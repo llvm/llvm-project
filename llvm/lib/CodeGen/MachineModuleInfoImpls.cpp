@@ -15,8 +15,6 @@
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/MC/MCSymbol.h"
-#include <cstdlib>
-#include <utility>
 
 using namespace llvm;
 
@@ -28,20 +26,16 @@ using namespace llvm;
 void MachineModuleInfoMachO::anchor() {}
 void MachineModuleInfoELF::anchor() {}
 
-static int SortSymbolPair(const void *LHS, const void *RHS) {
-  using PairTy = std::pair<MCSymbol *, MachineModuleInfoImpl::StubValueTy>;
-
-  const MCSymbol *LHSS = ((const PairTy *)LHS)->first;
-  const MCSymbol *RHSS = ((const PairTy *)RHS)->first;
-  return LHSS->getName().compare(RHSS->getName());
+using PairTy = std::pair<MCSymbol *, MachineModuleInfoImpl::StubValueTy>;
+static int SortSymbolPair(const PairTy *LHS, const PairTy *RHS) {
+  return LHS->first->getName().compare(RHS->first->getName());
 }
 
 MachineModuleInfoImpl::SymbolListTy MachineModuleInfoImpl::getSortedStubs(
     DenseMap<MCSymbol *, MachineModuleInfoImpl::StubValueTy> &Map) {
   MachineModuleInfoImpl::SymbolListTy List(Map.begin(), Map.end());
 
-  if (!List.empty())
-    qsort(&List[0], List.size(), sizeof(List[0]), SortSymbolPair);
+  array_pod_sort(List.begin(), List.end(), SortSymbolPair);
 
   Map.clear();
   return List;

@@ -527,6 +527,24 @@ the alias is accessed. It will not have any effect in the aliasee.
 For platforms without linker support of ELF TLS model, the -femulated-tls
 flag can be used to generate GCC compatible emulated TLS code.
 
+.. _runtime_preemption_model:
+
+Runtime Preemption Specifiers
+-----------------------------
+
+Global variables, functions and aliases may have an optional runtime preemption
+specifier. If a preemption specifier isn't given explicitly, then a
+symbol is assumed to be ``dso_preemptable``.
+
+``dso_preemptable``
+    Indicates that the function or variable may be replaced by a symbol from
+    outside the linkage unit at runtime.
+
+``dso_local``
+    The compiler may assume that a function or variable marked as ``dso_local``
+    will resolve to a symbol within the same linkage unit. Direct access will 
+    be generated even if the definition is not within this compilation unit.
+
 .. _namedtypes:
 
 Structure Types
@@ -650,6 +668,7 @@ iterate over them as an array, alignment padding would break this
 iteration. The maximum alignment is ``1 << 29``.
 
 Globals can also have a :ref:`DLL storage class <dllstorageclass>`,
+an optional :ref:`runtime preemption specifier <runtime_preemption_model>`,
 an optional :ref:`global attributes <glattrs>` and
 an optional list of attached :ref:`metadata <metadata>`.
 
@@ -658,7 +677,8 @@ Variables and aliases can have a
 
 Syntax::
 
-      @<GlobalVarName> = [Linkage] [Visibility] [DLLStorageClass] [ThreadLocal]
+      @<GlobalVarName> = [Linkage] [PreemptionSpecifier] [Visibility]
+                         [DLLStorageClass] [ThreadLocal]
                          [(unnamed_addr|local_unnamed_addr)] [AddrSpace]
                          [ExternallyInitialized]
                          <global | constant> <Type> [<InitializerConstant>]
@@ -691,7 +711,8 @@ Functions
 ---------
 
 LLVM function definitions consist of the "``define``" keyword, an
-optional :ref:`linkage type <linkage>`, an optional :ref:`visibility
+optional :ref:`linkage type <linkage>`, an optional :ref:`runtime preemption
+specifier <runtime_preemption_model>`,  an optional :ref:`visibility
 style <visibility>`, an optional :ref:`DLL storage class <dllstorageclass>`,
 an optional :ref:`calling convention <callingconv>`,
 an optional ``unnamed_addr`` attribute, a return type, an optional
@@ -750,7 +771,7 @@ not be significant within the module.
 
 Syntax::
 
-    define [linkage] [visibility] [DLLStorageClass]
+    define [linkage] [PreemptionSpecifier] [visibility] [DLLStorageClass]
            [cconv] [ret attrs]
            <ResultType> @<FunctionName> ([argument list])
            [(unnamed_addr|local_unnamed_addr)] [fn Attrs] [section "name"]
@@ -777,12 +798,13 @@ Aliases have a name and an aliasee that is either a global value or a
 constant expression.
 
 Aliases may have an optional :ref:`linkage type <linkage>`, an optional
+:ref:`runtime preemption specifier <runtime_preemption_model>`, an optional
 :ref:`visibility style <visibility>`, an optional :ref:`DLL storage class
 <dllstorageclass>` and an optional :ref:`tls model <tls_model>`.
 
 Syntax::
 
-    @<Name> = [Linkage] [Visibility] [DLLStorageClass] [ThreadLocal] [(unnamed_addr|local_unnamed_addr)] alias <AliaseeTy>, <AliaseeTy>* @<Aliasee>
+    @<Name> = [Linkage] [PreemptionSpecifier] [Visibility] [DLLStorageClass] [ThreadLocal] [(unnamed_addr|local_unnamed_addr)] alias <AliaseeTy>, <AliaseeTy>* @<Aliasee>
 
 The linkage must be one of ``private``, ``internal``, ``linkonce``, ``weak``,
 ``linkonce_odr``, ``weak_odr``, ``external``. Note that some system linkers

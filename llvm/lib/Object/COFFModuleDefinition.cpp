@@ -250,13 +250,18 @@ private:
     for (;;) {
       read();
       if (Tok.K == Identifier && Tok.Value[0] == '@') {
-        if (Tok.Value.drop_front().getAsInteger(10, E.Ordinal)) {
-          // Not an ordinal modifier at all, but the next export (fastcall
-          // decorated) - complete the current one.
+        if (Tok.Value == "@") {
+          // "foo @ 10"
+          read();
+          Tok.Value.getAsInteger(10, E.Ordinal);
+        } else if (Tok.Value.drop_front().getAsInteger(10, E.Ordinal)) {
+          // "foo \n @bar" - Not an ordinal modifier at all, but the next
+          // export (fastcall decorated) - complete the current one.
           unget();
           Info.Exports.push_back(E);
           return Error::success();
         }
+        // "foo @10"
         read();
         if (Tok.K == KwNoname) {
           E.Noname = true;

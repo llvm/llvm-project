@@ -1197,7 +1197,7 @@ void ModuleBitcodeWriter::writeModuleInfo() {
     // GLOBALVAR: [strtab offset, strtab size, type, isconst, initid,
     //             linkage, alignment, section, visibility, threadlocal,
     //             unnamed_addr, externally_initialized, dllstorageclass,
-    //             comdat, attributes]
+    //             comdat, attributes, DSO_Local]
     Vals.push_back(addToStrtab(GV.getName()));
     Vals.push_back(GV.getName().size());
     Vals.push_back(VE.getTypeID(GV.getValueType()));
@@ -1213,7 +1213,8 @@ void ModuleBitcodeWriter::writeModuleInfo() {
         GV.isExternallyInitialized() ||
         GV.getDLLStorageClass() != GlobalValue::DefaultStorageClass ||
         GV.hasComdat() ||
-        GV.hasAttributes()) {
+        GV.hasAttributes() ||
+        GV.isDSOLocal()) {
       Vals.push_back(getEncodedVisibility(GV));
       Vals.push_back(getEncodedThreadLocalMode(GV));
       Vals.push_back(getEncodedUnnamedAddr(GV));
@@ -1223,6 +1224,8 @@ void ModuleBitcodeWriter::writeModuleInfo() {
 
       auto AL = GV.getAttributesAsList(AttributeList::FunctionIndex);
       Vals.push_back(VE.getAttributeListID(AL));
+
+      Vals.push_back(GV.isDSOLocal());
     } else {
       AbbrevToUse = SimpleGVarAbbrev;
     }
@@ -1236,7 +1239,7 @@ void ModuleBitcodeWriter::writeModuleInfo() {
     // FUNCTION:  [strtab offset, strtab size, type, callingconv, isproto,
     //             linkage, paramattrs, alignment, section, visibility, gc,
     //             unnamed_addr, prologuedata, dllstorageclass, comdat,
-    //             prefixdata, personalityfn]
+    //             prefixdata, personalityfn, DSO_Local]
     Vals.push_back(addToStrtab(F.getName()));
     Vals.push_back(F.getName().size());
     Vals.push_back(VE.getTypeID(F.getFunctionType()));
@@ -1258,6 +1261,7 @@ void ModuleBitcodeWriter::writeModuleInfo() {
     Vals.push_back(
         F.hasPersonalityFn() ? (VE.getValueID(F.getPersonalityFn()) + 1) : 0);
 
+    Vals.push_back(F.isDSOLocal());
     unsigned AbbrevToUse = 0;
     Stream.EmitRecord(bitc::MODULE_CODE_FUNCTION, Vals, AbbrevToUse);
     Vals.clear();
@@ -1266,7 +1270,8 @@ void ModuleBitcodeWriter::writeModuleInfo() {
   // Emit the alias information.
   for (const GlobalAlias &A : M.aliases()) {
     // ALIAS: [strtab offset, strtab size, alias type, aliasee val#, linkage,
-    //         visibility, dllstorageclass, threadlocal, unnamed_addr]
+    //         visibility, dllstorageclass, threadlocal, unnamed_addr,
+    //         DSO_Local]
     Vals.push_back(addToStrtab(A.getName()));
     Vals.push_back(A.getName().size());
     Vals.push_back(VE.getTypeID(A.getValueType()));
@@ -1277,6 +1282,8 @@ void ModuleBitcodeWriter::writeModuleInfo() {
     Vals.push_back(getEncodedDLLStorageClass(A));
     Vals.push_back(getEncodedThreadLocalMode(A));
     Vals.push_back(getEncodedUnnamedAddr(A));
+    Vals.push_back(A.isDSOLocal());
+
     unsigned AbbrevToUse = 0;
     Stream.EmitRecord(bitc::MODULE_CODE_ALIAS, Vals, AbbrevToUse);
     Vals.clear();

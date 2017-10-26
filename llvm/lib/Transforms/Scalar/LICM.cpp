@@ -1033,6 +1033,30 @@ public:
   }
   void instructionDeleted(Instruction *I) const override { AST.deleteValue(I); }
 };
+
+
+/// Return true iff we can prove that a caller of this function can not inspect
+/// the contents of the provided object in a well defined program.
+bool isKnownNonEscaping(Value *Object, const TargetLibraryInfo *TLI) {
+  if (isa<AllocaInst>(Object))
+    // Since the alloca goes out of scope, we know the caller can't retain a
+    // reference to it and be well defined.  Thus, we don't need to check for
+    // capture. 
+    return true;
+  
+  // For all other objects we need to know that the caller can't possibly
+  // have gotten a reference to the object.  There are two components of
+  // that:
+  //   1) Object can't be escaped by this function.  This is what
+  //      PointerMayBeCaptured checks.
+  //   2) Object can't have been captured at definition site.  For this, we
+  //      need to know the return value is noalias.  At the moment, we use a
+  //      weaker condition and handle only AllocLikeFunctions (which are
+  //      known to be noalias).  TODO
+  return isAllocLikeFn(Object, TLI) &&
+    !PointerMayBeCaptured(Object, true, true);
+}
+
 } // namespace
 
 /// Try to promote memory values to scalars by sinking stores out of the
@@ -1107,35 +1131,19 @@ bool llvm::promoteLoopAccessesToScalars(
 
   const DataLayout &MDL = Preheader->getModule()->getDataLayout();
 
-  // Do we know this object does not escape ?
-  bool IsKnownNonEscapingObject = false;
+  bool IsKnownThreadLocalObject = false;
   if (SafetyInfo->MayThrow) {
     // If a loop can throw, we have to insert a store along each unwind edge.
     // That said, we can't actually make the unwind edge explicit. Therefore,
-    // we have to prove that the store is dead along the unwind edge.
-    //
-    // If the underlying object is not an alloca, nor a pointer that does not
-    // escape, then we can not effectively prove that the store is dead along
-    // the unwind edge. i.e. the caller of this function could have ways to
-    // access the pointed object.
+    // we have to prove that the store is dead along the unwind edge.  We do
+    // this by proving that the caller can't have a reference to the object
+    // after return and thus can't possibly load from the object.  
     Value *Object = GetUnderlyingObject(SomePtr, MDL);
-    // If this is a base pointer we do not understand, simply bail.
-    // We only handle alloca and return value from alloc-like fn right now.
-    if (!isa<AllocaInst>(Object)) {
-      if (!isAllocLikeFn(Object, TLI))
-        return false;
-      // If this is an alloc like fn. There are more constraints we need to
-      // verify. More specifically, we must make sure that the pointer can not
-      // escape.
-      //
-      // NOTE: PointerMayBeCaptured is not enough as the pointer may have
-      // escaped even though its not captured by the enclosing function.
-      // Standard allocation functions like malloc, calloc, and operator new
-      // return values which can be assumed not to have previously escaped.
-      if (PointerMayBeCaptured(Object, true, true))
-        return false;
-      IsKnownNonEscapingObject = true;
-    }
+    if (!isKnownNonEscaping(Object, TLI))
+      return false;
+    // Subtlety: Alloca's aren't visible to callers, but *are* potentially
+    // visible to other threads if captured and used during their lifetimes.
+    IsKnownThreadLocalObject = !isa<AllocaInst>(Object);
   }
 
   // Check that all of the pointers in the alias set have the same type.  We
@@ -1247,8 +1255,7 @@ bool llvm::promoteLoopAccessesToScalars(
   // stores along paths which originally didn't have them without violating the
   // memory model.
   if (!SafeToInsertStore) {
-    // If this is a known non-escaping object, it is safe to insert the stores.
-    if (IsKnownNonEscapingObject)
+    if (IsKnownThreadLocalObject)
       SafeToInsertStore = true;
     else {
       Value *Object = GetUnderlyingObject(SomePtr, MDL);

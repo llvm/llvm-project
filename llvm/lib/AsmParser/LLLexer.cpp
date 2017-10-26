@@ -494,6 +494,9 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(declare); KEYWORD(define);
   KEYWORD(global);  KEYWORD(constant);
 
+  KEYWORD(dso_local);
+  KEYWORD(dso_preemptable);
+
   KEYWORD(private);
   KEYWORD(internal);
   KEYWORD(available_externally);

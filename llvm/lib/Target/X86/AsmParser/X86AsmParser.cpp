@@ -856,6 +856,7 @@ private:
   bool parseDirectiveFPOEndProc(SMLoc L);
   bool parseDirectiveFPOData(SMLoc L);
 
+  bool validateInstruction(MCInst &Inst, const OperandVector &Ops);
   bool processInstruction(MCInst &Inst, const OperandVector &Ops);
 
   /// Wrapper around MCStreamer::EmitInstruction(). Possibly adds
@@ -2627,6 +2628,72 @@ bool X86AsmParser::processInstruction(MCInst &Inst, const OperandVector &Ops) {
   return false;
 }
 
+bool X86AsmParser::validateInstruction(MCInst &Inst, const OperandVector &Ops) {
+  const MCRegisterInfo *MRI = getContext().getRegisterInfo();
+
+  switch (Inst.getOpcode()) {
+  case X86::VGATHERDPDYrm:
+  case X86::VGATHERDPDrm:
+  case X86::VGATHERDPSYrm:
+  case X86::VGATHERDPSrm:
+  case X86::VGATHERQPDYrm:
+  case X86::VGATHERQPDrm:
+  case X86::VGATHERQPSYrm:
+  case X86::VGATHERQPSrm:
+  case X86::VPGATHERDDYrm:
+  case X86::VPGATHERDDrm:
+  case X86::VPGATHERDQYrm:
+  case X86::VPGATHERDQrm:
+  case X86::VPGATHERQDYrm:
+  case X86::VPGATHERQDrm:
+  case X86::VPGATHERQQYrm:
+  case X86::VPGATHERQQrm: {
+    unsigned Dest = MRI->getEncodingValue(Inst.getOperand(0).getReg());
+    unsigned Mask = MRI->getEncodingValue(Inst.getOperand(1).getReg());
+    unsigned Index =
+      MRI->getEncodingValue(Inst.getOperand(3 + X86::AddrIndexReg).getReg());
+    if (Dest == Mask || Dest == Index || Mask == Index)
+      return Warning(Ops[0]->getStartLoc(), "mask, index, and destination "
+                                            "registers should be distinct");
+    break;
+  }
+  case X86::VGATHERDPDZ128rm:
+  case X86::VGATHERDPDZ256rm:
+  case X86::VGATHERDPDZrm:
+  case X86::VGATHERDPSZ128rm:
+  case X86::VGATHERDPSZ256rm:
+  case X86::VGATHERDPSZrm:
+  case X86::VGATHERQPDZ128rm:
+  case X86::VGATHERQPDZ256rm:
+  case X86::VGATHERQPDZrm:
+  case X86::VGATHERQPSZ128rm:
+  case X86::VGATHERQPSZ256rm:
+  case X86::VGATHERQPSZrm:
+  case X86::VPGATHERDDZ128rm:
+  case X86::VPGATHERDDZ256rm:
+  case X86::VPGATHERDDZrm:
+  case X86::VPGATHERDQZ128rm:
+  case X86::VPGATHERDQZ256rm:
+  case X86::VPGATHERDQZrm:
+  case X86::VPGATHERQDZ128rm:
+  case X86::VPGATHERQDZ256rm:
+  case X86::VPGATHERQDZrm:
+  case X86::VPGATHERQQZ128rm:
+  case X86::VPGATHERQQZ256rm:
+  case X86::VPGATHERQQZrm: {
+    unsigned Dest = MRI->getEncodingValue(Inst.getOperand(0).getReg());
+    unsigned Index =
+      MRI->getEncodingValue(Inst.getOperand(4 + X86::AddrIndexReg).getReg());
+    if (Dest == Index)
+      return Warning(Ops[0]->getStartLoc(), "index and destination registers "
+                                            "should be distinct");
+    break;
+  }
+  }
+
+  return false;
+}
+
 static const char *getSubtargetFeatureName(uint64_t Val);
 
 void X86AsmParser::EmitInstruction(MCInst &Inst, OperandVector &Operands,
@@ -2723,6 +2790,8 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
                            isParsingIntelSyntax())) {
   default: llvm_unreachable("Unexpected match result!");
   case Match_Success:
+    if (validateInstruction(Inst, Operands))
+      return true;
     // Some instructions need post-processing to, for example, tweak which
     // encoding is selected. Loop on it while changes happen so the
     // individual transformations can chain off each other.
@@ -3012,6 +3081,8 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
   // instruction will already have been filled in correctly, since the failing
   // matches won't have modified it).
   if (NumSuccessfulMatches == 1) {
+    if (validateInstruction(Inst, Operands))
+      return true;
     // Some instructions need post-processing to, for example, tweak which
     // encoding is selected. Loop on it while changes happen so the individual
     // transformations can chain off each other.
