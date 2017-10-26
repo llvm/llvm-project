@@ -275,7 +275,10 @@ ExtractRepeatedExpressionIntoVariableOperation::perform(
   // instead and get the offset from it.
   unsigned NameOffset = StringRef(OS.str()).find(Name);
   OS << " = ";
-  E->printPretty(OS, /*Helper=*/nullptr, Context.getPrintingPolicy());
+  PrintingPolicy ExprPP = Context.getPrintingPolicy();
+  ExprPP.SuppressStrongLifetime = true;
+  ExprPP.SuppressImplicitBase = true;
+  E->printPretty(OS, /*Helper=*/nullptr, ExprPP);
   OS << ";\n";
   Replacements.push_back(RefactoringReplacement(
       SourceRange(InsertionLoc, InsertionLoc), OS.str(), CreatedSymbol,
