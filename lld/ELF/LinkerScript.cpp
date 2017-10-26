@@ -318,10 +318,12 @@ LinkerScript::computeInputSections(const InputSectionDescription *Cmd,
 
 void LinkerScript::discard(ArrayRef<InputSection *> V) {
   for (InputSection *S : V) {
-    S->Live = false;
     if (S == InX::ShStrTab || S == InX::Dynamic || S == InX::DynSymTab ||
         S == InX::DynStrTab)
       error("discarding " + S->Name + " section is not allowed");
+
+    S->Assigned = false;
+    S->Live = false;
     discard(S->DependentSections);
   }
 }
