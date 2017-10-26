@@ -57,7 +57,7 @@ struct DILineInfo {
                     RHS.StartLine, RHS.Discriminator);
   }
 
-  operator bool() const { return (*this) != DILineInfo(); }
+  explicit operator bool() const { return *this != DILineInfo(); }
 
   void dump(raw_ostream &OS) {
     OS << "Line info: ";

@@ -262,7 +262,7 @@ public:
     DWARFCompileUnit *CompileUnit = nullptr;
     DWARFDie FunctionDIE;
     DWARFDie BlockDIE;
-    operator bool() const { return CompileUnit != nullptr; }
+    explicit operator bool() const { return CompileUnit != nullptr; }
   };
 
   /// Get the compilation unit, the function DIE and lexical block DIE for the

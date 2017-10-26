@@ -1,5 +1,5 @@
 # RUN: llvm-mc %s -filetype obj -triple x86_64-apple-darwin -o - \
-# RUN:   | llvm-dwarfdump -lookup=0x6a6f6e6173 - | \
+# RUN:   | llvm-dwarfdump -lookup=0x7fffffff - | \
 # RUN: FileCheck %s --check-prefix=EMPTY --allow-empty
 # EMPTY: {{^$}}
 

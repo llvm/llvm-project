@@ -157,7 +157,7 @@ static list<std::string> Name(
          "the -regex option <pattern> is interpreted as a regular expression."),
     value_desc("pattern"), cat(DwarfDumpCategory));
 static alias NameAlias("n", desc("Alias for -name"), aliasopt(Name));
-static opt<uint64_t>
+static opt<unsigned>
     Lookup("lookup",
            desc("Lookup <address> in the debug information and print out any"
                 "available file, function, block and line table details."),
