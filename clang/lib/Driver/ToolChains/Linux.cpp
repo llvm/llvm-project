@@ -248,7 +248,7 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   ExtraOpts.push_back("--build-id");
 #endif
 
-  if (Distro.IsOpenSUSE())
+  if (IsAndroid || Distro.IsOpenSUSE())
     ExtraOpts.push_back("--enable-new-dtags");
 
   // The selection of paths to try here is designed to match the patterns which
@@ -810,7 +810,10 @@ void Linux::AddIAMCUIncludeArgs(const ArgList &DriverArgs,
   }
 }
 
-bool Linux::isPIEDefault() const { return getSanitizerArgs().requiresPIE(); }
+bool Linux::isPIEDefault() const {
+  return (getTriple().isAndroid() && !getTriple().isAndroidVersionLT(16)) ||
+         getSanitizerArgs().requiresPIE();
+}
 
 SanitizerMask Linux::getSupportedSanitizers() const {
   const bool IsX86 = getTriple().getArch() == llvm::Triple::x86;

@@ -71,7 +71,7 @@ def getProjectMapPath():
     if not os.path.exists(ProjectMapPath):
         print "Error: Cannot find the Project Map file " + ProjectMapPath +\
               "\nRunning script for the wrong directory?"
-        sys.exit(-1)
+        sys.exit(1)
     return ProjectMapPath
 
 
@@ -97,7 +97,7 @@ else:
     Clang = SATestUtils.which("clang", os.environ['PATH'])
 if not Clang:
     print "Error: cannot find 'clang' in PATH"
-    sys.exit(-1)
+    sys.exit(1)
 
 # Number of jobs.
 Jobs = int(math.ceil(multiprocessing.cpu_count() * 0.75))
@@ -196,7 +196,7 @@ def downloadAndPatch(Dir, PBuildLogFile):
         if not os.path.exists(CachedSourceDirPath):
             print "Error: '%s' not found after download." % (
                   CachedSourceDirPath)
-            exit(-1)
+            exit(1)
 
     PatchedSourceDirPath = os.path.join(Dir, PatchedSourceDirName)
 
@@ -225,7 +225,7 @@ def applyPatch(Dir, PBuildLogFile):
                    shell=True)
     except:
         print "Error: Patch failed. See %s for details." % (PBuildLogFile.name)
-        sys.exit(-1)
+        sys.exit(1)
 
 
 def runScanBuild(Dir, SBOutputDir, PBuildLogFile):
@@ -236,7 +236,7 @@ def runScanBuild(Dir, SBOutputDir, PBuildLogFile):
     BuildScriptPath = os.path.join(Dir, BuildScript)
     if not os.path.exists(BuildScriptPath):
         print "Error: build script is not defined: %s" % BuildScriptPath
-        sys.exit(-1)
+        sys.exit(1)
 
     AllCheckers = Checkers
     if 'SA_ADDITIONAL_CHECKERS' in os.environ:
@@ -473,7 +473,7 @@ def checkBuild(SBOutputDir):
                 shutil.copyfileobj(FailLogI, SummaryLog)
 
     print "Error: analysis failed. See ", SummaryPath
-    sys.exit(-1)
+    sys.exit(1)
 
 
 def runCmpResults(Dir, Strictness=0):
@@ -503,7 +503,10 @@ def runCmpResults(Dir, Strictness=0):
         RefList.remove(RefLogDir)
     NewList.remove(os.path.join(NewDir, LogFolderName))
 
-    assert(len(RefList) == len(NewList))
+    if len(RefList) != len(NewList):
+        print "Mismatch in number of results folders: %s vs %s" % (
+            RefList, NewList)
+        sys.exit(1)
 
     # There might be more then one folder underneath - one per each scan-build
     # command (Ex: one for configure and one for make).
@@ -526,17 +529,11 @@ def runCmpResults(Dir, Strictness=0):
         DiffsPath = os.path.join(NewDir, DiffsSummaryFileName)
         PatchedSourceDirPath = os.path.join(Dir, PatchedSourceDirName)
         Opts = CmpRuns.CmpOptions(DiffsPath, "", PatchedSourceDirPath)
-        # Discard everything coming out of stdout
-        # (CmpRun produces a lot of them).
-        OLD_STDOUT = sys.stdout
-        sys.stdout = SATestUtils.Discarder()
         # Scan the results, delete empty plist files.
         NumDiffs, ReportsInRef, ReportsInNew = \
             CmpRuns.dumpScanBuildResultsDiff(RefDir, NewDir, Opts, False)
-        sys.stdout = OLD_STDOUT
         if (NumDiffs > 0):
-            print "Warning: %r differences in diagnostics. See %s" % \
-                  (NumDiffs, DiffsPath,)
+            print "Warning: %s differences in diagnostics." % NumDiffs
         if Strictness >= 2 and NumDiffs > 0:
             print "Error: Diffs found in strict mode (2)."
             TestsPassed = False
@@ -662,4 +659,4 @@ if __name__ == '__main__':
     TestsPassed = testAll(IsReference, Strictness)
     if not TestsPassed:
         print "ERROR: Tests failed."
-        sys.exit(-1)
+        sys.exit(42)

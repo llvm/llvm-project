@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "../tools/llvm-cfi-verify/lib/FileAnalysis.h"
+#include "../tools/llvm-cfi-verify/lib/GraphBuilder.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -479,6 +480,177 @@ TEST_F(BasicFileAnalysisTest, ControlFlowXRefsTest) {
   InstrMetaPtr = &Analysis.getInstructionOrDie(0xDEADBEEF + 38);
   XRefs = Analysis.getDirectControlFlowXRefs(*InstrMetaPtr);
   EXPECT_TRUE(Analysis.getDirectControlFlowXRefs(*InstrMetaPtr).empty());
+}
+
+TEST_F(BasicFileAnalysisTest, CFIProtectionInvalidTargets) {
+  if (!SuccessfullyInitialised)
+    return;
+  Analysis.parseSectionContents(
+      {
+          0x90,       // 0: nop
+          0x0f, 0x0b, // 1: ud2
+          0x75, 0x00, // 3: jne 5 [+0]
+      },
+      0xDEADBEEF);
+  EXPECT_FALSE(Analysis.isIndirectInstructionCFIProtected(0xDEADBEEF));
+  EXPECT_FALSE(Analysis.isIndirectInstructionCFIProtected(0xDEADBEEF + 1));
+  EXPECT_FALSE(Analysis.isIndirectInstructionCFIProtected(0xDEADBEEF + 3));
+  EXPECT_FALSE(Analysis.isIndirectInstructionCFIProtected(0xDEADC0DE));
+}
+
+TEST_F(BasicFileAnalysisTest, CFIProtectionBasicFallthroughToUd2) {
+  if (!SuccessfullyInitialised)
+    return;
+  Analysis.parseSectionContents(
+      {
+          0x75, 0x02, // 0: jne 4 [+2]
+          0x0f, 0x0b, // 2: ud2
+          0xff, 0x10, // 4: callq *(%rax)
+      },
+      0xDEADBEEF);
+  EXPECT_TRUE(Analysis.isIndirectInstructionCFIProtected(0xDEADBEEF + 4));
+}
+
+TEST_F(BasicFileAnalysisTest, CFIProtectionBasicJumpToUd2) {
+  if (!SuccessfullyInitialised)
+    return;
+  Analysis.parseSectionContents(
+      {
+          0x75, 0x02, // 0: jne 4 [+2]
+          0xff, 0x10, // 2: callq *(%rax)
+          0x0f, 0x0b, // 4: ud2
+      },
+      0xDEADBEEF);
+  EXPECT_TRUE(Analysis.isIndirectInstructionCFIProtected(0xDEADBEEF + 2));
+}
+
+TEST_F(BasicFileAnalysisTest, CFIProtectionDualPathUd2) {
+  if (!SuccessfullyInitialised)
+    return;
+  Analysis.parseSectionContents(
+      {
+          0x75, 0x03, // 0: jne 5 [+3]
+          0x90,       // 2: nop
+          0xff, 0x10, // 3: callq *(%rax)
+          0x0f, 0x0b, // 5: ud2
+          0x75, 0xf9, // 7: jne 2 [-7]
+          0x0f, 0x0b, // 9: ud2
+      },
+      0xDEADBEEF);
+  EXPECT_TRUE(Analysis.isIndirectInstructionCFIProtected(0xDEADBEEF + 3));
+}
+
+TEST_F(BasicFileAnalysisTest, CFIProtectionDualPathSingleUd2) {
+  if (!SuccessfullyInitialised)
+    return;
+  Analysis.parseSectionContents(
+      {
+          0x75, 0x05, // 0: jne 7 [+5]
+          0x90,       // 2: nop
+          0xff, 0x10, // 3: callq *(%rax)
+          0x75, 0xfb, // 5: jne 2 [-5]
+          0x0f, 0x0b, // 7: ud2
+      },
+      0xDEADBEEF);
+  EXPECT_TRUE(Analysis.isIndirectInstructionCFIProtected(0xDEADBEEF + 3));
+}
+
+TEST_F(BasicFileAnalysisTest, CFIProtectionDualFailLimitUpwards) {
+  if (!SuccessfullyInitialised)
+    return;
+  Analysis.parseSectionContents(
+      {
+          0x75, 0x06, // 0: jne 8 [+6]
+          0x90,       // 2: nop
+          0x90,       // 3: nop
+          0x90,       // 4: nop
+          0x90,       // 5: nop
+          0xff, 0x10, // 6: callq *(%rax)
+          0x0f, 0x0b, // 8: ud2
+      },
+      0xDEADBEEF);
+  uint64_t PrevSearchLengthForConditionalBranch =
+      SearchLengthForConditionalBranch;
+  SearchLengthForConditionalBranch = 2;
+
+  EXPECT_FALSE(Analysis.isIndirectInstructionCFIProtected(0xDEADBEEF + 6));
+
+  SearchLengthForConditionalBranch = PrevSearchLengthForConditionalBranch;
+}
+
+TEST_F(BasicFileAnalysisTest, CFIProtectionDualFailLimitDownwards) {
+  if (!SuccessfullyInitialised)
+    return;
+  Analysis.parseSectionContents(
+      {
+          0x75, 0x02, // 0: jne 4 [+2]
+          0xff, 0x10, // 2: callq *(%rax)
+          0x90,       // 4: nop
+          0x90,       // 5: nop
+          0x90,       // 6: nop
+          0x90,       // 7: nop
+          0x0f, 0x0b, // 8: ud2
+      },
+      0xDEADBEEF);
+  uint64_t PrevSearchLengthForUndef = SearchLengthForUndef;
+  SearchLengthForUndef = 2;
+
+  EXPECT_FALSE(Analysis.isIndirectInstructionCFIProtected(0xDEADBEEF + 2));
+
+  SearchLengthForUndef = PrevSearchLengthForUndef;
+}
+
+TEST_F(BasicFileAnalysisTest, CFIProtectionGoodAndBadPaths) {
+  if (!SuccessfullyInitialised)
+    return;
+  Analysis.parseSectionContents(
+      {
+          0xeb, 0x02, // 0: jmp 4 [+2]
+          0x75, 0x02, // 2: jne 6 [+2]
+          0xff, 0x10, // 4: callq *(%rax)
+          0x0f, 0x0b, // 6: ud2
+      },
+      0xDEADBEEF);
+  EXPECT_FALSE(Analysis.isIndirectInstructionCFIProtected(0xDEADBEEF + 4));
+}
+
+TEST_F(BasicFileAnalysisTest, CFIProtectionWithUnconditionalJumpInFallthrough) {
+  if (!SuccessfullyInitialised)
+    return;
+  Analysis.parseSectionContents(
+      {
+          0x75, 0x04, // 0: jne 6 [+4]
+          0xeb, 0x00, // 2: jmp 4 [+0]
+          0xff, 0x10, // 4: callq *(%rax)
+          0x0f, 0x0b, // 6: ud2
+      },
+      0xDEADBEEF);
+  EXPECT_TRUE(Analysis.isIndirectInstructionCFIProtected(0xDEADBEEF + 4));
+}
+
+TEST_F(BasicFileAnalysisTest, CFIProtectionComplexExample) {
+  if (!SuccessfullyInitialised)
+    return;
+  // See unittests/GraphBuilder.cpp::BuildFlowGraphComplexExample for this
+  // graph.
+  Analysis.parseSectionContents(
+      {
+          0x75, 0x12,                   // 0: jne 20 [+18]
+          0xeb, 0x03,                   // 2: jmp 7 [+3]
+          0x75, 0x10,                   // 4: jne 22 [+16]
+          0x90,                         // 6: nop
+          0x90,                         // 7: nop
+          0x90,                         // 8: nop
+          0xff, 0x10,                   // 9: callq *(%rax)
+          0xeb, 0xfc,                   // 11: jmp 9 [-4]
+          0x75, 0xfa,                   // 13: jne 9 [-6]
+          0xe8, 0x78, 0x56, 0x34, 0x12, // 15: callq OUTOFBOUNDS [+0x12345678]
+          0x90,                         // 20: nop
+          0x90,                         // 21: nop
+          0x0f, 0x0b,                   // 22: ud2
+      },
+      0xDEADBEEF);
+  EXPECT_FALSE(Analysis.isIndirectInstructionCFIProtected(0xDEADBEEF + 9));
 }
 
 } // anonymous namespace

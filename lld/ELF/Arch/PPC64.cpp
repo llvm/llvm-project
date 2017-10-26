@@ -7,10 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Error.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
+#include "lld/Common/ErrorHandler.h"
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;

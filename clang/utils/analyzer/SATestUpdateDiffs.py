@@ -32,7 +32,7 @@ def updateReferenceResults(ProjName, ProjBuildMode):
     if not os.path.exists(CreatedResultsPath):
         print >> sys.stderr, "New results not found, was SATestBuild.py "\
                              "previously run?"
-        sys.exit(-1)
+        sys.exit(1)
 
     # Remove reference results: in git, and then again for a good measure
     # with rm, as git might not remove things fully if there are empty
@@ -75,7 +75,7 @@ def main(argv):
         print >> sys.stderr, "Update static analyzer reference results based "\
                              "\non the previous run of SATestBuild.py.\n"\
                              "\nN.B.: Assumes that SATestBuild.py was just run"
-        sys.exit(-1)
+        sys.exit(1)
 
     with SATestBuild.projectFileHandler() as f:
         for (ProjName, ProjBuildMode) in SATestBuild.iterateOverProjects(f):

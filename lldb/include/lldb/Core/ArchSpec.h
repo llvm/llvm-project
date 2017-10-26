@@ -15,6 +15,7 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private-enumerations.h"
+#include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h" // for StringRef
 #include "llvm/ADT/Triple.h"
 
@@ -22,19 +23,6 @@
 
 #include <stddef.h> // for size_t
 #include <stdint.h> // for uint32_t
-
-namespace lldb_private {
-class Platform;
-}
-namespace lldb_private {
-class Stream;
-}
-namespace lldb_private {
-class StringList;
-}
-namespace lldb_private {
-class Thread;
-}
 
 namespace lldb_private {
 
@@ -257,8 +245,6 @@ public:
     kCore_mips_last = eCore_mips64r6el
 
   };
-
-  typedef void (*StopInfoOverrideCallbackType)(lldb_private::Thread &thread);
 
   //------------------------------------------------------------------
   /// Default constructor.
@@ -574,34 +560,11 @@ public:
   //------------------------------------------------------------------
   bool IsCompatibleMatch(const ArchSpec &rhs) const;
 
-  //------------------------------------------------------------------
-  /// Get a stop info override callback for the current architecture.
-  ///
-  /// Most platform specific code should go in lldb_private::Platform,
-  /// but there are cases where no matter which platform you are on
-  /// certain things hold true.
-  ///
-  /// This callback is currently intended to handle cases where a
-  /// program stops at an instruction that won't get executed and it
-  /// allows the stop reasonm, like "breakpoint hit", to be replaced
-  /// with a different stop reason like "no stop reason".
-  ///
-  /// This is specifically used for ARM in Thumb code when we stop in
-  /// an IT instruction (if/then/else) where the instruction won't get
-  /// executed and therefore it wouldn't be correct to show the program
-  /// stopped at the current PC. The code is generic and applies to all
-  /// ARM CPUs.
-  ///
-  /// @return NULL or a valid stop info override callback for the
-  ///     current architecture.
-  //------------------------------------------------------------------
-  StopInfoOverrideCallbackType GetStopInfoOverrideCallback() const;
-
   bool IsFullySpecifiedTriple() const;
 
   void PiecewiseTripleCompare(const ArchSpec &other, bool &arch_different,
                               bool &vendor_different, bool &os_different,
-                              bool &os_version_different, bool &env_different);
+                              bool &os_version_different, bool &env_different) const;
 
   //------------------------------------------------------------------
   /// Detect whether this architecture uses thumb code exclusively

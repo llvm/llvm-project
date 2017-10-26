@@ -153,7 +153,8 @@ public:
     std::set<Function *, CVPLatticeVal::Compare> Union;
     std::set_union(X.getFunctions().begin(), X.getFunctions().end(),
                    Y.getFunctions().begin(), Y.getFunctions().end(),
-                   std::inserter(Union, Union.begin()));
+                   std::inserter(Union, Union.begin()),
+                   CVPLatticeVal::Compare{});
     if (Union.size() > MaxFunctionsPerValue)
       return getOverdefinedVal();
     return CVPLatticeVal(std::move(Union));

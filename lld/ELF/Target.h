@@ -10,8 +10,8 @@
 #ifndef LLD_ELF_TARGET_H
 #define LLD_ELF_TARGET_H
 
-#include "Error.h"
 #include "InputSection.h"
+#include "lld/Common/ErrorHandler.h"
 #include "llvm/Object/ELF.h"
 
 namespace lld {

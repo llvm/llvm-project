@@ -8,13 +8,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "InputFiles.h"
-#include "Error.h"
 #include "InputSection.h"
 #include "LinkerScript.h"
 #include "Memory.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
+#include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"

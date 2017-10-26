@@ -140,7 +140,7 @@
 //
 // CHECK-ASAN-ANDROID: "{{(.*[^.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-ASAN-ANDROID-NOT: "-lc"
-// CHECK-ASAN-ANDROID: "-pie"
+// CHECK-ASAN-ANDROID-NOT: "-pie"
 // CHECK-ASAN-ANDROID-NOT: "-lpthread"
 // CHECK-ASAN-ANDROID: libclang_rt.asan-arm-android.so"
 // CHECK-ASAN-ANDROID-NOT: "-lpthread"
@@ -185,7 +185,7 @@
 //
 // CHECK-ASAN-ANDROID-X86: "{{(.*[^.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-ASAN-ANDROID-X86-NOT: "-lc"
-// CHECK-ASAN-ANDROID-X86: "-pie"
+// CHECK-ASAN-ANDROID-X86-NOT: "-pie"
 // CHECK-ASAN-ANDROID-X86-NOT: "-lpthread"
 // CHECK-ASAN-ANDROID-X86: libclang_rt.asan-i686-android.so"
 // CHECK-ASAN-ANDROID-X86-NOT: "-lpthread"

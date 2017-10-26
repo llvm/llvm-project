@@ -9,9 +9,9 @@
 
 #include "LTO.h"
 #include "Config.h"
-#include "Error.h"
 #include "InputFiles.h"
 #include "Symbols.h"
+#include "lld/Common/ErrorHandler.h"
 #include "lld/Common/TargetOptionsCommandFlags.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
