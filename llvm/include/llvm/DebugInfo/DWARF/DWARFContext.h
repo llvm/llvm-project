@@ -257,6 +257,18 @@ public:
   /// Get a pointer to a parsed line table corresponding to a compile unit.
   const DWARFDebugLine::LineTable *getLineTableForUnit(DWARFUnit *cu);
 
+  /// Wraps the returned DIEs for a given address.
+  struct DIEsForAddress {
+    DWARFCompileUnit *CompileUnit = nullptr;
+    DWARFDie FunctionDIE;
+    DWARFDie BlockDIE;
+    explicit operator bool() const { return CompileUnit != nullptr; }
+  };
+
+  /// Get the compilation unit, the function DIE and lexical block DIE for the
+  /// given address where applicable.
+  DIEsForAddress getDIEsForAddress(uint64_t Address);
+
   DILineInfo getLineInfoForAddress(uint64_t Address,
       DILineInfoSpecifier Specifier = DILineInfoSpecifier()) override;
   DILineInfoTable getLineInfoForAddressRange(uint64_t Address, uint64_t Size,

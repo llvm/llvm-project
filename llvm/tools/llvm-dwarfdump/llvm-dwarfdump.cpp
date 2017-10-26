@@ -157,6 +157,11 @@ static list<std::string> Name(
          "the -regex option <pattern> is interpreted as a regular expression."),
     value_desc("pattern"), cat(DwarfDumpCategory));
 static alias NameAlias("n", desc("Alias for -name"), aliasopt(Name));
+static opt<unsigned>
+    Lookup("lookup",
+           desc("Lookup <address> in the debug information and print out any"
+                "available file, function, block and line table details."),
+           value_desc("address"), cat(DwarfDumpCategory));
 static opt<std::string>
     OutputFilename("out-file", cl::init(""),
                    cl::desc("Redirect output to the specified file."),
@@ -303,6 +308,30 @@ static void filterByName(const StringSet<> &Names,
           Die.dump(OS, 0, getDumpOpts());
       }
     }
+
+}
+
+/// Handle the --lookup option and dump the DIEs and line info for the given
+/// address.
+static bool lookup(DWARFContext &DICtx, uint64_t Address, raw_ostream &OS) {
+  auto DIEsForAddr = DICtx.getDIEsForAddress(Lookup);
+
+  if (!DIEsForAddr)
+    return false;
+
+  DIDumpOptions DumpOpts = getDumpOpts();
+  DumpOpts.RecurseDepth = 0;
+  DIEsForAddr.CompileUnit->dump(OS, DumpOpts);
+  if (DIEsForAddr.FunctionDIE) {
+    DIEsForAddr.FunctionDIE.dump(OS, 2, DumpOpts);
+    if (DIEsForAddr.BlockDIE)
+      DIEsForAddr.BlockDIE.dump(OS, 4, DumpOpts);
+  }
+
+  if (DILineInfo LineInfo = DICtx.getLineInfoForAddress(Lookup))
+    LineInfo.dump(OS);
+
+  return true;
 }
 
 bool collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
@@ -312,10 +341,13 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx, Twine Filename,
                            raw_ostream &OS) {
   logAllUnhandledErrors(DICtx.loadRegisterInfo(Obj), errs(),
                         Filename.str() + ": ");
-
   // The UUID dump already contains all the same information.
   if (!(DumpType & DIDT_UUID) || DumpType == DIDT_All)
     OS << Filename << ":\tfile format " << Obj.getFileFormatName() << '\n';
+
+  // Handle the --lookup option.
+  if (Lookup)
+    return lookup(DICtx, Lookup, OS);
 
   // Handle the --name option.
   if (!Name.empty()) {
