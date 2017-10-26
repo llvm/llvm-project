@@ -96,6 +96,10 @@ ArgumentsAdjuster getInsertArgumentAdjuster(const char *Extra,
 
 ArgumentsAdjuster combineAdjusters(ArgumentsAdjuster First,
                                    ArgumentsAdjuster Second) {
+  if (!First)
+    return Second;
+  if (!Second)
+    return First;
   return [First, Second](const CommandLineArguments &Args, StringRef File) {
     return Second(First(Args, File), File);
   };

@@ -91,6 +91,9 @@ Improvements to Clang's diagnostics
   offset is nonzero. It also now warns about arithmetic on a null pointer
   treated as a cast from integer to pointer (GNU extension).
 
+- ``-Wzero-as-null-pointer-constant`` was adjusted not to warn on null pointer
+  constants that originate from system macros, except ``NULL`` macro.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 

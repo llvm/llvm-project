@@ -56,8 +56,8 @@ public:
     V(Spelling.getValueAsString("Variety")),
     N(Spelling.getValueAsString("Name")) {
 
-    assert(V != "GCC" && "Given a GCC spelling, which means this hasn't been"
-           "flattened!");
+    assert(V != "GCC" && V != "Clang" &&
+           "Given a GCC spelling, which means this hasn't been flattened!");
     if (V == "CXX11" || V == "C2x" || V == "Pragma")
       NS = Spelling.getValueAsString("Namespace");
     bool Unset;
@@ -78,11 +78,15 @@ GetFlattenedSpellings(const Record &Attr) {
   std::vector<FlattenedSpelling> Ret;
 
   for (const auto &Spelling : Spellings) {
-    if (Spelling->getValueAsString("Variety") == "GCC") {
+    StringRef Variety = Spelling->getValueAsString("Variety");
+    StringRef Name = Spelling->getValueAsString("Name");
+    if (Variety == "GCC") {
       // Gin up two new spelling objects to add into the list.
-      Ret.emplace_back("GNU", Spelling->getValueAsString("Name"), "", true);
-      Ret.emplace_back("CXX11", Spelling->getValueAsString("Name"), "gnu",
-                       true);
+      Ret.emplace_back("GNU", Name, "", true);
+      Ret.emplace_back("CXX11", Name, "gnu", true);
+    } else if (Variety == "Clang") {
+      Ret.emplace_back("GNU", Name, "", false);
+      Ret.emplace_back("CXX11", Name, "clang", false);
     } else
       Ret.push_back(FlattenedSpelling(*Spelling));
   }
