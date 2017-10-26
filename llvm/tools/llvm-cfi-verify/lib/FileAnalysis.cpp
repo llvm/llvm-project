@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "FileAnalysis.h"
+#include "GraphBuilder.h"
 
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -75,6 +76,32 @@ FileAnalysis::FileAnalysis(object::OwningBinary<object::Binary> Binary)
 FileAnalysis::FileAnalysis(const Triple &ObjectTriple,
                            const SubtargetFeatures &Features)
     : ObjectTriple(ObjectTriple), Features(Features) {}
+
+bool FileAnalysis::isIndirectInstructionCFIProtected(uint64_t Address) const {
+  const Instr *InstrMetaPtr = getInstruction(Address);
+  if (!InstrMetaPtr)
+    return false;
+
+  const auto &InstrDesc = MII->get(InstrMetaPtr->Instruction.getOpcode());
+
+  if (!InstrDesc.mayAffectControlFlow(InstrMetaPtr->Instruction, *RegisterInfo))
+    return false;
+
+  if (!usesRegisterOperand(*InstrMetaPtr))
+    return false;
+
+  auto Flows = GraphBuilder::buildFlowGraph(*this, Address);
+
+  if (!Flows.OrphanedNodes.empty())
+    return false;
+
+  for (const auto &BranchNode : Flows.ConditionalBranchNodes) {
+    if (!BranchNode.CFIProtection)
+      return false;
+  }
+
+  return true;
+}
 
 const Instr *
 FileAnalysis::getPrevInstructionSequential(const Instr &InstrMeta) const {
@@ -226,7 +253,8 @@ Error FileAnalysis::initialiseDisassemblyMembers() {
   if (!ObjectTarget)
     return make_error<UnsupportedDisassembly>(
         (Twine("Couldn't find target \"") + ObjectTriple.getTriple() +
-        "\", failed with error: " + ErrorString).str());
+         "\", failed with error: " + ErrorString)
+            .str());
 
   RegisterInfo.reset(ObjectTarget->createMCRegInfo(TripleName));
   if (!RegisterInfo)

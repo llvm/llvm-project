@@ -11,11 +11,11 @@
 //
 //===---------------------------------------------------------------------===//
 
-#include "Error.h"
 #include "InputFiles.h"
 #include "SymbolTable.h"
 #include "Writer.h"
 
+#include "lld/Common/ErrorHandler.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/MipsABIFlags.h"

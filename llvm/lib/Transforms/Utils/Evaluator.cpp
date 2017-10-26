@@ -12,19 +12,33 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/Evaluator.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallSite.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/DiagnosticPrinter.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include <iterator>
 
 #define DEBUG_TYPE "evaluator"
 
@@ -193,7 +207,7 @@ Constant *Evaluator::ComputeLoadResult(Constant *P) {
 bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
                               BasicBlock *&NextBB) {
   // This is the main evaluation loop.
-  while (1) {
+  while (true) {
     Constant *InstResult = nullptr;
 
     DEBUG(dbgs() << "Evaluating Instruction: " << *CurInst << "\n");
@@ -318,7 +332,6 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
       DEBUG(dbgs() << "Found a GEP! Simplifying: " << *InstResult
             << "\n");
     } else if (LoadInst *LI = dyn_cast<LoadInst>(CurInst)) {
-
       if (!LI->isSimple()) {
         DEBUG(dbgs() << "Found a Load! Not a simple load, can not evaluate.\n");
         return false;  // no volatile/atomic accesses.
@@ -344,9 +357,9 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
         return false;  // Cannot handle array allocs.
       }
       Type *Ty = AI->getAllocatedType();
-      AllocaTmps.push_back(
-          make_unique<GlobalVariable>(Ty, false, GlobalValue::InternalLinkage,
-                                      UndefValue::get(Ty), AI->getName()));
+      AllocaTmps.push_back(llvm::make_unique<GlobalVariable>(
+          Ty, false, GlobalValue::InternalLinkage, UndefValue::get(Ty),
+          AI->getName()));
       InstResult = AllocaTmps.back().get();
       DEBUG(dbgs() << "Found an alloca. Result: " << *InstResult << "\n");
     } else if (isa<CallInst>(CurInst) || isa<InvokeInst>(CurInst)) {
@@ -559,7 +572,7 @@ bool Evaluator::EvaluateFunction(Function *F, Constant *&RetVal,
 
   BasicBlock::iterator CurInst = CurBB->begin();
 
-  while (1) {
+  while (true) {
     BasicBlock *NextBB = nullptr; // Initialized to avoid compiler warnings.
     DEBUG(dbgs() << "Trying to evaluate BB: " << *CurBB << "\n");
 
@@ -594,4 +607,3 @@ bool Evaluator::EvaluateFunction(Function *F, Constant *&RetVal,
     CurBB = NextBB;
   }
 }
-

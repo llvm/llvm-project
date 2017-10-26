@@ -26,6 +26,7 @@
 #include "lldb/Core/Event.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/SourceManager.h"
 #include "lldb/Core/State.h"
@@ -65,6 +66,16 @@ using namespace lldb_private;
 
 constexpr std::chrono::milliseconds EvaluateExpressionOptions::default_timeout;
 
+Target::Arch::Arch(const ArchSpec &spec)
+    : m_spec(spec),
+      m_plugin_up(PluginManager::CreateArchitectureInstance(spec)) {}
+
+const Target::Arch& Target::Arch::operator=(const ArchSpec &spec) {
+  m_spec = spec;
+  m_plugin_up = PluginManager::CreateArchitectureInstance(spec);
+  return *this;
+}
+
 ConstString &Target::GetStaticBroadcasterClass() {
   static ConstString class_name("lldb.target");
   return class_name;
@@ -76,12 +87,12 @@ Target::Target(Debugger &debugger, const ArchSpec &target_arch,
       Broadcaster(debugger.GetBroadcasterManager(),
                   Target::GetStaticBroadcasterClass().AsCString()),
       ExecutionContextScope(), m_debugger(debugger), m_platform_sp(platform_sp),
-      m_mutex(), m_arch(target_arch), m_images(this), m_section_load_history(),
-      m_breakpoint_list(false), m_internal_breakpoint_list(true),
-      m_watchpoint_list(), m_process_sp(), m_search_filter_sp(),
-      m_image_search_paths(ImageSearchPathsChanged, this), m_ast_importer_sp(),
-      m_source_manager_ap(), m_stop_hooks(), m_stop_hook_next_id(0),
-      m_valid(true), m_suppress_stop_hooks(false),
+      m_mutex(), m_arch(target_arch),
+      m_images(this), m_section_load_history(), m_breakpoint_list(false),
+      m_internal_breakpoint_list(true), m_watchpoint_list(), m_process_sp(),
+      m_search_filter_sp(), m_image_search_paths(ImageSearchPathsChanged, this),
+      m_ast_importer_sp(), m_source_manager_ap(), m_stop_hooks(),
+      m_stop_hook_next_id(0), m_valid(true), m_suppress_stop_hooks(false),
       m_is_dummy_target(is_dummy_target)
 
 {
@@ -96,10 +107,11 @@ Target::Target(Debugger &debugger, const ArchSpec &target_arch,
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
   if (log)
     log->Printf("%p Target::Target()", static_cast<void *>(this));
-  if (m_arch.IsValid()) {
-    LogIfAnyCategoriesSet(
-        LIBLLDB_LOG_TARGET, "Target::Target created with architecture %s (%s)",
-        m_arch.GetArchitectureName(), m_arch.GetTriple().getTriple().c_str());
+  if (target_arch.IsValid()) {
+    LogIfAnyCategoriesSet(LIBLLDB_LOG_TARGET,
+                          "Target::Target created with architecture %s (%s)",
+                          target_arch.GetArchitectureName(),
+                          target_arch.GetTriple().getTriple().c_str());
   }
 }
 
@@ -250,7 +262,7 @@ void Target::Destroy() {
   m_valid = false;
   DeleteCurrentProcess();
   m_platform_sp.reset();
-  m_arch.Clear();
+  m_arch = ArchSpec();
   ClearModules(true);
   m_section_load_history.Clear();
   const bool notify = false;
@@ -1366,8 +1378,8 @@ void Target::ClearModules(bool delete_locations) {
 
 void Target::DidExec() {
   // When a process exec's we need to know about it so we can do some cleanup.
-  m_breakpoint_list.RemoveInvalidLocations(m_arch);
-  m_internal_breakpoint_list.RemoveInvalidLocations(m_arch);
+  m_breakpoint_list.RemoveInvalidLocations(m_arch.GetSpec());
+  m_internal_breakpoint_list.RemoveInvalidLocations(m_arch.GetSpec());
 }
 
 void Target::SetExecutableModule(ModuleSP &executable_sp,
@@ -1385,13 +1397,12 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
 
     // If we haven't set an architecture yet, reset our architecture based on
     // what we found in the executable module.
-    if (!m_arch.IsValid()) {
+    if (!m_arch.GetSpec().IsValid()) {
       m_arch = executable_sp->GetArchitecture();
-      if (log)
-        log->Printf("Target::SetExecutableModule setting architecture to %s "
-                    "(%s) based on executable file",
-                    m_arch.GetArchitectureName(),
-                    m_arch.GetTriple().getTriple().c_str());
+      LLDB_LOG(log,
+               "setting architecture to {0} ({1}) based on executable file",
+               m_arch.GetSpec().GetArchitectureName(),
+               m_arch.GetSpec().GetTriple().getTriple());
     }
 
     FileSpecList dependent_files;
@@ -1409,7 +1420,7 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
         else
           platform_dependent_file_spec = dependent_file_spec;
 
-        ModuleSpec module_spec(platform_dependent_file_spec, m_arch);
+        ModuleSpec module_spec(platform_dependent_file_spec, m_arch.GetSpec());
         ModuleSP image_module_sp(GetSharedModule(module_spec));
         if (image_module_sp) {
           ObjectFile *objfile = image_module_sp->GetObjectFile();
@@ -1423,21 +1434,21 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
 
 bool Target::SetArchitecture(const ArchSpec &arch_spec) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET));
-  bool missing_local_arch = !m_arch.IsValid();
+  bool missing_local_arch = !m_arch.GetSpec().IsValid();
   bool replace_local_arch = true;
   bool compatible_local_arch = false;
   ArchSpec other(arch_spec);
 
   if (!missing_local_arch) {
-    if (m_arch.IsCompatibleMatch(arch_spec)) {
-      other.MergeFrom(m_arch);
+    if (m_arch.GetSpec().IsCompatibleMatch(arch_spec)) {
+      other.MergeFrom(m_arch.GetSpec());
 
-      if (m_arch.IsCompatibleMatch(other)) {
+      if (m_arch.GetSpec().IsCompatibleMatch(other)) {
         compatible_local_arch = true;
         bool arch_changed, vendor_changed, os_changed, os_ver_changed,
             env_changed;
 
-        m_arch.PiecewiseTripleCompare(other, arch_changed, vendor_changed,
+        m_arch.GetSpec().PiecewiseTripleCompare(other, arch_changed, vendor_changed,
                                       os_changed, os_ver_changed, env_changed);
 
         if (!arch_changed && !vendor_changed && !os_changed && !env_changed)
@@ -1451,10 +1462,9 @@ bool Target::SetArchitecture(const ArchSpec &arch_spec) {
     // update the architecture, unless the one we already have is more specified
     if (replace_local_arch)
       m_arch = other;
-    if (log)
-      log->Printf("Target::SetArchitecture set architecture to %s (%s)",
-                  m_arch.GetArchitectureName(),
-                  m_arch.GetTriple().getTriple().c_str());
+    LLDB_LOG(log, "set architecture to {0} ({1})",
+             m_arch.GetSpec().GetArchitectureName(),
+             m_arch.GetSpec().GetTriple().getTriple());
     return true;
   }
 
@@ -1491,12 +1501,12 @@ bool Target::SetArchitecture(const ArchSpec &arch_spec) {
 
 bool Target::MergeArchitecture(const ArchSpec &arch_spec) {
   if (arch_spec.IsValid()) {
-    if (m_arch.IsCompatibleMatch(arch_spec)) {
+    if (m_arch.GetSpec().IsCompatibleMatch(arch_spec)) {
       // The current target arch is compatible with "arch_spec", see if we
       // can improve our current architecture using bits from "arch_spec"
 
       // Merge bits from arch_spec into "merged_arch" and set our architecture
-      ArchSpec merged_arch(m_arch);
+      ArchSpec merged_arch(m_arch.GetSpec());
       merged_arch.MergeFrom(arch_spec);
       return SetArchitecture(merged_arch);
     } else {
@@ -1824,8 +1834,8 @@ size_t Target::ReadScalarIntegerFromMemory(const Address &addr,
     size_t bytes_read =
         ReadMemory(addr, prefer_file_cache, &uval, byte_size, error);
     if (bytes_read == byte_size) {
-      DataExtractor data(&uval, sizeof(uval), m_arch.GetByteOrder(),
-                         m_arch.GetAddressByteSize());
+      DataExtractor data(&uval, sizeof(uval), m_arch.GetSpec().GetByteOrder(),
+                         m_arch.GetSpec().GetAddressByteSize());
       lldb::offset_t offset = 0;
       if (byte_size <= 4)
         scalar = data.GetMaxU32(&offset, byte_size);
@@ -1859,7 +1869,7 @@ bool Target::ReadPointerFromMemory(const Address &addr, bool prefer_file_cache,
                                    Status &error, Address &pointer_addr) {
   Scalar scalar;
   if (ReadScalarIntegerFromMemory(addr, prefer_file_cache,
-                                  m_arch.GetAddressByteSize(), false, scalar,
+                                  m_arch.GetSpec().GetAddressByteSize(), false, scalar,
                                   error)) {
     addr_t pointer_vm_addr = scalar.ULongLong(LLDB_INVALID_ADDRESS);
     if (pointer_vm_addr != LLDB_INVALID_ADDRESS) {
@@ -2352,7 +2362,7 @@ lldb::addr_t Target::GetPersistentSymbol(const ConstString &name) {
 lldb::addr_t Target::GetCallableLoadAddress(lldb::addr_t load_addr,
                                             AddressClass addr_class) const {
   addr_t code_addr = load_addr;
-  switch (m_arch.GetMachine()) {
+  switch (m_arch.GetSpec().GetMachine()) {
   case llvm::Triple::mips:
   case llvm::Triple::mipsel:
   case llvm::Triple::mips64:
@@ -2411,7 +2421,7 @@ lldb::addr_t Target::GetCallableLoadAddress(lldb::addr_t load_addr,
 lldb::addr_t Target::GetOpcodeLoadAddress(lldb::addr_t load_addr,
                                           AddressClass addr_class) const {
   addr_t opcode_addr = load_addr;
-  switch (m_arch.GetMachine()) {
+  switch (m_arch.GetSpec().GetMachine()) {
   case llvm::Triple::mips:
   case llvm::Triple::mipsel:
   case llvm::Triple::mips64:
@@ -2443,7 +2453,7 @@ lldb::addr_t Target::GetBreakableLoadAddress(lldb::addr_t addr) {
   addr_t breakable_addr = addr;
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
 
-  switch (m_arch.GetMachine()) {
+  switch (m_arch.GetSpec().GetMachine()) {
   default:
     break;
   case llvm::Triple::mips:
@@ -2454,7 +2464,7 @@ lldb::addr_t Target::GetBreakableLoadAddress(lldb::addr_t addr) {
     addr_t current_offset = 0;
     uint32_t loop_count = 0;
     Address resolved_addr;
-    uint32_t arch_flags = m_arch.GetFlags();
+    uint32_t arch_flags = m_arch.GetSpec().GetFlags();
     bool IsMips16 = arch_flags & ArchSpec::eMIPSAse_mips16;
     bool IsMicromips = arch_flags & ArchSpec::eMIPSAse_micromips;
     SectionLoadList &section_load_list = GetSectionLoadList();
@@ -2507,7 +2517,7 @@ lldb::addr_t Target::GetBreakableLoadAddress(lldb::addr_t addr) {
 
     // Create Disassembler Instance
     lldb::DisassemblerSP disasm_sp(
-        Disassembler::FindPlugin(m_arch, nullptr, nullptr));
+        Disassembler::FindPlugin(m_arch.GetSpec(), nullptr, nullptr));
 
     ExecutionContext exe_ctx;
     CalculateExecutionContext(exe_ctx);

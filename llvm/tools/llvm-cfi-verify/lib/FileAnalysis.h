@@ -66,6 +66,12 @@ public:
   FileAnalysis(const FileAnalysis &) = delete;
   FileAnalysis(FileAnalysis &&Other) = default;
 
+  // Check whether the provided instruction is CFI protected in this file.
+  // Returns false if this instruction doesn't exist in this file, if it's not
+  // an indirect control flow instruction, or isn't CFI protected. Returns true
+  // otherwise.
+  bool isIndirectInstructionCFIProtected(uint64_t Address) const;
+
   // Returns the instruction at the provided address. Returns nullptr if there
   // is no instruction at the provided address.
   const Instr *getInstruction(uint64_t Address) const;

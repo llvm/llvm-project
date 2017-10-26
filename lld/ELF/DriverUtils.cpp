@@ -14,8 +14,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Driver.h"
-#include "Error.h"
 #include "Memory.h"
+#include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Reproduce.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/Optional.h"
@@ -51,25 +51,26 @@ static const opt::OptTable::Info OptInfo[] = {
 
 ELFOptTable::ELFOptTable() : OptTable(OptInfo) {}
 
-// Parse -color-diagnostics={auto,always,never} or -no-color-diagnostics.
-static bool getColorDiagnostics(opt::InputArgList &Args) {
+// Set color diagnostics according to -color-diagnostics={auto,always,never}
+// or -no-color-diagnostics flags.
+static void handleColorDiagnostics(opt::InputArgList &Args) {
   auto *Arg = Args.getLastArg(OPT_color_diagnostics, OPT_color_diagnostics_eq,
                               OPT_no_color_diagnostics);
   if (!Arg)
-    return ErrorOS->has_colors();
-  if (Arg->getOption().getID() == OPT_color_diagnostics)
-    return true;
-  if (Arg->getOption().getID() == OPT_no_color_diagnostics)
-    return false;
-
-  StringRef S = Arg->getValue();
-  if (S == "auto")
-    return ErrorOS->has_colors();
-  if (S == "always")
-    return true;
-  if (S != "never")
-    error("unknown option: -color-diagnostics=" + S);
-  return false;
+    return;
+  else if (Arg->getOption().getID() == OPT_color_diagnostics)
+    errorHandler().ColorDiagnostics = true;
+  else if (Arg->getOption().getID() == OPT_no_color_diagnostics)
+    errorHandler().ColorDiagnostics = false;
+  else {
+    StringRef S = Arg->getValue();
+    if (S == "always")
+      errorHandler().ColorDiagnostics = true;
+    else if (S == "never")
+      errorHandler().ColorDiagnostics = false;
+    else if (S != "auto")
+      error("unknown option: -color-diagnostics=" + S);
+  }
 }
 
 static cl::TokenizerCallback getQuotingStyle(opt::InputArgList &Args) {
@@ -103,9 +104,7 @@ opt::InputArgList ELFOptTable::parse(ArrayRef<const char *> Argv) {
   cl::ExpandResponseFiles(Saver, getQuotingStyle(Args), Vec);
   Args = this->ParseArgs(Vec, MissingIndex, MissingCount);
 
-  // Interpret -color-diagnostics early so that error messages
-  // for unknown flags are colored.
-  Config->ColorDiagnostics = getColorDiagnostics(Args);
+  handleColorDiagnostics(Args);
   if (MissingCount)
     error(Twine(Args.getArgString(MissingIndex)) + ": missing argument");
 

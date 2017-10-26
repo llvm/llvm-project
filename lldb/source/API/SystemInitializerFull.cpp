@@ -42,6 +42,7 @@
 #include "Plugins/ABI/SysV-ppc64/ABISysV_ppc64.h"
 #include "Plugins/ABI/SysV-s390x/ABISysV_s390x.h"
 #include "Plugins/ABI/SysV-x86_64/ABISysV_x86_64.h"
+#include "Plugins/Architecture/Arm/ArchitectureArm.h"
 #include "Plugins/Disassembler/llvm/DisassemblerLLVMC.h"
 #include "Plugins/DynamicLoader/MacOSX-DYLD/DynamicLoaderMacOS.h"
 #include "Plugins/DynamicLoader/MacOSX-DYLD/DynamicLoaderMacOSXDYLD.h"
@@ -50,9 +51,9 @@
 #include "Plugins/DynamicLoader/Windows-DYLD/DynamicLoaderWindowsDYLD.h"
 #include "Plugins/Instruction/ARM64/EmulateInstructionARM64.h"
 #include "Plugins/InstrumentationRuntime/ASan/ASanRuntime.h"
+#include "Plugins/InstrumentationRuntime/MainThreadChecker/MainThreadCheckerRuntime.h"
 #include "Plugins/InstrumentationRuntime/TSan/TSanRuntime.h"
 #include "Plugins/InstrumentationRuntime/UBSan/UBSanRuntime.h"
-#include "Plugins/InstrumentationRuntime/MainThreadChecker/MainThreadCheckerRuntime.h"
 #include "Plugins/JITLoader/GDB/JITLoaderGDB.h"
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/Go/GoLanguage.h"
@@ -304,6 +305,9 @@ void SystemInitializerFull::Initialize() {
   ABISysV_mips::Initialize();
   ABISysV_mips64::Initialize();
   ABISysV_s390x::Initialize();
+
+  ArchitectureArm::Initialize();
+
   DisassemblerLLVMC::Initialize();
 
   JITLoaderGDB::Initialize();

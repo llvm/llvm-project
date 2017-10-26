@@ -39,7 +39,7 @@ HEADER-NEXT:   MajorImageVersion: 0
 HEADER-NEXT:   MinorImageVersion: 0
 HEADER-NEXT:   MajorSubsystemVersion: 6
 HEADER-NEXT:   MinorSubsystemVersion: 0
-HEADER-NEXT:   SizeOfImage: 16896
+HEADER-NEXT:   SizeOfImage: 20480
 HEADER-NEXT:   SizeOfHeaders: 512
 HEADER-NEXT:   Subsystem: IMAGE_SUBSYSTEM_WINDOWS_CUI (0x3)
 HEADER-NEXT:   Characteristics [ (0x9140)

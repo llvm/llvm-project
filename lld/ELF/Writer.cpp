@@ -188,7 +188,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   // to the string table, and add entries to .got and .plt.
   // finalizeSections does that.
   finalizeSections();
-  if (ErrorCount)
+  if (errorCount())
     return;
 
   // If -compressed-debug-sections is specified, we need to compress
@@ -218,11 +218,11 @@ template <class ELFT> void Writer<ELFT>::run() {
   }
 
   // It does not make sense try to open the file if we have error already.
-  if (ErrorCount)
+  if (errorCount())
     return;
   // Write the result down to a file.
   openFile();
-  if (ErrorCount)
+  if (errorCount())
     return;
 
   if (!Config->OFormatBinary) {
@@ -236,12 +236,12 @@ template <class ELFT> void Writer<ELFT>::run() {
   // Backfill .note.gnu.build-id section content. This is done at last
   // because the content is usually a hash value of the entire output file.
   writeBuildId();
-  if (ErrorCount)
+  if (errorCount())
     return;
 
   // Handle -Map option.
   writeMapFile<ELFT>();
-  if (ErrorCount)
+  if (errorCount())
     return;
 
   if (auto EC = Buffer->commit())
@@ -1287,7 +1287,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   }
 
   // Do not proceed if there was an undefined symbol.
-  if (ErrorCount)
+  if (errorCount())
     return;
 
   addPredefinedSections();
