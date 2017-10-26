@@ -965,3 +965,10 @@ define i1 @length64_eq_const(i8* %X) nounwind {
   ret i1 %c
 }
 
+; This checks that we do not do stupid things with huge sizes.
+define i32 @huge_length(i8* %X, i8* %Y) nounwind {
+  %m = tail call i32 @memcmp(i8* %X, i8* %Y, i64 9223372036854775807) nounwind
+  ret i32 %m
+}
+
+

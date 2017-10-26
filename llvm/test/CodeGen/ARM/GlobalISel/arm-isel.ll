@@ -439,9 +439,9 @@ define arm_aapcscc void @test_brcond(i32 %n) {
 ; CHECK-NEXT: movgt [[RCMP:r[0-9]+]], #1
 ; CHECK: tst [[RCMP]], #1
 ; CHECK-NEXT: bne [[FALSE:.L[[:alnum:]_]+]]
-; CHECK: blx brcond1
+; CHECK: bl brcond1
 ; CHECK: [[FALSE]]:
-; CHECK: blx brcond2
+; CHECK: bl brcond2
 entry:
   %cmp = icmp sgt i32 %n, 0
   br i1 %cmp, label %if.true, label %if.false

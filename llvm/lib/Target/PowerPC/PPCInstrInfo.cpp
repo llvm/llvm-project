@@ -1715,38 +1715,47 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
   else if (MI->getParent() != CmpInstr.getParent())
     return false;
   else if (Value != 0) {
-    // The record-form instructions set CR bit based on signed comparison against 0.
-    // We try to convert a compare against 1 or -1 into a compare against 0.
-    bool Success = false;
-    if (!equalityOnly && MRI->hasOneUse(CRReg)) {
-      MachineInstr *UseMI = &*MRI->use_instr_begin(CRReg);
-      if (UseMI->getOpcode() == PPC::BCC) {
-        PPC::Predicate Pred = (PPC::Predicate)UseMI->getOperand(0).getImm();
-        unsigned PredCond = PPC::getPredicateCondition(Pred);
-        unsigned PredHint = PPC::getPredicateHint(Pred);
-        int16_t Immed = (int16_t)Value;
+    // The record-form instructions set CR bit based on signed comparison
+    // against 0. We try to convert a compare against 1 or -1 into a compare
+    // against 0 to exploit record-form instructions. For example, we change
+    // the condition "greater than -1" into "greater than or equal to 0"
+    // and "less than 1" into "less than or equal to 0".
 
-        // When modyfing the condition in the predicate, we propagate hint bits
-        // from the original predicate to the new one.
-        if (Immed == -1 && PredCond == PPC::PRED_GT) {
-          // We convert "greater than -1" into "greater than or equal to 0",
-          // since we are assuming signed comparison by !equalityOnly
-          PredsToUpdate.push_back(std::make_pair(&(UseMI->getOperand(0)),
-                                  PPC::getPredicate(PPC::PRED_GE, PredHint)));
-          Success = true;
-        }
-        else if (Immed == 1 && PredCond == PPC::PRED_LT) {
-          // We convert "less than 1" into "less than or equal to 0".
-          PredsToUpdate.push_back(std::make_pair(&(UseMI->getOperand(0)),
-                                  PPC::getPredicate(PPC::PRED_LE, PredHint)));
-          Success = true;
-        }
-      }
-    }
-
-    // PPC does not have a record-form SUBri.
-    if (!Success)
+    // Since we optimize comparison based on a specific branch condition,
+    // we don't optimize if condition code is used by more than once.
+    if (equalityOnly || !MRI->hasOneUse(CRReg))
       return false;
+
+    MachineInstr *UseMI = &*MRI->use_instr_begin(CRReg);
+    if (UseMI->getOpcode() != PPC::BCC)
+      return false;
+
+    PPC::Predicate Pred = (PPC::Predicate)UseMI->getOperand(0).getImm();
+    PPC::Predicate NewPred = Pred;
+    unsigned PredCond = PPC::getPredicateCondition(Pred);
+    unsigned PredHint = PPC::getPredicateHint(Pred);
+    int16_t Immed = (int16_t)Value;
+
+    // When modyfing the condition in the predicate, we propagate hint bits
+    // from the original predicate to the new one.
+    if (Immed == -1 && PredCond == PPC::PRED_GT)
+      // We convert "greater than -1" into "greater than or equal to 0",
+      // since we are assuming signed comparison by !equalityOnly
+      NewPred = PPC::getPredicate(PPC::PRED_GE, PredHint);
+    else if (Immed == -1 && PredCond == PPC::PRED_LE)
+      // We convert "less than or equal to -1" into "less than 0".
+      NewPred = PPC::getPredicate(PPC::PRED_LT, PredHint);
+    else if (Immed == 1 && PredCond == PPC::PRED_LT)
+      // We convert "less than 1" into "less than or equal to 0".
+      NewPred = PPC::getPredicate(PPC::PRED_LE, PredHint);
+    else if (Immed == 1 && PredCond == PPC::PRED_GE)
+      // We convert "greater than or equal to 1" into "greater than 0".
+      NewPred = PPC::getPredicate(PPC::PRED_GT, PredHint);
+    else
+      return false;
+
+    PredsToUpdate.push_back(std::make_pair(&(UseMI->getOperand(0)),
+                                            NewPred));
   }
 
   // Search for Sub.
