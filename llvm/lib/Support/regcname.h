@@ -38,6 +38,8 @@
 #ifndef LLVM_SUPPORT_REGCNAME_H
 #define LLVM_SUPPORT_REGCNAME_H
 
+#include <stddef.h>
+
 /* character-name table */
 static struct cname {
 	const char *name;

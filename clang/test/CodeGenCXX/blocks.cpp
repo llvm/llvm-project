@@ -122,7 +122,6 @@ namespace test4 {
   // CHECK-LABEL: define internal void @___ZN5test44testEv_block_invoke
   // CHECK: [[TMP:%.*]] = alloca [[A:%.*]], align 1
   // CHECK-NEXT: store i8* [[BLOCKDESC:%.*]], i8** {{.*}}, align 8
-  // CHECK-NEXT: load i8*, i8**
   // CHECK-NEXT: bitcast i8* [[BLOCKDESC]] to <{ i8*, i32, i32, i8*, %struct.__block_descriptor* }>*
   // CHECK:      call void @_ZN5test41AC1Ev([[A]]* [[TMP]])
   // CHECK-NEXT: call void @_ZN5test43fooENS_1AE([[A]]* [[TMP]])

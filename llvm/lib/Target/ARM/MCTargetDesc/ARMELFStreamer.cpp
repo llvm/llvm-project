@@ -1171,6 +1171,8 @@ void ARMELFStreamer::reset() {
   ATS.reset();
   MappingSymbolCounter = 0;
   MCELFStreamer::reset();
+  LastMappingSymbols.clear();
+  LastEMSInfo.reset();
   // MCELFStreamer clear's the assembler's e_flags. However, for
   // arm we manually set the ABI version on streamer creation, so
   // do the same here

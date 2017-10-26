@@ -62,7 +62,7 @@ llvm::Error StandaloneToolExecutor::execute(
   auto &Action = Actions.front();
   Tool.appendArgumentsAdjuster(Action.second);
   Tool.appendArgumentsAdjuster(ArgsAdjuster);
-  if (int Ret = Tool.run(Action.first.get()))
+  if (Tool.run(Action.first.get()))
     return make_string_error("Failed to run action.");
 
   return llvm::Error::success();

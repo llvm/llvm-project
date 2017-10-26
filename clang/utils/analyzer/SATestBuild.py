@@ -450,29 +450,21 @@ def checkBuild(SBOutputDir):
             len(Plists)
         return
 
-    # Create summary file to display when the build fails.
-    SummaryPath = os.path.join(
-        SBOutputDir, LogFolderName, FailuresSummaryFileName)
-    if (Verbose > 0):
-        print "  Creating the failures summary file %s" % (SummaryPath,)
-
-    with open(SummaryPath, "w+") as SummaryLog:
-        SummaryLog.write("Total of %d failures discovered.\n" % (TotalFailed,))
-        if TotalFailed > NumOfFailuresInSummary:
-            SummaryLog.write("See the first %d below.\n" % (
-                NumOfFailuresInSummary,))
+    print "Error: analysis failed."
+    print "Total of %d failures discovered." % TotalFailed
+    if TotalFailed > NumOfFailuresInSummary:
+        print "See the first %d below.\n" % NumOfFailuresInSummary
         # TODO: Add a line "See the results folder for more."
 
-        Idx = 0
-        for FailLogPathI in Failures:
-            if Idx >= NumOfFailuresInSummary:
-                break
-            Idx += 1
-            SummaryLog.write("\n-- Error #%d -----------\n" % (Idx,))
-            with open(FailLogPathI, "r") as FailLogI:
-                shutil.copyfileobj(FailLogI, SummaryLog)
+    Idx = 0
+    for FailLogPathI in Failures:
+        if Idx >= NumOfFailuresInSummary:
+            break
+        Idx += 1
+        print "\n-- Error #%d -----------\n" % Idx
+        with open(FailLogPathI, "r") as FailLogI:
+            shutil.copyfileobj(FailLogI, sys.stdout)
 
-    print "Error: analysis failed. See ", SummaryPath
     sys.exit(1)
 
 

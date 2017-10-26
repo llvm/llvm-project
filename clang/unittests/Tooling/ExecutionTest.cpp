@@ -183,10 +183,10 @@ TEST(CreateToolExecutorTest, CreateTestToolExecutor) {
 }
 
 TEST(StandaloneToolTest, SynctaxOnlyActionOnSimpleCode) {
-  FixedCompilationDatabase Compilations("/", std::vector<std::string>());
+  FixedCompilationDatabase Compilations(".", std::vector<std::string>());
   StandaloneToolExecutor Executor(Compilations,
-                                  std::vector<std::string>(1, "/a.cc"));
-  Executor.mapVirtualFile("/a.cc", "int x = 0;");
+                                  std::vector<std::string>(1, "a.cc"));
+  Executor.mapVirtualFile("a.cc", "int x = 0;");
 
   auto Err = Executor.execute(newFrontendActionFactory<SyntaxOnlyAction>(),
                               getClangSyntaxOnlyAdjuster());
@@ -194,10 +194,10 @@ TEST(StandaloneToolTest, SynctaxOnlyActionOnSimpleCode) {
 }
 
 TEST(StandaloneToolTest, SimpleAction) {
-  FixedCompilationDatabase Compilations("/", std::vector<std::string>());
+  FixedCompilationDatabase Compilations(".", std::vector<std::string>());
   StandaloneToolExecutor Executor(Compilations,
-                                  std::vector<std::string>(1, "/a.cc"));
-  Executor.mapVirtualFile("/a.cc", "int x = 0;");
+                                  std::vector<std::string>(1, "a.cc"));
+  Executor.mapVirtualFile("a.cc", "int x = 0;");
 
   auto Err = Executor.execute(std::unique_ptr<FrontendActionFactory>(
       new ReportResultActionFactory(Executor.getExecutionContext())));
@@ -207,10 +207,10 @@ TEST(StandaloneToolTest, SimpleAction) {
 }
 
 TEST(StandaloneToolTest, SimpleActionWithResult) {
-  FixedCompilationDatabase Compilations("/", std::vector<std::string>());
+  FixedCompilationDatabase Compilations(".", std::vector<std::string>());
   StandaloneToolExecutor Executor(Compilations,
-                                  std::vector<std::string>(1, "/a.cc"));
-  Executor.mapVirtualFile("/a.cc", "int x = 0; void f() {}");
+                                  std::vector<std::string>(1, "a.cc"));
+  Executor.mapVirtualFile("a.cc", "int x = 0; void f() {}");
 
   auto Err = Executor.execute(std::unique_ptr<FrontendActionFactory>(
       new ReportResultActionFactory(Executor.getExecutionContext())));
