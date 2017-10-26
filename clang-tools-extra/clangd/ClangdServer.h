@@ -271,13 +271,14 @@ public:
   /// will be used. If \p UsedFS is non-null, it will be overwritten by
   /// vfs::FileSystem used for signature help. This method should only be called
   /// for currently tracked files.
-  Tagged<SignatureHelp>
+  llvm::Expected<Tagged<SignatureHelp>>
   signatureHelp(PathRef File, Position Pos,
                 llvm::Optional<StringRef> OverridenContents = llvm::None,
                 IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS = nullptr);
 
   /// Get definition of symbol at a specified \p Line and \p Column in \p File.
-  Tagged<std::vector<Location>> findDefinitions(PathRef File, Position Pos);
+  llvm::Expected<Tagged<std::vector<Location>>> findDefinitions(PathRef File,
+                                                                Position Pos);
 
   /// Helper function that returns a path to the corresponding source file when
   /// given a header file and vice versa.
