@@ -45,6 +45,9 @@ enum Kind {
   kw_global,
   kw_constant,
 
+  kw_dso_local,
+  kw_dso_preemptable,
+
   kw_private,
   kw_internal,
   kw_linkonce,

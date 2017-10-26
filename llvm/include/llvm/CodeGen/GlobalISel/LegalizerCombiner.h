@@ -88,7 +88,8 @@ public:
       unsigned DstReg = MI.getOperand(0).getReg();
       LLT DstTy = MRI.getType(DstReg);
       if (isInstUnsupported(TargetOpcode::G_SHL, DstTy) ||
-          isInstUnsupported(TargetOpcode::G_ASHR, DstTy))
+          isInstUnsupported(TargetOpcode::G_ASHR, DstTy) ||
+          isInstUnsupported(TargetOpcode::G_CONSTANT, DstTy))
         return false;
       DEBUG(dbgs() << ".. Combine MI: " << MI;);
       Builder.setInstr(MI);

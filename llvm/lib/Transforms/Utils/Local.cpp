@@ -649,9 +649,13 @@ void llvm::MergeBasicBlockIntoOnlyPred(BasicBlock *DestBB, DominatorTree *DT) {
     DestBB->moveAfter(PredBB);
 
   if (DT) {
-    BasicBlock *PredBBIDom = DT->getNode(PredBB)->getIDom()->getBlock();
-    DT->changeImmediateDominator(DestBB, PredBBIDom);
-    DT->eraseNode(PredBB);
+    // For some irreducible CFG we end up having forward-unreachable blocks
+    // so check if getNode returns a valid node before updating the domtree.
+    if (DomTreeNode *DTN = DT->getNode(PredBB)) {
+      BasicBlock *PredBBIDom = DTN->getIDom()->getBlock();
+      DT->changeImmediateDominator(DestBB, PredBBIDom);
+      DT->eraseNode(PredBB);
+    }
   }
   // Nuke BB.
   PredBB->eraseFromParent();

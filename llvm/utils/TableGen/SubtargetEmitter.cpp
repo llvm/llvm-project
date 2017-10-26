@@ -667,8 +667,8 @@ Record *SubtargetEmitter::FindWriteResources(
   // then call FindWriteResources recursively with that model here.
   if (!ResDef) {
     PrintFatalError(ProcModel.ModelDef->getLoc(),
-                  std::string("Processor does not define resources for ")
-                  + SchedWrite.TheDef->getName());
+                    Twine("Processor does not define resources for ") +
+                    SchedWrite.TheDef->getName());
   }
   return ResDef;
 }
@@ -719,8 +719,8 @@ Record *SubtargetEmitter::FindReadAdvance(const CodeGenSchedRW &SchedRead,
   // then call FindReadAdvance recursively with that model here.
   if (!ResDef && SchedRead.TheDef->getName() != "ReadDefault") {
     PrintFatalError(ProcModel.ModelDef->getLoc(),
-                  std::string("Processor does not define resources for ")
-                  + SchedRead.TheDef->getName());
+                    Twine("Processor does not define resources for ") +
+                    SchedRead.TheDef->getName());
   }
   return ResDef;
 }

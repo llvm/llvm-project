@@ -239,9 +239,9 @@ and we plan to deprecate it in future LLVM releases.
   void @llvm.dbg.value(metadata, metadata, metadata)
 
 This intrinsic provides information when a user source variable is set to a new
-value.  The first argument is the new value (wrapped as metadata).  The third
+value.  The first argument is the new value (wrapped as metadata).  The second
 argument is a `local variable <LangRef.html#dilocalvariable>`_ containing a
-description of the variable.  The fourth argument is a `complex expression
+description of the variable.  The third argument is a `complex expression
 <LangRef.html#diexpression>`_.
 
 Object lifetimes and scoping

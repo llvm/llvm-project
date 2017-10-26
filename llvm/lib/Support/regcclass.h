@@ -40,6 +40,8 @@
 #ifndef LLVM_SUPPORT_REGCCLASS_H
 #define LLVM_SUPPORT_REGCCLASS_H
 
+#include <stddef.h>
+
 /* character-class table */
 static struct cclass {
 	const char *name;
