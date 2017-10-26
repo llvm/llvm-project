@@ -49,14 +49,14 @@ class MiniDumpTestCase(TestBase):
         self.process = self.target.LoadCore("fizzbuzz_no_heap.dmp")
         self.assertEqual(self.process.GetNumThreads(), 1)
         thread = self.process.GetThreadAtIndex(0)
-        # The crash is in main, so there should be one frame on the stack.
-        self.assertEqual(thread.GetNumFrames(), 1)
-        frame = thread.GetFrameAtIndex(0)
-        self.assertTrue(frame.IsValid())
-        pc = frame.GetPC()
-        eip = frame.FindRegister("pc")
-        self.assertTrue(eip.IsValid())
-        self.assertEqual(pc, eip.GetValueAsUnsigned())
+
+        pc_list = [ 0x00164d14, 0x00167c79, 0x00167e6d, 0x7510336a, 0x77759882, 0x77759855]
+
+        self.assertEqual(thread.GetNumFrames(), len(pc_list))
+        for i in range(len(pc_list)):
+            frame = thread.GetFrameAtIndex(i)
+            self.assertTrue(frame.IsValid())
+            self.assertEqual(frame.GetPC(), pc_list[i])
 
     @skipUnlessWindows # Minidump saving works only on windows
     def test_deeper_stack_in_mini_dump(self):

@@ -19,6 +19,7 @@ def no_whole_archive: F<"no-whole-archive">,
 def o: JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
 def out_implib: Separate<["--"], "out-implib">, HelpText<"Import library name">;
+def out_implib_eq: Joined<["--"], "out-implib=">, Alias<out_implib>;
 def output_def: S<"output-def">, HelpText<"Output def file">;
 def shared: F<"shared">, HelpText<"Build a shared object">;
 def subs: S<"subsystem">, HelpText<"Specify subsystem">;
@@ -36,6 +37,7 @@ def Bdynamic: F<"Bdynamic">, HelpText<"Link against shared libraries">;
 def Bstatic: F<"Bstatic">, HelpText<"Do not link against shared libraries">;
 def O: Joined<["-"], "O">, HelpText<"Optimize output file size">;
 def enable_auto_image_base: F<"enable-auto-image-base">;
+def enable_auto_import: F<"enable-auto-import">;
 def full_shutdown: Flag<["--"], "full-shutdown">;
 def major_image_version: S<"major-image-version">;
 def minor_image_version: S<"minor-image-version">;

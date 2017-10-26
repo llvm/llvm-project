@@ -436,12 +436,24 @@ void Sema::diagnoseNullableToNonnullConversion(QualType DstType,
 }
 
 void Sema::diagnoseZeroToNullptrConversion(CastKind Kind, const Expr* E) {
+  if (Diags.isIgnored(diag::warn_zero_as_null_pointer_constant,
+                      E->getLocStart()))
+    return;
+  // nullptr only exists from C++11 on, so don't warn on its absence earlier.
+  if (!getLangOpts().CPlusPlus11)
+    return;
+
   if (Kind != CK_NullToPointer && Kind != CK_NullToMemberPointer)
     return;
   if (E->IgnoreParenImpCasts()->getType()->isNullPtrType())
     return;
-  // nullptr only exists from C++11 on, so don't warn on its absence earlier.
-  if (!getLangOpts().CPlusPlus11)
+
+  // If it is a macro from system header, and if the macro name is not "NULL",
+  // do not warn.
+  SourceLocation MaybeMacroLoc = E->getLocStart();
+  if (Diags.getSuppressSystemWarnings() &&
+      SourceMgr.isInSystemMacro(MaybeMacroLoc) &&
+      !findMacroSpelling(MaybeMacroLoc, "NULL"))
     return;
 
   Diag(E->getLocStart(), diag::warn_zero_as_null_pointer_constant)

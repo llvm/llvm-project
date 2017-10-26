@@ -1056,7 +1056,7 @@ int d;
         AddDocument(FileIndex);
 
       Position Pos{LineDist(RandGen), ColumnDist(RandGen)};
-      Server.findDefinitions(FilePaths[FileIndex], Pos);
+      ASSERT_TRUE(!!Server.findDefinitions(FilePaths[FileIndex], Pos));
     };
 
     std::vector<std::function<void()>> AsyncRequests = {

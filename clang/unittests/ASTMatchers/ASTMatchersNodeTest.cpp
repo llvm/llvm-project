@@ -1590,7 +1590,7 @@ TEST(ObjCMessageExprMatcher, SimpleExprs) {
     )));
 }
 
-TEST(ObjCDeclMacher, CoreDecls) {
+TEST(ObjCDeclMatcher, CoreDecls) {
   std::string ObjCString =
     "@protocol Proto "
     "- (void)protoDidThing; "
@@ -1605,6 +1605,9 @@ TEST(ObjCDeclMacher, CoreDecls) {
     "{ id _ivar; } "
     "- (void)anything {} "
     "@end "
+    "@implementation Thing (ABC) "
+    "- (void)abc_doThing {} "
+    "@end "
     ;
 
   EXPECT_TRUE(matchesObjC(
@@ -1616,6 +1619,9 @@ TEST(ObjCDeclMacher, CoreDecls) {
   EXPECT_TRUE(matchesObjC(
     ObjCString,
     objcCategoryDecl(hasName("ABC"))));
+  EXPECT_TRUE(matchesObjC(
+    ObjCString,
+    objcCategoryImplDecl(hasName("ABC"))));
   EXPECT_TRUE(matchesObjC(
     ObjCString,
     objcMethodDecl(hasName("protoDidThing"))));

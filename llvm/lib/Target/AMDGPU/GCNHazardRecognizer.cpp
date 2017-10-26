@@ -335,6 +335,18 @@ int GCNHazardRecognizer::checkSMRDHazards(MachineInstr *SMRD) {
   // SGPR was written by a VALU instruction.
   int SmrdSgprWaitStates = 4;
   auto IsHazardDefFn = [this] (MachineInstr *MI) { return TII.isVALU(*MI); };
+  auto IsBufferHazardDefFn = [this] (MachineInstr *MI) { return TII.isSALU(*MI); };
+
+  bool IsBufferSMRD = SMRD->getOpcode() == AMDGPU::S_BUFFER_LOAD_DWORD_IMM ||
+                      SMRD->getOpcode() == AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM ||
+                      SMRD->getOpcode() == AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM ||
+                      SMRD->getOpcode() == AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM ||
+                      SMRD->getOpcode() == AMDGPU::S_BUFFER_LOAD_DWORDX16_IMM ||
+                      SMRD->getOpcode() == AMDGPU::S_BUFFER_LOAD_DWORD_SGPR ||
+                      SMRD->getOpcode() == AMDGPU::S_BUFFER_LOAD_DWORDX2_SGPR ||
+                      SMRD->getOpcode() == AMDGPU::S_BUFFER_LOAD_DWORDX4_SGPR ||
+                      SMRD->getOpcode() == AMDGPU::S_BUFFER_LOAD_DWORDX8_SGPR ||
+                      SMRD->getOpcode() == AMDGPU::S_BUFFER_LOAD_DWORDX16_SGPR;
 
   for (const MachineOperand &Use : SMRD->uses()) {
     if (!Use.isReg())
@@ -342,7 +354,22 @@ int GCNHazardRecognizer::checkSMRDHazards(MachineInstr *SMRD) {
     int WaitStatesNeededForUse =
         SmrdSgprWaitStates - getWaitStatesSinceDef(Use.getReg(), IsHazardDefFn);
     WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForUse);
+
+    // This fixes what appears to be undocumented hardware behavior in SI where
+    // s_mov writing a descriptor and s_buffer_load_dword reading the descriptor
+    // needs some number of nops in between. We don't know how many we need, but
+    // let's use 4. This wasn't discovered before probably because the only
+    // case when this happens is when we expand a 64-bit pointer into a full
+    // descriptor and use s_buffer_load_dword instead of s_load_dword, which was
+    // probably never encountered in the closed-source land.
+    if (IsBufferSMRD) {
+      int WaitStatesNeededForUse =
+        SmrdSgprWaitStates - getWaitStatesSinceDef(Use.getReg(),
+                                                   IsBufferHazardDefFn);
+      WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForUse);
+    }
   }
+
   return WaitStatesNeeded;
 }
 

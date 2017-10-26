@@ -26,6 +26,10 @@ Content-Length: 246
 
 {"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///main.cpp","languageId":"cpp","version":1,"text":"struct fake { int a, bb, ccc; int f(int i, const float f) const; };\nint main() {\n  fake f;\n  f.\n}\n"}}}
 
+Content-Length: 104
+
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///main.cpp"}}}
+
 Content-Type: application/vscode-jsonrpc; charset-utf-8
 Content-Length: 146
 

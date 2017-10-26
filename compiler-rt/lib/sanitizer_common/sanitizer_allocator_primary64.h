@@ -669,10 +669,16 @@ class SizeClassAllocator64 {
 
     // Map more space for chunks, if necessary.
     if (new_space_end > region->mapped_user) {
-      if (!kUsingConstantSpaceBeg && kRandomShuffleChunks)
-        if (UNLIKELY(region->mapped_user == 0))
+      if (UNLIKELY(region->mapped_user == 0)) {
+        if (!kUsingConstantSpaceBeg && kRandomShuffleChunks)
           // The random state is initialized from ASLR.
           region->rand_state = static_cast<u32>(region_beg >> 12);
+        // Postpone the first release to OS attempt for ReleaseToOSIntervalMs,
+        // preventing just allocated memory from being released sooner than
+        // necessary and also preventing extraneous ReleaseMemoryPagesToOS calls
+        // for short lived processes.
+        region->rtoi.last_release_at_ns = NanoTime();
+      }
       // Do the mmap for the user memory.
       uptr map_size = kUserMapSize;
       while (new_space_end > region->mapped_user + map_size)

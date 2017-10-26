@@ -681,7 +681,7 @@ for each library name referenced.
 MODULE_CODE_GLOBALVAR Record
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-``[GLOBALVAR, strtab offset, strtab size, pointer type, isconst, initid, linkage, alignment, section, visibility, threadlocal, unnamed_addr, externally_initialized, dllstorageclass, comdat]``
+``[GLOBALVAR, strtab offset, strtab size, pointer type, isconst, initid, linkage, alignment, section, visibility, threadlocal, unnamed_addr, externally_initialized, dllstorageclass, comdat, attributes, preemptionspecifier]``
 
 The ``GLOBALVAR`` record (code 7) marks the declaration or definition of a
 global variable. The operand fields are:
@@ -761,12 +761,21 @@ global variable. The operand fields are:
 
 * *comdat*: An encoding of the COMDAT of this function
 
+* *attributes*: If nonzero, the 1-based index into the table of AttributeLists.
+
+.. _bcpreemptionspecifier:
+
+* *preemptionspecifier*: If present, an encoding of the runtime preemption specifier of this variable:
+
+  * ``dso_preemptable``: code 0
+  * ``dso_local``: code 1
+
 .. _FUNCTION:
 
 MODULE_CODE_FUNCTION Record
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-``[FUNCTION, strtab offset, strtab size, type, callingconv, isproto, linkage, paramattr, alignment, section, visibility, gc, prologuedata, dllstorageclass, comdat, prefixdata, personalityfn]``
+``[FUNCTION, strtab offset, strtab size, type, callingconv, isproto, linkage, paramattr, alignment, section, visibility, gc, prologuedata, dllstorageclass, comdat, prefixdata, personalityfn, preemptionspecifier]``
 
 The ``FUNCTION`` record (code 8) marks the declaration or definition of a
 function. The operand fields are:
@@ -828,10 +837,12 @@ function. The operand fields are:
 * *personalityfn*: If non-zero, the value index of the personality function for this function,
   plus 1.
 
+* *preemptionspecifier*: If present, an encoding of the :ref:`runtime preemption specifier<bcpreemptionspecifier>`  of this function.
+ 
 MODULE_CODE_ALIAS Record
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-``[ALIAS, strtab offset, strtab size, alias type, aliasee val#, linkage, visibility, dllstorageclass, threadlocal, unnamed_addr]``
+``[ALIAS, strtab offset, strtab size, alias type, aliasee val#, linkage, visibility, dllstorageclass, threadlocal, unnamed_addr, preemptionspecifier]``
 
 The ``ALIAS`` record (code 9) marks the definition of an alias. The operand
 fields are
@@ -855,6 +866,8 @@ fields are
 
 * *unnamed_addr*: If present, an encoding of the
   :ref:`unnamed_addr<bcunnamedaddr>` attribute of this alias
+
+* *preemptionspecifier*: If present, an encoding of the :ref:`runtime preemption specifier<bcpreemptionspecifier>`  of this alias.
 
 .. _MODULE_CODE_GCNAME:
 

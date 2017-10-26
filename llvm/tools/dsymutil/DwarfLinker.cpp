@@ -2878,7 +2878,8 @@ DIE *DwarfLinker::DIECloner::cloneDIE(
                               Tag == dwarf::DW_TAG_inlined_subroutine);
   } else if (isTypeTag(Tag) && !AttrInfo.IsDeclaration &&
              getDIENames(InputDIE, AttrInfo)) {
-    Unit.addTypeAccelerator(Die, AttrInfo.Name, AttrInfo.NameOffset);
+    if (AttrInfo.Name)
+      Unit.addTypeAccelerator(Die, AttrInfo.Name, AttrInfo.NameOffset);
   }
 
   // Determine whether there are any children that we want to keep.

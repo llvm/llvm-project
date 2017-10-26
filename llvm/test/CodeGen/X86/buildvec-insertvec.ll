@@ -60,11 +60,20 @@ entry:
   ret <4 x float> %5
 }
 
+; FIXME: This could be 'movhpd {{.*#+}} xmm0 = xmm0[0],mem[0]'.
+
 define <2 x double> @test_negative_zero_2(<2 x double> %A) {
-; CHECK-LABEL: test_negative_zero_2:
-; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    movhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
-; CHECK-NEXT:    retq
+; SSE2-LABEL: test_negative_zero_2:
+; SSE2:       # BB#0: # %entry
+; SSE2-NEXT:    movapd {{.*#+}} xmm1 = <u,-0>
+; SSE2-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
+; SSE2-NEXT:    movapd %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: test_negative_zero_2:
+; SSE41:       # BB#0: # %entry
+; SSE41-NEXT:    blendpd {{.*#+}} xmm0 = xmm0[0],mem[1]
+; SSE41-NEXT:    retq
 entry:
   %0 = extractelement <2 x double> %A, i32 0
   %1 = insertelement <2 x double> undef, double %0, i32 0
