@@ -71,17 +71,19 @@ struct ErrorDoubleFree : ErrorBase {
   void Print();
 };
 
-struct ErrorNewDeleteSizeMismatch : ErrorBase {
-  // ErrorNewDeleteSizeMismatch doesn't own the stack trace.
+struct ErrorNewDeleteTypeMismatch : ErrorBase {
+  // ErrorNewDeleteTypeMismatch doesn't own the stack trace.
   const BufferedStackTrace *free_stack;
   HeapAddressDescription addr_description;
   uptr delete_size;
+  uptr delete_alignment;
   // VS2013 doesn't implement unrestricted unions, so we need a trivial default
   // constructor
-  ErrorNewDeleteSizeMismatch() = default;
-  ErrorNewDeleteSizeMismatch(u32 tid, BufferedStackTrace *stack, uptr addr,
-                             uptr delete_size_)
-      : ErrorBase(tid), free_stack(stack), delete_size(delete_size_) {
+  ErrorNewDeleteTypeMismatch() = default;
+  ErrorNewDeleteTypeMismatch(u32 tid, BufferedStackTrace *stack, uptr addr,
+                             uptr delete_size_, uptr delete_alignment_)
+      : ErrorBase(tid), free_stack(stack), delete_size(delete_size_),
+        delete_alignment(delete_alignment_) {
     GetHeapAddressInformation(addr, 1, &addr_description);
     scariness.Clear();
     scariness.Scare(10, "new-delete-type-mismatch");
@@ -293,7 +295,7 @@ struct ErrorGeneric : ErrorBase {
 #define ASAN_FOR_EACH_ERROR_KIND(macro)         \
   macro(DeadlySignal)                           \
   macro(DoubleFree)                             \
-  macro(NewDeleteSizeMismatch)                  \
+  macro(NewDeleteTypeMismatch)                  \
   macro(FreeNotMalloced)                        \
   macro(AllocTypeMismatch)                      \
   macro(MallocUsableSizeNotOwned)               \
