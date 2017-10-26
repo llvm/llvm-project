@@ -57,6 +57,8 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- New module `objc` for Objective-C style checks.
+
 - Renamed checks to use correct term "implicit conversion" instead of "implicit
   cast" and modified messages and option names accordingly:
 

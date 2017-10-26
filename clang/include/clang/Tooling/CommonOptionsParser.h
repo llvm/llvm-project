@@ -109,6 +109,10 @@ public:
     return SourcePathList;
   }
 
+  /// Returns the argument adjuster calculated from "--extra-arg" and
+  //"--extra-arg-before" options.
+  ArgumentsAdjuster getArgumentsAdjuster() { return Adjuster; }
+
   static const char *const HelpMessage;
 
 private:
@@ -121,6 +125,7 @@ private:
 
   std::unique_ptr<CompilationDatabase> Compilations;
   std::vector<std::string> SourcePathList;
+  ArgumentsAdjuster Adjuster;
 };
 
 class ArgumentsAdjustingCompilations : public CompilationDatabase {

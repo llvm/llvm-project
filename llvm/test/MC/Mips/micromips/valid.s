@@ -49,6 +49,10 @@ sdbbp16 14                  # CHECK: sdbbp16 14         # encoding: [0x46,0xce]
 lw $3, 32($sp)              # CHECK: lw $3, 32($sp)     # encoding: [0x48,0x68]
 sw $4, 124($sp)             # CHECK: sw $4, 124($sp)    # encoding: [0xc8,0x9f]
 lw $3, 32($gp)              # CHECK: lw $3, 32($gp)     # encoding: [0x65,0x88]
+abs.s $f0, $f2              # CHECK:  abs.s $f0, $f2    # encoding: [0x54,0x02,0x03,0x7b]
+                            # CHECK-NEXT:               # <MCInst #{{[0-9]+}} FABS_S_MM
+abs.d $f4, $f6              # CHECK:  abs.d $f4, $f6    # encoding: [0x54,0x86,0x23,0x7b]
+                            # CHECK-NEXT:               # <MCInst #{{[0-9]+}} FABS_MM
 add $9, $6, $7              # CHECK: add $9, $6, $7         # encoding: [0x00,0xe6,0x49,0x10]
 addi $9, $6, 17767          # CHECK: addi $9, $6, 17767     # encoding: [0x11,0x26,0x45,0x67]
 addiu $9, $6, -15001        # CHECK: addiu $9, $6, -15001   # encoding: [0x31,0x26,0xc5,0x67]

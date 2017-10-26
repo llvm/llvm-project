@@ -73,6 +73,8 @@ void ClangdLSPServer::onDocumentDidOpen(Ctx C,
 
 void ClangdLSPServer::onDocumentDidChange(Ctx C,
                                           DidChangeTextDocumentParams &Params) {
+  if (Params.contentChanges.size() != 1)
+    return C.replyError(-32602, "can only apply one change at a time");
   // We only support full syncing right now.
   Server.addDocument(Params.textDocument.uri.file,
                      Params.contentChanges[0].text);

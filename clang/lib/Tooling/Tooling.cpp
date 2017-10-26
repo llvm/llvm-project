@@ -29,6 +29,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Host.h"
@@ -347,11 +348,7 @@ void ClangTool::mapVirtualFile(StringRef FilePath, StringRef Content) {
 }
 
 void ClangTool::appendArgumentsAdjuster(ArgumentsAdjuster Adjuster) {
-  if (ArgsAdjuster)
-    ArgsAdjuster =
-        combineAdjusters(std::move(ArgsAdjuster), std::move(Adjuster));
-  else
-    ArgsAdjuster = std::move(Adjuster);
+  ArgsAdjuster = combineAdjusters(std::move(ArgsAdjuster), std::move(Adjuster));
 }
 
 void ClangTool::clearArgumentsAdjusters() {

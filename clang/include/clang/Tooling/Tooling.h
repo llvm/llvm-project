@@ -31,12 +31,12 @@
 #define LLVM_CLANG_TOOLING_TOOLING_H
 
 #include "clang/AST/ASTConsumer.h"
-#include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Driver/Util.h"
 #include "clang/Frontend/FrontendAction.h"
+#include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Lex/ModuleLoader.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CompilationDatabase.h"
@@ -337,7 +337,9 @@ class ClangTool {
   /// The file manager is shared between all translation units.
   FileManager &getFiles() { return *Files; }
 
- private:
+  llvm::ArrayRef<std::string> getSourcePaths() const { return SourcePaths; }
+
+private:
   const CompilationDatabase &Compilations;
   std::vector<std::string> SourcePaths;
   std::shared_ptr<PCHContainerOperations> PCHContainerOps;
