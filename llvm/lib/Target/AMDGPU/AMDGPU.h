@@ -134,10 +134,6 @@ extern char &AMDGPUSimplifyLibCallsID;
 void initializeAMDGPUUseNativeCallsPass(PassRegistry &);
 extern char &AMDGPUUseNativeCallsID;
 
-ModulePass *createAMDGPUclpVectorExpansionPass();
-void initializeAMDGPUclpVectorExpansionPass(PassRegistry &);
-extern char &AMDGPUclpVectorExpansionID;
-
 // Passes common to R600 and SI
 FunctionPass *createAMDGPUPromoteAlloca();
 void initializeAMDGPUPromoteAllocaPass(PassRegistry&);
