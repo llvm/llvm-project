@@ -34745,6 +34745,11 @@ static SDValue combineVectorSizedSetCCEquality(SDNode *SetCC, SelectionDAG &DAG,
   if (!OpVT.isScalarInteger() || OpSize < 128 || isNullConstant(Y))
     return SDValue();
 
+  // Bail out if we know that this is not really just an oversized integer.
+  if (peekThroughBitcasts(X).getValueType() == MVT::f128 ||
+      peekThroughBitcasts(Y).getValueType() == MVT::f128)
+    return SDValue();
+
   // TODO: Use PXOR + PTEST for SSE4.1 or later?
   // TODO: Add support for AVX-512.
   EVT VT = SetCC->getValueType(0);
