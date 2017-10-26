@@ -7675,14 +7675,16 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   uint64_t NonZeros = 0;
   bool IsAllConstants = true;
   SmallSet<SDValue, 8> Values;
+  unsigned NumConstants = NumElems;
   for (unsigned i = 0; i < NumElems; ++i) {
     SDValue Elt = Op.getOperand(i);
     if (Elt.isUndef())
       continue;
     Values.insert(Elt);
-    if (Elt.getOpcode() != ISD::Constant &&
-        Elt.getOpcode() != ISD::ConstantFP)
+    if (!isa<ConstantSDNode>(Elt) && !isa<ConstantFPSDNode>(Elt)) {
       IsAllConstants = false;
+      NumConstants--;
+    }
     if (X86::isZeroNode(Elt))
       NumZero++;
     else {
@@ -7695,6 +7697,52 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   // All undef vector. Return an UNDEF.  All zero vectors were handled above.
   if (NumNonZero == 0)
     return DAG.getUNDEF(VT);
+
+  // If we are inserting one variable into a vector of non-zero constants, try
+  // to avoid loading each constant element as a scalar. Load the constants as a
+  // vector and then insert the variable scalar element. If insertion is not
+  // supported, we assume that we will fall back to a shuffle to get the scalar
+  // blended with the constants. Insertion into a zero vector is handled as a
+  // special-case somewhere below here.
+  LLVMContext &Context = *DAG.getContext();
+  if (NumConstants == NumElems - 1 && NumNonZero != 1 &&
+      (isOperationLegalOrCustom(ISD::INSERT_VECTOR_ELT, VT) ||
+       isOperationLegalOrCustom(ISD::VECTOR_SHUFFLE, VT))) {
+    // Create an all-constant vector. The variable element in the old
+    // build vector is replaced by undef in the constant vector. Save the
+    // variable scalar element and its index for use in the insertelement.
+    Type *EltType = Op.getValueType().getScalarType().getTypeForEVT(Context);
+    SmallVector<Constant *, 16> ConstVecOps(NumElems, UndefValue::get(EltType));
+    SDValue VarElt;
+    SDValue InsIndex;
+    for (unsigned i = 0; i != NumElems; ++i) {
+      SDValue Elt = Op.getOperand(i);
+      if (auto *C = dyn_cast<ConstantSDNode>(Elt))
+        ConstVecOps[i] = ConstantInt::get(Context, C->getAPIntValue());
+      else if (auto *C = dyn_cast<ConstantFPSDNode>(Elt))
+        ConstVecOps[i] = ConstantFP::get(Context, C->getValueAPF());
+      else if (!Elt.isUndef()) {
+        assert(!VarElt.getNode() && !InsIndex.getNode() &&
+               "Expected one variable element in this vector");
+        VarElt = Elt;
+        InsIndex = DAG.getConstant(i, dl, getVectorIdxTy(DAG.getDataLayout()));
+      }
+    }
+    Constant *CV = ConstantVector::get(ConstVecOps);
+    SDValue DAGConstVec = DAG.getConstantPool(CV, VT);
+
+    // The constants we just created may not be legal (eg, floating point). We
+    // must lower the vector right here because we can not guarantee that we'll
+    // legalize it before loading it. This is also why we could not just create
+    // a new build vector here. If the build vector contains illegal constants,
+    // it could get split back up into a series of insert elements.
+    // TODO: Improve this by using shorter loads with broadcast/VZEXT_LOAD.
+    SDValue LegalDAGConstVec = LowerConstantPool(DAGConstVec, DAG);
+    MachineFunction &MF = DAG.getMachineFunction();
+    MachinePointerInfo MPI = MachinePointerInfo::getConstantPool(MF);
+    SDValue Ld = DAG.getLoad(VT, dl, DAG.getEntryNode(), LegalDAGConstVec, MPI);
+    return DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, VT, Ld, VarElt, InsIndex);
+  }
 
   // Special case for single non-zero, non-undef, element.
   if (NumNonZero == 1) {
@@ -7821,7 +7869,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   // For AVX-length vectors, build the individual 128-bit pieces and use
   // shuffles to put them in place.
   if (VT.is256BitVector() || VT.is512BitVector()) {
-    EVT HVT = EVT::getVectorVT(*DAG.getContext(), ExtVT, NumElems/2);
+    EVT HVT = EVT::getVectorVT(Context, ExtVT, NumElems/2);
 
     // Build both the lower and upper subvector.
     SDValue Lower =
