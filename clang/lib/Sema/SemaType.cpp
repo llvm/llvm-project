@@ -3400,13 +3400,20 @@ bool Sema::isCFError(RecordDecl *recordDecl) {
   }
 
   // Check whether this is CFError, which we identify based on being
-  // bridged to NSError.
+  // bridged to NSError. CFErrorRef used to be declared with "objc_bridge" but
+  // is now declared with "objc_bridge_mutable", so look for either one of the
+  // two attributes.
   if (recordDecl->getTagKind() == TTK_Struct) {
-    if (auto bridgeAttr = recordDecl->getAttr<ObjCBridgeAttr>()) {
-      if (bridgeAttr->getBridgedType() == getNSErrorIdent()) {
-        CFError = recordDecl;
-        return true;
-      }
+    IdentifierInfo *bridgedType = nullptr;
+    if (auto bridgeAttr = recordDecl->getAttr<ObjCBridgeAttr>())
+      bridgedType = bridgeAttr->getBridgedType();
+    else if (auto bridgeAttr =
+                 recordDecl->getAttr<ObjCBridgeMutableAttr>())
+      bridgedType = bridgeAttr->getBridgedType();
+
+    if (bridgedType == getNSErrorIdent()) {
+      CFError = recordDecl;
+      return true;
     }
   }
 
