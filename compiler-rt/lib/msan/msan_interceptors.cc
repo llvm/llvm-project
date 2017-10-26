@@ -457,6 +457,20 @@ INTERCEPTOR(SIZE_T, strxfrm_l, char *dest, const char *src, SIZE_T n,
   return res;
 }
 
+#if SANITIZER_LINUX
+INTERCEPTOR(SIZE_T, __strxfrm_l, char *dest, const char *src, SIZE_T n,
+            void *loc) {
+  ENSURE_MSAN_INITED();
+  CHECK_UNPOISONED(src, REAL(strlen)(src) + 1);
+  SIZE_T res = REAL(__strxfrm_l)(dest, src, n, loc);
+  if (res < n) __msan_unpoison(dest, res + 1);
+  return res;
+}
+#define MSAN_MAYBE_INTERCEPT___STRXFRM_L INTERCEPT_FUNCTION(__strxfrm_l)
+#else
+#define MSAN_MAYBE_INTERCEPT___STRXFRM_L
+#endif
+
 #define INTERCEPTOR_STRFTIME_BODY(char_type, ret_type, func, s, ...) \
   ENSURE_MSAN_INITED();                                              \
   ret_type res = REAL(func)(s, __VA_ARGS__);                         \
@@ -1521,6 +1535,7 @@ void InitializeInterceptors() {
 #endif
   INTERCEPT_FUNCTION(strxfrm);
   INTERCEPT_FUNCTION(strxfrm_l);
+  MSAN_MAYBE_INTERCEPT___STRXFRM_L;
   INTERCEPT_FUNCTION(strftime);
   INTERCEPT_FUNCTION(strftime_l);
   MSAN_MAYBE_INTERCEPT___STRFTIME_L;

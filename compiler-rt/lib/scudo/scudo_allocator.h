@@ -77,9 +77,6 @@ struct AP64 {
 };
 typedef SizeClassAllocator64<AP64> PrimaryAllocator;
 #else
-// Currently, the 32-bit Sanitizer allocator has not yet benefited from all the
-// security improvements brought to the 64-bit one. This makes the 32-bit
-// version of Scudo slightly less toughened.
 static const uptr NumRegions = SANITIZER_MMAP_RANGE_SIZE >> RegionSizeLog;
 # if SANITIZER_WORDSIZE == 32
 typedef FlatByteMap<NumRegions> ByteMap;

@@ -338,6 +338,11 @@ public:
 
   void collectAddressRanges(DWARFAddressRangesVector &CURanges);
 
+  /// Returns subprogram DIE with address range encompassing the provided
+  /// address. The pointer is alive as long as parsed compile unit DIEs are not
+  /// cleared.
+  DWARFDie getSubroutineForAddress(uint64_t Address);
+
   /// getInlinedChainForAddress - fetches inlined chain for a given address.
   /// Returns empty chain if there is no subprogram containing address. The
   /// chain is valid as long as parsed compile unit DIEs are not cleared.
@@ -421,11 +426,6 @@ private:
   /// parseDWO - Parses .dwo file for current compile unit. Returns true if
   /// it was actually constructed.
   bool parseDWO();
-
-  /// getSubroutineForAddress - Returns subprogram DIE with address range
-  /// encompassing the provided address. The pointer is alive as long as parsed
-  /// compile unit DIEs are not cleared.
-  DWARFDie getSubroutineForAddress(uint64_t Address);
 };
 
 } // end namespace llvm

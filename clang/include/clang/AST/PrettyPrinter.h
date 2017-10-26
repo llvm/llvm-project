@@ -51,7 +51,7 @@ struct PrintingPolicy {
       TerseOutput(false), PolishForDeclaration(false),
       Half(LO.Half), MSWChar(LO.MicrosoftExt && !LO.WChar),
       IncludeNewlines(true), MSVCFormatting(false),
-      ConstantsAsWritten(false) { }
+      ConstantsAsWritten(false), SuppressImplicitBase(false) { }
 
   /// \brief Adjust this printing policy for cases where it's known that
   /// we're printing C++ code (for instance, if AST dumping reaches a
@@ -218,7 +218,10 @@ struct PrintingPolicy {
   /// 0x10
   /// 2.5e3
   /// \endcode
-  bool ConstantsAsWritten;
+  bool ConstantsAsWritten : 1;
+
+  /// \brief When true, don't print the implicit 'self' or 'this' expressions.
+  bool SuppressImplicitBase : 1;
 };
 
 } // end namespace clang

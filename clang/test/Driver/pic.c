@@ -251,17 +251,54 @@
 // RUN: %clang %s -target i386-pc-openbsd -no-pie -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NOPIE-LD
 //
-// On Android PIC is enabled by default
+// On Android PIC is enabled by default, and PIE is enabled by default starting
+// with API16.
 // RUN: %clang -c %s -target i686-linux-android -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIC2
+// RUN: %clang -c %s -target i686-linux-android14 -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIC2
+// RUN: %clang -c %s -target i686-linux-android16 -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
+// RUN: %clang -c %s -target i686-linux-android24 -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
+//
 // RUN: %clang -c %s -target arm-linux-androideabi -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIC1
+// RUN: %clang -c %s -target arm-linux-androideabi14 -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIC1
+// RUN: %clang -c %s -target arm-linux-androideabi16 -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
+// RUN: %clang -c %s -target arm-linux-androideabi24 -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
+//
 // RUN: %clang -c %s -target mipsel-linux-android -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIC1
+// RUN: %clang -c %s -target mipsel-linux-android14 -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIC1
+// RUN: %clang -c %s -target mipsel-linux-android16 -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
+// RUN: %clang -c %s -target mipsel-linux-android24 -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
+//
+// 64-bit Android targets are always PIE.
 // RUN: %clang -c %s -target aarch64-linux-android -### 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=CHECK-PIC1
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
+// RUN: %clang -c %s -target aarch64-linux-android24 -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
 // RUN: %clang -c %s -target arm64-linux-android -### 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=CHECK-PIC1
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
+//
+// Default value of PIE can be overwritten, even on 64-bit targets.
+// RUN: %clang -c %s -target arm-linux-androideabi -fPIE -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
+// RUN: %clang -c %s -target i686-linux-android14 -fPIE -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
+// RUN: %clang -c %s -target i686-linux-android16 -fno-PIE -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-NO-PIC
+// RUN: %clang -c %s -target aarch64-linux-android -fno-PIE -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-NO-PIC
+// RUN: %clang -c %s -target aarch64-linux-android24 -fno-PIE -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-NO-PIC
 //
 // On Windows-X64 PIC is enabled by default
 // RUN: %clang -c %s -target x86_64-pc-windows-msvc18.0.0 -### 2>&1 \

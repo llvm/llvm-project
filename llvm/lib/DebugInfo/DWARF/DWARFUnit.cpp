@@ -440,7 +440,7 @@ DWARFDie DWARFUnit::getSibling(const DWARFDebugInfoEntry *Die) {
   // NULL DIEs don't have siblings.
   if (Die->getAbbreviationDeclarationPtr() == nullptr)
     return DWARFDie();
-  
+
   // Find the next DIE whose depth is the same as the Die's depth.
   for (size_t I = getDIEIndex(Die) + 1, EndIdx = DieArray.size(); I < EndIdx;
        ++I) {

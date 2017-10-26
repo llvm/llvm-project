@@ -438,7 +438,7 @@ void Sema::diagnoseNullableToNonnullConversion(QualType DstType,
 void Sema::diagnoseZeroToNullptrConversion(CastKind Kind, const Expr* E) {
   if (Kind != CK_NullToPointer && Kind != CK_NullToMemberPointer)
     return;
-  if (E->getType()->isNullPtrType())
+  if (E->IgnoreParenImpCasts()->getType()->isNullPtrType())
     return;
   // nullptr only exists from C++11 on, so don't warn on its absence earlier.
   if (!getLangOpts().CPlusPlus11)

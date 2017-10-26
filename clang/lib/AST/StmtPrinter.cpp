@@ -1346,10 +1346,25 @@ void StmtPrinter::VisitUnresolvedLookupExpr(UnresolvedLookupExpr *Node) {
         OS, Node->template_arguments(), Policy);
 }
 
+static bool isImplicitSelf(const Expr *E) {
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+    if (const ImplicitParamDecl *PD =
+            dyn_cast<ImplicitParamDecl>(DRE->getDecl())) {
+      if (PD->getParameterKind() == ImplicitParamDecl::ObjCSelf &&
+          DRE->getLocStart().isInvalid())
+        return true;
+    }
+  }
+  return false;
+}
+
 void StmtPrinter::VisitObjCIvarRefExpr(ObjCIvarRefExpr *Node) {
   if (Node->getBase()) {
-    PrintExpr(Node->getBase());
-    OS << (Node->isArrow() ? "->" : ".");
+    if (!Policy.SuppressImplicitBase ||
+        !isImplicitSelf(Node->getBase()->IgnoreImpCasts())) {
+      PrintExpr(Node->getBase());
+      OS << (Node->isArrow() ? "->" : ".");
+    }
   }
   OS << *Node->getDecl();
 }
@@ -1670,16 +1685,25 @@ void StmtPrinter::VisitCallExpr(CallExpr *Call) {
   PrintCallArgs(Call);
   OS << ")";
 }
+
+static bool isImplicitThis(const Expr *E) {
+  if (const auto *TE = dyn_cast<CXXThisExpr>(E))
+    return TE->isImplicit();
+  return false;
+}
+
 void StmtPrinter::VisitMemberExpr(MemberExpr *Node) {
-  // FIXME: Suppress printing implicit bases (like "this")
-  PrintExpr(Node->getBase());
+  if (!Policy.SuppressImplicitBase || !isImplicitThis(Node->getBase())) {
+    PrintExpr(Node->getBase());
 
-  MemberExpr *ParentMember = dyn_cast<MemberExpr>(Node->getBase());
-  FieldDecl  *ParentDecl   = ParentMember
-    ? dyn_cast<FieldDecl>(ParentMember->getMemberDecl()) : nullptr;
+    MemberExpr *ParentMember = dyn_cast<MemberExpr>(Node->getBase());
+    FieldDecl *ParentDecl =
+        ParentMember ? dyn_cast<FieldDecl>(ParentMember->getMemberDecl())
+                     : nullptr;
 
-  if (!ParentDecl || !ParentDecl->isAnonymousStructOrUnion())
-    OS << (Node->isArrow() ? "->" : ".");
+    if (!ParentDecl || !ParentDecl->isAnonymousStructOrUnion())
+      OS << (Node->isArrow() ? "->" : ".");
+  }
 
   if (FieldDecl *FD = dyn_cast<FieldDecl>(Node->getMemberDecl()))
     if (FD->isAnonymousStructOrUnion())

@@ -1,4 +1,4 @@
-//===- Error.h --------------------------------------------------*- C++ -*-===//
+//===- ErrorHandler.h -------------------------------------------*- C++ -*-===//
 //
 //                             The LLVM Linker
 //
@@ -25,24 +25,48 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLD_ELF_ERROR_H
-#define LLD_ELF_ERROR_H
+#ifndef LLD_COMMON_ERRORHANDLER_H
+#define LLD_COMMON_ERRORHANDLER_H
 
 #include "lld/Common/LLVM.h"
 
 #include "llvm/Support/Error.h"
 
 namespace lld {
-namespace elf {
 
-extern uint64_t ErrorCount;
-extern llvm::raw_ostream *ErrorOS;
+class ErrorHandler {
+public:
+  uint64_t ErrorCount = 0;
+  uint64_t ErrorLimit = 20;
+  StringRef ErrorLimitExceededMsg = "too many errors emitted, stopping now";
+  StringRef LogName = "lld";
+  llvm::raw_ostream *ErrorOS = &llvm::errs();
+  bool ColorDiagnostics = llvm::errs().has_colors();
+  bool ExitEarly = true;
+  bool FatalWarnings = false;
+  bool Verbose = false;
 
-void log(const Twine &Msg);
-void message(const Twine &Msg);
-void warn(const Twine &Msg);
-void error(const Twine &Msg);
-LLVM_ATTRIBUTE_NORETURN void fatal(const Twine &Msg);
+  void error(const Twine &Msg);
+  LLVM_ATTRIBUTE_NORETURN void fatal(const Twine &Msg);
+  void log(const Twine &Msg);
+  void message(const Twine &Msg);
+  void warn(const Twine &Msg);
+
+private:
+  void print(StringRef S, raw_ostream::Colors C);
+};
+
+/// Returns the default error handler.
+ErrorHandler &errorHandler();
+
+inline void error(const Twine &Msg) { errorHandler().error(Msg); }
+inline LLVM_ATTRIBUTE_NORETURN void fatal(const Twine &Msg) {
+  errorHandler().fatal(Msg);
+}
+inline void log(const Twine &Msg) { errorHandler().log(Msg); }
+inline void message(const Twine &Msg) { errorHandler().message(Msg); }
+inline void warn(const Twine &Msg) { errorHandler().warn(Msg); }
+inline uint64_t errorCount() { return errorHandler().ErrorCount; }
 
 LLVM_ATTRIBUTE_NORETURN void exitLld(int Val);
 
@@ -72,7 +96,6 @@ template <class T> T check(Expected<T> E, const Twine &Prefix) {
   return std::move(*E);
 }
 
-} // namespace elf
 } // namespace lld
 
 #endif

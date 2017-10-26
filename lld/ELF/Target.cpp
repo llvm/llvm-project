@@ -25,11 +25,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "Target.h"
-#include "Error.h"
 #include "InputFiles.h"
 #include "OutputSections.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
+#include "lld/Common/ErrorHandler.h"
 #include "llvm/Object/ELF.h"
 
 using namespace llvm;

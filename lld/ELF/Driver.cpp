@@ -25,7 +25,6 @@
 
 #include "Driver.h"
 #include "Config.h"
-#include "Error.h"
 #include "Filesystem.h"
 #include "ICF.h"
 #include "InputFiles.h"
@@ -40,6 +39,7 @@
 #include "Target.h"
 #include "Writer.h"
 #include "lld/Common/Driver.h"
+#include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Threads.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/StringExtras.h"
@@ -72,8 +72,12 @@ static void setConfigs();
 
 bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
                raw_ostream &Error) {
-  ErrorCount = 0;
-  ErrorOS = &Error;
+  errorHandler().LogName = Args[0];
+  errorHandler().ErrorLimitExceededMsg =
+      "too many errors emitted, stopping now (use "
+      "-error-limit=0 to see all errors)";
+  errorHandler().ErrorOS = &Error;
+  errorHandler().ColorDiagnostics = Error.has_colors();
   InputSections.clear();
   OutputSections.clear();
   Tar = nullptr;
@@ -95,10 +99,10 @@ bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
   // This saves time because the overhead of calling destructors
   // for all globally-allocated objects is not negligible.
   if (Config->ExitEarly)
-    exitLld(ErrorCount ? 1 : 0);
+    exitLld(errorCount() ? 1 : 0);
 
   freeArena();
-  return !ErrorCount;
+  return !errorCount();
 }
 
 // Parses a linker -m option.
@@ -332,7 +336,7 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr, bool CanExitEarly) {
   opt::InputArgList Args = Parser.parse(ArgsArr.slice(1));
 
   // Interpret this flag early because error() depends on them.
-  Config->ErrorLimit = getInteger(Args, OPT_error_limit, 20);
+  errorHandler().ErrorLimit = getInteger(Args, OPT_error_limit, 20);
 
   // Handle -help
   if (Args.hasArg(OPT_help)) {
@@ -365,6 +369,7 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr, bool CanExitEarly) {
     return;
 
   Config->ExitEarly = CanExitEarly && !Args.hasArg(OPT_full_shutdown);
+  errorHandler().ExitEarly = Config->ExitEarly;
 
   if (const char *Path = getReproduceOption(Args)) {
     // Note that --reproduce is a debug option so you can ignore it
@@ -388,7 +393,7 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr, bool CanExitEarly) {
   inferMachineType();
   setConfigs();
   checkOptions(Args);
-  if (ErrorCount)
+  if (errorCount())
     return;
 
   switch (Config->EKind) {
@@ -645,7 +650,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->Entry = Args.getLastArgValue(OPT_entry);
   Config->ExportDynamic =
       Args.hasFlag(OPT_export_dynamic, OPT_no_export_dynamic, false);
-  Config->FatalWarnings =
+  errorHandler().FatalWarnings =
       Args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false);
   Config->FilterList = getArgs(Args, OPT_filter);
   Config->Fini = Args.getLastArgValue(OPT_fini, "_fini");
@@ -694,6 +699,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->Undefined = getArgs(Args, OPT_undefined);
   Config->UnresolvedSymbols = getUnresolvedSymbolPolicy(Args);
   Config->Verbose = Args.hasArg(OPT_verbose);
+  errorHandler().Verbose = Config->Verbose;
   Config->WarnCommon = Args.hasArg(OPT_warn_common);
   Config->ZCombreloc = !hasZOption(Args, "nocombreloc");
   Config->ZExecstack = hasZOption(Args, "execstack");
@@ -881,7 +887,7 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
     }
   }
 
-  if (Files.empty() && ErrorCount == 0)
+  if (Files.empty() && errorCount() == 0)
     error("no input files");
 }
 
@@ -1009,7 +1015,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     error("cannot open output file " + Config->OutputFile + ": " + E.message());
   if (auto E = tryCreateFile(Config->MapFile))
     error("cannot open map file " + Config->MapFile + ": " + E.message());
-  if (ErrorCount)
+  if (errorCount())
     return;
 
   // Use default entry point name if no name was given via the command
@@ -1053,7 +1059,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   Symtab->fetchIfLazy<ELFT>(Config->Entry);
 
   // Return if there were name resolution errors.
-  if (ErrorCount)
+  if (errorCount())
     return;
 
   // Handle undefined symbols in DSOs.
@@ -1075,7 +1081,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     Symtab->addSymbolAlias<ELFT>(Def.first, Def.second);
 
   Symtab->addCombinedLTOObject<ELFT>();
-  if (ErrorCount)
+  if (errorCount())
     return;
 
   // Apply symbol renames for -wrap and -defsym

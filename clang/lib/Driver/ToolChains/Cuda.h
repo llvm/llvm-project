@@ -40,7 +40,7 @@ private:
 
   // CUDA architectures for which we have raised an error in
   // CheckCudaVersionSupportsArch.
-  mutable llvm::SmallSet<CudaArch, 4> ArchsWithVersionTooLowErrors;
+  mutable llvm::SmallSet<CudaArch, 4> ArchsWithBadVersion;
 
 public:
   CudaInstallationDetector(const Driver &D, const llvm::Triple &HostTriple,

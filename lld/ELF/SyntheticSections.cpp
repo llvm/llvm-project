@@ -16,7 +16,6 @@
 
 #include "SyntheticSections.h"
 #include "Config.h"
-#include "Error.h"
 #include "InputFiles.h"
 #include "LinkerScript.h"
 #include "Memory.h"
@@ -25,6 +24,7 @@
 #include "SymbolTable.h"
 #include "Target.h"
 #include "Writer.h"
+#include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Threads.h"
 #include "lld/Common/Version.h"
 #include "llvm/BinaryFormat/Dwarf.h"
