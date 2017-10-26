@@ -56,8 +56,12 @@ void ClangdLSPServer::onInitialize(Ctx C, InitializeParams &Params) {
 }
 
 void ClangdLSPServer::onShutdown(Ctx C, ShutdownParams &Params) {
-  IsDone = true;
+  // Do essentially nothing, just say we're ready to exit.
+  ShutdownRequestReceived = true;
+  C.reply("null");
 }
+
+void ClangdLSPServer::onExit(Ctx C, ExitParams &Params) { IsDone = true; }
 
 void ClangdLSPServer::onDocumentDidOpen(Ctx C,
                                         DidOpenTextDocumentParams &Params) {
@@ -197,7 +201,7 @@ ClangdLSPServer::ClangdLSPServer(JSONOutput &Out, unsigned AsyncThreadsCount,
                  /*EnableSnippetsAndCodePatterns=*/SnippetCompletions),
              /*Logger=*/Out, ResourceDir) {}
 
-void ClangdLSPServer::run(std::istream &In) {
+bool ClangdLSPServer::run(std::istream &In) {
   assert(!IsDone && "Run was called before");
 
   // Set up JSONRPCDispatcher.
@@ -213,6 +217,8 @@ void ClangdLSPServer::run(std::istream &In) {
   // Make sure IsDone is set to true after this method exits to ensure assertion
   // at the start of the method fires if it's ever executed again.
   IsDone = true;
+
+  return ShutdownRequestReceived;
 }
 
 std::vector<clang::tooling::Replacement>

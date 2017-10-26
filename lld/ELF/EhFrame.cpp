@@ -17,11 +17,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "EhFrame.h"
-#include "Error.h"
 #include "InputSection.h"
 #include "Relocations.h"
 #include "Strings.h"
 
+#include "lld/Common/ErrorHandler.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/Endian.h"

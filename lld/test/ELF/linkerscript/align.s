@@ -81,6 +81,14 @@
 # RUN: ld.lld -o %t5 --script %t.script %t
 # RUN: llvm-objdump -section-headers %t5 | FileCheck %s -check-prefix=ZERO
 
+## Test we fail gracefuly when alignment value is not a power of 2 (#1).
+# RUN: echo "SECTIONS { . = 0x123; . = ALIGN(0x123, 3); .aaa : { *(.aaa) } }" > %t.script
+# RUN: not ld.lld -o %t6 --script %t.script %t 2>&1 | FileCheck -check-prefix=ERR %s
+# ERR: {{.*}}.script:1: alignment must be power of 2
+
+## Test we fail gracefuly when alignment value is not a power of 2 (#2).
+# RUN: echo "SECTIONS { . = 0x123; . = ALIGN(3); .aaa : { *(.aaa) } }" > %t.script
+# RUN: not ld.lld -o %t7 --script %t.script %t 2>&1 | FileCheck -check-prefix=ERR %s
 
 # RUN: echo "SECTIONS {                              \
 # RUN:  . = 0xff8;                                   \

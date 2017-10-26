@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MinGW.h"
-#include "Error.h"
+#include "lld/Common/ErrorHandler.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"

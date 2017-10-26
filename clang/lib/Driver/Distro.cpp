@@ -48,6 +48,7 @@ static Distro::DistroType DetectDistro(vfs::FileSystem &VFS) {
                       .Case("yakkety", Distro::UbuntuYakkety)
                       .Case("zesty", Distro::UbuntuZesty)
                       .Case("artful", Distro::UbuntuArtful)
+                      .Case("bionic", Distro::UbuntuBionic)
                       .Default(Distro::UnknownDistro);
     if (Version != Distro::UnknownDistro)
       return Version;
@@ -88,6 +89,8 @@ static Distro::DistroType DetectDistro(vfs::FileSystem &VFS) {
         return Distro::DebianJessie;
       case 9:
         return Distro::DebianStretch;
+      case 10:
+        return Distro::DebianBuster;
       default:
         return Distro::UnknownDistro;
       }

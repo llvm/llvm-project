@@ -219,6 +219,9 @@ def oformat: Separate<["--"], "oformat">, MetaVarName<"<format>">,
 def omagic: Flag<["--"], "omagic">, MetaVarName<"<magic>">,
   HelpText<"Set the text and data sections to be readable and writable">;
 
+defm orphan_handling: Eq<"orphan-handling">, 
+  HelpText<"Control how orphan sections are handled when linker script used">;
+
 def pie: F<"pie">, HelpText<"Create a position independent executable">;
 
 def print_gc_sections: F<"print-gc-sections">,

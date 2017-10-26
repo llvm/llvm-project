@@ -318,10 +318,12 @@ LinkerScript::computeInputSections(const InputSectionDescription *Cmd,
 
 void LinkerScript::discard(ArrayRef<InputSection *> V) {
   for (InputSection *S : V) {
-    S->Live = false;
     if (S == InX::ShStrTab || S == InX::Dynamic || S == InX::DynSymTab ||
         S == InX::DynStrTab)
       error("discarding " + S->Name + " section is not allowed");
+
+    S->Assigned = false;
+    S->Live = false;
     discard(S->DependentSections);
   }
 }
@@ -457,6 +459,13 @@ static OutputSection *findByName(ArrayRef<BaseCommand *> Vec,
   return nullptr;
 }
 
+static void reportOrphan(InputSectionBase *IS, StringRef Name) {
+  if (Config->OrphanHandling == OrphanHandlingPolicy::Error)
+    error(toString(IS) + " is being placed in '" + Name + "'");
+  else if (Config->OrphanHandling == OrphanHandlingPolicy::Warn)
+    warn(toString(IS) + " is being placed in '" + Name + "'");
+}
+
 // Add sections that didn't match any sections command.
 void LinkerScript::addOrphanSections(OutputSectionFactory &Factory) {
   unsigned End = SectionCommands.size();
@@ -466,7 +475,7 @@ void LinkerScript::addOrphanSections(OutputSectionFactory &Factory) {
       continue;
 
     StringRef Name = getOutputSectionName(S->Name);
-    log(toString(S) + " is being placed in '" + Name + "'");
+    reportOrphan(S, Name);
 
     if (OutputSection *Sec =
             findByName(makeArrayRef(SectionCommands).slice(0, End), Name)) {
