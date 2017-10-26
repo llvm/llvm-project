@@ -22,6 +22,7 @@ enum class CudaVersion {
   CUDA_75,
   CUDA_80,
   CUDA_90,
+  LATEST = CUDA_90,
 };
 const char *CudaVersionToString(CudaVersion V);
 
@@ -74,6 +75,9 @@ CudaVirtualArch VirtualArchForCudaArch(CudaArch A);
 
 /// Get the earliest CudaVersion that supports the given CudaArch.
 CudaVersion MinVersionForCudaArch(CudaArch A);
+
+/// Get the latest CudaVersion that supports the given CudaArch.
+CudaVersion MaxVersionForCudaArch(CudaArch A);
 
 } // namespace clang
 

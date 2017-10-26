@@ -526,17 +526,11 @@ def runCmpResults(Dir, Strictness=0):
         DiffsPath = os.path.join(NewDir, DiffsSummaryFileName)
         PatchedSourceDirPath = os.path.join(Dir, PatchedSourceDirName)
         Opts = CmpRuns.CmpOptions(DiffsPath, "", PatchedSourceDirPath)
-        # Discard everything coming out of stdout
-        # (CmpRun produces a lot of them).
-        OLD_STDOUT = sys.stdout
-        sys.stdout = SATestUtils.Discarder()
         # Scan the results, delete empty plist files.
         NumDiffs, ReportsInRef, ReportsInNew = \
             CmpRuns.dumpScanBuildResultsDiff(RefDir, NewDir, Opts, False)
-        sys.stdout = OLD_STDOUT
         if (NumDiffs > 0):
-            print "Warning: %r differences in diagnostics. See %s" % \
-                  (NumDiffs, DiffsPath,)
+            print "Warning: %s differences in diagnostics." % NumDiffs
         if Strictness >= 2 and NumDiffs > 0:
             print "Error: Diffs found in strict mode (2)."
             TestsPassed = False

@@ -282,6 +282,17 @@ static const char *getLDMOption(const llvm::Triple &T, const ArgList &Args) {
   }
 }
 
+static bool getPIE(const ArgList &Args, const toolchains::Linux &ToolChain) {
+  if (Args.hasArg(options::OPT_shared) || Args.hasArg(options::OPT_static))
+    return false;
+
+  Arg *A = Args.getLastArg(options::OPT_pie, options::OPT_no_pie,
+                           options::OPT_nopie);
+  if (!A)
+    return ToolChain.isPIEDefault();
+  return A->getOption().matches(options::OPT_pie);
+}
+
 void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                            const InputInfo &Output,
                                            const InputInfoList &Inputs,
@@ -296,9 +307,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const llvm::Triple::ArchType Arch = ToolChain.getArch();
   const bool isAndroid = ToolChain.getTriple().isAndroid();
   const bool IsIAMCU = ToolChain.getTriple().isOSIAMCU();
-  const bool IsPIE =
-      !Args.hasArg(options::OPT_shared) && !Args.hasArg(options::OPT_static) &&
-      (Args.hasArg(options::OPT_pie) || ToolChain.isPIEDefault());
+  const bool IsPIE = getPIE(Args, ToolChain);
   const bool HasCRTBeginEndFiles =
       ToolChain.getTriple().hasEnvironment() ||
       (ToolChain.getTriple().getVendor() != llvm::Triple::MipsTechnologies);

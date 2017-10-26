@@ -202,13 +202,19 @@
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=memory %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-PIE
 // RUN: %clang -target x86_64-unknown-freebsd -fsanitize=memory %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-PIE
 // RUN: %clang -target aarch64-linux-gnu -fsanitize=memory %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-PIE
-// RUN: %clang -target arm-linux-androideabi -fsanitize=address %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-PIE
+// RUN: %clang -target arm-linux-androideabi -fsanitize=address %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-PIC-NO-PIE
+// RUN: %clang -target arm-linux-androideabi24 -fsanitize=address %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-PIE
+// RUN: %clang -target aarch64-linux-android -fsanitize=address %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-PIE
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=address %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-PIE
 // RUN: %clang -target i386-linux-gnu -fsanitize=address %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-PIE
 
 // CHECK-NO-PIE-NOT: "-pie"
 // CHECK-NO-PIE: "-mrelocation-model" "static"
 // CHECK-NO-PIE-NOT: "-pie"
+
+// CHECK-PIC-NO-PIE-NOT: "-pie"
+// CHECK-PIC-NO-PIE: "-mrelocation-model" "pic"
+// CHECK-PIC-NO-PIE-NOT: "-pie"
 
 // CHECK-PIE: "-mrelocation-model" "pic" "-pic-level" "2" "-pic-is-pie"
 // CHECK-PIE: "-pie"
