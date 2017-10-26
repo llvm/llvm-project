@@ -75,8 +75,8 @@ body:             |
     ; SOFT-DAG: %r1 = COPY [[Y]]
     ; HARD-DAG: %s0 = COPY [[X]]
     ; HARD-DAG: %s1 = COPY [[Y]]
-    ; SOFT: BLX $fmodf, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; HARD: BLX $fmodf, {{.*}}, implicit %s0, implicit %s1, implicit-def %s0
+    ; SOFT: BL $fmodf, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; HARD: BL $fmodf, {{.*}}, implicit %s0, implicit %s1, implicit-def %s0
     ; SOFT: [[R:%[0-9]+]]:_(s32) = COPY %r0
     ; HARD: [[R:%[0-9]+]]:_(s32) = COPY %s0
     ; CHECK: ADJCALLSTACKUP
@@ -134,8 +134,8 @@ body:             |
     ; SOFT-DAG: %r{{[2-3]}} = COPY [[Y1]]
     ; HARD-DAG: %d0 = COPY [[X]]
     ; HARD-DAG: %d1 = COPY [[Y]]
-    ; SOFT: BLX $fmod, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0, implicit-def %r1
-    ; HARD: BLX $fmod, {{.*}}, implicit %d0, implicit %d1, implicit-def %d0
+    ; SOFT: BL $fmod, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0, implicit-def %r1
+    ; HARD: BL $fmod, {{.*}}, implicit %d0, implicit %d1, implicit-def %d0
     ; CHECK: ADJCALLSTACKUP
     ; CHECK-NOT: G_FREM
     %6(s64) = G_FREM %4, %5
@@ -170,8 +170,8 @@ body:             |
     ; SOFT-DAG: %r1 = COPY [[Y]]
     ; HARD-DAG: %s0 = COPY [[X]]
     ; HARD-DAG: %s1 = COPY [[Y]]
-    ; SOFT: BLX $powf, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; HARD: BLX $powf, {{.*}}, implicit %s0, implicit %s1, implicit-def %s0
+    ; SOFT: BL $powf, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; HARD: BL $powf, {{.*}}, implicit %s0, implicit %s1, implicit-def %s0
     ; SOFT: [[R:%[0-9]+]]:_(s32) = COPY %r0
     ; HARD: [[R:%[0-9]+]]:_(s32) = COPY %s0
     ; CHECK: ADJCALLSTACKUP
@@ -229,8 +229,8 @@ body:             |
     ; SOFT-DAG: %r{{[2-3]}} = COPY [[Y1]]
     ; HARD-DAG: %d0 = COPY [[X]]
     ; HARD-DAG: %d1 = COPY [[Y]]
-    ; SOFT: BLX $pow, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0, implicit-def %r1
-    ; HARD: BLX $pow, {{.*}}, implicit %d0, implicit %d1, implicit-def %d0
+    ; SOFT: BL $pow, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0, implicit-def %r1
+    ; HARD: BL $pow, {{.*}}, implicit %d0, implicit %d1, implicit-def %d0
     ; CHECK: ADJCALLSTACKUP
     ; CHECK-NOT: G_FPOW
     %6(s64) = G_FPOW %4, %5
@@ -264,8 +264,8 @@ body:             |
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
-    ; SOFT-AEABI: BLX $__aeabi_fadd, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-DEFAULT: BLX $__addsf3, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-AEABI: BL $__aeabi_fadd, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BL $__addsf3, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
     ; SOFT: [[R:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_FADD
@@ -315,8 +315,8 @@ body:             |
     ; SOFT-DAG: %r{{[0-1]}} = COPY [[X1]]
     ; SOFT-DAG: %r{{[2-3]}} = COPY [[Y0]]
     ; SOFT-DAG: %r{{[2-3]}} = COPY [[Y1]]
-    ; SOFT-AEABI: BLX $__aeabi_dadd, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0, implicit-def %r1
-    ; SOFT-DEFAULT: BLX $__adddf3, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0, implicit-def %r1
+    ; SOFT-AEABI: BL $__aeabi_dadd, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0, implicit-def %r1
+    ; SOFT-DEFAULT: BL $__adddf3, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0, implicit-def %r1
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_FADD
     %6(s64) = G_FADD %4, %5
@@ -419,8 +419,8 @@ body:             |
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
-    ; SOFT-AEABI: BLX $__aeabi_fcmpeq, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-DEFAULT: BLX $__eqsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-AEABI: BL $__aeabi_fcmpeq, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BL $__eqsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
     ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-AEABI: [[R:%[0-9]+]]:_(s1) = G_TRUNC [[RET]](s32)
@@ -460,8 +460,8 @@ body:             |
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
-    ; SOFT-AEABI: BLX $__aeabi_fcmpgt, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-DEFAULT: BLX $__gtsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-AEABI: BL $__aeabi_fcmpgt, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BL $__gtsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
     ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-AEABI: [[R:%[0-9]+]]:_(s1) = G_TRUNC [[RET]](s32)
@@ -501,8 +501,8 @@ body:             |
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
-    ; SOFT-AEABI: BLX $__aeabi_fcmpge, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-DEFAULT: BLX $__gesf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-AEABI: BL $__aeabi_fcmpge, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BL $__gesf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
     ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-AEABI: [[R:%[0-9]+]]:_(s1) = G_TRUNC [[RET]](s32)
@@ -542,8 +542,8 @@ body:             |
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
-    ; SOFT-AEABI: BLX $__aeabi_fcmplt, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-DEFAULT: BLX $__ltsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-AEABI: BL $__aeabi_fcmplt, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BL $__ltsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
     ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-AEABI: [[R:%[0-9]+]]:_(s1) = G_TRUNC [[RET]](s32)
@@ -583,8 +583,8 @@ body:             |
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
-    ; SOFT-AEABI: BLX $__aeabi_fcmple, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-DEFAULT: BLX $__lesf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-AEABI: BL $__aeabi_fcmple, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BL $__lesf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
     ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-AEABI: [[R:%[0-9]+]]:_(s1) = G_TRUNC [[RET]](s32)
@@ -624,8 +624,8 @@ body:             |
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
-    ; SOFT-AEABI: BLX $__aeabi_fcmpun, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-DEFAULT: BLX $__unordsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-AEABI: BL $__aeabi_fcmpun, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BL $__unordsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
     ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
@@ -664,8 +664,8 @@ body:             |
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
-    ; SOFT-AEABI: BLX $__aeabi_fcmple, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-DEFAULT: BLX $__lesf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-AEABI: BL $__aeabi_fcmple, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BL $__lesf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
     ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
@@ -705,8 +705,8 @@ body:             |
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
-    ; SOFT-AEABI: BLX $__aeabi_fcmplt, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-DEFAULT: BLX $__ltsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-AEABI: BL $__aeabi_fcmplt, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BL $__ltsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
     ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
@@ -746,8 +746,8 @@ body:             |
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
-    ; SOFT-AEABI: BLX $__aeabi_fcmpge, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-DEFAULT: BLX $__gesf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-AEABI: BL $__aeabi_fcmpge, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BL $__gesf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
     ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
@@ -787,8 +787,8 @@ body:             |
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
-    ; SOFT-AEABI: BLX $__aeabi_fcmpgt, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-DEFAULT: BLX $__gtsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-AEABI: BL $__aeabi_fcmpgt, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BL $__gtsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
     ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
@@ -828,8 +828,8 @@ body:             |
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
-    ; SOFT-AEABI: BLX $__aeabi_fcmpeq, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-DEFAULT: BLX $__nesf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-AEABI: BL $__aeabi_fcmpeq, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BL $__nesf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
     ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
@@ -869,8 +869,8 @@ body:             |
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
-    ; SOFT-AEABI: BLX $__aeabi_fcmpun, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-DEFAULT: BLX $__unordsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-AEABI: BL $__aeabi_fcmpun, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BL $__unordsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
     ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-AEABI: [[R:%[0-9]+]]:_(s1) = G_TRUNC [[RET]](s32)
@@ -910,8 +910,8 @@ body:             |
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
-    ; SOFT-AEABI: BLX $__aeabi_fcmpgt, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-DEFAULT: BLX $__gtsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-AEABI: BL $__aeabi_fcmpgt, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BL $__gtsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
     ; SOFT: [[RET1:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-DEFAULT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
@@ -920,8 +920,8 @@ body:             |
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
-    ; SOFT-AEABI: BLX $__aeabi_fcmplt, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-DEFAULT: BLX $__ltsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-AEABI: BL $__aeabi_fcmplt, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BL $__ltsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
     ; SOFT: [[RET2:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-DEFAULT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
@@ -966,8 +966,8 @@ body:             |
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
-    ; SOFT-AEABI: BLX $__aeabi_fcmpeq, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-DEFAULT: BLX $__eqsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-AEABI: BL $__aeabi_fcmpeq, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BL $__eqsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
     ; SOFT: [[RET1:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-DEFAULT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
@@ -976,8 +976,8 @@ body:             |
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: %r0 = COPY [[X]]
     ; SOFT-DAG: %r1 = COPY [[Y]]
-    ; SOFT-AEABI: BLX $__aeabi_fcmpun, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
-    ; SOFT-DEFAULT: BLX $__unordsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-AEABI: BL $__aeabi_fcmpun, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BL $__unordsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
     ; SOFT: [[RET2:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-DEFAULT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
@@ -1126,8 +1126,8 @@ body:             |
     ; SOFT-DAG: %r1 = COPY [[X1]]
     ; SOFT-DAG: %r2 = COPY [[Y0]]
     ; SOFT-DAG: %r3 = COPY [[Y1]]
-    ; SOFT-AEABI: BLX $__aeabi_dcmpeq, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
-    ; SOFT-DEFAULT: BLX $__eqdf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
+    ; SOFT-AEABI: BL $__aeabi_dcmpeq, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
+    ; SOFT-DEFAULT: BL $__eqdf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
     ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-AEABI: [[R:%[0-9]+]]:_(s1) = G_TRUNC [[RET]](s32)
@@ -1181,8 +1181,8 @@ body:             |
     ; SOFT-DAG: %r1 = COPY [[X1]]
     ; SOFT-DAG: %r2 = COPY [[Y0]]
     ; SOFT-DAG: %r3 = COPY [[Y1]]
-    ; SOFT-AEABI: BLX $__aeabi_dcmpgt, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
-    ; SOFT-DEFAULT: BLX $__gtdf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
+    ; SOFT-AEABI: BL $__aeabi_dcmpgt, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
+    ; SOFT-DEFAULT: BL $__gtdf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
     ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-AEABI: [[R:%[0-9]+]]:_(s1) = G_TRUNC [[RET]](s32)
@@ -1236,8 +1236,8 @@ body:             |
     ; SOFT-DAG: %r1 = COPY [[X1]]
     ; SOFT-DAG: %r2 = COPY [[Y0]]
     ; SOFT-DAG: %r3 = COPY [[Y1]]
-    ; SOFT-AEABI: BLX $__aeabi_dcmpge, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
-    ; SOFT-DEFAULT: BLX $__gedf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
+    ; SOFT-AEABI: BL $__aeabi_dcmpge, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
+    ; SOFT-DEFAULT: BL $__gedf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
     ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-AEABI: [[R:%[0-9]+]]:_(s1) = G_TRUNC [[RET]](s32)
@@ -1291,8 +1291,8 @@ body:             |
     ; SOFT-DAG: %r1 = COPY [[X1]]
     ; SOFT-DAG: %r2 = COPY [[Y0]]
     ; SOFT-DAG: %r3 = COPY [[Y1]]
-    ; SOFT-AEABI: BLX $__aeabi_dcmplt, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
-    ; SOFT-DEFAULT: BLX $__ltdf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
+    ; SOFT-AEABI: BL $__aeabi_dcmplt, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
+    ; SOFT-DEFAULT: BL $__ltdf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
     ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-AEABI: [[R:%[0-9]+]]:_(s1) = G_TRUNC [[RET]](s32)
@@ -1346,8 +1346,8 @@ body:             |
     ; SOFT-DAG: %r1 = COPY [[X1]]
     ; SOFT-DAG: %r2 = COPY [[Y0]]
     ; SOFT-DAG: %r3 = COPY [[Y1]]
-    ; SOFT-AEABI: BLX $__aeabi_dcmple, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
-    ; SOFT-DEFAULT: BLX $__ledf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
+    ; SOFT-AEABI: BL $__aeabi_dcmple, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
+    ; SOFT-DEFAULT: BL $__ledf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
     ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-AEABI: [[R:%[0-9]+]]:_(s1) = G_TRUNC [[RET]](s32)
@@ -1401,8 +1401,8 @@ body:             |
     ; SOFT-DAG: %r1 = COPY [[X1]]
     ; SOFT-DAG: %r2 = COPY [[Y0]]
     ; SOFT-DAG: %r3 = COPY [[Y1]]
-    ; SOFT-AEABI: BLX $__aeabi_dcmpun, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
-    ; SOFT-DEFAULT: BLX $__unorddf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
+    ; SOFT-AEABI: BL $__aeabi_dcmpun, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
+    ; SOFT-DEFAULT: BL $__unorddf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
     ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
@@ -1455,8 +1455,8 @@ body:             |
     ; SOFT-DAG: %r1 = COPY [[X1]]
     ; SOFT-DAG: %r2 = COPY [[Y0]]
     ; SOFT-DAG: %r3 = COPY [[Y1]]
-    ; SOFT-AEABI: BLX $__aeabi_dcmple, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
-    ; SOFT-DEFAULT: BLX $__ledf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
+    ; SOFT-AEABI: BL $__aeabi_dcmple, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
+    ; SOFT-DEFAULT: BL $__ledf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
     ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
@@ -1510,8 +1510,8 @@ body:             |
     ; SOFT-DAG: %r1 = COPY [[X1]]
     ; SOFT-DAG: %r2 = COPY [[Y0]]
     ; SOFT-DAG: %r3 = COPY [[Y1]]
-    ; SOFT-AEABI: BLX $__aeabi_dcmplt, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
-    ; SOFT-DEFAULT: BLX $__ltdf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
+    ; SOFT-AEABI: BL $__aeabi_dcmplt, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
+    ; SOFT-DEFAULT: BL $__ltdf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
     ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
@@ -1565,8 +1565,8 @@ body:             |
     ; SOFT-DAG: %r1 = COPY [[X1]]
     ; SOFT-DAG: %r2 = COPY [[Y0]]
     ; SOFT-DAG: %r3 = COPY [[Y1]]
-    ; SOFT-AEABI: BLX $__aeabi_dcmpge, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
-    ; SOFT-DEFAULT: BLX $__gedf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
+    ; SOFT-AEABI: BL $__aeabi_dcmpge, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
+    ; SOFT-DEFAULT: BL $__gedf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
     ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
@@ -1620,8 +1620,8 @@ body:             |
     ; SOFT-DAG: %r1 = COPY [[X1]]
     ; SOFT-DAG: %r2 = COPY [[Y0]]
     ; SOFT-DAG: %r3 = COPY [[Y1]]
-    ; SOFT-AEABI: BLX $__aeabi_dcmpgt, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
-    ; SOFT-DEFAULT: BLX $__gtdf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
+    ; SOFT-AEABI: BL $__aeabi_dcmpgt, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
+    ; SOFT-DEFAULT: BL $__gtdf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
     ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
@@ -1675,8 +1675,8 @@ body:             |
     ; SOFT-DAG: %r1 = COPY [[X1]]
     ; SOFT-DAG: %r2 = COPY [[Y0]]
     ; SOFT-DAG: %r3 = COPY [[Y1]]
-    ; SOFT-AEABI: BLX $__aeabi_dcmpeq, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
-    ; SOFT-DEFAULT: BLX $__nedf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
+    ; SOFT-AEABI: BL $__aeabi_dcmpeq, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
+    ; SOFT-DEFAULT: BL $__nedf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
     ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
@@ -1730,8 +1730,8 @@ body:             |
     ; SOFT-DAG: %r1 = COPY [[X1]]
     ; SOFT-DAG: %r2 = COPY [[Y0]]
     ; SOFT-DAG: %r3 = COPY [[Y1]]
-    ; SOFT-AEABI: BLX $__aeabi_dcmpun, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
-    ; SOFT-DEFAULT: BLX $__unorddf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
+    ; SOFT-AEABI: BL $__aeabi_dcmpun, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
+    ; SOFT-DEFAULT: BL $__unorddf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
     ; SOFT: [[RET:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-AEABI: [[R:%[0-9]+]]:_(s1) = G_TRUNC [[RET]](s32)
@@ -1785,8 +1785,8 @@ body:             |
     ; SOFT-DAG: %r1 = COPY [[X1]]
     ; SOFT-DAG: %r2 = COPY [[Y0]]
     ; SOFT-DAG: %r3 = COPY [[Y1]]
-    ; SOFT-AEABI: BLX $__aeabi_dcmpgt, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
-    ; SOFT-DEFAULT: BLX $__gtdf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
+    ; SOFT-AEABI: BL $__aeabi_dcmpgt, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
+    ; SOFT-DEFAULT: BL $__gtdf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
     ; SOFT: [[RET1:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-DEFAULT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
@@ -1797,8 +1797,8 @@ body:             |
     ; SOFT-DAG: %r1 = COPY [[X1]]
     ; SOFT-DAG: %r2 = COPY [[Y0]]
     ; SOFT-DAG: %r3 = COPY [[Y1]]
-    ; SOFT-AEABI: BLX $__aeabi_dcmplt, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
-    ; SOFT-DEFAULT: BLX $__ltdf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
+    ; SOFT-AEABI: BL $__aeabi_dcmplt, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
+    ; SOFT-DEFAULT: BL $__ltdf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
     ; SOFT: [[RET2:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-DEFAULT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
@@ -1857,8 +1857,8 @@ body:             |
     ; SOFT-DAG: %r1 = COPY [[X1]]
     ; SOFT-DAG: %r2 = COPY [[Y0]]
     ; SOFT-DAG: %r3 = COPY [[Y1]]
-    ; SOFT-AEABI: BLX $__aeabi_dcmpeq, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
-    ; SOFT-DEFAULT: BLX $__eqdf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
+    ; SOFT-AEABI: BL $__aeabi_dcmpeq, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
+    ; SOFT-DEFAULT: BL $__eqdf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
     ; SOFT: [[RET1:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-DEFAULT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
@@ -1869,8 +1869,8 @@ body:             |
     ; SOFT-DAG: %r1 = COPY [[X1]]
     ; SOFT-DAG: %r2 = COPY [[Y0]]
     ; SOFT-DAG: %r3 = COPY [[Y1]]
-    ; SOFT-AEABI: BLX $__aeabi_dcmpun, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
-    ; SOFT-DEFAULT: BLX $__unorddf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
+    ; SOFT-AEABI: BL $__aeabi_dcmpun, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
+    ; SOFT-DEFAULT: BL $__unorddf2, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
     ; SOFT: [[RET2:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-DEFAULT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0

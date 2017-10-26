@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -25,8 +26,6 @@
 #include <utility>
 
 namespace llvm {
-
-class raw_ostream;
 
 /// A format-neutral container for source line information.
 struct DILineInfo {
@@ -46,14 +45,29 @@ struct DILineInfo {
            FileName == RHS.FileName && FunctionName == RHS.FunctionName &&
            StartLine == RHS.StartLine && Discriminator == RHS.Discriminator;
   }
+
   bool operator!=(const DILineInfo &RHS) const {
     return !(*this == RHS);
   }
+
   bool operator<(const DILineInfo &RHS) const {
     return std::tie(FileName, FunctionName, Line, Column, StartLine,
                     Discriminator) <
            std::tie(RHS.FileName, RHS.FunctionName, RHS.Line, RHS.Column,
                     RHS.StartLine, RHS.Discriminator);
+  }
+
+  explicit operator bool() const { return *this != DILineInfo(); }
+
+  void dump(raw_ostream &OS) {
+    OS << "Line info: ";
+    if (FileName != "<invalid>")
+      OS << "file '" << FileName << "', ";
+    if (FunctionName != "<invalid>")
+      OS << "function '" << FunctionName << "', ";
+    OS << "line " << Line << ", ";
+    OS << "column " << Column << ", ";
+    OS << "start line " << StartLine << '\n';
   }
 };
 

@@ -39,6 +39,7 @@ MODULE_ALIAS_ANALYSIS("globals-aa", GlobalsAA())
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
 MODULE_PASS("always-inline", AlwaysInlinerPass())
+MODULE_PASS("called-value-propagation", CalledValuePropagationPass())
 MODULE_PASS("constmerge", ConstantMergePass())
 MODULE_PASS("cross-dso-cfi", CrossDSOCFIPass())
 MODULE_PASS("deadargelim", DeadArgumentEliminationPass())

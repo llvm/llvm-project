@@ -493,19 +493,26 @@ bool ARMCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   MachineFunction &MF = MIRBuilder.getMF();
   const auto &TLI = *getTLI<ARMTargetLowering>();
   const auto &DL = MF.getDataLayout();
-  const auto &STI = MF.getSubtarget();
+  const auto &STI = MF.getSubtarget<ARMSubtarget>();
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
-  if (MF.getSubtarget<ARMSubtarget>().genLongCalls())
+  if (STI.genLongCalls())
     return false;
 
   auto CallSeqStart = MIRBuilder.buildInstr(ARM::ADJCALLSTACKDOWN);
 
   // Create the call instruction so we can add the implicit uses of arg
   // registers, but don't insert it yet.
-  auto MIB = MIRBuilder.buildInstrNoInsert(ARM::BLX).add(Callee).addRegMask(
-      TRI->getCallPreservedMask(MF, CallConv));
+  bool isDirect = !Callee.isReg();
+  auto CallOpcode =
+      isDirect ? ARM::BL
+               : STI.hasV5TOps()
+                     ? ARM::BLX
+                     : STI.hasV4TOps() ? ARM::BX_CALL : ARM::BMOVPCRX_CALL;
+  auto MIB = MIRBuilder.buildInstrNoInsert(CallOpcode)
+                 .add(Callee)
+                 .addRegMask(TRI->getCallPreservedMask(MF, CallConv));
   if (Callee.isReg()) {
     auto CalleeReg = Callee.getReg();
     if (CalleeReg && !TRI->isPhysicalRegister(CalleeReg))

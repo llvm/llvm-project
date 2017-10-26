@@ -2823,16 +2823,27 @@ static void emitCustomOperandParsing(raw_ostream &OS, CodeGenTarget &Target,
 
 static void emitMnemonicSpellChecker(raw_ostream &OS, CodeGenTarget &Target,
                                      unsigned VariantCount) {
-  OS << "std::string " << Target.getName() << "MnemonicSpellCheck(StringRef S, uint64_t FBS) {\n";
+  OS << "static std::string " << Target.getName()
+     << "MnemonicSpellCheck(StringRef S, uint64_t FBS, unsigned VariantID) {\n";
   if (!VariantCount)
     OS <<  "  return \"\";";
   else {
     OS << "  const unsigned MaxEditDist = 2;\n";
     OS << "  std::vector<StringRef> Candidates;\n";
-    OS << "  StringRef Prev = \"\";\n";
-    OS << "  auto End = std::end(MatchTable0);\n";
-    OS << "\n";
-    OS << "  for (auto I = std::begin(MatchTable0); I < End; I++) {\n";
+    OS << "  StringRef Prev = \"\";\n\n";
+
+    OS << "  // Find the appropriate table for this asm variant.\n";
+    OS << "  const MatchEntry *Start, *End;\n";
+    OS << "  switch (VariantID) {\n";
+    OS << "  default: llvm_unreachable(\"invalid variant!\");\n";
+    for (unsigned VC = 0; VC != VariantCount; ++VC) {
+      Record *AsmVariant = Target.getAsmParserVariant(VC);
+      int AsmVariantNo = AsmVariant->getValueAsInt("Variant");
+      OS << "  case " << AsmVariantNo << ": Start = std::begin(MatchTable" << VC
+         << "); End = std::end(MatchTable" << VC << "); break;\n";
+    }
+    OS << "  }\n\n";
+    OS << "  for (auto I = Start; I < End; I++) {\n";
     OS << "    // Ignore unsupported instructions.\n";
     OS << "    if ((FBS & I->RequiredFeatures) != I->RequiredFeatures)\n";
     OS << "      continue;\n";
@@ -3158,8 +3169,6 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
 
     OS << "};\n\n";
   }
-
-  emitMnemonicSpellChecker(OS, Target, VariantCount);
 
   OS << "#include \"llvm/Support/Debug.h\"\n";
   OS << "#include \"llvm/Support/Format.h\"\n\n";
@@ -3576,6 +3585,13 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
                              MaxMnemonicIndex, HasMnemonicFirst);
 
   OS << "#endif // GET_MATCHER_IMPLEMENTATION\n\n";
+
+  OS << "\n#ifdef GET_MNEMONIC_SPELL_CHECKER\n";
+  OS << "#undef GET_MNEMONIC_SPELL_CHECKER\n\n";
+
+  emitMnemonicSpellChecker(OS, Target, VariantCount);
+
+  OS << "#endif // GET_MNEMONIC_SPELL_CHECKER\n\n";
 }
 
 namespace llvm {
