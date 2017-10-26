@@ -14,16 +14,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "ClangdLSPServer.h"
-#include "llvm/Support/Program.h"
 #include <sstream>
 
 extern "C" int LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
-  /// Change stdin to binary to not lose \r\n on windows.
-  llvm::sys::ChangeStdinToBinary();
-
   clang::clangd::JSONOutput Out(llvm::nulls(), llvm::nulls(), nullptr);
 
-  /// Initialize and run ClangdLSPServer.
+  // Initialize and run ClangdLSPServer.
   clang::clangd::ClangdLSPServer LSPServer(
       Out, clang::clangd::getDefaultAsyncThreadsCount(),
       /*EnableSnippets=*/false, llvm::None, llvm::None);
