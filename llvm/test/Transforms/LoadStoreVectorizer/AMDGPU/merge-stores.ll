@@ -632,6 +632,26 @@ define amdgpu_kernel void @copy_v3f64_align4(<3 x double> addrspace(1)* noalias 
   ret void
 }
 
+; Verify that we no longer hit asserts for this test case. No change expected.
+; CHECK-LABEL: @copy_vec_of_ptrs
+; CHECK: %in.gep.1 = getelementptr <2 x i16*>, <2 x i16*> addrspace(1)* %in, i32 1
+; CHECK: %vec1 = load <2 x i16*>, <2 x i16*> addrspace(1)* %in.gep.1
+; CHECK: %vec2 = load <2 x i16*>, <2 x i16*> addrspace(1)* %in, align 4
+; CHECK: %out.gep.1 = getelementptr <2 x i16*>, <2 x i16*> addrspace(1)* %out, i32 1
+; CHECK: store <2 x i16*> %vec1, <2 x i16*> addrspace(1)* %out.gep.1
+; CHECK: store <2 x i16*> %vec2, <2 x i16*> addrspace(1)* %out, align 4
+define amdgpu_kernel void @copy_vec_of_ptrs(<2 x i16*> addrspace(1)* %out,
+                                            <2 x i16*> addrspace(1)* %in ) #0 {
+  %in.gep.1 = getelementptr <2 x i16*>, <2 x i16*> addrspace(1)* %in, i32 1
+  %vec1 = load <2 x i16*>, <2 x i16*> addrspace(1)* %in.gep.1
+  %vec2 = load <2 x i16*>, <2 x i16*> addrspace(1)* %in, align 4
+
+  %out.gep.1 = getelementptr <2 x i16*>, <2 x i16*> addrspace(1)* %out, i32 1
+  store <2 x i16*> %vec1, <2 x i16*> addrspace(1)* %out.gep.1
+  store <2 x i16*> %vec2, <2 x i16*> addrspace(1)* %out, align 4
+  ret void
+}
+
 declare void @llvm.amdgcn.s.barrier() #1
 
 attributes #0 = { nounwind }

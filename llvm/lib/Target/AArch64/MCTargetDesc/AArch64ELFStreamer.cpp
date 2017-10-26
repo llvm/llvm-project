@@ -102,6 +102,14 @@ public:
     MCELFStreamer::ChangeSection(Section, Subsection);
   }
 
+  // Reset state between object emissions
+  void reset() override {
+    MappingSymbolCounter = 0;
+    MCELFStreamer::reset();
+    LastMappingSymbols.clear();
+    LastEMS = EMS_None;
+  }
+
   /// This function is the one used to emit instruction data into the ELF
   /// streamer. We override it to add the appropriate mapping symbol if
   /// necessary.

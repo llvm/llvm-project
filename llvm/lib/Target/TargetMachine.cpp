@@ -128,7 +128,8 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
   if (TT.isOSBinFormatCOFF() || (TT.isOSWindows() && TT.isOSBinFormatMachO()))
     return true;
 
-  if (GV && (GV->hasLocalLinkage() || !GV->hasDefaultVisibility()))
+  if (GV && (GV->hasLocalLinkage() || !GV->hasDefaultVisibility() ||
+              GV->isDSOLocal()))
     return true;
 
   if (TT.isOSBinFormatMachO()) {
