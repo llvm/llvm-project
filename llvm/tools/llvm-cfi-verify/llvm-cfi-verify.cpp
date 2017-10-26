@@ -43,6 +43,8 @@ void printIndirectCFInstructions(const FileAnalysis &Verifier) {
            << " ";
     InstrMeta.Instruction.print(outs());
     outs() << "\n";
+    outs() << "  Protected? "
+           << Verifier.isIndirectInstructionCFIProtected(Address) << "\n";
   }
 }
 

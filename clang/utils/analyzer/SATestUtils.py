@@ -93,14 +93,6 @@ def runScript(ScriptPath, PBuildLogFile, Cwd):
             sys.exit(-1)
 
 
-class Discarder(object):
-    """
-    Auxiliary object to discard stdout.
-    """
-    def write(self, text):
-        pass  # do nothing
-
-
 def isCommentCSVLine(Entries):
     """
     Treat CSV lines starting with a '#' as a comment.

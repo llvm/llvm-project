@@ -10,13 +10,13 @@
 #include "Writer.h"
 #include "Config.h"
 #include "DLL.h"
-#include "Error.h"
 #include "InputFiles.h"
 #include "MapFile.h"
 #include "Memory.h"
 #include "PDB.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
+#include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -316,7 +316,7 @@ void Writer::run() {
   writeMapFile(OutputSections);
 
   if (auto EC = Buffer->commit())
-    fatal(EC, "failed to write the output file");
+    fatal("failed to write the output file: " + EC.message());
 }
 
 static StringRef getOutputSection(StringRef Name) {
@@ -615,7 +615,7 @@ void Writer::assignAddresses() {
     RVA += alignTo(Sec->getVirtualSize(), PageSize);
     FileSize += alignTo(Sec->getRawSize(), SectorSize);
   }
-  SizeOfImage = SizeOfHeaders + alignTo(RVA - 0x1000, PageSize);
+  SizeOfImage = alignTo(RVA, PageSize);
 }
 
 template <typename PEHeaderTy> void Writer::writeHeader() {

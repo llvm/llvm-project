@@ -180,4 +180,16 @@ CudaVersion MinVersionForCudaArch(CudaArch A) {
   llvm_unreachable("invalid enum");
 }
 
+CudaVersion MaxVersionForCudaArch(CudaArch A) {
+  switch (A) {
+  case CudaArch::UNKNOWN:
+    return CudaVersion::UNKNOWN;
+  case CudaArch::SM_20:
+  case CudaArch::SM_21:
+    return CudaVersion::CUDA_80;
+  default:
+    return CudaVersion::LATEST;
+  }
+}
+
 } // namespace clang

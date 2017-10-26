@@ -421,7 +421,7 @@ class AnalysisDeclContextManager {
 
   /// Pointer to a factory for creating and caching implementations for common
   /// methods during the analysis.
-  std::unique_ptr<BodyFarm> BdyFrm;
+  std::unique_ptr<BodyFarm> FunctionBodyFarm;
 
   /// Flag to indicate whether or not bodies should be synthesized
   /// for well-known functions.
