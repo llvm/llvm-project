@@ -20,6 +20,7 @@
 #include "AArch64TargetMachine.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -32,8 +33,6 @@
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "aarch64-isel"
-
-#include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
 
 using namespace llvm;
 
@@ -50,6 +49,7 @@ public:
                              const AArch64RegisterBankInfo &RBI);
 
   bool select(MachineInstr &I) const override;
+  static const char *getName() { return DEBUG_TYPE; }
 
 private:
   /// tblgen-erated 'select' implementation, used as the initial selector for
