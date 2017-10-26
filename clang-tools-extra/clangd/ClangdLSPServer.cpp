@@ -73,6 +73,8 @@ void ClangdLSPServer::onDocumentDidOpen(Ctx C,
 
 void ClangdLSPServer::onDocumentDidChange(Ctx C,
                                           DidChangeTextDocumentParams &Params) {
+  if (Params.contentChanges.size() != 1)
+    return C.replyError(-32602, "can only apply one change at a time");
   // We only support full syncing right now.
   Server.addDocument(Params.textDocument.uri.file,
                      Params.contentChanges[0].text);
@@ -158,24 +160,24 @@ void ClangdLSPServer::onCompletion(Ctx C, TextDocumentPositionParams &Params) {
 
 void ClangdLSPServer::onSignatureHelp(Ctx C,
                                       TextDocumentPositionParams &Params) {
-  C.reply(SignatureHelp::unparse(
-      Server
-          .signatureHelp(
-              Params.textDocument.uri.file,
-              Position{Params.position.line, Params.position.character})
-          .Value));
+  auto SignatureHelp = Server.signatureHelp(
+      Params.textDocument.uri.file,
+      Position{Params.position.line, Params.position.character});
+  if (!SignatureHelp)
+    return C.replyError(-32602, llvm::toString(SignatureHelp.takeError()));
+  C.reply(SignatureHelp::unparse(SignatureHelp->Value));
 }
 
 void ClangdLSPServer::onGoToDefinition(Ctx C,
                                        TextDocumentPositionParams &Params) {
-  auto Items = Server
-                   .findDefinitions(Params.textDocument.uri.file,
-                                    Position{Params.position.line,
-                                             Params.position.character})
-                   .Value;
+  auto Items = Server.findDefinitions(
+      Params.textDocument.uri.file,
+      Position{Params.position.line, Params.position.character});
+  if (!Items)
+    return C.replyError(-32602, llvm::toString(Items.takeError()));
 
   std::string Locations;
-  for (const auto &Item : Items) {
+  for (const auto &Item : Items->Value) {
     Locations += Location::unparse(Item);
     Locations += ",";
   }

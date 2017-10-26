@@ -147,10 +147,12 @@ llvm::Error CommonOptionsParser::init(
   auto AdjustingCompilations =
       llvm::make_unique<ArgumentsAdjustingCompilations>(
           std::move(Compilations));
-  AdjustingCompilations->appendArgumentsAdjuster(
-      getInsertArgumentAdjuster(ArgsBefore, ArgumentInsertPosition::BEGIN));
-  AdjustingCompilations->appendArgumentsAdjuster(
+  Adjuster =
+      getInsertArgumentAdjuster(ArgsBefore, ArgumentInsertPosition::BEGIN);
+  Adjuster = combineAdjusters(
+      std::move(Adjuster),
       getInsertArgumentAdjuster(ArgsAfter, ArgumentInsertPosition::END));
+  AdjustingCompilations->appendArgumentsAdjuster(Adjuster);
   Compilations = std::move(AdjustingCompilations);
   return llvm::Error::success();
 }

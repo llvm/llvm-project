@@ -70,7 +70,7 @@ int main(int argc, char *argv[]) {
   if (RunSynchronously)
     WorkerThreadsCount = 0;
 
-  /// Validate command line arguments.
+  // Validate command line arguments.
   llvm::Optional<llvm::raw_fd_ostream> InputMirrorStream;
   if (!InputMirrorFile.empty()) {
     std::error_code EC;
@@ -108,10 +108,10 @@ int main(int argc, char *argv[]) {
   if (!ResourceDir.empty())
     ResourceDirRef = ResourceDir;
 
-  /// Change stdin to binary to not lose \r\n on windows.
+  // Change stdin to binary to not lose \r\n on windows.
   llvm::sys::ChangeStdinToBinary();
 
-  /// Initialize and run ClangdLSPServer.
+  // Initialize and run ClangdLSPServer.
   ClangdLSPServer LSPServer(Out, WorkerThreadsCount, EnableSnippets,
                             ResourceDirRef, CompileCommandsDirPath);
 

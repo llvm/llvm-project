@@ -65,7 +65,7 @@ E: qcolombet@apple.com
 D: Loop Strength Reduction, Register allocators
 
 N: Simon Dardis
-E: simon.dardis@imgtec.com
+E: simon.dardis@mips.com
 D: MIPS Backend (lib/Target/Mips/*)
 
 N: Duncan P. N. Exon Smith

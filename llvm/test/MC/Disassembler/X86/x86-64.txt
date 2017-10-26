@@ -479,6 +479,14 @@
 # CHECK: nopq %rax
 0x48 0x0f 0x1f 0xC0
 
+# TODO: wrong dissassembler with 0x67 prefix: expected popq
+# CHECK: popw    %r14
+0x67 0x49 0x5e
+
+# TODO: wrong dissassembler with 0x67 prefix: expected pushq
+# CHECK: pushw    %r14
+0x67 0x49 0x56
+
 # CHECK:  xchgw   %di, %ax
 0x66 0x3e 0x97
 
