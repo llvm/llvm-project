@@ -313,7 +313,7 @@ struct __sanitizer_wordexp_t {
   uptr we_nbytes;
 };
 
-typedef void __sanitizer_FILE;
+typedef char __sanitizer_FILE;
 #define SANITIZER_HAS_STRUCT_FILE 0
 
 extern int shmctl_ipc_stat;

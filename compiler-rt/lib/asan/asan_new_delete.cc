@@ -125,77 +125,69 @@ INTERCEPTOR(void *, _ZnwmRKSt9nothrow_t, size_t size, std::nothrow_t const&) {
 INTERCEPTOR(void *, _ZnamRKSt9nothrow_t, size_t size, std::nothrow_t const&) {
   OPERATOR_NEW_BODY(FROM_NEW_BR, true /*nothrow*/);
 }
-#endif
+#endif  // !SANITIZER_MAC
 
 #define OPERATOR_DELETE_BODY(type) \
   GET_STACK_TRACE_FREE;\
-  asan_free(ptr, &stack, type);
+  asan_delete(ptr, 0, 0, &stack, type);
+
+#define OPERATOR_DELETE_BODY_SIZE(type) \
+  GET_STACK_TRACE_FREE;\
+  asan_delete(ptr, size, 0, &stack, type);
+
+#define OPERATOR_DELETE_BODY_ALIGN(type) \
+  GET_STACK_TRACE_FREE;\
+  asan_delete(ptr, 0, static_cast<uptr>(align), &stack, type);
+
+#define OPERATOR_DELETE_BODY_SIZE_ALIGN(type) \
+  GET_STACK_TRACE_FREE;\
+  asan_delete(ptr, size, static_cast<uptr>(align), &stack, type);
 
 #if !SANITIZER_MAC
 CXX_OPERATOR_ATTRIBUTE
-void operator delete(void *ptr) NOEXCEPT {
-  OPERATOR_DELETE_BODY(FROM_NEW);
-}
+void operator delete(void *ptr) NOEXCEPT
+{ OPERATOR_DELETE_BODY(FROM_NEW); }
 CXX_OPERATOR_ATTRIBUTE
-void operator delete[](void *ptr) NOEXCEPT {
-  OPERATOR_DELETE_BODY(FROM_NEW_BR);
-}
+void operator delete[](void *ptr) NOEXCEPT
+{ OPERATOR_DELETE_BODY(FROM_NEW_BR); }
 CXX_OPERATOR_ATTRIBUTE
-void operator delete(void *ptr, std::nothrow_t const&) {
-  OPERATOR_DELETE_BODY(FROM_NEW);
-}
+void operator delete(void *ptr, std::nothrow_t const&)
+{ OPERATOR_DELETE_BODY(FROM_NEW); }
 CXX_OPERATOR_ATTRIBUTE
-void operator delete[](void *ptr, std::nothrow_t const&) {
-  OPERATOR_DELETE_BODY(FROM_NEW_BR);
-}
+void operator delete[](void *ptr, std::nothrow_t const&)
+{ OPERATOR_DELETE_BODY(FROM_NEW_BR); }
 CXX_OPERATOR_ATTRIBUTE
-void operator delete(void *ptr, size_t size) NOEXCEPT {
-  GET_STACK_TRACE_FREE;
-  asan_sized_free(ptr, size, &stack, FROM_NEW);
-}
+void operator delete(void *ptr, size_t size) NOEXCEPT
+{ OPERATOR_DELETE_BODY_SIZE(FROM_NEW); }
 CXX_OPERATOR_ATTRIBUTE
-void operator delete[](void *ptr, size_t size) NOEXCEPT {
-  GET_STACK_TRACE_FREE;
-  asan_sized_free(ptr, size, &stack, FROM_NEW_BR);
-}
+void operator delete[](void *ptr, size_t size) NOEXCEPT
+{ OPERATOR_DELETE_BODY_SIZE(FROM_NEW_BR); }
 CXX_OPERATOR_ATTRIBUTE
-void operator delete(void *ptr, std::align_val_t) NOEXCEPT {
-  OPERATOR_DELETE_BODY(FROM_NEW);
-}
+void operator delete(void *ptr, std::align_val_t align) NOEXCEPT
+{ OPERATOR_DELETE_BODY_ALIGN(FROM_NEW); }
 CXX_OPERATOR_ATTRIBUTE
-void operator delete[](void *ptr, std::align_val_t) NOEXCEPT {
-  OPERATOR_DELETE_BODY(FROM_NEW_BR);
-}
+void operator delete[](void *ptr, std::align_val_t align) NOEXCEPT
+{ OPERATOR_DELETE_BODY_ALIGN(FROM_NEW_BR); }
 CXX_OPERATOR_ATTRIBUTE
-void operator delete(void *ptr, std::align_val_t, std::nothrow_t const&) {
-  OPERATOR_DELETE_BODY(FROM_NEW);
-}
+void operator delete(void *ptr, std::align_val_t align, std::nothrow_t const&)
+{ OPERATOR_DELETE_BODY_ALIGN(FROM_NEW); }
 CXX_OPERATOR_ATTRIBUTE
-void operator delete[](void *ptr, std::align_val_t, std::nothrow_t const&) {
-  OPERATOR_DELETE_BODY(FROM_NEW_BR);
-}
+void operator delete[](void *ptr, std::align_val_t align, std::nothrow_t const&)
+{ OPERATOR_DELETE_BODY_ALIGN(FROM_NEW_BR); }
 CXX_OPERATOR_ATTRIBUTE
-void operator delete(void *ptr, size_t size, std::align_val_t) NOEXCEPT {
-  GET_STACK_TRACE_FREE;
-  asan_sized_free(ptr, size, &stack, FROM_NEW);
-}
+void operator delete(void *ptr, size_t size, std::align_val_t align) NOEXCEPT
+{ OPERATOR_DELETE_BODY_SIZE_ALIGN(FROM_NEW); }
 CXX_OPERATOR_ATTRIBUTE
-void operator delete[](void *ptr, size_t size, std::align_val_t) NOEXCEPT {
-  GET_STACK_TRACE_FREE;
-  asan_sized_free(ptr, size, &stack, FROM_NEW_BR);
-}
+void operator delete[](void *ptr, size_t size, std::align_val_t align) NOEXCEPT
+{ OPERATOR_DELETE_BODY_SIZE_ALIGN(FROM_NEW_BR); }
 
 #else  // SANITIZER_MAC
-INTERCEPTOR(void, _ZdlPv, void *ptr) {
-  OPERATOR_DELETE_BODY(FROM_NEW);
-}
-INTERCEPTOR(void, _ZdaPv, void *ptr) {
-  OPERATOR_DELETE_BODY(FROM_NEW_BR);
-}
-INTERCEPTOR(void, _ZdlPvRKSt9nothrow_t, void *ptr, std::nothrow_t const&) {
-  OPERATOR_DELETE_BODY(FROM_NEW);
-}
-INTERCEPTOR(void, _ZdaPvRKSt9nothrow_t, void *ptr, std::nothrow_t const&) {
-  OPERATOR_DELETE_BODY(FROM_NEW_BR);
-}
-#endif
+INTERCEPTOR(void, _ZdlPv, void *ptr)
+{ OPERATOR_DELETE_BODY(FROM_NEW); }
+INTERCEPTOR(void, _ZdaPv, void *ptr)
+{ OPERATOR_DELETE_BODY(FROM_NEW_BR); }
+INTERCEPTOR(void, _ZdlPvRKSt9nothrow_t, void *ptr, std::nothrow_t const&)
+{ OPERATOR_DELETE_BODY(FROM_NEW); }
+INTERCEPTOR(void, _ZdaPvRKSt9nothrow_t, void *ptr, std::nothrow_t const&)
+{ OPERATOR_DELETE_BODY(FROM_NEW_BR); }
+#endif  // !SANITIZER_MAC
