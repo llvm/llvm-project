@@ -110,12 +110,12 @@ cd ${LIBCXX_BUILD}
 ninja cxx cxxabi
 
 FLAGS="${FLAGS} -fno-rtti -fno-exceptions"
+LLVM_FLAGS="${FLAGS} -nostdinc++ -I${ZLIB_BUILD} -I${LIBCXX_BUILD}/include/c++/v1"
 
 # Build LLVM.
 if [[ ! -d ${LLVM_BUILD} ]]; then
   mkdir -p ${LLVM_BUILD}
   cd ${LLVM_BUILD}
-  LLVM_FLAGS="${FLAGS} -I${ZLIB_BUILD} -I${LIBCXX_BUILD}/include/c++/v1"
   cmake -GNinja \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_C_COMPILER=$CC \
@@ -137,7 +137,7 @@ mkdir ${SYMBOLIZER_BUILD}
 cd ${SYMBOLIZER_BUILD}
 
 echo "Compiling..."
-SYMBOLIZER_FLAGS="$FLAGS -std=c++11 -I${LLVM_SRC}/include -I${LLVM_BUILD}/include -I${LIBCXX_BUILD}/include/c++/v1"
+SYMBOLIZER_FLAGS="$LLVM_FLAGS -I${LLVM_SRC}/include -I${LLVM_BUILD}/include -std=c++11"
 $CXX $SYMBOLIZER_FLAGS ${SRC_DIR}/sanitizer_symbolize.cc ${SRC_DIR}/sanitizer_wrappers.cc -c
 $AR rc symbolizer.a sanitizer_symbolize.o sanitizer_wrappers.o
 
