@@ -543,6 +543,7 @@ public:
 #define GET_REGISTER_MATCHER
 #define GET_SUBTARGET_FEATURE_NAME
 #define GET_MATCHER_IMPLEMENTATION
+#define GET_MNEMONIC_SPELL_CHECKER
 #include "SystemZGenAsmMatcher.inc"
 
 // Used for the .insn directives; contains information needed to parse the
@@ -1168,7 +1169,8 @@ bool SystemZAsmParser::parseOperand(OperandVector &Operands,
   return false;
 }
 
-std::string SystemZMnemonicSpellCheck(StringRef S, uint64_t FBS);
+static std::string SystemZMnemonicSpellCheck(StringRef S, uint64_t FBS,
+                                             unsigned VariantID = 0);
 
 bool SystemZAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                                OperandVector &Operands,

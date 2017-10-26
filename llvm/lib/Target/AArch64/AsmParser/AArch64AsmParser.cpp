@@ -3297,7 +3297,8 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst,
   }
 }
 
-std::string AArch64MnemonicSpellCheck(StringRef S, uint64_t FBS);
+static std::string AArch64MnemonicSpellCheck(StringRef S, uint64_t FBS,
+                                             unsigned VariantID = 0);
 
 bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
                                       OperandVector &Operands) {
@@ -4255,6 +4256,7 @@ extern "C" void LLVMInitializeAArch64AsmParser() {
 #define GET_REGISTER_MATCHER
 #define GET_SUBTARGET_FEATURE_NAME
 #define GET_MATCHER_IMPLEMENTATION
+#define GET_MNEMONIC_SPELL_CHECKER
 #include "AArch64GenAsmMatcher.inc"
 
 // Define this matcher function after the auto-generated include so we

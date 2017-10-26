@@ -4396,9 +4396,11 @@ void Sema::CodeCompleteCall(Scope *S, Expr *Fn, ArrayRef<Expr *> Args) {
     ArgExprs.append(Args.begin(), Args.end());
     UnresolvedSet<8> Decls;
     Decls.append(UME->decls_begin(), UME->decls_end());
+    const bool FirstArgumentIsBase = !UME->isImplicitAccess() && UME->getBase();
     AddFunctionCandidates(Decls, ArgExprs, CandidateSet, TemplateArgs,
                           /*SuppressUsedConversions=*/false,
-                          /*PartialOverloading=*/true);
+                          /*PartialOverloading=*/true,
+                          FirstArgumentIsBase);
   } else {
     FunctionDecl *FD = nullptr;
     if (auto MCE = dyn_cast<MemberExpr>(NakedFn))
