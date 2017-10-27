@@ -2503,13 +2503,8 @@ bool Sema::IsDerivedFrom(SourceLocation Loc, QualType Derived, QualType Base,
   return DerivedRD->isDerivedFrom(BaseRD, Paths);
 }
 
-void Sema::BuildBasePathArray(const CXXBasePaths &Paths,
-                              CXXCastPath &BasePathArray) {
-  assert(BasePathArray.empty() && "Base path array must be empty!");
-  assert(Paths.isRecordingPaths() && "Must record paths!");
-
-  const CXXBasePath &Path = Paths.front();
-
+static void BuildBasePathArray(const CXXBasePath &Path,
+                               CXXCastPath &BasePathArray) {
   // We first go backward and check if we have a virtual base.
   // FIXME: It would be better if CXXBasePath had the base specifier for
   // the nearest virtual base.
@@ -2526,6 +2521,13 @@ void Sema::BuildBasePathArray(const CXXBasePaths &Paths,
     BasePathArray.push_back(const_cast<CXXBaseSpecifier*>(Path[I].Base));
 }
 
+
+void Sema::BuildBasePathArray(const CXXBasePaths &Paths,
+                              CXXCastPath &BasePathArray) {
+  assert(BasePathArray.empty() && "Base path array must be empty!");
+  assert(Paths.isRecordingPaths() && "Must record paths!");
+  return ::BuildBasePathArray(Paths.front(), BasePathArray);
+}
 /// CheckDerivedToBaseConversion - Check whether the Derived-to-Base
 /// conversion (where Derived and Base are class types) is
 /// well-formed, meaning that the conversion is unambiguous (and
@@ -2557,23 +2559,42 @@ Sema::CheckDerivedToBaseConversion(QualType Derived, QualType Base,
          "Can only be used with a derived-to-base conversion");
   (void)DerivationOkay;
 
-  if (!Paths.isAmbiguous(Context.getCanonicalType(Base).getUnqualifiedType())) {
+  const CXXBasePath *Path = nullptr;
+  if (!Paths.isAmbiguous(Context.getCanonicalType(Base).getUnqualifiedType()))
+    Path = &Paths.front();
+
+  // For MSVC compatibility, check if Derived directly inherits from Base. Clang
+  // warns about this hierarchy under -Winaccessible-base, but MSVC allows the
+  // user to access such bases.
+  if (!Path && getLangOpts().MSVCCompat) {
+    for (const CXXBasePath &PossiblePath : Paths) {
+      if (PossiblePath.size() == 1) {
+        Path = &PossiblePath;
+        if (AmbigiousBaseConvID)
+          Diag(Loc, diag::ext_ms_ambiguous_direct_base)
+              << Base << Derived << Range;
+        break;
+      }
+    }
+  }
+
+  if (Path) {
     if (!IgnoreAccess) {
       // Check that the base class can be accessed.
-      switch (CheckBaseClassAccess(Loc, Base, Derived, Paths.front(),
-                                   InaccessibleBaseID)) {
-        case AR_inaccessible:
-          return true;
-        case AR_accessible:
-        case AR_dependent:
-        case AR_delayed:
-          break;
+      switch (
+          CheckBaseClassAccess(Loc, Base, Derived, *Path, InaccessibleBaseID)) {
+      case AR_inaccessible:
+        return true;
+      case AR_accessible:
+      case AR_dependent:
+      case AR_delayed:
+        break;
       }
     }
 
     // Build a base path if necessary.
     if (BasePath)
-      BuildBasePathArray(Paths, *BasePath);
+      ::BuildBasePathArray(*Path, *BasePath);
     return false;
   }
 
