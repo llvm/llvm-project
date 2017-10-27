@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SyntheticSections.h"
+#include "Bits.h"
 #include "Config.h"
 #include "InputFiles.h"
 #include "LinkerScript.h"
@@ -385,8 +386,8 @@ void BuildIdSection::writeBuildId(ArrayRef<uint8_t> Buf) {
     });
     break;
   case BuildIdKind::Uuid:
-    if (getRandomBytes(HashBuf, HashSize))
-      error("entropy source failure");
+    if (auto EC = getRandomBytes(HashBuf, HashSize))
+      error("entropy source failure: " + EC.message());
     break;
   case BuildIdKind::Hexstring:
     memcpy(HashBuf, Config->BuildIdVector.data(), Config->BuildIdVector.size());
@@ -510,9 +511,7 @@ void EhFrameSection<ELFT>::addSection(InputSectionBase *C) {
   if (Sec->Pieces.empty())
     return;
 
-  if (Sec->NumRelocations == 0)
-    addSectionAux(Sec, makeArrayRef<Elf_Rela>(nullptr, nullptr));
-  else if (Sec->AreRelocsRela)
+  if (Sec->AreRelocsRela)
     addSectionAux(Sec, Sec->template relas<ELFT>());
   else
     addSectionAux(Sec, Sec->template rels<ELFT>());
@@ -854,19 +853,6 @@ bool MipsGotSection::empty() const {
 
 uint64_t MipsGotSection::getGp() const { return ElfSym::MipsGp->getVA(0); }
 
-static uint64_t readUint(uint8_t *Buf) {
-  if (Config->Is64)
-    return read64(Buf, Config->Endianness);
-  return read32(Buf, Config->Endianness);
-}
-
-static void writeUint(uint8_t *Buf, uint64_t Val) {
-  if (Config->Is64)
-    write64(Buf, Val, Config->Endianness);
-  else
-    write32(Buf, Val, Config->Endianness);
-}
-
 void MipsGotSection::writeTo(uint8_t *Buf) {
   // Set the MSB of the second GOT slot. This is not required by any
   // MIPS ABI documentation, though.
@@ -1110,13 +1096,13 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
     add({DT_PLTRELSZ, In<ELFT>::RelaPlt->getParent(), Entry::SecSize});
     switch (Config->EMachine) {
     case EM_MIPS:
-      add({DT_MIPS_PLTGOT, In<ELFT>::GotPlt});
+      add({DT_MIPS_PLTGOT, InX::GotPlt});
       break;
     case EM_SPARCV9:
-      add({DT_PLTGOT, In<ELFT>::Plt});
+      add({DT_PLTGOT, InX::Plt});
       break;
     default:
-      add({DT_PLTGOT, In<ELFT>::GotPlt});
+      add({DT_PLTGOT, InX::GotPlt});
       break;
     }
     add({DT_PLTREL, uint64_t(Config->IsRela ? DT_RELA : DT_REL)});

@@ -762,7 +762,7 @@
 		49DCF6FE170E6B4A0092F75E /* IRMemoryMap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49DCF6FD170E6B4A0092F75E /* IRMemoryMap.cpp */; };
 		49DCF702170E70120092F75E /* Materializer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49DCF700170E70120092F75E /* Materializer.cpp */; };
 		49DEF1251CD7C6DF006A7C7D /* BlockPointer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49DEF11F1CD7BD90006A7C7D /* BlockPointer.cpp */; };
-		49E431651BB5ED070085B52D /* ClangModulesDeclVendor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4959511E1A1BC4BC00F6F8FC /* ClangModulesDeclVendor.cpp */; };
+		4959511F1A1BC4BC00F6F8FC /* ClangModulesDeclVendor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4959511E1A1BC4BC00F6F8FC /* ClangModulesDeclVendor.cpp */; };
 		49E4F66B1C9CAD16008487EA /* DiagnosticManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49E4F6681C9CAD12008487EA /* DiagnosticManager.cpp */; };
 		49F811F31E931B2100F4E163 /* CPlusPlusNameParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49F811EF1E931B1500F4E163 /* CPlusPlusNameParser.cpp */; };
 		49FE3ADF1E6770E300839A32 /* ModuleCache.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2654A67F1E54D59400DA1013 /* ModuleCache.cpp */; };
@@ -1041,6 +1041,8 @@
 		AF2907BF1D3F082400E10654 /* DynamicLoaderMacOS.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF2907BD1D3F082400E10654 /* DynamicLoaderMacOS.cpp */; };
 		AF2BA6EC1A707E3400C5248A /* UriParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 33064C991A5C7A330033D415 /* UriParser.cpp */; };
 		AF2BCA6C18C7EFDE005B4526 /* JITLoaderGDB.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF2BCA6918C7EFDE005B4526 /* JITLoaderGDB.cpp */; };
+		AF2E02A31FA2CEAF00A86C34 /* ArchitectureArm.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF2E02A11FA2CEAF00A86C34 /* ArchitectureArm.cpp */; };
+		AF2E02A41FA2CEAF00A86C34 /* ArchitectureArm.h in Headers */ = {isa = PBXBuildFile; fileRef = AF2E02A21FA2CEAF00A86C34 /* ArchitectureArm.h */; };
 		AF33B4BE1C1FA441001B28D9 /* NetBSDSignals.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF33B4BC1C1FA441001B28D9 /* NetBSDSignals.cpp */; };
 		AF33B4BF1C1FA441001B28D9 /* NetBSDSignals.h in Headers */ = {isa = PBXBuildFile; fileRef = AF33B4BD1C1FA441001B28D9 /* NetBSDSignals.h */; };
 		AF37E10A17C861F20061E18E /* ProcessRunLock.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF37E10917C861F20061E18E /* ProcessRunLock.cpp */; };
@@ -3232,6 +3234,8 @@
 		AF2907BE1D3F082400E10654 /* DynamicLoaderMacOS.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DynamicLoaderMacOS.h; sourceTree = "<group>"; };
 		AF2BCA6918C7EFDE005B4526 /* JITLoaderGDB.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JITLoaderGDB.cpp; sourceTree = "<group>"; };
 		AF2BCA6A18C7EFDE005B4526 /* JITLoaderGDB.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JITLoaderGDB.h; sourceTree = "<group>"; };
+		AF2E02A11FA2CEAF00A86C34 /* ArchitectureArm.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ArchitectureArm.cpp; sourceTree = "<group>"; };
+		AF2E02A21FA2CEAF00A86C34 /* ArchitectureArm.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ArchitectureArm.h; sourceTree = "<group>"; };
 		AF33B4BC1C1FA441001B28D9 /* NetBSDSignals.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = NetBSDSignals.cpp; path = Utility/NetBSDSignals.cpp; sourceTree = "<group>"; };
 		AF33B4BD1C1FA441001B28D9 /* NetBSDSignals.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = NetBSDSignals.h; path = Utility/NetBSDSignals.h; sourceTree = "<group>"; };
 		AF37E10917C861F20061E18E /* ProcessRunLock.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ProcessRunLock.cpp; sourceTree = "<group>"; };
@@ -3879,6 +3883,7 @@
 		260C897110F57C5600BB2B04 /* Plugins */ = {
 			isa = PBXGroup;
 			children = (
+				AF2E029F1FA2CE8A00A86C34 /* Architecture */,
 				8CF02ADD19DCBEC200B14BE0 /* InstrumentationRuntime */,
 				8C2D6A58197A1FB9006989C9 /* MemoryHistory */,
 				26DB3E051379E7AD0080DC73 /* ABI */,
@@ -6840,6 +6845,23 @@
 			path = GDB;
 			sourceTree = "<group>";
 		};
+		AF2E029F1FA2CE8A00A86C34 /* Architecture */ = {
+			isa = PBXGroup;
+			children = (
+				AF2E02A01FA2CE9900A86C34 /* Arm */,
+			);
+			path = Architecture;
+			sourceTree = "<group>";
+		};
+		AF2E02A01FA2CE9900A86C34 /* Arm */ = {
+			isa = PBXGroup;
+			children = (
+				AF2E02A11FA2CEAF00A86C34 /* ArchitectureArm.cpp */,
+				AF2E02A21FA2CEAF00A86C34 /* ArchitectureArm.h */,
+			);
+			path = Arm;
+			sourceTree = "<group>";
+		};
 		AF6335DF1C87B20A00F7D554 /* PDB */ = {
 			isa = PBXGroup;
 			children = (
@@ -7011,6 +7033,7 @@
 				26EFB61C1BFE8D3E00544801 /* PlatformNetBSD.h in Headers */,
 				AF33B4BF1C1FA441001B28D9 /* NetBSDSignals.h in Headers */,
 				AF6335E31C87B21E00F7D554 /* SymbolFilePDB.h in Headers */,
+				AF2E02A41FA2CEAF00A86C34 /* ArchitectureArm.h in Headers */,
 				267F685A1CC02EBE0086832B /* RegisterInfos_s390x.h in Headers */,
 				267F68541CC02E920086832B /* RegisterContextLinux_s390x.h in Headers */,
 				267F68501CC02E270086832B /* RegisterContextPOSIXCore_s390x.h in Headers */,
@@ -7814,7 +7837,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				49E431651BB5ED070085B52D /* ClangModulesDeclVendor.cpp in Sources */,
 				33E5E8471A674FB60024ED68 /* StringConvert.cpp in Sources */,
 				2689FFDA13353D9D00698AC0 /* lldb.cpp in Sources */,
 				4C0083401B9F9BA900D5CF24 /* UtilityFunction.cpp in Sources */,
@@ -7901,6 +7923,8 @@
 				6D0F614E1C80AB0700A4ECEE /* JavaLanguageRuntime.cpp in Sources */,
 				2666ADC61B3CB675001FAFD3 /* DynamicLoaderHexagonDYLD.cpp in Sources */,
 				3F8169331ABB7A6D001DA9DF /* SystemLifetimeManager.cpp in Sources */,
+				AF2E02A31FA2CEAF00A86C34 /* ArchitectureArm.cpp in Sources */,
+				4959511F1A1BC4BC00F6F8FC /* ClangModulesDeclVendor.cpp in Sources */,
 				26BC179918C7F2B300D2196D /* JITLoader.cpp in Sources */,
 				4999FD071BC355630014BA69 /* SwiftREPLMaterializer.cpp in Sources */,
 				4CC7C6571D52997A0076FF94 /* OCamlASTContext.cpp in Sources */,

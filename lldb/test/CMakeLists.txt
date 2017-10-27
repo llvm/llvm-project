@@ -27,10 +27,6 @@ if(TARGET lldb-mi)
   list(APPEND LLDB_TEST_DEPS lldb-mi)
 endif()
 
-if ("${LLDB_TEST_COMPILER}" STREQUAL "")
-    string(REGEX REPLACE ".*ccache\ +" "" LLDB_TEST_COMPILER ${CMAKE_C_COMPILER} ${CMAKE_C_COMPILER_ARG1})
-endif()
-
 # The default architecture with which to compile test executables is the default LLVM target
 # architecture, which itself defaults to the host architecture.
 string(TOLOWER "${LLVM_TARGET_ARCH}" LLDB_DEFAULT_TEST_ARCH)
@@ -68,7 +64,7 @@ set(LLDB_TEST_COMMON_ARGS
   -S nm
   -u CXXFLAGS
   -u CFLAGS
-  -C ${LLDB_TEST_COMPILER}
+  -C ${LLDB_TEST_C_COMPILER}
   ${SWIFT_TEST_ARGS}
   )
 

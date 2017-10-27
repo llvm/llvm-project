@@ -42,10 +42,7 @@ if(APPLE)
   list(APPEND LLDB_TEST_DEPS debugserver)
 endif()
 
-if(LLDB_TEST_CLANG)
-  if(LLDB_TEST_C_COMPILER OR LLDB_TEST_CXX_COMPILER)
-    message(SEND_ERROR "Cannot override LLDB_TEST_<LANG>_COMPILER and set LLDB_TEST_CLANG.")
-  endif()
+if(TARGET clang)
   list(APPEND LLDB_TEST_DEPS clang)
 endif()
 

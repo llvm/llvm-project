@@ -38,6 +38,7 @@ RUN: ld.lld -### foo.o -m i386pep -o bar.exe | FileCheck -check-prefix=OUT %s
 OUT: -out:bar.exe
 
 RUN: ld.lld -### foo.o -m i386pep --out-implib bar | FileCheck -check-prefix=IMPLIB %s
+RUN: ld.lld -### foo.o -m i386pep --out-implib=bar | FileCheck -check-prefix=IMPLIB %s
 IMPLIB: -implib:bar
 
 RUN: ld.lld -### foo.o -m i386pep -out-implib bar | FileCheck -check-prefix=NOIMPLIB %s
