@@ -83,7 +83,7 @@
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 
-.section .text,"ax",@progbits,unique,0
+.section .text.fn,"ax",@progbits,unique,0
 .globl fn
 .type fn,@function
 fn:
@@ -94,7 +94,7 @@ bar:
   callq fn@PLT
   nop
 
-.section .text,"ax",@progbits,unique,1
+.section .text.fn2,"ax",@progbits,unique,1
 .globl fn2
 .type fn2,@function
 fn2:

@@ -289,6 +289,13 @@ template <class ELFT> void elf::markLive() {
 
   // Follow the graph to mark all live sections.
   doGcSections<ELFT>();
+
+  // Report garbage-collected sections.
+  if (Config->PrintGcSections)
+    for (InputSectionBase *Sec : InputSections)
+      if (!Sec->Live)
+        message("removing unused section from '" + Sec->Name + "' in file '" +
+                Sec->File->getName() + "'");
 }
 
 template void elf::markLive<ELF32LE>();

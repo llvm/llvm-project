@@ -668,6 +668,13 @@ void InputSection::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
     if (Expr == R_NONE)
       continue;
     if (Expr != R_ABS) {
+      // GCC 8.0 or earlier have a bug that it emits R_386_GOTPC relocations
+      // against _GLOBAL_OFFSET_TABLE for .debug_info. The bug seems to have
+      // been fixed in 2017: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82630,
+      // but we need to keep this bug-compatible code for a while.
+      if (Config->EMachine == EM_386 && Type == R_386_GOTPC)
+        continue;
+
       error(this->getLocation<ELFT>(Offset) + ": has non-ABS relocation " +
             toString(Type) + " against symbol '" + toString(Sym) + "'");
       return;
