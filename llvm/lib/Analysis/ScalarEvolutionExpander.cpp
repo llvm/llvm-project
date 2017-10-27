@@ -2250,6 +2250,10 @@ namespace {
 // only needed when the expression includes some subexpression that is not IV
 // derived.
 //
+// Currently, we only allow division by a nonzero constant here. If this is
+// inadequate, we could easily allow division by SCEVUnknown by using
+// ValueTracking to check isKnownNonZero().
+//
 // We cannot generally expand recurrences unless the step dominates the loop
 // header. The expander handles the special case of affine recurrences by
 // scaling the recurrence outside the loop, but this technique isn't generally
@@ -2264,11 +2268,13 @@ struct SCEVFindUnsafe {
 
   bool follow(const SCEV *S) {
     if (const SCEVUDivExpr *D = dyn_cast<SCEVUDivExpr>(S)) {
-      if (!SE.isKnownNonZero(D->getRHS())) {
+      const SCEVConstant *SC = dyn_cast<SCEVConstant>(D->getRHS());
+      if (!SC || SC->getValue()->isZero()) {
         IsUnsafe = true;
         return false;
       }
-    } else if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(S)) {
+    }
+    if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(S)) {
       const SCEV *Step = AR->getStepRecurrence(SE);
       if (!AR->isAffine() && !SE.dominates(Step, AR->getLoop()->getHeader())) {
         IsUnsafe = true;

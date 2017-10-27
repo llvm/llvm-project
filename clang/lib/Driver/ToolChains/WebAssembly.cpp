@@ -61,7 +61,7 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-allow-undefined-file");
     CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("wasm.syms")));
     CmdArgs.push_back("-lc");
-    CmdArgs.push_back("-lcompiler_rt");
+    AddRunTimeLibs(ToolChain, ToolChain.getDriver(), CmdArgs, Args);
   }
 
   CmdArgs.push_back("-o");

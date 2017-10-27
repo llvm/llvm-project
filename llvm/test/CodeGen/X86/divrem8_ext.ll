@@ -92,7 +92,6 @@ define i64 @test_urem_zext64_ah(i8 %x, i8 %y) {
 ; X64-NEXT:    # kill: %EAX<def> %EAX<kill> %AX<def>
 ; X64-NEXT:    divb %sil
 ; X64-NEXT:    movzbl %ah, %eax # NOREX
-; X64-NEXT:    movzbl %al, %eax
 ; X64-NEXT:    retq
   %1 = urem i8 %x, %y
   %2 = zext i8 %1 to i64
@@ -190,7 +189,7 @@ define i64 @test_srem_sext64_ah(i8 %x, i8 %y) {
 ; X64-NEXT:    cbtw
 ; X64-NEXT:    idivb %sil
 ; X64-NEXT:    movsbl %ah, %eax # NOREX
-; X64-NEXT:    movsbq %al, %rax
+; X64-NEXT:    cltq
 ; X64-NEXT:    retq
   %1 = srem i8 %x, %y
   %2 = sext i8 %1 to i64
@@ -215,7 +214,6 @@ define i64 @pr25754(i8 %a, i8 %c) {
 ; X64-NEXT:    # kill: %EAX<def> %EAX<kill> %AX<def>
 ; X64-NEXT:    divb %sil
 ; X64-NEXT:    movzbl %ah, %ecx # NOREX
-; X64-NEXT:    movzbl %cl, %ecx
 ; X64-NEXT:    movzbl %al, %eax
 ; X64-NEXT:    addq %rcx, %rax
 ; X64-NEXT:    retq

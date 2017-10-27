@@ -1,4 +1,4 @@
-//===-- NVPTXInferAddressSpace.cpp - ---------------------*- C++ -*-===//
+//===- InferAddressSpace.cpp - --------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -89,28 +89,54 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
+#include "llvm/IR/ValueHandle.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
+#include <cassert>
+#include <iterator>
+#include <limits>
+#include <utility>
+#include <vector>
 
 #define DEBUG_TYPE "infer-address-spaces"
 
 using namespace llvm;
 
+static const unsigned UninitializedAddressSpace =
+    std::numeric_limits<unsigned>::max();
+
 namespace {
-static const unsigned UninitializedAddressSpace = ~0u;
 
 using ValueToAddrSpaceMapTy = DenseMap<const Value *, unsigned>;
 
@@ -171,13 +197,16 @@ private:
     SmallVectorImpl<const Use *> *UndefUsesToFix) const;
   unsigned joinAddressSpaces(unsigned AS1, unsigned AS2) const;
 };
+
 } // end anonymous namespace
 
 char InferAddressSpaces::ID = 0;
 
 namespace llvm {
+
 void initializeInferAddressSpacesPass(PassRegistry &);
-}
+
+} // end namespace llvm
 
 INITIALIZE_PASS(InferAddressSpaces, DEBUG_TYPE, "Infer address spaces",
                 false, false)
@@ -455,11 +484,10 @@ static Value *cloneInstructionWithNewAddressSpace(
     NewGEP->setIsInBounds(GEP->isInBounds());
     return NewGEP;
   }
-  case Instruction::Select: {
+  case Instruction::Select:
     assert(I->getType()->isPointerTy());
     return SelectInst::Create(I->getOperand(0), NewPointerOperands[1],
                               NewPointerOperands[2], "", nullptr, I);
-  }
   default:
     llvm_unreachable("Unexpected opcode");
   }
@@ -732,10 +760,9 @@ static bool isSimplePointerUseValidToReplace(const TargetTransformInfo &TTI,
     return OpNo == AtomicRMWInst::getPointerOperandIndex() &&
            (VolatileIsAllowed || !RMW->isVolatile());
 
-  if (auto *CmpX = dyn_cast<AtomicCmpXchgInst>(Inst)) {
+  if (auto *CmpX = dyn_cast<AtomicCmpXchgInst>(Inst))
     return OpNo == AtomicCmpXchgInst::getPointerOperandIndex() &&
            (VolatileIsAllowed || !CmpX->isVolatile());
-  }
 
   return false;
 }

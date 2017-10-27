@@ -1,4 +1,4 @@
-//===--- PtrState.cpp -----------------------------------------------------===//
+//===- PtrState.cpp -------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,8 +10,20 @@
 #include "PtrState.h"
 #include "DependencyAnalysis.h"
 #include "ObjCARC.h"
+#include "llvm/Analysis/ObjCARCAnalysisUtils.h"
+#include "llvm/Analysis/ObjCARCInstKind.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <iterator>
+#include <utility>
 
 using namespace llvm;
 using namespace llvm::objcarc;

@@ -639,9 +639,11 @@ Error DumpOutputStyle::dumpUdtStats() {
     }
 
     auto &SymbolRecords = cantFail(getPdb().getPDBSymbolStream());
-    auto &Globals = cantFail(getPdb().getPDBGlobalsStream());
+    auto ExpGlobals = getPdb().getPDBGlobalsStream();
+    if (!ExpGlobals)
+      return ExpGlobals.takeError();
 
-    for (uint32_t PubSymOff : Globals.getGlobalsTable()) {
+    for (uint32_t PubSymOff : ExpGlobals->getGlobalsTable()) {
       CVSymbol Sym = SymbolRecords.readRecord(PubSymOff);
       HandleOneSymbol(Sym);
     }
