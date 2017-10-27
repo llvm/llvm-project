@@ -77,6 +77,19 @@ entry:
   ret i32* @e
 }
 
+; ExternalWeak hidden Linkage
+@he = extern_weak hidden global i32, align 4
+
+define i32* @my_access_global_he() #0 {
+; X32-LABEL: my_access_global_he:
+; X32:       addl $_GLOBAL_OFFSET_TABLE_{{.*}}, %eax
+; X32:       movl he@GOT(%eax), %eax
+; X64-LABEL: my_access_global_he:
+; X64:       movq he@GOTPCREL(%rip), %rax
+  ret i32* @he
+}
+
+
 ; External Linkage, only declaration, store a value.
 
 define i32 @my_access_global_store_d() #0 {

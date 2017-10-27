@@ -4063,21 +4063,19 @@ static SelectPatternResult matchFastFloatClamp(CmpInst::Predicate Pred,
   return {SPF_UNKNOWN, SPNB_NA, false};
 }
 
-/// Match non-obvious integer minimum and maximum sequences.
-static SelectPatternResult matchMinMax(CmpInst::Predicate Pred,
-                                       Value *CmpLHS, Value *CmpRHS,
-                                       Value *TrueVal, Value *FalseVal,
-                                       Value *&LHS, Value *&RHS) {
-  // Assume success. If there's no match, callers should not use these anyway.
-  LHS = TrueVal;
-  RHS = FalseVal;
-
-  // Recognize variations of:
-  // CLAMP(v,l,h) ==> ((v) < (l) ? (l) : ((v) > (h) ? (h) : (v)))
+/// Recognize variations of:
+///   CLAMP(v,l,h) ==> ((v) < (l) ? (l) : ((v) > (h) ? (h) : (v)))
+static SelectPatternResult matchClamp(CmpInst::Predicate Pred,
+                                      Value *CmpLHS, Value *CmpRHS,
+                                      Value *TrueVal, Value *FalseVal) {
+  // Swap the select operands and predicate to match the patterns below.
+  if (CmpRHS != TrueVal) {
+    Pred = ICmpInst::getSwappedPredicate(Pred);
+    std::swap(TrueVal, FalseVal);
+  }
   const APInt *C1;
   if (CmpRHS == TrueVal && match(CmpRHS, m_APInt(C1))) {
     const APInt *C2;
-
     // (X <s C1) ? C1 : SMIN(X, C2) ==> SMAX(SMIN(X, C2), C1)
     if (match(FalseVal, m_SMin(m_Specific(CmpLHS), m_APInt(C2))) &&
         C1->slt(*C2) && Pred == CmpInst::ICMP_SLT)
@@ -4098,6 +4096,21 @@ static SelectPatternResult matchMinMax(CmpInst::Predicate Pred,
         C1->ugt(*C2) && Pred == CmpInst::ICMP_UGT)
       return {SPF_UMIN, SPNB_NA, false};
   }
+  return {SPF_UNKNOWN, SPNB_NA, false};
+}
+
+/// Match non-obvious integer minimum and maximum sequences.
+static SelectPatternResult matchMinMax(CmpInst::Predicate Pred,
+                                       Value *CmpLHS, Value *CmpRHS,
+                                       Value *TrueVal, Value *FalseVal,
+                                       Value *&LHS, Value *&RHS) {
+  // Assume success. If there's no match, callers should not use these anyway.
+  LHS = TrueVal;
+  RHS = FalseVal;
+
+  SelectPatternResult SPR = matchClamp(Pred, CmpLHS, CmpRHS, TrueVal, FalseVal);
+  if (SPR.Flavor != SelectPatternFlavor::SPF_UNKNOWN)
+    return SPR;
 
   if (Pred != CmpInst::ICMP_SGT && Pred != CmpInst::ICMP_SLT)
     return {SPF_UNKNOWN, SPNB_NA, false};
@@ -4116,6 +4129,7 @@ static SelectPatternResult matchMinMax(CmpInst::Predicate Pred,
       match(TrueVal, m_NSWSub(m_Specific(CmpLHS), m_Specific(CmpRHS))))
     return {Pred == CmpInst::ICMP_SGT ? SPF_SMAX : SPF_SMIN, SPNB_NA, false};
 
+  const APInt *C1;
   if (!match(CmpRHS, m_APInt(C1)))
     return {SPF_UNKNOWN, SPNB_NA, false};
 

@@ -428,13 +428,13 @@ def WriteCVT3: SchedWriteRes<[JFPU1]> {
 def : InstRW<[WriteCVT3], (instregex "VCVTPS2PHrr")>;
 def : InstRW<[WriteCVT3], (instregex "VCVTPH2PSrr")>;
 
-def WriteCVT3St: SchedWriteRes<[JFPU1, JLAGU]> {
+def WriteCVT3St: SchedWriteRes<[JFPU1, JSAGU]> {
   let Latency = 3;
   let ResourceCycles = [1, 1];
 }
 def : InstRW<[WriteCVT3St], (instregex "VCVTPS2PHmr")>;
 
-def WriteCVT3Ld: SchedWriteRes<[JFPU1, JLAGU]> {
+def WriteCVT3Ld: SchedWriteRes<[JLAGU, JFPU1]> {
   let Latency = 8;
   let ResourceCycles = [1, 1];
 }
@@ -447,7 +447,7 @@ def WriteCVTPS2PHY: SchedWriteRes<[JFPU1, JFPU01]> {
 }
 def : InstRW<[WriteCVTPS2PHY], (instregex "VCVTPS2PHYrr")>;
 
-def WriteCVTPS2PHYSt: SchedWriteRes<[JFPU1, JFPU01, JLAGU]> {
+def WriteCVTPS2PHYSt: SchedWriteRes<[JFPU1, JFPU01, JSAGU]> {
   let Latency = 11;
   let ResourceCycles = [2,2,1];
   let NumMicroOps = 3;

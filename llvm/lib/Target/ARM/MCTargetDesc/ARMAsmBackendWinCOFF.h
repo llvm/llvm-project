@@ -11,6 +11,7 @@
 #define LLVM_LIB_TARGET_ARM_ARMASMBACKENDWINCOFF_H
 
 #include "ARMAsmBackend.h"
+#include "llvm/MC/MCObjectWriter.h"
 using namespace llvm;
 
 namespace {

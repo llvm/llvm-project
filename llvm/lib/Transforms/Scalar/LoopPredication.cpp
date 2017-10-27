@@ -53,101 +53,104 @@
 // One of the ways to reason about this problem is to use an inductive proof
 // approach. Given the loop:
 //
-//   if (B(Start)) {
+//   if (B(0)) {
 //     do {
-//       I = PHI(Start, I.INC)
+//       I = PHI(0, I.INC)
 //       I.INC = I + Step
 //       guard(G(I));
-//     } while (B(I.INC));
+//     } while (B(I));
 //   }
 //
 // where B(x) and G(x) are predicates that map integers to booleans, we want a
 // loop invariant expression M such the following program has the same semantics
 // as the above:
 //
-//   if (B(Start)) {
+//   if (B(0)) {
 //     do {
-//       I = PHI(Start, I.INC)
+//       I = PHI(0, I.INC)
 //       I.INC = I + Step
-//       guard(G(Start) && M);
-//     } while (B(I.INC));
+//       guard(G(0) && M);
+//     } while (B(I));
 //   }
 //
-// One solution for M is M = forall X . (G(X) && B(X + Step)) => G(X + Step) 
+// One solution for M is M = forall X . (G(X) && B(X)) => G(X + Step)
 // 
 // Informal proof that the transformation above is correct:
 //
 //   By the definition of guards we can rewrite the guard condition to:
-//     G(I) && G(Start) && M
+//     G(I) && G(0) && M
 //
 //   Let's prove that for each iteration of the loop:
-//     G(Start) && M => G(I)
+//     G(0) && M => G(I)
 //   And the condition above can be simplified to G(Start) && M.
 // 
 //   Induction base.
-//     G(Start) && M => G(Start)
+//     G(0) && M => G(0)
 //
-//   Induction step. Assuming G(Start) && M => G(I) on the subsequent 
+//   Induction step. Assuming G(0) && M => G(I) on the subsequent
 //   iteration:
 //
-//     B(I + Step) is true because it's the backedge condition.
+//     B(I) is true because it's the backedge condition.
 //     G(I) is true because the backedge is guarded by this condition.
 //
-//   So M = forall X . (G(X) && B(X + Step)) => G(X + Step) implies
-//   G(I + Step).
+//   So M = forall X . (G(X) && B(X)) => G(X + Step) implies G(I + Step).
 //
 // Note that we can use anything stronger than M, i.e. any condition which
 // implies M.
 //
 // For now the transformation is limited to the following case:
 //   * The loop has a single latch with the condition of the form:
-//      ++i <pred> latchLimit, where <pred> is u<, u<=, s<, or s<=.
+//     B(X) = latchStart + X <pred> latchLimit,
+//     where <pred> is u<, u<=, s<, or s<=.
 //   * The step of the IV used in the latch condition is 1.
-//   * The IV of the latch condition is the same as the post increment IV of the
-//   guard condition.
-//   * The guard condition is
-//     i u< guardLimit.
+//   * The guard condition is of the form
+//     G(X) = guardStart + X u< guardLimit
 //
 // For the ult latch comparison case M is:
-//   forall X . X u< guardLimit && (X + 1) u< latchLimit =>
-//      (X + 1) u< guardLimit
+//   forall X . guardStart + X u< guardLimit && latchStart + X <u latchLimit =>
+//      guardStart + X + 1 u< guardLimit
 //
-// This is true if latchLimit u<= guardLimit since then
-//   (X + 1) u< latchLimit u<= guardLimit == (X + 1) u< guardLimit.
-//
-// So for ult condition the widened condition is:
-//   i.start u< guardLimit && latchLimit u<= guardLimit
-// Similarly for ule condition the widened condition is:
-//   i.start u< guardLimit && latchLimit u< guardLimit
-//
-// For the signed latch comparison case M is:
-//   forall X . X u< guardLimit && (X + 1) s< latchLimit =>
-//      (X + 1) u< guardLimit
-//
-// The only way the antecedent can be true and the consequent can be false is 
+// The only way the antecedent can be true and the consequent can be false is
 // if
-//   X == guardLimit - 1
+//   X == guardLimit - 1 - guardStart
 // (and guardLimit is non-zero, but we won't use this latter fact).
-// If X == guardLimit - 1 then the second half of the antecedent is
-//   guardLimit s< latchLimit
+// If X == guardLimit - 1 - guardStart then the second half of the antecedent is
+//   latchStart + guardLimit - 1 - guardStart u< latchLimit
 // and its negation is
-//   latchLimit s<= guardLimit.
+//   latchStart + guardLimit - 1 - guardStart u>= latchLimit
 //
-// In other words, if latchLimit s<= guardLimit then:
+// In other words, if
+//   latchLimit u<= latchStart + guardLimit - 1 - guardStart
+// then:
 // (the ranges below are written in ConstantRange notation, where [A, B) is the
 // set for (I = A; I != B; I++ /*maywrap*/) yield(I);)
 //
-//    forall X . X u< guardLimit && (X + 1) s< latchLimit =>  (X + 1) u< guardLimit
-// == forall X . X u< guardLimit && (X + 1) s< guardLimit =>  (X + 1) u< guardLimit
-// == forall X . X in [0, guardLimit) && (X + 1) in [INT_MIN, guardLimit) =>  (X + 1) in [0, guardLimit)
-// == forall X . X in [0, guardLimit) && X in [INT_MAX, guardLimit-1) =>  X in [-1, guardLimit-1)
-// == forall X . X in [0, guardLimit-1) => X in [-1, guardLimit-1)
+//    forall X . guardStart + X u< guardLimit &&
+//               latchStart + X u< latchLimit =>
+//      guardStart + X + 1 u< guardLimit
+// == forall X . guardStart + X u< guardLimit &&
+//               latchStart + X u< latchStart + guardLimit - 1 - guardStart =>
+//      guardStart + X + 1 u< guardLimit
+// == forall X . (guardStart + X) in [0, guardLimit) &&
+//               (latchStart + X) in [0, latchStart + guardLimit - 1 - guardStart) =>
+//      (guardStart + X + 1) in [0, guardLimit)
+// == forall X . X in [-guardStart, guardLimit - guardStart) &&
+//               X in [-latchStart, guardLimit - 1 - guardStart) =>
+//       X in [-guardStart - 1, guardLimit - guardStart - 1)
 // == true
 //
 // So the widened condition is:
-//   i.start u< guardLimit && latchLimit s<= guardLimit
-// Similarly for sle condition the widened condition is:
-//   i.start u< guardLimit && latchLimit s< guardLimit
+//   guardStart u< guardLimit &&
+//   latchStart + guardLimit - 1 - guardStart u>= latchLimit
+// Similarly for ule condition the widened condition is:
+//   guardStart u< guardLimit &&
+//   latchStart + guardLimit - 1 - guardStart u> latchLimit
+// For slt condition the widened condition is:
+//   guardStart u< guardLimit &&
+//   latchStart + guardLimit - 1 - guardStart s>= latchLimit
+// For sle condition the widened condition is:
+//   guardStart u< guardLimit &&
+//   latchStart + guardLimit - 1 - guardStart s> latchLimit
 //
 //===----------------------------------------------------------------------===//
 
@@ -322,20 +325,37 @@ Optional<Value *> LoopPredication::widenICmpRangeCheck(ICmpInst *ICI,
     return None;
   }
   auto *RangeCheckIV = RangeCheck->IV;
-  auto *PostIncRangeCheckIV = RangeCheckIV->getPostIncExpr(*SE);
-  if (LatchCheck.IV != PostIncRangeCheckIV) {
-    DEBUG(dbgs() << "Post increment range check IV (" << *PostIncRangeCheckIV
-                 << ") is not the same as latch IV (" << *LatchCheck.IV
-                 << ")!\n");
+  auto *Ty = RangeCheckIV->getType();
+  if (Ty != LatchCheck.IV->getType()) {
+    DEBUG(dbgs() << "Type mismatch between range check and latch IVs!\n");
     return None;
   }
-  assert(RangeCheckIV->getStepRecurrence(*SE)->isOne() && "must be one");
-  const SCEV *Start = RangeCheckIV->getStart();
+  if (!RangeCheckIV->isAffine()) {
+    DEBUG(dbgs() << "Range check IV is not affine!\n");
+    return None;
+  }
+  auto *Step = RangeCheckIV->getStepRecurrence(*SE);
+  if (Step != LatchCheck.IV->getStepRecurrence(*SE)) {
+    DEBUG(dbgs() << "Range check and latch have IVs different steps!\n");
+    return None;
+  }
+  assert(Step->isOne() && "must be one");
 
   // Generate the widened condition:
-  //   i.start u< guardLimit && latchLimit <pred> guardLimit
+  //   guardStart u< guardLimit &&
+  //   latchLimit <pred> guardLimit - 1 - guardStart + latchStart
   // where <pred> depends on the latch condition predicate. See the file
   // header comment for the reasoning.
+  const SCEV *GuardStart = RangeCheckIV->getStart();
+  const SCEV *GuardLimit = RangeCheck->Limit;
+  const SCEV *LatchStart = LatchCheck.IV->getStart();
+  const SCEV *LatchLimit = LatchCheck.Limit;
+
+  // guardLimit - guardStart + latchStart - 1
+  const SCEV *RHS =
+      SE->getAddExpr(SE->getMinusSCEV(GuardLimit, GuardStart),
+                     SE->getMinusSCEV(LatchStart, SE->getOne(Ty)));
+
   ICmpInst::Predicate LimitCheckPred;
   switch (LatchCheck.Pred) {
   case ICmpInst::ICMP_ULT:
@@ -354,18 +374,24 @@ Optional<Value *> LoopPredication::widenICmpRangeCheck(ICmpInst *ICI,
     llvm_unreachable("Unsupported loop latch!");
   }
 
+  DEBUG(dbgs() << "LHS: " << *LatchLimit << "\n");
+  DEBUG(dbgs() << "RHS: " << *RHS << "\n");
+  DEBUG(dbgs() << "Pred: " << LimitCheckPred << "\n");
+
   auto CanExpand = [this](const SCEV *S) {
     return SE->isLoopInvariant(S, L) && isSafeToExpand(S, *SE);
   };
-  if (!CanExpand(Start) || !CanExpand(LatchCheck.Limit) ||
-      !CanExpand(RangeCheck->Limit))
+  if (!CanExpand(GuardStart) || !CanExpand(GuardLimit) ||
+      !CanExpand(LatchLimit) || !CanExpand(RHS)) {
+    DEBUG(dbgs() << "Can't expand limit check!\n");
     return None;
+  }
 
   Instruction *InsertAt = Preheader->getTerminator();
-  auto *LimitCheck = expandCheck(Expander, Builder, LimitCheckPred,
-                                 LatchCheck.Limit, RangeCheck->Limit, InsertAt);
+  auto *LimitCheck =
+      expandCheck(Expander, Builder, LimitCheckPred, LatchLimit, RHS, InsertAt);
   auto *FirstIterationCheck = expandCheck(Expander, Builder, RangeCheck->Pred,
-                                          Start, RangeCheck->Limit, InsertAt);
+                                          GuardStart, GuardLimit, InsertAt);
   return Builder.CreateAnd(FirstIterationCheck, LimitCheck);
 }
 
