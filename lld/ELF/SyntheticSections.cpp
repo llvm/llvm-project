@@ -2391,6 +2391,8 @@ void ThunkSection::writeTo(uint8_t *Buf) {
 }
 
 InputSection *ThunkSection::getTargetInputSection() const {
+  if (Thunks.empty())
+    return nullptr;
   const Thunk *T = Thunks.front();
   return T->getTargetInputSection();
 }

@@ -283,13 +283,8 @@ LinkerScript::computeInputSections(const InputSectionDescription *Cmd,
     size_t SizeBefore = Ret.size();
 
     for (InputSectionBase *Sec : InputSections) {
-      if (Sec->Assigned)
+      if (!Sec->Live || Sec->Assigned)
         continue;
-
-      if (!Sec->Live) {
-        reportDiscarded(Sec);
-        continue;
-      }
 
       // For -emit-relocs we have to ignore entries like
       //   .rela.dyn : { *(.rela.data) }

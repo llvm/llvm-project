@@ -63,29 +63,56 @@ DEFINE_LIBUNWIND_FUNCTION(unw_getcontext)
 #  thread_state pointer is in rdi
 #
 DEFINE_LIBUNWIND_FUNCTION(unw_getcontext)
-  movq  %rax,   (%rdi)
-  movq  %rbx,  8(%rdi)
-  movq  %rcx, 16(%rdi)
-  movq  %rdx, 24(%rdi)
-  movq  %rdi, 32(%rdi)
-  movq  %rsi, 40(%rdi)
-  movq  %rbp, 48(%rdi)
-  movq  %rsp, 56(%rdi)
-  addq  $8,   56(%rdi)
-  movq  %r8,  64(%rdi)
-  movq  %r9,  72(%rdi)
-  movq  %r10, 80(%rdi)
-  movq  %r11, 88(%rdi)
-  movq  %r12, 96(%rdi)
-  movq  %r13,104(%rdi)
-  movq  %r14,112(%rdi)
-  movq  %r15,120(%rdi)
-  movq  (%rsp),%rsi
-  movq  %rsi,128(%rdi) # store return address as rip
+#if defined(_WIN64)
+#define PTR %rcx
+#define TMP %rdx
+#else
+#define PTR %rdi
+#define TMP %rsi
+#endif
+
+  movq  %rax,   (PTR)
+  movq  %rbx,  8(PTR)
+  movq  %rcx, 16(PTR)
+  movq  %rdx, 24(PTR)
+  movq  %rdi, 32(PTR)
+  movq  %rsi, 40(PTR)
+  movq  %rbp, 48(PTR)
+  movq  %rsp, 56(PTR)
+  addq  $8,   56(PTR)
+  movq  %r8,  64(PTR)
+  movq  %r9,  72(PTR)
+  movq  %r10, 80(PTR)
+  movq  %r11, 88(PTR)
+  movq  %r12, 96(PTR)
+  movq  %r13,104(PTR)
+  movq  %r14,112(PTR)
+  movq  %r15,120(PTR)
+  movq  (%rsp),TMP
+  movq  TMP,128(PTR) # store return address as rip
   # skip rflags
   # skip cs
   # skip fs
   # skip gs
+
+#if defined(_WIN64)
+  movdqu %xmm0,176(PTR)
+  movdqu %xmm1,192(PTR)
+  movdqu %xmm2,208(PTR)
+  movdqu %xmm3,224(PTR)
+  movdqu %xmm4,240(PTR)
+  movdqu %xmm5,256(PTR)
+  movdqu %xmm6,272(PTR)
+  movdqu %xmm7,288(PTR)
+  movdqu %xmm8,304(PTR)
+  movdqu %xmm9,320(PTR)
+  movdqu %xmm10,336(PTR)
+  movdqu %xmm11,352(PTR)
+  movdqu %xmm12,368(PTR)
+  movdqu %xmm13,384(PTR)
+  movdqu %xmm14,400(PTR)
+  movdqu %xmm15,416(PTR)
+#endif
   xorl  %eax, %eax    # return UNW_ESUCCESS
   ret
 
