@@ -836,7 +836,7 @@ struct InX {
   static SymbolTableBaseSection *SymTab;
 };
 
-template <class ELFT> struct In : public InX {
+template <class ELFT> struct In {
   static EhFrameHeader<ELFT> *EhFrameHdr;
   static EhFrameSection<ELFT> *EhFrame;
   static RelocationSection<ELFT> *RelaDyn;
