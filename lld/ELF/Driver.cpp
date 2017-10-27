@@ -775,6 +775,14 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
 
   std::tie(Config->BuildId, Config->BuildIdVector) = getBuildId(Args);
 
+  if (auto *Arg = Args.getLastArg(OPT_pack_dyn_relocs_eq)) {
+    StringRef S = Arg->getValue();
+    if (S == "android")
+      Config->AndroidPackDynRelocs = true;
+    else if (S != "none")
+      error("unknown -pack-dyn-relocs format: " + S);
+  }
+
   if (auto *Arg = Args.getLastArg(OPT_symbol_ordering_file))
     if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
       Config->SymbolOrderingFile = getLines(*Buffer);

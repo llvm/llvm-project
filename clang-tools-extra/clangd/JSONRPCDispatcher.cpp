@@ -196,6 +196,15 @@ void clangd::runLanguageServerLoop(std::istream &In, JSONOutput &Out,
       }
     }
 
+    // Guard against large messages. This is usually a bug in the client code
+    // and we don't want to crash downstream because of it.
+    if (ContentLength > 1 << 30) { // 1024M
+      In.ignore(ContentLength);
+      Out.log("Skipped overly large message of " + Twine(ContentLength) +
+              " bytes.\n");
+      continue;
+    }
+
     if (ContentLength > 0) {
       // Now read the JSON. Insert a trailing null byte as required by the YAML
       // parser.
