@@ -11,10 +11,6 @@ else()
   set(ENABLE_SHARED 0)
 endif(BUILD_SHARED_LIBS)
 
-option(LLDB_TEST_CLANG "Use in-tree clang when testing lldb" Off)
-set(LLDB_TEST_C_COMPILER "" CACHE STRING "C compiler to use when testing LLDB")
-set(LLDB_TEST_CXX_COMPILER "" CACHE STRING "C++ compiler to use when testing LLDB")
-
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg)
@@ -41,10 +37,7 @@ if(APPLE)
   list(APPEND LLDB_TEST_DEPS debugserver)
 endif()
 
-if(LLDB_TEST_CLANG)
-  if(LLDB_TEST_C_COMPILER OR LLDB_TEST_CXX_COMPILER)
-    message(SEND_ERROR "Cannot override LLDB_TEST_<LANG>_COMPILER and set LLDB_TEST_CLANG.")
-  endif()
+if(TARGET clang)
   list(APPEND LLDB_TEST_DEPS clang)
 endif()
 
