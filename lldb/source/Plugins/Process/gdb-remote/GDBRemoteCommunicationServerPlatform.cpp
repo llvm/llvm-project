@@ -128,8 +128,9 @@ Status GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
   llvm::StringRef platform_ip;
   int platform_port;
   llvm::StringRef platform_path;
-  bool ok = UriParser::Parse(GetConnection()->GetURI(), platform_scheme,
-                             platform_ip, platform_port, platform_path);
+  std::string platform_uri = GetConnection()->GetURI();
+  bool ok = UriParser::Parse(platform_uri, platform_scheme, platform_ip,
+                             platform_port, platform_path);
   UNUSED_IF_ASSERT_DISABLED(ok);
   assert(ok);
 

@@ -30,7 +30,6 @@ struct SectionPiece;
 
 class DefinedRegular;
 class SyntheticSection;
-template <class ELFT> class EhFrameSection;
 class MergeSyntheticSection;
 template <class ELFT> class ObjFile;
 class OutputSection;
@@ -184,7 +183,7 @@ public:
   // Returns a source location string. Used to construct an error message.
   template <class ELFT> std::string getLocation(uint64_t Offset);
   template <class ELFT> std::string getSrcMsg(uint64_t Offset);
-  template <class ELFT> std::string getObjMsg(uint64_t Offset);
+  std::string getObjMsg(uint64_t Offset);
 
   // Each section knows how to relocate itself. These functions apply
   // relocations, assuming that Buf points to this section's copy in
