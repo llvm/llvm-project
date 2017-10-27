@@ -222,6 +222,9 @@ def omagic: Flag<["--"], "omagic">, MetaVarName<"<magic>">,
 defm orphan_handling: Eq<"orphan-handling">, 
   HelpText<"Control how orphan sections are handled when linker script used">;
 
+def pack_dyn_relocs_eq: J<"pack-dyn-relocs=">, MetaVarName<"<format>">,
+  HelpText<"Pack dynamic relocations in the given format (none or android)">;
+
 def pie: F<"pie">, HelpText<"Create a position independent executable">;
 
 def print_gc_sections: F<"print-gc-sections">,

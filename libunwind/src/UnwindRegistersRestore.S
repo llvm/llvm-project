@@ -65,7 +65,16 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind16Registers_x86_646jumptoEv)
 #
 # void libunwind::Registers_x86_64::jumpto()
 #
+#if defined(_WIN64)
+# On entry, thread_state pointer is in rcx; move it into rdi
+# to share restore code below. Since this routine restores and
+# overwrites all registers, we can use the same registers for
+# pointers and temporaries as on unix even though win64 normally
+# mustn't clobber some of them.
+  movq  %rcx, %rdi
+#else
 # On entry, thread_state pointer is in rdi
+#endif
 
   movq  56(%rdi), %rax # rax holds new stack pointer
   subq  $16, %rax
@@ -95,6 +104,25 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind16Registers_x86_646jumptoEv)
   # skip cs
   # skip fs
   # skip gs
+
+#if defined(_WIN64)
+  movdqu 176(%rdi),%xmm0
+  movdqu 192(%rdi),%xmm1
+  movdqu 208(%rdi),%xmm2
+  movdqu 224(%rdi),%xmm3
+  movdqu 240(%rdi),%xmm4
+  movdqu 256(%rdi),%xmm5
+  movdqu 272(%rdi),%xmm6
+  movdqu 288(%rdi),%xmm7
+  movdqu 304(%rdi),%xmm8
+  movdqu 320(%rdi),%xmm9
+  movdqu 336(%rdi),%xmm10
+  movdqu 352(%rdi),%xmm11
+  movdqu 368(%rdi),%xmm12
+  movdqu 384(%rdi),%xmm13
+  movdqu 400(%rdi),%xmm14
+  movdqu 416(%rdi),%xmm15
+#endif
   movq  56(%rdi), %rsp  # cut back rsp to new location
   pop    %rdi      # rdi was saved here earlier
   ret            # rip was saved here

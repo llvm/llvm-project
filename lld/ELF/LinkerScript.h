@@ -138,6 +138,7 @@ struct SectionPattern {
   SortSectionPolicy SortInner;
 };
 
+class ThunkSection;
 struct InputSectionDescription : BaseCommand {
   InputSectionDescription(StringRef FilePattern)
       : BaseCommand(InputSectionKind), FilePat(FilePattern) {}
@@ -153,6 +154,11 @@ struct InputSectionDescription : BaseCommand {
   std::vector<SectionPattern> SectionPatterns;
 
   std::vector<InputSection *> Sections;
+
+  // Temporary record of synthetic ThunkSection instances and the pass that
+  // they were created in. This is used to insert newly created ThunkSections
+  // into Sections at the end of a createThunks() pass.
+  std::vector<std::pair<ThunkSection *, uint32_t>> ThunkSections;
 };
 
 // Represents an ASSERT().

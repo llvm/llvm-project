@@ -167,7 +167,6 @@ private:
 };
 
 uint64_t getHeaderSize();
-void reportDiscarded(InputSectionBase *IS);
 void sortByOrder(llvm::MutableArrayRef<InputSection *> In,
                  std::function<int(InputSectionBase *S)> Order);
 

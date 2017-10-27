@@ -355,6 +355,10 @@ void elf::printTraceSymbol(Symbol *Sym) {
     S = ": reference to ";
   else if (B->isCommon())
     S = ": common definition of ";
+  else if (B->isLazy())
+    S = ": lazy definition of ";
+  else if (B->isShared())
+    S = ": shared definition of ";
   else
     S = ": definition of ";
 
