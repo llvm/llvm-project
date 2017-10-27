@@ -156,6 +156,8 @@
 // CHECK_I686_M32: #define __i686__ 1
 // CHECK_I686_M32: #define __pentiumpro 1
 // CHECK_I686_M32: #define __pentiumpro__ 1
+// CHECK_I686_M32: #define __tune_i686__ 1
+// CHECK_I686_M32: #define __tune_pentiumpro__ 1
 // CHECK_I686_M32: #define i386 1
 // RUN: not %clang -march=i686 -m64 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \

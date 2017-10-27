@@ -27267,6 +27267,13 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known.Zero &= Known2.Zero;
     break;
   }
+  case X86ISD::UDIVREM8_ZEXT_HREG:
+    // TODO: Support more than just the zero extended bits?
+    if (Op.getResNo() != 1)
+      break;
+    // The remainder is zero extended.
+    Known.Zero.setBitsFrom(8);
+    break;
   }
 }
 
@@ -27346,6 +27353,12 @@ unsigned X86TargetLowering::ComputeNumSignBitsForTargetNode(
     unsigned Tmp1 = DAG.ComputeNumSignBits(Op.getOperand(1), Depth+1);
     return std::min(Tmp0, Tmp1);
   }
+  case X86ISD::SDIVREM8_SEXT_HREG:
+    // TODO: Support more than just the sign extended bits?
+    if (Op.getResNo() != 1)
+      break;
+    // The remainder is sign extended.
+    return VTBits - 7;
   }
 
   // Fallback case.
@@ -34853,15 +34866,19 @@ static SDValue getDivRem8(SDNode *N, SelectionDAG &DAG) {
 
   EVT VT = N->getValueType(0);
   EVT InVT = N0.getValueType();
-  if (N0.getResNo() != 1 || InVT != MVT::i8 || VT != MVT::i32)
+  if (N0.getResNo() != 1 || InVT != MVT::i8 ||
+      !(VT == MVT::i32 || VT == MVT::i64))
     return SDValue();
 
-  SDVTList NodeTys = DAG.getVTList(MVT::i8, VT);
+  SDVTList NodeTys = DAG.getVTList(MVT::i8, MVT::i32);
   auto DivRemOpcode = OpcodeN0 == ISD::SDIVREM ? X86ISD::SDIVREM8_SEXT_HREG
                                                : X86ISD::UDIVREM8_ZEXT_HREG;
   SDValue R = DAG.getNode(DivRemOpcode, SDLoc(N), NodeTys, N0.getOperand(0),
                           N0.getOperand(1));
   DAG.ReplaceAllUsesOfValueWith(N0.getValue(0), R.getValue(0));
+  // If this was a 64-bit extend, complete it.
+  if (VT == MVT::i64)
+    return DAG.getNode(OpcodeN, SDLoc(N), VT, R.getValue(1));
   return R.getValue(1);
 }
 

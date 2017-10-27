@@ -117,7 +117,8 @@ Error GSIHashTable::read(BinaryStreamReader &Reader) {
     return EC;
   if (auto EC = readGSIHashRecords(HashRecords, HashHdr, Reader))
     return EC;
-  if (auto EC = readGSIHashBuckets(HashBuckets, HashBitmap, HashHdr, Reader))
-    return EC;
+  if (HashHdr->HrSize > 0)
+    if (auto EC = readGSIHashBuckets(HashBuckets, HashBitmap, HashHdr, Reader))
+      return EC;
   return Error::success();
 }

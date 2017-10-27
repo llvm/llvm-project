@@ -2366,7 +2366,8 @@ void Generic_ELF::addClangTargetOptions(const ArgList &DriverArgs,
       getTriple().getArch() == llvm::Triple::aarch64 ||
       getTriple().getArch() == llvm::Triple::aarch64_be ||
       (getTriple().getOS() == llvm::Triple::Linux &&
-       (!V.isOlderThan(4, 7, 0) || getTriple().isAndroid())) ||
+       ((!GCCInstallation.isValid() || !V.isOlderThan(4, 7, 0)) ||
+        getTriple().isAndroid())) ||
       getTriple().getOS() == llvm::Triple::NaCl ||
       (getTriple().getVendor() == llvm::Triple::MipsTechnologies &&
        !getTriple().hasEnvironment()) ||

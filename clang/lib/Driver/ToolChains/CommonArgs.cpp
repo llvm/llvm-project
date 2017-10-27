@@ -1027,15 +1027,7 @@ void tools::AddRunTimeLibs(const ToolChain &TC, const Driver &D,
 
   switch (RLT) {
   case ToolChain::RLT_CompilerRT:
-    switch (TC.getTriple().getOS()) {
-    default:
-      llvm_unreachable("unsupported OS");
-    case llvm::Triple::Win32:
-    case llvm::Triple::Linux:
-    case llvm::Triple::Fuchsia:
-      CmdArgs.push_back(TC.getCompilerRTArgString(Args, "builtins"));
-      break;
-    }
+    CmdArgs.push_back(TC.getCompilerRTArgString(Args, "builtins"));
     break;
   case ToolChain::RLT_Libgcc:
     // Make sure libgcc is not used under MSVC environment by default
