@@ -1644,10 +1644,8 @@ CodeGenFunction::GenerateCopyHelperFunction(const CGBlockInfo &blockInfo) {
 
   CGM.SetInternalFunctionAttributes(nullptr, Fn, FI);
 
-  auto NL = ApplyDebugLocation::CreateEmpty(*this);
   StartFunction(FD, C.VoidTy, Fn, FI, args);
-  // Create a scope with an artificial location for the body of this function.
-  auto AL = ApplyDebugLocation::CreateArtificial(*this);
+  ApplyDebugLocation NL{*this, blockInfo.getBlockExpr()->getLocStart()};
   llvm::Type *structPtrTy = blockInfo.StructureType->getPointerTo();
 
   Address src = GetAddrOfLocalVar(&SrcDecl);
@@ -1816,10 +1814,8 @@ CodeGenFunction::GenerateDestroyHelperFunction(const CGBlockInfo &blockInfo) {
 
   CGM.SetInternalFunctionAttributes(nullptr, Fn, FI);
 
-  // Create a scope with an artificial location for the body of this function.
-  auto NL = ApplyDebugLocation::CreateEmpty(*this);
   StartFunction(FD, C.VoidTy, Fn, FI, args);
-  auto AL = ApplyDebugLocation::CreateArtificial(*this);
+  ApplyDebugLocation NL{*this, blockInfo.getBlockExpr()->getLocStart()};
 
   llvm::Type *structPtrTy = blockInfo.StructureType->getPointerTo();
 

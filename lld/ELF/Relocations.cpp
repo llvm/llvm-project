@@ -77,7 +77,7 @@ static std::string getLocation(InputSectionBase &S, const SymbolBody &Sym,
   std::string Src = S.getSrcMsg<ELFT>(Off);
   if (!Src.empty())
     Msg += Src + "\n>>>               ";
-  return Msg + S.getObjMsg<ELFT>(Off);
+  return Msg + S.getObjMsg(Off);
 }
 
 // This is a MIPS-specific rule.
@@ -733,7 +733,7 @@ static bool maybeReportUndefined(SymbolBody &Sym, InputSectionBase &Sec,
   std::string Src = Sec.getSrcMsg<ELFT>(Offset);
   if (!Src.empty())
     Msg += Src + "\n>>>               ";
-  Msg += Sec.getObjMsg<ELFT>(Offset);
+  Msg += Sec.getObjMsg(Offset);
 
   if ((Config->UnresolvedSymbols == UnresolvedPolicy::Warn && CanBeExternal) ||
       Config->NoinhibitExec) {
