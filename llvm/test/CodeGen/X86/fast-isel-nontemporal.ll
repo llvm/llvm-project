@@ -4,6 +4,7 @@
 ; RUN: llc < %s -verify-machineinstrs -mtriple=x86_64-unknown-unknown -mattr=+mmx,+sse4.1 -fast-isel -O0 | FileCheck %s --check-prefix=ALL --check-prefix=SSE --check-prefix=SSE41
 ; RUN: llc < %s -verify-machineinstrs -mtriple=x86_64-unknown-unknown -mattr=+mmx,+avx -fast-isel -O0 | FileCheck %s --check-prefix=ALL --check-prefix=AVX --check-prefix=AVX1
 ; RUN: llc < %s -verify-machineinstrs -mtriple=x86_64-unknown-unknown -mattr=+mmx,+avx2 -fast-isel -O0 | FileCheck %s --check-prefix=ALL --check-prefix=AVX --check-prefix=AVX2
+; RUN: llc < %s -verify-machineinstrs -mtriple=x86_64-unknown-unknown -mattr=+mmx,+avx512vl -fast-isel -O0 | FileCheck %s --check-prefix=ALL --check-prefix=AVX512 --check-prefix=AVX512VL
 ; RUN: llc < %s -verify-machineinstrs -mtriple=x86_64-unknown-unknown -mattr=+mmx,+avx512f -fast-isel -O0 | FileCheck %s --check-prefix=ALL --check-prefix=AVX512 --check-prefix=AVX512F
 ; RUN: llc < %s -verify-machineinstrs -mtriple=x86_64-unknown-unknown -mattr=+mmx,+avx512bw -fast-isel -O0 | FileCheck %s --check-prefix=ALL --check-prefix=AVX512 --check-prefix=AVX512BW
 
@@ -848,6 +849,13 @@ define void @test_nt64xi8(<64 x i8>* nocapture %ptr, <64 x i8> %X) {
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
+; AVX512VL-LABEL: test_nt64xi8:
+; AVX512VL:       # BB#0: # %entry
+; AVX512VL-NEXT:    vmovntdq %ymm0, (%rdi)
+; AVX512VL-NEXT:    vmovntdq %ymm1, 32(%rdi)
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
+;
 ; AVX512F-LABEL: test_nt64xi8:
 ; AVX512F:       # BB#0: # %entry
 ; AVX512F-NEXT:    vmovntdq %ymm0, (%rdi)
@@ -880,6 +888,13 @@ define void @test_nt32xi16(<32 x i16>* nocapture %ptr, <32 x i16> %X) {
 ; AVX-NEXT:    vmovntdq %ymm1, 32(%rdi)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
+;
+; AVX512VL-LABEL: test_nt32xi16:
+; AVX512VL:       # BB#0: # %entry
+; AVX512VL-NEXT:    vmovntdq %ymm0, (%rdi)
+; AVX512VL-NEXT:    vmovntdq %ymm1, 32(%rdi)
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
 ;
 ; AVX512F-LABEL: test_nt32xi16:
 ; AVX512F:       # BB#0: # %entry
@@ -1107,6 +1122,12 @@ define <64 x i8> @test_load_nt64xi8(<64 x i8>* nocapture %ptr) {
 ; AVX2-NEXT:    vmovntdqa 32(%rdi), %ymm1
 ; AVX2-NEXT:    retq
 ;
+; AVX512VL-LABEL: test_load_nt64xi8:
+; AVX512VL:       # BB#0: # %entry
+; AVX512VL-NEXT:    vmovntdqa (%rdi), %ymm0
+; AVX512VL-NEXT:    vmovntdqa 32(%rdi), %ymm1
+; AVX512VL-NEXT:    retq
+;
 ; AVX512F-LABEL: test_load_nt64xi8:
 ; AVX512F:       # BB#0: # %entry
 ; AVX512F-NEXT:    vmovntdqa (%rdi), %ymm0
@@ -1166,6 +1187,12 @@ define <32 x i16> @test_load_nt32xi16(<32 x i16>* nocapture %ptr) {
 ; AVX2-NEXT:    vmovntdqa (%rdi), %ymm0
 ; AVX2-NEXT:    vmovntdqa 32(%rdi), %ymm1
 ; AVX2-NEXT:    retq
+;
+; AVX512VL-LABEL: test_load_nt32xi16:
+; AVX512VL:       # BB#0: # %entry
+; AVX512VL-NEXT:    vmovntdqa (%rdi), %ymm0
+; AVX512VL-NEXT:    vmovntdqa 32(%rdi), %ymm1
+; AVX512VL-NEXT:    retq
 ;
 ; AVX512F-LABEL: test_load_nt32xi16:
 ; AVX512F:       # BB#0: # %entry

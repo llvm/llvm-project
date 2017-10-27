@@ -128,6 +128,15 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
   if (TT.isOSBinFormatCOFF() || (TT.isOSWindows() && TT.isOSBinFormatMachO()))
     return true;
 
+  // Most PIC code sequences that assume that a symbol is local cannot
+  // produce a 0 if it turns out the symbol is undefined. While this
+  // is ABI and relocation depended, it seems worth it to handle it
+  // here.
+  // FIXME: this is probably not ELF specific.
+  if (GV && isPositionIndependent() && TT.isOSBinFormatELF() &&
+      GV->hasExternalWeakLinkage())
+    return false;
+
   if (GV && (GV->hasLocalLinkage() || !GV->hasDefaultVisibility() ||
               GV->isDSOLocal()))
     return true;
@@ -149,9 +158,8 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
       return true;
 
     bool IsTLS = GV && GV->isThreadLocal();
-    bool IsAccessViaCopyRelocs = Options.MCOptions.MCPIECopyRelocations && GV &&
-                                 isa<GlobalVariable>(GV) &&
-                                 !GV->hasExternalWeakLinkage();
+    bool IsAccessViaCopyRelocs =
+        Options.MCOptions.MCPIECopyRelocations && GV && isa<GlobalVariable>(GV);
     Triple::ArchType Arch = TT.getArch();
     bool IsPPC =
         Arch == Triple::ppc || Arch == Triple::ppc64 || Arch == Triple::ppc64le;
