@@ -1743,7 +1743,6 @@ class MemCmpExpansion {
     const uint64_t Offset;
   };
   SmallVector<LoadEntry, 8> LoadSequence;
-  void computeLoadSequence();
 
   void createLoadCmpBlocks();
   void createResultBlock();
@@ -1759,18 +1758,13 @@ class MemCmpExpansion {
   Value *getMemCmpEqZeroOneBlock();
   Value *getMemCmpOneBlock();
 
-  // Computes the decomposition. THis is the common code to compute the number
-  // of loads and the actual load sequence. `callback` is called with each load
-  // size and number of loads for the block size.
-  template <typename CallBackT>
-  void getDecomposition(CallBackT callback) const;
-
  public:
   MemCmpExpansion(CallInst *CI, uint64_t Size, unsigned MaxLoadSize,
-                  unsigned NumLoadsPerBlock, const DataLayout &DL);
+                  unsigned MaxNumLoads, unsigned NumLoadsPerBlock,
+                  const DataLayout &DL);
 
   unsigned getNumBlocks();
-  uint64_t getNumLoads() const { return NumLoads; }
+  uint64_t getNumLoads() const { return LoadSequence.size(); }
 
   Value *getMemCmpExpansion();
 };
@@ -1787,6 +1781,7 @@ class MemCmpExpansion {
 // LoadCmpBlock finds a difference.
 MemCmpExpansion::MemCmpExpansion(CallInst *const CI, uint64_t Size,
                                  const unsigned MaxLoadSize,
+                                 const unsigned MaxNumLoads,
                                  const unsigned LoadsPerBlock,
                                  const DataLayout &TheDataLayout)
     : CI(CI),
@@ -1798,27 +1793,34 @@ MemCmpExpansion::MemCmpExpansion(CallInst *const CI, uint64_t Size,
       IsUsedForZeroCmp(isOnlyUsedInZeroEqualityComparison(CI)),
       DL(TheDataLayout),
       Builder(CI) {
+  assert(Size > 0 && "zero blocks");
   // Scale the max size down if the target can load more bytes than we need.
   while (this->MaxLoadSize > Size) {
     this->MaxLoadSize /= 2;
   }
-  // Compute the number of loads. At that point we don't want to compute the
-  // actual decomposition because it might be too large to fit in memory.
-  getDecomposition([this](unsigned LoadSize, uint64_t NumLoadsForSize) {
-    NumLoads += NumLoadsForSize;
-  });
-}
-
-template <typename CallBackT>
-void MemCmpExpansion::getDecomposition(CallBackT callback) const {
+  // Compute the decomposition.
   unsigned LoadSize = this->MaxLoadSize;
-  assert(Size > 0 && "zero blocks");
   uint64_t CurSize = Size;
+  uint64_t Offset = 0;
   while (CurSize) {
     assert(LoadSize > 0 && "zero load size");
     const uint64_t NumLoadsForThisSize = CurSize / LoadSize;
+    if (LoadSequence.size() + NumLoadsForThisSize > MaxNumLoads) {
+      // Do not expand if the total number of loads is larger than what the
+      // target allows. Note that it's important that we exit before completing
+      // the expansion to avoid using a ton of memory to store the expansion for
+      // large sizes.
+      LoadSequence.clear();
+      return;
+    }
     if (NumLoadsForThisSize > 0) {
-      callback(LoadSize, NumLoadsForThisSize);
+      for (uint64_t I = 0; I < NumLoadsForThisSize; ++I) {
+        LoadSequence.push_back({LoadSize, Offset});
+        Offset += LoadSize;
+      }
+      if (LoadSize > 1) {
+        ++NumLoadsNonOneByte;
+      }
       CurSize = CurSize % LoadSize;
     }
     // FIXME: This can result in a non-native load size (e.g. X86-32+SSE can
@@ -1827,21 +1829,7 @@ void MemCmpExpansion::getDecomposition(CallBackT callback) const {
     // 4).
     LoadSize /= 2;
   }
-}
-
-void MemCmpExpansion::computeLoadSequence() {
-  uint64_t Offset = 0;
-  getDecomposition(
-      [this, &Offset](unsigned LoadSize, uint64_t NumLoadsForSize) {
-        for (uint64_t I = 0; I < NumLoadsForSize; ++I) {
-          LoadSequence.push_back({LoadSize, Offset});
-          Offset += LoadSize;
-        }
-        if (LoadSize > 1) {
-          ++NumLoadsNonOneByte;
-        }
-      });
-  assert(LoadSequence.size() == getNumLoads() && "mismatch in numbe rof loads");
+  assert(LoadSequence.size() <= MaxNumLoads && "broken invariant");
 }
 
 unsigned MemCmpExpansion::getNumBlocks() {
@@ -2241,7 +2229,6 @@ Value *MemCmpExpansion::getMemCmpOneBlock() {
 // This function expands the memcmp call into an inline expansion and returns
 // the memcmp result.
 Value *MemCmpExpansion::getMemCmpExpansion() {
-  computeLoadSequence();
   // A memcmp with zero-comparison with only one block of load and compare does
   // not need to set up any extra blocks. This case could be handled in the DAG,
   // but since we have all of the machinery to flexibly expand any memcpy here,
@@ -2372,17 +2359,23 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
   }
   const uint64_t SizeVal = SizeCast->getZExtValue();
 
+  if (SizeVal == 0) {
+    return false;
+  }
+
   // TTI call to check if target would like to expand memcmp. Also, get the
   // max LoadSize.
   unsigned MaxLoadSize;
   if (!TTI->enableMemCmpExpansion(MaxLoadSize)) return false;
 
-  MemCmpExpansion Expansion(CI, SizeVal, MaxLoadSize, MemCmpNumLoadsPerBlock,
-                            *DL);
+  const unsigned MaxNumLoads =
+      TLI->getMaxExpandSizeMemcmp(CI->getFunction()->optForSize());
+
+  MemCmpExpansion Expansion(CI, SizeVal, MaxLoadSize, MaxNumLoads,
+                            MemCmpNumLoadsPerBlock, *DL);
 
   // Don't expand if this will require more loads than desired by the target.
-  if (Expansion.getNumLoads() >
-      TLI->getMaxExpandSizeMemcmp(CI->getFunction()->optForSize())) {
+  if (Expansion.getNumLoads() == 0) {
     NumMemCmpGreaterThanMax++;
     return false;
   }

@@ -251,7 +251,7 @@ std::string InputSectionBase::getLocation(uint64_t Offset) {
     SrcFile = toString(File);
 
   // Find a function symbol that encloses a given location.
-  for (SymbolBody *B : getFile<ELFT>()->getSymbols())
+  for (SymbolBody *B : File->getSymbols())
     if (auto *D = dyn_cast<DefinedRegular>(B))
       if (D->Section == this && D->Type == STT_FUNC)
         if (D->Value <= Offset && Offset < D->Value + D->Size)
@@ -297,9 +297,8 @@ template <class ELFT> std::string InputSectionBase::getSrcMsg(uint64_t Offset) {
 // or
 //
 //   path/to/foo.o:(function bar) in archive path/to/bar.a
-template <class ELFT> std::string InputSectionBase::getObjMsg(uint64_t Off) {
+std::string InputSectionBase::getObjMsg(uint64_t Off) {
   // Synthetic sections don't have input files.
-  ObjFile<ELFT> *File = getFile<ELFT>();
   if (!File)
     return ("(internal):(" + Name + "+0x" + utohexstr(Off) + ")").str();
   std::string Filename = File->getName();
@@ -309,7 +308,7 @@ template <class ELFT> std::string InputSectionBase::getObjMsg(uint64_t Off) {
     Archive = (" in archive " + File->ArchiveName).str();
 
   // Find a symbol that encloses a given location.
-  for (SymbolBody *B : getFile<ELFT>()->getSymbols())
+  for (SymbolBody *B : File->getSymbols())
     if (auto *D = dyn_cast<DefinedRegular>(B))
       if (D->Section == this && D->Value <= Off && Off < D->Value + D->Size)
         return Filename + ":(" + toString(*D) + ")" + Archive;
@@ -669,6 +668,13 @@ void InputSection::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
     if (Expr == R_NONE)
       continue;
     if (Expr != R_ABS) {
+      // GCC 8.0 or earlier have a bug that it emits R_386_GOTPC relocations
+      // against _GLOBAL_OFFSET_TABLE for .debug_info. The bug seems to have
+      // been fixed in 2017: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82630,
+      // but we need to keep this bug-compatible code for a while.
+      if (Config->EMachine == EM_386 && Type == R_386_GOTPC)
+        continue;
+
       error(this->getLocation<ELFT>(Offset) + ": has non-ABS relocation " +
             toString(Type) + " against symbol '" + toString(Sym) + "'");
       return;
@@ -835,7 +841,7 @@ void EhInputSection::split(ArrayRef<RelTy> Rels) {
   ArrayRef<uint8_t> Data = this->Data;
   unsigned RelI = 0;
   for (size_t Off = 0, End = Data.size(); Off != End;) {
-    size_t Size = readEhRecordSize<ELFT>(this, Off);
+    size_t Size = readEhRecordSize(this, Off);
     this->Pieces.emplace_back(Off, this, Size, getReloc(Off, Size, Rels, RelI));
     // The empty record is the end marker.
     if (Size == 4)
@@ -987,11 +993,6 @@ template std::string InputSectionBase::getSrcMsg<ELF32LE>(uint64_t);
 template std::string InputSectionBase::getSrcMsg<ELF32BE>(uint64_t);
 template std::string InputSectionBase::getSrcMsg<ELF64LE>(uint64_t);
 template std::string InputSectionBase::getSrcMsg<ELF64BE>(uint64_t);
-
-template std::string InputSectionBase::getObjMsg<ELF32LE>(uint64_t);
-template std::string InputSectionBase::getObjMsg<ELF32BE>(uint64_t);
-template std::string InputSectionBase::getObjMsg<ELF64LE>(uint64_t);
-template std::string InputSectionBase::getObjMsg<ELF64BE>(uint64_t);
 
 template void InputSection::writeTo<ELF32LE>(uint8_t *);
 template void InputSection::writeTo<ELF32BE>(uint8_t *);
