@@ -544,8 +544,9 @@ LoopUnrollResult llvm::UnrollLoop(
   if (Header->getParent()->isDebugInfoForProfiling())
     for (BasicBlock *BB : L->getBlocks())
       for (Instruction &I : *BB)
-        if (const DILocation *DIL = I.getDebugLoc())
-          I.setDebugLoc(DIL->cloneWithDuplicationFactor(Count));
+        if (!isa<DbgInfoIntrinsic>(&I))
+          if (const DILocation *DIL = I.getDebugLoc())
+            I.setDebugLoc(DIL->cloneWithDuplicationFactor(Count));
 
   for (unsigned It = 1; It != Count; ++It) {
     std::vector<BasicBlock*> NewBlocks;

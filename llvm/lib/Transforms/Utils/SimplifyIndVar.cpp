@@ -174,14 +174,11 @@ void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp, Value *IVOperand) {
     Pred = ICmpInst::getSwappedPredicate(Pred);
   }
 
-  // Get the SCEVs for the ICmp operands.
-  const SCEV *S = SE->getSCEV(ICmp->getOperand(IVOperIdx));
-  const SCEV *X = SE->getSCEV(ICmp->getOperand(1 - IVOperIdx));
-
-  // Simplify unnecessary loops away.
+  // Get the SCEVs for the ICmp operands (in the specific context of the
+  // current loop)
   const Loop *ICmpLoop = LI->getLoopFor(ICmp->getParent());
-  S = SE->getSCEVAtScope(S, ICmpLoop);
-  X = SE->getSCEVAtScope(X, ICmpLoop);
+  const SCEV *S = SE->getSCEVAtScope(ICmp->getOperand(IVOperIdx), ICmpLoop);
+  const SCEV *X = SE->getSCEVAtScope(ICmp->getOperand(1 - IVOperIdx), ICmpLoop);
 
   ICmpInst::Predicate InvariantPredicate;
   const SCEV *InvariantLHS, *InvariantRHS;

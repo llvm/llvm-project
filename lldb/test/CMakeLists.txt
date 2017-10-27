@@ -27,10 +27,6 @@ if(TARGET lldb-mi)
   list(APPEND LLDB_TEST_DEPS lldb-mi)
 endif()
 
-if ("${LLDB_TEST_COMPILER}" STREQUAL "")
-    string(REGEX REPLACE ".*ccache\ +" "" LLDB_TEST_COMPILER ${CMAKE_C_COMPILER} ${CMAKE_C_COMPILER_ARG1})
-endif()
-
 # The default architecture with which to compile test executables is the default LLVM target
 # architecture, which itself defaults to the host architecture.
 string(TOLOWER "${LLVM_TARGET_ARCH}" LLDB_DEFAULT_TEST_ARCH)
@@ -42,10 +38,6 @@ endif ()
 set(LLDB_TEST_ARCH
 	${LLDB_DEFAULT_TEST_ARCH}
 	CACHE STRING "Specify the architecture to run LLDB tests as (x86|x64).  Determines whether tests are compiled with -m32 or -m64")
-
-if(LLDB_TEST_CLANG)
-  set(LLDB_TEST_COMPILER $<TARGET_FILE:clang>)
-endif()
 
 # Users can override LLDB_TEST_USER_ARGS to specify arbitrary arguments to pass to the script
 set(LLDB_TEST_USER_ARGS
@@ -60,7 +52,7 @@ set(LLDB_TEST_COMMON_ARGS
   -S nm
   -u CXXFLAGS
   -u CFLAGS
-  -C ${LLDB_TEST_COMPILER}
+  -C ${LLDB_TEST_C_COMPILER}
   )
 
 if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )

@@ -10123,6 +10123,14 @@ SDValue DAGCombiner::visitFMA(SDNode *N) {
       // TODO: The FMA node should have flags that propagate to this node.
       return DAG.getNode(ISD::FADD, DL, VT, N2, RHSNeg);
     }
+
+    // fma (fneg x), K, y -> fma x -K, y
+    if (N0.getOpcode() == ISD::FNEG &&
+        (TLI.isOperationLegal(ISD::ConstantFP, VT) ||
+         (N1.hasOneUse() && !TLI.isFPImmLegal(N1CFP->getValueAPF(), VT)))) {
+      return DAG.getNode(ISD::FMA, DL, VT, N0.getOperand(0),
+                         DAG.getNode(ISD::FNEG, DL, VT, N1, Flags), N2);
+    }
   }
 
   if (Options.UnsafeFPMath) {

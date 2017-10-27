@@ -62,6 +62,22 @@ add_subdirectory(tools)
 option(LLDB_INCLUDE_TESTS "Generate build targets for the LLDB unit tests."
   ${LLVM_INCLUDE_TESTS})
 if(LLDB_INCLUDE_TESTS)
+  if (TARGET clang)
+    set(LLDB_DEFAULT_TEST_C_COMPILER "${LLVM_BINARY_DIR}/bin/clang${CMAKE_EXECUTABLE_SUFFIX}")
+    set(LLDB_DEFAULT_TEST_CXX_COMPILER "${LLVM_BINARY_DIR}/bin/clang++${CMAKE_EXECUTABLE_SUFFIX}")
+  else()
+    set(LLDB_DEFAULT_TEST_C_COMPILER "")
+    set(LLDB_DEFAULT_TEST_CXX_COMPILER "")
+  endif()
+
+  set(LLDB_TEST_C_COMPILER "${LLDB_DEFAULT_TEST_C_COMPILER}" CACHE PATH "C Compiler to use for building LLDB test inferiors")
+  set(LLDB_TEST_CXX_COMPILER "${LLDB_DEFAULT_TEST_CXX_COMPILER}" CACHE PATH "C++ Compiler to use for building LLDB test inferiors")
+
+  if (("${LLDB_TEST_C_COMPILER}" STREQUAL "") OR
+      ("${LLDB_TEST_CXX_COMPILER}" STREQUAL ""))
+    message(FATAL_ERROR "LLDB test compilers not specified.  Tests will not run")
+  endif()
+
   add_subdirectory(test)
   add_subdirectory(unittests)
   add_subdirectory(lit)

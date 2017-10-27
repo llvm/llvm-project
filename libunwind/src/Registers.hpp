@@ -44,7 +44,7 @@ public:
   void        setVectorRegister(int num, v128 value);
   const char *getRegisterName(int num);
   void        jumpto();
-  static int  lastDwarfRegNum() { return 8; }
+  static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER; }
 
   uint32_t  getSP() const          { return _registers.__esp; }
   void      setSP(uint32_t value)  { _registers.__esp = value; }
@@ -245,12 +245,12 @@ public:
   bool        validFloatRegister(int) const { return false; }
   double      getFloatRegister(int num) const;
   void        setFloatRegister(int num, double value);
-  bool        validVectorRegister(int) const { return false; }
+  bool        validVectorRegister(int) const;
   v128        getVectorRegister(int num) const;
   void        setVectorRegister(int num, v128 value);
   const char *getRegisterName(int num);
   void        jumpto();
-  static int  lastDwarfRegNum() { return 16; }
+  static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER; }
 
   uint64_t  getSP() const          { return _registers.__rsp; }
   void      setSP(uint64_t value)  { _registers.__rsp = value; }
@@ -292,8 +292,14 @@ private:
     uint64_t __cs;
     uint64_t __fs;
     uint64_t __gs;
+#if defined(_WIN64)
+    uint64_t __padding; // 16-byte align
+#endif
   };
   GPRs _registers;
+#if defined(_WIN64)
+  v128 _xmm[16];
+#endif
 };
 
 inline Registers_x86_64::Registers_x86_64(const void *registers) {
@@ -458,6 +464,38 @@ inline const char *Registers_x86_64::getRegisterName(int regNum) {
     return "r14";
   case UNW_X86_64_R15:
     return "r15";
+  case UNW_X86_64_XMM0:
+    return "xmm0";
+  case UNW_X86_64_XMM1:
+    return "xmm1";
+  case UNW_X86_64_XMM2:
+    return "xmm2";
+  case UNW_X86_64_XMM3:
+    return "xmm3";
+  case UNW_X86_64_XMM4:
+    return "xmm4";
+  case UNW_X86_64_XMM5:
+    return "xmm5";
+  case UNW_X86_64_XMM6:
+    return "xmm6";
+  case UNW_X86_64_XMM7:
+    return "xmm7";
+  case UNW_X86_64_XMM8:
+    return "xmm8";
+  case UNW_X86_64_XMM9:
+    return "xmm9";
+  case UNW_X86_64_XMM10:
+    return "xmm10";
+  case UNW_X86_64_XMM11:
+    return "xmm11";
+  case UNW_X86_64_XMM12:
+    return "xmm12";
+  case UNW_X86_64_XMM13:
+    return "xmm13";
+  case UNW_X86_64_XMM14:
+    return "xmm14";
+  case UNW_X86_64_XMM15:
+    return "xmm15";
   default:
     return "unknown register";
   }
@@ -471,12 +509,34 @@ inline void Registers_x86_64::setFloatRegister(int, double) {
   _LIBUNWIND_ABORT("no x86_64 float registers");
 }
 
-inline v128 Registers_x86_64::getVectorRegister(int) const {
-  _LIBUNWIND_ABORT("no x86_64 vector registers");
+inline bool Registers_x86_64::validVectorRegister(int regNum) const {
+#if defined(_WIN64)
+  if (regNum < UNW_X86_64_XMM0)
+    return false;
+  if (regNum > UNW_X86_64_XMM15)
+    return false;
+  return true;
+#else
+  return false;
+#endif
 }
 
-inline void Registers_x86_64::setVectorRegister(int, v128) {
+inline v128 Registers_x86_64::getVectorRegister(int regNum) const {
+#if defined(_WIN64)
+  assert(validVectorRegister(regNum));
+  return _xmm[regNum - UNW_X86_64_XMM0];
+#else
   _LIBUNWIND_ABORT("no x86_64 vector registers");
+#endif
+}
+
+inline void Registers_x86_64::setVectorRegister(int regNum, v128 value) {
+#if defined(_WIN64)
+  assert(validVectorRegister(regNum));
+  _xmm[regNum - UNW_X86_64_XMM0] = value;
+#else
+  _LIBUNWIND_ABORT("no x86_64 vector registers");
+#endif
 }
 #endif // _LIBUNWIND_TARGET_X86_64
 
@@ -500,7 +560,7 @@ public:
   void        setVectorRegister(int num, v128 value);
   const char *getRegisterName(int num);
   void        jumpto();
-  static int  lastDwarfRegNum() { return 112; }
+  static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER; }
 
   uint64_t  getSP() const         { return _registers.__r1; }
   void      setSP(uint32_t value) { _registers.__r1 = value; }
@@ -1066,7 +1126,7 @@ public:
   void        setVectorRegister(int num, v128 value);
   const char *getRegisterName(int num);
   void        jumpto();
-  static int  lastDwarfRegNum() { return 95; }
+  static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER; }
 
   uint64_t  getSP() const         { return _registers.__sp; }
   void      setSP(uint64_t value) { _registers.__sp = value; }
@@ -1815,7 +1875,7 @@ public:
   void        setVectorRegister(int num, v128 value);
   const char *getRegisterName(int num);
   void        jumpto();
-  static int  lastDwarfRegNum() { return 31; }
+  static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER; }
 
   uint64_t  getSP() const         { return _registers.__r[1]; }
   void      setSP(uint32_t value) { _registers.__r[1] = value; }

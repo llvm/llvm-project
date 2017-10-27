@@ -318,11 +318,13 @@ static Thunk *addThunkArm(RelType Reloc, SymbolBody &S) {
   case R_ARM_PC24:
   case R_ARM_PLT32:
   case R_ARM_JUMP24:
+  case R_ARM_CALL:
     if (Config->Pic)
       return make<ARMV7PILongThunk>(S);
     return make<ARMV7ABSLongThunk>(S);
   case R_ARM_THM_JUMP19:
   case R_ARM_THM_JUMP24:
+  case R_ARM_THM_CALL:
     if (Config->Pic)
       return make<ThumbV7PILongThunk>(S);
     return make<ThumbV7ABSLongThunk>(S);
