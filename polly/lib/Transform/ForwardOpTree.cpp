@@ -306,7 +306,7 @@ public:
                           << '\n';
     OS.indent(Indent + 4) << "Known loads forwarded: " << NumKnownLoadsForwarded
                           << '\n';
-	OS.indent(Indent + 4) << "Reloads: " << NumReloads<< '\n';
+    OS.indent(Indent + 4) << "Reloads: " << NumReloads << '\n';
     OS.indent(Indent + 4) << "Read-only accesses copied: " << NumReadOnlyCopied
                           << '\n';
     OS.indent(Indent + 4) << "Operand trees forwarded: " << NumForwardedTrees
