@@ -1,9 +1,11 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -Wno-objc-root-class -fobjc-arc -emit-llvm -o - %s | FileCheck %s
 
 // rdar://problem/21054495
+typedef char FlexibleArray[];
+
 struct Packet {
   int size;
-  char data[];
+  FlexibleArray data;
 };
 
 @interface VariableSizeIvar {
