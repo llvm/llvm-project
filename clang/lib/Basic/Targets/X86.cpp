@@ -119,7 +119,6 @@ bool X86TargetInfo::initFeatureMap(
   case CK_i486:
   case CK_i586:
   case CK_Pentium:
-  case CK_i686:
   case CK_PentiumPro:
   case CK_Lakemont:
     break;
@@ -806,15 +805,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__tune_pentium2__");
     LLVM_FALLTHROUGH;
   case CK_PentiumPro:
-    Builder.defineMacro("__tune_i686__");
-    Builder.defineMacro("__tune_pentiumpro__");
-    LLVM_FALLTHROUGH;
-  case CK_i686:
-    Builder.defineMacro("__i686");
-    Builder.defineMacro("__i686__");
-    // Strangely, __tune_i686__ isn't defined by GCC when CPU == i686.
-    Builder.defineMacro("__pentiumpro");
-    Builder.defineMacro("__pentiumpro__");
+    defineCPUMacros(Builder, "i686");
+    defineCPUMacros(Builder, "pentiumpro");
     break;
   case CK_Pentium4:
     defineCPUMacros(Builder, "pentium4");
@@ -1172,6 +1164,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("sse2", true)
       .Case("sse3", true)
       .Case("ssse3", true)
+      .Case("sse4", true)
       .Case("sse4.1", true)
       .Case("sse4.2", true)
       .Case("sse4a", true)
@@ -1542,7 +1535,6 @@ bool X86TargetInfo::checkCPUKind(CPUKind Kind) const {
   case CK_i586:
   case CK_Pentium:
   case CK_PentiumMMX:
-  case CK_i686:
   case CK_PentiumPro:
   case CK_Pentium2:
   case CK_Pentium3:
@@ -1606,8 +1598,7 @@ X86TargetInfo::CPUKind X86TargetInfo::getCPUKind(StringRef CPU) const {
       .Case("i586", CK_i586)
       .Case("pentium", CK_Pentium)
       .Case("pentium-mmx", CK_PentiumMMX)
-      .Case("i686", CK_i686)
-      .Case("pentiumpro", CK_PentiumPro)
+      .Cases("i686", "pentiumpro", CK_PentiumPro)
       .Case("pentium2", CK_Pentium2)
       .Cases("pentium3", "pentium3m", CK_Pentium3)
       .Case("pentium-m", CK_PentiumM)
