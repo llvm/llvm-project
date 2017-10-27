@@ -6,6 +6,12 @@
 //
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1       \
 // RUN:     -target i386-unknown-linux \
+// RUN:     --sysroot=%S/Inputs/resource_dir \
+// RUN:     --gcc-toolchain="" \
+// RUN:   | FileCheck --check-prefix=CHECK-INIT-ARRAY %s
+//
+// RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1       \
+// RUN:     -target i386-unknown-linux \
 // RUN:     --sysroot=%S/Inputs/fake_install_tree \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-INIT-ARRAY %s

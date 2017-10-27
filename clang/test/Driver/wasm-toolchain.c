@@ -27,10 +27,10 @@
 
 // RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-unknown --sysroot=/foo %s 2>&1 | FileCheck -check-prefix=LINK %s
 // LINK: clang{{.*}}" "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
-// LINK: lld{{.*}}" "-flavor" "wasm" "-L/foo/lib" "[[temp]]" "-allow-undefined-file" "wasm.syms" "-lc" "-lcompiler_rt" "-o" "a.out"
+// LINK: lld{{.*}}" "-flavor" "wasm" "-L/foo/lib" "[[temp]]" "-allow-undefined-file" "wasm.syms" "-lc" "{{.*[/\\]}}libclang_rt.builtins-wasm32.a" "-o" "a.out"
 
 // A basic C link command-line with optimization.
 
 // RUN: %clang -### -O2 -no-canonical-prefixes -target wasm32-unknown-unknown --sysroot=/foo %s 2>&1 | FileCheck -check-prefix=LINK_OPT %s
 // LINK_OPT: clang{{.*}}" "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
-// LINK_OPT: lld{{.*}}" "-flavor" "wasm" "-L/foo/lib" "[[temp]]" "-allow-undefined-file" "wasm.syms" "-lc" "-lcompiler_rt" "-o" "a.out"
+// LINK_OPT: lld{{.*}}" "-flavor" "wasm" "-L/foo/lib" "[[temp]]" "-allow-undefined-file" "wasm.syms" "-lc" "{{.*[/\\]}}libclang_rt.builtins-wasm32.a" "-o" "a.out"

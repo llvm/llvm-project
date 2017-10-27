@@ -105,6 +105,10 @@ Non-comprehensive list of changes in this release
   Users should generally expect this to be regularly raised to match the most
   recently released version of the Visual C++ compiler.
 
+- clang now defaults to ``.init_array`` if no gcc installation can be found.
+  If a gcc installation is found, it still prefers ``.ctors`` if the found
+  gcc is older than 4.7.0.
+
 New Compiler Flags
 ------------------
 
