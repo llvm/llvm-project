@@ -80,7 +80,7 @@ SanitizerMask parseSanitizerValue(StringRef Value, bool AllowGroups);
 SanitizerMask expandSanitizerGroups(SanitizerMask Kinds);
 
 /// Return the sanitizers which do not affect preprocessing.
-static inline SanitizerMask getPPTransparentSanitizers() {
+inline SanitizerMask getPPTransparentSanitizers() {
   return SanitizerKind::CFI | SanitizerKind::Integer |
          SanitizerKind::Nullability | SanitizerKind::Undefined;
 }
