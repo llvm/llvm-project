@@ -510,6 +510,7 @@ static void addData(SmallVectorImpl<char> &DataBytes,
 
   DataBytes.resize(alignTo(DataBytes.size(), DataSection.getAlignment()));
 
+  size_t LastFragmentSize = 0;
   for (const MCFragment &Frag : DataSection) {
     if (Frag.hasInstructions())
       report_fatal_error("only data supported in data sections");
@@ -531,9 +532,16 @@ static void addData(SmallVectorImpl<char> &DataBytes,
       const SmallVectorImpl<char> &Contents = DataFrag.getContents();
 
       DataBytes.insert(DataBytes.end(), Contents.begin(), Contents.end());
+      LastFragmentSize = Contents.size();
     }
   }
 
+  // Don't allow empty segments, or segments that end with zero-sized
+  // fragment, otherwise the linker cannot map symbols to a unique
+  // data segment.  This can be triggered by zero-sized structs
+  // See: test/MC/WebAssembly/bss.ll
+  if (LastFragmentSize == 0)
+    DataBytes.resize(DataBytes.size() + 1);
   DEBUG(dbgs() << "addData -> " << DataBytes.size() << "\n");
 }
 

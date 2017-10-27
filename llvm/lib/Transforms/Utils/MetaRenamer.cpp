@@ -15,15 +15,29 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/IR/Argument.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalAlias.h"
+#include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/TypeFinder.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/IPO.h"
+
 using namespace llvm;
+
+static const char *const metaNames[] = {
+  // See http://en.wikipedia.org/wiki/Metasyntactic_variable
+  "foo", "bar", "baz", "quux", "barney", "snork", "zot", "blam", "hoge",
+  "wibble", "wobble", "widget", "wombat", "ham", "eggs", "pluto", "spam"
+};
 
 namespace {
 
@@ -43,12 +57,6 @@ namespace {
     }
   };
 
-  static const char *const metaNames[] = {
-    // See http://en.wikipedia.org/wiki/Metasyntactic_variable
-    "foo", "bar", "baz", "quux", "barney", "snork", "zot", "blam", "hoge",
-    "wibble", "wobble", "widget", "wombat", "ham", "eggs", "pluto", "spam"
-  };
-
   struct Renamer {
     Renamer(unsigned int seed) {
       prng.srand(seed);
@@ -62,7 +70,9 @@ namespace {
   };
   
   struct MetaRenamer : public ModulePass {
-    static char ID; // Pass identification, replacement for typeid
+    // Pass identification, replacement for typeid
+    static char ID;
+
     MetaRenamer() : ModulePass(ID) {
       initializeMetaRenamerPass(*PassRegistry::getPassRegistry());
     }
@@ -148,14 +158,17 @@ namespace {
       return true;
     }
   };
-}
+
+} // end anonymous namespace
 
 char MetaRenamer::ID = 0;
+
 INITIALIZE_PASS_BEGIN(MetaRenamer, "metarenamer",
                       "Assign new names to everything", false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(MetaRenamer, "metarenamer",
                     "Assign new names to everything", false, false)
+
 //===----------------------------------------------------------------------===//
 //
 // MetaRenamer - Rename everything with metasyntactic names.

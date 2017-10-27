@@ -5746,6 +5746,8 @@ SDValue SelectionDAG::getMemIntrinsicNode(unsigned Opcode, const SDLoc &dl,
   if (VTList.VTs[VTList.NumVTs-1] != MVT::Glue) {
     FoldingSetNodeID ID;
     AddNodeIDNode(ID, Opcode, VTList, Ops);
+    ID.AddInteger(getSyntheticNodeSubclassData<MemIntrinsicSDNode>(
+        Opcode, dl.getIROrder(), VTList, MemVT, MMO));
     ID.AddInteger(MMO->getPointerInfo().getAddrSpace());
     void *IP = nullptr;
     if (SDNode *E = FindNodeOrInsertPos(ID, dl, IP)) {

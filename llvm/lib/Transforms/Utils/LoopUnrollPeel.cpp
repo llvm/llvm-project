@@ -1,4 +1,4 @@
-//===-- UnrollLoopPeel.cpp - Loop peeling utilities -----------------------===//
+//===- UnrollLoopPeel.cpp - Loop peeling utilities ------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,29 +13,42 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
-#include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
-#include "llvm/IR/Module.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <limits>
 
 using namespace llvm;
 
 #define DEBUG_TYPE "loop-unroll"
+
 STATISTIC(NumPeeled, "Number of loops peeled");
 
 static cl::opt<unsigned> UnrollPeelMaxCount(
@@ -49,7 +62,8 @@ static cl::opt<unsigned> UnrollForcePeelCount(
 // Designates that a Phi is estimated to become invariant after an "infinite"
 // number of loop iterations (i.e. only may become an invariant if the loop is
 // fully unrolled).
-static const unsigned InfiniteIterationsToInvariance = UINT_MAX;
+static const unsigned InfiniteIterationsToInvariance =
+    std::numeric_limits<unsigned>::max();
 
 // Check whether we are capable of peeling this loop.
 static bool canPeel(Loop *L) {
@@ -210,8 +224,6 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
       DEBUG(dbgs() << "Max peel cost: " << UP.Threshold << "\n");
     }
   }
-
-  return;
 }
 
 /// \brief Update the branch weights of the latch of a peeled-off loop
@@ -236,7 +248,6 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
 static void updateBranchWeights(BasicBlock *Header, BranchInst *LatchBR,
                                 unsigned IterNumber, unsigned AvgIters,
                                 uint64_t &PeeledHeaderWeight) {
-
   // FIXME: Pick a more realistic distribution.
   // Currently the proportion of weight we assign to the fall-through
   // side of the branch drops linearly with the iteration number, and we use
@@ -272,7 +283,6 @@ static void cloneLoopBlocks(Loop *L, unsigned IterNumber, BasicBlock *InsertTop,
                             LoopBlocksDFS &LoopBlocks, ValueToValueMapTy &VMap,
                             ValueToValueMapTy &LVMap, DominatorTree *DT,
                             LoopInfo *LI) {
-
   BasicBlock *Header = L->getHeader();
   BasicBlock *Latch = L->getLoopLatch();
   BasicBlock *PreHeader = L->getLoopPreheader();

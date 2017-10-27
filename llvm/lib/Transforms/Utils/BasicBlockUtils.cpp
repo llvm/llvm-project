@@ -1,4 +1,4 @@
-//===-- BasicBlockUtils.cpp - BasicBlock Utilities -------------------------==//
+//===- BasicBlockUtils.cpp - BasicBlock Utilities --------------------------==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,22 +13,34 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryDependenceAnalysis.h"
-#include "llvm/IR/Constant.h"
-#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CFG.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Type.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Transforms/Scalar.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Transforms/Utils/Local.h"
-#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <string>
+#include <utility>
+#include <vector>
+
 using namespace llvm;
 
 void llvm::DeleteDeadBlock(BasicBlock *BB) {
@@ -454,7 +466,7 @@ BasicBlock *llvm::SplitBlockPredecessors(BasicBlock *BB,
   // node becomes an incoming value for BB's phi node.  However, if the Preds
   // list is empty, we need to insert dummy entries into the PHI nodes in BB to
   // account for the newly created predecessor.
-  if (Preds.size() == 0) {
+  if (Preds.empty()) {
     // Insert dummy values as the incoming value.
     for (BasicBlock::iterator I = BB->begin(); isa<PHINode>(I); ++I)
       cast<PHINode>(I)->addIncoming(UndefValue::get(I->getType()), NewBB);
@@ -674,7 +686,6 @@ void llvm::SplitBlockAndInsertIfThenElse(Value *Cond, Instruction *SplitBefore,
   HeadNewTerm->setMetadata(LLVMContext::MD_prof, BranchWeights);
   ReplaceInstWithInst(HeadOldTerm, HeadNewTerm);
 }
-
 
 Value *llvm::GetIfCondition(BasicBlock *BB, BasicBlock *&IfTrue,
                              BasicBlock *&IfFalse) {

@@ -967,6 +967,20 @@ define i1 @length64_eq_const(i8* %X) nounwind {
 
 ; This checks that we do not do stupid things with huge sizes.
 define i32 @huge_length(i8* %X, i8* %Y) nounwind {
+; X86-LABEL: huge_length:
+; X86:       # BB#0:
+; X86-NEXT:    pushl $2147483647 # imm = 0x7FFFFFFF
+; X86-NEXT:    pushl $-1
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    calll memcmp
+; X86-NEXT:    addl $16, %esp
+; X86-NEXT:    retl
+;
+; X64-LABEL: huge_length:
+; X64:       # BB#0:
+; X64-NEXT:    movabsq $9223372036854775807, %rdx # imm = 0x7FFFFFFFFFFFFFFF
+; X64-NEXT:    jmp memcmp # TAILCALL
   %m = tail call i32 @memcmp(i8* %X, i8* %Y, i64 9223372036854775807) nounwind
   ret i32 %m
 }

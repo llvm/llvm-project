@@ -23,7 +23,6 @@ module LLVM_Backend {
     exclude header "CodeGen/CommandFlags.h"
     exclude header "CodeGen/LinkAllAsmWriterComponents.h"
     exclude header "CodeGen/LinkAllCodegenComponents.h"
-    exclude header "CodeGen/GlobalISel/InstructionSelectorImpl.h"
 
     // These are intended for (repeated) textual inclusion.
     textual header "CodeGen/DIEValue.def"

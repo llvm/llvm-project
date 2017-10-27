@@ -15,13 +15,12 @@
 #include "ARMSubtarget.h"
 #include "ARMTargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "arm-isel"
-
-#include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
 
 using namespace llvm;
 
@@ -37,6 +36,7 @@ public:
                          const ARMRegisterBankInfo &RBI);
 
   bool select(MachineInstr &I) const override;
+  static const char *getName() { return DEBUG_TYPE; }
 
 private:
   bool selectImpl(MachineInstr &I) const;
