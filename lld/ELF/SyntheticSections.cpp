@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SyntheticSections.h"
+#include "Bits.h"
 #include "Config.h"
 #include "InputFiles.h"
 #include "LinkerScript.h"
@@ -50,6 +51,10 @@ using namespace lld;
 using namespace lld::elf;
 
 constexpr size_t MergeNoTailSection::NumShards;
+
+static void write32(void *Buf, uint32_t Val) {
+  endian::write32(Buf, Val, Config->Endianness);
+}
 
 uint64_t SyntheticSection::getVA() const {
   if (OutputSection *Sec = getParent())
@@ -133,7 +138,7 @@ MipsAbiFlagsSection<ELFT> *MipsAbiFlagsSection<ELFT>::create() {
     Sec->Live = false;
     Create = true;
 
-    std::string Filename = toString(Sec->getFile<ELFT>());
+    std::string Filename = toString(Sec->File);
     const size_t Size = Sec->Data.size();
     // Older version of BFD (such as the default FreeBSD linker) concatenate
     // .MIPS.abiflags instead of merging. To allow for this case (or potential
@@ -193,16 +198,19 @@ MipsOptionsSection<ELFT> *MipsOptionsSection<ELFT>::create() {
   if (!ELFT::Is64Bits)
     return nullptr;
 
+  std::vector<InputSectionBase *> Sections;
+  for (InputSectionBase *Sec : InputSections)
+    if (Sec->Type == SHT_MIPS_OPTIONS)
+      Sections.push_back(Sec);
+
+  if (Sections.empty())
+    return nullptr;
+
   Elf_Mips_RegInfo Reginfo = {};
-  bool Create = false;
-
-  for (InputSectionBase *Sec : InputSections) {
-    if (Sec->Type != SHT_MIPS_OPTIONS)
-      continue;
+  for (InputSectionBase *Sec : Sections) {
     Sec->Live = false;
-    Create = true;
 
-    std::string Filename = toString(Sec->getFile<ELFT>());
+    std::string Filename = toString(Sec->File);
     ArrayRef<uint8_t> D = Sec->Data;
 
     while (!D.empty()) {
@@ -226,9 +234,7 @@ MipsOptionsSection<ELFT> *MipsOptionsSection<ELFT>::create() {
     }
   };
 
-  if (Create)
-    return make<MipsOptionsSection<ELFT>>(Reginfo);
-  return nullptr;
+  return make<MipsOptionsSection<ELFT>>(Reginfo);
 }
 
 // MIPS .reginfo section.
@@ -251,32 +257,31 @@ MipsReginfoSection<ELFT> *MipsReginfoSection<ELFT>::create() {
   if (ELFT::Is64Bits)
     return nullptr;
 
-  Elf_Mips_RegInfo Reginfo = {};
-  bool Create = false;
+  std::vector<InputSectionBase *> Sections;
+  for (InputSectionBase *Sec : InputSections)
+    if (Sec->Type == SHT_MIPS_REGINFO)
+      Sections.push_back(Sec);
 
-  for (InputSectionBase *Sec : InputSections) {
-    if (Sec->Type != SHT_MIPS_REGINFO)
-      continue;
+  if (Sections.empty())
+    return nullptr;
+
+  Elf_Mips_RegInfo Reginfo = {};
+  for (InputSectionBase *Sec : Sections) {
     Sec->Live = false;
-    Create = true;
 
     if (Sec->Data.size() != sizeof(Elf_Mips_RegInfo)) {
-      error(toString(Sec->getFile<ELFT>()) +
-            ": invalid size of .reginfo section");
+      error(toString(Sec->File) + ": invalid size of .reginfo section");
       return nullptr;
     }
     auto *R = reinterpret_cast<const Elf_Mips_RegInfo *>(Sec->Data.data());
     if (Config->Relocatable && R->ri_gp_value)
-      error(toString(Sec->getFile<ELFT>()) +
-            ": unsupported non-zero ri_gp_value");
+      error(toString(Sec->File) + ": unsupported non-zero ri_gp_value");
 
     Reginfo.ri_gprmask |= R->ri_gprmask;
     Sec->getFile<ELFT>()->MipsGp0 = R->ri_gp_value;
   };
 
-  if (Create)
-    return make<MipsReginfoSection<ELFT>>(Reginfo);
-  return nullptr;
+  return make<MipsReginfoSection<ELFT>>(Reginfo);
 }
 
 InputSection *elf::createInterpSection() {
@@ -320,10 +325,9 @@ BuildIdSection::BuildIdSection()
       HashSize(getHashSize()) {}
 
 void BuildIdSection::writeTo(uint8_t *Buf) {
-  endianness E = Config->Endianness;
-  write32(Buf, 4, E);                   // Name size
-  write32(Buf + 4, HashSize, E);        // Content size
-  write32(Buf + 8, NT_GNU_BUILD_ID, E); // Type
+  write32(Buf, 4);                      // Name size
+  write32(Buf + 4, HashSize);           // Content size
+  write32(Buf + 8, NT_GNU_BUILD_ID);    // Type
   memcpy(Buf + 12, "GNU", 4);           // Name string
   HashBuf = Buf + 16;
 }
@@ -385,8 +389,8 @@ void BuildIdSection::writeBuildId(ArrayRef<uint8_t> Buf) {
     });
     break;
   case BuildIdKind::Uuid:
-    if (getRandomBytes(HashBuf, HashSize))
-      error("entropy source failure");
+    if (auto EC = getRandomBytes(HashBuf, HashSize))
+      error("entropy source failure: " + EC.message());
     break;
   case BuildIdKind::Hexstring:
     memcpy(HashBuf, Config->BuildIdVector.data(), Config->BuildIdVector.size());
@@ -396,20 +400,16 @@ void BuildIdSection::writeBuildId(ArrayRef<uint8_t> Buf) {
   }
 }
 
-template <class ELFT>
-EhFrameSection<ELFT>::EhFrameSection()
+EhFrameSection::EhFrameSection()
     : SyntheticSection(SHF_ALLOC, SHT_PROGBITS, 1, ".eh_frame") {}
 
 // Search for an existing CIE record or create a new one.
 // CIE records from input object files are uniquified by their contents
 // and where their relocations point to.
-template <class ELFT>
-template <class RelTy>
-CieRecord *EhFrameSection<ELFT>::addCie(EhSectionPiece &Cie,
-                                        ArrayRef<RelTy> Rels) {
+template <class ELFT, class RelTy>
+CieRecord *EhFrameSection::addCie(EhSectionPiece &Cie, ArrayRef<RelTy> Rels) {
   auto *Sec = cast<EhInputSection>(Cie.Sec);
-  const endianness E = ELFT::TargetEndianness;
-  if (read32<E>(Cie.data().data() + 4) != 0)
+  if (read32(Cie.data().data() + 4, Config->Endianness) != 0)
     fatal(toString(Sec) + ": CIE expected at beginning of .eh_frame");
 
   SymbolBody *Personality = nullptr;
@@ -432,10 +432,8 @@ CieRecord *EhFrameSection<ELFT>::addCie(EhSectionPiece &Cie,
 
 // There is one FDE per function. Returns true if a given FDE
 // points to a live function.
-template <class ELFT>
-template <class RelTy>
-bool EhFrameSection<ELFT>::isFdeLive(EhSectionPiece &Fde,
-                                     ArrayRef<RelTy> Rels) {
+template <class ELFT, class RelTy>
+bool EhFrameSection::isFdeLive(EhSectionPiece &Fde, ArrayRef<RelTy> Rels) {
   auto *Sec = cast<EhInputSection>(Fde.Sec);
   unsigned FirstRelI = Fde.FirstRelocation;
 
@@ -461,12 +459,8 @@ bool EhFrameSection<ELFT>::isFdeLive(EhSectionPiece &Fde,
 // is one CIE record per input object file which is followed by
 // a list of FDEs. This function searches an existing CIE or create a new
 // one and associates FDEs to the CIE.
-template <class ELFT>
-template <class RelTy>
-void EhFrameSection<ELFT>::addSectionAux(EhInputSection *Sec,
-                                         ArrayRef<RelTy> Rels) {
-  const endianness E = ELFT::TargetEndianness;
-
+template <class ELFT, class RelTy>
+void EhFrameSection::addSectionAux(EhInputSection *Sec, ArrayRef<RelTy> Rels) {
   DenseMap<size_t, CieRecord *> OffsetToCie;
   for (EhSectionPiece &Piece : Sec->Pieces) {
     // The empty record is the end marker.
@@ -474,9 +468,9 @@ void EhFrameSection<ELFT>::addSectionAux(EhInputSection *Sec,
       return;
 
     size_t Offset = Piece.InputOff;
-    uint32_t ID = read32<E>(Piece.data().data() + 4);
+    uint32_t ID = read32(Piece.data().data() + 4, Config->Endianness);
     if (ID == 0) {
-      OffsetToCie[Offset] = addCie(Piece, Rels);
+      OffsetToCie[Offset] = addCie<ELFT>(Piece, Rels);
       continue;
     }
 
@@ -485,15 +479,14 @@ void EhFrameSection<ELFT>::addSectionAux(EhInputSection *Sec,
     if (!Rec)
       fatal(toString(Sec) + ": invalid CIE reference");
 
-    if (!isFdeLive(Piece, Rels))
+    if (!isFdeLive<ELFT>(Piece, Rels))
       continue;
     Rec->Fdes.push_back(&Piece);
     NumFdes++;
   }
 }
 
-template <class ELFT>
-void EhFrameSection<ELFT>::addSection(InputSectionBase *C) {
+template <class ELFT> void EhFrameSection::addSection(InputSectionBase *C) {
   auto *Sec = cast<EhInputSection>(C);
   Sec->Parent = this;
 
@@ -510,29 +503,25 @@ void EhFrameSection<ELFT>::addSection(InputSectionBase *C) {
   if (Sec->Pieces.empty())
     return;
 
-  if (Sec->NumRelocations == 0)
-    addSectionAux(Sec, makeArrayRef<Elf_Rela>(nullptr, nullptr));
-  else if (Sec->AreRelocsRela)
-    addSectionAux(Sec, Sec->template relas<ELFT>());
+  if (Sec->AreRelocsRela)
+    addSectionAux<ELFT>(Sec, Sec->template relas<ELFT>());
   else
-    addSectionAux(Sec, Sec->template rels<ELFT>());
+    addSectionAux<ELFT>(Sec, Sec->template rels<ELFT>());
 }
 
-template <class ELFT>
 static void writeCieFde(uint8_t *Buf, ArrayRef<uint8_t> D) {
   memcpy(Buf, D.data(), D.size());
 
-  size_t Aligned = alignTo(D.size(), sizeof(typename ELFT::uint));
+  size_t Aligned = alignTo(D.size(), Config->Wordsize);
 
   // Zero-clear trailing padding if it exists.
   memset(Buf + D.size(), 0, Aligned - D.size());
 
   // Fix the size field. -4 since size does not include the size field itself.
-  const endianness E = ELFT::TargetEndianness;
-  write32<E>(Buf, Aligned - 4);
+  write32(Buf, Aligned - 4);
 }
 
-template <class ELFT> void EhFrameSection<ELFT>::finalizeContents() {
+void EhFrameSection::finalizeContents() {
   if (this->Size)
     return; // Already finalized.
 
@@ -556,32 +545,46 @@ template <class ELFT> void EhFrameSection<ELFT>::finalizeContents() {
   this->Size = Off;
 }
 
-template <class ELFT> static uint64_t readFdeAddr(uint8_t *Buf, int Size) {
-  const endianness E = ELFT::TargetEndianness;
+// Returns data for .eh_frame_hdr. .eh_frame_hdr is a binary search table
+// to get an FDE from an address to which FDE is applied. This function
+// returns a list of such pairs.
+std::vector<EhFrameSection::FdeData> EhFrameSection::getFdeData() const {
+  uint8_t *Buf = getParent()->Loc + OutSecOff;
+  std::vector<FdeData> Ret;
+
+  for (CieRecord *Rec : CieRecords) {
+    uint8_t Enc = getFdeEncoding(Rec->Cie);
+    for (EhSectionPiece *Fde : Rec->Fdes) {
+      uint32_t Pc = getFdePc(Buf, Fde->OutputOff, Enc);
+      uint32_t FdeVA = getParent()->Addr + Fde->OutputOff;
+      Ret.push_back({Pc, FdeVA});
+    }
+  }
+  return Ret;
+}
+
+static uint64_t readFdeAddr(uint8_t *Buf, int Size) {
   switch (Size) {
   case DW_EH_PE_udata2:
-    return read16<E>(Buf);
+    return read16(Buf, Config->Endianness);
   case DW_EH_PE_udata4:
-    return read32<E>(Buf);
+    return read32(Buf, Config->Endianness);
   case DW_EH_PE_udata8:
-    return read64<E>(Buf);
+    return read64(Buf, Config->Endianness);
   case DW_EH_PE_absptr:
-    if (ELFT::Is64Bits)
-      return read64<E>(Buf);
-    return read32<E>(Buf);
+    return readUint(Buf);
   }
   fatal("unknown FDE size encoding");
 }
 
 // Returns the VA to which a given FDE (on a mmap'ed buffer) is applied to.
 // We need it to create .eh_frame_hdr section.
-template <class ELFT>
-uint64_t EhFrameSection<ELFT>::getFdePc(uint8_t *Buf, size_t FdeOff,
-                                        uint8_t Enc) {
+uint64_t EhFrameSection::getFdePc(uint8_t *Buf, size_t FdeOff,
+                                  uint8_t Enc) const {
   // The starting address to which this FDE applies is
   // stored at FDE + 8 byte.
   size_t Off = FdeOff + 8;
-  uint64_t Addr = readFdeAddr<ELFT>(Buf + Off, Enc & 0x7);
+  uint64_t Addr = readFdeAddr(Buf + Off, Enc & 0x7);
   if ((Enc & 0x70) == DW_EH_PE_absptr)
     return Addr;
   if ((Enc & 0x70) == DW_EH_PE_pcrel)
@@ -589,21 +592,19 @@ uint64_t EhFrameSection<ELFT>::getFdePc(uint8_t *Buf, size_t FdeOff,
   fatal("unknown FDE size relative encoding");
 }
 
-template <class ELFT> void EhFrameSection<ELFT>::writeTo(uint8_t *Buf) {
-  const endianness E = ELFT::TargetEndianness;
-
+void EhFrameSection::writeTo(uint8_t *Buf) {
   // Write CIE and FDE records.
   for (CieRecord *Rec : CieRecords) {
     size_t CieOffset = Rec->Cie->OutputOff;
-    writeCieFde<ELFT>(Buf + CieOffset, Rec->Cie->data());
+    writeCieFde(Buf + CieOffset, Rec->Cie->data());
 
     for (EhSectionPiece *Fde : Rec->Fdes) {
       size_t Off = Fde->OutputOff;
-      writeCieFde<ELFT>(Buf + Off, Fde->data());
+      writeCieFde(Buf + Off, Fde->data());
 
       // FDE's second word should have the offset to an associated CIE.
       // Write it.
-      write32<E>(Buf + Off + 4, Off + 4 - CieOffset);
+      write32(Buf + Off + 4, Off + 4 - CieOffset);
     }
   }
 
@@ -612,20 +613,6 @@ template <class ELFT> void EhFrameSection<ELFT>::writeTo(uint8_t *Buf) {
   // getOffset() takes care of discontiguous section pieces.
   for (EhInputSection *S : Sections)
     S->relocateAlloc(Buf, nullptr);
-
-  // Construct .eh_frame_hdr. .eh_frame_hdr is a binary search table
-  // to get a FDE from an address to which FDE is applied. So here
-  // we obtain two addresses and pass them to EhFrameHdr object.
-  if (In<ELFT>::EhFrameHdr) {
-    for (CieRecord *Rec : CieRecords) {
-      uint8_t Enc = getFdeEncoding<ELFT>(Rec->Cie);
-      for (EhSectionPiece *Fde : Rec->Fdes) {
-        uint64_t Pc = getFdePc(Buf, Fde->OutputOff, Enc);
-        uint64_t FdeVA = getParent()->Addr + Fde->OutputOff;
-        In<ELFT>::EhFrameHdr->addFde(Pc, FdeVA);
-      }
-    }
-  }
 }
 
 GotSection::GotSection()
@@ -853,19 +840,6 @@ bool MipsGotSection::empty() const {
 }
 
 uint64_t MipsGotSection::getGp() const { return ElfSym::MipsGp->getVA(0); }
-
-static uint64_t readUint(uint8_t *Buf) {
-  if (Config->Is64)
-    return read64(Buf, Config->Endianness);
-  return read32(Buf, Config->Endianness);
-}
-
-static void writeUint(uint8_t *Buf, uint64_t Val) {
-  if (Config->Is64)
-    write64(Buf, Val, Config->Endianness);
-  else
-    write32(Buf, Val, Config->Endianness);
-}
 
 void MipsGotSection::writeTo(uint8_t *Buf) {
   // Set the MSB of the second GOT slot. This is not required by any
@@ -1110,13 +1084,13 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
     add({DT_PLTRELSZ, In<ELFT>::RelaPlt->getParent(), Entry::SecSize});
     switch (Config->EMachine) {
     case EM_MIPS:
-      add({DT_MIPS_PLTGOT, In<ELFT>::GotPlt});
+      add({DT_MIPS_PLTGOT, InX::GotPlt});
       break;
     case EM_SPARCV9:
-      add({DT_PLTGOT, In<ELFT>::Plt});
+      add({DT_PLTGOT, InX::Plt});
       break;
     default:
-      add({DT_PLTGOT, In<ELFT>::GotPlt});
+      add({DT_PLTGOT, InX::GotPlt});
       break;
     }
     add({DT_PLTREL, uint64_t(Config->IsRela ? DT_RELA : DT_REL)});
@@ -1520,11 +1494,10 @@ void GnuHashTableSection::finalizeContents() {
 
 void GnuHashTableSection::writeTo(uint8_t *Buf) {
   // Write a header.
-  write32(Buf, NBuckets, Config->Endianness);
-  write32(Buf + 4, InX::DynSymTab->getNumSymbols() - Symbols.size(),
-          Config->Endianness);
-  write32(Buf + 8, MaskWords, Config->Endianness);
-  write32(Buf + 12, getShift2(), Config->Endianness);
+  write32(Buf, NBuckets);
+  write32(Buf + 4, InX::DynSymTab->getNumSymbols() - Symbols.size());
+  write32(Buf + 8, MaskWords);
+  write32(Buf + 12, getShift2());
   Buf += 16;
 
   // Write a bloom filter and a hash table.
@@ -1562,7 +1535,7 @@ void GnuHashTableSection::writeHashTable(uint8_t *Buf) {
   uint32_t *Buckets = reinterpret_cast<uint32_t *>(Buf);
   for (size_t I = 0; I < NBuckets; ++I)
     if (!Syms[I].empty())
-      write32(Buckets + I, Syms[I][0].Body->DynsymIndex, Config->Endianness);
+      write32(Buckets + I, Syms[I][0].Body->DynsymIndex);
 
   // Write a hash value table. It represents a sequence of chains that
   // share the same hash modulo value. The last element of each chain
@@ -1573,8 +1546,8 @@ void GnuHashTableSection::writeHashTable(uint8_t *Buf) {
     if (Vec.empty())
       continue;
     for (const Entry &Ent : makeArrayRef(Vec).drop_back())
-      write32(Values + I++, Ent.Hash & ~1, Config->Endianness);
-    write32(Values + I++, Vec.back().Hash | 1, Config->Endianness);
+      write32(Values + I++, Ent.Hash & ~1);
+    write32(Values + I++, Vec.back().Hash | 1);
   }
 }
 
@@ -1654,8 +1627,8 @@ void HashTableSection::writeTo(uint8_t *Buf) {
   unsigned NumSymbols = InX::DynSymTab->getNumSymbols();
 
   uint32_t *P = reinterpret_cast<uint32_t *>(Buf);
-  write32(P++, NumSymbols, Config->Endianness); // nbucket
-  write32(P++, NumSymbols, Config->Endianness); // nchain
+  write32(P++, NumSymbols); // nbucket
+  write32(P++, NumSymbols); // nchain
 
   uint32_t *Buckets = P;
   uint32_t *Chains = P + NumSymbols;
@@ -1666,7 +1639,7 @@ void HashTableSection::writeTo(uint8_t *Buf) {
     unsigned I = Body->DynsymIndex;
     uint32_t Hash = hashSysV(Name) % NumSymbols;
     Chains[I] = Buckets[Hash];
-    write32(Buckets + Hash, I, Config->Endianness);
+    write32(Buckets + Hash, I);
   }
 }
 
@@ -1981,16 +1954,17 @@ void GdbIndexSection::writeTo(uint8_t *Buf) {
 
 bool GdbIndexSection::empty() const { return !Out::DebugInfo; }
 
-template <class ELFT>
-EhFrameHeader<ELFT>::EhFrameHeader()
+EhFrameHeader::EhFrameHeader()
     : SyntheticSection(SHF_ALLOC, SHT_PROGBITS, 1, ".eh_frame_hdr") {}
 
 // .eh_frame_hdr contains a binary search table of pointers to FDEs.
 // Each entry of the search table consists of two values,
 // the starting PC from where FDEs covers, and the FDE's address.
 // It is sorted by PC.
-template <class ELFT> void EhFrameHeader<ELFT>::writeTo(uint8_t *Buf) {
-  const endianness E = ELFT::TargetEndianness;
+void EhFrameHeader::writeTo(uint8_t *Buf) {
+  typedef EhFrameSection::FdeData FdeData;
+
+  std::vector<FdeData> Fdes = InX::EhFrame->getFdeData();
 
   // Sort the FDE list by their PC and uniqueify. Usually there is only
   // one FDE for a PC (i.e. function), but if ICF merges two functions
@@ -2004,31 +1978,24 @@ template <class ELFT> void EhFrameHeader<ELFT>::writeTo(uint8_t *Buf) {
   Buf[1] = DW_EH_PE_pcrel | DW_EH_PE_sdata4;
   Buf[2] = DW_EH_PE_udata4;
   Buf[3] = DW_EH_PE_datarel | DW_EH_PE_sdata4;
-  write32<E>(Buf + 4, In<ELFT>::EhFrame->getParent()->Addr - this->getVA() - 4);
-  write32<E>(Buf + 8, Fdes.size());
+  write32(Buf + 4, InX::EhFrame->getParent()->Addr - this->getVA() - 4);
+  write32(Buf + 8, Fdes.size());
   Buf += 12;
 
   uint64_t VA = this->getVA();
   for (FdeData &Fde : Fdes) {
-    write32<E>(Buf, Fde.Pc - VA);
-    write32<E>(Buf + 4, Fde.FdeVA - VA);
+    write32(Buf, Fde.Pc - VA);
+    write32(Buf + 4, Fde.FdeVA - VA);
     Buf += 8;
   }
 }
 
-template <class ELFT> size_t EhFrameHeader<ELFT>::getSize() const {
+size_t EhFrameHeader::getSize() const {
   // .eh_frame_hdr has a 12 bytes header followed by an array of FDEs.
-  return 12 + In<ELFT>::EhFrame->NumFdes * 8;
+  return 12 + InX::EhFrame->NumFdes * 8;
 }
 
-template <class ELFT>
-void EhFrameHeader<ELFT>::addFde(uint32_t Pc, uint32_t FdeVA) {
-  Fdes.push_back({Pc, FdeVA});
-}
-
-template <class ELFT> bool EhFrameHeader<ELFT>::empty() const {
-  return In<ELFT>::EhFrame->empty();
-}
+bool EhFrameHeader::empty() const { return InX::EhFrame->empty(); }
 
 template <class ELFT>
 VersionDefinitionSection<ELFT>::VersionDefinitionSection()
@@ -2400,7 +2367,7 @@ void ARMExidxSentinelSection::writeTo(uint8_t *Buf) {
   uint64_t S = LS->getParent()->Addr + LS->getOffset(LS->getSize());
   uint64_t P = getVA();
   Target->relocateOne(Buf, R_ARM_PREL31, S - P);
-  write32le(Buf + 4, 0x1);
+  write32le(Buf + 4, 1);
 }
 
 ThunkSection::ThunkSection(OutputSection *OS, uint64_t Off)
@@ -2432,6 +2399,8 @@ InputSection *InX::ARMAttributes;
 BssSection *InX::Bss;
 BssSection *InX::BssRelRo;
 BuildIdSection *InX::BuildId;
+EhFrameHeader *InX::EhFrameHdr;
+EhFrameSection *InX::EhFrame;
 SyntheticSection *InX::Dynamic;
 StringTableSection *InX::DynStrTab;
 SymbolTableBaseSection *InX::DynSymTab;
@@ -2454,6 +2423,11 @@ template GdbIndexSection *elf::createGdbIndex<ELF32LE>();
 template GdbIndexSection *elf::createGdbIndex<ELF32BE>();
 template GdbIndexSection *elf::createGdbIndex<ELF64LE>();
 template GdbIndexSection *elf::createGdbIndex<ELF64BE>();
+
+template void EhFrameSection::addSection<ELF32LE>(InputSectionBase *);
+template void EhFrameSection::addSection<ELF32BE>(InputSectionBase *);
+template void EhFrameSection::addSection<ELF64LE>(InputSectionBase *);
+template void EhFrameSection::addSection<ELF64BE>(InputSectionBase *);
 
 template void PltSection::addEntry<ELF32LE>(SymbolBody &Sym);
 template void PltSection::addEntry<ELF32BE>(SymbolBody &Sym);
@@ -2500,11 +2474,6 @@ template class elf::SymbolTableSection<ELF32BE>;
 template class elf::SymbolTableSection<ELF64LE>;
 template class elf::SymbolTableSection<ELF64BE>;
 
-template class elf::EhFrameHeader<ELF32LE>;
-template class elf::EhFrameHeader<ELF32BE>;
-template class elf::EhFrameHeader<ELF64LE>;
-template class elf::EhFrameHeader<ELF64BE>;
-
 template class elf::VersionTableSection<ELF32LE>;
 template class elf::VersionTableSection<ELF32BE>;
 template class elf::VersionTableSection<ELF64LE>;
@@ -2519,8 +2488,3 @@ template class elf::VersionDefinitionSection<ELF32LE>;
 template class elf::VersionDefinitionSection<ELF32BE>;
 template class elf::VersionDefinitionSection<ELF64LE>;
 template class elf::VersionDefinitionSection<ELF64BE>;
-
-template class elf::EhFrameSection<ELF32LE>;
-template class elf::EhFrameSection<ELF32BE>;
-template class elf::EhFrameSection<ELF64LE>;
-template class elf::EhFrameSection<ELF64BE>;

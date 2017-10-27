@@ -130,11 +130,11 @@ declare i32 @printf(i8* nocapture, ...) nounwind
 ; IndVars doesn't emit a udiv in for.body.preheader since SCEVExpander::expand will
 ; find out there's already a udiv in the original code.
 
-; CHECK-LABEL: @foo_01(
+; CHECK-LABEL: @foo(
 ; CHECK: for.body.preheader:
 ; CHECK-NOT: udiv
 
-define void @foo_01(double* %p, i64 %n) nounwind {
+define void @foo(double* %p, i64 %n) nounwind {
 entry:
   %div0 = udiv i64 %n, 7                          ; <i64> [#uses=1]
   %div1 = add i64 %div0, 1
@@ -160,39 +160,3 @@ for.end.loopexit:                                 ; preds = %for.body
 for.end:                                          ; preds = %for.end.loopexit, %entry
   ret void
 }
-
-; Same as foo_01, but we divide by non-constant value.
-
-; CHECK-LABEL: @foo_02(
-; CHECK: for.body.preheader:
-; CHECK-NOT: udiv
-
-define void @foo_02(double* %p, i64 %n, i64* %lp) nounwind {
-entry:
-  %denom = load i64, i64* %lp, align 4, !range !0
-  %div0 = udiv i64 %n, %denom                          ; <i64> [#uses=1]
-  %div1 = add i64 %div0, 1
-  %cmp2 = icmp ult i64 0, %div1                   ; <i1> [#uses=1]
-  br i1 %cmp2, label %for.body.preheader, label %for.end
-
-for.body.preheader:                               ; preds = %entry
-  br label %for.body
-
-for.body:                                         ; preds = %for.body.preheader, %for.body
-  %i.03 = phi i64 [ %inc, %for.body ], [ 0, %for.body.preheader ] ; <i64> [#uses=2]
-  %arrayidx = getelementptr inbounds double, double* %p, i64 %i.03 ; <double*> [#uses=1]
-  store double 0.000000e+00, double* %arrayidx
-  %inc = add i64 %i.03, 1                         ; <i64> [#uses=2]
-  %divx = udiv i64 %n, %denom                           ; <i64> [#uses=1]
-  %div = add i64 %divx, 1
-  %cmp = icmp ult i64 %inc, %div                  ; <i1> [#uses=1]
-  br i1 %cmp, label %for.body, label %for.end.loopexit
-
-for.end.loopexit:                                 ; preds = %for.body
-  br label %for.end
-
-for.end:                                          ; preds = %for.end.loopexit, %entry
-  ret void
-}
-
-!0 = !{i64 1, i64 10}

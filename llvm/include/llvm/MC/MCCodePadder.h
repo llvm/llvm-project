@@ -10,6 +10,7 @@
 #ifndef LLVM_MC_MCCODEPADDER_H
 #define LLVM_MC_MCCODEPADDER_H
 
+#include "MCFragment.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -21,7 +22,6 @@ class MCCodePaddingPolicy;
 class MCFragment;
 class MCInst;
 class MCObjectStreamer;
-class MCPaddingFragment;
 class MCSection;
 
 typedef SmallVector<const MCPaddingFragment *, 8> MCPFRange;

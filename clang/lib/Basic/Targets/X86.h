@@ -122,7 +122,6 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
     /// \name i686
     /// i686-generation processors, P6 / Pentium M microarchitecture based.
     //@{
-    CK_i686,
     CK_PentiumPro,
     CK_Pentium2,
     CK_Pentium3,

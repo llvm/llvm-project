@@ -246,8 +246,8 @@ static bool isMicroMips() { return Config->EFlags & EF_MIPS_MICROMIPS; }
 template <class ELFT> void MIPS<ELFT>::writePltHeader(uint8_t *Buf) const {
   const endianness E = ELFT::TargetEndianness;
   if (isMicroMips()) {
-    uint64_t GotPlt = In<ELFT>::GotPlt->getVA();
-    uint64_t Plt = In<ELFT>::Plt->getVA();
+    uint64_t GotPlt = InX::GotPlt->getVA();
+    uint64_t Plt = InX::Plt->getVA();
     // Overwrite trap instructions written by Writer::writeTrapInstr.
     memset(Buf, 0, PltHeaderSize);
 
