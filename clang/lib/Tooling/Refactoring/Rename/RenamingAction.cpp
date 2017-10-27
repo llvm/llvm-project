@@ -41,22 +41,6 @@ namespace tooling {
 
 namespace {
 
-class SymbolSelectionRequirement : public SourceRangeSelectionRequirement {
-public:
-  Expected<const NamedDecl *> evaluate(RefactoringRuleContext &Context) const {
-    Expected<SourceRange> Selection =
-        SourceRangeSelectionRequirement::evaluate(Context);
-    if (!Selection)
-      return Selection.takeError();
-    const NamedDecl *ND =
-        getNamedDeclAt(Context.getASTContext(), Selection->getBegin());
-    if (!ND)
-      return Context.createDiagnosticError(
-          Selection->getBegin(), diag::err_refactor_selection_no_symbol);
-    return getCanonicalSymbolDeclaration(ND);
-  }
-};
-
 class OccurrenceFinder final : public FindSymbolOccurrencesRefactoringRule {
 public:
   OccurrenceFinder(const NamedDecl *ND) : ND(ND) {}
@@ -74,50 +58,38 @@ private:
   const NamedDecl *ND;
 };
 
-class RenameOccurrences final : public SourceChangeRefactoringRule {
-public:
-  RenameOccurrences(const NamedDecl *ND, std::string NewName)
-      : Finder(ND), NewName(std::move(NewName)) {}
-
-  Expected<AtomicChanges>
-  createSourceReplacements(RefactoringRuleContext &Context) override {
-    Expected<SymbolOccurrences> Occurrences =
-        Finder.findSymbolOccurrences(Context);
-    if (!Occurrences)
-      return Occurrences.takeError();
-    // FIXME: Verify that the new name is valid.
-    SymbolName Name(NewName);
-    return createRenameReplacements(
-        *Occurrences, Context.getASTContext().getSourceManager(), Name);
-  }
-
-private:
-  OccurrenceFinder Finder;
-  std::string NewName;
-};
-
-class LocalRename final : public RefactoringAction {
-public:
-  StringRef getCommand() const override { return "local-rename"; }
-
-  StringRef getDescription() const override {
-    return "Finds and renames symbols in code with no indexer support";
-  }
-
-  /// Returns a set of refactoring actions rules that are defined by this
-  /// action.
-  RefactoringActionRules createActionRules() const override {
-    RefactoringActionRules Rules;
-    Rules.push_back(createRefactoringActionRule<RenameOccurrences>(
-        SymbolSelectionRequirement(), OptionRequirement<NewNameOption>()));
-    return Rules;
-  }
-};
-
 } // end anonymous namespace
 
-std::unique_ptr<RefactoringAction> createLocalRenameAction() {
-  return llvm::make_unique<LocalRename>();
+const RefactoringDescriptor &RenameOccurrences::describe() {
+  static const RefactoringDescriptor Descriptor = {
+      "local-rename",
+      "Rename",
+      "Finds and renames symbols in code with no indexer support",
+  };
+  return Descriptor;
+}
+
+Expected<RenameOccurrences>
+RenameOccurrences::initiate(RefactoringRuleContext &Context,
+                            SourceRange SelectionRange, std::string NewName) {
+  const NamedDecl *ND =
+      getNamedDeclAt(Context.getASTContext(), SelectionRange.getBegin());
+  if (!ND)
+    return Context.createDiagnosticError(
+        SelectionRange.getBegin(), diag::err_refactor_selection_no_symbol);
+  return RenameOccurrences(getCanonicalSymbolDeclaration(ND), NewName);
+}
+
+Expected<AtomicChanges>
+RenameOccurrences::createSourceReplacements(RefactoringRuleContext &Context) {
+  Expected<SymbolOccurrences> Occurrences =
+      OccurrenceFinder(ND).findSymbolOccurrences(Context);
+  if (!Occurrences)
+    return Occurrences.takeError();
+  // FIXME: Verify that the new name is valid.
+  SymbolName Name(NewName);
+  return createRenameReplacements(
+      *Occurrences, Context.getASTContext().getSourceManager(), Name);
 }
 
 Expected<std::vector<AtomicChange>>
