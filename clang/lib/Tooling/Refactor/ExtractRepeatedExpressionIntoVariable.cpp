@@ -266,7 +266,10 @@ ExtractRepeatedExpressionIntoVariableOperation::perform(
   PP.SuppressUnwrittenScope = true;
   T.print(OS, PP, /*PlaceHolder*/ Name);
   OS << " = ";
-  E->printPretty(OS, /*Helper=*/nullptr, Context.getPrintingPolicy());
+  PrintingPolicy ExprPP = Context.getPrintingPolicy();
+  ExprPP.SuppressStrongLifetime = true;
+  ExprPP.SuppressImplicitBase = true;
+  E->printPretty(OS, /*Helper=*/nullptr, ExprPP);
   OS << ";\n";
   Replacements.emplace_back(SourceRange(InsertionLoc, InsertionLoc), OS.str());
 
