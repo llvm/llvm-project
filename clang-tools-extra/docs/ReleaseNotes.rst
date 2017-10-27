@@ -59,6 +59,12 @@ Improvements to clang-tidy
 
 - New module `objc` for Objective-C style checks.
 
+- New `objc-forbidden-subclassing
+  <http://clang.llvm.org/extra/clang-tidy/checks/objc-forbidden-subclassing.html>`_ check
+
+  Ensures Objective-C classes do not subclass any classes which are
+  not intended to be subclassed.
+
 - Renamed checks to use correct term "implicit conversion" instead of "implicit
   cast" and modified messages and option names accordingly:
 

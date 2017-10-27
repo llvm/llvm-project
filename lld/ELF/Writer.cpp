@@ -98,6 +98,14 @@ StringRef elf::getOutputSectionName(StringRef Name) {
   if (Config->Relocatable)
     return Name;
 
+  // This is for --emit-relocs. If .text.foo is emitted as .text, we want to
+  // emit .rela.text.foo as .rel.text for consistency (this is not technically
+  // required, but not doing it is odd). This code guarantees that.
+  if (Name.startswith(".rel."))
+    return Saver.save(".rel" + getOutputSectionName(Name.substr(4)));
+  if (Name.startswith(".rela."))
+    return Saver.save(".rela" + getOutputSectionName(Name.substr(5)));
+
   for (StringRef V :
        {".text.", ".rodata.", ".data.rel.ro.", ".data.", ".bss.rel.ro.",
         ".bss.", ".init_array.", ".fini_array.", ".ctors.", ".dtors.", ".tbss.",
@@ -860,7 +868,7 @@ void Writer<ELFT>::forEachRelSec(std::function<void(InputSectionBase &)> Fn) {
 template <class ELFT> void Writer<ELFT>::createSections() {
   std::vector<OutputSection *> Vec;
   for (InputSectionBase *IS : InputSections)
-    if (IS)
+    if (IS && IS->Live)
       if (OutputSection *Sec =
               Factory.addInputSec(IS, getOutputSectionName(IS->Name)))
         Vec.push_back(Sec);
@@ -1352,19 +1360,12 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // It is linker's responsibility to create thunks containing long
   // jump instructions if jump targets are too far. Create thunks.
   if (Target->NeedsThunks) {
-    // FIXME: only ARM Interworking and Mips LA25 Thunks are implemented,
-    // these
-    // do not require address information. To support range extension Thunks
-    // we need to assign addresses so that we can tell if jump instructions
-    // are out of range. This will need to turn into a loop that converges
-    // when no more Thunks are added
     ThunkCreator TC;
     Script->assignAddresses();
-    if (TC.createThunks(OutputSections)) {
+    while (TC.createThunks(OutputSections)) {
       applySynthetic({InX::MipsGot},
                      [](SyntheticSection *SS) { SS->updateAllocSize(); });
-      if (TC.createThunks(OutputSections))
-        fatal("All non-range thunks should be created in first call");
+      Script->assignAddresses();
     }
   }
 
@@ -1856,20 +1857,15 @@ template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
                Buf + alignTo(P->p_offset + P->p_filesz, Target->PageSize));
 
   // Round up the file size of the last segment to the page boundary iff it is
-  // an executable segment to ensure that other other tools don't accidentally
+  // an executable segment to ensure that other tools don't accidentally
   // trim the instruction padding (e.g. when stripping the file).
-  PhdrEntry *LastRX = nullptr;
-  for (PhdrEntry *P : Phdrs) {
-    if (P->p_type != PT_LOAD)
-      continue;
-    if (P->p_flags & PF_X)
-      LastRX = P;
-    else
-      LastRX = nullptr;
-  }
-  if (LastRX)
-    LastRX->p_memsz = LastRX->p_filesz =
-        alignTo(LastRX->p_filesz, Target->PageSize);
+  PhdrEntry *Last = nullptr;
+  for (PhdrEntry *P : Phdrs)
+    if (P->p_type == PT_LOAD)
+      Last = P;
+
+  if (Last && (Last->p_flags & PF_X))
+    Last->p_memsz = Last->p_filesz = alignTo(Last->p_filesz, Target->PageSize);
 }
 
 // Write section contents to a mmap'ed file.

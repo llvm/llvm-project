@@ -625,5 +625,51 @@ define amdgpu_kernel void @test_f64_interp(double addrspace(1)* %out,
   ret void
 }
 
+; Make sure negative constant cancels out fneg
+; GCN-LABEL: {{^}}fma_neg_2.0_neg_a_b_f32:
+; GCN: {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[B:v[0-9]+]]
+; GCN-NOT: [[A]]
+; GCN-NOT: [[B]]
+; GCN: v_fma_f32 v{{[0-9]+}}, [[A]], 2.0, [[B]]
+define amdgpu_kernel void @fma_neg_2.0_neg_a_b_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep.0 = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
+  %gep.out = getelementptr float, float addrspace(1)* %out, i32 %tid
+
+  %r1 = load volatile float, float addrspace(1)* %gep.0
+  %r2 = load volatile float, float addrspace(1)* %gep.1
+
+  %r1.fneg = fsub float -0.000000e+00, %r1
+
+  %r3 = tail call float @llvm.fma.f32(float -2.0, float %r1.fneg, float %r2)
+  store float %r3, float addrspace(1)* %gep.out
+  ret void
+}
+
+; GCN-LABEL: {{^}}fma_2.0_neg_a_b_f32:
+; GCN: {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
+; GCN: {{buffer|flat|global}}_load_dword [[B:v[0-9]+]]
+; GCN-NOT: [[A]]
+; GCN-NOT: [[B]]
+; GCN: v_fma_f32 v{{[0-9]+}}, [[A]], -2.0, [[B]]
+define amdgpu_kernel void @fma_2.0_neg_a_b_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep.0 = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
+  %gep.out = getelementptr float, float addrspace(1)* %out, i32 %tid
+
+  %r1 = load volatile float, float addrspace(1)* %gep.0
+  %r2 = load volatile float, float addrspace(1)* %gep.1
+
+  %r1.fneg = fsub float -0.000000e+00, %r1
+
+  %r3 = tail call float @llvm.fma.f32(float 2.0, float %r1.fneg, float %r2)
+  store float %r3, float addrspace(1)* %gep.out
+  ret void
+}
+
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }
+

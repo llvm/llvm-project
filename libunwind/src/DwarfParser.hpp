@@ -87,7 +87,7 @@ public:
     uint32_t          codeOffsetAtStackDecrement;
     bool              registersInOtherRegisters;
     bool              sameValueUsed;
-    RegisterLocation  savedRegisters[kMaxRegisterNumber];
+    RegisterLocation  savedRegisters[kMaxRegisterNumber + 1];
   };
 
   struct PrologInfoStackEntry {

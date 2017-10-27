@@ -13,9 +13,11 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <map>
 #include <set>
@@ -377,45 +379,55 @@ unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die,
 
 unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
                                                  DWARFAttribute &AttrValue) {
-  const DWARFObject &DObj = DCtx.getDWARFObj();
   unsigned NumErrors = 0;
+  auto ReportError = [&](const Twine &TitleMsg) {
+    ++NumErrors;
+    error() << TitleMsg << '\n';
+    Die.dump(OS, 0, DumpOpts);
+    OS << "\n";
+  };
+
+  const DWARFObject &DObj = DCtx.getDWARFObj();
   const auto Attr = AttrValue.Attr;
   switch (Attr) {
   case DW_AT_ranges:
     // Make sure the offset in the DW_AT_ranges attribute is valid.
     if (auto SectionOffset = AttrValue.Value.getAsSectionOffset()) {
-      if (*SectionOffset >= DObj.getRangeSection().Data.size()) {
-        ++NumErrors;
-        error() << "DW_AT_ranges offset is beyond .debug_ranges "
-                   "bounds:\n";
-        Die.dump(OS, 0, DumpOpts);
-        OS << "\n";
-      }
-    } else {
-      ++NumErrors;
-      error() << "DIE has invalid DW_AT_ranges encoding:\n";
-      Die.dump(OS, 0, DumpOpts);
-      OS << "\n";
+      if (*SectionOffset >= DObj.getRangeSection().Data.size())
+        ReportError("DW_AT_ranges offset is beyond .debug_ranges bounds:");
+      break;
     }
+    ReportError("DIE has invalid DW_AT_ranges encoding:");
     break;
   case DW_AT_stmt_list:
     // Make sure the offset in the DW_AT_stmt_list attribute is valid.
     if (auto SectionOffset = AttrValue.Value.getAsSectionOffset()) {
-      if (*SectionOffset >= DObj.getLineSection().Data.size()) {
-        ++NumErrors;
-        error() << "DW_AT_stmt_list offset is beyond .debug_line "
-                   "bounds: "
-                << format("0x%08" PRIx64, *SectionOffset) << "\n";
-        Die.dump(OS, 0, DumpOpts);
-        OS << "\n";
-      }
-    } else {
-      ++NumErrors;
-      error() << "DIE has invalid DW_AT_stmt_list encoding:\n";
-      Die.dump(OS, 0, DumpOpts);
-      OS << "\n";
+      if (*SectionOffset >= DObj.getLineSection().Data.size())
+        ReportError("DW_AT_stmt_list offset is beyond .debug_line bounds: " +
+                    llvm::formatv("{0:x8}", *SectionOffset));
+      break;
     }
+    ReportError("DIE has invalid DW_AT_stmt_list encoding:");
     break;
+  case DW_AT_location: {
+    Optional<ArrayRef<uint8_t>> Expr = AttrValue.Value.getAsBlock();
+    if (!Expr) {
+      ReportError("DIE has invalid DW_AT_location encoding:");
+      break;
+    }
+
+    DWARFUnit *U = Die.getDwarfUnit();
+    DataExtractor Data(
+        StringRef(reinterpret_cast<const char *>(Expr->data()), Expr->size()),
+        DCtx.isLittleEndian(), 0);
+    DWARFExpression Expression(Data, U->getVersion(), U->getAddressByteSize());
+    bool Error = llvm::any_of(Expression, [](DWARFExpression::Operation &Op) {
+      return Op.isError();
+    });
+    if (Error)
+      ReportError("DIE contains invalid DWARF expression:");
+    break;
+  }
 
   default:
     break;
