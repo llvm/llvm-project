@@ -11,10 +11,10 @@
 #include "Chunks.h"
 #include "Config.h"
 #include "Driver.h"
-#include "Error.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "Writer.h"
+#include "lld/Common/ErrorHandler.h"
 #include "llvm/DebugInfo/CodeView/CVDebugRecord.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
@@ -188,7 +188,7 @@ maybeReadTypeServerRecord(CVTypeArray &Types) {
     return None;
   TypeServer2Record TS;
   if (auto EC = TypeDeserializer::deserializeAs(const_cast<CVType &>(Type), TS))
-    fatal(EC, "error reading type server record");
+    fatal("error reading type server record: " + toString(std::move(EC)));
   return std::move(TS);
 }
 
@@ -202,7 +202,7 @@ const CVIndexMap &PDBLinker::mergeDebugT(ObjFile *File,
   CVTypeArray Types;
   BinaryStreamReader Reader(Stream);
   if (auto EC = Reader.readArray(Types, Reader.getLength()))
-    fatal(EC, "Reader::readArray failed");
+    fatal("Reader::readArray failed: " + toString(std::move(EC)));
 
   // Look through type servers. If we've already seen this type server, don't
   // merge any type information.
@@ -213,7 +213,8 @@ const CVIndexMap &PDBLinker::mergeDebugT(ObjFile *File,
   // ObjectIndexMap.
   if (auto Err = mergeTypeAndIdRecords(IDTable, TypeTable,
                                        ObjectIndexMap.TPIMap, Types))
-    fatal(Err, "codeview::mergeTypeAndIdRecords failed");
+    fatal("codeview::mergeTypeAndIdRecords failed: " +
+          toString(std::move(Err)));
   return ObjectIndexMap;
 }
 
@@ -275,23 +276,23 @@ const CVIndexMap &PDBLinker::maybeMergeTypeServerPDB(ObjFile *File,
     ExpectedSession = tryToLoadPDB(TS.getGuid(), Path);
   }
   if (auto E = ExpectedSession.takeError())
-    fatal(E, "Type server PDB was not found");
+    fatal("Type server PDB was not found: " + toString(std::move(E)));
 
   // Merge TPI first, because the IPI stream will reference type indices.
   auto ExpectedTpi = (*ExpectedSession)->getPDBFile().getPDBTpiStream();
   if (auto E = ExpectedTpi.takeError())
-    fatal(E, "Type server does not have TPI stream");
+    fatal("Type server does not have TPI stream: " + toString(std::move(E)));
   if (auto Err = mergeTypeRecords(TypeTable, IndexMap.TPIMap,
                                   ExpectedTpi->typeArray()))
-    fatal(Err, "codeview::mergeTypeRecords failed");
+    fatal("codeview::mergeTypeRecords failed: " + toString(std::move(Err)));
 
   // Merge IPI.
   auto ExpectedIpi = (*ExpectedSession)->getPDBFile().getPDBIpiStream();
   if (auto E = ExpectedIpi.takeError())
-    fatal(E, "Type server does not have TPI stream");
+    fatal("Type server does not have TPI stream: " + toString(std::move(E)));
   if (auto Err = mergeIdRecords(IDTable, IndexMap.TPIMap, IndexMap.IPIMap,
                                 ExpectedIpi->typeArray()))
-    fatal(Err, "codeview::mergeIdRecords failed");
+    fatal("codeview::mergeIdRecords failed: " + toString(std::move(Err)));
 
   return IndexMap;
 }
@@ -305,7 +306,7 @@ static bool remapTypeIndex(TypeIndex &TI, ArrayRef<TypeIndex> TypeIndexMap) {
   return true;
 }
 
-static void remapTypesInSymbolRecord(ObjFile *File,
+static void remapTypesInSymbolRecord(ObjFile *File, SymbolKind SymKind,
                                      MutableArrayRef<uint8_t> Contents,
                                      const CVIndexMap &IndexMap,
                                      const TypeTableBuilder &IDTable,
@@ -317,15 +318,17 @@ static void remapTypesInSymbolRecord(ObjFile *File,
 
     // This can be an item index or a type index. Choose the appropriate map.
     ArrayRef<TypeIndex> TypeOrItemMap = IndexMap.TPIMap;
-    if (Ref.Kind == TiRefKind::IndexRef && IndexMap.IsTypeServerMap)
+    bool IsItemIndex = Ref.Kind == TiRefKind::IndexRef;
+    if (IsItemIndex && IndexMap.IsTypeServerMap)
       TypeOrItemMap = IndexMap.IPIMap;
 
     MutableArrayRef<TypeIndex> TIs(
         reinterpret_cast<TypeIndex *>(Contents.data() + Ref.Offset), Ref.Count);
     for (TypeIndex &TI : TIs) {
       if (!remapTypeIndex(TI, TypeOrItemMap)) {
-        log("ignoring symbol record in " + File->getName() +
-            " with bad type index 0x" + utohexstr(TI.getIndex()));
+        log("ignoring symbol record of kind 0x" + utohexstr(SymKind) + " in " +
+            File->getName() + " with bad " + (IsItemIndex ? "item" : "type") +
+            " index 0x" + utohexstr(TI.getIndex()));
         TI = TypeIndex(SimpleTypeKind::NotTranslated);
         continue;
       }
@@ -571,7 +574,8 @@ static void mergeSymbolRecords(BumpPtrAllocator &Alloc, ObjFile *File,
     // Re-map all the type index references.
     MutableArrayRef<uint8_t> Contents =
         NewData.drop_front(sizeof(RecordPrefix));
-    remapTypesInSymbolRecord(File, Contents, IndexMap, IDTable, TypeRefs);
+    remapTypesInSymbolRecord(File, Sym.kind(), Contents, IndexMap, IDTable,
+                             TypeRefs);
 
     // An object file may have S_xxx_ID symbols, but these get converted to
     // "real" symbols in a PDB.

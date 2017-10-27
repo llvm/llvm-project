@@ -20,3 +20,7 @@ Content-Length: 143
 Content-Length: 44
 
 {"jsonrpc":"2.0","id":3,"method":"shutdown"}
+# CHECK: {"jsonrpc":"2.0","id":3,"result":null}
+Content-Length: 33
+
+{"jsonrpc":"2.0":"method":"exit"}

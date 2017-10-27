@@ -10,8 +10,8 @@
 #ifndef LLD_ELF_TARGET_H
 #define LLD_ELF_TARGET_H
 
-#include "Error.h"
 #include "InputSection.h"
+#include "lld/Common/ErrorHandler.h"
 #include "llvm/Object/ELF.h"
 
 namespace lld {
@@ -23,6 +23,7 @@ class SymbolBody;
 
 class TargetInfo {
 public:
+  virtual uint32_t calcEFlags() const { return 0; }
   virtual bool isPicRel(RelType Type) const { return true; }
   virtual RelType getDynRel(RelType Type) const { return Type; }
   virtual void writeGotPltHeader(uint8_t *Buf) const {}

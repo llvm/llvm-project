@@ -39,8 +39,8 @@
 # elif defined(__arm__)
 #  define _LIBUNWIND_TARGET_ARM 1
 #  if defined(__ARM_WMMX)
-#    define _LIBUNWIND_CONTEXT_SIZE 60
-#    define _LIBUNWIND_CURSOR_SIZE 67
+#    define _LIBUNWIND_CONTEXT_SIZE 61
+#    define _LIBUNWIND_CURSOR_SIZE 68
 #  else
 #    define _LIBUNWIND_CONTEXT_SIZE 42
 #    define _LIBUNWIND_CURSOR_SIZE 49

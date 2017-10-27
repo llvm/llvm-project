@@ -83,8 +83,10 @@ if (lit.util.which('cvtres', config.environment['PATH'])) or \
 if (config.llvm_libxml2_enabled == '1'):
     config.available_features.add('libxml2')
 
-tar_version = subprocess.Popen(
-    ['tar', '--version'], stdout=subprocess.PIPE, env={'LANG': 'C'})
-if 'GNU tar' in tar_version.stdout.read().decode():
-    config.available_features.add('gnutar')
-tar_version.wait()
+tar_executable = lit.util.which('tar', config.environment['PATH'])
+if tar_executable:
+    tar_version = subprocess.Popen(
+        [tar_executable, '--version'], stdout=subprocess.PIPE, env={'LANG': 'C'})
+    if 'GNU tar' in tar_version.stdout.read().decode():
+        config.available_features.add('gnutar')
+    tar_version.wait()

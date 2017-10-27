@@ -216,7 +216,7 @@ public:
 	basic_string_view& operator=(const basic_string_view&) _NOEXCEPT = default;
 
 	_LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
-	basic_string_view(const _CharT* __s, size_type __len)
+	basic_string_view(const _CharT* __s, size_type __len) _NOEXCEPT
 		: __data(__s), __size(__len)
 	{
 // #if _LIBCPP_STD_VER > 11

@@ -10,7 +10,6 @@
 #include "InputSection.h"
 #include "Config.h"
 #include "EhFrame.h"
-#include "Error.h"
 #include "InputFiles.h"
 #include "LinkerScript.h"
 #include "Memory.h"
@@ -19,6 +18,7 @@
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Thunks.h"
+#include "lld/Common/ErrorHandler.h"
 #include "llvm/Object/Decompressor.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
@@ -824,14 +824,10 @@ template <class ELFT> void EhInputSection::split() {
   if (!this->Pieces.empty())
     return;
 
-  if (this->NumRelocations) {
-    if (this->AreRelocsRela)
-      split<ELFT>(this->relas<ELFT>());
-    else
-      split<ELFT>(this->rels<ELFT>());
-    return;
-  }
-  split<ELFT>(makeArrayRef<typename ELFT::Rela>(nullptr, nullptr));
+  if (this->AreRelocsRela)
+    split<ELFT>(this->relas<ELFT>());
+  else
+    split<ELFT>(this->rels<ELFT>());
 }
 
 template <class ELFT, class RelTy>

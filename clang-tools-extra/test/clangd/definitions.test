@@ -163,6 +163,15 @@ Content-Length: 148
 # Go to macro, being undefined
 # CHECK: {"jsonrpc":"2.0","id":1,"result":[{"uri": "file:///main.cpp", "range": {"start": {"line": 2, "character": 8}, "end": {"line": 2, "character": 13}}}]}
 
-Content-Length: 44
+Content-Length: 156
 
-{"jsonrpc":"2.0","id":3,"method":"shutdown"}
+{"jsonrpc":"2.0","id":2,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///doesnotexist.cpp"},"position":{"line":4,"character":7}}}
+# CHECK: {"jsonrpc":"2.0","id":2,"error":{"code":-32602,"message":"findDefinitions called on non-added file"}}
+
+Content-Length: 48
+
+{"jsonrpc":"2.0","id":10000,"method":"shutdown"}
+# CHECK: {"jsonrpc":"2.0","id":10000,"result":null}
+Content-Length: 33
+
+{"jsonrpc":"2.0":"method":"exit"}

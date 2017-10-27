@@ -11,9 +11,9 @@
 #define LLD_ELF_INPUT_FILES_H
 
 #include "Config.h"
-#include "Error.h"
 #include "InputSection.h"
 #include "Symbols.h"
+#include "lld/Common/ErrorHandler.h"
 
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Reproduce.h"

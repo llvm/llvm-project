@@ -311,7 +311,7 @@ static void walkReachable(Scop *S, LoopInfo *LI,
       if (Acc->isRead()) {
         const ScopArrayInfo *SAI = Acc->getScopArrayInfo();
 
-        if (Acc->isOriginalValueKind()) {
+        if (Acc->isLatestValueKind()) {
           MemoryAccess *DefAcc = S->getValueDef(SAI);
 
           // Accesses to read-only values do not have a definition.
@@ -319,7 +319,7 @@ static void walkReachable(Scop *S, LoopInfo *LI,
             WorklistAccs.push_back(S->getValueDef(SAI));
         }
 
-        if (Acc->isOriginalAnyPHIKind()) {
+        if (Acc->isLatestAnyPHIKind()) {
           auto IncomingMAs = S->getPHIIncomings(SAI);
           WorklistAccs.append(IncomingMAs.begin(), IncomingMAs.end());
         }

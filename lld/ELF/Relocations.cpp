@@ -927,7 +927,7 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
       Expr = fromPlt(Expr);
 
     Expr = adjustExpr<ELFT>(Body, Expr, Type, Sec, Rel.r_offset);
-    if (ErrorCount)
+    if (errorCount())
       continue;
 
     // This relocation does not require got entry, but it is relative to got and

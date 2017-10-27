@@ -36,7 +36,16 @@ Content-Length: 151
 # CHECK-DAG: {"label":"bar(float x = 0, int y = 42) -> void","parameters":[{"label":"float x = 0"},{"label":"int y = 42"}]}
 # CHECK: ]}
 
+Content-Length: 159
+
+{"jsonrpc":"2.0","id":3,"method":"textDocument/signatureHelp","params":{"textDocument":{"uri":"file:///doesnotexist.cpp"},"position":{"line":8,"character":9}}}
+# CHECK: {"jsonrpc":"2.0","id":3,"error":{"code":-32602,"message":"signatureHelp is called for non-added document"}}
+
 # Shutdown.
 Content-Length: 49
 
 {"jsonrpc":"2.0","id":100000,"method":"shutdown"}
+# CHECK: {"jsonrpc":"2.0","id":100000,"result":null}
+Content-Length: 33
+
+{"jsonrpc":"2.0":"method":"exit"}

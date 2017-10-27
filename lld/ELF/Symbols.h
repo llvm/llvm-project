@@ -267,11 +267,15 @@ private:
   const void *ElfSym;
 };
 
-// This class represents a symbol defined in an archive file. It is
-// created from an archive file header, and it knows how to load an
-// object file from an archive to replace itself with a defined
-// symbol. If the resolver finds both Undefined and Lazy for
-// the same name, it will ask the Lazy to load a file.
+// This represents a symbol that is not yet in the link, but we know where to
+// find it if needed. If the resolver finds both Undefined and Lazy for the same
+// name, it will ask the Lazy to load a file.
+//
+// A special complication is the handling of weak undefined symbols. They should
+// not load a file, but we have to remember we have seen both the weak undefined
+// and the lazy. We represent that with a lazy symbol with a weak binding. This
+// means that code looking for undefined symbols normally also has to take lazy
+// symbols into consideration.
 class Lazy : public SymbolBody {
 public:
   static bool classof(const SymbolBody *S) { return S->isLazy(); }
@@ -285,7 +289,10 @@ protected:
       : SymbolBody(K, Name, /*IsLocal=*/false, llvm::ELF::STV_DEFAULT, Type) {}
 };
 
-// LazyArchive symbols represents symbols in archive files.
+// This class represents a symbol defined in an archive file. It is
+// created from an archive file header, and it knows how to load an
+// object file from an archive to replace itself with a defined
+// symbol.
 class LazyArchive : public Lazy {
 public:
   LazyArchive(const llvm::object::Archive::Symbol S, uint8_t Type);

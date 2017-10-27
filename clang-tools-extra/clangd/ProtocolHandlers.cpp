@@ -52,6 +52,7 @@ void clangd::registerCallbackHandlers(JSONRPCDispatcher &Dispatcher,
 
   Register("initialize", &ProtocolCallbacks::onInitialize);
   Register("shutdown", &ProtocolCallbacks::onShutdown);
+  Register("exit", &ProtocolCallbacks::onExit);
   Register("textDocument/didOpen", &ProtocolCallbacks::onDocumentDidOpen);
   Register("textDocument/didClose", &ProtocolCallbacks::onDocumentDidClose);
   Register("textDocument/didChange", &ProtocolCallbacks::onDocumentDidChange);

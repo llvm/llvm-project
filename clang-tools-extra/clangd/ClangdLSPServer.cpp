@@ -56,8 +56,12 @@ void ClangdLSPServer::onInitialize(Ctx C, InitializeParams &Params) {
 }
 
 void ClangdLSPServer::onShutdown(Ctx C, ShutdownParams &Params) {
-  IsDone = true;
+  // Do essentially nothing, just say we're ready to exit.
+  ShutdownRequestReceived = true;
+  C.reply("null");
 }
+
+void ClangdLSPServer::onExit(Ctx C, ExitParams &Params) { IsDone = true; }
 
 void ClangdLSPServer::onDocumentDidOpen(Ctx C,
                                         DidOpenTextDocumentParams &Params) {
@@ -69,6 +73,8 @@ void ClangdLSPServer::onDocumentDidOpen(Ctx C,
 
 void ClangdLSPServer::onDocumentDidChange(Ctx C,
                                           DidChangeTextDocumentParams &Params) {
+  if (Params.contentChanges.size() != 1)
+    return C.replyError(-32602, "can only apply one change at a time");
   // We only support full syncing right now.
   Server.addDocument(Params.textDocument.uri.file,
                      Params.contentChanges[0].text);
@@ -154,24 +160,24 @@ void ClangdLSPServer::onCompletion(Ctx C, TextDocumentPositionParams &Params) {
 
 void ClangdLSPServer::onSignatureHelp(Ctx C,
                                       TextDocumentPositionParams &Params) {
-  C.reply(SignatureHelp::unparse(
-      Server
-          .signatureHelp(
-              Params.textDocument.uri.file,
-              Position{Params.position.line, Params.position.character})
-          .Value));
+  auto SignatureHelp = Server.signatureHelp(
+      Params.textDocument.uri.file,
+      Position{Params.position.line, Params.position.character});
+  if (!SignatureHelp)
+    return C.replyError(-32602, llvm::toString(SignatureHelp.takeError()));
+  C.reply(SignatureHelp::unparse(SignatureHelp->Value));
 }
 
 void ClangdLSPServer::onGoToDefinition(Ctx C,
                                        TextDocumentPositionParams &Params) {
-  auto Items = Server
-                   .findDefinitions(Params.textDocument.uri.file,
-                                    Position{Params.position.line,
-                                             Params.position.character})
-                   .Value;
+  auto Items = Server.findDefinitions(
+      Params.textDocument.uri.file,
+      Position{Params.position.line, Params.position.character});
+  if (!Items)
+    return C.replyError(-32602, llvm::toString(Items.takeError()));
 
   std::string Locations;
-  for (const auto &Item : Items) {
+  for (const auto &Item : Items->Value) {
     Locations += Location::unparse(Item);
     Locations += ",";
   }
@@ -197,7 +203,7 @@ ClangdLSPServer::ClangdLSPServer(JSONOutput &Out, unsigned AsyncThreadsCount,
                  /*EnableSnippetsAndCodePatterns=*/SnippetCompletions),
              /*Logger=*/Out, ResourceDir) {}
 
-void ClangdLSPServer::run(std::istream &In) {
+bool ClangdLSPServer::run(std::istream &In) {
   assert(!IsDone && "Run was called before");
 
   // Set up JSONRPCDispatcher.
@@ -213,6 +219,8 @@ void ClangdLSPServer::run(std::istream &In) {
   // Make sure IsDone is set to true after this method exits to ensure assertion
   // at the start of the method fires if it's ever executed again.
   IsDone = true;
+
+  return ShutdownRequestReceived;
 }
 
 std::vector<clang::tooling::Replacement>

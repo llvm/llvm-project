@@ -234,6 +234,9 @@ public:
   /// and AST and rebuild them from scratch.
   std::future<void> forceReparse(PathRef File);
 
+  /// DEPRECATED. Please use a callback-based version, this API is deprecated
+  /// and will soon be removed.
+  ///
   /// Run code completion for \p File at \p Pos.
   ///
   /// Request is processed asynchronously. You can use the returned future to
@@ -253,6 +256,14 @@ public:
                llvm::Optional<StringRef> OverridenContents = llvm::None,
                IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS = nullptr);
 
+  /// A version of `codeComplete` that runs \p Callback on the processing thread
+  /// when codeComplete results become available.
+  void codeComplete(
+      UniqueFunction<void(Tagged<std::vector<CompletionItem>>)> Callback,
+      PathRef File, Position Pos,
+      llvm::Optional<StringRef> OverridenContents = llvm::None,
+      IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS = nullptr);
+
   /// Provide signature help for \p File at \p Pos. If \p OverridenContents is
   /// not None, they will used only for signature help, i.e. no diagnostics
   /// update will be scheduled and a draft for \p File will not be updated. If
@@ -260,13 +271,14 @@ public:
   /// will be used. If \p UsedFS is non-null, it will be overwritten by
   /// vfs::FileSystem used for signature help. This method should only be called
   /// for currently tracked files.
-  Tagged<SignatureHelp>
+  llvm::Expected<Tagged<SignatureHelp>>
   signatureHelp(PathRef File, Position Pos,
                 llvm::Optional<StringRef> OverridenContents = llvm::None,
                 IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS = nullptr);
 
   /// Get definition of symbol at a specified \p Line and \p Column in \p File.
-  Tagged<std::vector<Location>> findDefinitions(PathRef File, Position Pos);
+  llvm::Expected<Tagged<std::vector<Location>>> findDefinitions(PathRef File,
+                                                                Position Pos);
 
   /// Helper function that returns a path to the corresponding source file when
   /// given a header file and vice versa.
