@@ -2065,12 +2065,12 @@ bool GVN::processBlock(BasicBlock *BB) {
     if (!AtStart)
       --BI;
 
-    for (SmallVectorImpl<Instruction *>::iterator I = InstrsToErase.begin(),
-         E = InstrsToErase.end(); I != E; ++I) {
-      DEBUG(dbgs() << "GVN removed: " << **I << '\n');
-      if (MD) MD->removeInstruction(*I);
-      DEBUG(verifyRemoved(*I));
-      (*I)->eraseFromParent();
+    for (auto *I : InstrsToErase) {
+      assert(I->getParent() == BB && "Removing instruction from wrong block?");
+      DEBUG(dbgs() << "GVN removed: " << *I << '\n');
+      if (MD) MD->removeInstruction(I);
+      DEBUG(verifyRemoved(I));
+      I->eraseFromParent();
     }
     InstrsToErase.clear();
 

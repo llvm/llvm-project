@@ -52,7 +52,7 @@ namespace {
 // Source State, TargetState, Target Requirement, ABS or PI, Range
 class ARMV7ABSLongThunk final : public Thunk {
 public:
-  ARMV7ABSLongThunk(const SymbolBody &Dest) : Thunk(Dest) {}
+  ARMV7ABSLongThunk(SymbolBody &Dest) : Thunk(Dest) {}
 
   uint32_t size() const override { return 12; }
   void writeTo(uint8_t *Buf, ThunkSection &IS) const override;
@@ -62,7 +62,7 @@ public:
 
 class ARMV7PILongThunk final : public Thunk {
 public:
-  ARMV7PILongThunk(const SymbolBody &Dest) : Thunk(Dest) {}
+  ARMV7PILongThunk(SymbolBody &Dest) : Thunk(Dest) {}
 
   uint32_t size() const override { return 16; }
   void writeTo(uint8_t *Buf, ThunkSection &IS) const override;
@@ -72,7 +72,7 @@ public:
 
 class ThumbV7ABSLongThunk final : public Thunk {
 public:
-  ThumbV7ABSLongThunk(const SymbolBody &Dest) : Thunk(Dest) { Alignment = 2; }
+  ThumbV7ABSLongThunk(SymbolBody &Dest) : Thunk(Dest) { Alignment = 2; }
 
   uint32_t size() const override { return 10; }
   void writeTo(uint8_t *Buf, ThunkSection &IS) const override;
@@ -82,7 +82,7 @@ public:
 
 class ThumbV7PILongThunk final : public Thunk {
 public:
-  ThumbV7PILongThunk(const SymbolBody &Dest) : Thunk(Dest) { Alignment = 2; }
+  ThumbV7PILongThunk(SymbolBody &Dest) : Thunk(Dest) { Alignment = 2; }
 
   uint32_t size() const override { return 12; }
   void writeTo(uint8_t *Buf, ThunkSection &IS) const override;
@@ -93,7 +93,7 @@ public:
 // MIPS LA25 thunk
 class MipsThunk final : public Thunk {
 public:
-  MipsThunk(const SymbolBody &Dest) : Thunk(Dest) {}
+  MipsThunk(SymbolBody &Dest) : Thunk(Dest) {}
 
   uint32_t size() const override { return 16; }
   void writeTo(uint8_t *Buf, ThunkSection &IS) const override;
@@ -104,7 +104,7 @@ public:
 // microMIPS R2-R5 LA25 thunk
 class MicroMipsThunk final : public Thunk {
 public:
-  MicroMipsThunk(const SymbolBody &Dest) : Thunk(Dest) {}
+  MicroMipsThunk(SymbolBody &Dest) : Thunk(Dest) {}
 
   uint32_t size() const override { return 14; }
   void writeTo(uint8_t *Buf, ThunkSection &IS) const override;
@@ -115,7 +115,7 @@ public:
 // microMIPS R6 LA25 thunk
 class MicroMipsR6Thunk final : public Thunk {
 public:
-  MicroMipsR6Thunk(const SymbolBody &Dest) : Thunk(Dest) {}
+  MicroMipsR6Thunk(SymbolBody &Dest) : Thunk(Dest) {}
 
   uint32_t size() const override { return 12; }
   void writeTo(uint8_t *Buf, ThunkSection &IS) const override;
@@ -305,7 +305,7 @@ InputSection *MicroMipsR6Thunk::getTargetInputSection() const {
   return dyn_cast<InputSection>(DR->Section);
 }
 
-Thunk::Thunk(const SymbolBody &D) : Destination(D), Offset(0) {}
+Thunk::Thunk(SymbolBody &D) : Destination(D), Offset(0) {}
 
 Thunk::~Thunk() = default;
 
@@ -318,11 +318,13 @@ static Thunk *addThunkArm(RelType Reloc, SymbolBody &S) {
   case R_ARM_PC24:
   case R_ARM_PLT32:
   case R_ARM_JUMP24:
+  case R_ARM_CALL:
     if (Config->Pic)
       return make<ARMV7PILongThunk>(S);
     return make<ARMV7ABSLongThunk>(S);
   case R_ARM_THM_JUMP19:
   case R_ARM_THM_JUMP24:
+  case R_ARM_THM_CALL:
     if (Config->Pic)
       return make<ThumbV7PILongThunk>(S);
     return make<ThumbV7ABSLongThunk>(S);
