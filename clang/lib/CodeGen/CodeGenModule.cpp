@@ -4582,14 +4582,23 @@ void CodeGenModule::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
     // If we have a TargetAttr build up the feature map based on that.
     TargetAttr::ParsedTargetAttr ParsedAttr = TD->parse();
 
+    ParsedAttr.Features.erase(
+        llvm::remove_if(ParsedAttr.Features,
+                        [&](const std::string &Feat) {
+                          return !Target.isValidFeatureName(
+                              StringRef{Feat}.substr(1));
+                        }),
+        ParsedAttr.Features.end());
+
     // Make a copy of the features as passed on the command line into the
     // beginning of the additional features from the function to override.
     ParsedAttr.Features.insert(ParsedAttr.Features.begin(),
                             Target.getTargetOpts().FeaturesAsWritten.begin(),
                             Target.getTargetOpts().FeaturesAsWritten.end());
 
-    if (ParsedAttr.Architecture != "")
-      TargetCPU = ParsedAttr.Architecture ;
+    if (ParsedAttr.Architecture != "" &&
+        Target.isValidCPUName(ParsedAttr.Architecture))
+      TargetCPU = ParsedAttr.Architecture;
 
     // Now populate the feature map, first with the TargetCPU which is either
     // the default or a new one from the target attribute string. Then we'll use
