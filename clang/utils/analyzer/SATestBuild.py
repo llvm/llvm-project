@@ -374,7 +374,7 @@ def buildProject(Dir, SBOutputDir, ProjectBuildMode, IsReferenceBuild):
     os.makedirs(os.path.join(SBOutputDir, LogFolderName))
 
     # Build and analyze the project.
-    with open(BuildLogPath, "r+b") as PBuildLogFile:
+    with open(BuildLogPath, "wb+") as PBuildLogFile:
         if (ProjectBuildMode == 1):
             downloadAndPatch(Dir, PBuildLogFile)
             runCleanupScript(Dir, PBuildLogFile)

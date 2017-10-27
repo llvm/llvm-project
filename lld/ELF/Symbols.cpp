@@ -228,7 +228,7 @@ void SymbolBody::parseSymbolVersion() {
   Name = {S.data(), Pos};
 
   // If this is not in this DSO, it is not a definition.
-  if (!isInCurrentDSO())
+  if (!isInCurrentOutput())
     return;
 
   // '@@' in a symbol name means the default version.
@@ -330,7 +330,7 @@ uint8_t Symbol::computeBinding() const {
     return Binding;
   if (Visibility != STV_DEFAULT && Visibility != STV_PROTECTED)
     return STB_LOCAL;
-  if (VersionId == VER_NDX_LOCAL && body()->isInCurrentDSO())
+  if (VersionId == VER_NDX_LOCAL && body()->isInCurrentOutput())
     return STB_LOCAL;
   if (Config->NoGnuUnique && Binding == STB_GNU_UNIQUE)
     return STB_GLOBAL;
@@ -342,7 +342,7 @@ bool Symbol::includeInDynsym() const {
     return false;
   if (computeBinding() == STB_LOCAL)
     return false;
-  if (!body()->isInCurrentDSO())
+  if (!body()->isInCurrentOutput())
     return true;
   return ExportDynamic;
 }

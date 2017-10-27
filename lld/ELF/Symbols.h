@@ -69,7 +69,7 @@ public:
     return SymbolKind == LazyArchiveKind || SymbolKind == LazyObjectKind;
   }
 
-  bool isInCurrentDSO() const {
+  bool isInCurrentOutput() const {
     return SymbolKind == DefinedRegularKind || SymbolKind == DefinedCommonKind;
   }
 
