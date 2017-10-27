@@ -27,7 +27,7 @@ class ThunkSection;
 // Thunks are assigned to synthetic ThunkSections
 class Thunk {
 public:
-  Thunk(const SymbolBody &Destination);
+  Thunk(SymbolBody &Destination);
   virtual ~Thunk();
 
   virtual uint32_t size() const { return 0; }
@@ -47,9 +47,9 @@ public:
 
   // The alignment requirement for this Thunk, defaults to the size of the
   // typical code section alignment.
-  const SymbolBody &Destination;
+  SymbolBody &Destination;
   SymbolBody *ThunkSym;
-  uint64_t Offset;
+  uint64_t Offset = 0;
   uint32_t Alignment = 4;
 };
 

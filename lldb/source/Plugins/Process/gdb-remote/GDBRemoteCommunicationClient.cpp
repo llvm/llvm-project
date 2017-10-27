@@ -1601,21 +1601,24 @@ GDBRemoteCommunicationClient::GetWatchpointsTriggerAfterInstruction(
   // and we only want to override this behavior if we have explicitly
   // received a qHostInfo telling us otherwise
   if (m_qHostInfo_is_valid != eLazyBoolYes) {
-    // On targets like MIPS, watchpoint exceptions are always generated
-    // before the instruction is executed. The connected target may not
-    // support qHostInfo or qWatchpointSupportInfo packets.
+    // On targets like MIPS and ppc64le, watchpoint exceptions are always
+    // generated before the instruction is executed. The connected target
+    // may not support qHostInfo or qWatchpointSupportInfo packets.
     if (atype == llvm::Triple::mips || atype == llvm::Triple::mipsel ||
-        atype == llvm::Triple::mips64 || atype == llvm::Triple::mips64el)
+        atype == llvm::Triple::mips64 || atype == llvm::Triple::mips64el ||
+        atype == llvm::Triple::ppc64le)
       after = false;
     else
       after = true;
   } else {
-    // For MIPS, set m_watchpoints_trigger_after_instruction to eLazyBoolNo
-    // if it is not calculated before.
-    if (m_watchpoints_trigger_after_instruction == eLazyBoolCalculate &&
-        (atype == llvm::Triple::mips || atype == llvm::Triple::mipsel ||
-         atype == llvm::Triple::mips64 || atype == llvm::Triple::mips64el))
+    // For MIPS and ppc64le, set m_watchpoints_trigger_after_instruction to
+    // eLazyBoolNo if it is not calculated before.
+    if ((m_watchpoints_trigger_after_instruction == eLazyBoolCalculate &&
+         (atype == llvm::Triple::mips || atype == llvm::Triple::mipsel ||
+          atype == llvm::Triple::mips64 || atype == llvm::Triple::mips64el)) ||
+        atype == llvm::Triple::ppc64le) {
       m_watchpoints_trigger_after_instruction = eLazyBoolNo;
+    }
 
     after = (m_watchpoints_trigger_after_instruction != eLazyBoolNo);
   }

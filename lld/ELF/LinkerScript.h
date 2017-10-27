@@ -155,9 +155,10 @@ struct InputSectionDescription : BaseCommand {
 
   std::vector<InputSection *> Sections;
 
-  // Temporary record of synthetic ThunkSection instances that we need to
-  // insert into Sections at the end of a createThunks() pass.
-  std::vector<ThunkSection *> ThunkSections;
+  // Temporary record of synthetic ThunkSection instances and the pass that
+  // they were created in. This is used to insert newly created ThunkSections
+  // into Sections at the end of a createThunks() pass.
+  std::vector<std::pair<ThunkSection *, uint32_t>> ThunkSections;
 };
 
 // Represents an ASSERT().

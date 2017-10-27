@@ -1048,7 +1048,97 @@ template <class ELFT> void elf::scanRelocations(InputSectionBase &S) {
     scanRelocs<ELFT>(S, S.rels<ELFT>());
 }
 
-// Merge the ThunkSections created this pass into the InputSectionDescriptions.
+// Thunk Implementation
+//
+// Thunks (sometimes called stubs, veneers or branch islands) are small pieces
+// of code that the linker inserts inbetween a caller and a callee. The thunks
+// are added at link time rather than compile time as the decision on whether
+// a thunk is needed, such as the caller and callee being out of range, can only
+// be made at link time.
+//
+// It is straightforward to tell given the current state of the program when a
+// thunk is needed for a particular call. The more difficult part is that
+// the thunk needs to be placed in the program such that the caller can reach
+// the thunk and the thunk can reach the callee; furthermore, adding thunks to
+// the program alters addresses, which can mean more thunks etc.
+//
+// In lld we have a synthetic ThunkSection that can hold many Thunks.
+// The decision to have a ThunkSection act as a container means that we can
+// more easily handle the most common case of a single block of contiguous
+// Thunks by inserting just a single ThunkSection.
+//
+// The implementation of Thunks in lld is split across these areas
+// Relocations.cpp : Framework for creating and placing thunks
+// Thunks.cpp : The code generated for each supported thunk
+// Target.cpp : Target specific hooks that the framework uses to decide when
+//              a thunk is used
+// Synthetic.cpp : Implementation of ThunkSection
+// Writer.cpp : Iteratively call framework until no more Thunks added
+//
+// Thunk placement requirements:
+// Mips LA25 thunks. These must be placed immediately before the callee section
+// We can assume that the caller is in range of the Thunk. These are modelled
+// by Thunks that return the section they must precede with
+// getTargetInputSection().
+//
+// ARM interworking and range extension thunks. These thunks must be placed
+// within range of the caller. All implemented ARM thunks can always reach the
+// callee as they use an indirect jump via a register that has no range
+// restrictions.
+//
+// Thunk placement algorithm:
+// For Mips LA25 ThunkSections; the placement is explicit, it has to be before
+// getTargetInputSection().
+//
+// For thunks that must be placed within range of the caller there are many
+// possible choices given that the maximum range from the caller is usually
+// much larger than the average InputSection size. Desirable properties include:
+// - Maximize reuse of thunks by multiple callers
+// - Minimize number of ThunkSections to simplify insertion
+// - Handle impact of already added Thunks on addresses
+// - Simple to understand and implement
+//
+// In lld for the first pass, we pre-create one or more ThunkSections per
+// InputSectionDescription at Target specific intervals. A ThunkSection is
+// placed so that the estimated end of the ThunkSection is within range of the
+// start of the InputSectionDescription or the previous ThunkSection. For
+// example:
+// InputSectionDescription
+// Section 0
+// ...
+// Section N
+// ThunkSection 0
+// Section N + 1
+// ...
+// Section N + K
+// Thunk Section 1
+//
+// The intention is that we can add a Thunk to a ThunkSection that is well
+// spaced enough to service a number of callers without having to do a lot
+// of work. An important principle is that it is not an error if a Thunk cannot
+// be placed in a pre-created ThunkSection; when this happens we create a new
+// ThunkSection placed next to the caller. This allows us to handle the vast
+// majority of thunks simply, but also handle rare cases where the branch range
+// is smaller than the target specific spacing.
+//
+// The algorithm is expected to create all the thunks that are needed in a
+// single pass, with a small number of programs needing a second pass due to
+// the insertion of thunks in the first pass increasing the offset between
+// callers and callees that were only just in range.
+//
+// A consequence of allowing new ThunkSections to be created outside of the
+// pre-created ThunkSections is that in rare cases calls to Thunks that were in
+// range in pass K, are out of range in some pass > K due to the insertion of
+// more Thunks in between the caller and callee. When this happens we retarget
+// the relocation back to the original target and create another Thunk.
+
+// Remove ThunkSections that are empty, this should only be the initial set
+// precreated on pass 0.
+
+// Insert the Thunks for OutputSection OS into their designated place
+// in the Sections vector, and recalculate the InputSection output section
+// offsets.
+// This may invalidate any output section offsets stored outside of InputSection
 void ThunkCreator::mergeThunks(ArrayRef<OutputSection *> OutputSections) {
   forEachInputSectionDescription(
       OutputSections, [&](OutputSection *OS, InputSectionDescription *ISD) {
@@ -1056,18 +1146,25 @@ void ThunkCreator::mergeThunks(ArrayRef<OutputSection *> OutputSections) {
           return;
 
         // Remove any zero sized precreated Thunks.
-        llvm::erase_if(ISD->ThunkSections, [](const ThunkSection *TS) {
-          return TS->getSize() == 0;
-        });
-        // Order Thunks in ascending OutSecOff.
-        std::stable_sort(ISD->ThunkSections.begin(), ISD->ThunkSections.end(),
+        llvm::erase_if(ISD->ThunkSections,
+                       [](const std::pair<ThunkSection *, uint32_t> &TS) {
+                         return TS.first->getSize() == 0;
+                       });
+        // ISD->ThunkSections contains all created ThunkSections, including
+        // those inserted in previous passes. Extract the Thunks created this
+        // pass and order them in ascending OutSecOff.
+        std::vector<ThunkSection *> NewThunks;
+        for (const std::pair<ThunkSection *, uint32_t> TS : ISD->ThunkSections)
+          if (TS.second == Pass)
+            NewThunks.push_back(TS.first);
+        std::stable_sort(NewThunks.begin(), NewThunks.end(),
                          [](const ThunkSection *A, const ThunkSection *B) {
                            return A->OutSecOff < B->OutSecOff;
                          });
 
         // Merge sorted vectors of Thunks and InputSections by OutSecOff
         std::vector<InputSection *> Tmp;
-        Tmp.reserve(ISD->Sections.size() + ISD->ThunkSections.size());
+        Tmp.reserve(ISD->Sections.size() + NewThunks.size());
         auto MergeCmp = [](const InputSection *A, const InputSection *B) {
           // std::merge requires a strict weak ordering.
           if (A->OutSecOff < B->OutSecOff)
@@ -1087,10 +1184,9 @@ void ThunkCreator::mergeThunks(ArrayRef<OutputSection *> OutputSections) {
           return false;
         };
         std::merge(ISD->Sections.begin(), ISD->Sections.end(),
-                   ISD->ThunkSections.begin(), ISD->ThunkSections.end(),
-                   std::back_inserter(Tmp), MergeCmp);
+                   NewThunks.begin(), NewThunks.end(), std::back_inserter(Tmp),
+                   MergeCmp);
         ISD->Sections = std::move(Tmp);
-        ISD->ThunkSections.clear();
       });
 }
 
@@ -1100,7 +1196,8 @@ void ThunkCreator::mergeThunks(ArrayRef<OutputSection *> OutputSections) {
 ThunkSection *ThunkCreator::getISDThunkSec(OutputSection *OS, InputSection *IS,
                                            InputSectionDescription *ISD,
                                            uint32_t Type, uint64_t Src) {
-  for (ThunkSection *TS : ISD->ThunkSections) {
+  for (std::pair<ThunkSection *, uint32_t> TP : ISD->ThunkSections) {
+    ThunkSection *TS = TP.first;
     uint64_t TSBase = OS->Addr + TS->OutSecOff;
     uint64_t TSLimit = TSBase + TS->getSize();
     if (Target->inBranchRange(Type, Src, (Src > TSLimit) ? TSBase : TSLimit))
@@ -1182,7 +1279,7 @@ ThunkSection *ThunkCreator::addThunkSection(OutputSection *OS,
                                             InputSectionDescription *ISD,
                                             uint64_t Off) {
   auto *TS = make<ThunkSection>(OS, Off);
-  ISD->ThunkSections.push_back(TS);
+  ISD->ThunkSections.push_back(std::make_pair(TS, Pass));
   return TS;
 }
 
@@ -1216,19 +1313,54 @@ void ThunkCreator::forEachInputSectionDescription(
   }
 }
 
+// Return true if the relocation target is an in range Thunk.
+// Return false if the relocation is not to a Thunk. If the relocation target
+// was originally to a Thunk, but is no longer in range we revert the
+// relocation back to its original non-Thunk target.
+bool ThunkCreator::normalizeExistingThunk(Relocation &Rel, uint64_t Src) {
+  if (Thunk *ET = Thunks.lookup(Rel.Sym)) {
+    if (Target->inBranchRange(Rel.Type, Src, Rel.Sym->getVA()))
+      return true;
+    Rel.Sym = &ET->Destination;
+    if (Rel.Sym->isInPlt())
+      Rel.Expr = toPlt(Rel.Expr);
+  }
+  return false;
+}
+
 // Process all relocations from the InputSections that have been assigned
-// to InputSectionDescriptions and redirect through Thunks if needed.
+// to InputSectionDescriptions and redirect through Thunks if needed. The
+// function should be called iteratively until it returns false.
 //
-// createThunks must be called after scanRelocs has created the Relocations for
-// each InputSection. It must be called before the static symbol table is
-// finalized. If any Thunks are added to an InputSectionDescription the
-// offsets within the OutputSection of the InputSections will change.
+// PreConditions:
+// All InputSections that may need a Thunk are reachable from
+// OutputSectionCommands.
 //
-// FIXME: Initial support for RangeThunks; only one pass supported.
+// All OutputSections have an address and all InputSections have an offset
+// within the OutputSection.
+//
+// The offsets between caller (relocation place) and callee
+// (relocation target) will not be modified outside of createThunks().
+//
+// PostConditions:
+// If return value is true then ThunkSections have been inserted into
+// OutputSections. All relocations that needed a Thunk based on the information
+// available to createThunks() on entry have been redirected to a Thunk. Note
+// that adding Thunks changes offsets between caller and callee so more Thunks
+// may be required.
+//
+// If return value is false then no more Thunks are needed, and createThunks has
+// made no changes. If the target requires range extension thunks, currently
+// ARM, then any future change in offset between caller and callee risks a
+// relocation out of range error.
 bool ThunkCreator::createThunks(ArrayRef<OutputSection *> OutputSections) {
   bool AddressesChanged = false;
   if (Pass == 0 && Target->ThunkSectionSpacing)
     createInitialThunkSections(OutputSections);
+  else if (Pass == 10)
+    // With Thunk Size much smaller than branch range we expect to
+    // converge quickly; if we get to 10 something has gone wrong.
+    fatal("thunk creation not converged");
 
   // Create all the Thunks and insert them into synthetic ThunkSections. The
   // ThunkSections are later inserted back into InputSectionDescriptions.
@@ -1239,14 +1371,20 @@ bool ThunkCreator::createThunks(ArrayRef<OutputSection *> OutputSections) {
       OutputSections, [&](OutputSection *OS, InputSectionDescription *ISD) {
         for (InputSection *IS : ISD->Sections)
           for (Relocation &Rel : IS->Relocations) {
-            SymbolBody &Body = *Rel.Sym;
             uint64_t Src = OS->Addr + IS->OutSecOff + Rel.Offset;
-            if (Thunks.find(&Body) != Thunks.end() ||
-                !Target->needsThunk(Rel.Expr, Rel.Type, IS->File, Src, Body))
+
+            // If we are a relocation to an existing Thunk, check if it is
+            // still in range. If not then Rel will be altered to point to its
+            // original target so another Thunk can be generated.
+            if (Pass > 0 && normalizeExistingThunk(Rel, Src))
+              continue;
+
+            if (!Target->needsThunk(Rel.Expr, Rel.Type, IS->File, Src,
+                                    *Rel.Sym))
               continue;
             Thunk *T;
             bool IsNew;
-            std::tie(T, IsNew) = getThunk(Body, Rel.Type, Src);
+            std::tie(T, IsNew) = getThunk(*Rel.Sym, Rel.Type, Src);
             if (IsNew) {
               AddressesChanged = true;
               // Find or create a ThunkSection for the new Thunk

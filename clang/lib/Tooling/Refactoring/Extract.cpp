@@ -13,12 +13,10 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "clang/Tooling/Refactoring/Extract/Extract.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Expr.h"
 #include "clang/Rewrite/Core/Rewriter.h"
-#include "clang/Tooling/Refactoring/RefactoringAction.h"
-#include "clang/Tooling/Refactoring/RefactoringActionRules.h"
-#include "clang/Tooling/Refactoring/RefactoringOptions.h"
 
 namespace clang {
 namespace tooling {
@@ -44,56 +42,41 @@ bool isSimpleExpression(const Expr *E) {
   }
 }
 
-class ExtractableCodeSelectionRequirement final
-    : public CodeRangeASTSelectionRequirement {
-public:
-  Expected<CodeRangeASTSelection>
-  evaluate(RefactoringRuleContext &Context) const {
-    Expected<CodeRangeASTSelection> Selection =
-        CodeRangeASTSelectionRequirement::evaluate(Context);
-    if (!Selection)
-      return Selection.takeError();
-    CodeRangeASTSelection &Code = *Selection;
-
-    // We would like to extract code out of functions/methods/blocks.
-    // Prohibit extraction from things like global variable / field
-    // initializers and other top-level expressions.
-    if (!Code.isInFunctionLikeBodyOfCode())
-      return Context.createDiagnosticError(
-          diag::err_refactor_code_outside_of_function);
-
-    // Avoid extraction of simple literals and references.
-    if (Code.size() == 1 && isSimpleExpression(dyn_cast<Expr>(Code[0])))
-      return Context.createDiagnosticError(
-          diag::err_refactor_extract_simple_expression);
-
-    // FIXME (Alex L): Prohibit extraction of Objective-C property setters.
-    return Selection;
-  }
-};
-
-class ExtractFunction final : public SourceChangeRefactoringRule {
-public:
-  ExtractFunction(CodeRangeASTSelection Code, Optional<std::string> DeclName)
-      : Code(std::move(Code)),
-        DeclName(DeclName ? std::move(*DeclName) : "extracted") {}
-
-  Expected<AtomicChanges>
-  createSourceReplacements(RefactoringRuleContext &Context) override;
-
-private:
-  CodeRangeASTSelection Code;
-
-  // FIXME: Account for naming collisions:
-  //  - error when name is specified by user.
-  //  - rename to "extractedN" when name is implicit.
-  std::string DeclName;
-};
-
 SourceLocation computeFunctionExtractionLocation(const Decl *D) {
   // FIXME (Alex L): Method -> function extraction should place function before
   // C++ record if the method is defined inside the record.
   return D->getLocStart();
+}
+
+} // end anonymous namespace
+
+const RefactoringDescriptor &ExtractFunction::describe() {
+  static const RefactoringDescriptor Descriptor = {
+      "extract-function",
+      "Extract Function",
+      "(WIP action; use with caution!) Extracts code into a new function",
+  };
+  return Descriptor;
+}
+
+Expected<ExtractFunction>
+ExtractFunction::initiate(RefactoringRuleContext &Context,
+                          CodeRangeASTSelection Code,
+                          Optional<std::string> DeclName) {
+  // We would like to extract code out of functions/methods/blocks.
+  // Prohibit extraction from things like global variable / field
+  // initializers and other top-level expressions.
+  if (!Code.isInFunctionLikeBodyOfCode())
+    return Context.createDiagnosticError(
+        diag::err_refactor_code_outside_of_function);
+
+  // Avoid extraction of simple literals and references.
+  if (Code.size() == 1 && isSimpleExpression(dyn_cast<Expr>(Code[0])))
+    return Context.createDiagnosticError(
+        diag::err_refactor_extract_simple_expression);
+
+  // FIXME (Alex L): Prohibit extraction of Objective-C property setters.
+  return ExtractFunction(std::move(Code), DeclName);
 }
 
 // FIXME: Support C++ method extraction.
@@ -192,40 +175,6 @@ ExtractFunction::createSourceReplacements(RefactoringRuleContext &Context) {
   // FIXME: Add support for assocciated symbol location to AtomicChange to mark
   // the ranges of the name of the extracted declaration.
   return AtomicChanges{std::move(Change)};
-}
-
-class DeclNameOption final : public OptionalRefactoringOption<std::string> {
-public:
-  StringRef getName() const { return "name"; }
-  StringRef getDescription() const {
-    return "Name of the extracted declaration";
-  }
-};
-
-class ExtractRefactoring final : public RefactoringAction {
-public:
-  StringRef getCommand() const override { return "extract"; }
-
-  StringRef getDescription() const override {
-    return "(WIP action; use with caution!) Extracts code into a new function "
-           "/ method / variable";
-  }
-
-  /// Returns a set of refactoring actions rules that are defined by this
-  /// action.
-  RefactoringActionRules createActionRules() const override {
-    RefactoringActionRules Rules;
-    Rules.push_back(createRefactoringActionRule<ExtractFunction>(
-        ExtractableCodeSelectionRequirement(),
-        OptionRequirement<DeclNameOption>()));
-    return Rules;
-  }
-};
-
-} // end anonymous namespace
-
-std::unique_ptr<RefactoringAction> createExtractAction() {
-  return llvm::make_unique<ExtractRefactoring>();
 }
 
 } // end namespace tooling

@@ -17,6 +17,7 @@
 
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Tooling/Refactoring/AtomicChange.h"
+#include "clang/Tooling/Refactoring/RefactoringActionRules.h"
 #include "clang/Tooling/Refactoring/RefactoringOptions.h"
 #include "clang/Tooling/Refactoring/Rename/SymbolOccurrences.h"
 #include "llvm/Support/Error.h"
@@ -46,12 +47,23 @@ private:
   bool PrintLocations;
 };
 
-class NewNameOption : public RequiredRefactoringOption<std::string> {
+class RenameOccurrences final : public SourceChangeRefactoringRule {
 public:
-  StringRef getName() const override { return "new-name"; }
-  StringRef getDescription() const override {
-    return "The new name to change the symbol to";
-  }
+  static Expected<RenameOccurrences> initiate(RefactoringRuleContext &Context,
+                                              SourceRange SelectionRange,
+                                              std::string NewName);
+
+  static const RefactoringDescriptor &describe();
+
+private:
+  RenameOccurrences(const NamedDecl *ND, std::string NewName)
+      : ND(ND), NewName(std::move(NewName)) {}
+
+  Expected<AtomicChanges>
+  createSourceReplacements(RefactoringRuleContext &Context) override;
+
+  const NamedDecl *ND;
+  std::string NewName;
 };
 
 /// Returns source replacements that correspond to the rename of the given

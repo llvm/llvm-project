@@ -158,6 +158,8 @@ private:
   ThunkSection *addThunkSection(OutputSection *OS, InputSectionDescription *,
                                 uint64_t Off);
 
+  bool normalizeExistingThunk(Relocation &Rel, uint64_t Src);
+
   // Record all the available Thunks for a Symbol
   llvm::DenseMap<SymbolBody *, std::vector<Thunk *>> ThunkedSymbols;
 
