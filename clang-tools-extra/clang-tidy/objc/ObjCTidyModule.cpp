@@ -10,6 +10,7 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
+#include "ForbiddenSubclassingCheck.h"
 
 using namespace clang::ast_matchers;
 
@@ -20,7 +21,8 @@ namespace objc {
 class ObjCModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
-    // TODO(D39142): Add checks here.
+    CheckFactories.registerCheck<ForbiddenSubclassingCheck>(
+        "objc-forbidden-subclassing");
   }
 };
 

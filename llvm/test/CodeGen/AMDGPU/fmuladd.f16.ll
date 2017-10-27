@@ -154,7 +154,7 @@ define amdgpu_kernel void @fmuladd_neg_2.0_a_b_f16(half addrspace(1)* %out, half
 ; VI-FLUSH: v_mac_f16_e32 [[R2]], 2.0, [[R1]]
 ; VI-FLUSH: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[R2]]
 
-; VI-DENORM: v_fma_f16 [[RESULT:v[0-9]+]], -[[R1]], -2.0, [[R2]]
+; VI-DENORM: v_fma_f16 [[RESULT:v[0-9]+]], [[R1]], 2.0, [[R2]]
 ; VI-DENORM: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @fmuladd_neg_2.0_neg_a_b_f16(half addrspace(1)* %out, half addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -178,7 +178,7 @@ define amdgpu_kernel void @fmuladd_neg_2.0_neg_a_b_f16(half addrspace(1)* %out, 
 ; VI-FLUSH: v_mac_f16_e32 [[R2]], -2.0, [[R1]]
 ; VI-FLUSH: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[R2]]
 
-; VI-DENORM: v_fma_f16 [[RESULT:v[0-9]+]], -[[R1]], 2.0, [[R2]]
+; VI-DENORM: v_fma_f16 [[RESULT:v[0-9]+]], [[R1]], -2.0, [[R2]]
 ; VI-DENORM: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @fmuladd_2.0_neg_a_b_f16(half addrspace(1)* %out, half addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

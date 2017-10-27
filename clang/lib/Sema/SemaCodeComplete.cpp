@@ -47,7 +47,7 @@ namespace {
     /// the result set (when it returns true) and which declarations should be
     /// filtered out (returns false).
     typedef bool (ResultBuilder::*LookupFilter)(const NamedDecl *) const;
-    
+
     typedef CodeCompletionResult Result;
     
   private:
