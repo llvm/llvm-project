@@ -1,4 +1,4 @@
-; RUN: opt -latesimplifycfg -S < %s | FileCheck %s
+; RUN: opt -simplifycfg -keep-loops=false -S < %s | FileCheck %s
 
 ; It's not worthwhile to if-convert one of the phi nodes and leave
 ; the other behind, because that still requires a branch. If

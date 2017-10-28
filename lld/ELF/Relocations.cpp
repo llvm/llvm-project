@@ -445,14 +445,13 @@ static RelExpr fromPlt(RelExpr Expr) {
 // Returns true if a given shared symbol is in a read-only segment in a DSO.
 template <class ELFT> static bool isReadOnly(SharedSymbol *SS) {
   typedef typename ELFT::Phdr Elf_Phdr;
-  uint64_t Value = SS->getValue<ELFT>();
 
   // Determine if the symbol is read-only by scanning the DSO's program headers.
   const SharedFile<ELFT> *File = SS->getFile<ELFT>();
   for (const Elf_Phdr &Phdr : check(File->getObj().program_headers()))
     if ((Phdr.p_type == ELF::PT_LOAD || Phdr.p_type == ELF::PT_GNU_RELRO) &&
-        !(Phdr.p_flags & ELF::PF_W) && Value >= Phdr.p_vaddr &&
-        Value < Phdr.p_vaddr + Phdr.p_memsz)
+        !(Phdr.p_flags & ELF::PF_W) && SS->Value >= Phdr.p_vaddr &&
+        SS->Value < Phdr.p_vaddr + Phdr.p_memsz)
       return true;
   return false;
 }
@@ -467,12 +466,10 @@ static std::vector<SharedSymbol *> getSymbolsAt(SharedSymbol *SS) {
   typedef typename ELFT::Sym Elf_Sym;
 
   SharedFile<ELFT> *File = SS->getFile<ELFT>();
-  uint64_t Shndx = SS->getShndx<ELFT>();
-  uint64_t Value = SS->getValue<ELFT>();
 
   std::vector<SharedSymbol *> Ret;
   for (const Elf_Sym &S : File->getGlobalELFSyms()) {
-    if (S.st_shndx != Shndx || S.st_value != Value)
+    if (S.st_shndx != SS->Shndx || S.st_value != SS->Value)
       continue;
     StringRef Name = check(S.getName(File->getStringTable()));
     SymbolBody *Sym = Symtab->find(Name);
@@ -526,7 +523,7 @@ static std::vector<SharedSymbol *> getSymbolsAt(SharedSymbol *SS) {
 // define an accessor getV().
 template <class ELFT> static void addCopyRelSymbol(SharedSymbol *SS) {
   // Copy relocation against zero-sized symbol doesn't make sense.
-  uint64_t SymSize = SS->template getSize<ELFT>();
+  uint64_t SymSize = SS->getSize();
   if (SymSize == 0)
     fatal("cannot create a copy relocation for symbol " + toString(*SS));
 
@@ -534,7 +531,7 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol *SS) {
   // memory protection by reserving space in the .bss.rel.ro section.
   bool IsReadOnly = isReadOnly<ELFT>(SS);
   BssSection *Sec = make<BssSection>(IsReadOnly ? ".bss.rel.ro" : ".bss",
-                                     SymSize, SS->getAlignment<ELFT>());
+                                     SymSize, SS->Alignment);
   if (IsReadOnly)
     InX::BssRelRo->getParent()->addSection(Sec);
   else
@@ -1014,7 +1011,7 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
 
     // The size is not going to change, so we fold it in here.
     if (Expr == R_SIZE)
-      Addend += Body.getSize<ELFT>();
+      Addend += Body.getSize();
 
     // If the produced value is a constant, we just remember to write it
     // when outputting this section. We also have to do it if the format

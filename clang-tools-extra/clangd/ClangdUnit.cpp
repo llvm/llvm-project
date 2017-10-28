@@ -157,7 +157,7 @@ getOptionalParameters(const CodeCompletionString &CCS,
   return Result;
 }
 
-llvm::Optional<DiagWithFixIts> toClangdDiag(StoredDiagnostic D) {
+llvm::Optional<DiagWithFixIts> toClangdDiag(const StoredDiagnostic &D) {
   auto Location = D.getLocation();
   if (!Location.isValid() || !Location.getManager().isInMainFile(Location))
     return llvm::None;
@@ -744,9 +744,9 @@ bool invokeCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
       Preamble = nullptr;
   }
 
-  auto Clang = prepareCompilerInstance(std::move(CI), Preamble,
-                                       std::move(ContentsBuffer), PCHs, VFS,
-                                       DummyDiagsConsumer);
+  auto Clang = prepareCompilerInstance(
+      std::move(CI), Preamble, std::move(ContentsBuffer), std::move(PCHs),
+      std::move(VFS), DummyDiagsConsumer);
   auto &DiagOpts = Clang->getDiagnosticOpts();
   DiagOpts.IgnoreWarnings = true;
 
@@ -804,7 +804,7 @@ clang::CodeCompleteOptions clangd::CodeCompleteOptions::getClangCompleteOpts() {
 }
 
 std::vector<CompletionItem>
-clangd::codeComplete(PathRef FileName, tooling::CompileCommand Command,
+clangd::codeComplete(PathRef FileName, const tooling::CompileCommand &Command,
                      PrecompiledPreamble const *Preamble, StringRef Contents,
                      Position Pos, IntrusiveRefCntPtr<vfs::FileSystem> VFS,
                      std::shared_ptr<PCHContainerOperations> PCHs,
@@ -826,7 +826,7 @@ clangd::codeComplete(PathRef FileName, tooling::CompileCommand Command,
 }
 
 SignatureHelp
-clangd::signatureHelp(PathRef FileName, tooling::CompileCommand Command,
+clangd::signatureHelp(PathRef FileName, const tooling::CompileCommand &Command,
                       PrecompiledPreamble const *Preamble, StringRef Contents,
                       Position Pos, IntrusiveRefCntPtr<vfs::FileSystem> VFS,
                       std::shared_ptr<PCHContainerOperations> PCHs,
@@ -859,9 +859,9 @@ ParsedAST::Build(std::unique_ptr<clang::CompilerInvocation> CI,
   std::vector<DiagWithFixIts> ASTDiags;
   StoreDiagsConsumer UnitDiagsConsumer(/*ref*/ ASTDiags);
 
-  auto Clang =
-      prepareCompilerInstance(std::move(CI), Preamble, std::move(Buffer), PCHs,
-                              VFS, /*ref*/ UnitDiagsConsumer);
+  auto Clang = prepareCompilerInstance(
+      std::move(CI), Preamble, std::move(Buffer), std::move(PCHs),
+      std::move(VFS), /*ref*/ UnitDiagsConsumer);
 
   // Recover resources if we crash before exiting this method.
   llvm::CrashRecoveryContextCleanupRegistrar<CompilerInstance> CICleanup(

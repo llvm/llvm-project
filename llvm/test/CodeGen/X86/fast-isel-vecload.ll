@@ -458,20 +458,20 @@ define <8 x i32> @test_v8i32(<8 x i32>* %V) {
 ;
 ; AVXONLY-LABEL: test_v8i32:
 ; AVXONLY:       # BB#0: # %entry
-; AVXONLY-NEXT:    vmovdqu (%rdi), %ymm0
+; AVXONLY-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVXONLY-NEXT:    retq
 ;
 ; KNL-LABEL: test_v8i32:
 ; KNL:       # BB#0: # %entry
-; KNL-NEXT:    vmovdqu (%rdi), %ymm0
+; KNL-NEXT:    vmovdqa (%rdi), %ymm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_v8i32:
 ; SKX:       # BB#0: # %entry
-; SKX-NEXT:    vmovdqu64 (%rdi), %ymm0
+; SKX-NEXT:    vmovdqa64 (%rdi), %ymm0
 ; SKX-NEXT:    retq
 entry:
-  %0 = load <8 x i32>, <8 x i32>* %V, align 16
+  %0 = load <8 x i32>, <8 x i32>* %V, align 32
   ret <8 x i32> %0
 }
 
@@ -614,10 +614,10 @@ define <8 x float> @test_v8f32(<8 x float>* %V) {
 ;
 ; AVX-LABEL: test_v8f32:
 ; AVX:       # BB#0: # %entry
-; AVX-NEXT:    vmovups (%rdi), %ymm0
+; AVX-NEXT:    vmovaps (%rdi), %ymm0
 ; AVX-NEXT:    retq
 entry:
-  %0 = load <8 x float>, <8 x float>* %V, align 16
+  %0 = load <8 x float>, <8 x float>* %V, align 32
   ret <8 x float> %0
 }
 
@@ -630,10 +630,10 @@ define <4 x double> @test_v4f64(<4 x double>* %V) {
 ;
 ; AVX-LABEL: test_v4f64:
 ; AVX:       # BB#0: # %entry
-; AVX-NEXT:    vmovupd (%rdi), %ymm0
+; AVX-NEXT:    vmovapd (%rdi), %ymm0
 ; AVX-NEXT:    retq
 entry:
-  %0 = load <4 x double>, <4 x double>* %V, align 16
+  %0 = load <4 x double>, <4 x double>* %V, align 32
   ret <4 x double> %0
 }
 
@@ -692,10 +692,10 @@ define <64 x i8> @test_v64i8(<64 x i8>* %V) {
 ;
 ; SKX-LABEL: test_v64i8:
 ; SKX:       # BB#0: # %entry
-; SKX-NEXT:    vmovdqu64 (%rdi), %zmm0
+; SKX-NEXT:    vmovdqa64 (%rdi), %zmm0
 ; SKX-NEXT:    retq
 entry:
-  %0 = load <64 x i8>, <64 x i8>* %V, align 32
+  %0 = load <64 x i8>, <64 x i8>* %V, align 64
   ret <64 x i8> %0
 }
 
@@ -722,10 +722,10 @@ define <32 x i16> @test_v32i16(<32 x i16>* %V) {
 ;
 ; SKX-LABEL: test_v32i16:
 ; SKX:       # BB#0: # %entry
-; SKX-NEXT:    vmovdqu64 (%rdi), %zmm0
+; SKX-NEXT:    vmovdqa64 (%rdi), %zmm0
 ; SKX-NEXT:    retq
 entry:
-  %0 = load <32 x i16>, <32 x i16>* %V, align 32
+  %0 = load <32 x i16>, <32 x i16>* %V, align 64
   ret <32 x i16> %0
 }
 
@@ -740,16 +740,16 @@ define <16 x i32> @test_v16i32(<16 x i32>* %V) {
 ;
 ; AVXONLY-LABEL: test_v16i32:
 ; AVXONLY:       # BB#0: # %entry
-; AVXONLY-NEXT:    vmovups (%rdi), %ymm0
-; AVXONLY-NEXT:    vmovups 32(%rdi), %ymm1
+; AVXONLY-NEXT:    vmovaps (%rdi), %ymm0
+; AVXONLY-NEXT:    vmovaps 32(%rdi), %ymm1
 ; AVXONLY-NEXT:    retq
 ;
 ; AVX512-LABEL: test_v16i32:
 ; AVX512:       # BB#0: # %entry
-; AVX512-NEXT:    vmovdqu64 (%rdi), %zmm0
+; AVX512-NEXT:    vmovdqa64 (%rdi), %zmm0
 ; AVX512-NEXT:    retq
 entry:
-  %0 = load <16 x i32>, <16 x i32>* %V, align 16
+  %0 = load <16 x i32>, <16 x i32>* %V, align 64
   ret <16 x i32> %0
 }
 
@@ -770,10 +770,10 @@ define <8 x i64> @test_v8i64(<8 x i64>* %V) {
 ;
 ; AVX512-LABEL: test_v8i64:
 ; AVX512:       # BB#0: # %entry
-; AVX512-NEXT:    vmovdqu64 (%rdi), %zmm0
+; AVX512-NEXT:    vmovdqa64 (%rdi), %zmm0
 ; AVX512-NEXT:    retq
 entry:
-  %0 = load <8 x i64>, <8 x i64>* %V, align 32
+  %0 = load <8 x i64>, <8 x i64>* %V, align 64
   ret <8 x i64> %0
 }
 
@@ -894,10 +894,10 @@ define <8 x float> @test_v16f32(<8 x float>* %V) {
 ;
 ; AVX-LABEL: test_v16f32:
 ; AVX:       # BB#0: # %entry
-; AVX-NEXT:    vmovups (%rdi), %ymm0
+; AVX-NEXT:    vmovaps (%rdi), %ymm0
 ; AVX-NEXT:    retq
 entry:
-  %0 = load <8 x float>, <8 x float>* %V, align 16
+  %0 = load <8 x float>, <8 x float>* %V, align 64
   ret <8 x float> %0
 }
 
@@ -912,16 +912,16 @@ define <8 x double> @test_v8f64(<8 x double>* %V) {
 ;
 ; AVXONLY-LABEL: test_v8f64:
 ; AVXONLY:       # BB#0: # %entry
-; AVXONLY-NEXT:    vmovupd (%rdi), %ymm0
-; AVXONLY-NEXT:    vmovupd 32(%rdi), %ymm1
+; AVXONLY-NEXT:    vmovapd (%rdi), %ymm0
+; AVXONLY-NEXT:    vmovapd 32(%rdi), %ymm1
 ; AVXONLY-NEXT:    retq
 ;
 ; AVX512-LABEL: test_v8f64:
 ; AVX512:       # BB#0: # %entry
-; AVX512-NEXT:    vmovupd (%rdi), %zmm0
+; AVX512-NEXT:    vmovapd (%rdi), %zmm0
 ; AVX512-NEXT:    retq
 entry:
-  %0 = load <8 x double>, <8 x double>* %V, align 16
+  %0 = load <8 x double>, <8 x double>* %V, align 64
   ret <8 x double> %0
 }
 
