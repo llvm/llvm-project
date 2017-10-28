@@ -18,15 +18,16 @@
 #define XRAY_XRAY_FDR_LOGGING_IMPL_H
 
 #include <cassert>
-#include <cstdint>
+#include <cstddef>
 #include <cstring>
 #include <limits>
-#include <memory>
 #include <pthread.h>
-#include <string>
 #include <sys/syscall.h>
 #include <time.h>
 #include <unistd.h>
+
+// FIXME: Implement analogues to std::shared_ptr and std::weak_ptr
+#include <memory>
 
 #include "sanitizer_common/sanitizer_common.h"
 #include "xray/xray_log_interface.h"
@@ -96,7 +97,7 @@ static void writeTSCWrapMetadata(uint64_t TSC);
 // call so that it can be initialized on first use instead of as a global. We
 // force the alignment to 64-bytes for x86 cache line alignment, as this
 // structure is used in the hot path of implementation.
-struct ALIGNED(64) ThreadLocalData {
+struct alignas(64) ThreadLocalData {
   BufferQueue::Buffer Buffer;
   char *RecordPtr = nullptr;
   // The number of FunctionEntry records immediately preceding RecordPtr.
@@ -176,8 +177,8 @@ static ThreadLocalData &getThreadLocalData() {
   // We need aligned, uninitialized storage for the TLS object which is
   // trivially destructible. We're going to use this as raw storage and
   // placement-new the ThreadLocalData object into it later.
-  thread_local std::aligned_storage<sizeof(ThreadLocalData),
-                                    alignof(ThreadLocalData)>::type TLSBuffer;
+  alignas(alignof(ThreadLocalData)) thread_local unsigned char
+      TLSBuffer[sizeof(ThreadLocalData)];
 
   // Ensure that we only actually ever do the pthread initialization once.
   thread_local bool UNUSED Unused = [] {
@@ -215,7 +216,7 @@ static ThreadLocalData &getThreadLocalData() {
     return true;
   }();
 
-  return *reinterpret_cast<ThreadLocalData *>(&TLSBuffer);
+  return *reinterpret_cast<ThreadLocalData *>(TLSBuffer);
 }
 
 //-----------------------------------------------------------------------------|
@@ -255,14 +256,15 @@ public:
 inline void writeNewBufferPreamble(pid_t Tid, timespec TS,
                                    char *&MemPtr) XRAY_NEVER_INSTRUMENT {
   static constexpr int InitRecordsCount = 2;
-  std::aligned_storage<sizeof(MetadataRecord)>::type Records[InitRecordsCount];
+  alignas(alignof(MetadataRecord)) unsigned char
+      Records[InitRecordsCount * MetadataRecSize];
   {
     // Write out a MetadataRecord to signify that this is the start of a new
     // buffer, associated with a particular thread, with a new CPU.  For the
     // data, we have 15 bytes to squeeze as much information as we can.  At this
     // point we only write down the following bytes:
     //   - Thread ID (pid_t, 4 bytes)
-    auto &NewBuffer = *reinterpret_cast<MetadataRecord *>(&Records[0]);
+    auto &NewBuffer = *reinterpret_cast<MetadataRecord *>(Records);
     NewBuffer.Type = uint8_t(RecordType::Metadata);
     NewBuffer.RecordKind = uint8_t(MetadataRecord::RecordKinds::NewBuffer);
     std::memcpy(&NewBuffer.Data, &Tid, sizeof(pid_t));
@@ -270,7 +272,8 @@ inline void writeNewBufferPreamble(pid_t Tid, timespec TS,
   // Also write the WalltimeMarker record.
   {
     static_assert(sizeof(time_t) <= 8, "time_t needs to be at most 8 bytes");
-    auto &WalltimeMarker = *reinterpret_cast<MetadataRecord *>(&Records[1]);
+    auto &WalltimeMarker =
+        *reinterpret_cast<MetadataRecord *>(Records + MetadataRecSize);
     WalltimeMarker.Type = uint8_t(RecordType::Metadata);
     WalltimeMarker.RecordKind =
         uint8_t(MetadataRecord::RecordKinds::WalltimeMarker);
@@ -382,10 +385,7 @@ static inline void writeCallArgumentMetadata(uint64_t A) XRAY_NEVER_INSTRUMENT {
 static inline void writeFunctionRecord(int FuncId, uint32_t TSCDelta,
                                        XRayEntryType EntryType,
                                        char *&MemPtr) XRAY_NEVER_INSTRUMENT {
-  std::aligned_storage<sizeof(FunctionRecord), alignof(FunctionRecord)>::type
-      AlignedFuncRecordBuffer;
-  auto &FuncRecord =
-      *reinterpret_cast<FunctionRecord *>(&AlignedFuncRecordBuffer);
+  FunctionRecord FuncRecord;
   FuncRecord.Type = uint8_t(RecordType::Function);
   // Only take 28 bits of the function id.
   FuncRecord.FuncId = FuncId & ~(0x0F << 28);
@@ -439,7 +439,7 @@ static inline void writeFunctionRecord(int FuncId, uint32_t TSCDelta,
   }
   }
 
-  std::memcpy(MemPtr, &AlignedFuncRecordBuffer, sizeof(FunctionRecord));
+  std::memcpy(MemPtr, &FuncRecord, sizeof(FunctionRecord));
   MemPtr += sizeof(FunctionRecord);
 }
 
@@ -456,14 +456,10 @@ static uint64_t thresholdTicks() {
 // "Function Entry" record and any "Tail Call Exit" records after that.
 static void rewindRecentCall(uint64_t TSC, uint64_t &LastTSC,
                              uint64_t &LastFunctionEntryTSC, int32_t FuncId) {
-  using AlignedFuncStorage =
-      std::aligned_storage<sizeof(FunctionRecord),
-                           alignof(FunctionRecord)>::type;
   auto &TLD = getThreadLocalData();
   TLD.RecordPtr -= FunctionRecSize;
-  AlignedFuncStorage AlignedFuncRecordBuffer;
-  const auto &FuncRecord = *reinterpret_cast<FunctionRecord *>(
-      std::memcpy(&AlignedFuncRecordBuffer, TLD.RecordPtr, FunctionRecSize));
+  FunctionRecord FuncRecord;
+  std::memcpy(&FuncRecord, TLD.RecordPtr, FunctionRecSize);
   assert(FuncRecord.RecordKind ==
              uint8_t(FunctionRecord::RecordKinds::FunctionEnter) &&
          "Expected to find function entry recording when rewinding.");
@@ -485,20 +481,17 @@ static void rewindRecentCall(uint64_t TSC, uint64_t &LastTSC,
   auto RewindingTSC = LastTSC;
   auto RewindingRecordPtr = TLD.RecordPtr - FunctionRecSize;
   while (TLD.NumTailCalls > 0) {
-    AlignedFuncStorage TailExitRecordBuffer;
     // Rewind the TSC back over the TAIL EXIT record.
-    const auto &ExpectedTailExit =
-        *reinterpret_cast<FunctionRecord *>(std::memcpy(
-            &TailExitRecordBuffer, RewindingRecordPtr, FunctionRecSize));
+    FunctionRecord ExpectedTailExit;
+    std::memcpy(&ExpectedTailExit, RewindingRecordPtr, FunctionRecSize);
 
     assert(ExpectedTailExit.RecordKind ==
                uint8_t(FunctionRecord::RecordKinds::FunctionTailExit) &&
            "Expected to find tail exit when rewinding.");
     RewindingRecordPtr -= FunctionRecSize;
     RewindingTSC -= ExpectedTailExit.TSCDelta;
-    AlignedFuncStorage FunctionEntryBuffer;
-    const auto &ExpectedFunctionEntry = *reinterpret_cast<FunctionRecord *>(
-        std::memcpy(&FunctionEntryBuffer, RewindingRecordPtr, FunctionRecSize));
+    FunctionRecord ExpectedFunctionEntry;
+    std::memcpy(&ExpectedFunctionEntry, RewindingRecordPtr, FunctionRecSize);
     assert(ExpectedFunctionEntry.RecordKind ==
                uint8_t(FunctionRecord::RecordKinds::FunctionEnter) &&
            "Expected to find function entry when rewinding tail call.");

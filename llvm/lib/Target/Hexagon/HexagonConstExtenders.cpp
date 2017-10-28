@@ -1759,7 +1759,7 @@ bool HCE::replaceInstr(unsigned Idx, Register ExtR, const ExtenderInit &ExtI) {
     // Update offsets of the def's uses.
     for (std::pair<MachineInstr*,unsigned> P : RegOps) {
       unsigned J = P.second;
-      assert(P.first->getNumOperands() < J+1 &&
+      assert(P.first->getNumOperands() > J+1 &&
              P.first->getOperand(J+1).isImm());
       MachineOperand &ImmOp = P.first->getOperand(J+1);
       ImmOp.setImm(ImmOp.getImm() + Diff);

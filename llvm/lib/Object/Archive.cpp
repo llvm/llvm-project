@@ -801,7 +801,7 @@ Expected<Archive::Child> Archive::Symbol::getMember() const {
     Offsets += sizeof(uint64_t);
   else
     Offsets += sizeof(uint32_t);
-  uint32_t Offset = 0;
+  uint64_t Offset = 0;
   if (Parent->kind() == K_GNU) {
     Offset = read32be(Offsets + SymbolIndex * 4);
   } else if (Parent->kind() == K_GNU64) {

@@ -98,6 +98,12 @@ public:
   virtual const MemRegion *getOriginRegion() const { return nullptr; }
 };
 
+inline raw_ostream &operator<<(raw_ostream &os,
+                               const clang::ento::SymExpr *SE) {
+  SE->dumpToStream(os);
+  return os;
+}
+
 typedef const SymExpr *SymbolRef;
 typedef SmallVector<SymbolRef, 2> SymbolRefSmallVectorTy;
 

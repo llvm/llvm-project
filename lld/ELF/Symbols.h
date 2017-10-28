@@ -69,7 +69,7 @@ public:
     return SymbolKind == LazyArchiveKind || SymbolKind == LazyObjectKind;
   }
 
-  bool isInCurrentDSO() const {
+  bool isInCurrentOutput() const {
     return SymbolKind == DefinedRegularKind || SymbolKind == DefinedCommonKind;
   }
 
@@ -104,7 +104,11 @@ public:
 
 protected:
   SymbolBody(Kind K, StringRefZ Name, bool IsLocal, uint8_t StOther,
-             uint8_t Type);
+             uint8_t Type)
+      : SymbolKind(K), IsLocal(IsLocal), NeedsPltAddr(false),
+        IsInGlobalMipsGot(false), Is32BitMipsGot(false), IsInIplt(false),
+        IsInIgot(false), IsPreemptible(false), Type(Type), StOther(StOther),
+        Name(Name) {}
 
   const unsigned SymbolKind : 8;
 
@@ -154,17 +158,21 @@ protected:
 // The base class for any defined symbols.
 class Defined : public SymbolBody {
 public:
-  Defined(Kind K, StringRefZ Name, bool IsLocal, uint8_t StOther, uint8_t Type);
+  Defined(Kind K, StringRefZ Name, bool IsLocal, uint8_t StOther, uint8_t Type)
+      : SymbolBody(K, Name, IsLocal, StOther, Type) {}
+
   static bool classof(const SymbolBody *S) { return S->isDefined(); }
 };
 
 class DefinedCommon : public Defined {
 public:
-  DefinedCommon(StringRef N, uint64_t Size, uint32_t Alignment, uint8_t StOther,
-                uint8_t Type);
+  DefinedCommon(StringRef Name, uint64_t Size, uint32_t Alignment,
+                uint8_t StOther, uint8_t Type)
+      : Defined(DefinedCommonKind, Name, /*IsLocal=*/false, StOther, Type),
+        Alignment(Alignment), Size(Size) {}
 
   static bool classof(const SymbolBody *S) {
-    return S->kind() == SymbolBody::DefinedCommonKind;
+    return S->kind() == DefinedCommonKind;
   }
 
   // The maximum alignment we have seen for this symbol.
@@ -181,14 +189,14 @@ class DefinedRegular : public Defined {
 public:
   DefinedRegular(StringRefZ Name, bool IsLocal, uint8_t StOther, uint8_t Type,
                  uint64_t Value, uint64_t Size, SectionBase *Section)
-      : Defined(SymbolBody::DefinedRegularKind, Name, IsLocal, StOther, Type),
-        Value(Value), Size(Size), Section(Section) {}
+      : Defined(DefinedRegularKind, Name, IsLocal, StOther, Type), Value(Value),
+        Size(Size), Section(Section) {}
 
   // Return true if the symbol is a PIC function.
   template <class ELFT> bool isMipsPIC() const;
 
   static bool classof(const SymbolBody *S) {
-    return S->kind() == SymbolBody::DefinedRegularKind;
+    return S->kind() == DefinedRegularKind;
   }
 
   uint64_t Value;
@@ -198,7 +206,8 @@ public:
 
 class Undefined : public SymbolBody {
 public:
-  Undefined(StringRefZ Name, bool IsLocal, uint8_t StOther, uint8_t Type);
+  Undefined(StringRefZ Name, bool IsLocal, uint8_t StOther, uint8_t Type)
+      : SymbolBody(UndefinedKind, Name, IsLocal, StOther, Type) {}
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == UndefinedKind;
@@ -207,13 +216,11 @@ public:
 
 class SharedSymbol : public Defined {
 public:
-  static bool classof(const SymbolBody *S) {
-    return S->kind() == SymbolBody::SharedKind;
-  }
+  static bool classof(const SymbolBody *S) { return S->kind() == SharedKind; }
 
   SharedSymbol(StringRef Name, uint8_t StOther, uint8_t Type,
                const void *ElfSym, const void *Verdef)
-      : Defined(SymbolBody::SharedKind, Name, /*IsLocal=*/false, StOther, Type),
+      : Defined(SharedKind, Name, /*IsLocal=*/false, StOther, Type),
         Verdef(Verdef), ElfSym(ElfSym) {
     // GNU ifunc is a mechanism to allow user-supplied functions to
     // resolve PLT slot values at load-time. This is contrary to the
@@ -285,7 +292,7 @@ public:
   InputFile *fetch();
 
 protected:
-  Lazy(SymbolBody::Kind K, StringRef Name, uint8_t Type)
+  Lazy(Kind K, StringRef Name, uint8_t Type)
       : SymbolBody(K, Name, /*IsLocal=*/false, llvm::ELF::STV_DEFAULT, Type) {}
 };
 
@@ -295,7 +302,8 @@ protected:
 // symbol.
 class LazyArchive : public Lazy {
 public:
-  LazyArchive(const llvm::object::Archive::Symbol S, uint8_t Type);
+  LazyArchive(const llvm::object::Archive::Symbol S, uint8_t Type)
+      : Lazy(LazyArchiveKind, S.getName(), Type), Sym(S) {}
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == LazyArchiveKind;
@@ -312,7 +320,7 @@ private:
 // --start-lib and --end-lib options.
 class LazyObject : public Lazy {
 public:
-  LazyObject(StringRef Name, uint8_t Type);
+  LazyObject(StringRef Name, uint8_t Type) : Lazy(LazyObjectKind, Name, Type) {}
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == LazyObjectKind;
