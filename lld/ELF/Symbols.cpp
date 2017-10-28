@@ -119,13 +119,6 @@ static uint64_t getSymVA(const SymbolBody &Body, int64_t &Addend) {
   llvm_unreachable("invalid symbol kind");
 }
 
-SymbolBody::SymbolBody(Kind K, StringRefZ Name, bool IsLocal, uint8_t StOther,
-                       uint8_t Type)
-    : SymbolKind(K), IsLocal(IsLocal), NeedsPltAddr(false),
-      IsInGlobalMipsGot(false), Is32BitMipsGot(false), IsInIplt(false),
-      IsInIgot(false), IsPreemptible(false), Type(Type), StOther(StOther),
-      Name(Name) {}
-
 // Returns true if this is a weak undefined symbol.
 bool SymbolBody::isUndefWeak() const {
   // See comment on Lazy in Symbols.h for the details.
@@ -228,7 +221,7 @@ void SymbolBody::parseSymbolVersion() {
   Name = {S.data(), Pos};
 
   // If this is not in this DSO, it is not a definition.
-  if (!isInCurrentDSO())
+  if (!isInCurrentOutput())
     return;
 
   // '@@' in a symbol name means the default version.
@@ -257,10 +250,6 @@ void SymbolBody::parseSymbolVersion() {
           Verstr);
 }
 
-Defined::Defined(Kind K, StringRefZ Name, bool IsLocal, uint8_t StOther,
-                 uint8_t Type)
-    : SymbolBody(K, Name, IsLocal, StOther, Type) {}
-
 template <class ELFT> bool DefinedRegular::isMipsPIC() const {
   typedef typename ELFT::Ehdr Elf_Ehdr;
   if (!Section || !isFunc())
@@ -271,16 +260,6 @@ template <class ELFT> bool DefinedRegular::isMipsPIC() const {
   return (this->StOther & STO_MIPS_MIPS16) == STO_MIPS_PIC ||
          (Hdr->e_flags & EF_MIPS_PIC);
 }
-
-Undefined::Undefined(StringRefZ Name, bool IsLocal, uint8_t StOther,
-                     uint8_t Type)
-    : SymbolBody(SymbolBody::UndefinedKind, Name, IsLocal, StOther, Type) {}
-
-DefinedCommon::DefinedCommon(StringRef Name, uint64_t Size, uint32_t Alignment,
-                             uint8_t StOther, uint8_t Type)
-    : Defined(SymbolBody::DefinedCommonKind, Name, /*IsLocal=*/false, StOther,
-              Type),
-      Alignment(Alignment), Size(Size) {}
 
 // If a shared symbol is referred via a copy relocation, its alignment
 // becomes part of the ABI. This function returns a symbol alignment.
@@ -298,12 +277,6 @@ InputFile *Lazy::fetch() {
     return S->fetch();
   return cast<LazyObject>(this)->fetch();
 }
-
-LazyArchive::LazyArchive(const llvm::object::Archive::Symbol S, uint8_t Type)
-    : Lazy(LazyArchiveKind, S.getName(), Type), Sym(S) {}
-
-LazyObject::LazyObject(StringRef Name, uint8_t Type)
-    : Lazy(LazyObjectKind, Name, Type) {}
 
 ArchiveFile *LazyArchive::getFile() {
   return cast<ArchiveFile>(SymbolBody::getFile());
@@ -330,7 +303,7 @@ uint8_t Symbol::computeBinding() const {
     return Binding;
   if (Visibility != STV_DEFAULT && Visibility != STV_PROTECTED)
     return STB_LOCAL;
-  if (VersionId == VER_NDX_LOCAL && body()->isInCurrentDSO())
+  if (VersionId == VER_NDX_LOCAL && body()->isInCurrentOutput())
     return STB_LOCAL;
   if (Config->NoGnuUnique && Binding == STB_GNU_UNIQUE)
     return STB_GLOBAL;
@@ -342,7 +315,7 @@ bool Symbol::includeInDynsym() const {
     return false;
   if (computeBinding() == STB_LOCAL)
     return false;
-  if (!body()->isInCurrentDSO())
+  if (!body()->isInCurrentOutput())
     return true;
   return ExportDynamic;
 }
@@ -355,6 +328,10 @@ void elf::printTraceSymbol(Symbol *Sym) {
     S = ": reference to ";
   else if (B->isCommon())
     S = ": common definition of ";
+  else if (B->isLazy())
+    S = ": lazy definition of ";
+  else if (B->isShared())
+    S = ": shared definition of ";
   else
     S = ": definition of ";
 

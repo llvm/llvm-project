@@ -516,25 +516,18 @@ template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
 template <class ELFT>
 InputSectionBase *ObjFile<ELFT>::getSection(const Elf_Sym &Sym) const {
   uint32_t Index = this->getSectionIndex(Sym);
+  if (Index == 0)
+    return nullptr;
+
   if (Index >= this->Sections.size())
     fatal(toString(this) + ": invalid section index: " + Twine(Index));
-  InputSectionBase *S = this->Sections[Index];
 
-  // We found that GNU assembler 2.17.50 [FreeBSD] 2007-07-03 could
-  // generate broken objects. STT_SECTION/STT_NOTYPE symbols can be
-  // associated with SHT_REL[A]/SHT_SYMTAB/SHT_STRTAB sections.
-  // In this case it is fine for section to be null here as we do not
-  // allocate sections of these types.
-  if (!S) {
-    if (Index == 0 || Sym.getType() == STT_SECTION ||
-        Sym.getType() == STT_NOTYPE)
-      return nullptr;
-    fatal(toString(this) + ": invalid section index: " + Twine(Index));
-  }
-
-  if (S == &InputSection::Discarded)
-    return S;
-  return S->Repl;
+  InputSectionBase *Sec = this->Sections[Index];
+  if (!Sec)
+    return nullptr;
+  if (Sec == &InputSection::Discarded)
+    return Sec;
+  return Sec->Repl;
 }
 
 template <class ELFT>
