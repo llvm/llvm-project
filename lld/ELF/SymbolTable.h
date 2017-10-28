@@ -60,7 +60,7 @@ public:
 
   template <class ELFT>
   void addShared(StringRef Name, SharedFile<ELFT> *F,
-                 const typename ELFT::Sym &Sym,
+                 const typename ELFT::Sym &Sym, uint32_t Alignment,
                  const typename ELFT::Verdef *Verdef);
 
   template <class ELFT>

@@ -17,6 +17,7 @@
 #include "xray_fdr_logging.h"
 #include <sys/syscall.h>
 #include <sys/time.h>
+#include <errno.h>
 #include <time.h>
 #include <unistd.h>
 

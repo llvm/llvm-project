@@ -29,8 +29,7 @@ std::shared_ptr<CppFile> CppFileCollection::removeIfPresent(PathRef File) {
 CppFileCollection::RecreateResult
 CppFileCollection::recreateFileIfCompileCommandChanged(
     PathRef File, PathRef ResourceDir, GlobalCompilationDatabase &CDB,
-    std::shared_ptr<PCHContainerOperations> PCHs,
-    IntrusiveRefCntPtr<vfs::FileSystem> VFS, clangd::Logger &Logger) {
+    std::shared_ptr<PCHContainerOperations> PCHs, clangd::Logger &Logger) {
   auto NewCommand = getCompileCommand(CDB, File, ResourceDir);
 
   std::lock_guard<std::mutex> Lock(Mutex);

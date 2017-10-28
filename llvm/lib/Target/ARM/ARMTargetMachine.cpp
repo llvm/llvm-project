@@ -384,10 +384,11 @@ void ARMPassConfig::addIRPasses() {
   // determine whether it succeeded. We can exploit existing control-flow in
   // ldrex/strex loops to simplify this, but it needs tidying up.
   if (TM->getOptLevel() != CodeGenOpt::None && EnableAtomicTidy)
-    addPass(createCFGSimplificationPass(-1, [this](const Function &F) {
-      const auto &ST = this->TM->getSubtarget<ARMSubtarget>(F);
-      return ST.hasAnyDataBarrier() && !ST.isThumb1Only();
-    }));
+    addPass(createCFGSimplificationPass(
+        1, false, false, true, [this](const Function &F) {
+          const auto &ST = this->TM->getSubtarget<ARMSubtarget>(F);
+          return ST.hasAnyDataBarrier() && !ST.isThumb1Only();
+        }));
 
   TargetPassConfig::addIRPasses();
 

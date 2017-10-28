@@ -167,7 +167,7 @@ public:
   ObjFile(MemoryBufferRef M, StringRef ArchiveName);
   void parse(llvm::DenseSet<llvm::CachedHashStringRef> &ComdatGroups);
 
-  InputSectionBase *getSection(const Elf_Sym &Sym) const;
+  InputSectionBase *getSection(uint32_t Index) const;
 
   SymbolBody &getSymbolBody(uint32_t SymbolIndex) const {
     if (SymbolIndex >= this->Symbols.size())
@@ -294,7 +294,6 @@ template <class ELFT> class SharedFile : public ELFFileBase<ELFT> {
 public:
   std::string SoName;
 
-  const Elf_Shdr *getSection(const Elf_Sym &Sym) const;
   llvm::ArrayRef<StringRef> getUndefinedSymbols() { return Undefs; }
 
   static bool classof(const InputFile *F) {

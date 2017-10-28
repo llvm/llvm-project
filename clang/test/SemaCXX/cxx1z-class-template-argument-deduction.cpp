@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++1z -verify %s -DERRORS
-// RUN: %clang_cc1 -std=c++1z -verify %s -UERRORS
+// RUN: %clang_cc1 -std=c++1z -verify %s -DERRORS -Wundefined-func-template
+// RUN: %clang_cc1 -std=c++1z -verify %s -UERRORS -Wundefined-func-template
 
 // This test is split into two because we only produce "undefined internal"
 // warnings if we didn't produce any errors.

@@ -2096,6 +2096,12 @@ void SelectionDAG::computeKnownBits(SDValue Op, KnownBits &Known,
     Known.Zero = ~Known.One;
     return;
   }
+  if (auto *C = dyn_cast<ConstantFPSDNode>(Op)) {
+    // We know all of the bits for a constant fp!
+    Known.One = C->getValueAPF().bitcastToAPInt();
+    Known.Zero = ~Known.One;
+    return;
+  }
 
   if (Depth == 6)
     return;  // Limit search depth.
@@ -2219,10 +2225,11 @@ void SelectionDAG::computeKnownBits(SDValue Op, KnownBits &Known,
   }
   case ISD::BITCAST: {
     SDValue N0 = Op.getOperand(0);
-    unsigned SubBitWidth = N0.getScalarValueSizeInBits();
+    EVT SubVT = N0.getValueType();
+    unsigned SubBitWidth = SubVT.getScalarSizeInBits();
 
-    // Ignore bitcasts from floating point.
-    if (!N0.getValueType().isInteger())
+    // Ignore bitcasts from unsupported types.
+    if (!(SubVT.isInteger() || SubVT.isFloatingPoint()))
       break;
 
     // Fast handling of 'identity' bitcasts.
@@ -2960,7 +2967,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, unsigned Depth) const {
 unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
                                           unsigned Depth) const {
   EVT VT = Op.getValueType();
-  assert(VT.isInteger() && "Invalid VT!");
+  assert((VT.isInteger() || VT.isFloatingPoint()) && "Invalid VT!");
   unsigned VTBits = VT.getScalarSizeInBits();
   unsigned NumElts = DemandedElts.getBitWidth();
   unsigned Tmp, Tmp2;
@@ -3041,10 +3048,11 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
 
   case ISD::BITCAST: {
     SDValue N0 = Op.getOperand(0);
-    unsigned SrcBits = N0.getScalarValueSizeInBits();
+    EVT SrcVT = N0.getValueType();
+    unsigned SrcBits = SrcVT.getScalarSizeInBits();
 
-    // Ignore bitcasts from floating point.
-    if (!N0.getValueType().isInteger())
+    // Ignore bitcasts from unsupported types..
+    if (!(SrcVT.isInteger() || SrcVT.isFloatingPoint()))
       break;
 
     // Fast handling of 'identity' bitcasts.

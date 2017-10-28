@@ -31,8 +31,16 @@ class SimplifyCFGPass : public PassInfoMixin<SimplifyCFGPass> {
   SimplifyCFGOptions Options;
 
 public:
-  /// Construct a pass with default options.
-  SimplifyCFGPass();
+  /// The default constructor sets the pass options to create optimal IR,
+  /// rather than canonical IR. That is, by default we do transformations that
+  /// are likely to improve performance but make analysis more difficult.
+  /// FIXME: This is inverted from what most instantiations of the pass should
+  /// be.
+  SimplifyCFGPass()
+      : SimplifyCFGPass(SimplifyCFGOptions()
+                            .forwardSwitchCondToPhi(true)
+                            .convertSwitchToLookupTable(true)
+                            .needCanonicalLoops(false)) {}
 
   /// Construct a pass with optional optimizations.
   SimplifyCFGPass(const SimplifyCFGOptions &PassOptions);
