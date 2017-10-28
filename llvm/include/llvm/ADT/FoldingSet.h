@@ -1,4 +1,4 @@
-//===-- llvm/ADT/FoldingSet.h - Uniquing Hash Set ---------------*- C++ -*-===//
+//===- llvm/ADT/FoldingSet.h - Uniquing Hash Set ----------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -115,11 +115,9 @@ class FoldingSetBase {
 
 protected:
   /// Buckets - Array of bucket chains.
-  ///
   void **Buckets;
 
   /// NumBuckets - Length of the Buckets array.  Always a power of 2.
-  ///
   unsigned NumBuckets;
 
   /// NumNodes - Number of nodes in the folding set. Growth occurs when NumNodes
@@ -135,14 +133,13 @@ public:
   //===--------------------------------------------------------------------===//
   /// Node - This class is used to maintain the singly linked bucket list in
   /// a folding set.
-  ///
   class Node {
   private:
     // NextInFoldingSetBucket - next link in the bucket list.
-    void *NextInFoldingSetBucket;
+    void *NextInFoldingSetBucket = nullptr;
 
   public:
-    Node() : NextInFoldingSetBucket(nullptr) {}
+    Node() = default;
 
     // Accessors
     void *getNextInBucket() const { return NextInFoldingSetBucket; }
@@ -221,7 +218,6 @@ protected:
 
 /// DefaultFoldingSetTrait - This class provides default implementations
 /// for FoldingSetTrait implementations.
-///
 template<typename T> struct DefaultFoldingSetTrait {
   static void Profile(const T &X, FoldingSetNodeID &ID) {
     X.Profile(ID);
@@ -307,7 +303,6 @@ public:
 /// FoldingSetNodeID - This class is used to gather all the unique data bits of
 /// a node.  When all the bits are gathered this class is used to produce a
 /// hash value for the node.
-///
 class FoldingSetNodeID {
   /// Bits - Vector of all the data bits that make the node unique.
   /// Use a SmallVector to avoid a heap allocation in the common case.
@@ -320,7 +315,6 @@ public:
     : Bits(Ref.getData(), Ref.getData() + Ref.getSize()) {}
 
   /// Add* - Add various data types to Bit data.
-  ///
   void AddPointer(const void *Ptr);
   void AddInteger(signed I);
   void AddInteger(unsigned I);
@@ -344,7 +338,6 @@ public:
   unsigned ComputeHash() const;
 
   /// operator== - Used to compare two nodes to each other.
-  ///
   bool operator==(const FoldingSetNodeID &RHS) const;
   bool operator==(const FoldingSetNodeIDRef RHS) const;
 
@@ -363,7 +356,7 @@ public:
 };
 
 // Convenience type to hide the implementation of the folding set.
-typedef FoldingSetBase::Node FoldingSetNode;
+using FoldingSetNode = FoldingSetBase::Node;
 template<class T> class FoldingSetIterator;
 template<class T> class FoldingSetBucketIterator;
 
@@ -415,15 +408,17 @@ protected:
   ~FoldingSetImpl() = default;
 
 public:
-  typedef FoldingSetIterator<T> iterator;
+  using iterator = FoldingSetIterator<T>;
+
   iterator begin() { return iterator(Buckets); }
   iterator end() { return iterator(Buckets+NumBuckets); }
 
-  typedef FoldingSetIterator<const T> const_iterator;
+  using const_iterator = FoldingSetIterator<const T>;
+
   const_iterator begin() const { return const_iterator(Buckets); }
   const_iterator end() const { return const_iterator(Buckets+NumBuckets); }
 
-  typedef FoldingSetBucketIterator<T> bucket_iterator;
+  using bucket_iterator = FoldingSetBucketIterator<T>;
 
   bucket_iterator bucket_begin(unsigned hash) {
     return bucket_iterator(Buckets + (hash & (NumBuckets-1)));
@@ -503,9 +498,7 @@ template <class T> class FoldingSet final : public FoldingSetImpl<T> {
   }
 
 public:
-  explicit FoldingSet(unsigned Log2InitSize = 6)
-      : Super(Log2InitSize) {}
-
+  explicit FoldingSet(unsigned Log2InitSize = 6) : Super(Log2InitSize) {}
   FoldingSet(FoldingSet &&Arg) = default;
   FoldingSet &operator=(FoldingSet &&RHS) = default;
 };
@@ -552,8 +545,7 @@ class ContextualFoldingSet final : public FoldingSetImpl<T> {
 
 public:
   explicit ContextualFoldingSet(Ctx Context, unsigned Log2InitSize = 6)
-  : Super(Log2InitSize), Context(Context)
-  {}
+      : Super(Log2InitSize), Context(Context) {}
 
   Ctx getContext() const { return Context; }
 };
@@ -569,15 +561,15 @@ class FoldingSetVector {
   VectorT Vector;
 
 public:
-  explicit FoldingSetVector(unsigned Log2InitSize = 6)
-      : Set(Log2InitSize) {
-  }
+  explicit FoldingSetVector(unsigned Log2InitSize = 6) : Set(Log2InitSize) {}
 
-  typedef pointee_iterator<typename VectorT::iterator> iterator;
+  using iterator = pointee_iterator<typename VectorT::iterator>;
+
   iterator begin() { return Vector.begin(); }
   iterator end()   { return Vector.end(); }
 
-  typedef pointee_iterator<typename VectorT::const_iterator> const_iterator;
+  using const_iterator = pointee_iterator<typename VectorT::const_iterator>;
+
   const_iterator begin() const { return Vector.begin(); }
   const_iterator end()   const { return Vector.end(); }
 
@@ -667,15 +659,13 @@ public:
 /// FoldingSetBucketIteratorImpl - This is the common bucket iterator support
 /// shared by all folding sets, which knows how to walk a particular bucket
 /// of a folding set hash table.
-
 class FoldingSetBucketIteratorImpl {
 protected:
   void *Ptr;
 
   explicit FoldingSetBucketIteratorImpl(void **Bucket);
 
-  FoldingSetBucketIteratorImpl(void **Bucket, bool)
-    : Ptr(Bucket) {}
+  FoldingSetBucketIteratorImpl(void **Bucket, bool) : Ptr(Bucket) {}
 
   void advance() {
     void *Probe = static_cast<FoldingSetNode*>(Ptr)->getNextInBucket();
