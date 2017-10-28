@@ -15,15 +15,11 @@
 //
 //===----------------------------------------------------------------------===//
 #include "xray_fdr_logging.h"
-#include <algorithm>
-#include <bitset>
-#include <cerrno>
-#include <cstring>
 #include <sys/syscall.h>
 #include <sys/time.h>
+#include <errno.h>
 #include <time.h>
 #include <unistd.h>
-#include <unordered_map>
 
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
@@ -176,19 +172,22 @@ XRayLogInitStatus fdrLoggingReset() XRAY_NEVER_INSTRUMENT {
   return XRayLogInitStatus::XRAY_LOG_UNINITIALIZED;
 }
 
-static std::tuple<uint64_t, unsigned char>
-getTimestamp() XRAY_NEVER_INSTRUMENT {
+struct TSCAndCPU {
+  uint64_t TSC;
+  unsigned char CPU;
+};
+
+static TSCAndCPU getTimestamp() XRAY_NEVER_INSTRUMENT {
   // We want to get the TSC as early as possible, so that we can check whether
   // we've seen this CPU before. We also do it before we load anything else, to
   // allow for forward progress with the scheduling.
-  unsigned char CPU;
-  uint64_t TSC;
+  TSCAndCPU Result;
 
   // Test once for required CPU features
   static bool TSCSupported = probeRequiredCPUFeatures();
 
   if (TSCSupported) {
-    TSC = __xray::readTSC(CPU);
+    Result.TSC = __xray::readTSC(Result.CPU);
   } else {
     // FIXME: This code needs refactoring as it appears in multiple locations
     timespec TS;
@@ -197,34 +196,32 @@ getTimestamp() XRAY_NEVER_INSTRUMENT {
       Report("clock_gettime(2) return %d, errno=%d", result, int(errno));
       TS = {0, 0};
     }
-    CPU = 0;
-    TSC = TS.tv_sec * __xray::NanosecondsPerSecond + TS.tv_nsec;
+    Result.CPU = 0;
+    Result.TSC = TS.tv_sec * __xray::NanosecondsPerSecond + TS.tv_nsec;
   }
-  return std::make_tuple(TSC, CPU);
+  return Result;
 }
 
 void fdrLoggingHandleArg0(int32_t FuncId,
                           XRayEntryType Entry) XRAY_NEVER_INSTRUMENT {
-  auto TSC_CPU = getTimestamp();
-  __xray_fdr_internal::processFunctionHook(FuncId, Entry, std::get<0>(TSC_CPU),
-                                           std::get<1>(TSC_CPU), 0,
-                                           clock_gettime, *BQ);
+  auto TC = getTimestamp();
+  __xray_fdr_internal::processFunctionHook(FuncId, Entry, TC.TSC,
+                                           TC.CPU, 0, clock_gettime, *BQ);
 }
 
 void fdrLoggingHandleArg1(int32_t FuncId, XRayEntryType Entry,
                           uint64_t Arg) XRAY_NEVER_INSTRUMENT {
-  auto TSC_CPU = getTimestamp();
-  __xray_fdr_internal::processFunctionHook(FuncId, Entry, std::get<0>(TSC_CPU),
-                                           std::get<1>(TSC_CPU), Arg,
-                                           clock_gettime, *BQ);
+  auto TC = getTimestamp();
+  __xray_fdr_internal::processFunctionHook(
+      FuncId, Entry, TC.TSC, TC.CPU, Arg, clock_gettime, *BQ);
 }
 
 void fdrLoggingHandleCustomEvent(void *Event,
                                  std::size_t EventSize) XRAY_NEVER_INSTRUMENT {
   using namespace __xray_fdr_internal;
-  auto TSC_CPU = getTimestamp();
-  auto &TSC = std::get<0>(TSC_CPU);
-  auto &CPU = std::get<1>(TSC_CPU);
+  auto TC = getTimestamp();
+  auto &TSC = TC.TSC;
+  auto &CPU = TC.CPU;
   RecursionGuard Guard{Running};
   if (!Guard) {
     assert(Running && "RecursionGuard is buggy!");
@@ -261,7 +258,7 @@ void fdrLoggingHandleCustomEvent(void *Event,
   CustomEvent.Type = uint8_t(RecordType::Metadata);
   CustomEvent.RecordKind =
       uint8_t(MetadataRecord::RecordKinds::CustomEventMarker);
-  constexpr auto TSCSize = sizeof(std::get<0>(TSC_CPU));
+  constexpr auto TSCSize = sizeof(TC.TSC);
   std::memcpy(&CustomEvent.Data, &ReducedEventSize, sizeof(int32_t));
   std::memcpy(&CustomEvent.Data[sizeof(int32_t)], &TSC, TSCSize);
   std::memcpy(TLD.RecordPtr, &CustomEvent, sizeof(CustomEvent));
