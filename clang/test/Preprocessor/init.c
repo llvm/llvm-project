@@ -9925,3 +9925,65 @@
 // RUN: | FileCheck -check-prefix=DARWIN %s
 
 // DARWIN:#define __STDC_NO_THREADS__ 1
+
+// RUN: %clang_cc1 -triple i386-apple-macosx -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix MACOS-32 %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix MACOS-64 %s
+
+// MACOS-32: #define __INTPTR_TYPE__ long int
+// MACOS-32: #define __PTRDIFF_TYPE__ int
+// MACOS-32: #define __SIZE_TYPE__ long unsigned int
+
+// MACOS-64: #define __INTPTR_TYPE__ long int
+// MACOS-64: #define __PTRDIFF_TYPE__ long int
+// MACOS-64: #define __SIZE_TYPE__ long unsigned int
+
+// RUN: %clang_cc1 -triple i386-apple-ios-simulator -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix IOS-32 %s
+// RUN: %clang_cc1 -triple armv7-apple-ios -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix IOS-32 %s
+// RUN: %clang_cc1 -triple x86_64-apple-ios-simulator -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix IOS-64 %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix IOS-64 %s
+
+// IOS-32: #define __INTPTR_TYPE__ long int
+// IOS-32: #define __PTRDIFF_TYPE__ int
+// IOS-32: #define __SIZE_TYPE__ long unsigned int
+
+// IOS-64: #define __INTPTR_TYPE__ long int
+// IOS-64: #define __PTRDIFF_TYPE__ long int
+// IOS-64: #define __SIZE_TYPE__ long unsigned int
+
+// RUN: %clang_cc1 -triple i386-apple-tvos-simulator -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix TVOS-32 %s
+// RUN: %clang_cc1 -triple armv7-apple-tvos -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix TVOS-32 %s
+// RUN: %clang_cc1 -triple x86_64-apple-tvos-simulator -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix TVOS-64 %s
+// RUN: %clang_cc1 -triple arm64-apple-tvos -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix TVOS-64 %s
+
+// TVOS-32: #define __INTPTR_TYPE__ long int
+// TVOS-32: #define __PTRDIFF_TYPE__ int
+// TVOS-32: #define __SIZE_TYPE__ long unsigned int
+
+// TVOS-64: #define __INTPTR_TYPE__ long int
+// TVOS-64: #define __PTRDIFF_TYPE__ long int
+// TVOS-64: #define __SIZE_TYPE__ long unsigned int
+
+// RUN: %clang_cc1 -triple i386-apple-watchos-simulator -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix WATCHOS-32 %s
+// RUN: %clang_cc1 -triple armv7k-apple-watchos -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix WATCHOS-64 %s
+// RUN: %clang_cc1 -triple x86_64-apple-watchos-simulator -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix WATCHOS-64 %s
+// RUN: %clang_cc1 -triple arm64-apple-watchos -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix WATCHOS-64 %s
+
+// WATCHOS-32: #define __INTPTR_TYPE__ long int
+// WATCHOS-32: #define __PTRDIFF_TYPE__ int
+// WATCHOS-32: #define __SIZE_TYPE__ long unsigned int
+
+// WATCHOS-64: #define __INTPTR_TYPE__ long int
+// WATCHOS-64: #define __PTRDIFF_TYPE__ long int
+// WATCHOS-64: #define __SIZE_TYPE__ long unsigned int
+
+// RUN: %clang_cc1 -triple armv7-apple-none-macho -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix ARM-DARWIN-BAREMETAL-32 %s
+// RUN: %clang_cc1 -triple arm64-apple-none-macho -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix ARM-DARWIN-BAREMETAL-64 %s
+
+// ARM-DARWIN-BAREMETAL-32: #define __INTPTR_TYPE__ long int
+// ARM-DARWIN-BAREMETAL-32: #define __PTRDIFF_TYPE__ int
+// ARM-DARWIN-BAREMETAL-32: #define __SIZE_TYPE__ long unsigned int
+
+// ARM-DARWIN-BAREMETAL-64: #define __INTPTR_TYPE__ long int
+// ARM-DARWIN-BAREMETAL-64: #define __PTRDIFF_TYPE__ long int
+// ARM-DARWIN-BAREMETAL-64: #define __SIZE_TYPE__ long unsigned int
+
