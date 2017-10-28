@@ -1,4 +1,4 @@
-; RUN: opt -latesimplifycfg -S < %s | FileCheck %s
+; RUN: opt -simplifycfg -keep-loops=false -S < %s | FileCheck %s
 
 define void @test1(i32 %n) #0 {
 entry:
