@@ -8,7 +8,7 @@ define i32* @bar1() {
 ; CHECK: bar1:
 ; CHECK: movq foo1@GOTPCREL(%rip), %rax
 ; I386: bar1:
-; I386: leal foo1@GOTOFF(%eax), %eax
+; I386: movl foo1@GOT(%eax), %eax
 
 @foo2 = external hidden global i32, align 4
 define i32* @bar2() {
@@ -46,7 +46,7 @@ define i32()* @bar5() {
 ; CHECK: bar5:
 ; CHECK: movq foo5@GOTPCREL(%rip), %rax
 ; I386: bar5:
-; I386: leal foo5@GOTOFF(%eax), %eax
+; I386: movl foo5@GOT(%eax), %eax
 
 declare external hidden i32 @foo6()
 define i32()* @bar6() {

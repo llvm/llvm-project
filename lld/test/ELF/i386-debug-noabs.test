@@ -9,12 +9,12 @@
 ## lld skips them instead of reporting errors.
 
 --- !ELF
-FileHeader:      
+FileHeader:
   Class:           ELFCLASS32
   Data:            ELFDATA2LSB
   Type:            ET_REL
   Machine:         EM_386
-Sections:        
+Sections:
   - Name:            .debug_info
     Type:            SHT_PROGBITS
     AddressAlign:    0x0000000000000001
@@ -24,7 +24,7 @@ Sections:
     Link:            .symtab
     AddressAlign:    0x0000000000000004
     Info:            .debug_info
-    Relocations:     
+    Relocations:
       - Offset:          0x000000000000041F
         Symbol:          _GLOBAL_OFFSET_TABLE_
         Type:            R_386_GOTPC

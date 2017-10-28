@@ -25,7 +25,7 @@ static ScudoTSD *TSDs;
 static u32 NumberOfTSDs;
 
 // sysconf(_SC_NPROCESSORS_{CONF,ONLN}) cannot be used as they allocate memory.
-static uptr getNumberOfCPUs() {
+static u32 getNumberOfCPUs() {
   cpu_set_t CPUs;
   CHECK_EQ(sched_getaffinity(0, sizeof(cpu_set_t), &CPUs), 0);
   return CPU_COUNT(&CPUs);
@@ -34,11 +34,8 @@ static uptr getNumberOfCPUs() {
 static void initOnce() {
   CHECK_EQ(pthread_key_create(&PThreadKey, NULL), 0);
   initScudo();
-  NumberOfTSDs = getNumberOfCPUs();
-  if (NumberOfTSDs == 0)
-    NumberOfTSDs = 1;
-  if (NumberOfTSDs > 32)
-    NumberOfTSDs = 32;
+  NumberOfTSDs = Min(Max(1U, getNumberOfCPUs()),
+                     static_cast<u32>(SCUDO_SHARED_TSD_POOL_SIZE));
   TSDs = reinterpret_cast<ScudoTSD *>(
       MmapOrDie(sizeof(ScudoTSD) * NumberOfTSDs, "ScudoTSDs"));
   for (u32 i = 0; i < NumberOfTSDs; i++)

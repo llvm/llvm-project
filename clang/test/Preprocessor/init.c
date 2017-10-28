@@ -1791,6 +1791,11 @@
 // ARM:#define __arm 1
 // ARM:#define __arm__ 1
 
+// RUN: %clang_cc1 -dM -ffreestanding -triple arm-none-none -target-abi apcs-gnu -E /dev/null -o - | FileCheck -match-full-lines -check-prefix ARM-APCS-GNU %s
+// ARM-APCS-GNU: #define __INTPTR_TYPE__ int
+// ARM-APCS-GNU: #define __PTRDIFF_TYPE__ int
+// ARM-APCS-GNU: #define __SIZE_TYPE__ unsigned int
+
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=armeb-none-none < /dev/null | FileCheck -match-full-lines -check-prefix ARM-BE %s
 //
 // ARM-BE-NOT:#define _LP64

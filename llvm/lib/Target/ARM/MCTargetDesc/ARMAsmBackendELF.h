@@ -12,6 +12,8 @@
 
 #include "ARMAsmBackend.h"
 #include "MCTargetDesc/ARMMCTargetDesc.h"
+#include "llvm/MC/MCObjectWriter.h"
+
 using namespace llvm;
 
 namespace {

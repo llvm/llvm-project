@@ -142,7 +142,7 @@ struct TypeCloner {
           LLVMGetVectorSize(Src)
         );
       case LLVMMetadataTypeKind:
-        break;
+        return LLVMMetadataTypeInContext(Ctx);
       case LLVMX86_MMXTypeKind:
         return LLVMX86MMXTypeInContext(Ctx);
       default:
