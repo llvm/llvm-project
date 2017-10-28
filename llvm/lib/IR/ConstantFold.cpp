@@ -2219,6 +2219,9 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
       Unknown = true;
       continue;
     }
+    if (!isa<ConstantInt>(Idxs[i - 1]))
+      // FIXME: add the support of cosntant vector index.
+      continue;
     if (InRangeIndex && i == *InRangeIndex + 1) {
       // If an index is marked inrange, we cannot apply this canonicalization to
       // the following index, as that will cause the inrange index to point to

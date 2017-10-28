@@ -1301,9 +1301,14 @@ def: AccRRR_pat<M4_xor_or,    Xor, Su<Or>,        I32,  I32>;
 def: AccRRR_pat<M2_xor_xacc,  Xor, Su<Xor>,       I32,  I32>;
 def: AccRRR_pat<M4_xor_xacc,  Xor, Su<Xor>,       I64,  I64>;
 
-def: AccRRR_pat<M4_and_andn,  And, Su<Not2<And>>, I32,  I32>;
-def: AccRRR_pat<M4_or_andn,   Or,  Su<Not2<And>>, I32,  I32>;
-def: AccRRR_pat<M4_xor_andn,  Xor, Su<Not2<And>>, I32,  I32>;
+// For dags like (or (and (not _), _), (shl _, _)) where the "or" with
+// one argument matches the patterns below, and with the other argument
+// matches S2_asl_r_r_or, etc, prefer the patterns below.
+let AddedComplexity = 110 in {  // greater than S2_asl_r_r_and/or/xor.
+  def: AccRRR_pat<M4_and_andn,  And, Su<Not2<And>>, I32,  I32>;
+  def: AccRRR_pat<M4_or_andn,   Or,  Su<Not2<And>>, I32,  I32>;
+  def: AccRRR_pat<M4_xor_andn,  Xor, Su<Not2<And>>, I32,  I32>;
+}
 
 // S4_addaddi and S4_subaddi don't have tied operands, so give them
 // a bit of preference.
@@ -1418,10 +1423,18 @@ def : Pat <(mulhs I64:$Rss, I64:$Rtt),
       (A2_andp (S2_asr_i_p $Rss, 63), (ClearSign $Rtt)),
       (A2_andp (S2_asr_i_p $Rtt, 63), (ClearSign $Rss))))>;
 
-def: Pat<(add (Su<Mul> I32:$Rs, u6_0ImmPred:$U6), anyimm:$u6),
-         (M4_mpyri_addi imm:$u6, IntRegs:$Rs, imm:$U6)>;
-def: Pat<(add (Su<Mul> I32:$Rs, I32:$Rt), anyimm:$u6),
-         (M4_mpyrr_addi imm:$u6, IntRegs:$Rs, IntRegs:$Rt)>;
+// Prefer these instructions over M2_macsip/M2_macsin: the macsi* instructions
+// will put the immediate addend into a register, while these instructions will
+// use it directly. Such a construct does not appear in the middle of a gep,
+// where M2_macsip would be preferable.
+let AddedComplexity = 20 in {
+  def: Pat<(add (Su<Mul> I32:$Rs, u6_0ImmPred:$U6), anyimm:$u6),
+           (M4_mpyri_addi imm:$u6, IntRegs:$Rs, imm:$U6)>;
+  def: Pat<(add (Su<Mul> I32:$Rs, I32:$Rt), anyimm:$u6),
+           (M4_mpyrr_addi imm:$u6, IntRegs:$Rs, IntRegs:$Rt)>;
+}
+
+// Keep these instructions less preferable to M2_macsip/M2_macsin.
 def: Pat<(add I32:$Ru, (Su<Mul> I32:$Rs, u6_2ImmPred:$u6_2)),
          (M4_mpyri_addr_u2 IntRegs:$Ru, imm:$u6_2, IntRegs:$Rs)>;
 def: Pat<(add I32:$Ru, (Su<Mul> I32:$Rs, anyimm:$u6)),
@@ -1599,6 +1612,16 @@ def: Pat<(i1 (setne (and I32:$Rs, I32:$Rt), 0)),
 def: Pat<(i1 (setne (and I32:$Rs, I32:$Rt), I32:$Rt)),
          (C4_nbitsset I32:$Rs, I32:$Rt)>;
 
+// Special patterns to address certain cases where the "top-down" matching
+// algorithm would cause suboptimal selection.
+
+let AddedComplexity = 100 in {
+  // Avoid A4_rcmp[n]eqi in these cases:
+  def: Pat<(i32 (zext (i1 (setne (and (shl 1, I32:$Rt), I32:$Rs), 0)))),
+           (I1toI32 (S2_tstbit_r IntRegs:$Rs, IntRegs:$Rt))>;
+  def: Pat<(i32 (zext (i1 (seteq (and (shl 1, I32:$Rt), I32:$Rs), 0)))),
+           (I1toI32 (S4_ntstbit_r IntRegs:$Rs, IntRegs:$Rt))>;
+}
 
 // --(11) Load -----------------------------------------------------------
 //

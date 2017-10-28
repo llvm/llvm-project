@@ -54,6 +54,12 @@ add_lit_testsuite(check-lldb-lit "Running lldb lit test suite"
 
 set_target_properties(check-lldb-lit PROPERTIES FOLDER "LLDB tests")
 
+# If we're building with an in-tree clang, then list clang as a dependency
+# to run tests.
+if (TARGET clang)
+  add_dependencies(check-lldb-lit clang)
+endif()
+
 add_lit_testsuites(LLDB ${CMAKE_CURRENT_SOURCE_DIR}
   PARAMS lldb_site_config=${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
          lldb_unit_site_config=${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg

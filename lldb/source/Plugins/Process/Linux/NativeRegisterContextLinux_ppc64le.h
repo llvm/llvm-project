@@ -1,4 +1,4 @@
-//===-- NativeRegisterContextLinux_ppc64le.h ---------------------*- C++ -*-===//
+//===-- NativeRegisterContextLinux_ppc64le.h --------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -49,6 +49,28 @@ public:
 
   Status WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
 
+  //------------------------------------------------------------------
+  // Hardware watchpoint mangement functions
+  //------------------------------------------------------------------
+
+  uint32_t NumSupportedHardwareWatchpoints() override;
+
+  uint32_t SetHardwareWatchpoint(lldb::addr_t addr, size_t size,
+                                 uint32_t watch_flags) override;
+
+  bool ClearHardwareWatchpoint(uint32_t hw_index) override;
+
+  Status GetWatchpointHitIndex(uint32_t &wp_index,
+                               lldb::addr_t trap_addr) override;
+
+  lldb::addr_t GetWatchpointHitAddress(uint32_t wp_index) override;
+
+  lldb::addr_t GetWatchpointAddress(uint32_t wp_index) override;
+
+  uint32_t GetWatchpointSize(uint32_t wp_index);
+
+  bool WatchpointIsEnabled(uint32_t wp_index);
+
 protected:
   Status DoReadGPR(void *buf, size_t buf_size) override;
 
@@ -60,6 +82,29 @@ private:
   GPR m_gpr_ppc64le; // 64-bit general purpose registers.
 
   bool IsGPR(unsigned reg) const;
+
+  Status ReadHardwareDebugInfo();
+
+  Status WriteHardwareDebugRegs();
+
+  // Debug register info for hardware watchpoints management.
+  struct DREG {
+    lldb::addr_t address;   // Breakpoint/watchpoint address value.
+    lldb::addr_t hit_addr;  // Address at which last watchpoint trigger
+                            // exception occurred.
+    lldb::addr_t real_addr; // Address value that should cause target to stop.
+    uint32_t control;       // Breakpoint/watchpoint control value.
+    uint32_t refcount;      // Serves as enable/disable and reference counter.
+    long slot;              // Saves the value returned from PTRACE_SETHWDEBUG.
+    int mode;               // Defines if watchpoint is read/write/access.
+  };
+
+  std::array<DREG, 4> m_hwp_regs;
+
+  // 16 is just a maximum value, query hardware for actual watchpoint count
+  uint32_t m_max_hwp_supported = 16;
+  uint32_t m_max_hbp_supported = 16;
+  bool m_refresh_hwdebug_info = true;
 };
 
 } // namespace process_linux

@@ -1513,6 +1513,10 @@ static const char *getTypeString(unsigned Arch, uint64_t Type) {
     }
   }
   switch (Type) {
+  LLVM_READOBJ_TYPE_CASE(ANDROID_REL);
+  LLVM_READOBJ_TYPE_CASE(ANDROID_RELSZ);
+  LLVM_READOBJ_TYPE_CASE(ANDROID_RELA);
+  LLVM_READOBJ_TYPE_CASE(ANDROID_RELASZ);
   LLVM_READOBJ_TYPE_CASE(BIND_NOW);
   LLVM_READOBJ_TYPE_CASE(DEBUG);
   LLVM_READOBJ_TYPE_CASE(FINI);
@@ -1715,6 +1719,8 @@ void ELFDumper<ELFT>::printValue(uint64_t Type, uint64_t Value) {
   case DT_INIT_ARRAYSZ:
   case DT_FINI_ARRAYSZ:
   case DT_PREINIT_ARRAYSZ:
+  case DT_ANDROID_RELSZ:
+  case DT_ANDROID_RELASZ:
     OS << Value << " (bytes)";
     break;
   case DT_NEEDED:

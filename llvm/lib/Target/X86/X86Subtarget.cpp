@@ -99,22 +99,6 @@ X86Subtarget::classifyLocalReference(const GlobalValue *GV) const {
   return X86II::MO_GOTOFF;
 }
 
-static bool shouldAssumeGlobalReferenceLocal(const X86Subtarget *ST,
-                                             const TargetMachine &TM,
-                                             const Module &M,
-                                             const GlobalValue *GV) {
-  if (!TM.shouldAssumeDSOLocal(M, GV))
-    return false;
-  // A weak reference can end up being 0. If the code can be more that 4g away
-  // from zero and we are using the small code model we have to treat it as non
-  // local.
-  if (GV && GV->hasExternalWeakLinkage() &&
-      TM.getCodeModel() == CodeModel::Small && TM.isPositionIndependent() &&
-      ST->is64Bit() && ST->isTargetELF())
-    return false;
-  return true;
-}
-
 unsigned char X86Subtarget::classifyGlobalReference(const GlobalValue *GV,
                                                     const Module &M) const {
   // Large model never uses stubs.
@@ -134,7 +118,7 @@ unsigned char X86Subtarget::classifyGlobalReference(const GlobalValue *GV,
     }
   }
 
-  if (shouldAssumeGlobalReferenceLocal(this, TM, M, GV))
+  if (TM.shouldAssumeDSOLocal(M, GV))
     return classifyLocalReference(GV);
 
   if (isTargetCOFF())

@@ -88,11 +88,7 @@ bool JSONRPCDispatcher::call(StringRef Content, JSONOutput &Out) const {
   if (Doc == YAMLStream.end())
     return false;
 
-  auto *Root = Doc->getRoot();
-  if (!Root)
-    return false;
-
-  auto *Object = dyn_cast<llvm::yaml::MappingNode>(Root);
+  auto *Object = dyn_cast_or_null<llvm::yaml::MappingNode>(Doc->getRoot());
   if (!Object)
     return false;
 
@@ -101,7 +97,8 @@ bool JSONRPCDispatcher::call(StringRef Content, JSONOutput &Out) const {
   llvm::yaml::MappingNode *Params = nullptr;
   llvm::yaml::ScalarNode *Id = nullptr;
   for (auto &NextKeyValue : *Object) {
-    auto *KeyString = dyn_cast<llvm::yaml::ScalarNode>(NextKeyValue.getKey());
+    auto *KeyString =
+        dyn_cast_or_null<llvm::yaml::ScalarNode>(NextKeyValue.getKey());
     if (!KeyString)
       return false;
 
@@ -197,6 +194,15 @@ void clangd::runLanguageServerLoop(std::istream &In, JSONOutput &Out,
         // Go ahead and read the JSON.
         break;
       }
+    }
+
+    // Guard against large messages. This is usually a bug in the client code
+    // and we don't want to crash downstream because of it.
+    if (ContentLength > 1 << 30) { // 1024M
+      In.ignore(ContentLength);
+      Out.log("Skipped overly large message of " + Twine(ContentLength) +
+              " bytes.\n");
+      continue;
     }
 
     if (ContentLength > 0) {

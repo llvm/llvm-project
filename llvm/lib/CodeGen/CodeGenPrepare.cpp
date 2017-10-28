@@ -1714,7 +1714,6 @@ class MemCmpExpansion {
   ResultBlock ResBlock;
   const uint64_t Size;
   unsigned MaxLoadSize;
-  uint64_t NumLoads;
   uint64_t NumLoadsNonOneByte;
   const uint64_t NumLoadsPerBlock;
   std::vector<BasicBlock *> LoadCmpBlocks;
@@ -1787,7 +1786,6 @@ MemCmpExpansion::MemCmpExpansion(CallInst *const CI, uint64_t Size,
     : CI(CI),
       Size(Size),
       MaxLoadSize(MaxLoadSize),
-      NumLoads(0),
       NumLoadsNonOneByte(0),
       NumLoadsPerBlock(LoadsPerBlock),
       IsUsedForZeroCmp(isOnlyUsedInZeroEqualityComparison(CI)),

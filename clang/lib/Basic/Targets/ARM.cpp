@@ -28,14 +28,6 @@ void ARMTargetInfo::setABIAAPCS() {
   DoubleAlign = LongLongAlign = LongDoubleAlign = SuitableAlign = 64;
   const llvm::Triple &T = getTriple();
 
-  // size_t is unsigned long on MachO-derived environments, NetBSD, and
-  // OpenBSD.
-  if (T.isOSBinFormatMachO() || T.getOS() == llvm::Triple::NetBSD ||
-      T.getOS() == llvm::Triple::OpenBSD)
-    SizeType = UnsignedLong;
-  else
-    SizeType = UnsignedInt;
-
   bool IsNetBSD = T.getOS() == llvm::Triple::NetBSD;
   bool IsOpenBSD = T.getOS() == llvm::Triple::OpenBSD;
   if (!T.isOSWindows() && !IsNetBSD && !IsOpenBSD)
@@ -82,12 +74,6 @@ void ARMTargetInfo::setABIAPCS(bool IsAAPCS16) {
     DoubleAlign = LongLongAlign = LongDoubleAlign = SuitableAlign = 64;
   else
     DoubleAlign = LongLongAlign = LongDoubleAlign = SuitableAlign = 32;
-
-  // size_t is unsigned int on FreeBSD.
-  if (T.getOS() == llvm::Triple::FreeBSD)
-    SizeType = UnsignedInt;
-  else
-    SizeType = UnsignedLong;
 
   WCharType = SignedInt;
 
@@ -225,21 +211,22 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
                              const TargetOptions &Opts)
     : TargetInfo(Triple), FPMath(FP_Default), IsAAPCS(true), LDREX(0),
       HW_FP(0) {
-
-  switch (getTriple().getOS()) {
-  case llvm::Triple::NetBSD:
-  case llvm::Triple::OpenBSD:
-    PtrDiffType = SignedLong;
-    break;
-  default:
-    PtrDiffType = SignedInt;
-    break;
-  }
-
   bool IsOpenBSD = Triple.getOS() == llvm::Triple::OpenBSD;
   bool IsNetBSD = Triple.getOS() == llvm::Triple::NetBSD;
-  IntPtrType =
+
+  PtrDiffType = IntPtrType =
       (Triple.isOSDarwin() || IsOpenBSD || IsNetBSD) ? SignedLong : SignedInt;
+
+  // FIXME: the isOSBinFormatMachO is a workaround for identifying a Darwin-like
+  // environment where size_t is `unsigned long` rather than `unsigned int`
+  SizeType = (Triple.isOSDarwin() || Triple.isOSBinFormatMachO() || IsOpenBSD ||
+              IsNetBSD)
+                 ? UnsignedLong
+                 : UnsignedInt;
+
+  // ptrdiff_t is inconsistent on Darwin
+  if (Triple.isOSDarwin() && !Triple.isWatchABI())
+    PtrDiffType = SignedInt;
 
   // Cache arch related info.
   setArchInfo();
@@ -927,7 +914,6 @@ void ARMbeTargetInfo::getTargetDefines(const LangOptions &Opts,
 WindowsARMTargetInfo::WindowsARMTargetInfo(const llvm::Triple &Triple,
                                            const TargetOptions &Opts)
     : WindowsTargetInfo<ARMleTargetInfo>(Triple, Opts), Triple(Triple) {
-  SizeType = UnsignedInt;
 }
 
 void WindowsARMTargetInfo::getVisualStudioDefines(const LangOptions &Opts,
@@ -1046,10 +1032,6 @@ DarwinARMTargetInfo::DarwinARMTargetInfo(const llvm::Triple &Triple,
   if (Triple.isWatchABI()) {
     // Darwin on iOS uses a variant of the ARM C++ ABI.
     TheCXXABI.set(TargetCXXABI::WatchOS);
-
-    // The 32-bit ABI is silent on what ptrdiff_t should be, but given that
-    // size_t is long, it's a bit weird for it to be int.
-    PtrDiffType = SignedLong;
 
     // BOOL should be a real boolean on the new ABI
     UseSignedCharForObjCBool = false;
