@@ -272,10 +272,11 @@ def runScanBuild(Dir, SBOutputDir, PBuildLogFile):
                        stderr=PBuildLogFile,
                        stdout=PBuildLogFile,
                        shell=True)
-    except:
-        print "Error: scan-build failed. See ", PBuildLogFile.name,\
-              " for details."
-        raise
+    except CalledProcessError:
+        print "Error: scan-build failed. Its output was: "
+        PBuildLogFile.seek(0)
+        shutil.copyfileobj(PBuildLogFile, sys.stdout)
+        sys.exit(1)
 
 
 def runAnalyzePreprocessed(Dir, SBOutputDir, Mode):

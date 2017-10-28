@@ -210,7 +210,7 @@ void SymbolTable::applySymbolRenames() {
 
     Symbol *Real = &Origs[I];
     // If __real_foo was undefined, we don't want it in the symbol table.
-    if (!Real->body()->isInCurrentDSO())
+    if (!Real->body()->isInCurrentOutput())
       continue;
 
     auto *NewSym = make<Symbol>();
@@ -324,7 +324,7 @@ Symbol *SymbolTable::addUndefined(StringRef Name, bool IsLocal, uint8_t Binding,
   }
   if (Binding != STB_WEAK) {
     SymbolBody *B = S->body();
-    if (!B->isInCurrentDSO())
+    if (!B->isInCurrentOutput())
       S->Binding = Binding;
     if (auto *SS = dyn_cast<SharedSymbol>(B))
       SS->getFile<ELFT>()->IsUsed = true;
@@ -364,7 +364,7 @@ static int compareDefined(Symbol *S, bool WasInserted, uint8_t Binding,
   if (WasInserted)
     return 1;
   SymbolBody *Body = S->body();
-  if (!Body->isInCurrentDSO())
+  if (!Body->isInCurrentOutput())
     return 1;
 
   if (int R = compareVersion(S, Name))
@@ -659,7 +659,7 @@ StringMap<std::vector<SymbolBody *>> &SymbolTable::getDemangledSyms() {
     DemangledSyms.emplace();
     for (Symbol *Sym : SymVector) {
       SymbolBody *B = Sym->body();
-      if (!B->isInCurrentDSO())
+      if (!B->isInCurrentOutput())
         continue;
       if (Optional<std::string> S = demangle(B->getName()))
         (*DemangledSyms)[*S].push_back(B);
@@ -674,7 +674,7 @@ std::vector<SymbolBody *> SymbolTable::findByVersion(SymbolVersion Ver) {
   if (Ver.IsExternCpp)
     return getDemangledSyms().lookup(Ver.Name);
   if (SymbolBody *B = find(Ver.Name))
-    if (B->isInCurrentDSO())
+    if (B->isInCurrentOutput())
       return {B};
   return {};
 }
@@ -692,7 +692,7 @@ std::vector<SymbolBody *> SymbolTable::findAllByVersion(SymbolVersion Ver) {
 
   for (Symbol *Sym : SymVector) {
     SymbolBody *B = Sym->body();
-    if (B->isInCurrentDSO() && M.match(B->getName()))
+    if (B->isInCurrentOutput() && M.match(B->getName()))
       Res.push_back(B);
   }
   return Res;

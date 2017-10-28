@@ -109,6 +109,12 @@ add_python_test_target(check-lldb
   "Testing LLDB (parallel execution, with a separate subprocess per test)"
   )
 
+# If we're building with an in-tree clang, then list clang as a dependency
+# to run tests.
+if (TARGET clang)
+  add_dependencies(check-lldb clang)
+endif()
+
 add_custom_target(lldb-test-depends DEPENDS ${LLDB_TEST_DEPENDS})
 # This will add LLDB's test dependencies to the depenednecies for check-all and
 # include them in the test-depends target.

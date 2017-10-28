@@ -198,6 +198,10 @@ public:
   }
 };
 
+inline raw_ostream &operator<<(raw_ostream &os, clang::ento::SVal V) {
+  V.dumpToStream(os);
+  return os;
+}
 
 class UndefinedVal : public SVal {
 public:
@@ -622,11 +626,6 @@ private:
 } // end clang namespace
 
 namespace llvm {
-static inline raw_ostream &operator<<(raw_ostream &os,
-                                            clang::ento::SVal V) {
-  V.dumpToStream(os);
-  return os;
-}
 
 template <typename T> struct isPodLike;
 template <> struct isPodLike<clang::ento::SVal> {

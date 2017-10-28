@@ -12,6 +12,7 @@
 
 #include "ARMAsmBackend.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/MC/MCObjectWriter.h"
 
 namespace llvm {
 class ARMAsmBackendDarwin : public ARMAsmBackend {

@@ -93,10 +93,7 @@ parseCrossTUIndex(StringRef IndexPath, StringRef CrossTUDir) {
             index_error_code::multiple_definitions, IndexPath.str(), LineNo);
       StringRef FileName = LineRef.substr(Pos + 1);
       SmallString<256> FilePath = CrossTUDir;
-      if (llvm::sys::path::is_absolute(FileName))
-        FilePath = FileName;
-      else
-        llvm::sys::path::append(FilePath, FileName);
+      llvm::sys::path::append(FilePath, FileName);
       Result[FunctionLookupName] = FilePath.str().str();
     } else
       return llvm::make_error<IndexError>(

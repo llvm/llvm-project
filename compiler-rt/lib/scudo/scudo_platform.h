@@ -40,6 +40,11 @@
 # error "The exclusive TSD model is not supported on this platform."
 #endif
 
+// Maximum number of TSDs that can be created for the Shared model.
+#ifndef SCUDO_SHARED_TSD_POOL_SIZE
+# define SCUDO_SHARED_TSD_POOL_SIZE 32U
+#endif  // SCUDO_SHARED_TSD_POOL_SIZE
+
 namespace __scudo {
 
 #if SANITIZER_CAN_USE_ALLOCATOR64
