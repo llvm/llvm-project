@@ -73,12 +73,6 @@ private:
   std::vector<clang::tooling::Replacement>
   getFixIts(StringRef File, const clangd::Diagnostic &D);
 
-  /// Function that will be called on a separate thread when diagnostics are
-  /// ready. Sends the Dianostics to LSP client via Out.writeMessage and caches
-  /// corresponding fixits in the FixItsMap.
-  void consumeDiagnostics(PathRef File,
-                          std::vector<DiagWithFixIts> Diagnostics);
-
   JSONOutput &Out;
   /// Used to indicate that the 'shutdown' request was received from the
   /// Language Server client.

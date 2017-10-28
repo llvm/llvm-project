@@ -7242,6 +7242,16 @@ ExprResult Sema::ActOnConditionalOp(SourceLocation QuestionLoc,
       commonExpr = commonRes.get();
     }
 
+    // If the common expression is a class or array prvalue, materialize it
+    // so that we can safely refer to it multiple times.
+    if (commonExpr->isRValue() && (commonExpr->getType()->isRecordType() ||
+                                   commonExpr->getType()->isArrayType())) {
+      ExprResult MatExpr = TemporaryMaterializationConversion(commonExpr);
+      if (MatExpr.isInvalid())
+        return ExprError();
+      commonExpr = MatExpr.get();
+    }
+
     opaqueValue = new (Context) OpaqueValueExpr(commonExpr->getExprLoc(),
                                                 commonExpr->getType(),
                                                 commonExpr->getValueKind(),

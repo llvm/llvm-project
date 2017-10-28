@@ -89,7 +89,6 @@ int main(int argc, char *argv[]) {
 
   // If --compile-commands-dir arg was invoked, check value and override default
   // path.
-  namespace path = llvm::sys::path;
   llvm::Optional<Path> CompileCommandsDirPath;
 
   if (CompileCommandsDir.empty()) {

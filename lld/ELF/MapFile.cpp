@@ -49,7 +49,7 @@ static void writeHeader(raw_ostream &OS, uint64_t Addr, uint64_t Size,
 static std::string indent(int Depth) { return std::string(Depth * 8, ' '); }
 
 // Returns a list of all symbols that we want to print out.
-template <class ELFT> static std::vector<Defined *> getSymbols() {
+static std::vector<Defined *> getSymbols() {
   std::vector<Defined *> V;
   for (InputFile *File : ObjectFiles) {
     for (SymbolBody *B : File->getSymbols()) {
@@ -90,13 +90,12 @@ static SymbolMapTy getSectionSyms(ArrayRef<Defined *> Syms) {
 // Construct a map from symbols to their stringified representations.
 // Demangling symbols (which is what toString() does) is slow, so
 // we do that in batch using parallel-for.
-template <class ELFT>
 static DenseMap<Defined *, std::string>
 getSymbolStrings(ArrayRef<Defined *> Syms) {
   std::vector<std::string> Str(Syms.size());
   parallelForEachN(0, Syms.size(), [&](size_t I) {
     raw_string_ostream OS(Str[I]);
-    writeHeader(OS, Syms[I]->getVA(), Syms[I]->template getSize<ELFT>(), 0);
+    writeHeader(OS, Syms[I]->getVA(), Syms[I]->getSize(), 0);
     OS << indent(2) << toString(*Syms[I]);
   });
 
@@ -106,7 +105,7 @@ getSymbolStrings(ArrayRef<Defined *> Syms) {
   return Ret;
 }
 
-template <class ELFT> void elf::writeMapFile() {
+void elf::writeMapFile() {
   if (Config->MapFile.empty())
     return;
 
@@ -119,12 +118,12 @@ template <class ELFT> void elf::writeMapFile() {
   }
 
   // Collect symbol info that we want to print out.
-  std::vector<Defined *> Syms = getSymbols<ELFT>();
+  std::vector<Defined *> Syms = getSymbols();
   SymbolMapTy SectionSyms = getSectionSyms(Syms);
-  DenseMap<Defined *, std::string> SymStr = getSymbolStrings<ELFT>(Syms);
+  DenseMap<Defined *, std::string> SymStr = getSymbolStrings(Syms);
 
   // Print out the header line.
-  int W = ELFT::Is64Bits ? 16 : 8;
+  int W = Config->Is64 ? 16 : 8;
   OS << left_justify("Address", W) << ' ' << left_justify("Size", W)
      << " Align Out     In      Symbol\n";
 
@@ -148,8 +147,3 @@ template <class ELFT> void elf::writeMapFile() {
     }
   }
 }
-
-template void elf::writeMapFile<ELF32LE>();
-template void elf::writeMapFile<ELF32BE>();
-template void elf::writeMapFile<ELF64LE>();
-template void elf::writeMapFile<ELF64BE>();

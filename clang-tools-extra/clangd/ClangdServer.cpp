@@ -166,8 +166,8 @@ std::future<void> ClangdServer::addDocument(PathRef File, StringRef Contents) {
   DocVersion Version = DraftMgr.updateDraft(File, Contents);
 
   auto TaggedFS = FSProvider.getTaggedFileSystem(File);
-  std::shared_ptr<CppFile> Resources = Units.getOrCreateFile(
-      File, ResourceDir, CDB, PCHs, TaggedFS.Value, Logger);
+  std::shared_ptr<CppFile> Resources =
+      Units.getOrCreateFile(File, ResourceDir, CDB, PCHs, Logger);
   return scheduleReparseAndDiags(File, VersionedDraft{Version, Contents.str()},
                                  std::move(Resources), std::move(TaggedFS));
 }
@@ -184,8 +184,8 @@ std::future<void> ClangdServer::forceReparse(PathRef File) {
          "forceReparse() was called for non-added document");
 
   auto TaggedFS = FSProvider.getTaggedFileSystem(File);
-  auto Recreated = Units.recreateFileIfCompileCommandChanged(
-      File, ResourceDir, CDB, PCHs, TaggedFS.Value, Logger);
+  auto Recreated = Units.recreateFileIfCompileCommandChanged(File, ResourceDir,
+                                                             CDB, PCHs, Logger);
 
   // Note that std::future from this cleanup action is ignored.
   scheduleCancelRebuild(std::move(Recreated.RemovedFile));
