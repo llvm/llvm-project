@@ -60,6 +60,7 @@ public:
                   const char *NL, const char *Sep) const override;
 
 private:
+  enum MisuseKind {MK_FunCall, MK_Copy, MK_Move};
   class MovedBugVisitor : public BugReporterVisitorImpl<MovedBugVisitor> {
   public:
     MovedBugVisitor(const MemRegion *R) : Region(R), Found(false) {}
@@ -83,7 +84,7 @@ private:
 
   mutable std::unique_ptr<BugType> BT;
   ExplodedNode *reportBug(const MemRegion *Region, const CallEvent &Call,
-                          CheckerContext &C, bool isCopy) const;
+                          CheckerContext &C, MisuseKind MK) const;
   bool isInMoveSafeContext(const LocationContext *LC) const;
   bool isStateResetMethod(const CXXMethodDecl *MethodDec) const;
   bool isMoveSafeMethod(const CXXMethodDecl *MethodDec) const;
@@ -179,7 +180,7 @@ const ExplodedNode *MisusedMovedObjectChecker::getMoveLocation(
 ExplodedNode *MisusedMovedObjectChecker::reportBug(const MemRegion *Region,
                                                    const CallEvent &Call,
                                                    CheckerContext &C,
-                                                   bool isCopy = false) const {
+                                                   MisuseKind MK) const {
   if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
     if (!BT)
       BT.reset(new BugType(this, "Usage of a 'moved-from' object",
@@ -195,10 +196,17 @@ ExplodedNode *MisusedMovedObjectChecker::reportBug(const MemRegion *Region,
 
     // Creating the error message.
     std::string ErrorMessage;
-    if (isCopy)
-      ErrorMessage = "Copying a 'moved-from' object";
-    else
-      ErrorMessage = "Method call on a 'moved-from' object";
+    switch(MK) {
+      case MK_FunCall:
+        ErrorMessage = "Method call on a 'moved-from' object";
+        break;
+      case MK_Copy:
+        ErrorMessage = "Copying a 'moved-from' object";
+        break;
+      case MK_Move:
+        ErrorMessage = "Moving a 'moved-from' object";
+        break;
+    }
     if (const auto DecReg = Region->getAs<DeclRegion>()) {
       const auto *RegionDecl = dyn_cast<NamedDecl>(DecReg->getDecl());
       ErrorMessage += " '" + RegionDecl->getNameAsString() + "'";
@@ -352,7 +360,7 @@ void MisusedMovedObjectChecker::checkPreCall(const CallEvent &Call,
   const LocationContext *LC = C.getLocationContext();
   ExplodedNode *N = nullptr;
 
-  // Remove the MemRegions from the map on which a ctor/dtor call or assignement
+  // Remove the MemRegions from the map on which a ctor/dtor call or assignment
   // happened.
 
   // Checking constructor calls.
@@ -365,7 +373,10 @@ void MisusedMovedObjectChecker::checkPreCall(const CallEvent &Call,
       const RegionState *ArgState = State->get<TrackedRegionMap>(ArgRegion);
       if (ArgState && ArgState->isMoved()) {
         if (!isInMoveSafeContext(LC)) {
-          N = reportBug(ArgRegion, Call, C, /*isCopy=*/true);
+          if(CtorDec->isMoveConstructor())
+            N = reportBug(ArgRegion, Call, C, MK_Move);
+          else
+            N = reportBug(ArgRegion, Call, C, MK_Copy);
           State = State->set<TrackedRegionMap>(ArgRegion,
                                                RegionState::getReported());
         }
@@ -380,8 +391,11 @@ void MisusedMovedObjectChecker::checkPreCall(const CallEvent &Call,
     return;
   // In case of destructor call we do not track the object anymore.
   const MemRegion *ThisRegion = IC->getCXXThisVal().getAsRegion();
+  if (!ThisRegion)
+    return;
+
   if (dyn_cast_or_null<CXXDestructorDecl>(Call.getDecl())) {
-    State = removeFromState(State, IC->getCXXThisVal().getAsRegion());
+    State = removeFromState(State, ThisRegion);
     C.addTransition(State);
     return;
   }
@@ -402,7 +416,10 @@ void MisusedMovedObjectChecker::checkPreCall(const CallEvent &Call,
           State->get<TrackedRegionMap>(IC->getArgSVal(0).getAsRegion());
       if (ArgState && ArgState->isMoved() && !isInMoveSafeContext(LC)) {
         const MemRegion *ArgRegion = IC->getArgSVal(0).getAsRegion();
-        N = reportBug(ArgRegion, Call, C, /*isCopy=*/true);
+        if(MethodDecl->isMoveAssignmentOperator())
+          N = reportBug(ArgRegion, Call, C, MK_Move);
+        else
+          N = reportBug(ArgRegion, Call, C, MK_Copy);
         State =
             State->set<TrackedRegionMap>(ArgRegion, RegionState::getReported());
       }
@@ -412,35 +429,35 @@ void MisusedMovedObjectChecker::checkPreCall(const CallEvent &Call,
   }
 
   // The remaining part is check only for method call on a moved-from object.
+
+  // We want to investigate the whole object, not only sub-object of a parent
+  // class in which the encountered method defined.
+  while (const CXXBaseObjectRegion *BR =
+             dyn_cast<CXXBaseObjectRegion>(ThisRegion))
+    ThisRegion = BR->getSuperRegion();
+
   if (isMoveSafeMethod(MethodDecl))
     return;
 
   if (isStateResetMethod(MethodDecl)) {
-    // A state reset method resets the whole object, not only sub-object
-    // of a parent class in which it is defined.
-    const MemRegion *WholeObjectRegion = ThisRegion;
-    while (const CXXBaseObjectRegion *BR =
-               dyn_cast<CXXBaseObjectRegion>(WholeObjectRegion))
-      WholeObjectRegion = BR->getSuperRegion();
-
-    State = State->remove<TrackedRegionMap>(WholeObjectRegion);
+    State = removeFromState(State, ThisRegion);
     C.addTransition(State);
     return;
   }
 
-  // If it is already reported then we dont report the bug again.
+  // If it is already reported then we don't report the bug again.
   const RegionState *ThisState = State->get<TrackedRegionMap>(ThisRegion);
   if (!(ThisState && ThisState->isMoved()))
     return;
 
-  // Dont report it in case if any base region is already reported
+  // Don't report it in case if any base region is already reported
   if (isAnyBaseRegionReported(State, ThisRegion))
     return;
 
   if (isInMoveSafeContext(LC))
     return;
 
-  N = reportBug(ThisRegion, Call, C);
+  N = reportBug(ThisRegion, Call, C, MK_FunCall);
   State = State->set<TrackedRegionMap>(ThisRegion, RegionState::getReported());
   C.addTransition(State, N);
 }

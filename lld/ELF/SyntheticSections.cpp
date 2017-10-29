@@ -82,7 +82,7 @@ template <class ELFT> void elf::createCommonSections() {
     // don't have to care about DefinedCommon symbols beyond this point.
     replaceBody<DefinedRegular>(S, Sym->getFile(), Sym->getName(),
                                 static_cast<bool>(Sym->isLocal()), Sym->StOther,
-                                Sym->Type, 0, Sym->getSize<ELFT>(), Section);
+                                Sym->Type, 0, Sym->getSize(), Section);
   }
 }
 
@@ -1615,7 +1615,7 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
     if (ESym->st_shndx == SHN_UNDEF)
       ESym->st_size = 0;
     else
-      ESym->st_size = Body->getSize<ELFT>();
+      ESym->st_size = Body->getSize();
 
     // st_value is usually an address of a symbol, but that has a
     // special meaining for uninstantiated common symbols (this can
