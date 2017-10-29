@@ -2622,8 +2622,13 @@ static void RenderCharacterOptions(const ArgList &Args, const llvm::Triple &T,
       CmdArgs.push_back("-fwchar-type=short");
       CmdArgs.push_back("-fno-signed-wchar");
     } else {
+      bool IsARM = T.isARM() || T.isThumb() || T.isAArch64();
       CmdArgs.push_back("-fwchar-type=int");
-      CmdArgs.push_back("-fsigned-wchar");
+      if (IsARM && !(T.isOSWindows() || T.getOS() == llvm::Triple::NetBSD ||
+                     T.getOS() == llvm::Triple::OpenBSD))
+        CmdArgs.push_back("-fno-signed-wchar");
+      else
+        CmdArgs.push_back("-fsigned-wchar");
     }
   }
 }

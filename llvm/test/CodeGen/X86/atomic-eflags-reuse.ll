@@ -32,7 +32,7 @@ entry:
 define i32 @test_sub_1_cmov_sle(i64* %p, i32 %a0, i32 %a1) #0 {
 ; CHECK-LABEL: test_sub_1_cmov_sle:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    lock decq (%rdi)
+; CHECK-NEXT:    lock addq $-1, (%rdi)
 ; CHECK-NEXT:    cmovgel %edx, %esi
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    retq
@@ -46,7 +46,7 @@ entry:
 define i32 @test_sub_1_cmov_sgt(i64* %p, i32 %a0, i32 %a1) #0 {
 ; CHECK-LABEL: test_sub_1_cmov_sgt:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    lock decq (%rdi)
+; CHECK-NEXT:    lock addq $-1, (%rdi)
 ; CHECK-NEXT:    cmovll %edx, %esi
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    retq
@@ -76,7 +76,7 @@ entry:
 define i8 @test_sub_1_setcc_sgt(i64* %p) #0 {
 ; CHECK-LABEL: test_sub_1_setcc_sgt:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    lock decq (%rdi)
+; CHECK-NEXT:    lock addq $-1, (%rdi)
 ; CHECK-NEXT:    setge %al
 ; CHECK-NEXT:    retq
 entry:
