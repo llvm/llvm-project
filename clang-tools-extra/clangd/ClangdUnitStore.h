@@ -27,8 +27,7 @@ class CppFileCollection {
 public:
   std::shared_ptr<CppFile> getOrCreateFile(
       PathRef File, PathRef ResourceDir, GlobalCompilationDatabase &CDB,
-      std::shared_ptr<PCHContainerOperations> PCHs,
-      IntrusiveRefCntPtr<vfs::FileSystem> VFS, clangd::Logger &Logger) {
+      std::shared_ptr<PCHContainerOperations> PCHs, clangd::Logger &Logger) {
     std::lock_guard<std::mutex> Lock(Mutex);
 
     auto It = OpenedFiles.find(File);
@@ -59,8 +58,7 @@ public:
   /// will be returned in RecreateResult.RemovedFile.
   RecreateResult recreateFileIfCompileCommandChanged(
       PathRef File, PathRef ResourceDir, GlobalCompilationDatabase &CDB,
-      std::shared_ptr<PCHContainerOperations> PCHs,
-      IntrusiveRefCntPtr<vfs::FileSystem> VFS, clangd::Logger &Logger);
+      std::shared_ptr<PCHContainerOperations> PCHs, clangd::Logger &Logger);
 
   std::shared_ptr<CppFile> getFile(PathRef File) {
     std::lock_guard<std::mutex> Lock(Mutex);

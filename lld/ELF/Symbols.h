@@ -93,7 +93,7 @@ public:
   uint64_t getGotPltOffset() const;
   uint64_t getGotPltVA() const;
   uint64_t getPltVA() const;
-  template <class ELFT> typename ELFT::uint getSize() const;
+  uint64_t getSize() const;
   OutputSection *getOutputSection() const;
 
   uint32_t DynsymIndex = 0;
@@ -218,10 +218,10 @@ class SharedSymbol : public Defined {
 public:
   static bool classof(const SymbolBody *S) { return S->kind() == SharedKind; }
 
-  SharedSymbol(StringRef Name, uint8_t StOther, uint8_t Type,
-               const void *ElfSym, const void *Verdef)
+  SharedSymbol(StringRef Name, uint8_t StOther, uint8_t Type, uint64_t Value,
+               uint64_t Size, uint32_t Alignment, const void *Verdef)
       : Defined(SharedKind, Name, /*IsLocal=*/false, StOther, Type),
-        Verdef(Verdef), ElfSym(ElfSym) {
+        Verdef(Verdef), Value(Value), Size(Size), Alignment(Alignment) {
     // GNU ifunc is a mechanism to allow user-supplied functions to
     // resolve PLT slot values at load-time. This is contrary to the
     // regualr symbol resolution scheme in which symbols are resolved just
@@ -246,18 +246,6 @@ public:
     return cast<SharedFile<ELFT>>(SymbolBody::getFile());
   }
 
-  template <class ELFT> uint64_t getShndx() const {
-    return getSym<ELFT>().st_shndx;
-  }
-
-  template <class ELFT> uint64_t getValue() const {
-    return getSym<ELFT>().st_value;
-  }
-
-  template <class ELFT> uint64_t getSize() const {
-    return getSym<ELFT>().st_size;
-  }
-
   template <class ELFT> uint32_t getAlignment() const;
 
   // This field is a pointer to the symbol's version definition.
@@ -266,12 +254,9 @@ public:
   // If not null, there is a copy relocation to this section.
   InputSection *CopyRelSec = nullptr;
 
-private:
-  template <class ELFT> const typename ELFT::Sym &getSym() const {
-    return *(const typename ELFT::Sym *)ElfSym;
-  }
-
-  const void *ElfSym;
+  uint64_t Value; // st_value
+  uint32_t Size;  // st_size
+  uint32_t Alignment;
 };
 
 // This represents a symbol that is not yet in the link, but we know where to
