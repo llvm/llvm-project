@@ -248,7 +248,7 @@ template <class ELFT> void Writer<ELFT>::run() {
     return;
 
   // Handle -Map option.
-  writeMapFile<ELFT>();
+  writeMapFile();
   if (errorCount())
     return;
 
