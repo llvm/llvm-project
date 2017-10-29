@@ -625,7 +625,9 @@ void PassManagerBuilder::populateModulePassManager(
   }
 
   addExtensionsToPM(EP_Peephole, MPM);
-  MPM.add(createLateCFGSimplificationPass()); // Switches to lookup tables
+  // Switches to lookup tables and other transforms that may not be considered
+  // canonical by other IR passes.
+  MPM.add(createCFGSimplificationPass(1, true, true, false));
   addInstructionCombiningPass(MPM);
 
   if (!DisableUnrollLoops) {

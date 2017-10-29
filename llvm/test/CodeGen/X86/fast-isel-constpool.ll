@@ -3,6 +3,8 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin -fast-isel -code-model=large < %s | FileCheck %s --check-prefix=LARGE
 ; RUN: llc -mtriple=x86_64-apple-darwin -fast-isel -code-model=small -mattr=avx < %s | FileCheck %s --check-prefix=AVX
 ; RUN: llc -mtriple=x86_64-apple-darwin -fast-isel -code-model=large -mattr=avx < %s | FileCheck %s --check-prefix=LARGE_AVX
+; RUN: llc -mtriple=x86_64-apple-darwin -fast-isel -code-model=small -mattr=avx512f < %s | FileCheck %s --check-prefix=AVX
+; RUN: llc -mtriple=x86_64-apple-darwin -fast-isel -code-model=large -mattr=avx512f < %s | FileCheck %s --check-prefix=LARGE_AVX
 
 ; Make sure fast isel uses rip-relative addressing for the small code model.
 define float @constpool_float(float %x) {
