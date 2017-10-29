@@ -655,6 +655,11 @@ public:
     return getArch() == Triple::arm || getArch() == Triple::armeb;
   }
 
+  /// Tests whether the target is AArch64 (little and big endian).
+  bool isAArch64() const {
+    return getArch() == Triple::aarch64 || getArch() == Triple::aarch64_be;
+  }
+
   /// Tests wether the target supports comdat
   bool supportsCOMDAT() const { return !isOSBinFormatMachO(); }
 

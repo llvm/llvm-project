@@ -1,6 +1,7 @@
-; RUN: opt < %s -latesimplifycfg -S -mtriple=x86_64-unknown-linux-gnu | FileCheck %s
-; In the presence of "-no-jump-tables"="true", late simplifycfg should not
-; convert any switch cases to lookup tables.
+; RUN: opt < %s -simplifycfg -switch-to-lookup -S -mtriple=x86_64-unknown-linux-gnu | FileCheck %s
+
+; In the presence of "-no-jump-tables"="true", simplifycfg should not convert switches to lookup tables.
+
 ; CHECK: @switch.table.bar = private unnamed_addr constant [4 x i32] [i32 55, i32 123, i32 0, i32 -1]
 ; CHECK-LABEL: foo
 ; CHECK-NOT: @switch.table.foo = private unnamed_addr constant [4 x i32] [i32 55, i32 123, i32 0, i32 -1]
