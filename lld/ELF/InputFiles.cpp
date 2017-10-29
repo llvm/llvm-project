@@ -763,7 +763,7 @@ template <class ELFT> void SharedFile<ELFT>::parseRest() {
     // files because the loader takes care of it. However, if we promote a
     // DSO symbol to point to .bss due to copy relocation, we need to keep
     // the original alignment requirements. We infer it here.
-    uint32_t Alignment = 1 << countTrailingZeros((uint64_t)Sym.st_value);
+    uint32_t Alignment = 1ULL << countTrailingZeros((uint64_t)Sym.st_value);
     if (0 < Sym.st_shndx && Sym.st_shndx < Sections.size()) {
       uint32_t SecAlign = Sections[Sym.st_shndx].sh_addralign;
       Alignment = std::min(Alignment, SecAlign);

@@ -14232,10 +14232,6 @@ SDValue X86TargetLowering::LowerVSELECT(SDValue Op, SelectionDAG &DAG) const {
 
   case MVT::v8i16:
   case MVT::v16i16:
-    // AVX-512 BWI and VLX features support VSELECT with i16 elements.
-    if (Subtarget.hasBWI() && Subtarget.hasVLX())
-      return Op;
-
     // FIXME: We should custom lower this by fixing the condition and using i8
     // blends.
     return SDValue();

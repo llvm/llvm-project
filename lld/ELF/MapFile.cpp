@@ -26,9 +26,7 @@
 #include "Strings.h"
 #include "SymbolTable.h"
 #include "SyntheticSections.h"
-
 #include "lld/Common/Threads.h"
-
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -51,30 +49,21 @@ static std::string indent(int Depth) { return std::string(Depth * 8, ' '); }
 // Returns a list of all symbols that we want to print out.
 static std::vector<Defined *> getSymbols() {
   std::vector<Defined *> V;
-  for (InputFile *File : ObjectFiles) {
-    for (SymbolBody *B : File->getSymbols()) {
-      if (auto *DR = dyn_cast<DefinedRegular>(B)) {
+  for (InputFile *File : ObjectFiles)
+    for (SymbolBody *B : File->getSymbols())
+      if (auto *DR = dyn_cast<DefinedRegular>(B))
         if (DR->getFile() == File && !DR->isSection() && DR->Section &&
             DR->Section->Live)
           V.push_back(DR);
-      } else if (auto *DC = dyn_cast<DefinedCommon>(B)) {
-        if (DC->Section)
-          V.push_back(DC);
-      }
-    }
-  }
   return V;
 }
 
 // Returns a map from sections to their symbols.
 static SymbolMapTy getSectionSyms(ArrayRef<Defined *> Syms) {
   SymbolMapTy Ret;
-  for (Defined *S : Syms) {
+  for (Defined *S : Syms)
     if (auto *DR = dyn_cast<DefinedRegular>(S))
       Ret[DR->Section].push_back(S);
-    else if (auto *DC = dyn_cast<DefinedCommon>(S))
-      Ret[DC->Section].push_back(S);
-  }
 
   // Sort symbols by address. We want to print out symbols in the
   // order in the output file rather than the order they appeared

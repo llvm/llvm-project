@@ -2207,6 +2207,40 @@ void SelectionDAG::computeKnownBits(SDValue Op, KnownBits &Known,
     }
     break;
   }
+  case ISD::INSERT_SUBVECTOR: {
+    // If we know the element index, demand any elements from the subvector and
+    // the remainder from the src its inserted into, otherwise demand them all.
+    SDValue Src = Op.getOperand(0);
+    SDValue Sub = Op.getOperand(1);
+    ConstantSDNode *SubIdx = dyn_cast<ConstantSDNode>(Op.getOperand(2));
+    unsigned NumSubElts = Sub.getValueType().getVectorNumElements();
+    if (SubIdx && SubIdx->getAPIntValue().ule(NumElts - NumSubElts)) {
+      Known.One.setAllBits();
+      Known.Zero.setAllBits();
+      uint64_t Idx = SubIdx->getZExtValue();
+      APInt DemandedSubElts = DemandedElts.extractBits(NumSubElts, Idx);
+      if (!!DemandedSubElts) {
+        computeKnownBits(Sub, Known, DemandedSubElts, Depth + 1);
+        if (Known.isUnknown())
+          break; // early-out.
+      }
+      APInt SubMask = APInt::getBitsSet(NumElts, Idx, Idx + NumSubElts);
+      APInt DemandedSrcElts = DemandedElts & ~SubMask;
+      if (!!DemandedSrcElts) {
+        computeKnownBits(Src, Known2, DemandedSrcElts, Depth + 1);
+        Known.One &= Known2.One;
+        Known.Zero &= Known2.Zero;
+      }
+    } else {
+      computeKnownBits(Sub, Known, Depth + 1);
+      if (Known.isUnknown())
+        break; // early-out.
+      computeKnownBits(Src, Known2, Depth + 1);
+      Known.One &= Known2.One;
+      Known.Zero &= Known2.Zero;
+    }
+    break;
+  }
   case ISD::EXTRACT_SUBVECTOR: {
     // If we know the element index, just demand that subvector elements,
     // otherwise demand them all.

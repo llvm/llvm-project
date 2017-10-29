@@ -219,11 +219,9 @@ public:
   static bool classof(const SymbolBody *S) { return S->kind() == SharedKind; }
 
   SharedSymbol(StringRef Name, uint8_t StOther, uint8_t Type, uint64_t Value,
-               uint64_t Size, uint32_t Alignment, uint64_t Shndx,
-               const void *Verdef)
+               uint64_t Size, uint32_t Alignment, const void *Verdef)
       : Defined(SharedKind, Name, /*IsLocal=*/false, StOther, Type),
-        Verdef(Verdef), Value(Value), Size(Size), Shndx(Shndx),
-        Alignment(Alignment) {
+        Verdef(Verdef), Value(Value), Size(Size), Alignment(Alignment) {
     // GNU ifunc is a mechanism to allow user-supplied functions to
     // resolve PLT slot values at load-time. This is contrary to the
     // regualr symbol resolution scheme in which symbols are resolved just
@@ -257,8 +255,7 @@ public:
   InputSection *CopyRelSec = nullptr;
 
   uint64_t Value; // st_value
-  uint64_t Size;  // st_size
-  uint64_t Shndx; // st_shndx
+  uint32_t Size;  // st_size
   uint32_t Alignment;
 };
 
