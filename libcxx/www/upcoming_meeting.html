@@ -59,42 +59,61 @@
   <table id="issues" border="1">
 	<tr><th>Issue #</th><th>Issue Name</th><th>Meeting</th><th>Status</th></tr>
 
-	<tr><td><a href="https://wg21.link/LWG2444">2444</a></td><td>Inconsistent complexity for std::sort_heap</td><td>Toronto</td><td></td></tr>
-	<tr><td><a href="https://wg21.link/LWG2593">2593</a></td><td>Moved-from state of Allocators</td><td>Toronto</td><td></td></tr>
-	<tr><td><a href="https://wg21.link/LWG2597">2597</a></td><td>std::log misspecified for complex numbers</td><td>Toronto</td><td></td></tr>
-	<tr><td><a href="https://wg21.link/LWG2783">2783</a></td><td>stack::emplace() and queue::emplace() should return decltype(auto)</td><td>Toronto</td><td></td></tr>
-	<tr><td><a href="https://wg21.link/LWG2932">2932</a></td><td>Constraints on parallel algorithm implementations are underspecified</td><td>Toronto</td><td></td></tr>
-	<tr><td><a href="https://wg21.link/LWG2937">2937</a></td><td>Is equivalent("existing_thing", "not_existing_thing") an error?</td><td>Toronto</td><td>Complete</td></tr>
-	<tr><td><a href="https://wg21.link/LWG2940">2940</a></td><td>result_of specification also needs a little cleanup</td><td>Toronto</td><td></td></tr>
-	<tr><td><a href="https://wg21.link/LWG2942">2942</a></td><td>LWG 2873's resolution missed weak_ptr::owner_before</td><td>Toronto</td><td></td></tr>
-	<tr><td><a href="https://wg21.link/LWG2954">2954</a></td><td>Specialization of the convenience variable templates should be prohibited</td><td>Toronto</td><td></td></tr>
-	<tr><td><a href="https://wg21.link/LWG2961">2961</a></td><td>Bad postcondition for set_default_resource</td><td>Toronto</td><td></td></tr>
-	<tr><td><a href="https://wg21.link/LWG2966">2966</a></td><td>Incomplete resolution of US 74</td><td>Toronto</td><td></td></tr>
-	<tr><td><a href="https://wg21.link/LWG2974">2974</a></td><td>Diagnose out of bounds tuple_element/variant_alternative</td><td>Toronto</td><td></td></tr>
-
-	<tr><td></td><td><center><b>Priority 1 Bugs</b></center></td><td></td><td></td></tr>
-	<tr><td><a href="https://wg21.link/LWG2665">2665</a></td><td>remove_filename() post condition is incorrect</td><td>Toronto</td><td>We do this already</td></tr>
-
-	<tr><td></td><td><center><b>Immediate Issues in Toronto</b></center></td><td></td><td></td></tr>
-	<tr><td><a href="https://wg21.link/LWG2901">2901</a></td><td>Variants cannot properly support allocators</td><td>Toronto</td><td>We do this already</td></tr>
-	<tr><td><a href="https://wg21.link/LWG2956">2956</a></td><td><tt>filesystem::canonical()</tt> still defined in terms of <tt>absolute(p, base)</tt></td><td>Toronto</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/2779">2779</a></td><td>[networking.ts] Relax requirements on buffer sequence iterators</td><td>Albuquerque</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/2870">2870</a></td><td>Default value of parameter theta of polar should be dependent</td><td>Albuquerque</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/2935">2935</a></td><td>What should create_directories do when p already exists but is not a directory?</td><td>Albuquerque</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/2941">2941</a></td><td>§[thread.req.timing] wording should apply to both member and namespace-level functions</td><td>Albuquerque</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/2944">2944</a></td><td>LWG 2905 accidentally removed requirement that construction of the deleter doesn't throw an exception</td><td>Albuquerque</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/2945">2945</a></td><td>Order of template parameters in optional comparisons</td><td>Albuquerque</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/2948">2948</a></td><td>unique_ptr does not define operator<< for stream output</td><td>Albuquerque</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/2950">2950</a></td><td>std::byte operations are misspecified</td><td>Albuquerque</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/2952">2952</a></td><td>iterator_traits should work for pointers to cv T</td><td>Albuquerque</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/2953">2953</a></td><td>LWG 2853 should apply to deque::erase too</td><td>Albuquerque</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/2964">2964</a></td><td>Apparently redundant requirement for dynamic_pointer_cast</td><td>Albuquerque</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/2965">2965</a></td><td>Non-existing path::native_string() in filesystem_error::what() specification</td><td>Albuquerque</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/2972">2972</a></td><td>What is is_trivially_destructible_v<int>?	Yes		</td><td>Albuquerque</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/2976">2976</a></td><td>Dangling uses_allocator specialization for packaged_task</td><td>Albuquerque</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/2977">2977</a></td><td>unordered_meow::merge() has incorrect Throws: clause</td><td>Albuquerque</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/2978">2978</a></td><td>Hash support for pmr::string and friends</td><td>Albuquerque</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/2979">2979</a></td><td>aligned_union should require complete object types</td><td>Albuquerque</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/2980">2980</a></td><td>Cannot compare_exchange empty pointers	Yes		</td><td>Albuquerque</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/2981">2981</a></td><td>Remove redundant deduction guides from standard library</td><td>Albuquerque</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/2982">2982</a></td><td>Making size_type consistent in associative container deduction guides</td><td>Albuquerque</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/2988">2988</a></td><td>Clause 32 cleanup missed one typename</td><td>Albuquerque</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/2993">2993</a></td><td>reference_wrapper<T> conversion from T&&</td><td>Albuquerque</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/2998">2998</a></td><td>Requirements on function objects passed to {forward_,}list-specific algorithms</td><td>Albuquerque</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/3001">3001</a></td><td>weak_ptr::element_type needs remove_extent_t</td><td>Albuquerque</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/3024">3024</a></td><td>variant's copies must be deleted instead of disabled via SFINAE</td><td>Albuquerque</td><td></td></tr>
 
   </table>
 
 <h3>Comments about the issues</h3>
 <ul>
-<li>2444 - </li>
-<li>2593 - </li>
-<li>2597 - I think we do this already; probably needs tests</li>
-<li>2783 - should be easy to change; needs tests</li>
-<li>2932 - We're not doing the parallel algorithms yet.</li>
-<li>2937 - Implemented with tests. The PR LGTM (Eric)</li>
-<li>2940 - We haven't implemented result_of yet, but I don't think that this will require any changes.</li>
-<li>2942 - all of our owner_before overloads are already noexcept; just need to update the tests.</li>
-<li>2954 - I don't think there's anything to do here.</li>
-<li>2961 - We haven't implemented the PMR stuff yet.</li>
-<li>2966 - Wording cleanup; no code or test changes needed.</li>
-<li>2974 - I did this in r305196. Tests added in 306580</li>
+<li>2779 - </li>
+<li>2870 - </li>
+<li>2935 - </li>
+<li>2941 - </li>
+<li>2944 - </li>
+<li>2945 - </li>
+<li>2948 - </li>
+<li>2950 - </li>
+<li>2952 - </li>
+<li>2953 - </li>
+<li>2964 - </li>
+<li>2965 - </li>
+<li>2972 - </li>
+<li>2976 - </li>
+<li>2977 - </li>
+<li>2978 - </li>
+<li>2979 - </li>
+<li>2980 - </li>
+<li>2981 - </li>
+<li>2982 - </li>
+<li>2988 - </li>
+<li>2993 - </li>
+<li>2998 - </li>
+<li>3001 - </li>
+<li>3024 - </li>
 </ul>
 
 <p>Last Updated: 28-Jun-2017</p>
