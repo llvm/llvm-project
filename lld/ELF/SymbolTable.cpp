@@ -517,8 +517,7 @@ void SymbolTable::addShared(StringRef Name, SharedFile<ELFT> *File,
   if (WasInserted || ((Body->isUndefined() || Body->isLazy()) &&
                       Body->getVisibility() == STV_DEFAULT)) {
     replaceBody<SharedSymbol>(S, File, Name, Sym.st_other, Sym.getType(),
-                              Sym.st_value, Sym.st_size, Alignment,
-                              Sym.st_shndx, Verdef);
+                              Sym.st_value, Sym.st_size, Alignment, Verdef);
     if (!S->isWeak())
       File->IsUsed = true;
   }

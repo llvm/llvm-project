@@ -469,7 +469,7 @@ static std::vector<SharedSymbol *> getSymbolsAt(SharedSymbol *SS) {
 
   std::vector<SharedSymbol *> Ret;
   for (const Elf_Sym &S : File->getGlobalELFSyms()) {
-    if (S.st_shndx != SS->Shndx || S.st_value != SS->Value)
+    if (S.st_shndx == 0 || S.st_value != SS->Value)
       continue;
     StringRef Name = check(S.getName(File->getStringTable()));
     SymbolBody *Sym = Symtab->find(Name);
