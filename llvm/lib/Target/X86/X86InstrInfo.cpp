@@ -7964,6 +7964,276 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   return false;
 }
 
+/// Return true for all instructions that only update
+/// the first 32 or 64-bits of the destination register and leave the rest
+/// unmodified. This can be used to avoid folding loads if the instructions
+/// only update part of the destination register, and the non-updated part is
+/// not needed. e.g. cvtss2sd, sqrtss. Unfolding the load from these
+/// instructions breaks the partial register dependency and it can improve
+/// performance. e.g.:
+///
+///   movss (%rdi), %xmm0
+///   cvtss2sd %xmm0, %xmm0
+///
+/// Instead of
+///   cvtss2sd (%rdi), %xmm0
+///
+/// FIXME: This should be turned into a TSFlags.
+///
+static bool hasPartialRegUpdate(unsigned Opcode) {
+  switch (Opcode) {
+  case X86::CVTSI2SSrr:
+  case X86::CVTSI2SSrm:
+  case X86::CVTSI2SS64rr:
+  case X86::CVTSI2SS64rm:
+  case X86::CVTSI2SDrr:
+  case X86::CVTSI2SDrm:
+  case X86::CVTSI2SD64rr:
+  case X86::CVTSI2SD64rm:
+  case X86::CVTSD2SSrr:
+  case X86::CVTSD2SSrm:
+  case X86::CVTSS2SDrr:
+  case X86::CVTSS2SDrm:
+  case X86::MOVHPDrm:
+  case X86::MOVHPSrm:
+  case X86::MOVLPDrm:
+  case X86::MOVLPSrm:
+  case X86::RCPSSr:
+  case X86::RCPSSm:
+  case X86::RCPSSr_Int:
+  case X86::RCPSSm_Int:
+  case X86::ROUNDSDr:
+  case X86::ROUNDSDm:
+  case X86::ROUNDSSr:
+  case X86::ROUNDSSm:
+  case X86::RSQRTSSr:
+  case X86::RSQRTSSm:
+  case X86::RSQRTSSr_Int:
+  case X86::RSQRTSSm_Int:
+  case X86::SQRTSSr:
+  case X86::SQRTSSm:
+  case X86::SQRTSSr_Int:
+  case X86::SQRTSSm_Int:
+  case X86::SQRTSDr:
+  case X86::SQRTSDm:
+  case X86::SQRTSDr_Int:
+  case X86::SQRTSDm_Int:
+    return true;
+  }
+
+  return false;
+}
+
+/// Inform the ExecutionDepsFix pass how many idle
+/// instructions we would like before a partial register update.
+unsigned X86InstrInfo::getPartialRegUpdateClearance(
+    const MachineInstr &MI, unsigned OpNum,
+    const TargetRegisterInfo *TRI) const {
+  if (OpNum != 0 || !hasPartialRegUpdate(MI.getOpcode()))
+    return 0;
+
+  // If MI is marked as reading Reg, the partial register update is wanted.
+  const MachineOperand &MO = MI.getOperand(0);
+  unsigned Reg = MO.getReg();
+  if (TargetRegisterInfo::isVirtualRegister(Reg)) {
+    if (MO.readsReg() || MI.readsVirtualRegister(Reg))
+      return 0;
+  } else {
+    if (MI.readsRegister(Reg, TRI))
+      return 0;
+  }
+
+  // If any instructions in the clearance range are reading Reg, insert a
+  // dependency breaking instruction, which is inexpensive and is likely to
+  // be hidden in other instruction's cycles.
+  return PartialRegUpdateClearance;
+}
+
+// Return true for any instruction the copies the high bits of the first source
+// operand into the unused high bits of the destination operand.
+static bool hasUndefRegUpdate(unsigned Opcode) {
+  switch (Opcode) {
+  case X86::VCVTSI2SSrr:
+  case X86::VCVTSI2SSrm:
+  case X86::Int_VCVTSI2SSrr:
+  case X86::Int_VCVTSI2SSrm:
+  case X86::VCVTSI2SS64rr:
+  case X86::VCVTSI2SS64rm:
+  case X86::Int_VCVTSI2SS64rr:
+  case X86::Int_VCVTSI2SS64rm:
+  case X86::VCVTSI2SDrr:
+  case X86::VCVTSI2SDrm:
+  case X86::Int_VCVTSI2SDrr:
+  case X86::Int_VCVTSI2SDrm:
+  case X86::VCVTSI2SD64rr:
+  case X86::VCVTSI2SD64rm:
+  case X86::Int_VCVTSI2SD64rr:
+  case X86::Int_VCVTSI2SD64rm:
+  case X86::VCVTSD2SSrr:
+  case X86::VCVTSD2SSrm:
+  case X86::Int_VCVTSD2SSrr:
+  case X86::Int_VCVTSD2SSrm:
+  case X86::VCVTSS2SDrr:
+  case X86::VCVTSS2SDrm:
+  case X86::Int_VCVTSS2SDrr:
+  case X86::Int_VCVTSS2SDrm:
+  case X86::VRCPSSr:
+  case X86::VRCPSSr_Int:
+  case X86::VRCPSSm:
+  case X86::VRCPSSm_Int:
+  case X86::VROUNDSDr:
+  case X86::VROUNDSDm:
+  case X86::VROUNDSDr_Int:
+  case X86::VROUNDSDm_Int:
+  case X86::VROUNDSSr:
+  case X86::VROUNDSSm:
+  case X86::VROUNDSSr_Int:
+  case X86::VROUNDSSm_Int:
+  case X86::VRSQRTSSr:
+  case X86::VRSQRTSSr_Int:
+  case X86::VRSQRTSSm:
+  case X86::VRSQRTSSm_Int:
+  case X86::VSQRTSSr:
+  case X86::VSQRTSSr_Int:
+  case X86::VSQRTSSm:
+  case X86::VSQRTSSm_Int:
+  case X86::VSQRTSDr:
+  case X86::VSQRTSDr_Int:
+  case X86::VSQRTSDm:
+  case X86::VSQRTSDm_Int:
+  // AVX-512
+  case X86::VCVTSI2SSZrr:
+  case X86::VCVTSI2SSZrm:
+  case X86::VCVTSI2SSZrr_Int:
+  case X86::VCVTSI2SSZrrb_Int:
+  case X86::VCVTSI2SSZrm_Int:
+  case X86::VCVTSI642SSZrr:
+  case X86::VCVTSI642SSZrm:
+  case X86::VCVTSI642SSZrr_Int:
+  case X86::VCVTSI642SSZrrb_Int:
+  case X86::VCVTSI642SSZrm_Int:
+  case X86::VCVTSI2SDZrr:
+  case X86::VCVTSI2SDZrm:
+  case X86::VCVTSI2SDZrr_Int:
+  case X86::VCVTSI2SDZrrb_Int:
+  case X86::VCVTSI2SDZrm_Int:
+  case X86::VCVTSI642SDZrr:
+  case X86::VCVTSI642SDZrm:
+  case X86::VCVTSI642SDZrr_Int:
+  case X86::VCVTSI642SDZrrb_Int:
+  case X86::VCVTSI642SDZrm_Int:
+  case X86::VCVTUSI2SSZrr:
+  case X86::VCVTUSI2SSZrm:
+  case X86::VCVTUSI2SSZrr_Int:
+  case X86::VCVTUSI2SSZrrb_Int:
+  case X86::VCVTUSI2SSZrm_Int:
+  case X86::VCVTUSI642SSZrr:
+  case X86::VCVTUSI642SSZrm:
+  case X86::VCVTUSI642SSZrr_Int:
+  case X86::VCVTUSI642SSZrrb_Int:
+  case X86::VCVTUSI642SSZrm_Int:
+  case X86::VCVTUSI2SDZrr:
+  case X86::VCVTUSI2SDZrm:
+  case X86::VCVTUSI2SDZrr_Int:
+  case X86::VCVTUSI2SDZrm_Int:
+  case X86::VCVTUSI642SDZrr:
+  case X86::VCVTUSI642SDZrm:
+  case X86::VCVTUSI642SDZrr_Int:
+  case X86::VCVTUSI642SDZrrb_Int:
+  case X86::VCVTUSI642SDZrm_Int:
+  case X86::VCVTSD2SSZrr:
+  case X86::VCVTSD2SSZrr_Int:
+  case X86::VCVTSD2SSZrrb_Int:
+  case X86::VCVTSD2SSZrm:
+  case X86::VCVTSD2SSZrm_Int:
+  case X86::VCVTSS2SDZrr:
+  case X86::VCVTSS2SDZrr_Int:
+  case X86::VCVTSS2SDZrrb_Int:
+  case X86::VCVTSS2SDZrm:
+  case X86::VCVTSS2SDZrm_Int:
+  case X86::VRNDSCALESDr:
+  case X86::VRNDSCALESDrb:
+  case X86::VRNDSCALESDm:
+  case X86::VRNDSCALESSr:
+  case X86::VRNDSCALESSrb:
+  case X86::VRNDSCALESSm:
+  case X86::VRCP14SSrr:
+  case X86::VRCP14SSrm:
+  case X86::VRSQRT14SSrr:
+  case X86::VRSQRT14SSrm:
+  case X86::VSQRTSSZr:
+  case X86::VSQRTSSZr_Int:
+  case X86::VSQRTSSZrb_Int:
+  case X86::VSQRTSSZm:
+  case X86::VSQRTSSZm_Int:
+  case X86::VSQRTSDZr:
+  case X86::VSQRTSDZr_Int:
+  case X86::VSQRTSDZrb_Int:
+  case X86::VSQRTSDZm:
+  case X86::VSQRTSDZm_Int:
+    return true;
+  }
+
+  return false;
+}
+
+/// Inform the ExecutionDepsFix pass how many idle instructions we would like
+/// before certain undef register reads.
+///
+/// This catches the VCVTSI2SD family of instructions:
+///
+/// vcvtsi2sdq %rax, %xmm0<undef>, %xmm14
+///
+/// We should to be careful *not* to catch VXOR idioms which are presumably
+/// handled specially in the pipeline:
+///
+/// vxorps %xmm1<undef>, %xmm1<undef>, %xmm1
+///
+/// Like getPartialRegUpdateClearance, this makes a strong assumption that the
+/// high bits that are passed-through are not live.
+unsigned
+X86InstrInfo::getUndefRegClearance(const MachineInstr &MI, unsigned &OpNum,
+                                   const TargetRegisterInfo *TRI) const {
+  if (!hasUndefRegUpdate(MI.getOpcode()))
+    return 0;
+
+  // Set the OpNum parameter to the first source operand.
+  OpNum = 1;
+
+  const MachineOperand &MO = MI.getOperand(OpNum);
+  if (MO.isUndef() && TargetRegisterInfo::isPhysicalRegister(MO.getReg())) {
+    return UndefRegClearance;
+  }
+  return 0;
+}
+
+void X86InstrInfo::breakPartialRegDependency(
+    MachineInstr &MI, unsigned OpNum, const TargetRegisterInfo *TRI) const {
+  unsigned Reg = MI.getOperand(OpNum).getReg();
+  // If MI kills this register, the false dependence is already broken.
+  if (MI.killsRegister(Reg, TRI))
+    return;
+
+  if (X86::VR128RegClass.contains(Reg)) {
+    // These instructions are all floating point domain, so xorps is the best
+    // choice.
+    unsigned Opc = Subtarget.hasAVX() ? X86::VXORPSrr : X86::XORPSrr;
+    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), get(Opc), Reg)
+        .addReg(Reg, RegState::Undef)
+        .addReg(Reg, RegState::Undef);
+    MI.addRegisterKilled(Reg, TRI, true);
+  } else if (X86::VR256RegClass.contains(Reg)) {
+    // Use vxorps to clear the full ymm register.
+    // It wants to read and write the xmm sub-register.
+    unsigned XReg = TRI->getSubReg(Reg, X86::sub_xmm);
+    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), get(X86::VXORPSrr), XReg)
+        .addReg(XReg, RegState::Undef)
+        .addReg(XReg, RegState::Undef)
+        .addReg(Reg, RegState::ImplicitDefine);
+    MI.addRegisterKilled(Reg, TRI, true);
+  }
+}
+
 static void addOperands(MachineInstrBuilder &MIB, ArrayRef<MachineOperand> MOs,
                         int PtrOffset = 0) {
   unsigned NumAddrOps = MOs.size();
@@ -8282,276 +8552,6 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   if (PrintFailedFusing && !MI.isCopy())
     dbgs() << "We failed to fuse operand " << OpNum << " in " << MI;
   return nullptr;
-}
-
-/// Return true for all instructions that only update
-/// the first 32 or 64-bits of the destination register and leave the rest
-/// unmodified. This can be used to avoid folding loads if the instructions
-/// only update part of the destination register, and the non-updated part is
-/// not needed. e.g. cvtss2sd, sqrtss. Unfolding the load from these
-/// instructions breaks the partial register dependency and it can improve
-/// performance. e.g.:
-///
-///   movss (%rdi), %xmm0
-///   cvtss2sd %xmm0, %xmm0
-///
-/// Instead of
-///   cvtss2sd (%rdi), %xmm0
-///
-/// FIXME: This should be turned into a TSFlags.
-///
-static bool hasPartialRegUpdate(unsigned Opcode) {
-  switch (Opcode) {
-  case X86::CVTSI2SSrr:
-  case X86::CVTSI2SSrm:
-  case X86::CVTSI2SS64rr:
-  case X86::CVTSI2SS64rm:
-  case X86::CVTSI2SDrr:
-  case X86::CVTSI2SDrm:
-  case X86::CVTSI2SD64rr:
-  case X86::CVTSI2SD64rm:
-  case X86::CVTSD2SSrr:
-  case X86::CVTSD2SSrm:
-  case X86::CVTSS2SDrr:
-  case X86::CVTSS2SDrm:
-  case X86::MOVHPDrm:
-  case X86::MOVHPSrm:
-  case X86::MOVLPDrm:
-  case X86::MOVLPSrm:
-  case X86::RCPSSr:
-  case X86::RCPSSm:
-  case X86::RCPSSr_Int:
-  case X86::RCPSSm_Int:
-  case X86::ROUNDSDr:
-  case X86::ROUNDSDm:
-  case X86::ROUNDSSr:
-  case X86::ROUNDSSm:
-  case X86::RSQRTSSr:
-  case X86::RSQRTSSm:
-  case X86::RSQRTSSr_Int:
-  case X86::RSQRTSSm_Int:
-  case X86::SQRTSSr:
-  case X86::SQRTSSm:
-  case X86::SQRTSSr_Int:
-  case X86::SQRTSSm_Int:
-  case X86::SQRTSDr:
-  case X86::SQRTSDm:
-  case X86::SQRTSDr_Int:
-  case X86::SQRTSDm_Int:
-    return true;
-  }
-
-  return false;
-}
-
-/// Inform the ExecutionDepsFix pass how many idle
-/// instructions we would like before a partial register update.
-unsigned X86InstrInfo::getPartialRegUpdateClearance(
-    const MachineInstr &MI, unsigned OpNum,
-    const TargetRegisterInfo *TRI) const {
-  if (OpNum != 0 || !hasPartialRegUpdate(MI.getOpcode()))
-    return 0;
-
-  // If MI is marked as reading Reg, the partial register update is wanted.
-  const MachineOperand &MO = MI.getOperand(0);
-  unsigned Reg = MO.getReg();
-  if (TargetRegisterInfo::isVirtualRegister(Reg)) {
-    if (MO.readsReg() || MI.readsVirtualRegister(Reg))
-      return 0;
-  } else {
-    if (MI.readsRegister(Reg, TRI))
-      return 0;
-  }
-
-  // If any instructions in the clearance range are reading Reg, insert a
-  // dependency breaking instruction, which is inexpensive and is likely to
-  // be hidden in other instruction's cycles.
-  return PartialRegUpdateClearance;
-}
-
-// Return true for any instruction the copies the high bits of the first source
-// operand into the unused high bits of the destination operand.
-static bool hasUndefRegUpdate(unsigned Opcode) {
-  switch (Opcode) {
-  case X86::VCVTSI2SSrr:
-  case X86::VCVTSI2SSrm:
-  case X86::Int_VCVTSI2SSrr:
-  case X86::Int_VCVTSI2SSrm:
-  case X86::VCVTSI2SS64rr:
-  case X86::VCVTSI2SS64rm:
-  case X86::Int_VCVTSI2SS64rr:
-  case X86::Int_VCVTSI2SS64rm:
-  case X86::VCVTSI2SDrr:
-  case X86::VCVTSI2SDrm:
-  case X86::Int_VCVTSI2SDrr:
-  case X86::Int_VCVTSI2SDrm:
-  case X86::VCVTSI2SD64rr:
-  case X86::VCVTSI2SD64rm:
-  case X86::Int_VCVTSI2SD64rr:
-  case X86::Int_VCVTSI2SD64rm:
-  case X86::VCVTSD2SSrr:
-  case X86::VCVTSD2SSrm:
-  case X86::Int_VCVTSD2SSrr:
-  case X86::Int_VCVTSD2SSrm:
-  case X86::VCVTSS2SDrr:
-  case X86::VCVTSS2SDrm:
-  case X86::Int_VCVTSS2SDrr:
-  case X86::Int_VCVTSS2SDrm:
-  case X86::VRCPSSr:
-  case X86::VRCPSSr_Int:
-  case X86::VRCPSSm:
-  case X86::VRCPSSm_Int:
-  case X86::VROUNDSDr:
-  case X86::VROUNDSDm:
-  case X86::VROUNDSDr_Int:
-  case X86::VROUNDSDm_Int:
-  case X86::VROUNDSSr:
-  case X86::VROUNDSSm:
-  case X86::VROUNDSSr_Int:
-  case X86::VROUNDSSm_Int:
-  case X86::VRSQRTSSr:
-  case X86::VRSQRTSSr_Int:
-  case X86::VRSQRTSSm:
-  case X86::VRSQRTSSm_Int:
-  case X86::VSQRTSSr:
-  case X86::VSQRTSSr_Int:
-  case X86::VSQRTSSm:
-  case X86::VSQRTSSm_Int:
-  case X86::VSQRTSDr:
-  case X86::VSQRTSDr_Int:
-  case X86::VSQRTSDm:
-  case X86::VSQRTSDm_Int:
-  // AVX-512
-  case X86::VCVTSI2SSZrr:
-  case X86::VCVTSI2SSZrm:
-  case X86::VCVTSI2SSZrr_Int:
-  case X86::VCVTSI2SSZrrb_Int:
-  case X86::VCVTSI2SSZrm_Int:
-  case X86::VCVTSI642SSZrr:
-  case X86::VCVTSI642SSZrm:
-  case X86::VCVTSI642SSZrr_Int:
-  case X86::VCVTSI642SSZrrb_Int:
-  case X86::VCVTSI642SSZrm_Int:
-  case X86::VCVTSI2SDZrr:
-  case X86::VCVTSI2SDZrm:
-  case X86::VCVTSI2SDZrr_Int:
-  case X86::VCVTSI2SDZrrb_Int:
-  case X86::VCVTSI2SDZrm_Int:
-  case X86::VCVTSI642SDZrr:
-  case X86::VCVTSI642SDZrm:
-  case X86::VCVTSI642SDZrr_Int:
-  case X86::VCVTSI642SDZrrb_Int:
-  case X86::VCVTSI642SDZrm_Int:
-  case X86::VCVTUSI2SSZrr:
-  case X86::VCVTUSI2SSZrm:
-  case X86::VCVTUSI2SSZrr_Int:
-  case X86::VCVTUSI2SSZrrb_Int:
-  case X86::VCVTUSI2SSZrm_Int:
-  case X86::VCVTUSI642SSZrr:
-  case X86::VCVTUSI642SSZrm:
-  case X86::VCVTUSI642SSZrr_Int:
-  case X86::VCVTUSI642SSZrrb_Int:
-  case X86::VCVTUSI642SSZrm_Int:
-  case X86::VCVTUSI2SDZrr:
-  case X86::VCVTUSI2SDZrm:
-  case X86::VCVTUSI2SDZrr_Int:
-  case X86::VCVTUSI2SDZrm_Int:
-  case X86::VCVTUSI642SDZrr:
-  case X86::VCVTUSI642SDZrm:
-  case X86::VCVTUSI642SDZrr_Int:
-  case X86::VCVTUSI642SDZrrb_Int:
-  case X86::VCVTUSI642SDZrm_Int:
-  case X86::VCVTSD2SSZrr:
-  case X86::VCVTSD2SSZrr_Int:
-  case X86::VCVTSD2SSZrrb_Int:
-  case X86::VCVTSD2SSZrm:
-  case X86::VCVTSD2SSZrm_Int:
-  case X86::VCVTSS2SDZrr:
-  case X86::VCVTSS2SDZrr_Int:
-  case X86::VCVTSS2SDZrrb_Int:
-  case X86::VCVTSS2SDZrm:
-  case X86::VCVTSS2SDZrm_Int:
-  case X86::VRNDSCALESDr:
-  case X86::VRNDSCALESDrb:
-  case X86::VRNDSCALESDm:
-  case X86::VRNDSCALESSr:
-  case X86::VRNDSCALESSrb:
-  case X86::VRNDSCALESSm:
-  case X86::VRCP14SSrr:
-  case X86::VRCP14SSrm:
-  case X86::VRSQRT14SSrr:
-  case X86::VRSQRT14SSrm:
-  case X86::VSQRTSSZr:
-  case X86::VSQRTSSZr_Int:
-  case X86::VSQRTSSZrb_Int:
-  case X86::VSQRTSSZm:
-  case X86::VSQRTSSZm_Int:
-  case X86::VSQRTSDZr:
-  case X86::VSQRTSDZr_Int:
-  case X86::VSQRTSDZrb_Int:
-  case X86::VSQRTSDZm:
-  case X86::VSQRTSDZm_Int:
-    return true;
-  }
-
-  return false;
-}
-
-/// Inform the ExecutionDepsFix pass how many idle instructions we would like
-/// before certain undef register reads.
-///
-/// This catches the VCVTSI2SD family of instructions:
-///
-/// vcvtsi2sdq %rax, %xmm0<undef>, %xmm14
-///
-/// We should to be careful *not* to catch VXOR idioms which are presumably
-/// handled specially in the pipeline:
-///
-/// vxorps %xmm1<undef>, %xmm1<undef>, %xmm1
-///
-/// Like getPartialRegUpdateClearance, this makes a strong assumption that the
-/// high bits that are passed-through are not live.
-unsigned
-X86InstrInfo::getUndefRegClearance(const MachineInstr &MI, unsigned &OpNum,
-                                   const TargetRegisterInfo *TRI) const {
-  if (!hasUndefRegUpdate(MI.getOpcode()))
-    return 0;
-
-  // Set the OpNum parameter to the first source operand.
-  OpNum = 1;
-
-  const MachineOperand &MO = MI.getOperand(OpNum);
-  if (MO.isUndef() && TargetRegisterInfo::isPhysicalRegister(MO.getReg())) {
-    return UndefRegClearance;
-  }
-  return 0;
-}
-
-void X86InstrInfo::breakPartialRegDependency(
-    MachineInstr &MI, unsigned OpNum, const TargetRegisterInfo *TRI) const {
-  unsigned Reg = MI.getOperand(OpNum).getReg();
-  // If MI kills this register, the false dependence is already broken.
-  if (MI.killsRegister(Reg, TRI))
-    return;
-
-  if (X86::VR128RegClass.contains(Reg)) {
-    // These instructions are all floating point domain, so xorps is the best
-    // choice.
-    unsigned Opc = Subtarget.hasAVX() ? X86::VXORPSrr : X86::XORPSrr;
-    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), get(Opc), Reg)
-        .addReg(Reg, RegState::Undef)
-        .addReg(Reg, RegState::Undef);
-    MI.addRegisterKilled(Reg, TRI, true);
-  } else if (X86::VR256RegClass.contains(Reg)) {
-    // Use vxorps to clear the full ymm register.
-    // It wants to read and write the xmm sub-register.
-    unsigned XReg = TRI->getSubReg(Reg, X86::sub_xmm);
-    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), get(X86::VXORPSrr), XReg)
-        .addReg(XReg, RegState::Undef)
-        .addReg(XReg, RegState::Undef)
-        .addReg(Reg, RegState::ImplicitDefine);
-    MI.addRegisterKilled(Reg, TRI, true);
-  }
 }
 
 MachineInstr *
