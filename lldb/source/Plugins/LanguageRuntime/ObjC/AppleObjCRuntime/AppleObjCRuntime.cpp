@@ -234,7 +234,7 @@ Address *AppleObjCRuntime::GetPrintForDebuggerAddr() {
   return m_PrintForDebugger_addr.get();
 }
 
- bool AppleObjCRuntime::CouldHaveDynamicValue(ValueObject &in_value) {
+bool AppleObjCRuntime::CouldHaveDynamicValue(ValueObject &in_value) {
   return in_value.GetCompilerType().IsPossibleDynamicType(
       NULL,
       false, // do not check C++

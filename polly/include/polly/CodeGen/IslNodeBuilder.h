@@ -351,7 +351,7 @@ protected:
   bool preloadInvariantEquivClass(InvariantEquivClassTy &IAClass);
 
   void createForVector(__isl_take isl_ast_node *For, int VectorWidth);
-  void createForSequential(__isl_take isl_ast_node *For, bool KnownParallel);
+  void createForSequential(__isl_take isl_ast_node *For, bool MarkParallel);
 
   /// Create LLVM-IR that executes a for node thread parallel.
   ///

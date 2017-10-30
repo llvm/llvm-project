@@ -119,13 +119,6 @@ static uint64_t getSymVA(const SymbolBody &Body, int64_t &Addend) {
   llvm_unreachable("invalid symbol kind");
 }
 
-SymbolBody::SymbolBody(Kind K, StringRefZ Name, bool IsLocal, uint8_t StOther,
-                       uint8_t Type)
-    : SymbolKind(K), IsLocal(IsLocal), NeedsPltAddr(false),
-      IsInGlobalMipsGot(false), Is32BitMipsGot(false), IsInIplt(false),
-      IsInIgot(false), IsPreemptible(false), Type(Type), StOther(StOther),
-      Name(Name) {}
-
 // Returns true if this is a weak undefined symbol.
 bool SymbolBody::isUndefWeak() const {
   // See comment on Lazy in Symbols.h for the details.
@@ -181,13 +174,13 @@ uint64_t SymbolBody::getPltVA() const {
          PltIndex * Target->PltEntrySize;
 }
 
-template <class ELFT> typename ELFT::uint SymbolBody::getSize() const {
+uint64_t SymbolBody::getSize() const {
   if (const auto *C = dyn_cast<DefinedCommon>(this))
     return C->Size;
   if (const auto *DR = dyn_cast<DefinedRegular>(this))
     return DR->Size;
   if (const auto *S = dyn_cast<SharedSymbol>(this))
-    return S->getSize<ELFT>();
+    return S->Size;
   return 0;
 }
 
@@ -228,7 +221,7 @@ void SymbolBody::parseSymbolVersion() {
   Name = {S.data(), Pos};
 
   // If this is not in this DSO, it is not a definition.
-  if (!isInCurrentDSO())
+  if (!isInCurrentOutput())
     return;
 
   // '@@' in a symbol name means the default version.
@@ -257,10 +250,6 @@ void SymbolBody::parseSymbolVersion() {
           Verstr);
 }
 
-Defined::Defined(Kind K, StringRefZ Name, bool IsLocal, uint8_t StOther,
-                 uint8_t Type)
-    : SymbolBody(K, Name, IsLocal, StOther, Type) {}
-
 template <class ELFT> bool DefinedRegular::isMipsPIC() const {
   typedef typename ELFT::Ehdr Elf_Ehdr;
   if (!Section || !isFunc())
@@ -272,38 +261,11 @@ template <class ELFT> bool DefinedRegular::isMipsPIC() const {
          (Hdr->e_flags & EF_MIPS_PIC);
 }
 
-Undefined::Undefined(StringRefZ Name, bool IsLocal, uint8_t StOther,
-                     uint8_t Type)
-    : SymbolBody(SymbolBody::UndefinedKind, Name, IsLocal, StOther, Type) {}
-
-DefinedCommon::DefinedCommon(StringRef Name, uint64_t Size, uint32_t Alignment,
-                             uint8_t StOther, uint8_t Type)
-    : Defined(SymbolBody::DefinedCommonKind, Name, /*IsLocal=*/false, StOther,
-              Type),
-      Alignment(Alignment), Size(Size) {}
-
-// If a shared symbol is referred via a copy relocation, its alignment
-// becomes part of the ABI. This function returns a symbol alignment.
-// Because symbols don't have alignment attributes, we need to infer that.
-template <class ELFT> uint32_t SharedSymbol::getAlignment() const {
-  SharedFile<ELFT> *File = getFile<ELFT>();
-  uint32_t SecAlign = File->getSection(getSym<ELFT>())->sh_addralign;
-  uint64_t SymValue = getSym<ELFT>().st_value;
-  uint32_t SymAlign = uint32_t(1) << countTrailingZeros(SymValue);
-  return std::min(SecAlign, SymAlign);
-}
-
 InputFile *Lazy::fetch() {
   if (auto *S = dyn_cast<LazyArchive>(this))
     return S->fetch();
   return cast<LazyObject>(this)->fetch();
 }
-
-LazyArchive::LazyArchive(const llvm::object::Archive::Symbol S, uint8_t Type)
-    : Lazy(LazyArchiveKind, S.getName(), Type), Sym(S) {}
-
-LazyObject::LazyObject(StringRef Name, uint8_t Type)
-    : Lazy(LazyObjectKind, Name, Type) {}
 
 ArchiveFile *LazyArchive::getFile() {
   return cast<ArchiveFile>(SymbolBody::getFile());
@@ -330,7 +292,7 @@ uint8_t Symbol::computeBinding() const {
     return Binding;
   if (Visibility != STV_DEFAULT && Visibility != STV_PROTECTED)
     return STB_LOCAL;
-  if (VersionId == VER_NDX_LOCAL && body()->isInCurrentDSO())
+  if (VersionId == VER_NDX_LOCAL && body()->isInCurrentOutput())
     return STB_LOCAL;
   if (Config->NoGnuUnique && Binding == STB_GNU_UNIQUE)
     return STB_GLOBAL;
@@ -342,7 +304,7 @@ bool Symbol::includeInDynsym() const {
     return false;
   if (computeBinding() == STB_LOCAL)
     return false;
-  if (!body()->isInCurrentDSO())
+  if (!body()->isInCurrentOutput())
     return true;
   return ExportDynamic;
 }
@@ -373,17 +335,7 @@ std::string lld::toString(const SymbolBody &B) {
   return B.getName();
 }
 
-template uint32_t SymbolBody::template getSize<ELF32LE>() const;
-template uint32_t SymbolBody::template getSize<ELF32BE>() const;
-template uint64_t SymbolBody::template getSize<ELF64LE>() const;
-template uint64_t SymbolBody::template getSize<ELF64BE>() const;
-
 template bool DefinedRegular::template isMipsPIC<ELF32LE>() const;
 template bool DefinedRegular::template isMipsPIC<ELF32BE>() const;
 template bool DefinedRegular::template isMipsPIC<ELF64LE>() const;
 template bool DefinedRegular::template isMipsPIC<ELF64BE>() const;
-
-template uint32_t SharedSymbol::template getAlignment<ELF32LE>() const;
-template uint32_t SharedSymbol::template getAlignment<ELF32BE>() const;
-template uint32_t SharedSymbol::template getAlignment<ELF64LE>() const;
-template uint32_t SharedSymbol::template getAlignment<ELF64BE>() const;
