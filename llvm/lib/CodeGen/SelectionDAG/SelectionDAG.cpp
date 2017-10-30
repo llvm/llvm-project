@@ -3130,17 +3130,21 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   }
 
   case ISD::SIGN_EXTEND:
-  case ISD::SIGN_EXTEND_VECTOR_INREG:
     Tmp = VTBits - Op.getOperand(0).getScalarValueSizeInBits();
-    return ComputeNumSignBits(Op.getOperand(0), Depth+1) + Tmp;
-
+    return ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth+1) + Tmp;
   case ISD::SIGN_EXTEND_INREG:
     // Max of the input and what this extends.
     Tmp = cast<VTSDNode>(Op.getOperand(1))->getVT().getScalarSizeInBits();
     Tmp = VTBits-Tmp+1;
-
-    Tmp2 = ComputeNumSignBits(Op.getOperand(0), Depth+1);
+    Tmp2 = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth+1);
     return std::max(Tmp, Tmp2);
+  case ISD::SIGN_EXTEND_VECTOR_INREG: {
+    SDValue Src = Op.getOperand(0);
+    EVT SrcVT = Src.getValueType();
+    APInt DemandedSrcElts = DemandedElts.zext(SrcVT.getVectorNumElements());
+    Tmp = VTBits - SrcVT.getScalarSizeInBits();
+    return ComputeNumSignBits(Src, DemandedSrcElts, Depth+1) + Tmp;
+  }
 
   case ISD::SRA:
     Tmp = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth+1);
@@ -3166,9 +3170,9 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   case ISD::OR:
   case ISD::XOR:    // NOT is handled here.
     // Logical binary ops preserve the number of sign bits at the worst.
-    Tmp = ComputeNumSignBits(Op.getOperand(0), Depth+1);
+    Tmp = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth+1);
     if (Tmp != 1) {
-      Tmp2 = ComputeNumSignBits(Op.getOperand(1), Depth+1);
+      Tmp2 = ComputeNumSignBits(Op.getOperand(1), DemandedElts, Depth+1);
       FirstAnswer = std::min(Tmp, Tmp2);
       // We computed what we know about the sign bits as our first
       // answer. Now proceed to the generic code that uses

@@ -227,10 +227,7 @@ template <class ELFT> bool ObjFile<ELFT>::shouldMerge(const Elf_Shdr &Sec) {
 
   // Do not merge sections if generating a relocatable object. It makes
   // the code simpler because we do not need to update relocation addends
-  // to reflect changes introduced by merging. Instead of that we write
-  // such "merge" sections into separate OutputSections and keep SHF_MERGE
-  // / SHF_STRINGS flags and sh_entsize value to be able to perform merging
-  // later during a final linking.
+  // to reflect changes introduced by merging.
   if (Config->Relocatable)
     return false;
 
@@ -520,12 +517,9 @@ InputSectionBase *ObjFile<ELFT>::getSection(uint32_t Index) const {
   if (Index >= this->Sections.size())
     fatal(toString(this) + ": invalid section index: " + Twine(Index));
 
-  InputSectionBase *Sec = this->Sections[Index];
-  if (!Sec)
-    return nullptr;
-  if (Sec == &InputSection::Discarded)
-    return Sec;
-  return Sec->Repl;
+  if (InputSectionBase *Sec = this->Sections[Index])
+    return Sec->Repl;
+  return nullptr;
 }
 
 template <class ELFT>
