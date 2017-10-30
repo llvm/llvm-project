@@ -18,7 +18,6 @@
 #include <csignal>
 #include <time.h>
 #include <vector>
-#include <sys/syscall.h>
 
 // Multiplexing is implemented using kqueue on systems that support it (BSD
 // variants including OSX). On linux we use ppoll, while android uses pselect
