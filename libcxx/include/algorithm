@@ -5547,9 +5547,9 @@ __set_union(_InputIterator1 __first1, _InputIterator1 __last1,
         }
         else
         {
-            *__result = *__first1;
             if (!__comp(*__first1, *__first2))
                 ++__first2;
+            *__result = *__first1;
             ++__first1;
         }
     }
