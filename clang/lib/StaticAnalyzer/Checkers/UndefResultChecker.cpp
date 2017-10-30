@@ -137,6 +137,10 @@ void UndefResultChecker::checkPostStmt(const BinaryOperator *B,
 
         OS << " greater or equal to the width of type '"
            << B->getLHS()->getType().getAsString() << "'.";
+      } else if (B->getOpcode() == BinaryOperatorKind::BO_Shl &&
+                 C.isNegative(B->getLHS())) {
+        OS << "The result of the left shift is undefined because the left "
+              "operand is negative";
       } else {
         OS << "The result of the '"
            << BinaryOperator::getOpcodeStr(B->getOpcode())

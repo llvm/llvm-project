@@ -56,6 +56,8 @@ struct UnwrappedLine {
   size_t MatchingOpeningBlockLineIndex;
 
   static const size_t kInvalidIndex = -1;
+
+  unsigned FirstStartColumn = 0;
 };
 
 class UnwrappedLineConsumer {
@@ -71,6 +73,7 @@ class UnwrappedLineParser {
 public:
   UnwrappedLineParser(const FormatStyle &Style,
                       const AdditionalKeywords &Keywords,
+                      unsigned FirstStartColumn,
                       ArrayRef<FormatToken *> Tokens,
                       UnwrappedLineConsumer &Callback);
 
@@ -249,6 +252,10 @@ private:
   FormatToken *IfNdefCondition;
   bool FoundIncludeGuardStart;
   bool IncludeGuardRejected;
+  // Contains the first start column where the source begins. This is zero for
+  // normal source code and may be nonzero when formatting a code fragment that
+  // does not start at the beginning of the file.
+  unsigned FirstStartColumn;
 
   friend class ScopedLineState;
   friend class CompoundStatementIndenter;
