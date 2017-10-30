@@ -20,12 +20,16 @@ namespace fuzzing {
     int sort             (const uint8_t *data, size_t size);
     int stable_sort      (const uint8_t *data, size_t size);
     int partition        (const uint8_t *data, size_t size);
+    int partition_copy   (const uint8_t *data, size_t size);
     int stable_partition (const uint8_t *data, size_t size);
+	int unique           (const uint8_t *data, size_t size);
+	int unique_copy      (const uint8_t *data, size_t size);
 
 //  partition and stable_partition take Bi-Di iterators.
 //  Should test those, too
-    int nth_element      (const uint8_t *data, size_t size);
-    int partial_sort     (const uint8_t *data, size_t size);
+    int nth_element       (const uint8_t *data, size_t size);
+    int partial_sort      (const uint8_t *data, size_t size);
+    int partial_sort_copy (const uint8_t *data, size_t size);
 
 //  Heap operations
     int make_heap        (const uint8_t *data, size_t size);
@@ -44,6 +48,14 @@ namespace fuzzing {
 	int search                      (const uint8_t *data, size_t size);
 // 	int search_boyer_moore          (const uint8_t *data, size_t size);
 // 	int search_boyer_moore_horspool (const uint8_t *data, size_t size);
+
+//	Set operations
+// 	int includes                 (const uint8_t *data, size_t size);
+// 	int set_union                (const uint8_t *data, size_t size);
+// 	int set_intersection         (const uint8_t *data, size_t size);
+// 	int set_difference           (const uint8_t *data, size_t size);
+// 	int set_symmetric_difference (const uint8_t *data, size_t size);
+// 	int merge                    (const uint8_t *data, size_t size);
 
 } // namespace fuzzing
 

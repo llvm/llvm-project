@@ -14,7 +14,7 @@
 // class directory_iterator
 
 // directory_iterator& operator++();
-// directory_iterator& increment(error_code& ec) noexcept;
+// directory_iterator& increment(error_code& ec);
 
 #include <experimental/filesystem>
 #include <type_traits>
@@ -40,7 +40,7 @@ TEST_CASE(test_increment_signatures)
     ASSERT_NOT_NOEXCEPT(++d);
 
     ASSERT_SAME_TYPE(decltype(d.increment(ec)), directory_iterator&);
-    ASSERT_NOEXCEPT(d.increment(ec));
+    ASSERT_NOT_NOEXCEPT(d.increment(ec));
 }
 
 TEST_CASE(test_prefix_increment)
