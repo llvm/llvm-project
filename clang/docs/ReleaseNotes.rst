@@ -65,6 +65,9 @@ Improvements to Clang's diagnostics
    default. It warns about unguarded uses of APIs only when they were introduced
    in or after macOS 10.13, iOS 11, tvOS 11 or watchOS 4.
 
+- ``-Wzero-as-null-pointer-constant`` was adjusted not to warn on null pointer
+  constants that originate from system macros, except ``NULL`` macro.
+
 -  The ``-Wdocumentation`` warning now allows the use of ``\param`` and
    ``\returns`` documentation directives in the documentation comments for
    declarations with a function or a block pointer type.
