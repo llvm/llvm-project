@@ -241,9 +241,6 @@ registers:
   - { id: 0, class: gprb }
   - { id: 1, class: gprb }
   - { id: 2, class: gprb }
-# CHECK: id: 0, class: gpr
-# CHECK: id: 1, class: gpr
-# CHECK: id: 2, class: gpr
 body:             |
   bb.0:
     liveins: %r0, %r1
@@ -274,9 +271,6 @@ registers:
   - { id: 0, class: fprb }
   - { id: 1, class: fprb }
   - { id: 2, class: fprb }
-# CHECK: id: 0, class: spr
-# CHECK: id: 1, class: spr
-# CHECK: id: 2, class: spr
 body:             |
   bb.0:
     liveins: %s0, %s1
@@ -307,9 +301,6 @@ registers:
   - { id: 0, class: fprb }
   - { id: 1, class: fprb }
   - { id: 2, class: fprb }
-# CHECK: id: 0, class: dpr
-# CHECK: id: 1, class: dpr
-# CHECK: id: 2, class: dpr
 body:             |
   bb.0:
     liveins: %d0, %d1
