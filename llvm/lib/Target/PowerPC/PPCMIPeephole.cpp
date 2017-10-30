@@ -375,53 +375,6 @@ bool PPCMIPeephole::simplifyCode(void) {
             MI.getOperand(2).setImm(NewElem);
           }
         }
-
-        // Splat is fed by a SWAP which is a permute of this form
-        //  XXPERMDI %VA, %VA, 2
-        // Since the splat instruction can use any of the vector elements to do
-        //  the splat we do not have to rearrange the elements in the vector
-        //  with a swap before we do the splat. We can simply do the splat from
-        //  a different index.
-        // If the swap has only one use (the splat) then we can completely
-        //  remove the swap too.
-        if (DefOpcode == PPC::XXPERMDI && MI.getOperand(1).isImm()) {
-          unsigned SwapRes = DefMI->getOperand(0).getReg();
-          unsigned SwapOp1 = DefMI->getOperand(1).getReg();
-          unsigned SwapOp2 = DefMI->getOperand(2).getReg();
-          unsigned SwapImm = DefMI->getOperand(3).getImm();
-          unsigned SplatImm = MI.getOperand(1).getImm();
-
-          // Break if this permute is not a swap.
-          if (SwapOp1 != SwapOp2 || SwapImm != 2)
-            break;
-
-          unsigned NewElem = 0;
-          // Compute the new index to use for the splat.
-          if (MI.getOpcode() == PPC::VSPLTB)
-            NewElem = (SplatImm + 8) & 0xF;
-          else if (MI.getOpcode() == PPC::VSPLTH)
-            NewElem = (SplatImm + 4) & 0x7;
-          else if (MI.getOpcode() == PPC::XXSPLTW)
-            NewElem = (SplatImm + 2) & 0x3;
-          else {
-            DEBUG(dbgs() << "Unknown splat opcode.");
-            DEBUG(MI.dump());
-            break;
-          }
-
-          if (MRI->hasOneNonDBGUse(SwapRes)) {
-            DEBUG(dbgs() << "Removing redundant swap: ");
-            DEBUG(DefMI->dump());
-            ToErase = DefMI;
-          }
-          Simplified = true;
-          DEBUG(dbgs() << "Changing splat immediate from " << SplatImm <<
-                " to " << NewElem << " in instruction: ");
-          DEBUG(MI.dump());
-          MI.getOperand(1).setImm(NewElem);
-          MI.getOperand(2).setReg(SwapOp1);
-        }
-
         break;
       }
       case PPC::XVCVDPSP: {

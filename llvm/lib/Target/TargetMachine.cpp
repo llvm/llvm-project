@@ -114,6 +114,17 @@ static TLSModel::Model getSelectedTLSModel(const GlobalValue *GV) {
 
 bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
                                          const GlobalValue *GV) const {
+  // If the IR producer requested that this GV be treated as dso local, obey.
+  if (GV && GV->isDSOLocal())
+    return true;
+
+  // According to the llvm language reference, we should be able to just return
+  // false in here if we have a GV, as we know it is dso_preemptable.
+  // At this point in time, the various IR producers have not been transitioned
+  // to always produce a dso_local when it is possible to do so. As a result we
+  // still have some pre-dso_local logic in here to improve the quality of the
+  // generated code:
+
   Reloc::Model RM = getRelocationModel();
   const Triple &TT = getTargetTriple();
 
@@ -137,8 +148,7 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
       GV->hasExternalWeakLinkage())
     return false;
 
-  if (GV && (GV->hasLocalLinkage() || !GV->hasDefaultVisibility() ||
-              GV->isDSOLocal()))
+  if (GV && (GV->hasLocalLinkage() || !GV->hasDefaultVisibility()))
     return true;
 
   if (TT.isOSBinFormatMachO()) {

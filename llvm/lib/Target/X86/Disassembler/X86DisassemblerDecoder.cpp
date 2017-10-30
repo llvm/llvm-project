@@ -949,8 +949,10 @@ static int getID(struct InternalInstruction* insn, const void *miiArg) {
     }
   }
 
-  if (insn->rexPrefix & 0x08)
+  if (insn->rexPrefix & 0x08) {
     attrMask |= ATTR_REXW;
+    attrMask &= ~ATTR_ADSIZE;
+  }
 
   /*
    * JCXZ/JECXZ need special handling for 16-bit mode because the meaning

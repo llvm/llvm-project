@@ -2,6 +2,8 @@
 ; RUN: opt -O1 -S < %s                    | FileCheck %s --check-prefix=ALL --check-prefix=OLDPM
 ; RUN: opt -passes='default<O1>' -S < %s  | FileCheck %s --check-prefix=ALL --check-prefix=NEWPM
 
+declare void @foo()
+
 ; Don't simplify unconditional branches from empty blocks in simplifyCFG
 ; until late in the pipeline because it can destroy canonical loop structure.
 
@@ -62,5 +64,43 @@ if.end:
   br label %for.cond
 }
 
-declare void @foo()
+; PR34603 - https://bugs.llvm.org/show_bug.cgi?id=34603
+; We should have a select of doubles, not a select of double pointers.
+; SimplifyCFG should not flatten this before early-cse has a chance to eliminate redundant ops.
+
+define double @max_of_loads(double* %x, double* %y, i64 %i) {
+; ALL-LABEL: @max_of_loads(
+; ALL-NEXT:  entry:
+; ALL-NEXT:    [[XI_PTR:%.*]] = getelementptr double, double* [[X:%.*]], i64 [[I:%.*]]
+; ALL-NEXT:    [[YI_PTR:%.*]] = getelementptr double, double* [[Y:%.*]], i64 [[I]]
+; ALL-NEXT:    [[XI:%.*]] = load double, double* [[XI_PTR]], align 8
+; ALL-NEXT:    [[YI:%.*]] = load double, double* [[YI_PTR]], align 8
+; ALL-NEXT:    [[CMP:%.*]] = fcmp ogt double [[XI]], [[YI]]
+; ALL-NEXT:    [[Y_SINK:%.*]] = select i1 [[CMP]], double* [[X]], double* [[Y]]
+; ALL-NEXT:    [[YI_PTR_AGAIN:%.*]] = getelementptr double, double* [[Y_SINK]], i64 [[I]]
+; ALL-NEXT:    [[YI_AGAIN:%.*]] = load double, double* [[YI_PTR_AGAIN]], align 8
+; ALL-NEXT:    ret double [[YI_AGAIN]]
+;
+entry:
+  %xi_ptr = getelementptr double, double* %x, i64 %i
+  %yi_ptr = getelementptr double, double* %y, i64 %i
+  %xi = load double, double* %xi_ptr
+  %yi = load double, double* %yi_ptr
+  %cmp = fcmp ogt double %xi, %yi
+  br i1 %cmp, label %if, label %else
+
+if:
+  %xi_ptr_again = getelementptr double, double* %x, i64 %i
+  %xi_again = load double, double* %xi_ptr_again
+  br label %end
+
+else:
+  %yi_ptr_again = getelementptr double, double* %y, i64 %i
+  %yi_again = load double, double* %yi_ptr_again
+  br label %end
+
+end:
+  %max = phi double [ %xi_again,  %if ], [ %yi_again, %else ]
+  ret double %max
+}
 

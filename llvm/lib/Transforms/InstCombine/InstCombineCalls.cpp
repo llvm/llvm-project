@@ -106,8 +106,8 @@ static Constant *getNegativeIsTrueBoolVec(ConstantDataVector *V) {
   return ConstantVector::get(BoolVec);
 }
 
-Instruction *InstCombiner::SimplifyElementUnorderedAtomicMemCpy(
-    ElementUnorderedAtomicMemCpyInst *AMI) {
+Instruction *
+InstCombiner::SimplifyElementUnorderedAtomicMemCpy(AtomicMemCpyInst *AMI) {
   // Try to unfold this intrinsic into sequence of explicit atomic loads and
   // stores.
   // First check that number of elements is compile time constant.
@@ -1877,7 +1877,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     if (Changed) return II;
   }
 
-  if (auto *AMI = dyn_cast<ElementUnorderedAtomicMemCpyInst>(II)) {
+  if (auto *AMI = dyn_cast<AtomicMemCpyInst>(II)) {
     if (Constant *C = dyn_cast<Constant>(AMI->getLength()))
       if (C->isNullValue())
         return eraseInstFromFunction(*AMI);

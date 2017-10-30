@@ -718,3 +718,178 @@ define <32 x i8> @var_shuffle_v32i8(<32 x i8> %v, <32 x i8> %indices) nounwind {
   ret <32 x i8> %ret31
 }
 
+define <4 x double> @var_shuffle_v4f64(<4 x double> %v, <4 x i64> %indices) nounwind {
+; AVX1-LABEL: var_shuffle_v4f64:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    pushq %rbp
+; AVX1-NEXT:    movq %rsp, %rbp
+; AVX1-NEXT:    andq $-32, %rsp
+; AVX1-NEXT:    subq $64, %rsp
+; AVX1-NEXT:    vmovq %xmm1, %rax
+; AVX1-NEXT:    andl $3, %eax
+; AVX1-NEXT:    vpextrq $1, %xmm1, %rcx
+; AVX1-NEXT:    andl $3, %ecx
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-NEXT:    vmovq %xmm1, %rdx
+; AVX1-NEXT:    andl $3, %edx
+; AVX1-NEXT:    vpextrq $1, %xmm1, %rsi
+; AVX1-NEXT:    andl $3, %esi
+; AVX1-NEXT:    vmovaps %ymm0, (%rsp)
+; AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vmovhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; AVX1-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; AVX1-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-NEXT:    movq %rbp, %rsp
+; AVX1-NEXT:    popq %rbp
+; AVX1-NEXT:    retq
+;
+; INT256-LABEL: var_shuffle_v4f64:
+; INT256:       # BB#0:
+; INT256-NEXT:    pushq %rbp
+; INT256-NEXT:    movq %rsp, %rbp
+; INT256-NEXT:    andq $-32, %rsp
+; INT256-NEXT:    subq $64, %rsp
+; INT256-NEXT:    vmovq %xmm1, %rax
+; INT256-NEXT:    andl $3, %eax
+; INT256-NEXT:    vpextrq $1, %xmm1, %rcx
+; INT256-NEXT:    andl $3, %ecx
+; INT256-NEXT:    vextracti128 $1, %ymm1, %xmm1
+; INT256-NEXT:    vmovq %xmm1, %rdx
+; INT256-NEXT:    andl $3, %edx
+; INT256-NEXT:    vpextrq $1, %xmm1, %rsi
+; INT256-NEXT:    andl $3, %esi
+; INT256-NEXT:    vmovaps %ymm0, (%rsp)
+; INT256-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; INT256-NEXT:    vmovhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; INT256-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; INT256-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
+; INT256-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; INT256-NEXT:    movq %rbp, %rsp
+; INT256-NEXT:    popq %rbp
+; INT256-NEXT:    retq
+  %index0 = extractelement <4 x i64> %indices, i32 0
+  %index1 = extractelement <4 x i64> %indices, i32 1
+  %index2 = extractelement <4 x i64> %indices, i32 2
+  %index3 = extractelement <4 x i64> %indices, i32 3
+  %v0 = extractelement <4 x double> %v, i64 %index0
+  %v1 = extractelement <4 x double> %v, i64 %index1
+  %v2 = extractelement <4 x double> %v, i64 %index2
+  %v3 = extractelement <4 x double> %v, i64 %index3
+  %ret0 = insertelement <4 x double> undef, double %v0, i32 0
+  %ret1 = insertelement <4 x double> %ret0, double %v1, i32 1
+  %ret2 = insertelement <4 x double> %ret1, double %v2, i32 2
+  %ret3 = insertelement <4 x double> %ret2, double %v3, i32 3
+  ret <4 x double> %ret3
+}
+
+define <8 x float> @var_shuffle_v8f32(<8 x float> %v, <8 x i32> %indices) nounwind {
+; AVX1-LABEL: var_shuffle_v8f32:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    pushq %rbp
+; AVX1-NEXT:    movq %rsp, %rbp
+; AVX1-NEXT:    andq $-32, %rsp
+; AVX1-NEXT:    subq $64, %rsp
+; AVX1-NEXT:    vpextrq $1, %xmm1, %r8
+; AVX1-NEXT:    movq %r8, %rcx
+; AVX1-NEXT:    shrq $30, %rcx
+; AVX1-NEXT:    vmovq %xmm1, %r9
+; AVX1-NEXT:    movq %r9, %rdx
+; AVX1-NEXT:    shrq $30, %rdx
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-NEXT:    vpextrq $1, %xmm1, %r10
+; AVX1-NEXT:    movq %r10, %rdi
+; AVX1-NEXT:    shrq $30, %rdi
+; AVX1-NEXT:    vmovq %xmm1, %rax
+; AVX1-NEXT:    movq %rax, %rsi
+; AVX1-NEXT:    shrq $30, %rsi
+; AVX1-NEXT:    vmovaps %ymm0, (%rsp)
+; AVX1-NEXT:    andl $7, %r9d
+; AVX1-NEXT:    andl $28, %edx
+; AVX1-NEXT:    andl $7, %r8d
+; AVX1-NEXT:    andl $28, %ecx
+; AVX1-NEXT:    andl $7, %eax
+; AVX1-NEXT:    andl $28, %esi
+; AVX1-NEXT:    andl $7, %r10d
+; AVX1-NEXT:    andl $28, %edi
+; AVX1-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX1-NEXT:    movq %rsp, %rax
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
+; AVX1-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[2,3]
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],mem[0],xmm1[3]
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],mem[0]
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-NEXT:    movq %rbp, %rsp
+; AVX1-NEXT:    popq %rbp
+; AVX1-NEXT:    retq
+;
+; INT256-LABEL: var_shuffle_v8f32:
+; INT256:       # BB#0:
+; INT256-NEXT:    pushq %rbp
+; INT256-NEXT:    movq %rsp, %rbp
+; INT256-NEXT:    andq $-32, %rsp
+; INT256-NEXT:    subq $64, %rsp
+; INT256-NEXT:    vpextrq $1, %xmm1, %r8
+; INT256-NEXT:    movq %r8, %rcx
+; INT256-NEXT:    shrq $30, %rcx
+; INT256-NEXT:    vmovq %xmm1, %r9
+; INT256-NEXT:    movq %r9, %rdx
+; INT256-NEXT:    shrq $30, %rdx
+; INT256-NEXT:    vextracti128 $1, %ymm1, %xmm1
+; INT256-NEXT:    vpextrq $1, %xmm1, %r10
+; INT256-NEXT:    movq %r10, %rdi
+; INT256-NEXT:    shrq $30, %rdi
+; INT256-NEXT:    vmovq %xmm1, %rax
+; INT256-NEXT:    movq %rax, %rsi
+; INT256-NEXT:    shrq $30, %rsi
+; INT256-NEXT:    vmovaps %ymm0, (%rsp)
+; INT256-NEXT:    andl $7, %r9d
+; INT256-NEXT:    andl $28, %edx
+; INT256-NEXT:    andl $7, %r8d
+; INT256-NEXT:    andl $28, %ecx
+; INT256-NEXT:    andl $7, %eax
+; INT256-NEXT:    andl $28, %esi
+; INT256-NEXT:    andl $7, %r10d
+; INT256-NEXT:    andl $28, %edi
+; INT256-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; INT256-NEXT:    movq %rsp, %rax
+; INT256-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; INT256-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; INT256-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
+; INT256-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; INT256-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[2,3]
+; INT256-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],mem[0],xmm1[3]
+; INT256-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],mem[0]
+; INT256-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; INT256-NEXT:    movq %rbp, %rsp
+; INT256-NEXT:    popq %rbp
+; INT256-NEXT:    retq
+  %index0 = extractelement <8 x i32> %indices, i32 0
+  %index1 = extractelement <8 x i32> %indices, i32 1
+  %index2 = extractelement <8 x i32> %indices, i32 2
+  %index3 = extractelement <8 x i32> %indices, i32 3
+  %index4 = extractelement <8 x i32> %indices, i32 4
+  %index5 = extractelement <8 x i32> %indices, i32 5
+  %index6 = extractelement <8 x i32> %indices, i32 6
+  %index7 = extractelement <8 x i32> %indices, i32 7
+  %v0 = extractelement <8 x float> %v, i32 %index0
+  %v1 = extractelement <8 x float> %v, i32 %index1
+  %v2 = extractelement <8 x float> %v, i32 %index2
+  %v3 = extractelement <8 x float> %v, i32 %index3
+  %v4 = extractelement <8 x float> %v, i32 %index4
+  %v5 = extractelement <8 x float> %v, i32 %index5
+  %v6 = extractelement <8 x float> %v, i32 %index6
+  %v7 = extractelement <8 x float> %v, i32 %index7
+  %ret0 = insertelement <8 x float> undef, float %v0, i32 0
+  %ret1 = insertelement <8 x float> %ret0, float %v1, i32 1
+  %ret2 = insertelement <8 x float> %ret1, float %v2, i32 2
+  %ret3 = insertelement <8 x float> %ret2, float %v3, i32 3
+  %ret4 = insertelement <8 x float> %ret3, float %v4, i32 4
+  %ret5 = insertelement <8 x float> %ret4, float %v5, i32 5
+  %ret6 = insertelement <8 x float> %ret5, float %v6, i32 6
+  %ret7 = insertelement <8 x float> %ret6, float %v7, i32 7
+  ret <8 x float> %ret7
+}

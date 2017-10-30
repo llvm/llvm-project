@@ -25,12 +25,20 @@
 // linkage does not work since optimization passes will try to replace loads
 // of the global variable with its initialization value.
 //
+// It also identifies the kernels directly or indirectly enqueues kernels
+// and adds "calls-enqueue-kernel" function attribute to them, which will
+// be used to determine whether to emit runtime metadata for the kernel
+// enqueue related hidden kernel arguments.
+//
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/User.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -66,7 +74,22 @@ ModulePass* llvm::createAMDGPUOpenCLEnqueuedBlockLoweringPass() {
   return new AMDGPUOpenCLEnqueuedBlockLowering();
 }
 
+/// Collect direct or indrect callers of \p F and save them
+/// to \p Callers.
+static void collectCallers(Function *F, DenseSet<Function *> &Callers) {
+  for (auto U : F->users()) {
+    if (auto *CI = dyn_cast<CallInst>(&*U)) {
+      auto *Caller = CI->getParent()->getParent();
+      if (Callers.count(Caller))
+        continue;
+      Callers.insert(Caller);
+      collectCallers(Caller, Callers);
+    }
+  }
+}
+
 bool AMDGPUOpenCLEnqueuedBlockLowering::runOnModule(Module &M) {
+  DenseSet<Function *> Callers;
   auto &C = M.getContext();
   auto AS = AMDGPU::getAMDGPUAS(M);
   bool Changed = false;
@@ -91,8 +114,23 @@ bool AMDGPUOpenCLEnqueuedBlockLowering::runOnModule(Module &M) {
       AddrCast->replaceAllUsesWith(NewPtr);
       F.addFnAttr("runtime-handle", RuntimeHandle);
       F.setLinkage(GlobalValue::ExternalLinkage);
+
+      // Collect direct or indirect callers of enqueue_kernel.
+      for (auto U : NewPtr->users()) {
+        if (auto *I = dyn_cast<Instruction>(&*U)) {
+          auto *F = I->getParent()->getParent();
+          Callers.insert(F);
+          collectCallers(F, Callers);
+        }
+      }
       Changed = true;
     }
+  }
+
+  for (auto F : Callers) {
+    if (F->getCallingConv() != CallingConv::AMDGPU_KERNEL)
+      continue;
+    F->addFnAttr("calls-enqueue-kernel");
   }
   return Changed;
 }

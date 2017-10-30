@@ -51,6 +51,8 @@
 ; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
+; CHECK-NOT:        ValueKind:     HiddenDefaultQueue
+; CHECK-NOT:        ValueKind:     HiddenCompletionAction
 define amdgpu_kernel void @test_char(i8 %a)
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !9
     !kernel_arg_base_type !9 !kernel_arg_type_qual !4 {
@@ -1267,7 +1269,52 @@ define amdgpu_kernel void @__test_block_invoke_kernel(
   ret void
 }
 
+; CHECK:      - Name:            test_enqueue_kernel_caller
+; CHECK-NEXT:   SymbolName:      'test_enqueue_kernel_caller@kd'
+; CHECK-NEXT:   Language:        OpenCL C
+; CHECK-NEXT:   LanguageVersion: [ 2, 0 ]
+; CHECK-NEXT:   Args:
+; CHECK-NEXT:     - TypeName:      char
+; CHECK-NEXT:       Size:          1
+; CHECK-NEXT:       Align:         1
+; CHECK-NEXT:       ValueKind:     ByValue
+; CHECK-NEXT:       ValueType:     I8
+; CHECK-NEXT:       AccQual:       Default
+; CHECK-NEXT:     - Size:          8
+; CHECK-NEXT:       Align:         8
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetX
+; CHECK-NEXT:       ValueType:     I64
+; CHECK-NEXT:     - Size:          8
+; CHECK-NEXT:       Align:         8
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetY
+; CHECK-NEXT:       ValueType:     I64
+; CHECK-NEXT:     - Size:          8
+; CHECK-NEXT:       Align:         8
+; CHECK-NEXT:       ValueKind:     HiddenGlobalOffsetZ
+; CHECK-NEXT:       ValueType:     I64
+; CHECK-NEXT:     - Size:          8
+; CHECK-NEXT:       Align:         8
+; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
+; CHECK-NEXT:       ValueType:     I8
+; CHECK-NEXT:       AddrSpaceQual: Global
+; CHECK-NEXT:     - Size:          8
+; CHECK-NEXT:       Align:         8
+; CHECK-NEXT:       ValueKind:     HiddenDefaultQueue
+; CHECK-NEXT:       ValueType:     I8
+; CHECK-NEXT:       AddrSpaceQual: Global
+; CHECK-NEXT:     - Size:          8
+; CHECK-NEXT:       Align:         8
+; CHECK-NEXT:       ValueKind:     HiddenCompletionAction
+; CHECK-NEXT:       ValueType:     I8
+; CHECK-NEXT:       AddrSpaceQual: Global
+define amdgpu_kernel void @test_enqueue_kernel_caller(i8 %a) #1
+    !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !9
+    !kernel_arg_base_type !9 !kernel_arg_type_qual !4 {
+  ret void
+}
+
 attributes #0 = { "runtime-handle"="__test_block_invoke_kernel_runtime_handle" }
+attributes #1 = { "calls-enqueue-kernel" }
 
 !llvm.printf.fmts = !{!100, !101}
 
