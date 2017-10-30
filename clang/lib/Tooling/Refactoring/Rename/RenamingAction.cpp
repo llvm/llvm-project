@@ -77,7 +77,8 @@ RenameOccurrences::initiate(RefactoringRuleContext &Context,
   if (!ND)
     return Context.createDiagnosticError(
         SelectionRange.getBegin(), diag::err_refactor_selection_no_symbol);
-  return RenameOccurrences(getCanonicalSymbolDeclaration(ND), NewName);
+  return RenameOccurrences(getCanonicalSymbolDeclaration(ND),
+                           std::move(NewName));
 }
 
 Expected<AtomicChanges>
