@@ -24,10 +24,10 @@ namespace clang {
 namespace format {
 
 FormatTokenLexer::FormatTokenLexer(const SourceManager &SourceMgr, FileID ID,
-                                   const FormatStyle &Style,
+                                   unsigned Column, const FormatStyle &Style,
                                    encoding::Encoding Encoding)
     : FormatTok(nullptr), IsFirstToken(true), StateStack({LexerState::NORMAL}),
-      Column(0), TrailingWhitespace(0), SourceMgr(SourceMgr), ID(ID),
+      Column(Column), TrailingWhitespace(0), SourceMgr(SourceMgr), ID(ID),
       Style(Style), IdentTable(getFormattingLangOpts(Style)),
       Keywords(IdentTable), Encoding(Encoding), FirstInLineIndex(0),
       FormattingDisabled(false), MacroBlockBeginRegex(Style.MacroBlockBegin),
@@ -554,13 +554,21 @@ FormatToken *FormatTokenLexer::getNextToken() {
   // take them into account as whitespace - this pattern is quite frequent
   // in macro definitions.
   // FIXME: Add a more explicit test.
-  while (FormatTok->TokenText.size() > 1 && FormatTok->TokenText[0] == '\\' &&
-         FormatTok->TokenText[1] == '\n') {
+  while (FormatTok->TokenText.size() > 1 && FormatTok->TokenText[0] == '\\') {
+    unsigned SkippedWhitespace = 0;
+    if (FormatTok->TokenText.size() > 2 &&
+        (FormatTok->TokenText[1] == '\r' && FormatTok->TokenText[2] == '\n'))
+      SkippedWhitespace = 3;
+    else if (FormatTok->TokenText[1] == '\n')
+      SkippedWhitespace = 2;
+    else
+      break;
+
     ++FormatTok->NewlinesBefore;
-    WhitespaceLength += 2;
-    FormatTok->LastNewlineOffset = 2;
+    WhitespaceLength += SkippedWhitespace;
+    FormatTok->LastNewlineOffset = SkippedWhitespace;
     Column = 0;
-    FormatTok->TokenText = FormatTok->TokenText.substr(2);
+    FormatTok->TokenText = FormatTok->TokenText.substr(SkippedWhitespace);
   }
 
   FormatTok->WhitespaceRange = SourceRange(

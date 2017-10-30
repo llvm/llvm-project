@@ -9,7 +9,21 @@ target triple = "amdgcn-amdhsa-amd-opencl"
 %struct.ndrange_t = type { i32 }
 %opencl.queue_t = type opaque
 
-define amdgpu_kernel void @test(i8 addrspace(1)* %a, i8 %b, i64 addrspace(1)* %c, i64 %d) local_unnamed_addr
+; CHECK: define amdgpu_kernel void @non_caller(i8 addrspace(1)* %a, i8 %b, i64 addrspace(1)* %c, i64 %d) local_unnamed_addr !kernel_arg_addr_space
+define amdgpu_kernel void @non_caller(i8 addrspace(1)* %a, i8 %b, i64 addrspace(1)* %c, i64 %d) local_unnamed_addr
+  !kernel_arg_addr_space !3 !kernel_arg_access_qual !4 !kernel_arg_type !5 !kernel_arg_base_type !5 !kernel_arg_type_qual !6 {
+  ret void
+}
+
+; CHECK: define amdgpu_kernel void @caller_indirect(i8 addrspace(1)* %a, i8 %b, i64 addrspace(1)* %c, i64 %d) local_unnamed_addr #[[AT_CALLER:[0-9]+]]
+define amdgpu_kernel void @caller_indirect(i8 addrspace(1)* %a, i8 %b, i64 addrspace(1)* %c, i64 %d) local_unnamed_addr
+  !kernel_arg_addr_space !3 !kernel_arg_access_qual !4 !kernel_arg_type !5 !kernel_arg_base_type !5 !kernel_arg_type_qual !6 {
+  call void @caller(i8 addrspace(1)* %a, i8 %b, i64 addrspace(1)* %c, i64 %d)
+  ret void
+}
+
+; CHECK: define amdgpu_kernel void @caller(i8 addrspace(1)* %a, i8 %b, i64 addrspace(1)* %c, i64 %d) local_unnamed_addr #[[AT_CALLER]]
+define amdgpu_kernel void @caller(i8 addrspace(1)* %a, i8 %b, i64 addrspace(1)* %c, i64 %d) local_unnamed_addr
   !kernel_arg_addr_space !3 !kernel_arg_access_qual !4 !kernel_arg_type !5 !kernel_arg_base_type !5 !kernel_arg_type_qual !6 {
 entry:
   %block = alloca <{ i32, i32, i8 addrspace(4)*, i8 addrspace(1)*, i8 }>, align 8
@@ -77,6 +91,7 @@ entry:
   ret void
 }
 
+; CHECK: attributes #[[AT_CALLER]] = { "calls-enqueue-kernel" }
 ; CHECK: attributes #[[AT1]] = {{.*}}"runtime-handle"="__test_block_invoke_kernel_runtime_handle"
 ; CHECK: attributes #[[AT2]] = {{.*}}"runtime-handle"="__test_block_invoke_2_kernel_runtime_handle"
 

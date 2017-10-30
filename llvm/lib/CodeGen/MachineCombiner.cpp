@@ -161,9 +161,10 @@ MachineCombiner::getDepth(SmallVectorImpl<MachineInstr *> &InsInstrs,
         assert(DefInstr &&
                "There must be a definition for a new virtual register");
         DepthOp = InstrDepth[II->second];
-        LatencyOp = TSchedModel.computeOperandLatency(
-            DefInstr, DefInstr->findRegisterDefOperandIdx(MO.getReg()),
-            InstrPtr, InstrPtr->findRegisterUseOperandIdx(MO.getReg()));
+        int DefIdx = DefInstr->findRegisterDefOperandIdx(MO.getReg());
+        int UseIdx = InstrPtr->findRegisterUseOperandIdx(MO.getReg());
+        LatencyOp = TSchedModel.computeOperandLatency(DefInstr, DefIdx,
+                                                      InstrPtr, UseIdx);
       } else {
         MachineInstr *DefInstr = getOperandDef(MO);
         if (DefInstr) {

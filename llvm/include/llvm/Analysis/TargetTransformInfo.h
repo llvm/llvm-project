@@ -554,8 +554,13 @@ public:
   /// \brief Don't restrict interleaved unrolling to small loops.
   bool enableAggressiveInterleaving(bool LoopHasReductions) const;
 
-  /// \brief Enable inline expansion of memcmp
-  bool enableMemCmpExpansion(unsigned &MaxLoadSize) const;
+  /// \brief If not nullptr, enable inline expansion of memcmp. IsZeroCmp is
+  /// true if this is the expansion of memcmp(p1, p2, s) == 0.
+  struct MemCmpExpansionOptions {
+    // The list of available load sizes (in bytes), sorted in decreasing order.
+    SmallVector<unsigned, 8> LoadSizes;
+  };
+  const MemCmpExpansionOptions *enableMemCmpExpansion(bool IsZeroCmp) const;
 
   /// \brief Enable matching of interleaved access groups.
   bool enableInterleavedAccessVectorization() const;
@@ -993,7 +998,8 @@ public:
                                                     unsigned VF) = 0;
   virtual bool supportsEfficientVectorElementLoadStore() = 0;
   virtual bool enableAggressiveInterleaving(bool LoopHasReductions) = 0;
-  virtual bool enableMemCmpExpansion(unsigned &MaxLoadSize) = 0;
+  virtual const MemCmpExpansionOptions *enableMemCmpExpansion(
+      bool IsZeroCmp) const = 0;
   virtual bool enableInterleavedAccessVectorization() = 0;
   virtual bool isFPVectorizationPotentiallyUnsafe() = 0;
   virtual bool allowsMisalignedMemoryAccesses(LLVMContext &Context,
@@ -1246,8 +1252,9 @@ public:
   bool enableAggressiveInterleaving(bool LoopHasReductions) override {
     return Impl.enableAggressiveInterleaving(LoopHasReductions);
   }
-  bool enableMemCmpExpansion(unsigned &MaxLoadSize) override {
-    return Impl.enableMemCmpExpansion(MaxLoadSize);
+  const MemCmpExpansionOptions *enableMemCmpExpansion(
+      bool IsZeroCmp) const override {
+    return Impl.enableMemCmpExpansion(IsZeroCmp);
   }
   bool enableInterleavedAccessVectorization() override {
     return Impl.enableInterleavedAccessVectorization();

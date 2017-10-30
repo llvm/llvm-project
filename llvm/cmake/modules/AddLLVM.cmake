@@ -149,8 +149,13 @@ endfunction(add_llvm_symbol_exports)
 
 if(NOT WIN32 AND NOT APPLE)
   # Detect what linker we have here
+  if( LLVM_USE_LINKER )
+    set(command ${CMAKE_C_COMPILER} -fuse-ld=${LLVM_USE_LINKER} -Wl,--version)
+  else()
+    set(command ${CMAKE_C_COMPILER} -Wl,--version)
+  endif()
   execute_process(
-    COMMAND ${CMAKE_C_COMPILER} -Wl,--version
+    COMMAND ${command}
     OUTPUT_VARIABLE stdout
     ERROR_VARIABLE stderr
     )

@@ -102,11 +102,13 @@ struct is_even<stable_test>
 	}
 };
 
-//	== sort ==
+typedef std::vector<uint8_t> Vec;
+typedef std::vector<stable_test> StableVec;
 
+//	== sort ==
 int sort(const uint8_t *data, size_t size)
 {
-	std::vector<uint8_t> working(data, data + size);
+	Vec working(data, data + size);
 	std::sort(working.begin(), working.end());
 
 	if (!std::is_sorted(working.begin(), working.end())) return 1;
@@ -116,13 +118,12 @@ int sort(const uint8_t *data, size_t size)
 
 
 //	== stable_sort ==
-
 int stable_sort(const uint8_t *data, size_t size)
 {
-	std::vector<stable_test> input;
+	StableVec input;
 	for (size_t i = 0; i < size; ++i)
 		input.push_back(stable_test(data[i], i));
-	std::vector<stable_test> working = input;
+	StableVec working = input;
 	std::stable_sort(working.begin(), working.end(), key_less());
 
 	if (!std::is_sorted(working.begin(), working.end(), key_less()))   return 1;
@@ -138,10 +139,9 @@ int stable_sort(const uint8_t *data, size_t size)
 }
 
 //	== partition ==
-
 int partition(const uint8_t *data, size_t size)
 {
-	std::vector<uint8_t> working(data, data + size);
+	Vec working(data, data + size);
 	auto iter = std::partition(working.begin(), working.end(), is_even<uint8_t>());
 
 	if (!std::all_of (working.begin(), iter, is_even<uint8_t>())) return 1;
@@ -151,14 +151,38 @@ int partition(const uint8_t *data, size_t size)
 }
 
 
-//	== stable_partition ==
+//	== partition_copy ==
+int partition_copy(const uint8_t *data, size_t size)
+{
+	Vec v1, v2;
+	auto iter = std::partition_copy(data, data + size,
+		std::back_inserter<Vec>(v1), std::back_inserter<Vec>(v2),
+		is_even<uint8_t>());
 
+//	The two vectors should add up to the original size
+	if (v1.size() + v2.size() != size) return 1;
+
+//	All of the even values should be in the first vector, and none in the second
+	if (!std::all_of (v1.begin(), v1.end(), is_even<uint8_t>())) return 2;
+	if (!std::none_of(v2.begin(), v2.end(), is_even<uint8_t>())) return 3;
+
+//	Every value in both vectors has to be in the original
+	for (auto v: v1)
+		if (std::find(data, data + size, v) == data + size) return 4;
+			
+	for (auto v: v2)
+		if (std::find(data, data + size, v) == data + size) return 5;
+			
+	return 0;
+}
+
+//	== stable_partition ==
 int stable_partition (const uint8_t *data, size_t size)
 {
-	std::vector<stable_test> input;
+	StableVec input;
 	for (size_t i = 0; i < size; ++i)
 		input.push_back(stable_test(data[i], i));
-	std::vector<stable_test> working = input;
+	StableVec working = input;
 	auto iter = std::stable_partition(working.begin(), working.end(), is_even<stable_test>());
 
 	if (!std::all_of (working.begin(), iter, is_even<stable_test>())) return 1;
@@ -175,7 +199,7 @@ int nth_element (const uint8_t *data, size_t size)
 {
 	if (size <= 1) return 0;
 	const size_t partition_point = data[0] % size;	
-	std::vector<uint8_t> working(data + 1, data + size);
+	Vec working(data + 1, data + size);
 	const auto partition_iter = working.begin() + partition_point;
 	std::nth_element(working.begin(), partition_iter, working.end());
 
@@ -203,7 +227,7 @@ int partial_sort (const uint8_t *data, size_t size)
 {
 	if (size <= 1) return 0;
 	const size_t sort_point = data[0] % size;
-	std::vector<uint8_t> working(data + 1, data + size);
+	Vec working(data + 1, data + size);
 	const auto sort_iter = working.begin() + sort_point;
 	std::partial_sort(working.begin(), sort_iter, working.end());
 
@@ -222,8 +246,140 @@ int partial_sort (const uint8_t *data, size_t size)
 }
 
 
-// --	regex fuzzers
+//	== partial_sort_copy ==
+//	use the first element as a count
+int partial_sort_copy (const uint8_t *data, size_t size)
+{
+	if (size <= 1) return 0;
+	const size_t num_results = data[0] % size;
+	Vec results(num_results);
+	(void) std::partial_sort_copy(data + 1, data + size, results.begin(), results.end());
 
+//	The results have to be sorted
+	if (!std::is_sorted(results.begin(), results.end())) return 1;
+//	All the values in results have to be in the original data
+	for (auto v: results)
+		if (std::find(data + 1, data + size, v) == data + size) return 2;
+
+//	The things in results have to be the smallest N in the original data
+	Vec sorted(data + 1, data + size);
+	std::sort(sorted.begin(), sorted.end());
+	if (!std::equal(results.begin(), results.end(), sorted.begin())) return 3;
+	return 0;
+}
+
+//	The second sequence has been "uniqued"
+template <typename Iter1, typename Iter2>
+static bool compare_unique(Iter1 first1, Iter1 last1, Iter2 first2, Iter2 last2)
+{
+	assert(first1 != last1 && first2 != last2);
+	if (*first1 != *first2) return false;
+
+	uint8_t last_value = *first1;
+	++first1; ++first2;
+	while(first1 != last1 && first2 != last2)
+	{
+	//	Skip over dups in the first sequence
+		while (*first1 == last_value)
+			if (++first1 == last1) return false;
+		if (*first1 != *first2) return false;
+		last_value = *first1;
+		++first1; ++first2;
+	}
+
+//	Still stuff left in the 'uniqued' sequence - oops
+	if (first1 == last1 && first2 != last2) return false;
+
+//	Still stuff left in the original sequence - better be all the same
+	while (first1 != last1)
+	{
+		if (*first1 != last_value) return false;
+		++first1;
+	}
+	return true;
+}
+
+//	== unique ==
+int unique (const uint8_t *data, size_t size)
+{
+	Vec working(data, data + size);
+	std::sort(working.begin(), working.end());
+	Vec results = working;
+	Vec::iterator new_end = std::unique(results.begin(), results.end());
+	Vec::iterator it;	// scratch iterator
+	
+//	Check the size of the unique'd sequence.
+//	it should only be zero if the input sequence was empty.
+	if (results.begin() == new_end)
+		return working.size() == 0 ? 0 : 1;
+	
+//	'results' is sorted
+	if (!std::is_sorted(results.begin(), new_end)) return 2;
+
+//	All the elements in 'results' must be different
+	it = results.begin();
+	uint8_t prev_value = *it++;
+	for (; it != new_end; ++it)
+	{
+		if (*it == prev_value) return 3;
+		prev_value = *it;
+	}
+	
+//	Every element in 'results' must be in 'working'
+	for (it = results.begin(); it != new_end; ++it)
+		if (std::find(working.begin(), working.end(), *it) == working.end())
+			return 4;
+			
+//	Every element in 'working' must be in 'results'
+	for (auto v : working)
+		if (std::find(results.begin(), new_end, v) == new_end)
+			return 5;
+	
+	return 0;
+}
+
+//	== unique_copy ==
+int unique_copy (const uint8_t *data, size_t size)
+{
+	Vec working(data, data + size);
+	std::sort(working.begin(), working.end());
+	Vec results;
+	(void) std::unique_copy(working.begin(), working.end(),
+	                        std::back_inserter<Vec>(results));
+	Vec::iterator it;	// scratch iterator
+	
+//	Check the size of the unique'd sequence.
+//	it should only be zero if the input sequence was empty.
+	if (results.size() == 0)
+		return working.size() == 0 ? 0 : 1;
+	
+//	'results' is sorted
+	if (!std::is_sorted(results.begin(), results.end())) return 2;
+
+//	All the elements in 'results' must be different
+	it = results.begin();
+	uint8_t prev_value = *it++;
+	for (; it != results.end(); ++it)
+	{
+		if (*it == prev_value) return 3;
+		prev_value = *it;
+	}
+	
+//	Every element in 'results' must be in 'working'
+	for (auto v : results)
+		if (std::find(working.begin(), working.end(), v) == working.end())
+			return 4;
+			
+//	Every element in 'working' must be in 'results'
+	for (auto v : working)
+		if (std::find(results.begin(), results.end(), v) == results.end())
+			return 5;
+	
+	return 0;
+}
+
+
+// --	regex fuzzers
 static int regex_helper(const uint8_t *data, size_t size, std::regex::flag_type flag)
 {
 	if (size > 0)
@@ -279,7 +435,7 @@ int regex_egrep (const uint8_t *data, size_t size)
 // --	heap fuzzers
 int make_heap (const uint8_t *data, size_t size)
 {
-	std::vector<uint8_t> working(data, data + size);
+	Vec working(data, data + size);
 	std::make_heap(working.begin(), working.end());
 
 	if (!std::is_heap(working.begin(), working.end())) return 1;
@@ -292,7 +448,7 @@ int push_heap (const uint8_t *data, size_t size)
 	if (size < 2) return 0;
 
 //	Make a heap from the first half of the data
-	std::vector<uint8_t> working(data, data + size);
+	Vec working(data, data + size);
 	auto iter = working.begin() + (size / 2);
 	std::make_heap(working.begin(), iter);
 	if (!std::is_heap(working.begin(), iter)) return 1;
@@ -311,7 +467,7 @@ int push_heap (const uint8_t *data, size_t size)
 int pop_heap (const uint8_t *data, size_t size)
 {
 	if (size < 2) return 0;
-	std::vector<uint8_t> working(data, data + size);
+	Vec working(data, data + size);
 	std::make_heap(working.begin(), working.end());
 
 //	Pop things off, one at a time
@@ -372,5 +528,23 @@ static int search_helper (const uint8_t *data, size_t size)
 // {
 // 	return search_helper<std::boyer_moore_horspool_searcher<const uint8_t *>>(data, size);
 // }
+
+
+// --	set operation fuzzers
+template <typename S>
+static void set_helper (const uint8_t *data, size_t size, Vec &v1, Vec &v2)
+{
+	assert(size > 1);
+	
+	const size_t pat_size = data[0] * (size - 1) / std::numeric_limits<uint8_t>::max();
+	const uint8_t *pat_begin = data + 1;
+	const uint8_t *pat_end   = pat_begin + pat_size;
+	const uint8_t *data_end  = data + size;
+	v1.assign(pat_begin, pat_end);
+	v2.assign(pat_end, data_end);
+
+	std::sort(v1.begin(), v1.end());
+	std::sort(v2.begin(), v2.end());
+}
 
 } // namespace fuzzing

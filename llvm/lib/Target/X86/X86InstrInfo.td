@@ -82,6 +82,9 @@ def SDTLockBinaryArithWithFlags : SDTypeProfile<1, 2, [SDTCisVT<0, i32>,
                                                        SDTCisPtrTy<1>,
                                                        SDTCisInt<2>]>;
 
+def SDTLockUnaryArithWithFlags : SDTypeProfile<1, 1, [SDTCisVT<0, i32>,
+                                                      SDTCisPtrTy<1>]>;
+
 def SDTX86Ret     : SDTypeProfile<0, -1, [SDTCisVT<0, i32>]>;
 
 def SDT_X86CallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>,
@@ -268,6 +271,13 @@ def X86lock_xor  : SDNode<"X86ISD::LXOR",  SDTLockBinaryArithWithFlags,
                           [SDNPHasChain, SDNPMayStore, SDNPMayLoad,
                            SDNPMemOperand]>;
 def X86lock_and  : SDNode<"X86ISD::LAND",  SDTLockBinaryArithWithFlags,
+                          [SDNPHasChain, SDNPMayStore, SDNPMayLoad,
+                           SDNPMemOperand]>;
+
+def X86lock_inc  : SDNode<"X86ISD::LINC",  SDTLockUnaryArithWithFlags,
+                          [SDNPHasChain, SDNPMayStore, SDNPMayLoad,
+                           SDNPMemOperand]>;
+def X86lock_dec  : SDNode<"X86ISD::LDEC",  SDTLockUnaryArithWithFlags,
                           [SDNPHasChain, SDNPMayStore, SDNPMayLoad,
                            SDNPMemOperand]>;
 
