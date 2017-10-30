@@ -132,6 +132,38 @@ void EvexToVexInstPass::AddTableEntry(EvexToVexTableType &EvexToVexTable,
   EvexToVexTable[EvexOp] = VexOp;
 }
 
+static bool usesExtendedRegister(const MachineInstr &MI) {
+  auto isHiRegIdx = [](unsigned Reg) {
+    // Check for XMM register with indexes between 16 - 31.
+    if (Reg >= X86::XMM16 && Reg <= X86::XMM31)
+      return true;
+
+    // Check for YMM register with indexes between 16 - 31.
+    if (Reg >= X86::YMM16 && Reg <= X86::YMM31)
+      return true;
+
+    return false;
+  };
+
+  // Check that operands are not ZMM regs or
+  // XMM/YMM regs with hi indexes between 16 - 31.
+  for (const MachineOperand &MO : MI.explicit_operands()) {
+    if (!MO.isReg())
+      continue;
+
+    unsigned Reg = MO.getReg();
+
+    assert(!(Reg >= X86::ZMM0 && Reg <= X86::ZMM31) &&
+           "ZMM instructions should not be in the EVEX->VEX tables");
+
+    if (isHiRegIdx(Reg))
+      return true;
+  }
+
+  return false;
+}
+
+
 // For EVEX instructions that can be encoded using VEX encoding
 // replace them by the VEX encoding in order to reduce size.
 bool EvexToVexInstPass::CompressEvexToVexImpl(MachineInstr &MI) const {
@@ -188,34 +220,10 @@ bool EvexToVexInstPass::CompressEvexToVexImpl(MachineInstr &MI) const {
   if (!NewOpc)
     return false;
 
-  auto isHiRegIdx = [](unsigned Reg) {
-    // Check for XMM register with indexes between 16 - 31.
-    if (Reg >= X86::XMM16 && Reg <= X86::XMM31)
-      return true;
-
-    // Check for YMM register with indexes between 16 - 31.
-    if (Reg >= X86::YMM16 && Reg <= X86::YMM31)
-      return true;
-
+  if (usesExtendedRegister(MI))
     return false;
-  };
 
-  // Check that operands are not ZMM regs or
-  // XMM/YMM regs with hi indexes between 16 - 31.
-  for (const MachineOperand &MO : MI.explicit_operands()) {
-    if (!MO.isReg())
-      continue;
-
-    unsigned Reg = MO.getReg();
-
-    assert (!(Reg >= X86::ZMM0 && Reg <= X86::ZMM31));
-
-    if (isHiRegIdx(Reg))
-      return false;
-  }
-
-  const MCInstrDesc &MCID = TII->get(NewOpc);
-  MI.setDesc(MCID);
+  MI.setDesc(TII->get(NewOpc));
   MI.setAsmPrinterFlag(AC_EVEX_2_VEX);
   return true;
 }

@@ -2056,6 +2056,30 @@ bool SelectionDAG::MaskedValueIsZero(SDValue Op, const APInt &Mask,
   return Mask.isSubsetOf(Known.Zero);
 }
 
+/// Helper function that checks to see if a node is a constant or a
+/// build vector of splat constants at least within the demanded elts.
+static ConstantSDNode *isConstOrDemandedConstSplat(SDValue N,
+                                                   const APInt &DemandedElts) {
+  if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(N))
+    return CN;
+  if (N.getOpcode() != ISD::BUILD_VECTOR)
+    return nullptr;
+  EVT VT = N.getValueType();
+  ConstantSDNode *Cst = nullptr;
+  unsigned NumElts = VT.getVectorNumElements();
+  assert(DemandedElts.getBitWidth() == NumElts && "Unexpected vector size");
+  for (unsigned i = 0; i != NumElts; ++i) {
+    if (!DemandedElts[i])
+      continue;
+    ConstantSDNode *C = dyn_cast<ConstantSDNode>(N.getOperand(i));
+    if (!C || (Cst && Cst->getAPIntValue() != C->getAPIntValue()) ||
+        C->getValueType(0) != VT.getScalarType())
+      return nullptr;
+    Cst = C;
+  }
+  return Cst;
+}
+
 /// If a SHL/SRA/SRL node has a constant or splat constant shift amount that
 /// is less than the element bit-width of the shift node, return it.
 static const APInt *getValidShiftAmountConstant(SDValue V) {
@@ -3106,31 +3130,37 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   }
 
   case ISD::SIGN_EXTEND:
-  case ISD::SIGN_EXTEND_VECTOR_INREG:
     Tmp = VTBits - Op.getOperand(0).getScalarValueSizeInBits();
-    return ComputeNumSignBits(Op.getOperand(0), Depth+1) + Tmp;
-
+    return ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth+1) + Tmp;
   case ISD::SIGN_EXTEND_INREG:
     // Max of the input and what this extends.
     Tmp = cast<VTSDNode>(Op.getOperand(1))->getVT().getScalarSizeInBits();
     Tmp = VTBits-Tmp+1;
-
-    Tmp2 = ComputeNumSignBits(Op.getOperand(0), Depth+1);
+    Tmp2 = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth+1);
     return std::max(Tmp, Tmp2);
+  case ISD::SIGN_EXTEND_VECTOR_INREG: {
+    SDValue Src = Op.getOperand(0);
+    EVT SrcVT = Src.getValueType();
+    APInt DemandedSrcElts = DemandedElts.zext(SrcVT.getVectorNumElements());
+    Tmp = VTBits - SrcVT.getScalarSizeInBits();
+    return ComputeNumSignBits(Src, DemandedSrcElts, Depth+1) + Tmp;
+  }
 
   case ISD::SRA:
     Tmp = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth+1);
     // SRA X, C   -> adds C sign bits.
-    if (ConstantSDNode *C = isConstOrConstSplat(Op.getOperand(1))) {
+    if (ConstantSDNode *C =
+            isConstOrDemandedConstSplat(Op.getOperand(1), DemandedElts)) {
       APInt ShiftVal = C->getAPIntValue();
       ShiftVal += Tmp;
       Tmp = ShiftVal.uge(VTBits) ? VTBits : ShiftVal.getZExtValue();
     }
     return Tmp;
   case ISD::SHL:
-    if (ConstantSDNode *C = isConstOrConstSplat(Op.getOperand(1))) {
+    if (ConstantSDNode *C =
+            isConstOrDemandedConstSplat(Op.getOperand(1), DemandedElts)) {
       // shl destroys sign bits.
-      Tmp = ComputeNumSignBits(Op.getOperand(0), Depth+1);
+      Tmp = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth+1);
       if (C->getAPIntValue().uge(VTBits) ||      // Bad shift.
           C->getAPIntValue().uge(Tmp)) break;    // Shifted all sign bits out.
       return Tmp - C->getZExtValue();
@@ -3140,9 +3170,9 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   case ISD::OR:
   case ISD::XOR:    // NOT is handled here.
     // Logical binary ops preserve the number of sign bits at the worst.
-    Tmp = ComputeNumSignBits(Op.getOperand(0), Depth+1);
+    Tmp = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth+1);
     if (Tmp != 1) {
-      Tmp2 = ComputeNumSignBits(Op.getOperand(1), Depth+1);
+      Tmp2 = ComputeNumSignBits(Op.getOperand(1), DemandedElts, Depth+1);
       FirstAnswer = std::min(Tmp, Tmp2);
       // We computed what we know about the sign bits as our first
       // answer. Now proceed to the generic code that uses

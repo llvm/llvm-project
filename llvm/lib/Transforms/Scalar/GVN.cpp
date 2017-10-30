@@ -1167,8 +1167,7 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
   if (!CanDoPRE) {
     while (!NewInsts.empty()) {
       Instruction *I = NewInsts.pop_back_val();
-      if (MD) MD->removeInstruction(I);
-      I->eraseFromParent();
+      markInstructionForDeletion(I);
     }
     // HINT: Don't revert the edge-splitting as following transformation may
     // also need to split these critical edges.
