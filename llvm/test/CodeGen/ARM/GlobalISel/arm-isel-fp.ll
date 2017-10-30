@@ -50,6 +50,23 @@ define arm_aapcscc double @test_add_double(double %x, double %y) {
   ret double %r
 }
 
+define arm_aapcscc float @test_sub_float(float %x, float %y) {
+; CHECK-LABEL: test_sub_float:
+; HARD: vsub.f32
+; SOFT-AEABI: bl __aeabi_fsub
+; SOFT-DEFAULT: bl __subsf3
+  %r = fsub float %x, %y
+  ret float %r
+}
+
+define arm_aapcscc double @test_sub_double(double %x, double %y) {
+; CHECK-LABEL: test_sub_double:
+; HARD: vsub.f64
+; SOFT-AEABI: bl __aeabi_dsub
+; SOFT-DEFAULT: bl __subdf3
+  %r = fsub double %x, %y
+  ret double %r
+}
 define arm_aapcs_vfpcc i32 @test_cmp_float_ogt(float %x, float %y) {
 ; CHECK-LABEL: test_cmp_float_ogt
 ; HARD: vcmp.f32
