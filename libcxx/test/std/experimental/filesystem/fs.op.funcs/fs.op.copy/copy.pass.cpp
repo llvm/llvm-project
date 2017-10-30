@@ -12,10 +12,10 @@
 // <experimental/filesystem>
 
 // void copy(const path& from, const path& to);
-// void copy(const path& from, const path& to, error_code& ec) noexcept;
+// void copy(const path& from, const path& to, error_code& ec);
 // void copy(const path& from, const path& to, copy_options options);
 // void copy(const path& from, const path& to, copy_options options,
-//           error_code& ec) noexcept;
+//           error_code& ec);
 
 #include <experimental/filesystem>
 #include <type_traits>
@@ -39,9 +39,9 @@ TEST_CASE(signature_test)
     std::error_code ec; ((void)ec);
     const copy_options opts{}; ((void)opts);
     ASSERT_NOT_NOEXCEPT(fs::copy(p, p));
-    ASSERT_NOEXCEPT(fs::copy(p, p, ec));
+    ASSERT_NOT_NOEXCEPT(fs::copy(p, p, ec));
     ASSERT_NOT_NOEXCEPT(copy(p, p, opts));
-    ASSERT_NOEXCEPT(copy(p, p, opts, ec));
+    ASSERT_NOT_NOEXCEPT(copy(p, p, opts, ec));
 }
 
 // There are 4 cases is the proposal for absolute path.

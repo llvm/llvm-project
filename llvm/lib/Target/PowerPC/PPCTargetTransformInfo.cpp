@@ -226,9 +226,17 @@ bool PPCTTIImpl::enableAggressiveInterleaving(bool LoopHasReductions) {
   return LoopHasReductions;
 }
 
-bool PPCTTIImpl::enableMemCmpExpansion(unsigned &MaxLoadSize) {
-  MaxLoadSize = 8;
-  return true;
+const PPCTTIImpl::TTI::MemCmpExpansionOptions *
+PPCTTIImpl::enableMemCmpExpansion(bool IsZeroCmp) const {
+  static const auto Options = []() {
+    TTI::MemCmpExpansionOptions Options;
+    Options.LoadSizes.push_back(8);
+    Options.LoadSizes.push_back(4);
+    Options.LoadSizes.push_back(2);
+    Options.LoadSizes.push_back(1);
+    return Options;
+  }();
+  return &Options;
 }
 
 bool PPCTTIImpl::enableInterleavedAccessVectorization() {

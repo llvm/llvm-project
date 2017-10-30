@@ -128,6 +128,20 @@ void CheckVMASize();
 void RunMallocHooks(const void *ptr, uptr size);
 void RunFreeHooks(const void *ptr);
 
+class ReservedAddressRange {
+ public:
+  uptr Init(uptr size, const char *name = nullptr, uptr fixed_addr = 0);
+  uptr Map(uptr fixed_addr, uptr size, bool tolerate_enomem = false);
+  void Unmap(uptr addr, uptr size);
+  void *base() const { return base_; }
+  uptr size() const { return size_; }
+
+ private:
+  void* base_;
+  uptr size_;
+  const char* name_;
+};
+
 typedef void (*fill_profile_f)(uptr start, uptr rss, bool file,
                                /*out*/uptr *stats, uptr stats_size);
 

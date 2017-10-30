@@ -54,20 +54,7 @@ def updateReferenceResults(ProjName, ProjBuildMode):
     # Clean up the generated difference results.
     SATestBuild.cleanupReferenceResults(RefResultsPath)
 
-    # Remove the created .diffs file before adding.
-    removeDiffsSummaryFiles(RefResultsPath)
-
     runCmd('git add "%s"' % (RefResultsPath,))
-
-
-def removeDiffsSummaryFiles(RefResultsPath):
-    """
-    Remove all auto-generated .diffs files in reference data.
-    """
-    for (Dirpath, Dirnames, Filenames) in os.walk(RefResultsPath):
-        if SATestBuild.DiffsSummaryFileName in Filenames:
-            runCmd("rm '%s'" % os.path.join(
-                Dirpath, SATestBuild.DiffsSummaryFileName))
 
 
 def main(argv):

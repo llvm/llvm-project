@@ -225,6 +225,8 @@ BasicValueFactory::evalAPSInt(BinaryOperator::Opcode Op,
       // test these conditions symbolically.
 
       // FIXME: Expand these checks to include all undefined behavior.
+      if (V1.isSigned() && V1.isNegative())
+        return nullptr;
 
       if (V2.isSigned() && V2.isNegative())
         return nullptr;

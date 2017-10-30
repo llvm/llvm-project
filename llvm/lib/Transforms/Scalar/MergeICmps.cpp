@@ -625,8 +625,7 @@ PreservedAnalyses MergeICmps::runImpl(Function &F, const TargetLibraryInfo *TLI,
 
   // We only try merging comparisons if the target wants to expand memcmp later.
   // The rationale is to avoid turning small chains into memcmp calls.
-  unsigned MaxLoadSize;
-  if (!TTI->enableMemCmpExpansion(MaxLoadSize)) return PreservedAnalyses::all();
+  if (!TTI->enableMemCmpExpansion(true)) return PreservedAnalyses::all();
 
   bool MadeChange = false;
 

@@ -1758,9 +1758,10 @@ class MemCmpExpansion {
   Value *getMemCmpOneBlock();
 
  public:
-  MemCmpExpansion(CallInst *CI, uint64_t Size, unsigned MaxLoadSize,
-                  unsigned MaxNumLoads, unsigned NumLoadsPerBlock,
-                  const DataLayout &DL);
+  MemCmpExpansion(CallInst *CI, uint64_t Size,
+                  const TargetTransformInfo::MemCmpExpansionOptions &Options,
+                  unsigned MaxNumLoads, const bool IsUsedForZeroCmp,
+                  unsigned NumLoadsPerBlock, const DataLayout &DL);
 
   unsigned getNumBlocks();
   uint64_t getNumLoads() const { return LoadSequence.size(); }
@@ -1778,29 +1779,32 @@ class MemCmpExpansion {
 // return from.
 // 3. ResultBlock, block to branch to for early exit when a
 // LoadCmpBlock finds a difference.
-MemCmpExpansion::MemCmpExpansion(CallInst *const CI, uint64_t Size,
-                                 const unsigned MaxLoadSize,
-                                 const unsigned MaxNumLoads,
-                                 const unsigned LoadsPerBlock,
-                                 const DataLayout &TheDataLayout)
+MemCmpExpansion::MemCmpExpansion(
+    CallInst *const CI, uint64_t Size,
+    const TargetTransformInfo::MemCmpExpansionOptions &Options,
+    const unsigned MaxNumLoads, const bool IsUsedForZeroCmp,
+    const unsigned NumLoadsPerBlock, const DataLayout &TheDataLayout)
     : CI(CI),
       Size(Size),
-      MaxLoadSize(MaxLoadSize),
+      MaxLoadSize(0),
       NumLoadsNonOneByte(0),
-      NumLoadsPerBlock(LoadsPerBlock),
-      IsUsedForZeroCmp(isOnlyUsedInZeroEqualityComparison(CI)),
+      NumLoadsPerBlock(NumLoadsPerBlock),
+      IsUsedForZeroCmp(IsUsedForZeroCmp),
       DL(TheDataLayout),
       Builder(CI) {
   assert(Size > 0 && "zero blocks");
   // Scale the max size down if the target can load more bytes than we need.
-  while (this->MaxLoadSize > Size) {
-    this->MaxLoadSize /= 2;
+  size_t LoadSizeIndex = 0;
+  while (LoadSizeIndex < Options.LoadSizes.size() &&
+         Options.LoadSizes[LoadSizeIndex] > Size) {
+    ++LoadSizeIndex;
   }
+  this->MaxLoadSize = Options.LoadSizes[LoadSizeIndex];
   // Compute the decomposition.
-  unsigned LoadSize = this->MaxLoadSize;
   uint64_t CurSize = Size;
   uint64_t Offset = 0;
-  while (CurSize) {
+  while (CurSize && LoadSizeIndex < Options.LoadSizes.size()) {
+    const unsigned LoadSize = Options.LoadSizes[LoadSizeIndex];
     assert(LoadSize > 0 && "zero load size");
     const uint64_t NumLoadsForThisSize = CurSize / LoadSize;
     if (LoadSequence.size() + NumLoadsForThisSize > MaxNumLoads) {
@@ -1821,11 +1825,7 @@ MemCmpExpansion::MemCmpExpansion(CallInst *const CI, uint64_t Size,
       }
       CurSize = CurSize % LoadSize;
     }
-    // FIXME: This can result in a non-native load size (e.g. X86-32+SSE can
-    // load 16 and 4 but not 8), which throws the load count off (e.g. in the
-    // aforementioned case, 16 bytes will count for 2 loads but will generate
-    // 4).
-    LoadSize /= 2;
+    ++LoadSizeIndex;
   }
   assert(LoadSequence.size() <= MaxNumLoads && "broken invariant");
 }
@@ -2362,15 +2362,16 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
   }
 
   // TTI call to check if target would like to expand memcmp. Also, get the
-  // max LoadSize.
-  unsigned MaxLoadSize;
-  if (!TTI->enableMemCmpExpansion(MaxLoadSize)) return false;
+  // available load sizes.
+  const bool IsUsedForZeroCmp = isOnlyUsedInZeroEqualityComparison(CI);
+  const auto *const Options = TTI->enableMemCmpExpansion(IsUsedForZeroCmp);
+  if (!Options) return false;
 
   const unsigned MaxNumLoads =
       TLI->getMaxExpandSizeMemcmp(CI->getFunction()->optForSize());
 
-  MemCmpExpansion Expansion(CI, SizeVal, MaxLoadSize, MaxNumLoads,
-                            MemCmpNumLoadsPerBlock, *DL);
+  MemCmpExpansion Expansion(CI, SizeVal, *Options, MaxNumLoads,
+                            IsUsedForZeroCmp, MemCmpNumLoadsPerBlock, *DL);
 
   // Don't expand if this will require more loads than desired by the target.
   if (Expansion.getNumLoads() == 0) {

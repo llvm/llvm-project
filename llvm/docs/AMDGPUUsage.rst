@@ -1039,10 +1039,10 @@ non-AMD key names should be prefixed by "*vendor-name*.".
                                                   passed in the kernarg.
 
                                                 "HiddenCompletionAction"
-                                                  *TBD*
-
-                                                  .. TODO
-                                                     Add description.
+                                                  A global address space pointer
+                                                  to help link enqueued kernels into
+                                                  the ancestor tree for determining
+                                                  when the parent kernel has finished.
 
      "ValueType"       string         Required  Kernel argument value type. Only
                                                 present if "ValueKind" is

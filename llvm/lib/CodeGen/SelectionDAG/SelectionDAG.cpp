@@ -2416,22 +2416,23 @@ void SelectionDAG::computeKnownBits(SDValue Op, KnownBits &Known,
     break;
   }
   case ISD::SELECT:
-    computeKnownBits(Op.getOperand(2), Known, Depth+1);
+  case ISD::VSELECT:
+    computeKnownBits(Op.getOperand(2), Known, DemandedElts, Depth+1);
     // If we don't know any bits, early out.
     if (Known.isUnknown())
       break;
-    computeKnownBits(Op.getOperand(1), Known2, Depth+1);
+    computeKnownBits(Op.getOperand(1), Known2, DemandedElts, Depth+1);
 
     // Only known if known in both the LHS and RHS.
     Known.One &= Known2.One;
     Known.Zero &= Known2.Zero;
     break;
   case ISD::SELECT_CC:
-    computeKnownBits(Op.getOperand(3), Known, Depth+1);
+    computeKnownBits(Op.getOperand(3), Known, DemandedElts, Depth+1);
     // If we don't know any bits, early out.
     if (Known.isUnknown())
       break;
-    computeKnownBits(Op.getOperand(2), Known2, Depth+1);
+    computeKnownBits(Op.getOperand(2), Known2, DemandedElts, Depth+1);
 
     // Only known if known in both the LHS and RHS.
     Known.One &= Known2.One;
@@ -3182,15 +3183,16 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
 
   case ISD::SELECT:
   case ISD::VSELECT:
-    Tmp = ComputeNumSignBits(Op.getOperand(1), Depth+1);
+    Tmp = ComputeNumSignBits(Op.getOperand(1), DemandedElts, Depth+1);
     if (Tmp == 1) return 1;  // Early out.
-    Tmp2 = ComputeNumSignBits(Op.getOperand(2), Depth+1);
+    Tmp2 = ComputeNumSignBits(Op.getOperand(2), DemandedElts, Depth+1);
     return std::min(Tmp, Tmp2);
   case ISD::SELECT_CC:
-    Tmp = ComputeNumSignBits(Op.getOperand(2), Depth+1);
+    Tmp = ComputeNumSignBits(Op.getOperand(2), DemandedElts, Depth+1);
     if (Tmp == 1) return 1;  // Early out.
-    Tmp2 = ComputeNumSignBits(Op.getOperand(3), Depth+1);
+    Tmp2 = ComputeNumSignBits(Op.getOperand(3), DemandedElts, Depth+1);
     return std::min(Tmp, Tmp2);
+
   case ISD::SMIN:
   case ISD::SMAX:
   case ISD::UMIN:

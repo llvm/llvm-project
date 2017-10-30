@@ -2536,10 +2536,35 @@ bool X86TTIImpl::areInlineCompatible(const Function *Caller,
   return (CallerBits & CalleeBits) == CalleeBits;
 }
 
-bool X86TTIImpl::enableMemCmpExpansion(unsigned &MaxLoadSize) {
-  // TODO: We can increase these based on available vector ops.
-  MaxLoadSize = ST->is64Bit() ? 8 : 4;
-  return true;
+const X86TTIImpl::TTI::MemCmpExpansionOptions *
+X86TTIImpl::enableMemCmpExpansion(bool IsZeroCmp) const {
+  // Only enable vector loads for equality comparison.
+  // Right now the vector version is not as fast, see #33329.
+  static const auto ThreeWayOptions = [this]() {
+    TTI::MemCmpExpansionOptions Options;
+    if (ST->is64Bit()) {
+      Options.LoadSizes.push_back(8);
+    }
+    Options.LoadSizes.push_back(4);
+    Options.LoadSizes.push_back(2);
+    Options.LoadSizes.push_back(1);
+    return Options;
+  }();
+  static const auto EqZeroOptions = [this]() {
+    TTI::MemCmpExpansionOptions Options;
+    // TODO: enable AVX512 when the DAG is ready.
+    // if (ST->hasAVX512()) Options.LoadSizes.push_back(64);
+    if (ST->hasAVX2()) Options.LoadSizes.push_back(32);
+    if (ST->hasSSE2()) Options.LoadSizes.push_back(16);
+    if (ST->is64Bit()) {
+      Options.LoadSizes.push_back(8);
+    }
+    Options.LoadSizes.push_back(4);
+    Options.LoadSizes.push_back(2);
+    Options.LoadSizes.push_back(1);
+    return Options;
+  }();
+  return IsZeroCmp ? &EqZeroOptions : &ThreeWayOptions;
 }
 
 bool X86TTIImpl::enableInterleavedAccessVectorization() {

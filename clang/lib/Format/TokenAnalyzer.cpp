@@ -38,7 +38,10 @@ namespace format {
 // Code.
 std::unique_ptr<Environment>
 Environment::CreateVirtualEnvironment(StringRef Code, StringRef FileName,
-                                      ArrayRef<tooling::Range> Ranges) {
+                                      ArrayRef<tooling::Range> Ranges,
+                                      unsigned FirstStartColumn,
+                                      unsigned NextStartColumn,
+                                      unsigned LastStartColumn) {
   // This is referenced by `FileMgr` and will be released by `FileMgr` when it
   // is deleted.
   IntrusiveRefCntPtr<vfs::InMemoryFileSystem> InMemoryFileSystem(
@@ -70,9 +73,9 @@ Environment::CreateVirtualEnvironment(StringRef Code, StringRef FileName,
     SourceLocation End = Start.getLocWithOffset(Range.getLength());
     CharRanges.push_back(CharSourceRange::getCharRange(Start, End));
   }
-  return llvm::make_unique<Environment>(ID, std::move(FileMgr),
-                                        std::move(VirtualSM),
-                                        std::move(Diagnostics), CharRanges);
+  return llvm::make_unique<Environment>(
+      ID, std::move(FileMgr), std::move(VirtualSM), std::move(Diagnostics),
+      CharRanges, FirstStartColumn, NextStartColumn, LastStartColumn);
 }
 
 TokenAnalyzer::TokenAnalyzer(const Environment &Env, const FormatStyle &Style)
@@ -89,14 +92,16 @@ TokenAnalyzer::TokenAnalyzer(const Environment &Env, const FormatStyle &Style)
                      << "\n");
 }
 
-tooling::Replacements TokenAnalyzer::process() {
+std::pair<tooling::Replacements, unsigned> TokenAnalyzer::process() {
   tooling::Replacements Result;
-  FormatTokenLexer Tokens(Env.getSourceManager(), Env.getFileID(), Style,
-                          Encoding);
+  FormatTokenLexer Tokens(Env.getSourceManager(), Env.getFileID(),
+                          Env.getFirstStartColumn(), Style, Encoding);
 
-  UnwrappedLineParser Parser(Style, Tokens.getKeywords(), Tokens.lex(), *this);
+  UnwrappedLineParser Parser(Style, Tokens.getKeywords(),
+                             Env.getFirstStartColumn(), Tokens.lex(), *this);
   Parser.parse();
   assert(UnwrappedLines.rbegin()->empty());
+  unsigned Penalty = 0;
   for (unsigned Run = 0, RunE = UnwrappedLines.size(); Run + 1 != RunE; ++Run) {
     DEBUG(llvm::dbgs() << "Run " << Run << "...\n");
     SmallVector<AnnotatedLine *, 16> AnnotatedLines;
@@ -107,13 +112,13 @@ tooling::Replacements TokenAnalyzer::process() {
       Annotator.annotate(*AnnotatedLines.back());
     }
 
-    tooling::Replacements RunResult =
+    std::pair<tooling::Replacements, unsigned> RunResult =
         analyze(Annotator, AnnotatedLines, Tokens);
 
     DEBUG({
       llvm::dbgs() << "Replacements for run " << Run << ":\n";
-      for (tooling::Replacements::const_iterator I = RunResult.begin(),
-                                                 E = RunResult.end();
+      for (tooling::Replacements::const_iterator I = RunResult.first.begin(),
+                                                 E = RunResult.first.end();
            I != E; ++I) {
         llvm::dbgs() << I->toString() << "\n";
       }
@@ -121,17 +126,19 @@ tooling::Replacements TokenAnalyzer::process() {
     for (unsigned i = 0, e = AnnotatedLines.size(); i != e; ++i) {
       delete AnnotatedLines[i];
     }
-    for (const auto &R : RunResult) {
+
+    Penalty += RunResult.second;
+    for (const auto &R : RunResult.first) {
       auto Err = Result.add(R);
       // FIXME: better error handling here. For now, simply return an empty
       // Replacements to indicate failure.
       if (Err) {
         llvm::errs() << llvm::toString(std::move(Err)) << "\n";
-        return tooling::Replacements();
+        return {tooling::Replacements(), 0};
       }
     }
   }
-  return Result;
+  return {Result, Penalty};
 }
 
 void TokenAnalyzer::consumeUnwrappedLine(const UnwrappedLine &TheLine) {

@@ -20,6 +20,8 @@
 #include "FormatToken.h"
 #include "clang/Format/Format.h"
 #include "llvm/Support/Regex.h"
+#include <map>
+#include <tuple>
 
 namespace clang {
 class SourceManager;
@@ -30,7 +32,16 @@ class AnnotatedLine;
 struct FormatToken;
 struct LineState;
 struct ParenState;
+struct RawStringFormatStyleManager;
 class WhitespaceManager;
+
+struct RawStringFormatStyleManager {
+  llvm::StringMap<FormatStyle> DelimiterStyle;
+
+  RawStringFormatStyleManager(const FormatStyle &CodeStyle);
+
+  llvm::Optional<FormatStyle> get(StringRef Delimiter) const;
+};
 
 class ContinuationIndenter {
 public:
@@ -44,9 +55,11 @@ public:
                        bool BinPackInconclusiveFunctions);
 
   /// \brief Get the initial state, i.e. the state after placing \p Line's
-  /// first token at \p FirstIndent.
-  LineState getInitialState(unsigned FirstIndent, const AnnotatedLine *Line,
-                            bool DryRun);
+  /// first token at \p FirstIndent. When reformatting a fragment of code, as in
+  /// the case of formatting inside raw string literals, \p FirstStartColumn is
+  /// the column at which the state of the parent formatter is.
+  LineState getInitialState(unsigned FirstIndent, unsigned FirstStartColumn,
+                            const AnnotatedLine *Line, bool DryRun);
 
   // FIXME: canBreak and mustBreak aren't strictly indentation-related. Find a
   // better home.
@@ -88,15 +101,24 @@ private:
   /// \brief Update 'State' with the next token opening a nested block.
   void moveStateToNewBlock(LineState &State);
 
+  /// \brief Reformats a raw string literal.
+  /// 
+  /// \returns An extra penalty induced by reformatting the token.
+  unsigned reformatRawStringLiteral(const FormatToken &Current,
+                                    unsigned StartColumn, LineState &State,
+                                    StringRef Delimiter,
+                                    const FormatStyle &RawStringStyle,
+                                    bool DryRun);
+
   /// \brief If the current token sticks out over the end of the line, break
   /// it if possible.
   ///
   /// \returns An extra penalty if a token was broken, otherwise 0.
   ///
-  /// The returned penalty will cover the cost of the additional line breaks and
-  /// column limit violation in all lines except for the last one. The penalty
-  /// for the column limit violation in the last line (and in single line
-  /// tokens) is handled in \c addNextStateToQueue.
+  /// The returned penalty will cover the cost of the additional line breaks
+  /// and column limit violation in all lines except for the last one. The
+  /// penalty for the column limit violation in the last line (and in single
+  /// line tokens) is handled in \c addNextStateToQueue.
   unsigned breakProtrudingToken(const FormatToken &Current, LineState &State,
                                 bool DryRun);
 
@@ -143,6 +165,7 @@ private:
   encoding::Encoding Encoding;
   bool BinPackInconclusiveFunctions;
   llvm::Regex CommentPragmasRegex;
+  const RawStringFormatStyleManager RawStringFormats;
 };
 
 struct ParenState {

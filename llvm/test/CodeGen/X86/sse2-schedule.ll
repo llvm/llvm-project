@@ -307,6 +307,67 @@ define <2 x double> @test_andnotpd(<2 x double> %a0, <2 x double> %a1, <2 x doub
   ret <2 x double> %10
 }
 
+define void @test_clflush(i8* %p){
+; GENERIC-LABEL: test_clflush:
+; GENERIC:       # BB#0:
+; GENERIC-NEXT:    clflush (%rdi) # sched: [5:1.00]
+; GENERIC-NEXT:    retq # sched: [1:1.00]
+;
+; ATOM-LABEL: test_clflush:
+; ATOM:       # BB#0:
+; ATOM-NEXT:    clflush (%rdi) # sched: [1:1.00]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    retq # sched: [79:39.50]
+;
+; SLM-LABEL: test_clflush:
+; SLM:       # BB#0:
+; SLM-NEXT:    clflush (%rdi) # sched: [3:1.00]
+; SLM-NEXT:    retq # sched: [4:1.00]
+;
+; SANDY-LABEL: test_clflush:
+; SANDY:       # BB#0:
+; SANDY-NEXT:    clflush (%rdi) # sched: [5:1.00]
+; SANDY-NEXT:    retq # sched: [1:1.00]
+;
+; HASWELL-LABEL: test_clflush:
+; HASWELL:       # BB#0:
+; HASWELL-NEXT:    clflush (%rdi) # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; BROADWELL-LABEL: test_clflush:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    clflush (%rdi) # sched: [2:1.00]
+; BROADWELL-NEXT:    retq # sched: [7:1.00]
+;
+; SKYLAKE-LABEL: test_clflush:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    clflush (%rdi) # sched: [2:1.00]
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
+;
+; SKX-LABEL: test_clflush:
+; SKX:       # BB#0:
+; SKX-NEXT:    clflush (%rdi) # sched: [2:1.00]
+; SKX-NEXT:    retq # sched: [7:1.00]
+;
+; BTVER2-LABEL: test_clflush:
+; BTVER2:       # BB#0:
+; BTVER2-NEXT:    clflush (%rdi) # sched: [5:1.00]
+; BTVER2-NEXT:    retq # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_clflush:
+; ZNVER1:       # BB#0:
+; ZNVER1-NEXT:    clflush (%rdi) # sched: [8:0.50]
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
+  tail call void @llvm.x86.sse2.clflush(i8* %p)
+  ret void
+}
+declare void @llvm.x86.sse2.clflush(i8*) nounwind
+
 define <2 x double> @test_cmppd(<2 x double> %a0, <2 x double> %a1, <2 x double> *%a2) {
 ; GENERIC-LABEL: test_cmppd:
 ; GENERIC:       # BB#0:

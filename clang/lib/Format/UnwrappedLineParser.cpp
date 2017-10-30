@@ -225,6 +225,7 @@ private:
 
 UnwrappedLineParser::UnwrappedLineParser(const FormatStyle &Style,
                                          const AdditionalKeywords &Keywords,
+                                         unsigned FirstStartColumn,
                                          ArrayRef<FormatToken *> Tokens,
                                          UnwrappedLineConsumer &Callback)
     : Line(new UnwrappedLine), MustBreakBeforeNextToken(false),
@@ -232,7 +233,7 @@ UnwrappedLineParser::UnwrappedLineParser(const FormatStyle &Style,
       CommentPragmasRegex(Style.CommentPragmas), Tokens(nullptr),
       Callback(Callback), AllTokens(Tokens), PPBranchLevel(-1),
       IfNdefCondition(nullptr), FoundIncludeGuardStart(false),
-      IncludeGuardRejected(false) {}
+      IncludeGuardRejected(false), FirstStartColumn(FirstStartColumn) {}
 
 void UnwrappedLineParser::reset() {
   PPBranchLevel = -1;
@@ -247,10 +248,12 @@ void UnwrappedLineParser::reset() {
   CurrentLines = &Lines;
   DeclarationScopeStack.clear();
   PPStack.clear();
+  Line->FirstStartColumn = FirstStartColumn;
 }
 
 void UnwrappedLineParser::parse() {
   IndexedTokenSource TokenSource(AllTokens);
+  Line->FirstStartColumn = FirstStartColumn;
   do {
     DEBUG(llvm::dbgs() << "----\n");
     reset();
@@ -2193,7 +2196,8 @@ void UnwrappedLineParser::parseJavaScriptEs6ImportExport() {
 
 LLVM_ATTRIBUTE_UNUSED static void printDebugInfo(const UnwrappedLine &Line,
                                                  StringRef Prefix = "") {
-  llvm::dbgs() << Prefix << "Line(" << Line.Level << ")"
+  llvm::dbgs() << Prefix << "Line(" << Line.Level
+               << ", FSC=" << Line.FirstStartColumn << ")"
                << (Line.InPPDirective ? " MACRO" : "") << ": ";
   for (std::list<UnwrappedLineNode>::const_iterator I = Line.Tokens.begin(),
                                                     E = Line.Tokens.end();
@@ -2226,6 +2230,7 @@ void UnwrappedLineParser::addUnwrappedLine() {
   CurrentLines->push_back(std::move(*Line));
   Line->Tokens.clear();
   Line->MatchingOpeningBlockLineIndex = UnwrappedLine::kInvalidIndex;
+  Line->FirstStartColumn = 0;
   if (CurrentLines == &Lines && !PreprocessorDirectives.empty()) {
     CurrentLines->append(
         std::make_move_iterator(PreprocessorDirectives.begin()),

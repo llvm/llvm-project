@@ -63,7 +63,8 @@ public:
   /// @{
 
   bool enableAggressiveInterleaving(bool LoopHasReductions);
-  bool enableMemCmpExpansion(unsigned &MaxLoadSize);
+  const TTI::MemCmpExpansionOptions *enableMemCmpExpansion(
+      bool IsZeroCmp) const;
   bool enableInterleavedAccessVectorization();
   unsigned getNumberOfRegisters(bool Vector);
   unsigned getRegisterBitWidth(bool Vector) const;
