@@ -255,7 +255,7 @@ public:
   InputSection *CopyRelSec = nullptr;
 
   uint64_t Value; // st_value
-  uint32_t Size;  // st_size
+  uint64_t Size;  // st_size
   uint32_t Alignment;
 };
 
