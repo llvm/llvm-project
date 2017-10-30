@@ -74,7 +74,7 @@ static void resolveReloc(InputSectionBase &Sec, RelT &Rel,
     return;
   }
 
-  if (!B.isInCurrentDSO())
+  if (!B.isInCurrentOutput())
     for (InputSectionBase *Sec : CNamedSections.lookup(B.getName()))
       Fn(Sec, 0);
 }

@@ -52,6 +52,7 @@ private:
   void createSections();
   void forEachRelSec(std::function<void(InputSectionBase &)> Fn);
   void sortSections();
+  void sortInputSections();
   void finalizeSections();
   void addPredefinedSections();
   void setReservedSymbolSections();
@@ -248,7 +249,7 @@ template <class ELFT> void Writer<ELFT>::run() {
     return;
 
   // Handle -Map option.
-  writeMapFile<ELFT>();
+  writeMapFile();
   if (errorCount())
     return;
 
@@ -749,7 +750,7 @@ static DefinedRegular *
 addOptionalRegular(StringRef Name, SectionBase *Sec, uint64_t Val,
                    uint8_t StOther = STV_HIDDEN, uint8_t Binding = STB_GLOBAL) {
   SymbolBody *S = Symtab->find(Name);
-  if (!S || S->isInCurrentDSO())
+  if (!S || S->isInCurrentOutput())
     return nullptr;
   Symbol *Sym = Symtab->addRegular<ELFT>(Name, StOther, STT_NOTYPE, Val,
                                          /*Size=*/0, Binding, Sec,
@@ -837,31 +838,6 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
   ElfSym::Edata2 = Add("_edata", -1);
 }
 
-// Sort input sections by section name suffixes for
-// __attribute__((init_priority(N))).
-static void sortInitFini(OutputSection *Cmd) {
-  if (Cmd)
-    Cmd->sortInitFini();
-}
-
-// Sort input sections by the special rule for .ctors and .dtors.
-static void sortCtorsDtors(OutputSection *Cmd) {
-  if (Cmd)
-    Cmd->sortCtorsDtors();
-}
-
-// Sort input sections using the list provided by --symbol-ordering-file.
-static void sortBySymbolsOrder() {
-  if (Config->SymbolOrderingFile.empty())
-    return;
-
-  // Sort sections by priority.
-  DenseMap<SectionBase *, int> SectionOrder = buildSectionOrder();
-  for (BaseCommand *Base : Script->SectionCommands)
-    if (auto *Sec = dyn_cast<OutputSection>(Base))
-      Sec->sort([&](InputSectionBase *S) { return SectionOrder.lookup(S); });
-}
-
 template <class ELFT>
 void Writer<ELFT>::forEachRelSec(std::function<void(InputSectionBase &)> Fn) {
   // Scan all relocations. Each relocation goes through a series
@@ -888,11 +864,6 @@ template <class ELFT> void Writer<ELFT>::createSections() {
                                  Vec.end());
 
   Script->fabricateDefaultCommands();
-  sortBySymbolsOrder();
-  sortInitFini(findSection(".init_array"));
-  sortInitFini(findSection(".fini_array"));
-  sortCtorsDtors(findSection(".ctors"));
-  sortCtorsDtors(findSection(".dtors"));
 }
 
 // This function generates assignments for predefined symbols (e.g. _end or
@@ -915,37 +886,34 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
       LastRO = P;
   }
 
-  // _end is the first location after the uninitialized data region.
-  if (Last) {
-    if (ElfSym::End1)
-      ElfSym::End1->Section = Last->LastSec;
-    if (ElfSym::End2)
-      ElfSym::End2->Section = Last->LastSec;
-  }
-
-  // _etext is the first location after the last read-only loadable segment.
   if (LastRO) {
+    // _etext is the first location after the last read-only loadable segment.
     if (ElfSym::Etext1)
       ElfSym::Etext1->Section = LastRO->LastSec;
     if (ElfSym::Etext2)
       ElfSym::Etext2->Section = LastRO->LastSec;
   }
 
-  // _edata points to the end of the last non SHT_NOBITS section.
-  if (LastRW) {
-    size_t I = 0;
-    for (; I < OutputSections.size(); ++I)
-      if (OutputSections[I] == LastRW->FirstSec)
+  if (Last) {
+    // _edata points to the end of the last mapped initialized section.
+    OutputSection *Edata = nullptr;
+    for (OutputSection *OS : OutputSections) {
+      if (OS->Type != SHT_NOBITS)
+        Edata = OS;
+      if (OS == Last->LastSec)
         break;
-
-    for (; I < OutputSections.size(); ++I)
-      if (OutputSections[I]->Type == SHT_NOBITS)
-        break;
+    }
 
     if (ElfSym::Edata1)
-      ElfSym::Edata1->Section = OutputSections[I - 1];
+      ElfSym::Edata1->Section = Edata;
     if (ElfSym::Edata2)
-      ElfSym::Edata2->Section = OutputSections[I - 1];
+      ElfSym::Edata2->Section = Edata;
+
+    // _end is the first location after the uninitialized data region.
+    if (ElfSym::End1)
+      ElfSym::End1->Section = Last->LastSec;
+    if (ElfSym::End2)
+      ElfSym::End2->Section = Last->LastSec;
   }
 
   if (ElfSym::Bss)
@@ -1053,6 +1021,34 @@ findOrphanPos(std::vector<BaseCommand *>::iterator B,
   return I;
 }
 
+// If no layout was provided by linker script, we want to apply default
+// sorting for special input sections and handle --symbol-ordering-file.
+template <class ELFT> void Writer<ELFT>::sortInputSections() {
+  assert(!Script->HasSectionsCommand);
+
+  // Sort input sections by priority using the list provided
+  // by --symbol-ordering-file.
+  DenseMap<SectionBase *, int> Order = buildSectionOrder();
+  if (!Order.empty())
+    for (BaseCommand *Base : Script->SectionCommands)
+      if (auto *Sec = dyn_cast<OutputSection>(Base))
+        if (Sec->Live)
+          Sec->sort([&](InputSectionBase *S) { return Order.lookup(S); });
+
+  // Sort input sections by section name suffixes for
+  // __attribute__((init_priority(N))).
+  if (OutputSection *Sec = findSection(".init_array"))
+    Sec->sortInitFini();
+  if (OutputSection *Sec = findSection(".fini_array"))
+    Sec->sortInitFini();
+
+  // Sort input sections by the special rule for .ctors and .dtors.
+  if (OutputSection *Sec = findSection(".ctors"))
+    Sec->sortCtorsDtors();
+  if (OutputSection *Sec = findSection(".dtors"))
+    Sec->sortCtorsDtors();
+}
+
 template <class ELFT> void Writer<ELFT>::sortSections() {
   Script->adjustSectionsBeforeSorting();
 
@@ -1066,8 +1062,9 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
       Sec->SortRank = getSectionRank(Sec);
 
   if (!Script->HasSectionsCommand) {
-    // We know that all the OutputSections are contiguous in
-    // this case.
+    sortInputSections();
+
+    // We know that all the OutputSections are contiguous in this case.
     auto E = Script->SectionCommands.end();
     auto I = Script->SectionCommands.begin();
     auto IsSection = [](BaseCommand *Base) { return isa<OutputSection>(Base); };
@@ -1223,7 +1220,7 @@ static bool computeIsPreemptible(const SymbolBody &B) {
 
   // At this point copy relocations have not been created yet, so any
   // symbol that is not defined locally is preemptible.
-  if (!B.isInCurrentDSO())
+  if (!B.isInCurrentOutput())
     return true;
 
   // If we have a dynamic list it specifies which local symbols are preemptible.

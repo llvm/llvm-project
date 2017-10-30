@@ -227,10 +227,7 @@ template <class ELFT> bool ObjFile<ELFT>::shouldMerge(const Elf_Shdr &Sec) {
 
   // Do not merge sections if generating a relocatable object. It makes
   // the code simpler because we do not need to update relocation addends
-  // to reflect changes introduced by merging. Instead of that we write
-  // such "merge" sections into separate OutputSections and keep SHF_MERGE
-  // / SHF_STRINGS flags and sh_entsize value to be able to perform merging
-  // later during a final linking.
+  // to reflect changes introduced by merging.
   if (Config->Relocatable)
     return false;
 
@@ -514,33 +511,21 @@ template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
 }
 
 template <class ELFT>
-InputSectionBase *ObjFile<ELFT>::getSection(const Elf_Sym &Sym) const {
-  uint32_t Index = this->getSectionIndex(Sym);
+InputSectionBase *ObjFile<ELFT>::getSection(uint32_t Index) const {
+  if (Index == 0)
+    return nullptr;
   if (Index >= this->Sections.size())
     fatal(toString(this) + ": invalid section index: " + Twine(Index));
-  InputSectionBase *S = this->Sections[Index];
 
-  // We found that GNU assembler 2.17.50 [FreeBSD] 2007-07-03 could
-  // generate broken objects. STT_SECTION/STT_NOTYPE symbols can be
-  // associated with SHT_REL[A]/SHT_SYMTAB/SHT_STRTAB sections.
-  // In this case it is fine for section to be null here as we do not
-  // allocate sections of these types.
-  if (!S) {
-    if (Index == 0 || Sym.getType() == STT_SECTION ||
-        Sym.getType() == STT_NOTYPE)
-      return nullptr;
-    fatal(toString(this) + ": invalid section index: " + Twine(Index));
-  }
-
-  if (S == &InputSection::Discarded)
-    return S;
-  return S->Repl;
+  if (InputSectionBase *Sec = this->Sections[Index])
+    return Sec->Repl;
+  return nullptr;
 }
 
 template <class ELFT>
 SymbolBody *ObjFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
   int Binding = Sym->getBinding();
-  InputSectionBase *Sec = getSection(*Sym);
+  InputSectionBase *Sec = getSection(this->getSectionIndex(*Sym));
 
   uint8_t StOther = Sym->st_other;
   uint8_t Type = Sym->getType();
@@ -635,14 +620,6 @@ template <class ELFT>
 SharedFile<ELFT>::SharedFile(MemoryBufferRef M, StringRef DefaultSoName)
     : ELFFileBase<ELFT>(Base::SharedKind, M), SoName(DefaultSoName),
       AsNeeded(Config->AsNeeded) {}
-
-template <class ELFT>
-const typename ELFT::Shdr *
-SharedFile<ELFT>::getSection(const Elf_Sym &Sym) const {
-  return check(
-      this->getObj().getSection(&Sym, this->ELFSyms, this->SymtabSHNDX),
-      toString(this));
-}
 
 // Partially parse the shared object file so that we can call
 // getSoName on this object.
@@ -742,6 +719,10 @@ template <class ELFT> void SharedFile<ELFT>::parseRest() {
   const Elf_Versym *Versym = nullptr;
   std::vector<const Elf_Verdef *> Verdefs = parseVerdefs(Versym);
 
+  ArrayRef<Elf_Shdr> Sections =
+      check(this->getObj().sections(), toString(this));
+
+  // Add symbols to the symbol table.
   Elf_Sym_Range Syms = this->getGlobalELFSyms();
   for (const Elf_Sym &Sym : Syms) {
     unsigned VersymIndex = 0;
@@ -761,7 +742,7 @@ template <class ELFT> void SharedFile<ELFT>::parseRest() {
     // Ignore local symbols.
     if (Versym && VersymIndex == VER_NDX_LOCAL)
       continue;
-    const Elf_Verdef *V = nullptr;
+    const Elf_Verdef *Ver = nullptr;
     if (VersymIndex != VER_NDX_GLOBAL) {
       if (VersymIndex >= Verdefs.size()) {
         error("corrupt input file: version definition index " +
@@ -769,18 +750,30 @@ template <class ELFT> void SharedFile<ELFT>::parseRest() {
               " is out of bounds\n>>> defined in " + toString(this));
         continue;
       }
-      V = Verdefs[VersymIndex];
+      Ver = Verdefs[VersymIndex];
+    }
+
+    // We do not usually care about alignments of data in shared object
+    // files because the loader takes care of it. However, if we promote a
+    // DSO symbol to point to .bss due to copy relocation, we need to keep
+    // the original alignment requirements. We infer it here.
+    uint32_t Alignment = 1;
+    if (Sym.st_value)
+      Alignment = 1ULL << countTrailingZeros((uint64_t)Sym.st_value);
+    if (0 < Sym.st_shndx && Sym.st_shndx < Sections.size()) {
+      uint32_t SecAlign = Sections[Sym.st_shndx].sh_addralign;
+      Alignment = std::min(Alignment, SecAlign);
     }
 
     if (!Hidden)
-      Symtab->addShared(Name, this, Sym, V);
+      Symtab->addShared(Name, this, Sym, Alignment, Ver);
 
     // Also add the symbol with the versioned name to handle undefined symbols
     // with explicit versions.
-    if (V) {
-      StringRef VerName = this->StringTable.data() + V->getAux()->vda_name;
+    if (Ver) {
+      StringRef VerName = this->StringTable.data() + Ver->getAux()->vda_name;
       Name = Saver.save(Name + "@" + VerName);
-      Symtab->addShared(Name, this, Sym, V);
+      Symtab->addShared(Name, this, Sym, Alignment, Ver);
     }
   }
 }

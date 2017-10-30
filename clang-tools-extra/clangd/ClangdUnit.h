@@ -289,14 +289,15 @@ struct CodeCompleteOptions {
 
 /// Get code completions at a specified \p Pos in \p FileName.
 std::vector<CompletionItem>
-codeComplete(PathRef FileName, tooling::CompileCommand Command,
+codeComplete(PathRef FileName, const tooling::CompileCommand &Command,
              PrecompiledPreamble const *Preamble, StringRef Contents,
              Position Pos, IntrusiveRefCntPtr<vfs::FileSystem> VFS,
              std::shared_ptr<PCHContainerOperations> PCHs,
              clangd::CodeCompleteOptions Opts, clangd::Logger &Logger);
 
 /// Get signature help at a specified \p Pos in \p FileName.
-SignatureHelp signatureHelp(PathRef FileName, tooling::CompileCommand Command,
+SignatureHelp signatureHelp(PathRef FileName,
+                            const tooling::CompileCommand &Command,
                             PrecompiledPreamble const *Preamble,
                             StringRef Contents, Position Pos,
                             IntrusiveRefCntPtr<vfs::FileSystem> VFS,
