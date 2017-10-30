@@ -6,8 +6,8 @@ define i32 @_Z3foov() {
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    subl $24, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    subl $16, %esp
+; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    .cfi_offset %esi, -8
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    movw $10959, {{[0-9]+}}(%esp) # imm = 0x2ACF
@@ -29,13 +29,12 @@ define i32 @_Z3foov() {
 ; CHECK-NEXT:    andb $1, %al
 ; CHECK-NEXT:    movzbl %al, %edx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi # 4-byte Reload
-; CHECK-NEXT:    subl %edx, %esi
+; CHECK-NEXT:    cmpl %edx, %esi
 ; CHECK-NEXT:    setl %al
 ; CHECK-NEXT:    andb $1, %al
 ; CHECK-NEXT:    movzbl %al, %edx
 ; CHECK-NEXT:    xorl $-1, %edx
 ; CHECK-NEXT:    cmpl $0, %edx
-; CHECK-NEXT:    movl %esi, {{[0-9]+}}(%esp) # 4-byte Spill
 ; CHECK-NEXT:    movb %cl, {{[0-9]+}}(%esp) # 1-byte Spill
 ; CHECK-NEXT:    jne .LBB0_4
 ; CHECK-NEXT:  # BB#3: # %lor.rhs4
@@ -50,7 +49,7 @@ define i32 @_Z3foov() {
 ; CHECK-NEXT:    movw %cx, %dx
 ; CHECK-NEXT:    movw %dx, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    addl $24, %esp
+; CHECK-NEXT:    addl $16, %esp
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    retl
 entry:

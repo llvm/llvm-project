@@ -1342,6 +1342,7 @@ bool X86FastISel::X86SelectLoad(const Instruction *I) {
 }
 
 static unsigned X86ChooseCmpOpcode(EVT VT, const X86Subtarget *Subtarget) {
+  bool HasAVX512 = Subtarget->hasAVX512();
   bool HasAVX = Subtarget->hasAVX();
   bool X86ScalarSSEf32 = Subtarget->hasSSE1();
   bool X86ScalarSSEf64 = Subtarget->hasSSE2();
@@ -1353,9 +1354,9 @@ static unsigned X86ChooseCmpOpcode(EVT VT, const X86Subtarget *Subtarget) {
   case MVT::i32: return X86::CMP32rr;
   case MVT::i64: return X86::CMP64rr;
   case MVT::f32:
-    return X86ScalarSSEf32 ? (HasAVX ? X86::VUCOMISSrr : X86::UCOMISSrr) : 0;
+    return X86ScalarSSEf32 ? (HasAVX512 ? X86::VUCOMISSZrr : HasAVX ? X86::VUCOMISSrr : X86::UCOMISSrr) : 0;
   case MVT::f64:
-    return X86ScalarSSEf64 ? (HasAVX ? X86::VUCOMISDrr : X86::UCOMISDrr) : 0;
+    return X86ScalarSSEf64 ? (HasAVX512 ? X86::VUCOMISDZrr : HasAVX ? X86::VUCOMISDrr : X86::UCOMISDrr) : 0;
   }
 }
 
@@ -1426,9 +1427,6 @@ bool X86FastISel::X86SelectCmp(const Instruction *I) {
 
   MVT VT;
   if (!isTypeLegal(I->getOperand(0)->getType(), VT))
-    return false;
-
-  if (I->getType()->isIntegerTy(1) && Subtarget->hasAVX512())
     return false;
 
   // Try to optimize or fold the cmp.

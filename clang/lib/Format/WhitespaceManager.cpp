@@ -67,6 +67,11 @@ void WhitespaceManager::addUntouchableToken(const FormatToken &Tok,
                            /*IsInsideToken=*/false));
 }
 
+llvm::Error
+WhitespaceManager::addReplacement(const tooling::Replacement &Replacement) {
+  return Replaces.add(Replacement);
+}
+
 void WhitespaceManager::replaceWhitespaceInToken(
     const FormatToken &Tok, unsigned Offset, unsigned ReplaceChars,
     StringRef PreviousPostfix, StringRef CurrentPrefix, bool InPPDirective,

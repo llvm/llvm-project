@@ -36,7 +36,7 @@ enum LexerState {
 
 class FormatTokenLexer {
 public:
-  FormatTokenLexer(const SourceManager &SourceMgr, FileID ID,
+  FormatTokenLexer(const SourceManager &SourceMgr, FileID ID, unsigned Column,
                    const FormatStyle &Style, encoding::Encoding Encoding);
 
   ArrayRef<FormatToken *> lex();

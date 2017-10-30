@@ -8,10 +8,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/SValExplainer.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
+#include "clang/StaticAnalyzer/Core/IssueHash.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "clang/StaticAnalyzer/Checkers/SValExplainer.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ScopedPrinter.h"
 
@@ -41,6 +42,7 @@ class ExprInspectionChecker : public Checker<eval::Call, check::DeadSymbols,
   void analyzerExplain(const CallExpr *CE, CheckerContext &C) const;
   void analyzerPrintState(const CallExpr *CE, CheckerContext &C) const;
   void analyzerGetExtent(const CallExpr *CE, CheckerContext &C) const;
+  void analyzerHashDump(const CallExpr *CE, CheckerContext &C) const;
 
   typedef void (ExprInspectionChecker::*FnCheck)(const CallExpr *,
                                                  CheckerContext &C) const;
@@ -79,6 +81,7 @@ bool ExprInspectionChecker::evalCall(const CallExpr *CE,
           &ExprInspectionChecker::analyzerPrintState)
     .Case("clang_analyzer_numTimesReached",
           &ExprInspectionChecker::analyzerNumTimesReached)
+    .Case("clang_analyzer_hashDump", &ExprInspectionChecker::analyzerHashDump)
     .Default(nullptr);
 
   if (!Handler)
@@ -280,7 +283,18 @@ void ExprInspectionChecker::analyzerCrash(const CallExpr *CE,
   LLVM_BUILTIN_TRAP;
 }
 
+void ExprInspectionChecker::analyzerHashDump(const CallExpr *CE,
+                                             CheckerContext &C) const {
+  const LangOptions &Opts = C.getLangOpts();
+  const SourceManager &SM = C.getSourceManager();
+  FullSourceLoc FL(CE->getArg(0)->getLocStart(), SM);
+  std::string HashContent =
+      GetIssueString(SM, FL, getCheckName().getName(), "Category",
+                     C.getLocationContext()->getDecl(), Opts);
+
+  reportBug(HashContent, C);
+}
+
 void ento::registerExprInspectionChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<ExprInspectionChecker>();
 }
-
