@@ -242,11 +242,10 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
             : &ARM::ValueMappings[ARM::GPR3OpsIdx];
     break;
   }
-  case G_FADD: {
+  case G_FADD:
+  case G_FSUB: {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    assert((Ty.getSizeInBits() == 32 || Ty.getSizeInBits() == 64) &&
-           "Unsupported size for G_FADD");
-    OperandsMapping = Ty.getSizeInBits() == 64
+    OperandsMapping =Ty.getSizeInBits() == 64
                           ? &ARM::ValueMappings[ARM::DPR3OpsIdx]
                           : &ARM::ValueMappings[ARM::SPR3OpsIdx];
     break;

@@ -4596,7 +4596,7 @@ def : Pat<(i32 (bitreverse i32:$A)),
 // n = ((n >> 2) & 0x3333333333333333) | ((n << 2) & 0xCCCCCCCCCCCCCCCC);
 // Step 3: 4-bit swap (swap odd 4-bit and even 4-bit):
 // n = ((n >> 4) & 0x0F0F0F0F0F0F0F0F) | ((n << 4) & 0xF0F0F0F0F0F0F0F0);
-// Step 4: byte reverse (Suppose n = [B1,B2,B3,B4,B5,B6,B7,B8]):
+// Step 4: byte reverse (Suppose n = [B0,B1,B2,B3,B4,B5,B6,B7]):
 // Apply the same byte reverse algorithm mentioned above for the fast 32-bit
 // reverse to both the high 32 bit and low 32 bit of the 64 bit value. And
 // then OR them together to get the final result.
@@ -4618,92 +4618,55 @@ def DWMaskValues {
   dag Hi4 = (ORI8 (ORIS8 (RLDICR MaskValues64.Hi4, 32, 31), 0xF0F0), 0xF0F0);
 }
 
-def DWShift1 {
-  dag Right = (RLDICL $A, 63, 1);
-  dag Left = (RLDICR $A, 1, 62);
+def DWSwapInByte {
+  dag Swap1 = (OR8 (AND8 (RLDICL $A, 63, 1), DWMaskValues.Lo1),
+                   (AND8 (RLDICR $A, 1, 62), DWMaskValues.Hi1));
+  dag Swap2 = (OR8 (AND8 (RLDICL DWSwapInByte.Swap1, 62, 2), DWMaskValues.Lo2),
+                   (AND8 (RLDICR DWSwapInByte.Swap1, 2, 61), DWMaskValues.Hi2));
+  dag Swap4 = (OR8 (AND8 (RLDICL DWSwapInByte.Swap2, 60, 4), DWMaskValues.Lo4),
+                   (AND8 (RLDICR DWSwapInByte.Swap2, 4, 59), DWMaskValues.Hi4));
 }
 
-def DWSwap1 {
-  dag Bit = (OR8 (AND8 DWShift1.Right, DWMaskValues.Lo1),
-                 (AND8 DWShift1.Left, DWMaskValues.Hi1));
+// Intra-byte swap is done, now start inter-byte swap.
+def DWBytes4567 {
+  dag Word = (i32 (EXTRACT_SUBREG DWSwapInByte.Swap4, sub_32));
 }
 
-def DWShift2 {
-  dag Right = (RLDICL DWSwap1.Bit, 62, 2);
-  dag Left = (RLDICR DWSwap1.Bit, 2, 61);
+def DWBytes7456 {
+  dag Word = (RLWINM DWBytes4567.Word, 24, 0, 31);
 }
 
-def DWSwap2 {
-  dag Bits = (OR8 (AND8 DWShift2.Right, DWMaskValues.Lo2),
-                  (AND8 DWShift2.Left, DWMaskValues.Hi2));
+def DWBytes7656 {
+  dag Word = (RLWIMI DWBytes7456.Word, DWBytes4567.Word, 8, 8, 15);
 }
 
-def DWShift4 {
-  dag Right = (RLDICL DWSwap2.Bits, 60, 4);
-  dag Left = (RLDICR DWSwap2.Bits, 4, 59);
+// B7 B6 B5 B4 in the right order
+def DWBytes7654 {
+  dag Word = (RLWIMI DWBytes7656.Word, DWBytes4567.Word, 8, 24, 31);
+  dag DWord =
+    (i64 (INSERT_SUBREG (i64 (IMPLICIT_DEF)), DWBytes7654.Word, sub_32));
 }
 
-def DWSwap4 {
-  dag Bits = (OR8 (AND8 DWShift4.Right, DWMaskValues.Lo4),
-                  (AND8 DWShift4.Left, DWMaskValues.Hi4));
+def DWBytes0123 {
+  dag Word = (i32 (EXTRACT_SUBREG (RLDICL DWSwapInByte.Swap4, 32, 32), sub_32));
 }
 
-// Bit swap is done, now start byte swap.
-def DWExtractLo32 {
-  dag SubReg = (i32 (EXTRACT_SUBREG DWSwap4.Bits, sub_32));
+def DWBytes3012 {
+  dag Word = (RLWINM DWBytes0123.Word, 24, 0, 31);
 }
 
-def DWRotateLo32 {
-  dag Left24 = (RLWINM DWExtractLo32.SubReg, 24, 0, 31);
+def DWBytes3212 {
+  dag Word = (RLWIMI DWBytes3012.Word, DWBytes0123.Word, 8, 8, 15);
 }
 
-def DWLo32RotateInsertByte3 {
-  dag Left = (RLWIMI DWRotateLo32.Left24, DWExtractLo32.SubReg, 8, 8, 15);
+// B3 B2 B1 B0 in the right order
+def DWBytes3210 {
+  dag Word = (RLWIMI DWBytes3212.Word, DWBytes0123.Word, 8, 24, 31);
+  dag DWord =
+    (i64 (INSERT_SUBREG (i64 (IMPLICIT_DEF)), DWBytes3210.Word, sub_32));
 }
 
-// Lower 32 bits in the right order
-def DWLo32RotateInsertByte1 {
-  dag Left =
-    (RLWIMI DWLo32RotateInsertByte3.Left, DWExtractLo32.SubReg, 8, 24, 31);
-}
-
-def ExtendLo32 {
-  dag To64Bit =
-    (i64 (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
-          DWLo32RotateInsertByte1.Left, sub_32));
-}
-
-def DWShiftHi32 { // SRDI DWSwap4.Bits, 32)
-  dag ToLo32 = (RLDICL DWSwap4.Bits, 32, 32);
-}
-
-def DWExtractHi32 {
-  dag SubReg = (i32 (EXTRACT_SUBREG DWShiftHi32.ToLo32, sub_32));
-}
-
-def DWRotateHi32 {
-  dag Left24 = (RLWINM DWExtractHi32.SubReg, 24, 0, 31);
-}
-
-def DWHi32RotateInsertByte3 {
-  dag Left = (RLWIMI DWRotateHi32.Left24, DWExtractHi32.SubReg, 8, 8, 15);
-}
-
-// High 32 bits in the right order, but in the low 32-bit position
-def DWHi32RotateInsertByte1 {
-  dag Left =
-    (RLWIMI DWHi32RotateInsertByte3.Left, DWExtractHi32.SubReg, 8, 24, 31);
-}
-
-def ExtendHi32 {
-  dag To64Bit =
-    (i64 (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
-          DWHi32RotateInsertByte1.Left, sub_32));
-}
-
-def DWShiftLo32 { // SLDI ExtendHi32.To64Bit, 32
-  dag ToHi32 = (RLDICR ExtendHi32.To64Bit, 32, 31);
-}
-
+// Now both high word and low word are reversed, next
+// swap the high word and low word.
 def : Pat<(i64 (bitreverse i64:$A)),
-  (OR8 DWShiftLo32.ToHi32, ExtendLo32.To64Bit)>;
+  (OR8 (RLDICR DWBytes7654.DWord, 32, 31), DWBytes3210.DWord)>;

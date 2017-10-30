@@ -2766,7 +2766,7 @@ NewGVN::makePossiblePHIOfOps(Instruction *I,
               Deps.insert(Op);
           } else if (auto *ValuePHI = RealToTemp.lookup(Op)) {
             if (getBlockForValue(ValuePHI) == PHIBlock)
-              Op = ValuePHI->getIncomingValue(PredNum);
+              Op = ValuePHI->getIncomingValueForBlock(PredBB);
           }
           // If we phi-translated the op, it must be safe.
           SafeForPHIOfOps =
