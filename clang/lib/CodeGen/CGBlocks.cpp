@@ -1189,8 +1189,8 @@ Address CodeGenFunction::GetAddrOfBlockDecl(const VarDecl *variable,
                                  variable->getName());
   }
 
-  if (auto refType = capture.fieldType()->getAs<ReferenceType>())
-    addr = EmitLoadOfReference(addr, refType);
+  if (capture.fieldType()->isReferenceType())
+    addr = EmitLoadOfReference(MakeAddrLValue(addr, capture.fieldType()));
 
   return addr;
 }

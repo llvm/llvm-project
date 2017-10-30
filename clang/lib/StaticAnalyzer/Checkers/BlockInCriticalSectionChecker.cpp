@@ -26,14 +26,21 @@ using namespace ento;
 
 namespace {
 
-class BlockInCriticalSectionChecker : public Checker<check::PostCall,
-                                                     check::PreCall> {
+class BlockInCriticalSectionChecker : public Checker<check::PostCall> {
+
+  mutable IdentifierInfo *IILockGuard, *IIUniqueLock;
 
   CallDescription LockFn, UnlockFn, SleepFn, GetcFn, FgetsFn, ReadFn, RecvFn,
                   PthreadLockFn, PthreadTryLockFn, PthreadUnlockFn,
                   MtxLock, MtxTimedLock, MtxTryLock, MtxUnlock;
 
+  StringRef ClassLockGuard, ClassUniqueLock;
+
+  mutable bool IdentifierInfoInitialized;
+
   std::unique_ptr<BugType> BlockInCritSectionBugType;
+
+  void initIdentifierInfo(ASTContext &Ctx) const;
 
   void reportBlockInCritSection(SymbolRef FileDescSym,
                                 const CallEvent &call,
@@ -46,13 +53,10 @@ public:
   bool isLockFunction(const CallEvent &Call) const;
   bool isUnlockFunction(const CallEvent &Call) const;
 
-  void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
-
   /// Process unlock.
   /// Process lock.
   /// Process blocking functions (sleep, getc, fgets, read, recv)
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
-
 };
 
 } // end anonymous namespace
@@ -60,7 +64,8 @@ public:
 REGISTER_TRAIT_WITH_PROGRAMSTATE(MutexCounter, unsigned)
 
 BlockInCriticalSectionChecker::BlockInCriticalSectionChecker()
-    : LockFn("lock"), UnlockFn("unlock"), SleepFn("sleep"), GetcFn("getc"),
+    : IILockGuard(nullptr), IIUniqueLock(nullptr),
+      LockFn("lock"), UnlockFn("unlock"), SleepFn("sleep"), GetcFn("getc"),
       FgetsFn("fgets"), ReadFn("read"), RecvFn("recv"),
       PthreadLockFn("pthread_mutex_lock"),
       PthreadTryLockFn("pthread_mutex_trylock"),
@@ -68,11 +73,27 @@ BlockInCriticalSectionChecker::BlockInCriticalSectionChecker()
       MtxLock("mtx_lock"),
       MtxTimedLock("mtx_timedlock"),
       MtxTryLock("mtx_trylock"),
-      MtxUnlock("mtx_unlock") {
+      MtxUnlock("mtx_unlock"),
+      ClassLockGuard("lock_guard"),
+      ClassUniqueLock("unique_lock"),
+      IdentifierInfoInitialized(false) {
   // Initialize the bug type.
   BlockInCritSectionBugType.reset(
       new BugType(this, "Call to blocking function in critical section",
                         "Blocking Error"));
+}
+
+void BlockInCriticalSectionChecker::initIdentifierInfo(ASTContext &Ctx) const {
+  if (!IdentifierInfoInitialized) {
+    /* In case of checking C code, or when the corresponding headers are not
+     * included, we might end up query the identifier table every time when this
+     * function is called instead of early returning it. To avoid this, a bool
+     * variable (IdentifierInfoInitialized) is used and the function will be run
+     * only once. */
+    IILockGuard  = &Ctx.Idents.get(ClassLockGuard);
+    IIUniqueLock = &Ctx.Idents.get(ClassUniqueLock);
+    IdentifierInfoInitialized = true;
+  }
 }
 
 bool BlockInCriticalSectionChecker::isBlockingFunction(const CallEvent &Call) const {
@@ -87,6 +108,12 @@ bool BlockInCriticalSectionChecker::isBlockingFunction(const CallEvent &Call) co
 }
 
 bool BlockInCriticalSectionChecker::isLockFunction(const CallEvent &Call) const {
+  if (const auto *Ctor = dyn_cast<CXXConstructorCall>(&Call)) {
+    auto IdentifierInfo = Ctor->getDecl()->getParent()->getIdentifier();
+    if (IdentifierInfo == IILockGuard || IdentifierInfo == IIUniqueLock)
+      return true;
+  }
+
   if (Call.isCalled(LockFn)
       || Call.isCalled(PthreadLockFn)
       || Call.isCalled(PthreadTryLockFn)
@@ -99,6 +126,13 @@ bool BlockInCriticalSectionChecker::isLockFunction(const CallEvent &Call) const 
 }
 
 bool BlockInCriticalSectionChecker::isUnlockFunction(const CallEvent &Call) const {
+  if (const auto *Dtor = dyn_cast<CXXDestructorCall>(&Call)) {
+    const auto *DRecordDecl = dyn_cast<CXXRecordDecl>(Dtor->getDecl()->getParent());
+    auto IdentifierInfo = DRecordDecl->getIdentifier();
+    if (IdentifierInfo == IILockGuard || IdentifierInfo == IIUniqueLock)
+      return true;
+  }
+
   if (Call.isCalled(UnlockFn)
        || Call.isCalled(PthreadUnlockFn)
        || Call.isCalled(MtxUnlock)) {
@@ -107,12 +141,10 @@ bool BlockInCriticalSectionChecker::isUnlockFunction(const CallEvent &Call) cons
   return false;
 }
 
-void BlockInCriticalSectionChecker::checkPreCall(const CallEvent &Call,
-                                                 CheckerContext &C) const {
-}
-
 void BlockInCriticalSectionChecker::checkPostCall(const CallEvent &Call,
                                                   CheckerContext &C) const {
+  initIdentifierInfo(C.getASTContext());
+
   if (!isBlockingFunction(Call)
       && !isLockFunction(Call)
       && !isUnlockFunction(Call))
