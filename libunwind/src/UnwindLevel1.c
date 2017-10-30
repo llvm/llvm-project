@@ -76,8 +76,8 @@ unwind_phase1(unw_context_t *uc, unw_cursor_t *cursor, _Unwind_Exception *except
       unw_word_t pc;
       unw_get_reg(cursor, UNW_REG_IP, &pc);
       _LIBUNWIND_TRACE_UNWINDING(
-          "unwind_phase1(ex_ojb=%p): pc=0x%" PRIx64 ", start_ip=0x%" PRIx64
-          ", func=%s, lsda=0x%" PRIx64 ", personality=0x%" PRIx64 "",
+          "unwind_phase1(ex_ojb=%p): pc=0x%" PRIxPTR ", start_ip=0x%" PRIxPTR
+          ", func=%s, lsda=0x%" PRIxPTR ", personality=0x%" PRIxPTR "",
           (void *)exception_object, pc, frameInfo.start_ip, functionName,
           frameInfo.lsda, frameInfo.handler);
     }
@@ -170,9 +170,9 @@ unwind_phase2(unw_context_t *uc, unw_cursor_t *cursor, _Unwind_Exception *except
                              &offset) != UNW_ESUCCESS) ||
           (frameInfo.start_ip + offset > frameInfo.end_ip))
         functionName = ".anonymous.";
-      _LIBUNWIND_TRACE_UNWINDING("unwind_phase2(ex_ojb=%p): start_ip=0x%" PRIx64
-                                 ", func=%s, sp=0x%" PRIx64 ", lsda=0x%" PRIx64
-                                 ", personality=0x%" PRIx64,
+      _LIBUNWIND_TRACE_UNWINDING("unwind_phase2(ex_ojb=%p): start_ip=0x%" PRIxPTR
+                                 ", func=%s, sp=0x%" PRIxPTR ", lsda=0x%" PRIxPTR
+                                 ", personality=0x%" PRIxPTR,
                                  (void *)exception_object, frameInfo.start_ip,
                                  functionName, sp, frameInfo.lsda,
                                  frameInfo.handler);
@@ -213,8 +213,8 @@ unwind_phase2(unw_context_t *uc, unw_cursor_t *cursor, _Unwind_Exception *except
           unw_get_reg(cursor, UNW_REG_IP, &pc);
           unw_get_reg(cursor, UNW_REG_SP, &sp);
           _LIBUNWIND_TRACE_UNWINDING("unwind_phase2(ex_ojb=%p): re-entering "
-                                     "user code with ip=0x%" PRIx64
-                                     ", sp=0x%" PRIx64,
+                                     "user code with ip=0x%" PRIxPTR
+                                     ", sp=0x%" PRIxPTR,
                                      (void *)exception_object, pc, sp);
         }
         unw_resume(cursor);
@@ -262,8 +262,8 @@ unwind_phase2_forced(unw_context_t *uc, unw_cursor_t *cursor,
           (frameInfo.start_ip + offset > frameInfo.end_ip))
         functionName = ".anonymous.";
       _LIBUNWIND_TRACE_UNWINDING(
-          "unwind_phase2_forced(ex_ojb=%p): start_ip=0x%" PRIx64
-          ", func=%s, lsda=0x%" PRIx64 ", personality=0x%" PRIx64,
+          "unwind_phase2_forced(ex_ojb=%p): start_ip=0x%" PRIxPTR
+          ", func=%s, lsda=0x%" PRIxPTR ", personality=0x%" PRIxPTR,
           (void *)exception_object, frameInfo.start_ip, functionName,
           frameInfo.lsda, frameInfo.handler);
     }
@@ -467,17 +467,17 @@ _Unwind_GetGR(struct _Unwind_Context *context, int index) {
   unw_cursor_t *cursor = (unw_cursor_t *)context;
   unw_word_t result;
   unw_get_reg(cursor, index, &result);
-  _LIBUNWIND_TRACE_API("_Unwind_GetGR(context=%p, reg=%d) => 0x%" PRIx64,
-                       (void *)context, index, (uint64_t)result);
+  _LIBUNWIND_TRACE_API("_Unwind_GetGR(context=%p, reg=%d) => 0x%" PRIxPTR,
+                       (void *)context, index, result);
   return (uintptr_t)result;
 }
 
 /// Called by personality handler during phase 2 to alter register values.
 _LIBUNWIND_EXPORT void _Unwind_SetGR(struct _Unwind_Context *context, int index,
                                      uintptr_t value) {
-  _LIBUNWIND_TRACE_API("_Unwind_SetGR(context=%p, reg=%d, value=0x%0" PRIx64
+  _LIBUNWIND_TRACE_API("_Unwind_SetGR(context=%p, reg=%d, value=0x%0" PRIxPTR
                        ")",
-                       (void *)context, index, (uint64_t)value);
+                       (void *)context, index, value);
   unw_cursor_t *cursor = (unw_cursor_t *)context;
   unw_set_reg(cursor, index, value);
 }
@@ -487,8 +487,8 @@ _LIBUNWIND_EXPORT uintptr_t _Unwind_GetIP(struct _Unwind_Context *context) {
   unw_cursor_t *cursor = (unw_cursor_t *)context;
   unw_word_t result;
   unw_get_reg(cursor, UNW_REG_IP, &result);
-  _LIBUNWIND_TRACE_API("_Unwind_GetIP(context=%p) => 0x%" PRIx64,
-                       (void *)context, (uint64_t)result);
+  _LIBUNWIND_TRACE_API("_Unwind_GetIP(context=%p) => 0x%" PRIxPTR,
+                       (void *)context, result);
   return (uintptr_t)result;
 }
 
@@ -497,8 +497,8 @@ _LIBUNWIND_EXPORT uintptr_t _Unwind_GetIP(struct _Unwind_Context *context) {
 /// start executing in the landing pad.
 _LIBUNWIND_EXPORT void _Unwind_SetIP(struct _Unwind_Context *context,
                                      uintptr_t value) {
-  _LIBUNWIND_TRACE_API("_Unwind_SetIP(context=%p, value=0x%0" PRIx64 ")",
-                       (void *)context, (uint64_t)value);
+  _LIBUNWIND_TRACE_API("_Unwind_SetIP(context=%p, value=0x%0" PRIxPTR ")",
+                       (void *)context, value);
   unw_cursor_t *cursor = (unw_cursor_t *)context;
   unw_set_reg(cursor, UNW_REG_IP, value);
 }
