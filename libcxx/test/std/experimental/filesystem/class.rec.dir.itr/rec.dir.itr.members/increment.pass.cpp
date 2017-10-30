@@ -40,7 +40,7 @@ TEST_CASE(test_increment_signatures)
     ASSERT_NOT_NOEXCEPT(++d);
 
     ASSERT_SAME_TYPE(decltype(d.increment(ec)), recursive_directory_iterator&);
-    ASSERT_NOEXCEPT(d.increment(ec));
+    ASSERT_NOT_NOEXCEPT(d.increment(ec));
 }
 
 TEST_CASE(test_prefix_increment)
