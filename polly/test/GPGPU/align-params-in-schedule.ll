@@ -1,4 +1,4 @@
-; RUN: opt -S -polly-process-unprofitable -polly-codegen-ppcg \
+; RUN: opt %loadPolly -S -polly-process-unprofitable -polly-codegen-ppcg \
 ; RUN: -polly-invariant-load-hoisting -polly-ignore-parameter-bounds < %s | \
 ; RUN: FileCheck %s
 
