@@ -749,10 +749,6 @@ def ExplodedGraphViewer : Checker<"ViewExplodedGraph">,
   HelpText<"View Exploded Graphs using GraphViz">,
   DescFile<"DebugCheckers.cpp">;
 
-def BugHashDumper : Checker<"DumpBugHash">,
-  HelpText<"Dump the bug hash for all statements.">,
-  DescFile<"DebugCheckers.cpp">;
-
 } // end "debug"
 
 
