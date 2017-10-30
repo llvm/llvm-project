@@ -120,8 +120,6 @@ BuildLogName = "run_static_analyzer.log"
 # displayed when buildbot detects a build failure.
 NumOfFailuresInSummary = 10
 FailuresSummaryFileName = "failures.txt"
-# Summary of the result diffs.
-DiffsSummaryFileName = "diffs.txt"
 
 # The scan-build result directory.
 SBOutputDirName = "ScanBuildResults"
@@ -434,6 +432,16 @@ def CleanUpEmptyPlists(SBOutputDir):
             continue
 
 
+def CleanUpEmptyFolders(SBOutputDir):
+    """
+    Remove empty folders from results, as git would not store them.
+    """
+    Subfolders = glob.glob(SBOutputDir + "/*")
+    for Folder in Subfolders:
+        if not os.listdir(Folder):
+            os.removedirs(Folder)
+
+
 def checkBuild(SBOutputDir):
     """
     Given the scan-build output directory, checks if the build failed
@@ -446,6 +454,7 @@ def checkBuild(SBOutputDir):
     TotalFailed = len(Failures)
     if TotalFailed == 0:
         CleanUpEmptyPlists(SBOutputDir)
+        CleanUpEmptyFolders(SBOutputDir)
         Plists = glob.glob(SBOutputDir + "/*/*.plist")
         print "Number of bug reports (non-empty plist files) produced: %d" %\
             len(Plists)
@@ -519,9 +528,8 @@ def runCmpResults(Dir, Strictness=0):
         if Verbose == 1:
             print "  Comparing Results: %s %s" % (RefDir, NewDir)
 
-        DiffsPath = os.path.join(NewDir, DiffsSummaryFileName)
         PatchedSourceDirPath = os.path.join(Dir, PatchedSourceDirName)
-        Opts = CmpRuns.CmpOptions(DiffsPath, "", PatchedSourceDirPath)
+        Opts = CmpRuns.CmpOptions(rootA="", rootB=PatchedSourceDirPath)
         # Scan the results, delete empty plist files.
         NumDiffs, ReportsInRef, ReportsInNew = \
             CmpRuns.dumpScanBuildResultsDiff(RefDir, NewDir, Opts, False)
