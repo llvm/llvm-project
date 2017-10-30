@@ -151,7 +151,7 @@ class InductiveRangeCheck {
 
   const SCEV *Offset = nullptr;
   const SCEV *Scale = nullptr;
-  Value *Length = nullptr;
+  const SCEV *Length = nullptr;
   Use *CheckUse = nullptr;
   RangeCheckKind Kind = RANGE_CHECK_UNKNOWN;
   bool IsSigned = true;
@@ -168,7 +168,7 @@ class InductiveRangeCheck {
 public:
   const SCEV *getOffset() const { return Offset; }
   const SCEV *getScale() const { return Scale; }
-  Value *getLength() const { return Length; }
+  const SCEV *getLength() const { return Length; }
   bool isSigned() const { return IsSigned; }
 
   void print(raw_ostream &OS) const {
@@ -419,7 +419,7 @@ void InductiveRangeCheck::extractRangeChecksFromCond(
     return;
 
   InductiveRangeCheck IRC;
-  IRC.Length = Length;
+  IRC.Length = Length ? SE.getSCEV(Length) : nullptr;
   IRC.Offset = IndexAddRec->getStart();
   IRC.Scale = IndexAddRec->getStepRecurrence(SE);
   IRC.CheckUse = &ConditionUse;
@@ -1660,9 +1660,9 @@ InductiveRangeCheck::computeSafeIterationSpace(
 
   // We strengthen "0 <= I" to "0 <= I < INT_SMAX" and "I < L" to "0 <= I < L".
   // We can potentially do much better here.
-  if (Value *V = getLength()) {
-    UpperLimit = SE.getSCEV(V);
-  } else {
+  if (const SCEV *L = getLength())
+    UpperLimit = L;
+  else {
     assert(Kind == InductiveRangeCheck::RANGE_CHECK_LOWER && "invariant!");
     unsigned BitWidth = cast<IntegerType>(IndVar->getType())->getBitWidth();
     UpperLimit = SE.getConstant(APInt::getSignedMaxValue(BitWidth));
