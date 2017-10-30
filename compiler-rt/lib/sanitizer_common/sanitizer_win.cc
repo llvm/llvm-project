@@ -379,7 +379,7 @@ struct ModuleInfo {
 
 #if !SANITIZER_GO
 int CompareModulesBase(const void *pl, const void *pr) {
-  const ModuleInfo *l = (ModuleInfo *)pl, *r = (ModuleInfo *)pr;
+  const ModuleInfo *l = (const ModuleInfo *)pl, *r = (const ModuleInfo *)pr;
   if (l->base_address < r->base_address)
     return -1;
   return l->base_address > r->base_address;
@@ -794,7 +794,7 @@ void BufferedStackTrace::SlowUnwindStack(uptr pc, u32 max_depth) {
   // FIXME: Compare with StackWalk64.
   // FIXME: Look at LLVMUnhandledExceptionFilter in Signals.inc
   size = CaptureStackBackTrace(1, Min(max_depth, kStackTraceMax),
-                               (void**)trace, 0);
+                               (void **)&trace_buffer[0], 0);
   if (size == 0)
     return;
 
@@ -917,7 +917,7 @@ bool IsAccessibleMemoryRange(uptr beg, uptr size) {
 }
 
 bool SignalContext::IsStackOverflow() const {
-  return GetType() == EXCEPTION_STACK_OVERFLOW;
+  return (DWORD)GetType() == EXCEPTION_STACK_OVERFLOW;
 }
 
 void SignalContext::InitPcSpBp() {

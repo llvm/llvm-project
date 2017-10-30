@@ -753,27 +753,13 @@ define i32 @cmp_eq16(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
 ; X32-NEXT:    ret i32 [[CONV]]
 ;
 ; X64-LABEL: @cmp_eq16(
-; X64-NEXT:  loadbb:
-; X64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i64*
-; X64-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i64*
-; X64-NEXT:    [[TMP2:%.*]] = load i64, i64* [[TMP0]]
-; X64-NEXT:    [[TMP3:%.*]] = load i64, i64* [[TMP1]]
-; X64-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[TMP2]], [[TMP3]]
-; X64-NEXT:    br i1 [[TMP4]], label [[RES_BLOCK:%.*]], label [[LOADBB1:%.*]]
-; X64:       res_block:
-; X64-NEXT:    br label [[ENDBLOCK:%.*]]
-; X64:       loadbb1:
-; X64-NEXT:    [[TMP5:%.*]] = bitcast i8* [[X]] to i64*
-; X64-NEXT:    [[TMP6:%.*]] = bitcast i8* [[Y]] to i64*
-; X64-NEXT:    [[TMP7:%.*]] = getelementptr i64, i64* [[TMP5]], i64 1
-; X64-NEXT:    [[TMP8:%.*]] = getelementptr i64, i64* [[TMP6]], i64 1
-; X64-NEXT:    [[TMP9:%.*]] = load i64, i64* [[TMP7]]
-; X64-NEXT:    [[TMP10:%.*]] = load i64, i64* [[TMP8]]
-; X64-NEXT:    [[TMP11:%.*]] = icmp ne i64 [[TMP9]], [[TMP10]]
-; X64-NEXT:    br i1 [[TMP11]], label [[RES_BLOCK]], label [[ENDBLOCK]]
-; X64:       endblock:
-; X64-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, [[LOADBB1]] ], [ 1, [[RES_BLOCK]] ]
-; X64-NEXT:    [[CMP:%.*]] = icmp eq i32 [[PHI_RES]], 0
+; X64-NEXT:    [[TMP1:%.*]] = bitcast i8* [[X:%.*]] to i128*
+; X64-NEXT:    [[TMP2:%.*]] = bitcast i8* [[Y:%.*]] to i128*
+; X64-NEXT:    [[TMP3:%.*]] = load i128, i128* [[TMP1]]
+; X64-NEXT:    [[TMP4:%.*]] = load i128, i128* [[TMP2]]
+; X64-NEXT:    [[TMP5:%.*]] = icmp ne i128 [[TMP3]], [[TMP4]]
+; X64-NEXT:    [[TMP6:%.*]] = zext i1 [[TMP5]] to i32
+; X64-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP6]], 0
 ; X64-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; X64-NEXT:    ret i32 [[CONV]]
 ;

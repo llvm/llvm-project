@@ -137,7 +137,7 @@ NamespaceEndCommentsFixer::NamespaceEndCommentsFixer(const Environment &Env,
                                                      const FormatStyle &Style)
     : TokenAnalyzer(Env, Style) {}
 
-tooling::Replacements NamespaceEndCommentsFixer::analyze(
+std::pair<tooling::Replacements, unsigned> NamespaceEndCommentsFixer::analyze(
     TokenAnnotator &Annotator, SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
     FormatTokenLexer &Tokens) {
   const SourceManager &SourceMgr = Env.getSourceManager();
@@ -206,7 +206,7 @@ tooling::Replacements NamespaceEndCommentsFixer::analyze(
     }
     StartLineIndex = SIZE_MAX;
   }
-  return Fixes;
+  return {Fixes, 0};
 }
 
 } // namespace format

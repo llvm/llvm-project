@@ -123,7 +123,7 @@ public:
       : TokenAnalyzer(Env, Style),
         FileContents(Env.getSourceManager().getBufferData(Env.getFileID())) {}
 
-  tooling::Replacements
+  std::pair<tooling::Replacements, unsigned>
   analyze(TokenAnnotator &Annotator,
           SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
           FormatTokenLexer &Tokens) override {
@@ -138,7 +138,7 @@ public:
         parseModuleReferences(Keywords, AnnotatedLines);
 
     if (References.empty())
-      return Result;
+      return {Result, 0};
 
     SmallVector<unsigned, 16> Indices;
     for (unsigned i = 0, e = References.size(); i != e; ++i)
@@ -168,7 +168,7 @@ public:
     }
 
     if (ReferencesInOrder && SymbolsInOrder)
-      return Result;
+      return {Result, 0};
 
     SourceRange InsertionPoint = References[0].Range;
     InsertionPoint.setEnd(References[References.size() - 1].Range.getEnd());
@@ -202,7 +202,7 @@ public:
       assert(false);
     }
 
-    return Result;
+    return {Result, 0};
   }
 
 private:
@@ -449,7 +449,7 @@ tooling::Replacements sortJavaScriptImports(const FormatStyle &Style,
   std::unique_ptr<Environment> Env =
       Environment::CreateVirtualEnvironment(Code, FileName, Ranges);
   JavaScriptImportSorter Sorter(*Env, Style);
-  return Sorter.process();
+  return Sorter.process().first;
 }
 
 } // end namespace format

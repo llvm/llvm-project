@@ -124,7 +124,7 @@ UsingDeclarationsSorter::UsingDeclarationsSorter(const Environment &Env,
                                                  const FormatStyle &Style)
     : TokenAnalyzer(Env, Style) {}
 
-tooling::Replacements UsingDeclarationsSorter::analyze(
+std::pair<tooling::Replacements, unsigned> UsingDeclarationsSorter::analyze(
     TokenAnnotator &Annotator, SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
     FormatTokenLexer &Tokens) {
   const SourceManager &SourceMgr = Env.getSourceManager();
@@ -149,7 +149,7 @@ tooling::Replacements UsingDeclarationsSorter::analyze(
     UsingDeclarations.push_back(UsingDeclaration(AnnotatedLines[I], Label));
   }
   endUsingDeclarationBlock(&UsingDeclarations, SourceMgr, &Fixes);
-  return Fixes;
+  return {Fixes, 0};
 }
 
 } // namespace format
