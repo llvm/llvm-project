@@ -30,6 +30,7 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/ValueLattice.h"
 #include "llvm/Analysis/ValueLatticeUtils.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallSite.h"
@@ -70,6 +71,8 @@ STATISTIC(NumDeadBlocks , "Number of basic blocks unreachable");
 STATISTIC(IPNumInstRemoved, "Number of instructions removed by IPSCCP");
 STATISTIC(IPNumArgsElimed ,"Number of arguments constant propagated by IPSCCP");
 STATISTIC(IPNumGlobalConst, "Number of globals found to be constant by IPSCCP");
+STATISTIC(IPNumRangeInfoUsed, "Number of times constant range info was used by"
+                              "IPSCCP");
 
 namespace {
 
@@ -174,6 +177,14 @@ public:
     Val.setInt(forcedconstant);
     Val.setPointer(V);
   }
+
+  ValueLatticeElement toValueLattice() const {
+    if (isOverdefined())
+      return ValueLatticeElement::getOverdefined();
+    if (isConstant())
+      return ValueLatticeElement::get(getConstant());
+    return ValueLatticeElement();
+  }
 };
 
 //===----------------------------------------------------------------------===//
@@ -186,6 +197,8 @@ class SCCPSolver : public InstVisitor<SCCPSolver> {
   const TargetLibraryInfo *TLI;
   SmallPtrSet<BasicBlock *, 8> BBExecutable; // The BBs that are executable.
   DenseMap<Value *, LatticeVal> ValueState;  // The state each value is in.
+  // The state each parameter is in.
+  DenseMap<Value *, ValueLatticeElement> ParamState;
 
   /// StructValueState - This maintains ValueState for values that have
   /// StructType, for example for formal arguments, calls, insertelement, etc.
@@ -312,10 +325,20 @@ public:
     return StructValues;
   }
 
-  LatticeVal getLatticeValueFor(Value *V) const {
-    DenseMap<Value*, LatticeVal>::const_iterator I = ValueState.find(V);
-    assert(I != ValueState.end() && "V is not in valuemap!");
-    return I->second;
+  ValueLatticeElement getLatticeValueFor(Value *V) {
+    assert(!V->getType()->isStructTy() &&
+           "Should use getStructLatticeValueFor");
+    std::pair<DenseMap<Value*, ValueLatticeElement>::iterator, bool>
+        PI = ParamState.insert(std::make_pair(V, ValueLatticeElement()));
+    ValueLatticeElement &LV = PI.first->second;
+    if (PI.second) {
+      DenseMap<Value*, LatticeVal>::const_iterator I = ValueState.find(V);
+      assert(I != ValueState.end() &&
+             "V not found in ValueState nor Paramstate map!");
+      LV = I->second.toValueLattice();
+    }
+
+    return LV;
   }
 
   /// getTrackedRetVals - Get the inferred return value map.
@@ -441,6 +464,18 @@ private:
     }
 
     // All others are underdefined by default.
+    return LV;
+  }
+
+  ValueLatticeElement &getParamState(Value *V) {
+    assert(!V->getType()->isStructTy() && "Should use getStructValueState");
+
+    std::pair<DenseMap<Value*, ValueLatticeElement>::iterator, bool>
+        PI = ParamState.insert(std::make_pair(V, ValueLatticeElement()));
+    ValueLatticeElement &LV = PI.first->second;
+    if (PI.second)
+      LV = getValueState(V).toValueLattice();
+
     return LV;
   }
 
@@ -1170,6 +1205,9 @@ CallOverdefined:
           mergeInValue(getStructValueState(&*AI, i), &*AI, CallArg);
         }
       } else {
+        // Most other parts of the Solver still only use the simpler value
+        // lattice, so we propagate changes for parameters to both lattices.
+        getParamState(&*AI).mergeIn(getValueState(*CAI).toValueLattice(), DL);
         mergeInValue(&*AI, getValueState(*CAI));
       }
     }
@@ -1560,6 +1598,43 @@ bool SCCPSolver::ResolvedUndefsIn(Function &F) {
   return false;
 }
 
+static bool tryToReplaceWithConstantRange(SCCPSolver &Solver, Value *V) {
+  bool Changed = false;
+
+  // Currently we only use range information for integer values.
+  if (!V->getType()->isIntegerTy())
+    return false;
+
+  const ValueLatticeElement &IV = Solver.getLatticeValueFor(V);
+  if (!IV.isConstantRange())
+    return false;
+
+  for (auto UI = V->uses().begin(), E = V->uses().end(); UI != E;) {
+    const Use &U = *UI++;
+    auto *Icmp = dyn_cast<ICmpInst>(U.getUser());
+    if (!Icmp || !Solver.isBlockExecutable(Icmp->getParent()))
+      continue;
+
+    auto A = Solver.getLatticeValueFor(Icmp->getOperand(0));
+    auto B = Solver.getLatticeValueFor(Icmp->getOperand(1));
+    Constant *C = nullptr;
+    if (A.satisfiesPredicate(Icmp->getPredicate(), B))
+      C = ConstantInt::getTrue(Icmp->getType());
+    else if (A.satisfiesPredicate(Icmp->getInversePredicate(), B))
+      C = ConstantInt::getFalse(Icmp->getType());
+
+    if (C) {
+      Icmp->replaceAllUsesWith(C);
+      DEBUG(dbgs() << "Replacing " << *Icmp << " with " << *C
+                   << ", because of range information " << A << " " << B
+                   << "\n");
+      Icmp->eraseFromParent();
+      Changed = true;
+    }
+  }
+  return Changed;
+}
+
 static bool tryToReplaceWithConstant(SCCPSolver &Solver, Value *V) {
   Constant *Const = nullptr;
   if (V->getType()->isStructTy()) {
@@ -1577,10 +1652,19 @@ static bool tryToReplaceWithConstant(SCCPSolver &Solver, Value *V) {
     }
     Const = ConstantStruct::get(ST, ConstVals);
   } else {
-    LatticeVal IV = Solver.getLatticeValueFor(V);
+    const ValueLatticeElement &IV = Solver.getLatticeValueFor(V);
     if (IV.isOverdefined())
       return false;
-    Const = IV.isConstant() ? IV.getConstant() : UndefValue::get(V->getType());
+
+    if (IV.isConstantRange()) {
+      if (IV.getConstantRange().isSingleElement())
+        Const =
+            ConstantInt::get(V->getType(), IV.asConstantInteger().getValue());
+      else
+        return false;
+    } else
+      Const =
+          IV.isConstant() ? IV.getConstant() : UndefValue::get(V->getType());
   }
   assert(Const && "Constant is nullptr here!");
   DEBUG(dbgs() << "  Constant: " << *Const << " = " << *V << '\n');
@@ -1781,9 +1865,13 @@ static bool runIPSCCP(Module &M, const DataLayout &DL,
 
     if (Solver.isBlockExecutable(&F.front()))
       for (Function::arg_iterator AI = F.arg_begin(), E = F.arg_end(); AI != E;
-           ++AI)
+           ++AI) {
         if (!AI->use_empty() && tryToReplaceWithConstant(Solver, &*AI))
           ++IPNumArgsElimed;
+
+        if (!AI->use_empty() && tryToReplaceWithConstantRange(Solver, &*AI))
+          ++IPNumRangeInfoUsed;
+      }
 
     for (Function::iterator BB = F.begin(), E = F.end(); BB != E; ++BB) {
       if (!Solver.isBlockExecutable(&*BB)) {

@@ -6687,6 +6687,44 @@ static bool isUseOfShuffle(SDNode *N) {
   return false;
 }
 
+// Check if the current node of build vector is a zero extended vector.
+// If so, return the value extended.
+// For example: (0,0,0,a,0,0,0,a,0,0,0,a,0,0,0,a) returns a.
+// NumElt - return the number of zero extended identical values.
+// EltType - return the type of the value include the zero extend.
+static SDValue isSplatZeroExtended(const BuildVectorSDNode *Op,
+                                   unsigned &NumElt, MVT &EltType) {
+  SDValue ExtValue = Op->getOperand(0);
+  unsigned NumElts = Op->getNumOperands();
+  unsigned Delta = NumElts;
+
+  for (unsigned i = 1; i < NumElts; i++) {
+    if (Op->getOperand(i) == ExtValue) {
+      Delta = i;
+      break;
+    }
+    if (!(Op->getOperand(i).isUndef() || isNullConstant(Op->getOperand(i))))
+      return SDValue();
+  }
+  if (!isPowerOf2_32(Delta) || Delta == 1)
+    return SDValue();
+
+  for (unsigned i = Delta; i < NumElts; i++) {
+    if (i % Delta == 0) {
+      if (Op->getOperand(i) != ExtValue)
+        return SDValue();
+    } else if (!(isNullConstant(Op->getOperand(i)) ||
+                 Op->getOperand(i).isUndef()))
+      return SDValue();
+  }
+  unsigned EltSize =
+      Op->getSimpleValueType(0).getScalarSizeInBits();
+  unsigned ExtVTSize = EltSize * Delta;
+  EltType = MVT::getIntegerVT(ExtVTSize);
+  NumElt = NumElts / Delta;
+  return ExtValue;
+}
+
 /// Attempt to use the vbroadcast instruction to generate a splat value
 /// from a splat BUILD_VECTOR which uses:
 ///  a. A single scalar load, or a constant.
@@ -6708,6 +6746,32 @@ static SDValue lowerBuildVectorAsBroadcast(BuildVectorSDNode *BVOp,
 
   assert((VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector()) &&
          "Unsupported vector type for broadcast.");
+
+  // Attempt to use VBROADCASTM
+  // From this paterrn:
+  //  a. t0 = (zext_i64 (bitcast_i8 v2i1 X))
+  //  b. t1 = (build_vector t0 t0)
+  //
+  // Create (VBROADCASTM v2i1 X)
+  if (Subtarget.hasCDI() && (VT.is512BitVector() || Subtarget.hasVLX())) {
+    MVT EltType;
+    unsigned NumElts;
+    SDValue ZeroExtended = isSplatZeroExtended(BVOp, NumElts, EltType);
+    if (ZeroExtended && ZeroExtended.getOpcode() == ISD::BITCAST) {
+      SDValue BOperand = ZeroExtended.getOperand(0);
+      if (BOperand.getSimpleValueType().getVectorElementType() == MVT::i1) {
+        if ((EltType == MVT::i64 &&
+             VT.getVectorElementType() == MVT::i8) || // for broadcastmb2q
+            (EltType == MVT::i32 &&
+             VT.getVectorElementType() == MVT::i16)) { // for broadcastmw2d
+          SDValue Brdcst =
+              DAG.getNode(X86ISD::VBROADCASTM, dl,
+                          MVT::getVectorVT(EltType, NumElts), BOperand);
+          return DAG.getBitcast(VT, Brdcst);
+        }
+      }
+    }
+  }
 
   BitVector UndefElements;
   SDValue Ld = BVOp->getSplatValue(&UndefElements);
