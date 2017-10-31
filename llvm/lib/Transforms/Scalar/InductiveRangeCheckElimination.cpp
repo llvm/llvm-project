@@ -149,9 +149,9 @@ class InductiveRangeCheck {
 
   static StringRef rangeCheckKindToStr(RangeCheckKind);
 
-  const SCEV *Offset = nullptr;
-  const SCEV *Scale = nullptr;
-  const SCEV *Length = nullptr;
+  const SCEV *Begin = nullptr;
+  const SCEV *Step = nullptr;
+  const SCEV *End = nullptr;
   Use *CheckUse = nullptr;
   RangeCheckKind Kind = RANGE_CHECK_UNKNOWN;
   bool IsSigned = true;
@@ -166,21 +166,21 @@ class InductiveRangeCheck {
                              SmallPtrSetImpl<Value *> &Visited);
 
 public:
-  const SCEV *getOffset() const { return Offset; }
-  const SCEV *getScale() const { return Scale; }
-  const SCEV *getLength() const { return Length; }
+  const SCEV *getBegin() const { return Begin; }
+  const SCEV *getStep() const { return Step; }
+  const SCEV *getEnd() const { return End; }
   bool isSigned() const { return IsSigned; }
 
   void print(raw_ostream &OS) const {
     OS << "InductiveRangeCheck:\n";
     OS << "  Kind: " << rangeCheckKindToStr(Kind) << "\n";
-    OS << "  Offset: ";
-    Offset->print(OS);
-    OS << "  Scale: ";
-    Scale->print(OS);
-    OS << "  Length: ";
-    if (Length)
-      Length->print(OS);
+    OS << "  Begin: ";
+    Begin->print(OS);
+    OS << "  Step: ";
+    Step->print(OS);
+    OS << "  End: ";
+    if (End)
+      End->print(OS);
     else
       OS << "(null)";
     OS << "\n  CheckUse: ";
@@ -379,8 +379,8 @@ void InductiveRangeCheck::extractRangeChecksFromCond(
       // checking the upper and lower bounds into a full range check.
       const auto &RChkA = SubChecks[0];
       const auto &RChkB = SubChecks[1];
-      if ((RChkA.Length == RChkB.Length || !RChkA.Length || !RChkB.Length) &&
-          RChkA.Offset == RChkB.Offset && RChkA.Scale == RChkB.Scale &&
+      if ((RChkA.End == RChkB.End || !RChkA.End || !RChkB.End) &&
+          RChkA.Begin == RChkB.Begin && RChkA.Step == RChkB.Step &&
           RChkA.IsSigned == RChkB.IsSigned) {
         // If RChkA.Kind == RChkB.Kind then we just found two identical checks.
         // But if one of them is a RANGE_CHECK_LOWER and the other is a
@@ -388,7 +388,7 @@ void InductiveRangeCheck::extractRangeChecksFromCond(
         // together they form a RANGE_CHECK_BOTH.
         SubChecks[0].Kind =
             (InductiveRangeCheck::RangeCheckKind)(RChkA.Kind | RChkB.Kind);
-        SubChecks[0].Length = RChkA.Length ? RChkA.Length : RChkB.Length;
+        SubChecks[0].End = RChkA.End ? RChkA.End : RChkB.End;
         SubChecks[0].CheckUse = &ConditionUse;
         SubChecks[0].IsSigned = RChkA.IsSigned;
 
@@ -419,9 +419,9 @@ void InductiveRangeCheck::extractRangeChecksFromCond(
     return;
 
   InductiveRangeCheck IRC;
-  IRC.Length = Length ? SE.getSCEV(Length) : nullptr;
-  IRC.Offset = IndexAddRec->getStart();
-  IRC.Scale = IndexAddRec->getStepRecurrence(SE);
+  IRC.End = Length ? SE.getSCEV(Length) : nullptr;
+  IRC.Begin = IndexAddRec->getStart();
+  IRC.Step = IndexAddRec->getStepRecurrence(SE);
   IRC.CheckUse = &ConditionUse;
   IRC.Kind = RCKind;
   IRC.IsSigned = IsSigned;
@@ -1615,7 +1615,7 @@ InductiveRangeCheck::computeSafeIterationSpace(
   // IndVar is of the form "A + B * I" (where "I" is the canonical induction
   // variable, that may or may not exist as a real llvm::Value in the loop) and
   // this inductive range check is a range check on the "C + D * I" ("C" is
-  // getOffset() and "D" is getScale()).  We rewrite the value being range
+  // getBegin() and "D" is getStep()).  We rewrite the value being range
   // checked to "M + N * IndVar" where "N" = "D * B^(-1)" and "M" = "C - NA".
   //
   // The actual inequalities we solve are of the form
@@ -1647,8 +1647,8 @@ InductiveRangeCheck::computeSafeIterationSpace(
     return None;
   assert(!B->isZero() && "Recurrence with zero step?");
 
-  const SCEV *C = getOffset();
-  const SCEVConstant *D = dyn_cast<SCEVConstant>(getScale());
+  const SCEV *C = getBegin();
+  const SCEVConstant *D = dyn_cast<SCEVConstant>(getStep());
   if (D != B)
     return None;
 
@@ -1660,7 +1660,7 @@ InductiveRangeCheck::computeSafeIterationSpace(
 
   // We strengthen "0 <= I" to "0 <= I < INT_SMAX" and "I < L" to "0 <= I < L".
   // We can potentially do much better here.
-  if (const SCEV *L = getLength())
+  if (const SCEV *L = getEnd())
     UpperLimit = L;
   else {
     assert(Kind == InductiveRangeCheck::RANGE_CHECK_LOWER && "invariant!");

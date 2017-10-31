@@ -273,6 +273,28 @@ for.end:                                          ; preds = %if.end, %entry
   ret void
 }
 
+; check to handle loops without preheaders, but invariant operands
+; (we handle this today by inserting a preheader)
+define void @test9(i1 %cnd, i64 %start) {
+; CHECK-LABEL: @test9
+; CHECK-LABEL: loop.preheader:
+entry:
+  br i1 %cnd, label %entry1, label %entry2
+entry1:
+  br label %loop
+entry2:
+  br label %loop
+loop:
+  %indvars.iv = phi i64 [ %start, %entry1 ],[ %start, %entry2 ], [ %indvars.iv.next, %loop ]
+  %indvars.iv.next = add nsw i64 %indvars.iv, 1
+; CHECK: %cmp1 = icmp slt i64 %start, -1
+  %cmp1 = icmp slt i64 %indvars.iv, -1
+  br i1 %cmp1, label %for.end, label %loop
+
+for.end:                                          ; preds = %if.end, %entry
+  ret void
+}
+
 !1 = !{i64 -1, i64 100}
 
 

@@ -430,3 +430,161 @@ cleanup2:
   call void @g(i32 %NOTPRE)
   cleanupret from %c2 unwind to caller
 }
+
+; Don't PRE load across potentially throwing calls.
+
+define i32 @test13(i32* noalias nocapture readonly %x, i32* noalias nocapture %r, i32 %a) {
+
+; CHECK-LABEL: @test13(
+; CHECK: entry:
+; CHECK-NEXT: icmp eq
+; CHECK-NEXT: br i1
+
+entry:
+  %tobool = icmp eq i32 %a, 0
+  br i1 %tobool, label %if.end, label %if.then
+
+; CHECK: if.then:
+; CHECK-NEXT: load i32
+; CHECK-NEXT: store i32
+
+if.then:
+  %uu = load i32, i32* %x, align 4
+  store i32 %uu, i32* %r, align 4
+  br label %if.end
+
+; CHECK: if.end:
+; CHECK-NEXT: call void @f()
+; CHECK-NEXT: load i32
+
+if.end:
+  call void @f()
+  %vv = load i32, i32* %x, align 4
+  ret i32 %vv
+}
+
+; Same as test13, but now the blocking function is not immediately in load's
+; block.
+
+define i32 @test14(i32* noalias nocapture readonly %x, i32* noalias nocapture %r, i32 %a) {
+
+; CHECK-LABEL: @test14(
+; CHECK: entry:
+; CHECK-NEXT: icmp eq
+; CHECK-NEXT: br i1
+
+entry:
+  %tobool = icmp eq i32 %a, 0
+  br i1 %tobool, label %if.end, label %if.then
+
+; CHECK: if.then:
+; CHECK-NEXT: load i32
+; CHECK-NEXT: store i32
+
+if.then:
+  %uu = load i32, i32* %x, align 4
+  store i32 %uu, i32* %r, align 4
+  br label %if.end
+
+; CHECK: if.end:
+; CHECK-NEXT: call void @f()
+; CHECK-NEXT: load i32
+
+if.end:
+  call void @f()
+  br label %follow_1
+
+follow_1:
+  br label %follow_2
+
+follow_2:
+  %vv = load i32, i32* %x, align 4
+  ret i32 %vv
+}
+
+; Same as test13, but %x here is dereferenceable. A pointer that is
+; dereferenceable can be loaded from speculatively without a risk of trapping.
+; Since it is OK to speculate, PRE is allowed.
+
+define i32 @test15(i32* noalias nocapture readonly dereferenceable(8) %x, i32* noalias nocapture %r, i32 %a) {
+
+; CHECK-LABEL: @test15
+; CHECK: entry:
+; CHECK-NEXT: icmp eq
+; CHECK-NEXT: br i1
+
+entry:
+  %tobool = icmp eq i32 %a, 0
+  br i1 %tobool, label %if.end, label %if.then
+
+; CHECK: entry.if.end_crit_edge:
+; CHECK-NEXT: %vv.pre = load i32, i32* %x, align 4
+; CHECK-NEXT: br label %if.end
+
+if.then:
+  %uu = load i32, i32* %x, align 4
+  store i32 %uu, i32* %r, align 4
+  br label %if.end
+
+; CHECK: if.then:
+; CHECK-NEXT: %uu = load i32, i32* %x, align 4
+; CHECK-NEXT: store i32 %uu, i32* %r, align 4
+; CHECK-NEXT: br label %if.end
+
+if.end:
+  call void @f()
+  %vv = load i32, i32* %x, align 4
+  ret i32 %vv
+
+; CHECK: if.end:
+; CHECK-NEXT: %vv = phi i32 [ %vv.pre, %entry.if.end_crit_edge ], [ %uu, %if.then ]
+; CHECK-NEXT: call void @f()
+; CHECK-NEXT: ret i32 %vv
+
+}
+
+; Same as test14, but %x here is dereferenceable. A pointer that is
+; dereferenceable can be loaded from speculatively without a risk of trapping.
+; Since it is OK to speculate, PRE is allowed.
+
+define i32 @test16(i32* noalias nocapture readonly dereferenceable(8) %x, i32* noalias nocapture %r, i32 %a) {
+
+; CHECK-LABEL: @test16(
+; CHECK: entry:
+; CHECK-NEXT: icmp eq
+; CHECK-NEXT: br i1
+
+entry:
+  %tobool = icmp eq i32 %a, 0
+  br i1 %tobool, label %if.end, label %if.then
+
+; CHECK: entry.if.end_crit_edge:
+; CHECK-NEXT: %vv.pre = load i32, i32* %x, align 4
+; CHECK-NEXT: br label %if.end
+
+if.then:
+  %uu = load i32, i32* %x, align 4
+  store i32 %uu, i32* %r, align 4
+  br label %if.end
+
+; CHECK: if.then:
+; CHECK-NEXT: %uu = load i32, i32* %x, align 4
+; CHECK-NEXT: store i32 %uu, i32* %r, align 4
+; CHECK-NEXT: br label %if.end
+
+if.end:
+  call void @f()
+  br label %follow_1
+
+; CHECK: if.end:
+; CHECK-NEXT: %vv = phi i32 [ %vv.pre, %entry.if.end_crit_edge ], [ %uu, %if.then ]
+; CHECK-NEXT: call void @f()
+; CHECK-NEXT: ret i32 %vv
+
+follow_1:
+  br label %follow_2
+
+follow_2:
+  %vv = load i32, i32* %x, align 4
+  ret i32 %vv
+}
