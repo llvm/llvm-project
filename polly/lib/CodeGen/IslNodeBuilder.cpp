@@ -263,7 +263,7 @@ isl_stat addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr,
     }
 
     if (Access->isLatestArrayKind()) {
-      auto *BasePtr = Access->getScopArrayInfo()->getBasePtr();
+      auto *BasePtr = Access->getLatestScopArrayInfo()->getBasePtr();
       if (Instruction *OpInst = dyn_cast<Instruction>(BasePtr))
         if (Stmt->getParent()->contains(OpInst))
           continue;

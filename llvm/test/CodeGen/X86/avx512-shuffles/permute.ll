@@ -2117,7 +2117,7 @@ define <16 x float> @test_masked_16xfloat_perm_mask0(<16 x float> %vec, <16 x fl
 ; CHECK-LABEL: test_masked_16xfloat_perm_mask0:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vmovaps {{.*#+}} zmm3 = [15,7,5,13,4,9,11,13,12,6,0,0,11,15,5,7]
-; CHECK-NEXT:    vxorps %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; CHECK-NEXT:    vcmpeqps %zmm4, %zmm2, %k1
 ; CHECK-NEXT:    vpermps %zmm0, %zmm3, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0
@@ -2132,7 +2132,7 @@ define <16 x float> @test_masked_z_16xfloat_perm_mask0(<16 x float> %vec, <16 x 
 ; CHECK-LABEL: test_masked_z_16xfloat_perm_mask0:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vmovaps {{.*#+}} zmm2 = [15,7,5,13,4,9,11,13,12,6,0,0,11,15,5,7]
-; CHECK-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqps %zmm3, %zmm1, %k1
 ; CHECK-NEXT:    vpermps %zmm0, %zmm2, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
@@ -2145,7 +2145,7 @@ define <16 x float> @test_masked_16xfloat_perm_mask1(<16 x float> %vec, <16 x fl
 ; CHECK-LABEL: test_masked_16xfloat_perm_mask1:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vmovaps {{.*#+}} zmm3 = [11,10,4,10,4,5,8,11,2,0,10,0,0,3,10,1]
-; CHECK-NEXT:    vxorps %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; CHECK-NEXT:    vcmpeqps %zmm4, %zmm2, %k1
 ; CHECK-NEXT:    vpermps %zmm0, %zmm3, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0
@@ -2160,7 +2160,7 @@ define <16 x float> @test_masked_z_16xfloat_perm_mask1(<16 x float> %vec, <16 x 
 ; CHECK-LABEL: test_masked_z_16xfloat_perm_mask1:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vmovaps {{.*#+}} zmm2 = [11,10,4,10,4,5,8,11,2,0,10,0,0,3,10,1]
-; CHECK-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqps %zmm3, %zmm1, %k1
 ; CHECK-NEXT:    vpermps %zmm0, %zmm2, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
@@ -2173,7 +2173,7 @@ define <16 x float> @test_masked_16xfloat_perm_mask2(<16 x float> %vec, <16 x fl
 ; CHECK-LABEL: test_masked_16xfloat_perm_mask2:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vmovaps {{.*#+}} zmm3 = [0,15,6,14,3,6,5,2,5,15,11,6,6,4,8,11]
-; CHECK-NEXT:    vxorps %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; CHECK-NEXT:    vcmpeqps %zmm4, %zmm2, %k1
 ; CHECK-NEXT:    vpermps %zmm0, %zmm3, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0
@@ -2188,7 +2188,7 @@ define <16 x float> @test_masked_z_16xfloat_perm_mask2(<16 x float> %vec, <16 x 
 ; CHECK-LABEL: test_masked_z_16xfloat_perm_mask2:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vmovaps {{.*#+}} zmm2 = [0,15,6,14,3,6,5,2,5,15,11,6,6,4,8,11]
-; CHECK-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqps %zmm3, %zmm1, %k1
 ; CHECK-NEXT:    vpermps %zmm0, %zmm2, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
@@ -2210,7 +2210,7 @@ define <16 x float> @test_masked_16xfloat_perm_mask3(<16 x float> %vec, <16 x fl
 ; CHECK-LABEL: test_masked_16xfloat_perm_mask3:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vmovaps {{.*#+}} zmm3 = [10,7,0,14,6,6,0,2,13,8,11,2,5,13,13,3]
-; CHECK-NEXT:    vxorps %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; CHECK-NEXT:    vcmpeqps %zmm4, %zmm2, %k1
 ; CHECK-NEXT:    vpermps %zmm0, %zmm3, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0
@@ -2225,7 +2225,7 @@ define <16 x float> @test_masked_z_16xfloat_perm_mask3(<16 x float> %vec, <16 x 
 ; CHECK-LABEL: test_masked_z_16xfloat_perm_mask3:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vmovaps {{.*#+}} zmm2 = [10,7,0,14,6,6,0,2,13,8,11,2,5,13,13,3]
-; CHECK-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqps %zmm3, %zmm1, %k1
 ; CHECK-NEXT:    vpermps %zmm0, %zmm2, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
@@ -2248,7 +2248,7 @@ define <16 x float> @test_masked_16xfloat_perm_mem_mask0(<16 x float>* %vp, <16 
 ; CHECK-LABEL: test_masked_16xfloat_perm_mem_mask0:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vmovaps {{.*#+}} zmm2 = [10,2,1,14,9,9,7,2,9,4,12,11,0,14,0,1]
-; CHECK-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqps %zmm3, %zmm1, %k1
 ; CHECK-NEXT:    vpermps (%rdi), %zmm2, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
@@ -2263,7 +2263,7 @@ define <16 x float> @test_masked_z_16xfloat_perm_mem_mask0(<16 x float>* %vp, <1
 ; CHECK-LABEL: test_masked_z_16xfloat_perm_mem_mask0:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vmovaps {{.*#+}} zmm1 = [10,2,1,14,9,9,7,2,9,4,12,11,0,14,0,1]
-; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqps %zmm2, %zmm0, %k1
 ; CHECK-NEXT:    vpermps (%rdi), %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
@@ -2278,7 +2278,7 @@ define <16 x float> @test_masked_16xfloat_perm_mem_mask1(<16 x float>* %vp, <16 
 ; CHECK-LABEL: test_masked_16xfloat_perm_mem_mask1:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vmovaps {{.*#+}} zmm2 = [4,2,3,5,11,6,4,7,6,4,14,8,15,12,9,4]
-; CHECK-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqps %zmm3, %zmm1, %k1
 ; CHECK-NEXT:    vpermps (%rdi), %zmm2, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
@@ -2293,7 +2293,7 @@ define <16 x float> @test_masked_z_16xfloat_perm_mem_mask1(<16 x float>* %vp, <1
 ; CHECK-LABEL: test_masked_z_16xfloat_perm_mem_mask1:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vmovaps {{.*#+}} zmm1 = [4,2,3,5,11,6,4,7,6,4,14,8,15,12,9,4]
-; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqps %zmm2, %zmm0, %k1
 ; CHECK-NEXT:    vpermps (%rdi), %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
@@ -2308,7 +2308,7 @@ define <16 x float> @test_masked_16xfloat_perm_mem_mask2(<16 x float>* %vp, <16 
 ; CHECK-LABEL: test_masked_16xfloat_perm_mem_mask2:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vmovaps {{.*#+}} zmm2 = [10,7,11,6,7,0,11,0,10,9,12,4,10,3,8,5]
-; CHECK-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqps %zmm3, %zmm1, %k1
 ; CHECK-NEXT:    vpermps (%rdi), %zmm2, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
@@ -2323,7 +2323,7 @@ define <16 x float> @test_masked_z_16xfloat_perm_mem_mask2(<16 x float>* %vp, <1
 ; CHECK-LABEL: test_masked_z_16xfloat_perm_mem_mask2:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vmovaps {{.*#+}} zmm1 = [10,7,11,6,7,0,11,0,10,9,12,4,10,3,8,5]
-; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqps %zmm2, %zmm0, %k1
 ; CHECK-NEXT:    vpermps (%rdi), %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
@@ -2348,7 +2348,7 @@ define <16 x float> @test_masked_16xfloat_perm_mem_mask3(<16 x float>* %vp, <16 
 ; CHECK-LABEL: test_masked_16xfloat_perm_mem_mask3:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vmovaps {{.*#+}} zmm2 = [15,15,3,9,5,15,14,9,11,10,5,14,14,5,11,0]
-; CHECK-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqps %zmm3, %zmm1, %k1
 ; CHECK-NEXT:    vpermps (%rdi), %zmm2, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
@@ -2363,7 +2363,7 @@ define <16 x float> @test_masked_z_16xfloat_perm_mem_mask3(<16 x float>* %vp, <1
 ; CHECK-LABEL: test_masked_z_16xfloat_perm_mem_mask3:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vmovaps {{.*#+}} zmm1 = [15,15,3,9,5,15,14,9,11,10,5,14,14,5,11,0]
-; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqps %zmm2, %zmm0, %k1
 ; CHECK-NEXT:    vpermps (%rdi), %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
@@ -2637,7 +2637,7 @@ define <8 x double> @test_masked_8xdouble_perm_mask0(<8 x double> %vec, <8 x dou
 ; CHECK-LABEL: test_masked_8xdouble_perm_mask0:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vmovapd {{.*#+}} zmm3 = [5,7,4,2,7,4,3,4]
-; CHECK-NEXT:    vxorpd %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; CHECK-NEXT:    vcmpeqpd %zmm4, %zmm2, %k1
 ; CHECK-NEXT:    vpermpd %zmm0, %zmm3, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
@@ -2652,7 +2652,7 @@ define <8 x double> @test_masked_z_8xdouble_perm_mask0(<8 x double> %vec, <8 x d
 ; CHECK-LABEL: test_masked_z_8xdouble_perm_mask0:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vmovapd {{.*#+}} zmm2 = [5,7,4,2,7,4,3,4]
-; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqpd %zmm3, %zmm1, %k1
 ; CHECK-NEXT:    vpermpd %zmm0, %zmm2, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
@@ -2664,7 +2664,7 @@ define <8 x double> @test_masked_z_8xdouble_perm_mask0(<8 x double> %vec, <8 x d
 define <8 x double> @test_masked_8xdouble_perm_imm_mask1(<8 x double> %vec, <8 x double> %vec2, <8 x double> %mask) {
 ; CHECK-LABEL: test_masked_8xdouble_perm_imm_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqpd %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vpermpd {{.*#+}} zmm1 {%k1} = zmm0[3,0,0,2,7,4,4,6]
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
@@ -2678,7 +2678,7 @@ define <8 x double> @test_masked_8xdouble_perm_imm_mask1(<8 x double> %vec, <8 x
 define <8 x double> @test_masked_z_8xdouble_perm_imm_mask1(<8 x double> %vec, <8 x double> %mask) {
 ; CHECK-LABEL: test_masked_z_8xdouble_perm_imm_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqpd %zmm2, %zmm1, %k1
 ; CHECK-NEXT:    vpermpd {{.*#+}} zmm0 {%k1} {z} = zmm0[3,0,0,2,7,4,4,6]
 ; CHECK-NEXT:    retq
@@ -2691,7 +2691,7 @@ define <8 x double> @test_masked_8xdouble_perm_mask2(<8 x double> %vec, <8 x dou
 ; CHECK-LABEL: test_masked_8xdouble_perm_mask2:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vmovapd {{.*#+}} zmm3 = [7,5,5,5,3,5,1,7]
-; CHECK-NEXT:    vxorpd %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; CHECK-NEXT:    vcmpeqpd %zmm4, %zmm2, %k1
 ; CHECK-NEXT:    vpermpd %zmm0, %zmm3, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
@@ -2706,7 +2706,7 @@ define <8 x double> @test_masked_z_8xdouble_perm_mask2(<8 x double> %vec, <8 x d
 ; CHECK-LABEL: test_masked_z_8xdouble_perm_mask2:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vmovapd {{.*#+}} zmm2 = [7,5,5,5,3,5,1,7]
-; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqpd %zmm3, %zmm1, %k1
 ; CHECK-NEXT:    vpermpd %zmm0, %zmm2, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
@@ -2726,7 +2726,7 @@ define <8 x double> @test_8xdouble_perm_imm_mask3(<8 x double> %vec) {
 define <8 x double> @test_masked_8xdouble_perm_imm_mask3(<8 x double> %vec, <8 x double> %vec2, <8 x double> %mask) {
 ; CHECK-LABEL: test_masked_8xdouble_perm_imm_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqpd %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vpermpd {{.*#+}} zmm1 {%k1} = zmm0[1,3,3,0,5,7,7,4]
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
@@ -2740,7 +2740,7 @@ define <8 x double> @test_masked_8xdouble_perm_imm_mask3(<8 x double> %vec, <8 x
 define <8 x double> @test_masked_z_8xdouble_perm_imm_mask3(<8 x double> %vec, <8 x double> %mask) {
 ; CHECK-LABEL: test_masked_z_8xdouble_perm_imm_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqpd %zmm2, %zmm1, %k1
 ; CHECK-NEXT:    vpermpd {{.*#+}} zmm0 {%k1} {z} = zmm0[1,3,3,0,5,7,7,4]
 ; CHECK-NEXT:    retq
@@ -2753,7 +2753,7 @@ define <8 x double> @test_masked_8xdouble_perm_mask4(<8 x double> %vec, <8 x dou
 ; CHECK-LABEL: test_masked_8xdouble_perm_mask4:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vmovapd {{.*#+}} zmm3 = [3,5,3,4,6,5,7,1]
-; CHECK-NEXT:    vxorpd %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; CHECK-NEXT:    vcmpeqpd %zmm4, %zmm2, %k1
 ; CHECK-NEXT:    vpermpd %zmm0, %zmm3, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
@@ -2768,7 +2768,7 @@ define <8 x double> @test_masked_z_8xdouble_perm_mask4(<8 x double> %vec, <8 x d
 ; CHECK-LABEL: test_masked_z_8xdouble_perm_mask4:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vmovapd {{.*#+}} zmm2 = [3,5,3,4,6,5,7,1]
-; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqpd %zmm3, %zmm1, %k1
 ; CHECK-NEXT:    vpermpd %zmm0, %zmm2, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
@@ -2780,7 +2780,7 @@ define <8 x double> @test_masked_z_8xdouble_perm_mask4(<8 x double> %vec, <8 x d
 define <8 x double> @test_masked_8xdouble_perm_imm_mask5(<8 x double> %vec, <8 x double> %vec2, <8 x double> %mask) {
 ; CHECK-LABEL: test_masked_8xdouble_perm_imm_mask5:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqpd %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vpermpd {{.*#+}} zmm1 {%k1} = zmm0[3,3,2,3,7,7,6,7]
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
@@ -2794,7 +2794,7 @@ define <8 x double> @test_masked_8xdouble_perm_imm_mask5(<8 x double> %vec, <8 x
 define <8 x double> @test_masked_z_8xdouble_perm_imm_mask5(<8 x double> %vec, <8 x double> %mask) {
 ; CHECK-LABEL: test_masked_z_8xdouble_perm_imm_mask5:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqpd %zmm2, %zmm1, %k1
 ; CHECK-NEXT:    vpermpd {{.*#+}} zmm0 {%k1} {z} = zmm0[3,3,2,3,7,7,6,7]
 ; CHECK-NEXT:    retq
@@ -2816,7 +2816,7 @@ define <8 x double> @test_masked_8xdouble_perm_mask6(<8 x double> %vec, <8 x dou
 ; CHECK-LABEL: test_masked_8xdouble_perm_mask6:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vmovapd {{.*#+}} zmm3 = [2,7,6,4,0,0,0,2]
-; CHECK-NEXT:    vxorpd %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; CHECK-NEXT:    vcmpeqpd %zmm4, %zmm2, %k1
 ; CHECK-NEXT:    vpermpd %zmm0, %zmm3, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
@@ -2831,7 +2831,7 @@ define <8 x double> @test_masked_z_8xdouble_perm_mask6(<8 x double> %vec, <8 x d
 ; CHECK-LABEL: test_masked_z_8xdouble_perm_mask6:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vmovapd {{.*#+}} zmm2 = [2,7,6,4,0,0,0,2]
-; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqpd %zmm3, %zmm1, %k1
 ; CHECK-NEXT:    vpermpd %zmm0, %zmm2, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
@@ -2843,7 +2843,7 @@ define <8 x double> @test_masked_z_8xdouble_perm_mask6(<8 x double> %vec, <8 x d
 define <8 x double> @test_masked_8xdouble_perm_imm_mask7(<8 x double> %vec, <8 x double> %vec2, <8 x double> %mask) {
 ; CHECK-LABEL: test_masked_8xdouble_perm_imm_mask7:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqpd %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vpermpd {{.*#+}} zmm1 {%k1} = zmm0[3,1,3,2,7,5,7,6]
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
@@ -2857,7 +2857,7 @@ define <8 x double> @test_masked_8xdouble_perm_imm_mask7(<8 x double> %vec, <8 x
 define <8 x double> @test_masked_z_8xdouble_perm_imm_mask7(<8 x double> %vec, <8 x double> %mask) {
 ; CHECK-LABEL: test_masked_z_8xdouble_perm_imm_mask7:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqpd %zmm2, %zmm1, %k1
 ; CHECK-NEXT:    vpermpd {{.*#+}} zmm0 {%k1} {z} = zmm0[3,1,3,2,7,5,7,6]
 ; CHECK-NEXT:    retq
@@ -2880,7 +2880,7 @@ define <8 x double> @test_masked_8xdouble_perm_mem_mask0(<8 x double>* %vp, <8 x
 ; CHECK-LABEL: test_masked_8xdouble_perm_mem_mask0:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vmovapd {{.*#+}} zmm2 = [0,3,4,0,4,2,0,1]
-; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqpd %zmm3, %zmm1, %k1
 ; CHECK-NEXT:    vpermpd (%rdi), %zmm2, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
@@ -2895,7 +2895,7 @@ define <8 x double> @test_masked_z_8xdouble_perm_mem_mask0(<8 x double>* %vp, <8
 ; CHECK-LABEL: test_masked_z_8xdouble_perm_mem_mask0:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vmovapd {{.*#+}} zmm1 = [0,3,4,0,4,2,0,1]
-; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqpd %zmm2, %zmm0, %k1
 ; CHECK-NEXT:    vpermpd (%rdi), %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
@@ -2909,7 +2909,7 @@ define <8 x double> @test_masked_z_8xdouble_perm_mem_mask0(<8 x double>* %vp, <8
 define <8 x double> @test_masked_8xdouble_perm_imm_mem_mask1(<8 x double>* %vp, <8 x double> %vec2, <8 x double> %mask) {
 ; CHECK-LABEL: test_masked_8xdouble_perm_imm_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqpd %zmm2, %zmm1, %k1
 ; CHECK-NEXT:    vpermpd {{.*#+}} zmm0 {%k1} = mem[0,2,0,3,4,6,4,7]
 ; CHECK-NEXT:    retq
@@ -2923,7 +2923,7 @@ define <8 x double> @test_masked_8xdouble_perm_imm_mem_mask1(<8 x double>* %vp, 
 define <8 x double> @test_masked_z_8xdouble_perm_imm_mem_mask1(<8 x double>* %vp, <8 x double> %mask) {
 ; CHECK-LABEL: test_masked_z_8xdouble_perm_imm_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vcmpeqpd %zmm1, %zmm0, %k1
 ; CHECK-NEXT:    vpermpd {{.*#+}} zmm0 {%k1} {z} = mem[0,2,0,3,4,6,4,7]
 ; CHECK-NEXT:    retq
@@ -2938,7 +2938,7 @@ define <8 x double> @test_masked_8xdouble_perm_mem_mask2(<8 x double>* %vp, <8 x
 ; CHECK-LABEL: test_masked_8xdouble_perm_mem_mask2:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vmovapd {{.*#+}} zmm2 = [6,7,2,7,7,6,2,5]
-; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqpd %zmm3, %zmm1, %k1
 ; CHECK-NEXT:    vpermpd (%rdi), %zmm2, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
@@ -2953,7 +2953,7 @@ define <8 x double> @test_masked_z_8xdouble_perm_mem_mask2(<8 x double>* %vp, <8
 ; CHECK-LABEL: test_masked_z_8xdouble_perm_mem_mask2:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vmovapd {{.*#+}} zmm1 = [6,7,2,7,7,6,2,5]
-; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqpd %zmm2, %zmm0, %k1
 ; CHECK-NEXT:    vpermpd (%rdi), %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
@@ -2976,7 +2976,7 @@ define <8 x double> @test_8xdouble_perm_imm_mem_mask3(<8 x double>* %vp) {
 define <8 x double> @test_masked_8xdouble_perm_imm_mem_mask3(<8 x double>* %vp, <8 x double> %vec2, <8 x double> %mask) {
 ; CHECK-LABEL: test_masked_8xdouble_perm_imm_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqpd %zmm2, %zmm1, %k1
 ; CHECK-NEXT:    vpermpd {{.*#+}} zmm0 {%k1} = mem[2,1,1,0,6,5,5,4]
 ; CHECK-NEXT:    retq
@@ -2990,7 +2990,7 @@ define <8 x double> @test_masked_8xdouble_perm_imm_mem_mask3(<8 x double>* %vp, 
 define <8 x double> @test_masked_z_8xdouble_perm_imm_mem_mask3(<8 x double>* %vp, <8 x double> %mask) {
 ; CHECK-LABEL: test_masked_z_8xdouble_perm_imm_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vcmpeqpd %zmm1, %zmm0, %k1
 ; CHECK-NEXT:    vpermpd {{.*#+}} zmm0 {%k1} {z} = mem[2,1,1,0,6,5,5,4]
 ; CHECK-NEXT:    retq
@@ -3005,7 +3005,7 @@ define <8 x double> @test_masked_8xdouble_perm_mem_mask4(<8 x double>* %vp, <8 x
 ; CHECK-LABEL: test_masked_8xdouble_perm_mem_mask4:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vmovapd {{.*#+}} zmm2 = [1,1,3,5,6,0,6,0]
-; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqpd %zmm3, %zmm1, %k1
 ; CHECK-NEXT:    vpermpd (%rdi), %zmm2, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
@@ -3020,7 +3020,7 @@ define <8 x double> @test_masked_z_8xdouble_perm_mem_mask4(<8 x double>* %vp, <8
 ; CHECK-LABEL: test_masked_z_8xdouble_perm_mem_mask4:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vmovapd {{.*#+}} zmm1 = [1,1,3,5,6,0,6,0]
-; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqpd %zmm2, %zmm0, %k1
 ; CHECK-NEXT:    vpermpd (%rdi), %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
@@ -3034,7 +3034,7 @@ define <8 x double> @test_masked_z_8xdouble_perm_mem_mask4(<8 x double>* %vp, <8
 define <8 x double> @test_masked_8xdouble_perm_imm_mem_mask5(<8 x double>* %vp, <8 x double> %vec2, <8 x double> %mask) {
 ; CHECK-LABEL: test_masked_8xdouble_perm_imm_mem_mask5:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqpd %zmm2, %zmm1, %k1
 ; CHECK-NEXT:    vpermpd {{.*#+}} zmm0 {%k1} = mem[2,2,2,3,6,6,6,7]
 ; CHECK-NEXT:    retq
@@ -3048,7 +3048,7 @@ define <8 x double> @test_masked_8xdouble_perm_imm_mem_mask5(<8 x double>* %vp, 
 define <8 x double> @test_masked_z_8xdouble_perm_imm_mem_mask5(<8 x double>* %vp, <8 x double> %mask) {
 ; CHECK-LABEL: test_masked_z_8xdouble_perm_imm_mem_mask5:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vcmpeqpd %zmm1, %zmm0, %k1
 ; CHECK-NEXT:    vpermpd {{.*#+}} zmm0 {%k1} {z} = mem[2,2,2,3,6,6,6,7]
 ; CHECK-NEXT:    retq
@@ -3073,7 +3073,7 @@ define <8 x double> @test_masked_8xdouble_perm_mem_mask6(<8 x double>* %vp, <8 x
 ; CHECK-LABEL: test_masked_8xdouble_perm_mem_mask6:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vmovapd {{.*#+}} zmm2 = [2,4,0,4,6,1,2,5]
-; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqpd %zmm3, %zmm1, %k1
 ; CHECK-NEXT:    vpermpd (%rdi), %zmm2, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
@@ -3088,7 +3088,7 @@ define <8 x double> @test_masked_z_8xdouble_perm_mem_mask6(<8 x double>* %vp, <8
 ; CHECK-LABEL: test_masked_z_8xdouble_perm_mem_mask6:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vmovapd {{.*#+}} zmm1 = [2,4,0,4,6,1,2,5]
-; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqpd %zmm2, %zmm0, %k1
 ; CHECK-NEXT:    vpermpd (%rdi), %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
@@ -3102,7 +3102,7 @@ define <8 x double> @test_masked_z_8xdouble_perm_mem_mask6(<8 x double>* %vp, <8
 define <8 x double> @test_masked_8xdouble_perm_imm_mem_mask7(<8 x double>* %vp, <8 x double> %vec2, <8 x double> %mask) {
 ; CHECK-LABEL: test_masked_8xdouble_perm_imm_mem_mask7:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqpd %zmm2, %zmm1, %k1
 ; CHECK-NEXT:    vpermpd {{.*#+}} zmm0 {%k1} = mem[0,3,2,0,4,7,6,4]
 ; CHECK-NEXT:    retq
@@ -3116,7 +3116,7 @@ define <8 x double> @test_masked_8xdouble_perm_imm_mem_mask7(<8 x double>* %vp, 
 define <8 x double> @test_masked_z_8xdouble_perm_imm_mem_mask7(<8 x double>* %vp, <8 x double> %mask) {
 ; CHECK-LABEL: test_masked_z_8xdouble_perm_imm_mem_mask7:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vcmpeqpd %zmm1, %zmm0, %k1
 ; CHECK-NEXT:    vpermpd {{.*#+}} zmm0 {%k1} {z} = mem[0,3,2,0,4,7,6,4]
 ; CHECK-NEXT:    retq

@@ -149,20 +149,15 @@ static inline AlignmentSource getFieldAlignmentSource(AlignmentSource Source) {
 
 class LValueBaseInfo {
   AlignmentSource AlignSource;
-  bool MayAlias;
 
 public:
-  explicit LValueBaseInfo(AlignmentSource Source = AlignmentSource::Type,
-                 bool Alias = false)
-    : AlignSource(Source), MayAlias(Alias) {}
+  explicit LValueBaseInfo(AlignmentSource Source = AlignmentSource::Type)
+    : AlignSource(Source) {}
   AlignmentSource getAlignmentSource() const { return AlignSource; }
   void setAlignmentSource(AlignmentSource Source) { AlignSource = Source; }
-  bool getMayAlias() const { return MayAlias; }
-  void setMayAlias(bool Alias) { MayAlias = Alias; }
 
   void mergeForCast(const LValueBaseInfo &Info) {
     setAlignmentSource(Info.getAlignmentSource());
-    setMayAlias(getMayAlias() || Info.getMayAlias());
   }
 };
 
@@ -426,8 +421,7 @@ public:
     R.LVType = GlobalReg;
     R.V = Reg.getPointer();
     R.Initialize(type, type.getQualifiers(), Reg.getAlignment(),
-                 LValueBaseInfo(AlignmentSource::Decl, false),
-                 TBAAAccessInfo());
+                 LValueBaseInfo(AlignmentSource::Decl), TBAAAccessInfo());
     return R;
   }
 

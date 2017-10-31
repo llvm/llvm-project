@@ -520,7 +520,7 @@ define <16 x float> @test_16xfloat_unpack_low_mask0(<16 x float> %vec1, <16 x fl
 define <16 x float> @test_16xfloat_masked_unpack_low_mask0(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %vec3, <16 x float> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_unpack_low_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorps %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; CHECK-NEXT:    vcmpeqps %zmm4, %zmm3, %k1
 ; CHECK-NEXT:    vunpcklps {{.*#+}} zmm2 {%k1} = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
 ; CHECK-NEXT:    vmovaps %zmm2, %zmm0
@@ -534,7 +534,7 @@ define <16 x float> @test_16xfloat_masked_unpack_low_mask0(<16 x float> %vec1, <
 define <16 x float> @test_16xfloat_zero_masked_unpack_low_mask0(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_unpack_low_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqps %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vunpcklps {{.*#+}} zmm0 {%k1} {z} = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
 ; CHECK-NEXT:    retq
@@ -546,7 +546,7 @@ define <16 x float> @test_16xfloat_zero_masked_unpack_low_mask0(<16 x float> %ve
 define <16 x float> @test_16xfloat_masked_unpack_low_mask1(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %vec3, <16 x float> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_unpack_low_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorps %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; CHECK-NEXT:    vcmpeqps %zmm4, %zmm3, %k1
 ; CHECK-NEXT:    vunpcklps {{.*#+}} zmm2 {%k1} = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
 ; CHECK-NEXT:    vmovaps %zmm2, %zmm0
@@ -560,7 +560,7 @@ define <16 x float> @test_16xfloat_masked_unpack_low_mask1(<16 x float> %vec1, <
 define <16 x float> @test_16xfloat_zero_masked_unpack_low_mask1(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_unpack_low_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqps %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vunpcklps {{.*#+}} zmm0 {%k1} {z} = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
 ; CHECK-NEXT:    retq
@@ -572,7 +572,7 @@ define <16 x float> @test_16xfloat_zero_masked_unpack_low_mask1(<16 x float> %ve
 define <16 x float> @test_16xfloat_masked_unpack_low_mask2(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %vec3, <16 x float> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_unpack_low_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorps %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; CHECK-NEXT:    vcmpeqps %zmm4, %zmm3, %k1
 ; CHECK-NEXT:    vunpcklps {{.*#+}} zmm2 {%k1} = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
 ; CHECK-NEXT:    vmovaps %zmm2, %zmm0
@@ -586,7 +586,7 @@ define <16 x float> @test_16xfloat_masked_unpack_low_mask2(<16 x float> %vec1, <
 define <16 x float> @test_16xfloat_zero_masked_unpack_low_mask2(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_unpack_low_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqps %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vunpcklps {{.*#+}} zmm0 {%k1} {z} = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
 ; CHECK-NEXT:    retq
@@ -606,7 +606,7 @@ define <16 x float> @test_16xfloat_unpack_low_mask3(<16 x float> %vec1, <16 x fl
 define <16 x float> @test_16xfloat_masked_unpack_low_mask3(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %vec3, <16 x float> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_unpack_low_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorps %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; CHECK-NEXT:    vcmpeqps %zmm4, %zmm3, %k1
 ; CHECK-NEXT:    vunpcklps {{.*#+}} zmm2 {%k1} = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
 ; CHECK-NEXT:    vmovaps %zmm2, %zmm0
@@ -620,7 +620,7 @@ define <16 x float> @test_16xfloat_masked_unpack_low_mask3(<16 x float> %vec1, <
 define <16 x float> @test_16xfloat_zero_masked_unpack_low_mask3(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_unpack_low_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqps %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vunpcklps {{.*#+}} zmm0 {%k1} {z} = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
 ; CHECK-NEXT:    retq
@@ -641,7 +641,7 @@ define <16 x float> @test_16xfloat_unpack_low_mem_mask0(<16 x float> %vec1, <16 
 define <16 x float> @test_16xfloat_masked_unpack_low_mem_mask0(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %vec3, <16 x float> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_unpack_low_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqps %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vunpcklps {{.*#+}} zmm1 {%k1} = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13]
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0
@@ -656,7 +656,7 @@ define <16 x float> @test_16xfloat_masked_unpack_low_mem_mask0(<16 x float> %vec
 define <16 x float> @test_16xfloat_zero_masked_unpack_low_mem_mask0(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_unpack_low_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqps %zmm2, %zmm1, %k1
 ; CHECK-NEXT:    vunpcklps {{.*#+}} zmm0 {%k1} {z} = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13]
 ; CHECK-NEXT:    retq
@@ -670,7 +670,7 @@ define <16 x float> @test_16xfloat_zero_masked_unpack_low_mem_mask0(<16 x float>
 define <16 x float> @test_16xfloat_masked_unpack_low_mem_mask1(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %vec3, <16 x float> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_unpack_low_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqps %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vunpcklps {{.*#+}} zmm1 {%k1} = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13]
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0
@@ -685,7 +685,7 @@ define <16 x float> @test_16xfloat_masked_unpack_low_mem_mask1(<16 x float> %vec
 define <16 x float> @test_16xfloat_zero_masked_unpack_low_mem_mask1(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_unpack_low_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqps %zmm2, %zmm1, %k1
 ; CHECK-NEXT:    vunpcklps {{.*#+}} zmm0 {%k1} {z} = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13]
 ; CHECK-NEXT:    retq
@@ -699,7 +699,7 @@ define <16 x float> @test_16xfloat_zero_masked_unpack_low_mem_mask1(<16 x float>
 define <16 x float> @test_16xfloat_masked_unpack_low_mem_mask2(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %vec3, <16 x float> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_unpack_low_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqps %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vunpcklps {{.*#+}} zmm1 {%k1} = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13]
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0
@@ -714,7 +714,7 @@ define <16 x float> @test_16xfloat_masked_unpack_low_mem_mask2(<16 x float> %vec
 define <16 x float> @test_16xfloat_zero_masked_unpack_low_mem_mask2(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_unpack_low_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqps %zmm2, %zmm1, %k1
 ; CHECK-NEXT:    vunpcklps {{.*#+}} zmm0 {%k1} {z} = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13]
 ; CHECK-NEXT:    retq
@@ -737,7 +737,7 @@ define <16 x float> @test_16xfloat_unpack_low_mem_mask3(<16 x float> %vec1, <16 
 define <16 x float> @test_16xfloat_masked_unpack_low_mem_mask3(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %vec3, <16 x float> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_unpack_low_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqps %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vunpcklps {{.*#+}} zmm1 {%k1} = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13]
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0
@@ -752,7 +752,7 @@ define <16 x float> @test_16xfloat_masked_unpack_low_mem_mask3(<16 x float> %vec
 define <16 x float> @test_16xfloat_zero_masked_unpack_low_mem_mask3(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_unpack_low_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqps %zmm2, %zmm1, %k1
 ; CHECK-NEXT:    vunpcklps {{.*#+}} zmm0 {%k1} {z} = zmm0[0],mem[0],zmm0[1],mem[1],zmm0[4],mem[4],zmm0[5],mem[5],zmm0[8],mem[8],zmm0[9],mem[9],zmm0[12],mem[12],zmm0[13],mem[13]
 ; CHECK-NEXT:    retq
@@ -1155,7 +1155,7 @@ define <8 x double> @test_8xdouble_unpack_low_mask0(<8 x double> %vec1, <8 x dou
 define <8 x double> @test_8xdouble_masked_unpack_low_mask0(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %vec3, <8 x double> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_unpack_low_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; CHECK-NEXT:    vcmpeqpd %zmm4, %zmm3, %k1
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} zmm2 {%k1} = zmm0[0],zmm1[0],zmm0[2],zmm1[2],zmm0[4],zmm1[4],zmm0[6],zmm1[6]
 ; CHECK-NEXT:    vmovapd %zmm2, %zmm0
@@ -1169,7 +1169,7 @@ define <8 x double> @test_8xdouble_masked_unpack_low_mask0(<8 x double> %vec1, <
 define <8 x double> @test_8xdouble_zero_masked_unpack_low_mask0(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_unpack_low_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqpd %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} zmm0 {%k1} {z} = zmm0[0],zmm1[0],zmm0[2],zmm1[2],zmm0[4],zmm1[4],zmm0[6],zmm1[6]
 ; CHECK-NEXT:    retq
@@ -1181,7 +1181,7 @@ define <8 x double> @test_8xdouble_zero_masked_unpack_low_mask0(<8 x double> %ve
 define <8 x double> @test_8xdouble_masked_unpack_low_mask1(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %vec3, <8 x double> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_unpack_low_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; CHECK-NEXT:    vcmpeqpd %zmm4, %zmm3, %k1
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} zmm2 {%k1} = zmm0[0],zmm1[0],zmm0[2],zmm1[2],zmm0[4],zmm1[4],zmm0[6],zmm1[6]
 ; CHECK-NEXT:    vmovapd %zmm2, %zmm0
@@ -1195,7 +1195,7 @@ define <8 x double> @test_8xdouble_masked_unpack_low_mask1(<8 x double> %vec1, <
 define <8 x double> @test_8xdouble_zero_masked_unpack_low_mask1(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_unpack_low_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqpd %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} zmm0 {%k1} {z} = zmm0[0],zmm1[0],zmm0[2],zmm1[2],zmm0[4],zmm1[4],zmm0[6],zmm1[6]
 ; CHECK-NEXT:    retq
@@ -1207,7 +1207,7 @@ define <8 x double> @test_8xdouble_zero_masked_unpack_low_mask1(<8 x double> %ve
 define <8 x double> @test_8xdouble_masked_unpack_low_mask2(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %vec3, <8 x double> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_unpack_low_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; CHECK-NEXT:    vcmpeqpd %zmm4, %zmm3, %k1
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} zmm2 {%k1} = zmm0[0],zmm1[0],zmm0[2],zmm1[2],zmm0[4],zmm1[4],zmm0[6],zmm1[6]
 ; CHECK-NEXT:    vmovapd %zmm2, %zmm0
@@ -1221,7 +1221,7 @@ define <8 x double> @test_8xdouble_masked_unpack_low_mask2(<8 x double> %vec1, <
 define <8 x double> @test_8xdouble_zero_masked_unpack_low_mask2(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_unpack_low_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqpd %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} zmm0 {%k1} {z} = zmm0[0],zmm1[0],zmm0[2],zmm1[2],zmm0[4],zmm1[4],zmm0[6],zmm1[6]
 ; CHECK-NEXT:    retq
@@ -1241,7 +1241,7 @@ define <8 x double> @test_8xdouble_unpack_low_mask3(<8 x double> %vec1, <8 x dou
 define <8 x double> @test_8xdouble_masked_unpack_low_mask3(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %vec3, <8 x double> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_unpack_low_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; CHECK-NEXT:    vcmpeqpd %zmm4, %zmm3, %k1
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} zmm2 {%k1} = zmm0[0],zmm1[0],zmm0[2],zmm1[2],zmm0[4],zmm1[4],zmm0[6],zmm1[6]
 ; CHECK-NEXT:    vmovapd %zmm2, %zmm0
@@ -1255,7 +1255,7 @@ define <8 x double> @test_8xdouble_masked_unpack_low_mask3(<8 x double> %vec1, <
 define <8 x double> @test_8xdouble_zero_masked_unpack_low_mask3(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_unpack_low_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqpd %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} zmm0 {%k1} {z} = zmm0[0],zmm1[0],zmm0[2],zmm1[2],zmm0[4],zmm1[4],zmm0[6],zmm1[6]
 ; CHECK-NEXT:    retq
@@ -1276,7 +1276,7 @@ define <8 x double> @test_8xdouble_unpack_low_mem_mask0(<8 x double> %vec1, <8 x
 define <8 x double> @test_8xdouble_masked_unpack_low_mem_mask0(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %vec3, <8 x double> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_unpack_low_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqpd %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} zmm1 {%k1} = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6]
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
@@ -1291,7 +1291,7 @@ define <8 x double> @test_8xdouble_masked_unpack_low_mem_mask0(<8 x double> %vec
 define <8 x double> @test_8xdouble_zero_masked_unpack_low_mem_mask0(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_unpack_low_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqpd %zmm2, %zmm1, %k1
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} zmm0 {%k1} {z} = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6]
 ; CHECK-NEXT:    retq
@@ -1305,7 +1305,7 @@ define <8 x double> @test_8xdouble_zero_masked_unpack_low_mem_mask0(<8 x double>
 define <8 x double> @test_8xdouble_masked_unpack_low_mem_mask1(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %vec3, <8 x double> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_unpack_low_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqpd %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} zmm1 {%k1} = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6]
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
@@ -1320,7 +1320,7 @@ define <8 x double> @test_8xdouble_masked_unpack_low_mem_mask1(<8 x double> %vec
 define <8 x double> @test_8xdouble_zero_masked_unpack_low_mem_mask1(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_unpack_low_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqpd %zmm2, %zmm1, %k1
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} zmm0 {%k1} {z} = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6]
 ; CHECK-NEXT:    retq
@@ -1334,7 +1334,7 @@ define <8 x double> @test_8xdouble_zero_masked_unpack_low_mem_mask1(<8 x double>
 define <8 x double> @test_8xdouble_masked_unpack_low_mem_mask2(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %vec3, <8 x double> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_unpack_low_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqpd %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} zmm1 {%k1} = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6]
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
@@ -1349,7 +1349,7 @@ define <8 x double> @test_8xdouble_masked_unpack_low_mem_mask2(<8 x double> %vec
 define <8 x double> @test_8xdouble_zero_masked_unpack_low_mem_mask2(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_unpack_low_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqpd %zmm2, %zmm1, %k1
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} zmm0 {%k1} {z} = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6]
 ; CHECK-NEXT:    retq
@@ -1372,7 +1372,7 @@ define <8 x double> @test_8xdouble_unpack_low_mem_mask3(<8 x double> %vec1, <8 x
 define <8 x double> @test_8xdouble_masked_unpack_low_mem_mask3(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %vec3, <8 x double> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_unpack_low_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqpd %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} zmm1 {%k1} = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6]
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
@@ -1387,7 +1387,7 @@ define <8 x double> @test_8xdouble_masked_unpack_low_mem_mask3(<8 x double> %vec
 define <8 x double> @test_8xdouble_zero_masked_unpack_low_mem_mask3(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_unpack_low_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqpd %zmm2, %zmm1, %k1
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} zmm0 {%k1} {z} = zmm0[0],mem[0],zmm0[2],mem[2],zmm0[4],mem[4],zmm0[6],mem[6]
 ; CHECK-NEXT:    retq
@@ -1917,7 +1917,7 @@ define <16 x float> @test_16xfloat_unpack_high_mask0(<16 x float> %vec1, <16 x f
 define <16 x float> @test_16xfloat_masked_unpack_high_mask0(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %vec3, <16 x float> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_unpack_high_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorps %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; CHECK-NEXT:    vcmpeqps %zmm4, %zmm3, %k1
 ; CHECK-NEXT:    vunpckhps {{.*#+}} zmm2 {%k1} = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; CHECK-NEXT:    vmovaps %zmm2, %zmm0
@@ -1931,7 +1931,7 @@ define <16 x float> @test_16xfloat_masked_unpack_high_mask0(<16 x float> %vec1, 
 define <16 x float> @test_16xfloat_zero_masked_unpack_high_mask0(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_unpack_high_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqps %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vunpckhps {{.*#+}} zmm0 {%k1} {z} = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; CHECK-NEXT:    retq
@@ -1943,7 +1943,7 @@ define <16 x float> @test_16xfloat_zero_masked_unpack_high_mask0(<16 x float> %v
 define <16 x float> @test_16xfloat_masked_unpack_high_mask1(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %vec3, <16 x float> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_unpack_high_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorps %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; CHECK-NEXT:    vcmpeqps %zmm4, %zmm3, %k1
 ; CHECK-NEXT:    vunpckhps {{.*#+}} zmm2 {%k1} = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; CHECK-NEXT:    vmovaps %zmm2, %zmm0
@@ -1957,7 +1957,7 @@ define <16 x float> @test_16xfloat_masked_unpack_high_mask1(<16 x float> %vec1, 
 define <16 x float> @test_16xfloat_zero_masked_unpack_high_mask1(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_unpack_high_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqps %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vunpckhps {{.*#+}} zmm0 {%k1} {z} = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; CHECK-NEXT:    retq
@@ -1969,7 +1969,7 @@ define <16 x float> @test_16xfloat_zero_masked_unpack_high_mask1(<16 x float> %v
 define <16 x float> @test_16xfloat_masked_unpack_high_mask2(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %vec3, <16 x float> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_unpack_high_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorps %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; CHECK-NEXT:    vcmpeqps %zmm4, %zmm3, %k1
 ; CHECK-NEXT:    vunpckhps {{.*#+}} zmm2 {%k1} = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; CHECK-NEXT:    vmovaps %zmm2, %zmm0
@@ -1983,7 +1983,7 @@ define <16 x float> @test_16xfloat_masked_unpack_high_mask2(<16 x float> %vec1, 
 define <16 x float> @test_16xfloat_zero_masked_unpack_high_mask2(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_unpack_high_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqps %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vunpckhps {{.*#+}} zmm0 {%k1} {z} = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; CHECK-NEXT:    retq
@@ -2003,7 +2003,7 @@ define <16 x float> @test_16xfloat_unpack_high_mask3(<16 x float> %vec1, <16 x f
 define <16 x float> @test_16xfloat_masked_unpack_high_mask3(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %vec3, <16 x float> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_unpack_high_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorps %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; CHECK-NEXT:    vcmpeqps %zmm4, %zmm3, %k1
 ; CHECK-NEXT:    vunpckhps {{.*#+}} zmm2 {%k1} = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; CHECK-NEXT:    vmovaps %zmm2, %zmm0
@@ -2017,7 +2017,7 @@ define <16 x float> @test_16xfloat_masked_unpack_high_mask3(<16 x float> %vec1, 
 define <16 x float> @test_16xfloat_zero_masked_unpack_high_mask3(<16 x float> %vec1, <16 x float> %vec2, <16 x float> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_unpack_high_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqps %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vunpckhps {{.*#+}} zmm0 {%k1} {z} = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; CHECK-NEXT:    retq
@@ -2038,7 +2038,7 @@ define <16 x float> @test_16xfloat_unpack_high_mem_mask0(<16 x float> %vec1, <16
 define <16 x float> @test_16xfloat_masked_unpack_high_mem_mask0(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %vec3, <16 x float> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_unpack_high_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqps %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vunpckhps {{.*#+}} zmm1 {%k1} = zmm0[2],mem[2],zmm0[3],mem[3],zmm0[6],mem[6],zmm0[7],mem[7],zmm0[10],mem[10],zmm0[11],mem[11],zmm0[14],mem[14],zmm0[15],mem[15]
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0
@@ -2053,7 +2053,7 @@ define <16 x float> @test_16xfloat_masked_unpack_high_mem_mask0(<16 x float> %ve
 define <16 x float> @test_16xfloat_zero_masked_unpack_high_mem_mask0(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_unpack_high_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqps %zmm2, %zmm1, %k1
 ; CHECK-NEXT:    vunpckhps {{.*#+}} zmm0 {%k1} {z} = zmm0[2],mem[2],zmm0[3],mem[3],zmm0[6],mem[6],zmm0[7],mem[7],zmm0[10],mem[10],zmm0[11],mem[11],zmm0[14],mem[14],zmm0[15],mem[15]
 ; CHECK-NEXT:    retq
@@ -2067,7 +2067,7 @@ define <16 x float> @test_16xfloat_zero_masked_unpack_high_mem_mask0(<16 x float
 define <16 x float> @test_16xfloat_masked_unpack_high_mem_mask1(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %vec3, <16 x float> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_unpack_high_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqps %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vunpckhps {{.*#+}} zmm1 {%k1} = zmm0[2],mem[2],zmm0[3],mem[3],zmm0[6],mem[6],zmm0[7],mem[7],zmm0[10],mem[10],zmm0[11],mem[11],zmm0[14],mem[14],zmm0[15],mem[15]
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0
@@ -2082,7 +2082,7 @@ define <16 x float> @test_16xfloat_masked_unpack_high_mem_mask1(<16 x float> %ve
 define <16 x float> @test_16xfloat_zero_masked_unpack_high_mem_mask1(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_unpack_high_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqps %zmm2, %zmm1, %k1
 ; CHECK-NEXT:    vunpckhps {{.*#+}} zmm0 {%k1} {z} = zmm0[2],mem[2],zmm0[3],mem[3],zmm0[6],mem[6],zmm0[7],mem[7],zmm0[10],mem[10],zmm0[11],mem[11],zmm0[14],mem[14],zmm0[15],mem[15]
 ; CHECK-NEXT:    retq
@@ -2096,7 +2096,7 @@ define <16 x float> @test_16xfloat_zero_masked_unpack_high_mem_mask1(<16 x float
 define <16 x float> @test_16xfloat_masked_unpack_high_mem_mask2(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %vec3, <16 x float> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_unpack_high_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqps %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vunpckhps {{.*#+}} zmm1 {%k1} = zmm0[2],mem[2],zmm0[3],mem[3],zmm0[6],mem[6],zmm0[7],mem[7],zmm0[10],mem[10],zmm0[11],mem[11],zmm0[14],mem[14],zmm0[15],mem[15]
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0
@@ -2111,7 +2111,7 @@ define <16 x float> @test_16xfloat_masked_unpack_high_mem_mask2(<16 x float> %ve
 define <16 x float> @test_16xfloat_zero_masked_unpack_high_mem_mask2(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_unpack_high_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqps %zmm2, %zmm1, %k1
 ; CHECK-NEXT:    vunpckhps {{.*#+}} zmm0 {%k1} {z} = zmm0[2],mem[2],zmm0[3],mem[3],zmm0[6],mem[6],zmm0[7],mem[7],zmm0[10],mem[10],zmm0[11],mem[11],zmm0[14],mem[14],zmm0[15],mem[15]
 ; CHECK-NEXT:    retq
@@ -2134,7 +2134,7 @@ define <16 x float> @test_16xfloat_unpack_high_mem_mask3(<16 x float> %vec1, <16
 define <16 x float> @test_16xfloat_masked_unpack_high_mem_mask3(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %vec3, <16 x float> %mask) {
 ; CHECK-LABEL: test_16xfloat_masked_unpack_high_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqps %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vunpckhps {{.*#+}} zmm1 {%k1} = zmm0[2],mem[2],zmm0[3],mem[3],zmm0[6],mem[6],zmm0[7],mem[7],zmm0[10],mem[10],zmm0[11],mem[11],zmm0[14],mem[14],zmm0[15],mem[15]
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0
@@ -2149,7 +2149,7 @@ define <16 x float> @test_16xfloat_masked_unpack_high_mem_mask3(<16 x float> %ve
 define <16 x float> @test_16xfloat_zero_masked_unpack_high_mem_mask3(<16 x float> %vec1, <16 x float>* %vec2p, <16 x float> %mask) {
 ; CHECK-LABEL: test_16xfloat_zero_masked_unpack_high_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqps %zmm2, %zmm1, %k1
 ; CHECK-NEXT:    vunpckhps {{.*#+}} zmm0 {%k1} {z} = zmm0[2],mem[2],zmm0[3],mem[3],zmm0[6],mem[6],zmm0[7],mem[7],zmm0[10],mem[10],zmm0[11],mem[11],zmm0[14],mem[14],zmm0[15],mem[15]
 ; CHECK-NEXT:    retq
@@ -2552,7 +2552,7 @@ define <8 x double> @test_8xdouble_unpack_high_mask0(<8 x double> %vec1, <8 x do
 define <8 x double> @test_8xdouble_masked_unpack_high_mask0(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %vec3, <8 x double> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_unpack_high_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; CHECK-NEXT:    vcmpeqpd %zmm4, %zmm3, %k1
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} zmm2 {%k1} = zmm0[1],zmm1[1],zmm0[3],zmm1[3],zmm0[5],zmm1[5],zmm0[7],zmm1[7]
 ; CHECK-NEXT:    vmovapd %zmm2, %zmm0
@@ -2566,7 +2566,7 @@ define <8 x double> @test_8xdouble_masked_unpack_high_mask0(<8 x double> %vec1, 
 define <8 x double> @test_8xdouble_zero_masked_unpack_high_mask0(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_unpack_high_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqpd %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} zmm0 {%k1} {z} = zmm0[1],zmm1[1],zmm0[3],zmm1[3],zmm0[5],zmm1[5],zmm0[7],zmm1[7]
 ; CHECK-NEXT:    retq
@@ -2578,7 +2578,7 @@ define <8 x double> @test_8xdouble_zero_masked_unpack_high_mask0(<8 x double> %v
 define <8 x double> @test_8xdouble_masked_unpack_high_mask1(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %vec3, <8 x double> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_unpack_high_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; CHECK-NEXT:    vcmpeqpd %zmm4, %zmm3, %k1
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} zmm2 {%k1} = zmm0[1],zmm1[1],zmm0[3],zmm1[3],zmm0[5],zmm1[5],zmm0[7],zmm1[7]
 ; CHECK-NEXT:    vmovapd %zmm2, %zmm0
@@ -2592,7 +2592,7 @@ define <8 x double> @test_8xdouble_masked_unpack_high_mask1(<8 x double> %vec1, 
 define <8 x double> @test_8xdouble_zero_masked_unpack_high_mask1(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_unpack_high_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqpd %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} zmm0 {%k1} {z} = zmm0[1],zmm1[1],zmm0[3],zmm1[3],zmm0[5],zmm1[5],zmm0[7],zmm1[7]
 ; CHECK-NEXT:    retq
@@ -2604,7 +2604,7 @@ define <8 x double> @test_8xdouble_zero_masked_unpack_high_mask1(<8 x double> %v
 define <8 x double> @test_8xdouble_masked_unpack_high_mask2(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %vec3, <8 x double> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_unpack_high_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; CHECK-NEXT:    vcmpeqpd %zmm4, %zmm3, %k1
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} zmm2 {%k1} = zmm0[1],zmm1[1],zmm0[3],zmm1[3],zmm0[5],zmm1[5],zmm0[7],zmm1[7]
 ; CHECK-NEXT:    vmovapd %zmm2, %zmm0
@@ -2618,7 +2618,7 @@ define <8 x double> @test_8xdouble_masked_unpack_high_mask2(<8 x double> %vec1, 
 define <8 x double> @test_8xdouble_zero_masked_unpack_high_mask2(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_unpack_high_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqpd %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} zmm0 {%k1} {z} = zmm0[1],zmm1[1],zmm0[3],zmm1[3],zmm0[5],zmm1[5],zmm0[7],zmm1[7]
 ; CHECK-NEXT:    retq
@@ -2638,7 +2638,7 @@ define <8 x double> @test_8xdouble_unpack_high_mask3(<8 x double> %vec1, <8 x do
 define <8 x double> @test_8xdouble_masked_unpack_high_mask3(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %vec3, <8 x double> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_unpack_high_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; CHECK-NEXT:    vcmpeqpd %zmm4, %zmm3, %k1
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} zmm2 {%k1} = zmm0[1],zmm1[1],zmm0[3],zmm1[3],zmm0[5],zmm1[5],zmm0[7],zmm1[7]
 ; CHECK-NEXT:    vmovapd %zmm2, %zmm0
@@ -2652,7 +2652,7 @@ define <8 x double> @test_8xdouble_masked_unpack_high_mask3(<8 x double> %vec1, 
 define <8 x double> @test_8xdouble_zero_masked_unpack_high_mask3(<8 x double> %vec1, <8 x double> %vec2, <8 x double> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_unpack_high_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqpd %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} zmm0 {%k1} {z} = zmm0[1],zmm1[1],zmm0[3],zmm1[3],zmm0[5],zmm1[5],zmm0[7],zmm1[7]
 ; CHECK-NEXT:    retq
@@ -2673,7 +2673,7 @@ define <8 x double> @test_8xdouble_unpack_high_mem_mask0(<8 x double> %vec1, <8 
 define <8 x double> @test_8xdouble_masked_unpack_high_mem_mask0(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %vec3, <8 x double> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_unpack_high_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqpd %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} zmm1 {%k1} = zmm0[1],mem[1],zmm0[3],mem[3],zmm0[5],mem[5],zmm0[7],mem[7]
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
@@ -2688,7 +2688,7 @@ define <8 x double> @test_8xdouble_masked_unpack_high_mem_mask0(<8 x double> %ve
 define <8 x double> @test_8xdouble_zero_masked_unpack_high_mem_mask0(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_unpack_high_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqpd %zmm2, %zmm1, %k1
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} zmm0 {%k1} {z} = zmm0[1],mem[1],zmm0[3],mem[3],zmm0[5],mem[5],zmm0[7],mem[7]
 ; CHECK-NEXT:    retq
@@ -2702,7 +2702,7 @@ define <8 x double> @test_8xdouble_zero_masked_unpack_high_mem_mask0(<8 x double
 define <8 x double> @test_8xdouble_masked_unpack_high_mem_mask1(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %vec3, <8 x double> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_unpack_high_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqpd %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} zmm1 {%k1} = zmm0[1],mem[1],zmm0[3],mem[3],zmm0[5],mem[5],zmm0[7],mem[7]
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
@@ -2717,7 +2717,7 @@ define <8 x double> @test_8xdouble_masked_unpack_high_mem_mask1(<8 x double> %ve
 define <8 x double> @test_8xdouble_zero_masked_unpack_high_mem_mask1(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_unpack_high_mem_mask1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqpd %zmm2, %zmm1, %k1
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} zmm0 {%k1} {z} = zmm0[1],mem[1],zmm0[3],mem[3],zmm0[5],mem[5],zmm0[7],mem[7]
 ; CHECK-NEXT:    retq
@@ -2731,7 +2731,7 @@ define <8 x double> @test_8xdouble_zero_masked_unpack_high_mem_mask1(<8 x double
 define <8 x double> @test_8xdouble_masked_unpack_high_mem_mask2(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %vec3, <8 x double> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_unpack_high_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqpd %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} zmm1 {%k1} = zmm0[1],mem[1],zmm0[3],mem[3],zmm0[5],mem[5],zmm0[7],mem[7]
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
@@ -2746,7 +2746,7 @@ define <8 x double> @test_8xdouble_masked_unpack_high_mem_mask2(<8 x double> %ve
 define <8 x double> @test_8xdouble_zero_masked_unpack_high_mem_mask2(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_unpack_high_mem_mask2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqpd %zmm2, %zmm1, %k1
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} zmm0 {%k1} {z} = zmm0[1],mem[1],zmm0[3],mem[3],zmm0[5],mem[5],zmm0[7],mem[7]
 ; CHECK-NEXT:    retq
@@ -2769,7 +2769,7 @@ define <8 x double> @test_8xdouble_unpack_high_mem_mask3(<8 x double> %vec1, <8 
 define <8 x double> @test_8xdouble_masked_unpack_high_mem_mask3(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %vec3, <8 x double> %mask) {
 ; CHECK-LABEL: test_8xdouble_masked_unpack_high_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqpd %zmm3, %zmm2, %k1
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} zmm1 {%k1} = zmm0[1],mem[1],zmm0[3],mem[3],zmm0[5],mem[5],zmm0[7],mem[7]
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
@@ -2784,7 +2784,7 @@ define <8 x double> @test_8xdouble_masked_unpack_high_mem_mask3(<8 x double> %ve
 define <8 x double> @test_8xdouble_zero_masked_unpack_high_mem_mask3(<8 x double> %vec1, <8 x double>* %vec2p, <8 x double> %mask) {
 ; CHECK-LABEL: test_8xdouble_zero_masked_unpack_high_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqpd %zmm2, %zmm1, %k1
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} zmm0 {%k1} {z} = zmm0[1],mem[1],zmm0[3],mem[3],zmm0[5],mem[5],zmm0[7],mem[7]
 ; CHECK-NEXT:    retq

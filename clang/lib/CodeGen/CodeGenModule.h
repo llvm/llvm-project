@@ -673,14 +673,23 @@ public:
   /// getTBAAAccessTagInfo - Get TBAA tag for a given memory access.
   llvm::MDNode *getTBAAAccessTagInfo(TBAAAccessInfo Info);
 
-  /// getTBAAMayAliasAccessInfo - Get TBAA information that represents
-  /// may-alias accesses.
-  TBAAAccessInfo getTBAAMayAliasAccessInfo();
-
   /// mergeTBAAInfoForCast - Get merged TBAA information for the purposes of
   /// type casts.
   TBAAAccessInfo mergeTBAAInfoForCast(TBAAAccessInfo SourceInfo,
                                       TBAAAccessInfo TargetInfo);
+
+  /// mergeTBAAInfoForConditionalOperator - Get merged TBAA information for the
+  /// purposes of conditional operator.
+  TBAAAccessInfo mergeTBAAInfoForConditionalOperator(TBAAAccessInfo InfoA,
+                                                     TBAAAccessInfo InfoB);
+
+  /// getTBAAInfoForSubobject - Get TBAA information for an access with a given
+  /// base lvalue.
+  TBAAAccessInfo getTBAAInfoForSubobject(LValue Base, QualType AccessType) {
+    if (Base.getTBAAInfo().isMayAlias())
+      return TBAAAccessInfo::getMayAliasInfo();
+    return getTBAAAccessInfo(AccessType);
+  }
 
   bool isTypeConstant(QualType QTy, bool ExcludeCtorDtor);
 

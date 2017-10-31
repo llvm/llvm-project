@@ -426,25 +426,6 @@ void LinkerScript::processSectionCommands() {
   }
 }
 
-// If no SECTIONS command was given, we create simple SectionCommands
-// as if a minimum SECTIONS command were given. This function does that.
-void LinkerScript::fabricateDefaultCommands() {
-  // Define start address
-  uint64_t StartAddr = UINT64_MAX;
-
-  // The Sections with -T<section> have been sorted in order of ascending
-  // address. We must lower StartAddr if the lowest -T<section address> as
-  // calls to setDot() must be monotonically increasing.
-  for (auto &KV : Config->SectionStartMap)
-    StartAddr = std::min(StartAddr, KV.second);
-
-  auto Expr = [=] {
-    return std::min(StartAddr, Target->getImageBase() + elf::getHeaderSize());
-  };
-  SectionCommands.insert(SectionCommands.begin(),
-                         make<SymbolAssignment>(".", Expr, ""));
-}
-
 static OutputSection *findByName(ArrayRef<BaseCommand *> Vec,
                                  StringRef Name) {
   for (BaseCommand *Base : Vec)
@@ -465,6 +446,7 @@ static void reportOrphan(InputSectionBase *IS, StringRef Name) {
 void LinkerScript::addOrphanSections(OutputSectionFactory &Factory) {
   unsigned End = SectionCommands.size();
 
+  std::vector<OutputSection *> V;
   for (InputSectionBase *S : InputSections) {
     if (!S->Live || S->Parent)
       continue;
@@ -479,9 +461,18 @@ void LinkerScript::addOrphanSections(OutputSectionFactory &Factory) {
     }
 
     if (OutputSection *OS = Factory.addInputSec(S, Name))
-      SectionCommands.push_back(OS);
+      V.push_back(OS);
     assert(S->getOutputSection()->SectionIndex == INT_MAX);
   }
+
+  // If no SECTIONS command was given, we should insert sections commands
+  // before others, so that we can handle scripts which refers them,
+  // for example: "foo = ABSOLUTE(ADDR(.text)));".
+  // When SECTIONS command is present we just add all orphans to the end.
+  if (HasSectionsCommand)
+    SectionCommands.insert(SectionCommands.end(), V.begin(), V.end());
+  else
+    SectionCommands.insert(SectionCommands.begin(), V.begin(), V.end());
 }
 
 uint64_t LinkerScript::advance(uint64_t Size, unsigned Alignment) {
@@ -802,11 +793,26 @@ LinkerScript::AddressState::AddressState() {
   }
 }
 
-// Assign addresses as instructed by linker script SECTIONS sub-commands.
+static uint64_t getInitialDot() {
+  // By default linker scripts use an initial value of 0 for '.',
+  // but prefer -image-base if set.
+  if (Script->HasSectionsCommand)
+    return Config->ImageBase ? *Config->ImageBase : 0;
+
+  uint64_t StartAddr = UINT64_MAX;
+  // The Sections with -T<section> have been sorted in order of ascending
+  // address. We must lower StartAddr if the lowest -T<section address> as
+  // calls to setDot() must be monotonically increasing.
+  for (auto &KV : Config->SectionStartMap)
+    StartAddr = std::min(StartAddr, KV.second);
+  return std::min(StartAddr, Target->getImageBase() + elf::getHeaderSize());
+}
+
+// Here we assign addresses as instructed by linker script SECTIONS
+// sub-commands. Doing that allows us to use final VA values, so here
+// we also handle rest commands like symbol assignments and ASSERTs.
 void LinkerScript::assignAddresses() {
-  // By default linker scripts use an initial value of 0 for '.', but prefer
-  // -image-base if set.
-  Dot = Config->ImageBase ? *Config->ImageBase : 0;
+  Dot = getInitialDot();
 
   auto Deleter = make_unique<AddressState>();
   Ctx = Deleter.get();

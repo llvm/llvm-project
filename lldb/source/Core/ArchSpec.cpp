@@ -10,7 +10,6 @@
 #include "lldb/Core/ArchSpec.h"
 
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Target/Platform.h"
 #include "lldb/Utility/NameMatches.h"
 #include "lldb/Utility/Stream.h" // for Stream
 #include "lldb/Utility/StringList.h"
@@ -555,15 +554,6 @@ FindArchDefinitionEntry(const ArchDefinition *def, ArchSpec::Core core) {
 
 ArchSpec::ArchSpec() {}
 
-ArchSpec::ArchSpec(const char *triple_cstr, Platform *platform) {
-  if (triple_cstr)
-    SetTriple(triple_cstr, platform);
-}
-
-ArchSpec::ArchSpec(llvm::StringRef triple_str, Platform *platform) {
-  SetTriple(triple_str, platform);
-}
-
 ArchSpec::ArchSpec(const char *triple_cstr) {
   if (triple_cstr)
     SetTriple(triple_cstr);
@@ -873,16 +863,6 @@ bool lldb_private::ParseMachCPUDashSubtypeTriple(llvm::StringRef triple_str,
   return true;
 }
 
-bool ArchSpec::SetTriple(const char *triple_cstr) {
-  llvm::StringRef str(triple_cstr ? triple_cstr : "");
-  return SetTriple(str);
-}
-
-bool ArchSpec::SetTriple(const char *triple_cstr, Platform *platform) {
-  llvm::StringRef str(triple_cstr ? triple_cstr : "");
-  return SetTriple(str, platform);
-}
-
 bool ArchSpec::SetTriple(llvm::StringRef triple) {
   if (triple.empty()) {
     Clear();
@@ -906,73 +886,11 @@ bool ArchSpec::SetTriple(llvm::StringRef triple) {
   return IsValid();
 }
 
-bool ArchSpec::SetTriple(llvm::StringRef triple, Platform *platform) {
-  if (triple.empty()) {
-    Clear();
-    return false;
-  }
-  if (ParseMachCPUDashSubtypeTriple(triple, *this))
-    return true;
-
-  if (triple.startswith(LLDB_ARCH_DEFAULT)) {
-    // Special case for the current host default architectures...
-    if (triple.equals(LLDB_ARCH_DEFAULT_32BIT))
-      *this = HostInfo::GetArchitecture(HostInfo::eArchKind32);
-    else if (triple.equals(LLDB_ARCH_DEFAULT_64BIT))
-      *this = HostInfo::GetArchitecture(HostInfo::eArchKind64);
-    else if (triple.equals(LLDB_ARCH_DEFAULT))
-      *this = HostInfo::GetArchitecture(HostInfo::eArchKindDefault);
-    return IsValid();
-  }
-
-  ArchSpec raw_arch(triple);
-
-  llvm::Triple normalized_triple(llvm::Triple::normalize(triple));
-
-  const bool os_specified = !normalized_triple.getOSName().empty();
-  const bool vendor_specified = !normalized_triple.getVendorName().empty();
-  const bool env_specified = !normalized_triple.getEnvironmentName().empty();
-
-  if (os_specified || vendor_specified || env_specified) {
-    SetTriple(normalized_triple);
-    return IsValid();
-  }
-
-  // We got an arch only.  If there is no platform, fallback to the host system
-  // for defaults.
-  if (!platform) {
-    llvm::Triple host_triple(llvm::sys::getDefaultTargetTriple());
-    if (!vendor_specified)
-      normalized_triple.setVendor(host_triple.getVendor());
-    if (!vendor_specified)
-      normalized_triple.setOS(host_triple.getOS());
-    if (!env_specified && host_triple.getEnvironmentName().size())
-      normalized_triple.setEnvironment(host_triple.getEnvironment());
-    SetTriple(normalized_triple);
-    return IsValid();
-  }
-
-  // If we were given a platform, use the platform's system architecture. If
-  // this is not available (might not be connected) use the first supported
-  // architecture.
-  ArchSpec compatible_arch;
-  if (!platform->IsCompatibleArchitecture(raw_arch, false, &compatible_arch)) {
-    *this = raw_arch;
-    return IsValid();
-  }
-
-  if (compatible_arch.IsValid()) {
-    const llvm::Triple &compatible_triple = compatible_arch.GetTriple();
-    if (!vendor_specified)
-      normalized_triple.setVendor(compatible_triple.getVendor());
-    if (!os_specified)
-      normalized_triple.setOS(compatible_triple.getOS());
-    if (!env_specified && compatible_triple.hasEnvironment())
-      normalized_triple.setEnvironment(compatible_triple.getEnvironment());
-  }
-
-  SetTriple(normalized_triple);
-  return IsValid();
+bool ArchSpec::ContainsOnlyArch(const llvm::Triple &normalized_triple) {
+  return !normalized_triple.getArchName().empty() &&
+         normalized_triple.getOSName().empty() &&
+         normalized_triple.getVendorName().empty() &&
+         normalized_triple.getEnvironmentName().empty();
 }
 
 void ArchSpec::MergeFrom(const ArchSpec &other) {
