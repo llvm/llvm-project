@@ -141,37 +141,29 @@ static void RewriteUsesOfClonedInstructions(BasicBlock *OrigHeader,
 
     // Replace MetadataAsValue(ValueAsMetadata(OrigHeaderVal)) uses in debug
     // intrinsics.
-    LLVMContext &C = OrigHeader->getContext();
-    if (auto *VAM = ValueAsMetadata::getIfExists(OrigHeaderVal)) {
-      if (auto *MAV = MetadataAsValue::getIfExists(C, VAM)) {
-        for (auto UI = MAV->use_begin(), E = MAV->use_end(); UI != E;) {
-          // Grab the use before incrementing the iterator. Otherwise, altering
-          // the Use will invalidate the iterator.
-          Use &U = *UI++;
-          DbgInfoIntrinsic *UserInst = dyn_cast<DbgInfoIntrinsic>(U.getUser());
-          if (!UserInst)
-            continue;
+    SmallVector<DbgValueInst *, 1> DbgValues;
+    llvm::findDbgValues(DbgValues, OrigHeaderVal);
+    for (auto &DbgValue : DbgValues) {
+      // The original users in the OrigHeader are already using the original
+      // definitions.
+      BasicBlock *UserBB = DbgValue->getParent();
+      if (UserBB == OrigHeader)
+        continue;
 
-          // The original users in the OrigHeader are already using the original
-          // definitions.
-          BasicBlock *UserBB = UserInst->getParent();
-          if (UserBB == OrigHeader)
-            continue;
-
-          // Users in the OrigPreHeader need to use the value to which the
-          // original definitions are mapped and anything else can be handled by
-          // the SSAUpdater. To avoid adding PHINodes, check if the value is
-          // available in UserBB, if not substitute undef.
-          Value *NewVal;
-          if (UserBB == OrigPreheader)
-            NewVal = OrigPreHeaderVal;
-          else if (SSA.HasValueForBlock(UserBB))
-            NewVal = SSA.GetValueInMiddleOfBlock(UserBB);
-          else
-            NewVal = UndefValue::get(OrigHeaderVal->getType());
-          U = MetadataAsValue::get(C, ValueAsMetadata::get(NewVal));
-        }
-      }
+      // Users in the OrigPreHeader need to use the value to which the
+      // original definitions are mapped and anything else can be handled by
+      // the SSAUpdater. To avoid adding PHINodes, check if the value is
+      // available in UserBB, if not substitute undef.
+      Value *NewVal;
+      if (UserBB == OrigPreheader)
+        NewVal = OrigPreHeaderVal;
+      else if (SSA.HasValueForBlock(UserBB))
+        NewVal = SSA.GetValueInMiddleOfBlock(UserBB);
+      else
+        NewVal = UndefValue::get(OrigHeaderVal->getType());
+      DbgValue->setOperand(0,
+                           MetadataAsValue::get(OrigHeaderVal->getContext(),
+                                                ValueAsMetadata::get(NewVal)));
     }
   }
 }
