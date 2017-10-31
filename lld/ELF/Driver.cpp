@@ -978,21 +978,32 @@ static DenseSet<StringRef> getExcludeLibs(opt::InputArgList &Args) {
   return Ret;
 }
 
+static Optional<StringRef> getArchiveName(InputFile *File) {
+  if (isa<ArchiveFile>(File))
+    return File->getName();
+  if (!File->ArchiveName.empty())
+    return File->ArchiveName;
+  return None;
+}
+
 // Handles the -exclude-libs option. If a static library file is specified
 // by the -exclude-libs option, all public symbols from the archive become
 // private unless otherwise specified by version scripts or something.
 // A special library name "ALL" means all archive files.
 //
 // This is not a popular option, but some programs such as bionic libc use it.
+template <class ELFT>
 static void excludeLibs(opt::InputArgList &Args, ArrayRef<InputFile *> Files) {
   DenseSet<StringRef> Libs = getExcludeLibs(Args);
   bool All = Libs.count("ALL");
 
-  for (InputFile *File : Files)
-    if (auto *F = dyn_cast<ArchiveFile>(File))
-      if (All || Libs.count(path::filename(F->getName())))
-        for (SymbolBody *Sym : F->getSymbols())
-          Sym->symbol()->VersionId = VER_NDX_LOCAL;
+  for (InputFile *File : Files) {
+    if (Optional<StringRef> Archive = getArchiveName(File))
+      if (All || Libs.count(path::filename(*Archive)))
+        for (SymbolBody *SymBody : File->getSymbols())
+          if (!SymBody->isLocal())
+            SymBody->symbol()->VersionId = VER_NDX_LOCAL;
+  }
 }
 
 // Do actual linking. Note that when this function is called,
@@ -1075,7 +1086,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   // Handle the -exclude-libs option.
   if (Args.hasArg(OPT_exclude_libs))
-    excludeLibs(Args, Files);
+    excludeLibs<ELFT>(Args, Files);
 
   // Apply version scripts.
   Symtab->scanVersionScript();

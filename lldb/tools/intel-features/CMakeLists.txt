@@ -1,5 +1,3 @@
-include(${LLDB_PROJECT_ROOT}/cmake/LLDBDependencies.cmake)
-
 # Flags to control each individual feature
 option(LLDB_BUILD_INTEL_MPX "Enable Building of Intel(R) Memory Protection Extensions" ON)
 option(LLDB_BUILD_INTEL_PT "Enable Building of Intel(R) Processor Trace Tool" OFF)
@@ -63,7 +61,6 @@ add_lldb_library(lldbIntelFeatures SHARED
 # Add link dependencies for python wrapper
 if (NOT LLDB_DISABLE_PYTHON AND LLDB_BUILD_INTEL_PT)
   add_dependencies(lldbIntelFeatures intel-features-swig_wrapper)
-  target_link_libraries(lldbIntelFeatures PRIVATE ${LLDB_SYSTEM_LIBS})
 endif()
 
 install(TARGETS lldbIntelFeatures

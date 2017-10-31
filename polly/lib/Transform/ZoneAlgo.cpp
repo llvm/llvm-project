@@ -321,7 +321,7 @@ void ZoneAlgorithm::collectIncompatibleElts(ScopStmt *Stmt,
   // This assumes that the MemoryKind::Array MemoryAccesses are iterated in
   // order.
   for (auto *MA : *Stmt) {
-    if (!MA->isLatestArrayKind())
+    if (!MA->isOriginalArrayKind())
       continue;
 
     isl::map AccRelMap = getAccessRelationFor(MA);
