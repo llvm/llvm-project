@@ -14,6 +14,7 @@
 
 #if defined(_LIBUNWIND_ARM_EHABI)
 
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -468,11 +469,11 @@ unwind_phase1(unw_context_t *uc, unw_cursor_t *cursor, _Unwind_Exception *except
       unw_word_t pc;
       unw_get_reg(cursor, UNW_REG_IP, &pc);
       _LIBUNWIND_TRACE_UNWINDING(
-          "unwind_phase1(ex_ojb=%p): pc=0x%llX, start_ip=0x%llX, func=%s, "
-          "lsda=0x%llX, personality=0x%llX",
-          static_cast<void *>(exception_object), (long long)pc,
-          (long long)frameInfo.start_ip, functionName,
-          (long long)frameInfo.lsda, (long long)frameInfo.handler);
+          "unwind_phase1(ex_ojb=%p): pc=0x%" PRIxPTR ", start_ip=0x%" PRIxPTR ", func=%s, "
+          "lsda=0x%" PRIxPTR ", personality=0x%" PRIxPTR,
+          static_cast<void *>(exception_object), pc,
+          frameInfo.start_ip, functionName,
+          frameInfo.lsda, frameInfo.handler);
     }
 
     // If there is a personality routine, ask it if it will want to stop at
@@ -584,11 +585,11 @@ static _Unwind_Reason_Code unwind_phase2(unw_context_t *uc, unw_cursor_t *cursor
           (frameInfo.start_ip + offset > frameInfo.end_ip))
         functionName = ".anonymous.";
       _LIBUNWIND_TRACE_UNWINDING(
-          "unwind_phase2(ex_ojb=%p): start_ip=0x%llX, func=%s, sp=0x%llX, "
-          "lsda=0x%llX, personality=0x%llX",
-          static_cast<void *>(exception_object), (long long)frameInfo.start_ip,
-          functionName, (long long)sp, (long long)frameInfo.lsda,
-          (long long)frameInfo.handler);
+          "unwind_phase2(ex_ojb=%p): start_ip=0x%" PRIxPTR ", func=%s, sp=0x%" PRIxPTR ", "
+          "lsda=0x%" PRIxPTR ", personality=0x%" PRIxPTR "",
+          static_cast<void *>(exception_object), frameInfo.start_ip,
+          functionName, sp, frameInfo.lsda,
+          frameInfo.handler);
     }
 
     // If there is a personality routine, tell it we are unwinding.
@@ -627,9 +628,9 @@ static _Unwind_Reason_Code unwind_phase2(unw_context_t *uc, unw_cursor_t *cursor
           unw_get_reg(cursor, UNW_REG_IP, &pc);
           unw_get_reg(cursor, UNW_REG_SP, &sp);
           _LIBUNWIND_TRACE_UNWINDING("unwind_phase2(ex_ojb=%p): re-entering "
-                                     "user code with ip=0x%llX, sp=0x%llX",
+                                     "user code with ip=0x%" PRIxPTR ", sp=0x%" PRIxPTR,
                                      static_cast<void *>(exception_object),
-                                     (long long)pc, (long long)sp);
+                                     pc, sp);
         }
 
         {

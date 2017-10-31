@@ -93,3 +93,6 @@ namespace DeprecatedCopy {
   void g() { c1 = c2; } // expected-note {{implicit copy assignment operator for 'DeprecatedCopy::Dtor' first required here}}
 }
 #endif
+
+# 1 "/usr/include/system-header.h" 1 3
+void system_header_function(void) throw();

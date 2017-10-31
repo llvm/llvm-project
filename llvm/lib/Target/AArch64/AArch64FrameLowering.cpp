@@ -155,8 +155,8 @@ static unsigned estimateRSStackSizeLimit(MachineFunction &MF) {
           MI.getOpcode() == AArch64::ADDSXri)
         continue;
 
-      for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-        if (!MI.getOperand(i).isFI())
+      for (const MachineOperand &MO : MI.operands()) {
+        if (!MO.isFI())
           continue;
 
         int Offset = 0;

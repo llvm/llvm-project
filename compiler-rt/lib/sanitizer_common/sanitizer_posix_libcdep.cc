@@ -337,6 +337,36 @@ void *MmapFixedNoReserve(uptr fixed_addr, uptr size, const char *name) {
   return (void *)p;
 }
 
+uptr ReservedAddressRange::Init(uptr size, const char *name, uptr fixed_addr) {
+  if (fixed_addr) {
+    base_ = MmapFixedNoAccess(fixed_addr, size, name);
+  } else {
+    base_ = MmapNoAccess(size);
+  }
+  size_ = size;
+  name_ = name;
+  return reinterpret_cast<uptr>(base_);
+}
+
+// Uses fixed_addr for now.
+// Will use offset instead once we've implemented this function for real.
+uptr ReservedAddressRange::Map(uptr fixed_addr, uptr size,
+                               bool tolerate_enomem) {
+  if (tolerate_enomem) {
+    return reinterpret_cast<uptr>(MmapFixedOrDieOnFatalError(fixed_addr, size));
+  }
+  return reinterpret_cast<uptr>(MmapFixedOrDie(fixed_addr, size));
+}
+
+void ReservedAddressRange::Unmap(uptr addr, uptr size) {
+  void* addr_as_void = reinterpret_cast<void*>(addr);
+  uptr base_as_uptr = reinterpret_cast<uptr>(base_);
+  // Only unmap at the beginning or end of the range.
+  CHECK((addr_as_void == base_) || (addr + size == base_as_uptr + size_));
+  CHECK_LE(size, size_);
+  UnmapOrDie(reinterpret_cast<void*>(addr), size);
+}
+
 void *MmapFixedNoAccess(uptr fixed_addr, uptr size, const char *name) {
   int fd = name ? GetNamedMappingFd(name, size) : -1;
   unsigned flags = MAP_PRIVATE | MAP_FIXED | MAP_NORESERVE;
