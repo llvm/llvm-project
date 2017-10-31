@@ -840,4 +840,60 @@ void f() {
       });
 }
 
+TEST(ASTSelectionFinder, SelectEntireDeclStmtRange) {
+  StringRef Source = R"(
+void f(int x, int y) {
+   int a = x * y;
+}
+)";
+  // 'int a = x * y'
+  findSelectedASTNodesWithRange(
+      Source, {3, 4}, FileRange{{3, 4}, {3, 17}},
+      [](SourceRange SelectionRange, Optional<SelectedASTNode> Node) {
+        EXPECT_TRUE(Node);
+        Optional<CodeRangeASTSelection> SelectedCode =
+            CodeRangeASTSelection::create(SelectionRange, std::move(*Node));
+        EXPECT_TRUE(SelectedCode);
+        EXPECT_EQ(SelectedCode->size(), 1u);
+        EXPECT_TRUE(isa<DeclStmt>((*SelectedCode)[0]));
+        ArrayRef<SelectedASTNode::ReferenceType> Parents =
+            SelectedCode->getParents();
+        EXPECT_EQ(Parents.size(), 3u);
+        EXPECT_TRUE(
+            isa<TranslationUnitDecl>(Parents[0].get().Node.get<Decl>()));
+        // Function 'f' definition.
+        EXPECT_TRUE(isa<FunctionDecl>(Parents[1].get().Node.get<Decl>()));
+        // Function body of function 'F'.
+        EXPECT_TRUE(isa<CompoundStmt>(Parents[2].get().Node.get<Stmt>()));
+      });
+}
+
+TEST(ASTSelectionFinder, SelectEntireDeclStmtRangeWithMultipleDecls) {
+  StringRef Source = R"(
+void f(int x, int y) {
+   int a = x * y, b = x - y;
+}
+)";
+  // 'b = x - y'
+  findSelectedASTNodesWithRange(
+      Source, {3, 19}, FileRange{{3, 19}, {3, 28}},
+      [](SourceRange SelectionRange, Optional<SelectedASTNode> Node) {
+        EXPECT_TRUE(Node);
+        Optional<CodeRangeASTSelection> SelectedCode =
+            CodeRangeASTSelection::create(SelectionRange, std::move(*Node));
+        EXPECT_TRUE(SelectedCode);
+        EXPECT_EQ(SelectedCode->size(), 1u);
+        EXPECT_TRUE(isa<DeclStmt>((*SelectedCode)[0]));
+        ArrayRef<SelectedASTNode::ReferenceType> Parents =
+            SelectedCode->getParents();
+        EXPECT_EQ(Parents.size(), 3u);
+        EXPECT_TRUE(
+            isa<TranslationUnitDecl>(Parents[0].get().Node.get<Decl>()));
+        // Function 'f' definition.
+        EXPECT_TRUE(isa<FunctionDecl>(Parents[1].get().Node.get<Decl>()));
+        // Function body of function 'F'.
+        EXPECT_TRUE(isa<CompoundStmt>(Parents[2].get().Node.get<Stmt>()));
+      });
+}
+
 } // end anonymous namespace
