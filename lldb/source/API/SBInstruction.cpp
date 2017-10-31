@@ -20,6 +20,7 @@
 #include "lldb/Core/EmulateInstruction.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/StreamFile.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
@@ -259,8 +260,7 @@ bool SBInstruction::EmulateWithFrame(lldb::SBFrame &frame,
 bool SBInstruction::DumpEmulation(const char *triple) {
   lldb::InstructionSP inst_sp(GetOpaque());
   if (inst_sp && triple) {
-    lldb_private::ArchSpec arch(triple, NULL);
-    return inst_sp->DumpEmulation(arch);
+    return inst_sp->DumpEmulation(HostInfo::GetAugmentedArchSpec(triple));
   }
   return false;
 }

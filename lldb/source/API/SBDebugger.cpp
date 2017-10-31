@@ -694,8 +694,8 @@ SBTarget SBDebugger::FindTargetWithFileAndArch(const char *filename,
   SBTarget sb_target;
   if (m_opaque_sp && filename && filename[0]) {
     // No need to lock, the target list is thread safe
-    ArchSpec arch(arch_name,
-                  m_opaque_sp->GetPlatformList().GetSelectedPlatform().get());
+    ArchSpec arch = Platform::GetAugmentedArchSpec(
+        m_opaque_sp->GetPlatformList().GetSelectedPlatform().get(), arch_name);
     TargetSP target_sp(
         m_opaque_sp->GetTargetList().FindTargetWithExecutableAndArchitecture(
             FileSpec(filename, false), arch_name ? &arch : nullptr));

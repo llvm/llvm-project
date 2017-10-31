@@ -81,6 +81,13 @@ public:
   //------------------------------------------------------------------
   static bool GetLLDBPath(lldb::PathType type, FileSpec &file_spec);
 
+  //---------------------------------------------------------------------------
+  /// If the triple does not specify the vendor, os, and environment parts, we
+  /// "augment" these using information from the host and return the resulting
+  /// ArchSpec object.
+  //---------------------------------------------------------------------------
+  static ArchSpec GetAugmentedArchSpec(llvm::StringRef triple);
+
 protected:
   static bool ComputeSharedLibraryDirectory(FileSpec &file_spec);
   static bool ComputeSupportExeDirectory(FileSpec &file_spec);
