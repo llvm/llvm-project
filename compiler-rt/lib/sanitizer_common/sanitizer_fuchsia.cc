@@ -255,7 +255,7 @@ void ReservedAddressRange::Unmap(uptr addr, uptr size) {
   void* addr_as_void = reinterpret_cast<void*>(addr);
   uptr base_as_uptr = reinterpret_cast<uptr>(base_);
   // Only unmap at the beginning or end of the range.
-  CHECK((addr_as_void == base_) || (addr + size == base_as_uptr + size_))
+  CHECK((addr_as_void == base_) || (addr + size == base_as_uptr + size_));
   CHECK_LE(size, size_);
   UnmapOrDie(reinterpret_cast<void*>(addr), size);
 }

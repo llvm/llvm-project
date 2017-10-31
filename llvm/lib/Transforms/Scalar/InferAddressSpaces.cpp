@@ -971,6 +971,11 @@ bool InferAddressSpaces::rewriteWithNewAddressSpaces(
         if (AddrSpaceCastInst *ASC = dyn_cast<AddrSpaceCastInst>(CurUser)) {
           unsigned NewAS = NewV->getType()->getPointerAddressSpace();
           if (ASC->getDestAddressSpace() == NewAS) {
+            if (ASC->getType()->getPointerElementType() !=
+                NewV->getType()->getPointerElementType()) {
+              NewV = CastInst::Create(Instruction::BitCast, NewV,
+                                      ASC->getType(), "", ASC);
+            }
             ASC->replaceAllUsesWith(NewV);
             DeadInstructions.push_back(ASC);
             continue;
