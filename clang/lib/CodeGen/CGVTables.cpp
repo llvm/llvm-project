@@ -14,11 +14,12 @@
 #include "CGCXXABI.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
-#include "clang/CodeGen/ConstantInitBuilder.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
+#include "clang/CodeGen/ConstantInitBuilder.h"
 #include "clang/Frontend/CodeGenOptions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <algorithm>
@@ -122,6 +123,33 @@ static RValue PerformReturnAdjustment(CodeGenFunction &CGF,
   return RValue::get(ReturnValue);
 }
 
+/// This function clones a function's DISubprogram node and enters it into 
+/// a value map with the intent that the map can be utilized by the cloner
+/// to short-circuit Metadata node mapping.
+/// Furthermore, the function resolves any DILocalVariable nodes referenced
+/// by dbg.value intrinsics so they can be properly mapped during cloning.
+static void resolveTopLevelMetadata(llvm::Function *Fn,
+                                    llvm::ValueToValueMapTy &VMap) {
+  // Clone the DISubprogram node and put it into the Value map.
+  auto *DIS = Fn->getSubprogram();
+  if (!DIS)
+    return;
+  auto *NewDIS = DIS->replaceWithDistinct(DIS->clone());
+  VMap.MD()[DIS].reset(NewDIS);
+
+  // Find all llvm.dbg.declare intrinsics and resolve the DILocalVariable nodes
+  // they are referencing.
+  for (auto &BB : Fn->getBasicBlockList()) {
+    for (auto &I : BB) {
+      if (auto *DII = dyn_cast<llvm::DbgInfoIntrinsic>(&I)) {
+        auto *DILocal = DII->getVariable();
+        if (!DILocal->isResolved())
+          DILocal->resolve();
+      }
+    }
+  }
+}
+
 // This function does roughly the same thing as GenerateThunk, but in a
 // very different way, so that va_start and va_end work correctly.
 // FIXME: This function assumes "this" is the first non-sret LLVM argument of
@@ -154,6 +182,10 @@ CodeGenFunction::GenerateVarArgsThunk(llvm::Function *Fn,
 
   // Clone to thunk.
   llvm::ValueToValueMapTy VMap;
+
+  // We are cloning a function while some Metadata nodes are still unresolved.
+  // Ensure that the value mapper does not encounter any of them.
+  resolveTopLevelMetadata(BaseFn, VMap);
   llvm::Function *NewFn = llvm::CloneFunction(BaseFn, VMap);
   Fn->replaceAllUsesWith(NewFn);
   NewFn->takeName(Fn);
