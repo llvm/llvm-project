@@ -88,6 +88,25 @@ static bool TypeHasMayAlias(QualType QTy) {
   return false;
 }
 
+/// Check if the given type is a valid base type to be used in access tags.
+static bool isValidBaseType(QualType QTy) {
+  if (QTy->isReferenceType())
+    return false;
+  if (const RecordType *TTy = QTy->getAs<RecordType>()) {
+    const RecordDecl *RD = TTy->getDecl()->getDefinition();
+    // Incomplete types are not valid base access types.
+    if (!RD)
+      return false;
+    if (RD->hasFlexibleArrayMember())
+      return false;
+    // RD can be struct, union, class, interface or enum.
+    // For now, we only handle struct and class.
+    if (RD->isStruct() || RD->isClass())
+      return true;
+  }
+  return false;
+}
+
 llvm::MDNode *CodeGenTBAA::getTypeInfo(QualType QTy) {
   // At -O0 or relaxed aliasing, TBAA is not emitted for regular types.
   if (CodeGenOpts.OptimizationLevel == 0 || CodeGenOpts.RelaxedAliasing)
@@ -98,8 +117,16 @@ llvm::MDNode *CodeGenTBAA::getTypeInfo(QualType QTy) {
   if (TypeHasMayAlias(QTy))
     return getChar();
 
-  const Type *Ty = Context.getCanonicalType(QTy).getTypePtr();
+  // We need this function to not fall back to returning the "omnipotent char"
+  // type node for aggregate and union types. Otherwise, any dereference of an
+  // aggregate will result into the may-alias access descriptor, meaning all
+  // subsequent accesses to direct and indirect members of that aggregate will
+  // be considered may-alias too.
+  // TODO: Combine getTypeInfo() and getBaseTypeInfo() into a single function.
+  if (isValidBaseType(QTy))
+    return getBaseTypeInfo(QTy);
 
+  const Type *Ty = Context.getCanonicalType(QTy).getTypePtr();
   if (llvm::MDNode *N = MetadataCache[Ty])
     return N;
 
@@ -232,20 +259,6 @@ CodeGenTBAA::getTBAAStructInfo(QualType QTy) {
   return StructMetadataCache[Ty] = nullptr;
 }
 
-/// Check if the given type is a valid base type to be used in access tags.
-static bool isValidBaseType(QualType QTy) {
-  if (const RecordType *TTy = QTy->getAs<RecordType>()) {
-    const RecordDecl *RD = TTy->getDecl()->getDefinition();
-    if (RD->hasFlexibleArrayMember())
-      return false;
-    // RD can be struct, union, class, interface or enum.
-    // For now, we only handle struct and class.
-    if (RD->isStruct() || RD->isClass())
-      return true;
-  }
-  return false;
-}
-
 llvm::MDNode *CodeGenTBAA::getBaseTypeInfo(QualType QTy) {
   if (!isValidBaseType(QTy))
     return nullptr;
@@ -288,6 +301,9 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfo(QualType QTy) {
 }
 
 llvm::MDNode *CodeGenTBAA::getAccessTagInfo(TBAAAccessInfo Info) {
+  if (Info.isMayAlias())
+    Info = TBAAAccessInfo(getChar());
+
   if (!Info.AccessType)
     return nullptr;
 
@@ -306,14 +322,27 @@ llvm::MDNode *CodeGenTBAA::getAccessTagInfo(TBAAAccessInfo Info) {
                                               Info.Offset);
 }
 
-TBAAAccessInfo CodeGenTBAA::getMayAliasAccessInfo() {
-  return TBAAAccessInfo(getChar());
-}
-
 TBAAAccessInfo CodeGenTBAA::mergeTBAAInfoForCast(TBAAAccessInfo SourceInfo,
                                                  TBAAAccessInfo TargetInfo) {
-  TBAAAccessInfo MayAliasInfo = getMayAliasAccessInfo();
-  if (SourceInfo == MayAliasInfo || TargetInfo == MayAliasInfo)
-    return MayAliasInfo;
+  if (SourceInfo.isMayAlias() || TargetInfo.isMayAlias())
+    return TBAAAccessInfo::getMayAliasInfo();
   return TargetInfo;
+}
+
+TBAAAccessInfo
+CodeGenTBAA::mergeTBAAInfoForConditionalOperator(TBAAAccessInfo InfoA,
+                                                 TBAAAccessInfo InfoB) {
+  if (InfoA == InfoB)
+    return InfoA;
+
+  if (!InfoA || !InfoB)
+    return TBAAAccessInfo();
+
+  if (InfoA.isMayAlias() || InfoB.isMayAlias())
+    return TBAAAccessInfo::getMayAliasInfo();
+
+  // TODO: Implement the rest of the logic here. For example, two accesses
+  // with same final access types result in an access to an object of that final
+  // access type regardless of their base types.
+  return TBAAAccessInfo::getMayAliasInfo();
 }
