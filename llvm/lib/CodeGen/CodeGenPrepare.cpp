@@ -4032,7 +4032,7 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
   case Instruction::Shl: {
     // Can only handle X*C and X << C.
     ConstantInt *RHS = dyn_cast<ConstantInt>(AddrInst->getOperand(1));
-    if (!RHS)
+    if (!RHS || RHS->getBitWidth() > 64)
       return false;
     int64_t Scale = RHS->getSExtValue();
     if (Opcode == Instruction::Shl)
