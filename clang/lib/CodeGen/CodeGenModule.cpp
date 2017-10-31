@@ -606,17 +606,19 @@ llvm::MDNode *CodeGenModule::getTBAAAccessTagInfo(TBAAAccessInfo Info) {
   return TBAA->getAccessTagInfo(Info);
 }
 
-TBAAAccessInfo CodeGenModule::getTBAAMayAliasAccessInfo() {
-  if (!TBAA)
-    return TBAAAccessInfo();
-  return TBAA->getMayAliasAccessInfo();
-}
-
 TBAAAccessInfo CodeGenModule::mergeTBAAInfoForCast(TBAAAccessInfo SourceInfo,
                                                    TBAAAccessInfo TargetInfo) {
   if (!TBAA)
     return TBAAAccessInfo();
   return TBAA->mergeTBAAInfoForCast(SourceInfo, TargetInfo);
+}
+
+TBAAAccessInfo
+CodeGenModule::mergeTBAAInfoForConditionalOperator(TBAAAccessInfo InfoA,
+                                                   TBAAAccessInfo InfoB) {
+  if (!TBAA)
+    return TBAAAccessInfo();
+  return TBAA->mergeTBAAInfoForConditionalOperator(InfoA, InfoB);
 }
 
 void CodeGenModule::DecorateInstructionWithTBAA(llvm::Instruction *Inst,

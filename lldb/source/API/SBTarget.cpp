@@ -1442,8 +1442,8 @@ lldb::SBModule SBTarget::AddModule(const char *path, const char *triple,
       module_spec.GetUUID().SetFromCString(uuid_cstr);
 
     if (triple)
-      module_spec.GetArchitecture().SetTriple(triple,
-                                              target_sp->GetPlatform().get());
+      module_spec.GetArchitecture() = Platform::GetAugmentedArchSpec(
+          target_sp->GetPlatform().get(), triple);
     else
       module_spec.GetArchitecture() = target_sp->GetArchitecture();
 

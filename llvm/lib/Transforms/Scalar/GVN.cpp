@@ -2421,14 +2421,14 @@ GVN::fillImplicitControlFlowInfo(BasicBlock *BB) {
     // must be removed once isGuaranteedToTransferExecutionToSuccessor is fixed.
     if (isGuaranteedToTransferExecutionToSuccessor(I))
       return false;
-    if (auto *LI = dyn_cast<LoadInst>(I)) {
-      assert(LI->isVolatile() && "Non-volatile load should transfer execution"
-                                 " to successor!");
+    if (isa<LoadInst>(I)) {
+      assert(cast<LoadInst>(I)->isVolatile() &&
+             "Non-volatile load should transfer execution to successor!");
       return false;
     }
-    if (auto *SI = dyn_cast<StoreInst>(I)) {
-      assert(SI->isVolatile() && "Non-volatile store should transfer execution"
-                                 " to successor!");
+    if (isa<StoreInst>(I)) {
+      assert(cast<StoreInst>(I)->isVolatile() &&
+             "Non-volatile store should transfer execution to successor!");
       return false;
     }
     return true;

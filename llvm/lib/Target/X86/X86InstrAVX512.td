@@ -192,6 +192,7 @@ class X86KVectorVTInfo<RegisterClass _krc, RegisterClass _krcwm,
   ValueType KVT = _vt;
 }
 
+def v1i1_info : X86KVectorVTInfo<VK1, VK1WM, v1i1>;
 def v2i1_info : X86KVectorVTInfo<VK2, VK2WM, v2i1>;
 def v4i1_info : X86KVectorVTInfo<VK4, VK4WM, v4i1>;
 def v8i1_info : X86KVectorVTInfo<VK8, VK8WM, v8i1>;
@@ -2935,21 +2936,48 @@ defm : operation_subvector_mask_lowering<VK16, v16i1, VK64, v64i1>;
 
 defm : operation_subvector_mask_lowering<VK32, v32i1, VK64, v64i1>;
 
-def : Pat<(v2i1 (extract_subvector (v4i1 VK4:$src), (iPTR 2))),
-          (v2i1 (COPY_TO_REGCLASS
-                  (KSHIFTRWri (COPY_TO_REGCLASS VK4:$src, VK16), (i8 2)),
-                   VK2))>;
-def : Pat<(v4i1 (extract_subvector (v8i1 VK8:$src), (iPTR 4))),
-          (v4i1 (COPY_TO_REGCLASS
-                  (KSHIFTRWri (COPY_TO_REGCLASS VK8:$src, VK16), (i8 4)),
-                   VK4))>;
-def : Pat<(v8i1 (extract_subvector (v16i1 VK16:$src), (iPTR 8))),
-          (v8i1 (COPY_TO_REGCLASS (KSHIFTRWri VK16:$src, (i8 8)), VK8))>;
-def : Pat<(v16i1 (extract_subvector (v32i1 VK32:$src), (iPTR 16))),
-          (v16i1 (COPY_TO_REGCLASS (KSHIFTRDri VK32:$src, (i8 16)), VK16))>;
-def : Pat<(v32i1 (extract_subvector (v64i1 VK64:$src), (iPTR 32))),
-          (v32i1 (COPY_TO_REGCLASS (KSHIFTRQri VK64:$src, (i8 32)), VK32))>;
 
+multiclass vextract_for_mask_to_mask<string InstrStr, X86KVectorVTInfo From,
+                                     X86KVectorVTInfo To, Predicate prd> {
+let Predicates = [prd] in
+  def :
+    Pat<(To.KVT(extract_subvector(From.KVT From.KRC:$src), (iPTR imm:$imm8))),
+        (To.KVT(COPY_TO_REGCLASS
+                  (!cast<Instruction>(InstrStr#"ri") From.KVT:$src,
+                      (i8 imm:$imm8)), To.KRC))>;
+}
+
+multiclass vextract_for_mask_to_mask_legal_w<X86KVectorVTInfo From,
+                                             X86KVectorVTInfo To> {
+def :
+  Pat<(To.KVT(extract_subvector(From.KVT From.KRC:$src), (iPTR imm:$imm8))),
+      (To.KVT(COPY_TO_REGCLASS
+               (KSHIFTRWri(COPY_TO_REGCLASS From.KRC:$src, VK16),
+                   (i8 imm:$imm8)), To.KRC))>;
+}
+
+defm : vextract_for_mask_to_mask_legal_w<v2i1_info, v1i1_info>;
+defm : vextract_for_mask_to_mask_legal_w<v4i1_info, v1i1_info>;
+defm : vextract_for_mask_to_mask_legal_w<v8i1_info, v1i1_info>;
+defm : vextract_for_mask_to_mask_legal_w<v4i1_info, v2i1_info>;
+defm : vextract_for_mask_to_mask_legal_w<v8i1_info, v2i1_info>;
+defm : vextract_for_mask_to_mask_legal_w<v8i1_info, v4i1_info>;
+
+defm : vextract_for_mask_to_mask<"KSHIFTRW", v16i1_info, v1i1_info, HasAVX512>;
+defm : vextract_for_mask_to_mask<"KSHIFTRD", v32i1_info, v1i1_info, HasBWI>;
+defm : vextract_for_mask_to_mask<"KSHIFTRQ", v64i1_info, v1i1_info, HasBWI>;
+defm : vextract_for_mask_to_mask<"KSHIFTRW", v16i1_info, v2i1_info, HasAVX512>;
+defm : vextract_for_mask_to_mask<"KSHIFTRD", v32i1_info, v2i1_info, HasBWI>;
+defm : vextract_for_mask_to_mask<"KSHIFTRQ", v64i1_info, v2i1_info, HasBWI>;
+defm : vextract_for_mask_to_mask<"KSHIFTRW", v16i1_info, v4i1_info, HasAVX512>;
+defm : vextract_for_mask_to_mask<"KSHIFTRD", v32i1_info, v4i1_info, HasBWI>;
+defm : vextract_for_mask_to_mask<"KSHIFTRQ", v64i1_info, v4i1_info, HasBWI>;
+defm : vextract_for_mask_to_mask<"KSHIFTRW", v16i1_info, v8i1_info, HasAVX512>;
+defm : vextract_for_mask_to_mask<"KSHIFTRD", v32i1_info, v8i1_info, HasBWI>;
+defm : vextract_for_mask_to_mask<"KSHIFTRQ", v64i1_info, v8i1_info, HasBWI>;
+defm : vextract_for_mask_to_mask<"KSHIFTRD", v32i1_info, v16i1_info, HasBWI>;
+defm : vextract_for_mask_to_mask<"KSHIFTRQ", v64i1_info, v16i1_info, HasBWI>;
+defm : vextract_for_mask_to_mask<"KSHIFTRQ", v64i1_info, v32i1_info, HasBWI>;
 
 // Patterns for kmask shift
 multiclass mask_shift_lowering<RegisterClass RC, ValueType VT> {

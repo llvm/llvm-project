@@ -1468,7 +1468,7 @@ define <16 x double> @sbto16f64(<16 x double> %a) {
 ;
 ; VLNODQ-LABEL: sbto16f64:
 ; VLNODQ:       # BB#0:
-; VLNODQ-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; VLNODQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; VLNODQ-NEXT:    vcmpltpd %zmm1, %zmm2, %k1
 ; VLNODQ-NEXT:    vcmpltpd %zmm0, %zmm2, %k2
 ; VLNODQ-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
@@ -1513,7 +1513,7 @@ define <8 x double> @sbto8f64(<8 x double> %a) {
 ;
 ; VLNODQ-LABEL: sbto8f64:
 ; VLNODQ:       # BB#0:
-; VLNODQ-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; VLNODQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; VLNODQ-NEXT:    vcmpltpd %zmm0, %zmm1, %k1
 ; VLNODQ-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
 ; VLNODQ-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}

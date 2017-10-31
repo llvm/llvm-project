@@ -356,6 +356,12 @@ PlatformSP Platform::Create(const ArchSpec &arch, ArchSpec *platform_arch_ptr,
   return platform_sp;
 }
 
+ArchSpec Platform::GetAugmentedArchSpec(Platform *platform, llvm::StringRef triple) {
+  if (platform)
+    return platform->GetAugmentedArchSpec(triple);
+  return HostInfo::GetAugmentedArchSpec(triple);
+}
+
 //------------------------------------------------------------------
 /// Default Constructor
 //------------------------------------------------------------------
@@ -961,6 +967,31 @@ const ArchSpec &Platform::GetSystemArchitecture() {
     }
   }
   return m_system_arch;
+}
+
+ArchSpec Platform::GetAugmentedArchSpec(llvm::StringRef triple) {
+  if (triple.empty())
+    return ArchSpec();
+  llvm::Triple normalized_triple(llvm::Triple::normalize(triple));
+  if (!ArchSpec::ContainsOnlyArch(normalized_triple))
+    return ArchSpec(triple);
+
+  ArchSpec compatible_arch;
+  ArchSpec raw_arch(triple);
+  if (!IsCompatibleArchitecture(raw_arch, false, &compatible_arch))
+    return raw_arch;
+
+  if (!compatible_arch.IsValid())
+    return ArchSpec(normalized_triple);
+
+  const llvm::Triple &compatible_triple = compatible_arch.GetTriple();
+  if (normalized_triple.getVendorName().empty())
+    normalized_triple.setVendor(compatible_triple.getVendor());
+  if (normalized_triple.getOSName().empty())
+    normalized_triple.setOS(compatible_triple.getOS());
+  if (normalized_triple.getEnvironmentName().empty())
+    normalized_triple.setEnvironment(compatible_triple.getEnvironment());
+  return ArchSpec(normalized_triple);
 }
 
 Status Platform::ConnectRemote(Args &args) {
