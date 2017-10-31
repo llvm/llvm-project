@@ -428,6 +428,12 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       true);
   AddCXXSynthetic(
       cpp_category_sp,
+      lldb_private::formatters::LibcxxStdForwardListSyntheticFrontEndCreator,
+      "libc++ std::forward_list synthetic children",
+      ConstString("^std::__(ndk)?1::forward_list<.+>(( )?&)?$"),
+      stl_synth_flags, true);
+  AddCXXSynthetic(
+      cpp_category_sp,
       lldb_private::formatters::LibcxxStdListSyntheticFrontEndCreator,
       "libc++ std::list synthetic children",
       ConstString("^std::__(ndk)?1::list<.+>(( )?&)?$"), stl_synth_flags, true);
@@ -499,6 +505,11 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 lldb_private::formatters::LibcxxContainerSummaryProvider,
                 "libc++ std::vector summary provider",
                 ConstString("^std::__(ndk)?1::vector<.+>(( )?&)?$"),
+                stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibcxxContainerSummaryProvider,
+                "libc++ std::list summary provider",
+                ConstString("^std::__(ndk)?1::forward_list<.+>(( )?&)?$"),
                 stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::LibcxxContainerSummaryProvider,
