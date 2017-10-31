@@ -997,13 +997,12 @@ static void excludeLibs(opt::InputArgList &Args, ArrayRef<InputFile *> Files) {
   DenseSet<StringRef> Libs = getExcludeLibs(Args);
   bool All = Libs.count("ALL");
 
-  for (InputFile *File : Files) {
+  for (InputFile *File : Files)
     if (Optional<StringRef> Archive = getArchiveName(File))
       if (All || Libs.count(path::filename(*Archive)))
-        for (SymbolBody *SymBody : File->getSymbols())
-          if (!SymBody->isLocal())
-            SymBody->symbol()->VersionId = VER_NDX_LOCAL;
-  }
+        for (SymbolBody *Sym : File->getSymbols())
+          if (!Sym->isLocal())
+            Sym->VersionId = VER_NDX_LOCAL;
 }
 
 // Do actual linking. Note that when this function is called,

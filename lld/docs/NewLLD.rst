@@ -140,13 +140,13 @@ We will describe the key data structures in LLD in this section.
 The linker can be understood as the interactions between them.
 Once you understand their functions, the code of the linker should look obvious to you.
 
-* SymbolBody
+* Symbol
 
-  SymbolBody is a class to represent symbols.
+  This class represents a symbol.
   They are created for symbols in object files or archive files.
   The linker creates linker-defined symbols as well.
 
-  There are basically three types of SymbolBodies: Defined, Undefined, or Lazy.
+  There are basically three types of Symbols: Defined, Undefined, or Lazy.
 
   - Defined symbols are for all symbols that are considered as "resolved",
     including real defined symbols, COMDAT symbols, common symbols,
@@ -156,26 +156,17 @@ Once you understand their functions, the code of the linker should look obvious 
   - Lazy symbols represent symbols we found in archive file headers
     which can turn into Defined if we read archieve members.
 
-* Symbol
+  There's only one Symbol instance for each unique symbol name. This uniqueness
+  is guaranteed by the symbol table. As the resolver reads symbols from input
+  files, it replaces an existing Symbol with the "best" Symbol for its symbol
+  name using the placement new.
 
-  A Symbol is a container for a SymbolBody. There's only one Symbol for each
-  unique symbol name (this uniqueness is guaranteed by the symbol table).
-  Each global symbol has only one SymbolBody at any one time, which is
-  the SymbolBody stored within a memory region of the Symbol large enough
-  to store any SymbolBody.
-
-  As the resolver reads symbols from input files, it replaces the Symbol's
-  SymbolBody with the "best" SymbolBody for its symbol name by constructing
-  the new SymbolBody in place on top of the existing SymbolBody. For example,
-  if the resolver is given a defined symbol, and the SymbolBody with its name
-  is undefined, it will construct a Defined SymbolBody over the Undefined
-  SymbolBody.
-
-  This means that each SymbolBody pointer always points to the best SymbolBody,
-  and it is possible to get from a SymbolBody to a Symbol, or vice versa,
-  by adding or subtracting a fixed offset. This memory layout helps reduce
-  the cache miss rate through high locality and a small number of required
-  pointer indirections.
+  The above mechanism allows you to use pointers to Symbols as a very cheap way
+  to access name resolution results. Assume for example that you have a pointer
+  to an undefined symbol before name resolution. If the symbol is resolved to a
+  defined symbol by the resolver, the pointer will "automatically" point to the
+  defined symbol, because the undefined symbol the pointer pointed to will have
+  been replaced by the defined symbol in-place.
 
 * SymbolTable
 
@@ -221,8 +212,7 @@ There are mainly three actors in this linker.
   InputFile is a superclass of file readers.
   We have a different subclass for each input file type,
   such as regular object file, archive file, etc.
-  They are responsible for creating and owning SymbolBodies and
-  InputSections/Chunks.
+  They are responsible for creating and owning Symbols and InputSections/Chunks.
 
 * Writer
 

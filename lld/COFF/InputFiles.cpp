@@ -54,7 +54,7 @@ static void checkAndSetWeakAlias(SymbolTable *Symtab, InputFile *F,
                                  SymbolBody *Source, SymbolBody *Target) {
   if (auto *U = dyn_cast<Undefined>(Source)) {
     if (U->WeakAlias && U->WeakAlias != Target)
-      Symtab->reportDuplicate(Source->symbol(), F);
+      Symtab->reportDuplicate(Source, F);
     U->WeakAlias = Target;
   }
 }
@@ -215,7 +215,7 @@ void ObjFile::initializeSymbols() {
 SymbolBody *ObjFile::createUndefined(COFFSymbolRef Sym) {
   StringRef Name;
   COFFObj->getSymbolName(Sym, Name);
-  return Symtab->addUndefined(Name, this, Sym.isWeakExternal())->body();
+  return Symtab->addUndefined(Name, this, Sym.isWeakExternal());
 }
 
 SymbolBody *ObjFile::createDefined(COFFSymbolRef Sym, const void *AuxP,
@@ -225,9 +225,9 @@ SymbolBody *ObjFile::createDefined(COFFSymbolRef Sym, const void *AuxP,
     auto *C = make<CommonChunk>(Sym);
     Chunks.push_back(C);
     COFFObj->getSymbolName(Sym, Name);
-    Symbol *S =
+    SymbolBody *S =
         Symtab->addCommon(this, Name, Sym.getValue(), Sym.getGeneric(), C);
-    return S->body();
+    return S;
   }
   if (Sym.isAbsolute()) {
     COFFObj->getSymbolName(Sym, Name);
@@ -241,7 +241,7 @@ SymbolBody *ObjFile::createDefined(COFFSymbolRef Sym, const void *AuxP,
       return nullptr;
     }
     if (Sym.isExternal())
-      return Symtab->addAbsolute(Name, Sym)->body();
+      return Symtab->addAbsolute(Name, Sym);
     else
       return make<DefinedAbsolute>(Name, Sym);
   }
@@ -280,9 +280,9 @@ SymbolBody *ObjFile::createDefined(COFFSymbolRef Sym, const void *AuxP,
   DefinedRegular *B;
   if (Sym.isExternal()) {
     COFFObj->getSymbolName(Sym, Name);
-    Symbol *S =
+    SymbolBody *S =
         Symtab->addRegular(this, Name, SC->isCOMDAT(), Sym.getGeneric(), SC);
-    B = cast<DefinedRegular>(S->body());
+    B = cast<DefinedRegular>(S);
   } else
     B = make<DefinedRegular>(this, /*Name*/ "", SC->isCOMDAT(),
                              /*IsExternal*/ false, Sym.getGeneric(), SC);
@@ -368,7 +368,7 @@ void BitcodeFile::parse() {
       MB.getBuffer(), Saver.save(ParentName + MB.getBufferIdentifier()))));
   for (const lto::InputFile::Symbol &ObjSym : Obj->symbols()) {
     StringRef SymName = Saver.save(ObjSym.getName());
-    Symbol *Sym;
+    SymbolBody *Sym;
     if (ObjSym.isUndefined()) {
       Sym = Symtab->addUndefined(SymName, this, false);
     } else if (ObjSym.isCommon()) {
@@ -378,12 +378,12 @@ void BitcodeFile::parse() {
       Sym = Symtab->addUndefined(SymName, this, true);
       std::string Fallback = ObjSym.getCOFFWeakExternalFallback();
       SymbolBody *Alias = Symtab->addUndefined(Saver.save(Fallback));
-      checkAndSetWeakAlias(Symtab, this, Sym->body(), Alias);
+      checkAndSetWeakAlias(Symtab, this, Sym, Alias);
     } else {
       bool IsCOMDAT = ObjSym.getComdatIndex() != -1;
       Sym = Symtab->addRegular(this, SymName, IsCOMDAT);
     }
-    SymbolBodies.push_back(Sym->body());
+    SymbolBodies.push_back(Sym);
   }
   Directives = Obj->getCOFFLinkerOpts();
 }

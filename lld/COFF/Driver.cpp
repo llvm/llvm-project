@@ -378,7 +378,7 @@ StringRef LinkerDriver::findDefaultEntry() {
   };
   for (auto E : Entries) {
     StringRef Entry = Symtab->findMangle(mangle(E[0]));
-    if (!Entry.empty() && !isa<Undefined>(Symtab->find(Entry)->body()))
+    if (!Entry.empty() && !isa<Undefined>(Symtab->find(Entry)))
       return mangle(E[1]);
   }
   return "";
@@ -1181,10 +1181,10 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     for (auto Pair : Config->AlternateNames) {
       StringRef From = Pair.first;
       StringRef To = Pair.second;
-      Symbol *Sym = Symtab->find(From);
+      SymbolBody *Sym = Symtab->find(From);
       if (!Sym)
         continue;
-      if (auto *U = dyn_cast<Undefined>(Sym->body()))
+      if (auto *U = dyn_cast<Undefined>(Sym))
         if (!U->WeakAlias)
           U->WeakAlias = Symtab->addUndefined(To);
     }
@@ -1237,8 +1237,8 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
                       Args.hasArg(OPT_export_all_symbols))) {
     AutoExporter Exporter;
 
-    Symtab->forEachSymbol([=](Symbol *S) {
-      auto *Def = dyn_cast<Defined>(S->body());
+    Symtab->forEachSymbol([=](SymbolBody *S) {
+      auto *Def = dyn_cast<Defined>(S);
       if (!Exporter.shouldExport(Def))
         return;
       Export E;
@@ -1265,13 +1265,13 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     StringRef Name = Pair.first;
     uint32_t Alignment = Pair.second;
 
-    Symbol *Sym = Symtab->find(Name);
+    SymbolBody *Sym = Symtab->find(Name);
     if (!Sym) {
       warn("/aligncomm symbol " + Name + " not found");
       continue;
     }
 
-    auto *DC = dyn_cast<DefinedCommon>(Sym->body());
+    auto *DC = dyn_cast<DefinedCommon>(Sym);
     if (!DC) {
       warn("/aligncomm symbol " + Name + " of wrong kind");
       continue;
