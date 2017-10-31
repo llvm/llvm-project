@@ -1797,6 +1797,8 @@ public:
   BuildMIAction(unsigned InsnID, const CodeGenInstruction *I)
       : InsnID(InsnID), I(I), Matched(nullptr) {}
 
+  const CodeGenInstruction *getCGI() const { return I; }
+
   void chooseInsnToMutate(RuleMatcher &Rule) {
     for (const auto *MutateCandidate : Rule.mutatable_insns()) {
       if (canMutate(Rule, MutateCandidate)) {
@@ -2218,9 +2220,16 @@ private:
                            const TreePatternNode *SrcChild,
                            bool OperandIsAPointer, unsigned OpIdx,
                            unsigned &TempOpIdx) const;
+
   Expected<BuildMIAction &>
   createAndImportInstructionRenderer(RuleMatcher &M,
                                      const TreePatternNode *Dst);
+  Expected<BuildMIAction &>
+  createInstructionRenderer(RuleMatcher &M, const TreePatternNode *Dst);
+  void importExplicitDefRenderers(BuildMIAction &DstMIBuilder);
+  Expected<BuildMIAction &>
+  importExplicitUseRenderers(RuleMatcher &M, BuildMIAction &DstMIBuilder,
+                             const llvm::TreePatternNode *Dst);
   Error importExplicitUseRenderer(RuleMatcher &Rule,
                                   BuildMIAction &DstMIBuilder,
                                   TreePatternNode *DstChild) const;
@@ -2652,6 +2661,22 @@ Error GlobalISelEmitter::importExplicitUseRenderer(
 
 Expected<BuildMIAction &> GlobalISelEmitter::createAndImportInstructionRenderer(
     RuleMatcher &M, const TreePatternNode *Dst) {
+  auto DstMIBuilderOrError = createInstructionRenderer(M, Dst);
+  if (auto Error = DstMIBuilderOrError.takeError())
+    return std::move(Error);
+
+  BuildMIAction &DstMIBuilder = DstMIBuilderOrError.get();
+
+  importExplicitDefRenderers(DstMIBuilder);
+
+  if (auto Error = importExplicitUseRenderers(M, DstMIBuilder, Dst).takeError())
+    return std::move(Error);
+
+  return DstMIBuilder;
+}
+
+Expected<BuildMIAction &> GlobalISelEmitter::createInstructionRenderer(
+    RuleMatcher &M, const TreePatternNode *Dst) {
   Record *DstOp = Dst->getOperator();
   if (!DstOp->isSubClassOf("Instruction")) {
     if (DstOp->isSubClassOf("ValueType"))
@@ -2661,31 +2686,35 @@ Expected<BuildMIAction &> GlobalISelEmitter::createAndImportInstructionRenderer(
   }
   CodeGenInstruction *DstI = &Target.getInstruction(DstOp);
 
-  unsigned DstINumUses = DstI->Operands.size() - DstI->Operands.NumDefs;
-  unsigned ExpectedDstINumUses = Dst->getNumChildren();
-  bool IsExtractSubReg = false;
-
   // COPY_TO_REGCLASS is just a copy with a ConstrainOperandToRegClassAction
   // attached. Similarly for EXTRACT_SUBREG except that's a subregister copy.
-  if (DstI->TheDef->getName() == "COPY_TO_REGCLASS") {
+  if (DstI->TheDef->getName() == "COPY_TO_REGCLASS")
     DstI = &Target.getInstruction(RK.getDef("COPY"));
-    DstINumUses--; // Ignore the class constraint.
-    ExpectedDstINumUses--;
-  } else if (DstI->TheDef->getName() == "EXTRACT_SUBREG") {
+  else if (DstI->TheDef->getName() == "EXTRACT_SUBREG")
     DstI = &Target.getInstruction(RK.getDef("COPY"));
-    IsExtractSubReg = true;
-  }
 
   auto &DstMIBuilder = M.addAction<BuildMIAction>(0, DstI);
 
-  // Render the explicit defs.
+  return DstMIBuilder;
+}
+
+void GlobalISelEmitter::importExplicitDefRenderers(
+    BuildMIAction &DstMIBuilder) {
+  const CodeGenInstruction *DstI = DstMIBuilder.getCGI();
   for (unsigned I = 0; I < DstI->Operands.NumDefs; ++I) {
     const CGIOperandList::OperandInfo &DstIOperand = DstI->Operands[I];
     DstMIBuilder.addRenderer<CopyRenderer>(0, DstIOperand.Name);
   }
+}
+
+Expected<BuildMIAction &> GlobalISelEmitter::importExplicitUseRenderers(
+    RuleMatcher &M, BuildMIAction &DstMIBuilder,
+    const llvm::TreePatternNode *Dst) {
+  const CodeGenInstruction *DstI = DstMIBuilder.getCGI();
+  CodeGenInstruction *OrigDstI = &Target.getInstruction(Dst->getOperator());
 
   // EXTRACT_SUBREG needs to use a subregister COPY.
-  if (IsExtractSubReg) {
+  if (OrigDstI->TheDef->getName() == "EXTRACT_SUBREG") {
     if (!Dst->getChild(0)->isLeaf())
       return failedImport("EXTRACT_SUBREG child #1 is not a leaf");
 
@@ -2712,6 +2741,13 @@ Expected<BuildMIAction &> GlobalISelEmitter::createAndImportInstructionRenderer(
   }
 
   // Render the explicit uses.
+  unsigned DstINumUses = OrigDstI->Operands.size() - OrigDstI->Operands.NumDefs;
+  unsigned ExpectedDstINumUses = Dst->getNumChildren();
+  if (OrigDstI->TheDef->getName() == "COPY_TO_REGCLASS") {
+    DstINumUses--; // Ignore the class constraint.
+    ExpectedDstINumUses--;
+  }
+
   unsigned Child = 0;
   unsigned NumDefaultOps = 0;
   for (unsigned I = 0; I != DstINumUses; ++I) {
