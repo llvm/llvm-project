@@ -49,7 +49,6 @@ private:
   void copyLocalSymbols();
   void addSectionSymbols();
   void addReservedSymbols();
-  void createSections();
   void forEachRelSec(std::function<void(InputSectionBase &)> Fn);
   void sortSections();
   void sortInputSections();
@@ -169,22 +168,14 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (!Config->Relocatable)
     addReservedSymbols();
 
-  // Create output sections.
-  if (Script->HasSectionsCommand) {
-    // If linker script contains SECTIONS commands, let it create sections.
-    Script->processSectionCommands();
+  // We want to process linker script commands. When SECTIONS command
+  // is given we let it create sections.
+  Script->processSectionCommands();
 
-    // Linker scripts may have left some input sections unassigned.
-    // Assign such sections using the default rule.
-    Script->addOrphanSections(Factory);
-  } else {
-    // If linker script does not contain SECTIONS commands, create
-    // output sections by default rules. We still need to give the
-    // linker script a chance to run, because it might contain
-    // non-SECTIONS commands such as ASSERT.
-    Script->processSectionCommands();
-    createSections();
-  }
+  // Linker scripts controls how input sections are assigned to output sections.
+  // Input sections that were not handled by scripts are called "orphans", and
+  // they are assigned to output sections by the default rule. Process that.
+  Script->addOrphanSections(Factory);
 
   if (Config->Discard != DiscardPolicy::All)
     copyLocalSymbols();
@@ -850,20 +841,6 @@ void Writer<ELFT>::forEachRelSec(std::function<void(InputSectionBase &)> Fn) {
       Fn(*IS);
   for (EhInputSection *ES : InX::EhFrame->Sections)
     Fn(*ES);
-}
-
-template <class ELFT> void Writer<ELFT>::createSections() {
-  std::vector<OutputSection *> Vec;
-  for (InputSectionBase *IS : InputSections)
-    if (IS && IS->Live)
-      if (OutputSection *Sec =
-              Factory.addInputSec(IS, getOutputSectionName(IS->Name)))
-        Vec.push_back(Sec);
-
-  Script->SectionCommands.insert(Script->SectionCommands.begin(), Vec.begin(),
-                                 Vec.end());
-
-  Script->fabricateDefaultCommands();
 }
 
 // This function generates assignments for predefined symbols (e.g. _end or

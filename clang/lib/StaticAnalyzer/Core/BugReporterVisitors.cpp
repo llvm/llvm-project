@@ -11,7 +11,7 @@
 //  enhance the diagnostics reported for a bug.
 //
 //===----------------------------------------------------------------------===//
-#include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitor.h"
+#include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitors.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/Analysis/CFGStmtMap.h"

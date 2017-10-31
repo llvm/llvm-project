@@ -7852,7 +7852,8 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MIB->getOperand(0).setReg(SrcReg);
     return Expand2AddrUndef(MIB, get(X86::VPXORDZrr));
   }
-  case X86::AVX512_256_SET0: {
+  case X86::AVX512_256_SET0:
+  case X86::AVX512_512_SET0: {
     bool HasVLX = Subtarget.hasVLX();
     unsigned SrcReg = MIB->getOperand(0).getReg();
     const TargetRegisterInfo *TRI = &getRegisterInfo();
@@ -7861,18 +7862,6 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       MIB->getOperand(0).setReg(XReg);
       Expand2AddrUndef(MIB,
                        get(HasVLX ? X86::VPXORDZ128rr : X86::VXORPSrr));
-      MIB.addReg(SrcReg, RegState::ImplicitDefine);
-      return true;
-    }
-    return Expand2AddrUndef(MIB, get(X86::VPXORDZrr));
-  }
-  case X86::AVX512_512_SET0: {
-    const TargetRegisterInfo *TRI = &getRegisterInfo();
-    unsigned SrcReg = MIB->getOperand(0).getReg();
-    if (TRI->getEncodingValue(SrcReg) < 16) {
-      unsigned XReg = TRI->getSubReg(SrcReg, X86::sub_xmm);
-      MIB->getOperand(0).setReg(XReg);
-      Expand2AddrUndef(MIB, get(X86::VXORPSrr));
       MIB.addReg(SrcReg, RegState::ImplicitDefine);
       return true;
     }

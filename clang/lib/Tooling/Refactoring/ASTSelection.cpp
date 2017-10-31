@@ -279,11 +279,23 @@ static void findDeepestWithKind(
     llvm::SmallVectorImpl<SelectedNodeWithParents> &MatchingNodes,
     SourceSelectionKind Kind,
     llvm::SmallVectorImpl<SelectedASTNode::ReferenceType> &ParentStack) {
-  if (!hasAnyDirectChildrenWithKind(ASTSelection, Kind)) {
-    // This node is the bottom-most.
-    MatchingNodes.push_back(SelectedNodeWithParents{
-        std::cref(ASTSelection), {ParentStack.begin(), ParentStack.end()}});
-    return;
+  if (ASTSelection.Node.get<DeclStmt>()) {
+    // Select the entire decl stmt when any of its child declarations is the
+    // bottom-most.
+    for (const auto &Child : ASTSelection.Children) {
+      if (!hasAnyDirectChildrenWithKind(Child, Kind)) {
+        MatchingNodes.push_back(SelectedNodeWithParents{
+            std::cref(ASTSelection), {ParentStack.begin(), ParentStack.end()}});
+        return;
+      }
+    }
+  } else {
+    if (!hasAnyDirectChildrenWithKind(ASTSelection, Kind)) {
+      // This node is the bottom-most.
+      MatchingNodes.push_back(SelectedNodeWithParents{
+          std::cref(ASTSelection), {ParentStack.begin(), ParentStack.end()}});
+      return;
+    }
   }
   // Search in the children.
   ParentStack.push_back(std::cref(ASTSelection));

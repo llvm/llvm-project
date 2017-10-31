@@ -2751,17 +2751,16 @@ struct ExtAddrMode : public TargetLowering::AddrMode {
       return static_cast<FieldName>(Result);
   }
 
-  // AddrModes with a base reg or gv where the reg/gv is just the original
-  // value are trivial.
+  // AddrModes with a baseReg or gv where the reg/gv is
+  // the only populated field are trivial.
   bool isTrivial() {
-    bool Trivial = (BaseGV && BaseGV == OriginalValue) ||
-      (BaseReg && BaseReg == OriginalValue);
-    // If the AddrMode is trivial it shouldn't have an offset or be scaled.
-    if (Trivial) {
-      assert(BaseOffs == 0);
-      assert(Scale == 0);
-    }
-    return Trivial;
+    if (BaseGV && !BaseOffs && !Scale && !BaseReg)
+      return true;
+
+    if (!BaseGV && !BaseOffs && !Scale && BaseReg)
+      return true;
+
+    return false;
   }
 };
 
@@ -4032,7 +4031,7 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
   case Instruction::Shl: {
     // Can only handle X*C and X << C.
     ConstantInt *RHS = dyn_cast<ConstantInt>(AddrInst->getOperand(1));
-    if (!RHS)
+    if (!RHS || RHS->getBitWidth() > 64)
       return false;
     int64_t Scale = RHS->getSExtValue();
     if (Opcode == Instruction::Shl)

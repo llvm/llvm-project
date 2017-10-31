@@ -1479,6 +1479,9 @@ StmtResult Parser::ParseDoStatement() {
   DiagnoseAndSkipCXX11Attributes();
 
   ExprResult Cond = ParseExpression();
+  // Correct the typos in condition before closing the scope.
+  if (Cond.isUsable())
+    Cond = Actions.CorrectDelayedTyposInExpr(Cond);
   T.consumeClose();
   DoScope.Exit();
 
