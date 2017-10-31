@@ -18,7 +18,11 @@ import lldbsuite.test.decorators as decorators
 class REPLBasicTestCase(lldbrepl.REPLTest):
 
     mydir = lldbrepl.REPLTest.compute_mydir(__file__)
-
+    @decorators.expectedFailureAll(
+        oslist=[
+            "macosx",
+            "linux"],
+        bugnumber="rdar://35264910")
     def doTest(self):
         self.command(
             '''class Foo<T,U> {
