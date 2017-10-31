@@ -2567,49 +2567,33 @@ void SelectionDAG::computeKnownBits(SDValue Op, KnownBits &Known,
   }
   case ISD::ZERO_EXTEND_VECTOR_INREG: {
     EVT InVT = Op.getOperand(0).getValueType();
-    unsigned InBits = InVT.getScalarSizeInBits();
-    Known = Known.trunc(InBits);
-    computeKnownBits(Op.getOperand(0), Known,
-                     DemandedElts.zext(InVT.getVectorNumElements()),
-                     Depth + 1);
+    APInt InDemandedElts = DemandedElts.zext(InVT.getVectorNumElements());
+    computeKnownBits(Op.getOperand(0), Known, InDemandedElts, Depth + 1);
     Known = Known.zext(BitWidth);
-    Known.Zero.setBitsFrom(InBits);
+    Known.Zero.setBitsFrom(InVT.getScalarSizeInBits());
     break;
   }
   case ISD::ZERO_EXTEND: {
     EVT InVT = Op.getOperand(0).getValueType();
-    unsigned InBits = InVT.getScalarSizeInBits();
-    Known = Known.trunc(InBits);
     computeKnownBits(Op.getOperand(0), Known, DemandedElts, Depth + 1);
     Known = Known.zext(BitWidth);
-    Known.Zero.setBitsFrom(InBits);
+    Known.Zero.setBitsFrom(InVT.getScalarSizeInBits());
     break;
   }
   // TODO ISD::SIGN_EXTEND_VECTOR_INREG
   case ISD::SIGN_EXTEND: {
-    EVT InVT = Op.getOperand(0).getValueType();
-    unsigned InBits = InVT.getScalarSizeInBits();
-
-    Known = Known.trunc(InBits);
     computeKnownBits(Op.getOperand(0), Known, DemandedElts, Depth + 1);
-
     // If the sign bit is known to be zero or one, then sext will extend
     // it to the top bits, else it will just zext.
     Known = Known.sext(BitWidth);
     break;
   }
   case ISD::ANY_EXTEND: {
-    EVT InVT = Op.getOperand(0).getValueType();
-    unsigned InBits = InVT.getScalarSizeInBits();
-    Known = Known.trunc(InBits);
     computeKnownBits(Op.getOperand(0), Known, Depth+1);
     Known = Known.zext(BitWidth);
     break;
   }
   case ISD::TRUNCATE: {
-    EVT InVT = Op.getOperand(0).getValueType();
-    unsigned InBits = InVT.getScalarSizeInBits();
-    Known = Known.zext(InBits);
     computeKnownBits(Op.getOperand(0), Known, DemandedElts, Depth + 1);
     Known = Known.trunc(BitWidth);
     break;

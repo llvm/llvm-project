@@ -268,3 +268,13 @@ entry:
   call void @foo(i32 %v)
   ret void
 }
+
+; Found by fuzzer, getSExtValue of > 64 bit constant
+define void @i96_mul(i1* %base, i96 %offset) {
+BB:
+  ;; RHS = 0x7FFFFFFFFFFFFFFFFFFFFFFF
+  %B84 = mul i96 %offset, 39614081257132168796771975167
+  %G23 = getelementptr i1, i1* %base, i96 %B84
+  store i1 false, i1* %G23
+  ret void
+}

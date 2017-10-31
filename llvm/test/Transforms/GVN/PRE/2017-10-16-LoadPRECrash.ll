@@ -17,6 +17,13 @@ declare i64* @getaddr_i64(i64 addrspace(100)*) #0
 define hidden void @wrapon_fn173() {
 
 ; CHECK-LABEL: @wrapon_fn173
+; CHECK:       entry:
+; CHECK-NEXT:    call %ArrayImpl* @getaddr_ArrayImpl(%ArrayImpl addrspace(100)* undef)
+; CHECK-NEXT:    %.pre = load i64 addrspace(100)*, i64 addrspace(100)** null, align 8
+; CHECK-NEXT:    br label %loop
+; CHECK:       loop:
+; CHECK-NEXT:    call i64* @getaddr_i64(i64 addrspace(100)* %.pre)
+; CHECK-NEXT:    br label %loop
 
 entry:
   %0 = call %ArrayImpl* @getaddr_ArrayImpl(%ArrayImpl addrspace(100)* undef)
