@@ -34,8 +34,9 @@ all_categories = {
     'stresstest': 'Tests related to stressing lldb limits',
     'flakey': 'Flakey test cases, i.e. tests that do not reliably pass at each execution',
     'lldb-mi': 'lldb-mi tests',
-    'darwin-log': 'Darwin log tests',
     'frame-diagnose': 'Frame diagnose tests',
+    'darwin-log': 'Darwin log tests',
+    'watchpoint': 'Watchpoint-related tests',
 }
 
 
