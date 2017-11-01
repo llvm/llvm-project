@@ -221,6 +221,13 @@ void GraphBuilder::buildFlowGraphImpl(const FileAnalysis &Analysis,
       continue;
     }
 
+    // Call instructions are not valid in the upwards traversal.
+    if (ParentDesc.isCall()) {
+      Result.IntermediateNodes[ParentMeta.VMAddress] = Address;
+      Result.OrphanedNodes.push_back(ParentMeta.VMAddress);
+      continue;
+    }
+
     // Evaluate the branch target to ascertain whether this XRef is the result
     // of a fallthrough or the target of a branch.
     uint64_t BranchTarget;

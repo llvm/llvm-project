@@ -35,6 +35,7 @@
 #include "llvm/Object/MachO.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/TargetRegistry.h"
+#include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include <memory>
@@ -479,7 +480,7 @@ class DwarfStreamer {
   /// @}
 
   /// The file we stream the linked Dwarf to.
-  std::unique_ptr<raw_fd_ostream> OutFile;
+  std::unique_ptr<ToolOutputFile> OutFile;
 
   uint32_t RangesSectionSize;
   uint32_t LocSectionSize;
@@ -617,13 +618,13 @@ bool DwarfStreamer::init(Triple TheTriple, StringRef OutputFilename) {
   // Create the output file.
   std::error_code EC;
   OutFile =
-      llvm::make_unique<raw_fd_ostream>(OutputFilename, EC, sys::fs::F_None);
+      llvm::make_unique<ToolOutputFile>(OutputFilename, EC, sys::fs::F_None);
   if (EC)
     return error(Twine(OutputFilename) + ": " + EC.message(), Context);
 
   MCTargetOptions MCOptions = InitMCTargetOptionsFromFlags();
   MS = TheTarget->createMCObjectStreamer(
-      TheTriple, *MC, std::unique_ptr<MCAsmBackend>(MAB), *OutFile,
+      TheTriple, *MC, std::unique_ptr<MCAsmBackend>(MAB), OutFile->os(),
       std::unique_ptr<MCCodeEmitter>(MCE), *MSTI, MCOptions.MCRelaxAll,
       MCOptions.MCIncrementalLinkerCompatible,
       /*DWARFMustBeAtTheEnd*/ false);
@@ -649,11 +650,16 @@ bool DwarfStreamer::init(Triple TheTriple, StringRef OutputFilename) {
 }
 
 bool DwarfStreamer::finish(const DebugMap &DM) {
+  bool Result = true;
   if (DM.getTriple().isOSDarwin() && !DM.getBinaryPath().empty())
-    return MachOUtils::generateDsymCompanion(DM, *MS, *OutFile);
+    Result = MachOUtils::generateDsymCompanion(DM, *MS, OutFile->os());
+  else
+    MS->Finish();
 
-  MS->Finish();
-  return true;
+  // Declare success.
+  OutFile->keep();
+
+  return Result;
 }
 
 /// Set the current output section to debug_info and change
