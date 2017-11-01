@@ -1152,6 +1152,7 @@ void CodeGenModule::CreateFunctionTypeMetadata(const FunctionDecl *FD,
 
   llvm::Metadata *MD = CreateMetadataIdentifierForType(FD->getType());
   F->addTypeMetadata(0, MD);
+  F->addTypeMetadata(0, CreateMetadataIdentifierGeneralized(FD->getType()));
 
   // Emit a hash-based bit set entry for cross-DSO calls.
   if (CodeGenOpts.SanitizeCfiCrossDso)
@@ -4533,6 +4534,60 @@ llvm::Metadata *CodeGenModule::CreateMetadataIdentifierForType(QualType T) {
     std::string OutName;
     llvm::raw_string_ostream Out(OutName);
     getCXXABI().getMangleContext().mangleTypeName(T, Out);
+
+    InternalId = llvm::MDString::get(getLLVMContext(), Out.str());
+  } else {
+    InternalId = llvm::MDNode::getDistinct(getLLVMContext(),
+                                           llvm::ArrayRef<llvm::Metadata *>());
+  }
+
+  return InternalId;
+}
+
+// Generalize pointer types to a void pointer with the qualifiers of the
+// originally pointed-to type, e.g. 'const char *' and 'char * const *'
+// generalize to 'const void *' while 'char *' and 'const char **' generalize to
+// 'void *'.
+static QualType GeneralizeType(ASTContext &Ctx, QualType Ty) {
+  if (!Ty->isPointerType())
+    return Ty;
+
+  return Ctx.getPointerType(
+      QualType(Ctx.VoidTy).withCVRQualifiers(
+          Ty->getPointeeType().getCVRQualifiers()));
+}
+
+// Apply type generalization to a FunctionType's return and argument types
+static QualType GeneralizeFunctionType(ASTContext &Ctx, QualType Ty) {
+  if (auto *FnType = Ty->getAs<FunctionProtoType>()) {
+    SmallVector<QualType, 8> GeneralizedParams;
+    for (auto &Param : FnType->param_types())
+      GeneralizedParams.push_back(GeneralizeType(Ctx, Param));
+
+    return Ctx.getFunctionType(
+        GeneralizeType(Ctx, FnType->getReturnType()),
+        GeneralizedParams, FnType->getExtProtoInfo());
+  }
+
+  if (auto *FnType = Ty->getAs<FunctionNoProtoType>())
+    return Ctx.getFunctionNoProtoType(
+        GeneralizeType(Ctx, FnType->getReturnType()));
+
+  llvm_unreachable("Encountered unknown FunctionType");
+}
+
+llvm::Metadata *CodeGenModule::CreateMetadataIdentifierGeneralized(QualType T) {
+  T = GeneralizeFunctionType(getContext(), T);
+
+  llvm::Metadata *&InternalId = GeneralizedMetadataIdMap[T.getCanonicalType()];
+  if (InternalId)
+    return InternalId;
+
+  if (isExternallyVisible(T->getLinkage())) {
+    std::string OutName;
+    llvm::raw_string_ostream Out(OutName);
+    getCXXABI().getMangleContext().mangleTypeName(T, Out);
+    Out << ".generalized";
 
     InternalId = llvm::MDString::get(getLLVMContext(), Out.str());
   } else {

@@ -4475,7 +4475,12 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, const CGCallee &OrigCallee
     SanitizerScope SanScope(this);
     EmitSanitizerStatReport(llvm::SanStat_CFI_ICall);
 
-    llvm::Metadata *MD = CGM.CreateMetadataIdentifierForType(QualType(FnType, 0));
+    llvm::Metadata *MD;
+    if (CGM.getCodeGenOpts().SanitizeCfiICallGeneralizePointers)
+      MD = CGM.CreateMetadataIdentifierGeneralized(QualType(FnType, 0));
+    else
+      MD = CGM.CreateMetadataIdentifierForType(QualType(FnType, 0));
+
     llvm::Value *TypeId = llvm::MetadataAsValue::get(getLLVMContext(), MD);
 
     llvm::Value *CalleePtr = Callee.getFunctionPointer();

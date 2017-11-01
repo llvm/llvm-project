@@ -39,6 +39,9 @@ public:
   /// Factory method for creating bodies for Objective-C properties.
   Stmt *getBody(const ObjCMethodDecl *D);
 
+  /// Remove copy constructor to avoid accidental copying.
+  BodyFarm(const BodyFarm &other) = delete;
+
 private:
   typedef llvm::DenseMap<const Decl *, Optional<Stmt *>> BodyMap;
 

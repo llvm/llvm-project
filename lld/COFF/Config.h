@@ -27,7 +27,6 @@ using llvm::StringRef;
 class DefinedAbsolute;
 class DefinedRelative;
 class StringChunk;
-struct Symbol;
 class SymbolBody;
 
 // Short aliases.
@@ -111,8 +110,8 @@ struct Configuration {
   bool SaveTemps = false;
 
   // Used for SafeSEH.
-  Symbol *SEHTable = nullptr;
-  Symbol *SEHCount = nullptr;
+  SymbolBody *SEHTable = nullptr;
+  SymbolBody *SEHCount = nullptr;
 
   // Used for /opt:lldlto=N
   unsigned LTOOptLevel = 2;

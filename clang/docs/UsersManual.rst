@@ -1147,6 +1147,11 @@ are listed below.
    the behavior of sanitizers in the ``cfi`` group to allow checking
    of cross-DSO virtual and indirect calls.
 
+.. option:: -fsanitize-cfi-icall-generalize-pointers
+
+   Generalize pointers in return and argument types in function type signatures
+   checked by Control Flow Integrity indirect call checking. See
+   :doc:`ControlFlowIntegrity` for more details.
 
 .. option:: -fstrict-vtable-pointers
 

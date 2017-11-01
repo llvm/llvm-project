@@ -27330,7 +27330,7 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
         break;
       }
 
-      DAG.computeKnownBits(Op.getOperand(0), Known, Depth + 1);
+      DAG.computeKnownBits(Op.getOperand(0), Known, DemandedElts, Depth + 1);
       unsigned ShAmt = ShiftImm->getZExtValue();
       if (Opc == X86ISD::VSHLI) {
         Known.Zero <<= ShAmt;
@@ -27347,6 +27347,7 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     break;
   }
   case X86ISD::VZEXT: {
+    // TODO: Add DemandedElts support.
     SDValue N0 = Op.getOperand(0);
     unsigned NumElts = VT.getVectorNumElements();
 
@@ -27396,6 +27397,7 @@ unsigned X86TargetLowering::ComputeNumSignBitsForTargetNode(
     return VTBits;
 
   case X86ISD::VSEXT: {
+    // TODO: Add DemandedElts support.
     SDValue Src = Op.getOperand(0);
     unsigned Tmp = DAG.ComputeNumSignBits(Src, Depth + 1);
     Tmp += VTBits - Src.getScalarValueSizeInBits();
@@ -27403,6 +27405,7 @@ unsigned X86TargetLowering::ComputeNumSignBitsForTargetNode(
   }
 
   case X86ISD::VTRUNC: {
+    // TODO: Add DemandedElts support.
     SDValue Src = Op.getOperand(0);
     unsigned NumSrcBits = Src.getScalarValueSizeInBits();
     assert(VTBits < NumSrcBits && "Illegal truncation input type");
@@ -27425,24 +27428,22 @@ unsigned X86TargetLowering::ComputeNumSignBitsForTargetNode(
   }
 
   case X86ISD::VSHLI: {
-    // TODO: Add DemandedElts support.
     SDValue Src = Op.getOperand(0);
     APInt ShiftVal = cast<ConstantSDNode>(Op.getOperand(1))->getAPIntValue();
     if (ShiftVal.uge(VTBits))
       return VTBits; // Shifted all bits out --> zero.
-    unsigned Tmp = DAG.ComputeNumSignBits(Src, Depth + 1);
+    unsigned Tmp = DAG.ComputeNumSignBits(Src, DemandedElts, Depth + 1);
     if (ShiftVal.uge(Tmp))
       return 1; // Shifted all sign bits out --> unknown.
     return Tmp - ShiftVal.getZExtValue();
   }
 
   case X86ISD::VSRAI: {
-    // TODO: Add DemandedElts support.
     SDValue Src = Op.getOperand(0);
     APInt ShiftVal = cast<ConstantSDNode>(Op.getOperand(1))->getAPIntValue();
     if (ShiftVal.uge(VTBits - 1))
       return VTBits; // Sign splat.
-    unsigned Tmp = DAG.ComputeNumSignBits(Src, Depth + 1);
+    unsigned Tmp = DAG.ComputeNumSignBits(Src, DemandedElts, Depth + 1);
     ShiftVal += Tmp;
     return ShiftVal.uge(VTBits) ? VTBits : ShiftVal.getZExtValue();
   }

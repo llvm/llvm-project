@@ -731,8 +731,8 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
     Dir[BASE_RELOCATION_TABLE].RelativeVirtualAddress = Sec->getRVA();
     Dir[BASE_RELOCATION_TABLE].Size = Sec->getVirtualSize();
   }
-  if (Symbol *Sym = Symtab->findUnderscore("_tls_used")) {
-    if (Defined *B = dyn_cast<Defined>(Sym->body())) {
+  if (SymbolBody *Sym = Symtab->findUnderscore("_tls_used")) {
+    if (Defined *B = dyn_cast<Defined>(Sym)) {
       Dir[TLS_TABLE].RelativeVirtualAddress = B->getRVA();
       Dir[TLS_TABLE].Size = Config->is64()
                                 ? sizeof(object::coff_tls_directory64)
@@ -743,8 +743,8 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
     Dir[DEBUG_DIRECTORY].RelativeVirtualAddress = DebugDirectory->getRVA();
     Dir[DEBUG_DIRECTORY].Size = DebugDirectory->getSize();
   }
-  if (Symbol *Sym = Symtab->findUnderscore("_load_config_used")) {
-    if (auto *B = dyn_cast<DefinedRegular>(Sym->body())) {
+  if (SymbolBody *Sym = Symtab->findUnderscore("_load_config_used")) {
+    if (auto *B = dyn_cast<DefinedRegular>(Sym)) {
       SectionChunk *SC = B->getChunk();
       assert(B->getRVA() >= SC->getRVA());
       uint64_t OffsetInChunk = B->getRVA() - SC->getRVA();
@@ -804,10 +804,10 @@ void Writer::fixSafeSEHSymbols() {
   // Replace the absolute table symbol with a synthetic symbol pointing to the
   // SEHTable chunk so that we can emit base relocations for it and resolve
   // section relative relocations.
-  Symbol *T = Symtab->find("___safe_se_handler_table");
-  Symbol *C = Symtab->find("___safe_se_handler_count");
-  replaceBody<DefinedSynthetic>(T, T->body()->getName(), SEHTable);
-  cast<DefinedAbsolute>(C->body())->setVA(SEHTable->getSize() / 4);
+  SymbolBody *T = Symtab->find("___safe_se_handler_table");
+  SymbolBody *C = Symtab->find("___safe_se_handler_count");
+  replaceBody<DefinedSynthetic>(T, T->getName(), SEHTable);
+  cast<DefinedAbsolute>(C)->setVA(SEHTable->getSize() / 4);
 }
 
 // Handles /section options to allow users to overwrite

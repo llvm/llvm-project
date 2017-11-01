@@ -127,7 +127,7 @@ void LinkerScript::addSymbol(SymbolAssignment *Cmd) {
     return;
 
   // Define a symbol.
-  Symbol *Sym;
+  SymbolBody *Sym;
   uint8_t Visibility = Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT;
   std::tie(Sym, std::ignore) = Symtab->insert(Cmd->Name, /*Type*/ 0, Visibility,
                                               /*CanOmitFromDynSym*/ false,
@@ -151,7 +151,7 @@ void LinkerScript::addSymbol(SymbolAssignment *Cmd) {
 
   replaceBody<DefinedRegular>(Sym, nullptr, Cmd->Name, /*IsLocal=*/false,
                               Visibility, STT_NOTYPE, SymValue, 0, Sec);
-  Cmd->Sym = cast<DefinedRegular>(Sym->body());
+  Cmd->Sym = cast<DefinedRegular>(Sym);
 }
 
 // This function is called from assignAddresses, while we are

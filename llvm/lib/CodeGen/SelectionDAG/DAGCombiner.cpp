@@ -1203,10 +1203,10 @@ SDValue DAGCombiner::PromoteIntBinOp(SDValue Op) {
     Replace0 &= !N0->hasOneUse();
     Replace1 &= (N0 != N1) && !N1->hasOneUse();
 
-    // Combine Op here so it is presreved past replacements.
+    // Combine Op here so it is preserved past replacements.
     CombineTo(Op.getNode(), RV);
 
-    // If operands have a use ordering, make sur we deal with
+    // If operands have a use ordering, make sure we deal with
     // predecessor first.
     if (Replace0 && Replace1 && N0.getNode()->isPredecessorOf(N1.getNode())) {
       std::swap(N0, N1);

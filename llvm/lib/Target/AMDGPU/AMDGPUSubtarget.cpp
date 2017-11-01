@@ -544,6 +544,7 @@ unsigned SISubtarget::getMaxNumVGPRs(const MachineFunction &MF) const {
   return MaxNumVGPRs - getReservedNumVGPRs(MF);
 }
 
+namespace {
 struct MemOpClusterMutation : ScheduleDAGMutation {
   const SIInstrInfo *TII;
 
@@ -592,6 +593,7 @@ struct MemOpClusterMutation : ScheduleDAGMutation {
     }
   }
 };
+} // namespace
 
 void SISubtarget::getPostRAMutations(
     std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {

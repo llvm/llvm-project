@@ -266,11 +266,12 @@ bool Parser::diagnoseUnknownTemplateId(ExprResult LHS, SourceLocation Less) {
   return false;
 }
 
-static bool isFoldOperator(prec::Level Level) {
+bool Parser::isFoldOperator(prec::Level Level) const {
   return Level > prec::Unknown && Level != prec::Conditional;
 }
-static bool isFoldOperator(tok::TokenKind Kind) {
-  return isFoldOperator(getBinOpPrecedence(Kind, false, true));
+
+bool Parser::isFoldOperator(tok::TokenKind Kind) const {
+  return isFoldOperator(getBinOpPrecedence(Kind, GreaterThanIsOperator, true));
 }
 
 /// \brief Parse a binary expression that starts with \p LHS and has a

@@ -7,6 +7,7 @@ add_library(LLVMCFIVerify
 
 llvm_update_compile_flags(LLVMCFIVerify)
 llvm_map_components_to_libnames(libs
+  DebugInfoDWARF
   MC
   MCParser
   Object

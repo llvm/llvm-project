@@ -66,8 +66,8 @@ uint64_t SyntheticSection::getVA() const {
 // Create a .bss section for each common symbol and replace the common symbol
 // with a DefinedRegular symbol.
 template <class ELFT> void elf::createCommonSections() {
-  for (Symbol *S : Symtab->getSymbols()) {
-    auto *Sym = dyn_cast<DefinedCommon>(S->body());
+  for (SymbolBody *S : Symtab->getSymbols()) {
+    auto *Sym = dyn_cast<DefinedCommon>(S);
 
     if (!Sym)
       continue;
@@ -1533,8 +1533,7 @@ void SymbolTableBaseSection::postThunkContents() {
   // move all local symbols before global symbols.
   auto It = std::stable_partition(
       Symbols.begin(), Symbols.end(), [](const SymbolTableEntry &S) {
-        return S.Symbol->isLocal() ||
-               S.Symbol->symbol()->computeBinding() == STB_LOCAL;
+        return S.Symbol->isLocal() || S.Symbol->computeBinding() == STB_LOCAL;
       });
   size_t NumLocals = It - Symbols.begin();
   getParent()->Info = NumLocals + 1;
@@ -1591,8 +1590,8 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
     if (Body->isLocal()) {
       ESym->setBindingAndType(STB_LOCAL, Body->Type);
     } else {
-      ESym->setBindingAndType(Body->symbol()->computeBinding(), Body->Type);
-      ESym->setVisibility(Body->symbol()->Visibility);
+      ESym->setBindingAndType(Body->computeBinding(), Body->Type);
+      ESym->setVisibility(Body->Visibility);
     }
 
     ESym->st_name = Ent.StrTabOffset;
@@ -2284,7 +2283,7 @@ template <class ELFT> size_t VersionTableSection<ELFT>::getSize() const {
 template <class ELFT> void VersionTableSection<ELFT>::writeTo(uint8_t *Buf) {
   auto *OutVersym = reinterpret_cast<Elf_Versym *>(Buf) + 1;
   for (const SymbolTableEntry &S : InX::DynSymTab->getSymbols()) {
-    OutVersym->vs_index = S.Symbol->symbol()->VersionId;
+    OutVersym->vs_index = S.Symbol->VersionId;
     ++OutVersym;
   }
 }
@@ -2307,7 +2306,7 @@ template <class ELFT>
 void VersionNeedSection<ELFT>::addSymbol(SharedSymbol *SS) {
   auto *Ver = reinterpret_cast<const typename ELFT::Verdef *>(SS->Verdef);
   if (!Ver) {
-    SS->symbol()->VersionId = VER_NDX_GLOBAL;
+    SS->VersionId = VER_NDX_GLOBAL;
     return;
   }
 
@@ -2327,7 +2326,7 @@ void VersionNeedSection<ELFT>::addSymbol(SharedSymbol *SS) {
                                           Ver->getAux()->vda_name);
     NV.Index = NextIndex++;
   }
-  SS->symbol()->VersionId = NV.Index;
+  SS->VersionId = NV.Index;
 }
 
 template <class ELFT> void VersionNeedSection<ELFT>::writeTo(uint8_t *Buf) {

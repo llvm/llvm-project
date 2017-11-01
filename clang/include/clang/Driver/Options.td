@@ -914,6 +914,9 @@ def fno_sanitize_cfi_cross_dso : Flag<["-"], "fno-sanitize-cfi-cross-dso">,
                                  Flags<[CoreOption, DriverOption]>,
                                  Group<f_clang_Group>,
                                  HelpText<"Disable control flow integrity (CFI) checks for cross-DSO calls.">;
+def fsanitize_cfi_icall_generalize_pointers : Flag<["-"], "fsanitize-cfi-icall-generalize-pointers">,
+                                              Group<f_clang_Group>,
+                                              HelpText<"Generalize pointers in CFI indirect call type signature checks">;
 def fsanitize_stats : Flag<["-"], "fsanitize-stats">,
                               Group<f_clang_Group>,
                               HelpText<"Enable sanitizer statistics gathering.">;
