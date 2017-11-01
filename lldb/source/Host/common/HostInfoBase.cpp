@@ -251,6 +251,24 @@ bool HostInfoBase::GetLLDBPath(lldb::PathType type, FileSpec &file_spec) {
   return true;
 }
 
+ArchSpec HostInfoBase::GetAugmentedArchSpec(llvm::StringRef triple) {
+  if (triple.empty())
+    return ArchSpec();
+  llvm::Triple normalized_triple(llvm::Triple::normalize(triple));
+  if (!ArchSpec::ContainsOnlyArch(normalized_triple))
+    return ArchSpec(triple);
+
+  llvm::Triple host_triple(llvm::sys::getDefaultTargetTriple());
+
+  if (normalized_triple.getVendorName().empty())
+    normalized_triple.setVendor(host_triple.getVendor());
+  if (normalized_triple.getOSName().empty())
+    normalized_triple.setOS(host_triple.getOS());
+  if (normalized_triple.getEnvironmentName().empty())
+    normalized_triple.setEnvironment(host_triple.getEnvironment());
+  return ArchSpec(normalized_triple);
+}
+
 bool HostInfoBase::ComputeSharedLibraryDirectory(FileSpec &file_spec) {
   // To get paths related to LLDB we get the path to the executable that
   // contains this function. On MacOSX this will be "LLDB.framework/.../LLDB",

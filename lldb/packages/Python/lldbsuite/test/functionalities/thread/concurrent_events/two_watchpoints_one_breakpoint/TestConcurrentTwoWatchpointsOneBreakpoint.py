@@ -17,6 +17,7 @@ class ConcurrentTwoWatchpointsOneBreakpoint(ConcurrentEventsBase):
     # Atomic sequences are not supported yet for MIPS in LLDB.
     @skipIf(triple='^mips')
     @expectedFlakeyLinux
+    @add_test_categories(["watchpoint"])
     def test(self):
         """Test two threads that trigger a watchpoint and one breakpoint thread. """
         self.build(dictionary=self.getBuildFlags())

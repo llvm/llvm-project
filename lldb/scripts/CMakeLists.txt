@@ -48,10 +48,10 @@ add_custom_command(
       --swigExecutable=${SWIG_EXECUTABLE}
   VERBATIM
   COMMENT "Python script building LLDB Python wrapper")
-set_source_files_properties(${LLDB_WRAP_PYTHON} PROPERTIES GENERATED 1)
+add_custom_target(swig_wrapper ALL DEPENDS ${LLDB_WRAP_PYTHON})
+
 set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/lldb.py PROPERTIES GENERATED 1)
 
-add_custom_target(swig_wrapper ALL DEPENDS ${LLDB_WRAP_PYTHON})
 
 # Install the LLDB python module
 install(DIRECTORY ${SWIG_PYTHON_DIR} DESTINATION ${SWIG_INSTALL_DIR})

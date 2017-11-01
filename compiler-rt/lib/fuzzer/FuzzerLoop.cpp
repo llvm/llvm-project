@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <cstring>
 #include <memory>
+#include <mutex>
 #include <set>
 
 #if defined(__has_include)
@@ -73,11 +74,14 @@ struct MallocFreeTracer {
 
 static MallocFreeTracer AllocTracer;
 
+static std::mutex MallocFreeStackMutex;
+
 ATTRIBUTE_NO_SANITIZE_MEMORY
 void MallocHook(const volatile void *ptr, size_t size) {
   size_t N = AllocTracer.Mallocs++;
   F->HandleMalloc(size);
   if (int TraceLevel = AllocTracer.TraceLevel) {
+    std::lock_guard<std::mutex> Lock(MallocFreeStackMutex);
     Printf("MALLOC[%zd] %p %zd\n", N, ptr, size);
     if (TraceLevel >= 2 && EF)
       EF->__sanitizer_print_stack_trace();
@@ -88,6 +92,7 @@ ATTRIBUTE_NO_SANITIZE_MEMORY
 void FreeHook(const volatile void *ptr) {
   size_t N = AllocTracer.Frees++;
   if (int TraceLevel = AllocTracer.TraceLevel) {
+    std::lock_guard<std::mutex> Lock(MallocFreeStackMutex);
     Printf("FREE[%zd]   %p\n", N, ptr);
     if (TraceLevel >= 2 && EF)
       EF->__sanitizer_print_stack_trace();

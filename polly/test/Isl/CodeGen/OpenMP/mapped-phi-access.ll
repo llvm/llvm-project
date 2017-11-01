@@ -53,6 +53,6 @@ attributes #0 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="fals
 ; CHECK-LABEL: define internal void @main_polly_subfn(i8* %polly.par.userContext)
 ;
 ; CHECK:       polly.stmt.for.body65.i226:
-; CHECK-NEXT:    %polly.access.cast.polly.subfunc.arg.2 = bitcast i8* %polly.subfunc.arg.2 to double*
-; CHECK-NEXT:    %polly.access.polly.subfunc.arg.2 = getelementptr double, double* %polly.access.cast.polly.subfunc.arg.2, i64 %polly.indvar
-; CHECK-NEXT:    store double undef, double* %polly.access.polly.subfunc.arg.2
+; CHECK-NEXT:    %polly.access.cast.polly.subfunc.arg.[[R0:[0-9]*]] = bitcast i8* %polly.subfunc.arg.{{[0-9]*}} to double*
+; CHECK-NEXT:    %polly.access.polly.subfunc.arg.[[R1:[0-9]*]] = getelementptr double, double* %polly.access.cast.polly.subfunc.arg.[[R0]], i64 %polly.indvar
+; CHECK-NEXT:    store double undef, double* %polly.access.polly.subfunc.arg.[[R1]]

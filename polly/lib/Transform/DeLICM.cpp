@@ -660,52 +660,6 @@ private:
     return std::make_pair(DefUses, Lifetime);
   }
 
-  /// For each 'execution' of a PHINode, get the incoming block that was
-  /// executed before.
-  ///
-  /// For each PHI instance we can directly determine which was the incoming
-  /// block, and hence derive which value the PHI has.
-  ///
-  /// @param SAI The ScopArrayInfo representing the PHI's storage.
-  ///
-  /// @return { DomainPHIRead[] -> DomainPHIWrite[] }
-  isl::union_map computePerPHI(const ScopArrayInfo *SAI) {
-    assert(SAI->isPHIKind());
-
-    // { DomainPHIWrite[] -> Scatter[] }
-    auto PHIWriteScatter = makeEmptyUnionMap();
-
-    // Collect all incoming block timepoint.
-    for (auto *MA : S->getPHIIncomings(SAI)) {
-      auto Scatter = getScatterFor(MA);
-      PHIWriteScatter =
-          give(isl_union_map_add_map(PHIWriteScatter.take(), Scatter.take()));
-    }
-
-    // { DomainPHIRead[] -> Scatter[] }
-    auto PHIReadScatter = getScatterFor(S->getPHIRead(SAI));
-
-    // { DomainPHIRead[] -> Scatter[] }
-    auto BeforeRead = beforeScatter(PHIReadScatter, true);
-
-    // { Scatter[] }
-    auto WriteTimes = singleton(
-        give(isl_union_map_range(PHIWriteScatter.copy())), ScatterSpace);
-
-    // { DomainPHIRead[] -> Scatter[] }
-    auto PHIWriteTimes =
-        give(isl_map_intersect_range(BeforeRead.take(), WriteTimes.take()));
-    auto LastPerPHIWrites = give(isl_map_lexmax(PHIWriteTimes.take()));
-
-    // { DomainPHIRead[] -> DomainPHIWrite[] }
-    auto Result = give(isl_union_map_apply_range(
-        isl_union_map_from_map(LastPerPHIWrites.take()),
-        isl_union_map_reverse(PHIWriteScatter.take())));
-    assert(isl_union_map_is_single_valued(Result.keep()) == isl_bool_true);
-    assert(isl_union_map_is_injective(Result.keep()) == isl_bool_true);
-    return Result;
-  }
-
   /// Try to map a MemoryKind::Value to a given array element.
   ///
   /// @param SAI       Representation of the scalar's memory to map.

@@ -2,10 +2,6 @@ if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
   add_definitions( -DEXPORT_LIBLLDB )
 endif()
 
-# Include this so that add_lldb_library() has the list of dependencies
-# for liblldb to link against
-include(${LLDB_PROJECT_ROOT}/cmake/LLDBDependencies.cmake)
-
 option(LLDB_BUILD_FRAMEWORK "Build the Darwin LLDB.framework" Off)
 
 if(LLDB_BUILD_FRAMEWORK AND CMAKE_VERSION VERSION_LESS 3.7)
@@ -112,9 +108,17 @@ if (LLVM_ENABLE_WERROR)
     set_property(SOURCE ${LLDB_WRAP_PYTHON} APPEND_STRING PROPERTY COMPILE_FLAGS " -w")
   endif()
 endif()
+set_source_files_properties(${LLDB_WRAP_PYTHON} PROPERTIES GENERATED 1)
+if (CLANG_CL)
+  set_property(SOURCE ${LLDB_WRAP_PYTHON} APPEND_STRING
+    PROPERTY COMPILE_FLAGS " -Wno-unused-function")
+endif()
+if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND
+    NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
+  set_property(SOURCE ${LLDB_WRAP_PYTHON} APPEND_STRING
+    PROPERTY COMPILE_FLAGS " -Wno-sequence-point -Wno-cast-qual")
+endif ()
 
-# This should not be part of LLDBDependencies.cmake, because we don't
-# want every single library taking a dependency on the script interpreters.
 target_link_libraries(liblldb PRIVATE
   lldbPluginScriptInterpreterNone
   lldbPluginScriptInterpreterPython
@@ -156,7 +160,6 @@ endif()
 if (LLDB_WRAP_PYTHON)
   add_dependencies(liblldb swig_wrapper)
 endif()
-target_link_libraries(liblldb PRIVATE ${LLDB_SYSTEM_LIBS})
 
 if(LLDB_BUILD_FRAMEWORK)
   file(GLOB public_headers ${LLDB_SOURCE_DIR}/include/lldb/API/*.h
