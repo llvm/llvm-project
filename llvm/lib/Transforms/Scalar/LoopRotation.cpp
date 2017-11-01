@@ -25,6 +25,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -141,37 +142,29 @@ static void RewriteUsesOfClonedInstructions(BasicBlock *OrigHeader,
 
     // Replace MetadataAsValue(ValueAsMetadata(OrigHeaderVal)) uses in debug
     // intrinsics.
-    LLVMContext &C = OrigHeader->getContext();
-    if (auto *VAM = ValueAsMetadata::getIfExists(OrigHeaderVal)) {
-      if (auto *MAV = MetadataAsValue::getIfExists(C, VAM)) {
-        for (auto UI = MAV->use_begin(), E = MAV->use_end(); UI != E;) {
-          // Grab the use before incrementing the iterator. Otherwise, altering
-          // the Use will invalidate the iterator.
-          Use &U = *UI++;
-          DbgInfoIntrinsic *UserInst = dyn_cast<DbgInfoIntrinsic>(U.getUser());
-          if (!UserInst)
-            continue;
+    SmallVector<DbgValueInst *, 1> DbgValues;
+    llvm::findDbgValues(DbgValues, OrigHeaderVal);
+    for (auto &DbgValue : DbgValues) {
+      // The original users in the OrigHeader are already using the original
+      // definitions.
+      BasicBlock *UserBB = DbgValue->getParent();
+      if (UserBB == OrigHeader)
+        continue;
 
-          // The original users in the OrigHeader are already using the original
-          // definitions.
-          BasicBlock *UserBB = UserInst->getParent();
-          if (UserBB == OrigHeader)
-            continue;
-
-          // Users in the OrigPreHeader need to use the value to which the
-          // original definitions are mapped and anything else can be handled by
-          // the SSAUpdater. To avoid adding PHINodes, check if the value is
-          // available in UserBB, if not substitute undef.
-          Value *NewVal;
-          if (UserBB == OrigPreheader)
-            NewVal = OrigPreHeaderVal;
-          else if (SSA.HasValueForBlock(UserBB))
-            NewVal = SSA.GetValueInMiddleOfBlock(UserBB);
-          else
-            NewVal = UndefValue::get(OrigHeaderVal->getType());
-          U = MetadataAsValue::get(C, ValueAsMetadata::get(NewVal));
-        }
-      }
+      // Users in the OrigPreHeader need to use the value to which the
+      // original definitions are mapped and anything else can be handled by
+      // the SSAUpdater. To avoid adding PHINodes, check if the value is
+      // available in UserBB, if not substitute undef.
+      Value *NewVal;
+      if (UserBB == OrigPreheader)
+        NewVal = OrigPreHeaderVal;
+      else if (SSA.HasValueForBlock(UserBB))
+        NewVal = SSA.GetValueInMiddleOfBlock(UserBB);
+      else
+        NewVal = UndefValue::get(OrigHeaderVal->getType());
+      DbgValue->setOperand(0,
+                           MetadataAsValue::get(OrigHeaderVal->getContext(),
+                                                ValueAsMetadata::get(NewVal)));
     }
   }
 }
@@ -315,6 +308,22 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
   // For the rest of the instructions, either hoist to the OrigPreheader if
   // possible or create a clone in the OldPreHeader if not.
   TerminatorInst *LoopEntryBranch = OrigPreheader->getTerminator();
+
+  // Record all debug intrinsics preceding LoopEntryBranch to avoid duplication.
+  using DbgIntrinsicHash =
+      std::pair<std::pair<Value *, DILocalVariable *>, DIExpression *>;
+  auto makeHash = [](DbgInfoIntrinsic *D) -> DbgIntrinsicHash {
+    return {{D->getVariableLocation(), D->getVariable()}, D->getExpression()};
+  };
+  SmallDenseSet<DbgIntrinsicHash, 8> DbgIntrinsics;
+  for (auto I = std::next(OrigPreheader->rbegin()), E = OrigPreheader->rend();
+       I != E; ++I) {
+    if (auto *DII = dyn_cast<DbgInfoIntrinsic>(&*I))
+      DbgIntrinsics.insert(makeHash(DII));
+    else
+      break;
+  }
+
   while (I != E) {
     Instruction *Inst = &*I++;
 
@@ -337,6 +346,13 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     // Eagerly remap the operands of the instruction.
     RemapInstruction(C, ValueMap,
                      RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+
+    // Avoid inserting the same intrinsic twice.
+    if (auto *DII = dyn_cast<DbgInfoIntrinsic>(C))
+      if (DbgIntrinsics.count(makeHash(DII))) {
+        C->deleteValue();
+        continue;
+      }
 
     // With the operands remapped, see if the instruction constant folds or is
     // otherwise simplifyable.  This commonly occurs because the entry from PHI
