@@ -2171,7 +2171,7 @@ bool QualType::unionHasUniqueObjectRepresentations(
   return true;
 }
 
-bool isStructEmpty(QualType Ty) {
+static bool isStructEmpty(QualType Ty) {
   assert(Ty.getTypePtr()->isStructureOrClassType() &&
          "Must be struct or class");
   const RecordDecl *RD = Ty.getTypePtr()->getAs<RecordType>()->getDecl();

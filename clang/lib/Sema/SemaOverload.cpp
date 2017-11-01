@@ -8977,6 +8977,18 @@ bool clang::isBetterOverloadCandidate(
     // C++14 [over.match.best]p1 section 2 bullet 3.
   }
 
+  // FIXME: Work around a defect in the C++17 guaranteed copy elision wording,
+  // as combined with the resolution to CWG issue 243.
+  //
+  // When the context is initialization by constructor ([over.match.ctor] or
+  // either phase of [over.match.list]), a constructor is preferred over
+  // a conversion function.
+  if (Kind == OverloadCandidateSet::CSK_InitByConstructor && NumArgs == 1 &&
+      Cand1.Function && Cand2.Function &&
+      isa<CXXConstructorDecl>(Cand1.Function) !=
+          isa<CXXConstructorDecl>(Cand2.Function))
+    return isa<CXXConstructorDecl>(Cand1.Function);
+
   //    -- F1 is a non-template function and F2 is a function template
   //       specialization, or, if not that,
   bool Cand1IsSpecialization = Cand1.Function &&
@@ -9035,20 +9047,6 @@ bool clang::isBetterOverloadCandidate(
         return true;
     }
   }
-  
-
-
-  // FIXME: Work around a defect in the C++17 guaranteed copy elision wording,
-  // as combined with the resolution to CWG issue 243.
-  //
-  // When the context is initialization by constructor ([over.match.ctor] or
-  // either phase of [over.match.list]), a constructor is preferred over
-  // a conversion function.
-  if (Kind == OverloadCandidateSet::CSK_InitByConstructor && NumArgs == 1 &&
-      Cand1.Function && Cand2.Function &&
-      isa<CXXConstructorDecl>(Cand1.Function) !=
-          isa<CXXConstructorDecl>(Cand2.Function))
-    return isa<CXXConstructorDecl>(Cand1.Function);
 
   // Check for enable_if value-based overload resolution.
   if (Cand1.Function && Cand2.Function) {

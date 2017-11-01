@@ -160,3 +160,12 @@ struct AsDelegating final {
   // classes?
   AsDelegating(int n) : AsDelegating(make(n)) {} // expected-error {{deleted}}
 };
+
+namespace CtorTemplateBeatsNonTemplateConversionFn {
+  struct Foo { template <typename Derived> Foo(const Derived &); };
+  template <typename Derived> struct Base { operator Foo() const = delete; }; // expected-note {{deleted}}
+  struct Derived : Base<Derived> {};
+
+  Foo f(Derived d) { return d; } // expected-error {{invokes a deleted function}}
+  Foo g(Derived d) { return Foo(d); } // ok, calls constructor
+}

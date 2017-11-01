@@ -740,6 +740,10 @@ Path to blacklist file for sanitizers
 
 Enable control flow integrity (CFI) checks for cross-DSO calls.
 
+.. option:: -fsanitize-cfi-icall-generalize-pointers
+
+Generalize pointers in function type signatures used for Control Flow Integrity (CFI) indirect call checking
+
 .. option:: -fsanitize-coverage=<arg1>,<arg2>..., -fno-sanitize-coverage=<arg1>,<arg2>...
 
 Specify the type of coverage instrumentation for Sanitizers

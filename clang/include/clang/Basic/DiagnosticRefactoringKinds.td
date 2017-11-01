@@ -26,6 +26,8 @@ def err_refactor_code_outside_of_function : Error<"the selected code is not a "
   "part of a function's / method's body">;
 def err_refactor_extract_simple_expression : Error<"the selected expression "
   "is too simple to extract">;
+def err_refactor_extract_prohibited_expression : Error<"the selected "
+  "expression can't be extracted">;
 
 }
 
