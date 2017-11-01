@@ -126,7 +126,6 @@ private:
   uint16_t NameID;
   const WinResHeaderSuffix *Suffix = nullptr;
   ArrayRef<uint8_t> Data;
-  const WindowsResource *OwningRes = nullptr;
 };
 
 class WindowsResource : public Binary {

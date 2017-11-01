@@ -206,6 +206,7 @@ namespace rdf {
 
       bool operator==(const rr_iterator &I) const {
         assert(Owner == I.Owner);
+        (void)Owner;
         return Index == I.Index;
       }
 

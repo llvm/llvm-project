@@ -1,4 +1,4 @@
-// RUN: %clang_scudo %s -o %t
+// RUN: %clangxx_scudo %s -o %t
 // RUN: rm -rf %T/random_shuffle_tmp_dir
 // RUN: mkdir %T/random_shuffle_tmp_dir
 // RUN: %run %t 100 > %T/random_shuffle_tmp_dir/out1

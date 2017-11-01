@@ -16079,9 +16079,11 @@ static SDValue LowerZERO_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
 /// prevent the PACKSS from saturating the results.
 /// AVX2 (Int256) sub-targets require extra shuffling as the PACKSS operates
 /// within each 128-bit lane.
-static SDValue truncateVectorWithPACKSS(EVT DstVT, SDValue In, const SDLoc &DL,
-                                        SelectionDAG &DAG,
-                                        const X86Subtarget &Subtarget) {
+static SDValue truncateVectorWithPACK(unsigned Opcode, EVT DstVT, SDValue In,
+                                      const SDLoc &DL, SelectionDAG &DAG,
+                                      const X86Subtarget &Subtarget) {
+  assert(Opcode == X86ISD::PACKSS && "Unexpected PACK opcode");
+
   // Requires SSE2 but AVX512 has fast truncate.
   if (!Subtarget.hasSSE2() || Subtarget.hasAVX512())
     return SDValue();
@@ -16127,7 +16129,7 @@ static SDValue truncateVectorWithPACKSS(EVT DstVT, SDValue In, const SDLoc &DL,
   if (SrcVT.is256BitVector()) {
     Lo = DAG.getBitcast(InVT, Lo);
     Hi = DAG.getBitcast(InVT, Hi);
-    SDValue Res = DAG.getNode(X86ISD::PACKSS, DL, OutVT, Lo, Hi);
+    SDValue Res = DAG.getNode(Opcode, DL, OutVT, Lo, Hi);
     return DAG.getBitcast(DstVT, Res);
   }
 
@@ -16136,7 +16138,7 @@ static SDValue truncateVectorWithPACKSS(EVT DstVT, SDValue In, const SDLoc &DL,
   if (SrcVT.is512BitVector() && Subtarget.hasInt256()) {
     Lo = DAG.getBitcast(InVT, Lo);
     Hi = DAG.getBitcast(InVT, Hi);
-    SDValue Res = DAG.getNode(X86ISD::PACKSS, DL, OutVT, Lo, Hi);
+    SDValue Res = DAG.getNode(Opcode, DL, OutVT, Lo, Hi);
 
     // 256-bit PACKSS(ARG0, ARG1) leaves us with ((LO0,LO1),(HI0,HI1)),
     // so we need to shuffle to get ((LO0,HI0),(LO1,HI1)).
@@ -16149,18 +16151,18 @@ static SDValue truncateVectorWithPACKSS(EVT DstVT, SDValue In, const SDLoc &DL,
     // If 512bit -> 128bit truncate another stage.
     EVT PackedVT = EVT::getVectorVT(Ctx, PackedSVT, NumElems);
     Res = DAG.getBitcast(PackedVT, Res);
-    return truncateVectorWithPACKSS(DstVT, Res, DL, DAG, Subtarget);
+    return truncateVectorWithPACK(Opcode, DstVT, Res, DL, DAG, Subtarget);
   }
 
   // Recursively pack lower/upper subvectors, concat result and pack again.
   assert(SrcSizeInBits >= 512 && "Expected 512-bit vector or greater");
   EVT PackedVT = EVT::getVectorVT(Ctx, PackedSVT, NumSubElts);
-  Lo = truncateVectorWithPACKSS(PackedVT, Lo, DL, DAG, Subtarget);
-  Hi = truncateVectorWithPACKSS(PackedVT, Hi, DL, DAG, Subtarget);
+  Lo = truncateVectorWithPACK(Opcode, PackedVT, Lo, DL, DAG, Subtarget);
+  Hi = truncateVectorWithPACK(Opcode, PackedVT, Hi, DL, DAG, Subtarget);
 
   PackedVT = EVT::getVectorVT(Ctx, PackedSVT, NumElems);
   SDValue Res = DAG.getNode(ISD::CONCAT_VECTORS, DL, PackedVT, Lo, Hi);
-  return truncateVectorWithPACKSS(DstVT, Res, DL, DAG, Subtarget);
+  return truncateVectorWithPACK(Opcode, DstVT, Res, DL, DAG, Subtarget);
 }
 
 static SDValue LowerTruncateVecI1(SDValue Op, SelectionDAG &DAG,
@@ -16226,7 +16228,8 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
   // extend all the way to the packed/truncated value.
   unsigned NumPackedBits = std::min<unsigned>(VT.getScalarSizeInBits(), 16);
   if ((InVT.getScalarSizeInBits() - NumPackedBits) < DAG.ComputeNumSignBits(In))
-    if (SDValue V = truncateVectorWithPACKSS(VT, In, DL, DAG, Subtarget))
+    if (SDValue V =
+            truncateVectorWithPACK(X86ISD::PACKSS, VT, In, DL, DAG, Subtarget))
       return V;
 
   if ((VT == MVT::v4i32) && (InVT == MVT::v4i64)) {
@@ -34461,7 +34464,7 @@ static SDValue combineVectorSignBitsTruncation(SDNode *N, SDLoc &DL,
   if (NumSignBits <= (InSVT.getSizeInBits() - NumPackedBits))
     return SDValue();
 
-  return truncateVectorWithPACKSS(VT, In, DL, DAG, Subtarget);
+  return truncateVectorWithPACK(X86ISD::PACKSS, VT, In, DL, DAG, Subtarget);
 }
 
 static SDValue combineTruncate(SDNode *N, SelectionDAG &DAG,

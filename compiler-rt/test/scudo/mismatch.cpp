@@ -1,4 +1,4 @@
-// RUN: %clang_scudo %s -o %t
+// RUN: %clangxx_scudo %s -o %t
 // RUN: %env_scudo_opts=DeallocationTypeMismatch=1 not %run %t mallocdel       2>&1 | FileCheck --check-prefix=CHECK-dealloc %s
 // RUN: %env_scudo_opts=DeallocationTypeMismatch=0     %run %t mallocdel       2>&1
 // RUN: %env_scudo_opts=DeallocationTypeMismatch=1 not %run %t newfree         2>&1 | FileCheck --check-prefix=CHECK-dealloc %s

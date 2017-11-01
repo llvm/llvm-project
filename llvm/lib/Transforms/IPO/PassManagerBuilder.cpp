@@ -418,6 +418,14 @@ void PassManagerBuilder::populateModulePassManager(
     else if (GlobalExtensionsNotEmpty() || !Extensions.empty())
       MPM.add(createBarrierNoopPass());
 
+    if (PerformThinLTO) {
+      // Drop available_externally and unreferenced globals. This is necessary
+      // with ThinLTO in order to avoid leaving undefined references to dead
+      // globals in the object file.
+      MPM.add(createEliminateAvailableExternallyPass());
+      MPM.add(createGlobalDCEPass());
+    }
+
     addExtensionsToPM(EP_EnabledOnOptLevel0, MPM);
 
     // Rename anon globals to be able to export them in the summary.

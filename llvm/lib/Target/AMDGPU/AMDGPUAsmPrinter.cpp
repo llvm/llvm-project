@@ -226,7 +226,7 @@ void AMDGPUAsmPrinter::EmitFunctionEntryLabel() {
 void AMDGPUAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
 
   // Group segment variables aren't emitted in HSA.
-  if (AMDGPU::isGroupSegment(GV, AMDGPUASI))
+  if (AMDGPU::isGroupSegment(GV))
     return;
 
   AsmPrinter::EmitGlobalVariable(GV);

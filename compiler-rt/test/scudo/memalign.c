@@ -15,11 +15,11 @@
 #include <unistd.h>
 
 // Sometimes the headers may not have this...
-extern "C" void *aligned_alloc(size_t alignment, size_t size);
+void *aligned_alloc(size_t alignment, size_t size);
 
 int main(int argc, char **argv)
 {
-  void *p = nullptr;
+  void *p = NULL;
   size_t alignment = 1U << 12;
   size_t size = 1U << 12;
   int err;

@@ -25,6 +25,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -307,6 +308,22 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
   // For the rest of the instructions, either hoist to the OrigPreheader if
   // possible or create a clone in the OldPreHeader if not.
   TerminatorInst *LoopEntryBranch = OrigPreheader->getTerminator();
+
+  // Record all debug intrinsics preceding LoopEntryBranch to avoid duplication.
+  using DbgIntrinsicHash =
+      std::pair<std::pair<Value *, DILocalVariable *>, DIExpression *>;
+  auto makeHash = [](DbgInfoIntrinsic *D) -> DbgIntrinsicHash {
+    return {{D->getVariableLocation(), D->getVariable()}, D->getExpression()};
+  };
+  SmallDenseSet<DbgIntrinsicHash, 8> DbgIntrinsics;
+  for (auto I = std::next(OrigPreheader->rbegin()), E = OrigPreheader->rend();
+       I != E; ++I) {
+    if (auto *DII = dyn_cast<DbgInfoIntrinsic>(&*I))
+      DbgIntrinsics.insert(makeHash(DII));
+    else
+      break;
+  }
+
   while (I != E) {
     Instruction *Inst = &*I++;
 
@@ -329,6 +346,13 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     // Eagerly remap the operands of the instruction.
     RemapInstruction(C, ValueMap,
                      RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+
+    // Avoid inserting the same intrinsic twice.
+    if (auto *DII = dyn_cast<DbgInfoIntrinsic>(C))
+      if (DbgIntrinsics.count(makeHash(DII))) {
+        C->deleteValue();
+        continue;
+      }
 
     // With the operands remapped, see if the instruction constant folds or is
     // otherwise simplifyable.  This commonly occurs because the entry from PHI

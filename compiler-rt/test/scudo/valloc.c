@@ -19,7 +19,7 @@ size_t round_up_to(size_t size, size_t alignment) {
 
 int main(int argc, char **argv)
 {
-  void *p = nullptr;
+  void *p = NULL;
   size_t size, page_size;
 
   assert(argc == 2);

@@ -477,10 +477,10 @@ def VPERM      : VA1a_Int_Ty3<43, "vperm", int_ppc_altivec_vperm,
 def VSEL       : VA1a_Int_Ty<42, "vsel",  int_ppc_altivec_vsel, v4i32>;
 
 // Shuffles.
-def VSLDOI  : VAForm_2<44, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB, u5imm:$SH),
+def VSLDOI  : VAForm_2<44, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB, u4imm:$SH),
                        "vsldoi $vD, $vA, $vB, $SH", IIC_VecFP,
-                       [(set v16i8:$vD, 
-                         (vsldoi_shuffle:$SH v16i8:$vA, v16i8:$vB))]>;
+                       [(set v16i8:$vD,
+                         (PPCvecshl v16i8:$vA, v16i8:$vB, imm32SExt16:$SH))]>;
 
 // VX-Form instructions.  AltiVec arithmetic ops.
 let isCommutable = 1 in {
@@ -908,6 +908,9 @@ def:Pat<(vpkuwum_unary_shuffle v16i8:$vA, undef),
         (VPKUWUM $vA, $vA)>;
 def:Pat<(vpkuhum_unary_shuffle v16i8:$vA, undef),
         (VPKUHUM $vA, $vA)>;
+def:Pat<(vsldoi_shuffle:$SH v16i8:$vA, v16i8:$vB),
+        (VSLDOI v16i8:$vA, v16i8:$vB, (VSLDOI_get_imm $SH))>;
+
 
 // Match vsldoi(y,x), vpkuwum(y,x), vpkuhum(y,x), i.e., swapped operands.
 // These fragments are matched for little-endian, where the inputs must
@@ -1310,7 +1313,12 @@ def VEXTUWRX : VX1_RT5_RA5_VB5<1933, "vextuwrx", []>;
 
 // Vector Insert Element Instructions
 def VINSERTB : VX1_VT5_UIM5_VB5<781, "vinsertb", []>;
-def VINSERTH : VX1_VT5_UIM5_VB5<845, "vinserth", []>;
+def VINSERTH : VXForm_1<845, (outs vrrc:$vD),
+                        (ins vrrc:$vDi, u4imm:$UIM, vrrc:$vB),
+                        "vinserth $vD, $vB, $UIM", IIC_VecGeneral,
+                        [(set v8i16:$vD, (PPCvecinsert v8i16:$vDi, v8i16:$vB,
+                                                      imm32SExt16:$UIM))]>,
+                        RegConstraint<"$vDi = $vD">, NoEncode<"$vDi">;
 def VINSERTW : VX1_VT5_UIM5_VB5<909, "vinsertw", []>;
 def VINSERTD : VX1_VT5_UIM5_VB5<973, "vinsertd", []>;
 

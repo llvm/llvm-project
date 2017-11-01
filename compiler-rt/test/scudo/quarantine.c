@@ -61,7 +61,7 @@ int main(int argc, char **argv)
     free(p);
 
     // Eventually the chunk should become available again.
-    bool found = false;
+    char found = 0;
     for (int i = 0; i < 0x200 && !found; i++) {
       p = malloc(size);
       assert(p);

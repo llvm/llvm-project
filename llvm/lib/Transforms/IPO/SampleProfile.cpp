@@ -200,7 +200,7 @@ protected:
   const FunctionSamples *findFunctionSamples(const Instruction &I) const;
   bool inlineCallInstruction(Instruction *I);
   bool inlineHotFunctions(Function &F,
-                          DenseSet<GlobalValue::GUID> &ImportGUIDs);
+                          DenseSet<GlobalValue::GUID> &InlinedGUIDs);
   void printEdgeWeight(raw_ostream &OS, Edge E);
   void printBlockWeight(raw_ostream &OS, const BasicBlock *BB) const;
   void printBlockEquivalence(raw_ostream &OS, const BasicBlock *BB);
@@ -766,12 +766,12 @@ bool SampleProfileLoader::inlineCallInstruction(Instruction *I) {
 /// it to direct call. Each indirect call is limited with a single target.
 ///
 /// \param F function to perform iterative inlining.
-/// \param ImportGUIDs a set to be updated to include all GUIDs that come
-///     from a different module but inlined in the profiled binary.
+/// \param InlinedGUIDs a set to be updated to include all GUIDs that are
+///     inlined in the profiled binary.
 ///
 /// \returns True if there is any inline happened.
 bool SampleProfileLoader::inlineHotFunctions(
-    Function &F, DenseSet<GlobalValue::GUID> &ImportGUIDs) {
+    Function &F, DenseSet<GlobalValue::GUID> &InlinedGUIDs) {
   DenseSet<Instruction *> PromotedInsns;
   bool Changed = false;
   while (true) {
@@ -804,9 +804,9 @@ bool SampleProfileLoader::inlineHotFunctions(
         uint64_t Sum;
         for (const auto *FS : findIndirectCallFunctionSamples(*I, Sum)) {
           if (IsThinLTOPreLink) {
-            FS->findImportedFunctions(ImportGUIDs, F.getParent(),
-                                      Samples->getTotalSamples() *
-                                          SampleProfileHotThreshold / 100);
+            FS->findInlinedFunctions(InlinedGUIDs, F.getParent(),
+                                     Samples->getTotalSamples() *
+                                         SampleProfileHotThreshold / 100);
             continue;
           }
           auto CalleeFunctionName = FS->getName();
@@ -844,8 +844,8 @@ bool SampleProfileLoader::inlineHotFunctions(
         if (inlineCallInstruction(I))
           LocalChanged = true;
       } else if (IsThinLTOPreLink) {
-        findCalleeFunctionSamples(*I)->findImportedFunctions(
-            ImportGUIDs, F.getParent(),
+        findCalleeFunctionSamples(*I)->findInlinedFunctions(
+            InlinedGUIDs, F.getParent(),
             Samples->getTotalSamples() * SampleProfileHotThreshold / 100);
       }
     }
@@ -1455,18 +1455,19 @@ bool SampleProfileLoader::emitAnnotations(Function &F) {
   DEBUG(dbgs() << "Line number for the first instruction in " << F.getName()
                << ": " << getFunctionLoc(F) << "\n");
 
-  DenseSet<GlobalValue::GUID> ImportGUIDs;
-  Changed |= inlineHotFunctions(F, ImportGUIDs);
+  DenseSet<GlobalValue::GUID> InlinedGUIDs;
+  Changed |= inlineHotFunctions(F, InlinedGUIDs);
 
   // Compute basic block weights.
   Changed |= computeBlockWeights(F);
 
   if (Changed) {
     // Add an entry count to the function using the samples gathered at the
-    // function entry. Also sets the GUIDs that comes from a different
-    // module but inlined in the profiled binary. This is aiming at making
-    // the IR match the profiled binary before annotation.
-    F.setEntryCount(Samples->getHeadSamples() + 1, &ImportGUIDs);
+    // function entry.
+    // Sets the GUIDs that are inlined in the profiled binary. This is used
+    // for ThinLink to make correct liveness analysis, and also make the IR
+    // match the profiled binary before annotation.
+    F.setEntryCount(Samples->getHeadSamples() + 1, &InlinedGUIDs);
 
     // Compute dominance and loop info needed for propagation.
     computeDominanceAndLoopInfo(F);
