@@ -516,7 +516,7 @@ static const CoreDefinition *FindCoreDefinition(llvm::StringRef name) {
 }
 
 static inline const CoreDefinition *FindCoreDefinition(ArchSpec::Core core) {
-  if (core >= 0 && core < llvm::array_lengthof(g_core_definitions))
+  if (core < llvm::array_lengthof(g_core_definitions))
     return &g_core_definitions[core];
   return nullptr;
 }
