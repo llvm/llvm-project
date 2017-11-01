@@ -15,6 +15,8 @@
 #define POLLY_ZONEALGO_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "isl/isl-noexceptions.h"
 #include <memory>
 
@@ -22,12 +24,14 @@ namespace llvm {
 class Value;
 class LoopInfo;
 class Loop;
+class PHINode;
 } // namespace llvm
 
 namespace polly {
 class Scop;
 class ScopStmt;
 class MemoryAccess;
+class ScopArrayInfo;
 
 /// Return only the mappings that map to known values.
 ///
@@ -108,6 +112,47 @@ protected:
   /// { Element[] }
   isl::union_set CompatibleElts;
 
+  /// List of PHIs that may transitively refer to themselves.
+  ///
+  /// Computing them would require a polyhedral transitive closure operation,
+  /// for which isl may only return an approximation. For correctness, we always
+  /// require an exact result. Hence, we exclude such PHIs.
+  llvm::SmallPtrSet<llvm::PHINode *, 4> RecursivePHIs;
+
+  /// PHIs that have been computed.
+  ///
+  /// Computed PHIs are replaced by their incoming values using #NormalizeMap.
+  llvm::DenseSet<llvm::PHINode *> ComputedPHIs;
+
+  /// For computed PHIs, contains the ValInst they stand for.
+  ///
+  /// To show an example, assume the following PHINode:
+  ///
+  ///   Stmt:
+  ///     %phi = phi double [%val1, %bb1], [%val2, %bb2]
+  ///
+  /// It's ValInst is:
+  ///
+  ///   { [Stmt[i] -> phi[]] }
+  ///
+  /// The value %phi will be either %val1 or %val2, depending on whether in
+  /// iteration i %bb1 or %bb2 has been executed before. In SCoPs, this can be
+  /// determined at compile-time, and the result stored in #NormalizeMap. For
+  /// the previous example, it could be:
+  ///
+  ///   { [Stmt[i] -> phi[]] -> [Stmt[0] -> val1[]];
+  ///     [Stmt[i] -> phi[]] -> [Stmt[i] -> val2[]] : i > 0 }
+  ///
+  /// Only ValInsts in #ComputedPHIs are present in this map. Other values are
+  /// assumed to represent themselves. This is to avoid adding lots of identity
+  /// entries to this map.
+  ///
+  /// { PHIValInst[] -> IncomingValInst[] }
+  isl::union_map NormalizeMap;
+
+  /// Cache for computePerPHI(const ScopArrayInfo *)
+  llvm::SmallDenseMap<llvm::PHINode *, isl::union_map> PerPHIMaps;
+
   /// Prepare the object before computing the zones of @p S.
   ///
   /// @param PassName Name of the pass using this analysis.
@@ -142,7 +187,7 @@ private:
   /// have.
   ///
   /// @return { ValInst[] }
-  isl::map getWrittenValue(MemoryAccess *MA, isl::map AccRel);
+  isl::union_map getWrittenValue(MemoryAccess *MA, isl::map AccRel);
 
   void addArrayWriteAccess(MemoryAccess *MA);
 
@@ -150,6 +195,17 @@ protected:
   isl::union_set makeEmptyUnionSet() const;
 
   isl::union_map makeEmptyUnionMap() const;
+
+  /// For each 'execution' of a PHINode, get the incoming block that was
+  /// executed before.
+  ///
+  /// For each PHI instance we can directly determine which was the incoming
+  /// block, and hence derive which value the PHI has.
+  ///
+  /// @param SAI The ScopArrayInfo representing the PHI's storage.
+  ///
+  /// @return { DomainPHIRead[] -> DomainPHIWrite[] }
+  isl::union_map computePerPHI(const polly::ScopArrayInfo *SAI);
 
   /// Find the array elements that can be used for zone analysis.
   void collectCompatibleElts();
@@ -244,6 +300,15 @@ protected:
   isl::map makeValInst(llvm::Value *Val, ScopStmt *UserStmt, llvm::Loop *Scope,
                        bool IsCertain = true);
 
+  /// Create and normalize a ValInst.
+  ///
+  /// @see makeValInst
+  /// @see normalizeValInst
+  /// @see #NormalizedPHI
+  isl::union_map makeNormalizedValInst(llvm::Value *Val, ScopStmt *UserStmt,
+                                       llvm::Loop *Scope,
+                                       bool IsCertain = true);
+
   /// Return whether @p MA can be used for transformations (e.g. OpTree load
   /// forwarding, DeLICM mapping).
   bool isCompatibleAccess(MemoryAccess *MA);
@@ -251,8 +316,28 @@ protected:
   /// Compute the different zones.
   void computeCommon();
 
+  ///  Compute the normalization map that replaces PHIs by their incoming
+  ///  values.
+  ///
+  /// @see #NormalizeMap
+  void computeNormalizedPHIs();
+
   /// Print the current state of all MemoryAccesses to @p.
   void printAccesses(llvm::raw_ostream &OS, int Indent = 0) const;
+
+  /// Is @p MA a PHI READ access that can be normalized?
+  ///
+  /// @see #NormalizeMap
+  bool isNormalizable(MemoryAccess *MA);
+
+  /// @{
+  /// Determine whether the argument does not map to any computed PHI. Those
+  /// should have been replaced by their incoming values.
+  ///
+  /// @see #NormalizedPHI
+  bool isNormalized(isl::map Map);
+  bool isNormalized(isl::union_map Map);
+  /// @}
 
 public:
   /// Return the SCoP this object is analyzing.

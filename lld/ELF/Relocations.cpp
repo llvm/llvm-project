@@ -544,7 +544,7 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol *SS) {
   for (SharedSymbol *Sym : getSymbolsAt<ELFT>(SS)) {
     Sym->CopyRelSec = Sec;
     Sym->IsPreemptible = false;
-    Sym->symbol()->IsUsedInRegularObj = true;
+    Sym->IsUsedInRegularObj = true;
   }
 
   In<ELFT>::RelaDyn->addReloc({Target->CopyRel, Sec, 0, false, SS, 0});
@@ -717,11 +717,11 @@ static bool maybeReportUndefined(SymbolBody &Sym, InputSectionBase &Sec,
   if (Config->UnresolvedSymbols == UnresolvedPolicy::IgnoreAll)
     return false;
 
-  if (Sym.isLocal() || !Sym.isUndefined() || Sym.symbol()->isWeak())
+  if (Sym.isLocal() || !Sym.isUndefined() || Sym.isWeak())
     return false;
 
-  bool CanBeExternal = Sym.symbol()->computeBinding() != STB_LOCAL &&
-                       Sym.getVisibility() == STV_DEFAULT;
+  bool CanBeExternal =
+      Sym.computeBinding() != STB_LOCAL && Sym.getVisibility() == STV_DEFAULT;
   if (Config->UnresolvedSymbols == UnresolvedPolicy::Ignore && CanBeExternal)
     return false;
 

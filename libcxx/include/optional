@@ -57,17 +57,17 @@ namespace std {
 
   // 23.6.8, comparison with T
   template <class T, class U> constexpr bool operator==(const optional<T>&, const U&);
-  template <class T, class U> constexpr bool operator==(const U&, const optional<T>&);
+  template <class T, class U> constexpr bool operator==(const T&, const optional<U>&);
   template <class T, class U> constexpr bool operator!=(const optional<T>&, const U&);
-  template <class T, class U> constexpr bool operator!=(const U&, const optional<T>&);
+  template <class T, class U> constexpr bool operator!=(const T&, const optional<U>&);
   template <class T, class U> constexpr bool operator<(const optional<T>&, const U&);
-  template <class T, class U> constexpr bool operator<(const U&, const optional<T>&);
+  template <class T, class U> constexpr bool operator<(const T&, const optional<U>&);
   template <class T, class U> constexpr bool operator<=(const optional<T>&, const U&);
-  template <class T, class U> constexpr bool operator<=(const U&, const optional<T>&);
+  template <class T, class U> constexpr bool operator<=(const T&, const optional<U>&);
   template <class T, class U> constexpr bool operator>(const optional<T>&, const U&);
-  template <class T, class U> constexpr bool operator>(const U&, const optional<T>&);
+  template <class T, class U> constexpr bool operator>(const T&, const optional<U>&);
   template <class T, class U> constexpr bool operator>=(const optional<T>&, const U&);
-  template <class T, class U> constexpr bool operator>=(const U&, const optional<T>&);
+  template <class T, class U> constexpr bool operator>=(const T&, const optional<U>&);
 
   // 23.6.9, specialized algorithms
   template <class T> void swap(optional<T>&, optional<T>&) noexcept(see below );
