@@ -15,6 +15,7 @@ define void @t1(i8 signext %c) {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    popl %edi
+; CHECK-NEXT:   .cfi_def_cfa_offset 4
 ; CHECK-NEXT:    retl
 entry:
   tail call void asm sideeffect "", "{di},~{dirflag},~{fpsr},~{flags}"(i8 %c)
@@ -32,6 +33,7 @@ define void @t2(i8 signext %c) {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    popl %esi
+; CHECK-NEXT:   .cfi_def_cfa_offset 4
 ; CHECK-NEXT:    retl
 entry:
   tail call void asm sideeffect "", "{si},~{dirflag},~{fpsr},~{flags}"(i8 %c)

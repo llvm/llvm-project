@@ -86,10 +86,15 @@ define i128 @foo(i128 %t, i128 %u) {
 ; X86-NEXT:    movl %edx, 12(%ecx)
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    addl $8, %esp
+; X86-NEXT:   .cfi_def_cfa_offset 20
 ; X86-NEXT:    popl %esi
+; X86-NEXT:   .cfi_def_cfa_offset 16
 ; X86-NEXT:    popl %edi
+; X86-NEXT:   .cfi_def_cfa_offset 12
 ; X86-NEXT:    popl %ebx
+; X86-NEXT:   .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %ebp
+; X86-NEXT:   .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl $4
   %k = mul i128 %t, %u
   ret i128 %k

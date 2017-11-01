@@ -18,6 +18,7 @@ define void @foo(i32 %a) {
 ; CHECK-NEXT:    callq qux
 ; CHECK-NEXT:  .LBB0_2: # %false
 ; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %t0 = lshr i32 %a, 23
   br label %next

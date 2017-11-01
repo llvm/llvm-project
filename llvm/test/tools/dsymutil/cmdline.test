@@ -9,10 +9,10 @@ HELP: -flat
 HELP: -no-odr
 HELP: -no-output
 HELP: -no-swiftmodule-timestamp
+HELP: -num-threads=<n>
 HELP: -o=<filename>
 HELP: -oso-prepend-path=<path>
 HELP: -symtab
-HELP: -threads=<n>
 HELP: -verbose
 HELP: -y
 HELP-NOT: -reverse-iterate

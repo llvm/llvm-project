@@ -317,11 +317,10 @@ getAltRegInst(const CodeGenInstruction *I, const RecordKeeper &Records,
 // matches the EVEX instruction of this object.
 class IsMatch {
   const CodeGenInstruction *MemInst;
-  const RecordKeeper &Records;
 
 public:
   IsMatch(const CodeGenInstruction *Inst, const RecordKeeper &Records)
-      : MemInst(Inst), Records(Records) {}
+      : MemInst(Inst) {}
 
   bool operator()(const CodeGenInstruction *RegInst) {
     Record *MemRec = MemInst->TheDef;

@@ -13,6 +13,7 @@
 
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -424,25 +425,73 @@ bool BranchProbabilityInfo::calcPointerHeuristics(const BasicBlock *BB) {
   return true;
 }
 
+static int getSCCNum(const BasicBlock *BB,
+                     const BranchProbabilityInfo::SccInfo &SccI) {
+  auto SccIt = SccI.SccNums.find(BB);
+  if (SccIt == SccI.SccNums.end())
+    return -1;
+  return SccIt->second;
+}
+
+// Consider any block that is an entry point to the SCC as a header.
+static bool isSCCHeader(const BasicBlock *BB, int SccNum,
+                        BranchProbabilityInfo::SccInfo &SccI) {
+  assert(getSCCNum(BB, SccI) == SccNum);
+
+  // Lazily compute the set of headers for a given SCC and cache the results
+  // in the SccHeaderMap.
+  if (SccI.SccHeaders.size() <= static_cast<unsigned>(SccNum))
+    SccI.SccHeaders.resize(SccNum + 1);
+  auto &HeaderMap = SccI.SccHeaders[SccNum];
+  bool Inserted;
+  BranchProbabilityInfo::SccHeaderMap::iterator HeaderMapIt;
+  std::tie(HeaderMapIt, Inserted) = HeaderMap.insert(std::make_pair(BB, false));
+  if (Inserted) {
+    bool IsHeader = llvm::any_of(make_range(pred_begin(BB), pred_end(BB)),
+                                 [&](const BasicBlock *Pred) {
+                                   return getSCCNum(Pred, SccI) != SccNum;
+                                 });
+    HeaderMapIt->second = IsHeader;
+    return IsHeader;
+  } else
+    return HeaderMapIt->second;
+}
+
 // Calculate Edge Weights using "Loop Branch Heuristics". Predict backedges
 // as taken, exiting edges as not-taken.
 bool BranchProbabilityInfo::calcLoopBranchHeuristics(const BasicBlock *BB,
-                                                     const LoopInfo &LI) {
+                                                     const LoopInfo &LI,
+                                                     SccInfo &SccI) {
+  int SccNum;
   Loop *L = LI.getLoopFor(BB);
-  if (!L)
-    return false;
+  if (!L) {
+    SccNum = getSCCNum(BB, SccI);
+    if (SccNum < 0)
+      return false;
+  }
 
   SmallVector<unsigned, 8> BackEdges;
   SmallVector<unsigned, 8> ExitingEdges;
   SmallVector<unsigned, 8> InEdges; // Edges from header to the loop.
 
   for (succ_const_iterator I = succ_begin(BB), E = succ_end(BB); I != E; ++I) {
-    if (!L->contains(*I))
-      ExitingEdges.push_back(I.getSuccessorIndex());
-    else if (L->getHeader() == *I)
-      BackEdges.push_back(I.getSuccessorIndex());
-    else
-      InEdges.push_back(I.getSuccessorIndex());
+    // Use LoopInfo if we have it, otherwise fall-back to SCC info to catch
+    // irreducible loops.
+    if (L) {
+      if (!L->contains(*I))
+        ExitingEdges.push_back(I.getSuccessorIndex());
+      else if (L->getHeader() == *I)
+        BackEdges.push_back(I.getSuccessorIndex());
+      else
+        InEdges.push_back(I.getSuccessorIndex());
+    } else {
+      if (getSCCNum(*I, SccI) != SccNum)
+        ExitingEdges.push_back(I.getSuccessorIndex());
+      else if (isSCCHeader(*I, SccNum, SccI))
+        BackEdges.push_back(I.getSuccessorIndex());
+      else
+        InEdges.push_back(I.getSuccessorIndex());
+    }
   }
 
   if (BackEdges.empty() && ExitingEdges.empty())
@@ -771,6 +820,27 @@ void BranchProbabilityInfo::calculate(const Function &F, const LoopInfo &LI,
   assert(PostDominatedByUnreachable.empty());
   assert(PostDominatedByColdCall.empty());
 
+  // Record SCC numbers of blocks in the CFG to identify irreducible loops.
+  // FIXME: We could only calculate this if the CFG is known to be irreducible
+  // (perhaps cache this info in LoopInfo if we can easily calculate it there?).
+  int SccNum = 0;
+  SccInfo SccI;
+  for (scc_iterator<const Function *> It = scc_begin(&F); !It.isAtEnd();
+       ++It, ++SccNum) {
+    // Ignore single-block SCCs since they either aren't loops or LoopInfo will
+    // catch them.
+    const std::vector<const BasicBlock *> &Scc = *It;
+    if (Scc.size() == 1)
+      continue;
+
+    DEBUG(dbgs() << "BPI: SCC " << SccNum << ":");
+    for (auto *BB : Scc) {
+      DEBUG(dbgs() << " " << BB->getName());
+      SccI.SccNums[BB] = SccNum;
+    }
+    DEBUG(dbgs() << "\n");
+  }
+
   // Walk the basic blocks in post-order so that we can build up state about
   // the successors of a block iteratively.
   for (auto BB : post_order(&F.getEntryBlock())) {
@@ -786,7 +856,7 @@ void BranchProbabilityInfo::calculate(const Function &F, const LoopInfo &LI,
       continue;
     if (calcColdCallHeuristics(BB))
       continue;
-    if (calcLoopBranchHeuristics(BB, LI))
+    if (calcLoopBranchHeuristics(BB, LI, SccI))
       continue;
     if (calcPointerHeuristics(BB))
       continue;

@@ -62,12 +62,13 @@ static opt<bool> FlatOut("flat",
                          init(false), cat(DsymCategory));
 static alias FlatOutA("f", desc("Alias for --flat"), aliasopt(FlatOut));
 
-static opt<unsigned> Threads(
-    "threads",
+static opt<unsigned> NumThreads(
+    "num-threads",
     desc("Specifies the maximum number (n) of simultaneous threads to use\n"
          "when linking multiple architectures."),
     value_desc("n"), init(0), cat(DsymCategory));
-static alias ThreadsA("t", desc("Alias for --threads"), aliasopt(Threads));
+static alias NumThreadsA("j", desc("Alias for --num-threads"),
+                         aliasopt(NumThreads));
 
 static opt<bool> Verbose("verbose", desc("Verbosity level"), init(false),
                          cat(DsymCategory));
@@ -324,12 +325,11 @@ int main(int argc, char **argv) {
       exitDsymutil(1);
     }
 
-    unsigned NumThreads = Threads;
-    if (!NumThreads)
+    if (NumThreads == 0)
       NumThreads = llvm::thread::hardware_concurrency();
     if (DumpDebugMap || Verbose)
       NumThreads = 1;
-    NumThreads = std::min(NumThreads, (unsigned)DebugMapPtrsOrErr->size());
+    NumThreads = std::min<unsigned>(NumThreads, DebugMapPtrsOrErr->size());
 
     llvm::ThreadPool Threads(NumThreads);
 

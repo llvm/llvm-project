@@ -529,7 +529,7 @@ private:
         // the code-completion string, typically a keyword or the name of
         // a declarator or macro.
         Item.filterText = Chunk.Text;
-        // Note intentional fallthrough here.
+        LLVM_FALLTHROUGH;
       case CodeCompletionString::CK_Text:
         // A piece of text that should be placed in the buffer,
         // e.g., parentheses or a comma in a function call.

@@ -65,7 +65,7 @@ Expected<ResourceEntryRef> WindowsResource::getHeadEntry() {
 
 ResourceEntryRef::ResourceEntryRef(BinaryStreamRef Ref,
                                    const WindowsResource *Owner)
-    : Reader(Ref), OwningRes(Owner) {}
+    : Reader(Ref) {}
 
 Expected<ResourceEntryRef>
 ResourceEntryRef::create(BinaryStreamRef BSR, const WindowsResource *Owner) {

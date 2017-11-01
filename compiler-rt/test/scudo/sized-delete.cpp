@@ -1,4 +1,4 @@
-// RUN: %clang_scudo -fsized-deallocation %s -o %t
+// RUN: %clangxx_scudo -fsized-deallocation %s -o %t
 // RUN: %env_scudo_opts=DeleteSizeMismatch=1     %run %t gooddel    2>&1
 // RUN: %env_scudo_opts=DeleteSizeMismatch=1 not %run %t baddel     2>&1 | FileCheck %s
 // RUN: %env_scudo_opts=DeleteSizeMismatch=0     %run %t baddel     2>&1

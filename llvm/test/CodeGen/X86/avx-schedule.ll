@@ -1090,8 +1090,8 @@ define <4 x double> @test_cvtdq2pd(<4 x i32> %a0, <4 x i32> *%a1) {
 ;
 ; BTVER2-LABEL: test_cvtdq2pd:
 ; BTVER2:       # BB#0:
-; BTVER2-NEXT:    vcvtdq2pd (%rdi), %ymm1 # sched: [8:1.00]
-; BTVER2-NEXT:    vcvtdq2pd %xmm0, %ymm0 # sched: [3:1.00]
+; BTVER2-NEXT:    vcvtdq2pd (%rdi), %ymm1 # sched: [8:2.00]
+; BTVER2-NEXT:    vcvtdq2pd %xmm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -1155,8 +1155,8 @@ define <8 x float> @test_cvtdq2ps(<8 x i32> %a0, <8 x i32> *%a1) {
 ;
 ; BTVER2-LABEL: test_cvtdq2ps:
 ; BTVER2:       # BB#0:
-; BTVER2-NEXT:    vcvtdq2ps (%rdi), %ymm1 # sched: [8:1.00]
-; BTVER2-NEXT:    vcvtdq2ps %ymm0, %ymm0 # sched: [3:1.00]
+; BTVER2-NEXT:    vcvtdq2ps (%rdi), %ymm1 # sched: [8:2.00]
+; BTVER2-NEXT:    vcvtdq2ps %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -1218,8 +1218,8 @@ define <8 x i32> @test_cvtpd2dq(<4 x double> %a0, <4 x double> *%a1) {
 ;
 ; BTVER2-LABEL: test_cvtpd2dq:
 ; BTVER2:       # BB#0:
-; BTVER2-NEXT:    vcvtpd2dqy (%rdi), %xmm1 # sched: [8:1.00]
-; BTVER2-NEXT:    vcvtpd2dq %ymm0, %xmm0 # sched: [3:1.00]
+; BTVER2-NEXT:    vcvtpd2dqy (%rdi), %xmm1 # sched: [11:2.00]
+; BTVER2-NEXT:    vcvtpd2dq %ymm0, %xmm0 # sched: [6:2.00]
 ; BTVER2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -1282,8 +1282,8 @@ define <8 x i32> @test_cvttpd2dq(<4 x double> %a0, <4 x double> *%a1) {
 ;
 ; BTVER2-LABEL: test_cvttpd2dq:
 ; BTVER2:       # BB#0:
-; BTVER2-NEXT:    vcvttpd2dqy (%rdi), %xmm1 # sched: [8:1.00]
-; BTVER2-NEXT:    vcvttpd2dq %ymm0, %xmm0 # sched: [3:1.00]
+; BTVER2-NEXT:    vcvttpd2dqy (%rdi), %xmm1 # sched: [11:2.00]
+; BTVER2-NEXT:    vcvttpd2dq %ymm0, %xmm0 # sched: [6:2.00]
 ; BTVER2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -1345,8 +1345,8 @@ define <8 x float> @test_cvtpd2ps(<4 x double> %a0, <4 x double> *%a1) {
 ;
 ; BTVER2-LABEL: test_cvtpd2ps:
 ; BTVER2:       # BB#0:
-; BTVER2-NEXT:    vcvtpd2psy (%rdi), %xmm1 # sched: [8:1.00]
-; BTVER2-NEXT:    vcvtpd2ps %ymm0, %xmm0 # sched: [3:1.00]
+; BTVER2-NEXT:    vcvtpd2psy (%rdi), %xmm1 # sched: [11:2.00]
+; BTVER2-NEXT:    vcvtpd2ps %ymm0, %xmm0 # sched: [6:2.00]
 ; BTVER2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -1408,8 +1408,8 @@ define <8 x i32> @test_cvtps2dq(<8 x float> %a0, <8 x float> *%a1) {
 ;
 ; BTVER2-LABEL: test_cvtps2dq:
 ; BTVER2:       # BB#0:
-; BTVER2-NEXT:    vcvtps2dq (%rdi), %ymm1 # sched: [8:1.00]
-; BTVER2-NEXT:    vcvtps2dq %ymm0, %ymm0 # sched: [3:1.00]
+; BTVER2-NEXT:    vcvtps2dq (%rdi), %ymm1 # sched: [8:2.00]
+; BTVER2-NEXT:    vcvtps2dq %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    vorpd %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -1472,8 +1472,8 @@ define <8 x i32> @test_cvttps2dq(<8 x float> %a0, <8 x float> *%a1) {
 ;
 ; BTVER2-LABEL: test_cvttps2dq:
 ; BTVER2:       # BB#0:
-; BTVER2-NEXT:    vcvttps2dq (%rdi), %ymm1 # sched: [8:1.00]
-; BTVER2-NEXT:    vcvttps2dq %ymm0, %ymm0 # sched: [3:1.00]
+; BTVER2-NEXT:    vcvttps2dq (%rdi), %ymm1 # sched: [8:2.00]
+; BTVER2-NEXT:    vcvttps2dq %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    vorps %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -2847,7 +2847,7 @@ define <4 x double> @test_movntpd(<4 x double> %a0, <4 x double> *%a1) {
 ; BTVER2-LABEL: test_movntpd:
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    vaddpd %ymm0, %ymm0, %ymm0 # sched: [3:2.00]
-; BTVER2-NEXT:    vmovntpd %ymm0, (%rdi) # sched: [1:1.00]
+; BTVER2-NEXT:    vmovntpd %ymm0, (%rdi) # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_movntpd:
@@ -2900,7 +2900,7 @@ define <8 x float> @test_movntps(<8 x float> %a0, <8 x float> *%a1) {
 ; BTVER2-LABEL: test_movntps:
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    vaddps %ymm0, %ymm0, %ymm0 # sched: [3:2.00]
-; BTVER2-NEXT:    vmovntps %ymm0, (%rdi) # sched: [1:1.00]
+; BTVER2-NEXT:    vmovntps %ymm0, (%rdi) # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_movntps:
@@ -4053,8 +4053,8 @@ define <4 x double> @test_roundpd(<4 x double> %a0, <4 x double> *%a1) {
 ;
 ; BTVER2-LABEL: test_roundpd:
 ; BTVER2:       # BB#0:
-; BTVER2-NEXT:    vroundpd $7, (%rdi), %ymm1 # sched: [8:1.00]
-; BTVER2-NEXT:    vroundpd $7, %ymm0, %ymm0 # sched: [3:1.00]
+; BTVER2-NEXT:    vroundpd $7, (%rdi), %ymm1 # sched: [8:2.00]
+; BTVER2-NEXT:    vroundpd $7, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -4117,8 +4117,8 @@ define <8 x float> @test_roundps(<8 x float> %a0, <8 x float> *%a1) {
 ;
 ; BTVER2-LABEL: test_roundps:
 ; BTVER2:       # BB#0:
-; BTVER2-NEXT:    vroundps $7, (%rdi), %ymm1 # sched: [8:1.00]
-; BTVER2-NEXT:    vroundps $7, %ymm0, %ymm0 # sched: [3:1.00]
+; BTVER2-NEXT:    vroundps $7, (%rdi), %ymm1 # sched: [8:2.00]
+; BTVER2-NEXT:    vroundps $7, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;

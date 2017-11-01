@@ -630,6 +630,7 @@ define i64 @shuf64i1_zero(i64 %a) {
 ; AVX512F-NEXT:    orq %rcx, %rax
 ; AVX512F-NEXT:    movq %rbp, %rsp
 ; AVX512F-NEXT:    popq %rbp
+; AVX512F-NEXT:    .cfi_def_cfa %rsp, 8
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
@@ -662,6 +663,7 @@ define i64 @shuf64i1_zero(i64 %a) {
 ; AVX512VL-NEXT:    orq %rcx, %rax
 ; AVX512VL-NEXT:    movq %rbp, %rsp
 ; AVX512VL-NEXT:    popq %rbp
+; AVX512VL-NEXT:    .cfi_def_cfa %rsp, 8
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;

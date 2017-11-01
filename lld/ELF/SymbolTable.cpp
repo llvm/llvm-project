@@ -456,9 +456,9 @@ static void reportDuplicate(SymbolBody *Sym, InputSectionBase *ErrSec,
   //   >>> defined at baz.c:563
   //   >>>            baz.o in archive libbaz.a
   auto *Sec1 = cast<InputSectionBase>(D->Section);
-  std::string Src1 = Sec1->getSrcMsg<ELFT>(D->Value);
+  std::string Src1 = Sec1->getSrcMsg<ELFT>(*Sym, D->Value);
   std::string Obj1 = Sec1->getObjMsg(D->Value);
-  std::string Src2 = ErrSec->getSrcMsg<ELFT>(ErrOffset);
+  std::string Src2 = ErrSec->getSrcMsg<ELFT>(*Sym, ErrOffset);
   std::string Obj2 = ErrSec->getObjMsg(ErrOffset);
 
   std::string Msg = "duplicate symbol: " + toString(*Sym) + "\n>>> defined at ";
