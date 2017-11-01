@@ -2072,24 +2072,21 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
     return RValue::get(nullptr);
   }
 
-    // Library functions with special handling.
   case Builtin::BIsqrt:
   case Builtin::BIsqrtf:
-  case Builtin::BIsqrtl: {
-    // Transform a call to sqrt* into a @llvm.sqrt.* intrinsic call, but only
-    // in finite- or unsafe-math mode (the intrinsic has different semantics
-    // for handling negative numbers compared to the library function, so
-    // -fmath-errno=0 is not enough).
-    if (!FD->hasAttr<ConstAttr>())
-      break;
-    if (!(CGM.getCodeGenOpts().UnsafeFPMath ||
-          CGM.getCodeGenOpts().NoNaNsFPMath))
-      break;
-    Value *Arg0 = EmitScalarExpr(E->getArg(0));
-    llvm::Type *ArgType = Arg0->getType();
-    Value *F = CGM.getIntrinsic(Intrinsic::sqrt, ArgType);
-    return RValue::get(Builder.CreateCall(F, Arg0));
-  }
+  case Builtin::BIsqrtl:
+    // Builtins have the same semantics as library functions. The LLVM intrinsic
+    // has the same semantics as the library function except it does not set
+    // errno. Thus, we can transform either sqrt or __builtin_sqrt to @llvm.sqrt
+    // if the call is 'const' (the call must not set errno).
+    //
+    // FIXME: The builtin cases are not here because they are marked 'const' in
+    // Builtins.def. So that means they are wrongly defined to have different
+    // semantics than the library functions. If we included them here, we would
+    // turn them into LLVM intrinsics regardless of whether -fmath-errno was on.
+    if (FD->hasAttr<ConstAttr>())
+      return RValue::get(emitUnaryBuiltin(*this, E, Intrinsic::sqrt));
+    break;
 
   case Builtin::BI__builtin_pow:
   case Builtin::BI__builtin_powf:

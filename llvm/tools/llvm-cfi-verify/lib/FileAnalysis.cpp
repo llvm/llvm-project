@@ -11,6 +11,7 @@
 #include "GraphBuilder.h"
 
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -41,6 +42,19 @@ using Instr = llvm::cfi_verify::FileAnalysis::Instr;
 
 namespace llvm {
 namespace cfi_verify {
+
+static cl::opt<bool> IgnoreDWARF(
+    "ignore-dwarf",
+    cl::desc(
+        "Ignore all DWARF data. This relaxes the requirements for all "
+        "statically linked libraries to have been compiled with '-g', but "
+        "will result in false positives for 'CFI unprotected' instructions."),
+    cl::init(false));
+
+cl::opt<unsigned long long> DWARFSearchRange(
+    "dwarf-search-range",
+    cl::desc("Address search range used to determine if instruction is valid."),
+    cl::init(0x10));
 
 Expected<FileAnalysis> FileAnalysis::Create(StringRef Filename) {
   // Open the filename provided.
@@ -294,6 +308,28 @@ Error FileAnalysis::initialiseDisassemblyMembers() {
 }
 
 Error FileAnalysis::parseCodeSections() {
+  if (!IgnoreDWARF) {
+    DWARF.reset(DWARFContext::create(*Object).release());
+    if (!DWARF)
+      return make_error<StringError>("Could not create DWARF information.",
+                                     inconvertibleErrorCode());
+
+    bool LineInfoValid = false;
+
+    for (auto &Unit : DWARF->compile_units()) {
+      const auto &LineTable = DWARF->getLineTableForUnit(Unit.get());
+      if (LineTable && !LineTable->Rows.empty()) {
+        LineInfoValid = true;
+        break;
+      }
+    }
+
+    if (!LineInfoValid)
+      return make_error<StringError>(
+          "DWARF line information missing. Did you compile with '-g'?",
+          inconvertibleErrorCode());
+  }
+
   for (const object::SectionRef &Section : Object->sections()) {
     // Ensure only executable sections get analysed.
     if (!(object::ELFSectionRef(Section).getFlags() & ELF::SHF_EXECINSTR))
@@ -310,6 +346,19 @@ Error FileAnalysis::parseCodeSections() {
   }
   return Error::success();
 }
+
+DILineInfoTable FileAnalysis::getLineInfoForAddressRange(uint64_t Address) {
+  if (!hasLineTableInfo())
+    return DILineInfoTable();
+
+  return DWARF->getLineInfoForAddressRange(Address, DWARFSearchRange);
+}
+
+bool FileAnalysis::hasValidLineInfoForAddressRange(uint64_t Address) {
+  return !getLineInfoForAddressRange(Address).empty();
+}
+
+bool FileAnalysis::hasLineTableInfo() const { return DWARF != nullptr; }
 
 void FileAnalysis::parseSectionContents(ArrayRef<uint8_t> SectionBytes,
                                         uint64_t SectionAddress) {
@@ -330,6 +379,11 @@ void FileAnalysis::parseSectionContents(ArrayRef<uint8_t> SectionBytes,
     InstrMeta.VMAddress = VMAddress;
     InstrMeta.InstructionSize = InstructionSize;
     InstrMeta.Valid = ValidInstruction;
+
+    // Check if this instruction exists in the range of the DWARF metadata.
+    if (hasLineTableInfo() && !hasValidLineInfoForAddressRange(VMAddress))
+      continue;
+
     addInstruction(InstrMeta);
 
     if (!ValidInstruction)

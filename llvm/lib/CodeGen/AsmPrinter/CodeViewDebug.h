@@ -161,8 +161,9 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   /// emit at the end of the TU.
   MapVector<const Function *, FunctionInfo> FnDebugInfo;
 
-  /// Map from DIFile to .cv_file id.
-  DenseMap<const DIFile *, unsigned> FileIdMap;
+  /// Map from full file path to .cv_file id. Full paths are built from DIFiles
+  /// and are stored in FileToFilepathMap;
+  DenseMap<StringRef, unsigned> FileIdMap;
 
   /// All inlined subprograms in the order they should be emitted.
   SmallSetVector<const DISubprogram *, 4> InlinedSubprograms;

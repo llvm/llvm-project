@@ -32,6 +32,7 @@ class SanitizerArgs {
   int MsanTrackOrigins = 0;
   bool MsanUseAfterDtor = false;
   bool CfiCrossDso = false;
+  bool CfiICallGeneralizePointers = false;
   int AsanFieldPadding = 0;
   bool SharedRuntime = false;
   bool AsanUseAfterScope = true;

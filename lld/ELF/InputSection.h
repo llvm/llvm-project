@@ -177,7 +177,7 @@ public:
 
   // Returns a source location string. Used to construct an error message.
   template <class ELFT> std::string getLocation(uint64_t Offset);
-  template <class ELFT> std::string getSrcMsg(uint64_t Offset);
+  template <class ELFT> std::string getSrcMsg(const SymbolBody &Sym, uint64_t Offset);
   std::string getObjMsg(uint64_t Offset);
 
   // Each section knows how to relocate itself. These functions apply
@@ -262,6 +262,9 @@ public:
 private:
   void splitStrings(ArrayRef<uint8_t> A, size_t Size);
   void splitNonStrings(ArrayRef<uint8_t> A, size_t Size);
+
+  mutable llvm::DenseMap<uint32_t, uint32_t> OffsetMap;
+  mutable llvm::once_flag InitOffsetMap;
 
   llvm::DenseSet<uint64_t> LiveOffsets;
 };

@@ -22,6 +22,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FormatVariadic.h"
 
 #include <cstdlib>
 
@@ -34,30 +35,62 @@ cl::opt<std::string> InputFilename(cl::Positional, cl::desc("<input file>"),
 
 ExitOnError ExitOnErr;
 
-void printIndirectCFInstructions(const FileAnalysis &Verifier) {
-  for (uint64_t Address : Verifier.getIndirectInstructions()) {
-    const auto &InstrMeta = Verifier.getInstructionOrDie(Address);
-    outs() << format_hex(Address, 2) << " |"
-           << Verifier.getMCInstrInfo()->getName(
+void printIndirectCFInstructions(FileAnalysis &Analysis) {
+  uint64_t ProtectedCount = 0;
+  uint64_t UnprotectedCount = 0;
+
+  for (uint64_t Address : Analysis.getIndirectInstructions()) {
+    const auto &InstrMeta = Analysis.getInstructionOrDie(Address);
+
+    if (Analysis.isIndirectInstructionCFIProtected(Address)) {
+      outs() << "P ";
+      ProtectedCount++;
+    } else {
+      outs() << "U ";
+      UnprotectedCount++;
+    }
+
+    outs() << format_hex(Address, 2) << " | "
+           << Analysis.getMCInstrInfo()->getName(
                   InstrMeta.Instruction.getOpcode())
            << " ";
-    InstrMeta.Instruction.print(outs());
     outs() << "\n";
-    outs() << "  Protected? "
-           << Verifier.isIndirectInstructionCFIProtected(Address) << "\n";
+
+    if (Analysis.hasLineTableInfo()) {
+      for (const auto &LineKV : Analysis.getLineInfoForAddressRange(Address)) {
+        outs() << "  " << format_hex(LineKV.first, 2) << " = "
+               << LineKV.second.FileName << ":" << LineKV.second.Line << ":"
+               << LineKV.second.Column << " (" << LineKV.second.FunctionName
+               << ")\n";
+      }
+    }
   }
+
+  if (ProtectedCount || UnprotectedCount)
+    outs() << formatv(
+        "Unprotected: {0} ({1:P}), Protected: {2} ({3:P})\n", UnprotectedCount,
+        (((double)UnprotectedCount) / (UnprotectedCount + ProtectedCount)),
+        ProtectedCount,
+        (((double)ProtectedCount) / (UnprotectedCount + ProtectedCount)));
+  else
+    outs() << "No indirect CF instructions found.\n";
 }
 
 int main(int argc, char **argv) {
-  cl::ParseCommandLineOptions(argc, argv);
+  cl::ParseCommandLineOptions(
+      argc, argv,
+      "Identifies whether Control Flow Integrity protects all indirect control "
+      "flow instructions in the provided object file, DSO or binary.\nNote: "
+      "Anything statically linked into the provided file *must* be compiled "
+      "with '-g'. This can be relaxed through the '--ignore-dwarf' flag.");
 
   InitializeAllTargetInfos();
   InitializeAllTargetMCs();
   InitializeAllAsmParsers();
   InitializeAllDisassemblers();
 
-  FileAnalysis Verifier = ExitOnErr(FileAnalysis::Create(InputFilename));
-  printIndirectCFInstructions(Verifier);
+  FileAnalysis Analysis = ExitOnErr(FileAnalysis::Create(InputFilename));
+  printIndirectCFInstructions(Analysis);
 
   return EXIT_SUCCESS;
 }

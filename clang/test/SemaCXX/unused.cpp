@@ -6,7 +6,7 @@
 // PR4103 : Make sure we don't get a bogus unused expression warning
 namespace PR4103 {
   class APInt {
-    char foo;
+    char foo; // expected-warning {{private field 'foo' is not used}}
   };
   class APSInt : public APInt {
     char bar; // expected-warning {{private field 'bar' is not used}}

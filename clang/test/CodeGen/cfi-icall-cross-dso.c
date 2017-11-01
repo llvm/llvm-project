@@ -46,7 +46,7 @@ void caller(void (*f)()) {
 // Check that we emit both string and hash based type entries for static void g(),
 // and don't emit them for the declaration of h().
 
-// CHECK: define internal void @g({{.*}} !type [[TVOID:![0-9]+]] !type [[TVOID_ID:![0-9]+]]
+// CHECK: define internal void @g({{.*}} !type [[TVOID:![0-9]+]] !type [[TVOID_GENERALIZED:![0-9]+]] !type [[TVOID_ID:![0-9]+]]
 static void g(void) {}
 
 // CHECK: declare void @h({{[^!]*$}}
@@ -60,9 +60,9 @@ Fn h1() {
   return &h;
 }
 
-// CHECK: define void @bar({{.*}} !type [[TNOPROTO:![0-9]+]] !type [[TNOPROTO_ID:![0-9]+]]
+// CHECK: define void @bar({{.*}} !type [[TNOPROTO:![0-9]+]] !type [[TNOPROTO_GENERALIZED:![0-9]+]] !type [[TNOPROTO_ID:![0-9]+]]
 // ITANIUM: define available_externally void @foo({{[^!]*$}}
-// MS: define linkonce_odr void @foo({{.*}} !type [[TNOPROTO]] !type [[TNOPROTO_ID]]
+// MS: define linkonce_odr void @foo({{.*}} !type [[TNOPROTO]] !type [[TNOPROTO_GENERALIZED:![0-9]+]] !type [[TNOPROTO_ID]]
 inline void foo() {}
 void bar() { foo(); }
 
@@ -71,11 +71,15 @@ void bar() { foo(); }
 // Check that the type entries are correct.
 
 // ITANIUM: [[TVOID]] = !{i64 0, !"_ZTSFvvE"}
+// ITANIUM: [[TVOID_GENERALIZED]] = !{i64 0, !"_ZTSFvvE.generalized"}
 // ITANIUM: [[TVOID_ID]] = !{i64 0, i64 9080559750644022485}
 // ITANIUM: [[TNOPROTO]] = !{i64 0, !"_ZTSFvE"}
+// ITANIUM: [[TNOPROTO_GENERALIZED]] = !{i64 0, !"_ZTSFvE.generalized"}
 // ITANIUM: [[TNOPROTO_ID]] = !{i64 0, i64 6588678392271548388}
 
 // MS: [[TVOID]] = !{i64 0, !"?6AXXZ"}
+// MS: [[TVOID_GENERALIZED]] = !{i64 0, !"?6AXXZ.generalized"}
 // MS: [[TVOID_ID]] = !{i64 0, i64 5113650790573562461}
 // MS: [[TNOPROTO]] = !{i64 0, !"?6AX@Z"}
+// MS: [[TNOPROTO_GENERALIZED]] = !{i64 0, !"?6AX@Z.generalized"}
 // MS: [[TNOPROTO_ID]] = !{i64 0, i64 4195979634929632483}

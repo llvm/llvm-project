@@ -108,8 +108,8 @@ static std::unique_ptr<lto::LTO> createLTO() {
 }
 
 BitcodeCompiler::BitcodeCompiler() : LTOObj(createLTO()) {
-  for (Symbol *Sym : Symtab->getSymbols()) {
-    StringRef Name = Sym->body()->getName();
+  for (SymbolBody *Sym : Symtab->getSymbols()) {
+    StringRef Name = Sym->getName();
     for (StringRef Prefix : {"__start_", "__stop_"})
       if (Name.startswith(Prefix))
         UsedStartStop.insert(Name.substr(Prefix.size()));
@@ -118,9 +118,9 @@ BitcodeCompiler::BitcodeCompiler() : LTOObj(createLTO()) {
 
 BitcodeCompiler::~BitcodeCompiler() = default;
 
-static void undefine(Symbol *S) {
-  replaceBody<Undefined>(S, nullptr, S->body()->getName(), /*IsLocal=*/false,
-                         STV_DEFAULT, S->body()->Type);
+static void undefine(SymbolBody *S) {
+  replaceBody<Undefined>(S, nullptr, S->getName(), /*IsLocal=*/false,
+                         STV_DEFAULT, S->Type);
 }
 
 void BitcodeCompiler::add(BitcodeFile &F) {
@@ -136,8 +136,7 @@ void BitcodeCompiler::add(BitcodeFile &F) {
 
   // Provide a resolution to the LTO API for each symbol.
   for (const lto::InputFile::Symbol &ObjSym : Obj.symbols()) {
-    SymbolBody *B = Syms[SymNum];
-    Symbol *Sym = B->symbol();
+    SymbolBody *Sym = Syms[SymNum];
     lto::SymbolResolution &R = Resols[SymNum];
     ++SymNum;
 
@@ -146,7 +145,7 @@ void BitcodeCompiler::add(BitcodeFile &F) {
     // flags an undefined in IR with a definition in ASM as prevailing.
     // Once IRObjectFile is fixed to report only one symbol this hack can
     // be removed.
-    R.Prevailing = !ObjSym.isUndefined() && B->getFile() == &F;
+    R.Prevailing = !ObjSym.isUndefined() && Sym->getFile() == &F;
 
     // We ask LTO to preserve following global symbols:
     // 1) All symbols when doing relocatable link, so that them can be used
@@ -165,7 +164,7 @@ void BitcodeCompiler::add(BitcodeFile &F) {
     // still not final:
     // 1) Aliased (with --defsym) or wrapped (with --wrap) symbols.
     // 2) Symbols redefined in linker script.
-    R.LinkerRedefined = !Sym->CanInline || ScriptSymbols.count(B->getName());
+    R.LinkerRedefined = !Sym->CanInline || ScriptSymbols.count(Sym->getName());
   }
   checkError(LTOObj->add(std::move(F.Obj), Resols));
 }

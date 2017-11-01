@@ -852,6 +852,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   case CK_KNM:
     break;
   case CK_Lakemont:
+    defineCPUMacros(Builder, "i586", /*Tuning*/false);
+    defineCPUMacros(Builder, "pentium", /*Tuning*/false);
     Builder.defineMacro("__tune_lakemont__");
     break;
   case CK_K6_2:

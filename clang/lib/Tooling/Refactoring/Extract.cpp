@@ -15,7 +15,9 @@
 
 #include "clang/Tooling/Refactoring/Extract/Extract.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprObjC.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 
 namespace clang {
@@ -43,8 +45,12 @@ bool isSimpleExpression(const Expr *E) {
 }
 
 SourceLocation computeFunctionExtractionLocation(const Decl *D) {
-  // FIXME (Alex L): Method -> function extraction should place function before
-  // C++ record if the method is defined inside the record.
+  if (isa<CXXMethodDecl>(D)) {
+    // Code from method that is defined in class body should be extracted to a
+    // function defined just before the class.
+    while (const auto *RD = dyn_cast<CXXRecordDecl>(D->getLexicalDeclContext()))
+      D = RD;
+  }
   return D->getLocStart();
 }
 
@@ -70,12 +76,20 @@ ExtractFunction::initiate(RefactoringRuleContext &Context,
     return Context.createDiagnosticError(
         diag::err_refactor_code_outside_of_function);
 
-  // Avoid extraction of simple literals and references.
-  if (Code.size() == 1 && isSimpleExpression(dyn_cast<Expr>(Code[0])))
-    return Context.createDiagnosticError(
-        diag::err_refactor_extract_simple_expression);
+  if (Code.size() == 1) {
+    // Avoid extraction of simple literals and references.
+    if (isSimpleExpression(dyn_cast<Expr>(Code[0])))
+      return Context.createDiagnosticError(
+          diag::err_refactor_extract_simple_expression);
 
-  // FIXME (Alex L): Prohibit extraction of Objective-C property setters.
+    // Property setters can't be extracted.
+    if (const auto *PRE = dyn_cast<ObjCPropertyRefExpr>(Code[0])) {
+      if (!PRE->isMessagingGetter())
+        return Context.createDiagnosticError(
+            diag::err_refactor_extract_prohibited_expression);
+    }
+  }
+
   return ExtractFunction(std::move(Code), DeclName);
 }
 

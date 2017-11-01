@@ -16,6 +16,9 @@
 #include "kmp.h"
 #include "kmp_io.h"
 #include "kmp_wait_release.h"
+#if OMPT_SUPPORT
+#include "ompt-specific.h"
+#endif
 
 #if OMP_40_ENABLED
 
@@ -217,18 +220,19 @@ static inline void __kmp_track_dependence(kmp_depnode_t *source,
                task_source->td_ident->psource, sink->dn.id,
                task_sink->td_ident->psource);
 #endif
-#if OMPT_SUPPORT && OMPT_TRACE
-  // OMPT tracks dependences between task (a=source, b=sink) in which
-  // task a blocks the execution of b through the ompt_new_dependence_callback
-  if (ompt_enabled &&
-      ompt_callbacks.ompt_callback(ompt_event_task_dependence_pair)) {
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  /* OMPT tracks dependences between task (a=source, b=sink) in which
+     task a blocks the execution of b through the ompt_new_dependence_callback
+     */
+  if (ompt_enabled.ompt_callback_task_dependence) {
     kmp_taskdata_t *task_source = KMP_TASK_TO_TASKDATA(source->dn.task);
     kmp_taskdata_t *task_sink = KMP_TASK_TO_TASKDATA(sink_task);
 
-    ompt_callbacks.ompt_callback(ompt_event_task_dependence_pair)(
-        task_source->ompt_task_info.task_id, task_sink->ompt_task_info.task_id);
+    ompt_callbacks.ompt_callback(ompt_callback_task_dependence)(
+        &(task_source->ompt_task_info.task_data),
+        &(task_sink->ompt_task_info.task_data));
   }
-#endif /* OMPT_SUPPORT && OMPT_TRACE */
+#endif /* OMPT_SUPPORT && OMPT_OPTIONAL */
 }
 
 template <bool filter>
@@ -470,10 +474,29 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
   kmp_info_t *thread = __kmp_threads[gtid];
   kmp_taskdata_t *current_task = thread->th.th_current_task;
 
-#if OMPT_SUPPORT && OMPT_TRACE
+#if OMPT_SUPPORT
+  OMPT_STORE_RETURN_ADDRESS(gtid);
+
+  if (ompt_enabled.enabled) {
+    if (ompt_enabled.ompt_callback_task_create) {
+      kmp_taskdata_t *parent = new_taskdata->td_parent;
+      ompt_data_t task_data = ompt_data_none;
+      ompt_callbacks.ompt_callback(ompt_callback_task_create)(
+          parent ? &(parent->ompt_task_info.task_data) : &task_data,
+          parent ? &(parent->ompt_task_info.frame) : NULL,
+          &(new_taskdata->ompt_task_info.task_data),
+          ompt_task_explicit | TASK_TYPE_DETAILS_FORMAT(new_taskdata), 1,
+          OMPT_LOAD_RETURN_ADDRESS(gtid));
+    }
+
+    new_taskdata->ompt_task_info.frame.reenter_runtime_frame =
+        OMPT_GET_FRAME_ADDRESS(0);
+  }
+
+#if OMPT_OPTIONAL
   /* OMPT grab all dependences if requested by the tool */
-  if (ompt_enabled && ndeps + ndeps_noalias > 0 &&
-      ompt_callbacks.ompt_callback(ompt_event_task_dependences)) {
+  if (ndeps + ndeps_noalias > 0 &&
+      ompt_enabled.ompt_callback_task_dependences) {
     kmp_int32 i;
 
     new_taskdata->ompt_task_info.ndeps = ndeps + ndeps_noalias;
@@ -509,8 +532,17 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
         new_taskdata->ompt_task_info.deps[ndeps + i].dependence_flags =
             ompt_task_dependence_type_in;
     }
+    ompt_callbacks.ompt_callback(ompt_callback_task_dependences)(
+        &(new_taskdata->ompt_task_info.task_data),
+        new_taskdata->ompt_task_info.deps, new_taskdata->ompt_task_info.ndeps);
+    /* We can now free the allocated memory for the dependencies */
+    /* For OMPD we might want to delay the free until task_end */
+    KMP_OMPT_DEPS_FREE(thread, new_taskdata->ompt_task_info.deps);
+    new_taskdata->ompt_task_info.deps = NULL;
+    new_taskdata->ompt_task_info.ndeps = 0;
   }
-#endif /* OMPT_SUPPORT && OMPT_TRACE */
+#endif /* OMPT_OPTIONAL */
+#endif /* OMPT_SUPPORT */
 
   bool serial = current_task->td_flags.team_serial ||
                 current_task->td_flags.tasking_ser ||
@@ -557,7 +589,7 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
                 "loc=%p task=%p, transferring to __kmpc_omp_task\n",
                 gtid, loc_ref, new_taskdata));
 
-  return __kmpc_omp_task(loc_ref, gtid, new_task);
+  return __kmp_omp_task(gtid, new_task, true);
 }
 
 /*!

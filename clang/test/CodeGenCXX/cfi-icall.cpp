@@ -8,19 +8,22 @@ namespace {
 
 struct S {};
 
-void f(S *s) {
+void f(S s) {
 }
 
 }
 
 void g() {
-  void (*fp)(S *) = f;
-  // CHECK: call i1 @llvm.type.test(i8* {{.*}}, metadata [[VOIDS:![0-9]+]])
-  fp(0);
+  struct S s;
+  void (*fp)(S) = f;
+  // CHECK: call i1 @llvm.type.test(i8* {{.*}}, metadata [[VOIDS1:![0-9]+]])
+  fp(s);
 }
 
-// ITANIUM: define internal void @_ZN12_GLOBAL__N_11fEPNS_1SE({{.*}} !type [[TS:![0-9]+]]
-// MS: define internal void @"\01?f@?A@@YAXPEAUS@?A@@@Z"({{.*}} !type [[TS:![0-9]+]]
+// ITANIUM: define internal void @_ZN12_GLOBAL__N_11fENS_1SE({{.*}} !type [[TS1:![0-9]+]] !type [[TS2:![0-9]+]]
+// MS: define internal void @"\01?f@?A@@YAXUS@?A@@@Z"({{.*}} !type [[TS1:![0-9]+]] !type [[TS2:![0-9]+]]
 
-// CHECK: [[VOIDS]] = distinct !{}
-// CHECK: [[TS]] = !{i64 0, [[VOIDS]]}
+// CHECK: [[VOIDS1]] = distinct !{}
+// CHECK: [[TS1]] = !{i64 0, [[VOIDS1]]}
+// CHECK: [[TS2]] = !{i64 0, [[VOIDS2:![0-9]+]]}
+// CHECK: [[VOIDS2]] = distinct !{}

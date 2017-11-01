@@ -201,6 +201,12 @@ def noinhibit_exec: F<"noinhibit-exec">,
 
 def nopie: F<"nopie">, HelpText<"Do not create a position independent executable">;
 
+def no_omagic: Flag<["--"], "no-omagic">, MetaVarName<"<magic>">,
+  HelpText<"Do not set the text data sections to be writable">;
+
+def no_print_gc_sections: F<"no-print-gc-sections">,
+  HelpText<"Do not list removed unused sections">;
+
 def no_rosegment: F<"no-rosegment">,
   HelpText<"Do not put read-only non-executable sections in their own segment">;
 

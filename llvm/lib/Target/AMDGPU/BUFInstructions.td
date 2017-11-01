@@ -878,13 +878,6 @@ def BUFFER_WBINVL1_VOL : MUBUF_Invalidate <"buffer_wbinvl1_vol",
 // MUBUF Patterns
 //===----------------------------------------------------------------------===//
 
-// Offset in an 32-bit VGPR
-def : GCNPat <
-  (SIload_constant v4i32:$sbase, i32:$voff),
-  (BUFFER_LOAD_DWORD_OFFEN $voff, $sbase, (i32 0), 0, 0, 0, 0)
->;
-
-
 //===----------------------------------------------------------------------===//
 // buffer_load/store_format patterns
 //===----------------------------------------------------------------------===//
