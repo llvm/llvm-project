@@ -552,6 +552,9 @@ protected:
   /// ID for the next instruction variable defined with defineInsnVar()
   unsigned NextInsnVarID;
 
+  /// ID for the next output instruction allocated with allocateOutputInsnID()
+  unsigned NextOutputInsnID;
+
   std::vector<Record *> RequiredFeatures;
 
   ArrayRef<SMLoc> SrcLoc;
@@ -566,8 +569,8 @@ protected:
 public:
   RuleMatcher(ArrayRef<SMLoc> SrcLoc)
       : Matchers(), Actions(), InsnVariableIDs(), MutatableInsns(),
-        DefinedOperands(), NextInsnVarID(0), SrcLoc(SrcLoc),
-        ComplexSubOperands() {}
+        DefinedOperands(), NextInsnVarID(0), NextOutputInsnID(0),
+        SrcLoc(SrcLoc), ComplexSubOperands() {}
   RuleMatcher(RuleMatcher &&Other) = default;
   RuleMatcher &operator=(RuleMatcher &&Other) = default;
 
@@ -653,6 +656,8 @@ public:
 
   // FIXME: Remove this as soon as possible
   InstructionMatcher &insnmatcher_front() const { return *Matchers.front(); }
+
+  unsigned allocateOutputInsnID() { return NextOutputInsnID++; }
 };
 
 using action_iterator = RuleMatcher::action_iterator;
@@ -1828,7 +1833,7 @@ public:
   template <class Kind, class... Args>
   Kind &addRenderer(Args&&... args) {
     OperandRenderers.emplace_back(
-        llvm::make_unique<Kind>(std::forward<Args>(args)...));
+        llvm::make_unique<Kind>(InsnID, std::forward<Args>(args)...));
     return *static_cast<Kind *>(OperandRenderers.back().get());
   }
 
@@ -2608,7 +2613,7 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
   const auto &SubOperand = Rule.getComplexSubOperand(DstChild->getName());
   if (SubOperand.hasValue()) {
     DstMIBuilder.addRenderer<RenderComplexPatternOperand>(
-        0, *std::get<0>(*SubOperand), DstChild->getName(),
+        *std::get<0>(*SubOperand), DstChild->getName(),
         std::get<1>(*SubOperand), std::get<2>(*SubOperand));
     return InsertPt;
   }
@@ -2619,7 +2624,7 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
     if (DstChild->getOperator()->isSubClassOf("SDNode")) {
       auto &ChildSDNI = CGP.getSDNodeInfo(DstChild->getOperator());
       if (ChildSDNI.getSDClassName() == "BasicBlockSDNode") {
-        DstMIBuilder.addRenderer<CopyRenderer>(0, DstChild->getName());
+        DstMIBuilder.addRenderer<CopyRenderer>(DstChild->getName());
         return InsertPt;
       }
     }
@@ -2629,12 +2634,11 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
     // FIXME: The target should be able to choose sign-extended when appropriate
     //        (e.g. on Mips).
     if (DstChild->getOperator()->getName() == "imm") {
-      DstMIBuilder.addRenderer<CopyConstantAsImmRenderer>(0,
-                                                          DstChild->getName());
+      DstMIBuilder.addRenderer<CopyConstantAsImmRenderer>(DstChild->getName());
       return InsertPt;
     } else if (DstChild->getOperator()->getName() == "fpimm") {
       DstMIBuilder.addRenderer<CopyFConstantAsFPImmRenderer>(
-          0, DstChild->getName());
+          DstChild->getName());
       return InsertPt;
     }
 
@@ -2654,7 +2658,7 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
       return failedImport("Dst operand has an unsupported type");
 
     if (ChildRec->isSubClassOf("Register")) {
-      DstMIBuilder.addRenderer<AddRegisterRenderer>(0, ChildRec);
+      DstMIBuilder.addRenderer<AddRegisterRenderer>(ChildRec);
       return InsertPt;
     }
 
@@ -2664,11 +2668,11 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
       if (ChildRec->isSubClassOf("RegisterOperand") &&
           !ChildRec->isValueUnset("GIZeroRegister")) {
         DstMIBuilder.addRenderer<CopyOrAddZeroRegRenderer>(
-            0, DstChild->getName(), ChildRec->getValueAsDef("GIZeroRegister"));
+            DstChild->getName(), ChildRec->getValueAsDef("GIZeroRegister"));
         return InsertPt;
       }
 
-      DstMIBuilder.addRenderer<CopyRenderer>(0, DstChild->getName());
+      DstMIBuilder.addRenderer<CopyRenderer>(DstChild->getName());
       return InsertPt;
     }
 
@@ -2680,7 +2684,7 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
 
       const OperandMatcher &OM = Rule.getOperandMatcher(DstChild->getName());
       DstMIBuilder.addRenderer<RenderComplexPatternOperand>(
-          0, *ComplexPattern->second, DstChild->getName(),
+          *ComplexPattern->second, DstChild->getName(),
           OM.getAllocatedTemporariesBaseID());
       return InsertPt;
     }
@@ -2732,9 +2736,8 @@ Expected<action_iterator> GlobalISelEmitter::createInstructionRenderer(
   else if (DstI->TheDef->getName() == "EXTRACT_SUBREG")
     DstI = &Target.getInstruction(RK.getDef("COPY"));
 
-  InsertPt = M.insertAction<BuildMIAction>(InsertPt, 0, DstI);
-
-  return InsertPt;
+  return M.insertAction<BuildMIAction>(InsertPt, M.allocateOutputInsnID(),
+                                       DstI);
 }
 
 void GlobalISelEmitter::importExplicitDefRenderers(
@@ -2742,7 +2745,7 @@ void GlobalISelEmitter::importExplicitDefRenderers(
   const CodeGenInstruction *DstI = DstMIBuilder.getCGI();
   for (unsigned I = 0; I < DstI->Operands.NumDefs; ++I) {
     const CGIOperandList::OperandInfo &DstIOperand = DstI->Operands[I];
-    DstMIBuilder.addRenderer<CopyRenderer>(0, DstIOperand.Name);
+    DstMIBuilder.addRenderer<CopyRenderer>(DstIOperand.Name);
   }
 }
 
@@ -2771,8 +2774,8 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
           return failedImport("EXTRACT_SUBREG requires an additional COPY");
       }
 
-      DstMIBuilder.addRenderer<CopySubRegRenderer>(
-          0, Dst->getChild(0)->getName(), SubIdx);
+      DstMIBuilder.addRenderer<CopySubRegRenderer>(Dst->getChild(0)->getName(),
+                                                   SubIdx);
       return InsertPt;
     }
 
@@ -2837,12 +2840,12 @@ Error GlobalISelEmitter::importDefaultOperandRenderers(
     }
 
     if (const DefInit *DefaultDefOp = dyn_cast<DefInit>(DefaultOp)) {
-      DstMIBuilder.addRenderer<AddRegisterRenderer>(0, DefaultDefOp->getDef());
+      DstMIBuilder.addRenderer<AddRegisterRenderer>(DefaultDefOp->getDef());
       continue;
     }
 
     if (const IntInit *DefaultIntOp = dyn_cast<IntInit>(DefaultOp)) {
-      DstMIBuilder.addRenderer<ImmRenderer>(0, DefaultIntOp->getValue());
+      DstMIBuilder.addRenderer<ImmRenderer>(DefaultIntOp->getValue());
       continue;
     }
 
@@ -2906,9 +2909,10 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
       M.defineOperand(OM0.getSymbolicName(), OM0);
       OM0.addPredicate<RegisterBankOperandMatcher>(RC);
 
-      auto &DstMIBuilder = M.addAction<BuildMIAction>(0, &DstI);
-      DstMIBuilder.addRenderer<CopyRenderer>(0, DstIOperand.Name);
-      DstMIBuilder.addRenderer<CopyRenderer>(0, Dst->getName());
+      auto &DstMIBuilder =
+          M.addAction<BuildMIAction>(M.allocateOutputInsnID(), &DstI);
+      DstMIBuilder.addRenderer<CopyRenderer>(DstIOperand.Name);
+      DstMIBuilder.addRenderer<CopyRenderer>(Dst->getName());
       M.addAction<ConstrainOperandToRegClassAction>(0, 0, RC);
 
       // We're done with this pattern!  It's eligible for GISel emission; return
