@@ -137,6 +137,15 @@ public:
   /// Forget analysis results for the given basic block.
   void eraseBlock(const BasicBlock *BB);
 
+  // Use to track SCCs for handling irreducible loops.
+  using SccMap = DenseMap<const BasicBlock *, int>;
+  using SccHeaderMap = DenseMap<const BasicBlock *, bool>;
+  using SccHeaderMaps = std::vector<SccHeaderMap>;
+  struct SccInfo {
+    SccMap SccNums;
+    SccHeaderMaps SccHeaders;
+  };
+
 private:
   // We need to store CallbackVH's in order to correctly handle basic block
   // removal.
@@ -185,7 +194,8 @@ private:
   bool calcMetadataWeights(const BasicBlock *BB);
   bool calcColdCallHeuristics(const BasicBlock *BB);
   bool calcPointerHeuristics(const BasicBlock *BB);
-  bool calcLoopBranchHeuristics(const BasicBlock *BB, const LoopInfo &LI);
+  bool calcLoopBranchHeuristics(const BasicBlock *BB, const LoopInfo &LI,
+                                SccInfo &SccI);
   bool calcZeroHeuristics(const BasicBlock *BB, const TargetLibraryInfo *TLI);
   bool calcFloatingPointHeuristics(const BasicBlock *BB);
   bool calcInvokeHeuristics(const BasicBlock *BB);

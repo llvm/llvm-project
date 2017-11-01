@@ -29,11 +29,6 @@ namespace PBQP {
     using SelectionsMap = std::map<GraphBase::NodeId, unsigned>;
     SelectionsMap selections;
 
-    unsigned r0Reductions = 0;
-    unsigned r1Reductions = 0;
-    unsigned r2Reductions = 0;
-    unsigned rNReductions = 0;
-
   public:
     /// \brief Initialise an empty solution.
     Solution() = default;

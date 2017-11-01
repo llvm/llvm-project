@@ -133,7 +133,7 @@ void HexagonCVIResource::SetupTUL(TypeUnitsAndLanes *TUL, StringRef CPU) {
 HexagonCVIResource::HexagonCVIResource(TypeUnitsAndLanes *TUL,
                                        MCInstrInfo const &MCII, unsigned s,
                                        MCInst const *id)
-    : HexagonResource(s), TUL(TUL) {
+    : HexagonResource(s) {
   unsigned T = HexagonMCInstrInfo::getType(MCII, *id);
 
   if (TUL->count(T)) {

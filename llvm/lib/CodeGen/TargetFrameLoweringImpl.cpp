@@ -104,3 +104,12 @@ unsigned TargetFrameLowering::getStackAlignmentSkew(
 
   return 0;
 }
+
+int TargetFrameLowering::getInitialCFAOffset(const MachineFunction &MF) const {
+  llvm_unreachable("getInitialCFAOffset() not implemented!");
+}
+
+unsigned TargetFrameLowering::getInitialCFARegister(const MachineFunction &MF)
+    const {
+  llvm_unreachable("getInitialCFARegister() not implemented!");
+}

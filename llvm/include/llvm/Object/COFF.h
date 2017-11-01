@@ -1144,7 +1144,7 @@ public:
   BaseRelocRef() = default;
   BaseRelocRef(const coff_base_reloc_block_header *Header,
                const COFFObjectFile *Owner)
-      : Header(Header), Index(0), OwningObject(Owner) {}
+      : Header(Header), Index(0) {}
 
   bool operator==(const BaseRelocRef &Other) const;
   void moveNext();
@@ -1155,7 +1155,6 @@ public:
 private:
   const coff_base_reloc_block_header *Header;
   uint32_t Index;
-  const COFFObjectFile *OwningObject = nullptr;
 };
 
 class ResourceSectionRef {

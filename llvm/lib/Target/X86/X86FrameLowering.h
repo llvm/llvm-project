@@ -168,6 +168,10 @@ public:
                               MachineBasicBlock::iterator MBBI,
                               const DebugLoc &DL, bool RestoreSP = false) const;
 
+  int getInitialCFAOffset(const MachineFunction &MF) const override;
+
+  unsigned getInitialCFARegister(const MachineFunction &MF) const override;
+
 private:
   uint64_t calculateMaxStackAlign(const MachineFunction &MF) const;
 

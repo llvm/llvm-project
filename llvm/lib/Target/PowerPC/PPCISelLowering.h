@@ -1072,7 +1072,14 @@ namespace llvm {
     SDValue
     combineElementTruncationToVectorTruncation(SDNode *N,
                                                DAGCombinerInfo &DCI) const;
-  };
+
+    /// lowerToVINSERTH - Return the SDValue if this VECTOR_SHUFFLE can be
+    /// handled by the VINSERTH instruction introduced in ISA 3.0. This is
+    /// essentially any shuffle of v8i16 vectors that just inserts one element
+    /// from one vector into the other.
+    SDValue lowerToVINSERTH(ShuffleVectorSDNode *N, SelectionDAG &DAG) const;
+
+  }; // end class PPCTargetLowering
 
   namespace PPC {
 

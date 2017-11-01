@@ -16,6 +16,7 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_INSTRUCTIONSELECTOR_H
 #define LLVM_CODEGEN_GLOBALISEL_INSTRUCTIONSELECTOR_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Optional.h"
 #include <bitset>
@@ -212,6 +213,10 @@ enum {
   /// - InsnID - Instruction ID to modify
   /// - RegNum - The register to add
   GIR_AddRegister,
+  /// Add a a temporary register to the specified instruction
+  /// - InsnID - Instruction ID to modify
+  /// - TempRegID - The temporary register ID to add
+  GIR_AddTempRegister,
   /// Add an immediate to the specified instruction
   /// - InsnID - Instruction ID to modify
   /// - Imm - The immediate to add
@@ -250,6 +255,10 @@ enum {
   /// Erase from parent.
   /// - InsnID - Instruction ID to erase
   GIR_EraseFromParent,
+  /// Create a new temporary register that's not constrained.
+  /// - TempRegID - The temporary register ID to initialize.
+  /// - Expected type
+  GIR_MakeTempReg,
 
   /// A successful emission
   GIR_Done,
@@ -291,6 +300,7 @@ protected:
   struct MatcherState {
     std::vector<ComplexRendererFns::value_type> Renderers;
     RecordedMIVector MIs;
+    DenseMap<unsigned, unsigned> TempRegisters;
 
     MatcherState(unsigned MaxRenderers);
   };

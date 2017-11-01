@@ -369,7 +369,6 @@ void SIFrameLowering::emitEntryFunctionScratchSetup(const SISubtarget &ST,
   const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo *TRI = &TII->getRegisterInfo();
   DebugLoc DL;
-  auto AMDGPUASI = ST.getAMDGPUAS();
 
   if (ST.isAmdPalOS()) {
     // The pointer to the GIT is formed from the offset passed in and either
@@ -437,7 +436,7 @@ void SIFrameLowering::emitEntryFunctionScratchSetup(const SISubtarget &ST,
 
         PointerType *PtrTy =
           PointerType::get(Type::getInt64Ty(MF.getFunction()->getContext()),
-                           AMDGPUASI.CONSTANT_ADDRESS);
+                           AMDGPUAS::CONSTANT_ADDRESS);
         MachinePointerInfo PtrInfo(UndefValue::get(PtrTy));
         auto MMO = MF.getMachineMemOperand(PtrInfo,
                                            MachineMemOperand::MOLoad |

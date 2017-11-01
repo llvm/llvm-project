@@ -20,7 +20,7 @@ pthread_t tid[kMaxNumThreads];
 
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-bool go = false;
+char go = 0;
 
 void *thread_fun(void *arg) {
   pthread_mutex_lock(&mutex);
@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
   for (int i = 0; i < num_threads; i++)
     pthread_create(&tid[i], 0, thread_fun, 0);
   pthread_mutex_lock(&mutex);
-  go = true;
+  go = 1;
   pthread_cond_broadcast(&cond);
   pthread_mutex_unlock(&mutex);
   for (int i = 0; i < num_threads; i++)

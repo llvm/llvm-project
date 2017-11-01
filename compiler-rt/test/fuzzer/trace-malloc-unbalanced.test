@@ -1,0 +1,27 @@
+// FIXME: This test infinite loops on darwin because it crashes
+// printing a stack trace repeatedly
+UNSUPPORTED: darwin
+
+// Verifies lib/fuzzer/scripts/unbalanced_allocs.py script
+
+RUN: %cpp_compiler %S/TraceMallocTest.cpp -o %t-TraceMallocTest
+
+RUN: %t-TraceMallocTest -seed=1 -trace_malloc=1 -runs=100 2>&1 | \
+RUN:    %libfuzzer_src/scripts/unbalanced_allocs.py --skip=5 | FileCheck %s
+
+RUN: %t-TraceMallocTest -seed=1 -trace_malloc=2 -runs=100 2>&1 | \
+RUN:    %libfuzzer_src/scripts/unbalanced_allocs.py --skip=5 | FileCheck %s --check-prefixes=CHECK,CHECK2
+
+CHECK: MallocFreeTracer: START
+CHECK: Unbalanced MALLOC[{{[0-9]+}}] [[PTR:0x[0-9a-f]+]] 4
+CHECK2-NEXT: {{ #0 0x[0-9a-f]+ in }}
+CHECK2-NEXT: {{ #1 0x[0-9a-f]+ in }}
+CHECK2-NEXT: {{ #2 0x[0-9a-f]+ in }}
+CHECK: MallocFreeTracer: STOP
+
+CHECK: MallocFreeTracer: START
+CHECK: Unbalanced FREE[{{[0-9]+}}] [[PTR]]
+CHECK2-NEXT: {{ #0 0x[0-9a-f]+ in }}
+CHECK2-NEXT: {{ #1 0x[0-9a-f]+ in }}
+CHECK2-NEXT: {{ #2 0x[0-9a-f]+ in }}
+CHECK: MallocFreeTracer: STOP

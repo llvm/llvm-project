@@ -439,6 +439,7 @@ define i32 @v32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8> %c, <32 x i8> %d) {
 ; AVX512F-NEXT:    movl (%rsp), %eax
 ; AVX512F-NEXT:    movq %rbp, %rsp
 ; AVX512F-NEXT:    popq %rbp
+; AVX512F-NEXT:    .cfi_def_cfa %rsp, 8
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;

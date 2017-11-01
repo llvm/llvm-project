@@ -555,6 +555,9 @@ protected:
   /// ID for the next output instruction allocated with allocateOutputInsnID()
   unsigned NextOutputInsnID;
 
+  /// ID for the next temporary register ID allocated with allocateTempRegID()
+  unsigned NextTempRegID;
+
   std::vector<Record *> RequiredFeatures;
 
   ArrayRef<SMLoc> SrcLoc;
@@ -570,7 +573,7 @@ public:
   RuleMatcher(ArrayRef<SMLoc> SrcLoc)
       : Matchers(), Actions(), InsnVariableIDs(), MutatableInsns(),
         DefinedOperands(), NextInsnVarID(0), NextOutputInsnID(0),
-        SrcLoc(SrcLoc), ComplexSubOperands() {}
+        NextTempRegID(0), SrcLoc(SrcLoc), ComplexSubOperands() {}
   RuleMatcher(RuleMatcher &&Other) = default;
   RuleMatcher &operator=(RuleMatcher &&Other) = default;
 
@@ -658,6 +661,7 @@ public:
   InstructionMatcher &insnmatcher_front() const { return *Matchers.front(); }
 
   unsigned allocateOutputInsnID() { return NextOutputInsnID++; }
+  unsigned allocateTempRegID() { return NextTempRegID++; }
 };
 
 using action_iterator = RuleMatcher::action_iterator;
@@ -1476,6 +1480,7 @@ public:
     OR_CopyFConstantAsFPImm,
     OR_Imm,
     OR_Register,
+    OR_TempRegister,
     OR_ComplexPattern
   };
 
@@ -1689,6 +1694,37 @@ public:
                       : ""),
                  RegisterDef->getName())
           << MatchTable::LineBreak;
+  }
+};
+
+/// Adds a specific temporary virtual register to the instruction being built.
+/// This is used to chain instructions together when emitting multiple
+/// instructions.
+class TempRegRenderer : public OperandRenderer {
+protected:
+  unsigned InsnID;
+  unsigned TempRegID;
+  bool IsDef;
+
+public:
+  TempRegRenderer(unsigned InsnID, unsigned TempRegID, bool IsDef = false)
+      : OperandRenderer(OR_Register), InsnID(InsnID), TempRegID(TempRegID),
+        IsDef(IsDef) {}
+
+  static bool classof(const OperandRenderer *R) {
+    return R->getKind() == OR_TempRegister;
+  }
+
+  void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
+    Table << MatchTable::Opcode("GIR_AddTempRegister")
+          << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)
+          << MatchTable::Comment("TempRegID") << MatchTable::IntValue(TempRegID)
+          << MatchTable::Comment("TempRegFlags");
+    if (IsDef)
+      Table << MatchTable::NamedValue("RegState::Define");
+    else
+      Table << MatchTable::IntValue(0);
+    Table << MatchTable::LineBreak;
   }
 };
 
@@ -1906,9 +1942,13 @@ public:
             << MatchTable::LineBreak;
     }
 
-    Table << MatchTable::Opcode("GIR_EraseFromParent")
-          << MatchTable::Comment("InsnID") << MatchTable::IntValue(0)
-          << MatchTable::LineBreak;
+    // FIXME: This is a hack but it's sufficient for ISel. We'll need to do
+    //        better for combines. Particularly when there are multiple match
+    //        roots.
+    if (InsnID == 0)
+      Table << MatchTable::Opcode("GIR_EraseFromParent")
+            << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)
+            << MatchTable::LineBreak;
   }
 };
 
@@ -1948,6 +1988,26 @@ public:
   }
 };
 
+/// Generates code to create a temporary register which can be used to chain
+/// instructions together.
+class MakeTempRegisterAction : public MatchAction {
+private:
+  LLTCodeGen Ty;
+  unsigned TempRegID;
+
+public:
+  MakeTempRegisterAction(const LLTCodeGen &Ty, unsigned TempRegID)
+      : Ty(Ty), TempRegID(TempRegID) {}
+
+  void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
+    Table << MatchTable::Opcode("GIR_MakeTempReg")
+          << MatchTable::Comment("TempRegID") << MatchTable::IntValue(TempRegID)
+          << MatchTable::Comment("TypeID")
+          << MatchTable::NamedValue(Ty.getCxxEnumValue())
+          << MatchTable::LineBreak;
+  }
+};
+
 InstructionMatcher &RuleMatcher::addInstructionMatcher(StringRef SymbolicName) {
   Matchers.emplace_back(new InstructionMatcher(*this, SymbolicName));
   MutatableInsns.insert(Matchers.back().get());
@@ -1974,6 +2034,7 @@ Kind &RuleMatcher::addAction(Args &&... args) {
   Actions.emplace_back(llvm::make_unique<Kind>(std::forward<Args>(args)...));
   return *static_cast<Kind *>(Actions.back().get());
 }
+
 // Emplaces an action of the specified Kind before the given insertion point.
 //
 // Returns an iterator pointing at the newly created instruction.
@@ -1984,7 +2045,8 @@ Kind &RuleMatcher::addAction(Args &&... args) {
 template <class Kind, class... Args>
 action_iterator RuleMatcher::insertAction(action_iterator InsertPt,
                                           Args &&... args) {
-  return Actions.insert(InsertPt, llvm::make_unique<Kind>(std::forward<Args>(args)...));
+  return Actions.emplace(InsertPt,
+                         llvm::make_unique<Kind>(std::forward<Args>(args)...));
 }
 
 unsigned
@@ -2264,6 +2326,9 @@ private:
   Expected<BuildMIAction &>
   createAndImportInstructionRenderer(RuleMatcher &M,
                                      const TreePatternNode *Dst);
+  Expected<action_iterator> createAndImportSubInstructionRenderer(
+      action_iterator InsertPt, RuleMatcher &M, const TreePatternNode *Dst,
+      unsigned TempReg);
   Expected<action_iterator>
   createInstructionRenderer(action_iterator InsertPt, RuleMatcher &M,
                             const TreePatternNode *Dst);
@@ -2275,7 +2340,7 @@ private:
   Expected<action_iterator>
   importExplicitUseRenderer(action_iterator InsertPt, RuleMatcher &Rule,
                             BuildMIAction &DstMIBuilder,
-                            TreePatternNode *DstChild) const;
+                            TreePatternNode *DstChild);
   Error importDefaultOperandRenderers(BuildMIAction &DstMIBuilder,
                                       DagInit *DefaultOps) const;
   Error
@@ -2607,7 +2672,7 @@ Error GlobalISelEmitter::importChildMatcher(RuleMatcher &Rule,
 
 Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
     action_iterator InsertPt, RuleMatcher &Rule, BuildMIAction &DstMIBuilder,
-    TreePatternNode *DstChild) const {
+    TreePatternNode *DstChild) {
   if (DstChild->getTransformFn() != nullptr) {
     return failedImport("Dst pattern child has transform fn " +
                         DstChild->getTransformFn()->getName());
@@ -2643,6 +2708,30 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
       DstMIBuilder.addRenderer<CopyFConstantAsFPImmRenderer>(
           DstChild->getName());
       return InsertPt;
+    }
+
+    if (DstChild->getOperator()->isSubClassOf("Instruction")) {
+      ArrayRef<TypeSetByHwMode> ChildTypes = DstChild->getExtTypes();
+      if (ChildTypes.size() != 1)
+        return failedImport("Dst pattern child has multiple results");
+
+      Optional<LLTCodeGen> OpTyOrNone = None;
+      if (ChildTypes.front().isMachineValueType())
+        OpTyOrNone =
+            MVTToLLT(ChildTypes.front().getMachineValueType().SimpleTy);
+      if (!OpTyOrNone)
+        return failedImport("Dst operand has an unsupported type");
+
+      unsigned TempRegID = Rule.allocateTempRegID();
+      InsertPt = Rule.insertAction<MakeTempRegisterAction>(
+          InsertPt, OpTyOrNone.getValue(), TempRegID);
+      DstMIBuilder.addRenderer<TempRegRenderer>(TempRegID);
+
+      auto InsertPtOrError = createAndImportSubInstructionRenderer(
+          ++InsertPt, Rule, DstChild, TempRegID);
+      if (auto Error = InsertPtOrError.takeError())
+        return std::move(Error);
+      return InsertPtOrError.get();
     }
 
     return failedImport("Dst pattern child isn't a leaf node or an MBB" + llvm::to_string(*DstChild));
@@ -2723,6 +2812,31 @@ Expected<BuildMIAction &> GlobalISelEmitter::createAndImportInstructionRenderer(
   return DstMIBuilder;
 }
 
+Expected<action_iterator>
+GlobalISelEmitter::createAndImportSubInstructionRenderer(
+    action_iterator InsertPt, RuleMatcher &M, const TreePatternNode *Dst,
+    unsigned TempRegID) {
+  auto InsertPtOrError = createInstructionRenderer(InsertPt, M, Dst);
+
+  // TODO: Assert there's exactly one result.
+
+  if (auto Error = InsertPtOrError.takeError())
+    return std::move(Error);
+  InsertPt = InsertPtOrError.get();
+
+  BuildMIAction &DstMIBuilder =
+      *static_cast<BuildMIAction *>(InsertPtOrError.get()->get());
+
+  // Assign the result to TempReg.
+  DstMIBuilder.addRenderer<TempRegRenderer>(TempRegID, true);
+
+  InsertPtOrError = importExplicitUseRenderers(InsertPt, M, DstMIBuilder, Dst);
+  if (auto Error = InsertPtOrError.takeError())
+    return std::move(Error);
+
+  return InsertPtOrError.get();
+}
+
 Expected<action_iterator> GlobalISelEmitter::createInstructionRenderer(
     action_iterator InsertPt, RuleMatcher &M, const TreePatternNode *Dst) {
   Record *DstOp = Dst->getOperator();
@@ -2740,6 +2854,8 @@ Expected<action_iterator> GlobalISelEmitter::createInstructionRenderer(
     DstI = &Target.getInstruction(RK.getDef("COPY"));
   else if (DstI->TheDef->getName() == "EXTRACT_SUBREG")
     DstI = &Target.getInstruction(RK.getDef("COPY"));
+  else if (DstI->TheDef->getName() == "REG_SEQUENCE")
+    return failedImport("Unable to emit REG_SEQUENCE");
 
   return M.insertAction<BuildMIAction>(InsertPt, M.allocateOutputInsnID(),
                                        DstI);
@@ -2767,8 +2883,12 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
 
     if (DefInit *SubRegInit =
             dyn_cast<DefInit>(Dst->getChild(1)->getLeafValue())) {
-      CodeGenRegisterClass *RC = CGRegs.getRegClass(
-          getInitValueAsRegClass(Dst->getChild(0)->getLeafValue()));
+      Record *RCDef = getInitValueAsRegClass(Dst->getChild(0)->getLeafValue());
+      if (!RCDef)
+        return failedImport("EXTRACT_SUBREG child #0 could not "
+                            "be coerced to a register class");
+
+      CodeGenRegisterClass *RC = CGRegs.getRegClass(RCDef);
       CodeGenSubRegIndex *SubIdx = CGRegs.getSubRegIdx(SubRegInit->getDef());
 
       const auto &SrcRCDstRCPair =

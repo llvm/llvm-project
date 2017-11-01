@@ -473,6 +473,14 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       "libc++ std::initializer_list synthetic children",
       ConstString("^std::initializer_list<.+>(( )?&)?$"), stl_synth_flags,
       true);
+  AddCXXSynthetic(cpp_category_sp, LibcxxQueueFrontEndCreator,
+                  "libc++ std::queue synthetic children",
+                  ConstString("^std::__(ndk)?1::queue<.+>(( )?&)?$"),
+                  stl_synth_flags, true);
+  AddCXXSynthetic(cpp_category_sp, LibcxxTupleFrontEndCreator,
+                  "libc++ std::tuple synthetic children",
+                  ConstString("^std::__(ndk)?1::tuple<.*>(( )?&)?$"), stl_synth_flags,
+                  true);
   AddCXXSynthetic(
       cpp_category_sp,
       lldb_private::formatters::LibcxxAtomicSyntheticFrontEndCreator,
@@ -528,6 +536,11 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::LibcxxContainerSummaryProvider,
+                "libc++ std::queue summary provider",
+                ConstString("^std::__(ndk)?1::queue<.+>(( )?&)?$"),
+                stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibcxxContainerSummaryProvider,
                 "libc++ std::set summary provider",
                 ConstString("^std::__(ndk)?1::set<.+>(( )?&)?$"),
                 stl_summary_flags, true);
@@ -546,6 +559,10 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       "libc++ std::unordered containers summary provider",
       ConstString("^(std::__(ndk)?1::)unordered_(multi)?(map|set)<.+> >$"),
       stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp, LibcxxContainerSummaryProvider,
+                "libc++ std::tuple summary provider",
+                ConstString("^std::__(ndk)?1::tuple<.*>(( )?&)?$"), stl_summary_flags,
+                true);
   AddCXXSummary(
       cpp_category_sp, lldb_private::formatters::LibCxxAtomicSummaryProvider,
       "libc++ std::atomic summary provider",

@@ -91,7 +91,6 @@ static void collectCallers(Function *F, DenseSet<Function *> &Callers) {
 bool AMDGPUOpenCLEnqueuedBlockLowering::runOnModule(Module &M) {
   DenseSet<Function *> Callers;
   auto &C = M.getContext();
-  auto AS = AMDGPU::getAMDGPUAS(M);
   bool Changed = false;
   for (auto &F : M.functions()) {
     if (F.hasFnAttribute("enqueued-block")) {
@@ -104,10 +103,10 @@ bool AMDGPUOpenCLEnqueuedBlockLowering::runOnModule(Module &M) {
       auto *AddrCast = cast<ConstantExpr>(*BitCast->user_begin());
       auto RuntimeHandle = (F.getName() + "_runtime_handle").str();
       auto *GV = new GlobalVariable(
-          M, Type::getInt8Ty(C)->getPointerTo(AS.GLOBAL_ADDRESS),
+          M, Type::getInt8Ty(C)->getPointerTo(AMDGPUAS::GLOBAL_ADDRESS),
           /*IsConstant=*/true, GlobalValue::ExternalLinkage,
           /*Initializer=*/nullptr, RuntimeHandle, /*InsertBefore=*/nullptr,
-          GlobalValue::NotThreadLocal, AS.GLOBAL_ADDRESS,
+          GlobalValue::NotThreadLocal, AMDGPUAS::GLOBAL_ADDRESS,
           /*IsExternallyInitialized=*/true);
       DEBUG(dbgs() << "runtime handle created: " << *GV << '\n');
       auto *NewPtr = ConstantExpr::getPointerCast(GV, AddrCast->getType());

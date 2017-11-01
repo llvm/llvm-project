@@ -36,8 +36,7 @@ MSFBuilder::MSFBuilder(uint32_t BlockSize, uint32_t MinBlockCount, bool CanGrow,
                        BumpPtrAllocator &Allocator)
     : Allocator(Allocator), IsGrowable(CanGrow),
       FreePageMap(kDefaultFreePageMap), BlockSize(BlockSize),
-      MininumBlocks(MinBlockCount), BlockMapAddr(kDefaultBlockMapAddr),
-      FreeBlocks(MinBlockCount, true) {
+      BlockMapAddr(kDefaultBlockMapAddr), FreeBlocks(MinBlockCount, true) {
   FreeBlocks[kSuperBlockBlock] = false;
   FreeBlocks[kFreePageMap0Block] = false;
   FreeBlocks[kFreePageMap1Block] = false;

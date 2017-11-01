@@ -1,4 +1,4 @@
-// RUN: %clang_scudo %s -lstdc++ -o %t
+// RUN: %clangxx_scudo %s -lstdc++ -o %t
 // RUN: %env_scudo_opts=allocator_may_return_null=0 not %run %t malloc 2>&1 | FileCheck %s
 // RUN: %env_scudo_opts=allocator_may_return_null=1     %run %t malloc 2>&1
 // RUN: %env_scudo_opts=allocator_may_return_null=0 not %run %t calloc 2>&1 | FileCheck %s
