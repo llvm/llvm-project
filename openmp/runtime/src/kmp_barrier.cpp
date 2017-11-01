@@ -16,6 +16,9 @@
 #include "kmp_itt.h"
 #include "kmp_os.h"
 #include "kmp_stats.h"
+#if OMPT_SUPPORT
+#include "ompt-specific.h"
+#endif
 
 #if KMP_MIC
 #include <immintrin.h>
@@ -1224,8 +1227,9 @@ int __kmp_barrier(enum barrier_type bt, int gtid, int is_split,
   int status = 0;
   ident_t *loc = __kmp_threads[gtid]->th.th_ident;
 #if OMPT_SUPPORT
-  ompt_task_id_t my_task_id;
-  ompt_parallel_id_t my_parallel_id;
+  ompt_data_t *my_task_data;
+  ompt_data_t *my_parallel_data;
+  void *return_address;
 #endif
 
   KA_TRACE(15, ("__kmp_barrier: T#%d(%d:%d) has arrived\n", gtid,
@@ -1233,28 +1237,26 @@ int __kmp_barrier(enum barrier_type bt, int gtid, int is_split,
 
   ANNOTATE_BARRIER_BEGIN(&team->t.t_bar);
 #if OMPT_SUPPORT
-  if (ompt_enabled) {
-#if OMPT_BLAME
-    my_task_id = team->t.t_implicit_task_taskdata[tid].ompt_task_info.task_id;
-    my_parallel_id = team->t.ompt_team_info.parallel_id;
-
-#if OMPT_TRACE
-    if (this_thr->th.ompt_thread_info.state == ompt_state_wait_single) {
-      if (ompt_callbacks.ompt_callback(ompt_event_single_others_end)) {
-        ompt_callbacks.ompt_callback(ompt_event_single_others_end)(
-            my_parallel_id, my_task_id);
-      }
+  if (ompt_enabled.enabled) {
+#if OMPT_OPTIONAL
+    my_task_data = OMPT_CUR_TASK_DATA(this_thr);
+    my_parallel_data = OMPT_CUR_TEAM_DATA(this_thr);
+    return_address = OMPT_LOAD_RETURN_ADDRESS(gtid);
+    if (ompt_enabled.ompt_callback_sync_region) {
+      ompt_callbacks.ompt_callback(ompt_callback_sync_region)(
+          ompt_sync_region_barrier, ompt_scope_begin, my_parallel_data,
+          my_task_data, return_address);
     }
-#endif
-    if (ompt_callbacks.ompt_callback(ompt_event_barrier_begin)) {
-      ompt_callbacks.ompt_callback(ompt_event_barrier_begin)(my_parallel_id,
-                                                             my_task_id);
+    if (ompt_enabled.ompt_callback_sync_region_wait) {
+      ompt_callbacks.ompt_callback(ompt_callback_sync_region_wait)(
+          ompt_sync_region_barrier, ompt_scope_begin, my_parallel_data,
+          my_task_data, return_address);
     }
 #endif
     // It is OK to report the barrier state after the barrier begin callback.
     // According to the OMPT specification, a compliant implementation may
     // even delay reporting this state until the barrier begins to wait.
-    this_thr->th.ompt_thread_info.state = ompt_state_wait_barrier;
+    this_thr->th.ompt_thread_info.state = omp_state_wait_barrier;
   }
 #endif
 
@@ -1489,14 +1491,20 @@ int __kmp_barrier(enum barrier_type bt, int gtid, int is_split,
                 __kmp_tid_from_gtid(gtid), status));
 
 #if OMPT_SUPPORT
-  if (ompt_enabled) {
-#if OMPT_BLAME
-    if (ompt_callbacks.ompt_callback(ompt_event_barrier_end)) {
-      ompt_callbacks.ompt_callback(ompt_event_barrier_end)(my_parallel_id,
-                                                           my_task_id);
+  if (ompt_enabled.enabled) {
+#if OMPT_OPTIONAL
+    if (ompt_enabled.ompt_callback_sync_region_wait) {
+      ompt_callbacks.ompt_callback(ompt_callback_sync_region_wait)(
+          ompt_sync_region_barrier, ompt_scope_end, my_parallel_data,
+          my_task_data, return_address);
+    }
+    if (ompt_enabled.ompt_callback_sync_region) {
+      ompt_callbacks.ompt_callback(ompt_callback_sync_region)(
+          ompt_sync_region_barrier, ompt_scope_end, my_parallel_data,
+          my_task_data, return_address);
     }
 #endif
-    this_thr->th.ompt_thread_info.state = ompt_state_work_parallel;
+    this_thr->th.ompt_thread_info.state = omp_state_work_parallel;
   }
 #endif
   ANNOTATE_BARRIER_END(&team->t.t_bar);
@@ -1593,14 +1601,31 @@ void __kmp_join_barrier(int gtid) {
 
   ANNOTATE_BARRIER_BEGIN(&team->t.t_bar);
 #if OMPT_SUPPORT
-#if OMPT_TRACE
-  if (ompt_enabled && ompt_callbacks.ompt_callback(ompt_event_barrier_begin)) {
-    ompt_callbacks.ompt_callback(ompt_event_barrier_begin)(
-        team->t.ompt_team_info.parallel_id,
-        team->t.t_implicit_task_taskdata[tid].ompt_task_info.task_id);
-  }
+  ompt_data_t *my_task_data;
+  ompt_data_t *my_parallel_data;
+  if (ompt_enabled.enabled) {
+#if OMPT_OPTIONAL
+    void *codeptr = NULL;
+    int ds_tid = this_thr->th.th_info.ds.ds_tid;
+    if (KMP_MASTER_TID(ds_tid) &&
+        (ompt_callbacks.ompt_callback(ompt_callback_sync_region_wait) ||
+         ompt_callbacks.ompt_callback(ompt_callback_sync_region)))
+      codeptr = team->t.ompt_team_info.master_return_address;
+    my_task_data = OMPT_CUR_TASK_DATA(this_thr);
+    my_parallel_data = OMPT_CUR_TEAM_DATA(this_thr);
+    if (ompt_enabled.ompt_callback_sync_region) {
+      ompt_callbacks.ompt_callback(ompt_callback_sync_region)(
+          ompt_sync_region_barrier, ompt_scope_begin, my_parallel_data,
+          my_task_data, codeptr);
+    }
+    if (ompt_enabled.ompt_callback_sync_region_wait) {
+      ompt_callbacks.ompt_callback(ompt_callback_sync_region_wait)(
+          ompt_sync_region_barrier, ompt_scope_begin, my_parallel_data,
+          my_task_data, codeptr);
+    }
 #endif
-  this_thr->th.ompt_thread_info.state = ompt_state_wait_barrier;
+    this_thr->th.ompt_thread_info.state = omp_state_wait_barrier_implicit;
+  }
 #endif
 
   if (__kmp_tasking_mode == tskm_extra_barrier) {
@@ -1758,20 +1783,6 @@ void __kmp_join_barrier(int gtid) {
   KA_TRACE(10,
            ("__kmp_join_barrier: T#%d(%d:%d) leaving\n", gtid, team_id, tid));
 
-#if OMPT_SUPPORT
-  if (ompt_enabled) {
-#if OMPT_BLAME
-    if (ompt_callbacks.ompt_callback(ompt_event_barrier_end)) {
-      ompt_callbacks.ompt_callback(ompt_event_barrier_end)(
-          team->t.ompt_team_info.parallel_id,
-          team->t.t_implicit_task_taskdata[tid].ompt_task_info.task_id);
-    }
-#endif
-
-    // return to default state
-    this_thr->th.ompt_thread_info.state = ompt_state_overhead;
-  }
-#endif
   ANNOTATE_BARRIER_END(&team->t.t_bar);
 }
 
@@ -1868,6 +1879,39 @@ void __kmp_fork_barrier(int gtid, int tid) {
                                  TRUE USE_ITT_BUILD_ARG(itt_sync_obj));
   }
   }
+
+#if OMPT_SUPPORT
+  if (ompt_enabled.enabled) {
+    if (this_thr->th.ompt_thread_info.state ==
+        omp_state_wait_barrier_implicit) {
+      int ds_tid = this_thr->th.th_info.ds.ds_tid;
+      ompt_data_t *tId = (team) ? OMPT_CUR_TASK_DATA(this_thr)
+                                : &(this_thr->th.ompt_thread_info.task_data);
+      this_thr->th.ompt_thread_info.state = omp_state_overhead;
+#if OMPT_OPTIONAL
+      void *codeptr = NULL;
+      if (KMP_MASTER_TID(ds_tid) &&
+          (ompt_callbacks.ompt_callback(ompt_callback_sync_region_wait) ||
+           ompt_callbacks.ompt_callback(ompt_callback_sync_region)))
+        codeptr = team->t.ompt_team_info.master_return_address;
+      if (ompt_enabled.ompt_callback_sync_region_wait) {
+        ompt_callbacks.ompt_callback(ompt_callback_sync_region_wait)(
+            ompt_sync_region_barrier, ompt_scope_end, NULL, tId, codeptr);
+      }
+      if (ompt_enabled.ompt_callback_sync_region) {
+        ompt_callbacks.ompt_callback(ompt_callback_sync_region)(
+            ompt_sync_region_barrier, ompt_scope_end, NULL, tId, codeptr);
+      }
+#endif
+      if (!KMP_MASTER_TID(ds_tid) && ompt_enabled.ompt_callback_implicit_task) {
+        ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
+            ompt_scope_end, NULL, tId, 0, ds_tid);
+      }
+      // return to idle state
+      this_thr->th.ompt_thread_info.state = omp_state_overhead;
+    }
+  }
+#endif
 
   // Early exit for reaping threads releasing forkjoin barrier
   if (TCR_4(__kmp_global.g.g_done)) {

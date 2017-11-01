@@ -2280,7 +2280,7 @@ int __kmp_invoke_microtask(microtask_t pkfn, int gtid, int tid, int argc,
 #endif
                            ) {
 #if OMPT_SUPPORT
-  *exit_frame_ptr = __builtin_frame_address(0);
+  *exit_frame_ptr = OMPT_GET_FRAME_ADDRESS(0);
 #endif
 
   switch (argc) {

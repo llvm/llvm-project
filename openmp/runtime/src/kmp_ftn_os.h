@@ -133,6 +133,10 @@
 #endif
 #endif
 
+#if OMP_50_ENABLED
+#define FTN_CONTROL_TOOL omp_control_tool
+#endif
+
 #endif /* KMP_FTN_PLAIN */
 
 /* ------------------------------------------------------------------------ */
@@ -249,6 +253,10 @@
 #define FTN_TARGET_ASSOCIATE_PTR omp_target_associate_ptr_
 #define FTN_TARGET_DISASSOCIATE_PTR omp_target_disassociate_ptr_
 #endif
+#endif
+
+#if OMP_50_ENABLED
+#define FTN_CONTROL_TOOL OMP_CONTROL_TOOL
 #endif
 
 #endif /* KMP_FTN_APPEND */
@@ -369,6 +377,10 @@
 #endif
 #endif
 
+#if OMP_50_ENABLED
+#define FTN_CONTROL_TOOL OMP_CONTROL_TOOL
+#endif
+
 #endif /* KMP_FTN_UPPER */
 
 /* ------------------------------------------------------------------------ */
@@ -485,6 +497,10 @@
 #define FTN_TARGET_ASSOCIATE_PTR OMP_TARGET_ASSOCIATE_PTR_
 #define FTN_TARGET_DISASSOCIATE_PTR OMP_TARGET_DISASSOCIATE_PTR_
 #endif
+#endif
+
+#if OMP_50_ENABLED
+#define FTN_CONTROL_TOOL OMP_CONTROL_TOOL_
 #endif
 
 #endif /* KMP_FTN_UAPPEND */
