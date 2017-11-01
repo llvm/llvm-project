@@ -49,7 +49,6 @@ private:
   void copyLocalSymbols();
   void addSectionSymbols();
   void addReservedSymbols();
-  void createSections();
   void forEachRelSec(std::function<void(InputSectionBase &)> Fn);
   void sortSections();
   void sortInputSections();
@@ -169,22 +168,14 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (!Config->Relocatable)
     addReservedSymbols();
 
-  // Create output sections.
-  if (Script->HasSectionsCommand) {
-    // If linker script contains SECTIONS commands, let it create sections.
-    Script->processSectionCommands();
+  // We want to process linker script commands. When SECTIONS command
+  // is given we let it create sections.
+  Script->processSectionCommands();
 
-    // Linker scripts may have left some input sections unassigned.
-    // Assign such sections using the default rule.
-    Script->addOrphanSections(Factory);
-  } else {
-    // If linker script does not contain SECTIONS commands, create
-    // output sections by default rules. We still need to give the
-    // linker script a chance to run, because it might contain
-    // non-SECTIONS commands such as ASSERT.
-    Script->processSectionCommands();
-    createSections();
-  }
+  // Linker scripts controls how input sections are assigned to output sections.
+  // Input sections that were not handled by scripts are called "orphans", and
+  // they are assigned to output sections by the default rule. Process that.
+  Script->addOrphanSections(Factory);
 
   if (Config->Discard != DiscardPolicy::All)
     copyLocalSymbols();
@@ -434,7 +425,7 @@ static bool shouldKeepInSymtab(SectionBase *Sec, StringRef SymName,
 }
 
 static bool includeInSymtab(const SymbolBody &B) {
-  if (!B.isLocal() && !B.symbol()->IsUsedInRegularObj)
+  if (!B.isLocal() && !B.IsUsedInRegularObj)
     return false;
 
   if (auto *D = dyn_cast<DefinedRegular>(&B)) {
@@ -752,10 +743,10 @@ addOptionalRegular(StringRef Name, SectionBase *Sec, uint64_t Val,
   SymbolBody *S = Symtab->find(Name);
   if (!S || S->isInCurrentOutput())
     return nullptr;
-  Symbol *Sym = Symtab->addRegular<ELFT>(Name, StOther, STT_NOTYPE, Val,
-                                         /*Size=*/0, Binding, Sec,
-                                         /*File=*/nullptr);
-  return cast<DefinedRegular>(Sym->body());
+  SymbolBody *Sym = Symtab->addRegular<ELFT>(Name, StOther, STT_NOTYPE, Val,
+                                             /*Size=*/0, Binding, Sec,
+                                             /*File=*/nullptr);
+  return cast<DefinedRegular>(Sym);
 }
 
 // The beginning and the ending of .rel[a].plt section are marked
@@ -850,20 +841,6 @@ void Writer<ELFT>::forEachRelSec(std::function<void(InputSectionBase &)> Fn) {
       Fn(*IS);
   for (EhInputSection *ES : InX::EhFrame->Sections)
     Fn(*ES);
-}
-
-template <class ELFT> void Writer<ELFT>::createSections() {
-  std::vector<OutputSection *> Vec;
-  for (InputSectionBase *IS : InputSections)
-    if (IS && IS->Live)
-      if (OutputSection *Sec =
-              Factory.addInputSec(IS, getOutputSectionName(IS->Name)))
-        Vec.push_back(Sec);
-
-  Script->SectionCommands.insert(Script->SectionCommands.begin(), Vec.begin(),
-                                 Vec.end());
-
-  Script->fabricateDefaultCommands();
 }
 
 // This function generates assignments for predefined symbols (e.g. _end or
@@ -1211,11 +1188,11 @@ static void removeUnusedSyntheticSections() {
 static bool computeIsPreemptible(const SymbolBody &B) {
   assert(!B.isLocal());
   // Only symbols that appear in dynsym can be preempted.
-  if (!B.symbol()->includeInDynsym())
+  if (!B.includeInDynsym())
     return false;
 
   // Only default visibility symbols can be preempted.
-  if (B.symbol()->Visibility != STV_DEFAULT)
+  if (B.Visibility != STV_DEFAULT)
     return false;
 
   // At this point copy relocations have not been created yet, so any
@@ -1271,8 +1248,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   applySynthetic({InX::EhFrame},
                  [](SyntheticSection *SS) { SS->finalizeContents(); });
 
-  for (Symbol *S : Symtab->getSymbols())
-    S->body()->IsPreemptible |= computeIsPreemptible(*S->body());
+  for (SymbolBody *S : Symtab->getSymbols())
+    S->IsPreemptible |= computeIsPreemptible(*S);
 
   // Scan relocations. This must be done after every symbol is declared so that
   // we can correctly decide if a dynamic relocation is needed.
@@ -1286,18 +1263,16 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
   // Now that we have defined all possible global symbols including linker-
   // synthesized ones. Visit all symbols to give the finishing touches.
-  for (Symbol *S : Symtab->getSymbols()) {
-    SymbolBody *Body = S->body();
-
-    if (!includeInSymtab(*Body))
+  for (SymbolBody *Sym : Symtab->getSymbols()) {
+    if (!includeInSymtab(*Sym))
       continue;
     if (InX::SymTab)
-      InX::SymTab->addSymbol(Body);
+      InX::SymTab->addSymbol(Sym);
 
-    if (InX::DynSymTab && S->includeInDynsym()) {
-      InX::DynSymTab->addSymbol(Body);
-      if (auto *SS = dyn_cast<SharedSymbol>(Body))
-        if (cast<SharedFile<ELFT>>(S->File)->isNeeded())
+    if (InX::DynSymTab && Sym->includeInDynsym()) {
+      InX::DynSymTab->addSymbol(Sym);
+      if (auto *SS = dyn_cast<SharedSymbol>(Sym))
+        if (cast<SharedFile<ELFT>>(Sym->File)->isNeeded())
           In<ELFT>::VerNeed->addSymbol(SS);
     }
   }
@@ -1388,7 +1363,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     Sec->finalize<ELFT>();
 
   // createThunks may have added local symbols to the static symbol table
-  applySynthetic({InX::SymTab, InX::ShStrTab, InX::StrTab},
+  applySynthetic({InX::SymTab},
                  [](SyntheticSection *SS) { SS->postThunkContents(); });
 }
 

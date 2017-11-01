@@ -480,8 +480,8 @@ Status ProcessLaunchCommandOptions::SetOptionValue(
         execution_context ? execution_context->GetTargetSP() : TargetSP();
     PlatformSP platform_sp =
         target_sp ? target_sp->GetPlatform() : PlatformSP();
-    if (!launch_info.GetArchitecture().SetTriple(option_arg, platform_sp.get()))
-      launch_info.GetArchitecture().SetTriple(option_arg);
+    launch_info.GetArchitecture() =
+        Platform::GetAugmentedArchSpec(platform_sp.get(), option_arg);
   } break;
 
   case 'A': // Disable ASLR.

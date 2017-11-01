@@ -263,8 +263,6 @@ public:
   explicit ArchSpec(const llvm::Triple &triple);
   explicit ArchSpec(const char *triple_cstr);
   explicit ArchSpec(llvm::StringRef triple_str);
-  ArchSpec(const char *triple_cstr, Platform *platform);
-  ArchSpec(llvm::StringRef triple_str, Platform *platform);
   //------------------------------------------------------------------
   /// Constructor over architecture name.
   ///
@@ -287,6 +285,12 @@ public:
   /// @return A const reference to this object.
   //------------------------------------------------------------------
   const ArchSpec &operator=(const ArchSpec &rhs);
+
+  //---------------------------------------------------------------------------
+  /// Returns true if the OS, vendor and environment fields of the triple are
+  /// unset. The triple is expected to be normalized (llvm::Triple::normalize).
+  //---------------------------------------------------------------------------
+  static bool ContainsOnlyArch(const llvm::Triple &normalized_triple);
 
   static size_t AutoComplete(llvm::StringRef name, StringList &matches);
 
@@ -520,10 +524,6 @@ public:
   bool SetTriple(const llvm::Triple &triple);
 
   bool SetTriple(llvm::StringRef triple_str);
-  bool SetTriple(llvm::StringRef triple_str, Platform *platform);
-
-  bool SetTriple(const char *triple_cstr);
-  bool SetTriple(const char *triple_cstr, Platform *platform);
 
   //------------------------------------------------------------------
   /// Returns the default endianness of the architecture.

@@ -47,7 +47,6 @@ class DefinedImportData;
 class DefinedImportThunk;
 class Lazy;
 class SectionChunk;
-struct Symbol;
 class SymbolBody;
 class Undefined;
 

@@ -250,7 +250,6 @@ public:
 
   ExprValue getSymbolValue(StringRef Name, const Twine &Loc);
 
-  void fabricateDefaultCommands();
   void addOrphanSections(OutputSectionFactory &Factory);
   void removeEmptyCommands();
   void adjustSectionsBeforeSorting();
