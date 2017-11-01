@@ -10,8 +10,6 @@ entry:
   call void @llvm.dbg.value(metadata i64 %n, metadata !16, metadata !DIExpression()), !dbg !21
   call void @llvm.dbg.value(metadata i64 %s, metadata !17, metadata !DIExpression()), !dbg !22
   call void @llvm.dbg.value(metadata i64 0, metadata !18, metadata !DIExpression()), !dbg !23
-  ; CHECK:   call void @llvm.dbg.value(metadata i64 0, metadata !18, metadata !DIExpression()), !dbg !23
-  ; CHECK-NOT:   call void @llvm.dbg.value(metadata i64 0, metadata !18, metadata !DIExpression()), !dbg !23
   br label %for.cond, !dbg !24
 
 for.cond:                                         ; preds = %for.body, %entry
