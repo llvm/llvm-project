@@ -228,9 +228,9 @@ template <class ELFT> static void doGcSections() {
 
   // Preserve externally-visible symbols if the symbols defined by this
   // file can interrupt other ELF file's symbols at runtime.
-  for (Symbol *S : Symtab->getSymbols())
+  for (SymbolBody *S : Symtab->getSymbols())
     if (S->includeInDynsym())
-      MarkSymbol(S->body());
+      MarkSymbol(S);
 
   // Preserve special sections and those which are specified in linker
   // script KEEP command.

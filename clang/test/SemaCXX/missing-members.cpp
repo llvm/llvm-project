@@ -37,3 +37,17 @@ struct S : A::B::C {
   using A::B::C::f; // expected-error {{no member named 'f' in 'A::B::C'}}
   
 };
+
+struct S1 {};
+
+struct S2 : S1 {};
+
+struct S3 : S2 {
+  void run();
+};
+
+struct S4: S3 {};
+
+void test(S4 *ptr) {
+  ptr->S1::run();  // expected-error {{no member named 'run' in 'S1'}}
+}

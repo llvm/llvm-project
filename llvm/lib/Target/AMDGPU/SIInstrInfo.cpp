@@ -3709,6 +3709,27 @@ void SIInstrInfo::moveToVALU(MachineInstr &TopInst) const {
       splitScalar64BitBinaryOp(Worklist, Inst, AMDGPU::S_XNOR_B32);
       Inst.eraseFromParent();
       continue;
+
+    case AMDGPU::S_BUFFER_LOAD_DWORD_SGPR: {
+      unsigned VDst = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+
+      BuildMI(*MBB, Inst, Inst.getDebugLoc(),
+              get(AMDGPU::BUFFER_LOAD_DWORD_OFFEN), VDst)
+        .add(*getNamedOperand(Inst, AMDGPU::OpName::soff)) // vaddr
+        .add(*getNamedOperand(Inst, AMDGPU::OpName::sbase)) // srsrc
+        .addImm(0) // soffset
+        .addImm(0) // offset
+        .addImm(getNamedOperand(Inst, AMDGPU::OpName::glc)->getImm())
+        .addImm(0) // slc
+        .addImm(0) // tfe
+        .setMemRefs(Inst.memoperands_begin(), Inst.memoperands_end());
+
+      MRI.replaceRegWith(getNamedOperand(Inst, AMDGPU::OpName::sdst)->getReg(),
+                         VDst);
+      addUsersToMoveToVALUWorklist(VDst, MRI, Worklist);
+      Inst.eraseFromParent();
+      continue;
+    }
     }
 
     if (NewOpcode == AMDGPU::INSTRUCTION_LIST_END) {

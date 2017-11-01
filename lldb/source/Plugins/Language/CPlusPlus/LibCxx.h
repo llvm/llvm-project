@@ -105,6 +105,10 @@ LibcxxStdListSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                       lldb::ValueObjectSP);
 
 SyntheticChildrenFrontEnd *
+LibcxxStdForwardListSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                             lldb::ValueObjectSP);
+
+SyntheticChildrenFrontEnd *
 LibcxxStdMapSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                      lldb::ValueObjectSP);
 

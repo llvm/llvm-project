@@ -410,7 +410,6 @@ class AnalysisDeclContextManager {
   typedef llvm::DenseMap<const Decl *, std::unique_ptr<AnalysisDeclContext>>
       ContextMap;
 
-  ASTContext &ASTCtx;
   ContextMap Contexts;
   LocationContextManager LocContexts;
   CFG::BuildOptions cfgBuildOptions;
@@ -419,9 +418,9 @@ class AnalysisDeclContextManager {
   /// declarations from external source.
   std::unique_ptr<CodeInjector> Injector;
 
-  /// Pointer to a factory for creating and caching implementations for common
+  /// A factory for creating and caching implementations for common
   /// methods during the analysis.
-  std::unique_ptr<BodyFarm> FunctionBodyFarm;
+  BodyFarm FunctionBodyFarm;
 
   /// Flag to indicate whether or not bodies should be synthesized
   /// for well-known functions.
@@ -475,8 +474,8 @@ public:
     return LocContexts.getStackFrame(getContext(D), Parent, S, Blk, Idx);
   }
 
-  /// Get and lazily create a {@code BodyFarm} instance.
-  BodyFarm *getBodyFarm();
+  /// Get a reference to {@code BodyFarm} instance.
+  BodyFarm &getBodyFarm();
 
   /// Discard all previously created AnalysisDeclContexts.
   void clear();

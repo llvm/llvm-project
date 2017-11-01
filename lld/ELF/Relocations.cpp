@@ -74,7 +74,7 @@ static std::string getLocation(InputSectionBase &S, const SymbolBody &Sym,
                                uint64_t Off) {
   std::string Msg =
       "\n>>> defined in " + toString(Sym.getFile()) + "\n>>> referenced by ";
-  std::string Src = S.getSrcMsg<ELFT>(Off);
+  std::string Src = S.getSrcMsg<ELFT>(Sym, Off);
   if (!Src.empty())
     Msg += Src + "\n>>>               ";
   return Msg + S.getObjMsg(Off);
@@ -544,7 +544,7 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol *SS) {
   for (SharedSymbol *Sym : getSymbolsAt<ELFT>(SS)) {
     Sym->CopyRelSec = Sec;
     Sym->IsPreemptible = false;
-    Sym->symbol()->IsUsedInRegularObj = true;
+    Sym->IsUsedInRegularObj = true;
   }
 
   In<ELFT>::RelaDyn->addReloc({Target->CopyRel, Sec, 0, false, SS, 0});
@@ -717,18 +717,18 @@ static bool maybeReportUndefined(SymbolBody &Sym, InputSectionBase &Sec,
   if (Config->UnresolvedSymbols == UnresolvedPolicy::IgnoreAll)
     return false;
 
-  if (Sym.isLocal() || !Sym.isUndefined() || Sym.symbol()->isWeak())
+  if (Sym.isLocal() || !Sym.isUndefined() || Sym.isWeak())
     return false;
 
-  bool CanBeExternal = Sym.symbol()->computeBinding() != STB_LOCAL &&
-                       Sym.getVisibility() == STV_DEFAULT;
+  bool CanBeExternal =
+      Sym.computeBinding() != STB_LOCAL && Sym.getVisibility() == STV_DEFAULT;
   if (Config->UnresolvedSymbols == UnresolvedPolicy::Ignore && CanBeExternal)
     return false;
 
   std::string Msg =
       "undefined symbol: " + toString(Sym) + "\n>>> referenced by ";
 
-  std::string Src = Sec.getSrcMsg<ELFT>(Offset);
+  std::string Src = Sec.getSrcMsg<ELFT>(Sym, Offset);
   if (!Src.empty())
     Msg += Src + "\n>>>               ";
   Msg += Sec.getObjMsg(Offset);

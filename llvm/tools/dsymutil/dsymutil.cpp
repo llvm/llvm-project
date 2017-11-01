@@ -12,9 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "dsymutil.h"
 #include "DebugMap.h"
 #include "MachOUtils.h"
-#include "dsymutil.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
@@ -22,8 +22,9 @@
 #include "llvm/Support/Options.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/ThreadPool.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 #include <string>
 
@@ -60,6 +61,13 @@ static opt<bool> FlatOut("flat",
                          desc("Produce a flat dSYM file (not a bundle)."),
                          init(false), cat(DsymCategory));
 static alias FlatOutA("f", desc("Alias for --flat"), aliasopt(FlatOut));
+
+static opt<unsigned> Threads(
+    "threads",
+    desc("Specifies the maximum number (n) of simultaneous threads to use\n"
+         "when linking multiple architectures."),
+    value_desc("n"), init(0), cat(DsymCategory));
+static alias ThreadsA("t", desc("Alias for --threads"), aliasopt(Threads));
 
 static opt<bool> Verbose("verbose", desc("Verbosity level"), init(false),
                          cat(DsymCategory));
@@ -316,6 +324,15 @@ int main(int argc, char **argv) {
       exitDsymutil(1);
     }
 
+    unsigned NumThreads = Threads;
+    if (!NumThreads)
+      NumThreads = llvm::thread::hardware_concurrency();
+    if (DumpDebugMap || Verbose)
+      NumThreads = 1;
+    NumThreads = std::min(NumThreads, (unsigned)DebugMapPtrsOrErr->size());
+
+    llvm::ThreadPool Threads(NumThreads);
+
     // If there is more than one link to execute, we need to generate
     // temporary files.
     bool NeedsTempFiles = !DumpDebugMap && (*DebugMapPtrsOrErr).size() != 1;
@@ -333,13 +350,26 @@ int main(int argc, char **argv) {
                      << ")\n";
 
       std::string OutputFile = getOutputFileName(InputFile, NeedsTempFiles);
-      if (OutputFile.empty() || !linkDwarf(OutputFile, *Map, Options))
-        exitDsymutil(1);
+
+      auto LinkLambda = [OutputFile, Options, &Map]() {
+        if (OutputFile.empty() || !linkDwarf(OutputFile, *Map, Options))
+          exitDsymutil(1);
+      };
+
+      // FIXME: The DwarfLinker can have some very deep recursion that can max
+      // out the (significantly smaller) stack when using threads. We don't
+      // want this limitation when we only have a single thread.
+      if (NumThreads == 1)
+        LinkLambda();
+      else
+        Threads.async(LinkLambda);
 
       if (NeedsTempFiles)
         TempFiles.emplace_back(Map->getTriple().getArchName().str(),
                                OutputFile);
     }
+
+    Threads.wait();
 
     if (NeedsTempFiles &&
         !MachOUtils::generateUniversalBinary(

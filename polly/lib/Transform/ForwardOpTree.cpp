@@ -51,6 +51,11 @@ static cl::opt<bool>
                  cl::desc("Analyze array contents for load forwarding"),
                  cl::cat(PollyCategory), cl::init(true), cl::Hidden);
 
+static cl::opt<bool>
+    NormalizePHIs("polly-optree-normalize-phi",
+                  cl::desc("Replace PHIs by their incoming values"),
+                  cl::cat(PollyCategory), cl::init(false), cl::Hidden);
+
 static cl::opt<unsigned>
     MaxOps("polly-optree-max-ops",
            cl::desc("Maximum number of ISL operations to invest for known "
@@ -280,16 +285,19 @@ public:
       IslQuotaScope QuotaScope = MaxOpGuard.enter();
 
       computeCommon();
+      if (NormalizePHIs)
+        computeNormalizedPHIs();
       Known = computeKnown(true, true);
 
       // Preexisting ValInsts use the known content analysis of themselves.
       Translator = makeIdentityMap(Known.range(), false);
     }
 
-    if (!Known || !Translator) {
+    if (!Known || !Translator || !NormalizeMap) {
       assert(isl_ctx_last_error(IslCtx.get()) == isl_error_quota);
       Known = nullptr;
       Translator = nullptr;
+      NormalizeMap = nullptr;
       DEBUG(dbgs() << "Known analysis exceeded max_operations\n");
       return false;
     }
@@ -462,6 +470,7 @@ public:
 
     // { DomainDef[] -> ValInst[] }
     isl::map ExpectedVal = makeValInst(Inst, UseStmt, UseLoop);
+    assert(isNormalized(ExpectedVal) && "LoadInsts are always normalized");
 
     // { DomainTarget[] -> ValInst[] }
     isl::map TargetExpectedVal = ExpectedVal.apply_domain(UseToTarget);
@@ -578,7 +587,7 @@ public:
     }
 
     // { DomainDef[] -> ValInst[] }
-    isl::union_map ExpectedVal = makeValInst(Inst, UseStmt, UseLoop);
+    isl::union_map ExpectedVal = makeNormalizedValInst(Inst, UseStmt, UseLoop);
 
     // { DomainTarget[] -> ValInst[] }
     isl::union_map TargetExpectedVal = ExpectedVal.apply_domain(UseToTarget);

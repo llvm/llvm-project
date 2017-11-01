@@ -67,7 +67,6 @@ bool UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
                                 LoopInfo *LI,
                                 ScalarEvolution *SE, DominatorTree *DT,
                                 AssumptionCache *AC,
-                                OptimizationRemarkEmitter *ORE,
                                 bool PreserveLCSSA);
 
 void computePeelCount(Loop *L, unsigned LoopSize,

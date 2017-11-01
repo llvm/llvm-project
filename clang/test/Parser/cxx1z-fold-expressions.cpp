@@ -43,3 +43,20 @@ template<typename ...T> void as_operand_of_cast(int a, T ...t) {
     (int)(undeclared_junk + ...) + // expected-error {{undeclared}}
     (int)(a + ...); // expected-error {{does not contain any unexpanded}}
 }
+
+// fold-operator can be '>' or '>>'.
+template <int... N> constexpr bool greaterThan() { return (N > ...); }
+template <int... N> constexpr int rightShift() { return (N >> ...); }
+
+static_assert(greaterThan<2, 1>());
+static_assert(rightShift<10, 1>() == 5);
+
+template <auto V> constexpr auto Identity = V;
+
+// Support fold operators within templates.
+template <int... N> constexpr int nestedFoldOperator() {
+  return Identity<(Identity<0> >> ... >> N)> +
+    Identity<(N >> ... >> Identity<0>)>;
+}
+
+static_assert(nestedFoldOperator<3, 1>() == 1);

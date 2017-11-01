@@ -3289,6 +3289,20 @@ TEST(APFloatTest, mod) {
     EXPECT_EQ(f1.mod(f2), APFloat::opInvalidOp);
     EXPECT_TRUE(f1.isNaN());
   }
+  {
+    APFloat f1(APFloat::IEEEdouble(), "-4.0");
+    APFloat f2(APFloat::IEEEdouble(), "-2.0");
+    APFloat expected(APFloat::IEEEdouble(), "-0.0");
+    EXPECT_EQ(f1.mod(f2), APFloat::opOK);
+    EXPECT_TRUE(f1.bitwiseIsEqual(expected));
+  }
+  {
+    APFloat f1(APFloat::IEEEdouble(), "-4.0");
+    APFloat f2(APFloat::IEEEdouble(), "2.0");
+    APFloat expected(APFloat::IEEEdouble(), "-0.0");
+    EXPECT_EQ(f1.mod(f2), APFloat::opOK);
+    EXPECT_TRUE(f1.bitwiseIsEqual(expected));
+  }
 }
 
 TEST(APFloatTest, PPCDoubleDoubleAddSpecial) {

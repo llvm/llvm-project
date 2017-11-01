@@ -110,7 +110,7 @@ LValue CGObjCRuntime::EmitValueForIvarAtOffset(CodeGen::CodeGenFunction &CGF,
                                    llvm::Type::getIntNTy(CGF.getLLVMContext(),
                                                          Info->StorageSize));
   return LValue::MakeBitfield(Addr, *Info, IvarTy,
-                              LValueBaseInfo(AlignmentSource::Decl, false),
+                              LValueBaseInfo(AlignmentSource::Decl),
                               TBAAAccessInfo());
 }
 

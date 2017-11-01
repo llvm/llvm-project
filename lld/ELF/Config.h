@@ -24,7 +24,6 @@ namespace lld {
 namespace elf {
 
 class InputFile;
-struct Symbol;
 
 enum ELFKind {
   ELFNoneKind,

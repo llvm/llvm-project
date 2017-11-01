@@ -55,7 +55,7 @@ void TestArm64InstEmulation::TearDownTestCase() {
 }
 
 TEST_F(TestArm64InstEmulation, TestSimpleDarwinFunction) {
-  ArchSpec arch("arm64-apple-ios10", nullptr);
+  ArchSpec arch("arm64-apple-ios10");
   UnwindAssemblyInstEmulation *engine =
       static_cast<UnwindAssemblyInstEmulation *>(
           UnwindAssemblyInstEmulation::CreateInstance(arch));
@@ -151,7 +151,7 @@ TEST_F(TestArm64InstEmulation, TestSimpleDarwinFunction) {
 }
 
 TEST_F(TestArm64InstEmulation, TestMediumDarwinFunction) {
-  ArchSpec arch("arm64-apple-ios10", nullptr);
+  ArchSpec arch("arm64-apple-ios10");
   UnwindAssemblyInstEmulation *engine =
       static_cast<UnwindAssemblyInstEmulation *>(
           UnwindAssemblyInstEmulation::CreateInstance(arch));
@@ -313,7 +313,7 @@ TEST_F(TestArm64InstEmulation, TestMediumDarwinFunction) {
 }
 
 TEST_F(TestArm64InstEmulation, TestFramelessThreeEpilogueFunction) {
-  ArchSpec arch("arm64-apple-ios10", nullptr);
+  ArchSpec arch("arm64-apple-ios10");
   UnwindAssemblyInstEmulation *engine =
       static_cast<UnwindAssemblyInstEmulation *>(
           UnwindAssemblyInstEmulation::CreateInstance(arch));
@@ -408,7 +408,7 @@ TEST_F(TestArm64InstEmulation, TestFramelessThreeEpilogueFunction) {
 }
 
 TEST_F(TestArm64InstEmulation, TestRegisterSavedTwice) {
-  ArchSpec arch("arm64-apple-ios10", nullptr);
+  ArchSpec arch("arm64-apple-ios10");
   UnwindAssemblyInstEmulation *engine =
       static_cast<UnwindAssemblyInstEmulation *>(
           UnwindAssemblyInstEmulation::CreateInstance(arch));
@@ -510,7 +510,7 @@ TEST_F(TestArm64InstEmulation, TestRegisterSavedTwice) {
 }
 
 TEST_F(TestArm64InstEmulation, TestRegisterDoubleSpills) {
-  ArchSpec arch("arm64-apple-ios10", nullptr);
+  ArchSpec arch("arm64-apple-ios10");
   UnwindAssemblyInstEmulation *engine =
       static_cast<UnwindAssemblyInstEmulation *>(
           UnwindAssemblyInstEmulation::CreateInstance(arch));

@@ -8,7 +8,7 @@ else ifeq "$(ARCH)" "i386"
 	API_LEVEL := 17
 else
 	# lowest supported 32-bit API level
-	API_LEVEL := 9
+	API_LEVEL := 16
 endif
 
 ifeq "$(ARCH)" "arm"
@@ -18,8 +18,8 @@ ifeq "$(ARCH)" "arm"
 	ARCH_CFLAGS += -march=armv7-a -mfloat-abi=softfp -mfpu=vfpv3-d16 -marm
 else ifeq "$(ARCH)" "aarch64"
 	SYSROOT_ARCH := arm64
-	TRIPLE := aarch64-none-linux-android
 	STL_ARCH := arm64-v8a
+	TRIPLE := aarch64-none-linux-android
 else ifeq "$(ARCH)" "i386"
 	SYSROOT_ARCH := x86
 	STL_ARCH := x86
@@ -70,7 +70,9 @@ ifeq "$(findstring clang,$(CC))" "clang"
 	ARCH_LDFLAGS += -target $(TRIPLE) -gcc-toolchain $(GCC_TOOLCHAIN)
 endif
 
-ARCH_CFLAGS += --sysroot=$(NDK_ROOT)/platforms/android-$(API_LEVEL)/arch-$(SYSROOT_ARCH)
+ARCH_CFLAGS += --sysroot=$(NDK_ROOT)/sysroot \
+	-isystem $(NDK_ROOT)/sysroot/usr/include/$(TOOL_PREFIX) \
+	-D__ANDROID_API__=$(API_LEVEL)
 ARCH_LDFLAGS += --sysroot=$(NDK_ROOT)/platforms/android-$(API_LEVEL)/arch-$(SYSROOT_ARCH) -lm
 
 ifeq (1,$(USE_LIBCPP))

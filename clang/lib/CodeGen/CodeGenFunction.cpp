@@ -137,13 +137,13 @@ CharUnits CodeGenFunction::getNaturalTypeAlignment(QualType T,
   if (auto TT = T->getAs<TypedefType>()) {
     if (auto Align = TT->getDecl()->getMaxAlignment()) {
       if (BaseInfo)
-        *BaseInfo = LValueBaseInfo(AlignmentSource::AttributedType, false);
+        *BaseInfo = LValueBaseInfo(AlignmentSource::AttributedType);
       return getContext().toCharUnitsFromBits(Align);
     }
   }
 
   if (BaseInfo)
-    *BaseInfo = LValueBaseInfo(AlignmentSource::Type, false);
+    *BaseInfo = LValueBaseInfo(AlignmentSource::Type);
 
   CharUnits Alignment;
   if (T->isIncompleteType()) {

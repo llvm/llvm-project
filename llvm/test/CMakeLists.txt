@@ -47,6 +47,7 @@ set(LLVM_TEST_DEPENDS
           llvm-bcanalyzer
           llvm-c-test
           llvm-cat
+          llvm-cfi-verify
           llvm-cxxfilt
           llvm-config
           llvm-cov

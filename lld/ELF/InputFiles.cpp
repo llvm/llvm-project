@@ -67,7 +67,7 @@ Optional<MemoryBufferRef> elf::readFile(StringRef Path) {
   return MBRef;
 }
 
-template <class ELFT> void ObjFile<ELFT>::initializeDwarfLine() {
+template <class ELFT> void ObjFile<ELFT>::initializeDwarf() {
   DWARFContext Dwarf(make_unique<LLDDwarfObj<ELFT>>(this));
   const DWARFObject &Obj = Dwarf.getDWARFObj();
   DwarfLine.reset(new DWARFDebugLine);
@@ -77,7 +77,68 @@ template <class ELFT> void ObjFile<ELFT>::initializeDwarfLine() {
   // The second parameter is offset in .debug_line section
   // for compilation unit (CU) of interest. We have only one
   // CU (object file), so offset is always 0.
-  DwarfLine->getOrParseLineTable(LineData, 0);
+  const DWARFDebugLine::LineTable *LT =
+      DwarfLine->getOrParseLineTable(LineData, 0);
+
+  // Return if there is no debug information about CU available.
+  if (!Dwarf.getNumCompileUnits())
+    return;
+
+  // Loop over variable records and insert them to VariableLoc.
+  DWARFCompileUnit *CU = Dwarf.getCompileUnitAtIndex(0);
+  for (const auto &Entry : CU->dies()) {
+    DWARFDie Die(CU, &Entry);
+    // Skip all tags that are not variables.
+    if (Die.getTag() != dwarf::DW_TAG_variable)
+      continue;
+
+    // Skip if a local variable because we don't need them for generating error
+    // messages. In general, only non-local symbols can fail to be linked.
+    if (!dwarf::toUnsigned(Die.find(dwarf::DW_AT_external), 0))
+      continue;
+
+    // Get the source filename index for the variable.
+    unsigned File = dwarf::toUnsigned(Die.find(dwarf::DW_AT_decl_file), 0);
+    if (!LT->hasFileAtIndex(File))
+      continue;
+
+    // Get the line number on which the variable is declared.
+    unsigned Line = dwarf::toUnsigned(Die.find(dwarf::DW_AT_decl_line), 0);
+
+    // Get the name of the variable and add the collected information to
+    // VariableLoc. Usually Name is non-empty, but it can be empty if the input
+    // object file lacks some debug info.
+    StringRef Name = dwarf::toString(Die.find(dwarf::DW_AT_name), "");
+    if (!Name.empty())
+      VariableLoc.insert({Name, {File, Line}});
+  }
+}
+
+// Returns the pair of file name and line number describing location of data
+// object (variable, array, etc) definition.
+template <class ELFT>
+Optional<std::pair<std::string, unsigned>>
+ObjFile<ELFT>::getVariableLoc(StringRef Name) {
+  llvm::call_once(InitDwarfLine, [this]() { initializeDwarf(); });
+
+  // There is always only one CU so it's offset is 0.
+  const DWARFDebugLine::LineTable *LT = DwarfLine->getLineTable(0);
+  if (!LT)
+    return None;
+
+  // Return if we have no debug information about data object.
+  auto It = VariableLoc.find(Name);
+  if (It == VariableLoc.end())
+    return None;
+
+  // Take file name string from line table.
+  std::string FileName;
+  if (!LT->getFileNameByIndex(
+          It->second.first /* File */, nullptr,
+          DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, FileName))
+    return None;
+
+  return std::make_pair(FileName, It->second.second /*Line*/);
 }
 
 // Returns source line information for a given offset
@@ -85,7 +146,7 @@ template <class ELFT> void ObjFile<ELFT>::initializeDwarfLine() {
 template <class ELFT>
 Optional<DILineInfo> ObjFile<ELFT>::getDILineInfo(InputSectionBase *S,
                                                   uint64_t Offset) {
-  llvm::call_once(InitDwarfLine, [this]() { initializeDwarfLine(); });
+  llvm::call_once(InitDwarfLine, [this]() { initializeDwarf(); });
 
   // The offset to CU is 0.
   const DWARFDebugLine::LineTable *Tbl = DwarfLine->getLineTable(0);
@@ -551,16 +612,14 @@ SymbolBody *ObjFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
 
   switch (Sym->st_shndx) {
   case SHN_UNDEF:
-    return Symtab
-        ->addUndefined<ELFT>(Name, /*IsLocal=*/false, Binding, StOther, Type,
-                             /*CanOmitFromDynSym=*/false, this)
-        ->body();
+    return Symtab->addUndefined<ELFT>(Name, /*IsLocal=*/false, Binding, StOther,
+                                      Type,
+                                      /*CanOmitFromDynSym=*/false, this);
   case SHN_COMMON:
     if (Value == 0 || Value >= UINT32_MAX)
       fatal(toString(this) + ": common symbol '" + Name +
             "' has invalid alignment: " + Twine(Value));
-    return Symtab->addCommon(Name, Size, Value, Binding, StOther, Type, this)
-        ->body();
+    return Symtab->addCommon(Name, Size, Value, Binding, StOther, Type, this);
   }
 
   switch (Binding) {
@@ -570,13 +629,11 @@ SymbolBody *ObjFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
   case STB_WEAK:
   case STB_GNU_UNIQUE:
     if (Sec == &InputSection::Discarded)
-      return Symtab
-          ->addUndefined<ELFT>(Name, /*IsLocal=*/false, Binding, StOther, Type,
-                               /*CanOmitFromDynSym=*/false, this)
-          ->body();
-    return Symtab
-        ->addRegular<ELFT>(Name, StOther, Type, Value, Size, Binding, Sec, this)
-        ->body();
+      return Symtab->addUndefined<ELFT>(Name, /*IsLocal=*/false, Binding,
+                                        StOther, Type,
+                                        /*CanOmitFromDynSym=*/false, this);
+    return Symtab->addRegular<ELFT>(Name, StOther, Type, Value, Size, Binding,
+                                    Sec, this);
   }
 }
 
@@ -587,8 +644,7 @@ ArchiveFile::ArchiveFile(std::unique_ptr<Archive> &&File)
 template <class ELFT> void ArchiveFile::parse() {
   Symbols.reserve(File->getNumberOfSymbols());
   for (const Archive::Symbol &Sym : File->symbols())
-    Symbols.push_back(
-        Symtab->addLazyArchive<ELFT>(Sym.getName(), this, Sym)->body());
+    Symbols.push_back(Symtab->addLazyArchive<ELFT>(Sym.getName(), this, Sym));
 }
 
 // Returns a buffer pointing to a member file containing a given symbol.
@@ -848,9 +904,9 @@ static uint8_t mapVisibility(GlobalValue::VisibilityTypes GvVisibility) {
 }
 
 template <class ELFT>
-static Symbol *createBitcodeSymbol(const std::vector<bool> &KeptComdats,
-                                   const lto::InputFile::Symbol &ObjSym,
-                                   BitcodeFile *F) {
+static SymbolBody *createBitcodeSymbol(const std::vector<bool> &KeptComdats,
+                                       const lto::InputFile::Symbol &ObjSym,
+                                       BitcodeFile *F) {
   StringRef NameRef = Saver.save(ObjSym.getName());
   uint32_t Binding = ObjSym.isWeak() ? STB_WEAK : STB_GLOBAL;
 
@@ -883,8 +939,7 @@ void BitcodeFile::parse(DenseSet<CachedHashStringRef> &ComdatGroups) {
     KeptComdats.push_back(ComdatGroups.insert(CachedHashStringRef(S)).second);
 
   for (const lto::InputFile::Symbol &ObjSym : Obj->symbols())
-    Symbols.push_back(
-        createBitcodeSymbol<ELFT>(KeptComdats, ObjSym, this)->body());
+    Symbols.push_back(createBitcodeSymbol<ELFT>(KeptComdats, ObjSym, this));
 }
 
 static ELFKind getELFKind(MemoryBufferRef MB) {
