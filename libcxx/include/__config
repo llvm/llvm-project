@@ -296,10 +296,6 @@
 #define _LIBCPP_NO_CFI
 #endif
 
-#if __libcpp_has_include(<sys/cdefs.h>)
-#include <sys/cdefs.h>
-#endif
-
 #if defined(_LIBCPP_COMPILER_CLANG)
 
 // _LIBCPP_ALTERNATE_STRING_LAYOUT is an old name for
@@ -411,7 +407,7 @@ typedef __char32_t char32_t;
 #define _LIBCPP_HAS_C11_FEATURES
 #elif defined(__linux__)
 #if !defined(_LIBCPP_HAS_MUSL_LIBC)
-#if __GLIBC_PREREQ(2, 15) || (defined(__BIONIC__) && (__ANDROID_API__ >= 21))
+#if __GLIBC_PREREQ(2, 15) || defined(__BIONIC__)
 #define _LIBCPP_HAS_QUICK_EXIT
 #endif
 #if __GLIBC_PREREQ(2, 17)
