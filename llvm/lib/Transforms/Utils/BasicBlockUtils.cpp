@@ -20,11 +20,9 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/ValueHandle.h"
@@ -133,16 +131,8 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DominatorTree *DT,
   }
 
   // Begin by getting rid of unneeded PHIs.
-  SmallVector<Value *, 4> IncomingValues;
-  if (isa<PHINode>(BB->front())) {
-    for (auto &I : *BB)
-      if (PHINode *PN = dyn_cast<PHINode>(&I)) {
-        if (PN->getIncomingValue(0) != PN)
-          IncomingValues.push_back(PN->getIncomingValue(0));
-      } else
-        break;
+  if (isa<PHINode>(BB->front()))
     FoldSingleEntryPHINodes(BB, MemDep);
-  }
 
   // Delete the unconditional branch from the predecessor...
   PredBB->getInstList().pop_back();
@@ -153,18 +143,6 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DominatorTree *DT,
 
   // Move all definitions in the successor to the predecessor...
   PredBB->getInstList().splice(PredBB->end(), BB->getInstList());
-
-  // Eliminate duplicate dbg.values describing the entry PHI node post-splice.
-  for (auto *Incoming : IncomingValues) {
-    SmallVector<DbgValueInst *, 2> DbgValues;
-    SmallDenseSet<std::pair<DILocalVariable *, DIExpression *>, 2> DbgValueSet;
-    llvm::findDbgValues(DbgValues, Incoming);
-    for (auto &DVI : DbgValues) {
-      auto R = DbgValueSet.insert({DVI->getVariable(), DVI->getExpression()});
-      if (!R.second)
-        DVI->eraseFromParent();
-    }
-  }
 
   // Inherit predecessors name if it exists.
   if (!PredBB->hasName())
