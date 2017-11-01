@@ -19,4 +19,4 @@
 type = Library
 name = CFIVerify
 parent = Libraries
-required_libraries = MC MCDisassembler MCParser Support
+required_libraries = DebugInfoDWARF MC MCDisassembler MCParser Support

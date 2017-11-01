@@ -175,6 +175,22 @@ main_body:
   ret void
 }
 
+; GCN-LABEL: {{^}}smrd_sgpr_offset:
+; GCN: s_buffer_load_dword s{{[0-9]}}, s[0:3], s4
+define amdgpu_ps float @smrd_sgpr_offset(<4 x i32> inreg %desc, i32 inreg %offset) #0 {
+main_body:
+  %r = call float @llvm.SI.load.const.v4i32(<4 x i32> %desc, i32 %offset)
+  ret float %r
+}
+
+; GCN-LABEL: {{^}}smrd_vgpr_offset:
+; GCN: buffer_load_dword v{{[0-9]}}, v0, s[0:3], 0 offen ;
+define amdgpu_ps float @smrd_vgpr_offset(<4 x i32> inreg %desc, i32 %offset) #0 {
+main_body:
+  %r = call float @llvm.SI.load.const.v4i32(<4 x i32> %desc, i32 %offset)
+  ret float %r
+}
+
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
 declare float @llvm.SI.load.const.v4i32(<4 x i32>, i32) #1
 

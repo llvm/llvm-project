@@ -578,24 +578,25 @@ void raw_fd_ostream::write_impl(const char *Ptr, size_t Size) {
   assert(FD >= 0 && "File already closed.");
   pos += Size;
 
-#ifndef LLVM_ON_WIN32
+  // The maximum write size is limited to SSIZE_MAX because a write
+  // greater than SSIZE_MAX is implementation-defined in POSIX.
+  // Since SSIZE_MAX is not portable, we use SIZE_MAX >> 1 instead.
+  size_t MaxWriteSize = SIZE_MAX >> 1;
+
 #if defined(__linux__)
-  bool ShouldWriteInChunks = true;
-#else
-  bool ShouldWriteInChunks = false;
-#endif
-#else
+  // It is observed that Linux returns EINVAL for a very large write (>2G).
+  // Make it a reasonably small value.
+  MaxWriteSize = 1024 * 1024 * 1024;
+#elif defined(LLVM_ON_WIN32)
   // Writing a large size of output to Windows console returns ENOMEM. It seems
   // that, prior to Windows 8, WriteFile() is redirecting to WriteConsole(), and
   // the latter has a size limit (66000 bytes or less, depending on heap usage).
-  bool ShouldWriteInChunks = !!::_isatty(FD) && !RunningWindows8OrGreater();
+  if (::_isatty(FD) && !RunningWindows8OrGreater())
+    MaxWriteSize = 32767;
 #endif
 
   do {
-    size_t ChunkSize = Size;
-    if (ChunkSize > 32767 && ShouldWriteInChunks)
-        ChunkSize = 32767;
-
+    size_t ChunkSize = std::min(Size, MaxWriteSize);
     ssize_t ret = ::write(FD, Ptr, ChunkSize);
 
     if (ret < 0) {

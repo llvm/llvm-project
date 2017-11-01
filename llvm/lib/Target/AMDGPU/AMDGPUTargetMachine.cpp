@@ -324,7 +324,7 @@ static ImmutablePass *createAMDGPUExternalAAWrapperPass() {
 }
 
 /// Predicate for Internalize pass.
-bool mustPreserveGV(const GlobalValue &GV) {
+static bool mustPreserveGV(const GlobalValue &GV) {
   if (const Function *F = dyn_cast<Function>(&GV))
     return F->isDeclaration() || AMDGPU::isEntryFunctionCC(F->getCallingConv());
 

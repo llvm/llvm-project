@@ -12,13 +12,14 @@
 ; In this case, we want to reassociate the specified expr so that i+j can be
 ; hoisted out of the inner most loop.
 ;
-; RUN: opt < %s -reassociate -S | grep 115 | not grep 117
+; RUN: opt < %s -reassociate -S | FileCheck %s
 ; END.
 @.LC0 = internal global [4 x i8] c"%d\0A\00"		; <[4 x i8]*> [#uses=1]
 
 declare i32 @printf(i8*, ...)
 
-; FIXME: No longer works.
+; Check that (i+j) has been reassociated (i=reg115, j=reg116)
+; CHECK: %reg113 = add i32 %reg116, %reg115
 define void @test(i32 %Num, i32* %Array) {
 bb0:
 	%cond221 = icmp eq i32 0, %Num		; <i1> [#uses=3]

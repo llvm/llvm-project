@@ -2228,7 +2228,7 @@ class LoopVectorizationPlanner {
   /// The profitablity analysis.
   LoopVectorizationCostModel &CM;
 
-  SmallVector<VPlan *, 4> VPlans;
+  SmallVector<std::unique_ptr<VPlan>, 4> VPlans;
 
   unsigned BestVF = 0;
   unsigned BestUF = 0;
@@ -2239,14 +2239,6 @@ public:
                            LoopVectorizationLegality *Legal,
                            LoopVectorizationCostModel &CM)
       : OrigLoop(L), LI(LI), TLI(TLI), TTI(TTI), Legal(Legal), CM(CM) {}
-
-  ~LoopVectorizationPlanner() {
-    while (!VPlans.empty()) {
-      VPlan *Plan = VPlans.back();
-      VPlans.pop_back();
-      delete Plan;
-    }
-  }
 
   /// Plan how to best vectorize, return the best VF and its cost.
   LoopVectorizationCostModel::VectorizationFactor plan(bool OptForSize,
@@ -2260,7 +2252,7 @@ public:
   void executePlan(InnerLoopVectorizer &LB, DominatorTree *DT);
 
   void printPlans(raw_ostream &O) {
-    for (VPlan *Plan : VPlans)
+    for (const auto &Plan : VPlans)
       O << *Plan;
   }
 
@@ -2336,7 +2328,7 @@ private:
   /// Build a VPlan according to the information gathered by Legal. \return a
   /// VPlan for vectorization factors \p Range.Start and up to \p Range.End
   /// exclusive, possibly decreasing \p Range.End.
-  VPlan *buildVPlan(VFRange &Range);
+  std::unique_ptr<VPlan> buildVPlan(VFRange &Range);
 };
 
 } // end namespace llvm
@@ -7616,15 +7608,9 @@ void LoopVectorizationPlanner::setBestPlan(unsigned VF, unsigned UF) {
   BestVF = VF;
   BestUF = UF;
 
-  for (auto *VPlanIter = VPlans.begin(); VPlanIter != VPlans.end();) {
-    VPlan *Plan = *VPlanIter;
-    if (Plan->hasVF(VF))
-      ++VPlanIter;
-    else {
-      VPlanIter = VPlans.erase(VPlanIter);
-      delete Plan;
-    }
-  }
+  erase_if(VPlans, [VF](const std::unique_ptr<VPlan> &Plan) {
+    return !Plan->hasVF(VF);
+  });
   assert(VPlans.size() == 1 && "Best VF has not a single VPlan.");
 }
 
@@ -7647,8 +7633,7 @@ void LoopVectorizationPlanner::executePlan(InnerLoopVectorizer &ILV,
 
   // 2. Copy and widen instructions from the old loop into the new loop.
   assert(VPlans.size() == 1 && "Not a single VPlan to execute.");
-  VPlan *Plan = *VPlans.begin();
-  Plan->execute(&State);
+  VPlans.front()->execute(&State);
 
   // 3. Fix the vectorized code: take care of header phi's, live-outs,
   //    predication, updating analyses.
@@ -8009,8 +7994,7 @@ bool LoopVectorizationPlanner::getDecisionAndClampRange(
 void LoopVectorizationPlanner::buildVPlans(unsigned MinVF, unsigned MaxVF) {
   for (unsigned VF = MinVF; VF < MaxVF + 1;) {
     VFRange SubRange = {VF, MaxVF + 1};
-    VPlan *Plan = buildVPlan(SubRange);
-    VPlans.push_back(Plan);
+    VPlans.push_back(buildVPlan(SubRange));
     VF = SubRange.End;
   }
 }
@@ -8238,7 +8222,7 @@ LoopVectorizationPlanner::createReplicateRegion(Instruction *Instr,
   return Region;
 }
 
-VPlan *LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
+std::unique_ptr<VPlan> LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
   DenseMap<Instruction *, Instruction *> &SinkAfter = Legal->getSinkAfter();
   DenseMap<Instruction *, Instruction *> SinkAfterInverse;
 
@@ -8258,7 +8242,7 @@ VPlan *LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
 
   // Create a dummy pre-entry VPBasicBlock to start building the VPlan.
   VPBasicBlock *VPBB = new VPBasicBlock("Pre-Entry");
-  VPlan *Plan = new VPlan(VPBB);
+  auto Plan = llvm::make_unique<VPlan>(VPBB);
 
   // Scan the body of the loop in a topological order to visit each basic block
   // after having visited its predecessor basic blocks.
