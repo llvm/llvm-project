@@ -993,7 +993,7 @@ void ReductionCodeGen::emitInitialization(
       CGF.Builder.CreateElementBitCast(SharedLVal.getAddress(),
                                        CGF.ConvertTypeForMem(SharedType)),
       SharedType, SharedAddresses[N].first.getBaseInfo(),
-      CGF.CGM.getTBAAAccessInfo(SharedType));
+      CGF.CGM.getTBAAInfoForSubobject(SharedAddresses[N].first, SharedType));
   if (CGF.getContext().getAsArrayType(PrivateVD->getType())) {
     emitAggregateInitialization(CGF, N, PrivateAddr, SharedLVal, DRD);
   } else if (DRD && (DRD->getInitializer() || !PrivateVD->hasInit())) {
@@ -1046,7 +1046,7 @@ static LValue loadToBegin(CodeGenFunction &CGF, QualType BaseTy, QualType ElTy,
       CGF.Builder.CreateElementBitCast(BaseLV.getAddress(),
                                        CGF.ConvertTypeForMem(ElTy)),
       BaseLV.getType(), BaseLV.getBaseInfo(),
-      CGF.CGM.getTBAAAccessInfo(BaseLV.getType()));
+      CGF.CGM.getTBAAInfoForSubobject(BaseLV, BaseLV.getType()));
 }
 
 static Address castToBase(CodeGenFunction &CGF, QualType BaseTy, QualType ElTy,
@@ -4084,9 +4084,8 @@ static void emitPrivatesInit(CodeGenFunction &CGF,
         SharedRefLValue = CGF.MakeAddrLValue(
             Address(SharedRefLValue.getPointer(), C.getDeclAlign(OriginalVD)),
             SharedRefLValue.getType(),
-            LValueBaseInfo(AlignmentSource::Decl,
-                           SharedRefLValue.getBaseInfo().getMayAlias()),
-            CGF.CGM.getTBAAAccessInfo(SharedRefLValue.getType()));
+            LValueBaseInfo(AlignmentSource::Decl),
+            SharedRefLValue.getTBAAInfo());
         QualType Type = OriginalVD->getType();
         if (Type->isArrayType()) {
           // Initialize firstprivate array.

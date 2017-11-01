@@ -68,7 +68,8 @@ AnalysisDeclContextManager::AnalysisDeclContextManager(
     bool addInitializers, bool addTemporaryDtors, bool addLifetime,
     bool addLoopExit, bool synthesizeBodies, bool addStaticInitBranch,
     bool addCXXNewAllocator, CodeInjector *injector)
-    : ASTCtx(ASTCtx), Injector(injector), SynthesizeBodies(synthesizeBodies) {
+    : Injector(injector), FunctionBodyFarm(ASTCtx, injector),
+      SynthesizeBodies(synthesizeBodies) {
   cfgBuildOptions.PruneTriviallyFalseEdges = !useUnoptimizedCFG;
   cfgBuildOptions.AddImplicitDtors = addImplicitDtors;
   cfgBuildOptions.AddInitializers = addInitializers;
@@ -88,7 +89,7 @@ Stmt *AnalysisDeclContext::getBody(bool &IsAutosynthesized) const {
     if (auto *CoroBody = dyn_cast_or_null<CoroutineBodyStmt>(Body))
       Body = CoroBody->getBody();
     if (Manager && Manager->synthesizeBodies()) {
-      Stmt *SynthesizedBody = Manager->getBodyFarm()->getBody(FD);
+      Stmt *SynthesizedBody = Manager->getBodyFarm().getBody(FD);
       if (SynthesizedBody) {
         Body = SynthesizedBody;
         IsAutosynthesized = true;
@@ -99,7 +100,7 @@ Stmt *AnalysisDeclContext::getBody(bool &IsAutosynthesized) const {
   else if (const ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(D)) {
     Stmt *Body = MD->getBody();
     if (Manager && Manager->synthesizeBodies()) {
-      Stmt *SynthesizedBody = Manager->getBodyFarm()->getBody(MD);
+      Stmt *SynthesizedBody = Manager->getBodyFarm().getBody(MD);
       if (SynthesizedBody) {
         Body = SynthesizedBody;
         IsAutosynthesized = true;
@@ -304,11 +305,7 @@ AnalysisDeclContext *AnalysisDeclContextManager::getContext(const Decl *D) {
   return AC.get();
 }
 
-BodyFarm *AnalysisDeclContextManager::getBodyFarm() {
-  if (!FunctionBodyFarm)
-    FunctionBodyFarm = llvm::make_unique<BodyFarm>(ASTCtx, Injector.get());
-  return FunctionBodyFarm.get();
-}
+BodyFarm &AnalysisDeclContextManager::getBodyFarm() { return FunctionBodyFarm; }
 
 const StackFrameContext *
 AnalysisDeclContext::getStackFrame(LocationContext const *Parent, const Stmt *S,

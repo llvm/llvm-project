@@ -32,11 +32,22 @@ namespace clang {
 namespace CodeGen {
 class CGRecordLayout;
 
+// TBAAAccessKind - A kind of TBAA memory access descriptor.
+enum class TBAAAccessKind : unsigned {
+  Ordinary,
+  MayAlias,
+};
+
 // TBAAAccessInfo - Describes a memory access in terms of TBAA.
 struct TBAAAccessInfo {
+  TBAAAccessInfo(TBAAAccessKind Kind, llvm::MDNode *BaseType,
+                 llvm::MDNode *AccessType, uint64_t Offset)
+    : Kind(Kind), BaseType(BaseType), AccessType(AccessType), Offset(Offset)
+  {}
+
   TBAAAccessInfo(llvm::MDNode *BaseType, llvm::MDNode *AccessType,
                  uint64_t Offset)
-    : BaseType(BaseType), AccessType(AccessType), Offset(Offset)
+    : TBAAAccessInfo(TBAAAccessKind::Ordinary, BaseType, AccessType, Offset)
   {}
 
   explicit TBAAAccessInfo(llvm::MDNode *AccessType)
@@ -47,11 +58,30 @@ struct TBAAAccessInfo {
     : TBAAAccessInfo(/* AccessType= */ nullptr)
   {}
 
+  static TBAAAccessInfo getMayAliasInfo() {
+    return TBAAAccessInfo(TBAAAccessKind::MayAlias, /* BaseType= */ nullptr,
+                          /* AccessType= */ nullptr, /* Offset= */ 0);
+  }
+
+  bool isMayAlias() const { return Kind == TBAAAccessKind::MayAlias; }
+
   bool operator==(const TBAAAccessInfo &Other) const {
-    return BaseType == Other.BaseType &&
+    return Kind == Other.Kind &&
+           BaseType == Other.BaseType &&
            AccessType == Other.AccessType &&
            Offset == Other.Offset;
   }
+
+  bool operator!=(const TBAAAccessInfo &Other) const {
+    return !(*this == Other);
+  }
+
+  explicit operator bool() const {
+    return *this != TBAAAccessInfo();
+  }
+
+  /// Kind - The kind of the access descriptor.
+  TBAAAccessKind Kind;
 
   /// BaseType - The base/leading access type. May be null if this access
   /// descriptor represents an access that is not considered to be an access
@@ -139,14 +169,15 @@ public:
   /// getAccessTagInfo - Get TBAA tag for a given memory access.
   llvm::MDNode *getAccessTagInfo(TBAAAccessInfo Info);
 
-  /// getMayAliasAccessInfo - Get TBAA information that represents may-alias
-  /// accesses.
-  TBAAAccessInfo getMayAliasAccessInfo();
-
   /// mergeTBAAInfoForCast - Get merged TBAA information for the purpose of
   /// type casts.
   TBAAAccessInfo mergeTBAAInfoForCast(TBAAAccessInfo SourceInfo,
                                       TBAAAccessInfo TargetInfo);
+
+  /// mergeTBAAInfoForConditionalOperator - Get merged TBAA information for the
+  /// purpose of conditional operator.
+  TBAAAccessInfo mergeTBAAInfoForConditionalOperator(TBAAAccessInfo InfoA,
+                                                     TBAAAccessInfo InfoB);
 };
 
 }  // end namespace CodeGen
@@ -156,30 +187,34 @@ namespace llvm {
 
 template<> struct DenseMapInfo<clang::CodeGen::TBAAAccessInfo> {
   static clang::CodeGen::TBAAAccessInfo getEmptyKey() {
+    unsigned UnsignedKey = DenseMapInfo<unsigned>::getEmptyKey();
     return clang::CodeGen::TBAAAccessInfo(
+      static_cast<clang::CodeGen::TBAAAccessKind>(UnsignedKey),
       DenseMapInfo<MDNode *>::getEmptyKey(),
       DenseMapInfo<MDNode *>::getEmptyKey(),
       DenseMapInfo<uint64_t>::getEmptyKey());
   }
 
   static clang::CodeGen::TBAAAccessInfo getTombstoneKey() {
+    unsigned UnsignedKey = DenseMapInfo<unsigned>::getTombstoneKey();
     return clang::CodeGen::TBAAAccessInfo(
+      static_cast<clang::CodeGen::TBAAAccessKind>(UnsignedKey),
       DenseMapInfo<MDNode *>::getTombstoneKey(),
       DenseMapInfo<MDNode *>::getTombstoneKey(),
       DenseMapInfo<uint64_t>::getTombstoneKey());
   }
 
   static unsigned getHashValue(const clang::CodeGen::TBAAAccessInfo &Val) {
-    return DenseMapInfo<MDNode *>::getHashValue(Val.BaseType) ^
+    auto KindValue = static_cast<unsigned>(Val.Kind);
+    return DenseMapInfo<unsigned>::getHashValue(KindValue) ^
+           DenseMapInfo<MDNode *>::getHashValue(Val.BaseType) ^
            DenseMapInfo<MDNode *>::getHashValue(Val.AccessType) ^
            DenseMapInfo<uint64_t>::getHashValue(Val.Offset);
   }
 
   static bool isEqual(const clang::CodeGen::TBAAAccessInfo &LHS,
                       const clang::CodeGen::TBAAAccessInfo &RHS) {
-    return LHS.BaseType == RHS.BaseType &&
-           LHS.AccessType == RHS.AccessType &&
-           LHS.Offset == RHS.Offset;
+    return LHS == RHS;
   }
 };
 
