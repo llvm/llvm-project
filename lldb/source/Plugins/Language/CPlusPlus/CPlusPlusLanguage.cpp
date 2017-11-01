@@ -473,6 +473,10 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       "libc++ std::initializer_list synthetic children",
       ConstString("^std::initializer_list<.+>(( )?&)?$"), stl_synth_flags,
       true);
+  AddCXXSynthetic(cpp_category_sp, LibcxxQueueFrontEndCreator,
+                  "libc++ std::queue synthetic children",
+                  ConstString("^std::__(ndk)?1::queue<.+>(( )?&)?$"),
+                  stl_synth_flags, true);
   AddCXXSynthetic(cpp_category_sp, LibcxxTupleFrontEndCreator,
                   "libc++ std::tuple synthetic children",
                   ConstString("^std::__(ndk)?1::tuple<.*>(( )?&)?$"), stl_synth_flags,
@@ -529,6 +533,11 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 lldb_private::formatters::LibcxxContainerSummaryProvider,
                 "libc++ std::deque summary provider",
                 ConstString("^std::__(ndk)?1::deque<.+>(( )?&)?$"),
+                stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibcxxContainerSummaryProvider,
+                "libc++ std::queue summary provider",
+                ConstString("^std::__(ndk)?1::queue<.+>(( )?&)?$"),
                 stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::LibcxxContainerSummaryProvider,
