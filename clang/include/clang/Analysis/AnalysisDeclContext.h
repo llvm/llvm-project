@@ -410,7 +410,6 @@ class AnalysisDeclContextManager {
   typedef llvm::DenseMap<const Decl *, std::unique_ptr<AnalysisDeclContext>>
       ContextMap;
 
-  ASTContext &ASTCtx;
   ContextMap Contexts;
   LocationContextManager LocContexts;
   CFG::BuildOptions cfgBuildOptions;

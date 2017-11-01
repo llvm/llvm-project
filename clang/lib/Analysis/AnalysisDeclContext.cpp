@@ -68,7 +68,7 @@ AnalysisDeclContextManager::AnalysisDeclContextManager(
     bool addInitializers, bool addTemporaryDtors, bool addLifetime,
     bool addLoopExit, bool synthesizeBodies, bool addStaticInitBranch,
     bool addCXXNewAllocator, CodeInjector *injector)
-    : ASTCtx(ASTCtx), Injector(injector), FunctionBodyFarm(ASTCtx, injector),
+    : Injector(injector), FunctionBodyFarm(ASTCtx, injector),
       SynthesizeBodies(synthesizeBodies) {
   cfgBuildOptions.PruneTriviallyFalseEdges = !useUnoptimizedCFG;
   cfgBuildOptions.AddImplicitDtors = addImplicitDtors;
