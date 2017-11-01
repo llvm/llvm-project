@@ -33,17 +33,17 @@ enum SymbolPreference {
 /// Checks if an existing symbol S should be kept or replaced by a new symbol.
 /// Returns SP_EXISTING when S should be kept, SP_NEW when the new symbol
 /// should be kept, and SP_CONFLICT if no valid resolution exists.
-static SymbolPreference compareDefined(Symbol *S, bool WasInserted,
+static SymbolPreference compareDefined(SymbolBody *S, bool WasInserted,
                                        bool NewIsCOMDAT) {
   // If the symbol wasn't previously known, the new symbol wins by default.
-  if (WasInserted || !isa<Defined>(S->body()))
+  if (WasInserted || !isa<Defined>(S))
     return SP_NEW;
 
   // If the existing symbol is a DefinedRegular, both it and the new symbol
   // must be comdats. In that case, we have no reason to prefer one symbol
   // over the other, and we keep the existing one. If one of the symbols
   // is not a comdat, we report a conflict.
-  if (auto *R = dyn_cast<DefinedRegular>(S->body())) {
+  if (auto *R = dyn_cast<DefinedRegular>(S)) {
     if (NewIsCOMDAT && R->isCOMDAT())
       return SP_EXISTING;
     else
@@ -95,8 +95,8 @@ void SymbolTable::reportRemainingUndefines() {
   SmallPtrSet<SymbolBody *, 8> Undefs;
 
   for (auto &I : Symtab) {
-    Symbol *Sym = I.second;
-    auto *Undef = dyn_cast<Undefined>(Sym->body());
+    SymbolBody *Sym = I.second;
+    auto *Undef = dyn_cast<Undefined>(Sym);
     if (!Undef)
       continue;
     if (!Sym->IsUsedInRegularObj)
@@ -106,32 +106,28 @@ void SymbolTable::reportRemainingUndefines() {
 
     // A weak alias may have been resolved, so check for that.
     if (Defined *D = Undef->getWeakAlias()) {
-      // We resolve weak aliases by replacing the alias's SymbolBody with the
-      // target's SymbolBody. This causes all SymbolBody pointers referring to
-      // the old symbol to instead refer to the new symbol. However, we can't
-      // just blindly copy sizeof(Symbol::Body) bytes from D to Sym->Body
-      // because D may be an internal symbol, and internal symbols are stored as
-      // "unparented" SymbolBodies. For that reason we need to check which type
-      // of symbol we are dealing with and copy the correct number of bytes.
+      // We want to replace Sym with D. However, we can't just blindly
+      // copy sizeof(SymbolUnion) bytes from D to Sym because D may be an
+      // internal symbol, and internal symbols are stored as "unparented"
+      // Symbols. For that reason we need to check which type of symbol we
+      // are dealing with and copy the correct number of bytes.
       if (isa<DefinedRegular>(D))
-        memcpy(Sym->Body.buffer, D, sizeof(DefinedRegular));
+        memcpy(Sym, D, sizeof(DefinedRegular));
       else if (isa<DefinedAbsolute>(D))
-        memcpy(Sym->Body.buffer, D, sizeof(DefinedAbsolute));
+        memcpy(Sym, D, sizeof(DefinedAbsolute));
       else
-        // No other internal symbols are possible.
-        Sym->Body = D->symbol()->Body;
+        memcpy(Sym, D, sizeof(SymbolUnion));
       continue;
     }
 
     // If we can resolve a symbol by removing __imp_ prefix, do that.
     // This odd rule is for compatibility with MSVC linker.
     if (Name.startswith("__imp_")) {
-      Symbol *Imp = find(Name.substr(strlen("__imp_")));
-      if (Imp && isa<Defined>(Imp->body())) {
-        auto *D = cast<Defined>(Imp->body());
+      SymbolBody *Imp = find(Name.substr(strlen("__imp_")));
+      if (Imp && isa<Defined>(Imp)) {
+        auto *D = cast<Defined>(Imp);
         replaceBody<DefinedLocalImport>(Sym, Name, D);
-        LocalImportChunks.push_back(
-            cast<DefinedLocalImport>(Sym->body())->getChunk());
+        LocalImportChunks.push_back(cast<DefinedLocalImport>(Sym)->getChunk());
         continue;
       }
     }
@@ -140,7 +136,7 @@ void SymbolTable::reportRemainingUndefines() {
     // They are replaced with dummy defined symbols.
     if (Config->Force)
       replaceBody<DefinedAbsolute>(Sym, Name, 0);
-    Undefs.insert(Sym->body());
+    Undefs.insert(Sym);
   }
 
   if (Undefs.empty())
@@ -156,28 +152,28 @@ void SymbolTable::reportRemainingUndefines() {
         errorOrWarn(toString(File) + ": undefined symbol: " + Sym->getName());
 }
 
-std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name) {
-  Symbol *&Sym = Symtab[CachedHashStringRef(Name)];
+std::pair<SymbolBody *, bool> SymbolTable::insert(StringRef Name) {
+  SymbolBody *&Sym = Symtab[CachedHashStringRef(Name)];
   if (Sym)
     return {Sym, false};
-  Sym = make<Symbol>();
+  Sym = (SymbolBody *)make<SymbolUnion>();
   Sym->IsUsedInRegularObj = false;
   Sym->PendingArchiveLoad = false;
   return {Sym, true};
 }
 
-Symbol *SymbolTable::addUndefined(StringRef Name, InputFile *F,
-                                  bool IsWeakAlias) {
-  Symbol *S;
+SymbolBody *SymbolTable::addUndefined(StringRef Name, InputFile *F,
+                                      bool IsWeakAlias) {
+  SymbolBody *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name);
   if (!F || !isa<BitcodeFile>(F))
     S->IsUsedInRegularObj = true;
-  if (WasInserted || (isa<Lazy>(S->body()) && IsWeakAlias)) {
+  if (WasInserted || (isa<Lazy>(S) && IsWeakAlias)) {
     replaceBody<Undefined>(S, Name);
     return S;
   }
-  if (auto *L = dyn_cast<Lazy>(S->body())) {
+  if (auto *L = dyn_cast<Lazy>(S)) {
     if (!S->PendingArchiveLoad) {
       S->PendingArchiveLoad = true;
       L->File->addMember(&L->Sym);
@@ -188,66 +184,66 @@ Symbol *SymbolTable::addUndefined(StringRef Name, InputFile *F,
 
 void SymbolTable::addLazy(ArchiveFile *F, const Archive::Symbol Sym) {
   StringRef Name = Sym.getName();
-  Symbol *S;
+  SymbolBody *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name);
   if (WasInserted) {
     replaceBody<Lazy>(S, F, Sym);
     return;
   }
-  auto *U = dyn_cast<Undefined>(S->body());
+  auto *U = dyn_cast<Undefined>(S);
   if (!U || U->WeakAlias || S->PendingArchiveLoad)
     return;
   S->PendingArchiveLoad = true;
   F->addMember(&Sym);
 }
 
-void SymbolTable::reportDuplicate(Symbol *Existing, InputFile *NewFile) {
-  error("duplicate symbol: " + toString(*Existing->body()) + " in " +
-        toString(Existing->body()->getFile()) + " and in " +
+void SymbolTable::reportDuplicate(SymbolBody *Existing, InputFile *NewFile) {
+  error("duplicate symbol: " + toString(*Existing) + " in " +
+        toString(Existing->getFile()) + " and in " +
         (NewFile ? toString(NewFile) : "(internal)"));
 }
 
-Symbol *SymbolTable::addAbsolute(StringRef N, COFFSymbolRef Sym) {
-  Symbol *S;
+SymbolBody *SymbolTable::addAbsolute(StringRef N, COFFSymbolRef Sym) {
+  SymbolBody *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(N);
   S->IsUsedInRegularObj = true;
-  if (WasInserted || isa<Undefined>(S->body()) || isa<Lazy>(S->body()))
+  if (WasInserted || isa<Undefined>(S) || isa<Lazy>(S))
     replaceBody<DefinedAbsolute>(S, N, Sym);
-  else if (!isa<DefinedCOFF>(S->body()))
+  else if (!isa<DefinedCOFF>(S))
     reportDuplicate(S, nullptr);
   return S;
 }
 
-Symbol *SymbolTable::addAbsolute(StringRef N, uint64_t VA) {
-  Symbol *S;
+SymbolBody *SymbolTable::addAbsolute(StringRef N, uint64_t VA) {
+  SymbolBody *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(N);
   S->IsUsedInRegularObj = true;
-  if (WasInserted || isa<Undefined>(S->body()) || isa<Lazy>(S->body()))
+  if (WasInserted || isa<Undefined>(S) || isa<Lazy>(S))
     replaceBody<DefinedAbsolute>(S, N, VA);
-  else if (!isa<DefinedCOFF>(S->body()))
+  else if (!isa<DefinedCOFF>(S))
     reportDuplicate(S, nullptr);
   return S;
 }
 
-Symbol *SymbolTable::addSynthetic(StringRef N, Chunk *C) {
-  Symbol *S;
+SymbolBody *SymbolTable::addSynthetic(StringRef N, Chunk *C) {
+  SymbolBody *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(N);
   S->IsUsedInRegularObj = true;
-  if (WasInserted || isa<Undefined>(S->body()) || isa<Lazy>(S->body()))
+  if (WasInserted || isa<Undefined>(S) || isa<Lazy>(S))
     replaceBody<DefinedSynthetic>(S, N, C);
-  else if (!isa<DefinedCOFF>(S->body()))
+  else if (!isa<DefinedCOFF>(S))
     reportDuplicate(S, nullptr);
   return S;
 }
 
-Symbol *SymbolTable::addRegular(InputFile *F, StringRef N, bool IsCOMDAT,
-                                const coff_symbol_generic *Sym,
-                                SectionChunk *C) {
-  Symbol *S;
+SymbolBody *SymbolTable::addRegular(InputFile *F, StringRef N, bool IsCOMDAT,
+                                    const coff_symbol_generic *Sym,
+                                    SectionChunk *C) {
+  SymbolBody *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(N);
   if (!isa<BitcodeFile>(F))
@@ -267,29 +263,30 @@ Symbol *SymbolTable::addRegular(InputFile *F, StringRef N, bool IsCOMDAT,
   return S;
 }
 
-Symbol *SymbolTable::addCommon(InputFile *F, StringRef N, uint64_t Size,
-                               const coff_symbol_generic *Sym, CommonChunk *C) {
-  Symbol *S;
+SymbolBody *SymbolTable::addCommon(InputFile *F, StringRef N, uint64_t Size,
+                                   const coff_symbol_generic *Sym,
+                                   CommonChunk *C) {
+  SymbolBody *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(N);
   if (!isa<BitcodeFile>(F))
     S->IsUsedInRegularObj = true;
-  if (WasInserted || !isa<DefinedCOFF>(S->body()))
+  if (WasInserted || !isa<DefinedCOFF>(S))
     replaceBody<DefinedCommon>(S, F, N, Size, Sym, C);
-  else if (auto *DC = dyn_cast<DefinedCommon>(S->body()))
+  else if (auto *DC = dyn_cast<DefinedCommon>(S))
     if (Size > DC->getSize())
       replaceBody<DefinedCommon>(S, F, N, Size, Sym, C);
   return S;
 }
 
 DefinedImportData *SymbolTable::addImportData(StringRef N, ImportFile *F) {
-  Symbol *S;
+  SymbolBody *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(N);
   S->IsUsedInRegularObj = true;
-  if (WasInserted || isa<Undefined>(S->body()) || isa<Lazy>(S->body())) {
+  if (WasInserted || isa<Undefined>(S) || isa<Lazy>(S)) {
     replaceBody<DefinedImportData>(S, N, F);
-    return cast<DefinedImportData>(S->body());
+    return cast<DefinedImportData>(S);
   }
 
   reportDuplicate(S, F);
@@ -299,13 +296,13 @@ DefinedImportData *SymbolTable::addImportData(StringRef N, ImportFile *F) {
 DefinedImportThunk *SymbolTable::addImportThunk(StringRef Name,
                                                DefinedImportData *ID,
                                                uint16_t Machine) {
-  Symbol *S;
+  SymbolBody *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name);
   S->IsUsedInRegularObj = true;
-  if (WasInserted || isa<Undefined>(S->body()) || isa<Lazy>(S->body())) {
+  if (WasInserted || isa<Undefined>(S) || isa<Lazy>(S)) {
     replaceBody<DefinedImportThunk>(S, Name, ID, Machine);
-    return cast<DefinedImportThunk>(S->body());
+    return cast<DefinedImportThunk>(S);
   }
 
   reportDuplicate(S, ID->File);
@@ -321,14 +318,14 @@ std::vector<Chunk *> SymbolTable::getChunks() {
   return Res;
 }
 
-Symbol *SymbolTable::find(StringRef Name) {
+SymbolBody *SymbolTable::find(StringRef Name) {
   auto It = Symtab.find(CachedHashStringRef(Name));
   if (It == Symtab.end())
     return nullptr;
   return It->second;
 }
 
-Symbol *SymbolTable::findUnderscore(StringRef Name) {
+SymbolBody *SymbolTable::findUnderscore(StringRef Name) {
   if (Config->Machine == I386)
     return find(("_" + Name).str());
   return find(Name);
@@ -344,8 +341,8 @@ StringRef SymbolTable::findByPrefix(StringRef Prefix) {
 }
 
 StringRef SymbolTable::findMangle(StringRef Name) {
-  if (Symbol *Sym = find(Name))
-    if (!isa<Undefined>(Sym->body()))
+  if (SymbolBody *Sym = find(Name))
+    if (!isa<Undefined>(Sym))
       return Name;
   if (Config->Machine != I386)
     return findByPrefix(("?" + Name + "@@Y").str());
@@ -379,7 +376,7 @@ void SymbolTable::mangleMaybe(SymbolBody *B) {
 }
 
 SymbolBody *SymbolTable::addUndefined(StringRef Name) {
-  return addUndefined(Name, nullptr, false)->body();
+  return addUndefined(Name, nullptr, false);
 }
 
 std::vector<StringRef> SymbolTable::compileBitcodeFiles() {

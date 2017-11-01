@@ -668,14 +668,15 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->NoinhibitExec = Args.hasArg(OPT_noinhibit_exec);
   Config->Nostdlib = Args.hasArg(OPT_nostdlib);
   Config->OFormatBinary = isOutputFormatBinary(Args);
-  Config->Omagic = Args.hasArg(OPT_omagic);
+  Config->Omagic = Args.hasFlag(OPT_omagic, OPT_no_omagic, false);
   Config->OptRemarksFilename = Args.getLastArgValue(OPT_opt_remarks_filename);
   Config->OptRemarksWithHotness = Args.hasArg(OPT_opt_remarks_with_hotness);
   Config->Optimize = getInteger(Args, OPT_O, 1);
   Config->OrphanHandling = getOrphanHandling(Args);
   Config->OutputFile = Args.getLastArgValue(OPT_o);
   Config->Pie = Args.hasFlag(OPT_pie, OPT_nopie, false);
-  Config->PrintGcSections = Args.hasArg(OPT_print_gc_sections);
+  Config->PrintGcSections =
+      Args.hasFlag(OPT_print_gc_sections, OPT_no_print_gc_sections, false);
   Config->Rpath = getRpath(Args);
   Config->Relocatable = Args.hasArg(OPT_relocatable);
   Config->SaveTemps = Args.hasArg(OPT_save_temps);
@@ -978,21 +979,31 @@ static DenseSet<StringRef> getExcludeLibs(opt::InputArgList &Args) {
   return Ret;
 }
 
+static Optional<StringRef> getArchiveName(InputFile *File) {
+  if (isa<ArchiveFile>(File))
+    return File->getName();
+  if (!File->ArchiveName.empty())
+    return File->ArchiveName;
+  return None;
+}
+
 // Handles the -exclude-libs option. If a static library file is specified
 // by the -exclude-libs option, all public symbols from the archive become
 // private unless otherwise specified by version scripts or something.
 // A special library name "ALL" means all archive files.
 //
 // This is not a popular option, but some programs such as bionic libc use it.
+template <class ELFT>
 static void excludeLibs(opt::InputArgList &Args, ArrayRef<InputFile *> Files) {
   DenseSet<StringRef> Libs = getExcludeLibs(Args);
   bool All = Libs.count("ALL");
 
   for (InputFile *File : Files)
-    if (auto *F = dyn_cast<ArchiveFile>(File))
-      if (All || Libs.count(path::filename(F->getName())))
-        for (SymbolBody *Sym : F->getSymbols())
-          Sym->symbol()->VersionId = VER_NDX_LOCAL;
+    if (Optional<StringRef> Archive = getArchiveName(File))
+      if (All || Libs.count(path::filename(*Archive)))
+        for (SymbolBody *Sym : File->getSymbols())
+          if (!Sym->isLocal())
+            Sym->VersionId = VER_NDX_LOCAL;
 }
 
 // Do actual linking. Note that when this function is called,
@@ -1075,7 +1086,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   // Handle the -exclude-libs option.
   if (Args.hasArg(OPT_exclude_libs))
-    excludeLibs(Args, Files);
+    excludeLibs<ELFT>(Args, Files);
 
   // Apply version scripts.
   Symtab->scanVersionScript();

@@ -154,11 +154,11 @@ StringRef CodeViewDebug::getFullFilepath(const DIFile *File) {
 }
 
 unsigned CodeViewDebug::maybeRecordFile(const DIFile *F) {
+  StringRef FullPath = getFullFilepath(F);
   unsigned NextId = FileIdMap.size() + 1;
-  auto Insertion = FileIdMap.insert(std::make_pair(F, NextId));
+  auto Insertion = FileIdMap.insert(std::make_pair(FullPath, NextId));
   if (Insertion.second) {
     // We have to compute the full filepath and emit a .cv_file directive.
-    StringRef FullPath = getFullFilepath(F);
     std::string Checksum = fromHex(F->getChecksum());
     void *CKMem = OS.getContext().allocate(Checksum.size(), 1);
     memcpy(CKMem, Checksum.data(), Checksum.size());

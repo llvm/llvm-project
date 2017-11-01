@@ -239,7 +239,6 @@ def SMRDImm32       : ComplexPattern<i64, 2, "SelectSMRDImm32">;
 def SMRDSgpr        : ComplexPattern<i64, 2, "SelectSMRDSgpr">;
 def SMRDBufferImm   : ComplexPattern<i32, 1, "SelectSMRDBufferImm">;
 def SMRDBufferImm32 : ComplexPattern<i32, 1, "SelectSMRDBufferImm32">;
-def SMRDBufferSgpr  : ComplexPattern<i32, 1, "SelectSMRDBufferSgpr">;
 
 multiclass SMRD_Pattern <string Instr, ValueType vt> {
 
@@ -282,7 +281,7 @@ def SM_LOAD_PATTERN : GCNPat <  // name this pattern to reuse AddedComplexity on
 
 // 2. Offset loaded in an 32bit SGPR
 def : GCNPat <
-  (SIload_constant v4i32:$sbase, (SMRDBufferSgpr i32:$offset)),
+  (SIload_constant v4i32:$sbase, i32:$offset),
   (S_BUFFER_LOAD_DWORD_SGPR $sbase, $offset, 0)
 >;
 

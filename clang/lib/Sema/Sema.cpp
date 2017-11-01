@@ -737,7 +737,8 @@ static bool MethodsAndNestedClassesComplete(const CXXRecordDecl *RD,
                                   E = RD->decls_end();
        I != E && Complete; ++I) {
     if (const CXXMethodDecl *M = dyn_cast<CXXMethodDecl>(*I))
-      Complete = M->isDefined() || (M->isPure() && !isa<CXXDestructorDecl>(M));
+      Complete = M->isDefined() || M->isDefaulted() ||
+                 (M->isPure() && !isa<CXXDestructorDecl>(M));
     else if (const FunctionTemplateDecl *F = dyn_cast<FunctionTemplateDecl>(*I))
       // If the template function is marked as late template parsed at this
       // point, it has not been instantiated and therefore we have not

@@ -1764,9 +1764,14 @@ void AddressSanitizerModule::SetComdatForGlobalMetadata(
       C = M.getOrInsertComdat(G->getName());
     }
 
-    // Make this IMAGE_COMDAT_SELECT_NODUPLICATES on COFF.
-    if (TargetTriple.isOSBinFormatCOFF())
+    // Make this IMAGE_COMDAT_SELECT_NODUPLICATES on COFF. Also upgrade private
+    // linkage to internal linkage so that a symbol table entry is emitted. This
+    // is necessary in order to create the comdat group.
+    if (TargetTriple.isOSBinFormatCOFF()) {
       C->setSelectionKind(Comdat::NoDuplicates);
+      if (G->hasPrivateLinkage())
+        G->setLinkage(GlobalValue::InternalLinkage);
+    }
     G->setComdat(C);
   }
 

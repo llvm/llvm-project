@@ -518,5 +518,14 @@ TEST_F(OptionalTest, OperatorGreaterEqual) {
   CheckRelation<GreaterEqual>(InequalityLhs, InequalityRhs, !IsLess);
 }
 
+#if (__has_feature(is_trivially_copyable) && defined(_LIBCPP_VERSION)) ||      \
+    (defined(__GNUC__) && __GNUC__ >= 5)
+static_assert(std::is_trivially_copyable<Optional<int>>::value,
+              "Should be trivially copyable");
+static_assert(
+    !std::is_trivially_copyable<Optional<NonDefaultConstructible>>::value,
+    "Shouldn't be trivially copyable");
+#endif
+
 } // end anonymous namespace
 

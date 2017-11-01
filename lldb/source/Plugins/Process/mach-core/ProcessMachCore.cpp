@@ -468,7 +468,7 @@ Status ProcessMachCore::DoLoadCore() {
   // it to match the core file which is always single arch.
   ArchSpec arch(m_core_module_sp->GetArchitecture());
   if (arch.GetCore() == ArchSpec::eCore_x86_32_i486) {
-    arch.SetTriple("i386", GetTarget().GetPlatform().get());
+    arch = Platform::GetAugmentedArchSpec(GetTarget().GetPlatform().get(), "i386");
   }
   if (arch.IsValid())
     GetTarget().SetArchitecture(arch);

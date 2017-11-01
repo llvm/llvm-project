@@ -6,29 +6,28 @@
 // CHECK-NO-LABEL: define void @test_sqrt
 // CHECK-FAST-LABEL: define void @test_sqrt
 void test_sqrt(float a0, double a1, long double a2) {
-  // Following llvm-gcc's lead, we never emit these as intrinsics;
-  // no-math-errno isn't good enough.  We could probably use intrinsics
-  // with appropriate guards if it proves worthwhile.
-
   // CHECK-YES: call float @sqrtf
-  // CHECK-NO: call float @sqrtf
+  // CHECK-NO: call float @llvm.sqrt.f32(float
+  // CHECK-FAST: call float @llvm.sqrt.f32(float
   float l0 = sqrtf(a0);
 
   // CHECK-YES: call double @sqrt
-  // CHECK-NO: call double @sqrt
+  // CHECK-NO: call double @llvm.sqrt.f64(double
+  // CHECK-FAST: call double @llvm.sqrt.f64(double
   double l1 = sqrt(a1);
 
   // CHECK-YES: call x86_fp80 @sqrtl
-  // CHECK-NO: call x86_fp80 @sqrtl
+  // CHECK-NO: call x86_fp80 @llvm.sqrt.f80(x86_fp80
+  // CHECK-FAST: call x86_fp80 @llvm.sqrt.f80(x86_fp80
   long double l2 = sqrtl(a2);
 }
 
 // CHECK-YES: declare float @sqrtf(float)
 // CHECK-YES: declare double @sqrt(double)
 // CHECK-YES: declare x86_fp80 @sqrtl(x86_fp80)
-// CHECK-NO: declare float @sqrtf(float) [[NUW_RN:#[0-9]+]]
-// CHECK-NO: declare double @sqrt(double) [[NUW_RN]]
-// CHECK-NO: declare x86_fp80 @sqrtl(x86_fp80) [[NUW_RN]]
+// CHECK-NO: declare float @llvm.sqrt.f32(float)
+// CHECK-NO: declare double @llvm.sqrt.f64(double)
+// CHECK-NO: declare x86_fp80 @llvm.sqrt.f80(x86_fp80)
 // CHECK-FAST: declare float @llvm.sqrt.f32(float)
 // CHECK-FAST: declare double @llvm.sqrt.f64(double)
 // CHECK-FAST: declare x86_fp80 @llvm.sqrt.f80(x86_fp80)
@@ -86,7 +85,7 @@ void test_builtins(double d, float f, long double ld) {
   double atan_ = atan(d);
   long double atanl_ = atanl(ld);
   float atanf_ = atanf(f);
-// CHECK-NO: declare double @atan(double) [[NUW_RN]]
+// CHECK-NO: declare double @atan(double) [[NUW_RN:#[0-9]+]]
 // CHECK-NO: declare x86_fp80 @atanl(x86_fp80) [[NUW_RN]]
 // CHECK-NO: declare float @atanf(float) [[NUW_RN]]
 // CHECK-YES-NOT: declare double @atan(double) [[NUW_RN]]
@@ -126,5 +125,5 @@ void test_builtins(double d, float f, long double ld) {
 
 // CHECK-YES: attributes [[NUW_RN]] = { nounwind readnone speculatable }
 
-// CHECK-NO: attributes [[NUW_RN]] = { nounwind readnone{{.*}} }
-// CHECK-NO: attributes [[NUW_RNI]] = { nounwind readnone speculatable }
+// CHECK-NO-DAG: attributes [[NUW_RN]] = { nounwind readnone{{.*}} }
+// CHECK-NO-DAG: attributes [[NUW_RNI]] = { nounwind readnone speculatable }

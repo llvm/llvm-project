@@ -520,6 +520,13 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     // Without PIE, external function address may resolve to a PLT record, which
     // can not be verified by the target module.
     NeedPIE |= CfiCrossDso;
+    CfiICallGeneralizePointers =
+        Args.hasArg(options::OPT_fsanitize_cfi_icall_generalize_pointers);
+
+    if (CfiCrossDso && CfiICallGeneralizePointers)
+      D.Diag(diag::err_drv_argument_not_allowed_with)
+          << "-fsanitize-cfi-cross-dso"
+          << "-fsanitize-cfi-icall-generalize-pointers";
   }
 
   Stats = Args.hasFlag(options::OPT_fsanitize_stats,
@@ -806,6 +813,9 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
 
   if (CfiCrossDso)
     CmdArgs.push_back("-fsanitize-cfi-cross-dso");
+
+  if (CfiICallGeneralizePointers)
+    CmdArgs.push_back("-fsanitize-cfi-icall-generalize-pointers");
 
   if (Stats)
     CmdArgs.push_back("-fsanitize-stats");

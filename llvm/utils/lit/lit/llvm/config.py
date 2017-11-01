@@ -45,14 +45,16 @@ class LLVMConfig(object):
             features.add('shell')
 
         # Running on Darwin OS
-        if platform.system() in ['Darwin']:
+        if platform.system() == 'Darwin':
             # FIXME: lld uses the first, other projects use the second.
             # We should standardize on the former.
             features.add('system-linker-mach-o')
             features.add('system-darwin')
-        elif platform.system() in ['Windows']:
+        elif platform.system() == 'Windows':
             # For tests that require Windows to run.
             features.add('system-windows')
+        elif platform.system() == "Linux":
+            features.add('system-linux')
 
         # Native compilation: host arch == default triple arch
         # Both of these values should probably be in every site config (e.g. as

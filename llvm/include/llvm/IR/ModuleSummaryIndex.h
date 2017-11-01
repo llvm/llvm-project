@@ -743,7 +743,8 @@ public:
   static std::string getGlobalNameForLocal(StringRef Name, ModuleHash ModHash) {
     SmallString<256> NewName(Name);
     NewName += ".llvm.";
-    NewName += utostr(ModHash[0]); // Take the first 32 bits
+    NewName += utostr((uint64_t(ModHash[0]) << 32) |
+                      ModHash[1]); // Take the first 64 bits
     return NewName.str();
   }
 
