@@ -16222,8 +16222,10 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getNode(X86ISD::VTRUNC, DL, VT, In);
   }
 
-  // Truncate with PACKSS if we are truncating a vector zero/all-bits result.
-  if (InVT.getScalarSizeInBits() == DAG.ComputeNumSignBits(In))
+  // Truncate with PACKSS if we are truncating a vector with sign-bits that
+  // extend all the way to the packed/truncated value.
+  unsigned NumPackedBits = std::min<unsigned>(VT.getScalarSizeInBits(), 16);
+  if ((InVT.getScalarSizeInBits() - NumPackedBits) < DAG.ComputeNumSignBits(In))
     if (SDValue V = truncateVectorWithPACKSS(VT, In, DL, DAG, Subtarget))
       return V;
 
@@ -34422,7 +34424,7 @@ static SDValue combineVectorTruncation(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 }
 
-/// This function transforms vector truncation of 'all or none' bits values.
+/// This function transforms vector truncation of 'extended sign-bits' values.
 /// vXi16/vXi32/vXi64 to vXi8/vXi16/vXi32 into X86ISD::PACKSS operations.
 static SDValue combineVectorSignBitsTruncation(SDNode *N, SDLoc &DL,
                                                SelectionDAG &DAG,
@@ -34444,18 +34446,19 @@ static SDValue combineVectorSignBitsTruncation(SDNode *N, SDLoc &DL,
   MVT InVT = In.getValueType().getSimpleVT();
   MVT InSVT = InVT.getScalarType();
 
-  // Use PACKSS if the input is a splatted sign bit.
-  // e.g. Comparison result, sext_in_reg, etc.
-  unsigned NumSignBits = DAG.ComputeNumSignBits(In);
-  if (NumSignBits != InSVT.getSizeInBits())
-    return SDValue();
-
   // Check we have a truncation suited for PACKSS.
   if (!VT.is128BitVector() && !VT.is256BitVector())
     return SDValue();
   if (SVT != MVT::i8 && SVT != MVT::i16 && SVT != MVT::i32)
     return SDValue();
   if (InSVT != MVT::i16 && InSVT != MVT::i32 && InSVT != MVT::i64)
+    return SDValue();
+
+  // Use PACKSS if the input has sign-bits that extend all the way to the
+  // packed/truncated value. e.g. Comparison result, sext_in_reg, etc.
+  unsigned NumSignBits = DAG.ComputeNumSignBits(In);
+  unsigned NumPackedBits = std::min<unsigned>(SVT.getSizeInBits(), 16);
+  if (NumSignBits <= (InSVT.getSizeInBits() - NumPackedBits))
     return SDValue();
 
   return truncateVectorWithPACKSS(VT, In, DL, DAG, Subtarget);

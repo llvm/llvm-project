@@ -334,13 +334,11 @@ static void __kmp_stg_parse_size(char const *name, char const *value,
   }
 } // __kmp_stg_parse_size
 
-#if KMP_AFFINITY_SUPPORTED
 static void __kmp_stg_parse_str(char const *name, char const *value,
                                 char const **out) {
   __kmp_str_free(out);
   *out = __kmp_str_format("%s", value);
 } // __kmp_stg_parse_str
-#endif
 
 static void __kmp_stg_parse_int(
     char const
@@ -4354,7 +4352,29 @@ static void __kmp_stg_print_omp_cancellation(kmp_str_buf_t *buffer,
 
 #endif
 
-// -----------------------------------------------------------------------------
+#if OMP_50_ENABLED && OMPT_SUPPORT
+
+static void __kmp_stg_parse_omp_tool_libraries(char const *name,
+                                               char const *value, void *data) {
+  __kmp_stg_parse_str(name, value, &__kmp_tool_libraries);
+} // __kmp_stg_parse_omp_tool_libraries
+
+static void __kmp_stg_print_omp_tool_libraries(kmp_str_buf_t *buffer,
+                                               char const *name, void *data) {
+  if (__kmp_tool_libraries)
+    __kmp_stg_print_str(buffer, name, __kmp_tool_libraries);
+  else {
+    if (__kmp_env_format) {
+      KMP_STR_BUF_PRINT_NAME;
+    } else {
+      __kmp_str_buf_print(buffer, "   %s", name);
+    }
+    __kmp_str_buf_print(buffer, ": %s\n", KMP_I18N_STR(NotDefined));
+  }
+} // __kmp_stg_print_omp_tool_libraries
+
+#endif
+
 // Table.
 
 static kmp_setting_t __kmp_stg_table[] = {
@@ -4598,6 +4618,12 @@ static kmp_setting_t __kmp_stg_table[] = {
     {"OMP_CANCELLATION", __kmp_stg_parse_omp_cancellation,
      __kmp_stg_print_omp_cancellation, NULL, 0, 0},
 #endif
+
+#if OMP_50_ENABLED && OMPT_SUPPORT
+    {"OMP_TOOL_LIBRARIES", __kmp_stg_parse_omp_tool_libraries,
+     __kmp_stg_print_omp_tool_libraries, NULL, 0, 0},
+#endif
+
     {"", NULL, NULL, NULL, 0, 0}}; // settings
 
 static int const __kmp_stg_count =

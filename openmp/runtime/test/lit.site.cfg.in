@@ -11,7 +11,7 @@ config.omp_header_directory = "@LIBOMP_BINARY_DIR@/src"
 config.operating_system = "@CMAKE_SYSTEM_NAME@"
 config.hwloc_library_dir = "@LIBOMP_HWLOC_LIBRARY_DIR@"
 config.using_hwloc = @LIBOMP_USE_HWLOC@
-config.has_ompt = @LIBOMP_OMPT_SUPPORT@ and @LIBOMP_OMPT_BLAME@ and @LIBOMP_OMPT_TRACE@
+config.has_ompt = @LIBOMP_OMPT_SUPPORT@ and @LIBOMP_OMPT_OPTIONAL@
 config.has_libm = @LIBOMP_HAVE_LIBM@
 config.has_libatomic = @LIBOMP_HAVE_LIBATOMIC@
 

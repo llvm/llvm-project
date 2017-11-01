@@ -21,6 +21,10 @@
 
 #include "kmp_i18n.h"
 
+#if OMPT_SUPPORT
+#include "ompt-specific.h"
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -339,6 +343,26 @@ int FTN_STDCALL xexpand(FTN_GET_MAX_THREADS)(void) {
   return thread->th.th_current_task->td_icvs.nproc;
 #endif
 }
+
+#if OMP_50_ENABLED
+int FTN_STDCALL FTN_CONTROL_TOOL(uint64_t command, uint64_t modifier,
+                                 void *arg) {
+#if defined(KMP_STUB) || !OMPT_SUPPORT
+  return -2;
+#else
+  OMPT_STORE_RETURN_ADDRESS(__kmp_entry_gtid());
+  if (!TCR_4(__kmp_init_middle)) {
+    return -2;
+  }
+  kmp_info_t *this_thr = __kmp_threads[__kmp_entry_gtid()];
+  ompt_task_info_t *parent_task_info = OMPT_CUR_TASK_INFO(this_thr);
+  parent_task_info->frame.reenter_runtime_frame = OMPT_GET_FRAME_ADDRESS(1);
+  int ret = __kmp_control_tool(command, modifier, arg);
+  parent_task_info->frame.reenter_runtime_frame = 0;
+  return ret;
+#endif
+}
+#endif
 
 int FTN_STDCALL xexpand(FTN_GET_THREAD_NUM)(void) {
 #ifdef KMP_STUB
@@ -873,8 +897,11 @@ void FTN_STDCALL FTN_INIT_LOCK_WITH_HINT(void **user_lock,
 #ifdef KMP_STUB
   *((kmp_stub_lock_t *)user_lock) = UNLOCKED;
 #else
-  __kmpc_init_lock_with_hint(NULL, __kmp_entry_gtid(), user_lock,
-                             KMP_DEREF hint);
+  int gtid = __kmp_entry_gtid();
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  OMPT_STORE_RETURN_ADDRESS(gtid);
+#endif
+  __kmpc_init_lock_with_hint(NULL, gtid, user_lock, KMP_DEREF hint);
 #endif
 }
 
@@ -883,8 +910,11 @@ void FTN_STDCALL FTN_INIT_NEST_LOCK_WITH_HINT(void **user_lock,
 #ifdef KMP_STUB
   *((kmp_stub_lock_t *)user_lock) = UNLOCKED;
 #else
-  __kmpc_init_nest_lock_with_hint(NULL, __kmp_entry_gtid(), user_lock,
-                                  KMP_DEREF hint);
+  int gtid = __kmp_entry_gtid();
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  OMPT_STORE_RETURN_ADDRESS(gtid);
+#endif
+  __kmpc_init_nest_lock_with_hint(NULL, gtid, user_lock, KMP_DEREF hint);
 #endif
 }
 #endif
@@ -894,7 +924,11 @@ void FTN_STDCALL xexpand(FTN_INIT_LOCK)(void **user_lock) {
 #ifdef KMP_STUB
   *((kmp_stub_lock_t *)user_lock) = UNLOCKED;
 #else
-  __kmpc_init_lock(NULL, __kmp_entry_gtid(), user_lock);
+  int gtid = __kmp_entry_gtid();
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  OMPT_STORE_RETURN_ADDRESS(gtid);
+#endif
+  __kmpc_init_lock(NULL, gtid, user_lock);
 #endif
 }
 
@@ -903,7 +937,11 @@ void FTN_STDCALL xexpand(FTN_INIT_NEST_LOCK)(void **user_lock) {
 #ifdef KMP_STUB
   *((kmp_stub_lock_t *)user_lock) = UNLOCKED;
 #else
-  __kmpc_init_nest_lock(NULL, __kmp_entry_gtid(), user_lock);
+  int gtid = __kmp_entry_gtid();
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  OMPT_STORE_RETURN_ADDRESS(gtid);
+#endif
+  __kmpc_init_nest_lock(NULL, gtid, user_lock);
 #endif
 }
 
@@ -911,7 +949,11 @@ void FTN_STDCALL xexpand(FTN_DESTROY_LOCK)(void **user_lock) {
 #ifdef KMP_STUB
   *((kmp_stub_lock_t *)user_lock) = UNINIT;
 #else
-  __kmpc_destroy_lock(NULL, __kmp_entry_gtid(), user_lock);
+  int gtid = __kmp_entry_gtid();
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  OMPT_STORE_RETURN_ADDRESS(gtid);
+#endif
+  __kmpc_destroy_lock(NULL, gtid, user_lock);
 #endif
 }
 
@@ -919,7 +961,11 @@ void FTN_STDCALL xexpand(FTN_DESTROY_NEST_LOCK)(void **user_lock) {
 #ifdef KMP_STUB
   *((kmp_stub_lock_t *)user_lock) = UNINIT;
 #else
-  __kmpc_destroy_nest_lock(NULL, __kmp_entry_gtid(), user_lock);
+  int gtid = __kmp_entry_gtid();
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  OMPT_STORE_RETURN_ADDRESS(gtid);
+#endif
+  __kmpc_destroy_nest_lock(NULL, gtid, user_lock);
 #endif
 }
 
@@ -933,7 +979,11 @@ void FTN_STDCALL xexpand(FTN_SET_LOCK)(void **user_lock) {
   }
   *((kmp_stub_lock_t *)user_lock) = LOCKED;
 #else
-  __kmpc_set_lock(NULL, __kmp_entry_gtid(), user_lock);
+  int gtid = __kmp_entry_gtid();
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  OMPT_STORE_RETURN_ADDRESS(gtid);
+#endif
+  __kmpc_set_lock(NULL, gtid, user_lock);
 #endif
 }
 
@@ -944,7 +994,11 @@ void FTN_STDCALL xexpand(FTN_SET_NEST_LOCK)(void **user_lock) {
   }
   (*((int *)user_lock))++;
 #else
-  __kmpc_set_nest_lock(NULL, __kmp_entry_gtid(), user_lock);
+  int gtid = __kmp_entry_gtid();
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  OMPT_STORE_RETURN_ADDRESS(gtid);
+#endif
+  __kmpc_set_nest_lock(NULL, gtid, user_lock);
 #endif
 }
 
@@ -958,7 +1012,11 @@ void FTN_STDCALL xexpand(FTN_UNSET_LOCK)(void **user_lock) {
   }
   *((kmp_stub_lock_t *)user_lock) = UNLOCKED;
 #else
-  __kmpc_unset_lock(NULL, __kmp_entry_gtid(), user_lock);
+  int gtid = __kmp_entry_gtid();
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  OMPT_STORE_RETURN_ADDRESS(gtid);
+#endif
+  __kmpc_unset_lock(NULL, gtid, user_lock);
 #endif
 }
 
@@ -972,7 +1030,11 @@ void FTN_STDCALL xexpand(FTN_UNSET_NEST_LOCK)(void **user_lock) {
   }
   (*((int *)user_lock))--;
 #else
-  __kmpc_unset_nest_lock(NULL, __kmp_entry_gtid(), user_lock);
+  int gtid = __kmp_entry_gtid();
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  OMPT_STORE_RETURN_ADDRESS(gtid);
+#endif
+  __kmpc_unset_nest_lock(NULL, gtid, user_lock);
 #endif
 }
 
@@ -987,7 +1049,11 @@ int FTN_STDCALL xexpand(FTN_TEST_LOCK)(void **user_lock) {
   *((kmp_stub_lock_t *)user_lock) = LOCKED;
   return 1;
 #else
-  return __kmpc_test_lock(NULL, __kmp_entry_gtid(), user_lock);
+  int gtid = __kmp_entry_gtid();
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  OMPT_STORE_RETURN_ADDRESS(gtid);
+#endif
+  return __kmpc_test_lock(NULL, gtid, user_lock);
 #endif
 }
 
@@ -998,7 +1064,11 @@ int FTN_STDCALL xexpand(FTN_TEST_NEST_LOCK)(void **user_lock) {
   }
   return ++(*((int *)user_lock));
 #else
-  return __kmpc_test_nest_lock(NULL, __kmp_entry_gtid(), user_lock);
+  int gtid = __kmp_entry_gtid();
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  OMPT_STORE_RETURN_ADDRESS(gtid);
+#endif
+  return __kmpc_test_nest_lock(NULL, gtid, user_lock);
 #endif
 }
 

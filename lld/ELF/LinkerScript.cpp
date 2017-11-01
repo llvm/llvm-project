@@ -357,16 +357,17 @@ void LinkerScript::processSectionCommands() {
   Ctx = Deleter.get();
   Ctx->OutSec = Aether;
 
+  size_t I = 0;
   DenseMap<SectionBase *, int> Order = buildSectionOrder();
   // Add input sections to output sections.
-  for (size_t I = 0; I < SectionCommands.size(); ++I) {
+  for (BaseCommand *Base : SectionCommands) {
     // Handle symbol assignments outside of any output section.
-    if (auto *Cmd = dyn_cast<SymbolAssignment>(SectionCommands[I])) {
+    if (auto *Cmd = dyn_cast<SymbolAssignment>(Base)) {
       addSymbol(Cmd);
       continue;
     }
 
-    if (auto *Sec = dyn_cast<OutputSection>(SectionCommands[I])) {
+    if (auto *Sec = dyn_cast<OutputSection>(Base)) {
       std::vector<InputSection *> V = createInputSectionList(*Sec, Order);
 
       // The output section name `/DISCARD/' is special.
@@ -381,13 +382,12 @@ void LinkerScript::processSectionCommands() {
       // sections satisfy a given constraint. If not, a directive is handled
       // as if it wasn't present from the beginning.
       //
-      // Because we'll iterate over SectionCommands many more times, the easiest
-      // way to "make it as if it wasn't present" is to just remove it.
+      // Because we'll iterate over SectionCommands many more times, the easy
+      // way to "make it as if it wasn't present" is to make it empty.
       if (!matchConstraints(V, Sec->Constraint)) {
         for (InputSectionBase *S : V)
           S->Assigned = false;
-        SectionCommands.erase(SectionCommands.begin() + I);
-        --I;
+        Sec->SectionCommands.clear();
         continue;
       }
 
@@ -409,21 +409,13 @@ void LinkerScript::processSectionCommands() {
       // Add input sections to an output section.
       for (InputSection *S : V)
         Sec->addSection(S);
+
+      Sec->SectionIndex = I++;
+      if (Sec->Noload)
+        Sec->Type = SHT_NOBITS;
     }
   }
   Ctx = nullptr;
-
-  // Output sections are emitted in the exact same order as
-  // appeared in SECTIONS command, so we know their section indices.
-  for (size_t I = 0; I < SectionCommands.size(); ++I) {
-    auto *Sec = dyn_cast<OutputSection>(SectionCommands[I]);
-    if (!Sec)
-      continue;
-    assert(Sec->SectionIndex == INT_MAX);
-    Sec->SectionIndex = I;
-    if (Sec->Noload)
-      Sec->Type = SHT_NOBITS;
-  }
 }
 
 static OutputSection *findByName(ArrayRef<BaseCommand *> Vec,

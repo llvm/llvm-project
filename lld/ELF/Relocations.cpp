@@ -74,7 +74,7 @@ static std::string getLocation(InputSectionBase &S, const SymbolBody &Sym,
                                uint64_t Off) {
   std::string Msg =
       "\n>>> defined in " + toString(Sym.getFile()) + "\n>>> referenced by ";
-  std::string Src = S.getSrcMsg<ELFT>(Off);
+  std::string Src = S.getSrcMsg<ELFT>(Sym, Off);
   if (!Src.empty())
     Msg += Src + "\n>>>               ";
   return Msg + S.getObjMsg(Off);
@@ -728,7 +728,7 @@ static bool maybeReportUndefined(SymbolBody &Sym, InputSectionBase &Sec,
   std::string Msg =
       "undefined symbol: " + toString(Sym) + "\n>>> referenced by ";
 
-  std::string Src = Sec.getSrcMsg<ELFT>(Offset);
+  std::string Src = Sec.getSrcMsg<ELFT>(Sym, Offset);
   if (!Src.empty())
     Msg += Src + "\n>>>               ";
   Msg += Sec.getObjMsg(Offset);
