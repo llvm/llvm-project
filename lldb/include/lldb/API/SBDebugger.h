@@ -78,9 +78,6 @@ public:
   void SetOutputFileHandle(FILE *f, bool transfer_ownership);
 
   void SetErrorFileHandle(FILE *f, bool transfer_ownership);
-  
-  // Force a flush of the OutputFileHandle and ErrorFileHandle.
-  void FlushDebuggerOutputHandles();
 
   FILE *GetInputFileHandle();
 

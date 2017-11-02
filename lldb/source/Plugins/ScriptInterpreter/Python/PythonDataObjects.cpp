@@ -17,7 +17,6 @@
 #include "PythonDataObjects.h"
 #include "ScriptInterpreterPython.h"
 
-#include "lldb/Utility/Log.h"
 #include "lldb/Host/File.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
@@ -960,11 +959,8 @@ PythonFile::~PythonFile() {}
 
 bool PythonFile::Check(PyObject *py_obj) {
 #if PY_MAJOR_VERSION < 3
-  bool is_ordinary_file = PyFile_Check(py_obj);
-  if (is_ordinary_file) {
-    return true;
-  }
-#endif
+  return PyFile_Check(py_obj);
+#else
   // In Python 3, there is no `PyFile_Check`, and in fact PyFile is not even a
   // first-class object type anymore.  `PyFile_FromFd` is just a thin wrapper
   // over `io.open()`, which returns some object derived from `io.IOBase`.
@@ -985,6 +981,7 @@ bool PythonFile::Check(PyObject *py_obj) {
     return false;
 
   return true;
+#endif
 }
 
 void PythonFile::Reset(PyRefType type, PyObject *py_obj) {
@@ -992,7 +989,7 @@ void PythonFile::Reset(PyRefType type, PyObject *py_obj) {
   // `py_obj` it still gets decremented if necessary.
   PythonObject result(type, py_obj);
 
-  if (py_obj == NULL || !PythonFile::Check(py_obj)) {
+  if (!PythonFile::Check(py_obj)) {
     PythonObject::Reset();
     return;
   }
@@ -1037,131 +1034,17 @@ uint32_t PythonFile::GetOptionsFromMode(llvm::StringRef mode) {
       .Default(0);
 }
 
-static void
-log_exception(const char *fmt, PyObject *obj)
-{
-  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_SCRIPT);
-  if (!log) {
-    return;
-  }
-  const char *classname = "unknown class";
-  PyObject *pyclass = PyObject_Type(obj);
-  if (pyclass) {
-    PyObject *s = PyObject_GetAttrString(pyclass, "__name__");
-    if (s) {
-      classname = PyString_AsString(s);
-      Py_XDECREF(s);
-    }
-    Py_XDECREF(pyclass);
-  }
-  const char *error = "unknown error";
-  PyObject *exception, *v, *tb;
-  PyErr_Fetch(&exception, &v, &tb);
-  if (exception) {
-    PyErr_NormalizeException(&exception, &v, &tb);
-  }
-  PyObject *string = NULL;
-  if (v) {
-    string = PyObject_Str(v);
-  }
-  error = PyString_AsString(string);
-  log->Printf(fmt, classname, error);
-  Py_XDECREF(exception);
-  Py_XDECREF(v);
-  Py_XDECREF(tb);
-  Py_XDECREF(string);
-}
-
-static int readfn(void *ctx, char *buffer, int n)
-{
-  auto state = PyGILState_Ensure();
-  auto *file = (PyObject *) ctx;
-  int result = -1;
-  auto pybuffer = PyBuffer_FromMemory(buffer, n);
-  PyObject *pyresult = NULL;
-  if (!pybuffer) {
-    goto fail;
-  }
-  pyresult = PyEval_CallMethod(file, "read", "(i)", n);
-  if (pyresult == NULL || !PyInt_Check(pyresult)) {
-    log_exception("read from python %s failed: %s", file);
-    goto fail;
-  }
-  result =  _PyInt_AsInt(pyresult);
-fail:
-  Py_XDECREF(pybuffer);
-  Py_XDECREF(pyresult);
-  PyGILState_Release(state);
-  return result;
-}
-
-static int writefn(void *ctx, const char *buffer, int n)
-{
-  auto state = PyGILState_Ensure();
-  auto *file = (PyObject *) ctx;
-  int result = -1;
-  auto pyresult = PyEval_CallMethod(file, "write", "(s#)", buffer, n);
-  if (pyresult == NULL || !PyInt_Check(pyresult)) {
-    log_exception("write to python %s failed: %s", file);
-    goto fail;
-  }
-  result =  _PyInt_AsInt(pyresult);
-fail:
-  Py_XDECREF(pyresult);
-  PyGILState_Release(state);
-  return result;
-}
-
-
-static int closefn(void *ctx) {
-  auto *file = (PyObject *) ctx;
-  auto state = PyGILState_Ensure();
-  Py_XDECREF(file);
-  PyGILState_Release(state);
-  return 0;
-}
-
-
 bool PythonFile::GetUnderlyingFile(File &file) const {
   if (!IsValid())
     return false;
-  
+
   file.Close();
-  
-  int fd = PyObject_AsFileDescriptor(m_py_obj);
-  if (fd >= 0) {
-    // We don't own the file descriptor returned by this function, make sure the
-    // File object knows about that.
-    file.SetDescriptor(PyObject_AsFileDescriptor(m_py_obj), false);
-    PythonString py_mode = GetAttributeValue("mode").AsType<PythonString>();
-    file.SetOptions(PythonFile::GetOptionsFromMode(py_mode.GetString()));
-    return file.IsValid();
-  }
-  
-  PythonObject io_module(PyRefType::Owned, PyImport_ImportModule("io"));
-  PythonDictionary io_dict(PyRefType::Borrowed,
-                           PyModule_GetDict(io_module.get()));
-  PythonObject io_base_class = io_dict.GetItemForKey(PythonString("IOBase"));
-  
-  PythonObject object_type(PyRefType::Owned, PyObject_Type(m_py_obj));
-  
-  if (1 != PyObject_IsSubclass(object_type.get(), io_base_class.get()))
-    return false;
-  
-  PyObject *r = PyEval_CallMethod(m_py_obj, "readable", "()");
-  bool readable = PyObject_IsTrue(r);
-
-  r = PyEval_CallMethod(m_py_obj, "writable", "()");
-  bool writable = PyObject_IsTrue(r);
-
-  Py_XINCREF(m_py_obj);
-  file = File(m_py_obj, readable ? readfn : NULL, writable ? writefn : NULL, closefn);
-  if (!file.IsValid()) {
-    closefn(m_py_obj);
-    return false;
-  } else {
-    return true;
-  }
+  // We don't own the file descriptor returned by this function, make sure the
+  // File object knows about that.
+  file.SetDescriptor(PyObject_AsFileDescriptor(m_py_obj), false);
+  PythonString py_mode = GetAttributeValue("mode").AsType<PythonString>();
+  file.SetOptions(PythonFile::GetOptionsFromMode(py_mode.GetString()));
+  return file.IsValid();
 }
 
 #endif

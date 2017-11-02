@@ -759,15 +759,6 @@ void Debugger::Destroy(DebuggerSP &debugger_sp) {
   if (!debugger_sp)
     return;
 
-  /*
-   * FILE* get flushed on process exit.  If those FILEs need to call into python
-   * to flush, we can't have them flushing after python is already torn down.
-   * That would result in a segfault.  We are still relying on the python script
-   * to tear down the debugger before it exits.
-   */
-  debugger_sp->m_output_file_sp->Flush();
-  debugger_sp->m_error_file_sp->Flush();
-
   debugger_sp->Clear();
 
   if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
@@ -982,11 +973,6 @@ void Debugger::SetErrorFileHandle(FILE *fh, bool tranfer_ownership) {
   File &err_file = m_error_file_sp->GetFile();
   if (!err_file.IsValid())
     err_file.SetStream(stderr, false);
-}
-
-void Debugger::Flush() {
-  m_output_file_sp->Flush();
-  m_error_file_sp->Flush();
 }
 
 void Debugger::SaveInputTerminalState() {
