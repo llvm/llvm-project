@@ -4689,8 +4689,8 @@ declare <4 x i32> @llvm.x86.avx512.mask.valign.d.128(<4 x i32>, <4 x i32>, i32, 
 define <4 x i32>@test_int_x86_avx512_mask_valign_d_128(<4 x i32> %x0, <4 x i32> %x1,<4 x i32> %x3, i8 %x4) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_valign_d_128:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    valignd $2, %xmm1, %xmm0, %xmm3 ## encoding: [0x62,0xf3,0x7d,0x08,0x03,0xd9,0x02]
-; CHECK-NEXT:    ## xmm3 = xmm1[2,3],xmm0[0,1]
+; CHECK-NEXT:    vpalignr $8, %xmm1, %xmm0, %xmm3 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x0f,0xd9,0x08]
+; CHECK-NEXT:    ## xmm3 = xmm1[8,9,10,11,12,13,14,15],xmm0[0,1,2,3,4,5,6,7]
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    valignd $2, %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf3,0x7d,0x09,0x03,0xd1,0x02]
 ; CHECK-NEXT:    ## xmm2 {%k1} = xmm1[2,3],xmm0[0,1]
@@ -4730,8 +4730,8 @@ declare <2 x i64> @llvm.x86.avx512.mask.valign.q.128(<2 x i64>, <2 x i64>, i32, 
 define <2 x i64>@test_int_x86_avx512_mask_valign_q_128(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %x3, i8 %x4) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_valign_q_128:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    valignq $1, %xmm1, %xmm0, %xmm3 ## encoding: [0x62,0xf3,0xfd,0x08,0x03,0xd9,0x01]
-; CHECK-NEXT:    ## xmm3 = xmm1[1],xmm0[0]
+; CHECK-NEXT:    vpalignr $8, %xmm1, %xmm0, %xmm3 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x0f,0xd9,0x08]
+; CHECK-NEXT:    ## xmm3 = xmm1[8,9,10,11,12,13,14,15],xmm0[0,1,2,3,4,5,6,7]
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    valignq $1, %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf3,0xfd,0x09,0x03,0xd1,0x01]
 ; CHECK-NEXT:    ## xmm2 {%k1} = xmm1[1],xmm0[0]

@@ -55,6 +55,9 @@ static void print_usage(void) {
   fprintf(stderr, "  * --test-diagnostic-handler\n");
   fprintf(stderr,
           "    Read bitcode file form stdin with a diagnostic handler set\n\n");
+  fprintf(stderr, "  * --test-dibuilder\n");
+  fprintf(stderr,
+          "    Run tests for the DIBuilder C API - print generated module\n\n");
 }
 
 int main(int argc, char **argv) {
@@ -96,6 +99,8 @@ int main(int argc, char **argv) {
     return llvm_echo();
   } else if (argc == 2 && !strcmp(argv[1], "--test-diagnostic-handler")) {
     return llvm_test_diagnostic_handler();
+  } else if (argc == 2 && !strcmp(argv[1], "--test-dibuilder")) {
+    return llvm_test_dibuilder();
   } else {
     print_usage();
   }

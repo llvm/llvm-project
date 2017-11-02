@@ -299,6 +299,19 @@ void RegisterBankEmitter::run(raw_ostream &OS) {
     Banks.push_back(Bank);
   }
 
+  // Warn about ambiguous MIR caused by register bank/class name clashes.
+  for (const auto &Class : Records.getAllDerivedDefinitions("RegisterClass")) {
+    for (const auto &Bank : Banks) {
+      if (Bank.getName().lower() == Class->getName().lower()) {
+        PrintWarning(Bank.getDef().getLoc(), "Register bank names should be "
+                                             "distinct from register classes "
+                                             "to avoid ambiguous MIR");
+        PrintNote(Bank.getDef().getLoc(), "RegisterBank was declared here");
+        PrintNote(Class->getLoc(), "RegisterClass was declared here");
+      }
+    }
+  }
+
   emitSourceFileHeader("Register Bank Source Fragments", OS);
   OS << "#ifdef GET_REGBANK_DECLARATIONS\n"
      << "#undef GET_REGBANK_DECLARATIONS\n";

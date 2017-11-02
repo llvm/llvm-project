@@ -378,15 +378,19 @@ void ELFState<ELFT>::setProgramHeaderLayout(std::vector<Elf_Phdr> &PHeaders,
     }
 
     // Set the alignment of the segment to be the same as the maximum alignment
-    // of the the sections with the same offset so that by default the segment
+    // of the sections with the same offset so that by default the segment
     // has a valid and sensible alignment.
-    PHeader.p_align = 1;
-    for (auto SecName : YamlPhdr.Sections) {
-      uint32_t Index = 0;
-      SN2I.lookup(SecName.Section, Index);
-      const auto &SHeader = SHeaders[Index];
-      if (SHeader.sh_offset == PHeader.p_offset)
-        PHeader.p_align = std::max(PHeader.p_align, SHeader.sh_addralign);
+    if (YamlPhdr.Align) {
+      PHeader.p_align = *YamlPhdr.Align;
+    } else {
+      PHeader.p_align = 1;
+      for (auto SecName : YamlPhdr.Sections) {
+        uint32_t Index = 0;
+        SN2I.lookup(SecName.Section, Index);
+        const auto &SHeader = SHeaders[Index];
+        if (SHeader.sh_offset == PHeader.p_offset)
+          PHeader.p_align = std::max(PHeader.p_align, SHeader.sh_addralign);
+      }
     }
   }
 }

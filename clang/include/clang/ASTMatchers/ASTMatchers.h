@@ -1,4 +1,4 @@
-//===--- ASTMatchers.h - Structural query framework -------------*- C++ -*-===//
+//===- ASTMatchers.h - Structural query framework ---------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -46,13 +46,48 @@
 #define LLVM_CLANG_ASTMATCHERS_ASTMATCHERS_H
 
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTTypeTraits.h"
+#include "clang/AST/Attr.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
+#include "clang/AST/ExprObjC.h"
+#include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/OperationKinds.h"
+#include "clang/AST/Stmt.h"
+#include "clang/AST/StmtCXX.h"
+#include "clang/AST/StmtObjC.h"
+#include "clang/AST/TemplateBase.h"
+#include "clang/AST/TemplateName.h"
+#include "clang/AST/Type.h"
+#include "clang/AST/TypeLoc.h"
 #include "clang/ASTMatchers/ASTMatchersInternal.h"
 #include "clang/ASTMatchers/ASTMatchersMacros.h"
+#include "clang/Basic/AttrKinds.h"
+#include "clang/Basic/ExceptionSpecificationType.h"
+#include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/SourceManager.h"
+#include "clang/Basic/Specifiers.h"
+#include "clang/Basic/TypeTraits.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Regex.h"
+#include <cassert>
+#include <cstddef>
 #include <iterator>
+#include <limits>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace clang {
 namespace ast_matchers {
@@ -78,7 +113,7 @@ public:
   /// \brief Type of mapping from binding identifiers to bound nodes. This type
   /// is an associative container with a key type of \c std::string and a value
   /// type of \c clang::ast_type_traits::DynTypedNode
-  typedef internal::BoundNodesMap::IDToNodeMap IDToNodeMap;
+  using IDToNodeMap = internal::BoundNodesMap::IDToNodeMap;
 
   /// \brief Retrieve mapping from binding identifiers to bound nodes.
   const IDToNodeMap &getMap() const {
@@ -86,13 +121,13 @@ public:
   }
 
 private:
+  friend class internal::BoundNodesTreeBuilder;
+
   /// \brief Create BoundNodes from a pre-filled map of bindings.
   BoundNodes(internal::BoundNodesMap &MyBoundNodes)
       : MyBoundNodes(MyBoundNodes) {}
 
   internal::BoundNodesMap MyBoundNodes;
-
-  friend class internal::BoundNodesTreeBuilder;
 };
 
 /// \brief If the provided matcher matches a node, binds the node to \c ID.
@@ -107,13 +142,13 @@ internal::Matcher<T> id(StringRef ID,
 /// \brief Types of matchers for the top-level classes in the AST class
 /// hierarchy.
 /// @{
-typedef internal::Matcher<Decl> DeclarationMatcher;
-typedef internal::Matcher<Stmt> StatementMatcher;
-typedef internal::Matcher<QualType> TypeMatcher;
-typedef internal::Matcher<TypeLoc> TypeLocMatcher;
-typedef internal::Matcher<NestedNameSpecifier> NestedNameSpecifierMatcher;
-typedef internal::Matcher<NestedNameSpecifierLoc> NestedNameSpecifierLocMatcher;
-typedef internal::Matcher<CXXCtorInitializer> CXXCtorInitializerMatcher;
+using DeclarationMatcher = internal::Matcher<Decl>;
+using StatementMatcher = internal::Matcher<Stmt>;
+using TypeMatcher = internal::Matcher<QualType>;
+using TypeLocMatcher = internal::Matcher<TypeLoc>;
+using NestedNameSpecifierMatcher = internal::Matcher<NestedNameSpecifier>;
+using NestedNameSpecifierLocMatcher = internal::Matcher<NestedNameSpecifierLoc>;
+using CXXCtorInitializerMatcher = internal::Matcher<CXXCtorInitializer>;
 /// @}
 
 /// \brief Matches any node.
@@ -2186,23 +2221,23 @@ const internal::VariadicAllOfMatcher<TypeLoc> typeLoc;
 /// \c b.
 ///
 /// Usable as: Any Matcher
-const internal::VariadicOperatorMatcherFunc<2, UINT_MAX> eachOf = {
-  internal::DynTypedMatcher::VO_EachOf
-};
+const internal::VariadicOperatorMatcherFunc<
+    2, std::numeric_limits<unsigned>::max()>
+    eachOf = {internal::DynTypedMatcher::VO_EachOf};
 
 /// \brief Matches if any of the given matchers matches.
 ///
 /// Usable as: Any Matcher
-const internal::VariadicOperatorMatcherFunc<2, UINT_MAX> anyOf = {
-  internal::DynTypedMatcher::VO_AnyOf
-};
+const internal::VariadicOperatorMatcherFunc<
+    2, std::numeric_limits<unsigned>::max()>
+    anyOf = {internal::DynTypedMatcher::VO_AnyOf};
 
 /// \brief Matches if all given matchers match.
 ///
 /// Usable as: Any Matcher
-const internal::VariadicOperatorMatcherFunc<2, UINT_MAX> allOf = {
-  internal::DynTypedMatcher::VO_AllOf
-};
+const internal::VariadicOperatorMatcherFunc<
+    2, std::numeric_limits<unsigned>::max()>
+    allOf = {internal::DynTypedMatcher::VO_AllOf};
 
 /// \brief Matches sizeof (C99), alignof (C++11) and vec_step (OpenCL)
 ///
@@ -4004,7 +4039,6 @@ AST_MATCHER_P(UnaryOperator, hasUnaryOperand,
 /// \code
 /// int a = b ?: 1;
 /// \endcode
-
 AST_POLYMORPHIC_MATCHER_P(hasSourceExpression,
                           AST_POLYMORPHIC_SUPPORTED_TYPES(CastExpr,
                                                           OpaqueValueExpr),
@@ -5677,7 +5711,6 @@ AST_MATCHER_P(ReturnStmt, hasReturnValue, internal::Matcher<Expr>,
   return false;
 }
 
-
 /// \brief Matches CUDA kernel call expression.
 ///
 /// Example matches,
@@ -5687,7 +5720,6 @@ AST_MATCHER_P(ReturnStmt, hasReturnValue, internal::Matcher<Expr>,
 const internal::VariadicDynCastAllOfMatcher<
   Stmt,
   CUDAKernelCallExpr> cudaKernelCallExpr;
-
 
 /// \brief Matches expressions that resolve to a null pointer constant, such as
 /// GNU's __null, C++11's nullptr, or C's NULL macro.
@@ -5772,7 +5804,7 @@ AST_MATCHER(NamedDecl, hasExternalFormalLinkage) {
   return Node.hasExternalFormalLinkage();
 }
 
-} // end namespace ast_matchers
-} // end namespace clang
+} // namespace ast_matchers
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_ASTMATCHERS_ASTMATCHERS_H

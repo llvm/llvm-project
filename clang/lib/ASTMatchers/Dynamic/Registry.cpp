@@ -1,37 +1,49 @@
-//===--- Registry.cpp - Matcher registry -------------------------===//
+//===- Registry.cpp - Matcher registry ------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-//===------------------------------------------------------------===//
-///
+//===----------------------------------------------------------------------===//
+//
 /// \file
 /// \brief Registry map populated at static initialization time.
-///
-//===------------------------------------------------------------===//
+//
+//===----------------------------------------------------------------------===//
 
 #include "clang/ASTMatchers/Dynamic/Registry.h"
 #include "Marshallers.h"
+#include "clang/AST/ASTTypeTraits.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/ASTMatchers/Dynamic/Diagnostics.h"
+#include "clang/ASTMatchers/Dynamic/VariantValue.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <iterator>
+#include <memory>
 #include <set>
+#include <string>
 #include <utility>
+#include <vector>
 
 using namespace clang::ast_type_traits;
 
 namespace clang {
 namespace ast_matchers {
 namespace dynamic {
+
 namespace {
 
 using internal::MatcherDescriptor;
 
-typedef llvm::StringMap<std::unique_ptr<const MatcherDescriptor>> ConstructorMap;
+using ConstructorMap = llvm::StringMap<std::unique_ptr<const MatcherDescriptor>>;
+
 class RegistryMaps {
 public:
   RegistryMaps();
@@ -45,6 +57,8 @@ private:
 
   ConstructorMap Constructors;
 };
+
+} // namespace
 
 void RegistryMaps::registerMatcher(
     StringRef MatcherName, std::unique_ptr<MatcherDescriptor> Callback) {
@@ -74,7 +88,7 @@ void RegistryMaps::registerMatcher(
         MATCHER_OVERLOAD_ENTRY(name, 0),                                       \
         MATCHER_OVERLOAD_ENTRY(name, 1)};                                      \
     REGISTER_MATCHER_OVERLOAD(name);                                           \
-  } while (0)
+  } while (false)
 
 /// \brief Generate a registry map with all the known matchers.
 RegistryMaps::RegistryMaps() {
@@ -454,11 +468,9 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(withInitializer);
 }
 
-RegistryMaps::~RegistryMaps() {}
+RegistryMaps::~RegistryMaps() = default;
 
 static llvm::ManagedStatic<RegistryMaps> RegistryData;
-
-} // anonymous namespace
 
 // static
 llvm::Optional<MatcherCtor> Registry::lookupMatcherCtor(StringRef MatcherName) {
@@ -468,10 +480,8 @@ llvm::Optional<MatcherCtor> Registry::lookupMatcherCtor(StringRef MatcherName) {
              : it->second.get();
 }
 
-namespace {
-
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
-                              const std::set<ASTNodeKind> &KS) {
+static llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                                     const std::set<ASTNodeKind> &KS) {
   unsigned Count = 0;
   for (std::set<ASTNodeKind>::const_iterator I = KS.begin(), E = KS.end();
        I != E; ++I) {
@@ -485,8 +495,6 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
   }
   return OS;
 }
-
-}  // namespace
 
 std::vector<ArgKind> Registry::getAcceptedCompletionTypes(
     ArrayRef<std::pair<MatcherCtor, unsigned>> Context) {
@@ -597,7 +605,6 @@ Registry::getMatcherCompletions(ArrayRef<ArgKind> AcceptedTypes) {
   return Completions;
 }
 
-// static
 VariantMatcher Registry::constructMatcher(MatcherCtor Ctor,
                                           SourceRange NameRange,
                                           ArrayRef<ParserValue> Args,
@@ -605,7 +612,6 @@ VariantMatcher Registry::constructMatcher(MatcherCtor Ctor,
   return Ctor->create(NameRange, Args, Error);
 }
 
-// static
 VariantMatcher Registry::constructBoundMatcher(MatcherCtor Ctor,
                                                SourceRange NameRange,
                                                StringRef BindID,
@@ -625,6 +631,6 @@ VariantMatcher Registry::constructBoundMatcher(MatcherCtor Ctor,
   return VariantMatcher();
 }
 
-}  // namespace dynamic
-}  // namespace ast_matchers
-}  // namespace clang
+} // namespace dynamic
+} // namespace ast_matchers
+} // namespace clang

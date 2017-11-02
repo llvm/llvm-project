@@ -483,9 +483,8 @@ define <8 x i16> @trunc8i32_8i16_lshr(<8 x i32> %a) {
 ; AVX2-LABEL: trunc8i32_8i16_lshr:
 ; AVX2:       # BB#0: # %entry
 ; AVX2-NEXT:    vpsrld $16, %ymm0, %ymm0
-; AVX2-NEXT:    vpackusdw %ymm0, %ymm0, %ymm0
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX2-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -814,12 +813,12 @@ define void @trunc16i32_16i16_lshr(<16 x i32> %a) {
 ;
 ; AVX2-LABEL: trunc16i32_16i16_lshr:
 ; AVX2:       # BB#0: # %entry
-; AVX2-NEXT:    vpsrld $16, %ymm1, %ymm1
 ; AVX2-NEXT:    vpsrld $16, %ymm0, %ymm0
-; AVX2-NEXT:    vpackusdw %ymm0, %ymm0, %ymm0
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; AVX2-NEXT:    vpackusdw %ymm0, %ymm1, %ymm1
-; AVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,2,2,3]
+; AVX2-NEXT:    vpsrld $16, %ymm1, %ymm1
+; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; AVX2-NEXT:    vpackusdw %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm2
+; AVX2-NEXT:    vpackusdw %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vmovdqu %ymm0, (%rax)
 ; AVX2-NEXT:    vzeroupper
@@ -1901,8 +1900,8 @@ define void @PR34773(i16* %a0, i8* %a1) {
 ; AVX1-NEXT:    vpsrlw $8, %xmm2, %xmm2
 ; AVX1-NEXT:    vpsrlw $8, %xmm1, %xmm1
 ; AVX1-NEXT:    vpackuswb %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1-NEXT:    vmovups %ymm0, (%rsi)
+; AVX1-NEXT:    vmovdqu %xmm0, (%rsi)
+; AVX1-NEXT:    vmovdqu %xmm1, 16(%rsi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -1916,8 +1915,8 @@ define void @PR34773(i16* %a0, i8* %a1) {
 ; AVX2-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
 ; AVX2-NEXT:    vpackuswb %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX2-NEXT:    vmovdqu %ymm0, (%rsi)
+; AVX2-NEXT:    vmovdqu %xmm0, (%rsi)
+; AVX2-NEXT:    vmovdqu %xmm1, 16(%rsi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;

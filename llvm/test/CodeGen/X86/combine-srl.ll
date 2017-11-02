@@ -181,9 +181,8 @@ define <4 x i32> @combine_vec_lshr_trunc_lshr0(<4 x i64> %x) {
 ; AVX-LABEL: combine_vec_lshr_trunc_lshr0:
 ; AVX:       # BB#0:
 ; AVX-NEXT:    vpsrlq $48, %ymm0, %ymm0
-; AVX-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,2,2,3,4,6,6,7]
-; AVX-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; AVX-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
+; AVX-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
   %1 = lshr <4 x i64> %x, <i64 32, i64 32, i64 32, i64 32>
