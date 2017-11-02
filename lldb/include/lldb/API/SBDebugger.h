@@ -78,6 +78,8 @@ public:
   void SetOutputFileHandle(FILE *f, bool transfer_ownership);
 
   void SetErrorFileHandle(FILE *f, bool transfer_ownership);
+  
+  void FlushDebuggerOutputHandles();
 
   FILE *GetInputFileHandle();
 

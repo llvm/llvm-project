@@ -504,7 +504,7 @@ void ScriptInterpreterPython::LeaveSession() {
 }
 
 bool ScriptInterpreterPython::SetStdHandle(File &file, const char *py_name,
-                                           PythonFile &save_file,
+                                           PythonObject &save_file,
                                            const char *mode) {
   if (file.IsValid()) {
     // Flush the file before giving it to python to avoid interleaved output.
@@ -512,8 +512,7 @@ bool ScriptInterpreterPython::SetStdHandle(File &file, const char *py_name,
 
     PythonDictionary &sys_module_dict = GetSysModuleDictionary();
 
-    save_file = sys_module_dict.GetItemForKey(PythonString(py_name))
-                    .AsType<PythonFile>();
+    save_file = sys_module_dict.GetItemForKey(PythonString(py_name));
 
     PythonFile new_file(file, mode);
     sys_module_dict.SetItemForKey(PythonString(py_name), new_file);
