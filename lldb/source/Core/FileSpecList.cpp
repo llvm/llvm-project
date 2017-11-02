@@ -49,7 +49,7 @@ void FileSpecList::Append(const FileSpec &file_spec) {
 // contained a copy of "file_spec".
 //------------------------------------------------------------------
 bool FileSpecList::AppendIfUnique(const FileSpec &file_spec) {
-  collection::iterator pos, end = m_files.end();
+  collection::iterator end = m_files.end();
   if (find(m_files.begin(), end, file_spec) == end) {
     m_files.push_back(file_spec);
     return true;
