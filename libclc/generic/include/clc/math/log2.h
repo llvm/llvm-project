@@ -20,5 +20,10 @@
  * THE SOFTWARE.
  */
 
-#define __CLC_BODY <clc/math/log2.inc>
+#define __CLC_BODY <clc/math/unary_decl.inc>
+#define __CLC_FUNCTION log2
+
 #include <clc/math/gentype.inc>
+
+#undef __CLC_BODY
+#undef __CLC_FUNCTION
