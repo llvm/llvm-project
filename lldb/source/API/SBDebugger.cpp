@@ -270,6 +270,18 @@ void SBDebugger::SetInputFileHandle(FILE *fh, bool transfer_ownership) {
     m_opaque_sp->SetInputFileHandle(fh, transfer_ownership);
 }
 
+void SBDebugger::FlushDebuggerOutputHandles() {
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
+  
+  if (log)
+    log->Printf(
+                "SBDebugger(%p)::FlushDebuggerOutputHandles ()",
+                static_cast<void *>(m_opaque_sp.get()));
+
+  if (m_opaque_sp)
+    m_opaque_sp->Flush();
+}
+
 void SBDebugger::SetOutputFileHandle(FILE *fh, bool transfer_ownership) {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 

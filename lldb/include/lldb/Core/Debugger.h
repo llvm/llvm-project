@@ -139,6 +139,8 @@ public:
   void SetOutputFileHandle(FILE *fh, bool tranfer_ownership);
 
   void SetErrorFileHandle(FILE *fh, bool tranfer_ownership);
+                     
+  void Flush();
 
   void SaveInputTerminalState();
 
