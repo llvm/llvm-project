@@ -113,8 +113,6 @@ public:
       Reset(PyRefType::Borrowed, rhs.m_py_obj);
   }
 
-  operator PyObject*() const { return m_py_obj; }
-
   // PythonObject is implicitly convertible to PyObject *, which will call the
   // wrong overload.  We want to explicitly disallow this, since a PyObject
   // *always* owns its reference.  Therefore the overload which takes a

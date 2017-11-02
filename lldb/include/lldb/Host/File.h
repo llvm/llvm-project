@@ -64,17 +64,6 @@ public:
         m_is_real_terminal(eLazyBoolCalculate),
         m_supports_colors(eLazyBoolCalculate) {}
 
-  File(File &&rhs);
-
-  File& operator= (File &&rhs);
-
-  void Swap(File &other);
-
-  File(void *cookie,
-       int (*readfn)(void *, char *, int),
-       int (*writefn)(void *, const char *, int),
-       int (*closefn)(void *));
-
   //------------------------------------------------------------------
   /// Constructor with path.
   ///
@@ -494,6 +483,9 @@ protected:
   LazyBool m_is_interactive;
   LazyBool m_is_real_terminal;
   LazyBool m_supports_colors;
+
+private:
+  DISALLOW_COPY_AND_ASSIGN(File);
 };
 
 } // namespace lldb_private

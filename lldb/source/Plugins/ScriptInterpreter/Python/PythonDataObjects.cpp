@@ -17,7 +17,6 @@
 #include "PythonDataObjects.h"
 #include "ScriptInterpreterPython.h"
 
-#include "lldb/Utility/Log.h"
 #include "lldb/Host/File.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
@@ -960,10 +959,8 @@ PythonFile::~PythonFile() {}
 
 bool PythonFile::Check(PyObject *py_obj) {
 #if PY_MAJOR_VERSION < 3
-  if (PyFile_Check(py_obj)) {
-    return true;
-  }
-#endif
+  return PyFile_Check(py_obj);
+#else
   // In Python 3, there is no `PyFile_Check`, and in fact PyFile is not even a
   // first-class object type anymore.  `PyFile_FromFd` is just a thin wrapper
   // over `io.open()`, which returns some object derived from `io.IOBase`.
@@ -980,11 +977,11 @@ bool PythonFile::Check(PyObject *py_obj) {
 
   if (1 != PyObject_IsSubclass(object_type.get(), io_base_class.get()))
     return false;
-
   if (!object_type.HasAttribute("fileno"))
     return false;
 
   return true;
+#endif
 }
 
 void PythonFile::Reset(PyRefType type, PyObject *py_obj) {
@@ -992,7 +989,7 @@ void PythonFile::Reset(PyRefType type, PyObject *py_obj) {
   // `py_obj` it still gets decremented if necessary.
   PythonObject result(type, py_obj);
 
-  if (py_obj == NULL || !PythonFile::Check(py_obj)) {
+  if (!PythonFile::Check(py_obj)) {
     PythonObject::Reset();
     return;
   }
@@ -1037,168 +1034,17 @@ uint32_t PythonFile::GetOptionsFromMode(llvm::StringRef mode) {
       .Default(0);
 }
 
-static const char *
-str(PyObject *o, const char *defaultt, PyObject **cleanup)
-{
-  *cleanup = NULL;
-  if (o == NULL) {
-    return defaultt;
-  }
-  PyObject *string = PyObject_Str(o);
-  *cleanup = string;
-  if (string == NULL) {
-    return defaultt;
-  }
-  if (PyUnicode_Check(string)) {
-    PyObject *bytes = PyUnicode_AsEncodedString(string, "utf-8", "Error ~");
-    if (bytes == NULL) {
-      return defaultt;
-    }
-    Py_XDECREF(string);
-    *cleanup = bytes;
-    return PyBytes_AS_STRING(bytes);
-  } else {
-    return PyBytes_AS_STRING(string);
-  }
-}
-
-
-static void
-log_exception(const char *fmt, PyObject *obj)
-{
-  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_SCRIPT);
-  if (!log) {
-    return;
-  }
-  PyObject *pyclass = PyObject_Type(obj);
-  PyObject *pyclassname = NULL;
-  if (pyclass) {
-    pyclassname = PyObject_GetAttrString(pyclass, "__name__");
-  }
-  PyObject *exception = NULL, *v = NULL, *tb = NULL;
-  PyErr_Fetch(&exception, &v, &tb);
-  if (exception) {
-    PyErr_NormalizeException(&exception, &v, &tb);
-  }
-  PyObject *cleanup1 = NULL, *cleanup2 = NULL;
-  log->Printf(fmt,
-              str(pyclassname, "UknownClass", &cleanup1),
-              str(v, "unknown error", &cleanup2));
-  Py_XDECREF(cleanup1);
-  Py_XDECREF(cleanup2);
-  Py_XDECREF(pyclass);
-  Py_XDECREF(pyclassname);
-  Py_XDECREF(exception);
-  Py_XDECREF(v);
-  Py_XDECREF(tb);
-
-}
-
-class GIL
-{
-private:
-  PyGILState_STATE m_state;
-public:
-  GIL() {
-    m_state = PyGILState_Ensure();
-  }
-  ~GIL() {
-    PyGILState_Release(m_state);
-  }
-};
-
-#define callmethod(obj, name, fmt, ...) \
-  PythonObject(PyRefType::Owned, PyObject_CallMethod(obj, (char*)name, (char*)fmt, __VA_ARGS__))
-
-#define callmethod0(obj, name, fmt) \
-  PythonObject(PyRefType::Owned, PyObject_CallMethod(obj, (char*)name, (char*)fmt))
-
-static int readfn(void *ctx, char *buffer, int n)
-{
-  GIL gil;
-  auto *file = (PyObject *) ctx;
-
-  PythonObject pyresult = callmethod(file, "read", "(i)", n);
-  if (!pyresult.IsValid() || PyErr_Occurred()) {
-    log_exception("read from python %s failed: %s", file);
-    return -1;
-  }
-  if (!PyBytes_Check(pyresult)) {
-    PyErr_SetString(PyExc_TypeError, "read didn't return bytes");
-    log_exception("read from python %s failed: %s", file);
-    return -1;
-  }
-
-  int r = 0;
-  char *data = NULL;
-  ssize_t length = 0;
-  r = PyBytes_AsStringAndSize(pyresult, &data, &length);
-  if (r || length < 0 || PyErr_Occurred()) {
-    log_exception("read from python %s failed: %s", file);
-    return -1;
-  }
-
-  memcpy(buffer, data, length);
-  return length;
-}
-
-static int writefn(void *ctx, const char *buffer, int n)
-{
-  GIL gil;
-  auto *file = (PyObject *) ctx;
-
-  PythonObject pyresult = callmethod(file, "write", "(s#)", buffer, n);
-  if (!pyresult.IsValid() || PyErr_Occurred()) {
-    log_exception("write to python %s failed: %s", file);
-    return -1;
-  }
-
-  int result = PyLong_AsLong(pyresult);
-  if (PyErr_Occurred()) {
-    log_exception("read from python %s failed: %s", file);
-    return -1;
-  }
-
-  return result;
-}
-
-static int closefn(void *ctx) {
-  GIL gil;
-  auto *file = (PyObject *) ctx;
-  Py_XDECREF(file);
-  return 0;
-}
-
 bool PythonFile::GetUnderlyingFile(File &file) const {
   if (!IsValid())
     return false;
 
-  if (!PythonFile::Check(m_py_obj))
-    return false;
-  
   file.Close();
-  
-  int fd = PyObject_AsFileDescriptor(m_py_obj);
-  if (fd >= 0) {
-    // We don't own the file descriptor returned by this function, make sure the
-    // File object knows about that.
-    file.SetDescriptor(PyObject_AsFileDescriptor(m_py_obj), false);
-    PythonString py_mode = GetAttributeValue("mode").AsType<PythonString>();
-    file.SetOptions(PythonFile::GetOptionsFromMode(py_mode.GetString()));
-    return file.IsValid();
-  }
-  
-  bool readable = PyObject_IsTrue(callmethod0(m_py_obj, "readable", "()"));
-  bool writable = PyObject_IsTrue(callmethod0(m_py_obj, "writable", "()"));
-  
-  Py_XINCREF(m_py_obj);
-  file = File(m_py_obj, readable ? readfn : NULL, writable ? writefn : NULL, closefn);
-  if (!file.IsValid()) {
-    closefn(m_py_obj);
-    return false;
-  } else {
-    return true;
-  }
+  // We don't own the file descriptor returned by this function, make sure the
+  // File object knows about that.
+  file.SetDescriptor(PyObject_AsFileDescriptor(m_py_obj), false);
+  PythonString py_mode = GetAttributeValue("mode").AsType<PythonString>();
+  file.SetOptions(PythonFile::GetOptionsFromMode(py_mode.GetString()));
+  return file.IsValid();
 }
 
 #endif

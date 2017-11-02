@@ -541,12 +541,12 @@ protected:
 
   bool GetEmbeddedInterpreterModuleObjects();
 
-  bool SetStdHandle(File &file, const char *py_name, PythonObject &save_file,
+  bool SetStdHandle(File &file, const char *py_name, PythonFile &save_file,
                     const char *mode);
 
-  PythonObject m_saved_stdin;
-  PythonObject m_saved_stdout;
-  PythonObject m_saved_stderr;
+  PythonFile m_saved_stdin;
+  PythonFile m_saved_stdout;
+  PythonFile m_saved_stderr;
   PythonObject m_main_module;
   PythonObject m_lldb_module;
   PythonDictionary m_session_dict;

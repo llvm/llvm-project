@@ -171,14 +171,6 @@ public:
     void
     SetErrorFileHandle (FILE *f, bool transfer_ownership);
 
-    %feature("docstring",
-    "Flush the Debugger's Output/Error file handles.
-For instance, this is needed by a repl implementation on top of 
-the SB API, where fine grained control of output timing was needed."
-    ) FlushDebuggerOutputHandles;
-    void
-    FlushDebuggerOutputHandles ();
-
     FILE *
     GetInputFileHandle ();
 

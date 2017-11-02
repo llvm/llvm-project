@@ -14,7 +14,6 @@
 #include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
-#include <assert.h>
 
 #ifdef _WIN32
 #include "lldb/Host/windows/windows.h"
@@ -71,129 +70,6 @@ static const char *GetStreamOpenModeFromOptions(uint32_t options) {
 
 int File::kInvalidDescriptor = -1;
 FILE *File::kInvalidStream = NULL;
-
-File::File(File &&rhs)
-  : IOObject(eFDTypeFile, false), m_descriptor(kInvalidDescriptor),
-  m_stream(kInvalidStream), m_options(), m_own_stream(false),
-  m_is_interactive(eLazyBoolCalculate),
-  m_is_real_terminal(eLazyBoolCalculate),
-  m_supports_colors(eLazyBoolCalculate)
-{
-  Swap(rhs);
-}
-
-File& File::operator= (File &&rhs)
-{
-  Close();
-  Swap(rhs);
-  return *this;
-}
-
-void File::Swap(File &rhs)
-{
-    std::swap(m_descriptor, rhs.m_descriptor);
-    std::swap(m_stream, rhs.m_stream);
-    std::swap(m_own_stream, rhs.m_own_stream);
-    std::swap(m_options, rhs.m_options);
-    std::swap(m_is_interactive, rhs.m_is_interactive);
-    std::swap(m_is_real_terminal, rhs.m_is_real_terminal);
-    std::swap(m_supports_colors, rhs.m_supports_colors);
-}
-
-#if defined(__linux__)
-
-struct context {
-  void *cookie;
-  int (*readfn)(void *, char *, int);
-  int (*writefn)(void *, const char *, int);
-  int (*closefn)(void *);
-};
-
-static ssize_t
-write_wrapper(void *c, const char *buf, size_t size)
-{
-  auto ctx = (struct context *)c;
-  if (size > INT_MAX) {
-    size = INT_MAX;
-  }
-  ssize_t wrote = ctx->writefn(ctx->cookie, buf, (int)size);
-  assert(wrote < 0 || (size_t)wrote <= size);
-  if (wrote < 0) {
-    return -1;
-  } else {
-    return (int)wrote;
-  }
-}
-
-static ssize_t
-read_wrapper(void *c, char *buf, size_t size)
-{
-  auto ctx = (struct context *)c;
-  if (size > INT_MAX) {
-    size = INT_MAX;
-  }
-  ssize_t read = ctx->writefn(ctx->cookie, buf, (int)size);
-  assert(read < 0 || (size_t)read <= size);
-  if (read < 0) {
-    return -1;
-  } else {
-    return (int)read;
-  }
-}
-
-static int
-close_wrapper(void *c)
-{
-  auto ctx = (struct context *)c;
-  int ret = ctx->closefn(ctx->cookie);
-  delete ctx;
-  return ret;
-}
-
-#endif
-
-File::File(void *cookie,
-           int (*readfn)(void *, char *, int),
-           int (*writefn)(void *, const char *, int),
-           int (*closefn)(void *))
-    : IOObject(eFDTypeFile, false), m_descriptor(kInvalidDescriptor),
-    m_stream(kInvalidStream), m_options(), m_own_stream(false),
-    m_is_interactive(eLazyBoolCalculate),
-    m_is_real_terminal(eLazyBoolCalculate),
-    m_supports_colors(eLazyBoolCalculate)
-{
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__)
-    m_stream = funopen(cookie, readfn, writefn, NULL, closefn);
-#elif defined(__linux__)
-    cookie_io_functions_t io_funcs = {};
-    io_funcs.read = read_wrapper;
-    io_funcs.write = write_wrapper;
-    io_funcs.close = close_wrapper;
-    const char *mode = NULL;
-    if (readfn && writefn) {
-      mode = "r+";
-    } else if (readfn) {
-      mode = "r";
-    } else if (writefn) {
-      mode = "w";
-    }
-    if (mode) {
-      struct context *ctx = new context;
-      ctx->readfn = readfn;
-      ctx->writefn = writefn;
-      ctx->closefn = closefn;
-      ctx->cookie = cookie;
-      m_stream = fopencookie(ctx, mode, io_funcs);
-      if (!m_stream) {
-        delete ctx;
-      }
-    }
-#endif
-    if (m_stream) {
-        m_own_stream = true;
-    }
-}
-
 
 File::File(const char *path, uint32_t options, uint32_t permissions)
     : IOObject(eFDTypeFile, false), m_descriptor(kInvalidDescriptor),
