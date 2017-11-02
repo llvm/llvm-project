@@ -53,7 +53,11 @@ protected:
     DistanceBetweenRegBanks = 3,
     FirstCrossRegCpyIdx = 25,
     LastCrossRegCpyIdx = 39,
-    DistanceBetweenCrossRegCpy = 2
+    DistanceBetweenCrossRegCpy = 2,
+    FPExt16To32Idx = 41,
+    FPExt16To64Idx = 43,
+    FPExt32To64Idx = 45,
+    FPExt64To128Idx = 47,
   };
 
   static bool checkPartialMap(unsigned Idx, unsigned ValStartIdx,
@@ -81,6 +85,15 @@ protected:
   /// register bank with a size of \p Size.
   static const RegisterBankInfo::ValueMapping *
   getCopyMapping(unsigned DstBankID, unsigned SrcBankID, unsigned Size);
+
+  /// Get the instruction mapping for G_FPEXT.
+  ///
+  /// \pre (DstSize, SrcSize) pair is one of the following:
+  ///      (32, 16), (64, 16), (64, 32), (128, 64)
+  ///
+  /// \return An InstructionMapping with statically allocated OperandsMapping.
+  static const RegisterBankInfo::ValueMapping *
+  getFPExtMapping(unsigned DstSize, unsigned SrcSize);
 
 #define GET_TARGET_REGBANK_CLASS
 #include "AArch64GenRegisterBank.inc"

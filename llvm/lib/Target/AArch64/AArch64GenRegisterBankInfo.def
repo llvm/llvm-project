@@ -98,6 +98,18 @@ RegisterBankInfo::ValueMapping AArch64GenRegisterBankInfo::ValMappings[]{
     //                                               LastCrossRegCpyIdx.
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR64 - PMI_Min], 1},
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR64 - PMI_Min], 1},
+    // 41: FPExt: 16 to 32. <-- This must match FPExt16To32Idx.
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR32 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR16 - PMI_Min], 1},
+    // 43: FPExt: 16 to 32. <-- This must match FPExt16To64Idx.
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR64 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR16 - PMI_Min], 1},
+    // 45: FPExt: 32 to 64. <-- This must match FPExt32To64Idx.
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR64 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR32 - PMI_Min], 1},
+    // 47: FPExt vector: 64 to 128. <-- This must match FPExt64To128Idx.
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR128 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR64 - PMI_Min], 1},
 };
 
 bool AArch64GenRegisterBankInfo::checkPartialMap(unsigned Idx,
@@ -216,5 +228,36 @@ AArch64GenRegisterBankInfo::getCopyMapping(unsigned DstBankID,
   assert(ValMappingIdx >= FirstCrossRegCpyIdx &&
          ValMappingIdx <= LastCrossRegCpyIdx && "Mapping out of bound");
   return &ValMappings[ValMappingIdx];
+}
+
+const RegisterBankInfo::ValueMapping *
+AArch64GenRegisterBankInfo::getFPExtMapping(unsigned DstSize,
+                                         unsigned SrcSize) {
+  // We support:
+  // - For Scalar:
+  //   - 16 to 32.
+  //   - 16 to 64.
+  //   - 32 to 64.
+  // => FPR 16 to FPR 32|64
+  // => FPR 32 to FPR 64
+  // - For vectors:
+  //   - v4f16 to v4f32
+  //   - v2f32 to v2f64
+  // => FPR 64 to FPR 128
+
+  // Check that we have been asked sensible sizes.
+  if (SrcSize == 16) {
+    assert((DstSize == 32 || DstSize == 64) && "Unexpected half extension");
+    if (DstSize == 32)
+      return &ValMappings[FPExt16To32Idx];
+    return &ValMappings[FPExt16To64Idx];
+  }
+
+  if (SrcSize == 32) {
+    assert(DstSize == 64 && "Unexpected float extension");
+    return &ValMappings[FPExt32To64Idx];
+  }
+  assert((SrcSize == 64 || DstSize == 128) && "Unexpected vector extension");
+  return &ValMappings[FPExt64To128Idx];
 }
 } // End llvm namespace.
