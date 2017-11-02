@@ -73,7 +73,7 @@ typedef struct unw_addr_space *unw_addr_space_t;
 
 typedef int unw_regnum_t;
 typedef uintptr_t unw_word_t;
-#if defined(_LIBUNWIND_ARM_EHABI)
+#if defined(__arm__)
 typedef uint64_t unw_fpreg_t;
 #else
 typedef double unw_fpreg_t;

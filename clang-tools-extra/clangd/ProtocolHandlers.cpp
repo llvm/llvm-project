@@ -11,6 +11,7 @@
 #include "ClangdLSPServer.h"
 #include "ClangdServer.h"
 #include "DraftStore.h"
+#include "Trace.h"
 
 using namespace clang;
 using namespace clang::clangd;
@@ -30,7 +31,10 @@ struct HandlerRegisterer {
     auto *Callbacks = this->Callbacks;
     Dispatcher.registerHandler(
         Method, [=](RequestContext C, llvm::yaml::MappingNode *RawParams) {
-          if (auto P = std::decay<Param>::type::parse(RawParams, *Out)) {
+          if (auto P = [&] {
+                trace::Span Tracer("Parse");
+                return std::decay<Param>::type::parse(RawParams, *Out);
+              }()) {
             (Callbacks->*Handler)(std::move(C), *P);
           } else {
             Out->log("Failed to decode " + Method + " request.\n");

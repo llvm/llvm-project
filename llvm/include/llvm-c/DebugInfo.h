@@ -143,7 +143,7 @@ void LLVMDIBuilderFinalize(LLVMDIBuilderRef Builder);
 /// information generated during this instance of compilation.
 /// \param Lang          Source programming language, eg.
 ///                      \c LLVMDWARFSourceLanguageC99
-/// \param File          File info.
+/// \param FileRef       File info.
 /// \param Producer      Identify the producer of debugging information
 ///                      and code.  Usually this is a compiler
 ///                      version string.

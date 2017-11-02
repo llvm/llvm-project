@@ -107,38 +107,31 @@ bool MipsFrameLowering::hasBP(const MachineFunction &MF) const {
   return MFI.hasVarSizedObjects() && TRI->needsStackRealignment(MF);
 }
 
+// Estimate the size of the stack, including the incoming arguments. We need to
+// account for register spills, local objects, reserved call frame and incoming
+// arguments. This is required to determine the largest possible positive offset
+// from $sp so that it can be determined if an emergency spill slot for stack
+// addresses is required.
 uint64_t MipsFrameLowering::estimateStackSize(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
 
-  int64_t Offset = 0;
+  int64_t Size = 0;
 
-  // Iterate over fixed sized objects.
+  // Iterate over fixed sized objects which are incoming arguments.
   for (int I = MFI.getObjectIndexBegin(); I != 0; ++I)
-    Offset = std::max(Offset, -MFI.getObjectOffset(I));
+    if (MFI.getObjectOffset(I) > 0)
+      Size += MFI.getObjectSize(I);
 
   // Conservatively assume all callee-saved registers will be saved.
   for (const MCPhysReg *R = TRI.getCalleeSavedRegs(&MF); *R; ++R) {
-    unsigned Size = TRI.getSpillSize(*TRI.getMinimalPhysRegClass(*R));
-    Offset = alignTo(Offset + Size, Size);
+    unsigned RegSize = TRI.getSpillSize(*TRI.getMinimalPhysRegClass(*R));
+    Size = alignTo(Size + RegSize, RegSize);
   }
 
-  unsigned MaxAlign = MFI.getMaxAlignment();
-
-  // Check that MaxAlign is not zero if there is a stack object that is not a
-  // callee-saved spill.
-  assert(!MFI.getObjectIndexEnd() || MaxAlign);
-
-  // Iterate over other objects.
-  for (unsigned I = 0, E = MFI.getObjectIndexEnd(); I != E; ++I)
-    Offset = alignTo(Offset + MFI.getObjectSize(I), MaxAlign);
-
-  // Call frame.
-  if (MFI.adjustsStack() && hasReservedCallFrame(MF))
-    Offset = alignTo(Offset + MFI.getMaxCallFrameSize(),
-                     std::max(MaxAlign, getStackAlignment()));
-
-  return alignTo(Offset, getStackAlignment());
+  // Get the size of the rest of the frame objects and any possible reserved
+  // call frame, accounting for alignment.
+  return Size + MFI.estimateStackSize(MF);
 }
 
 // Eliminate ADJCALLSTACKDOWN, ADJCALLSTACKUP pseudo instructions

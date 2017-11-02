@@ -2,13 +2,13 @@
 target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:32-f32:32:32-f64:32:32-v64:32:64-v128:32:128-a0:0:32-n32"
 target triple = "arm-apple-ios"
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) nounwind
+declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1) #0
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32, i1) #0
 
-declare void @a_readonly_func(i8 *) noinline nounwind readonly
-declare void @a_writeonly_func(i8 *) noinline nounwind writeonly
+declare void @a_readonly_func(i8*) #1
+declare void @a_writeonly_func(i8*) #2
 
-define void @test2(i8* %P, i8* %Q) nounwind ssp {
+define void @test2(i8* %P, i8* %Q) #3 {
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false)
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false)
   ret void
@@ -24,7 +24,7 @@ define void @test2(i8* %P, i8* %Q) nounwind ssp {
 ; CHECK:   Just Mod:   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false) <->   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false)
 }
 
-define void @test2a(i8* noalias %P, i8* noalias %Q) nounwind ssp {
+define void @test2a(i8* noalias %P, i8* noalias %Q) #3 {
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false)
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false)
   ret void
@@ -40,7 +40,7 @@ define void @test2a(i8* noalias %P, i8* noalias %Q) nounwind ssp {
 ; CHECK: Just Mod:   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false) <->   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false)
 }
 
-define void @test2b(i8* noalias %P, i8* noalias %Q) nounwind ssp {
+define void @test2b(i8* noalias %P, i8* noalias %Q) #3 {
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false)
   %R = getelementptr i8, i8* %P, i64 12
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %R, i8* %Q, i64 12, i32 1, i1 false)
@@ -61,7 +61,7 @@ define void @test2b(i8* noalias %P, i8* noalias %Q) nounwind ssp {
 ; CHECK: NoModRef:   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %R, i8* %Q, i64 12, i32 1, i1 false) <->   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false)
 }
 
-define void @test2c(i8* noalias %P, i8* noalias %Q) nounwind ssp {
+define void @test2c(i8* noalias %P, i8* noalias %Q) #3 {
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false)
   %R = getelementptr i8, i8* %P, i64 11
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %R, i8* %Q, i64 12, i32 1, i1 false)
@@ -82,7 +82,7 @@ define void @test2c(i8* noalias %P, i8* noalias %Q) nounwind ssp {
 ; CHECK: Just Mod:   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %R, i8* %Q, i64 12, i32 1, i1 false) <->   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false)
 }
 
-define void @test2d(i8* noalias %P, i8* noalias %Q) nounwind ssp {
+define void @test2d(i8* noalias %P, i8* noalias %Q) #3 {
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false)
   %R = getelementptr i8, i8* %P, i64 -12
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %R, i8* %Q, i64 12, i32 1, i1 false)
@@ -103,7 +103,7 @@ define void @test2d(i8* noalias %P, i8* noalias %Q) nounwind ssp {
 ; CHECK: NoModRef:   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %R, i8* %Q, i64 12, i32 1, i1 false) <->   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false)
 }
 
-define void @test2e(i8* noalias %P, i8* noalias %Q) nounwind ssp {
+define void @test2e(i8* noalias %P, i8* noalias %Q) #3 {
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false)
   %R = getelementptr i8, i8* %P, i64 -11
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %R, i8* %Q, i64 12, i32 1, i1 false)
@@ -124,7 +124,7 @@ define void @test2e(i8* noalias %P, i8* noalias %Q) nounwind ssp {
 ; CHECK: Just Mod:   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %R, i8* %Q, i64 12, i32 1, i1 false) <->   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false)
 }
 
-define void @test3(i8* %P, i8* %Q) nounwind ssp {
+define void @test3(i8* %P, i8* %Q) #3 {
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 8, i32 1, i1 false)
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false)
   ret void
@@ -140,7 +140,7 @@ define void @test3(i8* %P, i8* %Q) nounwind ssp {
 ; CHECK: Just Mod:   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false) <->   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 8, i32 1, i1 false)
 }
 
-define void @test3a(i8* noalias %P, i8* noalias %Q) nounwind ssp {
+define void @test3a(i8* noalias %P, i8* noalias %Q) #3 {
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 8, i32 1, i1 false)
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false)
   ret void
@@ -156,7 +156,7 @@ define void @test3a(i8* noalias %P, i8* noalias %Q) nounwind ssp {
 ; CHECK: Just Mod:   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false) <->   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 8, i32 1, i1 false)
 }
 
-define void @test4(i8* %P, i8* noalias %Q) nounwind ssp {
+define void @test4(i8* %P, i8* noalias %Q) #3 {
   tail call void @llvm.memset.p0i8.i64(i8* %P, i8 42, i64 8, i32 1, i1 false)
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false)
   ret void
@@ -172,7 +172,7 @@ define void @test4(i8* %P, i8* noalias %Q) nounwind ssp {
 ; CHECK: Just Mod:   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false) <->   tail call void @llvm.memset.p0i8.i64(i8* %P, i8 42, i64 8, i32 1, i1 false)
 }
 
-define void @test5(i8* %P, i8* %Q, i8* %R) nounwind ssp {
+define void @test5(i8* %P, i8* %Q, i8* %R) #3 {
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false)
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %R, i64 12, i32 1, i1 false)
   ret void
@@ -192,7 +192,7 @@ define void @test5(i8* %P, i8* %Q, i8* %R) nounwind ssp {
 ; CHECK: Just Mod:   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %R, i64 12, i32 1, i1 false) <->   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false)
 }
 
-define void @test6(i8* %P) nounwind ssp {
+define void @test6(i8* %P) #3 {
   call void @llvm.memset.p0i8.i64(i8* %P, i8 -51, i64 32, i32 8, i1 false)
   call void @a_readonly_func(i8* %P)
   ret void
@@ -205,7 +205,7 @@ define void @test6(i8* %P) nounwind ssp {
 ; CHECK: Just Ref:   call void @a_readonly_func(i8* %P) <->   call void @llvm.memset.p0i8.i64(i8* %P, i8 -51, i64 32, i32 8, i1 false)
 }
 
-define void @test7(i8* %P) nounwind ssp {
+define void @test7(i8* %P) #3 {
   call void @a_writeonly_func(i8* %P)
   call void @a_readonly_func(i8* %P)
   ret void
@@ -218,9 +218,9 @@ define void @test7(i8* %P) nounwind ssp {
 ; CHECK: Just Ref:   call void @a_readonly_func(i8* %P) <->   call void @a_writeonly_func(i8* %P)
 }
 
-declare void @an_inaccessiblememonly_func() nounwind inaccessiblememonly
-declare void @an_inaccessibleorargmemonly_func(i8 *) nounwind inaccessiblemem_or_argmemonly
-declare void @an_argmemonly_func(i8 *) nounwind argmemonly
+declare void @an_inaccessiblememonly_func() #4
+declare void @an_inaccessibleorargmemonly_func(i8*) #5
+declare void @an_argmemonly_func(i8*) #0
 
 define void @test8(i8* %p) {
 entry:
@@ -260,3 +260,80 @@ entry:
 ; CHECK: NoModRef: call void @an_argmemonly_func(i8* %q) <-> call void @an_inaccessiblememonly_func()
 ; CHECK: Both ModRef: call void @an_argmemonly_func(i8* %q) <-> call void @an_inaccessibleorargmemonly_func(i8* %q)
 }
+
+;; test that unknown operand bundle has unknown effect to the heap
+define void @test9(i8* %p) {
+; CHECK-LABEL: Function: test9
+entry:
+  %q = getelementptr i8, i8* %p, i64 16
+  call void @a_readonly_func(i8* %p) [ "unknown"() ]
+  call void @an_inaccessiblememonly_func() [ "unknown"() ]
+  call void @an_inaccessibleorargmemonly_func(i8* %q) [ "unknown"() ]
+  call void @an_argmemonly_func(i8* %q) [ "unknown"() ]
+  ret void
+
+; CHECK: Both ModRef:  Ptr: i8* %p     <->  call void @a_readonly_func(i8* %p) [ "unknown"() ]
+; CHECK: Both ModRef:  Ptr: i8* %q     <->  call void @a_readonly_func(i8* %p) [ "unknown"() ]
+; CHECK: Both ModRef:  Ptr: i8* %p     <->  call void @an_inaccessiblememonly_func() [ "unknown"() ]
+; CHECK: Both ModRef:  Ptr: i8* %q     <->  call void @an_inaccessiblememonly_func() [ "unknown"() ]
+; CHECK: Both ModRef:  Ptr: i8* %p     <->  call void @an_inaccessibleorargmemonly_func(i8* %q) [ "unknown"() ]
+; CHECK: Both ModRef:  Ptr: i8* %q     <->  call void @an_inaccessibleorargmemonly_func(i8* %q) [ "unknown"() ]
+; CHECK: Both ModRef:  Ptr: i8* %p     <->  call void @an_argmemonly_func(i8* %q) [ "unknown"() ]
+; CHECK: Both ModRef:  Ptr: i8* %q     <->  call void @an_argmemonly_func(i8* %q) [ "unknown"() ]
+; CHECK: Both ModRef:   call void @a_readonly_func(i8* %p) [ "unknown"() ] <->   call void @an_inaccessiblememonly_func() [ "unknown"() ]
+; CHECK: Both ModRef:   call void @a_readonly_func(i8* %p) [ "unknown"() ] <->   call void @an_inaccessibleorargmemonly_func(i8* %q) [ "unknown"() ]
+; CHECK: Both ModRef:   call void @a_readonly_func(i8* %p) [ "unknown"() ] <->   call void @an_argmemonly_func(i8* %q) [ "unknown"() ]
+; CHECK: Both ModRef:   call void @an_inaccessiblememonly_func() [ "unknown"() ] <->   call void @a_readonly_func(i8* %p) [ "unknown"() ]
+; CHECK: Both ModRef:   call void @an_inaccessiblememonly_func() [ "unknown"() ] <->   call void @an_inaccessibleorargmemonly_func(i8* %q) [ "unknown"() ]
+; CHECK: Both ModRef:   call void @an_inaccessiblememonly_func() [ "unknown"() ] <->   call void @an_argmemonly_func(i8* %q) [ "unknown"() ]
+; CHECK: Both ModRef:   call void @an_inaccessibleorargmemonly_func(i8* %q) [ "unknown"() ] <->   call void @a_readonly_func(i8* %p) [ "unknown"() ]
+; CHECK: Both ModRef:   call void @an_inaccessibleorargmemonly_func(i8* %q) [ "unknown"() ] <->   call void @an_inaccessiblememonly_func() [ "unknown"() ]
+; CHECK: Both ModRef:   call void @an_inaccessibleorargmemonly_func(i8* %q) [ "unknown"() ] <->   call void @an_argmemonly_func(i8* %q) [ "unknown"() ]
+; CHECK: Both ModRef:   call void @an_argmemonly_func(i8* %q) [ "unknown"() ] <->   call void @a_readonly_func(i8* %p) [ "unknown"() ]
+; CHECK: Both ModRef:   call void @an_argmemonly_func(i8* %q) [ "unknown"() ] <->   call void @an_inaccessiblememonly_func() [ "unknown"() ]
+; CHECK: Both ModRef:   call void @an_argmemonly_func(i8* %q) [ "unknown"() ] <->   call void @an_inaccessibleorargmemonly_func(i8* %q) [ "unknown"() ]
+}
+
+;; test callsite overwrite of unknown operand bundle
+define void @test10(i8* %p) {
+; CHECK-LABEL: Function: test10
+entry:
+  %q = getelementptr i8, i8* %p, i64 16
+  call void @a_readonly_func(i8* %p) #6 [ "unknown"() ]
+  call void @an_inaccessiblememonly_func() #7 [ "unknown"() ]
+  call void @an_inaccessibleorargmemonly_func(i8* %q) #8 [ "unknown"() ]
+  call void @an_argmemonly_func(i8* %q) #9 [ "unknown"() ]
+  ret void
+
+; CHECK: Just Ref:  Ptr: i8* %p        <->  call void @a_readonly_func(i8* %p) #6 [ "unknown"() ]
+; CHECK: Just Ref:  Ptr: i8* %q        <->  call void @a_readonly_func(i8* %p) #6 [ "unknown"() ]
+; CHECK: NoModRef:  Ptr: i8* %p        <->  call void @an_inaccessiblememonly_func() #7 [ "unknown"() ]
+; CHECK: NoModRef:  Ptr: i8* %q        <->  call void @an_inaccessiblememonly_func() #7 [ "unknown"() ]
+; CHECK: NoModRef:  Ptr: i8* %p        <->  call void @an_inaccessibleorargmemonly_func(i8* %q) #8 [ "unknown"() ]
+; CHECK: Both ModRef:  Ptr: i8* %q     <->  call void @an_inaccessibleorargmemonly_func(i8* %q) #8 [ "unknown"() ]
+; CHECK: NoModRef:  Ptr: i8* %p        <->  call void @an_argmemonly_func(i8* %q) #9 [ "unknown"() ]
+; CHECK: Both ModRef:  Ptr: i8* %q     <->  call void @an_argmemonly_func(i8* %q) #9 [ "unknown"() ]
+; CHECK: Just Ref:   call void @a_readonly_func(i8* %p) #6 [ "unknown"() ] <->   call void @an_inaccessiblememonly_func() #7 [ "unknown"() ]
+; CHECK: Just Ref:   call void @a_readonly_func(i8* %p) #6 [ "unknown"() ] <->   call void @an_inaccessibleorargmemonly_func(i8* %q) #8 [ "unknown"() ]
+; CHECK: Just Ref:   call void @a_readonly_func(i8* %p) #6 [ "unknown"() ] <->   call void @an_argmemonly_func(i8* %q) #9 [ "unknown"() ]
+; CHECK: Both ModRef:   call void @an_inaccessiblememonly_func() #7 [ "unknown"() ] <->   call void @a_readonly_func(i8* %p) #6 [ "unknown"() ]
+; CHECK: Both ModRef:   call void @an_inaccessiblememonly_func() #7 [ "unknown"() ] <->   call void @an_inaccessibleorargmemonly_func(i8* %q) #8 [ "unknown"() ]
+; CHECK: NoModRef:   call void @an_inaccessiblememonly_func() #7 [ "unknown"() ] <->   call void @an_argmemonly_func(i8* %q) #9 [ "unknown"() ]
+; CHECK: Both ModRef:   call void @an_inaccessibleorargmemonly_func(i8* %q) #8 [ "unknown"() ] <->   call void @a_readonly_func(i8* %p) #6 [ "unknown"() ]
+; CHECK: Both ModRef:   call void @an_inaccessibleorargmemonly_func(i8* %q) #8 [ "unknown"() ] <->   call void @an_inaccessiblememonly_func() #7 [ "unknown"() ]
+; CHECK: Both ModRef:   call void @an_inaccessibleorargmemonly_func(i8* %q) #8 [ "unknown"() ] <->   call void @an_argmemonly_func(i8* %q) #9 [ "unknown"() ]
+; CHECK: Both ModRef:   call void @an_argmemonly_func(i8* %q) #9 [ "unknown"() ] <->   call void @a_readonly_func(i8* %p) #6 [ "unknown"() ]
+; CHECK: NoModRef:   call void @an_argmemonly_func(i8* %q) #9 [ "unknown"() ] <->   call void @an_inaccessiblememonly_func() #7 [ "unknown"() ]
+; CHECK: Both ModRef:   call void @an_argmemonly_func(i8* %q) #9 [ "unknown"() ] <->   call void @an_inaccessibleorargmemonly_func(i8* %q) #8 [ "unknown"() ]
+}
+
+attributes #0 = { argmemonly nounwind }
+attributes #1 = { noinline nounwind readonly }
+attributes #2 = { noinline nounwind writeonly }
+attributes #3 = { nounwind ssp }
+attributes #4 = { inaccessiblememonly nounwind }
+attributes #5 = { inaccessiblemem_or_argmemonly nounwind }
+attributes #6 = { readonly }
+attributes #7 = { inaccessiblememonly }
+attributes #8 = { inaccessiblemem_or_argmemonly }
+attributes #9 = { argmemonly }

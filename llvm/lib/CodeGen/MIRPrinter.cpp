@@ -1243,6 +1243,12 @@ void MIPrinter::print(const MCCFIInstruction &CFI,
     printCFIRegister(CFI.getRegister(), OS, TRI);
     OS << ", " << CFI.getOffset();
     break;
+  case MCCFIInstruction::OpRestore:
+    OS << "restore ";
+    if (CFI.getLabel())
+      OS << "<mcsymbol> ";
+    printCFIRegister(CFI.getRegister(), OS, TRI);
+    break;
   default:
     // TODO: Print the other CFI Operations.
     OS << "<unserializable cfi operation>";

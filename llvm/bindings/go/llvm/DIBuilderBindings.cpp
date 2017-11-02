@@ -29,25 +29,6 @@ void LLVMDIBuilderDestroy(LLVMDIBuilderRef dref) {
   delete d;
 }
 
-void LLVMDIBuilderFinalize(LLVMDIBuilderRef dref) { unwrap(dref)->finalize(); }
-
-LLVMMetadataRef LLVMDIBuilderCreateCompileUnit(LLVMDIBuilderRef Dref,
-                                               unsigned Lang, const char *File,
-                                               const char *Dir,
-                                               const char *Producer,
-                                               int Optimized, const char *Flags,
-                                               unsigned RuntimeVersion) {
-  DIBuilder *D = unwrap(Dref);
-  return wrap(D->createCompileUnit(Lang, D->createFile(File, Dir), Producer,
-                                   Optimized, Flags, RuntimeVersion));
-}
-
-LLVMMetadataRef LLVMDIBuilderCreateFile(LLVMDIBuilderRef Dref, const char *File,
-                                        const char *Dir) {
-  DIBuilder *D = unwrap(Dref);
-  return wrap(D->createFile(File, Dir));
-}
-
 LLVMMetadataRef LLVMDIBuilderCreateLexicalBlock(LLVMDIBuilderRef Dref,
                                                 LLVMMetadataRef Scope,
                                                 LLVMMetadataRef File,
