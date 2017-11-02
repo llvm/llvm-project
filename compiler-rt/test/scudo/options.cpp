@@ -1,4 +1,4 @@
-// RUN: %clang_scudo %s -o %t
+// RUN: %clangxx_scudo %s -o %t
 // RUN:                                                %run %t 2>&1
 // RUN: %env_scudo_opts=DeallocationTypeMismatch=0     %run %t 2>&1
 // RUN: %env_scudo_opts=DeallocationTypeMismatch=1 not %run %t 2>&1 | FileCheck %s

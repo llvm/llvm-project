@@ -36,7 +36,6 @@
 #endif
 
 #if OMPT_SUPPORT
-#include "ompt-internal.h"
 #include "ompt-specific.h"
 #endif
 
@@ -1230,12 +1229,14 @@ __kmp_dispatch_init(ident_t *loc, int gtid, enum sched_type schedule, T lb,
   }
 #endif // ( KMP_STATIC_STEAL_ENABLED )
 
-#if OMPT_SUPPORT && OMPT_TRACE
-  if (ompt_enabled && ompt_callbacks.ompt_callback(ompt_event_loop_begin)) {
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  if (ompt_enabled.ompt_callback_work) {
     ompt_team_info_t *team_info = __ompt_get_teaminfo(0, NULL);
-    ompt_task_info_t *task_info = __ompt_get_taskinfo(0);
-    ompt_callbacks.ompt_callback(ompt_event_loop_begin)(
-        team_info->parallel_id, task_info->task_id, team_info->microtask);
+    ompt_task_info_t *task_info = __ompt_get_task_info_object(0);
+    kmp_info_t *thr = __kmp_threads[gtid];
+    ompt_callbacks.ompt_callback(ompt_callback_work)(
+        ompt_work_loop, ompt_scope_begin, &(team_info->parallel_data),
+        &(task_info->task_data), tc, OMPT_LOAD_RETURN_ADDRESS(gtid));
   }
 #endif
 }
@@ -1390,16 +1391,18 @@ static void __kmp_dispatch_finish_chunk(int gtid, ident_t *loc) {
 /* Define a macro for exiting __kmp_dispatch_next(). If status is 0 (no more
    work), then tell OMPT the loop is over. In some cases kmp_dispatch_fini()
    is not called. */
-#if OMPT_SUPPORT && OMPT_TRACE
+#if OMPT_SUPPORT && OMPT_OPTIONAL
 #define OMPT_LOOP_END                                                          \
   if (status == 0) {                                                           \
-    if (ompt_enabled && ompt_callbacks.ompt_callback(ompt_event_loop_end)) {   \
+    if (ompt_enabled.ompt_callback_work) {                                     \
       ompt_team_info_t *team_info = __ompt_get_teaminfo(0, NULL);              \
-      ompt_task_info_t *task_info = __ompt_get_taskinfo(0);                    \
-      ompt_callbacks.ompt_callback(ompt_event_loop_end)(                       \
-          team_info->parallel_id, task_info->task_id);                         \
+      ompt_task_info_t *task_info = __ompt_get_task_info_object(0);            \
+      ompt_callbacks.ompt_callback(ompt_callback_work)(                        \
+          ompt_work_loop, ompt_scope_end, &(team_info->parallel_data),         \
+          &(task_info->task_data), 0, codeptr);                                \
     }                                                                          \
   }
+// TODO: implement count
 #else
 #define OMPT_LOOP_END // no-op
 #endif
@@ -1407,7 +1410,12 @@ static void __kmp_dispatch_finish_chunk(int gtid, ident_t *loc) {
 template <typename T>
 static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
                                T *p_lb, T *p_ub,
-                               typename traits_t<T>::signed_t *p_st) {
+                               typename traits_t<T>::signed_t *p_st
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+                               ,
+                               void *codeptr
+#endif
+                               ) {
 
   typedef typename traits_t<T>::unsigned_t UT;
   typedef typename traits_t<T>::signed_t ST;
@@ -2527,6 +2535,9 @@ void __kmpc_dispatch_init_4(ident_t *loc, kmp_int32 gtid,
                             enum sched_type schedule, kmp_int32 lb,
                             kmp_int32 ub, kmp_int32 st, kmp_int32 chunk) {
   KMP_DEBUG_ASSERT(__kmp_init_serial);
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  OMPT_STORE_RETURN_ADDRESS(gtid);
+#endif
   __kmp_dispatch_init<kmp_int32>(loc, gtid, schedule, lb, ub, st, chunk, true);
 }
 /*!
@@ -2536,6 +2547,9 @@ void __kmpc_dispatch_init_4u(ident_t *loc, kmp_int32 gtid,
                              enum sched_type schedule, kmp_uint32 lb,
                              kmp_uint32 ub, kmp_int32 st, kmp_int32 chunk) {
   KMP_DEBUG_ASSERT(__kmp_init_serial);
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  OMPT_STORE_RETURN_ADDRESS(gtid);
+#endif
   __kmp_dispatch_init<kmp_uint32>(loc, gtid, schedule, lb, ub, st, chunk, true);
 }
 
@@ -2546,6 +2560,9 @@ void __kmpc_dispatch_init_8(ident_t *loc, kmp_int32 gtid,
                             enum sched_type schedule, kmp_int64 lb,
                             kmp_int64 ub, kmp_int64 st, kmp_int64 chunk) {
   KMP_DEBUG_ASSERT(__kmp_init_serial);
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  OMPT_STORE_RETURN_ADDRESS(gtid);
+#endif
   __kmp_dispatch_init<kmp_int64>(loc, gtid, schedule, lb, ub, st, chunk, true);
 }
 
@@ -2556,6 +2573,9 @@ void __kmpc_dispatch_init_8u(ident_t *loc, kmp_int32 gtid,
                              enum sched_type schedule, kmp_uint64 lb,
                              kmp_uint64 ub, kmp_int64 st, kmp_int64 chunk) {
   KMP_DEBUG_ASSERT(__kmp_init_serial);
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  OMPT_STORE_RETURN_ADDRESS(gtid);
+#endif
   __kmp_dispatch_init<kmp_uint64>(loc, gtid, schedule, lb, ub, st, chunk, true);
 }
 
@@ -2573,6 +2593,9 @@ void __kmpc_dist_dispatch_init_4(ident_t *loc, kmp_int32 gtid,
                                  kmp_int32 lb, kmp_int32 ub, kmp_int32 st,
                                  kmp_int32 chunk) {
   KMP_DEBUG_ASSERT(__kmp_init_serial);
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  OMPT_STORE_RETURN_ADDRESS(gtid);
+#endif
   __kmp_dist_get_bounds<kmp_int32>(loc, gtid, p_last, &lb, &ub, st);
   __kmp_dispatch_init<kmp_int32>(loc, gtid, schedule, lb, ub, st, chunk, true);
 }
@@ -2582,6 +2605,9 @@ void __kmpc_dist_dispatch_init_4u(ident_t *loc, kmp_int32 gtid,
                                   kmp_uint32 lb, kmp_uint32 ub, kmp_int32 st,
                                   kmp_int32 chunk) {
   KMP_DEBUG_ASSERT(__kmp_init_serial);
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  OMPT_STORE_RETURN_ADDRESS(gtid);
+#endif
   __kmp_dist_get_bounds<kmp_uint32>(loc, gtid, p_last, &lb, &ub, st);
   __kmp_dispatch_init<kmp_uint32>(loc, gtid, schedule, lb, ub, st, chunk, true);
 }
@@ -2591,6 +2617,9 @@ void __kmpc_dist_dispatch_init_8(ident_t *loc, kmp_int32 gtid,
                                  kmp_int64 lb, kmp_int64 ub, kmp_int64 st,
                                  kmp_int64 chunk) {
   KMP_DEBUG_ASSERT(__kmp_init_serial);
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  OMPT_STORE_RETURN_ADDRESS(gtid);
+#endif
   __kmp_dist_get_bounds<kmp_int64>(loc, gtid, p_last, &lb, &ub, st);
   __kmp_dispatch_init<kmp_int64>(loc, gtid, schedule, lb, ub, st, chunk, true);
 }
@@ -2600,6 +2629,9 @@ void __kmpc_dist_dispatch_init_8u(ident_t *loc, kmp_int32 gtid,
                                   kmp_uint64 lb, kmp_uint64 ub, kmp_int64 st,
                                   kmp_int64 chunk) {
   KMP_DEBUG_ASSERT(__kmp_init_serial);
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  OMPT_STORE_RETURN_ADDRESS(gtid);
+#endif
   __kmp_dist_get_bounds<kmp_uint64>(loc, gtid, p_last, &lb, &ub, st);
   __kmp_dispatch_init<kmp_uint64>(loc, gtid, schedule, lb, ub, st, chunk, true);
 }
@@ -2619,7 +2651,15 @@ If there is no more work, then the lb,ub and stride need not be modified.
 */
 int __kmpc_dispatch_next_4(ident_t *loc, kmp_int32 gtid, kmp_int32 *p_last,
                            kmp_int32 *p_lb, kmp_int32 *p_ub, kmp_int32 *p_st) {
-  return __kmp_dispatch_next<kmp_int32>(loc, gtid, p_last, p_lb, p_ub, p_st);
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  OMPT_STORE_RETURN_ADDRESS(gtid);
+#endif
+  return __kmp_dispatch_next<kmp_int32>(loc, gtid, p_last, p_lb, p_ub, p_st
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+                                        ,
+                                        OMPT_LOAD_RETURN_ADDRESS(gtid)
+#endif
+                                            );
 }
 
 /*!
@@ -2628,7 +2668,15 @@ See @ref __kmpc_dispatch_next_4
 int __kmpc_dispatch_next_4u(ident_t *loc, kmp_int32 gtid, kmp_int32 *p_last,
                             kmp_uint32 *p_lb, kmp_uint32 *p_ub,
                             kmp_int32 *p_st) {
-  return __kmp_dispatch_next<kmp_uint32>(loc, gtid, p_last, p_lb, p_ub, p_st);
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  OMPT_STORE_RETURN_ADDRESS(gtid);
+#endif
+  return __kmp_dispatch_next<kmp_uint32>(loc, gtid, p_last, p_lb, p_ub, p_st
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+                                         ,
+                                         OMPT_LOAD_RETURN_ADDRESS(gtid)
+#endif
+                                             );
 }
 
 /*!
@@ -2636,7 +2684,15 @@ See @ref __kmpc_dispatch_next_4
 */
 int __kmpc_dispatch_next_8(ident_t *loc, kmp_int32 gtid, kmp_int32 *p_last,
                            kmp_int64 *p_lb, kmp_int64 *p_ub, kmp_int64 *p_st) {
-  return __kmp_dispatch_next<kmp_int64>(loc, gtid, p_last, p_lb, p_ub, p_st);
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  OMPT_STORE_RETURN_ADDRESS(gtid);
+#endif
+  return __kmp_dispatch_next<kmp_int64>(loc, gtid, p_last, p_lb, p_ub, p_st
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+                                        ,
+                                        OMPT_LOAD_RETURN_ADDRESS(gtid)
+#endif
+                                            );
 }
 
 /*!
@@ -2645,7 +2701,15 @@ See @ref __kmpc_dispatch_next_4
 int __kmpc_dispatch_next_8u(ident_t *loc, kmp_int32 gtid, kmp_int32 *p_last,
                             kmp_uint64 *p_lb, kmp_uint64 *p_ub,
                             kmp_int64 *p_st) {
-  return __kmp_dispatch_next<kmp_uint64>(loc, gtid, p_last, p_lb, p_ub, p_st);
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  OMPT_STORE_RETURN_ADDRESS(gtid);
+#endif
+  return __kmp_dispatch_next<kmp_uint64>(loc, gtid, p_last, p_lb, p_ub, p_st
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+                                         ,
+                                         OMPT_LOAD_RETURN_ADDRESS(gtid)
+#endif
+                                             );
 }
 
 /*!

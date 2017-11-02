@@ -1142,7 +1142,7 @@ typedef struct {
 // with/without consistency checking.
 extern void (*__kmp_direct_init[])(kmp_dyna_lock_t *, kmp_dyna_lockseq_t);
 extern void (*__kmp_direct_destroy[])(kmp_dyna_lock_t *);
-extern void (*(*__kmp_direct_set))(kmp_dyna_lock_t *, kmp_int32);
+extern int (*(*__kmp_direct_set))(kmp_dyna_lock_t *, kmp_int32);
 extern int (*(*__kmp_direct_unset))(kmp_dyna_lock_t *, kmp_int32);
 extern int (*(*__kmp_direct_test))(kmp_dyna_lock_t *, kmp_int32);
 
@@ -1150,7 +1150,7 @@ extern int (*(*__kmp_direct_test))(kmp_dyna_lock_t *, kmp_int32);
 // with/withuot consistency checking.
 extern void (*__kmp_indirect_init[])(kmp_user_lock_p);
 extern void (*__kmp_indirect_destroy[])(kmp_user_lock_p);
-extern void (*(*__kmp_indirect_set))(kmp_user_lock_p, kmp_int32);
+extern int (*(*__kmp_indirect_set))(kmp_user_lock_p, kmp_int32);
 extern int (*(*__kmp_indirect_unset))(kmp_user_lock_p, kmp_int32);
 extern int (*(*__kmp_indirect_test))(kmp_user_lock_p, kmp_int32);
 

@@ -29,6 +29,8 @@
       integer, parameter :: kmp_size_t_kind        = int_ptr_kind()
       integer, parameter :: kmp_affinity_mask_kind = int_ptr_kind()
       integer, parameter :: omp_lock_hint_kind     = omp_integer_kind
+      integer, parameter :: omp_control_tool_kind  = omp_integer_kind
+      integer, parameter :: omp_control_tool_result_kind = omp_integer_kind
 
       integer (kind=omp_integer_kind), parameter :: openmp_version    = @LIBOMP_OMP_YEAR_MONTH@
       integer (kind=omp_integer_kind), parameter :: kmp_version_major = @LIBOMP_VERSION_MAJOR@
@@ -56,6 +58,16 @@
       integer (kind=omp_lock_hint_kind), parameter :: kmp_lock_hint_hle            = 65536
       integer (kind=omp_lock_hint_kind), parameter :: kmp_lock_hint_rtm            = 131072
       integer (kind=omp_lock_hint_kind), parameter :: kmp_lock_hint_adaptive       = 262144
+
+      integer (kind=omp_control_tool_kind), parameter :: omp_control_tool_start = 1
+      integer (kind=omp_control_tool_kind), parameter :: omp_control_tool_pause = 2
+      integer (kind=omp_control_tool_kind), parameter :: omp_control_tool_flush = 3
+      integer (kind=omp_control_tool_kind), parameter :: omp_control_tool_end = 4
+
+      integer (kind=omp_control_tool_result_kind), parameter :: omp_control_tool_notool = -2
+      integer (kind=omp_control_tool_result_kind), parameter :: omp_control_tool_nocallback = -1
+      integer (kind=omp_control_tool_result_kind), parameter :: omp_control_tool_success = 0
+      integer (kind=omp_control_tool_result_kind), parameter :: omp_control_tool_ignored = 1
 
       interface
 
@@ -493,6 +505,13 @@
           integer (kind=omp_nest_lock_kind) nvar
           integer (kind=omp_lock_hint_kind), value :: hint
         end subroutine omp_init_nest_lock_with_hint
+
+        function omp_control_tool(command, modifier) bind(c)
+          import
+          integer (kind=omp_integer_kind) omp_control_tool
+          integer (kind=omp_control_tool_kind), value :: command
+          integer (kind=omp_control_tool_kind), value :: modifier
+        end function omp_control_tool
 
       end interface
 

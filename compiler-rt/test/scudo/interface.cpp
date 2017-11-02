@@ -1,4 +1,4 @@
-// RUN: %clang_scudo %s -lstdc++ -o %t
+// RUN: %clangxx_scudo %s -lstdc++ -o %t
 // RUN: %run %t ownership          2>&1
 // RUN: %run %t ownership-and-size 2>&1
 // RUN: %run %t heap-size          2>&1
