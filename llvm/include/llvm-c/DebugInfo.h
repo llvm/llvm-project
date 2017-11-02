@@ -14,6 +14,9 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_C_DEBUGINFO_H
+#define LLVM_C_DEBUGINFO_H
+
 #include "llvm-c/Core.h"
 
 #ifdef __cplusplus
@@ -199,4 +202,6 @@ LLVMDIBuilderCreateDebugLocation(LLVMContextRef Ctx, unsigned Line,
 
 #ifdef __cplusplus
 } // end extern "C"
+#endif
+
 #endif

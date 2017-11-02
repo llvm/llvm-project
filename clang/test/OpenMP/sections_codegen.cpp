@@ -84,7 +84,7 @@ int main() {
 
 // CHECK-LABEL: tmain
 // CHECK:       call void {{.*}} @__kmpc_fork_call(
-// CHECK:       __kmpc_global_thread_num
+// CHECK-NOT:   __kmpc_global_thread_num
 // CHECK:       call void @__kmpc_for_static_init_4(
 // CHECK:       invoke void @{{.*}}foo{{.*}}()
 // CHECK-NEXT:  unwind label %[[TERM_LPAD:.+]]
