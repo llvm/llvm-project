@@ -1098,41 +1098,44 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
       ThinLTO.ModuleMap.size());
   StringMap<std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>> ResolvedODR;
 
-  if (Conf.OptLevel > 0) {
+  if (Conf.OptLevel > 0)
     ComputeCrossModuleImport(ThinLTO.CombinedIndex, ModuleToDefinedGVSummaries,
                              ImportLists, ExportLists);
 
-    std::set<GlobalValue::GUID> ExportedGUIDs;
-    for (auto &Res : GlobalResolutions) {
-      // First check if the symbol was flagged as having external references.
-      if (Res.second.Partition != GlobalResolution::External)
-        continue;
-      // IRName will be defined if we have seen the prevailing copy of
-      // this value. If not, no need to mark as exported from a ThinLTO
-      // partition (and we can't get the GUID).
-      if (Res.second.IRName.empty())
-        continue;
-      auto GUID = GlobalValue::getGUID(
-          GlobalValue::dropLLVMManglingEscape(Res.second.IRName));
-      // Mark exported unless index-based analysis determined it to be dead.
-      if (ThinLTO.CombinedIndex.isGUIDLive(GUID))
-        ExportedGUIDs.insert(GUID);
-    }
-
-    // Any functions referenced by the jump table in the regular LTO object must
-    // be exported.
-    for (auto &Def : ThinLTO.CombinedIndex.cfiFunctionDefs())
-      ExportedGUIDs.insert(
-          GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(Def)));
-
-    auto isExported = [&](StringRef ModuleIdentifier, GlobalValue::GUID GUID) {
-      const auto &ExportList = ExportLists.find(ModuleIdentifier);
-      return (ExportList != ExportLists.end() &&
-              ExportList->second.count(GUID)) ||
-             ExportedGUIDs.count(GUID);
-    };
-    thinLTOInternalizeAndPromoteInIndex(ThinLTO.CombinedIndex, isExported);
+  // Figure out which symbols need to be internalized. This also needs to happen
+  // at -O0 because summary-based DCE is implemented using internalization, and
+  // we must apply DCE consistently with the full LTO module in order to avoid
+  // undefined references during the final link.
+  std::set<GlobalValue::GUID> ExportedGUIDs;
+  for (auto &Res : GlobalResolutions) {
+    // First check if the symbol was flagged as having external references.
+    if (Res.second.Partition != GlobalResolution::External)
+      continue;
+    // IRName will be defined if we have seen the prevailing copy of
+    // this value. If not, no need to mark as exported from a ThinLTO
+    // partition (and we can't get the GUID).
+    if (Res.second.IRName.empty())
+      continue;
+    auto GUID = GlobalValue::getGUID(
+        GlobalValue::dropLLVMManglingEscape(Res.second.IRName));
+    // Mark exported unless index-based analysis determined it to be dead.
+    if (ThinLTO.CombinedIndex.isGUIDLive(GUID))
+      ExportedGUIDs.insert(GUID);
   }
+
+  // Any functions referenced by the jump table in the regular LTO object must
+  // be exported.
+  for (auto &Def : ThinLTO.CombinedIndex.cfiFunctionDefs())
+    ExportedGUIDs.insert(
+        GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(Def)));
+
+  auto isExported = [&](StringRef ModuleIdentifier, GlobalValue::GUID GUID) {
+    const auto &ExportList = ExportLists.find(ModuleIdentifier);
+    return (ExportList != ExportLists.end() &&
+            ExportList->second.count(GUID)) ||
+           ExportedGUIDs.count(GUID);
+  };
+  thinLTOInternalizeAndPromoteInIndex(ThinLTO.CombinedIndex, isExported);
 
   auto isPrevailing = [&](GlobalValue::GUID GUID,
                           const GlobalValueSummary *S) {

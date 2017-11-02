@@ -303,9 +303,7 @@ public:
 private:
   bool WaitAtBeginning = false;
   bool RevisitLoop = false;
-  bool ValidLoop = false;
   bool MixedExpTypes = false;
-  MachineLoop *LoopRegion = nullptr;
   int32_t PostOrder = 0;
   MachineInstr *Waitcnt = nullptr;
   int32_t ScoreLBs[NUM_INST_CNTS] = {0};

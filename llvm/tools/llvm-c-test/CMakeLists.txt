@@ -38,6 +38,7 @@ endif ()
 add_llvm_tool(llvm-c-test
   attributes.c
   calc.c
+  debuginfo.c
   diagnostic.c
   disassemble.c
   echo.cpp

@@ -318,9 +318,8 @@ define <8 x i16> @var_shift_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
 ; AVX2-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; AVX2-NEXT:    vpsravd %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpackssdw %ymm0, %ymm0, %ymm0
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX2-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -1249,9 +1248,8 @@ define <8 x i16> @constant_shift_v8i16(<8 x i16> %a) nounwind {
 ; AVX2:       # BB#0:
 ; AVX2-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; AVX2-NEXT:    vpsravd {{.*}}(%rip), %ymm0, %ymm0
-; AVX2-NEXT:    vpackssdw %ymm0, %ymm0, %ymm0
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX2-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;

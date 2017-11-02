@@ -1,4 +1,4 @@
-//===- llvm-objcopy.cpp -----------------------------------------*- C++ -*-===//
+//===- llvm-objcopy.cpp ---------------------------------------------------===//
 //
 //                      The LLVM Compiler Infrastructure
 //
@@ -6,17 +6,37 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+
 #include "llvm-objcopy.h"
 #include "Object.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/ELF.h"
+#include "llvm/Object/Binary.h"
+#include "llvm/Object/ELFObjectFile.h"
+#include "llvm/Object/ELFTypes.h"
+#include "llvm/Object/Error.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileOutputBuffer.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
-#include "llvm/Support/ToolOutputFile.h"
-
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdlib>
+#include <functional>
+#include <iterator>
 #include <memory>
 #include <string>
 #include <system_error>
+#include <utility>
 
 using namespace llvm;
 using namespace object;
@@ -39,7 +59,7 @@ LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, std::error_code EC) {
   exit(1);
 }
 
-LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, llvm::Error E) {
+LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, Error E) {
   assert(E);
   std::string Buf;
   raw_string_ostream OS(Buf);
@@ -48,22 +68,23 @@ LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, llvm::Error E) {
   errs() << ToolName << ": '" << File << "': " << Buf;
   exit(1);
 }
-}
 
-cl::opt<std::string> InputFilename(cl::Positional, cl::desc("<input>"));
-cl::opt<std::string> OutputFilename(cl::Positional, cl::desc("<output>"),
+} // end namespace llvm
+
+static cl::opt<std::string> InputFilename(cl::Positional, cl::desc("<input>"));
+static cl::opt<std::string> OutputFilename(cl::Positional, cl::desc("<output>"),
                                     cl::init("-"));
-cl::opt<std::string>
+static cl::opt<std::string>
     OutputFormat("O", cl::desc("set output format to one of the following:"
                                "\n\tbinary"));
-cl::list<std::string> ToRemove("remove-section",
-                               cl::desc("Remove a specific section"));
-cl::alias ToRemoveA("R", cl::desc("Alias for remove-section"),
-                    cl::aliasopt(ToRemove));
-cl::opt<bool> StripSections("strip-sections",
-                            cl::desc("Remove all section headers"));
+static cl::list<std::string> ToRemove("remove-section",
+                                      cl::desc("Remove a specific section"));
+static cl::alias ToRemoveA("R", cl::desc("Alias for remove-section"),
+                           cl::aliasopt(ToRemove));
+static cl::opt<bool> StripSections("strip-sections",
+                                   cl::desc("Remove all section headers"));
 
-typedef std::function<bool(const SectionBase &Sec)> SectionPred;
+using SectionPred = std::function<bool(const SectionBase &Sec)>;
 
 void CopyBinary(const ELFObjectFile<ELF64LE> &ObjFile) {
   std::unique_ptr<FileOutputBuffer> Buffer;

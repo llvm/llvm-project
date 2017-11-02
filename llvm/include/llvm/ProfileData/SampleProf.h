@@ -352,17 +352,15 @@ public:
     return Result;
   }
 
-  /// Recursively traverses all children, if the corresponding function is
-  /// not defined in module \p M, and its total sample is no less than
-  /// \p Threshold, add its corresponding GUID to \p S. Also traverse the
-  /// BodySamples to add hot CallTarget's GUID to \p S.
-  void findImportedFunctions(DenseSet<GlobalValue::GUID> &S, const Module *M,
-                             uint64_t Threshold) const {
+  /// Recursively traverses all children, if the total sample count of the
+  /// corresponding function is no less than \p Threshold, add its corresponding
+  /// GUID to \p S. Also traverse the BodySamples to add hot CallTarget's GUID
+  /// to \p S.
+  void findInlinedFunctions(DenseSet<GlobalValue::GUID> &S, const Module *M,
+                            uint64_t Threshold) const {
     if (TotalSamples <= Threshold)
       return;
-    Function *F = M->getFunction(Name);
-    if (!F || !F->getSubprogram())
-      S.insert(Function::getGUID(Name));
+    S.insert(Function::getGUID(Name));
     // Import hot CallTargets, which may not be available in IR because full
     // profile annotation cannot be done until backend compilation in ThinLTO.
     for (const auto &BS : BodySamples)
@@ -374,7 +372,7 @@ public:
         }
     for (const auto &CS : CallsiteSamples)
       for (const auto &NameFS : CS.second)
-        NameFS.second.findImportedFunctions(S, M, Threshold);
+        NameFS.second.findInlinedFunctions(S, M, Threshold);
   }
 
   /// Set the name of the function.
