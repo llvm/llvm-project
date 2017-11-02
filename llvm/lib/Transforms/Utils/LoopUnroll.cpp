@@ -68,9 +68,23 @@ static inline void remapInstruction(Instruction *I,
                                     ValueToValueMapTy &VMap) {
   for (unsigned op = 0, E = I->getNumOperands(); op != E; ++op) {
     Value *Op = I->getOperand(op);
+
+    // Unwrap arguments of dbg.value intrinsics.
+    bool Wrapped = false;
+    if (auto *V = dyn_cast<MetadataAsValue>(Op))
+      if (auto *Unwrapped = dyn_cast<ValueAsMetadata>(V->getMetadata())) {
+        Op = Unwrapped->getValue();
+        Wrapped = true;
+      }
+
+    auto wrap = [&](Value *V) {
+      auto &C = I->getContext();
+      return Wrapped ? MetadataAsValue::get(C, ValueAsMetadata::get(V)) : V;
+    };
+
     ValueToValueMapTy::iterator It = VMap.find(Op);
     if (It != VMap.end())
-      I->setOperand(op, It->second);
+      I->setOperand(op, wrap(It->second));
   }
 
   if (PHINode *PN = dyn_cast<PHINode>(I)) {

@@ -8389,6 +8389,11 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
        MI.getOpcode() == X86::PUSH64r))
     return nullptr;
 
+  // Avoid partial register update stalls unless optimizing for size.
+  // TODO: we should block undef reg update as well.
+  if (!MF.getFunction()->optForSize() && hasPartialRegUpdate(MI.getOpcode()))
+    return nullptr;
+
   unsigned NumOps = MI.getDesc().getNumOperands();
   bool isTwoAddr =
       NumOps > 1 && MI.getDesc().getOperandConstraint(1, MCOI::TIED_TO) != -1;
@@ -8554,6 +8559,7 @@ X86InstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
 
   // Unless optimizing for size, don't fold to avoid partial
   // register update stalls
+  // TODO: we should block undef reg update as well.
   if (!MF.getFunction()->optForSize() && hasPartialRegUpdate(MI.getOpcode()))
     return nullptr;
 
@@ -8752,6 +8758,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   if (NoFusing) return nullptr;
 
   // Avoid partial register update stalls unless optimizing for size.
+  // TODO: we should block undef reg update as well.
   if (!MF.getFunction()->optForSize() && hasPartialRegUpdate(MI.getOpcode()))
     return nullptr;
 

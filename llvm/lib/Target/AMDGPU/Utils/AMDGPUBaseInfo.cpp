@@ -356,16 +356,16 @@ void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
   Header.private_segment_alignment = 4;
 }
 
-bool isGroupSegment(const GlobalValue *GV, AMDGPUAS AS) {
-  return GV->getType()->getAddressSpace() == AS.LOCAL_ADDRESS;
+bool isGroupSegment(const GlobalValue *GV) {
+  return GV->getType()->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS;
 }
 
-bool isGlobalSegment(const GlobalValue *GV, AMDGPUAS AS) {
-  return GV->getType()->getAddressSpace() == AS.GLOBAL_ADDRESS;
+bool isGlobalSegment(const GlobalValue *GV) {
+  return GV->getType()->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS;
 }
 
-bool isReadOnlySegment(const GlobalValue *GV, AMDGPUAS AS) {
-  return GV->getType()->getAddressSpace() == AS.CONSTANT_ADDRESS;
+bool isReadOnlySegment(const GlobalValue *GV) {
+  return GV->getType()->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS;
 }
 
 bool shouldEmitConstantsToTextSection(const Triple &TT) {

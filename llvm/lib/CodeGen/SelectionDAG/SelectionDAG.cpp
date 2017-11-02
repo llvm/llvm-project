@@ -2479,17 +2479,9 @@ void SelectionDAG::computeKnownBits(SDValue Op, KnownBits &Known,
   case ISD::SRA:
     if (const APInt *ShAmt = getValidShiftAmountConstant(Op)) {
       computeKnownBits(Op.getOperand(0), Known, DemandedElts, Depth + 1);
-      Known.Zero.lshrInPlace(*ShAmt);
-      Known.One.lshrInPlace(*ShAmt);
-      // If we know the value of the sign bit, then we know it is copied across
-      // the high bits by the shift amount.
-      APInt SignMask = APInt::getSignMask(BitWidth);
-      SignMask.lshrInPlace(*ShAmt);  // Adjust to where it is now in the mask.
-      if (Known.Zero.intersects(SignMask)) {
-        Known.Zero.setHighBits(ShAmt->getZExtValue());// New bits are known zero.
-      } else if (Known.One.intersects(SignMask)) {
-        Known.One.setHighBits(ShAmt->getZExtValue()); // New bits are known one.
-      }
+      // Sign extend known zero/one bit (else is unknown).
+      Known.Zero.ashrInPlace(*ShAmt);
+      Known.One.ashrInPlace(*ShAmt);
     }
     break;
   case ISD::SIGN_EXTEND_INREG: {

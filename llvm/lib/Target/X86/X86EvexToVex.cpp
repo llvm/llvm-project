@@ -163,6 +163,25 @@ static bool usesExtendedRegister(const MachineInstr &MI) {
   return false;
 }
 
+// Do any custom cleanup needed to finalize the conversion.
+static void performCustomAdjustments(MachineInstr &MI, unsigned NewOpc) {
+  (void)NewOpc;
+  unsigned Opc = MI.getOpcode();
+  switch (Opc) {
+  case X86::VALIGNDZ128rri:
+  case X86::VALIGNDZ128rmi:
+  case X86::VALIGNQZ128rri:
+  case X86::VALIGNQZ128rmi:
+    assert((NewOpc == X86::VPALIGNRrri || NewOpc == X86::VPALIGNRrmi) &&
+           "Unexpected new opcode!");
+    unsigned Scale = (Opc == X86::VALIGNQZ128rri ||
+                      Opc == X86::VALIGNQZ128rmi) ? 8 : 4;
+    MachineOperand &Imm = MI.getOperand(MI.getNumExplicitOperands()-1);
+    Imm.setImm(Imm.getImm() * Scale);
+    break;
+  }
+}
+
 
 // For EVEX instructions that can be encoded using VEX encoding
 // replace them by the VEX encoding in order to reduce size.
@@ -222,6 +241,8 @@ bool EvexToVexInstPass::CompressEvexToVexImpl(MachineInstr &MI) const {
 
   if (usesExtendedRegister(MI))
     return false;
+
+  performCustomAdjustments(MI, NewOpc);
 
   MI.setDesc(TII->get(NewOpc));
   MI.setAsmPrinterFlag(AC_EVEX_2_VEX);

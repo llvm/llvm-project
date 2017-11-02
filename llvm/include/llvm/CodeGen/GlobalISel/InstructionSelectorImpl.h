@@ -434,12 +434,13 @@ bool InstructionSelector::executeMatchTable(
 
     case GIR_MutateOpcode: {
       int64_t OldInsnID = MatchTable[CurrentIdx++];
-      int64_t NewInsnID = MatchTable[CurrentIdx++];
+      uint64_t NewInsnID = MatchTable[CurrentIdx++];
       int64_t NewOpcode = MatchTable[CurrentIdx++];
-      assert((size_t)NewInsnID == OutMIs.size() &&
-             "Expected to store MIs in order");
-      OutMIs.push_back(MachineInstrBuilder(*State.MIs[OldInsnID]->getMF(),
-                                           State.MIs[OldInsnID]));
+      if (NewInsnID >= OutMIs.size())
+        OutMIs.resize(NewInsnID + 1);
+
+      OutMIs[NewInsnID] = MachineInstrBuilder(*State.MIs[OldInsnID]->getMF(),
+                                              State.MIs[OldInsnID]);
       OutMIs[NewInsnID]->setDesc(TII.get(NewOpcode));
       DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
                       dbgs() << CurrentIdx << ": GIR_MutateOpcode(OutMIs["
@@ -449,16 +450,16 @@ bool InstructionSelector::executeMatchTable(
     }
 
     case GIR_BuildMI: {
-      int64_t InsnID = MatchTable[CurrentIdx++];
+      uint64_t NewInsnID = MatchTable[CurrentIdx++];
       int64_t Opcode = MatchTable[CurrentIdx++];
-      assert((size_t)InsnID == OutMIs.size() &&
-             "Expected to store MIs in order");
-      (void)InsnID;
-      OutMIs.push_back(BuildMI(*State.MIs[0]->getParent(), State.MIs[0],
-                               State.MIs[0]->getDebugLoc(), TII.get(Opcode)));
+      if (NewInsnID >= OutMIs.size())
+        OutMIs.resize(NewInsnID + 1);
+
+      OutMIs[NewInsnID] = BuildMI(*State.MIs[0]->getParent(), State.MIs[0],
+                                  State.MIs[0]->getDebugLoc(), TII.get(Opcode));
       DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
-                      dbgs() << CurrentIdx << ": GIR_BuildMI(OutMIs[" << InsnID
-                             << "], " << Opcode << ")\n");
+                      dbgs() << CurrentIdx << ": GIR_BuildMI(OutMIs["
+                             << NewInsnID << "], " << Opcode << ")\n");
       break;
     }
 
@@ -538,6 +539,19 @@ bool InstructionSelector::executeMatchTable(
       DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
                       dbgs() << CurrentIdx << ": GIR_AddRegister(OutMIs["
                              << InsnID << "], " << RegNum << ")\n");
+      break;
+    }
+
+    case GIR_AddTempRegister: {
+      int64_t InsnID = MatchTable[CurrentIdx++];
+      int64_t TempRegID = MatchTable[CurrentIdx++];
+      uint64_t TempRegFlags = MatchTable[CurrentIdx++];
+      assert(OutMIs[InsnID] && "Attempted to add to undefined instruction");
+      OutMIs[InsnID].addReg(State.TempRegisters[TempRegID], TempRegFlags);
+      DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
+                      dbgs() << CurrentIdx << ": GIR_AddTempRegister(OutMIs["
+                             << InsnID << "], TempRegisters[" << TempRegID
+                             << "], " << TempRegFlags << ")\n");
       break;
     }
 
@@ -648,6 +662,18 @@ bool InstructionSelector::executeMatchTable(
       DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
                       dbgs() << CurrentIdx << ": GIR_EraseFromParent(MIs["
                              << InsnID << "])\n");
+      break;
+    }
+
+    case GIR_MakeTempReg: {
+      int64_t TempRegID = MatchTable[CurrentIdx++];
+      int64_t TypeID = MatchTable[CurrentIdx++];
+
+      State.TempRegisters[TempRegID] =
+          MRI.createGenericVirtualRegister(MatcherInfo.TypeObjects[TypeID]);
+      DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
+                      dbgs() << CurrentIdx << ": TempRegs[" << TempRegID
+                             << "] = GIR_MakeTempReg(" << TypeID << ")\n");
       break;
     }
 
