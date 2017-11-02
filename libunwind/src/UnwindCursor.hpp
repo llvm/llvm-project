@@ -583,6 +583,12 @@ private:
   }
 #endif
 
+#if defined(_LIBUNWIND_TARGET_ARM)
+  compact_unwind_encoding_t dwarfEncoding(Registers_arm &) const {
+    return 0;
+  }
+#endif
+
 #if defined (_LIBUNWIND_TARGET_OR1K)
   compact_unwind_encoding_t dwarfEncoding(Registers_or1k &) const {
     return 0;

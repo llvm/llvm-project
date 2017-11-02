@@ -1386,7 +1386,7 @@ public:
   Registers_arm(const void *registers);
 
   bool        validRegister(int num) const;
-  uint32_t    getRegister(int num);
+  uint32_t    getRegister(int num) const;
   void        setRegister(int num, uint32_t value);
   bool        validFloatRegister(int num) const;
   unw_fpreg_t getFloatRegister(int num);
@@ -1399,6 +1399,7 @@ public:
     restoreSavedFloatRegisters();
     restoreCoreAndJumpTo();
   }
+  static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER_ARM; }
 
   uint32_t  getSP() const         { return _registers.__sp; }
   void      setSP(uint32_t value) { _registers.__sp = value; }
@@ -1472,11 +1473,11 @@ private:
   // Whether iWMMX data registers are saved.
   bool _saved_iwmmx;
   // Whether iWMMX control registers are saved.
-  bool _saved_iwmmx_control;
+  mutable bool _saved_iwmmx_control;
   // iWMMX registers
   unw_fpreg_t _iwmmx[16];
   // iWMMX control registers
-  uint32_t _iwmmx_control[4];
+  mutable uint32_t _iwmmx_control[4];
 #endif
 };
 
@@ -1533,7 +1534,7 @@ inline bool Registers_arm::validRegister(int regNum) const {
   return false;
 }
 
-inline uint32_t Registers_arm::getRegister(int regNum) {
+inline uint32_t Registers_arm::getRegister(int regNum) const {
   if (regNum == UNW_REG_SP || regNum == UNW_ARM_SP)
     return _registers.__sp;
 
