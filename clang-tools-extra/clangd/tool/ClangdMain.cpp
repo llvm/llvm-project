@@ -10,6 +10,7 @@
 #include "ClangdLSPServer.h"
 #include "JSONRPCDispatcher.h"
 #include "Path.h"
+#include "Trace.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -56,6 +57,12 @@ static llvm::cl::opt<Path> InputMirrorFile(
         "Mirror all LSP input to the specified file. Useful for debugging."),
     llvm::cl::init(""), llvm::cl::Hidden);
 
+static llvm::cl::opt<Path> TraceFile(
+    "trace",
+    llvm::cl::desc(
+        "Trace internal events and timestamps in chrome://tracing JSON format"),
+    llvm::cl::init(""), llvm::cl::Hidden);
+
 int main(int argc, char *argv[]) {
   llvm::cl::ParseCommandLineOptions(argc, argv, "clangd");
 
@@ -79,6 +86,18 @@ int main(int argc, char *argv[]) {
       InputMirrorStream.reset();
       llvm::errs() << "Error while opening an input mirror file: "
                    << EC.message();
+    }
+  }
+  llvm::Optional<llvm::raw_fd_ostream> TraceStream;
+  std::unique_ptr<trace::Session> TraceSession;
+  if (!TraceFile.empty()) {
+    std::error_code EC;
+    TraceStream.emplace(TraceFile, /*ref*/ EC, llvm::sys::fs::F_RW);
+    if (EC) {
+      TraceFile.reset();
+      llvm::errs() << "Error while opening trace file: " << EC.message();
+    } else {
+      TraceSession = trace::Session::create(*TraceStream);
     }
   }
 
@@ -113,7 +132,7 @@ int main(int argc, char *argv[]) {
   // Initialize and run ClangdLSPServer.
   ClangdLSPServer LSPServer(Out, WorkerThreadsCount, EnableSnippets,
                             ResourceDirRef, CompileCommandsDirPath);
-
   constexpr int NoShutdownRequestErrorCode = 1;
+  llvm::set_thread_name("clangd.main");
   return LSPServer.run(std::cin) ? 0 : NoShutdownRequestErrorCode;
 }
