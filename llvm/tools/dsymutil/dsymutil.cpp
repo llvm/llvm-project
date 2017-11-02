@@ -93,8 +93,8 @@ static list<std::string> ArchFlags(
     "arch",
     desc("Link DWARF debug information only for specified CPU architecture\n"
          "types. This option can be specified multiple times, once for each\n"
-         "desired architecture.  All cpu architectures will be linked by\n"
-         "default."),
+         "desired architecture. All CPU architectures will be linked by\n"
+         "default."), value_desc("arch"),
     ZeroOrMore, cat(DsymCategory));
 
 static opt<bool>
@@ -338,7 +338,6 @@ int main(int argc, char **argv) {
       NumThreads = 1;
     NumThreads = std::min<unsigned>(NumThreads, DebugMapPtrsOrErr->size());
 
-    llvm::ThreadPool Threads(NumThreads);
 
     // If there is more than one link to execute, we need to generate
     // temporary files.
@@ -366,17 +365,19 @@ int main(int argc, char **argv) {
       // FIXME: The DwarfLinker can have some very deep recursion that can max
       // out the (significantly smaller) stack when using threads. We don't
       // want this limitation when we only have a single thread.
-      if (NumThreads == 1)
+      if (NumThreads == 1) {
         LinkLambda();
-      else
+      } else {
+        llvm::ThreadPool Threads(NumThreads);
         Threads.async(LinkLambda);
+        Threads.wait();
+      }
 
       if (NeedsTempFiles)
         TempFiles.emplace_back(Map->getTriple().getArchName().str(),
                                OutputFile);
     }
 
-    Threads.wait();
 
     if (NeedsTempFiles &&
         !MachOUtils::generateUniversalBinary(

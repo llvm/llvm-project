@@ -3,7 +3,7 @@ HELP: OVERVIEW: manipulate archived DWARF debug symbol files.
 HELP: USAGE: llvm-dsymutil{{[^ ]*}} [options] <input files>
 HELP-NOT: -reverse-iterate
 HELP: Specific Options:
-HELP: -arch=<string>
+HELP: -arch=<arch>
 HELP: -dump-debug-map
 HELP: -flat
 HELP: -no-odr
