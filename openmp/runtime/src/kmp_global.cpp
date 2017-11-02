@@ -303,6 +303,10 @@ kmp_int32 __kmp_max_task_priority = 0;
 kmp_uint64 __kmp_taskloop_min_tasks = 0;
 #endif
 
+#if OMP_50_ENABLED && OMPT_SUPPORT
+char const *__kmp_tool_libraries = NULL;
+#endif
+
 /* This check ensures that the compiler is passing the correct data type for the
    flags formal parameter of the function kmpc_omp_task_alloc(). If the type is
    not a 4-byte type, then give an error message about a non-positive length

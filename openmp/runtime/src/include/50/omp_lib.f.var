@@ -32,6 +32,8 @@
         integer, parameter :: kmp_affinity_mask_kind = int_ptr_kind()
         integer, parameter :: kmp_cancel_kind        = omp_integer_kind
         integer, parameter :: omp_lock_hint_kind     = omp_integer_kind
+        integer, parameter :: omp_control_tool_kind  = omp_integer_kind
+        integer, parameter :: omp_control_tool_result_kind = omp_integer_kind
 
       end module omp_lib_kinds
 
@@ -518,6 +520,13 @@
             integer (kind=omp_lock_hint_kind) hint
           end subroutine omp_init_nest_lock_with_hint
 
+          function omp_control_tool(command, modifier)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) omp_control_tool
+            integer (kind=omp_control_tool_kind) command
+            integer (kind=omp_control_tool_kind) modifier
+          end function omp_control_tool
+
         end interface
 
 !dec$ if defined(_WIN32)
@@ -563,6 +572,7 @@
 !dec$ attributes alias:'OMP_GET_CANCELLATION' :: omp_get_cancellation
 !dec$ attributes alias:'OMP_IS_INITIAL_DEVICE' :: omp_is_initial_device
 !dec$ attributes alias:'OMP_GET_MAX_TASK_PRIORITY' :: omp_get_max_task_priority
+!dec$ attributes alias:'OMP_CONTROL_TOOL' :: omp_control_tool
 
 !dec$ attributes alias:'omp_init_lock' :: omp_init_lock
 !dec$ attributes alias:'omp_init_lock_with_hint' :: omp_init_lock_with_hint
@@ -643,6 +653,7 @@
 !dec$ attributes alias:'_OMP_GET_CANCELLATION' :: omp_get_cancellation
 !dec$ attributes alias:'_OMP_IS_INITIAL_DEVICE' :: omp_is_initial_device
 !dec$ attributes alias:'_OMP_GET_MAX_TASK_PRIORTY' :: omp_get_max_task_priority
+!dec$ attributes alias:'_OMP_CONTROL_TOOL' :: omp_control_tool
 
 !dec$ attributes alias:'_omp_init_lock' :: omp_init_lock
 !dec$ attributes alias:'_omp_init_lock_with_hint' :: omp_init_lock_with_hint
@@ -739,6 +750,7 @@
 !dec$ attributes alias:'omp_set_nest_lock_'::omp_set_nest_lock
 !dec$ attributes alias:'omp_unset_nest_lock_'::omp_unset_nest_lock
 !dec$ attributes alias:'omp_test_nest_lock_'::omp_test_nest_lock
+!dec$ attributes alias:'omp_control_tool_'::omp_control_tool
 
 !dec$ attributes alias:'kmp_set_stacksize_'::kmp_set_stacksize
 !dec$ attributes alias:'kmp_set_stacksize_s_'::kmp_set_stacksize_s
@@ -818,6 +830,7 @@
 !dec$ attributes alias:'_omp_set_nest_lock_'::omp_set_nest_lock
 !dec$ attributes alias:'_omp_unset_nest_lock_'::omp_unset_nest_lock
 !dec$ attributes alias:'_omp_test_nest_lock_'::omp_test_nest_lock
+!dec$ attributes alias:'_omp_control_tool_'::omp_control_tool
 
 !dec$ attributes alias:'_kmp_set_stacksize_'::kmp_set_stacksize
 !dec$ attributes alias:'_kmp_set_stacksize_s_'::kmp_set_stacksize_s

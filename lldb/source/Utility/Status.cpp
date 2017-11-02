@@ -104,16 +104,6 @@ const Status &Status::operator=(const Status &rhs) {
   return *this;
 }
 
-//----------------------------------------------------------------------
-// Assignment operator
-//----------------------------------------------------------------------
-const Status &Status::operator=(uint32_t err) {
-  m_code = err;
-  m_type = eErrorTypeMachKernel;
-  m_string.clear();
-  return *this;
-}
-
 Status::~Status() = default;
 
 //----------------------------------------------------------------------

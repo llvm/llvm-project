@@ -668,14 +668,15 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->NoinhibitExec = Args.hasArg(OPT_noinhibit_exec);
   Config->Nostdlib = Args.hasArg(OPT_nostdlib);
   Config->OFormatBinary = isOutputFormatBinary(Args);
-  Config->Omagic = Args.hasArg(OPT_omagic);
+  Config->Omagic = Args.hasFlag(OPT_omagic, OPT_no_omagic, false);
   Config->OptRemarksFilename = Args.getLastArgValue(OPT_opt_remarks_filename);
   Config->OptRemarksWithHotness = Args.hasArg(OPT_opt_remarks_with_hotness);
   Config->Optimize = getInteger(Args, OPT_O, 1);
   Config->OrphanHandling = getOrphanHandling(Args);
   Config->OutputFile = Args.getLastArgValue(OPT_o);
   Config->Pie = Args.hasFlag(OPT_pie, OPT_nopie, false);
-  Config->PrintGcSections = Args.hasArg(OPT_print_gc_sections);
+  Config->PrintGcSections =
+      Args.hasFlag(OPT_print_gc_sections, OPT_no_print_gc_sections, false);
   Config->Rpath = getRpath(Args);
   Config->Relocatable = Args.hasArg(OPT_relocatable);
   Config->SaveTemps = Args.hasArg(OPT_save_temps);
