@@ -7,14 +7,11 @@
 define <16 x i8> @usat_trunc_wb_256(<16 x i16> %i) {
 ; AVX-LABEL: usat_trunc_wb_256:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [255,255,255,255,255,255,255,255]
-; AVX-NEXT:    vpminuw %xmm1, %xmm0, %xmm2
-; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX-NEXT:    vpminuw %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
-; AVX-NEXT:    vpshufb %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpshufb %xmm1, %xmm2, %xmm1
-; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
+; AVX-NEXT:    vpminuw %xmm2, %xmm1, %xmm1
+; AVX-NEXT:    vpminuw %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
@@ -32,14 +29,11 @@ define <16 x i8> @usat_trunc_wb_256(<16 x i16> %i) {
 define <8 x i16> @usat_trunc_dw_256(<8 x i32> %i) {
 ; AVX-LABEL: usat_trunc_dw_256:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [65535,65535,65535,65535]
-; AVX-NEXT:    vpminud %xmm1, %xmm0, %xmm2
-; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX-NEXT:    vpminud %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
-; AVX-NEXT:    vpshufb %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpshufb %xmm1, %xmm2, %xmm1
-; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [65535,65535,65535,65535]
+; AVX-NEXT:    vpminud %xmm2, %xmm1, %xmm1
+; AVX-NEXT:    vpminud %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;

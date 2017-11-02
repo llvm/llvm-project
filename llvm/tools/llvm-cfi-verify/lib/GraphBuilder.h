@@ -47,8 +47,8 @@ using Instr = llvm::cfi_verify::FileAnalysis::Instr;
 namespace llvm {
 namespace cfi_verify {
 
-extern uint64_t SearchLengthForUndef;
-extern uint64_t SearchLengthForConditionalBranch;
+extern unsigned long long SearchLengthForUndef;
+extern unsigned long long SearchLengthForConditionalBranch;
 
 struct ConditionalBranchNode {
   uint64_t Address;

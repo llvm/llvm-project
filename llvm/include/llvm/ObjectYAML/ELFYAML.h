@@ -83,6 +83,7 @@ struct ProgramHeader {
   ELF_PF Flags;
   llvm::yaml::Hex64 VAddr;
   llvm::yaml::Hex64 PAddr;
+  Optional<llvm::yaml::Hex64> Align;
   std::vector<SectionName> Sections;
 };
 

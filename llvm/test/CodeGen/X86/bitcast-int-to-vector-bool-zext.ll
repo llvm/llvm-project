@@ -321,17 +321,11 @@ define <16 x i8> @ext_i16_16i8(i16 %a0) {
 ; AVX512-NEXT:    vpinsrb $15, %r9d, %xmm0, %xmm0
 ; AVX512-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
 ; AVX512-NEXT:    popq %rbx
-; AVX512-NEXT:    .cfi_def_cfa_offset 48
 ; AVX512-NEXT:    popq %r12
-; AVX512-NEXT:    .cfi_def_cfa_offset 40
 ; AVX512-NEXT:    popq %r13
-; AVX512-NEXT:    .cfi_def_cfa_offset 32
 ; AVX512-NEXT:    popq %r14
-; AVX512-NEXT:    .cfi_def_cfa_offset 24
 ; AVX512-NEXT:    popq %r15
-; AVX512-NEXT:    .cfi_def_cfa_offset 16
 ; AVX512-NEXT:    popq %rbp
-; AVX512-NEXT:    .cfi_def_cfa_offset 8
 ; AVX512-NEXT:    retq
   %1 = bitcast i16 %a0 to <16 x i1>
   %2 = zext <16 x i1> %1 to <16 x i8>

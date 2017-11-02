@@ -108,7 +108,6 @@ define <16 x float> @makefloat(float %f1, float %f2, float %f3, float %f4, float
 ; CHECK-NEXT:    vmovss %xmm14, (%rsp) # 4-byte Spill
 ; CHECK-NEXT:    movq %rbp, %rsp
 ; CHECK-NEXT:    popq %rbp
-; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT:    retq
 entry:
   %__A.addr.i = alloca float, align 4

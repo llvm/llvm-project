@@ -393,6 +393,14 @@ inline bool LocalAddressSpace::findUnwindSections(pint_t targetAddr,
     }
   }
   return false;
+#elif defined(_LIBUNWIND_ARM_EHABI) && defined(__BIONIC__) &&                  \
+    (__ANDROID_API__ < 21)
+  int length = 0;
+  info.arm_section =
+      (uintptr_t)dl_unwind_find_exidx((_Unwind_Ptr)targetAddr, &length);
+  info.arm_section_length = (uintptr_t)length;
+  if (info.arm_section && info.arm_section_length)
+    return true;
 #elif defined(_LIBUNWIND_ARM_EHABI) || defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
   struct dl_iterate_cb_data {
     LocalAddressSpace *addressSpace;

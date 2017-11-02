@@ -1510,6 +1510,7 @@ class Base(unittest2.TestCase):
             clean=True):
         """Platform specific way to build binaries with dsym info."""
         module = builder_module()
+        dictionary = lldbplatformutil.finalize_build_dictionary(dictionary)
         if not module.buildDsym(
                 self,
                 architecture,
@@ -1560,6 +1561,7 @@ class Base(unittest2.TestCase):
             clean=True):
         """Platform specific way to build binaries with gmodules info."""
         module = builder_module()
+        dictionary = lldbplatformutil.finalize_build_dictionary(dictionary)
         if not module.buildGModules(
                 self,
                 architecture,

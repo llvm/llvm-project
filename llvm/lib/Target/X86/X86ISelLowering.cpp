@@ -16074,15 +16074,16 @@ static SDValue LowerZERO_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
   return SDValue();
 }
 
-/// Helper to recursively truncate vector elements in half with PACKSS.
-/// It makes use of the fact that vectors with enough leading sign bits
-/// prevent the PACKSS from saturating the results.
-/// AVX2 (Int256) sub-targets require extra shuffling as the PACKSS operates
+/// Helper to recursively truncate vector elements in half with PACKSS/PACKUS.
+/// It makes use of the fact that vectors with enough leading sign/zero bits
+/// prevent the PACKSS/PACKUS from saturating the results.
+/// AVX2 (Int256) sub-targets require extra shuffling as the PACK*S operates
 /// within each 128-bit lane.
 static SDValue truncateVectorWithPACK(unsigned Opcode, EVT DstVT, SDValue In,
                                       const SDLoc &DL, SelectionDAG &DAG,
                                       const X86Subtarget &Subtarget) {
-  assert(Opcode == X86ISD::PACKSS && "Unexpected PACK opcode");
+  assert((Opcode == X86ISD::PACKSS || Opcode == X86ISD::PACKUS) &&
+         "Unexpected PACK opcode");
 
   // Requires SSE2 but AVX512 has fast truncate.
   if (!Subtarget.hasSSE2() || Subtarget.hasAVX512())
@@ -16114,9 +16115,10 @@ static SDValue truncateVectorWithPACK(unsigned Opcode, EVT DstVT, SDValue In,
   SDValue Hi = extractSubVector(In, 1 * NumSubElts, DAG, DL, SrcSizeInBits / 2);
 
   // Pack to the largest type possible:
-  // vXi64/vXi32 -> PACKSSDW and vXi16 -> PACKSSWB.
+  // vXi64/vXi32 -> PACK*SDW and vXi16 -> PACK*SWB.
   EVT InVT = MVT::i16, OutVT = MVT::i8;
-  if (DstVT.getScalarSizeInBits() > 8) {
+  if (DstVT.getScalarSizeInBits() > 8 &&
+      (Opcode == X86ISD::PACKSS || Subtarget.hasSSE41())) {
     InVT = MVT::i32;
     OutVT = MVT::i16;
   }
@@ -16125,7 +16127,7 @@ static SDValue truncateVectorWithPACK(unsigned Opcode, EVT DstVT, SDValue In,
   InVT = EVT::getVectorVT(Ctx, InVT, SubSizeInBits / InVT.getSizeInBits());
   OutVT = EVT::getVectorVT(Ctx, OutVT, SubSizeInBits / OutVT.getSizeInBits());
 
-  // 256bit -> 128bit truncate - PACKSS lower/upper 128-bit subvectors.
+  // 256bit -> 128bit truncate - PACK lower/upper 128-bit subvectors.
   if (SrcVT.is256BitVector()) {
     Lo = DAG.getBitcast(InVT, Lo);
     Hi = DAG.getBitcast(InVT, Hi);
@@ -16133,14 +16135,14 @@ static SDValue truncateVectorWithPACK(unsigned Opcode, EVT DstVT, SDValue In,
     return DAG.getBitcast(DstVT, Res);
   }
 
-  // AVX2: 512bit -> 256bit truncate - PACKSS lower/upper 256-bit subvectors.
-  // AVX2: 512bit -> 128bit truncate - PACKSS(PACKSS, PACKSS).
+  // AVX2: 512bit -> 256bit truncate - PACK lower/upper 256-bit subvectors.
+  // AVX2: 512bit -> 128bit truncate - PACK(PACK, PACK).
   if (SrcVT.is512BitVector() && Subtarget.hasInt256()) {
     Lo = DAG.getBitcast(InVT, Lo);
     Hi = DAG.getBitcast(InVT, Hi);
     SDValue Res = DAG.getNode(Opcode, DL, OutVT, Lo, Hi);
 
-    // 256-bit PACKSS(ARG0, ARG1) leaves us with ((LO0,LO1),(HI0,HI1)),
+    // 256-bit PACK(ARG0, ARG1) leaves us with ((LO0,LO1),(HI0,HI1)),
     // so we need to shuffle to get ((LO0,HI0),(LO1,HI1)).
     Res = DAG.getBitcast(MVT::v4i64, Res);
     Res = DAG.getVectorShuffle(MVT::v4i64, DL, Res, Res, {0, 2, 1, 3});
@@ -16208,6 +16210,7 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
   MVT VT = Op.getSimpleValueType();
   SDValue In = Op.getOperand(0);
   MVT InVT = In.getSimpleValueType();
+  unsigned InNumEltBits = InVT.getScalarSizeInBits();
 
   assert(VT.getVectorNumElements() == InVT.getVectorNumElements() &&
          "Invalid TRUNCATE operation");
@@ -16227,9 +16230,20 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
   // Truncate with PACKSS if we are truncating a vector with sign-bits that
   // extend all the way to the packed/truncated value.
   unsigned NumPackedBits = std::min<unsigned>(VT.getScalarSizeInBits(), 16);
-  if ((InVT.getScalarSizeInBits() - NumPackedBits) < DAG.ComputeNumSignBits(In))
+  if ((InNumEltBits - NumPackedBits) < DAG.ComputeNumSignBits(In))
     if (SDValue V =
             truncateVectorWithPACK(X86ISD::PACKSS, VT, In, DL, DAG, Subtarget))
+      return V;
+
+  // Truncate with PACKUS if we are truncating a vector with leading zero bits
+  // that extend all the way to the packed/truncated value.
+  // Pre-SSE41 we can only use PACKUSWB.
+  KnownBits Known;
+  DAG.computeKnownBits(In, Known);
+  NumPackedBits = Subtarget.hasSSE41() ? NumPackedBits : 8;
+  if ((InNumEltBits - NumPackedBits) <= Known.countMinLeadingZeros())
+    if (SDValue V =
+            truncateVectorWithPACK(X86ISD::PACKUS, VT, In, DL, DAG, Subtarget))
       return V;
 
   if ((VT == MVT::v4i32) && (InVT == MVT::v4i64)) {

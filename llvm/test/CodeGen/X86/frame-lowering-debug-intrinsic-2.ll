@@ -18,15 +18,11 @@ entry:
 }
 
 ; CHECK-LABEL: noDebug
-; CHECK:        addq	$16, %rsp
-; CHECK-NEXT: 	  .cfi_adjust_cfa_offset -16
-; CHECK-NEXT: 	addq	$8, %rsp
-; CHECK-NEXT: 	  .cfi_def_cfa_offset 24
-; CHECK-NEXT: 	popq	%rbx
-; CHECK-NEXT: 	  .cfi_def_cfa_offset 16
-; CHECK-NEXT: 	popq	%r14
-; CHECK-NEXT: 	  .cfi_def_cfa_offset 8
-; CHECK-NEXT: 	retq
+; CHECK:       addq  $24, %rsp
+; CHECK:       popq  %rbx
+; CHECK-NEXT:  popq  %r14
+; CHECK-NEXT:  retq
+
 
 define void @withDebug() !dbg !18 {
 entry:
@@ -46,11 +42,9 @@ entry:
 ; CHECK-LABEL: withDebug
 ; CHECK:       callq printf
 ; CHECK:       callq printf
-; CHECK-NEXT: addq $16, %rsp
+; CHECK-NEXT:  addq  $24, %rsp
 ; CHECK:       popq  %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:  popq  %r14
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:  retq
 
 declare { i64, i1 } @llvm.uadd.with.overflow.i64(i64, i64)

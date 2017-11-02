@@ -35,6 +35,9 @@ int llvm_calc(void);
 // disassemble.c
 int llvm_disassemble(void);
 
+// debuginfo.c
+int llvm_test_dibuilder(void);
+
 // metadata.c
 int llvm_add_named_metadata_operand(void);
 int llvm_set_metadata(void);

@@ -296,11 +296,6 @@ static unsigned HashEndOfMBB(const MachineBasicBlock &MBB) {
   return HashMachineInstr(*I);
 }
 
-// Whether MI should be counted as an instruction when calculating common tail.
-static bool countsAsInstruction(const MachineInstr &MI) {
-  return !(MI.isDebugValue() || MI.isCFIInstruction());
-}
-
 /// ComputeCommonTailLength - Given two machine basic blocks, compute the number
 /// of instructions they actually have in common together at their end.  Return
 /// iterators for the first shared instruction in each block.
@@ -315,9 +310,9 @@ static unsigned ComputeCommonTailLength(MachineBasicBlock *MBB1,
   while (I1 != MBB1->begin() && I2 != MBB2->begin()) {
     --I1; --I2;
     // Skip debugging pseudos; necessary to avoid changing the code.
-    while (!countsAsInstruction(*I1)) {
+    while (I1->isDebugValue()) {
       if (I1==MBB1->begin()) {
-        while (!countsAsInstruction(*I2)) {
+        while (I2->isDebugValue()) {
           if (I2==MBB2->begin())
             // I1==DBG at begin; I2==DBG at begin
             return TailLen;
@@ -330,7 +325,7 @@ static unsigned ComputeCommonTailLength(MachineBasicBlock *MBB1,
       --I1;
     }
     // I1==first (untested) non-DBG preceding known match
-    while (!countsAsInstruction(*I2)) {
+    while (I2->isDebugValue()) {
       if (I2==MBB2->begin()) {
         ++I1;
         // I1==non-DBG, or first of DBGs not at begin; I2==DBG at begin
@@ -372,35 +367,6 @@ static unsigned ComputeCommonTailLength(MachineBasicBlock *MBB1,
       --I1;
     }
     ++I1;
-  }
-
-  // Ensure that I1 and I2 do not point to a CFI_INSTRUCTION. This can happen if
-  // I1 and I2 are non-identical when compared and then one or both of them ends
-  // up pointing to a CFI instruction after being incremented. For example:
-  /*
-    BB1:
-    ...
-    INSTRUCTION_A
-    ADD32ri8  <- last common instruction
-    ...
-    BB2:
-    ...
-    INSTRUCTION_B
-    CFI_INSTRUCTION
-    ADD32ri8  <- last common instruction
-    ...
-  */
-  // When INSTRUCTION_A and INSTRUCTION_B are compared as not equal, after
-  // incrementing the iterators, I1 will point to ADD, however I2 will point to
-  // the CFI instruction. Later on, this leads to BB2 being 'hacked off' at the
-  // wrong place (in ReplaceTailWithBranchTo()) which results in losing this CFI
-  // instruction.
-  while (I1 != MBB1->end() && I1->isCFIInstruction()) {
-    ++I1;
-  }
-
-  while (I2 != MBB2->end() && I2->isCFIInstruction()) {
-    ++I2;
   }
   return TailLen;
 }
@@ -488,7 +454,7 @@ static unsigned EstimateRuntime(MachineBasicBlock::iterator I,
                                 MachineBasicBlock::iterator E) {
   unsigned Time = 0;
   for (; I != E; ++I) {
-    if (!countsAsInstruction(*I))
+    if (I->isDebugValue())
       continue;
     if (I->isCall())
       Time += 10;
@@ -848,12 +814,12 @@ mergeOperations(MachineBasicBlock::iterator MBBIStartPos,
     assert(MBBI != MBBIE && "Reached BB end within common tail length!");
     (void)MBBIE;
 
-    if (!countsAsInstruction(*MBBI)) {
+    if (MBBI->isDebugValue()) {
       ++MBBI;
       continue;
     }
 
-    while ((MBBICommon != MBBIECommon) && !countsAsInstruction(*MBBICommon))
+    while ((MBBICommon != MBBIECommon) && MBBICommon->isDebugValue())
       ++MBBICommon;
 
     assert(MBBICommon != MBBIECommon &&
@@ -893,7 +859,7 @@ void BranchFolder::mergeCommonTails(unsigned commonTailIndex) {
   }
 
   for (auto &MI : *MBB) {
-    if (!countsAsInstruction(MI))
+    if (MI.isDebugValue())
       continue;
     DebugLoc DL = MI.getDebugLoc();
     for (unsigned int i = 0 ; i < NextCommonInsts.size() ; i++) {
@@ -903,7 +869,7 @@ void BranchFolder::mergeCommonTails(unsigned commonTailIndex) {
       auto &Pos = NextCommonInsts[i];
       assert(Pos != SameTails[i].getBlock()->end() &&
           "Reached BB end within common tail");
-      while (!countsAsInstruction(*Pos)) {
+      while (Pos->isDebugValue()) {
         ++Pos;
         assert(Pos != SameTails[i].getBlock()->end() &&
             "Reached BB end within common tail");
