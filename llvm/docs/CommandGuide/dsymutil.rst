@@ -1,0 +1,89 @@
+dsymutil - manipulate archived DWARF debug symbol files
+=======================================================
+
+SYNOPSIS
+--------
+
+| :program:`dsymutil` [*options*] *executable*
+
+DESCRIPTION
+-----------
+
+:program:`dsymutil` links the DWARF debug information found in the object files
+for an executable *executable* by using debug symbols information contained in
+its symbol table. By default, the linked debug information is placed in a
+``.dSYM`` bundle with the same name as the executable.
+
+OPTIONS
+-------
+.. option:: -arch=<arch>
+
+ Link DWARF debug information only for specified CPU architecture types.
+ Architectures may be specified by name. When using this option, an error will
+ be returned if any architectures can not be properly linked.  This option can
+ be specified multiple times, once for each desired architecture. All CPU
+ architectures will be linked by default and any architectures that can't be
+ properly linked will cause :program:`dsymutil` to return an error.
+
+.. option:: -dump-debug-map
+
+ Dump the executable debug-map (the list of the object files containing the
+ debug information) in YAML format and exit. Not DWARF link will take place.
+
+.. option:: -f, -flat
+
+ Produce a flat dSYM file. A ``.dwarf`` extension will be appended to the
+ executable name unless the output file is specified using the -o option.
+
+.. option:: -no-odr
+
+ Do not use ODR (One Definition Rule) for uniquing C++ types.
+
+.. option:: -no-output
+
+ Do the link in memory, but do not emit the result file.
+
+.. option:: -no-swiftmodule-timestamp
+
+ Don't check the timestamp for swiftmodule files.
+
+.. option:: -j <n>, -num-threads=<n>
+
+ Specifies the maximum number (``n``) of simultaneous threads to use when
+ linking multiple architectures.
+
+.. option:: -o <filename>
+
+ Specifies an alternate ``path`` to place the dSYM bundle. The default dSYM
+ bundle path is created by appending ``.dSYM`` to the executable name.
+
+.. option:: -oso-prepend-path=<path>
+
+ Specifies a ``path`` to prepend to all debug symbol object file paths.
+
+.. option:: -s, -symtab
+
+ Dumps the symbol table found in executable or object file(s) and exits.
+
+.. option:: -v, -verbose
+
+ Display verbose information when linking.
+
+.. option:: --version
+
+ Display the version of the tool.
+
+.. option:: -y
+
+ Treat *executable* as a YAML debug-map rather than an executable.
+
+EXIT STATUS
+-----------
+
+:program:`dsymutil` returns 0 if the DWARF debug information was linked
+successfully. Otherwise, it returns 1.
+
+SEE ALSO
+--------
+
+:manpage:`llvm-dwarfdump(1)`

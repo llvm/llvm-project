@@ -2,26 +2,20 @@
 
 cmake_minimum_required(VERSION 3.4.3)
 
-if(POLICY CMP0022)
-  cmake_policy(SET CMP0022 NEW) # automatic when 2.8.12 is required
-endif()
+cmake_policy(SET CMP0022 NEW)
 
-if (POLICY CMP0051)
-  # CMake 3.1 and higher include generator expressions of the form
-  # $<TARGETLIB:obj> in the SOURCES property.  These need to be
-  # stripped everywhere that access the SOURCES property, so we just
-  # defer to the OLD behavior of not including generator expressions
-  # in the output for now.
-  cmake_policy(SET CMP0051 OLD)
-endif()
+cmake_policy(SET CMP0048 NEW)
 
-if(POLICY CMP0056)
-  cmake_policy(SET CMP0056 NEW)
-endif()
+# CMake 3.1 and higher include generator expressions of the form
+# $<TARGETLIB:obj> in the SOURCES property.  These need to be
+# stripped everywhere that access the SOURCES property, so we just
+# defer to the OLD behavior of not including generator expressions
+# in the output for now.
+cmake_policy(SET CMP0051 OLD)
 
-if(POLICY CMP0057)
-  cmake_policy(SET CMP0057 NEW)
-endif()
+cmake_policy(SET CMP0056 NEW)
+
+cmake_policy(SET CMP0057 NEW)
 
 if(NOT DEFINED LLVM_VERSION_MAJOR)
   set(LLVM_VERSION_MAJOR 6)
@@ -34,13 +28,6 @@ if(NOT DEFINED LLVM_VERSION_PATCH)
 endif()
 if(NOT DEFINED LLVM_VERSION_SUFFIX)
   set(LLVM_VERSION_SUFFIX svn)
-endif()
-
-if (POLICY CMP0048)
-  cmake_policy(SET CMP0048 NEW)
-  set(cmake_3_0_PROJ_VERSION
-    VERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH})
-  set(cmake_3_0_LANGUAGES LANGUAGES)
 endif()
 
 if (NOT PACKAGE_VERSION)
@@ -56,9 +43,8 @@ if ((CMAKE_GENERATOR MATCHES "Visual Studio") AND (CMAKE_GENERATOR_TOOLSET STREQ
 endif()
 
 project(LLVM
-  ${cmake_3_0_PROJ_VERSION}
-  ${cmake_3_0_LANGUAGES}
-  C CXX ASM)
+  VERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}
+  LANGUAGES C CXX ASM)
 
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   message(STATUS "No build type selected, default to Debug")

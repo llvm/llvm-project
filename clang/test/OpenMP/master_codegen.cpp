@@ -49,7 +49,7 @@ int main() {
 void parallel_master() {
 #pragma omp parallel
 #pragma omp master
-  // TERM_DEBUG:     __kmpc_global_thread_num
+  // TERM_DEBUG-NOT: __kmpc_global_thread_num
   // TERM_DEBUG:     call i32 @__kmpc_master({{.+}}), !dbg [[DBG_LOC_START:![0-9]+]]
   // TERM_DEBUG:     invoke void {{.*}}foo{{.*}}()
   // TERM_DEBUG:     unwind label %[[TERM_LPAD:.+]],

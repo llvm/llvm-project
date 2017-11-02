@@ -63,7 +63,8 @@ Improvements to clang-tidy
   <http://clang.llvm.org/extra/clang-tidy/checks/objc-forbidden-subclassing.html>`_ check
 
   Ensures Objective-C classes do not subclass any classes which are
-  not intended to be subclassed.
+  not intended to be subclassed. Includes a list of classes from Foundation
+  and UIKit which are documented as not supporting subclassing.
 
 - Renamed checks to use correct term "implicit conversion" instead of "implicit
   cast" and modified messages and option names accordingly:

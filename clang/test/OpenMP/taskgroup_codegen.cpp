@@ -40,7 +40,7 @@ int main() {
 void parallel_taskgroup() {
 #pragma omp parallel
 #pragma omp taskgroup
-  // TERM_DEBUG:     __kmpc_global_thread_num
+  // TERM_DEBUG-NOT: __kmpc_global_thread_num
   // TERM_DEBUG:     call void @__kmpc_taskgroup({{.+}}), !dbg [[DBG_LOC_START:![0-9]+]]
   // TERM_DEBUG:     invoke void {{.*}}foo{{.*}}()
   // TERM_DEBUG:     unwind label %[[TERM_LPAD:.+]],

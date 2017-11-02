@@ -972,4 +972,36 @@ TEST(ASTSelectionFinder, SimpleCodeRangeASTSelectionInObjCMethod) {
       SelectionFinderVisitor::Lang_OBJC);
 }
 
+TEST(ASTSelectionFinder, CanonicalizeObjCStringLiteral) {
+  StringRef Source = R"(
+void foo() {
+  (void)@"test";
+}
+      )";
+  // Just '"test"':
+  findSelectedASTNodesWithRange(
+      Source, {3, 10}, FileRange{{3, 10}, {3, 16}},
+      [](SourceRange SelectionRange, Optional<SelectedASTNode> Node) {
+        EXPECT_TRUE(Node);
+        Optional<CodeRangeASTSelection> SelectedCode =
+            CodeRangeASTSelection::create(SelectionRange, std::move(*Node));
+        EXPECT_TRUE(SelectedCode);
+        EXPECT_EQ(SelectedCode->size(), 1u);
+        EXPECT_TRUE(isa<ObjCStringLiteral>((*SelectedCode)[0]));
+      },
+      SelectionFinderVisitor::Lang_OBJC);
+  // Just 'test':
+  findSelectedASTNodesWithRange(
+      Source, {3, 11}, FileRange{{3, 11}, {3, 15}},
+      [](SourceRange SelectionRange, Optional<SelectedASTNode> Node) {
+        EXPECT_TRUE(Node);
+        Optional<CodeRangeASTSelection> SelectedCode =
+            CodeRangeASTSelection::create(SelectionRange, std::move(*Node));
+        EXPECT_TRUE(SelectedCode);
+        EXPECT_EQ(SelectedCode->size(), 1u);
+        EXPECT_TRUE(isa<ObjCStringLiteral>((*SelectedCode)[0]));
+      },
+      SelectionFinderVisitor::Lang_OBJC);
+}
+
 } // end anonymous namespace
