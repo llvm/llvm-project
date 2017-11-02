@@ -3990,6 +3990,8 @@ void ASTDeclReader::UpdateDecl(Decl *D,
       VarDecl *VD = cast<VarDecl>(D);
       VD->getMemberSpecializationInfo()->setPointOfInstantiation(
           ReadSourceLocation());
+      VD->NonParmVarDeclBits.IsInline = Record.readInt();
+      VD->NonParmVarDeclBits.IsInlineSpecified = Record.readInt();
       uint64_t Val = Record.readInt();
       if (Val && !VD->getInit()) {
         VD->setInit(Record.readExpr());
