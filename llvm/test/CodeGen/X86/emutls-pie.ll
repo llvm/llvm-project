@@ -18,16 +18,13 @@ define i32 @my_get_xyz() {
 ; X32-NEXT: calll my_emutls_get_address@PLT
 ; X32-NEXT: movl (%eax), %eax
 ; X32-NEXT: addl $8, %esp
-; X32-NEXT: .cfi_def_cfa_offset 8
 ; X32-NEXT: popl %ebx
-; X32-NEXT: .cfi_def_cfa_offset 4
 ; X32-NEXT: retl
 ; X64-LABEL: my_get_xyz:
 ; X64:      movq my_emutls_v_xyz@GOTPCREL(%rip), %rdi
 ; X64-NEXT: callq my_emutls_get_address@PLT
 ; X64-NEXT: movl (%rax), %eax
 ; X64-NEXT: popq %rcx
-; X64-NEXT: .cfi_def_cfa_offset 8
 ; X64-NEXT: retq
 
 entry:
@@ -47,16 +44,13 @@ define i32 @f1() {
 ; X32-NEXT: calll __emutls_get_address@PLT
 ; X32-NEXT: movl (%eax), %eax
 ; X32-NEXT: addl $8, %esp
-; X32-NEXT: .cfi_def_cfa_offset 8
 ; X32-NEXT: popl %ebx
-; X32-NEXT: .cfi_def_cfa_offset 4
 ; X32-NEXT: retl
 ; X64-LABEL: f1:
 ; X64:      leaq __emutls_v.i(%rip), %rdi
 ; X64-NEXT: callq __emutls_get_address@PLT
 ; X64-NEXT: movl (%rax), %eax
 ; X64-NEXT: popq %rcx
-; X64-NEXT: .cfi_def_cfa_offset 8
 ; X64-NEXT: retq
 
 entry:

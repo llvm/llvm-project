@@ -115,7 +115,6 @@ define <16 x double> @select04(<16 x double> %a, <16 x double> %b) {
 ; X86-NEXT:    vmovaps 8(%ebp), %zmm1
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
-; X86-NEXT:    	.cfi_def_cfa %esp, 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: select04:

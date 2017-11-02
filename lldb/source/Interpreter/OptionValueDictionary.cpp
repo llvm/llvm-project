@@ -227,8 +227,7 @@ OptionValueDictionary::GetSubValue(const ExecutionContext *exe_ctx,
   }
   assert(!temp.empty());
 
-  llvm::StringRef key, value;
-  llvm::StringRef quote_char;
+  llvm::StringRef key, quote_char;
 
   if (temp[0] == '\"' || temp[0] == '\'') {
     quote_char = temp.take_front();

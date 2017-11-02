@@ -603,8 +603,8 @@ bool TailDuplicator::shouldTailDuplicate(bool IsSimple,
     if (PreRegAlloc && MI.isCall())
       return false;
 
-    if (!MI.isPHI() && !MI.isMetaInstruction())
-        InstrCount += 1;
+    if (!MI.isPHI() && !MI.isDebugValue())
+      InstrCount += 1;
 
     if (InstrCount > MaxDuplicateCount)
       return false;

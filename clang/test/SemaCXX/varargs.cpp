@@ -8,7 +8,7 @@ void f(const string& s, ...) {  // expected-note {{parameter of type 'const stri
   __builtin_va_start(ap, s); // expected-warning {{passing an object of reference type to 'va_start' has undefined behavior}}
 }
 
-void g(register int i, ...) {
+void g(register int i, ...) { // expected-warning 0-1{{deprecated}}
   __builtin_va_start(ap, i); // UB in C, OK in C++
 }
 

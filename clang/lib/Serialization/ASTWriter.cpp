@@ -5084,6 +5084,8 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
       case UPD_CXX_INSTANTIATED_STATIC_DATA_MEMBER: {
         const VarDecl *VD = cast<VarDecl>(D);
         Record.AddSourceLocation(Update.getLoc());
+        Record.push_back(VD->isInline());
+        Record.push_back(VD->isInlineSpecified());
         if (VD->getInit()) {
           Record.push_back(!VD->isInitKnownICE() ? 1
                                                  : (VD->isInitICE() ? 3 : 2));

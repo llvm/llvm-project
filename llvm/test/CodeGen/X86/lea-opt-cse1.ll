@@ -30,7 +30,6 @@ define void @test_func(%struct.SA* nocapture %ctx, i32 %n) local_unnamed_addr {
 ; X86-NEXT:    leal 1(%edx,%ecx), %ecx
 ; X86-NEXT:    movl %ecx, 16(%eax)
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
  entry:
    %h0 = getelementptr inbounds %struct.SA, %struct.SA* %ctx, i64 0, i32 0

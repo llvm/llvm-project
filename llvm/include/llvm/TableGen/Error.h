@@ -19,6 +19,8 @@
 
 namespace llvm {
 
+void PrintNote(ArrayRef<SMLoc> NoteLoc, const Twine &Msg);
+
 void PrintWarning(ArrayRef<SMLoc> WarningLoc, const Twine &Msg);
 void PrintWarning(const char *Loc, const Twine &Msg);
 void PrintWarning(const Twine &Msg);

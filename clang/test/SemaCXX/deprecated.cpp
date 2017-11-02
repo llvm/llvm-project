@@ -20,7 +20,12 @@ void i() throw(...);
 // expected-warning@-8 {{dynamic exception specifications are deprecated}} expected-note@-8 {{use 'noexcept(false)' instead}}
 #endif
 
-void stuff() {
+void stuff(register int q) {
+#if __cplusplus > 201402L
+  // expected-error@-2 {{ISO C++17 does not allow 'register' storage class specifier}}
+#elif __cplusplus >= 201103L && !defined(NO_DEPRECATED_FLAGS)
+  // expected-warning@-4 {{'register' storage class specifier is deprecated}}
+#endif
   register int n;
 #if __cplusplus > 201402L
   // expected-error@-2 {{ISO C++17 does not allow 'register' storage class specifier}}

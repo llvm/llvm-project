@@ -417,9 +417,6 @@ namespace llvm {
   /// shuffles.
   FunctionPass *createExpandReductionsPass();
 
-  /// Creates CFI Instruction Inserter pass. \see CFIInstrInserter.cpp
-  FunctionPass *createCFIInstrInserter();
-
 } // End llvm namespace
 
 #endif

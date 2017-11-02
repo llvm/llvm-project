@@ -31,7 +31,6 @@ define double @int_to_double_rr(i32 %a) {
 ; SSE2_X86-NEXT:    fldl (%esp)
 ; SSE2_X86-NEXT:    movl %ebp, %esp
 ; SSE2_X86-NEXT:    popl %ebp
-; SSE2_X86-NEXT:    .cfi_def_cfa %esp, 4
 ; SSE2_X86-NEXT:    retl
 ;
 ; AVX_X86-LABEL: int_to_double_rr:
@@ -48,7 +47,6 @@ define double @int_to_double_rr(i32 %a) {
 ; AVX_X86-NEXT:    fldl (%esp)
 ; AVX_X86-NEXT:    movl %ebp, %esp
 ; AVX_X86-NEXT:    popl %ebp
-; AVX_X86-NEXT:    .cfi_def_cfa %esp, 4
 ; AVX_X86-NEXT:    retl
 entry:
   %0 = sitofp i32 %a to double
@@ -82,7 +80,6 @@ define double @int_to_double_rm(i32* %a) {
 ; SSE2_X86-NEXT:    fldl (%esp)
 ; SSE2_X86-NEXT:    movl %ebp, %esp
 ; SSE2_X86-NEXT:    popl %ebp
-; SSE2_X86-NEXT:    .cfi_def_cfa %esp, 4
 ; SSE2_X86-NEXT:    retl
 ;
 ; AVX_X86-LABEL: int_to_double_rm:
@@ -100,7 +97,6 @@ define double @int_to_double_rm(i32* %a) {
 ; AVX_X86-NEXT:    fldl (%esp)
 ; AVX_X86-NEXT:    movl %ebp, %esp
 ; AVX_X86-NEXT:    popl %ebp
-; AVX_X86-NEXT:    .cfi_def_cfa %esp, 4
 ; AVX_X86-NEXT:    retl
 entry:
   %0 = load i32, i32* %a
@@ -134,7 +130,6 @@ define double @int_to_double_rm_optsize(i32* %a) optsize {
 ; SSE2_X86-NEXT:    fldl (%esp)
 ; SSE2_X86-NEXT:    movl %ebp, %esp
 ; SSE2_X86-NEXT:    popl %ebp
-; SSE2_X86-NEXT:    .cfi_def_cfa %esp, 4
 ; SSE2_X86-NEXT:    retl
 ;
 ; AVX_X86-LABEL: int_to_double_rm_optsize:
@@ -152,7 +147,6 @@ define double @int_to_double_rm_optsize(i32* %a) optsize {
 ; AVX_X86-NEXT:    fldl (%esp)
 ; AVX_X86-NEXT:    movl %ebp, %esp
 ; AVX_X86-NEXT:    popl %ebp
-; AVX_X86-NEXT:    .cfi_def_cfa %esp, 4
 ; AVX_X86-NEXT:    retl
 entry:
   %0 = load i32, i32* %a
@@ -180,7 +174,6 @@ define float @int_to_float_rr(i32 %a) {
 ; SSE2_X86-NEXT:    movss %xmm0, (%esp)
 ; SSE2_X86-NEXT:    flds (%esp)
 ; SSE2_X86-NEXT:    popl %eax
-; SSE2_X86-NEXT:    .cfi_def_cfa_offset 4
 ; SSE2_X86-NEXT:    retl
 ;
 ; AVX_X86-LABEL: int_to_float_rr:
@@ -191,7 +184,6 @@ define float @int_to_float_rr(i32 %a) {
 ; AVX_X86-NEXT:    vmovss %xmm0, (%esp)
 ; AVX_X86-NEXT:    flds (%esp)
 ; AVX_X86-NEXT:    popl %eax
-; AVX_X86-NEXT:    .cfi_def_cfa_offset 4
 ; AVX_X86-NEXT:    retl
 entry:
   %0 = sitofp i32 %a to float
@@ -219,7 +211,6 @@ define float @int_to_float_rm(i32* %a) {
 ; SSE2_X86-NEXT:    movss %xmm0, (%esp)
 ; SSE2_X86-NEXT:    flds (%esp)
 ; SSE2_X86-NEXT:    popl %eax
-; SSE2_X86-NEXT:    .cfi_def_cfa_offset 4
 ; SSE2_X86-NEXT:    retl
 ;
 ; AVX_X86-LABEL: int_to_float_rm:
@@ -231,7 +222,6 @@ define float @int_to_float_rm(i32* %a) {
 ; AVX_X86-NEXT:    vmovss %xmm0, (%esp)
 ; AVX_X86-NEXT:    flds (%esp)
 ; AVX_X86-NEXT:    popl %eax
-; AVX_X86-NEXT:    .cfi_def_cfa_offset 4
 ; AVX_X86-NEXT:    retl
 entry:
   %0 = load i32, i32* %a
@@ -259,7 +249,6 @@ define float @int_to_float_rm_optsize(i32* %a) optsize {
 ; SSE2_X86-NEXT:    movss %xmm0, (%esp)
 ; SSE2_X86-NEXT:    flds (%esp)
 ; SSE2_X86-NEXT:    popl %eax
-; SSE2_X86-NEXT:    .cfi_def_cfa_offset 4
 ; SSE2_X86-NEXT:    retl
 ;
 ; AVX_X86-LABEL: int_to_float_rm_optsize:
@@ -271,7 +260,6 @@ define float @int_to_float_rm_optsize(i32* %a) optsize {
 ; AVX_X86-NEXT:    vmovss %xmm0, (%esp)
 ; AVX_X86-NEXT:    flds (%esp)
 ; AVX_X86-NEXT:    popl %eax
-; AVX_X86-NEXT:    .cfi_def_cfa_offset 4
 ; AVX_X86-NEXT:    retl
 entry:
   %0 = load i32, i32* %a

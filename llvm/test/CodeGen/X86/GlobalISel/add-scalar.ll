@@ -20,7 +20,6 @@ define i64 @test_add_i64(i64 %arg1, i64 %arg2) {
 ; X32-NEXT:    addl 8(%ebp), %eax
 ; X32-NEXT:    adcl 12(%ebp), %edx
 ; X32-NEXT:    popl %ebp
-; X32-NEXT:    .cfi_def_cfa %esp, 4
 ; X32-NEXT:    retl
   %ret = add i64 %arg1, %arg2
   ret i64 %ret

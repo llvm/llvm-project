@@ -1,4 +1,4 @@
-//===--- Parser.cpp - Matcher expression parser -----*- C++ -*-===//
+//===- Parser.cpp - Matcher expression parser -----------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,11 +13,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/ASTMatchers/Dynamic/Parser.h"
+#include "clang/ASTMatchers/ASTMatchersInternal.h"
+#include "clang/ASTMatchers/Dynamic/Diagnostics.h"
 #include "clang/ASTMatchers/Dynamic/Registry.h"
 #include "clang/Basic/CharInfo.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ManagedStatic.h"
+#include <algorithm>
+#include <cassert>
+#include <cerrno>
+#include <cstddef>
+#include <cstdlib>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace clang {
@@ -43,10 +53,10 @@ struct Parser::TokenInfo {
   /// \brief Some known identifiers.
   static const char* const ID_Bind;
 
-  TokenInfo() : Text(), Kind(TK_Eof), Range(), Value() {}
+  TokenInfo() = default;
 
   StringRef Text;
-  TokenKind Kind;
+  TokenKind Kind = TK_Eof;
   SourceRange Range;
   VariantValue Value;
 };
@@ -57,14 +67,13 @@ const char* const Parser::TokenInfo::ID_Bind = "bind";
 class Parser::CodeTokenizer {
 public:
   explicit CodeTokenizer(StringRef MatcherCode, Diagnostics *Error)
-      : Code(MatcherCode), StartOfLine(MatcherCode), Line(1), Error(Error),
-        CodeCompletionLocation(nullptr) {
+      : Code(MatcherCode), StartOfLine(MatcherCode), Error(Error) {
     NextToken = getNextToken();
   }
 
   CodeTokenizer(StringRef MatcherCode, Diagnostics *Error,
                 unsigned CodeCompletionOffset)
-      : Code(MatcherCode), StartOfLine(MatcherCode), Line(1), Error(Error),
+      : Code(MatcherCode), StartOfLine(MatcherCode), Error(Error),
         CodeCompletionLocation(MatcherCode.data() + CodeCompletionOffset) {
     NextToken = getNextToken();
   }
@@ -138,7 +147,7 @@ private:
       if (isAlphanumeric(Code[0])) {
         // Parse an identifier
         size_t TokenLength = 1;
-        while (1) {
+        while (true) {
           // A code completion location in/immediately after an identifier will
           // cause the portion of the identifier before the code completion
           // location to become a code completion token.
@@ -283,22 +292,22 @@ private:
 
   StringRef Code;
   StringRef StartOfLine;
-  unsigned Line;
+  unsigned Line = 1;
   Diagnostics *Error;
   TokenInfo NextToken;
-  const char *CodeCompletionLocation;
+  const char *CodeCompletionLocation = nullptr;
 };
 
-Parser::Sema::~Sema() {}
+Parser::Sema::~Sema() = default;
 
 std::vector<ArgKind> Parser::Sema::getAcceptedCompletionTypes(
     llvm::ArrayRef<std::pair<MatcherCtor, unsigned>> Context) {
-  return std::vector<ArgKind>();
+  return {};
 }
 
 std::vector<MatcherCompletion>
 Parser::Sema::getMatcherCompletions(llvm::ArrayRef<ArgKind> AcceptedTypes) {
-  return std::vector<MatcherCompletion>();
+  return {};
 }
 
 struct Parser::ScopedContextEntry {
@@ -384,7 +393,7 @@ bool Parser::parseMatcherExpressionImpl(const TokenInfo &NameToken,
         EndToken = Tokenizer->consumeNextToken();
         break;
       }
-      if (Args.size() > 0) {
+      if (!Args.empty()) {
         // We must find a , token to continue.
         const TokenInfo CommaToken = Tokenizer->consumeNextToken();
         if (CommaToken.Kind != TokenInfo::TK_Comma) {
@@ -558,7 +567,7 @@ Parser::Parser(CodeTokenizer *Tokenizer, Sema *S,
     : Tokenizer(Tokenizer), S(S ? S : &*DefaultRegistrySema),
       NamedValues(NamedValues), Error(Error) {}
 
-Parser::RegistrySema::~RegistrySema() {}
+Parser::RegistrySema::~RegistrySema() = default;
 
 llvm::Optional<MatcherCtor>
 Parser::RegistrySema::lookupMatcherCtor(StringRef MatcherName) {
@@ -640,6 +649,6 @@ Parser::parseMatcherExpression(StringRef Code, Sema *S,
   return Result;
 }
 
-}  // namespace dynamic
-}  // namespace ast_matchers
-}  // namespace clang
+} // namespace dynamic
+} // namespace ast_matchers
+} // namespace clang
