@@ -12,7 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static void *global_p = nullptr;
+static void *global_p = NULL;
 
 void __init(void) {
   global_p = malloc(1);

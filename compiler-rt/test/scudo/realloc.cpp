@@ -1,4 +1,4 @@
-// RUN: %clang_scudo %s -lstdc++ -o %t
+// RUN: %clangxx_scudo %s -lstdc++ -o %t
 // RUN: %run %t pointers 2>&1
 // RUN: %run %t contents 2>&1
 // RUN: %run %t usablesize 2>&1

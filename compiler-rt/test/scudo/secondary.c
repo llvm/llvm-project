@@ -36,7 +36,7 @@ int main(int argc, char **argv)
   assert(p);
   memset(p, 'A', size); // This should not trigger anything.
   // Set up the SIGSEGV handler now, as the rest should trigger an AV.
-  sigaction(SIGSEGV, &a, nullptr);
+  sigaction(SIGSEGV, &a, NULL);
   if (!strcmp(argv[1], "after")) {
     for (int i = 0; i < page_size; i++)
       p[size + i] = 'A';
