@@ -219,6 +219,9 @@ void AsmPrinter::emitCFIInstruction(const MCCFIInstruction &Inst) const {
   case MCCFIInstruction::OpEscape:
     OutStreamer->EmitCFIEscape(Inst.getValues());
     break;
+  case MCCFIInstruction::OpRestore:
+    OutStreamer->EmitCFIRestore(Inst.getRegister());
+    break;
   }
 }
 

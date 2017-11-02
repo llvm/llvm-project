@@ -893,10 +893,12 @@ void MipsSEFrameLowering::determineCalleeSaves(MachineFunction &MF,
   }
 
   // Set scavenging frame index if necessary.
-  uint64_t MaxSPOffset = MF.getInfo<MipsFunctionInfo>()->getIncomingArgSize() +
-    estimateStackSize(MF);
+  uint64_t MaxSPOffset = estimateStackSize(MF);
 
-  if (isInt<16>(MaxSPOffset))
+  // MSA has a minimum offset of 10 bits signed. If there is a variable
+  // sized object on the stack, the estimation cannot account for it.
+  if (isIntN(STI.hasMSA() ? 10 : 16, MaxSPOffset) &&
+      !MF.getFrameInfo().hasVarSizedObjects())
     return;
 
   const TargetRegisterClass &RC =

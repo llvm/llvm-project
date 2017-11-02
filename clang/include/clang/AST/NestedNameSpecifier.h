@@ -35,7 +35,7 @@ class LangOptions;
 /// "\::std::vector<int>::".
 ///
 /// C++ nested name specifiers are the prefixes to qualified
-/// namespaces. For example, "foo::" in "foo::x" is a nested name
+/// names. For example, "foo::" in "foo::x" is a nested name
 /// specifier. Nested name specifiers are made up of a sequence of
 /// specifiers, each of which can be a namespace, type, identifier
 /// (for dependent names), decltype specifier, or the global specifier ('::').
