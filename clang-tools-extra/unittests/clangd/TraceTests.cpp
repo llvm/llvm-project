@@ -12,6 +12,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/YAMLParser.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -88,6 +89,11 @@ TEST(TraceTest, SmokeTest) {
   auto *Root = dyn_cast_or_null<yaml::MappingNode>(Doc->getRoot());
   ASSERT_NE(Root, nullptr) << "Root should be an object";
 
+  // Check whether we expect thread name events on this platform.
+  SmallString<32> ThreadName;
+  llvm::get_thread_name(ThreadName);
+  bool ThreadsHaveNames = !ThreadName.empty();
+
   // We expect in order:
   //   displayTimeUnit: "ns"
   //   traceEvents: [process name, thread name, start span, log, end span]
@@ -103,8 +109,10 @@ TEST(TraceTest, SmokeTest) {
   auto Event = Events->begin();
   ASSERT_NE(Event, Events->end()) << "Expected process name";
   EXPECT_TRUE(VerifyObject(*Event, {{"ph", "M"}, {"name", "process_name"}}));
-  ASSERT_NE(++Event, Events->end()) << "Expected thread name";
-  EXPECT_TRUE(VerifyObject(*Event, {{"ph", "M"}, {"name", "thread_name"}}));
+  if (ThreadsHaveNames) {
+    ASSERT_NE(++Event, Events->end()) << "Expected thread name";
+    EXPECT_TRUE(VerifyObject(*Event, {{"ph", "M"}, {"name", "thread_name"}}));
+  }
   ASSERT_NE(++Event, Events->end()) << "Expected span start";
   EXPECT_TRUE(VerifyObject(*Event, {{"ph", "B"}, {"name", "A"}}));
   ASSERT_NE(++Event, Events->end()) << "Expected log message";
