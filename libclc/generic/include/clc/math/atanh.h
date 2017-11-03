@@ -20,5 +20,10 @@
  * THE SOFTWARE.
  */
 
-#define __CLC_BODY <clc/math/atanh.inc>
+#define __CLC_BODY <clc/math/unary_decl.inc>
+#define __CLC_FUNCTION atanh
+
 #include <clc/math/gentype.inc>
+
+#undef __CLC_BODY
+#undef __CLC_FUNCTION

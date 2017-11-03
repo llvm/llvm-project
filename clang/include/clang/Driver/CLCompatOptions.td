@@ -302,6 +302,8 @@ def _SLASH_Gz : CLFlag<"Gz">,
   HelpText<"Set __stdcall as a default calling convention">;
 def _SLASH_Gv : CLFlag<"Gv">,
   HelpText<"Set __vectorcall as a default calling convention">;
+def _SLASH_Gregcall : CLFlag<"Gregcall">,
+  HelpText<"Set __regcall as a default calling convention">;
 
 // Ignored:
 

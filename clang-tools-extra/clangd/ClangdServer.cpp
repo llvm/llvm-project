@@ -15,6 +15,8 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FormatProviders.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <future>
@@ -98,7 +100,8 @@ ClangdScheduler::ClangdScheduler(unsigned AsyncThreadsCount)
 
   Workers.reserve(AsyncThreadsCount);
   for (unsigned I = 0; I < AsyncThreadsCount; ++I) {
-    Workers.push_back(std::thread([this]() {
+    Workers.push_back(std::thread([this, I]() {
+      llvm::set_thread_name(llvm::formatv("scheduler/{0}", I));
       while (true) {
         UniqueFunction<void()> Request;
 

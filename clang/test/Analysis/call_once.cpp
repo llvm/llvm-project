@@ -1,6 +1,11 @@
 // RUN: %clang_analyze_cc1 -std=c++11 -fblocks -analyzer-checker=core,debug.ExprInspection -verify %s
 // RUN: %clang_analyze_cc1 -std=c++11 -fblocks -analyzer-checker=core,debug.ExprInspection -DEMULATE_LIBSTDCPP -verify %s
 
+// We do NOT model libcxx03 implementation, but the analyzer should still
+// not crash.
+// RUN: %clang_analyze_cc1 -std=c++11 -fblocks -analyzer-checker=core,debug.ExprInspection -DEMULATE_LIBCXX03 -verify %s
+// RUN: %clang_analyze_cc1 -std=c++11 -fblocks -analyzer-checker=core,debug.ExprInspection -DEMULATE_LIBCXX03 -DEMULATE_LIBSTDCPP -verify %s
+
 void clang_analyzer_eval(bool);
 
 // Faking std::std::call_once implementation.
@@ -16,8 +21,13 @@ typedef struct once_flag_s {
 } once_flag;
 #endif
 
+#ifndef EMULATE_LIBCXX03
 template <class Callable, class... Args>
 void call_once(once_flag &o, Callable&& func, Args&&... args) {};
+#else
+template <class Callable, class... Args> // libcxx03 call_once
+void call_once(once_flag &o, Callable func, Args&&... args) {};
+#endif
 
 } // namespace std
 
@@ -28,7 +38,9 @@ void test_called_warning() {
 
   std::call_once(g_initialize, [&] {
     int *x = nullptr;
+#ifndef EMULATE_LIBCXX03
     int y = *x; // expected-warning{{Dereference of null pointer (loaded from variable 'x')}}
+#endif
     z = 200;
   });
 }
@@ -45,8 +57,10 @@ void test_called_on_path_inside_no_warning() {
     x = &z;
   });
 
+#ifndef EMULATE_LIBCXX03
   *x = 100; // no-warning
   clang_analyzer_eval(z == 100); // expected-warning{{TRUE}}
+#endif
 }
 
 void test_called_on_path_no_warning() {
@@ -59,7 +73,11 @@ void test_called_on_path_no_warning() {
     x = &y;
   });
 
+#ifndef EMULATE_LIBCXX03
   *x = 100; // no-warning
+#else
+  *x = 100; // expected-warning{{Dereference of null pointer (loaded from variable 'x')}}
+#endif
 }
 
 void test_called_on_path_warning() {
@@ -72,7 +90,9 @@ void test_called_on_path_warning() {
     x = nullptr;
   });
 
+#ifndef EMULATE_LIBCXX03
   *x = 100; // expected-warning{{Dereference of null pointer (loaded from variable 'x')}}
+#endif
 }
 
 void test_called_once_warning() {
@@ -89,7 +109,9 @@ void test_called_once_warning() {
     x = &y;
   });
 
+#ifndef EMULATE_LIBCXX03
   *x = 100; // expected-warning{{Dereference of null pointer (loaded from variable 'x')}}
+#endif
 }
 
 void test_called_once_no_warning() {
@@ -106,7 +128,9 @@ void test_called_once_no_warning() {
     x = nullptr;
   });
 
+#ifndef EMULATE_LIBCXX03
   *x = 100; // no-warning
+#endif
 }
 
 static int global = 0;
@@ -117,7 +141,9 @@ void funcPointer() {
 void test_func_pointers() {
   static std::once_flag flag;
   std::call_once(flag, &funcPointer);
+#ifndef EMULATE_LIBCXX03
   clang_analyzer_eval(global == 1); // expected-warning{{TRUE}}
+#endif
 }
 
 template <class _Fp>
@@ -157,7 +183,9 @@ void test_param_passing_lambda() {
   },
                  x);
 
+#ifndef EMULATE_LIBCXX03
   clang_analyzer_eval(y == 120); // expected-warning{{TRUE}}
+#endif
 }
 
 void test_param_passing_lambda_false() {
@@ -169,7 +197,9 @@ void test_param_passing_lambda_false() {
   },
                  x);
 
+#ifndef EMULATE_LIBCXX03
   clang_analyzer_eval(x == 120); // expected-warning{{FALSE}}
+#endif
 }
 
 void test_param_passing_stored_lambda() {
@@ -182,7 +212,9 @@ void test_param_passing_stored_lambda() {
   };
 
   std::call_once(flag, lambda, x);
+#ifndef EMULATE_LIBCXX03
   clang_analyzer_eval(y == 120); // expected-warning{{TRUE}}
+#endif
 }
 
 void test_multiparam_passing_lambda() {
@@ -194,8 +226,10 @@ void test_multiparam_passing_lambda() {
   },
                  1, 2, 3);
 
+#ifndef EMULATE_LIBCXX03
   clang_analyzer_eval(x == 120); // expected-warning{{FALSE}}
   clang_analyzer_eval(x == 6); // expected-warning{{TRUE}}
+#endif
 }
 
 static int global2 = 0;
@@ -206,7 +240,9 @@ void test_param_passing_lambda_global() {
     global2 = a + b + c;
   },
                  1, 2, 3);
+#ifndef EMULATE_LIBCXX03
   clang_analyzer_eval(global2 == 6); // expected-warning{{TRUE}}
+#endif
 }
 
 static int global3 = 0;
@@ -220,7 +256,9 @@ void test_param_passing_funcptr() {
 
   std::call_once(flag, &funcptr, 1, 2, 3);
 
+#ifndef EMULATE_LIBCXX03
   clang_analyzer_eval(global3 == 6); // expected-warning{{TRUE}}
+#endif
 }
 
 void test_blocks() {
@@ -229,7 +267,9 @@ void test_blocks() {
   std::call_once(flag, ^{
     global3 = 120;
   });
+#ifndef EMULATE_LIBCXX03
   clang_analyzer_eval(global3 == 120); // expected-warning{{TRUE}}
+#endif
 }
 
 int call_once() {
@@ -238,7 +278,9 @@ int call_once() {
 
 void test_non_std_call_once() {
   int x = call_once();
+#ifndef EMULATE_LIBCXX03
   clang_analyzer_eval(x == 5); // expected-warning{{TRUE}}
+#endif
 }
 
 namespace std {
@@ -247,28 +289,36 @@ void call_once(d, e);
 }
 void g();
 void test_no_segfault_on_different_impl() {
+#ifndef EMULATE_LIBCXX03
   std::call_once(g, false); // no-warning
+#endif
 }
 
 void test_lambda_refcapture() {
   static std::once_flag flag;
   int a = 6;
   std::call_once(flag, [&](int &a) { a = 42; }, a);
+#ifndef EMULATE_LIBCXX03
   clang_analyzer_eval(a == 42); // expected-warning{{TRUE}}
+#endif
 }
 
 void test_lambda_refcapture2() {
   static std::once_flag flag;
   int a = 6;
   std::call_once(flag, [=](int &a) { a = 42; }, a);
+#ifndef EMULATE_LIBCXX03
   clang_analyzer_eval(a == 42); // expected-warning{{TRUE}}
+#endif
 }
 
 void test_lambda_fail_refcapture() {
   static std::once_flag flag;
   int a = 6;
   std::call_once(flag, [=](int a) { a = 42; }, a);
+#ifndef EMULATE_LIBCXX03
   clang_analyzer_eval(a == 42); // expected-warning{{FALSE}}
+#endif
 }
 
 void mutator(int &param) {
@@ -278,7 +328,9 @@ void test_reftypes_funcptr() {
   static std::once_flag flag;
   int a = 6;
   std::call_once(flag, &mutator, a);
+#ifndef EMULATE_LIBCXX03
   clang_analyzer_eval(a == 42); // expected-warning{{TRUE}}
+#endif
 }
 
 void fail_mutator(int param) {
@@ -288,7 +340,9 @@ void test_mutator_noref() {
   static std::once_flag flag;
   int a = 6;
   std::call_once(flag, &fail_mutator, a);
+#ifndef EMULATE_LIBCXX03
   clang_analyzer_eval(a == 42); // expected-warning{{FALSE}}
+#endif
 }
 
 // Function is implicitly treated as a function pointer
@@ -301,5 +355,7 @@ void test_implicit_funcptr() {
   static std::once_flag flagn;
 
   std::call_once(flagn, callbackn, x);
+#ifndef EMULATE_LIBCXX03
   clang_analyzer_eval(x == 42); // expected-warning{{TRUE}}
+#endif
 }

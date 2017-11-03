@@ -537,7 +537,8 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
     return &InputSection::Discarded;
   }
 
-  if (Config->Strip != StripPolicy::None && Name.startswith(".debug"))
+  if (Config->Strip != StripPolicy::None &&
+      (Name.startswith(".debug") || Name.startswith(".zdebug")))
     return &InputSection::Discarded;
 
   // The linkonce feature is a sort of proto-comdat. Some glibc i386 object
