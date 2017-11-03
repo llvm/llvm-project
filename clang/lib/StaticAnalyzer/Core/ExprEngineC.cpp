@@ -92,12 +92,10 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
       // Process non-assignments except commas or short-circuited
       // logical expressions (LAnd and LOr).
       SVal Result = evalBinOp(state, Op, LeftV, RightV, B->getType());
-      if (Result.isUnknown()) {
-        Bldr.generateNode(B, *it, state);
-        continue;
+      if (!Result.isUnknown()) {
+        state = state->BindExpr(B, LCtx, Result);
       }
 
-      state = state->BindExpr(B, LCtx, Result);
       Bldr.generateNode(B, *it, state);
       continue;
     }
