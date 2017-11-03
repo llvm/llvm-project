@@ -1212,18 +1212,12 @@ const char *Lexer::SkipEscapedNewLines(const char *P) {
   }
 }
 
-/// \brief Checks that the given token is the first token that occurs after the
-/// given location (this excludes comments and whitespace). Returns the location
-/// immediately after the specified token. If the token is not found or the
-/// location is inside a macro, the returned source location will be invalid.
-SourceLocation Lexer::findLocationAfterToken(SourceLocation Loc,
-                                        tok::TokenKind TKind,
-                                        const SourceManager &SM,
-                                        const LangOptions &LangOpts,
-                                        bool SkipTrailingWhitespaceAndNewLine) {
+Optional<Token> Lexer::findNextToken(SourceLocation Loc,
+                                     const SourceManager &SM,
+                                     const LangOptions &LangOpts) {
   if (Loc.isMacroID()) {
     if (!Lexer::isAtEndOfMacroExpansion(Loc, SM, LangOpts, &Loc))
-      return SourceLocation();
+      return None;
   }
   Loc = Lexer::getLocForEndOfToken(Loc, 0, SM, LangOpts);
 
@@ -1234,7 +1228,7 @@ SourceLocation Lexer::findLocationAfterToken(SourceLocation Loc,
   bool InvalidTemp = false;
   StringRef File = SM.getBufferData(LocInfo.first, &InvalidTemp);
   if (InvalidTemp)
-    return SourceLocation();
+    return None;
 
   const char *TokenBegin = File.data() + LocInfo.second;
 
@@ -1244,15 +1238,25 @@ SourceLocation Lexer::findLocationAfterToken(SourceLocation Loc,
   // Find the token.
   Token Tok;
   lexer.LexFromRawLexer(Tok);
-  if (Tok.isNot(TKind))
+  return Tok;
+}
+
+/// \brief Checks that the given token is the first token that occurs after the
+/// given location (this excludes comments and whitespace). Returns the location
+/// immediately after the specified token. If the token is not found or the
+/// location is inside a macro, the returned source location will be invalid.
+SourceLocation Lexer::findLocationAfterToken(
+    SourceLocation Loc, tok::TokenKind TKind, const SourceManager &SM,
+    const LangOptions &LangOpts, bool SkipTrailingWhitespaceAndNewLine) {
+  Optional<Token> Tok = findNextToken(Loc, SM, LangOpts);
+  if (!Tok || Tok->isNot(TKind))
     return SourceLocation();
-  SourceLocation TokenLoc = Tok.getLocation();
+  SourceLocation TokenLoc = Tok->getLocation();
 
   // Calculate how much whitespace needs to be skipped if any.
   unsigned NumWhitespaceChars = 0;
   if (SkipTrailingWhitespaceAndNewLine) {
-    const char *TokenEnd = SM.getCharacterData(TokenLoc) +
-                           Tok.getLength();
+    const char *TokenEnd = SM.getCharacterData(TokenLoc) + Tok->getLength();
     unsigned char C = *TokenEnd;
     while (isHorizontalWhitespace(C)) {
       C = *(++TokenEnd);
@@ -1269,7 +1273,7 @@ SourceLocation Lexer::findLocationAfterToken(SourceLocation Loc,
     }
   }
 
-  return TokenLoc.getLocWithOffset(Tok.getLength() + NumWhitespaceChars);
+  return TokenLoc.getLocWithOffset(Tok->getLength() + NumWhitespaceChars);
 }
 
 /// getCharAndSizeSlow - Peek a single 'character' from the specified buffer,

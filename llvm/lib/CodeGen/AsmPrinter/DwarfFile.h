@@ -15,6 +15,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/DIE.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/Support/Allocator.h"
 #include <memory>
 #include <utility>
@@ -27,7 +28,6 @@ class DwarfCompileUnit;
 class DwarfUnit;
 class LexicalScope;
 class MCSection;
-class MDNode;
 
 class DwarfFile {
   // Target of Dwarf emission, used for sizing of abbreviations.

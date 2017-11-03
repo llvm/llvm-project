@@ -472,11 +472,9 @@ void LTOCodeGenerator::restoreLinkageForExternals() {
     GV.setLinkage(I->second);
   };
 
-  std::for_each(MergedModule->begin(), MergedModule->end(), externalize);
-  std::for_each(MergedModule->global_begin(), MergedModule->global_end(),
-                externalize);
-  std::for_each(MergedModule->alias_begin(), MergedModule->alias_end(),
-                externalize);
+  llvm::for_each(MergedModule->functions(), externalize);
+  llvm::for_each(MergedModule->globals(), externalize);
+  llvm::for_each(MergedModule->aliases(), externalize);
 }
 
 void LTOCodeGenerator::verifyMergedModuleOnce() {

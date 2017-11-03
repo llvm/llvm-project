@@ -141,6 +141,7 @@ struct TextEdit {
   static llvm::Optional<TextEdit> parse(llvm::yaml::MappingNode *Params,
                                         clangd::Logger &Logger);
   static std::string unparse(const TextEdit &P);
+  static std::string unparse(const std::vector<TextEdit> &TextEdits);
 };
 
 struct TextDocumentItem {
@@ -380,6 +381,46 @@ struct CodeActionParams {
 
   static llvm::Optional<CodeActionParams> parse(llvm::yaml::MappingNode *Params,
                                                 clangd::Logger &Logger);
+};
+
+struct WorkspaceEdit {
+  /// Holds changes to existing resources.
+  llvm::Optional<std::map<std::string, std::vector<TextEdit>>> changes;
+
+  /// Note: "documentChanges" is not currently used because currently there is
+  /// no support for versioned edits.
+
+  static llvm::Optional<WorkspaceEdit> parse(llvm::yaml::MappingNode *Params,
+                                             clangd::Logger &Logger);
+  static std::string unparse(const WorkspaceEdit &WE);
+};
+
+/// Exact commands are not specified in the protocol so we define the
+/// ones supported by Clangd here. The protocol specifies the command arguments
+/// to be "any[]" but to make this safer and more manageable, each command we
+/// handle maps to a certain llvm::Optional of some struct to contain its
+/// arguments. Different commands could reuse the same llvm::Optional as
+/// arguments but a command that needs different arguments would simply add a
+/// new llvm::Optional and not use any other ones. In practice this means only
+/// one argument type will be parsed and set.
+struct ExecuteCommandParams {
+  // Command to apply fix-its. Uses WorkspaceEdit as argument.
+  const static std::string CLANGD_APPLY_FIX_COMMAND;
+
+  /// The command identifier, e.g. CLANGD_APPLY_FIX_COMMAND
+  std::string command;
+
+  // Arguments
+
+  llvm::Optional<WorkspaceEdit> workspaceEdit;
+
+  static llvm::Optional<ExecuteCommandParams>
+  parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger);
+};
+
+struct ApplyWorkspaceEditParams {
+  WorkspaceEdit edit;
+  static std::string unparse(const ApplyWorkspaceEditParams &Params);
 };
 
 struct TextDocumentPositionParams {

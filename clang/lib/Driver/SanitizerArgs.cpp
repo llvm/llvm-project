@@ -30,7 +30,7 @@ enum : SanitizerMask {
   NeedsUbsanCxxRt = Vptr | CFI,
   NotAllowedWithTrap = Vptr,
   NotAllowedWithMinimalRuntime = Vptr,
-  RequiresPIE = DataFlow,
+  RequiresPIE = DataFlow | Scudo,
   NeedsUnwindTables = Address | Thread | Memory | DataFlow,
   SupportsCoverage = Address | KernelAddress | Memory | Leak | Undefined |
                      Integer | Nullability | DataFlow | Fuzzer | FuzzerNoLink,
@@ -173,7 +173,7 @@ static SanitizerMask parseSanitizeTrapArgs(const Driver &D,
 bool SanitizerArgs::needsUbsanRt() const {
   // All of these include ubsan.
   if (needsAsanRt() || needsMsanRt() || needsTsanRt() || needsDfsanRt() ||
-      needsLsanRt() || needsCfiDiagRt())
+      needsLsanRt() || needsCfiDiagRt() || needsScudoRt())
     return false;
 
   return (Sanitizers.Mask & NeedsUbsanRt & ~TrapSanitizers.Mask) ||
@@ -370,17 +370,14 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
 
   // Warn about incompatible groups of sanitizers.
   std::pair<SanitizerMask, SanitizerMask> IncompatibleGroups[] = {
-      std::make_pair(Address, Thread), std::make_pair(Address, Memory),
-      std::make_pair(Thread, Memory), std::make_pair(Leak, Thread),
-      std::make_pair(Leak, Memory), std::make_pair(KernelAddress, Address),
-      std::make_pair(KernelAddress, Leak),
-      std::make_pair(KernelAddress, Thread),
-      std::make_pair(KernelAddress, Memory),
-      std::make_pair(Efficiency, Address),
-      std::make_pair(Efficiency, Leak),
-      std::make_pair(Efficiency, Thread),
-      std::make_pair(Efficiency, Memory),
-      std::make_pair(Efficiency, KernelAddress)};
+      std::make_pair(Address, Thread | Memory),
+      std::make_pair(Thread, Memory),
+      std::make_pair(Leak, Thread | Memory),
+      std::make_pair(KernelAddress, Address| Leak | Thread | Memory),
+      std::make_pair(Efficiency, Address | Leak | Thread | Memory |
+                                 KernelAddress),
+      std::make_pair(Scudo, Address | Leak | Thread | Memory | KernelAddress |
+                            Efficiency) };
   for (auto G : IncompatibleGroups) {
     SanitizerMask Group = G.first;
     if (Kinds & Group) {

@@ -845,9 +845,10 @@ SanitizerMask Linux::getSupportedSanitizers() const {
     Res |= SanitizerKind::Memory;
   if (IsX86_64 || IsMIPS64)
     Res |= SanitizerKind::Efficiency;
-  if (IsX86 || IsX86_64) {
+  if (IsX86 || IsX86_64)
     Res |= SanitizerKind::Function;
-  }
+  if (IsX86_64 || IsMIPS64 || IsAArch64 || IsX86 || IsArmArch)
+    Res |= SanitizerKind::Scudo;
   return Res;
 }
 

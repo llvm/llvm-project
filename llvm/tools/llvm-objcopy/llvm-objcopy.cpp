@@ -83,18 +83,72 @@ static cl::alias ToRemoveA("R", cl::desc("Alias for remove-section"),
                            cl::aliasopt(ToRemove));
 static cl::opt<bool> StripSections("strip-sections",
                                    cl::desc("Remove all section headers"));
+static cl::opt<bool>
+    StripDWO("strip-dwo", cl::desc("remove all DWARF .dwo sections from file"));
+static cl::opt<bool> ExtractDWO(
+    "extract-dwo",
+    cl::desc("remove all sections that are not DWARF .dwo sections from file"));
+static cl::opt<std::string>
+    SplitDWO("split-dwo",
+             cl::desc("equivalent to extract-dwo on the input file to "
+                      "<dwo-file>, then strip-dwo on the input file"),
+             cl::value_desc("dwo-file"));
 
 using SectionPred = std::function<bool(const SectionBase &Sec)>;
 
-void CopyBinary(const ELFObjectFile<ELF64LE> &ObjFile) {
+bool IsDWOSection(const SectionBase &Sec) {
+  return Sec.Name.endswith(".dwo");
+}
+
+template <class ELFT>
+bool OnlyKeepDWOPred(const Object<ELFT> &Obj, const SectionBase &Sec) {
+  // We can't remove the section header string table.
+  if (&Sec == Obj.getSectionHeaderStrTab())
+    return false;
+  // Short of keeping the string table we want to keep everything that is a DWO
+  // section and remove everything else.
+  return !IsDWOSection(Sec);
+}
+
+template <class ELFT>
+void WriteObjectFile(const Object<ELFT> &Obj, StringRef File) {
   std::unique_ptr<FileOutputBuffer> Buffer;
+  ErrorOr<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
+      FileOutputBuffer::create(File, Obj.totalSize(),
+                               FileOutputBuffer::F_executable);
+  if (BufferOrErr.getError())
+    error("failed to open " + OutputFilename);
+  else
+    Buffer = std::move(*BufferOrErr);
+  Obj.write(*Buffer);
+  if (auto EC = Buffer->commit())
+    reportError(File, EC);
+}
+
+template <class ELFT>
+void SplitDWOToFile(const ELFObjectFile<ELFT> &ObjFile, StringRef File) {
+  // Construct a second output file for the DWO sections.
+  ELFObject<ELFT> DWOFile(ObjFile);
+
+  DWOFile.removeSections([&](const SectionBase &Sec) {
+    return OnlyKeepDWOPred<ELFT>(DWOFile, Sec);
+  });
+  DWOFile.finalize();
+  WriteObjectFile(DWOFile, File);
+}
+
+void CopyBinary(const ELFObjectFile<ELF64LE> &ObjFile) {
   std::unique_ptr<Object<ELF64LE>> Obj;
+
   if (!OutputFormat.empty() && OutputFormat != "binary")
     error("invalid output format '" + OutputFormat + "'");
   if (!OutputFormat.empty() && OutputFormat == "binary")
     Obj = llvm::make_unique<BinaryObject<ELF64LE>>(ObjFile);
   else
     Obj = llvm::make_unique<ELFObject<ELF64LE>>(ObjFile);
+
+  if (!SplitDWO.empty())
+    SplitDWOToFile<ELF64LE>(ObjFile, SplitDWO.getValue());
 
   SectionPred RemovePred = [](const SectionBase &) { return false; };
 
@@ -105,6 +159,16 @@ void CopyBinary(const ELFObjectFile<ELF64LE> &ObjFile) {
     };
   }
 
+  if (StripDWO || !SplitDWO.empty())
+    RemovePred = [RemovePred](const SectionBase &Sec) {
+      return IsDWOSection(Sec) || RemovePred(Sec);
+    };
+
+  if (ExtractDWO)
+    RemovePred = [RemovePred, &Obj](const SectionBase &Sec) {
+      return OnlyKeepDWOPred(*Obj, Sec) || RemovePred(Sec);
+    };
+
   if (StripSections) {
     RemovePred = [RemovePred](const SectionBase &Sec) {
       return RemovePred(Sec) || (Sec.Flags & SHF_ALLOC) == 0;
@@ -113,21 +177,8 @@ void CopyBinary(const ELFObjectFile<ELF64LE> &ObjFile) {
   }
 
   Obj->removeSections(RemovePred);
-
   Obj->finalize();
-  ErrorOr<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
-      FileOutputBuffer::create(OutputFilename, Obj->totalSize(),
-                               FileOutputBuffer::F_executable);
-  if (BufferOrErr.getError())
-    error("failed to open " + OutputFilename);
-  else
-    Buffer = std::move(*BufferOrErr);
-  std::error_code EC;
-  if (EC)
-    report_fatal_error(EC.message());
-  Obj->write(*Buffer);
-  if (auto EC = Buffer->commit())
-    reportError(OutputFilename, EC);
+  WriteObjectFile(*Obj, OutputFilename.getValue());
 }
 
 int main(int argc, char **argv) {

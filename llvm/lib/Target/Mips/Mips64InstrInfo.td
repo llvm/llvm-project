@@ -341,13 +341,13 @@ let AdditionalPredicates = [NotInMicroMips] in {
   // for dinsm and dinsu like binutils.
   let DecoderMethod = "DecodeDINS" in {
     def DINS  : InsBase<"dins", GPR64Opnd, uimm6, uimm5_inssize_plus1,
-                        immZExt5, immZExt5Plus1, MipsIns>, EXT_FM<7>,
+                        immZExt5, immZExt5Plus1>, EXT_FM<7>,
                 ISA_MIPS64R2;
     def DINSU : InsBase<"dinsu", GPR64Opnd, uimm5_plus32, uimm5_inssize_plus1,
-                        immZExt5Plus32, immZExt5Plus1, MipsIns>,
+                        immZExt5Plus32, immZExt5Plus1>,
                 EXT_FM<6>, ISA_MIPS64R2;
     def DINSM : InsBase<"dinsm", GPR64Opnd, uimm5, uimm_range_2_64,
-                        immZExt5, immZExtRange2To64, MipsIns>,
+                        immZExt5, immZExtRange2To64>,
                 EXT_FM<5>, ISA_MIPS64R2;
   }
 }
