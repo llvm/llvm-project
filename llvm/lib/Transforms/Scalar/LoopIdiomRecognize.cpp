@@ -1326,9 +1326,9 @@ static bool detectCTLZIdiom(Loop *CurLoop, PHINode *&PhiX,
   // step 2: detect instructions corresponding to "x.next = x >> 1"
   if (!DefX || DefX->getOpcode() != Instruction::AShr)
     return false;
-  if (ConstantInt *Shft = dyn_cast<ConstantInt>(DefX->getOperand(1)))
-    if (!Shft || !Shft->isOne())
-      return false;
+  ConstantInt *Shft = dyn_cast<ConstantInt>(DefX->getOperand(1));
+  if (!Shft || !Shft->isOne())
+    return false;
   VarX = DefX->getOperand(0);
 
   // step 3: Check the recurrence of variable X

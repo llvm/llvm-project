@@ -162,6 +162,13 @@ createExecutorFromCommandLineArgs(int &argc, const char **argv,
                                   llvm::cl::OptionCategory &Category,
                                   const char *Overview = nullptr);
 
+namespace internal {
+llvm::Expected<std::unique_ptr<ToolExecutor>>
+createExecutorFromCommandLineArgsImpl(int &argc, const char **argv,
+                                      llvm::cl::OptionCategory &Category,
+                                      const char *Overview = nullptr);
+} // end namespace internal
+
 } // end namespace tooling
 } // end namespace clang
 

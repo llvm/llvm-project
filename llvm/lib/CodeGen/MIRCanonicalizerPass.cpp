@@ -101,10 +101,10 @@ char MIRCanonicalizer::ID;
 char &llvm::MIRCanonicalizerID = MIRCanonicalizer::ID;
 
 INITIALIZE_PASS_BEGIN(MIRCanonicalizer, "mir-canonicalizer",
-                      "Rename Register Operands Canonically", false, false);
+                      "Rename Register Operands Canonically", false, false)
 
 INITIALIZE_PASS_END(MIRCanonicalizer, "mir-canonicalizer",
-                    "Rename Register Operands Canonically", false, false);
+                    "Rename Register Operands Canonically", false, false)
 
 static std::vector<MachineBasicBlock *> GetRPOList(MachineFunction &MF) {
   ReversePostOrderTraversal<MachineBasicBlock *> RPOT(&*MF.begin());

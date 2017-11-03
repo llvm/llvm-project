@@ -54,13 +54,14 @@ llvm::Error ToolExecutor::execute(std::unique_ptr<FrontendActionFactory> Action,
   return execute(Actions);
 }
 
+namespace internal {
 llvm::Expected<std::unique_ptr<ToolExecutor>>
-createExecutorFromCommandLineArgs(int &argc, const char **argv,
-                                  llvm::cl::OptionCategory &Category,
-                                  const char *Overview) {
+createExecutorFromCommandLineArgsImpl(int &argc, const char **argv,
+                                      llvm::cl::OptionCategory &Category,
+                                      const char *Overview) {
   auto OptionsParser =
       CommonOptionsParser::create(argc, argv, Category, llvm::cl::ZeroOrMore,
-                                  /*Overview=*/nullptr);
+                                  /*Overview=*/Overview);
   if (!OptionsParser)
     return OptionsParser.takeError();
   for (auto I = ToolExecutorPluginRegistry::begin(),
@@ -84,6 +85,21 @@ createExecutorFromCommandLineArgs(int &argc, const char **argv,
       llvm::Twine("Executor \"") + ExecutorName + "\" is not registered.",
       llvm::inconvertibleErrorCode());
 }
+} // end namespace internal
+
+llvm::Expected<std::unique_ptr<ToolExecutor>>
+createExecutorFromCommandLineArgs(int &argc, const char **argv,
+                                  llvm::cl::OptionCategory &Category,
+                                  const char *Overview) {
+  return internal::createExecutorFromCommandLineArgsImpl(argc, argv, Category,
+                                                         Overview);
+}
+
+// This anchor is used to force the linker to link in the generated object file
+// and thus register the StandaloneToolExecutorPlugin.
+extern volatile int StandaloneToolExecutorAnchorSource;
+static int LLVM_ATTRIBUTE_UNUSED StandaloneToolExecutorAnchorDest =
+    StandaloneToolExecutorAnchorSource;
 
 } // end namespace tooling
 } // end namespace clang

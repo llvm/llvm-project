@@ -4,7 +4,8 @@ add_clang_library(clangToolingRefactor
   ASTSelection.cpp
   ASTSelectionRequirements.cpp
   AtomicChange.cpp
-  Extract.cpp
+  Extract/Extract.cpp
+  Extract/SourceExtraction.cpp
   RefactoringActions.cpp
   Rename/RenamingAction.cpp
   Rename/SymbolOccurrences.cpp

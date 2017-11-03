@@ -1,0 +1,35 @@
+# REQUIRES: llvm-64-bits
+# REQUIRES: system-linux
+
+# RUN: yaml2obj %s > %t
+# RUN: dd if=%t of=%t bs=1 count=0 seek=2200M
+# RUN: rm -f %t.lib
+# RUN: cp %t %t2
+# RUN: llvm-ar cr %t.lib %t %t2 %p/Inputs/trivial-object-test.elf-x86-64
+# RUN: llvm-nm --print-armap %t.lib | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    AddressAlign:    0x0000000000000001
+    Content:         "00"
+    Size:            32
+
+# CHECK:      Archive map
+# CHECK-NEXT: main in trivial-object-test.elf-x86-64
+
+# CHECK:    archive-SYM64-write.test.tmp:
+
+# CHECK:    archive-SYM64-write.test.tmp2:
+
+# CHECK:    trivial-object-test.elf-x86-64:
+# CHECK-NEXT:                     U SomeOtherFunction
+# CHECK-NEXT:    0000000000000000 T main
+# CHECK-NEXT:                     U puts

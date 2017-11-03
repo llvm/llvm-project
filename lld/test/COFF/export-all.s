@@ -4,17 +4,28 @@
 
 # RUN: lld-link -lldmingw -dll -out:%t.dll -entry:DllMainCRTStartup@12 %t.obj -implib:%t.lib
 # RUN: llvm-readobj -coff-exports %t.dll | FileCheck %s
+# RUN: llvm-readobj %t.lib | FileCheck -check-prefix=IMPLIB %s
 
 # CHECK-NOT: Name: DllMainCRTStartup
+# CHECK: Name: dataSym
 # CHECK: Name: foobar
+
+# IMPLIB: Symbol: __imp__dataSym
+# IMPLIB-NOT: Symbol: _dataSym
+# IMPLIB: Symbol: __imp__foobar
+# IMPLIB: Symbol: _foobar
 
 .global _foobar
 .global _DllMainCRTStartup@12
+.global _dataSym
 .text
 _DllMainCRTStartup@12:
   ret
 _foobar:
   ret
+.data
+_dataSym:
+  .int 4
 
 # Test specifying -export-all-symbols, on an object file that contains
 # dllexport directive for some of the symbols.

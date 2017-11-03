@@ -125,13 +125,6 @@ public:
   }
 };
 
-// This anchor is used to force the linker to link in the generated object file
-// and thus register the plugin.
-extern volatile int ToolExecutorPluginAnchorSource;
-
-static int LLVM_ATTRIBUTE_UNUSED TestToolExecutorPluginAnchorDest =
-    ToolExecutorPluginAnchorSource;
-
 static ToolExecutorPluginRegistry::Add<TestToolExecutorPlugin>
     X("test-executor", "Plugin for TestToolExecutor.");
 

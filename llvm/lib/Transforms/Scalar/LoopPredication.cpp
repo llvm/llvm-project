@@ -189,6 +189,10 @@ class LoopPredication {
              const SCEV *Limit)
         : Pred(Pred), IV(IV), Limit(Limit) {}
     LoopICmp() {}
+    void dump() {
+      dbgs() << "LoopICmp Pred = " << Pred << ", IV = " << *IV
+             << ", Limit = " << *Limit << "\n";
+    }
   };
 
   ScalarEvolution *SE;
@@ -198,6 +202,7 @@ class LoopPredication {
   BasicBlock *Preheader;
   LoopICmp LatchCheck;
 
+  bool isSupportedStep(const SCEV* Step);
   Optional<LoopICmp> parseLoopICmp(ICmpInst *ICI) {
     return parseLoopICmp(ICI->getPredicate(), ICI->getOperand(0),
                          ICI->getOperand(1));
@@ -207,12 +212,18 @@ class LoopPredication {
 
   Optional<LoopICmp> parseLoopLatchICmp();
 
+  bool CanExpand(const SCEV* S);
   Value *expandCheck(SCEVExpander &Expander, IRBuilder<> &Builder,
                      ICmpInst::Predicate Pred, const SCEV *LHS, const SCEV *RHS,
                      Instruction *InsertAt);
 
   Optional<Value *> widenICmpRangeCheck(ICmpInst *ICI, SCEVExpander &Expander,
                                         IRBuilder<> &Builder);
+  Optional<Value *> widenICmpRangeCheckIncrementingLoop(LoopICmp LatchCheck,
+                                                        LoopICmp RangeCheck,
+                                                        SCEVExpander &Expander,
+                                                        IRBuilder<> &Builder);
+
   bool widenGuardConditions(IntrinsicInst *II, SCEVExpander &Expander);
 
   // When the IV type is wider than the range operand type, we can still do loop
@@ -348,72 +359,40 @@ LoopPredication::generateLoopLatchCheck(Type *RangeCheckType) {
   return NewLatchCheck;
 }
 
-/// If ICI can be widened to a loop invariant condition emits the loop
-/// invariant condition in the loop preheader and return it, otherwise
-/// returns None.
-Optional<Value *> LoopPredication::widenICmpRangeCheck(ICmpInst *ICI,
-                                                       SCEVExpander &Expander,
-                                                       IRBuilder<> &Builder) {
-  DEBUG(dbgs() << "Analyzing ICmpInst condition:\n");
-  DEBUG(ICI->dump());
+bool LoopPredication::isSupportedStep(const SCEV* Step) {
+  return Step->isOne();
+}
 
-  // parseLoopStructure guarantees that the latch condition is:
-  //   ++i <pred> latchLimit, where <pred> is u<, u<=, s<, or s<=.
-  // We are looking for the range checks of the form:
-  //   i u< guardLimit
-  auto RangeCheck = parseLoopICmp(ICI);
-  if (!RangeCheck) {
-    DEBUG(dbgs() << "Failed to parse the loop latch condition!\n");
-    return None;
-  }
-  if (RangeCheck->Pred != ICmpInst::ICMP_ULT) {
-    DEBUG(dbgs() << "Unsupported range check predicate(" << RangeCheck->Pred
-                 << ")!\n");
-    return None;
-  }
-  auto *RangeCheckIV = RangeCheck->IV;
-  if (!RangeCheckIV->isAffine()) {
-    DEBUG(dbgs() << "Range check IV is not affine!\n");
-    return None;
-  }
-  auto *Step = RangeCheckIV->getStepRecurrence(*SE);
-  // We cannot just compare with latch IV step because the latch and range IVs
-  // may have different types.
-  if (!Step->isOne()) {
-    DEBUG(dbgs() << "Range check and latch have IVs different steps!\n");
-    return None;
-  }
-  auto *Ty = RangeCheckIV->getType();
-  auto CurrLatchCheckOpt = generateLoopLatchCheck(Ty);
-  if (!CurrLatchCheckOpt) {
-    DEBUG(dbgs() << "Failed to generate a loop latch check "
-                    "corresponding to range type: "
-                 << *Ty << "\n");
-    return None;
-  }
+bool LoopPredication::CanExpand(const SCEV* S) {
+  return SE->isLoopInvariant(S, L) && isSafeToExpand(S, *SE);
+}
 
-  LoopICmp CurrLatchCheck = *CurrLatchCheckOpt;
-  // At this point the range check step and latch step should have the same
-  // value and type.
-  assert(Step == CurrLatchCheck.IV->getStepRecurrence(*SE) &&
-         "Range and latch should have same step recurrence!");
-  // Generate the widened condition:
+Optional<Value *> LoopPredication::widenICmpRangeCheckIncrementingLoop(
+    LoopPredication::LoopICmp LatchCheck, LoopPredication::LoopICmp RangeCheck,
+    SCEVExpander &Expander, IRBuilder<> &Builder) {
+  auto *Ty = RangeCheck.IV->getType();
+  // Generate the widened condition for the forward loop:
   //   guardStart u< guardLimit &&
   //   latchLimit <pred> guardLimit - 1 - guardStart + latchStart
   // where <pred> depends on the latch condition predicate. See the file
   // header comment for the reasoning.
-  const SCEV *GuardStart = RangeCheckIV->getStart();
-  const SCEV *GuardLimit = RangeCheck->Limit;
-  const SCEV *LatchStart = CurrLatchCheck.IV->getStart();
-  const SCEV *LatchLimit = CurrLatchCheck.Limit;
+  // guardLimit - guardStart + latchStart - 1
+  const SCEV *GuardStart = RangeCheck.IV->getStart();
+  const SCEV *GuardLimit = RangeCheck.Limit;
+  const SCEV *LatchStart = LatchCheck.IV->getStart();
+  const SCEV *LatchLimit = LatchCheck.Limit;
 
   // guardLimit - guardStart + latchStart - 1
   const SCEV *RHS =
       SE->getAddExpr(SE->getMinusSCEV(GuardLimit, GuardStart),
                      SE->getMinusSCEV(LatchStart, SE->getOne(Ty)));
-
+  if (!CanExpand(GuardStart) || !CanExpand(GuardLimit) ||
+      !CanExpand(LatchLimit) || !CanExpand(RHS)) {
+    DEBUG(dbgs() << "Can't expand limit check!\n");
+    return None;
+  }
   ICmpInst::Predicate LimitCheckPred;
-  switch (CurrLatchCheck.Pred) {
+  switch (LatchCheck.Pred) {
   case ICmpInst::ICMP_ULT:
     LimitCheckPred = ICmpInst::ICMP_ULE;
     break;
@@ -434,21 +413,67 @@ Optional<Value *> LoopPredication::widenICmpRangeCheck(ICmpInst *ICI,
   DEBUG(dbgs() << "RHS: " << *RHS << "\n");
   DEBUG(dbgs() << "Pred: " << LimitCheckPred << "\n");
 
-  auto CanExpand = [this](const SCEV *S) {
-    return SE->isLoopInvariant(S, L) && isSafeToExpand(S, *SE);
-  };
-  if (!CanExpand(GuardStart) || !CanExpand(GuardLimit) ||
-      !CanExpand(LatchLimit) || !CanExpand(RHS)) {
-    DEBUG(dbgs() << "Can't expand limit check!\n");
-    return None;
-  }
-
   Instruction *InsertAt = Preheader->getTerminator();
   auto *LimitCheck =
       expandCheck(Expander, Builder, LimitCheckPred, LatchLimit, RHS, InsertAt);
-  auto *FirstIterationCheck = expandCheck(Expander, Builder, RangeCheck->Pred,
+  auto *FirstIterationCheck = expandCheck(Expander, Builder, RangeCheck.Pred,
                                           GuardStart, GuardLimit, InsertAt);
   return Builder.CreateAnd(FirstIterationCheck, LimitCheck);
+}
+/// If ICI can be widened to a loop invariant condition emits the loop
+/// invariant condition in the loop preheader and return it, otherwise
+/// returns None.
+Optional<Value *> LoopPredication::widenICmpRangeCheck(ICmpInst *ICI,
+                                                       SCEVExpander &Expander,
+                                                       IRBuilder<> &Builder) {
+  DEBUG(dbgs() << "Analyzing ICmpInst condition:\n");
+  DEBUG(ICI->dump());
+
+  // parseLoopStructure guarantees that the latch condition is:
+  //   ++i <pred> latchLimit, where <pred> is u<, u<=, s<, or s<=.
+  // We are looking for the range checks of the form:
+  //   i u< guardLimit
+  auto RangeCheck = parseLoopICmp(ICI);
+  if (!RangeCheck) {
+    DEBUG(dbgs() << "Failed to parse the loop latch condition!\n");
+    return None;
+  }
+  DEBUG(dbgs() << "Guard check:\n");
+  DEBUG(RangeCheck->dump());
+  if (RangeCheck->Pred != ICmpInst::ICMP_ULT) {
+    DEBUG(dbgs() << "Unsupported range check predicate(" << RangeCheck->Pred
+                 << ")!\n");
+    return None;
+  }
+  auto *RangeCheckIV = RangeCheck->IV;
+  if (!RangeCheckIV->isAffine()) {
+    DEBUG(dbgs() << "Range check IV is not affine!\n");
+    return None;
+  }
+  auto *Step = RangeCheckIV->getStepRecurrence(*SE);
+  // We cannot just compare with latch IV step because the latch and range IVs
+  // may have different types.
+  if (!isSupportedStep(Step)) {
+    DEBUG(dbgs() << "Range check and latch have IVs different steps!\n");
+    return None;
+  }
+  auto *Ty = RangeCheckIV->getType();
+  auto CurrLatchCheckOpt = generateLoopLatchCheck(Ty);
+  if (!CurrLatchCheckOpt) {
+    DEBUG(dbgs() << "Failed to generate a loop latch check "
+                    "corresponding to range type: "
+                 << *Ty << "\n");
+    return None;
+  }
+
+  LoopICmp CurrLatchCheck = *CurrLatchCheckOpt;
+  // At this point the range check step and latch step should have the same
+  // value and type.
+  assert(Step == CurrLatchCheck.IV->getStepRecurrence(*SE) &&
+         "Range and latch should have same step recurrence!");
+
+  return widenICmpRangeCheckIncrementingLoop(CurrLatchCheck, *RangeCheck,
+                                             Expander, Builder);
 }
 
 bool LoopPredication::widenGuardConditions(IntrinsicInst *Guard,
@@ -541,15 +566,6 @@ Optional<LoopPredication::LoopICmp> LoopPredication::parseLoopLatchICmp() {
     return None;
   }
 
-  if (Result->Pred != ICmpInst::ICMP_ULT &&
-      Result->Pred != ICmpInst::ICMP_SLT &&
-      Result->Pred != ICmpInst::ICMP_ULE &&
-      Result->Pred != ICmpInst::ICMP_SLE) {
-    DEBUG(dbgs() << "Unsupported loop latch predicate(" << Result->Pred
-                 << ")!\n");
-    return None;
-  }
-
   // Check affine first, so if it's not we don't try to compute the step
   // recurrence.
   if (!Result->IV->isAffine()) {
@@ -558,11 +574,22 @@ Optional<LoopPredication::LoopICmp> LoopPredication::parseLoopLatchICmp() {
   }
 
   auto *Step = Result->IV->getStepRecurrence(*SE);
-  if (!Step->isOne()) {
+  if (!isSupportedStep(Step)) {
     DEBUG(dbgs() << "Unsupported loop stride(" << *Step << ")!\n");
     return None;
   }
 
+  auto IsUnsupportedPredicate = [](const SCEV *Step, ICmpInst::Predicate Pred) {
+    assert(Step->isOne() && "expected Step to be one!");
+    return Pred != ICmpInst::ICMP_ULT && Pred != ICmpInst::ICMP_SLT &&
+           Pred != ICmpInst::ICMP_ULE && Pred != ICmpInst::ICMP_SLE;
+  };
+
+  if (IsUnsupportedPredicate(Step, Result->Pred)) {
+    DEBUG(dbgs() << "Unsupported loop latch predicate(" << Result->Pred
+                 << ")!\n");
+    return None;
+  }
   return Result;
 }
 
@@ -620,6 +647,9 @@ bool LoopPredication::runOnLoop(Loop *Loop) {
   if (!LatchCheckOpt)
     return false;
   LatchCheck = *LatchCheckOpt;
+
+  DEBUG(dbgs() << "Latch check:\n");
+  DEBUG(LatchCheck.dump());
 
   // Collect all the guards into a vector and process later, so as not
   // to invalidate the instruction iterator.

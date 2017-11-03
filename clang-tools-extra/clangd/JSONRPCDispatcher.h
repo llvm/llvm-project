@@ -58,6 +58,8 @@ public:
   void reply(const Twine &Result);
   /// Sends an error response to the client, and logs it.
   void replyError(int code, const llvm::StringRef &Message);
+  /// Sends a request to the client.
+  void call(llvm::StringRef Method, StringRef Params);
 
 private:
   JSONOutput &Out;

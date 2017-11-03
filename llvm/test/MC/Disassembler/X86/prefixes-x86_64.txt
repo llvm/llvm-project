@@ -9,30 +9,22 @@
 # CHECK: mulsd   %xmm7, %xmm7
 0xf2 0x66 0x0f 0x59 0xff
 
-# CHECK: repne
-# CHECK-NEXT: scasw   %es:(%rdi), %ax
+# CHECK: repne scasw   %es:(%rdi), %ax
 0xf2 0x66 0xaf
-# CHECK: rep
-# CHECK-NEXT: scasw   %es:(%rdi), %ax
+# CHECK: repne scasw   %es:(%rdi), %ax
 0x66 0xf2 0xaf
 
-# CHECK: rep
-# CHECK-NEXT: scasw   %es:(%rdi), %ax
+# CHECK: rep scasw   %es:(%rdi), %ax
 0xf3 0x66 0xaf
-# CHECK: rep
-# CHECK-NEXT: scasw   %es:(%rdi), %ax
+# CHECK: rep scasw   %es:(%rdi), %ax
 0x66 0xf3 0xaf
 
-# CHECK: repne
-# CHECK:  insw    %dx, %es:(%rdi)
+# CHECK: repne insw    %dx, %es:(%rdi)
 0xf2 0x66 0x6d
-# CHECK: repne
-# CHECK:  insw    %dx, %es:(%rdi)
+# CHECK: repne insw    %dx, %es:(%rdi)
 0x66 0xf2 0x6d
 
-# CHECK: rep
-# CHECK:  insw    %dx, %es:(%rdi)
+# CHECK: rep insw    %dx, %es:(%rdi)
 0xf3 0x66 0x6d
-# CHECK: rep
-# CHECK:  insw    %dx, %es:(%rdi)
+# CHECK: rep insw    %dx, %es:(%rdi)
 0x66 0xf3 0x6d

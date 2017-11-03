@@ -127,6 +127,8 @@ static cl::extrahelp MoreHelp(
   "  [v] - be verbose about actions taken\n"
 );
 
+static const char OptionChars[] = "dmpqrtxabiosSTucv";
+
 // This enumeration delineates the kinds of operations on an archive
 // that are permitted.
 enum ArchiveOperation {
@@ -863,6 +865,24 @@ int main(int argc, char **argv) {
   if (Stem.find("ranlib") == StringRef::npos &&
       Stem.find("lib") != StringRef::npos)
     return libDriverMain(makeArrayRef(argv, argc));
+
+  for (int i = 1; i < argc; i++) {
+    // If an argument starts with a dash and only contains chars
+    // that belong to the options chars set, remove the dash.
+    // We can't handle it after the command line options parsing
+    // is done, since it will error out on an unrecognized string
+    // starting with a dash.
+    // Make sure this doesn't match the actual llvm-ar specific options
+    // that start with a dash.
+    StringRef S = argv[i];
+    if (S.startswith("-") &&
+        S.find_first_not_of(OptionChars, 1) == StringRef::npos) {
+      argv[i]++;
+      break;
+    }
+    if (S == "--")
+      break;
+  }
 
   // Have the command line options parsed and handle things
   // like --help and --version.

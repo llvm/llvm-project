@@ -4,11 +4,11 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsDescs
   AllTargetsDisassemblers
   AllTargetsInfos
-  DebugInfoDWARF
   MC
   MCParser
   Object
   Support
+  Symbolize
   )
 
 add_llvm_tool(llvm-cfi-verify

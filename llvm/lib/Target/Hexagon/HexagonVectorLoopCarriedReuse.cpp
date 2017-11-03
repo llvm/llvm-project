@@ -551,8 +551,7 @@ bool HexagonVectorLoopCarriedReuse::doVLCR() {
       Changed = true;
       Continue = true;
     }
-    std::for_each(Dependences.begin(), Dependences.end(),
-                  std::default_delete<DepChain>());
+    llvm::for_each(Dependences, std::default_delete<DepChain>());
   } while (Continue);
   return Changed;
 }
