@@ -60,7 +60,7 @@ DenseMap<SectionBase *, int> elf::buildSectionOrder() {
 
   // Build a map from sections to their priorities.
   for (InputFile *File : ObjectFiles) {
-    for (SymbolBody *Body : File->getSymbols()) {
+    for (Symbol *Body : File->getSymbols()) {
       auto *D = dyn_cast<DefinedRegular>(Body);
       if (!D || !D->Section)
         continue;
@@ -250,7 +250,7 @@ std::string InputSectionBase::getLocation(uint64_t Offset) {
     SrcFile = toString(File);
 
   // Find a function symbol that encloses a given location.
-  for (SymbolBody *B : File->getSymbols())
+  for (Symbol *B : File->getSymbols())
     if (auto *D = dyn_cast<DefinedRegular>(B))
       if (D->Section == this && D->Type == STT_FUNC)
         if (D->Value <= Offset && Offset < D->Value + D->Size)
@@ -276,8 +276,7 @@ static std::string createFileLineMsg(StringRef Path, unsigned Line) {
 //
 //  Returns an empty string if there's no way to get line info.
 template <class ELFT>
-std::string InputSectionBase::getSrcMsg(const SymbolBody &Sym,
-                                        uint64_t Offset) {
+std::string InputSectionBase::getSrcMsg(const Symbol &Sym, uint64_t Offset) {
   // Synthetic sections don't have input files.
   ObjFile<ELFT> *File = getFile<ELFT>();
   if (!File)
@@ -317,7 +316,7 @@ std::string InputSectionBase::getObjMsg(uint64_t Off) {
     Archive = (" in archive " + File->ArchiveName).str();
 
   // Find a symbol that encloses a given location.
-  for (SymbolBody *B : File->getSymbols())
+  for (Symbol *B : File->getSymbols())
     if (auto *D = dyn_cast<DefinedRegular>(B))
       if (D->Section == this && D->Value <= Off && Off < D->Value + D->Size)
         return Filename + ":(" + toString(*D) + ")" + Archive;
@@ -381,7 +380,7 @@ void InputSection::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
 
   for (const RelTy &Rel : Rels) {
     RelType Type = Rel.getType(Config->IsMips64EL);
-    SymbolBody &Body = this->getFile<ELFT>()->getRelocTargetSym(Rel);
+    Symbol &Body = this->getFile<ELFT>()->getRelocTargetSym(Rel);
 
     auto *P = reinterpret_cast<typename ELFT::Rela *>(Buf);
     Buf += sizeof(RelTy);
@@ -489,7 +488,7 @@ static uint64_t getAArch64UndefinedRelativeWeakVA(uint64_t Type, uint64_t A,
 // The procedure call standard only defines a Read Write Position Independent
 // RWPI variant so in practice we should expect the static base to be the base
 // of the RW segment.
-static uint64_t getARMStaticBase(const SymbolBody &Body) {
+static uint64_t getARMStaticBase(const Symbol &Body) {
   OutputSection *OS = Body.getOutputSection();
   if (!OS || !OS->PtLoad || !OS->PtLoad->FirstSec)
     fatal("SBREL relocation to " + Body.getName() + " without static base");
@@ -497,7 +496,7 @@ static uint64_t getARMStaticBase(const SymbolBody &Body) {
 }
 
 static uint64_t getRelocTargetVA(RelType Type, int64_t A, uint64_t P,
-                                 const SymbolBody &Body, RelExpr Expr) {
+                                 const Symbol &Body, RelExpr Expr) {
   switch (Expr) {
   case R_INVALID:
     return 0;
@@ -672,7 +671,7 @@ void InputSection::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
     if (!RelTy::IsRela)
       Addend += Target->getImplicitAddend(BufLoc, Type);
 
-    SymbolBody &Sym = this->getFile<ELFT>()->getRelocTargetSym(Rel);
+    Symbol &Sym = this->getFile<ELFT>()->getRelocTargetSym(Rel);
     RelExpr Expr = Target->getRelExpr(Type, Sym, BufLoc);
     if (Expr == R_NONE)
       continue;
@@ -1013,13 +1012,13 @@ template std::string InputSectionBase::getLocation<ELF32BE>(uint64_t);
 template std::string InputSectionBase::getLocation<ELF64LE>(uint64_t);
 template std::string InputSectionBase::getLocation<ELF64BE>(uint64_t);
 
-template std::string InputSectionBase::getSrcMsg<ELF32LE>(const SymbolBody &,
+template std::string InputSectionBase::getSrcMsg<ELF32LE>(const Symbol &,
                                                           uint64_t);
-template std::string InputSectionBase::getSrcMsg<ELF32BE>(const SymbolBody &,
+template std::string InputSectionBase::getSrcMsg<ELF32BE>(const Symbol &,
                                                           uint64_t);
-template std::string InputSectionBase::getSrcMsg<ELF64LE>(const SymbolBody &,
+template std::string InputSectionBase::getSrcMsg<ELF64LE>(const Symbol &,
                                                           uint64_t);
-template std::string InputSectionBase::getSrcMsg<ELF64BE>(const SymbolBody &,
+template std::string InputSectionBase::getSrcMsg<ELF64BE>(const Symbol &,
                                                           uint64_t);
 
 template void InputSection::writeTo<ELF32LE>(uint8_t *);

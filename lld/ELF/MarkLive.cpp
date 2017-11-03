@@ -62,7 +62,7 @@ static DenseMap<StringRef, std::vector<InputSectionBase *>> CNamedSections;
 template <class ELFT, class RelT>
 static void resolveReloc(InputSectionBase &Sec, RelT &Rel,
                          std::function<void(InputSectionBase *, uint64_t)> Fn) {
-  SymbolBody &B = Sec.getFile<ELFT>()->getRelocTargetSym(Rel);
+  Symbol &B = Sec.getFile<ELFT>()->getRelocTargetSym(Rel);
 
   if (auto *D = dyn_cast<DefinedRegular>(&B)) {
     if (!D->Section)
@@ -211,7 +211,7 @@ template <class ELFT> static void doGcSections() {
       Q.push_back(S);
   };
 
-  auto MarkSymbol = [&](SymbolBody *Sym) {
+  auto MarkSymbol = [&](Symbol *Sym) {
     if (auto *D = dyn_cast_or_null<DefinedRegular>(Sym))
       if (auto *IS = cast_or_null<InputSectionBase>(D->Section))
         Enqueue(IS, D->Value);
@@ -228,7 +228,7 @@ template <class ELFT> static void doGcSections() {
 
   // Preserve externally-visible symbols if the symbols defined by this
   // file can interrupt other ELF file's symbols at runtime.
-  for (SymbolBody *S : Symtab->getSymbols())
+  for (Symbol *S : Symtab->getSymbols())
     if (S->includeInDynsym())
       MarkSymbol(S);
 

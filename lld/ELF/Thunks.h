@@ -14,7 +14,7 @@
 
 namespace lld {
 namespace elf {
-class SymbolBody;
+class Symbol;
 class ThunkSection;
 // Class to describe an instance of a Thunk.
 // A Thunk is a code-sequence inserted by the linker in between a caller and
@@ -27,7 +27,7 @@ class ThunkSection;
 // Thunks are assigned to synthetic ThunkSections
 class Thunk {
 public:
-  Thunk(SymbolBody &Destination);
+  Thunk(Symbol &Destination);
   virtual ~Thunk();
 
   virtual uint32_t size() const { return 0; }
@@ -47,15 +47,15 @@ public:
 
   // The alignment requirement for this Thunk, defaults to the size of the
   // typical code section alignment.
-  SymbolBody &Destination;
-  SymbolBody *ThunkSym;
+  Symbol &Destination;
+  Symbol *ThunkSym;
   uint64_t Offset = 0;
   uint32_t Alignment = 4;
 };
 
 // For a Relocation to symbol S create a Thunk to be added to a synthetic
 // ThunkSection. At present there are implementations for ARM and Mips Thunks.
-Thunk *addThunk(RelType Type, SymbolBody &S);
+Thunk *addThunk(RelType Type, Symbol &S);
 
 } // namespace elf
 } // namespace lld

@@ -51,7 +51,7 @@ std::vector<BitcodeFile *> BitcodeFile::Instances;
 /// If Source is Undefined and has no weak alias set, makes it a weak
 /// alias to Target.
 static void checkAndSetWeakAlias(SymbolTable *Symtab, InputFile *F,
-                                 SymbolBody *Source, SymbolBody *Target) {
+                                 Symbol *Source, Symbol *Target) {
   if (auto *U = dyn_cast<Undefined>(Source)) {
     if (U->WeakAlias && U->WeakAlias != Target)
       Symtab->reportDuplicate(Source, F);
@@ -175,7 +175,7 @@ void ObjFile::initializeSymbols() {
   SymbolBodies.reserve(NumSymbols);
   SparseSymbolBodies.resize(NumSymbols);
 
-  SmallVector<std::pair<SymbolBody *, uint32_t>, 8> WeakAliases;
+  SmallVector<std::pair<Symbol *, uint32_t>, 8> WeakAliases;
   int32_t LastSectionNumber = 0;
 
   for (uint32_t I = 0; I < NumSymbols; ++I) {
@@ -186,7 +186,7 @@ void ObjFile::initializeSymbols() {
       AuxP = check(COFFObj->getSymbol(I + 1)).getRawPtr();
     bool IsFirst = (LastSectionNumber != Sym.getSectionNumber());
 
-    SymbolBody *Body = nullptr;
+    Symbol *Body = nullptr;
     if (Sym.isUndefined()) {
       Body = createUndefined(Sym);
     } else if (Sym.isWeakExternal()) {
@@ -206,26 +206,26 @@ void ObjFile::initializeSymbols() {
   }
 
   for (auto &KV : WeakAliases) {
-    SymbolBody *Sym = KV.first;
+    Symbol *Sym = KV.first;
     uint32_t Idx = KV.second;
     checkAndSetWeakAlias(Symtab, this, Sym, SparseSymbolBodies[Idx]);
   }
 }
 
-SymbolBody *ObjFile::createUndefined(COFFSymbolRef Sym) {
+Symbol *ObjFile::createUndefined(COFFSymbolRef Sym) {
   StringRef Name;
   COFFObj->getSymbolName(Sym, Name);
   return Symtab->addUndefined(Name, this, Sym.isWeakExternal());
 }
 
-SymbolBody *ObjFile::createDefined(COFFSymbolRef Sym, const void *AuxP,
-                                   bool IsFirst) {
+Symbol *ObjFile::createDefined(COFFSymbolRef Sym, const void *AuxP,
+                               bool IsFirst) {
   StringRef Name;
   if (Sym.isCommon()) {
     auto *C = make<CommonChunk>(Sym);
     Chunks.push_back(C);
     COFFObj->getSymbolName(Sym, Name);
-    SymbolBody *S =
+    Symbol *S =
         Symtab->addCommon(this, Name, Sym.getValue(), Sym.getGeneric(), C);
     return S;
   }
@@ -280,7 +280,7 @@ SymbolBody *ObjFile::createDefined(COFFSymbolRef Sym, const void *AuxP,
   DefinedRegular *B;
   if (Sym.isExternal()) {
     COFFObj->getSymbolName(Sym, Name);
-    SymbolBody *S =
+    Symbol *S =
         Symtab->addRegular(this, Name, SC->isCOMDAT(), Sym.getGeneric(), SC);
     B = cast<DefinedRegular>(S);
   } else
@@ -368,7 +368,7 @@ void BitcodeFile::parse() {
       MB.getBuffer(), Saver.save(ParentName + MB.getBufferIdentifier()))));
   for (const lto::InputFile::Symbol &ObjSym : Obj->symbols()) {
     StringRef SymName = Saver.save(ObjSym.getName());
-    SymbolBody *Sym;
+    Symbol *Sym;
     if (ObjSym.isUndefined()) {
       Sym = Symtab->addUndefined(SymName, this, false);
     } else if (ObjSym.isCommon()) {
@@ -377,7 +377,7 @@ void BitcodeFile::parse() {
       // Weak external.
       Sym = Symtab->addUndefined(SymName, this, true);
       std::string Fallback = ObjSym.getCOFFWeakExternalFallback();
-      SymbolBody *Alias = Symtab->addUndefined(Saver.save(Fallback));
+      Symbol *Alias = Symtab->addUndefined(Saver.save(Fallback));
       checkAndSetWeakAlias(Symtab, this, Sym, Alias);
     } else {
       bool IsCOMDAT = ObjSym.getComdatIndex() != -1;
