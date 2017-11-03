@@ -140,7 +140,6 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
 
 private:
   unsigned LDSWaveSpillSize = 0;
-  unsigned ScratchOffsetReg;
   unsigned NumUserSGPRs = 0;
   unsigned NumSystemSGPRs = 0;
 

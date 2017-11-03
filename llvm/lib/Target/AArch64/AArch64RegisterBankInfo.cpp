@@ -87,9 +87,9 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
   assert(checkPartialMappingIdx(PMI_FirstGPR, PMI_LastGPR,
                                 {PMI_GPR32, PMI_GPR64}) &&
          "PartialMappingIdx's are incorrectly ordered");
-  assert(checkPartialMappingIdx(
-             PMI_FirstFPR, PMI_LastFPR,
-             {PMI_FPR32, PMI_FPR64, PMI_FPR128, PMI_FPR256, PMI_FPR512}) &&
+  assert(checkPartialMappingIdx(PMI_FirstFPR, PMI_LastFPR,
+                                {PMI_FPR16, PMI_FPR32, PMI_FPR64, PMI_FPR128,
+                                 PMI_FPR256, PMI_FPR512}) &&
          "PartialMappingIdx's are incorrectly ordered");
 // Now, the content.
 // Check partial mapping.
@@ -102,6 +102,7 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
 
   CHECK_PARTIALMAP(PMI_GPR32, 0, 32, RBGPR);
   CHECK_PARTIALMAP(PMI_GPR64, 0, 64, RBGPR);
+  CHECK_PARTIALMAP(PMI_FPR16, 0, 16, RBFPR);
   CHECK_PARTIALMAP(PMI_FPR32, 0, 32, RBFPR);
   CHECK_PARTIALMAP(PMI_FPR64, 0, 64, RBFPR);
   CHECK_PARTIALMAP(PMI_FPR128, 0, 128, RBFPR);
@@ -121,6 +122,7 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
 
   CHECK_VALUEMAP(GPR, 32);
   CHECK_VALUEMAP(GPR, 64);
+  CHECK_VALUEMAP(FPR, 16);
   CHECK_VALUEMAP(FPR, 32);
   CHECK_VALUEMAP(FPR, 64);
   CHECK_VALUEMAP(FPR, 128);
@@ -172,6 +174,30 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
   CHECK_VALUEMAP_CROSSREGCPY(FPR, GPR, 32);
   CHECK_VALUEMAP_CROSSREGCPY(FPR, FPR, 64);
   CHECK_VALUEMAP_CROSSREGCPY(FPR, GPR, 64);
+
+#define CHECK_VALUEMAP_FPEXT(DstSize, SrcSize)                                 \
+  do {                                                                         \
+    unsigned PartialMapDstIdx = PMI_FPR##DstSize - PMI_Min;                    \
+    unsigned PartialMapSrcIdx = PMI_FPR##SrcSize - PMI_Min;                    \
+    (void)PartialMapDstIdx;                                                    \
+    (void)PartialMapSrcIdx;                                                    \
+    const ValueMapping *Map = getFPExtMapping(DstSize, SrcSize);               \
+    (void)Map;                                                                 \
+    assert(Map[0].BreakDown ==                                                 \
+               &AArch64GenRegisterBankInfo::PartMappings[PartialMapDstIdx] &&  \
+           Map[0].NumBreakDowns == 1 && "FPR" #DstSize                         \
+                                        " Dst is incorrectly initialized");    \
+    assert(Map[1].BreakDown ==                                                 \
+               &AArch64GenRegisterBankInfo::PartMappings[PartialMapSrcIdx] &&  \
+           Map[1].NumBreakDowns == 1 && "FPR" #SrcSize                         \
+                                        " Src is incorrectly initialized");    \
+                                                                               \
+  } while (false)
+
+  CHECK_VALUEMAP_FPEXT(32, 16);
+  CHECK_VALUEMAP_FPEXT(64, 16);
+  CHECK_VALUEMAP_FPEXT(64, 32);
+  CHECK_VALUEMAP_FPEXT(128, 64);
 
   assert(verify(TRI) && "Invalid register bank information");
 }
@@ -453,6 +479,14 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_FMUL:
   case TargetOpcode::G_FDIV:
     return getSameKindOfOperandsMapping(MI);
+  case TargetOpcode::G_FPEXT: {
+    LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+    LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
+    return getInstructionMapping(
+        DefaultMappingID, /*Cost*/ 1,
+        getFPExtMapping(DstTy.getSizeInBits(), SrcTy.getSizeInBits()),
+        /*NumOperands*/ 2);
+  }
   case TargetOpcode::COPY: {
     unsigned DstReg = MI.getOperand(0).getReg();
     unsigned SrcReg = MI.getOperand(1).getReg();

@@ -62,6 +62,8 @@ public:
   Optional<uint64_t> getBlockProfileCount(const MachineBasicBlock *MBB) const;
   Optional<uint64_t> getProfileCountFromFreq(uint64_t Freq) const;
 
+  bool isIrrLoopHeader(const MachineBasicBlock *MBB);
+
   const MachineFunction *getFunction() const;
   const MachineBranchProbabilityInfo *getMBPI() const;
   void view(const Twine &Name, bool isSimple = true) const;

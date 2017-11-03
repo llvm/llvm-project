@@ -997,7 +997,7 @@ bool CompilerType::ReadFromMemory(lldb_private::ExecutionContext *exe_ctx,
       if (addr == 0)
         return false;
       // The address is an address in this process, so just copy it
-      memcpy(dst, (uint8_t *)nullptr + addr, byte_size);
+      memcpy(dst, reinterpret_cast<uint8_t *>(addr), byte_size);
       return true;
     } else {
       Process *process = nullptr;
