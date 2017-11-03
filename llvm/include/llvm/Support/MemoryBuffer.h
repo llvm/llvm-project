@@ -136,7 +136,8 @@ public:
 
   /// Map a subrange of the specified file as a MemoryBuffer.
   static ErrorOr<std::unique_ptr<MemoryBuffer>>
-  getFileSlice(const Twine &Filename, uint64_t MapSize, uint64_t Offset, bool IsVolatile = false);
+  getFileSlice(const Twine &Filename, uint64_t MapSize, uint64_t Offset,
+               bool IsVolatile = false);
 
   //===--------------------------------------------------------------------===//
   // Provided for performance analysis.

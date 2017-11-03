@@ -377,6 +377,7 @@ void initializeWinEHPreparePass(PassRegistry&);
 void initializeWriteBitcodePassPass(PassRegistry&);
 void initializeWriteThinLTOBitcodePass(PassRegistry&);
 void initializeXRayInstrumentationPass(PassRegistry&);
+void initializeMIRCanonicalizerPass(PassRegistry &);
 
 } // end namespace llvm
 

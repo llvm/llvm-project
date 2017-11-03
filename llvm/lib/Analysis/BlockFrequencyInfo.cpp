@@ -218,6 +218,11 @@ BlockFrequencyInfo::getProfileCountFromFreq(uint64_t Freq) const {
   return BFI->getProfileCountFromFreq(*getFunction(), Freq);
 }
 
+bool BlockFrequencyInfo::isIrrLoopHeader(const BasicBlock *BB) {
+  assert(BFI && "Expected analysis to be available");
+  return BFI->isIrrLoopHeader(BB);
+}
+
 void BlockFrequencyInfo::setBlockFreq(const BasicBlock *BB, uint64_t Freq) {
   assert(BFI && "Expected analysis to be available");
   BFI->setBlockFreq(BB, Freq);

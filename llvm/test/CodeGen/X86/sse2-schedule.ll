@@ -3179,7 +3179,7 @@ define i32 @test_movmskpd(<2 x double> %a0) {
 ;
 ; BTVER2-LABEL: test_movmskpd:
 ; BTVER2:       # BB#0:
-; BTVER2-NEXT:    vmovmskpd %xmm0, %eax # sched: [1:0.50]
+; BTVER2-NEXT:    vmovmskpd %xmm0, %eax # sched: [3:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_movmskpd:

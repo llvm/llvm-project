@@ -1,0 +1,59 @@
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses the cfi directives correctly.
+
+--- |
+
+  declare void @foo()
+
+  define void @trivial_fp_func() {
+  entry:
+    call void @foo()
+    ret void
+  }
+
+  define void @trivial_fp_func_restore() {
+  entry:
+    call void @foo()
+    ret void
+  }
+
+...
+---
+name:            trivial_fp_func
+# CHECK-LABEL: name: trivial_fp_func
+body: |
+  bb.0.entry:
+    liveins: %lr, %fp, %lr, %fp
+
+    %sp = frame-setup STPXpre killed %fp, killed %lr, %sp, -2
+    %fp = frame-setup ADDXri %sp, 0, 0
+    ; CHECK: CFI_INSTRUCTION def_cfa %w29, 16
+    frame-setup CFI_INSTRUCTION def_cfa %w29, 16
+    frame-setup CFI_INSTRUCTION offset %w30, -8
+    frame-setup CFI_INSTRUCTION offset %w29, -16
+    BL @foo, csr_aarch64_aapcs, implicit-def dead %lr, implicit %sp, implicit-def %sp
+    %sp, %fp, %lr = LDPXpost %sp, 2
+    RET_ReallyLR
+...
+---
+name:            trivial_fp_func_restore
+# CHECK-LABEL: name: trivial_fp_func_restore
+body: |
+  bb.0.entry:
+    liveins: %lr, %fp
+
+    %sp = frame-setup STPXpre killed %fp, killed %lr, %sp, -2
+    %fp = frame-setup ADDXri %sp, 0, 0
+    frame-setup CFI_INSTRUCTION def_cfa %w29, 16
+    frame-setup CFI_INSTRUCTION offset %w30, -8
+    ; CHECK: CFI_INSTRUCTION offset %w30, -8
+    frame-setup CFI_INSTRUCTION offset %w29, -16
+    ; CHECK: CFI_INSTRUCTION offset %w29, -16
+    BL @foo, csr_aarch64_aapcs, implicit-def dead %lr, implicit %sp, implicit-def %sp
+    %sp, %fp, %lr = LDPXpost %sp, 2
+    CFI_INSTRUCTION restore %w30
+    ; CHECK: CFI_INSTRUCTION restore %w30
+    CFI_INSTRUCTION restore %w29
+    ; CHECK: CFI_INSTRUCTION restore %w29
+    RET_ReallyLR
+...

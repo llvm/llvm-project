@@ -844,8 +844,9 @@ public:
   PGOUseFunc(Function &Func, Module *Modu,
              std::unordered_multimap<Comdat *, GlobalValue *> &ComdatMembers,
              BranchProbabilityInfo *BPI = nullptr,
-             BlockFrequencyInfo *BFI = nullptr)
-      : F(Func), M(Modu), FuncInfo(Func, ComdatMembers, false, BPI, BFI),
+             BlockFrequencyInfo *BFIin = nullptr)
+      : F(Func), M(Modu), BFI(BFIin),
+        FuncInfo(Func, ComdatMembers, false, BPI, BFIin),
         FreqAttr(FFA_Normal) {}
 
   // Read counts for the instrumented BB from profile.
@@ -862,6 +863,9 @@ public:
 
   // Annotate the value profile call sites for one value kind.
   void annotateValueSites(uint32_t Kind);
+
+  // Annotate the irreducible loop header weights.
+  void annotateIrrLoopHeaderWeights();
 
   // The hotness of the function from the profile count.
   enum FuncFreqAttr { FFA_Normal, FFA_Cold, FFA_Hot };
@@ -894,6 +898,7 @@ public:
 private:
   Function &F;
   Module *M;
+  BlockFrequencyInfo *BFI;
 
   // This member stores the shared information with class PGOGenFunc.
   FuncPGOInstrumentation<PGOUseEdge, UseBBInfo> FuncInfo;
@@ -1183,6 +1188,18 @@ void PGOUseFunc::setBranchWeights() {
   }
 }
 
+void PGOUseFunc::annotateIrrLoopHeaderWeights() {
+  DEBUG(dbgs() << "\nAnnotating irreducible loop header weights.\n");
+  // Find irr loop headers
+  for (auto &BB : F) {
+    if (BFI->isIrrLoopHeader(&BB)) {
+      TerminatorInst *TI = BB.getTerminator();
+      const UseBBInfo &BBCountInfo = getBBInfo(&BB);
+      setIrrLoopHeaderMetadata(M, TI, BBCountInfo.CountValue);
+    }
+  }
+}
+
 void SelectInstVisitor::instrumentOneSelectInst(SelectInst &SI) {
   Module *M = F.getParent();
   IRBuilder<> Builder(&SI);
@@ -1441,6 +1458,7 @@ static bool annotateAllFunctions(
     Func.populateCounters();
     Func.setBranchWeights();
     Func.annotateValueSites();
+    Func.annotateIrrLoopHeaderWeights();
     PGOUseFunc::FuncFreqAttr FreqAttr = Func.getFuncFreqAttr();
     if (FreqAttr == PGOUseFunc::FFA_Cold)
       ColdFunctions.push_back(&F);
@@ -1581,6 +1599,12 @@ void llvm::setProfMetadata(Module *M, Instruction *TI,
 }
 
 namespace llvm {
+
+void setIrrLoopHeaderMetadata(Module *M, Instruction *TI, uint64_t Count) {
+  MDBuilder MDB(M->getContext());
+  TI->setMetadata(llvm::LLVMContext::MD_irr_loop,
+                  MDB.createIrrLoopHeaderWeight(Count));
+}
 
 template <> struct GraphTraits<PGOUseFunc *> {
   using NodeRef = const BasicBlock *;

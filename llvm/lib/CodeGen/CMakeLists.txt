@@ -113,6 +113,7 @@ add_llvm_library(LLVMCodeGen
   RegisterPressure.cpp
   RegisterScavenging.cpp
   RenameIndependentSubregs.cpp
+  MIRCanonicalizerPass.cpp
   RegisterUsageInfo.cpp
   RegUsageInfoCollector.cpp
   RegUsageInfoPropagate.cpp

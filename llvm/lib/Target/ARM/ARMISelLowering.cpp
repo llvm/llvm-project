@@ -9955,6 +9955,102 @@ static SDValue PerformADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
   return SDValue();
 }
 
+static SDValue PerformSHLSimplify(SDNode *N,
+                                TargetLowering::DAGCombinerInfo &DCI,
+                                const ARMSubtarget *ST) {
+  // Allow the generic combiner to identify potential bswaps.
+  if (DCI.isBeforeLegalize())
+    return SDValue();
+
+  // DAG combiner will fold:
+  // (shl (add x, c1), c2) -> (add (shl x, c2), c1 << c2)
+  // (shl (or x, c1), c2) -> (or (shl x, c2), c1 << c2
+  // Other code patterns that can be also be modified have the following form:
+  // b + ((a << 1) | 510)
+  // b + ((a << 1) & 510)
+  // b + ((a << 1) ^ 510)
+  // b + ((a << 1) + 510)
+
+  // Many instructions can  perform the shift for free, but it requires both
+  // the operands to be registers. If c1 << c2 is too large, a mov immediate
+  // instruction will needed. So, unfold back to the original pattern if:
+  // - if c1 and c2 are small enough that they don't require mov imms.
+  // - the user(s) of the node can perform an shl
+
+  // No shifted operands for 16-bit instructions.
+  if (ST->isThumb() && ST->isThumb1Only())
+    return SDValue();
+
+  // Check that all the users could perform the shl themselves.
+  for (auto U : N->uses()) {
+    switch(U->getOpcode()) {
+    default:
+      return SDValue();
+    case ISD::SUB:
+    case ISD::ADD:
+    case ISD::AND:
+    case ISD::OR:
+    case ISD::XOR:
+    case ISD::SETCC:
+    case ARMISD::CMP:
+      // Check that its not already using a shl.
+      if (U->getOperand(0).getOpcode() == ISD::SHL ||
+          U->getOperand(1).getOpcode() == ISD::SHL)
+        return SDValue();
+      break;
+    }
+  }
+
+  if (N->getOpcode() != ISD::ADD && N->getOpcode() != ISD::OR &&
+      N->getOpcode() != ISD::XOR && N->getOpcode() != ISD::AND)
+    return SDValue();
+
+  if (N->getOperand(0).getOpcode() != ISD::SHL)
+    return SDValue();
+
+  SDValue SHL = N->getOperand(0);
+
+  auto *C1ShlC2 = dyn_cast<ConstantSDNode>(N->getOperand(1));
+  auto *C2 = dyn_cast<ConstantSDNode>(SHL.getOperand(1));
+  if (!C1ShlC2 || !C2)
+    return SDValue();
+
+  DEBUG(dbgs() << "Trying to simplify shl: "; N->dump());
+
+  APInt C2Int = C2->getAPIntValue();
+  APInt C1Int = C1ShlC2->getAPIntValue();
+
+  // Check that performing a lshr will not lose any information.
+  APInt Mask = APInt::getHighBitsSet(C2Int.getBitWidth(),
+                                     C2Int.getBitWidth() - C2->getZExtValue());
+  if ((C1Int & Mask) != C1Int)
+    return SDValue();
+
+  // Shift the first constant.
+  C1Int.lshrInPlace(C2Int);
+
+  // The immediates are encoded as an 8-bit value that can be rotated.
+  unsigned Zeros = C1Int.countLeadingZeros() + C1Int.countTrailingZeros();
+  if (C1Int.getBitWidth() - Zeros > 8)
+    return SDValue();
+
+  Zeros = C2Int.countLeadingZeros() + C2Int.countTrailingZeros();
+  if (C2Int.getBitWidth() - Zeros > 8)
+    return SDValue();
+
+  SelectionDAG &DAG = DCI.DAG;
+  SDLoc dl(N);
+  SDValue X = SHL.getOperand(0);
+  SDValue BinOp = DAG.getNode(N->getOpcode(), dl, MVT::i32, X,
+                              DAG.getConstant(C1Int, dl, MVT::i32));
+  // Shift left to compensate for the lshr of C1Int.
+  SDValue Res = DAG.getNode(ISD::SHL, dl, MVT::i32, BinOp, SHL.getOperand(1));
+
+  DAG.ReplaceAllUsesWith(SDValue(N, 0), Res);
+  return SDValue(N, 0);
+}
+
+
 /// PerformADDCombine - Target-specific dag combine xforms for ISD::ADD.
 ///
 static SDValue PerformADDCombine(SDNode *N,
@@ -9962,6 +10058,10 @@ static SDValue PerformADDCombine(SDNode *N,
                                  const ARMSubtarget *Subtarget) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
+
+  // Only works one way, because it needs an immediate operand.
+  if (SDValue Result = PerformSHLSimplify(N, DCI, Subtarget))
+    return Result;
 
   // First try with the default operand order.
   if (SDValue Result = PerformADDCombineWithOperands(N, N0, N1, DCI, Subtarget))
@@ -10150,6 +10250,9 @@ static SDValue PerformANDCombine(SDNode *N,
   if (!Subtarget->isThumb1Only()) {
     // fold (and (select cc, -1, c), x) -> (select cc, x, (and, x, c))
     if (SDValue Result = combineSelectAndUseCommutative(N, true, DCI))
+      return Result;
+
+    if (SDValue Result = PerformSHLSimplify(N, DCI, Subtarget))
       return Result;
   }
 
@@ -10384,17 +10487,19 @@ static SDValue PerformORCombine(SDNode *N,
       return Result;
   }
 
-  // The code below optimizes (or (and X, Y), Z).
-  // The AND operand needs to have a single user to make these optimizations
-  // profitable.
   SDValue N0 = N->getOperand(0);
-  if (N0.getOpcode() != ISD::AND || !N0.hasOneUse())
-    return SDValue();
   SDValue N1 = N->getOperand(1);
 
   // (or (and B, A), (and C, ~A)) => (VBSL A, B, C) when A is a constant.
   if (Subtarget->hasNEON() && N1.getOpcode() == ISD::AND && VT.isVector() &&
       DAG.getTargetLoweringInfo().isTypeLegal(VT)) {
+
+    // The code below optimizes (or (and X, Y), Z).
+    // The AND operand needs to have a single user to make these optimizations
+    // profitable.
+    if (N0.getOpcode() != ISD::AND || !N0.hasOneUse())
+      return SDValue();
+
     APInt SplatUndef;
     unsigned SplatBitSize;
     bool HasAnyUndefs;
@@ -10427,8 +10532,13 @@ static SDValue PerformORCombine(SDNode *N,
 
   // Try to use the ARM/Thumb2 BFI (bitfield insert) instruction when
   // reasonable.
-  if (SDValue Res = PerformORCombineToBFI(N, DCI, Subtarget))
-    return Res;
+  if (N0.getOpcode() == ISD::AND && N0.hasOneUse()) {
+    if (SDValue Res = PerformORCombineToBFI(N, DCI, Subtarget))
+      return Res;
+  }
+
+  if (SDValue Result = PerformSHLSimplify(N, DCI, Subtarget))
+    return Result;
 
   return SDValue();
 }
@@ -10445,6 +10555,9 @@ static SDValue PerformXORCombine(SDNode *N,
   if (!Subtarget->isThumb1Only()) {
     // fold (xor (select cc, 0, c), x) -> (select cc, x, (xor, x, c))
     if (SDValue Result = combineSelectAndUseCommutative(N, false, DCI))
+      return Result;
+
+    if (SDValue Result = PerformSHLSimplify(N, DCI, Subtarget))
       return Result;
   }
 

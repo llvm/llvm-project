@@ -174,6 +174,9 @@
 
 using namespace llvm;
 
+static cl::opt<bool> EnableIVTruncation("loop-predication-enable-iv-truncation",
+                                        cl::Hidden, cl::init(true));
+
 namespace {
 class LoopPredication {
   /// Represents an induction variable check:
@@ -212,6 +215,22 @@ class LoopPredication {
                                         IRBuilder<> &Builder);
   bool widenGuardConditions(IntrinsicInst *II, SCEVExpander &Expander);
 
+  // When the IV type is wider than the range operand type, we can still do loop
+  // predication, by generating SCEVs for the range and latch that are of the
+  // same type. We achieve this by generating a SCEV truncate expression for the
+  // latch IV. This is done iff truncation of the IV is a safe operation,
+  // without loss of information.
+  // Another way to achieve this is by generating a wider type SCEV for the
+  // range check operand, however, this needs a more involved check that
+  // operands do not overflow. This can lead to loss of information when the
+  // range operand is of the form: add i32 %offset, %iv. We need to prove that
+  // sext(x + y) is same as sext(x) + sext(y).
+  // This function returns true if we can safely represent the IV type in
+  // the RangeCheckType without loss of information.
+  bool isSafeToTruncateWideIVType(Type *RangeCheckType);
+  // Return the loopLatchCheck corresponding to the RangeCheckType if safe to do
+  // so.
+  Optional<LoopICmp> generateLoopLatchCheck(Type *RangeCheckType);
 public:
   LoopPredication(ScalarEvolution *SE) : SE(SE){};
   bool runOnLoop(Loop *L);
@@ -301,6 +320,34 @@ Value *LoopPredication::expandCheck(SCEVExpander &Expander,
   return Builder.CreateICmp(Pred, LHSV, RHSV);
 }
 
+Optional<LoopPredication::LoopICmp>
+LoopPredication::generateLoopLatchCheck(Type *RangeCheckType) {
+
+  auto *LatchType = LatchCheck.IV->getType();
+  if (RangeCheckType == LatchType)
+    return LatchCheck;
+  // For now, bail out if latch type is narrower than range type.
+  if (DL->getTypeSizeInBits(LatchType) < DL->getTypeSizeInBits(RangeCheckType))
+    return None;
+  if (!isSafeToTruncateWideIVType(RangeCheckType))
+    return None;
+  // We can now safely identify the truncated version of the IV and limit for
+  // RangeCheckType.
+  LoopICmp NewLatchCheck;
+  NewLatchCheck.Pred = LatchCheck.Pred;
+  NewLatchCheck.IV = dyn_cast<SCEVAddRecExpr>(
+      SE->getTruncateExpr(LatchCheck.IV, RangeCheckType));
+  if (!NewLatchCheck.IV)
+    return None;
+  NewLatchCheck.Limit = SE->getTruncateExpr(LatchCheck.Limit, RangeCheckType);
+  DEBUG(dbgs() << "IV of type: " << *LatchType
+               << "can be represented as range check type:" << *RangeCheckType
+               << "\n");
+  DEBUG(dbgs() << "LatchCheck.IV: " << *NewLatchCheck.IV << "\n");
+  DEBUG(dbgs() << "LatchCheck.Limit: " << *NewLatchCheck.Limit << "\n");
+  return NewLatchCheck;
+}
+
 /// If ICI can be widened to a loop invariant condition emits the loop
 /// invariant condition in the loop preheader and return it, otherwise
 /// returns None.
@@ -325,22 +372,31 @@ Optional<Value *> LoopPredication::widenICmpRangeCheck(ICmpInst *ICI,
     return None;
   }
   auto *RangeCheckIV = RangeCheck->IV;
-  auto *Ty = RangeCheckIV->getType();
-  if (Ty != LatchCheck.IV->getType()) {
-    DEBUG(dbgs() << "Type mismatch between range check and latch IVs!\n");
-    return None;
-  }
   if (!RangeCheckIV->isAffine()) {
     DEBUG(dbgs() << "Range check IV is not affine!\n");
     return None;
   }
   auto *Step = RangeCheckIV->getStepRecurrence(*SE);
-  if (Step != LatchCheck.IV->getStepRecurrence(*SE)) {
+  // We cannot just compare with latch IV step because the latch and range IVs
+  // may have different types.
+  if (!Step->isOne()) {
     DEBUG(dbgs() << "Range check and latch have IVs different steps!\n");
     return None;
   }
-  assert(Step->isOne() && "must be one");
+  auto *Ty = RangeCheckIV->getType();
+  auto CurrLatchCheckOpt = generateLoopLatchCheck(Ty);
+  if (!CurrLatchCheckOpt) {
+    DEBUG(dbgs() << "Failed to generate a loop latch check "
+                    "corresponding to range type: "
+                 << *Ty << "\n");
+    return None;
+  }
 
+  LoopICmp CurrLatchCheck = *CurrLatchCheckOpt;
+  // At this point the range check step and latch step should have the same
+  // value and type.
+  assert(Step == CurrLatchCheck.IV->getStepRecurrence(*SE) &&
+         "Range and latch should have same step recurrence!");
   // Generate the widened condition:
   //   guardStart u< guardLimit &&
   //   latchLimit <pred> guardLimit - 1 - guardStart + latchStart
@@ -348,8 +404,8 @@ Optional<Value *> LoopPredication::widenICmpRangeCheck(ICmpInst *ICI,
   // header comment for the reasoning.
   const SCEV *GuardStart = RangeCheckIV->getStart();
   const SCEV *GuardLimit = RangeCheck->Limit;
-  const SCEV *LatchStart = LatchCheck.IV->getStart();
-  const SCEV *LatchLimit = LatchCheck.Limit;
+  const SCEV *LatchStart = CurrLatchCheck.IV->getStart();
+  const SCEV *LatchLimit = CurrLatchCheck.Limit;
 
   // guardLimit - guardStart + latchStart - 1
   const SCEV *RHS =
@@ -357,7 +413,7 @@ Optional<Value *> LoopPredication::widenICmpRangeCheck(ICmpInst *ICI,
                      SE->getMinusSCEV(LatchStart, SE->getOne(Ty)));
 
   ICmpInst::Predicate LimitCheckPred;
-  switch (LatchCheck.Pred) {
+  switch (CurrLatchCheck.Pred) {
   case ICmpInst::ICMP_ULT:
     LimitCheckPred = ICmpInst::ICMP_ULE;
     break;
@@ -508,6 +564,36 @@ Optional<LoopPredication::LoopICmp> LoopPredication::parseLoopLatchICmp() {
   }
 
   return Result;
+}
+
+// Returns true if its safe to truncate the IV to RangeCheckType.
+bool LoopPredication::isSafeToTruncateWideIVType(Type *RangeCheckType) {
+  if (!EnableIVTruncation)
+    return false;
+  assert(DL->getTypeSizeInBits(LatchCheck.IV->getType()) >
+             DL->getTypeSizeInBits(RangeCheckType) &&
+         "Expected latch check IV type to be larger than range check operand "
+         "type!");
+  // The start and end values of the IV should be known. This is to guarantee
+  // that truncating the wide type will not lose information.
+  auto *Limit = dyn_cast<SCEVConstant>(LatchCheck.Limit);
+  auto *Start = dyn_cast<SCEVConstant>(LatchCheck.IV->getStart());
+  if (!Limit || !Start)
+    return false;
+  // This check makes sure that the IV does not change sign during loop
+  // iterations. Consider latchType = i64, LatchStart = 5, Pred = ICMP_SGE,
+  // LatchEnd = 2, rangeCheckType = i32. If it's not a monotonic predicate, the
+  // IV wraps around, and the truncation of the IV would lose the range of
+  // iterations between 2^32 and 2^64.
+  bool Increasing;
+  if (!SE->isMonotonicPredicate(LatchCheck.IV, LatchCheck.Pred, Increasing))
+    return false;
+  // The active bits should be less than the bits in the RangeCheckType. This
+  // guarantees that truncating the latch check to RangeCheckType is a safe
+  // operation.
+  auto RangeCheckTypeBitSize = DL->getTypeSizeInBits(RangeCheckType);
+  return Start->getAPInt().getActiveBits() < RangeCheckTypeBitSize &&
+         Limit->getAPInt().getActiveBits() < RangeCheckTypeBitSize;
 }
 
 bool LoopPredication::runOnLoop(Loop *Loop) {

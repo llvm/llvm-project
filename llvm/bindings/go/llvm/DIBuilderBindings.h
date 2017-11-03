@@ -16,6 +16,7 @@
 
 #include "IRBindings.h"
 #include "llvm-c/Core.h"
+#include "llvm-c/DebugInfo.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,16 +31,6 @@ typedef struct LLVMOpaqueDIBuilder *LLVMDIBuilderRef;
 LLVMDIBuilderRef LLVMNewDIBuilder(LLVMModuleRef m);
 
 void LLVMDIBuilderDestroy(LLVMDIBuilderRef d);
-void LLVMDIBuilderFinalize(LLVMDIBuilderRef d);
-
-LLVMMetadataRef
-LLVMDIBuilderCreateCompileUnit(LLVMDIBuilderRef D, unsigned Language,
-                               const char *File, const char *Dir,
-                               const char *Producer, int Optimized,
-                               const char *Flags, unsigned RuntimeVersion);
-
-LLVMMetadataRef LLVMDIBuilderCreateFile(LLVMDIBuilderRef D, const char *File,
-                                        const char *Dir);
 
 LLVMMetadataRef LLVMDIBuilderCreateLexicalBlock(LLVMDIBuilderRef D,
                                                 LLVMMetadataRef Scope,

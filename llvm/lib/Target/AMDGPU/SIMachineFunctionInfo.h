@@ -87,9 +87,6 @@ public:
 /// This class keeps track of the SPI_SP_INPUT_ADDR config register, which
 /// tells the hardware which interpolation parameters to load.
 class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
-  // FIXME: This should be removed and getPreloadedValue moved here.
-  friend class SIRegisterInfo;
-
   unsigned TIDReg = AMDGPU::NoRegister;
 
   // Registers that may be reserved for spilling purposes. These may be the same
@@ -143,7 +140,6 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
 
 private:
   unsigned LDSWaveSpillSize = 0;
-  unsigned ScratchOffsetReg;
   unsigned NumUserSGPRs = 0;
   unsigned NumSystemSGPRs = 0;
 

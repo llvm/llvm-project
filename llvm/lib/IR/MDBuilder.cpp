@@ -197,3 +197,10 @@ MDNode *MDBuilder::createTBAAStructTagNode(MDNode *BaseType, MDNode *AccessType,
   }
   return MDNode::get(Context, {BaseType, AccessType, createConstant(Off)});
 }
+
+MDNode *MDBuilder::createIrrLoopHeaderWeight(uint64_t Weight) {
+  SmallVector<Metadata *, 2> Vals(2);
+  Vals[0] = createString("loop_header_weight");
+  Vals[1] = createConstant(ConstantInt::get(Type::getInt64Ty(Context), Weight));
+  return MDNode::get(Context, Vals);
+}

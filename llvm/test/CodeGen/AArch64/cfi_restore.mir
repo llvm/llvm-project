@@ -1,0 +1,37 @@
+# RUN: llc -mtriple=aarch64-- -start-after prologepilog -o - %s | FileCheck %s
+---
+name:            fun
+# CHECK: .cfi_startproc
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       16
+  maxAlignment:    8
+  hasCalls:        true
+stack:
+  - { id: 0, type: spill-slot, offset: -8, size: 8, alignment: 8, stack-id: 0,
+      callee-saved-register: '%lr' }
+  - { id: 1, type: spill-slot, offset: -16, size: 8, alignment: 8, stack-id: 0,
+      callee-saved-register: '%fp' }
+body:             |
+  bb.0:
+    liveins: %fp, %lr
+
+    %sp = frame-setup SUBXri %sp, 16, 0
+    frame-setup STRXui killed %fp, %sp, 0 :: (store 8 into %stack.1)
+    frame-setup CFI_INSTRUCTION offset %w29, -16
+    ; CHECK: .cfi_offset w29, -16
+    frame-setup STRXui killed %lr, %sp, 1 :: (store 8 into %stack.0)
+    frame-setup CFI_INSTRUCTION offset %w30, -8
+    ; CHECK: .cfi_offset w30, -8
+    %fp = frame-setup ADDXri %sp, 0, 0
+    frame-setup CFI_INSTRUCTION def_cfa %w29, 16
+    %lr = LDRXui %sp, 1 :: (load 8 from %stack.0)
+    CFI_INSTRUCTION restore %w30
+    ; CHECK: .cfi_restore w30
+    %fp = LDRXui %sp, 0 :: (load 8 from %stack.1)
+    CFI_INSTRUCTION restore %w29
+    ; CHECK: .cfi_restore w29
+    %sp = ADDXri %sp, 16, 0
+    RET_ReallyLR
+    ; CHECK: .cfi_endproc
+...
