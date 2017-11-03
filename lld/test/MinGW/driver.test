@@ -79,3 +79,6 @@ EXPORT-ALL: -export-all-symbols
 
 RUN: ld.lld -### -m i386pep foo.o --output-def out.def | FileCheck -check-prefix OUTPUT-DEF %s
 OUTPUT-DEF: -output-def:out.def
+
+RUN: ld.lld -### -m i386pep foo.o -Xlink=-lldmap | FileCheck -check-prefix XLINK %s
+XLINK: -lldmap

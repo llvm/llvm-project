@@ -10716,10 +10716,16 @@ static SDValue lowerV2I64VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   // Try to use byte rotation instructions.
   // Its more profitable for pre-SSSE3 to use shuffles/unpacks.
-  if (Subtarget.hasSSSE3())
+  if (Subtarget.hasSSSE3()) {
+    if (Subtarget.hasVLX())
+      if (SDValue Rotate = lowerVectorShuffleAsRotate(DL, MVT::v2i64, V1, V2,
+                                                      Mask, Subtarget, DAG))
+        return Rotate;
+
     if (SDValue Rotate = lowerVectorShuffleAsByteRotate(
             DL, MVT::v2i64, V1, V2, Mask, Subtarget, DAG))
       return Rotate;
+  }
 
   // If we have direct support for blends, we should lower by decomposing into
   // a permute. That will be faster than the domain cross.
@@ -11016,10 +11022,16 @@ static SDValue lowerV4I32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   // Try to use byte rotation instructions.
   // Its more profitable for pre-SSSE3 to use shuffles/unpacks.
-  if (Subtarget.hasSSSE3())
+  if (Subtarget.hasSSSE3()) {
+    if (Subtarget.hasVLX())
+      if (SDValue Rotate = lowerVectorShuffleAsRotate(DL, MVT::v4i32, V1, V2,
+                                                      Mask, Subtarget, DAG))
+        return Rotate;
+
     if (SDValue Rotate = lowerVectorShuffleAsByteRotate(
             DL, MVT::v4i32, V1, V2, Mask, Subtarget, DAG))
       return Rotate;
+  }
 
   // Assume that a single SHUFPS is faster than an alternative sequence of
   // multiple instructions (even if the CPU has a domain penalty).
@@ -30674,26 +30686,6 @@ static bool combineBitcastForMaskedOp(SDValue OrigOp, SelectionDAG &DAG,
 
   unsigned Opcode = Op.getOpcode();
   switch (Opcode) {
-  case X86ISD::PALIGNR:
-    // PALIGNR can be converted to VALIGND/Q for 128-bit vectors.
-    if (!VT.is128BitVector())
-      return false;
-    Opcode = X86ISD::VALIGN;
-    LLVM_FALLTHROUGH;
-  case X86ISD::VALIGN: {
-    if (EltVT != MVT::i32 && EltVT != MVT::i64)
-      return false;
-    uint64_t Imm = Op.getConstantOperandVal(2);
-    MVT OpEltVT = Op.getSimpleValueType().getVectorElementType();
-    unsigned ShiftAmt = Imm * OpEltVT.getSizeInBits();
-    unsigned EltSize = EltVT.getSizeInBits();
-    // Make sure we can represent the same shift with the new VT.
-    if ((ShiftAmt % EltSize) != 0)
-      return false;
-    Imm = ShiftAmt / EltSize;
-    return BitcastAndCombineShuffle(Opcode, Op.getOperand(0), Op.getOperand(1),
-                                    DAG.getConstant(Imm, DL, MVT::i8));
-  }
   case X86ISD::SHUF128: {
     if (EltVT.getSizeInBits() != 32 && EltVT.getSizeInBits() != 64)
       return false;

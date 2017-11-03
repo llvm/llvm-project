@@ -13,7 +13,6 @@ def export_all_symbols: F<"export-all-symbols">,
 def l: JoinedOrSeparate<["-"], "l">, MetaVarName<"<libName>">,
   HelpText<"Root name of library to use">;
 def m: JoinedOrSeparate<["-"], "m">, HelpText<"Set target emulation">;
-def mllvm: S<"mllvm">;
 def no_whole_archive: F<"no-whole-archive">,
     HelpText<"No longer include all object files for following archives">;
 def o: JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
@@ -31,6 +30,9 @@ def verbose: F<"verbose">, HelpText<"Verbose mode">;
 // LLD specific options
 def _HASH_HASH_HASH : Flag<["-"], "###">,
     HelpText<"Print (but do not run) the commands to run for this compilation">;
+def mllvm: S<"mllvm">;
+def Xlink : J<"Xlink=">, MetaVarName<"<arg>">,
+    HelpText<"Pass <arg> to the COFF linker">;
 
 // Currently stubs to avoid errors
 def Bdynamic: F<"Bdynamic">, HelpText<"Link against shared libraries">;
