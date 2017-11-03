@@ -685,6 +685,19 @@ template <class ELFT> void ELFObject<ELFT>::sortSections() {
                    CompareSections);
 }
 
+static uint64_t alignToAddr(uint64_t Offset, uint64_t Addr, uint64_t Align) {
+  // Calculate Diff such that (Offset + Diff) & -Align == Addr & -Align.
+  if (Align == 0)
+    Align = 1;
+  auto Diff =
+      static_cast<int64_t>(Addr % Align) - static_cast<int64_t>(Offset % Align);
+  // We only want to add to Offset, however, so if Diff < 0 we can add Align and
+  // (Offset + Diff) & -Align == Addr & -Align will still hold.
+  if (Diff < 0)
+    Diff += Align;
+  return Offset + Diff;
+}
+
 template <class ELFT> void ELFObject<ELFT>::assignOffsets() {
   // We need a temporary list of segments that has a special order to it
   // so that we know that anytime ->ParentSegment is set that segment has
@@ -728,7 +741,7 @@ template <class ELFT> void ELFObject<ELFT>::assignOffsets() {
       Segment->Offset =
           Parent->Offset + Segment->OriginalOffset - Parent->OriginalOffset;
     } else {
-      Offset = alignTo(Offset, Segment->Align == 0 ? 1 : Segment->Align);
+      Offset = alignToAddr(Offset, Segment->VAddr, Segment->Align);
       Segment->Offset = Offset;
     }
     Offset = std::max(Offset, Segment->Offset + Segment->FileSize);
@@ -829,8 +842,9 @@ template <class ELFT> void BinaryObject<ELFT>::finalize() {
 
   uint64_t Offset = 0;
   for (auto &Segment : this->Segments) {
-    if (Segment->Type == PT_LOAD && Segment->firstSection() != nullptr) {
-      Offset = alignTo(Offset, Segment->Align);
+    if (Segment->Type == llvm::ELF::PT_LOAD &&
+        Segment->firstSection() != nullptr) {
+      Offset = alignToAddr(Offset, Segment->VAddr, Segment->Align);
       Segment->Offset = Offset;
       Offset += Segment->FileSize;
     }

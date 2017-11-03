@@ -351,7 +351,6 @@ enum ProcessorTypes {
   INTEL_PENTIUM_IV,
   INTEL_PENTIUM_M,
   INTEL_CORE_DUO,
-  INTEL_X86_64,
   INTEL_NOCONA,
   INTEL_PRESCOTT,
   AMD_i486,
@@ -794,8 +793,13 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
         break;
       }
       if (Features2 & (1 << (FEATURE_EM64T - 32))) {
-        *Type = INTEL_X86_64;
-        break; // x86-64
+        *Type = INTEL_CORE2; // "core2"
+        *Subtype = INTEL_CORE2_65;
+        break;
+      }
+      if (Features & (1 << FEATURE_SSE3)) {
+        *Type = INTEL_CORE_DUO;
+        break;
       }
       if (Features & (1 << FEATURE_SSE2)) {
         *Type = INTEL_PENTIUM_M;
@@ -814,40 +818,15 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     }
     break;
   case 15: {
-    switch (Model) {
-    case 0: // Pentium 4 processor, Intel Xeon processor. All processors are
-            // model 00h and manufactured using the 0.18 micron process.
-    case 1: // Pentium 4 processor, Intel Xeon processor, Intel Xeon
-            // processor MP, and Intel Celeron processor. All processors are
-            // model 01h and manufactured using the 0.18 micron process.
-    case 2: // Pentium 4 processor, Mobile Intel Pentium 4 processor - M,
-            // Intel Xeon processor, Intel Xeon processor MP, Intel Celeron
-            // processor, and Mobile Intel Celeron processor. All processors
-            // are model 02h and manufactured using the 0.13 micron process.
-      *Type = ((Features2 & (1 << (FEATURE_EM64T - 32))) ? INTEL_X86_64
-                                                         : INTEL_PENTIUM_IV);
-      break;
-
-    case 3: // Pentium 4 processor, Intel Xeon processor, Intel Celeron D
-            // processor. All processors are model 03h and manufactured using
-            // the 90 nm process.
-    case 4: // Pentium 4 processor, Pentium 4 processor Extreme Edition,
-            // Pentium D processor, Intel Xeon processor, Intel Xeon
-            // processor MP, Intel Celeron D processor. All processors are
-            // model 04h and manufactured using the 90 nm process.
-    case 6: // Pentium 4 processor, Pentium D processor, Pentium processor
-            // Extreme Edition, Intel Xeon processor, Intel Xeon processor
-            // MP, Intel Celeron D processor. All processors are model 06h
-            // and manufactured using the 65 nm process.
-      *Type = ((Features2 & (1 << (FEATURE_EM64T - 32))) ? INTEL_NOCONA
-                                                         : INTEL_PRESCOTT);
-      break;
-
-    default:
-      *Type = ((Features2 & (1 << (FEATURE_EM64T - 32))) ? INTEL_X86_64
-                                                         : INTEL_PENTIUM_IV);
+    if (Features2 & (1 << (FEATURE_EM64T - 32))) {
+      *Type = INTEL_NOCONA;
       break;
     }
+    if (Features & (1 << FEATURE_SSE3)) {
+      *Type = INTEL_PRESCOTT;
+      break;
+    }
+    *Type = INTEL_PENTIUM_IV;
     break;
   }
   default:
@@ -1145,8 +1124,6 @@ StringRef sys::getHostCPUName() {
       return "knl";
     case INTEL_KNM:
       return "knm";
-    case INTEL_X86_64:
-      return "x86-64";
     case INTEL_NOCONA:
       return "nocona";
     case INTEL_PRESCOTT:

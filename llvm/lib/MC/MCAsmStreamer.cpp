@@ -260,6 +260,7 @@ public:
   void EmitCFILsda(const MCSymbol *Sym, unsigned Encoding) override;
   void EmitCFIRememberState() override;
   void EmitCFIRestoreState() override;
+  void EmitCFIRestore(int64_t Register) override;
   void EmitCFISameValue(int64_t Register) override;
   void EmitCFIRelOffset(int64_t Register, int64_t Offset) override;
   void EmitCFIAdjustCfaOffset(int64_t Adjustment) override;
@@ -1382,6 +1383,13 @@ void MCAsmStreamer::EmitCFIRememberState() {
 void MCAsmStreamer::EmitCFIRestoreState() {
   MCStreamer::EmitCFIRestoreState();
   OS << "\t.cfi_restore_state";
+  EmitEOL();
+}
+
+void MCAsmStreamer::EmitCFIRestore(int64_t Register) {
+  MCStreamer::EmitCFIRestore(Register);
+  OS << "\t.cfi_restore ";
+  EmitRegisterName(Register);
   EmitEOL();
 }
 

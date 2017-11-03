@@ -75,6 +75,10 @@ public:
   /// the enclosing function's count (if available) and returns the value.
   Optional<uint64_t> getProfileCountFromFreq(uint64_t Freq) const;
 
+  /// \brief Returns true if \p BB is an irreducible loop header
+  /// block. Otherwise false.
+  bool isIrrLoopHeader(const BasicBlock *BB);
+
   // Set the frequency of the given basic block.
   void setBlockFreq(const BasicBlock *BB, uint64_t Freq);
 

@@ -75,6 +75,54 @@ define void @test_dereferenceable(i32 addrspace(1)* addrspace(1)* %p, i32 %x, i3
   ret void
 }
 
+; invariant.start allows us to sink the load past the baz statepoint call into taken block, which is
+; incorrect. remove the invariant.start and RAUW undef.
+define void @test_inv_start(i1 %cond, i32 addrspace(1)* addrspace(1)* %p, i32 %x, i32 addrspace(1)* %q) gc "statepoint-example" {
+; CHECK-LABEL: test_inv_start
+; CHECK-NOT: invariant.start
+; CHECK: gc.statepoint
+  %v1 = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(1)* %p
+  %invst = call {}* @llvm.invariant.start.p1i32(i64 1, i32 addrspace(1)* %v1)
+  %v2 = load i32, i32 addrspace(1)* %v1
+  call void @baz(i32 %x)
+  br i1 %cond, label %taken, label %untaken
+
+taken:
+  store i32 %v2, i32 addrspace(1)* %q, align 16
+  call void @llvm.invariant.end.p1i32({}* %invst, i64 4, i32 addrspace(1)* %v1)
+  ret void
+
+; CHECK-LABEL: untaken:
+; CHECK: gc.statepoint
+untaken:
+  %foo = call i32 @escaping.invariant.start({}* %invst)
+  call void @dummy(i32 %foo)
+  ret void
+}
+
+; invariant.start is removed and the uses are undef'ed.
+define void @test_inv_start2(i1 %cond, i32 addrspace(1)* addrspace(1)* %p, i32 %x, i32 addrspace(1)* %q) gc "statepoint-example" {
+; CHECK-LABEL: test_inv_start2
+; CHECK-NOT: invariant.start
+; CHECK: gc.statepoint
+  %v1 = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(1)* %p
+  %invst = call {}* @llvm.invariant.start.p1i32(i64 1, i32 addrspace(1)* %v1)
+  %v2 = load i32, i32 addrspace(1)* %v1
+  call void @baz(i32 %x)
+  br i1 %cond, label %taken, label %untaken
+
+taken:
+  store i32 %v2, i32 addrspace(1)* %q, align 16
+  call void @llvm.invariant.end.p1i32({}* %invst, i64 4, i32 addrspace(1)* %v1)
+  ret void
+
+untaken:
+  ret void
+}
+declare {}* @llvm.invariant.start.p1i32(i64, i32 addrspace(1)*  nocapture) nounwind readonly
+declare void @llvm.invariant.end.p1i32({}*, i64, i32 addrspace(1)* nocapture) nounwind
+declare i32 @escaping.invariant.start({}*) nounwind
+declare void @dummy(i32)
 declare token @llvm.experimental.gc.statepoint.p0f_isVoidi32f(i64, i32, void (i32)*, i32, i32, ...)
 
 ; Function Attrs: nounwind readonly

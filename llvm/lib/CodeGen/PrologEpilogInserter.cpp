@@ -76,12 +76,6 @@ using namespace llvm;
 
 using MBBVector = SmallVector<MachineBasicBlock *, 4>;
 
-static void spillCalleeSavedRegs(MachineFunction &MF, RegScavenger *RS,
-                                 unsigned &MinCSFrameIndex,
-                                 unsigned &MaxCXFrameIndex,
-                                 const MBBVector &SaveBlocks,
-                                 const MBBVector &RestoreBlocks);
-
 namespace {
 
 class PEI : public MachineFunctionPass {
@@ -125,6 +119,7 @@ private:
 
   void calculateCallFrameInfo(MachineFunction &Fn);
   void calculateSaveRestoreBlocks(MachineFunction &Fn);
+  void spillCalleeSavedRegs(MachineFunction &MF);
 
   void calculateFrameObjectOffsets(MachineFunction &Fn);
   void replaceFrameIndices(MachineFunction &Fn);
@@ -197,8 +192,7 @@ bool PEI::runOnMachineFunction(MachineFunction &Fn) {
 
   // Handle CSR spilling and restoring, for targets that need it.
   if (Fn.getTarget().usesPhysRegsForPEI())
-    spillCalleeSavedRegs(Fn, RS, MinCSFrameIndex, MaxCSFrameIndex, SaveBlocks,
-                         RestoreBlocks);
+    spillCalleeSavedRegs(Fn);
 
   // Allow the target machine to make final modifications to the function
   // before the frame layout is finalized.
@@ -505,11 +499,7 @@ static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
   }
 }
 
-static void spillCalleeSavedRegs(MachineFunction &Fn, RegScavenger *RS,
-                                 unsigned &MinCSFrameIndex,
-                                 unsigned &MaxCSFrameIndex,
-                                 const MBBVector &SaveBlocks,
-                                 const MBBVector &RestoreBlocks) {
+void PEI::spillCalleeSavedRegs(MachineFunction &Fn) {
   // We can't list this requirement in getRequiredProperties because some
   // targets (WebAssembly) use virtual registers past this point, and the pass
   // pipeline is set up without giving the passes a chance to look at the

@@ -1480,6 +1480,12 @@ protected:
     default:
       return false;
 
+    case Attribute::InaccessibleMemOrArgMemOnly:
+      return hasReadingOperandBundles();
+
+    case Attribute::InaccessibleMemOnly:
+      return hasReadingOperandBundles();
+
     case Attribute::ArgMemOnly:
       return hasReadingOperandBundles();
 

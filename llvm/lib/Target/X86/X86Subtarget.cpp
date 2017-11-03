@@ -144,6 +144,15 @@ X86Subtarget::classifyGlobalFunctionReference(const GlobalValue *GV) const {
 unsigned char
 X86Subtarget::classifyGlobalFunctionReference(const GlobalValue *GV,
                                               const Module &M) const {
+  const Function *F = dyn_cast_or_null<Function>(GV);
+
+  // Do not use the PLT when explicitly told to do so for ELF 64-bit
+  // target.
+  if (isTargetELF() && is64Bit() && F &&
+      F->hasFnAttribute(Attribute::NonLazyBind) &&
+      GV->isDeclarationForLinker())
+    return X86II::MO_GOTPCREL;
+
   if (TM.shouldAssumeDSOLocal(M, GV))
     return X86II::MO_NO_FLAG;
 
@@ -152,8 +161,6 @@ X86Subtarget::classifyGlobalFunctionReference(const GlobalValue *GV,
            "shouldAssumeDSOLocal gave inconsistent answer");
     return X86II::MO_DLLIMPORT;
   }
-
-  const Function *F = dyn_cast_or_null<Function>(GV);
 
   if (isTargetELF()) {
     if (is64Bit() && F && (CallingConv::X86_RegCall == F->getCallingConv()))
