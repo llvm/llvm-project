@@ -4712,8 +4712,8 @@ declare <8 x i32> @llvm.x86.avx512.mask.valign.d.256(<8 x i32>, <8 x i32>, i32, 
 define <8 x i32>@test_int_x86_avx512_mask_valign_d_256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x3, i8 %x4) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_valign_d_256:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    valignd $6, %ymm1, %ymm0, %ymm3 ## encoding: [0x62,0xf3,0x7d,0x28,0x03,0xd9,0x06]
-; CHECK-NEXT:    ## ymm3 = ymm1[6,7],ymm0[0,1,2,3,4,5]
+; CHECK-NEXT:    valignq $3, %ymm1, %ymm0, %ymm3 ## encoding: [0x62,0xf3,0xfd,0x28,0x03,0xd9,0x03]
+; CHECK-NEXT:    ## ymm3 = ymm1[3],ymm0[0,1,2]
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    valignd $6, %ymm1, %ymm0, %ymm2 {%k1} ## encoding: [0x62,0xf3,0x7d,0x29,0x03,0xd1,0x06]
 ; CHECK-NEXT:    ## ymm2 {%k1} = ymm1[6,7],ymm0[0,1,2,3,4,5]

@@ -175,7 +175,7 @@ define <4 x i32> @combine_vec_lshr_trunc_lshr0(<4 x i64> %x) {
 ; SSE:       # BB#0:
 ; SSE-NEXT:    psrlq $48, %xmm1
 ; SSE-NEXT:    psrlq $48, %xmm0
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; SSE-NEXT:    packusdw %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_lshr_trunc_lshr0:

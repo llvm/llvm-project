@@ -350,7 +350,7 @@ void Preprocessor::CheckEndOfDirective(const char *DirType, bool EnableMacros) {
 /// If ElseOk is true, then \#else directives are ok, if not, then we have
 /// already seen one so a \#else directive is a duplicate.  When this returns,
 /// the caller can lex the first valid token.
-void Preprocessor::SkipExcludedConditionalBlock(const Token &HashToken,
+void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
                                                 SourceLocation IfTokenLoc,
                                                 bool FoundNonSkipPortion,
                                                 bool FoundElse,
@@ -358,8 +358,11 @@ void Preprocessor::SkipExcludedConditionalBlock(const Token &HashToken,
   ++NumSkipped;
   assert(!CurTokenLexer && CurPPLexer && "Lexing a macro, not a file?");
 
-  CurPPLexer->pushConditionalLevel(IfTokenLoc, /*isSkipping*/false,
-                                 FoundNonSkipPortion, FoundElse);
+  if (PreambleConditionalStack.reachedEOFWhileSkipping())
+    PreambleConditionalStack.clearSkipInfo();
+  else
+    CurPPLexer->pushConditionalLevel(IfTokenLoc, /*isSkipping*/ false,
+                                     FoundNonSkipPortion, FoundElse);
 
   if (CurPTHLexer) {
     PTHSkipExcludedConditionalBlock();
@@ -385,6 +388,9 @@ void Preprocessor::SkipExcludedConditionalBlock(const Token &HashToken,
       // We don't emit errors for unterminated conditionals here,
       // Lexer::LexEndOfFile can do that propertly.
       // Just return and let the caller lex after this #include.
+      if (PreambleConditionalStack.isRecording())
+        PreambleConditionalStack.SkipInfo.emplace(
+            HashTokenLoc, IfTokenLoc, FoundNonSkipPortion, FoundElse, ElseLoc);
       break;
     }
 
@@ -554,7 +560,7 @@ void Preprocessor::SkipExcludedConditionalBlock(const Token &HashToken,
 
   if (Callbacks)
     Callbacks->SourceRangeSkipped(
-        SourceRange(HashToken.getLocation(), CurPPLexer->getSourceLocation()),
+        SourceRange(HashTokenLoc, CurPPLexer->getSourceLocation()),
         Tok.getLocation());
 }
 
@@ -2676,7 +2682,8 @@ void Preprocessor::HandleIfdefDirective(Token &Result,
   if (MacroNameTok.is(tok::eod)) {
     // Skip code until we get to #endif.  This helps with recovery by not
     // emitting an error when the #endif is reached.
-    SkipExcludedConditionalBlock(HashToken, DirectiveTok.getLocation(),
+    SkipExcludedConditionalBlock(HashToken.getLocation(),
+                                 DirectiveTok.getLocation(),
                                  /*Foundnonskip*/ false, /*FoundElse*/ false);
     return;
   }
@@ -2725,7 +2732,8 @@ void Preprocessor::HandleIfdefDirective(Token &Result,
                                      /*foundelse*/false);
   } else {
     // No, skip the contents of this block.
-    SkipExcludedConditionalBlock(HashToken, DirectiveTok.getLocation(),
+    SkipExcludedConditionalBlock(HashToken.getLocation(),
+                                 DirectiveTok.getLocation(),
                                  /*Foundnonskip*/ false,
                                  /*FoundElse*/ false);
   }
@@ -2772,7 +2780,7 @@ void Preprocessor::HandleIfDirective(Token &IfToken,
                                    /*foundnonskip*/true, /*foundelse*/false);
   } else {
     // No, skip the contents of this block.
-    SkipExcludedConditionalBlock(HashToken, IfToken.getLocation(),
+    SkipExcludedConditionalBlock(HashToken.getLocation(), IfToken.getLocation(),
                                  /*Foundnonskip*/ false,
                                  /*FoundElse*/ false);
   }
@@ -2837,7 +2845,8 @@ void Preprocessor::HandleElseDirective(Token &Result, const Token &HashToken) {
   }
 
   // Finally, skip the rest of the contents of this block.
-  SkipExcludedConditionalBlock(HashToken, CI.IfLoc, /*Foundnonskip*/ true,
+  SkipExcludedConditionalBlock(HashToken.getLocation(), CI.IfLoc,
+                               /*Foundnonskip*/ true,
                                /*FoundElse*/ true, Result.getLocation());
 }
 
@@ -2881,7 +2890,7 @@ void Preprocessor::HandleElifDirective(Token &ElifToken,
   }
 
   // Finally, skip the rest of the contents of this block.
-  SkipExcludedConditionalBlock(HashToken, CI.IfLoc, /*Foundnonskip*/ true,
-                               /*FoundElse*/ CI.FoundElse,
-                               ElifToken.getLocation());
+  SkipExcludedConditionalBlock(
+      HashToken.getLocation(), CI.IfLoc, /*Foundnonskip*/ true,
+      /*FoundElse*/ CI.FoundElse, ElifToken.getLocation());
 }

@@ -417,6 +417,9 @@ namespace llvm {
   /// shuffles.
   FunctionPass *createExpandReductionsPass();
 
+  // This pass expands memcmp() to load/stores.
+  FunctionPass *createExpandMemCmpPass();
+
 } // End llvm namespace
 
 #endif
