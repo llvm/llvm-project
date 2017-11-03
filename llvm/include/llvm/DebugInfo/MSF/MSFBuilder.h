@@ -128,7 +128,6 @@ private:
   uint32_t FreePageMap;
   uint32_t Unknown1 = 0;
   uint32_t BlockSize;
-  uint32_t MininumBlocks;
   uint32_t BlockMapAddr;
   BitVector FreeBlocks;
   std::vector<uint32_t> DirectoryBlocks;

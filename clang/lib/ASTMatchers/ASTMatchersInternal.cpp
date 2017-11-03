@@ -1,4 +1,4 @@
-//===--- ASTMatchersInternal.cpp - Structural query framework -------------===//
+//===- ASTMatchersInternal.cpp - Structural query framework ---------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,11 +11,30 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchersInternal.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTTypeTraits.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclTemplate.h"
+#include "clang/AST/PrettyPrinter.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Basic/LLVM.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/None.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace clang {
 namespace ast_matchers {
@@ -40,7 +59,6 @@ bool AnyOfVariadicOperator(const ast_type_traits::DynTypedNode &DynNode,
                            BoundNodesTreeBuilder *Builder,
                            ArrayRef<DynTypedMatcher> InnerMatchers);
 
-
 void BoundNodesTreeBuilder::visitMatches(Visitor *ResultVisitor) {
   if (Bindings.empty())
     Bindings.push_back(BoundNodesMap());
@@ -51,7 +69,7 @@ void BoundNodesTreeBuilder::visitMatches(Visitor *ResultVisitor) {
 
 namespace {
 
-typedef bool (*VariadicOperatorFunction)(
+using VariadicOperatorFunction = bool (*)(
     const ast_type_traits::DynTypedNode &DynNode, ASTMatchFinder *Finder,
     BoundNodesTreeBuilder *Builder, ArrayRef<DynTypedMatcher> InnerMatchers);
 
@@ -100,20 +118,22 @@ public:
   TrueMatcherImpl() {
     Retain(); // Reference count will never become zero.
   }
+
   bool dynMatches(const ast_type_traits::DynTypedNode &, ASTMatchFinder *,
                   BoundNodesTreeBuilder *) const override {
     return true;
   }
 };
-static llvm::ManagedStatic<TrueMatcherImpl> TrueMatcherInstance;
 
-}  // namespace
+} // namespace
+
+static llvm::ManagedStatic<TrueMatcherImpl> TrueMatcherInstance;
 
 DynTypedMatcher DynTypedMatcher::constructVariadic(
     DynTypedMatcher::VariadicOperator Op,
     ast_type_traits::ASTNodeKind SupportedKind,
     std::vector<DynTypedMatcher> InnerMatchers) {
-  assert(InnerMatchers.size() > 0 && "Array must not be empty.");
+  assert(!InnerMatchers.empty() && "Array must not be empty.");
   assert(std::all_of(InnerMatchers.begin(), InnerMatchers.end(),
                      [SupportedKind](const DynTypedMatcher &M) {
                        return M.canConvertTo(SupportedKind);
@@ -314,9 +334,7 @@ HasNameMatcher::HasNameMatcher(std::vector<std::string> N)
 #endif
 }
 
-namespace {
-
-bool consumeNameSuffix(StringRef &FullName, StringRef Suffix) {
+static bool consumeNameSuffix(StringRef &FullName, StringRef Suffix) {
   StringRef Name = FullName;
   if (!Name.endswith(Suffix))
     return false;
@@ -330,7 +348,8 @@ bool consumeNameSuffix(StringRef &FullName, StringRef Suffix) {
   return true;
 }
 
-StringRef getNodeName(const NamedDecl &Node, llvm::SmallString<128> &Scratch) {
+static StringRef getNodeName(const NamedDecl &Node,
+                             llvm::SmallString<128> &Scratch) {
   // Simple name.
   if (Node.getIdentifier())
     return Node.getName();
@@ -346,7 +365,8 @@ StringRef getNodeName(const NamedDecl &Node, llvm::SmallString<128> &Scratch) {
   return "(anonymous)";
 }
 
-StringRef getNodeName(const RecordDecl &Node, llvm::SmallString<128> &Scratch) {
+static StringRef getNodeName(const RecordDecl &Node,
+                             llvm::SmallString<128> &Scratch) {
   if (Node.getIdentifier()) {
     return Node.getName();
   }
@@ -354,11 +374,12 @@ StringRef getNodeName(const RecordDecl &Node, llvm::SmallString<128> &Scratch) {
   return ("(anonymous " + Node.getKindName() + ")").toStringRef(Scratch);
 }
 
-StringRef getNodeName(const NamespaceDecl &Node,
-                      llvm::SmallString<128> &Scratch) {
+static StringRef getNodeName(const NamespaceDecl &Node,
+                             llvm::SmallString<128> &Scratch) {
   return Node.isAnonymousNamespace() ? "(anonymous namespace)" : Node.getName();
 }
 
+namespace {
 
 class PatternSet {
 public:
@@ -397,10 +418,11 @@ private:
     StringRef P;
     bool IsFullyQualified;
   };
+
   llvm::SmallVector<Pattern, 8> Patterns;
 };
 
-}  // namespace
+} // namespace
 
 bool HasNameMatcher::matchesNodeUnqualified(const NamedDecl &Node) const {
   assert(UseUnqualifiedMatch);

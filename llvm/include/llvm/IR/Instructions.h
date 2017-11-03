@@ -1807,6 +1807,24 @@ public:
     addAttribute(AttributeList::FunctionIndex, Attribute::ArgMemOnly);
   }
 
+  /// @brief Determine if the function may only access memory that is
+  /// inaccessible from the IR.
+  bool onlyAccessesInaccessibleMemory() const {
+    return hasFnAttr(Attribute::InaccessibleMemOnly);
+  }
+  void setOnlyAccessesInaccessibleMemory() {
+    addAttribute(AttributeList::FunctionIndex, Attribute::InaccessibleMemOnly);
+  }
+
+  /// @brief Determine if the function may only access memory that is
+  /// either inaccessible from the IR or pointed to by its arguments.
+  bool onlyAccessesInaccessibleMemOrArgMem() const {
+    return hasFnAttr(Attribute::InaccessibleMemOrArgMemOnly);
+  }
+  void setOnlyAccessesInaccessibleMemOrArgMem() {
+    addAttribute(AttributeList::FunctionIndex, Attribute::InaccessibleMemOrArgMemOnly);
+  }
+
   /// Determine if the call cannot return.
   bool doesNotReturn() const { return hasFnAttr(Attribute::NoReturn); }
   void setDoesNotReturn() {
@@ -3887,6 +3905,24 @@ public:
   }
   void setOnlyAccessesArgMemory() {
     addAttribute(AttributeList::FunctionIndex, Attribute::ArgMemOnly);
+  }
+
+  /// @brief Determine if the function may only access memory that is
+  /// inaccessible from the IR.
+  bool onlyAccessesInaccessibleMemory() const {
+    return hasFnAttr(Attribute::InaccessibleMemOnly);
+  }
+  void setOnlyAccessesInaccessibleMemory() {
+    addAttribute(AttributeList::FunctionIndex, Attribute::InaccessibleMemOnly);
+  }
+
+  /// @brief Determine if the function may only access memory that is
+  /// either inaccessible from the IR or pointed to by its arguments.
+  bool onlyAccessesInaccessibleMemOrArgMem() const {
+    return hasFnAttr(Attribute::InaccessibleMemOrArgMemOnly);
+  }
+  void setOnlyAccessesInaccessibleMemOrArgMem() {
+    addAttribute(AttributeList::FunctionIndex, Attribute::InaccessibleMemOrArgMemOnly);
   }
 
   /// Determine if the call cannot return.

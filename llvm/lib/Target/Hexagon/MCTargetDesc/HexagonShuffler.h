@@ -77,8 +77,6 @@ private:
     CVI_MPY1 = 1 << 3
   };
 
-  TypeUnitsAndLanes *TUL;
-
   // Count of adjacent slots that the insn requires to be executed.
   unsigned Lanes;
   // Flag whether the insn is a load or a store.

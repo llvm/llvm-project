@@ -534,6 +534,138 @@ def WriteVMULYPSLd: SchedWriteRes<[JLAGU, JFPU1]> {
 }
 def : InstRW<[WriteVMULYPSLd, ReadAfterLd], (instregex "VMULPSYrm", "VRCPPSYm", "VRSQRTPSYm")>;
 
+def WriteVCVTY: SchedWriteRes<[JSTC]> {
+  let Latency = 3;
+  let ResourceCycles = [2];
+}
+def : InstRW<[WriteVCVTY], (instregex "VCVTDQ2P(S|D)Yrr")>;
+def : InstRW<[WriteVCVTY], (instregex "VROUNDYP(S|D)r")>;
+def : InstRW<[WriteVCVTY], (instregex "VCVTPS2DQYrr")>;
+def : InstRW<[WriteVCVTY], (instregex "VCVTTPS2DQYrr")>;
+
+def WriteVCVTYLd: SchedWriteRes<[JLAGU, JSTC]> {
+  let Latency = 8;
+  let ResourceCycles = [1, 2];
+}
+def : InstRW<[WriteVCVTYLd, ReadAfterLd], (instregex "VCVTDQ2P(S|D)Yrm")>;
+def : InstRW<[WriteVCVTYLd, ReadAfterLd], (instregex "VROUNDYP(S|D)m")>;
+def : InstRW<[WriteVCVTYLd, ReadAfterLd], (instregex "VCVTPS2DQYrm")>;
+def : InstRW<[WriteVCVTYLd, ReadAfterLd], (instregex "VCVTTPS2DQYrm")>;
+
+def WriteVMONTPSt: SchedWriteRes<[JSTC, JLAGU]> {
+  let Latency = 3;
+  let ResourceCycles = [2,1];
+}
+def : InstRW<[WriteVMONTPSt], (instregex "VMOVNTP(S|D)Ymr")>;
+def : InstRW<[WriteVMONTPSt], (instregex "VMOVNTDQYmr")>;
+
+def WriteVCVTPDY: SchedWriteRes<[JSTC, JFPU01]> {
+  let Latency = 6;
+  let ResourceCycles = [2, 4];
+}
+def : InstRW<[WriteVCVTPDY], (instregex "VCVTPD2(DQ|PS)Yrr")>;
+def : InstRW<[WriteVCVTPDY], (instregex "VCVTTPD2DQYrr")>;
+
+def WriteVCVTPDYLd: SchedWriteRes<[JLAGU, JSTC, JFPU01]> {
+  let Latency = 11;
+  let ResourceCycles = [1, 2, 4];
+}
+def : InstRW<[WriteVCVTPDYLd, ReadAfterLd], (instregex "VCVTPD2(DQ|PS)Yrm")>;
+def : InstRW<[WriteVCVTPDYLd, ReadAfterLd], (instregex "VCVTTPD2DQYrm")>;
+
+def WriteVBlendVPY: SchedWriteRes<[JFPU01]> {
+  let Latency = 3;
+  let ResourceCycles = [6];
+}
+def : InstRW<[WriteVBlendVPY], (instregex "VBLENDVP(S|D)Yrr", "VPERMILP(D|S)Yrr")>;
+
+def WriteVBlendVPYLd: SchedWriteRes<[JLAGU, JFPU01]> {
+  let Latency = 8;
+  let ResourceCycles = [1, 6];
+}
+def : InstRW<[WriteVBlendVPYLd, ReadAfterLd], (instregex "VBLENDVP(S|D)Yrm")>;
+
+def WriteVBROADCASTYLd: SchedWriteRes<[JLAGU, JFPU01]> {
+  let Latency = 6;
+  let ResourceCycles = [1, 4];
+}
+def : InstRW<[WriteVBROADCASTYLd, ReadAfterLd], (instregex "VBROADCASTS(S|D)Yrm")>;
+
+def WriteFPAY22: SchedWriteRes<[JFPU0]> {
+  let Latency = 2;
+  let ResourceCycles = [2];
+}
+def : InstRW<[WriteFPAY22], (instregex "VCMPP(S|D)Yrri", "VM(AX|IN)P(D|S)Yrr")>;
+
+def WriteFPAY22Ld: SchedWriteRes<[JLAGU, JFPU0]> {
+  let Latency = 7;
+  let ResourceCycles = [1, 2];
+}
+def : InstRW<[WriteFPAY22Ld, ReadAfterLd], (instregex "VCMPP(S|D)Yrmi", "VM(AX|IN)P(D|S)Yrm")>;
+
+def WriteVHAddSubY: SchedWriteRes<[JFPU0]> {
+  let Latency = 3;
+  let ResourceCycles = [2];
+}
+def : InstRW<[WriteVHAddSubY], (instregex "VH(ADD|SUB)P(D|S)Yrr")>;
+
+def WriteVHAddSubYLd: SchedWriteRes<[JLAGU, JFPU0]> {
+  let Latency = 8;
+  let ResourceCycles = [1, 2];
+}
+def : InstRW<[WriteVHAddSubYLd], (instregex "VH(ADD|SUB)P(D|S)Yrm")>;
+
+def WriteVMaskMovLd: SchedWriteRes<[JLAGU,JFPU01]> {
+  let Latency = 6;
+  let ResourceCycles = [1, 2];
+}
+def : InstRW<[WriteVMaskMovLd], (instregex "VMASKMOVP(D|S)rm")>;
+
+def WriteVMaskMovYLd: SchedWriteRes<[JLAGU,JFPU01]> {
+  let Latency = 6;
+  let ResourceCycles = [1, 4];
+}
+def : InstRW<[WriteVMaskMovYLd], (instregex "VMASKMOVP(D|S)Yrm")>;
+
+def WriteVMaskMovSt: SchedWriteRes<[JFPU01,JSAGU]> {
+  let Latency = 6;
+  let ResourceCycles = [4, 1];
+}
+def : InstRW<[WriteVMaskMovSt], (instregex "VMASKMOVP(D|S)mr")>;
+
+def WriteVMaskMovYSt: SchedWriteRes<[JFPU01,JSAGU]> {
+  let Latency = 6;
+  let ResourceCycles = [4, 1];
+}
+def : InstRW<[WriteVMaskMovYSt], (instregex "VMASKMOVP(D|S)Ymr")>;
+
+// TODO: In fact we have latency '2+i'. The +i represents an additional 1 cycle transfer
+// operation which moves the floating point result to the integer unit. During this
+// additional cycle the floating point unit execution resources are not occupied
+// and ALU0 in the integer unit is occupied instead.
+def WriteVMOVMSK: SchedWriteRes<[JFPU0]> {
+  let Latency = 3;
+}
+def : InstRW<[WriteVMOVMSK], (instregex "VMOVMSKP(D|S)(Y)?rr")>;
+
+// TODO: In fact we have latency '3+i'. The +i represents an additional 1 cycle transfer
+// operation which moves the floating point result to the integer unit. During this
+// additional cycle the floating point unit execution resources are not occupied
+// and ALU0 in the integer unit is occupied instead.
+def WriteVTESTY: SchedWriteRes<[JFPU01, JFPU0]> {
+  let Latency = 4;
+  let ResourceCycles = [4, 2];
+}
+def : InstRW<[WriteVTESTY], (instregex "VTESTP(S|D)Yrr")>;
+def : InstRW<[WriteVTESTY], (instregex "VPTESTYrr")>;
+
+def WriteVTESTYLd: SchedWriteRes<[JLAGU, JFPU01, JFPU0]> {
+  let Latency = 9;
+  let ResourceCycles = [1, 4, 2];
+}
+def : InstRW<[WriteVTESTYLd], (instregex "VTESTP(S|D)Yrm")>;
+def : InstRW<[WriteVTESTYLd], (instregex "VPTESTYrm")>;
+
 def WriteVSQRTYPD: SchedWriteRes<[JFPU1]> {
   let Latency = 54;
   let ResourceCycles = [54];

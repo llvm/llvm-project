@@ -70,18 +70,39 @@ struct MallocFreeTracer {
   std::atomic<size_t> Mallocs;
   std::atomic<size_t> Frees;
   int TraceLevel = 0;
+
+  std::recursive_mutex TraceMutex;
+  bool TraceDisabled = false;
 };
 
 static MallocFreeTracer AllocTracer;
 
-static std::mutex MallocFreeStackMutex;
+// Locks printing and avoids nested hooks triggered from mallocs/frees in
+// sanitizer.
+class TraceLock {
+public:
+  TraceLock() : Lock(AllocTracer.TraceMutex) {
+    AllocTracer.TraceDisabled = !AllocTracer.TraceDisabled;
+  }
+  ~TraceLock() { AllocTracer.TraceDisabled = !AllocTracer.TraceDisabled; }
+
+  bool IsDisabled() const {
+    // This is already inverted value.
+    return !AllocTracer.TraceDisabled;
+  }
+
+private:
+  std::lock_guard<std::recursive_mutex> Lock;
+};
 
 ATTRIBUTE_NO_SANITIZE_MEMORY
 void MallocHook(const volatile void *ptr, size_t size) {
   size_t N = AllocTracer.Mallocs++;
   F->HandleMalloc(size);
   if (int TraceLevel = AllocTracer.TraceLevel) {
-    std::lock_guard<std::mutex> Lock(MallocFreeStackMutex);
+    TraceLock Lock;
+    if (Lock.IsDisabled())
+      return;
     Printf("MALLOC[%zd] %p %zd\n", N, ptr, size);
     if (TraceLevel >= 2 && EF)
       EF->__sanitizer_print_stack_trace();
@@ -92,7 +113,9 @@ ATTRIBUTE_NO_SANITIZE_MEMORY
 void FreeHook(const volatile void *ptr) {
   size_t N = AllocTracer.Frees++;
   if (int TraceLevel = AllocTracer.TraceLevel) {
-    std::lock_guard<std::mutex> Lock(MallocFreeStackMutex);
+    TraceLock Lock;
+    if (Lock.IsDisabled())
+      return;
     Printf("FREE[%zd]   %p\n", N, ptr);
     if (TraceLevel >= 2 && EF)
       EF->__sanitizer_print_stack_trace();

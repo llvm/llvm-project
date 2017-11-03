@@ -10,6 +10,7 @@ include_directories(
 
 add_extra_unittest(ClangdTests
   ClangdTests.cpp
+  TraceTests.cpp
   )
 
 target_link_libraries(ClangdTests

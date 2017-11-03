@@ -88,19 +88,6 @@ public:
   //------------------------------------------------------------------
   const Status &operator=(const Status &rhs);
 
-  //------------------------------------------------------------------
-  /// Assignment operator from a kern_return_t.
-  ///
-  /// Sets the type to \c MachKernel and the error code to \a err.
-  ///
-  /// @param[in] err
-  ///     A mach error code.
-  ///
-  /// @return
-  ///     A const reference to this object.
-  //------------------------------------------------------------------
-  const Status &operator=(uint32_t err);
-
   ~Status();
 
   // llvm::Error support

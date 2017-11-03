@@ -355,7 +355,7 @@ int foo() {return 0;};
 void parallel_for(float *a) {
 #pragma omp parallel
 #pragma omp for schedule(static, 5)
-  // TERM_DEBUG:     __kmpc_global_thread_num
+  // TERM_DEBUG-NOT: __kmpc_global_thread_num
   // TERM_DEBUG:     call void @__kmpc_for_static_init_4u({{.+}}), !dbg [[DBG_LOC_START:![0-9]+]]
   // TERM_DEBUG:     invoke i32 {{.*}}foo{{.*}}()
   // TERM_DEBUG:     unwind label %[[TERM_LPAD:.+]],

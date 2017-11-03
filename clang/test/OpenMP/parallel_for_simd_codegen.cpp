@@ -668,7 +668,7 @@ int bar() {return 0;};
 // TERM_DEBUG-LABEL: parallel_simd
 void parallel_simd(float *a) {
 #pragma omp parallel for simd
-  // TERM_DEBUG:     __kmpc_global_thread_num
+  // TERM_DEBUG-NOT: __kmpc_global_thread_num
   // TERM_DEBUG:     invoke i32 {{.*}}bar{{.*}}()
   // TERM_DEBUG:     unwind label %[[TERM_LPAD:.+]],
   // TERM_DEBUG-NOT: __kmpc_global_thread_num

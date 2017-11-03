@@ -1308,39 +1308,39 @@ SDValue R600TargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
 
 // return (512 + (kc_bank << 12)
 static int
-ConstantAddressBlock(unsigned AddressSpace, AMDGPUAS AMDGPUASI) {
+ConstantAddressBlock(unsigned AddressSpace) {
   switch (AddressSpace) {
-  case AMDGPUASI.CONSTANT_BUFFER_0:
+  case AMDGPUAS::CONSTANT_BUFFER_0:
     return 512;
-  case AMDGPUASI.CONSTANT_BUFFER_1:
+  case AMDGPUAS::CONSTANT_BUFFER_1:
     return 512 + 4096;
-  case AMDGPUASI.CONSTANT_BUFFER_2:
+  case AMDGPUAS::CONSTANT_BUFFER_2:
     return 512 + 4096 * 2;
-  case AMDGPUASI.CONSTANT_BUFFER_3:
+  case AMDGPUAS::CONSTANT_BUFFER_3:
     return 512 + 4096 * 3;
-  case AMDGPUASI.CONSTANT_BUFFER_4:
+  case AMDGPUAS::CONSTANT_BUFFER_4:
     return 512 + 4096 * 4;
-  case AMDGPUASI.CONSTANT_BUFFER_5:
+  case AMDGPUAS::CONSTANT_BUFFER_5:
     return 512 + 4096 * 5;
-  case AMDGPUASI.CONSTANT_BUFFER_6:
+  case AMDGPUAS::CONSTANT_BUFFER_6:
     return 512 + 4096 * 6;
-  case AMDGPUASI.CONSTANT_BUFFER_7:
+  case AMDGPUAS::CONSTANT_BUFFER_7:
     return 512 + 4096 * 7;
-  case AMDGPUASI.CONSTANT_BUFFER_8:
+  case AMDGPUAS::CONSTANT_BUFFER_8:
     return 512 + 4096 * 8;
-  case AMDGPUASI.CONSTANT_BUFFER_9:
+  case AMDGPUAS::CONSTANT_BUFFER_9:
     return 512 + 4096 * 9;
-  case AMDGPUASI.CONSTANT_BUFFER_10:
+  case AMDGPUAS::CONSTANT_BUFFER_10:
     return 512 + 4096 * 10;
-  case AMDGPUASI.CONSTANT_BUFFER_11:
+  case AMDGPUAS::CONSTANT_BUFFER_11:
     return 512 + 4096 * 11;
-  case AMDGPUASI.CONSTANT_BUFFER_12:
+  case AMDGPUAS::CONSTANT_BUFFER_12:
     return 512 + 4096 * 12;
-  case AMDGPUASI.CONSTANT_BUFFER_13:
+  case AMDGPUAS::CONSTANT_BUFFER_13:
     return 512 + 4096 * 13;
-  case AMDGPUASI.CONSTANT_BUFFER_14:
+  case AMDGPUAS::CONSTANT_BUFFER_14:
     return 512 + 4096 * 14;
-  case AMDGPUASI.CONSTANT_BUFFER_15:
+  case AMDGPUAS::CONSTANT_BUFFER_15:
     return 512 + 4096 * 15;
   default:
     return -1;
@@ -1424,8 +1424,7 @@ SDValue R600TargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
       return scalarizeVectorLoad(LoadNode, DAG);
   }
 
-  int ConstantBlock = ConstantAddressBlock(LoadNode->getAddressSpace(),
-      AMDGPUASI);
+  int ConstantBlock = ConstantAddressBlock(LoadNode->getAddressSpace());
   if (ConstantBlock > -1 &&
       ((LoadNode->getExtensionType() == ISD::NON_EXTLOAD) ||
        (LoadNode->getExtensionType() == ISD::ZEXTLOAD))) {

@@ -1,4 +1,4 @@
-//===--- Parser.h - Matcher expression parser -----*- C++ -*-===//
+//===- Parser.h - Matcher expression parser ---------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,7 +6,7 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-///
+//
 /// \file
 /// \brief Simple matcher expression parser.
 ///
@@ -30,23 +30,27 @@
 /// <Identifier>        := [a-zA-Z]+
 /// <ArgumentList>      := <Expression> | <Expression>,<ArgumentList>
 /// \endcode
-///
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_ASTMATCHERS_DYNAMIC_PARSER_H
 #define LLVM_CLANG_ASTMATCHERS_DYNAMIC_PARSER_H
 
-#include "clang/ASTMatchers/Dynamic/Diagnostics.h"
+#include "clang/ASTMatchers/ASTMatchersInternal.h"
 #include "clang/ASTMatchers/Dynamic/Registry.h"
 #include "clang/ASTMatchers/Dynamic/VariantValue.h"
-#include "clang/Basic/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include <utility>
+#include <vector>
 
 namespace clang {
 namespace ast_matchers {
 namespace dynamic {
+
+class Diagnostics;
 
 /// \brief Matcher expression parser.
 class Parser {
@@ -124,8 +128,8 @@ public:
   /// \brief Sema implementation that uses the matcher registry to process the
   ///   tokens.
   class RegistrySema : public Parser::Sema {
-   public:
-     ~RegistrySema() override;
+  public:
+    ~RegistrySema() override;
 
     llvm::Optional<MatcherCtor>
     lookupMatcherCtor(StringRef MatcherName) override;
@@ -143,7 +147,7 @@ public:
     getMatcherCompletions(llvm::ArrayRef<ArgKind> AcceptedTypes) override;
   };
 
-  typedef llvm::StringMap<VariantValue> NamedValueMap;
+  using NamedValueMap = llvm::StringMap<VariantValue>;
 
   /// \brief Parse a matcher expression.
   ///
@@ -247,13 +251,14 @@ private:
   const NamedValueMap *const NamedValues;
   Diagnostics *const Error;
 
-  typedef std::vector<std::pair<MatcherCtor, unsigned> > ContextStackTy;
+  using ContextStackTy = std::vector<std::pair<MatcherCtor, unsigned>>;
+
   ContextStackTy ContextStack;
   std::vector<MatcherCompletion> Completions;
 };
 
-}  // namespace dynamic
-}  // namespace ast_matchers
-}  // namespace clang
+} // namespace dynamic
+} // namespace ast_matchers
+} // namespace clang
 
-#endif  // LLVM_CLANG_AST_MATCHERS_DYNAMIC_PARSER_H
+#endif // LLVM_CLANG_AST_MATCHERS_DYNAMIC_PARSER_H

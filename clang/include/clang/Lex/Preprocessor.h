@@ -286,6 +286,23 @@ class Preprocessor {
   /// This is used when loading a precompiled preamble.
   std::pair<int, bool> SkipMainFilePreamble;
 
+public:
+  struct PreambleSkipInfo {
+    PreambleSkipInfo(SourceLocation HashTokenLoc, SourceLocation IfTokenLoc,
+                     bool FoundNonSkipPortion, bool FoundElse,
+                     SourceLocation ElseLoc)
+        : HashTokenLoc(HashTokenLoc), IfTokenLoc(IfTokenLoc),
+          FoundNonSkipPortion(FoundNonSkipPortion), FoundElse(FoundElse),
+          ElseLoc(ElseLoc) {}
+
+    SourceLocation HashTokenLoc;
+    SourceLocation IfTokenLoc;
+    bool FoundNonSkipPortion;
+    bool FoundElse;
+    SourceLocation ElseLoc;
+  };
+
+private:
   class PreambleConditionalStackStore {
     enum State {
       Off = 0,
@@ -318,6 +335,12 @@ class Preprocessor {
     }
 
     bool hasRecordedPreamble() const { return !ConditionalStack.empty(); }
+
+    bool reachedEOFWhileSkipping() const { return SkipInfo.hasValue(); }
+
+    void clearSkipInfo() { SkipInfo.reset(); }
+
+    llvm::Optional<PreambleSkipInfo> SkipInfo;
 
   private:
     SmallVector<PPConditionalInfo, 4> ConditionalStack;
@@ -1839,7 +1862,7 @@ private:
   /// \p FoundElse is false, then \#else directives are ok, if not, then we have
   /// already seen one so a \#else directive is a duplicate.  When this returns,
   /// the caller can lex the first valid token.
-  void SkipExcludedConditionalBlock(const Token &HashToken,
+  void SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
                                     SourceLocation IfTokenLoc,
                                     bool FoundNonSkipPortion, bool FoundElse,
                                     SourceLocation ElseLoc = SourceLocation());
@@ -2019,9 +2042,15 @@ public:
     PreambleConditionalStack.setStack(s);
   }
 
-  void setReplayablePreambleConditionalStack(ArrayRef<PPConditionalInfo> s) {
+  void setReplayablePreambleConditionalStack(ArrayRef<PPConditionalInfo> s,
+                                             llvm::Optional<PreambleSkipInfo> SkipInfo) {
     PreambleConditionalStack.startReplaying();
     PreambleConditionalStack.setStack(s);
+    PreambleConditionalStack.SkipInfo = SkipInfo;
+  }
+
+  llvm::Optional<PreambleSkipInfo> getPreambleSkipInfo() const {
+    return PreambleConditionalStack.SkipInfo;
   }
 
 private:

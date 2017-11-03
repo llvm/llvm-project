@@ -77,7 +77,8 @@ public:
     DCC_CDecl,
     DCC_FastCall,
     DCC_StdCall,
-    DCC_VectorCall
+    DCC_VectorCall,
+    DCC_RegCall
   };
 
   enum AddrSpaceMapMangling { ASMM_Target, ASMM_On, ASMM_Off };

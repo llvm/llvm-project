@@ -3,6 +3,8 @@
 // RUN: | FileCheck %s --implicit-check-not "error:"
 #ifdef FOO_H
 
-void foo();
+void foo() {}
 
 #endif
+
+int foo() { return 0; }

@@ -39,6 +39,10 @@ static void PrintMessage(ArrayRef<SMLoc> Loc, SourceMgr::DiagKind Kind,
                         "instantiated from multiclass");
 }
 
+void PrintNote(ArrayRef<SMLoc> NoteLoc, const Twine &Msg) {
+  PrintMessage(NoteLoc, SourceMgr::DK_Note, Msg);
+}
+
 void PrintWarning(ArrayRef<SMLoc> WarningLoc, const Twine &Msg) {
   PrintMessage(WarningLoc, SourceMgr::DK_Warning, Msg);
 }

@@ -25,7 +25,13 @@ FOO-NOT: {{define|declare}}
 FOO: declare void @_Z2f1Ri(i32*
 FOO-NOT: {{define|declare}}
 
-FIXME: this internal function should be weak_odr, comdat, and with a new mangling
+Internal functions are not modularly code generated - they are
+internal wherever they're used. This might not be ideal, but
+continues to workaround/support some oddities that backwards
+compatible modules have seen and supported in the wild.  To remove
+the duplication here, the internal functions would need to be
+promoted to weak_odr, placed in comdat and given a new mangling -
+this would be needed for the C++ Modules TS anyway.
 FOO: define internal void @_ZL2f2v() #{{[0-9]+}}
 FOO-NOT: {{define|declare}}
 
@@ -45,7 +51,7 @@ BAR-OPT: define available_externally void @_Z3foov()
 BAR-CMN-NOT: {{define|declare}}
 BAR-OPT: declare void @_Z2f1Ri(i32*
 BAR-OPT-NOT: {{define|declare}}
-BAR-OPT: define available_externally void @_ZL2f2v()
+BAR-OPT: define internal void @_ZL2f2v()
 BAR-OPT-NOT: {{define|declare}}
 
 
@@ -61,5 +67,5 @@ USE-OPT: define available_externally void @_Z3foov()
 USE-OPT-NOT: {{define|declare}}
 USE-OPT: declare void @_Z2f1Ri(i32*
 USE-OPT-NOT: {{define|declare}}
-USE-OPT: define available_externally void @_ZL2f2v()
+USE-OPT: define internal void @_ZL2f2v()
 USE-OPT-NOT: {{define|declare}}

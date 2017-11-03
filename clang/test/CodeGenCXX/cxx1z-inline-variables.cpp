@@ -67,6 +67,18 @@ int &use3 = X<int>::a;
 template<> int X<int>::b = 20;
 template<> inline int X<int>::c = 30;
 
+template<typename T> struct Y;
+template<> struct Y<int> {
+  static constexpr int a = 123;
+  static constexpr int b = 456;
+  static constexpr int c = 789;
+};
+// CHECK: @_ZN1YIiE1aE = weak_odr constant i32 123
+constexpr int Y<int>::a;
+// CHECK: @_ZN1YIiE1bE = linkonce_odr constant i32 456
+const int &yib = Y<int>::b;
+// CHECK-NOT: @_ZN1YIiE1cE
+
 // CHECK-LABEL: define {{.*}}global_var_init
 // CHECK: call i32 @_Z1fv
 

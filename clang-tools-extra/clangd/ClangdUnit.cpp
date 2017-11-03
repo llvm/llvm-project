@@ -10,6 +10,7 @@
 #include "ClangdUnit.h"
 
 #include "Logger.h"
+#include "Trace.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -529,7 +530,7 @@ private:
         // the code-completion string, typically a keyword or the name of
         // a declarator or macro.
         Item.filterText = Chunk.Text;
-        // Note intentional fallthrough here.
+        LLVM_FALLTHROUGH;
       case CodeCompletionString::CK_Text:
         // A piece of text that should be placed in the buffer,
         // e.g., parentheses or a comma in a function call.
@@ -1285,6 +1286,7 @@ CppFile::deferRebuild(StringRef NewContents,
         return OldPreamble;
       }
 
+      trace::Span Tracer(llvm::Twine("Preamble: ") + That->FileName);
       std::vector<DiagWithFixIts> PreambleDiags;
       StoreDiagsConsumer PreambleDiagnosticsConsumer(/*ref*/ PreambleDiags);
       IntrusiveRefCntPtr<DiagnosticsEngine> PreambleDiagsEngine =
@@ -1330,9 +1332,13 @@ CppFile::deferRebuild(StringRef NewContents,
     }
 
     // Compute updated AST.
-    llvm::Optional<ParsedAST> NewAST =
-        ParsedAST::Build(std::move(CI), PreambleForAST, SerializedPreambleDecls,
-                         std::move(ContentsBuffer), PCHs, VFS, That->Logger);
+    llvm::Optional<ParsedAST> NewAST;
+    {
+      trace::Span Tracer(llvm::Twine("Build: ") + That->FileName);
+      NewAST = ParsedAST::Build(
+          std::move(CI), PreambleForAST, SerializedPreambleDecls,
+          std::move(ContentsBuffer), PCHs, VFS, That->Logger);
+    }
 
     if (NewAST) {
       Diagnostics.insert(Diagnostics.end(), NewAST->getDiagnostics().begin(),

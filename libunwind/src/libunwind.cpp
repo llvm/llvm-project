@@ -55,7 +55,7 @@ _LIBUNWIND_EXPORT int unw_init_local(unw_cursor_t *cursor,
 # define REGISTER_KIND Registers_ppc
 #elif defined(__aarch64__)
 # define REGISTER_KIND Registers_arm64
-#elif defined(_LIBUNWIND_ARM_EHABI)
+#elif defined(__arm__)
 # define REGISTER_KIND Registers_arm
 #elif defined(__or1k__)
 # define REGISTER_KIND Registers_or1k

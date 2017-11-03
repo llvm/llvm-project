@@ -6,11 +6,15 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_OBJCOPY_H
-#define LLVM_OBJCOPY_H
+
+#ifndef LLVM_TOOLS_OBJCOPY_OBJCOPY_H
+#define LLVM_TOOLS_OBJCOPY_OBJCOPY_H
 
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/raw_ostream.h"
+#include <string>
 
 namespace llvm {
 
@@ -27,6 +31,7 @@ template <class T> T unwrapOrError(Expected<T> EO) {
   OS.flush();
   error(Buf);
 }
-}
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_TOOLS_OBJCOPY_OBJCOPY_H

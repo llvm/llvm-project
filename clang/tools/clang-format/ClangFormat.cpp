@@ -289,7 +289,7 @@ static bool format(StringRef FileName) {
               "xml:space='preserve' incomplete_format='"
            << (Status.FormatComplete ? "false" : "true") << "'";
     if (!Status.FormatComplete)
-      outs() << " line=" << Status.Line;
+      outs() << " line='" << Status.Line << "'";
     outs() << ">\n";
     if (Cursor.getNumOccurrences() != 0)
       outs() << "<cursor>"

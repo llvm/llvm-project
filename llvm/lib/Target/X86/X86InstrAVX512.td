@@ -8911,6 +8911,123 @@ defm VPALIGNR:   avx512_common_3Op_rm_imm8<0x0F, X86PAlignr, "vpalignr" ,
                                           avx512vl_i8_info, avx512vl_i8_info>,
                 EVEX_CD8<8, CD8VF>;
 
+// Fragments to help convert valignq into masked valignd. Or valignq/valignd
+// into vpalignr.
+def ValignqImm32XForm : SDNodeXForm<imm, [{
+  return getI8Imm(N->getZExtValue() * 2, SDLoc(N));
+}]>;
+def ValignqImm8XForm : SDNodeXForm<imm, [{
+  return getI8Imm(N->getZExtValue() * 8, SDLoc(N));
+}]>;
+def ValigndImm8XForm : SDNodeXForm<imm, [{
+  return getI8Imm(N->getZExtValue() * 4, SDLoc(N));
+}]>;
+
+multiclass avx512_vpalign_mask_lowering<string OpcodeStr, SDNode OpNode,
+                                        X86VectorVTInfo From, X86VectorVTInfo To,
+                                        SDNodeXForm ImmXForm> {
+  def : Pat<(To.VT (vselect To.KRCWM:$mask,
+                            (bitconvert
+                             (From.VT (OpNode From.RC:$src1, From.RC:$src2,
+                                              imm:$src3))),
+                            To.RC:$src0)),
+            (!cast<Instruction>(OpcodeStr#"rrik") To.RC:$src0, To.KRCWM:$mask,
+                                                  To.RC:$src1, To.RC:$src2,
+                                                  (ImmXForm imm:$src3))>;
+
+  def : Pat<(To.VT (vselect To.KRCWM:$mask,
+                            (bitconvert
+                             (From.VT (OpNode From.RC:$src1, From.RC:$src2,
+                                              imm:$src3))),
+                            To.ImmAllZerosV)),
+            (!cast<Instruction>(OpcodeStr#"rrikz") To.KRCWM:$mask,
+                                                   To.RC:$src1, To.RC:$src2,
+                                                   (ImmXForm imm:$src3))>;
+
+  def : Pat<(To.VT (vselect To.KRCWM:$mask,
+                            (bitconvert
+                             (From.VT (OpNode From.RC:$src1,
+                                      (bitconvert (To.LdFrag addr:$src2)),
+                                      imm:$src3))),
+                            To.RC:$src0)),
+            (!cast<Instruction>(OpcodeStr#"rmik") To.RC:$src0, To.KRCWM:$mask,
+                                                  To.RC:$src1, addr:$src2,
+                                                  (ImmXForm imm:$src3))>;
+
+  def : Pat<(To.VT (vselect To.KRCWM:$mask,
+                            (bitconvert
+                             (From.VT (OpNode From.RC:$src1,
+                                      (bitconvert (To.LdFrag addr:$src2)),
+                                      imm:$src3))),
+                            To.ImmAllZerosV)),
+            (!cast<Instruction>(OpcodeStr#"rmikz") To.KRCWM:$mask,
+                                                   To.RC:$src1, addr:$src2,
+                                                   (ImmXForm imm:$src3))>;
+}
+
+multiclass avx512_vpalign_mask_lowering_mb<string OpcodeStr, SDNode OpNode,
+                                           X86VectorVTInfo From,
+                                           X86VectorVTInfo To,
+                                           SDNodeXForm ImmXForm> :
+      avx512_vpalign_mask_lowering<OpcodeStr, OpNode, From, To, ImmXForm> {
+  def : Pat<(From.VT (OpNode From.RC:$src1,
+                             (bitconvert (To.VT (X86VBroadcast
+                                                (To.ScalarLdFrag addr:$src2)))),
+                             imm:$src3)),
+            (!cast<Instruction>(OpcodeStr#"rmbi") To.RC:$src1, addr:$src2,
+                                                  (ImmXForm imm:$src3))>;
+
+  def : Pat<(To.VT (vselect To.KRCWM:$mask,
+                            (bitconvert
+                             (From.VT (OpNode From.RC:$src1,
+                                      (bitconvert
+                                       (To.VT (X86VBroadcast
+                                               (To.ScalarLdFrag addr:$src2)))),
+                                      imm:$src3))),
+                            To.RC:$src0)),
+            (!cast<Instruction>(OpcodeStr#"rmbik") To.RC:$src0, To.KRCWM:$mask,
+                                                   To.RC:$src1, addr:$src2,
+                                                   (ImmXForm imm:$src3))>;
+
+  def : Pat<(To.VT (vselect To.KRCWM:$mask,
+                            (bitconvert
+                             (From.VT (OpNode From.RC:$src1,
+                                      (bitconvert
+                                       (To.VT (X86VBroadcast
+                                               (To.ScalarLdFrag addr:$src2)))),
+                                      imm:$src3))),
+                            To.ImmAllZerosV)),
+            (!cast<Instruction>(OpcodeStr#"rmbikz") To.KRCWM:$mask,
+                                                    To.RC:$src1, addr:$src2,
+                                                    (ImmXForm imm:$src3))>;
+}
+
+let Predicates = [HasAVX512] in {
+  // For 512-bit we lower to the widest element type we can. So we only need
+  // to handle converting valignq to valignd.
+  defm : avx512_vpalign_mask_lowering_mb<"VALIGNDZ", X86VAlign, v8i64_info,
+                                         v16i32_info, ValignqImm32XForm>;
+}
+
+let Predicates = [HasVLX] in {
+  // For 128-bit we lower to the widest element type we can. So we only need
+  // to handle converting valignq to valignd.
+  defm : avx512_vpalign_mask_lowering_mb<"VALIGNDZ128", X86VAlign, v2i64x_info,
+                                         v4i32x_info, ValignqImm32XForm>;
+  // For 256-bit we lower to the widest element type we can. So we only need
+  // to handle converting valignq to valignd.
+  defm : avx512_vpalign_mask_lowering_mb<"VALIGNDZ256", X86VAlign, v4i64x_info,
+                                         v8i32x_info, ValignqImm32XForm>;
+}
+
+let Predicates = [HasVLX, HasBWI] in {
+  // We can turn 128 and 256 bit VALIGND/VALIGNQ into VPALIGNR.
+  defm : avx512_vpalign_mask_lowering<"VPALIGNRZ128", X86VAlign, v2i64x_info,
+                                      v16i8x_info, ValignqImm8XForm>;
+  defm : avx512_vpalign_mask_lowering<"VPALIGNRZ128", X86VAlign, v4i32x_info,
+                                      v16i8x_info, ValigndImm8XForm>;
+}
+
 defm VDBPSADBW: avx512_common_3Op_rm_imm8<0x42, X86dbpsadbw, "vdbpsadbw" ,
                     avx512vl_i16_info, avx512vl_i8_info>, EVEX_CD8<8, CD8VF>;
 

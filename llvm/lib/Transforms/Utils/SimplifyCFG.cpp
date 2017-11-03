@@ -1920,6 +1920,8 @@ static bool SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
   // - All of their uses are in CondBB.
   SmallDenseMap<Instruction *, unsigned, 4> SinkCandidateUseCounts;
 
+  SmallVector<Instruction *, 4> SpeculatedDbgIntrinsics;
+
   unsigned SpeculationCost = 0;
   Value *SpeculatedStoreValue = nullptr;
   StoreInst *SpeculatedStore = nullptr;
@@ -1928,8 +1930,10 @@ static bool SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
        BBI != BBE; ++BBI) {
     Instruction *I = &*BBI;
     // Skip debug info.
-    if (isa<DbgInfoIntrinsic>(I))
+    if (isa<DbgInfoIntrinsic>(I)) {
+      SpeculatedDbgIntrinsics.push_back(I);
       continue;
+    }
 
     // Only speculatively execute a single instruction (not counting the
     // terminator) for now.
@@ -2073,6 +2077,12 @@ static bool SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
     PN->setIncomingValue(OrigI, V);
     PN->setIncomingValue(ThenI, V);
   }
+
+  // Remove speculated dbg intrinsics.
+  // FIXME: Is it possible to do this in a more elegant way? Moving/merging the
+  // dbg value for the different flows and inserting it after the select.
+  for (Instruction *I : SpeculatedDbgIntrinsics)
+    I->eraseFromParent();
 
   ++NumSpeculations;
   return true;

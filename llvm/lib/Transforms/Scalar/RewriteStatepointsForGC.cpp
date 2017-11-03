@@ -125,10 +125,10 @@ struct RewriteStatepointsForGC : public ModulePass {
       Changed |= runOnFunction(F);
 
     if (Changed) {
-      // stripNonValidAttributesAndMetadata asserts that shouldRewriteStatepointsIn
+      // stripNonValidData asserts that shouldRewriteStatepointsIn
       // returns true for at least one function in the module.  Since at least
       // one function changed, we know that the precondition is satisfied.
-      stripNonValidAttributesAndMetadata(M);
+      stripNonValidData(M);
     }
 
     return Changed;
@@ -146,15 +146,17 @@ struct RewriteStatepointsForGC : public ModulePass {
   /// metadata implying dereferenceability that are no longer valid/correct after
   /// RewriteStatepointsForGC has run. This is because semantically, after
   /// RewriteStatepointsForGC runs, all calls to gc.statepoint "free" the entire
-  /// heap. stripNonValidAttributesAndMetadata (conservatively) restores
+  /// heap. stripNonValidData (conservatively) restores
   /// correctness by erasing all attributes in the module that externally imply
   /// dereferenceability. Similar reasoning also applies to the noalias
   /// attributes and metadata. gc.statepoint can touch the entire heap including
   /// noalias objects.
-  void stripNonValidAttributesAndMetadata(Module &M);
+  /// Apart from attributes and metadata, we also remove instructions that imply
+  /// constant physical memory: llvm.invariant.start.
+  void stripNonValidData(Module &M);
 
-  // Helpers for stripNonValidAttributesAndMetadata
-  void stripNonValidAttributesAndMetadataFromBody(Function &F);
+  // Helpers for stripNonValidData
+  void stripNonValidDataFromBody(Function &F);
   void stripNonValidAttributesFromPrototype(Function &F);
 
   // Certain metadata on instructions are invalid after running RS4GC.
@@ -2385,14 +2387,30 @@ void RewriteStatepointsForGC::stripInvalidMetadataFromInstruction(Instruction &I
   I.dropUnknownNonDebugMetadata(ValidMetadataAfterRS4GC);
 }
 
-void RewriteStatepointsForGC::stripNonValidAttributesAndMetadataFromBody(Function &F) {
+void RewriteStatepointsForGC::stripNonValidDataFromBody(Function &F) {
   if (F.empty())
     return;
 
   LLVMContext &Ctx = F.getContext();
   MDBuilder Builder(Ctx);
 
+  // Set of invariantstart instructions that we need to remove.
+  // Use this to avoid invalidating the instruction iterator.
+  SmallVector<IntrinsicInst*, 12> InvariantStartInstructions;
+
   for (Instruction &I : instructions(F)) {
+    // invariant.start on memory location implies that the referenced memory
+    // location is constant and unchanging. This is no longer true after
+    // RewriteStatepointsForGC runs because there can be calls to gc.statepoint
+    // which frees the entire heap and the presence of invariant.start allows
+    // the optimizer to sink the load of a memory location past a statepoint,
+    // which is incorrect.
+    if (auto *II = dyn_cast<IntrinsicInst>(&I))
+      if (II->getIntrinsicID() == Intrinsic::invariant_start) {
+        InvariantStartInstructions.push_back(II);
+        continue;
+      }
+
     if (const MDNode *MD = I.getMetadata(LLVMContext::MD_tbaa)) {
       assert(MD->getNumOperands() < 5 && "unrecognized metadata shape!");
       bool IsImmutableTBAA =
@@ -2422,6 +2440,12 @@ void RewriteStatepointsForGC::stripNonValidAttributesAndMetadataFromBody(Functio
         RemoveNonValidAttrAtIndex(Ctx, CS, AttributeList::ReturnIndex);
     }
   }
+
+  // Delete the invariant.start instructions and RAUW undef.
+  for (auto *II : InvariantStartInstructions) {
+    II->replaceAllUsesWith(UndefValue::get(II->getType()));
+    II->eraseFromParent();
+  }
 }
 
 /// Returns true if this function should be rewritten by this pass.  The main
@@ -2438,7 +2462,7 @@ static bool shouldRewriteStatepointsIn(Function &F) {
     return false;
 }
 
-void RewriteStatepointsForGC::stripNonValidAttributesAndMetadata(Module &M) {
+void RewriteStatepointsForGC::stripNonValidData(Module &M) {
 #ifndef NDEBUG
   assert(llvm::any_of(M, shouldRewriteStatepointsIn) && "precondition!");
 #endif
@@ -2447,7 +2471,7 @@ void RewriteStatepointsForGC::stripNonValidAttributesAndMetadata(Module &M) {
     stripNonValidAttributesFromPrototype(F);
 
   for (Function &F : M)
-    stripNonValidAttributesAndMetadataFromBody(F);
+    stripNonValidDataFromBody(F);
 }
 
 bool RewriteStatepointsForGC::runOnFunction(Function &F) {

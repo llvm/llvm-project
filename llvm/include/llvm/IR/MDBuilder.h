@@ -173,6 +173,9 @@ public:
   /// base type, access type and offset relative to the base type.
   MDNode *createTBAAStructTagNode(MDNode *BaseType, MDNode *AccessType,
                                   uint64_t Offset, bool IsConstant = false);
+
+  /// \brief Return metadata containing an irreducible loop header weight.
+  MDNode *createIrrLoopHeaderWeight(uint64_t Weight);
 };
 
 } // end namespace llvm

@@ -148,7 +148,13 @@ void X86EVEX2VEXTablesEmitter::printTable(const std::vector<Entry> &Table,
       {"VINSERTF64x2Z256rm",  "VINSERTF128rm",   false},
       {"VINSERTF64x2Z256rr",  "VINSERTF128rr",   false},
       {"VINSERTI64x2Z256rm",  "VINSERTI128rm",   false},
-      {"VINSERTI64x2Z256rr",  "VINSERTI128rr",   false}
+      {"VINSERTI64x2Z256rr",  "VINSERTI128rr",   false},
+
+      // These will require some custom adjustment in the conversion pass.
+      {"VALIGNDZ128rri",      "VPALIGNRrri",     true},
+      {"VALIGNQZ128rri",      "VPALIGNRrri",     true},
+      {"VALIGNDZ128rmi",      "VPALIGNRrmi",     true},
+      {"VALIGNQZ128rmi",      "VPALIGNRrmi",     true},
   };
 
   // Print the manually added entries

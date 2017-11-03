@@ -54,4 +54,14 @@ b2:
   ret i32 %v6
 }
 
+; CHECK-LABEL: Prefer_L2_loadrub_io:
+; CHECK: memub(r0+#65)
+define i64 @Prefer_L2_loadrub_io(i8* %a0) #0 {
+b1:
+  %v2 = getelementptr i8, i8* %a0, i32 65
+  %v3 = load i8, i8* %v2
+  %v4 = zext i8 %v3 to i64
+  ret i64 %v4
+}
+
 attributes #0 = { nounwind readnone }

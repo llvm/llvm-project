@@ -851,15 +851,12 @@ void Writer<ELFT>::forEachRelSec(std::function<void(InputSectionBase &)> Fn) {
 template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
   PhdrEntry *Last = nullptr;
   PhdrEntry *LastRO = nullptr;
-  PhdrEntry *LastRW = nullptr;
 
   for (PhdrEntry *P : Phdrs) {
     if (P->p_type != PT_LOAD)
       continue;
     Last = P;
-    if (P->p_flags & PF_W)
-      LastRW = P;
-    else
+    if (!(P->p_flags & PF_W))
       LastRO = P;
   }
 

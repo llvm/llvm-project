@@ -249,7 +249,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(CXXScopeSpec &SS,
 
       if (Tok.is(tok::code_completion)) {
         // Code completion for a nested-name-specifier, where the code
-        // code completion token follows the '::'.
+        // completion token follows the '::'.
         Actions.CodeCompleteQualifiedId(getCurScope(), SS, EnteringContext);
         // Include code completion token into the range of the scope otherwise
         // when we try to annotate the scope tokens the dangling code completion

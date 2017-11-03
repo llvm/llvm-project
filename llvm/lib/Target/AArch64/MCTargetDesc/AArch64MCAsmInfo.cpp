@@ -106,13 +106,15 @@ AArch64MCAsmInfoCOFF::AArch64MCAsmInfoCOFF() {
   PrivateLabelPrefix = ".L";
   AlignmentIsInBytes = false;
   SupportsDebugInformation = true;
-  ExceptionsType = ExceptionHandling::WinEH;
+  CodePointerSize = 8;
 }
 
 AArch64MCAsmInfoMicrosoftCOFF::AArch64MCAsmInfoMicrosoftCOFF() {
   CommentString = ";";
+  ExceptionsType = ExceptionHandling::WinEH;
 }
 
 AArch64MCAsmInfoGNUCOFF::AArch64MCAsmInfoGNUCOFF() {
   CommentString = "//";
+  ExceptionsType = ExceptionHandling::DwarfCFI;
 }

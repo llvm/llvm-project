@@ -931,15 +931,17 @@ bool PartialInlinerImpl::tryPartialInline(FunctionCloner &Cloner) {
     if (!shouldPartialInline(CS, Cloner, WeightedRcost, ORE))
       continue;
 
-    ORE.emit([&]() {
-      return OptimizationRemark(DEBUG_TYPE, "PartiallyInlined",
-                                CS.getInstruction())
-             << ore::NV("Callee", Cloner.OrigFunc) << " partially inlined into "
-             << ore::NV("Caller", CS.getCaller());
-    });
+    // Construct remark before doing the inlining, as after successful inlining
+    // the callsite is removed.
+    OptimizationRemark OR(DEBUG_TYPE, "PartiallyInlined", CS.getInstruction());
+    OR << ore::NV("Callee", Cloner.OrigFunc) << " partially inlined into "
+       << ore::NV("Caller", CS.getCaller());
 
     InlineFunctionInfo IFI(nullptr, GetAssumptionCache, PSI);
-    InlineFunction(CS, IFI);
+    if (!InlineFunction(CS, IFI))
+      continue;
+
+    ORE.emit(OR);
 
     // Now update the entry count:
     if (CalleeEntryCountV && CallSiteToProfCountMap.count(User)) {

@@ -68,6 +68,8 @@ public:
 void setProfMetadata(Module *M, Instruction *TI, ArrayRef<uint64_t> EdgeCounts,
                      uint64_t MaxCount);
 
+void setIrrLoopHeaderMetadata(Module *M, Instruction *TI, uint64_t Count);
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_PGOINSTRUMENTATION_H

@@ -1592,10 +1592,15 @@ define <2 x double> @test_x86_sse2_sqrt_pd(<2 x double> %a0) {
 ; SSE-NEXT:    sqrtpd %xmm0, %xmm0 ## encoding: [0x66,0x0f,0x51,0xc0]
 ; SSE-NEXT:    retl ## encoding: [0xc3]
 ;
-; VCHECK-LABEL: test_x86_sse2_sqrt_pd:
-; VCHECK:       ## BB#0:
-; VCHECK-NEXT:    vsqrtpd %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0x51,0xc0]
-; VCHECK-NEXT:    retl ## encoding: [0xc3]
+; AVX2-LABEL: test_x86_sse2_sqrt_pd:
+; AVX2:       ## BB#0:
+; AVX2-NEXT:    vsqrtpd %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0x51,0xc0]
+; AVX2-NEXT:    retl ## encoding: [0xc3]
+;
+; SKX-LABEL: test_x86_sse2_sqrt_pd:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vsqrtpd %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x51,0xc0]
+; SKX-NEXT:    retl ## encoding: [0xc3]
   %res = call <2 x double> @llvm.x86.sse2.sqrt.pd(<2 x double> %a0) ; <<2 x double>> [#uses=1]
   ret <2 x double> %res
 }

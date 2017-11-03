@@ -1,0 +1,11 @@
+test:10000:0
+ 3: foo:1000
+  3: bar:200
+   4: baz:10
+ 4: foo1:1000
+  1: 1000
+ 4: foo2:1000
+  1: 1000 foo3:1000
+test_liveness:10000:0
+ 1: foo:1000
+  1: foo_available:1000

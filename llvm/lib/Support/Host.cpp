@@ -344,13 +344,13 @@ enum ProcessorTypes {
   INTEL_i386,
   INTEL_i486,
   INTEL_PENTIUM,
+  INTEL_PENTIUM_MMX,
   INTEL_PENTIUM_PRO,
   INTEL_PENTIUM_II,
   INTEL_PENTIUM_III,
   INTEL_PENTIUM_IV,
   INTEL_PENTIUM_M,
   INTEL_CORE_DUO,
-  INTEL_X86_64,
   INTEL_NOCONA,
   INTEL_PRESCOTT,
   AMD_i486,
@@ -378,7 +378,6 @@ enum ProcessorSubtypes {
   INTEL_COREI7_SKYLAKE,
   INTEL_COREI7_SKYLAKE_AVX512,
   // Entries below this are not in libgcc/compiler-rt.
-  INTEL_PENTIUM_MMX,
   INTEL_CORE2_65,
   INTEL_CORE2_45,
   AMDPENTIUM_K6,
@@ -587,42 +586,14 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     *Type = INTEL_i386;
     break;
   case 4:
-    switch (Model) {
-    case 0: // Intel486 DX processors
-    case 1: // Intel486 DX processors
-    case 2: // Intel486 SX processors
-    case 3: // Intel487 processors, IntelDX2 OverDrive processors,
-            // IntelDX2 processors
-    case 4: // Intel486 SL processor
-    case 5: // IntelSX2 processors
-    case 7: // Write-Back Enhanced IntelDX2 processors
-    case 8: // IntelDX4 OverDrive processors, IntelDX4 processors
-    default:
-      *Type = INTEL_i486;
-      break;
-    }
+    *Type = INTEL_i486;
     break;
   case 5:
-    switch (Model) {
-    case 1: // Pentium OverDrive processor for Pentium processor (60, 66),
-            // Pentium processors (60, 66)
-    case 2: // Pentium OverDrive processor for Pentium processor (75, 90,
-            // 100, 120, 133), Pentium processors (75, 90, 100, 120, 133,
-            // 150, 166, 200)
-    case 3: // Pentium OverDrive processors for Intel486 processor-based
-            // systems
-      *Type = INTEL_PENTIUM;
-      break;
-    case 4: // Pentium OverDrive processor with MMX technology for Pentium
-            // processor (75, 90, 100, 120, 133), Pentium processor with
-            // MMX technology (166, 200)
-      *Type = INTEL_PENTIUM;
-      *Subtype = INTEL_PENTIUM_MMX;
-      break;
-    default:
-      *Type = INTEL_PENTIUM;
+    if (Features & (1 << FEATURE_MMX)) {
+      *Type = INTEL_PENTIUM_MMX;
       break;
     }
+    *Type = INTEL_PENTIUM;
     break;
   case 6:
     switch (Model) {
@@ -822,8 +793,13 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
         break;
       }
       if (Features2 & (1 << (FEATURE_EM64T - 32))) {
-        *Type = INTEL_X86_64;
-        break; // x86-64
+        *Type = INTEL_CORE2; // "core2"
+        *Subtype = INTEL_CORE2_65;
+        break;
+      }
+      if (Features & (1 << FEATURE_SSE3)) {
+        *Type = INTEL_CORE_DUO;
+        break;
       }
       if (Features & (1 << FEATURE_SSE2)) {
         *Type = INTEL_PENTIUM_M;
@@ -842,40 +818,15 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     }
     break;
   case 15: {
-    switch (Model) {
-    case 0: // Pentium 4 processor, Intel Xeon processor. All processors are
-            // model 00h and manufactured using the 0.18 micron process.
-    case 1: // Pentium 4 processor, Intel Xeon processor, Intel Xeon
-            // processor MP, and Intel Celeron processor. All processors are
-            // model 01h and manufactured using the 0.18 micron process.
-    case 2: // Pentium 4 processor, Mobile Intel Pentium 4 processor - M,
-            // Intel Xeon processor, Intel Xeon processor MP, Intel Celeron
-            // processor, and Mobile Intel Celeron processor. All processors
-            // are model 02h and manufactured using the 0.13 micron process.
-      *Type = ((Features2 & (1 << (FEATURE_EM64T - 32))) ? INTEL_X86_64
-                                                         : INTEL_PENTIUM_IV);
-      break;
-
-    case 3: // Pentium 4 processor, Intel Xeon processor, Intel Celeron D
-            // processor. All processors are model 03h and manufactured using
-            // the 90 nm process.
-    case 4: // Pentium 4 processor, Pentium 4 processor Extreme Edition,
-            // Pentium D processor, Intel Xeon processor, Intel Xeon
-            // processor MP, Intel Celeron D processor. All processors are
-            // model 04h and manufactured using the 90 nm process.
-    case 6: // Pentium 4 processor, Pentium D processor, Pentium processor
-            // Extreme Edition, Intel Xeon processor, Intel Xeon processor
-            // MP, Intel Celeron D processor. All processors are model 06h
-            // and manufactured using the 65 nm process.
-      *Type = ((Features2 & (1 << (FEATURE_EM64T - 32))) ? INTEL_NOCONA
-                                                         : INTEL_PRESCOTT);
-      break;
-
-    default:
-      *Type = ((Features2 & (1 << (FEATURE_EM64T - 32))) ? INTEL_X86_64
-                                                         : INTEL_PENTIUM_IV);
+    if (Features2 & (1 << (FEATURE_EM64T - 32))) {
+      *Type = INTEL_NOCONA;
       break;
     }
+    if (Features & (1 << FEATURE_SSE3)) {
+      *Type = INTEL_PRESCOTT;
+      break;
+    }
+    *Type = INTEL_PENTIUM_IV;
     break;
   }
   default:
@@ -1118,9 +1069,9 @@ StringRef sys::getHostCPUName() {
     case INTEL_i486:
       return "i486";
     case INTEL_PENTIUM:
-      if (Subtype == INTEL_PENTIUM_MMX)
-        return "pentium-mmx";
       return "pentium";
+    case INTEL_PENTIUM_MMX:
+      return "pentium-mmx";
     case INTEL_PENTIUM_PRO:
       return "pentiumpro";
     case INTEL_PENTIUM_II:
@@ -1173,8 +1124,6 @@ StringRef sys::getHostCPUName() {
       return "knl";
     case INTEL_KNM:
       return "knm";
-    case INTEL_X86_64:
-      return "x86-64";
     case INTEL_NOCONA:
       return "nocona";
     case INTEL_PRESCOTT:

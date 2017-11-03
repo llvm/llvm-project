@@ -1,4 +1,4 @@
-//===--- MultiOnDiskHashTable.h - Merged set of hash tables -----*- C++ -*-===//
+//===- MultiOnDiskHashTable.h - Merged set of hash tables -------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,6 +15,7 @@
 //  files.
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef LLVM_CLANG_LIB_SERIALIZATION_MULTIONDISKHASHTABLE_H
 #define LLVM_CLANG_LIB_SERIALIZATION_MULTIONDISKHASHTABLE_H
 
@@ -22,33 +23,43 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TinyPtrVector.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/OnDiskHashTable.h"
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cstdint>
+#include <vector>
 
 namespace clang {
 namespace serialization {
-
-class ModuleFile;
 
 /// \brief A collection of on-disk hash tables, merged when relevant for performance.
 template<typename Info> class MultiOnDiskHashTable {
 public:
   /// A handle to a file, used when overriding tables.
-  typedef typename Info::file_type file_type;
-  /// A pointer to an on-disk representation of the hash table.
-  typedef const unsigned char *storage_type;
+  using file_type = typename Info::file_type;
 
-  typedef typename Info::external_key_type external_key_type;
-  typedef typename Info::internal_key_type internal_key_type;
-  typedef typename Info::data_type data_type;
-  typedef typename Info::data_type_builder data_type_builder;
-  typedef unsigned hash_value_type;
+  /// A pointer to an on-disk representation of the hash table.
+  using storage_type = const unsigned char *;
+
+  using external_key_type = typename Info::external_key_type;
+  using internal_key_type = typename Info::internal_key_type;
+  using data_type = typename Info::data_type;
+  using data_type_builder = typename Info::data_type_builder;
+  using hash_value_type = unsigned;
 
 private:
+  /// The generator is permitted to read our merged table.
+  template<typename ReaderInfo, typename WriterInfo>
+  friend class MultiOnDiskHashTableGenerator;
+
   /// \brief A hash table stored on disk.
   struct OnDiskTable {
-    typedef llvm::OnDiskIterableChainedHashTable<Info> HashTable;
+    using HashTable = llvm::OnDiskIterableChainedHashTable<Info>;
 
     file_type File;
     HashTable Table;
@@ -65,8 +76,8 @@ private:
     llvm::DenseMap<internal_key_type, data_type> Data;
   };
 
-  typedef llvm::PointerUnion<OnDiskTable*, MergedTable*> Table;
-  typedef llvm::TinyPtrVector<void*> TableVector;
+  using Table = llvm::PointerUnion<OnDiskTable *, MergedTable *>;
+  using TableVector = llvm::TinyPtrVector<void *>;
 
   /// \brief The current set of on-disk and merged tables.
   /// We manually store the opaque value of the Table because TinyPtrVector
@@ -80,14 +91,16 @@ private:
   llvm::TinyPtrVector<file_type> PendingOverrides;
 
   struct AsOnDiskTable {
-    typedef OnDiskTable *result_type;
+    using result_type = OnDiskTable *;
+
     result_type operator()(void *P) const {
       return Table::getFromOpaqueValue(P).template get<OnDiskTable *>();
     }
   };
-  typedef llvm::mapped_iterator<TableVector::iterator, AsOnDiskTable>
-      table_iterator;
-  typedef llvm::iterator_range<table_iterator> table_range;
+
+  using table_iterator =
+      llvm::mapped_iterator<TableVector::iterator, AsOnDiskTable>;
+  using table_range = llvm::iterator_range<table_iterator>;
 
   /// \brief The current set of on-disk tables.
   table_range tables() {
@@ -160,17 +173,15 @@ private:
     Tables.push_back(Table(Merged).getOpaqueValue());
   }
 
-  /// The generator is permitted to read our merged table.
-  template<typename ReaderInfo, typename WriterInfo>
-  friend class MultiOnDiskHashTableGenerator;
-
 public:
-  MultiOnDiskHashTable() {}
+  MultiOnDiskHashTable() = default;
+
   MultiOnDiskHashTable(MultiOnDiskHashTable &&O)
       : Tables(std::move(O.Tables)),
         PendingOverrides(std::move(O.PendingOverrides)) {
     O.Tables.clear();
   }
+
   MultiOnDiskHashTable &operator=(MultiOnDiskHashTable &&O) {
     if (&O == this)
       return *this;
@@ -180,11 +191,13 @@ public:
     PendingOverrides = std::move(O.PendingOverrides);
     return *this;
   }
+
   ~MultiOnDiskHashTable() { clear(); }
 
   /// \brief Add the table \p Data loaded from file \p File.
   void add(file_type File, storage_type Data, Info InfoObj = Info()) {
     using namespace llvm::support;
+
     storage_type Ptr = Data;
 
     uint32_t BucketOffset = endian::readNext<uint32_t, little, unaligned>(Ptr);
@@ -278,8 +291,8 @@ public:
 /// \brief Writer for the on-disk hash table.
 template<typename ReaderInfo, typename WriterInfo>
 class MultiOnDiskHashTableGenerator {
-  typedef MultiOnDiskHashTable<ReaderInfo> BaseTable;
-  typedef llvm::OnDiskChainedHashTableGenerator<WriterInfo> Generator;
+  using BaseTable = MultiOnDiskHashTable<ReaderInfo>;
+  using Generator = llvm::OnDiskChainedHashTableGenerator<WriterInfo>;
 
   Generator Gen;
 
@@ -294,6 +307,7 @@ public:
   void emit(llvm::SmallVectorImpl<char> &Out, WriterInfo &Info,
             const BaseTable *Base) {
     using namespace llvm::support;
+
     llvm::raw_svector_ostream OutStream(Out);
 
     // Write our header information.
@@ -327,8 +341,7 @@ public:
   }
 };
 
-} // end namespace clang::serialization
-} // end namespace clang
+} // namespace serialization
+} // namespace clang
 
-
-#endif
+#endif // LLVM_CLANG_LIB_SERIALIZATION_MULTIONDISKHASHTABLE_H

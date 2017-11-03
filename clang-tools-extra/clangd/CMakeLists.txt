@@ -13,6 +13,7 @@ add_clang_library(clangDaemon
   Logger.cpp
   Protocol.cpp
   ProtocolHandlers.cpp
+  Trace.cpp
 
   LINK_LIBS
   clangAST

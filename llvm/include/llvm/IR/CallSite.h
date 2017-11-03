@@ -475,6 +475,24 @@ public:
     CALLSITE_DELEGATE_SETTER(setOnlyAccessesArgMemory());
   }
 
+  /// Determine if the function may only access memory that is
+  /// inaccessible from the IR.
+  bool onlyAccessesInaccessibleMemory() const {
+    CALLSITE_DELEGATE_GETTER(onlyAccessesInaccessibleMemory());
+  }
+  void setOnlyAccessesInaccessibleMemory() {
+    CALLSITE_DELEGATE_SETTER(setOnlyAccessesInaccessibleMemory());
+  }
+
+  /// Determine if the function may only access memory that is
+  /// either inaccessible from the IR or pointed to by its arguments.
+  bool onlyAccessesInaccessibleMemOrArgMem() const {
+    CALLSITE_DELEGATE_GETTER(onlyAccessesInaccessibleMemOrArgMem());
+  }
+  void setOnlyAccessesInaccessibleMemOrArgMem() {
+    CALLSITE_DELEGATE_SETTER(setOnlyAccessesInaccessibleMemOrArgMem());
+  }
+
   /// Determine if the call cannot return.
   bool doesNotReturn() const {
     CALLSITE_DELEGATE_GETTER(doesNotReturn());
