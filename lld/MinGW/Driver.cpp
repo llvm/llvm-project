@@ -170,6 +170,9 @@ bool mingw::link(ArrayRef<const char *> ArgsArr, raw_ostream &Diag) {
   for (auto *A : Args.filtered(OPT_mllvm))
     Add("-mllvm:" + StringRef(A->getValue()));
 
+  for (auto *A : Args.filtered(OPT_Xlink))
+    Add(A->getValue());
+
   if (Args.getLastArgValue(OPT_m) == "i386pe")
     Add("-alternatename:__image_base__=___ImageBase");
   else
