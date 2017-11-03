@@ -10,27 +10,25 @@
 #include "ClangdLSPServer.h"
 #include "JSONRPCDispatcher.h"
 
+#include "llvm/Support/FormatVariadic.h"
+
 using namespace clang::clangd;
 using namespace clang;
 
 namespace {
 
-std::string
+std::vector<TextEdit>
 replacementsToEdits(StringRef Code,
                     const std::vector<tooling::Replacement> &Replacements) {
+  std::vector<TextEdit> Edits;
   // Turn the replacements into the format specified by the Language Server
-  // Protocol. Fuse them into one big JSON array.
-  std::string Edits;
+  // Protocol.
   for (auto &R : Replacements) {
     Range ReplacementRange = {
         offsetToPosition(Code, R.getOffset()),
         offsetToPosition(Code, R.getOffset() + R.getLength())};
-    TextEdit TE = {ReplacementRange, R.getReplacementText()};
-    Edits += TextEdit::unparse(TE);
-    Edits += ',';
+    Edits.push_back({ReplacementRange, R.getReplacementText()});
   }
-  if (!Edits.empty())
-    Edits.pop_back();
 
   return Edits;
 }
@@ -47,7 +45,9 @@ void ClangdLSPServer::onInitialize(Ctx C, InitializeParams &Params) {
           "codeActionProvider": true,
           "completionProvider": {"resolveProvider": false, "triggerCharacters": [".",">",":"]},
           "signatureHelpProvider": {"triggerCharacters": ["(",","]},
-          "definitionProvider": true
+          "definitionProvider": true,
+          "executeCommandProvider": {"commands": [")" +
+      ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND + R"("]}
         }})");
   if (Params.rootUri && !Params.rootUri->file.empty())
     Server.setRootPath(Params.rootUri->file);
@@ -84,6 +84,34 @@ void ClangdLSPServer::onFileEvent(Ctx C, DidChangeWatchedFilesParams &Params) {
   Server.onFileEvent(Params);
 }
 
+void ClangdLSPServer::onCommand(Ctx C, ExecuteCommandParams &Params) {
+  if (Params.command == ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND &&
+      Params.workspaceEdit) {
+    // The flow for "apply-fix" :
+    // 1. We publish a diagnostic, including fixits
+    // 2. The user clicks on the diagnostic, the editor asks us for code actions
+    // 3. We send code actions, with the fixit embedded as context
+    // 4. The user selects the fixit, the editor asks us to apply it
+    // 5. We unwrap the changes and send them back to the editor
+    // 6. The editor applies the changes (applyEdit), and sends us a reply (but
+    // we ignore it)
+
+    ApplyWorkspaceEditParams ApplyEdit;
+    ApplyEdit.edit = *Params.workspaceEdit;
+    C.reply("\"Fix applied.\"");
+    // We don't need the response so id == 1 is OK.
+    // Ideally, we would wait for the response and if there is no error, we
+    // would reply success/failure to the original RPC.
+    C.call("workspace/applyEdit", ApplyWorkspaceEditParams::unparse(ApplyEdit));
+  } else {
+    // We should not get here because ExecuteCommandParams would not have
+    // parsed in the first place and this handler should not be called. But if
+    // more commands are added, this will be here has a safe guard.
+    C.replyError(
+        1, llvm::formatv("Unsupported command \"{0}\".", Params.command).str());
+  }
+}
+
 void ClangdLSPServer::onDocumentDidClose(Ctx C,
                                          DidCloseTextDocumentParams &Params) {
   Server.removeDocument(Params.textDocument.uri.file);
@@ -93,26 +121,27 @@ void ClangdLSPServer::onDocumentOnTypeFormatting(
     Ctx C, DocumentOnTypeFormattingParams &Params) {
   auto File = Params.textDocument.uri.file;
   std::string Code = Server.getDocument(File);
-  std::string Edits =
-      replacementsToEdits(Code, Server.formatOnType(File, Params.position));
-  C.reply("[" + Edits + "]");
+  std::string Edits = TextEdit::unparse(
+      replacementsToEdits(Code, Server.formatOnType(File, Params.position)));
+  C.reply(Edits);
 }
 
 void ClangdLSPServer::onDocumentRangeFormatting(
     Ctx C, DocumentRangeFormattingParams &Params) {
   auto File = Params.textDocument.uri.file;
   std::string Code = Server.getDocument(File);
-  std::string Edits =
-      replacementsToEdits(Code, Server.formatRange(File, Params.range));
-  C.reply("[" + Edits + "]");
+  std::string Edits = TextEdit::unparse(
+      replacementsToEdits(Code, Server.formatRange(File, Params.range)));
+  C.reply(Edits);
 }
 
 void ClangdLSPServer::onDocumentFormatting(Ctx C,
                                            DocumentFormattingParams &Params) {
   auto File = Params.textDocument.uri.file;
   std::string Code = Server.getDocument(File);
-  std::string Edits = replacementsToEdits(Code, Server.formatFile(File));
-  C.reply("[" + Edits + "]");
+  std::string Edits =
+      TextEdit::unparse(replacementsToEdits(Code, Server.formatFile(File)));
+  C.reply(Edits);
 }
 
 void ClangdLSPServer::onCodeAction(Ctx C, CodeActionParams &Params) {
@@ -123,15 +152,16 @@ void ClangdLSPServer::onCodeAction(Ctx C, CodeActionParams &Params) {
   for (Diagnostic &D : Params.context.diagnostics) {
     std::vector<clang::tooling::Replacement> Fixes =
         getFixIts(Params.textDocument.uri.file, D);
-    std::string Edits = replacementsToEdits(Code, Fixes);
+    auto Edits = replacementsToEdits(Code, Fixes);
+    WorkspaceEdit WE;
+    WE.changes = {{llvm::yaml::escape(Params.textDocument.uri.uri), Edits}};
 
     if (!Edits.empty())
       Commands +=
           R"({"title":"Apply FixIt ')" + llvm::yaml::escape(D.message) +
-          R"('", "command": "clangd.applyFix", "arguments": [")" +
-          llvm::yaml::escape(Params.textDocument.uri.uri) +
-          R"(", [)" + Edits +
-          R"(]]},)";
+          R"('", "command": ")" +
+          ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND +
+          R"(", "arguments": [)" + WorkspaceEdit::unparse(WE) + R"(]},)";
   }
   if (!Commands.empty())
     Commands.pop_back();
