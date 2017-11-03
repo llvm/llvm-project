@@ -78,7 +78,7 @@ void critical_ref(S &s) {
 void parallel_critical() {
 #pragma omp parallel
 #pragma omp critical
-  // TERM_DEBUG:     __kmpc_global_thread_num
+  // TERM_DEBUG-NOT: __kmpc_global_thread_num
   // TERM_DEBUG:     call void @__kmpc_critical({{.+}}), !dbg [[DBG_LOC_START:![0-9]+]]
   // TERM_DEBUG:     invoke void {{.*}}foo{{.*}}()
   // TERM_DEBUG:     unwind label %[[TERM_LPAD:.+]],

@@ -157,6 +157,7 @@ public:
   bool isPICDefaultForced() const override { return false; }
   bool SupportsProfiling() const override { return false; }
   bool SupportsObjCGC() const override { return false; }
+  bool IsMathErrnoDefault() const override { return false; }
 
   void AddCudaIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                           llvm::opt::ArgStringList &CC1Args) const override;

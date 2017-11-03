@@ -249,8 +249,29 @@ struct SelectedNodeWithParents {
   SelectedNodeWithParents &operator=(SelectedNodeWithParents &&) = default;
   SelectedASTNode::ReferenceType Node;
   llvm::SmallVector<SelectedASTNode::ReferenceType, 8> Parents;
+
+  /// Canonicalizes the given selection by selecting different related AST nodes
+  /// when it makes sense to do so.
+  void canonicalize();
 };
 } // end anonymous namespace
+
+void SelectedNodeWithParents::canonicalize() {
+  const Stmt *S = Node.get().Node.get<Stmt>();
+  assert(S && "non statement selection!");
+  const Stmt *Parent = Parents[Parents.size() - 1].get().Node.get<Stmt>();
+  if (!Parent)
+    return;
+  // Select the parent expression when:
+  // - The string literal in ObjC string literal is selected, e.g.:
+  //     @"test"   becomes   @"test"
+  //      ~~~~~~             ~~~~~~~
+  if (isa<StringLiteral>(S) && isa<ObjCStringLiteral>(Parent))
+    Node = Parents.pop_back_val();
+  // FIXME: Syntactic form -> Entire pseudo-object expr.
+  // FIXME: Callee -> Call.
+  // FIXME: Callee member expr -> Call.
+}
 
 /// Finds the set of bottom-most selected AST nodes that are in the selection
 /// tree with the specified selection kind.
@@ -330,7 +351,7 @@ CodeRangeASTSelection::create(SourceRange SelectionRange,
     return None;
   const Stmt *CodeRangeStmt = Selected.Node.get().Node.get<Stmt>();
   if (!isa<CompoundStmt>(CodeRangeStmt)) {
-    // FIXME (Alex L): Canonicalize.
+    Selected.canonicalize();
     return CodeRangeASTSelection(Selected.Node, Selected.Parents,
                                  /*AreChildrenSelected=*/false);
   }

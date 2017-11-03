@@ -9276,6 +9276,11 @@ CallingConv ASTContext::getDefaultCallingConvention(bool IsVariadic,
     if (!IsVariadic)
       return CC_X86VectorCall;
     break;
+  case LangOptions::DCC_RegCall:
+    // __regcall cannot be applied to variadic functions.
+    if (!IsVariadic)
+      return CC_X86RegCall;
+    break;
   }
   return Target->getDefaultCallingConv(TargetInfo::CCMT_Unknown);
 }

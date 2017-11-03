@@ -1451,7 +1451,9 @@ llvm::Value *CGOpenMPRuntime::getThreadID(CodeGenFunction &CGF,
       return ThreadID;
   }
   // If exceptions are enabled, do not use parameter to avoid possible crash.
-  if (!CGF.getInvokeDest()) {
+  if (!CGF.EHStack.requiresLandingPad() || !CGF.getLangOpts().Exceptions ||
+      !CGF.getLangOpts().CXXExceptions ||
+      CGF.Builder.GetInsertBlock() == CGF.AllocaInsertPt->getParent()) {
     if (auto *OMPRegionInfo =
             dyn_cast_or_null<CGOpenMPRegionInfo>(CGF.CapturedStmtInfo)) {
       if (OMPRegionInfo->getThreadIDVariable()) {
@@ -1475,12 +1477,13 @@ llvm::Value *CGOpenMPRuntime::getThreadID(CodeGenFunction &CGF,
   // function.
   CGBuilderTy::InsertPointGuard IPG(CGF.Builder);
   CGF.Builder.SetInsertPoint(CGF.AllocaInsertPt);
-  ThreadID =
-      CGF.EmitRuntimeCall(createRuntimeFunction(OMPRTL__kmpc_global_thread_num),
-                          emitUpdateLocation(CGF, Loc));
+  auto *Call = CGF.Builder.CreateCall(
+      createRuntimeFunction(OMPRTL__kmpc_global_thread_num),
+      emitUpdateLocation(CGF, Loc));
+  Call->setCallingConv(CGF.getRuntimeCC());
   auto &Elem = OpenMPLocThreadIDMap.FindAndConstruct(CGF.CurFn);
-  Elem.second.ThreadID = ThreadID;
-  return ThreadID;
+  Elem.second.ThreadID = Call;
+  return Call;
 }
 
 void CGOpenMPRuntime::functionFinished(CodeGenFunction &CGF) {
