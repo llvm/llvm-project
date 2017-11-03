@@ -1,6 +1,7 @@
 # RUN: llc -O0 -mtriple arm-- -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
 --- |
   define void @test_mla() #0 { ret void }
+  define void @test_mla_commutative() #0 { ret void }
   define void @test_mla_v5() #1 { ret void }
 
   define void @test_mls() #2 { ret void }
@@ -36,6 +37,40 @@ body:             |
 
     %3(s32) = G_MUL %0, %1
     %4(s32) = G_ADD %3, %2
+    ; CHECK: [[VREGR:%[0-9]+]]:gprnopc = MLA [[VREGX]], [[VREGY]], [[VREGZ]], 14, _, _
+
+    %r0 = COPY %4(s32)
+    ; CHECK: %r0 = COPY [[VREGR]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_mla_commutative
+# CHECK-LABEL: name: test_mla_commutative
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+  - { id: 4, class: gprb }
+body:             |
+  bb.0:
+    liveins: %r0, %r1, %r2
+
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    %2(s32) = COPY %r2
+    ; CHECK: [[VREGX:%[0-9]+]]:gprnopc = COPY %r0
+    ; CHECK: [[VREGY:%[0-9]+]]:gprnopc = COPY %r1
+    ; CHECK: [[VREGZ:%[0-9]+]]:gprnopc = COPY %r2
+
+    %3(s32) = G_MUL %0, %1
+    %4(s32) = G_ADD %2, %3
     ; CHECK: [[VREGR:%[0-9]+]]:gprnopc = MLA [[VREGX]], [[VREGY]], [[VREGZ]], 14, _, _
 
     %r0 = COPY %4(s32)
