@@ -1,4 +1,4 @@
-//===--- IdentifierTable.h - Hash table for identifier lookup ---*- C++ -*-===//
+//===- IdentifierTable.h - Hash table for identifier lookup -----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,11 +6,11 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-///
+//
 /// \file
 /// \brief Defines the clang::IdentifierInfo, clang::IdentifierTable, and
 /// clang::Selector interfaces.
-///
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_BASIC_IDENTIFIERTABLE_H
@@ -18,35 +18,29 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/TokenKinds.h"
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/PointerLikeTypeTraits.h"
+#include "llvm/Support/type_traits.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <new>
 #include <string>
 #include <utility>
 
-namespace llvm {
-
-  template <typename T> struct DenseMapInfo;
-
-} // end namespace llvm
-
 namespace clang {
 
-  class LangOptions;
-  class IdentifierInfo;
-  class IdentifierTable;
-  class SourceLocation;
-  class MultiKeywordSelector; // private class used by Selector
-  class DeclarationName;      // AST class that stores declaration names
+class IdentifierInfo;
+class LangOptions;
+class MultiKeywordSelector;
+class SourceLocation;
 
-  /// \brief A simple pair of identifier info and location.
-  typedef std::pair<IdentifierInfo*, SourceLocation> IdentifierLocPair;
+/// \brief A simple pair of identifier info and location.
+using IdentifierLocPair = std::pair<IdentifierInfo *, SourceLocation>;
 
 /// One of these records is kept for each identifier that
 /// is lexed.  This contains information about whether the token was \#define'd,
@@ -85,8 +79,10 @@ class IdentifierInfo {
                                    // keyword.
   // 29 bit left in 64-bit word.
 
-  void *FETokenInfo;               // Managed by the language front-end.
-  llvm::StringMapEntry<IdentifierInfo*> *Entry;
+  // Managed by the language front-end.
+  void *FETokenInfo = nullptr;
+
+  llvm::StringMapEntry<IdentifierInfo *> *Entry = nullptr;
 
 public:
   IdentifierInfo();
@@ -104,7 +100,6 @@ public:
 
   /// \brief Return the beginning of the actual null-terminated string for this
   /// identifier.
-  ///
   const char *getNameStart() const {
     if (Entry) return Entry->getKeyData();
     // FIXME: This is gross. It would be best not to embed specific details
@@ -112,12 +107,12 @@ public:
     // The 'this' pointer really points to a
     // std::pair<IdentifierInfo, const char*>, where internal pointer
     // points to the external string data.
-    typedef std::pair<IdentifierInfo, const char*> actualtype;
+    using actualtype = std::pair<IdentifierInfo, const char *>;
+
     return ((const actualtype*) this)->second;
   }
 
   /// \brief Efficiently return the length of this identifier info.
-  ///
   unsigned getLength() const {
     if (Entry) return Entry->getKeyLength();
     // FIXME: This is gross. It would be best not to embed specific details
@@ -125,7 +120,8 @@ public:
     // The 'this' pointer really points to a
     // std::pair<IdentifierInfo, const char*>, where internal pointer
     // points to the external string data.
-    typedef std::pair<IdentifierInfo, const char*> actualtype;
+    using actualtype = std::pair<IdentifierInfo, const char *>;
+
     const char* p = ((const actualtype*) this)->second - 2;
     return (((unsigned) p[0]) | (((unsigned) p[1]) << 8)) - 1;
   }
@@ -465,7 +461,7 @@ public:
 class IdentifierTable {
   // Shark shows that using MallocAllocator is *much* slower than using this
   // BumpPtrAllocator!
-  typedef llvm::StringMap<IdentifierInfo*, llvm::BumpPtrAllocator> HashTableTy;
+  using HashTableTy = llvm::StringMap<IdentifierInfo *, llvm::BumpPtrAllocator>;
   HashTableTy HashTable;
 
   IdentifierInfoLookup* ExternalLookup;
@@ -551,8 +547,8 @@ public:
     return *II;
   }
 
-  typedef HashTableTy::const_iterator iterator;
-  typedef HashTableTy::const_iterator const_iterator;
+  using iterator = HashTableTy::const_iterator;
+  using const_iterator = HashTableTy::const_iterator;
 
   iterator begin() const { return HashTable.begin(); }
   iterator end() const   { return HashTable.end(); }
@@ -654,7 +650,9 @@ class Selector {
     MultiArg = 0x3,
     ArgFlags = ZeroArg|OneArg
   };
-  uintptr_t InfoPtr; // a pointer to the MultiKeywordSelector or IdentifierInfo.
+
+  // a pointer to the MultiKeywordSelector or IdentifierInfo.
+  uintptr_t InfoPtr = 0;
 
   Selector(IdentifierInfo *II, unsigned nArgs) {
     InfoPtr = reinterpret_cast<uintptr_t>(II);
@@ -662,6 +660,7 @@ class Selector {
     assert(nArgs < 2 && "nArgs not equal to 0/1");
     InfoPtr |= nArgs+1;
   }
+
   Selector(MultiKeywordSelector *SI) {
     InfoPtr = reinterpret_cast<uintptr_t>(SI);
     assert((InfoPtr & ArgFlags) == 0 &&"Insufficiently aligned IdentifierInfo");
@@ -692,7 +691,7 @@ public:
 
   /// The default ctor should only be used when creating data structures that
   ///  will contain selectors.
-  Selector() : InfoPtr(0) {}
+  Selector() = default;
   Selector(uintptr_t V) : InfoPtr(V) {}
 
   /// operator==/!= - Indicate whether the specified selectors are identical.
@@ -776,7 +775,8 @@ public:
 /// \brief This table allows us to fully hide how we implement
 /// multi-keyword caching.
 class SelectorTable {
-  void *Impl;  // Actually a SelectorTableImpl
+  // Actually a SelectorTableImpl
+  void *Impl;
 
 public:
   SelectorTable();
@@ -793,6 +793,7 @@ public:
   Selector getUnarySelector(IdentifierInfo *ID) {
     return Selector(ID, 1);
   }
+
   Selector getNullarySelector(IdentifierInfo *ID) {
     return Selector(ID, 0);
   }
@@ -848,7 +849,7 @@ public:
   unsigned ExtraKindOrNumArgs;
 };
 
-}  // end namespace clang
+}  // namespace clang
 
 namespace llvm {
 
@@ -856,11 +857,11 @@ namespace llvm {
 /// DenseSets.
 template <>
 struct DenseMapInfo<clang::Selector> {
-  static inline clang::Selector getEmptyKey() {
+  static clang::Selector getEmptyKey() {
     return clang::Selector::getEmptyMarker();
   }
 
-  static inline clang::Selector getTombstoneKey() {
+  static clang::Selector getTombstoneKey() {
     return clang::Selector::getTombstoneMarker();
   }
 
@@ -874,15 +875,13 @@ struct DenseMapInfo<clang::Selector> {
 template <>
 struct isPodLike<clang::Selector> { static const bool value = true; };
 
-template <typename T> struct PointerLikeTypeTraits;
-
 template<>
 struct PointerLikeTypeTraits<clang::Selector> {
-  static inline const void *getAsVoidPointer(clang::Selector P) {
+  static const void *getAsVoidPointer(clang::Selector P) {
     return P.getAsOpaquePtr();
   }
 
-  static inline clang::Selector getFromVoidPointer(const void *P) {
+  static clang::Selector getFromVoidPointer(const void *P) {
     return clang::Selector(reinterpret_cast<uintptr_t>(P));
   }
 
@@ -893,11 +892,11 @@ struct PointerLikeTypeTraits<clang::Selector> {
 // are not guaranteed to be 8-byte aligned.
 template<>
 struct PointerLikeTypeTraits<clang::IdentifierInfo*> {
-  static inline void *getAsVoidPointer(clang::IdentifierInfo* P) {
+  static void *getAsVoidPointer(clang::IdentifierInfo* P) {
     return P;
   }
 
-  static inline clang::IdentifierInfo *getFromVoidPointer(void *P) {
+  static clang::IdentifierInfo *getFromVoidPointer(void *P) {
     return static_cast<clang::IdentifierInfo*>(P);
   }
 
@@ -906,17 +905,17 @@ struct PointerLikeTypeTraits<clang::IdentifierInfo*> {
 
 template<>
 struct PointerLikeTypeTraits<const clang::IdentifierInfo*> {
-  static inline const void *getAsVoidPointer(const clang::IdentifierInfo* P) {
+  static const void *getAsVoidPointer(const clang::IdentifierInfo* P) {
     return P;
   }
 
-  static inline const clang::IdentifierInfo *getFromVoidPointer(const void *P) {
+  static const clang::IdentifierInfo *getFromVoidPointer(const void *P) {
     return static_cast<const clang::IdentifierInfo*>(P);
   }
 
   enum { NumLowBitsAvailable = 1 };
 };
 
-} // end namespace llvm
+} // namespace llvm
 
 #endif // LLVM_CLANG_BASIC_IDENTIFIERTABLE_H

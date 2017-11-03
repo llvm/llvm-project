@@ -79,13 +79,13 @@ public:
   }
 };
 
-// This anchor is used to force the linker to link in the generated object file
-// and thus register the plugin.
-volatile int ToolExecutorPluginAnchorSource = 0;
-
 static ToolExecutorPluginRegistry::Add<StandaloneToolExecutorPlugin>
     X("standalone", "Runs FrontendActions on a set of files provided "
                     "via positional arguments.");
+
+// This anchor is used to force the linker to link in the generated object file
+// and thus register the plugin.
+volatile int StandaloneToolExecutorAnchorSource = 0;
 
 } // end namespace tooling
 } // end namespace clang

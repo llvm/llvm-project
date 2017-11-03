@@ -644,3 +644,53 @@
 //
 // CHECK-ESAN-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-ESAN-LINUX: libclang_rt.esan-x86_64.a
+
+// RUN: %clang -fsanitize=scudo %s -### -o %t.o 2>&1 \
+// RUN:     -target i386-unknown-linux -fuse-ld=ld \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-SCUDO-LINUX %s
+// CHECK-SCUDO-LINUX: "{{.*}}ld{{(.exe)?}}"
+// CHECK-SCUDO-LINUX: "-pie"
+// CHECK-SCUDO-LINUX: "-whole-archive" "{{.*}}libclang_rt.scudo-i386.a" "-no-whole-archive"
+// CHECK-SCUDO-LINUX-NOT: "-lstdc++"
+// CHECK-SCUDO-LINUX: "-lpthread"
+// CHECK-SCUDO-LINUX: "-ldl"
+
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.so -shared 2>&1 \
+// RUN:     -target i386-unknown-linux -fuse-ld=ld -fsanitize=scudo -shared-libsan \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-SCUDO-SHARED-LINUX %s
+//
+// CHECK-SCUDO-SHARED-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
+// CHECK-SCUDO-SHARED-LINUX-NOT: "-lc"
+// CHECK-SCUDO-SHARED-LINUX-NOT: libclang_rt.scudo-i386.a"
+// CHECK-SCUDO-SHARED-LINUX: libclang_rt.scudo-i386.so"
+// CHECK-SCUDO-SHARED-LINUX-NOT: "-lpthread"
+// CHECK-SCUDO-SHARED-LINUX-NOT: "-lrt"
+// CHECK-SCUDO-SHARED-LINUX-NOT: "-ldl"
+// CHECK-SCUDO-SHARED-LINUX-NOT: "-export-dynamic"
+// CHECK-SCUDO-SHARED-LINUX-NOT: "--dynamic-list"
+
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     -target arm-linux-androideabi -fuse-ld=ld -fsanitize=scudo \
+// RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
+// RUN:   | FileCheck --check-prefix=CHECK-SCUDO-ANDROID %s
+//
+// CHECK-SCUDO-ANDROID: "{{(.*[^.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
+// CHECK-SCUDO-ANDROID-NOT: "-lc"
+// CHECK-SCUDO-ANDROID: "-pie"
+// CHECK-SCUDO-ANDROID-NOT: "-lpthread"
+// CHECK-SCUDO-ANDROID: libclang_rt.scudo-arm-android.so"
+// CHECK-SCUDO-ANDROID-NOT: "-lpthread"
+
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     -target arm-linux-androideabi -fuse-ld=ld -fsanitize=scudo \
+// RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
+// RUN:     -static-libsan \
+// RUN:   | FileCheck --check-prefix=CHECK-SCUDO-ANDROID-STATIC %s
+// CHECK-SCUDO-ANDROID-STATIC: "{{(.*[^.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
+// CHECK-SCUDO-ANDROID-STATIC: "-pie"
+// CHECK-SCUDO-ANDROID-STATIC: "-whole-archive" "{{.*}}libclang_rt.scudo-arm-android.a" "-no-whole-archive"
+// CHECK-SCUDO-ANDROID-STATIC-NOT: "-lstdc++"
+// CHECK-SCUDO-ANDROID-STATIC: "-lpthread"
