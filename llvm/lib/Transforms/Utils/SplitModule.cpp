@@ -144,9 +144,9 @@ static void findPartitions(Module *M, ClusterIDMapType &ClusterIDMap,
       addAllGlobalValueUsers(GVtoClusterMap, &GV, &GV);
   };
 
-  std::for_each(M->begin(), M->end(), recordGVSet);
-  std::for_each(M->global_begin(), M->global_end(), recordGVSet);
-  std::for_each(M->alias_begin(), M->alias_end(), recordGVSet);
+  llvm::for_each(M->functions(), recordGVSet);
+  llvm::for_each(M->globals(), recordGVSet);
+  llvm::for_each(M->aliases(), recordGVSet);
 
   // Assigned all GVs to merged clusters while balancing number of objects in
   // each.

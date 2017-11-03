@@ -41,6 +41,7 @@ class MiniDumpTestCase(TestBase):
         stop_description = thread.GetStopDescription(256)
         self.assertTrue("0xc0000005" in stop_description)
 
+    @expectedFailureAll(bugnumber="llvm.org/pr35193", hostoslist=["windows"])
     def test_stack_info_in_mini_dump(self):
         """Test that we can see a trivial stack in a VS-generate mini dump."""
         # target create -c fizzbuzz_no_heap.dmp

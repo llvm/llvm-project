@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_GCOV_H
-#define LLVM_SUPPORT_GCOV_H
+#ifndef LLVM_PROFILEDATA_GCOV_H
+#define LLVM_PROFILEDATA_GCOV_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"

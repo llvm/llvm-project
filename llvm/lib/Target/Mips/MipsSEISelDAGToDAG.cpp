@@ -905,6 +905,64 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
     break;
   }
 
+  // Manually match MipsISD::Ins nodes to get the correct instruction. It has
+  // to be done in this fashion so that we respect the differences between
+  // dins and dinsm, as the difference is that the size operand has the range
+  // 0 < size <= 32 for dins while dinsm has the range 2 <= size <= 64 which
+  // means SelectionDAGISel would have to test all the operands at once to
+  // match the instruction.
+  case MipsISD::Ins: {
+
+    // Sanity checking for the node operands.
+    if (Node->getValueType(0) != MVT::i32 && Node->getValueType(0) != MVT::i64)
+      return false;
+
+    if (Node->getNumOperands() != 4)
+      return false;
+
+    if (Node->getOperand(1)->getOpcode() != ISD::Constant ||
+        Node->getOperand(2)->getOpcode() != ISD::Constant)
+      return false;
+
+    MVT ResTy = Node->getSimpleValueType(0);
+    uint64_t Pos = Node->getConstantOperandVal(1);
+    uint64_t Size = Node->getConstantOperandVal(2);
+
+    // Size has to be >0 for 'ins', 'dins' and 'dinsu'.
+    if (!Size)
+      return false;
+
+    if (Pos + Size > 64)
+      return false;
+
+    if (ResTy != MVT::i32 && ResTy != MVT::i64)
+      return false;
+
+    unsigned Opcode = 0;
+    if (ResTy == MVT::i32) {
+      if (Pos + Size <= 32)
+        Opcode = Mips::INS;
+    } else {
+      if (Pos + Size <= 32)
+        Opcode = Mips::DINS;
+      else if (Pos < 32 && 1 < Size)
+        Opcode = Mips::DINSM;
+      else
+        Opcode = Mips::DINSU;
+    }
+
+    if (Opcode) {
+      SDValue Ops[4] = {
+          Node->getOperand(0), CurDAG->getTargetConstant(Pos, DL, MVT::i32),
+          CurDAG->getTargetConstant(Size, DL, MVT::i32), Node->getOperand(3)};
+
+      ReplaceNode(Node, CurDAG->getMachineNode(Opcode, DL, ResTy, Ops));
+      return true;
+    }
+
+    return false;
+  }
+
   case MipsISD::ThreadPointer: {
     EVT PtrVT = getTargetLowering()->getPointerTy(CurDAG->getDataLayout());
     unsigned RdhwrOpc, DestReg;

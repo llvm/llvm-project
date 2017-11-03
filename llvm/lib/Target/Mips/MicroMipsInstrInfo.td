@@ -884,7 +884,7 @@ let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
   def EXT_MM : MMRel, ExtBase<"ext", GPR32Opnd, uimm5, uimm5_plus1, immZExt5,
                               immZExt5Plus1, MipsExt>, EXT_FM_MM<0x2c>;
   def INS_MM : MMRel, InsBase<"ins", GPR32Opnd, uimm5, uimm5_inssize_plus1,
-                              immZExt5, immZExt5Plus1, MipsIns>,
+                              immZExt5, immZExt5Plus1>,
                EXT_FM_MM<0x0c>;
 
   /// Jump Instructions

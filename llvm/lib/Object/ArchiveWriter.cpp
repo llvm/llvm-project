@@ -122,11 +122,11 @@ static void printWithSpacePadding(raw_ostream &OS, T Data, unsigned Size) {
 static bool isBSDLike(object::Archive::Kind Kind) {
   switch (Kind) {
   case object::Archive::K_GNU:
+  case object::Archive::K_GNU64:
     return false;
   case object::Archive::K_BSD:
   case object::Archive::K_DARWIN:
     return true;
-  case object::Archive::K_GNU64:
   case object::Archive::K_DARWIN64:
   case object::Archive::K_COFF:
     break;
@@ -134,8 +134,8 @@ static bool isBSDLike(object::Archive::Kind Kind) {
   llvm_unreachable("not supported for writting");
 }
 
-static void print32(raw_ostream &Out, object::Archive::Kind Kind,
-                    uint32_t Val) {
+template <class T>
+static void print(raw_ostream &Out, object::Archive::Kind Kind, T Val) {
   if (isBSDLike(Kind))
     support::endian::Writer<support::little>(Out).write(Val);
   else
@@ -216,6 +216,20 @@ static std::string computeRelativePath(StringRef From, StringRef To) {
   return Relative.str();
 }
 
+static bool is64BitKind(object::Archive::Kind Kind) {
+  switch (Kind) {
+  case object::Archive::K_GNU:
+  case object::Archive::K_BSD:
+  case object::Archive::K_DARWIN:
+  case object::Archive::K_COFF:
+    return false;
+  case object::Archive::K_DARWIN64:
+  case object::Archive::K_GNU64:
+    return true;
+  }
+  llvm_unreachable("not supported for writting");
+}
+
 static void addToStringTable(raw_ostream &Out, StringRef ArcName,
                              const NewArchiveMember &M, bool Thin) {
   StringRef ID = M.Buf->getBufferIdentifier();
@@ -288,6 +302,14 @@ static bool isArchiveSymbol(const object::BasicSymbolRef &S) {
   return true;
 }
 
+static void printNBits(raw_ostream &Out, object::Archive::Kind Kind,
+                       uint64_t Val) {
+  if (is64BitKind(Kind))
+    print<uint64_t>(Out, Kind, Val);
+  else
+    print<uint32_t>(Out, Kind, Val);
+}
+
 static void writeSymbolTable(raw_ostream &Out, object::Archive::Kind Kind,
                              bool Deterministic, ArrayRef<MemberData> Members,
                              StringRef StringTable) {
@@ -299,8 +321,10 @@ static void writeSymbolTable(raw_ostream &Out, object::Archive::Kind Kind,
     NumSyms += M.Symbols.size();
 
   unsigned Size = 0;
-  Size += 4; // Number of entries
+  Size += is64BitKind(Kind) ? 8 : 4; // Number of entries
   if (isBSDLike(Kind))
+    Size += NumSyms * 8; // Table
+  else if (is64BitKind(Kind))
     Size += NumSyms * 8; // Table
   else
     Size += NumSyms * 4; // Table
@@ -318,27 +342,30 @@ static void writeSymbolTable(raw_ostream &Out, object::Archive::Kind Kind,
   if (isBSDLike(Kind))
     printBSDMemberHeader(Out, Out.tell(), "__.SYMDEF", now(Deterministic), 0, 0,
                          0, Size);
+  else if (is64BitKind(Kind))
+    printGNUSmallMemberHeader(Out, "/SYM64", now(Deterministic), 0, 0, 0, Size);
   else
     printGNUSmallMemberHeader(Out, "", now(Deterministic), 0, 0, 0, Size);
 
   uint64_t Pos = Out.tell() + Size;
 
   if (isBSDLike(Kind))
-    print32(Out, Kind, NumSyms * 8);
+    print<uint32_t>(Out, Kind, NumSyms * 8);
   else
-    print32(Out, Kind, NumSyms);
+    printNBits(Out, Kind, NumSyms);
 
   for (const MemberData &M : Members) {
     for (unsigned StringOffset : M.Symbols) {
       if (isBSDLike(Kind))
-        print32(Out, Kind, StringOffset);
-      print32(Out, Kind, Pos); // member offset
+        print<uint32_t>(Out, Kind, StringOffset);
+      printNBits(Out, Kind, Pos); // member offset
     }
     Pos += M.Header.size() + M.Data.size() + M.Padding.size();
   }
 
   if (isBSDLike(Kind))
-    print32(Out, Kind, StringTable.size()); // byte count of the string table
+    // byte count of the string table
+    print<uint32_t>(Out, Kind, StringTable.size());
   Out << StringTable;
 
   while (Pad--)
@@ -441,6 +468,25 @@ Error llvm::writeArchive(StringRef ArcName,
 
   if (!StringTableBuf.empty())
     Data.insert(Data.begin(), computeStringTable(StringTableBuf));
+
+  // We would like to detect if we need to switch to a 64-bit symbol table.
+  if (WriteSymtab) {
+    uint64_t MaxOffset = 0;
+    uint64_t LastOffset = MaxOffset;
+    for (const auto& M : Data) {
+      // Record the start of the member's offset
+      LastOffset = MaxOffset;
+      // Account for the size of each part associated with the member.
+      MaxOffset += M.Header.size() + M.Data.size() + M.Padding.size();
+      // We assume 32-bit symbols to see if 32-bit symbols are possible or not.
+      MaxOffset += M.Symbols.size() * 4;
+    }
+    // If LastOffset isn't going to fit in a 32-bit varible we need to switch
+    // to 64-bit. Note that the file can be larger than 4GB as long as the last
+    // member starts before the 4GB offset.
+    if (LastOffset >> 32 != 0)
+      Kind = object::Archive::K_GNU64;
+  }
 
   SmallString<128> TmpArchive;
   int TmpArchiveFD;

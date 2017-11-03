@@ -66,6 +66,13 @@ void RequestContext::replyError(int code, const llvm::StringRef &Message) {
   }
 }
 
+void RequestContext::call(StringRef Method, StringRef Params) {
+  // FIXME: Generate/Increment IDs for every request so that we can get proper
+  // replies once we need to.
+  Out.writeMessage(llvm::Twine(R"({"jsonrpc":"2.0","id":1,"method":")" +
+                               Method + R"(","params":)" + Params + R"(})"));
+}
+
 void JSONRPCDispatcher::registerHandler(StringRef Method, Handler H) {
   assert(!Handlers.count(Method) && "Handler already registered!");
   Handlers[Method] = std::move(H);

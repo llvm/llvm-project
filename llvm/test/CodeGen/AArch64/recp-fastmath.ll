@@ -18,6 +18,8 @@ define float @frecp1(float %x) #1 {
 ; CHECK-NEXT: BB#0
 ; CHECK-NEXT: frecpe [[R:s[0-7]]]
 ; CHECK-NEXT: frecps {{s[0-7](, s[0-7])?}}, [[R]]
+; CHECK: frecps {{s[0-7]}}, {{s[0-7]}}, {{s[0-7]}}
+; CHECK-NOT: frecps {{s[0-7]}}, {{s[0-7]}}, {{s[0-7]}}
 }
 
 define <2 x float> @f2recp0(<2 x float> %x) #0 {
@@ -38,6 +40,8 @@ define <2 x float> @f2recp1(<2 x float> %x) #1 {
 ; CHECK-NEXT: BB#0
 ; CHECK-NEXT: frecpe [[R:v[0-7]\.2s]]
 ; CHECK-NEXT: frecps {{v[0-7]\.2s(, v[0-7].2s)?}}, [[R]]
+; CHECK: frecps {{v[0-7]\.2s}}, {{v[0-7]\.2s}}, {{v[0-7]\.2s}}
+; CHECK-NOT: frecps {{v[0-7]\.2s}}, {{v[0-7]\.2s}}, {{v[0-7]\.2s}}
 }
 
 define <4 x float> @f4recp0(<4 x float> %x) #0 {
@@ -58,6 +62,8 @@ define <4 x float> @f4recp1(<4 x float> %x) #1 {
 ; CHECK-NEXT: BB#0
 ; CHECK-NEXT: frecpe [[R:v[0-7]\.4s]]
 ; CHECK-NEXT: frecps {{v[0-7]\.4s(, v[0-7].4s)?}}, [[R]]
+; CHECK: frecps {{v[0-7]\.4s}}, {{v[0-7]\.4s}}, {{v[0-7]\.4s}}
+; CHECK-NOT: frecps {{v[0-7]\.4s}}, {{v[0-7]\.4s}}, {{v[0-7]\.4s}}
 }
 
 define <8 x float> @f8recp0(<8 x float> %x) #0 {
@@ -77,10 +83,12 @@ define <8 x float> @f8recp1(<8 x float> %x) #1 {
 
 ; CHECK-LABEL: f8recp1:
 ; CHECK-NEXT: BB#0
-; CHECK-NEXT: frecpe [[RA:v[0-7]\.4s]]
-; CHECK-NEXT: frecpe [[RB:v[0-7]\.4s]]
-; CHECK-NEXT: frecps {{v[0-7]\.4s(, v[0-7].4s)?}}, [[RA]]
-; CHECK: frecps {{v[0-7]\.4s(, v[0-7].4s)?}}, [[RB]]
+; CHECK-NEXT: frecpe [[R:v[0-7]\.4s]]
+; CHECK: frecps {{v[0-7]\.4s(, v[0-7].4s)?}}, [[R]]
+; CHECK: frecps {{v[0-7]\.4s(, v[0-7].4s)?}}, {{v[0-7]\.4s}}
+; CHECK: frecps {{v[0-7]\.4s}}, {{v[0-7]\.4s}}, {{v[0-7]\.4s}}
+; CHECK: frecps {{v[0-7]\.4s}}, {{v[0-7]\.4s}}, {{v[0-7]\.4s}}
+; CHECK-NOT: frecps {{v[0-7]\.4s}}, {{v[0-7]\.4s}}, {{v[0-7]\.4s}}
 }
 
 define double @drecp0(double %x) #0 {
@@ -101,6 +109,9 @@ define double @drecp1(double %x) #1 {
 ; CHECK-NEXT: BB#0
 ; CHECK-NEXT: frecpe [[R:d[0-7]]]
 ; CHECK-NEXT: frecps {{d[0-7](, d[0-7])?}}, [[R]]
+; CHECK: frecps {{d[0-7]}}, {{d[0-7]}}, {{d[0-7]}}
+; CHECK: frecps {{d[0-7]}}, {{d[0-7]}}, {{d[0-7]}}
+; CHECK-NOT: frecps {{d[0-7]}}, {{d[0-7]}}, {{d[0-7]}}
 }
 
 define <2 x double> @d2recp0(<2 x double> %x) #0 {
@@ -121,6 +132,9 @@ define <2 x double> @d2recp1(<2 x double> %x) #1 {
 ; CHECK-NEXT: BB#0
 ; CHECK-NEXT: frecpe [[R:v[0-7]\.2d]]
 ; CHECK-NEXT: frecps {{v[0-7]\.2d(, v[0-7].2d)?}}, [[R]]
+; CHECK: frecps {{v[0-7]\.2d}}, {{v[0-7]\.2d}}, {{v[0-7]\.2d}}
+; CHECK: frecps {{v[0-7]\.2d}}, {{v[0-7]\.2d}}, {{v[0-7]\.2d}}
+; CHECK-NOT: frecps {{v[0-7]\.2d}}, {{v[0-7]\.2d}}, {{v[0-7]\.2d}}
 }
 
 define <4 x double> @d4recp0(<4 x double> %x) #0 {
@@ -140,10 +154,14 @@ define <4 x double> @d4recp1(<4 x double> %x) #1 {
 
 ; CHECK-LABEL: d4recp1:
 ; CHECK-NEXT: BB#0
-; CHECK-NEXT: frecpe [[RA:v[0-7]\.2d]]
-; CHECK-NEXT: frecpe [[RB:v[0-7]\.2d]]
-; CHECK-NEXT: frecps {{v[0-7]\.2d(, v[0-7].2d)?}}, [[RA]]
-; CHECK: frecps {{v[0-7]\.2d(, v[0-7].2d)?}}, [[RB]]
+; CHECK-NEXT: frecpe [[R:v[0-7]\.2d]]
+; CHECK: frecps {{v[0-7]\.2d(, v[0-7].2d)?}}, [[R]]
+; CHECK: frecps {{v[0-7]\.2d}}, {{v[0-7]\.2d}}, {{v[0-7]\.2d}}
+; CHECK: frecps {{v[0-7]\.2d}}, {{v[0-7]\.2d}}, {{v[0-7]\.2d}}
+; CHECK: frecps {{v[0-7]\.2d}}, {{v[0-7]\.2d}}, {{v[0-7]\.2d}}
+; CHECK: frecps {{v[0-7]\.2d}}, {{v[0-7]\.2d}}, {{v[0-7]\.2d}}
+; CHECK: frecps {{v[0-7]\.2d}}, {{v[0-7]\.2d}}, {{v[0-7]\.2d}}
+; CHECK-NOT: frecps {{v[0-7]\.2d}}, {{v[0-7]\.2d}}, {{v[0-7]\.2d}}
 }
 
 attributes #0 = { nounwind "unsafe-fp-math"="true" }
