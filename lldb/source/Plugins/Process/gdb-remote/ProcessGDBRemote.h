@@ -263,7 +263,6 @@ protected:
     eBroadcastBitAsyncThreadDidExit = (1 << 2)
   };
 
-  Flags m_flags; // Process specific flags (see eFlags enums)
   GDBRemoteCommunicationClient m_gdb_comm;
   std::atomic<lldb::pid_t> m_debugserver_pid;
   std::vector<StringExtractorGDBRemote> m_stop_packet_stack; // The stop packet
@@ -323,10 +322,6 @@ protected:
   bool ProcessIDIsValid() const;
 
   void Clear();
-
-  Flags &GetFlags() { return m_flags; }
-
-  const Flags &GetFlags() const { return m_flags; }
 
   bool UpdateThreadList(ThreadList &old_thread_list,
                         ThreadList &new_thread_list) override;

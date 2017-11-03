@@ -17,6 +17,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <cstddef>
@@ -29,7 +30,7 @@ namespace lld {
 namespace elf {
 
 class DefinedRegular;
-class SymbolBody;
+class Symbol;
 class InputSectionBase;
 class InputSection;
 class OutputSection;
@@ -277,7 +278,7 @@ public:
   std::vector<InputSectionDescription *> KeptSections;
 
   // A map from memory region name to a memory region descriptor.
-  llvm::DenseMap<llvm::StringRef, MemoryRegion *> MemoryRegions;
+  llvm::MapVector<llvm::StringRef, MemoryRegion *> MemoryRegions;
 
   // A list of symbols referenced by the script.
   std::vector<llvm::StringRef> ReferencedSymbols;

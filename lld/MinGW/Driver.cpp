@@ -152,6 +152,8 @@ bool mingw::link(ArrayRef<const char *> ArgsArr, raw_ostream &Diag) {
     Add("-verbose");
   if (Args.hasArg(OPT_export_all_symbols))
     Add("-export-all-symbols");
+  if (!Args.hasArg(OPT_strip_all))
+    Add("-debug:dwarf");
 
   if (auto *A = Args.getLastArg(OPT_m)) {
     StringRef S = A->getValue();
@@ -169,6 +171,9 @@ bool mingw::link(ArrayRef<const char *> ArgsArr, raw_ostream &Diag) {
 
   for (auto *A : Args.filtered(OPT_mllvm))
     Add("-mllvm:" + StringRef(A->getValue()));
+
+  for (auto *A : Args.filtered(OPT_Xlink))
+    Add(A->getValue());
 
   if (Args.getLastArgValue(OPT_m) == "i386pe")
     Add("-alternatename:__image_base__=___ImageBase");

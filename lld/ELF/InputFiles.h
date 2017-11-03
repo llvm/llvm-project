@@ -50,7 +50,7 @@ namespace elf {
 using llvm::object::Archive;
 
 class Lazy;
-class SymbolBody;
+class Symbol;
 
 // If -reproduce option is given, all input files are written
 // to this tar archive.
@@ -85,7 +85,7 @@ public:
 
   // Returns object file symbols. It is a runtime error to call this
   // function on files of other types.
-  ArrayRef<SymbolBody *> getSymbols() {
+  ArrayRef<Symbol *> getSymbols() {
     assert(FileKind == ObjKind || FileKind == BitcodeKind ||
            FileKind == ArchiveKind);
     return Symbols;
@@ -108,7 +108,7 @@ public:
 protected:
   InputFile(Kind K, MemoryBufferRef M);
   std::vector<InputSectionBase *> Sections;
-  std::vector<SymbolBody *> Symbols;
+  std::vector<Symbol *> Symbols;
 
 private:
   const Kind FileKind;
@@ -162,23 +162,22 @@ template <class ELFT> class ObjFile : public ELFFileBase<ELFT> {
 public:
   static bool classof(const InputFile *F) { return F->kind() == Base::ObjKind; }
 
-  ArrayRef<SymbolBody *> getLocalSymbols();
+  ArrayRef<Symbol *> getLocalSymbols();
 
   ObjFile(MemoryBufferRef M, StringRef ArchiveName);
   void parse(llvm::DenseSet<llvm::CachedHashStringRef> &ComdatGroups);
 
   InputSectionBase *getSection(uint32_t Index) const;
 
-  SymbolBody &getSymbolBody(uint32_t SymbolIndex) const {
+  Symbol &getSymbol(uint32_t SymbolIndex) const {
     if (SymbolIndex >= this->Symbols.size())
       fatal(toString(this) + ": invalid symbol index");
     return *this->Symbols[SymbolIndex];
   }
 
-  template <typename RelT>
-  SymbolBody &getRelocTargetSym(const RelT &Rel) const {
+  template <typename RelT> Symbol &getRelocTargetSym(const RelT &Rel) const {
     uint32_t SymIndex = Rel.getSymbol(Config->IsMips64EL);
-    return getSymbolBody(SymIndex);
+    return getSymbol(SymIndex);
   }
 
   // Returns source line information for a given offset.
@@ -207,7 +206,7 @@ private:
   StringRef getSectionName(const Elf_Shdr &Sec);
 
   bool shouldMerge(const Elf_Shdr &Sec);
-  SymbolBody *createSymbolBody(const Elf_Sym *Sym);
+  Symbol *createSymbol(const Elf_Sym *Sym);
 
   // .shstrtab contents.
   StringRef SectionStringTable;

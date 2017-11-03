@@ -20,7 +20,7 @@ using namespace llvm;
 using namespace llvm::object;
 
 // Returns a symbol name for an error message.
-std::string lld::toString(coff::SymbolBody &B) {
+std::string lld::toString(coff::Symbol &B) {
   if (Optional<std::string> S = coff::demangle(B.getName()))
     return ("\"" + *S + "\" (" + B.getName() + ")").str();
   return B.getName();
@@ -29,7 +29,7 @@ std::string lld::toString(coff::SymbolBody &B) {
 namespace lld {
 namespace coff {
 
-StringRef SymbolBody::getName() {
+StringRef Symbol::getName() {
   // COFF symbol names are read lazily for a performance reason.
   // Non-external symbol names are never used by the linker except for logging
   // or debugging. Their internal references are resolved not by name but by
@@ -44,7 +44,7 @@ StringRef SymbolBody::getName() {
   return Name;
 }
 
-InputFile *SymbolBody::getFile() {
+InputFile *Symbol::getFile() {
   if (auto *Sym = dyn_cast<DefinedCOFF>(this))
     return Sym->File;
   if (auto *Sym = dyn_cast<Lazy>(this))
@@ -52,7 +52,7 @@ InputFile *SymbolBody::getFile() {
   return nullptr;
 }
 
-bool SymbolBody::isLive() const {
+bool Symbol::isLive() const {
   if (auto *R = dyn_cast<DefinedRegular>(this))
     return R->getChunk()->isLive();
   if (auto *Imp = dyn_cast<DefinedImportData>(this))
@@ -91,7 +91,7 @@ DefinedImportThunk::DefinedImportThunk(StringRef Name, DefinedImportData *S,
 
 Defined *Undefined::getWeakAlias() {
   // A weak alias may be a weak alias to another symbol, so check recursively.
-  for (SymbolBody *A = WeakAlias; A; A = cast<Undefined>(A)->WeakAlias)
+  for (Symbol *A = WeakAlias; A; A = cast<Undefined>(A)->WeakAlias)
     if (auto *D = dyn_cast<Defined>(A))
       return D;
   return nullptr;

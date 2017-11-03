@@ -122,12 +122,12 @@ void LinkerScript::addSymbol(SymbolAssignment *Cmd) {
 
   // If a symbol was in PROVIDE(), we need to define it only when
   // it is a referenced undefined symbol.
-  SymbolBody *B = Symtab->find(Cmd->Name);
+  Symbol *B = Symtab->find(Cmd->Name);
   if (Cmd->Provide && (!B || B->isDefined()))
     return;
 
   // Define a symbol.
-  SymbolBody *Sym;
+  Symbol *Sym;
   uint8_t Visibility = Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT;
   std::tie(Sym, std::ignore) = Symtab->insert(Cmd->Name, /*Type*/ 0, Visibility,
                                               /*CanOmitFromDynSym*/ false,
