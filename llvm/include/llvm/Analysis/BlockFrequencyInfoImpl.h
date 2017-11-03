@@ -20,6 +20,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/BasicBlock.h"
@@ -414,6 +415,10 @@ public:
   /// \brief Data about each block.  This is used downstream.
   std::vector<FrequencyData> Freqs;
 
+  /// \brief Whether each block is an irreducible loop header.
+  /// This is used downstream.
+  SparseBitVector<> IsIrrLoopHeader;
+
   /// \brief Loop data: see initializeLoops().
   std::vector<WorkingData> Working;
 
@@ -492,6 +497,8 @@ public:
   /// the backedges going into each of the loop headers.
   void adjustLoopHeaderMass(LoopData &Loop);
 
+  void distributeIrrLoopHeaderMass(Distribution &Dist);
+
   /// \brief Package up a loop.
   void packageLoop(LoopData &Loop);
 
@@ -520,6 +527,7 @@ public:
                                           const BlockNode &Node) const;
   Optional<uint64_t> getProfileCountFromFreq(const Function &F,
                                              uint64_t Freq) const;
+  bool isIrrLoopHeader(const BlockNode &Node);
 
   void setBlockFreq(const BlockNode &Node, uint64_t Freq);
 
@@ -973,6 +981,10 @@ public:
     return BlockFrequencyInfoImplBase::getProfileCountFromFreq(F, Freq);
   }
 
+  bool isIrrLoopHeader(const BlockT *BB) {
+    return BlockFrequencyInfoImplBase::isIrrLoopHeader(getNode(BB));
+  }
+
   void setBlockFreq(const BlockT *BB, uint64_t Freq);
 
   Scaled64 getFloatingBlockFreq(const BlockT *BB) const {
@@ -1140,17 +1152,39 @@ bool BlockFrequencyInfoImpl<BT>::computeMassInLoop(LoopData &Loop) {
   DEBUG(dbgs() << "compute-mass-in-loop: " << getLoopName(Loop) << "\n");
 
   if (Loop.isIrreducible()) {
-    BlockMass Remaining = BlockMass::getFull();
+    DEBUG(dbgs() << "isIrreducible = true\n");
+    Distribution Dist;
+    unsigned NumHeadersWithWeight = 0;
     for (uint32_t H = 0; H < Loop.NumHeaders; ++H) {
-      auto &Mass = Working[Loop.Nodes[H].Index].getMass();
-      Mass = Remaining * BranchProbability(1, Loop.NumHeaders - H);
-      Remaining -= Mass;
+      auto &HeaderNode = Loop.Nodes[H];
+      const BlockT *Block = getBlock(HeaderNode);
+      IsIrrLoopHeader.set(Loop.Nodes[H].Index);
+      Optional<uint64_t> HeaderWeight = Block->getIrrLoopHeaderWeight();
+      if (!HeaderWeight)
+        continue;
+      DEBUG(dbgs() << getBlockName(HeaderNode)
+            << " has irr loop header weight " << HeaderWeight.getValue()
+            << "\n");
+      NumHeadersWithWeight++;
+      uint64_t HeaderWeightValue = HeaderWeight.getValue();
+      if (HeaderWeightValue)
+        Dist.addLocal(HeaderNode, HeaderWeightValue);
     }
+    if (NumHeadersWithWeight != Loop.NumHeaders) {
+      // Not all headers have a weight metadata. Distribute weight evenly.
+      Dist = Distribution();
+      for (uint32_t H = 0; H < Loop.NumHeaders; ++H) {
+        auto &HeaderNode = Loop.Nodes[H];
+        Dist.addLocal(HeaderNode, 1);
+      }
+    }
+    distributeIrrLoopHeaderMass(Dist);
     for (const BlockNode &M : Loop.Nodes)
       if (!propagateMassToSuccessors(&Loop, M))
         llvm_unreachable("unhandled irreducible control flow");
-
-    adjustLoopHeaderMass(Loop);
+    if (NumHeadersWithWeight != Loop.NumHeaders)
+      // Not all headers have a weight metadata. Adjust header mass.
+      adjustLoopHeaderMass(Loop);
   } else {
     Working[Loop.getHeader().Index].getMass() = BlockMass::getFull();
     if (!propagateMassToSuccessors(&Loop, Loop.getHeader()))
@@ -1285,6 +1319,9 @@ raw_ostream &BlockFrequencyInfoImpl<BT>::print(raw_ostream &OS) const {
         BlockFrequencyInfoImplBase::getBlockProfileCount(
             *F->getFunction(), getNode(&BB)))
       OS << ", count = " << ProfileCount.getValue();
+    if (Optional<uint64_t> IrrLoopHeaderWeight =
+        BB.getIrrLoopHeaderWeight())
+      OS << ", irr_loop_header_weight = " << IrrLoopHeaderWeight.getValue();
     OS << "\n";
   }
 

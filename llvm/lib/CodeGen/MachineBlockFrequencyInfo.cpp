@@ -234,6 +234,12 @@ MachineBlockFrequencyInfo::getProfileCountFromFreq(uint64_t Freq) const {
   return MBFI ? MBFI->getProfileCountFromFreq(*F, Freq) : None;
 }
 
+bool
+MachineBlockFrequencyInfo::isIrrLoopHeader(const MachineBasicBlock *MBB) {
+  assert(MBFI && "Expected analysis to be available");
+  return MBFI->isIrrLoopHeader(MBB);
+}
+
 const MachineFunction *MachineBlockFrequencyInfo::getFunction() const {
   return MBFI ? MBFI->getFunction() : nullptr;
 }

@@ -271,6 +271,7 @@ void BlockFrequencyInfoImplBase::clear() {
   // Swap with a default-constructed std::vector, since std::vector<>::clear()
   // does not actually clear heap storage.
   std::vector<FrequencyData>().swap(Freqs);
+  IsIrrLoopHeader.clear();
   std::vector<WorkingData>().swap(Working);
   Loops.clear();
 }
@@ -280,8 +281,10 @@ void BlockFrequencyInfoImplBase::clear() {
 /// Releases all memory not used downstream.  In particular, saves Freqs.
 static void cleanup(BlockFrequencyInfoImplBase &BFI) {
   std::vector<FrequencyData> SavedFreqs(std::move(BFI.Freqs));
+  SparseBitVector<> SavedIsIrrLoopHeader(std::move(BFI.IsIrrLoopHeader));
   BFI.clear();
   BFI.Freqs = std::move(SavedFreqs);
+  BFI.IsIrrLoopHeader = std::move(SavedIsIrrLoopHeader);
 }
 
 bool BlockFrequencyInfoImplBase::addToDist(Distribution &Dist,
@@ -572,6 +575,13 @@ BlockFrequencyInfoImplBase::getProfileCountFromFreq(const Function &F,
   return BlockCount.getLimitedValue();
 }
 
+bool
+BlockFrequencyInfoImplBase::isIrrLoopHeader(const BlockNode &Node) {
+  if (!Node.isValid())
+    return false;
+  return IsIrrLoopHeader.test(Node.Index);
+}
+
 Scaled64
 BlockFrequencyInfoImplBase::getFloatingBlockFreq(const BlockNode &Node) const {
   if (!Node.isValid())
@@ -812,6 +822,17 @@ void BlockFrequencyInfoImplBase::adjustLoopHeaderMass(LoopData &Loop) {
 
   DEBUG(dbgs() << " Distribute loop mass " << LoopMass
                << " to headers using above weights\n");
+  for (const Weight &W : Dist.Weights) {
+    BlockMass Taken = D.takeMass(W.Amount);
+    assert(W.Type == Weight::Local && "all weights should be local");
+    Working[W.TargetNode.Index].getMass() = Taken;
+    DEBUG(debugAssign(*this, D, W.TargetNode, Taken, nullptr));
+  }
+}
+
+void BlockFrequencyInfoImplBase::distributeIrrLoopHeaderMass(Distribution &Dist) {
+  BlockMass LoopMass = BlockMass::getFull();
+  DitheringDistributer D(Dist, LoopMass);
   for (const Weight &W : Dist.Weights) {
     BlockMass Taken = D.takeMass(W.Amount);
     assert(W.Type == Weight::Local && "all weights should be local");

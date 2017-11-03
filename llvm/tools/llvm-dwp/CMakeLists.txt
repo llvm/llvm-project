@@ -15,3 +15,7 @@ add_llvm_tool(llvm-dwp
   DEPENDS
   intrinsics_gen
   )
+
+if(LLVM_INSTALL_BINUTILS_SYMLINKS)
+  add_llvm_tool_symlink(dwp llvm-dwp)
+endif()

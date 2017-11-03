@@ -42,6 +42,8 @@ using namespace llvm;
 MachineBasicBlock::MachineBasicBlock(MachineFunction &MF, const BasicBlock *B)
     : BB(B), Number(-1), xParent(&MF) {
   Insts.Parent = this;
+  if (B)
+    IrrLoopHeaderWeight = B->getIrrLoopHeaderWeight();
 }
 
 MachineBasicBlock::~MachineBasicBlock() {
@@ -336,6 +338,12 @@ void MachineBasicBlock::print(raw_ostream &OS, ModuleSlotTracker &MST,
       if (!Probs.empty())
         OS << '(' << *getProbabilityIterator(SI) << ')';
     }
+    OS << '\n';
+  }
+  if (IrrLoopHeaderWeight) {
+    if (Indexes) OS << '\t';
+    OS << "    Irreducible loop header weight: "
+       << IrrLoopHeaderWeight.getValue();
     OS << '\n';
   }
 }

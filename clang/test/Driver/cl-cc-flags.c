@@ -13,6 +13,9 @@
 // RUN: %clang_cl --target=i686-windows-msvc /Gv -### -- %s 2>&1 | FileCheck --check-prefix=VECTORCALL %s
 // VECTORCALL: -fdefault-calling-conv=vectorcall
 
+// RUN: %clang_cl --target=i686-windows-msvc /Gregcall -### -- %s 2>&1 | FileCheck --check-prefix=REGCALL %s
+// REGCALL: -fdefault-calling-conv=regcall
+
 // Last one should win:
 
 // RUN: %clang_cl --target=i686-windows-msvc /Gd /Gv -### -- %s 2>&1 | FileCheck --check-prefix=LASTWINS_VECTOR %s
