@@ -33,8 +33,27 @@ struct UsingDeclaration {
   UsingDeclaration(const AnnotatedLine *Line, const std::string &Label)
       : Line(Line), Label(Label) {}
 
+  // Compares lexicographically with the exception that '_' is just before 'A'.
   bool operator<(const UsingDeclaration &Other) const {
-    return StringRef(Label).compare_lower(Other.Label) < 0;
+    size_t Size = Label.size();
+    size_t OtherSize = Other.Label.size();
+    for (size_t I = 0, E = std::min(Size, OtherSize); I < E; ++I) {
+      char Rank = rank(Label[I]);
+      char OtherRank = rank(Other.Label[I]);
+      if (Rank != OtherRank)
+        return Rank < OtherRank;
+    }
+    return Size < OtherSize;
+  }
+
+  // Returns the position of c in a lexicographic ordering with the exception
+  // that '_' is just before 'A'.
+  static char rank(char c) {
+    if (c == '_')
+      return 'A';
+    if ('A' <= c && c < '_')
+      return c + 1;
+    return c;
   }
 };
 
@@ -77,7 +96,7 @@ void endUsingDeclarationBlock(
     SmallVectorImpl<UsingDeclaration> *UsingDeclarations,
     const SourceManager &SourceMgr, tooling::Replacements *Fixes) {
   bool BlockAffected = false;
-  for (const UsingDeclaration& Declaration : *UsingDeclarations) {
+  for (const UsingDeclaration &Declaration : *UsingDeclarations) {
     if (Declaration.Line->Affected) {
       BlockAffected = true;
       break;

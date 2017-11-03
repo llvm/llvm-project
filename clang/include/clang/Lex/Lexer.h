@@ -466,6 +466,13 @@ public:
                                         const LangOptions &LangOpts,
                                         unsigned MaxLines = 0);
 
+  /// Finds the token that comes right after the given location.
+  ///
+  /// Returns the next token, or none if the location is inside a macro.
+  static Optional<Token> findNextToken(SourceLocation Loc,
+                                       const SourceManager &SM,
+                                       const LangOptions &LangOpts);
+
   /// \brief Checks that the given token is the first token that occurs after
   /// the given location (this excludes comments and whitespace). Returns the
   /// location immediately after the specified token. If the token is not found

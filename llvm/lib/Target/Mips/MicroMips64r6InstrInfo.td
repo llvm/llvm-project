@@ -162,12 +162,11 @@ class DCLZ_MM64R6_DESC {
 
 class DINSU_MM64R6_DESC : InsBase<"dinsu", GPR64Opnd, uimm5_plus32,
                                   uimm5_inssize_plus1, immZExt5Plus32,
-                                  immZExt5Plus1, MipsIns>;
+                                  immZExt5Plus1>;
 class DINSM_MM64R6_DESC : InsBase<"dinsm", GPR64Opnd, uimm5, uimm_range_2_64,
-                                  immZExt5, immZExtRange2To64, MipsIns>;
+                                  immZExt5, immZExtRange2To64>;
 class DINS_MM64R6_DESC : InsBase<"dins", GPR64Opnd, uimm5_report_uimm6,
-                                 uimm5_inssize_plus1, immZExt5, immZExt5Plus1,
-                                 MipsIns>;
+                                 uimm5_inssize_plus1, immZExt5, immZExt5Plus1>;
 class DMTC0_MM64R6_DESC : MTC0_MMR6_DESC_BASE<"dmtc0", COP0Opnd, GPR64Opnd,
                                               II_DMTC0>;
 class DMTC1_MM64R6_DESC : MTC1_MMR6_DESC_BASE<"dmtc1", FGR64Opnd, GPR64Opnd,

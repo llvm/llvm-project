@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/Refactoring/Extract/Extract.h"
+#include "SourceExtraction.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
@@ -145,6 +146,8 @@ ExtractFunction::createSourceReplacements(RefactoringRuleContext &Context) {
   PP.SuppressLifetimeQualifiers = true;
   PP.SuppressUnwrittenScope = true;
 
+  ExtractionSemicolonPolicy Semicolons = ExtractionSemicolonPolicy::compute(
+      Code[Code.size() - 1], ExtractedRange, SM, LangOpts);
   AtomicChange Change(SM, ExtractedDeclLocation);
   // Create the replacement for the extracted declaration.
   {
@@ -162,8 +165,8 @@ ExtractFunction::createSourceReplacements(RefactoringRuleContext &Context) {
     if (IsExpr && !ReturnType->isVoidType())
       OS << "return ";
     OS << ExtractedCodeRewriter.getRewrittenText(ExtractedRange);
-    // FIXME: Compute the correct semicolon policy.
-    OS << ';';
+    if (Semicolons.isNeededInExtractedFunction())
+      OS << ';';
     OS << "\n}\n\n";
     auto Err = Change.insert(SM, ExtractedDeclLocation, OS.str());
     if (Err)
@@ -178,7 +181,8 @@ ExtractFunction::createSourceReplacements(RefactoringRuleContext &Context) {
     OS << DeclName << '(';
     // FIXME: Forward arguments.
     OS << ')';
-    // FIXME: Add semicolon if needed.
+    if (Semicolons.isNeededInOriginalFunction())
+      OS << ';';
 
     auto Err = Change.replace(
         SM, CharSourceRange::getTokenRange(ExtractedRange), OS.str());

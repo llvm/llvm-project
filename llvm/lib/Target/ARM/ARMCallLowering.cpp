@@ -417,6 +417,12 @@ struct FormalArgHandler : public IncomingValueHandler {
 bool ARMCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                                            const Function &F,
                                            ArrayRef<unsigned> VRegs) const {
+  auto &TLI = *getTLI<ARMTargetLowering>();
+  auto Subtarget = TLI.getSubtarget();
+
+  if (Subtarget->isThumb())
+    return false;
+
   // Quick exit if there aren't any args
   if (F.arg_empty())
     return true;
@@ -427,12 +433,6 @@ bool ARMCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   auto &MF = MIRBuilder.getMF();
   auto &MBB = MIRBuilder.getMBB();
   auto DL = MF.getDataLayout();
-  auto &TLI = *getTLI<ARMTargetLowering>();
-
-  auto Subtarget = TLI.getSubtarget();
-
-  if (Subtarget->isThumb())
-    return false;
 
   for (auto &Arg : F.args())
     if (!isSupportedType(DL, TLI, Arg.getType()))

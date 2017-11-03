@@ -69,6 +69,7 @@ private:
   void onGoToDefinition(Ctx C, TextDocumentPositionParams &Params) override;
   void onSwitchSourceHeader(Ctx C, TextDocumentIdentifier &Params) override;
   void onFileEvent(Ctx C, DidChangeWatchedFilesParams &Params) override;
+  void onCommand(Ctx C, ExecuteCommandParams &Params) override;
 
   std::vector<clang::tooling::Replacement>
   getFixIts(StringRef File, const clangd::Diagnostic &D);

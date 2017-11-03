@@ -20,10 +20,10 @@ void simpleExtractStmtNoCaptures() {
 // CHECK: 1 'astatement' results:
 // CHECK:      static void extracted() {
 // CHECK-NEXT: int a = 1;
-// CHECK-NEXT: int b = 2;;{{$}}
+// CHECK-NEXT: int b = 2;{{$}}
 // CHECK-NEXT: }{{[[:space:]].*}}
 // CHECK-NEXT: void simpleExtractStmtNoCaptures() {
-// CHECK-NEXT:   /*range astatement=->+1:13*/extracted(){{$}}
+// CHECK-NEXT:   /*range astatement=->+1:13*/extracted();{{$}}
 // CHECK-NEXT: }
 
 

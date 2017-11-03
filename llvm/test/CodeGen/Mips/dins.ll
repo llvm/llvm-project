@@ -1,7 +1,11 @@
-; RUN: llc -O2 -march=mips64 -mcpu=mips64r2 -target-abi=n64 < %s -o - | FileCheck %s -check-prefix=MIPS64R2
-; RUN: llc -O2 -march=mips -mcpu=mips32r2 < %s -o - | FileCheck %s -check-prefix=MIPS32R2
-; RUN: llc -O2 -march=mips -mattr=mips16 < %s -o - | FileCheck %s -check-prefix=MIPS16
-; RUN: llc -O2 -march=mips64 -mcpu=mips64r2 -target-abi=n32 < %s -o - | FileCheck %s -check-prefix=MIPS64R2N32
+; RUN: llc -O2 -verify-machineinstrs -march=mips64 -mcpu=mips64r2 \
+; RUN:   -target-abi=n64 < %s -o - | FileCheck %s -check-prefix=MIPS64R2
+; RUN: llc -O2 -verify-machineinstrs -march=mips -mcpu=mips32r2 < %s -o - \
+; RUN:   | FileCheck %s -check-prefix=MIPS32R2
+; RUN: llc -O2 -verify-machineinstrs -march=mips -mattr=mips16 < %s -o - \
+; RUN:   | FileCheck %s -check-prefix=MIPS16
+; RUN: llc -O2 -verify-machineinstrs -march=mips64 -mcpu=mips64r2 \
+; RUN:   -target-abi=n32 < %s -o - | FileCheck %s -check-prefix=MIPS64R2N32
 
 ; #include <stdint.h>
 ; #include <stdio.h>
@@ -60,7 +64,7 @@ entry:
 ; MIPS64R2: daddiu  $[[R0:[0-9]+]], $zero, 123
 ; MIPS64R2: dinsm   $[[R0:[0-9]+]], $[[R1:[0-9]+]], 27, 37
 ; MIPS64R2: daddiu  $[[R0:[0-9]+]], $zero, 4
-; MIPS64R2: dins    $[[R0:[0-9]+]], $[[R1:[0-9]+]], 28, 6
+; MIPS64R2: dinsm   $[[R0:[0-9]+]], $[[R1:[0-9]+]], 28, 6
 ; MIPS64R2: daddiu  $[[R0:[0-9]+]], $zero, 5
 ; MIPS64R2: dinsu   $[[R0:[0-9]+]], $[[R1:[0-9]+]], 50, 14
 ; MIPS64R2: dsrl    $[[R0:[0-9]+]], $[[R1:[0-9]+]], 50

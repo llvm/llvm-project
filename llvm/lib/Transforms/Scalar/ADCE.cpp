@@ -18,6 +18,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/GraphTraits.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -118,7 +119,8 @@ class AggressiveDeadCodeElimination {
   PostDominatorTree &PDT;
 
   /// Mapping of blocks to associated information, an element in BlockInfoVec.
-  DenseMap<BasicBlock *, BlockInfoType> BlockInfo;
+  /// Use MapVector to get deterministic iteration order.
+  MapVector<BasicBlock *, BlockInfoType> BlockInfo;
   bool isLive(BasicBlock *BB) { return BlockInfo[BB].Live; }
 
   /// Mapping of instructions to associated information.

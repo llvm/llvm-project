@@ -368,6 +368,7 @@ public:
   Object(const object::ELFObjectFile<ELFT> &Obj);
   virtual ~Object() = default;
 
+  const SectionBase *getSectionHeaderStrTab() const { return SectionNames; }
   void removeSections(std::function<bool(const SectionBase &)> ToRemove);
   virtual size_t totalSize() const = 0;
   virtual void finalize() = 0;

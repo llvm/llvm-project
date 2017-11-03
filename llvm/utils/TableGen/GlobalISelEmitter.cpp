@@ -2629,6 +2629,9 @@ Error GlobalISelEmitter::importChildMatcher(RuleMatcher &Rule,
     return Error::success();
   }
 
+  if (SrcChild->hasAnyPredicate())
+    return failedImport("Src pattern child has unsupported predicate");
+
   // Check for constant immediates.
   if (auto *ChildInt = dyn_cast<IntInit>(SrcChild->getLeafValue())) {
     OM.addPredicate<ConstantIntOperandMatcher>(ChildInt->getValue());

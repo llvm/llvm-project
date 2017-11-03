@@ -1977,8 +1977,7 @@ int main(int argc, char **argv) {
   if (NoDyldInfo && (AddDyldInfo || DyldInfoOnly))
     error("-no-dyldinfo can't be used with -add-dyldinfo or -dyldinfo-only");
 
-  std::for_each(InputFilenames.begin(), InputFilenames.end(),
-                dumpSymbolNamesFromFile);
+  llvm::for_each(InputFilenames, dumpSymbolNamesFromFile);
 
   if (HadError)
     return 1;

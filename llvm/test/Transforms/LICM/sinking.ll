@@ -392,6 +392,288 @@ lab60:
   indirectbr i8* undef, [label %lab21, label %lab19]
 }
 
-declare void @f(i32*)
+; Check if LICM can sink a sinkable instruction the exit blocks through
+; a non-trivially replacable PHI node.
+;
+; CHECK-LABEL: @test14
+; CHECK-LABEL: Loop:
+; CHECK-NOT: mul
+; CHECK-NOT: sub
+;
+; CHECK-LABEL: Out12.split.loop.exit:
+; CHECK: %[[LCSSAPHI:.*]] = phi i32 [ %N_addr.0.pn, %ContLoop ]
+; CHECK: %[[MUL:.*]] = mul i32 %N, %[[LCSSAPHI]]
+; CHECK: br label %Out12
+;
+; CHECK-LABEL: Out12.split.loop.exit1:
+; CHECK: %[[LCSSAPHI2:.*]] = phi i32 [ %N_addr.0.pn, %Loop ]
+; CHECK: %[[MUL2:.*]] = mul i32 %N, %[[LCSSAPHI2]]
+; CHECK: %[[SUB:.*]] = sub i32 %[[MUL2]], %N
+; CHECK: br label %Out12
+;
+; CHECK-LABEL: Out12:
+; CHECK: phi i32 [ %[[MUL]], %Out12.split.loop.exit ], [ %[[SUB]], %Out12.split.loop.exit1 ]
+define i32 @test14(i32 %N, i32 %N2, i1 %C) {
+Entry:
+        br label %Loop
+Loop:
+        %N_addr.0.pn = phi i32 [ %dec, %ContLoop ], [ %N, %Entry ]
+        %sink.mul = mul i32 %N, %N_addr.0.pn
+        %sink.sub = sub i32 %sink.mul, %N
+        %dec = add i32 %N_addr.0.pn, -1
+        br i1 %C, label %ContLoop, label %Out12
+ContLoop:
+        %tmp.1 = icmp ne i32 %N_addr.0.pn, 1
+        br i1 %tmp.1, label %Loop, label %Out12
+Out12:
+  %tmp = phi i32 [%sink.mul,  %ContLoop], [%sink.sub, %Loop]
+  ret i32 %tmp
+}
 
+; In this test, splitting predecessors is not really required because the
+; operations of sinkable instructions (sub and mul) are same. In this case, we
+; can sink the same sinkable operations and modify the PHI to pass the operands
+; to the shared operations. As of now, we split predecessors of non-trivially
+; replicalbe PHIs by default in LICM because all incoming edges of a
+; non-trivially replacable PHI in LCSSA is critical.
+;
+; CHECK-LABEL: @test15
+; CHECK-LABEL: Loop:
+; CHECK-NOT: mul
+; CHECK-NOT: sub
+;
+; CHECK-LABEL: Out12.split.loop.exit:
+; CHECK: %[[LCSSAPHI:.*]] = phi i32 [ %N_addr.0.pn, %ContLoop ]
+; CHECK: %[[MUL:.*]] = mul i32 %N, %[[LCSSAPHI]]
+; CHECK: %[[SUB:.*]] = sub i32 %[[MUL]], %N2
+; CHECK: br label %Out12
+;
+; CHECK-LABEL: Out12.split.loop.exit1:
+; CHECK: %[[LCSSAPHI2:.*]] = phi i32 [ %N_addr.0.pn, %Loop ]
+; CHECK: %[[MUL2:.*]] = mul i32 %N, %[[LCSSAPHI2]]
+; CHECK: %[[SUB2:.*]] = sub i32 %[[MUL2]], %N
+; CHECK: br label %Out12
+;
+; CHECK-LABEL: Out12:
+; CHECK: phi i32 [ %[[SUB]], %Out12.split.loop.exit ], [ %[[SUB2]], %Out12.split.loop.exit1 ]
+define i32 @test15(i32 %N, i32 %N2, i1 %C) {
+Entry:
+        br label %Loop
+Loop:
+        %N_addr.0.pn = phi i32 [ %dec, %ContLoop ], [ %N, %Entry ]
+        %sink.mul = mul i32 %N, %N_addr.0.pn
+        %sink.sub = sub i32 %sink.mul, %N
+        %sink.sub2 = sub i32 %sink.mul, %N2
+        %dec = add i32 %N_addr.0.pn, -1
+        br i1 %C, label %ContLoop, label %Out12
+ContLoop:
+        %tmp.1 = icmp ne i32 %N_addr.0.pn, 1
+        br i1 %tmp.1, label %Loop, label %Out12
+Out12:
+  %tmp = phi i32 [%sink.sub2, %ContLoop], [%sink.sub, %Loop]
+  ret i32 %tmp
+}
+
+; Sink through a non-trivially replacable PHI node which use the same sinkable
+; instruction multiple times.
+;
+; CHECK-LABEL: @test16
+; CHECK-LABEL: Loop:
+; CHECK-NOT: mul
+;
+; CHECK-LABEL: Out.split.loop.exit:
+; CHECK: %[[PHI:.*]] = phi i32 [ %l2, %ContLoop ]
+; CHECK: br label %Out
+;
+; CHECK-LABEL: Out.split.loop.exit1:
+; CHECK: %[[SINKABLE:.*]] = mul i32 %l2.lcssa, %t.le
+; CHECK: br label %Out
+;
+; CHECK-LABEL: Out:
+; CHECK: %idx = phi i32 [ %[[PHI]], %Out.split.loop.exit ], [ %[[SINKABLE]], %Out.split.loop.exit1 ]
+define i32 @test16(i1 %c, i8** %P, i32* %P2, i64 %V) {
+entry:
+  br label %loop.ph
+loop.ph:
+  br label %Loop
+Loop:
+  %iv = phi i64 [ 0, %loop.ph ], [ %next, %ContLoop ]
+  %l2 = call i32 @getv()
+  %t = trunc i64 %iv to i32
+  %sinkable = mul i32 %l2,  %t
+  switch i32 %l2, label %ContLoop [
+    i32 32, label %Out
+    i32 46, label %Out
+    i32 95, label %Out
+  ]
+ContLoop:
+  %next = add nuw i64 %iv, 1
+  %c1 = call i1 @getc()
+  br i1 %c1, label %Loop, label %Out
+Out:
+  %idx = phi i32 [ %l2, %ContLoop ], [ %sinkable, %Loop ], [ %sinkable, %Loop ], [ %sinkable, %Loop ]
+  ret i32 %idx
+}
+
+; Sink a sinkable instruction through multiple non-trivially replacable PHIs in
+; differect exit blocks.
+;
+; CHECK-LABEL: @test17
+; CHECK-LABEL: Loop:
+; CHECK-NOT: mul
+;
+; CHECK-LABEL:OutA.split.loop.exit{{.*}}:
+; CHECK:  %[[OP1:.*]] = phi i32 [ %N_addr.0.pn, %ContLoop1 ]
+; CHECK:  %[[SINKABLE:.*]] = mul i32 %N, %[[OP1]]
+; CHECK:  br label %OutA
+;
+; CHECK-LABEL:OutA:
+; CHECK: phi i32{{.*}}[ %[[SINKABLE]], %OutA.split.loop.exit{{.*}} ]
+;
+; CHECK-LABEL:OutB.split.loop.exit{{.*}}:
+; CHECK:  %[[OP2:.*]] = phi i32 [ %N_addr.0.pn, %ContLoop2 ]
+; CHECK:  %[[SINKABLE2:.*]] = mul i32 %N, %[[OP2]]
+; CHECK:  br label %OutB
+;
+; CHECK-LABEL:OutB:
+; CHECK:  phi i32 {{.*}}[ %[[SINKABLE2]], %OutB.split.loop.exit{{.*}} ]
+define i32 @test17(i32 %N, i32 %N2) {
+Entry:
+        br label %Loop
+Loop:
+        %N_addr.0.pn = phi i32 [ %dec, %ContLoop3 ], [ %N, %Entry ]
+        %sink.mul = mul i32 %N, %N_addr.0.pn
+        %c0 = call i1 @getc()
+        br i1 %c0 , label %ContLoop1, label %OutA
+ContLoop1:
+        %c1 = call i1 @getc()
+        br i1 %c1, label %ContLoop2, label %OutA
+
+ContLoop2:
+        %c2 = call i1 @getc()
+        br i1 %c2, label %ContLoop3, label %OutB
+ContLoop3:
+        %c3 = call i1 @getc()
+        %dec = add i32 %N_addr.0.pn, -1
+        br i1 %c3, label %Loop, label %OutB
+OutA:
+        %tmp1 = phi i32 [%sink.mul, %ContLoop1], [%N2, %Loop]
+        br label %Out12
+OutB:
+        %tmp2 = phi i32 [%sink.mul, %ContLoop2], [%dec, %ContLoop3]
+        br label %Out12
+Out12:
+  %tmp = phi i32 [%tmp1, %OutA], [%tmp2, %OutB]
+  ret i32 %tmp
+}
+
+
+; Sink a sinkable instruction through both trivially and non-trivially replacable PHIs.
+;
+; CHECK-LABEL: @test18
+; CHECK-LABEL: Loop:
+; CHECK-NOT: mul
+; CHECK-NOT: sub
+;
+; CHECK-LABEL:Out12.split.loop.exit:
+; CHECK:  %[[OP:.*]] = phi i32 [ %iv, %ContLoop ]
+; CHECK:  %[[DEC:.*]] = phi i32 [ %dec, %ContLoop ]
+; CHECK:  %[[SINKMUL:.*]] = mul i32 %N, %[[OP]]
+; CHECK:  %[[SINKSUB:.*]] = sub i32 %[[SINKMUL]], %N2
+; CHECK:  br label %Out12
+;
+; CHECK-LABEL:Out12.split.loop.exit1:
+; CHECK:  %[[OP2:.*]] = phi i32 [ %iv, %Loop ]
+; CHECK:  %[[SINKMUL2:.*]] = mul i32 %N, %[[OP2]]
+; CHECK:  %[[SINKSUB2:.*]] = sub i32 %[[SINKMUL2]], %N2
+; CHECK:  br label %Out12
+;
+; CHECK-LABEL:Out12:
+; CHECK:  %tmp1 = phi i32 [ %[[SINKSUB]], %Out12.split.loop.exit ], [ %[[SINKSUB2]], %Out12.split.loop.exit1 ]
+; CHECK:  %tmp2 = phi i32 [ %[[DEC]], %Out12.split.loop.exit ], [ %[[SINKSUB2]], %Out12.split.loop.exit1 ]
+; CHECK:  %add = add i32 %tmp1, %tmp2
+define i32 @test18(i32 %N, i32 %N2) {
+Entry:
+        br label %Loop
+Loop:
+        %iv = phi i32 [ %dec, %ContLoop ], [ %N, %Entry ]
+        %sink.mul = mul i32 %N, %iv
+        %sink.sub = sub i32 %sink.mul, %N2
+        %c0 = call i1 @getc()
+        br i1 %c0, label %ContLoop, label %Out12
+ContLoop:
+        %dec = add i32 %iv, -1
+        %c1 = call i1 @getc()
+        br i1 %c1, label %Loop, label %Out12
+Out12:
+  %tmp1 = phi i32 [%sink.sub, %ContLoop], [%sink.sub, %Loop]
+  %tmp2 = phi i32 [%dec, %ContLoop], [%sink.sub, %Loop]
+  %add = add i32 %tmp1, %tmp2
+  ret i32 %add
+}
+
+; Do not sink an instruction through a non-trivially replacable PHI, to avoid
+; assert while splitting predecessors, if the terminator of predecessor is an
+; indirectbr.
+; CHECK-LABEL: @test19
+; CHECK-LABEL: L0:
+; CHECK: %sinkable = mul
+; CHECK: %sinkable2 = add
+
+define i32 @test19(i1 %cond, i1 %cond2, i8* %address, i32 %v1) nounwind {
+entry:
+  br label %L0
+L0:
+  %indirect.goto.dest = select i1 %cond, i8* blockaddress(@test19, %exit), i8* %address
+  %v2 = call i32 @getv()
+  %sinkable = mul i32 %v1, %v2
+  %sinkable2 = add i32 %v1, %v2
+  indirectbr i8* %indirect.goto.dest, [label %L1, label %exit]
+
+L1:
+  %indirect.goto.dest2 = select i1 %cond2, i8* blockaddress(@test19, %exit), i8* %address
+  indirectbr i8* %indirect.goto.dest2, [label %L0, label %exit]
+
+exit:
+  %r = phi i32 [%sinkable, %L0], [%sinkable2, %L1]
+  ret i32 %r
+}
+
+
+; Do not sink through a non-trivially replacable PHI if splitting predecessors
+; not allowed in SplitBlockPredecessors().
+;
+; CHECK-LABEL: @test20
+; CHECK-LABEL: while.cond
+; CHECK: %sinkable = mul
+; CHECK: %sinkable2 = add
+define void @test20(i32* %s, i1 %b, i32 %v1, i32 %v2) personality i32 (...)* @__CxxFrameHandler3 {
+entry:
+  br label %while.cond
+while.cond:
+  %v = call i32 @getv()
+  %sinkable = mul i32 %v, %v2
+  %sinkable2 = add  i32 %v, %v2
+  br i1 %b, label %try.cont, label %while.body
+while.body:
+  invoke void @may_throw()
+          to label %while.body2 unwind label %catch.dispatch
+while.body2:
+  invoke void @may_throw2()
+          to label %while.cond unwind label %catch.dispatch
+catch.dispatch:
+  %.lcssa1 = phi i32 [ %sinkable, %while.body ], [ %sinkable2, %while.body2 ]
+  %cp = cleanuppad within none []
+  store i32 %.lcssa1, i32* %s
+  cleanupret from %cp unwind to caller
+try.cont:
+  ret void
+}
+
+declare void @may_throw()
+declare void @may_throw2()
+declare i32 @__CxxFrameHandler3(...)
+declare i32 @getv()
+declare i1 @getc()
+declare void @f(i32*)
 declare void @g()
