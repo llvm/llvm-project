@@ -76,12 +76,47 @@ protected:
 
   Status DoWriteGPR(void *buf, size_t buf_size) override;
 
+  Status DoReadFPR(void *buf, size_t buf_size) override;
+
+  Status DoWriteFPR(void *buf, size_t buf_size) override;
+
+  bool IsVMX(unsigned reg);
+
+  bool IsVSX(unsigned reg);
+
+  Status ReadVMX();
+
+  Status WriteVMX();
+
+  Status ReadVSX();
+
+  Status WriteVSX();
+
   void *GetGPRBuffer() override { return &m_gpr_ppc64le; }
+
+  void *GetFPRBuffer() override { return &m_fpr_ppc64le; }
+
+  size_t GetFPRSize() override { return sizeof(m_fpr_ppc64le); }
 
 private:
   GPR m_gpr_ppc64le; // 64-bit general purpose registers.
+  FPR m_fpr_ppc64le; // floating-point registers including extended register.
+  VMX m_vmx_ppc64le; // VMX registers.
+  VSX m_vsx_ppc64le; // Last lower bytes from first VSX registers.
 
   bool IsGPR(unsigned reg) const;
+
+  bool IsFPR(unsigned reg) const;
+
+  bool IsVMX(unsigned reg) const;
+
+  bool IsVSX(unsigned reg) const;
+
+  uint32_t CalculateFprOffset(const RegisterInfo *reg_info) const;
+
+  uint32_t CalculateVmxOffset(const RegisterInfo *reg_info) const;
+
+  uint32_t CalculateVsxOffset(const RegisterInfo *reg_info) const;
 
   Status ReadHardwareDebugInfo();
 
