@@ -325,6 +325,16 @@ static Stmt *create_call_once(ASTContext &C, const FunctionDecl *D) {
 
   const ParmVarDecl *Flag = D->getParamDecl(0);
   const ParmVarDecl *Callback = D->getParamDecl(1);
+
+  if (!Callback->getType()->isReferenceType()) {
+    llvm::dbgs() << "libcxx03 std::call_once implementation, skipping.\n";
+    return nullptr;
+  }
+  if (!Flag->getType()->isReferenceType()) {
+    llvm::dbgs() << "unknown std::call_once implementation, skipping.\n";
+    return nullptr;
+  }
+
   QualType CallbackType = Callback->getType().getNonReferenceType();
 
   // Nullable pointer, non-null iff function is a CXXRecordDecl.
@@ -346,15 +356,13 @@ static Stmt *create_call_once(ASTContext &C, const FunctionDecl *D) {
   // Otherwise, try libstdc++ implementation, with a field
   // `_M_once`
   if (!FlagFieldDecl) {
-    DEBUG(llvm::dbgs() << "No field __state_ found on std::once_flag struct, "
-                       << "assuming libstdc++ implementation\n");
     FlagFieldDecl = M.findMemberField(FlagRecordDecl, "_M_once");
   }
 
   if (!FlagFieldDecl) {
-    DEBUG(llvm::dbgs() << "No field _M_once found on std::once flag struct: "
-                       << "unknown std::call_once implementation, "
-                       << "ignoring the call");
+    DEBUG(llvm::dbgs() << "No field _M_once or __state_ found on "
+                       << "std::once_flag struct: unknown std::call_once "
+                       << "implementation, ignoring the call.");
     return nullptr;
   }
 
@@ -388,9 +396,9 @@ static Stmt *create_call_once(ASTContext &C, const FunctionDecl *D) {
 
   // First two arguments are used for the flag and for the callback.
   if (D->getNumParams() != CallbackFunctionType->getNumParams() + 2) {
-    DEBUG(llvm::dbgs() << "Number of params of the callback does not match "
-                       << "the number of params passed to std::call_once, "
-                       << "ignoring the call");
+    DEBUG(llvm::dbgs() << "Types of params of the callback do not match "
+                       << "params passed to std::call_once, "
+                       << "ignoring the call\n");
     return nullptr;
   }
 
