@@ -574,7 +574,7 @@ void fixupExports() {
   }
 
   for (Export &E : Config->Exports) {
-    SymbolBody *Sym = E.Sym;
+    Symbol *Sym = E.Sym;
     if (!E.ForwardTo.empty() || !Sym) {
       E.SymbolName = E.Name;
     } else {

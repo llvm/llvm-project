@@ -287,6 +287,19 @@ std::string TextEdit::unparse(const TextEdit &P) {
   return Result;
 }
 
+std::string TextEdit::unparse(const std::vector<TextEdit> &TextEdits) {
+  // Fuse all edits into one big JSON array.
+  std::string Edits;
+  for (auto &TE : TextEdits) {
+    Edits += TextEdit::unparse(TE);
+    Edits += ',';
+  }
+  if (!Edits.empty())
+    Edits.pop_back();
+
+  return "[" + Edits + "]";
+}
+
 namespace {
 TraceLevel getTraceLevel(llvm::StringRef TraceLevelStr,
                          clangd::Logger &Logger) {
@@ -843,6 +856,153 @@ CodeActionParams::parse(llvm::yaml::MappingNode *Params,
       logIgnoredField(KeyValue, Logger);
     }
   }
+  return Result;
+}
+
+llvm::Optional<std::map<std::string, std::vector<TextEdit>>>
+parseWorkspaceEditChange(llvm::yaml::MappingNode *Params,
+                         clangd::Logger &Logger) {
+  std::map<std::string, std::vector<TextEdit>> Result;
+  for (auto &NextKeyValue : *Params) {
+    auto *KeyString = dyn_cast<llvm::yaml::ScalarNode>(NextKeyValue.getKey());
+    if (!KeyString)
+      return llvm::None;
+
+    llvm::SmallString<10> KeyStorage;
+    StringRef KeyValue = KeyString->getValue(KeyStorage);
+    if (Result.count(KeyValue)) {
+      logIgnoredField(KeyValue, Logger);
+      continue;
+    }
+
+    auto *Value =
+        dyn_cast_or_null<llvm::yaml::SequenceNode>(NextKeyValue.getValue());
+    if (!Value)
+      return llvm::None;
+    for (auto &Item : *Value) {
+      auto *ItemValue = dyn_cast_or_null<llvm::yaml::MappingNode>(&Item);
+      if (!ItemValue)
+        return llvm::None;
+      auto Parsed = TextEdit::parse(ItemValue, Logger);
+      if (!Parsed)
+        return llvm::None;
+
+      Result[KeyValue].push_back(*Parsed);
+    }
+  }
+
+  return Result;
+}
+
+llvm::Optional<WorkspaceEdit>
+WorkspaceEdit::parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger) {
+  WorkspaceEdit Result;
+  for (auto &NextKeyValue : *Params) {
+    auto *KeyString = dyn_cast<llvm::yaml::ScalarNode>(NextKeyValue.getKey());
+    if (!KeyString)
+      return llvm::None;
+
+    llvm::SmallString<10> KeyStorage;
+    StringRef KeyValue = KeyString->getValue(KeyStorage);
+
+    llvm::SmallString<10> Storage;
+    if (KeyValue == "changes") {
+      auto *Value =
+          dyn_cast_or_null<llvm::yaml::MappingNode>(NextKeyValue.getValue());
+      if (!Value)
+        return llvm::None;
+      auto Parsed = parseWorkspaceEditChange(Value, Logger);
+      if (!Parsed)
+        return llvm::None;
+      Result.changes = std::move(*Parsed);
+    } else {
+      logIgnoredField(KeyValue, Logger);
+    }
+  }
+  return Result;
+}
+
+const std::string ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND =
+    "clangd.applyFix";
+
+llvm::Optional<ExecuteCommandParams>
+ExecuteCommandParams::parse(llvm::yaml::MappingNode *Params,
+                            clangd::Logger &Logger) {
+  ExecuteCommandParams Result;
+  // Depending on which "command" we parse, we will use this function to parse
+  // the command "arguments".
+  std::function<bool(llvm::yaml::MappingNode * Params)> ArgParser = nullptr;
+
+  for (auto &NextKeyValue : *Params) {
+    auto *KeyString = dyn_cast<llvm::yaml::ScalarNode>(NextKeyValue.getKey());
+    if (!KeyString)
+      return llvm::None;
+
+    llvm::SmallString<10> KeyStorage;
+    StringRef KeyValue = KeyString->getValue(KeyStorage);
+
+    // Note that "commands" has to be parsed before "arguments" for this to
+    // work properly.
+    if (KeyValue == "command") {
+      auto *ScalarValue =
+          dyn_cast_or_null<llvm::yaml::ScalarNode>(NextKeyValue.getValue());
+      if (!ScalarValue)
+        return llvm::None;
+      llvm::SmallString<10> Storage;
+      Result.command = ScalarValue->getValue(Storage);
+      if (Result.command == ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND) {
+        ArgParser = [&Result, &Logger](llvm::yaml::MappingNode *Params) {
+          auto WE = WorkspaceEdit::parse(Params, Logger);
+          if (WE)
+            Result.workspaceEdit = WE;
+          return WE.hasValue();
+        };
+      } else {
+        return llvm::None;
+      }
+    } else if (KeyValue == "arguments") {
+      auto *Value = NextKeyValue.getValue();
+      auto *Seq = dyn_cast<llvm::yaml::SequenceNode>(Value);
+      if (!Seq)
+        return llvm::None;
+      for (auto &Item : *Seq) {
+        auto *ItemValue = dyn_cast_or_null<llvm::yaml::MappingNode>(&Item);
+        if (!ItemValue || !ArgParser)
+          return llvm::None;
+        if (!ArgParser(ItemValue))
+          return llvm::None;
+      }
+    } else {
+      logIgnoredField(KeyValue, Logger);
+    }
+  }
+  if (Result.command.empty())
+    return llvm::None;
+
+  return Result;
+}
+
+std::string WorkspaceEdit::unparse(const WorkspaceEdit &WE) {
+  std::string Changes;
+  for (auto &Change : *WE.changes) {
+    Changes += llvm::formatv(R"("{0}": {1})", Change.first,
+                             TextEdit::unparse(Change.second));
+    Changes += ',';
+  }
+  if (!Changes.empty())
+    Changes.pop_back();
+
+  std::string Result;
+  llvm::raw_string_ostream(Result)
+      << llvm::format(R"({"changes": {%s}})", Changes.c_str());
+  return Result;
+}
+
+std::string
+ApplyWorkspaceEditParams::unparse(const ApplyWorkspaceEditParams &Params) {
+  std::string Result;
+  llvm::raw_string_ostream(Result) << llvm::format(
+      R"({"edit": %s})", WorkspaceEdit::unparse(Params.edit).c_str());
   return Result;
 }
 

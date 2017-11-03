@@ -220,8 +220,8 @@ bool ICF<ELFT>::constantEq(const InputSection *SecA, ArrayRef<RelTy> RA,
     uint64_t AddA = getAddend<ELFT>(RA[I]);
     uint64_t AddB = getAddend<ELFT>(RB[I]);
 
-    SymbolBody &SA = SecA->template getFile<ELFT>()->getRelocTargetSym(RA[I]);
-    SymbolBody &SB = SecB->template getFile<ELFT>()->getRelocTargetSym(RB[I]);
+    Symbol &SA = SecA->template getFile<ELFT>()->getRelocTargetSym(RA[I]);
+    Symbol &SB = SecB->template getFile<ELFT>()->getRelocTargetSym(RB[I]);
     if (&SA == &SB) {
       if (AddA == AddB)
         continue;
@@ -295,8 +295,8 @@ bool ICF<ELFT>::variableEq(const InputSection *SecA, ArrayRef<RelTy> RA,
 
   for (size_t I = 0; I < RA.size(); ++I) {
     // The two sections must be identical.
-    SymbolBody &SA = SecA->template getFile<ELFT>()->getRelocTargetSym(RA[I]);
-    SymbolBody &SB = SecB->template getFile<ELFT>()->getRelocTargetSym(RB[I]);
+    Symbol &SA = SecA->template getFile<ELFT>()->getRelocTargetSym(RA[I]);
+    Symbol &SB = SecB->template getFile<ELFT>()->getRelocTargetSym(RB[I]);
     if (&SA == &SB)
       continue;
 

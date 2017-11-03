@@ -52,7 +52,7 @@ namespace {
 // Source State, TargetState, Target Requirement, ABS or PI, Range
 class ARMV7ABSLongThunk final : public Thunk {
 public:
-  ARMV7ABSLongThunk(SymbolBody &Dest) : Thunk(Dest) {}
+  ARMV7ABSLongThunk(Symbol &Dest) : Thunk(Dest) {}
 
   uint32_t size() const override { return 12; }
   void writeTo(uint8_t *Buf, ThunkSection &IS) const override;
@@ -62,7 +62,7 @@ public:
 
 class ARMV7PILongThunk final : public Thunk {
 public:
-  ARMV7PILongThunk(SymbolBody &Dest) : Thunk(Dest) {}
+  ARMV7PILongThunk(Symbol &Dest) : Thunk(Dest) {}
 
   uint32_t size() const override { return 16; }
   void writeTo(uint8_t *Buf, ThunkSection &IS) const override;
@@ -72,7 +72,7 @@ public:
 
 class ThumbV7ABSLongThunk final : public Thunk {
 public:
-  ThumbV7ABSLongThunk(SymbolBody &Dest) : Thunk(Dest) { Alignment = 2; }
+  ThumbV7ABSLongThunk(Symbol &Dest) : Thunk(Dest) { Alignment = 2; }
 
   uint32_t size() const override { return 10; }
   void writeTo(uint8_t *Buf, ThunkSection &IS) const override;
@@ -82,7 +82,7 @@ public:
 
 class ThumbV7PILongThunk final : public Thunk {
 public:
-  ThumbV7PILongThunk(SymbolBody &Dest) : Thunk(Dest) { Alignment = 2; }
+  ThumbV7PILongThunk(Symbol &Dest) : Thunk(Dest) { Alignment = 2; }
 
   uint32_t size() const override { return 12; }
   void writeTo(uint8_t *Buf, ThunkSection &IS) const override;
@@ -93,7 +93,7 @@ public:
 // MIPS LA25 thunk
 class MipsThunk final : public Thunk {
 public:
-  MipsThunk(SymbolBody &Dest) : Thunk(Dest) {}
+  MipsThunk(Symbol &Dest) : Thunk(Dest) {}
 
   uint32_t size() const override { return 16; }
   void writeTo(uint8_t *Buf, ThunkSection &IS) const override;
@@ -104,7 +104,7 @@ public:
 // microMIPS R2-R5 LA25 thunk
 class MicroMipsThunk final : public Thunk {
 public:
-  MicroMipsThunk(SymbolBody &Dest) : Thunk(Dest) {}
+  MicroMipsThunk(Symbol &Dest) : Thunk(Dest) {}
 
   uint32_t size() const override { return 14; }
   void writeTo(uint8_t *Buf, ThunkSection &IS) const override;
@@ -115,7 +115,7 @@ public:
 // microMIPS R6 LA25 thunk
 class MicroMipsR6Thunk final : public Thunk {
 public:
-  MicroMipsR6Thunk(SymbolBody &Dest) : Thunk(Dest) {}
+  MicroMipsR6Thunk(Symbol &Dest) : Thunk(Dest) {}
 
   uint32_t size() const override { return 12; }
   void writeTo(uint8_t *Buf, ThunkSection &IS) const override;
@@ -126,7 +126,7 @@ public:
 } // end anonymous namespace
 
 // ARM Target Thunks
-static uint64_t getARMThunkDestVA(const SymbolBody &S) {
+static uint64_t getARMThunkDestVA(const Symbol &S) {
   uint64_t V = S.isInPlt() ? S.getPltVA() : S.getVA();
   return SignExtend64<32>(V);
 }
@@ -305,12 +305,12 @@ InputSection *MicroMipsR6Thunk::getTargetInputSection() const {
   return dyn_cast<InputSection>(DR->Section);
 }
 
-Thunk::Thunk(SymbolBody &D) : Destination(D), Offset(0) {}
+Thunk::Thunk(Symbol &D) : Destination(D), Offset(0) {}
 
 Thunk::~Thunk() = default;
 
 // Creates a thunk for Thumb-ARM interworking.
-static Thunk *addThunkArm(RelType Reloc, SymbolBody &S) {
+static Thunk *addThunkArm(RelType Reloc, Symbol &S) {
   // ARM relocations need ARM to Thumb interworking Thunks.
   // Thumb relocations need Thumb to ARM relocations.
   // Use position independent Thunks if we require position independent code.
@@ -332,7 +332,7 @@ static Thunk *addThunkArm(RelType Reloc, SymbolBody &S) {
   fatal("unrecognized relocation type");
 }
 
-static Thunk *addThunkMips(RelType Type, SymbolBody &S) {
+static Thunk *addThunkMips(RelType Type, Symbol &S) {
   if ((S.StOther & STO_MIPS_MICROMIPS) && isMipsR6())
     return make<MicroMipsR6Thunk>(S);
   if (S.StOther & STO_MIPS_MICROMIPS)
@@ -340,7 +340,7 @@ static Thunk *addThunkMips(RelType Type, SymbolBody &S) {
   return make<MipsThunk>(S);
 }
 
-Thunk *addThunk(RelType Type, SymbolBody &S) {
+Thunk *addThunk(RelType Type, Symbol &S) {
   if (Config->EMachine == EM_ARM)
     return addThunkArm(Type, S);
   else if (Config->EMachine == EM_MIPS)

@@ -135,6 +135,9 @@ SANITIZER("efficiency-working-set", EfficiencyWorkingSet)
 SANITIZER_GROUP("efficiency-all", Efficiency,
                 EfficiencyCacheFrag | EfficiencyWorkingSet)
 
+// Scudo hardened allocator
+SANITIZER("scudo", Scudo)
+
 // Magic group, containing all sanitizers. For example, "-fno-sanitize=all"
 // can be used to disable all the sanitizers.
 SANITIZER_GROUP("all", All, ~0ULL)

@@ -24,13 +24,13 @@ namespace {
 class X86 final : public TargetInfo {
 public:
   X86();
-  RelExpr getRelExpr(RelType Type, const SymbolBody &S,
+  RelExpr getRelExpr(RelType Type, const Symbol &S,
                      const uint8_t *Loc) const override;
   int64_t getImplicitAddend(const uint8_t *Buf, RelType Type) const override;
   void writeGotPltHeader(uint8_t *Buf) const override;
   RelType getDynRel(RelType Type) const override;
-  void writeGotPlt(uint8_t *Buf, const SymbolBody &S) const override;
-  void writeIgotPlt(uint8_t *Buf, const SymbolBody &S) const override;
+  void writeGotPlt(uint8_t *Buf, const Symbol &S) const override;
+  void writeIgotPlt(uint8_t *Buf, const Symbol &S) const override;
   void writePltHeader(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
@@ -65,7 +65,7 @@ X86::X86() {
 
 static bool hasBaseReg(uint8_t ModRM) { return (ModRM & 0xc7) != 0x5; }
 
-RelExpr X86::getRelExpr(RelType Type, const SymbolBody &S,
+RelExpr X86::getRelExpr(RelType Type, const Symbol &S,
                         const uint8_t *Loc) const {
   switch (Type) {
   case R_386_8:
@@ -156,13 +156,13 @@ void X86::writeGotPltHeader(uint8_t *Buf) const {
   write32le(Buf, InX::Dynamic->getVA());
 }
 
-void X86::writeGotPlt(uint8_t *Buf, const SymbolBody &S) const {
+void X86::writeGotPlt(uint8_t *Buf, const Symbol &S) const {
   // Entries in .got.plt initially points back to the corresponding
   // PLT entries with a fixed offset to skip the first instruction.
   write32le(Buf, S.getPltVA() + 6);
 }
 
-void X86::writeIgotPlt(uint8_t *Buf, const SymbolBody &S) const {
+void X86::writeIgotPlt(uint8_t *Buf, const Symbol &S) const {
   // An x86 entry is the address of the ifunc resolver function.
   write32le(Buf, S.getVA());
 }

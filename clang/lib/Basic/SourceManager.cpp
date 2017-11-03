@@ -1,4 +1,4 @@
-//===--- SourceManager.cpp - Track and cache source files -----------------===//
+//===- SourceManager.cpp - Track and cache source files -------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,17 +14,33 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManagerInternals.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/Capacity.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
-#include <cstring>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <tuple>
+#include <utility>
+#include <vector>
 
 using namespace clang;
 using namespace SrcMgr;
@@ -222,7 +238,6 @@ void LineTableInfo::AddLineNote(FileID FID, unsigned Offset, unsigned LineNo,
                                    IncludeOffset));
 }
 
-
 /// FindNearestLineEntry - Find the line entry nearest to FID that is before
 /// it.  If there is no line entry before Offset in FID, return null.
 const LineEntry *LineTableInfo::FindNearestLineEntry(FileID FID,
@@ -250,7 +265,6 @@ void LineTableInfo::AddEntry(FileID FID,
 }
 
 /// getLineTableFilenameID - Return the uniqued ID for the specified filename.
-///
 unsigned SourceManager::getLineTableFilenameID(StringRef Name) {
   return getLineTable().getLineTableFilenameID(Name);
 }
@@ -298,10 +312,7 @@ LineTableInfo &SourceManager::getLineTable() {
 
 SourceManager::SourceManager(DiagnosticsEngine &Diag, FileManager &FileMgr,
                              bool UserFilesAreVolatile)
-  : Diag(Diag), FileMgr(FileMgr), OverridenFilesKeepOriginalName(true),
-    UserFilesAreVolatile(UserFilesAreVolatile), FilesAreTransient(false),
-    ExternalSLocEntries(nullptr), LineTable(nullptr), NumLinearScans(0),
-    NumBinaryProbes(0) {
+  : Diag(Diag), FileMgr(FileMgr), UserFilesAreVolatile(UserFilesAreVolatile) {
   clearIDTables();
   Diag.setSourceManager(this);
 }
@@ -342,7 +353,7 @@ void SourceManager::clearIDTables() {
   // Use up FileID #0 as an invalid expansion.
   NextLocalOffset = 0;
   CurrentLoadedOffset = MaxLoadedOffset;
-  createExpansionLoc(SourceLocation(),SourceLocation(),SourceLocation(), 1);
+  createExpansionLoc(SourceLocation(), SourceLocation(), SourceLocation(), 1);
 }
 
 void SourceManager::initializeForReplay(const SourceManager &Old) {
@@ -407,7 +418,6 @@ SourceManager::getOrCreateContentCache(const FileEntry *FileEnt,
 
   return Entry;
 }
-
 
 /// Create a new ContentCache for the specified memory buffer.
 /// This does no caching.
@@ -716,7 +726,7 @@ FileID SourceManager::getFileIDLocal(unsigned SLocOffset) const {
   // Find the FileID that contains this.  "I" is an iterator that points to a
   // FileID whose offset is known to be larger than SLocOffset.
   unsigned NumProbes = 0;
-  while (1) {
+  while (true) {
     --I;
     if (I->getOffset() <= SLocOffset) {
       FileID Res = FileID::get(int(I - LocalSLocEntryTable.begin()));
@@ -740,7 +750,7 @@ FileID SourceManager::getFileIDLocal(unsigned SLocOffset) const {
   // SLocOffset.
   unsigned LessIndex = 0;
   NumProbes = 0;
-  while (1) {
+  while (true) {
     bool Invalid = false;
     unsigned MiddleIndex = (GreaterIndex-LessIndex)/2+LessIndex;
     unsigned MidOffset = getLocalSLocEntry(MiddleIndex, &Invalid).getOffset();
@@ -817,7 +827,7 @@ FileID SourceManager::getFileIDLoaded(unsigned SLocOffset) const {
   unsigned GreaterIndex = I;
   unsigned LessIndex = LoadedSLocEntryTable.size();
   NumProbes = 0;
-  while (1) {
+  while (true) {
     ++NumProbes;
     unsigned MiddleIndex = (LessIndex - GreaterIndex) / 2 + GreaterIndex;
     const SrcMgr::SLocEntry &E = getLoadedSLocEntry(MiddleIndex);
@@ -934,7 +944,6 @@ SourceLocation SourceManager::getImmediateSpellingLoc(SourceLocation Loc) const{
   Loc = getSLocEntry(LocInfo.first).getExpansion().getSpellingLoc();
   return Loc.getLocWithOffset(LocInfo.second);
 }
-
 
 /// getImmediateExpansionRange - Loc is required to be an expansion location.
 /// Return the start/end of the expansion information.
@@ -1055,7 +1064,6 @@ bool SourceManager::isAtEndOfImmediateMacroExpansion(SourceLocation Loc,
   return true;
 }
 
-
 //===----------------------------------------------------------------------===//
 // Queries about the code at a SourceLocation.
 //===----------------------------------------------------------------------===//
@@ -1083,7 +1091,6 @@ const char *SourceManager::getCharacterData(SourceLocation SL,
     *Invalid = CharDataInvalid;
   return Buffer->getBufferStart() + (CharDataInvalid? 0 : LocInfo.second);
 }
-
 
 /// getColumnNumber - Return the column # for the specified file position.
 /// this is significantly cheaper to compute than the line number.
@@ -1189,7 +1196,7 @@ static void ComputeLineNumbers(DiagnosticsEngine &Diag, ContentCache *FI,
   const unsigned char *Buf = (const unsigned char *)Buffer->getBufferStart();
   const unsigned char *End = (const unsigned char *)Buffer->getBufferEnd();
   unsigned Offs = 0;
-  while (1) {
+  while (true) {
     // Skip over the contents of the line.
     const unsigned char *NextBuf = (const unsigned char *)Buf;
 
@@ -1418,7 +1425,6 @@ StringRef SourceManager::getBufferName(SourceLocation Loc,
 
   return getBuffer(getFileID(Loc), Invalid)->getBufferIdentifier();
 }
-
 
 /// getPresumedLoc - This method returns the "presumed" location of a
 /// SourceLocation specifies.  A "presumed location" can be modified by \#line
@@ -1767,7 +1773,7 @@ void SourceManager::computeMacroArgsCache(MacroArgsMap &MacroArgsCache,
   MacroArgsCache.insert(std::make_pair(0, SourceLocation()));
 
   int ID = FID.ID;
-  while (1) {
+  while (true) {
     ++ID;
     // Stop if there are no more FileIDs to check.
     if (ID > 0) {
@@ -1830,7 +1836,7 @@ void SourceManager::associateFileChunkWithMacroArgExp(
     FileID SpellFID; // Current FileID in the spelling range.
     unsigned SpellRelativeOffs;
     std::tie(SpellFID, SpellRelativeOffs) = getDecomposedLoc(SpellLoc);
-    while (1) {
+    while (true) {
       const SLocEntry &Entry = getSLocEntry(SpellFID);
       unsigned SpellFIDBeginOffs = Entry.getOffset();
       unsigned SpellFIDSize = getFileIDSize(SpellFID);
@@ -1857,7 +1863,6 @@ void SourceManager::associateFileChunkWithMacroArgExp(
       ++SpellFID.ID;
       SpellRelativeOffs = 0;
     }
-
   }
 
   assert(SpellLoc.isFileID());
@@ -1937,8 +1942,8 @@ SourceManager::getDecomposedIncludedLoc(FileID FID) const {
 
   // Uses IncludedLocMap to retrieve/cache the decomposed loc.
 
-  typedef std::pair<FileID, unsigned> DecompTy;
-  typedef llvm::DenseMap<FileID, DecompTy> MapTy;
+  using DecompTy = std::pair<FileID, unsigned>;
+  using MapTy = llvm::DenseMap<FileID, DecompTy>;
   std::pair<MapTy::iterator, bool>
     InsertOp = IncludedLocMap.insert(std::make_pair(FID, DecompTy()));
   DecompTy &DecompLoc = InsertOp.first->second;
@@ -2085,7 +2090,7 @@ std::pair<bool, bool> SourceManager::isInTheSameTranslationUnit(
   // of the other looking for a match.
   // We use a map from FileID to Offset to store the chain. Easier than writing
   // a custom set hash info that only depends on the first part of a pair.
-  typedef llvm::SmallDenseMap<FileID, unsigned, 16> LocSet;
+  using LocSet = llvm::SmallDenseMap<FileID, unsigned, 16>;
   LocSet LChain;
   do {
     LChain.insert(LOffs);
@@ -2197,7 +2202,7 @@ LLVM_DUMP_METHOD void SourceManager::dump() const {
   }
 }
 
-ExternalSLocEntrySource::~ExternalSLocEntrySource() { }
+ExternalSLocEntrySource::~ExternalSLocEntrySource() = default;
 
 /// Return the amount of memory used by memory buffers, breaking down
 /// by heap-backed versus mmap'ed memory.

@@ -227,7 +227,7 @@ ObjFile<ELFT>::ObjFile(MemoryBufferRef M, StringRef ArchiveName)
   this->ArchiveName = ArchiveName;
 }
 
-template <class ELFT> ArrayRef<SymbolBody *> ObjFile<ELFT>::getLocalSymbols() {
+template <class ELFT> ArrayRef<Symbol *> ObjFile<ELFT>::getLocalSymbols() {
   if (this->Symbols.empty())
     return {};
   return makeArrayRef(this->Symbols).slice(1, this->FirstNonLocal - 1);
@@ -569,7 +569,7 @@ StringRef ObjFile<ELFT>::getSectionName(const Elf_Shdr &Sec) {
 template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
   this->Symbols.reserve(this->ELFSyms.size());
   for (const Elf_Sym &Sym : this->ELFSyms)
-    this->Symbols.push_back(createSymbolBody(&Sym));
+    this->Symbols.push_back(createSymbol(&Sym));
 }
 
 template <class ELFT>
@@ -584,8 +584,7 @@ InputSectionBase *ObjFile<ELFT>::getSection(uint32_t Index) const {
   return nullptr;
 }
 
-template <class ELFT>
-SymbolBody *ObjFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
+template <class ELFT> Symbol *ObjFile<ELFT>::createSymbol(const Elf_Sym *Sym) {
   int Binding = Sym->getBinding();
   InputSectionBase *Sec = getSection(this->getSectionIndex(*Sym));
 
@@ -905,9 +904,9 @@ static uint8_t mapVisibility(GlobalValue::VisibilityTypes GvVisibility) {
 }
 
 template <class ELFT>
-static SymbolBody *createBitcodeSymbol(const std::vector<bool> &KeptComdats,
-                                       const lto::InputFile::Symbol &ObjSym,
-                                       BitcodeFile *F) {
+static Symbol *createBitcodeSymbol(const std::vector<bool> &KeptComdats,
+                                   const lto::InputFile::Symbol &ObjSym,
+                                   BitcodeFile *F) {
   StringRef NameRef = Saver.save(ObjSym.getName());
   uint32_t Binding = ObjSym.isWeak() ? STB_WEAK : STB_GLOBAL;
 

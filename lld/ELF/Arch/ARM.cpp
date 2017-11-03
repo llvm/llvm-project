@@ -27,20 +27,20 @@ class ARM final : public TargetInfo {
 public:
   ARM();
   uint32_t calcEFlags() const override;
-  RelExpr getRelExpr(RelType Type, const SymbolBody &S,
+  RelExpr getRelExpr(RelType Type, const Symbol &S,
                      const uint8_t *Loc) const override;
   bool isPicRel(RelType Type) const override;
   RelType getDynRel(RelType Type) const override;
   int64_t getImplicitAddend(const uint8_t *Buf, RelType Type) const override;
-  void writeGotPlt(uint8_t *Buf, const SymbolBody &S) const override;
-  void writeIgotPlt(uint8_t *Buf, const SymbolBody &S) const override;
+  void writeGotPlt(uint8_t *Buf, const Symbol &S) const override;
+  void writeIgotPlt(uint8_t *Buf, const Symbol &S) const override;
   void writePltHeader(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
   void addPltSymbols(InputSectionBase *IS, uint64_t Off) const override;
   void addPltHeaderSymbols(InputSectionBase *ISD) const override;
   bool needsThunk(RelExpr Expr, RelType Type, const InputFile *File,
-                  uint64_t BranchAddr, const SymbolBody &S) const override;
+                  uint64_t BranchAddr, const Symbol &S) const override;
   bool inBranchRange(RelType Type, uint64_t Src, uint64_t Dst) const override;
   void relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const override;
 };
@@ -103,7 +103,7 @@ uint32_t ARM::calcEFlags() const {
   return EF_ARM_EABI_VER5;
 }
 
-RelExpr ARM::getRelExpr(RelType Type, const SymbolBody &S,
+RelExpr ARM::getRelExpr(RelType Type, const Symbol &S,
                         const uint8_t *Loc) const {
   switch (Type) {
   case R_ARM_THM_JUMP11:
@@ -175,11 +175,11 @@ RelType ARM::getDynRel(RelType Type) const {
   return R_ARM_ABS32;
 }
 
-void ARM::writeGotPlt(uint8_t *Buf, const SymbolBody &) const {
+void ARM::writeGotPlt(uint8_t *Buf, const Symbol &) const {
   write32le(Buf, InX::Plt->getVA());
 }
 
-void ARM::writeIgotPlt(uint8_t *Buf, const SymbolBody &S) const {
+void ARM::writeIgotPlt(uint8_t *Buf, const Symbol &S) const {
   // An ARM entry is the address of the ifunc resolver function.
   write32le(Buf, S.getVA());
 }
@@ -228,7 +228,7 @@ void ARM::addPltSymbols(InputSectionBase *ISD, uint64_t Off) const {
 }
 
 bool ARM::needsThunk(RelExpr Expr, RelType Type, const InputFile *File,
-                     uint64_t BranchAddr, const SymbolBody &S) const {
+                     uint64_t BranchAddr, const Symbol &S) const {
   // If S is an undefined weak symbol in an executable we don't need a Thunk.
   // In a DSO calls to undefined symbols, including weak ones get PLT entries
   // which may need a thunk.
