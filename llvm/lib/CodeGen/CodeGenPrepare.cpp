@@ -1125,6 +1125,7 @@ static bool SinkCast(CastInst *CI) {
 
   // If we removed all uses, nuke the cast.
   if (CI->use_empty()) {
+    salvageDebugInfo(*CI);
     CI->eraseFromParent();
     MadeChange = true;
   }
