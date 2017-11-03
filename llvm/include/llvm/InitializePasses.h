@@ -128,6 +128,7 @@ void initializeEdgeBundlesPass(PassRegistry&);
 void initializeEfficiencySanitizerPass(PassRegistry&);
 void initializeEliminateAvailableExternallyLegacyPassPass(PassRegistry&);
 void initializeExpandISelPseudosPass(PassRegistry&);
+void initializeExpandMemCmpPassPass(PassRegistry&);
 void initializeExpandPostRAPass(PassRegistry&);
 void initializeExpandReductionsPass(PassRegistry&);
 void initializeExternalAAWrapperPassPass(PassRegistry&);

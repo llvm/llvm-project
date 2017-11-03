@@ -4030,6 +4030,13 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
   case Decl::Namespace:
     EmitDeclContext(cast<NamespaceDecl>(D));
     break;
+  case Decl::ClassTemplateSpecialization: {
+    const auto *Spec = cast<ClassTemplateSpecializationDecl>(D);
+    if (DebugInfo &&
+        Spec->getSpecializationKind() == TSK_ExplicitInstantiationDefinition &&
+        Spec->hasDefinition())
+      DebugInfo->completeTemplateDefinition(*Spec);
+  } LLVM_FALLTHROUGH;
   case Decl::CXXRecord:
     if (DebugInfo) {
       if (auto *ES = D->getASTContext().getExternalSource())
@@ -4215,15 +4222,6 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
   case Decl::OMPThreadPrivate:
     EmitOMPThreadPrivateDecl(cast<OMPThreadPrivateDecl>(D));
     break;
-
-  case Decl::ClassTemplateSpecialization: {
-    const auto *Spec = cast<ClassTemplateSpecializationDecl>(D);
-    if (DebugInfo &&
-        Spec->getSpecializationKind() == TSK_ExplicitInstantiationDefinition &&
-        Spec->hasDefinition())
-      DebugInfo->completeTemplateDefinition(*Spec);
-    break;
-  }
 
   case Decl::OMPDeclareReduction:
     EmitOMPDeclareReduction(cast<OMPDeclareReductionDecl>(D));

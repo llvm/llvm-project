@@ -550,6 +550,13 @@ void Preprocessor::replayPreambleConditionalStack() {
            "CurPPLexer is null when calling replayPreambleConditionalStack.");
     CurPPLexer->setConditionalLevels(PreambleConditionalStack.getStack());
     PreambleConditionalStack.doneReplaying();
+    if (PreambleConditionalStack.reachedEOFWhileSkipping())
+      SkipExcludedConditionalBlock(
+          PreambleConditionalStack.SkipInfo->HashTokenLoc,
+          PreambleConditionalStack.SkipInfo->IfTokenLoc,
+          PreambleConditionalStack.SkipInfo->FoundNonSkipPortion,
+          PreambleConditionalStack.SkipInfo->FoundElse,
+          PreambleConditionalStack.SkipInfo->ElseLoc);
   }
 }
 

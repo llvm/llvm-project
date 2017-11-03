@@ -422,7 +422,7 @@ void ScriptParser::readRegionAlias() {
     setError("redefinition of memory region '" + Alias + "'");
   if (!Script->MemoryRegions.count(Name))
     setError("memory region '" + Name + "' is not defined");
-  Script->MemoryRegions[Alias] = Script->MemoryRegions[Name];
+  Script->MemoryRegions.insert({Alias, Script->MemoryRegions[Name]});
 }
 
 void ScriptParser::readSearchDir() {

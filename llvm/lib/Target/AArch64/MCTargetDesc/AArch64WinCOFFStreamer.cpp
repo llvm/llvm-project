@@ -23,7 +23,15 @@ public:
                          std::unique_ptr<MCCodeEmitter> CE,
                          raw_pwrite_stream &OS)
       : MCWinCOFFStreamer(C, std::move(AB), std::move(CE), OS) {}
+
+  void FinishImpl() override;
 };
+
+void AArch64WinCOFFStreamer::FinishImpl() {
+  EmitFrames(nullptr);
+
+  MCWinCOFFStreamer::FinishImpl();
+}
 } // end anonymous namespace
 
 namespace llvm {
