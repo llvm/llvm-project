@@ -2258,15 +2258,24 @@ void ASTRecordWriter::AddFunctionDefinition(const FunctionDecl *FD) {
   assert(FD->doesThisDeclarationHaveABody());
   bool ModulesCodegen = false;
   if (Writer->WritingModule && !FD->isDependentContext()) {
-    // Under -fmodules-codegen, codegen is performed for all defined functions.
-    // When building a C++ Modules TS module interface unit, a strong definition
-    // in the module interface is provided by the compilation of that module
-    // interface unit, not by its users. (Inline functions are still emitted
-    // in module users.)
-    ModulesCodegen =
-        Writer->Context->getLangOpts().ModulesCodegen ||
-        (Writer->WritingModule->Kind == Module::ModuleInterfaceUnit &&
-         Writer->Context->GetGVALinkageForFunction(FD) == GVA_StrongExternal);
+    Optional<GVALinkage> Linkage;
+    if (Writer->WritingModule->Kind == Module::ModuleInterfaceUnit) {
+      // When building a C++ Modules TS module interface unit, a strong
+      // definition in the module interface is provided by the compilation of
+      // that module interface unit, not by its users. (Inline functions are
+      // still emitted in module users.)
+      Linkage = Writer->Context->GetGVALinkageForFunction(FD);
+      ModulesCodegen = *Linkage == GVA_StrongExternal;
+    }
+    if (Writer->Context->getLangOpts().ModulesCodegen) {
+      // Under -fmodules-codegen, codegen is performed for all non-internal,
+      // non-always_inline functions.
+      if (!FD->hasAttr<AlwaysInlineAttr>()) {
+        if (!Linkage)
+          Linkage = Writer->Context->GetGVALinkageForFunction(FD);
+        ModulesCodegen = *Linkage != GVA_Internal;
+      }
+    }
   }
   Record->push_back(ModulesCodegen);
   if (ModulesCodegen)

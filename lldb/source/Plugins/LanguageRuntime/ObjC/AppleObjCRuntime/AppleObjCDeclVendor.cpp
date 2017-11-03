@@ -324,8 +324,6 @@ public:
 
     clang::ASTContext &ast_ctx(interface_decl->getASTContext());
 
-    clang::QualType return_qual_type;
-
     const bool isInstance = instance;
     const bool isVariadic = false;
     const bool isSynthesized = false;

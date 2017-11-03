@@ -33,8 +33,6 @@ class HelloWatchLocationTestCase(TestBase):
         self.exe_name = self.testMethodName
         self.d = {'CXX_SOURCES': self.source, 'EXE': self.exe_name}
 
-    # Watchpoints not supported
-    @expectedFailureAndroid(archs=['arm', 'aarch64'])
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
@@ -43,12 +41,6 @@ class HelloWatchLocationTestCase(TestBase):
     @expectedFailureAll(triple=re.compile('^mips'))
     # SystemZ also currently supports only one H/W watchpoint
     @expectedFailureAll(archs=['s390x'])
-    @expectedFailureAll(
-        oslist=["linux"],
-        archs=[
-            "arm",
-            "aarch64"],
-        bugnumber="llvm.org/pr27795")
     @skipIfDarwin
     def test_hello_watchlocation(self):
         """Test watching a location with '-s size' option."""

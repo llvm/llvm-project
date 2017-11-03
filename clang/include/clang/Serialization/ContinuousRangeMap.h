@@ -1,4 +1,4 @@
-//===--- ContinuousRangeMap.h - Map with int range as key -------*- C++ -*-===//
+//===- ContinuousRangeMap.h - Map with int range as key ---------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,6 +18,7 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/SmallVector.h"
 #include <algorithm>
+#include <cassert>
 #include <utility>
 
 namespace clang {
@@ -35,14 +36,15 @@ namespace clang {
 template <typename Int, typename V, unsigned InitialCapacity>
 class ContinuousRangeMap {
 public:
-  typedef std::pair<Int, V> value_type;
-  typedef value_type &reference;
-  typedef const value_type &const_reference;
-  typedef value_type *pointer;
-  typedef const value_type *const_pointer;
+  using value_type = std::pair<Int, V>;
+  using reference = value_type &;
+  using const_reference = const value_type &;
+  using pointer = value_type *;
+  using const_pointer = const value_type *;
 
 private:
-  typedef SmallVector<value_type, InitialCapacity> Representation;
+  using Representation = SmallVector<value_type, InitialCapacity>;
+
   Representation Rep;
 
   struct Compare {
@@ -52,7 +54,7 @@ private:
     bool operator ()(Int L, const_reference R) const {
       return L < R.first;
     }
-    bool operator ()(Int L, Int R) const { 
+    bool operator ()(Int L, Int R) const {
       return L < R;
     }
     bool operator ()(const_reference L, const_reference R) const {
@@ -80,8 +82,8 @@ public:
     Rep.insert(I, Val);
   }
 
-  typedef typename Representation::iterator iterator;
-  typedef typename Representation::const_iterator const_iterator;
+  using iterator = typename Representation::iterator;
+  using const_iterator = typename Representation::const_iterator;
 
   iterator begin() { return Rep.begin(); }
   iterator end() { return Rep.end(); }
@@ -108,12 +110,11 @@ public:
   /// from a set of values.
   class Builder {
     ContinuousRangeMap &Self;
-    
+
+  public:
+    explicit Builder(ContinuousRangeMap &Self) : Self(Self) {}
     Builder(const Builder&) = delete;
     Builder &operator=(const Builder&) = delete;
-    
-  public:
-    explicit Builder(ContinuousRangeMap &Self) : Self(Self) { }
     
     ~Builder() {
       std::sort(Self.Rep.begin(), Self.Rep.end(), Compare());
@@ -131,9 +132,10 @@ public:
       Self.Rep.push_back(Val);
     }
   };
+
   friend class Builder;
 };
 
-}
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_SERIALIZATION_CONTINUOUSRANGEMAP_H

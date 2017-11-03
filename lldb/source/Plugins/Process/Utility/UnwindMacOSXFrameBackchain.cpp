@@ -85,8 +85,6 @@ size_t UnwindMacOSXFrameBackchain::GetStackFrameData_i386(
   if (process == NULL)
     return 0;
 
-  std::pair<lldb::addr_t, lldb::addr_t> fp_pc_pair;
-
   struct Frame_i386 {
     uint32_t fp;
     uint32_t pc;
@@ -178,8 +176,6 @@ size_t UnwindMacOSXFrameBackchain::GetStackFrameData_x86_64(
     return 0;
 
   StackFrame *first_frame = exe_ctx.GetFramePtr();
-
-  std::pair<lldb::addr_t, lldb::addr_t> fp_pc_pair;
 
   struct Frame_x86_64 {
     uint64_t fp;
