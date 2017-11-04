@@ -12,7 +12,7 @@
 // %clang_cc1 -triple i686-windows-itanium -std=c++11 -fdeclspec -fms-compatibility -fexceptions -fcxx-exceptions -fno-use-cxa-atexit -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-IA -check-prefix CHECK-DYNAMIC-IA -check-prefix CHECK-DYNAMIC-IA-ATEXIT
 // %clang_cc1 -triple i686-windows-itanium -std=c++11 -fdeclspec -fms-compatibility -fexceptions -fcxx-exceptions -fno-use-cxa-atexit -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-IA -check-prefix CHECK-STATIC-IA -check-prefix CHECK-STATIC-IA-ATEXIT
 
-// RUN: %clang_cc1 -triple i686-windows-gnu -std=c++11 -fdeclspec -fms-compatibility -fexceptions -fcxx-exceptions -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-IA -check-prefix CHECK-DYNAMIC-IA
+// RUN: %clang_cc1 -triple i686-windows-gnu -std=c++11 -fdeclspec -fms-compatibility -fexceptions -fcxx-exceptions -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-IA -check-prefix CHECK-STATIC-IA
 // RUN: %clang_cc1 -triple i686-windows-gnu -std=c++11 -fdeclspec -fms-compatibility -fexceptions -fcxx-exceptions -flto-visibility-public-std -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-IA -check-prefix CHECK-STATIC-IA
 // RUN: %clang_cc1 -triple i686-windows-cygnus -std=c++11 -fdeclspec -fms-compatibility -fexceptions -fcxx-exceptions -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-IA -check-prefix CHECK-DYNAMIC-IA
 // RUN: %clang_cc1 -triple i686-windows-cygnus -std=c++11 -fdeclspec -fms-compatibility -fexceptions -fcxx-exceptions -flto-visibility-public-std -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-IA -check-prefix CHECK-STATIC-IA

@@ -12384,6 +12384,16 @@ static SDValue lowerV2X128VectorShuffle(const SDLoc &DL, MVT VT, SDValue V1,
         return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, LoV, HiV);
       }
     }
+
+    // Try to use SHUF128 if possible.
+    if (Subtarget.hasVLX()) {
+      if (WidenedMask[0] < 2 && WidenedMask[1] >= 2) {
+        unsigned PermMask = ((WidenedMask[0] % 2) << 0) |
+                            ((WidenedMask[1] % 2) << 1);
+      return DAG.getNode(X86ISD::SHUF128, DL, VT, V1, V2,
+                         DAG.getConstant(PermMask, DL, MVT::i8));
+      }
+    }
   }
 
   // Otherwise form a 128-bit permutation. After accounting for undefs,
