@@ -126,7 +126,7 @@ void SymbolTable::reportRemainingUndefines() {
       Symbol *Imp = find(Name.substr(strlen("__imp_")));
       if (Imp && isa<Defined>(Imp)) {
         auto *D = cast<Defined>(Imp);
-        replaceBody<DefinedLocalImport>(Sym, Name, D);
+        replaceSymbol<DefinedLocalImport>(Sym, Name, D);
         LocalImportChunks.push_back(cast<DefinedLocalImport>(Sym)->getChunk());
         continue;
       }
@@ -135,7 +135,7 @@ void SymbolTable::reportRemainingUndefines() {
     // Remaining undefined symbols are not fatal if /force is specified.
     // They are replaced with dummy defined symbols.
     if (Config->Force)
-      replaceBody<DefinedAbsolute>(Sym, Name, 0);
+      replaceSymbol<DefinedAbsolute>(Sym, Name, 0);
     Undefs.insert(Sym);
   }
 
@@ -170,7 +170,7 @@ Symbol *SymbolTable::addUndefined(StringRef Name, InputFile *F,
   if (!F || !isa<BitcodeFile>(F))
     S->IsUsedInRegularObj = true;
   if (WasInserted || (isa<Lazy>(S) && IsWeakAlias)) {
-    replaceBody<Undefined>(S, Name);
+    replaceSymbol<Undefined>(S, Name);
     return S;
   }
   if (auto *L = dyn_cast<Lazy>(S)) {
@@ -188,7 +188,7 @@ void SymbolTable::addLazy(ArchiveFile *F, const Archive::Symbol Sym) {
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name);
   if (WasInserted) {
-    replaceBody<Lazy>(S, F, Sym);
+    replaceSymbol<Lazy>(S, F, Sym);
     return;
   }
   auto *U = dyn_cast<Undefined>(S);
@@ -210,7 +210,7 @@ Symbol *SymbolTable::addAbsolute(StringRef N, COFFSymbolRef Sym) {
   std::tie(S, WasInserted) = insert(N);
   S->IsUsedInRegularObj = true;
   if (WasInserted || isa<Undefined>(S) || isa<Lazy>(S))
-    replaceBody<DefinedAbsolute>(S, N, Sym);
+    replaceSymbol<DefinedAbsolute>(S, N, Sym);
   else if (!isa<DefinedCOFF>(S))
     reportDuplicate(S, nullptr);
   return S;
@@ -222,7 +222,7 @@ Symbol *SymbolTable::addAbsolute(StringRef N, uint64_t VA) {
   std::tie(S, WasInserted) = insert(N);
   S->IsUsedInRegularObj = true;
   if (WasInserted || isa<Undefined>(S) || isa<Lazy>(S))
-    replaceBody<DefinedAbsolute>(S, N, VA);
+    replaceSymbol<DefinedAbsolute>(S, N, VA);
   else if (!isa<DefinedCOFF>(S))
     reportDuplicate(S, nullptr);
   return S;
@@ -234,7 +234,7 @@ Symbol *SymbolTable::addSynthetic(StringRef N, Chunk *C) {
   std::tie(S, WasInserted) = insert(N);
   S->IsUsedInRegularObj = true;
   if (WasInserted || isa<Undefined>(S) || isa<Lazy>(S))
-    replaceBody<DefinedSynthetic>(S, N, C);
+    replaceSymbol<DefinedSynthetic>(S, N, C);
   else if (!isa<DefinedCOFF>(S))
     reportDuplicate(S, nullptr);
   return S;
@@ -252,7 +252,8 @@ Symbol *SymbolTable::addRegular(InputFile *F, StringRef N, bool IsCOMDAT,
   if (SP == SP_CONFLICT) {
     reportDuplicate(S, F);
   } else if (SP == SP_NEW) {
-    replaceBody<DefinedRegular>(S, F, N, IsCOMDAT, /*IsExternal*/ true, Sym, C);
+    replaceSymbol<DefinedRegular>(S, F, N, IsCOMDAT, /*IsExternal*/ true, Sym,
+                                  C);
   } else if (SP == SP_EXISTING && IsCOMDAT && C) {
     C->markDiscarded();
     // Discard associative chunks that we've parsed so far. No need to recurse
@@ -271,10 +272,10 @@ Symbol *SymbolTable::addCommon(InputFile *F, StringRef N, uint64_t Size,
   if (!isa<BitcodeFile>(F))
     S->IsUsedInRegularObj = true;
   if (WasInserted || !isa<DefinedCOFF>(S))
-    replaceBody<DefinedCommon>(S, F, N, Size, Sym, C);
+    replaceSymbol<DefinedCommon>(S, F, N, Size, Sym, C);
   else if (auto *DC = dyn_cast<DefinedCommon>(S))
     if (Size > DC->getSize())
-      replaceBody<DefinedCommon>(S, F, N, Size, Sym, C);
+      replaceSymbol<DefinedCommon>(S, F, N, Size, Sym, C);
   return S;
 }
 
@@ -284,7 +285,7 @@ DefinedImportData *SymbolTable::addImportData(StringRef N, ImportFile *F) {
   std::tie(S, WasInserted) = insert(N);
   S->IsUsedInRegularObj = true;
   if (WasInserted || isa<Undefined>(S) || isa<Lazy>(S)) {
-    replaceBody<DefinedImportData>(S, N, F);
+    replaceSymbol<DefinedImportData>(S, N, F);
     return cast<DefinedImportData>(S);
   }
 
@@ -300,7 +301,7 @@ DefinedImportThunk *SymbolTable::addImportThunk(StringRef Name,
   std::tie(S, WasInserted) = insert(Name);
   S->IsUsedInRegularObj = true;
   if (WasInserted || isa<Undefined>(S) || isa<Lazy>(S)) {
-    replaceBody<DefinedImportThunk>(S, Name, ID, Machine);
+    replaceSymbol<DefinedImportThunk>(S, Name, ID, Machine);
     return cast<DefinedImportThunk>(S);
   }
 
