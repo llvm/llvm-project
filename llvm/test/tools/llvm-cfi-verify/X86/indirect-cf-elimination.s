@@ -10,7 +10,10 @@
 # reporting of the cfi-verify program. It should only find a single indirect CF
 # instruction at `tiny.cc:11` (see protected-lineinfo.s for the source).
 
-# CHECK: Unprotected: 0 (0.00%), Protected: 1 (100.00%)
+# CHECK: Expected Protected: 1 (100.00%)
+# CHECK: Unexpected Protected: 0 (0.00%)
+# CHECK: Expected Unprotected: 0 (0.00%)
+# CHECK: Unexpected Unprotected (BAD): 0 (0.00%)
 
   .text
   .file "ld-temp.o"

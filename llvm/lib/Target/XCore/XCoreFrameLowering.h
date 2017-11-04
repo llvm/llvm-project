@@ -15,7 +15,7 @@
 #ifndef LLVM_LIB_TARGET_XCORE_XCOREFRAMELOWERING_H
 #define LLVM_LIB_TARGET_XCORE_XCOREFRAMELOWERING_H
 
-#include "llvm/Target/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {

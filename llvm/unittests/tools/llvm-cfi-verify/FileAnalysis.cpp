@@ -64,6 +64,7 @@ public:
 class BasicFileAnalysisTest : public ::testing::Test {
 protected:
   virtual void SetUp() {
+    IgnoreDWARFFlag = true;
     SuccessfullyInitialised = true;
     if (auto Err = Analysis.initialiseDisassemblyMembers()) {
       handleAllErrors(std::move(Err), [&](const UnsupportedDisassembly &E) {
@@ -650,7 +651,60 @@ TEST_F(BasicFileAnalysisTest, CFIProtectionComplexExample) {
           0x0f, 0x0b,                   // 22: ud2
       },
       0xDEADBEEF);
+  uint64_t PrevSearchLengthForUndef = SearchLengthForUndef;
+  SearchLengthForUndef = 5;
   EXPECT_FALSE(Analysis.isIndirectInstructionCFIProtected(0xDEADBEEF + 9));
+  SearchLengthForUndef = PrevSearchLengthForUndef;
+}
+
+TEST_F(BasicFileAnalysisTest, UndefSearchLengthOneTest) {
+  Analysis.parseSectionContents(
+      {
+          0x77, 0x0d,                   // 0x688118: ja 0x688127 [+12]
+          0x48, 0x89, 0xdf,             // 0x68811a: mov %rbx, %rdi
+          0xff, 0xd0,                   // 0x68811d: callq *%rax
+          0x48, 0x89, 0xdf,             // 0x68811f: mov %rbx, %rdi
+          0xe8, 0x09, 0x00, 0x00, 0x00, // 0x688122: callq 0x688130
+          0x0f, 0x0b,                   // 0x688127: ud2
+      },
+      0x688118);
+  uint64_t PrevSearchLengthForUndef = SearchLengthForUndef;
+  SearchLengthForUndef = 1;
+  EXPECT_TRUE(Analysis.isIndirectInstructionCFIProtected(0x68811d));
+  SearchLengthForUndef = PrevSearchLengthForUndef;
+}
+
+TEST_F(BasicFileAnalysisTest, UndefSearchLengthOneTestFarAway) {
+  Analysis.parseSectionContents(
+      {
+          0x74, 0x73,                         // 0x7759eb: je 0x775a60
+          0xe9, 0x1c, 0x04, 0x00, 0x00, 0x00, // 0x7759ed: jmpq 0x775e0e
+      },
+      0x7759eb);
+
+  Analysis.parseSectionContents(
+      {
+          0x0f, 0x85, 0xb2, 0x03, 0x00, 0x00, // 0x775a56: jne    0x775e0e
+          0x48, 0x83, 0xc3, 0xf4, // 0x775a5c: add    $0xfffffffffffffff4,%rbx
+          0x48, 0x8b, 0x7c, 0x24, 0x10, // 0x775a60: mov    0x10(%rsp),%rdi
+          0x48, 0x89, 0xde,             // 0x775a65: mov    %rbx,%rsi
+          0xff, 0xd1,                   // 0x775a68: callq  *%rcx
+      },
+      0x775a56);
+
+  Analysis.parseSectionContents(
+      {
+          0x0f, 0x0b, // 0x775e0e: ud2
+      },
+      0x775e0e);
+  uint64_t PrevSearchLengthForUndef = SearchLengthForUndef;
+  SearchLengthForUndef = 1;
+  EXPECT_FALSE(Analysis.isIndirectInstructionCFIProtected(0x775a68));
+  SearchLengthForUndef = 2;
+  EXPECT_TRUE(Analysis.isIndirectInstructionCFIProtected(0x775a68));
+  SearchLengthForUndef = 3;
+  EXPECT_TRUE(Analysis.isIndirectInstructionCFIProtected(0x775a68));
+  SearchLengthForUndef = PrevSearchLengthForUndef;
 }
 
 } // anonymous namespace
