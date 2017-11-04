@@ -15,7 +15,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUFRAMELOWERING_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUFRAMELOWERING_H
 
-#include "llvm/Target/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 
 namespace llvm {
 

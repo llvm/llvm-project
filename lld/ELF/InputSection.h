@@ -25,7 +25,7 @@ namespace lld {
 namespace elf {
 
 class DefinedCommon;
-class SymbolBody;
+class Symbol;
 struct SectionPiece;
 
 class DefinedRegular;
@@ -177,7 +177,8 @@ public:
 
   // Returns a source location string. Used to construct an error message.
   template <class ELFT> std::string getLocation(uint64_t Offset);
-  template <class ELFT> std::string getSrcMsg(const SymbolBody &Sym, uint64_t Offset);
+  template <class ELFT>
+  std::string getSrcMsg(const Symbol &Sym, uint64_t Offset);
   std::string getObjMsg(uint64_t Offset);
 
   // Each section knows how to relocate itself. These functions apply

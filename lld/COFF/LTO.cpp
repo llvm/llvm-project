@@ -88,17 +88,17 @@ BitcodeCompiler::BitcodeCompiler() : LTOObj(createLTO()) {}
 
 BitcodeCompiler::~BitcodeCompiler() = default;
 
-static void undefine(SymbolBody *S) { replaceBody<Undefined>(S, S->getName()); }
+static void undefine(Symbol *S) { replaceSymbol<Undefined>(S, S->getName()); }
 
 void BitcodeCompiler::add(BitcodeFile &F) {
   lto::InputFile &Obj = *F.Obj;
   unsigned SymNum = 0;
-  std::vector<SymbolBody *> SymBodies = F.getSymbols();
+  std::vector<Symbol *> SymBodies = F.getSymbols();
   std::vector<lto::SymbolResolution> Resols(SymBodies.size());
 
   // Provide a resolution to the LTO API for each symbol.
   for (const lto::InputFile::Symbol &ObjSym : Obj.symbols()) {
-    SymbolBody *Sym = SymBodies[SymNum];
+    Symbol *Sym = SymBodies[SymNum];
     lto::SymbolResolution &R = Resols[SymNum];
     ++SymNum;
 

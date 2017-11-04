@@ -39,22 +39,22 @@ public:
   template <class ELFT> void addSymbolWrap(StringRef Name);
   void applySymbolRenames();
 
-  ArrayRef<SymbolBody *> getSymbols() const { return SymVector; }
+  ArrayRef<Symbol *> getSymbols() const { return SymVector; }
 
   template <class ELFT>
   DefinedRegular *addAbsolute(StringRef Name,
                               uint8_t Visibility = llvm::ELF::STV_HIDDEN,
                               uint8_t Binding = llvm::ELF::STB_GLOBAL);
 
-  template <class ELFT> SymbolBody *addUndefined(StringRef Name);
+  template <class ELFT> Symbol *addUndefined(StringRef Name);
   template <class ELFT>
-  SymbolBody *addUndefined(StringRef Name, bool IsLocal, uint8_t Binding,
-                           uint8_t StOther, uint8_t Type,
-                           bool CanOmitFromDynSym, InputFile *File);
+  Symbol *addUndefined(StringRef Name, bool IsLocal, uint8_t Binding,
+                       uint8_t StOther, uint8_t Type, bool CanOmitFromDynSym,
+                       InputFile *File);
   template <class ELFT>
-  SymbolBody *addRegular(StringRef Name, uint8_t StOther, uint8_t Type,
-                         uint64_t Value, uint64_t Size, uint8_t Binding,
-                         SectionBase *Section, InputFile *File);
+  Symbol *addRegular(StringRef Name, uint8_t StOther, uint8_t Type,
+                     uint64_t Value, uint64_t Size, uint8_t Binding,
+                     SectionBase *Section, InputFile *File);
 
   template <class ELFT>
   void addShared(StringRef Name, SharedFile<ELFT> *F,
@@ -62,40 +62,39 @@ public:
                  const typename ELFT::Verdef *Verdef);
 
   template <class ELFT>
-  SymbolBody *addLazyArchive(StringRef Name, ArchiveFile *F,
-                             const llvm::object::Archive::Symbol S);
+  Symbol *addLazyArchive(StringRef Name, ArchiveFile *F,
+                         const llvm::object::Archive::Symbol S);
 
   template <class ELFT> void addLazyObject(StringRef Name, LazyObjFile &Obj);
 
-  SymbolBody *addBitcode(StringRef Name, uint8_t Binding, uint8_t StOther,
-                         uint8_t Type, bool CanOmitFromDynSym,
-                         BitcodeFile *File);
+  Symbol *addBitcode(StringRef Name, uint8_t Binding, uint8_t StOther,
+                     uint8_t Type, bool CanOmitFromDynSym, BitcodeFile *File);
 
-  SymbolBody *addCommon(StringRef Name, uint64_t Size, uint32_t Alignment,
-                        uint8_t Binding, uint8_t StOther, uint8_t Type,
-                        InputFile *File);
+  Symbol *addCommon(StringRef Name, uint64_t Size, uint32_t Alignment,
+                    uint8_t Binding, uint8_t StOther, uint8_t Type,
+                    InputFile *File);
 
-  std::pair<SymbolBody *, bool> insert(StringRef Name);
-  std::pair<SymbolBody *, bool> insert(StringRef Name, uint8_t Type,
-                                       uint8_t Visibility,
-                                       bool CanOmitFromDynSym, InputFile *File);
+  std::pair<Symbol *, bool> insert(StringRef Name);
+  std::pair<Symbol *, bool> insert(StringRef Name, uint8_t Type,
+                                   uint8_t Visibility, bool CanOmitFromDynSym,
+                                   InputFile *File);
 
   template <class ELFT> void fetchIfLazy(StringRef Name);
   template <class ELFT> void scanShlibUndefined();
   void scanVersionScript();
 
-  SymbolBody *find(StringRef Name);
+  Symbol *find(StringRef Name);
 
   void trace(StringRef Name);
 
   void handleDynamicList();
 
 private:
-  std::vector<SymbolBody *> findByVersion(SymbolVersion Ver);
-  std::vector<SymbolBody *> findAllByVersion(SymbolVersion Ver);
-  void defsym(SymbolBody *Dst, SymbolBody *Src);
+  std::vector<Symbol *> findByVersion(SymbolVersion Ver);
+  std::vector<Symbol *> findAllByVersion(SymbolVersion Ver);
+  void defsym(Symbol *Dst, Symbol *Src);
 
-  llvm::StringMap<std::vector<SymbolBody *>> &getDemangledSyms();
+  llvm::StringMap<std::vector<Symbol *>> &getDemangledSyms();
   void handleAnonymousVersion();
   void assignExactVersion(SymbolVersion Ver, uint16_t VersionId,
                           StringRef VersionName);
@@ -115,7 +114,7 @@ private:
   // FIXME: Experiment with passing in a custom hashing or sorting the symbols
   // once symbol resolution is finished.
   llvm::DenseMap<llvm::CachedHashStringRef, SymIndex> Symtab;
-  std::vector<SymbolBody *> SymVector;
+  std::vector<Symbol *> SymVector;
 
   // Comdat groups define "link once" sections. If two comdat groups have the
   // same name, only one of them is linked, and the other is ignored. This set
@@ -129,11 +128,11 @@ private:
   // This mapping is 1:N because two symbols with different versions
   // can have the same name. We use this map to handle "extern C++ {}"
   // directive in version scripts.
-  llvm::Optional<llvm::StringMap<std::vector<SymbolBody *>>> DemangledSyms;
+  llvm::Optional<llvm::StringMap<std::vector<Symbol *>>> DemangledSyms;
 
   struct SymbolRenaming {
-    SymbolBody *Dst;
-    SymbolBody *Src;
+    Symbol *Dst;
+    Symbol *Src;
     uint8_t Binding;
   };
 
@@ -141,7 +140,7 @@ private:
   std::vector<SymbolRenaming> Defsyms;
 
   // For -wrap.
-  std::vector<std::pair<SymbolBody *, SymbolBody *>> WrapSymbols;
+  std::vector<std::pair<Symbol *, Symbol *>> WrapSymbols;
 
   // For LTO.
   std::unique_ptr<BitcodeCompiler> LTO;

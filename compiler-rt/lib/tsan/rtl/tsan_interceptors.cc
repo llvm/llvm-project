@@ -2451,8 +2451,8 @@ TSAN_INTERCEPTOR(void *, __tls_get_addr, void *arg) {
 #if SANITIZER_NETBSD
 TSAN_INTERCEPTOR(void, _lwp_exit) {
   SCOPED_TSAN_INTERCEPTOR(_lwp_exit);
-  REAL(_lwp_exit)();
   DestroyThreadState();
+  REAL(_lwp_exit)();
 }
 #define TSAN_MAYBE_INTERCEPT__LWP_EXIT TSAN_INTERCEPT(_lwp_exit)
 #else

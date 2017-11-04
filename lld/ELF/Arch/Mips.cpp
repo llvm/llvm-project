@@ -29,17 +29,17 @@ template <class ELFT> class MIPS final : public TargetInfo {
 public:
   MIPS();
   uint32_t calcEFlags() const override;
-  RelExpr getRelExpr(RelType Type, const SymbolBody &S,
+  RelExpr getRelExpr(RelType Type, const Symbol &S,
                      const uint8_t *Loc) const override;
   int64_t getImplicitAddend(const uint8_t *Buf, RelType Type) const override;
   bool isPicRel(RelType Type) const override;
   RelType getDynRel(RelType Type) const override;
-  void writeGotPlt(uint8_t *Buf, const SymbolBody &S) const override;
+  void writeGotPlt(uint8_t *Buf, const Symbol &S) const override;
   void writePltHeader(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
   bool needsThunk(RelExpr Expr, RelType Type, const InputFile *File,
-                  uint64_t BranchAddr, const SymbolBody &S) const override;
+                  uint64_t BranchAddr, const Symbol &S) const override;
   void relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const override;
   bool usesOnlyLowPageBits(RelType Type) const override;
 };
@@ -75,7 +75,7 @@ template <class ELFT> uint32_t MIPS<ELFT>::calcEFlags() const {
 }
 
 template <class ELFT>
-RelExpr MIPS<ELFT>::getRelExpr(RelType Type, const SymbolBody &S,
+RelExpr MIPS<ELFT>::getRelExpr(RelType Type, const Symbol &S,
                                const uint8_t *Loc) const {
   // See comment in the calculateMipsRelChain.
   if (ELFT::Is64Bits || Config->MipsN32Abi)
@@ -192,7 +192,7 @@ template <class ELFT> RelType MIPS<ELFT>::getDynRel(RelType Type) const {
 }
 
 template <class ELFT>
-void MIPS<ELFT>::writeGotPlt(uint8_t *Buf, const SymbolBody &) const {
+void MIPS<ELFT>::writeGotPlt(uint8_t *Buf, const Symbol &) const {
   write32<ELFT::TargetEndianness>(Buf, InX::Plt->getVA());
 }
 
@@ -331,7 +331,7 @@ void MIPS<ELFT>::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
 
 template <class ELFT>
 bool MIPS<ELFT>::needsThunk(RelExpr Expr, RelType Type, const InputFile *File,
-                            uint64_t BranchAddr, const SymbolBody &S) const {
+                            uint64_t BranchAddr, const Symbol &S) const {
   // Any MIPS PIC code function is invoked with its address in register $t9.
   // So if we have a branch instruction from non-PIC code to the PIC one
   // we cannot make the jump directly and need to create a small stubs
