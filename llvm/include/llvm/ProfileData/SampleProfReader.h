@@ -217,10 +217,10 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/ProfileSummary.h"
+#include "llvm/ProfileData/GCOV.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorOr.h"
-#include "llvm/Support/GCOV.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <algorithm>
 #include <cstdint>

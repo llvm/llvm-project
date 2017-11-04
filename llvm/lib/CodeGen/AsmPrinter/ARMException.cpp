@@ -29,7 +29,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Target/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 using namespace llvm;

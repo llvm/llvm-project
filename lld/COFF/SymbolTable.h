@@ -31,7 +31,7 @@ class DefinedAbsolute;
 class DefinedRelative;
 class Lazy;
 class SectionChunk;
-class SymbolBody;
+class Symbol;
 
 // SymbolTable is a bucket of all known symbols, including defined,
 // undefined, or lazy symbols (the last one is symbols in archive
@@ -58,14 +58,14 @@ public:
   std::vector<Chunk *> getChunks();
 
   // Returns a symbol for a given name. Returns a nullptr if not found.
-  SymbolBody *find(StringRef Name);
-  SymbolBody *findUnderscore(StringRef Name);
+  Symbol *find(StringRef Name);
+  Symbol *findUnderscore(StringRef Name);
 
   // Occasionally we have to resolve an undefined symbol to its
   // mangled symbol. This function tries to find a mangled name
   // for U from the symbol table, and if found, set the symbol as
   // a weak alias for U.
-  void mangleMaybe(SymbolBody *B);
+  void mangleMaybe(Symbol *B);
   StringRef findMangle(StringRef Name);
 
   // Build a set of COFF objects representing the combined contents of
@@ -75,25 +75,25 @@ public:
   std::vector<StringRef> compileBitcodeFiles();
 
   // Creates an Undefined symbol for a given name.
-  SymbolBody *addUndefined(StringRef Name);
+  Symbol *addUndefined(StringRef Name);
 
-  SymbolBody *addSynthetic(StringRef N, Chunk *C);
-  SymbolBody *addAbsolute(StringRef N, uint64_t VA);
+  Symbol *addSynthetic(StringRef N, Chunk *C);
+  Symbol *addAbsolute(StringRef N, uint64_t VA);
 
-  SymbolBody *addUndefined(StringRef Name, InputFile *F, bool IsWeakAlias);
+  Symbol *addUndefined(StringRef Name, InputFile *F, bool IsWeakAlias);
   void addLazy(ArchiveFile *F, const Archive::Symbol Sym);
-  SymbolBody *addAbsolute(StringRef N, COFFSymbolRef S);
-  SymbolBody *addRegular(InputFile *F, StringRef N, bool IsCOMDAT,
-                         const llvm::object::coff_symbol_generic *S = nullptr,
-                         SectionChunk *C = nullptr);
-  SymbolBody *addCommon(InputFile *F, StringRef N, uint64_t Size,
-                        const llvm::object::coff_symbol_generic *S = nullptr,
-                        CommonChunk *C = nullptr);
+  Symbol *addAbsolute(StringRef N, COFFSymbolRef S);
+  Symbol *addRegular(InputFile *F, StringRef N, bool IsCOMDAT,
+                     const llvm::object::coff_symbol_generic *S = nullptr,
+                     SectionChunk *C = nullptr);
+  Symbol *addCommon(InputFile *F, StringRef N, uint64_t Size,
+                    const llvm::object::coff_symbol_generic *S = nullptr,
+                    CommonChunk *C = nullptr);
   DefinedImportData *addImportData(StringRef N, ImportFile *F);
   DefinedImportThunk *addImportThunk(StringRef Name, DefinedImportData *S,
                                      uint16_t Machine);
 
-  void reportDuplicate(SymbolBody *Existing, InputFile *NewFile);
+  void reportDuplicate(Symbol *Existing, InputFile *NewFile);
 
   // A list of chunks which to be added to .rdata.
   std::vector<Chunk *> LocalImportChunks;
@@ -105,10 +105,10 @@ public:
   }
 
 private:
-  std::pair<SymbolBody *, bool> insert(StringRef Name);
+  std::pair<Symbol *, bool> insert(StringRef Name);
   StringRef findByPrefix(StringRef Prefix);
 
-  llvm::DenseMap<llvm::CachedHashStringRef, SymbolBody *> Symtab;
+  llvm::DenseMap<llvm::CachedHashStringRef, Symbol *> Symtab;
   std::unique_ptr<BitcodeCompiler> LTO;
 };
 

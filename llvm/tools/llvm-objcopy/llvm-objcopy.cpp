@@ -160,7 +160,7 @@ void CopyBinary(const ELFObjectFile<ELF64LE> &ObjFile) {
   }
 
   if (StripDWO || !SplitDWO.empty())
-    RemovePred = [RemovePred, &Obj](const SectionBase &Sec) {
+    RemovePred = [RemovePred](const SectionBase &Sec) {
       return IsDWOSection(Sec) || RemovePred(Sec);
     };
 

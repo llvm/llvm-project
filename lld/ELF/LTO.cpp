@@ -108,7 +108,7 @@ static std::unique_ptr<lto::LTO> createLTO() {
 }
 
 BitcodeCompiler::BitcodeCompiler() : LTOObj(createLTO()) {
-  for (SymbolBody *Sym : Symtab->getSymbols()) {
+  for (Symbol *Sym : Symtab->getSymbols()) {
     StringRef Name = Sym->getName();
     for (StringRef Prefix : {"__start_", "__stop_"})
       if (Name.startswith(Prefix))
@@ -118,15 +118,15 @@ BitcodeCompiler::BitcodeCompiler() : LTOObj(createLTO()) {
 
 BitcodeCompiler::~BitcodeCompiler() = default;
 
-static void undefine(SymbolBody *S) {
-  replaceBody<Undefined>(S, nullptr, S->getName(), /*IsLocal=*/false,
-                         STV_DEFAULT, S->Type);
+static void undefine(Symbol *S) {
+  replaceSymbol<Undefined>(S, nullptr, S->getName(), /*IsLocal=*/false,
+                           STV_DEFAULT, S->Type);
 }
 
 void BitcodeCompiler::add(BitcodeFile &F) {
   lto::InputFile &Obj = *F.Obj;
   unsigned SymNum = 0;
-  std::vector<SymbolBody *> Syms = F.getSymbols();
+  std::vector<Symbol *> Syms = F.getSymbols();
   std::vector<lto::SymbolResolution> Resols(Syms.size());
 
   DenseSet<StringRef> ScriptSymbols;
@@ -136,7 +136,7 @@ void BitcodeCompiler::add(BitcodeFile &F) {
 
   // Provide a resolution to the LTO API for each symbol.
   for (const lto::InputFile::Symbol &ObjSym : Obj.symbols()) {
-    SymbolBody *Sym = Syms[SymNum];
+    Symbol *Sym = Syms[SymNum];
     lto::SymbolResolution &R = Resols[SymNum];
     ++SymNum;
 

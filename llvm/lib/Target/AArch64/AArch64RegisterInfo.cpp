@@ -26,7 +26,7 @@
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/Target/TargetOptions.h"
 
 using namespace llvm;

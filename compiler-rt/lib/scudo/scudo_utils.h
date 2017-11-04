@@ -14,9 +14,9 @@
 #ifndef SCUDO_UTILS_H_
 #define SCUDO_UTILS_H_
 
-#include <string.h>
-
 #include "sanitizer_common/sanitizer_common.h"
+
+#include <string.h>
 
 namespace __scudo {
 
@@ -34,7 +34,7 @@ enum CPUFeature {
   CRC32CPUFeature = 0,
   MaxCPUFeature,
 };
-bool testCPUFeature(CPUFeature feature);
+bool testCPUFeature(CPUFeature Feature);
 
 INLINE u64 rotl(const u64 X, int K) {
   return (X << K) | (X >> (64 - K));

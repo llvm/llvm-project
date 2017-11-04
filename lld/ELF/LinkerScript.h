@@ -30,7 +30,7 @@ namespace lld {
 namespace elf {
 
 class DefinedRegular;
-class SymbolBody;
+class Symbol;
 class InputSectionBase;
 class InputSection;
 class OutputSection;

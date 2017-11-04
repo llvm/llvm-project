@@ -13,7 +13,7 @@
 #include "llvm/CodeGen/LiveIntervalAnalysis.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/Target/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 
 using namespace llvm;
 

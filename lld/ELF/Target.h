@@ -19,7 +19,7 @@ std::string toString(elf::RelType Type);
 
 namespace elf {
 class InputFile;
-class SymbolBody;
+class Symbol;
 
 class TargetInfo {
 public:
@@ -27,8 +27,8 @@ public:
   virtual bool isPicRel(RelType Type) const { return true; }
   virtual RelType getDynRel(RelType Type) const { return Type; }
   virtual void writeGotPltHeader(uint8_t *Buf) const {}
-  virtual void writeGotPlt(uint8_t *Buf, const SymbolBody &S) const {};
-  virtual void writeIgotPlt(uint8_t *Buf, const SymbolBody &S) const;
+  virtual void writeGotPlt(uint8_t *Buf, const Symbol &S) const {};
+  virtual void writeIgotPlt(uint8_t *Buf, const Symbol &S) const;
   virtual int64_t getImplicitAddend(const uint8_t *Buf, RelType Type) const;
 
   // If lazy binding is supported, the first entry of the PLT has code
@@ -53,11 +53,11 @@ public:
   // targeting S.
   virtual bool needsThunk(RelExpr Expr, RelType RelocType,
                           const InputFile *File, uint64_t BranchAddr,
-                          const SymbolBody &S) const;
+                          const Symbol &S) const;
   // Return true if we can reach Dst from Src with Relocation RelocType
   virtual bool inBranchRange(RelType Type, uint64_t Src,
                              uint64_t Dst) const;
-  virtual RelExpr getRelExpr(RelType Type, const SymbolBody &S,
+  virtual RelExpr getRelExpr(RelType Type, const Symbol &S,
                              const uint8_t *Loc) const = 0;
 
   virtual void relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const = 0;

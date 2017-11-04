@@ -89,6 +89,7 @@
 #include "llvm/Transforms/Scalar/ADCE.h"
 #include "llvm/Transforms/Scalar/AlignmentFromAssumptions.h"
 #include "llvm/Transforms/Scalar/BDCE.h"
+#include "llvm/Transforms/Scalar/CallSiteSplitting.h"
 #include "llvm/Transforms/Scalar/ConstantHoisting.h"
 #include "llvm/Transforms/Scalar/CorrelatedValuePropagation.h"
 #include "llvm/Transforms/Scalar/DCE.h"
@@ -548,6 +549,9 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   EarlyFPM.addPass(SROA());
   EarlyFPM.addPass(EarlyCSEPass());
   EarlyFPM.addPass(LowerExpectIntrinsicPass());
+  if (Level == O3)
+    EarlyFPM.addPass(CallSiteSplittingPass());
+
   // In SamplePGO ThinLTO backend, we need instcombine before profile annotation
   // to convert bitcast to direct calls so that they can be inlined during the
   // profile annotation prepration step.
@@ -920,13 +924,16 @@ ModulePassManager PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   MPM.addPass(InferFunctionAttrsPass());
 
   if (Level > 1) {
+    FunctionPassManager EarlyFPM(DebugLogging);
+    EarlyFPM.addPass(CallSiteSplittingPass());
+    MPM.addPass(createModuleToFunctionPassAdaptor(std::move(EarlyFPM)));
+
     // Indirect call promotion. This should promote all the targets that are
     // left by the earlier promotion pass that promotes intra-module targets.
     // This two-step promotion is to save the compile time. For LTO, it should
     // produce the same result as if we only do promotion here.
     MPM.addPass(PGOIndirectCallPromotion(
         true /* InLTO */, PGOOpt && !PGOOpt->SampleProfileFile.empty()));
-
     // Propagate constants at call sites into the functions they call.  This
     // opens opportunities for globalopt (and inlining) by substituting function
     // pointers passed as arguments to direct uses of functions.

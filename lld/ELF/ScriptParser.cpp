@@ -53,6 +53,7 @@ public:
   void readLinkerScript();
   void readVersionScript();
   void readDynamicList();
+  void readDefsym(StringRef Name);
 
 private:
   void addFile(StringRef Path);
@@ -267,6 +268,14 @@ void ScriptParser::readLinkerScript() {
       setError("unknown directive: " + Tok);
     }
   }
+}
+
+void ScriptParser::readDefsym(StringRef Name) {
+  Expr E = readExpr();
+  if (!atEOF())
+    setError("EOF expected, but got " + next());
+  SymbolAssignment *Cmd = make<SymbolAssignment>(Name, E, getCurrentLocation());
+  Script->SectionCommands.push_back(Cmd);
 }
 
 void ScriptParser::addFile(StringRef S) {
@@ -1325,4 +1334,8 @@ void elf::readVersionScript(MemoryBufferRef MB) {
 
 void elf::readDynamicList(MemoryBufferRef MB) {
   ScriptParser(MB).readDynamicList();
+}
+
+void elf::readDefsym(StringRef Name, MemoryBufferRef MB) {
+  ScriptParser(MB).readDefsym(Name);
 }

@@ -20,7 +20,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Target/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Target/TargetRegisterInfo.h"

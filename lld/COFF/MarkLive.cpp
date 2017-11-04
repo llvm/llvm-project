@@ -37,7 +37,7 @@ void markLive(const std::vector<Chunk *> &Chunks) {
     Worklist.push_back(C);
   };
 
-  auto AddSym = [&](SymbolBody *B) {
+  auto AddSym = [&](Symbol *B) {
     if (auto *Sym = dyn_cast<DefinedRegular>(B))
       Enqueue(Sym->getChunk());
     else if (auto *Sym = dyn_cast<DefinedImportData>(B))
@@ -47,7 +47,7 @@ void markLive(const std::vector<Chunk *> &Chunks) {
   };
 
   // Add GC root chunks.
-  for (SymbolBody *B : Config->GCRoot)
+  for (Symbol *B : Config->GCRoot)
     AddSym(B);
 
   while (!Worklist.empty()) {
@@ -62,7 +62,7 @@ void markLive(const std::vector<Chunk *> &Chunks) {
     assert(SC->isLive() && "We mark as live when pushing onto the worklist!");
 
     // Mark all symbols listed in the relocation table for this section.
-    for (SymbolBody *B : SC->symbols())
+    for (Symbol *B : SC->symbols())
       AddSym(B);
 
     // Mark associative sections if any.

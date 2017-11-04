@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/GCOV.h"
+#include "llvm/ProfileData/GCOV.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"

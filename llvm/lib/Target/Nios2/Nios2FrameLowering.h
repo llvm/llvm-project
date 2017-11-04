@@ -14,7 +14,7 @@
 #define LLVM_LIB_TARGET_NIOS2_NIOS2FRAMELOWERING_H
 
 #include "Nios2.h"
-#include "llvm/Target/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 
 namespace llvm {
 class Nios2Subtarget;
