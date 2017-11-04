@@ -82,7 +82,8 @@ Improvements to Clang's diagnostics
   tautological comparisons between integer variable of the type ``T`` and the
   largest/smallest possible integer constant of that same type.
 
-- For C code, ``-Wsign-compare``, ``-Wtautological-constant-compare`` and
+- For C code, ``-Wsign-compare``, ``-Wsign-conversion``,
+  ``-Wtautological-constant-compare`` and
   ``-Wtautological-constant-out-of-range-compare`` were adjusted to use the
   underlying datatype of ``enum``.
 

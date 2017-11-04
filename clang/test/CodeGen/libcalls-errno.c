@@ -418,10 +418,14 @@ void foo() {
 // HAS_ERRNO: declare float @remainderf(float, float) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @remainderl(x86_fp80, x86_fp80) [[NOT_READNONE]]
 
-//
-// FIXME: remquo is not recognized as a mathlib call.
-//
-  // remquo(f,f,i);  remquof(f,f,i); remquol(f,f,i);
+  remquo(f,f,i);  remquof(f,f,i); remquol(f,f,i);
+
+// NO__ERRNO: declare double @remquo(double, double, i32*) [[NOT_READNONE]]
+// NO__ERRNO: declare float @remquof(float, float, i32*) [[NOT_READNONE]]
+// NO__ERRNO: declare x86_fp80 @remquol(x86_fp80, x86_fp80, i32*) [[NOT_READNONE]]
+// HAS_ERRNO: declare double @remquo(double, double, i32*) [[NOT_READNONE]]
+// HAS_ERRNO: declare float @remquof(float, float, i32*) [[NOT_READNONE]]
+// HAS_ERRNO: declare x86_fp80 @remquol(x86_fp80, x86_fp80, i32*) [[NOT_READNONE]]
 
   rint(f);       rintf(f);      rintl(f);
 
