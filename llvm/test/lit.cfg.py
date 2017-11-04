@@ -169,7 +169,8 @@ for arch in config.targets_to_build.split():
 
 # Features
 known_arches = ["x86_64", "mips64", "ppc64", "aarch64"]
-if any(config.llvm_host_triple.startswith(x) for x in known_arches):
+if (config.host_ldflags.find("-m32") < 0
+    and any(config.llvm_host_triple.startswith(x) for x in known_arches)):
   config.available_features.add("llvm-64-bits")
 
 # Others/can-execute.txt

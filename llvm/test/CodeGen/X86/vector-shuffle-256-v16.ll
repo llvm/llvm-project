@@ -3963,10 +3963,20 @@ define <16 x i16> @concat_v16i16_0_1_2_3_4_5_6_7_24_25_26_27_28_29_30_31(<16 x i
 }
 
 define <16 x i16> @concat_v16i16_8_9_10_11_12_13_14_15_24_25_26_27_28_29_30_31_bc(<16 x i16> %a, <16 x i16> %b) {
-; ALL-LABEL: concat_v16i16_8_9_10_11_12_13_14_15_24_25_26_27_28_29_30_31_bc:
-; ALL:       # BB#0:
-; ALL-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3]
-; ALL-NEXT:    retq
+; AVX1-LABEL: concat_v16i16_8_9_10_11_12_13_14_15_24_25_26_27_28_29_30_31_bc:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: concat_v16i16_8_9_10_11_12_13_14_15_24_25_26_27_28_29_30_31_bc:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3]
+; AVX2-NEXT:    retq
+;
+; AVX512VL-LABEL: concat_v16i16_8_9_10_11_12_13_14_15_24_25_26_27_28_29_30_31_bc:
+; AVX512VL:       # BB#0:
+; AVX512VL-NEXT:    vshufi64x2 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3]
+; AVX512VL-NEXT:    retq
   %ahi = shufflevector <16 x i16> %a, <16 x i16> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %bhi = shufflevector <16 x i16> %b, <16 x i16> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %bc0hi = bitcast <8 x i16> %ahi to <16 x i8>
