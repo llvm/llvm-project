@@ -27,7 +27,7 @@ public:
   AMDGPU();
   uint32_t calcEFlags() const override;
   void relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const override;
-  RelExpr getRelExpr(RelType Type, const SymbolBody &S,
+  RelExpr getRelExpr(RelType Type, const Symbol &S,
                      const uint8_t *Loc) const override;
 };
 } // namespace
@@ -77,7 +77,7 @@ void AMDGPU::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   }
 }
 
-RelExpr AMDGPU::getRelExpr(RelType Type, const SymbolBody &S,
+RelExpr AMDGPU::getRelExpr(RelType Type, const Symbol &S,
                            const uint8_t *Loc) const {
   switch (Type) {
   case R_AMDGPU_ABS32:

@@ -1001,7 +1001,7 @@ static void excludeLibs(opt::InputArgList &Args, ArrayRef<InputFile *> Files) {
   for (InputFile *File : Files)
     if (Optional<StringRef> Archive = getArchiveName(File))
       if (All || Libs.count(path::filename(*Archive)))
-        for (SymbolBody *Sym : File->getSymbols())
+        for (Symbol *Sym : File->getSymbols())
           if (!Sym->isLocal())
             Sym->VersionId = VER_NDX_LOCAL;
 }

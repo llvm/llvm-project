@@ -152,6 +152,8 @@ bool mingw::link(ArrayRef<const char *> ArgsArr, raw_ostream &Diag) {
     Add("-verbose");
   if (Args.hasArg(OPT_export_all_symbols))
     Add("-export-all-symbols");
+  if (!Args.hasArg(OPT_strip_all))
+    Add("-debug:dwarf");
 
   if (auto *A = Args.getLastArg(OPT_m)) {
     StringRef S = A->getValue();

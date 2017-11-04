@@ -1,4 +1,4 @@
-//===--- Module.cpp - Describe a module -----------------------------------===//
+//===- Module.cpp - Describe a module -------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,23 +16,33 @@
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <functional>
+#include <string>
+#include <utility>
+#include <vector>
 
 using namespace clang;
 
 Module::Module(StringRef Name, SourceLocation DefinitionLoc, Module *Parent,
                bool IsFramework, bool IsExplicit, unsigned VisibilityID)
-    : Name(Name), DefinitionLoc(DefinitionLoc), Parent(Parent), Directory(),
-      Umbrella(), ASTFile(nullptr), VisibilityID(VisibilityID),
-      IsMissingRequirement(false), HasIncompatibleModuleFile(false),
-      IsAvailable(true), IsFromModuleFile(false), IsFramework(IsFramework),
-      IsExplicit(IsExplicit), IsSystem(false), IsExternC(false),
-      IsInferred(false), InferSubmodules(false), InferExplicitSubmodules(false),
+    : Name(Name), DefinitionLoc(DefinitionLoc), Parent(Parent),
+      VisibilityID(VisibilityID), IsMissingRequirement(false),
+      HasIncompatibleModuleFile(false), IsAvailable(true),
+      IsFromModuleFile(false), IsFramework(IsFramework), IsExplicit(IsExplicit),
+      IsSystem(false), IsExternC(false), IsInferred(false),
+      InferSubmodules(false), InferExplicitSubmodules(false),
       InferExportWildcard(false), ConfigMacrosExhaustive(false),
       NoUndeclaredIncludes(false), NameVisibility(Hidden) {
   if (Parent) {
@@ -130,6 +140,7 @@ static StringRef getModuleNameFromComponent(
     const std::pair<std::string, SourceLocation> &IdComponent) {
   return IdComponent.first;
 }
+
 static StringRef getModuleNameFromComponent(StringRef R) { return R; }
 
 template<typename InputIter>

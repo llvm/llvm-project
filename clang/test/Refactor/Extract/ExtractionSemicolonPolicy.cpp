@@ -1,4 +1,4 @@
-// RUN: clang-refactor extract -selection=test:%s %s -- -std=c++11 2>&1 | grep -v CHECK | FileCheck %s
+// RUN: clang-refactor extract -selection=test:%s %s -- -std=c++11 -fcxx-exceptions | grep -v CHECK | FileCheck %s
 
 struct Rectangle { int width, height; };
 

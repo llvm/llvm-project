@@ -727,7 +727,7 @@ void PDBLinker::addObjectsToPDB() {
   // Compute the public and global symbols.
   auto &GsiBuilder = Builder.getGsiBuilder();
   std::vector<PublicSym32> Publics;
-  Symtab->forEachSymbol([&Publics](SymbolBody *S) {
+  Symtab->forEachSymbol([&Publics](Symbol *S) {
     // Only emit defined, live symbols that have a chunk.
     auto *Def = dyn_cast<Defined>(S);
     if (Def && Def->isLive() && Def->getChunk())

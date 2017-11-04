@@ -35,7 +35,7 @@ class ObjFile;
 class SymbolTable;
 
 // The base class for real symbol classes.
-class SymbolBody {
+class Symbol {
 public:
   enum Kind {
     // The order of these is significant. We start with the regular defined
@@ -75,7 +75,7 @@ public:
 
 protected:
   friend SymbolTable;
-  explicit SymbolBody(Kind K, StringRef N = "")
+  explicit Symbol(Kind K, StringRef N = "")
       : SymbolKind(K), IsExternal(true), IsCOMDAT(false),
         WrittenToSymtab(false), Name(N) {}
 
@@ -104,13 +104,11 @@ protected:
 
 // The base class for any defined symbols, including absolute symbols,
 // etc.
-class Defined : public SymbolBody {
+class Defined : public Symbol {
 public:
-  Defined(Kind K, StringRef N) : SymbolBody(K, N) {}
+  Defined(Kind K, StringRef N) : Symbol(K, N) {}
 
-  static bool classof(const SymbolBody *S) {
-    return S->kind() <= LastDefinedKind;
-  }
+  static bool classof(const Symbol *S) { return S->kind() <= LastDefinedKind; }
 
   // Returns the RVA (relative virtual address) of this symbol. The
   // writer sets and uses RVAs.
@@ -126,12 +124,13 @@ public:
 // loaded through that. For bitcode files, Sym is nullptr and the name is stored
 // as a StringRef.
 class DefinedCOFF : public Defined {
-  friend SymbolBody;
+  friend Symbol;
+
 public:
   DefinedCOFF(Kind K, InputFile *F, StringRef N, const coff_symbol_generic *S)
       : Defined(K, N), File(F), Sym(S) {}
 
-  static bool classof(const SymbolBody *S) {
+  static bool classof(const Symbol *S) {
     return S->kind() <= LastDefinedCOFFKind;
   }
 
@@ -157,7 +156,7 @@ public:
     this->IsCOMDAT = IsCOMDAT;
   }
 
-  static bool classof(const SymbolBody *S) {
+  static bool classof(const Symbol *S) {
     return S->kind() == DefinedRegularKind;
   }
 
@@ -179,7 +178,7 @@ public:
     this->IsExternal = true;
   }
 
-  static bool classof(const SymbolBody *S) {
+  static bool classof(const Symbol *S) {
     return S->kind() == DefinedCommonKind;
   }
 
@@ -204,7 +203,7 @@ public:
   DefinedAbsolute(StringRef N, uint64_t V)
       : Defined(DefinedAbsoluteKind, N), VA(V) {}
 
-  static bool classof(const SymbolBody *S) {
+  static bool classof(const Symbol *S) {
     return S->kind() == DefinedAbsoluteKind;
   }
 
@@ -228,7 +227,7 @@ public:
   explicit DefinedSynthetic(StringRef Name, Chunk *C)
       : Defined(DefinedSyntheticKind, Name), C(C) {}
 
-  static bool classof(const SymbolBody *S) {
+  static bool classof(const Symbol *S) {
     return S->kind() == DefinedSyntheticKind;
   }
 
@@ -246,12 +245,12 @@ private:
 // object file from an archive to replace itself with a defined
 // symbol. If the resolver finds both Undefined and Lazy for
 // the same name, it will ask the Lazy to load a file.
-class Lazy : public SymbolBody {
+class Lazy : public Symbol {
 public:
   Lazy(ArchiveFile *F, const Archive::Symbol S)
-      : SymbolBody(LazyKind, S.getName()), File(F), Sym(S) {}
+      : Symbol(LazyKind, S.getName()), File(F), Sym(S) {}
 
-  static bool classof(const SymbolBody *S) { return S->kind() == LazyKind; }
+  static bool classof(const Symbol *S) { return S->kind() == LazyKind; }
 
   ArchiveFile *File;
 
@@ -263,19 +262,17 @@ private:
 };
 
 // Undefined symbols.
-class Undefined : public SymbolBody {
+class Undefined : public Symbol {
 public:
-  explicit Undefined(StringRef N) : SymbolBody(UndefinedKind, N) {}
+  explicit Undefined(StringRef N) : Symbol(UndefinedKind, N) {}
 
-  static bool classof(const SymbolBody *S) {
-    return S->kind() == UndefinedKind;
-  }
+  static bool classof(const Symbol *S) { return S->kind() == UndefinedKind; }
 
   // An undefined symbol can have a fallback symbol which gives an
   // undefined symbol a second chance if it would remain undefined.
   // If it remains undefined, it'll be replaced with whatever the
   // Alias pointer points to.
-  SymbolBody *WeakAlias = nullptr;
+  Symbol *WeakAlias = nullptr;
 
   // If this symbol is external weak, try to resolve it to a defined
   // symbol by searching the chain of fallback symbols. Returns the symbol if
@@ -295,7 +292,7 @@ public:
       : Defined(DefinedImportDataKind, N), File(F) {
   }
 
-  static bool classof(const SymbolBody *S) {
+  static bool classof(const Symbol *S) {
     return S->kind() == DefinedImportDataKind;
   }
 
@@ -319,7 +316,7 @@ class DefinedImportThunk : public Defined {
 public:
   DefinedImportThunk(StringRef Name, DefinedImportData *S, uint16_t Machine);
 
-  static bool classof(const SymbolBody *S) {
+  static bool classof(const Symbol *S) {
     return S->kind() == DefinedImportThunkKind;
   }
 
@@ -342,7 +339,7 @@ public:
   DefinedLocalImport(StringRef N, Defined *S)
       : Defined(DefinedLocalImportKind, N), Data(make<LocalImportChunk>(S)) {}
 
-  static bool classof(const SymbolBody *S) {
+  static bool classof(const Symbol *S) {
     return S->kind() == DefinedLocalImportKind;
   }
 
@@ -399,7 +396,7 @@ inline Chunk *Defined::getChunk() {
   llvm_unreachable("unknown symbol kind");
 }
 
-// A buffer class that is large enough to hold any SymbolBody-derived
+// A buffer class that is large enough to hold any Symbol-derived
 // object. We allocate memory using this class and instantiate a symbol
 // using the placement new.
 union SymbolUnion {
@@ -415,17 +412,17 @@ union SymbolUnion {
 };
 
 template <typename T, typename... ArgT>
-void replaceBody(SymbolBody *S, ArgT &&... Arg) {
+void replaceSymbol(Symbol *S, ArgT &&... Arg) {
   static_assert(sizeof(T) <= sizeof(SymbolUnion), "Symbol too small");
   static_assert(alignof(T) <= alignof(SymbolUnion),
                 "SymbolUnion not aligned enough");
-  assert(static_cast<SymbolBody *>(static_cast<T *>(nullptr)) == nullptr &&
-         "Not a SymbolBody");
+  assert(static_cast<Symbol *>(static_cast<T *>(nullptr)) == nullptr &&
+         "Not a Symbol");
   new (S) T(std::forward<ArgT>(Arg)...);
 }
 } // namespace coff
 
-std::string toString(coff::SymbolBody &B);
+std::string toString(coff::Symbol &B);
 } // namespace lld
 
 #endif

@@ -23,7 +23,7 @@ namespace lld {
 namespace elf {
 
 struct PhdrEntry;
-class SymbolBody;
+class Symbol;
 struct EhSectionPiece;
 class EhInputSection;
 class InputSection;

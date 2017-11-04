@@ -10,7 +10,7 @@
 #ifndef LLVM_AVR_FRAME_LOWERING_H
 #define LLVM_AVR_FRAME_LOWERING_H
 
-#include "llvm/Target/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 
 namespace llvm {
 

@@ -35,7 +35,7 @@ class DefinedImportData;
 class DefinedRegular;
 class ObjFile;
 class OutputSection;
-class SymbolBody;
+class Symbol;
 
 // Mask for section types (code, data, bss, disacardable, etc.)
 // and permissions (writable, readable or executable).
@@ -117,7 +117,7 @@ class SectionChunk final : public Chunk {
 public:
   class symbol_iterator : public llvm::iterator_adaptor_base<
                               symbol_iterator, const coff_relocation *,
-                              std::random_access_iterator_tag, SymbolBody *> {
+                              std::random_access_iterator_tag, Symbol *> {
     friend SectionChunk;
 
     ObjFile *File;
@@ -128,9 +128,7 @@ public:
   public:
     symbol_iterator() = default;
 
-    SymbolBody *operator*() const {
-      return File->getSymbolBody(I->SymbolTableIndex);
-    }
+    Symbol *operator*() const { return File->getSymbol(I->SymbolTableIndex); }
   };
 
   SectionChunk(ObjFile *File, const coff_section *Header);
