@@ -806,7 +806,7 @@ void Writer::fixSafeSEHSymbols() {
   // section relative relocations.
   Symbol *T = Symtab->find("___safe_se_handler_table");
   Symbol *C = Symtab->find("___safe_se_handler_count");
-  replaceBody<DefinedSynthetic>(T, T->getName(), SEHTable);
+  replaceSymbol<DefinedSynthetic>(T, T->getName(), SEHTable);
   cast<DefinedAbsolute>(C)->setVA(SEHTable->getSize() / 4);
 }
 

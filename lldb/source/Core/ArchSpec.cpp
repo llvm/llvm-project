@@ -921,6 +921,9 @@ void ArchSpec::MergeFrom(const ArchSpec &other) {
     m_core = other.GetCore();
     CoreUpdated(true);
   }
+  if (GetFlags() == 0) {
+    SetFlags(other.GetFlags());
+  }
 }
 
 bool ArchSpec::SetArchitecture(ArchitectureType arch_type, uint32_t cpu,

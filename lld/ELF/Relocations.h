@@ -152,7 +152,7 @@ private:
       ArrayRef<OutputSection *> OutputSections,
       std::function<void(OutputSection *, InputSectionDescription *)> Fn);
 
-  std::pair<Thunk *, bool> getThunk(Symbol &Body, RelType Type, uint64_t Src);
+  std::pair<Thunk *, bool> getThunk(Symbol &Sym, RelType Type, uint64_t Src);
 
   ThunkSection *addThunkSection(OutputSection *OS, InputSectionDescription *,
                                 uint64_t Off);

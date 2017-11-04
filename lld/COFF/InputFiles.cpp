@@ -179,30 +179,30 @@ void ObjFile::initializeSymbols() {
   int32_t LastSectionNumber = 0;
 
   for (uint32_t I = 0; I < NumSymbols; ++I) {
-    COFFSymbolRef Sym = check(COFFObj->getSymbol(I));
+    COFFSymbolRef COFFSym = check(COFFObj->getSymbol(I));
 
     const void *AuxP = nullptr;
-    if (Sym.getNumberOfAuxSymbols())
+    if (COFFSym.getNumberOfAuxSymbols())
       AuxP = check(COFFObj->getSymbol(I + 1)).getRawPtr();
-    bool IsFirst = (LastSectionNumber != Sym.getSectionNumber());
+    bool IsFirst = (LastSectionNumber != COFFSym.getSectionNumber());
 
-    Symbol *Body = nullptr;
-    if (Sym.isUndefined()) {
-      Body = createUndefined(Sym);
-    } else if (Sym.isWeakExternal()) {
-      Body = createUndefined(Sym);
+    Symbol *Sym = nullptr;
+    if (COFFSym.isUndefined()) {
+      Sym = createUndefined(COFFSym);
+    } else if (COFFSym.isWeakExternal()) {
+      Sym = createUndefined(COFFSym);
       uint32_t TagIndex =
           static_cast<const coff_aux_weak_external *>(AuxP)->TagIndex;
-      WeakAliases.emplace_back(Body, TagIndex);
+      WeakAliases.emplace_back(Sym, TagIndex);
     } else {
-      Body = createDefined(Sym, AuxP, IsFirst);
+      Sym = createDefined(COFFSym, AuxP, IsFirst);
     }
-    if (Body) {
-      SymbolBodies.push_back(Body);
-      SparseSymbolBodies[I] = Body;
+    if (Sym) {
+      SymbolBodies.push_back(Sym);
+      SparseSymbolBodies[I] = Sym;
     }
-    I += Sym.getNumberOfAuxSymbols();
-    LastSectionNumber = Sym.getSectionNumber();
+    I += COFFSym.getNumberOfAuxSymbols();
+    LastSectionNumber = COFFSym.getSectionNumber();
   }
 
   for (auto &KV : WeakAliases) {

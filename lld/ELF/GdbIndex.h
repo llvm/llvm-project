@@ -30,7 +30,6 @@ template <class ELFT> class LLDDwarfObj final : public llvm::DWARFObject {
   StringRef AbbrevSection;
   StringRef GnuPubNamesSection;
   StringRef GnuPubTypesSection;
-  StringRef StrSection;
 
   template <class RelTy>
   llvm::Optional<llvm::RelocAddrEntry> findAux(const InputSectionBase &Sec,
@@ -50,7 +49,7 @@ public:
   }
   StringRef getCUIndexSection() const override { return ""; }
   StringRef getAbbrevSection() const override { return AbbrevSection; }
-  StringRef getStringSection() const override { return StrSection; }
+  StringRef getStringSection() const override { return ""; }
   StringRef getGnuPubNamesSection() const override {
     return GnuPubNamesSection;
   }

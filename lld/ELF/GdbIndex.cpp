@@ -44,8 +44,6 @@ template <class ELFT> LLDDwarfObj<ELFT>::LLDDwarfObj(ObjFile<ELFT> *Obj) {
       GnuPubNamesSection = toStringRef(Sec->Data);
     else if (Sec->Name == ".debug_gnu_pubtypes")
       GnuPubTypesSection = toStringRef(Sec->Data);
-    else if (Sec->Name == ".debug_str")
-      StrSection = toStringRef(Sec->Data);
   }
 }
 

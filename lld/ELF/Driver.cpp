@@ -946,21 +946,6 @@ static Optional<uint64_t> getImageBase(opt::InputArgList &Args) {
   return V;
 }
 
-// Parses --defsym=alias option.
-static std::vector<std::pair<StringRef, StringRef>>
-getDefsym(opt::InputArgList &Args) {
-  std::vector<std::pair<StringRef, StringRef>> Ret;
-  for (auto *Arg : Args.filtered(OPT_defsym)) {
-    StringRef From;
-    StringRef To;
-    std::tie(From, To) = StringRef(Arg->getValue()).split('=');
-    if (!isValidCIdentifier(To))
-      error("--defsym: symbol name expected, but got " + To);
-    Ret.push_back({From, To});
-  }
-  return Ret;
-}
-
 // Parses `--exclude-libs=lib,lib,...`.
 // The library names may be delimited by commas or colons.
 static DenseSet<StringRef> getExcludeLibs(opt::InputArgList &Args) {
@@ -1054,6 +1039,14 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   for (InputFile *F : Files)
     Symtab->addFile<ELFT>(F);
 
+  // Process -defsym option.
+  for (auto *Arg : Args.filtered(OPT_defsym)) {
+    StringRef From;
+    StringRef To;
+    std::tie(From, To) = StringRef(Arg->getValue()).split('=');
+    readDefsym(From, MemoryBufferRef(To, "-defsym"));
+  }
+
   // Now that we have every file, we can decide if we will need a
   // dynamic symbol table.
   // We need one if we were asked to export dynamic symbols or if we are
@@ -1095,10 +1088,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   for (auto *Arg : Args.filtered(OPT_wrap))
     Symtab->addSymbolWrap<ELFT>(Arg->getValue());
 
-  // Create alias symbols for -defsym option.
-  for (std::pair<StringRef, StringRef> &Def : getDefsym(Args))
-    Symtab->addSymbolAlias<ELFT>(Def.first, Def.second);
-
   Symtab->addCombinedLTOObject<ELFT>();
   if (errorCount())
     return;
@@ -1116,6 +1105,13 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   for (BinaryFile *F : BinaryFiles)
     for (InputSectionBase *S : F->getSections())
       InputSections.push_back(cast<InputSection>(S));
+
+  // We do not want to emit debug sections if --strip-all
+  // or -strip-debug are given.
+  if (Config->Strip != StripPolicy::None)
+    llvm::erase_if(InputSections, [](InputSectionBase *S) {
+      return S->Name.startswith(".debug") || S->Name.startswith(".zdebug");
+    });
 
   Config->EFlags = Target->calcEFlags();
 

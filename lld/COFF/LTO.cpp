@@ -88,7 +88,7 @@ BitcodeCompiler::BitcodeCompiler() : LTOObj(createLTO()) {}
 
 BitcodeCompiler::~BitcodeCompiler() = default;
 
-static void undefine(Symbol *S) { replaceBody<Undefined>(S, S->getName()); }
+static void undefine(Symbol *S) { replaceSymbol<Undefined>(S, S->getName()); }
 
 void BitcodeCompiler::add(BitcodeFile &F) {
   lto::InputFile &Obj = *F.Obj;

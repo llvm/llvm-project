@@ -315,7 +315,7 @@ Symbol *SymbolTable::addUndefined(StringRef Name, bool IsLocal, uint8_t Binding,
   // in the same DSO.
   if (WasInserted || (isa<SharedSymbol>(S) && Visibility != STV_DEFAULT)) {
     S->Binding = Binding;
-    replaceBody<Undefined>(S, File, Name, IsLocal, StOther, Type);
+    replaceSymbol<Undefined>(S, File, Name, IsLocal, StOther, Type);
     return S;
   }
   if (Binding != STB_WEAK) {
@@ -404,7 +404,7 @@ Symbol *SymbolTable::addCommon(StringRef N, uint64_t Size, uint32_t Alignment,
   int Cmp = compareDefined(S, WasInserted, Binding, N);
   if (Cmp > 0) {
     S->Binding = Binding;
-    replaceBody<DefinedCommon>(S, File, N, Size, Alignment, StOther, Type);
+    replaceSymbol<DefinedCommon>(S, File, N, Size, Alignment, StOther, Type);
   } else if (Cmp == 0) {
     auto *C = dyn_cast<DefinedCommon>(S);
     if (!C) {
@@ -419,7 +419,7 @@ Symbol *SymbolTable::addCommon(StringRef N, uint64_t Size, uint32_t Alignment,
 
     Alignment = C->Alignment = std::max(C->Alignment, Alignment);
     if (Size > C->Size)
-      replaceBody<DefinedCommon>(S, File, N, Size, Alignment, StOther, Type);
+      replaceSymbol<DefinedCommon>(S, File, N, Size, Alignment, StOther, Type);
   }
   return S;
 }
@@ -480,8 +480,8 @@ Symbol *SymbolTable::addRegular(StringRef Name, uint8_t StOther, uint8_t Type,
   int Cmp = compareDefinedNonCommon(S, WasInserted, Binding, Section == nullptr,
                                     Value, Name);
   if (Cmp > 0)
-    replaceBody<DefinedRegular>(S, File, Name, /*IsLocal=*/false, StOther, Type,
-                                Value, Size, Section);
+    replaceSymbol<DefinedRegular>(S, File, Name, /*IsLocal=*/false, StOther,
+                                  Type, Value, Size, Section);
   else if (Cmp == 0)
     reportDuplicate<ELFT>(S, dyn_cast_or_null<InputSectionBase>(Section),
                           Value);
@@ -507,8 +507,8 @@ void SymbolTable::addShared(StringRef Name, SharedFile<ELFT> *File,
   // in the same DSO.
   if (WasInserted || ((S->isUndefined() || S->isLazy()) &&
                       S->getVisibility() == STV_DEFAULT)) {
-    replaceBody<SharedSymbol>(S, File, Name, Sym.st_other, Sym.getType(),
-                              Sym.st_value, Sym.st_size, Alignment, Verdef);
+    replaceSymbol<SharedSymbol>(S, File, Name, Sym.st_other, Sym.getType(),
+                                Sym.st_value, Sym.st_size, Alignment, Verdef);
     if (!S->isWeak())
       File->IsUsed = true;
   }
@@ -524,8 +524,8 @@ Symbol *SymbolTable::addBitcode(StringRef Name, uint8_t Binding,
   int Cmp = compareDefinedNonCommon(S, WasInserted, Binding,
                                     /*IsAbs*/ false, /*Value*/ 0, Name);
   if (Cmp > 0)
-    replaceBody<DefinedRegular>(S, F, Name, /*IsLocal=*/false, StOther, Type, 0,
-                                0, nullptr);
+    replaceSymbol<DefinedRegular>(S, F, Name, /*IsLocal=*/false, StOther, Type,
+                                  0, 0, nullptr);
   else if (Cmp == 0)
     reportDuplicate(S, F);
   return S;
@@ -559,7 +559,7 @@ Symbol *SymbolTable::addLazyArchive(StringRef Name, ArchiveFile *F,
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name);
   if (WasInserted) {
-    replaceBody<LazyArchive>(S, F, Sym, Symbol::UnknownType);
+    replaceSymbol<LazyArchive>(S, F, Sym, Symbol::UnknownType);
     return S;
   }
   if (!S->isUndefined())
@@ -568,7 +568,7 @@ Symbol *SymbolTable::addLazyArchive(StringRef Name, ArchiveFile *F,
   // An undefined weak will not fetch archive members. See comment on Lazy in
   // Symbols.h for the details.
   if (S->isWeak()) {
-    replaceBody<LazyArchive>(S, F, Sym, S->Type);
+    replaceSymbol<LazyArchive>(S, F, Sym, S->Type);
     return S;
   }
   std::pair<MemoryBufferRef, uint64_t> MBInfo = F->getMember(&Sym);
@@ -583,7 +583,7 @@ void SymbolTable::addLazyObject(StringRef Name, LazyObjFile &Obj) {
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name);
   if (WasInserted) {
-    replaceBody<LazyObject>(S, &Obj, Name, Symbol::UnknownType);
+    replaceSymbol<LazyObject>(S, &Obj, Name, Symbol::UnknownType);
     return;
   }
   if (!S->isUndefined())
@@ -591,7 +591,7 @@ void SymbolTable::addLazyObject(StringRef Name, LazyObjFile &Obj) {
 
   // See comment for addLazyArchive above.
   if (S->isWeak())
-    replaceBody<LazyObject>(S, &Obj, Name, S->Type);
+    replaceSymbol<LazyObject>(S, &Obj, Name, S->Type);
   else if (InputFile *F = Obj.fetch())
     addFile<ELFT>(F);
 }
