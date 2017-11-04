@@ -8,6 +8,9 @@
 # RUN: llvm-ar cr %t.lib %t %t2 %p/Inputs/trivial-object-test.elf-x86-64
 # RUN: llvm-nm --print-armap %t.lib | FileCheck %s
 
+# Delete temp files. They are too large.
+# RUN: rm -f %t %t2 %t.lib
+
 !ELF
 FileHeader:
   Class:           ELFCLASS64
