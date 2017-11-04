@@ -14,7 +14,7 @@
 #ifndef LLVM_LIB_TARGET_RISCV_RISCVFRAMELOWERING_H
 #define LLVM_LIB_TARGET_RISCV_RISCVFRAMELOWERING_H
 
-#include "llvm/Target/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 
 namespace llvm {
 class RISCVSubtarget;

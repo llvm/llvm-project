@@ -220,7 +220,6 @@ int main(int argc, char **argv) {
   if (InputFilenames.size() == 0)
     InputFilenames.push_back("-");
 
-  std::for_each(InputFilenames.begin(), InputFilenames.end(),
-                parseMCMarkup);
+  llvm::for_each(InputFilenames, parseMCMarkup);
   return 0;
 }

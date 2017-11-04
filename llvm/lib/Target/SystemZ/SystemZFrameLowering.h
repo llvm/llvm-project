@@ -11,7 +11,7 @@
 #define LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZFRAMELOWERING_H
 
 #include "llvm/ADT/IndexedMap.h"
-#include "llvm/Target/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 
 namespace llvm {
 class SystemZTargetMachine;

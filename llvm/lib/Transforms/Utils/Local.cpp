@@ -1366,7 +1366,7 @@ void llvm::salvageDebugInfo(Instruction &I) {
     return MetadataAsValue::get(I.getContext(), ValueAsMetadata::get(V));
   };
 
-  if (isa<BitCastInst>(&I)) {
+  if (isa<BitCastInst>(&I) || isa<IntToPtrInst>(&I)) {
     findDbgValues(DbgValues, &I);
     for (auto *DVI : DbgValues) {
       // Bitcasts are entirely irrelevant for debug info. Rewrite the dbg.value

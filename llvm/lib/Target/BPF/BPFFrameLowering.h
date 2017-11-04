@@ -14,7 +14,7 @@
 #ifndef LLVM_LIB_TARGET_BPF_BPFFRAMELOWERING_H
 #define LLVM_LIB_TARGET_BPF_BPFFRAMELOWERING_H
 
-#include "llvm/Target/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 
 namespace llvm {
 class BPFSubtarget;

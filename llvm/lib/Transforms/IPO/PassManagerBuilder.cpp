@@ -467,6 +467,9 @@ void PassManagerBuilder::populateModulePassManager(
 
   addExtensionsToPM(EP_ModuleOptimizerEarly, MPM);
 
+  if (OptLevel > 2)
+    MPM.add(createCallSiteSplittingPass());
+
   MPM.add(createIPSCCPPass());          // IP SCCP
   MPM.add(createCalledValuePropagationPass());
   MPM.add(createGlobalOptimizerPass()); // Optimize out global vars
@@ -703,6 +706,9 @@ void PassManagerBuilder::addLTOOptimizationPasses(legacy::PassManagerBase &PM) {
   PM.add(createInferFunctionAttrsLegacyPass());
 
   if (OptLevel > 1) {
+    // Split call-site with more constrained arguments.
+    PM.add(createCallSiteSplittingPass());
+
     // Indirect call promotion. This should promote all the targets that are
     // left by the earlier promotion pass that promotes intra-module targets.
     // This two-step promotion is to save the compile time. For LTO, it should

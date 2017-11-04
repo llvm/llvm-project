@@ -12,7 +12,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/Symbolize/Symbolize.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -43,6 +43,8 @@
 
 namespace llvm {
 namespace cfi_verify {
+
+extern bool IgnoreDWARFFlag;
 
 // Disassembler and analysis tool for machine code files. Keeps track of non-
 // sequential control flows, including indirect control flow instructions.
@@ -120,6 +122,7 @@ public:
   const MCRegisterInfo *getRegisterInfo() const;
   const MCInstrInfo *getMCInstrInfo() const;
   const MCInstrAnalysis *getMCInstrAnalysis() const;
+  symbolize::LLVMSymbolizer &getSymbolizer();
 
   // Returns true if this class is using DWARF line tables for elimination.
   bool hasLineTableInfo() const;
@@ -175,8 +178,8 @@ private:
   std::unique_ptr<const MCInstrAnalysis> MIA;
   std::unique_ptr<MCInstPrinter> Printer;
 
-  // DWARF debug information.
-  std::unique_ptr<DWARFContext> DWARF;
+  // Symbolizer used for debug information parsing.
+  std::unique_ptr<symbolize::LLVMSymbolizer> Symbolizer;
 
   // A mapping between the virtual memory address to the instruction metadata
   // struct. TODO(hctim): Reimplement this as a sorted vector to avoid per-

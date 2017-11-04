@@ -1726,12 +1726,13 @@ class ExtBase<string opstr, RegisterOperand RO, Operand PosOpnd,
          [(set RO:$rt, (Op RO:$rs, PosImm:$pos, SizeImm:$size))], II_EXT,
          FrmR, opstr>, ISA_MIPS32R2;
 
+// 'ins' and its' 64 bit variants are matched by C++ code.
 class InsBase<string opstr, RegisterOperand RO, Operand PosOpnd,
-              Operand SizeOpnd, PatFrag PosImm, PatFrag SizeImm,
-              SDPatternOperator Op = null_frag>:
+              Operand SizeOpnd, PatFrag PosImm, PatFrag SizeImm>:
   InstSE<(outs RO:$rt), (ins RO:$rs, PosOpnd:$pos, SizeOpnd:$size, RO:$src),
          !strconcat(opstr, " $rt, $rs, $pos, $size"),
-         [(set RO:$rt, (Op RO:$rs, PosImm:$pos, SizeImm:$size, RO:$src))],
+         [(set RO:$rt, (null_frag RO:$rs, PosImm:$pos, SizeImm:$size,
+                                  RO:$src))],
          II_INS, FrmR, opstr>, ISA_MIPS32R2 {
   let Constraints = "$src = $rt";
 }
@@ -2236,7 +2237,7 @@ let AdditionalPredicates = [NotInMicroMips] in {
             EXT_FM<0>;
   def INS : MMRel, StdMMR6Rel, InsBase<"ins", GPR32Opnd, uimm5,
                                        uimm5_inssize_plus1, immZExt5,
-                                       immZExt5Plus1, MipsIns>,
+                                       immZExt5Plus1>,
             EXT_FM<4>;
 }
 /// Move Control Registers From/To CPU Registers

@@ -1,4 +1,4 @@
-//===-- llvm/Target/TargetFrameLowering.h ---------------------------*- C++ -*-===//
+//===-- llvm/CodeGen/TargetFrameLowering.h ---------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TARGET_TARGETFRAMELOWERING_H
-#define LLVM_TARGET_TARGETFRAMELOWERING_H
+#ifndef LLVM_CODEGEN_TARGETFRAMELOWERING_H
+#define LLVM_CODEGEN_TARGETFRAMELOWERING_H
 
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include <utility>

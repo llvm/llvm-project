@@ -126,6 +126,7 @@ public:
 class BasicGraphBuilderTest : public ::testing::Test {
 protected:
   virtual void SetUp() {
+    IgnoreDWARFFlag = true;
     SuccessfullyInitialised = true;
     if (auto Err = Analysis.initialiseDisassemblyMembers()) {
       handleAllErrors(std::move(Err), [&](const UnsupportedDisassembly &E) {

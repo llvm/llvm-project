@@ -813,6 +813,13 @@ void DeleteContainerSeconds(Container &C) {
   C.clear();
 }
 
+/// Provide wrappers to std::for_each which take ranges instead of having to
+/// pass begin/end explicitly.
+template <typename R, typename UnaryPredicate>
+UnaryPredicate for_each(R &&Range, UnaryPredicate P) {
+  return std::for_each(std::begin(Range), std::end(Range), P);
+}
+
 /// Provide wrappers to std::all_of which take ranges instead of having to pass
 /// begin/end explicitly.
 template <typename R, typename UnaryPredicate>

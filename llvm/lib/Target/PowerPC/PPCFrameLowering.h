@@ -15,7 +15,7 @@
 
 #include "PPC.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Target/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {

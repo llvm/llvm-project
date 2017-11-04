@@ -21,6 +21,7 @@ add_llvm_library(LLVMCodeGen
   EdgeBundles.cpp
   ExecutionDepsFix.cpp
   ExpandISelPseudos.cpp
+  ExpandMemCmp.cpp
   ExpandPostRAPseudos.cpp
   ExpandReductions.cpp
   FaultMaps.cpp

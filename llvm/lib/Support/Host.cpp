@@ -355,7 +355,10 @@ enum ProcessorTypes {
   INTEL_PRESCOTT,
   AMD_i486,
   AMDPENTIUM,
-  AMDATHLON,
+  AMD_ATHLON,
+  AMD_ATHLON_XP,
+  AMD_K8,
+  AMD_K8SSE3,
   INTEL_GOLDMONT,
   CPU_TYPE_MAX
 };
@@ -384,10 +387,6 @@ enum ProcessorSubtypes {
   AMDPENTIUM_K62,
   AMDPENTIUM_K63,
   AMDPENTIUM_GEODE,
-  AMDATHLON_CLASSIC,
-  AMDATHLON_XP,
-  AMDATHLON_K8,
-  AMDATHLON_K8SSE3,
   CPU_SUBTYPE_MAX
 };
 
@@ -864,20 +863,18 @@ static void getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     }
     break;
   case 6:
-    *Type = AMDATHLON;
     if (Features & (1 << FEATURE_SSE)) {
-      *Subtype = AMDATHLON_XP;
+      *Type = AMD_ATHLON_XP;
       break; // "athlon-xp"
     }
-    *Subtype = AMDATHLON_CLASSIC;
+    *Type = AMD_ATHLON;
     break; // "athlon"
   case 15:
-    *Type = AMDATHLON;
     if (Features & (1 << FEATURE_SSE3)) {
-      *Subtype = AMDATHLON_K8SSE3;
+      *Type = AMD_K8SSE3;
       break; // "k8-sse3"
     }
-    *Subtype = AMDATHLON_K8;
+    *Type = AMD_K8;
     break; // "k8"
   case 16:
     *Type = AMDFAM10H; // "amdfam10"
@@ -1057,8 +1054,8 @@ StringRef sys::getHostCPUName() {
   detectX86FamilyModel(EAX, &Family, &Model);
   getAvailableFeatures(ECX, EDX, MaxLeaf, &Features, &Features2);
 
-  unsigned Type;
-  unsigned Subtype;
+  unsigned Type = 0;
+  unsigned Subtype = 0;
 
   if (Vendor == SIG_INTEL) {
     getIntelProcessorTypeAndSubtype(Family, Model, Brand_id, Features,
@@ -1149,19 +1146,14 @@ StringRef sys::getHostCPUName() {
       default:
         return "pentium";
       }
-    case AMDATHLON:
-      switch (Subtype) {
-      case AMDATHLON_CLASSIC:
-        return "athlon";
-      case AMDATHLON_XP:
-        return "athlon-xp";
-      case AMDATHLON_K8:
-        return "k8";
-      case AMDATHLON_K8SSE3:
-        return "k8-sse3";
-      default:
-        llvm_unreachable("Unexpected subtype!");
-      }
+    case AMD_ATHLON:
+      return "athlon";
+    case AMD_ATHLON_XP:
+      return "athlon-xp";
+    case AMD_K8:
+      return "k8";
+    case AMD_K8SSE3:
+      return "k8-sse3";
     case AMDFAM10H:
       return "amdfam10";
     case AMD_BTVER1:

@@ -255,6 +255,14 @@ TEST(STLExtrasTest, CountAdaptor) {
   EXPECT_EQ(1, count(v, 4));
 }
 
+TEST(STLExtrasTest, for_each) {
+  std::vector<int> v{ 0, 1, 2, 3, 4 };
+  int count = 0;
+
+  llvm::for_each(v, [&count](int) { ++count; });
+  EXPECT_EQ(5, count);
+}
+
 TEST(STLExtrasTest, ToVector) {
   std::vector<char> v = {'a', 'b', 'c'};
   auto Enumerated = to_vector<4>(enumerate(v));

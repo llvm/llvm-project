@@ -851,14 +851,11 @@
 0xf0 0x48 0x0f 0xc1 0xcb
 
 # rdar://13493622 lldb doesn't print the x86 rep/repne prefix when disassembling
-# CHECK: repne
-# CHECK-NEXT: movsl
+# CHECK: repne movsl
 0xf2 0xa5
-# CHECK: repne
-# CHECK-NEXT: movsq
+# CHECK: repne movsq
 0xf2 0x48 0xa5
-# CHECK: repne
-# CHECK-NEXT: movb  $0, (%rax)
+# CHECK: repne movb  $0, (%rax)
 0xf2 0xc6 0x0 0x0
 
 # rdar://11019859 Support 2013 Haswell RTM instructions and HLE prefixes
