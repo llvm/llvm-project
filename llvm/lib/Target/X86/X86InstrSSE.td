@@ -3252,9 +3252,9 @@ defm SQRT  : sse1_fp_unop_s<0x51, "sqrt", fsqrt, SSE_SQRTSS>,
 // Reciprocal approximations. Note that these typically require refinement
 // in order to obtain suitable precision.
 defm RSQRT : sse1_fp_unop_s<0x52, "rsqrt", X86frsqrt, SSE_RSQRTSS>,
-             sse1_fp_unop_p<0x52, "rsqrt", X86frsqrt, SSE_RSQRTPS, [HasAVX, NoVLX] >;
+             sse1_fp_unop_p<0x52, "rsqrt", X86frsqrt, SSE_RSQRTPS, [HasAVX]>;
 defm RCP   : sse1_fp_unop_s<0x53, "rcp", X86frcp, SSE_RCPS>,
-             sse1_fp_unop_p<0x53, "rcp", X86frcp, SSE_RCPP, [HasAVX, NoVLX]>;
+             sse1_fp_unop_p<0x53, "rcp", X86frcp, SSE_RCPP, [HasAVX]>;
 
 // There is no f64 version of the reciprocal approximation instructions.
 

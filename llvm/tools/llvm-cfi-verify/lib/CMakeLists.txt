@@ -14,3 +14,4 @@ llvm_map_components_to_libnames(libs
   Support
   Symbolize)
 target_link_libraries(LLVMCFIVerify ${libs})
+set_target_properties(LLVMCFIVerify PROPERTIES FOLDER "Libraries")

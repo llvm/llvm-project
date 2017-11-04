@@ -56,8 +56,6 @@ def X86fxor    : SDNode<"X86ISD::FXOR",      SDTFPBinOp,
 def X86fandn   : SDNode<"X86ISD::FANDN",     SDTFPBinOp>;
 def X86frsqrt  : SDNode<"X86ISD::FRSQRT",    SDTFPUnaryOp>;
 def X86frcp    : SDNode<"X86ISD::FRCP",      SDTFPUnaryOp>;
-def X86frsqrt14s: SDNode<"X86ISD::FRSQRTS",  SDTFPBinOp>;
-def X86frcp14s : SDNode<"X86ISD::FRCPS",    SDTFPBinOp>;
 def X86fhadd   : SDNode<"X86ISD::FHADD",     SDTFPBinOp>;
 def X86fhsub   : SDNode<"X86ISD::FHSUB",     SDTFPBinOp>;
 def X86hadd    : SDNode<"X86ISD::HADD",      SDTIntBinOp>;
@@ -498,10 +496,14 @@ def SDTIFma : SDTypeProfile<1, 3, [SDTCisInt<0>, SDTCisSameAs<0,1>,
 def x86vpmadd52l     : SDNode<"X86ISD::VPMADD52L",     SDTIFma, [SDNPCommutative]>;
 def x86vpmadd52h     : SDNode<"X86ISD::VPMADD52H",     SDTIFma, [SDNPCommutative]>;
 
+def X86rsqrt14   : SDNode<"X86ISD::RSQRT14",  SDTFPUnaryOp>;
+def X86rcp14     : SDNode<"X86ISD::RCP14",    SDTFPUnaryOp>;
 def X86rsqrt28   : SDNode<"X86ISD::RSQRT28",  SDTFPUnaryOpRound>;
 def X86rcp28     : SDNode<"X86ISD::RCP28",    SDTFPUnaryOpRound>;
 def X86exp2      : SDNode<"X86ISD::EXP2",     SDTFPUnaryOpRound>;
 
+def X86rsqrt14s  : SDNode<"X86ISD::RSQRT14S",   SDTFPBinOp>;
+def X86rcp14s    : SDNode<"X86ISD::RCP14S",     SDTFPBinOp>;
 def X86rsqrt28s  : SDNode<"X86ISD::RSQRT28S",   SDTFPBinOpRound>;
 def X86rcp28s    : SDNode<"X86ISD::RCP28S",     SDTFPBinOpRound>;
 def X86RndScales : SDNode<"X86ISD::VRNDSCALES", SDTFPBinOpImmRound>;

@@ -203,6 +203,23 @@ FunctionImportGlobalProcessing::getLinkage(const GlobalValue *SGV,
 }
 
 void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
+
+  // Check the summaries to see if the symbol gets resolved to a known local
+  // definition.
+  if (GV.hasName()) {
+    ValueInfo VI = ImportIndex.getValueInfo(GV.getGUID());
+    if (VI) {
+      // Need to check all summaries are local in case of hash collisions.
+      bool IsLocal = VI.getSummaryList().size() &&
+          llvm::all_of(VI.getSummaryList(),
+                       [](const std::unique_ptr<GlobalValueSummary> &Summary) {
+                         return Summary->isDSOLocal();
+                       });
+      if (IsLocal)
+        GV.setDSOLocal(true);
+    }
+  }
+
   bool DoPromote = false;
   if (GV.hasLocalLinkage() &&
       ((DoPromote = shouldPromoteLocalToGlobal(&GV)) || isPerformingImport())) {

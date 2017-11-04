@@ -70,14 +70,14 @@ bb11:
 ; CHECK-DAG: @a23 = alias i32 (i8*), i32 (i8*)* @f1.2{{$}}
 ; CHECK-DAG: @a24 = alias i16, bitcast (i32 (i8*)* @f1.2 to i16*)
 
-; CHECK:      define weak_odr i32 @f1(i8*) comdat($c1) {
+; CHECK:      define weak_odr dso_local i32 @f1(i8*) comdat($c1) {
 ; CHECK-NEXT: bb10:
 ; CHECK-NEXT:   br label %bb11{{$}}
 ; CHECK:      bb11:
 ; CHECK-NEXT:   ret i32 42
 ; CHECK-NEXT: }
 
-; CHECK:      define internal i32 @f1.2(i8* %this) comdat($c2) {
+; CHECK:      define internal dso_local i32 @f1.2(i8* %this) comdat($c2) {
 ; CHECK-NEXT: bb20:
 ; CHECK-NEXT:   store i8* %this, i8** null
 ; CHECK-NEXT:   br label %bb21

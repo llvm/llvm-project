@@ -537,10 +537,6 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
     return &InputSection::Discarded;
   }
 
-  if (Config->Strip != StripPolicy::None &&
-      (Name.startswith(".debug") || Name.startswith(".zdebug")))
-    return &InputSection::Discarded;
-
   // The linkonce feature is a sort of proto-comdat. Some glibc i386 object
   // files contain definitions of symbol "__x86.get_pc_thunk.bx" in linkonce
   // sections. Drop those sections to avoid duplicate symbol errors.

@@ -283,14 +283,7 @@ public:
 
   enum EPtrKind {
     BYVALUE = 0,
-    PRIVATE,
-    GLOBAL,
-    READONLY,
-    LOCAL,
-    GENERIC,
-    OTHER,
-
-    ADDR_SPACE = 0xF,
+    ADDR_SPACE = 0xF, // Address space takes value 0x1 ~ 0xF.
     CONST      = 0x10,
     VOLATILE   = 0x20
   };
@@ -314,6 +307,17 @@ public:
   };
   static bool isMangled(EFuncId Id) {
     return static_cast<unsigned>(Id) <= static_cast<unsigned>(EI_LAST_MANGLED);
+  }
+
+  static unsigned getEPtrKindFromAddrSpace(unsigned AS) {
+    assert(((AS + 1) & ~ADDR_SPACE) == 0);
+    return AS + 1;
+  }
+
+  static unsigned getAddrSpaceFromEPtrKind(unsigned Kind) {
+    Kind = Kind & ADDR_SPACE;
+    assert(Kind >= 1);
+    return Kind - 1;
   }
 };
 
