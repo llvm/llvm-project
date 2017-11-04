@@ -2901,7 +2901,9 @@ static bool mergeConditionalStoreToAddress(BasicBlock *PTB, BasicBlock *PFB,
       else
         return false;
     }
-    return N <= PHINodeFoldingThreshold;
+    // The store we want to merge is counted in N, so add 1 to make sure
+    // we're counting the instructions that would be left.
+    return N <= (PHINodeFoldingThreshold + 1);
   };
 
   if (!MergeCondStoresAggressively &&

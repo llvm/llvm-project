@@ -119,8 +119,8 @@ bool ICF::equalsConstant(const SectionChunk *A, const SectionChunk *B) {
         R1.VirtualAddress != R2.VirtualAddress) {
       return false;
     }
-    SymbolBody *B1 = A->File->getSymbolBody(R1.SymbolTableIndex);
-    SymbolBody *B2 = B->File->getSymbolBody(R2.SymbolTableIndex);
+    Symbol *B1 = A->File->getSymbol(R1.SymbolTableIndex);
+    Symbol *B2 = B->File->getSymbol(R2.SymbolTableIndex);
     if (B1 == B2)
       return true;
     if (auto *D1 = dyn_cast<DefinedRegular>(B1))
@@ -143,8 +143,8 @@ bool ICF::equalsConstant(const SectionChunk *A, const SectionChunk *B) {
 bool ICF::equalsVariable(const SectionChunk *A, const SectionChunk *B) {
   // Compare relocations.
   auto Eq = [&](const coff_relocation &R1, const coff_relocation &R2) {
-    SymbolBody *B1 = A->File->getSymbolBody(R1.SymbolTableIndex);
-    SymbolBody *B2 = B->File->getSymbolBody(R2.SymbolTableIndex);
+    Symbol *B1 = A->File->getSymbol(R1.SymbolTableIndex);
+    Symbol *B2 = B->File->getSymbol(R2.SymbolTableIndex);
     if (B1 == B2)
       return true;
     if (auto *D1 = dyn_cast<DefinedRegular>(B1))

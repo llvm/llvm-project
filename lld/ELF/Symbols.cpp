@@ -40,10 +40,10 @@ DefinedRegular *ElfSym::MipsGp;
 DefinedRegular *ElfSym::MipsGpDisp;
 DefinedRegular *ElfSym::MipsLocalGp;
 
-static uint64_t getSymVA(const SymbolBody &Body, int64_t &Addend) {
-  switch (Body.kind()) {
-  case SymbolBody::DefinedRegularKind: {
-    auto &D = cast<DefinedRegular>(Body);
+static uint64_t getSymVA(const Symbol &Sym, int64_t &Addend) {
+  switch (Sym.kind()) {
+  case Symbol::DefinedRegularKind: {
+    auto &D = cast<DefinedRegular>(Sym);
     SectionBase *IS = D.Section;
     if (auto *ISB = dyn_cast_or_null<InputSectionBase>(IS))
       IS = ISB->Repl;
@@ -99,38 +99,38 @@ static uint64_t getSymVA(const SymbolBody &Body, int64_t &Addend) {
     }
     return VA;
   }
-  case SymbolBody::DefinedCommonKind:
+  case Symbol::DefinedCommonKind:
     llvm_unreachable("common are converted to bss");
-  case SymbolBody::SharedKind: {
-    auto &SS = cast<SharedSymbol>(Body);
+  case Symbol::SharedKind: {
+    auto &SS = cast<SharedSymbol>(Sym);
     if (SS.CopyRelSec)
       return SS.CopyRelSec->getParent()->Addr + SS.CopyRelSec->OutSecOff;
     if (SS.NeedsPltAddr)
-      return Body.getPltVA();
+      return Sym.getPltVA();
     return 0;
   }
-  case SymbolBody::UndefinedKind:
+  case Symbol::UndefinedKind:
     return 0;
-  case SymbolBody::LazyArchiveKind:
-  case SymbolBody::LazyObjectKind:
-    assert(Body.IsUsedInRegularObj && "lazy symbol reached writer");
+  case Symbol::LazyArchiveKind:
+  case Symbol::LazyObjectKind:
+    assert(Sym.IsUsedInRegularObj && "lazy symbol reached writer");
     return 0;
   }
   llvm_unreachable("invalid symbol kind");
 }
 
 // Returns true if this is a weak undefined symbol.
-bool SymbolBody::isUndefWeak() const {
+bool Symbol::isUndefWeak() const {
   // See comment on Lazy in Symbols.h for the details.
   return !isLocal() && isWeak() && (isUndefined() || isLazy());
 }
 
-InputFile *SymbolBody::getFile() const {
+InputFile *Symbol::getFile() const {
   if (isLocal()) {
     const SectionBase *Sec = cast<DefinedRegular>(this)->Section;
     // Local absolute symbols actually have a file, but that is not currently
     // used. We could support that by having a mostly redundant InputFile in
-    // SymbolBody, or having a special absolute section if needed.
+    // Symbol, or having a special absolute section if needed.
     return Sec ? cast<InputSectionBase>(Sec)->File : nullptr;
   }
   return File;
@@ -139,8 +139,8 @@ InputFile *SymbolBody::getFile() const {
 // Overwrites all attributes with Other's so that this symbol becomes
 // an alias to Other. This is useful for handling some options such as
 // --wrap.
-void SymbolBody::copyFrom(SymbolBody *Other) {
-  SymbolBody Sym = *this;
+void Symbol::copyFrom(Symbol *Other) {
+  Symbol Sym = *this;
   memcpy(this, Other, sizeof(SymbolUnion));
 
   Binding = Sym.Binding;
@@ -153,37 +153,35 @@ void SymbolBody::copyFrom(SymbolBody *Other) {
   InVersionScript = Sym.InVersionScript;
 }
 
-uint64_t SymbolBody::getVA(int64_t Addend) const {
+uint64_t Symbol::getVA(int64_t Addend) const {
   uint64_t OutVA = getSymVA(*this, Addend);
   return OutVA + Addend;
 }
 
-uint64_t SymbolBody::getGotVA() const {
-  return InX::Got->getVA() + getGotOffset();
-}
+uint64_t Symbol::getGotVA() const { return InX::Got->getVA() + getGotOffset(); }
 
-uint64_t SymbolBody::getGotOffset() const {
+uint64_t Symbol::getGotOffset() const {
   return GotIndex * Target->GotEntrySize;
 }
 
-uint64_t SymbolBody::getGotPltVA() const {
+uint64_t Symbol::getGotPltVA() const {
   if (this->IsInIgot)
     return InX::IgotPlt->getVA() + getGotPltOffset();
   return InX::GotPlt->getVA() + getGotPltOffset();
 }
 
-uint64_t SymbolBody::getGotPltOffset() const {
+uint64_t Symbol::getGotPltOffset() const {
   return GotPltIndex * Target->GotPltEntrySize;
 }
 
-uint64_t SymbolBody::getPltVA() const {
+uint64_t Symbol::getPltVA() const {
   if (this->IsInIplt)
     return InX::Iplt->getVA() + PltIndex * Target->PltEntrySize;
   return InX::Plt->getVA() + Target->PltHeaderSize +
          PltIndex * Target->PltEntrySize;
 }
 
-uint64_t SymbolBody::getSize() const {
+uint64_t Symbol::getSize() const {
   if (const auto *C = dyn_cast<DefinedCommon>(this))
     return C->Size;
   if (const auto *DR = dyn_cast<DefinedRegular>(this))
@@ -193,7 +191,7 @@ uint64_t SymbolBody::getSize() const {
   return 0;
 }
 
-OutputSection *SymbolBody::getOutputSection() const {
+OutputSection *Symbol::getOutputSection() const {
   if (auto *S = dyn_cast<DefinedRegular>(this)) {
     if (S->Section)
       return S->Section->getOutputSection();
@@ -217,7 +215,7 @@ OutputSection *SymbolBody::getOutputSection() const {
 
 // If a symbol name contains '@', the characters after that is
 // a symbol version name. This function parses that.
-void SymbolBody::parseSymbolVersion() {
+void Symbol::parseSymbolVersion() {
   StringRef S = getName();
   size_t Pos = S.find('@');
   if (Pos == 0 || Pos == StringRef::npos)
@@ -277,7 +275,7 @@ InputFile *Lazy::fetch() {
 }
 
 ArchiveFile *LazyArchive::getFile() {
-  return cast<ArchiveFile>(SymbolBody::getFile());
+  return cast<ArchiveFile>(Symbol::getFile());
 }
 
 InputFile *LazyArchive::fetch() {
@@ -291,12 +289,12 @@ InputFile *LazyArchive::fetch() {
 }
 
 LazyObjFile *LazyObject::getFile() {
-  return cast<LazyObjFile>(SymbolBody::getFile());
+  return cast<LazyObjFile>(Symbol::getFile());
 }
 
 InputFile *LazyObject::fetch() { return getFile()->fetch(); }
 
-uint8_t SymbolBody::computeBinding() const {
+uint8_t Symbol::computeBinding() const {
   if (Config->Relocatable)
     return Binding;
   if (Visibility != STV_DEFAULT && Visibility != STV_PROTECTED)
@@ -308,7 +306,7 @@ uint8_t SymbolBody::computeBinding() const {
   return Binding;
 }
 
-bool SymbolBody::includeInDynsym() const {
+bool Symbol::includeInDynsym() const {
   if (!Config->HasDynSymTab)
     return false;
   if (computeBinding() == STB_LOCAL)
@@ -319,7 +317,7 @@ bool SymbolBody::includeInDynsym() const {
 }
 
 // Print out a log message for --trace-symbol.
-void elf::printTraceSymbol(SymbolBody *Sym) {
+void elf::printTraceSymbol(Symbol *Sym) {
   std::string S;
   if (Sym->isUndefined())
     S = ": reference to ";
@@ -336,7 +334,7 @@ void elf::printTraceSymbol(SymbolBody *Sym) {
 }
 
 // Returns a symbol for an error message.
-std::string lld::toString(const SymbolBody &B) {
+std::string lld::toString(const Symbol &B) {
   if (Config->Demangle)
     if (Optional<std::string> S = demangle(B.getName()))
       return *S;

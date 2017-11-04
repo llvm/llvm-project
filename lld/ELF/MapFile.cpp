@@ -50,7 +50,7 @@ static std::string indent(int Depth) { return std::string(Depth * 8, ' '); }
 static std::vector<Defined *> getSymbols() {
   std::vector<Defined *> V;
   for (InputFile *File : ObjectFiles)
-    for (SymbolBody *B : File->getSymbols())
+    for (Symbol *B : File->getSymbols())
       if (auto *DR = dyn_cast<DefinedRegular>(B))
         if (DR->getFile() == File && !DR->isSection() && DR->Section &&
             DR->Section->Live)

@@ -27,7 +27,7 @@
 #include "llvm/CodeGen/RegisterUsageInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 
 using namespace llvm;
 

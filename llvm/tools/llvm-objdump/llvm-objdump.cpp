@@ -865,8 +865,19 @@ static void printRelocationTargetName(const MachOObjectFile *O,
   } else {
     section_iterator SI = O->section_begin();
     // Adjust for the fact that sections are 1-indexed.
-    advance(SI, Val - 1);
-    SI->getName(S);
+    if (Val == 0) {
+      fmt << "0 (?,?)";
+      return;
+    }
+    uint32_t i = Val - 1;
+    while (i != 0 && SI != O->section_end()) {
+      i--;
+      advance(SI, 1);
+    }
+    if (SI == O->section_end())
+      fmt << Val << " (?,?)";
+    else
+      SI->getName(S);
   }
 
   fmt << S;

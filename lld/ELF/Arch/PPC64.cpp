@@ -39,7 +39,7 @@ namespace {
 class PPC64 final : public TargetInfo {
 public:
   PPC64();
-  RelExpr getRelExpr(RelType Type, const SymbolBody &S,
+  RelExpr getRelExpr(RelType Type, const Symbol &S,
                      const uint8_t *Loc) const override;
   void writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
@@ -82,7 +82,7 @@ PPC64::PPC64() {
   DefaultImageBase = 0x10000000;
 }
 
-RelExpr PPC64::getRelExpr(RelType Type, const SymbolBody &S,
+RelExpr PPC64::getRelExpr(RelType Type, const Symbol &S,
                           const uint8_t *Loc) const {
   switch (Type) {
   case R_PPC64_TOC16:

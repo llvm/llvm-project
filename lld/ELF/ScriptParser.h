@@ -25,6 +25,9 @@ void readVersionScript(MemoryBufferRef MB);
 
 void readDynamicList(MemoryBufferRef MB);
 
+// Parses the defsym expression.
+void readDefsym(StringRef Name, MemoryBufferRef MB);
+
 } // namespace elf
 } // namespace lld
 

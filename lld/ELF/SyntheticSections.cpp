@@ -66,7 +66,7 @@ uint64_t SyntheticSection::getVA() const {
 // Create a .bss section for each common symbol and replace the common symbol
 // with a DefinedRegular symbol.
 template <class ELFT> void elf::createCommonSections() {
-  for (SymbolBody *S : Symtab->getSymbols()) {
+  for (Symbol *S : Symtab->getSymbols()) {
     auto *Sym = dyn_cast<DefinedCommon>(S);
 
     if (!Sym)
@@ -80,9 +80,9 @@ template <class ELFT> void elf::createCommonSections() {
 
     // Replace all DefinedCommon symbols with DefinedRegular symbols so that we
     // don't have to care about DefinedCommon symbols beyond this point.
-    replaceBody<DefinedRegular>(S, Sym->getFile(), Sym->getName(),
-                                static_cast<bool>(Sym->isLocal()), Sym->StOther,
-                                Sym->Type, 0, Sym->getSize(), Section);
+    replaceSymbol<DefinedRegular>(
+        S, Sym->getFile(), Sym->getName(), static_cast<bool>(Sym->isLocal()),
+        Sym->StOther, Sym->Type, 0, Sym->getSize(), Section);
   }
 }
 
@@ -296,8 +296,8 @@ InputSection *elf::createInterpSection() {
   return Sec;
 }
 
-SymbolBody *elf::addSyntheticLocal(StringRef Name, uint8_t Type, uint64_t Value,
-                                   uint64_t Size, InputSectionBase *Section) {
+Symbol *elf::addSyntheticLocal(StringRef Name, uint8_t Type, uint64_t Value,
+                               uint64_t Size, InputSectionBase *Section) {
   auto *S = make<DefinedRegular>(Name, /*IsLocal*/ true, STV_DEFAULT, Type,
                                  Value, Size, Section);
   if (InX::SymTab)
@@ -413,7 +413,7 @@ CieRecord *EhFrameSection::addCie(EhSectionPiece &Cie, ArrayRef<RelTy> Rels) {
   if (read32(Cie.data().data() + 4, Config->Endianness) != 0)
     fatal(toString(Sec) + ": CIE expected at beginning of .eh_frame");
 
-  SymbolBody *Personality = nullptr;
+  Symbol *Personality = nullptr;
   unsigned FirstRelI = Cie.FirstRelocation;
   if (FirstRelI != (unsigned)-1)
     Personality =
@@ -447,7 +447,7 @@ bool EhFrameSection::isFdeLive(EhSectionPiece &Fde, ArrayRef<RelTy> Rels) {
     return false;
 
   const RelTy &Rel = Rels[FirstRelI];
-  SymbolBody &B = Sec->template getFile<ELFT>()->getRelocTargetSym(Rel);
+  Symbol &B = Sec->template getFile<ELFT>()->getRelocTargetSym(Rel);
 
   // FDEs for garbage-collected or merged-by-ICF sections are dead.
   if (auto *D = dyn_cast<DefinedRegular>(&B))
@@ -620,12 +620,12 @@ GotSection::GotSection()
     : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
                        Target->GotEntrySize, ".got") {}
 
-void GotSection::addEntry(SymbolBody &Sym) {
+void GotSection::addEntry(Symbol &Sym) {
   Sym.GotIndex = NumEntries;
   ++NumEntries;
 }
 
-bool GotSection::addDynTlsEntry(SymbolBody &Sym) {
+bool GotSection::addDynTlsEntry(Symbol &Sym) {
   if (Sym.GlobalDynIndex != -1U)
     return false;
   Sym.GlobalDynIndex = NumEntries;
@@ -644,11 +644,11 @@ bool GotSection::addTlsIndex() {
   return true;
 }
 
-uint64_t GotSection::getGlobalDynAddr(const SymbolBody &B) const {
+uint64_t GotSection::getGlobalDynAddr(const Symbol &B) const {
   return this->getVA() + B.GlobalDynIndex * Config->Wordsize;
 }
 
-uint64_t GotSection::getGlobalDynOffset(const SymbolBody &B) const {
+uint64_t GotSection::getGlobalDynOffset(const Symbol &B) const {
   return B.GlobalDynIndex * Config->Wordsize;
 }
 
@@ -672,7 +672,7 @@ MipsGotSection::MipsGotSection()
     : SyntheticSection(SHF_ALLOC | SHF_WRITE | SHF_MIPS_GPREL, SHT_PROGBITS, 16,
                        ".got") {}
 
-void MipsGotSection::addEntry(SymbolBody &Sym, int64_t Addend, RelExpr Expr) {
+void MipsGotSection::addEntry(Symbol &Sym, int64_t Addend, RelExpr Expr) {
   // For "true" local symbols which can be referenced from the same module
   // only compiler creates two instructions for address loading:
   //
@@ -714,7 +714,7 @@ void MipsGotSection::addEntry(SymbolBody &Sym, int64_t Addend, RelExpr Expr) {
     TlsEntries.push_back(&Sym);
     return;
   }
-  auto AddEntry = [&](SymbolBody &S, uint64_t A, GotEntries &Items) {
+  auto AddEntry = [&](Symbol &S, uint64_t A, GotEntries &Items) {
     if (S.isInGot() && !A)
       return;
     size_t NewIndex = Items.size();
@@ -739,7 +739,7 @@ void MipsGotSection::addEntry(SymbolBody &Sym, int64_t Addend, RelExpr Expr) {
   }
 }
 
-bool MipsGotSection::addDynTlsEntry(SymbolBody &Sym) {
+bool MipsGotSection::addDynTlsEntry(Symbol &Sym) {
   if (Sym.GlobalDynIndex != -1U)
     return false;
   Sym.GlobalDynIndex = TlsEntries.size();
@@ -768,7 +768,7 @@ static uint64_t getMipsPageCount(uint64_t Size) {
   return (Size + 0xfffe) / 0xffff + 1;
 }
 
-uint64_t MipsGotSection::getPageEntryOffset(const SymbolBody &B,
+uint64_t MipsGotSection::getPageEntryOffset(const Symbol &B,
                                             int64_t Addend) const {
   const OutputSection *OutSec = B.getOutputSection();
   uint64_t SecAddr = getMipsPageAddr(OutSec->Addr);
@@ -778,8 +778,8 @@ uint64_t MipsGotSection::getPageEntryOffset(const SymbolBody &B,
   return (HeaderEntriesNum + Index) * Config->Wordsize;
 }
 
-uint64_t MipsGotSection::getBodyEntryOffset(const SymbolBody &B,
-                                            int64_t Addend) const {
+uint64_t MipsGotSection::getSymEntryOffset(const Symbol &B,
+                                           int64_t Addend) const {
   // Calculate offset of the GOT entries block: TLS, global, local.
   uint64_t Index = HeaderEntriesNum + PageEntriesNum;
   if (B.isTls())
@@ -803,11 +803,11 @@ uint64_t MipsGotSection::getTlsOffset() const {
   return (getLocalEntriesNum() + GlobalEntries.size()) * Config->Wordsize;
 }
 
-uint64_t MipsGotSection::getGlobalDynOffset(const SymbolBody &B) const {
+uint64_t MipsGotSection::getGlobalDynOffset(const Symbol &B) const {
   return B.GlobalDynIndex * Config->Wordsize;
 }
 
-const SymbolBody *MipsGotSection::getFirstGlobalEntry() const {
+const Symbol *MipsGotSection::getFirstGlobalEntry() const {
   return GlobalEntries.empty() ? nullptr : GlobalEntries.front().first;
 }
 
@@ -873,8 +873,8 @@ void MipsGotSection::writeTo(uint8_t *Buf) {
   auto AddEntry = [&](const GotEntry &SA) {
     uint8_t *Entry = Buf;
     Buf += Config->Wordsize;
-    const SymbolBody *Body = SA.first;
-    uint64_t VA = Body->getVA(SA.second);
+    const Symbol *Sym = SA.first;
+    uint64_t VA = Sym->getVA(SA.second);
     writeUint(Entry, VA);
   };
   std::for_each(std::begin(LocalEntries), std::end(LocalEntries), AddEntry);
@@ -887,7 +887,7 @@ void MipsGotSection::writeTo(uint8_t *Buf) {
   // https://www.linux-mips.org/wiki/NPTL
   if (TlsIndexOff != -1U && !Config->Pic)
     writeUint(Buf + TlsIndexOff, 1);
-  for (const SymbolBody *B : TlsEntries) {
+  for (const Symbol *B : TlsEntries) {
     if (!B || B->IsPreemptible)
       continue;
     uint64_t VA = B->getVA();
@@ -908,7 +908,7 @@ GotPltSection::GotPltSection()
     : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
                        Target->GotPltEntrySize, ".got.plt") {}
 
-void GotPltSection::addEntry(SymbolBody &Sym) {
+void GotPltSection::addEntry(Symbol &Sym) {
   Sym.GotPltIndex = Target->GotPltHeaderEntriesNum + Entries.size();
   Entries.push_back(&Sym);
 }
@@ -921,7 +921,7 @@ size_t GotPltSection::getSize() const {
 void GotPltSection::writeTo(uint8_t *Buf) {
   Target->writeGotPltHeader(Buf);
   Buf += Target->GotPltHeaderEntriesNum * Target->GotPltEntrySize;
-  for (const SymbolBody *B : Entries) {
+  for (const Symbol *B : Entries) {
     Target->writeGotPlt(Buf, *B);
     Buf += Config->Wordsize;
   }
@@ -934,7 +934,7 @@ IgotPltSection::IgotPltSection()
                        Target->GotPltEntrySize,
                        Config->EMachine == EM_ARM ? ".got" : ".got.plt") {}
 
-void IgotPltSection::addEntry(SymbolBody &Sym) {
+void IgotPltSection::addEntry(Symbol &Sym) {
   Sym.IsInIgot = true;
   Sym.GotPltIndex = Entries.size();
   Entries.push_back(&Sym);
@@ -945,7 +945,7 @@ size_t IgotPltSection::getSize() const {
 }
 
 void IgotPltSection::writeTo(uint8_t *Buf) {
-  for (const SymbolBody *B : Entries) {
+  for (const Symbol *B : Entries) {
     Target->writeIgotPlt(Buf, *B);
     Buf += Config->Wordsize;
   }
@@ -1123,10 +1123,10 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
     add({DT_FINI_ARRAYSZ, Out::FiniArray, Entry::SecSize});
   }
 
-  if (SymbolBody *B = Symtab->find(Config->Init))
+  if (Symbol *B = Symtab->find(Config->Init))
     if (B->isInCurrentOutput())
       add({DT_INIT, B});
-  if (SymbolBody *B = Symtab->find(Config->Fini))
+  if (Symbol *B = Symtab->find(Config->Fini))
     if (B->isInCurrentOutput())
       add({DT_FINI, B});
 
@@ -1148,7 +1148,7 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
     add({DT_MIPS_BASE_ADDRESS, Target->getImageBase()});
     add({DT_MIPS_SYMTABNO, InX::DynSymTab->getNumSymbols()});
     add({DT_MIPS_LOCAL_GOTNO, InX::MipsGot->getLocalEntriesNum()});
-    if (const SymbolBody *B = InX::MipsGot->getFirstGlobalEntry())
+    if (const Symbol *B = InX::MipsGot->getFirstGlobalEntry())
       add({DT_MIPS_GOTSYM, B->DynsymIndex});
     else
       add({DT_MIPS_GOTSYM, InX::DynSymTab->getNumSymbols()});
@@ -1493,11 +1493,11 @@ static bool sortMipsSymbols(const SymbolTableEntry &L,
                             const SymbolTableEntry &R) {
   // Sort entries related to non-local preemptible symbols by GOT indexes.
   // All other entries go to the first part of GOT in arbitrary order.
-  bool LIsInLocalGot = !L.Symbol->IsInGlobalMipsGot;
-  bool RIsInLocalGot = !R.Symbol->IsInGlobalMipsGot;
+  bool LIsInLocalGot = !L.Sym->IsInGlobalMipsGot;
+  bool RIsInLocalGot = !R.Sym->IsInGlobalMipsGot;
   if (LIsInLocalGot || RIsInLocalGot)
     return !RIsInLocalGot;
-  return L.Symbol->GotIndex < R.Symbol->GotIndex;
+  return L.Sym->GotIndex < R.Sym->GotIndex;
 }
 
 void SymbolTableBaseSection::finalizeContents() {
@@ -1518,8 +1518,7 @@ void SymbolTableBaseSection::finalizeContents() {
     }
 
     size_t I = 0;
-    for (const SymbolTableEntry &S : Symbols)
-      S.Symbol->DynsymIndex = ++I;
+    for (const SymbolTableEntry &S : Symbols) S.Sym->DynsymIndex = ++I;
     return;
   }
 }
@@ -1533,13 +1532,13 @@ void SymbolTableBaseSection::postThunkContents() {
   // move all local symbols before global symbols.
   auto It = std::stable_partition(
       Symbols.begin(), Symbols.end(), [](const SymbolTableEntry &S) {
-        return S.Symbol->isLocal() || S.Symbol->computeBinding() == STB_LOCAL;
+        return S.Sym->isLocal() || S.Sym->computeBinding() == STB_LOCAL;
       });
   size_t NumLocals = It - Symbols.begin();
   getParent()->Info = NumLocals + 1;
 }
 
-void SymbolTableBaseSection::addSymbol(SymbolBody *B) {
+void SymbolTableBaseSection::addSymbol(Symbol *B) {
   // Adding a local symbol to a .dynsym is a bug.
   assert(this->Type != SHT_DYNSYM || !B->isLocal());
 
@@ -1547,25 +1546,25 @@ void SymbolTableBaseSection::addSymbol(SymbolBody *B) {
   Symbols.push_back({B, StrTabSec.addString(B->getName(), HashIt)});
 }
 
-size_t SymbolTableBaseSection::getSymbolIndex(SymbolBody *Body) {
+size_t SymbolTableBaseSection::getSymbolIndex(Symbol *Sym) {
   // Initializes symbol lookup tables lazily. This is used only
   // for -r or -emit-relocs.
   llvm::call_once(OnceFlag, [&] {
     SymbolIndexMap.reserve(Symbols.size());
     size_t I = 0;
     for (const SymbolTableEntry &E : Symbols) {
-      if (E.Symbol->Type == STT_SECTION)
-        SectionIndexMap[E.Symbol->getOutputSection()] = ++I;
+      if (E.Sym->Type == STT_SECTION)
+        SectionIndexMap[E.Sym->getOutputSection()] = ++I;
       else
-        SymbolIndexMap[E.Symbol] = ++I;
+        SymbolIndexMap[E.Sym] = ++I;
     }
   });
 
   // Section symbols are mapped based on their output sections
   // to maintain their semantics.
-  if (Body->Type == STT_SECTION)
-    return SectionIndexMap.lookup(Body->getOutputSection());
-  return SymbolIndexMap.lookup(Body);
+  if (Sym->Type == STT_SECTION)
+    return SectionIndexMap.lookup(Sym->getOutputSection());
+  return SymbolIndexMap.lookup(Sym);
 }
 
 template <class ELFT>
@@ -1583,25 +1582,25 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
   auto *ESym = reinterpret_cast<Elf_Sym *>(Buf);
 
   for (SymbolTableEntry &Ent : Symbols) {
-    SymbolBody *Body = Ent.Symbol;
+    Symbol *Sym = Ent.Sym;
 
     // Set st_info and st_other.
     ESym->st_other = 0;
-    if (Body->isLocal()) {
-      ESym->setBindingAndType(STB_LOCAL, Body->Type);
+    if (Sym->isLocal()) {
+      ESym->setBindingAndType(STB_LOCAL, Sym->Type);
     } else {
-      ESym->setBindingAndType(Body->computeBinding(), Body->Type);
-      ESym->setVisibility(Body->Visibility);
+      ESym->setBindingAndType(Sym->computeBinding(), Sym->Type);
+      ESym->setVisibility(Sym->Visibility);
     }
 
     ESym->st_name = Ent.StrTabOffset;
 
     // Set a section index.
-    if (const OutputSection *OutSec = Body->getOutputSection())
+    if (const OutputSection *OutSec = Sym->getOutputSection())
       ESym->st_shndx = OutSec->SectionIndex;
-    else if (isa<DefinedRegular>(Body))
+    else if (isa<DefinedRegular>(Sym))
       ESym->st_shndx = SHN_ABS;
-    else if (isa<DefinedCommon>(Body))
+    else if (isa<DefinedCommon>(Sym))
       ESym->st_shndx = SHN_COMMON;
     else
       ESym->st_shndx = SHN_UNDEF;
@@ -1614,15 +1613,15 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
     if (ESym->st_shndx == SHN_UNDEF)
       ESym->st_size = 0;
     else
-      ESym->st_size = Body->getSize();
+      ESym->st_size = Sym->getSize();
 
     // st_value is usually an address of a symbol, but that has a
     // special meaining for uninstantiated common symbols (this can
     // occur if -r is given).
-    if (!Config->DefineCommon && isa<DefinedCommon>(Body))
-      ESym->st_value = cast<DefinedCommon>(Body)->Alignment;
+    if (!Config->DefineCommon && isa<DefinedCommon>(Sym))
+      ESym->st_value = cast<DefinedCommon>(Sym)->Alignment;
     else
-      ESym->st_value = Body->getVA();
+      ESym->st_value = Sym->getVA();
 
     ++ESym;
   }
@@ -1635,12 +1634,12 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
     auto *ESym = reinterpret_cast<Elf_Sym *>(Buf);
 
     for (SymbolTableEntry &Ent : Symbols) {
-      SymbolBody *Body = Ent.Symbol;
-      if (Body->isInPlt() && Body->NeedsPltAddr)
+      Symbol *Sym = Ent.Sym;
+      if (Sym->isInPlt() && Sym->NeedsPltAddr)
         ESym->st_other |= STO_MIPS_PLT;
 
       if (Config->Relocatable)
-        if (auto *D = dyn_cast<DefinedRegular>(Body))
+        if (auto *D = dyn_cast<DefinedRegular>(Sym))
           if (D->isMipsPIC<ELFT>())
             ESym->st_other |= STO_MIPS_PIC;
       ++ESym;
@@ -1742,7 +1741,7 @@ void GnuHashTableSection::writeHashTable(uint8_t *Buf) {
   uint32_t *Buckets = reinterpret_cast<uint32_t *>(Buf);
   for (size_t I = 0; I < NBuckets; ++I)
     if (!Syms[I].empty())
-      write32(Buckets + I, Syms[I][0].Body->DynsymIndex);
+      write32(Buckets + I, Syms[I][0].Sym->DynsymIndex);
 
   // Write a hash value table. It represents a sequence of chains that
   // share the same hash modulo value. The last element of each chain
@@ -1791,15 +1790,15 @@ void GnuHashTableSection::addSymbols(std::vector<SymbolTableEntry> &V) {
       std::stable_partition(V.begin(), V.end(), [](const SymbolTableEntry &S) {
         // Shared symbols that this executable preempts are special. The dynamic
         // linker has to look them up, so they have to be in the hash table.
-        if (auto *SS = dyn_cast<SharedSymbol>(S.Symbol))
+        if (auto *SS = dyn_cast<SharedSymbol>(S.Sym))
           return SS->CopyRelSec == nullptr && !SS->NeedsPltAddr;
-        return !S.Symbol->isInCurrentOutput();
+        return !S.Sym->isInCurrentOutput();
       });
   if (Mid == V.end())
     return;
 
   for (SymbolTableEntry &Ent : llvm::make_range(Mid, V.end())) {
-    SymbolBody *B = Ent.Symbol;
+    Symbol *B = Ent.Sym;
     Symbols.push_back({B, Ent.StrTabOffset, hashGnu(B->getName())});
   }
 
@@ -1811,7 +1810,7 @@ void GnuHashTableSection::addSymbols(std::vector<SymbolTableEntry> &V) {
 
   V.erase(Mid, V.end());
   for (const Entry &Ent : Symbols)
-    V.push_back({Ent.Body, Ent.StrTabOffset});
+    V.push_back({Ent.Sym, Ent.StrTabOffset});
 }
 
 HashTableSection::HashTableSection()
@@ -1841,9 +1840,9 @@ void HashTableSection::writeTo(uint8_t *Buf) {
   uint32_t *Chains = P + NumSymbols;
 
   for (const SymbolTableEntry &S : InX::DynSymTab->getSymbols()) {
-    SymbolBody *Body = S.Symbol;
-    StringRef Name = Body->getName();
-    unsigned I = Body->DynsymIndex;
+    Symbol *Sym = S.Sym;
+    StringRef Name = Sym->getName();
+    unsigned I = Sym->DynsymIndex;
     uint32_t Hash = hashSysV(Name) % NumSymbols;
     Chains[I] = Buckets[Hash];
     write32(Buckets + Hash, I);
@@ -1869,7 +1868,7 @@ void PltSection::writeTo(uint8_t *Buf) {
   unsigned PltOff = getPltRelocOff();
 
   for (auto &I : Entries) {
-    const SymbolBody *B = I.first;
+    const Symbol *B = I.first;
     unsigned RelOff = I.second + PltOff;
     uint64_t Got = B->getGotPltVA();
     uint64_t Plt = this->getVA() + Off;
@@ -1878,7 +1877,7 @@ void PltSection::writeTo(uint8_t *Buf) {
   }
 }
 
-template <class ELFT> void PltSection::addEntry(SymbolBody &Sym) {
+template <class ELFT> void PltSection::addEntry(Symbol &Sym) {
   Sym.PltIndex = Entries.size();
   RelocationSection<ELFT> *PltRelocSection = In<ELFT>::RelaPlt;
   if (HeaderSize == 0) {
@@ -2283,7 +2282,7 @@ template <class ELFT> size_t VersionTableSection<ELFT>::getSize() const {
 template <class ELFT> void VersionTableSection<ELFT>::writeTo(uint8_t *Buf) {
   auto *OutVersym = reinterpret_cast<Elf_Versym *>(Buf) + 1;
   for (const SymbolTableEntry &S : InX::DynSymTab->getSymbols()) {
-    OutVersym->vs_index = S.Symbol->VersionId;
+    OutVersym->vs_index = S.Sym->VersionId;
     ++OutVersym;
   }
 }
@@ -2638,10 +2637,10 @@ template void EhFrameSection::addSection<ELF32BE>(InputSectionBase *);
 template void EhFrameSection::addSection<ELF64LE>(InputSectionBase *);
 template void EhFrameSection::addSection<ELF64BE>(InputSectionBase *);
 
-template void PltSection::addEntry<ELF32LE>(SymbolBody &Sym);
-template void PltSection::addEntry<ELF32BE>(SymbolBody &Sym);
-template void PltSection::addEntry<ELF64LE>(SymbolBody &Sym);
-template void PltSection::addEntry<ELF64BE>(SymbolBody &Sym);
+template void PltSection::addEntry<ELF32LE>(Symbol &Sym);
+template void PltSection::addEntry<ELF32BE>(Symbol &Sym);
+template void PltSection::addEntry<ELF64LE>(Symbol &Sym);
+template void PltSection::addEntry<ELF64BE>(Symbol &Sym);
 
 template void elf::createCommonSections<ELF32LE>();
 template void elf::createCommonSections<ELF32BE>();
