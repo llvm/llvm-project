@@ -778,8 +778,8 @@ uint64_t MipsGotSection::getPageEntryOffset(const Symbol &B,
   return (HeaderEntriesNum + Index) * Config->Wordsize;
 }
 
-uint64_t MipsGotSection::getBodyEntryOffset(const Symbol &B,
-                                            int64_t Addend) const {
+uint64_t MipsGotSection::getSymEntryOffset(const Symbol &B,
+                                           int64_t Addend) const {
   // Calculate offset of the GOT entries block: TLS, global, local.
   uint64_t Index = HeaderEntriesNum + PageEntriesNum;
   if (B.isTls())
@@ -873,8 +873,8 @@ void MipsGotSection::writeTo(uint8_t *Buf) {
   auto AddEntry = [&](const GotEntry &SA) {
     uint8_t *Entry = Buf;
     Buf += Config->Wordsize;
-    const Symbol *Body = SA.first;
-    uint64_t VA = Body->getVA(SA.second);
+    const Symbol *Sym = SA.first;
+    uint64_t VA = Sym->getVA(SA.second);
     writeUint(Entry, VA);
   };
   std::for_each(std::begin(LocalEntries), std::end(LocalEntries), AddEntry);
@@ -1546,7 +1546,7 @@ void SymbolTableBaseSection::addSymbol(Symbol *B) {
   Symbols.push_back({B, StrTabSec.addString(B->getName(), HashIt)});
 }
 
-size_t SymbolTableBaseSection::getSymbolIndex(Symbol *Body) {
+size_t SymbolTableBaseSection::getSymbolIndex(Symbol *Sym) {
   // Initializes symbol lookup tables lazily. This is used only
   // for -r or -emit-relocs.
   llvm::call_once(OnceFlag, [&] {
@@ -1562,9 +1562,9 @@ size_t SymbolTableBaseSection::getSymbolIndex(Symbol *Body) {
 
   // Section symbols are mapped based on their output sections
   // to maintain their semantics.
-  if (Body->Type == STT_SECTION)
-    return SectionIndexMap.lookup(Body->getOutputSection());
-  return SymbolIndexMap.lookup(Body);
+  if (Sym->Type == STT_SECTION)
+    return SectionIndexMap.lookup(Sym->getOutputSection());
+  return SymbolIndexMap.lookup(Sym);
 }
 
 template <class ELFT>
@@ -1582,25 +1582,25 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
   auto *ESym = reinterpret_cast<Elf_Sym *>(Buf);
 
   for (SymbolTableEntry &Ent : Symbols) {
-    Symbol *Body = Ent.Sym;
+    Symbol *Sym = Ent.Sym;
 
     // Set st_info and st_other.
     ESym->st_other = 0;
-    if (Body->isLocal()) {
-      ESym->setBindingAndType(STB_LOCAL, Body->Type);
+    if (Sym->isLocal()) {
+      ESym->setBindingAndType(STB_LOCAL, Sym->Type);
     } else {
-      ESym->setBindingAndType(Body->computeBinding(), Body->Type);
-      ESym->setVisibility(Body->Visibility);
+      ESym->setBindingAndType(Sym->computeBinding(), Sym->Type);
+      ESym->setVisibility(Sym->Visibility);
     }
 
     ESym->st_name = Ent.StrTabOffset;
 
     // Set a section index.
-    if (const OutputSection *OutSec = Body->getOutputSection())
+    if (const OutputSection *OutSec = Sym->getOutputSection())
       ESym->st_shndx = OutSec->SectionIndex;
-    else if (isa<DefinedRegular>(Body))
+    else if (isa<DefinedRegular>(Sym))
       ESym->st_shndx = SHN_ABS;
-    else if (isa<DefinedCommon>(Body))
+    else if (isa<DefinedCommon>(Sym))
       ESym->st_shndx = SHN_COMMON;
     else
       ESym->st_shndx = SHN_UNDEF;
@@ -1613,15 +1613,15 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
     if (ESym->st_shndx == SHN_UNDEF)
       ESym->st_size = 0;
     else
-      ESym->st_size = Body->getSize();
+      ESym->st_size = Sym->getSize();
 
     // st_value is usually an address of a symbol, but that has a
     // special meaining for uninstantiated common symbols (this can
     // occur if -r is given).
-    if (!Config->DefineCommon && isa<DefinedCommon>(Body))
-      ESym->st_value = cast<DefinedCommon>(Body)->Alignment;
+    if (!Config->DefineCommon && isa<DefinedCommon>(Sym))
+      ESym->st_value = cast<DefinedCommon>(Sym)->Alignment;
     else
-      ESym->st_value = Body->getVA();
+      ESym->st_value = Sym->getVA();
 
     ++ESym;
   }
@@ -1634,12 +1634,12 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
     auto *ESym = reinterpret_cast<Elf_Sym *>(Buf);
 
     for (SymbolTableEntry &Ent : Symbols) {
-      Symbol *Body = Ent.Sym;
-      if (Body->isInPlt() && Body->NeedsPltAddr)
+      Symbol *Sym = Ent.Sym;
+      if (Sym->isInPlt() && Sym->NeedsPltAddr)
         ESym->st_other |= STO_MIPS_PLT;
 
       if (Config->Relocatable)
-        if (auto *D = dyn_cast<DefinedRegular>(Body))
+        if (auto *D = dyn_cast<DefinedRegular>(Sym))
           if (D->isMipsPIC<ELFT>())
             ESym->st_other |= STO_MIPS_PIC;
       ++ESym;
@@ -1741,7 +1741,7 @@ void GnuHashTableSection::writeHashTable(uint8_t *Buf) {
   uint32_t *Buckets = reinterpret_cast<uint32_t *>(Buf);
   for (size_t I = 0; I < NBuckets; ++I)
     if (!Syms[I].empty())
-      write32(Buckets + I, Syms[I][0].Body->DynsymIndex);
+      write32(Buckets + I, Syms[I][0].Sym->DynsymIndex);
 
   // Write a hash value table. It represents a sequence of chains that
   // share the same hash modulo value. The last element of each chain
@@ -1810,7 +1810,7 @@ void GnuHashTableSection::addSymbols(std::vector<SymbolTableEntry> &V) {
 
   V.erase(Mid, V.end());
   for (const Entry &Ent : Symbols)
-    V.push_back({Ent.Body, Ent.StrTabOffset});
+    V.push_back({Ent.Sym, Ent.StrTabOffset});
 }
 
 HashTableSection::HashTableSection()
@@ -1840,9 +1840,9 @@ void HashTableSection::writeTo(uint8_t *Buf) {
   uint32_t *Chains = P + NumSymbols;
 
   for (const SymbolTableEntry &S : InX::DynSymTab->getSymbols()) {
-    Symbol *Body = S.Sym;
-    StringRef Name = Body->getName();
-    unsigned I = Body->DynsymIndex;
+    Symbol *Sym = S.Sym;
+    StringRef Name = Sym->getName();
+    unsigned I = Sym->DynsymIndex;
     uint32_t Hash = hashSysV(Name) % NumSymbols;
     Chains[I] = Buckets[Hash];
     write32(Buckets + Hash, I);

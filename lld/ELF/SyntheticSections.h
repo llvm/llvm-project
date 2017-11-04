@@ -175,7 +175,7 @@ public:
   bool addDynTlsEntry(Symbol &Sym);
   bool addTlsIndex();
   uint64_t getPageEntryOffset(const Symbol &B, int64_t Addend) const;
-  uint64_t getBodyEntryOffset(const Symbol &B, int64_t Addend) const;
+  uint64_t getSymEntryOffset(const Symbol &B, int64_t Addend) const;
   uint64_t getGlobalDynOffset(const Symbol &B) const;
 
   // Returns the symbol which corresponds to the first entry of the global part
@@ -430,9 +430,9 @@ public:
   void finalizeContents() override;
   void postThunkContents() override;
   size_t getSize() const override { return getNumSymbols() * Entsize; }
-  void addSymbol(Symbol *Body);
+  void addSymbol(Symbol *Sym);
   unsigned getNumSymbols() const { return Symbols.size() + 1; }
-  size_t getSymbolIndex(Symbol *Body);
+  size_t getSymbolIndex(Symbol *Sym);
   ArrayRef<SymbolTableEntry> getSymbols() const { return Symbols; }
 
 protected:
@@ -475,7 +475,7 @@ private:
   void writeHashTable(uint8_t *Buf);
 
   struct Entry {
-    Symbol *Body;
+    Symbol *Sym;
     size_t StrTabOffset;
     uint32_t Hash;
   };

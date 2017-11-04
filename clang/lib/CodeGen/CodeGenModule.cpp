@@ -2284,7 +2284,8 @@ CodeGenModule::CreateRuntimeFunction(llvm::FunctionType *FTy, StringRef Name,
       F->setCallingConv(getRuntimeCC());
 
       if (!Local && getTriple().isOSBinFormatCOFF() &&
-          !getCodeGenOpts().LTOVisibilityPublicStd) {
+          !getCodeGenOpts().LTOVisibilityPublicStd &&
+          !getTriple().isWindowsGNUEnvironment()) {
         const FunctionDecl *FD = GetRuntimeFunctionDecl(Context, Name);
         if (!FD || FD->hasAttr<DLLImportAttr>()) {
           F->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);

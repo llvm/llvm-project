@@ -12,6 +12,10 @@
 // RUN: echo "#define SECOND" >> %t/Inputs/second.h
 // RUN: cat %s                >> %t/Inputs/second.h
 
+// Test that each header can compile
+// RUN: %clang_cc1 -fsyntax-only -x c++ -std=c++1z %t/Inputs/first.h
+// RUN: %clang_cc1 -fsyntax-only -x c++ -std=c++1z %t/Inputs/second.h
+
 // Build module map file
 // RUN: echo "module FirstModule {"     >> %t/Inputs/module.map
 // RUN: echo "    header \"first.h\""   >> %t/Inputs/module.map
@@ -26,6 +30,13 @@
 #if !defined(FIRST) && !defined(SECOND)
 #include "first.h"
 #include "second.h"
+#endif
+
+// Used for testing
+#if defined(FIRST)
+#define ACCESS public:
+#elif defined(SECOND)
+#define ACCESS private:
 #endif
 
 namespace AccessSpecifiers {
@@ -55,6 +66,32 @@ S2 s2;
 // expected-error@second.h:* {{'AccessSpecifiers::S2' has different definitions in different modules; first difference is definition in module 'SecondModule' found protected access specifier}}
 // expected-note@first.h:* {{but in 'FirstModule' found public access specifier}}
 #endif
+
+#define DECLS \
+public:       \
+private:      \
+protected:
+
+#if defined(FIRST) || defined(SECOND)
+struct Valid1 {
+  DECLS
+};
+#else
+Valid1 v1;
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+struct Invalid1 {
+  DECLS
+  ACCESS
+};
+#else
+Invalid1 i1;
+// expected-error@second.h:* {{'AccessSpecifiers::Invalid1' has different definitions in different modules; first difference is definition in module 'SecondModule' found private access specifier}}
+// expected-note@first.h:* {{but in 'FirstModule' found public access specifier}}
+#endif
+
+#undef DECLS
 } // namespace AccessSpecifiers
 
 namespace StaticAssert {
@@ -113,7 +150,31 @@ S4 s4;
 // expected-error@second.h:* {{'StaticAssert::S4' has different definitions in different modules; first difference is definition in module 'SecondModule' found public access specifier}}
 // expected-note@first.h:* {{but in 'FirstModule' found static assert}}
 #endif
-}
+
+#define DECLS                       \
+  static_assert(4 == 4, "Message"); \
+  static_assert(5 == 5);
+
+#if defined(FIRST) || defined(SECOND)
+struct Valid1 {
+  DECLS
+};
+#else
+Valid1 v1;
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+struct Invalid1 {
+  DECLS
+  ACCESS
+};
+#else
+Invalid1 i1;
+// expected-error@second.h:* {{'StaticAssert::Invalid1' has different definitions in different modules; first difference is definition in module 'SecondModule' found private access specifier}}
+// expected-note@first.h:* {{but in 'FirstModule' found public access specifier}}
+#endif
+#undef DECLS
+}  // namespace StaticAssert
 
 namespace Field {
 #if defined(FIRST)
@@ -302,6 +363,38 @@ S13 s13;
 // expected-error@first.h:* {{'Field::S13::x' from module 'FirstModule' is not present in definition of 'Field::S13' in module 'SecondModule'}}
 // expected-note@second.h:* {{declaration of 'x' does not match}}
 #endif
+
+#define DECLS         \
+  int a;              \
+  int b : 3;          \
+  unsigned c : 1 + 2; \
+  s d;                \
+  double e = 1.0;     \
+  long f[5];
+
+#if defined(FIRST) || defined(SECOND)
+typedef short s;
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+struct Valid1 {
+  DECLS
+};
+#else
+Valid1 v1;
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+struct Invalid1 {
+  DECLS
+  ACCESS
+};
+#else
+Invalid1 i1;
+// expected-error@second.h:* {{'Field::Invalid1' has different definitions in different modules; first difference is definition in module 'SecondModule' found private access specifier}}
+// expected-note@first.h:* {{but in 'FirstModule' found public access specifier}}
+#endif
+#undef DECLS
 }  // namespace Field
 
 namespace Method {
@@ -531,6 +624,40 @@ S15 s15;
 // expected-error@first.h:* {{'Method::S15::A' from module 'FirstModule' is not present in definition of 'Method::S15' in module 'SecondModule'}}
 // expected-note@second.h:* {{declaration of 'A' does not match}}
 #endif
+
+#define DECLS            \
+  void A();              \
+  static void B();       \
+  virtual void C();      \
+  virtual void D() = 0;  \
+  inline void E();       \
+  void F() const;        \
+  void G() volatile;     \
+  void H(int x);         \
+  void I(int x = 5 + 5); \
+  void J(int);           \
+  void K(int x[2]);      \
+  int L();
+
+#if defined(FIRST) || defined(SECOND)
+struct Valid1 {
+  DECLS
+};
+#else
+Valid1* v1;
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+struct Invalid1 {
+  DECLS
+  ACCESS
+};
+#else
+Invalid1* i1;
+// expected-error@second.h:* {{'Method::Invalid1' has different definitions in different modules; first difference is definition in module 'SecondModule' found private access specifier}}
+// expected-note@first.h:* {{but in 'FirstModule' found public access specifier}}
+#endif
+#undef DECLS
 }  // namespace Method
 
 namespace Constructor {
@@ -565,6 +692,31 @@ S2* s2;
 // expected-error@second.h:* {{'Constructor::S2' has different definitions in different modules; first difference is definition in module 'SecondModule' found constructor that has 2 parameters}}
 // expected-note@first.h:* {{but in 'FirstModule' found constructor that has 1 parameter}}
 #endif
+
+#define DECLS(CLASS) \
+  CLASS(int);        \
+  CLASS(double);     \
+  CLASS(int, int);
+
+#if defined(FIRST) || defined(SECOND)
+struct Valid1 {
+  DECLS(Valid1)
+};
+#else
+Valid1* v1;
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+struct Invalid1 {
+  DECLS(Invalid1)
+  ACCESS
+};
+#else
+Invalid1* i1;
+// expected-error@second.h:* {{'Constructor::Invalid1' has different definitions in different modules; first difference is definition in module 'SecondModule' found private access specifier}}
+// expected-note@first.h:* {{but in 'FirstModule' found public access specifier}}
+#endif
+#undef DECLS
 }  // namespace Constructor
 
 namespace Destructor {
@@ -600,32 +752,44 @@ S2 s2;
 // expected-note@first.h:* {{but in 'FirstModule' found destructor is virtual}}
 #endif
 
-}  // namespace Destructor
-
-// Naive parsing of AST can lead to cycles in processing.  Ensure
-// self-references don't trigger an endless cycles of AST node processing.
-namespace SelfReference {
-#if defined(FIRST)
-template <template <int> class T> class Wrapper {};
-
-template <int N> class S {
-  S(Wrapper<::SelfReference::S> &Ref) {}
+#if defined(FIRST) || defined(SECOND)
+struct Valid1 {
+  ~Valid1();
 };
-
-struct Xx {
-  struct Yy {
-  };
-};
-
-Xx::Xx::Xx::Yy yy;
-
-namespace NNS {
-template <typename> struct Foo;
-template <template <class> class T = NNS::Foo>
-struct NestedNamespaceSpecifier {};
-}
+#else
+Valid1 v1;
 #endif
-}  // namespace SelfReference
+
+#if defined(FIRST) || defined(SECOND)
+struct Invalid1 {
+  ~Invalid1();
+  ACCESS
+};
+#else
+Invalid1 i1;
+// expected-error@second.h:* {{'Destructor::Invalid1' has different definitions in different modules; first difference is definition in module 'SecondModule' found private access specifier}}
+// expected-note@first.h:* {{but in 'FirstModule' found public access specifier}}
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+struct Valid2 {
+  virtual ~Valid2();
+};
+#else
+Valid2 v2;
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+struct Invalid2 {
+  virtual ~Invalid2();
+  ACCESS
+};
+#else
+Invalid2 i2;
+// expected-error@second.h:* {{'Destructor::Invalid2' has different definitions in different modules; first difference is definition in module 'SecondModule' found private access specifier}}
+// expected-note@first.h:* {{but in 'FirstModule' found public access specifier}}
+#endif
+}  // namespace Destructor
 
 namespace TypeDef {
 #if defined(FIRST)
@@ -722,6 +886,35 @@ S6 s6;
 // expected-error@second.h:* {{'TypeDef::S6' has different definitions in different modules; first difference is definition in module 'SecondModule' found typedef 'b' with underlying type 'float'}}
 // expected-note@first.h:* {{but in 'FirstModule' found typedef 'b' with different underlying type 'TypeDef::F' (aka 'float')}}
 #endif
+
+#define DECLS       \
+  typedef int A;    \
+  typedef double B; \
+  typedef I C;
+
+#if defined(FIRST) || defined(SECOND)
+typedef int I;
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+struct Valid1 {
+  DECLS
+};
+#else
+Valid1 v1;
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+struct Invalid1 {
+  DECLS
+  ACCESS
+};
+#else
+Invalid1 i1;
+// expected-error@second.h:* {{'TypeDef::Invalid1' has different definitions in different modules; first difference is definition in module 'SecondModule' found private access specifier}}
+// expected-note@first.h:* {{but in 'FirstModule' found public access specifier}}
+#endif
+#undef DECLS
 }  // namespace TypeDef
 
 namespace Using {
@@ -819,6 +1012,35 @@ S6 s6;
 // expected-error@second.h:* {{'Using::S6' has different definitions in different modules; first difference is definition in module 'SecondModule' found type alias 'b' with underlying type 'float'}}
 // expected-note@first.h:* {{but in 'FirstModule' found type alias 'b' with different underlying type 'Using::F' (aka 'float')}}
 #endif
+
+#if defined(FIRST) || defined(SECOND)
+using I = int;
+#endif
+
+#define DECLS       \
+  using A = int;    \
+  using B = double; \
+  using C = I;
+
+#if defined(FIRST) || defined(SECOND)
+struct Valid1 {
+  DECLS
+};
+#else
+Valid1 v1;
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+struct Invalid1 {
+  DECLS
+  ACCESS
+};
+#else
+Invalid1 i1;
+// expected-error@second.h:* {{'Using::Invalid1' has different definitions in different modules; first difference is definition in module 'SecondModule' found private access specifier}}
+// expected-note@first.h:* {{but in 'FirstModule' found public access specifier}}
+#endif
+#undef DECLS
 }  // namespace Using
 
 namespace RecordType {
@@ -837,7 +1059,34 @@ S1 s1;
 // expected-error@first.h:* {{'RecordType::S1::x' from module 'FirstModule' is not present in definition of 'RecordType::S1' in module 'SecondModule'}}
 // expected-note@second.h:* {{declaration of 'x' does not match}}
 #endif
-}
+
+#define DECLS \
+  Foo F;
+
+#if defined(FIRST) || defined(SECOND)
+struct Foo {};
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+struct Valid1 {
+  DECLS
+};
+#else
+Valid1 v1;
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+struct Invalid1 {
+  DECLS
+  ACCESS
+};
+#else
+Invalid1 i1;
+// expected-error@second.h:* {{'RecordType::Invalid1' has different definitions in different modules; first difference is definition in module 'SecondModule' found private access specifier}}
+// expected-note@first.h:* {{but in 'FirstModule' found public access specifier}}
+#endif
+#undef DECLS
+}  // namespace RecordType
 
 namespace DependentType {
 #if defined(FIRST)
@@ -856,7 +1105,34 @@ using U1 = S1<T>;
 // expected-error@first.h:* {{'DependentType::S1::x' from module 'FirstModule' is not present in definition of 'S1<T>' in module 'SecondModule'}}
 // expected-note@second.h:* {{declaration of 'x' does not match}}
 #endif
-}
+
+#define DECLS \
+  typename T::typeA x;
+
+#if defined(FIRST) || defined(SECOND)
+template <class T>
+struct Valid1 {
+  DECLS
+};
+#else
+template <class T>
+using V1 = Valid1<T>;
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+template <class T>
+struct Invalid1 {
+  DECLS
+  ACCESS
+};
+#else
+template <class T>
+using I1 = Invalid1<T>;
+// expected-error@second.h:* {{'DependentType::Invalid1' has different definitions in different modules; first difference is definition in module 'SecondModule' found private access specifier}}
+// expected-note@first.h:* {{but in 'FirstModule' found public access specifier}}
+#endif
+#undef DECLS
+}  // namespace DependentType
 
 namespace ElaboratedType {
 #if defined(FIRST)
@@ -874,7 +1150,34 @@ S1 s1;
 // expected-error@first.h:* {{'ElaboratedType::S1::x' from module 'FirstModule' is not present in definition of 'ElaboratedType::S1' in module 'SecondModule'}}
 // expected-note@second.h:* {{declaration of 'x' does not match}}
 #endif
-}
+
+#define DECLS \
+  NS::type x;
+
+#if defined(FIRST) || defined(SECOND)
+namespace NS { using type = float; }
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+struct Valid1 {
+  DECLS
+};
+#else
+Valid1 v1;
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+struct Invalid1 {
+  DECLS
+  ACCESS
+};
+#else
+Invalid1 i1;
+// expected-error@second.h:* {{'ElaboratedType::Invalid1' has different definitions in different modules; first difference is definition in module 'SecondModule' found private access specifier}}
+// expected-note@first.h:* {{but in 'FirstModule' found public access specifier}}
+#endif
+#undef DECLS
+}  // namespace ElaboratedType
 
 namespace Enum {
 #if defined(FIRST)
@@ -892,6 +1195,33 @@ S1 s1;
 // expected-error@first.h:* {{'Enum::S1::x' from module 'FirstModule' is not present in definition of 'Enum::S1' in module 'SecondModule'}}
 // expected-note@second.h:* {{declaration of 'x' does not match}}
 #endif
+
+#define DECLS \
+  E e = E1;
+
+#if defined(FIRST) || defined(SECOND)
+enum E { E1, E2 };
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+struct Valid1 {
+  DECLS
+};
+#else
+Valid1 v1;
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+struct Invalid1 {
+  DECLS
+  ACCESS
+};
+#else
+Invalid1 i1;
+// expected-error@second.h:* {{'Enum::Invalid1' has different definitions in different modules; first difference is definition in module 'SecondModule' found private access specifier}}
+// expected-note@first.h:* {{but in 'FirstModule' found public access specifier}}
+#endif
+#undef DECLS
 }
 
 namespace NestedNamespaceSpecifier {
@@ -1069,7 +1399,73 @@ S10 s10;
 // expected-note@first.h:* {{declaration of 'x' does not match}}
 #endif
 }
+
+#define DECLS       \
+  NS1::Type a;      \
+  NS1::NS2::Type b; \
+  NS1::S c;         \
+  NS3::Type d;
+
+#if defined(FIRST) || defined(SECOND)
+namespace NS1 {
+  using Type = int;
+  namespace NS2 {
+    using Type = double;
+  }
+  struct S {};
 }
+namespace NS3 = NS1;
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+struct Valid1 {
+  DECLS
+};
+#else
+Valid1 v1;
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+struct Invalid1 {
+  DECLS
+  ACCESS
+};
+#else
+Invalid1 i1;
+// expected-error@second.h:* {{'NestedNamespaceSpecifier::Invalid1' has different definitions in different modules; first difference is definition in module 'SecondModule' found private access specifier}}
+// expected-note@first.h:* {{but in 'FirstModule' found public access specifier}}
+#endif
+#undef DECLS
+
+#define DECLS               \
+  typename T::type *x = {}; \
+  int y = x->T::foo();      \
+  int z = U::template X<int>::value;
+
+#if defined(FIRST) || defined(SECOND)
+template <class T, class U>
+struct Valid2 {
+  DECLS
+};
+#else
+template <class T, class U>
+using V2 = Valid2<T, U>;
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+template <class T, class U>
+struct Invalid2 {
+  DECLS
+  ACCESS
+};
+#else
+template <class T, class U>
+using I2 = Invalid2<T, U>;
+// expected-error@second.h:* {{'NestedNamespaceSpecifier::Invalid2' has different definitions in different modules; first difference is definition in module 'SecondModule' found private access specifier}}
+// expected-note@first.h:* {{but in 'FirstModule' found public access specifier}}
+#endif
+#undef DECLS
+}  // namespace NestedNamespaceSpecifier
 
 namespace TemplateSpecializationType {
 #if defined(FIRST)
@@ -1103,7 +1499,40 @@ S2 s2;
 // expected-error@first.h:* {{'TemplateSpecializationType::S2::u' from module 'FirstModule' is not present in definition of 'TemplateSpecializationType::S2' in module 'SecondModule'}}
 // expected-note@second.h:* {{declaration of 'u' does not match}}
 #endif
-}
+
+#define DECLS                       \
+  OneTemplateArg<int> x;            \
+  OneTemplateArg<double> y;         \
+  OneTemplateArg<char *> z;         \
+  TwoTemplateArgs<int, int> a;      \
+  TwoTemplateArgs<double, float> b; \
+  TwoTemplateArgs<short *, char> c;
+
+#if defined(FIRST) || defined(SECOND)
+template <class T> struct OneTemplateArg {};
+template <class T, class U> struct TwoTemplateArgs {};
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+struct Valid1 {
+DECLS
+};
+#else
+Valid1 v1;
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+struct Invalid1 {
+DECLS
+ACCESS
+};
+#else
+Invalid1 i1;
+// expected-error@second.h:* {{'TemplateSpecializationType::Invalid1' has different definitions in different modules; first difference is definition in module 'SecondModule' found private access specifier}}
+// expected-note@first.h:* {{but in 'FirstModule' found public access specifier}}
+#endif
+#undef DECLS
+}  // namespace TemplateSpecializationType
 
 namespace TemplateArgument {
 #if defined(FIRST)
@@ -1205,7 +1634,43 @@ S6 s6;
 // expected-error@second.h:* {{'TemplateArgument::S6' has different definitions in different modules; first difference is definition in module 'SecondModule' found field 'y'}}
 // expected-note@first.h:* {{but in 'FirstModule' found field 'x'}}
 #endif
-}
+
+#define DECLS                   \
+  OneClass<int> a;              \
+  OneInt<1> b;                  \
+  using c = OneClass<float>;    \
+  using d = OneInt<2>;          \
+  using e = OneInt<2 + 2>;      \
+  OneTemplateClass<OneClass> f; \
+  OneTemplateInt<OneInt> g;
+
+#if defined(FIRST) || defined(SECOND)
+template <class> struct OneClass{};
+template <int> struct OneInt{};
+template <template <class> class> struct OneTemplateClass{};
+template <template <int> class> struct OneTemplateInt{};
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+struct Valid1 {
+DECLS
+};
+#else
+Valid1 v1;
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+struct Invalid1 {
+DECLS
+ACCESS
+};
+#else
+Invalid1 i1;
+// expected-error@second.h:* {{'TemplateArgument::Invalid1' has different definitions in different modules; first difference is definition in module 'SecondModule' found private access specifier}}
+// expected-note@first.h:* {{but in 'FirstModule' found public access specifier}}
+#endif
+#undef DECLS
+}  // namespace TemplateArgument
 
 namespace TemplateTypeParmType {
 #if defined(FIRST)
@@ -1247,7 +1712,41 @@ using TemplateTypeParmType::S2;
 // expected-error@first.h:* {{'TemplateTypeParmType::S2::type' from module 'FirstModule' is not present in definition of 'S2<T, U>' in module 'SecondModule'}}
 // expected-note@second.h:* {{declaration of 'type' does not match}}
 #endif
-}
+
+#define DECLS            \
+  T t;                   \
+  U u;                   \
+  ParameterPack<T> a;    \
+  ParameterPack<T, U> b; \
+  ParameterPack<U> c;    \
+  ParameterPack<U, T> d;
+
+#if defined(FIRST) || defined(SECOND)
+template <class ...Ts> struct ParameterPack {};
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+template <class T, class U>
+struct Valid1 {
+  DECLS
+};
+#else
+using TemplateTypeParmType::Valid1;
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+template <class T, class U>
+struct Invalid1 {
+  DECLS
+  ACCESS
+};
+#else
+using TemplateTypeParmType::Invalid1;
+// expected-error@second.h:* {{'TemplateTypeParmType::Invalid1' has different definitions in different modules; first difference is definition in module 'SecondModule' found private access specifier}}
+// expected-note@first.h:* {{but in 'FirstModule' found public access specifier}}
+#endif
+#undef DECLS
+}  // namespace TemplateTypeParmType
 
 namespace VarDecl {
 #if defined(FIRST)
@@ -1381,46 +1880,36 @@ S9 s9;
 // expected-note@second.h:* {{declaration of 'x' does not match}}
 #endif
 
-#if defined(FIRST)
-template <typename T>
-struct S {
-  struct R {
-    void foo(T x = 0) {}
-  };
-};
-#elif defined(SECOND)
-template <typename T>
-struct S {
-  struct R {
-    void foo(T x = 1) {}
-  };
-};
-#else
-void run() {
-  S<int>::R().foo();
-}
-// expected-error@second.h:* {{'VarDecl::S::R' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'foo' with 1st parameter with a default argument}}
-// expected-note@first.h:* {{but in 'FirstModule' found method 'foo' with 1st parameter with a different default argument}}
+#define DECLS             \
+  static int a;           \
+  static I b;             \
+  static const int c = 1; \
+  static constexpr int d = 5;
+
+#if defined(FIRST) || defined(SECOND)
+using I = int;
 #endif
 
-#if defined(FIRST)
-template <typename alpha> struct Bravo {
-  void charlie(bool delta = false) {}
+#if defined(FIRST) || defined(SECOND)
+struct Valid1 {
+  DECLS
 };
-typedef Bravo<char> echo;
-echo foxtrot;
-#elif defined(SECOND)
-template <typename alpha> struct Bravo {
-  void charlie(bool delta = (false)) {}
-};
-typedef Bravo<char> echo;
-echo foxtrot;
 #else
-Bravo<char> golf;
-// expected-error@second.h:* {{'VarDecl::Bravo' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'charlie' with 1st parameter with a default argument}}
-// expected-note@first.h:* {{but in 'FirstModule' found method 'charlie' with 1st parameter with a different default argument}}
+Valid1 v1;
 #endif
-}
+
+#if defined(FIRST) || defined(SECOND)
+struct Invalid1 {
+  DECLS
+  ACCESS
+};
+#else
+Invalid1 i1;
+// expected-error@second.h:* {{'VarDecl::Invalid1' has different definitions in different modules; first difference is definition in module 'SecondModule' found private access specifier}}
+// expected-note@first.h:* {{but in 'FirstModule' found public access specifier}}
+#endif
+#undef DECLS
+}  // namespace VarDecl
 
 namespace Friend {
 #if defined(FIRST)
@@ -1499,7 +1988,41 @@ S5 s5;
 // expected-error@second.h:* {{'Friend::S5' has different definitions in different modules; first difference is definition in module 'SecondModule' found friend function 'T5b'}}
 // expected-note@first.h:* {{but in 'FirstModule' found friend function 'T5a'}}
 #endif
-}
+
+#define DECLS            \
+  friend class FriendA;  \
+  friend struct FriendB; \
+  friend FriendC;        \
+  friend const FriendD;  \
+  friend void Function();
+
+#if defined(FIRST) || defined(SECOND)
+class FriendA {};
+class FriendB {};
+class FriendC {};
+class FriendD {};
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+struct Valid1 {
+  DECLS
+};
+#else
+Valid1 v1;
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+struct Invalid1 {
+  DECLS
+  ACCESS
+};
+#else
+Invalid1 i1;
+// expected-error@second.h:* {{'Friend::Invalid1' has different definitions in different modules; first difference is definition in module 'SecondModule' found private access specifier}}
+// expected-note@first.h:* {{but in 'FirstModule' found public access specifier}}
+#endif
+#undef DECLS
+}  // namespace Friend
 
 namespace TemplateParameters {
 #if defined(FIRST)
@@ -1575,6 +2098,38 @@ using TemplateParameters::S6;
 // expected-error@second.h:* {{'TemplateParameters::S6' has different definitions in different modules; first difference is definition in module 'SecondModule' found unnamed template parameter}}
 // expected-note@first.h:* {{but in 'FirstModule' found template parameter 'A'}}
 #endif
+
+#define DECLS
+
+#if defined(FIRST) || defined(SECOND)
+template <class> class DefaultArg;
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+template <int, class, template <class> class,
+          int A, class B, template <int> class C,
+          int D = 1, class E = int, template <class F> class = DefaultArg>
+struct Valid1 {
+  DECLS
+};
+#else
+using TemplateParameters::Valid1;
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+template <int, class, template <class> class,
+          int A, class B, template <int> class C,
+          int D = 1, class E = int, template <class F> class = DefaultArg>
+struct Invalid1 {
+  DECLS
+  ACCESS
+};
+#else
+using TemplateParameters::Invalid1;
+// expected-error@second.h:* {{'TemplateParameters::Invalid1' has different definitions in different modules; first difference is definition in module 'SecondModule' found private access specifier}}
+// expected-note@first.h:* {{but in 'FirstModule' found public access specifier}}
+#endif
+#undef DECLS
 }  // namespace TemplateParameters
 
 namespace BaseClass {
@@ -1695,68 +2250,69 @@ S10 s10;
 // expected-error@second.h:* {{'BaseClass::S10' has different definitions in different modules; first difference is definition in module 'SecondModule' found 1st base class 'BaseClass::B10a' with protected access specifier}}
 // expected-note@first.h:* {{but in 'FirstModule' found 1st base class 'BaseClass::B10a' with no access specifier}}
 #endif
+
+#define DECLS
+
+#if defined(FIRST) || defined(SECOND)
+struct Base1 {};
+struct Base2 {};
+struct Base3 {};
+struct Base4 {};
+struct Base5 {};
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+struct Valid1 :
+  Base1, virtual Base2, protected Base3, public Base4, private Base5 {
+
+  DECLS
+};
+#else
+Valid1 v1;
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+struct Invalid1 :
+  Base1, virtual Base2, protected Base3, public Base4, private Base5 {
+
+  DECLS
+  ACCESS
+};
+#else
+Invalid1 i1;
+// expected-error@second.h:* {{'BaseClass::Invalid1' has different definitions in different modules; first difference is definition in module 'SecondModule' found private access specifier}}
+// expected-note@first.h:* {{but in 'FirstModule' found public access specifier}}
+#endif
+#undef DECLS
 }  // namespace BaseClass
 
-// Interesting cases that should not cause errors.  struct S should not error
-// while struct T should error at the access specifier mismatch at the end.
-namespace AllDecls {
-#define CREATE_ALL_DECL_STRUCT(NAME, ACCESS)               \
-  typedef int INT;                                         \
-  struct NAME {                                            \
-  public:                                                  \
-  private:                                                 \
-  protected:                                               \
-    static_assert(1 == 1, "Message");                      \
-    static_assert(2 == 2);                                 \
-                                                           \
-    int x;                                                 \
-    double y;                                              \
-                                                           \
-    INT z;                                                 \
-                                                           \
-    unsigned a : 1;                                        \
-    unsigned b : 2 * 2 + 5 / 2;                            \
-                                                           \
-    mutable int c = sizeof(x + y);                         \
-                                                           \
-    void method() {}                                       \
-    static void static_method() {}                         \
-    virtual void virtual_method() {}                       \
-    virtual void pure_virtual_method() = 0;                \
-    inline void inline_method() {}                         \
-    void volatile_method() volatile {}                     \
-    void const_method() const {}                           \
-                                                           \
-    typedef int typedef_int;                               \
-    using using_int = int;                                 \
-                                                           \
-    void method_one_arg(int x) {}                          \
-    void method_one_arg_default_argument(int x = 5 + 5) {} \
-    void method_decayed_type(int x[5]) {}                  \
-                                                           \
-    int constant_arr[5];                                   \
-                                                           \
-    ACCESS:                                                \
+
+// Collection of interesting cases below.
+
+// Naive parsing of AST can lead to cycles in processing.  Ensure
+// self-references don't trigger an endless cycles of AST node processing.
+namespace SelfReference {
+#if defined(FIRST)
+template <template <int> class T> class Wrapper {};
+
+template <int N> class S {
+  S(Wrapper<::SelfReference::S> &Ref) {}
+};
+
+struct Xx {
+  struct Yy {
   };
+};
 
-#if defined(FIRST)
-CREATE_ALL_DECL_STRUCT(S, public)
-#elif defined(SECOND)
-CREATE_ALL_DECL_STRUCT(S, public)
-#else
-S *s;
-#endif
+Xx::Xx::Xx::Yy yy;
 
-#if defined(FIRST)
-CREATE_ALL_DECL_STRUCT(T, private)
-#elif defined(SECOND)
-CREATE_ALL_DECL_STRUCT(T, public)
-#else
-T *t;
-// expected-error@second.h:* {{'AllDecls::T' has different definitions in different modules; first difference is definition in module 'SecondModule' found public access specifier}}
-// expected-note@first.h:* {{but in 'FirstModule' found private access specifier}}
-#endif
+namespace NNS {
+template <typename> struct Foo;
+template <template <class> class T = NNS::Foo>
+struct NestedNamespaceSpecifier {};
 }
+#endif
+}  // namespace SelfReference
 
 namespace FriendFunction {
 #if defined(FIRST)
@@ -1825,7 +2381,7 @@ T t;
 // expected-note@second.h:* {{but in 'SecondModule' found public access specifier}}
 #endif
 
-}  // namespace ImplicitDelc
+}  // namespace ImplicitDecl
 
 namespace TemplatedClass {
 #if defined(FIRST)
@@ -2051,7 +2607,7 @@ void run() {
   S<int>::R().foo();
 }
 #endif
-}
+}  // namespace LateParsedDefaultArgument
 
 namespace LateParsedDefaultArgument {
 #if defined(FIRST)
@@ -2065,7 +2621,7 @@ Bravo<char> golf;
 #elif defined(SECOND)
 #else
 #endif
-}
+}  // LateParsedDefaultArgument
 
 namespace DifferentParameterNameInTemplate {
 #if defined(FIRST) || defined(SECOND)
@@ -2111,7 +2667,7 @@ struct BetaHelper {
 #else
 Alpha::Alpha() {}
 #endif
-}
+}  // DifferentParameterNameInTemplate
 
 namespace ParameterTest {
 #if defined(FIRST)
@@ -2138,7 +2694,7 @@ G* S<G>::Foo(const G* asdf, int*) {}
 #else
 S<X> s;
 #endif
-}
+}  // ParameterTest
 
 namespace MultipleTypedefs {
 #if defined(FIRST)
@@ -2188,12 +2744,59 @@ struct S3 {
 #else
 S3 s3;
 #endif
+}  // MultipleTypedefs
+
+namespace DefaultArguments {
+#if defined(FIRST)
+template <typename T>
+struct S {
+  struct R {
+    void foo(T x = 0) {}
+  };
+};
+#elif defined(SECOND)
+template <typename T>
+struct S {
+  struct R {
+    void foo(T x = 1) {}
+  };
+};
+#else
+void run() {
+  S<int>::R().foo();
 }
+// expected-error@second.h:* {{'DefaultArguments::S::R' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'foo' with 1st parameter with a default argument}}
+// expected-note@first.h:* {{but in 'FirstModule' found method 'foo' with 1st parameter with a different default argument}}
+#endif
+
+#if defined(FIRST)
+template <typename alpha> struct Bravo {
+  void charlie(bool delta = false) {}
+};
+typedef Bravo<char> echo;
+echo foxtrot;
+#elif defined(SECOND)
+template <typename alpha> struct Bravo {
+  void charlie(bool delta = (false)) {}
+};
+typedef Bravo<char> echo;
+echo foxtrot;
+#else
+Bravo<char> golf;
+// expected-error@second.h:* {{'DefaultArguments::Bravo' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'charlie' with 1st parameter with a default argument}}
+// expected-note@first.h:* {{but in 'FirstModule' found method 'charlie' with 1st parameter with a different default argument}}
+#endif
+}  // namespace DefaultArguments
 
 // Keep macros contained to one file.
 #ifdef FIRST
 #undef FIRST
 #endif
+
 #ifdef SECOND
 #undef SECOND
+#endif
+
+#ifdef ACCESS
+#undef ACCESS
 #endif
