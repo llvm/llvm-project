@@ -677,7 +677,10 @@ class SizeClassAllocator64 {
         // preventing just allocated memory from being released sooner than
         // necessary and also preventing extraneous ReleaseMemoryPagesToOS calls
         // for short lived processes.
-        region->rtoi.last_release_at_ns = NanoTime();
+        // Do it only when the feature is turned on, to avoid a potentially
+        // extraneous syscall.
+        if (ReleaseToOSIntervalMs() >= 0)
+          region->rtoi.last_release_at_ns = NanoTime();
       }
       // Do the mmap for the user memory.
       uptr map_size = kUserMapSize;
