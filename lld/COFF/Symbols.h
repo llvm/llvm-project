@@ -412,7 +412,7 @@ union SymbolUnion {
 };
 
 template <typename T, typename... ArgT>
-void replaceBody(Symbol *S, ArgT &&... Arg) {
+void replaceSymbol(Symbol *S, ArgT &&... Arg) {
   static_assert(sizeof(T) <= sizeof(SymbolUnion), "Symbol too small");
   static_assert(alignof(T) <= alignof(SymbolUnion),
                 "SymbolUnion not aligned enough");

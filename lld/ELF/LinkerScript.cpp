@@ -149,8 +149,8 @@ void LinkerScript::addSymbol(SymbolAssignment *Cmd) {
   // write expressions like this: `alignment = 16; . = ALIGN(., alignment)`.
   uint64_t SymValue = Value.Sec ? 0 : Value.getValue();
 
-  replaceBody<DefinedRegular>(Sym, nullptr, Cmd->Name, /*IsLocal=*/false,
-                              Visibility, STT_NOTYPE, SymValue, 0, Sec);
+  replaceSymbol<DefinedRegular>(Sym, nullptr, Cmd->Name, /*IsLocal=*/false,
+                                Visibility, STT_NOTYPE, SymValue, 0, Sec);
   Cmd->Sym = cast<DefinedRegular>(Sym);
 }
 

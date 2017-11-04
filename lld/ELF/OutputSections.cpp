@@ -142,61 +142,6 @@ void OutputSection::addSection(InputSection *IS) {
   }
 }
 
-static SectionKey createKey(InputSectionBase *IS, StringRef OutsecName) {
-  // When control reaches here, mergeable sections have already been
-  // merged except the -r case. If that's the case, we want to combine
-  // mergeable sections by sh_entsize and sh_flags.
-  if (Config->Relocatable && (IS->Flags & SHF_MERGE)) {
-    uint64_t Flags = IS->Flags & (SHF_MERGE | SHF_STRINGS);
-    uint32_t Alignment = std::max<uint32_t>(IS->Alignment, IS->Entsize);
-    return SectionKey{OutsecName, Flags, Alignment};
-  }
-
-  //  The ELF spec just says
-  // ----------------------------------------------------------------
-  // In the first phase, input sections that match in name, type and
-  // attribute flags should be concatenated into single sections.
-  // ----------------------------------------------------------------
-  //
-  // However, it is clear that at least some flags have to be ignored for
-  // section merging. At the very least SHF_GROUP and SHF_COMPRESSED have to be
-  // ignored. We should not have two output .text sections just because one was
-  // in a group and another was not for example.
-  //
-  // It also seems that that wording was a late addition and didn't get the
-  // necessary scrutiny.
-  //
-  // Merging sections with different flags is expected by some users. One
-  // reason is that if one file has
-  //
-  // int *const bar __attribute__((section(".foo"))) = (int *)0;
-  //
-  // gcc with -fPIC will produce a read only .foo section. But if another
-  // file has
-  //
-  // int zed;
-  // int *const bar __attribute__((section(".foo"))) = (int *)&zed;
-  //
-  // gcc with -fPIC will produce a read write section.
-  //
-  // Last but not least, when using linker script the merge rules are forced by
-  // the script. Unfortunately, linker scripts are name based. This means that
-  // expressions like *(.foo*) can refer to multiple input sections with
-  // different flags. We cannot put them in different output sections or we
-  // would produce wrong results for
-  //
-  // start = .; *(.foo.*) end = .; *(.bar)
-  //
-  // and a mapping of .foo1 and .bar1 to one section and .foo2 and .bar2 to
-  // another. The problem is that there is no way to layout those output
-  // sections such that the .foo sections are the only thing between the start
-  // and end symbols.
-  //
-  // Given the above issues, we instead merge sections by name and error on
-  // incompatible types and flags.
-  return SectionKey{OutsecName, 0, 0};
-}
-
 OutputSectionFactory::OutputSectionFactory() {}
 
 void elf::sortByOrder(MutableArrayRef<InputSection *> In,
@@ -252,8 +197,55 @@ OutputSection *OutputSectionFactory::addInputSec(InputSectionBase *IS,
     return Out->RelocationSection;
   }
 
-  SectionKey Key = createKey(IS, OutsecName);
-  OutputSection *&Sec = Map[Key];
+  // When control reaches here, mergeable sections have already been
+  // merged except the -r case. If that's the case, we do not combine them
+  // and let final link to handle this optimization.
+  if (Config->Relocatable && (IS->Flags & SHF_MERGE))
+    return createSection(IS, OutsecName);
+
+  //  The ELF spec just says
+  // ----------------------------------------------------------------
+  // In the first phase, input sections that match in name, type and
+  // attribute flags should be concatenated into single sections.
+  // ----------------------------------------------------------------
+  //
+  // However, it is clear that at least some flags have to be ignored for
+  // section merging. At the very least SHF_GROUP and SHF_COMPRESSED have to be
+  // ignored. We should not have two output .text sections just because one was
+  // in a group and another was not for example.
+  //
+  // It also seems that that wording was a late addition and didn't get the
+  // necessary scrutiny.
+  //
+  // Merging sections with different flags is expected by some users. One
+  // reason is that if one file has
+  //
+  // int *const bar __attribute__((section(".foo"))) = (int *)0;
+  //
+  // gcc with -fPIC will produce a read only .foo section. But if another
+  // file has
+  //
+  // int zed;
+  // int *const bar __attribute__((section(".foo"))) = (int *)&zed;
+  //
+  // gcc with -fPIC will produce a read write section.
+  //
+  // Last but not least, when using linker script the merge rules are forced by
+  // the script. Unfortunately, linker scripts are name based. This means that
+  // expressions like *(.foo*) can refer to multiple input sections with
+  // different flags. We cannot put them in different output sections or we
+  // would produce wrong results for
+  //
+  // start = .; *(.foo.*) end = .; *(.bar)
+  //
+  // and a mapping of .foo1 and .bar1 to one section and .foo2 and .bar2 to
+  // another. The problem is that there is no way to layout those output
+  // sections such that the .foo sections are the only thing between the start
+  // and end symbols.
+  //
+  // Given the above issues, we instead merge sections by name and error on
+  // incompatible types and flags.
+  OutputSection *&Sec = Map[OutsecName];
   if (Sec) {
     Sec->addSection(cast<InputSection>(IS));
     return nullptr;
@@ -264,24 +256,6 @@ OutputSection *OutputSectionFactory::addInputSec(InputSectionBase *IS,
 }
 
 OutputSectionFactory::~OutputSectionFactory() {}
-
-SectionKey DenseMapInfo<SectionKey>::getEmptyKey() {
-  return SectionKey{DenseMapInfo<StringRef>::getEmptyKey(), 0, 0};
-}
-
-SectionKey DenseMapInfo<SectionKey>::getTombstoneKey() {
-  return SectionKey{DenseMapInfo<StringRef>::getTombstoneKey(), 0, 0};
-}
-
-unsigned DenseMapInfo<SectionKey>::getHashValue(const SectionKey &Val) {
-  return hash_combine(Val.Name, Val.Flags, Val.Alignment);
-}
-
-bool DenseMapInfo<SectionKey>::isEqual(const SectionKey &LHS,
-                                       const SectionKey &RHS) {
-  return DenseMapInfo<StringRef>::isEqual(LHS.Name, RHS.Name) &&
-         LHS.Flags == RHS.Flags && LHS.Alignment == RHS.Alignment;
-}
 
 uint64_t elf::getHeaderSize() {
   if (Config->OFormatBinary)

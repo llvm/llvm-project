@@ -388,7 +388,7 @@ union SymbolUnion {
 void printTraceSymbol(Symbol *Sym);
 
 template <typename T, typename... ArgT>
-void replaceBody(Symbol *S, InputFile *File, ArgT &&... Arg) {
+void replaceSymbol(Symbol *S, InputFile *File, ArgT &&... Arg) {
   static_assert(sizeof(T) <= sizeof(SymbolUnion), "SymbolUnion too small");
   static_assert(alignof(T) <= alignof(SymbolUnion),
                 "SymbolUnion not aligned enough");

@@ -40,10 +40,10 @@ DefinedRegular *ElfSym::MipsGp;
 DefinedRegular *ElfSym::MipsGpDisp;
 DefinedRegular *ElfSym::MipsLocalGp;
 
-static uint64_t getSymVA(const Symbol &Body, int64_t &Addend) {
-  switch (Body.kind()) {
+static uint64_t getSymVA(const Symbol &Sym, int64_t &Addend) {
+  switch (Sym.kind()) {
   case Symbol::DefinedRegularKind: {
-    auto &D = cast<DefinedRegular>(Body);
+    auto &D = cast<DefinedRegular>(Sym);
     SectionBase *IS = D.Section;
     if (auto *ISB = dyn_cast_or_null<InputSectionBase>(IS))
       IS = ISB->Repl;
@@ -102,18 +102,18 @@ static uint64_t getSymVA(const Symbol &Body, int64_t &Addend) {
   case Symbol::DefinedCommonKind:
     llvm_unreachable("common are converted to bss");
   case Symbol::SharedKind: {
-    auto &SS = cast<SharedSymbol>(Body);
+    auto &SS = cast<SharedSymbol>(Sym);
     if (SS.CopyRelSec)
       return SS.CopyRelSec->getParent()->Addr + SS.CopyRelSec->OutSecOff;
     if (SS.NeedsPltAddr)
-      return Body.getPltVA();
+      return Sym.getPltVA();
     return 0;
   }
   case Symbol::UndefinedKind:
     return 0;
   case Symbol::LazyArchiveKind:
   case Symbol::LazyObjectKind:
-    assert(Body.IsUsedInRegularObj && "lazy symbol reached writer");
+    assert(Sym.IsUsedInRegularObj && "lazy symbol reached writer");
     return 0;
   }
   llvm_unreachable("invalid symbol kind");
