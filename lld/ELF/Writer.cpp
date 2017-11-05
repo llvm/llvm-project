@@ -72,8 +72,6 @@ private:
 
   std::unique_ptr<FileOutputBuffer> Buffer;
 
-  OutputSectionFactory Factory;
-
   void addRelIpltSymbols();
   void addStartEndSymbols();
   void addStartStopSymbols(OutputSection *Sec);
@@ -175,7 +173,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   // Linker scripts controls how input sections are assigned to output sections.
   // Input sections that were not handled by scripts are called "orphans", and
   // they are assigned to output sections by the default rule. Process that.
-  Script->addOrphanSections(Factory);
+  Script->addOrphanSections();
 
   if (Config->Discard != DiscardPolicy::All)
     copyLocalSymbols();
