@@ -755,6 +755,7 @@ configure_file(
 add_custom_target(srpm
   COMMAND cpack -G TGZ --config CPackSourceConfig.cmake -B ${LLVM_SRPM_DIR}/SOURCES
   COMMAND rpmbuild -bs --define '_topdir ${LLVM_SRPM_DIR}' ${LLVM_SRPM_BINARY_SPECFILE})
+set_target_properties(srpm PROPERTIES FOLDER "Misc")
 
 
 # They are not referenced. See set_output_directory().
@@ -967,6 +968,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   # Installing the headers needs to depend on generating any public
   # tablegen'd headers.
   add_custom_target(llvm-headers DEPENDS intrinsics_gen)
+  set_target_properties(llvm-headers PROPERTIES FOLDER "Misc")
 
   if (NOT CMAKE_CONFIGURATION_TYPES)
     add_custom_target(install-llvm-headers

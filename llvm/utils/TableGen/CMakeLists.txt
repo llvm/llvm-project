@@ -43,3 +43,4 @@ add_tablegen(llvm-tblgen LLVM
   X86RecognizableInstr.cpp
   CTagsEmitter.cpp
   )
+set_target_properties(llvm-tblgen PROPERTIES FOLDER "Tablegenning")

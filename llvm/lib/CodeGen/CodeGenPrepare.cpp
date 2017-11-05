@@ -113,6 +113,12 @@ STATISTIC(NumCastUses, "Number of uses of Cast expressions replaced with uses "
                        "of sunken Casts");
 STATISTIC(NumMemoryInsts, "Number of memory instructions whose address "
                           "computations were sunk");
+STATISTIC(NumMemoryInstsPhiCreated,
+          "Number of phis created when address "
+          "computations were sunk to memory instructions");
+STATISTIC(NumMemoryInstsSelectCreated,
+          "Number of select created when address "
+          "computations were sunk to memory instructions");
 STATISTIC(NumExtsMoved,  "Number of [s|z]ext instructions combined with loads");
 STATISTIC(NumExtUses,    "Number of uses of [s|z]ext instructions optimized");
 STATISTIC(NumAndsAdded,
@@ -182,6 +188,19 @@ static cl::opt<bool>
 EnableTypePromotionMerge("cgp-type-promotion-merge", cl::Hidden,
     cl::desc("Enable merging of redundant sexts when one is dominating"
     " the other."), cl::init(true));
+
+static cl::opt<bool> DisableComplexAddrModes(
+    "disable-complex-addr-modes", cl::Hidden, cl::init(true),
+    cl::desc("Disables combining addressing modes with different parts "
+             "in optimizeMemoryInst."));
+
+static cl::opt<bool>
+AddrSinkNewPhis("addr-sink-new-phis", cl::Hidden, cl::init(false),
+                cl::desc("Allow creation of Phis in Address sinking."));
+
+static cl::opt<bool>
+AddrSinkNewSelects("addr-sink-new-select", cl::Hidden, cl::init(true),
+                   cl::desc("Allow creation of selects in Address sinking."));
 
 namespace {
 
@@ -2668,8 +2687,65 @@ private:
                              Value *PromotedOperand) const;
 };
 
+/// \brief Keep track of simplification of Phi nodes.
+/// Accept the set of all phi nodes and erase phi node from this set
+/// if it is simplified.
+class SimplificationTracker {
+  DenseMap<Value *, Value *> Storage;
+  const SimplifyQuery &SQ;
+  SmallPtrSetImpl<PHINode *> &AllPhiNodes;
+  SmallPtrSetImpl<SelectInst *> &AllSelectNodes;
+
+public:
+  SimplificationTracker(const SimplifyQuery &sq,
+                        SmallPtrSetImpl<PHINode *> &APN,
+                        SmallPtrSetImpl<SelectInst *> &ASN)
+      : SQ(sq), AllPhiNodes(APN), AllSelectNodes(ASN) {}
+
+  Value *Get(Value *V) {
+    do {
+      auto SV = Storage.find(V);
+      if (SV == Storage.end())
+        return V;
+      V = SV->second;
+    } while (true);
+  }
+
+  Value *Simplify(Value *Val) {
+    SmallVector<Value *, 32> WorkList;
+    SmallPtrSet<Value *, 32> Visited;
+    WorkList.push_back(Val);
+    while (!WorkList.empty()) {
+      auto P = WorkList.pop_back_val();
+      if (!Visited.insert(P).second)
+        continue;
+      if (auto *PI = dyn_cast<Instruction>(P))
+        if (Value *V = SimplifyInstruction(cast<Instruction>(PI), SQ)) {
+          for (auto *U : PI->users())
+            WorkList.push_back(cast<Value>(U));
+          Put(PI, V);
+          PI->replaceAllUsesWith(V);
+          if (auto *PHI = dyn_cast<PHINode>(PI))
+            AllPhiNodes.erase(PHI);
+          if (auto *Select = dyn_cast<SelectInst>(PI))
+            AllSelectNodes.erase(Select);
+          PI->eraseFromParent();
+        }
+    }
+    return Get(Val);
+  }
+
+  void Put(Value *From, Value *To) {
+    Storage.insert({ From, To });
+  }
+};
+
 /// \brief A helper class for combining addressing modes.
 class AddressingModeCombiner {
+  typedef std::pair<Value *, BasicBlock *> ValueInBB;
+  typedef DenseMap<ValueInBB, Value *> FoldAddrToValueMapping;
+  typedef std::pair<PHINode *, PHINode *> PHIPair;
+
 private:
   /// The addressing modes we've collected.
   SmallVector<ExtAddrMode, 16> AddrModes;
@@ -2680,7 +2756,19 @@ private:
   /// Are the AddrModes that we have all just equal to their original values?
   bool AllAddrModesTrivial = true;
 
+  /// Common Type for all different fields in addressing modes.
+  Type *CommonType;
+
+  /// SimplifyQuery for simplifyInstruction utility.
+  const SimplifyQuery &SQ;
+
+  /// Original Address.
+  ValueInBB Original;
+
 public:
+  AddressingModeCombiner(const SimplifyQuery &_SQ, ValueInBB OriginalValue)
+      : CommonType(nullptr), SQ(_SQ), Original(OriginalValue) {}
+
   /// \brief Get the combined AddrMode
   const ExtAddrMode &getAddrMode() const {
     return AddrModes[0];
@@ -2748,12 +2836,356 @@ public:
     if (AllAddrModesTrivial)
       return false;
 
-    // TODO: Combine multiple AddrModes by inserting a select or phi for the
-    // field in which the AddrModes differ.
-    return false;
+    if (DisableComplexAddrModes)
+      return false;
+
+    // For now we support only different base registers.
+    // TODO: enable others.
+    if (DifferentField != ExtAddrMode::BaseRegField)
+      return false;
+
+    // Build a map between <original value, basic block where we saw it> to
+    // value of base register.
+    FoldAddrToValueMapping Map;
+    initializeMap(Map);
+
+    Value *CommonValue = findCommon(Map);
+    if (CommonValue)
+      AddrModes[0].BaseReg = CommonValue;
+    return CommonValue != nullptr;
+  }
+
+private:
+  /// \brief Initialize Map with anchor values. For address seen in some BB
+  /// we set the value of different field saw in this address.
+  /// If address is not an instruction than basic block is set to null.
+  /// At the same time we find a common type for different field we will
+  /// use to create new Phi/Select nodes. Keep it in CommonType field.
+  void initializeMap(FoldAddrToValueMapping &Map) {
+    // Keep track of keys where the value is null. We will need to replace it
+    // with constant null when we know the common type.
+    SmallVector<ValueInBB, 2> NullValue;
+    for (auto &AM : AddrModes) {
+      BasicBlock *BB = nullptr;
+      if (Instruction *I = dyn_cast<Instruction>(AM.OriginalValue))
+        BB = I->getParent();
+
+      // For now we support only base register as different field.
+      // TODO: Enable others.
+      Value *DV = AM.BaseReg;
+      if (DV) {
+        if (CommonType)
+          assert(CommonType == DV->getType() && "Different types detected!");
+        else
+          CommonType = DV->getType();
+        Map[{ AM.OriginalValue, BB }] = DV;
+      } else {
+        NullValue.push_back({ AM.OriginalValue, BB });
+      }
+    }
+    assert(CommonType && "At least one non-null value must be!");
+    for (auto VIBB : NullValue)
+      Map[VIBB] = Constant::getNullValue(CommonType);
+  }
+
+  /// \brief We have mapping between value A and basic block where value A
+  /// seen to other value B where B was a field in addressing mode represented
+  /// by A. Also we have an original value C representin an address in some
+  /// basic block. Traversing from C through phi and selects we ended up with
+  /// A's in a map. This utility function tries to find a value V which is a
+  /// field in addressing mode C and traversing through phi nodes and selects
+  /// we will end up in corresponded values B in a map.
+  /// The utility will create a new Phi/Selects if needed.
+  // The simple example looks as follows:
+  // BB1:
+  //   p1 = b1 + 40
+  //   br cond BB2, BB3
+  // BB2:
+  //   p2 = b2 + 40
+  //   br BB3
+  // BB3:
+  //   p = phi [p1, BB1], [p2, BB2]
+  //   v = load p
+  // Map is
+  //   <p1, BB1> -> b1
+  //   <p2, BB2> -> b2
+  // Request is
+  //   <p, BB3> -> ?
+  // The function tries to find or build phi [b1, BB1], [b2, BB2] in BB3
+  Value *findCommon(FoldAddrToValueMapping &Map) {
+    // Tracks of new created Phi nodes.
+    SmallPtrSet<PHINode *, 32> NewPhiNodes;
+    // Tracks of new created Select nodes.
+    SmallPtrSet<SelectInst *, 32> NewSelectNodes;
+    // Tracks the simplification of new created phi nodes. The reason we use
+    // this mapping is because we will add new created Phi nodes in AddrToBase.
+    // Simplification of Phi nodes is recursive, so some Phi node may
+    // be simplified after we added it to AddrToBase.
+    // Using this mapping we can find the current value in AddrToBase.
+    SimplificationTracker ST(SQ, NewPhiNodes, NewSelectNodes);
+
+    // First step, DFS to create PHI nodes for all intermediate blocks.
+    // Also fill traverse order for the second step.
+    SmallVector<ValueInBB, 32> TraverseOrder;
+    InsertPlaceholders(Map, TraverseOrder, NewPhiNodes, NewSelectNodes);
+
+    // Second Step, fill new nodes by merged values and simplify if possible.
+    FillPlaceholders(Map, TraverseOrder, ST);
+
+    if (!AddrSinkNewSelects && NewSelectNodes.size() > 0) {
+      DestroyNodes(NewPhiNodes);
+      DestroyNodes(NewSelectNodes);
+      return nullptr;
+    }
+
+    // Now we'd like to match New Phi nodes to existed ones.
+    unsigned PhiNotMatchedCount = 0;
+    if (!MatchPhiSet(NewPhiNodes, ST, AddrSinkNewPhis, PhiNotMatchedCount)) {
+      DestroyNodes(NewPhiNodes);
+      DestroyNodes(NewSelectNodes);
+      return nullptr;
+    }
+
+    auto *Result = ST.Get(Map.find(Original)->second);
+    if (Result) {
+      NumMemoryInstsPhiCreated += NewPhiNodes.size() + PhiNotMatchedCount;
+      NumMemoryInstsSelectCreated += NewSelectNodes.size();
+    }
+    return Result;
+  }
+
+  /// \brief Destroy nodes from a set.
+  template <typename T> void DestroyNodes(SmallPtrSetImpl<T *> &Instructions) {
+    // For safe erasing, replace the Phi with dummy value first.
+    auto Dummy = UndefValue::get(CommonType);
+    for (auto I : Instructions) {
+      I->replaceAllUsesWith(Dummy);
+      I->eraseFromParent();
+    }
+  }
+
+  /// \brief Try to match PHI node to Candidate.
+  /// Matcher tracks the matched Phi nodes.
+  bool MatchPhiNode(PHINode *PHI, PHINode *Candidate,
+                    DenseSet<PHIPair> &Matcher,
+                    SmallPtrSetImpl<PHINode *> &PhiNodesToMatch) {
+    SmallVector<PHIPair, 8> WorkList;
+    Matcher.insert({ PHI, Candidate });
+    WorkList.push_back({ PHI, Candidate });
+    SmallSet<PHIPair, 8> Visited;
+    while (!WorkList.empty()) {
+      auto Item = WorkList.pop_back_val();
+      if (!Visited.insert(Item).second)
+        continue;
+      // We iterate over all incoming values to Phi to compare them.
+      // If values are different and both of them Phi and the first one is a
+      // Phi we added (subject to match) and both of them is in the same basic
+      // block then we can match our pair if values match. So we state that
+      // these values match and add it to work list to verify that.
+      for (auto B : Item.first->blocks()) {
+        Value *FirstValue = Item.first->getIncomingValueForBlock(B);
+        Value *SecondValue = Item.second->getIncomingValueForBlock(B);
+        if (FirstValue == SecondValue)
+          continue;
+
+        PHINode *FirstPhi = dyn_cast<PHINode>(FirstValue);
+        PHINode *SecondPhi = dyn_cast<PHINode>(SecondValue);
+
+        // One of them is not Phi or
+        // The first one is not Phi node from the set we'd like to match or
+        // Phi nodes from different basic blocks then
+        // we will not be able to match.
+        if (!FirstPhi || !SecondPhi || !PhiNodesToMatch.count(FirstPhi) ||
+            FirstPhi->getParent() != SecondPhi->getParent())
+          return false;
+
+        // If we already matched them then continue.
+        if (Matcher.count({ FirstPhi, SecondPhi }))
+          continue;
+        // So the values are different and does not match. So we need them to
+        // match.
+        Matcher.insert({ FirstPhi, SecondPhi });
+        // But me must check it.
+        WorkList.push_back({ FirstPhi, SecondPhi });
+      }
+    }
+    return true;
+  }
+
+  /// \brief For the given set of PHI nodes try to find their equivalents.
+  /// Returns false if this matching fails and creation of new Phi is disabled.
+  bool MatchPhiSet(SmallPtrSetImpl<PHINode *> &PhiNodesToMatch,
+                   SimplificationTracker &ST, bool AllowNewPhiNodes,
+                   unsigned &PhiNotMatchedCount) {
+    DenseSet<PHIPair> Matched;
+    SmallPtrSet<PHINode *, 8> WillNotMatch;
+    while (PhiNodesToMatch.size()) {
+      PHINode *PHI = *PhiNodesToMatch.begin();
+
+      // Add us, if no Phi nodes in the basic block we do not match.
+      WillNotMatch.clear();
+      WillNotMatch.insert(PHI);
+
+      // Traverse all Phis until we found equivalent or fail to do that.
+      bool IsMatched = false;
+      for (auto &P : PHI->getParent()->phis()) {
+        if (&P == PHI)
+          continue;
+        if ((IsMatched = MatchPhiNode(PHI, &P, Matched, PhiNodesToMatch)))
+          break;
+        // If it does not match, collect all Phi nodes from matcher.
+        // if we end up with no match, them all these Phi nodes will not match
+        // later.
+        for (auto M : Matched)
+          WillNotMatch.insert(M.first);
+        Matched.clear();
+      }
+      if (IsMatched) {
+        // Replace all matched values and erase them.
+        for (auto MV : Matched) {
+          MV.first->replaceAllUsesWith(MV.second);
+          PhiNodesToMatch.erase(MV.first);
+          ST.Put(MV.first, MV.second);
+          MV.first->eraseFromParent();
+        }
+        Matched.clear();
+        continue;
+      }
+      // If we are not allowed to create new nodes then bail out.
+      if (!AllowNewPhiNodes)
+        return false;
+      // Just remove all seen values in matcher. They will not match anything.
+      PhiNotMatchedCount += WillNotMatch.size();
+      for (auto *P : WillNotMatch)
+        PhiNodesToMatch.erase(P);
+    }
+    return true;
+  }
+  /// \brief Fill the placeholder with values from predecessors and simplify it.
+  void FillPlaceholders(FoldAddrToValueMapping &Map,
+                        SmallVectorImpl<ValueInBB> &TraverseOrder,
+                        SimplificationTracker &ST) {
+    while (!TraverseOrder.empty()) {
+      auto Current = TraverseOrder.pop_back_val();
+      assert(Map.find(Current) != Map.end() && "No node to fill!!!");
+      Value *CurrentValue = Current.first;
+      BasicBlock *CurrentBlock = Current.second;
+      Value *V = Map[Current];
+
+      if (SelectInst *Select = dyn_cast<SelectInst>(V)) {
+        // CurrentValue also must be Select.
+        auto *CurrentSelect = cast<SelectInst>(CurrentValue);
+        auto *TrueValue = CurrentSelect->getTrueValue();
+        ValueInBB TrueItem = { TrueValue, isa<Instruction>(TrueValue)
+                                              ? CurrentBlock
+                                              : nullptr };
+        assert(Map.find(TrueItem) != Map.end() && "No True Value!");
+        Select->setTrueValue(Map[TrueItem]);
+        auto *FalseValue = CurrentSelect->getFalseValue();
+        ValueInBB FalseItem = { FalseValue, isa<Instruction>(FalseValue)
+                                                ? CurrentBlock
+                                                : nullptr };
+        assert(Map.find(FalseItem) != Map.end() && "No False Value!");
+        Select->setFalseValue(Map[FalseItem]);
+      } else {
+        // Must be a Phi node then.
+        PHINode *PHI = cast<PHINode>(V);
+        // Fill the Phi node with values from predecessors.
+        bool IsDefinedInThisBB =
+            cast<Instruction>(CurrentValue)->getParent() == CurrentBlock;
+        auto *CurrentPhi = dyn_cast<PHINode>(CurrentValue);
+        for (auto B : predecessors(CurrentBlock)) {
+          Value *PV = IsDefinedInThisBB
+                          ? CurrentPhi->getIncomingValueForBlock(B)
+                          : CurrentValue;
+          ValueInBB item = { PV, isa<Instruction>(PV) ? B : nullptr };
+          assert(Map.find(item) != Map.end() && "No predecessor Value!");
+          PHI->addIncoming(ST.Get(Map[item]), B);
+        }
+      }
+      // Simplify if possible.
+      Map[Current] = ST.Simplify(V);
+    }
+  }
+
+  /// Starting from value recursively iterates over predecessors up to known
+  /// ending values represented in a map. For each traversed block inserts
+  /// a placeholder Phi or Select.
+  /// Reports all new created Phi/Select nodes by adding them to set.
+  /// Also reports and order in what basic blocks have been traversed.
+  void InsertPlaceholders(FoldAddrToValueMapping &Map,
+                          SmallVectorImpl<ValueInBB> &TraverseOrder,
+                          SmallPtrSetImpl<PHINode *> &NewPhiNodes,
+                          SmallPtrSetImpl<SelectInst *> &NewSelectNodes) {
+    SmallVector<ValueInBB, 32> Worklist;
+    assert((isa<PHINode>(Original.first) || isa<SelectInst>(Original.first)) &&
+           "Address must be a Phi or Select node");
+    auto *Dummy = UndefValue::get(CommonType);
+    Worklist.push_back(Original);
+    while (!Worklist.empty()) {
+      auto Current = Worklist.pop_back_val();
+      // If value is not an instruction it is something global, constant,
+      // parameter and we can say that this value is observable in any block.
+      // Set block to null to denote it.
+      // Also please take into account that it is how we build anchors.
+      if (!isa<Instruction>(Current.first))
+        Current.second = nullptr;
+      // if it is already visited or it is an ending value then skip it.
+      if (Map.find(Current) != Map.end())
+        continue;
+      TraverseOrder.push_back(Current);
+
+      Value *CurrentValue = Current.first;
+      BasicBlock *CurrentBlock = Current.second;
+      // CurrentValue must be a Phi node or select. All others must be covered
+      // by anchors.
+      Instruction *CurrentI = cast<Instruction>(CurrentValue);
+      bool IsDefinedInThisBB = CurrentI->getParent() == CurrentBlock;
+
+      unsigned PredCount =
+          std::distance(pred_begin(CurrentBlock), pred_end(CurrentBlock));
+      // if Current Value is not defined in this basic block we are interested
+      // in values in predecessors.
+      if (!IsDefinedInThisBB) {
+        assert(PredCount && "Unreachable block?!");
+        PHINode *PHI = PHINode::Create(CommonType, PredCount, "sunk_phi",
+                                       &CurrentBlock->front());
+        Map[Current] = PHI;
+        NewPhiNodes.insert(PHI);
+        // Add all predecessors in work list.
+        for (auto B : predecessors(CurrentBlock))
+          Worklist.push_back({ CurrentValue, B });
+        continue;
+      }
+      // Value is defined in this basic block.
+      if (SelectInst *OrigSelect = dyn_cast<SelectInst>(CurrentI)) {
+        // Is it OK to get metadata from OrigSelect?!
+        // Create a Select placeholder with dummy value.
+        SelectInst *Select =
+            SelectInst::Create(OrigSelect->getCondition(), Dummy, Dummy,
+                               OrigSelect->getName(), OrigSelect, OrigSelect);
+        Map[Current] = Select;
+        NewSelectNodes.insert(Select);
+        // We are interested in True and False value in this basic block.
+        Worklist.push_back({ OrigSelect->getTrueValue(), CurrentBlock });
+        Worklist.push_back({ OrigSelect->getFalseValue(), CurrentBlock });
+      } else {
+        // It must be a Phi node then.
+        auto *CurrentPhi = cast<PHINode>(CurrentI);
+        // Create new Phi node for merge of bases.
+        assert(PredCount && "Unreachable block?!");
+        PHINode *PHI = PHINode::Create(CommonType, PredCount, "sunk_phi",
+                                       &CurrentBlock->front());
+        Map[Current] = PHI;
+        NewPhiNodes.insert(PHI);
+
+        // Add all predecessors in work list.
+        for (auto B : predecessors(CurrentBlock))
+          Worklist.push_back({ CurrentPhi->getIncomingValueForBlock(B), B });
+      }
+    }
   }
 };
-
 } // end anonymous namespace
 
 /// Try adding ScaleReg*Scale to the current addressing mode.
@@ -3846,7 +4278,8 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
   // the graph are compatible.
   bool PhiOrSelectSeen = false;
   SmallVector<Instruction*, 16> AddrModeInsts;
-  AddressingModeCombiner AddrModes;
+  const SimplifyQuery SQ(*DL, TLInfo);
+  AddressingModeCombiner AddrModes(SQ, { Addr, MemoryInst->getParent() });
   TypePromotionTransaction TPT(RemovedInsts);
   TypePromotionTransaction::ConstRestorationPt LastKnownGood =
       TPT.getRestorationPoint();

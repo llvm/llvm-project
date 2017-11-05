@@ -1092,8 +1092,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   if (errorCount())
     return;
 
-  // Apply symbol renames for -wrap and -defsym
-  Symtab->applySymbolRenames();
+  // Apply symbol renames for -wrap.
+  Symtab->applySymbolWrap();
 
   // Now that we have a complete list of input files.
   // Beyond this point, no new files are added.

@@ -6,7 +6,7 @@
 define <8 x float> @test_8xfloat_shuff_mask0(<8 x float> %vec1, <8 x float> %vec2) {
 ; CHECK-LABEL: test_8xfloat_shuff_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vshuff64x2 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1]
+; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1]
 ; CHECK-NEXT:    retq
   %res = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
   ret <8 x float> %res
@@ -92,7 +92,7 @@ define <8 x float> @test_8xfloat_zero_masked_shuff_mask2(<8 x float> %vec1, <8 x
 define <8 x float> @test_8xfloat_shuff_mask3(<8 x float> %vec1, <8 x float> %vec2) {
 ; CHECK-LABEL: test_8xfloat_shuff_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vshuff64x2 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1]
+; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1]
 ; CHECK-NEXT:    retq
   %res = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
   ret <8 x float> %res
@@ -126,7 +126,7 @@ define <8 x float> @test_8xfloat_zero_masked_shuff_mask3(<8 x float> %vec1, <8 x
 define <8 x float> @test_8xfloat_shuff_mem_mask0(<8 x float> %vec1, <8 x float>* %vec2p) {
 ; CHECK-LABEL: test_8xfloat_shuff_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vshuff64x2 {{.*#+}} ymm0 = ymm0[2,3],mem[2,3]
+; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[2,3]
 ; CHECK-NEXT:    retq
   %vec2 = load <8 x float>, <8 x float>* %vec2p
   %res = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
@@ -222,7 +222,7 @@ define <8 x float> @test_8xfloat_zero_masked_shuff_mem_mask2(<8 x float> %vec1, 
 define <8 x float> @test_8xfloat_shuff_mem_mask3(<8 x float> %vec1, <8 x float>* %vec2p) {
 ; CHECK-LABEL: test_8xfloat_shuff_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vshuff64x2 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1]
+; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1]
 ; CHECK-NEXT:    retq
   %vec2 = load <8 x float>, <8 x float>* %vec2p
   %res = shufflevector <8 x float> %vec1, <8 x float> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
@@ -514,7 +514,7 @@ define <16 x float> @test_16xfloat_zero_masked_shuff_mem_mask3(<16 x float> %vec
 define <4 x double> @test_4xdouble_shuff_mask0(<4 x double> %vec1, <4 x double> %vec2) {
 ; CHECK-LABEL: test_4xdouble_shuff_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vshuff64x2 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1]
+; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1]
 ; CHECK-NEXT:    retq
   %res = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
   ret <4 x double> %res
@@ -600,7 +600,7 @@ define <4 x double> @test_4xdouble_zero_masked_shuff_mask2(<4 x double> %vec1, <
 define <4 x double> @test_4xdouble_shuff_mask3(<4 x double> %vec1, <4 x double> %vec2) {
 ; CHECK-LABEL: test_4xdouble_shuff_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vshuff64x2 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3]
+; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3]
 ; CHECK-NEXT:    retq
   %res = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
   ret <4 x double> %res
@@ -634,7 +634,7 @@ define <4 x double> @test_4xdouble_zero_masked_shuff_mask3(<4 x double> %vec1, <
 define <4 x double> @test_4xdouble_shuff_mem_mask0(<4 x double> %vec1, <4 x double>* %vec2p) {
 ; CHECK-LABEL: test_4xdouble_shuff_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vshuff64x2 {{.*#+}} ymm0 = ymm0[2,3],mem[2,3]
+; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[2,3]
 ; CHECK-NEXT:    retq
   %vec2 = load <4 x double>, <4 x double>* %vec2p
   %res = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
@@ -730,7 +730,7 @@ define <4 x double> @test_4xdouble_zero_masked_shuff_mem_mask2(<4 x double> %vec
 define <4 x double> @test_4xdouble_shuff_mem_mask3(<4 x double> %vec1, <4 x double>* %vec2p) {
 ; CHECK-LABEL: test_4xdouble_shuff_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vshuff64x2 {{.*#+}} ymm0 = ymm0[2,3],mem[2,3]
+; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[2,3]
 ; CHECK-NEXT:    retq
   %vec2 = load <4 x double>, <4 x double>* %vec2p
   %res = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
@@ -1022,7 +1022,7 @@ define <8 x double> @test_8xdouble_zero_masked_shuff_mem_mask3(<8 x double> %vec
 define <8 x i32> @test_8xi32_shuff_mask0(<8 x i32> %vec1, <8 x i32> %vec2) {
 ; CHECK-LABEL: test_8xi32_shuff_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vshufi64x2 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3]
+; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3]
 ; CHECK-NEXT:    retq
   %res = shufflevector <8 x i32> %vec1, <8 x i32> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
   ret <8 x i32> %res
@@ -1108,7 +1108,7 @@ define <8 x i32> @test_8xi32_zero_masked_shuff_mask2(<8 x i32> %vec1, <8 x i32> 
 define <8 x i32> @test_8xi32_shuff_mask3(<8 x i32> %vec1, <8 x i32> %vec2) {
 ; CHECK-LABEL: test_8xi32_shuff_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vshufi64x2 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1]
+; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1]
 ; CHECK-NEXT:    retq
   %res = shufflevector <8 x i32> %vec1, <8 x i32> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
   ret <8 x i32> %res
@@ -1142,7 +1142,7 @@ define <8 x i32> @test_8xi32_zero_masked_shuff_mask3(<8 x i32> %vec1, <8 x i32> 
 define <8 x i32> @test_8xi32_shuff_mem_mask0(<8 x i32> %vec1, <8 x i32>* %vec2p) {
 ; CHECK-LABEL: test_8xi32_shuff_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vshufi64x2 {{.*#+}} ymm0 = ymm0[2,3],mem[2,3]
+; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],mem[2,3]
 ; CHECK-NEXT:    retq
   %vec2 = load <8 x i32>, <8 x i32>* %vec2p
   %res = shufflevector <8 x i32> %vec1, <8 x i32> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
@@ -1238,7 +1238,7 @@ define <8 x i32> @test_8xi32_zero_masked_shuff_mem_mask2(<8 x i32> %vec1, <8 x i
 define <8 x i32> @test_8xi32_shuff_mem_mask3(<8 x i32> %vec1, <8 x i32>* %vec2p) {
 ; CHECK-LABEL: test_8xi32_shuff_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vshufi64x2 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1]
+; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1]
 ; CHECK-NEXT:    retq
   %vec2 = load <8 x i32>, <8 x i32>* %vec2p
   %res = shufflevector <8 x i32> %vec1, <8 x i32> %vec2, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
@@ -1530,7 +1530,7 @@ define <16 x i32> @test_16xi32_zero_masked_shuff_mem_mask3(<16 x i32> %vec1, <16
 define <4 x i64> @test_4xi64_shuff_mask0(<4 x i64> %vec1, <4 x i64> %vec2) {
 ; CHECK-LABEL: test_4xi64_shuff_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vshufi64x2 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1]
+; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1]
 ; CHECK-NEXT:    retq
   %res = shufflevector <4 x i64> %vec1, <4 x i64> %vec2, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
   ret <4 x i64> %res
@@ -1616,7 +1616,7 @@ define <4 x i64> @test_4xi64_zero_masked_shuff_mask2(<4 x i64> %vec1, <4 x i64> 
 define <4 x i64> @test_4xi64_shuff_mask3(<4 x i64> %vec1, <4 x i64> %vec2) {
 ; CHECK-LABEL: test_4xi64_shuff_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vshufi64x2 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3]
+; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3]
 ; CHECK-NEXT:    retq
   %res = shufflevector <4 x i64> %vec1, <4 x i64> %vec2, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
   ret <4 x i64> %res
@@ -1650,7 +1650,7 @@ define <4 x i64> @test_4xi64_zero_masked_shuff_mask3(<4 x i64> %vec1, <4 x i64> 
 define <4 x i64> @test_4xi64_shuff_mem_mask0(<4 x i64> %vec1, <4 x i64>* %vec2p) {
 ; CHECK-LABEL: test_4xi64_shuff_mem_mask0:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vshufi64x2 {{.*#+}} ymm0 = ymm0[2,3],mem[2,3]
+; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],mem[2,3]
 ; CHECK-NEXT:    retq
   %vec2 = load <4 x i64>, <4 x i64>* %vec2p
   %res = shufflevector <4 x i64> %vec1, <4 x i64> %vec2, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
@@ -1746,7 +1746,7 @@ define <4 x i64> @test_4xi64_zero_masked_shuff_mem_mask2(<4 x i64> %vec1, <4 x i
 define <4 x i64> @test_4xi64_shuff_mem_mask3(<4 x i64> %vec1, <4 x i64>* %vec2p) {
 ; CHECK-LABEL: test_4xi64_shuff_mem_mask3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vshufi64x2 {{.*#+}} ymm0 = ymm0[2,3],mem[2,3]
+; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],mem[2,3]
 ; CHECK-NEXT:    retq
   %vec2 = load <4 x i64>, <4 x i64>* %vec2p
   %res = shufflevector <4 x i64> %vec1, <4 x i64> %vec2, <4 x i32> <i32 2, i32 3, i32 6, i32 7>

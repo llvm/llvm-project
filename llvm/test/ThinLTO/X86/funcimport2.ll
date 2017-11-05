@@ -7,7 +7,7 @@
 ; RUN:     -r=%t2.bc,_main,plx \
 ; RUN:     -r=%t2.bc,_foo,l
 ; RUN: llvm-dis %t.o.1.3.import.bc -o - | FileCheck %s
-; CHECK: define available_externally void @foo()
+; CHECK: define available_externally dso_local void @foo()
 
 ; We shouldn't do any importing at -O0
 ; rm -f %t.o.1.3.import.bc
@@ -17,7 +17,7 @@
 ; RUN:     -r=%t2.bc,_main,plx \
 ; RUN:     -r=%t2.bc,_foo,l
 ; RUN: llvm-dis %t.o.1.3.import.bc -o - | FileCheck %s --check-prefix=CHECKO0
-; CHECKO0: declare void @foo(...)
+; CHECKO0: declare dso_local void @foo(...)
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.11.0"
