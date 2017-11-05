@@ -2136,8 +2136,51 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
   if (!Stride)
     return;
 
-  DEBUG(dbgs() << "LAA: Found a strided access that we can version");
+  DEBUG(dbgs() << "LAA: Found a strided access that is a candidate for "
+                  "versioning:");
   DEBUG(dbgs() << "  Ptr: " << *Ptr << " Stride: " << *Stride << "\n");
+
+  // Avoid adding the "Stride == 1" predicate when we know that 
+  // Stride >= Trip-Count. Such a predicate will effectively optimize a single
+  // or zero iteration loop, as Trip-Count <= Stride == 1.
+  // 
+  // TODO: We are currently not making a very informed decision on when it is
+  // beneficial to apply stride versioning. It might make more sense that the
+  // users of this analysis (such as the vectorizer) will trigger it, based on 
+  // their specific cost considerations; For example, in cases where stride 
+  // versioning does  not help resolving memory accesses/dependences, the
+  // vectorizer should evaluate the cost of the runtime test, and the benefit 
+  // of various possible stride specializations, considering the alternatives 
+  // of using gather/scatters (if available). 
+  
+  const SCEV *StrideExpr = PSE->getSCEV(Stride);
+  const SCEV *BETakenCount = PSE->getBackedgeTakenCount();  
+
+  // Match the types so we can compare the stride and the BETakenCount.
+  // The Stride can be positive/negative, so we sign extend Stride; 
+  // The backdgeTakenCount is non-negative, so we zero extend BETakenCount.
+  const DataLayout &DL = TheLoop->getHeader()->getModule()->getDataLayout();
+  uint64_t StrideTypeSize = DL.getTypeAllocSize(StrideExpr->getType());
+  uint64_t BETypeSize = DL.getTypeAllocSize(BETakenCount->getType());
+  const SCEV *CastedStride = StrideExpr;
+  const SCEV *CastedBECount = BETakenCount;
+  ScalarEvolution *SE = PSE->getSE();
+  if (BETypeSize >= StrideTypeSize)
+    CastedStride = SE->getNoopOrSignExtend(StrideExpr, BETakenCount->getType());
+  else
+    CastedBECount = SE->getZeroExtendExpr(BETakenCount, StrideExpr->getType());
+  const SCEV *StrideMinusBETaken = SE->getMinusSCEV(CastedStride, CastedBECount);
+  // Since TripCount == BackEdgeTakenCount + 1, checking:
+  // "Stride >= TripCount" is equivalent to checking: 
+  // Stride - BETakenCount > 0
+  if (SE->isKnownPositive(StrideMinusBETaken)) {
+    DEBUG(dbgs() << "LAA: Stride>=TripCount; No point in versioning as the "
+                    "Stride==1 predicate will imply that the loop executes "
+                    "at most once.\n");
+    return;
+  }  
+  DEBUG(dbgs() << "LAA: Found a strided access that we can version.");
+
   SymbolicStrides[Ptr] = Stride;
   StrideSet.insert(Stride);
 }

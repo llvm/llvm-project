@@ -41,13 +41,6 @@
     macro(ompt_get_target_info)             \
     macro(ompt_get_num_devices)
 
-#define FOREACH_OMPT_PLACEHOLDER_FN(macro)  \
-    macro (ompt_idle)                       \
-    macro (ompt_overhead)                   \
-    macro (ompt_barrier_wait)               \
-    macro (ompt_task_wait)                  \
-    macro (ompt_mutex_wait)
-
 #define FOREACH_OMP_STATE(macro)                                                                \
                                                                                                 \
     /* first available state */                                                                 \
@@ -96,59 +89,59 @@
     macro (ompt_mutex_impl_queuing, 2)      /* based on some fair policy */           \
     macro (ompt_mutex_impl_speculative, 3)  /* based on HW-supported speculation */
 
-#define FOREACH_OMPT_EVENT(macro)                                                                               \
-                                                                                                                \
-    /*--- Mandatory Events ---*/                                                                                \
-    macro (ompt_callback_thread_begin,          ompt_callback_thread_begin_t,   1) /* thread begin */           \
-    macro (ompt_callback_thread_end,            ompt_callback_thread_end_t,     2) /* thread end */             \
-                                                                                                                \
-    macro (ompt_callback_parallel_begin,        ompt_callback_parallel_begin_t, 3) /* parallel begin */         \
-    macro (ompt_callback_parallel_end,          ompt_callback_parallel_end_t,   4) /* parallel end */           \
-                                                                                                                \
-    macro (ompt_callback_task_create,           ompt_callback_task_create_t,    5) /* task begin */             \
-    macro (ompt_callback_task_schedule,         ompt_callback_task_schedule_t,  6) /* task schedule */          \
-    macro (ompt_callback_implicit_task,         ompt_callback_implicit_task_t,  7) /* implicit task   */        \
-                                                                                                                \
-    macro (ompt_callback_target,                ompt_callback_target_t,         8) /* target */                 \
-    macro (ompt_callback_target_data_op,        ompt_callback_target_data_op_t, 9) /* target data op*/          \
-    macro (ompt_callback_target_submit,         ompt_callback_target_submit_t, 10) /* target  submit*/          \
-                                                                                                                \
-    macro (ompt_callback_control_tool,          ompt_callback_control_tool_t,  11) /* control tool */           \
-                                                                                                                \
-    macro (ompt_callback_device_initialize,     ompt_callback_device_initialize_t, 12) /* device initialize */  \
-    macro (ompt_callback_device_finalize,       ompt_callback_device_finalize_t, 13)   /* device finalize   */  \
-                                                                                                                \
-    /*--- Optional Events (blame shifting, ompt_event_unimplemented) ---*/                                      \
-                                                                                                                \
-    macro (ompt_callback_sync_region_wait,      ompt_callback_sync_region_t,   14) /* sync region wait begin or end*/  \
-                                                                                                                \
-    macro (ompt_callback_mutex_released,        ompt_callback_mutex_t,         15) /* mutex released */         \
-                                                                                                                \
-    /*--- Optional Events (synchronous events, ompt_event_unimplemented) --- */                                 \
-                                                                                                                \
-    macro (ompt_callback_task_dependences,      ompt_callback_task_dependences_t, 16) /* report task dependences  */\
-    macro (ompt_callback_task_dependence,       ompt_callback_task_dependence_t, 17) /* report task dependence  */\
-                                                                                                                \
-    macro (ompt_callback_work,                  ompt_callback_work_t,          18) /* task at work begin or end*/\
-                                                                                                                \
-    macro (ompt_callback_master,                ompt_callback_master_t,        19) /* task at master begin or end */\
-                                                                                                                \
-    macro (ompt_callback_target_map,            ompt_callback_target_map_t,    20) /* target map */             \
-                                                                                                                \
-    macro (ompt_callback_sync_region,           ompt_callback_sync_region_t,   21) /* sync region begin or end */ \
-                                                                                                                \
-    macro (ompt_callback_lock_init,             ompt_callback_mutex_acquire_t, 22) /* lock init */              \
-    macro (ompt_callback_lock_destroy,          ompt_callback_mutex_t,         23) /* lock destroy */           \
-                                                                                                                \
-    macro (ompt_callback_mutex_acquire,         ompt_callback_mutex_acquire_t, 24) /* mutex acquire */          \
-    macro (ompt_callback_mutex_acquired,        ompt_callback_mutex_t,         25) /* mutex acquired */         \
-                                                                                                                \
-    macro (ompt_callback_nest_lock,             ompt_callback_nest_lock_t,     26) /* nest lock */              \
-                                                                                                                \
-    macro (ompt_callback_flush,                 ompt_callback_flush_t,         27) /* after executing flush */  \
-                                                                                                                \
-    macro (ompt_callback_cancel,                ompt_callback_cancel_t,        28) /*cancel innermost binding region*/\
-    macro (ompt_callback_idle,                  ompt_callback_idle_t,          29) /* begin or end idle state */\
+#define FOREACH_OMPT_EVENT(macro)                                                                                        \
+                                                                                                                         \
+    /*--- Mandatory Events ---*/                                                                                         \
+    macro (ompt_callback_thread_begin,      ompt_callback_thread_begin_t,       1) /* thread begin                    */ \
+    macro (ompt_callback_thread_end,        ompt_callback_thread_end_t,         2) /* thread end                      */ \
+                                                                                                                         \
+    macro (ompt_callback_parallel_begin,    ompt_callback_parallel_begin_t,     3) /* parallel begin                  */ \
+    macro (ompt_callback_parallel_end,      ompt_callback_parallel_end_t,       4) /* parallel end                    */ \
+                                                                                                                         \
+    macro (ompt_callback_task_create,       ompt_callback_task_create_t,        5) /* task begin                      */ \
+    macro (ompt_callback_task_schedule,     ompt_callback_task_schedule_t,      6) /* task schedule                   */ \
+    macro (ompt_callback_implicit_task,     ompt_callback_implicit_task_t,      7) /* implicit task                   */ \
+                                                                                                                         \
+    macro (ompt_callback_target,            ompt_callback_target_t,             8) /* target                          */ \
+    macro (ompt_callback_target_data_op,    ompt_callback_target_data_op_t,     9) /* target data op                  */ \
+    macro (ompt_callback_target_submit,     ompt_callback_target_submit_t,     10) /* target  submit                  */ \
+                                                                                                                         \
+    macro (ompt_callback_control_tool,      ompt_callback_control_tool_t,      11) /* control tool                    */ \
+                                                                                                                         \
+    macro (ompt_callback_device_initialize, ompt_callback_device_initialize_t, 12) /* device initialize               */ \
+    macro (ompt_callback_device_finalize,   ompt_callback_device_finalize_t,   13) /* device finalize                 */ \
+                                                                                                                         \
+    macro (ompt_callback_device_load,       ompt_callback_device_load_t,       14) /* device load                     */ \
+    macro (ompt_callback_device_unload,     ompt_callback_device_unload_t,     15) /* device unload                   */ \
+                                                                                                                         \
+    /* Optional Events */                                                                                                \
+    macro (ompt_callback_sync_region_wait,  ompt_callback_sync_region_t,       16) /* sync region wait begin or end   */ \
+                                                                                                                         \
+    macro (ompt_callback_mutex_released,    ompt_callback_mutex_t,             17) /* mutex released                  */ \
+                                                                                                                         \
+    macro (ompt_callback_task_dependences,  ompt_callback_task_dependences_t,  18) /* report task dependences         */ \
+    macro (ompt_callback_task_dependence,   ompt_callback_task_dependence_t,   19) /* report task dependence          */ \
+                                                                                                                         \
+    macro (ompt_callback_work,              ompt_callback_work_t,              20) /* task at work begin or end       */ \
+                                                                                                                         \
+    macro (ompt_callback_master,            ompt_callback_master_t,            21) /* task at master begin or end     */ \
+                                                                                                                         \
+    macro (ompt_callback_target_map,        ompt_callback_target_map_t,        22) /* target map                      */ \
+                                                                                                                         \
+    macro (ompt_callback_sync_region,       ompt_callback_sync_region_t,       23) /* sync region begin or end        */ \
+                                                                                                                         \
+    macro (ompt_callback_lock_init,         ompt_callback_mutex_acquire_t,     24) /* lock init                       */ \
+    macro (ompt_callback_lock_destroy,      ompt_callback_mutex_t,             25) /* lock destroy                    */ \
+                                                                                                                         \
+    macro (ompt_callback_mutex_acquire,     ompt_callback_mutex_acquire_t,     26) /* mutex acquire                   */ \
+    macro (ompt_callback_mutex_acquired,    ompt_callback_mutex_t,             27) /* mutex acquired                  */ \
+                                                                                                                         \
+    macro (ompt_callback_nest_lock,         ompt_callback_nest_lock_t,         28) /* nest lock                       */ \
+                                                                                                                         \
+    macro (ompt_callback_flush,             ompt_callback_flush_t,             29) /* after executing flush           */ \
+                                                                                                                         \
+    macro (ompt_callback_cancel,            ompt_callback_cancel_t,            30) /* cancel innermost binding region */ \
+    macro (ompt_callback_idle,              ompt_callback_idle_t,              31) /* begin or end idle state         */
 
 
 
@@ -163,7 +156,7 @@
 typedef uint64_t ompt_id_t;
 #define ompt_id_none 0
 
-typedef union ompt_data_u {
+typedef union ompt_data_t {
   uint64_t value; /* data initialized by runtime to unique id */
   void *ptr;      /* pointer under tool control */
 } ompt_data_t;
@@ -179,9 +172,9 @@ typedef void ompt_device_t;
  * ompt_frame_t
  *---------------------*/
 
-typedef struct ompt_frame_s {
-    void *exit_runtime_frame;    /* next frame is user code     */
-    void *reenter_runtime_frame; /* previous frame is user code */
+typedef struct ompt_frame_t {
+    void *exit_frame;    /* next frame is user code     */
+    void *enter_frame;   /* previous frame is user code */
 } ompt_frame_t;
 
 
@@ -189,16 +182,16 @@ typedef struct ompt_frame_s {
  * dependences types
  *---------------------*/
 
-typedef enum ompt_task_dependence_flag_e {
+typedef enum ompt_task_dependence_flag_t {
     // a two bit field for the dependence type
     ompt_task_dependence_type_out   = 1,
     ompt_task_dependence_type_in    = 2,
     ompt_task_dependence_type_inout = 3,
 } ompt_task_dependence_flag_t;
 
-typedef struct ompt_task_dependence_s {
+typedef struct ompt_task_dependence_t {
     void *variable_addr;
-    uint32_t  dependence_flags;
+    unsigned int dependence_flags;
 } ompt_task_dependence_t;
 
 
@@ -231,7 +224,7 @@ typedef enum ompt_callbacks_e{
 /*---------------------
  * set callback results
  *---------------------*/
-typedef enum ompt_set_result_e {
+typedef enum ompt_set_result_t {
     ompt_set_error = 0,
     ompt_set_never = 1,
     ompt_set_sometimes = 2,
@@ -243,7 +236,7 @@ typedef enum ompt_set_result_e {
 /*----------------------
  * mutex implementations
  *----------------------*/
-typedef enum ompt_mutex_impl_e {
+typedef enum ompt_mutex_impl_t {
 #define ompt_mutex_impl_macro(impl, code) impl = code,
     FOREACH_OMPT_MUTEX_IMPL(ompt_mutex_impl_macro)
 #undef ompt_mutex_impl_macro
@@ -262,13 +255,14 @@ typedef ompt_interface_fn_t (*ompt_function_lookup_t)(
 );
 
 /* threads */
-typedef enum {
+typedef enum ompt_thread_type_t {
     ompt_thread_initial = 1, // start the enumeration at 1
     ompt_thread_worker  = 2,
-    ompt_thread_other   = 3
+    ompt_thread_other   = 3,
+    ompt_thread_unknown = 4
 } ompt_thread_type_t;
 
-typedef enum {
+typedef enum ompt_invoker_t {
     ompt_invoker_program = 1,             /* program invokes master task         */
     ompt_invoker_runtime = 2              /* runtime invokes master task         */
 } ompt_invoker_t;
@@ -287,9 +281,9 @@ typedef void (*ompt_wait_callback_t) (
 );
 
 /* parallel and workshares */
-typedef enum ompt_scope_endpoint_e {
+typedef enum ompt_scope_endpoint_t {
     ompt_scope_begin = 1,
-    ompt_scope_end = 2
+    ompt_scope_end   = 2
 } ompt_scope_endpoint_t;
 
 
@@ -303,23 +297,23 @@ typedef void (*ompt_callback_implicit_task_t) (
 );
 
 typedef void (*ompt_callback_parallel_begin_t) (
-    ompt_data_t *parent_task_data,        /* data of parent task                 */
-    const ompt_frame_t *parent_frame,     /* frame data of parent task           */
-    ompt_data_t *parallel_data,           /* data of parallel region             */
-    unsigned int requested_team_size,     /* requested number of threads in team */
-    ompt_invoker_t invoker,               /* invoker of master task              */
-    const void *codeptr_ra                /* return address of runtime call      */
+    ompt_data_t *encountering_task_data,         /* data of encountering task           */
+    const ompt_frame_t *encountering_task_frame, /* frame data of encountering task     */
+    ompt_data_t *parallel_data,                  /* data of parallel region             */
+    unsigned int requested_team_size,            /* requested number of threads in team */
+    ompt_invoker_t invoker,                      /* invoker of master task              */
+    const void *codeptr_ra                       /* return address of runtime call      */
 );
 
 typedef void (*ompt_callback_parallel_end_t) (
     ompt_data_t *parallel_data,           /* data of parallel region             */
-    ompt_data_t *task_data,               /* data of task                        */
+    ompt_data_t *encountering_task_data,  /* data of encountering task           */
     ompt_invoker_t invoker,               /* invoker of master task              */ 
     const void *codeptr_ra                /* return address of runtime call      */
 );
 
 /* tasks */
-typedef enum ompt_task_type_e {
+typedef enum ompt_task_type_t {
     ompt_task_initial    = 0x1,
     ompt_task_implicit   = 0x2,
     ompt_task_explicit   = 0x4,
@@ -331,7 +325,7 @@ typedef enum ompt_task_type_e {
     ompt_task_merged     = 0x80000000
 } ompt_task_type_t;
 
-typedef enum ompt_task_status_e {
+typedef enum ompt_task_status_t {
     ompt_task_complete = 1,
     ompt_task_yield    = 2,
     ompt_task_cancel   = 3,
@@ -345,12 +339,12 @@ typedef void (*ompt_callback_task_schedule_t) (
 );
 
 typedef void (*ompt_callback_task_create_t) (
-    ompt_data_t *parent_task_data,        /* data of parent task                 */
-    const ompt_frame_t *parent_frame,     /* frame data for parent task          */
-    ompt_data_t *new_task_data,           /* data of created task                */
-    int type,                             /* type of created task                */
-    int has_dependences,                  /* created task has dependences        */
-    const void *codeptr_ra                /* return address of runtime call      */
+    ompt_data_t *encountering_task_data,         /* data of parent task                 */
+    const ompt_frame_t *encountering_task_frame, /* frame data for parent task          */
+    ompt_data_t *new_task_data,                  /* data of created task                */
+    int type,                                    /* type of created task                */
+    int has_dependences,                         /* created task has dependences        */
+    const void *codeptr_ra                       /* return address of runtime call      */
 );
 
 /* task dependences */
@@ -366,7 +360,7 @@ typedef void (*ompt_callback_task_dependence_t) (
 );
 
 /* target and device */
-typedef enum ompt_target_type_e {
+typedef enum ompt_target_type_t {
     ompt_target = 1,
     ompt_target_enter_data = 2,
     ompt_target_exit_data = 3,
@@ -382,7 +376,7 @@ typedef void (*ompt_callback_target_t) (
     const void *codeptr_ra
 );
 
-typedef enum ompt_target_data_op_e {
+typedef enum ompt_target_data_op_t {
     ompt_target_data_alloc = 1,
     ompt_target_data_transfer_to_dev = 2,
     ompt_target_data_transfer_from_dev = 3,
@@ -424,6 +418,24 @@ typedef void (*ompt_callback_device_finalize_t) (
     uint64_t device_num
 );
 
+typedef void (*ompt_callback_device_load_t) (
+    uint64_t device_num,
+    const char * filename,
+    int64_t offset_in_file,
+    void * vma_in_file,
+    size_t bytes,
+    void * host_addr,
+    void * device_addr,
+    uint64_t module_id
+);
+
+#define ompt_addr_unknown ((void *) ~0)
+
+typedef void (*ompt_callback_device_unload_t) (
+    uint64_t device_num,
+    uint64_t module_id
+);
+
 /* control_tool */
 typedef int (*ompt_callback_control_tool_t) (
     uint64_t command,                     /* command of control call             */
@@ -432,13 +444,13 @@ typedef int (*ompt_callback_control_tool_t) (
     const void *codeptr_ra                /* return address of runtime call      */
 );
 
-typedef enum ompt_mutex_kind_e {
-    ompt_mutex = 0x10,
-    ompt_mutex_lock = 0x11,
+typedef enum ompt_mutex_kind_t {
+    ompt_mutex           = 0x10,
+    ompt_mutex_lock      = 0x11,
     ompt_mutex_nest_lock = 0x12,
-    ompt_mutex_critical = 0x13,
-    ompt_mutex_atomic = 0x14,
-    ompt_mutex_ordered = 0x20
+    ompt_mutex_critical  = 0x13,
+    ompt_mutex_atomic    = 0x14,
+    ompt_mutex_ordered   = 0x20
 } ompt_mutex_kind_t;
 
 typedef void (*ompt_callback_mutex_acquire_t) (
@@ -472,14 +484,14 @@ typedef void (*ompt_callback_idle_t) (
     ompt_scope_endpoint_t endpoint        /* endpoint of idle time               */
 );
 
-typedef enum ompt_work_type_e {
-    ompt_work_loop = 1,
-    ompt_work_sections = 2,
+typedef enum ompt_work_type_t {
+    ompt_work_loop            = 1,
+    ompt_work_sections        = 2,
     ompt_work_single_executor = 3,
-    ompt_work_single_other = 4,
-    ompt_work_workshare = 5,
-    ompt_work_distribute = 6,
-    ompt_work_taskloop = 7
+    ompt_work_single_other    = 4,
+    ompt_work_workshare       = 5,
+    ompt_work_distribute      = 6,
+    ompt_work_taskloop        = 7
 } ompt_work_type_t;
 
 typedef void (*ompt_callback_work_t) (
@@ -491,9 +503,9 @@ typedef void (*ompt_callback_work_t) (
     const void *codeptr_ra                /* return address of runtime call      */
 );
 
-typedef enum ompt_sync_region_kind_e {
-    ompt_sync_region_barrier = 1,
-    ompt_sync_region_taskwait = 2,
+typedef enum ompt_sync_region_kind_t {
+    ompt_sync_region_barrier   = 1,
+    ompt_sync_region_taskwait  = 2,
     ompt_sync_region_taskgroup = 3
 } ompt_sync_region_kind_t;
 
@@ -505,7 +517,7 @@ typedef void (*ompt_callback_sync_region_t) (
     const void *codeptr_ra                /* return address of runtime call      */
 );
 
-typedef enum ompt_cancel_flag_e {
+typedef enum ompt_cancel_flag_t {
     ompt_cancel_parallel       = 0x1,
     ompt_cancel_sections       = 0x2,
     ompt_cancel_do             = 0x4,
@@ -591,61 +603,29 @@ OMPT_API_FUNCTION(int, ompt_get_proc_id, (void));
 
 
 /****************************************************************************
- * PLACEHOLDERS FOR PERFORMANCE REPORTING
- ***************************************************************************/
-
-/* idle */
-OMPT_API_FUNCTION(void, ompt_idle, (
-    void
-));
-
-/* overhead */
-OMPT_API_FUNCTION(void, ompt_overhead, (
-    void
-));
-
-/* barrier wait */
-OMPT_API_FUNCTION(void, ompt_barrier_wait, (
-    void
-));
-
-/* task wait */
-OMPT_API_FUNCTION(void, ompt_task_wait, (
-    void
-));
-
-/* mutex wait */
-OMPT_API_FUNCTION(void, ompt_mutex_wait, (
-    void
-));
-
-
-
-/****************************************************************************
  * INITIALIZATION FUNCTIONS
  ***************************************************************************/
 
-typedef struct ompt_fns_t ompt_fns_t;
-
 OMPT_API_FUNCTION(int, ompt_initialize, (
     ompt_function_lookup_t ompt_fn_lookup,
-    ompt_fns_t *fns
+    ompt_data_t *tool_data
 ));
 
 OMPT_API_FUNCTION(void, ompt_finalize, (
-    ompt_fns_t *fns
+    ompt_data_t *tool_data
 ));
 
-struct ompt_fns_t {
+typedef struct ompt_start_tool_result_t {
     ompt_initialize_t initialize;
     ompt_finalize_t finalize;
-};
+    ompt_data_t tool_data;
+} ompt_start_tool_result_t;
 
 /* initialization interface to be defined by tool */
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
-ompt_fns_t * ompt_start_tool(
+ompt_start_tool_result_t * ompt_start_tool(
     unsigned int omp_version, 
     const char * runtime_version
 );
@@ -656,15 +636,6 @@ OMPT_API_FUNCTION(int, ompt_set_callback, (
     ompt_callbacks_t which,
     ompt_callback_t callback
 ));
-
-typedef enum ompt_set_callback_rc_e {  /* non-standard */
-    ompt_set_callback_error      = 0,
-    ompt_has_event_no_callback   = 1,
-    ompt_no_event_no_callback    = 2,
-    ompt_has_event_may_callback  = 3,
-    ompt_has_event_must_callback = 4,
-} ompt_set_callback_rc_t;
-
 
 OMPT_API_FUNCTION(int, ompt_get_callback, (
     ompt_callbacks_t which,

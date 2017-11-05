@@ -74,7 +74,7 @@ ompt_mutex_impl_info_t ompt_mutex_impl_info[] = {
 
 ompt_callbacks_internal_t ompt_callbacks;
 
-static ompt_fns_t *ompt_fns = NULL;
+static ompt_start_tool_result_t *ompt_start_tool_result = NULL;
 
 /*****************************************************************************
  * forward declarations
@@ -97,7 +97,8 @@ OMPT_API_ROUTINE ompt_data_t *ompt_get_thread_data(void);
  * found, ompt_tool's return value is used to initialize the tool. Otherwise,
  * NULL is returned and OMPT won't be enabled */
 
-typedef ompt_fns_t *(*ompt_start_tool_t)(unsigned int, const char *);
+typedef ompt_start_tool_result_t *(*ompt_start_tool_t)(unsigned int,
+                                                       const char *);
 
 #if KMP_OS_UNIX
 
@@ -109,13 +110,13 @@ _OMP_EXTERN
 #else
 #error Activation of OMPT is not supported on this platform.
 #endif
-ompt_fns_t *
+ompt_start_tool_result_t *
 ompt_start_tool(unsigned int omp_version, const char *runtime_version) {
 #ifdef KMP_DYNAMIC_LIB
-  ompt_fns_t *ret = NULL;
+  ompt_start_tool_result_t *ret = NULL;
   // Try next symbol in the address space
   ompt_start_tool_t next_tool = NULL;
-  next_tool = (ompt_start_tool_t)dlsym(RTLD_NEXT, "ompt_start_tool");
+  *(void **)(&next_tool) = dlsym(RTLD_NEXT, "ompt_start_tool");
   if (next_tool)
     ret = (next_tool)(omp_version, runtime_version);
   return ret;
@@ -136,8 +137,8 @@ ompt_start_tool(unsigned int omp_version, const char *runtime_version) {
 // The number of loaded modules to start enumeration with EnumProcessModules()
 #define NUM_MODULES 128
 
-static ompt_fns_t *ompt_tool_windows(unsigned int omp_version,
-                                     const char *runtime_version) {
+static ompt_start_tool_result_t *
+ompt_tool_windows(unsigned int omp_version, const char *runtime_version) {
   int i;
   DWORD needed, new_size;
   HMODULE *modules;
@@ -195,9 +196,9 @@ static ompt_fns_t *ompt_tool_windows(unsigned int omp_version,
 #error Either __attribute__((weak)) or psapi.dll are required for OMPT support
 #endif // OMPT_HAVE_WEAK_ATTRIBUTE
 
-static ompt_fns_t *ompt_try_start_tool(unsigned int omp_version,
-                                       const char *runtime_version) {
-  ompt_fns_t *ret = NULL;
+static ompt_start_tool_result_t *
+ompt_try_start_tool(unsigned int omp_version, const char *runtime_version) {
+  ompt_start_tool_result_t *ret = NULL;
   ompt_start_tool_t start_tool = NULL;
 #if KMP_OS_WINDOWS
   // Cannot use colon to describe a list of absolute paths on Windows
@@ -275,7 +276,7 @@ void ompt_pre_init() {
     //--------------------------------------------------
     // Load tool iff specified in environment variable
     //--------------------------------------------------
-    ompt_fns =
+    ompt_start_tool_result =
         ompt_try_start_tool(__kmp_openmp_version, ompt_get_runtime_version());
 
     memset(&ompt_enabled, 0, sizeof(ompt_enabled));
@@ -307,8 +308,9 @@ void ompt_post_init() {
   //--------------------------------------------------
   // Initialize the tool if so indicated.
   //--------------------------------------------------
-  if (ompt_fns) {
-    ompt_enabled.enabled = !!ompt_fns->initialize(ompt_fn_lookup, ompt_fns);
+  if (ompt_start_tool_result) {
+    ompt_enabled.enabled = !!ompt_start_tool_result->initialize(
+        ompt_fn_lookup, &(ompt_start_tool_result->tool_data));
 
     ompt_thread_t *root_thread = ompt_get_thread();
 
@@ -331,7 +333,7 @@ void ompt_post_init() {
 
 void ompt_fini() {
   if (ompt_enabled.enabled) {
-    ompt_fns->finalize(ompt_fns);
+    ompt_start_tool_result->finalize(&(ompt_start_tool_result->tool_data));
   }
 
   memset(&ompt_enabled, 0, sizeof(ompt_enabled));
@@ -577,56 +579,6 @@ OMPT_API_ROUTINE int ompt_get_proc_id(void) {
 }
 
 /*****************************************************************************
- * placeholders
- ****************************************************************************/
-
-// Don't define this as static. The loader may choose to eliminate the symbol
-// even though it is needed by tools.
-#define OMPT_API_PLACEHOLDER
-
-// Ensure that placeholders don't have mangled names in the symbol table.
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-OMPT_API_PLACEHOLDER void ompt_idle(void) {
-  // This function is a placeholder used to represent the calling context of
-  // idle OpenMP worker threads. It is not meant to be invoked.
-  assert(0);
-}
-
-OMPT_API_PLACEHOLDER void ompt_overhead(void) {
-  // This function is a placeholder used to represent the OpenMP context of
-  // threads working in the OpenMP runtime.  It is not meant to be invoked.
-  assert(0);
-}
-
-OMPT_API_PLACEHOLDER void ompt_barrier_wait(void) {
-  // This function is a placeholder used to represent the OpenMP context of
-  // threads waiting for a barrier in the OpenMP runtime. It is not meant
-  // to be invoked.
-  assert(0);
-}
-
-OMPT_API_PLACEHOLDER void ompt_task_wait(void) {
-  // This function is a placeholder used to represent the OpenMP context of
-  // threads waiting for a task in the OpenMP runtime. It is not meant
-  // to be invoked.
-  assert(0);
-}
-
-OMPT_API_PLACEHOLDER void ompt_mutex_wait(void) {
-  // This function is a placeholder used to represent the OpenMP context of
-  // threads waiting for a mutex in the OpenMP runtime. It is not meant
-  // to be invoked.
-  assert(0);
-}
-
-#ifdef __cplusplus
-};
-#endif
-
-/*****************************************************************************
  * compatability
  ****************************************************************************/
 
@@ -688,8 +640,6 @@ static ompt_interface_fn_t ompt_fn_lookup(const char *s) {
     return (ompt_interface_fn_t)fn##_f;
 
   FOREACH_OMPT_INQUIRY_FN(ompt_interface_fn)
-
-  FOREACH_OMPT_PLACEHOLDER_FN(ompt_interface_fn)
 
   return (ompt_interface_fn_t)0;
 }

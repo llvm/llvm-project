@@ -36,62 +36,37 @@
  | Mandatory Events
  +--------------------------------------------------------------------------*/
 
+#define ompt_callback_thread_begin_implemented ompt_event_MAY_ALWAYS
+#define ompt_callback_thread_end_implemented ompt_event_MAY_ALWAYS
+
 #define ompt_callback_parallel_begin_implemented ompt_event_MAY_ALWAYS
 #define ompt_callback_parallel_end_implemented ompt_event_MAY_ALWAYS
 
 #define ompt_callback_task_create_implemented ompt_event_MAY_ALWAYS
 #define ompt_callback_task_schedule_implemented ompt_event_MAY_ALWAYS
 
-#define ompt_callback_thread_begin_implemented ompt_event_MAY_ALWAYS
-#define ompt_callback_thread_end_implemented ompt_event_MAY_ALWAYS
-
-#define ompt_callback_control_tool_implemented ompt_event_MAY_ALWAYS
-
 #define ompt_callback_implicit_task_implemented ompt_event_MAY_ALWAYS
-
-/*----------------------------------------------------------------------------
- | Target Related Events (not yet implemented)
- +--------------------------------------------------------------------------*/
 
 #define ompt_callback_target_implemented ompt_event_UNIMPLEMENTED
 #define ompt_callback_target_data_op_implemented ompt_event_UNIMPLEMENTED
 #define ompt_callback_target_submit_implemented ompt_event_UNIMPLEMENTED
+
+#define ompt_callback_control_tool_implemented ompt_event_MAY_ALWAYS
+
 #define ompt_callback_device_initialize_implemented ompt_event_UNIMPLEMENTED
 #define ompt_callback_device_finalize_implemented ompt_event_UNIMPLEMENTED
 
-#define ompt_callback_target_map_implemented ompt_event_UNIMPLEMENTED
+#define ompt_callback_device_load_implemented ompt_event_UNIMPLEMENTED
+#define ompt_callback_device_unload_implemented ompt_event_UNIMPLEMENTED
 
 /*----------------------------------------------------------------------------
- | Optional Events (blame shifting)
+ | Optional Events
  +--------------------------------------------------------------------------*/
-
-#define ompt_callback_idle_implemented ompt_event_MAY_ALWAYS_OPTIONAL
 
 #define ompt_callback_sync_region_wait_implemented                             \
   ompt_event_MAY_ALWAYS_OPTIONAL
 
 #define ompt_callback_mutex_released_implemented ompt_event_MAY_ALWAYS_OPTIONAL
-
-/*----------------------------------------------------------------------------
- | Optional Events (synchronous events)
- +--------------------------------------------------------------------------*/
-
-#define ompt_callback_work_implemented ompt_event_MAY_ALWAYS_OPTIONAL
-
-#define ompt_callback_master_implemented ompt_event_MAY_ALWAYS_OPTIONAL
-
-#define ompt_callback_sync_region_implemented ompt_event_MAY_ALWAYS_OPTIONAL
-
-#define ompt_callback_mutex_acquire_implemented ompt_event_MAY_ALWAYS_OPTIONAL
-#define ompt_callback_mutex_acquired_implemented ompt_event_MAY_ALWAYS_OPTIONAL
-#define ompt_callback_nest_lock_implemented ompt_event_MAY_ALWAYS_OPTIONAL
-
-#define ompt_callback_lock_init_implemented ompt_event_MAY_ALWAYS_OPTIONAL
-#define ompt_callback_lock_destroy_implemented ompt_event_MAY_ALWAYS_OPTIONAL
-
-#define ompt_callback_flush_implemented ompt_event_MAY_ALWAYS_OPTIONAL
-
-#define ompt_callback_cancel_implemented ompt_event_MAY_ALWAYS_OPTIONAL
 
 #if OMP_40_ENABLED
 #define ompt_callback_task_dependences_implemented                             \
@@ -101,5 +76,26 @@
 #define ompt_callback_task_dependences_implemented ompt_event_UNIMPLEMENTED
 #define ompt_callback_task_dependence_implemented ompt_event_UNIMPLEMENTED
 #endif /* OMP_40_ENABLED */
+
+#define ompt_callback_work_implemented ompt_event_MAY_ALWAYS_OPTIONAL
+
+#define ompt_callback_master_implemented ompt_event_MAY_ALWAYS_OPTIONAL
+
+#define ompt_callback_target_map_implemented ompt_event_UNIMPLEMENTED
+
+#define ompt_callback_sync_region_implemented ompt_event_MAY_ALWAYS_OPTIONAL
+
+#define ompt_callback_lock_init_implemented ompt_event_MAY_ALWAYS_OPTIONAL
+#define ompt_callback_lock_destroy_implemented ompt_event_MAY_ALWAYS_OPTIONAL
+
+#define ompt_callback_mutex_acquire_implemented ompt_event_MAY_ALWAYS_OPTIONAL
+#define ompt_callback_mutex_acquired_implemented ompt_event_MAY_ALWAYS_OPTIONAL
+#define ompt_callback_nest_lock_implemented ompt_event_MAY_ALWAYS_OPTIONAL
+
+#define ompt_callback_flush_implemented ompt_event_MAY_ALWAYS_OPTIONAL
+
+#define ompt_callback_cancel_implemented ompt_event_MAY_ALWAYS_OPTIONAL
+
+#define ompt_callback_idle_implemented ompt_event_MAY_ALWAYS_OPTIONAL
 
 #endif

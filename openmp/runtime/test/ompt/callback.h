@@ -50,7 +50,7 @@ static void print_ids(int level)
   int exists_task = ompt_get_task_info(level, NULL, &task_data, &frame, &parallel_data, NULL);
   if (frame)
   {
-    printf("%" PRIu64 ": task level %d: parallel_id=%" PRIu64 ", task_id=%" PRIu64 ", exit_frame=%p, reenter_frame=%p\n", ompt_get_thread_data()->value, level, exists_task ? parallel_data->value : 0, exists_task ? task_data->value : 0, frame->exit_runtime_frame, frame->reenter_runtime_frame);
+    printf("%" PRIu64 ": task level %d: parallel_id=%" PRIu64 ", task_id=%" PRIu64 ", exit_frame=%p, reenter_frame=%p\n", ompt_get_thread_data()->value, level, exists_task ? parallel_data->value : 0, exists_task ? task_data->value : 0, frame->exit_frame, frame->enter_frame);
   }
   else
     printf("%" PRIu64 ": task level %d: parallel_id=%" PRIu64 ", task_id=%" PRIu64 ", frame=%p\n", ompt_get_thread_data()->value, level, exists_task ? parallel_data->value : 0, exists_task ? task_data->value : 0, frame);
@@ -477,8 +477,8 @@ on_ompt_callback_master(
 
 static void
 on_ompt_callback_parallel_begin(
-  ompt_data_t *parent_task_data,
-  const ompt_frame_t *parent_task_frame,
+  ompt_data_t *encountering_task_data,
+  const ompt_frame_t *encountering_task_frame,
   ompt_data_t* parallel_data,
   uint32_t requested_team_size,
   ompt_invoker_t invoker,
@@ -487,27 +487,27 @@ on_ompt_callback_parallel_begin(
   if(parallel_data->ptr)
     printf("%s\n", "0: parallel_data initially not null");
   parallel_data->value = ompt_get_unique_id();
-  printf("%" PRIu64 ": ompt_event_parallel_begin: parent_task_id=%" PRIu64 ", parent_task_frame.exit=%p, parent_task_frame.reenter=%p, parallel_id=%" PRIu64 ", requested_team_size=%" PRIu32 ", codeptr_ra=%p, invoker=%d\n", ompt_get_thread_data()->value, parent_task_data->value, parent_task_frame->exit_runtime_frame, parent_task_frame->reenter_runtime_frame, parallel_data->value, requested_team_size, codeptr_ra, invoker);
+  printf("%" PRIu64 ": ompt_event_parallel_begin: parent_task_id=%" PRIu64 ", parent_task_frame.exit=%p, parent_task_frame.reenter=%p, parallel_id=%" PRIu64 ", requested_team_size=%" PRIu32 ", codeptr_ra=%p, invoker=%d\n", ompt_get_thread_data()->value, parent_task_data->value, parent_task_frame->exit_frame, parent_task_frame->enter_frame, parallel_data->value, requested_team_size, codeptr_ra, invoker);
 }
 
 static void
 on_ompt_callback_parallel_end(
   ompt_data_t *parallel_data,
-  ompt_data_t *task_data,
+  ompt_data_t *encountering_task_data,
   ompt_invoker_t invoker,
   const void *codeptr_ra)
 {
-  printf("%" PRIu64 ": ompt_event_parallel_end: parallel_id=%" PRIu64 ", task_id=%" PRIu64 ", invoker=%d, codeptr_ra=%p\n", ompt_get_thread_data()->value, parallel_data->value, task_data->value, invoker, codeptr_ra);
+  printf("%" PRIu64 ": ompt_event_parallel_end: parallel_id=%" PRIu64 ", task_id=%" PRIu64 ", invoker=%d, codeptr_ra=%p\n", ompt_get_thread_data()->value, parallel_data->value, encountering_task_data->value, invoker, codeptr_ra);
 }
 
 static void
 on_ompt_callback_task_create(
-    ompt_data_t *parent_task_data,     /* id of parent task            */
-    const ompt_frame_t *parent_frame,  /* frame data for parent task   */
-    ompt_data_t* new_task_data,        /* id of created task           */
+    ompt_data_t *encountering_task_data,
+    const ompt_frame_t *encountering_task_frame,
+    ompt_data_t* new_task_data,
     int type,
     int has_dependences,
-    const void *codeptr_ra)               /* pointer to outlined function */
+    const void *codeptr_ra)
 {
   if(new_task_data->ptr)
     printf("%s\n", "0: new_task_data initially not null");
@@ -516,7 +516,7 @@ on_ompt_callback_task_create(
 
   format_task_type(type, buffer);
 
-  //there is no paralllel_begin callback for implicit parallel region
+  //there is no parallel_begin callback for implicit parallel region
   //thus it is initialized in initial task
   if(type & ompt_task_initial)
   {
@@ -527,7 +527,7 @@ on_ompt_callback_task_create(
     parallel_data->value = ompt_get_unique_id();
   }
 
-  printf("%" PRIu64 ": ompt_event_task_create: parent_task_id=%" PRIu64 ", parent_task_frame.exit=%p, parent_task_frame.reenter=%p, new_task_id=%" PRIu64 ", codeptr_ra=%p, task_type=%s=%d, has_dependences=%s\n", ompt_get_thread_data()->value, parent_task_data ? parent_task_data->value : 0, parent_frame ? parent_frame->exit_runtime_frame : NULL, parent_frame ? parent_frame->reenter_runtime_frame : NULL, new_task_data->value, codeptr_ra, buffer, type, has_dependences ? "yes" : "no");
+  printf("%" PRIu64 ": ompt_event_task_create: parent_task_id=%" PRIu64 ", parent_task_frame.exit=%p, parent_task_frame.reenter=%p, new_task_id=%" PRIu64 ", codeptr_ra=%p, task_type=%s=%d, has_dependences=%s\n", ompt_get_thread_data()->value, parent_task_data ? parent_task_data->value : 0, parent_frame ? parent_frame->exit_frame : NULL, parent_frame ? parent_frame->enter_frame : NULL, new_task_data->value, codeptr_ra, buffer, type, has_dependences ? "yes" : "no");
 }
 
 static void
@@ -587,7 +587,7 @@ on_ompt_callback_control_tool(
 {
   ompt_frame_t* omptTaskFrame;
   ompt_get_task_info(0, NULL, (ompt_data_t**) NULL, &omptTaskFrame, NULL, NULL);
-  printf("%" PRIu64 ": ompt_event_control_tool: command=%" PRIu64 ", modifier=%" PRIu64 ", arg=%p, codeptr_ra=%p, current_task_frame.exit=%p, current_task_frame.reenter=%p \n", ompt_get_thread_data()->value, command, modifier, arg, codeptr_ra, omptTaskFrame->exit_runtime_frame, omptTaskFrame->reenter_runtime_frame);
+  printf("%" PRIu64 ": ompt_event_control_tool: command=%" PRIu64 ", modifier=%" PRIu64 ", arg=%p, codeptr_ra=%p, current_task_frame.exit=%p, current_task_frame.reenter=%p \n", ompt_get_thread_data()->value, command, modifier, arg, codeptr_ra, omptTaskFrame->exit_frame, omptTaskFrame->enter_frame);
   return 0; //success
 }
 
@@ -603,7 +603,7 @@ do{                                                           \
 
 int ompt_initialize(
   ompt_function_lookup_t lookup,
-  ompt_fns_t* fns)
+  ompt_data_t *tool_data)
 {
   ompt_set_callback = (ompt_set_callback_t) lookup("ompt_set_callback");
   ompt_get_task_info = (ompt_get_task_info_t) lookup("ompt_get_task_info");
@@ -646,15 +646,15 @@ int ompt_initialize(
   return 1; //success
 }
 
-void ompt_finalize(ompt_fns_t* fns)
+void ompt_finalize(ompt_data_t *tool_data)
 {
   printf("0: ompt_event_runtime_shutdown\n");
 }
 
-ompt_fns_t* ompt_start_tool(
+ompt_start_tool_result_t* ompt_start_tool(
   unsigned int omp_version,
   const char *runtime_version)
 {
-  static ompt_fns_t ompt_fns = {&ompt_initialize,&ompt_finalize};
-  return &ompt_fns;
+  static ompt_start_tool_result_t ompt_start_tool_result = {&ompt_initialize,&ompt_finalize, 0};
+  return &ompt_start_tool_result;
 }

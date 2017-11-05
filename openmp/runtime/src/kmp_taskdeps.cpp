@@ -489,8 +489,7 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
           OMPT_LOAD_RETURN_ADDRESS(gtid));
     }
 
-    new_taskdata->ompt_task_info.frame.reenter_runtime_frame =
-        OMPT_GET_FRAME_ADDRESS(0);
+    new_taskdata->ompt_task_info.frame.enter_frame = OMPT_GET_FRAME_ADDRESS(0);
   }
 
 #if OMPT_OPTIONAL
