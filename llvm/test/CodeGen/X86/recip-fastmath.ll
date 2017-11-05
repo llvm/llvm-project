@@ -144,14 +144,14 @@ define float @f32_one_step(float %x) #1 {
 ;
 ; KNL-LABEL: f32_one_step:
 ; KNL:       # BB#0:
-; KNL-NEXT:    vrcp14ss %xmm0, %xmm0, %xmm1
+; KNL-NEXT:    vrcpss %xmm0, %xmm0, %xmm1 # sched: [5:1.00]
 ; KNL-NEXT:    vfnmadd213ss {{.*}}(%rip), %xmm1, %xmm0 # sched: [5:0.50]
 ; KNL-NEXT:    vfmadd132ss %xmm1, %xmm1, %xmm0 # sched: [5:0.50]
 ; KNL-NEXT:    retq # sched: [2:1.00]
 ;
 ; SKX-LABEL: f32_one_step:
 ; SKX:       # BB#0:
-; SKX-NEXT:    vrcp14ss %xmm0, %xmm0, %xmm1 # sched: [4:1.00]
+; SKX-NEXT:    vrcpss %xmm0, %xmm0, %xmm1 # sched: [4:1.00]
 ; SKX-NEXT:    vfnmadd213ss {{.*}}(%rip), %xmm1, %xmm0 # sched: [9:0.50]
 ; SKX-NEXT:    vfmadd132ss %xmm1, %xmm1, %xmm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
@@ -257,7 +257,7 @@ define float @f32_two_step(float %x) #2 {
 ;
 ; KNL-LABEL: f32_two_step:
 ; KNL:       # BB#0:
-; KNL-NEXT:    vrcp14ss %xmm0, %xmm0, %xmm1
+; KNL-NEXT:    vrcpss %xmm0, %xmm0, %xmm1 # sched: [5:1.00]
 ; KNL-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero sched: [1:0.50]
 ; KNL-NEXT:    vmovaps %xmm1, %xmm3 # sched: [1:1.00]
 ; KNL-NEXT:    vfnmadd213ss %xmm2, %xmm0, %xmm3 # sched: [5:0.50]
@@ -268,7 +268,7 @@ define float @f32_two_step(float %x) #2 {
 ;
 ; SKX-LABEL: f32_two_step:
 ; SKX:       # BB#0:
-; SKX-NEXT:    vrcp14ss %xmm0, %xmm0, %xmm1 # sched: [4:1.00]
+; SKX-NEXT:    vrcpss %xmm0, %xmm0, %xmm1 # sched: [4:1.00]
 ; SKX-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero sched: [5:0.50]
 ; SKX-NEXT:    vmovaps %xmm1, %xmm3 # sched: [1:1.00]
 ; SKX-NEXT:    vfnmadd213ss %xmm2, %xmm0, %xmm3 # sched: [4:0.33]
