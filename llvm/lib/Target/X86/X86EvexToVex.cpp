@@ -171,7 +171,7 @@ static void performCustomAdjustments(MachineInstr &MI, unsigned NewOpc) {
   case X86::VALIGNDZ128rri:
   case X86::VALIGNDZ128rmi:
   case X86::VALIGNQZ128rri:
-  case X86::VALIGNQZ128rmi:
+  case X86::VALIGNQZ128rmi: {
     assert((NewOpc == X86::VPALIGNRrri || NewOpc == X86::VPALIGNRrmi) &&
            "Unexpected new opcode!");
     unsigned Scale = (Opc == X86::VALIGNQZ128rri ||
@@ -179,6 +179,24 @@ static void performCustomAdjustments(MachineInstr &MI, unsigned NewOpc) {
     MachineOperand &Imm = MI.getOperand(MI.getNumExplicitOperands()-1);
     Imm.setImm(Imm.getImm() * Scale);
     break;
+  }
+  case X86::VSHUFF32X4Z256rmi:
+  case X86::VSHUFF32X4Z256rri:
+  case X86::VSHUFF64X2Z256rmi:
+  case X86::VSHUFF64X2Z256rri:
+  case X86::VSHUFI32X4Z256rmi:
+  case X86::VSHUFI32X4Z256rri:
+  case X86::VSHUFI64X2Z256rmi:
+  case X86::VSHUFI64X2Z256rri: {
+    assert((NewOpc == X86::VPERM2F128rr || NewOpc == X86::VPERM2I128rr ||
+            NewOpc == X86::VPERM2F128rm || NewOpc == X86::VPERM2I128rm) &&
+           "Unexpected new opcode!");
+    MachineOperand &Imm = MI.getOperand(MI.getNumExplicitOperands()-1);
+    int64_t ImmVal = Imm.getImm();
+    // Set bit 5, move bit 1 to bit 4, copy bit 0.
+    Imm.setImm(0x20 | ((ImmVal & 2) << 3) | (ImmVal & 1));
+    break;
+  }
   }
 }
 

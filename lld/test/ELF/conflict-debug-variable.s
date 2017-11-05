@@ -30,6 +30,9 @@
 # CHECK-NEXT: >>> defined at 1.c:1
 # CHECK-NEXT: >>>            {{.*}}:(.bss+0x0)
 
+## Check that stripping debug sections does not break error reporting.
+# RUN: not ld.lld --strip-debug %t.o %t.o -o %t 2>&1 | FileCheck %s
+
 # Used reduced output from following code and gcc 7.1.0
 # to produce this input file:
 # Source (1.c):

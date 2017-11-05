@@ -46,4 +46,4 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; RUN: llvm-dis %t3.o -o - | FileCheck --check-prefix=MIXED %s
 
 ; Mixed ELF and IR. We keep ours as common so the linker will finish the merge.
-; MIXED: @a = common global i16 0, align 8
+; MIXED: @a = common dso_local global i16 0, align 8

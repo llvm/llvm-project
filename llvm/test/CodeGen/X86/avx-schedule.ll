@@ -3982,8 +3982,8 @@ define <8 x float> @test_rcpps(<8 x float> %a0, <8 x float> *%a1) {
 ;
 ; SKX-LABEL: test_rcpps:
 ; SKX:       # BB#0:
-; SKX-NEXT:    vrcp14ps %ymm0, %ymm0 # sched: [4:1.00]
-; SKX-NEXT:    vrcp14ps (%rdi), %ymm1 # sched: [11:1.00]
+; SKX-NEXT:    vrcpps %ymm0, %ymm0 # sched: [4:1.00]
+; SKX-NEXT:    vrcpps (%rdi), %ymm1 # sched: [11:1.00]
 ; SKX-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
@@ -4174,8 +4174,8 @@ define <8 x float> @test_rsqrtps(<8 x float> %a0, <8 x float> *%a1) {
 ;
 ; SKX-LABEL: test_rsqrtps:
 ; SKX:       # BB#0:
-; SKX-NEXT:    vrsqrt14ps %ymm0, %ymm0 # sched: [4:1.00]
-; SKX-NEXT:    vrsqrt14ps (%rdi), %ymm1 # sched: [11:1.00]
+; SKX-NEXT:    vrsqrtps %ymm0, %ymm0 # sched: [4:1.00]
+; SKX-NEXT:    vrsqrtps (%rdi), %ymm1 # sched: [11:1.00]
 ; SKX-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;

@@ -155,6 +155,14 @@ void X86EVEX2VEXTablesEmitter::printTable(const std::vector<Entry> &Table,
       {"VALIGNQZ128rri",      "VPALIGNRrri",     true},
       {"VALIGNDZ128rmi",      "VPALIGNRrmi",     true},
       {"VALIGNQZ128rmi",      "VPALIGNRrmi",     true},
+      {"VSHUFF32X4Z256rmi",   "VPERM2F128rm",    false},
+      {"VSHUFF32X4Z256rri",   "VPERM2F128rr",    false},
+      {"VSHUFF64X2Z256rmi",   "VPERM2F128rm",    false},
+      {"VSHUFF64X2Z256rri",   "VPERM2F128rr",    false},
+      {"VSHUFI32X4Z256rmi",   "VPERM2I128rm",    false},
+      {"VSHUFI32X4Z256rri",   "VPERM2I128rr",    false},
+      {"VSHUFI64X2Z256rmi",   "VPERM2I128rm",    false},
+      {"VSHUFI64X2Z256rri",   "VPERM2I128rr",    false},
   };
 
   // Print the manually added entries

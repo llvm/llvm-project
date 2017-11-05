@@ -1,11 +1,11 @@
-; RUN: opt -S -O1 -mtriple=amdgcn-- -amdgpu-simplify-libcall <%s | FileCheck -check-prefix=GCN -check-prefix=GCN-POSTLINK %s
-; RUN: opt -S -O1 -mtriple=amdgcn-- -amdgpu-simplify-libcall -amdgpu-prelink <%s | FileCheck -check-prefix=GCN -check-prefix=GCN-PRELINK %s
-; RUN: opt -S -O1 -mtriple=amdgcn-- -amdgpu-use-native -amdgpu-prelink <%s | FileCheck -check-prefix=GCN -check-prefix=GCN-NATIVE %s
+; RUN: opt -S -O1 -mtriple=amdgcn---amdgiz -amdgpu-simplify-libcall <%s | FileCheck -check-prefix=GCN -check-prefix=GCN-POSTLINK %s
+; RUN: opt -S -O1 -mtriple=amdgcn---amdgiz -amdgpu-simplify-libcall -amdgpu-prelink <%s | FileCheck -check-prefix=GCN -check-prefix=GCN-PRELINK %s
+; RUN: opt -S -O1 -mtriple=amdgcn---amdgiz -amdgpu-use-native -amdgpu-prelink <%s | FileCheck -check-prefix=GCN -check-prefix=GCN-NATIVE %s
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_sincos
 ; GCN-POSTLINK: tail call fast float @_Z3sinf(
 ; GCN-POSTLINK: tail call fast float @_Z3cosf(
-; GCN-PRELINK: call fast float @_Z6sincosfPU3AS4f(
+; GCN-PRELINK: call fast float @_Z6sincosfPf(
 ; GCN-NATIVE: tail call fast float @_Z10native_sinf(
 ; GCN-NATIVE: tail call fast float @_Z10native_cosf(
 define amdgpu_kernel void @test_sincos(float addrspace(1)* nocapture %a) {
@@ -26,7 +26,7 @@ declare float @_Z3cosf(float)
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_sincos_v2
 ; GCN-POSTLINK: tail call fast <2 x float> @_Z3sinDv2_f(
 ; GCN-POSTLINK: tail call fast <2 x float> @_Z3cosDv2_f(
-; GCN-PRELINK: call fast <2 x float> @_Z6sincosDv2_fPU3AS4S_(
+; GCN-PRELINK: call fast <2 x float> @_Z6sincosDv2_fPS_(
 ; GCN-NATIVE: tail call fast <2 x float> @_Z10native_sinDv2_f(
 ; GCN-NATIVE: tail call fast <2 x float> @_Z10native_cosDv2_f(
 define amdgpu_kernel void @test_sincos_v2(<2 x float> addrspace(1)* nocapture %a) {
@@ -47,7 +47,7 @@ declare <2 x float> @_Z3cosDv2_f(<2 x float>)
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_sincos_v3
 ; GCN-POSTLINK: tail call fast <3 x float> @_Z3sinDv3_f(
 ; GCN-POSTLINK: tail call fast <3 x float> @_Z3cosDv3_f(
-; GCN-PRELINK: call fast <3 x float> @_Z6sincosDv3_fPU3AS4S_(
+; GCN-PRELINK: call fast <3 x float> @_Z6sincosDv3_fPS_(
 ; GCN-NATIVE: tail call fast <3 x float> @_Z10native_sinDv3_f(
 ; GCN-NATIVE: tail call fast <3 x float> @_Z10native_cosDv3_f(
 define amdgpu_kernel void @test_sincos_v3(<3 x float> addrspace(1)* nocapture %a) {
@@ -73,7 +73,7 @@ declare <3 x float> @_Z3cosDv3_f(<3 x float>)
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_sincos_v4
 ; GCN-POSTLINK: tail call fast <4 x float> @_Z3sinDv4_f(
 ; GCN-POSTLINK: tail call fast <4 x float> @_Z3cosDv4_f(
-; GCN-PRELINK: call fast <4 x float> @_Z6sincosDv4_fPU3AS4S_(
+; GCN-PRELINK: call fast <4 x float> @_Z6sincosDv4_fPS_(
 ; GCN-NATIVE: tail call fast <4 x float> @_Z10native_sinDv4_f(
 ; GCN-NATIVE: tail call fast <4 x float> @_Z10native_cosDv4_f(
 define amdgpu_kernel void @test_sincos_v4(<4 x float> addrspace(1)* nocapture %a) {
@@ -94,7 +94,7 @@ declare <4 x float> @_Z3cosDv4_f(<4 x float>)
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_sincos_v8
 ; GCN-POSTLINK: tail call fast <8 x float> @_Z3sinDv8_f(
 ; GCN-POSTLINK: tail call fast <8 x float> @_Z3cosDv8_f(
-; GCN-PRELINK: call fast <8 x float> @_Z6sincosDv8_fPU3AS4S_(
+; GCN-PRELINK: call fast <8 x float> @_Z6sincosDv8_fPS_(
 ; GCN-NATIVE: tail call fast <8 x float> @_Z10native_sinDv8_f(
 ; GCN-NATIVE: tail call fast <8 x float> @_Z10native_cosDv8_f(
 define amdgpu_kernel void @test_sincos_v8(<8 x float> addrspace(1)* nocapture %a) {
@@ -115,7 +115,7 @@ declare <8 x float> @_Z3cosDv8_f(<8 x float>)
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_sincos_v16
 ; GCN-POSTLINK: tail call fast <16 x float> @_Z3sinDv16_f(
 ; GCN-POSTLINK: tail call fast <16 x float> @_Z3cosDv16_f(
-; GCN-PRELINK: call fast <16 x float> @_Z6sincosDv16_fPU3AS4S_(
+; GCN-PRELINK: call fast <16 x float> @_Z6sincosDv16_fPS_(
 ; GCN-NATIVE: tail call fast <16 x float> @_Z10native_sinDv16_f(
 ; GCN-NATIVE: tail call fast <16 x float> @_Z10native_cosDv16_f(
 define amdgpu_kernel void @test_sincos_v16(<16 x float> addrspace(1)* nocapture %a) {
@@ -685,101 +685,101 @@ define amdgpu_kernel void @test_use_native_sincos(float addrspace(1)* %a) {
 entry:
   %tmp = load float, float addrspace(1)* %a, align 4
   %arrayidx1 = getelementptr inbounds float, float addrspace(1)* %a, i64 1
-  %tmp1 = addrspacecast float addrspace(1)* %arrayidx1 to float addrspace(4)*
-  %call = tail call fast float @_Z6sincosfPU3AS4f(float %tmp, float addrspace(4)* %tmp1)
+  %tmp1 = addrspacecast float addrspace(1)* %arrayidx1 to float*
+  %call = tail call fast float @_Z6sincosfPf(float %tmp, float* %tmp1)
   store float %call, float addrspace(1)* %a, align 4
   ret void
 }
 
-declare float @_Z6sincosfPU3AS4f(float, float addrspace(4)*)
+declare float @_Z6sincosfPf(float, float*)
 
 %opencl.pipe_t = type opaque
 %opencl.reserve_id_t = type opaque
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_read_pipe(%opencl.pipe_t addrspace(1)* %p, i32 addrspace(1)* %ptr)
-; GCN-PRELINK: call i32 @__read_pipe_2_4(%opencl.pipe_t addrspace(1)* %{{.*}}, i32 addrspace(4)* %{{.*}}) #[[NOUNWIND:[0-9]+]]
-; GCN-PRELINK: call i32 @__read_pipe_4_4(%opencl.pipe_t addrspace(1)* %{{.*}}, %opencl.reserve_id_t* %{{.*}}, i32 2, i32 addrspace(4)* %{{.*}}) #[[NOUNWIND]]
+; GCN-PRELINK: call i32 @__read_pipe_2_4(%opencl.pipe_t addrspace(1)* %{{.*}}, i32* %{{.*}}) #[[NOUNWIND:[0-9]+]]
+; GCN-PRELINK: call i32 @__read_pipe_4_4(%opencl.pipe_t addrspace(1)* %{{.*}}, %opencl.reserve_id_t addrspace(5)* %{{.*}}, i32 2, i32* %{{.*}}) #[[NOUNWIND]]
 define amdgpu_kernel void @test_read_pipe(%opencl.pipe_t addrspace(1)* %p, i32 addrspace(1)* %ptr) local_unnamed_addr {
 entry:
   %tmp = bitcast i32 addrspace(1)* %ptr to i8 addrspace(1)*
-  %tmp1 = addrspacecast i8 addrspace(1)* %tmp to i8 addrspace(4)*
-  %tmp2 = tail call i32 @__read_pipe_2(%opencl.pipe_t addrspace(1)* %p, i8 addrspace(4)* %tmp1, i32 4, i32 4) #0
-  %tmp3 = tail call %opencl.reserve_id_t* @__reserve_read_pipe(%opencl.pipe_t addrspace(1)* %p, i32 2, i32 4, i32 4)
-  %tmp4 = tail call i32 @__read_pipe_4(%opencl.pipe_t addrspace(1)* %p, %opencl.reserve_id_t* %tmp3, i32 2, i8 addrspace(4)* %tmp1, i32 4, i32 4) #0
-  tail call void @__commit_read_pipe(%opencl.pipe_t addrspace(1)* %p, %opencl.reserve_id_t* %tmp3, i32 4, i32 4)
+  %tmp1 = addrspacecast i8 addrspace(1)* %tmp to i8*
+  %tmp2 = tail call i32 @__read_pipe_2(%opencl.pipe_t addrspace(1)* %p, i8* %tmp1, i32 4, i32 4) #0
+  %tmp3 = tail call %opencl.reserve_id_t addrspace(5)* @__reserve_read_pipe(%opencl.pipe_t addrspace(1)* %p, i32 2, i32 4, i32 4)
+  %tmp4 = tail call i32 @__read_pipe_4(%opencl.pipe_t addrspace(1)* %p, %opencl.reserve_id_t addrspace(5)* %tmp3, i32 2, i8* %tmp1, i32 4, i32 4) #0
+  tail call void @__commit_read_pipe(%opencl.pipe_t addrspace(1)* %p, %opencl.reserve_id_t addrspace(5)* %tmp3, i32 4, i32 4)
   ret void
 }
 
-declare i32 @__read_pipe_2(%opencl.pipe_t addrspace(1)*, i8 addrspace(4)*, i32, i32)
+declare i32 @__read_pipe_2(%opencl.pipe_t addrspace(1)*, i8*, i32, i32)
 
-declare %opencl.reserve_id_t* @__reserve_read_pipe(%opencl.pipe_t addrspace(1)*, i32, i32, i32)
+declare %opencl.reserve_id_t addrspace(5)* @__reserve_read_pipe(%opencl.pipe_t addrspace(1)*, i32, i32, i32)
 
-declare i32 @__read_pipe_4(%opencl.pipe_t addrspace(1)*, %opencl.reserve_id_t*, i32, i8 addrspace(4)*, i32, i32)
+declare i32 @__read_pipe_4(%opencl.pipe_t addrspace(1)*, %opencl.reserve_id_t addrspace(5)*, i32, i8*, i32, i32)
 
-declare void @__commit_read_pipe(%opencl.pipe_t addrspace(1)*, %opencl.reserve_id_t*, i32, i32)
+declare void @__commit_read_pipe(%opencl.pipe_t addrspace(1)*, %opencl.reserve_id_t addrspace(5)*, i32, i32)
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_write_pipe(%opencl.pipe_t addrspace(1)* %p, i32 addrspace(1)* %ptr)
-; GCN-PRELINK: call i32 @__write_pipe_2_4(%opencl.pipe_t addrspace(1)* %{{.*}}, i32 addrspace(4)* %{{.*}}) #[[NOUNWIND]]
-; GCN-PRELINK: call i32 @__write_pipe_4_4(%opencl.pipe_t addrspace(1)* %{{.*}}, %opencl.reserve_id_t* %{{.*}}, i32 2, i32 addrspace(4)* %{{.*}}) #[[NOUNWIND]]
+; GCN-PRELINK: call i32 @__write_pipe_2_4(%opencl.pipe_t addrspace(1)* %{{.*}}, i32* %{{.*}}) #[[NOUNWIND]]
+; GCN-PRELINK: call i32 @__write_pipe_4_4(%opencl.pipe_t addrspace(1)* %{{.*}}, %opencl.reserve_id_t addrspace(5)* %{{.*}}, i32 2, i32* %{{.*}}) #[[NOUNWIND]]
 define amdgpu_kernel void @test_write_pipe(%opencl.pipe_t addrspace(1)* %p, i32 addrspace(1)* %ptr) local_unnamed_addr {
 entry:
   %tmp = bitcast i32 addrspace(1)* %ptr to i8 addrspace(1)*
-  %tmp1 = addrspacecast i8 addrspace(1)* %tmp to i8 addrspace(4)*
-  %tmp2 = tail call i32 @__write_pipe_2(%opencl.pipe_t addrspace(1)* %p, i8 addrspace(4)* %tmp1, i32 4, i32 4) #0
-  %tmp3 = tail call %opencl.reserve_id_t* @__reserve_write_pipe(%opencl.pipe_t addrspace(1)* %p, i32 2, i32 4, i32 4) #0
-  %tmp4 = tail call i32 @__write_pipe_4(%opencl.pipe_t addrspace(1)* %p, %opencl.reserve_id_t* %tmp3, i32 2, i8 addrspace(4)* %tmp1, i32 4, i32 4) #0
-  tail call void @__commit_write_pipe(%opencl.pipe_t addrspace(1)* %p, %opencl.reserve_id_t* %tmp3, i32 4, i32 4) #0
+  %tmp1 = addrspacecast i8 addrspace(1)* %tmp to i8*
+  %tmp2 = tail call i32 @__write_pipe_2(%opencl.pipe_t addrspace(1)* %p, i8* %tmp1, i32 4, i32 4) #0
+  %tmp3 = tail call %opencl.reserve_id_t addrspace(5)* @__reserve_write_pipe(%opencl.pipe_t addrspace(1)* %p, i32 2, i32 4, i32 4) #0
+  %tmp4 = tail call i32 @__write_pipe_4(%opencl.pipe_t addrspace(1)* %p, %opencl.reserve_id_t addrspace(5)* %tmp3, i32 2, i8* %tmp1, i32 4, i32 4) #0
+  tail call void @__commit_write_pipe(%opencl.pipe_t addrspace(1)* %p, %opencl.reserve_id_t addrspace(5)* %tmp3, i32 4, i32 4) #0
   ret void
 }
 
-declare i32 @__write_pipe_2(%opencl.pipe_t addrspace(1)*, i8 addrspace(4)*, i32, i32) local_unnamed_addr
+declare i32 @__write_pipe_2(%opencl.pipe_t addrspace(1)*, i8*, i32, i32) local_unnamed_addr
 
-declare %opencl.reserve_id_t* @__reserve_write_pipe(%opencl.pipe_t addrspace(1)*, i32, i32, i32) local_unnamed_addr
+declare %opencl.reserve_id_t addrspace(5)* @__reserve_write_pipe(%opencl.pipe_t addrspace(1)*, i32, i32, i32) local_unnamed_addr
 
-declare i32 @__write_pipe_4(%opencl.pipe_t addrspace(1)*, %opencl.reserve_id_t*, i32, i8 addrspace(4)*, i32, i32) local_unnamed_addr
+declare i32 @__write_pipe_4(%opencl.pipe_t addrspace(1)*, %opencl.reserve_id_t addrspace(5)*, i32, i8*, i32, i32) local_unnamed_addr
 
-declare void @__commit_write_pipe(%opencl.pipe_t addrspace(1)*, %opencl.reserve_id_t*, i32, i32) local_unnamed_addr
+declare void @__commit_write_pipe(%opencl.pipe_t addrspace(1)*, %opencl.reserve_id_t addrspace(5)*, i32, i32) local_unnamed_addr
 
 %struct.S = type { [100 x i32] }
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_pipe_size
-; GCN-PRELINK: call i32 @__read_pipe_2_1(%opencl.pipe_t addrspace(1)* %{{.*}} i8 addrspace(4)* %{{.*}}) #[[NOUNWIND]]
-; GCN-PRELINK: call i32 @__read_pipe_2_2(%opencl.pipe_t addrspace(1)* %{{.*}} i16 addrspace(4)* %{{.*}}) #[[NOUNWIND]]
-; GCN-PRELINK: call i32 @__read_pipe_2_4(%opencl.pipe_t addrspace(1)* %{{.*}} i32 addrspace(4)* %{{.*}}) #[[NOUNWIND]]
-; GCN-PRELINK: call i32 @__read_pipe_2_8(%opencl.pipe_t addrspace(1)* %{{.*}} i64 addrspace(4)* %{{.*}}) #[[NOUNWIND]]
-; GCN-PRELINK: call i32 @__read_pipe_2_16(%opencl.pipe_t addrspace(1)* %{{.*}}, <2 x i64> addrspace(4)* %{{.*}}) #[[NOUNWIND]]
-; GCN-PRELINK: call i32 @__read_pipe_2_32(%opencl.pipe_t addrspace(1)* %{{.*}}, <4 x i64> addrspace(4)* %{{.*}} #[[NOUNWIND]]
-; GCN-PRELINK: call i32 @__read_pipe_2_64(%opencl.pipe_t addrspace(1)* %{{.*}}, <8 x i64> addrspace(4)* %{{.*}} #[[NOUNWIND]]
-; GCN-PRELINK: call i32 @__read_pipe_2_128(%opencl.pipe_t addrspace(1)* %{{.*}}, <16 x i64> addrspace(4)* %{{.*}} #[[NOUNWIND]]
-; GCN-PRELINK: call i32 @__read_pipe_2(%opencl.pipe_t addrspace(1)* %{{.*}}, i8 addrspace(4)* %{{.*}} i32 400, i32 4) #[[NOUNWIND]]
+; GCN-PRELINK: call i32 @__read_pipe_2_1(%opencl.pipe_t addrspace(1)* %{{.*}} i8* %{{.*}}) #[[NOUNWIND]]
+; GCN-PRELINK: call i32 @__read_pipe_2_2(%opencl.pipe_t addrspace(1)* %{{.*}} i16* %{{.*}}) #[[NOUNWIND]]
+; GCN-PRELINK: call i32 @__read_pipe_2_4(%opencl.pipe_t addrspace(1)* %{{.*}} i32* %{{.*}}) #[[NOUNWIND]]
+; GCN-PRELINK: call i32 @__read_pipe_2_8(%opencl.pipe_t addrspace(1)* %{{.*}} i64* %{{.*}}) #[[NOUNWIND]]
+; GCN-PRELINK: call i32 @__read_pipe_2_16(%opencl.pipe_t addrspace(1)* %{{.*}}, <2 x i64>* %{{.*}}) #[[NOUNWIND]]
+; GCN-PRELINK: call i32 @__read_pipe_2_32(%opencl.pipe_t addrspace(1)* %{{.*}}, <4 x i64>* %{{.*}} #[[NOUNWIND]]
+; GCN-PRELINK: call i32 @__read_pipe_2_64(%opencl.pipe_t addrspace(1)* %{{.*}}, <8 x i64>* %{{.*}} #[[NOUNWIND]]
+; GCN-PRELINK: call i32 @__read_pipe_2_128(%opencl.pipe_t addrspace(1)* %{{.*}}, <16 x i64>* %{{.*}} #[[NOUNWIND]]
+; GCN-PRELINK: call i32 @__read_pipe_2(%opencl.pipe_t addrspace(1)* %{{.*}}, i8* %{{.*}} i32 400, i32 4) #[[NOUNWIND]]
 define amdgpu_kernel void @test_pipe_size(%opencl.pipe_t addrspace(1)* %p1, i8 addrspace(1)* %ptr1, %opencl.pipe_t addrspace(1)* %p2, i16 addrspace(1)* %ptr2, %opencl.pipe_t addrspace(1)* %p4, i32 addrspace(1)* %ptr4, %opencl.pipe_t addrspace(1)* %p8, i64 addrspace(1)* %ptr8, %opencl.pipe_t addrspace(1)* %p16, <2 x i64> addrspace(1)* %ptr16, %opencl.pipe_t addrspace(1)* %p32, <4 x i64> addrspace(1)* %ptr32, %opencl.pipe_t addrspace(1)* %p64, <8 x i64> addrspace(1)* %ptr64, %opencl.pipe_t addrspace(1)* %p128, <16 x i64> addrspace(1)* %ptr128, %opencl.pipe_t addrspace(1)* %pu, %struct.S addrspace(1)* %ptru) local_unnamed_addr #0 {
 entry:
-  %tmp = addrspacecast i8 addrspace(1)* %ptr1 to i8 addrspace(4)*
-  %tmp1 = tail call i32 @__read_pipe_2(%opencl.pipe_t addrspace(1)* %p1, i8 addrspace(4)* %tmp, i32 1, i32 1) #0
+  %tmp = addrspacecast i8 addrspace(1)* %ptr1 to i8*
+  %tmp1 = tail call i32 @__read_pipe_2(%opencl.pipe_t addrspace(1)* %p1, i8* %tmp, i32 1, i32 1) #0
   %tmp2 = bitcast i16 addrspace(1)* %ptr2 to i8 addrspace(1)*
-  %tmp3 = addrspacecast i8 addrspace(1)* %tmp2 to i8 addrspace(4)*
-  %tmp4 = tail call i32 @__read_pipe_2(%opencl.pipe_t addrspace(1)* %p2, i8 addrspace(4)* %tmp3, i32 2, i32 2) #0
+  %tmp3 = addrspacecast i8 addrspace(1)* %tmp2 to i8*
+  %tmp4 = tail call i32 @__read_pipe_2(%opencl.pipe_t addrspace(1)* %p2, i8* %tmp3, i32 2, i32 2) #0
   %tmp5 = bitcast i32 addrspace(1)* %ptr4 to i8 addrspace(1)*
-  %tmp6 = addrspacecast i8 addrspace(1)* %tmp5 to i8 addrspace(4)*
-  %tmp7 = tail call i32 @__read_pipe_2(%opencl.pipe_t addrspace(1)* %p4, i8 addrspace(4)* %tmp6, i32 4, i32 4) #0
+  %tmp6 = addrspacecast i8 addrspace(1)* %tmp5 to i8*
+  %tmp7 = tail call i32 @__read_pipe_2(%opencl.pipe_t addrspace(1)* %p4, i8* %tmp6, i32 4, i32 4) #0
   %tmp8 = bitcast i64 addrspace(1)* %ptr8 to i8 addrspace(1)*
-  %tmp9 = addrspacecast i8 addrspace(1)* %tmp8 to i8 addrspace(4)*
-  %tmp10 = tail call i32 @__read_pipe_2(%opencl.pipe_t addrspace(1)* %p8, i8 addrspace(4)* %tmp9, i32 8, i32 8) #0
+  %tmp9 = addrspacecast i8 addrspace(1)* %tmp8 to i8*
+  %tmp10 = tail call i32 @__read_pipe_2(%opencl.pipe_t addrspace(1)* %p8, i8* %tmp9, i32 8, i32 8) #0
   %tmp11 = bitcast <2 x i64> addrspace(1)* %ptr16 to i8 addrspace(1)*
-  %tmp12 = addrspacecast i8 addrspace(1)* %tmp11 to i8 addrspace(4)*
-  %tmp13 = tail call i32 @__read_pipe_2(%opencl.pipe_t addrspace(1)* %p16, i8 addrspace(4)* %tmp12, i32 16, i32 16) #0
+  %tmp12 = addrspacecast i8 addrspace(1)* %tmp11 to i8*
+  %tmp13 = tail call i32 @__read_pipe_2(%opencl.pipe_t addrspace(1)* %p16, i8* %tmp12, i32 16, i32 16) #0
   %tmp14 = bitcast <4 x i64> addrspace(1)* %ptr32 to i8 addrspace(1)*
-  %tmp15 = addrspacecast i8 addrspace(1)* %tmp14 to i8 addrspace(4)*
-  %tmp16 = tail call i32 @__read_pipe_2(%opencl.pipe_t addrspace(1)* %p32, i8 addrspace(4)* %tmp15, i32 32, i32 32) #0
+  %tmp15 = addrspacecast i8 addrspace(1)* %tmp14 to i8*
+  %tmp16 = tail call i32 @__read_pipe_2(%opencl.pipe_t addrspace(1)* %p32, i8* %tmp15, i32 32, i32 32) #0
   %tmp17 = bitcast <8 x i64> addrspace(1)* %ptr64 to i8 addrspace(1)*
-  %tmp18 = addrspacecast i8 addrspace(1)* %tmp17 to i8 addrspace(4)*
-  %tmp19 = tail call i32 @__read_pipe_2(%opencl.pipe_t addrspace(1)* %p64, i8 addrspace(4)* %tmp18, i32 64, i32 64) #0
+  %tmp18 = addrspacecast i8 addrspace(1)* %tmp17 to i8*
+  %tmp19 = tail call i32 @__read_pipe_2(%opencl.pipe_t addrspace(1)* %p64, i8* %tmp18, i32 64, i32 64) #0
   %tmp20 = bitcast <16 x i64> addrspace(1)* %ptr128 to i8 addrspace(1)*
-  %tmp21 = addrspacecast i8 addrspace(1)* %tmp20 to i8 addrspace(4)*
-  %tmp22 = tail call i32 @__read_pipe_2(%opencl.pipe_t addrspace(1)* %p128, i8 addrspace(4)* %tmp21, i32 128, i32 128) #0
+  %tmp21 = addrspacecast i8 addrspace(1)* %tmp20 to i8*
+  %tmp22 = tail call i32 @__read_pipe_2(%opencl.pipe_t addrspace(1)* %p128, i8* %tmp21, i32 128, i32 128) #0
   %tmp23 = bitcast %struct.S addrspace(1)* %ptru to i8 addrspace(1)*
-  %tmp24 = addrspacecast i8 addrspace(1)* %tmp23 to i8 addrspace(4)*
-  %tmp25 = tail call i32 @__read_pipe_2(%opencl.pipe_t addrspace(1)* %pu, i8 addrspace(4)* %tmp24, i32 400, i32 4) #0
+  %tmp24 = addrspacecast i8 addrspace(1)* %tmp23 to i8*
+  %tmp25 = tail call i32 @__read_pipe_2(%opencl.pipe_t addrspace(1)* %pu, i8* %tmp24, i32 400, i32 4) #0
   ret void
 }
 

@@ -724,15 +724,18 @@ uint32_t ProcessElfCore::GetNumThreadContexts() {
 }
 
 ArchSpec ProcessElfCore::GetArchitecture() {
-  ObjectFileELF *core_file =
-      (ObjectFileELF *)(m_core_module_sp->GetObjectFile());
   ArchSpec arch;
-  core_file->GetArchitecture(arch);
+  m_core_module_sp->GetObjectFile()->GetArchitecture(arch);
 
   ArchSpec target_arch = GetTarget().GetArchitecture();
-  
-  if (target_arch.IsMIPS())
+  arch.MergeFrom(target_arch);
+
+  // On MIPS there is no way to differentiate betwenn 32bit and 64bit core files
+  // and this information can't be merged in from the target arch so we fail
+  // back to unconditionally returning the target arch in this config.
+  if (target_arch.IsMIPS()) {
     return target_arch;
+  }
 
   return arch;
 }

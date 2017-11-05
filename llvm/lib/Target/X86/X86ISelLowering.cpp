@@ -12384,6 +12384,16 @@ static SDValue lowerV2X128VectorShuffle(const SDLoc &DL, MVT VT, SDValue V1,
         return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, LoV, HiV);
       }
     }
+
+    // Try to use SHUF128 if possible.
+    if (Subtarget.hasVLX()) {
+      if (WidenedMask[0] < 2 && WidenedMask[1] >= 2) {
+        unsigned PermMask = ((WidenedMask[0] % 2) << 0) |
+                            ((WidenedMask[1] % 2) << 1);
+      return DAG.getNode(X86ISD::SHUF128, DL, VT, V1, V2,
+                         DAG.getConstant(PermMask, DL, MVT::i8));
+      }
+    }
   }
 
   // Otherwise form a 128-bit permutation. After accounting for undefs,
@@ -24798,9 +24808,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::FMAXC:              return "X86ISD::FMAXC";
   case X86ISD::FMINC:              return "X86ISD::FMINC";
   case X86ISD::FRSQRT:             return "X86ISD::FRSQRT";
-  case X86ISD::FRSQRTS:            return "X86ISD::FRSQRTS";
   case X86ISD::FRCP:               return "X86ISD::FRCP";
-  case X86ISD::FRCPS:              return "X86ISD::FRCPS";
   case X86ISD::EXTRQI:             return "X86ISD::EXTRQI";
   case X86ISD::INSERTQI:           return "X86ISD::INSERTQI";
   case X86ISD::TLSADDR:            return "X86ISD::TLSADDR";
@@ -24978,9 +24986,13 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::SELECT:             return "X86ISD::SELECT";
   case X86ISD::SELECTS:            return "X86ISD::SELECTS";
   case X86ISD::ADDSUB:             return "X86ISD::ADDSUB";
+  case X86ISD::RCP14:              return "X86ISD::RCP14";
+  case X86ISD::RCP14S:             return "X86ISD::RCP14S";
   case X86ISD::RCP28:              return "X86ISD::RCP28";
   case X86ISD::RCP28S:             return "X86ISD::RCP28S";
   case X86ISD::EXP2:               return "X86ISD::EXP2";
+  case X86ISD::RSQRT14:            return "X86ISD::RSQRT14";
+  case X86ISD::RSQRT14S:           return "X86ISD::RSQRT14S";
   case X86ISD::RSQRT28:            return "X86ISD::RSQRT28";
   case X86ISD::RSQRT28S:           return "X86ISD::RSQRT28S";
   case X86ISD::FADD_RND:           return "X86ISD::FADD_RND";

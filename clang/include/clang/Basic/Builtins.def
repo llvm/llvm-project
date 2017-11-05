@@ -1162,6 +1162,10 @@ LIBBUILTIN(remainder, "ddd", "fne", "math.h", ALL_LANGUAGES)
 LIBBUILTIN(remainderf, "fff", "fne", "math.h", ALL_LANGUAGES)
 LIBBUILTIN(remainderl, "LdLdLd", "fne", "math.h", ALL_LANGUAGES)
 
+LIBBUILTIN(remquo, "dddi*", "fn", "math.h", ALL_LANGUAGES)
+LIBBUILTIN(remquof, "fffi*", "fn", "math.h", ALL_LANGUAGES)
+LIBBUILTIN(remquol, "LdLdLdi*", "fn", "math.h", ALL_LANGUAGES)
+
 LIBBUILTIN(rint, "dd", "fnc", "math.h", ALL_LANGUAGES)
 LIBBUILTIN(rintf, "ff", "fnc", "math.h", ALL_LANGUAGES)
 LIBBUILTIN(rintl, "LdLd", "fnc", "math.h", ALL_LANGUAGES)

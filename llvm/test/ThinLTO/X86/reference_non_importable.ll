@@ -22,7 +22,7 @@ target triple = "x86_64-apple-macosx10.11.0"
 
 ; We want foo to be imported in the main module!
 ; RUN: llvm-dis < %t.o.1.3.import.bc  | FileCheck  %s --check-prefix=IMPORT
-; IMPORT: define available_externally i8** @foo()
+; IMPORT: define available_externally dso_local i8** @foo()
 define i8 **@foo() {
 	ret i8 **@b
 }

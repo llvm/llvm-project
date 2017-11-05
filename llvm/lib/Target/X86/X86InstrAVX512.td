@@ -7362,13 +7362,13 @@ multiclass avx512_fp14_s<bits<8> opc, string OpcodeStr, SDNode OpNode,
 }
 }
 
-defm VRCP14SS   : avx512_fp14_s<0x4D, "vrcp14ss", X86frcp14s, f32x_info>,
+defm VRCP14SS   : avx512_fp14_s<0x4D, "vrcp14ss", X86rcp14s, f32x_info>,
                   EVEX_CD8<32, CD8VT1>, T8PD, NotMemoryFoldable;
-defm VRCP14SD   : avx512_fp14_s<0x4D, "vrcp14sd", X86frcp14s, f64x_info>,
+defm VRCP14SD   : avx512_fp14_s<0x4D, "vrcp14sd", X86rcp14s, f64x_info>,
                   VEX_W, EVEX_CD8<64, CD8VT1>, T8PD, NotMemoryFoldable;
-defm VRSQRT14SS   : avx512_fp14_s<0x4F, "vrsqrt14ss", X86frsqrt14s, f32x_info>,
+defm VRSQRT14SS   : avx512_fp14_s<0x4F, "vrsqrt14ss", X86rsqrt14s, f32x_info>,
                   EVEX_CD8<32, CD8VT1>, T8PD, NotMemoryFoldable;
-defm VRSQRT14SD   : avx512_fp14_s<0x4F, "vrsqrt14sd", X86frsqrt14s, f64x_info>,
+defm VRSQRT14SD   : avx512_fp14_s<0x4F, "vrsqrt14sd", X86rsqrt14s, f64x_info>,
                   VEX_W, EVEX_CD8<64, CD8VT1>, T8PD, NotMemoryFoldable;
 
 /// avx512_fp14_p rcp14ps, rcp14pd, rsqrt14ps, rsqrt14pd
@@ -7414,8 +7414,8 @@ multiclass avx512_fp14_p_vl_all<bits<8> opc, string OpcodeStr, SDNode OpNode> {
   }
 }
 
-defm VRSQRT14 : avx512_fp14_p_vl_all<0x4E, "vrsqrt14", X86frsqrt>;
-defm VRCP14 : avx512_fp14_p_vl_all<0x4C, "vrcp14", X86frcp>;
+defm VRSQRT14 : avx512_fp14_p_vl_all<0x4E, "vrsqrt14", X86rsqrt14>;
+defm VRCP14 : avx512_fp14_p_vl_all<0x4C, "vrcp14", X86rcp14>;
 
 /// avx512_fp28_s rcp28ss, rcp28sd, rsqrt28ss, rsqrt28sd
 multiclass avx512_fp28_s<bits<8> opc, string OpcodeStr,X86VectorVTInfo _,

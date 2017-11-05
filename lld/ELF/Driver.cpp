@@ -1106,6 +1106,13 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     for (InputSectionBase *S : F->getSections())
       InputSections.push_back(cast<InputSection>(S));
 
+  // We do not want to emit debug sections if --strip-all
+  // or -strip-debug are given.
+  if (Config->Strip != StripPolicy::None)
+    llvm::erase_if(InputSections, [](InputSectionBase *S) {
+      return S->Name.startswith(".debug") || S->Name.startswith(".zdebug");
+    });
+
   Config->EFlags = Target->calcEFlags();
 
   // This adds a .comment section containing a version string. We have to add it

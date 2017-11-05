@@ -429,6 +429,7 @@ add_subdirectory(include)
 # All targets below may depend on all tablegen'd files.
 get_property(CLANG_TABLEGEN_TARGETS GLOBAL PROPERTY CLANG_TABLEGEN_TARGETS)
 add_custom_target(clang-tablegen-targets DEPENDS ${CLANG_TABLEGEN_TARGETS})
+set_target_properties(clang-tablegen-targets PROPERTIES FOLDER "Misc")
 list(APPEND LLVM_COMMON_DEPENDS clang-tablegen-targets)
 
 # Force target to be built as soon as possible. Clang modules builds depend
