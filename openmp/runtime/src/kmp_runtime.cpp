@@ -1205,7 +1205,7 @@ void __kmp_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
     ompt_task_info_t *parent_task_info;
     parent_task_info = OMPT_CUR_TASK_INFO(this_thr);
 
-    parent_task_info->frame.reenter_runtime_frame = OMPT_GET_FRAME_ADDRESS(1);
+    parent_task_info->frame.enter_frame = OMPT_GET_FRAME_ADDRESS(1);
     if (ompt_enabled.ompt_callback_parallel_begin) {
       int team_size = 1;
 
@@ -1371,8 +1371,7 @@ void __kmp_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
   serial_team->t.ompt_team_info.master_return_address = codeptr;
   if (ompt_enabled.enabled &&
       this_thr->th.ompt_thread_info.state != omp_state_overhead) {
-    OMPT_CUR_TASK_INFO(this_thr)
-        ->frame.exit_runtime_frame = OMPT_GET_FRAME_ADDRESS(1);
+    OMPT_CUR_TASK_INFO(this_thr)->frame.exit_frame = OMPT_GET_FRAME_ADDRESS(1);
 
     ompt_lw_taskteam_t lw_taskteam;
     __ompt_lw_taskteam_init(&lw_taskteam, this_thr, global_tid,
@@ -1391,8 +1390,7 @@ void __kmp_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
 
     /* OMPT state */
     this_thr->th.ompt_thread_info.state = omp_state_work_parallel;
-    OMPT_CUR_TASK_INFO(this_thr)
-        ->frame.exit_runtime_frame = OMPT_GET_FRAME_ADDRESS(1);
+    OMPT_CUR_TASK_INFO(this_thr)->frame.exit_frame = OMPT_GET_FRAME_ADDRESS(1);
   }
 #endif
 }
@@ -1542,8 +1540,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
         if (ompt_enabled.enabled) {
           __ompt_lw_taskteam_init(&lw_taskteam, master_th, gtid,
                                   &ompt_parallel_data, return_address);
-          exit_runtime_p =
-              &(lw_taskteam.ompt_task_info.frame.exit_runtime_frame);
+          exit_runtime_p = &(lw_taskteam.ompt_task_info.frame.exit_frame);
 
           __ompt_lw_taskteam_link(&lw_taskteam, master_th, 0);
           // don't use lw_taskteam after linking. content was swaped
@@ -1577,7 +1574,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
 #if OMPT_SUPPORT
         *exit_runtime_p = NULL;
         if (ompt_enabled.enabled) {
-          OMPT_CUR_TASK_INFO(master_th)->frame.exit_runtime_frame = NULL;
+          OMPT_CUR_TASK_INFO(master_th)->frame.exit_frame = NULL;
           if (ompt_enabled.ompt_callback_implicit_task) {
             ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
                 ompt_scope_end, NULL, implicit_task_data, 1,
@@ -1760,7 +1757,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
             // don't use lw_taskteam after linking. content was swaped
 
             task_info = OMPT_CUR_TASK_INFO(master_th);
-            exit_runtime_p = &(task_info->frame.exit_runtime_frame);
+            exit_runtime_p = &(task_info->frame.exit_frame);
             if (ompt_enabled.ompt_callback_implicit_task) {
               ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
                   ompt_scope_begin, OMPT_CUR_TEAM_DATA(master_th),
@@ -1860,7 +1857,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
             __ompt_lw_taskteam_link(&lw_taskteam, master_th, 0);
             // don't use lw_taskteam after linking. content was swaped
             task_info = OMPT_CUR_TASK_INFO(master_th);
-            exit_runtime_p = &(task_info->frame.exit_runtime_frame);
+            exit_runtime_p = &(task_info->frame.exit_frame);
 
             /* OMPT implicit task begin */
             implicit_task_data = OMPT_CUR_TASK_DATA(master_th);
@@ -1916,7 +1913,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
         __ompt_lw_taskteam_init(&lwt, master_th, gtid, &ompt_parallel_data,
                                 return_address);
 
-        lwt.ompt_task_info.frame.exit_runtime_frame = NULL;
+        lwt.ompt_task_info.frame.exit_frame = NULL;
         __ompt_lw_taskteam_link(&lwt, master_th, 1);
 // don't use lw_taskteam after linking. content was swaped
 #endif
@@ -2288,7 +2285,7 @@ static inline void __kmp_join_ompt(int gtid, kmp_info_t *thread,
         codeptr);
   }
 
-  task_info->frame.reenter_runtime_frame = NULL;
+  task_info->frame.enter_frame = NULL;
   __kmp_join_restore_state(thread, team);
 }
 #endif
@@ -2502,7 +2499,7 @@ void __kmp_join_call(ident_t *loc, int gtid
           __kmp_tid_from_gtid(gtid));
     }
 
-    task_info->frame.exit_runtime_frame = NULL;
+    task_info->frame.exit_frame = NULL;
     task_info->task_data = ompt_data_none;
   }
 #endif
@@ -5678,7 +5675,7 @@ void *__kmp_launch_thread(kmp_info_t *this_thr) {
 #if OMPT_SUPPORT
       if (ompt_enabled.enabled) {
         /* no frame set while outside task */
-        __ompt_get_task_info_object(0)->frame.exit_runtime_frame = NULL;
+        __ompt_get_task_info_object(0)->frame.exit_frame = NULL;
 
         this_thr->th.ompt_thread_info.state = omp_state_overhead;
         this_thr->th.ompt_thread_info.task_data = *OMPT_CUR_TASK_DATA(this_thr);
@@ -6955,8 +6952,8 @@ int __kmp_invoke_task_func(int gtid) {
   int ompt_team_size;
 
   if (ompt_enabled.enabled) {
-    exit_runtime_p = &(team->t.t_implicit_task_taskdata[tid]
-                           .ompt_task_info.frame.exit_runtime_frame);
+    exit_runtime_p = &(
+        team->t.t_implicit_task_taskdata[tid].ompt_task_info.frame.exit_frame);
   } else {
     exit_runtime_p = &dummy;
   }
