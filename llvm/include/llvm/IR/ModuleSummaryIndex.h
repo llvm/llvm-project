@@ -148,11 +148,15 @@ public:
     /// In combined summary, indicate that the global value is live.
     unsigned Live : 1;
 
+    /// Indicates that the linker resolved the symbol to a definition from
+    /// within the same linkage unit.
+    unsigned DSOLocal : 1;
+
     /// Convenience Constructors
     explicit GVFlags(GlobalValue::LinkageTypes Linkage,
-                     bool NotEligibleToImport, bool Live)
+                     bool NotEligibleToImport, bool Live, bool IsLocal)
         : Linkage(Linkage), NotEligibleToImport(NotEligibleToImport),
-          Live(Live) {}
+          Live(Live), DSOLocal(IsLocal) {}
   };
 
 private:
@@ -228,6 +232,10 @@ public:
   bool notEligibleToImport() const { return Flags.NotEligibleToImport; }
 
   void setLive(bool Live) { Flags.Live = Live; }
+
+  void setDSOLocal(bool Local) { Flags.DSOLocal = Local; }
+
+  bool isDSOLocal() const { return Flags.DSOLocal; }
 
   /// Flag that this global value cannot be imported.
   void setNotEligibleToImport() { Flags.NotEligibleToImport = true; }

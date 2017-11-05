@@ -254,7 +254,9 @@ namespace llvm {
       /// Note that these typically require refinement
       /// in order to obtain suitable precision.
       FRSQRT, FRCP,
-      FRSQRTS, FRCPS,
+
+      // AVX-512 reciprocal approximations with a little more precision.
+      RSQRT14, RSQRT14S, RCP14, RCP14S,
 
       // Thread Local Storage.
       TLSADDR,

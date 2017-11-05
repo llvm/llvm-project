@@ -7,6 +7,7 @@
 ; SUMMARY-NEXT:    - Linkage:             0
 ; SUMMARY-NEXT:      NotEligibleToImport: false
 ; SUMMARY-NEXT:      Live:                true
+; SUMMARY-NEXT:      Local:               false
 ; SUMMARY-NEXT:      TypeTestAssumeVCalls:
 ; SUMMARY-NEXT:        - GUID:            123
 ; SUMMARY-NEXT:          Offset:          0
