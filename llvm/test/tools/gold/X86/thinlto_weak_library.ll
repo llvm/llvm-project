@@ -24,7 +24,7 @@
 ; copy of f() (and didn't simply convert to available_externally, which
 ; would incorrectly enable inlining).
 ; RUN: llvm-dis %t2.o.1.promote.bc -o - | FileCheck %s
-; CHECK: declare i32 @f()
+; CHECK: declare dso_local i32 @f()
 
 ; ModuleID = 'thinlto_weak_library.c'
 source_filename = "thinlto_weak_library.c"

@@ -2531,8 +2531,8 @@ define <4 x i64> @test_perm2i128(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) {
 ;
 ; SKX-LABEL: test_perm2i128:
 ; SKX:       # BB#0:
-; SKX-NEXT:    vshufi64x2 {{.*#+}} ymm1 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
-; SKX-NEXT:    vshufi64x2 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [10:1.00]
+; SKX-NEXT:    vperm2i128 {{.*#+}} ymm1 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
+; SKX-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [10:1.00]
 ; SKX-NEXT:    vpaddq %ymm0, %ymm1, %ymm0 # sched: [1:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;

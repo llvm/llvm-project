@@ -478,7 +478,7 @@ define <4 x float> @v4f32_one_step2(<4 x float> %x) #1 {
 ;
 ; SKX-LABEL: v4f32_one_step2:
 ; SKX:       # BB#0:
-; SKX-NEXT:    vrcp14ps %xmm0, %xmm1 # sched: [4:1.00]
+; SKX-NEXT:    vrcpps %xmm0, %xmm1 # sched: [4:1.00]
 ; SKX-NEXT:    vfnmadd213ps {{.*}}(%rip){1to4}, %xmm1, %xmm0 # sched: [10:0.50]
 ; SKX-NEXT:    vfmadd132ps %xmm1, %xmm1, %xmm0 # sched: [4:0.33]
 ; SKX-NEXT:    vmulps {{.*}}(%rip), %xmm0, %xmm0 # sched: [10:0.50]
@@ -580,7 +580,7 @@ define <4 x float> @v4f32_one_step_2_divs(<4 x float> %x) #1 {
 ;
 ; SKX-LABEL: v4f32_one_step_2_divs:
 ; SKX:       # BB#0:
-; SKX-NEXT:    vrcp14ps %xmm0, %xmm1 # sched: [4:1.00]
+; SKX-NEXT:    vrcpps %xmm0, %xmm1 # sched: [4:1.00]
 ; SKX-NEXT:    vfnmadd213ps {{.*}}(%rip){1to4}, %xmm1, %xmm0 # sched: [10:0.50]
 ; SKX-NEXT:    vfmadd132ps %xmm1, %xmm1, %xmm0 # sched: [4:0.33]
 ; SKX-NEXT:    vmulps {{.*}}(%rip), %xmm0, %xmm1 # sched: [10:0.50]
@@ -708,7 +708,7 @@ define <4 x float> @v4f32_two_step2(<4 x float> %x) #2 {
 ;
 ; SKX-LABEL: v4f32_two_step2:
 ; SKX:       # BB#0:
-; SKX-NEXT:    vrcp14ps %xmm0, %xmm1 # sched: [4:1.00]
+; SKX-NEXT:    vrcpps %xmm0, %xmm1 # sched: [4:1.00]
 ; SKX-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1,1,1,1] sched: [6:0.50]
 ; SKX-NEXT:    vmovaps %xmm1, %xmm3 # sched: [1:1.00]
 ; SKX-NEXT:    vfnmadd213ps %xmm2, %xmm0, %xmm3 # sched: [4:0.33]
@@ -814,7 +814,7 @@ define <8 x float> @v8f32_one_step2(<8 x float> %x) #1 {
 ;
 ; SKX-LABEL: v8f32_one_step2:
 ; SKX:       # BB#0:
-; SKX-NEXT:    vrcp14ps %ymm0, %ymm1 # sched: [4:1.00]
+; SKX-NEXT:    vrcpps %ymm0, %ymm1 # sched: [4:1.00]
 ; SKX-NEXT:    vfnmadd213ps {{.*}}(%rip){1to8}, %ymm1, %ymm0 # sched: [11:0.50]
 ; SKX-NEXT:    vfmadd132ps %ymm1, %ymm1, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    vmulps {{.*}}(%rip), %ymm0, %ymm0 # sched: [11:0.50]
@@ -925,7 +925,7 @@ define <8 x float> @v8f32_one_step_2_divs(<8 x float> %x) #1 {
 ;
 ; SKX-LABEL: v8f32_one_step_2_divs:
 ; SKX:       # BB#0:
-; SKX-NEXT:    vrcp14ps %ymm0, %ymm1 # sched: [4:1.00]
+; SKX-NEXT:    vrcpps %ymm0, %ymm1 # sched: [4:1.00]
 ; SKX-NEXT:    vfnmadd213ps {{.*}}(%rip){1to8}, %ymm1, %ymm0 # sched: [11:0.50]
 ; SKX-NEXT:    vfmadd132ps %ymm1, %ymm1, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    vmulps {{.*}}(%rip), %ymm0, %ymm1 # sched: [11:0.50]
@@ -1067,7 +1067,7 @@ define <8 x float> @v8f32_two_step2(<8 x float> %x) #2 {
 ;
 ; SKX-LABEL: v8f32_two_step2:
 ; SKX:       # BB#0:
-; SKX-NEXT:    vrcp14ps %ymm0, %ymm1 # sched: [4:1.00]
+; SKX-NEXT:    vrcpps %ymm0, %ymm1 # sched: [4:1.00]
 ; SKX-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1,1,1,1,1,1,1,1] sched: [7:0.50]
 ; SKX-NEXT:    vmovaps %ymm1, %ymm3 # sched: [1:1.00]
 ; SKX-NEXT:    vfnmadd213ps %ymm2, %ymm0, %ymm3 # sched: [4:0.33]
@@ -1124,7 +1124,7 @@ define <8 x float> @v8f32_no_step(<8 x float> %x) #3 {
 ;
 ; SKX-LABEL: v8f32_no_step:
 ; SKX:       # BB#0:
-; SKX-NEXT:    vrcp14ps %ymm0, %ymm0 # sched: [4:1.00]
+; SKX-NEXT:    vrcpps %ymm0, %ymm0 # sched: [4:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %div = fdiv fast <8 x float> <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>, %x
   ret <8 x float> %div
@@ -1183,7 +1183,7 @@ define <8 x float> @v8f32_no_step2(<8 x float> %x) #3 {
 ;
 ; SKX-LABEL: v8f32_no_step2:
 ; SKX:       # BB#0:
-; SKX-NEXT:    vrcp14ps %ymm0, %ymm0 # sched: [4:1.00]
+; SKX-NEXT:    vrcpps %ymm0, %ymm0 # sched: [4:1.00]
 ; SKX-NEXT:    vmulps {{.*}}(%rip), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %div = fdiv fast <8 x float> <float 1.0, float 2.0, float 3.0, float 4.0, float 5.0, float 6.0, float 7.0, float 8.0>, %x

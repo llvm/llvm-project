@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AMDGPU.h"
 #include "AMDGPULibFunc.h"
 #include <llvm/ADT/SmallString.h>
 #include <llvm/ADT/SmallVector.h>
@@ -458,13 +459,16 @@ AMDGPULibFunc::Param ParamIterator::getNextParam() {
       P.ArgType = AMDGPULibFunc::I32;
       break;
 
-    case E_CONSTPTR_SWAPGL:
-      switch (P.PtrKind & AMDGPULibFunc::ADDR_SPACE) {
-      case AMDGPULibFunc::GLOBAL: P.PtrKind = AMDGPULibFunc::LOCAL; break;
-      case AMDGPULibFunc::LOCAL:  P.PtrKind = AMDGPULibFunc::GLOBAL; break;
+    case E_CONSTPTR_SWAPGL: {
+      unsigned AS = AMDGPULibFunc::getAddrSpaceFromEPtrKind(P.PtrKind);
+      switch (AS) {
+      case AMDGPUAS::GLOBAL_ADDRESS: AS = AMDGPUAS::LOCAL_ADDRESS; break;
+      case AMDGPUAS::LOCAL_ADDRESS:  AS = AMDGPUAS::GLOBAL_ADDRESS; break;
       }
+      P.PtrKind = AMDGPULibFunc::getEPtrKindFromAddrSpace(AS);
       P.PtrKind |= AMDGPULibFunc::CONST;
       break;
+    }
 
     default: llvm_unreachable("Unhandeled param rule");
     }
@@ -590,19 +594,14 @@ bool ItaniumParamParser::parseItaniumParam(StringRef& param,
   if (eatTerm(param, 'P')) {
     if (eatTerm(param, 'K')) res.PtrKind |= AMDGPULibFunc::CONST;
     if (eatTerm(param, 'V')) res.PtrKind |= AMDGPULibFunc::VOLATILE;
+    unsigned AS;
     if (!eatTerm(param, "U3AS")) {
-      res.PtrKind |= AMDGPULibFunc::PRIVATE;
+      AS = 0;
     } else {
-      switch(param.front()) {
-      case '1': res.PtrKind |= AMDGPULibFunc::GLOBAL;  break;
-      case '2': res.PtrKind |= AMDGPULibFunc::READONLY;break;
-      case '3': res.PtrKind |= AMDGPULibFunc::LOCAL;   break;
-      case '4': res.PtrKind |= AMDGPULibFunc::GENERIC; break;
-      case '5': res.PtrKind |= AMDGPULibFunc::OTHER;   break;
-      default: return false;
-      }
+      AS = param.front() - '0';
       drop_front(param, 1);
     }
+    res.PtrKind |= AMDGPULibFuncBase::getEPtrKindFromAddrSpace(AS);
   } else {
     res.PtrKind = AMDGPULibFunc::BYVALUE;
   }
@@ -837,7 +836,9 @@ public:
       os << 'P';
       if (p.PtrKind & AMDGPULibFunc::CONST) os << 'K';
       if (p.PtrKind & AMDGPULibFunc::VOLATILE) os << 'V';
-      int AS = UseAddrSpace ? (p.PtrKind & AMDGPULibFunc::ADDR_SPACE)-1 : 0;
+      unsigned AS = UseAddrSpace
+                        ? AMDGPULibFuncBase::getAddrSpaceFromEPtrKind(p.PtrKind)
+                        : 0;
       if (AS != 0) os << "U3AS" << AS;
       Ptr = p;
       p.PtrKind = 0;

@@ -18,8 +18,8 @@
 ; RUN:   -r %t2.bc,_boo,pl \
 ; RUN:   -r %t2.bc,_dead_func,pl \
 ; RUN:   -r %t2.bc,_another_dead_func,pl
-; RUN: llvm-dis < %t.out.0.3.import.bc | FileCheck %s
-; RUN: llvm-dis < %t.out.1.3.import.bc | FileCheck %s --check-prefix=CHECK2
+; RUN: llvm-dis < %t.out.0.3.import.bc | FileCheck %s --check-prefix=LTO2
+; RUN: llvm-dis < %t.out.1.3.import.bc | FileCheck %s --check-prefix=LTO2-CHECK2
 ; RUN: llvm-nm %t.out.1 | FileCheck %s --check-prefix=CHECK2-NM
 
 ; RUN: llvm-bcanalyzer -dump %t.out.index.bc | FileCheck %s --check-prefix=COMBINED
@@ -27,14 +27,14 @@
 ; COMBINED-DAG: <COMBINED {{.*}} op2=55
 ; Live, Internal
 ; COMBINED-DAG: <COMBINED {{.*}} op2=39
-; Live, External
-; COMBINED-DAG: <COMBINED {{.*}} op2=32
-; COMBINED-DAG: <COMBINED {{.*}} op2=32
-; COMBINED-DAG: <COMBINED {{.*}} op2=32
-; (Dead)
-; COMBINED-DAG: <COMBINED {{.*}} op2=0
-; COMBINED-DAG: <COMBINED {{.*}} op2=0
-; COMBINED-DAG: <COMBINED {{.*}} op2=0
+; Live, Local, External
+; COMBINED-DAG: <COMBINED {{.*}} op2=96
+; COMBINED-DAG: <COMBINED {{.*}} op2=96
+; COMBINED-DAG: <COMBINED {{.*}} op2=96
+; Local, (Dead)
+; COMBINED-DAG: <COMBINED {{.*}} op2=64
+; COMBINED-DAG: <COMBINED {{.*}} op2=64
+; COMBINED-DAG: <COMBINED {{.*}} op2=64
 
 ; Dead-stripping on the index allows to internalize these,
 ; and limit the import of @baz thanks to early pruning.
@@ -45,10 +45,18 @@
 ; CHECK: define internal void @bar_internal()
 ; CHECK: define internal void @dead_func() {
 ; CHECK-NOT: available_externally {{.*}} @baz()
+; LTO2-NOT: available_externally {{.*}} @baz()
+; LTO2: @llvm.global_ctors =
+; LTO2: define internal void @_GLOBAL__I_a()
+; LTO2: define internal dso_local void @bar() {
+; LTO2: define internal void @bar_internal()
+; LTO2: define internal dso_local void @dead_func() {
+; LTO2-NOT: available_externally {{.*}} @baz()
 
 ; Make sure we didn't internalize @boo, which is reachable via
 ; llvm.global_ctors
 ; CHECK2: define void @boo()
+; LTO2-CHECK2: define dso_local void @boo()
 ; We should have eventually removed @baz since it was internalized and unused
 ; CHECK2-NM-NOT: _baz
 
@@ -80,7 +88,7 @@
 
 ; We can't internalize @dead_func because of the use in the regular LTO
 ; partition.
-; CHECK-NOTDEAD: define void @dead_func()
+; CHECK-NOTDEAD: define dso_local void @dead_func()
 ; We also can't eliminate @baz because it is in the regular LTO partition
 ; and called from @dead_func.
 ; CHECK-NM-NOTDEAD: T _baz
