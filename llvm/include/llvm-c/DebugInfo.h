@@ -151,7 +151,7 @@ LLVMDIBuilderRef LLVMCreateDIBuilderDisallowUnresolved(LLVMModuleRef M);
 LLVMDIBuilderRef LLVMCreateDIBuilder(LLVMModuleRef M);
 
 /**
- * Deallocates the DIBuilder and everything it owns.
+ * Deallocates the \c DIBuilder and everything it owns.
  * @note You must call \c LLVMDIBuilderFinalize before this
  */
 void LLVMDisposeDIBuilder(LLVMDIBuilderRef Builder);
@@ -199,7 +199,7 @@ LLVMMetadataRef LLVMDIBuilderCreateCompileUnit(
 
 /**
  * Create a file descriptor to hold debugging information for a file.
- * \param Builder      The DIBuilder.
+ * \param Builder      The \c DIBuilder.
  * \param Filename     File name.
  * \param FilenameLen  The length of the C string passed to \c Filename.
  * \param Directory    Directory.

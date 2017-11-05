@@ -131,23 +131,8 @@ struct Out {
   static OutputSection *FiniArray;
 };
 
-struct SectionKey {
-  StringRef Name;
-  uint64_t Flags;
-  uint32_t Alignment;
-};
 } // namespace elf
 } // namespace lld
-
-namespace llvm {
-template <> struct DenseMapInfo<lld::elf::SectionKey> {
-  static lld::elf::SectionKey getEmptyKey();
-  static lld::elf::SectionKey getTombstoneKey();
-  static unsigned getHashValue(const lld::elf::SectionKey &Val);
-  static bool isEqual(const lld::elf::SectionKey &LHS,
-                      const lld::elf::SectionKey &RHS);
-};
-} // namespace llvm
 
 namespace lld {
 namespace elf {
@@ -163,7 +148,7 @@ public:
   OutputSection *addInputSec(InputSectionBase *IS, StringRef OutsecName);
 
 private:
-  llvm::SmallDenseMap<SectionKey, OutputSection *> Map;
+  llvm::StringMap<OutputSection *> Map;
 };
 
 uint64_t getHeaderSize();

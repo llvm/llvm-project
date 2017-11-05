@@ -401,15 +401,10 @@ define <4 x float> @test_x86_sse_rcp_ps(<4 x float> %a0) {
 ; SSE-NEXT:    rcpps %xmm0, %xmm0 ## encoding: [0x0f,0x53,0xc0]
 ; SSE-NEXT:    retl ## encoding: [0xc3]
 ;
-; AVX2-LABEL: test_x86_sse_rcp_ps:
-; AVX2:       ## BB#0:
-; AVX2-NEXT:    vrcpps %xmm0, %xmm0 ## encoding: [0xc5,0xf8,0x53,0xc0]
-; AVX2-NEXT:    retl ## encoding: [0xc3]
-;
-; SKX-LABEL: test_x86_sse_rcp_ps:
-; SKX:       ## BB#0:
-; SKX-NEXT:    vrcp14ps %xmm0, %xmm0 ## encoding: [0x62,0xf2,0x7d,0x08,0x4c,0xc0]
-; SKX-NEXT:    retl ## encoding: [0xc3]
+; VCHECK-LABEL: test_x86_sse_rcp_ps:
+; VCHECK:       ## BB#0:
+; VCHECK-NEXT:    vrcpps %xmm0, %xmm0 ## encoding: [0xc5,0xf8,0x53,0xc0]
+; VCHECK-NEXT:    retl ## encoding: [0xc3]
   %res = call <4 x float> @llvm.x86.sse.rcp.ps(<4 x float> %a0) ; <<4 x float>> [#uses=1]
   ret <4 x float> %res
 }
@@ -438,15 +433,10 @@ define <4 x float> @test_x86_sse_rsqrt_ps(<4 x float> %a0) {
 ; SSE-NEXT:    rsqrtps %xmm0, %xmm0 ## encoding: [0x0f,0x52,0xc0]
 ; SSE-NEXT:    retl ## encoding: [0xc3]
 ;
-; AVX2-LABEL: test_x86_sse_rsqrt_ps:
-; AVX2:       ## BB#0:
-; AVX2-NEXT:    vrsqrtps %xmm0, %xmm0 ## encoding: [0xc5,0xf8,0x52,0xc0]
-; AVX2-NEXT:    retl ## encoding: [0xc3]
-;
-; SKX-LABEL: test_x86_sse_rsqrt_ps:
-; SKX:       ## BB#0:
-; SKX-NEXT:    vrsqrt14ps %xmm0, %xmm0 ## encoding: [0x62,0xf2,0x7d,0x08,0x4e,0xc0]
-; SKX-NEXT:    retl ## encoding: [0xc3]
+; VCHECK-LABEL: test_x86_sse_rsqrt_ps:
+; VCHECK:       ## BB#0:
+; VCHECK-NEXT:    vrsqrtps %xmm0, %xmm0 ## encoding: [0xc5,0xf8,0x52,0xc0]
+; VCHECK-NEXT:    retl ## encoding: [0xc3]
   %res = call <4 x float> @llvm.x86.sse.rsqrt.ps(<4 x float> %a0) ; <<4 x float>> [#uses=1]
   ret <4 x float> %res
 }

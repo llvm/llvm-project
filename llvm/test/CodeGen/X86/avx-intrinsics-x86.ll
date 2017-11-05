@@ -581,15 +581,10 @@ declare i32 @llvm.x86.avx.ptestz.256(<4 x i64>, <4 x i64>) nounwind readnone
 
 
 define <8 x float> @test_x86_avx_rcp_ps_256(<8 x float> %a0) {
-; AVX-LABEL: test_x86_avx_rcp_ps_256:
-; AVX:       # BB#0:
-; AVX-NEXT:    vrcpps %ymm0, %ymm0 # encoding: [0xc5,0xfc,0x53,0xc0]
-; AVX-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-;
-; AVX512VL-LABEL: test_x86_avx_rcp_ps_256:
-; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    vrcp14ps %ymm0, %ymm0 # encoding: [0x62,0xf2,0x7d,0x28,0x4c,0xc0]
-; AVX512VL-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+; CHECK-LABEL: test_x86_avx_rcp_ps_256:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    vrcpps %ymm0, %ymm0 # encoding: [0xc5,0xfc,0x53,0xc0]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %res = call <8 x float> @llvm.x86.avx.rcp.ps.256(<8 x float> %a0) ; <<8 x float>> [#uses=1]
   ret <8 x float> %res
 }
@@ -619,15 +614,10 @@ declare <8 x float> @llvm.x86.avx.round.ps.256(<8 x float>, i32) nounwind readno
 
 
 define <8 x float> @test_x86_avx_rsqrt_ps_256(<8 x float> %a0) {
-; AVX-LABEL: test_x86_avx_rsqrt_ps_256:
-; AVX:       # BB#0:
-; AVX-NEXT:    vrsqrtps %ymm0, %ymm0 # encoding: [0xc5,0xfc,0x52,0xc0]
-; AVX-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-;
-; AVX512VL-LABEL: test_x86_avx_rsqrt_ps_256:
-; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    vrsqrt14ps %ymm0, %ymm0 # encoding: [0x62,0xf2,0x7d,0x28,0x4e,0xc0]
-; AVX512VL-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+; CHECK-LABEL: test_x86_avx_rsqrt_ps_256:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    vrsqrtps %ymm0, %ymm0 # encoding: [0xc5,0xfc,0x52,0xc0]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %res = call <8 x float> @llvm.x86.avx.rsqrt.ps.256(<8 x float> %a0) ; <<8 x float>> [#uses=1]
   ret <8 x float> %res
 }
