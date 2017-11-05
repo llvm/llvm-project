@@ -35,9 +35,8 @@ class SymbolTable {
 public:
   template <class ELFT> void addFile(InputFile *File);
   template <class ELFT> void addCombinedLTOObject();
-  template <class ELFT> void addSymbolAlias(StringRef Alias, StringRef Name);
   template <class ELFT> void addSymbolWrap(StringRef Name);
-  void applySymbolRenames();
+  void applySymbolWrap();
 
   ArrayRef<Symbol *> getSymbols() const { return SymVector; }
 
@@ -130,17 +129,16 @@ private:
   // directive in version scripts.
   llvm::Optional<llvm::StringMap<std::vector<Symbol *>>> DemangledSyms;
 
-  struct SymbolRenaming {
-    Symbol *Dst;
-    Symbol *Src;
-    uint8_t Binding;
+  struct WrappedSymbol {
+    Symbol *Sym;
+    Symbol *Real;
+    Symbol *Wrap;
+    uint8_t SymBinding;
+    uint8_t RealBinding;
   };
 
-  // For -defsym or -wrap.
-  std::vector<SymbolRenaming> Defsyms;
-
   // For -wrap.
-  std::vector<std::pair<Symbol *, Symbol *>> WrapSymbols;
+  std::vector<WrappedSymbol> WrappedSymbols;
 
   // For LTO.
   std::unique_ptr<BitcodeCompiler> LTO;

@@ -155,66 +155,51 @@ template <class ELFT> void SymbolTable::addSymbolWrap(StringRef Name) {
     return;
   Symbol *Real = addUndefined<ELFT>(Saver.save("__real_" + Name));
   Symbol *Wrap = addUndefined<ELFT>(Saver.save("__wrap_" + Name));
+  WrappedSymbols.push_back({Sym, Real, Wrap, Sym->Binding, Real->Binding});
 
-  defsym(Real, Sym);
-  defsym(Sym, Wrap);
+  // We want to tell LTO not to inline symbols to be overwritten
+  // because LTO doesn't know the final symbol contents after renaming.
+  Real->CanInline = false;
+  Sym->CanInline = false;
 
-  WrapSymbols.push_back({Wrap, Real});
+  // Tell LTO not to eliminate these symbols.
+  Sym->IsUsedInRegularObj = true;
+  Wrap->IsUsedInRegularObj = true;
 }
 
-// Creates alias for symbol. Used to implement --defsym=ALIAS=SYM.
-template <class ELFT>
-void SymbolTable::addSymbolAlias(StringRef Alias, StringRef Name) {
-  Symbol *B = find(Name);
-  if (!B) {
-    error("-defsym: undefined symbol: " + Name);
-    return;
-  }
-
-  defsym(addUndefined<ELFT>(Alias), B);
-}
-
-// Apply symbol renames created by -wrap and -defsym. The renames are created
-// before LTO in addSymbolWrap() and addSymbolAlias() to have a chance to inform
-// LTO (if LTO is running) not to include these symbols in IPO. Now that the
+// Apply symbol renames created by -wrap. The renames are created
+// before LTO in addSymbolWrap() to have a chance to inform LTO (if
+// LTO is running) not to include these symbols in IPO. Now that the
 // symbols are finalized, we can perform the replacement.
-void SymbolTable::applySymbolRenames() {
+void SymbolTable::applySymbolWrap() {
   // This function rotates 3 symbols:
   //
-  // __real_foo becomes foo
-  // foo        becomes __wrap_foo
-  // __wrap_foo becomes __real_foo
+  // __real_sym becomes sym
+  // sym        becomes __wrap_sym
+  // __wrap_sym becomes __real_sym
   //
   // The last part is special in that we don't want to change what references to
-  // __wrap_foo point to, we just want have __real_foo in the symbol table.
+  // __wrap_sym point to, we just want have __real_sym in the symbol table.
 
-  // First make a copy of __real_foo
-  std::vector<SymbolUnion> Origs;
-  for (const auto &P : WrapSymbols)
-    Origs.emplace_back(*(SymbolUnion *)P.second);
+  for (WrappedSymbol &W : WrappedSymbols) {
+    // First, make a copy of __real_sym.
+    Symbol *Real = nullptr;
+    if (W.Real->isInCurrentOutput()) {
+      Real = (Symbol *)make<SymbolUnion>();
+      memcpy(Real, W.Real, sizeof(SymbolUnion));
+    }
 
-  // Replace __real_foo with foo and foo with __wrap_foo
-  for (SymbolRenaming &S : Defsyms) {
-    S.Dst->copyFrom(S.Src);
-    S.Dst->File = S.Src->File;
-    S.Dst->Binding = S.Binding;
-  }
+    // Replace __real_sym with sym and sym with __wrap_sym.
+    W.Real->copyFrom(W.Sym);
+    W.Real->Binding = W.RealBinding;
+    W.Sym->copyFrom(W.Wrap);
+    W.Sym->Binding = W.SymBinding;
 
-  // Hide one of the copies of __wrap_foo, create a new symbol and copy
-  // __real_foo into it.
-  for (unsigned I = 0, N = WrapSymbols.size(); I < N; ++I) {
-    // We now have two copies of __wrap_foo. Drop one.
-    Symbol *Wrap = WrapSymbols[I].first;
-    Wrap->IsUsedInRegularObj = false;
-
-    auto *Real = (Symbol *)&Origs[I];
-    // If __real_foo was undefined, we don't want it in the symbol table.
-    if (!Real->isInCurrentOutput())
-      continue;
-
-    auto *NewSym = (Symbol *)make<SymbolUnion>();
-    memcpy(NewSym, Real, sizeof(SymbolUnion));
-    SymVector.push_back(NewSym);
+    if (Real) {
+      // We now have two copies of __wrap_sym. Drop one.
+      W.Wrap->IsUsedInRegularObj = false;
+      SymVector.push_back(Real);
+    }
   }
 }
 
@@ -541,17 +526,6 @@ Symbol *SymbolTable::find(StringRef Name) {
   return SymVector[V.Idx];
 }
 
-void SymbolTable::defsym(Symbol *Dst, Symbol *Src) {
-  // We want to tell LTO not to inline Dst symbol because LTO doesn't
-  // know the final symbol contents after renaming.
-  Dst->CanInline = false;
-
-  // Tell LTO not to eliminate this symbol.
-  Src->IsUsedInRegularObj = true;
-
-  Defsyms.push_back({Dst, Src, Dst->Binding});
-}
-
 template <class ELFT>
 Symbol *SymbolTable::addLazyArchive(StringRef Name, ArchiveFile *F,
                                     const object::Archive::Symbol Sym) {
@@ -815,11 +789,6 @@ template Symbol *SymbolTable::addUndefined<ELF64LE>(StringRef, bool, uint8_t,
 template Symbol *SymbolTable::addUndefined<ELF64BE>(StringRef, bool, uint8_t,
                                                     uint8_t, uint8_t, bool,
                                                     InputFile *);
-
-template void SymbolTable::addSymbolAlias<ELF32LE>(StringRef, StringRef);
-template void SymbolTable::addSymbolAlias<ELF32BE>(StringRef, StringRef);
-template void SymbolTable::addSymbolAlias<ELF64LE>(StringRef, StringRef);
-template void SymbolTable::addSymbolAlias<ELF64BE>(StringRef, StringRef);
 
 template void SymbolTable::addCombinedLTOObject<ELF32LE>();
 template void SymbolTable::addCombinedLTOObject<ELF32BE>();
