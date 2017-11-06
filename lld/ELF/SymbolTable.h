@@ -35,16 +35,15 @@ class SymbolTable {
 public:
   template <class ELFT> void addFile(InputFile *File);
   template <class ELFT> void addCombinedLTOObject();
-  template <class ELFT> void addSymbolAlias(StringRef Alias, StringRef Name);
   template <class ELFT> void addSymbolWrap(StringRef Name);
-  void applySymbolRenames();
+  void applySymbolWrap();
 
   ArrayRef<Symbol *> getSymbols() const { return SymVector; }
 
   template <class ELFT>
-  DefinedRegular *addAbsolute(StringRef Name,
-                              uint8_t Visibility = llvm::ELF::STV_HIDDEN,
-                              uint8_t Binding = llvm::ELF::STB_GLOBAL);
+  Defined *addAbsolute(StringRef Name,
+                       uint8_t Visibility = llvm::ELF::STV_HIDDEN,
+                       uint8_t Binding = llvm::ELF::STB_GLOBAL);
 
   template <class ELFT> Symbol *addUndefined(StringRef Name);
   template <class ELFT>
@@ -100,12 +99,6 @@ private:
                           StringRef VersionName);
   void assignWildcardVersion(SymbolVersion Ver, uint16_t VersionId);
 
-  struct SymIndex {
-    SymIndex(int Idx, bool Traced) : Idx(Idx), Traced(Traced) {}
-    int Idx : 31;
-    unsigned Traced : 1;
-  };
-
   // The order the global symbols are in is not defined. We can use an arbitrary
   // order, but it has to be reproducible. That is true even when cross linking.
   // The default hashing of StringRef produces different results on 32 and 64
@@ -113,7 +106,7 @@ private:
   // but a bit inefficient.
   // FIXME: Experiment with passing in a custom hashing or sorting the symbols
   // once symbol resolution is finished.
-  llvm::DenseMap<llvm::CachedHashStringRef, SymIndex> Symtab;
+  llvm::DenseMap<llvm::CachedHashStringRef, int> Symtab;
   std::vector<Symbol *> SymVector;
 
   // Comdat groups define "link once" sections. If two comdat groups have the
@@ -130,17 +123,16 @@ private:
   // directive in version scripts.
   llvm::Optional<llvm::StringMap<std::vector<Symbol *>>> DemangledSyms;
 
-  struct SymbolRenaming {
-    Symbol *Dst;
-    Symbol *Src;
-    uint8_t Binding;
+  struct WrappedSymbol {
+    Symbol *Sym;
+    Symbol *Real;
+    Symbol *Wrap;
+    uint8_t SymBinding;
+    uint8_t RealBinding;
   };
 
-  // For -defsym or -wrap.
-  std::vector<SymbolRenaming> Defsyms;
-
   // For -wrap.
-  std::vector<std::pair<Symbol *, Symbol *>> WrapSymbols;
+  std::vector<WrappedSymbol> WrappedSymbols;
 
   // For LTO.
   std::unique_ptr<BitcodeCompiler> LTO;

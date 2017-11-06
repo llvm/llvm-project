@@ -30,15 +30,6 @@ VERSION {
         # icc drops weak attribute at linking step without the following line:
         Annotate*;           # TSAN annotation
 
-        #
-        # OMPT state placeholders
-        #
-        ompt_idle;
-        ompt_overhead;
-        ompt_barrier_wait;
-        ompt_task_wait;
-        ompt_mutex_wait;
-
         ompc_*;    # omp.h renames some standard functions to ompc_*.
         kmp_*;     # Intel extensions.
         kmpc_*;    # Intel extensions.

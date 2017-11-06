@@ -63,29 +63,6 @@ uint64_t SyntheticSection::getVA() const {
   return 0;
 }
 
-// Create a .bss section for each common symbol and replace the common symbol
-// with a DefinedRegular symbol.
-template <class ELFT> void elf::createCommonSections() {
-  for (Symbol *S : Symtab->getSymbols()) {
-    auto *Sym = dyn_cast<DefinedCommon>(S);
-
-    if (!Sym)
-      continue;
-
-    // Create a synthetic section for the common data.
-    auto *Section = make<BssSection>("COMMON", Sym->Size, Sym->Alignment);
-    Section->File = Sym->getFile();
-    Section->Live = !Config->GcSections;
-    InputSections.push_back(Section);
-
-    // Replace all DefinedCommon symbols with DefinedRegular symbols so that we
-    // don't have to care about DefinedCommon symbols beyond this point.
-    replaceSymbol<DefinedRegular>(
-        S, Sym->getFile(), Sym->getName(), static_cast<bool>(Sym->isLocal()),
-        Sym->StOther, Sym->Type, 0, Sym->getSize(), Section);
-  }
-}
-
 // Returns an LLD version string.
 static ArrayRef<uint8_t> getVersion() {
   // Check LLD_VERSION first for ease of testing.
@@ -298,8 +275,8 @@ InputSection *elf::createInterpSection() {
 
 Symbol *elf::addSyntheticLocal(StringRef Name, uint8_t Type, uint64_t Value,
                                uint64_t Size, InputSectionBase *Section) {
-  auto *S = make<DefinedRegular>(Name, /*IsLocal*/ true, STV_DEFAULT, Type,
-                                 Value, Size, Section);
+  auto *S = make<Defined>(Name, /*IsLocal*/ true, STV_DEFAULT, Type, Value,
+                          Size, Section);
   if (InX::SymTab)
     InX::SymTab->addSymbol(S);
   return S;
@@ -367,6 +344,7 @@ void BuildIdSection::computeHash(
 
 BssSection::BssSection(StringRef Name, uint64_t Size, uint32_t Alignment)
     : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_NOBITS, Alignment, Name) {
+  this->Bss = true;
   if (OutputSection *Sec = getParent())
     Sec->Alignment = std::max(Sec->Alignment, Alignment);
   this->Size = Size;
@@ -450,7 +428,7 @@ bool EhFrameSection::isFdeLive(EhSectionPiece &Fde, ArrayRef<RelTy> Rels) {
   Symbol &B = Sec->template getFile<ELFT>()->getRelocTargetSym(Rel);
 
   // FDEs for garbage-collected or merged-by-ICF sections are dead.
-  if (auto *D = dyn_cast<DefinedRegular>(&B))
+  if (auto *D = dyn_cast<Defined>(&B))
     if (auto *Sec = cast_or_null<InputSectionBase>(D->Section))
       return Sec->Live && (Sec == Sec->Repl);
   return false;
@@ -1124,10 +1102,10 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
   }
 
   if (Symbol *B = Symtab->find(Config->Init))
-    if (B->isInCurrentOutput())
+    if (B->isDefined())
       add({DT_INIT, B});
   if (Symbol *B = Symtab->find(Config->Fini))
-    if (B->isInCurrentOutput())
+    if (B->isDefined())
       add({DT_FINI, B});
 
   bool HasVerNeed = In<ELFT>::VerNeed->getNeedNum() != 0;
@@ -1596,12 +1574,16 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
     ESym->st_name = Ent.StrTabOffset;
 
     // Set a section index.
-    if (const OutputSection *OutSec = Sym->getOutputSection())
-      ESym->st_shndx = OutSec->SectionIndex;
-    else if (isa<DefinedRegular>(Sym))
-      ESym->st_shndx = SHN_ABS;
-    else if (isa<DefinedCommon>(Sym))
+    BssSection *CommonSec = nullptr;
+    if (!Config->DefineCommon)
+      if (auto *D = dyn_cast<Defined>(Sym))
+        CommonSec = dyn_cast_or_null<BssSection>(D->Section);
+    if (CommonSec)
       ESym->st_shndx = SHN_COMMON;
+    else if (const OutputSection *OutSec = Sym->getOutputSection())
+      ESym->st_shndx = OutSec->SectionIndex;
+    else if (isa<Defined>(Sym))
+      ESym->st_shndx = SHN_ABS;
     else
       ESym->st_shndx = SHN_UNDEF;
 
@@ -1618,8 +1600,8 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
     // st_value is usually an address of a symbol, but that has a
     // special meaining for uninstantiated common symbols (this can
     // occur if -r is given).
-    if (!Config->DefineCommon && isa<DefinedCommon>(Sym))
-      ESym->st_value = cast<DefinedCommon>(Sym)->Alignment;
+    if (CommonSec)
+      ESym->st_value = CommonSec->Alignment;
     else
       ESym->st_value = Sym->getVA();
 
@@ -1639,7 +1621,7 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
         ESym->st_other |= STO_MIPS_PLT;
 
       if (Config->Relocatable)
-        if (auto *D = dyn_cast<DefinedRegular>(Sym))
+        if (auto *D = dyn_cast<Defined>(Sym))
           if (D->isMipsPIC<ELFT>())
             ESym->st_other |= STO_MIPS_PIC;
       ++ESym;
@@ -1792,7 +1774,7 @@ void GnuHashTableSection::addSymbols(std::vector<SymbolTableEntry> &V) {
         // linker has to look them up, so they have to be in the hash table.
         if (auto *SS = dyn_cast<SharedSymbol>(S.Sym))
           return SS->CopyRelSec == nullptr && !SS->NeedsPltAddr;
-        return !S.Sym->isInCurrentOutput();
+        return !S.Sym->isDefined();
       });
   if (Mid == V.end())
     return;
@@ -2641,11 +2623,6 @@ template void PltSection::addEntry<ELF32LE>(Symbol &Sym);
 template void PltSection::addEntry<ELF32BE>(Symbol &Sym);
 template void PltSection::addEntry<ELF64LE>(Symbol &Sym);
 template void PltSection::addEntry<ELF64BE>(Symbol &Sym);
-
-template void elf::createCommonSections<ELF32LE>();
-template void elf::createCommonSections<ELF32BE>();
-template void elf::createCommonSections<ELF64LE>();
-template void elf::createCommonSections<ELF64BE>();
 
 template MergeInputSection *elf::createCommentSection<ELF32LE>();
 template MergeInputSection *elf::createCommentSection<ELF32BE>();

@@ -142,8 +142,6 @@ void OutputSection::addSection(InputSection *IS) {
   }
 }
 
-OutputSectionFactory::OutputSectionFactory() {}
-
 void elf::sortByOrder(MutableArrayRef<InputSection *> In,
                       std::function<int(InputSectionBase *S)> Order) {
   typedef std::pair<int, InputSection *> Pair;
@@ -157,105 +155,6 @@ void elf::sortByOrder(MutableArrayRef<InputSection *> In,
   for (size_t I = 0; I < V.size(); ++I)
     In[I] = V[I].second;
 }
-
-static OutputSection *createSection(InputSectionBase *IS, StringRef OutsecName) {
-  OutputSection *Sec = Script->createOutputSection(OutsecName, "<internal>");
-  Sec->addSection(cast<InputSection>(IS));
-  return Sec;
-}
-
-OutputSection *OutputSectionFactory::addInputSec(InputSectionBase *IS,
-                                                 StringRef OutsecName) {
-
-  // Sections with SHT_GROUP or SHF_GROUP attributes reach here only when the -r
-  // option is given. A section with SHT_GROUP defines a "section group", and
-  // its members have SHF_GROUP attribute. Usually these flags have already been
-  // stripped by InputFiles.cpp as section groups are processed and uniquified.
-  // However, for the -r option, we want to pass through all section groups
-  // as-is because adding/removing members or merging them with other groups
-  // change their semantics.
-  if (IS->Type == SHT_GROUP || (IS->Flags & SHF_GROUP))
-    return createSection(IS, OutsecName);
-
-  // Imagine .zed : { *(.foo) *(.bar) } script. Both foo and bar may have
-  // relocation sections .rela.foo and .rela.bar for example. Most tools do
-  // not allow multiple REL[A] sections for output section. Hence we
-  // should combine these relocation sections into single output.
-  // We skip synthetic sections because it can be .rela.dyn/.rela.plt or any
-  // other REL[A] sections created by linker itself.
-  if (!isa<SyntheticSection>(IS) &&
-      (IS->Type == SHT_REL || IS->Type == SHT_RELA)) {
-    auto *Sec = cast<InputSection>(IS);
-    OutputSection *Out = Sec->getRelocatedSection()->getOutputSection();
-
-    if (Out->RelocationSection) {
-      Out->RelocationSection->addSection(Sec);
-      return nullptr;
-    }
-
-    Out->RelocationSection = createSection(IS, OutsecName);
-    return Out->RelocationSection;
-  }
-
-  // When control reaches here, mergeable sections have already been
-  // merged except the -r case. If that's the case, we do not combine them
-  // and let final link to handle this optimization.
-  if (Config->Relocatable && (IS->Flags & SHF_MERGE))
-    return createSection(IS, OutsecName);
-
-  //  The ELF spec just says
-  // ----------------------------------------------------------------
-  // In the first phase, input sections that match in name, type and
-  // attribute flags should be concatenated into single sections.
-  // ----------------------------------------------------------------
-  //
-  // However, it is clear that at least some flags have to be ignored for
-  // section merging. At the very least SHF_GROUP and SHF_COMPRESSED have to be
-  // ignored. We should not have two output .text sections just because one was
-  // in a group and another was not for example.
-  //
-  // It also seems that that wording was a late addition and didn't get the
-  // necessary scrutiny.
-  //
-  // Merging sections with different flags is expected by some users. One
-  // reason is that if one file has
-  //
-  // int *const bar __attribute__((section(".foo"))) = (int *)0;
-  //
-  // gcc with -fPIC will produce a read only .foo section. But if another
-  // file has
-  //
-  // int zed;
-  // int *const bar __attribute__((section(".foo"))) = (int *)&zed;
-  //
-  // gcc with -fPIC will produce a read write section.
-  //
-  // Last but not least, when using linker script the merge rules are forced by
-  // the script. Unfortunately, linker scripts are name based. This means that
-  // expressions like *(.foo*) can refer to multiple input sections with
-  // different flags. We cannot put them in different output sections or we
-  // would produce wrong results for
-  //
-  // start = .; *(.foo.*) end = .; *(.bar)
-  //
-  // and a mapping of .foo1 and .bar1 to one section and .foo2 and .bar2 to
-  // another. The problem is that there is no way to layout those output
-  // sections such that the .foo sections are the only thing between the start
-  // and end symbols.
-  //
-  // Given the above issues, we instead merge sections by name and error on
-  // incompatible types and flags.
-  OutputSection *&Sec = Map[OutsecName];
-  if (Sec) {
-    Sec->addSection(cast<InputSection>(IS));
-    return nullptr;
-  }
-
-  Sec = createSection(IS, OutsecName);
-  return Sec;
-}
-
-OutputSectionFactory::~OutputSectionFactory() {}
 
 uint64_t elf::getHeaderSize() {
   if (Config->OFormatBinary)
