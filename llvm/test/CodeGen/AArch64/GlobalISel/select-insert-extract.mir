@@ -15,11 +15,11 @@ body:             |
     %1:gpr(s64) = G_IMPLICIT_DEF
 
     ; CHECK:  body:
-    ; CHECK: [[TMP:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, %0, 15
+    ; CHECK: [[TMP:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, %0, %subreg.sub_32
     ; CHECK: %2:gpr64 = BFMXri %1, [[TMP]], 0, 31
     %2:gpr(s64) = G_INSERT %1, %0, 0
 
-    ; CHECK: [[TMP:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, %0, 15
+    ; CHECK: [[TMP:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, %0, %subreg.sub_32
     ; CHECK: %3:gpr64 = BFMXri %1, [[TMP]], 51, 31
     %3:gpr(s64) = G_INSERT %1, %0, 13
 
