@@ -1,4 +1,4 @@
-# RUN: clangd -run-synchronously < %s | FileCheck %s
+# RUN: clangd -pretty -run-synchronously < %s | FileCheck -strict-whitespace %s
 # It is absolutely vital that this file has CRLF line endings.
 #
 Content-Length: 125
@@ -8,12 +8,14 @@ Content-Length: 125
 Content-Length: 206
 
 {"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///main.cpp","languageId":"cpp","version":1,"text":"#ifndef FOO\n#define FOO\nint a;\n#else\nint a = b;#endif\n\n\n"}}}
-# CHECK: {"jsonrpc":"2.0","method":"textDocument/publishDiagnostics","params":{"uri":"file:///main.cpp","diagnostics":[]}}
-
+#      CHECK:  "method": "textDocument/publishDiagnostics",
+# CHECK-NEXT:  "params": {
+# CHECK-NEXT:    "diagnostics": [],
+# CHECK-NEXT:    "uri": "file:///main.cpp"
+# CHECK-NEXT:  }
 Content-Length: 58
 
 {"jsonrpc":"2.0","id":2,"method":"shutdown","params":null}
-# CHECK: {"jsonrpc":"2.0","id":2,"result":null}
 Content-Length: 33
 
 {"jsonrpc":"2.0":"method":"exit"}

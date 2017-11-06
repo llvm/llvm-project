@@ -16,25 +16,24 @@ Content-Length: 151
 # The order of results returned by codeComplete seems to be
 # nondeterministic, so we check regardless of order.
 #
-# CHECK: {"jsonrpc":"2.0","id":2,"result":[
-# CHECK-DAG: {"label":"pub()","kind":2,"detail":"void","sortText":"000034pub","filterText":"pub","insertText":"pub","insertTextFormat":1}
-# CHECK-DAG: {"label":"prot()","kind":2,"detail":"void","sortText":"000034prot","filterText":"prot","insertText":"prot","insertTextFormat":1}
-# CHECK-DAG: {"label":"priv()","kind":2,"detail":"void","sortText":"000034priv","filterText":"priv","insertText":"priv","insertTextFormat":1}
-# CHECK: ]}
+# CHECK: {"id":2,"jsonrpc":"2.0","result":[
+# CHECK-DAG: {"detail":"void","filterText":"pub","insertText":"pub","insertTextFormat":1,"kind":2,"label":"pub()","sortText":"000034pub"}
+# CHECK-DAG: {"detail":"void","filterText":"prot","insertText":"prot","insertTextFormat":1,"kind":2,"label":"prot()","sortText":"000034prot"}
+# CHECK-DAG: {"detail":"void","filterText":"priv","insertText":"priv","insertTextFormat":1,"kind":2,"label":"priv()","sortText":"000034priv"}
+# CHECK-SAME: ]}
 
 Content-Length: 151
 
 {"jsonrpc":"2.0","id":3,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":17,"character":4}}}
-# CHECK: {"jsonrpc":"2.0","id":3,"result":[
-# CHECK-DAG: {"label":"pub()","kind":2,"detail":"void","sortText":"000034pub","filterText":"pub","insertText":"pub","insertTextFormat":1}
-# CHECK-DAG: {"label":"prot()","kind":2,"detail":"void","sortText":"200034prot","filterText":"prot","insertText":"prot","insertTextFormat":1}
-# CHECK-DAG: {"label":"priv()","kind":2,"detail":"void","sortText":"200034priv","filterText":"priv","insertText":"priv","insertTextFormat":1}
-# CHECK: ]}
+# CHECK: {"id":3,"jsonrpc":"2.0","result":[
+# CHECK-DAG: {"detail":"void","filterText":"pub","insertText":"pub","insertTextFormat":1,"kind":2,"label":"pub()","sortText":"000034pub"}
+# CHECK-DAG: {"detail":"void","filterText":"prot","insertText":"prot","insertTextFormat":1,"kind":2,"label":"prot()","sortText":"200034prot"}
+# CHECK-DAG: {"detail":"void","filterText":"priv","insertText":"priv","insertTextFormat":1,"kind":2,"label":"priv()","sortText":"200034priv"}
+# CHECK-SAME: ]}
 
 Content-Length: 58
 
 {"jsonrpc":"2.0","id":4,"method":"shutdown","params":null}
-# CHECK: {"jsonrpc":"2.0","id":4,"result":null}
 Content-Length: 33
 
 {"jsonrpc":"2.0":"method":"exit"}

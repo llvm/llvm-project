@@ -1,4 +1,4 @@
-# RUN: clangd -run-synchronously -input-mirror-file %t < %s
+# RUN: clangd -pretty -run-synchronously -input-mirror-file %t < %s
 # Note that we have to use '-b' as -input-mirror-file does not have a newline at the end of file.
 # RUN: diff -b %t %s
 # It is absolutely vital that this file has CRLF line endings.
@@ -152,7 +152,6 @@ Content-Length: 148
 Content-Length: 44
 
 {"jsonrpc":"2.0","id":3,"method":"shutdown"}
-# CHECK: {"jsonrpc":"2.0","id":3,"result":null}
 Content-Length: 33
 
 {"jsonrpc":"2.0":"method":"exit"}
