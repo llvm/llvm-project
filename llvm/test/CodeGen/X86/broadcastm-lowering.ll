@@ -80,8 +80,7 @@ define <16 x i32> @test_mm512_epi32(<16 x i32> %a, <16 x i32> %b) {
 ; AVX512CD-LABEL: test_mm512_epi32:
 ; AVX512CD:       # BB#0: # %entry
 ; AVX512CD-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
-; AVX512CD-NEXT:    kmovw %k0, %eax
-; AVX512CD-NEXT:    vpbroadcastd %eax, %zmm0
+; AVX512CD-NEXT:    vpbroadcastmw2d %k0, %zmm0
 ; AVX512CD-NEXT:    retq
 ;
 ; AVX512VLCDBW-LABEL: test_mm512_epi32:
@@ -110,9 +109,7 @@ define <8 x i64> @test_mm512_epi64(<8 x i32> %a, <8 x i32> %b) {
 ; AVX512CD-NEXT:    # kill: %YMM1<def> %YMM1<kill> %ZMM1<def>
 ; AVX512CD-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
 ; AVX512CD-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
-; AVX512CD-NEXT:    kmovw %k0, %eax
-; AVX512CD-NEXT:    movzbl %al, %eax
-; AVX512CD-NEXT:    vpbroadcastq %rax, %zmm0
+; AVX512CD-NEXT:    vpbroadcastmb2q %k0, %zmm0
 ; AVX512CD-NEXT:    retq
 ;
 ; AVX512VLCDBW-LABEL: test_mm512_epi64:
