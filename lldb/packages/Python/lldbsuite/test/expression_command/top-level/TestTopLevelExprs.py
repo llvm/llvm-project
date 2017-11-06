@@ -57,7 +57,7 @@ class TopLevelExpressionsTestCase(TestBase):
         self.runCmd("run", RUN_SUCCEEDED)
 
     @add_test_categories(['pyapi'])
-    @expectedFailureAndroid(api_levels=[21, 22], bugnumber="llvm.org/pr27787")
+    @expectedFailureAndroid(api_levels=list(range(22+1)), bugnumber="llvm.org/pr27787")
     @expectedFailureAll(
         oslist=["linux"],
         archs=[

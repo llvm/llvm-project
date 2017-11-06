@@ -829,6 +829,21 @@ class POOL16C_NOT16_FM_MMR6 : MicroMipsR6Inst16 {
   let Inst{3-0}   = 0b0000;
 }
 
+class POOL16C_MOVEP16_FM_MMR6 : MicroMipsR6Inst16 {
+  bits<3> dst_regs;
+  bits<3> rt;
+  bits<3> rs;
+
+  bits<16> Inst;
+
+  let Inst{15-10} = 0b010001;
+  let Inst{9-7}   = dst_regs;
+  let Inst{6-4}   = rt;
+  let Inst{3}     = rs{2};
+  let Inst{2}     = 0b1;
+  let Inst{1-0}   = rs{1-0};
+}
+
 class POOL16C_OR16_XOR16_FM_MMR6<bits<4> op> : MicroMipsR6Inst16 {
   bits<3> rt;
   bits<3> rs;
