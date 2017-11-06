@@ -19,6 +19,7 @@
 #include "LinkerScript.h"
 #include "Memory.h"
 #include "Symbols.h"
+#include "SyntheticSections.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/STLExtras.h"
 
@@ -134,17 +135,17 @@ template <class ELFT> void SymbolTable::addCombinedLTOObject() {
 }
 
 template <class ELFT>
-DefinedRegular *SymbolTable::addAbsolute(StringRef Name, uint8_t Visibility,
-                                         uint8_t Binding) {
+Defined *SymbolTable::addAbsolute(StringRef Name, uint8_t Visibility,
+                                  uint8_t Binding) {
   Symbol *Sym = addRegular<ELFT>(Name, Visibility, STT_NOTYPE, 0, 0, Binding,
                                  nullptr, nullptr);
-  return cast<DefinedRegular>(Sym);
+  return cast<Defined>(Sym);
 }
 
 // Set a flag for --trace-symbol so that we can print out a log message
 // if a new symbol with the same name is inserted into the symbol table.
 void SymbolTable::trace(StringRef Name) {
-  Symtab.insert({CachedHashStringRef(Name), {-1, true}});
+  Symtab.insert({CachedHashStringRef(Name), -1});
 }
 
 // Rename SYM as __wrap_SYM. The original symbol is preserved as __real_SYM.
@@ -184,7 +185,7 @@ void SymbolTable::applySymbolWrap() {
   for (WrappedSymbol &W : WrappedSymbols) {
     // First, make a copy of __real_sym.
     Symbol *Real = nullptr;
-    if (W.Real->isInCurrentOutput()) {
+    if (W.Real->isDefined()) {
       Real = (Symbol *)make<SymbolUnion>();
       memcpy(Real, W.Real, sizeof(SymbolUnion));
     }
@@ -223,14 +224,14 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name) {
   if (Pos != StringRef::npos && Pos + 1 < Name.size() && Name[Pos + 1] == '@')
     Name = Name.take_front(Pos);
 
-  auto P = Symtab.insert(
-      {CachedHashStringRef(Name), SymIndex((int)SymVector.size(), false)});
-  SymIndex &V = P.first->second;
+  auto P = Symtab.insert({CachedHashStringRef(Name), (int)SymVector.size()});
+  int &SymIndex = P.first->second;
   bool IsNew = P.second;
+  bool Traced = false;
 
-  if (V.Idx == -1) {
-    IsNew = true;
-    V = SymIndex((int)SymVector.size(), true);
+  if (SymIndex == -1) {
+    SymIndex = SymVector.size();
+    IsNew = Traced = true;
   }
 
   Symbol *Sym;
@@ -242,11 +243,11 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name) {
     Sym->IsUsedInRegularObj = false;
     Sym->ExportDynamic = false;
     Sym->CanInline = true;
-    Sym->Traced = V.Traced;
+    Sym->Traced = Traced;
     Sym->VersionId = Config->DefaultSymbolVersion;
     SymVector.push_back(Sym);
   } else {
-    Sym = SymVector[V.Idx];
+    Sym = SymVector[SymIndex];
   }
   return {Sym, IsNew};
 }
@@ -304,7 +305,7 @@ Symbol *SymbolTable::addUndefined(StringRef Name, bool IsLocal, uint8_t Binding,
     return S;
   }
   if (Binding != STB_WEAK) {
-    if (!S->isInCurrentOutput())
+    if (!S->isDefined())
       S->Binding = Binding;
     if (auto *SS = dyn_cast<SharedSymbol>(S))
       SS->getFile<ELFT>()->IsUsed = true;
@@ -343,7 +344,7 @@ static int compareDefined(Symbol *S, bool WasInserted, uint8_t Binding,
                           StringRef Name) {
   if (WasInserted)
     return 1;
-  if (!S->isInCurrentOutput())
+  if (!S->isDefined())
     return 1;
   if (int R = compareVersion(S, Name))
     return R;
@@ -365,13 +366,13 @@ static int compareDefinedNonCommon(Symbol *S, bool WasInserted, uint8_t Binding,
       S->Binding = Binding;
     return Cmp;
   }
-  if (isa<DefinedCommon>(S)) {
-    // Non-common symbols take precedence over common symbols.
-    if (Config->WarnCommon)
-      warn("common " + S->getName() + " is overridden");
-    return 1;
-  }
-  if (auto *R = dyn_cast<DefinedRegular>(S)) {
+  if (auto *R = dyn_cast<Defined>(S)) {
+    if (R->Section && isa<BssSection>(R->Section)) {
+      // Non-common symbols take precedence over common symbols.
+      if (Config->WarnCommon)
+        warn("common " + S->getName() + " is overridden");
+      return 1;
+    }
     if (R->Section == nullptr && Binding == STB_GLOBAL && IsAbsolute &&
         R->Value == Value)
       return -1;
@@ -388,11 +389,18 @@ Symbol *SymbolTable::addCommon(StringRef N, uint64_t Size, uint32_t Alignment,
                                     /*CanOmitFromDynSym*/ false, File);
   int Cmp = compareDefined(S, WasInserted, Binding, N);
   if (Cmp > 0) {
+    auto *Bss = make<BssSection>("COMMON", Size, Alignment);
+    Bss->File = File;
+    Bss->Live = !Config->GcSections;
+    InputSections.push_back(Bss);
+
     S->Binding = Binding;
-    replaceSymbol<DefinedCommon>(S, File, N, Size, Alignment, StOther, Type);
+    replaceSymbol<Defined>(S, File, N, /*IsLocal=*/false, StOther, Type, 0,
+                           Size, Bss);
   } else if (Cmp == 0) {
-    auto *C = dyn_cast<DefinedCommon>(S);
-    if (!C) {
+    auto *D = cast<Defined>(S);
+    auto *Bss = dyn_cast_or_null<BssSection>(D->Section);
+    if (!Bss) {
       // Non-common symbols take precedence over common symbols.
       if (Config->WarnCommon)
         warn("common " + S->getName() + " is overridden");
@@ -400,11 +408,13 @@ Symbol *SymbolTable::addCommon(StringRef N, uint64_t Size, uint32_t Alignment,
     }
 
     if (Config->WarnCommon)
-      warn("multiple common of " + S->getName());
+      warn("multiple common of " + D->getName());
 
-    Alignment = C->Alignment = std::max(C->Alignment, Alignment);
-    if (Size > C->Size)
-      replaceSymbol<DefinedCommon>(S, File, N, Size, Alignment, StOther, Type);
+    Bss->Alignment = std::max(Bss->Alignment, Alignment);
+    if (Size > Bss->Size) {
+      D->File = Bss->File = File;
+      D->Size = Bss->Size = Size;
+    }
   }
   return S;
 }
@@ -425,7 +435,7 @@ static void reportDuplicate(Symbol *Sym, InputFile *NewFile) {
 template <class ELFT>
 static void reportDuplicate(Symbol *Sym, InputSectionBase *ErrSec,
                             typename ELFT::uint ErrOffset) {
-  DefinedRegular *D = dyn_cast<DefinedRegular>(Sym);
+  Defined *D = dyn_cast<Defined>(Sym);
   if (!D || !D->Section || !ErrSec) {
     reportDuplicate(Sym, ErrSec ? ErrSec->File : nullptr);
     return;
@@ -465,8 +475,8 @@ Symbol *SymbolTable::addRegular(StringRef Name, uint8_t StOther, uint8_t Type,
   int Cmp = compareDefinedNonCommon(S, WasInserted, Binding, Section == nullptr,
                                     Value, Name);
   if (Cmp > 0)
-    replaceSymbol<DefinedRegular>(S, File, Name, /*IsLocal=*/false, StOther,
-                                  Type, Value, Size, Section);
+    replaceSymbol<Defined>(S, File, Name, /*IsLocal=*/false, StOther, Type,
+                           Value, Size, Section);
   else if (Cmp == 0)
     reportDuplicate<ELFT>(S, dyn_cast_or_null<InputSectionBase>(Section),
                           Value);
@@ -509,8 +519,8 @@ Symbol *SymbolTable::addBitcode(StringRef Name, uint8_t Binding,
   int Cmp = compareDefinedNonCommon(S, WasInserted, Binding,
                                     /*IsAbs*/ false, /*Value*/ 0, Name);
   if (Cmp > 0)
-    replaceSymbol<DefinedRegular>(S, F, Name, /*IsLocal=*/false, StOther, Type,
-                                  0, 0, nullptr);
+    replaceSymbol<Defined>(S, F, Name, /*IsLocal=*/false, StOther, Type, 0, 0,
+                           nullptr);
   else if (Cmp == 0)
     reportDuplicate(S, F);
   return S;
@@ -520,10 +530,9 @@ Symbol *SymbolTable::find(StringRef Name) {
   auto It = Symtab.find(CachedHashStringRef(Name));
   if (It == Symtab.end())
     return nullptr;
-  SymIndex V = It->second;
-  if (V.Idx == -1)
+  if (It->second == -1)
     return nullptr;
-  return SymVector[V.Idx];
+  return SymVector[It->second];
 }
 
 template <class ELFT>
@@ -623,7 +632,7 @@ StringMap<std::vector<Symbol *>> &SymbolTable::getDemangledSyms() {
   if (!DemangledSyms) {
     DemangledSyms.emplace();
     for (Symbol *Sym : SymVector) {
-      if (!Sym->isInCurrentOutput())
+      if (!Sym->isDefined())
         continue;
       if (Optional<std::string> S = demangle(Sym->getName()))
         (*DemangledSyms)[*S].push_back(Sym);
@@ -638,7 +647,7 @@ std::vector<Symbol *> SymbolTable::findByVersion(SymbolVersion Ver) {
   if (Ver.IsExternCpp)
     return getDemangledSyms().lookup(Ver.Name);
   if (Symbol *B = find(Ver.Name))
-    if (B->isInCurrentOutput())
+    if (B->isDefined())
       return {B};
   return {};
 }
@@ -655,7 +664,7 @@ std::vector<Symbol *> SymbolTable::findAllByVersion(SymbolVersion Ver) {
   }
 
   for (Symbol *Sym : SymVector)
-    if (Sym->isInCurrentOutput() && M.match(Sym->getName()))
+    if (Sym->isDefined() && M.match(Sym->getName()))
       Res.push_back(Sym);
   return Res;
 }
@@ -808,14 +817,14 @@ template Symbol *SymbolTable::addRegular<ELF64BE>(StringRef, uint8_t, uint8_t,
                                                   uint64_t, uint64_t, uint8_t,
                                                   SectionBase *, InputFile *);
 
-template DefinedRegular *SymbolTable::addAbsolute<ELF32LE>(StringRef, uint8_t,
-                                                           uint8_t);
-template DefinedRegular *SymbolTable::addAbsolute<ELF32BE>(StringRef, uint8_t,
-                                                           uint8_t);
-template DefinedRegular *SymbolTable::addAbsolute<ELF64LE>(StringRef, uint8_t,
-                                                           uint8_t);
-template DefinedRegular *SymbolTable::addAbsolute<ELF64BE>(StringRef, uint8_t,
-                                                           uint8_t);
+template Defined *SymbolTable::addAbsolute<ELF32LE>(StringRef, uint8_t,
+                                                    uint8_t);
+template Defined *SymbolTable::addAbsolute<ELF32BE>(StringRef, uint8_t,
+                                                    uint8_t);
+template Defined *SymbolTable::addAbsolute<ELF64LE>(StringRef, uint8_t,
+                                                    uint8_t);
+template Defined *SymbolTable::addAbsolute<ELF64BE>(StringRef, uint8_t,
+                                                    uint8_t);
 
 template Symbol *
 SymbolTable::addLazyArchive<ELF32LE>(StringRef, ArchiveFile *,

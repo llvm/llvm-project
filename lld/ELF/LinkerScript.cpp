@@ -149,9 +149,9 @@ void LinkerScript::addSymbol(SymbolAssignment *Cmd) {
   // write expressions like this: `alignment = 16; . = ALIGN(., alignment)`.
   uint64_t SymValue = Value.Sec ? 0 : Value.getValue();
 
-  replaceSymbol<DefinedRegular>(Sym, nullptr, Cmd->Name, /*IsLocal=*/false,
-                                Visibility, STT_NOTYPE, SymValue, 0, Sec);
-  Cmd->Sym = cast<DefinedRegular>(Sym);
+  replaceSymbol<Defined>(Sym, nullptr, Cmd->Name, /*IsLocal=*/false, Visibility,
+                         STT_NOTYPE, SymValue, 0, Sec);
+  Cmd->Sym = cast<Defined>(Sym);
 }
 
 // This function is called from assignAddresses, while we are
@@ -977,7 +977,7 @@ ExprValue LinkerScript::getSymbolValue(StringRef Name, const Twine &Loc) {
     return 0;
   }
 
-  if (auto *Sym = dyn_cast_or_null<DefinedRegular>(Symtab->find(Name)))
+  if (auto *Sym = dyn_cast_or_null<Defined>(Symtab->find(Name)))
     return {Sym->Section, false, Sym->Value, Loc};
 
   error(Loc + ": symbol not found: " + Name);

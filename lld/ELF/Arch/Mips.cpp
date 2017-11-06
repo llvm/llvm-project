@@ -346,7 +346,7 @@ bool MIPS<ELFT>::needsThunk(RelExpr Expr, RelType Type, const InputFile *File,
   // If current file has PIC code, LA25 stub is not required.
   if (F->getObj().getHeader()->e_flags & EF_MIPS_PIC)
     return false;
-  auto *D = dyn_cast<DefinedRegular>(&S);
+  auto *D = dyn_cast<Defined>(&S);
   // LA25 is required if target file has PIC code
   // or target symbol is a PIC symbol.
   return D && D->isMipsPIC<ELFT>();

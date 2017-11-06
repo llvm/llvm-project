@@ -326,7 +326,7 @@ static RelType getMipsPairType(RelType Type, bool IsLocal) {
 static bool isAbsolute(const Symbol &Sym) {
   if (Sym.isUndefWeak())
     return true;
-  if (const auto *DR = dyn_cast<DefinedRegular>(&Sym))
+  if (const auto *DR = dyn_cast<Defined>(&Sym))
     return DR->Section == nullptr; // Absolute symbol.
   return false;
 }
