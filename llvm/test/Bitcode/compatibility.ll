@@ -775,6 +775,10 @@ define void @fastmathflags(float %op1, float %op2) {
   ; CHECK: %f.arcp = fadd arcp float %op1, %op2
   %f.contract = fadd contract float %op1, %op2
   ; CHECK: %f.contract = fadd contract float %op1, %op2
+  %f.afn = fadd afn float %op1, %op2
+  ; CHECK: %f.afn = fadd afn float %op1, %op2
+  %f.reassoc = fadd reassoc float %op1, %op2
+  ; CHECK: %f.reassoc = fadd reassoc float %op1, %op2
   %f.fast = fadd fast float %op1, %op2
   ; CHECK: %f.fast = fadd fast float %op1, %op2
   ret void

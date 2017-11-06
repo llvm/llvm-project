@@ -30485,10 +30485,17 @@ static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
 static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
                                        TargetLowering::DAGCombinerInfo &DCI,
                                        const X86Subtarget &Subtarget) {
-  if (SDValue NewOp = XFormVExtractWithShuffleIntoLoad(N, DAG, DCI))
+  if (SDValue NewOp = combineExtractWithShuffle(N, DAG, DCI, Subtarget))
     return NewOp;
 
-  if (SDValue NewOp = combineExtractWithShuffle(N, DAG, DCI, Subtarget))
+  // TODO - Remove this once we can handle the implicit zero-extension of
+  // X86ISD::PEXTRW/X86ISD::PEXTRB in:
+  // XFormVExtractWithShuffleIntoLoad, combineHorizontalPredicateResult and
+  // combineBasicSADPattern.
+  if (N->getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+    return SDValue();
+
+  if (SDValue NewOp = XFormVExtractWithShuffleIntoLoad(N, DAG, DCI))
     return NewOp;
 
   SDValue InputVector = N->getOperand(0);
@@ -30633,16 +30640,6 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
 
   // The replacement was made in place; don't return anything.
   return SDValue();
-}
-
-// TODO - merge with combineExtractVectorElt once it can handle the implicit
-// zero-extension of X86ISD::PINSRW/X86ISD::PINSRB in:
-// XFormVExtractWithShuffleIntoLoad, combineHorizontalPredicateResult and
-// combineBasicSADPattern.
-static SDValue combineExtractVectorElt_SSE(SDNode *N, SelectionDAG &DAG,
-                                           TargetLowering::DAGCombinerInfo &DCI,
-                                           const X86Subtarget &Subtarget) {
-  return combineExtractWithShuffle(N, DAG, DCI, Subtarget);
 }
 
 /// If a vector select has an operand that is -1 or 0, try to simplify the
@@ -36767,10 +36764,9 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   switch (N->getOpcode()) {
   default: break;
   case ISD::EXTRACT_VECTOR_ELT:
-    return combineExtractVectorElt(N, DAG, DCI, Subtarget);
   case X86ISD::PEXTRW:
   case X86ISD::PEXTRB:
-    return combineExtractVectorElt_SSE(N, DAG, DCI, Subtarget);
+    return combineExtractVectorElt(N, DAG, DCI, Subtarget);
   case ISD::INSERT_SUBVECTOR:
     return combineInsertSubvector(N, DAG, DCI, Subtarget);
   case ISD::EXTRACT_SUBVECTOR:

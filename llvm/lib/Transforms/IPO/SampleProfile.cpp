@@ -1182,24 +1182,20 @@ void SampleProfileLoader::buildEdges(Function &F) {
   }
 }
 
-/// Sorts the CallTargetMap \p M by count in descending order and stores the
-/// sorted result in \p Sorted. Returns the total counts.
-static uint64_t SortCallTargets(SmallVector<InstrProfValueData, 2> &Sorted,
-                                const SampleRecord::CallTargetMap &M) {
-  Sorted.clear();
-  uint64_t Sum = 0;
-  for (auto I = M.begin(); I != M.end(); ++I) {
-    Sum += I->getValue();
-    Sorted.push_back({Function::getGUID(I->getKey()), I->getValue()});
-  }
-  std::sort(Sorted.begin(), Sorted.end(),
+/// Returns the sorted CallTargetMap \p M by count in descending order.
+static SmallVector<InstrProfValueData, 2> SortCallTargets(
+    const SampleRecord::CallTargetMap &M) {
+  SmallVector<InstrProfValueData, 2> R;
+  for (auto I = M.begin(); I != M.end(); ++I)
+    R.push_back({Function::getGUID(I->getKey()), I->getValue()});
+  std::sort(R.begin(), R.end(),
             [](const InstrProfValueData &L, const InstrProfValueData &R) {
               if (L.Count == R.Count)
                 return L.Value > R.Value;
               else
                 return L.Count > R.Count;
             });
-  return Sum;
+  return R;
 }
 
 /// \brief Propagate weights into edges
@@ -1292,8 +1288,10 @@ void SampleProfileLoader::propagateWeights(Function &F) {
           auto T = FS->findCallTargetMapAt(LineOffset, Discriminator);
           if (!T || T.get().empty())
             continue;
-          SmallVector<InstrProfValueData, 2> SortedCallTargets;
-          uint64_t Sum = SortCallTargets(SortedCallTargets, T.get());
+          SmallVector<InstrProfValueData, 2> SortedCallTargets =
+              SortCallTargets(T.get());
+          uint64_t Sum;
+          findIndirectCallFunctionSamples(I, Sum);
           annotateValueSite(*I.getParent()->getParent()->getParent(), I,
                             SortedCallTargets, Sum, IPVK_IndirectCallTarget,
                             SortedCallTargets.size());

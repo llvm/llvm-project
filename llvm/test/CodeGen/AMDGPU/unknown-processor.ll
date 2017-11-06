@@ -1,5 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=unknown -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=ERROR -check-prefix=GCN %s
-; RUN: llc -march=r600 -mcpu=unknown -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=ERROR -check-prefix=R600 %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=unknown -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=ERROR -check-prefix=GCN %s
+; RUN: llc -march=r600 -mtriple=r600---amdgiz -mcpu=unknown -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=ERROR -check-prefix=R600 %s
+target datalayout = "A5"
 
 ; Should not crash when the processor is not recognized and the
 ; wavefront size feature not set.
@@ -14,7 +15,7 @@
 
 ; R600: MOV
 define amdgpu_kernel void @foo() {
-  %alloca = alloca i32, align 4
-  store volatile i32 0, i32* %alloca
+  %alloca = alloca i32, align 4, addrspace(5)
+  store volatile i32 0, i32 addrspace(5)* %alloca
   ret void
 }

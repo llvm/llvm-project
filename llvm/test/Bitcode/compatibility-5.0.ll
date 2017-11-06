@@ -765,7 +765,9 @@ define void @fastmathflags(float %op1, float %op2) {
   %f.contract = fadd contract float %op1, %op2
   ; CHECK: %f.contract = fadd contract float %op1, %op2
   %f.fast = fadd fast float %op1, %op2
-  ; CHECK: %f.fast = fadd fast float %op1, %op2
+  ; 'fast' used to be its own bit, but this changed in Oct 2017.
+  ; The binary test file does not have the newer 'afn' bit set, so this is not fully 'fast'.
+  ; CHECK: %f.fast = fadd reassoc nnan ninf nsz arcp contract float %op1, %op2
   ret void
 }
 
@@ -778,7 +780,9 @@ declare <4 x double> @fmf3()
 ; CHECK-LABEL: fastMathFlagsForCalls(
 define void @fastMathFlagsForCalls(float %f, double %d1, <4 x double> %d2) {
   %call.fast = call fast float @fmf1()
-  ; CHECK: %call.fast = call fast float @fmf1()
+  ; 'fast' used to be its own bit, but this changed in Oct 2017.
+  ; The binary test file does not have the newer 'afn' bit set, so this is not fully 'fast'.
+  ; CHECK: %call.fast = call reassoc nnan ninf nsz arcp contract float @fmf1()
 
   ; Throw in some other attributes to make sure those stay in the right places.
 

@@ -63,7 +63,7 @@ URI URI::parse(llvm::yaml::ScalarNode *Param) {
   return URI::fromUri(Param->getValue(Storage));
 }
 
-std::string URI::unparse(const URI &U) { return "\"" + U.uri + "\""; }
+json::Expr URI::unparse(const URI &U) { return U.uri; }
 
 llvm::Optional<TextDocumentIdentifier>
 TextDocumentIdentifier::parse(llvm::yaml::MappingNode *Params,
@@ -125,11 +125,11 @@ llvm::Optional<Position> Position::parse(llvm::yaml::MappingNode *Params,
   return Result;
 }
 
-std::string Position::unparse(const Position &P) {
-  std::string Result;
-  llvm::raw_string_ostream(Result)
-      << llvm::format(R"({"line": %d, "character": %d})", P.line, P.character);
-  return Result;
+json::Expr Position::unparse(const Position &P) {
+  return json::obj{
+      {"line", P.line},
+      {"character", P.character},
+  };
 }
 
 llvm::Optional<Range> Range::parse(llvm::yaml::MappingNode *Params,
@@ -165,20 +165,18 @@ llvm::Optional<Range> Range::parse(llvm::yaml::MappingNode *Params,
   return Result;
 }
 
-std::string Range::unparse(const Range &P) {
-  std::string Result;
-  llvm::raw_string_ostream(Result) << llvm::format(
-      R"({"start": %s, "end": %s})", Position::unparse(P.start).c_str(),
-      Position::unparse(P.end).c_str());
-  return Result;
+json::Expr Range::unparse(const Range &P) {
+  return json::obj{
+      {"start", P.start},
+      {"end", P.end},
+  };
 }
 
-std::string Location::unparse(const Location &P) {
-  std::string Result;
-  llvm::raw_string_ostream(Result) << llvm::format(
-      R"({"uri": %s, "range": %s})", URI::unparse(P.uri).c_str(),
-      Range::unparse(P.range).c_str());
-  return Result;
+json::Expr Location::unparse(const Location &P) {
+  return json::obj{
+      {"uri", P.uri},
+      {"range", P.range},
+  };
 }
 
 llvm::Optional<TextDocumentItem>
@@ -279,25 +277,11 @@ llvm::Optional<TextEdit> TextEdit::parse(llvm::yaml::MappingNode *Params,
   return Result;
 }
 
-std::string TextEdit::unparse(const TextEdit &P) {
-  std::string Result;
-  llvm::raw_string_ostream(Result) << llvm::format(
-      R"({"range": %s, "newText": "%s"})", Range::unparse(P.range).c_str(),
-      llvm::yaml::escape(P.newText).c_str());
-  return Result;
-}
-
-std::string TextEdit::unparse(const std::vector<TextEdit> &TextEdits) {
-  // Fuse all edits into one big JSON array.
-  std::string Edits;
-  for (auto &TE : TextEdits) {
-    Edits += TextEdit::unparse(TE);
-    Edits += ',';
-  }
-  if (!Edits.empty())
-    Edits.pop_back();
-
-  return "[" + Edits + "]";
+json::Expr TextEdit::unparse(const TextEdit &P) {
+  return json::obj{
+      {"range", P.range},
+      {"newText", P.newText},
+  };
 }
 
 namespace {
@@ -611,11 +595,11 @@ FormattingOptions::parse(llvm::yaml::MappingNode *Params,
   return Result;
 }
 
-std::string FormattingOptions::unparse(const FormattingOptions &P) {
-  std::string Result;
-  llvm::raw_string_ostream(Result) << llvm::format(
-      R"({"tabSize": %d, "insertSpaces": %d})", P.tabSize, P.insertSpaces);
-  return Result;
+json::Expr FormattingOptions::unparse(const FormattingOptions &P) {
+  return json::obj{
+      {"tabSize", P.tabSize},
+      {"insertSpaces", P.insertSpaces},
+  };
 }
 
 llvm::Optional<DocumentRangeFormattingParams>
@@ -982,28 +966,18 @@ ExecuteCommandParams::parse(llvm::yaml::MappingNode *Params,
   return Result;
 }
 
-std::string WorkspaceEdit::unparse(const WorkspaceEdit &WE) {
-  std::string Changes;
-  for (auto &Change : *WE.changes) {
-    Changes += llvm::formatv(R"("{0}": {1})", Change.first,
-                             TextEdit::unparse(Change.second));
-    Changes += ',';
-  }
-  if (!Changes.empty())
-    Changes.pop_back();
-
-  std::string Result;
-  llvm::raw_string_ostream(Result)
-      << llvm::format(R"({"changes": {%s}})", Changes.c_str());
-  return Result;
+json::Expr WorkspaceEdit::unparse(const WorkspaceEdit &WE) {
+  if (!WE.changes)
+    return json::obj{};
+  json::obj FileChanges;
+  for (auto &Change : *WE.changes)
+    FileChanges[Change.first] = json::ary(Change.second);
+  return json::obj{{"changes", std::move(FileChanges)}};
 }
 
-std::string
+json::Expr
 ApplyWorkspaceEditParams::unparse(const ApplyWorkspaceEditParams &Params) {
-  std::string Result;
-  llvm::raw_string_ostream(Result) << llvm::format(
-      R"({"edit": %s})", WorkspaceEdit::unparse(Params.edit).c_str());
-  return Result;
+  return json::obj{{"edit", Params.edit}};
 }
 
 llvm::Optional<TextDocumentPositionParams>
@@ -1040,96 +1014,57 @@ TextDocumentPositionParams::parse(llvm::yaml::MappingNode *Params,
   return Result;
 }
 
-std::string CompletionItem::unparse(const CompletionItem &CI) {
-  std::string Result = "{";
-  llvm::raw_string_ostream Os(Result);
+json::Expr CompletionItem::unparse(const CompletionItem &CI) {
   assert(!CI.label.empty() && "completion item label is required");
-  Os << R"("label":")" << llvm::yaml::escape(CI.label) << R"(",)";
+  json::obj Result{{"label", CI.label}};
   if (CI.kind != CompletionItemKind::Missing)
-    Os << R"("kind":)" << static_cast<int>(CI.kind) << R"(,)";
+    Result["kind"] = static_cast<int>(CI.kind);
   if (!CI.detail.empty())
-    Os << R"("detail":")" << llvm::yaml::escape(CI.detail) << R"(",)";
+    Result["detail"] = CI.detail;
   if (!CI.documentation.empty())
-    Os << R"("documentation":")" << llvm::yaml::escape(CI.documentation)
-       << R"(",)";
+    Result["documentation"] = CI.documentation;
   if (!CI.sortText.empty())
-    Os << R"("sortText":")" << llvm::yaml::escape(CI.sortText) << R"(",)";
+    Result["sortText"] = CI.sortText;
   if (!CI.filterText.empty())
-    Os << R"("filterText":")" << llvm::yaml::escape(CI.filterText) << R"(",)";
+    Result["filterText"] = CI.filterText;
   if (!CI.insertText.empty())
-    Os << R"("insertText":")" << llvm::yaml::escape(CI.insertText) << R"(",)";
-  if (CI.insertTextFormat != InsertTextFormat::Missing) {
-    Os << R"("insertTextFormat":)" << static_cast<int>(CI.insertTextFormat)
-       << R"(,)";
-  }
+    Result["insertText"] = CI.insertText;
+  if (CI.insertTextFormat != InsertTextFormat::Missing)
+    Result["insertTextFormat"] = static_cast<int>(CI.insertTextFormat);
   if (CI.textEdit)
-    Os << R"("textEdit":)" << TextEdit::unparse(*CI.textEdit) << ',';
-  if (!CI.additionalTextEdits.empty()) {
-    Os << R"("additionalTextEdits":[)";
-    for (const auto &Edit : CI.additionalTextEdits)
-      Os << TextEdit::unparse(Edit) << ",";
-    Os.flush();
-    // The list additionalTextEdits is guaranteed nonempty at this point.
-    // Replace the trailing comma with right brace.
-    Result.back() = ']';
-  }
-  Os.flush();
-  // Label is required, so Result is guaranteed to have a trailing comma.
-  Result.back() = '}';
-  return Result;
+    Result["textEdit"] = *CI.textEdit;
+  if (!CI.additionalTextEdits.empty())
+    Result["additionalTextEdits"] = json::ary(CI.additionalTextEdits);
+  return std::move(Result);
 }
 
-std::string ParameterInformation::unparse(const ParameterInformation &PI) {
-  std::string Result = "{";
-  llvm::raw_string_ostream Os(Result);
+json::Expr ParameterInformation::unparse(const ParameterInformation &PI) {
   assert(!PI.label.empty() && "parameter information label is required");
-  Os << R"("label":")" << llvm::yaml::escape(PI.label) << '\"';
+  json::obj Result{{"label", PI.label}};
   if (!PI.documentation.empty())
-    Os << R"(,"documentation":")" << llvm::yaml::escape(PI.documentation)
-       << '\"';
-  Os << '}';
-  Os.flush();
-  return Result;
+    Result["documentation"] = PI.documentation;
+  return std::move(Result);
 }
 
-std::string SignatureInformation::unparse(const SignatureInformation &SI) {
-  std::string Result = "{";
-  llvm::raw_string_ostream Os(Result);
+json::Expr SignatureInformation::unparse(const SignatureInformation &SI) {
   assert(!SI.label.empty() && "signature information label is required");
-  Os << R"("label":")" << llvm::yaml::escape(SI.label) << '\"';
+  json::obj Result{
+      {"label", SI.label},
+      {"parameters", json::ary(SI.parameters)},
+  };
   if (!SI.documentation.empty())
-    Os << R"(,"documentation":")" << llvm::yaml::escape(SI.documentation)
-       << '\"';
-  Os << R"(,"parameters":[)";
-  for (const auto &Parameter : SI.parameters) {
-    Os << ParameterInformation::unparse(Parameter) << ',';
-  }
-  Os.flush();
-  if (SI.parameters.empty())
-    Result.push_back(']');
-  else
-    Result.back() = ']'; // Replace the last `,` with an `]`.
-  Result.push_back('}');
-  return Result;
+    Result["documentation"] = SI.documentation;
+  return std::move(Result);
 }
 
-std::string SignatureHelp::unparse(const SignatureHelp &SH) {
-  std::string Result = "{";
-  llvm::raw_string_ostream Os(Result);
+json::Expr SignatureHelp::unparse(const SignatureHelp &SH) {
   assert(SH.activeSignature >= 0 &&
          "Unexpected negative value for number of active signatures.");
   assert(SH.activeParameter >= 0 &&
          "Unexpected negative value for active parameter index");
-  Os << R"("activeSignature":)" << SH.activeSignature
-     << R"(,"activeParameter":)" << SH.activeParameter << R"(,"signatures":[)";
-  for (const auto &Signature : SH.signatures) {
-    Os << SignatureInformation::unparse(Signature) << ',';
-  }
-  Os.flush();
-  if (SH.signatures.empty())
-    Result.push_back(']');
-  else
-    Result.back() = ']'; // Replace the last `,` with an `]`.
-  Result.push_back('}');
-  return Result;
+  return json::obj{
+      {"activeSignature", SH.activeSignature},
+      {"activeParameter", SH.activeParameter},
+      {"signatures", json::ary(SH.signatures)},
+  };
 }

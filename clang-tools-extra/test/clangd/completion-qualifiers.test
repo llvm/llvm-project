@@ -8,15 +8,14 @@ Content-Length: 297
 Content-Length: 151
 
 {"jsonrpc":"2.0","id":2,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":11,"character":8}}}
-# CHECK: {"jsonrpc":"2.0","id":2,"result":[
-# CHECK-DAG: {"label":"foo() const","kind":2,"detail":"int","sortText":"200035foo","filterText":"foo","insertText":"foo","insertTextFormat":1}
-# CHECK-DAG: {"label":"bar() const","kind":2,"detail":"int","sortText":"000037bar","filterText":"bar","insertText":"bar","insertTextFormat":1}
-# CHECK-DAG: {"label":"Foo::foo() const","kind":2,"detail":"int","sortText":"000037foo","filterText":"foo","insertText":"foo","insertTextFormat":1}
-# CHECK: ]}
+# CHECK: {"id":2,"jsonrpc":"2.0","result":[
+# CHECK-DAG: {"detail":"int","filterText":"foo","insertText":"foo","insertTextFormat":1,"kind":2,"label":"foo() const","sortText":"200035foo"}
+# CHECK-DAG: {"detail":"int","filterText":"bar","insertText":"bar","insertTextFormat":1,"kind":2,"label":"bar() const","sortText":"000037bar"}
+# CHECK-DAG: {"detail":"int","filterText":"foo","insertText":"foo","insertTextFormat":1,"kind":2,"label":"Foo::foo() const","sortText":"000037foo"}
+# CHECK-SAME: ]}
 Content-Length: 44
 
 {"jsonrpc":"2.0","id":4,"method":"shutdown"}
-# CHECK: {"jsonrpc":"2.0","id":4,"result":null}
 Content-Length: 33
 
 {"jsonrpc":"2.0":"method":"exit"}

@@ -991,27 +991,34 @@ Optional<unsigned> Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
 ///
 /// Returns true if it hit something unexpected.
 bool Parser::TryParseLambdaIntroducer(LambdaIntroducer &Intro) {
-  TentativeParsingAction PA(*this);
+  {
+    bool SkippedInits = false;
+    TentativeParsingAction PA1(*this);
 
-  bool SkippedInits = false;
-  Optional<unsigned> DiagID(ParseLambdaIntroducer(Intro, &SkippedInits));
+    if (ParseLambdaIntroducer(Intro, &SkippedInits)) {
+      PA1.Revert();
+      return true;
+    }
 
-  if (DiagID) {
-    PA.Revert();
-    return true;
+    if (!SkippedInits) {
+      PA1.Commit();
+      return false;
+    }
+
+    PA1.Revert();
   }
 
-  if (SkippedInits) {
-    // Parse it again, but this time parse the init-captures too.
-    PA.Revert();
-    Intro = LambdaIntroducer();
-    DiagID = ParseLambdaIntroducer(Intro);
-    assert(!DiagID && "parsing lambda-introducer failed on reparse");
+  // Try to parse it again, but this time parse the init-captures too.
+  Intro = LambdaIntroducer();
+  TentativeParsingAction PA2(*this);
+
+  if (!ParseLambdaIntroducer(Intro)) {
+    PA2.Commit();
     return false;
   }
 
-  PA.Commit();
-  return false;
+  PA2.Revert();
+  return true;
 }
 
 static void

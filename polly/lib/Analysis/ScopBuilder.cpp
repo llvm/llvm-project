@@ -1151,7 +1151,7 @@ static MemoryAccess::ReductionType getReductionType(const BinaryOperator *BinOp,
     return MemoryAccess::RT_NONE;
   switch (BinOp->getOpcode()) {
   case Instruction::FAdd:
-    if (!BinOp->hasUnsafeAlgebra())
+    if (!BinOp->isFast())
       return MemoryAccess::RT_NONE;
     // Fall through
   case Instruction::Add:
@@ -1163,7 +1163,7 @@ static MemoryAccess::ReductionType getReductionType(const BinaryOperator *BinOp,
   case Instruction::And:
     return MemoryAccess::RT_BAND;
   case Instruction::FMul:
-    if (!BinOp->hasUnsafeAlgebra())
+    if (!BinOp->isFast())
       return MemoryAccess::RT_NONE;
     // Fall through
   case Instruction::Mul:

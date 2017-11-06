@@ -20,35 +20,46 @@ namespace {
 std::vector<TextEdit>
 replacementsToEdits(StringRef Code,
                     const std::vector<tooling::Replacement> &Replacements) {
-  std::vector<TextEdit> Edits;
   // Turn the replacements into the format specified by the Language Server
-  // Protocol.
+  // Protocol. Fuse them into one big JSON array.
+  std::vector<TextEdit> Edits;
   for (auto &R : Replacements) {
     Range ReplacementRange = {
         offsetToPosition(Code, R.getOffset()),
         offsetToPosition(Code, R.getOffset() + R.getLength())};
     Edits.push_back({ReplacementRange, R.getReplacementText()});
   }
-
   return Edits;
 }
 
 } // namespace
 
 void ClangdLSPServer::onInitialize(Ctx C, InitializeParams &Params) {
-  C.reply(
-      R"({"capabilities":{
-          "textDocumentSync": 1,
-          "documentFormattingProvider": true,
-          "documentRangeFormattingProvider": true,
-          "documentOnTypeFormattingProvider": {"firstTriggerCharacter":"}","moreTriggerCharacter":[]},
-          "codeActionProvider": true,
-          "completionProvider": {"resolveProvider": false, "triggerCharacters": [".",">",":"]},
-          "signatureHelpProvider": {"triggerCharacters": ["(",","]},
-          "definitionProvider": true,
-          "executeCommandProvider": {"commands": [")" +
-      ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND + R"("]}
-        }})");
+  C.reply(json::obj{
+      {"textDocumentSync", 1},
+      {"documentFormattingProvider", true},
+      {"documentRangeFormattingProvider", true},
+      {"documentOnTypeFormattingProvider",
+       json::obj{
+           {"firstTriggerCharacter", "}"},
+           {"moreTriggerCharacter", {}},
+       }},
+      {"codeActionProvider", true},
+      {"completionProvider",
+       json::obj{
+           {"resolveProvider", false},
+           {"triggerCharacters", {".", ">", ":"}},
+       }},
+      {"signatureHelpProvider",
+       json::obj{
+           {"triggerCharacters", {"(", ","}},
+       }},
+      {"definitionProvider", true},
+      {"executeCommandProvider",
+       json::obj{
+           {"commands", {ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND}},
+       }},
+  });
   if (Params.rootUri && !Params.rootUri->file.empty())
     Server.setRootPath(Params.rootUri->file);
   else if (Params.rootPath && !Params.rootPath->empty())
@@ -58,7 +69,7 @@ void ClangdLSPServer::onInitialize(Ctx C, InitializeParams &Params) {
 void ClangdLSPServer::onShutdown(Ctx C, ShutdownParams &Params) {
   // Do essentially nothing, just say we're ready to exit.
   ShutdownRequestReceived = true;
-  C.reply("null");
+  C.reply(nullptr);
 }
 
 void ClangdLSPServer::onExit(Ctx C, ExitParams &Params) { IsDone = true; }
@@ -98,7 +109,7 @@ void ClangdLSPServer::onCommand(Ctx C, ExecuteCommandParams &Params) {
 
     ApplyWorkspaceEditParams ApplyEdit;
     ApplyEdit.edit = *Params.workspaceEdit;
-    C.reply("\"Fix applied.\"");
+    C.reply("Fix applied.");
     // We don't need the response so id == 1 is OK.
     // Ideally, we would wait for the response and if there is no error, we
     // would reply success/failure to the original RPC.
@@ -121,51 +132,45 @@ void ClangdLSPServer::onDocumentOnTypeFormatting(
     Ctx C, DocumentOnTypeFormattingParams &Params) {
   auto File = Params.textDocument.uri.file;
   std::string Code = Server.getDocument(File);
-  std::string Edits = TextEdit::unparse(
-      replacementsToEdits(Code, Server.formatOnType(File, Params.position)));
-  C.reply(Edits);
+  C.reply(json::ary(
+      replacementsToEdits(Code, Server.formatOnType(File, Params.position))));
 }
 
 void ClangdLSPServer::onDocumentRangeFormatting(
     Ctx C, DocumentRangeFormattingParams &Params) {
   auto File = Params.textDocument.uri.file;
   std::string Code = Server.getDocument(File);
-  std::string Edits = TextEdit::unparse(
-      replacementsToEdits(Code, Server.formatRange(File, Params.range)));
-  C.reply(Edits);
+  C.reply(json::ary(
+      replacementsToEdits(Code, Server.formatRange(File, Params.range))));
 }
 
 void ClangdLSPServer::onDocumentFormatting(Ctx C,
                                            DocumentFormattingParams &Params) {
   auto File = Params.textDocument.uri.file;
   std::string Code = Server.getDocument(File);
-  std::string Edits =
-      TextEdit::unparse(replacementsToEdits(Code, Server.formatFile(File)));
-  C.reply(Edits);
+  C.reply(json::ary(replacementsToEdits(Code, Server.formatFile(File))));
 }
 
 void ClangdLSPServer::onCodeAction(Ctx C, CodeActionParams &Params) {
   // We provide a code action for each diagnostic at the requested location
   // which has FixIts available.
   std::string Code = Server.getDocument(Params.textDocument.uri.file);
-  std::string Commands;
+  json::ary Commands;
   for (Diagnostic &D : Params.context.diagnostics) {
     std::vector<clang::tooling::Replacement> Fixes =
         getFixIts(Params.textDocument.uri.file, D);
     auto Edits = replacementsToEdits(Code, Fixes);
-    WorkspaceEdit WE;
-    WE.changes = {{llvm::yaml::escape(Params.textDocument.uri.uri), Edits}};
-
-    if (!Edits.empty())
-      Commands +=
-          R"({"title":"Apply FixIt ')" + llvm::yaml::escape(D.message) +
-          R"('", "command": ")" +
-          ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND +
-          R"(", "arguments": [)" + WorkspaceEdit::unparse(WE) + R"(]},)";
+    if (!Edits.empty()) {
+      WorkspaceEdit WE;
+      WE.changes = {{Params.textDocument.uri.uri, std::move(Edits)}};
+      Commands.push_back(json::obj{
+          {"title", llvm::formatv("Apply FixIt {0}", D.message)},
+          {"command", ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND},
+          {"arguments", {WE}},
+      });
+    }
   }
-  if (!Commands.empty())
-    Commands.pop_back();
-  C.reply("[" + Commands + "]");
+  C.reply(std::move(Commands));
 }
 
 void ClangdLSPServer::onCompletion(Ctx C, TextDocumentPositionParams &Params) {
@@ -177,15 +182,7 @@ void ClangdLSPServer::onCompletion(Ctx C, TextDocumentPositionParams &Params) {
                           // had an API that would allow to attach callbacks to
                           // futures returned by ClangdServer.
                    .Value;
-
-  std::string Completions;
-  for (const auto &Item : Items) {
-    Completions += CompletionItem::unparse(Item);
-    Completions += ",";
-  }
-  if (!Completions.empty())
-    Completions.pop_back();
-  C.reply("[" + Completions + "]");
+  C.reply(json::ary(Items));
 }
 
 void ClangdLSPServer::onSignatureHelp(Ctx C,
@@ -195,7 +192,7 @@ void ClangdLSPServer::onSignatureHelp(Ctx C,
       Position{Params.position.line, Params.position.character});
   if (!SignatureHelp)
     return C.replyError(-32602, llvm::toString(SignatureHelp.takeError()));
-  C.reply(SignatureHelp::unparse(SignatureHelp->Value));
+  C.reply(SignatureHelp->Value);
 }
 
 void ClangdLSPServer::onGoToDefinition(Ctx C,
@@ -205,22 +202,14 @@ void ClangdLSPServer::onGoToDefinition(Ctx C,
       Position{Params.position.line, Params.position.character});
   if (!Items)
     return C.replyError(-32602, llvm::toString(Items.takeError()));
-
-  std::string Locations;
-  for (const auto &Item : Items->Value) {
-    Locations += Location::unparse(Item);
-    Locations += ",";
-  }
-  if (!Locations.empty())
-    Locations.pop_back();
-  C.reply("[" + Locations + "]");
+  C.reply(json::ary(Items->Value));
 }
 
 void ClangdLSPServer::onSwitchSourceHeader(Ctx C,
                                            TextDocumentIdentifier &Params) {
   llvm::Optional<Path> Result = Server.switchSourceHeader(Params.uri.file);
   std::string ResultUri;
-  C.reply(Result ? URI::unparse(URI::fromFile(*Result)) : R"("")");
+  C.reply(Result ? URI::fromFile(*Result).uri : "");
 }
 
 ClangdLSPServer::ClangdLSPServer(JSONOutput &Out, unsigned AsyncThreadsCount,
@@ -270,17 +259,16 @@ ClangdLSPServer::getFixIts(StringRef File, const clangd::Diagnostic &D) {
 
 void ClangdLSPServer::onDiagnosticsReady(
     PathRef File, Tagged<std::vector<DiagWithFixIts>> Diagnostics) {
-  std::string DiagnosticsJSON;
+  json::ary DiagnosticsJSON;
 
   DiagnosticToReplacementMap LocalFixIts; // Temporary storage
   for (auto &DiagWithFixes : Diagnostics.Value) {
     auto Diag = DiagWithFixes.Diag;
-    DiagnosticsJSON +=
-        R"({"range":)" + Range::unparse(Diag.range) +
-        R"(,"severity":)" + std::to_string(Diag.severity) +
-        R"(,"message":")" + llvm::yaml::escape(Diag.message) +
-        R"("},)";
-
+    DiagnosticsJSON.push_back(json::obj{
+        {"range", Diag.range},
+        {"severity", Diag.severity},
+        {"message", Diag.message},
+    });
     // We convert to Replacements to become independent of the SourceManager.
     auto &FixItsForDiagnostic = LocalFixIts[Diag];
     std::copy(DiagWithFixes.FixIts.begin(), DiagWithFixes.FixIts.end(),
@@ -295,10 +283,13 @@ void ClangdLSPServer::onDiagnosticsReady(
   }
 
   // Publish diagnostics.
-  if (!DiagnosticsJSON.empty())
-    DiagnosticsJSON.pop_back(); // Drop trailing comma.
-  Out.writeMessage(
-      R"({"jsonrpc":"2.0","method":"textDocument/publishDiagnostics","params":{"uri":")" +
-      URI::fromFile(File).uri + R"(","diagnostics":[)" + DiagnosticsJSON +
-      R"(]}})");
+  Out.writeMessage(json::obj{
+      {"jsonrpc", "2.0"},
+      {"method", "textDocument/publishDiagnostics"},
+      {"params",
+       json::obj{
+           {"uri", URI::fromFile(File)},
+           {"diagnostics", std::move(DiagnosticsJSON)},
+       }},
+  });
 }
