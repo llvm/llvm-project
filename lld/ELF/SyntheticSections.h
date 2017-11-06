@@ -159,7 +159,7 @@ public:
   bool empty() const override { return getSize() == 0; }
   size_t getSize() const override { return Size; }
 
-private:
+  static bool classof(const SectionBase *S) { return S->Bss; }
   uint64_t Size;
 };
 
@@ -821,7 +821,6 @@ private:
   size_t Size = 0;
 };
 
-template <class ELFT> void createCommonSections();
 InputSection *createInterpSection();
 template <class ELFT> MergeInputSection *createCommentSection();
 void decompressSections();

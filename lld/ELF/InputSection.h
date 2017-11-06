@@ -24,11 +24,10 @@
 namespace lld {
 namespace elf {
 
-class DefinedCommon;
 class Symbol;
 struct SectionPiece;
 
-class DefinedRegular;
+class Defined;
 class SyntheticSection;
 class MergeSyntheticSection;
 template <class ELFT> class ObjFile;
@@ -55,6 +54,8 @@ public:
   // If GC is disabled, all sections are considered live by default.
   unsigned Live : 1;
 
+  unsigned Bss : 1;
+
   // These corresponds to the fields in Elf_Shdr.
   uint32_t Alignment;
   uint64_t Flags;
@@ -72,13 +73,13 @@ public:
   // section.
   uint64_t getOffset(uint64_t Offset) const;
 
-  uint64_t getOffset(const DefinedRegular &Sym) const;
+  uint64_t getOffset(const Defined &Sym) const;
 
 protected:
   SectionBase(Kind SectionKind, StringRef Name, uint64_t Flags,
               uint64_t Entsize, uint64_t Alignment, uint32_t Type,
               uint32_t Info, uint32_t Link)
-      : Name(Name), SectionKind(SectionKind), Live(false),
+      : Name(Name), SectionKind(SectionKind), Live(false), Bss(false),
         Alignment(Alignment), Flags(Flags), Entsize(Entsize), Type(Type),
         Link(Link), Info(Info) {}
 };

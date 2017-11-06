@@ -41,9 +41,9 @@ public:
   ArrayRef<Symbol *> getSymbols() const { return SymVector; }
 
   template <class ELFT>
-  DefinedRegular *addAbsolute(StringRef Name,
-                              uint8_t Visibility = llvm::ELF::STV_HIDDEN,
-                              uint8_t Binding = llvm::ELF::STB_GLOBAL);
+  Defined *addAbsolute(StringRef Name,
+                       uint8_t Visibility = llvm::ELF::STV_HIDDEN,
+                       uint8_t Binding = llvm::ELF::STB_GLOBAL);
 
   template <class ELFT> Symbol *addUndefined(StringRef Name);
   template <class ELFT>
@@ -99,12 +99,6 @@ private:
                           StringRef VersionName);
   void assignWildcardVersion(SymbolVersion Ver, uint16_t VersionId);
 
-  struct SymIndex {
-    SymIndex(int Idx, bool Traced) : Idx(Idx), Traced(Traced) {}
-    int Idx : 31;
-    unsigned Traced : 1;
-  };
-
   // The order the global symbols are in is not defined. We can use an arbitrary
   // order, but it has to be reproducible. That is true even when cross linking.
   // The default hashing of StringRef produces different results on 32 and 64
@@ -112,7 +106,7 @@ private:
   // but a bit inefficient.
   // FIXME: Experiment with passing in a custom hashing or sorting the symbols
   // once symbol resolution is finished.
-  llvm::DenseMap<llvm::CachedHashStringRef, SymIndex> Symtab;
+  llvm::DenseMap<llvm::CachedHashStringRef, int> Symtab;
   std::vector<Symbol *> SymVector;
 
   // Comdat groups define "link once" sections. If two comdat groups have the

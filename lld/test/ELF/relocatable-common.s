@@ -30,7 +30,7 @@
 # DEFCOMM-NEXT:   Binding: Global
 # DEFCOMM-NEXT:   Type: Object
 # DEFCOMM-NEXT:   Other: 0
-# DEFCOMM-NEXT:   Section: COMMON (0x2)
+# DEFCOMM-NEXT:   Section: COMMON
 # DEFCOMM-NEXT: }
 
 .comm common,4,4
