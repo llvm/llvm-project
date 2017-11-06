@@ -512,6 +512,7 @@ void BaserelChunk::writeTo(uint8_t *Buf) const {
 uint8_t Baserel::getDefaultType() {
   switch (Config->Machine) {
   case AMD64:
+  case ARM64:
     return IMAGE_REL_BASED_DIR64;
   case I386:
   case ARMNT:

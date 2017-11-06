@@ -86,82 +86,82 @@ sections:
     Relocations:
       - VirtualAddress:  4
         SymbolName:      .Lstr
-        Type:            4
+        Type:            IMAGE_REL_ARM64_PAGEBASE_REL21
       - VirtualAddress:  8
         SymbolName:      .Lstr
-        Type:            6
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12A
       - VirtualAddress:  12
         SymbolName:      function
-        Type:            3
+        Type:            IMAGE_REL_ARM64_BRANCH26
       - VirtualAddress:  16
         SymbolName:      .Lglobal
-        Type:            7
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
       - VirtualAddress:  20
         SymbolName:      .Lglobal
-        Type:            7
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
       - VirtualAddress:  24
         SymbolName:      .Lglobal
-        Type:            7
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
       - VirtualAddress:  28
         SymbolName:      .Lglobal
-        Type:            7
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
       - VirtualAddress:  32
         SymbolName:      .Lglobal
-        Type:            7
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
       - VirtualAddress:  36
         SymbolName:      .Lglobal
-        Type:            7
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
       - VirtualAddress:  40
         SymbolName:      .Lglobal
-        Type:            7
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
       - VirtualAddress:  44
         SymbolName:      .Lglobal
-        Type:            7
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
       - VirtualAddress:  48
         SymbolName:      .Lglobal16
-        Type:            7
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
       - VirtualAddress:  52
         SymbolName:      .Lglobal16
-        Type:            7
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
       - VirtualAddress:  56
         SymbolName:      .Lglobal16
-        Type:            7
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
       - VirtualAddress:  60
         SymbolName:      .Lglobal16
-        Type:            7
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
       - VirtualAddress:  64
         SymbolName:      .Lglobal16
-        Type:            7
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
       - VirtualAddress:  68
         SymbolName:      .Lglobal16
-        Type:            7
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
       - VirtualAddress:  72
         SymbolName:      .Lglobal16
-        Type:            7
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
       - VirtualAddress:  76
         SymbolName:      .Lglobal16
-        Type:            7
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
       - VirtualAddress:  80
         SymbolName:      .Lglobal16
-        Type:            7
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
       - VirtualAddress:  84
         SymbolName:      .Lglobal16
-        Type:            7
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
       - VirtualAddress:  88
         SymbolName:      .Lglobal
-        Type:            7
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
       - VirtualAddress:  92
         SymbolName:      .Lglobal16
-        Type:            4
+        Type:            IMAGE_REL_ARM64_PAGEBASE_REL21
       - VirtualAddress:  96
         SymbolName:      .Lglobal0
-        Type:            7
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
       - VirtualAddress:  112
         SymbolName:      .Lglobal
-        Type:            14
+        Type:            IMAGE_REL_ARM64_ADDR64
       - VirtualAddress:  120
         SymbolName:      .Lglobal
-        Type:            2
+        Type:            IMAGE_REL_ARM64_ADDR32NB
   - Name:            .data
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
     Alignment:       4
