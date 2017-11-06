@@ -151,6 +151,22 @@ bool AMDGPUTargetLowering::isOrEquivalentToAdd(SelectionDAG &DAG, SDValue Op)
   return false;
 }
 
+unsigned AMDGPUTargetLowering::numBitsUnsigned(SDValue Op, SelectionDAG &DAG) {
+  KnownBits Known;
+  EVT VT = Op.getValueType();
+  DAG.computeKnownBits(Op, Known);
+
+  return VT.getSizeInBits() - Known.countMinLeadingZeros();
+}
+
+unsigned AMDGPUTargetLowering::numBitsSigned(SDValue Op, SelectionDAG &DAG) {
+  EVT VT = Op.getValueType();
+
+  // In order for this to be a signed 24-bit value, bit 23, must
+  // be a sign bit.
+  return VT.getSizeInBits() - DAG.ComputeNumSignBits(Op);
+}
+
 AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
                                            const AMDGPUSubtarget &STI)
     : TargetLowering(TM), Subtarget(&STI) {
@@ -2615,21 +2631,14 @@ SDValue AMDGPUTargetLowering::LowerSIGN_EXTEND_INREG(SDValue Op,
 //===----------------------------------------------------------------------===//
 
 static bool isU24(SDValue Op, SelectionDAG &DAG) {
-  KnownBits Known;
-  EVT VT = Op.getValueType();
-  DAG.computeKnownBits(Op, Known);
-
-  return (VT.getSizeInBits() - Known.countMinLeadingZeros()) <= 24;
+  return AMDGPUTargetLowering::numBitsUnsigned(Op, DAG) <= 24;
 }
 
 static bool isI24(SDValue Op, SelectionDAG &DAG) {
   EVT VT = Op.getValueType();
-
-  // In order for this to be a signed 24-bit value, bit 23, must
-  // be a sign bit.
   return VT.getSizeInBits() >= 24 && // Types less than 24-bit should be treated
                                      // as unsigned 24-bit values.
-         (VT.getSizeInBits() - DAG.ComputeNumSignBits(Op)) < 24;
+    AMDGPUTargetLowering::numBitsSigned(Op, DAG) < 24;
 }
 
 static bool simplifyI24(SDNode *Node24, unsigned OpIdx,
@@ -3946,6 +3955,8 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(MUL_LOHI_I24)
   NODE_NAME_CASE(MAD_U24)
   NODE_NAME_CASE(MAD_I24)
+  NODE_NAME_CASE(MAD_I64_I32)
+  NODE_NAME_CASE(MAD_U64_U32)
   NODE_NAME_CASE(TEXTURE_FETCH)
   NODE_NAME_CASE(EXPORT)
   NODE_NAME_CASE(EXPORT_DONE)

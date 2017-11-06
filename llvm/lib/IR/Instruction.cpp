@@ -146,9 +146,14 @@ bool Instruction::isExact() const {
   return cast<PossiblyExactOperator>(this)->isExact();
 }
 
-void Instruction::setHasUnsafeAlgebra(bool B) {
+void Instruction::setFast(bool B) {
   assert(isa<FPMathOperator>(this) && "setting fast-math flag on invalid op");
-  cast<FPMathOperator>(this)->setHasUnsafeAlgebra(B);
+  cast<FPMathOperator>(this)->setFast(B);
+}
+
+void Instruction::setHasAllowReassoc(bool B) {
+  assert(isa<FPMathOperator>(this) && "setting fast-math flag on invalid op");
+  cast<FPMathOperator>(this)->setHasAllowReassoc(B);
 }
 
 void Instruction::setHasNoNaNs(bool B) {
@@ -171,6 +176,11 @@ void Instruction::setHasAllowReciprocal(bool B) {
   cast<FPMathOperator>(this)->setHasAllowReciprocal(B);
 }
 
+void Instruction::setHasApproxFunc(bool B) {
+  assert(isa<FPMathOperator>(this) && "setting fast-math flag on invalid op");
+  cast<FPMathOperator>(this)->setHasApproxFunc(B);
+}
+
 void Instruction::setFastMathFlags(FastMathFlags FMF) {
   assert(isa<FPMathOperator>(this) && "setting fast-math flag on invalid op");
   cast<FPMathOperator>(this)->setFastMathFlags(FMF);
@@ -181,9 +191,14 @@ void Instruction::copyFastMathFlags(FastMathFlags FMF) {
   cast<FPMathOperator>(this)->copyFastMathFlags(FMF);
 }
 
-bool Instruction::hasUnsafeAlgebra() const {
+bool Instruction::isFast() const {
   assert(isa<FPMathOperator>(this) && "getting fast-math flag on invalid op");
-  return cast<FPMathOperator>(this)->hasUnsafeAlgebra();
+  return cast<FPMathOperator>(this)->isFast();
+}
+
+bool Instruction::hasAllowReassoc() const {
+  assert(isa<FPMathOperator>(this) && "getting fast-math flag on invalid op");
+  return cast<FPMathOperator>(this)->hasAllowReassoc();
 }
 
 bool Instruction::hasNoNaNs() const {
@@ -209,6 +224,11 @@ bool Instruction::hasAllowReciprocal() const {
 bool Instruction::hasAllowContract() const {
   assert(isa<FPMathOperator>(this) && "getting fast-math flag on invalid op");
   return cast<FPMathOperator>(this)->hasAllowContract();
+}
+
+bool Instruction::hasApproxFunc() const {
+  assert(isa<FPMathOperator>(this) && "getting fast-math flag on invalid op");
+  return cast<FPMathOperator>(this)->hasApproxFunc();
 }
 
 FastMathFlags Instruction::getFastMathFlags() const {
@@ -579,7 +599,7 @@ bool Instruction::isAssociative() const {
   switch (Opcode) {
   case FMul:
   case FAdd:
-    return cast<FPMathOperator>(this)->hasUnsafeAlgebra();
+    return cast<FPMathOperator>(this)->isFast();
   default:
     return false;
   }

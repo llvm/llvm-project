@@ -432,7 +432,7 @@ RecurrenceDescriptor::isRecurrenceInstr(Instruction *I, RecurrenceKind Kind,
                                         InstDesc &Prev, bool HasFunNoNaNAttr) {
   bool FP = I->getType()->isFloatingPointTy();
   Instruction *UAI = Prev.getUnsafeAlgebraInst();
-  if (!UAI && FP && !I->hasUnsafeAlgebra())
+  if (!UAI && FP && !I->isFast())
     UAI = I; // Found an unsafe (unvectorizable) algebra instruction.
 
   switch (I->getOpcode()) {
@@ -660,11 +660,11 @@ Value *RecurrenceDescriptor::createMinMaxOp(IRBuilder<> &Builder,
     break;
   }
 
-  // We only match FP sequences with unsafe algebra, so we can unconditionally
+  // We only match FP sequences that are 'fast', so we can unconditionally
   // set it on any generated instructions.
   IRBuilder<>::FastMathFlagGuard FMFG(Builder);
   FastMathFlags FMF;
-  FMF.setUnsafeAlgebra();
+  FMF.setFast();
   Builder.setFastMathFlags(FMF);
 
   Value *Cmp;
@@ -768,7 +768,7 @@ Value *InductionDescriptor::transform(IRBuilder<> &B, Value *Index,
 
     // Floating point operations had to be 'fast' to enable the induction.
     FastMathFlags Flags;
-    Flags.setUnsafeAlgebra();
+    Flags.setFast();
 
     Value *MulExp = B.CreateFMul(StepValue, Index);
     if (isa<Instruction>(MulExp))
@@ -1338,7 +1338,7 @@ Optional<unsigned> llvm::getLoopEstimatedTripCount(Loop *L) {
 static Value *addFastMathFlag(Value *V) {
   if (isa<FPMathOperator>(V)) {
     FastMathFlags Flags;
-    Flags.setUnsafeAlgebra();
+    Flags.setFast();
     cast<Instruction>(V)->setFastMathFlags(Flags);
   }
   return V;
@@ -1401,7 +1401,7 @@ Value *llvm::createSimpleTargetReduction(
   RD::MinMaxRecurrenceKind MinMaxKind = RD::MRK_Invalid;
   // TODO: Support creating ordered reductions.
   FastMathFlags FMFUnsafe;
-  FMFUnsafe.setUnsafeAlgebra();
+  FMFUnsafe.setFast();
 
   switch (Opcode) {
   case Instruction::Add:

@@ -2585,7 +2585,7 @@ static bool isVectorReductionOp(const User *I) {
   case Instruction::FAdd:
   case Instruction::FMul:
     if (const FPMathOperator *FPOp = dyn_cast<const FPMathOperator>(Inst))
-      if (FPOp->getFastMathFlags().unsafeAlgebra())
+      if (FPOp->getFastMathFlags().isFast())
         break;
     LLVM_FALLTHROUGH;
   default:
@@ -2631,7 +2631,7 @@ static bool isVectorReductionOp(const User *I) {
 
       if (Inst->getOpcode() == OpCode || isa<PHINode>(U)) {
         if (const FPMathOperator *FPOp = dyn_cast<const FPMathOperator>(Inst))
-          if (!isa<PHINode>(FPOp) && !FPOp->getFastMathFlags().unsafeAlgebra())
+          if (!isa<PHINode>(FPOp) && !FPOp->getFastMathFlags().isFast())
             return false;
         UsersToVisit.push_back(U);
       } else if (const ShuffleVectorInst *ShufInst =
@@ -2725,7 +2725,7 @@ void SelectionDAGBuilder::visitBinary(const User &I, unsigned OpCode) {
   Flags.setNoInfs(FMF.noInfs());
   Flags.setNoNaNs(FMF.noNaNs());
   Flags.setNoSignedZeros(FMF.noSignedZeros());
-  Flags.setUnsafeAlgebra(FMF.unsafeAlgebra());
+  Flags.setUnsafeAlgebra(FMF.isFast());
 
   SDValue BinNodeValue = DAG.getNode(OpCode, getCurSDLoc(), Op1.getValueType(),
                                      Op1, Op2, Flags);
@@ -7959,13 +7959,13 @@ void SelectionDAGBuilder::visitVectorReduce(const CallInst &I,
 
   switch (Intrinsic) {
   case Intrinsic::experimental_vector_reduce_fadd:
-    if (FMF.unsafeAlgebra())
+    if (FMF.isFast())
       Res = DAG.getNode(ISD::VECREDUCE_FADD, dl, VT, Op2);
     else
       Res = DAG.getNode(ISD::VECREDUCE_STRICT_FADD, dl, VT, Op1, Op2);
     break;
   case Intrinsic::experimental_vector_reduce_fmul:
-    if (FMF.unsafeAlgebra())
+    if (FMF.isFast())
       Res = DAG.getNode(ISD::VECREDUCE_FMUL, dl, VT, Op2);
     else
       Res = DAG.getNode(ISD::VECREDUCE_STRICT_FMUL, dl, VT, Op1, Op2);

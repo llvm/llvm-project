@@ -1332,3 +1332,263 @@ define i7 @test65(i7 %a, i7 %b) {
   %y = and i7 %x, 1 ; this extracts the lsb which should be 0 because we shifted an even number of bits and all even bits of the shift input are 0.
   ret i7 %y
 }
+
+define i32 @shl_select_add_true(i32 %x, i1 %cond) {
+; CHECK-LABEL: @shl_select_add_true(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], 14
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[COND:%.*]], i32 [[TMP2]], i32 [[TMP1]]
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %1 = add i32 %x, 7
+  %2 = select i1 %cond, i32 %1, i32 %x
+  %3 = shl i32 %2, 1
+  ret i32 %3
+}
+
+define i32 @shl_select_add_false(i32 %x, i1 %cond) {
+; CHECK-LABEL: @shl_select_add_false(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], 14
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[COND:%.*]], i32 [[TMP1]], i32 [[TMP2]]
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %1 = add i32 %x, 7
+  %2 = select i1 %cond, i32 %x, i32 %1
+  %3 = shl i32 %2, 1
+  ret i32 %3
+}
+
+define i32 @shl_select_and_true(i32 %x, i1 %cond) {
+; CHECK-LABEL: @shl_select_and_true(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 14
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[COND:%.*]], i32 [[TMP2]], i32 [[TMP1]]
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %1 = and i32 %x, 7
+  %2 = select i1 %cond, i32 %1, i32 %x
+  %3 = shl i32 %2, 1
+  ret i32 %3
+}
+
+define i32 @shl_select_and_false(i32 %x, i1 %cond) {
+; CHECK-LABEL: @shl_select_and_false(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 14
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[COND:%.*]], i32 [[TMP1]], i32 [[TMP2]]
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %1 = and i32 %x, 7
+  %2 = select i1 %cond, i32 %x, i32 %1
+  %3 = shl i32 %2, 1
+  ret i32 %3
+}
+
+define i32 @lshr_select_and_true(i32 %x, i1 %cond) {
+; CHECK-LABEL: @lshr_select_and_true(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[COND:%.*]], i32 [[TMP2]], i32 [[TMP1]]
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %1 = and i32 %x, 7
+  %2 = select i1 %cond, i32 %1, i32 %x
+  %3 = lshr i32 %2, 1
+  ret i32 %3
+}
+
+define i32 @lshr_select_and_false(i32 %x, i1 %cond) {
+; CHECK-LABEL: @lshr_select_and_false(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[COND:%.*]], i32 [[TMP1]], i32 [[TMP2]]
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %1 = and i32 %x, 7
+  %2 = select i1 %cond, i32 %x, i32 %1
+  %3 = lshr i32 %2, 1
+  ret i32 %3
+}
+
+define i32 @ashr_select_and_true(i32 %x, i1 %cond) {
+; CHECK-LABEL: @ashr_select_and_true(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], -1073741821
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[COND:%.*]], i32 [[TMP2]], i32 [[TMP1]]
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %1 = and i32 %x, 2147483655
+  %2 = select i1 %cond, i32 %1, i32 %x
+  %3 = ashr i32 %2, 1
+  ret i32 %3
+}
+
+define i32 @ashr_select_and_false(i32 %x, i1 %cond) {
+; CHECK-LABEL: @ashr_select_and_false(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], -1073741821
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[COND:%.*]], i32 [[TMP1]], i32 [[TMP2]]
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %1 = and i32 %x, 2147483655
+  %2 = select i1 %cond, i32 %x, i32 %1
+  %3 = ashr i32 %2, 1
+  ret i32 %3
+}
+
+define i32 @shl_select_or_true(i32 %x, i1 %cond) {
+; CHECK-LABEL: @shl_select_or_true(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[TMP1]], 14
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[COND:%.*]], i32 [[TMP2]], i32 [[TMP1]]
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %1 = or i32 %x, 7
+  %2 = select i1 %cond, i32 %1, i32 %x
+  %3 = shl i32 %2, 1
+  ret i32 %3
+}
+
+define i32 @shl_select_or_false(i32 %x, i1 %cond) {
+; CHECK-LABEL: @shl_select_or_false(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[TMP1]], 14
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[COND:%.*]], i32 [[TMP1]], i32 [[TMP2]]
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %1 = or i32 %x, 7
+  %2 = select i1 %cond, i32 %x, i32 %1
+  %3 = shl i32 %2, 1
+  ret i32 %3
+}
+
+define i32 @lshr_select_or_true(i32 %x, i1 %cond) {
+; CHECK-LABEL: @lshr_select_or_true(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[COND:%.*]], i32 [[TMP2]], i32 [[TMP1]]
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %1 = or i32 %x, 7
+  %2 = select i1 %cond, i32 %1, i32 %x
+  %3 = lshr i32 %2, 1
+  ret i32 %3
+}
+
+define i32 @lshr_select_or_false(i32 %x, i1 %cond) {
+; CHECK-LABEL: @lshr_select_or_false(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[COND:%.*]], i32 [[TMP1]], i32 [[TMP2]]
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %1 = or i32 %x, 7
+  %2 = select i1 %cond, i32 %x, i32 %1
+  %3 = lshr i32 %2, 1
+  ret i32 %3
+}
+
+define i32 @ashr_select_or_true(i32 %x, i1 %cond) {
+; CHECK-LABEL: @ashr_select_or_true(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[COND:%.*]], i32 [[TMP2]], i32 [[TMP1]]
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %1 = or i32 %x, 7
+  %2 = select i1 %cond, i32 %1, i32 %x
+  %3 = ashr i32 %2, 1
+  ret i32 %3
+}
+
+define i32 @ashr_select_or_false(i32 %x, i1 %cond) {
+; CHECK-LABEL: @ashr_select_or_false(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[COND:%.*]], i32 [[TMP1]], i32 [[TMP2]]
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %1 = or i32 %x, 7
+  %2 = select i1 %cond, i32 %x, i32 %1
+  %3 = ashr i32 %2, 1
+  ret i32 %3
+}
+
+define i32 @shl_select_xor_true(i32 %x, i1 %cond) {
+; CHECK-LABEL: @shl_select_xor_true(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], 14
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[COND:%.*]], i32 [[TMP2]], i32 [[TMP1]]
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %1 = xor i32 %x, 7
+  %2 = select i1 %cond, i32 %1, i32 %x
+  %3 = shl i32 %2, 1
+  ret i32 %3
+}
+
+define i32 @shl_select_xor_false(i32 %x, i1 %cond) {
+; CHECK-LABEL: @shl_select_xor_false(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], 14
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[COND:%.*]], i32 [[TMP1]], i32 [[TMP2]]
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %1 = xor i32 %x, 7
+  %2 = select i1 %cond, i32 %x, i32 %1
+  %3 = shl i32 %2, 1
+  ret i32 %3
+}
+
+define i32 @lshr_select_xor_true(i32 %x, i1 %cond) {
+; CHECK-LABEL: @lshr_select_xor_true(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[COND:%.*]], i32 [[TMP2]], i32 [[TMP1]]
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %1 = xor i32 %x, 7
+  %2 = select i1 %cond, i32 %1, i32 %x
+  %3 = lshr i32 %2, 1
+  ret i32 %3
+}
+
+define i32 @lshr_select_xor_false(i32 %x, i1 %cond) {
+; CHECK-LABEL: @lshr_select_xor_false(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[COND:%.*]], i32 [[TMP1]], i32 [[TMP2]]
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %1 = xor i32 %x, 7
+  %2 = select i1 %cond, i32 %x, i32 %1
+  %3 = lshr i32 %2, 1
+  ret i32 %3
+}
+
+define i32 @ashr_select_xor_true(i32 %x, i1 %cond) {
+; CHECK-LABEL: @ashr_select_xor_true(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[COND:%.*]], i32 [[TMP2]], i32 [[TMP1]]
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %1 = xor i32 %x, 7
+  %2 = select i1 %cond, i32 %1, i32 %x
+  %3 = ashr i32 %2, 1
+  ret i32 %3
+}
+
+define i32 @ashr_select_xor_false(i32 %x, i1 %cond) {
+; CHECK-LABEL: @ashr_select_xor_false(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[COND:%.*]], i32 [[TMP1]], i32 [[TMP2]]
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %1 = xor i32 %x, 7
+  %2 = select i1 %cond, i32 %x, i32 %1
+  %3 = ashr i32 %2, 1
+  ret i32 %3
+}

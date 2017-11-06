@@ -157,7 +157,7 @@ if( NOT PURE_WINDOWS AND NOT LLVM_USE_SANITIZER MATCHES "Memory.*")
     set(HAVE_TERMINFO 0)
   endif()
 
-  find_library(ICONV_LIBRARY_PATH NAMES iconv libiconv libiconv-2)
+  find_library(ICONV_LIBRARY_PATH NAMES iconv libiconv libiconv-2 c)
   set(LLVM_LIBXML2_ENABLED 0)
   set(LIBXML2_FOUND 0)
   if((LLVM_ENABLE_LIBXML2) AND ((CMAKE_SYSTEM_NAME MATCHES "Linux") AND (ICONV_LIBRARY_PATH) OR APPLE))

@@ -1,4 +1,4 @@
-# RUN: clangd -run-synchronously < %s | FileCheck %s
+# RUN: clangd -pretty -run-synchronously < %s | FileCheck -strict-whitespace %s
 # It is absolutely vital that this file has CRLF line endings.
 #
 # Test authority-less URI
@@ -15,22 +15,34 @@ Content-Length: 146
 {"jsonrpc":"2.0","id":1,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:/main.cpp"},"position":{"line":3,"character":5}}}
 # Test authority-less URI
 #
-# CHECK: {"jsonrpc":"2.0","id":1,"result":[
-# CHECK-DAG: {"label":"a","kind":5,"detail":"int","sortText":"000035a","filterText":"a","insertText":"a","insertTextFormat":1}
-# CHECK: ]}
-
+#      CHECK:  "id": 1,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": [
+#      CHECK:      "filterText": "fake",
+# CHECK-NEXT:      "insertText": "fake",
+# CHECK-NEXT:      "insertTextFormat": 1,
+# CHECK-NEXT:      "kind": 7,
+# CHECK-NEXT:      "label": "fake::",
+# CHECK-NEXT:      "sortText": "000075fake"
+#      CHECK:  ]
 Content-Length: 172
 
 {"jsonrpc":"2.0","id":2,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///main.cpp"},"uri":"file:///main.cpp","position":{"line":3,"character":5}}}
 # Test params parsing in the presence of a 1.x-compatible client (inlined "uri")
 #
-# CHECK: {"jsonrpc":"2.0","id":2,"result":[
-# CHECK-DAG: {"label":"a","kind":5,"detail":"int","sortText":"000035a","filterText":"a","insertText":"a","insertTextFormat":1}
-# CHECK: ]}
+#      CHECK:  "id": 2,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": [
+#      CHECK:      "filterText": "fake",
+# CHECK-NEXT:      "insertText": "fake",
+# CHECK-NEXT:      "insertTextFormat": 1,
+# CHECK-NEXT:      "kind": 7,
+# CHECK-NEXT:      "label": "fake::",
+# CHECK-NEXT:      "sortText": "000075fake"
+#      CHECK:  ]
 Content-Length: 44
 
 {"jsonrpc":"2.0","id":3,"method":"shutdown"}
-# CHECK: {"jsonrpc":"2.0","id":3,"result":null}
 Content-Length: 33
 
 {"jsonrpc":"2.0":"method":"exit"}

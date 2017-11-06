@@ -21,6 +21,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_PROTOCOL_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_PROTOCOL_H
 
+#include "JSONExpr.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/YAMLParser.h"
 #include <string>
@@ -39,7 +40,7 @@ struct URI {
   static URI fromFile(llvm::StringRef file);
 
   static URI parse(llvm::yaml::ScalarNode *Param);
-  static std::string unparse(const URI &U);
+  static json::Expr unparse(const URI &U);
 
   friend bool operator==(const URI &LHS, const URI &RHS) {
     return LHS.uri == RHS.uri;
@@ -80,7 +81,7 @@ struct Position {
 
   static llvm::Optional<Position> parse(llvm::yaml::MappingNode *Params,
                                         clangd::Logger &Logger);
-  static std::string unparse(const Position &P);
+  static json::Expr unparse(const Position &P);
 };
 
 struct Range {
@@ -99,7 +100,7 @@ struct Range {
 
   static llvm::Optional<Range> parse(llvm::yaml::MappingNode *Params,
                                      clangd::Logger &Logger);
-  static std::string unparse(const Range &P);
+  static json::Expr unparse(const Range &P);
 };
 
 struct Location {
@@ -119,7 +120,7 @@ struct Location {
     return std::tie(LHS.uri, LHS.range) < std::tie(RHS.uri, RHS.range);
   }
 
-  static std::string unparse(const Location &P);
+  static json::Expr unparse(const Location &P);
 };
 
 struct Metadata {
@@ -140,8 +141,7 @@ struct TextEdit {
 
   static llvm::Optional<TextEdit> parse(llvm::yaml::MappingNode *Params,
                                         clangd::Logger &Logger);
-  static std::string unparse(const TextEdit &P);
-  static std::string unparse(const std::vector<TextEdit> &TextEdits);
+  static json::Expr unparse(const TextEdit &P);
 };
 
 struct TextDocumentItem {
@@ -283,7 +283,7 @@ struct FormattingOptions {
 
   static llvm::Optional<FormattingOptions>
   parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger);
-  static std::string unparse(const FormattingOptions &P);
+  static json::Expr unparse(const FormattingOptions &P);
 };
 
 struct DocumentRangeFormattingParams {
@@ -392,7 +392,7 @@ struct WorkspaceEdit {
 
   static llvm::Optional<WorkspaceEdit> parse(llvm::yaml::MappingNode *Params,
                                              clangd::Logger &Logger);
-  static std::string unparse(const WorkspaceEdit &WE);
+  static json::Expr unparse(const WorkspaceEdit &WE);
 };
 
 /// Exact commands are not specified in the protocol so we define the
@@ -420,7 +420,7 @@ struct ExecuteCommandParams {
 
 struct ApplyWorkspaceEditParams {
   WorkspaceEdit edit;
-  static std::string unparse(const ApplyWorkspaceEditParams &Params);
+  static json::Expr unparse(const ApplyWorkspaceEditParams &Params);
 };
 
 struct TextDocumentPositionParams {
@@ -527,7 +527,7 @@ struct CompletionItem {
   //
   // data?: any - A data entry field that is preserved on a completion item
   //              between a completion and a completion resolve request.
-  static std::string unparse(const CompletionItem &P);
+  static json::Expr unparse(const CompletionItem &P);
 };
 
 /// A single parameter of a particular signature.
@@ -539,7 +539,7 @@ struct ParameterInformation {
   /// The documentation of this parameter. Optional.
   std::string documentation;
 
-  static std::string unparse(const ParameterInformation &);
+  static json::Expr unparse(const ParameterInformation &);
 };
 
 /// Represents the signature of something callable.
@@ -554,7 +554,7 @@ struct SignatureInformation {
   /// The parameters of this signature.
   std::vector<ParameterInformation> parameters;
 
-  static std::string unparse(const SignatureInformation &);
+  static json::Expr unparse(const SignatureInformation &);
 };
 
 /// Represents the signature of a callable.
@@ -569,7 +569,7 @@ struct SignatureHelp {
   /// The active parameter of the active signature.
   int activeParameter = 0;
 
-  static std::string unparse(const SignatureHelp &);
+  static json::Expr unparse(const SignatureHelp &);
 };
 
 } // namespace clangd
