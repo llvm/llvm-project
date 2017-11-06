@@ -11,133 +11,127 @@ declare double @sqrt(double)
 declare i64 @round(i64)
 
 
-; CHECK: sin_libm
-; CHECK: call <2 x double> @llvm.sin.v2f64
-; CHECK: ret void
-define void @sin_libm(double* %a, double* %b, double* %c) {
-entry:
-  %i0 = load double, double* %a, align 8
-  %i1 = load double, double* %b, align 8
-  %mul = fmul double %i0, %i1
-  %call = tail call double @sin(double %mul) nounwind readnone
-  %arrayidx3 = getelementptr inbounds double, double* %a, i64 1
-  %i3 = load double, double* %arrayidx3, align 8
-  %arrayidx4 = getelementptr inbounds double, double* %b, i64 1
-  %i4 = load double, double* %arrayidx4, align 8
-  %mul5 = fmul double %i3, %i4
-  %call5 = tail call double @sin(double %mul5) nounwind readnone
-  store double %call, double* %c, align 8
-  %arrayidx5 = getelementptr inbounds double, double* %c, i64 1
-  store double %call5, double* %arrayidx5, align 8
+define void @sin_libm(double* %a, double* %b) {
+; CHECK-LABEL: @sin_libm(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double* %a to <2 x double>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, <2 x double>* [[TMP1]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.sin.v2f64(<2 x double> [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast double* %b to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP3]], <2 x double>* [[TMP4]], align 8
+; CHECK-NEXT:    ret void
+;
+  %a0 = load double, double* %a, align 8
+  %idx1 = getelementptr inbounds double, double* %a, i64 1
+  %a1 = load double, double* %idx1, align 8
+  %sin1 = tail call double @sin(double %a0) nounwind readnone
+  %sin2 = tail call double @sin(double %a1) nounwind readnone
+  store double %sin1, double* %b, align 8
+  %idx2 = getelementptr inbounds double, double* %b, i64 1
+  store double %sin2, double* %idx2, align 8
   ret void
 }
 
-; CHECK: cos_libm
-; CHECK: call <2 x double> @llvm.cos.v2f64
-; CHECK: ret void
-define void @cos_libm(double* %a, double* %b, double* %c) {
-entry:
-  %i0 = load double, double* %a, align 8
-  %i1 = load double, double* %b, align 8
-  %mul = fmul double %i0, %i1
-  %call = tail call double @cos(double %mul) nounwind readnone
-  %arrayidx3 = getelementptr inbounds double, double* %a, i64 1
-  %i3 = load double, double* %arrayidx3, align 8
-  %arrayidx4 = getelementptr inbounds double, double* %b, i64 1
-  %i4 = load double, double* %arrayidx4, align 8
-  %mul5 = fmul double %i3, %i4
-  %call5 = tail call double @cos(double %mul5) nounwind readnone
-  store double %call, double* %c, align 8
-  %arrayidx5 = getelementptr inbounds double, double* %c, i64 1
-  store double %call5, double* %arrayidx5, align 8
+define void @cos_libm(double* %a, double* %b) {
+; CHECK-LABEL: @cos_libm(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double* %a to <2 x double>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, <2 x double>* [[TMP1]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.cos.v2f64(<2 x double> [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast double* %b to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP3]], <2 x double>* [[TMP4]], align 8
+; CHECK-NEXT:    ret void
+;
+  %a0 = load double, double* %a, align 8
+  %idx1 = getelementptr inbounds double, double* %a, i64 1
+  %a1 = load double, double* %idx1, align 8
+  %cos1 = tail call double @cos(double %a0) nounwind readnone
+  %cos2 = tail call double @cos(double %a1) nounwind readnone
+  store double %cos1, double* %b, align 8
+  %idx2 = getelementptr inbounds double, double* %b, i64 1
+  store double %cos2, double* %idx2, align 8
   ret void
 }
 
-; CHECK: pow_libm
-; CHECK: call <2 x double> @llvm.pow.v2f64
-; CHECK: ret void
-define void @pow_libm(double* %a, double* %b, double* %c) {
-entry:
-  %i0 = load double, double* %a, align 8
-  %i1 = load double, double* %b, align 8
-  %mul = fmul double %i0, %i1
-  %call = tail call double @pow(double %mul,double %mul) nounwind readnone
-  %arrayidx3 = getelementptr inbounds double, double* %a, i64 1
-  %i3 = load double, double* %arrayidx3, align 8
-  %arrayidx4 = getelementptr inbounds double, double* %b, i64 1
-  %i4 = load double, double* %arrayidx4, align 8
-  %mul5 = fmul double %i3, %i4
-  %call5 = tail call double @pow(double %mul5,double %mul5) nounwind readnone
-  store double %call, double* %c, align 8
-  %arrayidx5 = getelementptr inbounds double, double* %c, i64 1
-  store double %call5, double* %arrayidx5, align 8
+define void @pow_libm(double* %a, double* %b) {
+; CHECK-LABEL: @pow_libm(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double* %a to <2 x double>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, <2 x double>* [[TMP1]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.pow.v2f64(<2 x double> [[TMP2]], <2 x double> [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast double* %b to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP3]], <2 x double>* [[TMP4]], align 8
+; CHECK-NEXT:    ret void
+;
+  %a0 = load double, double* %a, align 8
+  %idx1 = getelementptr inbounds double, double* %a, i64 1
+  %a1 = load double, double* %idx1, align 8
+  %pow1 = tail call double @pow(double %a0, double %a0) nounwind readnone
+  %pow2 = tail call double @pow(double %a1, double %a1) nounwind readnone
+  store double %pow1, double* %b, align 8
+  %idx2 = getelementptr inbounds double, double* %b, i64 1
+  store double %pow2, double* %idx2, align 8
   ret void
 }
 
-
-; CHECK: exp2_libm
-; CHECK: call <2 x double> @llvm.exp2.v2f64
-; CHECK: ret void
-define void @exp2_libm(double* %a, double* %b, double* %c) {
-entry:
-  %i0 = load double, double* %a, align 8
-  %i1 = load double, double* %b, align 8
-  %mul = fmul double %i0, %i1
-  %call = tail call double @exp2(double %mul) nounwind readnone
-  %arrayidx3 = getelementptr inbounds double, double* %a, i64 1
-  %i3 = load double, double* %arrayidx3, align 8
-  %arrayidx4 = getelementptr inbounds double, double* %b, i64 1
-  %i4 = load double, double* %arrayidx4, align 8
-  %mul5 = fmul double %i3, %i4
-  %call5 = tail call double @exp2(double %mul5) nounwind readnone
-  store double %call, double* %c, align 8
-  %arrayidx5 = getelementptr inbounds double, double* %c, i64 1
-  store double %call5, double* %arrayidx5, align 8
+define void @exp_libm(double* %a, double* %b) {
+; CHECK-LABEL: @exp_libm(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double* %a to <2 x double>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, <2 x double>* [[TMP1]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.exp2.v2f64(<2 x double> [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast double* %b to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP3]], <2 x double>* [[TMP4]], align 8
+; CHECK-NEXT:    ret void
+;
+  %a0 = load double, double* %a, align 8
+  %idx1 = getelementptr inbounds double, double* %a, i64 1
+  %a1 = load double, double* %idx1, align 8
+  %exp1 = tail call double @exp2(double %a0) nounwind readnone
+  %exp2 = tail call double @exp2(double %a1) nounwind readnone
+  store double %exp1, double* %b, align 8
+  %idx2 = getelementptr inbounds double, double* %b, i64 1
+  store double %exp2, double* %idx2, align 8
   ret void
 }
 
-
-; CHECK: sqrt_libm
-; CHECK: call nnan <2 x double> @llvm.sqrt.v2f64
-; CHECK: ret void
-define void @sqrt_libm(double* %a, double* %b, double* %c) {
-entry:
-  %i0 = load double, double* %a, align 8
-  %i1 = load double, double* %b, align 8
-  %mul = fmul double %i0, %i1
-  %call = tail call nnan double @sqrt(double %mul) nounwind readnone
-  %arrayidx3 = getelementptr inbounds double, double* %a, i64 1
-  %i3 = load double, double* %arrayidx3, align 8
-  %arrayidx4 = getelementptr inbounds double, double* %b, i64 1
-  %i4 = load double, double* %arrayidx4, align 8
-  %mul5 = fmul double %i3, %i4
-  %call5 = tail call nnan double @sqrt(double %mul5) nounwind readnone
-  store double %call, double* %c, align 8
-  %arrayidx5 = getelementptr inbounds double, double* %c, i64 1
-  store double %call5, double* %arrayidx5, align 8
+define void @sqrt_libm(double* %a, double* %b) {
+; CHECK-LABEL: @sqrt_libm(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double* %a to <2 x double>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, <2 x double>* [[TMP1]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = call nnan <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast double* %b to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP3]], <2 x double>* [[TMP4]], align 8
+; CHECK-NEXT:    ret void
+;
+  %a0 = load double, double* %a, align 8
+  %idx1 = getelementptr inbounds double, double* %a, i64 1
+  %a1 = load double, double* %idx1, align 8
+  %sqrt1 = tail call nnan double @sqrt(double %a0) nounwind readnone
+  %sqrt2 = tail call nnan double @sqrt(double %a1) nounwind readnone
+  store double %sqrt1, double* %b, align 8
+  %idx2 = getelementptr inbounds double, double* %b, i64 1
+  store double %sqrt2, double* %idx2, align 8
   ret void
 }
-
 
 ; Negative test case
-; CHECK: round_custom
-; CHECK-NOT: load <4 x i64>
-; CHECK: ret void
-define void @round_custom(i64* %a, i64* %b, i64* %c) {
-entry:
-  %i0 = load i64, i64* %a, align 8
-  %i1 = load i64, i64* %b, align 8
-  %mul = mul i64 %i0, %i1
-  %call = tail call i64 @round(i64 %mul) nounwind readnone
-  %arrayidx3 = getelementptr inbounds i64, i64* %a, i64 1
-  %i3 = load i64, i64* %arrayidx3, align 8
-  %arrayidx4 = getelementptr inbounds i64, i64* %b, i64 1
-  %i4 = load i64, i64* %arrayidx4, align 8
-  %mul5 = mul i64 %i3, %i4
-  %call5 = tail call i64 @round(i64 %mul5) nounwind readnone
-  store i64 %call, i64* %c, align 8
-  %arrayidx5 = getelementptr inbounds i64, i64* %c, i64 1
-  store i64 %call5, i64* %arrayidx5, align 8
+define void @round_custom(i64* %a, i64* %b) {
+; CHECK-LABEL: @round_custom(
+; CHECK-NEXT:    [[A0:%.*]] = load i64, i64* %a, align 8
+; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr inbounds i64, i64* %a, i64 1
+; CHECK-NEXT:    [[A1:%.*]] = load i64, i64* [[IDX1]], align 8
+; CHECK-NEXT:    [[ROUND1:%.*]] = tail call i64 @round(i64 [[A0]]) #2
+; CHECK-NEXT:    [[ROUND2:%.*]] = tail call i64 @round(i64 [[A1]]) #2
+; CHECK-NEXT:    store i64 [[ROUND1]], i64* %b, align 8
+; CHECK-NEXT:    [[IDX2:%.*]] = getelementptr inbounds i64, i64* %b, i64 1
+; CHECK-NEXT:    store i64 [[ROUND2]], i64* [[IDX2]], align 8
+; CHECK-NEXT:    ret void
+;
+  %a0 = load i64, i64* %a, align 8
+  %idx1 = getelementptr inbounds i64, i64* %a, i64 1
+  %a1 = load i64, i64* %idx1, align 8
+  %round1 = tail call i64 @round(i64 %a0) nounwind readnone
+  %round2 = tail call i64 @round(i64 %a1) nounwind readnone
+  store i64 %round1, i64* %b, align 8
+  %idx2 = getelementptr inbounds i64, i64* %b, i64 1
+  store i64 %round2, i64* %idx2, align 8
   ret void
 }
 

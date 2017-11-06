@@ -45,3 +45,26 @@ define <8 x i64> @test_mask_lzcnt_q(<8 x i64> %a, <8 x i64> %b, i8 %mask) {
   %res = call <8 x i64> @llvm.x86.avx512.mask.lzcnt.q.512(<8 x i64> %a, <8 x i64> %b, i8 %mask)
   ret <8 x i64> %res
 }
+
+define <16 x i32> @test_x86_vbroadcastmw_512(i16 %a0) {
+; CHECK-LABEL: test_x86_vbroadcastmw_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    movzwl %di, %eax
+; CHECK-NEXT:    vpbroadcastd %eax, %zmm0
+; CHECK-NEXT:    retq
+  %res = call <16 x i32> @llvm.x86.avx512.broadcastmw.512(i16 %a0)
+  ret <16 x i32> %res
+}
+declare <16 x i32> @llvm.x86.avx512.broadcastmw.512(i16)
+
+define <8 x i64> @test_x86_broadcastmb_512(i8 %a0) {
+; CHECK-LABEL: test_x86_broadcastmb_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    movzbl %dil, %eax
+; CHECK-NEXT:    vpbroadcastq %rax, %zmm0
+; CHECK-NEXT:    retq
+  %res = call <8 x i64> @llvm.x86.avx512.broadcastmb.512(i8 %a0)
+  ret <8 x i64> %res
+}
+declare <8 x i64> @llvm.x86.avx512.broadcastmb.512(i8)
+
