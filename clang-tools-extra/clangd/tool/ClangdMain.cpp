@@ -41,6 +41,10 @@ static llvm::cl::opt<bool> EnableSnippets(
         "Present snippet completions instead of plaintext completions"),
     llvm::cl::init(false));
 
+static llvm::cl::opt<bool>
+    PrettyPrint("pretty", llvm::cl::desc("Pretty-print JSON output"),
+                llvm::cl::init(false));
+
 static llvm::cl::opt<bool> RunSynchronously(
     "run-synchronously",
     llvm::cl::desc("Parse on main thread. If set, -j is ignored"),
@@ -104,7 +108,8 @@ int main(int argc, char *argv[]) {
   llvm::raw_ostream &Outs = llvm::outs();
   llvm::raw_ostream &Logs = llvm::errs();
   JSONOutput Out(Outs, Logs,
-                 InputMirrorStream ? InputMirrorStream.getPointer() : nullptr);
+                 InputMirrorStream ? InputMirrorStream.getPointer() : nullptr,
+                 PrettyPrint);
 
   // If --compile-commands-dir arg was invoked, check value and override default
   // path.

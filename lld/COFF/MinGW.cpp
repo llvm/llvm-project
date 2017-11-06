@@ -69,6 +69,8 @@ AutoExporter::AutoExporter() {
       "libc++",
       "libc++abi",
       "libunwind",
+      "libmsvcrt",
+      "libucrtbase",
   };
   ExcludeObjects = {
       "crt0.o",
