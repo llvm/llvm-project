@@ -400,7 +400,7 @@ bool AMDGPUCodeGenPrepare::visitFDiv(BinaryOperator &FDiv) {
     return false;
 
   FastMathFlags FMF = FPOp->getFastMathFlags();
-  bool UnsafeDiv = HasUnsafeFPMath || FMF.unsafeAlgebra() ||
+  bool UnsafeDiv = HasUnsafeFPMath || FMF.isFast() ||
                                       FMF.allowReciprocal();
 
   // With UnsafeDiv node will be optimized to just rcp and mul.

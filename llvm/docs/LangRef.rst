@@ -2272,11 +2272,11 @@ seq\_cst total orderings of other operations that are not marked
 Fast-Math Flags
 ---------------
 
-LLVM IR floating-point binary ops (:ref:`fadd <i_fadd>`,
+LLVM IR floating-point operations (:ref:`fadd <i_fadd>`,
 :ref:`fsub <i_fsub>`, :ref:`fmul <i_fmul>`, :ref:`fdiv <i_fdiv>`,
 :ref:`frem <i_frem>`, :ref:`fcmp <i_fcmp>`) and :ref:`call <i_call>`
-instructions have the following flags that can be set to enable
-otherwise unsafe floating point transformations.
+may use the following flags to enable otherwise unsafe 
+floating-point transformations.
 
 ``nnan``
    No NaNs - Allow optimizations to assume the arguments and result are not
@@ -2300,10 +2300,17 @@ otherwise unsafe floating point transformations.
    Allow floating-point contraction (e.g. fusing a multiply followed by an
    addition into a fused multiply-and-add).
 
+``afn``
+   Approximate functions - Allow substitution of approximate calculations for
+   functions (sin, log, sqrt, etc). See floating-point intrinsic definitions 
+   for places where this can apply to LLVM's intrinsic math functions. 
+
+``reassoc``
+   Allow reassociation transformations for floating-point instructions. 
+   This may dramatically change results in floating point.
+
 ``fast``
-   Fast - Allow algebraically equivalent transformations that may
-   dramatically change results in floating point (e.g. reassociate). This
-   flag implies all the others.
+   This flag implies all of the others.
 
 .. _uselistorder:
 
@@ -10483,7 +10490,7 @@ Syntax:
 """""""
 
 This is an overloaded intrinsic. You can use ``llvm.sqrt`` on any
-floating point or vector of floating point type. Not all targets support
+floating-point or vector of floating-point type. Not all targets support
 all types however.
 
 ::
@@ -10497,20 +10504,22 @@ all types however.
 Overview:
 """""""""
 
-The '``llvm.sqrt``' intrinsics return the square root of the specified value,
-returning the same value as the libm '``sqrt``' functions would, but without
-trapping or setting ``errno``.
+The '``llvm.sqrt``' intrinsics return the square root of the specified value.
 
 Arguments:
 """"""""""
 
-The argument and return value are floating point numbers of the same type.
+The argument and return value are floating-point numbers of the same type.
 
 Semantics:
 """"""""""
 
-This function returns the square root of the operand if it is a nonnegative
-floating point number.
+Return the same value as a corresponding libm '``sqrt``' function but without
+trapping or setting ``errno``. For types specified by IEEE-754, the result 
+matches a conforming libm implementation.
+
+When specified with the fast-math-flag 'afn', the result may be approximated 
+using a less accurate calculation.
 
 '``llvm.powi.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -10557,7 +10566,7 @@ Syntax:
 """""""
 
 This is an overloaded intrinsic. You can use ``llvm.sin`` on any
-floating point or vector of floating point type. Not all targets support
+floating-point or vector of floating-point type. Not all targets support
 all types however.
 
 ::
@@ -10576,14 +10585,16 @@ The '``llvm.sin.*``' intrinsics return the sine of the operand.
 Arguments:
 """"""""""
 
-The argument and return value are floating point numbers of the same type.
+The argument and return value are floating-point numbers of the same type.
 
 Semantics:
 """"""""""
 
-This function returns the sine of the specified operand, returning the
-same values as the libm ``sin`` functions would, and handles error
-conditions in the same way.
+Return the same value as a corresponding libm '``sin``' function but without
+trapping or setting ``errno``.
+
+When specified with the fast-math-flag 'afn', the result may be approximated 
+using a less accurate calculation.
 
 '``llvm.cos.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -10592,7 +10603,7 @@ Syntax:
 """""""
 
 This is an overloaded intrinsic. You can use ``llvm.cos`` on any
-floating point or vector of floating point type. Not all targets support
+floating-point or vector of floating-point type. Not all targets support
 all types however.
 
 ::
@@ -10611,14 +10622,16 @@ The '``llvm.cos.*``' intrinsics return the cosine of the operand.
 Arguments:
 """"""""""
 
-The argument and return value are floating point numbers of the same type.
+The argument and return value are floating-point numbers of the same type.
 
 Semantics:
 """"""""""
 
-This function returns the cosine of the specified operand, returning the
-same values as the libm ``cos`` functions would, and handles error
-conditions in the same way.
+Return the same value as a corresponding libm '``cos``' function but without
+trapping or setting ``errno``.
+
+When specified with the fast-math-flag 'afn', the result may be approximated 
+using a less accurate calculation.
 
 '``llvm.pow.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -10627,7 +10640,7 @@ Syntax:
 """""""
 
 This is an overloaded intrinsic. You can use ``llvm.pow`` on any
-floating point or vector of floating point type. Not all targets support
+floating-point or vector of floating-point type. Not all targets support
 all types however.
 
 ::
@@ -10647,15 +10660,16 @@ specified (positive or negative) power.
 Arguments:
 """"""""""
 
-The second argument is a floating point power, and the first is a value
-to raise to that power.
+The arguments and return value are floating-point numbers of the same type.
 
 Semantics:
 """"""""""
 
-This function returns the first value raised to the second power,
-returning the same values as the libm ``pow`` functions would, and
-handles error conditions in the same way.
+Return the same value as a corresponding libm '``pow``' function but without
+trapping or setting ``errno``.
+
+When specified with the fast-math-flag 'afn', the result may be approximated 
+using a less accurate calculation.
 
 '``llvm.exp.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -10664,7 +10678,7 @@ Syntax:
 """""""
 
 This is an overloaded intrinsic. You can use ``llvm.exp`` on any
-floating point or vector of floating point type. Not all targets support
+floating-point or vector of floating-point type. Not all targets support
 all types however.
 
 ::
@@ -10684,13 +10698,16 @@ value.
 Arguments:
 """"""""""
 
-The argument and return value are floating point numbers of the same type.
+The argument and return value are floating-point numbers of the same type.
 
 Semantics:
 """"""""""
 
-This function returns the same values as the libm ``exp`` functions
-would, and handles error conditions in the same way.
+Return the same value as a corresponding libm '``exp``' function but without
+trapping or setting ``errno``.
+
+When specified with the fast-math-flag 'afn', the result may be approximated 
+using a less accurate calculation.
 
 '``llvm.exp2.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -10699,7 +10716,7 @@ Syntax:
 """""""
 
 This is an overloaded intrinsic. You can use ``llvm.exp2`` on any
-floating point or vector of floating point type. Not all targets support
+floating-point or vector of floating-point type. Not all targets support
 all types however.
 
 ::
@@ -10719,13 +10736,16 @@ specified value.
 Arguments:
 """"""""""
 
-The argument and return value are floating point numbers of the same type.
+The argument and return value are floating-point numbers of the same type.
 
 Semantics:
 """"""""""
 
-This function returns the same values as the libm ``exp2`` functions
-would, and handles error conditions in the same way.
+Return the same value as a corresponding libm '``exp2``' function but without
+trapping or setting ``errno``.
+
+When specified with the fast-math-flag 'afn', the result may be approximated 
+using a less accurate calculation.
 
 '``llvm.log.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -10734,7 +10754,7 @@ Syntax:
 """""""
 
 This is an overloaded intrinsic. You can use ``llvm.log`` on any
-floating point or vector of floating point type. Not all targets support
+floating-point or vector of floating-point type. Not all targets support
 all types however.
 
 ::
@@ -10754,13 +10774,16 @@ value.
 Arguments:
 """"""""""
 
-The argument and return value are floating point numbers of the same type.
+The argument and return value are floating-point numbers of the same type.
 
 Semantics:
 """"""""""
 
-This function returns the same values as the libm ``log`` functions
-would, and handles error conditions in the same way.
+Return the same value as a corresponding libm '``log``' function but without
+trapping or setting ``errno``.
+
+When specified with the fast-math-flag 'afn', the result may be approximated 
+using a less accurate calculation.
 
 '``llvm.log10.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -10769,7 +10792,7 @@ Syntax:
 """""""
 
 This is an overloaded intrinsic. You can use ``llvm.log10`` on any
-floating point or vector of floating point type. Not all targets support
+floating-point or vector of floating-point type. Not all targets support
 all types however.
 
 ::
@@ -10789,13 +10812,16 @@ specified value.
 Arguments:
 """"""""""
 
-The argument and return value are floating point numbers of the same type.
+The argument and return value are floating-point numbers of the same type.
 
 Semantics:
 """"""""""
 
-This function returns the same values as the libm ``log10`` functions
-would, and handles error conditions in the same way.
+Return the same value as a corresponding libm '``log10``' function but without
+trapping or setting ``errno``.
+
+When specified with the fast-math-flag 'afn', the result may be approximated 
+using a less accurate calculation.
 
 '``llvm.log2.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -10804,7 +10830,7 @@ Syntax:
 """""""
 
 This is an overloaded intrinsic. You can use ``llvm.log2`` on any
-floating point or vector of floating point type. Not all targets support
+floating-point or vector of floating-point type. Not all targets support
 all types however.
 
 ::
@@ -10824,13 +10850,16 @@ value.
 Arguments:
 """"""""""
 
-The argument and return value are floating point numbers of the same type.
+The argument and return value are floating-point numbers of the same type.
 
 Semantics:
 """"""""""
 
-This function returns the same values as the libm ``log2`` functions
-would, and handles error conditions in the same way.
+Return the same value as a corresponding libm '``log2``' function but without
+trapping or setting ``errno``.
+
+When specified with the fast-math-flag 'afn', the result may be approximated 
+using a less accurate calculation.
 
 '``llvm.fma.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -10839,7 +10868,7 @@ Syntax:
 """""""
 
 This is an overloaded intrinsic. You can use ``llvm.fma`` on any
-floating point or vector of floating point type. Not all targets support
+floating-point or vector of floating-point type. Not all targets support
 all types however.
 
 ::
@@ -10853,20 +10882,21 @@ all types however.
 Overview:
 """""""""
 
-The '``llvm.fma.*``' intrinsics perform the fused multiply-add
-operation.
+The '``llvm.fma.*``' intrinsics perform the fused multiply-add operation.
 
 Arguments:
 """"""""""
 
-The argument and return value are floating point numbers of the same
-type.
+The arguments and return value are floating-point numbers of the same type.
 
 Semantics:
 """"""""""
 
-This function returns the same values as the libm ``fma`` functions
-would, and does not set errno.
+Return the same value as a corresponding libm '``fma``' function but without
+trapping or setting ``errno``.
+
+When specified with the fast-math-flag 'afn', the result may be approximated 
+using a less accurate calculation.
 
 '``llvm.fabs.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^

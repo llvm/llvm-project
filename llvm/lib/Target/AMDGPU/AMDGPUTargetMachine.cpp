@@ -248,6 +248,10 @@ GCNMinRegSchedRegistry("gcn-minreg",
 static StringRef computeDataLayout(const Triple &TT) {
   if (TT.getArch() == Triple::r600) {
     // 32-bit pointers.
+    if (TT.getEnvironmentName() == "amdgiz" ||
+        TT.getEnvironmentName() == "amdgizcl")
+      return "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128"
+             "-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-A5";
     return "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128"
             "-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64";
   }

@@ -485,9 +485,9 @@ on_ompt_callback_parallel_begin(
   const void *codeptr_ra)
 {
   if(parallel_data->ptr)
-    printf("%s\n", "0: parallel_data initially not null");
+    printf("0: parallel_data initially not null\n");
   parallel_data->value = ompt_get_unique_id();
-  printf("%" PRIu64 ": ompt_event_parallel_begin: parent_task_id=%" PRIu64 ", parent_task_frame.exit=%p, parent_task_frame.reenter=%p, parallel_id=%" PRIu64 ", requested_team_size=%" PRIu32 ", codeptr_ra=%p, invoker=%d\n", ompt_get_thread_data()->value, parent_task_data->value, parent_task_frame->exit_frame, parent_task_frame->enter_frame, parallel_data->value, requested_team_size, codeptr_ra, invoker);
+  printf("%" PRIu64 ": ompt_event_parallel_begin: parent_task_id=%" PRIu64 ", parent_task_frame.exit=%p, parent_task_frame.reenter=%p, parallel_id=%" PRIu64 ", requested_team_size=%" PRIu32 ", codeptr_ra=%p, invoker=%d\n", ompt_get_thread_data()->value, encountering_task_data->value, encountering_task_frame->exit_frame, encountering_task_frame->enter_frame, parallel_data->value, requested_team_size, codeptr_ra, invoker);
 }
 
 static void
@@ -510,7 +510,7 @@ on_ompt_callback_task_create(
     const void *codeptr_ra)
 {
   if(new_task_data->ptr)
-    printf("%s\n", "0: new_task_data initially not null");
+    printf("0: new_task_data initially not null\n");
   new_task_data->value = ompt_get_unique_id();
   char buffer[2048];
 
@@ -527,7 +527,7 @@ on_ompt_callback_task_create(
     parallel_data->value = ompt_get_unique_id();
   }
 
-  printf("%" PRIu64 ": ompt_event_task_create: parent_task_id=%" PRIu64 ", parent_task_frame.exit=%p, parent_task_frame.reenter=%p, new_task_id=%" PRIu64 ", codeptr_ra=%p, task_type=%s=%d, has_dependences=%s\n", ompt_get_thread_data()->value, parent_task_data ? parent_task_data->value : 0, parent_frame ? parent_frame->exit_frame : NULL, parent_frame ? parent_frame->enter_frame : NULL, new_task_data->value, codeptr_ra, buffer, type, has_dependences ? "yes" : "no");
+  printf("%" PRIu64 ": ompt_event_task_create: parent_task_id=%" PRIu64 ", parent_task_frame.exit=%p, parent_task_frame.reenter=%p, new_task_id=%" PRIu64 ", codeptr_ra=%p, task_type=%s=%d, has_dependences=%s\n", ompt_get_thread_data()->value, encountering_task_data ? encountering_task_data->value : 0, encountering_task_frame ? encountering_task_frame->exit_frame : NULL, encountering_task_frame ? encountering_task_frame->enter_frame : NULL, new_task_data->value, codeptr_ra, buffer, type, has_dependences ? "yes" : "no");
 }
 
 static void

@@ -102,6 +102,8 @@ enum Kind {
   kw_nsz,
   kw_arcp,
   kw_contract,
+  kw_reassoc,
+  kw_afn,
   kw_fast,
   kw_nuw,
   kw_nsw,

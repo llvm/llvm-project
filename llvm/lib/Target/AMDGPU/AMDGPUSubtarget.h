@@ -462,6 +462,10 @@ public:
     return isAmdHsaOS() || isMesaKernel(MF);
   }
 
+  bool hasMad64_32() const {
+    return getGeneration() >= SEA_ISLANDS;
+  }
+
   bool hasFminFmaxLegacy() const {
     return getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS;
   }

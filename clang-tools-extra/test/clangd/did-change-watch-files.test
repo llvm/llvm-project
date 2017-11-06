@@ -5,18 +5,7 @@
 Content-Length: 143
 
 {"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootUri":"file:///path/to/workspace","capabilities":{},"trace":"off"}}
-# CHECK: Content-Length: 466
-# CHECK: {"jsonrpc":"2.0","id":0,"result":{"capabilities":{
-# CHECK:   "textDocumentSync": 1,
-# CHECK:   "documentFormattingProvider": true,
-# CHECK:   "documentRangeFormattingProvider": true,
-# CHECK:   "documentOnTypeFormattingProvider": {"firstTriggerCharacter":"}","moreTriggerCharacter":[]},
-# CHECK:   "codeActionProvider": true,
-# CHECK:   "completionProvider": {"resolveProvider": false, "triggerCharacters": [".",">",":"]},
-# CHECK:   "definitionProvider": true
-# CHECK: }}}
-#
-#Normal case
+# Normal case.
 Content-Length: 217
 
 {"jsonrpc":"2.0","method":"workspace/didChangeWatchedFiles","params":{"changes":[{"uri":"file:///path/to/file.cpp","type":1},{"uri":"file:///path/to/file2.cpp","type":2},{"uri":"file:///path/to/file3.cpp","type":3}]}}

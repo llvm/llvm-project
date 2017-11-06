@@ -1046,8 +1046,8 @@ static Comdat::SelectionKind getDecodedComdatSelectionKind(unsigned Val) {
 
 static FastMathFlags getDecodedFastMathFlags(unsigned Val) {
   FastMathFlags FMF;
-  if (0 != (Val & FastMathFlags::UnsafeAlgebra))
-    FMF.setUnsafeAlgebra();
+  if (0 != (Val & FastMathFlags::AllowReassoc))
+    FMF.setAllowReassoc();
   if (0 != (Val & FastMathFlags::NoNaNs))
     FMF.setNoNaNs();
   if (0 != (Val & FastMathFlags::NoInfs))
@@ -1058,6 +1058,8 @@ static FastMathFlags getDecodedFastMathFlags(unsigned Val) {
     FMF.setAllowReciprocal();
   if (0 != (Val & FastMathFlags::AllowContract))
     FMF.setAllowContract(true);
+  if (0 != (Val & FastMathFlags::ApproxFunc))
+    FMF.setApproxFunc();
   return FMF;
 }
 

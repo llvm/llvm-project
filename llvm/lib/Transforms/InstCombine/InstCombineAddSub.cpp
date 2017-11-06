@@ -482,7 +482,7 @@ Value *FAddCombine::performFactorization(Instruction *I) {
     return nullptr;
 
   FastMathFlags Flags;
-  Flags.setUnsafeAlgebra();
+  Flags.setFast();
   if (I0) Flags &= I->getFastMathFlags();
   if (I1) Flags &= I->getFastMathFlags();
 
@@ -511,7 +511,7 @@ Value *FAddCombine::performFactorization(Instruction *I) {
 }
 
 Value *FAddCombine::simplify(Instruction *I) {
-  assert(I->hasUnsafeAlgebra() && "Should be in unsafe mode");
+  assert(I->isFast() && "Expected 'fast' instruction");
 
   // Currently we are not able to handle vector type.
   if (I->getType()->isVectorTy())
@@ -1386,7 +1386,7 @@ Instruction *InstCombiner::visitFAdd(BinaryOperator &I) {
   if (Value *V = SimplifySelectsFeedingBinaryOp(I, LHS, RHS))
     return replaceInstUsesWith(I, V);
 
-  if (I.hasUnsafeAlgebra()) {
+  if (I.isFast()) {
     if (Value *V = FAddCombine(Builder).simplify(&I))
       return replaceInstUsesWith(I, V);
   }
@@ -1736,7 +1736,7 @@ Instruction *InstCombiner::visitFSub(BinaryOperator &I) {
   if (Value *V = SimplifySelectsFeedingBinaryOp(I, Op0, Op1))
     return replaceInstUsesWith(I, V);
 
-  if (I.hasUnsafeAlgebra()) {
+  if (I.isFast()) {
     if (Value *V = FAddCombine(Builder).simplify(&I))
       return replaceInstUsesWith(I, V);
   }

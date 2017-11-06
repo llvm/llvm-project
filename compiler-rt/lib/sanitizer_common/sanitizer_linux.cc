@@ -18,6 +18,7 @@
 
 #include "sanitizer_common.h"
 #include "sanitizer_flags.h"
+#include "sanitizer_getauxval.h"
 #include "sanitizer_internal_defs.h"
 #include "sanitizer_libc.h"
 #include "sanitizer_linux.h"
@@ -93,20 +94,6 @@ extern struct ps_strings *__ps_strings;
 
 #if !SANITIZER_ANDROID
 #include <sys/signal.h>
-#endif
-
-#ifndef __GLIBC_PREREQ
-#define __GLIBC_PREREQ(x, y) 0
-#endif
-
-#if SANITIZER_LINUX && __GLIBC_PREREQ(2, 16)
-# define SANITIZER_USE_GETAUXVAL 1
-#else
-# define SANITIZER_USE_GETAUXVAL 0
-#endif
-
-#if SANITIZER_USE_GETAUXVAL
-#include <sys/auxv.h>
 #endif
 
 #if SANITIZER_LINUX

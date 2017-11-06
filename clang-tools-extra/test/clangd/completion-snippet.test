@@ -15,27 +15,27 @@ Content-Length: 148
 # The order of results returned by codeComplete seems to be
 # nondeterministic, so we check regardless of order.
 #
-# CHECK: {"jsonrpc":"2.0","id":1,"result":[
-# CHECK-DAG: {"label":"a","kind":5,"detail":"int","sortText":"000035a","filterText":"a","insertText":"a","insertTextFormat":1}
-# CHECK-DAG: {"label":"bb","kind":5,"detail":"int","sortText":"000035bb","filterText":"bb","insertText":"bb","insertTextFormat":1}
-# CHECK-DAG: {"label":"ccc","kind":5,"detail":"int","sortText":"000035ccc","filterText":"ccc","insertText":"ccc","insertTextFormat":1}
-# CHECK-DAG: {"label":"operator=(const fake &)","kind":2,"detail":"fake &","sortText":"000079operator=","filterText":"operator=","insertText":"operator=(${1:const fake &})","insertTextFormat":2}
-# CHECK-DAG: {"label":"~fake()","kind":4,"detail":"void","sortText":"000079~fake","filterText":"~fake","insertText":"~fake()","insertTextFormat":1}
-# CHECK-DAG: {"label":"f(int i, const float f) const","kind":2,"detail":"int","sortText":"000035f","filterText":"f","insertText":"f(${1:int i}, ${2:const float f})","insertTextFormat":2}
-# CHECK: ]}
+# CHECK: {"id":1,"jsonrpc":"2.0","result":[
+# CHECK-DAG: {"detail":"int","filterText":"a","insertText":"a","insertTextFormat":1,"kind":5,"label":"a","sortText":"000035a"}
+# CHECK-DAG: {"detail":"int","filterText":"bb","insertText":"bb","insertTextFormat":1,"kind":5,"label":"bb","sortText":"000035bb"}
+# CHECK-DAG: {"detail":"int","filterText":"ccc","insertText":"ccc","insertTextFormat":1,"kind":5,"label":"ccc","sortText":"000035ccc"}
+# CHECK-DAG: {"detail":"fake &","filterText":"operator=","insertText":"operator=(${1:const fake &})","insertTextFormat":2,"kind":2,"label":"operator=(const fake &)","sortText":"000079operator="}
+# CHECK-DAG: {"detail":"void","filterText":"~fake","insertText":"~fake()","insertTextFormat":1,"kind":4,"label":"~fake()","sortText":"000079~fake"}
+# CHECK-DAG: {"detail":"int","filterText":"f","insertText":"f(${1:int i}, ${2:const float f})","insertTextFormat":2,"kind":2,"label":"f(int i, const float f) const","sortText":"000035f"}
+# CHECK-SAME: ]}
 Content-Length: 148
 
 {"jsonrpc":"2.0","id":2,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":3,"character":5}}}
 # Repeat the completion request, expect the same results.
 #
-# CHECK: {"jsonrpc":"2.0","id":2,"result":[
-# CHECK-DAG: {"label":"a","kind":5,"detail":"int","sortText":"000035a","filterText":"a","insertText":"a","insertTextFormat":1}
-# CHECK-DAG: {"label":"bb","kind":5,"detail":"int","sortText":"000035bb","filterText":"bb","insertText":"bb","insertTextFormat":1}
-# CHECK-DAG: {"label":"ccc","kind":5,"detail":"int","sortText":"000035ccc","filterText":"ccc","insertText":"ccc","insertTextFormat":1}
-# CHECK-DAG: {"label":"operator=(const fake &)","kind":2,"detail":"fake &","sortText":"000079operator=","filterText":"operator=","insertText":"operator=(${1:const fake &})","insertTextFormat":2}
-# CHECK-DAG: {"label":"~fake()","kind":4,"detail":"void","sortText":"000079~fake","filterText":"~fake","insertText":"~fake()","insertTextFormat":1}
-# CHECK-DAG: {"label":"f(int i, const float f) const","kind":2,"detail":"int","sortText":"000035f","filterText":"f","insertText":"f(${1:int i}, ${2:const float f})","insertTextFormat":2}
-# CHECK: ]}
+# CHECK: {"id":2,"jsonrpc":"2.0","result":[
+# CHECK-DAG: {"detail":"int","filterText":"a","insertText":"a","insertTextFormat":1,"kind":5,"label":"a","sortText":"000035a"}
+# CHECK-DAG: {"detail":"int","filterText":"bb","insertText":"bb","insertTextFormat":1,"kind":5,"label":"bb","sortText":"000035bb"}
+# CHECK-DAG: {"detail":"int","filterText":"ccc","insertText":"ccc","insertTextFormat":1,"kind":5,"label":"ccc","sortText":"000035ccc"}
+# CHECK-DAG: {"detail":"fake &","filterText":"operator=","insertText":"operator=(${1:const fake &})","insertTextFormat":2,"kind":2,"label":"operator=(const fake &)","sortText":"000079operator="}
+# CHECK-DAG: {"detail":"void","filterText":"~fake","insertText":"~fake()","insertTextFormat":1,"kind":4,"label":"~fake()","sortText":"000079~fake"}
+# CHECK-DAG: {"detail":"int","filterText":"f","insertText":"f(${1:int i}, ${2:const float f})","insertTextFormat":2,"kind":2,"label":"f(int i, const float f) const","sortText":"000035f"}
+# CHECK-SAME: ]}
 # Update the source file and check for completions again.
 Content-Length: 226
 
@@ -44,15 +44,12 @@ Content-Length: 226
 Content-Length: 148
 
 {"jsonrpc":"2.0","id":3,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":3,"character":5}}}
-# Repeat the completion request, expect the same results.
-#
-# CHECK: {"jsonrpc":"2.0","id":3,"result":[
-# CHECK-DAG: {"label":"func()","kind":2,"detail":"int (*)(int, int)","sortText":"000034func","filterText":"func","insertText":"func()","insertTextFormat":1}
-# CHECK: ]}
+# CHECK: {"id":3,"jsonrpc":"2.0","result":[
+# CHECK-DAG: {"detail":"int (*)(int, int)","filterText":"func","insertText":"func()","insertTextFormat":1,"kind":2,"label":"func()","sortText":"000034func"}
+# CHECK-SAME: ]}
 Content-Length: 44
 
 {"jsonrpc":"2.0","id":4,"method":"shutdown"}
-# CHECK: {"jsonrpc":"2.0","id":4,"result":null}
 Content-Length: 33
 
 {"jsonrpc":"2.0":"method":"exit"}

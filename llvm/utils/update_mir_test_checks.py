@@ -254,7 +254,8 @@ def add_check_lines(test, output_lines, prefix, func_name, single_bb,
                 func_line = func_line.replace(
                     vreg.group(1), '[[{}:%[0-9]+]]'.format(name), 1)
         for number, name in vreg_map.items():
-            func_line = func_line.replace(number, '[[{}]]'.format(name))
+            func_line = re.sub(r'{}\b'.format(number), '[[{}]]'.format(name),
+                               func_line)
         check_line = '{}: {}'.format(check, func_line[indent:]).rstrip()
         output_lines.append(check_line)
 
