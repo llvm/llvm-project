@@ -10,6 +10,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_JSONRPCDISPATCHER_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_JSONRPCDISPATCHER_H
 
+#include "JSONExpr.h"
 #include "Logger.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/SmallString.h"
@@ -26,11 +27,11 @@ namespace clangd {
 class JSONOutput : public Logger {
 public:
   JSONOutput(llvm::raw_ostream &Outs, llvm::raw_ostream &Logs,
-             llvm::raw_ostream *InputMirror = nullptr)
-      : Outs(Outs), Logs(Logs), InputMirror(InputMirror) {}
+             llvm::raw_ostream *InputMirror = nullptr, bool Pretty = false)
+      : Outs(Outs), Logs(Logs), InputMirror(InputMirror), Pretty(Pretty) {}
 
   /// Emit a JSONRPC message.
-  void writeMessage(const Twine &Message);
+  void writeMessage(const json::Expr &Result);
 
   /// Write to the logging stream.
   /// No newline is implicitly added. (TODO: we should fix this!)
@@ -45,6 +46,7 @@ private:
   llvm::raw_ostream &Outs;
   llvm::raw_ostream &Logs;
   llvm::raw_ostream *InputMirror;
+  bool Pretty;
 
   std::mutex StreamMutex;
 };
@@ -52,18 +54,19 @@ private:
 /// Context object passed to handlers to allow replies.
 class RequestContext {
 public:
-  RequestContext(JSONOutput &Out, StringRef ID) : Out(Out), ID(ID) {}
+  RequestContext(JSONOutput &Out, llvm::Optional<json::Expr> ID)
+      : Out(Out), ID(std::move(ID)) {}
 
-  /// Sends a successful reply. Result should be well-formed JSON.
-  void reply(const Twine &Result);
+  /// Sends a successful reply.
+  void reply(json::Expr &&Result);
   /// Sends an error response to the client, and logs it.
   void replyError(int code, const llvm::StringRef &Message);
   /// Sends a request to the client.
-  void call(llvm::StringRef Method, StringRef Params);
+  void call(llvm::StringRef Method, json::Expr &&Params);
 
 private:
   JSONOutput &Out;
-  llvm::SmallString<64> ID; // Valid JSON, or empty for a notification.
+  llvm::Optional<json::Expr> ID;
 };
 
 /// Main JSONRPC entry point. This parses the JSONRPC "header" and calls the
