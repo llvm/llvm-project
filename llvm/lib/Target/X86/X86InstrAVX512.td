@@ -7582,7 +7582,8 @@ multiclass avx512_sqrt_packed_all_round<bits<8> opc, string OpcodeStr,
 }
 
 multiclass avx512_sqrt_scalar<bits<8> opc, string OpcodeStr,X86VectorVTInfo _,
-                              string SUFF, SDNode OpNode, SDNode OpNodeRnd> {
+                              string SUFF, SDNode OpNode, SDNode OpNodeRnd,
+                              Intrinsic Intr> {
   let ExeDomain = _.ExeDomain in {
   defm r_Int : AVX512_maskable_scalar<opc, MRMSrcReg, _, (outs _.RC:$dst),
                          (ins _.RC:$src1, _.RC:$src2), OpcodeStr,
@@ -7618,21 +7619,35 @@ multiclass avx512_sqrt_scalar<bits<8> opc, string OpcodeStr,X86VectorVTInfo _,
   }
   }
 
+let Predicates = [HasAVX512] in {
   def : Pat<(_.EltVT (OpNode _.FRC:$src)),
             (!cast<Instruction>(NAME#SUFF#Zr)
                 (_.EltVT (IMPLICIT_DEF)), _.FRC:$src)>;
 
+   def : Pat<(Intr VR128X:$src),
+             (!cast<Instruction>(NAME#SUFF#Zr_Int) VR128X:$src,
+                                 VR128X:$src)>;
+}
+
+let Predicates = [HasAVX512, OptForSize] in {
   def : Pat<(_.EltVT (OpNode (load addr:$src))),
             (!cast<Instruction>(NAME#SUFF#Zm)
-                (_.EltVT (IMPLICIT_DEF)), addr:$src)>, Requires<[HasAVX512, OptForSize]>;
+                (_.EltVT (IMPLICIT_DEF)), addr:$src)>;
+
+  def : Pat<(Intr (scalar_to_vector (_.EltVT (load addr:$src2)))),
+            (!cast<Instruction>(NAME#SUFF#Zm_Int)
+                  (_.VT (IMPLICIT_DEF)), addr:$src2)>;
+}
+
 }
 
 multiclass avx512_sqrt_scalar_all<bits<8> opc, string OpcodeStr> {
   defm SSZ : avx512_sqrt_scalar<opc, OpcodeStr#"ss", f32x_info, "SS", fsqrt,
-                        X86fsqrtRnds>, EVEX_CD8<32, CD8VT1>, EVEX_4V, XS,
-                        NotMemoryFoldable;
+                        X86fsqrtRnds, int_x86_sse_sqrt_ss>,
+                        EVEX_CD8<32, CD8VT1>, EVEX_4V, XS, NotMemoryFoldable;
   defm SDZ : avx512_sqrt_scalar<opc, OpcodeStr#"sd", f64x_info, "SD", fsqrt,
-                        X86fsqrtRnds>, EVEX_CD8<64, CD8VT1>, EVEX_4V, XD, VEX_W,
+                        X86fsqrtRnds, int_x86_sse2_sqrt_sd>,
+                        EVEX_CD8<64, CD8VT1>, EVEX_4V, XD, VEX_W,
                         NotMemoryFoldable;
 }
 
@@ -7640,19 +7655,6 @@ defm VSQRT   : avx512_sqrt_packed_all<0x51, "vsqrt", fsqrt>,
                avx512_sqrt_packed_all_round<0x51, "vsqrt", X86fsqrtRnd>;
 
 defm VSQRT   : avx512_sqrt_scalar_all<0x51, "vsqrt">, VEX_LIG;
-
-let Predicates = [HasAVX512] in {
-  def : Pat<(f32 (X86frsqrt FR32X:$src)),
-            (COPY_TO_REGCLASS (VRSQRT14SSrr (v4f32 (IMPLICIT_DEF)), (COPY_TO_REGCLASS FR32X:$src, VR128X)), VR128X)>;
-  def : Pat<(f32 (X86frsqrt (load addr:$src))),
-            (COPY_TO_REGCLASS (VRSQRT14SSrm (v4f32 (IMPLICIT_DEF)), addr:$src), VR128X)>,
-            Requires<[OptForSize]>;
-  def : Pat<(f32 (X86frcp FR32X:$src)),
-            (COPY_TO_REGCLASS (VRCP14SSrr (v4f32 (IMPLICIT_DEF)), (COPY_TO_REGCLASS FR32X:$src, VR128X)), VR128X )>;
-  def : Pat<(f32 (X86frcp (load addr:$src))),
-            (COPY_TO_REGCLASS (VRCP14SSrm (v4f32 (IMPLICIT_DEF)), addr:$src), VR128X)>,
-            Requires<[OptForSize]>;
-}
 
 multiclass
 avx512_rndscale_scalar<bits<8> opc, string OpcodeStr, X86VectorVTInfo _> {

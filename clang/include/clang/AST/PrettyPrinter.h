@@ -30,8 +30,8 @@ public:
   virtual bool handledStmt(Stmt* E, raw_ostream& OS) = 0;
 };
 
-/// \brief Describes how types, statements, expressions, and
-/// declarations should be printed.
+/// Describes how types, statements, expressions, and declarations should be
+/// printed.
 ///
 /// This type is intended to be small and suitable for passing by value.
 /// It is very frequently copied.
@@ -53,20 +53,20 @@ struct PrintingPolicy {
       IncludeNewlines(true), MSVCFormatting(false),
       ConstantsAsWritten(false), SuppressImplicitBase(false) { }
 
-  /// \brief Adjust this printing policy for cases where it's known that
-  /// we're printing C++ code (for instance, if AST dumping reaches a
-  /// C++-only construct). This should not be used if a real LangOptions
-  /// object is available.
+  /// Adjust this printing policy for cases where it's known that we're
+  /// printing C++ code (for instance, if AST dumping reaches a C++-only
+  /// construct). This should not be used if a real LangOptions object is
+  /// available.
   void adjustForCPlusPlus() {
     SuppressTagKeyword = true;
     Bool = true;
     UseVoidForZeroParams = false;
   }
 
-  /// \brief The number of spaces to use to indent each line.
+  /// The number of spaces to use to indent each line.
   unsigned Indentation : 8;
 
-  /// \brief Whether we should suppress printing of the actual specifiers for
+  /// Whether we should suppress printing of the actual specifiers for
   /// the given type or declaration.
   ///
   /// This flag is only used when we are printing declarators beyond
@@ -82,7 +82,7 @@ struct PrintingPolicy {
   /// "const int" type specifier and instead only print the "*y".
   bool SuppressSpecifiers : 1;
 
-  /// \brief Whether type printing should skip printing the tag keyword.
+  /// Whether type printing should skip printing the tag keyword.
   ///
   /// This is used when printing the inner type of elaborated types,
   /// (as the tag keyword is part of the elaborated type):
@@ -92,7 +92,7 @@ struct PrintingPolicy {
   /// \endcode
   bool SuppressTagKeyword : 1;
 
-  /// \brief When true, include the body of a tag definition.
+  /// When true, include the body of a tag definition.
   ///
   /// This is used to place the definition of a struct
   /// in the middle of another declaration as with:
@@ -102,14 +102,14 @@ struct PrintingPolicy {
   /// \endcode
   bool IncludeTagDefinition : 1;
 
-  /// \brief Suppresses printing of scope specifiers.
+  /// Suppresses printing of scope specifiers.
   bool SuppressScope : 1;
 
-  /// \brief Suppress printing parts of scope specifiers that don't need
+  /// Suppress printing parts of scope specifiers that don't need
   /// to be written, e.g., for inline or anonymous namespaces.
   bool SuppressUnwrittenScope : 1;
   
-  /// \brief Suppress printing of variable initializers.
+  /// Suppress printing of variable initializers.
   ///
   /// This flag is used when printing the loop variable in a for-range
   /// statement. For example, given:
@@ -122,8 +122,8 @@ struct PrintingPolicy {
   /// internal initializer constructed for x will not be printed.
   bool SuppressInitializers : 1;
 
-  /// \brief Whether we should print the sizes of constant array expressions
-  /// as written in the sources.
+  /// Whether we should print the sizes of constant array expressions as written
+  /// in the sources.
   ///
   /// This flag determines whether array types declared as
   ///
@@ -140,69 +140,67 @@ struct PrintingPolicy {
   /// \endcode
   bool ConstantArraySizeAsWritten : 1;
   
-  /// \brief When printing an anonymous tag name, also print the location of
-  /// that entity (e.g., "enum <anonymous at t.h:10:5>"). Otherwise, just 
-  /// prints "(anonymous)" for the name.
+  /// When printing an anonymous tag name, also print the location of that
+  /// entity (e.g., "enum <anonymous at t.h:10:5>"). Otherwise, just prints
+  /// "(anonymous)" for the name.
   bool AnonymousTagLocations : 1;
   
-  /// \brief When true, suppress printing of the __strong lifetime qualifier in
-  /// ARC.
+  /// When true, suppress printing of the __strong lifetime qualifier in ARC.
   unsigned SuppressStrongLifetime : 1;
   
-  /// \brief When true, suppress printing of lifetime qualifier in
-  /// ARC.
+  /// When true, suppress printing of lifetime qualifier in ARC.
   unsigned SuppressLifetimeQualifiers : 1;
 
   /// When true, suppresses printing template arguments in names of C++
   /// constructors.
   unsigned SuppressTemplateArgsInCXXConstructors : 1;
 
-  /// \brief Whether we can use 'bool' rather than '_Bool' (even if the language
+  /// Whether we can use 'bool' rather than '_Bool' (even if the language
   /// doesn't actually have 'bool', because, e.g., it is defined as a macro).
   unsigned Bool : 1;
 
-  /// \brief Whether we can use 'restrict' rather than '__restrict'.
+  /// Whether we can use 'restrict' rather than '__restrict'.
   unsigned Restrict : 1;
 
-  /// \brief Whether we can use 'alignof' rather than '__alignof'.
+  /// Whether we can use 'alignof' rather than '__alignof'.
   unsigned Alignof : 1;
 
-  /// \brief Whether we can use '_Alignof' rather than '__alignof'.
+  /// Whether we can use '_Alignof' rather than '__alignof'.
   unsigned UnderscoreAlignof : 1;
 
-  /// \brief Whether we should use '(void)' rather than '()' for a function
-  /// prototype with zero parameters.
+  /// Whether we should use '(void)' rather than '()' for a function prototype
+  /// with zero parameters.
   unsigned UseVoidForZeroParams : 1;
 
-  /// \brief Provide a 'terse' output.
+  /// Provide a 'terse' output.
   ///
   /// For example, in this mode we don't print function bodies, class members,
   /// declarations inside namespaces etc.  Effectively, this should print
   /// only the requested declaration.
   unsigned TerseOutput : 1;
   
-  /// \brief When true, do certain refinement needed for producing proper
-  /// declaration tag; such as, do not print attributes attached to the declaration.
+  /// When true, do certain refinement needed for producing proper declaration
+  /// tag; such as, do not print attributes attached to the declaration.
   ///
   unsigned PolishForDeclaration : 1;
 
-  /// \brief When true, print the half-precision floating-point type as 'half'
+  /// When true, print the half-precision floating-point type as 'half'
   /// instead of '__fp16'
   unsigned Half : 1;
 
-  /// \brief When true, print the built-in wchar_t type as __wchar_t. For use in
+  /// When true, print the built-in wchar_t type as __wchar_t. For use in
   /// Microsoft mode when wchar_t is not available.
   unsigned MSWChar : 1;
 
-  /// \brief When true, include newlines after statements like "break", etc.
+  /// When true, include newlines after statements like "break", etc.
   unsigned IncludeNewlines : 1;
 
-  /// \brief Use whitespace and punctuation like MSVC does. In particular, this
-  /// prints anonymous namespaces as `anonymous namespace' and does not insert
-  /// spaces after template arguments.
+  /// Use whitespace and punctuation like MSVC does. In particular, this prints
+  /// anonymous namespaces as `anonymous namespace' and does not insert spaces
+  /// after template arguments.
   bool MSVCFormatting : 1;
 
-  /// \brief Whether we should print the constant expressions as written in the
+  /// Whether we should print the constant expressions as written in the
   /// sources.
   ///
   /// This flag determines whether constants expressions like
@@ -220,7 +218,7 @@ struct PrintingPolicy {
   /// \endcode
   bool ConstantsAsWritten : 1;
 
-  /// \brief When true, don't print the implicit 'self' or 'this' expressions.
+  /// When true, don't print the implicit 'self' or 'this' expressions.
   bool SuppressImplicitBase : 1;
 };
 

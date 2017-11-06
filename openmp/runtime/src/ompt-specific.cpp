@@ -240,8 +240,8 @@ void __ompt_lw_taskteam_init(ompt_lw_taskteam_t *lwt, kmp_info_t *thr, int gtid,
   lwt->ompt_team_info.parallel_data = *ompt_pid;
   lwt->ompt_team_info.master_return_address = codeptr;
   lwt->ompt_task_info.task_data.value = 0;
-  lwt->ompt_task_info.frame.reenter_runtime_frame = NULL;
-  lwt->ompt_task_info.frame.exit_runtime_frame = NULL;
+  lwt->ompt_task_info.frame.enter_frame = NULL;
+  lwt->ompt_task_info.frame.exit_frame = NULL;
   lwt->ompt_task_info.scheduling_parent = NULL;
   lwt->ompt_task_info.deps = NULL;
   lwt->ompt_task_info.ndeps = 0;
