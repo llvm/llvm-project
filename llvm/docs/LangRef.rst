@@ -542,7 +542,7 @@ symbol is assumed to be ``dso_preemptable``.
 
 ``dso_local``
     The compiler may assume that a function or variable marked as ``dso_local``
-    will resolve to a symbol within the same linkage unit. Direct access will 
+    will resolve to a symbol within the same linkage unit. Direct access will
     be generated even if the definition is not within this compilation unit.
 
 .. _namedtypes:
@@ -597,9 +597,9 @@ Global variables in other translation units can also be declared, in which
 case they don't have an initializer.
 
 Either global variable definitions or declarations may have an explicit section
-to be placed in and may have an optional explicit alignment specified. If there 
-is a mismatch between the explicit or inferred section information for the 
-variable declaration and its definition the resulting behavior is undefined. 
+to be placed in and may have an optional explicit alignment specified. If there
+is a mismatch between the explicit or inferred section information for the
+variable declaration and its definition the resulting behavior is undefined.
 
 A variable may be defined as a global ``constant``, which indicates that
 the contents of the variable will **never** be modified (enabling better
@@ -642,11 +642,11 @@ target supports it, it will emit globals to the section specified.
 Additionally, the global can placed in a comdat if the target has the necessary
 support.
 
-External declarations may have an explicit section specified. Section 
-information is retained in LLVM IR for targets that make use of this 
-information. Attaching section information to an external declaration is an 
-assertion that its definition is located in the specified section. If the 
-definition is located in a different section, the behavior is undefined.   
+External declarations may have an explicit section specified. Section
+information is retained in LLVM IR for targets that make use of this
+information. Attaching section information to an external declaration is an
+assertion that its definition is located in the specified section. If the
+definition is located in a different section, the behavior is undefined.
 
 By default, global initializers are optimized by assuming that global
 variables defined within the module are not modified from their
@@ -4499,7 +4499,7 @@ source variable. DIExpressions also follow this model: A DIExpression that
 doesn't have a trailing ``DW_OP_stack_value`` will describe an *address* when
 combined with a concrete location.
 
-.. code-block:: llvm
+.. code-block:: text
 
     !0 = !DIExpression(DW_OP_deref)
     !1 = !DIExpression(DW_OP_plus_uconst, 3)
@@ -4639,13 +4639,13 @@ As a concrete example, the type descriptor graph for the following program
       int i;    // offset 0
       float f;  // offset 4
     };
-    
+
     struct Outer {
       float f;  // offset 0
       double d; // offset 4
       struct Inner inner_a;  // offset 12
     };
-    
+
     void f(struct Outer* outer, struct Inner* inner, float* f, int* i, char* c) {
       outer->f = 0;            // tag0: (OuterStructTy, FloatScalarTy, 0)
       outer->inner_a.i = 0;    // tag1: (OuterStructTy, IntScalarTy, 12)
@@ -5221,10 +5221,10 @@ Irreducible loop header weights are typically based on profile data.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The ``invariant.group`` metadata may be attached to ``load``/``store`` instructions.
-The existence of the ``invariant.group`` metadata on the instruction tells 
-the optimizer that every ``load`` and ``store`` to the same pointer operand 
-within the same invariant group can be assumed to load or store the same  
-value (but see the ``llvm.invariant.group.barrier`` intrinsic which affects 
+The existence of the ``invariant.group`` metadata on the instruction tells
+the optimizer that every ``load`` and ``store`` to the same pointer operand
+within the same invariant group can be assumed to load or store the same
+value (but see the ``llvm.invariant.group.barrier`` intrinsic which affects
 when two pointers are considered the same). Pointers returned by bitcast or
 getelementptr with only zero indices are considered the same.
 
@@ -5237,26 +5237,26 @@ Examples:
    %ptr = alloca i8
    store i8 42, i8* %ptr, !invariant.group !0
    call void @foo(i8* %ptr)
-   
+
    %a = load i8, i8* %ptr, !invariant.group !0 ; Can assume that value under %ptr didn't change
    call void @foo(i8* %ptr)
    %b = load i8, i8* %ptr, !invariant.group !1 ; Can't assume anything, because group changed
-  
-   %newPtr = call i8* @getPointer(i8* %ptr) 
+
+   %newPtr = call i8* @getPointer(i8* %ptr)
    %c = load i8, i8* %newPtr, !invariant.group !0 ; Can't assume anything, because we only have information about %ptr
-   
+
    %unknownValue = load i8, i8* @unknownPtr
    store i8 %unknownValue, i8* %ptr, !invariant.group !0 ; Can assume that %unknownValue == 42
-   
+
    call void @foo(i8* %ptr)
    %newPtr2 = call i8* @llvm.invariant.group.barrier(i8* %ptr)
    %d = load i8, i8* %newPtr2, !invariant.group !0  ; Can't step through invariant.group.barrier to get value of %ptr
-   
+
    ...
    declare void @foo(i8*)
    declare i8* @getPointer(i8*)
    declare i8* @llvm.invariant.group.barrier(i8*)
-   
+
    !0 = !{!"magic ptr"}
    !1 = !{!"other ptr"}
 
@@ -5265,7 +5265,7 @@ another based on aliasing information. This is because invariant.group is tied
 to the SSA value of the pointer operand.
 
 .. code-block:: llvm
-  
+
   %v = load i8, i8* %x, !invariant.group !0
   ; if %x mustalias %y then we can replace the above instruction with
   %v = load i8, i8* %y
@@ -5295,7 +5295,7 @@ It does not have any effect on non-ELF targets.
 
 Example:
 
-.. code-block:: llvm
+.. code-block:: text
 
     $a = comdat any
     @a = global i32 1, comdat $a
@@ -6723,9 +6723,9 @@ remainder.
 
 Note that unsigned integer remainder and signed integer remainder are
 distinct operations; for signed integer remainder, use '``srem``'.
- 
+
 Taking the remainder of a division by zero is undefined behavior.
-For vectors, if any element of the divisor is zero, the operation has 
+For vectors, if any element of the divisor is zero, the operation has
 undefined behavior.
 
 Example:
@@ -6777,7 +6777,7 @@ Note that signed integer remainder and unsigned integer remainder are
 distinct operations; for unsigned integer remainder, use '``urem``'.
 
 Taking the remainder of a division by zero is undefined behavior.
-For vectors, if any element of the divisor is zero, the operation has 
+For vectors, if any element of the divisor is zero, the operation has
 undefined behavior.
 Overflow also leads to undefined behavior; this is a rare case, but can
 occur, for example, by taking the remainder of a 32-bit division of
@@ -7650,7 +7650,7 @@ be reused in the cache. The code generator may select special
 instructions to save cache bandwidth, such as the ``MOVNT`` instruction on
 x86.
 
-The optional ``!invariant.group`` metadata must reference a 
+The optional ``!invariant.group`` metadata must reference a
 single metadata name ``<index>``. See ``invariant.group`` metadata.
 
 Semantics:
@@ -7724,7 +7724,7 @@ A ``fence`` instruction can also take an optional
 Example:
 """"""""
 
-.. code-block:: llvm
+.. code-block:: text
 
       fence acquire                                        ; yields void
       fence syncscope("singlethread") seq_cst              ; yields void
@@ -7756,10 +7756,10 @@ There are three arguments to the '``cmpxchg``' instruction: an address
 to operate on, a value to compare to the value currently be at that
 address, and a new value to place at that address if the compared values
 are equal. The type of '<cmp>' must be an integer or pointer type whose
-bit width is a power of two greater than or equal to eight and less 
+bit width is a power of two greater than or equal to eight and less
 than or equal to a target-specific size limit. '<cmp>' and '<new>' must
-have the same type, and the type of '<pointer>' must be a pointer to 
-that type. If the ``cmpxchg`` is marked as ``volatile``, then the 
+have the same type, and the type of '<pointer>' must be a pointer to
+that type. If the ``cmpxchg`` is marked as ``volatile``, then the
 optimizer is not allowed to modify the number or order of execution of
 this ``cmpxchg`` with other :ref:`volatile operations <volatile>`.
 
@@ -9053,7 +9053,7 @@ This instruction requires several arguments:
    ``tail`` or ``musttail`` markers to the call. It is used to prevent tail
    call optimization from being performed on the call.
 
-#. The optional ``fast-math flags`` marker indicates that the call has one or more 
+#. The optional ``fast-math flags`` marker indicates that the call has one or more
    :ref:`fast-math flags <fastmath>`, which are optimization hints to enable
    otherwise unsafe floating-point optimizations. Fast-math flags are only valid
    for calls that return a floating-point scalar or vector type.
@@ -12795,7 +12795,7 @@ Syntax:
 Overview:
 """""""""
 
-The '``llvm.invariant.group.barrier``' intrinsic can be used when an invariant 
+The '``llvm.invariant.group.barrier``' intrinsic can be used when an invariant
 established by invariant.group metadata no longer holds, to obtain a new pointer
 value that does not carry the invariant information.
 
@@ -12809,7 +12809,7 @@ the pointer to the memory for which the ``invariant.group`` no longer holds.
 Semantics:
 """"""""""
 
-Returns another pointer that aliases its argument but which is considered different 
+Returns another pointer that aliases its argument but which is considered different
 for the purposes of ``load``/``store`` ``invariant.group`` metadata.
 
 Constrained Floating Point Intrinsics
@@ -12887,7 +12887,7 @@ strictly preserve the floating point exception semantics of the original code.
 Any FP exception that would have been raised by the original code must be raised
 by the transformed code, and the transformed code must not raise any FP
 exceptions that would not have been raised by the original code.  This is the
-exception behavior argument that will be used if the code being compiled reads 
+exception behavior argument that will be used if the code being compiled reads
 the FP exception status flags, but this mode can also be used with code that
 unmasks FP exceptions.
 
@@ -12905,7 +12905,7 @@ Syntax:
 
 ::
 
-      declare <type> 
+      declare <type>
       @llvm.experimental.constrained.fadd(<type> <op1>, <type> <op2>,
                                           metadata <rounding mode>,
                                           metadata <exception behavior>)
@@ -12942,7 +12942,7 @@ Syntax:
 
 ::
 
-      declare <type> 
+      declare <type>
       @llvm.experimental.constrained.fsub(<type> <op1>, <type> <op2>,
                                           metadata <rounding mode>,
                                           metadata <exception behavior>)
@@ -12979,7 +12979,7 @@ Syntax:
 
 ::
 
-      declare <type> 
+      declare <type>
       @llvm.experimental.constrained.fmul(<type> <op1>, <type> <op2>,
                                           metadata <rounding mode>,
                                           metadata <exception behavior>)
@@ -13016,7 +13016,7 @@ Syntax:
 
 ::
 
-      declare <type> 
+      declare <type>
       @llvm.experimental.constrained.fdiv(<type> <op1>, <type> <op2>,
                                           metadata <rounding mode>,
                                           metadata <exception behavior>)
@@ -13053,7 +13053,7 @@ Syntax:
 
 ::
 
-      declare <type> 
+      declare <type>
       @llvm.experimental.constrained.frem(<type> <op1>, <type> <op2>,
                                           metadata <rounding mode>,
                                           metadata <exception behavior>)
@@ -13082,7 +13082,7 @@ Semantics:
 
 The value produced is the floating point remainder from the division of the two
 value operands and has the same type as the operands.  The remainder has the
-same sign as the dividend. 
+same sign as the dividend.
 
 '``llvm.experimental.constrained.fma``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -13142,7 +13142,7 @@ Syntax:
 
 ::
 
-      declare <type> 
+      declare <type>
       @llvm.experimental.constrained.sqrt(<type> <op1>,
                                           metadata <rounding mode>,
                                           metadata <exception behavior>)
@@ -13179,7 +13179,7 @@ Syntax:
 
 ::
 
-      declare <type> 
+      declare <type>
       @llvm.experimental.constrained.pow(<type> <op1>, <type> <op2>,
                                          metadata <rounding mode>,
                                          metadata <exception behavior>)
@@ -13216,7 +13216,7 @@ Syntax:
 
 ::
 
-      declare <type> 
+      declare <type>
       @llvm.experimental.constrained.powi(<type> <op1>, i32 <op2>,
                                           metadata <rounding mode>,
                                           metadata <exception behavior>)
@@ -13255,7 +13255,7 @@ Syntax:
 
 ::
 
-      declare <type> 
+      declare <type>
       @llvm.experimental.constrained.sin(<type> <op1>,
                                          metadata <rounding mode>,
                                          metadata <exception behavior>)
@@ -13291,7 +13291,7 @@ Syntax:
 
 ::
 
-      declare <type> 
+      declare <type>
       @llvm.experimental.constrained.cos(<type> <op1>,
                                          metadata <rounding mode>,
                                          metadata <exception behavior>)
@@ -13327,7 +13327,7 @@ Syntax:
 
 ::
 
-      declare <type> 
+      declare <type>
       @llvm.experimental.constrained.exp(<type> <op1>,
                                          metadata <rounding mode>,
                                          metadata <exception behavior>)
@@ -13362,7 +13362,7 @@ Syntax:
 
 ::
 
-      declare <type> 
+      declare <type>
       @llvm.experimental.constrained.exp2(<type> <op1>,
                                           metadata <rounding mode>,
                                           metadata <exception behavior>)
@@ -13398,7 +13398,7 @@ Syntax:
 
 ::
 
-      declare <type> 
+      declare <type>
       @llvm.experimental.constrained.log(<type> <op1>,
                                          metadata <rounding mode>,
                                          metadata <exception behavior>)
@@ -13434,7 +13434,7 @@ Syntax:
 
 ::
 
-      declare <type> 
+      declare <type>
       @llvm.experimental.constrained.log10(<type> <op1>,
                                            metadata <rounding mode>,
                                            metadata <exception behavior>)
@@ -13469,7 +13469,7 @@ Syntax:
 
 ::
 
-      declare <type> 
+      declare <type>
       @llvm.experimental.constrained.log2(<type> <op1>,
                                           metadata <rounding mode>,
                                           metadata <exception behavior>)
@@ -13504,7 +13504,7 @@ Syntax:
 
 ::
 
-      declare <type> 
+      declare <type>
       @llvm.experimental.constrained.rint(<type> <op1>,
                                           metadata <rounding mode>,
                                           metadata <exception behavior>)
@@ -13543,7 +13543,7 @@ Syntax:
 
 ::
 
-      declare <type> 
+      declare <type>
       @llvm.experimental.constrained.nearbyint(<type> <op1>,
                                                metadata <rounding mode>,
                                                metadata <exception behavior>)
@@ -14304,7 +14304,7 @@ The '``llvm.memcpy.element.unordered.atomic.*``' intrinsic copies ``len`` bytes 
 memory from the source location to the destination location. These locations are not
 allowed to overlap. The memory copy is performed as a sequence of load/store operations
 where each access is guaranteed to be a multiple of ``element_size`` bytes wide and
-aligned at an ``element_size`` boundary. 
+aligned at an ``element_size`` boundary.
 
 The order of the copy is unspecified. The same value may be read from the source
 buffer many times, but only one write is issued to the destination buffer per
@@ -14379,7 +14379,7 @@ The '``llvm.memmove.element.unordered.atomic.*``' intrinsic copies ``len`` bytes
 of memory from the source location to the destination location. These locations
 are allowed to overlap. The memory copy is performed as a sequence of load/store
 operations where each access is guaranteed to be a multiple of ``element_size``
-bytes wide and aligned at an ``element_size`` boundary. 
+bytes wide and aligned at an ``element_size`` boundary.
 
 The order of the copy is unspecified. The same value may be read from the source
 buffer many times, but only one write is issued to the destination buffer per
@@ -14454,7 +14454,7 @@ Semantics:
 The '``llvm.memset.element.unordered.atomic.*``' intrinsic sets the ``len`` bytes of
 memory starting at the destination location to the given ``value``. The memory is
 set with a sequence of store operations where each access is guaranteed to be a
-multiple of ``element_size`` bytes wide and aligned at an ``element_size`` boundary. 
+multiple of ``element_size`` bytes wide and aligned at an ``element_size`` boundary.
 
 The order of the assignment is unspecified. Only one write is issued to the
 destination buffer per element. It is well defined to have concurrent reads and

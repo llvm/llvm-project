@@ -1032,7 +1032,7 @@ implementation for the interface.
 Pass Statistics
 ===============
 
-The `Statistic <http://llvm.org/doxygen/Statistic_8h-source.html>`_ class is
+The `Statistic <http://llvm.org/doxygen/Statistic_8h_source.html>`_ class is
 designed to be an easy way to expose various success metrics from passes.
 These statistics are printed at the end of a run, when the :option:`-stats`
 command line option is enabled on the command line.  See the :ref:`Statistics
@@ -1043,7 +1043,7 @@ section <Statistic>` in the Programmer's Manual for details.
 What PassManager does
 ---------------------
 
-The `PassManager <http://llvm.org/doxygen/PassManager_8h-source.html>`_ `class
+The `PassManager <http://llvm.org/doxygen/PassManager_8h_source.html>`_ `class
 <http://llvm.org/doxygen/classllvm_1_1PassManager.html>`_ takes a list of
 passes, ensures their :ref:`prerequisites <writing-an-llvm-pass-interaction>`
 are set up correctly, and then schedules passes to run efficiently.  All of the

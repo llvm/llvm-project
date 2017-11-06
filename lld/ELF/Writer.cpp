@@ -426,7 +426,7 @@ static bool includeInSymtab(const Symbol &B) {
   if (!B.isLocal() && !B.IsUsedInRegularObj)
     return false;
 
-  if (auto *D = dyn_cast<DefinedRegular>(&B)) {
+  if (auto *D = dyn_cast<Defined>(&B)) {
     // Always include absolute symbols.
     SectionBase *Sec = D->Section;
     if (!Sec)
@@ -456,7 +456,7 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
       if (!B->isLocal())
         fatal(toString(F) +
               ": broken object: getLocalSymbols returns a non-local symbol");
-      auto *DR = dyn_cast<DefinedRegular>(B);
+      auto *DR = dyn_cast<Defined>(B);
 
       // No reason to keep local undefined symbol in symtab.
       if (!DR)
@@ -491,9 +491,8 @@ template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
         IS->Type == SHT_RELA)
       continue;
 
-    auto *Sym =
-        make<DefinedRegular>("", /*IsLocal=*/true, /*StOther=*/0, STT_SECTION,
-                             /*Value=*/0, /*Size=*/0, IS);
+    auto *Sym = make<Defined>("", /*IsLocal=*/true, /*StOther=*/0, STT_SECTION,
+                              /*Value=*/0, /*Size=*/0, IS);
     InX::SymTab->addSymbol(Sym);
   }
 }
@@ -735,16 +734,16 @@ void PhdrEntry::add(OutputSection *Sec) {
 }
 
 template <class ELFT>
-static DefinedRegular *
-addOptionalRegular(StringRef Name, SectionBase *Sec, uint64_t Val,
-                   uint8_t StOther = STV_HIDDEN, uint8_t Binding = STB_GLOBAL) {
+static Defined *addOptionalRegular(StringRef Name, SectionBase *Sec,
+                                   uint64_t Val, uint8_t StOther = STV_HIDDEN,
+                                   uint8_t Binding = STB_GLOBAL) {
   Symbol *S = Symtab->find(Name);
-  if (!S || S->isInCurrentOutput())
+  if (!S || S->isDefined())
     return nullptr;
   Symbol *Sym = Symtab->addRegular<ELFT>(Name, StOther, STT_NOTYPE, Val,
                                          /*Size=*/0, Binding, Sec,
                                          /*File=*/nullptr);
-  return cast<DefinedRegular>(Sym);
+  return cast<Defined>(Sym);
 }
 
 // The beginning and the ending of .rel[a].plt section are marked
@@ -1192,7 +1191,7 @@ static bool computeIsPreemptible(const Symbol &B) {
 
   // At this point copy relocations have not been created yet, so any
   // symbol that is not defined locally is preemptible.
-  if (!B.isInCurrentOutput())
+  if (!B.isDefined())
     return true;
 
   // If we have a dynamic list it specifies which local symbols are preemptible.

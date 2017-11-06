@@ -3129,18 +3129,14 @@ multiclass avx_fp_unop_s<bits<8> opc, string OpcodeStr, RegisterClass RC,
   let Predicates = [target] in {
    def : Pat<(OpNode RC:$src),  (!cast<Instruction>("V"#NAME#Suffix##r)
                                 (ScalarVT (IMPLICIT_DEF)), RC:$src)>;
-  }
-  let Predicates = [HasAVX] in {
    def : Pat<(Intr VR128:$src),
              (!cast<Instruction>("V"#NAME#Suffix##r_Int) VR128:$src,
                                  VR128:$src)>;
   }
-  let Predicates = [HasAVX, OptForSize] in {
+  let Predicates = [target, OptForSize] in {
     def : Pat<(Intr (scalar_to_vector (ScalarVT (load addr:$src2)))),
               (!cast<Instruction>("V"#NAME#Suffix##m_Int)
                     (vt (IMPLICIT_DEF)), addr:$src2)>;
-  }
-  let Predicates = [target, OptForSize] in {
     def : Pat<(ScalarVT (OpNode (load addr:$src))),
               (!cast<Instruction>("V"#NAME#Suffix##m) (ScalarVT (IMPLICIT_DEF)),
             addr:$src)>;

@@ -64,7 +64,7 @@ static void resolveReloc(InputSectionBase &Sec, RelT &Rel,
                          std::function<void(InputSectionBase *, uint64_t)> Fn) {
   Symbol &B = Sec.getFile<ELFT>()->getRelocTargetSym(Rel);
 
-  if (auto *D = dyn_cast<DefinedRegular>(&B)) {
+  if (auto *D = dyn_cast<Defined>(&B)) {
     if (!D->Section)
       return;
     uint64_t Offset = D->Value;
@@ -74,7 +74,7 @@ static void resolveReloc(InputSectionBase &Sec, RelT &Rel,
     return;
   }
 
-  if (!B.isInCurrentOutput())
+  if (!B.isDefined())
     for (InputSectionBase *Sec : CNamedSections.lookup(B.getName()))
       Fn(Sec, 0);
 }
@@ -212,7 +212,7 @@ template <class ELFT> static void doGcSections() {
   };
 
   auto MarkSymbol = [&](Symbol *Sym) {
-    if (auto *D = dyn_cast_or_null<DefinedRegular>(Sym))
+    if (auto *D = dyn_cast_or_null<Defined>(Sym))
       if (auto *IS = cast_or_null<InputSectionBase>(D->Section))
         Enqueue(IS, D->Value);
   };

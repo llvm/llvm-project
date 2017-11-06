@@ -158,6 +158,16 @@ struct ScalarEnumerationTraits<COFF::RelocationTypeAMD64> {
 };
 
 template <>
+struct ScalarEnumerationTraits<COFF::RelocationTypesARM> {
+  static void enumeration(IO &IO, COFF::RelocationTypesARM &Value);
+};
+
+template <>
+struct ScalarEnumerationTraits<COFF::RelocationTypesARM64> {
+  static void enumeration(IO &IO, COFF::RelocationTypesARM64 &Value);
+};
+
+template <>
 struct ScalarEnumerationTraits<COFF::WindowsSubsystem> {
   static void enumeration(IO &IO, COFF::WindowsSubsystem &Value);
 };

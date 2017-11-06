@@ -6,18 +6,14 @@
 define zeroext i8 @TEST_mm_test_epi64_mask(<2 x i64> %__A, <2 x i64> %__B) local_unnamed_addr #0 {
 ; X86_64-LABEL: TEST_mm_test_epi64_mask:
 ; X86_64:       # BB#0: # %entry
-; X86_64-NEXT:    vpand %xmm0, %xmm1, %xmm0
-; X86_64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X86_64-NEXT:    vpcmpneqq %xmm1, %xmm0, %k0
+; X86_64-NEXT:    vptestmq %xmm0, %xmm1, %k0
 ; X86_64-NEXT:    kmovw %k0, %eax
 ; X86_64-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; X86_64-NEXT:    retq
 ;
 ; I386-LABEL: TEST_mm_test_epi64_mask:
 ; I386:       # BB#0: # %entry
-; I386-NEXT:    vpand %xmm0, %xmm1, %xmm0
-; I386-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; I386-NEXT:    vpcmpneqq %xmm1, %xmm0, %k0
+; I386-NEXT:    vptestmq %xmm0, %xmm1, %k0
 ; I386-NEXT:    kmovw %k0, %eax
 ; I386-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; I386-NEXT:    retl
@@ -33,18 +29,14 @@ entry:
 define zeroext i8 @TEST_mm_test_epi32_mask(<2 x i64> %__A, <2 x i64> %__B) local_unnamed_addr #0 {
 ; X86_64-LABEL: TEST_mm_test_epi32_mask:
 ; X86_64:       # BB#0: # %entry
-; X86_64-NEXT:    vpand %xmm0, %xmm1, %xmm0
-; X86_64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X86_64-NEXT:    vpcmpneqd %xmm1, %xmm0, %k0
+; X86_64-NEXT:    vptestmd %xmm0, %xmm1, %k0
 ; X86_64-NEXT:    kmovw %k0, %eax
 ; X86_64-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; X86_64-NEXT:    retq
 ;
 ; I386-LABEL: TEST_mm_test_epi32_mask:
 ; I386:       # BB#0: # %entry
-; I386-NEXT:    vpand %xmm0, %xmm1, %xmm0
-; I386-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; I386-NEXT:    vpcmpneqd %xmm1, %xmm0, %k0
+; I386-NEXT:    vptestmd %xmm0, %xmm1, %k0
 ; I386-NEXT:    kmovw %k0, %eax
 ; I386-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; I386-NEXT:    retl
@@ -61,9 +53,7 @@ entry:
 define zeroext i8 @TEST_mm256_test_epi64_mask(<4 x i64> %__A, <4 x i64> %__B) local_unnamed_addr #0 {
 ; X86_64-LABEL: TEST_mm256_test_epi64_mask:
 ; X86_64:       # BB#0: # %entry
-; X86_64-NEXT:    vpand %ymm0, %ymm1, %ymm0
-; X86_64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X86_64-NEXT:    vpcmpneqq %ymm1, %ymm0, %k0
+; X86_64-NEXT:    vptestmq %ymm0, %ymm1, %k0
 ; X86_64-NEXT:    kmovw %k0, %eax
 ; X86_64-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; X86_64-NEXT:    vzeroupper
@@ -71,9 +61,7 @@ define zeroext i8 @TEST_mm256_test_epi64_mask(<4 x i64> %__A, <4 x i64> %__B) lo
 ;
 ; I386-LABEL: TEST_mm256_test_epi64_mask:
 ; I386:       # BB#0: # %entry
-; I386-NEXT:    vpand %ymm0, %ymm1, %ymm0
-; I386-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; I386-NEXT:    vpcmpneqq %ymm1, %ymm0, %k0
+; I386-NEXT:    vptestmq %ymm0, %ymm1, %k0
 ; I386-NEXT:    kmovw %k0, %eax
 ; I386-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; I386-NEXT:    vzeroupper
@@ -90,9 +78,7 @@ entry:
 define zeroext i8 @TEST_mm256_test_epi32_mask(<4 x i64> %__A, <4 x i64> %__B) local_unnamed_addr #0 {
 ; X86_64-LABEL: TEST_mm256_test_epi32_mask:
 ; X86_64:       # BB#0: # %entry
-; X86_64-NEXT:    vpand %ymm0, %ymm1, %ymm0
-; X86_64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X86_64-NEXT:    vpcmpneqd %ymm1, %ymm0, %k0
+; X86_64-NEXT:    vptestmd %ymm0, %ymm1, %k0
 ; X86_64-NEXT:    kmovw %k0, %eax
 ; X86_64-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; X86_64-NEXT:    vzeroupper
@@ -100,9 +86,7 @@ define zeroext i8 @TEST_mm256_test_epi32_mask(<4 x i64> %__A, <4 x i64> %__B) lo
 ;
 ; I386-LABEL: TEST_mm256_test_epi32_mask:
 ; I386:       # BB#0: # %entry
-; I386-NEXT:    vpand %ymm0, %ymm1, %ymm0
-; I386-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; I386-NEXT:    vpcmpneqd %ymm1, %ymm0, %k0
+; I386-NEXT:    vptestmd %ymm0, %ymm1, %k0
 ; I386-NEXT:    kmovw %k0, %eax
 ; I386-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; I386-NEXT:    vzeroupper
@@ -119,21 +103,17 @@ entry:
 define zeroext i8 @TEST_mm_mask_test_epi64_mask(i8 %__U, <2 x i64> %__A, <2 x i64> %__B) local_unnamed_addr #0 {
 ; X86_64-LABEL: TEST_mm_mask_test_epi64_mask:
 ; X86_64:       # BB#0: # %entry
-; X86_64-NEXT:    vpand %xmm0, %xmm1, %xmm0
-; X86_64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X86_64-NEXT:    kmovw %edi, %k1
-; X86_64-NEXT:    vpcmpneqq %xmm1, %xmm0, %k0 {%k1}
+; X86_64-NEXT:    vptestmq %xmm0, %xmm1, %k0 {%k1}
 ; X86_64-NEXT:    kmovw %k0, %eax
 ; X86_64-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; X86_64-NEXT:    retq
 ;
 ; I386-LABEL: TEST_mm_mask_test_epi64_mask:
 ; I386:       # BB#0: # %entry
-; I386-NEXT:    vpand %xmm0, %xmm1, %xmm0
-; I386-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; I386-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; I386-NEXT:    kmovw %eax, %k1
-; I386-NEXT:    vpcmpneqq %xmm1, %xmm0, %k0 {%k1}
+; I386-NEXT:    vptestmq %xmm0, %xmm1, %k0 {%k1}
 ; I386-NEXT:    kmovw %k0, %eax
 ; I386-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; I386-NEXT:    retl
@@ -152,21 +132,17 @@ entry:
 define zeroext i8 @TEST_mm_mask_test_epi32_mask(i8 %__U, <2 x i64> %__A, <2 x i64> %__B) local_unnamed_addr #0 {
 ; X86_64-LABEL: TEST_mm_mask_test_epi32_mask:
 ; X86_64:       # BB#0: # %entry
-; X86_64-NEXT:    vpand %xmm0, %xmm1, %xmm0
-; X86_64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X86_64-NEXT:    kmovw %edi, %k1
-; X86_64-NEXT:    vpcmpneqd %xmm1, %xmm0, %k0 {%k1}
+; X86_64-NEXT:    vptestmd %xmm0, %xmm1, %k0 {%k1}
 ; X86_64-NEXT:    kmovw %k0, %eax
 ; X86_64-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; X86_64-NEXT:    retq
 ;
 ; I386-LABEL: TEST_mm_mask_test_epi32_mask:
 ; I386:       # BB#0: # %entry
-; I386-NEXT:    vpand %xmm0, %xmm1, %xmm0
-; I386-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; I386-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; I386-NEXT:    kmovw %eax, %k1
-; I386-NEXT:    vpcmpneqd %xmm1, %xmm0, %k0 {%k1}
+; I386-NEXT:    vptestmd %xmm0, %xmm1, %k0 {%k1}
 ; I386-NEXT:    kmovw %k0, %eax
 ; I386-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; I386-NEXT:    retl
@@ -187,10 +163,8 @@ entry:
 define zeroext i8 @TEST_mm256_mask_test_epi64_mask(i8 %__U, <4 x i64> %__A, <4 x i64> %__B) local_unnamed_addr #0 {
 ; X86_64-LABEL: TEST_mm256_mask_test_epi64_mask:
 ; X86_64:       # BB#0: # %entry
-; X86_64-NEXT:    vpand %ymm0, %ymm1, %ymm0
-; X86_64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X86_64-NEXT:    kmovw %edi, %k1
-; X86_64-NEXT:    vpcmpneqq %ymm1, %ymm0, %k0 {%k1}
+; X86_64-NEXT:    vptestmq %ymm0, %ymm1, %k0 {%k1}
 ; X86_64-NEXT:    kmovw %k0, %eax
 ; X86_64-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; X86_64-NEXT:    vzeroupper
@@ -198,11 +172,9 @@ define zeroext i8 @TEST_mm256_mask_test_epi64_mask(i8 %__U, <4 x i64> %__A, <4 x
 ;
 ; I386-LABEL: TEST_mm256_mask_test_epi64_mask:
 ; I386:       # BB#0: # %entry
-; I386-NEXT:    vpand %ymm0, %ymm1, %ymm0
-; I386-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; I386-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; I386-NEXT:    kmovw %eax, %k1
-; I386-NEXT:    vpcmpneqq %ymm1, %ymm0, %k0 {%k1}
+; I386-NEXT:    vptestmq %ymm0, %ymm1, %k0 {%k1}
 ; I386-NEXT:    kmovw %k0, %eax
 ; I386-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; I386-NEXT:    vzeroupper
@@ -222,10 +194,8 @@ entry:
 define zeroext i8 @TEST_mm256_mask_test_epi32_mask(i8 %__U, <4 x i64> %__A, <4 x i64> %__B) local_unnamed_addr #0 {
 ; X86_64-LABEL: TEST_mm256_mask_test_epi32_mask:
 ; X86_64:       # BB#0: # %entry
-; X86_64-NEXT:    vpand %ymm0, %ymm1, %ymm0
-; X86_64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X86_64-NEXT:    kmovw %edi, %k1
-; X86_64-NEXT:    vpcmpneqd %ymm1, %ymm0, %k0 {%k1}
+; X86_64-NEXT:    vptestmd %ymm0, %ymm1, %k0 {%k1}
 ; X86_64-NEXT:    kmovw %k0, %eax
 ; X86_64-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; X86_64-NEXT:    vzeroupper
@@ -233,11 +203,9 @@ define zeroext i8 @TEST_mm256_mask_test_epi32_mask(i8 %__U, <4 x i64> %__A, <4 x
 ;
 ; I386-LABEL: TEST_mm256_mask_test_epi32_mask:
 ; I386:       # BB#0: # %entry
-; I386-NEXT:    vpand %ymm0, %ymm1, %ymm0
-; I386-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; I386-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; I386-NEXT:    kmovw %eax, %k1
-; I386-NEXT:    vpcmpneqd %ymm1, %ymm0, %k0 {%k1}
+; I386-NEXT:    vptestmd %ymm0, %ymm1, %k0 {%k1}
 ; I386-NEXT:    kmovw %k0, %eax
 ; I386-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; I386-NEXT:    vzeroupper
@@ -256,18 +224,14 @@ entry:
 define zeroext i8 @TEST_mm_testn_epi64_mask(<2 x i64> %__A, <2 x i64> %__B) local_unnamed_addr #0 {
 ; X86_64-LABEL: TEST_mm_testn_epi64_mask:
 ; X86_64:       # BB#0: # %entry
-; X86_64-NEXT:    vpand %xmm0, %xmm1, %xmm0
-; X86_64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X86_64-NEXT:    vpcmpeqq %xmm1, %xmm0, %k0
+; X86_64-NEXT:    vptestnmq %xmm0, %xmm1, %k0
 ; X86_64-NEXT:    kmovw %k0, %eax
 ; X86_64-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; X86_64-NEXT:    retq
 ;
 ; I386-LABEL: TEST_mm_testn_epi64_mask:
 ; I386:       # BB#0: # %entry
-; I386-NEXT:    vpand %xmm0, %xmm1, %xmm0
-; I386-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; I386-NEXT:    vpcmpeqq %xmm1, %xmm0, %k0
+; I386-NEXT:    vptestnmq %xmm0, %xmm1, %k0
 ; I386-NEXT:    kmovw %k0, %eax
 ; I386-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; I386-NEXT:    retl
@@ -283,18 +247,14 @@ entry:
 define zeroext i8 @TEST_mm_testn_epi32_mask(<2 x i64> %__A, <2 x i64> %__B) local_unnamed_addr #0 {
 ; X86_64-LABEL: TEST_mm_testn_epi32_mask:
 ; X86_64:       # BB#0: # %entry
-; X86_64-NEXT:    vpand %xmm0, %xmm1, %xmm0
-; X86_64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X86_64-NEXT:    vpcmpeqd %xmm1, %xmm0, %k0
+; X86_64-NEXT:    vptestnmd %xmm0, %xmm1, %k0
 ; X86_64-NEXT:    kmovw %k0, %eax
 ; X86_64-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; X86_64-NEXT:    retq
 ;
 ; I386-LABEL: TEST_mm_testn_epi32_mask:
 ; I386:       # BB#0: # %entry
-; I386-NEXT:    vpand %xmm0, %xmm1, %xmm0
-; I386-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; I386-NEXT:    vpcmpeqd %xmm1, %xmm0, %k0
+; I386-NEXT:    vptestnmd %xmm0, %xmm1, %k0
 ; I386-NEXT:    kmovw %k0, %eax
 ; I386-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; I386-NEXT:    retl
@@ -311,9 +271,7 @@ entry:
 define zeroext i8 @TEST_mm256_testn_epi64_mask(<4 x i64> %__A, <4 x i64> %__B) local_unnamed_addr #0 {
 ; X86_64-LABEL: TEST_mm256_testn_epi64_mask:
 ; X86_64:       # BB#0: # %entry
-; X86_64-NEXT:    vpand %ymm0, %ymm1, %ymm0
-; X86_64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X86_64-NEXT:    vpcmpeqq %ymm1, %ymm0, %k0
+; X86_64-NEXT:    vptestnmq %ymm0, %ymm1, %k0
 ; X86_64-NEXT:    kmovw %k0, %eax
 ; X86_64-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; X86_64-NEXT:    vzeroupper
@@ -321,9 +279,7 @@ define zeroext i8 @TEST_mm256_testn_epi64_mask(<4 x i64> %__A, <4 x i64> %__B) l
 ;
 ; I386-LABEL: TEST_mm256_testn_epi64_mask:
 ; I386:       # BB#0: # %entry
-; I386-NEXT:    vpand %ymm0, %ymm1, %ymm0
-; I386-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; I386-NEXT:    vpcmpeqq %ymm1, %ymm0, %k0
+; I386-NEXT:    vptestnmq %ymm0, %ymm1, %k0
 ; I386-NEXT:    kmovw %k0, %eax
 ; I386-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; I386-NEXT:    vzeroupper
@@ -340,9 +296,7 @@ entry:
 define zeroext i8 @TEST_mm256_testn_epi32_mask(<4 x i64> %__A, <4 x i64> %__B) local_unnamed_addr #0 {
 ; X86_64-LABEL: TEST_mm256_testn_epi32_mask:
 ; X86_64:       # BB#0: # %entry
-; X86_64-NEXT:    vpand %ymm0, %ymm1, %ymm0
-; X86_64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X86_64-NEXT:    vpcmpeqd %ymm1, %ymm0, %k0
+; X86_64-NEXT:    vptestnmd %ymm0, %ymm1, %k0
 ; X86_64-NEXT:    kmovw %k0, %eax
 ; X86_64-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; X86_64-NEXT:    vzeroupper
@@ -350,9 +304,7 @@ define zeroext i8 @TEST_mm256_testn_epi32_mask(<4 x i64> %__A, <4 x i64> %__B) l
 ;
 ; I386-LABEL: TEST_mm256_testn_epi32_mask:
 ; I386:       # BB#0: # %entry
-; I386-NEXT:    vpand %ymm0, %ymm1, %ymm0
-; I386-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; I386-NEXT:    vpcmpeqd %ymm1, %ymm0, %k0
+; I386-NEXT:    vptestnmd %ymm0, %ymm1, %k0
 ; I386-NEXT:    kmovw %k0, %eax
 ; I386-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; I386-NEXT:    vzeroupper
@@ -369,21 +321,17 @@ entry:
 define zeroext i8 @TEST_mm_mask_testn_epi64_mask(i8 %__U, <2 x i64> %__A, <2 x i64> %__B) local_unnamed_addr #0 {
 ; X86_64-LABEL: TEST_mm_mask_testn_epi64_mask:
 ; X86_64:       # BB#0: # %entry
-; X86_64-NEXT:    vpand %xmm0, %xmm1, %xmm0
-; X86_64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X86_64-NEXT:    kmovw %edi, %k1
-; X86_64-NEXT:    vpcmpeqq %xmm1, %xmm0, %k0 {%k1}
+; X86_64-NEXT:    vptestnmq %xmm0, %xmm1, %k0 {%k1}
 ; X86_64-NEXT:    kmovw %k0, %eax
 ; X86_64-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; X86_64-NEXT:    retq
 ;
 ; I386-LABEL: TEST_mm_mask_testn_epi64_mask:
 ; I386:       # BB#0: # %entry
-; I386-NEXT:    vpand %xmm0, %xmm1, %xmm0
-; I386-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; I386-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; I386-NEXT:    kmovw %eax, %k1
-; I386-NEXT:    vpcmpeqq %xmm1, %xmm0, %k0 {%k1}
+; I386-NEXT:    vptestnmq %xmm0, %xmm1, %k0 {%k1}
 ; I386-NEXT:    kmovw %k0, %eax
 ; I386-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; I386-NEXT:    retl
@@ -402,21 +350,17 @@ entry:
 define zeroext i8 @TEST_mm_mask_testn_epi32_mask(i8 %__U, <2 x i64> %__A, <2 x i64> %__B) local_unnamed_addr #0 {
 ; X86_64-LABEL: TEST_mm_mask_testn_epi32_mask:
 ; X86_64:       # BB#0: # %entry
-; X86_64-NEXT:    vpand %xmm0, %xmm1, %xmm0
-; X86_64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X86_64-NEXT:    kmovw %edi, %k1
-; X86_64-NEXT:    vpcmpeqd %xmm1, %xmm0, %k0 {%k1}
+; X86_64-NEXT:    vptestnmd %xmm0, %xmm1, %k0 {%k1}
 ; X86_64-NEXT:    kmovw %k0, %eax
 ; X86_64-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; X86_64-NEXT:    retq
 ;
 ; I386-LABEL: TEST_mm_mask_testn_epi32_mask:
 ; I386:       # BB#0: # %entry
-; I386-NEXT:    vpand %xmm0, %xmm1, %xmm0
-; I386-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; I386-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; I386-NEXT:    kmovw %eax, %k1
-; I386-NEXT:    vpcmpeqd %xmm1, %xmm0, %k0 {%k1}
+; I386-NEXT:    vptestnmd %xmm0, %xmm1, %k0 {%k1}
 ; I386-NEXT:    kmovw %k0, %eax
 ; I386-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; I386-NEXT:    retl
@@ -437,10 +381,8 @@ entry:
 define zeroext i8 @TEST_mm256_mask_testn_epi64_mask(i8 %__U, <4 x i64> %__A, <4 x i64> %__B) local_unnamed_addr #0 {
 ; X86_64-LABEL: TEST_mm256_mask_testn_epi64_mask:
 ; X86_64:       # BB#0: # %entry
-; X86_64-NEXT:    vpand %ymm0, %ymm1, %ymm0
-; X86_64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X86_64-NEXT:    kmovw %edi, %k1
-; X86_64-NEXT:    vpcmpeqq %ymm1, %ymm0, %k0 {%k1}
+; X86_64-NEXT:    vptestnmq %ymm0, %ymm1, %k0 {%k1}
 ; X86_64-NEXT:    kmovw %k0, %eax
 ; X86_64-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; X86_64-NEXT:    vzeroupper
@@ -448,11 +390,9 @@ define zeroext i8 @TEST_mm256_mask_testn_epi64_mask(i8 %__U, <4 x i64> %__A, <4 
 ;
 ; I386-LABEL: TEST_mm256_mask_testn_epi64_mask:
 ; I386:       # BB#0: # %entry
-; I386-NEXT:    vpand %ymm0, %ymm1, %ymm0
-; I386-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; I386-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; I386-NEXT:    kmovw %eax, %k1
-; I386-NEXT:    vpcmpeqq %ymm1, %ymm0, %k0 {%k1}
+; I386-NEXT:    vptestnmq %ymm0, %ymm1, %k0 {%k1}
 ; I386-NEXT:    kmovw %k0, %eax
 ; I386-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; I386-NEXT:    vzeroupper
@@ -472,10 +412,8 @@ entry:
 define zeroext i8 @TEST_mm256_mask_testn_epi32_mask(i8 %__U, <4 x i64> %__A, <4 x i64> %__B) local_unnamed_addr #0 {
 ; X86_64-LABEL: TEST_mm256_mask_testn_epi32_mask:
 ; X86_64:       # BB#0: # %entry
-; X86_64-NEXT:    vpand %ymm0, %ymm1, %ymm0
-; X86_64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X86_64-NEXT:    kmovw %edi, %k1
-; X86_64-NEXT:    vpcmpeqd %ymm1, %ymm0, %k0 {%k1}
+; X86_64-NEXT:    vptestnmd %ymm0, %ymm1, %k0 {%k1}
 ; X86_64-NEXT:    kmovw %k0, %eax
 ; X86_64-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; X86_64-NEXT:    vzeroupper
@@ -483,11 +421,9 @@ define zeroext i8 @TEST_mm256_mask_testn_epi32_mask(i8 %__U, <4 x i64> %__A, <4 
 ;
 ; I386-LABEL: TEST_mm256_mask_testn_epi32_mask:
 ; I386:       # BB#0: # %entry
-; I386-NEXT:    vpand %ymm0, %ymm1, %ymm0
-; I386-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; I386-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; I386-NEXT:    kmovw %eax, %k1
-; I386-NEXT:    vpcmpeqd %ymm1, %ymm0, %k0 {%k1}
+; I386-NEXT:    vptestnmd %ymm0, %ymm1, %k0 {%k1}
 ; I386-NEXT:    kmovw %k0, %eax
 ; I386-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; I386-NEXT:    vzeroupper

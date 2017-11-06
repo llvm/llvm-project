@@ -51,7 +51,7 @@ static std::vector<Defined *> getSymbols() {
   std::vector<Defined *> V;
   for (InputFile *File : ObjectFiles)
     for (Symbol *B : File->getSymbols())
-      if (auto *DR = dyn_cast<DefinedRegular>(B))
+      if (auto *DR = dyn_cast<Defined>(B))
         if (DR->getFile() == File && !DR->isSection() && DR->Section &&
             DR->Section->Live)
           V.push_back(DR);
@@ -62,7 +62,7 @@ static std::vector<Defined *> getSymbols() {
 static SymbolMapTy getSectionSyms(ArrayRef<Defined *> Syms) {
   SymbolMapTy Ret;
   for (Defined *S : Syms)
-    if (auto *DR = dyn_cast<DefinedRegular>(S))
+    if (auto *DR = dyn_cast<Defined>(S))
       Ret[DR->Section].push_back(S);
 
   // Sort symbols by address. We want to print out symbols in the

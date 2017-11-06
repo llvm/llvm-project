@@ -326,7 +326,7 @@ static RelType getMipsPairType(RelType Type, bool IsLocal) {
 static bool isAbsolute(const Symbol &Sym) {
   if (Sym.isUndefWeak())
     return true;
-  if (const auto *DR = dyn_cast<DefinedRegular>(&Sym))
+  if (const auto *DR = dyn_cast<Defined>(&Sym))
     return DR->Section == nullptr; // Absolute symbol.
   return false;
 }
@@ -1184,7 +1184,7 @@ void ThunkCreator::mergeThunks(ArrayRef<OutputSection *> OutputSections) {
 }
 
 // Find or create a ThunkSection within the InputSectionDescription (ISD) that
-// is in range of Src. An ISR maps to a range of InputSections described by a
+// is in range of Src. An ISD maps to a range of InputSections described by a
 // linker script section pattern such as { .text .text.* }.
 ThunkSection *ThunkCreator::getISDThunkSec(OutputSection *OS, InputSection *IS,
                                            InputSectionDescription *ISD,

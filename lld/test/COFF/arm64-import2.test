@@ -47,10 +47,10 @@ sections:
     Relocations:
       - VirtualAddress:  0
         SymbolName:      function
-        Type:            3
+        Type:            IMAGE_REL_ARM64_BRANCH26
       - VirtualAddress:  4
         SymbolName:      function2
-        Type:            3
+        Type:            IMAGE_REL_ARM64_BRANCH26
 symbols:
   - Name:            .text
     Value:           0
