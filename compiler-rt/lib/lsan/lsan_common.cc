@@ -411,8 +411,9 @@ static void MarkInvalidPCCb(uptr chunk, void *arg) {
   }
 }
 
-// On Linux, handles dynamically allocated TLS blocks by treating all chunks
-// allocated from ld-linux.so as reachable.
+// On Linux, treats all chunks allocated from ld-linux.so as reachable, which
+// covers dynamically allocated TLS blocks, internal dynamic loader's loaded
+// modules accounting etc.
 // Dynamic TLS blocks contain the TLS variables of dynamically loaded modules.
 // They are allocated with a __libc_memalign() call in allocate_and_init()
 // (elf/dl-tls.c). Glibc won't tell us the address ranges occupied by those

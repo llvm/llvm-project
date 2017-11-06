@@ -5835,7 +5835,7 @@ INTERCEPTOR(int, pthread_setcancelstate, int state, int *oldstate) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, pthread_setcancelstate, state, oldstate);
   int res = REAL(pthread_setcancelstate)(state, oldstate);
-  if (res == 0)
+  if (res == 0 && oldstate != nullptr)
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, oldstate, sizeof(*oldstate));
   return res;
 }
@@ -5844,7 +5844,7 @@ INTERCEPTOR(int, pthread_setcanceltype, int type, int *oldtype) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, pthread_setcanceltype, type, oldtype);
   int res = REAL(pthread_setcanceltype)(type, oldtype);
-  if (res == 0)
+  if (res == 0 && oldtype != nullptr)
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, oldtype, sizeof(*oldtype));
   return res;
 }
