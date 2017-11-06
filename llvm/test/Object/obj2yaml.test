@@ -1,5 +1,7 @@
 RUN: obj2yaml %p/Inputs/trivial-object-test.coff-i386 | FileCheck %s --check-prefix COFF-I386
 RUN: obj2yaml %p/Inputs/trivial-object-test.coff-x86-64 | FileCheck %s --check-prefix COFF-X86-64
+RUN: obj2yaml %p/Inputs/trivial-object-test.coff-armnt | FileCheck %s --check-prefix COFF-ARMNT
+RUN: obj2yaml %p/Inputs/trivial-object-test.coff-arm64 | FileCheck %s --check-prefix COFF-ARM64
 RUN: obj2yaml %p/Inputs/trivial-object-test.elf-mipsel | FileCheck %s --check-prefix ELF-MIPSEL
 RUN: obj2yaml %p/Inputs/trivial-object-test.elf-mips64el | FileCheck %s --check-prefix ELF-MIPS64EL
 RUN: obj2yaml %p/Inputs/trivial-object-test.elf-x86-64 | FileCheck %s --check-prefix ELF-X86-64
@@ -188,6 +190,162 @@ COFF-X86-64-NEXT:     SectionNumber: 3
 COFF-X86-64-NEXT:     SimpleType: IMAGE_SYM_TYPE_NULL
 COFF-X86-64-NEXT:     ComplexType: IMAGE_SYM_DTYPE_FUNCTION
 COFF-X86-64-NEXT:     StorageClass: IMAGE_SYM_CLASS_STATIC
+
+COFF-ARMNT: header:
+COFF-ARMNT-NEXT:  Machine: IMAGE_FILE_MACHINE_ARMNT
+
+COFF-ARMNT: sections:
+COFF-ARMNT-NEXT:   - Name: .text
+COFF-ARMNT-NEXT:     Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_PURGEABLE, IMAGE_SCN_MEM_16BIT, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+COFF-ARMNT-NEXT:     Alignment: 4
+COFF-ARMNT-NEXT:     SectionData: 00F000F87047
+
+COFF-ARMNT:     Relocations:
+COFF-ARMNT-NEXT:       - VirtualAddress: 0
+COFF-ARMNT-NEXT:         SymbolName: otherFunc
+COFF-ARMNT-NEXT:         Type: IMAGE_REL_ARM_BLX23T
+
+COFF-ARMNT:        - Name: .data
+COFF-ARMNT-NEXT:     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+COFF-ARMNT-NEXT:     Alignment: 4
+COFF-ARMNT-NEXT:     SectionData: ''
+
+COFF-ARMNT:        - Name: .bss
+COFF-ARMNT-NEXT:     Characteristics: [ IMAGE_SCN_CNT_UNINITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+COFF-ARMNT-NEXT:     Alignment: 4
+COFF-ARMNT-NEXT:     SectionData: ''
+
+COFF-ARMNT: symbols:
+COFF-ARMNT-NEXT:   - Name: .text
+COFF-ARMNT-NEXT:     Value: 0
+COFF-ARMNT-NEXT:     SectionNumber: 1
+COFF-ARMNT-NEXT:     SimpleType: IMAGE_SYM_TYPE_NULL
+COFF-ARMNT-NEXT:     ComplexType: IMAGE_SYM_DTYPE_NULL
+COFF-ARMNT-NEXT:     StorageClass: IMAGE_SYM_CLASS_STATIC
+COFF-ARMNT-NEXT:     SectionDefinition:
+COFF-ARMNT-NEXT:       Length:          6
+COFF-ARMNT-NEXT:       NumberOfRelocations: 1
+COFF-ARMNT-NEXT:       NumberOfLinenumbers: 0
+COFF-ARMNT-NEXT:       CheckSum:        879026160
+COFF-ARMNT-NEXT:       Number:          1
+
+COFF-ARMNT:        - Name: .data
+COFF-ARMNT-NEXT:     Value: 0
+COFF-ARMNT-NEXT:     SectionNumber: 2
+COFF-ARMNT-NEXT:     SimpleType: IMAGE_SYM_TYPE_NULL
+COFF-ARMNT-NEXT:     ComplexType: IMAGE_SYM_DTYPE_NULL
+COFF-ARMNT-NEXT:     StorageClass: IMAGE_SYM_CLASS_STATIC
+COFF-ARMNT-NEXT:     SectionDefinition:
+COFF-ARMNT-NEXT:       Length:          0
+COFF-ARMNT-NEXT:       NumberOfRelocations: 0
+COFF-ARMNT-NEXT:       NumberOfLinenumbers: 0
+COFF-ARMNT-NEXT:       CheckSum:        0
+COFF-ARMNT-NEXT:       Number:          2
+
+COFF-ARMNT:        - Name: .bss
+COFF-ARMNT-NEXT:     Value: 0
+COFF-ARMNT-NEXT:     SectionNumber: 3
+COFF-ARMNT-NEXT:     SimpleType: IMAGE_SYM_TYPE_NULL
+COFF-ARMNT-NEXT:     ComplexType: IMAGE_SYM_DTYPE_NULL
+COFF-ARMNT-NEXT:     StorageClass: IMAGE_SYM_CLASS_STATIC
+COFF-ARMNT-NEXT:     SectionDefinition:
+COFF-ARMNT-NEXT:       Length:          0
+COFF-ARMNT-NEXT:       NumberOfRelocations: 0
+COFF-ARMNT-NEXT:       NumberOfLinenumbers: 0
+COFF-ARMNT-NEXT:       CheckSum:        0
+COFF-ARMNT-NEXT:       Number:          3
+
+COFF-ARMNT:        - Name: main
+COFF-ARMNT-NEXT:     Value: 0
+COFF-ARMNT-NEXT:     SectionNumber: 1
+COFF-ARMNT-NEXT:     SimpleType: IMAGE_SYM_TYPE_NULL
+COFF-ARMNT-NEXT:     ComplexType: IMAGE_SYM_DTYPE_NULL
+COFF-ARMNT-NEXT:     StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+
+COFF-ARMNT:        - Name: otherFunc
+COFF-ARMNT-NEXT:     Value: 0
+COFF-ARMNT-NEXT:     SectionNumber: 0
+COFF-ARMNT-NEXT:     SimpleType: IMAGE_SYM_TYPE_NULL
+COFF-ARMNT-NEXT:     ComplexType: IMAGE_SYM_DTYPE_NULL
+COFF-ARMNT-NEXT:     StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+
+COFF-ARM64: header:
+COFF-ARM64-NEXT:  Machine: IMAGE_FILE_MACHINE_ARM64
+
+COFF-ARM64: sections:
+COFF-ARM64-NEXT:   - Name: .text
+COFF-ARM64-NEXT:     Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+COFF-ARM64-NEXT:     Alignment: 4
+COFF-ARM64-NEXT:     SectionData: 00000094C0035FD6
+
+COFF-ARM64:     Relocations:
+COFF-ARM64-NEXT:       - VirtualAddress: 0
+COFF-ARM64-NEXT:         SymbolName: otherFunc
+COFF-ARM64-NEXT:         Type: IMAGE_REL_ARM64_BRANCH26
+
+COFF-ARM64:        - Name: .data
+COFF-ARM64-NEXT:     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+COFF-ARM64-NEXT:     Alignment: 4
+COFF-ARM64-NEXT:     SectionData: ''
+
+COFF-ARM64:        - Name: .bss
+COFF-ARM64-NEXT:     Characteristics: [ IMAGE_SCN_CNT_UNINITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+COFF-ARM64-NEXT:     Alignment: 4
+COFF-ARM64-NEXT:     SectionData: ''
+
+COFF-ARM64: symbols:
+COFF-ARM64-NEXT:   - Name: .text
+COFF-ARM64-NEXT:     Value: 0
+COFF-ARM64-NEXT:     SectionNumber: 1
+COFF-ARM64-NEXT:     SimpleType: IMAGE_SYM_TYPE_NULL
+COFF-ARM64-NEXT:     ComplexType: IMAGE_SYM_DTYPE_NULL
+COFF-ARM64-NEXT:     StorageClass: IMAGE_SYM_CLASS_STATIC
+COFF-ARM64-NEXT:     SectionDefinition:
+COFF-ARM64-NEXT:       Length:          8
+COFF-ARM64-NEXT:       NumberOfRelocations: 1
+COFF-ARM64-NEXT:       NumberOfLinenumbers: 0
+COFF-ARM64-NEXT:       CheckSum:        35579893
+COFF-ARM64-NEXT:       Number:          1
+
+COFF-ARM64:        - Name: .data
+COFF-ARM64-NEXT:     Value: 0
+COFF-ARM64-NEXT:     SectionNumber: 2
+COFF-ARM64-NEXT:     SimpleType: IMAGE_SYM_TYPE_NULL
+COFF-ARM64-NEXT:     ComplexType: IMAGE_SYM_DTYPE_NULL
+COFF-ARM64-NEXT:     StorageClass: IMAGE_SYM_CLASS_STATIC
+COFF-ARM64-NEXT:     SectionDefinition:
+COFF-ARM64-NEXT:       Length:          0
+COFF-ARM64-NEXT:       NumberOfRelocations: 0
+COFF-ARM64-NEXT:       NumberOfLinenumbers: 0
+COFF-ARM64-NEXT:       CheckSum:        0
+COFF-ARM64-NEXT:       Number:          2
+
+COFF-ARM64:        - Name: .bss
+COFF-ARM64-NEXT:     Value: 0
+COFF-ARM64-NEXT:     SectionNumber: 3
+COFF-ARM64-NEXT:     SimpleType: IMAGE_SYM_TYPE_NULL
+COFF-ARM64-NEXT:     ComplexType: IMAGE_SYM_DTYPE_NULL
+COFF-ARM64-NEXT:     StorageClass: IMAGE_SYM_CLASS_STATIC
+COFF-ARM64-NEXT:     SectionDefinition:
+COFF-ARM64-NEXT:       Length:          0
+COFF-ARM64-NEXT:       NumberOfRelocations: 0
+COFF-ARM64-NEXT:       NumberOfLinenumbers: 0
+COFF-ARM64-NEXT:       CheckSum:        0
+COFF-ARM64-NEXT:       Number:          3
+
+COFF-ARM64:        - Name: main
+COFF-ARM64-NEXT:     Value: 0
+COFF-ARM64-NEXT:     SectionNumber: 1
+COFF-ARM64-NEXT:     SimpleType: IMAGE_SYM_TYPE_NULL
+COFF-ARM64-NEXT:     ComplexType: IMAGE_SYM_DTYPE_NULL
+COFF-ARM64-NEXT:     StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+
+COFF-ARM64:        - Name: otherFunc
+COFF-ARM64-NEXT:     Value: 0
+COFF-ARM64-NEXT:     SectionNumber: 0
+COFF-ARM64-NEXT:     SimpleType: IMAGE_SYM_TYPE_NULL
+COFF-ARM64-NEXT:     ComplexType: IMAGE_SYM_DTYPE_NULL
+COFF-ARM64-NEXT:     StorageClass: IMAGE_SYM_CLASS_EXTERNAL
 
 ELF-MIPSEL:      FileHeader:
 ELF-MIPSEL-NEXT:   Class:           ELFCLASS32

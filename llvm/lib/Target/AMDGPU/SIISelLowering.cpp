@@ -2134,12 +2134,17 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Callee)) {
-    // FIXME: Remove this hack for function pointer types.
-    const GlobalValue *GV = GA->getGlobal();
-    assert(Callee.getValueType() == MVT::i32);
-    Callee = DAG.getGlobalAddress(GV, DL, MVT::i64, GA->getOffset(),
-                                  false, GA->getTargetFlags());
+    // FIXME: Remove this hack for function pointer types after removing
+    // support of old address space mapping. In the new address space
+    // mapping the pointer in default address space is 64 bit, therefore
+    // does not need this hack.
+    if (Callee.getValueType() == MVT::i32) {
+      const GlobalValue *GV = GA->getGlobal();
+      Callee = DAG.getGlobalAddress(GV, DL, MVT::i64, GA->getOffset(), false,
+                                    GA->getTargetFlags());
+    }
   }
+  assert(Callee.getValueType() == MVT::i64);
 
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
 

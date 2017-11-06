@@ -46,8 +46,6 @@ define <8 x i1> @test3(<4 x i1> %a) {
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vpslld $31, %xmm0, %xmm0
 ; CHECK-NEXT:    vptestmd %xmm0, %xmm0, %k0
-; CHECK-NEXT:    kshiftlb $4, %k0, %k0
-; CHECK-NEXT:    kshiftrb $4, %k0, %k0
 ; CHECK-NEXT:    vpmovm2w %k0, %xmm0
 ; CHECK-NEXT:    retq
 

@@ -178,6 +178,46 @@ void ScalarEnumerationTraits<COFF::RelocationTypeAMD64>::enumeration(
   ECase(IMAGE_REL_AMD64_SSPAN32);
 }
 
+void ScalarEnumerationTraits<COFF::RelocationTypesARM>::enumeration(
+    IO &IO, COFF::RelocationTypesARM &Value) {
+  ECase(IMAGE_REL_ARM_ABSOLUTE);
+  ECase(IMAGE_REL_ARM_ADDR32);
+  ECase(IMAGE_REL_ARM_ADDR32NB);
+  ECase(IMAGE_REL_ARM_BRANCH24);
+  ECase(IMAGE_REL_ARM_BRANCH11);
+  ECase(IMAGE_REL_ARM_TOKEN);
+  ECase(IMAGE_REL_ARM_BLX24);
+  ECase(IMAGE_REL_ARM_BLX11);
+  ECase(IMAGE_REL_ARM_SECTION);
+  ECase(IMAGE_REL_ARM_SECREL);
+  ECase(IMAGE_REL_ARM_MOV32A);
+  ECase(IMAGE_REL_ARM_MOV32T);
+  ECase(IMAGE_REL_ARM_BRANCH20T);
+  ECase(IMAGE_REL_ARM_BRANCH24T);
+  ECase(IMAGE_REL_ARM_BLX23T);
+}
+
+void ScalarEnumerationTraits<COFF::RelocationTypesARM64>::enumeration(
+    IO &IO, COFF::RelocationTypesARM64 &Value) {
+  ECase(IMAGE_REL_ARM64_ABSOLUTE);
+  ECase(IMAGE_REL_ARM64_ADDR32);
+  ECase(IMAGE_REL_ARM64_ADDR32NB);
+  ECase(IMAGE_REL_ARM64_BRANCH26);
+  ECase(IMAGE_REL_ARM64_PAGEBASE_REL21);
+  ECase(IMAGE_REL_ARM64_REL21);
+  ECase(IMAGE_REL_ARM64_PAGEOFFSET_12A);
+  ECase(IMAGE_REL_ARM64_PAGEOFFSET_12L);
+  ECase(IMAGE_REL_ARM64_SECREL);
+  ECase(IMAGE_REL_ARM64_SECREL_LOW12A);
+  ECase(IMAGE_REL_ARM64_SECREL_HIGH12A);
+  ECase(IMAGE_REL_ARM64_SECREL_LOW12L);
+  ECase(IMAGE_REL_ARM64_TOKEN);
+  ECase(IMAGE_REL_ARM64_SECTION);
+  ECase(IMAGE_REL_ARM64_ADDR64);
+  ECase(IMAGE_REL_ARM64_BRANCH19);
+  ECase(IMAGE_REL_ARM64_BRANCH14);
+}
+
 void ScalarEnumerationTraits<COFF::WindowsSubsystem>::enumeration(
     IO &IO, COFF::WindowsSubsystem &Value) {
   ECase(IMAGE_SUBSYSTEM_UNKNOWN);
@@ -376,6 +416,14 @@ void MappingTraits<COFFYAML::Relocation>::mapping(IO &IO,
     IO.mapRequired("Type", NT->Type);
   } else if (H.Machine == COFF::IMAGE_FILE_MACHINE_AMD64) {
     MappingNormalization<NType<COFF::RelocationTypeAMD64>, uint16_t> NT(
+        IO, Rel.Type);
+    IO.mapRequired("Type", NT->Type);
+  } else if (H.Machine == COFF::IMAGE_FILE_MACHINE_ARMNT) {
+    MappingNormalization<NType<COFF::RelocationTypesARM>, uint16_t> NT(
+        IO, Rel.Type);
+    IO.mapRequired("Type", NT->Type);
+  } else if (H.Machine == COFF::IMAGE_FILE_MACHINE_ARM64) {
+    MappingNormalization<NType<COFF::RelocationTypesARM64>, uint16_t> NT(
         IO, Rel.Type);
     IO.mapRequired("Type", NT->Type);
   } else {

@@ -140,9 +140,7 @@ define void @test7(float* %base, <8 x float> %V, <8 x i1> %mask) {
 ; KNL-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
 ; KNL-NEXT:    vpmovsxwq %xmm1, %zmm1
 ; KNL-NEXT:    vpsllq $63, %zmm1, %zmm1
-; KNL-NEXT:    vptestmq %zmm1, %zmm1, %k0
-; KNL-NEXT:    kshiftlw $8, %k0, %k0
-; KNL-NEXT:    kshiftrw $8, %k0, %k1
+; KNL-NEXT:    vptestmq %zmm1, %zmm1, %k1
 ; KNL-NEXT:    vcompressps %zmm0, (%rdi) {%k1}
 ; KNL-NEXT:    retq
   call void @llvm.masked.compressstore.v8f32(<8 x float> %V, float* %base, <8 x i1> %mask)

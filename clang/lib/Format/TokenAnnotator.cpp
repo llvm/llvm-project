@@ -696,7 +696,8 @@ private:
           CurrentToken->Type = TT_PointerOrReference;
         consumeToken();
         if (CurrentToken &&
-            CurrentToken->Previous->isOneOf(TT_BinaryOperator, tok::comma))
+            CurrentToken->Previous->isOneOf(TT_BinaryOperator, TT_UnaryOperator,
+                                            tok::comma))
           CurrentToken->Previous->Type = TT_OverloadedOperator;
       }
       if (CurrentToken) {

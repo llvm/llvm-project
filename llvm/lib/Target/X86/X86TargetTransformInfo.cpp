@@ -2644,12 +2644,15 @@ int X86TTIImpl::getInterleavedMemoryOpCostAVX2(unsigned Opcode, Type *VecTy,
     { 3, MVT::v8i8,  9 },  //(load 24i8 and) deinterleave into 3 x 8i8
     { 3, MVT::v16i8, 11},  //(load 48i8 and) deinterleave into 3 x 16i8
     { 3, MVT::v32i8, 13},  //(load 96i8 and) deinterleave into 3 x 32i8
+    { 3, MVT::v8f32, 17 }, //(load 24f32 and)deinterleave into 3 x 8f32
 
     { 4, MVT::v2i8,  12 }, //(load 8i8 and)   deinterleave into 4 x 2i8
     { 4, MVT::v4i8,  4 },  //(load 16i8 and)  deinterleave into 4 x 4i8
     { 4, MVT::v8i8,  20 }, //(load 32i8 and)  deinterleave into 4 x 8i8
     { 4, MVT::v16i8, 39 }, //(load 64i8 and)  deinterleave into 4 x 16i8
-    { 4, MVT::v32i8, 80 }  //(load 128i8 and) deinterleave into 4 x 32i8
+    { 4, MVT::v32i8, 80 }, //(load 128i8 and) deinterleave into 4 x 32i8
+
+    { 8, MVT::v8f32, 40 }  //(load 64f32 and)deinterleave into 8 x 8f32
   };
 
   static const CostTblEntry AVX2InterleavedStoreTbl[] = {

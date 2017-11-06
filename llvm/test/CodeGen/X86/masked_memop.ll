@@ -285,9 +285,7 @@ define <8 x i32> @test11b(<8 x i1> %mask, <8 x i32>* %addr, <8 x i32> %dst) {
 ; AVX512F-NEXT:    ## kill: %YMM1<def> %YMM1<kill> %ZMM1<def>
 ; AVX512F-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; AVX512F-NEXT:    vpsllq $63, %zmm0, %zmm0
-; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
-; AVX512F-NEXT:    kshiftlw $8, %k0, %k0
-; AVX512F-NEXT:    kshiftrw $8, %k0, %k1
+; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512F-NEXT:    vpblendmd (%rdi), %zmm1, %zmm0 {%k1}
 ; AVX512F-NEXT:    ## kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
 ; AVX512F-NEXT:    retq
@@ -327,9 +325,7 @@ define <8 x float> @test11c(<8 x i1> %mask, <8 x float>* %addr) {
 ; AVX512F:       ## BB#0:
 ; AVX512F-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; AVX512F-NEXT:    vpsllq $63, %zmm0, %zmm0
-; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
-; AVX512F-NEXT:    kshiftlw $8, %k0, %k0
-; AVX512F-NEXT:    kshiftrw $8, %k0, %k1
+; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512F-NEXT:    vmovups (%rdi), %zmm0 {%k1} {z}
 ; AVX512F-NEXT:    ## kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
 ; AVX512F-NEXT:    retq
@@ -369,9 +365,7 @@ define <8 x i32> @test11d(<8 x i1> %mask, <8 x i32>* %addr) {
 ; AVX512F:       ## BB#0:
 ; AVX512F-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; AVX512F-NEXT:    vpsllq $63, %zmm0, %zmm0
-; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
-; AVX512F-NEXT:    kshiftlw $8, %k0, %k0
-; AVX512F-NEXT:    kshiftrw $8, %k0, %k1
+; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512F-NEXT:    vmovdqu32 (%rdi), %zmm0 {%k1} {z}
 ; AVX512F-NEXT:    ## kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
 ; AVX512F-NEXT:    retq

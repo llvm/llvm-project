@@ -84,7 +84,7 @@
   lwm32 $16, $17, $18, $19, $20, $21, $22, $23, $fp, 8($4)      # CHECK: lwm32 $16, $17, $18, $19, $20, $21, $22, $23, $fp, 8($4)      # encoding: [0x21,0x24,0x50,0x08]
   lwm32 $16, $17, $18, $19, $20, $21, $22, $23, $fp, $ra, 8($4) # CHECK: lwm32 $16, $17, $18, $19, $20, $21, $22, $23, $fp, $ra, 8($4) # encoding: [0x23,0x24,0x50,0x08]
   lwm32 $16, $17, $18, $19, $20, $21, $22, $23, $fp, $ra, 8($4) # CHECK: lwm32 $16, $17, $18, $19, $20, $21, $22, $23, $fp, $ra, 8($4) # encoding: [0x23,0x24,0x50,0x08]
-  movep $5, $6, $2, $3            # CHECK: movep $5, $6, $2, $3            # encoding: [0x84,0x34]
+  movep $5, $6, $2, $3            # CHECK: movep $5, $6, $2, $3            # encoding: [0x44,0x36]
   rotr $2, 7                      # CHECK: rotr $2, $2, 7                  # encoding: [0x00,0x42,0x38,0xc0]
   rotr $9, $6, 7                  # CHECK: rotr $9, $6, 7                  # encoding: [0x01,0x26,0x38,0xc0]
   rotrv $9, $6, $7                # CHECK: rotrv $9, $6, $7                # encoding: [0x00,0xc7,0x48,0xd0]
