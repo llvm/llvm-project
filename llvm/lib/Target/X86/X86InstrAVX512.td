@@ -6017,16 +6017,17 @@ let Constraints = "$src1 = $dst", hasSideEffects = 0 in {
 }
 
 multiclass avx512_fma3s_all<bits<8> opc213, bits<8> opc231, bits<8> opc132,
-                            string OpcodeStr, SDNode OpNode, SDNode OpNodeRnds1,
-                            SDNode OpNodeRnds3, X86VectorVTInfo _ , string SUFF> {
+                            string OpcodeStr, SDNode OpNode, SDNode OpNodes1,
+                            SDNode OpNodeRnds1, SDNode OpNodes3,
+                            SDNode OpNodeRnds3, X86VectorVTInfo _,
+                            string SUFF> {
   let ExeDomain = _.ExeDomain in {
   defm NAME#213#SUFF#Z: avx512_fma3s_common<opc213, OpcodeStr#"213"#_.Suffix, _,
                 // Operands for intrinsic are in 123 order to preserve passthu
                 // semantics.
-                (_.VT (OpNodeRnds1 _.RC:$src1, _.RC:$src2, _.RC:$src3,
-                                   (i32 FROUND_CURRENT))),
-                (_.VT (OpNodeRnds1 _.RC:$src1, _.RC:$src2,
-                         _.ScalarIntMemCPat:$src3, (i32 FROUND_CURRENT))),
+                (_.VT (OpNodes1 _.RC:$src1, _.RC:$src2, _.RC:$src3)),
+                (_.VT (OpNodes1 _.RC:$src1, _.RC:$src2,
+                         _.ScalarIntMemCPat:$src3)),
                 (_.VT (OpNodeRnds1 _.RC:$src1, _.RC:$src2, _.RC:$src3,
                          (i32 imm:$rc))),
                 (set _.FRC:$dst, (_.EltVT (OpNode _.FRC:$src2, _.FRC:$src1,
@@ -6035,10 +6036,9 @@ multiclass avx512_fma3s_all<bits<8> opc213, bits<8> opc231, bits<8> opc132,
                          (_.ScalarLdFrag addr:$src3)))), 0>;
 
   defm NAME#231#SUFF#Z: avx512_fma3s_common<opc231, OpcodeStr#"231"#_.Suffix, _,
-                (_.VT (OpNodeRnds3 _.RC:$src2, _.RC:$src3, _.RC:$src1,
-                                   (i32 FROUND_CURRENT))),
-                (_.VT (OpNodeRnds3 _.RC:$src2, _.ScalarIntMemCPat:$src3,
-                              _.RC:$src1, (i32 FROUND_CURRENT))),
+                (_.VT (OpNodes3 _.RC:$src2, _.RC:$src3, _.RC:$src1)),
+                (_.VT (OpNodes3 _.RC:$src2, _.ScalarIntMemCPat:$src3,
+                              _.RC:$src1)),
                 (_.VT ( OpNodeRnds3 _.RC:$src2, _.RC:$src3, _.RC:$src1,
                                   (i32 imm:$rc))),
                 (set _.FRC:$dst, (_.EltVT (OpNode _.FRC:$src2, _.FRC:$src3,
@@ -6050,8 +6050,8 @@ multiclass avx512_fma3s_all<bits<8> opc213, bits<8> opc231, bits<8> opc132,
   // 213 and 231 patterns this helps tablegen's duplicate pattern detection.
   defm NAME#132#SUFF#Z: avx512_fma3s_common<opc132, OpcodeStr#"132"#_.Suffix, _,
                 (null_frag),
-                (_.VT (OpNodeRnds1 _.RC:$src1, _.ScalarIntMemCPat:$src3,
-                              _.RC:$src2, (i32 FROUND_CURRENT))),
+                (_.VT (OpNodes1 _.RC:$src1, _.ScalarIntMemCPat:$src3,
+                              _.RC:$src2)),
                 (null_frag),
                 (set _.FRC:$dst, (_.EltVT (OpNode _.FRC:$src1, _.FRC:$src3,
                          _.FRC:$src2))),
@@ -6061,26 +6061,29 @@ multiclass avx512_fma3s_all<bits<8> opc213, bits<8> opc231, bits<8> opc132,
 }
 
 multiclass avx512_fma3s<bits<8> opc213, bits<8> opc231, bits<8> opc132,
-                        string OpcodeStr, SDNode OpNode, SDNode OpNodeRnds1,
+                        string OpcodeStr, SDNode OpNode, SDNode OpNodes1,
+                        SDNode OpNodeRnds1, SDNode OpNodes3,
                         SDNode OpNodeRnds3> {
   let Predicates = [HasAVX512] in {
     defm NAME : avx512_fma3s_all<opc213, opc231, opc132, OpcodeStr, OpNode,
-                                 OpNodeRnds1, OpNodeRnds3, f32x_info, "SS">,
+                                 OpNodes1, OpNodeRnds1, OpNodes3, OpNodeRnds3,
+                                 f32x_info, "SS">,
                                  EVEX_CD8<32, CD8VT1>, VEX_LIG;
     defm NAME : avx512_fma3s_all<opc213, opc231, opc132, OpcodeStr, OpNode,
-                                 OpNodeRnds1, OpNodeRnds3, f64x_info, "SD">,
+                                 OpNodes1, OpNodeRnds1, OpNodes3, OpNodeRnds3,
+                                 f64x_info, "SD">,
                                  EVEX_CD8<64, CD8VT1>, VEX_LIG, VEX_W;
   }
 }
 
-defm VFMADD  : avx512_fma3s<0xA9, 0xB9, 0x99, "vfmadd", X86Fmadd, X86FmaddRnds1,
-                            X86FmaddRnds3>;
-defm VFMSUB  : avx512_fma3s<0xAB, 0xBB, 0x9B, "vfmsub", X86Fmsub, X86FmsubRnds1,
-                            X86FmsubRnds3>;
-defm VFNMADD : avx512_fma3s<0xAD, 0xBD, 0x9D, "vfnmadd", X86Fnmadd,
-                            X86FnmaddRnds1, X86FnmaddRnds3>;
-defm VFNMSUB : avx512_fma3s<0xAF, 0xBF, 0x9F, "vfnmsub", X86Fnmsub,
-                            X86FnmsubRnds1, X86FnmsubRnds3>;
+defm VFMADD  : avx512_fma3s<0xA9, 0xB9, 0x99, "vfmadd", X86Fmadd, X86Fmadds1,
+                            X86FmaddRnds1, X86Fmadds3, X86FmaddRnds3>;
+defm VFMSUB  : avx512_fma3s<0xAB, 0xBB, 0x9B, "vfmsub", X86Fmsub, X86Fmsubs1,
+                            X86FmsubRnds1, X86Fmsubs3, X86FmsubRnds3>;
+defm VFNMADD : avx512_fma3s<0xAD, 0xBD, 0x9D, "vfnmadd", X86Fnmadd, X86Fnmadds1,
+                            X86FnmaddRnds1, X86Fnmadds3, X86FnmaddRnds3>;
+defm VFNMSUB : avx512_fma3s<0xAF, 0xBF, 0x9F, "vfnmsub", X86Fnmsub, X86Fnmsubs1,
+                            X86FnmsubRnds1, X86Fnmsubs3, X86FnmsubRnds3>;
 
 //===----------------------------------------------------------------------===//
 // AVX-512  Packed Multiply of Unsigned 52-bit Integers and Add the Low 52-bit IFMA
@@ -7582,7 +7585,8 @@ multiclass avx512_sqrt_packed_all_round<bits<8> opc, string OpcodeStr,
 }
 
 multiclass avx512_sqrt_scalar<bits<8> opc, string OpcodeStr,X86VectorVTInfo _,
-                              string SUFF, SDNode OpNode, SDNode OpNodeRnd> {
+                              string SUFF, SDNode OpNode, SDNode OpNodeRnd,
+                              Intrinsic Intr> {
   let ExeDomain = _.ExeDomain in {
   defm r_Int : AVX512_maskable_scalar<opc, MRMSrcReg, _, (outs _.RC:$dst),
                          (ins _.RC:$src1, _.RC:$src2), OpcodeStr,
@@ -7623,18 +7627,30 @@ let Predicates = [HasAVX512] in {
             (!cast<Instruction>(NAME#SUFF#Zr)
                 (_.EltVT (IMPLICIT_DEF)), _.FRC:$src)>;
 
+   def : Pat<(Intr VR128X:$src),
+             (!cast<Instruction>(NAME#SUFF#Zr_Int) VR128X:$src,
+                                 VR128X:$src)>;
+}
+
+let Predicates = [HasAVX512, OptForSize] in {
   def : Pat<(_.EltVT (OpNode (load addr:$src))),
             (!cast<Instruction>(NAME#SUFF#Zm)
-                (_.EltVT (IMPLICIT_DEF)), addr:$src)>, Requires<[HasAVX512, OptForSize]>;
+                (_.EltVT (IMPLICIT_DEF)), addr:$src)>;
+
+  def : Pat<(Intr (scalar_to_vector (_.EltVT (load addr:$src2)))),
+            (!cast<Instruction>(NAME#SUFF#Zm_Int)
+                  (_.VT (IMPLICIT_DEF)), addr:$src2)>;
 }
+
 }
 
 multiclass avx512_sqrt_scalar_all<bits<8> opc, string OpcodeStr> {
   defm SSZ : avx512_sqrt_scalar<opc, OpcodeStr#"ss", f32x_info, "SS", fsqrt,
-                        X86fsqrtRnds>, EVEX_CD8<32, CD8VT1>, EVEX_4V, XS,
-                        NotMemoryFoldable;
+                        X86fsqrtRnds, int_x86_sse_sqrt_ss>,
+                        EVEX_CD8<32, CD8VT1>, EVEX_4V, XS, NotMemoryFoldable;
   defm SDZ : avx512_sqrt_scalar<opc, OpcodeStr#"sd", f64x_info, "SD", fsqrt,
-                        X86fsqrtRnds>, EVEX_CD8<64, CD8VT1>, EVEX_4V, XD, VEX_W,
+                        X86fsqrtRnds, int_x86_sse2_sqrt_sd>,
+                        EVEX_CD8<64, CD8VT1>, EVEX_4V, XD, VEX_W,
                         NotMemoryFoldable;
 }
 

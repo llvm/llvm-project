@@ -19860,10 +19860,19 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       else
         PassThru = Src1;
 
-      SDValue Rnd = Op.getOperand(5);
+      unsigned IntrWithRoundingModeOpcode = IntrData->Opc1;
+      if (IntrWithRoundingModeOpcode != 0) {
+        SDValue Rnd = Op.getOperand(5);
+        if (!isRoundModeCurDirection(Rnd))
+          return getScalarMaskingNode(DAG.getNode(IntrWithRoundingModeOpcode, dl,
+                                                  Op.getValueType(), Src1, Src2,
+                                                  Src3, Rnd),
+                                      Mask, PassThru, Subtarget, DAG);
+      }
+
       return getScalarMaskingNode(DAG.getNode(IntrData->Opc0, dl,
                                               Op.getValueType(), Src1, Src2,
-                                              Src3, Rnd),
+                                              Src3),
                                   Mask, PassThru, Subtarget, DAG);
     }
     case IFMA_OP_MASKZ:
@@ -24962,10 +24971,18 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::FNMSUB_RND:         return "X86ISD::FNMSUB_RND";
   case X86ISD::FMADDSUB_RND:       return "X86ISD::FMADDSUB_RND";
   case X86ISD::FMSUBADD_RND:       return "X86ISD::FMSUBADD_RND";
+  case X86ISD::FMADDS1:            return "X86ISD::FMADDS1";
+  case X86ISD::FNMADDS1:           return "X86ISD::FNMADDS1";
+  case X86ISD::FMSUBS1:            return "X86ISD::FMSUBS1";
+  case X86ISD::FNMSUBS1:           return "X86ISD::FNMSUBS1";
   case X86ISD::FMADDS1_RND:        return "X86ISD::FMADDS1_RND";
   case X86ISD::FNMADDS1_RND:       return "X86ISD::FNMADDS1_RND";
   case X86ISD::FMSUBS1_RND:        return "X86ISD::FMSUBS1_RND";
   case X86ISD::FNMSUBS1_RND:       return "X86ISD::FNMSUBS1_RND";
+  case X86ISD::FMADDS3:            return "X86ISD::FMADDS3";
+  case X86ISD::FNMADDS3:           return "X86ISD::FNMADDS3";
+  case X86ISD::FMSUBS3:            return "X86ISD::FMSUBS3";
+  case X86ISD::FNMSUBS3:           return "X86ISD::FNMSUBS3";
   case X86ISD::FMADDS3_RND:        return "X86ISD::FMADDS3_RND";
   case X86ISD::FNMADDS3_RND:       return "X86ISD::FNMADDS3_RND";
   case X86ISD::FMSUBS3_RND:        return "X86ISD::FMSUBS3_RND";
@@ -35355,9 +35372,11 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
 
   // Do not convert the passthru input of scalar intrinsics.
   // FIXME: We could allow negations of the lower element only.
-  bool NegA = N->getOpcode() != X86ISD::FMADDS1_RND && invertIfNegative(A);
+  bool NegA = N->getOpcode() != X86ISD::FMADDS1 &&
+              N->getOpcode() != X86ISD::FMADDS1_RND && invertIfNegative(A);
   bool NegB = invertIfNegative(B);
-  bool NegC = N->getOpcode() != X86ISD::FMADDS3_RND && invertIfNegative(C);
+  bool NegC = N->getOpcode() != X86ISD::FMADDS3 &&
+              N->getOpcode() != X86ISD::FMADDS3_RND && invertIfNegative(C);
 
   // Negative multiplication when NegA xor NegB
   bool NegMul = (NegA != NegB);
@@ -35384,6 +35403,20 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
     case X86ISD::FMSUB:  NewOpcode = X86ISD::FMSUB_RND; break;
     case X86ISD::FNMADD: NewOpcode = X86ISD::FNMADD_RND; break;
     case X86ISD::FNMSUB: NewOpcode = X86ISD::FNMSUB_RND; break;
+    }
+  } else if (N->getOpcode() == X86ISD::FMADDS1) {
+    switch (NewOpcode) {
+    case ISD::FMA:       NewOpcode = X86ISD::FMADDS1; break;
+    case X86ISD::FMSUB:  NewOpcode = X86ISD::FMSUBS1; break;
+    case X86ISD::FNMADD: NewOpcode = X86ISD::FNMADDS1; break;
+    case X86ISD::FNMSUB: NewOpcode = X86ISD::FNMSUBS1; break;
+    }
+  } else if (N->getOpcode() == X86ISD::FMADDS3) {
+    switch (NewOpcode) {
+    case ISD::FMA:       NewOpcode = X86ISD::FMADDS3; break;
+    case X86ISD::FMSUB:  NewOpcode = X86ISD::FMSUBS3; break;
+    case X86ISD::FNMADD: NewOpcode = X86ISD::FNMADDS3; break;
+    case X86ISD::FNMSUB: NewOpcode = X86ISD::FNMSUBS3; break;
     }
   } else if (N->getOpcode() == X86ISD::FMADDS1_RND) {
     switch (NewOpcode) {
@@ -36703,6 +36736,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::FMADD_RND:
   case X86ISD::FMADDS1_RND:
   case X86ISD::FMADDS3_RND:
+  case X86ISD::FMADDS1:
+  case X86ISD::FMADDS3:
   case ISD::FMA:            return combineFMA(N, DAG, Subtarget);
   case ISD::MGATHER:
   case ISD::MSCATTER:       return combineGatherScatter(N, DAG);

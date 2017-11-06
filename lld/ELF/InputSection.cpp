@@ -61,7 +61,7 @@ DenseMap<SectionBase *, int> elf::buildSectionOrder() {
   // Build a map from sections to their priorities.
   for (InputFile *File : ObjectFiles) {
     for (Symbol *Sym : File->getSymbols()) {
-      auto *D = dyn_cast<DefinedRegular>(Sym);
+      auto *D = dyn_cast<Defined>(Sym);
       if (!D || !D->Section)
         continue;
       int &Priority = SectionOrder[D->Section];
@@ -214,7 +214,7 @@ void InputSectionBase::maybeUncompress() {
   this->Flags &= ~(uint64_t)SHF_COMPRESSED;
 }
 
-uint64_t SectionBase::getOffset(const DefinedRegular &Sym) const {
+uint64_t SectionBase::getOffset(const Defined &Sym) const {
   return getOffset(Sym.Value);
 }
 
@@ -251,7 +251,7 @@ std::string InputSectionBase::getLocation(uint64_t Offset) {
 
   // Find a function symbol that encloses a given location.
   for (Symbol *B : File->getSymbols())
-    if (auto *D = dyn_cast<DefinedRegular>(B))
+    if (auto *D = dyn_cast<Defined>(B))
       if (D->Section == this && D->Type == STT_FUNC)
         if (D->Value <= Offset && Offset < D->Value + D->Size)
           return SrcFile + ":(function " + toString(*D) + ")";
@@ -317,7 +317,7 @@ std::string InputSectionBase::getObjMsg(uint64_t Off) {
 
   // Find a symbol that encloses a given location.
   for (Symbol *B : File->getSymbols())
-    if (auto *D = dyn_cast<DefinedRegular>(B))
+    if (auto *D = dyn_cast<Defined>(B))
       if (D->Section == this && D->Value <= Off && Off < D->Value + D->Size)
         return Filename + ":(" + toString(*D) + ")" + Archive;
 
@@ -404,7 +404,7 @@ void InputSection::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
       // avoid having to parse and recreate .eh_frame, we just replace any
       // relocation in it pointing to discarded sections with R_*_NONE, which
       // hopefully creates a frame that is ignored at runtime.
-      SectionBase *Section = cast<DefinedRegular>(Sym).Section;
+      SectionBase *Section = cast<Defined>(Sym).Section;
       if (Section == &InputSection::Discarded) {
         P->setSymbolAndType(0, 0, false);
         continue;
