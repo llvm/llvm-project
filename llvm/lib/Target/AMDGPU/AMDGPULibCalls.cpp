@@ -487,7 +487,7 @@ bool AMDGPULibCalls::parseFunctionName(const StringRef& FMangledName,
 
 bool AMDGPULibCalls::isUnsafeMath(const CallInst *CI) const {
   if (auto Op = dyn_cast<FPMathOperator>(CI))
-    if (Op->hasUnsafeAlgebra())
+    if (Op->isFast())
       return true;
   const Function *F = CI->getParent()->getParent();
   Attribute Attr = F->getFnAttribute("unsafe-fp-math");

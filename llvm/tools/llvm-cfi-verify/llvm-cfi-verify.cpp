@@ -132,8 +132,10 @@ void printIndirectCFInstructions(FileAnalysis &Analysis,
   uint64_t IndirectCFInstructions = ExpectedProtected + UnexpectedProtected +
                                     ExpectedUnprotected + UnexpectedUnprotected;
 
-  if (IndirectCFInstructions == 0)
+  if (IndirectCFInstructions == 0) {
     outs() << "No indirect CF instructions found.\n";
+    return;
+  }
 
   outs() << formatv("Expected Protected: {0} ({1:P})\n"
                     "Unexpected Protected: {2} ({3:P})\n"

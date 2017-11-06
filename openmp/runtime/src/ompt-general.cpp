@@ -115,8 +115,8 @@ ompt_start_tool(unsigned int omp_version, const char *runtime_version) {
 #ifdef KMP_DYNAMIC_LIB
   ompt_start_tool_result_t *ret = NULL;
   // Try next symbol in the address space
-  ompt_start_tool_t next_tool = NULL;
-  *(void **)(&next_tool) = dlsym(RTLD_NEXT, "ompt_start_tool");
+  ompt_start_tool_t next_tool =
+      (ompt_start_tool_t)dlsym(RTLD_NEXT, "ompt_start_tool");
   if (next_tool)
     ret = (next_tool)(omp_version, runtime_version);
   return ret;

@@ -193,7 +193,7 @@ namespace llvm {
       FastMathFlags FMF;
       while (true)
         switch (Lex.getKind()) {
-        case lltok::kw_fast: FMF.setUnsafeAlgebra();   Lex.Lex(); continue;
+        case lltok::kw_fast: FMF.setFast();            Lex.Lex(); continue;
         case lltok::kw_nnan: FMF.setNoNaNs();          Lex.Lex(); continue;
         case lltok::kw_ninf: FMF.setNoInfs();          Lex.Lex(); continue;
         case lltok::kw_nsz:  FMF.setNoSignedZeros();   Lex.Lex(); continue;
@@ -202,6 +202,8 @@ namespace llvm {
           FMF.setAllowContract(true);
           Lex.Lex();
           continue;
+        case lltok::kw_reassoc: FMF.setAllowReassoc(); Lex.Lex(); continue;
+        case lltok::kw_afn:     FMF.setApproxFunc();   Lex.Lex(); continue;
         default: return FMF;
         }
       return FMF;

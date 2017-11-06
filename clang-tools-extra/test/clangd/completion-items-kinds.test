@@ -11,27 +11,26 @@ Content-Length: 148
 
 {"jsonrpc":"2.0","id":1,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":4,"character":7}}}
 Content-Length: 58
-# CHECK: {"jsonrpc":"2.0","id":1,"result":[
+# CHECK: {"id":1,"jsonrpc":"2.0","result":[
 #
 # Keyword
-# CHECK-DAG: {"label":"int","kind":14,"sortText":"000050int","filterText":"int","insertText":"int","insertTextFormat":1}
+# CHECK-DAG: {"filterText":"int","insertText":"int","insertTextFormat":1,"kind":14,"label":"int","sortText":"000050int"}
 #
 # Code pattern
-# CHECK-DAG: {"label":"static_cast<type>(expression)","kind":15,"sortText":"000040static_cast","filterText":"static_cast","insertText":"static_cast<${1:type}>(${2:expression})","insertTextFormat":2}
+# CHECK-DAG: {"filterText":"static_cast","insertText":"static_cast<${1:type}>(${2:expression})","insertTextFormat":2,"kind":15,"label":"static_cast<type>(expression)","sortText":"000040static_cast"}
 #
 # Struct
-# CHECK-DAG: {"label":"Struct","kind":7,"sortText":"000050Struct","filterText":"Struct","insertText":"Struct","insertTextFormat":1}
+# CHECK-DAG: {"filterText":"Struct","insertText":"Struct","insertTextFormat":1,"kind":7,"label":"Struct","sortText":"000050Struct"}
 #
 # Macro
-# CHECK-DAG: {"label":"MACRO","kind":1,"sortText":"000070MACRO","filterText":"MACRO","insertText":"MACRO","insertTextFormat":1}
+# CHECK-DAG: {"filterText":"MACRO","insertText":"MACRO","insertTextFormat":1,"kind":1,"label":"MACRO","sortText":"000070MACRO"}
 #
 # Variable
-# CHECK-DAG: {"label":"variable","kind":6,"detail":"int","sortText":"000012variable","filterText":"variable","insertText":"variable","insertTextFormat":1}
+# CHECK-DAG: {"detail":"int","filterText":"variable","insertText":"variable","insertTextFormat":1,"kind":6,"label":"variable","sortText":"000012variable"}
 #
 # Function
-# CHECK-DAG: {"label":"function()","kind":3,"detail":"int","sortText":"000012function","filterText":"function","insertText":"function()","insertTextFormat":1}
+# CHECK-DAG: {"detail":"int","filterText":"function","insertText":"function()","insertTextFormat":1,"kind":3,"label":"function()","sortText":"000012function"}
 #
-#
-# CHECK: ]}
+# CHECK-SAME: ]}
 
 {"jsonrpc":"2.0","id":3,"method":"shutdown","params":null}

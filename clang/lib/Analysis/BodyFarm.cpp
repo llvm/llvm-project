@@ -96,8 +96,8 @@ public:
   /// Create a Return statement.
   ReturnStmt *makeReturn(const Expr *RetVal);
   
-  /// Create an integer literal.
-  IntegerLiteral *makeIntegerLiteral(uint64_t value);
+  /// Create an integer literal expression of the given type.
+  IntegerLiteral *makeIntegerLiteral(uint64_t Value, QualType Ty);
 
   /// Create a member expression.
   MemberExpr *makeMemberExpression(Expr *base, ValueDecl *MemberDecl,
@@ -206,11 +206,9 @@ ReturnStmt *ASTMaker::makeReturn(const Expr *RetVal) {
                             nullptr);
 }
 
-IntegerLiteral *ASTMaker::makeIntegerLiteral(uint64_t value) {
-  return IntegerLiteral::Create(C,
-                                llvm::APInt(
-                                    /*numBits=*/C.getTypeSize(C.IntTy), value),
-                                /*QualType=*/C.IntTy, SourceLocation());
+IntegerLiteral *ASTMaker::makeIntegerLiteral(uint64_t Value, QualType Ty) {
+  llvm::APInt APValue = llvm::APInt(C.getTypeSize(Ty), Value);
+  return IntegerLiteral::Create(C, APValue, Ty, SourceLocation());
 }
 
 MemberExpr *ASTMaker::makeMemberExpression(Expr *base, ValueDecl *MemberDecl,
@@ -447,7 +445,8 @@ static Stmt *create_call_once(ASTContext &C, const FunctionDecl *D) {
 
   // Create assignment.
   BinaryOperator *FlagAssignment = M.makeAssignment(
-      Deref, M.makeIntegralCast(M.makeIntegerLiteral(1), DerefType), DerefType);
+      Deref, M.makeIntegralCast(M.makeIntegerLiteral(1, C.IntTy), DerefType),
+      DerefType);
 
   IfStmt *Out = new (C)
       IfStmt(C, SourceLocation(),
@@ -486,8 +485,8 @@ static Stmt *create_dispatch_once(ASTContext &C, const FunctionDecl *D) {
   // sets it, and calls the block.  Basically, an AST dump of:
   //
   // void dispatch_once(dispatch_once_t *predicate, dispatch_block_t block) {
-  //  if (!*predicate) {
-  //    *predicate = 1;
+  //  if (*predicate != ~0l) {
+  //    *predicate = ~0l;
   //    block();
   //  }
   // }
@@ -504,7 +503,9 @@ static Stmt *create_dispatch_once(ASTContext &C, const FunctionDecl *D) {
       /*SourceLocation=*/SourceLocation());
 
   // (2) Create the assignment to the predicate.
-  IntegerLiteral *IL = M.makeIntegerLiteral(1);
+  Expr *DoneValue =
+      new (C) UnaryOperator(M.makeIntegerLiteral(0, C.LongTy), UO_Not, C.LongTy,
+                            VK_RValue, OK_Ordinary, SourceLocation());
 
   BinaryOperator *B =
     M.makeAssignment(
@@ -512,7 +513,7 @@ static Stmt *create_dispatch_once(ASTContext &C, const FunctionDecl *D) {
           M.makeLvalueToRvalue(
             M.makeDeclRefExpr(Predicate), PredicateQPtrTy),
             PredicateTy),
-       M.makeIntegralCast(IL, PredicateTy),
+       M.makeIntegralCast(DoneValue, PredicateTy),
        PredicateTy);
   
   // (3) Create the compound statement.
@@ -528,20 +529,14 @@ static Stmt *create_dispatch_once(ASTContext &C, const FunctionDecl *D) {
           PredicateQPtrTy),
         PredicateTy),
     PredicateTy);
-  
-  UnaryOperator *UO = new (C) UnaryOperator(
-      /* input=*/ LValToRval,
-      /* opc=*/ UO_LNot,
-      /* QualType=*/ C.IntTy,
-      /* ExprValueKind=*/ VK_RValue,
-      /* ExprObjectKind=*/ OK_Ordinary, SourceLocation());
-  
+
+  Expr *GuardCondition = M.makeComparison(LValToRval, DoneValue, BO_NE);
   // (5) Create the 'if' statement.
   IfStmt *If = new (C) IfStmt(C, SourceLocation(),
                               /* IsConstexpr=*/ false,
                               /* init=*/ nullptr,
                               /* var=*/ nullptr,
-                              /* cond=*/ UO,
+                              /* cond=*/ GuardCondition,
                               /* then=*/ CS);
   return If;
 }

@@ -576,7 +576,8 @@ public:
                                         Loop *DefLoop, isl::map DefToTarget,
                                         bool DoIt) {
     // Cannot do anything without successful known analysis.
-    if (Known.is_null())
+    if (Known.is_null() || Translator.is_null() || UseToTarget.is_null() ||
+        DefToTarget.is_null() || MaxOpGuard.hasQuotaExceeded())
       return FD_NotApplicable;
 
     MemoryAccess *Access = TargetStmt->lookupInputAccessOf(Inst);
@@ -585,6 +586,12 @@ public:
         return FD_DidForwardLeaf;
       return FD_CanForwardLeaf;
     }
+
+    // Don't spend too much time analyzing whether it can be reloaded. When
+    // carrying-out the forwarding, we cannot bail-out in the middle of the
+    // transformation. It also shouldn't take as long because some results are
+    // cached.
+    IslQuotaScope QuotaScope = MaxOpGuard.enter(!DoIt);
 
     // { DomainDef[] -> ValInst[] }
     isl::union_map ExpectedVal = makeNormalizedValInst(Inst, UseStmt, UseLoop);

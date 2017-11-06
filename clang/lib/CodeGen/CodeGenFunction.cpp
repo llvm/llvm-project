@@ -87,7 +87,7 @@ CodeGenFunction::CodeGenFunction(CodeGenModule &cgm, bool suppressNewContext)
 
   llvm::FastMathFlags FMF;
   if (CGM.getLangOpts().FastMath)
-    FMF.setUnsafeAlgebra();
+    FMF.setFast();
   if (CGM.getLangOpts().FiniteMathOnly) {
     FMF.setNoNaNs();
     FMF.setNoInfs();

@@ -35,7 +35,7 @@ a:
         lhu16 $3, 4($16)         # CHECK: lhu16 $3, 4($16)      # encoding: [0x29,0x82]
         lbu16 $3, 4($17)         # CHECK: lbu16 $3, 4($17)      # encoding: [0x09,0x94]
         lbu16 $3, -1($17)        # CHECK: lbu16 $3, -1($17)     # encoding: [0x09,0x9f]
-        movep $5, $6, $2, $3     # CHECK: movep $5, $6, $2, $3  # encoding: [0x84,0x34]
+        movep $5, $6, $2, $3     # CHECK: movep $5, $6, $2, $3  # encoding: [0x44,0x36]
         not16 $4, $7             # CHECK: not16 $4, $7          # encoding: [0x46,0x70]
         or16 $3, $7              # CHECK: or16 $3, $7           # encoding: [0x45,0xf9]
         ll $2, 8($4)                    # CHECK: ll $2, 8($4)                    # encoding: [0x60,0x44,0x30,0x08]
