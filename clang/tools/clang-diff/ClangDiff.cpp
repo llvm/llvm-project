@@ -33,9 +33,9 @@ static cl::opt<bool> ASTDumpJson(
     cl::desc("Print the internal representation of the AST as JSON."),
     cl::init(false), cl::cat(ClangDiffCategory));
 
-static cl::opt<bool>
-    PrintMatches("dump-matches", cl::desc("Print the matched nodes."),
-                 cl::init(false), cl::cat(ClangDiffCategory));
+static cl::opt<bool> PrintMatches("dump-matches",
+                                  cl::desc("Print the matched nodes."),
+                                  cl::init(false), cl::cat(ClangDiffCategory));
 
 static cl::opt<bool> HtmlDiff("html",
                               cl::desc("Output a side-by-side diff in HTML."),
