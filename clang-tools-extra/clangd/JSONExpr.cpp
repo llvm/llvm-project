@@ -180,11 +180,16 @@ void clang::clangd::json::Expr::print(raw_ostream &OS,
   }
 }
 
-llvm::raw_ostream &clang::clangd::json::operator<<(raw_ostream &OS,
-                                                   const Expr &E) {
+namespace clang {
+namespace clangd {
+namespace json {
+llvm::raw_ostream &operator<<(raw_ostream &OS, const Expr &E) {
   E.print(OS, [](IndenterAction A) { /*ignore*/ });
   return OS;
 }
+} // namespace json
+} // namespace clangd
+} // namespace clang
 
 void llvm::format_provider<clang::clangd::json::Expr>::format(
     const clang::clangd::json::Expr &E, raw_ostream &OS, StringRef Options) {
