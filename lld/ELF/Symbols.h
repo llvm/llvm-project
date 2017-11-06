@@ -35,20 +35,17 @@ class OutputSection;
 template <class ELFT> class SharedFile;
 
 // The base class for real symbol classes.
-class SymbolBody {
+class Symbol {
 public:
   enum Kind {
-    DefinedFirst,
-    DefinedRegularKind = DefinedFirst,
+    DefinedKind,
     SharedKind,
-    DefinedCommonKind,
-    DefinedLast = DefinedCommonKind,
     UndefinedKind,
     LazyArchiveKind,
     LazyObjectKind,
   };
 
-  SymbolBody(Kind K) : SymbolKind(K) {}
+  Symbol(Kind K) : SymbolKind(K) {}
   Kind kind() const { return static_cast<Kind>(SymbolKind); }
 
   // Symbol binding. This is not overwritten by replaceSymbol to track
@@ -96,17 +93,12 @@ public:
   bool isWeak() const { return Binding == llvm::ELF::STB_WEAK; }
 
   bool isUndefined() const { return SymbolKind == UndefinedKind; }
-  bool isDefined() const { return SymbolKind <= DefinedLast; }
-  bool isCommon() const { return SymbolKind == DefinedCommonKind; }
+  bool isDefined() const { return SymbolKind == DefinedKind; }
   bool isShared() const { return SymbolKind == SharedKind; }
   bool isLocal() const { return IsLocal; }
 
   bool isLazy() const {
     return SymbolKind == LazyArchiveKind || SymbolKind == LazyObjectKind;
-  }
-
-  bool isInCurrentOutput() const {
-    return SymbolKind == DefinedRegularKind || SymbolKind == DefinedCommonKind;
   }
 
   // True is this is an undefined weak symbol. This only works once
@@ -117,7 +109,7 @@ public:
   StringRef getName() const { return Name; }
   uint8_t getVisibility() const { return StOther & 0x3; }
   void parseSymbolVersion();
-  void copyFrom(SymbolBody *Other);
+  void copyFrom(Symbol *Other);
 
   bool isInGot() const { return GotIndex != -1U; }
   bool isInPlt() const { return PltIndex != -1U; }
@@ -139,8 +131,7 @@ public:
   uint32_t GlobalDynIndex = -1;
 
 protected:
-  SymbolBody(Kind K, StringRefZ Name, bool IsLocal, uint8_t StOther,
-             uint8_t Type)
+  Symbol(Kind K, StringRefZ Name, bool IsLocal, uint8_t StOther, uint8_t Type)
       : SymbolKind(K), IsLocal(IsLocal), NeedsPltAddr(false),
         IsInGlobalMipsGot(false), Is32BitMipsGot(false), IsInIplt(false),
         IsInIgot(false), IsPreemptible(false), Type(Type), StOther(StOther),
@@ -191,72 +182,39 @@ protected:
   StringRefZ Name;
 };
 
-// The base class for any defined symbols.
-class Defined : public SymbolBody {
+// Represents a symbol that is defined in the current output file.
+class Defined : public Symbol {
 public:
-  Defined(Kind K, StringRefZ Name, bool IsLocal, uint8_t StOther, uint8_t Type)
-      : SymbolBody(K, Name, IsLocal, StOther, Type) {}
-
-  static bool classof(const SymbolBody *S) { return S->isDefined(); }
-};
-
-class DefinedCommon : public Defined {
-public:
-  DefinedCommon(StringRef Name, uint64_t Size, uint32_t Alignment,
-                uint8_t StOther, uint8_t Type)
-      : Defined(DefinedCommonKind, Name, /*IsLocal=*/false, StOther, Type),
-        Alignment(Alignment), Size(Size) {}
-
-  static bool classof(const SymbolBody *S) {
-    return S->kind() == DefinedCommonKind;
-  }
-
-  // The maximum alignment we have seen for this symbol.
-  uint32_t Alignment;
-
-  // The output offset of this common symbol in the output bss.
-  // Computed by the writer.
-  uint64_t Size;
-  BssSection *Section = nullptr;
-};
-
-// Regular defined symbols read from object file symbol tables.
-class DefinedRegular : public Defined {
-public:
-  DefinedRegular(StringRefZ Name, bool IsLocal, uint8_t StOther, uint8_t Type,
-                 uint64_t Value, uint64_t Size, SectionBase *Section)
-      : Defined(DefinedRegularKind, Name, IsLocal, StOther, Type), Value(Value),
+  Defined(StringRefZ Name, bool IsLocal, uint8_t StOther, uint8_t Type,
+          uint64_t Value, uint64_t Size, SectionBase *Section)
+      : Symbol(DefinedKind, Name, IsLocal, StOther, Type), Value(Value),
         Size(Size), Section(Section) {}
 
   // Return true if the symbol is a PIC function.
   template <class ELFT> bool isMipsPIC() const;
 
-  static bool classof(const SymbolBody *S) {
-    return S->kind() == DefinedRegularKind;
-  }
+  static bool classof(const Symbol *S) { return S->isDefined(); }
 
   uint64_t Value;
   uint64_t Size;
   SectionBase *Section;
 };
 
-class Undefined : public SymbolBody {
+class Undefined : public Symbol {
 public:
   Undefined(StringRefZ Name, bool IsLocal, uint8_t StOther, uint8_t Type)
-      : SymbolBody(UndefinedKind, Name, IsLocal, StOther, Type) {}
+      : Symbol(UndefinedKind, Name, IsLocal, StOther, Type) {}
 
-  static bool classof(const SymbolBody *S) {
-    return S->kind() == UndefinedKind;
-  }
+  static bool classof(const Symbol *S) { return S->kind() == UndefinedKind; }
 };
 
-class SharedSymbol : public Defined {
+class SharedSymbol : public Symbol {
 public:
-  static bool classof(const SymbolBody *S) { return S->kind() == SharedKind; }
+  static bool classof(const Symbol *S) { return S->kind() == SharedKind; }
 
   SharedSymbol(StringRef Name, uint8_t StOther, uint8_t Type, uint64_t Value,
                uint64_t Size, uint32_t Alignment, const void *Verdef)
-      : Defined(SharedKind, Name, /*IsLocal=*/false, StOther, Type),
+      : Symbol(SharedKind, Name, /*IsLocal=*/false, StOther, Type),
         Verdef(Verdef), Value(Value), Size(Size), Alignment(Alignment) {
     // GNU ifunc is a mechanism to allow user-supplied functions to
     // resolve PLT slot values at load-time. This is contrary to the
@@ -279,7 +237,7 @@ public:
   }
 
   template <class ELFT> SharedFile<ELFT> *getFile() const {
-    return cast<SharedFile<ELFT>>(SymbolBody::getFile());
+    return cast<SharedFile<ELFT>>(Symbol::getFile());
   }
 
   template <class ELFT> uint32_t getAlignment() const;
@@ -304,9 +262,9 @@ public:
 // and the lazy. We represent that with a lazy symbol with a weak binding. This
 // means that code looking for undefined symbols normally also has to take lazy
 // symbols into consideration.
-class Lazy : public SymbolBody {
+class Lazy : public Symbol {
 public:
-  static bool classof(const SymbolBody *S) { return S->isLazy(); }
+  static bool classof(const Symbol *S) { return S->isLazy(); }
 
   // Returns an object file for this symbol, or a nullptr if the file
   // was already returned.
@@ -314,7 +272,7 @@ public:
 
 protected:
   Lazy(Kind K, StringRef Name, uint8_t Type)
-      : SymbolBody(K, Name, /*IsLocal=*/false, llvm::ELF::STV_DEFAULT, Type) {}
+      : Symbol(K, Name, /*IsLocal=*/false, llvm::ELF::STV_DEFAULT, Type) {}
 };
 
 // This class represents a symbol defined in an archive file. It is
@@ -326,9 +284,7 @@ public:
   LazyArchive(const llvm::object::Archive::Symbol S, uint8_t Type)
       : Lazy(LazyArchiveKind, S.getName(), Type), Sym(S) {}
 
-  static bool classof(const SymbolBody *S) {
-    return S->kind() == LazyArchiveKind;
-  }
+  static bool classof(const Symbol *S) { return S->kind() == LazyArchiveKind; }
 
   ArchiveFile *getFile();
   InputFile *fetch();
@@ -343,66 +299,63 @@ class LazyObject : public Lazy {
 public:
   LazyObject(StringRef Name, uint8_t Type) : Lazy(LazyObjectKind, Name, Type) {}
 
-  static bool classof(const SymbolBody *S) {
-    return S->kind() == LazyObjectKind;
-  }
+  static bool classof(const Symbol *S) { return S->kind() == LazyObjectKind; }
 
   LazyObjFile *getFile();
   InputFile *fetch();
 };
 
 // Some linker-generated symbols need to be created as
-// DefinedRegular symbols.
+// Defined symbols.
 struct ElfSym {
   // __bss_start
-  static DefinedRegular *Bss;
+  static Defined *Bss;
 
   // etext and _etext
-  static DefinedRegular *Etext1;
-  static DefinedRegular *Etext2;
+  static Defined *Etext1;
+  static Defined *Etext2;
 
   // edata and _edata
-  static DefinedRegular *Edata1;
-  static DefinedRegular *Edata2;
+  static Defined *Edata1;
+  static Defined *Edata2;
 
   // end and _end
-  static DefinedRegular *End1;
-  static DefinedRegular *End2;
+  static Defined *End1;
+  static Defined *End2;
 
   // The _GLOBAL_OFFSET_TABLE_ symbol is defined by target convention to
   // be at some offset from the base of the .got section, usually 0 or
   // the end of the .got.
-  static DefinedRegular *GlobalOffsetTable;
+  static Defined *GlobalOffsetTable;
 
   // _gp, _gp_disp and __gnu_local_gp symbols. Only for MIPS.
-  static DefinedRegular *MipsGp;
-  static DefinedRegular *MipsGpDisp;
-  static DefinedRegular *MipsLocalGp;
+  static Defined *MipsGp;
+  static Defined *MipsGpDisp;
+  static Defined *MipsLocalGp;
 };
 
-// A buffer class that is large enough to hold any SymbolBody-derived
+// A buffer class that is large enough to hold any Symbol-derived
 // object. We allocate memory using this class and instantiate a symbol
 // using the placement new.
 union SymbolUnion {
-  alignas(DefinedRegular) char A[sizeof(DefinedRegular)];
-  alignas(DefinedCommon) char B[sizeof(DefinedCommon)];
+  alignas(Defined) char A[sizeof(Defined)];
   alignas(Undefined) char C[sizeof(Undefined)];
   alignas(SharedSymbol) char D[sizeof(SharedSymbol)];
   alignas(LazyArchive) char E[sizeof(LazyArchive)];
   alignas(LazyObject) char F[sizeof(LazyObject)];
 };
 
-void printTraceSymbol(SymbolBody *Sym);
+void printTraceSymbol(Symbol *Sym);
 
 template <typename T, typename... ArgT>
-void replaceBody(SymbolBody *S, InputFile *File, ArgT &&... Arg) {
+void replaceSymbol(Symbol *S, InputFile *File, ArgT &&... Arg) {
   static_assert(sizeof(T) <= sizeof(SymbolUnion), "SymbolUnion too small");
   static_assert(alignof(T) <= alignof(SymbolUnion),
                 "SymbolUnion not aligned enough");
-  assert(static_cast<SymbolBody *>(static_cast<T *>(nullptr)) == nullptr &&
-         "Not a SymbolBody");
+  assert(static_cast<Symbol *>(static_cast<T *>(nullptr)) == nullptr &&
+         "Not a Symbol");
 
-  SymbolBody Sym = *S;
+  Symbol Sym = *S;
 
   new (S) T(std::forward<ArgT>(Arg)...);
   S->File = File;
@@ -423,7 +376,7 @@ void replaceBody(SymbolBody *S, InputFile *File, ArgT &&... Arg) {
 }
 } // namespace elf
 
-std::string toString(const elf::SymbolBody &B);
+std::string toString(const elf::Symbol &B);
 } // namespace lld
 
 #endif

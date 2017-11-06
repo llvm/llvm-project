@@ -28,22 +28,22 @@ using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
 
-DefinedRegular *ElfSym::Bss;
-DefinedRegular *ElfSym::Etext1;
-DefinedRegular *ElfSym::Etext2;
-DefinedRegular *ElfSym::Edata1;
-DefinedRegular *ElfSym::Edata2;
-DefinedRegular *ElfSym::End1;
-DefinedRegular *ElfSym::End2;
-DefinedRegular *ElfSym::GlobalOffsetTable;
-DefinedRegular *ElfSym::MipsGp;
-DefinedRegular *ElfSym::MipsGpDisp;
-DefinedRegular *ElfSym::MipsLocalGp;
+Defined *ElfSym::Bss;
+Defined *ElfSym::Etext1;
+Defined *ElfSym::Etext2;
+Defined *ElfSym::Edata1;
+Defined *ElfSym::Edata2;
+Defined *ElfSym::End1;
+Defined *ElfSym::End2;
+Defined *ElfSym::GlobalOffsetTable;
+Defined *ElfSym::MipsGp;
+Defined *ElfSym::MipsGpDisp;
+Defined *ElfSym::MipsLocalGp;
 
-static uint64_t getSymVA(const SymbolBody &Body, int64_t &Addend) {
-  switch (Body.kind()) {
-  case SymbolBody::DefinedRegularKind: {
-    auto &D = cast<DefinedRegular>(Body);
+static uint64_t getSymVA(const Symbol &Sym, int64_t &Addend) {
+  switch (Sym.kind()) {
+  case Symbol::DefinedKind: {
+    auto &D = cast<Defined>(Sym);
     SectionBase *IS = D.Section;
     if (auto *ISB = dyn_cast_or_null<InputSectionBase>(IS))
       IS = ISB->Repl;
@@ -99,38 +99,36 @@ static uint64_t getSymVA(const SymbolBody &Body, int64_t &Addend) {
     }
     return VA;
   }
-  case SymbolBody::DefinedCommonKind:
-    llvm_unreachable("common are converted to bss");
-  case SymbolBody::SharedKind: {
-    auto &SS = cast<SharedSymbol>(Body);
+  case Symbol::SharedKind: {
+    auto &SS = cast<SharedSymbol>(Sym);
     if (SS.CopyRelSec)
       return SS.CopyRelSec->getParent()->Addr + SS.CopyRelSec->OutSecOff;
     if (SS.NeedsPltAddr)
-      return Body.getPltVA();
+      return Sym.getPltVA();
     return 0;
   }
-  case SymbolBody::UndefinedKind:
+  case Symbol::UndefinedKind:
     return 0;
-  case SymbolBody::LazyArchiveKind:
-  case SymbolBody::LazyObjectKind:
-    assert(Body.IsUsedInRegularObj && "lazy symbol reached writer");
+  case Symbol::LazyArchiveKind:
+  case Symbol::LazyObjectKind:
+    assert(Sym.IsUsedInRegularObj && "lazy symbol reached writer");
     return 0;
   }
   llvm_unreachable("invalid symbol kind");
 }
 
 // Returns true if this is a weak undefined symbol.
-bool SymbolBody::isUndefWeak() const {
+bool Symbol::isUndefWeak() const {
   // See comment on Lazy in Symbols.h for the details.
   return !isLocal() && isWeak() && (isUndefined() || isLazy());
 }
 
-InputFile *SymbolBody::getFile() const {
+InputFile *Symbol::getFile() const {
   if (isLocal()) {
-    const SectionBase *Sec = cast<DefinedRegular>(this)->Section;
+    const SectionBase *Sec = cast<Defined>(this)->Section;
     // Local absolute symbols actually have a file, but that is not currently
     // used. We could support that by having a mostly redundant InputFile in
-    // SymbolBody, or having a special absolute section if needed.
+    // Symbol, or having a special absolute section if needed.
     return Sec ? cast<InputSectionBase>(Sec)->File : nullptr;
   }
   return File;
@@ -139,8 +137,8 @@ InputFile *SymbolBody::getFile() const {
 // Overwrites all attributes with Other's so that this symbol becomes
 // an alias to Other. This is useful for handling some options such as
 // --wrap.
-void SymbolBody::copyFrom(SymbolBody *Other) {
-  SymbolBody Sym = *this;
+void Symbol::copyFrom(Symbol *Other) {
+  Symbol Sym = *this;
   memcpy(this, Other, sizeof(SymbolUnion));
 
   Binding = Sym.Binding;
@@ -153,48 +151,44 @@ void SymbolBody::copyFrom(SymbolBody *Other) {
   InVersionScript = Sym.InVersionScript;
 }
 
-uint64_t SymbolBody::getVA(int64_t Addend) const {
+uint64_t Symbol::getVA(int64_t Addend) const {
   uint64_t OutVA = getSymVA(*this, Addend);
   return OutVA + Addend;
 }
 
-uint64_t SymbolBody::getGotVA() const {
-  return InX::Got->getVA() + getGotOffset();
-}
+uint64_t Symbol::getGotVA() const { return InX::Got->getVA() + getGotOffset(); }
 
-uint64_t SymbolBody::getGotOffset() const {
+uint64_t Symbol::getGotOffset() const {
   return GotIndex * Target->GotEntrySize;
 }
 
-uint64_t SymbolBody::getGotPltVA() const {
+uint64_t Symbol::getGotPltVA() const {
   if (this->IsInIgot)
     return InX::IgotPlt->getVA() + getGotPltOffset();
   return InX::GotPlt->getVA() + getGotPltOffset();
 }
 
-uint64_t SymbolBody::getGotPltOffset() const {
+uint64_t Symbol::getGotPltOffset() const {
   return GotPltIndex * Target->GotPltEntrySize;
 }
 
-uint64_t SymbolBody::getPltVA() const {
+uint64_t Symbol::getPltVA() const {
   if (this->IsInIplt)
     return InX::Iplt->getVA() + PltIndex * Target->PltEntrySize;
   return InX::Plt->getVA() + Target->PltHeaderSize +
          PltIndex * Target->PltEntrySize;
 }
 
-uint64_t SymbolBody::getSize() const {
-  if (const auto *C = dyn_cast<DefinedCommon>(this))
-    return C->Size;
-  if (const auto *DR = dyn_cast<DefinedRegular>(this))
+uint64_t Symbol::getSize() const {
+  if (const auto *DR = dyn_cast<Defined>(this))
     return DR->Size;
   if (const auto *S = dyn_cast<SharedSymbol>(this))
     return S->Size;
   return 0;
 }
 
-OutputSection *SymbolBody::getOutputSection() const {
-  if (auto *S = dyn_cast<DefinedRegular>(this)) {
+OutputSection *Symbol::getOutputSection() const {
+  if (auto *S = dyn_cast<Defined>(this)) {
     if (S->Section)
       return S->Section->getOutputSection();
     return nullptr;
@@ -206,18 +200,12 @@ OutputSection *SymbolBody::getOutputSection() const {
     return nullptr;
   }
 
-  if (auto *S = dyn_cast<DefinedCommon>(this)) {
-    if (Config->DefineCommon)
-      return S->Section->getParent();
-    return nullptr;
-  }
-
   return nullptr;
 }
 
 // If a symbol name contains '@', the characters after that is
 // a symbol version name. This function parses that.
-void SymbolBody::parseSymbolVersion() {
+void Symbol::parseSymbolVersion() {
   StringRef S = getName();
   size_t Pos = S.find('@');
   if (Pos == 0 || Pos == StringRef::npos)
@@ -230,7 +218,7 @@ void SymbolBody::parseSymbolVersion() {
   Name = {S.data(), Pos};
 
   // If this is not in this DSO, it is not a definition.
-  if (!isInCurrentOutput())
+  if (!isDefined())
     return;
 
   // '@@' in a symbol name means the default version.
@@ -259,7 +247,7 @@ void SymbolBody::parseSymbolVersion() {
           Verstr);
 }
 
-template <class ELFT> bool DefinedRegular::isMipsPIC() const {
+template <class ELFT> bool Defined::isMipsPIC() const {
   typedef typename ELFT::Ehdr Elf_Ehdr;
   if (!Section || !isFunc())
     return false;
@@ -277,7 +265,7 @@ InputFile *Lazy::fetch() {
 }
 
 ArchiveFile *LazyArchive::getFile() {
-  return cast<ArchiveFile>(SymbolBody::getFile());
+  return cast<ArchiveFile>(Symbol::getFile());
 }
 
 InputFile *LazyArchive::fetch() {
@@ -291,44 +279,44 @@ InputFile *LazyArchive::fetch() {
 }
 
 LazyObjFile *LazyObject::getFile() {
-  return cast<LazyObjFile>(SymbolBody::getFile());
+  return cast<LazyObjFile>(Symbol::getFile());
 }
 
 InputFile *LazyObject::fetch() { return getFile()->fetch(); }
 
-uint8_t SymbolBody::computeBinding() const {
+uint8_t Symbol::computeBinding() const {
   if (Config->Relocatable)
     return Binding;
   if (Visibility != STV_DEFAULT && Visibility != STV_PROTECTED)
     return STB_LOCAL;
-  if (VersionId == VER_NDX_LOCAL && isInCurrentOutput())
+  if (VersionId == VER_NDX_LOCAL && isDefined())
     return STB_LOCAL;
   if (Config->NoGnuUnique && Binding == STB_GNU_UNIQUE)
     return STB_GLOBAL;
   return Binding;
 }
 
-bool SymbolBody::includeInDynsym() const {
+bool Symbol::includeInDynsym() const {
   if (!Config->HasDynSymTab)
     return false;
   if (computeBinding() == STB_LOCAL)
     return false;
-  if (!isInCurrentOutput())
+  if (!isDefined())
     return true;
   return ExportDynamic;
 }
 
 // Print out a log message for --trace-symbol.
-void elf::printTraceSymbol(SymbolBody *Sym) {
+void elf::printTraceSymbol(Symbol *Sym) {
   std::string S;
   if (Sym->isUndefined())
     S = ": reference to ";
-  else if (Sym->isCommon())
-    S = ": common definition of ";
   else if (Sym->isLazy())
     S = ": lazy definition of ";
   else if (Sym->isShared())
     S = ": shared definition of ";
+  else if (dyn_cast_or_null<BssSection>(cast<Defined>(Sym)->Section))
+    S = ": common definition of ";
   else
     S = ": definition of ";
 
@@ -336,14 +324,14 @@ void elf::printTraceSymbol(SymbolBody *Sym) {
 }
 
 // Returns a symbol for an error message.
-std::string lld::toString(const SymbolBody &B) {
+std::string lld::toString(const Symbol &B) {
   if (Config->Demangle)
     if (Optional<std::string> S = demangle(B.getName()))
       return *S;
   return B.getName();
 }
 
-template bool DefinedRegular::template isMipsPIC<ELF32LE>() const;
-template bool DefinedRegular::template isMipsPIC<ELF32BE>() const;
-template bool DefinedRegular::template isMipsPIC<ELF64LE>() const;
-template bool DefinedRegular::template isMipsPIC<ELF64BE>() const;
+template bool Defined::template isMipsPIC<ELF32LE>() const;
+template bool Defined::template isMipsPIC<ELF32BE>() const;
+template bool Defined::template isMipsPIC<ELF64LE>() const;
+template bool Defined::template isMipsPIC<ELF64BE>() const;

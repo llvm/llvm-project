@@ -32,10 +32,10 @@ namespace {
 class AArch64 final : public TargetInfo {
 public:
   AArch64();
-  RelExpr getRelExpr(RelType Type, const SymbolBody &S,
+  RelExpr getRelExpr(RelType Type, const Symbol &S,
                      const uint8_t *Loc) const override;
   bool isPicRel(RelType Type) const override;
-  void writeGotPlt(uint8_t *Buf, const SymbolBody &S) const override;
+  void writeGotPlt(uint8_t *Buf, const Symbol &S) const override;
   void writePltHeader(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
@@ -68,7 +68,7 @@ AArch64::AArch64() {
   TcbSize = 16;
 }
 
-RelExpr AArch64::getRelExpr(RelType Type, const SymbolBody &S,
+RelExpr AArch64::getRelExpr(RelType Type, const Symbol &S,
                             const uint8_t *Loc) const {
   switch (Type) {
   case R_AARCH64_TLSDESC_ADR_PAGE21:
@@ -139,7 +139,7 @@ bool AArch64::isPicRel(RelType Type) const {
   return Type == R_AARCH64_ABS32 || Type == R_AARCH64_ABS64;
 }
 
-void AArch64::writeGotPlt(uint8_t *Buf, const SymbolBody &) const {
+void AArch64::writeGotPlt(uint8_t *Buf, const Symbol &) const {
   write64le(Buf, InX::Plt->getVA());
 }
 

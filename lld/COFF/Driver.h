@@ -96,7 +96,7 @@ private:
   std::set<std::string> VisitedFiles;
   std::set<std::string> VisitedLibs;
 
-  SymbolBody *addUndefined(StringRef Sym);
+  Symbol *addUndefined(StringRef Sym);
   StringRef mangle(StringRef Sym);
 
   // Windows specific -- "main" is not the only main function in Windows.
