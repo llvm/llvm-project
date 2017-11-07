@@ -6,7 +6,7 @@
 # CHECK: S_NOP 0, implicit-def %0
 # CHECK: S_NOP 0, implicit-def %1
 # CHECK: S_NOP 0, implicit-def dead %2
-# CHECK: %3:sreg_128 = REG_SEQUENCE %0, {{[0-9]+}}, %1, {{[0-9]+}}, undef %2, {{[0-9]+}}
+# CHECK: %3:sreg_128 = REG_SEQUENCE %0,  %subreg.sub0, %1,  %subreg.sub1, undef %2, %subreg.sub3
 # CHECK: S_NOP 0, implicit %3.sub0
 # CHECK: S_NOP 0, implicit %3.sub1
 # CHECK: S_NOP 0, implicit undef %3.sub2
@@ -42,9 +42,9 @@ body: |
 # Check defined lanes transfer; Includes checking for some special cases like
 # undef operands or IMPLICIT_DEF definitions.
 # CHECK-LABEL: name: test1
-# CHECK: %0:sreg_128 = REG_SEQUENCE %sgpr0, {{[0-9]+}}, %sgpr0, {{[0-9]+}}
-# CHECK: %1:sreg_128 = INSERT_SUBREG %0, %sgpr1, {{[0-9]+}}
-# CHECK: %2:sreg_64 = INSERT_SUBREG %0.sub2_sub3, %sgpr42, {{[0-9]+}}
+# CHECK: %0:sreg_128 = REG_SEQUENCE %sgpr0, %subreg.sub0, %sgpr0, %subreg.sub2
+# CHECK: %1:sreg_128 = INSERT_SUBREG %0, %sgpr1,  %subreg.sub3
+# CHECK: %2:sreg_64 = INSERT_SUBREG %0.sub2_sub3, %sgpr42,  %subreg.sub0
 # CHECK: S_NOP 0, implicit %1.sub0
 # CHECK: S_NOP 0, implicit undef %1.sub1
 # CHECK: S_NOP 0, implicit %1.sub2
@@ -53,24 +53,24 @@ body: |
 # CHECK: S_NOP 0, implicit undef %2.sub1
 
 # CHECK: %3:sreg_32_xm0 = IMPLICIT_DEF
-# CHECK: %4:sreg_128 = INSERT_SUBREG %0, undef %3, {{[0-9]+}}
+# CHECK: %4:sreg_128 = INSERT_SUBREG %0, undef %3, %subreg.sub0
 # CHECK: S_NOP 0, implicit undef %4.sub0
 # CHECK: S_NOP 0, implicit undef %4.sub1
 # CHECK: S_NOP 0, implicit %4.sub2
 # CHECK: S_NOP 0, implicit undef %4.sub3
 
-# CHECK: %5:sreg_64 = EXTRACT_SUBREG %0, {{[0-9]+}}
-# CHECK: %6:sreg_32_xm0 = EXTRACT_SUBREG %5, {{[0-9]+}}
-# CHECK: %7:sreg_32_xm0 = EXTRACT_SUBREG %5, {{[0-9]+}}
+# CHECK: %5:sreg_64 = EXTRACT_SUBREG %0, %subreg.sub0_sub1
+# CHECK: %6:sreg_32_xm0 = EXTRACT_SUBREG %5, %subreg.sub0
+# CHECK: %7:sreg_32_xm0 = EXTRACT_SUBREG %5, %subreg.sub1
 # CHECK: S_NOP 0, implicit %5
 # CHECK: S_NOP 0, implicit %6
 # CHECK: S_NOP 0, implicit undef %7
 
 # CHECK: %8:sreg_64 = IMPLICIT_DEF
-# CHECK: %9:sreg_32_xm0 = EXTRACT_SUBREG undef %8, {{[0-9]+}}
+# CHECK: %9:sreg_32_xm0 = EXTRACT_SUBREG undef %8, %subreg.sub1
 # CHECK: S_NOP 0, implicit undef %9
 
-# CHECK: %10:sreg_128 = EXTRACT_SUBREG undef %0, {{[0-9]+}}
+# CHECK: %10:sreg_128 = EXTRACT_SUBREG undef %0, %subreg.sub2_sub3
 # CHECK: S_NOP 0, implicit undef %10
 name: test1
 registers:
@@ -125,29 +125,29 @@ body: |
 # CHECK: S_NOP 0, implicit-def dead %0
 # CHECK: S_NOP 0, implicit-def %1
 # CHECK: S_NOP 0, implicit-def %2
-# CHECK: %3:sreg_128 = REG_SEQUENCE undef %0, {{[0-9]+}}, %1, {{[0-9]+}}, %2, {{[0-9]+}}
+# CHECK: %3:sreg_128 = REG_SEQUENCE undef %0, %subreg.sub0, %1, %subreg.sub1, %2, %subreg.sub2_sub3
 # CHECK: S_NOP 0, implicit %3.sub1
 # CHECK: S_NOP 0, implicit %3.sub3
 
 # CHECK: S_NOP 0, implicit-def %4
 # CHECK: S_NOP 0, implicit-def dead %5
-# CHECK: %6:sreg_64 = REG_SEQUENCE %4, {{[0-9]+}}, undef %5, {{[0-9]+}}
+# CHECK: %6:sreg_64 = REG_SEQUENCE %4, %subreg.sub0, undef %5, %subreg.sub1
 # CHECK: S_NOP 0, implicit %6
 
 # CHECK: S_NOP 0, implicit-def dead %7
 # CHECK: S_NOP 0, implicit-def %8
-# CHECK: %9:sreg_128 = INSERT_SUBREG undef %7, %8, {{[0-9]+}}
+# CHECK: %9:sreg_128 = INSERT_SUBREG undef %7, %8, %subreg.sub2_sub3
 # CHECK: S_NOP 0, implicit %9.sub2
 
 # CHECK: S_NOP 0, implicit-def %10
 # CHECK: S_NOP 0, implicit-def dead %11
-# CHECK: %12:sreg_128 = INSERT_SUBREG %10, undef %11, {{[0-9]+}}
+# CHECK: %12:sreg_128 = INSERT_SUBREG %10, undef %11, %subreg.sub0_sub1
 # CHECK: S_NOP 0, implicit %12.sub3
 
 # CHECK: S_NOP 0, implicit-def %13
 # CHECK: S_NOP 0, implicit-def dead %14
-# CHECK: %15:sreg_128 = REG_SEQUENCE %13, {{[0-9]+}}, undef %14, {{[0-9]+}}
-# CHECK: %16:sreg_64 = EXTRACT_SUBREG %15, {{[0-9]+}}
+# CHECK: %15:sreg_128 = REG_SEQUENCE %13, %subreg.sub0_sub1, undef %14, %subreg.sub2_sub3
+# CHECK: %16:sreg_64 = EXTRACT_SUBREG %15, %subreg.sub0_sub1
 # CHECK: S_NOP 0, implicit %16.sub1
 
 name: test2
@@ -245,7 +245,7 @@ body: |
 # used.
 # CHECK-LABEL: name: test5
 # CHECK: S_NOP 0, implicit-def %0
-# CHECK: %1:sreg_64 = REG_SEQUENCE undef %0, {{[0-9]+}}, %0, {{[0-9]+}}
+# CHECK: %1:sreg_64 = REG_SEQUENCE undef %0, %subreg.sub0, %0, %subreg.sub1
 # CHECK: S_NOP 0, implicit %1.sub1
 name: test5
 tracksRegLiveness: true
@@ -265,7 +265,7 @@ body: |
 # CHECK: S_NOP 0, implicit-def %0
 # CHECK: S_NOP 0, implicit-def dead %1
 # CHECK: S_NOP 0, implicit-def dead %2
-# CHECK: %3:sreg_128 = REG_SEQUENCE %0, {{[0-9]+}}, undef %1, {{[0-9]+}}, undef %2, {{[0-9]+}}
+# CHECK: %3:sreg_128 = REG_SEQUENCE %0,  %subreg.sub0, undef %1,  %subreg.sub1, undef %2,  %subreg.sub2
 
 # CHECK: bb.1:
 # CHECK: %4:sreg_128 = PHI %3, %bb.0, %5, %bb.1
@@ -315,12 +315,12 @@ body: |
 # CHECK: S_NOP 0, implicit-def %1
 # CHECK: S_NOP 0, implicit-def dead %2
 # CHECK: S_NOP 0, implicit-def %3
-# CHECK: %4:sreg_128 = REG_SEQUENCE %0, {{[0-9]+}}, %1, {{[0-9]+}}, undef %2, {{[0-9]+}}, %3, {{[0-9]+}}
+# CHECK: %4:sreg_128 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, undef %2, %subreg.sub2, %3, %subreg.sub3
 
 # CHECK: bb.1:
 # CHECK: %5:sreg_128 = PHI %4, %bb.0, %6, %bb.1
 
-# CHECK: %6:sreg_128 = REG_SEQUENCE %5.sub1, {{[0-9]+}}, %5.sub3, {{[0-9]+}}, undef %5.sub2, {{[0-9]+}}, %5.sub0, {{[0-9]+}}
+# CHECK: %6:sreg_128 = REG_SEQUENCE %5.sub1, %subreg.sub0, %5.sub3, %subreg.sub1, undef %5.sub2, %subreg.sub2, %5.sub0, %subreg.sub3
 
 # CHECK: bb.2:
 # CHECK:   S_NOP 0, implicit %6.sub3
@@ -361,12 +361,12 @@ body: |
 # CHECK-LABEL: name: loop2
 # CHECK: bb.0:
 # CHECK: S_NOP 0, implicit-def %0
-# CHECK: %1:sreg_128 = REG_SEQUENCE %0, {{[0-9]+}}
+# CHECK: %1:sreg_128 = REG_SEQUENCE %0, %subreg.sub0
 
 # CHECK: bb.1:
 # CHECK: %2:sreg_128 = PHI %1, %bb.0, %3, %bb.1
 
-# CHECK: %3:sreg_128 = REG_SEQUENCE %2.sub3, {{[0-9]+}}, undef %2.sub1, {{[0-9]+}}, %2.sub0, {{[0-9]+}}, %2.sub2, {{[0-9]+}}
+# CHECK: %3:sreg_128 = REG_SEQUENCE %2.sub3, %subreg.sub0, undef %2.sub1, %subreg.sub1, %2.sub0, %subreg.sub2, %2.sub2, %subreg.sub3
 
 # CHECK: bb.2:
 # CHECK:   S_NOP 0, implicit %2.sub0

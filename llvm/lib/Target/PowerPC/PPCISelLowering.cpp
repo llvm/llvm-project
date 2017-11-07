@@ -8139,10 +8139,10 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
 
   if (Subtarget.hasP9Altivec()) {
     SDValue NewISDNode;
-    if (NewISDNode = lowerToVINSERTH(SVOp, DAG))
+    if ((NewISDNode = lowerToVINSERTH(SVOp, DAG)))
       return NewISDNode;
 
-    if (NewISDNode = lowerToVINSERTB(SVOp, DAG))
+    if ((NewISDNode = lowerToVINSERTB(SVOp, DAG)))
       return NewISDNode;
   }
 

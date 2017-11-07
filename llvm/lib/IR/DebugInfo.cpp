@@ -676,25 +676,7 @@ unsigned llvm::getDebugMetadataVersionFromModule(const Module &M) {
 
 void Instruction::applyMergedLocation(const DILocation *LocA,
                                       const DILocation *LocB) {
-  if (LocA && LocB && (LocA == LocB || !LocA->canDiscriminate(*LocB))) {
-    setDebugLoc(LocA);
-    return;
-  }
-  if (!LocA || !LocB || !isa<CallInst>(this)) {
-    setDebugLoc(nullptr);
-    return;
-  }
-  SmallPtrSet<DILocation *, 5> InlinedLocationsA;
-  for (DILocation *L = LocA->getInlinedAt(); L; L = L->getInlinedAt())
-    InlinedLocationsA.insert(L);
-  const DILocation *Result = LocB;
-  for (DILocation *L = LocB->getInlinedAt(); L; L = L->getInlinedAt()) {
-    Result = L;
-    if (InlinedLocationsA.count(L))
-      break;
-  }
-  setDebugLoc(DILocation::get(
-      Result->getContext(), 0, 0, Result->getScope(), Result->getInlinedAt()));
+  setDebugLoc(DILocation::getMergedLocation(LocA, LocB, this));
 }
 
 //===----------------------------------------------------------------------===//

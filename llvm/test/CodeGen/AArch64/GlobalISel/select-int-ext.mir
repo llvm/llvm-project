@@ -33,7 +33,7 @@ body:             |
 
     ; CHECK-LABEL: name: anyext_s64_from_s32
     ; CHECK: [[COPY:%[0-9]+]]:gpr32all = COPY %w0
-    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG 0, [[COPY]], 15
+    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG 0, [[COPY]], %subreg.sub_32
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64all = COPY [[SUBREG_TO_REG]]
     ; CHECK: %x0 = COPY [[COPY1]]
     %0(s32) = COPY %w0
@@ -80,7 +80,7 @@ body:             |
 
     ; CHECK-LABEL: name: zext_s64_from_s32
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY %w0
-    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[COPY]], 15
+    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[COPY]], %subreg.sub_32
     ; CHECK: [[UBFMXri:%[0-9]+]]:gpr64 = UBFMXri [[SUBREG_TO_REG]], 0, 31
     ; CHECK: %x0 = COPY [[UBFMXri]]
     %0(s32) = COPY %w0
@@ -177,7 +177,7 @@ body:             |
 
     ; CHECK-LABEL: name: sext_s64_from_s32
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY %w0
-    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[COPY]], 15
+    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[COPY]], %subreg.sub_32
     ; CHECK: [[SBFMXri:%[0-9]+]]:gpr64 = SBFMXri [[SUBREG_TO_REG]], 0, 31
     ; CHECK: %x0 = COPY [[SBFMXri]]
     %0(s32) = COPY %w0

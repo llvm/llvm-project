@@ -3880,7 +3880,13 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
         break;
       case llvm::Triple::MSVC:
       case llvm::Triple::UnknownEnvironment:
-        TC = llvm::make_unique<toolchains::MSVCToolChain>(*this, Target, Args);
+        if (Args.getLastArgValue(options::OPT_fuse_ld_EQ)
+                .startswith_lower("bfd"))
+          TC = llvm::make_unique<toolchains::CrossWindowsToolChain>(
+              *this, Target, Args);
+        else
+          TC =
+              llvm::make_unique<toolchains::MSVCToolChain>(*this, Target, Args);
         break;
       }
       break;
