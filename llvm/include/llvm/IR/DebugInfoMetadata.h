@@ -1419,19 +1419,15 @@ public:
   /// represented in a single line entry.  In this case, no location
   /// should be set, unless the merged instruction is a call, which we will
   /// set the merged debug location as line 0 of the nearest common scope
-  /// where 2 locations are inlined from. This only applies to Instruction,
-  /// For MachineInstruction, as it is post-inline, we will treat the call
+  /// where 2 locations are inlined from. This only applies to Instruction;
+  /// for MachineInstruction, as it is post-inline, we will treat the call
   /// instruction the same way as other instructions.
   ///
-  /// This should only be used by MachineInstruction because call can be
-  /// treated the same as other instructions. Otherwise, use
-  /// \p applyMergedLocation instead.
-  static const DILocation *getMergedLocation(const DILocation *LocA,
-                                             const DILocation *LocB) {
-    if (LocA && LocB && (LocA == LocB || !LocA->canDiscriminate(*LocB)))
-      return LocA;
-    return nullptr;
-  }
+  /// \p ForInst: The Instruction the merged DILocation is for. If the
+  /// Instruction is unavailable or non-existent, use nullptr.
+  static const DILocation *
+  getMergedLocation(const DILocation *LocA, const DILocation *LocB,
+                    const Instruction *ForInst = nullptr);
 
   /// Returns the base discriminator for a given encoded discriminator \p D.
   static unsigned getBaseDiscriminatorFromDiscriminator(unsigned D) {
@@ -2310,9 +2306,11 @@ public:
   ///
   /// \param OffsetInBits Offset of the piece in bits.
   /// \param SizeInBits   Size of the piece in bits.
-  static DIExpression *createFragmentExpression(const DIExpression *Exp,
-                                                unsigned OffsetInBits,
-                                                unsigned SizeInBits);
+  /// \return             Creating a fragment expression may fail if \c Expr
+  ///                     contains arithmetic operations that would be truncated.
+  static Optional<DIExpression *>
+  createFragmentExpression(const DIExpression *Expr, unsigned OffsetInBits,
+                           unsigned SizeInBits);
 };
 
 /// Global variables.

@@ -9,6 +9,7 @@
   define void @test_inserts_4() { ret void }
   define void @test_inserts_5() { ret void }
   define void @test_inserts_6() { ret void }
+  define void @test_inserts_nonpow2() { ret void }
 ...
 
 ---
@@ -139,5 +140,23 @@ body: |
     %2:_(s32) = COPY %w2
     %3:_(s128) = G_MERGE_VALUES %0, %1
     %4:_(s128) = G_INSERT %3, %2, 32
+    RET_ReallyLR
+...
+
+---
+name:            test_inserts_nonpow2
+body: |
+  bb.0:
+    liveins: %x0, %x1, %x2
+
+
+    ; CHECK-LABEL: name: test_inserts_nonpow2
+    ; CHECK: %5:_(s192) = G_MERGE_VALUES %3(s64), %1(s64), %2(s64)
+    %0:_(s64) = COPY %x0
+    %1:_(s64) = COPY %x1
+    %2:_(s64) = COPY %x2
+    %3:_(s64) = COPY %x3
+    %4:_(s192) = G_MERGE_VALUES %0, %1, %2
+    %5:_(s192) = G_INSERT %4, %3, 0
     RET_ReallyLR
 ...

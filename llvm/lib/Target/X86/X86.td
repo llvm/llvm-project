@@ -116,9 +116,15 @@ def FeatureAVX     : SubtargetFeature<"avx", "X86SSELevel", "AVX",
 def FeatureAVX2    : SubtargetFeature<"avx2", "X86SSELevel", "AVX2",
                                       "Enable AVX2 instructions",
                                       [FeatureAVX]>;
+def FeatureFMA     : SubtargetFeature<"fma", "HasFMA", "true",
+                                      "Enable three-operand fused multiple-add",
+                                      [FeatureAVX]>;
+def FeatureF16C    : SubtargetFeature<"f16c", "HasF16C", "true",
+                       "Support 16-bit floating point conversion instructions",
+                       [FeatureAVX]>;
 def FeatureAVX512   : SubtargetFeature<"avx512f", "X86SSELevel", "AVX512F",
                                       "Enable AVX-512 instructions",
-                                      [FeatureAVX2]>;
+                                      [FeatureAVX2, FeatureFMA, FeatureF16C]>;
 def FeatureERI      : SubtargetFeature<"avx512er", "HasERI", "true",
                       "Enable AVX-512 Exponential and Reciprocal Instructions",
                                       [FeatureAVX512]>;
@@ -154,9 +160,6 @@ def FeaturePKU   : SubtargetFeature<"pku", "HasPKU", "true",
 def FeaturePCLMUL  : SubtargetFeature<"pclmul", "HasPCLMUL", "true",
                          "Enable packed carry-less multiplication instructions",
                                [FeatureSSE2]>;
-def FeatureFMA     : SubtargetFeature<"fma", "HasFMA", "true",
-                                      "Enable three-operand fused multiple-add",
-                                      [FeatureAVX]>;
 def FeatureFMA4    : SubtargetFeature<"fma4", "HasFMA4", "true",
                                       "Enable four-operand fused multiple-add",
                                       [FeatureAVX, FeatureSSE4A]>;
@@ -177,9 +180,6 @@ def FeatureMOVBE   : SubtargetFeature<"movbe", "HasMOVBE", "true",
                                       "Support MOVBE instruction">;
 def FeatureRDRAND  : SubtargetFeature<"rdrnd", "HasRDRAND", "true",
                                       "Support RDRAND instruction">;
-def FeatureF16C    : SubtargetFeature<"f16c", "HasF16C", "true",
-                       "Support 16-bit floating point conversion instructions",
-                       [FeatureAVX]>;
 def FeatureFSGSBase : SubtargetFeature<"fsgsbase", "HasFSGSBase", "true",
                                        "Support FS/GS Base instructions">;
 def FeatureLZCNT   : SubtargetFeature<"lzcnt", "HasLZCNT", "true",

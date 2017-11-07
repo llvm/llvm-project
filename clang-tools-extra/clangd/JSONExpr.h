@@ -154,7 +154,7 @@ public:
     ObjectKey(const llvm::formatv_object_base &V) : ObjectKey(V.str()) {}
 
     ObjectKey(const ObjectKey &C) { *this = C; }
-    ObjectKey(ObjectKey &&C) = default;
+    ObjectKey(ObjectKey &&C) : ObjectKey(static_cast<const ObjectKey &&>(C)) {}
     ObjectKey &operator=(const ObjectKey &C) {
       if (C.Owned) {
         Owned.reset(new std::string(*C.Owned));

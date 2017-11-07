@@ -505,13 +505,6 @@ def skipIfRemote(func):
     return skipTestIfFn(is_remote)(func)
 
 
-def skipIfRemoteDueToDeadlock(func):
-    """Decorate the item to skip tests if testing remotely due to the test deadlocking."""
-    def is_remote():
-        return "skip on remote platform (deadlocks)" if lldb.remote_platform else None
-    return skipTestIfFn(is_remote)(func)
-
-
 def skipIfNoSBHeaders(func):
     """Decorate the item to mark tests that should be skipped when LLDB is built with no SB API headers."""
     def are_sb_headers_missing():

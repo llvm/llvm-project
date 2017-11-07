@@ -86,6 +86,11 @@ OPTIONS
 
   All other variables get undefined after each encountered ``CHECK-LABEL``.
 
+.. option:: -D<VAR=VALUE>
+
+  Sets a filecheck variable ``VAR`` with value ``VALUE`` that can be used in
+  ``CHECK:`` lines.
+
 .. option:: -version
 
  Show the version number of this program.

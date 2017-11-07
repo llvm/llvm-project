@@ -65,13 +65,13 @@ void RequestContext::reply(json::Expr &&Result) {
   });
 }
 
-void RequestContext::replyError(int code, const llvm::StringRef &Message) {
-  Out.log("Error " + llvm::Twine(code) + ": " + Message + "\n");
+void RequestContext::replyError(ErrorCode code, const llvm::StringRef &Message) {
+  Out.log("Error " + Twine(static_cast<int>(code)) + ": " + Message + "\n");
   if (ID) {
     Out.writeMessage(json::obj{
         {"jsonrpc", "2.0"},
         {"id", *ID},
-        {"error", json::obj{{"code", code}, {"message", Message}}},
+        {"error", json::obj{{"code", static_cast<int>(code)}, {"message", Message}}},
     });
   }
 }

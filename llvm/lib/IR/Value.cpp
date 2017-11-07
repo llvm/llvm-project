@@ -454,6 +454,28 @@ void Value::replaceUsesOutsideBlock(Value *New, BasicBlock *BB) {
   }
 }
 
+void Value::replaceUsesExceptBlockAddr(Value *New) {
+  use_iterator UI = use_begin(), E = use_end();
+  for (; UI != E;) {
+    Use &U = *UI;
+    ++UI;
+
+    if (isa<BlockAddress>(U.getUser()))
+      continue;
+
+    // Must handle Constants specially, we cannot call replaceUsesOfWith on a
+    // constant because they are uniqued.
+    if (auto *C = dyn_cast<Constant>(U.getUser())) {
+      if (!isa<GlobalValue>(C)) {
+        C->handleOperandChange(this, New);
+        continue;
+      }
+    }
+
+    U.set(New);
+  }
+}
+
 namespace {
 // Various metrics for how much to strip off of pointers.
 enum PointerStripKind {

@@ -167,3 +167,70 @@ end:
   %vec = load <2 x i16*>, <2 x i16*>* undef
   br label %block
 }
+
+; FALLBACK-WITH-REPORT-ERR-G_IMPLICIT_DEF-LEGALIZABLE: (FIXME: this is what is expected once we can legalize non-pow-of-2 G_IMPLICIT_DEF) remark: <unknown>:0:0: unable to legalize instruction: %vreg1<def>(s96) = G_INSERT %vreg2, %vreg0, 0; (in function: nonpow2_insertvalue_narrowing
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %vreg2<def>(s96) = G_IMPLICIT_DEF; (in function: nonpow2_insertvalue_narrowing
+; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for nonpow2_insertvalue_narrowing
+; FALLBACK-WITH-REPORT-OUT-LABEL: nonpow2_insertvalue_narrowing:
+%struct96 = type { float, float, float }
+define void @nonpow2_insertvalue_narrowing(float %a) {
+  %dummy = insertvalue %struct96 undef, float %a, 0
+  ret void
+}
+
+; FALLBACK-WITH-REPORT-ERR remark: <unknown>:0:0: unable to legalize instruction: %vreg3<def>(s96) = G_ADD %vreg2, %vreg2; (in function: nonpow2_add_narrowing
+; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for nonpow2_add_narrowing
+; FALLBACK-WITH-REPORT-OUT-LABEL: nonpow2_add_narrowing:
+define void @nonpow2_add_narrowing() {
+  %a = add i128 undef, undef
+  %b = trunc i128 %a to i96
+  %dummy = add i96 %b, %b
+  ret void
+}
+
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %vreg3<def>(s96) = G_OR %vreg2, %vreg2; (in function: nonpow2_or_narrowing
+; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for nonpow2_or_narrowing
+; FALLBACK-WITH-REPORT-OUT-LABEL: nonpow2_or_narrowing:
+define void @nonpow2_or_narrowing() {
+  %a = add i128 undef, undef
+  %b = trunc i128 %a to i96
+  %dummy = or i96 %b, %b
+  ret void
+}
+
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %vreg0<def>(s96) = G_LOAD %vreg1; mem:LD12[undef](align=16) (in function: nonpow2_load_narrowing
+; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for nonpow2_load_narrowing
+; FALLBACK-WITH-REPORT-OUT-LABEL: nonpow2_load_narrowing:
+define void @nonpow2_load_narrowing() {
+  %dummy = load i96, i96* undef
+  ret void
+}
+
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: G_STORE %vreg3, %vreg0; mem:ST12[%c](align=16) (in function: nonpow2_store_narrowing
+; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for nonpow2_store_narrowing
+; FALLBACK-WITH-REPORT-OUT-LABEL: nonpow2_store_narrowing:
+define void @nonpow2_store_narrowing(i96* %c) {
+  %a = add i128 undef, undef
+  %b = trunc i128 %a to i96
+  store i96 %b, i96* %c
+  ret void
+}
+
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %vreg0<def>(s96) = G_CONSTANT 0; (in function: nonpow2_constant_narrowing
+; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for nonpow2_constant_narrowing
+; FALLBACK-WITH-REPORT-OUT-LABEL: nonpow2_constant_narrowing:
+define void @nonpow2_constant_narrowing() {
+  store i96 0, i96* undef
+  ret void
+}
+
+; Currently can't handle vector lengths that aren't an exact multiple of
+; natively supported vector lengths. Test that the fall-back works for those.
+; FALLBACK-WITH-REPORT-ERR-G_IMPLICIT_DEF-LEGALIZABLE: (FIXME: this is what is expected once we can legalize non-pow-of-2 G_IMPLICIT_DEF) remark: <unknown>:0:0: unable to legalize instruction: %vreg1<def>(<7 x s64>) = G_ADD %vreg0, %vreg0; (in function: nonpow2_vector_add_fewerelements
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %vreg0<def>(<7 x s64>) = G_IMPLICIT_DEF; (in function: nonpow2_vector_add_fewerelements
+; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for nonpow2_vector_add_fewerelements
+; FALLBACK-WITH-REPORT-OUT-LABEL: nonpow2_vector_add_fewerelements:
+define void @nonpow2_vector_add_fewerelements() {
+  %dummy = add <7 x i64> undef, undef
+  ret void
+}

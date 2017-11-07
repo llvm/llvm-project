@@ -2778,7 +2778,7 @@ def err_attribute_weakref_not_global_context : Error<
 def err_attribute_weakref_without_alias : Error<
   "weakref declaration of %0 must also have an alias attribute">;
 def err_alias_not_supported_on_darwin : Error <
-  "only weak aliases are supported on darwin">;
+  "aliases are not supported on darwin">;
 def err_alias_to_undefined : Error<
   "%select{alias|ifunc}0 must point to a defined %select{variable or |}1function">;
 def warn_alias_to_weak_alias : Warning<

@@ -35,7 +35,6 @@ private:
   SDValue getFFBX_U32(SelectionDAG &DAG, SDValue Op, const SDLoc &DL, unsigned Opc) const;
 
 public:
-  static bool isOrEquivalentToAdd(SelectionDAG &DAG, SDValue Op);
   static unsigned numBitsUnsigned(SDValue Op, SelectionDAG &DAG);
   static unsigned numBitsSigned(SDValue Op, SelectionDAG &DAG);
 

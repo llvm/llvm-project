@@ -460,11 +460,11 @@ def QQQQ : RegisterClass<"AArch64", [untyped], 128, (add QSeqQuads)> {
 // assmebler matching.
 def VectorReg64AsmOperand : AsmOperandClass {
   let Name = "VectorReg64";
-  let PredicateMethod = "isVectorReg";
+  let PredicateMethod = "isNeonVectorReg";
 }
 def VectorReg128AsmOperand : AsmOperandClass {
   let Name = "VectorReg128";
-  let PredicateMethod = "isVectorReg";
+  let PredicateMethod = "isNeonVectorReg";
 }
 
 def V64  : RegisterOperand<FPR64, "printVRegOperand"> {
@@ -475,7 +475,10 @@ def V128 : RegisterOperand<FPR128, "printVRegOperand"> {
   let ParserMatchClass = VectorReg128AsmOperand;
 }
 
-def VectorRegLoAsmOperand : AsmOperandClass { let Name = "VectorRegLo"; }
+def VectorRegLoAsmOperand : AsmOperandClass {
+  let Name = "VectorRegLo";
+  let PredicateMethod = "isNeonVectorRegLo";
+}
 def V128_lo : RegisterOperand<FPR128_lo, "printVRegOperand"> {
   let ParserMatchClass = VectorRegLoAsmOperand;
 }
