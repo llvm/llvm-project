@@ -289,8 +289,8 @@ ProgramStateRef CStringChecker::CheckLocation(CheckerContext &C,
   if (!ER)
     return state;
 
-  assert(ER->getValueType() == C.getASTContext().CharTy &&
-    "CheckLocation should only be called with char* ElementRegions");
+  if (ER->getValueType() != C.getASTContext().CharTy)
+    return state;
 
   // Get the size of the array.
   const SubRegion *superReg = cast<SubRegion>(ER->getSuperRegion());
@@ -874,6 +874,8 @@ bool CStringChecker::IsFirstBufInBound(CheckerContext &C,
   if (!ER)
     return true; // cf top comment.
 
+  // FIXME: Does this crash when a non-standard definition
+  // of a library function is encountered?
   assert(ER->getValueType() == C.getASTContext().CharTy &&
          "IsFirstBufInBound should only be called with char* ElementRegions");
 

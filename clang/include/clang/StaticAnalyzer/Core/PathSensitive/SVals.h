@@ -103,9 +103,6 @@ public:
     return *static_cast<const T *>(this);
   }
 
-  /// BufferTy - A temporary buffer to hold a set of SVals.
-  typedef SmallVector<SVal,5> BufferTy;
-
   inline unsigned getRawKind() const { return Kind; }
   inline BaseKind getBaseKind() const { return (BaseKind) (Kind & BaseMask); }
   inline unsigned getSubKind() const { return (Kind & ~BaseMask) >> BaseBits; }
