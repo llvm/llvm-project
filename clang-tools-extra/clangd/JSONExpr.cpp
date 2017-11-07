@@ -2,10 +2,10 @@
 
 #include "llvm/Support/Format.h"
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace json {
-using namespace llvm;
 
 void Expr::copyFrom(const Expr &M) {
   Type = M.Type;

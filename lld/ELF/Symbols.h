@@ -237,8 +237,6 @@ public:
     return cast<SharedFile<ELFT>>(Symbol::getFile());
   }
 
-  template <class ELFT> uint32_t getAlignment() const;
-
   // This field is a pointer to the symbol's version definition.
   const void *Verdef;
 
