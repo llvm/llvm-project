@@ -68,7 +68,7 @@ TEST(JSONExprTests, Escaping) {
       '\xce', '\x94',       // Non-ASCII UTF-8 is not escaped.
   };
   EXPECT_EQ(R"("\u0000\u0008\u000c\r\n\tS\"\\)"
-            u8"\x7f\xce\x94\"",
+            "\x7f\xCE\x94\"",
             s(test));
 
   EXPECT_EQ(R"({"object keys are\nescaped":true})",
