@@ -517,7 +517,7 @@ class Configuration(object):
         std = self.get_lit_conf('std')
         if not std:
             # Choose the newest possible language dialect if none is given.
-            possible_stds = ['c++1z', 'c++14', 'c++11', 'c++03']
+            possible_stds = ['c++17', 'c++1z', 'c++14', 'c++11', 'c++03']
             if self.cxx.type == 'gcc':
                 maj_v, _, _ = self.cxx.version
                 maj_v = int(maj_v)
@@ -538,7 +538,9 @@ class Configuration(object):
                     'Failed to infer a supported language dialect from one of %r'
                     % possible_stds)
         self.cxx.compile_flags += ['-std={0}'.format(std)]
-        self.config.available_features.add(std.replace('gnu++', 'c++'))
+        std_feature = std.replace('gnu++', 'c++')
+        std_feature = std.replace('1z', '17')
+        self.config.available_features.add(std_feature)
         # Configure include paths
         self.configure_compile_flags_header_includes()
         self.target_info.add_cxx_compile_flags(self.cxx.compile_flags)
@@ -886,7 +888,7 @@ class Configuration(object):
         # Turn on warnings by default for Clang based compilers when C++ >= 11
         default_enable_warnings = self.cxx.type in ['clang', 'apple-clang'] \
             and len(self.config.available_features.intersection(
-                ['c++11', 'c++14', 'c++1z'])) != 0
+                ['c++11', 'c++14', 'c++17'])) != 0
         enable_warnings = self.get_lit_bool('enable_warnings',
                                             default_enable_warnings)
         self.cxx.useWarnings(enable_warnings)
