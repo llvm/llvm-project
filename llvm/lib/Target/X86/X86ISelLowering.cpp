@@ -380,8 +380,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   // Special handling for half-precision floating point conversions.
   // If we don't have F16C support, then lower half float conversions
   // into library calls.
-  if (Subtarget.useSoftFloat() ||
-      (!Subtarget.hasF16C() && !Subtarget.hasAVX512())) {
+  if (Subtarget.useSoftFloat() || !Subtarget.hasF16C()) {
     setOperationAction(ISD::FP16_TO_FP, MVT::f32, Expand);
     setOperationAction(ISD::FP_TO_FP16, MVT::f32, Expand);
   }

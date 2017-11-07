@@ -1622,7 +1622,7 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
 
       if (Config->Relocatable)
         if (auto *D = dyn_cast<Defined>(Sym))
-          if (D->isMipsPIC<ELFT>())
+          if (isMipsPIC<ELFT>(D))
             ESym->st_other |= STO_MIPS_PIC;
       ++ESym;
     }

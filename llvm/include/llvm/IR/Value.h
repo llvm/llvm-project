@@ -299,6 +299,12 @@ public:
   /// values or constant users.
   void replaceUsesOutsideBlock(Value *V, BasicBlock *BB);
 
+  /// replaceUsesExceptBlockAddr - Go through the uses list for this definition
+  /// and make each use point to "V" instead of "this" when the use is outside
+  /// the block. 'This's use list is expected to have at least one element.
+  /// Unlike replaceAllUsesWith this function skips blockaddr uses.
+  void replaceUsesExceptBlockAddr(Value *New);
+
   //----------------------------------------------------------------------
   // Methods for handling the chain of uses of this Value.
   //

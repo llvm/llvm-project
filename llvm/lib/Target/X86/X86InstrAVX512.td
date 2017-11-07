@@ -6557,7 +6557,7 @@ defm VCVTSS2SD : avx512_cvt_fp_scalar_ss2sd<0x5A, "vcvtss2sd",
                                           NotMemoryFoldable;
 
 def : Pat<(f64 (fpextend FR32X:$src)),
-          (VCVTSS2SDZrr (COPY_TO_REGCLASS FR32X:$src, FR64X), FR32X:$src)>,
+          (VCVTSS2SDZrr (f64 (IMPLICIT_DEF)), FR32X:$src)>,
           Requires<[HasAVX512]>;
 def : Pat<(f64 (fpextend (loadf32 addr:$src))),
           (VCVTSS2SDZrm (f64 (IMPLICIT_DEF)), addr:$src)>,
@@ -6572,7 +6572,7 @@ def : Pat<(f64 (extloadf32 addr:$src)),
           Requires<[HasAVX512, OptForSpeed]>;
 
 def : Pat<(f32 (fpround FR64X:$src)),
-          (VCVTSD2SSZrr (COPY_TO_REGCLASS FR64X:$src, FR32X), FR64X:$src)>,
+          (VCVTSD2SSZrr (f32 (IMPLICIT_DEF)), FR64X:$src)>,
            Requires<[HasAVX512]>;
 
 def : Pat<(v4f32 (X86Movss
@@ -7265,35 +7265,6 @@ let Predicates = [HasVLX] in {
   def : Pat<(f16_to_fp (i16 (fp_to_f16 FR32X:$src))),
             (f32 (COPY_TO_REGCLASS (VCVTPH2PSZ128rr
               (VCVTPS2PHZ128rr (COPY_TO_REGCLASS FR32X:$src, VR128X), 4)), FR32X)) >;
-}
-
-// Patterns for matching float to half-float conversion when AVX512 is supported
-// but F16C isn't. In that case we have to use 512-bit vectors.
-let Predicates = [HasAVX512, NoVLX, NoF16C] in {
-  def : Pat<(fp_to_f16 FR32X:$src),
-            (i16 (EXTRACT_SUBREG
-                  (VMOVPDI2DIZrr
-                   (v8i16 (EXTRACT_SUBREG
-                    (VCVTPS2PHZrr
-                     (INSERT_SUBREG (v16f32 (IMPLICIT_DEF)),
-                      (v4f32 (COPY_TO_REGCLASS FR32X:$src, VR128X)),
-                      sub_xmm), 4), sub_xmm))), sub_16bit))>;
-
-  def : Pat<(f16_to_fp GR16:$src),
-            (f32 (COPY_TO_REGCLASS
-                  (v4f32 (EXTRACT_SUBREG
-                   (VCVTPH2PSZrr
-                    (INSERT_SUBREG (v16i16 (IMPLICIT_DEF)),
-                     (v8i16 (COPY_TO_REGCLASS (MOVSX32rr16 GR16:$src), VR128X)),
-                     sub_xmm)), sub_xmm)), FR32X))>;
-
-  def : Pat<(f16_to_fp (i16 (fp_to_f16 FR32X:$src))),
-            (f32 (COPY_TO_REGCLASS
-                  (v4f32 (EXTRACT_SUBREG
-                          (VCVTPH2PSZrr
-                           (VCVTPS2PHZrr (INSERT_SUBREG (v16f32 (IMPLICIT_DEF)),
-                            (v4f32 (COPY_TO_REGCLASS FR32X:$src, VR128X)),
-                            sub_xmm), 4)), sub_xmm)), FR32X))>;
 }
 
 //  Unordered/Ordered scalar fp compare with Sea and set EFLAGS

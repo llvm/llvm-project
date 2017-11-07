@@ -4873,11 +4873,13 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
           for (unsigned E = I + RegCount; I != E; ++I) {
             // The vregs are guaranteed to be allocated in sequence.
             Op = MachineOperand::CreateReg(VMI->second + I, false);
-            auto *FragmentExpr = DIExpression::createFragmentExpression(
+            auto FragmentExpr = DIExpression::createFragmentExpression(
                 Expr, Offset, RegisterSize);
+            if (!FragmentExpr)
+              continue;
             FuncInfo.ArgDbgValues.push_back(
                 BuildMI(MF, DL, TII->get(TargetOpcode::DBG_VALUE), IsDbgDeclare,
-                        Op->getReg(), Variable, FragmentExpr));
+                        Op->getReg(), Variable, *FragmentExpr));
             Offset += RegisterSize;
           }
         }

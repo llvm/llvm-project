@@ -190,9 +190,6 @@ public:
       : Symbol(DefinedKind, Name, IsLocal, StOther, Type), Value(Value),
         Size(Size), Section(Section) {}
 
-  // Return true if the symbol is a PIC function.
-  template <class ELFT> bool isMipsPIC() const;
-
   static bool classof(const Symbol *S) { return S->isDefined(); }
 
   uint64_t Value;
@@ -239,8 +236,6 @@ public:
   template <class ELFT> SharedFile<ELFT> *getFile() const {
     return cast<SharedFile<ELFT>>(Symbol::getFile());
   }
-
-  template <class ELFT> uint32_t getAlignment() const;
 
   // This field is a pointer to the symbol's version definition.
   const void *Verdef;

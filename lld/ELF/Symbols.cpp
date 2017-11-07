@@ -247,17 +247,6 @@ void Symbol::parseSymbolVersion() {
           Verstr);
 }
 
-template <class ELFT> bool Defined::isMipsPIC() const {
-  typedef typename ELFT::Ehdr Elf_Ehdr;
-  if (!Section || !isFunc())
-    return false;
-
-  auto *Sec = cast<InputSectionBase>(Section);
-  const Elf_Ehdr *Hdr = Sec->template getFile<ELFT>()->getObj().getHeader();
-  return (this->StOther & STO_MIPS_MIPS16) == STO_MIPS_PIC ||
-         (Hdr->e_flags & EF_MIPS_PIC);
-}
-
 InputFile *Lazy::fetch() {
   if (auto *S = dyn_cast<LazyArchive>(this))
     return S->fetch();
@@ -330,8 +319,3 @@ std::string lld::toString(const Symbol &B) {
       return *S;
   return B.getName();
 }
-
-template bool Defined::template isMipsPIC<ELF32LE>() const;
-template bool Defined::template isMipsPIC<ELF32BE>() const;
-template bool Defined::template isMipsPIC<ELF64LE>() const;
-template bool Defined::template isMipsPIC<ELF64BE>() const;
