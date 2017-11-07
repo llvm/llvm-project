@@ -1115,6 +1115,29 @@ MipsMCCodeEmitter::getMovePRegPairOpValue(const MCInst &MI, unsigned OpNo,
 }
 
 unsigned
+MipsMCCodeEmitter::getMovePRegSingleOpValue(const MCInst &MI, unsigned OpNo,
+                                            SmallVectorImpl<MCFixup> &Fixups,
+                                            const MCSubtargetInfo &STI) const {
+  assert(((OpNo == 2) || (OpNo == 3)) &&
+         "Unexpected OpNo for movep operand encoding!");
+
+  MCOperand Op = MI.getOperand(OpNo);
+  assert(Op.isReg() && "Operand of movep is not a register!");
+  switch (Op.getReg()) {
+  default:
+    llvm_unreachable("Unknown register for movep!");
+  case Mips::ZERO:  return 0;
+  case Mips::S1:    return 1;
+  case Mips::V0:    return 2;
+  case Mips::V1:    return 3;
+  case Mips::S0:    return 4;
+  case Mips::S2:    return 5;
+  case Mips::S3:    return 6;
+  case Mips::S4:    return 7;
+  }
+}
+
+unsigned
 MipsMCCodeEmitter::getSimm23Lsl2Encoding(const MCInst &MI, unsigned OpNo,
                                          SmallVectorImpl<MCFixup> &Fixups,
                                          const MCSubtargetInfo &STI) const {

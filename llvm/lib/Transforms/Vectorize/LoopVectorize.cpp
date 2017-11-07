@@ -385,7 +385,7 @@ static unsigned getReciprocalPredBlockProb() { return 2; }
 static Value *addFastMathFlag(Value *V) {
   if (isa<FPMathOperator>(V)) {
     FastMathFlags Flags;
-    Flags.setUnsafeAlgebra();
+    Flags.setFast();
     cast<Instruction>(V)->setFastMathFlags(Flags);
   }
   return V;
@@ -2720,7 +2720,7 @@ Value *InnerLoopVectorizer::getStepVector(Value *Val, int StartIdx, Value *Step,
 
   // Floating point operations had to be 'fast' to enable the induction.
   FastMathFlags Flags;
-  Flags.setUnsafeAlgebra();
+  Flags.setFast();
 
   Value *MulOp = Builder.CreateFMul(Cv, Step);
   if (isa<Instruction>(MulOp))
@@ -5396,7 +5396,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         // operations, shuffles, or casts, as they don't change precision or
         // semantics.
       } else if (I.getType()->isFloatingPointTy() && (CI || I.isBinaryOp()) &&
-                 !I.hasUnsafeAlgebra()) {
+                 !I.isFast()) {
         DEBUG(dbgs() << "LV: Found FP op with unsafe algebra.\n");
         Hints->setPotentiallyUnsafe();
       }

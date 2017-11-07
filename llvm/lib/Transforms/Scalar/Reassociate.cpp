@@ -145,8 +145,7 @@ XorOpnd::XorOpnd(Value *V) {
 static BinaryOperator *isReassociableOp(Value *V, unsigned Opcode) {
   if (V->hasOneUse() && isa<Instruction>(V) &&
       cast<Instruction>(V)->getOpcode() == Opcode &&
-      (!isa<FPMathOperator>(V) ||
-       cast<Instruction>(V)->hasUnsafeAlgebra()))
+      (!isa<FPMathOperator>(V) || cast<Instruction>(V)->isFast()))
     return cast<BinaryOperator>(V);
   return nullptr;
 }
@@ -156,8 +155,7 @@ static BinaryOperator *isReassociableOp(Value *V, unsigned Opcode1,
   if (V->hasOneUse() && isa<Instruction>(V) &&
       (cast<Instruction>(V)->getOpcode() == Opcode1 ||
        cast<Instruction>(V)->getOpcode() == Opcode2) &&
-      (!isa<FPMathOperator>(V) ||
-       cast<Instruction>(V)->hasUnsafeAlgebra()))
+      (!isa<FPMathOperator>(V) || cast<Instruction>(V)->isFast()))
     return cast<BinaryOperator>(V);
   return nullptr;
 }
@@ -565,7 +563,7 @@ static bool LinearizeExprTree(BinaryOperator *I,
       assert((!isa<Instruction>(Op) ||
               cast<Instruction>(Op)->getOpcode() != Opcode
               || (isa<FPMathOperator>(Op) &&
-                  !cast<Instruction>(Op)->hasUnsafeAlgebra())) &&
+                  !cast<Instruction>(Op)->isFast())) &&
              "Should have been handled above!");
       assert(Op->hasOneUse() && "Has uses outside the expression tree!");
 
@@ -2017,8 +2015,8 @@ void ReassociatePass::OptimizeInst(Instruction *I) {
   if (I->isCommutative())
     canonicalizeOperands(I);
 
-  // Don't optimize floating point instructions that don't have unsafe algebra.
-  if (I->getType()->isFPOrFPVectorTy() && !I->hasUnsafeAlgebra())
+  // Don't optimize floating-point instructions unless they are 'fast'.
+  if (I->getType()->isFPOrFPVectorTy() && !I->isFast())
     return;
 
   // Do not reassociate boolean (i1) expressions.  We want to preserve the

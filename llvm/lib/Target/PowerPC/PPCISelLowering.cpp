@@ -291,14 +291,16 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::FROUND, MVT::f32, Legal);
   }
 
-  // PowerPC does not have BSWAP
+  // PowerPC does not have BSWAP, but we can use vector BSWAP instruction xxbrd
+  // to speed up scalar BSWAP64.
   // CTPOP or CTTZ were introduced in P8/P9 respectivelly
   setOperationAction(ISD::BSWAP, MVT::i32  , Expand);
-  setOperationAction(ISD::BSWAP, MVT::i64  , Expand);
   if (Subtarget.isISA3_0()) {
+    setOperationAction(ISD::BSWAP, MVT::i64  , Custom);
     setOperationAction(ISD::CTTZ , MVT::i32  , Legal);
     setOperationAction(ISD::CTTZ , MVT::i64  , Legal);
   } else {
+    setOperationAction(ISD::BSWAP, MVT::i64  , Expand);
     setOperationAction(ISD::CTTZ , MVT::i32  , Expand);
     setOperationAction(ISD::CTTZ , MVT::i64  , Expand);
   }
@@ -7888,6 +7890,107 @@ static SDValue GeneratePerfectShuffle(unsigned PFEntry, SDValue LHS,
   return DAG.getNode(ISD::BITCAST, dl, VT, T);
 }
 
+/// lowerToVINSERTB - Return the SDValue if this VECTOR_SHUFFLE can be handled
+/// by the VINSERTB instruction introduced in ISA 3.0, else just return default
+/// SDValue.
+SDValue PPCTargetLowering::lowerToVINSERTB(ShuffleVectorSDNode *N,
+                                           SelectionDAG &DAG) const {
+  const unsigned BytesInVector = 16;
+  bool IsLE = Subtarget.isLittleEndian();
+  SDLoc dl(N);
+  SDValue V1 = N->getOperand(0);
+  SDValue V2 = N->getOperand(1);
+  unsigned ShiftElts = 0, InsertAtByte = 0;
+  bool Swap = false;
+
+  // Shifts required to get the byte we want at element 7.
+  unsigned LittleEndianShifts[] = {8, 7,  6,  5,  4,  3,  2,  1,
+                                   0, 15, 14, 13, 12, 11, 10, 9};
+  unsigned BigEndianShifts[] = {9, 10, 11, 12, 13, 14, 15, 0,
+                                1, 2,  3,  4,  5,  6,  7,  8};
+
+  ArrayRef<int> Mask = N->getMask();
+  int OriginalOrder[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+
+  // For each mask element, find out if we're just inserting something
+  // from V2 into V1 or vice versa.
+  // Possible permutations inserting an element from V2 into V1:
+  //   X, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
+  //   0, X, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
+  //   ...
+  //   0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, X
+  // Inserting from V1 into V2 will be similar, except mask range will be
+  // [16,31].
+
+  bool FoundCandidate = false;
+  // If both vector operands for the shuffle are the same vector, the mask
+  // will contain only elements from the first one and the second one will be
+  // undef.
+  unsigned VINSERTBSrcElem = IsLE ? 8 : 7;
+  // Go through the mask of half-words to find an element that's being moved
+  // from one vector to the other.
+  for (unsigned i = 0; i < BytesInVector; ++i) {
+    unsigned CurrentElement = Mask[i];
+    // If 2nd operand is undefined, we should only look for element 7 in the
+    // Mask.
+    if (V2.isUndef() && CurrentElement != VINSERTBSrcElem)
+      continue;
+
+    bool OtherElementsInOrder = true;
+    // Examine the other elements in the Mask to see if they're in original
+    // order.
+    for (unsigned j = 0; j < BytesInVector; ++j) {
+      if (j == i)
+        continue;
+      // If CurrentElement is from V1 [0,15], then we the rest of the Mask to be
+      // from V2 [16,31] and vice versa.  Unless the 2nd operand is undefined,
+      // in which we always assume we're always picking from the 1st operand.
+      int MaskOffset =
+          (!V2.isUndef() && CurrentElement < BytesInVector) ? BytesInVector : 0;
+      if (Mask[j] != OriginalOrder[j] + MaskOffset) {
+        OtherElementsInOrder = false;
+        break;
+      }
+    }
+    // If other elements are in original order, we record the number of shifts
+    // we need to get the element we want into element 7. Also record which byte
+    // in the vector we should insert into.
+    if (OtherElementsInOrder) {
+      // If 2nd operand is undefined, we assume no shifts and no swapping.
+      if (V2.isUndef()) {
+        ShiftElts = 0;
+        Swap = false;
+      } else {
+        // Only need the last 4-bits for shifts because operands will be swapped if CurrentElement is >= 2^4.
+        ShiftElts = IsLE ? LittleEndianShifts[CurrentElement & 0xF]
+                         : BigEndianShifts[CurrentElement & 0xF];
+        Swap = CurrentElement < BytesInVector;
+      }
+      InsertAtByte = IsLE ? BytesInVector - (i + 1) : i;
+      FoundCandidate = true;
+      break;
+    }
+  }
+
+  if (!FoundCandidate)
+    return SDValue();
+
+  // Candidate found, construct the proper SDAG sequence with VINSERTB,
+  // optionally with VECSHL if shift is required.
+  if (Swap)
+    std::swap(V1, V2);
+  if (V2.isUndef())
+    V2 = V1;
+  if (ShiftElts) {
+    SDValue Shl = DAG.getNode(PPCISD::VECSHL, dl, MVT::v16i8, V2, V2,
+                              DAG.getConstant(ShiftElts, dl, MVT::i32));
+    return DAG.getNode(PPCISD::VECINSERT, dl, MVT::v16i8, V1, Shl,
+                       DAG.getConstant(InsertAtByte, dl, MVT::i32));
+  }
+  return DAG.getNode(PPCISD::VECINSERT, dl, MVT::v16i8, V1, V2,
+                     DAG.getConstant(InsertAtByte, dl, MVT::i32));
+}
+
 /// lowerToVINSERTH - Return the SDValue if this VECTOR_SHUFFLE can be handled
 /// by the VINSERTH instruction introduced in ISA 3.0, else just return default
 /// SDValue.
@@ -8035,8 +8138,11 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   }
 
   if (Subtarget.hasP9Altivec()) {
-    SDValue NewISDNode = lowerToVINSERTH(SVOp, DAG);
-    if (NewISDNode)
+    SDValue NewISDNode;
+    if ((NewISDNode = lowerToVINSERTH(SVOp, DAG)))
+      return NewISDNode;
+
+    if ((NewISDNode = lowerToVINSERTB(SVOp, DAG)))
       return NewISDNode;
   }
 
@@ -8675,6 +8781,23 @@ SDValue PPCTargetLowering::LowerREM(SDValue Op, SelectionDAG &DAG) const {
   return Op;
 }
 
+// Lower scalar BSWAP64 to xxbrd.
+SDValue PPCTargetLowering::LowerBSWAP(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc dl(Op);
+  // MTVSRDD
+  Op = DAG.getNode(ISD::BUILD_VECTOR, dl, MVT::v2i64, Op.getOperand(0),
+                   Op.getOperand(0));
+  // XXBRD
+  Op = DAG.getNode(PPCISD::XXREVERSE, dl, MVT::v2i64, Op);
+  // MFVSRD
+  int VectorIndex = 0;
+  if (Subtarget.isLittleEndian())
+    VectorIndex = 1;
+  Op = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i64, Op,
+                   DAG.getTargetConstant(VectorIndex, dl, MVT::i32));
+  return Op;
+}
+
 SDValue PPCTargetLowering::LowerSIGN_EXTEND_INREG(SDValue Op,
                                                   SelectionDAG &DAG) const {
   SDLoc dl(Op);
@@ -9146,6 +9269,8 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SREM:
   case ISD::UREM:
     return LowerREM(Op, DAG);
+  case ISD::BSWAP:
+    return LowerBSWAP(Op, DAG);
   }
 }
 

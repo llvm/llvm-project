@@ -612,7 +612,9 @@ define void @fastmathflags(float %op1, float %op2) {
   %f.arcp = fadd arcp float %op1, %op2
   ; CHECK: %f.arcp = fadd arcp float %op1, %op2
   %f.fast = fadd fast float %op1, %op2
-  ; CHECK: %f.fast = fadd fast float %op1, %op2
+  ; 'fast' used to be its own bit, but this changed in Oct 2017.
+  ; The binary test file does not have the newer 'contract' and 'afn' bits set, so this is not fully 'fast'.
+  ; CHECK: %f.fast = fadd reassoc nnan ninf nsz arcp float %op1, %op2
   ret void
 }
 

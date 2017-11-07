@@ -21,7 +21,7 @@
 0x29 0x82 # CHECK: lhu16 $3, 4($16)
 0x09 0x94 # CHECK: lbu16 $3, 4($17)
 0x09 0x9f # CHECK: lbu16 $3, -1($17)
-0x84 0x34 # CHECK: movep $5, $6, $2, $3
+0x44 0x36 # CHECK: movep $5, $6, $2, $3
 0x04 0xcc # CHECK: addu16 $6, $17, $4
 0x44 0x21 # CHECK: and16 $16, $2
 0x2e 0x56 # CHECK: andi16 $4, $5, 8

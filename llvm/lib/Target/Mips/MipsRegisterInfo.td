@@ -616,6 +616,7 @@ def GPRMM16OpndZero : RegisterOperand<GPRMM16Zero> {
 
 def GPRMM16OpndMoveP : RegisterOperand<GPRMM16MoveP> {
   let ParserMatchClass = GPRMM16AsmOperandMoveP;
+  let EncoderMethod = "getMovePRegSingleOpValue";
 }
 
 def GPR64Opnd : RegisterOperand<GPR64> {

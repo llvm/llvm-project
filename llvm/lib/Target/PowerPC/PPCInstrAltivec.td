@@ -1312,7 +1312,12 @@ def VEXTUWLX : VX1_RT5_RA5_VB5<1677, "vextuwlx", []>;
 def VEXTUWRX : VX1_RT5_RA5_VB5<1933, "vextuwrx", []>;
 
 // Vector Insert Element Instructions
-def VINSERTB : VX1_VT5_UIM5_VB5<781, "vinsertb", []>;
+def VINSERTB : VXForm_1<781, (outs vrrc:$vD),
+                        (ins vrrc:$vDi, u4imm:$UIM, vrrc:$vB),
+                        "vinsertb $vD, $vB, $UIM", IIC_VecGeneral,
+                        [(set v16i8:$vD, (PPCvecinsert v16i8:$vDi, v16i8:$vB,
+                                                      imm32SExt16:$UIM))]>,
+                        RegConstraint<"$vDi = $vD">, NoEncode<"$vDi">;
 def VINSERTH : VXForm_1<845, (outs vrrc:$vD),
                         (ins vrrc:$vDi, u4imm:$UIM, vrrc:$vB),
                         "vinserth $vD, $vB, $UIM", IIC_VecGeneral,

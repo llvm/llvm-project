@@ -6557,7 +6557,7 @@ defm VCVTSS2SD : avx512_cvt_fp_scalar_ss2sd<0x5A, "vcvtss2sd",
                                           NotMemoryFoldable;
 
 def : Pat<(f64 (fpextend FR32X:$src)),
-          (VCVTSS2SDZrr (COPY_TO_REGCLASS FR32X:$src, FR64X), FR32X:$src)>,
+          (VCVTSS2SDZrr (f64 (IMPLICIT_DEF)), FR32X:$src)>,
           Requires<[HasAVX512]>;
 def : Pat<(f64 (fpextend (loadf32 addr:$src))),
           (VCVTSS2SDZrm (f64 (IMPLICIT_DEF)), addr:$src)>,
@@ -6572,7 +6572,7 @@ def : Pat<(f64 (extloadf32 addr:$src)),
           Requires<[HasAVX512, OptForSpeed]>;
 
 def : Pat<(f32 (fpround FR64X:$src)),
-          (VCVTSD2SSZrr (COPY_TO_REGCLASS FR64X:$src, FR32X), FR64X:$src)>,
+          (VCVTSD2SSZrr (f32 (IMPLICIT_DEF)), FR64X:$src)>,
            Requires<[HasAVX512]>;
 
 def : Pat<(v4f32 (X86Movss
@@ -7177,34 +7177,44 @@ def : Pat<(v4f64 (uint_to_fp (v4i64 VR256X:$src1))),
 //===----------------------------------------------------------------------===//
 multiclass avx512_cvtph2ps<X86VectorVTInfo _dest, X86VectorVTInfo _src,
                            X86MemOperand x86memop, PatFrag ld_frag> {
-  defm rr : AVX512_maskable<0x13, MRMSrcReg, _dest ,(outs _dest.RC:$dst), (ins _src.RC:$src),
-                    "vcvtph2ps", "$src", "$src",
-                   (X86cvtph2ps (_src.VT _src.RC:$src),
-                                                (i32 FROUND_CURRENT))>, T8PD;
-  defm rm : AVX512_maskable<0x13, MRMSrcMem, _dest, (outs _dest.RC:$dst), (ins x86memop:$src),
-                    "vcvtph2ps", "$src", "$src",
-                    (X86cvtph2ps (_src.VT (bitconvert (ld_frag addr:$src))),
-                                     (i32 FROUND_CURRENT))>, T8PD;
+  defm rr : AVX512_maskable<0x13, MRMSrcReg, _dest ,(outs _dest.RC:$dst),
+                            (ins _src.RC:$src), "vcvtph2ps", "$src", "$src",
+                            (X86cvtph2ps (_src.VT _src.RC:$src))>, T8PD;
+  defm rm : AVX512_maskable<0x13, MRMSrcMem, _dest, (outs _dest.RC:$dst),
+                            (ins x86memop:$src), "vcvtph2ps", "$src", "$src",
+                            (X86cvtph2ps (_src.VT
+                                          (bitconvert
+                                           (ld_frag addr:$src))))>, T8PD;
 }
 
 multiclass avx512_cvtph2ps_sae<X86VectorVTInfo _dest, X86VectorVTInfo _src> {
-  defm rb : AVX512_maskable<0x13, MRMSrcReg, _dest ,(outs _dest.RC:$dst), (ins _src.RC:$src),
-                    "vcvtph2ps", "{sae}, $src", "$src, {sae}",
-                   (X86cvtph2ps (_src.VT _src.RC:$src),
-                                                (i32 FROUND_NO_EXC))>, T8PD, EVEX_B;
+  defm rb : AVX512_maskable<0x13, MRMSrcReg, _dest, (outs _dest.RC:$dst),
+                            (ins _src.RC:$src), "vcvtph2ps",
+                            "{sae}, $src", "$src, {sae}",
+                            (X86cvtph2psRnd (_src.VT _src.RC:$src),
+                                            (i32 FROUND_NO_EXC))>, T8PD, EVEX_B;
 
 }
 
-let Predicates = [HasAVX512] in {
+let Predicates = [HasAVX512] in
   defm VCVTPH2PSZ : avx512_cvtph2ps<v16f32_info, v16i16x_info, f256mem, loadv4i64>,
                     avx512_cvtph2ps_sae<v16f32_info, v16i16x_info>,
                     EVEX, EVEX_V512, EVEX_CD8<32, CD8VH>;
-  let Predicates = [HasVLX] in {
-    defm VCVTPH2PSZ256 : avx512_cvtph2ps<v8f32x_info, v8i16x_info, f128mem,
-                         loadv2i64>,EVEX, EVEX_V256, EVEX_CD8<32, CD8VH>;
-    defm VCVTPH2PSZ128 : avx512_cvtph2ps<v4f32x_info, v8i16x_info, f64mem,
-                         loadv2i64>, EVEX, EVEX_V128, EVEX_CD8<32, CD8VH>;
-  }
+
+let Predicates = [HasVLX] in {
+  defm VCVTPH2PSZ256 : avx512_cvtph2ps<v8f32x_info, v8i16x_info, f128mem,
+                       loadv2i64>,EVEX, EVEX_V256, EVEX_CD8<32, CD8VH>;
+  defm VCVTPH2PSZ128 : avx512_cvtph2ps<v4f32x_info, v8i16x_info, f64mem,
+                       loadv2i64>, EVEX, EVEX_V128, EVEX_CD8<32, CD8VH>;
+
+  // Pattern match vcvtph2ps of a scalar i64 load.
+  def : Pat<(v4f32 (X86cvtph2ps (v8i16 (vzmovl_v2i64 addr:$src)))),
+            (VCVTPH2PSZ128rm addr:$src)>;
+  def : Pat<(v4f32 (X86cvtph2ps (v8i16 (vzload_v2i64 addr:$src)))),
+            (VCVTPH2PSZ128rm addr:$src)>;
+  def : Pat<(v4f32 (X86cvtph2ps (v8i16 (bitconvert
+              (v2i64 (scalar_to_vector (loadi64 addr:$src))))))),
+            (VCVTPH2PSZ128rm addr:$src)>;
 }
 
 multiclass avx512_cvtps2ph<X86VectorVTInfo _dest, X86VectorVTInfo _src,
@@ -7265,35 +7275,6 @@ let Predicates = [HasVLX] in {
   def : Pat<(f16_to_fp (i16 (fp_to_f16 FR32X:$src))),
             (f32 (COPY_TO_REGCLASS (VCVTPH2PSZ128rr
               (VCVTPS2PHZ128rr (COPY_TO_REGCLASS FR32X:$src, VR128X), 4)), FR32X)) >;
-}
-
-// Patterns for matching float to half-float conversion when AVX512 is supported
-// but F16C isn't. In that case we have to use 512-bit vectors.
-let Predicates = [HasAVX512, NoVLX, NoF16C] in {
-  def : Pat<(fp_to_f16 FR32X:$src),
-            (i16 (EXTRACT_SUBREG
-                  (VMOVPDI2DIZrr
-                   (v8i16 (EXTRACT_SUBREG
-                    (VCVTPS2PHZrr
-                     (INSERT_SUBREG (v16f32 (IMPLICIT_DEF)),
-                      (v4f32 (COPY_TO_REGCLASS FR32X:$src, VR128X)),
-                      sub_xmm), 4), sub_xmm))), sub_16bit))>;
-
-  def : Pat<(f16_to_fp GR16:$src),
-            (f32 (COPY_TO_REGCLASS
-                  (v4f32 (EXTRACT_SUBREG
-                   (VCVTPH2PSZrr
-                    (INSERT_SUBREG (v16i16 (IMPLICIT_DEF)),
-                     (v8i16 (COPY_TO_REGCLASS (MOVSX32rr16 GR16:$src), VR128X)),
-                     sub_xmm)), sub_xmm)), FR32X))>;
-
-  def : Pat<(f16_to_fp (i16 (fp_to_f16 FR32X:$src))),
-            (f32 (COPY_TO_REGCLASS
-                  (v4f32 (EXTRACT_SUBREG
-                          (VCVTPH2PSZrr
-                           (VCVTPS2PHZrr (INSERT_SUBREG (v16f32 (IMPLICIT_DEF)),
-                            (v4f32 (COPY_TO_REGCLASS FR32X:$src, VR128X)),
-                            sub_xmm), 4)), sub_xmm)), FR32X))>;
 }
 
 //  Unordered/Ordered scalar fp compare with Sea and set EFLAGS

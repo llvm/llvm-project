@@ -1,5 +1,5 @@
-; RUN: not llc -march=amdgcn -tailcallopt < %s 2>&1 | FileCheck -check-prefix=GCN %s
-; RUN: not llc -march=r600 -mcpu=cypress -tailcallopt < %s 2>&1 | FileCheck -check-prefix=R600 %s
+; RUN: not llc -march=amdgcn -mtriple=amdgcn---amdgiz -tailcallopt < %s 2>&1 | FileCheck -check-prefix=GCN %s
+; RUN: not llc -march=r600 -mtriple=r600---amdgiz -mcpu=cypress -tailcallopt < %s 2>&1 | FileCheck -check-prefix=R600 %s
 
 declare i32 @external_function(i32) nounwind
 

@@ -16,7 +16,7 @@ its symbol table. By default, the linked debug information is placed in a
 
 OPTIONS
 -------
-.. option:: -arch=<arch>
+.. option:: --arch=<arch>
 
  Link DWARF debug information only for specified CPU architecture types.
  Architectures may be specified by name. When using this option, an error will
@@ -25,29 +25,29 @@ OPTIONS
  architectures will be linked by default and any architectures that can't be
  properly linked will cause :program:`dsymutil` to return an error.
 
-.. option:: -dump-debug-map
+.. option:: --dump-debug-map
 
- Dump the executable debug-map (the list of the object files containing the
+ Dump the *executable*'s debug-map (the list of the object files containing the
  debug information) in YAML format and exit. Not DWARF link will take place.
 
-.. option:: -f, -flat
+.. option:: -f, --flat
 
  Produce a flat dSYM file. A ``.dwarf`` extension will be appended to the
  executable name unless the output file is specified using the -o option.
 
-.. option:: -no-odr
+.. option:: --no-odr
 
  Do not use ODR (One Definition Rule) for uniquing C++ types.
 
-.. option:: -no-output
+.. option:: --no-output
 
  Do the link in memory, but do not emit the result file.
 
-.. option:: -no-swiftmodule-timestamp
+.. option:: --no-swiftmodule-timestamp
 
  Don't check the timestamp for swiftmodule files.
 
-.. option:: -j <n>, -num-threads=<n>
+.. option:: -j <n>, --num-threads=<n>
 
  Specifies the maximum number (``n``) of simultaneous threads to use when
  linking multiple architectures.
@@ -57,15 +57,15 @@ OPTIONS
  Specifies an alternate ``path`` to place the dSYM bundle. The default dSYM
  bundle path is created by appending ``.dSYM`` to the executable name.
 
-.. option:: -oso-prepend-path=<path>
+.. option:: --oso-prepend-path=<path>
 
  Specifies a ``path`` to prepend to all debug symbol object file paths.
 
-.. option:: -s, -symtab
+.. option:: -s, --symtab
 
- Dumps the symbol table found in executable or object file(s) and exits.
+ Dumps the symbol table found in *executable* or object file(s) and exits.
 
-.. option:: -v, -verbose
+.. option:: -v, --verbose
 
  Display verbose information when linking.
 

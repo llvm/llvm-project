@@ -591,7 +591,12 @@ def X86VUintToFP      : SDNode<"X86ISD::CVTUI2P",  SDTVintToFP>;
 def X86cvtp2Int      : SDNode<"X86ISD::CVTP2SI",  SDTFloatToInt>;
 def X86cvtp2UInt     : SDNode<"X86ISD::CVTP2UI",  SDTFloatToInt>;
 
+
 def X86cvtph2ps     : SDNode<"X86ISD::CVTPH2PS",
+                              SDTypeProfile<1, 1, [SDTCVecEltisVT<0, f32>,
+                                                   SDTCVecEltisVT<1, i16>]> >;
+
+def X86cvtph2psRnd  : SDNode<"X86ISD::CVTPH2PS_RND",
                               SDTypeProfile<1, 2, [SDTCVecEltisVT<0, f32>,
                                                    SDTCVecEltisVT<1, i16>,
                                                    SDTCisVT<2, i32>]> >;

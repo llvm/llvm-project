@@ -4880,7 +4880,7 @@ class HorizontalReduction {
       case RK_Min:
       case RK_Max:
         return Opcode == Instruction::ICmp ||
-               cast<Instruction>(I->getOperand(0))->hasUnsafeAlgebra();
+               cast<Instruction>(I->getOperand(0))->isFast();
       case RK_UMin:
       case RK_UMax:
         assert(Opcode == Instruction::ICmp &&
@@ -5232,7 +5232,7 @@ public:
     Value *VectorizedTree = nullptr;
     IRBuilder<> Builder(ReductionRoot);
     FastMathFlags Unsafe;
-    Unsafe.setUnsafeAlgebra();
+    Unsafe.setFast();
     Builder.setFastMathFlags(Unsafe);
     unsigned i = 0;
 

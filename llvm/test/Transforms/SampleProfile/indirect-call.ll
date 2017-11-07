@@ -182,7 +182,7 @@ define void @test_direct() !dbg !22 {
 ; CHECK: ![[PROF]] = !{!"VP", i32 0, i64 3457, i64 9191153033785521275, i64 2059, i64 -1069303473483922844, i64 1398}
 ; CHECK: ![[BR1]] = !{!"branch_weights", i32 4000, i32 4000}
 ; CHECK: ![[BR2]] = !{!"branch_weights", i32 3000, i32 1000}
-; CHECK: ![[VP]] = !{!"VP", i32 0, i64 1000, i64 -6391416044382067764, i64 1000}
+; CHECK: ![[VP]] = !{!"VP", i32 0, i64 8000, i64 -6391416044382067764, i64 1000}
 !6 = distinct !DISubprogram(name: "test_inline", scope: !1, file: !1, line: 6, unit: !0)
 !7 = !DILocation(line: 7, scope: !6)
 !8 = distinct !DISubprogram(name: "test_inline_strip", scope: !1, file: !1, line: 8, unit: !0)

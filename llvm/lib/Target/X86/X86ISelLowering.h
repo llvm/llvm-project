@@ -563,7 +563,7 @@ namespace llvm {
       RSQRT28, RSQRT28S, RCP28, RCP28S, EXP2,
 
       // Conversions between float and half-float.
-      CVTPS2PH, CVTPH2PS,
+      CVTPS2PH, CVTPH2PS, CVTPH2PS_RND,
 
       // LWP insert record.
       LWPINS,

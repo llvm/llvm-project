@@ -204,6 +204,7 @@ private:
   void SelectADD_SUB_I64(SDNode *N);
   void SelectUADDO_USUBO(SDNode *N);
   void SelectDIV_SCALE(SDNode *N);
+  void SelectMAD_64_32(SDNode *N);
   void SelectFMA_W_CHAIN(SDNode *N);
   void SelectFMUL_W_CHAIN(SDNode *N);
 
@@ -594,6 +595,11 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
     SelectDIV_SCALE(N);
     return;
   }
+  case AMDGPUISD::MAD_I64_I32:
+  case AMDGPUISD::MAD_U64_U32: {
+    SelectMAD_64_32(N);
+    return;
+  }
   case ISD::CopyToReg: {
     const SITargetLowering& Lowering =
       *static_cast<const SITargetLowering*>(getTargetLowering());
@@ -811,6 +817,19 @@ void AMDGPUDAGToDAGISel::SelectDIV_SCALE(SDNode *N) {
     = (VT == MVT::f64) ? AMDGPU::V_DIV_SCALE_F64 : AMDGPU::V_DIV_SCALE_F32;
 
   SDValue Ops[] = { N->getOperand(0), N->getOperand(1), N->getOperand(2) };
+  CurDAG->SelectNodeTo(N, Opc, N->getVTList(), Ops);
+}
+
+// We need to handle this here because tablegen doesn't support matching
+// instructions with multiple outputs.
+void AMDGPUDAGToDAGISel::SelectMAD_64_32(SDNode *N) {
+  SDLoc SL(N);
+  bool Signed = N->getOpcode() == AMDGPUISD::MAD_I64_I32;
+  unsigned Opc = Signed ? AMDGPU::V_MAD_I64_I32 : AMDGPU::V_MAD_U64_U32;
+
+  SDValue Clamp = CurDAG->getTargetConstant(0, SL, MVT::i1);
+  SDValue Ops[] = { N->getOperand(0), N->getOperand(1), N->getOperand(2),
+                    Clamp };
   CurDAG->SelectNodeTo(N, Opc, N->getVTList(), Ops);
 }
 

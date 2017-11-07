@@ -736,6 +736,7 @@ def : InstRW<[GenericDSPShort], (instregex "^MFHI_DSP_MM$")>;
 def : InstRW<[GenericDSPShort], (instregex "^MFLO_DSP_MM$")>;
 def : InstRW<[GenericDSPShort], (instregex "^MODSUB_MM$")>;
 def : InstRW<[GenericDSPShort], (instregex "^MOVEP_MM$")>;
+def : InstRW<[GenericDSPShort], (instregex "^MOVEP_MMR6$")>;
 def : InstRW<[GenericDSPShort], (instregex "^MOVN_I_MM$")>;
 def : InstRW<[GenericDSPShort], (instregex "^MOVZ_I_MM$")>;
 def : InstRW<[GenericDSPShort], (instregex "^MSUBU_DSP_MM$")>;

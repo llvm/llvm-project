@@ -1111,7 +1111,7 @@ Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
   // Example: x = 1000, y = 0.001.
   // pow(exp(x), y) = pow(inf, 0.001) = inf, whereas exp(x*y) = exp(1).
   auto *OpC = dyn_cast<CallInst>(Op1);
-  if (OpC && OpC->hasUnsafeAlgebra() && CI->hasUnsafeAlgebra()) {
+  if (OpC && OpC->isFast() && CI->isFast()) {
     LibFunc Func;
     Function *OpCCallee = OpC->getCalledFunction();
     if (OpCCallee && TLI->getLibFunc(OpCCallee->getName(), Func) &&
@@ -1136,7 +1136,7 @@ Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
                       LibFunc_sqrtl)) {
     // If -ffast-math:
     // pow(x, -0.5) -> 1.0 / sqrt(x)
-    if (CI->hasUnsafeAlgebra()) {
+    if (CI->isFast()) {
       IRBuilder<>::FastMathFlagGuard Guard(B);
       B.setFastMathFlags(CI->getFastMathFlags());
 
@@ -1157,7 +1157,7 @@ Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
                       LibFunc_sqrtl)) {
 
     // In -ffast-math, pow(x, 0.5) -> sqrt(x).
-    if (CI->hasUnsafeAlgebra()) {
+    if (CI->isFast()) {
       IRBuilder<>::FastMathFlagGuard Guard(B);
       B.setFastMathFlags(CI->getFastMathFlags());
 
@@ -1196,7 +1196,7 @@ Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
     return B.CreateFDiv(ConstantFP::get(CI->getType(), 1.0), Op1, "powrecip");
 
   // In -ffast-math, generate repeated fmul instead of generating pow(x, n).
-  if (CI->hasUnsafeAlgebra()) {
+  if (CI->isFast()) {
     APFloat V = abs(Op2C->getValueAPF());
     // We limit to a max of 7 fmul(s). Thus max exponent is 32.
     // This transformation applies to integer exponents only.
@@ -1284,9 +1284,9 @@ Value *LibCallSimplifier::optimizeFMinFMax(CallInst *CI, IRBuilder<> &B) {
 
   IRBuilder<>::FastMathFlagGuard Guard(B);
   FastMathFlags FMF;
-  if (CI->hasUnsafeAlgebra()) {
-    // Unsafe algebra sets all fast-math-flags to true.
-    FMF.setUnsafeAlgebra();
+  if (CI->isFast()) {
+    // If the call is 'fast', then anything we create here will also be 'fast'.
+    FMF.setFast();
   } else {
     // At a minimum, no-nans-fp-math must be true.
     if (!CI->hasNoNaNs())
@@ -1317,13 +1317,13 @@ Value *LibCallSimplifier::optimizeLog(CallInst *CI, IRBuilder<> &B) {
   if (UnsafeFPShrink && hasFloatVersion(Name))
     Ret = optimizeUnaryDoubleFP(CI, B, true);
 
-  if (!CI->hasUnsafeAlgebra())
+  if (!CI->isFast())
     return Ret;
   Value *Op1 = CI->getArgOperand(0);
   auto *OpC = dyn_cast<CallInst>(Op1);
 
-  // The earlier call must also be unsafe in order to do these transforms.
-  if (!OpC || !OpC->hasUnsafeAlgebra())
+  // The earlier call must also be 'fast' in order to do these transforms.
+  if (!OpC || !OpC->isFast())
     return Ret;
 
   // log(pow(x,y)) -> y*log(x)
@@ -1333,7 +1333,7 @@ Value *LibCallSimplifier::optimizeLog(CallInst *CI, IRBuilder<> &B) {
 
   IRBuilder<>::FastMathFlagGuard Guard(B);
   FastMathFlags FMF;
-  FMF.setUnsafeAlgebra();
+  FMF.setFast();
   B.setFastMathFlags(FMF);
 
   LibFunc Func;
@@ -1365,11 +1365,11 @@ Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilder<> &B) {
                                   Callee->getIntrinsicID() == Intrinsic::sqrt))
     Ret = optimizeUnaryDoubleFP(CI, B, true);
 
-  if (!CI->hasUnsafeAlgebra())
+  if (!CI->isFast())
     return Ret;
 
   Instruction *I = dyn_cast<Instruction>(CI->getArgOperand(0));
-  if (!I || I->getOpcode() != Instruction::FMul || !I->hasUnsafeAlgebra())
+  if (!I || I->getOpcode() != Instruction::FMul || !I->isFast())
     return Ret;
 
   // We're looking for a repeated factor in a multiplication tree,
@@ -1391,8 +1391,7 @@ Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilder<> &B) {
     Value *OtherMul0, *OtherMul1;
     if (match(Op0, m_FMul(m_Value(OtherMul0), m_Value(OtherMul1)))) {
       // Pattern: sqrt((x * y) * z)
-      if (OtherMul0 == OtherMul1 &&
-          cast<Instruction>(Op0)->hasUnsafeAlgebra()) {
+      if (OtherMul0 == OtherMul1 && cast<Instruction>(Op0)->isFast()) {
         // Matched: sqrt((x * x) * z)
         RepeatOp = OtherMul0;
         OtherOp = Op1;
@@ -1437,8 +1436,8 @@ Value *LibCallSimplifier::optimizeTan(CallInst *CI, IRBuilder<> &B) {
   if (!OpC)
     return Ret;
 
-  // Both calls must allow unsafe optimizations in order to remove them.
-  if (!CI->hasUnsafeAlgebra() || !OpC->hasUnsafeAlgebra())
+  // Both calls must be 'fast' in order to remove them.
+  if (!CI->isFast() || !OpC->isFast())
     return Ret;
 
   // tan(atan(x)) -> x
@@ -2167,10 +2166,10 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
 
   // Command-line parameter overrides instruction attribute.
   // This can't be moved to optimizeFloatingPointLibCall() because it may be
-  // used by the intrinsic optimizations. 
+  // used by the intrinsic optimizations.
   if (EnableUnsafeFPShrink.getNumOccurrences() > 0)
     UnsafeFPShrink = EnableUnsafeFPShrink;
-  else if (isa<FPMathOperator>(CI) && CI->hasUnsafeAlgebra())
+  else if (isa<FPMathOperator>(CI) && CI->isFast())
     UnsafeFPShrink = true;
 
   // First, check for intrinsics.

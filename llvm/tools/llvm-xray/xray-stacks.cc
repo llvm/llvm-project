@@ -19,6 +19,7 @@
 #include <numeric>
 
 #include "func-id-helper.h"
+#include "trie-node.h"
 #include "xray-registry.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CommandLine.h"
@@ -255,96 +256,61 @@ private:
 /// maintain an index of unique functions, and provide a means of iterating
 /// through all the instrumented call stacks which we know about.
 
-struct TrieNode {
-  int32_t FuncId;
-  TrieNode *Parent;
-  SmallVector<TrieNode *, 4> Callees;
-  // Separate durations depending on whether the node is the deepest node in the
-  // stack.
-  SmallVector<int64_t, 4> TerminalDurations;
-  SmallVector<int64_t, 4> IntermediateDurations;
+struct StackDuration {
+  llvm::SmallVector<int64_t, 4> TerminalDurations;
+  llvm::SmallVector<int64_t, 4> IntermediateDurations;
 };
 
-/// Merges together two TrieNodes with like function ids, aggregating their
-/// callee lists and durations. The caller must provide storage where new merged
-/// nodes can be allocated in the form of a linked list.
-TrieNode *mergeTrieNodes(const TrieNode &Left, const TrieNode &Right,
-                         TrieNode *NewParent,
-                         std::forward_list<TrieNode> &NodeStore) {
-  assert(Left.FuncId == Right.FuncId);
-  NodeStore.push_front(TrieNode{Left.FuncId, NewParent, {}, {}, {}});
-  auto I = NodeStore.begin();
-  auto *Node = &*I;
-
-  // Build a map of callees from the left side.
-  DenseMap<int32_t, TrieNode *> LeftCalleesByFuncId;
-  for (auto *Callee : Left.Callees) {
-    LeftCalleesByFuncId[Callee->FuncId] = Callee;
-  }
-
-  // Iterate through the right side, either merging with the map values or
-  // directly adding to the Callees vector. The iteration also removes any
-  // merged values from the left side map.
-  for (auto *Callee : Right.Callees) {
-    auto iter = LeftCalleesByFuncId.find(Callee->FuncId);
-    if (iter != LeftCalleesByFuncId.end()) {
-      Node->Callees.push_back(
-          mergeTrieNodes(*(iter->second), *Callee, Node, NodeStore));
-      LeftCalleesByFuncId.erase(iter);
-    } else {
-      Node->Callees.push_back(Callee);
-    }
-  }
-
-  // Add any callees that weren't found in the right side.
-  for (auto MapPairIter : LeftCalleesByFuncId) {
-    Node->Callees.push_back(MapPairIter.second);
-  }
-
+StackDuration mergeStackDuration(const StackDuration &Left,
+                                 const StackDuration &Right) {
+  StackDuration Data{};
+  Data.TerminalDurations.reserve(Left.TerminalDurations.size() +
+                                 Right.TerminalDurations.size());
+  Data.IntermediateDurations.reserve(Left.IntermediateDurations.size() +
+                                     Right.IntermediateDurations.size());
   // Aggregate the durations.
-  for (auto duration : Left.TerminalDurations) {
-    Node->TerminalDurations.push_back(duration);
-  }
-  for (auto duration : Right.TerminalDurations) {
-    Node->TerminalDurations.push_back(duration);
-  }
-  for (auto duration : Left.IntermediateDurations) {
-    Node->IntermediateDurations.push_back(duration);
-  }
-  for (auto duration : Right.IntermediateDurations) {
-    Node->IntermediateDurations.push_back(duration);
-  }
+  for (auto duration : Left.TerminalDurations)
+    Data.TerminalDurations.push_back(duration);
+  for (auto duration : Right.TerminalDurations)
+    Data.TerminalDurations.push_back(duration);
 
-  return Node;
+  for (auto duration : Left.IntermediateDurations)
+    Data.IntermediateDurations.push_back(duration);
+  for (auto duration : Right.IntermediateDurations)
+    Data.IntermediateDurations.push_back(duration);
+  return Data;
 }
 
+using StackTrieNode = TrieNode<StackDuration>;
+
 template <AggregationType AggType>
-std::size_t GetValueForStack(const TrieNode *Node);
+std::size_t GetValueForStack(const StackTrieNode *Node);
 
 // When computing total time spent in a stack, we're adding the timings from
 // its callees and the timings from when it was a leaf.
 template <>
 std::size_t
-GetValueForStack<AggregationType::TOTAL_TIME>(const TrieNode *Node) {
-  auto TopSum = std::accumulate(Node->TerminalDurations.begin(),
-                                Node->TerminalDurations.end(), 0uLL);
-  return std::accumulate(Node->IntermediateDurations.begin(),
-                         Node->IntermediateDurations.end(), TopSum);
+GetValueForStack<AggregationType::TOTAL_TIME>(const StackTrieNode *Node) {
+  auto TopSum = std::accumulate(Node->ExtraData.TerminalDurations.begin(),
+                                Node->ExtraData.TerminalDurations.end(), 0uLL);
+  return std::accumulate(Node->ExtraData.IntermediateDurations.begin(),
+                         Node->ExtraData.IntermediateDurations.end(), TopSum);
 }
 
 // Calculates how many times a function was invoked.
 // TODO: Hook up option to produce stacks
 template <>
 std::size_t
-GetValueForStack<AggregationType::INVOCATION_COUNT>(const TrieNode *Node) {
-  return Node->TerminalDurations.size() + Node->IntermediateDurations.size();
+GetValueForStack<AggregationType::INVOCATION_COUNT>(const StackTrieNode *Node) {
+  return Node->ExtraData.TerminalDurations.size() +
+         Node->ExtraData.IntermediateDurations.size();
 }
 
 // Make sure there are implementations for each enum value.
 template <AggregationType T> struct DependentFalseType : std::false_type {};
 
 template <AggregationType AggType>
-std::size_t GetValueForStack(const TrieNode *Node) {
+std::size_t GetValueForStack(const StackTrieNode *Node) {
   static_assert(DependentFalseType<AggType>::value,
                 "No implementation found for aggregation type provided.");
   return 0;
@@ -353,21 +319,21 @@ std::size_t GetValueForStack(const TrieNode *Node) {
 class StackTrie {
   // Avoid the magic number of 4 propagated through the code with an alias.
   // We use this SmallVector to track the root nodes in a call graph.
-  using RootVector = SmallVector<TrieNode *, 4>;
+  using RootVector = SmallVector<StackTrieNode *, 4>;
 
   // We maintain pointers to the roots of the tries we see.
   DenseMap<uint32_t, RootVector> Roots;
 
   // We make sure all the nodes are accounted for in this list.
-  std::forward_list<TrieNode> NodeStore;
+  std::forward_list<StackTrieNode> NodeStore;
 
   // A map of thread ids to pairs call stack trie nodes and their start times.
-  DenseMap<uint32_t, SmallVector<std::pair<TrieNode *, uint64_t>, 8>>
+  DenseMap<uint32_t, SmallVector<std::pair<StackTrieNode *, uint64_t>, 8>>
       ThreadStackMap;
 
-  TrieNode *createTrieNode(uint32_t ThreadId, int32_t FuncId,
-                           TrieNode *Parent) {
-    NodeStore.push_front(TrieNode{FuncId, Parent, {}, {}, {}});
+  StackTrieNode *createTrieNode(uint32_t ThreadId, int32_t FuncId,
+                                StackTrieNode *Parent) {
+    NodeStore.push_front(StackTrieNode{FuncId, Parent, {}, {{}, {}}});
     auto I = NodeStore.begin();
     auto *Node = &*I;
     if (!Parent)
@@ -375,10 +341,10 @@ class StackTrie {
     return Node;
   }
 
-  TrieNode *findRootNode(uint32_t ThreadId, int32_t FuncId) {
+  StackTrieNode *findRootNode(uint32_t ThreadId, int32_t FuncId) {
     const auto &RootsByThread = Roots[ThreadId];
     auto I = find_if(RootsByThread,
-                     [&](TrieNode *N) { return N->FuncId == FuncId; });
+                     [&](StackTrieNode *N) { return N->FuncId == FuncId; });
     return (I == RootsByThread.end()) ? nullptr : *I;
   }
 
@@ -416,7 +382,7 @@ public:
 
       auto &Top = TS.back();
       auto I = find_if(Top.first->Callees,
-                       [&](TrieNode *N) { return N->FuncId == R.FuncId; });
+                       [&](StackTrieNode *N) { return N->FuncId == R.FuncId; });
       if (I == Top.first->Callees.end()) {
         // We didn't find the callee in the stack trie, so we're going to
         // add to the stack then set up the pointers properly.
@@ -447,8 +413,8 @@ public:
         return AccountRecordStatus::ENTRY_NOT_FOUND;
       }
 
-      auto FunctionEntryMatch =
-          find_if(reverse(TS), [&](const std::pair<TrieNode *, uint64_t> &E) {
+      auto FunctionEntryMatch = find_if(
+          reverse(TS), [&](const std::pair<StackTrieNode *, uint64_t> &E) {
             return E.first->FuncId == R.FuncId;
           });
       auto status = AccountRecordStatus::OK;
@@ -461,14 +427,14 @@ public:
       }
       auto I = FunctionEntryMatch.base();
       for (auto &E : make_range(I, TS.end() - 1))
-        E.first->IntermediateDurations.push_back(std::max(E.second, R.TSC) -
-                                                 std::min(E.second, R.TSC));
+        E.first->ExtraData.IntermediateDurations.push_back(
+            std::max(E.second, R.TSC) - std::min(E.second, R.TSC));
       auto &Deepest = TS.back();
       if (wasLastRecordExit)
-        Deepest.first->IntermediateDurations.push_back(
+        Deepest.first->ExtraData.IntermediateDurations.push_back(
             std::max(Deepest.second, R.TSC) - std::min(Deepest.second, R.TSC));
       else
-        Deepest.first->TerminalDurations.push_back(
+        Deepest.first->ExtraData.TerminalDurations.push_back(
             std::max(Deepest.second, R.TSC) - std::min(Deepest.second, R.TSC));
       TS.erase(I, TS.end());
       return status;
@@ -479,11 +445,11 @@ public:
 
   bool isEmpty() const { return Roots.empty(); }
 
-  void printStack(raw_ostream &OS, const TrieNode *Top,
+  void printStack(raw_ostream &OS, const StackTrieNode *Top,
                   FuncIdConversionHelper &FN) {
     // Traverse the pointers up to the parent, noting the sums, then print
     // in reverse order (callers at top, callees down bottom).
-    SmallVector<const TrieNode *, 8> CurrentStack;
+    SmallVector<const StackTrieNode *, 8> CurrentStack;
     for (auto *F = Top; F != nullptr; F = F->Parent)
       CurrentStack.push_back(F);
     int Level = 0;
@@ -491,21 +457,22 @@ public:
                   "count", "sum");
     for (auto *F :
          reverse(make_range(CurrentStack.begin() + 1, CurrentStack.end()))) {
-      auto Sum = std::accumulate(F->IntermediateDurations.begin(),
-                                 F->IntermediateDurations.end(), 0LL);
+      auto Sum = std::accumulate(F->ExtraData.IntermediateDurations.begin(),
+                                 F->ExtraData.IntermediateDurations.end(), 0LL);
       auto FuncId = FN.SymbolOrNumber(F->FuncId);
       OS << formatv("#{0,-4} {1,-60} {2,+12} {3,+16}\n", Level++,
                     FuncId.size() > 60 ? FuncId.substr(0, 57) + "..." : FuncId,
-                    F->IntermediateDurations.size(), Sum);
+                    F->ExtraData.IntermediateDurations.size(), Sum);
     }
     auto *Leaf = *CurrentStack.begin();
-    auto LeafSum = std::accumulate(Leaf->TerminalDurations.begin(),
-                                   Leaf->TerminalDurations.end(), 0LL);
+    auto LeafSum =
+        std::accumulate(Leaf->ExtraData.TerminalDurations.begin(),
+                        Leaf->ExtraData.TerminalDurations.end(), 0LL);
     auto LeafFuncId = FN.SymbolOrNumber(Leaf->FuncId);
     OS << formatv("#{0,-4} {1,-60} {2,+12} {3,+16}\n", Level++,
                   LeafFuncId.size() > 60 ? LeafFuncId.substr(0, 57) + "..."
                                          : LeafFuncId,
-                  Leaf->TerminalDurations.size(), LeafSum);
+                  Leaf->ExtraData.TerminalDurations.size(), LeafSum);
     OS << "\n";
   }
 
@@ -552,20 +519,20 @@ public:
 
   /// Creates a merged list of Tries for unique stacks that disregards their
   /// thread IDs.
-  RootVector mergeAcrossThreads(std::forward_list<TrieNode> &NodeStore) {
+  RootVector mergeAcrossThreads(std::forward_list<StackTrieNode> &NodeStore) {
     RootVector MergedByThreadRoots;
     for (auto MapIter : Roots) {
       const auto &RootNodeVector = MapIter.second;
       for (auto *Node : RootNodeVector) {
         auto MaybeFoundIter =
-            find_if(MergedByThreadRoots, [Node](TrieNode *elem) {
+            find_if(MergedByThreadRoots, [Node](StackTrieNode *elem) {
               return Node->FuncId == elem->FuncId;
             });
         if (MaybeFoundIter == MergedByThreadRoots.end()) {
           MergedByThreadRoots.push_back(Node);
         } else {
-          MergedByThreadRoots.push_back(
-              mergeTrieNodes(**MaybeFoundIter, *Node, nullptr, NodeStore));
+          MergedByThreadRoots.push_back(mergeTrieNodes(
+              **MaybeFoundIter, *Node, nullptr, NodeStore, mergeStackDuration));
           MergedByThreadRoots.erase(MaybeFoundIter);
         }
       }
@@ -577,7 +544,7 @@ public:
   template <AggregationType AggType>
   void printAllAggregatingThreads(raw_ostream &OS, FuncIdConversionHelper &FN,
                                   StackOutputFormat format) {
-    std::forward_list<TrieNode> AggregatedNodeStore;
+    std::forward_list<StackTrieNode> AggregatedNodeStore;
     RootVector MergedByThreadRoots = mergeAcrossThreads(AggregatedNodeStore);
     bool reportThreadId = false;
     printAll<AggType>(OS, FN, MergedByThreadRoots,
@@ -586,7 +553,7 @@ public:
 
   /// Merges the trie by thread id before printing top stacks.
   void printAggregatingThreads(raw_ostream &OS, FuncIdConversionHelper &FN) {
-    std::forward_list<TrieNode> AggregatedNodeStore;
+    std::forward_list<StackTrieNode> AggregatedNodeStore;
     RootVector MergedByThreadRoots = mergeAcrossThreads(AggregatedNodeStore);
     print(OS, FN, MergedByThreadRoots);
   }
@@ -595,7 +562,7 @@ public:
   template <AggregationType AggType>
   void printAll(raw_ostream &OS, FuncIdConversionHelper &FN,
                 RootVector RootValues, uint32_t ThreadId, bool ReportThread) {
-    SmallVector<const TrieNode *, 16> S;
+    SmallVector<const StackTrieNode *, 16> S;
     for (const auto *N : RootValues) {
       S.clear();
       S.push_back(N);
@@ -616,10 +583,10 @@ public:
   template <AggregationType AggType>
   void printSingleStack(raw_ostream &OS, FuncIdConversionHelper &Converter,
                         bool ReportThread, uint32_t ThreadId,
-                        const TrieNode *Node) {
+                        const StackTrieNode *Node) {
     if (ReportThread)
       OS << "thread_" << ThreadId << ";";
-    SmallVector<const TrieNode *, 5> lineage{};
+    SmallVector<const StackTrieNode *, 5> lineage{};
     lineage.push_back(Node);
     while (lineage.back()->Parent != nullptr)
       lineage.push_back(lineage.back()->Parent);
@@ -639,15 +606,17 @@ public:
     //   - Total number of unique stacks
     //   - Top 10 stacks by count
     //   - Top 10 stacks by aggregate duration
-    SmallVector<std::pair<const TrieNode *, uint64_t>, 11> TopStacksByCount;
-    SmallVector<std::pair<const TrieNode *, uint64_t>, 11> TopStacksBySum;
-    auto greater_second = [](const std::pair<const TrieNode *, uint64_t> &A,
-                             const std::pair<const TrieNode *, uint64_t> &B) {
-      return A.second > B.second;
-    };
+    SmallVector<std::pair<const StackTrieNode *, uint64_t>, 11>
+        TopStacksByCount;
+    SmallVector<std::pair<const StackTrieNode *, uint64_t>, 11> TopStacksBySum;
+    auto greater_second =
+        [](const std::pair<const StackTrieNode *, uint64_t> &A,
+           const std::pair<const StackTrieNode *, uint64_t> &B) {
+          return A.second > B.second;
+        };
     uint64_t UniqueStacks = 0;
     for (const auto *N : RootValues) {
-      SmallVector<const TrieNode *, 16> S;
+      SmallVector<const StackTrieNode *, 16> S;
       S.emplace_back(N);
 
       while (!S.empty()) {
@@ -655,10 +624,11 @@ public:
 
         // We only start printing the stack (by walking up the parent pointers)
         // when we get to a leaf function.
-        if (!Top->TerminalDurations.empty()) {
+        if (!Top->ExtraData.TerminalDurations.empty()) {
           ++UniqueStacks;
-          auto TopSum = std::accumulate(Top->TerminalDurations.begin(),
-                                        Top->TerminalDurations.end(), 0uLL);
+          auto TopSum =
+              std::accumulate(Top->ExtraData.TerminalDurations.begin(),
+                              Top->ExtraData.TerminalDurations.end(), 0uLL);
           {
             auto E = std::make_pair(Top, TopSum);
             TopStacksBySum.insert(std::lower_bound(TopStacksBySum.begin(),
@@ -669,7 +639,8 @@ public:
               TopStacksBySum.pop_back();
           }
           {
-            auto E = std::make_pair(Top, Top->TerminalDurations.size());
+            auto E =
+                std::make_pair(Top, Top->ExtraData.TerminalDurations.size());
             TopStacksByCount.insert(std::lower_bound(TopStacksByCount.begin(),
                                                      TopStacksByCount.end(), E,
                                                      greater_second),

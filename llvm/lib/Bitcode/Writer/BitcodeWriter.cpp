@@ -1321,8 +1321,8 @@ static uint64_t getOptimizationFlags(const Value *V) {
     if (PEO->isExact())
       Flags |= 1 << bitc::PEO_EXACT;
   } else if (const auto *FPMO = dyn_cast<FPMathOperator>(V)) {
-    if (FPMO->hasUnsafeAlgebra())
-      Flags |= FastMathFlags::UnsafeAlgebra;
+    if (FPMO->hasAllowReassoc())
+      Flags |= FastMathFlags::AllowReassoc;
     if (FPMO->hasNoNaNs())
       Flags |= FastMathFlags::NoNaNs;
     if (FPMO->hasNoInfs())
@@ -1333,6 +1333,8 @@ static uint64_t getOptimizationFlags(const Value *V) {
       Flags |= FastMathFlags::AllowReciprocal;
     if (FPMO->hasAllowContract())
       Flags |= FastMathFlags::AllowContract;
+    if (FPMO->hasApproxFunc())
+      Flags |= FastMathFlags::ApproxFunc;
   }
 
   return Flags;

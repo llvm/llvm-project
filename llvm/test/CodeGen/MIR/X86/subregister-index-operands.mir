@@ -22,9 +22,9 @@ body: |
     liveins: %edi, %eax
     ; CHECK-LABEL: name: t
     ; CHECK: liveins: %edi, %eax
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:gr32 = INSERT_SUBREG %edi, %al, 1
-    ; CHECK: [[EXTRACT_SUBREG:%[0-9]+]]:gr8 = EXTRACT_SUBREG %eax, 2
-    ; CHECK: %ax = REG_SEQUENCE [[EXTRACT_SUBREG]], 1, [[EXTRACT_SUBREG]], 2
+    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:gr32 = INSERT_SUBREG %edi, %al, %subreg.sub_8bit
+    ; CHECK: [[EXTRACT_SUBREG:%[0-9]+]]:gr8 = EXTRACT_SUBREG %eax, %subreg.sub_8bit_hi
+    ; CHECK: %ax = REG_SEQUENCE [[EXTRACT_SUBREG]], %subreg.sub_8bit, [[EXTRACT_SUBREG]], %subreg.sub_8bit_hi
     ; CHECK: RETQ %ax
     %0 = INSERT_SUBREG %edi, %al, %subreg.sub_8bit
     %1 = EXTRACT_SUBREG %eax, %subreg.sub_8bit_hi
