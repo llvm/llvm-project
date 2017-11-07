@@ -7685,15 +7685,17 @@ let Defs = [YMM0, YMM1, YMM2, YMM3, YMM4, YMM5, YMM6, YMM7,
 //===----------------------------------------------------------------------===//
 // Half precision conversion instructions
 //===----------------------------------------------------------------------===//
-multiclass f16c_ph2ps<RegisterClass RC, X86MemOperand x86memop, Intrinsic Int> {
+multiclass f16c_ph2ps<RegisterClass RC, X86MemOperand x86memop> {
   def rr : I<0x13, MRMSrcReg, (outs RC:$dst), (ins VR128:$src),
              "vcvtph2ps\t{$src, $dst|$dst, $src}",
-             [(set RC:$dst, (Int VR128:$src))]>,
+             [(set RC:$dst, (X86cvtph2ps VR128:$src))]>,
              T8PD, VEX, Sched<[WriteCvtF2F]>;
   let hasSideEffects = 0, mayLoad = 1 in
   def rm : I<0x13, MRMSrcMem, (outs RC:$dst), (ins x86memop:$src),
-             "vcvtph2ps\t{$src, $dst|$dst, $src}", []>, T8PD, VEX,
-             Sched<[WriteCvtF2FLd]>;
+             "vcvtph2ps\t{$src, $dst|$dst, $src}",
+             [(set RC:$dst, (X86cvtph2ps (bc_v8i16
+                                          (loadv2i64 addr:$src))))]>,
+             T8PD, VEX, Sched<[WriteCvtF2FLd]>;
 }
 
 multiclass f16c_ps2ph<RegisterClass RC, X86MemOperand x86memop, Intrinsic Int> {
@@ -7710,20 +7712,23 @@ multiclass f16c_ps2ph<RegisterClass RC, X86MemOperand x86memop, Intrinsic Int> {
                TAPD, VEX;
 }
 
-let Predicates = [HasF16C] in {
-  defm VCVTPH2PS  : f16c_ph2ps<VR128, f64mem, int_x86_vcvtph2ps_128>;
-  defm VCVTPH2PSY : f16c_ph2ps<VR256, f128mem, int_x86_vcvtph2ps_256>, VEX_L;
-  defm VCVTPS2PH  : f16c_ps2ph<VR128, f64mem, int_x86_vcvtps2ph_128>;
-  defm VCVTPS2PHY : f16c_ps2ph<VR256, f128mem, int_x86_vcvtps2ph_256>, VEX_L;
+let Predicates = [HasF16C, NoVLX] in {
+  defm VCVTPH2PS  : f16c_ph2ps<VR128, f64mem>;
+  defm VCVTPH2PSY : f16c_ph2ps<VR256, f128mem>, VEX_L;
 
   // Pattern match vcvtph2ps of a scalar i64 load.
-  def : Pat<(int_x86_vcvtph2ps_128 (vzmovl_v2i64 addr:$src)),
+  def : Pat<(v4f32 (X86cvtph2ps (v8i16 (vzmovl_v2i64 addr:$src)))),
             (VCVTPH2PSrm addr:$src)>;
-  def : Pat<(int_x86_vcvtph2ps_128 (vzload_v2i64 addr:$src)),
+  def : Pat<(v4f32 (X86cvtph2ps (v8i16 (vzload_v2i64 addr:$src)))),
             (VCVTPH2PSrm addr:$src)>;
-  def : Pat<(int_x86_vcvtph2ps_128 (bitconvert
-              (v2i64 (scalar_to_vector (loadi64 addr:$src))))),
+  def : Pat<(v4f32 (X86cvtph2ps (v8i16 (bitconvert
+              (v2i64 (scalar_to_vector (loadi64 addr:$src))))))),
             (VCVTPH2PSrm addr:$src)>;
+}
+
+let Predicates = [HasF16C] in {
+  defm VCVTPS2PH  : f16c_ps2ph<VR128, f64mem, int_x86_vcvtps2ph_128>;
+  defm VCVTPS2PHY : f16c_ps2ph<VR256, f128mem, int_x86_vcvtps2ph_256>, VEX_L;
 
   def : Pat<(store (f64 (extractelt (bc_v2f64 (v8i16
                   (int_x86_vcvtps2ph_128 VR128:$src1, i32:$src2))), (iPTR 0))),

@@ -57,6 +57,13 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- New `google-objc-global-variable-declaration
+  <http://clang.llvm.org/extra/clang-tidy/checks/google-global-variable-declaration.html>`_ check
+
+  Add new check for Objective-C code to ensure global 
+  variables follow the naming convention of 'k[A-Z].*' (for constants) 
+  or 'g[A-Z].*' (for variables).
+
 - New module `objc` for Objective-C style checks.
 
 - New `objc-forbidden-subclassing

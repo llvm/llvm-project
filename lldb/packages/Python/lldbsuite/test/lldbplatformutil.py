@@ -100,8 +100,7 @@ def finalize_build_dictionary(dictionary):
         if dictionary is None:
             dictionary = {}
         dictionary["OS"] = "Android"
-        if android_device_api() >= 16:
-            dictionary["PIE"] = 1
+        dictionary["PIE"] = 1
     return dictionary
 
 

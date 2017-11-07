@@ -62,6 +62,10 @@ static cl::list<std::string> ImplicitCheckNot(
              "this pattern occur which are not matched by a positive pattern"),
     cl::value_desc("pattern"));
 
+static cl::list<std::string> GlobalDefines("D", cl::Prefix,
+    cl::desc("Define a variable to be used in capture patterns."),
+    cl::value_desc("VAR=VALUE"));
+
 static cl::opt<bool> AllowEmptyInput(
     "allow-empty", cl::init(false),
     cl::desc("Allow the input file to be empty. This is useful when making\n"
@@ -1294,6 +1298,9 @@ bool CheckInput(SourceMgr &SM, StringRef Buffer,
 
   /// VariableTable - This holds all the current filecheck variables.
   StringMap<StringRef> VariableTable;
+
+  for (const auto& Def : GlobalDefines)
+    VariableTable.insert(StringRef(Def).split('='));
 
   unsigned i = 0, j = 0, e = CheckStrings.size();
   while (true) {

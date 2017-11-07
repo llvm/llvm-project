@@ -85,7 +85,8 @@ void ClangdLSPServer::onDocumentDidOpen(Ctx C,
 void ClangdLSPServer::onDocumentDidChange(Ctx C,
                                           DidChangeTextDocumentParams &Params) {
   if (Params.contentChanges.size() != 1)
-    return C.replyError(-32602, "can only apply one change at a time");
+    return C.replyError(ErrorCode::InvalidParams,
+                        "can only apply one change at a time");
   // We only support full syncing right now.
   Server.addDocument(Params.textDocument.uri.file,
                      Params.contentChanges[0].text);
@@ -119,7 +120,8 @@ void ClangdLSPServer::onCommand(Ctx C, ExecuteCommandParams &Params) {
     // parsed in the first place and this handler should not be called. But if
     // more commands are added, this will be here has a safe guard.
     C.replyError(
-        1, llvm::formatv("Unsupported command \"{0}\".", Params.command).str());
+        ErrorCode::InvalidParams,
+        llvm::formatv("Unsupported command \"{0}\".", Params.command).str());
   }
 }
 
@@ -191,7 +193,8 @@ void ClangdLSPServer::onSignatureHelp(Ctx C,
       Params.textDocument.uri.file,
       Position{Params.position.line, Params.position.character});
   if (!SignatureHelp)
-    return C.replyError(-32602, llvm::toString(SignatureHelp.takeError()));
+    return C.replyError(ErrorCode::InvalidParams,
+                        llvm::toString(SignatureHelp.takeError()));
   C.reply(SignatureHelp->Value);
 }
 
@@ -201,7 +204,8 @@ void ClangdLSPServer::onGoToDefinition(Ctx C,
       Params.textDocument.uri.file,
       Position{Params.position.line, Params.position.character});
   if (!Items)
-    return C.replyError(-32602, llvm::toString(Items.takeError()));
+    return C.replyError(ErrorCode::InvalidParams,
+                        llvm::toString(Items.takeError()));
   C.reply(json::ary(Items->Value));
 }
 
@@ -228,7 +232,7 @@ bool ClangdLSPServer::run(std::istream &In) {
   // Set up JSONRPCDispatcher.
   JSONRPCDispatcher Dispatcher(
       [](RequestContext Ctx, llvm::yaml::MappingNode *Params) {
-        Ctx.replyError(-32601, "method not found");
+        Ctx.replyError(ErrorCode::MethodNotFound, "method not found");
       });
   registerCallbackHandlers(Dispatcher, Out, /*Callbacks=*/*this);
 

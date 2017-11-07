@@ -25176,6 +25176,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::SCALAR_UINT_TO_FP_RND: return "X86ISD::SCALAR_UINT_TO_FP_RND";
   case X86ISD::CVTPS2PH:           return "X86ISD::CVTPS2PH";
   case X86ISD::CVTPH2PS:           return "X86ISD::CVTPH2PS";
+  case X86ISD::CVTPH2PS_RND:       return "X86ISD::CVTPH2PS_RND";
   case X86ISD::CVTP2SI:            return "X86ISD::CVTP2SI";
   case X86ISD::CVTP2UI:            return "X86ISD::CVTP2UI";
   case X86ISD::CVTP2SI_RND:        return "X86ISD::CVTP2SI_RND";

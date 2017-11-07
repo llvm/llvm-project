@@ -68,6 +68,7 @@ representation.
    CMakePrimer
    AdvancedBuilds
    HowToBuildOnARM
+   HowToCrossCompileBuiltinsOnArm
    HowToCrossCompileLLVM
    CommandGuide/index
    GettingStarted
@@ -104,6 +105,9 @@ representation.
 
 :doc:`HowToBuildOnARM`
    Notes on building and testing LLVM/Clang on ARM.
+
+:doc:`HowToCrossCompileBuiltinsOnArm`
+   Notes on cross-building and testing the compiler-rt builtins for Arm.
 
 :doc:`HowToCrossCompileLLVM`
    Notes on cross-building and testing LLVM/Clang.

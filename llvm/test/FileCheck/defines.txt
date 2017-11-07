@@ -1,0 +1,9 @@
+; RUN: FileCheck -DVALUE=10 -input-file %s %s
+; RUN: not FileCheck -DVALUE=20 -input-file %s %s 2>&1 | FileCheck %s -check-prefix ERRMSG
+
+Value = 10
+; CHECK: Value = [[VALUE]]
+
+; ERRMSG: defines.txt:5:10: error: expected string not found in input
+; ERRMSG: defines.txt:1:1: note: with variable "VALUE" equal to "20"
+; ERRMSG: defines.txt:4:1: note: possible intended match here

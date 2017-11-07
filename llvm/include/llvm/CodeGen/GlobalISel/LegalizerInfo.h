@@ -26,6 +26,7 @@
 #include <cassert>
 #include <tuple>
 #include <utility>
+#include <unordered_map>
 
 namespace llvm {
 
@@ -120,26 +121,143 @@ public:
     }
   }
 
+  typedef std::pair<uint16_t, LegalizeAction> SizeAndAction;
+  typedef std::vector<SizeAndAction> SizeAndActionsVec;
+  using SizeChangeStrategy =
+      std::function<SizeAndActionsVec(const SizeAndActionsVec &v)>;
+
   /// More friendly way to set an action for common types that have an LLT
   /// representation.
+  /// The LegalizeAction must be one for which NeedsLegalizingToDifferentSize
+  /// returns false.
   void setAction(const InstrAspect &Aspect, LegalizeAction Action) {
+    assert(!needsLegalizingToDifferentSize(Action));
     TablesInitialized = false;
-    unsigned Opcode = Aspect.Opcode - FirstOp;
-    if (Actions[Opcode].size() <= Aspect.Idx)
-      Actions[Opcode].resize(Aspect.Idx + 1);
-    Actions[Aspect.Opcode - FirstOp][Aspect.Idx][Aspect.Type] = Action;
+    const unsigned OpcodeIdx = Aspect.Opcode - FirstOp;
+    if (SpecifiedActions[OpcodeIdx].size() <= Aspect.Idx)
+      SpecifiedActions[OpcodeIdx].resize(Aspect.Idx + 1);
+    SpecifiedActions[OpcodeIdx][Aspect.Idx][Aspect.Type] = Action;
   }
 
-  /// If an operation on a given vector type (say <M x iN>) isn't explicitly
-  /// specified, we proceed in 2 stages. First we legalize the underlying scalar
-  /// (so that there's at least one legal vector with that scalar), then we
-  /// adjust the number of elements in the vector so that it is legal. The
-  /// desired action in the first step is controlled by this function.
-  void setScalarInVectorAction(unsigned Opcode, LLT ScalarTy,
-                               LegalizeAction Action) {
-    assert(!ScalarTy.isVector());
-    ScalarInVectorActions[std::make_pair(Opcode, ScalarTy)] = Action;
+  /// The setAction calls record the non-size-changing legalization actions
+  /// to take on specificly-sized types. The SizeChangeStrategy defines what
+  /// to do when the size of the type needs to be changed to reach a legally
+  /// sized type (i.e., one that was defined through a setAction call).
+  /// e.g.
+  /// setAction ({G_ADD, 0, LLT::scalar(32)}, Legal);
+  /// setLegalizeScalarToDifferentSizeStrategy(
+  ///   G_ADD, 0, widenToLargerTypesAndNarrowToLargest);
+  /// will end up defining getAction({G_ADD, 0, T}) to return the following 
+  /// actions for different scalar types T:
+  ///  LLT::scalar(1)..LLT::scalar(31): {WidenScalar, 0, LLT::scalar(32)}
+  ///  LLT::scalar(32):                 {Legal, 0, LLT::scalar(32)}
+  ///  LLT::scalar(33)..:               {NarrowScalar, 0, LLT::scalar(32)}
+  ///
+  /// If no SizeChangeAction gets defined, through this function,
+  /// the default is unsupportedForDifferentSizes.
+  void setLegalizeScalarToDifferentSizeStrategy(const unsigned Opcode,
+                                                const unsigned TypeIdx,
+                                                SizeChangeStrategy S) {
+    const unsigned OpcodeIdx = Opcode - FirstOp;
+    if (ScalarSizeChangeStrategies[OpcodeIdx].size() <= TypeIdx)
+      ScalarSizeChangeStrategies[OpcodeIdx].resize(TypeIdx + 1);
+    ScalarSizeChangeStrategies[OpcodeIdx][TypeIdx] = S;
   }
+
+  /// See also setLegalizeScalarToDifferentSizeStrategy.
+  /// This function allows to set the SizeChangeStrategy for vector elements.
+  void setLegalizeVectorElementToDifferentSizeStrategy(const unsigned Opcode,
+                                                       const unsigned TypeIdx,
+                                                       SizeChangeStrategy S) {
+    const unsigned OpcodeIdx = Opcode - FirstOp;
+    if (VectorElementSizeChangeStrategies[OpcodeIdx].size() <= TypeIdx)
+      VectorElementSizeChangeStrategies[OpcodeIdx].resize(TypeIdx + 1);
+    VectorElementSizeChangeStrategies[OpcodeIdx][TypeIdx] = S;
+  }
+
+  /// A SizeChangeStrategy for the common case where legalization for a 
+  /// particular operation consists of only supporting a specific set of type
+  /// sizes. E.g.
+  ///   setAction ({G_DIV, 0, LLT::scalar(32)}, Legal);
+  ///   setAction ({G_DIV, 0, LLT::scalar(64)}, Legal);
+  ///   setLegalizeScalarToDifferentSizeStrategy(
+  ///     G_DIV, 0, unsupportedForDifferentSizes);
+  /// will result in getAction({G_DIV, 0, T}) to return Legal for s32 and s64,
+  /// and Unsupported for all other scalar types T.
+  static SizeAndActionsVec
+  unsupportedForDifferentSizes(const SizeAndActionsVec &v) {
+    return increaseToLargerTypesAndDecreaseToLargest(v, Unsupported,
+                                                        Unsupported);
+  }
+
+  /// A SizeChangeStrategy for the common case where legalization for a
+  /// particular operation consists of widening the type to a large legal type,
+  /// unless there is no such type and then instead it should be narrowed to the
+  /// largest legal type.
+  static SizeAndActionsVec
+  widenToLargerTypesAndNarrowToLargest(const SizeAndActionsVec &v) {
+    assert(v.size() > 0 &&
+           "At least one size that can be legalized towards is needed"
+           " for this SizeChangeStrategy");
+    return increaseToLargerTypesAndDecreaseToLargest(v, WidenScalar,
+                                                        NarrowScalar);
+  }
+
+  static SizeAndActionsVec
+  widenToLargerTypesUnsupportedOtherwise(const SizeAndActionsVec &v) {
+    return increaseToLargerTypesAndDecreaseToLargest(v, WidenScalar,
+                                                        Unsupported);
+  }
+
+  static SizeAndActionsVec
+  narrowToSmallerAndUnsupportedIfTooSmall(const SizeAndActionsVec &v) {
+    return decreaseToSmallerTypesAndIncreaseToSmallest(v, NarrowScalar,
+                                                          Unsupported);
+  }
+
+  static SizeAndActionsVec
+  narrowToSmallerAndWidenToSmallest(const SizeAndActionsVec &v) {
+    assert(v.size() > 0 &&
+           "At least one size that can be legalized towards is needed"
+           " for this SizeChangeStrategy");
+    return decreaseToSmallerTypesAndIncreaseToSmallest(v, NarrowScalar,
+                                                          WidenScalar);
+  }
+
+  /// A SizeChangeStrategy for the common case where legalization for a
+  /// particular vector operation consists of having more elements in the
+  /// vector, to a type that is legal. Unless there is no such type and then
+  /// instead it should be legalized towards the widest vector that's still
+  /// legal. E.g.
+  ///   setAction({G_ADD, LLT::vector(8, 8)}, Legal);
+  ///   setAction({G_ADD, LLT::vector(16, 8)}, Legal);
+  ///   setAction({G_ADD, LLT::vector(2, 32)}, Legal);
+  ///   setAction({G_ADD, LLT::vector(4, 32)}, Legal);
+  ///   setLegalizeVectorElementToDifferentSizeStrategy(
+  ///     G_ADD, 0, moreToWiderTypesAndLessToWidest);
+  /// will result in the following getAction results:
+  ///   * getAction({G_ADD, LLT::vector(8,8)}) returns
+  ///       (Legal, vector(8,8)).
+  ///   * getAction({G_ADD, LLT::vector(9,8)}) returns
+  ///       (MoreElements, vector(16,8)).
+  ///   * getAction({G_ADD, LLT::vector(8,32)}) returns
+  ///       (FewerElements, vector(4,32)).
+  static SizeAndActionsVec
+  moreToWiderTypesAndLessToWidest(const SizeAndActionsVec &v) {
+    return increaseToLargerTypesAndDecreaseToLargest(v, MoreElements,
+                                                        FewerElements);
+  }
+
+  /// Helper function to implement many typical SizeChangeStrategy functions.
+  static SizeAndActionsVec
+  increaseToLargerTypesAndDecreaseToLargest(const SizeAndActionsVec &v,
+                                            LegalizeAction IncreaseAction,
+                                            LegalizeAction DecreaseAction);
+  /// Helper function to implement many typical SizeChangeStrategy functions.
+  static SizeAndActionsVec
+  decreaseToSmallerTypesAndIncreaseToSmallest(const SizeAndActionsVec &v,
+                                              LegalizeAction DecreaseAction,
+                                              LegalizeAction IncreaseAction);
 
   /// Determine what action should be taken to legalize the given generic
   /// instruction opcode, type-index and type. Requires computeTables to have
@@ -158,58 +276,6 @@ public:
   std::tuple<LegalizeAction, unsigned, LLT>
   getAction(const MachineInstr &MI, const MachineRegisterInfo &MRI) const;
 
-  /// Iterate the given function (typically something like doubling the width)
-  /// on Ty until we find a legal type for this operation.
-  Optional<LLT> findLegalizableSize(const InstrAspect &Aspect,
-                                    function_ref<LLT(LLT)> NextType) const {
-    if (Aspect.Idx >= Actions[Aspect.Opcode - FirstOp].size())
-      return None;
-
-    LegalizeAction Action;
-    const TypeMap &Map = Actions[Aspect.Opcode - FirstOp][Aspect.Idx];
-    LLT Ty = Aspect.Type;
-    do {
-      Ty = NextType(Ty);
-      auto ActionIt = Map.find(Ty);
-      if (ActionIt == Map.end()) {
-        auto DefaultIt = DefaultActions.find(Aspect.Opcode);
-        if (DefaultIt == DefaultActions.end())
-          return None;
-        Action = DefaultIt->second;
-      } else
-        Action = ActionIt->second;
-    } while (needsLegalizingToDifferentSize(Action));
-    return Ty;
-  }
-
-  /// Find what type it's actually OK to perform the given operation on, given
-  /// the general approach we've decided to take.
-  Optional<LLT> findLegalType(const InstrAspect &Aspect, LegalizeAction Action) const;
-
-  std::pair<LegalizeAction, LLT> findLegalAction(const InstrAspect &Aspect,
-                                                 LegalizeAction Action) const {
-    auto LegalType = findLegalType(Aspect, Action);
-    if (!LegalType)
-      return std::make_pair(LegalizeAction::Unsupported, LLT());
-    return std::make_pair(Action, *LegalType);
-  }
-
-  /// Find the specified \p Aspect in the primary (explicitly set) Actions
-  /// table. Returns either the action the target requested or NotFound if there
-  /// was no setAction call.
-  LegalizeAction findInActions(const InstrAspect &Aspect) const {
-    if (Aspect.Opcode < FirstOp || Aspect.Opcode > LastOp)
-      return NotFound;
-    if (Aspect.Idx >= Actions[Aspect.Opcode - FirstOp].size())
-      return NotFound;
-    const TypeMap &Map = Actions[Aspect.Opcode - FirstOp][Aspect.Idx];
-    auto ActionIt =  Map.find(Aspect.Type);
-    if (ActionIt == Map.end())
-      return NotFound;
-
-    return ActionIt->second;
-  }
-
   bool isLegal(const MachineInstr &MI, const MachineRegisterInfo &MRI) const;
 
   virtual bool legalizeCustom(MachineInstr &MI,
@@ -217,20 +283,181 @@ public:
                               MachineIRBuilder &MIRBuilder) const;
 
 private:
+  /// The SizeAndActionsVec is a representation mapping between all natural
+  /// numbers and an Action. The natural number represents the bit size of
+  /// the InstrAspect. For example, for a target with native support for 32-bit
+  /// and 64-bit additions, you'd express that as:
+  /// setScalarAction(G_ADD, 0,
+  ///           {{1, WidenScalar},  // bit sizes [ 1, 31[
+  ///            {32, Legal},       // bit sizes [32, 33[
+  ///            {33, WidenScalar}, // bit sizes [33, 64[
+  ///            {64, Legal},       // bit sizes [64, 65[
+  ///            {65, NarrowScalar} // bit sizes [65, +inf[
+  ///           });
+  /// It may be that only 64-bit pointers are supported on your target:
+  /// setPointerAction(G_GEP, 0, LLT:pointer(1),
+  ///           {{1, Unsupported},  // bit sizes [ 1, 63[
+  ///            {64, Legal},       // bit sizes [64, 65[
+  ///            {65, Unsupported}, // bit sizes [65, +inf[
+  ///           });
+  void setScalarAction(const unsigned Opcode, const unsigned TypeIndex,
+                       const SizeAndActionsVec &SizeAndActions) {
+    const unsigned OpcodeIdx = Opcode - FirstOp;
+    SmallVector<SizeAndActionsVec, 1> &Actions = ScalarActions[OpcodeIdx];
+    setActions(TypeIndex, Actions, SizeAndActions);
+  }
+  void setPointerAction(const unsigned Opcode, const unsigned TypeIndex,
+                        const unsigned AddressSpace,
+                        const SizeAndActionsVec &SizeAndActions) {
+    const unsigned OpcodeIdx = Opcode - FirstOp;
+    if (AddrSpace2PointerActions[OpcodeIdx].find(AddressSpace) ==
+        AddrSpace2PointerActions[OpcodeIdx].end())
+      AddrSpace2PointerActions[OpcodeIdx][AddressSpace] = {{}};
+    SmallVector<SizeAndActionsVec, 1> &Actions =
+        AddrSpace2PointerActions[OpcodeIdx].find(AddressSpace)->second;
+    setActions(TypeIndex, Actions, SizeAndActions);
+  }
+
+  /// If an operation on a given vector type (say <M x iN>) isn't explicitly
+  /// specified, we proceed in 2 stages. First we legalize the underlying scalar
+  /// (so that there's at least one legal vector with that scalar), then we
+  /// adjust the number of elements in the vector so that it is legal. The
+  /// desired action in the first step is controlled by this function.
+  void setScalarInVectorAction(const unsigned Opcode, const unsigned TypeIndex,
+                               const SizeAndActionsVec &SizeAndActions) {
+    unsigned OpcodeIdx = Opcode - FirstOp;
+    SmallVector<SizeAndActionsVec, 1> &Actions =
+        ScalarInVectorActions[OpcodeIdx];
+    setActions(TypeIndex, Actions, SizeAndActions);
+  }
+
+  /// See also setScalarInVectorAction.
+  /// This function let's you specify the number of elements in a vector that
+  /// are legal for a legal element size.
+  void setVectorNumElementAction(const unsigned Opcode,
+                                 const unsigned TypeIndex,
+                                 const unsigned ElementSize,
+                                 const SizeAndActionsVec &SizeAndActions) {
+    const unsigned OpcodeIdx = Opcode - FirstOp;
+    if (NumElements2Actions[OpcodeIdx].find(ElementSize) ==
+        NumElements2Actions[OpcodeIdx].end())
+      NumElements2Actions[OpcodeIdx][ElementSize] = {{}};
+    SmallVector<SizeAndActionsVec, 1> &Actions =
+        NumElements2Actions[OpcodeIdx].find(ElementSize)->second;
+    setActions(TypeIndex, Actions, SizeAndActions);
+  }
+
+  /// A partial SizeAndActionsVec potentially doesn't cover all bit sizes,
+  /// i.e. it's OK if it doesn't start from size 1.
+  static void checkPartialSizeAndActionsVector(const SizeAndActionsVec& v) {
+#ifndef NDEBUG
+    // The sizes should be in increasing order
+    int prev_size = -1;
+    for(auto SizeAndAction: v) {
+      assert(SizeAndAction.first > prev_size);
+      prev_size = SizeAndAction.first;
+    }
+    // - for every Widen action, there should be a larger bitsize that
+    //   can be legalized towards (e.g. Legal, Lower, Libcall or Custom
+    //   action).
+    // - for every Narrow action, there should be a smaller bitsize that
+    //   can be legalized towards.
+    int SmallestNarrowIdx = -1;
+    int LargestWidenIdx = -1;
+    int SmallestLegalizableToSameSizeIdx = -1;
+    int LargestLegalizableToSameSizeIdx = -1;
+    for(size_t i=0; i<v.size(); ++i) {
+      switch (v[i].second) {
+        case FewerElements:
+        case NarrowScalar:
+          if (SmallestNarrowIdx == -1)
+            SmallestNarrowIdx = i;
+          break;
+        case WidenScalar:
+        case MoreElements:
+          LargestWidenIdx = i;
+          break;
+        case Unsupported:
+          break;
+        default:
+          if (SmallestLegalizableToSameSizeIdx == -1)
+            SmallestLegalizableToSameSizeIdx = i;
+          LargestLegalizableToSameSizeIdx = i;
+      }
+    }
+    if (SmallestNarrowIdx != -1) {
+      assert(SmallestLegalizableToSameSizeIdx != -1);
+      assert(SmallestNarrowIdx > SmallestLegalizableToSameSizeIdx);
+    }
+    if (LargestWidenIdx != -1)
+      assert(LargestWidenIdx < LargestLegalizableToSameSizeIdx);
+#endif
+  }
+
+  /// A full SizeAndActionsVec must cover all bit sizes, i.e. must start with
+  /// from size 1.
+  static void checkFullSizeAndActionsVector(const SizeAndActionsVec& v) {
+#ifndef NDEBUG
+    // Data structure invariant: The first bit size must be size 1.
+    assert(v.size() >= 1);
+    assert(v[0].first == 1);
+    checkPartialSizeAndActionsVector(v);
+#endif
+  }
+
+  /// Sets actions for all bit sizes on a particular generic opcode, type
+  /// index and scalar or pointer type.
+  void setActions(unsigned TypeIndex,
+                  SmallVector<SizeAndActionsVec, 1> &Actions,
+                  const SizeAndActionsVec &SizeAndActions) {
+    checkFullSizeAndActionsVector(SizeAndActions);
+    if (Actions.size() <= TypeIndex)
+      Actions.resize(TypeIndex + 1);
+    Actions[TypeIndex] = SizeAndActions;
+  }
+
+  static SizeAndAction findAction(const SizeAndActionsVec &Vec,
+                                  const uint32_t Size);
+
+  /// Returns the next action needed to get the scalar or pointer type closer
+  /// to being legal
+  /// E.g. findLegalAction({G_REM, 13}) should return
+  /// (WidenScalar, 32). After that, findLegalAction({G_REM, 32}) will
+  /// probably be called, which should return (Lower, 32).
+  /// This is assuming the setScalarAction on G_REM was something like:
+  /// setScalarAction(G_REM, 0,
+  ///           {{1, WidenScalar},  // bit sizes [ 1, 31[
+  ///            {32, Lower},       // bit sizes [32, 33[
+  ///            {33, NarrowScalar} // bit sizes [65, +inf[
+  ///           });
+  std::pair<LegalizeAction, LLT>
+  findScalarLegalAction(const InstrAspect &Aspect) const;
+
+  /// Returns the next action needed towards legalizing the vector type.
+  std::pair<LegalizeAction, LLT>
+  findVectorLegalAction(const InstrAspect &Aspect) const;
+
   static const int FirstOp = TargetOpcode::PRE_ISEL_GENERIC_OPCODE_START;
   static const int LastOp = TargetOpcode::PRE_ISEL_GENERIC_OPCODE_END;
 
-  using TypeMap = DenseMap<LLT, LegalizeAction>;
-  using SIVActionMap = DenseMap<std::pair<unsigned, LLT>, LegalizeAction>;
+  // Data structures used temporarily during construction of legality data:
+  typedef DenseMap<LLT, LegalizeAction> TypeMap;
+  SmallVector<TypeMap, 1> SpecifiedActions[LastOp - FirstOp + 1];
+  SmallVector<SizeChangeStrategy, 1>
+      ScalarSizeChangeStrategies[LastOp - FirstOp + 1];
+  SmallVector<SizeChangeStrategy, 1>
+      VectorElementSizeChangeStrategies[LastOp - FirstOp + 1];
+  bool TablesInitialized;
 
-  SmallVector<TypeMap, 1> Actions[LastOp - FirstOp + 1];
-  SIVActionMap ScalarInVectorActions;
-  DenseMap<std::pair<unsigned, LLT>, uint16_t> MaxLegalVectorElts;
-  DenseMap<unsigned, LegalizeAction> DefaultActions;
-
-  bool TablesInitialized = false;
+  // Data structures used by getAction:
+  SmallVector<SizeAndActionsVec, 1> ScalarActions[LastOp - FirstOp + 1];
+  SmallVector<SizeAndActionsVec, 1> ScalarInVectorActions[LastOp - FirstOp + 1];
+  std::unordered_map<uint16_t, SmallVector<SizeAndActionsVec, 1>>
+      AddrSpace2PointerActions[LastOp - FirstOp + 1];
+  std::unordered_map<uint16_t, SmallVector<SizeAndActionsVec, 1>>
+      NumElements2Actions[LastOp - FirstOp + 1];
 };
 
-} // end namespace llvm
+} // end namespace llvm.
 
 #endif // LLVM_CODEGEN_GLOBALISEL_LEGALIZERINFO_H

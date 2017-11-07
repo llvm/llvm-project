@@ -199,7 +199,7 @@ AddrSinkNewPhis("addr-sink-new-phis", cl::Hidden, cl::init(false),
                 cl::desc("Allow creation of Phis in Address sinking."));
 
 static cl::opt<bool>
-AddrSinkNewSelects("addr-sink-new-select", cl::Hidden, cl::init(true),
+AddrSinkNewSelects("addr-sink-new-select", cl::Hidden, cl::init(false),
                    cl::desc("Allow creation of selects in Address sinking."));
 
 namespace {
