@@ -109,7 +109,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
         m_ast.GetBuiltinTypeForEncodingAndBitSize(encoding, bytes * 8);
 
     CompilerType ast_enum = m_ast.CreateEnumerationType(
-        name.c_str(), tu_decl_ctx, decl, builtin_type);
+        name.c_str(), tu_decl_ctx, decl, builtin_type, false);
     auto enum_values = enum_type->findAllChildren<PDBSymbolData>();
     while (auto enum_value = enum_values->getNext()) {
       if (enum_value->getDataKind() != PDB_DataKind::Constant)
