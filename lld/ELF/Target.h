@@ -18,6 +18,7 @@ namespace lld {
 std::string toString(elf::RelType Type);
 
 namespace elf {
+class Defined;
 class InputFile;
 class Symbol;
 
@@ -140,6 +141,8 @@ uint64_t getAArch64Page(uint64_t Expr);
 
 extern TargetInfo *Target;
 TargetInfo *getTarget();
+
+template <class ELFT> bool isMipsPIC(const Defined *Sym);
 
 template <unsigned N>
 static void checkInt(uint8_t *Loc, int64_t V, RelType Type) {
