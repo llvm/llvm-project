@@ -23,7 +23,7 @@ class ThunkSection;
 // include transferring control from non-pi to pi and changing state on
 // targets like ARM.
 //
-// Thunks can be created for DefinedRegular, Shared and Undefined Symbols.
+// Thunks can be created for Defined, Shared and Undefined Symbols.
 // Thunks are assigned to synthetic ThunkSections
 class Thunk {
 public:

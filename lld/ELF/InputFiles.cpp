@@ -600,8 +600,8 @@ template <class ELFT> Symbol *ObjFile<ELFT>::createSymbol(const Elf_Sym *Sym) {
     if (Sym->st_shndx == SHN_UNDEF)
       return make<Undefined>(Name, /*IsLocal=*/true, StOther, Type);
 
-    return make<DefinedRegular>(Name, /*IsLocal=*/true, StOther, Type, Value,
-                                Size, Sec);
+    return make<Defined>(Name, /*IsLocal=*/true, StOther, Type, Value, Size,
+                         Sec);
   }
 
   StringRef Name = check(Sym->getName(this->StringTable), toString(this));
@@ -809,13 +809,15 @@ template <class ELFT> void SharedFile<ELFT>::parseRest() {
     // files because the loader takes care of it. However, if we promote a
     // DSO symbol to point to .bss due to copy relocation, we need to keep
     // the original alignment requirements. We infer it here.
-    uint32_t Alignment = 1;
+    uint64_t Alignment = 1;
     if (Sym.st_value)
       Alignment = 1ULL << countTrailingZeros((uint64_t)Sym.st_value);
     if (0 < Sym.st_shndx && Sym.st_shndx < Sections.size()) {
-      uint32_t SecAlign = Sections[Sym.st_shndx].sh_addralign;
+      uint64_t SecAlign = Sections[Sym.st_shndx].sh_addralign;
       Alignment = std::min(Alignment, SecAlign);
     }
+    if (Alignment > UINT32_MAX)
+      error(toString(this) + ": alignment too large: " + Name);
 
     if (!Hidden)
       Symtab->addShared(Name, this, Sym, Alignment, Ver);

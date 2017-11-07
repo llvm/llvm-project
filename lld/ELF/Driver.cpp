@@ -1092,8 +1092,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   if (errorCount())
     return;
 
-  // Apply symbol renames for -wrap and -defsym
-  Symtab->applySymbolRenames();
+  // Apply symbol renames for -wrap.
+  Symtab->applySymbolWrap();
 
   // Now that we have a complete list of input files.
   // Beyond this point, no new files are added.
@@ -1120,14 +1120,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   // mergeable section.
   if (!Config->Relocatable)
     InputSections.push_back(createCommentSection<ELFT>());
-
-  // Create a .bss section for each common symbol and then replace the common
-  // symbol with a DefinedRegular symbol. As a result, all common symbols are
-  // "instantiated" as regular defined symbols, so that we don't need to care
-  // about common symbols beyond this point. Note that if -r is given, we just
-  // need to pass through common symbols as-is.
-  if (Config->DefineCommon)
-    createCommonSections<ELFT>();
 
   // Do size optimizations: garbage collection, merging of SHF_MERGE sections
   // and identical code folding.

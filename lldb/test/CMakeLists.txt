@@ -115,6 +115,15 @@ if (TARGET clang)
   add_dependencies(check-lldb clang)
 endif()
 
+# LLD is required to link test executables on Windows.
+if (CMAKE_SYSTEM_NAME MATCHES "Windows")
+  if (TARGET lld)
+    add_dependencies(check-lldb lld)
+  else ()
+    message(WARNING "lld required to test LLDB on Windows")
+  endif ()
+endif ()
+
 add_custom_target(lldb-test-depends DEPENDS ${LLDB_TEST_DEPENDS})
 # This will add LLDB's test dependencies to the depenednecies for check-all and
 # include them in the test-depends target.
