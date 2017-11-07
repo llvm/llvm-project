@@ -310,40 +310,6 @@ static Value *getShiftedValue(Value *V, unsigned NumBits, bool isLeftShift,
   }
 }
 
-// If this is a bitwise operator or add with a constant RHS we might be able
-// to pull it through a shift.
-static bool canShiftBinOpWithConstantRHS(BinaryOperator &Shift,
-                                         BinaryOperator *BO,
-                                         const APInt &C) {
-  bool IsValid = true;     // Valid only for And, Or Xor,
-  bool HighBitSet = false; // Transform ifhigh bit of constant set?
-
-  switch (BO->getOpcode()) {
-  default: IsValid = false; break;   // Do not perform transform!
-  case Instruction::Add:
-    IsValid = Shift.getOpcode() == Instruction::Shl;
-    break;
-  case Instruction::Or:
-  case Instruction::Xor:
-    HighBitSet = false;
-    break;
-  case Instruction::And:
-    HighBitSet = true;
-    break;
-  }
-
-  // If this is a signed shift right, and the high bit is modified
-  // by the logical operation, do not perform the transformation.
-  // The HighBitSet boolean indicates the value of the high bit of
-  // the constant which would cause it to be modified for this
-  // operation.
-  //
-  if (IsValid && Shift.getOpcode() == Instruction::AShr)
-    IsValid = C.isNegative() == HighBitSet;
-
-  return IsValid;
-}
-
 Instruction *InstCombiner::FoldShiftByConstant(Value *Op0, Constant *Op1,
                                                BinaryOperator &I) {
   bool isLeftShift = I.getOpcode() == Instruction::Shl;
@@ -506,7 +472,33 @@ Instruction *InstCombiner::FoldShiftByConstant(Value *Op0, Constant *Op1,
       // shift is the only use, we can pull it out of the shift.
       const APInt *Op0C;
       if (match(Op0BO->getOperand(1), m_APInt(Op0C))) {
-        if (canShiftBinOpWithConstantRHS(I, Op0BO, *Op0C)) {
+        bool isValid = true;     // Valid only for And, Or, Xor
+        bool highBitSet = false; // Transform if high bit of constant set?
+
+        switch (Op0BO->getOpcode()) {
+        default: isValid = false; break;   // Do not perform transform!
+        case Instruction::Add:
+          isValid = isLeftShift;
+          break;
+        case Instruction::Or:
+        case Instruction::Xor:
+          highBitSet = false;
+          break;
+        case Instruction::And:
+          highBitSet = true;
+          break;
+        }
+
+        // If this is a signed shift right, and the high bit is modified
+        // by the logical operation, do not perform the transformation.
+        // The highBitSet boolean indicates the value of the high bit of
+        // the constant which would cause it to be modified for this
+        // operation.
+        //
+        if (isValid && I.getOpcode() == Instruction::AShr)
+          isValid = Op0C->isNegative() == highBitSet;
+
+        if (isValid) {
           Constant *NewRHS = ConstantExpr::get(I.getOpcode(),
                                      cast<Constant>(Op0BO->getOperand(1)), Op1);
 
@@ -531,53 +523,6 @@ Instruction *InstCombiner::FoldShiftByConstant(Value *Op0, Constant *Op1,
         NewShift->takeName(Op0BO);
 
         return BinaryOperator::CreateSub(NewRHS, NewShift);
-      }
-    }
-
-    // If we have a select that conditionally executes some binary operator,
-    // see if we can pull it the select and operator through the shift.
-    //
-    // For example, turning:
-    //   shl (select C, (add X, C1), X), C2
-    // Into:
-    //   Y = shl X, C2
-    //   select C, (add Y, C1 << C2), Y
-    Value *Cond;
-    BinaryOperator *TBO;
-    Value *FalseVal;
-    if (match(Op0, m_Select(m_Value(Cond), m_OneUse(m_BinOp(TBO)),
-                            m_Value(FalseVal)))) {
-      const APInt *C;
-      if (!isa<Constant>(FalseVal) && TBO->getOperand(0) == FalseVal &&
-          match(TBO->getOperand(1), m_APInt(C)) &&
-          canShiftBinOpWithConstantRHS(I, TBO, *C)) {
-        Constant *NewRHS = ConstantExpr::get(I.getOpcode(),
-                                       cast<Constant>(TBO->getOperand(1)), Op1);
-
-        Value *NewShift =
-          Builder.CreateBinOp(I.getOpcode(), FalseVal, Op1);
-        Value *NewOp = Builder.CreateBinOp(TBO->getOpcode(), NewShift,
-                                           NewRHS);
-        return SelectInst::Create(Cond, NewOp, NewShift);
-      }
-    }
-
-    BinaryOperator *FBO;
-    Value *TrueVal;
-    if (match(Op0, m_Select(m_Value(Cond), m_Value(TrueVal),
-                            m_OneUse(m_BinOp(FBO))))) {
-      const APInt *C;
-      if (!isa<Constant>(TrueVal) && FBO->getOperand(0) == TrueVal &&
-          match(FBO->getOperand(1), m_APInt(C)) && 
-          canShiftBinOpWithConstantRHS(I, FBO, *C)) {
-        Constant *NewRHS = ConstantExpr::get(I.getOpcode(),
-                                       cast<Constant>(FBO->getOperand(1)), Op1);
-
-        Value *NewShift =
-          Builder.CreateBinOp(I.getOpcode(), TrueVal, Op1);
-        Value *NewOp = Builder.CreateBinOp(FBO->getOpcode(), NewShift,
-                                           NewRHS);
-        return SelectInst::Create(Cond, NewShift, NewOp);
       }
     }
   }

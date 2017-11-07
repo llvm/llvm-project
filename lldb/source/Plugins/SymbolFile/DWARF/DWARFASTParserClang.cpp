@@ -927,6 +927,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
         // Set a bit that lets us know that we are currently parsing this
         dwarf->GetDIEToType()[die.GetDIE()] = DIE_IS_BEING_PARSED;
 
+        bool is_scoped = false;
         DWARFFormValue encoding_form;
 
         const size_t num_attributes = die.GetAttributes(attributes);
@@ -962,6 +963,9 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
                        // DW_ACCESS_to_AccessType(form_value.Unsigned()); break;
               case DW_AT_declaration:
                 is_forward_declaration = form_value.Boolean();
+                break;
+              case DW_AT_enum_class:
+                is_scoped = form_value.Boolean();
                 break;
               case DW_AT_allocated:
               case DW_AT_associated:
@@ -1052,7 +1056,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
 
             clang_type = m_ast.CreateEnumerationType(
                 type_name_cstr, GetClangDeclContextContainingDIE(die, nullptr),
-                decl, enumerator_clang_type);
+                decl, enumerator_clang_type, is_scoped);
           } else {
             enumerator_clang_type =
                 m_ast.GetEnumerationIntegerType(clang_type.GetOpaqueQualType());

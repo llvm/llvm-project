@@ -91,11 +91,14 @@ define void @exp_libm(double* %a, double* %b) {
   ret void
 }
 
-define void @sqrt_libm(double* %a, double* %b) {
-; CHECK-LABEL: @sqrt_libm(
+; No fast-math-flags are required to convert sqrt library calls to an intrinsic. 
+; We just need to know that errno is not set (readnone).
+
+define void @sqrt_libm_no_errno(double* %a, double* %b) {
+; CHECK-LABEL: @sqrt_libm_no_errno(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double* %a to <2 x double>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, <2 x double>* [[TMP1]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = call nnan <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP2]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP2]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast double* %b to <2 x double>*
 ; CHECK-NEXT:    store <2 x double> [[TMP3]], <2 x double>* [[TMP4]], align 8
 ; CHECK-NEXT:    ret void
@@ -103,8 +106,36 @@ define void @sqrt_libm(double* %a, double* %b) {
   %a0 = load double, double* %a, align 8
   %idx1 = getelementptr inbounds double, double* %a, i64 1
   %a1 = load double, double* %idx1, align 8
-  %sqrt1 = tail call nnan double @sqrt(double %a0) nounwind readnone
-  %sqrt2 = tail call nnan double @sqrt(double %a1) nounwind readnone
+  %sqrt1 = tail call double @sqrt(double %a0) nounwind readnone
+  %sqrt2 = tail call double @sqrt(double %a1) nounwind readnone
+  store double %sqrt1, double* %b, align 8
+  %idx2 = getelementptr inbounds double, double* %b, i64 1
+  store double %sqrt2, double* %idx2, align 8
+  ret void
+}
+
+; The sqrt intrinsic does not set errno, but a non-constant sqrt call might, so this can't vectorize.
+; The nnan on the call does not matter because there's no guarantee in the C standard that a negative
+; input would result in a nan output ("On a domain error, the function returns an 
+; implementation-defined value.")
+
+define void @sqrt_libm_errno(double* %a, double* %b) {
+; CHECK-LABEL: @sqrt_libm_errno(
+; CHECK-NEXT:    [[A0:%.*]] = load double, double* %a, align 8
+; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr inbounds double, double* %a, i64 1
+; CHECK-NEXT:    [[A1:%.*]] = load double, double* [[IDX1]], align 8
+; CHECK-NEXT:    [[SQRT1:%.*]] = tail call nnan double @sqrt(double [[A0]]) #2
+; CHECK-NEXT:    [[SQRT2:%.*]] = tail call nnan double @sqrt(double [[A1]]) #2
+; CHECK-NEXT:    store double [[SQRT1]], double* %b, align 8
+; CHECK-NEXT:    [[IDX2:%.*]] = getelementptr inbounds double, double* %b, i64 1
+; CHECK-NEXT:    store double [[SQRT2]], double* [[IDX2]], align 8
+; CHECK-NEXT:    ret void
+;
+  %a0 = load double, double* %a, align 8
+  %idx1 = getelementptr inbounds double, double* %a, i64 1
+  %a1 = load double, double* %idx1, align 8
+  %sqrt1 = tail call nnan double @sqrt(double %a0) nounwind
+  %sqrt2 = tail call nnan double @sqrt(double %a1) nounwind
   store double %sqrt1, double* %b, align 8
   %idx2 = getelementptr inbounds double, double* %b, i64 1
   store double %sqrt2, double* %idx2, align 8
@@ -117,8 +148,8 @@ define void @round_custom(i64* %a, i64* %b) {
 ; CHECK-NEXT:    [[A0:%.*]] = load i64, i64* %a, align 8
 ; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr inbounds i64, i64* %a, i64 1
 ; CHECK-NEXT:    [[A1:%.*]] = load i64, i64* [[IDX1]], align 8
-; CHECK-NEXT:    [[ROUND1:%.*]] = tail call i64 @round(i64 [[A0]]) #2
-; CHECK-NEXT:    [[ROUND2:%.*]] = tail call i64 @round(i64 [[A1]]) #2
+; CHECK-NEXT:    [[ROUND1:%.*]] = tail call i64 @round(i64 [[A0]]) #3
+; CHECK-NEXT:    [[ROUND2:%.*]] = tail call i64 @round(i64 [[A1]]) #3
 ; CHECK-NEXT:    store i64 [[ROUND1]], i64* %b, align 8
 ; CHECK-NEXT:    [[IDX2:%.*]] = getelementptr inbounds i64, i64* %b, i64 1
 ; CHECK-NEXT:    store i64 [[ROUND2]], i64* [[IDX2]], align 8

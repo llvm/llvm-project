@@ -65,17 +65,17 @@ void format_provider<TimePoint<>>::format(const TimePoint<> &T, raw_ostream &OS,
     if (Style[I] == '%' && Style.size() > I + 1) switch (Style[I + 1]) {
         case 'L':  // Milliseconds, from Ruby.
           FStream << llvm::format(
-              "%.3lu", duration_cast<milliseconds>(Fractional).count());
+              "%.3lu", (long)duration_cast<milliseconds>(Fractional).count());
           ++I;
           continue;
         case 'f':  // Microseconds, from Python.
           FStream << llvm::format(
-              "%.6lu", duration_cast<microseconds>(Fractional).count());
+              "%.6lu", (long)duration_cast<microseconds>(Fractional).count());
           ++I;
           continue;
         case 'N':  // Nanoseconds, from date(1).
           FStream << llvm::format(
-              "%.6lu", duration_cast<nanoseconds>(Fractional).count());
+              "%.6lu", (long)duration_cast<nanoseconds>(Fractional).count());
           ++I;
           continue;
         case '%':  // Consume %%, so %%f parses as (%%)f not %(%f)

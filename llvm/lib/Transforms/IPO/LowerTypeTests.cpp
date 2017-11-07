@@ -1401,7 +1401,7 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
       FAlias->takeName(F);
       if (FAlias->hasName())
         F->setName(FAlias->getName() + ".cfi");
-      F->replaceAllUsesWith(FAlias);
+      F->replaceUsesExceptBlockAddr(FAlias);
     }
     if (!F->isDeclarationForLinker())
       F->setLinkage(GlobalValue::InternalLinkage);

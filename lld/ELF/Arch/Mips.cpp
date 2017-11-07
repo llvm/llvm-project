@@ -349,7 +349,7 @@ bool MIPS<ELFT>::needsThunk(RelExpr Expr, RelType Type, const InputFile *File,
   auto *D = dyn_cast<Defined>(&S);
   // LA25 is required if target file has PIC code
   // or target symbol is a PIC symbol.
-  return D && D->isMipsPIC<ELFT>();
+  return D && isMipsPIC<ELFT>(D);
 }
 
 template <class ELFT>
@@ -644,6 +644,18 @@ template <class ELFT> bool MIPS<ELFT>::usesOnlyLowPageBits(RelType Type) const {
          Type == R_MICROMIPS_LO16 || Type == R_MICROMIPS_GOT_OFST;
 }
 
+// Return true if the symbol is a PIC function.
+template <class ELFT> bool elf::isMipsPIC(const Defined *Sym) {
+  typedef typename ELFT::Ehdr Elf_Ehdr;
+  if (!Sym->Section || !Sym->isFunc())
+    return false;
+
+  auto *Sec = cast<InputSectionBase>(Sym->Section);
+  const Elf_Ehdr *Hdr = Sec->template getFile<ELFT>()->getObj().getHeader();
+  return (Sym->StOther & STO_MIPS_MIPS16) == STO_MIPS_PIC ||
+         (Hdr->e_flags & EF_MIPS_PIC);
+}
+
 template <class ELFT> TargetInfo *elf::getMipsTargetInfo() {
   static MIPS<ELFT> Target;
   return &Target;
@@ -653,3 +665,8 @@ template TargetInfo *elf::getMipsTargetInfo<ELF32LE>();
 template TargetInfo *elf::getMipsTargetInfo<ELF32BE>();
 template TargetInfo *elf::getMipsTargetInfo<ELF64LE>();
 template TargetInfo *elf::getMipsTargetInfo<ELF64BE>();
+
+template bool elf::isMipsPIC<ELF32LE>(const Defined *);
+template bool elf::isMipsPIC<ELF32BE>(const Defined *);
+template bool elf::isMipsPIC<ELF64LE>(const Defined *);
+template bool elf::isMipsPIC<ELF64BE>(const Defined *);

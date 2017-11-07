@@ -448,9 +448,13 @@ static void transferSRADebugInfo(GlobalVariable *GV, GlobalVariable *NGV,
   for (auto *GVE : GVs) {
     DIVariable *Var = GVE->getVariable();
     DIExpression *Expr = GVE->getExpression();
-    if (NumElements > 1)
-      Expr = DIExpression::createFragmentExpression(Expr, FragmentOffsetInBits,
-                                                    FragmentSizeInBits);
+    if (NumElements > 1) {
+      if (auto E = DIExpression::createFragmentExpression(
+              Expr, FragmentOffsetInBits, FragmentSizeInBits))
+        Expr = *E;
+      else
+        return;
+    }
     auto *NGVE = DIGlobalVariableExpression::get(GVE->getContext(), Var, Expr);
     NGV->addDebugInfo(NGVE);
   }
