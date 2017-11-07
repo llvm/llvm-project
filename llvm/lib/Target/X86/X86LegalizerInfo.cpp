@@ -22,6 +22,38 @@
 using namespace llvm;
 using namespace TargetOpcode;
 
+/// FIXME: The following static functions are SizeChangeStrategy functions
+/// that are meant to temporarily mimic the behaviour of the old legalization
+/// based on doubling/halving non-legal types as closely as possible. This is
+/// not entirly possible as only legalizing the types that are exactly a power
+/// of 2 times the size of the legal types would require specifying all those
+/// sizes explicitly.
+/// In practice, not specifying those isn't a problem, and the below functions
+/// should disappear quickly as we add support for legalizing non-power-of-2
+/// sized types further.
+static void
+addAndInterleaveWithUnsupported(LegalizerInfo::SizeAndActionsVec &result,
+                                const LegalizerInfo::SizeAndActionsVec &v) {
+  for (unsigned i = 0; i < v.size(); ++i) {
+    result.push_back(v[i]);
+    if (i + 1 < v[i].first && i + 1 < v.size() &&
+        v[i + 1].first != v[i].first + 1)
+      result.push_back({v[i].first + 1, LegalizerInfo::Unsupported});
+  }
+}
+
+static LegalizerInfo::SizeAndActionsVec
+widen_1(const LegalizerInfo::SizeAndActionsVec &v) {
+  assert(v.size() >= 1);
+  assert(v[0].first > 1);
+  LegalizerInfo::SizeAndActionsVec result = {{1, LegalizerInfo::WidenScalar},
+                                             {2, LegalizerInfo::Unsupported}};
+  addAndInterleaveWithUnsupported(result, v);
+  auto Largest = result.back().first;
+  result.push_back({Largest + 1, LegalizerInfo::Unsupported});
+  return result;
+}
+
 X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
                                    const X86TargetMachine &TM)
     : Subtarget(STI), TM(TM) {
@@ -37,6 +69,17 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   setLegalizerInfoAVX512DQ();
   setLegalizerInfoAVX512BW();
 
+  setLegalizeScalarToDifferentSizeStrategy(G_PHI, 0, widen_1);
+  for (unsigned BinOp : {G_SUB, G_MUL, G_AND, G_OR, G_XOR})
+    setLegalizeScalarToDifferentSizeStrategy(BinOp, 0, widen_1);
+  for (unsigned MemOp : {G_LOAD, G_STORE})
+    setLegalizeScalarToDifferentSizeStrategy(MemOp, 0,
+       narrowToSmallerAndWidenToSmallest);
+  setLegalizeScalarToDifferentSizeStrategy(
+      G_GEP, 1, widenToLargerTypesUnsupportedOtherwise);
+  setLegalizeScalarToDifferentSizeStrategy(
+      G_CONSTANT, 0, widenToLargerTypesAndNarrowToLargest);
+
   computeTables();
 }
 
@@ -47,7 +90,6 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
   const LLT s8 = LLT::scalar(8);
   const LLT s16 = LLT::scalar(16);
   const LLT s32 = LLT::scalar(32);
-  const LLT s64 = LLT::scalar(64);
 
   for (auto Ty : {p0, s1, s8, s16, s32})
     setAction({G_IMPLICIT_DEF, Ty}, Legal);
@@ -55,14 +97,9 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
   for (auto Ty : {s8, s16, s32, p0})
     setAction({G_PHI, Ty}, Legal);
 
-  setAction({G_PHI, s1}, WidenScalar);
-
-  for (unsigned BinOp : {G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR}) {
+  for (unsigned BinOp : {G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR})
     for (auto Ty : {s8, s16, s32})
       setAction({BinOp, Ty}, Legal);
-
-    setAction({BinOp, s1}, WidenScalar);
-  }
 
   for (unsigned Op : {G_UADDE}) {
     setAction({Op, s32}, Legal);
@@ -73,7 +110,6 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
     for (auto Ty : {s8, s16, s32, p0})
       setAction({MemOp, Ty}, Legal);
 
-    setAction({MemOp, s1}, WidenScalar);
     // And everything's fine in addrspace 0.
     setAction({MemOp, 1, p0}, Legal);
   }
@@ -85,9 +121,6 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
   setAction({G_GEP, p0}, Legal);
   setAction({G_GEP, 1, s32}, Legal);
 
-  for (auto Ty : {s1, s8, s16})
-    setAction({G_GEP, 1, Ty}, WidenScalar);
-
   // Control-flow
   setAction({G_BRCOND, s1}, Legal);
 
@@ -95,20 +128,11 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
   for (auto Ty : {s8, s16, s32, p0})
     setAction({TargetOpcode::G_CONSTANT, Ty}, Legal);
 
-  setAction({TargetOpcode::G_CONSTANT, s1}, WidenScalar);
-  setAction({TargetOpcode::G_CONSTANT, s64}, NarrowScalar);
-
   // Extensions
   for (auto Ty : {s8, s16, s32}) {
     setAction({G_ZEXT, Ty}, Legal);
     setAction({G_SEXT, Ty}, Legal);
     setAction({G_ANYEXT, Ty}, Legal);
-  }
-
-  for (auto Ty : {s1, s8, s16}) {
-    setAction({G_ZEXT, 1, Ty}, Legal);
-    setAction({G_SEXT, 1, Ty}, Legal);
-    setAction({G_ANYEXT, 1, Ty}, Legal);
   }
 
   // Comparison
@@ -123,7 +147,6 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
   if (!Subtarget.is64Bit())
     return;
 
-  const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
 
   setAction({G_IMPLICIT_DEF, s64}, Legal);
@@ -145,7 +168,6 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
   // Extensions
   for (unsigned extOp : {G_ZEXT, G_SEXT, G_ANYEXT}) {
     setAction({extOp, s64}, Legal);
-    setAction({extOp, 1, s32}, Legal);
   }
 
   // Comparison
