@@ -190,9 +190,6 @@ public:
       : Symbol(DefinedKind, Name, IsLocal, StOther, Type), Value(Value),
         Size(Size), Section(Section) {}
 
-  // Return true if the symbol is a PIC function.
-  template <class ELFT> bool isMipsPIC() const;
-
   static bool classof(const Symbol *S) { return S->isDefined(); }
 
   uint64_t Value;
