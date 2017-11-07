@@ -13,6 +13,7 @@
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -84,7 +85,7 @@ class LLVMFuzzerInputBuffer : public MemoryBuffer
 {
   public:
     LLVMFuzzerInputBuffer(const uint8_t *data_, size_t size_)
-      : Data(reinterpret_cast<const char *>(data_)), 
+      : Data(reinterpret_cast<const char *>(data_)),
         Size(size_) {
         init(Data, Data+Size, false);
       }
@@ -230,7 +231,8 @@ int AssembleOneInput(const uint8_t *Data, size_t Size) {
     MCAsmBackend *MAB = TheTarget->createMCAsmBackend(*MRI, TripleName, MCPU,
                                                       MCOptions);
     Str.reset(TheTarget->createMCObjectStreamer(
-        TheTriple, Ctx, *MAB, *OS, CE, *STI, MCOptions.MCRelaxAll,
+        TheTriple, Ctx, std::unique_ptr<MCAsmBackend>(MAB), *OS,
+        std::unique_ptr<MCCodeEmitter>(CE), *STI, MCOptions.MCRelaxAll,
         MCOptions.MCIncrementalLinkerCompatible,
         /*DWARFMustBeAtTheEnd*/ false));
   }

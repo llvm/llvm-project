@@ -12,6 +12,7 @@
 
 #include "JSONExpr.h"
 #include "Logger.h"
+#include "Protocol.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
@@ -60,7 +61,7 @@ public:
   /// Sends a successful reply.
   void reply(json::Expr &&Result);
   /// Sends an error response to the client, and logs it.
-  void replyError(int code, const llvm::StringRef &Message);
+  void replyError(ErrorCode code, const llvm::StringRef &Message);
   /// Sends a request to the client.
   void call(llvm::StringRef Method, json::Expr &&Params);
 

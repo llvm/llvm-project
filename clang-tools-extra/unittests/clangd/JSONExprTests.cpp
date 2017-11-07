@@ -76,8 +76,7 @@ TEST(JSONExprTests, Escaping) {
 }
 
 TEST(JSONExprTests, PrettyPrinting) {
-  EXPECT_EQ(
-      R"({
+  const char str[] = R"({
   "empty_array": [],
   "empty_object": {},
   "full_array": [
@@ -91,7 +90,10 @@ TEST(JSONExprTests, PrettyPrinting) {
       }
     ]
   }
-})",
+})";
+
+  EXPECT_EQ(
+      str,
       sp(obj{
           {"empty_object", obj{}},
           {"empty_array", {}},

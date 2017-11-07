@@ -188,7 +188,7 @@ the variable.  The third argument is a `complex expression
 <LangRef.html#diexpression>`_.  An `llvm.dbg.addr` intrinsic describes the
 *address* of a source variable.
 
-.. code-block:: llvm
+.. code-block:: text
 
     %i.addr = alloca i32, align 4
     call void @llvm.dbg.addr(metadata i32* %i.addr, metadata !1,

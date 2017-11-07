@@ -849,13 +849,14 @@ static void transferDbgValues(SelectionDAG &DAG, SDValue From, SDValue To,
       break;
 
     DIVariable *Var = Dbg->getVariable();
-    auto *Fragment = DIExpression::createFragmentExpression(
-        Dbg->getExpression(), OffsetInBits, To.getValueSizeInBits());
-    SDDbgValue *Clone =
-        DAG.getDbgValue(Var, Fragment, ToNode, To.getResNo(), Dbg->isIndirect(),
-                        Dbg->getDebugLoc(), Dbg->getOrder());
+    if (auto Fragment = DIExpression::createFragmentExpression(
+            Dbg->getExpression(), OffsetInBits, To.getValueSizeInBits())) {
+      SDDbgValue *Clone = DAG.getDbgValue(Var, *Fragment, ToNode, To.getResNo(),
+                                          Dbg->isIndirect(), Dbg->getDebugLoc(),
+                                          Dbg->getOrder());
+      ClonedDVs.push_back(Clone);
+    }
     Dbg->setIsInvalidated();
-    ClonedDVs.push_back(Clone);
   }
 
   for (SDDbgValue *Dbg : ClonedDVs)

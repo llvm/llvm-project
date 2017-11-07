@@ -32,6 +32,21 @@ namespace clangd {
 
 class Logger;
 
+enum class ErrorCode {
+  // Defined by JSON RPC.
+  ParseError = -32700,
+  InvalidRequest = -32600,
+  MethodNotFound = -32601,
+  InvalidParams = -32602,
+  InternalError = -32603,
+
+  ServerNotInitialized = -32002,
+  UnknownErrorCode = -32001,
+
+  // Defined by the protocol.
+  RequestCancelled = -32800,
+};
+
 struct URI {
   std::string uri;
   std::string file;

@@ -2017,7 +2017,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::fmuladd: {
     // Canonicalize fast fmuladd to the separate fmul + fadd.
-    if (II->hasUnsafeAlgebra()) {
+    if (II->isFast()) {
       BuilderTy::FastMathFlagGuard Guard(Builder);
       Builder.setFastMathFlags(II->getFastMathFlags());
       Value *Mul = Builder.CreateFMul(II->getArgOperand(0),

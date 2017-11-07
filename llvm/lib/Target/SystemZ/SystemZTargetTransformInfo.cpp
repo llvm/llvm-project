@@ -323,6 +323,11 @@ unsigned SystemZTTIImpl::getRegisterBitWidth(bool Vector) const {
   return 0;
 }
 
+bool SystemZTTIImpl::hasDivRemOp(Type *DataType, bool IsSigned) {
+  EVT VT = TLI->getValueType(DL, DataType);
+  return (VT.isScalarInteger() && TLI->isTypeLegal(VT));
+}
+
 int SystemZTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty,  
     TTI::OperandValueKind Op1Info, TTI::OperandValueKind Op2Info,

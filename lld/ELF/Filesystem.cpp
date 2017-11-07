@@ -38,8 +38,8 @@ using namespace lld::elf;
 // This function spawns a background thread to call unlink.
 // The calling thread returns almost immediately.
 void elf::unlinkAsync(StringRef Path) {
-  if (!ThreadsEnabled || !sys::fs::exists(Config->OutputFile) ||
-      !sys::fs::is_regular_file(Config->OutputFile))
+  if (!ThreadsEnabled || !sys::fs::exists(Path) ||
+      !sys::fs::is_regular_file(Path))
     return;
 
   // First, rename Path to avoid race condition. We cannot remove

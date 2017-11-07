@@ -970,9 +970,10 @@ registers:
   - { id: 1, class: gprb }
   - { id: 2, class: gprb }
   - { id: 3, class: gprb }
+  - { id: 4, class: gprb }
 body:             |
   bb.0:
-    liveins: %r0, %r1
+    liveins: %r0, %r1, %r2
 
     %0(p0) = COPY %r0
     ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY %r0
@@ -980,14 +981,17 @@ body:             |
     %1(p0) = COPY %r1
     ; CHECK: [[VREGY:%[0-9]+]]:gpr = COPY %r1
 
-    %2(s1) = G_TRUNC %1(p0)
-    ; CHECK: [[VREGC:%[0-9]+]]:gpr = COPY [[VREGY]]
+    %2(s32) = COPY %r2
+    ; CHECK: [[VREGC:%[0-9]+]]:gpr = COPY %r2
 
-    %3(p0) = G_SELECT %2(s1),  %0, %1
-    ; CHECK: CMPri [[VREGC]], 0, 14, _, implicit-def %cpsr
+    %3(s1) = G_TRUNC %2(s32)
+    ; CHECK: [[VREGD:%[0-9]+]]:gpr = COPY [[VREGC]]
+
+    %4(p0) = G_SELECT %3(s1),  %0, %1
+    ; CHECK: CMPri [[VREGD]], 0, 14, _, implicit-def %cpsr
     ; CHECK: [[RES:%[0-9]+]]:gpr = MOVCCr [[VREGX]], [[VREGY]], 0, %cpsr
 
-    %r0 = COPY %3(p0)
+    %r0 = COPY %4(p0)
     ; CHECK: %r0 = COPY [[RES]]
 
     BX_RET 14, _, implicit %r0

@@ -142,7 +142,7 @@ Symbol Type Options
 
  Displays class definitions in the specified format.
 
- .. code-block:: perl
+ .. code-block:: text
 
     =all      - Display all class members including data, constants, typedefs, functions, etc (default)
     =layout   - Only display members that contribute to class size.
@@ -152,7 +152,7 @@ Symbol Type Options
 
  Displays classes in the specified order.
 
- .. code-block:: perl
+ .. code-block:: text
 
     =none            - Undefined / no particular sort order (default)
     =name            - Sort classes by name
@@ -200,7 +200,7 @@ Symbol Type Options
  Type of symbols to dump when -globals, -externals, or -module-syms is
  specified. (default all)
 
- .. code-block:: perl
+ .. code-block:: text
 
     =thunks - Display thunk symbols
     =data   - Display data symbols
@@ -212,7 +212,7 @@ Symbol Type Options
  For symbols dumped via the -module-syms, -globals, or -externals options, sort
  the results in specified order.
 
- .. code-block:: perl
+ .. code-block:: text
 
     =none - Undefined / no particular sort order
     =name - Sort symbols by name
