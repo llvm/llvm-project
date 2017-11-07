@@ -307,6 +307,7 @@ LegalizerInfo::findAction(const SizeAndActionsVec &Vec, const uint32_t Size) {
   case NotFound:
     llvm_unreachable("NotFound");
   }
+  llvm_unreachable("Action has an unknown enum value");
 }
 
 std::pair<LegalizerInfo::LegalizeAction, LLT>
