@@ -51,7 +51,7 @@ TEST(FileOutputBuffer, Test) {
     // Write to end of buffer to verify it is writable.
     memcpy(Buffer->getBufferEnd() - 20, "AABBCCDDEEFFGGHHIIJJ", 20);
     // Commit buffer.
-    ASSERT_NO_ERROR(Buffer->commit());
+    ASSERT_NO_ERROR(errorToErrorCode(Buffer->commit()));
   }
 
   // Verify file is correct size.
@@ -89,7 +89,7 @@ TEST(FileOutputBuffer, Test) {
     memcpy(Buffer->getBufferStart(), "AABBCCDDEEFFGGHHIIJJ", 20);
     // Write to end of buffer to verify it is writable.
     memcpy(Buffer->getBufferEnd() - 20, "AABBCCDDEEFFGGHHIIJJ", 20);
-    ASSERT_NO_ERROR(Buffer->commit());
+    ASSERT_NO_ERROR(errorToErrorCode(Buffer->commit()));
   }
 
   // Verify file is correct size.
@@ -109,7 +109,7 @@ TEST(FileOutputBuffer, Test) {
     // Start buffer with special header.
     memcpy(Buffer->getBufferStart(), "AABBCCDDEEFFGGHHIIJJ", 20);
     // Commit buffer.
-    ASSERT_NO_ERROR(Buffer->commit());
+    ASSERT_NO_ERROR(errorToErrorCode(Buffer->commit()));
   }
   // Verify file exists and is executable.
   fs::file_status Status;
