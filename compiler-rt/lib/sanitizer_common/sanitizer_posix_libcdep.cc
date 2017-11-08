@@ -338,8 +338,13 @@ void *MmapFixedNoReserve(uptr fixed_addr, uptr size, const char *name) {
 }
 
 uptr ReservedAddressRange::Init(uptr size, const char *name, uptr fixed_addr) {
+  // We don't pass `name` along because, when you enable `decorate_proc_maps`
+  // AND actually use a named mapping AND are using a sanitizer intercepting
+  // `open` (e.g. TSAN, ESAN), then you'll get a failure during initialization.
+  // TODO(flowerhack): Fix the implementation of GetNamedMappingFd to solve
+  // this problem.
   if (fixed_addr) {
-    base_ = MmapFixedNoAccess(fixed_addr, size, name);
+    base_ = MmapFixedNoAccess(fixed_addr, size);
   } else {
     base_ = MmapNoAccess(size);
   }
@@ -350,11 +355,11 @@ uptr ReservedAddressRange::Init(uptr size, const char *name, uptr fixed_addr) {
 
 // Uses fixed_addr for now.
 // Will use offset instead once we've implemented this function for real.
-uptr ReservedAddressRange::Map(uptr fixed_addr, uptr size,
-                               bool tolerate_enomem) {
-  if (tolerate_enomem) {
-    return reinterpret_cast<uptr>(MmapFixedOrDieOnFatalError(fixed_addr, size));
-  }
+uptr ReservedAddressRange::Map(uptr fixed_addr, uptr size) {
+  return reinterpret_cast<uptr>(MmapFixedOrDieOnFatalError(fixed_addr, size));
+}
+
+uptr ReservedAddressRange::MapOrDie(uptr fixed_addr, uptr size) {
   return reinterpret_cast<uptr>(MmapFixedOrDie(fixed_addr, size));
 }
 

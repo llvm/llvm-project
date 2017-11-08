@@ -508,7 +508,7 @@ static void *__kmp_launch_worker(void *thr) {
   __kmp_gtid = gtid;
 #endif
 #if KMP_STATS_ENABLED
-  // set __thread local index to point to thread-specific stats
+  // set thread local index to point to thread-specific stats
   __kmp_stats_thread_ptr = ((kmp_info_t *)thr)->th.th_stats;
   KMP_START_EXPLICIT_TIMER(OMP_worker_thread_life);
   KMP_SET_THREAD_STATE(IDLE);
@@ -778,7 +778,7 @@ void __kmp_create_worker(int gtid, kmp_info_t *th, size_t stack_size) {
 
   // th->th.th_stats is used to transfer thread-specific stats-pointer to
   // __kmp_launch_worker. So when thread is created (goes into
-  // __kmp_launch_worker) it will set its __thread local pointer to
+  // __kmp_launch_worker) it will set its thread local pointer to
   // th->th.th_stats
   if (!KMP_UBER_GTID(gtid)) {
     th->th.th_stats = __kmp_stats_list->push_back(gtid);

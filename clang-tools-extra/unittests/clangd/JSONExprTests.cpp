@@ -67,9 +67,11 @@ TEST(JSONExprTests, Escaping) {
       '\x7f',               // Delete is not escaped.
       '\xce', '\x94',       // Non-ASCII UTF-8 is not escaped.
   };
-  EXPECT_EQ(R"("\u0000\u0008\u000c\r\n\tS\"\\)"
-            u8"\x7fΔ\"",
-            s(test));
+
+  std::string teststring = R"("\u0000\u0008\u000c\r\n\tS\"\\)"
+                           "\x7f\xCE\x94\"";
+
+  EXPECT_EQ(teststring, s(test));
 
   EXPECT_EQ(R"({"object keys are\nescaped":true})",
             s(obj{{"object keys are\nescaped", true}}));

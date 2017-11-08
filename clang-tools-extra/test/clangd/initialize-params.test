@@ -8,34 +8,36 @@ Content-Length: 143
 #      CHECK:  "id": 0,
 # CHECK-NEXT:  "jsonrpc": "2.0",
 # CHECK-NEXT:  "result": {
-# CHECK-NEXT:    "codeActionProvider": true,
-# CHECK-NEXT:    "completionProvider": {
-# CHECK-NEXT:      "resolveProvider": false,
-# CHECK-NEXT:      "triggerCharacters": [
-# CHECK-NEXT:        ".",
-# CHECK-NEXT:        ">",
-# CHECK-NEXT:        ":"
-# CHECK-NEXT:      ]
-# CHECK-NEXT:    },
-# CHECK-NEXT:    "definitionProvider": true,
-# CHECK-NEXT:    "documentFormattingProvider": true,
-# CHECK-NEXT:    "documentOnTypeFormattingProvider": {
-# CHECK-NEXT:      "firstTriggerCharacter": "}",
-# CHECK-NEXT:      "moreTriggerCharacter": []
-# CHECK-NEXT:    },
-# CHECK-NEXT:    "documentRangeFormattingProvider": true,
-# CHECK-NEXT:    "executeCommandProvider": {
-# CHECK-NEXT:      "commands": [
-# CHECK-NEXT:        "clangd.applyFix"
-# CHECK-NEXT:      ]
-# CHECK-NEXT:    },
-# CHECK-NEXT:    "signatureHelpProvider": {
-# CHECK-NEXT:      "triggerCharacters": [
-# CHECK-NEXT:        "(",
-# CHECK-NEXT:        ","
-# CHECK-NEXT:      ]
-# CHECK-NEXT:    },
-# CHECK-NEXT:    "textDocumentSync": 1
+# CHECK-NEXT:    "capabilities": {
+# CHECK-NEXT:      "codeActionProvider": true,
+# CHECK-NEXT:      "completionProvider": {
+# CHECK-NEXT:        "resolveProvider": false,
+# CHECK-NEXT:        "triggerCharacters": [
+# CHECK-NEXT:          ".",
+# CHECK-NEXT:          ">",
+# CHECK-NEXT:          ":"
+# CHECK-NEXT:        ]
+# CHECK-NEXT:      },
+# CHECK-NEXT:      "definitionProvider": true,
+# CHECK-NEXT:      "documentFormattingProvider": true,
+# CHECK-NEXT:      "documentOnTypeFormattingProvider": {
+# CHECK-NEXT:        "firstTriggerCharacter": "}",
+# CHECK-NEXT:        "moreTriggerCharacter": []
+# CHECK-NEXT:      },
+# CHECK-NEXT:      "documentRangeFormattingProvider": true,
+# CHECK-NEXT:      "executeCommandProvider": {
+# CHECK-NEXT:        "commands": [
+# CHECK-NEXT:          "clangd.applyFix"
+# CHECK-NEXT:        ]
+# CHECK-NEXT:      },
+# CHECK-NEXT:      "signatureHelpProvider": {
+# CHECK-NEXT:        "triggerCharacters": [
+# CHECK-NEXT:          "(",
+# CHECK-NEXT:          ","
+# CHECK-NEXT:        ]
+# CHECK-NEXT:      },
+# CHECK-NEXT:      "textDocumentSync": 1
+# CHECK-NEXT:    }
 # CHECK-NEXT:  }
 Content-Length: 44
 

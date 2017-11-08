@@ -12,6 +12,7 @@
 #include "ProtocolHandlers.h"
 #include "Trace.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/YAMLParser.h"
 #include <istream>
@@ -149,7 +150,8 @@ bool JSONRPCDispatcher::call(StringRef Content, JSONOutput &Out) const {
           ID.emplace(V.str());
         } else {
           double D;
-          if (!V.getAsDouble(D))
+          // FIXME: this is locale-sensitive.
+          if (llvm::to_float(V, D))
             ID.emplace(D);
         }
       }

@@ -213,8 +213,6 @@ const int SIG_SETMASK = 2;
 #define COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED \
   (!cur_thread()->is_inited)
 
-static sigaction_t sigactions[kSigCount];
-
 namespace __tsan {
 struct SignalDesc {
   bool armed;
@@ -233,11 +231,31 @@ struct ThreadSignalContext {
   __sanitizer_sigset_t oldset;
 };
 
-// The object is 64-byte aligned, because we want hot data to be located in
-// a single cache line if possible (it's accessed in every interceptor).
-static ALIGNED(64) char libignore_placeholder[sizeof(LibIgnore)];
+// InterceptorContext holds all global data required for interceptors.
+// It's explicitly constructed in InitializeInterceptors with placement new
+// and is never destroyed. This allows usage of members with non-trivial
+// constructors and destructors.
+struct InterceptorContext {
+  // The object is 64-byte aligned, because we want hot data to be located
+  // in a single cache line if possible (it's accessed in every interceptor).
+  ALIGNED(64) LibIgnore libignore;
+  sigaction_t sigactions[kSigCount];
+#if !SANITIZER_MAC && !SANITIZER_NETBSD
+  unsigned finalize_key;
+#endif
+
+  InterceptorContext()
+      : libignore(LINKER_INITIALIZED) {
+  }
+};
+
+static ALIGNED(64) char interceptor_placeholder[sizeof(InterceptorContext)];
+InterceptorContext *interceptor_ctx() {
+  return reinterpret_cast<InterceptorContext*>(&interceptor_placeholder[0]);
+}
+
 LibIgnore *libignore() {
-  return reinterpret_cast<LibIgnore*>(&libignore_placeholder[0]);
+  return &interceptor_ctx()->libignore;
 }
 
 void InitializeLibIgnore() {
@@ -264,10 +282,6 @@ static ThreadSignalContext *SigCtx(ThreadState *thr) {
   }
   return ctx;
 }
-
-#if !SANITIZER_MAC && !SANITIZER_NETBSD
-static unsigned g_thread_finalize_key;
-#endif
 
 ScopedInterceptor::ScopedInterceptor(ThreadState *thr, const char *fname,
                                      uptr pc)
@@ -873,7 +887,8 @@ void DestroyThreadState() {
 static void thread_finalize(void *v) {
   uptr iter = (uptr)v;
   if (iter > 1) {
-    if (pthread_setspecific(g_thread_finalize_key, (void*)(iter - 1))) {
+    if (pthread_setspecific(interceptor_ctx()->finalize_key,
+        (void*)(iter - 1))) {
       Printf("ThreadSanitizer: failed to set thread key\n");
       Die();
     }
@@ -901,7 +916,7 @@ extern "C" void *__tsan_thread_start_func(void *arg) {
     ScopedIgnoreInterceptors ignore;
 #if !SANITIZER_MAC && !SANITIZER_NETBSD
     ThreadIgnoreBegin(thr, 0);
-    if (pthread_setspecific(g_thread_finalize_key,
+    if (pthread_setspecific(interceptor_ctx()->finalize_key,
                             (void *)GetPthreadDestructorIterations())) {
       Printf("ThreadSanitizer: failed to set thread key\n");
       Die();
@@ -1802,6 +1817,7 @@ namespace __tsan {
 
 static void CallUserSignalHandler(ThreadState *thr, bool sync, bool acquire,
     bool sigact, int sig, my_siginfo_t *info, void *uctx) {
+  sigaction_t *sigactions = interceptor_ctx()->sigactions;
   if (acquire)
     Acquire(thr, 0, (uptr)&sigactions[sig]);
   // Signals are generally asynchronous, so if we receive a signals when
@@ -1953,6 +1969,7 @@ TSAN_INTERCEPTOR(int, sigaction, int sig, sigaction_t *act, sigaction_t *old) {
   // the signal handler through rtl_sigaction, very bad things will happen.
   // The handler will run synchronously and corrupt tsan per-thread state.
   SCOPED_INTERCEPTOR_RAW(sigaction, sig, act, old);
+  sigaction_t *sigactions = interceptor_ctx()->sigactions;
   if (old)
     internal_memcpy(old, &sigactions[sig], sizeof(*old));
   if (act == 0)
@@ -2490,6 +2507,8 @@ void InitializeInterceptors() {
   mallopt(-3, 32*1024);  // M_MMAP_THRESHOLD
 #endif
 
+  new(interceptor_ctx()) InterceptorContext();
+
   InitializeCommonInterceptors();
 
 #if !SANITIZER_MAC
@@ -2641,7 +2660,7 @@ void InitializeInterceptors() {
   }
 
 #if !SANITIZER_MAC && !SANITIZER_NETBSD
-  if (pthread_key_create(&g_thread_finalize_key, &thread_finalize)) {
+  if (pthread_key_create(&interceptor_ctx()->finalize_key, &thread_finalize)) {
     Printf("ThreadSanitizer: failed to create thread key\n");
     Die();
   }

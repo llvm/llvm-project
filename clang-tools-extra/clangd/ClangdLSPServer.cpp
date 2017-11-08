@@ -36,30 +36,32 @@ replacementsToEdits(StringRef Code,
 
 void ClangdLSPServer::onInitialize(Ctx C, InitializeParams &Params) {
   C.reply(json::obj{
-      {"textDocumentSync", 1},
-      {"documentFormattingProvider", true},
-      {"documentRangeFormattingProvider", true},
-      {"documentOnTypeFormattingProvider",
-       json::obj{
-           {"firstTriggerCharacter", "}"},
-           {"moreTriggerCharacter", {}},
-       }},
-      {"codeActionProvider", true},
-      {"completionProvider",
-       json::obj{
-           {"resolveProvider", false},
-           {"triggerCharacters", {".", ">", ":"}},
-       }},
-      {"signatureHelpProvider",
-       json::obj{
-           {"triggerCharacters", {"(", ","}},
-       }},
-      {"definitionProvider", true},
-      {"executeCommandProvider",
-       json::obj{
-           {"commands", {ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND}},
-       }},
-  });
+      {{"capabilities",
+        json::obj{
+            {"textDocumentSync", 1},
+            {"documentFormattingProvider", true},
+            {"documentRangeFormattingProvider", true},
+            {"documentOnTypeFormattingProvider",
+             json::obj{
+                 {"firstTriggerCharacter", "}"},
+                 {"moreTriggerCharacter", {}},
+             }},
+            {"codeActionProvider", true},
+            {"completionProvider",
+             json::obj{
+                 {"resolveProvider", false},
+                 {"triggerCharacters", {".", ">", ":"}},
+             }},
+            {"signatureHelpProvider",
+             json::obj{
+                 {"triggerCharacters", {"(", ","}},
+             }},
+            {"definitionProvider", true},
+            {"executeCommandProvider",
+             json::obj{
+                 {"commands", {ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND}},
+             }},
+        }}}});
   if (Params.rootUri && !Params.rootUri->file.empty())
     Server.setRootPath(Params.rootUri->file);
   else if (Params.rootPath && !Params.rootPath->empty())

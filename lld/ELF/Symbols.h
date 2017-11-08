@@ -45,7 +45,6 @@ public:
     LazyObjectKind,
   };
 
-  Symbol(Kind K) : SymbolKind(K) {}
   Kind kind() const { return static_cast<Kind>(SymbolKind); }
 
   // Symbol binding. This is not overwritten by replaceSymbol to track
