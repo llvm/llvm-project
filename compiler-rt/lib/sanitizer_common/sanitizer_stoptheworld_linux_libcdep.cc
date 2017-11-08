@@ -57,6 +57,14 @@
 #include "sanitizer_mutex.h"
 #include "sanitizer_placement_new.h"
 
+// Sufficiently old kernel headers don't provide this value, but we can still
+// call prctl with it. If the runtime kernel is new enough, the prctl call will
+// have the desired effect; if the kernel is too old, the call will error and we
+// can ignore said error.
+#ifndef PR_SET_PTRACER
+#define PR_SET_PTRACER 0x59616d61
+#endif
+
 // This module works by spawning a Linux task which then attaches to every
 // thread in the caller process with ptrace. This suspends the threads, and
 // PTRACE_GETREGS can then be used to obtain their register state. The callback
@@ -433,9 +441,7 @@ void StopTheWorld(StopTheWorldCallback callback, void *argument) {
     ScopedSetTracerPID scoped_set_tracer_pid(tracer_pid);
     // On some systems we have to explicitly declare that we want to be traced
     // by the tracer thread.
-#ifdef PR_SET_PTRACER
     internal_prctl(PR_SET_PTRACER, tracer_pid, 0, 0, 0);
-#endif
     // Allow the tracer thread to start.
     tracer_thread_argument.mutex.Unlock();
     // NOTE: errno is shared between this thread and the tracer thread.

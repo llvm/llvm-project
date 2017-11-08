@@ -46,6 +46,22 @@ public:
   }
 };
 
+class OldQualifiedNameOption : public RequiredRefactoringOption<std::string> {
+public:
+  StringRef getName() const override { return "old-qualified-name"; }
+  StringRef getDescription() const override {
+    return "The old qualified name to be renamed";
+  }
+};
+
+class NewQualifiedNameOption : public RequiredRefactoringOption<std::string> {
+public:
+  StringRef getName() const override { return "new-qualified-name"; }
+  StringRef getDescription() const override {
+    return "The new qualified name to change the symbol to";
+  }
+};
+
 class NewNameOption : public RequiredRefactoringOption<std::string> {
 public:
   StringRef getName() const override { return "new-name"; }
@@ -70,6 +86,10 @@ public:
     RefactoringActionRules Rules;
     Rules.push_back(createRefactoringActionRule<RenameOccurrences>(
         SourceRangeSelectionRequirement(), OptionRequirement<NewNameOption>()));
+    // FIXME: Use NewNameOption.
+    Rules.push_back(createRefactoringActionRule<QualifiedRenameRule>(
+        OptionRequirement<OldQualifiedNameOption>(),
+        OptionRequirement<NewQualifiedNameOption>()));
     return Rules;
   }
 };

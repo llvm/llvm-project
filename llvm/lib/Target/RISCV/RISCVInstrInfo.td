@@ -86,6 +86,24 @@ def simm21_lsb0 : Operand<XLenVT> {
   let DecoderMethod = "decodeSImmOperandAndLsl1<21>";
 }
 
+// Standalone (codegen-only) immleaf patterns.
+def simm32 : ImmLeaf<XLenVT, [{return isInt<32>(Imm);}]>;
+
+// Extract least significant 12 bits from an immediate value and sign extend
+// them.
+def LO12Sext : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(SignExtend64<12>(N->getZExtValue()),
+                                   SDLoc(N), N->getValueType(0));
+}]>;
+
+// Extract the most significant 20 bits from an immediate value. Add 1 if bit
+// 11 is 1, to compensate for the low 12 bits in the matching immediate addi
+// or ld/st being negative.
+def HI20 : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(((N->getZExtValue()+0x800) >> 12) & 0xfffff,
+                                   SDLoc(N), N->getValueType(0));
+}]>;
+
 //===----------------------------------------------------------------------===//
 // Instruction Class Templates
 //===----------------------------------------------------------------------===//
@@ -257,6 +275,12 @@ class PatGprUimm5<SDPatternOperator OpNode, RVInstIShift Inst>
     : Pat<(OpNode GPR:$rs1, uimm5:$shamt),
           (Inst GPR:$rs1, uimm5:$shamt)>;
 
+/// Immediates
+
+def : Pat<(simm12:$imm), (ADDI X0, simm12:$imm)>;
+// TODO: Add a pattern for immediates with all zeroes in the lower 12 bits.
+def : Pat<(simm32:$imm), (ADDI (LUI (HI20 imm:$imm)), (LO12Sext imm:$imm))>;
+
 /// Simple arithmetic operations
 
 def : PatGprGpr<add, ADD>;
@@ -287,3 +311,31 @@ def : PatGprSimm12<setult, SLTIU>;
 let isBarrier = 1, isReturn = 1, isTerminator = 1 in
 def PseudoRET : Pseudo<(outs), (ins), [(RetFlag)]>,
                 PseudoInstExpansion<(JALR X0, X1, 0)>;
+
+/// Loads
+
+multiclass LdPat<PatFrag LoadOp, RVInst Inst> {
+  def : Pat<(LoadOp GPR:$rs1), (Inst GPR:$rs1, 0)>;
+  def : Pat<(LoadOp (add GPR:$rs1, simm12:$imm12)),
+            (Inst GPR:$rs1, simm12:$imm12)>;
+}
+
+defm : LdPat<sextloadi8, LB>;
+defm : LdPat<extloadi8, LB>;
+defm : LdPat<sextloadi16, LH>;
+defm : LdPat<extloadi16, LH>;
+defm : LdPat<load, LW>;
+defm : LdPat<zextloadi8, LBU>;
+defm : LdPat<zextloadi16, LHU>;
+
+/// Stores
+
+multiclass StPat<PatFrag StoreOp, RVInst Inst> {
+  def : Pat<(StoreOp GPR:$rs2, GPR:$rs1), (Inst GPR:$rs2, GPR:$rs1, 0)>;
+  def : Pat<(StoreOp GPR:$rs2, (add GPR:$rs1, simm12:$imm12)),
+            (Inst GPR:$rs2, GPR:$rs1, simm12:$imm12)>;
+}
+
+defm : StPat<truncstorei8, SB>;
+defm : StPat<truncstorei16, SH>;
+defm : StPat<store, SW>;

@@ -1,4 +1,4 @@
-# RUN: clangd -run-synchronously < %s | FileCheck %s
+# RUN: clangd -pretty -run-synchronously < %s | FileCheck -strict-whitespace %s
 Content-Length: 125
 
 {"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
@@ -8,11 +8,39 @@ Content-Length: 297
 Content-Length: 151
 
 {"jsonrpc":"2.0","id":2,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":11,"character":8}}}
-# CHECK: {"id":2,"jsonrpc":"2.0","result":[
-# CHECK-DAG: {"detail":"int","filterText":"foo","insertText":"foo","insertTextFormat":1,"kind":2,"label":"foo() const","sortText":"200035foo"}
-# CHECK-DAG: {"detail":"int","filterText":"bar","insertText":"bar","insertTextFormat":1,"kind":2,"label":"bar() const","sortText":"000037bar"}
-# CHECK-DAG: {"detail":"int","filterText":"foo","insertText":"foo","insertTextFormat":1,"kind":2,"label":"Foo::foo() const","sortText":"000037foo"}
-# CHECK-SAME: ]}
+#      CHECK:  "id": 2,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": [
+# Eligible const functions are at the top of the list.
+# CHECK-NEXT:    {
+# CHECK-NEXT:      "detail": "int",
+# CHECK-NEXT:      "filterText": "bar",
+# CHECK-NEXT:      "insertText": "bar",
+# CHECK-NEXT:      "insertTextFormat": 1,
+# CHECK-NEXT:      "kind": 2,
+# CHECK-NEXT:      "label": "bar() const",
+# CHECK-NEXT:      "sortText": "000037bar"
+# CHECK-NEXT:    },
+# CHECK-NEXT:    {
+# CHECK-NEXT:      "detail": "int",
+# CHECK-NEXT:      "filterText": "foo",
+# CHECK-NEXT:      "insertText": "foo",
+# CHECK-NEXT:      "insertTextFormat": 1,
+# CHECK-NEXT:      "kind": 2,
+# CHECK-NEXT:      "label": "Foo::foo() const",
+# CHECK-NEXT:      "sortText": "000037foo"
+# CHECK-NEXT:    },
+# Ineligible non-const function is at the bottom of the list.
+# CHECK-NEXT:    {
+#      CHECK:      "detail": "int",
+#      CHECK:      "filterText": "foo",
+# CHECK-NEXT:      "insertText": "foo",
+# CHECK-NEXT:      "insertTextFormat": 1,
+# CHECK-NEXT:      "kind": 2,
+# CHECK-NEXT:      "label": "foo() const",
+# CHECK-NEXT:      "sortText": "200035foo"
+# CHECK-NEXT:    }
+# CHECK-NEXT:  ]
 Content-Length: 44
 
 {"jsonrpc":"2.0","id":4,"method":"shutdown"}

@@ -9,11 +9,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Tooling/Core/QualTypeNames.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/Mangle.h"
+#include "clang/AST/QualTypeNames.h"
 
 #include <stdio.h>
 #include <memory>
@@ -21,17 +21,6 @@
 namespace clang {
 
 namespace TypeName {
-/// \brief Generates a QualType that can be used to name the same type
-/// if used at the end of the current translation unit. This ignores
-/// issues such as type shadowing.
-///
-/// \param[in] QT - the type for which the fully qualified type will be
-/// returned.
-/// \param[in] Ctx - the ASTContext to be used.
-/// \param[in] WithGlobalNsPrefix - Indicate whether the global namespace
-/// specifier "::" should be prepended or not.
-static QualType getFullyQualifiedType(QualType QT, const ASTContext &Ctx,
-                                      bool WithGlobalNsPrefix);
 
 /// \brief Create a NestedNameSpecifier for Namesp and its enclosing
 /// scopes.

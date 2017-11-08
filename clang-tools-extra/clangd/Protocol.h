@@ -545,6 +545,8 @@ struct CompletionItem {
   static json::Expr unparse(const CompletionItem &P);
 };
 
+bool operator<(const CompletionItem &, const CompletionItem &);
+
 /// A single parameter of a particular signature.
 struct ParameterInformation {
 
