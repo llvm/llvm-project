@@ -89,7 +89,6 @@ define void @pr26232(i64 %a, <16 x i1> %b) {
 ; KNL-32-NEXT:    jne .LBB1_1
 ; KNL-32-NEXT:  # BB#2: # %for_exit600
 ; KNL-32-NEXT:    popl %esi
-; KNL-32-NEXT:    .cfi_def_cfa_offset 4
 ; KNL-32-NEXT:    retl
 allocas:
   br label %for_test11.preheader

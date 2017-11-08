@@ -420,9 +420,6 @@ namespace llvm {
   // This pass expands memcmp() to load/stores.
   FunctionPass *createExpandMemCmpPass();
 
-  /// Creates CFI Instruction Inserter pass. \see CFIInstrInserter.cpp
-  FunctionPass *createCFIInstrInserter();
-
 } // End llvm namespace
 
 #endif

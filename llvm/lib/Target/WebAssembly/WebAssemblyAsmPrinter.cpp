@@ -267,12 +267,11 @@ bool WebAssemblyAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   if (AsmVariant != 0)
     report_fatal_error("There are no defined alternate asm variants");
 
-  if (!ExtraCode) {
-    // TODO: For now, we just hard-code 0 as the constant offset; teach
-    // SelectInlineAsmMemoryOperand how to do address mode matching.
-    OS << "0(" + regToString(MI->getOperand(OpNo)) + ')';
-    return false;
-  }
+  // The current approach to inline asm is that "r" constraints are expressed
+  // as local indices, rather than values on the operand stack. This simplifies
+  // using "r" as it eliminates the need to push and pop the values in a
+  // particular order, however it also makes it impossible to have an "m"
+  // constraint. So we don't support it.
 
   return AsmPrinter::PrintAsmMemoryOperand(MI, OpNo, AsmVariant, ExtraCode, OS);
 }

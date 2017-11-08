@@ -182,7 +182,7 @@ void MCWinCOFFStreamer::EmitCOFFSafeSEH(MCSymbol const *Symbol) {
   if (SXData->getAlignment() < 4)
     SXData->setAlignment(4);
 
-  new MCSafeSEHFragment(Symbol, SXData);
+  new MCSymbolIdFragment(Symbol, SXData);
 
   getAssembler().registerSymbol(*Symbol);
   CSymbol->setIsSafeSEH();

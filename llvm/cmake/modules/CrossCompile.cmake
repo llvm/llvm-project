@@ -16,12 +16,15 @@ function(llvm_create_cross_target_internal target_name toolchain buildtype)
     COMMAND ${CMAKE_COMMAND} -E make_directory ${LLVM_${target_name}_BUILD}
     COMMENT "Creating ${LLVM_${target_name}_BUILD}...")
 
+  add_custom_target(CREATE_LLVM_${target_name}
+                    DEPENDS ${LLVM_${target_name}_BUILD})
+
   add_custom_command(OUTPUT ${LLVM_${target_name}_BUILD}/CMakeCache.txt
     COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}"
         ${CROSS_TOOLCHAIN_FLAGS_${target_name}} ${CMAKE_SOURCE_DIR}
         -DLLVM_TARGET_IS_CROSSCOMPILE_HOST=TRUE
     WORKING_DIRECTORY ${LLVM_${target_name}_BUILD}
-    DEPENDS ${LLVM_${target_name}_BUILD}
+    DEPENDS CREATE_LLVM_${target_name}
     COMMENT "Configuring ${target_name} LLVM...")
 
   add_custom_target(CONFIGURE_LLVM_${target_name}

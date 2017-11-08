@@ -1315,7 +1315,7 @@ bool RedundantInstrElimination::processBlock(MachineBasicBlock &B,
 
     if (MI->getOpcode() == TargetOpcode::COPY)
       continue;
-    if (MI->hasUnmodeledSideEffects() || MI->isInlineAsm())
+    if (MI->isPHI() || MI->hasUnmodeledSideEffects() || MI->isInlineAsm())
       continue;
     unsigned NumD = MI->getDesc().getNumDefs();
     if (NumD != 1)
@@ -1325,8 +1325,7 @@ bool RedundantInstrElimination::processBlock(MachineBasicBlock &B,
     if (!BT.has(RD.Reg))
       continue;
     const BitTracker::RegisterCell &DC = BT.lookup(RD.Reg);
-    auto At = MI->isPHI() ? B.getFirstNonPHI()
-                          : MachineBasicBlock::iterator(MI);
+    auto At = MachineBasicBlock::iterator(MI);
 
     // Find a source operand that is equal to the result.
     for (auto &Op : MI->uses()) {

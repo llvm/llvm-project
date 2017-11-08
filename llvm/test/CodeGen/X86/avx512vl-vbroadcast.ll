@@ -12,7 +12,6 @@ define <8 x float> @_256_broadcast_ss_spill(float %x) {
 ; CHECK-NEXT:    callq func_f32
 ; CHECK-NEXT:    vbroadcastss (%rsp), %ymm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    addq $24, %rsp
-; CHECK-NEXT:   .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %a  = fadd float %x, %x
   call void @func_f32(float %a)
@@ -31,7 +30,6 @@ define <4 x float> @_128_broadcast_ss_spill(float %x) {
 ; CHECK-NEXT:    callq func_f32
 ; CHECK-NEXT:    vbroadcastss (%rsp), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    addq $24, %rsp
-; CHECK-NEXT:   .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %a  = fadd float %x, %x
   call void @func_f32(float %a)
@@ -51,7 +49,6 @@ define <4 x double> @_256_broadcast_sd_spill(double %x) {
 ; CHECK-NEXT:    callq func_f64
 ; CHECK-NEXT:    vbroadcastsd (%rsp), %ymm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    addq $24, %rsp
-; CHECK-NEXT:   .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %a  = fadd double %x, %x
   call void @func_f64(double %a)
