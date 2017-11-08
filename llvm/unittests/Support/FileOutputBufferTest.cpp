@@ -42,9 +42,9 @@ TEST(FileOutputBuffer, Test) {
   SmallString<128> File1(TestDirectory);
 	File1.append("/file1");
   {
-    ErrorOr<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
+    Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
         FileOutputBuffer::create(File1, 8192);
-    ASSERT_NO_ERROR(BufferOrErr.getError());
+    ASSERT_NO_ERROR(errorToErrorCode(BufferOrErr.takeError()));
     std::unique_ptr<FileOutputBuffer> &Buffer = *BufferOrErr;
     // Start buffer with special header.
     memcpy(Buffer->getBufferStart(), "AABBCCDDEEFFGGHHIIJJ", 20);
@@ -64,9 +64,9 @@ TEST(FileOutputBuffer, Test) {
   SmallString<128> File2(TestDirectory);
   File2.append("/file2");
   {
-    ErrorOr<std::unique_ptr<FileOutputBuffer>> Buffer2OrErr =
+    Expected<std::unique_ptr<FileOutputBuffer>> Buffer2OrErr =
         FileOutputBuffer::create(File2, 8192);
-    ASSERT_NO_ERROR(Buffer2OrErr.getError());
+    ASSERT_NO_ERROR(errorToErrorCode(Buffer2OrErr.takeError()));
     std::unique_ptr<FileOutputBuffer> &Buffer2 = *Buffer2OrErr;
     // Fill buffer with special header.
     memcpy(Buffer2->getBufferStart(), "AABBCCDDEEFFGGHHIIJJ", 20);
@@ -81,9 +81,9 @@ TEST(FileOutputBuffer, Test) {
   SmallString<128> File3(TestDirectory);
 	File3.append("/file3");
   {
-    ErrorOr<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
+    Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
         FileOutputBuffer::create(File3, 8192000);
-    ASSERT_NO_ERROR(BufferOrErr.getError());
+    ASSERT_NO_ERROR(errorToErrorCode(BufferOrErr.takeError()));
     std::unique_ptr<FileOutputBuffer> &Buffer = *BufferOrErr;
     // Start buffer with special header.
     memcpy(Buffer->getBufferStart(), "AABBCCDDEEFFGGHHIIJJ", 20);
@@ -102,9 +102,9 @@ TEST(FileOutputBuffer, Test) {
   SmallString<128> File4(TestDirectory);
 	File4.append("/file4");
   {
-    ErrorOr<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
+    Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
         FileOutputBuffer::create(File4, 8192, FileOutputBuffer::F_executable);
-    ASSERT_NO_ERROR(BufferOrErr.getError());
+    ASSERT_NO_ERROR(errorToErrorCode(BufferOrErr.takeError()));
     std::unique_ptr<FileOutputBuffer> &Buffer = *BufferOrErr;
     // Start buffer with special header.
     memcpy(Buffer->getBufferStart(), "AABBCCDDEEFFGGHHIIJJ", 20);
