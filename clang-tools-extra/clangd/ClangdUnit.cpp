@@ -389,6 +389,7 @@ public:
       assert(CCS && "Expected the CodeCompletionString to be non-null");
       Items.push_back(ProcessCodeCompleteResult(Result, *CCS));
     }
+    std::sort(Items.begin(), Items.end());
   }
 
   GlobalCodeCompletionAllocator &getAllocator() override { return *Allocator; }

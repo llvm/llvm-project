@@ -314,8 +314,8 @@ void Writer::run() {
 
   writeMapFile(OutputSections);
 
-  if (auto EC = Buffer->commit())
-    fatal("failed to write the output file: " + EC.message());
+  if (auto E = Buffer->commit())
+    fatal("failed to write the output file: " + toString(std::move(E)));
 }
 
 static StringRef getOutputSection(StringRef Name) {
