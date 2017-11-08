@@ -2595,6 +2595,13 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
            (f64 (COPY_TO_REGCLASS (XVCVSXWDP (XXSPLTW $A, 3)), VSFRC))>;
   }
 
+  // Alternate patterns for PPCmtvsrz where the output is v8i16 or v16i8 instead
+  // of f64
+  def : Pat<(v8i16 (PPCmtvsrz i32:$A)),
+            (v8i16 (SUBREG_TO_REG (i64 1), (MTVSRWZ $A), sub_64))>;
+  def : Pat<(v16i8 (PPCmtvsrz i32:$A)),
+            (v16i8 (SUBREG_TO_REG (i64 1), (MTVSRWZ $A), sub_64))>;
+
   // Patterns for which instructions from ISA 3.0 are a better match
   let Predicates = [IsLittleEndian, HasP9Vector] in {
   def : Pat<(f32 (PPCfcfidus (PPCmtvsrz (i32 (extractelt v4i32:$A, 0))))),

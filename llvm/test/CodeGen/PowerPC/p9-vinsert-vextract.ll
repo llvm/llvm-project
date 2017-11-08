@@ -876,3 +876,247 @@ entry:
   %vecins = shufflevector <16 x i8> %a, <16 x i8> %a, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 8>
   ret <16 x i8> %vecins
 }
+
+; The following tests try to insert one halfword element into the vector.  We
+; should always be using the 'vinserth' instruction.
+define <8 x i16> @insert_halfword_0(<8 x i16> %a, i16 %b) {
+entry:
+; CHECK-LABEL: insert_halfword_0
+; CHECK: vinserth 2, 3, 14
+; CHECK-BE-LABEL: insert_halfword_0
+; CHECK-BE: vinserth 2, 3, 0
+  %vecins = insertelement <8 x i16> %a, i16 %b, i32 0
+  ret <8 x i16> %vecins
+}
+
+define <8 x i16> @insert_halfword_1(<8 x i16> %a, i16 %b) {
+entry:
+; CHECK-LABEL: insert_halfword_1
+; CHECK: vinserth 2, 3, 12
+; CHECK-BE-LABEL: insert_halfword_1
+; CHECK-BE: vinserth 2, 3, 2
+  %vecins = insertelement <8 x i16> %a, i16 %b, i32 1
+  ret <8 x i16> %vecins
+}
+
+define <8 x i16> @insert_halfword_2(<8 x i16> %a, i16 %b) {
+entry:
+; CHECK-LABEL: insert_halfword_2
+; CHECK: vinserth 2, 3, 10
+; CHECK-BE-LABEL: insert_halfword_2
+; CHECK-BE: vinserth 2, 3, 4
+  %vecins = insertelement <8 x i16> %a, i16 %b, i32 2
+  ret <8 x i16> %vecins
+}
+
+define <8 x i16> @insert_halfword_3(<8 x i16> %a, i16 %b) {
+entry:
+; CHECK-LABEL: insert_halfword_3
+; CHECK: vinserth 2, 3, 8
+; CHECK-BE-LABEL: insert_halfword_3
+; CHECK-BE: vinserth 2, 3, 6
+  %vecins = insertelement <8 x i16> %a, i16 %b, i32 3
+  ret <8 x i16> %vecins
+}
+
+define <8 x i16> @insert_halfword_4(<8 x i16> %a, i16 %b) {
+entry:
+; CHECK-LABEL: insert_halfword_4
+; CHECK: vinserth 2, 3, 6
+; CHECK-BE-LABEL: insert_halfword_4
+; CHECK-BE: vinserth 2, 3, 8
+  %vecins = insertelement <8 x i16> %a, i16 %b, i32 4
+  ret <8 x i16> %vecins
+}
+
+define <8 x i16> @insert_halfword_5(<8 x i16> %a, i16 %b) {
+entry:
+; CHECK-LABEL: insert_halfword_5
+; CHECK: vinserth 2, 3, 4
+; CHECK-BE-LABEL: insert_halfword_5
+; CHECK-BE: vinserth 2, 3, 10
+  %vecins = insertelement <8 x i16> %a, i16 %b, i32 5
+  ret <8 x i16> %vecins
+}
+
+define <8 x i16> @insert_halfword_6(<8 x i16> %a, i16 %b) {
+entry:
+; CHECK-LABEL: insert_halfword_6
+; CHECK: vinserth 2, 3, 2
+; CHECK-BE-LABEL: insert_halfword_6
+; CHECK-BE: vinserth 2, 3, 12
+  %vecins = insertelement <8 x i16> %a, i16 %b, i32 6
+  ret <8 x i16> %vecins
+}
+
+define <8 x i16> @insert_halfword_7(<8 x i16> %a, i16 %b) {
+entry:
+; CHECK-LABEL: insert_halfword_7
+; CHECK: vinserth 2, 3, 0
+; CHECK-BE-LABEL: insert_halfword_7
+; CHECK-BE: vinserth 2, 3, 14
+  %vecins = insertelement <8 x i16> %a, i16 %b, i32 7
+  ret <8 x i16> %vecins
+}
+
+; The following tests try to insert one byte element into the vector.  We
+; should always be using the 'vinsertb' instruction.
+define <16 x i8> @insert_byte_0(<16 x i8> %a, i8 %b) {
+entry:
+; CHECK-LABEL: insert_byte_0
+; CHECK: vinsertb 2, 3, 15
+; CHECK-BE-LABEL: insert_byte_0
+; CHECK-BE: vinsertb 2, 3, 0
+  %vecins = insertelement <16 x i8> %a, i8 %b, i32 0
+  ret <16 x i8> %vecins
+}
+
+define <16 x i8> @insert_byte_1(<16 x i8> %a, i8 %b) {
+entry:
+; CHECK-LABEL: insert_byte_1
+; CHECK: vinsertb 2, 3, 14
+; CHECK-BE-LABEL: insert_byte_1
+; CHECK-BE: vinsertb 2, 3, 1
+  %vecins = insertelement <16 x i8> %a, i8 %b, i32 1
+  ret <16 x i8> %vecins
+}
+
+define <16 x i8> @insert_byte_2(<16 x i8> %a, i8 %b) {
+entry:
+; CHECK-LABEL: insert_byte_2
+; CHECK: vinsertb 2, 3, 13
+; CHECK-BE-LABEL: insert_byte_2
+; CHECK-BE: vinsertb 2, 3, 2
+  %vecins = insertelement <16 x i8> %a, i8 %b, i32 2
+  ret <16 x i8> %vecins
+}
+
+define <16 x i8> @insert_byte_3(<16 x i8> %a, i8 %b) {
+entry:
+; CHECK-LABEL: insert_byte_3
+; CHECK: vinsertb 2, 3, 12
+; CHECK-BE-LABEL: insert_byte_3
+; CHECK-BE: vinsertb 2, 3, 3
+  %vecins = insertelement <16 x i8> %a, i8 %b, i32 3
+  ret <16 x i8> %vecins
+}
+
+define <16 x i8> @insert_byte_4(<16 x i8> %a, i8 %b) {
+entry:
+; CHECK-LABEL: insert_byte_4
+; CHECK: vinsertb 2, 3, 11
+; CHECK-BE-LABEL: insert_byte_4
+; CHECK-BE: vinsertb 2, 3, 4
+  %vecins = insertelement <16 x i8> %a, i8 %b, i32 4
+  ret <16 x i8> %vecins
+}
+
+define <16 x i8> @insert_byte_5(<16 x i8> %a, i8 %b) {
+entry:
+; CHECK-LABEL: insert_byte_5
+; CHECK: vinsertb 2, 3, 10
+; CHECK-BE-LABEL: insert_byte_5
+; CHECK-BE: vinsertb 2, 3, 5
+  %vecins = insertelement <16 x i8> %a, i8 %b, i32 5
+  ret <16 x i8> %vecins
+}
+
+define <16 x i8> @insert_byte_6(<16 x i8> %a, i8 %b) {
+entry:
+; CHECK-LABEL: insert_byte_6
+; CHECK: vinsertb 2, 3, 9
+; CHECK-BE-LABEL: insert_byte_6
+; CHECK-BE: vinsertb 2, 3, 6
+  %vecins = insertelement <16 x i8> %a, i8 %b, i32 6
+  ret <16 x i8> %vecins
+}
+
+define <16 x i8> @insert_byte_7(<16 x i8> %a, i8 %b) {
+entry:
+; CHECK-LABEL: insert_byte_7
+; CHECK: vinsertb 2, 3, 8
+; CHECK-BE-LABEL: insert_byte_7
+; CHECK-BE: vinsertb 2, 3, 7
+  %vecins = insertelement <16 x i8> %a, i8 %b, i32 7
+  ret <16 x i8> %vecins
+}
+
+define <16 x i8> @insert_byte_8(<16 x i8> %a, i8 %b) {
+entry:
+; CHECK-LABEL: insert_byte_8
+; CHECK: vinsertb 2, 3, 7
+; CHECK-BE-LABEL: insert_byte_8
+; CHECK-BE: vinsertb 2, 3, 8
+  %vecins = insertelement <16 x i8> %a, i8 %b, i32 8
+  ret <16 x i8> %vecins
+}
+
+define <16 x i8> @insert_byte_9(<16 x i8> %a, i8 %b) {
+entry:
+; CHECK-LABEL: insert_byte_9
+; CHECK: vinsertb 2, 3, 6
+; CHECK-BE-LABEL: insert_byte_9
+; CHECK-BE: vinsertb 2, 3, 9
+  %vecins = insertelement <16 x i8> %a, i8 %b, i32 9
+  ret <16 x i8> %vecins
+}
+
+define <16 x i8> @insert_byte_10(<16 x i8> %a, i8 %b) {
+entry:
+; CHECK-LABEL: insert_byte_10
+; CHECK: vinsertb 2, 3, 5
+; CHECK-BE-LABEL: insert_byte_10
+; CHECK-BE: vinsertb 2, 3, 10
+  %vecins = insertelement <16 x i8> %a, i8 %b, i32 10
+  ret <16 x i8> %vecins
+}
+
+define <16 x i8> @insert_byte_11(<16 x i8> %a, i8 %b) {
+entry:
+; CHECK-LABEL: insert_byte_11
+; CHECK: vinsertb 2, 3, 4
+; CHECK-BE-LABEL: insert_byte_11
+; CHECK-BE: vinsertb 2, 3, 11
+  %vecins = insertelement <16 x i8> %a, i8 %b, i32 11
+  ret <16 x i8> %vecins
+}
+
+define <16 x i8> @insert_byte_12(<16 x i8> %a, i8 %b) {
+entry:
+; CHECK-LABEL: insert_byte_12
+; CHECK: vinsertb 2, 3, 3
+; CHECK-BE-LABEL: insert_byte_12
+; CHECK-BE: vinsertb 2, 3, 12
+  %vecins = insertelement <16 x i8> %a, i8 %b, i32 12
+  ret <16 x i8> %vecins
+}
+
+define <16 x i8> @insert_byte_13(<16 x i8> %a, i8 %b) {
+entry:
+; CHECK-LABEL: insert_byte_13
+; CHECK: vinsertb 2, 3, 2
+; CHECK-BE-LABEL: insert_byte_13
+; CHECK-BE: vinsertb 2, 3, 13
+  %vecins = insertelement <16 x i8> %a, i8 %b, i32 13
+  ret <16 x i8> %vecins
+}
+
+define <16 x i8> @insert_byte_14(<16 x i8> %a, i8 %b) {
+entry:
+; CHECK-LABEL: insert_byte_14
+; CHECK: vinsertb 2, 3, 1
+; CHECK-BE-LABEL: insert_byte_14
+; CHECK-BE: vinsertb 2, 3, 14
+  %vecins = insertelement <16 x i8> %a, i8 %b, i32 14
+  ret <16 x i8> %vecins
+}
+
+define <16 x i8> @insert_byte_15(<16 x i8> %a, i8 %b) {
+entry:
+; CHECK-LABEL: insert_byte_15
+; CHECK: vinsertb 2, 3, 0
+; CHECK-BE-LABEL: insert_byte_15
+; CHECK-BE: vinsertb 2, 3, 15
+  %vecins = insertelement <16 x i8> %a, i8 %b, i32 15
+  ret <16 x i8> %vecins
+}

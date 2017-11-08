@@ -40,9 +40,7 @@ def : ProcessorModel<"generic-rv64", NoSchedModel, [Feature64Bit]>;
 //===----------------------------------------------------------------------===//
 
 def RISCVInstrInfo : InstrInfo {
-  // TODO: disable guessInstructionProperties when
-  // https://reviews.llvm.org/D37065 lands.
-  let guessInstructionProperties = 1;
+  let guessInstructionProperties = 0;
 }
 
 def RISCVAsmParser : AsmParser {

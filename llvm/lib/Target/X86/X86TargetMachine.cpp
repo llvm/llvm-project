@@ -436,4 +436,11 @@ void X86PassConfig::addPreEmitPass() {
     addPass(createX86FixupLEAs());
     addPass(createX86EvexToVexInsts());
   }
+
+  // Verify basic block incoming and outgoing cfa offset and register values and
+  // correct CFA calculation rule where needed by inserting appropriate CFI
+  // instructions.
+  const Triple &TT = TM->getTargetTriple();
+  if (!TT.isOSDarwin() && !TT.isOSWindows())
+    addPass(createCFIInstrInserter());
 }

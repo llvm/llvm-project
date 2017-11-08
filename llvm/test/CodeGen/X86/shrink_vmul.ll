@@ -31,6 +31,7 @@ define void @mul_2xi8(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 
 ; X86-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
 ; X86-NEXT:    movq %xmm1, (%esi,%ecx,4)
 ; X86-NEXT:    popl %esi
+; X86-NEXT:   .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_2xi8:
@@ -89,6 +90,7 @@ define void @mul_4xi8(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 
 ; X86-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
 ; X86-NEXT:    movdqu %xmm1, (%esi,%ecx,4)
 ; X86-NEXT:    popl %esi
+; X86-NEXT:   .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_4xi8:
@@ -148,6 +150,7 @@ define void @mul_8xi8(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 
 ; X86-NEXT:    movdqu %xmm1, 16(%esi,%ecx,4)
 ; X86-NEXT:    movdqu %xmm0, (%esi,%ecx,4)
 ; X86-NEXT:    popl %esi
+; X86-NEXT:   .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_8xi8:
@@ -220,6 +223,7 @@ define void @mul_16xi8(i8* nocapture readonly %a, i8* nocapture readonly %b, i64
 ; X86-NEXT:    movdqu %xmm4, 16(%esi,%ecx,4)
 ; X86-NEXT:    movdqu %xmm3, (%esi,%ecx,4)
 ; X86-NEXT:    popl %esi
+; X86-NEXT:   .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_16xi8:
@@ -288,6 +292,7 @@ define void @mul_2xi16(i8* nocapture readonly %a, i8* nocapture readonly %b, i64
 ; X86-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
 ; X86-NEXT:    movq %xmm1, (%esi,%ecx,4)
 ; X86-NEXT:    popl %esi
+; X86-NEXT:   .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_2xi16:
@@ -342,6 +347,7 @@ define void @mul_4xi16(i8* nocapture readonly %a, i8* nocapture readonly %b, i64
 ; X86-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
 ; X86-NEXT:    movdqu %xmm1, (%esi,%ecx,4)
 ; X86-NEXT:    popl %esi
+; X86-NEXT:   .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_4xi16:
@@ -399,6 +405,7 @@ define void @mul_8xi16(i8* nocapture readonly %a, i8* nocapture readonly %b, i64
 ; X86-NEXT:    movdqu %xmm1, 16(%esi,%ecx,4)
 ; X86-NEXT:    movdqu %xmm0, (%esi,%ecx,4)
 ; X86-NEXT:    popl %esi
+; X86-NEXT:   .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_8xi16:
@@ -469,6 +476,7 @@ define void @mul_16xi16(i8* nocapture readonly %a, i8* nocapture readonly %b, i6
 ; X86-NEXT:    movdqu %xmm2, 16(%esi,%ecx,4)
 ; X86-NEXT:    movdqu %xmm0, (%esi,%ecx,4)
 ; X86-NEXT:    popl %esi
+; X86-NEXT:   .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_16xi16:
@@ -541,6 +549,7 @@ define void @mul_2xi8_sext(i8* nocapture readonly %a, i8* nocapture readonly %b,
 ; X86-NEXT:    psrad $16, %xmm0
 ; X86-NEXT:    movq %xmm0, (%esi,%ecx,4)
 ; X86-NEXT:    popl %esi
+; X86-NEXT:   .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_2xi8_sext:
@@ -606,6 +615,7 @@ define void @mul_2xi8_sext_zext(i8* nocapture readonly %a, i8* nocapture readonl
 ; X86-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
 ; X86-NEXT:    movq %xmm0, (%esi,%ecx,4)
 ; X86-NEXT:    popl %esi
+; X86-NEXT:   .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_2xi8_sext_zext:
@@ -666,6 +676,7 @@ define void @mul_2xi16_sext(i8* nocapture readonly %a, i8* nocapture readonly %b
 ; X86-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
 ; X86-NEXT:    movq %xmm1, (%esi,%ecx,4)
 ; X86-NEXT:    popl %esi
+; X86-NEXT:   .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_2xi16_sext:
@@ -733,6 +744,7 @@ define void @mul_2xi16_sext_zext(i8* nocapture readonly %a, i8* nocapture readon
 ; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
 ; X86-NEXT:    movq %xmm0, (%esi,%ecx,4)
 ; X86-NEXT:    popl %esi
+; X86-NEXT:   .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_2xi16_sext_zext:
@@ -813,6 +825,7 @@ define void @mul_16xi16_sext(i8* nocapture readonly %a, i8* nocapture readonly %
 ; X86-NEXT:    movdqu %xmm2, 16(%esi,%ecx,4)
 ; X86-NEXT:    movdqu %xmm0, (%esi,%ecx,4)
 ; X86-NEXT:    popl %esi
+; X86-NEXT:   .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_16xi16_sext:

@@ -184,7 +184,7 @@ Optional<DWARFFormValue> DWARFAbbreviationDeclaration::getAttributeValue(
         FormValue.setSValue(Spec.getImplicitConstValue());
         return FormValue;
       }
-      if (FormValue.extractValue(DebugInfoData, &Offset, &U))
+      if (FormValue.extractValue(DebugInfoData, &Offset, U.getFormParams(), &U))
         return FormValue;
     }
     // March Offset along until we get to the attribute we want.

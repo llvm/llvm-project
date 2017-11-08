@@ -43,6 +43,7 @@ define void @foo() {
 ; X86-NEXT:    orl %eax, %edx
 ; X86-NEXT:    setne {{[0-9]+}}(%esp)
 ; X86-NEXT:    popl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: foo:
