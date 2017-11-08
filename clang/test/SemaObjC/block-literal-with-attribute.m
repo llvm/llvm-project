@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only %s -verify -fblocks -fobjc-arc
 // RUN: %clang_cc1 -fsyntax-only %s -verify -fblocks
-// FIXME: should compile
 
 __auto_type block = ^ id __attribute__((ns_returns_retained)) (id filter) {
   return filter; // ok
