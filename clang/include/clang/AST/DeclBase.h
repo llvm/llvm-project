@@ -1,4 +1,4 @@
-//===-- DeclBase.h - Base Classes for representing declarations -*- C++ -*-===//
+//===- DeclBase.h - Base Classes for representing declarations --*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,33 +16,40 @@
 
 #include "clang/AST/AttrIterator.h"
 #include "clang/AST/DeclarationName.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/VersionTuple.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/PrettyStackTrace.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <iterator>
+#include <string>
+#include <type_traits>
+#include <utility>
 
 namespace clang {
+
+class ASTContext;
 class ASTMutationListener;
-class BlockDecl;
-class CXXRecordDecl;
-class CompoundStmt;
+class Attr;
 class DeclContext;
-class DeclarationName;
-class DependentDiagnostic;
-class EnumDecl;
-class ExportDecl;
 class ExternalSourceSymbolAttr;
 class FunctionDecl;
 class FunctionType;
+class IdentifierInfo;
 enum Linkage : unsigned char;
-class LinkageComputer;
 class LinkageSpecDecl;
 class Module;
 class NamedDecl;
-class NamespaceDecl;
 class ObjCCategoryDecl;
 class ObjCCategoryImplDecl;
 class ObjCContainerDecl;
@@ -53,23 +60,21 @@ class ObjCMethodDecl;
 class ObjCProtocolDecl;
 struct PrintingPolicy;
 class RecordDecl;
+class SourceManager;
 class Stmt;
 class StoredDeclsMap;
 class TemplateDecl;
 class TranslationUnitDecl;
 class UsingDirectiveDecl;
-}
 
-namespace clang {
-
-  /// \brief Captures the result of checking the availability of a
-  /// declaration.
-  enum AvailabilityResult {
-    AR_Available = 0,
-    AR_NotYetIntroduced,
-    AR_Deprecated,
-    AR_Unavailable
-  };
+/// \brief Captures the result of checking the availability of a
+/// declaration.
+enum AvailabilityResult {
+  AR_Available = 0,
+  AR_NotYetIntroduced,
+  AR_Deprecated,
+  AR_Unavailable
+};
 
 /// Decl - This represents one declaration (or definition), e.g. a variable,
 /// typedef, function, struct, etc.
@@ -94,7 +99,7 @@ public:
   /// \brief A placeholder type used to construct an empty shell of a
   /// decl-derived type that will be filled in later (e.g., by some
   /// deserialization method).
-  struct EmptyShell { };
+  struct EmptyShell {};
 
   /// IdentifierNamespace - The different namespaces in which
   /// declarations may appear.  According to C99 6.2.3, there are
@@ -208,15 +213,18 @@ public:
   enum class ModuleOwnershipKind : unsigned {
     /// This declaration is not owned by a module.
     Unowned,
+
     /// This declaration has an owning module, but is globally visible
     /// (typically because its owning module is visible and we know that
     /// modules cannot later become hidden in this compilation).
     /// After serialization and deserialization, this will be converted
     /// to VisibleWhenImported.
     Visible,
+
     /// This declaration has an owning module, and is visible when that
     /// module is imported.
     VisibleWhenImported,
+
     /// This declaration has an owning module, but is only visible to
     /// lookups that occur within that module.
     ModulePrivate
@@ -238,7 +246,6 @@ private:
     DeclContext *LexicalDC;
   };
 
-
   /// DeclCtx - Holds either a DeclContext* or a MultipleDC*.
   /// For declarations that don't contain C++ scope specifiers, it contains
   /// the DeclContext where the Decl was declared.
@@ -254,12 +261,14 @@ private:
   ///                // LexicalDC == global namespace
   llvm::PointerUnion<DeclContext*, MultipleDC*> DeclCtx;
 
-  inline bool isInSemaDC() const    { return DeclCtx.is<DeclContext*>(); }
-  inline bool isOutOfSemaDC() const { return DeclCtx.is<MultipleDC*>(); }
-  inline MultipleDC *getMultipleDC() const {
+  bool isInSemaDC() const { return DeclCtx.is<DeclContext*>(); }
+  bool isOutOfSemaDC() const { return DeclCtx.is<MultipleDC*>(); }
+
+  MultipleDC *getMultipleDC() const {
     return DeclCtx.get<MultipleDC*>();
   }
-  inline DeclContext *getSemanticDC() const {
+
+  DeclContext *getSemanticDC() const {
     return DeclCtx.get<DeclContext*>();
   }
 
@@ -298,10 +307,16 @@ private:
   static bool StatisticsEnabled;
 
 protected:
+  friend class ASTDeclReader;
+  friend class ASTDeclWriter;
+  friend class ASTReader;
+  friend class CXXClassMemberWrapper;
+  friend class LinkageComputer;
+  template<typename decl_type> friend class Redeclarable;
+
   /// Access - Used by C++ decls for the access specifier.
   // NOTE: VC++ treats enums as signed, avoid using the AccessSpecifier enum
   unsigned Access : 2;
-  friend class CXXClassMemberWrapper;
 
   /// \brief Whether this declaration was loaded from an AST file.
   unsigned FromASTFile : 1;
@@ -312,13 +327,6 @@ protected:
   /// \brief If 0, we have not computed the linkage of this declaration.
   /// Otherwise, it is the linkage + 1.
   mutable unsigned CacheValidAndLinkage : 3;
-
-  friend class ASTDeclWriter;
-  friend class ASTDeclReader;
-  friend class ASTReader;
-  friend class LinkageComputer;
-
-  template<typename decl_type> friend class Redeclarable;
 
   /// \brief Allocate memory for a deserialized declaration.
   ///
@@ -357,7 +365,7 @@ private:
 protected:
   Decl(Kind DK, DeclContext *DC, SourceLocation L)
       : NextInContextAndBits(nullptr, getModuleOwnershipKindForChildOf(DC)),
-        DeclCtx(DC), Loc(L), DeclKind(DK), InvalidDecl(0), HasAttrs(false),
+        DeclCtx(DC), Loc(L), DeclKind(DK), InvalidDecl(false), HasAttrs(false),
         Implicit(false), Used(false), Referenced(false),
         TopLevelDeclInObjCContainer(false), Access(AS_none), FromASTFile(0),
         IdentifierNamespace(getIdentifierNamespaceForKind(DK)),
@@ -366,9 +374,9 @@ protected:
   }
 
   Decl(Kind DK, EmptyShell Empty)
-      : NextInContextAndBits(), DeclKind(DK), InvalidDecl(0), HasAttrs(false),
-        Implicit(false), Used(false), Referenced(false),
-        TopLevelDeclInObjCContainer(false), Access(AS_none), FromASTFile(0),
+      : DeclKind(DK), InvalidDecl(false), HasAttrs(false), Implicit(false),
+        Used(false), Referenced(false), TopLevelDeclInObjCContainer(false),
+        Access(AS_none), FromASTFile(0),
         IdentifierNamespace(getIdentifierNamespaceForKind(DK)),
         CacheValidAndLinkage(0) {
     if (StatisticsEnabled) add(DK);
@@ -392,14 +400,15 @@ protected:
   }
 
 public:
-
   /// \brief Source range that this declaration covers.
   virtual SourceRange getSourceRange() const LLVM_READONLY {
     return SourceRange(getLocation(), getLocation());
   }
+
   SourceLocation getLocStart() const LLVM_READONLY {
     return getSourceRange().getBegin();
   }
+
   SourceLocation getLocEnd() const LLVM_READONLY {
     return getSourceRange().getEnd();
   }
@@ -460,12 +469,15 @@ public:
   }
 
   bool hasAttrs() const { return HasAttrs; }
+
   void setAttrs(const AttrVec& Attrs) {
     return setAttrsImpl(Attrs, getASTContext());
   }
+
   AttrVec &getAttrs() {
     return const_cast<AttrVec&>(const_cast<const Decl*>(this)->getAttrs());
   }
+
   const AttrVec &getAttrs() const;
   void dropAttrs();
 
@@ -476,8 +488,8 @@ public:
       setAttrs(AttrVec(1, A));
   }
 
-  typedef AttrVec::const_iterator attr_iterator;
-  typedef llvm::iterator_range<attr_iterator> attr_range;
+  using attr_iterator = AttrVec::const_iterator;
+  using attr_range = llvm::iterator_range<attr_iterator>;
 
   attr_range attrs() const {
     return attr_range(attr_begin(), attr_end());
@@ -510,6 +522,7 @@ public:
   specific_attr_iterator<T> specific_attr_begin() const {
     return specific_attr_iterator<T>(attr_begin());
   }
+
   template <typename T>
   specific_attr_iterator<T> specific_attr_end() const {
     return specific_attr_iterator<T>(attr_end());
@@ -518,6 +531,7 @@ public:
   template<typename T> T *getAttr() const {
     return hasAttrs() ? getSpecificAttr<T>(getAttrs()) : nullptr;
   }
+
   template<typename T> bool hasAttr() const {
     return hasAttrs() && hasSpecificAttr<T>(getAttrs());
   }
@@ -616,7 +630,6 @@ protected:
   }
   
 public:
-  
   /// \brief Determine the availability of the given declaration.
   ///
   /// This routine will determine the most restrictive availability of
@@ -698,6 +711,7 @@ public:
 
 private:
   Module *getOwningModuleSlow() const;
+
 protected:
   bool hasLocalOwningModuleStorage() const;
 
@@ -777,14 +791,17 @@ public:
   unsigned getIdentifierNamespace() const {
     return IdentifierNamespace;
   }
+
   bool isInIdentifierNamespace(unsigned NS) const {
     return getIdentifierNamespace() & NS;
   }
+
   static unsigned getIdentifierNamespaceForKind(Kind DK);
 
   bool hasTagIdentifierNamespace() const {
     return isTagIdentifierNamespace(getIdentifierNamespace());
   }
+
   static bool isTagIdentifierNamespace(unsigned NS) {
     // TagDecls have Tag and Type set and may also have TagFriend.
     return (NS & ~IDNS_TagFriend) == (IDNS_Tag | IDNS_Type);
@@ -872,18 +889,18 @@ public:
   /// \brief Iterates through all the redeclarations of the same decl.
   class redecl_iterator {
     /// Current - The current declaration.
-    Decl *Current;
+    Decl *Current = nullptr;
     Decl *Starter;
 
   public:
-    typedef Decl *value_type;
-    typedef const value_type &reference;
-    typedef const value_type *pointer;
-    typedef std::forward_iterator_tag iterator_category;
-    typedef std::ptrdiff_t difference_type;
+    using value_type = Decl *;
+    using reference = const value_type &;
+    using pointer = const value_type *;
+    using iterator_category = std::forward_iterator_tag;
+    using difference_type = std::ptrdiff_t;
 
-    redecl_iterator() : Current(nullptr) { }
-    explicit redecl_iterator(Decl *C) : Current(C), Starter(C) { }
+    redecl_iterator() = default;
+    explicit redecl_iterator(Decl *C) : Current(C), Starter(C) {}
 
     reference operator*() const { return Current; }
     value_type operator->() const { return Current; }
@@ -906,12 +923,13 @@ public:
     friend bool operator==(redecl_iterator x, redecl_iterator y) {
       return x.Current == y.Current;
     }
+
     friend bool operator!=(redecl_iterator x, redecl_iterator y) {
       return x.Current != y.Current;
     }
   };
 
-  typedef llvm::iterator_range<redecl_iterator> redecl_range;
+  using redecl_range = llvm::iterator_range<redecl_iterator>;
 
   /// \brief Returns an iterator range for all the redeclarations of the same
   /// decl. It will iterate at least once (when this decl is the only one).
@@ -922,6 +940,7 @@ public:
   redecl_iterator redecls_begin() const {
     return redecl_iterator(const_cast<Decl *>(this));
   }
+
   redecl_iterator redecls_end() const { return redecl_iterator(); }
 
   /// \brief Retrieve the previous declaration that declares the same entity
@@ -1103,10 +1122,13 @@ public:
   static void printGroup(Decl** Begin, unsigned NumDecls,
                          raw_ostream &Out, const PrintingPolicy &Policy,
                          unsigned Indentation = 0);
+
   // Debuggers don't usually respect default arguments.
   void dump() const;
+
   // Same as dump(), but forces color printing.
   void dumpColor() const;
+
   void dump(raw_ostream &Out, bool Deserialize = false) const;
 
   /// \brief Looks through the Decl's underlying type to extract a FunctionType
@@ -1141,10 +1163,11 @@ class PrettyStackTraceDecl : public llvm::PrettyStackTraceEntry {
   SourceLocation Loc;
   SourceManager &SM;
   const char *Message;
+
 public:
   PrettyStackTraceDecl(const Decl *theDecl, SourceLocation L,
                        SourceManager &sm, const char *Msg)
-  : TheDecl(theDecl), Loc(L), SM(sm), Message(Msg) {}
+      : TheDecl(theDecl), Loc(L), SM(sm), Message(Msg) {}
 
   void print(raw_ostream &OS) const override;
 };
@@ -1153,30 +1176,35 @@ public:
 /// single result (with no stable storage) or a collection of results (with
 /// stable storage provided by the lookup table).
 class DeclContextLookupResult {
-  typedef ArrayRef<NamedDecl *> ResultTy;
+  using ResultTy = ArrayRef<NamedDecl *>;
+
   ResultTy Result;
+
   // If there is only one lookup result, it would be invalidated by
   // reallocations of the name table, so store it separately.
-  NamedDecl *Single;
+  NamedDecl *Single = nullptr;
 
   static NamedDecl *const SingleElementDummyList;
 
 public:
-  DeclContextLookupResult() : Result(), Single() {}
+  DeclContextLookupResult() = default;
   DeclContextLookupResult(ArrayRef<NamedDecl *> Result)
-      : Result(Result), Single() {}
+      : Result(Result) {}
   DeclContextLookupResult(NamedDecl *Single)
       : Result(SingleElementDummyList), Single(Single) {}
 
   class iterator;
-  typedef llvm::iterator_adaptor_base<iterator, ResultTy::iterator,
-                                      std::random_access_iterator_tag,
-                                      NamedDecl *const> IteratorBase;
+
+  using IteratorBase =
+      llvm::iterator_adaptor_base<iterator, ResultTy::iterator,
+                                  std::random_access_iterator_tag,
+                                  NamedDecl *const>;
+
   class iterator : public IteratorBase {
     value_type SingleElement;
 
   public:
-    iterator() : IteratorBase(), SingleElement() {}
+    iterator() = default;
     explicit iterator(pointer Pos, value_type Single = nullptr)
         : IteratorBase(Pos), SingleElement(Single) {}
 
@@ -1184,9 +1212,10 @@ public:
       return SingleElement ? SingleElement : IteratorBase::operator*();
     }
   };
-  typedef iterator const_iterator;
-  typedef iterator::pointer pointer;
-  typedef iterator::reference reference;
+
+  using const_iterator = iterator;
+  using pointer = iterator::pointer;
+  using reference = iterator::reference;
 
   iterator begin() const { return iterator(Result.begin(), Single); }
   iterator end() const { return iterator(Result.end(), Single); }
@@ -1220,7 +1249,6 @@ public:
 ///   ExportDecl
 ///   BlockDecl
 ///   OMPDeclareReductionDecl
-///
 class DeclContext {
   /// DeclKind - This indicates which class this is.
   unsigned DeclKind : 8;
@@ -1260,22 +1288,22 @@ class DeclContext {
   /// contains an entry for a DeclarationName (and we haven't lazily
   /// omitted anything), then it contains all relevant entries for that
   /// name (modulo the hasExternalDecls() flag).
-  mutable StoredDeclsMap *LookupPtr;
+  mutable StoredDeclsMap *LookupPtr = nullptr;
 
 protected:
+  friend class ASTDeclReader;
+  friend class ASTWriter;
+  friend class ExternalASTSource;
+
   /// FirstDecl - The first declaration stored within this declaration
   /// context.
-  mutable Decl *FirstDecl;
+  mutable Decl *FirstDecl = nullptr;
 
   /// LastDecl - The last declaration stored within this declaration
   /// context. FIXME: We could probably cache this value somewhere
   /// outside of the DeclContext, to reduce the size of DeclContext by
   /// another pointer.
-  mutable Decl *LastDecl;
-
-  friend class ExternalASTSource;
-  friend class ASTDeclReader;
-  friend class ASTWriter;
+  mutable Decl *LastDecl = nullptr;
 
   /// \brief Build up a chain of declarations.
   ///
@@ -1288,8 +1316,7 @@ protected:
         ExternalVisibleStorage(false),
         NeedToReconcileExternalVisibleStorage(false),
         HasLazyLocalLexicalLookups(false), HasLazyExternalLexicalLookups(false),
-        UseQualifiedLookup(false),
-        LookupPtr(nullptr), FirstDecl(nullptr), LastDecl(nullptr) {}
+        UseQualifiedLookup(false) {}
 
 public:
   ~DeclContext();
@@ -1297,6 +1324,7 @@ public:
   Decl::Kind getDeclKind() const {
     return static_cast<Decl::Kind>(DeclKind);
   }
+
   const char *getDeclKindName() const;
 
   /// getParent - Returns the containing DeclContext.
@@ -1504,19 +1532,20 @@ public:
   /// within this context.
   class decl_iterator {
     /// Current - The current declaration.
-    Decl *Current;
+    Decl *Current = nullptr;
 
   public:
-    typedef Decl *value_type;
-    typedef const value_type &reference;
-    typedef const value_type *pointer;
-    typedef std::forward_iterator_tag iterator_category;
-    typedef std::ptrdiff_t            difference_type;
+    using value_type = Decl *;
+    using reference = const value_type &;
+    using pointer = const value_type *;
+    using iterator_category = std::forward_iterator_tag;
+    using difference_type = std::ptrdiff_t;
 
-    decl_iterator() : Current(nullptr) { }
-    explicit decl_iterator(Decl *C) : Current(C) { }
+    decl_iterator() = default;
+    explicit decl_iterator(Decl *C) : Current(C) {}
 
     reference operator*() const { return Current; }
+
     // This doesn't meet the iterator requirements, but it's convenient
     value_type operator->() const { return Current; }
 
@@ -1534,12 +1563,13 @@ public:
     friend bool operator==(decl_iterator x, decl_iterator y) {
       return x.Current == y.Current;
     }
+
     friend bool operator!=(decl_iterator x, decl_iterator y) {
       return x.Current != y.Current;
     }
   };
 
-  typedef llvm::iterator_range<decl_iterator> decl_range;
+  using decl_range = llvm::iterator_range<decl_iterator>;
 
   /// decls_begin/decls_end - Iterate over the declarations stored in
   /// this context.
@@ -1578,16 +1608,16 @@ public:
     }
 
   public:
-    typedef SpecificDecl *value_type;
-    // TODO: Add reference and pointer typedefs (with some appropriate proxy
-    // type) if we ever have a need for them.
-    typedef void reference;
-    typedef void pointer;
-    typedef std::iterator_traits<DeclContext::decl_iterator>::difference_type
-      difference_type;
-    typedef std::forward_iterator_tag iterator_category;
+    using value_type = SpecificDecl *;
+    // TODO: Add reference and pointer types (with some appropriate proxy type)
+    // if we ever have a need for them.
+    using reference = void;
+    using pointer = void;
+    using difference_type =
+        std::iterator_traits<DeclContext::decl_iterator>::difference_type;
+    using iterator_category = std::forward_iterator_tag;
 
-    specific_decl_iterator() : Current() { }
+    specific_decl_iterator() = default;
 
     /// specific_decl_iterator - Construct a new iterator over a
     /// subset of the declarations the range [C,
@@ -1602,6 +1632,7 @@ public:
     }
 
     value_type operator*() const { return cast<SpecificDecl>(*Current); }
+
     // This doesn't meet the iterator requirements, but it's convenient
     value_type operator->() const { return **this; }
 
@@ -1655,16 +1686,16 @@ public:
     }
 
   public:
-    typedef SpecificDecl *value_type;
-    // TODO: Add reference and pointer typedefs (with some appropriate proxy
-    // type) if we ever have a need for them.
-    typedef void reference;
-    typedef void pointer;
-    typedef std::iterator_traits<DeclContext::decl_iterator>::difference_type
-      difference_type;
-    typedef std::forward_iterator_tag iterator_category;
+    using value_type = SpecificDecl *;
+    // TODO: Add reference and pointer types (with some appropriate proxy type)
+    // if we ever have a need for them.
+    using reference = void;
+    using pointer = void;
+    using difference_type =
+        std::iterator_traits<DeclContext::decl_iterator>::difference_type;
+    using iterator_category = std::forward_iterator_tag;
 
-    filtered_decl_iterator() : Current() { }
+    filtered_decl_iterator() = default;
 
     /// filtered_decl_iterator - Construct a new iterator over a
     /// subset of the declarations the range [C,
@@ -1742,8 +1773,8 @@ public:
   /// @brief Checks whether a declaration is in this context.
   bool containsDecl(Decl *D) const;
 
-  typedef DeclContextLookupResult lookup_result;
-  typedef lookup_result::iterator lookup_iterator;
+  using lookup_result = DeclContextLookupResult;
+  using lookup_iterator = lookup_result::iterator;
 
   /// lookup - Find the declarations (if any) with the given Name in
   /// this context. Returns a range of iterators that contains all of
@@ -1789,7 +1820,7 @@ public:
   /// of looking up every possible name.
   class all_lookups_iterator;
 
-  typedef llvm::iterator_range<all_lookups_iterator> lookups_range;
+  using lookups_range = llvm::iterator_range<all_lookups_iterator>;
 
   lookups_range lookups() const;
   lookups_range noload_lookups() const;
@@ -1805,21 +1836,26 @@ public:
   all_lookups_iterator noload_lookups_end() const;
 
   struct udir_iterator;
-  typedef llvm::iterator_adaptor_base<udir_iterator, lookup_iterator,
-                                      std::random_access_iterator_tag,
-                                      UsingDirectiveDecl *> udir_iterator_base;
+
+  using udir_iterator_base =
+      llvm::iterator_adaptor_base<udir_iterator, lookup_iterator,
+                                  std::random_access_iterator_tag,
+                                  UsingDirectiveDecl *>;
+
   struct udir_iterator : udir_iterator_base {
     udir_iterator(lookup_iterator I) : udir_iterator_base(I) {}
+
     UsingDirectiveDecl *operator*() const;
   };
 
-  typedef llvm::iterator_range<udir_iterator> udir_range;
+  using udir_range = llvm::iterator_range<udir_iterator>;
 
   udir_range using_directives() const;
 
   // These are all defined in DependentDiagnostic.h.
   class ddiag_iterator;
-  typedef llvm::iterator_range<DeclContext::ddiag_iterator> ddiag_range;
+
+  using ddiag_range = llvm::iterator_range<DeclContext::ddiag_iterator>;
 
   inline ddiag_range ddiags() const;
 
@@ -1892,6 +1928,8 @@ public:
                    bool Deserialize = false) const;
 
 private:
+  friend class DependentDiagnostic;
+
   void reconcileExternalVisibleStorage() const;
   bool LoadLexicalDeclsFromExternalStorage() const;
 
@@ -1903,7 +1941,6 @@ private:
   /// use of addDeclInternal().
   void makeDeclVisibleInContextInternal(NamedDecl *D);
 
-  friend class DependentDiagnostic;
   StoredDeclsMap *CreateStoredDeclsMap(ASTContext &C) const;
 
   void buildLookupImpl(DeclContext *DCtx, bool Internal);
@@ -1942,8 +1979,7 @@ struct cast_convert_decl_context<ToTy, true> {
   }
 };
 
-
-} // end clang.
+} // namespace clang
 
 namespace llvm {
 
@@ -1963,12 +1999,14 @@ struct cast_convert_val<ToTy,
     return *::clang::cast_convert_decl_context<ToTy>::doit(&Val);
   }
 };
+
 template<class ToTy>
 struct cast_convert_val<ToTy, ::clang::DeclContext, ::clang::DeclContext> {
   static ToTy &doit(::clang::DeclContext &Val) {
     return *::clang::cast_convert_decl_context<ToTy>::doit(&Val);
   }
 };
+
 template<class ToTy>
 struct cast_convert_val<ToTy,
                      const ::clang::DeclContext*, const ::clang::DeclContext*> {
@@ -1976,6 +2014,7 @@ struct cast_convert_val<ToTy,
     return ::clang::cast_convert_decl_context<ToTy>::doit(Val);
   }
 };
+
 template<class ToTy>
 struct cast_convert_val<ToTy, ::clang::DeclContext*, ::clang::DeclContext*> {
   static ToTy *doit(::clang::DeclContext *Val) {
@@ -2012,6 +2051,6 @@ struct cast_convert_val< const ::clang::DeclContext, FromTy*, FromTy*> {
   }
 };
 
-} // end namespace llvm
+} // namespace llvm
 
-#endif
+#endif // LLVM_CLANG_AST_DECLBASE_H

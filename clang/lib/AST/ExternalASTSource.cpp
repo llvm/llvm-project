@@ -1,4 +1,4 @@
-//===- ExternalASTSource.cpp - Abstract External AST Interface --*- C++ -*-===//
+//===- ExternalASTSource.cpp - Abstract External AST Interface ------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,12 +16,16 @@
 #include "clang/AST/ExternalASTSource.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclarationName.h"
+#include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/Module.h"
+#include "llvm/ADT/None.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <cstdint>
 
 using namespace clang;
 
-ExternalASTSource::~ExternalASTSource() { }
+ExternalASTSource::~ExternalASTSource() = default;
 
 llvm::Optional<ExternalASTSource::ASTSourceDescriptor>
 ExternalASTSource::getSourceDescriptor(unsigned ID) {
@@ -66,7 +70,7 @@ void ExternalASTSource::FinishedDeserializing() {}
 
 void ExternalASTSource::StartTranslationUnit(ASTConsumer *Consumer) {}
 
-void ExternalASTSource::PrintStats() { }
+void ExternalASTSource::PrintStats() {}
 
 bool ExternalASTSource::layoutRecordType(
     const RecordDecl *Record, uint64_t &Size, uint64_t &Alignment,
