@@ -257,20 +257,19 @@ public:
                               RefactoringActionRules ActionRules,
                               cl::OptionCategory &Category)
       : SubCommand(Action->getCommand(), Action->getDescription()),
-        Action(std::move(Action)), ActionRules(std::move(ActionRules)),
-        HasSelection(false) {
+        Action(std::move(Action)), ActionRules(std::move(ActionRules)) {
     // Check if the selection option is supported.
     for (const auto &Rule : this->ActionRules) {
-      if ((HasSelection = Rule->hasSelectionRequirement()))
+      if (Rule->hasSelectionRequirement()) {
+        Selection = llvm::make_unique<cl::opt<std::string>>(
+            "selection",
+            cl::desc(
+                "The selected source range in which the refactoring should "
+                "be initiated (<file>:<line>:<column>-<line>:<column> or "
+                "<file>:<line>:<column>)"),
+            cl::cat(Category), cl::sub(*this));
         break;
-    }
-    if (HasSelection) {
-      Selection = llvm::make_unique<cl::opt<std::string>>(
-          "selection",
-          cl::desc("The selected source range in which the refactoring should "
-                   "be initiated (<file>:<line>:<column>-<line>:<column> or "
-                   "<file>:<line>:<column>)"),
-          cl::cat(Category), cl::sub(*this));
+      }
     }
     // Create the refactoring options.
     for (const auto &Rule : this->ActionRules) {
@@ -284,10 +283,10 @@ public:
 
   const RefactoringActionRules &getActionRules() const { return ActionRules; }
 
-  /// Parses the command-line arguments that are specific to this rule.
+  /// Parses the "-selection" command-line argument.
   ///
   /// \returns true on error, false otherwise.
-  bool parseArguments() {
+  bool parseSelectionArgument() {
     if (Selection) {
       ParsedSelection = SourceSelectionArgument::fromString(*Selection);
       if (!ParsedSelection)
@@ -295,9 +294,6 @@ public:
     }
     return false;
   }
-
-  // Whether the selection is supported by any rule in the subcommand.
-  bool hasSelection() const { return HasSelection; }
 
   SourceSelectionArgument *getSelection() const {
     assert(Selection && "selection not supported!");
@@ -314,8 +310,6 @@ private:
   std::unique_ptr<cl::opt<std::string>> Selection;
   std::unique_ptr<SourceSelectionArgument> ParsedSelection;
   RefactoringActionCommandLineOptions Options;
-  // Whether the selection is supported by any rule in the subcommand.
-  bool HasSelection;
 };
 
 class ClangRefactorConsumer final : public ClangRefactorToolConsumerInterface {
@@ -403,13 +397,19 @@ public:
     // If the selection option is test specific, we use a test-specific
     // consumer.
     std::unique_ptr<ClangRefactorToolConsumerInterface> TestConsumer;
-    if (SelectedSubcommand->hasSelection())
+    bool HasSelection = MatchingRule->hasSelectionRequirement();
+    if (HasSelection)
       TestConsumer = SelectedSubcommand->getSelection()->createCustomConsumer();
     ClangRefactorToolConsumerInterface *ActiveConsumer =
         TestConsumer ? TestConsumer.get() : Consumer.get();
     ActiveConsumer->beginTU(AST);
-    // FIXME (Alex L): Implement non-selection based invocation path.
-    if (SelectedSubcommand->hasSelection()) {
+
+    auto InvokeRule = [&](RefactoringResultConsumer &Consumer) {
+      if (opts::Verbose)
+        logInvocation(*SelectedSubcommand, Context);
+      MatchingRule->invoke(*ActiveConsumer, Context);
+    };
+    if (HasSelection) {
       assert(SelectedSubcommand->getSelection() &&
              "Missing selection argument?");
       if (opts::Verbose)
@@ -417,14 +417,13 @@ public:
       if (SelectedSubcommand->getSelection()->forAllRanges(
               Context.getSources(), [&](SourceRange R) {
                 Context.setSelectionRange(R);
-                if (opts::Verbose)
-                  logInvocation(*SelectedSubcommand, Context);
-                MatchingRule->invoke(*ActiveConsumer, Context);
+                InvokeRule(*ActiveConsumer);
               }))
         HasFailed = true;
       ActiveConsumer->endTU();
       return;
     }
+    InvokeRule(*ActiveConsumer);
     ActiveConsumer->endTU();
   }
 
@@ -529,23 +528,24 @@ private:
   }
 
   llvm::Expected<RefactoringActionRule *>
-  getMatchingRule(const RefactoringActionSubcommand &Subcommand) {
+  getMatchingRule(RefactoringActionSubcommand &Subcommand) {
     SmallVector<RefactoringActionRule *, 4> MatchingRules;
     llvm::StringSet<> MissingOptions;
 
     for (const auto &Rule : Subcommand.getActionRules()) {
-      bool SelectionMatches = true;
-      if (Rule->hasSelectionRequirement()) {
-        if (!Subcommand.getSelection()) {
-          MissingOptions.insert("selection");
-          SelectionMatches = false;
-        }
-      }
       CommandLineRefactoringOptionVisitor Visitor(Subcommand.getOptions());
       Rule->visitRefactoringOptions(Visitor);
-      if (SelectionMatches && Visitor.getMissingRequiredOptions().empty()) {
-        MatchingRules.push_back(Rule.get());
-        continue;
+      if (Visitor.getMissingRequiredOptions().empty()) {
+        if (!Rule->hasSelectionRequirement()) {
+          MatchingRules.push_back(Rule.get());
+        } else {
+          Subcommand.parseSelectionArgument();
+          if (Subcommand.getSelection()) {
+            MatchingRules.push_back(Rule.get());
+          } else {
+            MissingOptions.insert("selection");
+          }
+        }
       }
       for (const RefactoringOption *Opt : Visitor.getMissingRequiredOptions())
         MissingOptions.insert(Opt->getName());
@@ -593,11 +593,6 @@ private:
           Error, llvm::inconvertibleErrorCode());
     }
     RefactoringActionSubcommand *Subcommand = &(**It);
-    if (Subcommand->parseArguments())
-      return llvm::make_error<llvm::StringError>(
-          llvm::Twine("Failed to parse arguments for subcommand ") +
-              Subcommand->getName(),
-          llvm::inconvertibleErrorCode());
     return Subcommand;
   }
 

@@ -14,6 +14,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
+#include "clang/AST/QualTypeNames.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/MacroInfo.h"
@@ -1495,6 +1496,7 @@ static PrintingPolicy getCompletionPrintingPolicy(const ASTContext &Context,
   Policy.AnonymousTagLocations = false;
   Policy.SuppressStrongLifetime = true;
   Policy.SuppressUnwrittenScope = true;
+  Policy.SuppressScope = true;
   return Policy;
 }
 
@@ -2139,9 +2141,10 @@ static void AddResultTypeChunk(ASTContext &Context,
       T = Method->getSendResultType(BaseType);
     else
       T = Method->getReturnType();
-  } else if (const EnumConstantDecl *Enumerator = dyn_cast<EnumConstantDecl>(ND))
+  } else if (const EnumConstantDecl *Enumerator = dyn_cast<EnumConstantDecl>(ND)) {
     T = Context.getTypeDeclType(cast<TypeDecl>(Enumerator->getDeclContext()));
-  else if (isa<UnresolvedUsingValueDecl>(ND)) {
+    T = clang::TypeName::getFullyQualifiedType(T, Context);
+  } else if (isa<UnresolvedUsingValueDecl>(ND)) {
     /* Do nothing: ignore unresolved using declarations*/
   } else if (const ObjCIvarDecl *Ivar = dyn_cast<ObjCIvarDecl>(ND)) {
     if (!BaseType.isNull())

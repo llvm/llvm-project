@@ -30,6 +30,12 @@ public:
   void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
 
   bool hasFP(const MachineFunction &MF) const override;
+
+  MachineBasicBlock::iterator
+  eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator MI) const override {
+    return MBB.erase(MI);
+  }
 };
 }
 #endif

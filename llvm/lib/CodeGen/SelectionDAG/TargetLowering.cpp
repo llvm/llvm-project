@@ -1288,6 +1288,19 @@ void TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   Known.resetAll();
 }
 
+void TargetLowering::computeKnownBitsForFrameIndex(const SDValue Op,
+                                                   KnownBits &Known,
+                                                   const APInt &DemandedElts,
+                                                   const SelectionDAG &DAG,
+                                                   unsigned Depth) const {
+  assert(isa<FrameIndexSDNode>(Op) && "expected FrameIndex");
+
+  if (unsigned Align = DAG.InferPtrAlignment(Op)) {
+    // The low bits are known zero if the pointer is aligned.
+    Known.Zero.setLowBits(Log2_32(Align));
+  }
+}
+
 /// This method can be implemented by targets that want to expose additional
 /// information about sign bits to the DAG Combiner.
 unsigned TargetLowering::ComputeNumSignBitsForTargetNode(SDValue Op,
