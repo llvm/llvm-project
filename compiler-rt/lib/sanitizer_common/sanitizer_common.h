@@ -73,7 +73,7 @@ INLINE uptr GetPageSizeCached() {
   return PageSizeCached;
 }
 uptr GetMmapGranularity();
-uptr GetMaxVirtualAddress();
+uptr GetMaxUserVirtualAddress();
 // Threads
 tid_t GetTid();
 uptr GetThreadSelf();
@@ -131,7 +131,8 @@ void RunFreeHooks(const void *ptr);
 class ReservedAddressRange {
  public:
   uptr Init(uptr size, const char *name = nullptr, uptr fixed_addr = 0);
-  uptr Map(uptr fixed_addr, uptr size, bool tolerate_enomem = false);
+  uptr Map(uptr fixed_addr, uptr size);
+  uptr MapOrDie(uptr fixed_addr, uptr size);
   void Unmap(uptr addr, uptr size);
   void *base() const { return base_; }
   uptr size() const { return size_; }

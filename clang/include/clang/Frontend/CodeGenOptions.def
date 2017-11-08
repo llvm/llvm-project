@@ -297,6 +297,8 @@ CODEGENOPT(PreserveVec3Type, 1, 0)
 /// Whether to emit .debug_gnu_pubnames section instead of .debug_pubnames.
 CODEGENOPT(GnuPubnames, 1, 0)
 
+CODEGENOPT(NoPLT, 1, 0)
+
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT
 #undef VALUE_CODEGENOPT

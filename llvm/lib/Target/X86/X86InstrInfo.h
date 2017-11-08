@@ -18,7 +18,7 @@
 #include "X86InstrFMA3Info.h"
 #include "X86RegisterInfo.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 
 #define GET_INSTRINFO_HEADER
 #include "X86GenInstrInfo.inc"

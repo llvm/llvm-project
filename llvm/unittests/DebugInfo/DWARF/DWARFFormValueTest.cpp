@@ -99,7 +99,7 @@ DWARFFormValue createDataXFormValue(dwarf::Form Form, RawTypeT Value) {
   DWARFFormValue Result(Form);
   DWARFDataExtractor Data(StringRef(Raw, sizeof(RawTypeT)),
                           sys::IsLittleEndianHost, sizeof(void *));
-  Result.extractValue(Data, &Offset, nullptr);
+  Result.extractValue(Data, &Offset, {0, 0, dwarf::DwarfFormat::DWARF32});
   return Result;
 }
 
@@ -110,7 +110,7 @@ DWARFFormValue createULEBFormValue(uint64_t Value) {
   uint32_t Offset = 0;
   DWARFFormValue Result(DW_FORM_udata);
   DWARFDataExtractor Data(OS.str(), sys::IsLittleEndianHost, sizeof(void *));
-  Result.extractValue(Data, &Offset, nullptr);
+  Result.extractValue(Data, &Offset, {0, 0, dwarf::DwarfFormat::DWARF32});
   return Result;
 }
 
@@ -121,7 +121,7 @@ DWARFFormValue createSLEBFormValue(int64_t Value) {
   uint32_t Offset = 0;
   DWARFFormValue Result(DW_FORM_sdata);
   DWARFDataExtractor Data(OS.str(), sys::IsLittleEndianHost, sizeof(void *));
-  Result.extractValue(Data, &Offset, nullptr);
+  Result.extractValue(Data, &Offset, {0, 0, dwarf::DwarfFormat::DWARF32});
   return Result;
 }
 

@@ -1384,6 +1384,10 @@ def fpic : Flag<["-"], "fpic">, Group<f_Group>;
 def fno_pic : Flag<["-"], "fno-pic">, Group<f_Group>;
 def fpie : Flag<["-"], "fpie">, Group<f_Group>;
 def fno_pie : Flag<["-"], "fno-pie">, Group<f_Group>;
+def fplt : Flag<["-"], "fplt">, Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"Use the PLT to make function calls">;
+def fno_plt : Flag<["-"], "fno-plt">, Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"Do not use the PLT to make function calls">;
 def fropi : Flag<["-"], "fropi">, Group<f_Group>;
 def fno_ropi : Flag<["-"], "fno-ropi">, Group<f_Group>;
 def frwpi : Flag<["-"], "frwpi">, Group<f_Group>;

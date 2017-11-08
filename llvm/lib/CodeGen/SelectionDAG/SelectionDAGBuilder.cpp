@@ -55,6 +55,8 @@
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/StackMaps.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/IR/Argument.h"
@@ -98,8 +100,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/CodeGen/TargetFrameLowering.h"
-#include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetIntrinsicInfo.h"
 #include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetMachine.h"
@@ -3862,7 +3862,7 @@ void SelectionDAGBuilder::visitMaskedStore(const CallInst &I,
 //
 // When the first GEP operand is a single pointer - it is the uniform base we
 // are looking for. If first operand of the GEP is a splat vector - we
-// extract the spalt value and use it as a uniform base.
+// extract the splat value and use it as a uniform base.
 // In all other cases the function returns 'false'.
 static bool getUniformBase(const Value* &Ptr, SDValue& Base, SDValue& Index,
                            SelectionDAGBuilder* SDB) {

@@ -38,7 +38,11 @@ private:
 
 bool TupleFrontEnd::Update() {
   m_elements.clear();
-  m_base_sp = m_backend.GetChildMemberWithName(ConstString("base_"), true);
+  m_base_sp = m_backend.GetChildMemberWithName(ConstString("__base_"), true);
+  if (! m_base_sp) {
+    // Pre r304382 name of the base element.
+    m_base_sp = m_backend.GetChildMemberWithName(ConstString("base_"), true);
+  }
   if (! m_base_sp)
     return false;
   m_elements.assign(m_base_sp->GetCompilerType().GetNumDirectBaseClasses(),

@@ -7225,17 +7225,16 @@ multiclass avx512_cvtps2ph<X86VectorVTInfo _dest, X86VectorVTInfo _src,
                    (X86cvtps2ph (_src.VT _src.RC:$src1),
                                 (i32 imm:$src2)),
                    NoItinerary, 0, 0>, AVX512AIi8Base;
-  def mr : AVX512AIi8<0x1D, MRMDestMem, (outs),
-             (ins x86memop:$dst, _src.RC:$src1, i32u8imm:$src2),
-             "vcvtps2ph\t{$src2, $src1, $dst|$dst, $src1, $src2}",
-             [(store (_dest.VT (X86cvtps2ph (_src.VT _src.RC:$src1),
-                                     (i32 imm:$src2))),
-                                     addr:$dst)]>;
-  let hasSideEffects = 0, mayStore = 1 in
-  def mrk : AVX512AIi8<0x1D, MRMDestMem, (outs),
-             (ins x86memop:$dst, _dest.KRCWM:$mask, _src.RC:$src1, i32u8imm:$src2),
-             "vcvtps2ph\t{$src2, $src1, $dst {${mask}}|$dst {${mask}}, $src1, $src2}",
-              []>, EVEX_K;
+  let hasSideEffects = 0, mayStore = 1 in {
+    def mr : AVX512AIi8<0x1D, MRMDestMem, (outs),
+               (ins x86memop:$dst, _src.RC:$src1, i32u8imm:$src2),
+               "vcvtps2ph\t{$src2, $src1, $dst|$dst, $src1, $src2}",
+               []>;
+    def mrk : AVX512AIi8<0x1D, MRMDestMem, (outs),
+               (ins x86memop:$dst, _dest.KRCWM:$mask, _src.RC:$src1, i32u8imm:$src2),
+               "vcvtps2ph\t{$src2, $src1, $dst {${mask}}|$dst {${mask}}, $src1, $src2}",
+                []>, EVEX_K;
+  }
 }
 multiclass avx512_cvtps2ph_sae<X86VectorVTInfo _dest, X86VectorVTInfo _src> {
   let hasSideEffects = 0 in
@@ -7255,6 +7254,19 @@ let Predicates = [HasAVX512] in {
     defm VCVTPS2PHZ128 : avx512_cvtps2ph<v8i16x_info, v4f32x_info, f64mem>,
                         EVEX, EVEX_V128, EVEX_CD8<32, CD8VH>;
   }
+
+  def : Pat<(store (f64 (extractelt
+                         (bc_v2f64 (v8i16 (X86cvtps2ph VR128X:$src1, i32:$src2))),
+                         (iPTR 0))), addr:$dst),
+            (VCVTPS2PHZ128mr addr:$dst, VR128X:$src1, imm:$src2)>;
+  def : Pat<(store (i64 (extractelt
+                         (bc_v2i64 (v8i16 (X86cvtps2ph VR128X:$src1, i32:$src2))),
+                         (iPTR 0))), addr:$dst),
+            (VCVTPS2PHZ128mr addr:$dst, VR128X:$src1, imm:$src2)>;
+  def : Pat<(store (v8i16 (X86cvtps2ph VR256X:$src1, i32:$src2)), addr:$dst),
+            (VCVTPS2PHZ256mr addr:$dst, VR256X:$src1, imm:$src2)>;
+  def : Pat<(store (v16i16 (X86cvtps2ph VR512:$src1, i32:$src2)), addr:$dst),
+            (VCVTPS2PHZmr addr:$dst, VR512:$src1, imm:$src2)>;
 }
 
 // Patterns for matching conversions from float to half-float and vice versa.

@@ -3333,11 +3333,17 @@ define <16 x i16> @load_sext_16i1_to_16i16(<16 x i1> *%ptr) {
 ; AVX1-NEXT:    vpinsrw $7, %ebp, %xmm1, %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    popq %rbx
+; AVX1-NEXT:    .cfi_def_cfa_offset 48
 ; AVX1-NEXT:    popq %r12
+; AVX1-NEXT:    .cfi_def_cfa_offset 40
 ; AVX1-NEXT:    popq %r13
+; AVX1-NEXT:    .cfi_def_cfa_offset 32
 ; AVX1-NEXT:    popq %r14
+; AVX1-NEXT:    .cfi_def_cfa_offset 24
 ; AVX1-NEXT:    popq %r15
+; AVX1-NEXT:    .cfi_def_cfa_offset 16
 ; AVX1-NEXT:    popq %rbp
+; AVX1-NEXT:    .cfi_def_cfa_offset 8
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: load_sext_16i1_to_16i16:
@@ -3424,11 +3430,17 @@ define <16 x i16> @load_sext_16i1_to_16i16(<16 x i1> *%ptr) {
 ; AVX2-NEXT:    vpinsrw $7, %ebp, %xmm1, %xmm1
 ; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; AVX2-NEXT:    popq %rbx
+; AVX2-NEXT:    .cfi_def_cfa_offset 48
 ; AVX2-NEXT:    popq %r12
+; AVX2-NEXT:    .cfi_def_cfa_offset 40
 ; AVX2-NEXT:    popq %r13
+; AVX2-NEXT:    .cfi_def_cfa_offset 32
 ; AVX2-NEXT:    popq %r14
+; AVX2-NEXT:    .cfi_def_cfa_offset 24
 ; AVX2-NEXT:    popq %r15
+; AVX2-NEXT:    .cfi_def_cfa_offset 16
 ; AVX2-NEXT:    popq %rbp
+; AVX2-NEXT:    .cfi_def_cfa_offset 8
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: load_sext_16i1_to_16i16:
@@ -4824,6 +4836,7 @@ define i32 @sext_2i8_to_i32(<16 x i8> %A) nounwind uwtable readnone ssp {
 ; X32-SSE41-NEXT:    pmovsxbw %xmm0, %xmm0
 ; X32-SSE41-NEXT:    movd %xmm0, %eax
 ; X32-SSE41-NEXT:    popl %ecx
+; X32-SSE41-NEXT:    .cfi_def_cfa_offset 4
 ; X32-SSE41-NEXT:    retl
 entry:
   %Shuf = shufflevector <16 x i8> %A, <16 x i8> undef, <2 x i32> <i32 0, i32 1>

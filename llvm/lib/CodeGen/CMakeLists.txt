@@ -9,6 +9,7 @@ add_llvm_library(LLVMCodeGen
   BuiltinGCs.cpp
   CalcSpillWeights.cpp
   CallingConvLower.cpp
+  CFIInstrInserter.cpp
   CodeGen.cpp
   CodeGenPrepare.cpp
   CountingFunctionInserter.cpp

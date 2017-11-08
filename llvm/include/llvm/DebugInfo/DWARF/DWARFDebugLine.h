@@ -22,6 +22,7 @@
 
 namespace llvm {
 
+class DWARFUnit;
 class raw_ostream;
 
 class DWARFDebugLine {
@@ -95,7 +96,8 @@ public:
 
     void clear();
     void dump(raw_ostream &OS) const;
-    bool parse(const DWARFDataExtractor &DebugLineData, uint32_t *OffsetPtr);
+    bool parse(const DWARFDataExtractor &DebugLineData, uint32_t *OffsetPtr,
+               const DWARFUnit *U = nullptr);
   };
 
   /// Standard .debug_line state machine structure.
@@ -218,7 +220,7 @@ public:
 
     /// Parse prologue and all rows.
     bool parse(const DWARFDataExtractor &DebugLineData, uint32_t *OffsetPtr,
-               raw_ostream *OS = nullptr);
+               const DWARFUnit *U, raw_ostream *OS = nullptr);
 
     using RowVector = std::vector<Row>;
     using RowIter = RowVector::const_iterator;
@@ -236,7 +238,7 @@ public:
 
   const LineTable *getLineTable(uint32_t Offset) const;
   const LineTable *getOrParseLineTable(const DWARFDataExtractor &DebugLineData,
-                                       uint32_t Offset);
+                                       uint32_t Offset, const DWARFUnit *U);
 
 private:
   struct ParsingState {

@@ -9554,6 +9554,16 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(FnALAF32, {Ptr, Val});
   }
 
+  case NVPTX::BI__nvvm_atom_add_gen_d: {
+    Value *Ptr = EmitScalarExpr(E->getArg(0));
+    Value *Val = EmitScalarExpr(E->getArg(1));
+    // atomicrmw only deals with integer arguments, so we need to use
+    // LLVM's nvvm_atomic_load_add_f64 intrinsic.
+    Value *FnALAF64 =
+        CGM.getIntrinsic(Intrinsic::nvvm_atomic_load_add_f64, Ptr->getType());
+    return Builder.CreateCall(FnALAF64, {Ptr, Val});
+  }
+
   case NVPTX::BI__nvvm_atom_inc_gen_ui: {
     Value *Ptr = EmitScalarExpr(E->getArg(0));
     Value *Val = EmitScalarExpr(E->getArg(1));

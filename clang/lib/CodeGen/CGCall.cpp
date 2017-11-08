@@ -1855,6 +1855,16 @@ void CodeGenModule::ConstructAttributeList(
       !(TargetDecl && TargetDecl->hasAttr<NoSplitStackAttr>()))
     FuncAttrs.addAttribute("split-stack");
 
+  // Add NonLazyBind attribute to function declarations when -fno-plt
+  // is used.
+  if (TargetDecl && CodeGenOpts.NoPLT) {
+    if (auto *Fn = dyn_cast<FunctionDecl>(TargetDecl)) {
+      if (!Fn->isDefined() && !AttrOnCallSite) {
+        FuncAttrs.addAttribute(llvm::Attribute::NonLazyBind);
+      }
+    }
+  }
+
   if (!AttrOnCallSite) {
     bool DisableTailCalls =
         CodeGenOpts.DisableTailCalls ||
