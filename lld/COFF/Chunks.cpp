@@ -224,6 +224,7 @@ void SectionChunk::applyRelARM64(uint8_t *Off, uint16_t Type, OutputSection *OS,
   case IMAGE_REL_ARM64_ADDR32:         add32(Off, S + Config->ImageBase); break;
   case IMAGE_REL_ARM64_ADDR32NB:       add32(Off, S); break;
   case IMAGE_REL_ARM64_ADDR64:         add64(Off, S + Config->ImageBase); break;
+  case IMAGE_REL_ARM64_SECREL:         applySecRel(this, Off, OS, S); break;
   default:
     fatal("unsupported relocation type 0x" + Twine::utohexstr(Type));
   }

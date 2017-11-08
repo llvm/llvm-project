@@ -8,6 +8,10 @@ beautification by scripts.  The fields are: name (N), email (E), web-address
 (W), PGP key ID and fingerprint (P), description (D), and snail-mail address
 (S).
 
+N: Adam Azarchs
+W: 10xgenomics.com
+D: Bug fix for lock code
+
 N: Carlo Bertolli
 W: http://ibm.com
 D: IBM contributor to PowerPC support in CMake files and elsewhere.
