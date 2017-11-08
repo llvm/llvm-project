@@ -1562,11 +1562,6 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   bool HasFP = hasFP(MF);
   uint64_t NumBytes = 0;
 
-  bool NeedsDwarfCFI =
-      (!MF.getTarget().getTargetTriple().isOSDarwin() &&
-       !MF.getTarget().getTargetTriple().isOSWindows()) &&
-      (MF.getMMI().hasDebugInfo() || MF.getFunction()->needsUnwindTableEntry());
-
   if (IsFunclet) {
     assert(HasFP && "EH funclets without FP not yet implemented");
     NumBytes = getWinEHFuncletFrameSize(MF);
@@ -1589,13 +1584,6 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
     BuildMI(MBB, MBBI, DL, TII.get(Is64Bit ? X86::POP64r : X86::POP32r),
             MachineFramePtr)
         .setMIFlag(MachineInstr::FrameDestroy);
-    if (NeedsDwarfCFI) {
-      unsigned DwarfStackPtr =
-          TRI->getDwarfRegNum(Is64Bit ? X86::RSP : X86::ESP, true);
-      BuildCFI(MBB, MBBI, DL, MCCFIInstruction::createDefCfa(
-                                  nullptr, DwarfStackPtr, -SlotSize));
-      --MBBI;
-    }
   }
 
   MachineBasicBlock::iterator FirstCSPop = MBBI;
@@ -1659,11 +1647,6 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   } else if (NumBytes) {
     // Adjust stack pointer back: ESP += numbytes.
     emitSPUpdate(MBB, MBBI, NumBytes, /*InEpilogue=*/true);
-    if (!hasFP(MF) && NeedsDwarfCFI) {
-      // Define the current CFA rule to use the provided offset.
-      BuildCFI(MBB, MBBI, DL, MCCFIInstruction::createDefCfaOffset(
-                                  nullptr, -CSSize - SlotSize));
-    }
     --MBBI;
   }
 
@@ -1675,23 +1658,6 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   // final emitted code.
   if (NeedsWin64CFI && MF.hasWinCFI())
     BuildMI(MBB, MBBI, DL, TII.get(X86::SEH_Epilogue));
-
-  if (!hasFP(MF) && NeedsDwarfCFI) {
-    MBBI = FirstCSPop;
-    int64_t Offset = -CSSize - SlotSize;
-    // Mark callee-saved pop instruction.
-    // Define the current CFA rule to use the provided offset.
-    while (MBBI != MBB.end()) {
-      MachineBasicBlock::iterator PI = MBBI;
-      unsigned Opc = PI->getOpcode();
-      ++MBBI;
-      if (Opc == X86::POP32r || Opc == X86::POP64r) {
-        Offset += SlotSize;
-        BuildCFI(MBB, MBBI, DL,
-                 MCCFIInstruction::createDefCfaOffset(nullptr, Offset));
-      }
-    }
-  }
 
   if (Terminator == MBB.end() || !isTailCallOpcode(Terminator->getOpcode())) {
     // Add the return addr area delta back since we are not tail calling.
@@ -2872,15 +2838,6 @@ MachineBasicBlock::iterator X86FrameLowering::restoreWin32EHStackPointers(
     llvm_unreachable("32-bit frames with WinEH must use FramePtr or BasePtr");
   }
   return MBBI;
-}
-
-int X86FrameLowering::getInitialCFAOffset(const MachineFunction &MF) const {
-  return TRI->getSlotSize();
-}
-
-unsigned X86FrameLowering::getInitialCFARegister(const MachineFunction &MF)
-    const {
-  return TRI->getDwarfRegNum(StackPtr, true);
 }
 
 namespace {

@@ -13,6 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCV.h"
+#include "MCTargetDesc/RISCVMCExpr.h"
+#include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -24,27 +26,72 @@
 
 using namespace llvm;
 
-void llvm::LowerRISCVMachineInstrToMCInst(const MachineInstr *MI,
-                                          MCInst &OutMI) {
+static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
+                                    const AsmPrinter &AP) {
+  MCContext &Ctx = AP.OutContext;
+  RISCVMCExpr::VariantKind Kind;
+
+  switch (MO.getTargetFlags()) {
+  default:
+    llvm_unreachable("Unknown target flag on GV operand");
+  case RISCVII::MO_None:
+    Kind = RISCVMCExpr::VK_RISCV_None;
+    break;
+  case RISCVII::MO_LO:
+    Kind = RISCVMCExpr::VK_RISCV_LO;
+    break;
+  case RISCVII::MO_HI:
+    Kind = RISCVMCExpr::VK_RISCV_HI;
+    break;
+  }
+
+  const MCExpr *ME =
+      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, Ctx);
+
+  if (!MO.isJTI() && MO.getOffset())
+    ME = MCBinaryExpr::createAdd(
+        ME, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
+
+  ME = RISCVMCExpr::create(ME, Kind, Ctx);
+  return MCOperand::createExpr(ME);
+}
+
+bool llvm::LowerRISCVMachineOperandToMCOperand(const MachineOperand &MO,
+                                               MCOperand &MCOp,
+                                               const AsmPrinter &AP) {
+  switch (MO.getType()) {
+  default:
+    report_fatal_error("LowerRISCVMachineInstrToMCInst: unknown operand type");
+  case MachineOperand::MO_Register:
+    // Ignore all implicit register operands.
+    if (MO.isImplicit())
+      return false;
+    MCOp = MCOperand::createReg(MO.getReg());
+    break;
+  case MachineOperand::MO_RegisterMask:
+    // Regmasks are like implicit defs.
+    return false;
+  case MachineOperand::MO_Immediate:
+    MCOp = MCOperand::createImm(MO.getImm());
+    break;
+  case MachineOperand::MO_MachineBasicBlock:
+    MCOp = MCOperand::createExpr(
+        MCSymbolRefExpr::create(MO.getMBB()->getSymbol(), AP.OutContext));
+    break;
+  case MachineOperand::MO_GlobalAddress:
+    MCOp = lowerSymbolOperand(MO, AP.getSymbol(MO.getGlobal()), AP);
+    break;
+  }
+  return true;
+}
+
+void llvm::LowerRISCVMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
+                                          const AsmPrinter &AP) {
   OutMI.setOpcode(MI->getOpcode());
 
   for (const MachineOperand &MO : MI->operands()) {
     MCOperand MCOp;
-    switch (MO.getType()) {
-    default:
-      report_fatal_error(
-          "LowerRISCVMachineInstrToMCInst: unknown operand type");
-    case MachineOperand::MO_Register:
-      // Ignore all implicit register operands.
-      if (MO.isImplicit())
-        continue;
-      MCOp = MCOperand::createReg(MO.getReg());
-      break;
-    case MachineOperand::MO_Immediate:
-      MCOp = MCOperand::createImm(MO.getImm());
-      break;
-    }
-
-    OutMI.addOperand(MCOp);
+    if (LowerRISCVMachineOperandToMCOperand(MO, MCOp, AP))
+      OutMI.addOperand(MCOp);
   }
 }

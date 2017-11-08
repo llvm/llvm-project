@@ -25,9 +25,14 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
 
   RISCVRegisterInfo(unsigned HwMode);
 
+  const uint32_t *getCallPreservedMask(const MachineFunction &MF,
+                                       CallingConv::ID) const override;
+
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
+
+  const uint32_t *getNoPreservedMask() const override;
 
   void eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
                            unsigned FIOperandNum,

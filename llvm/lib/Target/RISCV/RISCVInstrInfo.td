@@ -17,8 +17,22 @@ include "RISCVInstrFormats.td"
 // RISC-V specific DAG Nodes.
 //===----------------------------------------------------------------------===//
 
-def RetFlag : SDNode<"RISCVISD::RET_FLAG", SDTNone,
-                     [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+def SDT_RISCVCall         : SDTypeProfile<0, -1, [SDTCisVT<0, XLenVT>]>;
+def SDT_RISCVCallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>,
+                                            SDTCisVT<1, i32>]>;
+def SDT_RISCVCallSeqEnd   : SDCallSeqEnd<[SDTCisVT<0, i32>,
+                                          SDTCisVT<1, i32>]>;
+
+
+def Call         : SDNode<"RISCVISD::CALL", SDT_RISCVCall,
+                          [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                           SDNPVariadic]>;
+def CallSeqStart : SDNode<"ISD::CALLSEQ_START", SDT_RISCVCallSeqStart,
+                          [SDNPHasChain, SDNPOutGlue]>;
+def CallSeqEnd   : SDNode<"ISD::CALLSEQ_END", SDT_RISCVCallSeqEnd,
+                          [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
+def RetFlag      : SDNode<"RISCVISD::RET_FLAG", SDTNone,
+                          [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
@@ -67,7 +81,7 @@ def uimm12 : Operand<XLenVT> {
 }
 
 // A 13-bit signed immediate where the least significant bit is zero.
-def simm13_lsb0 : Operand<XLenVT> {
+def simm13_lsb0 : Operand<OtherVT> {
   let ParserMatchClass = SImmAsmOperand<13, "Lsb0">;
   let EncoderMethod = "getImmOpValueAsr1";
   let DecoderMethod = "decodeSImmOperandAndLsl1<13>";
@@ -80,7 +94,7 @@ def uimm20 : Operand<XLenVT> {
 }
 
 // A 21-bit signed immediate where the least significant bit is zero.
-def simm21_lsb0 : Operand<XLenVT> {
+def simm21_lsb0 : Operand<OtherVT> {
   let ParserMatchClass = SImmAsmOperand<21, "Lsb0">;
   let EncoderMethod = "getImmOpValueAsr1";
   let DecoderMethod = "decodeSImmOperandAndLsl1<21>";
@@ -308,6 +322,42 @@ def : PatGprSimm12<setult, SLTIU>;
 
 /// Branches and jumps
 
+// Match `(brcond (CondOp ..), ..)` and lower to the appropriate RISC-V branch
+// instruction.
+class BccPat<PatFrag CondOp, RVInstB Inst>
+    : Pat<(brcond (i32 (CondOp GPR:$rs1, GPR:$rs2)), bb:$imm12),
+          (Inst GPR:$rs1, GPR:$rs2, simm13_lsb0:$imm12)>;
+
+def : BccPat<seteq, BEQ>;
+def : BccPat<setne, BNE>;
+def : BccPat<setlt, BLT>;
+def : BccPat<setge, BGE>;
+def : BccPat<setult, BLTU>;
+def : BccPat<setuge, BGEU>;
+
+class BccSwapPat<PatFrag CondOp, RVInst InstBcc>
+    : Pat<(brcond (i32 (CondOp GPR:$rs1, GPR:$rs2)), bb:$imm12),
+          (InstBcc GPR:$rs2, GPR:$rs1, bb:$imm12)>;
+
+// Condition codes that don't have matching RISC-V branch instructions, but
+// are trivially supported by swapping the two input operands
+def : BccSwapPat<setgt, BLT>;
+def : BccSwapPat<setle, BGE>;
+def : BccSwapPat<setugt, BLTU>;
+def : BccSwapPat<setule, BGEU>;
+
+// An extra pattern is needed for a brcond without a setcc (i.e. where the
+// condition was calculated elsewhere).
+def : Pat<(brcond GPR:$cond, bb:$imm12), (BNE GPR:$cond, X0, bb:$imm12)>;
+
+let isBarrier = 1, isBranch = 1, isTerminator = 1 in
+def PseudoBR : Pseudo<(outs), (ins simm21_lsb0:$imm20), [(br bb:$imm20)]>,
+               PseudoInstExpansion<(JAL X0, simm21_lsb0:$imm20)>;
+
+let isCall = 1, Defs=[X1] in
+def PseudoCALL : Pseudo<(outs), (ins GPR:$rs1), [(Call GPR:$rs1)]>,
+                 PseudoInstExpansion<(JALR X1, GPR:$rs1, 0)>;
+
 let isBarrier = 1, isReturn = 1, isTerminator = 1 in
 def PseudoRET : Pseudo<(outs), (ins), [(RetFlag)]>,
                 PseudoInstExpansion<(JALR X0, X1, 0)>;
@@ -339,3 +389,13 @@ multiclass StPat<PatFrag StoreOp, RVInst Inst> {
 defm : StPat<truncstorei8, SB>;
 defm : StPat<truncstorei16, SH>;
 defm : StPat<store, SW>;
+
+/// Other pseudo-instructions
+
+// Pessimistically assume the stack pointer will be clobbered
+let Defs = [X2], Uses = [X2] in {
+def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
+                              [(CallSeqStart timm:$amt1, timm:$amt2)]>;
+def ADJCALLSTACKUP   : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
+                              [(CallSeqEnd timm:$amt1, timm:$amt2)]>;
+} // Defs = [X2], Uses = [X2]

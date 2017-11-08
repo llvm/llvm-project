@@ -4828,12 +4828,6 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
   MachineFunction &MF = DAG.getMachineFunction();
   const TargetInstrInfo *TII = DAG.getSubtarget().getInstrInfo();
 
-  // Ignore inlined function arguments here.
-  //
-  // FIXME: Should we be checking DL->inlinedAt() to determine this?
-  if (!Variable->getScope()->getSubprogram()->describes(MF.getFunction()))
-    return false;
-
   bool IsIndirect = false;
   Optional<MachineOperand> Op;
   // Some arguments' frame index is recorded during argument lowering.

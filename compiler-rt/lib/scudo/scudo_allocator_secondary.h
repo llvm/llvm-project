@@ -23,7 +23,6 @@
 
 class ScudoLargeMmapAllocator {
  public:
-
   void Init() {
     PageSize = GetPageSizeCached();
   }

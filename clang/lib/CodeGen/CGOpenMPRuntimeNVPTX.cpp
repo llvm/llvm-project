@@ -276,6 +276,7 @@ getExecutionModeForDirective(CodeGenModule &CGM,
   case OMPD_target_teams:
     return CGOpenMPRuntimeNVPTX::ExecutionMode::Generic;
   case OMPD_target_parallel:
+  case OMPD_target_parallel_for:
     return CGOpenMPRuntimeNVPTX::ExecutionMode::Spmd;
   default:
     llvm_unreachable("Unsupported directive on NVPTX device.");

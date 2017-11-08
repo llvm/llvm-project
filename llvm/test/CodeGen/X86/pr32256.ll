@@ -27,7 +27,6 @@ define void @_Z1av() {
 ; CHECK-NEXT:    andb $1, %al
 ; CHECK-NEXT:    movb %al, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    addl $2, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-NEXT:    retl
 entry:
   %b = alloca i8, align 1

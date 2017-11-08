@@ -9,7 +9,6 @@ define i64 @fn1NoDebug(i64 %a) {
 
 ; CHECK-LABEL: fn1NoDebug
 ; CHECK: popq %rcx
-; CHECK-NEXT: .cfi_def_cfa_offset 8
 ; CHECK-NEXT: ret
 
 define i64 @fn1WithDebug(i64 %a) !dbg !4 {
@@ -20,7 +19,6 @@ define i64 @fn1WithDebug(i64 %a) !dbg !4 {
 
 ; CHECK-LABEL: fn1WithDebug
 ; CHECK: popq %rcx
-; CHECK-NEXT: .cfi_def_cfa_offset 8
 ; CHECK-NEXT: ret
 
 %struct.Buffer = type { i8, [63 x i8] }
@@ -35,7 +33,6 @@ define void @fn2NoDebug(%struct.Buffer* byval align 64 %p1) {
 ; CHECK-NOT: sub
 ; CHECK: mov
 ; CHECK-NEXT: pop
-; CHECK-NEXT: .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT: ret
 
 define void @fn2WithDebug(%struct.Buffer* byval align 64 %p1) !dbg !8 {
@@ -49,7 +46,6 @@ define void @fn2WithDebug(%struct.Buffer* byval align 64 %p1) !dbg !8 {
 ; CHECK-NOT: sub
 ; CHECK: mov
 ; CHECK-NEXT: pop
-; CHECK-NEXT: .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT: ret
 
 declare i64 @fn(i64, i64)
