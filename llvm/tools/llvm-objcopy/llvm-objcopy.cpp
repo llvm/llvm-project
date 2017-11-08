@@ -113,16 +113,16 @@ bool OnlyKeepDWOPred(const Object<ELFT> &Obj, const SectionBase &Sec) {
 template <class ELFT>
 void WriteObjectFile(const Object<ELFT> &Obj, StringRef File) {
   std::unique_ptr<FileOutputBuffer> Buffer;
-  ErrorOr<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
+  Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
       FileOutputBuffer::create(File, Obj.totalSize(),
                                FileOutputBuffer::F_executable);
-  if (BufferOrErr.getError())
+  if (BufferOrErr.takeError())
     error("failed to open " + OutputFilename);
   else
     Buffer = std::move(*BufferOrErr);
   Obj.write(*Buffer);
-  if (auto EC = Buffer->commit())
-    reportError(File, EC);
+  if (auto E = Buffer->commit())
+    reportError(File, errorToErrorCode(std::move(E)));
 }
 
 template <class ELFT>

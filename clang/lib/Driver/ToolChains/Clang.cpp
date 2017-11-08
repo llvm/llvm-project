@@ -3423,6 +3423,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-mpie-copy-relocations");
   }
 
+  if (Args.hasFlag(options::OPT_fno_plt, options::OPT_fplt, false)) {
+    CmdArgs.push_back("-fno-plt");
+  }
+
   // -fhosted is default.
   // TODO: Audit uses of KernelOrKext and see where it'd be more appropriate to
   // use Freestanding.

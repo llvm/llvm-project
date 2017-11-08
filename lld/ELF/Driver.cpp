@@ -93,7 +93,6 @@ bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
   Config->Argv = {Args.begin(), Args.end()};
 
   Driver->main(Args, CanExitEarly);
-  waitForBackgroundThreads();
 
   // Exit immediately if we don't need to return to the caller.
   // This saves time because the overhead of calling destructors

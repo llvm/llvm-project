@@ -20,8 +20,8 @@
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/RegisterPressure.h"
 #include "llvm/CodeGen/ScheduleHazardRecognizer.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
-#include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include <algorithm>
 #include <cassert>

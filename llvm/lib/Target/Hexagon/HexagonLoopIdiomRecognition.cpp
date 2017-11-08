@@ -161,9 +161,16 @@ namespace {
   };
 
   struct Simplifier {
-    using Rule = std::function<Value * (Instruction *, LLVMContext &)>;
+    struct Rule {
+      using FuncType = std::function<Value* (Instruction*, LLVMContext&)>;
+      Rule(StringRef N, FuncType F) : Name(N), Fn(F) {}
+      StringRef Name;   // For debugging.
+      FuncType Fn;
+    };
 
-    void addRule(const Rule &R) { Rules.push_back(R); }
+    void addRule(StringRef N, const Rule::FuncType &F) {
+      Rules.push_back(Rule(N, F));
+    }
 
   private:
     struct WorkListType {
@@ -522,7 +529,7 @@ Value *Simplifier::simplify(Context &C) {
       continue;
     bool Changed = false;
     for (Rule &R : Rules) {
-      Value *W = R(U, C.Ctx);
+      Value *W = R.Fn(U, C.Ctx);
       if (!W)
         continue;
       Changed = true;
@@ -1544,8 +1551,30 @@ Value *PolynomialMultiplyRecognize::generate(BasicBlock::iterator At,
   return R;
 }
 
+static bool hasZeroSignBit(const Value *V) {
+  if (const auto *CI = dyn_cast<const ConstantInt>(V))
+    return (CI->getType()->getSignBit() & CI->getSExtValue()) == 0;
+  const Instruction *I = dyn_cast<const Instruction>(V);
+  if (!I)
+    return false;
+  switch (I->getOpcode()) {
+    case Instruction::LShr:
+      if (const auto SI = dyn_cast<const ConstantInt>(I->getOperand(1)))
+        return SI->getZExtValue() > 0;
+      return false;
+    case Instruction::Or:
+    case Instruction::Xor:
+      return hasZeroSignBit(I->getOperand(0)) &&
+             hasZeroSignBit(I->getOperand(1));
+    case Instruction::And:
+      return hasZeroSignBit(I->getOperand(0)) ||
+             hasZeroSignBit(I->getOperand(1));
+  }
+  return false;
+}
+
 void PolynomialMultiplyRecognize::setupSimplifier() {
-  Simp.addRule(
+  Simp.addRule("sink-zext",
     // Sink zext past bitwise operations.
     [](Instruction *I, LLVMContext &Ctx) -> Value* {
       if (I->getOpcode() != Instruction::ZExt)
@@ -1566,7 +1595,7 @@ void PolynomialMultiplyRecognize::setupSimplifier() {
                            B.CreateZExt(T->getOperand(0), I->getType()),
                            B.CreateZExt(T->getOperand(1), I->getType()));
     });
-  Simp.addRule(
+  Simp.addRule("xor/and -> and/xor",
     // (xor (and x a) (and y a)) -> (and (xor x y) a)
     [](Instruction *I, LLVMContext &Ctx) -> Value* {
       if (I->getOpcode() != Instruction::Xor)
@@ -1584,7 +1613,7 @@ void PolynomialMultiplyRecognize::setupSimplifier() {
       return B.CreateAnd(B.CreateXor(And0->getOperand(0), And1->getOperand(0)),
                          And0->getOperand(1));
     });
-  Simp.addRule(
+  Simp.addRule("sink binop into select",
     // (Op (select c x y) z) -> (select c (Op x z) (Op y z))
     // (Op x (select c y z)) -> (select c (Op x y) (Op x z))
     [](Instruction *I, LLVMContext &Ctx) -> Value* {
@@ -1610,7 +1639,7 @@ void PolynomialMultiplyRecognize::setupSimplifier() {
       }
       return nullptr;
     });
-  Simp.addRule(
+  Simp.addRule("fold select-select",
     // (select c (select c x y) z) -> (select c x z)
     // (select c x (select c y z)) -> (select c x z)
     [](Instruction *I, LLVMContext &Ctx) -> Value* {
@@ -1629,23 +1658,19 @@ void PolynomialMultiplyRecognize::setupSimplifier() {
       }
       return nullptr;
     });
-  Simp.addRule(
+  Simp.addRule("or-signbit -> xor-signbit",
     // (or (lshr x 1) 0x800.0) -> (xor (lshr x 1) 0x800.0)
     [](Instruction *I, LLVMContext &Ctx) -> Value* {
       if (I->getOpcode() != Instruction::Or)
         return nullptr;
-      Instruction *LShr = dyn_cast<Instruction>(I->getOperand(0));
-      if (!LShr || LShr->getOpcode() != Instruction::LShr)
-        return nullptr;
-      ConstantInt *One = dyn_cast<ConstantInt>(LShr->getOperand(1));
-      if (!One || One->getZExtValue() != 1)
-        return nullptr;
       ConstantInt *Msb = dyn_cast<ConstantInt>(I->getOperand(1));
       if (!Msb || Msb->getZExtValue() != Msb->getType()->getSignBit())
         return nullptr;
-      return IRBuilder<>(Ctx).CreateXor(LShr, Msb);
+      if (!hasZeroSignBit(I->getOperand(0)))
+        return nullptr;
+      return IRBuilder<>(Ctx).CreateXor(I->getOperand(0), Msb);
     });
-  Simp.addRule(
+  Simp.addRule("sink lshr into binop",
     // (lshr (BitOp x y) c) -> (BitOp (lshr x c) (lshr y c))
     [](Instruction *I, LLVMContext &Ctx) -> Value* {
       if (I->getOpcode() != Instruction::LShr)
@@ -1667,7 +1692,7 @@ void PolynomialMultiplyRecognize::setupSimplifier() {
                 B.CreateLShr(BitOp->getOperand(0), S),
                 B.CreateLShr(BitOp->getOperand(1), S));
     });
-  Simp.addRule(
+  Simp.addRule("expose bitop-const",
     // (BitOp1 (BitOp2 x a) b) -> (BitOp2 x (BitOp1 a b))
     [](Instruction *I, LLVMContext &Ctx) -> Value* {
       auto IsBitOp = [](unsigned Op) -> bool {
@@ -1737,9 +1762,17 @@ bool PolynomialMultiplyRecognize::recognize() {
   // XXX: Currently this approach can modify the loop before being 100% sure
   // that the transformation can be carried out.
   bool FoundPreScan = false;
+  auto FeedsPHI = [LoopB](const Value *V) -> bool {
+    for (const Value *U : V->users()) {
+      if (const auto *P = dyn_cast<const PHINode>(U))
+        if (P->getParent() == LoopB)
+          return true;
+    }
+    return false;
+  };
   for (Instruction &In : *LoopB) {
     SelectInst *SI = dyn_cast<SelectInst>(&In);
-    if (!SI)
+    if (!SI || !FeedsPHI(SI))
       continue;
 
     Simplifier::Context C(SI);

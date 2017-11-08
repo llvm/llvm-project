@@ -683,10 +683,15 @@ let TargetPrefix = "nvvm" in {
       Intrinsic<[llvm_i64_ty], [llvm_double_ty], [IntrNoMem]>;
 
 
-// Atomic not available as an llvm intrinsic.
+// Atomics not available as llvm intrinsics.
   def int_nvvm_atomic_load_add_f32 : Intrinsic<[llvm_float_ty],
           [LLVMAnyPointerType<llvm_float_ty>, llvm_float_ty],
                                       [IntrArgMemOnly, NoCapture<0>]>;
+  // Atomic add of f64 requires sm_60.
+  def int_nvvm_atomic_load_add_f64 : Intrinsic<[llvm_double_ty],
+          [LLVMAnyPointerType<llvm_double_ty>, llvm_double_ty],
+                                      [IntrArgMemOnly, NoCapture<0>]>;
+
   def int_nvvm_atomic_load_inc_32 : Intrinsic<[llvm_i32_ty],
           [LLVMAnyPointerType<llvm_i32_ty>, llvm_i32_ty],
                                       [IntrArgMemOnly, NoCapture<0>]>;

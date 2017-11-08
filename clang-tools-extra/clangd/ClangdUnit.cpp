@@ -965,10 +965,15 @@ private:
     End.character = SourceMgr.getSpellingColumnNumber(LocEnd) - 1;
     Range R = {Begin, End};
     Location L;
-    L.uri = URI::fromFile(
-        SourceMgr.getFilename(SourceMgr.getSpellingLoc(LocStart)));
-    L.range = R;
-    DeclarationLocations.push_back(L);
+    if (const FileEntry *F =
+            SourceMgr.getFileEntryForID(SourceMgr.getFileID(LocStart))) {
+      StringRef FilePath = F->tryGetRealPathName();
+      if (FilePath.empty())
+        FilePath = F->getName();
+      L.uri = URI::fromFile(FilePath);
+      L.range = R;
+      DeclarationLocations.push_back(L);
+    }
   }
 
   void finish() override {

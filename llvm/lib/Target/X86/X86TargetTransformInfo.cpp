@@ -1437,7 +1437,7 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
       return Entry->Cost;
   }
 
-  return BaseT::getCastInstrCost(Opcode, Dst, Src);
+  return BaseT::getCastInstrCost(Opcode, Dst, Src, I);
 }
 
 int X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,

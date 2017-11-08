@@ -77,8 +77,10 @@ template <class ELFT> void ObjFile<ELFT>::initializeDwarf() {
   // The second parameter is offset in .debug_line section
   // for compilation unit (CU) of interest. We have only one
   // CU (object file), so offset is always 0.
+  // FIXME: Provide the associated DWARFUnit if there is one.  DWARF v5
+  // needs it in order to find indirect strings.
   const DWARFDebugLine::LineTable *LT =
-      DwarfLine->getOrParseLineTable(LineData, 0);
+      DwarfLine->getOrParseLineTable(LineData, 0, nullptr);
 
   // Return if there is no debug information about CU available.
   if (!Dwarf.getNumCompileUnits())

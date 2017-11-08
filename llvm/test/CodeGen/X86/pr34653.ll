@@ -199,6 +199,7 @@ define void @pr34653() {
 ; CHECK-NEXT:    vmovsd %xmm7, {{[0-9]+}}(%rsp) # 8-byte Spill
 ; CHECK-NEXT:    movq %rbp, %rsp
 ; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 entry:

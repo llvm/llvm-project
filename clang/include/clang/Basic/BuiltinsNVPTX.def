@@ -481,7 +481,7 @@ TARGET_BUILTIN(__nvvm_atom_cta_add_gen_f, "ffD*f", "n", "satom")
 TARGET_BUILTIN(__nvvm_atom_sys_add_gen_f, "ffD*f", "n", "satom")
 BUILTIN(__nvvm_atom_add_g_d, "ddD*1d", "n")
 BUILTIN(__nvvm_atom_add_s_d, "ddD*3d", "n")
-BUILTIN(__nvvm_atom_add_gen_d, "ddD*d", "n")
+TARGET_BUILTIN(__nvvm_atom_add_gen_d, "ddD*d", "n", "satom")
 TARGET_BUILTIN(__nvvm_atom_cta_add_gen_d, "ddD*d", "n", "satom")
 TARGET_BUILTIN(__nvvm_atom_sys_add_gen_d, "ddD*d", "n", "satom")
 

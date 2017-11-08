@@ -17,15 +17,15 @@ define i32 @_Z9load_le32Ph(i8* nocapture readonly %data) {
 ; CHECK-NEXT:    [[SHL3:%.*]] = shl nuw nsw i32 [[CONV2]], 8
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHL3]], [[CONV]]
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i8, i8* [[DATA]], i64 2
+; CHECK-NEXT:    [[TMP2:%.*]] = load i8, i8* [[ARRAYIDX4]], align 1
+; CHECK-NEXT:    [[CONV5:%.*]] = zext i8 [[TMP2]] to i32
+; CHECK-NEXT:    [[SHL6:%.*]] = shl nuw nsw i32 [[CONV5]], 16
+; CHECK-NEXT:    [[OR7:%.*]] = or i32 [[OR]], [[SHL6]]
 ; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i8, i8* [[DATA]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8* [[ARRAYIDX4]] to <2 x i8>*
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i8>, <2 x i8>* [[TMP2]], align 1
-; CHECK-NEXT:    [[TMP4:%.*]] = zext <2 x i8> [[TMP3]] to <2 x i32>
-; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw <2 x i32> [[TMP4]], <i32 16, i32 24>
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[TMP5]], i32 0
-; CHECK-NEXT:    [[OR7:%.*]] = or i32 [[OR]], [[TMP6]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[TMP5]], i32 1
-; CHECK-NEXT:    [[OR11:%.*]] = or i32 [[OR7]], [[TMP7]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, i8* [[ARRAYIDX8]], align 1
+; CHECK-NEXT:    [[CONV9:%.*]] = zext i8 [[TMP3]] to i32
+; CHECK-NEXT:    [[SHL10:%.*]] = shl nuw i32 [[CONV9]], 24
+; CHECK-NEXT:    [[OR11:%.*]] = or i32 [[OR7]], [[SHL10]]
 ; CHECK-NEXT:    ret i32 [[OR11]]
 ;
 entry:

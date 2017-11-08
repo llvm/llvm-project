@@ -165,6 +165,9 @@ protected:
   void printGPRSeqPairsClassOperand(const MCInst *MI, unsigned OpNum,
                                     const MCSubtargetInfo &STI,
                                     raw_ostream &O);
+  template <char = 0>
+  void printSVERegOp(const MCInst *MI, unsigned OpNum,
+                    const MCSubtargetInfo &STI, raw_ostream &O);
 };
 
 class AArch64AppleInstPrinter : public AArch64InstPrinter {

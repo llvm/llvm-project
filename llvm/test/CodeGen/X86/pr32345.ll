@@ -84,6 +84,7 @@ define void @foo() {
 ; 6860-NEXT:    popl %edi
 ; 6860-NEXT:    popl %ebx
 ; 6860-NEXT:    popl %ebp
+; 6860-NEXT:    .cfi_def_cfa %esp, 4
 ; 6860-NEXT:    retl
 ;
 ; X64-LABEL: foo:
@@ -127,6 +128,7 @@ define void @foo() {
 ; 686-NEXT:    movb %dl, (%eax)
 ; 686-NEXT:    movl %ebp, %esp
 ; 686-NEXT:    popl %ebp
+; 686-NEXT:    .cfi_def_cfa %esp, 4
 ; 686-NEXT:    retl
 bb:
   %tmp = alloca i64, align 8

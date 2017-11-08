@@ -382,8 +382,10 @@ entry:
 ; LINUX: pushl   $1
 ; LINUX: .cfi_adjust_cfa_offset 4
 ; LINUX: calll   good
-; LINUX: addl    $28, %esp
+; LINUX: addl    $16, %esp
 ; LINUX: .cfi_adjust_cfa_offset -16
+; LINUX: addl    $12, %esp
+; LINUX: .cfi_def_cfa_offset 4
 ; LINUX-NOT: add
 ; LINUX: retl
 define void @pr27140() optsize {
