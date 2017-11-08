@@ -49,6 +49,7 @@ add_clang_library(clangAST
   ODRHash.cpp
   OpenMPClause.cpp
   ParentMap.cpp
+  QualTypeNames.cpp
   RawCommentList.cpp
   RecordLayout.cpp
   RecordLayoutBuilder.cpp

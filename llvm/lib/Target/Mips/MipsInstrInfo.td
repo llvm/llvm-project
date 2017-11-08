@@ -212,6 +212,8 @@ def HasMicroMips64r6 : Predicate<"Subtarget->inMicroMips64r6Mode()">,
                        AssemblerPredicate<"FeatureMicroMips,FeatureMips64r6">;
 def InMips16Mode :    Predicate<"Subtarget->inMips16Mode()">,
                       AssemblerPredicate<"FeatureMips16">;
+def NotInMips16Mode : Predicate<"!Subtarget->inMips16Mode()">,
+                      AssemblerPredicate<"!FeatureMips16">;
 def HasCnMips    :    Predicate<"Subtarget->hasCnMips()">,
                       AssemblerPredicate<"FeatureCnMips">;
 def NotCnMips    :    Predicate<"!Subtarget->hasCnMips()">,
@@ -1544,7 +1546,7 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, hasDelaySlot = 1,
     PseudoInstExpansion<(JumpInst Opnd:$target)>;
 
   class TailCallReg<RegisterOperand RO> :
-    MipsPseudo<(outs), (ins RO:$rs), [(MipsTailCall RO:$rs)], II_JR>;
+    PseudoSE<(outs), (ins RO:$rs), [(MipsTailCall RO:$rs)], II_JR>;
 }
 
 class BAL_BR_Pseudo<Instruction RealInst> :
@@ -2087,7 +2089,7 @@ def BLTZALL : MMRel, BGEZAL_FT<"bltzall", brtarget, GPR32Opnd>,
               BGEZAL_FM<0x12>, ISA_MIPS2_NOT_32R6_64R6;
 def BAL_BR : BAL_BR_Pseudo<BGEZAL>;
 
-let Predicates = [NotInMicroMips] in { 
+let AdditionalPredicates = [NotInMips16Mode, NotInMicroMips] in {
   def TAILCALL : TailCall<J, jmptarget>;
 }
 
@@ -2104,6 +2106,7 @@ class PseudoIndirectBranchBase<RegisterOperand RO> :
   let isBranch = 1;
   let isIndirectBranch = 1;
   bit isCTI = 1;
+  let Predicates = [NotInMips16Mode];
 }
 
 def PseudoIndirectBranch : PseudoIndirectBranchBase<GPR32Opnd>;
@@ -2777,10 +2780,12 @@ def : MipsPat<(MipsJmpLink (i32 texternalsym:$dst)),
 //              (JALR GPR32:$dst)>;
 
 // Tail call
-def : MipsPat<(MipsTailCall (iPTR tglobaladdr:$dst)),
-              (TAILCALL tglobaladdr:$dst)>;
-def : MipsPat<(MipsTailCall (iPTR texternalsym:$dst)),
-              (TAILCALL texternalsym:$dst)>;
+let AdditionalPredicates = [NotInMicroMips] in {
+  def : MipsPat<(MipsTailCall (iPTR tglobaladdr:$dst)),
+                (TAILCALL tglobaladdr:$dst)>;
+  def : MipsPat<(MipsTailCall (iPTR texternalsym:$dst)),
+                (TAILCALL texternalsym:$dst)>;
+}
 // hi/lo relocs
 multiclass MipsHiLoRelocs<Instruction Lui, Instruction Addiu,
                           Register ZeroReg, RegisterOperand GPROpnd> {

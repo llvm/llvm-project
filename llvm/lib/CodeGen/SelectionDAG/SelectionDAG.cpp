@@ -2893,11 +2893,7 @@ void SelectionDAG::computeKnownBits(SDValue Op, KnownBits &Known,
   }
   case ISD::FrameIndex:
   case ISD::TargetFrameIndex:
-    if (unsigned Align = InferPtrAlignment(Op)) {
-      // The low bits are known zero if the pointer is aligned.
-      Known.Zero.setLowBits(Log2_32(Align));
-      break;
-    }
+    TLI->computeKnownBitsForFrameIndex(Op, Known, DemandedElts, *this, Depth);
     break;
 
   default:

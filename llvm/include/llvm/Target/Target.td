@@ -884,12 +884,16 @@ class InstrInfo {
 // Standard Pseudo Instructions.
 // This list must match TargetOpcodes.h and CodeGenTarget.cpp.
 // Only these instructions are allowed in the TargetOpcode namespace.
-let isCodeGenOnly = 1, isPseudo = 1, hasNoSchedulingInfo = 1,
-    Namespace = "TargetOpcode" in {
+// Ensure mayLoad and mayStore have a default value, so as not to break
+// targets that set guessInstructionProperties=0. Any local definition of
+// mayLoad/mayStore takes precedence over these default values.
+let mayLoad = 0, mayStore = 0, isCodeGenOnly = 1, isPseudo = 1,
+    hasNoSchedulingInfo = 1, Namespace = "TargetOpcode" in {
 def PHI : Instruction {
   let OutOperandList = (outs unknown:$dst);
   let InOperandList = (ins variable_ops);
   let AsmString = "PHINODE";
+  let hasSideEffects = 1;
 }
 def INLINEASM : Instruction {
   let OutOperandList = (outs);
@@ -902,6 +906,7 @@ def CFI_INSTRUCTION : Instruction {
   let InOperandList = (ins i32imm:$id);
   let AsmString = "";
   let hasCtrlDep = 1;
+  let hasSideEffects = 1;
   let isNotDuplicable = 0;
 }
 def EH_LABEL : Instruction {
@@ -909,6 +914,7 @@ def EH_LABEL : Instruction {
   let InOperandList = (ins i32imm:$id);
   let AsmString = "";
   let hasCtrlDep = 1;
+  let hasSideEffects = 1;
   let isNotDuplicable = 1;
 }
 def GC_LABEL : Instruction {
@@ -916,6 +922,7 @@ def GC_LABEL : Instruction {
   let InOperandList = (ins i32imm:$id);
   let AsmString = "";
   let hasCtrlDep = 1;
+  let hasSideEffects = 1;
   let isNotDuplicable = 1;
 }
 def ANNOTATION_LABEL : Instruction {
@@ -923,6 +930,7 @@ def ANNOTATION_LABEL : Instruction {
   let InOperandList = (ins i32imm:$id);
   let AsmString = "";
   let hasCtrlDep = 1;
+  let hasSideEffects = 1;
   let isNotDuplicable = 1;
 }
 def KILL : Instruction {
@@ -990,6 +998,7 @@ def BUNDLE : Instruction {
   let OutOperandList = (outs);
   let InOperandList = (ins variable_ops);
   let AsmString = "BUNDLE";
+  let hasSideEffects = 1;
 }
 def LIFETIME_START : Instruction {
   let OutOperandList = (outs);
@@ -1006,6 +1015,7 @@ def LIFETIME_END : Instruction {
 def STACKMAP : Instruction {
   let OutOperandList = (outs);
   let InOperandList = (ins i64imm:$id, i32imm:$nbytes, variable_ops);
+  let hasSideEffects = 1;
   let isCall = 1;
   let mayLoad = 1;
   let usesCustomInserter = 1;
@@ -1014,6 +1024,7 @@ def PATCHPOINT : Instruction {
   let OutOperandList = (outs unknown:$dst);
   let InOperandList = (ins i64imm:$id, i32imm:$nbytes, unknown:$callee,
                        i32imm:$nargs, i32imm:$cc, variable_ops);
+  let hasSideEffects = 1;
   let isCall = 1;
   let mayLoad = 1;
   let usesCustomInserter = 1;
@@ -1048,6 +1059,7 @@ def FAULTING_OP : Instruction {
   let OutOperandList = (outs unknown:$dst);
   let InOperandList = (ins variable_ops);
   let usesCustomInserter = 1;
+  let hasSideEffects = 1;
   let mayLoad = 1;
   let mayStore = 1;
   let isTerminator = 1;

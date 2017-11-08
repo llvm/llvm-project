@@ -1,4 +1,4 @@
-# RUN: clangd -run-synchronously < %s | FileCheck %s
+# RUN: clangd -pretty -run-synchronously < %s | FileCheck -strict-whitespace %s
 # It is absolutely vital that this file has CRLF line endings.
 #
 
@@ -13,24 +13,71 @@ Content-Length: 312
 Content-Length: 151
 
 {"jsonrpc":"2.0","id":2,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":12,"character":8}}}
-# The order of results returned by codeComplete seems to be
-# nondeterministic, so we check regardless of order.
-#
-# CHECK: {"id":2,"jsonrpc":"2.0","result":[
-# CHECK-DAG: {"detail":"void","filterText":"pub","insertText":"pub","insertTextFormat":1,"kind":2,"label":"pub()","sortText":"000034pub"}
-# CHECK-DAG: {"detail":"void","filterText":"prot","insertText":"prot","insertTextFormat":1,"kind":2,"label":"prot()","sortText":"000034prot"}
-# CHECK-DAG: {"detail":"void","filterText":"priv","insertText":"priv","insertTextFormat":1,"kind":2,"label":"priv()","sortText":"000034priv"}
-# CHECK-SAME: ]}
-
+#      CHECK:  "id": 2,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": [
+# CHECK-NEXT:    {
+# CHECK-NEXT:      "detail": "void",
+# CHECK-NEXT:      "filterText": "priv",
+# CHECK-NEXT:      "insertText": "priv",
+# CHECK-NEXT:      "insertTextFormat": 1,
+# CHECK-NEXT:      "kind": 2,
+# CHECK-NEXT:      "label": "priv()",
+# CHECK-NEXT:      "sortText": "000034priv"
+# CHECK-NEXT:    },
+# CHECK-NEXT:    {
+# CHECK-NEXT:      "detail": "void",
+# CHECK-NEXT:      "filterText": "prot",
+# CHECK-NEXT:      "insertText": "prot",
+# CHECK-NEXT:      "insertTextFormat": 1,
+# CHECK-NEXT:      "kind": 2,
+# CHECK-NEXT:      "label": "prot()",
+# CHECK-NEXT:      "sortText": "000034prot"
+# CHECK-NEXT:    },
+# CHECK-NEXT:    {
+# CHECK-NEXT:      "detail": "void",
+# CHECK-NEXT:      "filterText": "pub",
+# CHECK-NEXT:      "insertText": "pub",
+# CHECK-NEXT:      "insertTextFormat": 1,
+# CHECK-NEXT:      "kind": 2,
+# CHECK-NEXT:      "label": "pub()",
+# CHECK-NEXT:      "sortText": "000034pub"
+# CHECK-NEXT:    },
 Content-Length: 151
 
 {"jsonrpc":"2.0","id":3,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":17,"character":4}}}
-# CHECK: {"id":3,"jsonrpc":"2.0","result":[
-# CHECK-DAG: {"detail":"void","filterText":"pub","insertText":"pub","insertTextFormat":1,"kind":2,"label":"pub()","sortText":"000034pub"}
-# CHECK-DAG: {"detail":"void","filterText":"prot","insertText":"prot","insertTextFormat":1,"kind":2,"label":"prot()","sortText":"200034prot"}
-# CHECK-DAG: {"detail":"void","filterText":"priv","insertText":"priv","insertTextFormat":1,"kind":2,"label":"priv()","sortText":"200034priv"}
-# CHECK-SAME: ]}
-
+#      CHECK:  "id": 3,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": [
+# CHECK-NEXT:    {
+# CHECK-NEXT:      "detail": "void",
+# CHECK-NEXT:      "filterText": "pub",
+# CHECK-NEXT:      "insertText": "pub",
+# CHECK-NEXT:      "insertTextFormat": 1,
+# CHECK-NEXT:      "kind": 2,
+# CHECK-NEXT:      "label": "pub()",
+# CHECK-NEXT:      "sortText": "000034pub"
+# CHECK-NEXT:    },
+# priv() and prot() are at the end of the list
+# CHECK-NEXT:    {
+#      CHECK:      "detail": "void",
+#      CHECK:      "filterText": "priv",
+# CHECK-NEXT:      "insertText": "priv",
+# CHECK-NEXT:      "insertTextFormat": 1,
+# CHECK-NEXT:      "kind": 2,
+# CHECK-NEXT:      "label": "priv()",
+# CHECK-NEXT:      "sortText": "200034priv"
+# CHECK-NEXT:    },
+# CHECK-NEXT:    {
+# CHECK-NEXT:      "detail": "void",
+# CHECK-NEXT:      "filterText": "prot",
+# CHECK-NEXT:      "insertText": "prot",
+# CHECK-NEXT:      "insertTextFormat": 1,
+# CHECK-NEXT:      "kind": 2,
+# CHECK-NEXT:      "label": "prot()",
+# CHECK-NEXT:      "sortText": "200034prot"
+# CHECK-NEXT:    }
+# CHECK-NEXT:  ]
 Content-Length: 58
 
 {"jsonrpc":"2.0","id":4,"method":"shutdown","params":null}
