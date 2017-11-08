@@ -24,8 +24,9 @@
 
 ; CHECK:      .debug_loc contents:
 ; CHECK-NEXT: 0x00000000:
-; CHECK-NEXT:              0x000000000000001f - 0x000000000000003c: DW_OP_reg3 RBX
-;   We should only have one entry
+;   We currently emit an entry for the function prologue, too, which could be optimized away.
+; CHECK:              0x000000000000001f - 0x000000000000003c: DW_OP_reg3 RBX
+;   We should only have one entry inside the function.
 ; CHECK-NOT: :
 
 declare i32 @foobar(i32, i32, i32, i32, i32)

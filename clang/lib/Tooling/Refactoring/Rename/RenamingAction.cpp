@@ -43,22 +43,14 @@ namespace tooling {
 
 namespace {
 
-class OccurrenceFinder final : public FindSymbolOccurrencesRefactoringRule {
-public:
-  OccurrenceFinder(const NamedDecl *ND) : ND(ND) {}
-
-  Expected<SymbolOccurrences>
-  findSymbolOccurrences(RefactoringRuleContext &Context) override {
-    std::vector<std::string> USRs =
-        getUSRsForDeclaration(ND, Context.getASTContext());
-    std::string PrevName = ND->getNameAsString();
-    return getOccurrencesOfUSRs(
-        USRs, PrevName, Context.getASTContext().getTranslationUnitDecl());
-  }
-
-private:
-  const NamedDecl *ND;
-};
+Expected<SymbolOccurrences>
+findSymbolOccurrences(const NamedDecl *ND, RefactoringRuleContext &Context) {
+  std::vector<std::string> USRs =
+      getUSRsForDeclaration(ND, Context.getASTContext());
+  std::string PrevName = ND->getNameAsString();
+  return getOccurrencesOfUSRs(USRs, PrevName,
+                              Context.getASTContext().getTranslationUnitDecl());
+}
 
 } // end anonymous namespace
 
@@ -85,8 +77,7 @@ RenameOccurrences::initiate(RefactoringRuleContext &Context,
 
 Expected<AtomicChanges>
 RenameOccurrences::createSourceReplacements(RefactoringRuleContext &Context) {
-  Expected<SymbolOccurrences> Occurrences =
-      OccurrenceFinder(ND).findSymbolOccurrences(Context);
+  Expected<SymbolOccurrences> Occurrences = findSymbolOccurrences(ND, Context);
   if (!Occurrences)
     return Occurrences.takeError();
   // FIXME: Verify that the new name is valid.

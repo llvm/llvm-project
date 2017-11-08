@@ -810,6 +810,12 @@ def int_experimental_guard : Intrinsic<[], [llvm_i1_ty, llvm_vararg_ty],
 // NOP: calls/invokes to this intrinsic are removed by codegen
 def int_donothing : Intrinsic<[], [], [IntrNoMem]>;
 
+// This instruction has no actual effect, though it is treated by the optimizer
+// has having opaque side effects. This may be inserted into loops to ensure
+// that they are not removed even if they turn out to be empty, for languages
+// which specify that infinite loops must be preserved.
+def int_sideeffect : Intrinsic<[], [], [IntrInaccessibleMemOnly]>;
+
 // Intrisics to support half precision floating point format
 let IntrProperties = [IntrNoMem] in {
 def int_convert_to_fp16   : Intrinsic<[llvm_i16_ty], [llvm_anyfloat_ty]>;

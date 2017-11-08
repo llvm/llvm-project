@@ -519,7 +519,7 @@ def cl_fp32_correctly_rounded_divide_sqrt : Flag<["-"], "cl-fp32-correctly-round
 def client__name : JoinedOrSeparate<["-"], "client_name">;
 def combine : Flag<["-", "--"], "combine">, Flags<[DriverOption, Unsupported]>;
 def compatibility__version : JoinedOrSeparate<["-"], "compatibility_version">;
-def coverage : Flag<["-", "--"], "coverage">;
+def coverage : Flag<["-", "--"], "coverage">, Flags<[CoreOption]>;
 def cpp_precomp : Flag<["-"], "cpp-precomp">, Group<clang_ignored_f_Group>;
 def current__version : JoinedOrSeparate<["-"], "current_version">;
 def cxx_isystem : JoinedOrSeparate<["-"], "cxx-isystem">, Group<clang_i_Group>,

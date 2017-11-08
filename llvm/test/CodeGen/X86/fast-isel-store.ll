@@ -375,7 +375,6 @@ define <4 x double> @test_store_4xf64(<4 x double>* nocapture %addr, <4 x double
 ; SSE64-NEXT:    movupd %xmm0, (%eax)
 ; SSE64-NEXT:    movupd %xmm1, 16(%eax)
 ; SSE64-NEXT:    addl $12, %esp
-; SSE64-NEXT:   .cfi_def_cfa_offset 4
 ; SSE64-NEXT:    retl
 ;
 ; AVX32-LABEL: test_store_4xf64:
@@ -414,7 +413,6 @@ define <4 x double> @test_store_4xf64_aligned(<4 x double>* nocapture %addr, <4 
 ; SSE64-NEXT:    movapd %xmm0, (%eax)
 ; SSE64-NEXT:    movapd %xmm1, 16(%eax)
 ; SSE64-NEXT:    addl $12, %esp
-; SSE64-NEXT:   .cfi_def_cfa_offset 4
 ; SSE64-NEXT:    retl
 ;
 ; AVX32-LABEL: test_store_4xf64_aligned:
@@ -454,7 +452,6 @@ define <16 x i32> @test_store_16xi32(<16 x i32>* nocapture %addr, <16 x i32> %va
 ; SSE64-NEXT:    movups %xmm2, 32(%eax)
 ; SSE64-NEXT:    movups %xmm3, 48(%eax)
 ; SSE64-NEXT:    addl $12, %esp
-; SSE64-NEXT:   .cfi_def_cfa_offset 4
 ; SSE64-NEXT:    retl
 ;
 ; AVXONLY32-LABEL: test_store_16xi32:
@@ -504,7 +501,6 @@ define <16 x i32> @test_store_16xi32_aligned(<16 x i32>* nocapture %addr, <16 x 
 ; SSE64-NEXT:    movaps %xmm2, 32(%eax)
 ; SSE64-NEXT:    movaps %xmm3, 48(%eax)
 ; SSE64-NEXT:    addl $12, %esp
-; SSE64-NEXT:   .cfi_def_cfa_offset 4
 ; SSE64-NEXT:    retl
 ;
 ; AVXONLY32-LABEL: test_store_16xi32_aligned:
@@ -554,7 +550,6 @@ define <16 x float> @test_store_16xf32(<16 x float>* nocapture %addr, <16 x floa
 ; SSE64-NEXT:    movups %xmm2, 32(%eax)
 ; SSE64-NEXT:    movups %xmm3, 48(%eax)
 ; SSE64-NEXT:    addl $12, %esp
-; SSE64-NEXT:   .cfi_def_cfa_offset 4
 ; SSE64-NEXT:    retl
 ;
 ; AVXONLY32-LABEL: test_store_16xf32:
@@ -604,7 +599,6 @@ define <16 x float> @test_store_16xf32_aligned(<16 x float>* nocapture %addr, <1
 ; SSE64-NEXT:    movaps %xmm2, 32(%eax)
 ; SSE64-NEXT:    movaps %xmm3, 48(%eax)
 ; SSE64-NEXT:    addl $12, %esp
-; SSE64-NEXT:   .cfi_def_cfa_offset 4
 ; SSE64-NEXT:    retl
 ;
 ; AVXONLY32-LABEL: test_store_16xf32_aligned:
@@ -662,7 +656,6 @@ define <8 x double> @test_store_8xf64(<8 x double>* nocapture %addr, <8 x double
 ; SSE64-NEXT:    movupd %xmm2, 32(%eax)
 ; SSE64-NEXT:    movupd %xmm3, 48(%eax)
 ; SSE64-NEXT:    addl $12, %esp
-; SSE64-NEXT:   .cfi_def_cfa_offset 4
 ; SSE64-NEXT:    retl
 ;
 ; AVXONLY32-LABEL: test_store_8xf64:
@@ -689,7 +682,6 @@ define <8 x double> @test_store_8xf64(<8 x double>* nocapture %addr, <8 x double
 ; AVXONLY64-NEXT:    vmovupd %ymm1, 32(%eax)
 ; AVXONLY64-NEXT:    movl %ebp, %esp
 ; AVXONLY64-NEXT:    popl %ebp
-; AVXONLY64-NEXT:    .cfi_def_cfa %esp, 4
 ; AVXONLY64-NEXT:    retl
 ;
 ; AVX51232-LABEL: test_store_8xf64:
@@ -737,7 +729,6 @@ define <8 x double> @test_store_8xf64_aligned(<8 x double>* nocapture %addr, <8 
 ; SSE64-NEXT:    movapd %xmm2, 32(%eax)
 ; SSE64-NEXT:    movapd %xmm3, 48(%eax)
 ; SSE64-NEXT:    addl $12, %esp
-; SSE64-NEXT:   .cfi_def_cfa_offset 4
 ; SSE64-NEXT:    retl
 ;
 ; AVXONLY32-LABEL: test_store_8xf64_aligned:
@@ -764,7 +755,6 @@ define <8 x double> @test_store_8xf64_aligned(<8 x double>* nocapture %addr, <8 
 ; AVXONLY64-NEXT:    vmovapd %ymm1, 32(%eax)
 ; AVXONLY64-NEXT:    movl %ebp, %esp
 ; AVXONLY64-NEXT:    popl %ebp
-; AVXONLY64-NEXT:    .cfi_def_cfa %esp, 4
 ; AVXONLY64-NEXT:    retl
 ;
 ; AVX51232-LABEL: test_store_8xf64_aligned:

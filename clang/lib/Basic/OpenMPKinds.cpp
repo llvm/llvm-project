@@ -908,7 +908,6 @@ void clang::getOpenMPCaptureRegions(
   case OMPD_atomic:
   case OMPD_target_data:
   case OMPD_target:
-  case OMPD_target_parallel_for:
   case OMPD_target_parallel_for_simd:
   case OMPD_target_simd:
   case OMPD_task:
@@ -926,6 +925,7 @@ void clang::getOpenMPCaptureRegions(
     CaptureRegions.push_back(DKind);
     break;
   case OMPD_target_parallel:
+  case OMPD_target_parallel_for:
     CaptureRegions.push_back(OMPD_target);
     CaptureRegions.push_back(OMPD_parallel);
     break;

@@ -1314,6 +1314,11 @@ TEST_F(DICompositeTypeTest, replaceOperands) {
   EXPECT_EQ(nullptr, N->getVTableHolder());
   N->replaceVTableHolder(VTableHolder);
   EXPECT_EQ(VTableHolder, N->getVTableHolder());
+  // As an extension, the containing type can be anything.  This is
+  // used by Rust to associate vtables with their concrete type.
+  DIType *BasicType = getBasicType("basic");
+  N->replaceVTableHolder(BasicType);
+  EXPECT_EQ(BasicType, N->getVTableHolder());
   N->replaceVTableHolder(nullptr);
   EXPECT_EQ(nullptr, N->getVTableHolder());
 

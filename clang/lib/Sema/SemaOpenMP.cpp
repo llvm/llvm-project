@@ -2084,7 +2084,8 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
     break;
   }
   case OMPD_target_teams:
-  case OMPD_target_parallel: {
+  case OMPD_target_parallel:
+  case OMPD_target_parallel_for: {
     Sema::CapturedParamNameType ParamsTarget[] = {
         std::make_pair(StringRef(), QualType()) // __context with shared vars
     };
@@ -2119,7 +2120,6 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
   case OMPD_atomic:
   case OMPD_target_data:
   case OMPD_target:
-  case OMPD_target_parallel_for:
   case OMPD_target_parallel_for_simd:
   case OMPD_target_simd: {
     Sema::CapturedParamNameType Params[] = {
@@ -6309,13 +6309,23 @@ StmtResult Sema::ActOnOpenMPTargetParallelForDirective(
   // The point of exit cannot be a branch out of the structured block.
   // longjmp() and throw() must not violate the entry/exit criteria.
   CS->getCapturedDecl()->setNothrow();
+  for (int ThisCaptureLevel = getOpenMPCaptureLevels(OMPD_target_parallel_for);
+       ThisCaptureLevel > 1; --ThisCaptureLevel) {
+    CS = cast<CapturedStmt>(CS->getCapturedStmt());
+    // 1.2.2 OpenMP Language Terminology
+    // Structured block - An executable statement with a single entry at the
+    // top and a single exit at the bottom.
+    // The point of exit cannot be a branch out of the structured block.
+    // longjmp() and throw() must not violate the entry/exit criteria.
+    CS->getCapturedDecl()->setNothrow();
+  }
 
   OMPLoopDirective::HelperExprs B;
   // In presence of clause 'collapse' or 'ordered' with number of loops, it will
   // define the nested loops number.
   unsigned NestedLoopCount =
       CheckOpenMPLoop(OMPD_target_parallel_for, getCollapseNumberExpr(Clauses),
-                      getOrderedNumberExpr(Clauses), AStmt, *this, *DSAStack,
+                      getOrderedNumberExpr(Clauses), CS, *this, *DSAStack,
                       VarsWithImplicitDSA, B);
   if (NestedLoopCount == 0)
     return StmtError();
@@ -7285,6 +7295,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
   case OMPC_if:
     switch (DKind) {
     case OMPD_target_parallel:
+    case OMPD_target_parallel_for:
       // If this clause applies to the nested 'parallel' region, capture within
       // the 'target' region, otherwise do not capture.
       if (NameModifier == OMPD_unknown || NameModifier == OMPD_parallel)
@@ -7297,7 +7308,6 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_parallel_for_simd:
     case OMPD_target:
     case OMPD_target_simd:
-    case OMPD_target_parallel_for:
     case OMPD_target_parallel_for_simd:
     case OMPD_target_teams:
     case OMPD_target_teams_distribute:
@@ -7351,6 +7361,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
   case OMPC_num_threads:
     switch (DKind) {
     case OMPD_target_parallel:
+    case OMPD_target_parallel_for:
       CaptureRegion = OMPD_target;
       break;
     case OMPD_cancel:
@@ -7360,7 +7371,6 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_parallel_for_simd:
     case OMPD_target:
     case OMPD_target_simd:
-    case OMPD_target_parallel_for:
     case OMPD_target_parallel_for_simd:
     case OMPD_target_teams:
     case OMPD_target_teams_distribute:
@@ -7538,6 +7548,68 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     }
     break;
   case OMPC_schedule:
+    switch (DKind) {
+    case OMPD_target_parallel_for:
+      CaptureRegion = OMPD_target;
+      break;
+    case OMPD_parallel_for:
+    case OMPD_parallel_for_simd:
+    case OMPD_target_parallel_for_simd:
+    case OMPD_target_teams_distribute_parallel_for:
+    case OMPD_target_teams_distribute_parallel_for_simd:
+    case OMPD_teams_distribute_parallel_for:
+    case OMPD_teams_distribute_parallel_for_simd:
+    case OMPD_distribute_parallel_for:
+    case OMPD_distribute_parallel_for_simd:
+      // Do not capture thread_limit-clause expressions.
+      break;
+    case OMPD_task:
+    case OMPD_taskloop:
+    case OMPD_taskloop_simd:
+    case OMPD_target_data:
+    case OMPD_target_enter_data:
+    case OMPD_target_exit_data:
+    case OMPD_target_update:
+    case OMPD_teams:
+    case OMPD_teams_distribute:
+    case OMPD_teams_distribute_simd:
+    case OMPD_target_teams_distribute:
+    case OMPD_target_teams_distribute_simd:
+    case OMPD_target:
+    case OMPD_target_simd:
+    case OMPD_target_parallel:
+    case OMPD_cancel:
+    case OMPD_parallel:
+    case OMPD_parallel_sections:
+    case OMPD_threadprivate:
+    case OMPD_taskyield:
+    case OMPD_barrier:
+    case OMPD_taskwait:
+    case OMPD_cancellation_point:
+    case OMPD_flush:
+    case OMPD_declare_reduction:
+    case OMPD_declare_simd:
+    case OMPD_declare_target:
+    case OMPD_end_declare_target:
+    case OMPD_simd:
+    case OMPD_for:
+    case OMPD_for_simd:
+    case OMPD_sections:
+    case OMPD_section:
+    case OMPD_single:
+    case OMPD_master:
+    case OMPD_critical:
+    case OMPD_taskgroup:
+    case OMPD_distribute:
+    case OMPD_ordered:
+    case OMPD_atomic:
+    case OMPD_distribute_simd:
+    case OMPD_target_teams:
+      llvm_unreachable("Unexpected OpenMP directive with schedule clause");
+    case OMPD_unknown:
+      llvm_unreachable("Unknown OpenMP directive");
+    }
+    break;
   case OMPC_dist_schedule:
   case OMPC_firstprivate:
   case OMPC_lastprivate:
