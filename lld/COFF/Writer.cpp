@@ -120,7 +120,7 @@ private:
   void createSymbolAndStringTable();
   void openFile(StringRef OutputPath);
   template <typename PEHeaderTy> void writeHeader();
-  void fixSafeSEHSymbols();
+  void createSEHTable(OutputSection *RData);
   void setSectionPermissions();
   void writeSections();
   void writeBuildId();
@@ -302,7 +302,6 @@ void Writer::run() {
   } else {
     writeHeader<pe32_header>();
   }
-  fixSafeSEHSymbols();
   writeSections();
   sortExceptionTable();
   writeBuildId();
@@ -315,8 +314,8 @@ void Writer::run() {
 
   writeMapFile(OutputSections);
 
-  if (auto EC = Buffer->commit())
-    fatal("failed to write the output file: " + EC.message());
+  if (auto E = Buffer->commit())
+    fatal("failed to write the output file: " + toString(std::move(E)));
 }
 
 static StringRef getOutputSection(StringRef Name) {
@@ -387,28 +386,7 @@ void Writer::createMiscChunks() {
       RData->addChunk(C);
   }
 
-  // Create SEH table. x86-only.
-  if (Config->Machine != I386)
-    return;
-
-  std::set<Defined *> Handlers;
-
-  for (ObjFile *File : ObjFile::Instances) {
-    if (!File->SEHCompat)
-      return;
-    for (Symbol *B : File->SEHandlers) {
-      // Make sure the handler is still live. Assume all handlers are regular
-      // symbols.
-      auto *D = dyn_cast<DefinedRegular>(B);
-      if (D && D->getChunk()->isLive())
-        Handlers.insert(D);
-    }
-  }
-
-  if (!Handlers.empty()) {
-    SEHTable = make<SEHTableChunk>(Handlers);
-    RData->addChunk(SEHTable);
-  }
+  createSEHTable(RData);
 }
 
 // Create .idata section for the DLL-imported symbol table.
@@ -798,9 +776,31 @@ void Writer::openFile(StringRef Path) {
       "failed to open " + Path);
 }
 
-void Writer::fixSafeSEHSymbols() {
-  if (!SEHTable)
+void Writer::createSEHTable(OutputSection *RData) {
+  // Create SEH table. x86-only.
+  if (Config->Machine != I386)
     return;
+
+  std::set<Defined *> Handlers;
+
+  for (ObjFile *File : ObjFile::Instances) {
+    if (!File->SEHCompat)
+      return;
+    for (Symbol *B : File->SEHandlers) {
+      // Make sure the handler is still live. Assume all handlers are regular
+      // symbols.
+      auto *D = dyn_cast<DefinedRegular>(B);
+      if (D && D->getChunk()->isLive())
+        Handlers.insert(D);
+    }
+  }
+
+  if (Handlers.empty())
+    return;
+
+  SEHTable = make<SEHTableChunk>(Handlers);
+  RData->addChunk(SEHTable);
+
   // Replace the absolute table symbol with a synthetic symbol pointing to the
   // SEHTable chunk so that we can emit base relocations for it and resolve
   // section relative relocations.

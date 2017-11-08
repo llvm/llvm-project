@@ -208,7 +208,8 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
   DWARFUnit *U = Die.getDwarfUnit();
   DWARFFormValue formValue(Form);
 
-  if (!formValue.extractValue(U->getDebugInfoExtractor(), OffsetPtr, U))
+  if (!formValue.extractValue(U->getDebugInfoExtractor(), OffsetPtr,
+                              U->getFormParams(), U))
     return;
 
   OS << "\t(";
@@ -550,7 +551,7 @@ void DWARFDie::attribute_iterator::updateForIndex(
     auto U = Die.getDwarfUnit();
     assert(U && "Die must have valid DWARF unit");
     bool b = AttrValue.Value.extractValue(U->getDebugInfoExtractor(),
-                                          &ParseOffset, U);
+                                          &ParseOffset, U->getFormParams(), U);
     (void)b;
     assert(b && "extractValue cannot fail on fully parsed DWARF");
     AttrValue.ByteSize = ParseOffset - AttrValue.Offset;

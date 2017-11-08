@@ -2181,9 +2181,9 @@ ClangASTContext::CreateEnumerationType(const char *name, DeclContext *decl_ctx,
   EnumDecl *enum_decl = EnumDecl::Create(
       *ast, decl_ctx, SourceLocation(), SourceLocation(),
       name && name[0] ? &ast->Idents.get(name) : nullptr, nullptr,
-      is_scoped,
-      true,   // IsScopedUsingClassTag
-      false); // IsFixed
+      is_scoped, // IsScoped
+      is_scoped, // IsScopedUsingClassTag
+      false);    // IsFixed
 
   if (enum_decl) {
     // TODO: check if we should be setting the promotion type too?

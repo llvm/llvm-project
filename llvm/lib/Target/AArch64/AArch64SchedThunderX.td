@@ -25,6 +25,8 @@ def ThunderXT8XModel : SchedMachineModel {
   let MispredictPenalty = 8;  // Branch mispredict penalty.
   let PostRAScheduler = 1;    // Use PostRA scheduler.
   let CompleteModel = 1;
+
+  list<Predicate> UnsupportedFeatures = [HasSVE];
 }
 
 // Modeling each pipeline with BufferSize == 0 since T8X is in-order.

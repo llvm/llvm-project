@@ -15,7 +15,7 @@
 #define LLVM_LIB_TARGET_ARC_ARCINSTRINFO_H
 
 #include "ARCRegisterInfo.h"
-#include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 
 #define GET_INSTRINFO_HEADER
 #include "ARCGenInstrInfo.inc"

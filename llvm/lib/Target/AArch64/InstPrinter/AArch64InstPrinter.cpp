@@ -1340,3 +1340,23 @@ void AArch64InstPrinter::printComplexRotationOp(const MCInst *MI, unsigned OpNo,
   O << "#" << (Val * Angle) + Remainder;
 }
 
+template <char suffix>
+void AArch64InstPrinter::printSVERegOp(const MCInst *MI, unsigned OpNum,
+                                       const MCSubtargetInfo &STI,
+                                       raw_ostream &O) {
+  switch (suffix) {
+  case 0:
+  case 'b':
+  case 'h':
+  case 's':
+  case 'd':
+  case 'q':
+    break;
+  default: llvm_unreachable("Invalid kind specifier.");
+  }
+
+  unsigned Reg = MI->getOperand(OpNum).getReg();
+  O << getRegisterName(Reg);
+  if (suffix != 0)
+    O << '.' << suffix;
+}

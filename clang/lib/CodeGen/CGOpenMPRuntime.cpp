@@ -5978,22 +5978,21 @@ public:
     /// \brief Delete the element from the device environment, ignoring the
     /// current reference count associated with the element.
     OMP_MAP_DELETE = 0x08,
-    /// \brief The element being mapped is a pointer, therefore the pointee
-    /// should be mapped as well.
-    OMP_MAP_IS_PTR = 0x10,
-    /// \brief This flags signals that an argument is the first one relating to
-    /// a map/private clause expression. For some cases a single
-    /// map/privatization results in multiple arguments passed to the runtime
-    /// library.
-    OMP_MAP_FIRST_REF = 0x20,
+    /// \brief The element being mapped is a pointer-pointee pair; both the
+    /// pointer and the pointee should be mapped.
+    OMP_MAP_PTR_AND_OBJ = 0x10,
+    /// \brief This flags signals that the base address of an entry should be
+    /// passed to the target kernel as an argument.
+    OMP_MAP_TARGET_PARAM = 0x20,
     /// \brief Signal that the runtime library has to return the device pointer
-    /// in the current position for the data being mapped.
-    OMP_MAP_RETURN_PTR = 0x40,
+    /// in the current position for the data being mapped. Used when we have the
+    /// use_device_ptr clause.
+    OMP_MAP_RETURN_PARAM = 0x40,
     /// \brief This flag signals that the reference being passed is a pointer to
     /// private data.
-    OMP_MAP_PRIVATE_PTR = 0x80,
+    OMP_MAP_PRIVATE = 0x80,
     /// \brief Pass the element to the device by value.
-    OMP_MAP_PRIVATE_VAL = 0x100,
+    OMP_MAP_LITERAL = 0x100,
     /// Implicit map
     OMP_MAP_IMPLICIT = 0x200,
   };
@@ -6084,7 +6083,7 @@ private:
   /// expression.
   unsigned getMapTypeBits(OpenMPMapClauseKind MapType,
                           OpenMPMapClauseKind MapTypeModifier, bool AddPtrFlag,
-                          bool AddIsFirstFlag) const {
+                          bool AddIsTargetParamFlag) const {
     unsigned Bits = 0u;
     switch (MapType) {
     case OMPC_MAP_alloc:
@@ -6111,9 +6110,9 @@ private:
       break;
     }
     if (AddPtrFlag)
-      Bits |= OMP_MAP_IS_PTR;
-    if (AddIsFirstFlag)
-      Bits |= OMP_MAP_FIRST_REF;
+      Bits |= OMP_MAP_PTR_AND_OBJ;
+    if (AddIsTargetParamFlag)
+      Bits |= OMP_MAP_TARGET_PARAM;
     if (MapTypeModifier == OMPC_MAP_always)
       Bits |= OMP_MAP_ALWAYS;
     return Bits;
@@ -6220,28 +6219,28 @@ private:
     //
     // map(s.p[:22], s.a s.b)
     // &s, &(s.p), sizeof(double*), noflags
-    // &(s.p), &(s.p[0]), 22*sizeof(double), ptr_flag + extra_flag
+    // &(s.p), &(s.p[0]), 22*sizeof(double), ptr_flag
     //
     // map(s.ps)
     // &s, &(s.ps), sizeof(S2*), noflags
     //
     // map(s.ps->s.i)
     // &s, &(s.ps), sizeof(S2*), noflags
-    // &(s.ps), &(s.ps->s.i), sizeof(int), ptr_flag + extra_flag
+    // &(s.ps), &(s.ps->s.i), sizeof(int), ptr_flag
     //
     // map(s.ps->ps)
     // &s, &(s.ps), sizeof(S2*), noflags
-    // &(s.ps), &(s.ps->ps), sizeof(S2*), ptr_flag + extra_flag
+    // &(s.ps), &(s.ps->ps), sizeof(S2*), ptr_flag
     //
     // map(s.ps->ps->ps)
     // &s, &(s.ps), sizeof(S2*), noflags
-    // &(s.ps), &(s.ps->ps), sizeof(S2*), ptr_flag + extra_flag
-    // &(s.ps->ps), &(s.ps->ps->ps), sizeof(S2*), ptr_flag + extra_flag
+    // &(s.ps), &(s.ps->ps), sizeof(S2*), ptr_flag
+    // &(s.ps->ps), &(s.ps->ps->ps), sizeof(S2*), ptr_flag
     //
     // map(s.ps->ps->s.f[:22])
     // &s, &(s.ps), sizeof(S2*), noflags
-    // &(s.ps), &(s.ps->ps), sizeof(S2*), ptr_flag + extra_flag
-    // &(s.ps->ps), &(s.ps->ps->s.f[0]), 22*sizeof(float), ptr_flag + extra_flag
+    // &(s.ps), &(s.ps->ps), sizeof(S2*), ptr_flag
+    // &(s.ps->ps), &(s.ps->ps->s.f[0]), 22*sizeof(float), ptr_flag
     //
     // map(ps)
     // &ps, &ps, sizeof(S2*), noflags
@@ -6257,29 +6256,28 @@ private:
     //
     // map(ps->p[:22])
     // ps, &(ps->p), sizeof(double*), noflags
-    // &(ps->p), &(ps->p[0]), 22*sizeof(double), ptr_flag + extra_flag
+    // &(ps->p), &(ps->p[0]), 22*sizeof(double), ptr_flag
     //
     // map(ps->ps)
     // ps, &(ps->ps), sizeof(S2*), noflags
     //
     // map(ps->ps->s.i)
     // ps, &(ps->ps), sizeof(S2*), noflags
-    // &(ps->ps), &(ps->ps->s.i), sizeof(int), ptr_flag + extra_flag
+    // &(ps->ps), &(ps->ps->s.i), sizeof(int), ptr_flag
     //
     // map(ps->ps->ps)
     // ps, &(ps->ps), sizeof(S2*), noflags
-    // &(ps->ps), &(ps->ps->ps), sizeof(S2*), ptr_flag + extra_flag
+    // &(ps->ps), &(ps->ps->ps), sizeof(S2*), ptr_flag
     //
     // map(ps->ps->ps->ps)
     // ps, &(ps->ps), sizeof(S2*), noflags
-    // &(ps->ps), &(ps->ps->ps), sizeof(S2*), ptr_flag + extra_flag
-    // &(ps->ps->ps), &(ps->ps->ps->ps), sizeof(S2*), ptr_flag + extra_flag
+    // &(ps->ps), &(ps->ps->ps), sizeof(S2*), ptr_flag
+    // &(ps->ps->ps), &(ps->ps->ps->ps), sizeof(S2*), ptr_flag
     //
     // map(ps->ps->ps->s.f[:22])
     // ps, &(ps->ps), sizeof(S2*), noflags
-    // &(ps->ps), &(ps->ps->ps), sizeof(S2*), ptr_flag + extra_flag
-    // &(ps->ps->ps), &(ps->ps->ps->s.f[0]), 22*sizeof(float), ptr_flag +
-    // extra_flag
+    // &(ps->ps), &(ps->ps->ps), sizeof(S2*), ptr_flag
+    // &(ps->ps->ps), &(ps->ps->ps->s.f[0]), 22*sizeof(float), ptr_flag
 
     // Track if the map information being generated is the first for a capture.
     bool IsCaptureFirstInfo = IsFirstComponentList;
@@ -6419,7 +6417,7 @@ private:
     // 'private ptr' and 'map to' flag. Return the right flags if the captured
     // declaration is known as first-private in this handler.
     if (FirstPrivateDecls.count(Cap.getCapturedVar()))
-      return MappableExprsHandler::OMP_MAP_PRIVATE_PTR |
+      return MappableExprsHandler::OMP_MAP_PRIVATE |
              MappableExprsHandler::OMP_MAP_TO;
 
     // We didn't modify anything.
@@ -6560,7 +6558,7 @@ public:
         BasePointers.push_back({Ptr, VD});
         Pointers.push_back(Ptr);
         Sizes.push_back(llvm::Constant::getNullValue(this->CGF.SizeTy));
-        Types.push_back(OMP_MAP_RETURN_PTR | OMP_MAP_FIRST_REF);
+        Types.push_back(OMP_MAP_RETURN_PARAM | OMP_MAP_TARGET_PARAM);
       }
 
     for (auto &M : Info) {
@@ -6598,7 +6596,7 @@ public:
                  "No relevant declaration related with device pointer??");
 
           BasePointers[CurrentBasePointersIdx].setDevicePtrDecl(RelevantVD);
-          Types[CurrentBasePointersIdx] |= OMP_MAP_RETURN_PTR;
+          Types[CurrentBasePointersIdx] |= OMP_MAP_RETURN_PARAM;
         }
         IsFirstComponentList = false;
       }
@@ -6650,7 +6648,7 @@ public:
       BasePointers.push_back({Arg, VD});
       Pointers.push_back(Arg);
       Sizes.push_back(CGF.getTypeSize(CGF.getContext().VoidPtrTy));
-      Types.push_back(OMP_MAP_PRIVATE_VAL | OMP_MAP_FIRST_REF);
+      Types.push_back(OMP_MAP_LITERAL | OMP_MAP_TARGET_PARAM);
       return;
     }
 
@@ -6693,7 +6691,7 @@ public:
       if (!RI.getType()->isAnyPointerType()) {
         // We have to signal to the runtime captures passed by value that are
         // not pointers.
-        CurMapTypes.push_back(OMP_MAP_PRIVATE_VAL);
+        CurMapTypes.push_back(OMP_MAP_LITERAL);
         CurSizes.push_back(CGF.getTypeSize(RI.getType()));
       } else {
         // Pointers are implicitly mapped with a zero size and no flags
@@ -6723,9 +6721,8 @@ public:
       CurMapTypes.back() =
           adjustMapModifiersForPrivateClauses(CI, CurMapTypes.back());
     }
-    // Every default map produces a single argument, so, it is always the
-    // first one.
-    CurMapTypes.back() |= OMP_MAP_FIRST_REF;
+    // Every default map produces a single argument which is a target parameter.
+    CurMapTypes.back() |= OMP_MAP_TARGET_PARAM;
   }
 };
 
@@ -6925,8 +6922,8 @@ void CGOpenMPRuntime::emitTargetCall(CodeGenFunction &CGF,
       CurPointers.push_back(*CV);
       CurSizes.push_back(CGF.getTypeSize(RI->getType()));
       // Copy to the device as an argument. No need to retrieve it.
-      CurMapTypes.push_back(MappableExprsHandler::OMP_MAP_PRIVATE_VAL |
-                            MappableExprsHandler::OMP_MAP_FIRST_REF);
+      CurMapTypes.push_back(MappableExprsHandler::OMP_MAP_LITERAL |
+                            MappableExprsHandler::OMP_MAP_TARGET_PARAM);
     } else {
       // If we have any information in the map clause, we use it, otherwise we
       // just do a default mapping.

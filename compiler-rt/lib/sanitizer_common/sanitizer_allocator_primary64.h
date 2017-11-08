@@ -72,11 +72,10 @@ class SizeClassAllocator64 {
   void Init(s32 release_to_os_interval_ms) {
     uptr TotalSpaceSize = kSpaceSize + AdditionalSize();
     if (kUsingConstantSpaceBeg) {
-      CHECK_EQ(kSpaceBeg, reinterpret_cast<uptr>(
-                              MmapFixedNoAccess(kSpaceBeg, TotalSpaceSize)));
+      CHECK_EQ(kSpaceBeg, address_range.Init(TotalSpaceSize, AllocatorName(),
+                                             kSpaceBeg));
     } else {
-      NonConstSpaceBeg =
-          reinterpret_cast<uptr>(MmapNoAccess(TotalSpaceSize));
+      NonConstSpaceBeg = address_range.Init(TotalSpaceSize, AllocatorName());
       CHECK_NE(NonConstSpaceBeg, ~(uptr)0);
     }
     SetReleaseToOSIntervalMs(release_to_os_interval_ms);
@@ -544,6 +543,9 @@ class SizeClassAllocator64 {
  private:
   friend class MemoryMapper;
 
+  ReservedAddressRange address_range;
+  static const char *AllocatorName() { return "sanitizer_allocator"; }
+
   static const uptr kRegionSize = kSpaceSize / kNumClassesRounded;
   // FreeArray is the array of free-d chunks (stored as 4-byte offsets).
   // In the worst case it may reguire kRegionSize/SizeClassMap::kMinSize
@@ -625,7 +627,7 @@ class SizeClassAllocator64 {
   }
 
   bool MapWithCallback(uptr beg, uptr size) {
-    uptr mapped = reinterpret_cast<uptr>(MmapFixedOrDieOnFatalError(beg, size));
+    uptr mapped = address_range.Map(beg, size);
     if (UNLIKELY(!mapped))
       return false;
     CHECK_EQ(beg, mapped);
@@ -634,13 +636,13 @@ class SizeClassAllocator64 {
   }
 
   void MapWithCallbackOrDie(uptr beg, uptr size) {
-    CHECK_EQ(beg, reinterpret_cast<uptr>(MmapFixedOrDie(beg, size)));
+    CHECK_EQ(beg, address_range.MapOrDie(beg, size));
     MapUnmapCallback().OnMap(beg, size);
   }
 
   void UnmapWithCallbackOrDie(uptr beg, uptr size) {
     MapUnmapCallback().OnUnmap(beg, size);
-    UnmapOrDie(reinterpret_cast<void *>(beg), size);
+    address_range.Unmap(beg, size);
   }
 
   bool EnsureFreeArraySpace(RegionInfo *region, uptr region_beg,

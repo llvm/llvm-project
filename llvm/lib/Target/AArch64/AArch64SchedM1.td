@@ -24,6 +24,8 @@ def ExynosM1Model : SchedMachineModel {
   let LoadLatency           =  4; // Optimistic load cases.
   let MispredictPenalty     = 14; // Minimum branch misprediction penalty.
   let CompleteModel         =  1; // Use the default model otherwise.
+
+  list<Predicate> UnsupportedFeatures = [HasSVE];
 }
 
 //===----------------------------------------------------------------------===//

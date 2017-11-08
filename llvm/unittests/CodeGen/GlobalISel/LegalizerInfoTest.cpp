@@ -49,7 +49,7 @@ TEST(LegalizerInfoTest, ScalarRISC) {
   using namespace TargetOpcode;
   LegalizerInfo L;
   // Typical RISCy set of operations based on AArch64.
-  for (auto Op : {G_ADD, G_SUB}) {
+  for (unsigned Op : {G_ADD, G_SUB}) {
     for (unsigned Size : {32, 64})
       L.setAction({Op, 0, LLT::scalar(Size)}, LegalizerInfo::Legal);
     L.setLegalizeScalarToDifferentSizeStrategy(
@@ -58,7 +58,7 @@ TEST(LegalizerInfoTest, ScalarRISC) {
 
   L.computeTables();
 
-  for (auto &opcode : {G_ADD, G_SUB}) {
+  for (unsigned opcode : {G_ADD, G_SUB}) {
     // Check we infer the correct types and actually do what we're told.
     ASSERT_EQ(L.getAction({opcode, LLT::scalar(8)}),
               std::make_pair(LegalizerInfo::WidenScalar, LLT::scalar(32)));

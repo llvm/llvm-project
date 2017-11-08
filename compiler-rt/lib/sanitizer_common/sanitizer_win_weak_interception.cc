@@ -12,7 +12,7 @@
 // definition is provided.
 //===----------------------------------------------------------------------===//
 
-#include "sanitizer_common/sanitizer_platform.h"
+#include "sanitizer_platform.h"
 #if SANITIZER_WINDOWS && SANITIZER_DYNAMIC
 #include "sanitizer_win_weak_interception.h"
 #include "sanitizer_allocator_interface.h"

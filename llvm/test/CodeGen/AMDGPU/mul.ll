@@ -227,10 +227,10 @@ endif:
 
 
 ; VI: s_mul_i32
-; VI: s_mul_i32
-; VI: v_mul_hi_u32
 ; VI: v_mul_hi_u32
 ; VI: v_mad_u64_u32
+; VI: s_mul_i32
+; VI: v_mul_hi_u32
 ; VI: v_mad_u64_u32
 ; VI: v_mad_u64_u32
 
@@ -254,7 +254,7 @@ define amdgpu_kernel void @s_mul_i128(i128 addrspace(1)* %out, i128 %a, i128 %b)
 ; GCN-DAG: v_mul_hi_u32
 ; GCN-DAG: v_mul_lo_i32
 ; GCN-DAG: v_mul_lo_i32
-; GCN: v_add_i32_e32
+; GCN-DAG: v_add_i32_e32
 
 ; SI-DAG: v_mul_hi_u32
 ; SI-DAG: v_mul_lo_i32
@@ -265,7 +265,7 @@ define amdgpu_kernel void @s_mul_i128(i128 addrspace(1)* %out, i128 %a, i128 %b)
 ; SI-DAG: v_mul_lo_i32
 ; SI-DAG: v_mul_lo_i32
 
-; VI: v_mad_u64_u32
+; VI-DAG: v_mad_u64_u32
 ; VI: v_mad_u64_u32
 ; VI: v_mad_u64_u32
 

@@ -167,6 +167,13 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
     if (GV && !GV->isDeclarationForLinker())
       return true;
 
+    // A symbol marked nonlazybind should not be accessed with a plt. If the
+    // symbol turns out to be external, the linker will convert a direct
+    // access to an access via the plt, so don't assume it is local.
+    const Function *F = dyn_cast_or_null<Function>(GV);
+    if (F && F->hasFnAttribute(Attribute::NonLazyBind))
+      return false;
+
     bool IsTLS = GV && GV->isThreadLocal();
     bool IsAccessViaCopyRelocs =
         Options.MCOptions.MCPIECopyRelocations && GV && isa<GlobalVariable>(GV);

@@ -7698,11 +7698,11 @@ multiclass f16c_ph2ps<RegisterClass RC, X86MemOperand x86memop> {
              T8PD, VEX, Sched<[WriteCvtF2FLd]>;
 }
 
-multiclass f16c_ps2ph<RegisterClass RC, X86MemOperand x86memop, Intrinsic Int> {
+multiclass f16c_ps2ph<RegisterClass RC, X86MemOperand x86memop> {
   def rr : Ii8<0x1D, MRMDestReg, (outs VR128:$dst),
                (ins RC:$src1, i32u8imm:$src2),
                "vcvtps2ph\t{$src2, $src1, $dst|$dst, $src1, $src2}",
-               [(set VR128:$dst, (Int RC:$src1, imm:$src2))]>,
+               [(set VR128:$dst, (X86cvtps2ph RC:$src1, imm:$src2))]>,
                TAPD, VEX, Sched<[WriteCvtF2F]>;
   let hasSideEffects = 0, mayStore = 1,
       SchedRW = [WriteCvtF2FLd, WriteRMW] in
@@ -7715,6 +7715,8 @@ multiclass f16c_ps2ph<RegisterClass RC, X86MemOperand x86memop, Intrinsic Int> {
 let Predicates = [HasF16C, NoVLX] in {
   defm VCVTPH2PS  : f16c_ph2ps<VR128, f64mem>;
   defm VCVTPH2PSY : f16c_ph2ps<VR256, f128mem>, VEX_L;
+  defm VCVTPS2PH  : f16c_ps2ph<VR128, f64mem>;
+  defm VCVTPS2PHY : f16c_ps2ph<VR256, f128mem>, VEX_L;
 
   // Pattern match vcvtph2ps of a scalar i64 load.
   def : Pat<(v4f32 (X86cvtph2ps (v8i16 (vzmovl_v2i64 addr:$src)))),
@@ -7724,23 +7726,17 @@ let Predicates = [HasF16C, NoVLX] in {
   def : Pat<(v4f32 (X86cvtph2ps (v8i16 (bitconvert
               (v2i64 (scalar_to_vector (loadi64 addr:$src))))))),
             (VCVTPH2PSrm addr:$src)>;
-}
 
-let Predicates = [HasF16C] in {
-  defm VCVTPS2PH  : f16c_ps2ph<VR128, f64mem, int_x86_vcvtps2ph_128>;
-  defm VCVTPS2PHY : f16c_ps2ph<VR256, f128mem, int_x86_vcvtps2ph_256>, VEX_L;
-
-  def : Pat<(store (f64 (extractelt (bc_v2f64 (v8i16
-                  (int_x86_vcvtps2ph_128 VR128:$src1, i32:$src2))), (iPTR 0))),
-                   addr:$dst),
-                   (VCVTPS2PHmr addr:$dst, VR128:$src1, imm:$src2)>;
-  def : Pat<(store (i64 (extractelt (bc_v2i64 (v8i16
-                  (int_x86_vcvtps2ph_128 VR128:$src1, i32:$src2))), (iPTR 0))),
-                   addr:$dst),
-                   (VCVTPS2PHmr addr:$dst, VR128:$src1, imm:$src2)>;
-  def : Pat<(store (v8i16 (int_x86_vcvtps2ph_256 VR256:$src1, i32:$src2)),
-                   addr:$dst),
-                   (VCVTPS2PHYmr addr:$dst, VR256:$src1, imm:$src2)>;
+  def : Pat<(store (f64 (extractelt
+                         (bc_v2f64 (v8i16 (X86cvtps2ph VR128:$src1, i32:$src2))),
+                         (iPTR 0))), addr:$dst),
+            (VCVTPS2PHmr addr:$dst, VR128:$src1, imm:$src2)>;
+  def : Pat<(store (i64 (extractelt
+                         (bc_v2i64 (v8i16 (X86cvtps2ph VR128:$src1, i32:$src2))),
+                         (iPTR 0))), addr:$dst),
+            (VCVTPS2PHmr addr:$dst, VR128:$src1, imm:$src2)>;
+  def : Pat<(store (v8i16 (X86cvtps2ph VR256:$src1, i32:$src2)), addr:$dst),
+            (VCVTPS2PHYmr addr:$dst, VR256:$src1, imm:$src2)>;
 }
 
 // Patterns for  matching conversions from float to half-float and vice versa.

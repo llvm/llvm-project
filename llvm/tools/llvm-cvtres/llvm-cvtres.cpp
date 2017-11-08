@@ -202,7 +202,7 @@ int main(int argc_, const char *argv_[]) {
   auto FileOrErr =
       FileOutputBuffer::create(OutputFile, OutputBuffer->getBufferSize());
   if (!FileOrErr)
-    reportError(OutputFile, FileOrErr.getError());
+    reportError(OutputFile, errorToErrorCode(FileOrErr.takeError()));
   std::unique_ptr<FileOutputBuffer> FileBuffer = std::move(*FileOrErr);
   std::copy(OutputBuffer->getBufferStart(), OutputBuffer->getBufferEnd(),
             FileBuffer->getBufferStart());

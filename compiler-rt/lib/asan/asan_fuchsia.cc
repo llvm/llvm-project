@@ -28,7 +28,7 @@
 namespace __asan {
 
 // The system already set up the shadow memory for us.
-// __sanitizer::GetMaxVirtualAddress has already been called by
+// __sanitizer::GetMaxUserVirtualAddress has already been called by
 // AsanInitInternal->InitializeHighMemEnd (asan_rtl.cc).
 // Just do some additional sanity checks here.
 void InitializeShadowMemory() {

@@ -14,11 +14,11 @@
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetInstrInfo.h"
 #include <string>
 
 using namespace llvm;

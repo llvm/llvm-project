@@ -427,6 +427,17 @@ public:
 
     return true;
   }
+
+  bool VisitOffsetOfExpr(OffsetOfExpr *S) {
+    for (unsigned I = 0, E = S->getNumComponents(); I != E; ++I) {
+      const OffsetOfNode &Component = S->getComponent(I);
+      if (Component.getKind() == OffsetOfNode::Field)
+        IndexCtx.handleReference(Component.getField(), Component.getLocEnd(),
+                                 Parent, ParentDC, SymbolRoleSet(), {});
+      // FIXME: Try to resolve dependent field references.
+    }
+    return true;
+  }
 };
 
 } // anonymous namespace

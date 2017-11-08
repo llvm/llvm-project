@@ -426,8 +426,7 @@ Instruction *InstCombiner::foldCmpLoadFromIndexedGlobal(GetElementPtrInst *GEP,
 
     // Look for an appropriate type:
     // - The type of Idx if the magic fits
-    // - The smallest fitting legal type if we have a DataLayout
-    // - Default to i32
+    // - The smallest fitting legal type
     if (ArrayElementCount <= Idx->getType()->getIntegerBitWidth())
       Ty = Idx->getType();
     else
