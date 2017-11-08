@@ -46,7 +46,6 @@ ErrorHandler &lld::errorHandler() {
 }
 
 void lld::exitLld(int Val) {
-  waitForBackgroundThreads();
   // Dealloc/destroy ManagedStatic variables before calling
   // _exit(). In a non-LTO build, this is a nop. In an LTO
   // build allows us to get the output of -time-passes.
