@@ -19,8 +19,8 @@
 #include "ARMBaseInstrInfo.h"
 #include "ARMSubtarget.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/CallingConv.h"
-#include "llvm/Target/TargetInstrInfo.h"
 
 namespace llvm {
 

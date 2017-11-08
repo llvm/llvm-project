@@ -3449,6 +3449,7 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   }
 
   case Intrinsic::nvvm_atomic_load_add_f32:
+  case Intrinsic::nvvm_atomic_load_add_f64:
   case Intrinsic::nvvm_atomic_load_inc_32:
   case Intrinsic::nvvm_atomic_load_dec_32:
 

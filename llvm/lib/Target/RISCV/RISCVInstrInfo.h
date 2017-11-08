@@ -15,7 +15,7 @@
 #define LLVM_LIB_TARGET_RISCV_RISCVINSTRINFO_H
 
 #include "RISCVRegisterInfo.h"
-#include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 
 #define GET_INSTRINFO_HEADER
 #include "RISCVGenInstrInfo.inc"

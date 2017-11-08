@@ -717,6 +717,7 @@ define <8 x i64> @test_mm512_mask_set1_epi8(<8 x i64> %__O, i64 %__M, i8 signext
 ; X32-NEXT:    vpbroadcastb %eax, %zmm3 {%k1}
 ; X32-NEXT:    vmovdqa64 %zmm3, %zmm0
 ; X32-NEXT:    popl %ebx
+; X32-NEXT:   .cfi_def_cfa_offset 4
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_mask_set1_epi8:
@@ -1444,6 +1445,7 @@ define <8 x i64> @test_mm512_maskz_set1_epi8(i64 %__M, i8 signext %__A)  {
 ; X32-NEXT:    korq %k0, %k1, %k1
 ; X32-NEXT:    vpbroadcastb %eax, %zmm0 {%k1} {z}
 ; X32-NEXT:    popl %ebx
+; X32-NEXT:   .cfi_def_cfa_offset 4
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_maskz_set1_epi8:

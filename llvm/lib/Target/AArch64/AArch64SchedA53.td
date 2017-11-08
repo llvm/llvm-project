@@ -26,6 +26,8 @@ def CortexA53Model : SchedMachineModel {
                              // Specification - Instruction Timings"
                              // v 1.0 Spreadsheet
   let CompleteModel = 1;
+
+  list<Predicate> UnsupportedFeatures = [HasSVE];
 }
 
 

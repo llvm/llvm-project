@@ -329,9 +329,9 @@ void DWARFContext::dump(
         // representation.
         OS << "debug_line[" << format("0x%8.8x", Offset) << "]\n";
         if (DumpOpts.Verbose) {
-          LineTable.parse(lineData, &Offset, &OS);
+          LineTable.parse(lineData, &Offset, &*CU, &OS);
         } else {
-          LineTable.parse(lineData, &Offset);
+          LineTable.parse(lineData, &Offset, &*CU);
           LineTable.dump(OS);
         }
       }
@@ -349,7 +349,7 @@ void DWARFContext::dump(
     DWARFDataExtractor lineData(*DObj, DObj->getLineDWOSection(),
                                 isLittleEndian(), savedAddressByteSize);
     DWARFDebugLine::LineTable LineTable;
-    while (LineTable.Prologue.parse(lineData, &stmtOffset)) {
+    while (LineTable.Prologue.parse(lineData, &stmtOffset, nullptr)) {
       LineTable.dump(OS);
       LineTable.clear();
     }
@@ -681,7 +681,7 @@ DWARFContext::getLineTableForUnit(DWARFUnit *U) {
   // We have to parse it first.
   DWARFDataExtractor lineData(*DObj, U->getLineSection(), isLittleEndian(),
                               U->getAddressByteSize());
-  return Line->getOrParseLineTable(lineData, stmtOffset);
+  return Line->getOrParseLineTable(lineData, stmtOffset, U);
 }
 
 void DWARFContext::parseCompileUnits() {

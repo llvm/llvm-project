@@ -1038,6 +1038,11 @@ json::Expr CompletionItem::unparse(const CompletionItem &CI) {
   return std::move(Result);
 }
 
+bool clangd::operator<(const CompletionItem &L, const CompletionItem &R) {
+  return (L.sortText.empty() ? L.label : L.sortText) <
+         (R.sortText.empty() ? R.label : R.sortText);
+}
+
 json::Expr ParameterInformation::unparse(const ParameterInformation &PI) {
   assert(!PI.label.empty() && "parameter information label is required");
   json::obj Result{{"label", PI.label}};

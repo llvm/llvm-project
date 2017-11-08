@@ -25,6 +25,8 @@ def ThunderX2T99Model : SchedMachineModel {
   let LoopMicroOpBufferSize =  32;
   let PostRAScheduler       =   1; // Using PostRA sched.
   let CompleteModel         =   1;
+
+  list<Predicate> UnsupportedFeatures = [HasSVE];
 }
 
 // Define the issue ports.
