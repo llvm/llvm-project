@@ -2896,13 +2896,7 @@ extern int __kmp_gtid_mode; /* Method of getting gtid, values:
 extern int
     __kmp_adjust_gtid_mode; /* If true, adjust method based on #threads */
 #ifdef KMP_TDATA_GTID
-#if KMP_OS_WINDOWS
-extern __declspec(
-    thread) int __kmp_gtid; /* This thread's gtid, if __kmp_gtid_mode == 3 */
-#else
-extern __thread int __kmp_gtid;
-#endif /* KMP_OS_WINDOWS - workaround because Intel(R) Many Integrated Core    \
-          compiler 20110316 doesn't accept __declspec */
+extern KMP_THREAD_LOCAL int __kmp_gtid;
 #endif
 extern int __kmp_tls_gtid_min; /* #threads below which use sp search for gtid */
 extern int __kmp_foreign_tp; // If true, separate TP var for each foreign thread

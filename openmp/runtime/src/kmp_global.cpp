@@ -30,7 +30,7 @@ kmp_tas_lock_t __kmp_stats_lock;
 kmp_stats_list *__kmp_stats_list;
 
 // thread local pointer to stats node within list
-__thread kmp_stats_list *__kmp_stats_thread_ptr = NULL;
+KMP_THREAD_LOCAL kmp_stats_list *__kmp_stats_thread_ptr = NULL;
 
 // gives reference tick for all events (considered the 0 tick)
 tsc_tick_count __kmp_stats_start_time;
@@ -182,12 +182,7 @@ int __kmp_gtid_mode = 0; /* select method to get gtid based on #threads */
 int __kmp_adjust_gtid_mode = TRUE;
 #endif /* KMP_OS_LINUX && defined(KMP_TDATA_GTID) */
 #ifdef KMP_TDATA_GTID
-#if KMP_OS_WINDOWS
-__declspec(thread) int __kmp_gtid = KMP_GTID_DNE;
-#else
-__thread int __kmp_gtid = KMP_GTID_DNE;
-#endif /* KMP_OS_WINDOWS - workaround because Intel(R) Many Integrated Core    \
-          compiler 20110316 doesn't accept __declspec */
+KMP_THREAD_LOCAL int __kmp_gtid = KMP_GTID_DNE;
 #endif /* KMP_TDATA_GTID */
 int __kmp_tls_gtid_min = INT_MAX;
 int __kmp_foreign_tp = TRUE;
