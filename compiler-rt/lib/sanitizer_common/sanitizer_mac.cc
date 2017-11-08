@@ -849,7 +849,7 @@ uptr GetTaskInfoMaxAddress() {
 }
 #endif
 
-uptr GetMaxVirtualAddress() {
+uptr GetMaxUserVirtualAddress() {
 #if SANITIZER_WORDSIZE == 64
 # if defined(__aarch64__) && SANITIZER_IOS && !SANITIZER_IOSSIM
   // Get the maximum VM address

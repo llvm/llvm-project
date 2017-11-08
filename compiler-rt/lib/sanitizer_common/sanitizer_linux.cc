@@ -139,6 +139,8 @@ namespace __sanitizer {
 #include "sanitizer_syscall_linux_x86_64.inc"
 #elif SANITIZER_LINUX && defined(__aarch64__)
 #include "sanitizer_syscall_linux_aarch64.inc"
+#elif SANITIZER_LINUX && defined(__arm__)
+#include "sanitizer_syscall_linux_arm.inc"
 #else
 #include "sanitizer_syscall_generic.inc"
 #endif
@@ -952,7 +954,7 @@ static uptr GetKernelAreaSize() {
 }
 #endif  // SANITIZER_WORDSIZE == 32
 
-uptr GetMaxVirtualAddress() {
+uptr GetMaxUserVirtualAddress() {
 #if SANITIZER_NETBSD && defined(__x86_64__)
   return 0x7f7ffffff000ULL;  // (0x00007f8000000000 - PAGE_SIZE)
 #elif SANITIZER_WORDSIZE == 64
