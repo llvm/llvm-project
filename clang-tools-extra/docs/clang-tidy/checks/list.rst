@@ -60,6 +60,7 @@ Clang-Tidy Checks
    google-default-arguments
    google-explicit-constructor
    google-global-names-in-headers
+   google-objc-global-variable-declaration
    google-readability-braces-around-statements (redirects to readability-braces-around-statements) <google-readability-braces-around-statements>
    google-readability-casting
    google-readability-function-size (redirects to readability-function-size) <google-readability-function-size>

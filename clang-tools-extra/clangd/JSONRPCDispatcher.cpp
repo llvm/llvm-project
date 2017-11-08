@@ -12,6 +12,7 @@
 #include "ProtocolHandlers.h"
 #include "Trace.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/YAMLParser.h"
 #include <istream>
@@ -65,13 +66,13 @@ void RequestContext::reply(json::Expr &&Result) {
   });
 }
 
-void RequestContext::replyError(int code, const llvm::StringRef &Message) {
-  Out.log("Error " + llvm::Twine(code) + ": " + Message + "\n");
+void RequestContext::replyError(ErrorCode code, const llvm::StringRef &Message) {
+  Out.log("Error " + Twine(static_cast<int>(code)) + ": " + Message + "\n");
   if (ID) {
     Out.writeMessage(json::obj{
         {"jsonrpc", "2.0"},
         {"id", *ID},
-        {"error", json::obj{{"code", code}, {"message", Message}}},
+        {"error", json::obj{{"code", static_cast<int>(code)}, {"message", Message}}},
     });
   }
 }
@@ -149,7 +150,8 @@ bool JSONRPCDispatcher::call(StringRef Content, JSONOutput &Out) const {
           ID.emplace(V.str());
         } else {
           double D;
-          if (!V.getAsDouble(D))
+          // FIXME: this is locale-sensitive.
+          if (llvm::to_float(V, D))
             ID.emplace(D);
         }
       }

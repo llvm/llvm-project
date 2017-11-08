@@ -2366,7 +2366,7 @@ void DwarfLinker::keepDIEAndDependencies(RelocationManager &RelocMgr,
       continue;
     }
 
-    Val.extractValue(Data, &Offset, &Unit);
+    Val.extractValue(Data, &Offset, Unit.getFormParams(), &Unit);
     CompileUnit *ReferencedCU;
     if (auto RefDie =
             resolveDIEReference(*this, Units, Val, Unit, Die, ReferencedCU)) {
@@ -2965,7 +2965,7 @@ DIE *DwarfLinker::DIECloner::cloneDIE(
 
     DWARFFormValue Val(AttrSpec.Form);
     uint32_t AttrSize = Offset;
-    Val.extractValue(Data, &Offset, &U);
+    Val.extractValue(Data, &Offset, U.getFormParams(), &U);
     AttrSize = Offset - AttrSize;
 
     OutOffset +=
@@ -3158,7 +3158,7 @@ void DwarfLinker::patchLineTableForUnit(CompileUnit &Unit,
   DWARFDataExtractor LineExtractor(
       OrigDwarf.getDWARFObj(), OrigDwarf.getDWARFObj().getLineSection(),
       OrigDwarf.isLittleEndian(), Unit.getOrigUnit().getAddressByteSize());
-  LineTable.parse(LineExtractor, &StmtOffset);
+  LineTable.parse(LineExtractor, &StmtOffset, &Unit.getOrigUnit());
 
   // This vector is the output line table.
   std::vector<DWARFDebugLine::Row> NewRows;

@@ -199,7 +199,7 @@ AddrSinkNewPhis("addr-sink-new-phis", cl::Hidden, cl::init(false),
                 cl::desc("Allow creation of Phis in Address sinking."));
 
 static cl::opt<bool>
-AddrSinkNewSelects("addr-sink-new-select", cl::Hidden, cl::init(true),
+AddrSinkNewSelects("addr-sink-new-select", cl::Hidden, cl::init(false),
                    cl::desc("Allow creation of selects in Address sinking."));
 
 namespace {
@@ -6439,7 +6439,7 @@ bool CodeGenPrepare::placeDbgValues(Function &F) {
       Instruction *Insn = &*BI++;
       DbgValueInst *DVI = dyn_cast<DbgValueInst>(Insn);
       // Leave dbg.values that refer to an alloca alone. These
-      // instrinsics describe the address of a variable (= the alloca)
+      // intrinsics describe the address of a variable (= the alloca)
       // being taken.  They should not be moved next to the alloca
       // (and to the beginning of the scope), but rather stay close to
       // where said address is used.

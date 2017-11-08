@@ -20,6 +20,7 @@ define x86_64_sysvcc i32 @bar(i32 %a0, i32 %a1, float %b0) #0 {
 ; CHECK-NEXT:    movl $4, %eax
 ; CHECK-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    popq %rdx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   call void asm sideeffect "", "~{rax},~{rdx},~{xmm1},~{rdi},~{rsi},~{xmm0}"()
   ret i32 4

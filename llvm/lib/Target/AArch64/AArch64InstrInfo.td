@@ -335,6 +335,7 @@ let RecomputePerFunction = 1 in {
 }
 
 include "AArch64InstrFormats.td"
+include "SVEInstrFormats.td"
 
 //===----------------------------------------------------------------------===//
 
@@ -6275,3 +6276,4 @@ def : Pat<(AArch64tcret texternalsym:$dst, (i32 timm:$FPDiff)),
           (TCRETURNdi texternalsym:$dst, imm:$FPDiff)>;
 
 include "AArch64InstrAtomics.td"
+include "AArch64SVEInstrInfo.td"

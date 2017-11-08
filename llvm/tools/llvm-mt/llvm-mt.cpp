@@ -146,10 +146,10 @@ int main(int argc, const char **argv) {
   std::unique_ptr<MemoryBuffer> OutputBuffer = Merger.getMergedManifest();
   if (!OutputBuffer)
     reportError("empty manifest not written");
-  ErrorOr<std::unique_ptr<FileOutputBuffer>> FileOrErr =
+  Expected<std::unique_ptr<FileOutputBuffer>> FileOrErr =
       FileOutputBuffer::create(OutputFile, OutputBuffer->getBufferSize());
   if (!FileOrErr)
-    reportError(OutputFile, FileOrErr.getError());
+    reportError(OutputFile, errorToErrorCode(FileOrErr.takeError()));
   std::unique_ptr<FileOutputBuffer> FileBuffer = std::move(*FileOrErr);
   std::copy(OutputBuffer->getBufferStart(), OutputBuffer->getBufferEnd(),
             FileBuffer->getBufferStart());

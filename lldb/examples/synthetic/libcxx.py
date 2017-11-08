@@ -693,6 +693,13 @@ class stddeque_SynthProvider:
         except:
             return None
 
+    def _get_value_of_compressed_pair(self, pair):
+        value = pair.GetChildMemberWithName("__value_")
+        if not value.IsValid():
+            # pre-r300140 member name
+            value = pair.GetChildMemberWithName("__first_")
+        return value.GetValueAsUnsigned(0)
+
     def update(self):
         logger = lldb.formatters.Logger.Logger()
         try:
@@ -709,8 +716,8 @@ class stddeque_SynthProvider:
             # variable tells which element in this NxM array is the 0th
             # one, and the 'size' element gives the number of elements
             # in the deque.
-            count = self.valobj.GetChildMemberWithName(
-                '__size_').GetChildMemberWithName('__first_').GetValueAsUnsigned(0)
+            count = self._get_value_of_compressed_pair(
+                    self.valobj.GetChildMemberWithName('__size_'))
             # give up now if we cant access memory reliably
             if self.block_size < 0:
                 logger.write("block_size < 0")
@@ -724,8 +731,8 @@ class stddeque_SynthProvider:
                 '__begin_').GetValueAsUnsigned(0)
             map_end = map_.GetChildMemberWithName(
                 '__end_').GetValueAsUnsigned(0)
-            map_endcap = map_.GetChildMemberWithName(
-                '__end_cap_').GetChildMemberWithName('__first_').GetValueAsUnsigned(0)
+            map_endcap = self._get_value_of_compressed_pair(
+                    map_.GetChildMemberWithName( '__end_cap_'))
             # check consistency
             if not map_first <= map_begin <= map_end <= map_endcap:
                 logger.write("map pointers are not monotonic")

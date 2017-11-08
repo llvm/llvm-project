@@ -27,6 +27,7 @@
 namespace llvm {
 
 bool SpecialCaseList::Matcher::insert(std::string Regexp,
+                                      unsigned LineNumber,
                                       std::string &REError) {
   if (Regexp.empty()) {
     REError = "Supplied regexp was blank";
@@ -34,7 +35,7 @@ bool SpecialCaseList::Matcher::insert(std::string Regexp,
   }
 
   if (Regex::isLiteralERE(Regexp)) {
-    Strings.insert(Regexp);
+    Strings[Regexp] = LineNumber;
     return true;
   }
   Trigrams.insert(Regexp);
@@ -45,33 +46,29 @@ bool SpecialCaseList::Matcher::insert(std::string Regexp,
     Regexp.replace(pos, strlen("*"), ".*");
   }
 
+  Regexp = (Twine("^(") + StringRef(Regexp) + ")$").str();
+
   // Check that the regexp is valid.
   Regex CheckRE(Regexp);
   if (!CheckRE.isValid(REError))
     return false;
 
-  if (!UncompiledRegEx.empty())
-    UncompiledRegEx += "|";
-  UncompiledRegEx += "^(" + Regexp + ")$";
+  RegExes.emplace_back(
+      std::make_pair(make_unique<Regex>(std::move(CheckRE)), LineNumber));
   return true;
 }
 
-void SpecialCaseList::Matcher::compile() {
-  if (!UncompiledRegEx.empty()) {
-    RegEx.reset(new Regex(UncompiledRegEx));
-    UncompiledRegEx.clear();
-  }
-}
-
-bool SpecialCaseList::Matcher::match(StringRef Query) const {
-  if (Strings.count(Query))
-    return true;
+unsigned SpecialCaseList::Matcher::match(StringRef Query) const {
+  auto It = Strings.find(Query);
+  if (It != Strings.end())
+    return It->second;
   if (Trigrams.isDefinitelyOut(Query))
     return false;
-  return RegEx && RegEx->match(Query);
+  for (auto& RegExKV : RegExes)
+    if (RegExKV.first->match(Query))
+      return RegExKV.second;
+  return 0;
 }
-
-SpecialCaseList::SpecialCaseList() : Sections(), IsCompiled(false) {}
 
 std::unique_ptr<SpecialCaseList>
 SpecialCaseList::create(const std::vector<std::string> &Paths,
@@ -114,7 +111,6 @@ bool SpecialCaseList::createInternal(const std::vector<std::string> &Paths,
       return false;
     }
   }
-  compile();
   return true;
 }
 
@@ -123,7 +119,6 @@ bool SpecialCaseList::createInternal(const MemoryBuffer *MB,
   StringMap<size_t> Sections;
   if (!parse(MB, Sections, Error))
     return false;
-  compile();
   return true;
 }
 
@@ -132,11 +127,13 @@ bool SpecialCaseList::parse(const MemoryBuffer *MB,
                             std::string &Error) {
   // Iterate through each line in the blacklist file.
   SmallVector<StringRef, 16> Lines;
-  SplitString(MB->getBuffer(), Lines, "\n\r");
+  MB->getBuffer().split(Lines, '\n');
 
-  int LineNo = 1;
+  unsigned LineNo = 1;
   StringRef Section = "*";
+
   for (auto I = Lines.begin(), E = Lines.end(); I != E; ++I, ++LineNo) {
+    *I = I->trim();
     // Ignore empty lines and lines starting with "#"
     if (I->empty() || I->startswith("#"))
       continue;
@@ -181,11 +178,10 @@ bool SpecialCaseList::parse(const MemoryBuffer *MB,
     if (SectionsMap.find(Section) == SectionsMap.end()) {
       std::unique_ptr<Matcher> M = make_unique<Matcher>();
       std::string REError;
-      if (!M->insert(Section, REError)) {
+      if (!M->insert(Section, LineNo, REError)) {
         Error = (Twine("malformed section ") + Section + ": '" + REError).str();
         return false;
       }
-      M->compile();
 
       SectionsMap[Section] = Sections.size();
       Sections.emplace_back(std::move(M));
@@ -193,7 +189,7 @@ bool SpecialCaseList::parse(const MemoryBuffer *MB,
 
     auto &Entry = Sections[SectionsMap[Section]].Entries[Prefix][Category];
     std::string REError;
-    if (!Entry.insert(std::move(Regexp), REError)) {
+    if (!Entry.insert(std::move(Regexp), LineNo, REError)) {
       Error = (Twine("malformed regex in line ") + Twine(LineNo) + ": '" +
                SplitLine.second + "': " + REError).str();
       return false;
@@ -202,38 +198,33 @@ bool SpecialCaseList::parse(const MemoryBuffer *MB,
   return true;
 }
 
-void SpecialCaseList::compile() {
-  assert(!IsCompiled && "compile() should only be called once");
-  // Iterate through every section compiling regular expressions for every query
-  // and creating Section entries.
-  for (auto &Section : Sections)
-    for (auto &Prefix : Section.Entries)
-      for (auto &Category : Prefix.getValue())
-        Category.getValue().compile();
-
-  IsCompiled = true;
-}
-
 SpecialCaseList::~SpecialCaseList() {}
 
 bool SpecialCaseList::inSection(StringRef Section, StringRef Prefix,
                                 StringRef Query, StringRef Category) const {
-  assert(IsCompiled && "SpecialCaseList::compile() was not called!");
-
-  for (auto &SectionIter : Sections)
-    if (SectionIter.SectionMatcher->match(Section) &&
-        inSection(SectionIter.Entries, Prefix, Query, Category))
-      return true;
-
-  return false;
+  return inSectionBlame(Section, Prefix, Query, Category);
 }
 
-bool SpecialCaseList::inSection(const SectionEntries &Entries, StringRef Prefix,
-                                StringRef Query, StringRef Category) const {
+unsigned SpecialCaseList::inSectionBlame(StringRef Section, StringRef Prefix,
+                                         StringRef Query,
+                                         StringRef Category) const {
+  for (auto &SectionIter : Sections)
+    if (SectionIter.SectionMatcher->match(Section)) {
+      unsigned Blame =
+          inSectionBlame(SectionIter.Entries, Prefix, Query, Category);
+      if (Blame)
+        return Blame;
+    }
+  return 0;
+}
+
+unsigned SpecialCaseList::inSectionBlame(const SectionEntries &Entries,
+                                         StringRef Prefix, StringRef Query,
+                                         StringRef Category) const {
   SectionEntries::const_iterator I = Entries.find(Prefix);
-  if (I == Entries.end()) return false;
+  if (I == Entries.end()) return 0;
   StringMap<Matcher>::const_iterator II = I->second.find(Category);
-  if (II == I->second.end()) return false;
+  if (II == I->second.end()) return 0;
 
   return II->getValue().match(Query);
 }

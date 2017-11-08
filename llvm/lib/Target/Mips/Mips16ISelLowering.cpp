@@ -17,8 +17,8 @@
 #include "MipsRegisterInfo.h"
 #include "MipsTargetMachine.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Target/TargetInstrInfo.h"
 
 using namespace llvm;
 

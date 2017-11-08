@@ -2169,21 +2169,21 @@ CompilerType ClangASTContext::GetOrCreateStructForIdentifier(
 CompilerType
 ClangASTContext::CreateEnumerationType(const char *name, DeclContext *decl_ctx,
                                        const Declaration &decl,
-                                       const CompilerType &integer_clang_type) {
+                                       const CompilerType &integer_clang_type,
+                                       bool is_scoped) {
   // TODO: Do something intelligent with the Declaration object passed in
   // like maybe filling in the SourceLocation with it...
   ASTContext *ast = getASTContext();
 
   // TODO: ask about these...
-  //    const bool IsScoped = false;
   //    const bool IsFixed = false;
 
   EnumDecl *enum_decl = EnumDecl::Create(
       *ast, decl_ctx, SourceLocation(), SourceLocation(),
       name && name[0] ? &ast->Idents.get(name) : nullptr, nullptr,
-      false,  // IsScoped
-      false,  // IsScopedUsingClassTag
-      false); // IsFixed
+      is_scoped, // IsScoped
+      is_scoped, // IsScopedUsingClassTag
+      false);    // IsFixed
 
   if (enum_decl) {
     // TODO: check if we should be setting the promotion type too?

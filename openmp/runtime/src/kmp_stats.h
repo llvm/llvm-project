@@ -588,7 +588,7 @@ public:
     The nestLevel variable is for plotting events and is related
     to the bar width in the timeline graph.
 
-    Every thread will have a __thread local pointer to its node in
+    Every thread will have a thread local pointer to its node in
     the list.  The sentinel node is used by the master thread to
     store "dummy" statistics before __kmp_create_worker() is called.
 **************************************************************** */
@@ -744,7 +744,7 @@ void __kmp_reset_stats();
 void __kmp_output_stats(const char *);
 void __kmp_accumulate_stats_at_exit(void);
 // thread local pointer to stats node within list
-extern __thread kmp_stats_list *__kmp_stats_thread_ptr;
+extern KMP_THREAD_LOCAL kmp_stats_list *__kmp_stats_thread_ptr;
 // head to stats list.
 extern kmp_stats_list *__kmp_stats_list;
 // lock for __kmp_stats_list

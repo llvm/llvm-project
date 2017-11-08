@@ -18,7 +18,7 @@
 #include "Nios2RegisterInfo.h"
 
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 
 #define GET_INSTRINFO_HEADER
 #include "Nios2GenInstrInfo.inc"

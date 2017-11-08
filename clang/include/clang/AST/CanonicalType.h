@@ -1,4 +1,4 @@
-//===-- CanonicalType.h - C Language Family Type Representation -*- C++ -*-===//
+//===- CanonicalType.h - C Language Family Type Representation --*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,13 +16,29 @@
 #define LLVM_CLANG_AST_CANONICALTYPE_H
 
 #include "clang/AST/Type.h"
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/PointerLikeTypeTraits.h"
+#include <cassert>
+#include <iterator>
+#include <type_traits>
 
 namespace clang {
 
 template<typename T> class CanProxy;
 template<typename T> struct CanProxyAdaptor;
+class CXXRecordDecl;
+class EnumDecl;
+class Expr;
+class IdentifierInfo;
+class ObjCInterfaceDecl;
+class RecordDecl;
+class TagDecl;
+class TemplateTypeParmDecl;
 
 //----------------------------------------------------------------------------//
 // Canonical, qualified type template
@@ -46,8 +62,6 @@ template<typename T> struct CanProxyAdaptor;
 /// converted to @c CanQual<ReferenceType>. Note that any @c CanQual type can
 /// be implicitly converted to a QualType, but the reverse operation requires
 /// a call to ASTContext::getCanonicalType().
-///
-///
 template<typename T = Type>
 class CanQual {
   /// \brief The actual, canonical type.
@@ -55,7 +69,7 @@ class CanQual {
 
 public:
   /// \brief Constructs a NULL canonical type.
-  CanQual() : Stored() { }
+  CanQual() = default;
 
   /// \brief Converting constructor that permits implicit upcasting of
   /// canonical type pointers.
@@ -66,12 +80,11 @@ public:
   /// \brief Retrieve the underlying type pointer, which refers to a
   /// canonical type.
   ///
-  /// The underlying pointer must not be NULL.
+  /// The underlying pointer must not be nullptr.
   const T *getTypePtr() const { return cast<T>(Stored.getTypePtr()); }
 
   /// \brief Retrieve the underlying type pointer, which refers to a
-  /// canonical type, or NULL.
-  ///
+  /// canonical type, or nullptr.
   const T *getTypePtrOrNull() const { 
     return cast_or_null<T>(Stored.getTypePtrOrNull()); 
   }
@@ -125,9 +138,11 @@ public:
   bool isConstQualified() const {
     return Stored.isLocalConstQualified();
   }
+
   bool isVolatileQualified() const {
     return Stored.isLocalVolatileQualified();
   }
+
   bool isRestrictQualified() const {
     return Stored.isLocalRestrictQualified();
   }
@@ -195,7 +210,7 @@ inline bool operator!=(CanQual<T> x, CanQual<U> y) {
 }
 
 /// \brief Represents a canonical, potentially-qualified type.
-typedef CanQual<Type> CanQualType;
+using CanQualType = CanQual<Type>;
 
 inline CanQualType Type::getCanonicalTypeUnqualified() const {
   return CanQualType::CreateUnsafe(getCanonicalTypeInternal());
@@ -320,7 +335,7 @@ public:
 /// than the more typical @c QualType, to propagate the notion of "canonical"
 /// through the system.
 template<typename T>
-struct CanProxyAdaptor : CanProxyBase<T> { };
+struct CanProxyAdaptor : CanProxyBase<T> {};
 
 /// \brief Canonical proxy type returned when retrieving the members of a
 /// canonical type or as the result of the @c CanQual<T>::getAs member
@@ -333,7 +348,7 @@ template<typename T>
 class CanProxy : public CanProxyAdaptor<T> {
 public:
   /// \brief Build a NULL proxy.
-  CanProxy() { }
+  CanProxy() = default;
 
   /// \brief Build a proxy to the given canonical type.
   CanProxy(CanQual<T> Stored) { this->Stored = Stored; }
@@ -342,7 +357,7 @@ public:
   operator CanQual<T>() const { return this->Stored; }
 };
 
-} // end namespace clang
+} // namespace clang
 
 namespace llvm {
 
@@ -350,8 +365,9 @@ namespace llvm {
 /// CanQual<T> to a specific Type class. We're prefer isa/dyn_cast/cast/etc.
 /// to return smart pointer (proxies?).
 template<typename T>
-struct simplify_type< ::clang::CanQual<T> > {
-  typedef const T *SimpleType;
+struct simplify_type< ::clang::CanQual<T>> {
+  using SimpleType = const T *;
+
   static SimpleType getSimplifiedValue(::clang::CanQual<T> Val) {
     return Val.getTypePtr();
   }
@@ -359,18 +375,20 @@ struct simplify_type< ::clang::CanQual<T> > {
 
 // Teach SmallPtrSet that CanQual<T> is "basically a pointer".
 template<typename T>
-struct PointerLikeTypeTraits<clang::CanQual<T> > {
-  static inline void *getAsVoidPointer(clang::CanQual<T> P) {
+struct PointerLikeTypeTraits<clang::CanQual<T>> {
+  static void *getAsVoidPointer(clang::CanQual<T> P) {
     return P.getAsOpaquePtr();
   }
-  static inline clang::CanQual<T> getFromVoidPointer(void *P) {
+
+  static clang::CanQual<T> getFromVoidPointer(void *P) {
     return clang::CanQual<T>::getFromOpaquePtr(P);
   }
+
   // qualifier information is encoded in the low bits.
   enum { NumLowBitsAvailable = 0 };
 };
 
-} // end namespace llvm
+} // namespace llvm
 
 namespace clang {
 
@@ -388,7 +406,7 @@ struct CanTypeIterator
           CanQualType,
           typename std::iterator_traits<InputIterator>::difference_type,
           CanProxy<Type>, CanQualType> {
-  CanTypeIterator() {}
+  CanTypeIterator() = default;
   explicit CanTypeIterator(InputIterator Iter)
       : CanTypeIterator::iterator_adaptor_base(std::move(Iter)) {}
 
@@ -486,6 +504,7 @@ struct CanProxyAdaptor<FunctionProtoType>
   LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(bool, hasExtParameterInfos)
   LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(
             ArrayRef<FunctionProtoType::ExtParameterInfo>, getExtParameterInfos)
+
   CanQualType getParamType(unsigned i) const {
     return CanQualType::CreateUnsafe(this->getTypePtr()->getParamType(i));
   }
@@ -493,8 +512,8 @@ struct CanProxyAdaptor<FunctionProtoType>
   LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(bool, isVariadic)
   LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(unsigned, getTypeQuals)
 
-  typedef CanTypeIterator<FunctionProtoType::param_type_iterator>
-  param_type_iterator;
+  using param_type_iterator =
+      CanTypeIterator<FunctionProtoType::param_type_iterator>;
 
   param_type_iterator param_type_begin() const {
     return param_type_iterator(this->getTypePtr()->param_type_begin());
@@ -566,7 +585,8 @@ struct CanProxyAdaptor<ObjCObjectType>
   LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(bool, isObjCQualifiedId)
   LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(bool, isObjCQualifiedClass)
 
-  typedef ObjCObjectPointerType::qual_iterator qual_iterator;
+  using qual_iterator = ObjCObjectPointerType::qual_iterator;
+
   LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(qual_iterator, qual_begin)
   LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(qual_iterator, qual_end)
   LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(bool, qual_empty)
@@ -584,7 +604,8 @@ struct CanProxyAdaptor<ObjCObjectPointerType>
   LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(bool, isObjCQualifiedIdType)
   LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(bool, isObjCQualifiedClassType)
 
-  typedef ObjCObjectPointerType::qual_iterator qual_iterator;
+  using qual_iterator = ObjCObjectPointerType::qual_iterator;
+
   LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(qual_iterator, qual_begin)
   LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(qual_iterator, qual_end)
   LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(bool, qual_empty)
@@ -661,7 +682,6 @@ CanProxy<Type> CanTypeIterator<InputIterator>::operator->() const {
   return CanProxy<Type>(*this);
 }
 
-}
+} // namespace clang
 
-
-#endif
+#endif // LLVM_CLANG_AST_CANONICALTYPE_H

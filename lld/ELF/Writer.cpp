@@ -242,8 +242,8 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (errorCount())
     return;
 
-  if (auto EC = Buffer->commit())
-    error("failed to write to the output file: " + EC.message());
+  if (auto E = Buffer->commit())
+    error("failed to write to the output file: " + toString(std::move(E)));
 }
 
 // Initialize Out members.
@@ -1798,12 +1798,13 @@ template <class ELFT> void Writer<ELFT>::openFile() {
   }
 
   unlinkAsync(Config->OutputFile);
-  ErrorOr<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
+  Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
       FileOutputBuffer::create(Config->OutputFile, FileSize,
                                FileOutputBuffer::F_executable);
 
-  if (auto EC = BufferOrErr.getError())
-    error("failed to open " + Config->OutputFile + ": " + EC.message());
+  if (!BufferOrErr)
+    error("failed to open " + Config->OutputFile + ": " +
+          llvm::toString(BufferOrErr.takeError()));
   else
     Buffer = std::move(*BufferOrErr);
 }

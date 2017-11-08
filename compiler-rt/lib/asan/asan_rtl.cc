@@ -307,7 +307,7 @@ static void asan_atexit() {
 
 static void InitializeHighMemEnd() {
 #if !ASAN_FIXED_MAPPING
-  kHighMemEnd = GetMaxVirtualAddress();
+  kHighMemEnd = GetMaxUserVirtualAddress();
   // Increase kHighMemEnd to make sure it's properly
   // aligned together with kHighMemBeg:
   kHighMemEnd |= SHADOW_GRANULARITY * GetMmapGranularity() - 1;

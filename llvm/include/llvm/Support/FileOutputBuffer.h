@@ -17,7 +17,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DataTypes.h"
-#include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 
 namespace llvm {
@@ -37,7 +37,7 @@ public:
   /// Factory method to create an OutputBuffer object which manages a read/write
   /// buffer of the specified size. When committed, the buffer will be written
   /// to the file at the specified path.
-  static ErrorOr<std::unique_ptr<FileOutputBuffer>>
+  static Expected<std::unique_ptr<FileOutputBuffer>>
   create(StringRef FilePath, size_t Size, unsigned Flags = 0);
 
   /// Returns a pointer to the start of the buffer.
@@ -57,7 +57,7 @@ public:
   /// is called, the file is deleted in the destructor. The optional parameter
   /// is used if it turns out you want the file size to be smaller than
   /// initially requested.
-  virtual std::error_code commit() = 0;
+  virtual Error commit() = 0;
 
   /// If this object was previously committed, the destructor just deletes
   /// this object.  If this object was not committed, the destructor

@@ -1564,25 +1564,25 @@ define <8 x double> @cvt_8i16_to_8f64(<8 x i16> %a0) nounwind {
 ; AVX1-LABEL: cvt_8i16_to_8f64:
 ; AVX1:       # BB#0:
 ; AVX1-NEXT:    vmovq %xmm0, %rdx
-; AVX1-NEXT:    movq %rdx, %r8
+; AVX1-NEXT:    movq %rdx, %r9
 ; AVX1-NEXT:    movl %edx, %r10d
-; AVX1-NEXT:    movswl %dx, %r9d
+; AVX1-NEXT:    movswl %dx, %r8d
 ; AVX1-NEXT:    shrq $48, %rdx
-; AVX1-NEXT:    shrq $32, %r8
+; AVX1-NEXT:    shrq $32, %r9
 ; AVX1-NEXT:    shrl $16, %r10d
 ; AVX1-NEXT:    vpextrq $1, %xmm0, %rdi
-; AVX1-NEXT:    movq %rdi, %rax
-; AVX1-NEXT:    movl %edi, %esi
+; AVX1-NEXT:    movq %rdi, %rsi
+; AVX1-NEXT:    movl %edi, %eax
 ; AVX1-NEXT:    movswl %di, %ecx
 ; AVX1-NEXT:    shrq $48, %rdi
-; AVX1-NEXT:    shrq $32, %rax
-; AVX1-NEXT:    shrl $16, %esi
-; AVX1-NEXT:    movswl %si, %esi
-; AVX1-NEXT:    vmovd %esi, %xmm0
+; AVX1-NEXT:    shrq $32, %rsi
+; AVX1-NEXT:    shrl $16, %eax
+; AVX1-NEXT:    cwtl
+; AVX1-NEXT:    vmovd %eax, %xmm0
 ; AVX1-NEXT:    vcvtph2ps %xmm0, %xmm1
 ; AVX1-NEXT:    vmovd %ecx, %xmm0
 ; AVX1-NEXT:    vcvtph2ps %xmm0, %xmm2
-; AVX1-NEXT:    cwtl
+; AVX1-NEXT:    movswl %si, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm0
 ; AVX1-NEXT:    vcvtph2ps %xmm0, %xmm3
 ; AVX1-NEXT:    movswl %di, %eax
@@ -1591,9 +1591,9 @@ define <8 x double> @cvt_8i16_to_8f64(<8 x i16> %a0) nounwind {
 ; AVX1-NEXT:    movswl %r10w, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm0
 ; AVX1-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX1-NEXT:    vmovd %r9d, %xmm5
+; AVX1-NEXT:    vmovd %r8d, %xmm5
 ; AVX1-NEXT:    vcvtph2ps %xmm5, %xmm5
-; AVX1-NEXT:    movswl %r8w, %eax
+; AVX1-NEXT:    movswl %r9w, %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm6
 ; AVX1-NEXT:    vcvtph2ps %xmm6, %xmm6
 ; AVX1-NEXT:    movswl %dx, %eax
@@ -1618,25 +1618,25 @@ define <8 x double> @cvt_8i16_to_8f64(<8 x i16> %a0) nounwind {
 ; AVX2-LABEL: cvt_8i16_to_8f64:
 ; AVX2:       # BB#0:
 ; AVX2-NEXT:    vmovq %xmm0, %rdx
-; AVX2-NEXT:    movq %rdx, %r8
+; AVX2-NEXT:    movq %rdx, %r9
 ; AVX2-NEXT:    movl %edx, %r10d
-; AVX2-NEXT:    movswl %dx, %r9d
+; AVX2-NEXT:    movswl %dx, %r8d
 ; AVX2-NEXT:    shrq $48, %rdx
-; AVX2-NEXT:    shrq $32, %r8
+; AVX2-NEXT:    shrq $32, %r9
 ; AVX2-NEXT:    shrl $16, %r10d
 ; AVX2-NEXT:    vpextrq $1, %xmm0, %rdi
-; AVX2-NEXT:    movq %rdi, %rax
-; AVX2-NEXT:    movl %edi, %esi
+; AVX2-NEXT:    movq %rdi, %rsi
+; AVX2-NEXT:    movl %edi, %eax
 ; AVX2-NEXT:    movswl %di, %ecx
 ; AVX2-NEXT:    shrq $48, %rdi
-; AVX2-NEXT:    shrq $32, %rax
-; AVX2-NEXT:    shrl $16, %esi
-; AVX2-NEXT:    movswl %si, %esi
-; AVX2-NEXT:    vmovd %esi, %xmm0
+; AVX2-NEXT:    shrq $32, %rsi
+; AVX2-NEXT:    shrl $16, %eax
+; AVX2-NEXT:    cwtl
+; AVX2-NEXT:    vmovd %eax, %xmm0
 ; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm1
 ; AVX2-NEXT:    vmovd %ecx, %xmm0
 ; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm2
-; AVX2-NEXT:    cwtl
+; AVX2-NEXT:    movswl %si, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm0
 ; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm3
 ; AVX2-NEXT:    movswl %di, %eax
@@ -1645,9 +1645,9 @@ define <8 x double> @cvt_8i16_to_8f64(<8 x i16> %a0) nounwind {
 ; AVX2-NEXT:    movswl %r10w, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm0
 ; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX2-NEXT:    vmovd %r9d, %xmm5
+; AVX2-NEXT:    vmovd %r8d, %xmm5
 ; AVX2-NEXT:    vcvtph2ps %xmm5, %xmm5
-; AVX2-NEXT:    movswl %r8w, %eax
+; AVX2-NEXT:    movswl %r9w, %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm6
 ; AVX2-NEXT:    vcvtph2ps %xmm6, %xmm6
 ; AVX2-NEXT:    movswl %dx, %eax
@@ -1672,25 +1672,25 @@ define <8 x double> @cvt_8i16_to_8f64(<8 x i16> %a0) nounwind {
 ; AVX512-LABEL: cvt_8i16_to_8f64:
 ; AVX512:       # BB#0:
 ; AVX512-NEXT:    vpextrq $1, %xmm0, %rdx
-; AVX512-NEXT:    movq %rdx, %r8
+; AVX512-NEXT:    movq %rdx, %r9
 ; AVX512-NEXT:    movl %edx, %r10d
-; AVX512-NEXT:    movswl %dx, %r9d
+; AVX512-NEXT:    movswl %dx, %r8d
 ; AVX512-NEXT:    shrq $48, %rdx
-; AVX512-NEXT:    shrq $32, %r8
+; AVX512-NEXT:    shrq $32, %r9
 ; AVX512-NEXT:    shrl $16, %r10d
 ; AVX512-NEXT:    vmovq %xmm0, %rdi
-; AVX512-NEXT:    movq %rdi, %rax
-; AVX512-NEXT:    movl %edi, %esi
+; AVX512-NEXT:    movq %rdi, %rsi
+; AVX512-NEXT:    movl %edi, %eax
 ; AVX512-NEXT:    movswl %di, %ecx
 ; AVX512-NEXT:    shrq $48, %rdi
-; AVX512-NEXT:    shrq $32, %rax
-; AVX512-NEXT:    shrl $16, %esi
-; AVX512-NEXT:    movswl %si, %esi
-; AVX512-NEXT:    vmovd %esi, %xmm0
+; AVX512-NEXT:    shrq $32, %rsi
+; AVX512-NEXT:    shrl $16, %eax
+; AVX512-NEXT:    cwtl
+; AVX512-NEXT:    vmovd %eax, %xmm0
 ; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512-NEXT:    vmovd %ecx, %xmm1
 ; AVX512-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX512-NEXT:    cwtl
+; AVX512-NEXT:    movswl %si, %eax
 ; AVX512-NEXT:    vmovd %eax, %xmm2
 ; AVX512-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX512-NEXT:    movswl %di, %eax
@@ -1699,9 +1699,9 @@ define <8 x double> @cvt_8i16_to_8f64(<8 x i16> %a0) nounwind {
 ; AVX512-NEXT:    movswl %r10w, %eax
 ; AVX512-NEXT:    vmovd %eax, %xmm4
 ; AVX512-NEXT:    vcvtph2ps %xmm4, %xmm4
-; AVX512-NEXT:    vmovd %r9d, %xmm5
+; AVX512-NEXT:    vmovd %r8d, %xmm5
 ; AVX512-NEXT:    vcvtph2ps %xmm5, %xmm5
-; AVX512-NEXT:    movswl %r8w, %eax
+; AVX512-NEXT:    movswl %r9w, %eax
 ; AVX512-NEXT:    vmovd %eax, %xmm6
 ; AVX512-NEXT:    vcvtph2ps %xmm6, %xmm6
 ; AVX512-NEXT:    movswl %dx, %eax
