@@ -6422,6 +6422,10 @@ static void CheckMoveOnConstruction(Sema &S, const Expr *InitExpr,
     if (!VD || !VD->hasLocalStorage())
       return;
 
+    // __block variables are not moved implicitly.
+    if (VD->hasAttr<BlocksAttr>())
+      return;
+
     QualType SourceType = VD->getType();
     if (!SourceType->isRecordType())
       return;
