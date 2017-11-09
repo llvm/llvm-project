@@ -496,12 +496,14 @@ struct CounterCoverageMappingBuilder
     DeferredRegion = None;
 
     // If the region ends in an expansion, find the expansion site.
-    if (SM.getFileID(DeferredEndLoc) != SM.getMainFileID()) {
-      FileID StartFile = SM.getFileID(DR.getStartLoc());
+    FileID StartFile = SM.getFileID(DR.getStartLoc());
+    if (SM.getFileID(DeferredEndLoc) != StartFile) {
       if (isNestedIn(DeferredEndLoc, StartFile)) {
         do {
           DeferredEndLoc = getIncludeOrExpansionLoc(DeferredEndLoc);
         } while (StartFile != SM.getFileID(DeferredEndLoc));
+      } else {
+        return Index;
       }
     }
 
@@ -591,7 +593,7 @@ struct CounterCoverageMappingBuilder
           if (!DeferredRegion.hasValue() &&
               // File IDs aren't gathered within macro expansions, so it isn't
               // useful to try and create a deferred region inside of one.
-              (SM.getFileID(EndLoc) == SM.getMainFileID()))
+              !EndLoc.isMacroID())
             DeferredRegion =
                 SourceMappingRegion(Counter::getZero(), EndLoc, None);
         }
