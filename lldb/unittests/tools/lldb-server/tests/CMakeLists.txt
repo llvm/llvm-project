@@ -10,6 +10,8 @@ add_lldb_unittest(LLDBServerTests
     lldbTarget
     lldbPluginPlatformLinux
     lldbPluginProcessGDBRemote
+
+    LLVMTestingSupport
   LINK_COMPONENTS
     Support
   )

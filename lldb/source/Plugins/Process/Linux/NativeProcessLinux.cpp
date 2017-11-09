@@ -1542,11 +1542,6 @@ size_t NativeProcessLinux::UpdateThreads() {
   return m_threads.size();
 }
 
-bool NativeProcessLinux::GetArchitecture(ArchSpec &arch) const {
-  arch = m_arch;
-  return true;
-}
-
 Status NativeProcessLinux::GetSoftwareBreakpointPCOffset(
     uint32_t &actual_opcode_size) {
   // FIXME put this behind a breakpoint protocol class that can be

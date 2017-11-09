@@ -589,6 +589,20 @@ struct SignatureHelp {
   static json::Expr unparse(const SignatureHelp &);
 };
 
+struct RenameParams {
+  /// The document that was opened.
+  TextDocumentIdentifier textDocument;
+
+  /// The position at which this request was sent.
+  Position position;
+
+  /// The new name of the symbol.
+  std::string newName;
+
+  static llvm::Optional<RenameParams> parse(llvm::yaml::MappingNode *Params,
+                                            clangd::Logger &Logger);
+};
+
 } // namespace clangd
 } // namespace clang
 

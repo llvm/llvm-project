@@ -290,6 +290,10 @@ public:
   std::vector<tooling::Replacement> formatFile(PathRef File);
   /// Run formatting after a character was typed at \p Pos in \p File.
   std::vector<tooling::Replacement> formatOnType(PathRef File, Position Pos);
+  /// Rename all occurrences of the symbol at the \p Pos in \p File to
+  /// \p NewName.
+  Expected<std::vector<tooling::Replacement>> rename(PathRef File, Position Pos,
+                                                     llvm::StringRef NewName);
 
   /// Gets current document contents for \p File. \p File must point to a
   /// currently tracked file.

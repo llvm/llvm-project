@@ -53,6 +53,7 @@ public:
   virtual void onSwitchSourceHeader(Ctx C, TextDocumentIdentifier &Params) = 0;
   virtual void onFileEvent(Ctx C, DidChangeWatchedFilesParams &Params) = 0;
   virtual void onCommand(Ctx C, ExecuteCommandParams &Params) = 0;
+  virtual void onRename(Ctx C, RenameParams &Parames) = 0;
 };
 
 void registerCallbackHandlers(JSONRPCDispatcher &Dispatcher, JSONOutput &Out,

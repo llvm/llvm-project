@@ -48,7 +48,7 @@ public:
              const RegisterMap &registers, unsigned int signal);
 
   llvm::StringRef ReadRegister(unsigned int register_id) const;
-  bool ReadRegisterAsUint64(unsigned int register_id, uint64_t &value) const;
+  llvm::Expected<uint64_t> ReadRegisterAsUint64(unsigned int register_id) const;
 
 private:
   std::string m_name;

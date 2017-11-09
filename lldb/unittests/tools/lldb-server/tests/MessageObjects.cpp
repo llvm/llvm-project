@@ -65,19 +65,16 @@ StringRef ThreadInfo::ReadRegister(unsigned int register_id) const {
   return m_registers.lookup(register_id);
 }
 
-bool ThreadInfo::ReadRegisterAsUint64(unsigned int register_id,
-                                      uint64_t &value) const {
+Expected<uint64_t>
+ThreadInfo::ReadRegisterAsUint64(unsigned int register_id) const {
+  uint64_t value;
   std::string value_str(m_registers.lookup(register_id));
-  if (!llvm::to_integer(value_str, value, 16)) {
-    GTEST_LOG_(ERROR)
-        << formatv("ThreadInfo: Unable to parse register value at {0}.",
-                   register_id)
-               .str();
-    return false;
-  }
+  if (!llvm::to_integer(value_str, value, 16))
+    return make_parsing_error("ThreadInfo value for register {0}: {1}",
+                              register_id, value_str);
 
   sys::swapByteOrder(value);
-  return true;
+  return value;
 }
 
 //====== JThreadsInfo ==========================================================

@@ -376,3 +376,48 @@ TEST_F(TestClangASTContext, TestRecordHasFields) {
   EXPECT_TRUE(
       ClangASTContext::RecordHasFields(empty_derived_non_empty_vbase_decl));
 }
+
+TEST_F(TestClangASTContext, TemplateArguments) {
+  ClangASTContext::TemplateParameterInfos infos;
+  infos.names.push_back("T");
+  infos.args.push_back(TemplateArgument(m_ast->getASTContext()->IntTy));
+  infos.names.push_back("I");
+  infos.args.push_back(TemplateArgument(*m_ast->getASTContext(),
+                                        llvm::APSInt(47),
+                                        m_ast->getASTContext()->IntTy));
+
+  // template<typename T, int I> struct foo;
+  ClassTemplateDecl *decl = m_ast->CreateClassTemplateDecl(
+      m_ast->GetTranslationUnitDecl(), eAccessPublic, "foo", TTK_Struct, infos);
+  ASSERT_NE(decl, nullptr);
+
+  // foo<int, 47>
+  ClassTemplateSpecializationDecl *spec_decl =
+      m_ast->CreateClassTemplateSpecializationDecl(
+          m_ast->GetTranslationUnitDecl(), decl, TTK_Struct, infos);
+  ASSERT_NE(spec_decl, nullptr);
+  CompilerType type = m_ast->CreateClassTemplateSpecializationType(spec_decl);
+  ASSERT_TRUE(type);
+  m_ast->StartTagDeclarationDefinition(type);
+  m_ast->CompleteTagDeclarationDefinition(type);
+
+  // typedef foo<int, 47> foo_def;
+  CompilerType typedef_type = m_ast->CreateTypedefType(
+      type, "foo_def",
+      CompilerDeclContext(m_ast.get(), m_ast->GetTranslationUnitDecl()));
+
+  CompilerType int_type(m_ast->getASTContext(), m_ast->getASTContext()->IntTy);
+  for(CompilerType t: { type, typedef_type }) {
+    SCOPED_TRACE(t.GetTypeName().AsCString());
+    TemplateArgumentKind kind;
+
+    CompilerType arg =
+        m_ast->GetTemplateArgument(t.GetOpaqueQualType(), 0, kind);
+    EXPECT_EQ(kind, eTemplateArgumentKindType);
+    EXPECT_EQ(arg, int_type);
+
+    arg = m_ast->GetTemplateArgument(t.GetOpaqueQualType(), 1, kind);
+    EXPECT_EQ(kind, eTemplateArgumentKindIntegral);
+    EXPECT_EQ(arg, int_type);
+  }
+}

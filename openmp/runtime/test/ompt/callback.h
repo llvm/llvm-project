@@ -5,6 +5,9 @@
 #include <ompt.h>
 #include "ompt-signal.h"
 
+// Used to detect architecture
+#include "../../src/kmp_platform.h"
+
 static const char* ompt_thread_type_t_values[] = {
   NULL,
   "ompt_thread_initial",
@@ -61,21 +64,74 @@ do {\
   printf("%" PRIu64 ": __builtin_frame_address(%d)=%p\n", ompt_get_thread_data()->value, level, __builtin_frame_address(level));\
 } while(0)
 
-#define print_current_address(id)\
-{}              /* Empty block between "#pragma omp ..." and __asm__ statement as a workaround for icc bug */ \
-__asm__("nop"); /* provide an instruction as jump target (compiler would insert an instruction if label is target of a jmp ) */ \
-ompt_label_##id:\
-    printf("%" PRIu64 ": current_address=%p or %p\n", ompt_get_thread_data()->value, (char*)(&& ompt_label_##id)-1, (char*)(&& ompt_label_##id)-4) 
-    /* "&& label" returns the address of the label (GNU extension); works with gcc, clang, icc */
-    /* for void-type runtime function, the label is after the nop (-1), for functions with return value, there is a mov instruction before the label (-4) */
 
-#define print_fuzzy_address(id)\
-{}              /* Empty block between "#pragma omp ..." and __asm__ statement as a workaround for icc bug */ \
-__asm__("nop"); /* provide an instruction as jump target (compiler would insert an instruction if label is target of a jmp ) */ \
-ompt_label_##id:\
-    printf("%" PRIu64 ": fuzzy_address=0x%lx or 0x%lx\n", ompt_get_thread_data()->value, ((uint64_t)(char*)(&& ompt_label_##id))/256-1, ((uint64_t)(char*)(&& ompt_label_##id))/256) 
-    /* "&& label" returns the address of the label (GNU extension); works with gcc, clang, icc */
-    /* for void-type runtime function, the label is after the nop (-1), for functions with return value, there is a mov instruction before the label (-4) */
+// This macro helps to define a label at the current position that can be used
+// to get the current address in the code.
+//
+// For print_current_address():
+//   To reliably determine the offset between the address of the label and the
+//   actual return address, we insert a NOP instruction as a jump target as the
+//   compiler would otherwise insert an instruction that we can't control. The
+//   instruction length is target dependent and is explained below.
+//
+// (The empty block between "#pragma omp ..." and the __asm__ statement is a
+// workaround for a bug in the Intel Compiler.)
+#define define_ompt_label(id) \
+  {} \
+  __asm__("nop"); \
+ompt_label_##id:
+
+// This macro helps to get the address of a label that is inserted by the above
+// macro define_ompt_label(). The address is obtained with a GNU extension
+// (&&label) that has been tested with gcc, clang and icc.
+#define get_ompt_label_address(id) (&& ompt_label_##id)
+
+// This macro prints the exact address that a previously called runtime function
+// returns to.
+#define print_current_address(id) \
+  define_ompt_label(id) \
+  print_possible_return_addresses(get_ompt_label_address(id))
+
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64
+// On X86 the NOP instruction is 1 byte long. In addition, the comiler inserts
+// a MOV instruction for non-void runtime functions which is 3 bytes long.
+#define print_possible_return_addresses(addr) \
+  printf("%" PRIu64 ": current_address=%p or %p for non-void functions\n", \
+         ompt_get_thread_data()->value, ((char *)addr) - 1, ((char *)addr) - 4)
+#elif KMP_ARCH_PPC64
+// On Power the NOP instruction is 4 bytes long. In addition, the compiler
+// inserts an LD instruction which accounts for another 4 bytes. In contrast to
+// X86 this instruction is always there, even for void runtime functions.
+#define print_possible_return_addresses(addr) \
+  printf("%" PRIu64 ": current_address=%p\n", ompt_get_thread_data()->value, \
+         ((char *)addr) - 8)
+#else
+#error Unsupported target architecture, cannot determine address offset!
+#endif
+
+
+// This macro performs a somewhat similar job to print_current_address(), except
+// that it discards a certain number of nibbles from the address and only prints
+// the most significant bits / nibbles. This can be used for cases where the
+// return address can only be approximated.
+//
+// To account for overflows (ie the most significant bits / nibbles have just
+// changed as we are a few bytes above the relevant power of two) the addresses
+// of the "current" and of the "previous block" are printed.
+#define print_fuzzy_address(id) \
+  define_ompt_label(id) \
+  print_fuzzy_address_blocks(get_ompt_label_address(id))
+
+// If you change this define you need to adapt all capture patterns in the tests
+// to include or discard the new number of nibbles!
+#define FUZZY_ADDRESS_DISCARD_NIBBLES 2
+#define FUZZY_ADDRESS_DISCARD_BYTES (1 << ((FUZZY_ADDRESS_DISCARD_NIBBLES) * 4))
+#define print_fuzzy_address_blocks(addr) \
+  printf("%" PRIu64 ": fuzzy_address=0x%" PRIx64 " or 0x%" PRIx64 " (%p)\n", \
+  ompt_get_thread_data()->value, \
+  ((uint64_t)addr) / FUZZY_ADDRESS_DISCARD_BYTES - 1, \
+  ((uint64_t)addr) / FUZZY_ADDRESS_DISCARD_BYTES, addr)
+
 
 static void format_task_type(int type, char* buffer)
 {
@@ -308,7 +364,7 @@ on_ompt_callback_cancel(
     second_flag_value = ompt_cancel_flag_t_values[5];
   else if(flags & ompt_cancel_discarded_task)
     second_flag_value = ompt_cancel_flag_t_values[6];
-    
+
   printf("%" PRIu64 ": ompt_event_cancel: task_data=%" PRIu64 ", flags=%s|%s=%" PRIu32 ", codeptr_ra=%p\n", ompt_get_thread_data()->value, task_data->value, first_flag_value, second_flag_value, flags,  codeptr_ra);
 }
 
