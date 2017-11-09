@@ -2,7 +2,7 @@
 
 void foo(int x) {
   if (x == 0) { // CHECK: [[@LINE]]|{{ +}}2|
-    return; // CHECK: [[@LINE]]|{{ +}}1|
+    return; // CHECK-NEXT: [[@LINE]]|{{ +}}1|
   }
 
 } // CHECK: [[@LINE]]|{{ +}}1|
