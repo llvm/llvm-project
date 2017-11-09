@@ -91,3 +91,9 @@ The convention is to name the file compile\_commands.json and put it at
 the top of the build directory. Clang tools are pointed to the top of
 the build directory to detect the file and use the compilation database
 to parse C++ code in the source tree.
+
+Alternatives
+============
+For simple projects, Clang tools also recognize a compile_flags.txt file.
+This should contain one flag per line. The same flags will be used to compile
+any file.

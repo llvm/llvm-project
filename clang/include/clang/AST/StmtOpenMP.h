@@ -899,7 +899,9 @@ public:
   }
   const Stmt *getBody() const {
     // This relies on the loop form is already checked by Sema.
-    Stmt *Body = getAssociatedStmt()->IgnoreContainers(true);
+    const Stmt *Body = getAssociatedStmt()->IgnoreContainers(true);
+    while(const auto *CS = dyn_cast<CapturedStmt>(Body))
+      Body = CS->getCapturedStmt();
     Body = cast<ForStmt>(Body)->getBody();
     for (unsigned Cnt = 1; Cnt < CollapsedNum; ++Cnt) {
       Body = Body->IgnoreContainers();
