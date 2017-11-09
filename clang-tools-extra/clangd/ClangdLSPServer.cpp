@@ -57,6 +57,7 @@ void ClangdLSPServer::onInitialize(Ctx C, InitializeParams &Params) {
                  {"triggerCharacters", {"(", ","}},
              }},
             {"definitionProvider", true},
+            {"renameProvider", true},
             {"executeCommandProvider",
              json::obj{
                  {"commands", {ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND}},
@@ -125,6 +126,22 @@ void ClangdLSPServer::onCommand(Ctx C, ExecuteCommandParams &Params) {
         ErrorCode::InvalidParams,
         llvm::formatv("Unsupported command \"{0}\".", Params.command).str());
   }
+}
+
+void ClangdLSPServer::onRename(Ctx C, RenameParams &Params) {
+  auto File = Params.textDocument.uri.file;
+  auto Replacements = Server.rename(File, Params.position, Params.newName);
+  if (!Replacements) {
+    C.replyError(
+        ErrorCode::InternalError,
+        llvm::toString(Replacements.takeError()));
+    return;
+  }
+  std::string Code = Server.getDocument(File);
+  std::vector<TextEdit> Edits = replacementsToEdits(Code, *Replacements);
+  WorkspaceEdit WE;
+  WE.changes = {{llvm::yaml::escape(Params.textDocument.uri.uri), Edits}};
+  C.reply(WorkspaceEdit::unparse(WE));
 }
 
 void ClangdLSPServer::onDocumentDidClose(Ctx C,
