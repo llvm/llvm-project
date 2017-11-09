@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestClient.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <string>
 
@@ -27,10 +28,10 @@ TEST_F(ThreadsInJstopinfoTest, TestStopReplyContainsThreadPcsLlgs) {
   auto test_info = ::testing::UnitTest::GetInstance()->current_test_info();
 
   TestClient client(test_info->name(), test_info->test_case_name());
-  ASSERT_TRUE(client.StartDebugger());
-  ASSERT_TRUE(client.SetInferior(inferior_args));
-  ASSERT_TRUE(client.ListThreadsInStopReply());
-  ASSERT_TRUE(client.ContinueAll());
+  ASSERT_THAT_ERROR(client.StartDebugger(), llvm::Succeeded());
+  ASSERT_THAT_ERROR(client.SetInferior(inferior_args), llvm::Succeeded());
+  ASSERT_THAT_ERROR(client.ListThreadsInStopReply(), llvm::Succeeded());
+  ASSERT_THAT_ERROR(client.ContinueAll(), llvm::Succeeded());
   unsigned int pc_reg = client.GetPcRegisterId();
   ASSERT_NE(pc_reg, UINT_MAX);
 
@@ -47,12 +48,11 @@ TEST_F(ThreadsInJstopinfoTest, TestStopReplyContainsThreadPcsLlgs) {
     unsigned long tid = stop_reply_pc.first;
     ASSERT_TRUE(thread_infos.find(tid) != thread_infos.end())
         << "Thread ID: " << tid << " not in JThreadsInfo.";
-    uint64_t pc_value;
-    ASSERT_TRUE(thread_infos[tid].ReadRegisterAsUint64(pc_reg, pc_value))
-        << "Failure reading ThreadInfo register " << pc_reg;
-    ASSERT_EQ(stop_reply_pcs[tid], pc_value)
+    auto pc_value = thread_infos[tid].ReadRegisterAsUint64(pc_reg);
+    ASSERT_THAT_EXPECTED(pc_value, llvm::Succeeded());
+    ASSERT_EQ(stop_reply_pcs[tid], *pc_value)
         << "Mismatched PC for thread: " << tid;
   }
 
-  ASSERT_TRUE(client.StopDebugger());
+  ASSERT_THAT_ERROR(client.StopDebugger(), llvm::Succeeded());
 }
