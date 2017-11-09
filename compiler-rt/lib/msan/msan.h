@@ -310,7 +310,7 @@ void PrintWarning(uptr pc, uptr bp);
 void PrintWarningWithOrigin(uptr pc, uptr bp, u32 origin);
 
 void GetStackTrace(BufferedStackTrace *stack, uptr max_s, uptr pc, uptr bp,
-                   bool request_fast_unwind);
+                   void *context, bool request_fast_unwind);
 
 void ReportUMR(StackTrace *stack, u32 origin);
 void ReportExpectedUMRNotFound(StackTrace *stack);
@@ -330,32 +330,32 @@ u32 ChainOrigin(u32 id, StackTrace *stack);
 
 const int STACK_TRACE_TAG_POISON = StackTrace::TAG_CUSTOM + 1;
 
-#define GET_MALLOC_STACK_TRACE                                                 \
-  BufferedStackTrace stack;                                                    \
-  if (__msan_get_track_origins() && msan_inited)                               \
-  GetStackTrace(&stack, common_flags()->malloc_context_size,                   \
-                StackTrace::GetCurrentPc(), GET_CURRENT_FRAME(),               \
+#define GET_MALLOC_STACK_TRACE                                            \
+  BufferedStackTrace stack;                                               \
+  if (__msan_get_track_origins() && msan_inited)                          \
+  GetStackTrace(&stack, common_flags()->malloc_context_size,              \
+                StackTrace::GetCurrentPc(), GET_CURRENT_FRAME(), nullptr, \
                 common_flags()->fast_unwind_on_malloc)
 
 // For platforms which support slow unwinder only, we restrict the store context
 // size to 1, basically only storing the current pc. We do this because the slow
 // unwinder which is based on libunwind is not async signal safe and causes
 // random freezes in forking applications as well as in signal handlers.
-#define GET_STORE_STACK_TRACE_PC_BP(pc, bp)                                    \
-  BufferedStackTrace stack;                                                    \
-  if (__msan_get_track_origins() > 1 && msan_inited) {                         \
-    if (!SANITIZER_CAN_FAST_UNWIND)                                            \
-      GetStackTrace(&stack, Min(1, flags()->store_context_size), pc, bp,       \
-                    false);                                                    \
-    else                                                                       \
-      GetStackTrace(&stack, flags()->store_context_size, pc, bp,               \
-                    common_flags()->fast_unwind_on_malloc);                    \
+#define GET_STORE_STACK_TRACE_PC_BP(pc, bp)                               \
+  BufferedStackTrace stack;                                               \
+  if (__msan_get_track_origins() > 1 && msan_inited) {                    \
+    if (!SANITIZER_CAN_FAST_UNWIND)                                       \
+      GetStackTrace(&stack, Min(1, flags()->store_context_size), pc, bp,  \
+                    nullptr, false);                                      \
+    else                                                                  \
+      GetStackTrace(&stack, flags()->store_context_size, pc, bp, nullptr, \
+                    common_flags()->fast_unwind_on_malloc);               \
   }
 
-#define GET_FATAL_STACK_TRACE_PC_BP(pc, bp)                                    \
-  BufferedStackTrace stack;                                                    \
-  if (msan_inited)                                                             \
-  GetStackTrace(&stack, kStackTraceMax, pc, bp,                                \
+#define GET_FATAL_STACK_TRACE_PC_BP(pc, bp)              \
+  BufferedStackTrace stack;                              \
+  if (msan_inited)                                       \
+  GetStackTrace(&stack, kStackTraceMax, pc, bp, nullptr, \
                 common_flags()->fast_unwind_on_fatal)
 
 #define GET_STORE_STACK_TRACE \

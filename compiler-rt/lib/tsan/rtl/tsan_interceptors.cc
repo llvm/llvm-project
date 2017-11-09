@@ -231,6 +231,13 @@ struct ThreadSignalContext {
   __sanitizer_sigset_t oldset;
 };
 
+// The sole reason tsan wraps atexit callbacks is to establish synchronization
+// between callback setup and callback execution.
+struct AtExitCtx {
+  void (*f)();
+  void *arg;
+};
+
 // InterceptorContext holds all global data required for interceptors.
 // It's explicitly constructed in InitializeInterceptors with placement new
 // and is never destroyed. This allows usage of members with non-trivial
@@ -244,8 +251,11 @@ struct InterceptorContext {
   unsigned finalize_key;
 #endif
 
+  BlockingMutex atexit_mu;
+  Vector<struct AtExitCtx *> AtExitStack;
+
   InterceptorContext()
-      : libignore(LINKER_INITIALIZED) {
+      : libignore(LINKER_INITIALIZED), AtExitStack(MBlockAtExit) {
   }
 };
 
@@ -398,17 +408,25 @@ TSAN_INTERCEPTOR(int, pause, int fake) {
   return BLOCK_REAL(pause)(fake);
 }
 
-// The sole reason tsan wraps atexit callbacks is to establish synchronization
-// between callback setup and callback execution.
-struct AtExitCtx {
-  void (*f)();
-  void *arg;
-};
+static void at_exit_wrapper() {
+  AtExitCtx *ctx;
+  {
+    // Ensure thread-safety.
+    BlockingMutexLock l(&interceptor_ctx()->atexit_mu);
 
-static void at_exit_wrapper(void *arg) {
-  ThreadState *thr = cur_thread();
-  uptr pc = 0;
-  Acquire(thr, pc, (uptr)arg);
+    // Pop AtExitCtx from the top of the stack of callback functions
+    uptr element = interceptor_ctx()->AtExitStack.Size() - 1;
+    ctx = interceptor_ctx()->AtExitStack[element];
+    interceptor_ctx()->AtExitStack.PopBack();
+  }
+
+  Acquire(cur_thread(), (uptr)0, (uptr)ctx);
+  ((void(*)())ctx->f)();
+  InternalFree(ctx);
+}
+
+static void cxa_at_exit_wrapper(void *arg) {
+  Acquire(cur_thread(), 0, (uptr)arg);
   AtExitCtx *ctx = (AtExitCtx*)arg;
   ((void(*)(void *arg))ctx->f)(ctx->arg);
   InternalFree(ctx);
@@ -444,7 +462,22 @@ static int setup_at_exit_wrapper(ThreadState *thr, uptr pc, void(*f)(),
   // Memory allocation in __cxa_atexit will race with free during exit,
   // because we do not see synchronization around atexit callback list.
   ThreadIgnoreBegin(thr, pc);
-  int res = REAL(__cxa_atexit)(at_exit_wrapper, ctx, dso);
+  int res;
+  if (!dso) {
+    // NetBSD does not preserve the 2nd argument if dso is equal to 0
+    // Store ctx in a local stack-like structure
+
+    // Ensure thread-safety.
+    BlockingMutexLock l(&interceptor_ctx()->atexit_mu);
+
+    res = REAL(__cxa_atexit)((void (*)(void *a))at_exit_wrapper, 0, 0);
+    // Push AtExitCtx on the top of the stack of callback functions
+    if (!res) {
+      interceptor_ctx()->AtExitStack.PushBack(ctx);
+    }
+  } else {
+    res = REAL(__cxa_atexit)(cxa_at_exit_wrapper, ctx, dso);
+  }
   ThreadIgnoreEnd(thr, pc);
   return res;
 }
