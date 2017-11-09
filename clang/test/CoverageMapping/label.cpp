@@ -28,8 +28,8 @@ void test1(int x) {          // CHECK-NEXT: File 0, [[@LINE]]:19 -> {{[0-9]+}}:2
   if(x == 0)                 // CHECK-NEXT: File 0, [[@LINE]]:6 -> [[@LINE]]:12 = #0
     goto a;                  // CHECK: File 0, [[@LINE]]:5 -> [[@LINE]]:11 = #1
                              // CHECK-NEXT: File 0, [[@LINE-1]]:11 -> [[@LINE+1]]:3 = (#0 - #1)
-  goto b;                    // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+5]]:2 = (#0 - #1)
-                             // CHECK-NEXT: File 0, [[@LINE-1]]:3 -> [[@LINE+4]]:2 = #3
+  goto b;                    // CHECK: Gap,File 0, [[@LINE]]:3 -> [[@LINE+5]]:2 = #3
+                             // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:9 -> [[@LINE+1]]:1 = #2
 a:                           // CHECK-NEXT: File 0, [[@LINE]]:1 -> [[@LINE+3]]:2 = #2
 b:                           // CHECK-NEXT: File 0, [[@LINE]]:1 -> [[@LINE+2]]:2 = #3
   x = x + 1;
@@ -58,7 +58,7 @@ int main() {                 // CHECK-NEXT: File 0, [[@LINE]]:12 -> {{[0-9]+}}:2
       goto e;                // CHECK: File 0, [[@LINE]]:7 -> [[@LINE]]:13 = #3
                              // CHECK-NEXT: File 0, [[@LINE-1]]:13 -> [[@LINE+1]]:5 = (#2 - #3)
     goto c;                  // CHECK-NEXT: File 0, [[@LINE]]:5 -> [[@LINE+8]]:4 = (#2 - #3)
-
+                             // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:11 -> [[@LINE+1]]:3 = #4
   b:                         // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+6]]:4 = #4
     j = 2;
   c:                         // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+4]]:4 = #5
