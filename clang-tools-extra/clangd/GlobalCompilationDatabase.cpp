@@ -81,7 +81,7 @@ DirectoryBasedGlobalCompilationDatabase::tryLoadDatabaseFromPath(PathRef File) {
     return CachedIt->second.get();
   std::string Error = "";
   auto CDB = tooling::CompilationDatabase::loadFromDirectory(File, Error);
-  if (CDB && Error.empty()) {
+  if (CDB) {
     auto Result = CDB.get();
     CompilationDatabases.insert(std::make_pair(File, std::move(CDB)));
     return Result;
