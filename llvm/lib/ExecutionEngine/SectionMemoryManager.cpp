@@ -59,6 +59,7 @@ uint8_t *SectionMemoryManager::allocateSection(
     case AllocationPurpose::RWData:
       return RWDataMem;
     }
+    llvm_unreachable("Unknown SectionMemoryManager::AllocationPurpose");
   }();
 
   // Look in the list of free memory regions and use a block there if one

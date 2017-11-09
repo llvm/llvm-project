@@ -4316,7 +4316,8 @@ bool SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
 
 bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
                                         BoUpSLP &R) {
-  SetVector<StoreInst *> Heads, Tails;
+  SetVector<StoreInst *> Heads;
+  SmallDenseSet<StoreInst *> Tails;
   SmallDenseMap<StoreInst *, StoreInst *> ConsecutiveChain;
 
   // We may run into multiple chains that merge into a single chain. We mark the
@@ -4324,45 +4325,51 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
   BoUpSLP::ValueSet VectorizedStores;
   bool Changed = false;
 
-  // Do a quadratic search on all of the given stores and find
+  // Do a quadratic search on all of the given stores in reverse order and find
   // all of the pairs of stores that follow each other.
   SmallVector<unsigned, 16> IndexQueue;
-  for (unsigned i = 0, e = Stores.size(); i < e; ++i) {
-    IndexQueue.clear();
+  unsigned E = Stores.size();
+  IndexQueue.resize(E - 1);
+  for (unsigned I = E; I > 0; --I) {
+    unsigned Idx = I - 1;
     // If a store has multiple consecutive store candidates, search Stores
-    // array according to the sequence: from i+1 to e, then from i-1 to 0.
+    // array according to the sequence: Idx-1, Idx+1, Idx-2, Idx+2, ...
     // This is because usually pairing with immediate succeeding or preceding
     // candidate create the best chance to find slp vectorization opportunity.
-    unsigned j = 0;
-    for (j = i + 1; j < e; ++j)
-      IndexQueue.push_back(j);
-    for (j = i; j > 0; --j)
-      IndexQueue.push_back(j - 1);
+    unsigned Offset = 1;
+    unsigned Cnt = 0;
+    for (unsigned J = 0; J < E - 1; ++J, ++Offset) {
+      if (Idx >= Offset) {
+        IndexQueue[Cnt] = Idx - Offset;
+        ++Cnt;
+      }
+      if (Idx + Offset < E) {
+        IndexQueue[Cnt] = Idx + Offset;
+        ++Cnt;
+      }
+    }
 
-    for (auto &k : IndexQueue) {
-      if (isConsecutiveAccess(Stores[i], Stores[k], *DL, *SE)) {
-        Tails.insert(Stores[k]);
-        Heads.insert(Stores[i]);
-        ConsecutiveChain[Stores[i]] = Stores[k];
+    for (auto K : IndexQueue) {
+      if (isConsecutiveAccess(Stores[K], Stores[Idx], *DL, *SE)) {
+        Tails.insert(Stores[Idx]);
+        Heads.insert(Stores[K]);
+        ConsecutiveChain[Stores[K]] = Stores[Idx];
         break;
       }
     }
   }
 
   // For stores that start but don't end a link in the chain:
-  for (SetVector<StoreInst *>::iterator it = Heads.begin(), e = Heads.end();
-       it != e; ++it) {
-    if (Tails.count(*it))
+  for (auto *SI : llvm::reverse(Heads)) {
+    if (Tails.count(SI))
       continue;
 
     // We found a store instr that starts a chain. Now follow the chain and try
     // to vectorize it.
     BoUpSLP::ValueList Operands;
-    StoreInst *I = *it;
+    StoreInst *I = SI;
     // Collect the chain into a list.
-    while (Tails.count(I) || Heads.count(I)) {
-      if (VectorizedStores.count(I))
-        break;
+    while ((Tails.count(I) || Heads.count(I)) && !VectorizedStores.count(I)) {
       Operands.push_back(I);
       // Move to the next value in the chain.
       I = ConsecutiveChain[I];

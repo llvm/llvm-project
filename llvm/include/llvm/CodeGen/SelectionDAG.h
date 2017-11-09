@@ -1184,15 +1184,20 @@ public:
                           unsigned R, bool IsIndirect, const DebugLoc &DL,
                           unsigned O);
 
-  /// Constant
+  /// Creates a constant SDDbgValue node.
   SDDbgValue *getConstantDbgValue(DIVariable *Var, DIExpression *Expr,
                                   const Value *C, const DebugLoc &DL,
                                   unsigned O);
 
-  /// FrameIndex
+  /// Creates a FrameIndex SDDbgValue node.
   SDDbgValue *getFrameIndexDbgValue(DIVariable *Var, DIExpression *Expr,
                                     unsigned FI, const DebugLoc &DL,
                                     unsigned O);
+
+  /// Transfer debug values from one node to another, while optionally
+  /// generating fragment expressions for split-up values.
+  void transferDbgValues(SDValue From, SDValue To, unsigned OffsetInBits = 0,
+                         unsigned SizeInBits = 0);
 
   /// Remove the specified node from the system. If any of its
   /// operands then becomes dead, remove them as well. Inform UpdateListener

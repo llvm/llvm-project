@@ -1379,8 +1379,11 @@ SelectInlineAsmMemoryOperand(const SDValue &Op,
     break;
   case InlineAsm::Constraint_T:
   case InlineAsm::Constraint_m:
+  case InlineAsm::Constraint_o:
     // Accept an address with a long displacement and an index.
     // m works the same as T, as this is the most general case.
+    // We don't really have any special handling of "offsettable"
+    // memory addresses, so just treat o the same as m.
     Form = SystemZAddressingMode::FormBDXNormal;
     DispRange = SystemZAddressingMode::Disp20Only;
     break;
