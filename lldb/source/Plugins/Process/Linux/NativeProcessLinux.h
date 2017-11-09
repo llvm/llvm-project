@@ -87,7 +87,7 @@ public:
 
   size_t UpdateThreads() override;
 
-  bool GetArchitecture(ArchSpec &arch) const override;
+  const ArchSpec &GetArchitecture() const override { return m_arch; }
 
   Status SetBreakpoint(lldb::addr_t addr, uint32_t size,
                        bool hardware) override;

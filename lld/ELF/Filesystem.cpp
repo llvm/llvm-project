@@ -80,5 +80,7 @@ void elf::unlinkAsync(StringRef Path) {
 std::error_code elf::tryCreateFile(StringRef Path) {
   if (Path.empty())
     return std::error_code();
+  if (Path == "-")
+    return std::error_code();
   return errorToErrorCode(FileOutputBuffer::create(Path, 1).takeError());
 }
