@@ -18,11 +18,9 @@
 
 # REQUIRES: mips
 
-# Check disassembled code when LLD starts to setup
-# the least-significant bit for microMIPS symbols.
 # EB:      __start:
 # EB-NEXT:      20010:       41 a3 00 01     lui     $3, 1
-# EB-NEXT:      20014:       30 63 7f e0     addiu   $3, $3, 32736
+# EB-NEXT:      20014:       30 63 7f df     addiu   $3, $3, 32735
 # EB-NEXT:      20018:       fc 7c 80 18     lw      $3, -32744($gp)
 # EB-NEXT:      2001c:       fc 63 80 18     lw      $3, -32744($3)
 # EB-NEXT:      20020:       8f 70           beqz16  $6, -32
@@ -33,7 +31,7 @@
 
 # EL:      __start:
 # EL-NEXT:      20010:       a3 41 01 00     lui     $3, 1
-# EL-NEXT:      20014:       63 30 e0 7f     addiu   $3, $3, 32736
+# EL-NEXT:      20014:       63 30 df 7f     addiu   $3, $3, 32735
 # EL-NEXT:      20018:       7c fc 18 80     lw      $3, -32744($gp)
 # EL-NEXT:      2001c:       63 fc 18 80     lw      $3, -32744($3)
 # EL-NEXT:      20020:       70 8f           beqz16  $6, -32

@@ -93,7 +93,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
   KE_TRACE(10, ("__kmpc_for_static_init called (%d)\n", global_tid));
 #ifdef KMP_DEBUG
   {
-    const char *buff;
+    char *buff;
     // create format specifiers before the debug output
     buff = __kmp_str_format(
         "__kmpc_for_static_init: T#%%d sched=%%d liter=%%d iter=(%%%s,"
@@ -125,7 +125,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
 // ON A ZERO-TRIP LOOP (lower=1, upper=0,stride=1) - JPH June 23, 2009.
 #ifdef KMP_DEBUG
     {
-      const char *buff;
+      char *buff;
       // create format specifiers before the debug output
       buff = __kmp_str_format("__kmpc_for_static_init:(ZERO TRIP) liter=%%d "
                               "lower=%%%s upper=%%%s stride = %%%s "
@@ -179,7 +179,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
 
 #ifdef KMP_DEBUG
     {
-      const char *buff;
+      char *buff;
       // create format specifiers before the debug output
       buff = __kmp_str_format("__kmpc_for_static_init: (serial) liter=%%d "
                               "lower=%%%s upper=%%%s stride = %%%s\n",
@@ -208,7 +208,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
         (incr > 0) ? (*pupper - *plower + 1) : (-(*plower - *pupper + 1));
 #ifdef KMP_DEBUG
     {
-      const char *buff;
+      char *buff;
       // create format specifiers before the debug output
       buff = __kmp_str_format("__kmpc_for_static_init: (serial) liter=%%d "
                               "lower=%%%s upper=%%%s stride = %%%s\n",
@@ -365,7 +365,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
 #endif
 #ifdef KMP_DEBUG
   {
-    const char *buff;
+    char *buff;
     // create format specifiers before the debug output
     buff = __kmp_str_format("__kmpc_for_static_init: liter=%%d lower=%%%s "
                             "upper=%%%s stride = %%%s signed?<%s>\n",
@@ -410,7 +410,7 @@ static void __kmp_dist_for_static_init(ident_t *loc, kmp_int32 gtid,
   KE_TRACE(10, ("__kmpc_dist_for_static_init called (%d)\n", gtid));
 #ifdef KMP_DEBUG
   {
-    const char *buff;
+    char *buff;
     // create format specifiers before the debug output
     buff = __kmp_str_format(
         "__kmpc_dist_for_static_init: T#%%d schedLoop=%%d liter=%%d "
@@ -613,7 +613,7 @@ static void __kmp_dist_for_static_init(ident_t *loc, kmp_int32 gtid,
 end:;
 #ifdef KMP_DEBUG
   {
-    const char *buff;
+    char *buff;
     // create format specifiers before the debug output
     buff = __kmp_str_format(
         "__kmpc_dist_for_static_init: last=%%d lo=%%%s up=%%%s upDist=%%%s "
@@ -654,7 +654,7 @@ static void __kmp_team_static_init(ident_t *loc, kmp_int32 gtid,
   KE_TRACE(10, ("__kmp_team_static_init called (%d)\n", gtid));
 #ifdef KMP_DEBUG
   {
-    const char *buff;
+    char *buff;
     // create format specifiers before the debug output
     buff = __kmp_str_format("__kmp_team_static_init enter: T#%%d liter=%%d "
                             "iter=(%%%s, %%%s, %%%s) chunk %%%s; signed?<%s>\n",
@@ -728,7 +728,7 @@ static void __kmp_team_static_init(ident_t *loc, kmp_int32 gtid,
   }
 #ifdef KMP_DEBUG
   {
-    const char *buff;
+    char *buff;
     // create format specifiers before the debug output
     buff =
         __kmp_str_format("__kmp_team_static_init exit: T#%%d team%%u liter=%%d "

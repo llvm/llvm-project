@@ -2040,11 +2040,12 @@ struct __compressed_pair_elem {
   typedef const _Tp& const_reference;
 
 #ifndef _LIBCPP_CXX03_LANG
-  constexpr __compressed_pair_elem() : __value_() {}
+  _LIBCPP_INLINE_VISIBILITY constexpr __compressed_pair_elem() : __value_() {}
 
   template <class _Up, class = typename enable_if<
       !is_same<__compressed_pair_elem, typename decay<_Up>::type>::value
   >::type>
+  _LIBCPP_INLINE_VISIBILITY
   constexpr explicit
   __compressed_pair_elem(_Up&& __u)
       : __value_(_VSTD::forward<_Up>(__u)){};
@@ -2055,11 +2056,13 @@ struct __compressed_pair_elem {
                          __tuple_indices<_Indexes...>)
       : __value_(_VSTD::forward<_Args>(_VSTD::get<_Indexes>(__args))...) {}
 #else
-  __compressed_pair_elem() : __value_() {}
+  _LIBCPP_INLINE_VISIBILITY __compressed_pair_elem() : __value_() {}
+  _LIBCPP_INLINE_VISIBILITY
   __compressed_pair_elem(_ParamT __p) : __value_(std::forward<_ParamT>(__p)) {}
 #endif
 
-  reference __get() _NOEXCEPT { return __value_; }
+  _LIBCPP_INLINE_VISIBILITY reference __get() _NOEXCEPT { return __value_; }
+  _LIBCPP_INLINE_VISIBILITY
   const_reference __get() const _NOEXCEPT { return __value_; }
 
 private:
@@ -2074,11 +2077,12 @@ struct __compressed_pair_elem<_Tp, _Idx, true> : private _Tp {
   typedef _Tp __value_type;
 
 #ifndef _LIBCPP_CXX03_LANG
-  constexpr __compressed_pair_elem() = default;
+  _LIBCPP_INLINE_VISIBILITY constexpr __compressed_pair_elem() = default;
 
   template <class _Up, class = typename enable_if<
         !is_same<__compressed_pair_elem, typename decay<_Up>::type>::value
   >::type>
+  _LIBCPP_INLINE_VISIBILITY
   constexpr explicit
   __compressed_pair_elem(_Up&& __u)
       : __value_type(_VSTD::forward<_Up>(__u)){};
@@ -2089,12 +2093,14 @@ struct __compressed_pair_elem<_Tp, _Idx, true> : private _Tp {
                          __tuple_indices<_Indexes...>)
       : __value_type(_VSTD::forward<_Args>(_VSTD::get<_Indexes>(__args))...) {}
 #else
-  __compressed_pair_elem() : __value_type() {}
+  _LIBCPP_INLINE_VISIBILITY __compressed_pair_elem() : __value_type() {}
+  _LIBCPP_INLINE_VISIBILITY
   __compressed_pair_elem(_ParamT __p)
       : __value_type(std::forward<_ParamT>(__p)) {}
 #endif
 
-  reference __get() _NOEXCEPT { return *this; }
+  _LIBCPP_INLINE_VISIBILITY reference __get() _NOEXCEPT { return *this; }
+  _LIBCPP_INLINE_VISIBILITY
   const_reference __get() const _NOEXCEPT { return *this; }
 };
 
