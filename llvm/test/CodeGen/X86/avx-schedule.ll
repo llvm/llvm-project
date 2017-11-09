@@ -4611,9 +4611,9 @@ define i32 @test_testpd(<2 x double> %a0, <2 x double> %a1, <2 x double> *%a2) {
 ; BTVER2-LABEL: test_testpd:
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    xorl %eax, %eax # sched: [1:0.50]
-; BTVER2-NEXT:    vtestpd %xmm1, %xmm0 # sched: [1:0.50]
+; BTVER2-NEXT:    vtestpd %xmm1, %xmm0 # sched: [3:1.00]
 ; BTVER2-NEXT:    setb %al # sched: [1:0.50]
-; BTVER2-NEXT:    vtestpd (%rdi), %xmm0 # sched: [6:1.00]
+; BTVER2-NEXT:    vtestpd (%rdi), %xmm0 # sched: [8:1.00]
 ; BTVER2-NEXT:    adcl $0, %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -4697,9 +4697,9 @@ define i32 @test_testpd_ymm(<4 x double> %a0, <4 x double> %a1, <4 x double> *%a
 ; BTVER2-LABEL: test_testpd_ymm:
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    xorl %eax, %eax # sched: [1:0.50]
-; BTVER2-NEXT:    vtestpd %ymm1, %ymm0 # sched: [4:3.00]
+; BTVER2-NEXT:    vtestpd %ymm1, %ymm0 # sched: [4:2.00]
 ; BTVER2-NEXT:    setb %al # sched: [1:0.50]
-; BTVER2-NEXT:    vtestpd (%rdi), %ymm0 # sched: [9:3.00]
+; BTVER2-NEXT:    vtestpd (%rdi), %ymm0 # sched: [9:2.00]
 ; BTVER2-NEXT:    adcl $0, %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -4778,9 +4778,9 @@ define i32 @test_testps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a2) {
 ; BTVER2-LABEL: test_testps:
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    xorl %eax, %eax # sched: [1:0.50]
-; BTVER2-NEXT:    vtestps %xmm1, %xmm0 # sched: [1:0.50]
+; BTVER2-NEXT:    vtestps %xmm1, %xmm0 # sched: [3:1.00]
 ; BTVER2-NEXT:    setb %al # sched: [1:0.50]
-; BTVER2-NEXT:    vtestps (%rdi), %xmm0 # sched: [6:1.00]
+; BTVER2-NEXT:    vtestps (%rdi), %xmm0 # sched: [8:1.00]
 ; BTVER2-NEXT:    adcl $0, %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -4864,9 +4864,9 @@ define i32 @test_testps_ymm(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a2) 
 ; BTVER2-LABEL: test_testps_ymm:
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    xorl %eax, %eax # sched: [1:0.50]
-; BTVER2-NEXT:    vtestps %ymm1, %ymm0 # sched: [4:3.00]
+; BTVER2-NEXT:    vtestps %ymm1, %ymm0 # sched: [4:2.00]
 ; BTVER2-NEXT:    setb %al # sched: [1:0.50]
-; BTVER2-NEXT:    vtestps (%rdi), %ymm0 # sched: [9:3.00]
+; BTVER2-NEXT:    vtestps (%rdi), %ymm0 # sched: [9:2.00]
 ; BTVER2-NEXT:    adcl $0, %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;

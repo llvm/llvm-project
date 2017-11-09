@@ -192,8 +192,8 @@ define <2 x double> @test_blendvpd(<2 x double> %a0, <2 x double> %a1, <2 x doub
 ;
 ; BTVER2-LABEL: test_blendvpd:
 ; BTVER2:       # BB#0:
-; BTVER2-NEXT:    vblendvpd %xmm2, %xmm1, %xmm0, %xmm0 # sched: [2:1.00]
-; BTVER2-NEXT:    vblendvpd %xmm2, (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
+; BTVER2-NEXT:    vblendvpd %xmm2, %xmm1, %xmm0, %xmm0 # sched: [2:2.00]
+; BTVER2-NEXT:    vblendvpd %xmm2, (%rdi), %xmm0, %xmm0 # sched: [7:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_blendvpd:
@@ -259,8 +259,8 @@ define <4 x float> @test_blendvps(<4 x float> %a0, <4 x float> %a1, <4 x float> 
 ;
 ; BTVER2-LABEL: test_blendvps:
 ; BTVER2:       # BB#0:
-; BTVER2-NEXT:    vblendvps %xmm2, %xmm1, %xmm0, %xmm0 # sched: [2:1.00]
-; BTVER2-NEXT:    vblendvps %xmm2, (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
+; BTVER2-NEXT:    vblendvps %xmm2, %xmm1, %xmm0, %xmm0 # sched: [2:2.00]
+; BTVER2-NEXT:    vblendvps %xmm2, (%rdi), %xmm0, %xmm0 # sched: [7:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_blendvps:
@@ -745,8 +745,8 @@ define <16 x i8> @test_pblendvb(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> %a2, <16
 ;
 ; BTVER2-LABEL: test_pblendvb:
 ; BTVER2:       # BB#0:
-; BTVER2-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0 # sched: [2:1.00]
-; BTVER2-NEXT:    vpblendvb %xmm2, (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
+; BTVER2-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0 # sched: [2:2.00]
+; BTVER2-NEXT:    vpblendvb %xmm2, (%rdi), %xmm0, %xmm0 # sched: [7:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pblendvb:
@@ -2935,9 +2935,9 @@ define i32 @test_ptest(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ;
 ; BTVER2-LABEL: test_ptest:
 ; BTVER2:       # BB#0:
-; BTVER2-NEXT:    vptest %xmm1, %xmm0 # sched: [1:0.50]
+; BTVER2-NEXT:    vptest %xmm1, %xmm0 # sched: [3:1.00]
 ; BTVER2-NEXT:    setb %al # sched: [1:0.50]
-; BTVER2-NEXT:    vptest (%rdi), %xmm0 # sched: [6:1.00]
+; BTVER2-NEXT:    vptest (%rdi), %xmm0 # sched: [8:1.00]
 ; BTVER2-NEXT:    setb %cl # sched: [1:0.50]
 ; BTVER2-NEXT:    andb %al, %cl # sched: [1:0.50]
 ; BTVER2-NEXT:    movzbl %cl, %eax # sched: [1:0.50]

@@ -77,14 +77,14 @@ T tmain(T argc, T *argv) {
     a = 2;
 // CHECK-NEXT: for (T i = 0; i < 2; ++i)
 // CHECK-NEXT: a = 2;
-#pragma omp target parallel for simd private(argc, b), firstprivate(c, d), lastprivate(d, f) collapse(N) schedule(static, N) ordered(N) if (parallel :argc) num_threads(N) default(shared) shared(e) reduction(+ : h)
+#pragma omp target parallel for simd private(argc, b), firstprivate(c, d), lastprivate(d, f) collapse(N) schedule(static, N) ordered if (parallel :argc) num_threads(N) default(shared) shared(e) reduction(+ : h)
   for (int i = 0; i < 2; ++i)
     for (int j = 0; j < 2; ++j)
       for (int j = 0; j < 2; ++j)
         for (int j = 0; j < 2; ++j)
           for (int j = 0; j < 2; ++j)
             foo();
-  // CHECK-NEXT: #pragma omp target parallel for simd private(argc,b) firstprivate(c,d) lastprivate(d,f) collapse(N) schedule(static, N) ordered(N) if(parallel: argc) num_threads(N) default(shared) shared(e) reduction(+: h)
+  // CHECK-NEXT: #pragma omp target parallel for simd private(argc,b) firstprivate(c,d) lastprivate(d,f) collapse(N) schedule(static, N) ordered if(parallel: argc) num_threads(N) default(shared) shared(e) reduction(+: h)
   // CHECK-NEXT: for (int i = 0; i < 2; ++i)
   // CHECK-NEXT: for (int j = 0; j < 2; ++j)
   // CHECK-NEXT: for (int j = 0; j < 2; ++j)

@@ -1488,9 +1488,9 @@ class JumpFJ<DAGOperand opnd, string opstr, SDPatternOperator operator,
 }
 
 // Unconditional branch
-class UncondBranch<Instruction BEQInst> :
+class UncondBranch<Instruction BEQInst, DAGOperand opnd> :
   PseudoSE<(outs), (ins brtarget:$offset), [(br bb:$offset)], II_B>,
-  PseudoInstExpansion<(BEQInst ZERO, ZERO, brtarget:$offset)> {
+  PseudoInstExpansion<(BEQInst ZERO, ZERO, opnd:$offset)> {
   let isBranch = 1;
   let isTerminator = 1;
   let isBarrier = 1;
@@ -2045,7 +2045,7 @@ def SC : SCBase<"sc", GPR32Opnd>, LW_FM<0x38>, PTR_32, ISA_MIPS2_NOT_32R6_64R6;
 
 /// Jump and Branch Instructions
 def J       : MMRel, JumpFJ<jmptarget, "j", br, bb, "j">, FJ<2>,
-              AdditionalRequires<[RelocNotPIC]>, IsBranch;
+              AdditionalRequires<[RelocNotPIC, NotInMicroMips]>, IsBranch;
 def JR      : MMRel, IndirectBranch<"jr", GPR32Opnd>, MTLO_FM<8>, ISA_MIPS1_NOT_32R6_64R6; 
 def BEQ     : MMRel, CBranch<"beq", brtarget, seteq, GPR32Opnd>, BEQ_FM<4>;
 def BEQL    : MMRel, CBranchLikely<"beql", brtarget, GPR32Opnd>,
@@ -2069,7 +2069,8 @@ def BLTZ    : MMRel, CBranchZero<"bltz", brtarget, setlt, GPR32Opnd>,
               BGEZ_FM<1, 0>;
 def BLTZL   : MMRel, CBranchZeroLikely<"bltzl", brtarget, GPR32Opnd>,
               BGEZ_FM<1, 2>, ISA_MIPS2_NOT_32R6_64R6;
-def B       : UncondBranch<BEQ>;
+def B       : UncondBranch<BEQ, brtarget>,
+              AdditionalRequires<[NotInMicroMips]>;
 
 def JAL  : MMRel, JumpLink<"jal", calltarget>, FJ<3>;
 let AdditionalPredicates = [NotInMicroMips] in {

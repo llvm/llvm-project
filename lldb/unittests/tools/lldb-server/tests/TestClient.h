@@ -27,27 +27,25 @@ public:
 
   TestClient(const std::string &test_name, const std::string &test_case_name);
   virtual ~TestClient();
-  LLVM_NODISCARD bool StartDebugger();
-  LLVM_NODISCARD bool StopDebugger();
-  LLVM_NODISCARD bool SetInferior(llvm::ArrayRef<std::string> inferior_args);
-  LLVM_NODISCARD bool ListThreadsInStopReply();
-  LLVM_NODISCARD bool SetBreakpoint(unsigned long address);
-  LLVM_NODISCARD bool ContinueAll();
-  LLVM_NODISCARD bool ContinueThread(unsigned long thread_id);
+  llvm::Error StartDebugger();
+  llvm::Error StopDebugger();
+  llvm::Error SetInferior(llvm::ArrayRef<std::string> inferior_args);
+  llvm::Error ListThreadsInStopReply();
+  llvm::Error SetBreakpoint(unsigned long address);
+  llvm::Error ContinueAll();
+  llvm::Error ContinueThread(unsigned long thread_id);
   const ProcessInfo &GetProcessInfo();
   llvm::Optional<JThreadsInfo> GetJThreadsInfo();
   const StopReply &GetLatestStopReply();
-  LLVM_NODISCARD bool SendMessage(llvm::StringRef message);
-  LLVM_NODISCARD bool SendMessage(llvm::StringRef message,
-                                  std::string &response_string);
-  LLVM_NODISCARD bool SendMessage(llvm::StringRef message,
-                                  std::string &response_string,
-                                  PacketResult expected_result);
+  llvm::Error SendMessage(llvm::StringRef message);
+  llvm::Error SendMessage(llvm::StringRef message,
+                          std::string &response_string);
+  llvm::Error SendMessage(llvm::StringRef message, std::string &response_string,
+                          PacketResult expected_result);
   unsigned int GetPcRegisterId();
 
 private:
-  LLVM_NODISCARD bool Continue(llvm::StringRef message);
-  LLVM_NODISCARD bool GenerateConnectionAddress(std::string &address);
+  llvm::Error Continue(llvm::StringRef message);
   std::string GenerateLogFileName(const lldb_private::ArchSpec &arch) const;
   std::string FormatFailedResult(
       const std::string &message,

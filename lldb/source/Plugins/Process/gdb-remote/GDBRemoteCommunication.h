@@ -290,4 +290,14 @@ private:
 } // namespace process_gdb_remote
 } // namespace lldb_private
 
+namespace llvm {
+template <>
+struct format_provider<
+    lldb_private::process_gdb_remote::GDBRemoteCommunication::PacketResult> {
+  static void format(const lldb_private::process_gdb_remote::
+                         GDBRemoteCommunication::PacketResult &state,
+                     raw_ostream &Stream, StringRef Style);
+};
+} // namespace llvm
+
 #endif // liblldb_GDBRemoteCommunication_h_
