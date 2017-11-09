@@ -1073,3 +1073,51 @@ json::Expr SignatureHelp::unparse(const SignatureHelp &SH) {
       {"signatures", json::ary(SH.signatures)},
   };
 }
+
+llvm::Optional<RenameParams>
+RenameParams::parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger) {
+  RenameParams Result;
+  for (auto &NextKeyValue : *Params) {
+    auto *KeyString = dyn_cast<llvm::yaml::ScalarNode>(NextKeyValue.getKey());
+    if (!KeyString)
+      return llvm::None;
+
+    llvm::SmallString<10> KeyStorage;
+    StringRef KeyValue = KeyString->getValue(KeyStorage);
+
+    if (KeyValue == "textDocument") {
+      auto *Value =
+        dyn_cast_or_null<llvm::yaml::MappingNode>(NextKeyValue.getValue());
+      if (!Value)
+        continue;
+      auto *Map = dyn_cast<llvm::yaml::MappingNode>(Value);
+      if (!Map)
+        return llvm::None;
+      auto Parsed = TextDocumentIdentifier::parse(Map, Logger);
+      if (!Parsed)
+        return llvm::None;
+      Result.textDocument = std::move(*Parsed);
+    } else if (KeyValue == "position") {
+      auto *Value =
+          dyn_cast_or_null<llvm::yaml::MappingNode>(NextKeyValue.getValue());
+      if (!Value)
+        continue;
+      auto Parsed = Position::parse(Value, Logger);
+      if (!Parsed)
+        return llvm::None;
+      Result.position = std::move(*Parsed);
+    } else if (KeyValue == "newName") {
+      auto *Value = NextKeyValue.getValue();
+      if (!Value)
+        continue;
+      auto *Node = dyn_cast<llvm::yaml::ScalarNode>(Value);
+      if (!Node)
+        return llvm::None;
+      llvm::SmallString<10> Storage;
+      Result.newName = Node->getValue(Storage);
+    } else {
+      logIgnoredField(KeyValue, Logger);
+    }
+  }
+  return Result;
+}

@@ -3712,13 +3712,43 @@ void SIInstrInfo::moveToVALU(MachineInstr &TopInst) const {
 
     case AMDGPU::S_BUFFER_LOAD_DWORD_SGPR: {
       unsigned VDst = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+      const MachineOperand *VAddr = getNamedOperand(Inst, AMDGPU::OpName::soff);
+      auto Add = MRI.getUniqueVRegDef(VAddr->getReg());
+      unsigned Offset = 0;
+
+      // See if we can extract an immediate offset by recognizing one of these:
+      //   V_ADD_I32_e32 dst, imm, src1
+      //   V_ADD_I32_e32 dst, (S_MOV_B32 imm), src1
+      // V_ADD will be removed by "Remove dead machine instructions".
+      if (Add && Add->getOpcode() == AMDGPU::V_ADD_I32_e32) {
+        const MachineOperand *Src =
+          getNamedOperand(*Add, AMDGPU::OpName::src0);
+
+        if (Src && Src->isReg()) {
+          auto Mov = MRI.getUniqueVRegDef(Src->getReg());
+          if (Mov && Mov->getOpcode() == AMDGPU::S_MOV_B32)
+            Src = &Mov->getOperand(1);
+        }
+
+        if (Src) {
+          if (Src->isImm())
+            Offset = Src->getImm();
+          else if (Src->isCImm())
+            Offset = Src->getCImm()->getZExtValue();
+        }
+
+        if (Offset && isLegalMUBUFImmOffset(Offset))
+          VAddr = getNamedOperand(*Add, AMDGPU::OpName::src1);
+        else
+          Offset = 0;
+      }
 
       BuildMI(*MBB, Inst, Inst.getDebugLoc(),
               get(AMDGPU::BUFFER_LOAD_DWORD_OFFEN), VDst)
-        .add(*getNamedOperand(Inst, AMDGPU::OpName::soff)) // vaddr
+        .add(*VAddr) // vaddr
         .add(*getNamedOperand(Inst, AMDGPU::OpName::sbase)) // srsrc
         .addImm(0) // soffset
-        .addImm(0) // offset
+        .addImm(Offset) // offset
         .addImm(getNamedOperand(Inst, AMDGPU::OpName::glc)->getImm())
         .addImm(0) // slc
         .addImm(0) // tfe

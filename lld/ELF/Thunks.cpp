@@ -258,7 +258,7 @@ InputSection *MipsThunk::getTargetInputSection() const {
 // Write microMIPS R2-R5 LA25 thunk code
 // to call PIC function from the non-PIC one.
 void MicroMipsThunk::writeTo(uint8_t *Buf, ThunkSection &) const {
-  uint64_t S = Destination.getVA();
+  uint64_t S = Destination.getVA() | 1;
   write16(Buf, 0x41b9, Config->Endianness);       // lui   $25, %hi(func)
   write16(Buf + 4, 0xd400, Config->Endianness);   // j     func
   write16(Buf + 8, 0x3339, Config->Endianness);   // addiu $25, $25, %lo(func)
@@ -283,7 +283,7 @@ InputSection *MicroMipsThunk::getTargetInputSection() const {
 // Write microMIPS R6 LA25 thunk code
 // to call PIC function from the non-PIC one.
 void MicroMipsR6Thunk::writeTo(uint8_t *Buf, ThunkSection &) const {
-  uint64_t S = Destination.getVA();
+  uint64_t S = Destination.getVA() | 1;
   uint64_t P = ThunkSym->getVA();
   write16(Buf, 0x1320, Config->Endianness);       // lui   $25, %hi(func)
   write16(Buf + 4, 0x3339, Config->Endianness);   // addiu $25, $25, %lo(func)

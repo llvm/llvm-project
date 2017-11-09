@@ -648,9 +648,10 @@ TEST_P(CoverageMappingTest, test_line_coverage_iterator) {
   CoverageData Data = LoadedCoverage->getCoverageForFile("file1");
 
   unsigned Line = 0;
-  unsigned LineCounts[] = {20, 20, 20, 20, 10, 10, 10, 10, 10, 0, 0};
+  unsigned LineCounts[] = {20, 20, 20, 20, 30, 10, 10, 10, 10, 0, 0};
   for (const auto &LCS : getLineCoverageStats(Data)) {
     ASSERT_EQ(Line + 1, LCS.getLine());
+    errs() << "Line: " << Line + 1 << ", count = " << LCS.getExecutionCount() << "\n";
     ASSERT_EQ(LineCounts[Line], LCS.getExecutionCount());
     ++Line;
   }

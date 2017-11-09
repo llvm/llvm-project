@@ -19,7 +19,7 @@ int main() {     // CHECK-NEXT: File 0, [[@LINE]]:12 -> {{[0-9]+}}:2 = #0
 
 #if 1
                  // CHECK-NEXT: File 0, [[@LINE+1]]:6 -> [[@LINE+1]]:12 = #0
-  if(i == 0) {   // CHECK-NEXT: File 0, [[@LINE]]:14 -> [[@LINE+2]]:4 = #1
+  if(i == 0) {   // CHECK: File 0, [[@LINE]]:14 -> [[@LINE+2]]:4 = #1
     i = 1;
   }
 #else            // CHECK-NEXT: Skipped,File 0, [[@LINE]]:1 -> [[@LINE+6]]:1 = 0

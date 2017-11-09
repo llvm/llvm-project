@@ -26,9 +26,8 @@
 
 using namespace __ubsan;
 
-void __ubsan::GetStackTraceWithPcBpAndContext(BufferedStackTrace *stack,
-                                              uptr max_depth, uptr pc, uptr bp,
-                                              void *context, bool fast) {
+void __ubsan::GetStackTrace(BufferedStackTrace *stack, uptr max_depth, uptr pc,
+                            uptr bp, void *context, bool fast) {
   uptr top = 0;
   uptr bottom = 0;
   if (fast)
@@ -43,8 +42,8 @@ static void MaybePrintStackTrace(uptr pc, uptr bp) {
     return;
 
   BufferedStackTrace stack;
-  GetStackTraceWithPcBpAndContext(&stack, kStackTraceMax, pc, bp, nullptr,
-                                  common_flags()->fast_unwind_on_fatal);
+  GetStackTrace(&stack, kStackTraceMax, pc, bp, nullptr,
+                common_flags()->fast_unwind_on_fatal);
   stack.Print();
 }
 

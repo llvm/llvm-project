@@ -872,12 +872,8 @@ Status NativeRegisterContextLinux_arm64::DoReadRegisterValue(
     error = NativeProcessLinux::PtraceWrapper(
         PTRACE_GETREGSET, m_thread.GetID(), &regset, &ioVec, sizeof regs);
     if (error.Success()) {
-      ArchSpec arch;
-      if (m_thread.GetProcess().GetArchitecture(arch))
-        value.SetBytes((void *)(((unsigned char *)(&regs)) + offset), 16,
-                       arch.GetByteOrder());
-      else
-        error.SetErrorString("failed to get architecture");
+      value.SetBytes((void *)(((unsigned char *)(&regs)) + offset), 16,
+                     m_thread.GetProcess().GetByteOrder());
     }
   } else {
     elf_gregset_t regs;
@@ -889,12 +885,8 @@ Status NativeRegisterContextLinux_arm64::DoReadRegisterValue(
     error = NativeProcessLinux::PtraceWrapper(
         PTRACE_GETREGSET, m_thread.GetID(), &regset, &ioVec, sizeof regs);
     if (error.Success()) {
-      ArchSpec arch;
-      if (m_thread.GetProcess().GetArchitecture(arch))
-        value.SetBytes((void *)(((unsigned char *)(regs)) + offset), 8,
-                       arch.GetByteOrder());
-      else
-        error.SetErrorString("failed to get architecture");
+      value.SetBytes((void *)(((unsigned char *)(regs)) + offset), 8,
+                     m_thread.GetProcess().GetByteOrder());
     }
   }
   return error;
