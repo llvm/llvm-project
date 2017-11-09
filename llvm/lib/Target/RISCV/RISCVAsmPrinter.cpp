@@ -43,6 +43,11 @@ public:
 
   bool emitPseudoExpansionLowering(MCStreamer &OutStreamer,
                                    const MachineInstr *MI);
+
+  // Wrapper needed for tblgenned pseudo lowering.
+  bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp) const {
+    return LowerRISCVMachineOperandToMCOperand(MO, MCOp, *this);
+  }
 };
 }
 
@@ -56,7 +61,7 @@ void RISCVAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     return;
 
   MCInst TmpInst;
-  LowerRISCVMachineInstrToMCInst(MI, TmpInst);
+  LowerRISCVMachineInstrToMCInst(MI, TmpInst, *this);
   EmitToStreamer(*OutStreamer, TmpInst);
 }
 

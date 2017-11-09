@@ -116,10 +116,11 @@ void WriteObjectFile(const Object<ELFT> &Obj, StringRef File) {
   Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
       FileOutputBuffer::create(File, Obj.totalSize(),
                                FileOutputBuffer::F_executable);
-  if (BufferOrErr.takeError())
+  handleAllErrors(BufferOrErr.takeError(), [](const ErrorInfoBase &) {
     error("failed to open " + OutputFilename);
-  else
-    Buffer = std::move(*BufferOrErr);
+  });
+  Buffer = std::move(*BufferOrErr);
+
   Obj.write(*Buffer);
   if (auto E = Buffer->commit())
     reportError(File, errorToErrorCode(std::move(E)));

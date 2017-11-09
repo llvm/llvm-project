@@ -191,9 +191,14 @@ template <class ELFT> RelType MIPS<ELFT>::getDynRel(RelType Type) const {
   return RelativeRel;
 }
 
+static bool isMicroMips() { return Config->EFlags & EF_MIPS_MICROMIPS; }
+
 template <class ELFT>
 void MIPS<ELFT>::writeGotPlt(uint8_t *Buf, const Symbol &) const {
-  write32<ELFT::TargetEndianness>(Buf, InX::Plt->getVA());
+  uint64_t VA = InX::Plt->getVA();
+  if (isMicroMips())
+    VA |= 1;
+  write32<ELFT::TargetEndianness>(Buf, VA);
 }
 
 template <endianness E> static uint32_t readShuffle(const uint8_t *Loc) {
@@ -240,8 +245,6 @@ static void writeMicroRelocation16(uint8_t *Loc, uint64_t V, uint8_t BitsSize,
   uint16_t Data = (Instr & ~Mask) | ((V >> Shift) & Mask);
   write16<E>(Loc, Data);
 }
-
-static bool isMicroMips() { return Config->EFlags & EF_MIPS_MICROMIPS; }
 
 template <class ELFT> void MIPS<ELFT>::writePltHeader(uint8_t *Buf) const {
   const endianness E = ELFT::TargetEndianness;

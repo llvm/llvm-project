@@ -42,7 +42,7 @@ public:
     FT_DwarfFrame,
     FT_LEB,
     FT_Padding,
-    FT_SafeSEH,
+    FT_SymbolId,
     FT_CVInlineLines,
     FT_CVDefRange,
     FT_Dummy
@@ -562,12 +562,13 @@ public:
   }
 };
 
-class MCSafeSEHFragment : public MCFragment {
+/// Represents a symbol table index fragment.
+class MCSymbolIdFragment : public MCFragment {
   const MCSymbol *Sym;
 
 public:
-  MCSafeSEHFragment(const MCSymbol *Sym, MCSection *Sec = nullptr)
-      : MCFragment(FT_SafeSEH, false, 0, Sec), Sym(Sym) {}
+  MCSymbolIdFragment(const MCSymbol *Sym, MCSection *Sec = nullptr)
+      : MCFragment(FT_SymbolId, false, 0, Sec), Sym(Sym) {}
 
   /// \name Accessors
   /// @{
@@ -578,7 +579,7 @@ public:
   /// @}
 
   static bool classof(const MCFragment *F) {
-    return F->getKind() == MCFragment::FT_SafeSEH;
+    return F->getKind() == MCFragment::FT_SymbolId;
   }
 };
 

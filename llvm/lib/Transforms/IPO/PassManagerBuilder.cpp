@@ -548,6 +548,9 @@ void PassManagerBuilder::populateModulePassManager(
   // unrolling/vectorization/... now. We'll first run the inliner + CGSCC passes
   // during ThinLTO and perform the rest of the optimizations afterward.
   if (PrepareForThinLTO) {
+    // Ensure we perform any last passes, but do so before renaming anonymous
+    // globals in case the passes add any.
+    addExtensionsToPM(EP_OptimizerLast, MPM);
     // Rename anon globals to be able to export them in the summary.
     MPM.add(createNameAnonGlobalPass());
     return;

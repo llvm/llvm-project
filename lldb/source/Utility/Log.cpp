@@ -287,8 +287,7 @@ void Log::WriteHeader(llvm::raw_ostream &OS, llvm::StringRef file,
   if (options.Test(LLDB_LOG_OPTION_PREPEND_THREAD_NAME)) {
     llvm::SmallString<32> thread_name;
     llvm::get_thread_name(thread_name);
-    if (!thread_name.empty())
-      OS << thread_name;
+    OS << llvm::formatv("{0,-16} ", thread_name);
   }
 
   if (options.Test(LLDB_LOG_OPTION_BACKTRACE))

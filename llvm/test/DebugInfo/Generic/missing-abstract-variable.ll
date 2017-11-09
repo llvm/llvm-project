@@ -2,11 +2,6 @@
 
 ; RUN: %llc_dwarf -O0 -filetype=obj < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
 
-; The formal parameter 'b' for Function 'x' when inlined within 'a' is lost on
-; mips and powerpc64 (and on x86_64 at at least -O2). Presumably this is a
-; SelectionDAG issue (do mips/powerpc64 use FastISel?).
-; XFAIL: mips, powerpc64, s390x, sparc
-
 ; Build from the following source with clang -O2.
 
 ; The important details are that 'x's abstract definition is first built during

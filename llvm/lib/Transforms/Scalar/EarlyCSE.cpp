@@ -709,6 +709,12 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
       continue;
     }
 
+    // Skip sideeffect intrinsics, for the same reason as assume intrinsics.
+    if (match(Inst, m_Intrinsic<Intrinsic::sideeffect>())) {
+      DEBUG(dbgs() << "EarlyCSE skipping sideeffect: " << *Inst << '\n');
+      continue;
+    }
+
     // Skip invariant.start intrinsics since they only read memory, and we can
     // forward values across it. Also, we dont need to consume the last store
     // since the semantics of invariant.start allow us to perform DSE of the

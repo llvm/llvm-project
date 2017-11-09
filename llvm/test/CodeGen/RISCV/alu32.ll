@@ -7,7 +7,6 @@ define i32 @addi(i32 %a) nounwind {
 ; RV32I-LABEL: addi:
 ; RV32I: addi a0, a0, 1
 ; RV32I: jalr zero, ra, 0
-; TODO: check support for materialising larger constants
   %1 = add i32 %a, 1
   ret i32 %1
 }

@@ -27,7 +27,7 @@ Content-Length: 148
 # CHECK-NEXT:          "line": 1
 # CHECK-NEXT:        }
 # CHECK-NEXT:      },
-# CHECK-NEXT:      "uri": "file:///main.cpp"
+# CHECK-NEXT:      "uri": "file:///{{([A-Z]:/)?}}main.cpp"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
 Content-Length: 148
@@ -48,7 +48,7 @@ Content-Length: 148
 # CHECK-NEXT:          "line": 1
 # CHECK-NEXT:        }
 # CHECK-NEXT:      },
-# CHECK-NEXT:      "uri": "file:///main.cpp"
+# CHECK-NEXT:      "uri": "file:///{{([A-Z]:/)?}}main.cpp"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
 Content-Length: 214
@@ -73,7 +73,7 @@ Content-Length: 149
 # CHECK-NEXT:          "line": 1
 # CHECK-NEXT:        }
 # CHECK-NEXT:      },
-# CHECK-NEXT:      "uri": "file:///main.cpp"
+# CHECK-NEXT:      "uri": "file:///{{([A-Z]:/)?}}main.cpp"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
 Content-Length: 215
@@ -98,7 +98,7 @@ Content-Length: 149
 # CHECK-NEXT:          "line": 1
 # CHECK-NEXT:        }
 # CHECK-NEXT:      },
-# CHECK-NEXT:      "uri": "file:///main.cpp"
+# CHECK-NEXT:      "uri": "file:///{{([A-Z]:/)?}}main.cpp"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
 Content-Length: 187
@@ -123,7 +123,7 @@ Content-Length: 148
 # CHECK-NEXT:          "line": 0
 # CHECK-NEXT:        }
 # CHECK-NEXT:      },
-# CHECK-NEXT:      "uri": "file:///main.cpp"
+# CHECK-NEXT:      "uri": "file:///{{([A-Z]:/)?}}main.cpp"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
 Content-Length: 208
@@ -148,7 +148,7 @@ Content-Length: 148
 # CHECK-NEXT:          "line": 0
 # CHECK-NEXT:        }
 # CHECK-NEXT:      },
-# CHECK-NEXT:      "uri": "file:///main.cpp"
+# CHECK-NEXT:      "uri": "file:///{{([A-Z]:/)?}}main.cpp"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
 Content-Length: 231
@@ -173,7 +173,7 @@ Content-Length: 148
 # CHECK-NEXT:          "line": 0
 # CHECK-NEXT:        }
 # CHECK-NEXT:      },
-# CHECK-NEXT:      "uri": "file:///main.cpp"
+# CHECK-NEXT:      "uri": "file:///{{([A-Z]:/)?}}main.cpp"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
 Content-Length: 215
@@ -198,7 +198,7 @@ Content-Length: 148
 # CHECK-NEXT:          "line": 1
 # CHECK-NEXT:        }
 # CHECK-NEXT:      },
-# CHECK-NEXT:      "uri": "file:///main.cpp"
+# CHECK-NEXT:      "uri": "file:///{{([A-Z]:/)?}}main.cpp"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
 Content-Length: 220
@@ -223,7 +223,7 @@ Content-Length: 148
 # CHECK-NEXT:          "line": 1
 # CHECK-NEXT:        }
 # CHECK-NEXT:      },
-# CHECK-NEXT:      "uri": "file:///main.cpp"
+# CHECK-NEXT:      "uri": "file:///{{([A-Z]:/)?}}main.cpp"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
 Content-Length: 240
@@ -248,7 +248,7 @@ Content-Length: 149
 # CHECK-NEXT:          "line": 2
 # CHECK-NEXT:        }
 # CHECK-NEXT:      },
-# CHECK-NEXT:      "uri": "file:///main.cpp"
+# CHECK-NEXT:      "uri": "file:///{{([A-Z]:/)?}}main.cpp"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
 Content-Length: 254
@@ -284,7 +284,7 @@ Content-Length: 148
 # CHECK-NEXT:          "line": 0
 # CHECK-NEXT:        }
 # CHECK-NEXT:      },
-# CHECK-NEXT:      "uri": "file:///main.cpp"
+# CHECK-NEXT:      "uri": "file:///{{([A-Z]:/)?}}main.cpp"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
 Content-Length: 265
@@ -309,7 +309,7 @@ Content-Length: 149
 # CHECK-NEXT:          "line": 2
 # CHECK-NEXT:        }
 # CHECK-NEXT:      },
-# CHECK-NEXT:      "uri": "file:///main.cpp"
+# CHECK-NEXT:      "uri": "file:///{{([A-Z]:/)?}}main.cpp"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
 Content-Length: 204
@@ -334,7 +334,7 @@ Content-Length: 148
 # CHECK-NEXT:          "line": 0
 # CHECK-NEXT:        }
 # CHECK-NEXT:      },
-# CHECK-NEXT:      "uri": "file:///main.cpp"
+# CHECK-NEXT:      "uri": "file:///{{([A-Z]:/)?}}main.cpp"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
 Content-Length: 217
@@ -359,7 +359,7 @@ Content-Length: 148
 # CHECK-NEXT:          "line": 0
 # CHECK-NEXT:        }
 # CHECK-NEXT:      },
-# CHECK-NEXT:      "uri": "file:///main.cpp"
+# CHECK-NEXT:      "uri": "file:///{{([A-Z]:/)?}}main.cpp"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
 Content-Length: 148
@@ -380,7 +380,7 @@ Content-Length: 148
 # CHECK-NEXT:          "line": 2
 # CHECK-NEXT:        }
 # CHECK-NEXT:      },
-# CHECK-NEXT:      "uri": "file:///main.cpp"
+# CHECK-NEXT:      "uri": "file:///{{([A-Z]:/)?}}main.cpp"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
 Content-Length: 148
@@ -401,7 +401,7 @@ Content-Length: 148
 # CHECK-NEXT:          "line": 2
 # CHECK-NEXT:        }
 # CHECK-NEXT:      },
-# CHECK-NEXT:      "uri": "file:///main.cpp"
+# CHECK-NEXT:      "uri": "file:///{{([A-Z]:/)?}}main.cpp"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
 Content-Length: 156

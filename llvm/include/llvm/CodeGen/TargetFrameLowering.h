@@ -341,14 +341,6 @@ public:
           return false;
     return true;
   }
-
-  /// Return initial CFA offset value i.e. the one valid at the beginning of the
-  /// function (before any stack operations).
-  virtual int getInitialCFAOffset(const MachineFunction &MF) const;
-
-  /// Return initial CFA register value i.e. the one valid at the beginning of
-  /// the function (before any stack operations).
-  virtual unsigned getInitialCFARegister(const MachineFunction &MF) const;
 };
 
 } // End llvm namespace
