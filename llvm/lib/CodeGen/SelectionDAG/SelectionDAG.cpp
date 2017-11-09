@@ -7026,6 +7026,41 @@ SDDbgValue *SelectionDAG::getFrameIndexDbgValue(DIVariable *Var,
   return new (DbgInfo->getAlloc()) SDDbgValue(Var, Expr, FI, DL, O);
 }
 
+void SelectionDAG::transferDbgValues(SDValue From, SDValue To,
+                                     unsigned OffsetInBits,
+                                     unsigned SizeInBits) {
+  SDNode *FromNode = From.getNode();
+  SDNode *ToNode = To.getNode();
+  assert(FromNode != ToNode);
+
+  SmallVector<SDDbgValue *, 2> ClonedDVs;
+  for (SDDbgValue *Dbg : GetDbgValues(FromNode)) {
+    if (Dbg->getKind() != SDDbgValue::SDNODE)
+      break;
+
+    DIVariable *Var = Dbg->getVariable();
+    auto *Expr = Dbg->getExpression();
+    // If a fragment is requested, update the expression.
+    if (SizeInBits) {
+      auto Fragment = DIExpression::createFragmentExpression(
+          Dbg->getExpression(), OffsetInBits, SizeInBits);
+      if (Fragment)
+        Expr = *Fragment;
+    }
+    // Clone the SbgValue unless the fragment creation failed.
+    if (!SizeInBits || (SizeInBits && Expr)) {
+      SDDbgValue *Clone =
+          getDbgValue(Var, Expr, ToNode, To.getResNo(), Dbg->isIndirect(),
+                      Dbg->getDebugLoc(), Dbg->getOrder());
+      ClonedDVs.push_back(Clone);
+    }
+    Dbg->setIsInvalidated();
+  }
+
+  for (SDDbgValue *Dbg : ClonedDVs)
+    AddDbgValue(Dbg, ToNode, false);
+}
+
 void SelectionDAG::salvageDebugInfo(SDNode &N) {
   if (!N.getHasDebugValue())
     return;

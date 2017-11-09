@@ -34,7 +34,6 @@
 #define get_section(id) ((id) >> 16)
 #define get_number(id) ((id)&0xFFFF)
 
-kmp_msg_t __kmp_msg_empty = {kmp_mt_dummy, 0, "", 0};
 kmp_msg_t __kmp_msg_null = {kmp_mt_dummy, 0, NULL, 0};
 static char const *no_message_available = "(No message available)";
 
@@ -820,9 +819,6 @@ void __kmp_msg(kmp_msg_severity_t severity, kmp_msg_t message, va_list args) {
     message = va_arg(args, kmp_msg_t);
     if (message.type == kmp_mt_dummy && message.str == NULL) {
       break;
-    }
-    if (message.type == kmp_mt_dummy && message.str == __kmp_msg_empty.str) {
-      continue;
     }
     switch (message.type) {
     case kmp_mt_hint: {

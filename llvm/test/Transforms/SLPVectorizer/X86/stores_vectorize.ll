@@ -25,26 +25,21 @@ define void @_Z8DistanceIlLi5EEvPfiPmS0_(float* %p1, i32 %p2, i64* %p3, float* %
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    store float [[ADD]], float* [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, i64* [[P3]], align 8
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 [[TMP2]], 5
-; CHECK-NEXT:    store i64 [[SHR]], i64* [[P3]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 1
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 2
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i64* [[ARRAYIDX4]] to <2 x i64>*
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i64>, <2 x i64>* [[TMP3]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = lshr <2 x i64> [[TMP4]], <i64 5, i64 5>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i64* [[ARRAYIDX4]] to <2 x i64>*
-; CHECK-NEXT:    store <2 x i64> [[TMP5]], <2 x i64>* [[TMP6]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 3
-; CHECK-NEXT:    [[TMP7:%.*]] = load i64, i64* [[ARRAYIDX8]], align 8
-; CHECK-NEXT:    [[SHR9:%.*]] = lshr i64 [[TMP7]], 5
-; CHECK-NEXT:    store i64 [[SHR9]], i64* [[ARRAYIDX8]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64* [[P3]] to <4 x i64>*
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i64>, <4 x i64>* [[TMP2]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr <4 x i64> [[TMP3]], <i64 5, i64 5, i64 5, i64 5>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i64* [[P3]] to <4 x i64>*
+; CHECK-NEXT:    store <4 x i64> [[TMP4]], <4 x i64>* [[TMP5]], align 8
 ; CHECK-NEXT:    [[ADD_PTR11:%.*]] = getelementptr inbounds float, float* [[ADD_PTR]], i64 [[IDX_EXT]]
-; CHECK-NEXT:    [[AND:%.*]] = and i64 [[SHR]], 5
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i64> [[TMP4]], i32 0
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[TMP6]], 5
 ; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds float, float* [[ADD_PTR11]], i64 [[AND]]
-; CHECK-NEXT:    [[TMP8:%.*]] = load float, float* [[ARRAYIDX13]], align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = load float, float* [[P4]], align 4
-; CHECK-NEXT:    [[ADD15:%.*]] = fadd float [[TMP8]], [[TMP9]]
+; CHECK-NEXT:    [[TMP7:%.*]] = load float, float* [[ARRAYIDX13]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = load float, float* [[P4]], align 4
+; CHECK-NEXT:    [[ADD15:%.*]] = fadd float [[TMP7]], [[TMP8]]
 ; CHECK-NEXT:    store float [[ADD15]], float* [[P4]], align 4
 ; CHECK-NEXT:    ret void
 ;

@@ -1376,3 +1376,39 @@ void GDBRemoteCommunication::AppendBytesToCache(const uint8_t *bytes,
     }
   }
 }
+
+void llvm::format_provider<GDBRemoteCommunication::PacketResult>::format(
+    const GDBRemoteCommunication::PacketResult &result, raw_ostream &Stream,
+    StringRef Style) {
+  using PacketResult = GDBRemoteCommunication::PacketResult;
+
+  switch (result) {
+  case PacketResult::Success:
+    Stream << "Success";
+    break;
+  case PacketResult::ErrorSendFailed:
+    Stream << "ErrorSendFailed";
+    break;
+  case PacketResult::ErrorSendAck:
+    Stream << "ErrorSendAck";
+    break;
+  case PacketResult::ErrorReplyFailed:
+    Stream << "ErrorReplyFailed";
+    break;
+  case PacketResult::ErrorReplyTimeout:
+    Stream << "ErrorReplyTimeout";
+    break;
+  case PacketResult::ErrorReplyInvalid:
+    Stream << "ErrorReplyInvalid";
+    break;
+  case PacketResult::ErrorReplyAck:
+    Stream << "ErrorReplyAck";
+    break;
+  case PacketResult::ErrorDisconnected:
+    Stream << "ErrorDisconnected";
+    break;
+  case PacketResult::ErrorNoSequenceLock:
+    Stream << "ErrorNoSequenceLock";
+    break;
+  }
+}

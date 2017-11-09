@@ -271,7 +271,7 @@ char *__kmp_affinity_proclist = NULL;
 kmp_affin_mask_t *__kmp_affinity_masks = NULL;
 unsigned __kmp_affinity_num_masks = 0;
 
-char const *__kmp_cpuinfo_file = NULL;
+char *__kmp_cpuinfo_file = NULL;
 
 #endif /* KMP_AFFINITY_SUPPORTED */
 
@@ -296,10 +296,6 @@ kmp_tasking_mode_t __kmp_tasking_mode = tskm_task_teams;
 #if OMP_45_ENABLED
 kmp_int32 __kmp_max_task_priority = 0;
 kmp_uint64 __kmp_taskloop_min_tasks = 0;
-#endif
-
-#if OMP_50_ENABLED && OMPT_SUPPORT
-char const *__kmp_tool_libraries = NULL;
 #endif
 
 /* This check ensures that the compiler is passing the correct data type for the

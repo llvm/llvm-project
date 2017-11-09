@@ -24,28 +24,9 @@ Versions
 ========
 
 LibFuzzer is under active development so you will need the current
-(or at least a very recent) version of the Clang compiler.
+(or at least a very recent) version of the Clang compiler (see `building Clang from trunk`_)
 
-(If `building Clang from trunk`_ is too time-consuming or difficult, then
-the Clang binaries that the Chromium developers build are likely to be
-fairly recent:
-
-.. code-block:: console
-
-  mkdir TMP_CLANG
-  cd TMP_CLANG
-  git clone https://chromium.googlesource.com/chromium/src/tools/clang
-  cd ..
-  TMP_CLANG/clang/scripts/update.py
-
-This installs the Clang binary as
-``./third_party/llvm-build/Release+Asserts/bin/clang``)
-
-The libFuzzer code resides in the LLVM repository, and requires a recent Clang
-compiler to build (and is used to :doc:`fuzz various parts of LLVM itself
-<FuzzingLLVM>`).  However the fuzzer itself does not (and should not) depend on
-any part of LLVM infrastructure and can be used for other projects without
-requiring the rest of LLVM.
+Refer to https://releases.llvm.org/5.0.0/docs/LibFuzzer.html for documentation on the older version.
 
 
 Getting Started
@@ -90,15 +71,19 @@ Some important things to remember about fuzz targets:
 Fuzzer Usage
 ------------
 
-Very recent versions of Clang (after April 20 2017) include libFuzzer,
-and no installation is necessary.
-In order to fuzz your binary, use the `-fsanitize=fuzzer` flag during the compilation::
+Recent versions of Clang (starting from 6.0) include libFuzzer, and no extra installation is necessary.
 
-   clang -fsanitize=fuzzer,address mytarget.c
+In order to build your fuzzer binary, use the `-fsanitize=fuzzer` flag during the
+compilation and linking. In most cases you may want to combine libFuzzer with
+AddressSanitizer_ (ASAN), UndefinedBehaviorSanitizer_ (UBSAN), or both::
 
-This will perform the necessary instrumentation, as well as linking in libFuzzer
-library.
-Note that linking in libFuzzer defines the ``main`` symbol.
+   clang -g -O1 -fsanitize=fuzzer                         mytarget.c # Builds the fuzz target w/o sanitizers
+   clang -g -O1 -fsanitize=fuzzer,address                 mytarget.c # Builds the fuzz target with ASAN
+   clang -g -O1 -fsanitize=fuzzer,signed-integer-overflow mytarget.c # Builds the fuzz target with a part of UBSAN
+
+This will perform the necessary instrumentation, as well as linking with the libFuzzer library.
+Note that ``-fsanitize=fuzzer`` links in the libFuzzer's ``main()`` symbol.
+
 If modifying ``CFLAGS`` of a large project, which also compiles executables
 requiring their own ``main`` symbol, it may be desirable to request just the
 instrumentation without linking::
@@ -108,37 +93,12 @@ instrumentation without linking::
 Then libFuzzer can be linked to the desired driver by passing in
 ``-fsanitize=fuzzer`` during the linking stage.
 
-Otherwise, build the libFuzzer library as a static archive, without any sanitizer
-options. Note that the libFuzzer library contains the ``main()`` function:
-
-.. code-block:: console
-
-  svn co http://llvm.org/svn/llvm-project/llvm/trunk/lib/Fuzzer  # or git clone https://chromium.googlesource.com/chromium/llvm-project/llvm/lib/Fuzzer
-  ./Fuzzer/build.sh  # Produces libFuzzer.a
-
-Then build the fuzzing target function and the library under test using
-the SanitizerCoverage_ option, which instruments the code so that the fuzzer
-can retrieve code coverage information (to guide the fuzzing).  Linking with
-the libFuzzer code then gives a fuzzer executable.
-
-You should also enable one or more of the *sanitizers*, which help to expose
-latent bugs by making incorrect behavior generate errors at runtime:
-
- - AddressSanitizer_ (ASAN) detects memory access errors. Use `-fsanitize=address`.
- - UndefinedBehaviorSanitizer_ (UBSAN) detects the use of various features of C/C++ that are explicitly
-   listed as resulting in undefined behavior.  Use `-fsanitize=undefined -fno-sanitize-recover=undefined`
-   or any individual UBSAN check, e.g.  `-fsanitize=signed-integer-overflow -fno-sanitize-recover=undefined`.
-   You may combine ASAN and UBSAN in one build.
- - MemorySanitizer_ (MSAN) detects uninitialized reads: code whose behavior relies on memory
-   contents that have not been initialized to a specific value. Use `-fsanitize=memory`.
-   MSAN can not be combined with other sanirizers and should be used as a seprate build.
-
-Finally, link with ``libFuzzer.a``::
-
-  clang -fsanitize-coverage=trace-pc-guard -fsanitize=address your_lib.cc fuzz_target.cc libFuzzer.a -o my_fuzzer
+Using MemorySanitizer_ (MSAN) with libFuzzer is possible too, but tricky.
+The exact details are out of scope, we expect to simplify this in future
+versions.
 
 .. _libfuzzer-corpus:
-  
+
 Corpus
 ------
 
@@ -174,7 +134,6 @@ Only the inputs that trigger new coverage will be added to the first corpus.
 .. code-block:: console
 
   ./my_fuzzer -merge=1 CURRENT_CORPUS_DIR NEW_POTENTIALLY_INTERESTING_INPUTS_DIR
-
 
 Running
 -------
@@ -221,6 +180,33 @@ worker processes can be overridden by the ``-workers=N`` option.  For example,
 running with ``-jobs=30`` on a 12-core machine would run 6 workers by default,
 with each worker averaging 5 bugs by completion of the entire process.
 
+
+Resuming merge
+--------------
+
+Merging large corpora may be time consuming, and it is often desirable to do it
+on preemptable VMs, where the process may be killed at any time.
+In order to seamlessly resume the merge, use the ``-merge_control_file`` flag
+and use ``killall -SIGUSR1 /path/to/fuzzer/binary`` to stop the merge gracefully. Example:
+
+.. code-block:: console
+
+  % rm -f SomeLocalPath
+  % ./my_fuzzer CORPUS1 CORPUS2 -merge=1 -merge_control_file=SomeLocalPath
+  ...
+  MERGE-INNER: using the control file 'SomeLocalPath'
+  ...
+  # While this is running, do `killall -SIGUSR1 my_fuzzer` in another console
+  ==9015== INFO: libFuzzer: exiting as requested
+
+  # This will leave the file SomeLocalPath with the partial state of the merge.
+  # Now, you can continue the merge by executing the same command. The merge
+  # will continue from where it has been interrupted.
+  % ./my_fuzzer CORPUS1 CORPUS2 -merge=1 -merge_control_file=SomeLocalPath
+  ...
+  MERGE-OUTER: non-empty control file provided: 'SomeLocalPath'
+  MERGE-OUTER: control file ok, 32 files total, first not processed file 20
+  ...
 
 Options
 =======
@@ -271,6 +257,10 @@ The most important command line options are:
   If set to 1, any corpus inputs from the 2nd, 3rd etc. corpus directories
   that trigger new code coverage will be merged into the first corpus
   directory.  Defaults to 0. This flag can be used to minimize a corpus.
+``-merge_control_file``
+  Specify a control file used for the merge proccess.
+  If a merge process gets killed it tries to leave this file in a state
+  suitable for resuming the merge. By default a temporary file will be used.
 ``-minimize_crash``
   If 1, minimizes the provided crash input.
   Use with -runs=N or -max_total_time=N to limit the number of attempts.
@@ -478,7 +468,7 @@ Tracing CMP instructions
 ------------------------
 
 With an additional compiler flag ``-fsanitize-coverage=trace-cmp``
-(see SanitizerCoverageTraceDataFlow_)
+(on by default as part of ``-fsanitize=fuzzer``, see SanitizerCoverageTraceDataFlow_)
 libFuzzer will intercept CMP instructions and guide mutations based
 on the arguments of intercepted CMP instructions. This may slow down
 the fuzzing but is very likely to improve the results.
@@ -486,7 +476,6 @@ the fuzzing but is very likely to improve the results.
 Value Profile
 -------------
 
-*EXPERIMENTAL*.
 With  ``-fsanitize-coverage=trace-cmp``
 and extra run-time flag ``-use_value_profile=1`` the fuzzer will
 collect value profiles for the parameters of compare instructions
@@ -548,7 +537,7 @@ Periodically restart both fuzzers so that they can use each other's findings.
 Currently, there is no simple way to run both fuzzing engines in parallel while sharing the same corpus dir.
 
 You may also use AFL on your target function ``LLVMFuzzerTestOneInput``:
-see an example `here <https://github.com/llvm-mirror/llvm/blob/master/lib/Fuzzer/afl/afl_driver.cpp>`__.
+see an example `here <https://github.com/llvm-mirror/compiler-rt/tree/master/lib/fuzzer/afl>`__.
 
 How good is my fuzzer?
 ----------------------
@@ -687,6 +676,8 @@ network, crypto.
 
 Trophies
 ========
+* Thousands of bugs found on OSS-Fuzz:  https://opensource.googleblog.com/2017/05/oss-fuzz-five-months-later-and.html
+
 * GLIBC: https://sourceware.org/glibc/wiki/FuzzingLibc
 
 * MUSL LIBC: `[1] <http://git.musl-libc.org/cgit/musl/commit/?id=39dfd58417ef642307d90306e1c7e50aaec5a35c>`__ `[2] <http://www.openwall.com/lists/oss-security/2015/03/30/3>`__
@@ -741,7 +732,7 @@ Trophies
 .. _AddressSanitizer: http://clang.llvm.org/docs/AddressSanitizer.html
 .. _LeakSanitizer: http://clang.llvm.org/docs/LeakSanitizer.html
 .. _Heartbleed: http://en.wikipedia.org/wiki/Heartbleed
-.. _FuzzerInterface.h: https://github.com/llvm-mirror/llvm/blob/master/lib/Fuzzer/FuzzerInterface.h
+.. _FuzzerInterface.h: https://github.com/llvm-mirror/compiler-rt/blob/master/lib/fuzzer/FuzzerInterface.h
 .. _3.7.0: http://llvm.org/releases/3.7.0/docs/LibFuzzer.html
 .. _building Clang from trunk: http://clang.llvm.org/get_started.html
 .. _MemorySanitizer: http://clang.llvm.org/docs/MemorySanitizer.html

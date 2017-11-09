@@ -1,12 +1,14 @@
 ; RUN: opt -reassociate %s -S | FileCheck %s
 
 define float @foo(float %a,float %b, float %c) {
-; CHECK: %mul3 = fmul float %a, %b
-; CHECK-NEXT: fmul fast float %c, 2.000000e+00
-; CHECK-NEXT: fadd fast float %factor, %b
-; CHECK-NEXT: fmul fast float %tmp1, %a
-; CHECK-NEXT: fadd fast float %tmp2, %mul3
-; CHECK-NEXT: ret float
+; CHECK-LABEL: @foo(
+; CHECK-NEXT:    [[MUL3:%.*]] = fmul float %a, %b
+; CHECK-NEXT:    [[FACTOR:%.*]] = fmul fast float %c, 2.000000e+00
+; CHECK-NEXT:    [[REASS_ADD1:%.*]] = fadd fast float [[FACTOR]], %b
+; CHECK-NEXT:    [[REASS_MUL:%.*]] = fmul fast float [[REASS_ADD1]], %a
+; CHECK-NEXT:    [[ADD3:%.*]] = fadd fast float [[REASS_MUL]], [[MUL3]]
+; CHECK-NEXT:    ret float [[ADD3]]
+;
   %mul1 = fmul fast float %a, %c
   %mul2 = fmul fast float %a, %b
   %mul3 = fmul float %a, %b

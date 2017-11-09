@@ -493,7 +493,11 @@ std::string InMemoryFileSystem::toString() const {
 }
 
 bool InMemoryFileSystem::addFile(const Twine &P, time_t ModificationTime,
-                                 std::unique_ptr<llvm::MemoryBuffer> Buffer) {
+                                 std::unique_ptr<llvm::MemoryBuffer> Buffer,
+                                 Optional<uint32_t> User,
+                                 Optional<uint32_t> Group,
+                                 Optional<llvm::sys::fs::file_type> Type,
+                                 Optional<llvm::sys::fs::perms> Perms) {
   SmallString<128> Path;
   P.toVector(Path);
 
@@ -509,7 +513,14 @@ bool InMemoryFileSystem::addFile(const Twine &P, time_t ModificationTime,
     return false;
 
   detail::InMemoryDirectory *Dir = Root.get();
-  auto I = llvm::sys::path::begin(Path), E = llvm::sys::path::end(Path);
+  auto I = llvm::sys::path::begin(Path), E = sys::path::end(Path);
+  const auto ResolvedUser = User.getValueOr(0);
+  const auto ResolvedGroup = Group.getValueOr(0);
+  const auto ResolvedType = Type.getValueOr(sys::fs::file_type::regular_file);
+  const auto ResolvedPerms = Perms.getValueOr(sys::fs::all_all);
+  // Any intermediate directories we create should be accessible by
+  // the owner, even if Perms says otherwise for the final path.
+  const auto NewDirectoryPerms = ResolvedPerms | sys::fs::owner_all;
   while (true) {
     StringRef Name = *I;
     detail::InMemoryNode *Node = Dir->getChild(Name);
@@ -517,24 +528,21 @@ bool InMemoryFileSystem::addFile(const Twine &P, time_t ModificationTime,
     if (!Node) {
       if (I == E) {
         // End of the path, create a new file.
-        // FIXME: expose the status details in the interface.
         Status Stat(P.str(), getNextVirtualUniqueID(),
-                    llvm::sys::toTimePoint(ModificationTime), 0, 0,
-                    Buffer->getBufferSize(),
-                    llvm::sys::fs::file_type::regular_file,
-                    llvm::sys::fs::all_all);
+                    llvm::sys::toTimePoint(ModificationTime), ResolvedUser,
+                    ResolvedGroup, Buffer->getBufferSize(), ResolvedType,
+                    ResolvedPerms);
         Dir->addChild(Name, llvm::make_unique<detail::InMemoryFile>(
                                 std::move(Stat), std::move(Buffer)));
         return true;
       }
 
       // Create a new directory. Use the path up to here.
-      // FIXME: expose the status details in the interface.
       Status Stat(
           StringRef(Path.str().begin(), Name.end() - Path.str().begin()),
-          getNextVirtualUniqueID(), llvm::sys::toTimePoint(ModificationTime), 0,
-          0, Buffer->getBufferSize(), llvm::sys::fs::file_type::directory_file,
-          llvm::sys::fs::all_all);
+          getNextVirtualUniqueID(), llvm::sys::toTimePoint(ModificationTime),
+          ResolvedUser, ResolvedGroup, Buffer->getBufferSize(),
+          sys::fs::file_type::directory_file, NewDirectoryPerms);
       Dir = cast<detail::InMemoryDirectory>(Dir->addChild(
           Name, llvm::make_unique<detail::InMemoryDirectory>(std::move(Stat))));
       continue;
@@ -558,10 +566,16 @@ bool InMemoryFileSystem::addFile(const Twine &P, time_t ModificationTime,
 }
 
 bool InMemoryFileSystem::addFileNoOwn(const Twine &P, time_t ModificationTime,
-                                      llvm::MemoryBuffer *Buffer) {
+                                      llvm::MemoryBuffer *Buffer,
+                                      Optional<uint32_t> User,
+                                      Optional<uint32_t> Group,
+                                      Optional<llvm::sys::fs::file_type> Type,
+                                      Optional<llvm::sys::fs::perms> Perms) {
   return addFile(P, ModificationTime,
                  llvm::MemoryBuffer::getMemBuffer(
-                     Buffer->getBuffer(), Buffer->getBufferIdentifier()));
+                     Buffer->getBuffer(), Buffer->getBufferIdentifier()),
+                 std::move(User), std::move(Group), std::move(Type),
+                 std::move(Perms));
 }
 
 static ErrorOr<detail::InMemoryNode *>

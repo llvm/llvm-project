@@ -114,6 +114,8 @@ FUZZER_FLAG_INT(handle_fpe, 1, "If 1, try to intercept SIGFPE.")
 FUZZER_FLAG_INT(handle_int, 1, "If 1, try to intercept SIGINT.")
 FUZZER_FLAG_INT(handle_term, 1, "If 1, try to intercept SIGTERM.")
 FUZZER_FLAG_INT(handle_xfsz, 1, "If 1, try to intercept SIGXFSZ.")
+FUZZER_FLAG_INT(handle_usr1, 1, "If 1, try to intercept SIGUSR1.")
+FUZZER_FLAG_INT(handle_usr2, 1, "If 1, try to intercept SIGUSR2.")
 FUZZER_FLAG_INT(close_fd_mask, 0, "If 1, close stdout at startup; "
     "if 2, close stderr; if 3, close both. "
     "Be careful, this will also close e.g. asan's stderr/stdout.")

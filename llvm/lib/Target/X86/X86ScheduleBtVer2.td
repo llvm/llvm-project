@@ -199,11 +199,13 @@ defm : JWriteResFpuPair<WriteCvtF2F,    JFPU1,  3>; // Float -> Float size conve
 
 def : WriteRes<WriteFVarBlend, [JFPU01]> {
   let Latency = 2;
-  let ResourceCycles = [2];
+  let ResourceCycles = [4];
+  let NumMicroOps = 3;
 }
 def : WriteRes<WriteFVarBlendLd, [JLAGU, JFPU01]> {
   let Latency = 7;
-  let ResourceCycles = [1, 2];
+  let ResourceCycles = [1, 4];
+  let NumMicroOps = 3;
 }
 
 // Vector integer operations.
@@ -217,21 +219,20 @@ defm : JWriteResFpuPair<WriteShuffle256, JFPU01, 1>;
 
 def : WriteRes<WriteVarBlend, [JFPU01]> {
   let Latency = 2;
-  let ResourceCycles = [2];
+  let ResourceCycles = [4];
+  let NumMicroOps = 3;
 }
 def : WriteRes<WriteVarBlendLd, [JLAGU, JFPU01]> {
   let Latency = 7;
-  let ResourceCycles = [1, 2];
+  let ResourceCycles = [1, 4];
+  let NumMicroOps = 3;
 }
 
 // FIXME: why do we need to define AVX2 resource on CPU that doesn't have AVX2?
-def : WriteRes<WriteVarVecShift, [JFPU01]> {
-  let Latency = 1;
-  let ResourceCycles = [1];
-}
+def : WriteRes<WriteVarVecShift, [JFPU01]> {}
 def : WriteRes<WriteVarVecShiftLd, [JLAGU, JFPU01]> {
   let Latency = 6;
-  let ResourceCycles = [1, 1];
+  let ResourceCycles = [1, 2];
 }
 
 def : WriteRes<WriteMPSAD, [JFPU0]> {
@@ -654,17 +655,31 @@ def : InstRW<[WriteVMOVMSK], (instregex "VMOVMSKP(D|S)(Y)?rr")>;
 // and ALU0 in the integer unit is occupied instead.
 def WriteVTESTY: SchedWriteRes<[JFPU01, JFPU0]> {
   let Latency = 4;
-  let ResourceCycles = [4, 2];
+  let ResourceCycles = [2, 2];
+  let NumMicroOps = 3;
 }
 def : InstRW<[WriteVTESTY], (instregex "VTESTP(S|D)Yrr")>;
 def : InstRW<[WriteVTESTY], (instregex "VPTESTYrr")>;
 
 def WriteVTESTYLd: SchedWriteRes<[JLAGU, JFPU01, JFPU0]> {
   let Latency = 9;
-  let ResourceCycles = [1, 4, 2];
+  let ResourceCycles = [1, 2, 2];
+  let NumMicroOps = 3;
 }
 def : InstRW<[WriteVTESTYLd], (instregex "VTESTP(S|D)Yrm")>;
 def : InstRW<[WriteVTESTYLd], (instregex "VPTESTYrm")>;
+
+def WriteVTEST: SchedWriteRes<[JFPU0]> {
+  let Latency = 3;
+}
+def : InstRW<[WriteVTEST], (instregex "VTESTP(S|D)rr")>;
+def : InstRW<[WriteVTEST], (instregex "VPTESTrr")>;
+
+def WriteVTESTLd: SchedWriteRes<[JLAGU, JFPU0]> {
+  let Latency = 8;
+}
+def : InstRW<[WriteVTESTLd], (instregex "VTESTP(S|D)rm")>;
+def : InstRW<[WriteVTESTLd], (instregex "VPTESTrm")>;
 
 def WriteVSQRTYPD: SchedWriteRes<[JFPU1]> {
   let Latency = 54;

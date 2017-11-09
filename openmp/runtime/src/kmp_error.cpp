@@ -75,7 +75,7 @@ static void __kmp_expand_cons_stack(int gtid, struct cons_header *p) {
 }
 
 // NOTE: Function returns allocated memory, caller must free it!
-static char const *__kmp_pragma(int ct, ident_t const *ident) {
+static char *__kmp_pragma(int ct, ident_t const *ident) {
   char const *cons = NULL; // Construct name.
   char *file = NULL; // File name.
   char *func = NULL; // Function (routine) name.
@@ -110,9 +110,9 @@ void __kmp_error_construct(kmp_i18n_id_t id, // Message identifier.
                            enum cons_type ct, // Construct type.
                            ident_t const *ident // Construct ident.
                            ) {
-  char const *construct = __kmp_pragma(ct, ident);
+  char *construct = __kmp_pragma(ct, ident);
   __kmp_fatal(__kmp_msg_format(id, construct), __kmp_msg_null);
-  KMP_INTERNAL_FREE(CCAST(char *, construct));
+  KMP_INTERNAL_FREE(construct);
 }
 
 void __kmp_error_construct2(kmp_i18n_id_t id, // Message identifier.
@@ -120,11 +120,11 @@ void __kmp_error_construct2(kmp_i18n_id_t id, // Message identifier.
                             ident_t const *ident, // First construct ident.
                             struct cons_data const *cons // Second construct.
                             ) {
-  char const *construct1 = __kmp_pragma(ct, ident);
-  char const *construct2 = __kmp_pragma(cons->type, cons->ident);
+  char *construct1 = __kmp_pragma(ct, ident);
+  char *construct2 = __kmp_pragma(cons->type, cons->ident);
   __kmp_fatal(__kmp_msg_format(id, construct1, construct2), __kmp_msg_null);
-  KMP_INTERNAL_FREE(CCAST(char *, construct1));
-  KMP_INTERNAL_FREE(CCAST(char *, construct2));
+  KMP_INTERNAL_FREE(construct1);
+  KMP_INTERNAL_FREE(construct2);
 }
 
 struct cons_header *__kmp_allocate_cons_stack(int gtid) {

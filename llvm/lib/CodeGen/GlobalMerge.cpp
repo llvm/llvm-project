@@ -386,7 +386,7 @@ bool GlobalMerge::doMerge(SmallVectorImpl<GlobalVariable*> &Globals,
   //
   // Multiply that by the size of the set to give us a crude profitability
   // metric.
-  std::sort(UsedGlobalSets.begin(), UsedGlobalSets.end(),
+  std::stable_sort(UsedGlobalSets.begin(), UsedGlobalSets.end(),
             [](const UsedGlobalSet &UGS1, const UsedGlobalSet &UGS2) {
               return UGS1.Globals.count() * UGS1.UsageCount <
                      UGS2.Globals.count() * UGS2.UsageCount;
