@@ -52,14 +52,14 @@ __kmp_env_block_free( & block );
 */
 
 struct __kmp_env_var {
-  char const *name;
-  char const *value;
+  char *name;
+  char *value;
 };
 typedef struct __kmp_env_var kmp_env_var_t;
 
 struct __kmp_env_blk {
-  char const *bulk;
-  kmp_env_var_t const *vars;
+  char *bulk;
+  kmp_env_var_t *vars;
   int count;
 };
 typedef struct __kmp_env_blk kmp_env_blk_t;

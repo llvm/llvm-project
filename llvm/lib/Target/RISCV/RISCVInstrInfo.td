@@ -399,3 +399,10 @@ def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
 def ADJCALLSTACKUP   : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
                               [(CallSeqEnd timm:$amt1, timm:$amt2)]>;
 } // Defs = [X2], Uses = [X2]
+
+//===----------------------------------------------------------------------===//
+// Standard extensions
+//===----------------------------------------------------------------------===//
+
+include "RISCVInstrInfoM.td"
+include "RISCVInstrInfoA.td"

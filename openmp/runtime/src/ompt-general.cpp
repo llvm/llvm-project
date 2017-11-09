@@ -214,9 +214,9 @@ ompt_try_start_tool(unsigned int omp_version, const char *runtime_version) {
   // Try tool-libraries-var ICV
   const char *tool_libs = getenv("OMP_TOOL_LIBRARIES");
   if (tool_libs) {
-    const char *libs = __kmp_str_format("%s", tool_libs);
+    char *libs = __kmp_str_format("%s", tool_libs);
     char *buf;
-    char *fname = __kmp_str_token(CCAST(char *, libs), sep, &buf);
+    char *fname = __kmp_str_token(libs, sep, &buf);
     while (fname) {
 #if KMP_OS_UNIX
       void *h = dlopen(fname, RTLD_LAZY);

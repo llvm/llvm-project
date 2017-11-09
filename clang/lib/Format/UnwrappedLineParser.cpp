@@ -2179,7 +2179,7 @@ void UnwrappedLineParser::parseJavaScriptEs6ImportExport() {
   while (!eof()) {
     if (FormatTok->is(tok::semi))
       return;
-    if (Line->Tokens.size() == 0) {
+    if (Line->Tokens.empty()) {
       // Common issue: Automatic Semicolon Insertion wrapped the line, so the
       // import statement should terminate.
       return;

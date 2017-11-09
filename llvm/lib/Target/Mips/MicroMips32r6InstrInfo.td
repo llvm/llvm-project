@@ -383,7 +383,9 @@ class BALC_MMR6_DESC : BC_MMR6_DESC_BASE<"balc", brtarget26_mm, II_BALC> {
   bit isCall = 1;
   list<Register> Defs = [RA];
 }
-class BC_MMR6_DESC : BC_MMR6_DESC_BASE<"bc", brtarget26_mm, II_BC>;
+class BC_MMR6_DESC : BC_MMR6_DESC_BASE<"bc", brtarget26_mm, II_BC> {
+  list<dag> Pattern = [(br bb:$offset)];
+}
 
 class BC16_MMR6_DESC : MicroMipsInst16<(outs), (ins brtarget10_mm:$offset),
                                        !strconcat("bc16", "\t$offset"), [],

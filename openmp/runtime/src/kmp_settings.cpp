@@ -335,7 +335,7 @@ static void __kmp_stg_parse_size(char const *name, char const *value,
 } // __kmp_stg_parse_size
 
 static void __kmp_stg_parse_str(char const *name, char const *value,
-                                char const **out) {
+                                char **out) {
   __kmp_str_free(out);
   *out = __kmp_str_format("%s", value);
 } // __kmp_stg_parse_str
@@ -2180,7 +2180,7 @@ static void __kmp_parse_affinity_env(char const *name, char const *value,
 #undef set_respect
 #undef set_granularity
 
-  __kmp_str_free(CCAST(const char **, &buffer));
+  __kmp_str_free(&buffer);
 
   if (proclist) {
     if (!type) {
@@ -3298,15 +3298,15 @@ static void __kmp_stg_parse_schedule(char const *name, char const *value,
     if (length > INT_MAX) {
       KMP_WARNING(LongValue, name);
     } else {
-      char *semicolon;
+      const char *semicolon;
       if (value[length - 1] == '"' || value[length - 1] == '\'')
         KMP_WARNING(UnbalancedQuotes, name);
       do {
         char sentinel;
 
-        semicolon = CCAST(char *, strchr(value, ';'));
+        semicolon = strchr(value, ';');
         if (*value && semicolon != value) {
-          char *comma = CCAST(char *, strchr(value, ','));
+          const char *comma = strchr(value, ',');
 
           if (comma) {
             ++comma;
@@ -3371,7 +3371,7 @@ static void __kmp_stg_parse_omp_schedule(char const *name, char const *value,
   if (value) {
     length = KMP_STRLEN(value);
     if (length) {
-      char *comma = CCAST(char *, strchr(value, ','));
+      const char *comma = strchr(value, ',');
       if (value[length - 1] == '"' || value[length - 1] == '\'')
         KMP_WARNING(UnbalancedQuotes, name);
       /* get the specified scheduling style */
@@ -4353,6 +4353,8 @@ static void __kmp_stg_print_omp_cancellation(kmp_str_buf_t *buffer,
 #endif
 
 #if OMP_50_ENABLED && OMPT_SUPPORT
+
+static char *__kmp_tool_libraries = NULL;
 
 static void __kmp_stg_parse_omp_tool_libraries(char const *name,
                                                char const *value, void *data) {
