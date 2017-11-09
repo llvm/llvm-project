@@ -2304,9 +2304,11 @@ public:
   ///
   /// \param OffsetInBits Offset of the piece in bits.
   /// \param SizeInBits   Size of the piece in bits.
-  static DIExpression *createFragmentExpression(const DIExpression *Exp,
-                                                unsigned OffsetInBits,
-                                                unsigned SizeInBits);
+  /// \return             Creating a fragment expression may fail if \c Expr
+  ///                     contains arithmetic operations that would be truncated.
+  static Optional<DIExpression *>
+  createFragmentExpression(const DIExpression *Expr, unsigned OffsetInBits,
+                           unsigned SizeInBits);
 };
 
 /// Global variables.

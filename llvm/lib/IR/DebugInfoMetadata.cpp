@@ -723,14 +723,23 @@ DIExpression *DIExpression::prepend(const DIExpression *Expr, bool Deref,
   return DIExpression::get(Expr->getContext(), Ops);
 }
 
-DIExpression *DIExpression::createFragmentExpression(const DIExpression *Expr,
-                                                     unsigned OffsetInBits,
-                                                     unsigned SizeInBits) {
+Optional<DIExpression *> DIExpression::createFragmentExpression(
+    const DIExpression *Expr, unsigned OffsetInBits, unsigned SizeInBits) {
   SmallVector<uint64_t, 8> Ops;
   // Copy over the expression, but leave off any trailing DW_OP_LLVM_fragment.
   if (Expr) {
     for (auto Op : Expr->expr_ops()) {
-      if (Op.getOp() == dwarf::DW_OP_LLVM_fragment) {
+      switch (Op.getOp()) {
+      default: break;
+      case dwarf::DW_OP_plus:
+      case dwarf::DW_OP_minus:
+        // We can't safely split arithmetic into multiple fragments because we
+        // can't express carry-over between fragments.
+        //
+        // FIXME: We *could* preserve the lowest fragment of a constant offset
+        // operation if the offset fits into SizeInBits.
+        return None;
+      case dwarf::DW_OP_LLVM_fragment: {
         // Make the new offset point into the existing fragment.
         uint64_t FragmentOffsetInBits = Op.getArg(0);
         // Op.getArg(0) is FragmentOffsetInBits.
@@ -738,7 +747,8 @@ DIExpression *DIExpression::createFragmentExpression(const DIExpression *Expr,
         assert((OffsetInBits + SizeInBits <= Op.getArg(0) + Op.getArg(1)) &&
                "new fragment outside of original fragment");
         OffsetInBits += FragmentOffsetInBits;
-        break;
+        continue;
+      }
       }
       Ops.push_back(Op.getOp());
       for (unsigned I = 0; I < Op.getNumArgs(); ++I)

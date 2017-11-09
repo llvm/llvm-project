@@ -4074,8 +4074,10 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
                  "new fragment is outside of original fragment");
           Start -= OrigFragment->OffsetInBits;
         }
-        FragmentExpr =
-            DIExpression::createFragmentExpression(Expr, Start, Size);
+        if (auto E = DIExpression::createFragmentExpression(Expr, Start, Size))
+          FragmentExpr = *E;
+        else
+          continue;
       }
 
       // Remove any existing dbg.declare intrinsic describing the same alloca.
