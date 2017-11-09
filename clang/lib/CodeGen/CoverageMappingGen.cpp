@@ -718,6 +718,19 @@ struct CounterCoverageMappingBuilder
     getRegion().setDeferred(true);
   }
 
+  /// Emit a gap region between \p StartLoc and \p EndLoc with the given count.
+  void fillGapAreaWithCount(SourceLocation StartLoc, SourceLocation EndLoc,
+                            Counter Count) {
+    if (StartLoc == EndLoc || StartLoc.isMacroID() || EndLoc.isMacroID() ||
+        !SM.isWrittenInSameFile(StartLoc, EndLoc))
+      return;
+    handleFileExit(StartLoc);
+    size_t Index = pushRegion(Count, StartLoc, EndLoc);
+    getRegion().setGap(true);
+    handleFileExit(EndLoc);
+    popRegions(Index);
+  }
+
   /// \brief Keep counts of breaks and continues inside loops.
   struct BreakContinue {
     Counter BreakCount;
@@ -1048,12 +1061,19 @@ struct CounterCoverageMappingBuilder
     // counter for the body when looking at the coverage.
     propagateCounts(ParentCount, S->getCond());
 
+    // The 'then' count applies to the area immediately after the condition.
+    fillGapAreaWithCount(getPreciseTokenLocEnd(getEnd(S->getCond())),
+                         getStart(S->getThen()), ThenCount);
+
     extendRegion(S->getThen());
     Counter OutCount = propagateCounts(ThenCount, S->getThen());
 
     Counter ElseCount = subtractCounters(ParentCount, ThenCount);
     if (const Stmt *Else = S->getElse()) {
-      extendRegion(S->getElse());
+      // The 'else' count applies to the area immediately after the 'then'.
+      fillGapAreaWithCount(getPreciseTokenLocEnd(getEnd(S->getThen())),
+                           getStart(Else), ElseCount);
+      extendRegion(Else);
       OutCount = addCounters(OutCount, propagateCounts(ElseCount, Else));
     } else
       OutCount = addCounters(OutCount, ElseCount);
@@ -1090,9 +1110,14 @@ struct CounterCoverageMappingBuilder
     Visit(E->getCond());
 
     if (!isa<BinaryConditionalOperator>(E)) {
+      // The 'then' count applies to the area immediately after the condition.
+      fillGapAreaWithCount(E->getQuestionLoc(), getStart(E->getTrueExpr()),
+                           TrueCount);
+
       extendRegion(E->getTrueExpr());
       propagateCounts(TrueCount, E->getTrueExpr());
     }
+
     extendRegion(E->getFalseExpr());
     propagateCounts(subtractCounters(ParentCount, TrueCount),
                     E->getFalseExpr());
