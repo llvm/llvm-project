@@ -93,6 +93,53 @@ def SIbuffer_load : SDNode <"AMDGPUISD::BUFFER_LOAD", SDTBufferLoad,
 def SIbuffer_load_format : SDNode <"AMDGPUISD::BUFFER_LOAD_FORMAT", SDTBufferLoad,
                             [SDNPMemOperand, SDNPHasChain, SDNPMayLoad]>;
 
+def SDTBufferStore : SDTypeProfile<0, 6,
+    [                    // vdata
+     SDTCisVT<1, v4i32>, // rsrc
+     SDTCisVT<2, i32>,   // vindex
+     SDTCisVT<3, i32>,   // offset
+     SDTCisVT<4, i1>,    // glc
+     SDTCisVT<5, i1>]>;  // slc
+
+def SIbuffer_store : SDNode <"AMDGPUISD::BUFFER_STORE", SDTBufferStore,
+                             [SDNPMemOperand, SDNPHasChain, SDNPMayStore]>;
+def SIbuffer_store_format : SDNode <"AMDGPUISD::BUFFER_STORE_FORMAT", SDTBufferStore,
+                             [SDNPMemOperand, SDNPHasChain, SDNPMayStore]>;
+
+class SDBufferAtomic<string opcode> : SDNode <opcode,
+  SDTypeProfile<1, 5,
+      [SDTCisVT<0, i32>,   // dst
+       SDTCisVT<1, i32>,   // vdata
+       SDTCisVT<2, v4i32>, // rsrc
+       SDTCisVT<3, i32>,   // vindex
+       SDTCisVT<4, i32>,   // offset
+       SDTCisVT<5, i1>]>,  // slc
+  [SDNPMemOperand, SDNPHasChain, SDNPMayLoad, SDNPMayStore]
+>;
+
+def SIbuffer_atomic_swap : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_SWAP">;
+def SIbuffer_atomic_add : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_ADD">;
+def SIbuffer_atomic_sub : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_SUB">;
+def SIbuffer_atomic_smin : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_SMIN">;
+def SIbuffer_atomic_umin : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_UMIN">;
+def SIbuffer_atomic_smax : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_SMAX">;
+def SIbuffer_atomic_umax : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_UMAX">;
+def SIbuffer_atomic_and : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_AND">;
+def SIbuffer_atomic_or : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_OR">;
+def SIbuffer_atomic_xor : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_XOR">;
+
+def SIbuffer_atomic_cmpswap : SDNode <"AMDGPUISD::BUFFER_ATOMIC_CMPSWAP",
+  SDTypeProfile<1, 6,
+    [SDTCisVT<0, i32>,   // dst
+     SDTCisVT<1, i32>,   // src
+     SDTCisVT<2, i32>,   // cmp
+     SDTCisVT<3, v4i32>, // rsrc
+     SDTCisVT<4, i32>,   // vindex
+     SDTCisVT<5, i32>,   // offset
+     SDTCisVT<6, i1>]>,  // slc
+  [SDNPMemOperand, SDNPHasChain, SDNPMayLoad, SDNPMayStore]
+>;
+
 class SDSample<string opcode> : SDNode <opcode,
   SDTypeProfile<1, 4, [SDTCisVT<0, v4f32>, SDTCisVT<2, v8i32>,
                        SDTCisVT<3, v4i32>, SDTCisVT<4, i32>]>

@@ -71,7 +71,6 @@ define void @foo() {
 ; 686-O0-NEXT:    movzbl %al, %ecx
 ; 686-O0-NEXT:    movl %ecx, (%esp)
 ; 686-O0-NEXT:    addl $8, %esp
-; 686-O0-NEXT:    .cfi_def_cfa_offset 4
 ; 686-O0-NEXT:    retl
 ;
 ; 686-LABEL: foo:
@@ -89,7 +88,6 @@ define void @foo() {
 ; 686-NEXT:    setle %dl
 ; 686-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; 686-NEXT:    addl $8, %esp
-; 686-NEXT:    .cfi_def_cfa_offset 4
 ; 686-NEXT:    retl
 entry:
   %a = alloca i8, align 1
@@ -234,15 +232,10 @@ define void @f1() {
 ; 686-O0-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
 ; 686-O0-NEXT:    movl %esi, (%esp) # 4-byte Spill
 ; 686-O0-NEXT:    addl $36, %esp
-; 686-O0-NEXT:    .cfi_def_cfa_offset 20
 ; 686-O0-NEXT:    popl %esi
-; 686-O0-NEXT:    .cfi_def_cfa_offset 16
 ; 686-O0-NEXT:    popl %edi
-; 686-O0-NEXT:    .cfi_def_cfa_offset 12
 ; 686-O0-NEXT:    popl %ebx
-; 686-O0-NEXT:    .cfi_def_cfa_offset 8
 ; 686-O0-NEXT:    popl %ebp
-; 686-O0-NEXT:    .cfi_def_cfa_offset 4
 ; 686-O0-NEXT:    retl
 ;
 ; 686-LABEL: f1:
@@ -284,11 +277,8 @@ define void @f1() {
 ; 686-NEXT:    movl %eax, _ZN8struct_210member_2_0E
 ; 686-NEXT:    movl $0, _ZN8struct_210member_2_0E+4
 ; 686-NEXT:    addl $1, %esp
-; 686-NEXT:    .cfi_def_cfa_offset 12
 ; 686-NEXT:    popl %esi
-; 686-NEXT:    .cfi_def_cfa_offset 8
 ; 686-NEXT:    popl %edi
-; 686-NEXT:    .cfi_def_cfa_offset 4
 ; 686-NEXT:    retl
 entry:
   %a = alloca i8, align 1
@@ -402,11 +392,8 @@ define void @f2() {
 ; 686-O0-NEXT:    movw %cx, %di
 ; 686-O0-NEXT:    movw %di, (%eax)
 ; 686-O0-NEXT:    addl $2, %esp
-; 686-O0-NEXT:    .cfi_def_cfa_offset 12
 ; 686-O0-NEXT:    popl %esi
-; 686-O0-NEXT:    .cfi_def_cfa_offset 8
 ; 686-O0-NEXT:    popl %edi
-; 686-O0-NEXT:    .cfi_def_cfa_offset 4
 ; 686-O0-NEXT:    retl
 ;
 ; 686-LABEL: f2:
@@ -427,7 +414,6 @@ define void @f2() {
 ; 686-NEXT:    sete %dl
 ; 686-NEXT:    movw %dx, (%eax)
 ; 686-NEXT:    addl $2, %esp
-; 686-NEXT:    .cfi_def_cfa_offset 4
 ; 686-NEXT:    retl
 entry:
   %a = alloca i16, align 2
@@ -546,7 +532,6 @@ define void @f3() #0 {
 ; 686-O0-NEXT:    popl %esi
 ; 686-O0-NEXT:    popl %edi
 ; 686-O0-NEXT:    popl %ebp
-; 686-O0-NEXT:    .cfi_def_cfa %esp, 4
 ; 686-O0-NEXT:    retl
 ;
 ; 686-LABEL: f3:
@@ -573,7 +558,6 @@ define void @f3() #0 {
 ; 686-NEXT:    movl %ecx, var_46
 ; 686-NEXT:    movl %ebp, %esp
 ; 686-NEXT:    popl %ebp
-; 686-NEXT:    .cfi_def_cfa %esp, 4
 ; 686-NEXT:    retl
 entry:
   %a = alloca i64, align 8

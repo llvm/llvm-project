@@ -433,6 +433,7 @@ static bool isAssumeLikeIntrinsic(const Instruction *I) {
       default: break;
       // FIXME: This list is repeated from NoTTI::getIntrinsicCost.
       case Intrinsic::assume:
+      case Intrinsic::sideeffect:
       case Intrinsic::dbg_declare:
       case Intrinsic::dbg_value:
       case Intrinsic::invariant_start:
@@ -3857,7 +3858,8 @@ bool llvm::isGuaranteedToTransferExecutionToSuccessor(const Instruction *I) {
     // FIXME: This isn't aggressive enough; a call which only writes to a global
     // is guaranteed to return.
     return CS.onlyReadsMemory() || CS.onlyAccessesArgMemory() ||
-           match(I, m_Intrinsic<Intrinsic::assume>());
+           match(I, m_Intrinsic<Intrinsic::assume>()) ||
+           match(I, m_Intrinsic<Intrinsic::sideeffect>());
   }
 
   // Other instructions return normally.
@@ -4138,7 +4140,8 @@ static SelectPatternResult matchMinMax(CmpInst::Predicate Pred,
     // Is the sign bit set?
     // (X <s 0) ? X : MAXVAL ==> (X >u MAXVAL) ? X : MAXVAL ==> UMAX
     // (X <s 0) ? MAXVAL : X ==> (X >u MAXVAL) ? MAXVAL : X ==> UMIN
-    if (Pred == CmpInst::ICMP_SLT && *C1 == 0 && C2->isMaxSignedValue())
+    if (Pred == CmpInst::ICMP_SLT && C1->isNullValue() &&
+        C2->isMaxSignedValue())
       return {CmpLHS == TrueVal ? SPF_UMAX : SPF_UMIN, SPNB_NA, false};
 
     // Is the sign bit clear?
@@ -4270,13 +4273,15 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
 
       // ABS(X) ==> (X >s 0) ? X : -X and (X >s -1) ? X : -X
       // NABS(X) ==> (X >s 0) ? -X : X and (X >s -1) ? -X : X
-      if (Pred == ICmpInst::ICMP_SGT && (*C1 == 0 || C1->isAllOnesValue())) {
+      if (Pred == ICmpInst::ICMP_SGT &&
+          (C1->isNullValue() || C1->isAllOnesValue())) {
         return {(CmpLHS == TrueVal) ? SPF_ABS : SPF_NABS, SPNB_NA, false};
       }
 
       // ABS(X) ==> (X <s 0) ? -X : X and (X <s 1) ? -X : X
       // NABS(X) ==> (X <s 0) ? X : -X and (X <s 1) ? X : -X
-      if (Pred == ICmpInst::ICMP_SLT && (*C1 == 0 || *C1 == 1)) {
+      if (Pred == ICmpInst::ICMP_SLT &&
+          (C1->isNullValue() || C1->isOneValue())) {
         return {(CmpLHS == FalseVal) ? SPF_ABS : SPF_NABS, SPNB_NA, false};
       }
     }

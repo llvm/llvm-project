@@ -1672,9 +1672,9 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, uint64_t V1Size,
   // If both pointers are pointing into the same object and one of them
   // accesses the entire object, then the accesses must overlap in some way.
   if (O1 == O2)
-    if ((V1Size != MemoryLocation::UnknownSize &&
-         isObjectSize(O1, V1Size, DL, TLI)) ||
-        (V2Size != MemoryLocation::UnknownSize &&
+    if (V1Size != MemoryLocation::UnknownSize &&
+        V2Size != MemoryLocation::UnknownSize &&
+        (isObjectSize(O1, V1Size, DL, TLI) ||
          isObjectSize(O2, V2Size, DL, TLI)))
       return AliasCache[Locs] = PartialAlias;
 

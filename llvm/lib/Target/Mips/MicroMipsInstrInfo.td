@@ -1062,12 +1062,12 @@ let Predicates = [InMicroMips] in {
                 (LW_MM addr:$addr)>;
   def : MipsPat<(subc GPR32:$lhs, GPR32:$rhs),
                 (SUBu_MM GPR32:$lhs, GPR32:$rhs)>;
-
-  def : MipsPat<(MipsTailCall (iPTR tglobaladdr:$dst)),
-                (TAILCALL_MM tglobaladdr:$dst)>, ISA_MIPS1_NOT_32R6_64R6;
-  def : MipsPat<(MipsTailCall (iPTR texternalsym:$dst)),
-                (TAILCALL_MM texternalsym:$dst)>, ISA_MIPS1_NOT_32R6_64R6;
 }
+
+def : MipsPat<(MipsTailCall (iPTR tglobaladdr:$dst)),
+              (TAILCALL_MM tglobaladdr:$dst)>, ISA_MICROMIPS32_NOT_MIPS32R6;
+def : MipsPat<(MipsTailCall (iPTR texternalsym:$dst)),
+              (TAILCALL_MM texternalsym:$dst)>, ISA_MICROMIPS32_NOT_MIPS32R6;
 
 let AddedComplexity = 40 in {
   def : MipsPat<(i32 (sextloadi16 addrRegImm:$a)),

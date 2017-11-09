@@ -2,6 +2,7 @@
 ;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s -check-prefix=CHECK -check-prefix=VI
 
 ;CHECK-LABEL: {{^}}test1:
+;CHECK-NOT: s_waitcnt
 ;CHECK: buffer_atomic_swap v0, off, s[0:3], 0 glc
 ;VI: s_movk_i32 [[SOFS:s[0-9]+]], 0x1ffc
 ;CHECK: s_waitcnt vmcnt(0)
@@ -32,6 +33,7 @@ main_body:
 }
 
 ;CHECK-LABEL: {{^}}test2:
+;CHECK-NOT: s_waitcnt
 ;CHECK: buffer_atomic_add v0, v1, s[0:3], 0 idxen glc
 ;CHECK: s_waitcnt vmcnt(0)
 ;CHECK: buffer_atomic_sub v0, v1, s[0:3], 0 idxen glc
@@ -69,6 +71,7 @@ main_body:
 ; create copies which we don't bother to track here.
 ;
 ;CHECK-LABEL: {{^}}test3:
+;CHECK-NOT: s_waitcnt
 ;CHECK: buffer_atomic_cmpswap {{v\[[0-9]+:[0-9]+\]}}, off, s[0:3], 0 glc
 ;CHECK: s_waitcnt vmcnt(0)
 ;VI: s_movk_i32 [[SOFS:s[0-9]+]], 0x1ffc

@@ -893,7 +893,7 @@ def PHI : Instruction {
   let OutOperandList = (outs unknown:$dst);
   let InOperandList = (ins variable_ops);
   let AsmString = "PHINODE";
-  let hasSideEffects = 1;
+  let hasSideEffects = 0;
 }
 def INLINEASM : Instruction {
   let OutOperandList = (outs);
@@ -907,7 +907,7 @@ def CFI_INSTRUCTION : Instruction {
   let AsmString = "";
   let hasCtrlDep = 1;
   let hasSideEffects = 1;
-  let isNotDuplicable = 0;
+  let isNotDuplicable = 1;
 }
 def EH_LABEL : Instruction {
   let OutOperandList = (outs);

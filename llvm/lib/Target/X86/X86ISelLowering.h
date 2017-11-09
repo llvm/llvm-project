@@ -1404,13 +1404,21 @@ namespace llvm {
   };
 
   // X86 specific Gather node.
-  class X86MaskedGatherSDNode : public MaskedGatherScatterSDNode {
+  // The class has the same order of operands as MaskedGatherSDNode for
+  // convenience.
+  class X86MaskedGatherSDNode : public MemSDNode {
   public:
     X86MaskedGatherSDNode(unsigned Order,
                           const DebugLoc &dl, SDVTList VTs, EVT MemVT,
                           MachineMemOperand *MMO)
-      : MaskedGatherScatterSDNode(X86ISD::MGATHER, Order, dl, VTs, MemVT, MMO)
+      : MemSDNode(X86ISD::MGATHER, Order, dl, VTs, MemVT, MMO)
     {}
+
+    const SDValue &getBasePtr() const { return getOperand(3); }
+    const SDValue &getIndex()   const { return getOperand(4); }
+    const SDValue &getMask()    const { return getOperand(2); }
+    const SDValue &getValue()   const { return getOperand(1); }
+
     static bool classof(const SDNode *N) {
       return N->getOpcode() == X86ISD::MGATHER;
     }

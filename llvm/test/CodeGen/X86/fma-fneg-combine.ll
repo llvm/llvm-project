@@ -160,6 +160,28 @@ entry:
 
 declare <4 x float> @llvm.x86.avx512.mask3.vfmadd.ss(<4 x float>, <4 x float>, <4 x float>, i8, i32)
 
+define <4 x float> @test11b(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 zeroext %mask) local_unnamed_addr #0 {
+; SKX-LABEL: test11b:
+; SKX:       # BB#0: # %entry
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vfmsub213ss %xmm2, %xmm1, %xmm1 {%k1}
+; SKX-NEXT:    vmovaps %xmm1, %xmm0
+; SKX-NEXT:    retq
+;
+; KNL-LABEL: test11b:
+; KNL:       # BB#0: # %entry
+; KNL-NEXT:    kmovw %edi, %k1
+; KNL-NEXT:    vfmsub213ss %xmm2, %xmm1, %xmm1 {%k1}
+; KNL-NEXT:    vmovaps %xmm1, %xmm0
+; KNL-NEXT:    retq
+entry:
+  %sub.i = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %c
+  %0 = tail call <4 x float> @llvm.x86.avx512.mask.vfmadd.ss(<4 x float> %b, <4 x float> %b, <4 x float> %sub.i, i8 %mask, i32 4) #10
+  ret <4 x float> %0
+}
+
+declare <4 x float> @llvm.x86.avx512.mask.vfmadd.ss(<4 x float>, <4 x float>, <4 x float>, i8, i32)
+
 define <8 x double> @test12(<8 x double> %a, <8 x double> %b, <8 x double> %c, i8 %mask) {
 ; SKX-LABEL: test12:
 ; SKX:       # BB#0: # %entry

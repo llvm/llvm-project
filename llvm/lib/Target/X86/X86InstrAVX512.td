@@ -6002,12 +6002,12 @@ let Constraints = "$src1 = $dst", hasSideEffects = 0 in {
          AVX512FMA3Base, EVEX_B, EVEX_RC;
 
   let isCodeGenOnly = 1, isCommutable = 1 in {
-    def r     : AVX512FMA3<opc, MRMSrcReg, (outs _.FRC:$dst),
+    def r     : AVX512FMA3S<opc, MRMSrcReg, (outs _.FRC:$dst),
                      (ins _.FRC:$src1, _.FRC:$src2, _.FRC:$src3),
                      !strconcat(OpcodeStr,
                               "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
                      !if(MaskOnlyReg, [], [RHS_r])>;
-    def m     : AVX512FMA3<opc, MRMSrcMem, (outs _.FRC:$dst),
+    def m     : AVX512FMA3S<opc, MRMSrcMem, (outs _.FRC:$dst),
                     (ins _.FRC:$src1, _.FRC:$src2, _.ScalarMemOp:$src3),
                     !strconcat(OpcodeStr,
                                "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),

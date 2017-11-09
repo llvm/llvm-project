@@ -506,6 +506,11 @@ static bool findAccessType(TBAAStructTagNode BaseTag,
 }
 
 static const MDNode *createAccessTag(const MDNode *AccessType) {
+  // If there is no access type or the access type is the root node, then
+  // we don't have any useful access tag to return.
+  if (!AccessType || AccessType->getNumOperands() < 2)
+    return nullptr;
+
   Type *Int64 = IntegerType::get(AccessType->getContext(), 64);
   auto *ImmutabilityFlag = ConstantAsMetadata::get(ConstantInt::get(Int64, 0));
   Metadata *Ops[] = {const_cast<MDNode*>(AccessType),
@@ -537,42 +542,26 @@ static bool matchAccessTags(const MDNode *A, const MDNode *B,
   assert(isStructPathTBAA(B) && "Access B is not struct-path aware!");
 
   TBAAStructTagNode TagA(A), TagB(B);
+  const MDNode *CommonType = getLeastCommonType(TagA.getAccessType(),
+                                                TagB.getAccessType());
+  if (GenericTag)
+    *GenericTag = createAccessTag(CommonType);
 
   // TODO: We need to check if AccessType of TagA encloses AccessType of
   // TagB to support aggregate AccessType. If yes, return true.
 
-  const MDNode *BaseA = TagA.getBaseType();
-  const MDNode *BaseB = TagB.getBaseType();
-
   // Climb the type DAG from base type of A to see if we reach base type of B.
   uint64_t OffsetA;
-  if (findAccessType(TagA, BaseB, OffsetA)) {
-    if (GenericTag)
-      *GenericTag = createAccessTag(TagB.getAccessType());
+  if (findAccessType(TagA, TagB.getBaseType(), OffsetA))
     return OffsetA == TagB.getOffset();
-  }
 
   // Climb the type DAG from base type of B to see if we reach base type of A.
   uint64_t OffsetB;
-  if (findAccessType(TagB, BaseA, OffsetB)) {
-    if (GenericTag)
-      *GenericTag = createAccessTag(TagA.getAccessType());
+  if (findAccessType(TagB, TagA.getBaseType(), OffsetB))
     return OffsetB == TagA.getOffset();
-  }
 
-  // If neither node is an ancestor of the other, then try to find the type
-  // that is common to both the final access types.
-  const MDNode *CommonType = getLeastCommonType(TagA.getAccessType(),
-                                                TagB.getAccessType());
-
-  // If there is no common type or the only common type is the root node, then
-  // we don't have any useful generic access tag to return.
-  if (GenericTag)
-    *GenericTag = !CommonType || CommonType->getNumOperands() < 2 ?
-        nullptr : createAccessTag(CommonType);
-
-  // If they have different roots, they're part of different potentially
-  // unrelated type systems, so we must be conservative.
+  // If the final access types have different roots, they're part of different
+  // potentially unrelated type systems, so we must be conservative.
   if (!CommonType)
     return true;
 

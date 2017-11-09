@@ -320,45 +320,8 @@ bool MachineOperand::isIdenticalTo(const MachineOperand &Other) const {
   }
   case MachineOperand::MO_MCSymbol:
     return getMCSymbol() == Other.getMCSymbol();
-  case MachineOperand::MO_CFIIndex: {
-    const MachineFunction *MF = getParent()->getParent()->getParent();
-    const MachineFunction *OtherMF =
-        Other.getParent()->getParent()->getParent();
-    MCCFIInstruction Inst = MF->getFrameInstructions()[getCFIIndex()];
-    MCCFIInstruction OtherInst =
-        OtherMF->getFrameInstructions()[Other.getCFIIndex()];
-    MCCFIInstruction::OpType op = Inst.getOperation();
-    if (op != OtherInst.getOperation()) return false;
-    switch (op) {
-    case MCCFIInstruction::OpDefCfa:
-    case MCCFIInstruction::OpOffset:
-    case MCCFIInstruction::OpRelOffset:
-      if (Inst.getRegister() != OtherInst.getRegister()) return false;
-      if (Inst.getOffset() != OtherInst.getOffset()) return false;
-      break;
-    case MCCFIInstruction::OpRestore:
-    case MCCFIInstruction::OpUndefined:
-    case MCCFIInstruction::OpSameValue:
-    case MCCFIInstruction::OpDefCfaRegister:
-      if (Inst.getRegister() != OtherInst.getRegister()) return false;
-      break;
-    case MCCFIInstruction::OpRegister:
-      if (Inst.getRegister() != OtherInst.getRegister()) return false;
-      if (Inst.getRegister2() != OtherInst.getRegister2()) return false;
-      break;
-    case MCCFIInstruction::OpDefCfaOffset:
-    case MCCFIInstruction::OpAdjustCfaOffset:
-    case MCCFIInstruction::OpGnuArgsSize:
-      if (Inst.getOffset() != OtherInst.getOffset()) return false;
-      break;
-    case MCCFIInstruction::OpRememberState:
-    case MCCFIInstruction::OpRestoreState:
-    case MCCFIInstruction::OpEscape:
-    case MCCFIInstruction::OpWindowSave:
-      break;
-    }
-    return true;
-  }
+  case MachineOperand::MO_CFIIndex:
+    return getCFIIndex() == Other.getCFIIndex();
   case MachineOperand::MO_Metadata:
     return getMetadata() == Other.getMetadata();
   case MachineOperand::MO_IntrinsicID:
@@ -407,13 +370,8 @@ hash_code llvm::hash_value(const MachineOperand &MO) {
     return hash_combine(MO.getType(), MO.getTargetFlags(), MO.getMetadata());
   case MachineOperand::MO_MCSymbol:
     return hash_combine(MO.getType(), MO.getTargetFlags(), MO.getMCSymbol());
-  case MachineOperand::MO_CFIIndex: {
-    const MachineFunction *MF = MO.getParent()->getParent()->getParent();
-    MCCFIInstruction Inst = MF->getFrameInstructions()[MO.getCFIIndex()];
-    return hash_combine(MO.getType(), MO.getTargetFlags(), Inst.getOperation(),
-                        Inst.getRegister(), Inst.getRegister2(),
-                        Inst.getOffset());
-  }
+  case MachineOperand::MO_CFIIndex:
+    return hash_combine(MO.getType(), MO.getTargetFlags(), MO.getCFIIndex());
   case MachineOperand::MO_IntrinsicID:
     return hash_combine(MO.getType(), MO.getTargetFlags(), MO.getIntrinsicID());
   case MachineOperand::MO_Predicate:
@@ -1686,7 +1644,7 @@ bool MachineInstr::isSafeToMove(AliasAnalysis *AA, bool &SawStore) const {
   // Treat volatile loads as stores. This is not strictly necessary for
   // volatiles, but it is required for atomic loads. It is not allowed to move
   // a load across an atomic load with Ordering > Monotonic.
-  if (mayStore() || isCall() ||
+  if (mayStore() || isCall() || isPHI() ||
       (mayLoad() && hasOrderedMemoryRef())) {
     SawStore = true;
     return false;

@@ -34,6 +34,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
@@ -500,6 +501,10 @@ Vectorizer::getVectorizablePrefix(ArrayRef<Instruction *> Chain) {
         MemoryInstrs.push_back(&I);
       else
         ChainInstrs.push_back(&I);
+    } else if (isa<IntrinsicInst>(&I) &&
+               cast<IntrinsicInst>(&I)->getIntrinsicID() ==
+                   Intrinsic::sideeffect) {
+      // Ignore llvm.sideeffect calls.
     } else if (IsLoadChain && (I.mayWriteToMemory() || I.mayThrow())) {
       DEBUG(dbgs() << "LSV: Found may-write/throw operation: " << I << '\n');
       break;

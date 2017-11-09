@@ -757,12 +757,12 @@ namespace llvm {
                                          const DILocation *DL,
                                          Instruction *InsertBefore);
 
-    /// Replace the vtable holder in the given composite type.
+    /// Replace the vtable holder in the given type.
     ///
     /// If this creates a self reference, it may orphan some unresolved cycles
     /// in the operands of \c T, so \a DIBuilder needs to track that.
     void replaceVTableHolder(DICompositeType *&T,
-                             DICompositeType *VTableHolder);
+                             DIType *VTableHolder);
 
     /// Replace arrays on a composite type.
     ///
