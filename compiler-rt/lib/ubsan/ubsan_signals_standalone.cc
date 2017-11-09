@@ -29,9 +29,8 @@ void InitializeDeadlySignals() {}
 #else
 static void OnStackUnwind(const SignalContext &sig, const void *,
                           BufferedStackTrace *stack) {
-  GetStackTraceWithPcBpAndContext(stack, kStackTraceMax, sig.pc, sig.bp,
-                                  sig.context,
-                                  common_flags()->fast_unwind_on_fatal);
+  GetStackTrace(stack, kStackTraceMax, sig.pc, sig.bp, sig.context,
+                common_flags()->fast_unwind_on_fatal);
 }
 
 static void UBsanOnDeadlySignal(int signo, void *siginfo, void *context) {

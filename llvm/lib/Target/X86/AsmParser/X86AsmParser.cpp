@@ -2699,8 +2699,9 @@ static const char *getSubtargetFeatureName(uint64_t Val);
 
 void X86AsmParser::EmitInstruction(MCInst &Inst, OperandVector &Operands,
                                    MCStreamer &Out) {
-  Instrumentation->InstrumentAndEmitInstruction(Inst, Operands, getContext(),
-                                                MII, Out);
+  Instrumentation->InstrumentAndEmitInstruction(
+      Inst, Operands, getContext(), MII, Out,
+      getParser().shouldPrintSchedInfo());
 }
 
 bool X86AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,

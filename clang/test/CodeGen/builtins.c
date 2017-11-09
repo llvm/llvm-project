@@ -176,6 +176,19 @@ void bar() {
 }
 // CHECK: }
 
+// CHECK-LABEL: define void @test_conditional_bzero
+void test_conditional_bzero() {
+  char dst[20];
+  int _sz = 20, len = 20;
+  return (_sz
+          ? ((_sz >= len)
+              ? __builtin_bzero(dst, len)
+              : foo())
+          : __builtin_bzero(dst, len));
+  // CHECK: call void @llvm.memset
+  // CHECK: call void @llvm.memset
+  // CHECK-NOT: phi
+}
 
 // CHECK-LABEL: define void @test_float_builtins
 void test_float_builtins(float F, double D, long double LD) {
