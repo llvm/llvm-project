@@ -68,8 +68,8 @@ void f(P x, Q y) {
     cr = tu.codeComplete('fake.cpp', 13, 5, unsaved_files=files)
     expected = [
         "{'P', TypedText} | {'::', Text} || Priority: 75 || Availability: Available || Brief comment: None",
-        "{'P &', ResultType} | {'operator=', TypedText} | {'(', LeftParen} | {'const P &', Placeholder} | {')', RightParen} || Priority: 34 || Availability: Available || Brief comment: None",
+        "{'P &', ResultType} | {'operator=', TypedText} | {'(', LeftParen} | {'const P &', Placeholder} | {')', RightParen} || Priority: 79 || Availability: Available || Brief comment: None",
         "{'int', ResultType} | {'member', TypedText} || Priority: 35 || Availability: NotAccessible || Brief comment: None",
-        "{'void', ResultType} | {'~P', TypedText} | {'(', LeftParen} | {')', RightParen} || Priority: 34 || Availability: Available || Brief comment: None"
+        "{'void', ResultType} | {'~P', TypedText} | {'(', LeftParen} | {')', RightParen} || Priority: 79 || Availability: Available || Brief comment: None"
     ]
     check_completion_results(cr, expected)

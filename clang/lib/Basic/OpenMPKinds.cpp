@@ -793,7 +793,7 @@ bool clang::isOpenMPParallelDirective(OpenMPDirectiveKind DKind) {
 
 bool clang::isOpenMPTargetExecutionDirective(OpenMPDirectiveKind DKind) {
   return DKind == OMPD_target || DKind == OMPD_target_parallel ||
-         DKind == OMPD_target_parallel_for || 
+         DKind == OMPD_target_parallel_for ||
          DKind == OMPD_target_parallel_for_simd || DKind == OMPD_target_simd ||
          DKind == OMPD_target_teams || DKind == OMPD_target_teams_distribute ||
          DKind == OMPD_target_teams_distribute_parallel_for ||
@@ -829,7 +829,8 @@ bool clang::isOpenMPSimdDirective(OpenMPDirectiveKind DKind) {
          DKind == OMPD_teams_distribute_simd ||
          DKind == OMPD_teams_distribute_parallel_for_simd ||
          DKind == OMPD_target_teams_distribute_parallel_for_simd ||
-         DKind == OMPD_target_teams_distribute_simd;
+         DKind == OMPD_target_teams_distribute_simd ||
+         DKind == OMPD_target_parallel_for_simd;
 }
 
 bool clang::isOpenMPNestingDistributeDirective(OpenMPDirectiveKind Kind) {
@@ -908,7 +909,6 @@ void clang::getOpenMPCaptureRegions(
   case OMPD_atomic:
   case OMPD_target_data:
   case OMPD_target:
-  case OMPD_target_parallel_for_simd:
   case OMPD_target_simd:
   case OMPD_task:
   case OMPD_taskloop:
@@ -926,6 +926,7 @@ void clang::getOpenMPCaptureRegions(
     break;
   case OMPD_target_parallel:
   case OMPD_target_parallel_for:
+  case OMPD_target_parallel_for_simd:
     CaptureRegions.push_back(OMPD_target);
     CaptureRegions.push_back(OMPD_parallel);
     break;

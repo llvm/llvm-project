@@ -460,6 +460,53 @@ RangeConstraintManager::removeDeadBindings(ProgramStateRef State,
   return Changed ? State->set<ConstraintRange>(CR) : State;
 }
 
+/// Return a range set subtracting zero from \p Domain.
+static RangeSet assumeNonZero(
+    BasicValueFactory &BV,
+    RangeSet::Factory &F,
+    SymbolRef Sym,
+    RangeSet Domain) {
+  APSIntType IntType = BV.getAPSIntType(Sym->getType());
+  return Domain.Intersect(BV, F, ++IntType.getZeroValue(),
+      --IntType.getZeroValue());
+}
+
+/// \brief Apply implicit constraints for bitwise OR- and AND-.
+/// For unsigned types, bitwise OR with a constant always returns
+/// a value greater-or-equal than the constant, and bitwise AND
+/// returns a value less-or-equal then the constant.
+///
+/// Pattern matches the expression \p Sym against those rule,
+/// and applies the required constraints.
+/// \p Input Previously established expression range set
+static RangeSet applyBitwiseConstraints(
+    BasicValueFactory &BV,
+    RangeSet::Factory &F,
+    RangeSet Input,
+    const SymIntExpr* SIE) {
+  QualType T = SIE->getType();
+  bool IsUnsigned = T->isUnsignedIntegerType();
+  const llvm::APSInt &RHS = SIE->getRHS();
+  const llvm::APSInt &Zero = BV.getAPSIntType(T).getZeroValue();
+  BinaryOperator::Opcode Operator = SIE->getOpcode();
+
+  // For unsigned types, the output of bitwise-or is bigger-or-equal than RHS.
+  if (Operator == BO_Or && IsUnsigned)
+    return Input.Intersect(BV, F, RHS, BV.getMaxValue(T));
+
+  // Bitwise-or with a non-zero constant is always non-zero.
+  if (Operator == BO_Or && RHS != Zero)
+    return assumeNonZero(BV, F, SIE, Input);
+
+  // For unsigned types, or positive RHS,
+  // bitwise-and output is always smaller-or-equal than RHS (assuming two's
+  // complement representation of signed types).
+  if (Operator == BO_And && (IsUnsigned || RHS >= Zero))
+    return Input.Intersect(BV, F, BV.getMinValue(T), RHS);
+
+  return Input;
+}
+
 RangeSet RangeConstraintManager::getRange(ProgramStateRef State,
                                           SymbolRef Sym) {
   if (ConstraintRangeTy::data_type *V = State->get<ConstraintRange>(Sym))
@@ -472,12 +519,13 @@ RangeSet RangeConstraintManager::getRange(ProgramStateRef State,
 
   RangeSet Result(F, BV.getMinValue(T), BV.getMaxValue(T));
 
-  // Special case: references are known to be non-zero.
-  if (T->isReferenceType()) {
-    APSIntType IntType = BV.getAPSIntType(T);
-    Result = Result.Intersect(BV, F, ++IntType.getZeroValue(),
-                              --IntType.getZeroValue());
-  }
+  // References are known to be non-zero.
+  if (T->isReferenceType())
+    return assumeNonZero(BV, F, Sym, Result);
+
+  // Known constraints on ranges of bitwise expressions.
+  if (const SymIntExpr* SIE = dyn_cast<SymIntExpr>(Sym))
+    return applyBitwiseConstraints(BV, F, Result, SIE);
 
   return Result;
 }
