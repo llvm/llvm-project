@@ -514,8 +514,9 @@ void SourceCoverageViewHTML::renderLine(raw_ostream &OS, LineRef L,
     return tag("span", Snippet, Color.getValue());
   };
 
-  auto CheckIfUncovered = [](const CoverageSegment *S) {
-    return S && S->HasCount && S->Count == 0;
+  auto CheckIfUncovered = [&](const CoverageSegment *S) {
+    return S && (!S->IsGapRegion || (Color && *Color == "red")) &&
+           S->HasCount && S->Count == 0;
   };
 
   if (CheckIfUncovered(LCS.getWrappedSegment())) {
@@ -526,11 +527,10 @@ void SourceCoverageViewHTML::renderLine(raw_ostream &OS, LineRef L,
 
   for (unsigned I = 0, E = Segments.size(); I < E; ++I) {
     const auto *CurSeg = Segments[I];
-    if (CurSeg->Col == ExpansionCol)
-      Color = "cyan";
-    else if ((!CurSeg->IsGapRegion || (Color && *Color == "red")) &&
-             CheckIfUncovered(CurSeg))
+    if (CheckIfUncovered(CurSeg))
       Color = "red";
+    else if (CurSeg->Col == ExpansionCol)
+      Color = "cyan";
     else
       Color = None;
 
@@ -556,7 +556,7 @@ void SourceCoverageViewHTML::renderLine(raw_ostream &OS, LineRef L,
   // 4. Snippets[1:N+1] correspond to \p Segments[0:N]: use these to generate
   //    sub-line region count tooltips if needed.
 
-  if (shouldRenderRegionMarkers(Segments)) {
+  if (shouldRenderRegionMarkers(LCS)) {
     // Just consider the segments which start *and* end on this line.
     for (unsigned I = 0, E = Segments.size() - 1; I < E; ++I) {
       const auto *CurSeg = Segments[I];
