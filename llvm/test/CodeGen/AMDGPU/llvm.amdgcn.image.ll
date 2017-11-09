@@ -2,6 +2,7 @@
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI %s
 
 ; GCN-LABEL: {{^}}image_load_v4i32:
+; GCN-NOT: s_waitcnt
 ; GCN: image_load v[0:3], v[0:3], s[0:7] dmask:0xf unorm
 ; GCN: s_waitcnt vmcnt(0)
 define amdgpu_ps <4 x float> @image_load_v4i32(<8 x i32> inreg %rsrc, <4 x i32> %c) #0 {
@@ -11,6 +12,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}image_load_v2i32:
+; GCN-NOT: s_waitcnt
 ; GCN: image_load v[0:3], v[0:1], s[0:7] dmask:0xf unorm
 ; GCN: s_waitcnt vmcnt(0)
 define amdgpu_ps <4 x float> @image_load_v2i32(<8 x i32> inreg %rsrc, <2 x i32> %c) #0 {
@@ -20,6 +22,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}image_load_i32:
+; GCN-NOT: s_waitcnt
 ; GCN: image_load v[0:3], v0, s[0:7] dmask:0xf unorm
 ; GCN: s_waitcnt vmcnt(0)
 define amdgpu_ps <4 x float> @image_load_i32(<8 x i32> inreg %rsrc, i32 %c) #0 {
@@ -29,6 +32,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}image_load_mip:
+; GCN-NOT: s_waitcnt
 ; GCN: image_load_mip v[0:3], v[0:3], s[0:7] dmask:0xf unorm
 ; GCN: s_waitcnt vmcnt(0)
 define amdgpu_ps <4 x float> @image_load_mip(<8 x i32> inreg %rsrc, <4 x i32> %c) #0 {
@@ -38,6 +42,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}image_load_1:
+; GCN-NOT: s_waitcnt
 ; GCN: image_load v0, v[0:3], s[0:7] dmask:0x1 unorm
 ; GCN: s_waitcnt vmcnt(0)
 define amdgpu_ps float @image_load_1(<8 x i32> inreg %rsrc, <4 x i32> %c) #0 {
@@ -48,6 +53,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}image_load_f32_v2i32:
+; GCN-NOT: s_waitcnt
 ; GCN: image_load {{v[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}} dmask:0x1 unorm
 ; GCN: s_waitcnt vmcnt(0)
 define amdgpu_ps float @image_load_f32_v2i32(<8 x i32> inreg %rsrc, <2 x i32> %c) #0 {
@@ -57,6 +63,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}image_load_v2f32_v4i32:
+; GCN-NOT: s_waitcnt
 ; GCN: image_load {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}} dmask:0x3 unorm
 ; GCN: s_waitcnt vmcnt(0)
 define amdgpu_ps <2 x float> @image_load_v2f32_v4i32(<8 x i32> inreg %rsrc, <4 x i32> %c) #0 {
@@ -66,6 +73,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}image_store_v4i32:
+; GCN-NOT: s_waitcnt
 ; GCN: image_store v[0:3], v[4:7], s[0:7] dmask:0xf unorm
 define amdgpu_ps void @image_store_v4i32(<8 x i32> inreg %rsrc, <4 x float> %data, <4 x i32> %coords) #0 {
 main_body:
@@ -74,6 +82,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}image_store_v2i32:
+; GCN-NOT: s_waitcnt
 ; GCN: image_store v[0:3], v[4:5], s[0:7] dmask:0xf unorm
 define amdgpu_ps void @image_store_v2i32(<8 x i32> inreg %rsrc, <4 x float> %data, <2 x i32> %coords) #0 {
 main_body:
@@ -82,6 +91,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}image_store_i32:
+; GCN-NOT: s_waitcnt
 ; GCN: image_store v[0:3], v4, s[0:7] dmask:0xf unorm
 define amdgpu_ps void @image_store_i32(<8 x i32> inreg %rsrc, <4 x float> %data, i32 %coords) #0 {
 main_body:
@@ -90,6 +100,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}image_store_f32_i32:
+; GCN-NOT: s_waitcnt
 ; GCN: image_store {{v[0-9]+}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}} dmask:0x1 unorm
 define amdgpu_ps void @image_store_f32_i32(<8 x i32> inreg %rsrc, float %data, i32 %coords) #0 {
 main_body:
@@ -98,6 +109,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}image_store_v2f32_v4i32:
+; GCN-NOT: s_waitcnt
 ; GCN: image_store {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}} dmask:0x3 unorm
 define amdgpu_ps void @image_store_v2f32_v4i32(<8 x i32> inreg %rsrc, <2 x float> %data, <4 x i32> %coords) #0 {
 main_body:
@@ -106,6 +118,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}image_store_mip:
+; GCN-NOT: s_waitcnt
 ; GCN: image_store_mip v[0:3], v[4:7], s[0:7] dmask:0xf unorm
 define amdgpu_ps void @image_store_mip(<8 x i32> inreg %rsrc, <4 x float> %data, <4 x i32> %coords) #0 {
 main_body:
@@ -114,6 +127,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}getresinfo:
+; GCN-NOT: s_waitcnt
 ; GCN: image_get_resinfo {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}} dmask:0xf
 define amdgpu_ps void @getresinfo() #0 {
 main_body:

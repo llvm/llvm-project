@@ -54,7 +54,7 @@ void STMT(fn3)() {
 // CHECK-NEXT: File 0, [[@LINE+1]]:17 -> {{[0-9]+}}:2 = #0
 void foo(int i) {
   // CHECK-NEXT: File 0, [[@LINE+2]]:7 -> [[@LINE+2]]:8 = #0
-  // CHECK-NEXT: File 0, [[@LINE+1]]:10 -> [[@LINE+1]]:12 = #1
+  // CHECK: File 0, [[@LINE+1]]:10 -> [[@LINE+1]]:12 = #1
   if (0) {}
 
   // CHECK-NEXT: Expansion,File 0, [[@LINE+2]]:7 -> [[@LINE+2]]:11 = #0
@@ -86,10 +86,10 @@ void foo(int i) {
   // CHECK-NEXT: Expansion,File 0, [[@LINE+1]]:23 -> [[@LINE+1]]:29 = #0
   (void)(i ? PRIo64 : PRIu64);
 
-  // CHECK-NEXT: File 0, [[@LINE+5]]:14 -> [[@LINE+5]]:15 = #9
+  // CHECK: File 0, [[@LINE+5]]:14 -> [[@LINE+5]]:15 = #9
   // CHECK-NEXT: Expansion,File 0, [[@LINE+4]]:18 -> [[@LINE+4]]:22 = (#0 - #9)
   // CHECK-NEXT: File 0, [[@LINE+3]]:22 -> [[@LINE+3]]:33 = (#0 - #9)
-  // CHECK-NEXT: File 0, [[@LINE+2]]:28 -> [[@LINE+2]]:29 = #10
+  // CHECK: File 0, [[@LINE+2]]:28 -> [[@LINE+2]]:29 = #10
   // CHECK-NEXT: File 0, [[@LINE+1]]:32 -> [[@LINE+1]]:33 = ((#0 - #9) - #10)
   (void)(i ? i : EXPR(i) ? i : 0);
   // CHECK-NEXT: Expansion,File 0, [[@LINE+3]]:15 -> [[@LINE+3]]:19 = (#0 - #11)

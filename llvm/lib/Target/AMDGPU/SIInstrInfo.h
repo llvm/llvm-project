@@ -860,6 +860,10 @@ public:
 
   static bool isKillTerminator(unsigned Opcode);
   const MCInstrDesc &getKillTerminatorFromPseudo(unsigned Opcode) const;
+
+  static bool isLegalMUBUFImmOffset(unsigned Imm) {
+    return isUInt<12>(Imm);
+  }
 };
 
 namespace AMDGPU {
