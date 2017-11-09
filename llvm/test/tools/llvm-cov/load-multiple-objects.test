@@ -4,8 +4,8 @@
 
 // RUN: llvm-cov report %S/Inputs/multiple-files.covmapping -object %S/Inputs/highlightedRanges.covmapping -instr-profile %t.profdata | FileCheck %s -check-prefixes=OBJ1,OBJ2
 
-// OBJ2: showHighlightedRanges.cpp
 // OBJ1: f2.c
 // OBJ1: f4.c
 // OBJ1: f3.c
 // OBJ1: f1.c
+// OBJ2: showHighlightedRanges.cpp
