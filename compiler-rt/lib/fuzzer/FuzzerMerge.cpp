@@ -260,7 +260,8 @@ void Fuzzer::CrashResistantMergeInternalStep(const std::string &CFPath) {
 void Fuzzer::CrashResistantMerge(const Vector<std::string> &Args,
                                  const Vector<std::string> &Corpora,
                                  const char *CoverageSummaryInputPathOrNull,
-                                 const char *CoverageSummaryOutputPathOrNull) {
+                                 const char *CoverageSummaryOutputPathOrNull,
+                                 const char *MergeControlFilePathOrNull) {
   if (Corpora.size() <= 1) {
     Printf("Merge requires two or more corpus dirs\n");
     return;
@@ -274,8 +275,11 @@ void Fuzzer::CrashResistantMerge(const Vector<std::string> &Args,
   std::sort(AllFiles.begin() + NumFilesInFirstCorpus, AllFiles.end());
   Printf("MERGE-OUTER: %zd files, %zd in the initial corpus\n",
          AllFiles.size(), NumFilesInFirstCorpus);
-  auto CFPath = DirPlusFile(TmpDir(),
-                       "libFuzzerTemp." + std::to_string(GetPid()) + ".txt");
+  auto CFPath =
+      MergeControlFilePathOrNull
+          ? MergeControlFilePathOrNull
+          : DirPlusFile(TmpDir(),
+                        "libFuzzerTemp." + std::to_string(GetPid()) + ".txt");
   // Write the control file.
   RemoveFile(CFPath);
   std::ofstream ControlFile(CFPath);
@@ -293,12 +297,13 @@ void Fuzzer::CrashResistantMerge(const Vector<std::string> &Args,
   // Execute the inner process untill it passes.
   // Every inner process should execute at least one input.
   auto BaseCmd = SplitBefore("-ignore_remaining_args=1",
-                             CloneArgsWithoutX(Args, "keep-all-flags"));
+                             CloneArgsWithoutX(Args, "merge"));
   bool Success = false;
   for (size_t i = 1; i <= AllFiles.size(); i++) {
     Printf("MERGE-OUTER: attempt %zd\n", i);
-    auto ExitCode = ExecuteCommand(BaseCmd.first + " -merge_control_file=" +
-                                   CFPath + " " + BaseCmd.second);
+    auto ExitCode =
+        ExecuteCommand(BaseCmd.first + " -merge_control_file=" + CFPath +
+                       " -merge_inner=1 " + BaseCmd.second);
     if (!ExitCode) {
       Printf("MERGE-OUTER: succesfull in %zd attempt(s)\n", i);
       Success = true;
@@ -338,8 +343,9 @@ void Fuzzer::CrashResistantMerge(const Vector<std::string> &Args,
          NewFiles.size(), NumNewFeatures);
   for (auto &F: NewFiles)
     WriteToOutputCorpus(FileToVector(F));
-  // We are done, delete the control file.
-  RemoveFile(CFPath);
+  // We are done, delete the control file if it was a temporary one.
+  if (!MergeControlFilePathOrNull)
+    RemoveFile(CFPath);
 }
 
 } // namespace fuzzer

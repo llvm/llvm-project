@@ -1023,6 +1023,7 @@ public:
     // FIXME: We should return 0 whenever getIntrinsicCost == TCC_Free.
     case Intrinsic::lifetime_start:
     case Intrinsic::lifetime_end:
+    case Intrinsic::sideeffect:
       return 0;
     case Intrinsic::masked_store:
       return static_cast<T *>(this)

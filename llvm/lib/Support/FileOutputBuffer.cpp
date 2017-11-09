@@ -38,9 +38,6 @@ public:
                std::unique_ptr<fs::mapped_file_region> Buf)
       : FileOutputBuffer(Path), Buffer(std::move(Buf)), TempPath(TempPath) {}
 
-  static Expected<std::unique_ptr<OnDiskBuffer>>
-  create(StringRef Path, size_t Size, unsigned Mode);
-
   uint8_t *getBufferStart() const override { return (uint8_t *)Buffer->data(); }
 
   uint8_t *getBufferEnd() const override {
@@ -78,16 +75,6 @@ public:
   InMemoryBuffer(StringRef Path, MemoryBlock Buf, unsigned Mode)
       : FileOutputBuffer(Path), Buffer(Buf), Mode(Mode) {}
 
-  static Expected<std::unique_ptr<InMemoryBuffer>>
-  create(StringRef Path, size_t Size, unsigned Mode) {
-    std::error_code EC;
-    MemoryBlock MB = Memory::allocateMappedMemory(
-        Size, nullptr, sys::Memory::MF_READ | sys::Memory::MF_WRITE, EC);
-    if (EC)
-      return errorCodeToError(EC);
-    return llvm::make_unique<InMemoryBuffer>(Path, MB, Mode);
-  }
-
   uint8_t *getBufferStart() const override { return (uint8_t *)Buffer.base(); }
 
   uint8_t *getBufferEnd() const override {
@@ -111,8 +98,18 @@ private:
   unsigned Mode;
 };
 
-Expected<std::unique_ptr<OnDiskBuffer>>
-OnDiskBuffer::create(StringRef Path, size_t Size, unsigned Mode) {
+static Expected<std::unique_ptr<InMemoryBuffer>>
+createInMemoryBuffer(StringRef Path, size_t Size, unsigned Mode) {
+  std::error_code EC;
+  MemoryBlock MB = Memory::allocateMappedMemory(
+      Size, nullptr, sys::Memory::MF_READ | sys::Memory::MF_WRITE, EC);
+  if (EC)
+    return errorCodeToError(EC);
+  return llvm::make_unique<InMemoryBuffer>(Path, MB, Mode);
+}
+
+static Expected<std::unique_ptr<OnDiskBuffer>>
+createOnDiskBuffer(StringRef Path, size_t Size, unsigned Mode) {
   // Create new file in same directory but with random name.
   SmallString<128> TempPath;
   int FD;
@@ -165,8 +162,8 @@ FileOutputBuffer::create(StringRef Path, size_t Size, unsigned Flags) {
   case fs::file_type::regular_file:
   case fs::file_type::file_not_found:
   case fs::file_type::status_error:
-    return OnDiskBuffer::create(Path, Size, Mode);
+    return createOnDiskBuffer(Path, Size, Mode);
   default:
-    return InMemoryBuffer::create(Path, Size, Mode);
+    return createInMemoryBuffer(Path, Size, Mode);
   }
 }

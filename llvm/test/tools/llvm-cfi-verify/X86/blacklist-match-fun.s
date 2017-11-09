@@ -5,7 +5,7 @@
 
 # CHECK-LABEL: U
 # CHECK-NEXT: tiny.cc:11
-# CHECK-NEXT: BLACKLIST MATCH, 'fun'
+# CHECK-NEXT: {{^Blacklist Match:.*blacklist\.txt:1$}}
 # CHECK-NEXT: ====> Expected Unprotected
 
 # CHECK: Expected Protected: 0 (0.00%)

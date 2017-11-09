@@ -6,6 +6,8 @@
 //
 // Test crash due to __sanitizer_annotate_contiguous_container.
 
+// REQUIRES: lto
+
 #include <assert.h>
 #include <string.h>
 

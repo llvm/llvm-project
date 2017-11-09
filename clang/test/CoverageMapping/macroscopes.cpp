@@ -89,10 +89,10 @@ int main() {
 // CHECK-NEXT: File 1, 3:52 -> 3:53 = #1
 // CHECK-NEXT: File 2, 10:3 -> 20:4 = #1
 // CHECK-NEXT: File 2, 11:7 -> 11:13 = #1
-// CHECK-NEXT: File 2, 11:15 -> 13:4 = #2
+// CHECK: File 2, 11:15 -> 13:4 = #2
 // CHECK-NEXT: File 2, 13:10 -> 15:4 = (#1 - #2)
 // CHECK-NEXT: File 2, 16:7 -> 16:11 = #1
-// CHECK-NEXT: File 2, 16:13 -> 18:4 = #3
+// CHECK: File 2, 16:13 -> 18:4 = #3
 // CHECK-NEXT: File 2, 18:10 -> 20:4 = (#1 - #3)
 // CHECK-NEXT: File 3, 6:3 -> 7:4 = #1
 // CHECK-NEXT: File 4, 3:24 -> 3:53 = #0
@@ -101,10 +101,10 @@ int main() {
 // CHECK-NEXT: File 4, 3:52 -> 3:53 = #4
 // CHECK-NEXT: File 5, 10:3 -> 20:4 = #4
 // CHECK-NEXT: File 5, 11:7 -> 11:13 = #4
-// CHECK-NEXT: File 5, 11:15 -> 13:4 = #5
+// CHECK: File 5, 11:15 -> 13:4 = #5
 // CHECK-NEXT: File 5, 13:10 -> 15:4 = (#4 - #5)
 // CHECK-NEXT: File 5, 16:7 -> 16:11 = #4
-// CHECK-NEXT: File 5, 16:13 -> 18:4 = #6
+// CHECK: File 5, 16:13 -> 18:4 = #6
 // CHECK-NEXT: File 5, 18:10 -> 20:4 = (#4 - #6)
 // CHECK-NEXT: File 6, 6:3 -> 7:4 = #4
 // CHECK-NEXT: File 7, 3:24 -> 3:53 = #0
