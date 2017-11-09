@@ -2041,17 +2041,6 @@ GDBRemoteCommunicationServerLLGS::Handle_P(StringExtractorGDBRemote &packet) {
     return SendIllFormedResponse(
         packet, "P packet missing '=' char after register number");
 
-  // Get process architecture.
-  ArchSpec process_arch;
-  if (!m_debugged_process_up ||
-      !m_debugged_process_up->GetArchitecture(process_arch)) {
-    if (log)
-      log->Printf("GDBRemoteCommunicationServerLLGS::%s failed to retrieve "
-                  "inferior architecture",
-                  __FUNCTION__);
-    return SendErrorResponse(0x49);
-  }
-
   // Parse out the value.
   uint8_t reg_bytes[32]; // big enough to support up to 256 bit ymmN register
   size_t reg_size = packet.GetHexBytesAvail(reg_bytes);
@@ -2109,7 +2098,9 @@ GDBRemoteCommunicationServerLLGS::Handle_P(StringExtractorGDBRemote &packet) {
   // Build the reginfos response.
   StreamGDBRemote response;
 
-  RegisterValue reg_value(reg_bytes, reg_size, process_arch.GetByteOrder());
+  RegisterValue reg_value(
+      reg_bytes, reg_size,
+      m_debugged_process_up->GetArchitecture().GetByteOrder());
   Status error = reg_context_sp->WriteRegister(reg_info, reg_value);
   if (error.Fail()) {
     if (log)

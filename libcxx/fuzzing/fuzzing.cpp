@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <functional>
 #include <regex>
+#include <cassert>
 
 #include <iostream>
 
