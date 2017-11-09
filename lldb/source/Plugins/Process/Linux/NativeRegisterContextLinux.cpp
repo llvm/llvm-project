@@ -26,15 +26,7 @@ NativeRegisterContextLinux::NativeRegisterContextLinux(
                                         reg_info_interface_p) {}
 
 lldb::ByteOrder NativeRegisterContextLinux::GetByteOrder() const {
-  // Get the target process whose privileged thread was used for the register
-  // read.
-  lldb::ByteOrder byte_order = lldb::eByteOrderInvalid;
-
-  if (!m_thread.GetProcess().GetByteOrder(byte_order)) {
-    // FIXME log here
-  }
-
-  return byte_order;
+  return m_thread.GetProcess().GetByteOrder();
 }
 
 Status NativeRegisterContextLinux::ReadRegisterRaw(uint32_t reg_index,

@@ -193,11 +193,10 @@ public:
   ~X86AddressSanitizer() override = default;
 
   // X86AsmInstrumentation implementation:
-  void InstrumentAndEmitInstruction(const MCInst &Inst,
-                                    OperandVector &Operands,
-                                    MCContext &Ctx,
-                                    const MCInstrInfo &MII,
-                                    MCStreamer &Out) override {
+  void InstrumentAndEmitInstruction(const MCInst &Inst, OperandVector &Operands,
+                                    MCContext &Ctx, const MCInstrInfo &MII,
+                                    MCStreamer &Out,
+                                    /* unused */ bool) override {
     InstrumentMOVS(Inst, Operands, Ctx, MII, Out);
     if (RepPrefix)
       EmitInstruction(Out, MCInstBuilder(X86::REP_PREFIX));
@@ -1045,13 +1044,13 @@ X86AsmInstrumentation::~X86AsmInstrumentation() = default;
 
 void X86AsmInstrumentation::InstrumentAndEmitInstruction(
     const MCInst &Inst, OperandVector &Operands, MCContext &Ctx,
-    const MCInstrInfo &MII, MCStreamer &Out) {
-  EmitInstruction(Out, Inst);
+    const MCInstrInfo &MII, MCStreamer &Out, bool PrintSchedInfoEnabled) {
+  EmitInstruction(Out, Inst, PrintSchedInfoEnabled);
 }
 
-void X86AsmInstrumentation::EmitInstruction(MCStreamer &Out,
-                                            const MCInst &Inst) {
-  Out.EmitInstruction(Inst, *STI);
+void X86AsmInstrumentation::EmitInstruction(MCStreamer &Out, const MCInst &Inst,
+                                            bool PrintSchedInfoEnabled) {
+  Out.EmitInstruction(Inst, *STI, PrintSchedInfoEnabled);
 }
 
 unsigned X86AsmInstrumentation::GetFrameRegGeneric(const MCContext &Ctx,

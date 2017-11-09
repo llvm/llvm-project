@@ -540,9 +540,14 @@ static uint64_t getRelocTargetVA(RelType Type, int64_t A, uint64_t P,
     // is _gp_disp symbol. In that case we should use the following
     // formula for calculation "AHL + GP - P + 4". For details see p. 4-19 at
     // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
+    // microMIPS variants of these relocations use slightly different
+    // expressions: AHL + GP - P + 3 for %lo() and AHL + GP - P - 1 for %hi()
+    // to correctly handle less-sugnificant bit of the microMIPS symbol.
     uint64_t V = InX::MipsGot->getGp() + A - P;
     if (Type == R_MIPS_LO16 || Type == R_MICROMIPS_LO16)
       V += 4;
+    if (Type == R_MICROMIPS_LO16 || Type == R_MICROMIPS_HI16)
+      V -= 1;
     return V;
   }
   case R_MIPS_GOT_LOCAL_PAGE:

@@ -8,8 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/common/NativeProcessProtocol.h"
-
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/State.h"
 #include "lldb/Host/Host.h"
@@ -114,14 +112,6 @@ NativeThreadProtocol *NativeProcessProtocol::GetThreadByID(lldb::tid_t tid) {
 bool NativeProcessProtocol::IsAlive() const {
   return m_state != eStateDetached && m_state != eStateExited &&
          m_state != eStateInvalid && m_state != eStateUnloaded;
-}
-
-bool NativeProcessProtocol::GetByteOrder(lldb::ByteOrder &byte_order) const {
-  ArchSpec process_arch;
-  if (!GetArchitecture(process_arch))
-    return false;
-  byte_order = process_arch.GetByteOrder();
-  return true;
 }
 
 const NativeWatchpointList::WatchpointMap &

@@ -13,6 +13,7 @@
 #include "NativeBreakpointList.h"
 #include "NativeThreadProtocol.h"
 #include "NativeWatchpointList.h"
+#include "lldb/Core/ArchSpec.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Utility/Status.h"
@@ -100,7 +101,7 @@ public:
 
   virtual size_t UpdateThreads() = 0;
 
-  virtual bool GetArchitecture(ArchSpec &arch) const = 0;
+  virtual const ArchSpec &GetArchitecture() const = 0;
 
   //----------------------------------------------------------------------
   // Breakpoint functions
@@ -151,7 +152,9 @@ public:
 
   bool CanResume() const { return m_state == lldb::eStateStopped; }
 
-  bool GetByteOrder(lldb::ByteOrder &byte_order) const;
+  lldb::ByteOrder GetByteOrder() const {
+    return GetArchitecture().GetByteOrder();
+  }
 
   virtual llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   GetAuxvData() const = 0;

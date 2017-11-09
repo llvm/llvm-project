@@ -678,11 +678,6 @@ lldb::addr_t NativeProcessNetBSD::GetSharedLibraryInfoAddress() {
 
 size_t NativeProcessNetBSD::UpdateThreads() { return m_threads.size(); }
 
-bool NativeProcessNetBSD::GetArchitecture(ArchSpec &arch) const {
-  arch = m_arch;
-  return true;
-}
-
 Status NativeProcessNetBSD::SetBreakpoint(lldb::addr_t addr, uint32_t size,
                                           bool hardware) {
   if (hardware)

@@ -1033,13 +1033,11 @@ Status NativeRegisterContextLinux_mips64::Read_SR_Config(uint32_t offset,
   Status error = NativeProcessLinux::PtraceWrapper(
       PTRACE_GETREGS, m_thread.GetID(), NULL, &regs, sizeof regs);
   if (error.Success()) {
-    lldb_private::ArchSpec arch;
-    if (m_thread.GetProcess().GetArchitecture(arch)) {
-      void *target_address = ((uint8_t *)&regs) + offset +
-                             4 * (arch.GetMachine() == llvm::Triple::mips);
-      value.SetUInt(*(uint32_t *)target_address, size);
-    } else
-      error.SetErrorString("failed to get architecture");
+    const lldb_private::ArchSpec &arch =
+        m_thread.GetProcess().GetArchitecture();
+    void *target_address = ((uint8_t *)&regs) + offset +
+                           4 * (arch.GetMachine() == llvm::Triple::mips);
+    value.SetUInt(*(uint32_t *)target_address, size);
   }
   return error;
 }

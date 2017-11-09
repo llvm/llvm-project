@@ -827,7 +827,7 @@ class AVX512PIi8<bits<8> o, Format F, dag outs, dag ins, string asm,
 class AVX512PI<bits<8> o, Format F, dag outs, dag ins, string asm,
               list<dag> pattern, Domain d, InstrItinClass itin = NoItinerary>
       : I<o, F, outs, ins, asm, pattern, itin, d>, Requires<[HasAVX512]>;
-class AVX512FMA3<bits<8> o, Format F, dag outs, dag ins, string asm,
+class AVX512FMA3S<bits<8> o, Format F, dag outs, dag ins, string asm,
            list<dag>pattern, InstrItinClass itin = NoItinerary>
       : I<o, F, outs, ins, asm, pattern, itin>, T8PD,
         EVEX_4V, Requires<[HasAVX512]>;
@@ -867,12 +867,20 @@ class FMA3<bits<8> o, Format F, dag outs, dag ins, string asm,
            list<dag>pattern, InstrItinClass itin = NoItinerary>
       : I<o, F, outs, ins, asm, pattern, itin>, T8PD,
         VEX_4V, FMASC, Requires<[HasFMA, NoVLX]>;
+class FMA3S<bits<8> o, Format F, dag outs, dag ins, string asm,
+            list<dag>pattern, InstrItinClass itin = NoItinerary>
+      : I<o, F, outs, ins, asm, pattern, itin>, T8PD,
+        VEX_4V, FMASC, Requires<[HasFMA, NoAVX512]>;
 
 // FMA4 Instruction Templates
 class FMA4<bits<8> o, Format F, dag outs, dag ins, string asm,
            list<dag>pattern, InstrItinClass itin = NoItinerary>
       : Ii8Reg<o, F, outs, ins, asm, pattern, itin>, TAPD,
-        VEX_4V, FMASC, Requires<[HasFMA4]>;
+        VEX_4V, FMASC, Requires<[HasFMA4, NoVLX]>;
+class FMA4S<bits<8> o, Format F, dag outs, dag ins, string asm,
+            list<dag>pattern, InstrItinClass itin = NoItinerary>
+      : Ii8Reg<o, F, outs, ins, asm, pattern, itin>, TAPD,
+        VEX_4V, FMASC, Requires<[HasFMA4, NoAVX512]>;
 
 // XOP 2, 3 and 4 Operand Instruction Template
 class IXOP<bits<8> o, Format F, dag outs, dag ins, string asm,
