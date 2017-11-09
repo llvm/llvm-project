@@ -160,21 +160,25 @@ const MappingDesc kMemoryLayout[] = {
 # define SHADOW_TO_ORIGIN(shadow) (((uptr)(shadow)) + 0x1000000000ULL)
 
 #elif SANITIZER_LINUX && SANITIZER_PPC64
-
 const MappingDesc kMemoryLayout[] = {
-    {0x000000000000ULL, 0x000100000000ULL, MappingDesc::APP, "low memory"},
-    {0x000100000000ULL, 0x080000000000ULL, MappingDesc::INVALID, "invalid"},
-    {0x080000000000ULL, 0x180100000000ULL, MappingDesc::SHADOW, "shadow"},
-    {0x180100000000ULL, 0x1C0000000000ULL, MappingDesc::INVALID, "invalid"},
-    {0x1C0000000000ULL, 0x2C0100000000ULL, MappingDesc::ORIGIN, "origin"},
-    {0x2C0100000000ULL, 0x300000000000ULL, MappingDesc::INVALID, "invalid"},
-    {0x300000000000ULL, 0x400000000000ULL, MappingDesc::APP, "high memory"}};
+    {0x000000000000ULL, 0x000200000000ULL, MappingDesc::APP, "low memory"},
+    {0x000200000000ULL, 0x080000000000ULL, MappingDesc::INVALID, "invalid"},
+    {0x080000000000ULL, 0x180200000000ULL, MappingDesc::SHADOW, "shadow"},
+    {0x180200000000ULL, 0x1C0000000000ULL, MappingDesc::INVALID, "invalid"},
+    {0x1C0000000000ULL, 0x2C0200000000ULL, MappingDesc::ORIGIN, "origin"},
+    {0x2C0200000000ULL, 0x300000000000ULL, MappingDesc::INVALID, "invalid"},
+    {0x300000000000ULL, 0x800000000000ULL, MappingDesc::APP, "high memory"}};
 
+// Various kernels use different low end ranges but we can combine them into one
+// big range. They also use different high end ranges but we can map them all to
+// one range.
 // Maps low and high app ranges to contiguous space with zero base:
-//   Low:  0000 0000 0000 - 0000 ffff ffff  ->  1000 0000 0000 - 1000 ffff ffff
+//   Low:  0000 0000 0000 - 0001 ffff ffff  ->  1000 0000 0000 - 1001 ffff ffff
 //   High: 3000 0000 0000 - 3fff ffff ffff  ->  0000 0000 0000 - 0fff ffff ffff
+//   High: 4000 0000 0000 - 4fff ffff ffff  ->  0000 0000 0000 - 0fff ffff ffff
+//   High: 7000 0000 0000 - 7fff ffff ffff  ->  0000 0000 0000 - 0fff ffff ffff
 #define LINEARIZE_MEM(mem) \
-  (((uptr)(mem) & ~0x200000000000ULL) ^ 0x100000000000ULL)
+  (((uptr)(mem) & ~0xE00000000000ULL) ^ 0x100000000000ULL)
 #define MEM_TO_SHADOW(mem) (LINEARIZE_MEM((mem)) + 0x080000000000ULL)
 #define SHADOW_TO_ORIGIN(shadow) (((uptr)(shadow)) + 0x140000000000ULL)
 
