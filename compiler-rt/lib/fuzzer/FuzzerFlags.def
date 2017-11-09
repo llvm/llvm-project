@@ -38,7 +38,12 @@ FUZZER_FLAG_INT(help, 0, "Print help.")
 FUZZER_FLAG_INT(merge, 0, "If 1, the 2-nd, 3-rd, etc corpora will be "
   "merged into the 1-st corpus. Only interesting units will be taken. "
   "This flag can be used to minimize a corpus.")
-FUZZER_FLAG_STRING(merge_control_file, "internal flag")
+FUZZER_FLAG_STRING(merge_inner, "internal flag")
+FUZZER_FLAG_STRING(merge_control_file,
+                   "Specify a control file used for the merge proccess. "
+                   "If a merge process gets killed it tries to leave this file "
+                   "in a state suitable for resuming the merge. "
+                   "By default a temporary file will be used.")
 FUZZER_FLAG_STRING(save_coverage_summary, "Experimental:"
                    " save coverage summary to a given file."
                    " Used with -merge=1")

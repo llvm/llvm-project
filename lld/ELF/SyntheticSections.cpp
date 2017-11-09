@@ -853,6 +853,8 @@ void MipsGotSection::writeTo(uint8_t *Buf) {
     Buf += Config->Wordsize;
     const Symbol *Sym = SA.first;
     uint64_t VA = Sym->getVA(SA.second);
+    if (Sym->StOther & STO_MIPS_MICROMIPS)
+      VA |= 1;
     writeUint(Entry, VA);
   };
   std::for_each(std::begin(LocalEntries), std::end(LocalEntries), AddEntry);

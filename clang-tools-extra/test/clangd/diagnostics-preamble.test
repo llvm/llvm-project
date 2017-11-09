@@ -11,7 +11,7 @@ Content-Length: 206
 #      CHECK:  "method": "textDocument/publishDiagnostics",
 # CHECK-NEXT:  "params": {
 # CHECK-NEXT:    "diagnostics": [],
-# CHECK-NEXT:    "uri": "file:///main.cpp"
+# CHECK-NEXT:    "uri": "file:///{{([A-Z]:/)?}}main.cpp"
 # CHECK-NEXT:  }
 Content-Length: 58
 

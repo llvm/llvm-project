@@ -73,7 +73,8 @@ public:
   void CrashResistantMerge(const Vector<std::string> &Args,
                            const Vector<std::string> &Corpora,
                            const char *CoverageSummaryInputPathOrNull,
-                           const char *CoverageSummaryOutputPathOrNull);
+                           const char *CoverageSummaryOutputPathOrNull,
+                           const char *MergeControlFilePathOrNull);
   void CrashResistantMergeInternalStep(const std::string &ControlFilePath);
   MutationDispatcher &GetMD() { return MD; }
   void PrintFinalStats();

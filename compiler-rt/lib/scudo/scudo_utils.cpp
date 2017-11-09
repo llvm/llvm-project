@@ -90,8 +90,7 @@ typedef struct {
   u32 Edx;
 } CPUIDRegs;
 
-static void getCPUID(CPUIDRegs *Regs, u32 Level)
-{
+static void getCPUID(CPUIDRegs *Regs, u32 Level) {
   __get_cpuid(Level, &Regs->Eax, &Regs->Ebx, &Regs->Ecx, &Regs->Edx);
 }
 
@@ -118,8 +117,7 @@ CPUIDRegs getCPUFeatures() {
 #  define bit_SSE4_2 bit_SSE42  // clang and gcc have different defines.
 # endif
 
-bool testCPUFeature(CPUFeature Feature)
-{
+bool testCPUFeature(CPUFeature Feature) {
   CPUIDRegs FeaturesRegs = getCPUFeatures();
 
   switch (Feature) {
