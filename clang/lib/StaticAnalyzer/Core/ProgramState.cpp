@@ -260,7 +260,9 @@ SVal ProgramState::getSVal(Loc location, QualType T) const {
   // be a constant value, use that value instead to lessen the burden
   // on later analysis stages (so we have less symbolic values to reason
   // about).
-  if (!T.isNull()) {
+  // We only go into this branch if we can convert the APSInt value we have
+  // to the type of T, which is not always the case (e.g. for void).
+  if (!T.isNull() && (T->isIntegralOrEnumerationType() || Loc::isLocType(T))) {
     if (SymbolRef sym = V.getAsSymbol()) {
       if (const llvm::APSInt *Int = getStateManager()
                                     .getConstraintManager()

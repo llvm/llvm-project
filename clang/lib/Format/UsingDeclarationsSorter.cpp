@@ -26,6 +26,45 @@ namespace format {
 
 namespace {
 
+// The order of using declaration is defined as follows:
+// Split the strings by "::" and discard any initial empty strings. The last
+// element of each list is a non-namespace name; all others are namespace
+// names. Sort the lists of names lexicographically, where the sort order of
+// individual names is that all non-namespace names come before all namespace
+// names, and within those groups, names are in case-insensitive lexicographic
+// order.
+int compareLabels(StringRef A, StringRef B) {
+  SmallVector<StringRef, 2> NamesA;
+  A.split(NamesA, "::", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+  SmallVector<StringRef, 2> NamesB;
+  B.split(NamesB, "::", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+  size_t SizeA = NamesA.size();
+  size_t SizeB = NamesB.size();
+  for (size_t I = 0, E = std::min(SizeA, SizeB); I < E; ++I) {
+    if (I + 1 == SizeA) {
+      // I is the last index of NamesA and NamesA[I] is a non-namespace name.
+
+      // Non-namespace names come before all namespace names.
+      if (SizeB > SizeA)
+        return -1;
+
+      // Two names within a group compare case-insensitively.
+      return NamesA[I].compare_lower(NamesB[I]);
+    }
+
+    // I is the last index of NamesB and NamesB[I] is a non-namespace name.
+    // Non-namespace names come before all namespace names.
+    if (I + 1 == SizeB)
+      return 1;
+
+    // Two namespaces names within a group compare case-insensitively.
+    int C = NamesA[I].compare_lower(NamesB[I]);
+    if (C != 0)
+      return C;
+  }
+  return 0;
+}
+
 struct UsingDeclaration {
   const AnnotatedLine *Line;
   std::string Label;
@@ -33,27 +72,8 @@ struct UsingDeclaration {
   UsingDeclaration(const AnnotatedLine *Line, const std::string &Label)
       : Line(Line), Label(Label) {}
 
-  // Compares lexicographically with the exception that '_' is just before 'A'.
   bool operator<(const UsingDeclaration &Other) const {
-    size_t Size = Label.size();
-    size_t OtherSize = Other.Label.size();
-    for (size_t I = 0, E = std::min(Size, OtherSize); I < E; ++I) {
-      char Rank = rank(Label[I]);
-      char OtherRank = rank(Other.Label[I]);
-      if (Rank != OtherRank)
-        return Rank < OtherRank;
-    }
-    return Size < OtherSize;
-  }
-
-  // Returns the position of c in a lexicographic ordering with the exception
-  // that '_' is just before 'A'.
-  static char rank(char c) {
-    if (c == '_')
-      return 'A';
-    if ('A' <= c && c < '_')
-      return c + 1;
-    return c;
+    return compareLabels(Label, Other.Label) < 0;
   }
 };
 
