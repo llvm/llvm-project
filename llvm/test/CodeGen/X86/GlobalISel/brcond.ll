@@ -36,7 +36,6 @@ define i32 @test_1(i32 %a, i32 %b, i32 %tValue, i32 %fValue) {
 ; X32-NEXT:    movl %eax, (%esp)
 ; X32-NEXT:    movl (%esp), %eax
 ; X32-NEXT:    popl %ecx
-; X32-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NEXT:    retl
 entry:
   %retval = alloca i32, align 4

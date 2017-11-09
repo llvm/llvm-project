@@ -47,6 +47,7 @@ void printIndirectCFInstructions(FileAnalysis &Analysis,
   uint64_t UnexpectedUnprotected = 0;
 
   symbolize::LLVMSymbolizer &Symbolizer = Analysis.getSymbolizer();
+  std::map<unsigned, uint64_t> BlameCounter;
 
   for (uint64_t Address : Analysis.getIndirectInstructions()) {
     const auto &InstrMeta = Analysis.getInstructionOrDie(Address);
@@ -97,20 +98,20 @@ void printIndirectCFInstructions(FileAnalysis &Analysis,
       continue;
     }
 
-    bool MatchesBlacklistRule = false;
-    if (SpecialCaseList->inSection("cfi-icall", "src", LineInfo.FileName) ||
-        SpecialCaseList->inSection("cfi-vcall", "src", LineInfo.FileName)) {
-      outs() << "BLACKLIST MATCH, 'src'\n";
-      MatchesBlacklistRule = true;
+    unsigned BlameLine = 0;
+    for (auto &K : {"cfi-icall", "cfi-vcall"}) {
+      if (!BlameLine)
+        BlameLine =
+            SpecialCaseList->inSectionBlame(K, "src", LineInfo.FileName);
+      if (!BlameLine)
+        BlameLine =
+            SpecialCaseList->inSectionBlame(K, "fun", LineInfo.FunctionName);
     }
 
-    if (SpecialCaseList->inSection("cfi-icall", "fun", LineInfo.FunctionName) ||
-        SpecialCaseList->inSection("cfi-vcall", "fun", LineInfo.FunctionName)) {
-      outs() << "BLACKLIST MATCH, 'fun'\n";
-      MatchesBlacklistRule = true;
-    }
-
-    if (MatchesBlacklistRule) {
+    if (BlameLine) {
+      outs() << "Blacklist Match: " << BlacklistFilename << ":" << BlameLine
+             << "\n";
+      BlameCounter[BlameLine]++;
       if (CFIProtected) {
         UnexpectedProtected++;
         outs() << "====> Unexpected Protected\n";
@@ -149,6 +150,15 @@ void printIndirectCFInstructions(FileAnalysis &Analysis,
                     ((double)ExpectedUnprotected) / IndirectCFInstructions,
                     UnexpectedUnprotected,
                     ((double)UnexpectedUnprotected) / IndirectCFInstructions);
+
+  if (!SpecialCaseList)
+    return;
+
+  outs() << "Blacklist Results:\n";
+  for (const auto &KV : BlameCounter) {
+    outs() << "  " << BlacklistFilename << ":" << KV.first << " affects "
+           << KV.second << " indirect CF instructions.\n";
+  }
 }
 
 int main(int argc, char **argv) {

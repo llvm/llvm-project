@@ -433,6 +433,10 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
           DEBUG(dbgs() << "Skipping assume intrinsic.\n");
           ++CurInst;
           continue;
+        } else if (II->getIntrinsicID() == Intrinsic::sideeffect) {
+          DEBUG(dbgs() << "Skipping sideeffect intrinsic.\n");
+          ++CurInst;
+          continue;
         }
 
         DEBUG(dbgs() << "Unknown intrinsic. Can not evaluate.\n");

@@ -370,21 +370,6 @@ void FileAnalysis::parseSectionContents(ArrayRef<uint8_t> SectionBytes,
     InstrMeta.InstructionSize = InstructionSize;
     InstrMeta.Valid = ValidInstruction;
 
-    // Check if this instruction exists in the range of the DWARF metadata.
-    if (!IgnoreDWARFFlag) {
-      auto LineInfo =
-          Symbolizer->symbolizeCode(Object->getFileName(), VMAddress);
-      if (!LineInfo) {
-        handleAllErrors(LineInfo.takeError(), [](const ErrorInfoBase &E) {
-          errs() << "Symbolizer failed to get line: " << E.message() << "\n";
-        });
-        continue;
-      }
-
-      if (LineInfo->FileName == "<invalid>")
-        continue;
-    }
-
     addInstruction(InstrMeta);
 
     if (!ValidInstruction)
@@ -405,6 +390,21 @@ void FileAnalysis::parseSectionContents(ArrayRef<uint8_t> SectionBytes,
 
     if (!usesRegisterOperand(InstrMeta))
       continue;
+
+    // Check if this instruction exists in the range of the DWARF metadata.
+    if (!IgnoreDWARFFlag) {
+      auto LineInfo =
+          Symbolizer->symbolizeCode(Object->getFileName(), VMAddress);
+      if (!LineInfo) {
+        handleAllErrors(LineInfo.takeError(), [](const ErrorInfoBase &E) {
+          errs() << "Symbolizer failed to get line: " << E.message() << "\n";
+        });
+        continue;
+      }
+
+      if (LineInfo->FileName == "<invalid>")
+        continue;
+    }
 
     IndirectInstructions.insert(VMAddress);
   }

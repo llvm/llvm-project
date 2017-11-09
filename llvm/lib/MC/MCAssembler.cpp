@@ -290,7 +290,7 @@ uint64_t MCAssembler::computeFragmentSize(const MCAsmLayout &Layout,
   case MCFragment::FT_Padding:
     return cast<MCPaddingFragment>(F).getSize();
 
-  case MCFragment::FT_SafeSEH:
+  case MCFragment::FT_SymbolId:
     return 4;
 
   case MCFragment::FT_Align: {
@@ -563,8 +563,8 @@ static void writeFragment(const MCAssembler &Asm, const MCAsmLayout &Layout,
     break;
   }
 
-  case MCFragment::FT_SafeSEH: {
-    const MCSafeSEHFragment &SF = cast<MCSafeSEHFragment>(F);
+  case MCFragment::FT_SymbolId: {
+    const MCSymbolIdFragment &SF = cast<MCSymbolIdFragment>(F);
     OW->write32(SF.getSymbol()->getIndex());
     break;
   }

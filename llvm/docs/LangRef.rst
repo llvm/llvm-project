@@ -14267,6 +14267,36 @@ not overflow at link time under the medium code model if ``x`` is an
 a constant initializer folded into a function body. This intrinsic can be
 used to avoid the possibility of overflows when loading from such a constant.
 
+'``llvm.sideeffect``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare void @llvm.sideeffect() inaccessiblememonly nounwind
+
+Overview:
+"""""""""
+
+The ``llvm.sideeffect`` intrinsic doesn't perform any operation. Optimizers
+treat it as having side effects, so it can be inserted into a loop to
+indicate that the loop shouldn't be assumed to terminate (which could
+potentially lead to the loop being optimized away entirely), even if it's
+an infinite loop with no other side effects.
+
+Arguments:
+""""""""""
+
+None.
+
+Semantics:
+""""""""""
+
+This intrinsic actually does nothing, but optimizers must assume that it
+has externally observable side effects.
+
 Stack Map Intrinsics
 --------------------
 

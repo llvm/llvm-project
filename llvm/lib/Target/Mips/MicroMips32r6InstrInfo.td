@@ -1883,3 +1883,10 @@ let AddedComplexity = 41 in {
 }
 
 def TAILCALL_MMR6 : TailCall<BC_MMR6, brtarget26_mm>, ISA_MICROMIPS32R6;
+
+def : MipsPat<(MipsTailCall (iPTR tglobaladdr:$dst)),
+              (TAILCALL_MMR6 tglobaladdr:$dst)>, ISA_MICROMIPS32R6;
+
+def : MipsPat<(MipsTailCall (iPTR texternalsym:$dst)),
+              (TAILCALL_MMR6 texternalsym:$dst)>, ISA_MICROMIPS32R6;
+

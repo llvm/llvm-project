@@ -81,7 +81,6 @@ define void @i24_insert_bit(i24* %a, i1 zeroext %bit) {
 ; X86-NEXT:    orl %edx, %eax
 ; X86-NEXT:    movw %ax, (%ecx)
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: i24_insert_bit:

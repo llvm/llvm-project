@@ -91,7 +91,6 @@ define i32 @foo1_mult_basic_blocks(i32 %a, i32 %b) local_unnamed_addr #0 {
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:  .LBB2_2: # %exit
 ; X86-NEXT:    popl %esi
-; X86-NEXT:   .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 entry:
   %mul = shl i32 %b, 2
@@ -144,7 +143,6 @@ define i32 @foo1_mult_basic_blocks_illegal_scale(i32 %a, i32 %b) local_unnamed_a
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:  .LBB3_2: # %exit
 ; X86-NEXT:    popl %esi
-; X86-NEXT:   .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 entry:
   %mul = shl i32 %b, 1
