@@ -1324,7 +1324,7 @@ unsigned ContinuationIndenter::reformatRawStringLiteral(
   std::pair<tooling::Replacements, unsigned> Fixes = internal::reformat(
       RawStringStyle, RawText, {tooling::Range(0, RawText.size())},
       FirstStartColumn, NextStartColumn, LastStartColumn, "<stdin>",
-      /*FormattingAttemptStatus=*/nullptr);
+      /*Status=*/nullptr);
 
   auto NewCode = applyAllReplacements(RawText, Fixes.first);
   tooling::Replacements NoFixes;

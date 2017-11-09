@@ -27,7 +27,7 @@
 # EB: __microLA25Thunk_foo:
 # EB-NEXT:    20008:       41 b9 00 02     lui     $25, 2
 # EB-NEXT:    2000c:       d4 01 00 10     j       131104
-# EB-NEXT:    20010:       33 39 00 20     addiu   $25, $25, 32
+# EB-NEXT:    20010:       33 39 00 21     addiu   $25, $25, 33
 # EB-NEXT:    20014:       0c 00           nop
 
 # EL: __start:
@@ -37,7 +37,7 @@
 # EL: __microLA25Thunk_foo:
 # EL-NEXT:    20008:       b9 41 02 00     lui     $25, 2
 # EL-NEXT:    2000c:       01 d4 10 00     j       131104
-# EL-NEXT:    20010:       39 33 20 00     addiu   $25, $25, 32
+# EL-NEXT:    20010:       39 33 21 00     addiu   $25, $25, 33
 # EL-NEXT:    20014:       00 0c           nop
 
   .text

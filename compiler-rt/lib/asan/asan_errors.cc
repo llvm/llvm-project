@@ -37,8 +37,7 @@ static void OnStackUnwind(const SignalContext &sig,
   // corresponding code in the sanitizer_common and we use this callback to
   // print it.
   static_cast<const ScarinessScoreBase *>(callback_context)->Print();
-  GetStackTraceWithPcBpAndContext(stack, kStackTraceMax, sig.pc, sig.bp,
-                                  sig.context, fast);
+  GetStackTrace(stack, kStackTraceMax, sig.pc, sig.bp, sig.context, fast);
 }
 
 void ErrorDeadlySignal::Print() {

@@ -304,6 +304,10 @@ SignatureHelp signatureHelp(PathRef FileName,
                             std::shared_ptr<PCHContainerOperations> PCHs,
                             clangd::Logger &Logger);
 
+/// Get the beginning SourceLocation at a specified \p Pos.
+SourceLocation getBeginningOfIdentifier(ParsedAST &Unit, const Position &Pos,
+                                        const FileEntry *FE);
+
 /// Get definition of symbol at a specified \p Pos.
 std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos,
                                       clangd::Logger &Logger);

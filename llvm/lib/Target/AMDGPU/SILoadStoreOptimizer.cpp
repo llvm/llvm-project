@@ -310,8 +310,6 @@ bool SILoadStoreOptimizer::findMatchingInst(CombineInfo &CI) {
     AddrOpName[NumAddresses++] = AMDGPU::OpName::srsrc;
     AddrOpName[NumAddresses++] = AMDGPU::OpName::soffset;
     break;
-  default:
-    llvm_unreachable("invalid InstClass");
   }
 
   for (unsigned i = 0; i < NumAddresses; i++) {

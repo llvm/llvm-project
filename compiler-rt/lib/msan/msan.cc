@@ -218,14 +218,14 @@ static void InitializeFlags() {
 }
 
 void GetStackTrace(BufferedStackTrace *stack, uptr max_s, uptr pc, uptr bp,
-                   bool request_fast_unwind) {
+                   void *context, bool request_fast_unwind) {
   MsanThread *t = GetCurrentThread();
   if (!t || !StackTrace::WillUseFastUnwind(request_fast_unwind)) {
     // Block reports from our interceptors during _Unwind_Backtrace.
     SymbolizerScope sym_scope;
-    return stack->Unwind(max_s, pc, bp, nullptr, 0, 0, request_fast_unwind);
+    return stack->Unwind(max_s, pc, bp, context, 0, 0, request_fast_unwind);
   }
-  stack->Unwind(max_s, pc, bp, nullptr, t->stack_top(), t->stack_bottom(),
+  stack->Unwind(max_s, pc, bp, context, t->stack_top(), t->stack_bottom(),
                 request_fast_unwind);
 }
 

@@ -15,8 +15,8 @@ define i16 @test_bsf16(i16 %a0, i16* %a1) optsize {
 ; GENERIC-LABEL: test_bsf16:
 ; GENERIC:       # BB#0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    bsfw %di, %ax
-; GENERIC-NEXT:    bsfw (%rsi), %cx
+; GENERIC-NEXT:    bsfw %di, %ax # sched: [3:1.00]
+; GENERIC-NEXT:    bsfw (%rsi), %cx # sched: [8:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    orl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
@@ -25,8 +25,8 @@ define i16 @test_bsf16(i16 %a0, i16* %a1) optsize {
 ; ATOM-LABEL: test_bsf16:
 ; ATOM:       # BB#0:
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    bsfw %di, %ax
-; ATOM-NEXT:    bsfw (%rsi), %cx
+; ATOM-NEXT:    bsfw %di, %ax # sched: [16:8.00]
+; ATOM-NEXT:    bsfw (%rsi), %cx # sched: [16:8.00]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    orl %ecx, %eax # sched: [1:0.50]
 ; ATOM-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
@@ -35,8 +35,8 @@ define i16 @test_bsf16(i16 %a0, i16* %a1) optsize {
 ; SLM-LABEL: test_bsf16:
 ; SLM:       # BB#0:
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    bsfw %di, %ax
-; SLM-NEXT:    bsfw (%rsi), %cx
+; SLM-NEXT:    bsfw %di, %ax # sched: [1:1.00]
+; SLM-NEXT:    bsfw (%rsi), %cx # sched: [4:1.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    orl %ecx, %eax # sched: [1:0.50]
 ; SLM-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
@@ -45,8 +45,8 @@ define i16 @test_bsf16(i16 %a0, i16* %a1) optsize {
 ; SANDY-LABEL: test_bsf16:
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    #APP
-; SANDY-NEXT:    bsfw %di, %ax
-; SANDY-NEXT:    bsfw (%rsi), %cx
+; SANDY-NEXT:    bsfw %di, %ax # sched: [3:1.00]
+; SANDY-NEXT:    bsfw (%rsi), %cx # sched: [8:1.00]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    orl %ecx, %eax # sched: [1:0.33]
 ; SANDY-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
@@ -55,8 +55,8 @@ define i16 @test_bsf16(i16 %a0, i16* %a1) optsize {
 ; HASWELL-LABEL: test_bsf16:
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    bsfw %di, %ax
-; HASWELL-NEXT:    bsfw (%rsi), %cx
+; HASWELL-NEXT:    bsfw %di, %ax # sched: [3:1.00]
+; HASWELL-NEXT:    bsfw (%rsi), %cx # sched: [3:1.00]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    orl %ecx, %eax # sched: [1:0.25]
 ; HASWELL-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
@@ -65,8 +65,8 @@ define i16 @test_bsf16(i16 %a0, i16* %a1) optsize {
 ; BROADWELL-LABEL: test_bsf16:
 ; BROADWELL:       # BB#0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    bsfw %di, %ax
-; BROADWELL-NEXT:    bsfw (%rsi), %cx
+; BROADWELL-NEXT:    bsfw %di, %ax # sched: [3:1.00]
+; BROADWELL-NEXT:    bsfw (%rsi), %cx # sched: [8:1.00]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    orl %ecx, %eax # sched: [1:0.25]
 ; BROADWELL-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
@@ -75,8 +75,8 @@ define i16 @test_bsf16(i16 %a0, i16* %a1) optsize {
 ; SKYLAKE-LABEL: test_bsf16:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    bsfw %di, %ax
-; SKYLAKE-NEXT:    bsfw (%rsi), %cx
+; SKYLAKE-NEXT:    bsfw %di, %ax # sched: [3:1.00]
+; SKYLAKE-NEXT:    bsfw (%rsi), %cx # sched: [8:1.00]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    orl %ecx, %eax # sched: [1:0.25]
 ; SKYLAKE-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
@@ -85,8 +85,8 @@ define i16 @test_bsf16(i16 %a0, i16* %a1) optsize {
 ; SKX-LABEL: test_bsf16:
 ; SKX:       # BB#0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    bsfw %di, %ax
-; SKX-NEXT:    bsfw (%rsi), %cx
+; SKX-NEXT:    bsfw %di, %ax # sched: [3:1.00]
+; SKX-NEXT:    bsfw (%rsi), %cx # sched: [8:1.00]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    orl %ecx, %eax # sched: [1:0.25]
 ; SKX-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
@@ -95,8 +95,8 @@ define i16 @test_bsf16(i16 %a0, i16* %a1) optsize {
 ; BTVER2-LABEL: test_bsf16:
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    bsfw %di, %ax
-; BTVER2-NEXT:    bsfw (%rsi), %cx
+; BTVER2-NEXT:    bsfw %di, %ax # sched: [1:0.50]
+; BTVER2-NEXT:    bsfw (%rsi), %cx # sched: [4:1.00]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    orl %ecx, %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
@@ -105,8 +105,8 @@ define i16 @test_bsf16(i16 %a0, i16* %a1) optsize {
 ; ZNVER1-LABEL: test_bsf16:
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    bsfw %di, %ax
-; ZNVER1-NEXT:    bsfw (%rsi), %cx
+; ZNVER1-NEXT:    bsfw %di, %ax # sched: [3:0.25]
+; ZNVER1-NEXT:    bsfw (%rsi), %cx # sched: [7:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    orl %ecx, %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
@@ -121,8 +121,8 @@ define i32 @test_bsf32(i32 %a0, i32* %a1) optsize {
 ; GENERIC-LABEL: test_bsf32:
 ; GENERIC:       # BB#0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    bsfl %edi, %eax
-; GENERIC-NEXT:    bsfl (%rsi), %ecx
+; GENERIC-NEXT:    bsfl %edi, %eax # sched: [3:1.00]
+; GENERIC-NEXT:    bsfl (%rsi), %ecx # sched: [8:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    orl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -130,8 +130,8 @@ define i32 @test_bsf32(i32 %a0, i32* %a1) optsize {
 ; ATOM-LABEL: test_bsf32:
 ; ATOM:       # BB#0:
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    bsfl %edi, %eax
-; ATOM-NEXT:    bsfl (%rsi), %ecx
+; ATOM-NEXT:    bsfl %edi, %eax # sched: [16:8.00]
+; ATOM-NEXT:    bsfl (%rsi), %ecx # sched: [16:8.00]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    orl %ecx, %eax # sched: [1:0.50]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
@@ -139,8 +139,8 @@ define i32 @test_bsf32(i32 %a0, i32* %a1) optsize {
 ; SLM-LABEL: test_bsf32:
 ; SLM:       # BB#0:
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    bsfl %edi, %eax
-; SLM-NEXT:    bsfl (%rsi), %ecx
+; SLM-NEXT:    bsfl %edi, %eax # sched: [1:1.00]
+; SLM-NEXT:    bsfl (%rsi), %ecx # sched: [4:1.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    orl %ecx, %eax # sched: [1:0.50]
 ; SLM-NEXT:    retq # sched: [4:1.00]
@@ -148,8 +148,8 @@ define i32 @test_bsf32(i32 %a0, i32* %a1) optsize {
 ; SANDY-LABEL: test_bsf32:
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    #APP
-; SANDY-NEXT:    bsfl %edi, %eax
-; SANDY-NEXT:    bsfl (%rsi), %ecx
+; SANDY-NEXT:    bsfl %edi, %eax # sched: [3:1.00]
+; SANDY-NEXT:    bsfl (%rsi), %ecx # sched: [8:1.00]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    orl %ecx, %eax # sched: [1:0.33]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
@@ -157,8 +157,8 @@ define i32 @test_bsf32(i32 %a0, i32* %a1) optsize {
 ; HASWELL-LABEL: test_bsf32:
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    bsfl %edi, %eax
-; HASWELL-NEXT:    bsfl (%rsi), %ecx
+; HASWELL-NEXT:    bsfl %edi, %eax # sched: [3:1.00]
+; HASWELL-NEXT:    bsfl (%rsi), %ecx # sched: [3:1.00]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    orl %ecx, %eax # sched: [1:0.25]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
@@ -166,8 +166,8 @@ define i32 @test_bsf32(i32 %a0, i32* %a1) optsize {
 ; BROADWELL-LABEL: test_bsf32:
 ; BROADWELL:       # BB#0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    bsfl %edi, %eax
-; BROADWELL-NEXT:    bsfl (%rsi), %ecx
+; BROADWELL-NEXT:    bsfl %edi, %eax # sched: [3:1.00]
+; BROADWELL-NEXT:    bsfl (%rsi), %ecx # sched: [8:1.00]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    orl %ecx, %eax # sched: [1:0.25]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
@@ -175,8 +175,8 @@ define i32 @test_bsf32(i32 %a0, i32* %a1) optsize {
 ; SKYLAKE-LABEL: test_bsf32:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    bsfl %edi, %eax
-; SKYLAKE-NEXT:    bsfl (%rsi), %ecx
+; SKYLAKE-NEXT:    bsfl %edi, %eax # sched: [3:1.00]
+; SKYLAKE-NEXT:    bsfl (%rsi), %ecx # sched: [8:1.00]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    orl %ecx, %eax # sched: [1:0.25]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
@@ -184,8 +184,8 @@ define i32 @test_bsf32(i32 %a0, i32* %a1) optsize {
 ; SKX-LABEL: test_bsf32:
 ; SKX:       # BB#0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    bsfl %edi, %eax
-; SKX-NEXT:    bsfl (%rsi), %ecx
+; SKX-NEXT:    bsfl %edi, %eax # sched: [3:1.00]
+; SKX-NEXT:    bsfl (%rsi), %ecx # sched: [8:1.00]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    orl %ecx, %eax # sched: [1:0.25]
 ; SKX-NEXT:    retq # sched: [7:1.00]
@@ -193,8 +193,8 @@ define i32 @test_bsf32(i32 %a0, i32* %a1) optsize {
 ; BTVER2-LABEL: test_bsf32:
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    bsfl %edi, %eax
-; BTVER2-NEXT:    bsfl (%rsi), %ecx
+; BTVER2-NEXT:    bsfl %edi, %eax # sched: [1:0.50]
+; BTVER2-NEXT:    bsfl (%rsi), %ecx # sched: [4:1.00]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    orl %ecx, %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
@@ -202,8 +202,8 @@ define i32 @test_bsf32(i32 %a0, i32* %a1) optsize {
 ; ZNVER1-LABEL: test_bsf32:
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    bsfl %edi, %eax
-; ZNVER1-NEXT:    bsfl (%rsi), %ecx
+; ZNVER1-NEXT:    bsfl %edi, %eax # sched: [3:0.25]
+; ZNVER1-NEXT:    bsfl (%rsi), %ecx # sched: [7:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    orl %ecx, %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -217,8 +217,8 @@ define i64 @test_bsf64(i64 %a0, i64* %a1) optsize {
 ; GENERIC-LABEL: test_bsf64:
 ; GENERIC:       # BB#0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    bsfq %rdi, %rax
-; GENERIC-NEXT:    bsfq (%rsi), %rcx
+; GENERIC-NEXT:    bsfq %rdi, %rax # sched: [3:1.00]
+; GENERIC-NEXT:    bsfq (%rsi), %rcx # sched: [8:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    orq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -226,8 +226,8 @@ define i64 @test_bsf64(i64 %a0, i64* %a1) optsize {
 ; ATOM-LABEL: test_bsf64:
 ; ATOM:       # BB#0:
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    bsfq %rdi, %rax
-; ATOM-NEXT:    bsfq (%rsi), %rcx
+; ATOM-NEXT:    bsfq %rdi, %rax # sched: [16:8.00]
+; ATOM-NEXT:    bsfq (%rsi), %rcx # sched: [16:8.00]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    orq %rcx, %rax # sched: [1:0.50]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
@@ -235,8 +235,8 @@ define i64 @test_bsf64(i64 %a0, i64* %a1) optsize {
 ; SLM-LABEL: test_bsf64:
 ; SLM:       # BB#0:
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    bsfq %rdi, %rax
-; SLM-NEXT:    bsfq (%rsi), %rcx
+; SLM-NEXT:    bsfq %rdi, %rax # sched: [1:1.00]
+; SLM-NEXT:    bsfq (%rsi), %rcx # sched: [4:1.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    orq %rcx, %rax # sched: [1:0.50]
 ; SLM-NEXT:    retq # sched: [4:1.00]
@@ -244,8 +244,8 @@ define i64 @test_bsf64(i64 %a0, i64* %a1) optsize {
 ; SANDY-LABEL: test_bsf64:
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    #APP
-; SANDY-NEXT:    bsfq %rdi, %rax
-; SANDY-NEXT:    bsfq (%rsi), %rcx
+; SANDY-NEXT:    bsfq %rdi, %rax # sched: [3:1.00]
+; SANDY-NEXT:    bsfq (%rsi), %rcx # sched: [8:1.00]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    orq %rcx, %rax # sched: [1:0.33]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
@@ -253,8 +253,8 @@ define i64 @test_bsf64(i64 %a0, i64* %a1) optsize {
 ; HASWELL-LABEL: test_bsf64:
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    bsfq %rdi, %rax
-; HASWELL-NEXT:    bsfq (%rsi), %rcx
+; HASWELL-NEXT:    bsfq %rdi, %rax # sched: [3:1.00]
+; HASWELL-NEXT:    bsfq (%rsi), %rcx # sched: [3:1.00]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    orq %rcx, %rax # sched: [1:0.25]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
@@ -262,8 +262,8 @@ define i64 @test_bsf64(i64 %a0, i64* %a1) optsize {
 ; BROADWELL-LABEL: test_bsf64:
 ; BROADWELL:       # BB#0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    bsfq %rdi, %rax
-; BROADWELL-NEXT:    bsfq (%rsi), %rcx
+; BROADWELL-NEXT:    bsfq %rdi, %rax # sched: [3:1.00]
+; BROADWELL-NEXT:    bsfq (%rsi), %rcx # sched: [8:1.00]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    orq %rcx, %rax # sched: [1:0.25]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
@@ -271,8 +271,8 @@ define i64 @test_bsf64(i64 %a0, i64* %a1) optsize {
 ; SKYLAKE-LABEL: test_bsf64:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    bsfq %rdi, %rax
-; SKYLAKE-NEXT:    bsfq (%rsi), %rcx
+; SKYLAKE-NEXT:    bsfq %rdi, %rax # sched: [3:1.00]
+; SKYLAKE-NEXT:    bsfq (%rsi), %rcx # sched: [8:1.00]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    orq %rcx, %rax # sched: [1:0.25]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
@@ -280,8 +280,8 @@ define i64 @test_bsf64(i64 %a0, i64* %a1) optsize {
 ; SKX-LABEL: test_bsf64:
 ; SKX:       # BB#0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    bsfq %rdi, %rax
-; SKX-NEXT:    bsfq (%rsi), %rcx
+; SKX-NEXT:    bsfq %rdi, %rax # sched: [3:1.00]
+; SKX-NEXT:    bsfq (%rsi), %rcx # sched: [8:1.00]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    orq %rcx, %rax # sched: [1:0.25]
 ; SKX-NEXT:    retq # sched: [7:1.00]
@@ -289,8 +289,8 @@ define i64 @test_bsf64(i64 %a0, i64* %a1) optsize {
 ; BTVER2-LABEL: test_bsf64:
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    bsfq %rdi, %rax
-; BTVER2-NEXT:    bsfq (%rsi), %rcx
+; BTVER2-NEXT:    bsfq %rdi, %rax # sched: [1:0.50]
+; BTVER2-NEXT:    bsfq (%rsi), %rcx # sched: [4:1.00]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    orq %rcx, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
@@ -298,8 +298,8 @@ define i64 @test_bsf64(i64 %a0, i64* %a1) optsize {
 ; ZNVER1-LABEL: test_bsf64:
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    bsfq %rdi, %rax
-; ZNVER1-NEXT:    bsfq (%rsi), %rcx
+; ZNVER1-NEXT:    bsfq %rdi, %rax # sched: [3:0.25]
+; ZNVER1-NEXT:    bsfq (%rsi), %rcx # sched: [7:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    orq %rcx, %rax # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -314,8 +314,8 @@ define i16 @test_bsr16(i16 %a0, i16* %a1) optsize {
 ; GENERIC-LABEL: test_bsr16:
 ; GENERIC:       # BB#0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    bsrw %di, %ax
-; GENERIC-NEXT:    bsrw (%rsi), %cx
+; GENERIC-NEXT:    bsrw %di, %ax # sched: [3:1.00]
+; GENERIC-NEXT:    bsrw (%rsi), %cx # sched: [8:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    orl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
@@ -324,8 +324,8 @@ define i16 @test_bsr16(i16 %a0, i16* %a1) optsize {
 ; ATOM-LABEL: test_bsr16:
 ; ATOM:       # BB#0:
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    bsrw %di, %ax
-; ATOM-NEXT:    bsrw (%rsi), %cx
+; ATOM-NEXT:    bsrw %di, %ax # sched: [16:8.00]
+; ATOM-NEXT:    bsrw (%rsi), %cx # sched: [16:8.00]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    orl %ecx, %eax # sched: [1:0.50]
 ; ATOM-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
@@ -334,8 +334,8 @@ define i16 @test_bsr16(i16 %a0, i16* %a1) optsize {
 ; SLM-LABEL: test_bsr16:
 ; SLM:       # BB#0:
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    bsrw %di, %ax
-; SLM-NEXT:    bsrw (%rsi), %cx
+; SLM-NEXT:    bsrw %di, %ax # sched: [1:1.00]
+; SLM-NEXT:    bsrw (%rsi), %cx # sched: [4:1.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    orl %ecx, %eax # sched: [1:0.50]
 ; SLM-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
@@ -344,8 +344,8 @@ define i16 @test_bsr16(i16 %a0, i16* %a1) optsize {
 ; SANDY-LABEL: test_bsr16:
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    #APP
-; SANDY-NEXT:    bsrw %di, %ax
-; SANDY-NEXT:    bsrw (%rsi), %cx
+; SANDY-NEXT:    bsrw %di, %ax # sched: [3:1.00]
+; SANDY-NEXT:    bsrw (%rsi), %cx # sched: [8:1.00]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    orl %ecx, %eax # sched: [1:0.33]
 ; SANDY-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
@@ -354,8 +354,8 @@ define i16 @test_bsr16(i16 %a0, i16* %a1) optsize {
 ; HASWELL-LABEL: test_bsr16:
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    bsrw %di, %ax
-; HASWELL-NEXT:    bsrw (%rsi), %cx
+; HASWELL-NEXT:    bsrw %di, %ax # sched: [3:1.00]
+; HASWELL-NEXT:    bsrw (%rsi), %cx # sched: [3:1.00]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    orl %ecx, %eax # sched: [1:0.25]
 ; HASWELL-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
@@ -364,8 +364,8 @@ define i16 @test_bsr16(i16 %a0, i16* %a1) optsize {
 ; BROADWELL-LABEL: test_bsr16:
 ; BROADWELL:       # BB#0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    bsrw %di, %ax
-; BROADWELL-NEXT:    bsrw (%rsi), %cx
+; BROADWELL-NEXT:    bsrw %di, %ax # sched: [3:1.00]
+; BROADWELL-NEXT:    bsrw (%rsi), %cx # sched: [8:1.00]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    orl %ecx, %eax # sched: [1:0.25]
 ; BROADWELL-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
@@ -374,8 +374,8 @@ define i16 @test_bsr16(i16 %a0, i16* %a1) optsize {
 ; SKYLAKE-LABEL: test_bsr16:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    bsrw %di, %ax
-; SKYLAKE-NEXT:    bsrw (%rsi), %cx
+; SKYLAKE-NEXT:    bsrw %di, %ax # sched: [3:1.00]
+; SKYLAKE-NEXT:    bsrw (%rsi), %cx # sched: [8:1.00]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    orl %ecx, %eax # sched: [1:0.25]
 ; SKYLAKE-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
@@ -384,8 +384,8 @@ define i16 @test_bsr16(i16 %a0, i16* %a1) optsize {
 ; SKX-LABEL: test_bsr16:
 ; SKX:       # BB#0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    bsrw %di, %ax
-; SKX-NEXT:    bsrw (%rsi), %cx
+; SKX-NEXT:    bsrw %di, %ax # sched: [3:1.00]
+; SKX-NEXT:    bsrw (%rsi), %cx # sched: [8:1.00]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    orl %ecx, %eax # sched: [1:0.25]
 ; SKX-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
@@ -394,8 +394,8 @@ define i16 @test_bsr16(i16 %a0, i16* %a1) optsize {
 ; BTVER2-LABEL: test_bsr16:
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    bsrw %di, %ax
-; BTVER2-NEXT:    bsrw (%rsi), %cx
+; BTVER2-NEXT:    bsrw %di, %ax # sched: [1:0.50]
+; BTVER2-NEXT:    bsrw (%rsi), %cx # sched: [4:1.00]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    orl %ecx, %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
@@ -404,8 +404,8 @@ define i16 @test_bsr16(i16 %a0, i16* %a1) optsize {
 ; ZNVER1-LABEL: test_bsr16:
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    bsrw %di, %ax
-; ZNVER1-NEXT:    bsrw (%rsi), %cx
+; ZNVER1-NEXT:    bsrw %di, %ax # sched: [3:0.25]
+; ZNVER1-NEXT:    bsrw (%rsi), %cx # sched: [7:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    orl %ecx, %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
@@ -420,8 +420,8 @@ define i32 @test_bsr32(i32 %a0, i32* %a1) optsize {
 ; GENERIC-LABEL: test_bsr32:
 ; GENERIC:       # BB#0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    bsrl %edi, %eax
-; GENERIC-NEXT:    bsrl (%rsi), %ecx
+; GENERIC-NEXT:    bsrl %edi, %eax # sched: [3:1.00]
+; GENERIC-NEXT:    bsrl (%rsi), %ecx # sched: [8:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    orl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -429,8 +429,8 @@ define i32 @test_bsr32(i32 %a0, i32* %a1) optsize {
 ; ATOM-LABEL: test_bsr32:
 ; ATOM:       # BB#0:
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    bsrl %edi, %eax
-; ATOM-NEXT:    bsrl (%rsi), %ecx
+; ATOM-NEXT:    bsrl %edi, %eax # sched: [16:8.00]
+; ATOM-NEXT:    bsrl (%rsi), %ecx # sched: [16:8.00]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    orl %ecx, %eax # sched: [1:0.50]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
@@ -438,8 +438,8 @@ define i32 @test_bsr32(i32 %a0, i32* %a1) optsize {
 ; SLM-LABEL: test_bsr32:
 ; SLM:       # BB#0:
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    bsrl %edi, %eax
-; SLM-NEXT:    bsrl (%rsi), %ecx
+; SLM-NEXT:    bsrl %edi, %eax # sched: [1:1.00]
+; SLM-NEXT:    bsrl (%rsi), %ecx # sched: [4:1.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    orl %ecx, %eax # sched: [1:0.50]
 ; SLM-NEXT:    retq # sched: [4:1.00]
@@ -447,8 +447,8 @@ define i32 @test_bsr32(i32 %a0, i32* %a1) optsize {
 ; SANDY-LABEL: test_bsr32:
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    #APP
-; SANDY-NEXT:    bsrl %edi, %eax
-; SANDY-NEXT:    bsrl (%rsi), %ecx
+; SANDY-NEXT:    bsrl %edi, %eax # sched: [3:1.00]
+; SANDY-NEXT:    bsrl (%rsi), %ecx # sched: [8:1.00]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    orl %ecx, %eax # sched: [1:0.33]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
@@ -456,8 +456,8 @@ define i32 @test_bsr32(i32 %a0, i32* %a1) optsize {
 ; HASWELL-LABEL: test_bsr32:
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    bsrl %edi, %eax
-; HASWELL-NEXT:    bsrl (%rsi), %ecx
+; HASWELL-NEXT:    bsrl %edi, %eax # sched: [3:1.00]
+; HASWELL-NEXT:    bsrl (%rsi), %ecx # sched: [3:1.00]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    orl %ecx, %eax # sched: [1:0.25]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
@@ -465,8 +465,8 @@ define i32 @test_bsr32(i32 %a0, i32* %a1) optsize {
 ; BROADWELL-LABEL: test_bsr32:
 ; BROADWELL:       # BB#0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    bsrl %edi, %eax
-; BROADWELL-NEXT:    bsrl (%rsi), %ecx
+; BROADWELL-NEXT:    bsrl %edi, %eax # sched: [3:1.00]
+; BROADWELL-NEXT:    bsrl (%rsi), %ecx # sched: [8:1.00]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    orl %ecx, %eax # sched: [1:0.25]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
@@ -474,8 +474,8 @@ define i32 @test_bsr32(i32 %a0, i32* %a1) optsize {
 ; SKYLAKE-LABEL: test_bsr32:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    bsrl %edi, %eax
-; SKYLAKE-NEXT:    bsrl (%rsi), %ecx
+; SKYLAKE-NEXT:    bsrl %edi, %eax # sched: [3:1.00]
+; SKYLAKE-NEXT:    bsrl (%rsi), %ecx # sched: [8:1.00]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    orl %ecx, %eax # sched: [1:0.25]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
@@ -483,8 +483,8 @@ define i32 @test_bsr32(i32 %a0, i32* %a1) optsize {
 ; SKX-LABEL: test_bsr32:
 ; SKX:       # BB#0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    bsrl %edi, %eax
-; SKX-NEXT:    bsrl (%rsi), %ecx
+; SKX-NEXT:    bsrl %edi, %eax # sched: [3:1.00]
+; SKX-NEXT:    bsrl (%rsi), %ecx # sched: [8:1.00]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    orl %ecx, %eax # sched: [1:0.25]
 ; SKX-NEXT:    retq # sched: [7:1.00]
@@ -492,8 +492,8 @@ define i32 @test_bsr32(i32 %a0, i32* %a1) optsize {
 ; BTVER2-LABEL: test_bsr32:
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    bsrl %edi, %eax
-; BTVER2-NEXT:    bsrl (%rsi), %ecx
+; BTVER2-NEXT:    bsrl %edi, %eax # sched: [1:0.50]
+; BTVER2-NEXT:    bsrl (%rsi), %ecx # sched: [4:1.00]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    orl %ecx, %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
@@ -501,8 +501,8 @@ define i32 @test_bsr32(i32 %a0, i32* %a1) optsize {
 ; ZNVER1-LABEL: test_bsr32:
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    bsrl %edi, %eax
-; ZNVER1-NEXT:    bsrl (%rsi), %ecx
+; ZNVER1-NEXT:    bsrl %edi, %eax # sched: [3:0.25]
+; ZNVER1-NEXT:    bsrl (%rsi), %ecx # sched: [7:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    orl %ecx, %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -516,8 +516,8 @@ define i64 @test_bsr64(i64 %a0, i64* %a1) optsize {
 ; GENERIC-LABEL: test_bsr64:
 ; GENERIC:       # BB#0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    bsrq %rdi, %rax
-; GENERIC-NEXT:    bsrq (%rsi), %rcx
+; GENERIC-NEXT:    bsrq %rdi, %rax # sched: [3:1.00]
+; GENERIC-NEXT:    bsrq (%rsi), %rcx # sched: [8:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    orq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -525,8 +525,8 @@ define i64 @test_bsr64(i64 %a0, i64* %a1) optsize {
 ; ATOM-LABEL: test_bsr64:
 ; ATOM:       # BB#0:
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    bsrq %rdi, %rax
-; ATOM-NEXT:    bsrq (%rsi), %rcx
+; ATOM-NEXT:    bsrq %rdi, %rax # sched: [16:8.00]
+; ATOM-NEXT:    bsrq (%rsi), %rcx # sched: [16:8.00]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    orq %rcx, %rax # sched: [1:0.50]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
@@ -534,8 +534,8 @@ define i64 @test_bsr64(i64 %a0, i64* %a1) optsize {
 ; SLM-LABEL: test_bsr64:
 ; SLM:       # BB#0:
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    bsrq %rdi, %rax
-; SLM-NEXT:    bsrq (%rsi), %rcx
+; SLM-NEXT:    bsrq %rdi, %rax # sched: [1:1.00]
+; SLM-NEXT:    bsrq (%rsi), %rcx # sched: [4:1.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    orq %rcx, %rax # sched: [1:0.50]
 ; SLM-NEXT:    retq # sched: [4:1.00]
@@ -543,8 +543,8 @@ define i64 @test_bsr64(i64 %a0, i64* %a1) optsize {
 ; SANDY-LABEL: test_bsr64:
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    #APP
-; SANDY-NEXT:    bsrq %rdi, %rax
-; SANDY-NEXT:    bsrq (%rsi), %rcx
+; SANDY-NEXT:    bsrq %rdi, %rax # sched: [3:1.00]
+; SANDY-NEXT:    bsrq (%rsi), %rcx # sched: [8:1.00]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    orq %rcx, %rax # sched: [1:0.33]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
@@ -552,8 +552,8 @@ define i64 @test_bsr64(i64 %a0, i64* %a1) optsize {
 ; HASWELL-LABEL: test_bsr64:
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    bsrq %rdi, %rax
-; HASWELL-NEXT:    bsrq (%rsi), %rcx
+; HASWELL-NEXT:    bsrq %rdi, %rax # sched: [3:1.00]
+; HASWELL-NEXT:    bsrq (%rsi), %rcx # sched: [3:1.00]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    orq %rcx, %rax # sched: [1:0.25]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
@@ -561,8 +561,8 @@ define i64 @test_bsr64(i64 %a0, i64* %a1) optsize {
 ; BROADWELL-LABEL: test_bsr64:
 ; BROADWELL:       # BB#0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    bsrq %rdi, %rax
-; BROADWELL-NEXT:    bsrq (%rsi), %rcx
+; BROADWELL-NEXT:    bsrq %rdi, %rax # sched: [3:1.00]
+; BROADWELL-NEXT:    bsrq (%rsi), %rcx # sched: [8:1.00]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    orq %rcx, %rax # sched: [1:0.25]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
@@ -570,8 +570,8 @@ define i64 @test_bsr64(i64 %a0, i64* %a1) optsize {
 ; SKYLAKE-LABEL: test_bsr64:
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    bsrq %rdi, %rax
-; SKYLAKE-NEXT:    bsrq (%rsi), %rcx
+; SKYLAKE-NEXT:    bsrq %rdi, %rax # sched: [3:1.00]
+; SKYLAKE-NEXT:    bsrq (%rsi), %rcx # sched: [8:1.00]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    orq %rcx, %rax # sched: [1:0.25]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
@@ -579,8 +579,8 @@ define i64 @test_bsr64(i64 %a0, i64* %a1) optsize {
 ; SKX-LABEL: test_bsr64:
 ; SKX:       # BB#0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    bsrq %rdi, %rax
-; SKX-NEXT:    bsrq (%rsi), %rcx
+; SKX-NEXT:    bsrq %rdi, %rax # sched: [3:1.00]
+; SKX-NEXT:    bsrq (%rsi), %rcx # sched: [8:1.00]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    orq %rcx, %rax # sched: [1:0.25]
 ; SKX-NEXT:    retq # sched: [7:1.00]
@@ -588,8 +588,8 @@ define i64 @test_bsr64(i64 %a0, i64* %a1) optsize {
 ; BTVER2-LABEL: test_bsr64:
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    bsrq %rdi, %rax
-; BTVER2-NEXT:    bsrq (%rsi), %rcx
+; BTVER2-NEXT:    bsrq %rdi, %rax # sched: [1:0.50]
+; BTVER2-NEXT:    bsrq (%rsi), %rcx # sched: [4:1.00]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    orq %rcx, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
@@ -597,8 +597,8 @@ define i64 @test_bsr64(i64 %a0, i64* %a1) optsize {
 ; ZNVER1-LABEL: test_bsr64:
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    bsrq %rdi, %rax
-; ZNVER1-NEXT:    bsrq (%rsi), %rcx
+; ZNVER1-NEXT:    bsrq %rdi, %rax # sched: [3:0.25]
+; ZNVER1-NEXT:    bsrq (%rsi), %rcx # sched: [7:0.50]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    orq %rcx, %rax # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
