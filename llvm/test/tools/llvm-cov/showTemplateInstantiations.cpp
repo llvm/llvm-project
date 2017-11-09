@@ -7,29 +7,29 @@ template<typename T> // ALL:         [[@LINE]]|  |template<typename T>
 int func(T x) {      // ALL-NEXT:    [[@LINE]]| 2|int func(T x) {
   if(x)              // ALL-NEXT:    [[@LINE]]| 2|  if(x)
     return 0;        // ALL-NEXT:    [[@LINE]]| 1|    return 0;
-  else               // ALL-NEXT:    [[@LINE]]| 2|  else
+  else               // ALL-NEXT:    [[@LINE]]| 1|  else
     return 1;        // ALL-NEXT:    [[@LINE]]| 1|    return 1;
   int j = 1;         // ALL-NEXT:    [[@LINE]]| 0|  int j = 1;
-}                    // ALL-NEXT:    [[@LINE]]| 2|}
+}                    // ALL-NEXT:    [[@LINE]]| 0|}
+
+                     // ALL:         _Z4{{[a-z]+}}IiEiT_:
+                     // FILTER-NOT:  _Z4{{[a-z]+}}IiEiT_:
+                     // ALL:         [[@LINE-10]]| 1|int func(T x) {
+                     // ALL-NEXT:    [[@LINE-10]]| 1|  if(x)
+                     // ALL-NEXT:    [[@LINE-10]]| 0|    return 0;
+                     // ALL-NEXT:    [[@LINE-10]]| 1|  else
+                     // ALL-NEXT:    [[@LINE-10]]| 1|    return 1;
+                     // ALL-NEXT:    [[@LINE-10]]| 0|  int j = 1;
+                     // ALL-NEXT:    [[@LINE-10]]| 0|}
 
                      // SHARED:       {{^ *(\| )?}}_Z4funcIbEiT_:
-                     // SHARED:       [[@LINE-9]]| 1|int func(T x) {
-                     // SHARED-NEXT:  [[@LINE-9]]| 1|  if(x)
-                     // SHARED-NEXT:  [[@LINE-9]]| 1|    return 0;
-                     // SHARED-NEXT:  [[@LINE-9]]| 1|  else
-                     // SHARED-NEXT:  [[@LINE-9]]| 0|    return 1;
-                     // SHARED-NEXT:  [[@LINE-9]]| 0|  int j = 1;
-                     // SHARED-NEXT:  [[@LINE-9]]| 1|}
-
-                     // ALL:         {{^ *}}| _Z4funcIiEiT_:
-                     // FILTER-NOT:  {{^ *(\| )?}} _Z4funcIiEiT_:
-                     // ALL:         [[@LINE-19]]| 1|int func(T x) {
-                     // ALL-NEXT:    [[@LINE-19]]| 1|  if(x)
-                     // ALL-NEXT:    [[@LINE-19]]| 0|    return 0;
-                     // ALL-NEXT:    [[@LINE-19]]| 1|  else
-                     // ALL-NEXT:    [[@LINE-19]]| 1|    return 1;
-                     // ALL-NEXT:    [[@LINE-19]]| 0|  int j = 1;
-                     // ALL-NEXT:    [[@LINE-19]]| 1|}
+                     // SHARED:       [[@LINE-19]]| 1|int func(T x) {
+                     // SHARED-NEXT:  [[@LINE-19]]| 1|  if(x)
+                     // SHARED-NEXT:  [[@LINE-19]]| 1|    return 0;
+                     // SHARED-NEXT:  [[@LINE-19]]| 0|  else
+                     // SHARED-NEXT:  [[@LINE-19]]| 0|    return 1;
+                     // SHARED-NEXT:  [[@LINE-19]]| 0|  int j = 1;
+                     // SHARED-NEXT:  [[@LINE-19]]| 0|}
 
 int main() {         // ALL:         [[@LINE]]| 1|int main() {
   func<int>(0);      // ALL-NEXT:    [[@LINE]]| 1|  func<int>(0);
@@ -45,44 +45,16 @@ int main() {         // ALL:         [[@LINE]]| 1|int main() {
 // RUN: FileCheck -check-prefixes=HTML-SHARED,HTML-ALL -input-file=%t.html.dir/coverage/tmp/showTemplateInstantiations.cpp.html %s
 // RUN: FileCheck -check-prefixes=HTML-SHARED,HTML-FILTER -input-file=%t.html.filtered.dir/coverage/tmp/showTemplateInstantiations.cpp.html %s
 
-// HTML-ALL: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='uncovered-line'></td><td class='code'><pre>// before
-// HTML-FILTER-NOT: <td class='line-number'><a name='L[[@LINE-45]]' href='#L[[@LINE-45]]'><pre>[[@LINE-45]]</pre></a></td><td class='uncovered-line'></td><td class='code'><pre>// before
-// HTML-ALL: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='uncovered-line'></td><td class='code'><pre>template&lt;typename T&gt;
-// HTML-ALL: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>2</pre></td><td class='code'><pre>int func(T x) {
-// HTML-ALL: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>2</pre></td><td class='code'><pre>  if(x)
-// HTML-ALL: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>1</pre></td><td class='code'><pre>    ret
-// HTML-ALL: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>2</pre></td><td class='code'><pre>  else
-// HTML-ALL: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>1</pre></td><td class='code'><pre>    ret
-// HTML-ALL: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='uncovered-line'><pre>0</pre></td><td class='code'><pre>
-// HTML-ALL: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>2</pre></td><td class='code'><pre>}
-
-// HTML-SHARED: <div class='source-name-title'><pre>_Z4funcIbEiT_</pre></div>
-// HTML-SHARED: <td class='line-number'><a name='L[[@LINE-53]]' href='#L[[@LINE-53]]'><pre>[[@LINE-53]]</pre></a></td><td class='covered-line'><pre>1</pre></td><td class='code'><pre>int func(T x) {
-// HTML-SHARED: <td class='line-number'><a name='L[[@LINE-53]]' href='#L[[@LINE-53]]'><pre>[[@LINE-53]]</pre></a></td><td class='covered-line'><pre>1</pre></td><td class='code'><pre>  if(x)
-// HTML-SHARED: <td class='line-number'><a name='L[[@LINE-53]]' href='#L[[@LINE-53]]'><pre>[[@LINE-53]]</pre></a></td><td class='covered-line'><pre>1</pre></td><td class='code'><pre>    ret
-// HTML-SHARED: <td class='line-number'><a name='L[[@LINE-53]]' href='#L[[@LINE-53]]'><pre>[[@LINE-53]]</pre></a></td><td class='covered-line'><pre>1</pre></td><td class='code'><pre>  else
-// HTML-SHARED: <td class='line-number'><a name='L[[@LINE-53]]' href='#L[[@LINE-53]]'><pre>[[@LINE-53]]</pre></a></td><td class='uncovered-line'><pre>0</pre></td><td class='code'><pre>
-// HTML-SHARED: <td class='line-number'><a name='L[[@LINE-53]]' href='#L[[@LINE-53]]'><pre>[[@LINE-53]]</pre></a></td><td class='uncovered-line'><pre>0</pre></td><td class='code'><pre>
-// HTML-SHARED: <td class='line-number'><a name='L[[@LINE-53]]' href='#L[[@LINE-53]]'><pre>[[@LINE-53]]</pre></a></td><td class='covered-line'><pre>1</pre></td><td class='code'><pre>}
+// HTML-ALL: <td class='line-number'><a name='L4' href='#L4'><pre>4</pre></a></td><td class='uncovered-line'></td><td class='code'><pre>// before
+// HTML-FILTER-NOT: <td class='line-number'><a name='L4' href='#L4'><pre>4</pre></a></td><td class='uncovered-line'></td><td class='code'><pre>// before
+// HTML-ALL: <td class='line-number'><a name='L6' href='#L6'><pre>6</pre></a></td><td class='uncovered-line'></td><td class='code'><pre>template&lt;typename T&gt;
 
 // HTML-ALL: <div class='source-name-title'><pre>_Z4funcIiEiT_</pre></div>
 // HTML-FILTER-NOT: <div class='source-name-title'><pre>_Z4funcIiEiT_</pre></div><table>
-// HTML-ALL: <td class='line-number'><a name='L[[@LINE-63]]' href='#L[[@LINE-63]]'><pre>[[@LINE-63]]</pre></a></td><td class='covered-line'><pre>1</pre></td><td class='code'><pre>int func(T x) {
-// HTML-ALL: <td class='line-number'><a name='L[[@LINE-63]]' href='#L[[@LINE-63]]'><pre>[[@LINE-63]]</pre></a></td><td class='covered-line'><pre>1</pre></td><td class='code'><pre>  if(x)
-// HTML-ALL: <td class='line-number'><a name='L[[@LINE-63]]' href='#L[[@LINE-63]]'><pre>[[@LINE-63]]</pre></a></td><td class='uncovered-line'><pre>0</pre></td><td class='code'><pre>
-// HTML-ALL: <td class='line-number'><a name='L[[@LINE-63]]' href='#L[[@LINE-63]]'><pre>[[@LINE-63]]</pre></a></td><td class='covered-line'><pre>1</pre></td><td class='code'><pre>  else
-// HTML-ALL: <td class='line-number'><a name='L[[@LINE-63]]' href='#L[[@LINE-63]]'><pre>[[@LINE-63]]</pre></a></td><td class='covered-line'><pre>1</pre></td><td class='code'><pre>    ret
-// HTML-ALL: <td class='line-number'><a name='L[[@LINE-63]]' href='#L[[@LINE-63]]'><pre>[[@LINE-63]]</pre></a></td><td class='uncovered-line'><pre>0</pre></td><td class='code'><pre>
-// HTML-ALL: <td class='line-number'><a name='L[[@LINE-63]]' href='#L[[@LINE-63]]'><pre>[[@LINE-63]]</pre></a></td><td class='covered-line'><pre>1</pre></td><td class='code'><pre>}
+// HTML-ALL: <td class='line-number'><a name='L7' href='#L7'><pre>7</pre></a></td><td class='covered-line'><pre>1</pre></td><td class='code'><pre>int func(T x) {
 
-// HTML-ALL: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>1</pre></td><td class='code'><pre>int main() {
-// HTML-ALL: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>1</pre></td><td class='code'><pre>  func&lt;int&gt;(0);
-// HTML-ALL: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>1</pre></td><td class='code'><pre>  func&lt;bool&gt;(true);
-// HTML-ALL: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>1</pre></td><td class='code'><pre>  return 0;
-// HTML-ALL: <td class='line-number'><a name='L[[@LINE-44]]' href='#L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>1</pre></td><td class='code'><pre>}
-
-// HTML-ALL: <td class='line-number'><a name='L[[@LINE-45]]' href='#L[[@LINE-45]]'><pre>[[@LINE-45]]</pre></a></td><td class='uncovered-line'></td><td class='code'><pre>// after
-// HTML-FILTER-NOT: <td class='line-number'><a name='L[[@LINE-46]]' href='#L[[@LINE-46]]'><pre>[[@LINE-46]]</pre></a></td><td class='uncovered-line'></td><td class='code'><pre>// after
+// HTML-SHARED: <div class='source-name-title'><pre>_Z4funcIbEiT_</pre></div>
+// HTML-SHARED: <td class='line-number'><a name='L7' href='#L7'><pre>7</pre></a></td><td class='covered-line'><pre>1</pre></td><td class='code'><pre>int func(T x) {
 
 // RUN: FileCheck -check-prefix=HTML-JUMP -input-file=%t.html.dir/coverage/tmp/showTemplateInstantiations.cpp.html %s
 // HTML-JUMP: <pre>Source (<a href='#L{{[0-9]+}}'>jump to first uncovered line</a>)</pre>
@@ -93,5 +65,5 @@ int main() {         // ALL:         [[@LINE]]| 1|int main() {
 // NO_INSTS-NOT: {{^ *}}| _Z4funcIiEiT_:
 
 // RUN: llvm-cov report %S/Inputs/templateInstantiations.covmapping -dump -instr-profile %S/Inputs/templateInstantiations.profdata -path-equivalence=/tmp,%S %s | FileCheck -check-prefix=DUMP %s
-// DUMP: InstantiationGroup: Definition at line 7, column 30 with size = 2
+// DUMP: InstantiationGroup: Definition at line 7, column 15 with size = 2
 // DUMP: InstantiationGroup: main with size = 1

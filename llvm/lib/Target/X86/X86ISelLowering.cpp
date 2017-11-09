@@ -35565,8 +35565,11 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
 
   // Only return the node is the opcode was changed or one of the
   // operand was negated. If not, we'll just recreate the same node.
-  if (HasNeg || NewOpcode != N->getOpcode())
-    return DAG.getNode(NewOpcode, dl, VT, A, B, C, N->getOperand(3));
+  if (HasNeg || NewOpcode != N->getOpcode()) {
+    if (N->getNumOperands() == 4)
+      return DAG.getNode(NewOpcode, dl, VT, A, B, C, N->getOperand(3));
+    return DAG.getNode(NewOpcode, dl, VT, A, B, C);
+  }
 
   return SDValue();
 }

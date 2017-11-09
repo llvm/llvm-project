@@ -445,6 +445,9 @@ struct CounterCoverageMappingBuilder
   /// expressions cross file or macro boundaries.
   SourceLocation MostRecentLocation;
 
+  /// Location of the last terminated region.
+  Optional<std::pair<SourceLocation, size_t>> LastTerminatedRegion;
+
   /// \brief Return a counter for the subtraction of \c RHS from \c LHS
   Counter subtractCounters(Counter LHS, Counter RHS) {
     return Builder.subtract(LHS, RHS);
@@ -493,12 +496,14 @@ struct CounterCoverageMappingBuilder
     DeferredRegion = None;
 
     // If the region ends in an expansion, find the expansion site.
-    if (SM.getFileID(DeferredEndLoc) != SM.getMainFileID()) {
-      FileID StartFile = SM.getFileID(DR.getStartLoc());
+    FileID StartFile = SM.getFileID(DR.getStartLoc());
+    if (SM.getFileID(DeferredEndLoc) != StartFile) {
       if (isNestedIn(DeferredEndLoc, StartFile)) {
         do {
           DeferredEndLoc = getIncludeOrExpansionLoc(DeferredEndLoc);
         } while (StartFile != SM.getFileID(DeferredEndLoc));
+      } else {
+        return Index;
       }
     }
 
@@ -518,6 +523,27 @@ struct CounterCoverageMappingBuilder
     handleFileExit(DeferredEndLoc);
     RegionStack.push_back(DR);
     return Index;
+  }
+
+  /// Complete a deferred region created after a terminated region at the
+  /// top-level.
+  void completeTopLevelDeferredRegion(Counter Count,
+                                      SourceLocation DeferredEndLoc) {
+    if (DeferredRegion || !LastTerminatedRegion)
+      return;
+
+    if (LastTerminatedRegion->second != RegionStack.size())
+      return;
+
+    SourceLocation Start = LastTerminatedRegion->first;
+    if (SM.getFileID(Start) != SM.getMainFileID())
+      return;
+
+    SourceMappingRegion DR = RegionStack.back();
+    DR.setStartLoc(Start);
+    DR.setDeferred(false);
+    DeferredRegion = DR;
+    completeDeferred(Count, DeferredEndLoc);
   }
 
   /// \brief Pop regions from the stack into the function's list of regions.
@@ -567,7 +593,7 @@ struct CounterCoverageMappingBuilder
           if (!DeferredRegion.hasValue() &&
               // File IDs aren't gathered within macro expansions, so it isn't
               // useful to try and create a deferred region inside of one.
-              (SM.getFileID(EndLoc) == SM.getMainFileID()))
+              !EndLoc.isMacroID())
             DeferredRegion =
                 SourceMappingRegion(Counter::getZero(), EndLoc, None);
         }
@@ -576,6 +602,12 @@ struct CounterCoverageMappingBuilder
         ParentOfDeferredRegion = true;
       }
       RegionStack.pop_back();
+
+      // If the zero region pushed after the last terminated region no longer
+      // exists, clear its cached information.
+      if (LastTerminatedRegion &&
+          RegionStack.size() < LastTerminatedRegion->second)
+        LastTerminatedRegion = None;
     }
     assert(!ParentOfDeferredRegion && "Deferred region with no parent");
   }
@@ -712,10 +744,26 @@ struct CounterCoverageMappingBuilder
   void terminateRegion(const Stmt *S) {
     extendRegion(S);
     SourceMappingRegion &Region = getRegion();
+    SourceLocation EndLoc = getEnd(S);
     if (!Region.hasEndLoc())
-      Region.setEndLoc(getEnd(S));
+      Region.setEndLoc(EndLoc);
     pushRegion(Counter::getZero());
-    getRegion().setDeferred(true);
+    auto &ZeroRegion = getRegion();
+    ZeroRegion.setDeferred(true);
+    LastTerminatedRegion = {EndLoc, RegionStack.size()};
+  }
+
+  /// Emit a gap region between \p StartLoc and \p EndLoc with the given count.
+  void fillGapAreaWithCount(SourceLocation StartLoc, SourceLocation EndLoc,
+                            Counter Count) {
+    if (StartLoc == EndLoc || StartLoc.isMacroID() || EndLoc.isMacroID() ||
+        !SM.isWrittenInSameFile(StartLoc, EndLoc))
+      return;
+    handleFileExit(StartLoc);
+    size_t Index = pushRegion(Count, StartLoc, EndLoc);
+    getRegion().setGap(true);
+    handleFileExit(EndLoc);
+    popRegions(Index);
   }
 
   /// \brief Keep counts of breaks and continues inside loops.
@@ -813,10 +861,12 @@ struct CounterCoverageMappingBuilder
   void VisitGotoStmt(const GotoStmt *S) { terminateRegion(S); }
 
   void VisitLabelStmt(const LabelStmt *S) {
+    Counter LabelCount = getRegionCounter(S);
     SourceLocation Start = getStart(S);
+    completeTopLevelDeferredRegion(LabelCount, Start);
     // We can't extendRegion here or we risk overlapping with our new region.
     handleFileExit(Start);
-    pushRegion(getRegionCounter(S), Start);
+    pushRegion(LabelCount, Start);
     Visit(S->getSubStmt());
   }
 
@@ -1048,12 +1098,19 @@ struct CounterCoverageMappingBuilder
     // counter for the body when looking at the coverage.
     propagateCounts(ParentCount, S->getCond());
 
+    // The 'then' count applies to the area immediately after the condition.
+    fillGapAreaWithCount(getPreciseTokenLocEnd(getEnd(S->getCond())),
+                         getStart(S->getThen()), ThenCount);
+
     extendRegion(S->getThen());
     Counter OutCount = propagateCounts(ThenCount, S->getThen());
 
     Counter ElseCount = subtractCounters(ParentCount, ThenCount);
     if (const Stmt *Else = S->getElse()) {
-      extendRegion(S->getElse());
+      // The 'else' count applies to the area immediately after the 'then'.
+      fillGapAreaWithCount(getPreciseTokenLocEnd(getEnd(S->getThen())),
+                           getStart(Else), ElseCount);
+      extendRegion(Else);
       OutCount = addCounters(OutCount, propagateCounts(ElseCount, Else));
     } else
       OutCount = addCounters(OutCount, ElseCount);
@@ -1090,9 +1147,14 @@ struct CounterCoverageMappingBuilder
     Visit(E->getCond());
 
     if (!isa<BinaryConditionalOperator>(E)) {
+      // The 'then' count applies to the area immediately after the condition.
+      fillGapAreaWithCount(E->getQuestionLoc(), getStart(E->getTrueExpr()),
+                           TrueCount);
+
       extendRegion(E->getTrueExpr());
       propagateCounts(TrueCount, E->getTrueExpr());
     }
+
     extendRegion(E->getFalseExpr());
     propagateCounts(subtractCounters(ParentCount, TrueCount),
                     E->getFalseExpr());

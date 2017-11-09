@@ -106,7 +106,8 @@ void SourceCoverageViewText::renderLine(raw_ostream &OS, LineRef L,
   SmallVector<std::pair<unsigned, unsigned>, 2> HighlightedRanges;
 
   // The first segment overlaps from a previous line, so we treat it specially.
-  if (WrappedSegment && WrappedSegment->HasCount && WrappedSegment->Count == 0)
+  if (WrappedSegment && !WrappedSegment->IsGapRegion &&
+      WrappedSegment->HasCount && WrappedSegment->Count == 0)
     Highlight = raw_ostream::RED;
 
   // Output each segment of the line, possibly highlighted.
@@ -120,11 +121,11 @@ void SourceCoverageViewText::renderLine(raw_ostream &OS, LineRef L,
     if (getOptions().Debug && Highlight)
       HighlightedRanges.push_back(std::make_pair(Col, End));
     Col = End;
-    if (Col == ExpansionCol)
-      Highlight = raw_ostream::CYAN;
-    else if ((!S->IsGapRegion || Highlight == raw_ostream::RED) &&
-             S->HasCount && S->Count == 0)
+    if ((!S->IsGapRegion || (Highlight && *Highlight == raw_ostream::RED)) &&
+        S->HasCount && S->Count == 0)
       Highlight = raw_ostream::RED;
+    else if (Col == ExpansionCol)
+      Highlight = raw_ostream::CYAN;
     else
       Highlight = None;
   }
