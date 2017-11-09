@@ -27,11 +27,21 @@ _Thread_local int tls_static;
     # The following case tests '__declspec(thread)'.  Since it is a Microsoft
     # specific extension, specific flags are required for the parser to pick
     # these up.
-    flags = ['-fms-extensions', '-target', 'x86_64-unknown-windows-win32']
+    flags = ['-fms-extensions', '-target', 'x86_64-unknown-windows-win32',
+             '-fms-compatibility-version=18']
     tu = get_tu("""
-__declspec(thread) int tls_declspec;
+__declspec(thread) int tls_declspec_msvc18;
 """, lang = 'cpp', flags=flags)
 
-    tls_declspec = get_cursor(tu.cursor, 'tls_declspec')
-    assert tls_declspec.tls_kind == TLSKind.STATIC
+    tls_declspec_msvc18 = get_cursor(tu.cursor, 'tls_declspec_msvc18')
+    assert tls_declspec_msvc18.tls_kind == TLSKind.STATIC
+
+    flags = ['-fms-extensions', '-target', 'x86_64-unknown-windows-win32',
+             '-fms-compatibility-version=19']
+    tu = get_tu("""
+__declspec(thread) int tls_declspec_msvc19;
+""", lang = 'cpp', flags=flags)
+
+    tls_declspec_msvc19 = get_cursor(tu.cursor, 'tls_declspec_msvc19')
+    assert tls_declspec_msvc19.tls_kind == TLSKind.DYNAMIC
 

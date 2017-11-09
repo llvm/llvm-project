@@ -182,6 +182,11 @@ public:
       int &Argc, const char *const *Argv, std::string &ErrorMsg,
       Twine Directory = ".");
 
+  /// Reads flags from the given file, one-per line.
+  /// Returns nullptr and sets ErrorMessage if we can't read the file.
+  static std::unique_ptr<FixedCompilationDatabase>
+  loadFromFile(StringRef Path, std::string &ErrorMsg);
+
   /// \brief Constructs a compilation data base from a specified directory
   /// and command line.
   FixedCompilationDatabase(Twine Directory, ArrayRef<std::string> CommandLine);

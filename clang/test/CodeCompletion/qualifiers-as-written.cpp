@@ -25,6 +25,7 @@ void test() {
   // CHECK-1: COMPLETION: method : [#type#]method(<#type#>, <#foo::type#>, <#::foo::type#>, <#::foo::foo::type#>)
   f
   // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:26:3 %s -o - | FileCheck %s --check-prefix=CHECK-2
-  // CHECK-2: COMPLETION: func : [#int#]func(<#foo a#>, <#bar b#>, <#ns::bar c#>, <#ns::baz d#>
-  // CHECK-2: COMPLETION: func : [#int#]func(<#foo::type a#>, <#bar b#>, <#baz c#>
+  // FIXME(ibiryukov): We should get rid of CHECK-DAGs here when completion output is made deterministic (see PR35244).
+  // CHECK-2-DAG: COMPLETION: func : [#int#]func(<#foo a#>, <#bar b#>, <#ns::bar c#>, <#ns::baz d#>
+  // CHECK-2-DAG: COMPLETION: func : [#int#]func(<#foo::type a#>, <#bar b#>, <#baz c#>
 }

@@ -406,6 +406,9 @@ public:
   /// \brief Skip no-op (attributed, compound) container stmts and skip captured
   /// stmt at the top, if \a IgnoreCaptured is true.
   Stmt *IgnoreContainers(bool IgnoreCaptured = false);
+  const Stmt *IgnoreContainers(bool IgnoreCaptured = false) const {
+    return const_cast<Stmt *>(this)->IgnoreContainers(IgnoreCaptured);
+  }
 
   const Stmt *stripLabelLikeStatements() const;
   Stmt *stripLabelLikeStatements() {

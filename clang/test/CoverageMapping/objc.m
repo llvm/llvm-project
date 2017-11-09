@@ -7,7 +7,7 @@
                       // CHECK: func
 void func(A *a) {     // CHECK-NEXT: File 0, [[@LINE]]:17 -> [[@LINE+3]]:2 = #0
   if (a)              // CHECK-NEXT: File 0, [[@LINE]]:7 -> [[@LINE]]:8 = #0
-    [a bork:  20  ];  // CHECK-NEXT: File 0, [[@LINE]]:5 -> [[@LINE]]:20 = #1
+    [a bork:  20  ];  // CHECK: File 0, [[@LINE]]:5 -> [[@LINE]]:20 = #1
 }
 
 @interface NSArray
@@ -20,9 +20,9 @@ void func2(NSArray *array) {   // CHECK-NEXT: File 0, [[@LINE]]:28 -> {{[0-9]+}}
   int i = 0;
   for (NSArray *x in array) {  // CHECK-NEXT: File 0, [[@LINE]]:29 -> [[@LINE+7]]:4 = #1
                                // CHECK-NEXT: File 0, [[@LINE+1]]:9 -> [[@LINE+1]]:10 = #1
-    if (x) {                   // CHECK-NEXT: File 0, [[@LINE]]:12 -> [[@LINE+2]]:6 = #2
+    if (x) {                   // CHECK: File 0, [[@LINE]]:12 -> [[@LINE+2]]:6 = #2
       i = 1;
-    } else {                   // CHECK-NEXT: File 0, [[@LINE]]:12 -> [[@LINE+2]]:6 = (#1 - #2)
+    } else {                   // CHECK: File 0, [[@LINE]]:12 -> [[@LINE+2]]:6 = (#1 - #2)
       i = -1;
     }
   }
