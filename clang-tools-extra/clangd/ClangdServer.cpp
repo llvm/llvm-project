@@ -9,6 +9,8 @@
 
 #include "ClangdServer.h"
 #include "clang/Format/Format.h"
+#include "clang/Tooling/Refactoring/RefactoringResultConsumer.h"
+#include "clang/Tooling/Refactoring/Rename/RenamingAction.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Tooling/CompilationDatabase.h"
@@ -50,6 +52,28 @@ std::string getStandardResourceDir() {
   static int Dummy; // Just an address in this process.
   return CompilerInvocation::GetResourcesPath("clangd", (void *)&Dummy);
 }
+
+class RefactoringResultCollector final
+    : public tooling::RefactoringResultConsumer {
+public:
+  void handleError(llvm::Error Err) override {
+    assert(!Result.hasValue());
+    // FIXME: figure out a way to return better message for DiagnosticError.
+    // clangd uses llvm::toString to convert the Err to string, however, for
+    // DiagnosticError, only "clang diagnostic" will be generated.
+    Result = std::move(Err);
+  }
+
+  // Using the handle(SymbolOccurrences) from parent class.
+  using tooling::RefactoringResultConsumer::handle;
+
+  void handle(tooling::AtomicChanges SourceReplacements) override {
+    assert(!Result.hasValue());
+    Result = std::move(SourceReplacements);
+  }
+
+  Optional<Expected<tooling::AtomicChanges>> Result;
+};
 
 } // namespace
 
@@ -331,6 +355,54 @@ std::vector<tooling::Replacement> ClangdServer::formatOnType(PathRef File,
   size_t Len = 1 + CursorPos - PreviousLBracePos;
 
   return formatCode(Code, File, {tooling::Range(PreviousLBracePos, Len)});
+}
+
+Expected<std::vector<tooling::Replacement>>
+ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName) {
+  std::string Code = getDocument(File);
+  std::shared_ptr<CppFile> Resources = Units.getFile(File);
+  RefactoringResultCollector ResultCollector;
+  Resources->getAST().get()->runUnderLock([&](ParsedAST *AST) {
+    const SourceManager &SourceMgr = AST->getASTContext().getSourceManager();
+    const FileEntry *FE =
+        SourceMgr.getFileEntryForID(SourceMgr.getMainFileID());
+    if (!FE)
+      return;
+    SourceLocation SourceLocationBeg =
+        clangd::getBeginningOfIdentifier(*AST, Pos, FE);
+    tooling::RefactoringRuleContext Context(
+        AST->getASTContext().getSourceManager());
+    Context.setASTContext(AST->getASTContext());
+    auto Rename = clang::tooling::RenameOccurrences::initiate(
+        Context, SourceRange(SourceLocationBeg), NewName.str());
+    if (!Rename) {
+      ResultCollector.Result = Rename.takeError();
+      return;
+    }
+    Rename->invoke(ResultCollector, Context);
+  });
+  assert(ResultCollector.Result.hasValue());
+  if (!ResultCollector.Result.getValue())
+    return ResultCollector.Result->takeError();
+
+  std::vector<tooling::Replacement> Replacements;
+  for (const tooling::AtomicChange &Change : ResultCollector.Result->get()) {
+    tooling::Replacements ChangeReps = Change.getReplacements();
+    for (const auto &Rep : ChangeReps) {
+      // FIXME: Right now we only support renaming the main file, so we drop
+      // replacements not for the main file. In the future, we might consider to
+      // support:
+      //   * rename in any included header
+      //   * rename only in the "main" header
+      //   * provide an error if there are symbols we won't rename (e.g.
+      //     std::vector)
+      //   * rename globally in project
+      //   * rename in open files
+      if (Rep.getFilePath() == File)
+        Replacements.push_back(Rep);
+    }
+  }
+  return Replacements;
 }
 
 std::string ClangdServer::getDocument(PathRef File) {
