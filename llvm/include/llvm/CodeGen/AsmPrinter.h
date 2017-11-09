@@ -114,7 +114,7 @@ public:
   using GOTEquivUsePair = std::pair<const GlobalVariable *, unsigned>;
   MapVector<const MCSymbol *, GOTEquivUsePair> GlobalGOTEquivs;
 
-  /// Enable print [latency:throughput] in output
+  /// Enable print [latency:throughput] in output.
   bool EnablePrintSchedInfo = false;
 
 private:

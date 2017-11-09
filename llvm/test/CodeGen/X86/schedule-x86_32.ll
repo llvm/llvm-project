@@ -24,7 +24,7 @@ define i8 @test_aaa(i8 %a0) optsize {
 ; ATOM:       # BB#0:
 ; ATOM-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    aaa
+; ATOM-NEXT:    aaa # sched: [13:6.50]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -32,7 +32,7 @@ define i8 @test_aaa(i8 %a0) optsize {
 ; SLM:       # BB#0:
 ; SLM-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [3:1.00]
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    aaa
+; SLM-NEXT:    aaa # sched: [100:1.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    retl # sched: [4:1.00]
 ;
@@ -40,7 +40,7 @@ define i8 @test_aaa(i8 %a0) optsize {
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:0.50]
 ; SANDY-NEXT:    #APP
-; SANDY-NEXT:    aaa
+; SANDY-NEXT:    aaa # sched: [100:0.33]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retl # sched: [5:1.00]
 ;
@@ -48,7 +48,7 @@ define i8 @test_aaa(i8 %a0) optsize {
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [1:0.50]
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    aaa
+; HASWELL-NEXT:    aaa # sched: [100:0.25]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retl # sched: [5:0.50]
 ;
@@ -56,7 +56,7 @@ define i8 @test_aaa(i8 %a0) optsize {
 ; BROADWELL:       # BB#0:
 ; BROADWELL-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:0.50]
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    aaa
+; BROADWELL-NEXT:    aaa # sched: [100:0.25]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retl # sched: [6:0.50]
 ;
@@ -64,7 +64,7 @@ define i8 @test_aaa(i8 %a0) optsize {
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:0.50]
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    aaa
+; SKYLAKE-NEXT:    aaa # sched: [100:0.25]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retl # sched: [6:0.50]
 ;
@@ -72,7 +72,7 @@ define i8 @test_aaa(i8 %a0) optsize {
 ; SKX:       # BB#0:
 ; SKX-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:0.50]
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    aaa
+; SKX-NEXT:    aaa # sched: [100:0.25]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
@@ -80,7 +80,7 @@ define i8 @test_aaa(i8 %a0) optsize {
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:1.00]
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    aaa
+; BTVER2-NEXT:    aaa # sched: [100:0.17]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -88,7 +88,7 @@ define i8 @test_aaa(i8 %a0) optsize {
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [8:0.50]
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    aaa
+; ZNVER1-NEXT:    aaa # sched: [100:?]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   %1 = tail call i8 asm "aaa", "=r,r"(i8 %a0) nounwind
@@ -108,7 +108,7 @@ define i8 @test_aad(i16 %a0) optsize {
 ; ATOM:       # BB#0:
 ; ATOM-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    aad
+; ATOM-NEXT:    aad # sched: [7:3.50]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -116,7 +116,7 @@ define i8 @test_aad(i16 %a0) optsize {
 ; SLM:       # BB#0:
 ; SLM-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [4:1.00]
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    aad
+; SLM-NEXT:    aad # sched: [100:1.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    retl # sched: [4:1.00]
 ;
@@ -124,7 +124,7 @@ define i8 @test_aad(i16 %a0) optsize {
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
 ; SANDY-NEXT:    #APP
-; SANDY-NEXT:    aad
+; SANDY-NEXT:    aad # sched: [100:0.33]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retl # sched: [5:1.00]
 ;
@@ -132,7 +132,7 @@ define i8 @test_aad(i16 %a0) optsize {
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [4:0.50]
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    aad
+; HASWELL-NEXT:    aad # sched: [100:0.25]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retl # sched: [5:0.50]
 ;
@@ -140,7 +140,7 @@ define i8 @test_aad(i16 %a0) optsize {
 ; BROADWELL:       # BB#0:
 ; BROADWELL-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    aad
+; BROADWELL-NEXT:    aad # sched: [100:0.25]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retl # sched: [6:0.50]
 ;
@@ -148,7 +148,7 @@ define i8 @test_aad(i16 %a0) optsize {
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    aad
+; SKYLAKE-NEXT:    aad # sched: [100:0.25]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retl # sched: [6:0.50]
 ;
@@ -156,7 +156,7 @@ define i8 @test_aad(i16 %a0) optsize {
 ; SKX:       # BB#0:
 ; SKX-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    aad
+; SKX-NEXT:    aad # sched: [100:0.25]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
@@ -164,7 +164,7 @@ define i8 @test_aad(i16 %a0) optsize {
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [4:1.00]
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    aad
+; BTVER2-NEXT:    aad # sched: [100:0.17]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -172,7 +172,7 @@ define i8 @test_aad(i16 %a0) optsize {
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [8:0.50]
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    aad
+; ZNVER1-NEXT:    aad # sched: [100:?]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   %1 = tail call i8 asm "aad", "=r,r"(i16 %a0) nounwind
@@ -192,7 +192,7 @@ define i16 @test_aam(i8 %a0) optsize {
 ; ATOM:       # BB#0:
 ; ATOM-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    aam
+; ATOM-NEXT:    aam # sched: [21:10.50]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -200,7 +200,7 @@ define i16 @test_aam(i8 %a0) optsize {
 ; SLM:       # BB#0:
 ; SLM-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [3:1.00]
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    aam
+; SLM-NEXT:    aam # sched: [100:1.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    retl # sched: [4:1.00]
 ;
@@ -208,7 +208,7 @@ define i16 @test_aam(i8 %a0) optsize {
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:0.50]
 ; SANDY-NEXT:    #APP
-; SANDY-NEXT:    aam
+; SANDY-NEXT:    aam # sched: [100:0.33]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retl # sched: [5:1.00]
 ;
@@ -216,7 +216,7 @@ define i16 @test_aam(i8 %a0) optsize {
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [1:0.50]
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    aam
+; HASWELL-NEXT:    aam # sched: [100:0.25]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retl # sched: [5:0.50]
 ;
@@ -224,7 +224,7 @@ define i16 @test_aam(i8 %a0) optsize {
 ; BROADWELL:       # BB#0:
 ; BROADWELL-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:0.50]
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    aam
+; BROADWELL-NEXT:    aam # sched: [100:0.25]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retl # sched: [6:0.50]
 ;
@@ -232,7 +232,7 @@ define i16 @test_aam(i8 %a0) optsize {
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:0.50]
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    aam
+; SKYLAKE-NEXT:    aam # sched: [100:0.25]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retl # sched: [6:0.50]
 ;
@@ -240,7 +240,7 @@ define i16 @test_aam(i8 %a0) optsize {
 ; SKX:       # BB#0:
 ; SKX-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:0.50]
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    aam
+; SKX-NEXT:    aam # sched: [100:0.25]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
@@ -248,7 +248,7 @@ define i16 @test_aam(i8 %a0) optsize {
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:1.00]
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    aam
+; BTVER2-NEXT:    aam # sched: [100:0.17]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -256,7 +256,7 @@ define i16 @test_aam(i8 %a0) optsize {
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [8:0.50]
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    aam
+; ZNVER1-NEXT:    aam # sched: [100:?]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   %1 = tail call i16 asm "aam", "=r,r"(i8 %a0) nounwind
@@ -276,7 +276,7 @@ define i8 @test_aas(i8 %a0) optsize {
 ; ATOM:       # BB#0:
 ; ATOM-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    aas
+; ATOM-NEXT:    aas # sched: [13:6.50]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
@@ -284,7 +284,7 @@ define i8 @test_aas(i8 %a0) optsize {
 ; SLM:       # BB#0:
 ; SLM-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [3:1.00]
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    aas
+; SLM-NEXT:    aas # sched: [100:1.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    retl # sched: [4:1.00]
 ;
@@ -292,7 +292,7 @@ define i8 @test_aas(i8 %a0) optsize {
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:0.50]
 ; SANDY-NEXT:    #APP
-; SANDY-NEXT:    aas
+; SANDY-NEXT:    aas # sched: [100:0.33]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retl # sched: [5:1.00]
 ;
@@ -300,7 +300,7 @@ define i8 @test_aas(i8 %a0) optsize {
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [1:0.50]
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    aas
+; HASWELL-NEXT:    aas # sched: [100:0.25]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retl # sched: [5:0.50]
 ;
@@ -308,7 +308,7 @@ define i8 @test_aas(i8 %a0) optsize {
 ; BROADWELL:       # BB#0:
 ; BROADWELL-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:0.50]
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    aas
+; BROADWELL-NEXT:    aas # sched: [100:0.25]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retl # sched: [6:0.50]
 ;
@@ -316,7 +316,7 @@ define i8 @test_aas(i8 %a0) optsize {
 ; SKYLAKE:       # BB#0:
 ; SKYLAKE-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:0.50]
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    aas
+; SKYLAKE-NEXT:    aas # sched: [100:0.25]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retl # sched: [6:0.50]
 ;
@@ -324,7 +324,7 @@ define i8 @test_aas(i8 %a0) optsize {
 ; SKX:       # BB#0:
 ; SKX-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:0.50]
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    aas
+; SKX-NEXT:    aas # sched: [100:0.25]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
@@ -332,7 +332,7 @@ define i8 @test_aas(i8 %a0) optsize {
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:1.00]
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    aas
+; BTVER2-NEXT:    aas # sched: [100:0.17]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -340,7 +340,7 @@ define i8 @test_aas(i8 %a0) optsize {
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [8:0.50]
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    aas
+; ZNVER1-NEXT:    aas # sched: [100:?]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   %1 = tail call i8 asm "aas", "=r,r"(i8 %a0) nounwind

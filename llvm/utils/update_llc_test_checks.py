@@ -141,7 +141,7 @@ def scrub_asm_powerpc64(asm, args):
   asm = SCRUB_TRAILING_WHITESPACE_RE.sub(r'', asm)
   return asm
 
-def scrub_asm_riscv(asm):
+def scrub_asm_riscv(asm, args):
   # Scrub runs of whitespace out of the assembly, but leave the leading
   # whitespace in place.
   asm = SCRUB_WHITESPACE_RE.sub(r' ', asm)
