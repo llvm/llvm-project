@@ -203,12 +203,6 @@ static ArrayRef<T> trimTrailingZeroes(ArrayRef<T> A, size_t Limit) {
   return A;
 }
 
-template <typename OriginalTy, typename TargetTy>
-static TargetTy front(ArrayRef<OriginalTy> A) {
-  assert(A.size() >= sizeof(TargetTy));
-  return *reinterpret_cast<const TargetTy *>(A.data());
-}
-
 void CodeObjectDisassembler::printKernelCode(const MCDisassembler &InstDisasm,
                                              ArrayRef<uint8_t> Bytes,
                                              uint64_t Address,
@@ -255,9 +249,12 @@ void CodeObjectDisassembler::printKernelCode(const MCDisassembler &InstDisasm,
     assert(0 == EatenBytesNum % 4);
 
     OS << left_justify(IS.str(), 60) << format("// %012X:", Address);
-    for (uint64_t i = 0; i < EatenBytesNum / 4; ++i) {
-      OS << format(" %08X", front<uint8_t, uint32_t>(Code));
-    }
+    typedef support::ulittle32_t U32;
+    for (auto D : makeArrayRef(reinterpret_cast<const U32 *>(Code.data()),
+                               EatenBytesNum / sizeof(U32)))
+      // D should be explicitly casted to uint32_t here as it is passed
+      // by format to snprintf as vararg.
+      OS << format(" %08" PRIX32, static_cast<uint32_t>(D));
 
     if (!CS.str().empty())
       OS << " // " << CS.str();
