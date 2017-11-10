@@ -123,9 +123,6 @@ protected:
   /// Section for newer gnu pubtypes.
   MCSection *DwarfGnuPubTypesSection;
 
-  // Section for Swift AST
-  MCSection *DwarfSwiftASTSection;
-
   MCSection *COFFDebugSymbolsSection;
   MCSection *COFFDebugTypesSection;
 
@@ -270,7 +267,6 @@ public:
   MCSection *getDwarfAddrSection() const { return DwarfAddrSection; }
   MCSection *getDwarfCUIndexSection() const { return DwarfCUIndexSection; }
   MCSection *getDwarfTUIndexSection() const { return DwarfTUIndexSection; }
-  MCSection *getDwarfSwiftASTSection() const { return DwarfSwiftASTSection; }
 
   MCSection *getCOFFDebugSymbolsSection() const {
     return COFFDebugSymbolsSection;
