@@ -147,7 +147,7 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: %edi
 
-    %0(s8) = COPY %edi
+    %0(s8) = COPY %dil
     %1(s32) = G_ZEXT %0(s8)
     %eax = COPY %1(s32)
     RET 0, implicit %eax
@@ -173,7 +173,7 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: %edi
 
-    %0(s16) = COPY %edi
+    %0(s16) = COPY %di
     %1(s32) = G_ZEXT %0(s16)
     %eax = COPY %1(s32)
     RET 0, implicit %eax
@@ -199,7 +199,7 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: %edi
 
-    %0(s8) = COPY %edi
+    %0(s8) = COPY %dil
     %1(s32) = G_SEXT %0(s8)
     %eax = COPY %1(s32)
     RET 0, implicit %eax
@@ -225,7 +225,7 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: %edi
 
-    %0(s16) = COPY %edi
+    %0(s16) = COPY %di
     %1(s32) = G_SEXT %0(s16)
     %eax = COPY %1(s32)
     RET 0, implicit %eax

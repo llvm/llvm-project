@@ -22,7 +22,7 @@ registers:
 # ALL:          %0(<16 x s32>) = COPY %zmm0
 # ALL-NEXT:     %1(<4 x s32>) = COPY %xmm1
 # ALL-NEXT:     %2(<16 x s32>) = G_INSERT %0, %1(<4 x s32>), 0
-# ALL-NEXT:     %ymm0 = COPY %2(<16 x s32>)
+# ALL-NEXT:     %zmm0 = COPY %2(<16 x s32>)
 # ALL-NEXT:     RET 0, implicit %ymm0
 body:             |
   bb.1 (%ir-block.0):
@@ -31,7 +31,7 @@ body:             |
     %0(<16 x s32>) = COPY %zmm0
     %1(<4 x s32>) = COPY %xmm1
     %2(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<4 x s32>), 0
-    %ymm0 = COPY %2(<16 x s32>)
+    %zmm0 = COPY %2(<16 x s32>)
     RET 0, implicit %ymm0
 
 ...
@@ -48,7 +48,7 @@ registers:
 # ALL:          %0(<16 x s32>) = COPY %zmm0
 # ALL-NEXT:     %1(<8 x s32>) = COPY %ymm1
 # ALL-NEXT:     %2(<16 x s32>) = G_INSERT %0, %1(<8 x s32>), 0
-# ALL-NEXT:     %ymm0 = COPY %2(<16 x s32>)
+# ALL-NEXT:     %zmm0 = COPY %2(<16 x s32>)
 # ALL-NEXT:     RET 0, implicit %ymm0
 body:             |
   bb.1 (%ir-block.0):
@@ -57,7 +57,7 @@ body:             |
     %0(<16 x s32>) = COPY %zmm0
     %1(<8 x s32>) = COPY %ymm1
     %2(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<8 x s32>), 0
-    %ymm0 = COPY %2(<16 x s32>)
+    %zmm0 = COPY %2(<16 x s32>)
     RET 0, implicit %ymm0
 
 ...

@@ -41,8 +41,8 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: %edi, %esi
 
-    %0(s16) = COPY %edi
-    %1(s16) = COPY %esi
+    %0(s16) = COPY %di
+    %1(s16) = COPY %si
     %2(s16) = G_MUL %0, %1
     %ax = COPY %2(s16)
     RET 0, implicit %ax

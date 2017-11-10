@@ -62,7 +62,7 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: %edi
 
-    %0(s8) = COPY %edi
+    %0(s8) = COPY %dil
     %1(s8) = G_IMPLICIT_DEF
     %2(s8) = G_ADD %0, %1
     %al = COPY %2(s8)
