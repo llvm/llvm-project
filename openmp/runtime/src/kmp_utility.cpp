@@ -96,14 +96,13 @@ static kmp_uint64 __kmp_parse_frequency( // R: Frequency in Hz.
     ) {
 
   double value = 0.0;
-  char const *unit = NULL;
+  char *unit = NULL;
   kmp_uint64 result = 0; /* Zero is a better unknown value than all ones. */
 
   if (frequency == NULL) {
     return result;
   }
-  value = strtod(frequency,
-                 CCAST(char **, &unit)); // strtod() does not like "const"
+  value = strtod(frequency, &unit);
   if (0 < value &&
       value <= DBL_MAX) { // Good value (not overflow, underflow, etc).
     if (strcmp(unit, "MHz") == 0) {

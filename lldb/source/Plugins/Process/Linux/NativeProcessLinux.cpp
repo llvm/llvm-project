@@ -702,7 +702,7 @@ void NativeProcessLinux::MonitorSIGTRAP(const siginfo_t &info,
   {
     // If a watchpoint was hit, report it
     uint32_t wp_index;
-    Status error = thread.GetRegisterContext()->GetWatchpointHitIndex(
+    Status error = thread.GetRegisterContext().GetWatchpointHitIndex(
         wp_index, (uintptr_t)info.si_addr);
     if (error.Fail())
       LLDB_LOG(log,
@@ -716,7 +716,7 @@ void NativeProcessLinux::MonitorSIGTRAP(const siginfo_t &info,
 
     // If a breakpoint was hit, report it
     uint32_t bp_index;
-    error = thread.GetRegisterContext()->GetHardwareBreakHitIndex(
+    error = thread.GetRegisterContext().GetHardwareBreakHitIndex(
         bp_index, (uintptr_t)info.si_addr);
     if (error.Fail())
       LLDB_LOG(log, "received error while checking for hardware "
@@ -739,7 +739,7 @@ void NativeProcessLinux::MonitorSIGTRAP(const siginfo_t &info,
     {
       // If a watchpoint was hit, report it
       uint32_t wp_index;
-      Status error = thread.GetRegisterContext()->GetWatchpointHitIndex(
+      Status error = thread.GetRegisterContext().GetWatchpointHitIndex(
           wp_index, LLDB_INVALID_ADDRESS);
       if (error.Fail())
         LLDB_LOG(log,
@@ -910,13 +910,13 @@ void NativeProcessLinux::MonitorSignal(const siginfo_t &info,
 namespace {
 
 struct EmulatorBaton {
-  NativeProcessLinux *m_process;
-  NativeRegisterContext *m_reg_context;
+  NativeProcessLinux &m_process;
+  NativeRegisterContext &m_reg_context;
 
   // eRegisterKindDWARF -> RegsiterValue
   std::unordered_map<uint32_t, RegisterValue> m_register_values;
 
-  EmulatorBaton(NativeProcessLinux *process, NativeRegisterContext *reg_context)
+  EmulatorBaton(NativeProcessLinux &process, NativeRegisterContext &reg_context)
       : m_process(process), m_reg_context(reg_context) {}
 };
 
@@ -928,7 +928,7 @@ static size_t ReadMemoryCallback(EmulateInstruction *instruction, void *baton,
   EmulatorBaton *emulator_baton = static_cast<EmulatorBaton *>(baton);
 
   size_t bytes_read;
-  emulator_baton->m_process->ReadMemory(addr, dst, length, bytes_read);
+  emulator_baton->m_process.ReadMemory(addr, dst, length, bytes_read);
   return bytes_read;
 }
 
@@ -948,11 +948,11 @@ static bool ReadRegisterCallback(EmulateInstruction *instruction, void *baton,
   // the generic register numbers). Get the full register info from the
   // register context based on the dwarf register numbers.
   const RegisterInfo *full_reg_info =
-      emulator_baton->m_reg_context->GetRegisterInfo(
+      emulator_baton->m_reg_context.GetRegisterInfo(
           eRegisterKindDWARF, reg_info->kinds[eRegisterKindDWARF]);
 
   Status error =
-      emulator_baton->m_reg_context->ReadRegister(full_reg_info, reg_value);
+      emulator_baton->m_reg_context.ReadRegister(full_reg_info, reg_value);
   if (error.Success())
     return true;
 
@@ -976,17 +976,17 @@ static size_t WriteMemoryCallback(EmulateInstruction *instruction, void *baton,
   return length;
 }
 
-static lldb::addr_t ReadFlags(NativeRegisterContext *regsiter_context) {
-  const RegisterInfo *flags_info = regsiter_context->GetRegisterInfo(
+static lldb::addr_t ReadFlags(NativeRegisterContext &regsiter_context) {
+  const RegisterInfo *flags_info = regsiter_context.GetRegisterInfo(
       eRegisterKindGeneric, LLDB_REGNUM_GENERIC_FLAGS);
-  return regsiter_context->ReadRegisterAsUnsigned(flags_info,
-                                                  LLDB_INVALID_ADDRESS);
+  return regsiter_context.ReadRegisterAsUnsigned(flags_info,
+                                                 LLDB_INVALID_ADDRESS);
 }
 
 Status
 NativeProcessLinux::SetupSoftwareSingleStepping(NativeThreadLinux &thread) {
   Status error;
-  NativeRegisterContextSP register_context_sp = thread.GetRegisterContext();
+  NativeRegisterContext& register_context = thread.GetRegisterContext();
 
   std::unique_ptr<EmulateInstruction> emulator_ap(
       EmulateInstruction::FindPlugin(m_arch, eInstructionTypePCModifying,
@@ -995,7 +995,7 @@ NativeProcessLinux::SetupSoftwareSingleStepping(NativeThreadLinux &thread) {
   if (emulator_ap == nullptr)
     return Status("Instruction emulator not found!");
 
-  EmulatorBaton baton(this, register_context_sp.get());
+  EmulatorBaton baton(*this, register_context);
   emulator_ap->SetBaton(&baton);
   emulator_ap->SetReadMemCallback(&ReadMemoryCallback);
   emulator_ap->SetReadRegCallback(&ReadRegisterCallback);
@@ -1008,9 +1008,9 @@ NativeProcessLinux::SetupSoftwareSingleStepping(NativeThreadLinux &thread) {
   bool emulation_result =
       emulator_ap->EvaluateInstruction(eEmulateInstructionOptionAutoAdvancePC);
 
-  const RegisterInfo *reg_info_pc = register_context_sp->GetRegisterInfo(
+  const RegisterInfo *reg_info_pc = register_context.GetRegisterInfo(
       eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
-  const RegisterInfo *reg_info_flags = register_context_sp->GetRegisterInfo(
+  const RegisterInfo *reg_info_flags = register_context.GetRegisterInfo(
       eRegisterKindGeneric, LLDB_REGNUM_GENERIC_FLAGS);
 
   auto pc_it =
@@ -1028,15 +1028,14 @@ NativeProcessLinux::SetupSoftwareSingleStepping(NativeThreadLinux &thread) {
     if (flags_it != baton.m_register_values.end())
       next_flags = flags_it->second.GetAsUInt64();
     else
-      next_flags = ReadFlags(register_context_sp.get());
+      next_flags = ReadFlags(register_context);
   } else if (pc_it == baton.m_register_values.end()) {
     // Emulate instruction failed and it haven't changed PC. Advance PC
     // with the size of the current opcode because the emulation of all
     // PC modifying instruction should be successful. The failure most
     // likely caused by a not supported instruction which don't modify PC.
-    next_pc =
-        register_context_sp->GetPC() + emulator_ap->GetOpcode().GetByteSize();
-    next_flags = ReadFlags(register_context_sp.get());
+    next_pc = register_context.GetPC() + emulator_ap->GetOpcode().GetByteSize();
+    next_flags = ReadFlags(register_context);
   } else {
     // The instruction emulation failed after it modified the PC. It is an
     // unknown error where we can't continue because the next instruction is
@@ -2012,12 +2011,7 @@ NativeProcessLinux::FixupBreakpointPCAsNeeded(NativeThreadLinux &thread) {
 
   // Find out the size of a breakpoint (might depend on where we are in the
   // code).
-  NativeRegisterContextSP context_sp = thread.GetRegisterContext();
-  if (!context_sp) {
-    error.SetErrorString("cannot get a NativeRegisterContext for the thread");
-    LLDB_LOG(log, "failed: {0}", error);
-    return error;
-  }
+  NativeRegisterContext &context = thread.GetRegisterContext();
 
   uint32_t breakpoint_size = 0;
   error = GetSoftwareBreakpointPCOffset(breakpoint_size);
@@ -2029,8 +2023,7 @@ NativeProcessLinux::FixupBreakpointPCAsNeeded(NativeThreadLinux &thread) {
 
   // First try probing for a breakpoint at a software breakpoint location: PC -
   // breakpoint size.
-  const lldb::addr_t initial_pc_addr =
-      context_sp->GetPCfromBreakpointLocation();
+  const lldb::addr_t initial_pc_addr = context.GetPCfromBreakpointLocation();
   lldb::addr_t breakpoint_addr = initial_pc_addr;
   if (breakpoint_size > 0) {
     // Do not allow breakpoint probe to wrap around.
@@ -2077,7 +2070,7 @@ NativeProcessLinux::FixupBreakpointPCAsNeeded(NativeThreadLinux &thread) {
   LLDB_LOG(log, "pid {0} tid {1}: changing PC from {2:x} to {3:x}", GetID(),
            thread.GetID(), initial_pc_addr, breakpoint_addr);
 
-  error = context_sp->SetPC(breakpoint_addr);
+  error = context.SetPC(breakpoint_addr);
   if (error.Fail()) {
     LLDB_LOG(log, "pid {0} tid {1}: failed to set PC: {2}", GetID(),
              thread.GetID(), error);

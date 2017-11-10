@@ -30,7 +30,7 @@ public:
 
   virtual lldb::StateType GetState() = 0;
 
-  virtual NativeRegisterContextSP GetRegisterContext() = 0;
+  virtual NativeRegisterContext &GetRegisterContext() = 0;
 
   virtual Status ReadRegister(uint32_t reg, RegisterValue &reg_value);
 
