@@ -762,11 +762,129 @@ TreePredicateFn::TreePredicateFn(TreePattern *N) : PatFragRec(N) {
         ".td file corrupt: can't have a node predicate *and* an imm predicate");
 }
 
-StringRef TreePredicateFn::getPredCode() const {
-  return PatFragRec->getRecord()->getValueAsString("PredicateCode");
+std::string TreePredicateFn::getPredCode() const {
+  std::string Code = "";
+
+  if (!isLoad() && !isStore()) {
+    if (isUnindexed())
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "IsUnindexed requires IsLoad or IsStore");
+
+    Record *MemoryVT = getMemoryVT();
+    Record *ScalarMemoryVT = getScalarMemoryVT();
+
+    if (MemoryVT)
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "MemoryVT requires IsLoad or IsStore");
+    if (ScalarMemoryVT)
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "ScalarMemoryVT requires IsLoad or IsStore");
+  }
+
+  if (isLoad() && isStore())
+    PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                    "IsLoad and IsStore are mutually exclusive");
+
+  if (isLoad()) {
+    if (!isUnindexed() && !isNonExtLoad() && !isAnyExtLoad() &&
+        !isSignExtLoad() && !isZeroExtLoad() && getMemoryVT() == nullptr &&
+        getScalarMemoryVT() == nullptr)
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "IsLoad cannot be used by itself");
+  } else {
+    if (isNonExtLoad())
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "IsNonExtLoad requires IsLoad");
+    if (isAnyExtLoad())
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "IsAnyExtLoad requires IsLoad");
+    if (isSignExtLoad())
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "IsSignExtLoad requires IsLoad");
+    if (isZeroExtLoad())
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "IsZeroExtLoad requires IsLoad");
+  }
+
+  if (isStore()) {
+    if (!isUnindexed() && !isTruncStore() && !isNonTruncStore() &&
+        getMemoryVT() == nullptr && getScalarMemoryVT() == nullptr)
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "IsStore cannot be used by itself");
+  } else {
+    if (isNonTruncStore())
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "IsNonTruncStore requires IsStore");
+    if (isTruncStore())
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "IsTruncStore requires IsStore");
+  }
+
+  if (isLoad() || isStore()) {
+    StringRef SDNodeName = isLoad() ? "LoadSDNode" : "StoreSDNode";
+
+    if (isUnindexed())
+      Code += ("if (cast<" + SDNodeName +
+               ">(N)->getAddressingMode() != ISD::UNINDEXED) "
+               "return false;\n")
+                  .str();
+
+    if (isLoad()) {
+      if ((isNonExtLoad() + isAnyExtLoad() + isSignExtLoad() +
+           isZeroExtLoad()) > 1)
+        PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                        "IsNonExtLoad, IsAnyExtLoad, IsSignExtLoad, and "
+                        "IsZeroExtLoad are mutually exclusive");
+      if (isNonExtLoad())
+        Code += "if (cast<LoadSDNode>(N)->getExtensionType() != "
+                "ISD::NON_EXTLOAD) return false;\n";
+      if (isAnyExtLoad())
+        Code += "if (cast<LoadSDNode>(N)->getExtensionType() != ISD::EXTLOAD) "
+                "return false;\n";
+      if (isSignExtLoad())
+        Code += "if (cast<LoadSDNode>(N)->getExtensionType() != ISD::SEXTLOAD) "
+                "return false;\n";
+      if (isZeroExtLoad())
+        Code += "if (cast<LoadSDNode>(N)->getExtensionType() != ISD::ZEXTLOAD) "
+                "return false;\n";
+    } else {
+      if ((isNonTruncStore() + isTruncStore()) > 1)
+        PrintFatalError(
+            getOrigPatFragRecord()->getRecord()->getLoc(),
+            "IsNonTruncStore, and IsTruncStore are mutually exclusive");
+      if (isNonTruncStore())
+        Code +=
+            " if (cast<StoreSDNode>(N)->isTruncatingStore()) return false;\n";
+      if (isTruncStore())
+        Code +=
+            " if (!cast<StoreSDNode>(N)->isTruncatingStore()) return false;\n";
+    }
+
+    Record *MemoryVT = getMemoryVT();
+    Record *ScalarMemoryVT = getScalarMemoryVT();
+
+    if (MemoryVT)
+      Code += ("if (cast<" + SDNodeName + ">(N)->getMemoryVT() != MVT::" +
+               MemoryVT->getName() + ") return false;\n")
+                  .str();
+    if (ScalarMemoryVT)
+      Code += ("if (cast<" + SDNodeName +
+               ">(N)->getMemoryVT().getScalarType() != MVT::" +
+               ScalarMemoryVT->getName() + ") return false;\n")
+                  .str();
+  }
+
+  std::string PredicateCode = PatFragRec->getRecord()->getValueAsString("PredicateCode");
+
+  Code += PredicateCode;
+
+  if (PredicateCode.empty() && !Code.empty())
+    Code += "return true;\n";
+
+  return Code;
 }
 
-StringRef TreePredicateFn::getImmCode() const {
+std::string TreePredicateFn::getImmCode() const {
   return PatFragRec->getRecord()->getValueAsString("ImmediateCode");
 }
 
@@ -779,6 +897,55 @@ bool TreePredicateFn::immCodeUsesAPFloat() const {
   // The return value will be false when IsAPFloat is unset.
   return getOrigPatFragRecord()->getRecord()->getValueAsBitOrUnset("IsAPFloat",
                                                                    Unset);
+}
+
+bool TreePredicateFn::isPredefinedPredicateEqualTo(StringRef Field,
+                                                   bool Value) const {
+  bool Unset;
+  bool Result =
+      getOrigPatFragRecord()->getRecord()->getValueAsBitOrUnset(Field, Unset);
+  if (Unset)
+    return false;
+  return Result == Value;
+}
+bool TreePredicateFn::isLoad() const {
+  return isPredefinedPredicateEqualTo("IsLoad", true);
+}
+bool TreePredicateFn::isStore() const {
+  return isPredefinedPredicateEqualTo("IsStore", true);
+}
+bool TreePredicateFn::isUnindexed() const {
+  return isPredefinedPredicateEqualTo("IsUnindexed", true);
+}
+bool TreePredicateFn::isNonExtLoad() const {
+  return isPredefinedPredicateEqualTo("IsNonExtLoad", true);
+}
+bool TreePredicateFn::isAnyExtLoad() const {
+  return isPredefinedPredicateEqualTo("IsAnyExtLoad", true);
+}
+bool TreePredicateFn::isSignExtLoad() const {
+  return isPredefinedPredicateEqualTo("IsSignExtLoad", true);
+}
+bool TreePredicateFn::isZeroExtLoad() const {
+  return isPredefinedPredicateEqualTo("IsZeroExtLoad", true);
+}
+bool TreePredicateFn::isNonTruncStore() const {
+  return isPredefinedPredicateEqualTo("IsTruncStore", false);
+}
+bool TreePredicateFn::isTruncStore() const {
+  return isPredefinedPredicateEqualTo("IsTruncStore", true);
+}
+Record *TreePredicateFn::getMemoryVT() const {
+  Record *R = getOrigPatFragRecord()->getRecord();
+  if (R->isValueUnset("MemoryVT"))
+    return nullptr;
+  return R->getValueAsDef("MemoryVT");
+}
+Record *TreePredicateFn::getScalarMemoryVT() const {
+  Record *R = getOrigPatFragRecord()->getRecord();
+  if (R->isValueUnset("ScalarMemoryVT"))
+    return nullptr;
+  return R->getValueAsDef("ScalarMemoryVT");
 }
 
 StringRef TreePredicateFn::getImmType() const {
@@ -814,16 +981,58 @@ std::string TreePredicateFn::getFnName() const {
 /// appropriate.
 std::string TreePredicateFn::getCodeToRunOnSDNode() const {
   // Handle immediate predicates first.
-  StringRef ImmCode = getImmCode();
+  std::string ImmCode = getImmCode();
   if (!ImmCode.empty()) {
-    std::string Result = "    " + getImmType().str() + " Imm = ";
+    if (isLoad())
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "IsLoad cannot be used with ImmLeaf or its subclasses");
+    if (isStore())
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "IsStore cannot be used with ImmLeaf or its subclasses");
+    if (isUnindexed())
+      PrintFatalError(
+          getOrigPatFragRecord()->getRecord()->getLoc(),
+          "IsUnindexed cannot be used with ImmLeaf or its subclasses");
+    if (isNonExtLoad())
+      PrintFatalError(
+          getOrigPatFragRecord()->getRecord()->getLoc(),
+          "IsNonExtLoad cannot be used with ImmLeaf or its subclasses");
+    if (isAnyExtLoad())
+      PrintFatalError(
+          getOrigPatFragRecord()->getRecord()->getLoc(),
+          "IsAnyExtLoad cannot be used with ImmLeaf or its subclasses");
+    if (isSignExtLoad())
+      PrintFatalError(
+          getOrigPatFragRecord()->getRecord()->getLoc(),
+          "IsSignExtLoad cannot be used with ImmLeaf or its subclasses");
+    if (isZeroExtLoad())
+      PrintFatalError(
+          getOrigPatFragRecord()->getRecord()->getLoc(),
+          "IsZeroExtLoad cannot be used with ImmLeaf or its subclasses");
+    if (isNonTruncStore())
+      PrintFatalError(
+          getOrigPatFragRecord()->getRecord()->getLoc(),
+          "IsNonTruncStore cannot be used with ImmLeaf or its subclasses");
+    if (isTruncStore())
+      PrintFatalError(
+          getOrigPatFragRecord()->getRecord()->getLoc(),
+          "IsTruncStore cannot be used with ImmLeaf or its subclasses");
+    if (getMemoryVT())
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "MemoryVT cannot be used with ImmLeaf or its subclasses");
+    if (getScalarMemoryVT())
+      PrintFatalError(
+          getOrigPatFragRecord()->getRecord()->getLoc(),
+          "ScalarMemoryVT cannot be used with ImmLeaf or its subclasses");
+
+    std::string Result = ("    " + getImmType() + " Imm = ").str();
     if (immCodeUsesAPFloat())
       Result += "cast<ConstantFPSDNode>(Node)->getValueAPF();\n";
     else if (immCodeUsesAPInt())
       Result += "cast<ConstantSDNode>(Node)->getAPIntValue();\n";
     else
       Result += "cast<ConstantSDNode>(Node)->getSExtValue();\n";
-    return Result + ImmCode.str();
+    return Result + ImmCode;
   }
   
   // Handle arbitrary node predicates.
@@ -841,7 +1050,7 @@ std::string TreePredicateFn::getCodeToRunOnSDNode() const {
   else
     Result = "    auto *N = cast<" + ClassName.str() + ">(Node);\n";
 
-  return Result + getPredCode().str();
+  return Result + getPredCode();
 }
 
 //===----------------------------------------------------------------------===//

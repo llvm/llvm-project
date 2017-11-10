@@ -170,6 +170,28 @@ static std::string explainPredicates(const TreePatternNode *N) {
       Explanation += " always-true";
     if (P.isImmediatePattern())
       Explanation += " immediate";
+
+    if (P.isUnindexed())
+      Explanation += " unindexed";
+
+    if (P.isNonExtLoad())
+      Explanation += " non-extload";
+    if (P.isAnyExtLoad())
+      Explanation += " extload";
+    if (P.isSignExtLoad())
+      Explanation += " sextload";
+    if (P.isZeroExtLoad())
+      Explanation += " zextload";
+
+    if (P.isNonTruncStore())
+      Explanation += " non-truncstore";
+    if (P.isTruncStore())
+      Explanation += " truncstore";
+
+    if (Record *VT = P.getMemoryVT())
+      Explanation += (" MemVT=" + VT->getName()).str();
+    if (Record *VT = P.getScalarMemoryVT())
+      Explanation += (" ScalarVT(MemVT)=" + VT->getName()).str();
   }
   return Explanation;
 }
@@ -204,6 +226,9 @@ static Error isTrivialOperatorNode(const TreePatternNode *N) {
     HasUnsupportedPredicate = true;
     Explanation = Separator + "Has a predicate (" + explainPredicates(N) + ")";
     Separator = ", ";
+    Explanation += (Separator + "first-failing:" +
+                    Predicate.getOrigPatFragRecord()->getRecord()->getName())
+                       .str();
     break;
   }
 
