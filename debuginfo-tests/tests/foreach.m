@@ -1,6 +1,6 @@
 // RUN: %clang %target_itanium_abi_host_triple -O0 -g %s -c -o %t.o
 // RUN: %clang %target_itanium_abi_host_triple %t.o -o %t.out -framework Foundation
-// RUN: %test_debuginfo %s %t.out 
+// RUN: %test_debuginfo %s %t.out
 //
 // REQUIRES: system-darwin
 // Radar 8757124
@@ -19,7 +19,7 @@ int main (int argc, const char * argv[]) {
     for (NSString *thing in things) {
         NSLog (@"%@", thing);
     }
-    
+
     things = [NSArray arrayWithObjects:@"aaa", @"bbb", @"ccc" , nil];
     for (NSString *thing in things) {
         NSLog (@"%@", thing);
