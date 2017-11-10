@@ -1313,6 +1313,9 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
       MachineInstr *UseMI = UseMO.getParent();
       if (UseMI->isDebugValue()) {
         UseMO.setReg(DstReg);
+        // Move the debug value directly after the def of the rematerialized
+        // value in DstReg.
+        MBB->splice(std::next(NewMI.getIterator()), UseMI->getParent(), UseMI);
         DEBUG(dbgs() << "\t\tupdated: " << *UseMI);
       }
     }
