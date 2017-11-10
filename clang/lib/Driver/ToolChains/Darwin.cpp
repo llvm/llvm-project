@@ -18,6 +18,7 @@
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Driver/XRayArgs.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Path.h"
@@ -1097,6 +1098,11 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
   }
   if (Sanitize.needsEsanRt())
     AddLinkSanitizerLibArgs(Args, CmdArgs, "esan");
+
+  const XRayArgs& XRay = getXRayArgs();
+  if (XRay.needsXRayRt() && isTargetMacOS()) {
+    AddLinkRuntimeLib(Args, CmdArgs, "libclang_rt.xray_osx.a", RLO_AlwaysLink);
+  }
 
   // Otherwise link libSystem, then the dynamic runtime library, and finally any
   // target specific static runtime library.

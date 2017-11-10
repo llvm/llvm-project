@@ -221,10 +221,15 @@ struct __sanitizer_sigset_t {
   unsigned int __bits[4];
 };
 
+struct __sanitizer_siginfo {
+  // The size is determined by looking at sizeof of real siginfo_t on linux.
+  u64 opaque[128 / sizeof(u64)];
+};
+
 struct __sanitizer_sigaction {
   union {
     void (*handler)(int sig);
-    void (*sigaction)(int sig, void *siginfo, void *uctx);
+    void (*sigaction)(int sig, __sanitizer_siginfo *siginfo, void *uctx);
   };
   __sanitizer_sigset_t sa_mask;
   int sa_flags;

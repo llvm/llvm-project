@@ -9,7 +9,6 @@
 
 // REQUIRES: x86-target-arch
 // FIXME: implement in other sanitizers.
-// XFAIL: msan
 // XFAIL: tsan
 
 int main() {

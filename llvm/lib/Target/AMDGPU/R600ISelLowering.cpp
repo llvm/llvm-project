@@ -1145,7 +1145,9 @@ SDValue R600TargetLowering::lowerPrivateTruncStore(StoreSDNode *Store,
 
   // Load dword
   // TODO: can we be smarter about machine pointer info?
-  SDValue Dst = DAG.getLoad(MVT::i32, DL, Chain, Ptr, MachinePointerInfo());
+  MachinePointerInfo PtrInfo(UndefValue::get(
+      Type::getInt32PtrTy(*DAG.getContext(), AMDGPUASI.PRIVATE_ADDRESS)));
+  SDValue Dst = DAG.getLoad(MVT::i32, DL, Chain, Ptr, PtrInfo);
 
   Chain = Dst.getValue(1);
 
@@ -1184,7 +1186,7 @@ SDValue R600TargetLowering::lowerPrivateTruncStore(StoreSDNode *Store,
 
   // Store dword
   // TODO: Can we be smarter about MachinePointerInfo?
-  SDValue NewStore = DAG.getStore(Chain, DL, Value, Ptr, MachinePointerInfo());
+  SDValue NewStore = DAG.getStore(Chain, DL, Value, Ptr, PtrInfo);
 
   // If we are part of expanded vector, make our neighbors depend on this store
   if (VectorTrunc) {
@@ -1371,7 +1373,9 @@ SDValue R600TargetLowering::lowerPrivateExtLoad(SDValue Op,
 
   // Load dword
   // TODO: can we be smarter about machine pointer info?
-  SDValue Read = DAG.getLoad(MVT::i32, DL, Chain, Ptr, MachinePointerInfo());
+  MachinePointerInfo PtrInfo(UndefValue::get(
+      Type::getInt32PtrTy(*DAG.getContext(), AMDGPUASI.PRIVATE_ADDRESS)));
+  SDValue Read = DAG.getLoad(MVT::i32, DL, Chain, Ptr, PtrInfo);
 
   // Get offset within the register.
   SDValue ByteIdx = DAG.getNode(ISD::AND, DL, MVT::i32,

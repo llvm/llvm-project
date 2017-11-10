@@ -1,4 +1,4 @@
-//===--- CommentVisitor.h - Visitor for Comment subclasses ------*- C++ -*-===//
+//===- CommentVisitor.h - Visitor for Comment subclasses --------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,8 +16,8 @@
 namespace clang {
 namespace comments {
 
-template <typename T> struct make_ptr       { typedef       T *type; };
-template <typename T> struct make_const_ptr { typedef const T *type; };
+template <typename T> struct make_ptr { using type = T *; };
+template <typename T> struct make_const_ptr { using type = const T *; };
 
 template<template <typename> class Ptr, typename ImplClass, typename RetTy=void>
 class CommentVisitorBase {
@@ -64,7 +64,7 @@ template<typename ImplClass, typename RetTy=void>
 class ConstCommentVisitor :
     public CommentVisitorBase<make_const_ptr, ImplClass, RetTy> {};
 
-} // end namespace comments
-} // end namespace clang
+} // namespace comments
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_AST_COMMENTVISITOR_H

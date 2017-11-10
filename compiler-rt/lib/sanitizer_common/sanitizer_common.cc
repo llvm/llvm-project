@@ -34,8 +34,6 @@ uptr stoptheworld_tracer_pid = 0;
 // writing to the same log file.
 uptr stoptheworld_tracer_ppid = 0;
 
-StaticSpinMutex CommonSanitizerReportMutex;
-
 void NORETURN ReportMmapFailureAndDie(uptr size, const char *mem_type,
                                       const char *mmap_type, error_t err,
                                       bool raw_report) {
