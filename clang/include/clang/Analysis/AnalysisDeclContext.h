@@ -16,6 +16,7 @@
 #define LLVM_CLANG_ANALYSIS_ANALYSISDECLCONTEXT_H
 
 #include "clang/AST/Decl.h"
+#include "clang/Analysis/BodyFarm.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/CodeInjector.h"
 #include "llvm/ADT/DenseMap.h"
@@ -409,6 +410,7 @@ class AnalysisDeclContextManager {
   typedef llvm::DenseMap<const Decl *, std::unique_ptr<AnalysisDeclContext>>
       ContextMap;
 
+  ASTContext &ASTCtx;
   ContextMap Contexts;
   LocationContextManager LocContexts;
   CFG::BuildOptions cfgBuildOptions;
@@ -416,22 +418,25 @@ class AnalysisDeclContextManager {
   /// Pointer to an interface that can provide function bodies for
   /// declarations from external source.
   std::unique_ptr<CodeInjector> Injector;
-  
+
+  /// Pointer to a factory for creating and caching implementations for common
+  /// methods during the analysis.
+  BodyFarm *BdyFrm = nullptr;
+
   /// Flag to indicate whether or not bodies should be synthesized
   /// for well-known functions.
   bool SynthesizeBodies;
 
 public:
-  AnalysisDeclContextManager(bool useUnoptimizedCFG = false,
+  AnalysisDeclContextManager(ASTContext &ASTCtx, bool useUnoptimizedCFG = false,
                              bool addImplicitDtors = false,
                              bool addInitializers = false,
                              bool addTemporaryDtors = false,
-                             bool addLifetime = false,
-                             bool addLoopExit = false,
+                             bool addLifetime = false, bool addLoopExit = false,
                              bool synthesizeBodies = false,
                              bool addStaticInitBranches = false,
                              bool addCXXNewAllocator = true,
-                             CodeInjector* injector = nullptr);
+                             CodeInjector *injector = nullptr);
 
   ~AnalysisDeclContextManager();
 
@@ -471,6 +476,9 @@ public:
                                          unsigned Idx) {
     return LocContexts.getStackFrame(getContext(D), Parent, S, Blk, Idx);
   }
+
+  /// Get and lazily create a {@code BodyFarm} instance.
+  BodyFarm *getBodyFarm();
 
   /// Discard all previously created AnalysisDeclContexts.
   void clear();
