@@ -749,8 +749,7 @@ void ConsumedStmtVisitor::VisitCallExpr(const CallExpr *Call) {
 
   // Special case for the std::move function.
   // TODO: Make this more specific. (Deferred)
-  if (Call->getNumArgs() == 1 && FunDecl->getNameAsString() == "move" &&
-      FunDecl->isInStdNamespace()) {
+  if (Call->isCallToStdMove()) {
     copyInfo(Call->getArg(0), Call, CS_Consumed);
     return;
   }

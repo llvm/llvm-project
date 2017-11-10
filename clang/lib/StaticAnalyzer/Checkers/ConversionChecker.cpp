@@ -123,57 +123,6 @@ void ConversionChecker::reportBug(ExplodedNode *N, CheckerContext &C,
   C.emitReport(std::move(R));
 }
 
-// Is E value greater or equal than Val?
-static bool isGreaterEqual(CheckerContext &C, const Expr *E,
-                           unsigned long long Val) {
-  ProgramStateRef State = C.getState();
-  SVal EVal = C.getSVal(E);
-  if (EVal.isUnknownOrUndef())
-    return false;
-  if (!EVal.getAs<NonLoc>() && EVal.getAs<Loc>()) {
-    ProgramStateManager &Mgr = C.getStateManager();
-    EVal =
-        Mgr.getStoreManager().getBinding(State->getStore(), EVal.castAs<Loc>());
-  }
-  if (EVal.isUnknownOrUndef() || !EVal.getAs<NonLoc>())
-    return false;
-
-  SValBuilder &Bldr = C.getSValBuilder();
-  DefinedSVal V = Bldr.makeIntVal(Val, C.getASTContext().LongLongTy);
-
-  // Is DefinedEVal greater or equal with V?
-  SVal GE = Bldr.evalBinOp(State, BO_GE, EVal, V, Bldr.getConditionType());
-  if (GE.isUnknownOrUndef())
-    return false;
-  ConstraintManager &CM = C.getConstraintManager();
-  ProgramStateRef StGE, StLT;
-  std::tie(StGE, StLT) = CM.assumeDual(State, GE.castAs<DefinedSVal>());
-  return StGE && !StLT;
-}
-
-// Is E value negative?
-static bool isNegative(CheckerContext &C, const Expr *E) {
-  ProgramStateRef State = C.getState();
-  SVal EVal = State->getSVal(E, C.getLocationContext());
-  if (EVal.isUnknownOrUndef() || !EVal.getAs<NonLoc>())
-    return false;
-  DefinedSVal DefinedEVal = EVal.castAs<DefinedSVal>();
-
-  SValBuilder &Bldr = C.getSValBuilder();
-  DefinedSVal V = Bldr.makeIntVal(0, false);
-
-  SVal LT =
-      Bldr.evalBinOp(State, BO_LT, DefinedEVal, V, Bldr.getConditionType());
-
-  // Is E value greater than MaxVal?
-  ConstraintManager &CM = C.getConstraintManager();
-  ProgramStateRef StNegative, StPositive;
-  std::tie(StNegative, StPositive) =
-      CM.assumeDual(State, LT.castAs<DefinedSVal>());
-
-  return StNegative && !StPositive;
-}
-
 bool ConversionChecker::isLossOfPrecision(const ImplicitCastExpr *Cast,
                                           QualType DestType,
                                           CheckerContext &C) const {
@@ -195,18 +144,18 @@ bool ConversionChecker::isLossOfPrecision(const ImplicitCastExpr *Cast,
     return false;
 
   unsigned long long MaxVal = 1ULL << W;
-  return isGreaterEqual(C, Cast->getSubExpr(), MaxVal);
+  return C.isGreaterOrEqual(Cast->getSubExpr(), MaxVal);
 }
 
 bool ConversionChecker::isLossOfSign(const ImplicitCastExpr *Cast,
-                                   CheckerContext &C) const {
+                                     CheckerContext &C) const {
   QualType CastType = Cast->getType();
   QualType SubType = Cast->IgnoreParenImpCasts()->getType();
 
   if (!CastType->isUnsignedIntegerType() || !SubType->isSignedIntegerType())
     return false;
 
-  return isNegative(C, Cast->getSubExpr());
+  return C.isNegative(Cast->getSubExpr());
 }
 
 void ento::registerConversionChecker(CheckerManager &mgr) {

@@ -1742,6 +1742,7 @@ void ExprEngine::processBranch(const Stmt *Condition, const Stmt *Term,
   const LocationContext *LCtx = Pred->getLocationContext();
   PrettyStackTraceLocationContext StackCrashInfo(LCtx);
   currBldrCtx = &BldCtx;
+
   // Check for NULL conditions; e.g. "for(;;)"
   if (!Condition) {
     BranchNodeBuilder NullCondBldr(Pred, Dst, BldCtx, DstT, DstF);

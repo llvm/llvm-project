@@ -132,6 +132,7 @@ bool Sema::isSimpleTypeSpecifier(tok::TokenKind Kind) const {
   case tok::kw_half:
   case tok::kw_float:
   case tok::kw_double:
+  case tok::kw__Float16:
   case tok::kw___float128:
   case tok::kw_wchar_t:
   case tok::kw_bool:
@@ -9990,14 +9991,9 @@ namespace {
 
     void VisitCallExpr(CallExpr *E) {
       // Treat std::move as a use.
-      if (E->getNumArgs() == 1) {
-        if (FunctionDecl *FD = E->getDirectCallee()) {
-          if (FD->isInStdNamespace() && FD->getIdentifier() &&
-              FD->getIdentifier()->isStr("move")) {
-            HandleValue(E->getArg(0));
-            return;
-          }
-        }
+      if (E->isCallToStdMove()) {
+        HandleValue(E->getArg(0));
+        return;
       }
 
       Inherited::VisitCallExpr(E);

@@ -28,24 +28,27 @@ class ObjCMethodDecl;
 class ObjCPropertyDecl;
 class Stmt;
 class CodeInjector;
-  
+
 class BodyFarm {
 public:
   BodyFarm(ASTContext &C, CodeInjector *injector) : C(C), Injector(injector) {}
-  
+
   /// Factory method for creating bodies for ordinary functions.
   Stmt *getBody(const FunctionDecl *D);
 
   /// Factory method for creating bodies for Objective-C properties.
   Stmt *getBody(const ObjCMethodDecl *D);
 
+  /// Remove copy constructor to avoid accidental copying.
+  BodyFarm(const BodyFarm &other) = delete;
+
 private:
-  typedef llvm::DenseMap<const Decl *, Optional<Stmt *> > BodyMap;
+  typedef llvm::DenseMap<const Decl *, Optional<Stmt *>> BodyMap;
 
   ASTContext &C;
   BodyMap Bodies;
   CodeInjector *Injector;
 };
-}
+} // namespace clang
 
 #endif

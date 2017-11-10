@@ -100,9 +100,6 @@ bool CallEvent::hasNonNullArgumentsWithType(bool (*Condition)(QualType)) const {
   for (CallEvent::param_type_iterator I = param_type_begin(),
                                       E = param_type_end();
        I != E && Idx < NumOfArgs; ++I, ++Idx) {
-    if (NumOfArgs <= Idx)
-      break;
-
     // If the parameter is 0, it's harmless.
     if (getArgSVal(Idx).isZeroConstant())
       continue;
@@ -214,7 +211,9 @@ ProgramPoint CallEvent::getProgramPoint(bool IsPreVisit,
 }
 
 bool CallEvent::isCalled(const CallDescription &CD) const {
-  assert(getKind() != CE_ObjCMessage && "Obj-C methods are not supported");
+  // FIXME: Add ObjC Message support.
+  if (getKind() == CE_ObjCMessage)
+    return false;
   if (!CD.IsLookupDone) {
     CD.IsLookupDone = true;
     CD.II = &getState()->getStateManager().getContext().Idents.get(CD.FuncName);

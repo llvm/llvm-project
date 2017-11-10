@@ -92,12 +92,10 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
       // Process non-assignments except commas or short-circuited
       // logical expressions (LAnd and LOr).
       SVal Result = evalBinOp(state, Op, LeftV, RightV, B->getType());
-      if (Result.isUnknown()) {
-        Bldr.generateNode(B, *it, state);
-        continue;
+      if (!Result.isUnknown()) {
+        state = state->BindExpr(B, LCtx, Result);
       }
 
-      state = state->BindExpr(B, LCtx, Result);
       Bldr.generateNode(B, *it, state);
       continue;
     }
@@ -627,6 +625,16 @@ void ExprEngine::VisitLogicalExpr(const BinaryOperator* B, ExplodedNode *Pred,
 
   StmtNodeBuilder Bldr(Pred, Dst, *currBldrCtx);
   ProgramStateRef state = Pred->getState();
+
+  if (B->getType()->isVectorType()) {
+    // FIXME: We do not model vector arithmetic yet. When adding support for
+    // that, note that the CFG-based reasoning below does not apply, because
+    // logical operators on vectors are not short-circuit. Currently they are
+    // modeled as short-circuit in Clang CFG but this is incorrect.
+    // Do not set the value for the expression. It'd be UnknownVal by default.
+    Bldr.generateNode(B, Pred, state);
+    return;
+  }
 
   ExplodedNode *N = Pred;
   while (!N->getLocation().getAs<BlockEntrance>()) {

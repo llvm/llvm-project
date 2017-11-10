@@ -33,6 +33,13 @@ static std::string GetSignature(const FunctionDecl *Target) {
     return "";
   std::string Signature;
 
+  // When a flow sensitive bug happens in templated code we should not generate
+  // distinct hash value for every instantiation. Use the signature from the
+  // primary template.
+  if (const FunctionDecl *InstantiatedFrom =
+          Target->getTemplateInstantiationPattern())
+    Target = InstantiatedFrom;
+
   if (!isa<CXXConstructorDecl>(Target) && !isa<CXXDestructorDecl>(Target) &&
       !isa<CXXConversionDecl>(Target))
     Signature.append(Target->getReturnType().getAsString()).append(" ");

@@ -103,9 +103,6 @@ public:
     return *static_cast<const T *>(this);
   }
 
-  /// BufferTy - A temporary buffer to hold a set of SVals.
-  typedef SmallVector<SVal,5> BufferTy;
-
   inline unsigned getRawKind() const { return Kind; }
   inline BaseKind getBaseKind() const { return (BaseKind) (Kind & BaseMask); }
   inline unsigned getSubKind() const { return (Kind & ~BaseMask) >> BaseBits; }
@@ -198,6 +195,10 @@ public:
   }
 };
 
+inline raw_ostream &operator<<(raw_ostream &os, clang::ento::SVal V) {
+  V.dumpToStream(os);
+  return os;
+}
 
 class UndefinedVal : public SVal {
 public:
@@ -622,11 +623,6 @@ private:
 } // end clang namespace
 
 namespace llvm {
-static inline raw_ostream &operator<<(raw_ostream &os,
-                                            clang::ento::SVal V) {
-  V.dumpToStream(os);
-  return os;
-}
 
 template <typename T> struct isPodLike;
 template <> struct isPodLike<clang::ento::SVal> {
