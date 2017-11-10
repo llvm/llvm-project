@@ -7,6 +7,20 @@ struct mutex {
   void lock() {}
   void unlock() {}
 };
+template<typename T>
+struct lock_guard {
+  lock_guard<T>(std::mutex) {}
+  ~lock_guard<T>() {}
+};
+template<typename T>
+struct unique_lock {
+  unique_lock<T>(std::mutex) {}
+  ~unique_lock<T>() {}
+};
+template<typename T>
+struct not_real_lock {
+  not_real_lock<T>(std::mutex) {}
+};
 }
 
 void getc() {}
@@ -109,4 +123,32 @@ void testBlockInCriticalSectionUnexpectedUnlock() {
   sleep(1); // no-warning
   m.lock();
   sleep(1); // expected-warning {{Call to blocking function 'sleep' inside of critical section}}
+}
+
+void testBlockInCriticalSectionLockGuard() {
+  std::mutex g_mutex;
+  std::not_real_lock<std::mutex> not_real_lock(g_mutex);
+  sleep(1); // no-warning
+
+  std::lock_guard<std::mutex> lock(g_mutex);
+  sleep(1); // expected-warning {{Call to blocking function 'sleep' inside of critical section}}
+}
+
+void testBlockInCriticalSectionLockGuardNested() {
+  testBlockInCriticalSectionLockGuard();
+  sleep(1); // no-warning
+}
+
+void testBlockInCriticalSectionUniqueLock() {
+  std::mutex g_mutex;
+  std::not_real_lock<std::mutex> not_real_lock(g_mutex);
+  sleep(1); // no-warning
+
+  std::unique_lock<std::mutex> lock(g_mutex);
+  sleep(1); // expected-warning {{Call to blocking function 'sleep' inside of critical section}}
+}
+
+void testBlockInCriticalSectionUniqueLockNested() {
+  testBlockInCriticalSectionUniqueLock();
+  sleep(1); // no-warning
 }
