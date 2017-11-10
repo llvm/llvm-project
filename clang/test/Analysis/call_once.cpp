@@ -1,15 +1,24 @@
-// RUN: %clang_analyze_cc1 -std=c++11 -fblocks -analyzer-checker=core,debug.ExprInspection -w -verify %s
+// RUN: %clang_analyze_cc1 -std=c++11 -fblocks -analyzer-checker=core,debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -std=c++11 -fblocks -analyzer-checker=core,debug.ExprInspection -DEMULATE_LIBSTDCPP -verify %s
 
 void clang_analyzer_eval(bool);
 
 // Faking std::std::call_once implementation.
 namespace std {
+
+#ifndef EMULATE_LIBSTDCPP
 typedef struct once_flag_s {
   unsigned long __state_ = 0;
 } once_flag;
+#else
+typedef struct once_flag_s {
+  int _M_once = 0;
+} once_flag;
+#endif
 
 template <class Callable, class... Args>
 void call_once(once_flag &o, Callable func, Args... args) {};
+
 } // namespace std
 
 // Check with Lambdas.
