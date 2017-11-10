@@ -105,3 +105,9 @@ unsigned ptrSubtractionNoCrash(char *Begin, char *End) {
     return 0;
   return N;
 }
+
+// Bug 34309
+bool ptrAsIntegerSubtractionNoCrash(long x, char *p) {
+  long y = (long)p - 1;
+  return y == x;
+}
