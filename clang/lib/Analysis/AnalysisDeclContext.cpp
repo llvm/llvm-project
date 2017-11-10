@@ -604,7 +604,7 @@ AnalysisDeclContext::~AnalysisDeclContext() {
 }
 
 AnalysisDeclContextManager::~AnalysisDeclContextManager() {
-  if (!BdyFrm)
+  if (BdyFrm)
     delete BdyFrm;
 }
 
