@@ -20288,7 +20288,7 @@ namespace rdar14960554 {
 // CHECK-NEXT:    <key>type</key><string>Bad deallocator</string>
 // CHECK-NEXT:    <key>check_name</key><string>unix.MismatchedDeallocator</string>
 // CHECK-NEXT:    <!-- This hash is experimental and going to change! -->
-// CHECK-NEXT:    <key>issue_hash_content_of_line_in_context</key><string>d9dbbf68db41ab74e2158f4b131abe34</string>
+// CHECK-NEXT:    <key>issue_hash_content_of_line_in_context</key><string>046c88d1c91ff46d6506dff5ff880756</string>
 // CHECK-NEXT:   <key>issue_hash_function_offset</key><string>0</string>
 // CHECK-NEXT:   <key>location</key>
 // CHECK-NEXT:   <dict>

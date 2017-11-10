@@ -71,15 +71,13 @@ void testLambda() {
 
 template <typename T>
 void f(T) {
-  clang_analyzer_hashDump(5); // expected-warning {{debug.ExprInspection$void f(double)$27$clang_analyzer_hashDump(5);$Category}}
-                               // expected-warning@-1{{debug.ExprInspection$void f(int)$27$clang_analyzer_hashDump(5);$Category}}
+  clang_analyzer_hashDump(5); // expected-warning {{debug.ExprInspection$void f(T)$27$clang_analyzer_hashDump(5);$Category}}
 }
 
 template <typename T>
 struct TX {
   void f(T) {
-    clang_analyzer_hashDump(5); // expected-warning {{debug.ExprInspection$void TX<double>::f(double)$29$clang_analyzer_hashDump(5);$Category}}
-                                 // expected-warning@-1{{debug.ExprInspection$void TX<int>::f(int)$29$clang_analyzer_hashDump(5);$Category}}
+    clang_analyzer_hashDump(5); // expected-warning {{debug.ExprInspection$void TX::f(T)$29$clang_analyzer_hashDump(5);$Category}}
   }
 };
 
@@ -99,11 +97,17 @@ template <typename T>
 struct TTX {
   template<typename S>
   void f(T, S) {
-    clang_analyzer_hashDump(5); // expected-warning {{debug.ExprInspection$void TTX<int>::f(int, int)$29$clang_analyzer_hashDump(5);$Category}}
+    clang_analyzer_hashDump(5); // expected-warning {{debug.ExprInspection$void TTX::f(T, S)$29$clang_analyzer_hashDump(5);$Category}}
   }
 };
 
 void g() {
+  // TX<int> and TX<double> is instantiated from the same code with the same
+  // source locations. The same error happining in both of the instantiations
+  // should share the common hash. This means we should not include the
+  // template argument for these types in the function signature.
+  // Note that, we still want the hash to be different for explicit
+  // specializations.
   TX<int> x;
   TX<double> y;
   TX<long> xl;
