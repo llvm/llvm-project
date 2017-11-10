@@ -70,7 +70,7 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
   // convergence for performance reasons.
   bool Changed = false;
   MachineBasicBlock::iterator NextMI;
-  using VecType = SetVector<MachineInstr *, SmallVector<MachineInstr *, 8>>;
+  using VecType = SmallSetVector<MachineInstr *, 8>;
   VecType WorkList;
   VecType CombineList;
   for (auto &MBB : MF) {
