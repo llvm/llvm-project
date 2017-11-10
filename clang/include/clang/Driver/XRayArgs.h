@@ -30,7 +30,6 @@ public:
   XRayArgs(const ToolChain &TC, const llvm::opt::ArgList &Args);
   void addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
                llvm::opt::ArgStringList &CmdArgs, types::ID InputType) const;
-  bool needsXRayRt() const { return XRayInstrument; }
 };
 
 } // namespace driver

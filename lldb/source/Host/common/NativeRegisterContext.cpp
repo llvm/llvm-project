@@ -19,9 +19,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
-NativeRegisterContext::NativeRegisterContext(NativeThreadProtocol &thread,
-                                             uint32_t concrete_frame_idx)
-    : m_thread(thread), m_concrete_frame_idx(concrete_frame_idx) {}
+NativeRegisterContext::NativeRegisterContext(NativeThreadProtocol &thread)
+    : m_thread(thread) {}
 
 //----------------------------------------------------------------------
 // Destructor
