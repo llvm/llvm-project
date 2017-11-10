@@ -416,7 +416,14 @@ void MisusedMovedObjectChecker::checkPreCall(const CallEvent &Call,
     return;
 
   if (isStateResetMethod(MethodDecl)) {
-    State = State->remove<TrackedRegionMap>(ThisRegion);
+    // A state reset method resets the whole object, not only sub-object
+    // of a parent class in which it is defined.
+    const MemRegion *WholeObjectRegion = ThisRegion;
+    while (const CXXBaseObjectRegion *BR =
+               dyn_cast<CXXBaseObjectRegion>(WholeObjectRegion))
+      WholeObjectRegion = BR->getSuperRegion();
+
+    State = State->remove<TrackedRegionMap>(WholeObjectRegion);
     C.addTransition(State);
     return;
   }
