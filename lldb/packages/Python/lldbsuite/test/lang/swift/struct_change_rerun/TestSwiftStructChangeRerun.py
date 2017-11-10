@@ -26,6 +26,7 @@ class TestSwiftStructChangeRerun(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.skipIf(debug_info=decorators.no_match("dsym"))
+    @decorators.expectedFailureAll(bugnumber="rdar://35459092")
     @decorators.swiftTest
     def test_swift_struct_change_rerun(self):
         """Test that we display self correctly for an inline-initialized struct"""
