@@ -35,6 +35,7 @@ add_clang_library(clangStaticAnalyzerCore
   ExprEngineObjC.cpp
   FunctionSummary.cpp
   HTMLDiagnostics.cpp
+  LoopUnrolling.cpp
   LoopWidening.cpp
   MemRegion.cpp
   PathDiagnostic.cpp
@@ -54,6 +55,7 @@ add_clang_library(clangStaticAnalyzerCore
 
   LINK_LIBS
   clangAST
+  clangASTMatchers
   clangAnalysis
   clangBasic
   clangLex
