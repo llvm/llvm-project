@@ -35474,6 +35474,7 @@ static SDValue combineSext(SDNode *N, SelectionDAG &DAG,
 
 static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
                           const X86Subtarget &Subtarget) {
+  // TODO: Handle FMSUB/FNMADD/FNMSUB as the starting opcode.
   SDLoc dl(N);
   EVT VT = N->getValueType(0);
 
@@ -35572,6 +35573,32 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
   }
 
   return SDValue();
+}
+
+// Combine FMADDSUB(A, B, FNEG(C)) -> FMSUBADD(A, B, C)
+static SDValue combineFMADDSUB(SDNode *N, SelectionDAG &DAG,
+                               const X86Subtarget &Subtarget) {
+  SDLoc dl(N);
+  EVT VT = N->getValueType(0);
+
+  SDValue NegVal = isFNEG(N->getOperand(2).getNode());
+  if (!NegVal)
+    return SDValue();
+
+  unsigned NewOpcode;
+  switch (N->getOpcode()) {
+  default: llvm_unreachable("Unexpected opcode!");
+  case X86ISD::FMADDSUB:     NewOpcode = X86ISD::FMSUBADD;     break;
+  case X86ISD::FMADDSUB_RND: NewOpcode = X86ISD::FMSUBADD_RND; break;
+  case X86ISD::FMSUBADD:     NewOpcode = X86ISD::FMADDSUB;     break;
+  case X86ISD::FMSUBADD_RND: NewOpcode = X86ISD::FMADDSUB_RND; break;
+  }
+
+  if (N->getNumOperands() == 4)
+    return DAG.getNode(NewOpcode, dl, VT, N->getOperand(0), N->getOperand(1),
+                       NegVal, N->getOperand(3));
+  return DAG.getNode(NewOpcode, dl, VT, N->getOperand(0), N->getOperand(1),
+                     NegVal);
 }
 
 static SDValue combineZext(SDNode *N, SelectionDAG &DAG,
@@ -36868,6 +36895,10 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::FMADDS1:
   case X86ISD::FMADDS3:
   case ISD::FMA:            return combineFMA(N, DAG, Subtarget);
+  case X86ISD::FMADDSUB_RND:
+  case X86ISD::FMSUBADD_RND:
+  case X86ISD::FMADDSUB:
+  case X86ISD::FMSUBADD:    return combineFMADDSUB(N, DAG, Subtarget);
   case ISD::MGATHER:
   case ISD::MSCATTER:       return combineGatherScatter(N, DAG);
   case X86ISD::TESTM:       return combineTestM(N, DAG, Subtarget);

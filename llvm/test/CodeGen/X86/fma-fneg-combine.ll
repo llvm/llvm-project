@@ -97,7 +97,7 @@ define <8 x float> @test8(<8 x float> %a, <8 x float> %b, <8 x float> %c) {
 ;
 ; KNL-LABEL: test8:
 ; KNL:       # BB#0: # %entry
-; KNL-NEXT:    vbroadcastss {{.*}}(%rip), %ymm3
+; KNL-NEXT:    vbroadcastss {{.*#+}} ymm3 = [-0,-0,-0,-0,-0,-0,-0,-0]
 ; KNL-NEXT:    vxorps %ymm3, %ymm2, %ymm2
 ; KNL-NEXT:    vfmsub213ps %ymm2, %ymm1, %ymm0
 ; KNL-NEXT:    retq
@@ -147,7 +147,7 @@ define <4 x float> @test11(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 ze
 ;
 ; KNL-LABEL: test11:
 ; KNL:       # BB#0: # %entry
-; KNL-NEXT:    vbroadcastss {{.*}}(%rip), %xmm0
+; KNL-NEXT:    vbroadcastss {{.*#+}} xmm0 = [-0,-0,-0,-0]
 ; KNL-NEXT:    vxorps %xmm0, %xmm2, %xmm0
 ; KNL-NEXT:    kmovw %edi, %k1
 ; KNL-NEXT:    vfmadd231ss %xmm1, %xmm1, %xmm0 {%k1}
@@ -270,3 +270,38 @@ entry:
   ret <16 x float> %1
 }
 
+define <16 x float> @test16(<16 x float> %a, <16 x float> %b, <16 x float> %c, i16 %mask) {
+; SKX-LABEL: test16:
+; SKX:       # BB#0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vfmsubadd132ps {rd-sae}, %zmm1, %zmm2, %zmm0 {%k1}
+; SKX-NEXT:    retq
+;
+; KNL-LABEL: test16:
+; KNL:       # BB#0:
+; KNL-NEXT:    kmovw %edi, %k1
+; KNL-NEXT:    vfmsubadd132ps {rd-sae}, %zmm1, %zmm2, %zmm0 {%k1}
+; KNL-NEXT:    retq
+  %sub.i = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %c
+  %res = call <16 x float> @llvm.x86.avx512.mask.vfmaddsub.ps.512(<16 x float> %a, <16 x float> %b, <16 x float> %sub.i, i16 %mask, i32 1)
+  ret <16 x float> %res
+}
+declare <16 x float> @llvm.x86.avx512.mask.vfmaddsub.ps.512(<16 x float>, <16 x float>, <16 x float>, i16, i32)
+
+define <8 x double> @test17(<8 x double> %a, <8 x double> %b, <8 x double> %c, i8 %mask) {
+; SKX-LABEL: test17:
+; SKX:       # BB#0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vfmsubadd132pd %zmm1, %zmm2, %zmm0 {%k1}
+; SKX-NEXT:    retq
+;
+; KNL-LABEL: test17:
+; KNL:       # BB#0:
+; KNL-NEXT:    kmovw %edi, %k1
+; KNL-NEXT:    vfmsubadd132pd %zmm1, %zmm2, %zmm0 {%k1}
+; KNL-NEXT:    retq
+  %sub.i = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %c
+  %res = call <8 x double> @llvm.x86.avx512.mask.vfmaddsub.pd.512(<8 x double> %a, <8 x double> %b, <8 x double> %sub.i, i8 %mask, i32 4)
+  ret <8 x double> %res
+}
+declare <8 x double> @llvm.x86.avx512.mask.vfmaddsub.pd.512(<8 x double>, <8 x double>, <8 x double>, i8, i32)

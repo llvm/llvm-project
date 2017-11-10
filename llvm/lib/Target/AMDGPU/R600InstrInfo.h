@@ -318,6 +318,9 @@ public:
   bool isRegisterLoad(const MachineInstr &MI) const {
     return get(MI.getOpcode()).TSFlags & R600InstrFlags::REGISTER_LOAD;
   }
+
+  unsigned getAddressSpaceForPseudoSourceKind(
+      PseudoSourceValue::PSVKind Kind) const override;
 };
 
 namespace AMDGPU {
