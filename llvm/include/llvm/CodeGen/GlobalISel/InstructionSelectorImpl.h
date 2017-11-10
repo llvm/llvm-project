@@ -244,7 +244,21 @@ bool InstructionSelector::executeMatchTable(
       }
       break;
     }
-
+    case GIM_CheckPointerToAny: {
+      int64_t InsnID = MatchTable[CurrentIdx++];
+      int64_t OpIdx = MatchTable[CurrentIdx++];
+      int64_t SizeInBits = MatchTable[CurrentIdx++];
+      DEBUG(dbgs() << CurrentIdx << ": GIM_CheckPointerToAny(MIs[" << InsnID
+                   << "]->getOperand(" << OpIdx
+                   << "), SizeInBits=" << SizeInBits << ")\n");
+      assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
+      const LLT &Ty = MRI.getType(State.MIs[InsnID]->getOperand(OpIdx).getReg());
+      if (!Ty.isPointer() || Ty.getSizeInBits() != SizeInBits) {
+        if (handleReject() == RejectAndGiveUp)
+          return false;
+      }
+      break;
+    }
     case GIM_CheckRegBankForClass: {
       int64_t InsnID = MatchTable[CurrentIdx++];
       int64_t OpIdx = MatchTable[CurrentIdx++];
