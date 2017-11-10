@@ -6164,8 +6164,12 @@ static void handleCapabilityAttr(Sema &S, Decl *D, const AttributeList &Attr) {
 
 static void handleAssertCapabilityAttr(Sema &S, Decl *D,
                                        const AttributeList &Attr) {
+  SmallVector<Expr*, 1> Args;
+  if (!checkLockFunAttrCommon(S, D, Attr, Args))
+    return;
+
   D->addAttr(::new (S.Context) AssertCapabilityAttr(Attr.getRange(), S.Context,
-                                                    Attr.getArgAsExpr(0),
+                                                    Args.data(), Args.size(),
                                         Attr.getAttributeSpellingListIndex()));
 }
 

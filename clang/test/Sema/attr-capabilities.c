@@ -37,9 +37,6 @@ void Func6(void) __attribute__((requires_shared_capability(BadCapability))) {}  
 void Func7(void) __attribute__((assert_capability(GUI))) {}
 void Func8(void) __attribute__((assert_shared_capability(GUI))) {}
 
-void Func9(void) __attribute__((assert_capability())) {} // expected-error {{'assert_capability' attribute takes one argument}}
-void Func10(void) __attribute__((assert_shared_capability())) {} // expected-error {{'assert_shared_capability' attribute takes one argument}}
-
 void Func11(void) __attribute__((acquire_capability(GUI))) {}
 void Func12(void) __attribute__((acquire_shared_capability(GUI))) {}
 
