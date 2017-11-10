@@ -10,7 +10,7 @@ define i8 @test_i8(i32 %a, i8 %f, i8 %t) {
 ; ALL-NEXT:    testb $1, %al
 ; ALL-NEXT:    jne .LBB0_2
 ; ALL-NEXT:  # BB#1: # %cond.false
-; ALL-NEXT:    movl %edx, %esi
+; ALL-NEXT:    movb %dl, %sil
 ; ALL-NEXT:  .LBB0_2: # %cond.end
 ; ALL-NEXT:    movl %esi, %eax
 ; ALL-NEXT:    retq
@@ -38,7 +38,7 @@ define i16 @test_i16(i32 %a, i16 %f, i16 %t) {
 ; ALL-NEXT:    testb $1, %al
 ; ALL-NEXT:    jne .LBB1_2
 ; ALL-NEXT:  # BB#1: # %cond.false
-; ALL-NEXT:    movl %edx, %esi
+; ALL-NEXT:    movw %dx, %si
 ; ALL-NEXT:  .LBB1_2: # %cond.end
 ; ALL-NEXT:    movl %esi, %eax
 ; ALL-NEXT:    retq
