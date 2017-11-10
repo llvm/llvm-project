@@ -99,3 +99,35 @@ StringRef CheckerContext::getMacroNameOrSpelling(SourceLocation &Loc) {
   return Lexer::getSpelling(Loc, buf, getSourceManager(), getLangOpts());
 }
 
+/// Evaluate comparison and return true if it's known that condition is true
+static bool evalComparison(SVal LHSVal, BinaryOperatorKind ComparisonOp,
+                           SVal RHSVal, ProgramStateRef State) {
+  if (LHSVal.isUnknownOrUndef())
+    return false;
+  ProgramStateManager &Mgr = State->getStateManager();
+  if (!LHSVal.getAs<NonLoc>()) {
+    LHSVal = Mgr.getStoreManager().getBinding(State->getStore(),
+                                              LHSVal.castAs<Loc>());
+    if (LHSVal.isUnknownOrUndef() || !LHSVal.getAs<NonLoc>())
+      return false;
+  }
+
+  SValBuilder &Bldr = Mgr.getSValBuilder();
+  SVal Eval = Bldr.evalBinOp(State, ComparisonOp, LHSVal, RHSVal,
+                             Bldr.getConditionType());
+  if (Eval.isUnknownOrUndef())
+    return false;
+  ProgramStateRef StTrue, StFalse;
+  std::tie(StTrue, StFalse) = State->assume(Eval.castAs<DefinedSVal>());
+  return StTrue && !StFalse;
+}
+
+bool CheckerContext::isGreaterOrEqual(const Expr *E, unsigned long long Val) {
+  DefinedSVal V = getSValBuilder().makeIntVal(Val, getASTContext().LongLongTy);
+  return evalComparison(getSVal(E), BO_GE, V, getState());
+}
+
+bool CheckerContext::isNegative(const Expr *E) {
+  DefinedSVal V = getSValBuilder().makeIntVal(0, false);
+  return evalComparison(getSVal(E), BO_LT, V, getState());
+}
