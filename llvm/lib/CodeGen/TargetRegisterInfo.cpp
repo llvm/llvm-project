@@ -360,7 +360,7 @@ bool TargetRegisterInfo::shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
 }
 
 // Compute target-independent register allocator hints to help eliminate copies.
-void
+bool
 TargetRegisterInfo::getRegAllocationHints(unsigned VirtReg,
                                           ArrayRef<MCPhysReg> Order,
                                           SmallVectorImpl<MCPhysReg> &Hints,
@@ -382,17 +382,18 @@ TargetRegisterInfo::getRegAllocationHints(unsigned VirtReg,
 
   // Check that Phys is a valid hint in VirtReg's register class.
   if (!isPhysicalRegister(Phys))
-    return;
+    return false;
   if (MRI.isReserved(Phys))
-    return;
+    return false;
   // Check that Phys is in the allocation order. We shouldn't heed hints
   // from VirtReg's register class if they aren't in the allocation order. The
   // target probably has a reason for removing the register.
   if (!is_contained(Order, Phys))
-    return;
+    return false;
 
   // All clear, tell the register allocator to prefer this register.
   Hints.push_back(Phys);
+  return false;
 }
 
 bool TargetRegisterInfo::canRealignStack(const MachineFunction &MF) const {

@@ -1493,3 +1493,21 @@ void R600InstrInfo::clearFlag(MachineInstr &MI, unsigned Operand,
     FlagOp.setImm(InstFlags);
   }
 }
+
+unsigned R600InstrInfo::getAddressSpaceForPseudoSourceKind(
+    PseudoSourceValue::PSVKind Kind) const {
+  switch (Kind) {
+  case PseudoSourceValue::Stack:
+  case PseudoSourceValue::FixedStack:
+    return AMDGPUASI.PRIVATE_ADDRESS;
+  case PseudoSourceValue::ConstantPool:
+  case PseudoSourceValue::GOT:
+  case PseudoSourceValue::JumpTable:
+  case PseudoSourceValue::GlobalValueCallEntry:
+  case PseudoSourceValue::ExternalSymbolCallEntry:
+  case PseudoSourceValue::TargetCustom:
+    return AMDGPUASI.CONSTANT_ADDRESS;
+  }
+  llvm_unreachable("Invalid pseudo source kind");
+  return AMDGPUASI.PRIVATE_ADDRESS;
+}

@@ -778,7 +778,8 @@ public:
   /// Get a list of 'hint' registers that the register allocator should try
   /// first when allocating a physical register for the virtual register
   /// VirtReg. These registers are effectively moved to the front of the
-  /// allocation order.
+  /// allocation order. If true is returned, regalloc will try to only use
+  /// hints to the greatest extent possible even if it means spilling.
   ///
   /// The Order argument is the allocation order for VirtReg's register class
   /// as returned from RegisterClassInfo::getOrder(). The hint registers must
@@ -789,7 +790,7 @@ public:
   /// HintType == 0. Targets that override this function should defer to the
   /// default implementation if they have no reason to change the allocation
   /// order for VirtReg. There may be target-independent hints.
-  virtual void getRegAllocationHints(unsigned VirtReg,
+  virtual bool getRegAllocationHints(unsigned VirtReg,
                                      ArrayRef<MCPhysReg> Order,
                                      SmallVectorImpl<MCPhysReg> &Hints,
                                      const MachineFunction &MF,
