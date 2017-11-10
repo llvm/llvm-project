@@ -346,6 +346,7 @@ ArrayRef<ParmVarDecl*> AnyFunctionCall::parameters() const {
   return D->parameters();
 }
 
+
 RuntimeDefinition AnyFunctionCall::getRuntimeDefinition() const {
   const FunctionDecl *FD = getDecl();
   // Note that the AnalysisDeclContext will have the FunctionDecl with
@@ -354,17 +355,8 @@ RuntimeDefinition AnyFunctionCall::getRuntimeDefinition() const {
     AnalysisDeclContext *AD =
       getLocationContext()->getAnalysisDeclContext()->
       getManager()->getContext(FD);
-    bool IsAutosynthesized;
-    Stmt* Body = AD->getBody(IsAutosynthesized);
-    DEBUG({
-        if (IsAutosynthesized)
-          llvm::dbgs() << "Using autosynthesized body for " << FD->getName()
-                       << "\n";
-    });
-    if (Body) {
-      const Decl* Decl = AD->getDecl();
-      return RuntimeDefinition(Decl);
-    }
+    if (AD->getBody())
+      return RuntimeDefinition(AD->getDecl());
   }
 
   return RuntimeDefinition();
