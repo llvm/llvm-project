@@ -304,6 +304,11 @@ As opposed to SelectionDAG, there are no legalization phases.  In particular,
 Legalization is iterative, and all state is contained in GMIR.  To maintain the
 validity of the intermediate code, instructions are introduced:
 
+* ``G_MERGE_VALUES`` --- concatenate multiple registers of the same
+  size into a single wider register.
+
+* ``G_UNMERGE_VALUES`` --- extract multiple registers of the same size
+  from a single wider register.
 
 * ``G_EXTRACT`` --- extract a simple register (as contiguous sequences of bits)
   from a single wider register.
