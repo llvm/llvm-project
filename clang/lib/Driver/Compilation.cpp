@@ -182,16 +182,51 @@ int Compilation::ExecuteCommand(const Command &C,
   return ExecutionFailed ? 1 : Res;
 }
 
-void Compilation::ExecuteJobs(
-    const JobList &Jobs,
-    SmallVectorImpl<std::pair<int, const Command *>> &FailingCommands) const {
+using FailingCommandList = SmallVectorImpl<std::pair<int, const Command *>>;
+
+static bool ActionFailed(const Action *A,
+                         const FailingCommandList &FailingCommands) {
+
+  if (FailingCommands.empty())
+    return false;
+
+  // CUDA can have the same input source code compiled multiple times so do not
+  // compiled again if there are already failures. It is OK to abort the CUDA
+  // pipeline on errors.
+  if (A->isOffloading(Action::OFK_Cuda))
+    return true;
+
+  for (const auto &CI : FailingCommands)
+    if (A == &(CI.second->getSource()))
+      return true;
+
+  for (const Action *AI : A->inputs())
+    if (ActionFailed(AI, FailingCommands))
+      return true;
+
+  return false;
+}
+
+static bool InputsOk(const Command &C,
+                     const FailingCommandList &FailingCommands) {
+  return !ActionFailed(&C.getSource(), FailingCommands);
+}
+
+void Compilation::ExecuteJobs(const JobList &Jobs,
+                              FailingCommandList &FailingCommands) const {
+  // According to UNIX standard, driver need to continue compiling all the
+  // inputs on the command line even one of them failed.
+  // In all but CLMode, execute all the jobs unless the necessary inputs for the
+  // job is missing due to previous failures.
   for (const auto &Job : Jobs) {
+    if (!InputsOk(Job, FailingCommands))
+      continue;
     const Command *FailingCommand = nullptr;
     if (int Res = ExecuteCommand(Job, FailingCommand)) {
       FailingCommands.push_back(std::make_pair(Res, FailingCommand));
-      // Bail as soon as one command fails, so we don't output duplicate error
-      // messages if we die on e.g. the same file.
-      return;
+      // Bail as soon as one command fails in cl driver mode.
+      if (TheDriver.IsCLMode())
+        return;
     }
   }
 }

@@ -1,4 +1,4 @@
-//===--- RecordLayout.h - Layout information for a struct/union -*- C++ -*-===//
+//===- RecordLayout.h - Layout information for a struct/union ---*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,15 +14,20 @@
 #ifndef LLVM_CLANG_AST_RECORDLAYOUT_H
 #define LLVM_CLANG_AST_RECORDLAYOUT_H
 
+#include "clang/AST/ASTVector.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/Basic/LLVM.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/PointerIntPair.h"
+#include <cassert>
+#include <cstdint>
 
 namespace clang {
-  class ASTContext;
-  class FieldDecl;
-  class RecordDecl;
-  class CXXRecordDecl;
+
+class ASTContext;
+class CXXRecordDecl;
 
 /// ASTRecordLayout -
 /// This class contains layout information for one RecordDecl,
@@ -42,21 +47,21 @@ public:
     /// Whether this virtual base requires a vtordisp field in the
     /// Microsoft ABI.  These fields are required for certain operations
     /// in constructors and destructors.
-    bool HasVtorDisp;
+    bool HasVtorDisp = false;
 
   public:
+    VBaseInfo() = default;
+    VBaseInfo(CharUnits VBaseOffset, bool hasVtorDisp)
+        : VBaseOffset(VBaseOffset), HasVtorDisp(hasVtorDisp) {}
+
     bool hasVtorDisp() const { return HasVtorDisp; }
-
-    VBaseInfo() : HasVtorDisp(false) {}
-
-    VBaseInfo(CharUnits VBaseOffset, bool hasVtorDisp) :
-     VBaseOffset(VBaseOffset), HasVtorDisp(hasVtorDisp) {}
   };
 
-  typedef llvm::DenseMap<const CXXRecordDecl *, VBaseInfo>
-    VBaseOffsetsMapTy;
+  using VBaseOffsetsMapTy = llvm::DenseMap<const CXXRecordDecl *, VBaseInfo>;
 
 private:
+  friend class ASTContext;
+
   /// Size - Size of record in characters.
   CharUnits Size;
 
@@ -117,7 +122,7 @@ private:
     const CXXRecordDecl *BaseSharingVBPtr;
     
     /// FIXME: This should really use a SmallPtrMap, once we have one in LLVM :)
-    typedef llvm::DenseMap<const CXXRecordDecl *, CharUnits> BaseOffsetsMapTy;
+    using BaseOffsetsMapTy = llvm::DenseMap<const CXXRecordDecl *, CharUnits>;
     
     /// BaseOffsets - Contains a map from base classes to their offset.
     BaseOffsetsMapTy BaseOffsets;
@@ -128,16 +133,15 @@ private:
 
   /// CXXInfo - If the record layout is for a C++ record, this will have
   /// C++ specific information about the record.
-  CXXRecordLayoutInfo *CXXInfo;
-
-  friend class ASTContext;
+  CXXRecordLayoutInfo *CXXInfo = nullptr;
 
   ASTRecordLayout(const ASTContext &Ctx, CharUnits size, CharUnits alignment,
                   CharUnits requiredAlignment, CharUnits datasize,
                   ArrayRef<uint64_t> fieldoffsets);
 
+  using BaseOffsetsMapTy = CXXRecordLayoutInfo::BaseOffsetsMapTy;
+
   // Constructor for C++ records.
-  typedef CXXRecordLayoutInfo::BaseOffsetsMapTy BaseOffsetsMapTy;
   ASTRecordLayout(const ASTContext &Ctx,
                   CharUnits size, CharUnits alignment,
                   CharUnits requiredAlignment,
@@ -159,9 +163,9 @@ private:
 
   void Destroy(ASTContext &Ctx);
   
-  ASTRecordLayout(const ASTRecordLayout &) = delete;
-  void operator=(const ASTRecordLayout &) = delete;
 public:
+  ASTRecordLayout(const ASTRecordLayout &) = delete;
+  ASTRecordLayout &operator=(const ASTRecordLayout &) = delete;
 
   /// getAlignment - Get the record alignment in characters.
   CharUnits getAlignment() const { return Alignment; }
@@ -305,6 +309,6 @@ public:
   }
 };
 
-}  // end namespace clang
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_AST_RECORDLAYOUT_H
