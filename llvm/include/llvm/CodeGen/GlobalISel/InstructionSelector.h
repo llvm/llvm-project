@@ -226,7 +226,7 @@ enum {
 /// Provides the logic to select generic machine instructions.
 class InstructionSelector {
 public:
-  typedef bool(*ImmediatePredicateFn)(int64_t);
+  using ImmediatePredicateFn = bool (*)(int64_t);
 
   virtual ~InstructionSelector() = default;
 
@@ -240,7 +240,6 @@ public:
   ///   if returns true:
   ///     for I in all mutated/inserted instructions:
   ///       !isPreISelGenericOpcode(I.getOpcode())
-  ///
   virtual bool select(MachineInstr &I) const = 0;
 
 protected:
