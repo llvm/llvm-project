@@ -1,4 +1,4 @@
-//===-- RecordLayout.cpp - Layout information for a struct/union -*- C++ -*-==//
+//===- RecordLayout.cpp - Layout information for a struct/union -----------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,9 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/ASTContext.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/Basic/TargetCXXABI.h"
 #include "clang/Basic/TargetInfo.h"
+#include <cassert>
 
 using namespace clang;
 
@@ -32,7 +34,7 @@ ASTRecordLayout::ASTRecordLayout(const ASTContext &Ctx, CharUnits size,
                                  CharUnits datasize,
                                  ArrayRef<uint64_t> fieldoffsets)
     : Size(size), DataSize(datasize), Alignment(alignment),
-      RequiredAlignment(requiredAlignment), CXXInfo(nullptr) {
+      RequiredAlignment(requiredAlignment) {
   FieldOffsets.append(Ctx, fieldoffsets.begin(), fieldoffsets.end());
 }
 
@@ -72,7 +74,6 @@ ASTRecordLayout::ASTRecordLayout(const ASTContext &Ctx,
   CXXInfo->BaseSharingVBPtr = BaseSharingVBPtr;
   CXXInfo->EndsWithZeroSizedObject = EndsWithZeroSizedObject;
   CXXInfo->LeadsWithZeroSizedBase = LeadsWithZeroSizedBase;
-
 
 #ifndef NDEBUG
     if (const CXXRecordDecl *PrimaryBase = getPrimaryBase()) {
