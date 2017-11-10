@@ -1,4 +1,4 @@
-//===- ASTVector.h - Vector that uses ASTContext for allocation  --*- C++ -*-=//
+//===- ASTVector.h - Vector that uses ASTContext for allocation ---*- C++ -*-=//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,22 +18,26 @@
 #ifndef LLVM_CLANG_AST_ASTVECTOR_H
 #define LLVM_CLANG_AST_ASTVECTOR_H
 
-#include "clang/AST/AttrIterator.h"
 #include "llvm/ADT/PointerIntPair.h"
-#include "llvm/Support/type_traits.h"
 #include <algorithm>
+#include <cassert>
 #include <cstddef>
 #include <cstring>
+#include <iterator>
 #include <memory>
+#include <type_traits>
+#include <utility>
 
 namespace clang {
-  class ASTContext;
+
+class ASTContext;
 
 template<typename T>
 class ASTVector {
 private:
-  T *Begin, *End;
-  llvm::PointerIntPair<T*, 1, bool> Capacity;
+  T *Begin = nullptr;
+  T *End = nullptr;
+  llvm::PointerIntPair<T *, 1, bool> Capacity;
 
   void setEnd(T *P) { this->End = P; }
 
@@ -45,7 +49,7 @@ protected:
 
 public:
   // Default ctor - Initialize to empty.
-  ASTVector() : Begin(nullptr), End(nullptr), Capacity(nullptr, false) {}
+  ASTVector() : Capacity(nullptr, false) {}
 
   ASTVector(ASTVector &&O) : Begin(O.Begin), End(O.End), Capacity(O.Capacity) {
     O.Begin = O.End = nullptr;
@@ -53,14 +57,15 @@ public:
     O.Capacity.setInt(false);
   }
 
-  ASTVector(const ASTContext &C, unsigned N)
-      : Begin(nullptr), End(nullptr), Capacity(nullptr, false) {
+  ASTVector(const ASTContext &C, unsigned N) : Capacity(nullptr, false) {
     reserve(C, N);
   }
 
   ASTVector &operator=(ASTVector &&RHS) {
     ASTVector O(std::move(RHS));
+
     using std::swap;
+
     swap(Begin, O.Begin);
     swap(End, O.End);
     swap(Capacity, O.Capacity);
@@ -74,19 +79,19 @@ public:
     }
   }
 
-  typedef size_t size_type;
-  typedef ptrdiff_t difference_type;
-  typedef T value_type;
-  typedef T* iterator;
-  typedef const T* const_iterator;
+  using size_type = size_t;
+  using difference_type = ptrdiff_t;
+  using value_type = T;
+  using iterator = T *;
+  using const_iterator = const T *;
 
-  typedef std::reverse_iterator<const_iterator>  const_reverse_iterator;
-  typedef std::reverse_iterator<iterator>  reverse_iterator;
+  using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+  using reverse_iterator = std::reverse_iterator<iterator>;
 
-  typedef T& reference;
-  typedef const T& const_reference;
-  typedef T* pointer;
-  typedef const T* const_pointer;
+  using reference = T &;
+  using const_reference = const T &;
+  using pointer = T *;
+  using const_pointer = const T *;
 
   // forward iterator creation methods.
   iterator begin() { return Begin; }
@@ -175,7 +180,6 @@ public:
   size_t capacity() const { return this->capacity_ptr() - Begin; }
 
   /// append - Add the specified range to the end of the SmallVector.
-  ///
   template<typename in_iter>
   void append(const ASTContext &C, in_iter in_start, in_iter in_end) {
     size_type NumInputs = std::distance(in_start, in_end);
@@ -195,7 +199,6 @@ public:
   }
 
   /// append - Add the specified range to the end of the SmallVector.
-  ///
   void append(const ASTContext &C, size_type NumInputs, const T &Elt) {
     // Grow allocated space if needed.
     if (NumInputs > size_type(this->capacity_ptr()-this->end()))
@@ -368,6 +371,7 @@ protected:
   const_iterator capacity_ptr() const {
     return (iterator) Capacity.getPointer();
   }
+
   iterator capacity_ptr() { return (iterator)Capacity.getPointer(); }
 };
 
@@ -401,5 +405,6 @@ void ASTVector<T>::grow(const ASTContext &C, size_t MinSize) {
   Capacity.setPointer(Begin+NewCapacity);
 }
 
-} // end: clang namespace
-#endif
+} // namespace clang
+
+#endif // LLVM_CLANG_AST_ASTVECTOR_H

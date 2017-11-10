@@ -185,7 +185,7 @@ uptr internal_getpid() {
 
 int internal_sigaction(int signum, const void *act, void *oldact) {
   return sigaction(signum,
-                   (struct sigaction *)act, (struct sigaction *)oldact);
+                   (const struct sigaction *)act, (struct sigaction *)oldact);
 }
 
 void internal_sigfillset(__sanitizer_sigset_t *set) { sigfillset(set); }

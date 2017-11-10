@@ -243,6 +243,11 @@ computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
 
       auto *CalledValue = CS.getCalledValue();
       auto *CalledFunction = CS.getCalledFunction();
+      if (CalledValue && !CalledFunction) {
+        CalledValue = CalledValue->stripPointerCastsNoFollowAliases();
+        // Stripping pointer casts can reveal a called function.
+        CalledFunction = dyn_cast<Function>(CalledValue);
+      }
       // Check if this is an alias to a function. If so, get the
       // called aliasee for the checks below.
       if (auto *GA = dyn_cast<GlobalAlias>(CalledValue)) {
@@ -275,9 +280,8 @@ computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
         // Skip inline assembly calls.
         if (CI && CI->isInlineAsm())
           continue;
-        // Skip direct calls.
-        if (!CS.getCalledValue() || isa<Constant>(CS.getCalledValue()))
-          continue;
+        assert(CalledValue && !isa<Constant>(CalledValue) &&
+               "Expected indirect call");
 
         uint32_t NumVals, NumCandidates;
         uint64_t TotalCount;

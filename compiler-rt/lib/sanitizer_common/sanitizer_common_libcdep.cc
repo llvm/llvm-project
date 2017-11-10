@@ -299,6 +299,7 @@ void MaybeStartBackgroudThread() {
 }
 
 static atomic_uintptr_t reporting_thread = {0};
+static StaticSpinMutex CommonSanitizerReportMutex;
 
 ScopedErrorReportLock::ScopedErrorReportLock() {
   uptr current = GetThreadSelf();
