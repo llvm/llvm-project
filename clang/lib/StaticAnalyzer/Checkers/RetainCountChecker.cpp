@@ -1170,6 +1170,11 @@ RetainSummaryManager::getFunctionSummary(const FunctionDecl *FD) {
       if (cocoa::isRefType(RetTy, "CF", FName)) {
         if (isRetain(FD, FName)) {
           S = getUnarySummary(FT, cfretain);
+          // CFRetain isn't supposed to be annotated. However, this may as well
+          // be a user-made "safe" CFRetain function that is incorrectly
+          // annotated as cf_returns_retained due to lack of better options.
+          // We want to ignore such annotation.
+          AllowAnnotations = false;
         } else if (isAutorelease(FD, FName)) {
           S = getUnarySummary(FT, cfautorelease);
           // The headers use cf_consumed, but we can fully model CFAutorelease
