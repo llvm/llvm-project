@@ -325,6 +325,8 @@ StgIgnored                   "%1$s: ignored because %2$s has been defined"
                                  # %1, -- name of ignored variable, %2 -- name of variable with higher priority.
 OBSOLETE                     "%1$s: overrides %3$s specified before"
                                  # %1, %2 -- name and value of the overriding variable, %3 -- name of overriden variable.
+OmptOutdatedWorkshare        "OMPT: Cannot determine workshare type; using the default (loop) instead. "
+                             "This issue is fixed in an up-to-date compiler."
 
 # --- OpenMP errors detected at runtime ---
 #
