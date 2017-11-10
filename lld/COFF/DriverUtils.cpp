@@ -594,7 +594,7 @@ void fixupExports() {
   }
 
   // Uniquefy by name.
-  std::map<StringRef, Export *> Map;
+  DenseMap<StringRef, Export *> Map(Config->Exports.size());
   std::vector<Export> V;
   for (Export &E : Config->Exports) {
     auto Pair = Map.insert(std::make_pair(E.ExportName, &E));
