@@ -450,6 +450,17 @@ DWARFDie DWARFUnit::getSibling(const DWARFDebugInfoEntry *Die) {
   return DWARFDie();
 }
 
+DWARFDie DWARFUnit::getFirstChild(const DWARFDebugInfoEntry *Die) {
+  if (!Die->hasChildren())
+    return DWARFDie();
+
+  // We do not want access out of bounds when parsing corrupted debug data.
+  size_t I = getDIEIndex(Die) + 1;
+  if (I >= DieArray.size())
+    return DWARFDie();
+  return DWARFDie(this, &DieArray[I]);
+}
+
 const DWARFAbbreviationDeclarationSet *DWARFUnit::getAbbreviations() const {
   if (!Abbrevs)
     Abbrevs = Abbrev->getAbbreviationDeclarationSet(AbbrOffset);

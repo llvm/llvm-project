@@ -108,11 +108,7 @@ public:
   ///
   /// \returns a valid DWARFDie instance if this object has children or an
   /// invalid DWARFDie instance if it doesn't.
-  DWARFDie getFirstChild() const {
-    if (isValid() && Die->hasChildren())
-      return DWARFDie(U, Die + 1);
-    return DWARFDie();
-  }
+  DWARFDie getFirstChild() const;
 
   /// Dump the DIE and all of its attributes to the supplied stream.
   ///
