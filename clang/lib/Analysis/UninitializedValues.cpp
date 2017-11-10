@@ -440,16 +440,11 @@ static bool isPointerToConst(const QualType &QT) {
 
 void ClassifyRefs::VisitCallExpr(CallExpr *CE) {
   // Classify arguments to std::move as used.
-  if (CE->getNumArgs() == 1) {
-    if (FunctionDecl *FD = CE->getDirectCallee()) {
-      if (FD->isInStdNamespace() && FD->getIdentifier() &&
-          FD->getIdentifier()->isStr("move")) {
-        // RecordTypes are handled in SemaDeclCXX.cpp.
-        if (!CE->getArg(0)->getType()->isRecordType())
-          classify(CE->getArg(0), Use);
-        return;
-      }
-    }
+  if (CE->isCallToStdMove()) {
+    // RecordTypes are handled in SemaDeclCXX.cpp.
+    if (!CE->getArg(0)->getType()->isRecordType())
+      classify(CE->getArg(0), Use);
+    return;
   }
 
   // If a value is passed by const pointer or by const reference to a function,
