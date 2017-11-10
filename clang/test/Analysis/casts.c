@@ -123,3 +123,29 @@ void locAsIntegerCasts(void *p) {
   int x = (int) p;
   clang_analyzer_eval(++x < 10); // no-crash // expected-warning{{UNKNOWN}}
 }
+
+void multiDimensionalArrayPointerCasts() {
+  static int x[10][10];
+  int *y1 = &(x[3][5]);
+  char *z = ((char *) y1) + 2;
+  int *y2 = (int *)(z - 2);
+  int *y3 = ((int *)x) + 35; // This is offset for [3][5].
+
+  clang_analyzer_eval(y1 == y2); // expected-warning{{TRUE}}
+
+  // FIXME: should be FALSE (i.e. equal pointers).
+  clang_analyzer_eval(y1 - y2); // expected-warning{{UNKNOWN}}
+  // FIXME: should be TRUE (i.e. same symbol).
+  clang_analyzer_eval(*y1 == *y2); // expected-warning{{UNKNOWN}}
+
+  clang_analyzer_eval(*((char *)y1) == *((char *) y2)); // expected-warning{{TRUE}}
+
+  clang_analyzer_eval(y1 == y3); // expected-warning{{TRUE}}
+
+  // FIXME: should be FALSE (i.e. equal pointers).
+  clang_analyzer_eval(y1 - y3); // expected-warning{{UNKNOWN}}
+  // FIXME: should be TRUE (i.e. same symbol).
+  clang_analyzer_eval(*y1 == *y3); // expected-warning{{UNKNOWN}}
+
+  clang_analyzer_eval(*((char *)y1) == *((char *) y3)); // expected-warning{{TRUE}}
+}
