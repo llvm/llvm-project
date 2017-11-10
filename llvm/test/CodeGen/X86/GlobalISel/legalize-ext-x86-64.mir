@@ -71,7 +71,7 @@ registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
   - { id: 2, class: _ }
-# CHECK:          %0(s8) = COPY %edi
+# CHECK:          %0(s8) = COPY %dil
 # CHECK-NEXT:     %1(s1) = G_TRUNC %0(s8)
 # CHECK-NEXT:     %2(s64) = G_SEXT %1(s1)
 # CHECK-NEXT:     %rax = COPY %2(s64)
@@ -80,7 +80,7 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: %edi
 
-    %0(s8) = COPY %edi
+    %0(s8) = COPY %dil
     %1(s1) = G_TRUNC %0(s8)
     %2(s64) = G_SEXT %1(s1)
     %rax = COPY %2(s64)
@@ -96,7 +96,7 @@ regBankSelected: false
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
-# CHECK:          %0(s8) = COPY %edi
+# CHECK:          %0(s8) = COPY %dil
 # CHECK-NEXT:     %1(s64) = G_SEXT %0(s8)
 # CHECK-NEXT:     %rax = COPY %1(s64)
 # CHECK-NEXT:     RET 0, implicit %rax
@@ -104,7 +104,7 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: %edi
 
-    %0(s8) = COPY %edi
+    %0(s8) = COPY %dil
     %1(s64) = G_SEXT %0(s8)
     %rax = COPY %1(s64)
     RET 0, implicit %rax
@@ -119,7 +119,7 @@ regBankSelected: false
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
-# CHECK:          %0(s16) = COPY %edi
+# CHECK:          %0(s16) = COPY %di
 # CHECK-NEXT:     %1(s64) = G_SEXT %0(s16)
 # CHECK-NEXT:     %rax = COPY %1(s64)
 # CHECK-NEXT:     RET 0, implicit %rax
@@ -127,7 +127,7 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: %edi
 
-    %0(s16) = COPY %edi
+    %0(s16) = COPY %di
     %1(s64) = G_SEXT %0(s16)
     %rax = COPY %1(s64)
     RET 0, implicit %rax
@@ -166,7 +166,7 @@ registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
   - { id: 2, class: _ }
-# CHECK:          %0(s8) = COPY %edi
+# CHECK:          %0(s8) = COPY %dil
 # CHECK-NEXT:     %1(s1) = G_TRUNC %0(s8)
 # CHECK-NEXT:     %2(s64) = G_ZEXT %1(s1)
 # CHECK-NEXT:     %rax = COPY %2(s64)
@@ -175,7 +175,7 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: %edi
 
-    %0(s8) = COPY %edi
+    %0(s8) = COPY %dil
     %1(s1) = G_TRUNC %0(s8)
     %2(s64) = G_ZEXT %1(s1)
     %rax = COPY %2(s64)
@@ -191,7 +191,7 @@ regBankSelected: false
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
-# CHECK:          %0(s8) = COPY %edi
+# CHECK:          %0(s8) = COPY %dil
 # CHECK-NEXT:     %1(s64) = G_ZEXT %0(s8)
 # CHECK-NEXT:     %rax = COPY %1(s64)
 # CHECK-NEXT:     RET 0, implicit %rax
@@ -199,7 +199,7 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: %edi
 
-    %0(s8) = COPY %edi
+    %0(s8) = COPY %dil
     %1(s64) = G_ZEXT %0(s8)
     %rax = COPY %1(s64)
     RET 0, implicit %rax
@@ -214,7 +214,7 @@ regBankSelected: false
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
-# CHECK:          %0(s16) = COPY %edi
+# CHECK:          %0(s16) = COPY %di
 # CHECK-NEXT:     %1(s64) = G_ZEXT %0(s16)
 # CHECK-NEXT:     %rax = COPY %1(s64)
 # CHECK-NEXT:     RET 0, implicit %rax
@@ -222,7 +222,7 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: %edi
 
-    %0(s16) = COPY %edi
+    %0(s16) = COPY %di
     %1(s64) = G_ZEXT %0(s16)
     %rax = COPY %1(s64)
     RET 0, implicit %rax
@@ -261,7 +261,7 @@ registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
   - { id: 2, class: _ }
-# CHECK:          %0(s8) = COPY %edi
+# CHECK:          %0(s8) = COPY %dil
 # CHECK-NEXT:     %1(s1) = G_TRUNC %0(s8)
 # CHECK-NEXT:     %2(s64) = G_ANYEXT %1(s1)
 # CHECK-NEXT:     %rax = COPY %2(s64)
@@ -270,7 +270,7 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: %edi
 
-    %0(s8) = COPY %edi
+    %0(s8) = COPY %dil
     %1(s1) = G_TRUNC %0(s8)
     %2(s64) = G_ANYEXT %1(s1)
     %rax = COPY %2(s64)
@@ -286,7 +286,7 @@ regBankSelected: false
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
-# CHECK:          %0(s8) = COPY %edi
+# CHECK:          %0(s8) = COPY %dil
 # CHECK-NEXT:     %1(s64) = G_ANYEXT %0(s8)
 # CHECK-NEXT:     %rax = COPY %1(s64)
 # CHECK-NEXT:     RET 0, implicit %rax
@@ -294,7 +294,7 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: %edi
 
-    %0(s8) = COPY %edi
+    %0(s8) = COPY %dil
     %1(s64) = G_ANYEXT %0(s8)
     %rax = COPY %1(s64)
     RET 0, implicit %rax
@@ -309,7 +309,7 @@ regBankSelected: false
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
-# CHECK:          %0(s16) = COPY %edi
+# CHECK:          %0(s16) = COPY %di
 # CHECK-NEXT:     %1(s64) = G_ANYEXT %0(s16)
 # CHECK-NEXT:     %rax = COPY %1(s64)
 # CHECK-NEXT:     RET 0, implicit %rax
@@ -317,7 +317,7 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: %edi
 
-    %0(s16) = COPY %edi
+    %0(s16) = COPY %di
     %1(s64) = G_ANYEXT %0(s16)
     %rax = COPY %1(s64)
     RET 0, implicit %rax

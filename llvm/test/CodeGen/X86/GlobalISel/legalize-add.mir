@@ -1,14 +1,35 @@
 # RUN: llc -mtriple=x86_64-linux-gnu -global-isel -run-pass=legalizer %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=X64
 # RUN: llc -mtriple=i386-linux-gnu   -global-isel -run-pass=legalizer %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=X32
 --- |
-  define void @test_add_i32() {
-    ret void
-  }
 
-  define void @test_add_i64() {
-    ret void
-  }
+  define void @test_add_i1() { ret void}
+  define void @test_add_i32() { ret void }
+  define void @test_add_i64() { ret void }
 
+...
+---
+name:            test_add_i1
+# CHECK-LABEL: name:  test_add_i1
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+  - { id: 2, class: _, preferred-register: '' }
+# CHECK:          %0(s32) = COPY %edx
+# CHECK-NEXT:     %3(s8) = G_TRUNC %0(s32)
+# CHECK-NEXT:     %4(s8) = G_TRUNC %0(s32)
+# CHECK-NEXT:     %5(s8) = G_ADD %3, %4
+# CHECK-NEXT:     %2(s1) = G_TRUNC %5(s8)
+# CHECK-NEXT:     RET 0
+body:             |
+  bb.1 (%ir-block.0):
+
+    %0(s32) = COPY %edx
+    %1(s1) = G_TRUNC %0(s32)
+    %2(s1) = G_ADD %1, %1
+    RET 0
 ...
 ---
 name:            test_add_i32

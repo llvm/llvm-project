@@ -456,17 +456,20 @@ void MIRPrinter::convert(yaml::MachineFunction &MF,
                          const MachineConstantPool &ConstantPool) {
   unsigned ID = 0;
   for (const MachineConstantPoolEntry &Constant : ConstantPool.getConstants()) {
-    // TODO: Serialize target specific constant pool entries.
-    if (Constant.isMachineConstantPoolEntry())
-      llvm_unreachable("Can't print target specific constant pool entries yet");
-
-    yaml::MachineConstantPoolValue YamlConstant;
     std::string Str;
     raw_string_ostream StrOS(Str);
-    Constant.Val.ConstVal->printAsOperand(StrOS);
+    if (Constant.isMachineConstantPoolEntry()) {
+      Constant.Val.MachineCPVal->print(StrOS);
+    } else {
+      Constant.Val.ConstVal->printAsOperand(StrOS);
+    }
+
+    yaml::MachineConstantPoolValue YamlConstant;
     YamlConstant.ID = ID++;
     YamlConstant.Value = StrOS.str();
     YamlConstant.Alignment = Constant.getAlignment();
+    YamlConstant.IsTargetSpecific = Constant.isMachineConstantPoolEntry();
+
     MF.Constants.push_back(YamlConstant);
   }
 }
@@ -593,8 +596,14 @@ void MIPrinter::print(const MachineBasicBlock &MBB) {
   bool HasLineAttributes = false;
   // Print the successors
   bool canPredictProbs = canPredictBranchProbabilities(MBB);
-  if (!MBB.succ_empty() && (!SimplifyMIR || !canPredictProbs ||
-                            !canPredictSuccessors(MBB))) {
+  // Even if the list of successors is empty, if we cannot guess it,
+  // we need to print it to tell the parser that the list is empty.
+  // This is needed, because MI model unreachable as empty blocks
+  // with an empty successor list. If the parser would see that
+  // without the successor list, it would guess the code would
+  // fallthrough.
+  if ((!MBB.succ_empty() && !SimplifyMIR) || !canPredictProbs ||
+      !canPredictSuccessors(MBB)) {
     OS.indent(2) << "successors: ";
     for (auto I = MBB.succ_begin(), E = MBB.succ_end(); I != E; ++I) {
       if (I != MBB.succ_begin())
