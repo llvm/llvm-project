@@ -8,7 +8,6 @@
 
 // REQUIRES: stable-runtime
 // FIXME: implement SEGV handler in other sanitizers.
-// XFAIL: msan
 // XFAIL: tsan
 
 volatile int *null = 0;

@@ -253,7 +253,8 @@ static void TracerThreadDieCallback() {
 }
 
 // Signal handler to wake up suspended threads when the tracer thread dies.
-static void TracerThreadSignalHandler(int signum, void *siginfo, void *uctx) {
+static void TracerThreadSignalHandler(int signum, __sanitizer_siginfo *siginfo,
+                                      void *uctx) {
   SignalContext ctx(siginfo, uctx);
   Printf("Tracer caught signal %d: addr=0x%zx pc=0x%zx sp=0x%zx\n", signum,
          ctx.addr, ctx.pc, ctx.sp);

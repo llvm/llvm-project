@@ -41,18 +41,3 @@ invalid C code
 // RUN: not %clang -S %t-dir/1.c %t-dir/2.c
 // RUN: test -f %t-dir/1.s
 // RUN: test ! -f %t-dir/2.s
-
-// When given multiple .c files to compile, clang compiles them in order until
-// it hits an error, at which point it stops.
-//
-// RUN: touch %t-dir/1.c
-// RUN: echo "invalid C code" > %t-dir/2.c
-// RUN: touch %t-dir/3.c
-// RUN: echo "invalid C code" > %t-dir/4.c
-// RUN: touch %t-dir/5.c
-// RUN: not %clang -S %t-dir/1.c %t-dir/2.c %t-dir/3.c %t-dir/4.c %t-dir/5.c
-// RUN: test -f %t-dir/1.s
-// RUN: test ! -f %t-dir/2.s
-// RUN: test ! -f %t-dir/3.s
-// RUN: test ! -f %t-dir/4.s
-// RUN: test ! -f %t-dir/5.s

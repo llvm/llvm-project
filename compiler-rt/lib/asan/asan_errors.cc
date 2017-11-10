@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "asan_errors.h"
-#include <signal.h>
 #include "asan_descriptions.h"
 #include "asan_mapping.h"
 #include "asan_report.h"

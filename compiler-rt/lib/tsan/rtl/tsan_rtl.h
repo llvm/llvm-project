@@ -574,11 +574,8 @@ const char *GetObjectTypeFromTag(uptr tag);
 const char *GetReportHeaderFromTag(uptr tag);
 uptr TagFromShadowStackFrame(uptr pc);
 
-class ScopedReport {
+class ScopedReportBase {
  public:
-  explicit ScopedReport(ReportType typ, uptr tag = kExternalTagNone);
-  ~ScopedReport();
-
   void AddMemoryAccess(uptr addr, uptr external_tag, Shadow s, StackTrace stack,
                        const MutexSet *mset);
   void AddStack(StackTrace stack, bool suppressable = false);
@@ -593,6 +590,10 @@ class ScopedReport {
 
   const ReportDesc *GetReport() const;
 
+ protected:
+  ScopedReportBase(ReportType typ, uptr tag);
+  ~ScopedReportBase();
+
  private:
   ReportDesc *rep_;
   // Symbolizer makes lots of intercepted calls. If we try to process them,
@@ -601,8 +602,17 @@ class ScopedReport {
 
   void AddDeadMutex(u64 id);
 
-  ScopedReport(const ScopedReport&);
-  void operator = (const ScopedReport&);
+  ScopedReportBase(const ScopedReportBase &) = delete;
+  void operator=(const ScopedReportBase &) = delete;
+};
+
+class ScopedReport : public ScopedReportBase {
+ public:
+  explicit ScopedReport(ReportType typ, uptr tag = kExternalTagNone);
+  ~ScopedReport();
+
+ private:
+  ScopedErrorReportLock lock_;
 };
 
 ThreadContext *IsThreadStackOrTls(uptr addr, bool *is_stack);
