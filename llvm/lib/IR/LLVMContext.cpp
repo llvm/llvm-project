@@ -129,11 +129,17 @@ void *LLVMContext::getInlineAsmDiagnosticContext() const {
   return pImpl->InlineAsmDiagContext;
 }
 
-void LLVMContext::setDiagnosticHandler(DiagnosticHandlerTy DiagnosticHandler,
-                                       void *DiagnosticContext,
-                                       bool RespectFilters) {
-  pImpl->DiagnosticHandler = DiagnosticHandler;
-  pImpl->DiagnosticContext = DiagnosticContext;
+void LLVMContext::setDiagnosticHandlerCallBack(
+    DiagnosticHandler::DiagnosticHandlerTy DiagnosticHandler,
+    void *DiagnosticContext, bool RespectFilters) {
+  pImpl->DiagHandler->DiagHandlerCallback = DiagnosticHandler;
+  pImpl->DiagHandler->DiagnosticContext = DiagnosticContext;
+  pImpl->RespectDiagnosticFilters = RespectFilters;
+}
+
+void LLVMContext::setDiagnosticHandler(std::unique_ptr<DiagnosticHandler> &&DH,
+                                      bool RespectFilters) {
+  pImpl->DiagHandler = std::move(DH);
   pImpl->RespectDiagnosticFilters = RespectFilters;
 }
 
@@ -159,12 +165,13 @@ void LLVMContext::setDiagnosticsOutputFile(std::unique_ptr<yaml::Output> F) {
   pImpl->DiagnosticsOutputFile = std::move(F);
 }
 
-LLVMContext::DiagnosticHandlerTy LLVMContext::getDiagnosticHandler() const {
-  return pImpl->DiagnosticHandler;
+DiagnosticHandler::DiagnosticHandlerTy
+LLVMContext::getDiagnosticHandlerCallBack() const {
+  return pImpl->DiagHandler->DiagHandlerCallback;
 }
 
 void *LLVMContext::getDiagnosticContext() const {
-  return pImpl->DiagnosticContext;
+  return pImpl->DiagHandler->DiagnosticContext;
 }
 
 void LLVMContext::setYieldCallback(YieldCallbackTy Callback, void *OpaqueHandle)
@@ -215,11 +222,10 @@ LLVMContext::getDiagnosticMessagePrefix(DiagnosticSeverity Severity) {
 
 void LLVMContext::diagnose(const DiagnosticInfo &DI) {
   // If there is a report handler, use it.
-  if (pImpl->DiagnosticHandler) {
-    if (!pImpl->RespectDiagnosticFilters || isDiagnosticEnabled(DI))
-      pImpl->DiagnosticHandler(DI, pImpl->DiagnosticContext);
+  if (pImpl->DiagHandler &&
+      (!pImpl->RespectDiagnosticFilters || isDiagnosticEnabled(DI)) &&
+      pImpl->DiagHandler->handleDiagnostics(DI))
     return;
-  }
 
   if (!isDiagnosticEnabled(DI))
     return;
@@ -314,4 +320,12 @@ void LLVMContext::setDiscardValueNames(bool Discard) {
 
 OptBisect &LLVMContext::getOptBisect() {
   return pImpl->getOptBisect();
+}
+
+const DiagnosticHandler *LLVMContext::getDiagHandlerPtr() const {
+  return pImpl->DiagHandler.get();
+}
+
+std::unique_ptr<DiagnosticHandler> LLVMContext::getDiagnosticHandler() {
+  return std::move(pImpl->DiagHandler);
 }
