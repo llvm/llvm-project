@@ -332,6 +332,8 @@ void moveStateResetFunctionsTest() {
     A b = std::move(a);
     a.reset(); // no-warning
     a.foo();   // no-warning
+    // Test if resets the state of subregions as well.
+    a.b.foo(); // no-warning
   }
   {
     A a;
@@ -344,6 +346,7 @@ void moveStateResetFunctionsTest() {
     A b = std::move(a);
     a.clear(); // no-warning
     a.foo();   // no-warning
+    a.b.foo(); // no-warning
   }
 }
 
@@ -444,7 +447,7 @@ void differentBranchesTest(int i) {
   // Same thing, but with a switch statement.
   {
     A a, b;
-    switch (i) { // expected-note {{Control jumps to 'case 1:'  at line 448}}
+    switch (i) { // expected-note {{Control jumps to 'case 1:'  at line 451}}
     case 1:
       b = std::move(a); // no-warning
       break;            // expected-note {{Execution jumps to the end of the function}}
@@ -456,7 +459,7 @@ void differentBranchesTest(int i) {
   // However, if there's a fallthrough, we do warn.
   {
     A a, b;
-    switch (i) { // expected-note {{Control jumps to 'case 1:'  at line 460}}
+    switch (i) { // expected-note {{Control jumps to 'case 1:'  at line 463}}
     case 1:
       b = std::move(a); // expected-note {{'a' became 'moved-from' here}}
     case 2:
@@ -598,6 +601,7 @@ void ifStmtSequencesDeclAndConditionTest() {
   }
 }
 
+class C : public A {};
 void subRegionMoveTest() {
   {
     A a;
@@ -616,12 +620,24 @@ void subRegionMoveTest() {
     a.foo();             // expected-warning {{Method call on a 'moved-from' object 'a'}} expected-note {{Method call on a 'moved-from' object 'a'}}
     a.b.foo();           // no-warning
   }
+  {
+    C c;
+    C c1 = std::move(c); // expected-note {{'c' became 'moved-from' here}}
+    c.foo();             // expected-warning {{Method call on a 'moved-from' object 'c'}} expected-note {{Method call on a 'moved-from' object 'c'}}
+    c.b.foo();           // no-warning
+  }
 }
 
-class C: public A {};
 void resetSuperClass() {
   C c;
   C c1 = std::move(c);
   c.clear();
   C c2 = c; // no-warning
+}
+
+void reportSuperClass() {
+  C c;
+  C c1 = std::move(c); // expected-note {{'c' became 'moved-from' here}}
+  c.foo();             // expected-warning {{Method call on a 'moved-from' object 'c'}} expected-note {{Method call on a 'moved-from' object 'c'}}
+  C c2 = c;            // no-warning
 }
