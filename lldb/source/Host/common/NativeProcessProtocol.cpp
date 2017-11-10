@@ -131,16 +131,9 @@ NativeProcessProtocol::GetHardwareDebugSupportInfo() const {
     return llvm::None;
   }
 
-  NativeRegisterContextSP reg_ctx_sp(thread->GetRegisterContext());
-  if (!reg_ctx_sp) {
-    LLDB_LOG(
-        log,
-        "failed to get a RegisterContextNativeProcess from the first thread!");
-    return llvm::None;
-  }
-
-  return std::make_pair(reg_ctx_sp->NumSupportedHardwareBreakpoints(),
-                        reg_ctx_sp->NumSupportedHardwareWatchpoints());
+  NativeRegisterContext &reg_ctx = thread->GetRegisterContext();
+  return std::make_pair(reg_ctx.NumSupportedHardwareBreakpoints(),
+                        reg_ctx.NumSupportedHardwareWatchpoints());
 }
 
 Status NativeProcessProtocol::SetWatchpoint(lldb::addr_t addr, size_t size,

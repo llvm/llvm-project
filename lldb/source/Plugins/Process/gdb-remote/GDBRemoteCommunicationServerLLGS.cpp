@@ -396,12 +396,12 @@ static void AppendHexValue(StreamString &response, const uint8_t *buf,
 }
 
 static void WriteRegisterValueInHexFixedWidth(
-    StreamString &response, NativeRegisterContextSP &reg_ctx_sp,
+    StreamString &response, NativeRegisterContext &reg_ctx,
     const RegisterInfo &reg_info, const RegisterValue *reg_value_p,
     lldb::ByteOrder byte_order) {
   RegisterValue reg_value;
   if (!reg_value_p) {
-    Status error = reg_ctx_sp->ReadRegister(&reg_info, reg_value);
+    Status error = reg_ctx.ReadRegister(&reg_info, reg_value);
     if (error.Success())
       reg_value_p = &reg_value;
     // else log.
@@ -423,9 +423,7 @@ static void WriteRegisterValueInHexFixedWidth(
 static JSONObject::SP GetRegistersAsJSON(NativeThreadProtocol &thread) {
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_THREAD));
 
-  NativeRegisterContextSP reg_ctx_sp = thread.GetRegisterContext();
-  if (!reg_ctx_sp)
-    return nullptr;
+  NativeRegisterContext& reg_ctx = thread.GetRegisterContext();
 
   JSONObject::SP register_object_sp = std::make_shared<JSONObject>();
 
@@ -448,14 +446,14 @@ static JSONObject::SP GetRegistersAsJSON(NativeThreadProtocol &thread) {
 
   for (const uint32_t *generic_reg_p = k_expedited_registers;
        *generic_reg_p != LLDB_INVALID_REGNUM; ++generic_reg_p) {
-    uint32_t reg_num = reg_ctx_sp->ConvertRegisterKindToRegisterNumber(
+    uint32_t reg_num = reg_ctx.ConvertRegisterKindToRegisterNumber(
         eRegisterKindGeneric, *generic_reg_p);
     if (reg_num == LLDB_INVALID_REGNUM)
       continue; // Target does not support the given register.
 #endif
 
     const RegisterInfo *const reg_info_p =
-        reg_ctx_sp->GetRegisterInfoAtIndex(reg_num);
+        reg_ctx.GetRegisterInfoAtIndex(reg_num);
     if (reg_info_p == nullptr) {
       if (log)
         log->Printf(
@@ -469,7 +467,7 @@ static JSONObject::SP GetRegistersAsJSON(NativeThreadProtocol &thread) {
                 // registers.
 
     RegisterValue reg_value;
-    Status error = reg_ctx_sp->ReadRegister(reg_info_p, reg_value);
+    Status error = reg_ctx.ReadRegister(reg_info_p, reg_value);
     if (error.Fail()) {
       if (log)
         log->Printf("%s failed to read register '%s' index %" PRIu32 ": %s",
@@ -480,7 +478,7 @@ static JSONObject::SP GetRegistersAsJSON(NativeThreadProtocol &thread) {
     }
 
     StreamString stream;
-    WriteRegisterValueInHexFixedWidth(stream, reg_ctx_sp, *reg_info_p,
+    WriteRegisterValueInHexFixedWidth(stream, reg_ctx, *reg_info_p,
                                       &reg_value, lldb::eByteOrderBig);
 
     register_object_sp->SetObject(
@@ -702,17 +700,15 @@ GDBRemoteCommunicationServerLLGS::SendStopReplyPacketForThread(
     for (NativeThreadProtocol *thread;
          (thread = m_debugged_process_up->GetThreadAtIndex(i)) != nullptr;
          ++i) {
-      NativeRegisterContextSP reg_ctx_sp = thread->GetRegisterContext();
-      if (!reg_ctx_sp)
-        continue;
+      NativeRegisterContext& reg_ctx = thread->GetRegisterContext();
 
-      uint32_t reg_to_read = reg_ctx_sp->ConvertRegisterKindToRegisterNumber(
+      uint32_t reg_to_read = reg_ctx.ConvertRegisterKindToRegisterNumber(
           eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
       const RegisterInfo *const reg_info_p =
-          reg_ctx_sp->GetRegisterInfoAtIndex(reg_to_read);
+          reg_ctx.GetRegisterInfoAtIndex(reg_to_read);
 
       RegisterValue reg_value;
-      Status error = reg_ctx_sp->ReadRegister(reg_info_p, reg_value);
+      Status error = reg_ctx.ReadRegister(reg_info_p, reg_value);
       if (error.Fail()) {
         if (log)
           log->Printf("%s failed to read register '%s' index %" PRIu32 ": %s",
@@ -725,7 +721,7 @@ GDBRemoteCommunicationServerLLGS::SendStopReplyPacketForThread(
 
       response.PutChar(delimiter);
       delimiter = ',';
-      WriteRegisterValueInHexFixedWidth(response, reg_ctx_sp, *reg_info_p,
+      WriteRegisterValueInHexFixedWidth(response, reg_ctx, *reg_info_p,
                                         &reg_value, endian::InlHostByteOrder());
     }
 
@@ -737,49 +733,48 @@ GDBRemoteCommunicationServerLLGS::SendStopReplyPacketForThread(
   //
 
   // Grab the register context.
-  NativeRegisterContextSP reg_ctx_sp = thread->GetRegisterContext();
-  if (reg_ctx_sp) {
-    // Expedite all registers in the first register set (i.e. should be GPRs)
-    // that are not contained in other registers.
-    const RegisterSet *reg_set_p;
-    if (reg_ctx_sp->GetRegisterSetCount() > 0 &&
-        ((reg_set_p = reg_ctx_sp->GetRegisterSet(0)) != nullptr)) {
-      if (log)
-        log->Printf("GDBRemoteCommunicationServerLLGS::%s expediting registers "
-                    "from set '%s' (registers set count: %zu)",
-                    __FUNCTION__,
-                    reg_set_p->name ? reg_set_p->name : "<unnamed-set>",
-                    reg_set_p->num_registers);
+  NativeRegisterContext& reg_ctx = thread->GetRegisterContext();
+  // Expedite all registers in the first register set (i.e. should be GPRs)
+  // that are not contained in other registers.
+  const RegisterSet *reg_set_p;
+  if (reg_ctx.GetRegisterSetCount() > 0 &&
+      ((reg_set_p = reg_ctx.GetRegisterSet(0)) != nullptr)) {
+    if (log)
+      log->Printf("GDBRemoteCommunicationServerLLGS::%s expediting registers "
+                  "from set '%s' (registers set count: %zu)",
+                  __FUNCTION__,
+                  reg_set_p->name ? reg_set_p->name : "<unnamed-set>",
+                  reg_set_p->num_registers);
 
-      for (const uint32_t *reg_num_p = reg_set_p->registers;
-           *reg_num_p != LLDB_INVALID_REGNUM; ++reg_num_p) {
-        const RegisterInfo *const reg_info_p =
-            reg_ctx_sp->GetRegisterInfoAtIndex(*reg_num_p);
-        if (reg_info_p == nullptr) {
+    for (const uint32_t *reg_num_p = reg_set_p->registers;
+         *reg_num_p != LLDB_INVALID_REGNUM; ++reg_num_p) {
+      const RegisterInfo *const reg_info_p =
+          reg_ctx.GetRegisterInfoAtIndex(*reg_num_p);
+      if (reg_info_p == nullptr) {
+        if (log)
+          log->Printf("GDBRemoteCommunicationServerLLGS::%s failed to get "
+                      "register info for register set '%s', register index "
+                      "%" PRIu32,
+                      __FUNCTION__,
+                      reg_set_p->name ? reg_set_p->name : "<unnamed-set>",
+                      *reg_num_p);
+      } else if (reg_info_p->value_regs == nullptr) {
+        // Only expediate registers that are not contained in other registers.
+        RegisterValue reg_value;
+        Status error = reg_ctx.ReadRegister(reg_info_p, reg_value);
+        if (error.Success()) {
+          response.Printf("%.02x:", *reg_num_p);
+          WriteRegisterValueInHexFixedWidth(response, reg_ctx, *reg_info_p,
+                                            &reg_value, lldb::eByteOrderBig);
+          response.PutChar(';');
+        } else {
           if (log)
-            log->Printf("GDBRemoteCommunicationServerLLGS::%s failed to get "
-                        "register info for register set '%s', register index "
-                        "%" PRIu32,
+            log->Printf("GDBRemoteCommunicationServerLLGS::%s failed to read "
+                        "register '%s' index %" PRIu32 ": %s",
                         __FUNCTION__,
-                        reg_set_p->name ? reg_set_p->name : "<unnamed-set>",
-                        *reg_num_p);
-        } else if (reg_info_p->value_regs == nullptr) {
-          // Only expediate registers that are not contained in other registers.
-          RegisterValue reg_value;
-          Status error = reg_ctx_sp->ReadRegister(reg_info_p, reg_value);
-          if (error.Success()) {
-            response.Printf("%.02x:", *reg_num_p);
-            WriteRegisterValueInHexFixedWidth(response, reg_ctx_sp, *reg_info_p,
-                                              &reg_value, lldb::eByteOrderBig);
-            response.PutChar(';');
-          } else {
-            if (log)
-              log->Printf("GDBRemoteCommunicationServerLLGS::%s failed to read "
-                          "register '%s' index %" PRIu32 ": %s",
-                          __FUNCTION__, reg_info_p->name ? reg_info_p->name
-                                                         : "<unnamed-register>",
-                          *reg_num_p, error.AsCString());
-          }
+                        reg_info_p->name ? reg_info_p->name
+                                         : "<unnamed-register>",
+                        *reg_num_p, error.AsCString());
         }
       }
     }
@@ -1695,9 +1690,7 @@ GDBRemoteCommunicationServerLLGS::Handle_qRegisterInfo(
     return SendErrorResponse(69);
 
   // Get the register context for the first thread.
-  NativeRegisterContextSP reg_context_sp(thread->GetRegisterContext());
-  if (!reg_context_sp)
-    return SendErrorResponse(69);
+  NativeRegisterContext &reg_context = thread->GetRegisterContext();
 
   // Parse out the register number from the request.
   packet.SetFilePos(strlen("qRegisterInfo"));
@@ -1708,11 +1701,10 @@ GDBRemoteCommunicationServerLLGS::Handle_qRegisterInfo(
 
   // Return the end of registers response if we've iterated one past the end of
   // the register set.
-  if (reg_index >= reg_context_sp->GetUserRegisterCount())
+  if (reg_index >= reg_context.GetUserRegisterCount())
     return SendErrorResponse(69);
 
-  const RegisterInfo *reg_info =
-      reg_context_sp->GetRegisterInfoAtIndex(reg_index);
+  const RegisterInfo *reg_info = reg_context.GetRegisterInfoAtIndex(reg_index);
   if (!reg_info)
     return SendErrorResponse(69);
 
@@ -1794,7 +1786,7 @@ GDBRemoteCommunicationServerLLGS::Handle_qRegisterInfo(
   };
 
   const char *const register_set_name =
-      reg_context_sp->GetRegisterSetNameForRegisterAtIndex(reg_index);
+      reg_context.GetRegisterSetNameForRegisterAtIndex(reg_index);
   if (register_set_name) {
     response.PutCString("set:");
     response.PutCString(register_set_name);
@@ -1955,28 +1947,20 @@ GDBRemoteCommunicationServerLLGS::Handle_p(StringExtractorGDBRemote &packet) {
   }
 
   // Get the thread's register context.
-  NativeRegisterContextSP reg_context_sp(thread->GetRegisterContext());
-  if (!reg_context_sp) {
-    LLDB_LOG(
-        log,
-        "pid {0} tid {1} failed, no register context available for the thread",
-        m_debugged_process_up->GetID(), thread->GetID());
-    return SendErrorResponse(0x15);
-  }
+  NativeRegisterContext &reg_context = thread->GetRegisterContext();
 
   // Return the end of registers response if we've iterated one past the end of
   // the register set.
-  if (reg_index >= reg_context_sp->GetUserRegisterCount()) {
+  if (reg_index >= reg_context.GetUserRegisterCount()) {
     if (log)
       log->Printf("GDBRemoteCommunicationServerLLGS::%s failed, requested "
                   "register %" PRIu32 " beyond register count %" PRIu32,
                   __FUNCTION__, reg_index,
-                  reg_context_sp->GetUserRegisterCount());
+                  reg_context.GetUserRegisterCount());
     return SendErrorResponse(0x15);
   }
 
-  const RegisterInfo *reg_info =
-      reg_context_sp->GetRegisterInfoAtIndex(reg_index);
+  const RegisterInfo *reg_info = reg_context.GetRegisterInfoAtIndex(reg_index);
   if (!reg_info) {
     if (log)
       log->Printf("GDBRemoteCommunicationServerLLGS::%s failed, requested "
@@ -1990,7 +1974,7 @@ GDBRemoteCommunicationServerLLGS::Handle_p(StringExtractorGDBRemote &packet) {
 
   // Retrieve the value
   RegisterValue reg_value;
-  Status error = reg_context_sp->ReadRegister(reg_info, reg_value);
+  Status error = reg_context.ReadRegister(reg_info, reg_value);
   if (error.Fail()) {
     if (log)
       log->Printf("GDBRemoteCommunicationServerLLGS::%s failed, read of "
@@ -2056,18 +2040,8 @@ GDBRemoteCommunicationServerLLGS::Handle_P(StringExtractorGDBRemote &packet) {
   }
 
   // Get the thread's register context.
-  NativeRegisterContextSP reg_context_sp(thread->GetRegisterContext());
-  if (!reg_context_sp) {
-    if (log)
-      log->Printf(
-          "GDBRemoteCommunicationServerLLGS::%s pid %" PRIu64 " tid %" PRIu64
-          " failed, no register context available for the thread",
-          __FUNCTION__, m_debugged_process_up->GetID(), thread->GetID());
-    return SendErrorResponse(0x15);
-  }
-
-  const RegisterInfo *reg_info =
-      reg_context_sp->GetRegisterInfoAtIndex(reg_index);
+  NativeRegisterContext &reg_context = thread->GetRegisterContext();
+  const RegisterInfo *reg_info = reg_context.GetRegisterInfoAtIndex(reg_index);
   if (!reg_info) {
     if (log)
       log->Printf("GDBRemoteCommunicationServerLLGS::%s failed, requested "
@@ -2078,12 +2052,11 @@ GDBRemoteCommunicationServerLLGS::Handle_P(StringExtractorGDBRemote &packet) {
 
   // Return the end of registers response if we've iterated one past the end of
   // the register set.
-  if (reg_index >= reg_context_sp->GetUserRegisterCount()) {
+  if (reg_index >= reg_context.GetUserRegisterCount()) {
     if (log)
       log->Printf("GDBRemoteCommunicationServerLLGS::%s failed, requested "
                   "register %" PRIu32 " beyond register count %" PRIu32,
-                  __FUNCTION__, reg_index,
-                  reg_context_sp->GetUserRegisterCount());
+                  __FUNCTION__, reg_index, reg_context.GetUserRegisterCount());
     return SendErrorResponse(0x47);
   }
 
@@ -2101,7 +2074,7 @@ GDBRemoteCommunicationServerLLGS::Handle_P(StringExtractorGDBRemote &packet) {
   RegisterValue reg_value(
       reg_bytes, reg_size,
       m_debugged_process_up->GetArchitecture().GetByteOrder());
-  Status error = reg_context_sp->WriteRegister(reg_info, reg_value);
+  Status error = reg_context.WriteRegister(reg_info, reg_value);
   if (error.Fail()) {
     if (log)
       log->Printf("GDBRemoteCommunicationServerLLGS::%s failed, write of "
@@ -2861,18 +2834,11 @@ GDBRemoteCommunicationServerLLGS::Handle_QSaveRegisterState(
   }
 
   // Grab the register context for the thread.
-  NativeRegisterContextSP reg_context_sp(thread->GetRegisterContext());
-  if (!reg_context_sp) {
-    LLDB_LOG(
-        log,
-        "pid {0} tid {1} failed, no register context available for the thread",
-        m_debugged_process_up->GetID(), thread->GetID());
-    return SendErrorResponse(0x15);
-  }
+  NativeRegisterContext& reg_context = thread->GetRegisterContext();
 
   // Save registers to a buffer.
   DataBufferSP register_data_sp;
-  Status error = reg_context_sp->ReadAllRegisterValues(register_data_sp);
+  Status error = reg_context.ReadAllRegisterValues(register_data_sp);
   if (error.Fail()) {
     LLDB_LOG(log, "pid {0} failed to save all register values: {1}",
              m_debugged_process_up->GetID(), error);
@@ -2926,14 +2892,7 @@ GDBRemoteCommunicationServerLLGS::Handle_QRestoreRegisterState(
   }
 
   // Grab the register context for the thread.
-  NativeRegisterContextSP reg_context_sp(thread->GetRegisterContext());
-  if (!reg_context_sp) {
-    LLDB_LOG(
-        log,
-        "pid {0} tid {1} failed, no register context available for the thread",
-        m_debugged_process_up->GetID(), thread->GetID());
-    return SendErrorResponse(0x15);
-  }
+  NativeRegisterContext &reg_context = thread->GetRegisterContext();
 
   // Retrieve register state buffer, then remove from the list.
   DataBufferSP register_data_sp;
@@ -2954,7 +2913,7 @@ GDBRemoteCommunicationServerLLGS::Handle_QRestoreRegisterState(
     m_saved_registers_map.erase(it);
   }
 
-  Status error = reg_context_sp->WriteAllRegisterValues(register_data_sp);
+  Status error = reg_context.WriteAllRegisterValues(register_data_sp);
   if (error.Fail()) {
     LLDB_LOG(log, "pid {0} failed to restore all register values: {1}",
              m_debugged_process_up->GetID(), error);

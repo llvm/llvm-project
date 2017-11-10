@@ -26,8 +26,7 @@ class NativeProcessLinux;
 class NativeRegisterContextLinux_mips64 : public NativeRegisterContextLinux {
 public:
   NativeRegisterContextLinux_mips64(const ArchSpec &target_arch,
-                                    NativeThreadProtocol &native_thread,
-                                    uint32_t concrete_frame_idx);
+                                    NativeThreadProtocol &native_thread);
 
   uint32_t GetRegisterSetCount() const override;
 

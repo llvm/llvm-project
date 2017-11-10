@@ -62,6 +62,12 @@ protected:
     return Style;
   }
 
+  FormatStyle getTextProtoStyleWithColumns(unsigned ColumnLimit) {
+    FormatStyle Style = getGoogleStyle(FormatStyle::FormatStyle::LK_TextProto);
+    Style.ColumnLimit = ColumnLimit;
+    return Style;
+  }
+
   void verifyFormat(llvm::StringRef Code,
                     const FormatStyle &Style = getLLVMStyle()) {
     EXPECT_EQ(Code.str(), format(test::messUp(Code), Style));
@@ -2872,6 +2878,85 @@ TEST_F(FormatTestComments, NonTrailingBlockComments) {
                    "    A = B;",
                    getLLVMStyleWithColumns(40)));
 }
+
+TEST_F(FormatTestComments, PythonStyleComments) {
+  // Keeps a space after '#'.
+  EXPECT_EQ("# comment\n"
+            "key: value",
+            format("#comment\n"
+                   "key:value",
+                   getTextProtoStyleWithColumns(20)));
+  EXPECT_EQ("# comment\n"
+            "key: value",
+            format("# comment\n"
+                   "key:value",
+                   getTextProtoStyleWithColumns(20)));
+  // Breaks long comment.
+  EXPECT_EQ("# comment comment\n"
+            "# comment\n"
+            "key: value",
+            format("# comment comment comment\n"
+                   "key:value",
+                   getTextProtoStyleWithColumns(20)));
+  // Indents comments.
+  EXPECT_EQ("data {\n"
+            "  # comment comment\n"
+            "  # comment\n"
+            "  key: value\n"
+            "}",
+            format("data {\n"
+                   "# comment comment comment\n"
+                   "key: value}",
+                   getTextProtoStyleWithColumns(20)));
+  EXPECT_EQ("data {\n"
+            "  # comment comment\n"
+            "  # comment\n"
+            "  key: value\n"
+            "}",
+            format("data {# comment comment comment\n"
+                   "key: value}",
+                   getTextProtoStyleWithColumns(20)));
+  // Reflows long comments.
+  EXPECT_EQ("# comment comment\n"
+            "# comment comment\n"
+            "key: value",
+            format("# comment comment comment\n"
+                   "# comment\n"
+                   "key:value",
+                   getTextProtoStyleWithColumns(20)));
+  // Breaks trailing comments.
+  EXPECT_EQ("k: val  # comment\n"
+            "        # comment\n"
+            "a: 1",
+            format("k:val#comment comment\n"
+                   "a:1",
+                   getTextProtoStyleWithColumns(20)));
+  EXPECT_EQ("id {\n"
+            "  k: val  # comment\n"
+            "          # comment\n"
+            "  # line line\n"
+            "  a: 1\n"
+            "}",
+            format("id {k:val#comment comment\n"
+                   "# line line\n"
+                   "a:1}",
+                   getTextProtoStyleWithColumns(20)));
+  // Aligns trailing comments.
+  EXPECT_EQ("k: val  # commen1\n"
+            "        # commen2\n"
+            "        # commen3\n"
+            "# commen4\n"
+            "a: 1  # commen5\n"
+            "      # commen6\n"
+            "      # commen7",
+            format("k:val#commen1 commen2\n"
+                   " # commen3\n"
+                   "# commen4\n"
+                   "a:1#commen5 commen6\n"
+                   " #commen7",
+                   getTextProtoStyleWithColumns(20)));
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang

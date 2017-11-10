@@ -1,4 +1,0 @@
-___start_xray_fn_idx
-___start_xray_instr_map
-___stop_xray_fn_idx
-___stop_xray_instr_map
