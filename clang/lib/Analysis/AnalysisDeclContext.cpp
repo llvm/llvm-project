@@ -305,9 +305,9 @@ AnalysisDeclContext *AnalysisDeclContextManager::getContext(const Decl *D) {
 }
 
 BodyFarm *AnalysisDeclContextManager::getBodyFarm() {
-  if (!BdyFrm)
-    BdyFrm = llvm::make_unique<BodyFarm>(ASTCtx, Injector.get());
-  return BdyFrm.get();
+  if (!FunctionBodyFarm)
+    FunctionBodyFarm = llvm::make_unique<BodyFarm>(ASTCtx, Injector.get());
+  return FunctionBodyFarm.get();
 }
 
 const StackFrameContext *
