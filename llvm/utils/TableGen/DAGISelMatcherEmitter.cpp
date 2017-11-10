@@ -208,13 +208,37 @@ static std::string getIncludePath(const Record *R) {
   return str;
 }
 
+static void BeginEmitFunction(raw_ostream &OS, StringRef RetType,
+                              StringRef Decl, bool AddOverride) {
+  OS << "#ifdef GET_DAGISEL_DECL\n";
+  OS << RetType << ' ' << Decl;
+  if (AddOverride)
+    OS << " override";
+  OS << ";\n"
+        "#endif\n"
+        "#if defined(GET_DAGISEL_BODY) || DAGISEL_INLINE\n";
+  OS << RetType << " DAGISEL_CLASS_COLONCOLON " << Decl << "\n";
+  if (AddOverride) {
+    OS << "#if DAGISEL_INLINE\n"
+          "  override\n"
+          "#endif\n";
+  }
+}
+
+static void EndEmitFunction(raw_ostream &OS) {
+  OS << "#endif // GET_DAGISEL_BODY\n\n";
+}
+
 void MatcherTableEmitter::EmitPatternMatchTable(raw_ostream &OS) {
 
   assert(isUInt<16>(VecPatterns.size()) &&
          "Using only 16 bits to encode offset into Pattern Table");
   assert(VecPatterns.size() == VecIncludeStrings.size() &&
          "The sizes of Pattern and include vectors should be the same");
-  OS << "StringRef getPatternForIndex(unsigned Index) override {\n";
+
+  BeginEmitFunction(OS, "StringRef", "getPatternForIndex(unsigned Index)",
+                    true/*AddOverride*/);
+  OS << "{\n";
   OS << "static const char * PATTERN_MATCH_TABLE[] = {\n";
 
   for (const auto &It : VecPatterns) {
@@ -224,8 +248,11 @@ void MatcherTableEmitter::EmitPatternMatchTable(raw_ostream &OS) {
   OS << "\n};";
   OS << "\nreturn StringRef(PATTERN_MATCH_TABLE[Index]);";
   OS << "\n}";
+  EndEmitFunction(OS);
 
-  OS << "\nStringRef getIncludePathForIndex(unsigned Index) override {\n";
+  BeginEmitFunction(OS, "StringRef", "getIncludePathForIndex(unsigned Index)",
+                    true/*AddOverride*/);
+  OS << "{\n";
   OS << "static const char * INCLUDE_PATH_TABLE[] = {\n";
 
   for (const auto &It : VecIncludeStrings) {
@@ -235,6 +262,7 @@ void MatcherTableEmitter::EmitPatternMatchTable(raw_ostream &OS) {
   OS << "\n};";
   OS << "\nreturn StringRef(INCLUDE_PATH_TABLE[Index]);";
   OS << "\n}";
+  EndEmitFunction(OS);
 }
 
 /// EmitMatcher - Emit bytes for the specified matcher and return
@@ -755,19 +783,24 @@ EmitMatcherList(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
 void MatcherTableEmitter::EmitPredicateFunctions(raw_ostream &OS) {
   // Emit pattern predicates.
   if (!PatternPredicates.empty()) {
-    OS << "bool CheckPatternPredicate(unsigned PredNo) const override {\n";
+    BeginEmitFunction(OS, "bool",
+          "CheckPatternPredicate(unsigned PredNo) const", true/*AddOverride*/);
+    OS << "{\n";
     OS << "  switch (PredNo) {\n";
     OS << "  default: llvm_unreachable(\"Invalid predicate in table?\");\n";
     for (unsigned i = 0, e = PatternPredicates.size(); i != e; ++i)
       OS << "  case " << i << ": return "  << PatternPredicates[i] << ";\n";
     OS << "  }\n";
-    OS << "}\n\n";
+    OS << "}\n";
+    EndEmitFunction(OS);
   }
 
   // Emit Node predicates.
   if (!NodePredicates.empty()) {
-    OS << "bool CheckNodePredicate(SDNode *Node,\n";
-    OS << "                        unsigned PredNo) const override {\n";
+    BeginEmitFunction(OS, "bool",
+          "CheckNodePredicate(SDNode *Node, unsigned PredNo) const",
+          true/*AddOverride*/);
+    OS << "{\n";
     OS << "  switch (PredNo) {\n";
     OS << "  default: llvm_unreachable(\"Invalid predicate in table?\");\n";
     for (unsigned i = 0, e = NodePredicates.size(); i != e; ++i) {
@@ -783,15 +816,19 @@ void MatcherTableEmitter::EmitPredicateFunctions(raw_ostream &OS) {
       OS << PredFn.getCodeToRunOnSDNode() << "\n  }\n";
     }
     OS << "  }\n";
-    OS << "}\n\n";
+    OS << "}\n";
+    EndEmitFunction(OS);
   }
 
   // Emit CompletePattern matchers.
   // FIXME: This should be const.
   if (!ComplexPatterns.empty()) {
-    OS << "bool CheckComplexPattern(SDNode *Root, SDNode *Parent,\n";
-    OS << "                         SDValue N, unsigned PatternNo,\n";
-    OS << "         SmallVectorImpl<std::pair<SDValue, SDNode*> > &Result) override {\n";
+    BeginEmitFunction(OS, "bool",
+          "CheckComplexPattern(SDNode *Root, SDNode *Parent,\n"
+          "      SDValue N, unsigned PatternNo,\n"
+          "      SmallVectorImpl<std::pair<SDValue, SDNode*>> &Result)",
+          true/*AddOverride*/);
+    OS << "{\n";
     OS << "  unsigned NextRes = Result.size();\n";
     OS << "  switch (PatternNo) {\n";
     OS << "  default: llvm_unreachable(\"Invalid pattern # in table?\");\n";
@@ -835,14 +872,17 @@ void MatcherTableEmitter::EmitPredicateFunctions(raw_ostream &OS) {
       }
     }
     OS << "  }\n";
-    OS << "}\n\n";
+    OS << "}\n";
+    EndEmitFunction(OS);
   }
 
 
   // Emit SDNodeXForm handlers.
   // FIXME: This should be const.
   if (!NodeXForms.empty()) {
-    OS << "SDValue RunSDNodeXForm(SDValue V, unsigned XFormNo) override {\n";
+    BeginEmitFunction(OS, "SDValue",
+          "RunSDNodeXForm(SDValue V, unsigned XFormNo)", true/*AddOverride*/);
+    OS << "{\n";
     OS << "  switch (XFormNo) {\n";
     OS << "  default: llvm_unreachable(\"Invalid xform # in table?\");\n";
 
@@ -868,7 +908,8 @@ void MatcherTableEmitter::EmitPredicateFunctions(raw_ostream &OS) {
       OS << Code << "\n  }\n";
     }
     OS << "  }\n";
-    OS << "}\n\n";
+    OS << "}\n";
+    EndEmitFunction(OS);
   }
 }
 
@@ -958,11 +999,39 @@ void MatcherTableEmitter::EmitHistogram(const Matcher *M,
 void llvm::EmitMatcherTable(const Matcher *TheMatcher,
                             const CodeGenDAGPatterns &CGP,
                             raw_ostream &OS) {
-  OS << "// The main instruction selector code.\n";
-  OS << "void SelectCode(SDNode *N) {\n";
+  OS << "#if defined(GET_DAGISEL_DECL) && defined(GET_DAGISEL_BODY)\n";
+  OS << "#error GET_DAGISEL_DECL and GET_DAGISEL_BODY cannot be both defined, ";
+  OS << "undef both for inline definitions\n";
+  OS << "#endif\n\n";
 
+  // Emit a check for omitted class name.
+  OS << "#ifdef GET_DAGISEL_BODY\n";
+  OS << "#define LOCAL_DAGISEL_STRINGIZE(X) LOCAL_DAGISEL_STRINGIZE_(X)\n";
+  OS << "#define LOCAL_DAGISEL_STRINGIZE_(X) #X\n";
+  OS << "static_assert(sizeof(LOCAL_DAGISEL_STRINGIZE(GET_DAGISEL_BODY)) > 1,"
+        "\n";
+  OS << "   \"GET_DAGISEL_BODY is empty: it should be defined with the class "
+        "name\");\n";
+  OS << "#undef LOCAL_DAGISEL_STRINGIZE_\n";
+  OS << "#undef LOCAL_DAGISEL_STRINGIZE\n";
+  OS << "#endif\n\n";
+
+  OS << "#if !defined(GET_DAGISEL_DECL) && !defined(GET_DAGISEL_BODY)\n";
+  OS << "#define DAGISEL_INLINE 1\n";
+  OS << "#else\n";
+  OS << "#define DAGISEL_INLINE 0\n";
+  OS << "#endif\n\n";
+
+  OS << "#if !DAGISEL_INLINE\n";
+  OS << "#define DAGISEL_CLASS_COLONCOLON GET_DAGISEL_BODY ::\n";
+  OS << "#else\n";
+  OS << "#define DAGISEL_CLASS_COLONCOLON\n";
+  OS << "#endif\n\n";
+
+  BeginEmitFunction(OS, "void", "SelectCode(SDNode *N)", false/*AddOverride*/);
   MatcherTableEmitter MatcherEmitter(CGP);
 
+  OS << "{\n";
   OS << "  // Some target values are emitted as 2 bytes, TARGET_VAL handles\n";
   OS << "  // this.\n";
   OS << "  #define TARGET_VAL(X) X & 255, unsigned(X) >> 8\n";
@@ -974,11 +1043,27 @@ void llvm::EmitMatcherTable(const Matcher *TheMatcher,
 
   OS << "  #undef TARGET_VAL\n";
   OS << "  SelectCodeCommon(N, MatcherTable,sizeof(MatcherTable));\n";
-  OS << "}\n\n";
+  OS << "}\n";
+  EndEmitFunction(OS);
 
   // Next up, emit the function for node and pattern predicates:
   MatcherEmitter.EmitPredicateFunctions(OS);
 
   if (InstrumentCoverage)
     MatcherEmitter.EmitPatternMatchTable(OS);
+
+  // Clean up the preprocessor macros.
+  OS << "\n";
+  OS << "#ifdef DAGISEL_INLINE\n";
+  OS << "#undef DAGISEL_INLINE\n";
+  OS << "#endif\n";
+  OS << "#ifdef DAGISEL_CLASS_COLONCOLON\n";
+  OS << "#undef DAGISEL_CLASS_COLONCOLON\n";
+  OS << "#endif\n";
+  OS << "#ifdef GET_DAGISEL_DECL\n";
+  OS << "#undef GET_DAGISEL_DECL\n";
+  OS << "#endif\n";
+  OS << "#ifdef GET_DAGISEL_BODY\n";
+  OS << "#undef GET_DAGISEL_BODY\n";
+  OS << "#endif\n";
 }

@@ -94,7 +94,7 @@ L1:
   }
 
 #pragma omp target
-#pragma omp teams distribute parallel for copyin(pvt) // expected-error {{unexpected OpenMP clause 'copyin' in directive '#pragma omp teams distribute parallel for'}}
+#pragma omp teams distribute parallel for copyin(pvt)
   for (int n = 0; n < 100; ++n) {}
 
   return 0;
