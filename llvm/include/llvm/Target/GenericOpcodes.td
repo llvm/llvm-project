@@ -486,8 +486,8 @@ def G_STORE : Instruction {
 // Variadic ops
 //------------------------------------------------------------------------------
 
-// Extract multiple registers specified size, starting from blocks given by
-// indexes. This will almost certainly be mapped to sub-register COPYs after
+// Extract a register of the specified size, starting from the block given by
+// index. This will almost certainly be mapped to sub-register COPYs after
 // register banks have been selected.
 def G_EXTRACT : Instruction {
   let OutOperandList = (outs type0:$res);
