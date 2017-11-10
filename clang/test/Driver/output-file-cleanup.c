@@ -25,30 +25,19 @@
 invalid C code
 #endif
 
-// RUN: touch %t1.c
-// RUN: echo "invalid C code" > %t2.c
-// RUN: cd %T && not %clang -S %t1.c %t2.c
-// RUN: test -f %t1.s
-// RUN: test ! -f %t2.s
+// RUN: rm -rf %t-dir
+// RUN: mkdir -p %t-dir
+// RUN: cd %t-dir
 
-// RUN: touch %t1.c
-// RUN: touch %t2.c
-// RUN: chmod -r %t2.c
-// RUN: cd %T && not %clang -S %t1.c %t2.c
-// RUN: test -f %t1.s
-// RUN: test ! -f %t2.s
+// RUN: touch %t-dir/1.c
+// RUN: echo "invalid C code" > %t-dir/2.c
+// RUN: not %clang -S %t-dir/1.c %t-dir/2.c
+// RUN: test -f %t-dir/1.s
+// RUN: test ! -f %t-dir/2.s
 
-// When given multiple .c files to compile, clang compiles them in order until
-// it hits an error, at which point it stops.
-//
-// RUN: touch %t1.c
-// RUN: echo "invalid C code" > %t2.c
-// RUN: touch %t3.c
-// RUN: echo "invalid C code" > %t4.c
-// RUN: touch %t5.c
-// RUN: cd %T && not %clang -S %t1.c %t2.c %t3.c %t4.c %t5.c
-// RUN: test -f %t1.s
-// RUN: test ! -f %t2.s
-// RUN: test ! -f %t3.s
-// RUN: test ! -f %t4.s
-// RUN: test ! -f %t5.s
+// RUN: touch %t-dir/1.c
+// RUN: touch %t-dir/2.c
+// RUN: chmod -r %t-dir/2.c
+// RUN: not %clang -S %t-dir/1.c %t-dir/2.c
+// RUN: test -f %t-dir/1.s
+// RUN: test ! -f %t-dir/2.s
