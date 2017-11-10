@@ -1412,21 +1412,18 @@ public:
   bool hasTrait(SymbolRef Sym, InvalidationKinds IK) const;
   bool hasTrait(const MemRegion *MR, InvalidationKinds IK) const;
 };
-  
-} // end GR namespace
-
-} // end clang namespace
 
 //===----------------------------------------------------------------------===//
 // Pretty-printing regions.
 //===----------------------------------------------------------------------===//
-
-namespace llvm {
-static inline raw_ostream &operator<<(raw_ostream &os,
-                                      const clang::ento::MemRegion* R) {
+inline raw_ostream &operator<<(raw_ostream &os,
+                               const clang::ento::MemRegion *R) {
   R->dumpToStream(os);
   return os;
 }
-} // end llvm namespace
+
+} // namespace ento
+
+} // namespace clang
 
 #endif
