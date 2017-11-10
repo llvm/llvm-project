@@ -369,6 +369,16 @@ void __msan_warning_noreturn() {
   Die();
 }
 
+static void OnStackUnwind(const SignalContext &sig, const void *,
+                          BufferedStackTrace *stack) {
+  GetStackTrace(stack, kStackTraceMax, sig.pc, sig.bp, sig.context,
+                common_flags()->fast_unwind_on_fatal);
+}
+
+static void MsanOnDeadlySignal(int signo, void *siginfo, void *context) {
+  HandleDeadlySignal(siginfo, context, GetTid(), &OnStackUnwind, nullptr);
+}
+
 void __msan_init() {
   CHECK(!msan_init_is_running);
   if (msan_inited) return;
@@ -384,6 +394,7 @@ void __msan_init() {
   __sanitizer_set_report_path(common_flags()->log_path);
 
   InitializeInterceptors();
+  InstallDeadlySignalHandlers(MsanOnDeadlySignal);
   InstallAtExitHandler(); // Needs __cxa_atexit interceptor.
 
   DisableCoreDumperIfNecessary();

@@ -594,12 +594,17 @@ namespace __sanitizer {
   };
 #endif
 
+  struct __sanitizer_siginfo {
+    // The size is determined by looking at sizeof of real siginfo_t on linux.
+    u64 opaque[128 / sizeof(u64)];
+  };
+
   // Linux system headers define the 'sa_handler' and 'sa_sigaction' macros.
 #if SANITIZER_ANDROID && (SANITIZER_WORDSIZE == 64)
   struct __sanitizer_sigaction {
     unsigned sa_flags;
     union {
-      void (*sigaction)(int sig, void *siginfo, void *uctx);
+      void (*sigaction)(int sig, __sanitizer_siginfo *siginfo, void *uctx);
       void (*handler)(int sig);
     };
     __sanitizer_sigset_t sa_mask;
@@ -609,7 +614,7 @@ namespace __sanitizer {
   struct __sanitizer_sigaction {
     unsigned sa_flags;
     union {
-      void (*sigaction)(int sig, void *siginfo, void *uctx);
+      void (*sigaction)(int sig, __sanitizer_siginfo *siginfo, void *uctx);
       void (*handler)(int sig);
     };
     __sanitizer_sigset_t sa_mask;
@@ -617,7 +622,7 @@ namespace __sanitizer {
 #elif SANITIZER_ANDROID && (SANITIZER_WORDSIZE == 32)
   struct __sanitizer_sigaction {
     union {
-      void (*sigaction)(int sig, void *siginfo, void *uctx);
+      void (*sigaction)(int sig, __sanitizer_siginfo *siginfo, void *uctx);
       void (*handler)(int sig);
     };
     __sanitizer_sigset_t sa_mask;
@@ -630,7 +635,7 @@ namespace __sanitizer {
     unsigned int sa_flags;
 #endif
     union {
-      void (*sigaction)(int sig, void *siginfo, void *uctx);
+      void (*sigaction)(int sig, __sanitizer_siginfo *siginfo, void *uctx);
       void (*handler)(int sig);
     };
 #if SANITIZER_FREEBSD
@@ -690,7 +695,7 @@ namespace __sanitizer {
     unsigned int sa_flags;
     union {
       void (*handler)(int signo);
-      void (*sigaction)(int signo, void *info, void *ctx);
+      void (*sigaction)(int signo, __sanitizer_siginfo *info, void *ctx);
     };
     __sanitizer_kernel_sigset_t sa_mask;
     void (*sa_restorer)(void);
@@ -699,7 +704,7 @@ namespace __sanitizer {
   struct __sanitizer_kernel_sigaction_t {
     union {
       void (*handler)(int signo);
-      void (*sigaction)(int signo, void *info, void *ctx);
+      void (*sigaction)(int signo, __sanitizer_siginfo *info, void *ctx);
     };
     unsigned long sa_flags;
     void (*sa_restorer)(void);
