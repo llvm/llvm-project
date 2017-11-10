@@ -676,12 +676,41 @@ class PatLeaf<dag frag, code pred = [{}], SDNodeXForm xform = NOOP_SDNodeXForm>
 // If FastIsel should ignore all instructions that have an operand of this type,
 // the FastIselShouldIgnore flag can be set.  This is an optimization to reduce
 // the code size of the generated fast instruction selector.
-class ImmLeaf<ValueType vt, code pred, SDNodeXForm xform = NOOP_SDNodeXForm>
-  : PatFrag<(ops), (vt imm), [{}], xform> {
+class ImmLeaf<ValueType vt, code pred, SDNodeXForm xform = NOOP_SDNodeXForm,
+              SDNode ImmNode = imm>
+  : PatFrag<(ops), (vt ImmNode), [{}], xform> {
   let ImmediateCode = pred;
   bit FastIselShouldIgnore = 0;
+
+  // Is the data type of the immediate an APInt?
+  bit IsAPInt = 0;
+
+  // Is the data type of the immediate an APFloat?
+  bit IsAPFloat = 0;
 }
 
+// An ImmLeaf except that Imm is an APInt. This is useful when you need to
+// zero-extend the immediate instead of sign-extend it.
+//
+// Note that FastISel does not currently understand IntImmLeaf and will not
+// generate code for rules that make use of it. As such, it does not make sense
+// to replace ImmLeaf with IntImmLeaf. However, replacing PatLeaf with an
+// IntImmLeaf will allow GlobalISel to import the rule.
+class IntImmLeaf<ValueType vt, code pred, SDNodeXForm xform = NOOP_SDNodeXForm>
+    : ImmLeaf<vt, pred, xform> {
+  let IsAPInt = 1;
+  let FastIselShouldIgnore = 1;
+}
+
+// An ImmLeaf except that Imm is an APFloat.
+//
+// Note that FastISel does not currently understand FPImmLeaf and will not
+// generate code for rules that make use of it.
+class FPImmLeaf<ValueType vt, code pred, SDNodeXForm xform = NOOP_SDNodeXForm>
+  : ImmLeaf<vt, pred, xform, fpimm> {
+  let IsAPFloat = 1;
+  let FastIselShouldIgnore = 1;
+}
 
 // Leaf fragments.
 
