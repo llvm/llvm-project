@@ -346,3 +346,7 @@ define i8 @test_aas(i8 %a0) optsize {
   %1 = tail call i8 asm "aas", "=r,r"(i8 %a0) nounwind
   ret i8 %1
 }
+
+; TODO - test_bound
+; TODO - test_daa
+; TODO - test_das

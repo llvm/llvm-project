@@ -36,6 +36,10 @@ void parseFuzzerCLOpts(int ArgC, char *ArgV[]);
 /// of passing in command line arguments in the normal way.
 void handleExecNameEncodedBEOpts(StringRef ExecName);
 
+/// Handle optimizer options which are encoded in the executable name.
+/// Same semantics as in 'handleExecNameEncodedBEOpts'.
+void handleExecNameEncodedOptimizerOpts(StringRef ExecName);
+
 using FuzzerTestFun = int (*)(const uint8_t *Data, size_t Size);
 using FuzzerInitFun = int (*)(int *argc, char ***argv);
 

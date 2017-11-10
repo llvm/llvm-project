@@ -187,6 +187,8 @@ bool MachineCopyPropagation::eraseIfRedundant(MachineInstr &Copy, unsigned Src,
 
   // Check that the existing copy uses the correct sub registers.
   MachineInstr &PrevCopy = *CI->second;
+  if (PrevCopy.getOperand(0).isDead())
+    return false;
   if (!isNopCopy(PrevCopy, Src, Def, TRI))
     return false;
 
