@@ -158,6 +158,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
 
   bool Ok = PB.parsePassPipeline(MPM, PassPipeline, false, false);
   assert(Ok && "Should have been checked during fuzzer initialization");
+  (void)Ok; // silence unused variable warning on release builds
 
   // Run passes which we need to test
   //

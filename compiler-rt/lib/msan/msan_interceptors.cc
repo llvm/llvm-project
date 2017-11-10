@@ -1590,8 +1590,6 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(dlerror);
   INTERCEPT_FUNCTION(dl_iterate_phdr);
   INTERCEPT_FUNCTION(getrusage);
-  INTERCEPT_FUNCTION(sigaction);
-  INTERCEPT_FUNCTION(signal);
 #if defined(__mips__)
   INTERCEPT_FUNCTION_VER(pthread_create, "GLIBC_2.2");
 #else

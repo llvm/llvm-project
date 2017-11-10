@@ -27,8 +27,9 @@ class LLVMConfig(object):
             # For tests that require Windows to run.
             features.add('system-windows')
 
+            lit_tools_dir = getattr(config, 'lit_tools_dir', None)
             # Seek sane tools in directories and set to $PATH.
-            path = self.lit_config.getToolsPath(config.lit_tools_dir,
+            path = self.lit_config.getToolsPath(lit_tools_dir,
                                                 config.environment['PATH'],
                                                 ['cmp.exe', 'grep.exe', 'sed.exe'])
             if path is not None:
@@ -413,8 +414,10 @@ class LLVMConfig(object):
             self.config.substitutions.append(
                 ('%target_itanium_abi_host_triple', ''))
 
-        self.config.substitutions.append(
-            ('%src_include_dir', self.config.clang_src_dir + '/include'))
+        clang_src_dir = getattr(self.config, 'clang_src_dir', None)
+        if clang_src_dir:
+            self.config.substitutions.append(
+                ('%src_include_dir', os.path.join(clang_src_dir, 'include')))
 
         # FIXME: Find nicer way to prohibit this.
         self.config.substitutions.append(

@@ -8044,10 +8044,10 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
       uint64_t Offset = OldOffsets[i];
       MVT RegisterVT = getRegisterType(CLI.RetTy->getContext(), RetVT);
       unsigned NumRegs = getNumRegisters(CLI.RetTy->getContext(), RetVT);
-      unsigned RegisterVTSize = RegisterVT.getSizeInBits();
+      unsigned RegisterVTByteSZ = RegisterVT.getSizeInBits() / 8;
       RetTys.append(NumRegs, RegisterVT);
       for (unsigned j = 0; j != NumRegs; ++j)
-        Offsets.push_back(Offset + j * RegisterVTSize);
+        Offsets.push_back(Offset + j * RegisterVTByteSZ);
     }
   }
 

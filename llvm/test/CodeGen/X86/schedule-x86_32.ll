@@ -348,5 +348,171 @@ define i8 @test_aas(i8 %a0) optsize {
 }
 
 ; TODO - test_bound
-; TODO - test_daa
-; TODO - test_das
+
+define i8 @test_daa(i8 %a0) optsize {
+; GENERIC-LABEL: test_daa:
+; GENERIC:       # BB#0:
+; GENERIC-NEXT:    movb {{[0-9]+}}(%esp), %al
+; GENERIC-NEXT:    #APP
+; GENERIC-NEXT:    daa
+; GENERIC-NEXT:    #NO_APP
+; GENERIC-NEXT:    retl
+;
+; ATOM-LABEL: test_daa:
+; ATOM:       # BB#0:
+; ATOM-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [1:1.00]
+; ATOM-NEXT:    #APP
+; ATOM-NEXT:    daa # sched: [18:9.00]
+; ATOM-NEXT:    #NO_APP
+; ATOM-NEXT:    retl # sched: [79:39.50]
+;
+; SLM-LABEL: test_daa:
+; SLM:       # BB#0:
+; SLM-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [3:1.00]
+; SLM-NEXT:    #APP
+; SLM-NEXT:    daa # sched: [100:1.00]
+; SLM-NEXT:    #NO_APP
+; SLM-NEXT:    retl # sched: [4:1.00]
+;
+; SANDY-LABEL: test_daa:
+; SANDY:       # BB#0:
+; SANDY-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:0.50]
+; SANDY-NEXT:    #APP
+; SANDY-NEXT:    daa # sched: [100:0.33]
+; SANDY-NEXT:    #NO_APP
+; SANDY-NEXT:    retl # sched: [5:1.00]
+;
+; HASWELL-LABEL: test_daa:
+; HASWELL:       # BB#0:
+; HASWELL-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [1:0.50]
+; HASWELL-NEXT:    #APP
+; HASWELL-NEXT:    daa # sched: [100:0.25]
+; HASWELL-NEXT:    #NO_APP
+; HASWELL-NEXT:    retl # sched: [5:0.50]
+;
+; BROADWELL-LABEL: test_daa:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:0.50]
+; BROADWELL-NEXT:    #APP
+; BROADWELL-NEXT:    daa # sched: [100:0.25]
+; BROADWELL-NEXT:    #NO_APP
+; BROADWELL-NEXT:    retl # sched: [6:0.50]
+;
+; SKYLAKE-LABEL: test_daa:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:0.50]
+; SKYLAKE-NEXT:    #APP
+; SKYLAKE-NEXT:    daa # sched: [100:0.25]
+; SKYLAKE-NEXT:    #NO_APP
+; SKYLAKE-NEXT:    retl # sched: [6:0.50]
+;
+; SKX-LABEL: test_daa:
+; SKX:       # BB#0:
+; SKX-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:0.50]
+; SKX-NEXT:    #APP
+; SKX-NEXT:    daa # sched: [100:0.25]
+; SKX-NEXT:    #NO_APP
+; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BTVER2-LABEL: test_daa:
+; BTVER2:       # BB#0:
+; BTVER2-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:1.00]
+; BTVER2-NEXT:    #APP
+; BTVER2-NEXT:    daa # sched: [100:0.17]
+; BTVER2-NEXT:    #NO_APP
+; BTVER2-NEXT:    retl # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_daa:
+; ZNVER1:       # BB#0:
+; ZNVER1-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [8:0.50]
+; ZNVER1-NEXT:    #APP
+; ZNVER1-NEXT:    daa # sched: [100:?]
+; ZNVER1-NEXT:    #NO_APP
+; ZNVER1-NEXT:    retl # sched: [1:0.50]
+  %1 = tail call i8 asm "daa", "=r,r"(i8 %a0) nounwind
+  ret i8 %1
+}
+
+define i8 @test_das(i8 %a0) optsize {
+; GENERIC-LABEL: test_das:
+; GENERIC:       # BB#0:
+; GENERIC-NEXT:    movb {{[0-9]+}}(%esp), %al
+; GENERIC-NEXT:    #APP
+; GENERIC-NEXT:    das
+; GENERIC-NEXT:    #NO_APP
+; GENERIC-NEXT:    retl
+;
+; ATOM-LABEL: test_das:
+; ATOM:       # BB#0:
+; ATOM-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [1:1.00]
+; ATOM-NEXT:    #APP
+; ATOM-NEXT:    das # sched: [20:10.00]
+; ATOM-NEXT:    #NO_APP
+; ATOM-NEXT:    retl # sched: [79:39.50]
+;
+; SLM-LABEL: test_das:
+; SLM:       # BB#0:
+; SLM-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [3:1.00]
+; SLM-NEXT:    #APP
+; SLM-NEXT:    das # sched: [100:1.00]
+; SLM-NEXT:    #NO_APP
+; SLM-NEXT:    retl # sched: [4:1.00]
+;
+; SANDY-LABEL: test_das:
+; SANDY:       # BB#0:
+; SANDY-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:0.50]
+; SANDY-NEXT:    #APP
+; SANDY-NEXT:    das # sched: [100:0.33]
+; SANDY-NEXT:    #NO_APP
+; SANDY-NEXT:    retl # sched: [5:1.00]
+;
+; HASWELL-LABEL: test_das:
+; HASWELL:       # BB#0:
+; HASWELL-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [1:0.50]
+; HASWELL-NEXT:    #APP
+; HASWELL-NEXT:    das # sched: [100:0.25]
+; HASWELL-NEXT:    #NO_APP
+; HASWELL-NEXT:    retl # sched: [5:0.50]
+;
+; BROADWELL-LABEL: test_das:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:0.50]
+; BROADWELL-NEXT:    #APP
+; BROADWELL-NEXT:    das # sched: [100:0.25]
+; BROADWELL-NEXT:    #NO_APP
+; BROADWELL-NEXT:    retl # sched: [6:0.50]
+;
+; SKYLAKE-LABEL: test_das:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:0.50]
+; SKYLAKE-NEXT:    #APP
+; SKYLAKE-NEXT:    das # sched: [100:0.25]
+; SKYLAKE-NEXT:    #NO_APP
+; SKYLAKE-NEXT:    retl # sched: [6:0.50]
+;
+; SKX-LABEL: test_das:
+; SKX:       # BB#0:
+; SKX-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:0.50]
+; SKX-NEXT:    #APP
+; SKX-NEXT:    das # sched: [100:0.25]
+; SKX-NEXT:    #NO_APP
+; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BTVER2-LABEL: test_das:
+; BTVER2:       # BB#0:
+; BTVER2-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:1.00]
+; BTVER2-NEXT:    #APP
+; BTVER2-NEXT:    das # sched: [100:0.17]
+; BTVER2-NEXT:    #NO_APP
+; BTVER2-NEXT:    retl # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_das:
+; ZNVER1:       # BB#0:
+; ZNVER1-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [8:0.50]
+; ZNVER1-NEXT:    #APP
+; ZNVER1-NEXT:    das # sched: [100:?]
+; ZNVER1-NEXT:    #NO_APP
+; ZNVER1-NEXT:    retl # sched: [1:0.50]
+  %1 = tail call i8 asm "das", "=r,r"(i8 %a0) nounwind
+  ret i8 %1
+}

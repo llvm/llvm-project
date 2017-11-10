@@ -1822,7 +1822,6 @@ def mno_neg_immediates: Flag<["-"], "mno-neg-immediates">, Group<m_arm_Features_
 
 def mgeneral_regs_only : Flag<["-"], "mgeneral-regs-only">, Group<m_aarch64_Features_Group>,
   HelpText<"Generate code which only uses the general purpose registers (AArch64 only)">;
-
 def mfix_cortex_a53_835769 : Flag<["-"], "mfix-cortex-a53-835769">,
   Group<m_aarch64_Features_Group>,
   HelpText<"Workaround Cortex-A53 erratum 835769 (AArch64 only)">;
@@ -1840,6 +1839,10 @@ def mamdgpu_debugger_abi : Joined<["-"], "mamdgpu-debugger-abi=">,
   Group<m_Group>,
   HelpText<"Generate additional code for specified <version> of debugger ABI (AMDGPU only)">,
   MetaVarName<"<version>">;
+def mxnack : Flag<["-"], "mxnack">, Group<m_amdgpu_Features_Group>,
+  HelpText<"Enable XNACK (AMDGPU only)">;
+def mno_xnack : Flag<["-"], "mno-xnack">, Group<m_amdgpu_Features_Group>,
+  HelpText<"Disable XNACK (AMDGPU only)">;
 
 def faltivec : Flag<["-"], "faltivec">, Group<f_Group>, Flags<[DriverOption]>;
 def fno_altivec : Flag<["-"], "fno-altivec">, Group<f_Group>, Flags<[DriverOption]>;

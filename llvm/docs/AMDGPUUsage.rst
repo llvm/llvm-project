@@ -2099,7 +2099,9 @@ SGPR register initial state is defined in
                                                     instructions. Having CP load
                                                     it once avoids loading it at
                                                     the beginning of every
-                                                    wavefront. GFX9 This is the
+                                                    wavefront.
+                                                  GFX9
+                                                    This is the
                                                     64 bit base address of the
                                                     per SPI scratch backing
                                                     memory managed by SPI for
@@ -2116,18 +2118,17 @@ SGPR register initial state is defined in
                                                     SGPR which is SGPRn-6 and
                                                     SGPRn-5. It is used as the
                                                     FLAT SCRATCH BASE in flat
-                                                    memory instructions. then
-                                                    Private Segment Size 1 The
-                                                    32 bit byte size of a
-                                                    (enable_sgpr_private single
-                                                    work-item's
-                                                    scratch_segment_size) memory
-                                                    allocation. This is the
-                                                    value from the kernel
-                                                    dispatch packet Private
-                                                    Segment Byte Size rounded up
-                                                    by CP to a multiple of
-                                                    DWORD.
+                                                    memory instructions.
+     then       Private Segment Size       1      The 32 bit byte size of a
+                                                  (enable_sgpr_private single
+                                                  work-item's
+                                                  scratch_segment_size) memory
+                                                  allocation. This is the
+                                                  value from the kernel
+                                                  dispatch packet Private
+                                                  Segment Byte Size rounded up
+                                                  by CP to a multiple of
+                                                  DWORD.
 
                                                   Having CP load it once avoids
                                                   loading it at the beginning of
@@ -2300,6 +2301,7 @@ GFX7-GFX8
      DWORD. Having CP load it once avoids loading it at the beginning of every
      wavefront. The prolog must move it to FLAT_SCRATCH_LO for use as FLAT SCRATCH
      SIZE.
+
 GFX9
   The Flat Scratch Init is the 64 bit address of the base of scratch backing
   memory being managed by SPI for the queue executing the kernel dispatch. The
@@ -3800,7 +3802,7 @@ Assembler
 ---------
 
 AMDGPU backend has LLVM-MC based assembler which is currently in development.
-It supports AMDGCN GFX6-GFX8.
+It supports AMDGCN GFX6-GFX9.
 
 This section describes general syntax for instructions and operands. For more
 information about instructions, their semantics and supported combinations of

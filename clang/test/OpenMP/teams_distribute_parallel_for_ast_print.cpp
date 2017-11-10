@@ -8,6 +8,9 @@
 
 void foo() {}
 
+int x;
+#pragma omp threadprivate(x)
+
 struct S {
   S(): a(0) {}
   S(int v) : a(v) {}
@@ -40,7 +43,7 @@ public:
   void foo() {
     int b, argv, d, c, e, f;
 #pragma omp target
-#pragma omp teams distribute parallel for default(none), private(b) firstprivate(argv) shared(d) reduction(+:c) reduction(max:e) num_teams(f) thread_limit(d)
+#pragma omp teams distribute parallel for default(none), private(b) firstprivate(argv) shared(d) reduction(+:c) reduction(max:e) num_teams(f) thread_limit(d) copyin(x)
     for (int k = 0; k < a.a; ++k)
       ++a.a;
   }
@@ -50,7 +53,7 @@ public:
 // CHECK: #pragma omp target
 // CHECK-NEXT: #pragma omp teams distribute parallel for private(this->a) private(this->a)
 // CHECK: #pragma omp target
-// CHECK-NEXT: #pragma omp teams distribute parallel for default(none) private(b) firstprivate(argv) shared(d) reduction(+: c) reduction(max: e) num_teams(f) thread_limit(d)
+// CHECK-NEXT: #pragma omp teams distribute parallel for default(none) private(b) firstprivate(argv) shared(d) reduction(+: c) reduction(max: e) num_teams(f) thread_limit(d) copyin(x)
 
 class S8 : public S7<S> {
   S8() {}
@@ -74,7 +77,7 @@ public:
   void bar() {
     int b, argv, d, c, e, f8;
 #pragma omp target
-#pragma omp teams distribute parallel for default(none), private(b) firstprivate(argv) shared(d) reduction(+:c) reduction(max:e) num_teams(f8) thread_limit(d)
+#pragma omp teams distribute parallel for default(none), private(b) firstprivate(argv) shared(d) reduction(+:c) reduction(max:e) num_teams(f8) thread_limit(d) copyin(x)
     for (int k = 0; k < a.a; ++k)
       ++a.a;
   }
@@ -86,7 +89,7 @@ public:
 // CHECK: #pragma omp target
 // CHECK-NEXT: #pragma omp teams distribute parallel for private(this->a) private(this->a)
 // CHECK: #pragma omp target
-// CHECK-NEXT: #pragma omp teams distribute parallel for default(none) private(b) firstprivate(argv) shared(d) reduction(+: c) reduction(max: e) num_teams(f8) thread_limit(d)
+// CHECK-NEXT: #pragma omp teams distribute parallel for default(none) private(b) firstprivate(argv) shared(d) reduction(+: c) reduction(max: e) num_teams(f8) thread_limit(d) copyin(x)
 
 template <class T, int N>
 T tmain(T argc) {
@@ -127,11 +130,11 @@ T tmain(T argc) {
 // CHECK-NEXT: for (int i = 0; i < 10; ++i)
 // CHECK-NEXT: foo();  
 #pragma omp target
-#pragma omp teams distribute parallel for default(none), private(b) firstprivate(argc) shared(d) reduction(+:c) reduction(max:e) num_teams(f) thread_limit(d)
+#pragma omp teams distribute parallel for default(none), private(b) firstprivate(argc) shared(d) reduction(+:c) reduction(max:e) num_teams(f) thread_limit(d) copyin(x)
     for (int k = 0; k < 10; ++k)
       e += d + argc;
 // CHECK: #pragma omp target
-// CHECK-NEXT: #pragma omp teams distribute parallel for default(none) private(b) firstprivate(argc) shared(d) reduction(+: c) reduction(max: e) num_teams(f) thread_limit(d)
+// CHECK-NEXT: #pragma omp teams distribute parallel for default(none) private(b) firstprivate(argc) shared(d) reduction(+: c) reduction(max: e) num_teams(f) thread_limit(d) copyin(x)
 // CHECK-NEXT: for (int k = 0; k < 10; ++k)
 // CHECK-NEXT: e += d + argc;
 #pragma omp target
@@ -182,11 +185,11 @@ int main (int argc, char **argv) {
 // CHECK-NEXT: for (int i = 0; i < 10; ++i)
 // CHECK-NEXT: foo();
 #pragma omp target
-#pragma omp teams distribute parallel for default(none), private(b) firstprivate(argc) shared(d) reduction(+:c) reduction(max:e) num_teams(f) thread_limit(d)
+#pragma omp teams distribute parallel for default(none), private(b) firstprivate(argc) shared(d) reduction(+:c) reduction(max:e) num_teams(f) thread_limit(d) copyin(x)
   for (int k = 0; k < 10; ++k)
     e += d + argc;
 // CHECK: #pragma omp target
-// CHECK-NEXT: #pragma omp teams distribute parallel for default(none) private(b) firstprivate(argc) shared(d) reduction(+: c) reduction(max: e) num_teams(f) thread_limit(d)
+// CHECK-NEXT: #pragma omp teams distribute parallel for default(none) private(b) firstprivate(argc) shared(d) reduction(+: c) reduction(max: e) num_teams(f) thread_limit(d) copyin(x)
 // CHECK-NEXT: for (int k = 0; k < 10; ++k)
 // CHECK-NEXT: e += d + argc;
 #pragma omp target

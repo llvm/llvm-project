@@ -44,7 +44,28 @@
 namespace llvm {
 namespace cfi_verify {
 
+struct GraphResult;
+
 extern bool IgnoreDWARFFlag;
+
+enum class CFIProtectionStatus {
+  // This instruction is protected by CFI.
+  PROTECTED,
+  // The instruction is not an indirect control flow instruction, and thus
+  // shouldn't be protected.
+  FAIL_NOT_INDIRECT_CF,
+  // There is a path to the instruction that was unexpected.
+  FAIL_ORPHANS,
+  // There is a path to the instruction from a conditional branch that does not
+  // properly check the destination for this vcall/icall.
+  FAIL_BAD_CONDITIONAL_BRANCH,
+  // The instruction referenced does not exist. This normally indicates an
+  // error in the program, where you try and validate a graph that was created
+  // in a different FileAnalysis object.
+  FAIL_INVALID_INSTRUCTION,
+};
+
+StringRef stringCFIProtectionStatus(CFIProtectionStatus Status);
 
 // Disassembler and analysis tool for machine code files. Keeps track of non-
 // sequential control flows, including indirect control flow instructions.
@@ -68,12 +89,6 @@ public:
   FileAnalysis() = delete;
   FileAnalysis(const FileAnalysis &) = delete;
   FileAnalysis(FileAnalysis &&Other) = default;
-
-  // Check whether the provided instruction is CFI protected in this file.
-  // Returns false if this instruction doesn't exist in this file, if it's not
-  // an indirect control flow instruction, or isn't CFI protected. Returns true
-  // otherwise.
-  bool isIndirectInstructionCFIProtected(uint64_t Address) const;
 
   // Returns the instruction at the provided address. Returns nullptr if there
   // is no instruction at the provided address.
@@ -122,19 +137,13 @@ public:
   const MCRegisterInfo *getRegisterInfo() const;
   const MCInstrInfo *getMCInstrInfo() const;
   const MCInstrAnalysis *getMCInstrAnalysis() const;
-  symbolize::LLVMSymbolizer &getSymbolizer();
 
-  // Returns true if this class is using DWARF line tables for elimination.
-  bool hasLineTableInfo() const;
+  // Returns the inlining information for the provided address.
+  Expected<DIInliningInfo> symbolizeInlinedCode(uint64_t Address);
 
-  // Returns the line table information for the range {Address +-
-  // DWARFSearchRange}. Returns an empty table if the address has no valid line
-  // table information, or this analysis object has DWARF handling disabled.
-  DILineInfoTable getLineInfoForAddressRange(uint64_t Address);
-
-  // Returns whether the provided address has valid line information for
-  // instructions in the range of Address +- DWARFSearchRange.
-  bool hasValidLineInfoForAddressRange(uint64_t Address);
+  // Returns whether the provided Graph represents a protected indirect control
+  // flow instruction in this file.
+  CFIProtectionStatus validateCFIProtection(const GraphResult &Graph) const;
 
 protected:
   // Construct a blank object with the provided triple and features. Used in

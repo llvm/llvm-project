@@ -204,11 +204,6 @@ namespace {
     bool selectVectorAddr(SDNode *Parent, SDValue N, SDValue &Base,
                           SDValue &Scale, SDValue &Index, SDValue &Disp,
                           SDValue &Segment);
-    template <class GatherScatterSDNode>
-    bool selectAddrOfGatherScatterNode(GatherScatterSDNode *Parent, SDValue N,
-                                       SDValue &Base, SDValue &Scale,
-                                       SDValue &Index, SDValue &Disp,
-                                       SDValue &Segment);
     bool selectMOV64Imm32(SDValue N, SDValue &Imm);
     bool selectLEAAddr(SDValue N, SDValue &Base,
                        SDValue &Scale, SDValue &Index, SDValue &Disp,
@@ -1507,12 +1502,23 @@ bool X86DAGToDAGISel::matchAddressBase(SDValue N, X86ISelAddressMode &AM) {
   return false;
 }
 
-template <class GatherScatterSDNode>
-bool X86DAGToDAGISel::selectAddrOfGatherScatterNode(
-    GatherScatterSDNode *Mgs, SDValue N, SDValue &Base, SDValue &Scale,
-    SDValue &Index, SDValue &Disp, SDValue &Segment) {
+bool X86DAGToDAGISel::selectVectorAddr(SDNode *Parent, SDValue N, SDValue &Base,
+                                       SDValue &Scale, SDValue &Index,
+                                       SDValue &Disp, SDValue &Segment) {
+  unsigned ScalarSize;
+  if (auto Mgs = dyn_cast<MaskedGatherScatterSDNode>(Parent)) {
+    Base = Mgs->getBasePtr();
+    Index = Mgs->getIndex();
+    ScalarSize = Mgs->getValue().getScalarValueSizeInBits();
+  } else {
+    auto X86Gather = cast<X86MaskedGatherSDNode>(Parent);
+    Base = X86Gather->getBasePtr();
+    Index = X86Gather->getIndex();
+    ScalarSize = X86Gather->getValue().getScalarValueSizeInBits();
+  }
+
   X86ISelAddressMode AM;
-  unsigned AddrSpace = Mgs->getPointerInfo().getAddrSpace();
+  unsigned AddrSpace = cast<MemSDNode>(Parent)->getPointerInfo().getAddrSpace();
   // AddrSpace 256 -> GS, 257 -> FS, 258 -> SS.
   if (AddrSpace == 256)
     AM.Segment = CurDAG->getRegister(X86::GS, MVT::i16);
@@ -1522,9 +1528,6 @@ bool X86DAGToDAGISel::selectAddrOfGatherScatterNode(
     AM.Segment = CurDAG->getRegister(X86::SS, MVT::i16);
 
   SDLoc DL(N);
-  Base = Mgs->getBasePtr();
-  Index = Mgs->getIndex();
-  unsigned ScalarSize = Mgs->getValue().getScalarValueSizeInBits();
   Scale = getI8Imm(ScalarSize/8, DL);
 
   // If Base is 0, the whole address is in index and the Scale is 1
@@ -1540,18 +1543,6 @@ bool X86DAGToDAGISel::selectAddrOfGatherScatterNode(
     Segment = CurDAG->getRegister(0, MVT::i32);
   Disp = CurDAG->getTargetConstant(0, DL, MVT::i32);
   return true;
-}
-
-bool X86DAGToDAGISel::selectVectorAddr(SDNode *Parent, SDValue N, SDValue &Base,
-                                       SDValue &Scale, SDValue &Index,
-                                       SDValue &Disp, SDValue &Segment) {
-  if (auto Mgs = dyn_cast<MaskedGatherScatterSDNode>(Parent))
-    return selectAddrOfGatherScatterNode<MaskedGatherScatterSDNode>(
-        Mgs, N, Base, Scale, Index, Disp, Segment);
-  if (auto X86Gather = dyn_cast<X86MaskedGatherSDNode>(Parent))
-    return selectAddrOfGatherScatterNode<X86MaskedGatherSDNode>(
-        X86Gather, N, Base, Scale, Index, Disp, Segment);
-  return false;
 }
 
 /// Returns true if it is able to pattern match an addressing mode.

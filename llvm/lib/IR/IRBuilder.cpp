@@ -135,8 +135,13 @@ CreateMemCpy(Value *Dst, Value *Src, Value *Size, unsigned Align,
 }
 
 CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemCpy(
-    Value *Dst, Value *Src, Value *Size, uint32_t ElementSize, MDNode *TBAATag,
-    MDNode *TBAAStructTag, MDNode *ScopeTag, MDNode *NoAliasTag) {
+    Value *Dst, unsigned DstAlign, Value *Src, unsigned SrcAlign, Value *Size,
+    uint32_t ElementSize, MDNode *TBAATag, MDNode *TBAAStructTag,
+    MDNode *ScopeTag, MDNode *NoAliasTag) {
+  assert(DstAlign >= ElementSize &&
+         "Pointer alignment must be at least element size");
+  assert(SrcAlign >= ElementSize &&
+         "Pointer alignment must be at least element size");
   Dst = getCastedInt8PtrValue(Dst);
   Src = getCastedInt8PtrValue(Src);
 
@@ -147,6 +152,10 @@ CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemCpy(
       M, Intrinsic::memcpy_element_unordered_atomic, Tys);
 
   CallInst *CI = createCallHelper(TheFn, Ops, this);
+
+  // Set the alignment of the pointer args.
+  CI->addParamAttr(0, Attribute::getWithAlignment(CI->getContext(), DstAlign));
+  CI->addParamAttr(1, Attribute::getWithAlignment(CI->getContext(), SrcAlign));
 
   // Set the TBAA info if present.
   if (TBAATag)

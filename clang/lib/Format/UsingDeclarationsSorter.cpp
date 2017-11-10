@@ -172,15 +172,17 @@ std::pair<tooling::Replacements, unsigned> UsingDeclarationsSorter::analyze(
   tooling::Replacements Fixes;
   SmallVector<UsingDeclaration, 4> UsingDeclarations;
   for (size_t I = 0, E = AnnotatedLines.size(); I != E; ++I) {
+    const auto *FirstTok = AnnotatedLines[I]->First;
     if (AnnotatedLines[I]->InPPDirective ||
-        !AnnotatedLines[I]->startsWith(tok::kw_using) ||
-        AnnotatedLines[I]->First->Finalized) {
+        !AnnotatedLines[I]->startsWith(tok::kw_using) || FirstTok->Finalized) {
       endUsingDeclarationBlock(&UsingDeclarations, SourceMgr, &Fixes);
       continue;
     }
-    if (AnnotatedLines[I]->First->NewlinesBefore > 1)
+    if (FirstTok->NewlinesBefore > 1)
       endUsingDeclarationBlock(&UsingDeclarations, SourceMgr, &Fixes);
-    std::string Label = computeUsingDeclarationLabel(AnnotatedLines[I]->First);
+    const auto *UsingTok =
+        FirstTok->is(tok::comment) ? FirstTok->getNextNonComment() : FirstTok;
+    std::string Label = computeUsingDeclarationLabel(UsingTok);
     if (Label.empty()) {
       endUsingDeclarationBlock(&UsingDeclarations, SourceMgr, &Fixes);
       continue;
