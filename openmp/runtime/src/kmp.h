@@ -744,7 +744,7 @@ extern unsigned __kmp_affinity_num_masks;
 extern void __kmp_affinity_bind_thread(int which);
 
 extern kmp_affin_mask_t *__kmp_affin_fullMask;
-extern char const *__kmp_cpuinfo_file;
+extern char *__kmp_cpuinfo_file;
 
 #endif /* KMP_AFFINITY_SUPPORTED */
 
@@ -801,10 +801,6 @@ extern kmp_hws_item_t __kmp_hws_core;
 extern kmp_hws_item_t __kmp_hws_proc;
 extern int __kmp_hws_requested;
 extern int __kmp_hws_abs_flag; // absolute or per-item number requested
-
-#if OMP_50_ENABLED && LIBOMP_OMPT_SUPPORT
-extern char const *__kmp_tool_libraries;
-#endif // OMP_50_ENABLED && LIBOMP_OMPT_SUPPORT
 
 /* ------------------------------------------------------------------------ */
 

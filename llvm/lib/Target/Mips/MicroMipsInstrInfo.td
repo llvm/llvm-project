@@ -889,9 +889,14 @@ let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
                EXT_FM_MM<0x0c>;
 
   /// Jump Instructions
+}
+let DecoderNamespace = "MicroMips", DecoderMethod = "DecodeJumpTargetMM" in
+  def J_MM          : MMRel, JumpFJ<jmptarget_mm, "j", br, bb, "j">,
+                      J_FM_MM<0x35>, AdditionalRequires<[RelocNotPIC]>,
+                      IsBranch, ISA_MICROMIPS32_NOT_MIPS32R6;
+
+let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
   let DecoderMethod = "DecodeJumpTargetMM" in {
-    def J_MM        : MMRel, JumpFJ<jmptarget_mm, "j", br, bb, "j">,
-                      J_FM_MM<0x35>;
     def JAL_MM      : MMRel, JumpLink<"jal", calltarget_mm>, J_FM_MM<0x3d>;
     def JALX_MM     : MMRel, JumpLink<"jalx", calltarget>, J_FM_MM<0x3c>;
   }
@@ -926,6 +931,9 @@ let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
                                              GPR32Opnd>, BGEZAL_FM_MM<0x13>;
   def BLTZALS_MM : BranchCompareToZeroLinkMM<"bltzals", brtarget_mm,
                                              GPR32Opnd>, BGEZAL_FM_MM<0x11>;
+}
+def B_MM    : UncondBranch<BEQ_MM, brtarget_mm>, IsBranch, ISA_MICROMIPS;
+let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
 
   /// Control Instructions
   def SYNC_MM    : MMRel, SYNC_FT<"sync">, SYNC_FM_MM;

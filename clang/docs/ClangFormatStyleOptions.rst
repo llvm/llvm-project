@@ -266,13 +266,9 @@ the configuration (without a prefix: ``Auto``).
 
   .. code-block:: c++
 
-    true:
-    int a;     // My comment a
-    int b = 2; // comment  b
-
-    false:
-    int a; // My comment a
-    int b = 2; // comment about b
+    true:                                   false:
+    int a;     // My comment a      vs.     int a; // My comment a
+    int b = 2; // comment  b                int b = 2; // comment about b
 
 **AllowAllParametersOfDeclarationOnNextLine** (``bool``)
   If the function declaration doesn't fit on a line,
@@ -1541,6 +1537,26 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+**RawStringFormats** (``std::vector<RawStringFormat>``)
+  Raw string delimiters denoting that the raw string contents are
+  code in a particular language and can be reformatted.
+
+  A raw string with a matching delimiter will be reformatted assuming the
+  specified language based on a predefined style given by 'BasedOnStyle'.
+  If 'BasedOnStyle' is not found, the formatting is based on llvm style.
+
+  To configure this in the .clang-format file, use:
+
+  .. code-block:: yaml
+
+    RawStringFormats:
+      - Delimiter: 'pb'
+        Language:  TextProto
+        BasedOnStyle: llvm
+      - Delimiter: 'proto'
+        Language:  TextProto
+        BasedOnStyle: google
+
 **ReflowComments** (``bool``)
   If ``true``, clang-format will attempt to re-flow comments.
 
@@ -1567,6 +1583,14 @@ the configuration (without a prefix: ``Auto``).
 
 **SortUsingDeclarations** (``bool``)
   If ``true``, clang-format will sort using declarations.
+
+  The order of using declarations is defined as follows:
+  Split the strings by "::" and discard any initial empty strings. The last
+  element of each list is a non-namespace name; all others are namespace
+  names. Sort the lists of names lexicographically, where the sort order of
+  individual names is that all non-namespace names come before all namespace
+  names, and within those groups, names are in case-insensitive
+  lexicographic order.
 
   .. code-block:: c++
 

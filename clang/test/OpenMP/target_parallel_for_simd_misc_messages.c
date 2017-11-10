@@ -166,7 +166,7 @@ void test_collapse() {
 // expected-note@+1 {{variable with automatic storage duration is predetermined as private; perhaps you forget to enclose 'omp for' directive into a parallel or another task region?}}
     for (int j = 0; j < 16; ++j)
 // expected-error@+2 2 {{reduction variable must be shared}}
-// expected-error@+1 {{region cannot be closely nested inside 'target parallel for simd' region; perhaps you forget to enclose 'omp for' directive into a parallel region?}}
+// expected-error@+1 {{OpenMP constructs may not be nested inside a simd region}}
 #pragma omp for reduction(+ : i, j)
       for (int k = 0; k < 16; ++k)
         i += j;

@@ -368,7 +368,7 @@ static void __kmp_dispatch_deo(int *gtid_ref, int *cid_ref, ident_t *loc_ref) {
     KMP_MB();
 #ifdef KMP_DEBUG
     {
-      const char *buff;
+      char *buff;
       // create format specifiers before the debug output
       buff = __kmp_str_format("__kmp_dispatch_deo: T#%%d before wait: "
                               "ordered_iter:%%%s lower:%%%s\n",
@@ -383,7 +383,7 @@ static void __kmp_dispatch_deo(int *gtid_ref, int *cid_ref, ident_t *loc_ref) {
     KMP_MB(); /* is this necessary? */
 #ifdef KMP_DEBUG
     {
-      const char *buff;
+      char *buff;
       // create format specifiers before the debug output
       buff = __kmp_str_format("__kmp_dispatch_deo: T#%%d after wait: "
                               "ordered_iter:%%%s lower:%%%s\n",
@@ -548,7 +548,7 @@ __kmp_dispatch_init(ident_t *loc, int gtid, enum sched_type schedule, T lb,
 #endif
 #ifdef KMP_DEBUG
   {
-    const char *buff;
+    char *buff;
     // create format specifiers before the debug output
     buff = __kmp_str_format("__kmp_dispatch_init: T#%%d called: schedule:%%d "
                             "chunk:%%%s lb:%%%s ub:%%%s st:%%%s\n",
@@ -638,7 +638,7 @@ __kmp_dispatch_init(ident_t *loc, int gtid, enum sched_type schedule, T lb,
 #endif
 #ifdef KMP_DEBUG
       {
-        const char *buff;
+        char *buff;
         // create format specifiers before the debug output
         buff = __kmp_str_format(
             "__kmp_dispatch_init: T#%%d new: schedule:%%d chunk:%%%s\n",
@@ -661,7 +661,7 @@ __kmp_dispatch_init(ident_t *loc, int gtid, enum sched_type schedule, T lb,
       schedule = __kmp_auto;
 #ifdef KMP_DEBUG
       {
-        const char *buff;
+        char *buff;
         // create format specifiers before the debug output
         buff = __kmp_str_format("__kmp_dispatch_init: kmp_sch_auto: T#%%d new: "
                                 "schedule:%%d chunk:%%%s\n",
@@ -697,7 +697,7 @@ __kmp_dispatch_init(ident_t *loc, int gtid, enum sched_type schedule, T lb,
 #endif
 #ifdef KMP_DEBUG
       {
-        const char *buff;
+        char *buff;
         // create format specifiers before the debug output
         buff = __kmp_str_format("__kmp_dispatch_init: T#%%d new: schedule:%%d"
                                 " chunk:%%%s\n",
@@ -1196,7 +1196,7 @@ __kmp_dispatch_init(ident_t *loc, int gtid, enum sched_type schedule, T lb,
 
 #ifdef KMP_DEBUG
   {
-    const char *buff;
+    char *buff;
     // create format specifiers before the debug output
     buff = __kmp_str_format(
         "__kmp_dispatch_init: T#%%d returning: schedule:%%d ordered:%%%s "
@@ -1276,7 +1276,7 @@ static void __kmp_dispatch_finish(int gtid, ident_t *loc) {
 
 #ifdef KMP_DEBUG
       {
-        const char *buff;
+        char *buff;
         // create format specifiers before the debug output
         buff = __kmp_str_format("__kmp_dispatch_finish: T#%%d before wait: "
                                 "ordered_iteration:%%%s lower:%%%s\n",
@@ -1291,7 +1291,7 @@ static void __kmp_dispatch_finish(int gtid, ident_t *loc) {
       KMP_MB(); /* is this necessary? */
 #ifdef KMP_DEBUG
       {
-        const char *buff;
+        char *buff;
         // create format specifiers before the debug output
         buff = __kmp_str_format("__kmp_dispatch_finish: T#%%d after wait: "
                                 "ordered_iteration:%%%s lower:%%%s\n",
@@ -1344,7 +1344,7 @@ static void __kmp_dispatch_finish_chunk(int gtid, ident_t *loc) {
 
 #ifdef KMP_DEBUG
       {
-        const char *buff;
+        char *buff;
         // create format specifiers before the debug output
         buff = __kmp_str_format(
             "__kmp_dispatch_finish_chunk: T#%%d before wait: "
@@ -1366,7 +1366,7 @@ static void __kmp_dispatch_finish_chunk(int gtid, ident_t *loc) {
 //!!!!! TODO check if the inc should be unsigned, or signed???
 #ifdef KMP_DEBUG
       {
-        const char *buff;
+        char *buff;
         // create format specifiers before the debug output
         buff = __kmp_str_format(
             "__kmp_dispatch_finish_chunk: T#%%d after wait: "
@@ -1435,7 +1435,7 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
   KMP_DEBUG_ASSERT(p_lb && p_ub && p_st); // AC: these cannot be NULL
 #ifdef KMP_DEBUG
   {
-    const char *buff;
+    char *buff;
     // create format specifiers before the debug output
     buff = __kmp_str_format("__kmp_dispatch_next: T#%%d called p_lb:%%%s "
                             "p_ub:%%%s p_st:%%%s p_last: %%p\n",
@@ -1517,7 +1517,7 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
           pr->u.p.ordered_upper = limit;
 #ifdef KMP_DEBUG
           {
-            const char *buff;
+            char *buff;
             // create format specifiers before the debug output
             buff = __kmp_str_format("__kmp_dispatch_next: T#%%d "
                                     "ordered_lower:%%%s ordered_upper:%%%s\n",
@@ -1543,7 +1543,7 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
     } // if
 #ifdef KMP_DEBUG
     {
-      const char *buff;
+      char *buff;
       // create format specifiers before the debug output
       buff = __kmp_str_format(
           "__kmp_dispatch_next: T#%%d serialized case: p_lb:%%%s "
@@ -1810,7 +1810,7 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
             pr->u.p.ordered_upper = limit;
 #ifdef KMP_DEBUG
             {
-              const char *buff;
+              char *buff;
               // create format specifiers before the debug output
               buff = __kmp_str_format("__kmp_dispatch_next: T#%%d "
                                       "ordered_lower:%%%s ordered_upper:%%%s\n",
@@ -1843,7 +1843,7 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
         if (pr->ordered) {
 #ifdef KMP_DEBUG
           {
-            const char *buff;
+            char *buff;
             // create format specifiers before the debug output
             buff = __kmp_str_format("__kmp_dispatch_next: T#%%d "
                                     "ordered_lower:%%%s ordered_upper:%%%s\n",
@@ -1895,7 +1895,7 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
             pr->u.p.ordered_upper = limit;
 #ifdef KMP_DEBUG
             {
-              const char *buff;
+              char *buff;
               // create format specifiers before the debug output
               buff = __kmp_str_format("__kmp_dispatch_next: T#%%d "
                                       "ordered_lower:%%%s ordered_upper:%%%s\n",
@@ -1949,7 +1949,7 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
             pr->u.p.ordered_upper = limit;
 #ifdef KMP_DEBUG
             {
-              const char *buff;
+              char *buff;
               // create format specifiers before the debug output
               buff = __kmp_str_format("__kmp_dispatch_next: T#%%d "
                                       "ordered_lower:%%%s ordered_upper:%%%s\n",
@@ -2022,7 +2022,7 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
             pr->u.p.ordered_upper = limit;
 #ifdef KMP_DEBUG
             {
-              const char *buff;
+              char *buff;
               // create format specifiers before the debug output
               buff = __kmp_str_format("__kmp_dispatch_next: T#%%d "
                                       "ordered_lower:%%%s ordered_upper:%%%s\n",
@@ -2106,7 +2106,7 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
             pr->u.p.ordered_upper = limit;
 #ifdef KMP_DEBUG
             {
-              const char *buff;
+              char *buff;
               // create format specifiers before the debug output
               buff = __kmp_str_format("__kmp_dispatch_next: T#%%d "
                                       "ordered_lower:%%%s ordered_upper:%%%s\n",
@@ -2214,7 +2214,7 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
             pr->u.p.ordered_upper = limit;
 #ifdef KMP_DEBUG
             {
-              const char *buff;
+              char *buff;
               // create format specifiers before the debug output
               buff = __kmp_str_format("__kmp_dispatch_next: T#%%d "
                                       "ordered_lower:%%%s ordered_upper:%%%s\n",
@@ -2276,7 +2276,7 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
             pr->u.p.ordered_upper = limit;
 #ifdef KMP_DEBUG
             {
-              const char *buff;
+              char *buff;
               // create format specifiers before the debug output
               buff = __kmp_str_format("__kmp_dispatch_next: T#%%d "
                                       "ordered_lower:%%%s ordered_upper:%%%s\n",
@@ -2306,7 +2306,7 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
       num_done = test_then_inc<ST>((volatile ST *)&sh->u.s.num_done);
 #ifdef KMP_DEBUG
       {
-        const char *buff;
+        char *buff;
         // create format specifiers before the debug output
         buff = __kmp_str_format(
             "__kmp_dispatch_next: T#%%d increment num_done:%%%s\n",
@@ -2375,7 +2375,7 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
 
 #ifdef KMP_DEBUG
   {
-    const char *buff;
+    char *buff;
     // create format specifiers before the debug output
     buff = __kmp_str_format(
         "__kmp_dispatch_next: T#%%d normal case: "
@@ -2408,7 +2408,7 @@ static void __kmp_dist_get_bounds(ident_t *loc, kmp_int32 gtid,
   KE_TRACE(10, ("__kmpc_dist_get_bounds called (%d)\n", gtid));
 #ifdef KMP_DEBUG
   {
-    const char *buff;
+    char *buff;
     // create format specifiers before the debug output
     buff = __kmp_str_format("__kmpc_dist_get_bounds: T#%%d liter=%%d "
                             "iter=(%%%s, %%%s, %%%s) signed?<%s>\n",

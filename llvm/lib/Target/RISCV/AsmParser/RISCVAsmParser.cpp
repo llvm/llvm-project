@@ -52,7 +52,8 @@ class RISCVAsmParser : public MCTargetAsmParser {
 #include "RISCVGenAsmMatcher.inc"
 
   OperandMatchResultTy parseImmediate(OperandVector &Operands);
-  OperandMatchResultTy parseRegister(OperandVector &Operands);
+  OperandMatchResultTy parseRegister(OperandVector &Operands,
+                                     bool AllowParens = false);
   OperandMatchResultTy parseMemOpBaseReg(OperandVector &Operands);
   OperandMatchResultTy parseOperandWithModifier(OperandVector &Operands);
 
@@ -431,9 +432,20 @@ bool RISCVAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
   return Error(StartLoc, "invalid register name");
 }
 
-OperandMatchResultTy RISCVAsmParser::parseRegister(OperandVector &Operands) {
-  SMLoc S = getLoc();
-  SMLoc E = SMLoc::getFromPointer(S.getPointer() - 1);
+OperandMatchResultTy RISCVAsmParser::parseRegister(OperandVector &Operands,
+                                                   bool AllowParens) {
+  SMLoc FirstS = getLoc();
+  bool HadParens = false;
+  AsmToken Buf[2];
+
+  // If this a parenthesised register name is allowed, parse it atomically
+  if (AllowParens && getLexer().is(AsmToken::LParen)) {
+    size_t ReadCount = getLexer().peekTokens(Buf);
+    if (ReadCount == 2 && Buf[1].getKind() == AsmToken::RParen) {
+      HadParens = true;
+      getParser().Lex(); // Eat '('
+    }
+  }
 
   switch (getLexer().getKind()) {
   default:
@@ -443,12 +455,25 @@ OperandMatchResultTy RISCVAsmParser::parseRegister(OperandVector &Operands) {
     unsigned RegNo = MatchRegisterName(Name);
     if (RegNo == 0) {
       RegNo = MatchRegisterAltName(Name);
-      if (RegNo == 0)
+      if (RegNo == 0) {
+        if (HadParens)
+          getLexer().UnLex(Buf[0]);
         return MatchOperand_NoMatch;
+      }
     }
+    if (HadParens)
+      Operands.push_back(RISCVOperand::createToken("(", FirstS));
+    SMLoc S = getLoc();
+    SMLoc E = SMLoc::getFromPointer(S.getPointer() - 1);
     getLexer().Lex();
     Operands.push_back(RISCVOperand::createReg(RegNo, S, E));
   }
+
+  if (HadParens) {
+    getParser().Lex(); // Eat ')'
+    Operands.push_back(RISCVOperand::createToken(")", getLoc()));
+  }
+
   return MatchOperand_Success;
 }
 
@@ -555,7 +580,7 @@ RISCVAsmParser::parseMemOpBaseReg(OperandVector &Operands) {
 /// If operand was parsed, returns false, else true.
 bool RISCVAsmParser::parseOperand(OperandVector &Operands) {
   // Attempt to parse token as register
-  if (parseRegister(Operands) == MatchOperand_Success)
+  if (parseRegister(Operands, true) == MatchOperand_Success)
     return false;
 
   // Attempt to parse token as an immediate

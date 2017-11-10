@@ -103,7 +103,7 @@ void __kmp_str_loc_free(kmp_str_loc_t *loc);
 
 int __kmp_str_eqf(char const *lhs, char const *rhs);
 char *__kmp_str_format(char const *format, ...);
-void __kmp_str_free(char const **str);
+void __kmp_str_free(char **str);
 int __kmp_str_match(char const *target, int len, char const *data);
 int __kmp_str_match_false(char const *data);
 int __kmp_str_match_true(char const *data);

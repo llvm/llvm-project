@@ -2893,6 +2893,10 @@ public:
   static void EmitOMPTargetParallelForDeviceFunction(
       CodeGenModule &CGM, StringRef ParentName,
       const OMPTargetParallelForDirective &S);
+  /// Emit device code for the target parallel for simd directive.
+  static void EmitOMPTargetParallelForSimdDeviceFunction(
+      CodeGenModule &CGM, StringRef ParentName,
+      const OMPTargetParallelForSimdDirective &S);
   static void
   EmitOMPTargetTeamsDeviceFunction(CodeGenModule &CGM, StringRef ParentName,
                                    const OMPTargetTeamsDirective &S);

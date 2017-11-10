@@ -88,7 +88,11 @@ void LogThreadStopInfo(Log &log, const ThreadStopInfo &stop_info,
 NativeThreadLinux::NativeThreadLinux(NativeProcessLinux &process,
                                      lldb::tid_t tid)
     : NativeThreadProtocol(process, tid), m_state(StateType::eStateInvalid),
-      m_stop_info(), m_reg_context_sp(), m_stop_description() {}
+      m_stop_info(),
+      m_reg_context_up(
+          NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
+              process.GetArchitecture(), *this)),
+      m_stop_description() {}
 
 std::string NativeThreadLinux::GetName() {
   NativeProcessLinux &process = GetProcess();
@@ -139,19 +143,6 @@ bool NativeThreadLinux::GetStopReason(ThreadStopInfo &stop_info,
   llvm_unreachable("unhandled StateType!");
 }
 
-NativeRegisterContextSP NativeThreadLinux::GetRegisterContext() {
-  // Return the register context if we already created it.
-  if (m_reg_context_sp)
-    return m_reg_context_sp;
-
-  const uint32_t concrete_frame_idx = 0;
-  m_reg_context_sp.reset(
-      NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
-          m_process.GetArchitecture(), *this, concrete_frame_idx));
-
-  return m_reg_context_sp;
-}
-
 Status NativeThreadLinux::SetWatchpoint(lldb::addr_t addr, size_t size,
                                         uint32_t watch_flags, bool hardware) {
   if (!hardware)
@@ -161,8 +152,8 @@ Status NativeThreadLinux::SetWatchpoint(lldb::addr_t addr, size_t size,
   Status error = RemoveWatchpoint(addr);
   if (error.Fail())
     return error;
-  NativeRegisterContextSP reg_ctx = GetRegisterContext();
-  uint32_t wp_index = reg_ctx->SetHardwareWatchpoint(addr, size, watch_flags);
+  uint32_t wp_index =
+      m_reg_context_up->SetHardwareWatchpoint(addr, size, watch_flags);
   if (wp_index == LLDB_INVALID_INDEX32)
     return Status("Setting hardware watchpoint failed.");
   m_watchpoint_index_map.insert({addr, wp_index});
@@ -175,7 +166,7 @@ Status NativeThreadLinux::RemoveWatchpoint(lldb::addr_t addr) {
     return Status();
   uint32_t wp_index = wp->second;
   m_watchpoint_index_map.erase(wp);
-  if (GetRegisterContext()->ClearHardwareWatchpoint(wp_index))
+  if (m_reg_context_up->ClearHardwareWatchpoint(wp_index))
     return Status();
   return Status("Clearing hardware watchpoint failed.");
 }
@@ -189,8 +180,7 @@ Status NativeThreadLinux::SetHardwareBreakpoint(lldb::addr_t addr,
   if (error.Fail())
     return error;
 
-  NativeRegisterContextSP reg_ctx = GetRegisterContext();
-  uint32_t bp_index = reg_ctx->SetHardwareBreakpoint(addr, size);
+  uint32_t bp_index = m_reg_context_up->SetHardwareBreakpoint(addr, size);
 
   if (bp_index == LLDB_INVALID_INDEX32)
     return Status("Setting hardware breakpoint failed.");
@@ -205,7 +195,7 @@ Status NativeThreadLinux::RemoveHardwareBreakpoint(lldb::addr_t addr) {
     return Status();
 
   uint32_t bp_index = bp->second;
-  if (GetRegisterContext()->ClearHardwareBreakpoint(bp_index)) {
+  if (m_reg_context_up->ClearHardwareBreakpoint(bp_index)) {
     m_hw_break_index_map.erase(bp);
     return Status();
   }
@@ -227,7 +217,7 @@ Status NativeThreadLinux::Resume(uint32_t signo) {
     NativeProcessLinux &process = GetProcess();
 
     const auto &watchpoint_map = process.GetWatchpointMap();
-    GetRegisterContext()->ClearAllHardwareWatchpoints();
+    m_reg_context_up->ClearAllHardwareWatchpoints();
     for (const auto &pair : watchpoint_map) {
       const auto &wp = pair.second;
       SetWatchpoint(wp.m_addr, wp.m_size, wp.m_watch_flags, wp.m_hardware);
@@ -239,7 +229,7 @@ Status NativeThreadLinux::Resume(uint32_t signo) {
     NativeProcessLinux &process = GetProcess();
 
     const auto &hw_breakpoint_map = process.GetHardwareBreakpointMap();
-    GetRegisterContext()->ClearAllHardwareBreakpoints();
+    m_reg_context_up->ClearAllHardwareBreakpoints();
     for (const auto &pair : hw_breakpoint_map) {
       const auto &bp = pair.second;
       SetHardwareBreakpoint(bp.m_addr, bp.m_size);
@@ -361,7 +351,7 @@ void NativeThreadLinux::SetStoppedByWatchpoint(uint32_t wp_index) {
   lldbassert(wp_index != LLDB_INVALID_INDEX32 && "wp_index cannot be invalid");
 
   std::ostringstream ostr;
-  ostr << GetRegisterContext()->GetWatchpointAddress(wp_index) << " ";
+  ostr << m_reg_context_up->GetWatchpointAddress(wp_index) << " ";
   ostr << wp_index;
 
   /*
@@ -375,7 +365,7 @@ void NativeThreadLinux::SetStoppedByWatchpoint(uint32_t wp_index) {
    * stop-info
    * packet.
   */
-  ostr << " " << GetRegisterContext()->GetWatchpointHitAddress(wp_index);
+  ostr << " " << m_reg_context_up->GetWatchpointHitAddress(wp_index);
 
   m_stop_description = ostr.str();
 

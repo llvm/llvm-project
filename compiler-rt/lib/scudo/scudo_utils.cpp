@@ -18,9 +18,9 @@
 # include <cpuid.h>
 #endif
 #if defined(__arm__) || defined(__aarch64__)
-# if SANITIZER_ANDROID && __ANDROID_API__ < 18
-// getauxval() was introduced with API level 18 on Android. Emulate it using
-// /proc/self/auxv for lower API levels.
+# if SANITIZER_ANDROID && __ANDROID_API__ < 21
+// getauxval() was introduced with API level 18 for ARM and 21 for AArch64.
+// Emulate it using /proc/self/auxv for lower API levels.
 #  include "sanitizer_common/sanitizer_posix.h"
 
 #  include <fcntl.h>

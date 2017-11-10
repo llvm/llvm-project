@@ -997,7 +997,7 @@ static Value *EmitAddTreeOfValues(Instruction *I,
   Value *V1 = Ops.back();
   Ops.pop_back();
   Value *V2 = EmitAddTreeOfValues(I, Ops);
-  return CreateAdd(V2, V1, "tmp", I, I);
+  return CreateAdd(V2, V1, "reass.add", I, I);
 }
 
 /// If V is an expression tree that is a multiplication sequence,
@@ -1604,7 +1604,7 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
       RedoInsts.insert(VI);
 
     // Create the multiply.
-    Instruction *V2 = CreateMul(V, MaxOccVal, "tmp", I, I);
+    Instruction *V2 = CreateMul(V, MaxOccVal, "reass.mul", I, I);
 
     // Rerun associate on the multiply in case the inner expression turned into
     // a multiply.  We want to make sure that we keep things in canonical form.

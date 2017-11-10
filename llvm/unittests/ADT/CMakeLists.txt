@@ -32,6 +32,7 @@ set(ADTSources
   IntrusiveRefCntPtrTest.cpp
   IteratorTest.cpp
   MakeUniqueTest.cpp
+  MappedIteratorTest.cpp
   MapVectorTest.cpp
   OptionalTest.cpp
   PackedVectorTest.cpp

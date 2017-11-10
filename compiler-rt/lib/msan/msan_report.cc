@@ -98,7 +98,7 @@ static void DescribeOrigin(u32 id) {
 void ReportUMR(StackTrace *stack, u32 origin) {
   if (!__msan::flags()->report_umrs) return;
 
-  SpinMutexLock l(&CommonSanitizerReportMutex);
+  ScopedErrorReportLock l;
 
   Decorator d;
   Printf("%s", d.Warning());
@@ -112,14 +112,14 @@ void ReportUMR(StackTrace *stack, u32 origin) {
 }
 
 void ReportExpectedUMRNotFound(StackTrace *stack) {
-  SpinMutexLock l(&CommonSanitizerReportMutex);
+  ScopedErrorReportLock l;
 
   Printf("WARNING: Expected use of uninitialized value not found\n");
   stack->Print();
 }
 
 void ReportStats() {
-  SpinMutexLock l(&CommonSanitizerReportMutex);
+  ScopedErrorReportLock l;
 
   if (__msan_get_track_origins() > 0) {
     StackDepotStats *stack_depot_stats = StackDepotGetStats();
@@ -137,7 +137,7 @@ void ReportStats() {
 }
 
 void ReportAtExitStatistics() {
-  SpinMutexLock l(&CommonSanitizerReportMutex);
+  ScopedErrorReportLock l;
 
   if (msan_report_count > 0) {
     Decorator d;

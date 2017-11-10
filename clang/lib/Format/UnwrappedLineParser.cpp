@@ -56,7 +56,7 @@ private:
 };
 
 static bool isLineComment(const FormatToken &FormatTok) {
-  return FormatTok.is(tok::comment) && FormatTok.TokenText.startswith("//");
+  return FormatTok.is(tok::comment) && !FormatTok.TokenText.startswith("/*");
 }
 
 // Checks if \p FormatTok is a line comment that continues the line comment
@@ -2179,7 +2179,7 @@ void UnwrappedLineParser::parseJavaScriptEs6ImportExport() {
   while (!eof()) {
     if (FormatTok->is(tok::semi))
       return;
-    if (Line->Tokens.size() == 0) {
+    if (Line->Tokens.empty()) {
       // Common issue: Automatic Semicolon Insertion wrapped the line, so the
       // import statement should terminate.
       return;

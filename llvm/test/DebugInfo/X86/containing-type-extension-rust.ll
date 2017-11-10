@@ -31,7 +31,6 @@
 ; ModuleID = 't2.cgu-0.rs'
 source_filename = "t2.cgu-0.rs"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
 
 @ref.0 = internal unnamed_addr constant double 2.300000e+01, align 8
 @vtable.1 = internal unnamed_addr constant { void (double*)*, i64, i64 } { void (double*)* @_ZN4core3ptr13drop_in_place17h2818a933abde117eE, i64 8, i64 8 }, align 8, !dbg !0

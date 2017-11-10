@@ -15,6 +15,7 @@
 #include "Arch/Sparc.h"
 #include "Arch/SystemZ.h"
 #include "Arch/X86.h"
+#include "AMDGPU.h"
 #include "CommonArgs.h"
 #include "Hexagon.h"
 #include "InputInfo.h"
@@ -278,23 +279,6 @@ static void getWebAssemblyTargetFeatures(const ArgList &Args,
   handleTargetFeaturesGroup(Args, Features, options::OPT_m_wasm_Features_Group);
 }
 
-static void getAMDGPUTargetFeatures(const Driver &D, const ArgList &Args,
-                                    std::vector<StringRef> &Features) {
-  if (const Arg *dAbi = Args.getLastArg(options::OPT_mamdgpu_debugger_abi)) {
-    StringRef value = dAbi->getValue();
-    if (value == "1.0") {
-      Features.push_back("+amdgpu-debugger-insert-nops");
-      Features.push_back("+amdgpu-debugger-reserve-regs");
-      Features.push_back("+amdgpu-debugger-emit-prologue");
-    } else {
-      D.Diag(diag::err_drv_clang_unsupported) << dAbi->getAsString(Args);
-    }
-  }
-
-  handleTargetFeaturesGroup(
-    Args, Features, options::OPT_m_amdgpu_Features_Group);
-}
-
 static void getTargetFeatures(const ToolChain &TC, const llvm::Triple &Triple,
                               const ArgList &Args, ArgStringList &CmdArgs,
                               bool ForAS) {
@@ -347,7 +331,7 @@ static void getTargetFeatures(const ToolChain &TC, const llvm::Triple &Triple,
     break;
   case llvm::Triple::r600:
   case llvm::Triple::amdgcn:
-    getAMDGPUTargetFeatures(D, Args, Features);
+    amdgpu::getAMDGPUTargetFeatures(D, Args, Features);
     break;
   }
 

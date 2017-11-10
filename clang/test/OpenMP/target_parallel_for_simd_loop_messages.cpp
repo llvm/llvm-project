@@ -238,27 +238,29 @@ int test_iteration_spaces() {
     c[ii] = a[ii];
 
 // expected-note@+2  {{defined as firstprivate}}
-// expected-error@+2 {{loop iteration variable in the associated loop of 'omp target parallel for simd' directive may not be firstprivate, predetermined as private}}
+// expected-error@+2 {{loop iteration variable in the associated loop of 'omp target parallel for simd' directive may not be firstprivate, predetermined as linear}}
 #pragma omp target parallel for simd firstprivate(ii)
   for (ii = 0; ii < 10; ii++)
     c[ii] = a[ii];
 
-// expected-note@+2  {{defined as linear}}
-// expected-error@+2 {{loop iteration variable in the associated loop of 'omp target parallel for simd' directive may not be linear, predetermined as private}}
 #pragma omp target parallel for simd linear(ii)
   for (ii = 0; ii < 10; ii++)
     c[ii] = a[ii];
 
+// expected-note@+2  {{defined as private}}
+// expected-error@+2 {{loop iteration variable in the associated loop of 'omp target parallel for simd' directive may not be private, predetermined as linear}}
 #pragma omp target parallel for simd private(ii)
   for (ii = 0; ii < 10; ii++)
     c[ii] = a[ii];
 
+// expected-note@+2  {{defined as lastprivate}}
+// expected-error@+2 {{loop iteration variable in the associated loop of 'omp target parallel for simd' directive may not be lastprivate, predetermined as linear}}
 #pragma omp target parallel for simd lastprivate(ii)
   for (ii = 0; ii < 10; ii++)
     c[ii] = a[ii];
 
   {
-// expected-error@+2 {{loop iteration variable in the associated loop of 'omp target parallel for simd' directive may not be threadprivate or thread local, predetermined as private}}
+// expected-error@+2 {{loop iteration variable in the associated loop of 'omp target parallel for simd' directive may not be threadprivate or thread local, predetermined as linear}}
 #pragma omp target parallel for simd
     for (sii = 0; sii < 10; sii += 1)
       c[sii] = a[sii];
@@ -585,15 +587,15 @@ void test_loop_eh() {
 #pragma omp target parallel for simd
   for (int i = 0; i < 10; i++) {
     c[i] = a[i] + b[i];
-    try {
+    try { // expected-error {{'try' statement cannot be used in OpenMP simd region}}
       for (int j = 0; j < 10; ++j) {
         if (a[i] > b[j])
-          throw a[i];
+          throw a[i]; // expected-error {{'throw' statement cannot be used in OpenMP simd region}}
       }
-      throw a[i];
+      throw a[i]; // expected-error {{'throw' statement cannot be used in OpenMP simd region}}
     } catch (float f) {
       if (f > 0.1)
-        throw a[i];
+        throw a[i]; // expected-error {{'throw' statement cannot be used in OpenMP simd region}}
       return; // expected-error {{cannot return from OpenMP region}}
     }
     switch (i) {
@@ -605,7 +607,7 @@ void test_loop_eh() {
     }
     for (int j = 0; j < 10; j++) {
       if (c[i] > 10)
-        throw c[i];
+        throw c[i]; // expected-error {{'throw' statement cannot be used in OpenMP simd region}}
     }
   }
   if (c[9] > 10)

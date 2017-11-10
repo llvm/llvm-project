@@ -44,6 +44,13 @@ public:
     return &SystemZ::ADDR64BitRegClass;
   }
 
+  bool getRegAllocationHints(unsigned VirtReg,
+                             ArrayRef<MCPhysReg> Order,
+                             SmallVectorImpl<MCPhysReg> &Hints,
+                             const MachineFunction &MF,
+                             const VirtRegMap *VRM,
+                             const LiveRegMatrix *Matrix) const override;
+
   // Override TargetRegisterInfo.h.
   bool requiresRegisterScavenging(const MachineFunction &MF) const override {
     return true;

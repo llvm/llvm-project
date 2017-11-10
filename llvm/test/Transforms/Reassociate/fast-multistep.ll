@@ -1,13 +1,14 @@
 ; RUN: opt < %s -reassociate -S | FileCheck %s
 
-define float @fmultistep1(float %a, float %b, float %c) {
 ; Check that a*a*b+a*a*c is turned into a*(a*(b+c)).
-; CHECK-LABEL: @fmultistep1
-; CHECK-NEXT: [[TMP1:%tmp.*]] = fadd fast float %c, %b
-; CHECK-NEXT: [[TMP2:%tmp.*]] = fmul fast float %a, %a
-; CHECK-NEXT: fmul fast float [[TMP2]], [[TMP1]]
-; CHECK-NEXT: ret float
 
+define float @fmultistep1(float %a, float %b, float %c) {
+; CHECK-LABEL: @fmultistep1(
+; CHECK-NEXT:    [[REASS_ADD1:%.*]] = fadd fast float %c, %b
+; CHECK-NEXT:    [[REASS_MUL2:%.*]] = fmul fast float %a, %a
+; CHECK-NEXT:    [[REASS_MUL:%.*]] = fmul fast float [[REASS_MUL:%.*]]2, [[REASS_ADD1]]
+; CHECK-NEXT:    ret float [[REASS_MUL]]
+;
   %t0 = fmul fast float %a, %b
   %t1 = fmul fast float %a, %t0 ; a*(a*b)
   %t2 = fmul fast float %a, %c
@@ -16,17 +17,19 @@ define float @fmultistep1(float %a, float %b, float %c) {
   ret float %t4
 }
 
-define float @fmultistep2(float %a, float %b, float %c, float %d) {
 ; Check that a*b+a*c+d is turned into a*(b+c)+d.
-; CHECK-LABEL: @fmultistep2
-; CHECK-NEXT: fadd fast float %c, %b
-; CHECK-NEXT: fmul fast float %tmp, %a
-; CHECK-NEXT: fadd fast float %tmp1, %d
-; CHECK-NEXT: ret float
 
+define float @fmultistep2(float %a, float %b, float %c, float %d) {
+; CHECK-LABEL: @fmultistep2(
+; CHECK-NEXT:    [[REASS_ADD:%.*]] = fadd fast float %c, %b
+; CHECK-NEXT:    [[REASS_MUL:%.*]] = fmul fast float [[REASS_ADD]], %a
+; CHECK-NEXT:    [[T3:%.*]] = fadd fast float [[REASS_MUL]], %d
+; CHECK-NEXT:    ret float [[T3]]
+;
   %t0 = fmul fast float %a, %b
   %t1 = fmul fast float %a, %c
   %t2 = fadd fast float %t1, %d ; a*c+d
   %t3 = fadd fast float %t0, %t2 ; a*b+(a*c+d)
   ret float %t3
 }
+

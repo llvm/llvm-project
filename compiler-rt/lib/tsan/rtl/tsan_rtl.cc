@@ -214,7 +214,7 @@ static void BackgroundThread(void *arg) {
                              memory_order_relaxed);
       if (last != 0 && last + flags()->flush_symbolizer_ms * kMs2Ns < now) {
         Lock l(&ctx->report_mtx);
-        SpinMutexLock l2(&CommonSanitizerReportMutex);
+        ScopedErrorReportLock l2;
         SymbolizeFlush();
         atomic_store(&ctx->last_symbolize_time_ns, 0, memory_order_relaxed);
       }
@@ -413,8 +413,7 @@ int Finalize(ThreadState *thr) {
 
   // Wait for pending reports.
   ctx->report_mtx.Lock();
-  CommonSanitizerReportMutex.Lock();
-  CommonSanitizerReportMutex.Unlock();
+  { ScopedErrorReportLock l; }
   ctx->report_mtx.Unlock();
 
 #if !SANITIZER_GO

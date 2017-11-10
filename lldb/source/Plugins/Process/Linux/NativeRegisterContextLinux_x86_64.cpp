@@ -243,12 +243,11 @@ static inline unsigned int fxsr_regset(const ArchSpec &arch) {
 #define mask_XSTATE_BNDCFG (1ULL << 4)
 #define mask_XSTATE_MPX (mask_XSTATE_BNDREGS | mask_XSTATE_BNDCFG)
 
-NativeRegisterContextLinux *
+std::unique_ptr<NativeRegisterContextLinux>
 NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
-    const ArchSpec &target_arch, NativeThreadProtocol &native_thread,
-    uint32_t concrete_frame_idx) {
-  return new NativeRegisterContextLinux_x86_64(target_arch, native_thread,
-                                               concrete_frame_idx);
+    const ArchSpec &target_arch, NativeThreadProtocol &native_thread) {
+  return std::unique_ptr<NativeRegisterContextLinux>(
+      new NativeRegisterContextLinux_x86_64(target_arch, native_thread));
 }
 
 // ----------------------------------------------------------------------------
@@ -270,9 +269,8 @@ CreateRegisterInfoInterface(const ArchSpec &target_arch) {
 }
 
 NativeRegisterContextLinux_x86_64::NativeRegisterContextLinux_x86_64(
-    const ArchSpec &target_arch, NativeThreadProtocol &native_thread,
-    uint32_t concrete_frame_idx)
-    : NativeRegisterContextLinux(native_thread, concrete_frame_idx,
+    const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
+    : NativeRegisterContextLinux(native_thread,
                                  CreateRegisterInfoInterface(target_arch)),
       m_xstate_type(XStateType::Invalid), m_fpr(), m_iovec(), m_ymm_set(),
       m_mpx_set(), m_reg_info(), m_gpr_x86_64() {

@@ -11,9 +11,11 @@
 #include "SystemZInstrInfo.h"
 #include "SystemZSubtarget.h"
 #include "llvm/CodeGen/LiveIntervalAnalysis.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/CodeGen/VirtRegMap.h"
 
 using namespace llvm;
 
@@ -22,6 +24,85 @@ using namespace llvm;
 
 SystemZRegisterInfo::SystemZRegisterInfo()
     : SystemZGenRegisterInfo(SystemZ::R14D) {}
+
+// Given that MO is a GRX32 operand, return either GR32 or GRH32 if MO
+// somehow belongs in it. Otherwise, return GRX32.
+static const TargetRegisterClass *getRC32(MachineOperand &MO,
+                                          const VirtRegMap *VRM,
+                                          const MachineRegisterInfo *MRI) {
+  const TargetRegisterClass *RC = MRI->getRegClass(MO.getReg());
+
+  if (SystemZ::GR32BitRegClass.hasSubClassEq(RC) ||
+      MO.getSubReg() == SystemZ::subreg_l32)
+    return &SystemZ::GR32BitRegClass;
+  if (SystemZ::GRH32BitRegClass.hasSubClassEq(RC) ||
+      MO.getSubReg() == SystemZ::subreg_h32)
+    return &SystemZ::GRH32BitRegClass;
+
+  if (VRM && VRM->hasPhys(MO.getReg())) {
+    unsigned PhysReg = VRM->getPhys(MO.getReg());
+    if (SystemZ::GR32BitRegClass.contains(PhysReg))
+      return &SystemZ::GR32BitRegClass;
+    assert (SystemZ::GRH32BitRegClass.contains(PhysReg) &&
+            "Phys reg not in GR32 or GRH32?");
+    return &SystemZ::GRH32BitRegClass;
+  }
+
+  assert (RC == &SystemZ::GRX32BitRegClass);
+  return RC;
+}
+
+bool
+SystemZRegisterInfo::getRegAllocationHints(unsigned VirtReg,
+                                           ArrayRef<MCPhysReg> Order,
+                                           SmallVectorImpl<MCPhysReg> &Hints,
+                                           const MachineFunction &MF,
+                                           const VirtRegMap *VRM,
+                                           const LiveRegMatrix *Matrix) const {
+  const MachineRegisterInfo *MRI = &MF.getRegInfo();
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  if (MRI->getRegClass(VirtReg) == &SystemZ::GRX32BitRegClass) {
+    SmallVector<unsigned, 8> Worklist;
+    SmallSet<unsigned, 4> DoneRegs;
+    Worklist.push_back(VirtReg);
+    while (Worklist.size()) {
+      unsigned Reg = Worklist.pop_back_val();
+      if (!DoneRegs.insert(Reg).second)
+        continue;
+
+      for (auto &Use : MRI->use_instructions(Reg))
+        // For LOCRMux, see if the other operand is already a high or low
+        // register, and in that case give the correpsonding hints for
+        // VirtReg. LOCR instructions need both operands in either high or
+        // low parts.
+        if (Use.getOpcode() == SystemZ::LOCRMux) {
+          MachineOperand &TrueMO = Use.getOperand(1);
+          MachineOperand &FalseMO = Use.getOperand(2);
+          const TargetRegisterClass *RC =
+            TRI->getCommonSubClass(getRC32(FalseMO, VRM, MRI),
+                                   getRC32(TrueMO, VRM, MRI));
+          if (RC && RC != &SystemZ::GRX32BitRegClass) {
+            for (MCPhysReg Reg : Order)
+              if (RC->contains(Reg) && !MRI->isReserved(Reg))
+                Hints.push_back(Reg);
+            // Return true to make these hints the only regs available to
+            // RA. This may mean extra spilling but since the alternative is
+            // a jump sequence expansion of the LOCRMux, it is preferred.
+            return true;
+          }
+
+          // Add the other operand of the LOCRMux to the worklist.
+          unsigned OtherReg =
+            (TrueMO.getReg() == Reg ? FalseMO.getReg() : TrueMO.getReg());
+          if (MRI->getRegClass(OtherReg) == &SystemZ::GRX32BitRegClass)
+            Worklist.push_back(OtherReg);
+        }
+    }
+  }
+
+  return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
+                                                   VRM, Matrix);
+}
 
 const MCPhysReg *
 SystemZRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {

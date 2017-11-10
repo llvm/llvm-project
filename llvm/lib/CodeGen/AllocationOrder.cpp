@@ -31,11 +31,12 @@ AllocationOrder::AllocationOrder(unsigned VirtReg,
                                  const VirtRegMap &VRM,
                                  const RegisterClassInfo &RegClassInfo,
                                  const LiveRegMatrix *Matrix)
-  : Pos(0) {
+  : Pos(0), HardHints(false) {
   const MachineFunction &MF = VRM.getMachineFunction();
   const TargetRegisterInfo *TRI = &VRM.getTargetRegInfo();
   Order = RegClassInfo.getOrder(MF.getRegInfo().getRegClass(VirtReg));
-  TRI->getRegAllocationHints(VirtReg, Order, Hints, MF, &VRM, Matrix);
+  if (TRI->getRegAllocationHints(VirtReg, Order, Hints, MF, &VRM, Matrix))
+    HardHints = true;
   rewind();
 
   DEBUG({

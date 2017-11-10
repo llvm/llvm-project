@@ -209,6 +209,8 @@ int main(int argc, char **argv) {
 #pragma omp target parallel for simd private(xa), lastprivate(xa) // expected-error {{private variable cannot be lastprivate}} expected-note {{defined as private}}
   for (i = 0; i < argc; ++i)
     foo();
+// expected-note@+2 {{defined as lastprivate}}
+// expected-error@+2 {{loop iteration variable in the associated loop of 'omp target parallel for simd' directive may not be lastprivate, predetermined as linear}}
 #pragma omp target parallel for simd lastprivate(i)
   for (i = 0; i < argc; ++i)
     foo();

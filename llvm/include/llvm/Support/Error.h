@@ -246,18 +246,20 @@ public:
   }
 
 private:
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+  // assertIsChecked() happens very frequently, but under normal circumstances
+  // is supposed to be a no-op.  So we want it to be inlined, but having a bunch
+  // of debug prints can cause the function to be too large for inlining.  So
+  // it's important that we define this function out of line so that it can't be
+  // inlined.
+  LLVM_ATTRIBUTE_NORETURN
+  void fatalUncheckedError() const;
+#endif
+
   void assertIsChecked() {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
-    if (!getChecked() || getPtr()) {
-      dbgs() << "Program aborted due to an unhandled Error:\n";
-      if (getPtr())
-        getPtr()->log(dbgs());
-      else
-        dbgs()
-            << "Error value was Success. (Note: Success values must still be "
-               "checked prior to being destroyed).\n";
-      abort();
-    }
+    if (LLVM_UNLIKELY(!getChecked() || getPtr()))
+      fatalUncheckedError();
 #endif
   }
 
@@ -632,19 +634,26 @@ private:
 #endif
   }
 
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+  LLVM_ATTRIBUTE_NORETURN
+  LLVM_ATTRIBUTE_NOINLINE
+  void fatalUncheckedExpected() const {
+    dbgs() << "Expected<T> must be checked before access or destruction.\n";
+    if (HasError) {
+      dbgs() << "Unchecked Expected<T> contained error:\n";
+      (*getErrorStorage())->log(dbgs());
+    } else
+      dbgs() << "Expected<T> value was in success state. (Note: Expected<T> "
+                "values in success mode must still be checked prior to being "
+                "destroyed).\n";
+    abort();
+  }
+#endif
+
   void assertIsChecked() {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
-    if (Unchecked) {
-      dbgs() << "Expected<T> must be checked before access or destruction.\n";
-      if (HasError) {
-        dbgs() << "Unchecked Expected<T> contained error:\n";
-        (*getErrorStorage())->log(dbgs());
-      } else
-        dbgs() << "Expected<T> value was in success state. (Note: Expected<T> "
-                  "values in success mode must still be checked prior to being "
-                  "destroyed).\n";
-      abort();
-    }
+    if (LLVM_UNLIKELY(Unchecked))
+      fatalUncheckedExpected();
 #endif
   }
 

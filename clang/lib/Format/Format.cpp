@@ -466,7 +466,7 @@ template <> struct DocumentListTraits<std::vector<FormatStyle>> {
     if (Index >= Seq.size()) {
       assert(Index == Seq.size());
       FormatStyle Template;
-      if (Seq.size() > 0 && Seq[0].Language == FormatStyle::LK_None) {
+      if (!Seq.empty() && Seq[0].Language == FormatStyle::LK_None) {
         Template = Seq[0];
       } else {
         Template = *((const FormatStyle *)IO.getContext());
