@@ -22,6 +22,8 @@
 
 namespace clang {
 namespace ento {
+class AnalysisManager;
+
 ProgramStateRef markLoopAsUnrolled(const Stmt *Term, ProgramStateRef State,
                                    const FunctionDecl *FD);
 bool isUnrolledLoopBlock(const CFGBlock *Block, ExplodedNode *Pred,
