@@ -94,7 +94,6 @@ bool DWARFUnit::extractImpl(DataExtractor debug_info, uint32_t *offset_ptr) {
   // FIXME: Support DWARF64.
   FormParams.Format = DWARF32;
   FormParams.Version = debug_info.getU16(offset_ptr);
-  uint64_t AbbrOffset;
   if (FormParams.Version >= 5) {
     UnitType = debug_info.getU8(offset_ptr);
     FormParams.AddrSize = debug_info.getU8(offset_ptr);
@@ -124,9 +123,7 @@ bool DWARFUnit::extractImpl(DataExtractor debug_info, uint32_t *offset_ptr) {
 
   // Keep track of the highest DWARF version we encounter across all units.
   Context.setMaxVersionIfGreater(getVersion());
-
-  Abbrevs = Abbrev->getAbbreviationDeclarationSet(AbbrOffset);
-  return Abbrevs != nullptr;
+  return true;
 }
 
 bool DWARFUnit::extract(DataExtractor debug_info, uint32_t *offset_ptr) {
@@ -451,4 +448,21 @@ DWARFDie DWARFUnit::getSibling(const DWARFDebugInfoEntry *Die) {
       return DWARFDie(this, &DieArray[I]);
   }
   return DWARFDie();
+}
+
+DWARFDie DWARFUnit::getFirstChild(const DWARFDebugInfoEntry *Die) {
+  if (!Die->hasChildren())
+    return DWARFDie();
+
+  // We do not want access out of bounds when parsing corrupted debug data.
+  size_t I = getDIEIndex(Die) + 1;
+  if (I >= DieArray.size())
+    return DWARFDie();
+  return DWARFDie(this, &DieArray[I]);
+}
+
+const DWARFAbbreviationDeclarationSet *DWARFUnit::getAbbreviations() const {
+  if (!Abbrevs)
+    Abbrevs = Abbrev->getAbbreviationDeclarationSet(AbbrOffset);
+  return Abbrevs;
 }
