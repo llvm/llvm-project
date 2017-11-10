@@ -2117,6 +2117,13 @@ Error GlobalISelEmitter::importChildMatcher(InstructionMatcher &InsnMatcher,
       return Error::success();
     }
 
+    // Check for ValueType.
+    if (ChildRec->isSubClassOf("ValueType")) {
+      // We already added a type check as standard practice so this doesn't need
+      // to do anything.
+      return Error::success();
+    }
+
     // Check for ComplexPattern's.
     if (ChildRec->isSubClassOf("ComplexPattern")) {
       const auto &ComplexPattern = ComplexPatternEquivs.find(ChildRec);
@@ -2193,7 +2200,8 @@ Error GlobalISelEmitter::importExplicitUseRenderer(
     }
 
     if (ChildRec->isSubClassOf("RegisterClass") ||
-        ChildRec->isSubClassOf("RegisterOperand")) {
+        ChildRec->isSubClassOf("RegisterOperand") ||
+        ChildRec->isSubClassOf("ValueType")) {
       DstMIBuilder.addRenderer<CopyRenderer>(0, InsnMatcher,
                                              DstChild->getName());
       return Error::success();
