@@ -304,9 +304,11 @@ struct MachineConstantPoolValue {
   UnsignedValue ID;
   StringValue Value;
   unsigned Alignment = 0;
+  bool IsTargetSpecific = false;
   bool operator==(const MachineConstantPoolValue &Other) const {
     return ID == Other.ID && Value == Other.Value &&
-           Alignment == Other.Alignment;
+           Alignment == Other.Alignment &&
+           IsTargetSpecific == Other.IsTargetSpecific;
   }
 };
 
@@ -315,6 +317,7 @@ template <> struct MappingTraits<MachineConstantPoolValue> {
     YamlIO.mapRequired("id", Constant.ID);
     YamlIO.mapOptional("value", Constant.Value, StringValue());
     YamlIO.mapOptional("alignment", Constant.Alignment, (unsigned)0);
+    YamlIO.mapOptional("isTargetSpecific", Constant.IsTargetSpecific, false);
   }
 };
 
