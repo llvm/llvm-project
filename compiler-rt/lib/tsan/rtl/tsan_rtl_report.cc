@@ -143,30 +143,28 @@ static ReportStack *SymbolizeStack(StackTrace trace) {
   return stack;
 }
 
-ScopedReport::ScopedReport(ReportType typ, uptr tag) {
+ScopedReportBase::ScopedReportBase(ReportType typ, uptr tag) {
   ctx->thread_registry->CheckLocked();
   void *mem = internal_alloc(MBlockReport, sizeof(ReportDesc));
   rep_ = new(mem) ReportDesc;
   rep_->typ = typ;
   rep_->tag = tag;
   ctx->report_mtx.Lock();
-  CommonSanitizerReportMutex.Lock();
 }
 
-ScopedReport::~ScopedReport() {
-  CommonSanitizerReportMutex.Unlock();
+ScopedReportBase::~ScopedReportBase() {
   ctx->report_mtx.Unlock();
   DestroyAndFree(rep_);
 }
 
-void ScopedReport::AddStack(StackTrace stack, bool suppressable) {
+void ScopedReportBase::AddStack(StackTrace stack, bool suppressable) {
   ReportStack **rs = rep_->stacks.PushBack();
   *rs = SymbolizeStack(stack);
   (*rs)->suppressable = suppressable;
 }
 
-void ScopedReport::AddMemoryAccess(uptr addr, uptr external_tag, Shadow s,
-                                   StackTrace stack, const MutexSet *mset) {
+void ScopedReportBase::AddMemoryAccess(uptr addr, uptr external_tag, Shadow s,
+                                       StackTrace stack, const MutexSet *mset) {
   void *mem = internal_alloc(MBlockReportMop, sizeof(ReportMop));
   ReportMop *mop = new(mem) ReportMop;
   rep_->mops.PushBack(mop);
@@ -187,11 +185,11 @@ void ScopedReport::AddMemoryAccess(uptr addr, uptr external_tag, Shadow s,
   }
 }
 
-void ScopedReport::AddUniqueTid(int unique_tid) {
+void ScopedReportBase::AddUniqueTid(int unique_tid) {
   rep_->unique_tids.PushBack(unique_tid);
 }
 
-void ScopedReport::AddThread(const ThreadContext *tctx, bool suppressable) {
+void ScopedReportBase::AddThread(const ThreadContext *tctx, bool suppressable) {
   for (uptr i = 0; i < rep_->threads.Size(); i++) {
     if ((u32)rep_->threads[i]->id == tctx->tid)
       return;
@@ -255,14 +253,14 @@ ThreadContext *IsThreadStackOrTls(uptr addr, bool *is_stack) {
 }
 #endif
 
-void ScopedReport::AddThread(int unique_tid, bool suppressable) {
+void ScopedReportBase::AddThread(int unique_tid, bool suppressable) {
 #if !SANITIZER_GO
   if (const ThreadContext *tctx = FindThreadByUidLocked(unique_tid))
     AddThread(tctx, suppressable);
 #endif
 }
 
-void ScopedReport::AddMutex(const SyncVar *s) {
+void ScopedReportBase::AddMutex(const SyncVar *s) {
   for (uptr i = 0; i < rep_->mutexes.Size(); i++) {
     if (rep_->mutexes[i]->id == s->uid)
       return;
@@ -276,7 +274,7 @@ void ScopedReport::AddMutex(const SyncVar *s) {
   rm->stack = SymbolizeStackId(s->creation_stack_id);
 }
 
-u64 ScopedReport::AddMutex(u64 id) {
+u64 ScopedReportBase::AddMutex(u64 id) {
   u64 uid = 0;
   u64 mid = id;
   uptr addr = SyncVar::SplitId(id, &uid);
@@ -295,7 +293,7 @@ u64 ScopedReport::AddMutex(u64 id) {
   return mid;
 }
 
-void ScopedReport::AddDeadMutex(u64 id) {
+void ScopedReportBase::AddDeadMutex(u64 id) {
   for (uptr i = 0; i < rep_->mutexes.Size(); i++) {
     if (rep_->mutexes[i]->id == id)
       return;
@@ -309,7 +307,7 @@ void ScopedReport::AddDeadMutex(u64 id) {
   rm->stack = 0;
 }
 
-void ScopedReport::AddLocation(uptr addr, uptr size) {
+void ScopedReportBase::AddLocation(uptr addr, uptr size) {
   if (addr == 0)
     return;
 #if !SANITIZER_GO
@@ -364,18 +362,19 @@ void ScopedReport::AddLocation(uptr addr, uptr size) {
 }
 
 #if !SANITIZER_GO
-void ScopedReport::AddSleep(u32 stack_id) {
+void ScopedReportBase::AddSleep(u32 stack_id) {
   rep_->sleep = SymbolizeStackId(stack_id);
 }
 #endif
 
-void ScopedReport::SetCount(int count) {
-  rep_->count = count;
-}
+void ScopedReportBase::SetCount(int count) { rep_->count = count; }
 
-const ReportDesc *ScopedReport::GetReport() const {
-  return rep_;
-}
+const ReportDesc *ScopedReportBase::GetReport() const { return rep_; }
+
+ScopedReport::ScopedReport(ReportType typ, uptr tag)
+    : ScopedReportBase(typ, tag) {}
+
+ScopedReport::~ScopedReport() {}
 
 void RestoreStack(int tid, const u64 epoch, VarSizeStackTrace *stk,
                   MutexSet *mset, uptr *tag) {

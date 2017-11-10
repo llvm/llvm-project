@@ -8,7 +8,6 @@
 // clang-format on
 
 // FIXME: implement in other sanitizers.
-// XFAIL: msan
 // XFAIL: tsan
 // XFAIL: ubsan
 //
