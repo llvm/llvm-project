@@ -9,7 +9,7 @@ typedef struct once_flag_s {
 } once_flag;
 
 template <class Callable, class... Args>
-void call_once(once_flag &o, Callable func, Args... args);
+void call_once(once_flag &o, Callable func, Args... args) {};
 } // namespace std
 
 // Check with Lambdas.
@@ -115,9 +115,9 @@ template <class _Fp>
 class function; // undefined
 template <class _Rp, class... _ArgTypes>
 struct function<_Rp(_ArgTypes...)> {
-  _Rp operator()(_ArgTypes...) const;
+  _Rp operator()(_ArgTypes...) const {};
   template <class _Fp>
-  function(_Fp);
+  function(_Fp) {};
 };
 
 // Note: currently we do not support calls to std::function,
