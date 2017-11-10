@@ -6,8 +6,10 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+//
 /// \file
 /// This file implements the InstructionSelector class.
+//
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
@@ -16,11 +18,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/MC/MCInstrDesc.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetRegisterInfo.h"

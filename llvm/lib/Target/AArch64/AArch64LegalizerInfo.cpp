@@ -38,7 +38,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo() {
   for (auto Ty : {p0, s1, s8, s16, s32, s64})
     setAction({G_IMPLICIT_DEF, Ty}, Legal);
 
-  for (auto Ty : {s16, s32, s64})
+  for (auto Ty : {s16, s32, s64, p0})
     setAction({G_PHI, Ty}, Legal);
 
   for (auto Ty : {s1, s8})

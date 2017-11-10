@@ -8,6 +8,8 @@
 
   define i32 @fconst_s32() { ret i32 42 }
   define i64 @fconst_s64() { ret i64 1234567890123 }
+  define float @fconst_s32_0() { ret float 0.0 }
+  define double @fconst_s64_0() { ret double 0.0 }
 ...
 
 ---
@@ -74,4 +76,38 @@ body:             |
   bb.0:
     %0(s64) = G_FCONSTANT double 1.0
     %d0 = COPY %0(s64)
+...
+
+---
+# CHECK-LABEL: name: fconst_s32_0
+name:            fconst_s32_0
+legalized:       true
+regBankSelected: true
+registers:
+  - { id: 0, class: fpr }
+
+# CHECK:  body:
+# CHECK: [[TMP:%[0-9]+]] = FMOVS0
+# CHECK: %s0 = COPY [[TMP]]
+body:             |
+  bb.0:
+    %0(s32) = G_FCONSTANT float 0.0
+    %s0 = COPY %0(s32)
+...
+
+---
+# CHECK-LABEL: name: fconst_s64_0
+name:            fconst_s64_0
+legalized:       true
+regBankSelected: true
+registers:
+  - { id: 0, class: fpr }
+
+# CHECK:  body:
+# CHECK: [[TMP:%[0-9]+]] = FMOVD0
+# CHECK: %s0 = COPY [[TMP]]
+body:             |
+  bb.0:
+    %0(s64) = G_FCONSTANT double 0.0
+    %s0 = COPY %0(s64)
 ...

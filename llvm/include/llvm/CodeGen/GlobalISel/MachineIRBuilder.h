@@ -93,8 +93,7 @@ public:
   /// Some constructors for easy use.
   MachineIRBuilder() = default;
   MachineIRBuilder(MachineFunction &MF) { setMF(MF); }
-  MachineIRBuilder(MachineInstr &MI)
-      : MachineIRBuilder(*MI.getParent()->getParent()) {
+  MachineIRBuilder(MachineInstr &MI) : MachineIRBuilder(*MI.getMF()) {
     setInstr(MI);
   }
 
@@ -543,6 +542,10 @@ public:
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildCopy(unsigned Res, unsigned Op);
+  template <typename DstType, typename SrcType>
+  MachineInstrBuilder buildCopy(DstType &&Res, SrcType &&Src) {
+    return buildCopy(getDestFromArg(Res), getRegFromArg(Src));
+  }
 
   /// Build and insert `Res<def> = G_LOAD Addr, MMO`.
   ///
@@ -660,6 +663,10 @@ public:
   ///
   /// \return The newly created instruction.
   MachineInstrBuilder buildTrunc(unsigned Res, unsigned Op);
+  template <typename DstType, typename SrcType>
+  MachineInstrBuilder buildTrunc(DstType &&Res, SrcType &&Src) {
+    return buildTrunc(getDestFromArg(Res), getRegFromArg(Src));
+  }
 
   /// Build and insert a \p Res = G_ICMP \p Pred, \p Op0, \p Op1
   ///

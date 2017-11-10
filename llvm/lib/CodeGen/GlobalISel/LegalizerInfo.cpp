@@ -48,6 +48,7 @@ LegalizerInfo::LegalizerInfo() {
   DefaultActions[TargetOpcode::G_ADD] = NarrowScalar;
   DefaultActions[TargetOpcode::G_LOAD] = NarrowScalar;
   DefaultActions[TargetOpcode::G_STORE] = NarrowScalar;
+  DefaultActions[TargetOpcode::G_OR] = NarrowScalar;
 
   DefaultActions[TargetOpcode::G_BRCOND] = WidenScalar;
   DefaultActions[TargetOpcode::G_INSERT] = NarrowScalar;
@@ -57,7 +58,7 @@ LegalizerInfo::LegalizerInfo() {
 
 void LegalizerInfo::computeTables() {
   for (unsigned Opcode = 0; Opcode <= LastOp - FirstOp; ++Opcode) {
-    for (unsigned Idx = 0; Idx != Actions[Opcode].size(); ++Idx) {
+    for (unsigned Idx = 0, End = Actions[Opcode].size(); Idx != End; ++Idx) {
       for (auto &Action : Actions[Opcode][Idx]) {
         LLT Ty = Action.first;
         if (!Ty.isVector())
@@ -144,8 +145,9 @@ std::tuple<LegalizerInfo::LegalizeAction, unsigned, LLT>
 LegalizerInfo::getAction(const MachineInstr &MI,
                          const MachineRegisterInfo &MRI) const {
   SmallBitVector SeenTypes(8);
-  const MCOperandInfo *OpInfo = MI.getDesc().OpInfo;
-  for (unsigned i = 0; i < MI.getDesc().getNumOperands(); ++i) {
+  const MCInstrDesc &MCID = MI.getDesc();
+  const MCOperandInfo *OpInfo = MCID.OpInfo;
+  for (unsigned i = 0, e = MCID.getNumOperands(); i != e; ++i) {
     if (!OpInfo[i].isGenericType())
       continue;
 

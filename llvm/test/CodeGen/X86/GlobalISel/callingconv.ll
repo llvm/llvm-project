@@ -314,22 +314,28 @@ define void @test_abi_exts_call(i8* %addr) {
 ; X32-NEXT:    pushl %ebx
 ; X32-NEXT:  .Lcfi7:
 ; X32-NEXT:    .cfi_def_cfa_offset 8
-; X32-NEXT:    subl $8, %esp
+; X32-NEXT:    pushl %esi
 ; X32-NEXT:  .Lcfi8:
-; X32-NEXT:    .cfi_def_cfa_offset 16
+; X32-NEXT:    .cfi_def_cfa_offset 12
+; X32-NEXT:    pushl %eax
 ; X32-NEXT:  .Lcfi9:
+; X32-NEXT:    .cfi_def_cfa_offset 16
+; X32-NEXT:  .Lcfi10:
+; X32-NEXT:    .cfi_offset %esi, -12
+; X32-NEXT:  .Lcfi11:
 ; X32-NEXT:    .cfi_offset %ebx, -8
 ; X32-NEXT:    movl 16(%esp), %eax
 ; X32-NEXT:    movb (%eax), %bl
-; X32-NEXT:    movb %bl, (%esp)
+; X32-NEXT:    movzbl %bl, %esi
+; X32-NEXT:    movl %esi, (%esp)
 ; X32-NEXT:    calll take_char
 ; X32-NEXT:    movsbl %bl, %eax
 ; X32-NEXT:    movl %eax, (%esp)
 ; X32-NEXT:    calll take_char
-; X32-NEXT:    movzbl %bl, %eax
-; X32-NEXT:    movl %eax, (%esp)
+; X32-NEXT:    movl %esi, (%esp)
 ; X32-NEXT:    calll take_char
-; X32-NEXT:    addl $8, %esp
+; X32-NEXT:    addl $4, %esp
+; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %ebx
 ; X32-NEXT:    retl
 ;
@@ -340,13 +346,13 @@ define void @test_abi_exts_call(i8* %addr) {
 ; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:  .Lcfi7:
 ; X64-NEXT:    .cfi_offset %rbx, -16
-; X64-NEXT:    movb (%rdi), %bl
+; X64-NEXT:    movb (%rdi), %al
+; X64-NEXT:    movzbl %al, %ebx
 ; X64-NEXT:    movl %ebx, %edi
 ; X64-NEXT:    callq take_char
-; X64-NEXT:    movsbl %bl, %ebx
-; X64-NEXT:    movl %ebx, %edi
+; X64-NEXT:    movsbl %bl, %edi
 ; X64-NEXT:    callq take_char
-; X64-NEXT:    movzbl %bl, %edi
+; X64-NEXT:    movl %ebx, %edi
 ; X64-NEXT:    callq take_char
 ; X64-NEXT:    popq %rbx
 ; X64-NEXT:    retq
@@ -362,7 +368,7 @@ define void @test_variadic_call_1(i8** %addr_ptr, i32* %val_ptr) {
 ; X32-LABEL: test_variadic_call_1:
 ; X32:       # BB#0:
 ; X32-NEXT:    subl $12, %esp
-; X32-NEXT:  .Lcfi10:
+; X32-NEXT:  .Lcfi12:
 ; X32-NEXT:    .cfi_def_cfa_offset 16
 ; X32-NEXT:    movl 16(%esp), %eax
 ; X32-NEXT:    movl 20(%esp), %ecx
@@ -396,7 +402,7 @@ define void @test_variadic_call_2(i8** %addr_ptr, double* %val_ptr) {
 ; X32-LABEL: test_variadic_call_2:
 ; X32:       # BB#0:
 ; X32-NEXT:    subl $12, %esp
-; X32-NEXT:  .Lcfi11:
+; X32-NEXT:  .Lcfi13:
 ; X32-NEXT:    .cfi_def_cfa_offset 16
 ; X32-NEXT:    movl 16(%esp), %eax
 ; X32-NEXT:    movl 20(%esp), %ecx
