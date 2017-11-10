@@ -70,6 +70,7 @@ def : GINodeEquiv<G_INTRINSIC, intrinsic_wo_chain>;
 def : GINodeEquiv<G_INTRINSIC_W_SIDE_EFFECTS, intrinsic_void>;
 def : GINodeEquiv<G_INTRINSIC_W_SIDE_EFFECTS, intrinsic_w_chain>;
 def : GINodeEquiv<G_BR, br>;
+def : GINodeEquiv<G_BSWAP, bswap>;
 
 // Specifies the GlobalISel equivalents for SelectionDAG's ComplexPattern.
 // Should be used on defs that subclass GIComplexOperandMatcher<>.
