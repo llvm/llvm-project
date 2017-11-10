@@ -2621,7 +2621,7 @@ void GlobalISelEmitter::emitImmPredicates(
   if (!MatchedRecords.empty()) {
     OS << "// PatFrag predicates.\n"
        << "enum {\n";
-    StringRef EnumeratorSeparator =
+    std::string EnumeratorSeparator =
         (" = GIPFP_" + TypeIdentifier + "_Invalid + 1,\n").str();
     for (const auto *Record : MatchedRecords) {
       OS << "  GIPFP_" << TypeIdentifier << "_Predicate_" << Record->getName()
