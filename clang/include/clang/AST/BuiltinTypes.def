@@ -133,9 +133,6 @@ FLOATING_TYPE(Double, DoubleTy)
 // 'long double'
 FLOATING_TYPE(LongDouble, LongDoubleTy)
 
-// '_Float16'
-FLOATING_TYPE(Float16, HalfTy)
-
 // '__float128'
 FLOATING_TYPE(Float128, Float128Ty)
 

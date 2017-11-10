@@ -319,7 +319,6 @@ TypeSpecifierType BuiltinTypeLoc::getWrittenTypeSpec() const {
   case BuiltinType::Float:
   case BuiltinType::Double:
   case BuiltinType::LongDouble:
-  case BuiltinType::Float16:
   case BuiltinType::Float128:
     llvm_unreachable("Builtin type needs extra local data!");
     // Fall through, if the impossible happens.
