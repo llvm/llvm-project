@@ -11,8 +11,10 @@ entry:
 define signext i1 @test_add_i1(i1 %x, i1 %y) {
 ; CHECK-LABEL: name: test_add_i1
 ; CHECK: liveins: %r0, %r1
-; CHECK-DAG: [[VREGX:%[0-9]+]](s1) = COPY %r0
-; CHECK-DAG: [[VREGY:%[0-9]+]](s1) = COPY %r1
+; CHECK-DAG: [[VREGR0:%[0-9]+]](s32) = COPY %r0
+; CHECK-DAG: [[VREGX:%[0-9]+]](s1) = G_TRUNC [[VREGR0]]
+; CHECK-DAG: [[VREGR1:%[0-9]+]](s32) = COPY %r1
+; CHECK-DAG: [[VREGY:%[0-9]+]](s1) = G_TRUNC [[VREGR1]]
 ; CHECK: [[SUM:%[0-9]+]](s1) = G_ADD [[VREGX]], [[VREGY]]
 ; CHECK: [[EXT:%[0-9]+]](s32) = G_SEXT [[SUM]]
 ; CHECK: %r0 = COPY [[EXT]](s32)
@@ -25,10 +27,13 @@ entry:
 define i8 @test_add_i8(i8 %x, i8 %y) {
 ; CHECK-LABEL: name: test_add_i8
 ; CHECK: liveins: %r0, %r1
-; CHECK-DAG: [[VREGX:%[0-9]+]](s8) = COPY %r0
-; CHECK-DAG: [[VREGY:%[0-9]+]](s8) = COPY %r1
+; CHECK-DAG: [[VREGR0:%[0-9]+]](s32) = COPY %r0
+; CHECK-DAG: [[VREGX:%[0-9]+]](s8) = G_TRUNC [[VREGR0]]
+; CHECK-DAG: [[VREGR1:%[0-9]+]](s32) = COPY %r1
+; CHECK-DAG: [[VREGY:%[0-9]+]](s8) = G_TRUNC [[VREGR1]]
 ; CHECK: [[SUM:%[0-9]+]](s8) = G_ADD [[VREGX]], [[VREGY]]
-; CHECK: %r0 = COPY [[SUM]](s8)
+; CHECK: [[SUM_EXT:%[0-9]+]](s32) = G_ANYEXT [[SUM]]
+; CHECK: %r0 = COPY [[SUM_EXT]](s32)
 ; CHECK: BX_RET 14, _, implicit %r0
 entry:
   %sum = add i8 %x, %y
@@ -38,10 +43,13 @@ entry:
 define i8 @test_sub_i8(i8 %x, i8 %y) {
 ; CHECK-LABEL: name: test_sub_i8
 ; CHECK: liveins: %r0, %r1
-; CHECK-DAG: [[VREGX:%[0-9]+]](s8) = COPY %r0
-; CHECK-DAG: [[VREGY:%[0-9]+]](s8) = COPY %r1
+; CHECK-DAG: [[VREGR0:%[0-9]+]](s32) = COPY %r0
+; CHECK-DAG: [[VREGX:%[0-9]+]](s8) = G_TRUNC [[VREGR0]]
+; CHECK-DAG: [[VREGR1:%[0-9]+]](s32) = COPY %r1
+; CHECK-DAG: [[VREGY:%[0-9]+]](s8) = G_TRUNC [[VREGR1]]
 ; CHECK: [[RES:%[0-9]+]](s8) = G_SUB [[VREGX]], [[VREGY]]
-; CHECK: %r0 = COPY [[RES]](s8)
+; CHECK: [[RES_EXT:%[0-9]+]](s32) = G_ANYEXT [[RES]]
+; CHECK: %r0 = COPY [[RES_EXT]](s32)
 ; CHECK: BX_RET 14, _, implicit %r0
 entry:
   %res = sub i8 %x, %y
@@ -51,7 +59,8 @@ entry:
 define signext i8 @test_return_sext_i8(i8 %x) {
 ; CHECK-LABEL: name: test_return_sext_i8
 ; CHECK: liveins: %r0
-; CHECK: [[VREG:%[0-9]+]](s8) = COPY %r0
+; CHECK: [[VREGR0:%[0-9]+]](s32) = COPY %r0
+; CHECK: [[VREG:%[0-9]+]](s8) = G_TRUNC [[VREGR0]]
 ; CHECK: [[VREGEXT:%[0-9]+]](s32) = G_SEXT [[VREG]]
 ; CHECK: %r0 = COPY [[VREGEXT]](s32)
 ; CHECK: BX_RET 14, _, implicit %r0
@@ -62,10 +71,13 @@ entry:
 define i16 @test_add_i16(i16 %x, i16 %y) {
 ; CHECK-LABEL: name: test_add_i16
 ; CHECK: liveins: %r0, %r1
-; CHECK-DAG: [[VREGX:%[0-9]+]](s16) = COPY %r0
-; CHECK-DAG: [[VREGY:%[0-9]+]](s16) = COPY %r1
+; CHECK-DAG: [[VREGR0:%[0-9]+]](s32) = COPY %r0
+; CHECK-DAG: [[VREGX:%[0-9]+]](s16) = G_TRUNC [[VREGR0]]
+; CHECK-DAG: [[VREGR1:%[0-9]+]](s32) = COPY %r1
+; CHECK-DAG: [[VREGY:%[0-9]+]](s16) = G_TRUNC [[VREGR1]]
 ; CHECK: [[SUM:%[0-9]+]](s16) = G_ADD [[VREGX]], [[VREGY]]
-; CHECK: %r0 = COPY [[SUM]](s16)
+; CHECK: [[SUM_EXT:%[0-9]+]](s32) = G_ANYEXT [[SUM]]
+; CHECK: %r0 = COPY [[SUM_EXT]](s32)
 ; CHECK: BX_RET 14, _, implicit %r0
 entry:
   %sum = add i16 %x, %y
@@ -75,10 +87,13 @@ entry:
 define i16 @test_sub_i16(i16 %x, i16 %y) {
 ; CHECK-LABEL: name: test_sub_i16
 ; CHECK: liveins: %r0, %r1
-; CHECK-DAG: [[VREGX:%[0-9]+]](s16) = COPY %r0
-; CHECK-DAG: [[VREGY:%[0-9]+]](s16) = COPY %r1
+; CHECK-DAG: [[VREGR0:%[0-9]+]](s32) = COPY %r0
+; CHECK-DAG: [[VREGX:%[0-9]+]](s16) = G_TRUNC [[VREGR0]]
+; CHECK-DAG: [[VREGR1:%[0-9]+]](s32) = COPY %r1
+; CHECK-DAG: [[VREGY:%[0-9]+]](s16) = G_TRUNC [[VREGR1]]
 ; CHECK: [[RES:%[0-9]+]](s16) = G_SUB [[VREGX]], [[VREGY]]
-; CHECK: %r0 = COPY [[RES]](s16)
+; CHECK: [[RES_EXT:%[0-9]+]](s32) = G_ANYEXT [[RES]]
+; CHECK: %r0 = COPY [[RES_EXT]](s32)
 ; CHECK: BX_RET 14, _, implicit %r0
 entry:
   %res = sub i16 %x, %y
@@ -88,7 +103,8 @@ entry:
 define zeroext i16 @test_return_zext_i16(i16 %x) {
 ; CHECK-LABEL: name: test_return_zext_i16
 ; CHECK: liveins: %r0
-; CHECK: [[VREG:%[0-9]+]](s16) = COPY %r0
+; CHECK: [[VREGR0:%[0-9]+]](s32) = COPY %r0
+; CHECK: [[VREG:%[0-9]+]](s16) = G_TRUNC [[VREGR0]]
 ; CHECK: [[VREGEXT:%[0-9]+]](s32) = G_ZEXT [[VREG]]
 ; CHECK: %r0 = COPY [[VREGEXT]](s32)
 ; CHECK: BX_RET 14, _, implicit %r0
@@ -146,12 +162,14 @@ define i16 @test_stack_args_signext(i32 %p0, i16 %p1, i8 %p2, i1 %p3,
 ; CHECK-DAG: id: [[P4:[0-9]]]{{.*}}offset: 0{{.*}}size: 1
 ; CHECK-DAG: id: [[P5:[0-9]]]{{.*}}offset: 4{{.*}}size: 2
 ; CHECK: liveins: %r0, %r1, %r2, %r3
-; CHECK: [[VREGP1:%[0-9]+]](s16) = COPY %r1
+; CHECK: [[VREGR1:%[0-9]+]](s32) = COPY %r1
+; CHECK: [[VREGP1:%[0-9]+]](s16) = G_TRUNC [[VREGR1]]
 ; CHECK: [[FIP5:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[P5]]
 ; CHECK: [[VREGP5EXT:%[0-9]+]](s32) = G_LOAD [[FIP5]](p0){{.*}}load 4
 ; CHECK: [[VREGP5:%[0-9]+]](s16) = G_TRUNC [[VREGP5EXT]]
 ; CHECK: [[SUM:%[0-9]+]](s16) = G_ADD [[VREGP1]], [[VREGP5]]
-; CHECK: %r0 = COPY [[SUM]]
+; CHECK: [[SUM_EXT:%[0-9]+]](s32) = G_ANYEXT [[SUM]]
+; CHECK: %r0 = COPY [[SUM_EXT]](s32)
 ; CHECK: BX_RET 14, _, implicit %r0
 entry:
   %sum = add i16 %p1, %p5
@@ -165,12 +183,14 @@ define i8 @test_stack_args_zeroext(i32 %p0, i16 %p1, i8 %p2, i1 %p3,
 ; CHECK-DAG: id: [[P4:[0-9]]]{{.*}}offset: 0{{.*}}size: 1
 ; CHECK-DAG: id: [[P5:[0-9]]]{{.*}}offset: 4{{.*}}size: 2
 ; CHECK: liveins: %r0, %r1, %r2, %r3
-; CHECK: [[VREGP2:%[0-9]+]](s8) = COPY %r2
+; CHECK: [[VREGR2:%[0-9]+]](s32) = COPY %r2
+; CHECK: [[VREGP2:%[0-9]+]](s8) = G_TRUNC [[VREGR2]]
 ; CHECK: [[FIP4:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[P4]]
 ; CHECK: [[VREGP4EXT:%[0-9]+]](s32) = G_LOAD [[FIP4]](p0){{.*}}load 4
 ; CHECK: [[VREGP4:%[0-9]+]](s8) = G_TRUNC [[VREGP4EXT]]
 ; CHECK: [[SUM:%[0-9]+]](s8) = G_ADD [[VREGP2]], [[VREGP4]]
-; CHECK: %r0 = COPY [[SUM]]
+; CHECK: [[SUM_EXT:%[0-9]+]](s32) = G_ANYEXT [[SUM]]
+; CHECK: %r0 = COPY [[SUM_EXT]](s32)
 ; CHECK: BX_RET 14, _, implicit %r0
 entry:
   %sum = add i8 %p2, %p4
@@ -184,11 +204,13 @@ define i8 @test_stack_args_noext(i32 %p0, i16 %p1, i8 %p2, i1 %p3,
 ; CHECK-DAG: id: [[P4:[0-9]]]{{.*}}offset: 0{{.*}}size: 1
 ; CHECK-DAG: id: [[P5:[0-9]]]{{.*}}offset: 4{{.*}}size: 2
 ; CHECK: liveins: %r0, %r1, %r2, %r3
-; CHECK: [[VREGP2:%[0-9]+]](s8) = COPY %r2
+; CHECK: [[VREGR2:%[0-9]+]](s32) = COPY %r2
+; CHECK: [[VREGP2:%[0-9]+]](s8) = G_TRUNC [[VREGR2]]
 ; CHECK: [[FIP4:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[P4]]
 ; CHECK: [[VREGP4:%[0-9]+]](s8) = G_LOAD [[FIP4]](p0){{.*}}load 1
 ; CHECK: [[SUM:%[0-9]+]](s8) = G_ADD [[VREGP2]], [[VREGP4]]
-; CHECK: %r0 = COPY [[SUM]]
+; CHECK: [[SUM_EXT:%[0-9]+]](s32) = G_ANYEXT [[SUM]]
+; CHECK: %r0 = COPY [[SUM_EXT]](s32)
 ; CHECK: BX_RET 14, _, implicit %r0
 entry:
   %sum = add i8 %p2, %p4
@@ -489,9 +511,12 @@ declare arm_aapcscc signext i16 @ext_target(i8 signext, i8 zeroext, i16 signext,
 
 define arm_aapcscc signext i16 @test_call_ext_params(i8 %a, i16 %b, i1 %c) {
 ; CHECK-LABEL: name: test_call_ext_params
-; CHECK-DAG: [[AVREG:%[0-9]+]](s8) = COPY %r0
-; CHECK-DAG: [[BVREG:%[0-9]+]](s16) = COPY %r1
-; CHECK-DAG: [[CVREG:%[0-9]+]](s1) = COPY %r2
+; CHECK-DAG: [[R0VREG:%[0-9]+]](s32) = COPY %r0
+; CHECK-DAG: [[AVREG:%[0-9]+]](s8) = G_TRUNC [[R0VREG]]
+; CHECK-DAG: [[R1VREG:%[0-9]+]](s32) = COPY %r1
+; CHECK-DAG: [[BVREG:%[0-9]+]](s16) = G_TRUNC [[R1VREG]]
+; CHECK-DAG: [[R2VREG:%[0-9]+]](s32) = COPY %r2
+; CHECK-DAG: [[CVREG:%[0-9]+]](s1) = G_TRUNC [[R2VREG]]
 ; CHECK: ADJCALLSTACKDOWN 20, 0, 14, _, implicit-def %sp, implicit %sp
 ; CHECK: [[SEXTA:%[0-9]+]](s32) = G_SEXT [[AVREG]](s8)
 ; CHECK: %r0 = COPY [[SEXTA]]
@@ -527,7 +552,8 @@ define arm_aapcscc signext i16 @test_call_ext_params(i8 %a, i16 %b, i1 %c) {
 ; CHECK: [[ZEXTC:%[0-9]+]](s32) = G_ZEXT [[CVREG]]
 ; CHECK: G_STORE [[ZEXTC]](s32), [[FI5]](p0){{.*}}store 4
 ; CHECK: BLX @ext_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0
-; CHECK: [[RVREG:%[0-9]+]](s16) = COPY %r0
+; CHECK: [[R0VREG:%[0-9]+]](s32) = COPY %r0
+; CHECK: [[RVREG:%[0-9]+]](s16) = G_TRUNC [[R0VREG]]
 ; CHECK: ADJCALLSTACKUP 20, 0, 14, _, implicit-def %sp, implicit %sp
 ; CHECK: [[RExtVREG:%[0-9]+]](s32) = G_SEXT [[RVREG]]
 ; CHECK: %r0 = COPY [[RExtVREG]]
