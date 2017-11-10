@@ -44,3 +44,10 @@ int testNegativeShift(int a) {
   }
   return 0;
 }
+
+int testNegativeLeftShift(int a) {
+  if (a == -3) {
+    return a << 1; // expected-warning{{The result of the left shift is undefined because the left operand is negative}}
+  }
+  return 0;
+}
