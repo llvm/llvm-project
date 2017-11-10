@@ -438,22 +438,26 @@ public:
   /// \brief Create and insert an element unordered-atomic memcpy between the
   /// specified pointers.
   ///
+  /// DstAlign/SrcAlign are the alignments of the Dst/Src pointers, respectively.
+  ///
   /// If the pointers aren't i8*, they will be converted.  If a TBAA tag is
   /// specified, it will be added to the instruction. Likewise with alias.scope
   /// and noalias tags.
   CallInst *CreateElementUnorderedAtomicMemCpy(
-      Value *Dst, Value *Src, uint64_t Size, uint32_t ElementSize,
-      MDNode *TBAATag = nullptr, MDNode *TBAAStructTag = nullptr,
-      MDNode *ScopeTag = nullptr, MDNode *NoAliasTag = nullptr) {
+      Value *Dst, unsigned DstAlign, Value *Src, unsigned SrcAlign,
+      uint64_t Size, uint32_t ElementSize, MDNode *TBAATag = nullptr,
+      MDNode *TBAAStructTag = nullptr, MDNode *ScopeTag = nullptr,
+      MDNode *NoAliasTag = nullptr) {
     return CreateElementUnorderedAtomicMemCpy(
-        Dst, Src, getInt64(Size), ElementSize, TBAATag, TBAAStructTag, ScopeTag,
-        NoAliasTag);
+        Dst, DstAlign, Src, SrcAlign, getInt64(Size), ElementSize, TBAATag,
+        TBAAStructTag, ScopeTag, NoAliasTag);
   }
 
   CallInst *CreateElementUnorderedAtomicMemCpy(
-      Value *Dst, Value *Src, Value *Size, uint32_t ElementSize,
-      MDNode *TBAATag = nullptr, MDNode *TBAAStructTag = nullptr,
-      MDNode *ScopeTag = nullptr, MDNode *NoAliasTag = nullptr);
+      Value *Dst, unsigned DstAlign, Value *Src, unsigned SrcAlign, Value *Size,
+      uint32_t ElementSize, MDNode *TBAATag = nullptr,
+      MDNode *TBAAStructTag = nullptr, MDNode *ScopeTag = nullptr,
+      MDNode *NoAliasTag = nullptr);
 
   /// \brief Create and insert a memmove between the specified
   /// pointers.

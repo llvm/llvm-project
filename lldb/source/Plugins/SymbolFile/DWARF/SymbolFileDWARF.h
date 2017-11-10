@@ -396,10 +396,6 @@ protected:
       const DWARFDIE &die, const lldb_private::ConstString &type_name,
       bool must_be_implementation);
 
-  lldb::TypeSP
-  FindCompleteObjCDefinitionType(const lldb_private::ConstString &type_name,
-                                 bool header_definition_ok);
-
   lldb_private::Symbol *
   GetObjCClassSymbol(const lldb_private::ConstString &objc_class_name);
 

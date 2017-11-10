@@ -348,6 +348,13 @@ TEST_F(UsingDeclarationsSorterTest, SortsPartialRangeOfUsingDeclarations) {
                                   {tooling::Range(19, 1)}));
 }
 
+TEST_F(UsingDeclarationsSorterTest, SortsUsingDeclarationsWithLeadingkComments) {
+  EXPECT_EQ("/* comment */ using a;\n"
+            "/* comment */ using b;",
+            sortUsingDeclarations("/* comment */ using b;\n"
+                                  "/* comment */ using a;"));
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang

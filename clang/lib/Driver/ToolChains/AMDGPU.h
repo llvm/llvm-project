@@ -19,7 +19,6 @@
 namespace clang {
 namespace driver {
 namespace tools {
-
 namespace amdgpu {
 
 class LLVM_LIBRARY_VISIBILITY Linker : public GnuTool {
@@ -32,6 +31,9 @@ public:
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
+
+void getAMDGPUTargetFeatures(const Driver &D, const llvm::opt::ArgList &Args,
+                             std::vector<StringRef> &Features);
 
 } // end namespace amdgpu
 } // end namespace tools

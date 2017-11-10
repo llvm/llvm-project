@@ -6,10 +6,14 @@ from clang.cindex import TranslationUnit
 from .util import get_cursor
 from .util import get_tu
 
-def test_access_specifiers():
-    """Ensure that C++ access specifiers are available on cursors"""
+import unittest
 
-    tu = get_tu("""
+
+class TestAccessSpecifiers(unittest.TestCase):
+    def test_access_specifiers(self):
+        """Ensure that C++ access specifiers are available on cursors"""
+
+        tu = get_tu("""
 class test_class {
 public:
   void public_member_function();
@@ -20,15 +24,14 @@ private:
 };
 """, lang = 'cpp')
 
-    test_class = get_cursor(tu, "test_class")
-    assert test_class.access_specifier == AccessSpecifier.INVALID;
+        test_class = get_cursor(tu, "test_class")
+        self.assertEqual(test_class.access_specifier, AccessSpecifier.INVALID)
 
-    public = get_cursor(tu.cursor, "public_member_function")
-    assert public.access_specifier == AccessSpecifier.PUBLIC
+        public = get_cursor(tu.cursor, "public_member_function")
+        self.assertEqual(public.access_specifier, AccessSpecifier.PUBLIC)
 
-    protected = get_cursor(tu.cursor, "protected_member_function")
-    assert protected.access_specifier == AccessSpecifier.PROTECTED
+        protected = get_cursor(tu.cursor, "protected_member_function")
+        self.assertEqual(protected.access_specifier, AccessSpecifier.PROTECTED)
 
-    private = get_cursor(tu.cursor, "private_member_function")
-    assert private.access_specifier == AccessSpecifier.PRIVATE
-
+        private = get_cursor(tu.cursor, "private_member_function")
+        self.assertEqual(private.access_specifier, AccessSpecifier.PRIVATE)

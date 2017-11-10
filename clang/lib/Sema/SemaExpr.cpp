@@ -14352,8 +14352,13 @@ static bool captureInCapturedRegion(CapturedRegionScopeInfo *RSI,
   bool ByRef = true;
   // Using an LValue reference type is consistent with Lambdas (see below).
   if (S.getLangOpts().OpenMP && RSI->CapRegionKind == CR_OpenMP) {
-    if (S.IsOpenMPCapturedDecl(Var))
+    if (S.IsOpenMPCapturedDecl(Var)) {
+      bool HasConst = DeclRefType.isConstQualified();
       DeclRefType = DeclRefType.getUnqualifiedType();
+      // Don't lose diagnostics about assignments to const.
+      if (HasConst)
+        DeclRefType.addConst();
+    }
     ByRef = S.IsOpenMPCapturedByRef(Var, RSI->OpenMPLevel);
   }
 
