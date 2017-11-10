@@ -1291,14 +1291,18 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
       if (translate(Inst))
         continue;
 
-      std::string InstStrStorage;
-      raw_string_ostream InstStr(InstStrStorage);
-      InstStr << Inst;
-
       OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
                                  Inst.getDebugLoc(), &BB);
-      R << "unable to translate instruction: " << ore::NV("Opcode", &Inst)
-        << ": '" << InstStr.str() << "'";
+      R << "unable to translate instruction: " << ore::NV("Opcode", &Inst);
+
+      if (ORE->allowExtraAnalysis("gisel-irtranslator")) {
+        std::string InstStrStorage;
+        raw_string_ostream InstStr(InstStrStorage);
+        InstStr << Inst;
+
+        R << ": '" << InstStr.str() << "'";
+      }
+
       reportTranslationError(*MF, *TPC, *ORE, R);
       return false;
     }
