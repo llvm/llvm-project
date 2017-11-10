@@ -164,6 +164,9 @@ void X86LegalizerInfo::setLegalizerInfoSSE1() {
   for (unsigned MemOp : {G_LOAD, G_STORE})
     for (auto Ty : {v4s32, v2s64})
       setAction({MemOp, Ty}, Legal);
+
+  // Constants
+  setAction({TargetOpcode::G_FCONSTANT, s32}, Legal);
 }
 
 void X86LegalizerInfo::setLegalizerInfoSSE2() {
@@ -189,6 +192,9 @@ void X86LegalizerInfo::setLegalizerInfoSSE2() {
 
   setAction({G_FPEXT, s64}, Legal);
   setAction({G_FPEXT, 1, s32}, Legal);
+
+  // Constants
+  setAction({TargetOpcode::G_FCONSTANT, s64}, Legal);
 }
 
 void X86LegalizerInfo::setLegalizerInfoSSE41() {

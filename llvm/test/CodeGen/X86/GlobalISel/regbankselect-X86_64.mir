@@ -237,6 +237,10 @@
     ret double %conv
   }
 
+  define void @test_fconstant() {
+    ret void
+  }
+
 ...
 ---
 name:            test_add_i8
@@ -1410,5 +1414,20 @@ body:             |
     %xmm0 = COPY %1(s64)
     RET 0, implicit %xmm0
 
+...
+---
+name:            test_fconstant
+# ALL-LABEL: name:            test_fconstant
+legalized:       true
+# CHECK:       registers:
+# CHECK-NEXT:    - { id: 0, class: vecr, preferred-register: '' }
+# CHECK-NEXT:    - { id: 1, class: vecr, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body: |
+  bb.0:
+    %0(s32) = G_FCONSTANT float 1.0
+    %1(s64) = G_FCONSTANT double 2.0
 ...
 
