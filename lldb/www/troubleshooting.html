@@ -79,6 +79,22 @@
 0
 </tt></pre></code>
                         <p> Above we can see that "/tmp/a.out" does have a compile unit, and "/usr/lib/dyld" does not.
+                        <p> We can also list the full paths to all compile units for a module using python:
+<code><pre><tt>
+(lldb) <b>script</b>
+Python Interactive Interpreter. To exit, type 'quit()', 'exit()' or Ctrl-D.
+>>> <b>m = lldb.target.module['a.out']</b>
+>>> <b>for i in range(m.GetNumCompileUnits()):</b>
+...   <b>cu = m.GetCompileUnitAtIndex(i).file.fullpath</b>
+/tmp/main.c
+/tmp/foo.c
+/tmp/bar.c
+>>>
+</tt></pre></code>
+                        <p> This can help to show the actual full path to the source files. Sometimes IDEs will set breakpoints by full paths where the path doesn't match the full path in the debug info and this can cause LLDB to not resolve breakpoints. You can use the breakpoint list command with the --verbose option to see the full paths for any source file and line breakpoints that the IDE set using:
+<code><pre><tt>
+(lldb) <b>breakpoint list --verbose</b>
+</tt></pre></code>
                     </div>
                 <div class="postfooter"></div>
             </div>

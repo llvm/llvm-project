@@ -386,8 +386,7 @@ let isReMaterializable = 1, isAsCheapAsAMove = 1, canFoldAsLoad = 1,
 
 multiclass sse12_move_rr<SDNode OpNode, ValueType vt,
                          X86MemOperand x86memop, string base_opc,
-                         string asm_opr, Domain d = GenericDomain,
-                         string Name> {
+                         string asm_opr, Domain d, string Name> {
   let isCommutable = 1 in
   def rr : SI<0x10, MRMSrcReg, (outs VR128:$dst),
               (ins VR128:$src1, VR128:$src2),
@@ -406,7 +405,7 @@ multiclass sse12_move_rr<SDNode OpNode, ValueType vt,
 
 multiclass sse12_move<RegisterClass RC, SDNode OpNode, ValueType vt,
                       X86MemOperand x86memop, string OpcodeStr,
-                      Domain d = GenericDomain, string Name> {
+                      Domain d, string Name> {
   // AVX
   defm V#NAME : sse12_move_rr<OpNode, vt, x86memop, OpcodeStr,
                               "\t{$src2, $src1, $dst|$dst, $src1, $src2}", d,
@@ -431,8 +430,7 @@ multiclass sse12_move<RegisterClass RC, SDNode OpNode, ValueType vt,
 
 // Loading from memory automatically zeroing upper bits.
 multiclass sse12_move_rm<RegisterClass RC, X86MemOperand x86memop,
-                         PatFrag mem_pat, string OpcodeStr,
-                         Domain d = GenericDomain> {
+                         PatFrag mem_pat, string OpcodeStr, Domain d> {
   def V#NAME#rm : SI<0x10, MRMSrcMem, (outs RC:$dst), (ins x86memop:$src),
                      !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
                      [(set RC:$dst, (mem_pat addr:$src))],
@@ -5831,7 +5829,7 @@ let ExeDomain = SSEPackedDouble in {
 
 multiclass avx_fp_unop_rm<bits<8> opcss, bits<8> opcsd,
                           string OpcodeStr> {
-let ExeDomain = GenericDomain, hasSideEffects = 0 in {
+let ExeDomain = SSEPackedSingle, hasSideEffects = 0 in {
   def SSr : SS4AIi8<opcss, MRMSrcReg,
         (outs FR32:$dst), (ins FR32:$src1, FR32:$src2, i32u8imm:$src3),
         !strconcat(OpcodeStr,
@@ -5844,7 +5842,9 @@ let ExeDomain = GenericDomain, hasSideEffects = 0 in {
         !strconcat(OpcodeStr,
              "ss\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
         []>, Sched<[WriteFAddLd, ReadAfterLd]>;
+} // ExeDomain = SSEPackedSingle, hasSideEffects = 0
 
+let ExeDomain = SSEPackedDouble, hasSideEffects = 0 in {
   def SDr : SS4AIi8<opcsd, MRMSrcReg,
         (outs FR64:$dst), (ins FR64:$src1, FR64:$src2, i32u8imm:$src3),
         !strconcat(OpcodeStr,
@@ -5857,12 +5857,12 @@ let ExeDomain = GenericDomain, hasSideEffects = 0 in {
         !strconcat(OpcodeStr,
              "sd\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
         []>, Sched<[WriteFAddLd, ReadAfterLd]>;
-} // ExeDomain = GenericDomain, hasSideEffects = 0
+} // ExeDomain = SSEPackedDouble, hasSideEffects = 0
 }
 
 multiclass sse41_fp_unop_s<bits<8> opcss, bits<8> opcsd,
                            string OpcodeStr> {
-let ExeDomain = GenericDomain, hasSideEffects = 0 in {
+let ExeDomain = SSEPackedSingle, hasSideEffects = 0 in {
   def SSr : SS4AIi8<opcss, MRMSrcReg,
                     (outs FR32:$dst), (ins FR32:$src1, i32u8imm:$src2),
                     !strconcat(OpcodeStr,
@@ -5875,7 +5875,9 @@ let ExeDomain = GenericDomain, hasSideEffects = 0 in {
                     !strconcat(OpcodeStr,
                                "ss\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
                     []>, Sched<[WriteFAddLd, ReadAfterLd]>;
+} // ExeDomain = SSEPackedSingle, hasSideEffects = 0
 
+let ExeDomain = SSEPackedDouble, hasSideEffects = 0 in {
   def SDr : SS4AIi8<opcsd, MRMSrcReg,
                     (outs FR64:$dst), (ins FR64:$src1, i32u8imm:$src2),
                     !strconcat(OpcodeStr,
@@ -5888,14 +5890,14 @@ let ExeDomain = GenericDomain, hasSideEffects = 0 in {
                     !strconcat(OpcodeStr,
                                "sd\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
                     []>, Sched<[WriteFAddLd, ReadAfterLd]>;
-} // ExeDomain = GenericDomain, hasSideEffects = 0
+} // ExeDomain = SSEPackedDouble, hasSideEffects = 0
 }
 
 multiclass sse41_fp_binop_s<bits<8> opcss, bits<8> opcsd,
                             string OpcodeStr,
                             Intrinsic F32Int,
                             Intrinsic F64Int, bit Is2Addr = 1> {
-let ExeDomain = GenericDomain, isCodeGenOnly = 1 in {
+let ExeDomain = SSEPackedSingle, isCodeGenOnly = 1 in {
   def SSr_Int : SS4AIi8<opcss, MRMSrcReg,
         (outs VR128:$dst), (ins VR128:$src1, VR128:$src2, i32u8imm:$src3),
         !if(Is2Addr,
@@ -5916,7 +5918,9 @@ let ExeDomain = GenericDomain, isCodeGenOnly = 1 in {
         [(set VR128:$dst,
              (F32Int VR128:$src1, sse_load_f32:$src2, imm:$src3))]>,
         Sched<[WriteFAddLd, ReadAfterLd]>;
+} // ExeDomain = SSEPackedSingle, isCodeGenOnly = 1
 
+let ExeDomain = SSEPackedDouble, isCodeGenOnly = 1 in {
   def SDr_Int : SS4AIi8<opcsd, MRMSrcReg,
         (outs VR128:$dst), (ins VR128:$src1, VR128:$src2, i32u8imm:$src3),
         !if(Is2Addr,
@@ -5937,7 +5941,7 @@ let ExeDomain = GenericDomain, isCodeGenOnly = 1 in {
         [(set VR128:$dst,
               (F64Int VR128:$src1, sse_load_f64:$src2, imm:$src3))]>,
         Sched<[WriteFAddLd, ReadAfterLd]>;
-} // ExeDomain = GenericDomain, isCodeGenOnly = 1
+} // ExeDomain = SSEPackedDouble, isCodeGenOnly = 1
 }
 
 // FP round - roundss, roundps, roundsd, roundpd

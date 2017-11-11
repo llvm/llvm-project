@@ -105,9 +105,10 @@ unsigned struct_msqid_ds_sz = sizeof(struct msqid_ds);
 unsigned struct_mq_attr_sz = sizeof(struct mq_attr);
 unsigned struct_statvfs_sz = sizeof(struct statvfs);
 
-uptr sig_ign = (uptr)SIG_IGN;
-uptr sig_dfl = (uptr)SIG_DFL;
-uptr sa_siginfo = (uptr)SA_SIGINFO;
+const uptr sig_ign = SIG_IGN;
+const uptr sig_dfl = (uptr)SIG_DFL;
+const uptr sig_err = (uptr)SIG_ERR;
+const uptr sa_siginfo = (uptr)SA_SIGINFO;
 
 int shmctl_ipc_stat = (int)IPC_STAT;
 

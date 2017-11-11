@@ -1590,6 +1590,9 @@ StmtProfiler::VisitLambdaExpr(const LambdaExpr *S) {
   for (LambdaExpr::capture_iterator C = S->explicit_capture_begin(),
                                  CEnd = S->explicit_capture_end();
        C != CEnd; ++C) {
+    if (C->capturesVLAType())
+      continue;
+
     ID.AddInteger(C->getCaptureKind());
     switch (C->getCaptureKind()) {
     case LCK_StarThis:

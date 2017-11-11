@@ -25,6 +25,7 @@
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
 #include <array>
+#include <functional>
 #include <map>
 #include <set>
 #include <vector>
@@ -780,6 +781,7 @@ public:
   const std::vector<TreePatternNode*> &getTrees() const { return Trees; }
   unsigned getNumTrees() const { return Trees.size(); }
   TreePatternNode *getTree(unsigned i) const { return Trees[i]; }
+  void setTree(unsigned i, TreePatternNode *Tree) { Trees[i] = Tree; }
   TreePatternNode *getOnlyTree() const {
     assert(Trees.size() == 1 && "Doesn't have exactly one pattern!");
     return Trees[0];
@@ -1029,8 +1031,12 @@ class CodeGenDAGPatterns {
 
   TypeSetByHwMode LegalVTS;
 
+  using PatternRewriterFn = std::function<void (TreePattern *)>;
+  PatternRewriterFn PatternRewriter;
+
 public:
-  CodeGenDAGPatterns(RecordKeeper &R);
+  CodeGenDAGPatterns(RecordKeeper &R,
+                     PatternRewriterFn PatternRewriter = nullptr);
 
   CodeGenTarget &getTargetInfo() { return Target; }
   const CodeGenTarget &getTargetInfo() const { return Target; }

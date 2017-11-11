@@ -89,9 +89,11 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 
 // CHECK-LABEL: // LLT Objects.
 // CHECK-NEXT:  enum {
+// CHECK-NEXT:    GILLT_s16,
 // CHECK-NEXT:    GILLT_s32,
 // CHECK-NEXT:  }
 // CHECK-NEXT:  const static LLT TypeObjects[] = {
+// CHECK-NEXT:    LLT::scalar(16),
 // CHECK-NEXT:    LLT::scalar(32),
 // CHECK-NEXT:  };
 
@@ -845,9 +847,43 @@ def MOVfpimmz : I<(outs FPR32:$dst), (ins f32imm:$imm), [(set FPR32:$dst, fpimmz
 
 def LOAD : I<(outs GPR32:$dst), (ins GPR32:$src1),
             [(set GPR32:$dst, (load GPR32:$src1))]>;
-//===- Test a pattern with an MBB operand. --------------------------------===//
+
+//===- Test a simple pattern with a sextload -------------------------------===//
 
 // CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 23*/ [[LABEL:[0-9]+]],
+// CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
+// CHECK-NEXT:    GIM_RecordInsn, /*DefineMI*/1, /*MI*/0, /*OpIdx*/1, // MIs[1]
+// CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/1, /*Expected*/2,
+// CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_SEXT,
+// CHECK-NEXT:    // MIs[0] dst
+// CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
+// CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::GPR32RegClassID,
+// CHECK-NEXT:    // MIs[0] Operand 1
+// CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/1, /*Type*/GILLT_s16,
+// CHECK-NEXT:    GIM_CheckOpcode, /*MI*/1, TargetOpcode::G_LOAD,
+// CHECK-NEXT:    GIM_CheckNonAtomic, /*MI*/1,
+// CHECK-NEXT:    // MIs[1] Operand 0
+// CHECK-NEXT:    GIM_CheckType, /*MI*/1, /*Op*/0, /*Type*/GILLT_s16,
+// CHECK-NEXT:    // MIs[1] src1
+// CHECK-NEXT:    GIM_CheckPointerToAny, /*MI*/1, /*Op*/1, /*SizeInBits*/32,
+// CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/1, /*Op*/1, /*RC*/MyTarget::GPR32RegClassID,
+// CHECK-NEXT:    GIM_CheckIsSafeToFold, /*InsnID*/1,
+// CHECK-NEXT:    // (sext:{ *:[i32] } (ld:{ *:[i16] } GPR32:{ *:[i32] }:$src1)<<P:Predicate_unindexedload>>)  =>  (SEXTLOAD:{ *:[i32] } GPR32:{ *:[i32] }:$src1)
+// CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::SEXTLOAD,
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/1, // src1
+// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0, /*MergeInsnID's*/0, 1, GIU_MergeMemOperands_EndOfList,
+// CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
+// CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_Done,
+// CHECK-NEXT:  // Label 23: @[[LABEL]]
+
+def SEXTLOAD : I<(outs GPR32:$dst), (ins GPR32:$src1),
+                 [(set GPR32:$dst, (sextloadi16 GPR32:$src1))]>;
+
+//===- Test a pattern with an MBB operand. --------------------------------===//
+
+// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 24*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/1,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_BR,
 // CHECK-NEXT:    // MIs[0] target
@@ -856,7 +892,7 @@ def LOAD : I<(outs GPR32:$dst), (ins GPR32:$src1),
 // CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/MyTarget::BR,
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
-// CHECK-NEXT:  // Label 23: @[[LABEL]]
+// CHECK-NEXT:  // Label 24: @[[LABEL]]
 
 def BR : I<(outs), (ins unknown:$target),
             [(br bb:$target)]>;
