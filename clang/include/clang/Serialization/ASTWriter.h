@@ -1,4 +1,4 @@
-//===--- ASTWriter.h - AST File Writer --------------------------*- C++ -*-===//
+//===- ASTWriter.h - AST File Writer ----------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,67 +11,89 @@
 //  containing a serialized representation of a translation unit.
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef LLVM_CLANG_SERIALIZATION_ASTWRITER_H
 #define LLVM_CLANG_SERIALIZATION_ASTWRITER_H
 
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclarationName.h"
+#include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/TemplateBase.h"
+#include "clang/AST/TemplateName.h"
+#include "clang/AST/Type.h"
+#include "clang/AST/TypeLoc.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Sema/SemaConsumer.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ASTDeserializationListener.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Bitcode/BitstreamWriter.h"
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <ctime>
+#include <memory>
 #include <queue>
+#include <string>
+#include <utility>
 #include <vector>
 
 namespace llvm {
-  class APFloat;
-  class APInt;
-}
+
+class APFloat;
+class APInt;
+class APSInt;
+
+} // namespace llvm
 
 namespace clang {
 
-class DeclarationName;
 class ASTContext;
+class ASTReader;
+class ASTUnresolvedSet;
 class Attr;
-class NestedNameSpecifier;
 class CXXBaseSpecifier;
 class CXXCtorInitializer;
+class CXXRecordDecl;
+class CXXTemporary;
 class FileEntry;
 class FPOptions;
+class FunctionDecl;
 class HeaderSearch;
 class HeaderSearchOptions;
 class IdentifierResolver;
+class LangOptions;
 class MacroDefinitionRecord;
-class MacroDirective;
 class MacroInfo;
-class OpaqueValueExpr;
-class OpenCLOptions;
-class ASTReader;
 class MemoryBufferCache;
 class Module;
 class ModuleFileExtension;
 class ModuleFileExtensionWriter;
-class PreprocessedEntity;
+class NamedDecl;
+class NestedNameSpecifier;
+class ObjCInterfaceDecl;
 class PreprocessingRecord;
 class Preprocessor;
+struct QualifierInfo;
 class RecordDecl;
 class Sema;
 class SourceManager;
+class Stmt;
 struct StoredDeclsList;
 class SwitchCase;
-class TargetInfo;
+class TemplateParameterList;
 class Token;
+class TypeSourceInfo;
 class VersionTuple;
-class ASTUnresolvedSet;
-
-namespace SrcMgr { class SLocEntry; }
 
 /// \brief Writes an AST file containing the contents of a translation unit.
 ///
@@ -82,14 +104,15 @@ namespace SrcMgr { class SLocEntry; }
 class ASTWriter : public ASTDeserializationListener,
                   public ASTMutationListener {
 public:
-  typedef SmallVector<uint64_t, 64> RecordData;
-  typedef SmallVectorImpl<uint64_t> RecordDataImpl;
-  typedef ArrayRef<uint64_t> RecordDataRef;
-
   friend class ASTDeclWriter;
+  friend class ASTRecordWriter;
   friend class ASTStmtWriter;
   friend class ASTTypeWriter;
-  friend class ASTRecordWriter;
+
+  using RecordData = SmallVector<uint64_t, 64>;
+  using RecordDataImpl = SmallVectorImpl<uint64_t>;
+  using RecordDataRef = ArrayRef<uint64_t>;
+
 private:
   /// \brief Map that provides the ID numbers of each type within the
   /// output stream, plus those deserialized from a chained PCH.
@@ -100,9 +123,8 @@ private:
   /// allow for the const/volatile qualifiers.
   ///
   /// Keys in the map never have const/volatile qualifiers.
-  typedef llvm::DenseMap<QualType, serialization::TypeIdx,
-                         serialization::UnsafeQualTypeDenseMapInfo>
-    TypeIdxMap;
+  using TypeIdxMap = llvm::DenseMap<QualType, serialization::TypeIdx,
+                                    serialization::UnsafeQualTypeDenseMapInfo>;
 
   /// \brief The bitstream writer used to emit this precompiled header.
   llvm::BitstreamWriter &Stream;
@@ -152,8 +174,8 @@ private:
   /// \brief Stores a declaration or a type to be written to the AST file.
   class DeclOrType {
   public:
-    DeclOrType(Decl *D) : Stored(D), IsType(false) { }
-    DeclOrType(QualType T) : Stored(T.getAsOpaquePtr()), IsType(true) { }
+    DeclOrType(Decl *D) : Stored(D), IsType(false) {}
+    DeclOrType(QualType T) : Stored(T.getAsOpaquePtr()), IsType(true) {}
 
     bool isType() const { return IsType; }
     bool isDecl() const { return !IsType; }
@@ -195,15 +217,16 @@ private:
   std::vector<serialization::DeclOffset> DeclOffsets;
 
   /// \brief Sorted (by file offset) vector of pairs of file offset/DeclID.
-  typedef SmallVector<std::pair<unsigned, serialization::DeclID>, 64>
-    LocDeclIDsTy;
+  using LocDeclIDsTy =
+      SmallVector<std::pair<unsigned, serialization::DeclID>, 64>;
   struct DeclIDInFileInfo {
     LocDeclIDsTy DeclIDs;
+
     /// \brief Set when the DeclIDs vectors from all files are joined, this
     /// indicates the index that this particular vector has in the global one.
     unsigned FirstDeclIndex;
   };
-  typedef llvm::DenseMap<FileID, DeclIDInFileInfo *> FileDeclIDsTy;
+  using FileDeclIDsTy = llvm::DenseMap<FileID, DeclIDInFileInfo *>;
 
   /// \brief Map from file SLocEntries to info about the file-level declarations
   /// that it contains.
@@ -260,6 +283,7 @@ private:
     MacroInfo *MI;
     serialization::MacroID ID;
   };
+
   /// \brief The macro infos to emit.
   std::vector<MacroInfoToEmitData> MacroInfosToEmit;
 
@@ -331,31 +355,33 @@ private:
         : Kind(Kind), Type(Type.getAsOpaquePtr()) {}
     DeclUpdate(unsigned Kind, SourceLocation Loc)
         : Kind(Kind), Loc(Loc.getRawEncoding()) {}
-    DeclUpdate(unsigned Kind, unsigned Val)
-        : Kind(Kind), Val(Val) {}
-    DeclUpdate(unsigned Kind, Module *M)
-          : Kind(Kind), Mod(M) {}
+    DeclUpdate(unsigned Kind, unsigned Val) : Kind(Kind), Val(Val) {}
+    DeclUpdate(unsigned Kind, Module *M) : Kind(Kind), Mod(M) {}
     DeclUpdate(unsigned Kind, const Attr *Attribute)
           : Kind(Kind), Attribute(Attribute) {}
 
     unsigned getKind() const { return Kind; }
     const Decl *getDecl() const { return Dcl; }
     QualType getType() const { return QualType::getFromOpaquePtr(Type); }
+
     SourceLocation getLoc() const {
       return SourceLocation::getFromRawEncoding(Loc);
     }
+
     unsigned getNumber() const { return Val; }
     Module *getModule() const { return Mod; }
     const Attr *getAttr() const { return Attribute; }
   };
 
-  typedef SmallVector<DeclUpdate, 1> UpdateRecord;
-  typedef llvm::MapVector<const Decl *, UpdateRecord> DeclUpdateMap;
+  using UpdateRecord = SmallVector<DeclUpdate, 1>;
+  using DeclUpdateMap = llvm::MapVector<const Decl *, UpdateRecord>;
+
   /// \brief Mapping from declarations that came from a chained PCH to the
   /// record containing modifications to them.
   DeclUpdateMap DeclUpdates;
 
-  typedef llvm::DenseMap<Decl *, Decl *> FirstLatestDeclMap;
+  using FirstLatestDeclMap = llvm::DenseMap<Decl *, Decl *>;
+
   /// \brief Map of first declarations from a chained PCH that point to the
   /// most recent declarations in another PCH.
   FirstLatestDeclMap FirstLatestDecls;
@@ -600,7 +626,6 @@ public:
   /// \brief Emit a reference to a declaration.
   void AddDeclRef(const Decl *D, RecordDataImpl &Record);
 
-
   /// \brief Force a declaration to be emitted and get its ID.
   serialization::DeclID GetDeclRef(const Decl *D);
 
@@ -651,6 +676,7 @@ public:
   unsigned getTypeExtQualAbbrev() const {
     return TypeExtQualAbbrev;
   }
+
   unsigned getTypeFunctionProtoAbbrev() const {
     return TypeFunctionProtoAbbrev;
   }
@@ -757,8 +783,8 @@ public:
       : Writer(Parent.Writer), Record(&Record) {}
 
   /// Copying an ASTRecordWriter is almost certainly a bug.
-  ASTRecordWriter(const ASTRecordWriter&) = delete;
-  void operator=(const ASTRecordWriter&) = delete;
+  ASTRecordWriter(const ASTRecordWriter &) = delete;
+  ASTRecordWriter &operator=(const ASTRecordWriter &) = delete;
 
   /// \brief Extract the underlying record storage.
   ASTWriter::RecordDataImpl &getRecordData() const { return *Record; }
@@ -910,7 +936,7 @@ public:
   void AddUnresolvedSet(const ASTUnresolvedSet &Set);
 
   /// \brief Emit a CXXCtorInitializer array.
-  void AddCXXCtorInitializers(ArrayRef<CXXCtorInitializer*> CtorInits);
+  void AddCXXCtorInitializers(ArrayRef<CXXCtorInitializer *> CtorInits);
 
   void AddCXXDefinitionData(const CXXRecordDecl *D);
 
@@ -956,6 +982,7 @@ public:
                ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
                bool AllowASTWithErrors = false, bool IncludeTimestamps = true);
   ~PCHGenerator() override;
+
   void InitializeSema(Sema &S) override { SemaPtr = &S; }
   void HandleTranslationUnit(ASTContext &Ctx) override;
   ASTMutationListener *GetASTMutationListener() override;
@@ -963,6 +990,6 @@ public:
   bool hasEmittedPCH() const { return Buffer->IsComplete; }
 };
 
-} // end namespace clang
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_SERIALIZATION_ASTWRITER_H

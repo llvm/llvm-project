@@ -29,7 +29,7 @@ using namespace __sanitizer;
 #endif
 
 #if SANITIZER_INTERCEPT_BSD_SIGNAL
-INTERCEPTOR(void *, bsd_signal, int signum, uptr handler) {
+INTERCEPTOR(uptr, bsd_signal, int signum, uptr handler) {
   if (GetHandleSignalMode(signum) == kHandleSignalExclusive) return 0;
   SIGNAL_INTERCEPTOR_SIGNAL_IMPL(bsd_signal, signum, handler);
 }
@@ -39,8 +39,9 @@ INTERCEPTOR(void *, bsd_signal, int signum, uptr handler) {
 #endif  // SANITIZER_INTERCEPT_BSD_SIGNAL
 
 #if SANITIZER_INTERCEPT_SIGNAL_AND_SIGACTION
-INTERCEPTOR(void *, signal, int signum, uptr handler) {
-  if (GetHandleSignalMode(signum) == kHandleSignalExclusive) return nullptr;
+INTERCEPTOR(uptr, signal, int signum, uptr handler) {
+  if (GetHandleSignalMode(signum) == kHandleSignalExclusive)
+    return (uptr) nullptr;
   SIGNAL_INTERCEPTOR_SIGNAL_IMPL(signal, signum, handler);
 }
 #define INIT_SIGNAL COMMON_INTERCEPT_FUNCTION(signal)

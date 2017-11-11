@@ -253,7 +253,7 @@ For example:
                              feature disabled.
 
                              This feature is supported by the
-                             ``amdgcn`` architecture for GFX7-GFX9.
+                             ``amdgcn`` architecture for GFX8-GFX9.
      ============== ======== ==================================================
 
 .. _amdgpu-address-spaces:

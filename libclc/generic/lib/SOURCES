@@ -119,9 +119,15 @@ math/log2.cl
 math/logb.cl
 math/mad.cl
 math/modf.cl
+math/native_cos.cl
+math/native_exp.cl
+math/native_exp10.cl
+math/native_exp2.cl
 math/native_log.cl
 math/native_log10.cl
 math/native_log2.cl
+math/native_sin.cl
+math/native_sqrt.cl
 math/tables.cl
 math/clc_nextafter.cl
 math/nextafter.cl

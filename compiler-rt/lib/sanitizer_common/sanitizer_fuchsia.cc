@@ -191,6 +191,10 @@ uptr GetMaxUserVirtualAddress() {
   return ShadowBounds.memory_limit - 1;
 }
 
+uptr GetMaxVirtualAddress() {
+  return GetMaxUserVirtualAddress();
+}
+
 static void *DoAnonymousMmapOrDie(uptr size, const char *mem_type,
                                   bool raw_report, bool die_for_nomem) {
   size = RoundUpTo(size, PAGE_SIZE);
