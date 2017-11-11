@@ -1881,10 +1881,6 @@ private:
     if (EndLocation.isValid())
       setRangeEnd(EndLocation);
     IsExplicitSpecified = IsExplicit;
-
-    // IsCopyDeductionCandidate is a union variant member, so ensure it is the
-    // active member by storing to it.
-    IsCopyDeductionCandidate = false; 
   }
 
 public:

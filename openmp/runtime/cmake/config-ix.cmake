@@ -223,7 +223,7 @@ endif()
 
 # Check if OMPT support is available
 # Currently, __builtin_frame_address() is required for OMPT
-# Weak attribute is required for Unices, LIBPSAPI is used for Windows
+# Weak attribute is required for Unices (except Darwin), LIBPSAPI is used for Windows
 check_c_source_compiles("int main(int argc, char** argv) {
   void* p = __builtin_frame_address(0);
   return 0;}" LIBOMP_HAVE___BUILTIN_FRAME_ADDRESS)
@@ -238,7 +238,7 @@ endif()
 if(NOT LIBOMP_HAVE___BUILTIN_FRAME_ADDRESS)
   set(LIBOMP_HAVE_OMPT_SUPPORT FALSE)
 else()
-  if(LIBOMP_HAVE_WEAK_ATTRIBUTE OR LIBOMP_HAVE_PSAPI)
+  if((WIN32 AND LIBOMP_HAVE_PSAPI) OR APPLE OR (NOT WIN32 AND LIBOMP_HAVE_WEAK_ATTRIBUTE))
     set(LIBOMP_HAVE_OMPT_SUPPORT TRUE)
   else()
     set(LIBOMP_HAVE_OMPT_SUPPORT FALSE)

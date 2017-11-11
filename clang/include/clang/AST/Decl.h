@@ -1678,17 +1678,17 @@ private:
   /// skipped.
   unsigned HasSkippedBody : 1;
 
+  /// Indicates if the function declaration will have a body, once we're done
+  /// parsing it.
+  unsigned WillHaveBody : 1;
+
 protected:
-  // Since a Deduction Guide [C++17] will never have a body, we can share the
-  // storage, and use a different name.
-  union {
-    /// Indicates if the function declaration will have a body, once we're done
-    /// parsing it.
-    unsigned WillHaveBody : 1;
-    /// Indicates that the Deduction Guide is the implicitly generated 'copy
-    /// deduction candidate' (is used during overload resolution).
-    unsigned IsCopyDeductionCandidate : 1;
-  };
+  /// [C++17] Only used by CXXDeductionGuideDecl. Declared here to avoid
+  /// increasing the size of CXXDeductionGuideDecl by the size of an unsigned
+  /// int as opposed to adding a single bit to FunctionDecl.
+  /// Indicates that the Deduction Guide is the implicitly generated 'copy
+  /// deduction candidate' (is used during overload resolution).
+  unsigned IsCopyDeductionCandidate : 1;
 private:
   /// \brief End part of this FunctionDecl's source range.
   ///
@@ -1767,15 +1767,14 @@ protected:
         DeclContext(DK), redeclarable_base(C), ParamInfo(nullptr), Body(),
         SClass(S), IsInline(isInlineSpecified),
         IsInlineSpecified(isInlineSpecified), IsExplicitSpecified(false),
-        IsVirtualAsWritten(false), IsPure(false),
-        HasInheritedPrototype(false), HasWrittenPrototype(true),
-        IsDeleted(false), IsTrivial(false), IsDefaulted(false),
-        IsExplicitlyDefaulted(false), HasImplicitReturnZero(false),
-        IsLateTemplateParsed(false), IsConstexpr(isConstexprSpecified),
-        InstantiationIsPending(false),
+        IsVirtualAsWritten(false), IsPure(false), HasInheritedPrototype(false),
+        HasWrittenPrototype(true), IsDeleted(false), IsTrivial(false),
+        IsDefaulted(false), IsExplicitlyDefaulted(false),
+        HasImplicitReturnZero(false), IsLateTemplateParsed(false),
+        IsConstexpr(isConstexprSpecified), InstantiationIsPending(false),
         UsesSEHTry(false), HasSkippedBody(false), WillHaveBody(false),
-        EndRangeLoc(NameInfo.getEndLoc()), TemplateOrSpecialization(),
-        DNLoc(NameInfo.getInfo()) {}
+        IsCopyDeductionCandidate(false), EndRangeLoc(NameInfo.getEndLoc()),
+        TemplateOrSpecialization(), DNLoc(NameInfo.getInfo()) {}
 
   typedef Redeclarable<FunctionDecl> redeclarable_base;
   FunctionDecl *getNextRedeclarationImpl() override {
