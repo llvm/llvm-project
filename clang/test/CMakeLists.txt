@@ -88,6 +88,13 @@ set(CLANG_TEST_PARAMS
   clang_site_config=${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
   )
 
+if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/debuginfo-tests/CMakeLists.txt")
+  # This is a hack to keep existing build build infrastructure working while we
+  # can migrate to the new standard workflow of checking out debuginfo-tests into
+  # llvm/projects or using it in a mono-repo
+  add_subdirectory(debuginfo-tests)
+endif()
+
 if( NOT CLANG_BUILT_STANDALONE )
   list(APPEND CLANG_TEST_DEPS
     llvm-config

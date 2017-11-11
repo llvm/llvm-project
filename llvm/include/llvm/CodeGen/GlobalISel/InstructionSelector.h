@@ -364,7 +364,10 @@ protected:
   bool isBaseWithConstantOffset(const MachineOperand &Root,
                                 const MachineRegisterInfo &MRI) const;
 
-  bool isObviouslySafeToFold(MachineInstr &MI) const;
+  /// Return true if MI can obviously be folded into IntoMI.
+  /// MI and IntoMI do not need to be in the same basic blocks, but MI must
+  /// preceed IntoMI.
+  bool isObviouslySafeToFold(MachineInstr &MI, MachineInstr &IntoMI) const;
 };
 
 } // end namespace llvm

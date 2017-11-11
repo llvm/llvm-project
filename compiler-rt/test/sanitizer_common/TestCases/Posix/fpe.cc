@@ -1,12 +1,12 @@
 // Test the handle_sigfpe option.
-// RUN: %clang %s -o %t
+// RUN: %clangxx %s -o %t
 // RUN:                               not         %run %t 2>&1 | FileCheck --check-prefix=CHECK1 %s
 // RUN: %env_tool_opts=handle_sigfpe=0 not --crash %run %t 2>&1 | FileCheck --check-prefix=CHECK0 %s
 // RUN: %env_tool_opts=handle_sigfpe=1 not         %run %t 2>&1 | FileCheck --check-prefix=CHECK1 %s
+
 // FIXME: implement in other sanitizers, not just asan.
 // XFAIL: tsan
-// XFAIL: ubsan
-//
+
 // FIXME: seems to fail on ARM
 // REQUIRES: x86_64-target-arch
 #include <assert.h>
@@ -24,6 +24,9 @@ int main(int argc, char **argv) {
   volatile int sink;
   sink = one / zero;
 }
-// CHECK1: ERROR: {{.*}}Sanitizer:
+
+// CHECK0-NOT: Sanitizer:DEADLYSIGNAL
+// CHECK1: ERROR: {{.*}}Sanitizer: FPE
+// CHECK1: {{#[0-9]+.* main .*fpe\.cc}}:[[@LINE-5]]
 // CHECK1: DEATH CALLBACK
 // CHECK0-NOT: Sanitizer

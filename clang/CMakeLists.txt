@@ -232,6 +232,9 @@ if (NOT(CLANG_DEFAULT_RTLIB STREQUAL "" OR
     "Default runtime library to use (\"libgcc\" or \"compiler-rt\", empty for platform default)" FORCE)
 endif()
 
+set(CLANG_DEFAULT_OBJCOPY "objcopy" CACHE STRING
+  "Default objcopy executable to use.")
+
 set(CLANG_DEFAULT_OPENMP_RUNTIME "libomp" CACHE STRING
   "Default OpenMP runtime used by -fopenmp.")
 
@@ -534,8 +537,8 @@ if (CLANG_ENABLE_BOOTSTRAP)
     set(NEXT_CLANG_STAGE ${NEXT_CLANG_STAGE}-instrumented)
   endif()
   message(STATUS "Setting next clang stage to: ${NEXT_CLANG_STAGE}")
-  
-  
+
+
   set(STAMP_DIR ${CMAKE_CURRENT_BINARY_DIR}/${NEXT_CLANG_STAGE}-stamps/)
   set(BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/${NEXT_CLANG_STAGE}-bins/)
 

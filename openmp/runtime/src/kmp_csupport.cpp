@@ -1758,7 +1758,7 @@ void __kmpc_for_static_fini(ident_t *loc, kmp_int32 global_tid) {
 
 #if OMPT_SUPPORT && OMPT_OPTIONAL
   if (ompt_enabled.ompt_callback_work) {
-    ompt_work_type_t ompt_work_type;
+    ompt_work_type_t ompt_work_type = ompt_work_loop;
     ompt_team_info_t *team_info = __ompt_get_teaminfo(0, NULL);
     ompt_task_info_t *task_info = __ompt_get_task_info_object(0);
     // Determine workshare type
@@ -1770,8 +1770,8 @@ void __kmpc_for_static_fini(ident_t *loc, kmp_int32 global_tid) {
       } else if ((loc->flags & KMP_IDENT_WORK_DISTRIBUTE) != 0) {
         ompt_work_type = ompt_work_distribute;
       } else {
-        KMP_ASSERT2(0,
-                    "__kmpc_for_static_fini: can't determine workshare type");
+        // use default set above.
+        // a warning about this case is provided in __kmpc_for_static_init
       }
       KMP_DEBUG_ASSERT(ompt_work_type);
     }

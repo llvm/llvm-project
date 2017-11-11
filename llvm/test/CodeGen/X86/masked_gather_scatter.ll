@@ -2330,46 +2330,34 @@ declare <4 x i64> @llvm.masked.gather.v4i64.v4p0i64(<4 x i64*>, i32, <4 x i1>, <
 define <8 x i32> @test_global_array(<8 x i64> %indxs) {
 ; KNL_64-LABEL: test_global_array:
 ; KNL_64:       # BB#0:
-; KNL_64-NEXT:    vpsllq $2, %zmm0, %zmm0
 ; KNL_64-NEXT:    movl $glob_array, %eax
-; KNL_64-NEXT:    vpbroadcastq %rax, %zmm1
-; KNL_64-NEXT:    vpaddq %zmm0, %zmm1, %zmm1
 ; KNL_64-NEXT:    kxnorw %k0, %k0, %k1
-; KNL_64-NEXT:    vpgatherqd (,%zmm1), %ymm0 {%k1}
+; KNL_64-NEXT:    vpgatherqd (%rax,%zmm0,4), %ymm1 {%k1}
+; KNL_64-NEXT:    vmovdqa %ymm1, %ymm0
 ; KNL_64-NEXT:    retq
 ;
 ; KNL_32-LABEL: test_global_array:
 ; KNL_32:       # BB#0:
-; KNL_32-NEXT:    vpmovqd %zmm0, %ymm0
-; KNL_32-NEXT:    vpslld $2, %ymm0, %ymm0
 ; KNL_32-NEXT:    movl $glob_array, %eax
-; KNL_32-NEXT:    vmovd %eax, %xmm1
-; KNL_32-NEXT:    vpbroadcastd %xmm1, %ymm1
-; KNL_32-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
-; KNL_32-NEXT:    vpmovsxdq %ymm0, %zmm1
 ; KNL_32-NEXT:    kxnorw %k0, %k0, %k1
-; KNL_32-NEXT:    vpgatherqd (,%zmm1), %ymm0 {%k1}
+; KNL_32-NEXT:    vpgatherqd (%eax,%zmm0,4), %ymm1 {%k1}
+; KNL_32-NEXT:    vmovdqa %ymm1, %ymm0
 ; KNL_32-NEXT:    retl
 ;
 ; SKX-LABEL: test_global_array:
 ; SKX:       # BB#0:
-; SKX-NEXT:    vpsllq $2, %zmm0, %zmm0
 ; SKX-NEXT:    movl $glob_array, %eax
-; SKX-NEXT:    vpbroadcastq %rax, %zmm1
-; SKX-NEXT:    vpaddq %zmm0, %zmm1, %zmm1
 ; SKX-NEXT:    kxnorw %k0, %k0, %k1
-; SKX-NEXT:    vpgatherqd (,%zmm1), %ymm0 {%k1}
+; SKX-NEXT:    vpgatherqd (%rax,%zmm0,4), %ymm1 {%k1}
+; SKX-NEXT:    vmovdqa %ymm1, %ymm0
 ; SKX-NEXT:    retq
 ;
 ; SKX_32-LABEL: test_global_array:
 ; SKX_32:       # BB#0:
 ; SKX_32-NEXT:    movl $glob_array, %eax
-; SKX_32-NEXT:    vpbroadcastd %eax, %ymm1
-; SKX_32-NEXT:    vpmovqd %zmm0, %ymm0
-; SKX_32-NEXT:    vpslld $2, %ymm0, %ymm0
-; SKX_32-NEXT:    vpaddd %ymm0, %ymm1, %ymm1
 ; SKX_32-NEXT:    kxnorw %k0, %k0, %k1
-; SKX_32-NEXT:    vpgatherdd (,%ymm1), %ymm0 {%k1}
+; SKX_32-NEXT:    vpgatherqd (%eax,%zmm0,4), %ymm1 {%k1}
+; SKX_32-NEXT:    vmovdqa %ymm1, %ymm0
 ; SKX_32-NEXT:    retl
   %p = getelementptr inbounds [16 x i32], [16 x i32]* @glob_array, i64 0, <8 x i64> %indxs
   %g = call <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*> %p, i32 8, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)

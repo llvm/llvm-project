@@ -3871,7 +3871,7 @@ static bool getUniformBase(const Value* &Ptr, SDValue& Base, SDValue& Index,
 
   assert(Ptr->getType()->isVectorTy() && "Uexpected pointer type");
   const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Ptr);
-  if (!GEP || GEP->getNumOperands() > 2)
+  if (!GEP)
     return false;
 
   const Value *GEPPtr = GEP->getPointerOperand();
@@ -3880,7 +3880,15 @@ static bool getUniformBase(const Value* &Ptr, SDValue& Base, SDValue& Index,
   else if (!(Ptr = getSplatValue(GEPPtr)))
     return false;
 
-  Value *IndexVal = GEP->getOperand(1);
+  unsigned FinalIndex = GEP->getNumOperands() - 1;
+  Value *IndexVal = GEP->getOperand(FinalIndex);
+
+  // Ensure all the other indices are 0.
+  for (unsigned i = 1; i < FinalIndex; ++i) {
+    auto *C = dyn_cast<ConstantInt>(GEP->getOperand(i));
+    if (!C || !C->isZero())
+      return false;
+  }
 
   // The operands of the GEP may be defined in another basic block.
   // In this case we'll not find nodes for the operands.

@@ -27,7 +27,7 @@ struct MemoryMappingLayoutData {
   ModuleArch current_arch;
   u8 current_uuid[kModuleUUIDSize];
   int current_load_cmd_count;
-  char *current_load_cmd_addr;
+  const char *current_load_cmd_addr;
   bool current_instrumented;
 };
 
