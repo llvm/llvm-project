@@ -30,6 +30,9 @@
   define void @load_gep_32_s8_fpr(i8* %addr) { ret void }
 
   define void @load_v2s32(i64 *%addr) { ret void }
+
+  define void @sextload_s32_from_s16(i16 *%addr) { ret void }
+  define void @zextload_s32_from_s16(i16 *%addr) { ret void }
 ...
 
 ---
@@ -467,4 +470,41 @@ body:             |
     %0(p0) = COPY %x0
     %1(<2 x s32>) = G_LOAD %0 :: (load 8 from %ir.addr)
     %d0 = COPY %1(<2 x s32>)
+...
+---
+name:            sextload_s32_from_s16
+legalized:       true
+regBankSelected: true
+
+body:             |
+  bb.0:
+    liveins: %w0
+
+    ; CHECK-LABEL: name: sextload_s32_from_s16
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY %x0
+    ; CHECK: [[T0:%[0-9]+]]:gpr32 = LDRSHWui [[COPY]], 0 :: (load 2 from %ir.addr)
+    ; CHECK: %w0 = COPY [[T0]]
+    %0:gpr(p0) = COPY %x0
+    %1:gpr(s16) = G_LOAD %0 :: (load 2 from %ir.addr)
+    %2:gpr(s32) = G_SEXT %1
+    %w0 = COPY %2(s32)
+...
+
+---
+name:            zextload_s32_from_s16
+legalized:       true
+regBankSelected: true
+
+body:             |
+  bb.0:
+    liveins: %w0
+
+    ; CHECK-LABEL: name: zextload_s32_from_s16
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY %x0
+    ; CHECK: [[T0:%[0-9]+]]:gpr32 = LDRHHui [[COPY]], 0 :: (load 2 from %ir.addr)
+    ; CHECK: %w0 = COPY [[T0]]
+    %0:gpr(p0) = COPY %x0
+    %1:gpr(s16) = G_LOAD %0 :: (load 2 from %ir.addr)
+    %2:gpr(s32) = G_ZEXT %1
+    %w0 = COPY %2(s32)
 ...
