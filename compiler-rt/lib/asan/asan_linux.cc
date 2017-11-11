@@ -17,6 +17,7 @@
 
 #include "asan_interceptors.h"
 #include "asan_internal.h"
+#include "asan_premap_shadow.h"
 #include "asan_thread.h"
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_freebsd.h"
@@ -81,10 +82,37 @@ void *AsanDoesNotSupportStaticLinkage() {
   return &_DYNAMIC;  // defined in link.h
 }
 
+#if ASAN_PREMAP_SHADOW
 uptr FindDynamicShadowStart() {
-  UNREACHABLE("FindDynamicShadowStart is not available");
-  return 0;
+  uptr granularity = GetMmapGranularity();
+  uptr shadow_start = reinterpret_cast<uptr>(&__asan_shadow);
+  uptr shadow_size = PremapShadowSize();
+  UnmapOrDie((void *)(shadow_start - granularity), shadow_size + granularity);
+  // MmapNoAccess does not touch TotalMmap, but UnmapOrDie decreases it.
+  // Compensate.
+  IncreaseTotalMmap(shadow_size + granularity);
+  return shadow_start;
 }
+#else
+uptr FindDynamicShadowStart() {
+  uptr granularity = GetMmapGranularity();
+  uptr alignment = granularity * 8;
+  uptr left_padding = granularity;
+  uptr shadow_size = kHighShadowEnd + left_padding;
+  uptr map_size = shadow_size + alignment;
+
+  uptr map_start = (uptr)MmapNoAccess(map_size);
+  CHECK_NE(map_start, ~(uptr)0);
+
+  uptr shadow_start = RoundUpTo(map_start, alignment);
+  UnmapOrDie((void *)map_start, map_size);
+  // MmapNoAccess does not touch TotalMmap, but UnmapOrDie decreases it.
+  // Compensate.
+  IncreaseTotalMmap(map_size);
+
+  return shadow_start;
+}
+#endif
 
 void AsanApplyToGlobals(globals_op_fptr op, const void *needle) {
   UNIMPLEMENTED();

@@ -22,6 +22,9 @@ RUN: llvm-readobj -h -relocations %t | FileCheck %s -check-prefix=X64
 RUN: llvm-cvtres /machine:ARM /out:%t %p/Inputs/test_resource.res
 RUN: llvm-readobj -h -relocations %t | FileCheck %s -check-prefix=ARM
 
+RUN: llvm-cvtres /machine:ARM64 /out:%t %p/Inputs/test_resource.res
+RUN: llvm-readobj -h -relocations %t | FileCheck %s -check-prefix=ARM64
+
 X86:         Machine: IMAGE_FILE_MACHINE_I386 (0x14C)
 X86-DAG:   Relocations [
 X86-DAG:                 .rsrc$01 {
@@ -57,3 +60,15 @@ ARM-NEXT:      0x1D8 IMAGE_REL_ARM_ADDR32NB $R000698
 ARM-NEXT:      0x1F8 IMAGE_REL_ARM_ADDR32NB $R000708
 ARM-NEXT:      0x1B8 IMAGE_REL_ARM_ADDR32NB $R000720
 ARM-NEXT:      0x188 IMAGE_REL_ARM_ADDR32NB $R000750
+
+ARM64:       Machine: IMAGE_FILE_MACHINE_ARM64 (0xAA64)
+ARM64-DAG: Relocations [
+ARM64-DAG:               .rsrc$01 {
+ARM64-NEXT:    0x1E8 IMAGE_REL_ARM64_ADDR32NB $R000000
+ARM64-NEXT:    0x198 IMAGE_REL_ARM64_ADDR32NB $R000018
+ARM64-NEXT:    0x1A8 IMAGE_REL_ARM64_ADDR32NB $R000340
+ARM64-NEXT:    0x1C8 IMAGE_REL_ARM64_ADDR32NB $R000668
+ARM64-NEXT:    0x1D8 IMAGE_REL_ARM64_ADDR32NB $R000698
+ARM64-NEXT:    0x1F8 IMAGE_REL_ARM64_ADDR32NB $R000708
+ARM64-NEXT:    0x1B8 IMAGE_REL_ARM64_ADDR32NB $R000720
+ARM64-NEXT:    0x188 IMAGE_REL_ARM64_ADDR32NB $R000750

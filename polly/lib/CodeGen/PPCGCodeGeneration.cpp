@@ -1286,7 +1286,6 @@ void GPUNodeBuilder::createUser(__isl_take isl_ast_node *UserStmt) {
 
   isl_ast_expr_free(Expr);
   isl_ast_node_free(UserStmt);
-  return;
 }
 
 void GPUNodeBuilder::createFor(__isl_take isl_ast_node *Node) {

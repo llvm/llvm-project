@@ -29,6 +29,14 @@ bool GetRealFunctionAddress(const char *func_name, uptr *func_addr,
   if (internal_strcmp(func_name, "sigaction") == 0) func_name = "__sigaction14";
 #endif
   *func_addr = (uptr)dlsym(RTLD_NEXT, func_name);
+  if (!*func_addr) {
+    // If the lookup using RTLD_NEXT failed, the sanitizer runtime library is
+    // later in the library search order than the DSO that we are trying to
+    // intercept, which means that we cannot intercept this function. We still
+    // want the address of the real definition, though, so look it up using
+    // RTLD_DEFAULT.
+    *func_addr = (uptr)dlsym(RTLD_DEFAULT, func_name);
+  }
   return real == wrapper;
 }
 

@@ -1063,16 +1063,12 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
     if (StoreSize > TTI->getAtomicMemIntrinsicMaxElementSize())
       return false;
 
+    // Create the call.
+    // Note that unordered atomic loads/stores are *required* by the spec to
+    // have an alignment but non-atomic loads/stores may not.
     NewCall = Builder.CreateElementUnorderedAtomicMemCpy(
-        StoreBasePtr, LoadBasePtr, NumBytes, StoreSize);
-
-    // Propagate alignment info onto the pointer args. Note that unordered
-    // atomic loads/stores are *required* by the spec to have an alignment
-    // but non-atomic loads/stores may not.
-    NewCall->addParamAttr(0, Attribute::getWithAlignment(NewCall->getContext(),
-                                                         SI->getAlignment()));
-    NewCall->addParamAttr(1, Attribute::getWithAlignment(NewCall->getContext(),
-                                                         LI->getAlignment()));
+        StoreBasePtr, SI->getAlignment(), LoadBasePtr, LI->getAlignment(),
+        NumBytes, StoreSize);
   }
   NewCall->setDebugLoc(SI->getDebugLoc());
 
