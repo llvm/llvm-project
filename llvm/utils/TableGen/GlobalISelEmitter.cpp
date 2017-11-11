@@ -2356,6 +2356,9 @@ private:
   Expected<RuleMatcher> runOnPattern(const PatternToMatch &P);
 
   void declareSubtargetFeature(Record *Predicate);
+
+  TreePatternNode *fixupPatternNode(TreePatternNode *N);
+  void fixupPatternTrees(TreePattern *P);
 };
 
 void GlobalISelEmitter::gatherNodeEquivs() {
@@ -2377,8 +2380,8 @@ Record *GlobalISelEmitter::findNodeEquiv(Record *N) const {
 }
 
 GlobalISelEmitter::GlobalISelEmitter(RecordKeeper &RK)
-    : RK(RK), CGP(RK), Target(CGP.getTargetInfo()),
-      CGRegs(RK, Target.getHwModes()) {}
+    : RK(RK), CGP(RK, [&](TreePattern *P) { fixupPatternTrees(P); }),
+      Target(CGP.getTargetInfo()), CGRegs(RK, Target.getHwModes()) {}
 
 //===- Emitter ------------------------------------------------------------===//
 
@@ -3233,6 +3236,7 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
   // Look through the SelectionDAG patterns we found, possibly emitting some.
   for (const PatternToMatch &Pat : CGP.ptms()) {
     ++NumPatternTotal;
+
     auto MatcherOrErr = runOnPattern(Pat);
 
     // The pattern analysis can fail, indicating an unsupported pattern.
@@ -3481,6 +3485,75 @@ void GlobalISelEmitter::declareSubtargetFeature(Record *Predicate) {
   if (SubtargetFeatures.count(Predicate) == 0)
     SubtargetFeatures.emplace(
         Predicate, SubtargetFeatureInfo(Predicate, SubtargetFeatures.size()));
+}
+
+TreePatternNode *GlobalISelEmitter::fixupPatternNode(TreePatternNode *N) {
+  if (!N->isLeaf()) {
+    for (unsigned I = 0, E = N->getNumChildren(); I < E; ++I) {
+      TreePatternNode *OrigChild = N->getChild(I);
+      TreePatternNode *NewChild = fixupPatternNode(OrigChild);
+      if (OrigChild != NewChild)
+        N->setChild(I, NewChild);
+    }
+
+    if (N->getOperator()->getName() == "ld") {
+      // If it's a signext-load we need to adapt the pattern slightly. We need
+      // to split the node into (sext (ld ...)), remove the <<signext>> predicate,
+      // and then apply the <<signextTY>> predicate by updating the result type
+      // of the load.
+      //
+      // For example:
+      //   (ld:[i32] [iPTR])<<unindexed>><<signext>><<signexti16>>
+      // must be transformed into:
+      //   (sext:[i32] (ld:[i16] [iPTR])<<unindexed>>)
+      //
+      // Likewise for zeroext-load.
+
+      std::vector<TreePredicateFn> Predicates;
+      bool IsSignExtLoad = false;
+      bool IsZeroExtLoad = false;
+      Record *MemVT = nullptr;
+      for (const auto &P : N->getPredicateFns()) {
+        if (P.isLoad() && P.isSignExtLoad()) {
+          IsSignExtLoad = true;
+          continue;
+        }
+        if (P.isLoad() && P.isZeroExtLoad()) {
+          IsZeroExtLoad = true;
+          continue;
+        }
+        if (P.isLoad() && P.getMemoryVT()) {
+          MemVT = P.getMemoryVT();
+          continue;
+        }
+        Predicates.push_back(P);
+      }
+
+      if ((IsSignExtLoad || IsZeroExtLoad) && MemVT) {
+        assert(((IsSignExtLoad && !IsZeroExtLoad) ||
+                (!IsSignExtLoad && IsZeroExtLoad)) &&
+               "IsSignExtLoad and IsZeroExtLoad are mutually exclusive");
+        TreePatternNode *Ext = new TreePatternNode(
+            RK.getDef(IsSignExtLoad ? "sext" : "zext"), {N}, 1);
+        Ext->setType(0, N->getType(0));
+        N->clearPredicateFns();
+        N->setPredicateFns(Predicates);
+        N->setType(0, getValueType(MemVT));
+        return Ext;
+      }
+    }
+  }
+
+  return N;
+}
+
+void GlobalISelEmitter::fixupPatternTrees(TreePattern *P) {
+  for (unsigned I = 0, E = P->getNumTrees(); I < E; ++I) {
+    TreePatternNode *OrigTree = P->getTree(I);
+    TreePatternNode *NewTree = fixupPatternNode(OrigTree);
+    if (OrigTree != NewTree)
+      P->setTree(I, NewTree);
+  }
 }
 
 } // end anonymous namespace

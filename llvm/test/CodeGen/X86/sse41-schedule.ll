@@ -3107,7 +3107,7 @@ declare <4 x float> @llvm.x86.sse41.round.ps(<4 x float>, i32) nounwind readnone
 define <2 x double> @test_roundsd(<2 x double> %a0, <2 x double> %a1, <2 x double> *%a2) {
 ; GENERIC-LABEL: test_roundsd:
 ; GENERIC:       # BB#0:
-; GENERIC-NEXT:    movaps %xmm0, %xmm2 # sched: [1:1.00]
+; GENERIC-NEXT:    movapd %xmm0, %xmm2 # sched: [1:1.00]
 ; GENERIC-NEXT:    roundsd $7, %xmm1, %xmm2 # sched: [3:1.00]
 ; GENERIC-NEXT:    roundsd $7, (%rdi), %xmm0 # sched: [9:1.00]
 ; GENERIC-NEXT:    addpd %xmm2, %xmm0 # sched: [3:1.00]
@@ -3115,7 +3115,7 @@ define <2 x double> @test_roundsd(<2 x double> %a0, <2 x double> %a1, <2 x doubl
 ;
 ; SLM-LABEL: test_roundsd:
 ; SLM:       # BB#0:
-; SLM-NEXT:    movaps %xmm0, %xmm2 # sched: [1:1.00]
+; SLM-NEXT:    movapd %xmm0, %xmm2 # sched: [1:1.00]
 ; SLM-NEXT:    roundsd $7, (%rdi), %xmm0 # sched: [6:1.00]
 ; SLM-NEXT:    roundsd $7, %xmm1, %xmm2 # sched: [3:1.00]
 ; SLM-NEXT:    addpd %xmm2, %xmm0 # sched: [3:1.00]

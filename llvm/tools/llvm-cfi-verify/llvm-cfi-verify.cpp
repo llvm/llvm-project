@@ -18,6 +18,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lib/FileAnalysis.h"
+#include "lib/GraphBuilder.h"
 
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/CommandLine.h"
@@ -46,13 +47,15 @@ void printIndirectCFInstructions(FileAnalysis &Analysis,
   uint64_t ExpectedUnprotected = 0;
   uint64_t UnexpectedUnprotected = 0;
 
-  symbolize::LLVMSymbolizer &Symbolizer = Analysis.getSymbolizer();
   std::map<unsigned, uint64_t> BlameCounter;
 
   for (uint64_t Address : Analysis.getIndirectInstructions()) {
     const auto &InstrMeta = Analysis.getInstructionOrDie(Address);
+    GraphResult Graph = GraphBuilder::buildFlowGraph(Analysis, Address);
 
-    bool CFIProtected = Analysis.isIndirectInstructionCFIProtected(Address);
+    CFIProtectionStatus ProtectionStatus =
+        Analysis.validateCFIProtection(Graph);
+    bool CFIProtected = (ProtectionStatus == CFIProtectionStatus::PROTECTED);
 
     if (CFIProtected)
       outs() << "P ";
@@ -72,7 +75,7 @@ void printIndirectCFInstructions(FileAnalysis &Analysis,
       continue;
     }
 
-    auto InliningInfo = Symbolizer.symbolizeInlinedCode(InputFilename, Address);
+    auto InliningInfo = Analysis.symbolizeInlinedCode(Address);
     if (!InliningInfo || InliningInfo->getNumberOfFrames() == 0) {
       errs() << "Failed to symbolise " << format_hex(Address, 2)
              << " with line tables from " << InputFilename << "\n";

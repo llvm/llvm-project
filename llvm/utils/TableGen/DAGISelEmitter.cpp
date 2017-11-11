@@ -127,6 +127,16 @@ void DAGISelEmitter::run(raw_ostream &OS) {
      << "// *** instruction selector class.  These functions are really "
      << "methods.\n\n";
 
+  OS << "// If GET_DAGISEL_DECL is #defined with any value, only function\n"
+        "// declarations will be included when this file is included.\n"
+        "// If GET_DAGISEL_BODY is #defined, its value should be the name of\n"
+        "// the instruction selector class. Function bodies will be emitted\n"
+        "// and each function's name will be qualified with the name of the\n"
+        "// class.\n"
+        "//\n"
+        "// When neither of the GET_DAGISEL* macros is defined, the functions\n"
+        "// are emitted inline.\n\n";
+
   DEBUG(errs() << "\n\nALL PATTERNS TO MATCH:\n\n";
         for (CodeGenDAGPatterns::ptm_iterator I = CGP.ptm_begin(),
              E = CGP.ptm_end(); I != E; ++I) {

@@ -67,6 +67,40 @@ void llvm::handleExecNameEncodedBEOpts(StringRef ExecName) {
   cl::ParseCommandLineOptions(CLArgs.size(), CLArgs.data());
 }
 
+void llvm::handleExecNameEncodedOptimizerOpts(StringRef ExecName) {
+  // TODO: Refactor parts common with the 'handleExecNameEncodedBEOpts'
+  std::vector<std::string> Args{ExecName};
+
+  auto NameAndArgs = ExecName.split("--");
+  if (NameAndArgs.second.empty())
+    return;
+
+  SmallVector<StringRef, 4> Opts;
+  NameAndArgs.second.split(Opts, '-');
+  for (StringRef Opt : Opts) {
+    if (Opt.startswith("instcombine")) {
+      Args.push_back("-passes=instcombine");
+    } else if (Triple(Opt).getArch()) {
+      Args.push_back("-mtriple=" + Opt.str());
+    } else {
+      errs() << ExecName << ": Unknown option: " << Opt << ".\n";
+      exit(1);
+    }
+  }
+
+  errs() << NameAndArgs.first << ": Injected args:";
+  for (int I = 1, E = Args.size(); I < E; ++I)
+    errs() << " " << Args[I];
+  errs() << "\n";
+
+  std::vector<const char *> CLArgs;
+  CLArgs.reserve(Args.size());
+  for (std::string &S : Args)
+    CLArgs.push_back(S.c_str());
+
+  cl::ParseCommandLineOptions(CLArgs.size(), CLArgs.data());
+}
+
 int llvm::runFuzzerOnInputs(int ArgC, char *ArgV[], FuzzerTestFun TestOne,
                             FuzzerInitFun Init) {
   errs() << "*** This tool was not linked to libFuzzer.\n"
