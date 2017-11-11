@@ -40,7 +40,7 @@ namespace __sanitizer {
 struct MemoryMappedSegmentData {
   char name[kMaxSegName];
   uptr nsects;
-  char *current_load_cmd_addr;
+  const char *current_load_cmd_addr;
   u32 lc_type;
   uptr base_virt_addr;
   uptr addr_mask;
@@ -212,7 +212,7 @@ MemoryMappedSegmentData *seg_data, MemoryMappingLayoutData &layout_data) {
     if (seg_data) {
       seg_data->nsects = sc->nsects;
       seg_data->current_load_cmd_addr =
-          (char *)lc + sizeof(SegmentCommand);
+          (const char *)lc + sizeof(SegmentCommand);
       seg_data->lc_type = kLCSegment;
       seg_data->base_virt_addr = base_virt_addr;
       seg_data->addr_mask = addr_mask;
@@ -265,7 +265,7 @@ ModuleArch ModuleArchFromCpuType(cpu_type_t cputype, cpu_subtype_t cpusubtype) {
 }
 
 static const load_command *NextCommand(const load_command *lc) {
-  return (const load_command *)((char *)lc + lc->cmdsize);
+  return (const load_command *)((const char *)lc + lc->cmdsize);
 }
 
 static void FindUUID(const load_command *first_lc, u8 *uuid_output) {
@@ -309,12 +309,13 @@ bool MemoryMappingLayout::Next(MemoryMappedSegment *segment) {
       switch (data_.current_magic) {
 #ifdef MH_MAGIC_64
         case MH_MAGIC_64: {
-          data_.current_load_cmd_addr = (char *)hdr + sizeof(mach_header_64);
+          data_.current_load_cmd_addr =
+              (const char *)hdr + sizeof(mach_header_64);
           break;
         }
 #endif
         case MH_MAGIC: {
-          data_.current_load_cmd_addr = (char *)hdr + sizeof(mach_header);
+          data_.current_load_cmd_addr = (const char *)hdr + sizeof(mach_header);
           break;
         }
         default: {
