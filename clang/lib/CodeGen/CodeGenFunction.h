@@ -1785,9 +1785,6 @@ public:
   /// function instrumentation is enabled.
   void EmitFunctionInstrumentation(const char *Fn);
 
-  /// EmitMCountInstrumentation - Emit call to .mcount.
-  void EmitMCountInstrumentation();
-
   /// Encode an address into a form suitable for use in a function prologue.
   llvm::Constant *EncodeAddrForUseInPrologue(llvm::Function *F,
                                              llvm::Constant *Addr);
