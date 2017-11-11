@@ -15,14 +15,60 @@
 // CHECK-NEXT: movl $0x11010, %edx
 // CHECK-NEXT: movl $0x11000, %edx
 
-// RUN: llvm-readobj -t -s %t | FileCheck -check-prefix=SYM %s
-// SYM-NOT:  Name: __real_foo
-// SYM:      Name: foo
-// SYM-NEXT: Value: 0x11000
-// SYM-NOT:  Name: __real_foo
-// SYM:      Name: __wrap_foo
-// SYM-NEXT: Value: 0x11010
-// SYM-NOT:  Name: __real_foo
+// RUN: llvm-readobj -t %t | FileCheck -check-prefix=SYM %s
+
+// Test the full symbol table. It is verbose, but lld at times
+// produced duplicated symbols which are hard to test otherwise.
+
+// SYM:       Symbols [
+// SYM-NEXT:    Symbol {
+// SYM-NEXT:     Name:  (0)
+// SYM-NEXT:     Value:
+// SYM-NEXT:     Size:
+// SYM-NEXT:     Binding:
+// SYM-NEXT:     Type
+// SYM-NEXT:     Other:
+// SYM-NEXT:     Section:
+// SYM-NEXT:   }
+// SYM-NEXT:   Symbol {
+// SYM-NEXT:     Name: _DYNAMIC
+// SYM-NEXT:     Value:
+// SYM-NEXT:     Size:
+// SYM-NEXT:     Binding:
+// SYM-NEXT:     Type:
+// SYM-NEXT:     Other [
+// SYM-NEXT:       STV_HIDDEN
+// SYM-NEXT:     ]
+// SYM-NEXT:     Section: .dynamic
+// SYM-NEXT:   }
+// SYM-NEXT:   Symbol {
+// SYM-NEXT:     Name: foo
+// SYM-NEXT:     Value: 0x11000
+// SYM-NEXT:     Size:
+// SYM-NEXT:     Binding:
+// SYM-NEXT:     Type:
+// SYM-NEXT:     Other:
+// SYM-NEXT:     Section:
+// SYM-NEXT:   }
+// SYM-NEXT:   Symbol {
+// SYM-NEXT:     Name: _start
+// SYM-NEXT:     Value:
+// SYM-NEXT:     Size:
+// SYM-NEXT:     Binding:
+// SYM-NEXT:     Type
+// SYM-NEXT:     Other:
+// SYM-NEXT:     Section:
+// SYM-NEXT:   }
+// SYM-NEXT:   Symbol {
+// SYM-NEXT:     Name: __wrap_foo
+// SYM-NEXT:     Value: 0x11010
+// SYM-NEXT:     Size:
+// SYM-NEXT:     Binding:
+// SYM-NEXT:     Type:
+// SYM-NEXT:     Other:
+// SYM-NEXT:     Section:
+// SYM-NEXT:   }
+// SYM-NEXT: ]
 
 .global _start
 _start:

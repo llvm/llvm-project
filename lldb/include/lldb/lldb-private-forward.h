@@ -30,8 +30,6 @@ class UnixSignals;
 // SP/WP decls.
 // ---------------------------------------------------------------
 typedef std::shared_ptr<NativeBreakpoint> NativeBreakpointSP;
-typedef std::shared_ptr<lldb_private::NativeRegisterContext>
-    NativeRegisterContextSP;
 }
 
 #endif // #if defined(__cplusplus)

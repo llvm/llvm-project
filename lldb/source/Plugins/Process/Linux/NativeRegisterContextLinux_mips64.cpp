@@ -80,12 +80,11 @@ struct pt_watch_regs default_watch_regs;
 using namespace lldb_private;
 using namespace lldb_private::process_linux;
 
-NativeRegisterContextLinux *
+std::unique_ptr<NativeRegisterContextLinux>
 NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
-    const ArchSpec &target_arch, NativeThreadProtocol &native_thread,
-    uint32_t concrete_frame_idx) {
-  return new NativeRegisterContextLinux_mips64(target_arch, native_thread,
-                                               concrete_frame_idx);
+    const ArchSpec &target_arch, NativeThreadProtocol &native_thread) {
+  return llvm::make_unique<NativeRegisterContextLinux_mips64>(target_arch,
+                                                              native_thread);
 }
 
 #define REG_CONTEXT_SIZE                                                       \
@@ -110,9 +109,8 @@ CreateRegisterInfoInterface(const ArchSpec &target_arch) {
 }
 
 NativeRegisterContextLinux_mips64::NativeRegisterContextLinux_mips64(
-    const ArchSpec &target_arch, NativeThreadProtocol &native_thread,
-    uint32_t concrete_frame_idx)
-    : NativeRegisterContextLinux(native_thread, concrete_frame_idx,
+    const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
+    : NativeRegisterContextLinux(native_thread,
                                  CreateRegisterInfoInterface(target_arch)) {
   switch (target_arch.GetMachine()) {
   case llvm::Triple::mips:

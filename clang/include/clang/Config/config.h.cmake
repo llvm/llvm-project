@@ -17,6 +17,9 @@
 /* Default runtime library to use. */
 #define CLANG_DEFAULT_RTLIB "${CLANG_DEFAULT_RTLIB}"
 
+/* Default objcopy to use */
+#define CLANG_DEFAULT_OBJCOPY "${CLANG_DEFAULT_OBJCOPY}"
+
 /* Default OpenMP runtime used by -fopenmp. */
 #define CLANG_DEFAULT_OPENMP_RUNTIME "${CLANG_DEFAULT_OPENMP_RUNTIME}"
 

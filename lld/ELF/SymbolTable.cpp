@@ -196,11 +196,11 @@ void SymbolTable::applySymbolWrap() {
     W.Sym->copyFrom(W.Wrap);
     W.Sym->Binding = W.SymBinding;
 
-    if (Real) {
-      // We now have two copies of __wrap_sym. Drop one.
-      W.Wrap->IsUsedInRegularObj = false;
+    // We now have two copies of __wrap_sym. Drop one.
+    W.Wrap->IsUsedInRegularObj = false;
+
+    if (Real)
       SymVector.push_back(Real);
-    }
   }
 }
 

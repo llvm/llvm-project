@@ -11,6 +11,7 @@
 #include "CommonArgs.h"
 #include "InputInfo.h"
 #include "clang/Driver/Compilation.h"
+#include "clang/Driver/DriverDiagnostic.h"
 #include "llvm/Option/ArgList.h"
 
 using namespace clang::driver;
@@ -33,6 +34,24 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back(Output.getFilename());
   C.addCommand(llvm::make_unique<Command>(JA, *this, Args.MakeArgString(Linker),
                                           CmdArgs, Inputs));
+}
+
+void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
+                                     const llvm::opt::ArgList &Args,
+                                     std::vector<StringRef> &Features) {
+  if (const Arg *dAbi = Args.getLastArg(options::OPT_mamdgpu_debugger_abi)) {
+    StringRef value = dAbi->getValue();
+    if (value == "1.0") {
+      Features.push_back("+amdgpu-debugger-insert-nops");
+      Features.push_back("+amdgpu-debugger-reserve-regs");
+      Features.push_back("+amdgpu-debugger-emit-prologue");
+    } else {
+      D.Diag(diag::err_drv_clang_unsupported) << dAbi->getAsString(Args);
+    }
+  }
+
+  handleTargetFeaturesGroup(
+    Args, Features, options::OPT_m_amdgpu_Features_Group);
 }
 
 /// AMDGPU Toolchain

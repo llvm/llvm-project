@@ -249,7 +249,7 @@ void NativeProcessNetBSD::MonitorSIGTRAP(lldb::pid_t pid) {
     uint32_t wp_index;
     Status error = static_cast<NativeThreadNetBSD &>(*m_threads[info.psi_lwpid])
                        .GetRegisterContext()
-                       ->GetWatchpointHitIndex(
+                       .GetWatchpointHitIndex(
                            wp_index, (uintptr_t)info.psi_siginfo.si_addr);
     if (error.Fail())
       LLDB_LOG(log,
@@ -268,7 +268,7 @@ void NativeProcessNetBSD::MonitorSIGTRAP(lldb::pid_t pid) {
     uint32_t bp_index;
     error = static_cast<NativeThreadNetBSD &>(*m_threads[info.psi_lwpid])
                 .GetRegisterContext()
-                ->GetHardwareBreakHitIndex(bp_index,
+                .GetHardwareBreakHitIndex(bp_index,
                                            (uintptr_t)info.psi_siginfo.si_addr);
     if (error.Fail())
       LLDB_LOG(log,
@@ -341,12 +341,7 @@ NativeProcessNetBSD::FixupBreakpointPCAsNeeded(NativeThreadNetBSD &thread) {
   Status error;
   // Find out the size of a breakpoint (might depend on where we are in the
   // code).
-  NativeRegisterContextSP context_sp = thread.GetRegisterContext();
-  if (!context_sp) {
-    error.SetErrorString("cannot get a NativeRegisterContext for the thread");
-    LLDB_LOG(log, "failed: {0}", error);
-    return error;
-  }
+  NativeRegisterContext& context = thread.GetRegisterContext();
   uint32_t breakpoint_size = 0;
   error = GetSoftwareBreakpointPCOffset(breakpoint_size);
   if (error.Fail()) {
@@ -357,7 +352,7 @@ NativeProcessNetBSD::FixupBreakpointPCAsNeeded(NativeThreadNetBSD &thread) {
   // First try probing for a breakpoint at a software breakpoint location: PC
   // - breakpoint size.
   const lldb::addr_t initial_pc_addr =
-      context_sp->GetPCfromBreakpointLocation();
+      context.GetPCfromBreakpointLocation();
   lldb::addr_t breakpoint_addr = initial_pc_addr;
   if (breakpoint_size > 0) {
     // Do not allow breakpoint probe to wrap around.
@@ -410,7 +405,7 @@ NativeProcessNetBSD::FixupBreakpointPCAsNeeded(NativeThreadNetBSD &thread) {
   // Change the program counter.
   LLDB_LOG(log, "pid {0} tid {1}: changing PC from {2:x} to {3:x}", GetID(),
            thread.GetID(), initial_pc_addr, breakpoint_addr);
-  error = context_sp->SetPC(breakpoint_addr);
+  error = context.SetPC(breakpoint_addr);
   if (error.Fail()) {
     LLDB_LOG(log, "pid {0} tid {1}: failed to set PC: {2}", GetID(),
              thread.GetID(), error);

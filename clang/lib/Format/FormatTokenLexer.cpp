@@ -50,6 +50,8 @@ ArrayRef<FormatToken *> FormatTokenLexer::lex() {
       tryParseJSRegexLiteral();
       handleTemplateStrings();
     }
+    if (Style.Language == FormatStyle::LK_TextProto)
+      tryParsePythonComment();
     tryMergePreviousTokens();
     if (Tokens.back()->NewlinesBefore > 0 || Tokens.back()->IsMultiline)
       FirstInLineIndex = Tokens.size() - 1;
@@ -328,6 +330,27 @@ void FormatTokenLexer::handleTemplateStrings() {
                            ? Lex->getSourceLocation(Offset + 1)
                            : SourceMgr.getLocForEndOfFile(ID);
   resetLexer(SourceMgr.getFileOffset(loc));
+}
+
+void FormatTokenLexer::tryParsePythonComment() {
+  FormatToken *HashToken = Tokens.back();
+  if (HashToken->isNot(tok::hash))
+    return;
+  // Turn the remainder of this line into a comment.
+  const char *CommentBegin =
+      Lex->getBufferLocation() - HashToken->TokenText.size(); // at "#"
+  size_t From = CommentBegin - Lex->getBuffer().begin();
+  size_t To = Lex->getBuffer().find_first_of('\n', From);
+  if (To == StringRef::npos)
+    To = Lex->getBuffer().size();
+  size_t Len = To - From;
+  HashToken->Type = TT_LineComment;
+  HashToken->Tok.setKind(tok::comment);
+  HashToken->TokenText = Lex->getBuffer().substr(From, Len);
+  SourceLocation Loc = To < Lex->getBuffer().size()
+                           ? Lex->getSourceLocation(CommentBegin + Len)
+                           : SourceMgr.getLocForEndOfFile(ID);
+  resetLexer(SourceMgr.getFileOffset(Loc));
 }
 
 bool FormatTokenLexer::tryMerge_TMacro() {
