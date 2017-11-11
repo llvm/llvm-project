@@ -1265,6 +1265,49 @@ const internal::VariadicDynCastAllOfMatcher<
   Decl,
   ObjCPropertyDecl> objcPropertyDecl;
 
+/// \brief Matches Objective-C @throw statements.
+///
+/// Example matches @throw
+/// \code
+///   @throw obj;
+/// \endcode
+const internal::VariadicDynCastAllOfMatcher<
+  Stmt,
+  ObjCAtThrowStmt> objcThrowStmt;
+
+/// \brief Matches Objective-C @try statements.
+///
+/// Example matches @try
+/// \code
+///   @try {}
+///   @catch (...) {}
+/// \endcode
+const internal::VariadicDynCastAllOfMatcher<
+  Stmt,
+  ObjCAtTryStmt> objcTryStmt;
+
+/// \brief Matches Objective-C @catch statements.
+///
+/// Example matches @catch
+/// \code
+///   @try {}
+///   @catch (...) {}
+/// \endcode
+const internal::VariadicDynCastAllOfMatcher<
+  Stmt,
+  ObjCAtCatchStmt> objcCatchStmt;
+
+/// \brief Matches Objective-C @finally statements.
+///
+/// Example matches @finally
+/// \code
+///   @try {}
+///   @finally {}
+/// \endcode
+const internal::VariadicDynCastAllOfMatcher<
+  Stmt,
+  ObjCAtFinallyStmt> objcFinallyStmt;
+
 /// \brief Matches expressions that introduce cleanups to be run at the end
 /// of the sub-expression's evaluation.
 ///
