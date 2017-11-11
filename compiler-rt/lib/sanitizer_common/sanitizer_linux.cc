@@ -954,7 +954,7 @@ static uptr GetKernelAreaSize() {
 }
 #endif  // SANITIZER_WORDSIZE == 32
 
-uptr GetMaxUserVirtualAddress() {
+uptr GetMaxVirtualAddress() {
 #if SANITIZER_NETBSD && defined(__x86_64__)
   return 0x7f7ffffff000ULL;  // (0x00007f8000000000 - PAGE_SIZE)
 #elif SANITIZER_WORDSIZE == 64
@@ -978,13 +978,19 @@ uptr GetMaxUserVirtualAddress() {
 # if defined(__s390__)
   return (1ULL << 31) - 1;  // 0x7fffffff;
 # else
-  uptr res = (1ULL << 32) - 1;  // 0xffffffff;
-  if (!common_flags()->full_address_space)
-    res -= GetKernelAreaSize();
-  CHECK_LT(reinterpret_cast<uptr>(&res), res);
-  return res;
+  return (1ULL << 32) - 1;  // 0xffffffff;
 # endif
 #endif  // SANITIZER_WORDSIZE
+}
+
+uptr GetMaxUserVirtualAddress() {
+  uptr addr = GetMaxVirtualAddress();
+#if SANITIZER_WORDSIZE == 32 && !defined(__s390__)
+  if (!common_flags()->full_address_space)
+    addr -= GetKernelAreaSize();
+  CHECK_LT(reinterpret_cast<uptr>(&addr), addr);
+#endif
+  return addr;
 }
 
 uptr GetPageSize() {

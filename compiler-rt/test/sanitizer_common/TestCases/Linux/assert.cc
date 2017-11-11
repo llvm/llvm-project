@@ -22,6 +22,9 @@ int main(int argc, char **argv) {
   __sanitizer_set_death_callback(death);
   assert(argc == 100);
 }
-// CHECK1: ERROR: {{.*}}Sanitizer:
+
+// CHECK0-NOT: Sanitizer:DEADLYSIGNAL
+// CHECK1: ERROR: {{.*}}Sanitizer: ABRT
+// CHECK1: {{#[0-9]+.* main .*assert\.cc}}:[[@LINE-5]]
 // CHECK1: DEATH CALLBACK
 // CHECK0-NOT: Sanitizer
