@@ -830,9 +830,58 @@ as the draft C++2a standard evolves.
       <td><a href="http://wg21.link/p0702r1">P0702R1</a></td>
       <td class="svn" align="center">SVN <a href="#p0702">(13)</a></td>
     </tr>
-    <tr id="p0374">
-      <td>Concepts</td>
+    <tr id="p0734">
+      <td rowspan="2">Concepts</td>
       <td><a href="http://wg21.link/p0734r0">P0734R0</a></td>
+      <td rowspan="2" class="none" align="center">No</td>
+    </tr>
+      <tr> <!-- from Albuquerque -->
+        <td><a href="http://wg21.link/p0857r0">P0857R0</a></td>
+      </tr>
+    <!-- Albuquerque papers -->
+    <tr>
+      <td>Range-based for statements with initializer</td>
+      <td><a href="http://wg21.link/p0614r1">P0614R1</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Simplifying implicit lambda capture</td>
+      <td><a href="http://wg21.link/p0588r1">P0588R1</a></td>
+      <td class="none" align="center">No <a href="#p0588">(14)</a></td>
+    </tr>
+    <tr>
+      <td>ADL and function templates that are not visible</td>
+      <td><a href="http://wg21.link/p0846r0">P0846R0</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td><tt>const</tt> mismatch with defaulted copy constructor</td>
+      <td><a href="http://wg21.link/p0641r2">P0641R2</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Less eager instantiation of <tt>constexpr</tt> functions</td>
+      <td><a href="http://wg21.link/p0859r0">P0859R0</a></td>
+      <td class="none" align="center">No <a href="#p0859">(15)</a></td>
+    </tr>
+    <tr>
+      <td>Consistent comparison (<tt>operator&lt;=&gt;</tt>)</td>
+      <td><a href="http://wg21.link/p0515r3">P0515R3</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Access checking on specializations</td>
+      <td><a href="http://wg21.link/p0692r1">P0692R1</a></td>
+      <td class="partial" align="center">Partial</td>
+    </tr>
+    <tr>
+      <td>Default constructible and assignable stateless lambdas</td>
+      <td><a href="http://wg21.link/p0624r2">P0624R2</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Lambdas in unevaluated contexts</td>
+      <td><a href="http://wg21.link/p0315r4">P0315R4</a></td>
       <td class="none" align="center">No</td>
     </tr>
 </table>
@@ -841,6 +890,12 @@ as the draft C++2a standard evolves.
 <p>
 <span id="p0702">(13): This is the resolution to a Defect Report, so is applied
 to all language versions supporting class template argument deduction.
+</span><br>
+<span id="p0588">(14): This is the resolution to a Defect Report, so will be applied
+to all language versions supporting lamba expressions.
+</span><br>
+<span id="p0859">(15): This is the resolution to a Defect Report, so will be applied
+to all language versions supporting <tt>constexpr</tt>.
 </span>
 </p>
 
@@ -900,7 +955,7 @@ and library features that are not part of standard C++.</p>
       <td>[TS] Concepts</td>
       <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/p0121r0.pdf">P0121R0</a></td>
       <td></td>
-      <td class="na" align="center">Superseded by <a href="#p0374">P0734R0</a></td>
+      <td class="na" align="center">Superseded by <a href="#p0734">P0734R0</a></td>
     </tr>
     <tr>
       <td>[DRAFT TS] Coroutines</td>

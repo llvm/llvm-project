@@ -24,6 +24,9 @@ int main(int argc, char **argv) {
   volatile int sink;
   sink = one / zero;
 }
-// CHECK1: ERROR: {{.*}}Sanitizer:
+
+// CHECK0-NOT: Sanitizer:DEADLYSIGNAL
+// CHECK1: ERROR: {{.*}}Sanitizer: FPE
+// CHECK1: {{#[0-9]+.* main .*fpe\.cc}}:[[@LINE-5]]
 // CHECK1: DEATH CALLBACK
 // CHECK0-NOT: Sanitizer

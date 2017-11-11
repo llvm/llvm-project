@@ -18,7 +18,7 @@
 // clang-format on
 
 // Remove when fixed: https://github.com/google/sanitizers/issues/637
-// XFAIL: msan
+
 // XFAIL: tsan
 
 // Flaky errors in debuggerd with "waitpid returned unexpected pid (0)" in logcat.
@@ -33,7 +33,7 @@ struct sigaction original_sigaction_sigsegv;
 
 void User_OnSIGSEGV(int signum, siginfo_t *siginfo, void *context) {
   fprintf(stderr, "User sigaction called\n");
-  struct sigaction original_sigaction;
+  struct sigaction original_sigaction = {};
   if (signum == SIGBUS)
     original_sigaction = original_sigaction_sigbus;
   else if (signum == SIGSEGV)
@@ -58,7 +58,7 @@ int DoSEGV() {
 }
 
 bool InstallHandler(int signum, struct sigaction *original_sigaction) {
-  struct sigaction user_sigaction;
+  struct sigaction user_sigaction = {};
   user_sigaction.sa_sigaction = User_OnSIGSEGV;
   user_sigaction.sa_flags = SA_SIGINFO;
   if (sigaction(signum, &user_sigaction, original_sigaction)) {

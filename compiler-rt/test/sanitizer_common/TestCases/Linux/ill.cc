@@ -24,6 +24,9 @@ int main(int argc, char **argv) {
   __sanitizer_set_death_callback(death);
   __builtin_trap();
 }
-// CHECK1: ERROR: {{.*}}Sanitizer:
+
+// CHECK0-NOT: Sanitizer:DEADLYSIGNAL
+// CHECK1: ERROR: {{.*}}Sanitizer: ILL
+// CHECK1: {{#[0-9]+.* main .*ill\.cc:[0-9]+}}
 // CHECK1: DEATH CALLBACK
 // CHECK0-NOT: Sanitizer
