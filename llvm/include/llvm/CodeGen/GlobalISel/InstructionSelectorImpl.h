@@ -401,7 +401,7 @@ bool InstructionSelector::executeMatchTable(
                       dbgs() << CurrentIdx << ": GIM_CheckIsSafeToFold(MIs["
                              << InsnID << "])\n");
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
-      if (!isObviouslySafeToFold(*State.MIs[InsnID])) {
+      if (!isObviouslySafeToFold(*State.MIs[InsnID], *State.MIs[0])) {
         if (handleReject() == RejectAndGiveUp)
           return false;
       }

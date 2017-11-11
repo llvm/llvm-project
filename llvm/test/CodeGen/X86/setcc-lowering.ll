@@ -24,7 +24,7 @@ define <8 x i16> @pr25080(<8 x i32> %a) {
 ; KNL-32-LABEL: pr25080:
 ; KNL-32:       # BB#0: # %entry
 ; KNL-32-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
-; KNL-32-NEXT:    vbroadcastss {{.*#+}} ymm1 = [8388607,8388607,8388607,8388607,8388607,8388607,8388607,8388607]
+; KNL-32-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [8388607,8388607,8388607,8388607,8388607,8388607,8388607,8388607]
 ; KNL-32-NEXT:    vptestnmd %zmm1, %zmm0, %k0
 ; KNL-32-NEXT:    movb $15, %al
 ; KNL-32-NEXT:    kmovw %eax, %k1

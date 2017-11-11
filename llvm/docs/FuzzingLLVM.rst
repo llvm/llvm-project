@@ -100,6 +100,28 @@ mode, the same example could be run like so:
 
    % bin/llvm-isel-fuzzer--aarch64-O0-gisel <corpus-dir>
 
+llvm-opt-fuzzer
+---------------
+
+A |LLVM IR fuzzer| aimed at finding bugs in optimization passes.
+
+It receives optimzation pipeline and runs it for each fuzzer input.
+
+Interface of this fuzzer almost directly mirrors ``llvm-isel-fuzzer``. Both
+``mtriple`` and ``passes`` arguments are required. Passes are specified in a
+format suitable for the new pass manager.
+
+.. code-block:: shell
+
+   % bin/llvm-opt-fuzzer <corpus-dir> -ignore_remaining_args=1 -mtriple x86_64 -passes instcombine
+
+Similarly to the ``llvm-isel-fuzzer`` arguments in some predefined configurations
+might be embedded directly into the binary file name:
+
+.. code-block:: shell
+
+   % bin/llvm-opt-fuzzer--x86_64-instcombine <corpus-dir>
+
 llvm-mc-assemble-fuzzer
 -----------------------
 

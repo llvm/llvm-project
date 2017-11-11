@@ -2744,8 +2744,10 @@ void TreePattern::dump() const { print(errs()); }
 // CodeGenDAGPatterns implementation
 //
 
-CodeGenDAGPatterns::CodeGenDAGPatterns(RecordKeeper &R) :
-  Records(R), Target(R), LegalVTS(Target.getLegalValueTypes()) {
+CodeGenDAGPatterns::CodeGenDAGPatterns(RecordKeeper &R,
+                                       PatternRewriterFn PatternRewriter)
+    : Records(R), Target(R), LegalVTS(Target.getLegalValueTypes()),
+      PatternRewriter(PatternRewriter) {
 
   Intrinsics = CodeGenIntrinsicTable(Records, false);
   TgtIntrinsics = CodeGenIntrinsicTable(Records, true);
@@ -3536,6 +3538,8 @@ void CodeGenDAGPatterns::ParseInstructions() {
     TreePattern *I = TheInst.getPattern();
     if (!I) continue;  // No pattern.
 
+    if (PatternRewriter)
+      PatternRewriter(I);
     // FIXME: Assume only the first tree is the pattern. The others are clobber
     // nodes.
     TreePatternNode *Pattern = I->getTree(0);
@@ -3936,6 +3940,8 @@ void CodeGenDAGPatterns::ParsePatterns() {
         Temp.getOnlyTree()->hasPossibleType()) {
       ListInit *Preds = CurPattern->getValueAsListInit("Predicates");
       int Complexity = CurPattern->getValueAsInt("AddedComplexity");
+      if (PatternRewriter)
+        PatternRewriter(Pattern);
       AddPatternToMatch(
           Pattern,
           PatternToMatch(

@@ -8141,11 +8141,15 @@ static bool hasUndefRegUpdate(unsigned Opcode) {
   case X86::VCVTSS2SDZrm:
   case X86::VCVTSS2SDZrm_Int:
   case X86::VRNDSCALESDr:
-  case X86::VRNDSCALESDrb:
+  case X86::VRNDSCALESDr_Int:
+  case X86::VRNDSCALESDrb_Int:
   case X86::VRNDSCALESDm:
+  case X86::VRNDSCALESDm_Int:
   case X86::VRNDSCALESSr:
-  case X86::VRNDSCALESSrb:
+  case X86::VRNDSCALESSr_Int:
+  case X86::VRNDSCALESSrb_Int:
   case X86::VRNDSCALESSm:
+  case X86::VRNDSCALESSm_Int:
   case X86::VRCP14SSrr:
   case X86::VRCP14SSrm:
   case X86::VRSQRT14SSrr:

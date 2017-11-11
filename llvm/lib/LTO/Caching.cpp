@@ -14,9 +14,9 @@
 #include "llvm/LTO/Caching.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Errc.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -72,10 +72,23 @@ Expected<NativeObjectCache> lto::localCache(StringRef CacheDirectoryPath,
                              MBOrErr.getError().message() + "\n");
 
         // This is atomic on POSIX systems.
-        if (auto EC = sys::fs::rename(TempFilename, EntryPath))
+        // On Windows, it can fail with permission denied if the destination
+        // file already exists. Since the existing file should be semantically
+        // equivalent to the one we are trying to write, we give AddBuffer
+        // a copy of the bytes we wrote in that case. We do this instead of
+        // just using the existing file, because the pruner might delete the
+        // file before we get a chance to use it.
+        auto EC = sys::fs::rename(TempFilename, EntryPath);
+        if (EC == errc::permission_denied) {
+          auto MBCopy = MemoryBuffer::getMemBufferCopy(
+              (*MBOrErr)->getBuffer(), EntryPath);
+          MBOrErr = std::move(MBCopy);
+          sys::fs::remove(TempFilename);
+        } else if (EC) {
           report_fatal_error(Twine("Failed to rename temporary file ") +
                              TempFilename + " to " + EntryPath + ": " +
                              EC.message() + "\n");
+        }
 
         AddBuffer(Task, std::move(*MBOrErr), EntryPath);
       }

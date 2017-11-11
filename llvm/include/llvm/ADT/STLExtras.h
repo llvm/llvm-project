@@ -132,91 +132,32 @@ inline void deleter(T *Ptr) {
 
 // mapped_iterator - This is a simple iterator adapter that causes a function to
 // be applied whenever operator* is invoked on the iterator.
-template <class RootIt, class UnaryFunc>
-class mapped_iterator {
-  RootIt current;
-  UnaryFunc Fn;
 
+template <typename ItTy, typename FuncTy,
+          typename FuncReturnTy =
+            decltype(std::declval<FuncTy>()(*std::declval<ItTy>()))>
+class mapped_iterator
+    : public iterator_adaptor_base<
+             mapped_iterator<ItTy, FuncTy>, ItTy,
+             typename std::iterator_traits<ItTy>::iterator_category,
+             typename std::remove_reference<FuncReturnTy>::type> {
 public:
-  using iterator_category =
-      typename std::iterator_traits<RootIt>::iterator_category;
-  using difference_type =
-      typename std::iterator_traits<RootIt>::difference_type;
-  using value_type =
-      decltype(std::declval<UnaryFunc>()(*std::declval<RootIt>()));
+  mapped_iterator(ItTy U, FuncTy F)
+    : mapped_iterator::iterator_adaptor_base(std::move(U)), F(std::move(F)) {}
 
-  using pointer = void;
-  using reference = void; // Can't modify value returned by fn
+  ItTy getCurrent() { return this->I; }
 
-  using iterator_type = RootIt;
+  FuncReturnTy operator*() { return F(*this->I); }
 
-  inline explicit mapped_iterator(const RootIt &I, UnaryFunc F)
-    : current(I), Fn(F) {}
-
-  inline value_type operator*() const {   // All this work to do this
-    return Fn(*current);         // little change
-  }
-
-  mapped_iterator &operator++() {
-    ++current;
-    return *this;
-  }
-  mapped_iterator &operator--() {
-    --current;
-    return *this;
-  }
-  mapped_iterator operator++(int) {
-    mapped_iterator __tmp = *this;
-    ++current;
-    return __tmp;
-  }
-  mapped_iterator operator--(int) {
-    mapped_iterator __tmp = *this;
-    --current;
-    return __tmp;
-  }
-  mapped_iterator operator+(difference_type n) const {
-    return mapped_iterator(current + n, Fn);
-  }
-  mapped_iterator &operator+=(difference_type n) {
-    current += n;
-    return *this;
-  }
-  mapped_iterator operator-(difference_type n) const {
-    return mapped_iterator(current - n, Fn);
-  }
-  mapped_iterator &operator-=(difference_type n) {
-    current -= n;
-    return *this;
-  }
-  reference operator[](difference_type n) const { return *(*this + n); }
-
-  bool operator!=(const mapped_iterator &X) const { return !operator==(X); }
-  bool operator==(const mapped_iterator &X) const {
-    return current == X.current;
-  }
-  bool operator<(const mapped_iterator &X) const { return current < X.current; }
-
-  difference_type operator-(const mapped_iterator &X) const {
-    return current - X.current;
-  }
-
-  inline const RootIt &getCurrent() const { return current; }
-  inline const UnaryFunc &getFunc() const { return Fn; }
+private:
+  FuncTy F;
 };
-
-template <class Iterator, class Func>
-inline mapped_iterator<Iterator, Func>
-operator+(typename mapped_iterator<Iterator, Func>::difference_type N,
-          const mapped_iterator<Iterator, Func> &X) {
-  return mapped_iterator<Iterator, Func>(X.getCurrent() - N, X.getFunc());
-}
 
 // map_iterator - Provide a convenient way to create mapped_iterators, just like
 // make_pair is useful for creating pairs...
 template <class ItTy, class FuncTy>
-inline mapped_iterator<ItTy, FuncTy> map_iterator(const ItTy &I, FuncTy F) {
-  return mapped_iterator<ItTy, FuncTy>(I, F);
+inline mapped_iterator<ItTy, FuncTy> map_iterator(ItTy I, FuncTy F) {
+  return mapped_iterator<ItTy, FuncTy>(std::move(I), std::move(F));
 }
 
 /// Helper to determine if type T has a member called rbegin().

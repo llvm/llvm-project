@@ -161,11 +161,9 @@ void RISCVAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                  MutableArrayRef<char> Data, uint64_t Value,
                                  bool IsResolved) const {
   MCContext &Ctx = Asm.getContext();
-  MCFixupKind Kind = Fixup.getKind();
-  unsigned NumBytes = (getFixupKindInfo(Kind).TargetSize + 7) / 8;
+  MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
   if (!Value)
     return; // Doesn't change encoding.
-  MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
   // Apply any target-specific value adjustments.
   Value = adjustFixupValue(Fixup, Value, Ctx);
 
@@ -173,14 +171,17 @@ void RISCVAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   Value <<= Info.TargetOffset;
 
   unsigned Offset = Fixup.getOffset();
+
+#ifndef NDEBUG
+  unsigned NumBytes = (Info.TargetSize + 7) / 8;
   assert(Offset + NumBytes <= Data.size() && "Invalid fixup offset!");
+#endif
 
   // For each byte of the fragment that the fixup touches, mask in the
   // bits from the fixup value.
   for (unsigned i = 0; i != 4; ++i) {
     Data[Offset + i] |= uint8_t((Value >> (i * 8)) & 0xff);
   }
-  return;
 }
 
 std::unique_ptr<MCObjectWriter>
