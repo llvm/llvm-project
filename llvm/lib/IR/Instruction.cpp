@@ -645,7 +645,6 @@ void Instruction::copyMetadata(const Instruction &SrcInst,
   }
   if (WL.empty() || WLS.count(LLVMContext::MD_dbg))
     setDebugLoc(SrcInst.getDebugLoc());
-  return;
 }
 
 Instruction *Instruction::clone() const {
