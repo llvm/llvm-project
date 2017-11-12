@@ -517,6 +517,7 @@ def X86rsqrt14s  : SDNode<"X86ISD::RSQRT14S",   SDTFPBinOp>;
 def X86rcp14s    : SDNode<"X86ISD::RCP14S",     SDTFPBinOp>;
 def X86rsqrt28s  : SDNode<"X86ISD::RSQRT28S",   SDTFPBinOpRound>;
 def X86rcp28s    : SDNode<"X86ISD::RCP28S",     SDTFPBinOpRound>;
+def X86Ranges    : SDNode<"X86ISD::VRANGES",    SDTFPBinOpImmRound>;
 def X86RndScales : SDNode<"X86ISD::VRNDSCALES", SDTFPBinOpImmRound>;
 def X86Reduces   : SDNode<"X86ISD::VREDUCES",   SDTFPBinOpImmRound>;
 def X86GetMants  : SDNode<"X86ISD::VGETMANTS",  SDTFPBinOpImmRound>;

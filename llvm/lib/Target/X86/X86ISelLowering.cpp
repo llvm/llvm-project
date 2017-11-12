@@ -20307,23 +20307,6 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                 DAG.getIntPtrConstant(0, dl));
       return DAG.getBitcast(Op.getValueType(), Res);
     }
-    case BRCST32x2_TO_VEC: {
-      SDValue Src = Op.getOperand(1);
-      SDValue PassThru = Op.getOperand(2);
-      SDValue Mask = Op.getOperand(3);
-
-      assert((VT.getScalarType() == MVT::i32 ||
-              VT.getScalarType() == MVT::f32) && "Unexpected type!");
-      //bitcast Src to packed 64
-      MVT ScalarVT = VT.getScalarType() == MVT::i32 ? MVT::i64 : MVT::f64;
-      MVT BitcastVT = MVT::getVectorVT(ScalarVT, Src.getValueSizeInBits()/64);
-      Src = DAG.getBitcast(BitcastVT, Src);
-      MVT ResVT = MVT::getVectorVT(ScalarVT, VT.getSizeInBits()/64);
-      SDValue Res = DAG.getNode(IntrData->Opc0, dl, ResVT, Src);
-      Res = DAG.getBitcast(VT, Res);
-
-      return getVectorMaskingNode(Res, Mask, PassThru, Subtarget, DAG);
-    }
     default:
       break;
     }
@@ -25067,8 +25050,9 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::VPERMI:             return "X86ISD::VPERMI";
   case X86ISD::VPTERNLOG:          return "X86ISD::VPTERNLOG";
   case X86ISD::VFIXUPIMM:          return "X86ISD::VFIXUPIMM";
-  case X86ISD::VFIXUPIMMS:          return "X86ISD::VFIXUPIMMS";
+  case X86ISD::VFIXUPIMMS:         return "X86ISD::VFIXUPIMMS";
   case X86ISD::VRANGE:             return "X86ISD::VRANGE";
+  case X86ISD::VRANGES:            return "X86ISD::VRANGES";
   case X86ISD::PMULUDQ:            return "X86ISD::PMULUDQ";
   case X86ISD::PMULDQ:             return "X86ISD::PMULDQ";
   case X86ISD::PSADBW:             return "X86ISD::PSADBW";
