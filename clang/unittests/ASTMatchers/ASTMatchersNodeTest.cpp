@@ -1639,5 +1639,28 @@ TEST(ObjCDeclMatcher, CoreDecls) {
     objcPropertyDecl(hasName("enabled"))));
 }
 
+TEST(ObjCStmtMatcher, ExceptionStmts) {
+  std::string ObjCString =
+    "void f(id obj) {"
+    "  @try {"
+    "    @throw obj;"
+    "  } @catch (...) {"
+    "  } @finally {}"
+    "}";
+
+  EXPECT_TRUE(matchesObjC(
+    ObjCString,
+    objcTryStmt()));
+  EXPECT_TRUE(matchesObjC(
+    ObjCString,
+    objcThrowStmt()));
+  EXPECT_TRUE(matchesObjC(
+    ObjCString,
+    objcCatchStmt()));
+  EXPECT_TRUE(matchesObjC(
+    ObjCString,
+    objcFinallyStmt()));
+}
+
 } // namespace ast_matchers
 } // namespace clang

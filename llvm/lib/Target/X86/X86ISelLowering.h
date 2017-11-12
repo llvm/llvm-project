@@ -426,7 +426,7 @@ namespace llvm {
       VFIXUPIMM,
       VFIXUPIMMS,
       // Range Restriction Calculation For Packed Pairs of Float32/64 values.
-      VRANGE,
+      VRANGE, VRANGES,
       // Reduce - Perform Reduction Transformation on scalar\packed FP.
       VREDUCE, VREDUCES,
       // RndScale - Round FP Values To Include A Given Number Of Fraction Bits.

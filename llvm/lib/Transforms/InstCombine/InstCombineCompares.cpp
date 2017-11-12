@@ -4461,11 +4461,15 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
   // and CodeGen. And in this case, at least one of the comparison
   // operands has at least one user besides the compare (the select),
   // which would often largely negate the benefit of folding anyway.
+  //
+  // Do the same for the other patterns recognized by matchSelectPattern.
   if (I.hasOneUse())
-    if (SelectInst *SI = dyn_cast<SelectInst>(*I.user_begin()))
-      if ((SI->getOperand(1) == Op0 && SI->getOperand(2) == Op1) ||
-          (SI->getOperand(2) == Op0 && SI->getOperand(1) == Op1))
+    if (SelectInst *SI = dyn_cast<SelectInst>(I.user_back())) {
+      Value *A, *B;
+      SelectPatternResult SPR = matchSelectPattern(SI, A, B);
+      if (SPR.Flavor != SPF_UNKNOWN)
         return nullptr;
+    }
 
   // Do this after checking for min/max to prevent infinite looping.
   if (Instruction *Res = foldICmpWithZero(I))
@@ -4944,10 +4948,12 @@ Instruction *InstCombiner::visitFCmpInst(FCmpInst &I) {
   // operands has at least one user besides the compare (the select),
   // which would often largely negate the benefit of folding anyway.
   if (I.hasOneUse())
-    if (SelectInst *SI = dyn_cast<SelectInst>(*I.user_begin()))
-      if ((SI->getOperand(1) == Op0 && SI->getOperand(2) == Op1) ||
-          (SI->getOperand(2) == Op0 && SI->getOperand(1) == Op1))
+    if (SelectInst *SI = dyn_cast<SelectInst>(I.user_back())) {
+      Value *A, *B;
+      SelectPatternResult SPR = matchSelectPattern(SI, A, B);
+      if (SPR.Flavor != SPF_UNKNOWN)
         return nullptr;
+    }
 
   // Handle fcmp with constant RHS
   if (Constant *RHSC = dyn_cast<Constant>(Op1)) {
