@@ -294,6 +294,12 @@ class TestSwiftStepping(lldbtest.TestBase):
         # finish off the line.
         if stop_on_caller:
             thread.StepOver()
+
+        # Step over the assignment.
+        stop_on_partial_apply = self.hit_correct_line(thread, "var cd_maker =", False)
+        if stop_on_partial_apply:
+            thread.StepOver()
+
         self.hit_correct_line(thread, "doSomethingWithFunction(cd_maker, 10)")
 
         thread.StepInto()
