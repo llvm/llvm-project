@@ -127,8 +127,6 @@ private:
     Symbol *Sym;
     Symbol *Real;
     Symbol *Wrap;
-    uint8_t SymBinding;
-    uint8_t RealBinding;
   };
 
   // For -wrap.
