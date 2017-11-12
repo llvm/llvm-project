@@ -8858,6 +8858,52 @@ def : Pat<(v8f64 (ftrunc VR512:$src)),
           (VRNDSCALEPDZrri VR512:$src, (i32 0xB))>;
 }
 
+let Predicates = [HasVLX] in {
+def : Pat<(v4f32 (ffloor VR128X:$src)),
+          (VRNDSCALEPSZ128rri VR128X:$src, (i32 0x9))>;
+def : Pat<(v4f32 (fnearbyint VR128X:$src)),
+          (VRNDSCALEPSZ128rri VR128X:$src, (i32 0xC))>;
+def : Pat<(v4f32 (fceil VR128X:$src)),
+          (VRNDSCALEPSZ128rri VR128X:$src, (i32 0xA))>;
+def : Pat<(v4f32 (frint VR128X:$src)),
+          (VRNDSCALEPSZ128rri VR128X:$src, (i32 0x4))>;
+def : Pat<(v4f32 (ftrunc VR128X:$src)),
+          (VRNDSCALEPSZ128rri VR128X:$src, (i32 0xB))>;
+
+def : Pat<(v2f64 (ffloor VR128X:$src)),
+          (VRNDSCALEPDZ128rri VR128X:$src, (i32 0x9))>;
+def : Pat<(v2f64 (fnearbyint VR128X:$src)),
+          (VRNDSCALEPDZ128rri VR128X:$src, (i32 0xC))>;
+def : Pat<(v2f64 (fceil VR128X:$src)),
+          (VRNDSCALEPDZ128rri VR128X:$src, (i32 0xA))>;
+def : Pat<(v2f64 (frint VR128X:$src)),
+          (VRNDSCALEPDZ128rri VR128X:$src, (i32 0x4))>;
+def : Pat<(v2f64 (ftrunc VR128X:$src)),
+          (VRNDSCALEPDZ128rri VR128X:$src, (i32 0xB))>;
+
+def : Pat<(v8f32 (ffloor VR256X:$src)),
+          (VRNDSCALEPSZ256rri VR256X:$src, (i32 0x9))>;
+def : Pat<(v8f32 (fnearbyint VR256X:$src)),
+          (VRNDSCALEPSZ256rri VR256X:$src, (i32 0xC))>;
+def : Pat<(v8f32 (fceil VR256X:$src)),
+          (VRNDSCALEPSZ256rri VR256X:$src, (i32 0xA))>;
+def : Pat<(v8f32 (frint VR256X:$src)),
+          (VRNDSCALEPSZ256rri VR256X:$src, (i32 0x4))>;
+def : Pat<(v8f32 (ftrunc VR256X:$src)),
+          (VRNDSCALEPSZ256rri VR256X:$src, (i32 0xB))>;
+
+def : Pat<(v4f64 (ffloor VR256X:$src)),
+          (VRNDSCALEPDZ256rri VR256X:$src, (i32 0x9))>;
+def : Pat<(v4f64 (fnearbyint VR256X:$src)),
+          (VRNDSCALEPDZ256rri VR256X:$src, (i32 0xC))>;
+def : Pat<(v4f64 (fceil VR256X:$src)),
+          (VRNDSCALEPDZ256rri VR256X:$src, (i32 0xA))>;
+def : Pat<(v4f64 (frint VR256X:$src)),
+          (VRNDSCALEPDZ256rri VR256X:$src, (i32 0x4))>;
+def : Pat<(v4f64 (ftrunc VR256X:$src)),
+          (VRNDSCALEPDZ256rri VR256X:$src, (i32 0xB))>;
+}
+
 multiclass avx512_shuff_packed_128<string OpcodeStr, AVX512VLVectorVTInfo _,
                                    bits<8> opc>{
   let Predicates = [HasAVX512] in {

@@ -5905,7 +5905,6 @@ void ARMAsmParser::fixupGNULDRDAlias(StringRef Mnemonic,
   Operands.insert(
       Operands.begin() + 3,
       ARMOperand::CreateReg(PairedReg, Op2.getStartLoc(), Op2.getEndLoc()));
-  return;
 }
 
 /// Parse an arm instruction mnemonic followed by its operands.
