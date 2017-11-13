@@ -486,7 +486,7 @@ void loop_with_It(It<char> begin, It<char> end) {
 
 void loop_with_It_plus(It<char> begin, It<char> end) {
 #pragma omp for
-  for (It<char> it = begin; it < end; it+=1) {
+  for (It<char> it = begin; it < end; it+=1u) {
     *it = 0;
   }
 }
