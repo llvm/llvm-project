@@ -201,8 +201,8 @@ class PseudoOverridesInSpecializations<double, int> {
 
   template<typename U>
   class InnerClass;
-// CHECK: [[@LINE-1]]:9 | class(Gen)/C++ | InnerClass | c:@S@PseudoOverridesInSpecializations>#d#I@ST>1#T@InnerClass | <no-cgname> | Ref,RelCont,RelSpecialization | rel: 2
-// CHECK-NEXT: RelCont
+// CHECK: [[@LINE-1]]:9 | class(Gen)/C++ | InnerClass | c:@S@PseudoOverridesInSpecializations>#d#I@ST>1#T@InnerClass | <no-cgname> | Decl,RelChild,RelSpecialization | rel: 2
+// CHECK-NEXT: RelChild
 // CHECK-NEXT: RelSpecialization | InnerClass | c:@ST>2#T#T@PseudoOverridesInSpecializations@ST>1#T@InnerClass
 };
 
@@ -274,7 +274,7 @@ void ContainsSpecializedMemberFunction::memberSpecialization<int>() {
 
 template<typename T>
 class SpecializationDecl;
-// CHECK: [[@LINE-1]]:7 | class(Gen)/C++ | SpecializationDecl | c:@ST>1#T@SpecializationDecl | <no-cgname> | Ref | rel: 0
+// CHECK: [[@LINE-1]]:7 | class(Gen)/C++ | SpecializationDecl | c:@ST>1#T@SpecializationDecl | <no-cgname> | Decl | rel: 0
 
 template<typename T>
 class SpecializationDecl { };
