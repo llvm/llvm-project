@@ -1311,6 +1311,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       unsigned DstReg = MI.getOperand(0).getReg();
       bool DstIsDead = MI.getOperand(0).isDead();
       const MachineOperand &MO1 = MI.getOperand(1);
+      auto Flags = MO1.getTargetFlags();
       const GlobalValue *GV = MO1.getGlobal();
       bool IsARM =
           Opcode != ARM::tLDRLIT_ga_pcrel && Opcode != ARM::tLDRLIT_ga_abs;
@@ -1329,7 +1330,9 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 
       if (IsPIC) {
         unsigned PCAdj = IsARM ? 8 : 4;
-        auto Modifier = STI->getCPModifier(GV);
+        auto Modifier = (Flags & ARMII::MO_GOT)
+                            ? ARMCP::GOT_PREL
+                            : ARMCP::no_modifier;
         ARMPCLabelIndex = AFI->createPICLabelUId();
         CPV = ARMConstantPoolConstant::Create(
             GV, ARMPCLabelIndex, ARMCP::CPValue, PCAdj, Modifier,

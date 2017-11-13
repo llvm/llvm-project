@@ -18,6 +18,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/Signals.h"
 #include <cctype>
 #include <cstring>
 
@@ -757,6 +758,58 @@ std::error_code createUniqueFile(const Twine &Model,
                                  SmallVectorImpl<char> &ResultPath) {
   int Dummy;
   return createUniqueEntity(Model, Dummy, ResultPath, false, 0, FS_Name);
+}
+
+TempFile::TempFile(StringRef Name, int FD) : TmpName(Name), FD(FD) {}
+TempFile::TempFile(TempFile &&Other) {
+  TmpName = std::move(Other.TmpName);
+  FD = Other.FD;
+  Other.Done = true;
+}
+
+TempFile::~TempFile() { assert(Done); }
+
+Error TempFile::discard() {
+  if (Done)
+    return Error::success();
+  Done = true;
+  // Always try to close and remove.
+  std::error_code RemoveEC = fs::remove(TmpName);
+  sys::DontRemoveFileOnSignal(TmpName);
+  if (close(FD) == -1) {
+    std::error_code EC = std::error_code(errno, std::generic_category());
+    return errorCodeToError(EC);
+  }
+  return errorCodeToError(RemoveEC);
+}
+
+Error TempFile::keep(const Twine &Name) {
+  assert(!Done);
+  Done = true;
+  // Always try to close and rename.
+  std::error_code RenameEC = fs::rename(TmpName, Name);
+  sys::DontRemoveFileOnSignal(TmpName);
+  if (close(FD) == -1) {
+    std::error_code EC(errno, std::generic_category());
+    return errorCodeToError(EC);
+  }
+  return errorCodeToError(RenameEC);
+}
+
+Expected<TempFile> TempFile::create(const Twine &Model, unsigned Mode) {
+  int FD;
+  SmallString<128> ResultPath;
+  if (std::error_code EC = createUniqueFile(Model, FD, ResultPath, Mode))
+    return errorCodeToError(EC);
+
+  // Make sure we delete the file when RemoveFileOnSignal fails.
+  TempFile Ret(ResultPath, FD);
+  if (sys::RemoveFileOnSignal(ResultPath)) {
+    consumeError(Ret.discard());
+    std::error_code EC(errc::operation_not_permitted);
+    return errorCodeToError(EC);
+  }
+  return std::move(Ret);
 }
 
 static std::error_code

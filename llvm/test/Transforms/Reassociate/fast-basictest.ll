@@ -11,6 +11,17 @@ define float @test1(float %arg) {
   ret float %t2
 }
 
+define float @test1_reassoc(float %arg) {
+; CHECK-LABEL: @test1_reassoc(
+; CHECK-NEXT:    [[T1:%.*]] = fsub reassoc float -1.200000e+01, %arg
+; CHECK-NEXT:    [[T2:%.*]] = fadd reassoc float [[T1]], 1.200000e+01
+; CHECK-NEXT:    ret float [[T2]]
+;
+  %t1 = fsub reassoc float -1.200000e+01, %arg
+  %t2 = fadd reassoc float %t1, 1.200000e+01
+  ret float %t2
+}
+
 define float @test2(float %reg109, float %reg1111) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[REG115:%.*]] = fadd float %reg109, -3.000000e+01
@@ -32,6 +43,19 @@ define float @test3(float %reg109, float %reg1111) {
   %reg115 = fadd fast float %reg109, -3.000000e+01
   %reg116 = fadd fast float %reg115, %reg1111
   %reg117 = fadd fast float %reg116, 3.000000e+01
+  ret float %reg117
+}
+
+define float @test3_reassoc(float %reg109, float %reg1111) {
+; CHECK-LABEL: @test3_reassoc(
+; CHECK-NEXT:    [[REG115:%.*]] = fadd reassoc float %reg109, -3.000000e+01
+; CHECK-NEXT:    [[REG116:%.*]] = fadd reassoc float [[REG115]], %reg1111
+; CHECK-NEXT:    [[REG117:%.*]] = fadd reassoc float [[REG116]], 3.000000e+01
+; CHECK-NEXT:    ret float [[REG117]]
+;
+  %reg115 = fadd reassoc float %reg109, -3.000000e+01
+  %reg116 = fadd reassoc float %reg115, %reg1111
+  %reg117 = fadd reassoc float %reg116, 3.000000e+01
   ret float %reg117
 }
 
@@ -131,6 +155,25 @@ define float @test7(float %A, float %B, float %C) {
   ret float %r
 }
 
+define float @test7_reassoc(float %A, float %B, float %C) {
+; CHECK-LABEL: @test7_reassoc(
+; CHECK-NEXT:    [[AA:%.*]] = fmul reassoc float %A, %A
+; CHECK-NEXT:    [[AAB:%.*]] = fmul reassoc float [[AA]], %B
+; CHECK-NEXT:    [[AC:%.*]] = fmul reassoc float %A, %C
+; CHECK-NEXT:    [[AAC:%.*]] = fmul reassoc float [[AC]], %A
+; CHECK-NEXT:    [[R:%.*]] = fadd reassoc float [[AAB]], [[AAC]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %aa = fmul reassoc float %A, %A
+  %aab = fmul reassoc float %aa, %B
+  %ac = fmul reassoc float %A, %C
+  %aac = fmul reassoc float %ac, %A
+  %r = fadd reassoc float %aab, %aac
+  ret float %r
+}
+
+; (-X)*Y + Z -> Z-X*Y
+
 define float @test8(float %X, float %Y, float %Z) {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:    [[A:%.*]] = fmul fast float %Y, %X
@@ -139,8 +182,20 @@ define float @test8(float %X, float %Y, float %Z) {
 ;
   %A = fsub fast float 0.0, %X
   %B = fmul fast float %A, %Y
-  ; (-X)*Y + Z -> Z-X*Y
   %C = fadd fast float %B, %Z
+  ret float %C
+}
+
+define float @test8_reassoc(float %X, float %Y, float %Z) {
+; CHECK-LABEL: @test8_reassoc(
+; CHECK-NEXT:    [[A:%.*]] = fsub reassoc float 0.000000e+00, %X
+; CHECK-NEXT:    [[B:%.*]] = fmul reassoc float [[A]], %Y
+; CHECK-NEXT:    [[C:%.*]] = fadd reassoc float [[B]], %Z
+; CHECK-NEXT:    ret float [[C]]
+;
+  %A = fsub reassoc float 0.0, %X
+  %B = fmul reassoc float %A, %Y
+  %C = fadd reassoc float %B, %Z
   ret float %C
 }
 
@@ -154,6 +209,17 @@ define float @test9(float %X) {
   ret float %Z
 }
 
+define float @test9_reassoc(float %X) {
+; CHECK-LABEL: @test9_reassoc(
+; CHECK-NEXT:    [[Y:%.*]] = fmul reassoc float %X, 4.700000e+01
+; CHECK-NEXT:    [[Z:%.*]] = fadd reassoc float [[Y]], [[Y]]
+; CHECK-NEXT:    ret float [[Z]]
+;
+  %Y = fmul reassoc float %X, 4.700000e+01
+  %Z = fadd reassoc float %Y, %Y
+  ret float %Z
+}
+
 define float @test10(float %X) {
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:    [[FACTOR:%.*]] = fmul fast float %X, 3.000000e+00
@@ -161,6 +227,17 @@ define float @test10(float %X) {
 ;
   %Y = fadd fast float %X ,%X
   %Z = fadd fast float %Y, %X
+  ret float %Z
+}
+
+define float @test10_reassoc(float %X) {
+; CHECK-LABEL: @test10_reassoc(
+; CHECK-NEXT:    [[Y:%.*]] = fadd reassoc float %X, %X
+; CHECK-NEXT:    [[Z:%.*]] = fadd reassoc float [[Y]], %X
+; CHECK-NEXT:    ret float [[Z]]
+;
+  %Y = fadd reassoc float %X ,%X
+  %Z = fadd reassoc float %Y, %X
   ret float %Z
 }
 
@@ -172,6 +249,19 @@ define float @test11(float %W) {
   %X = fmul fast float %W, 127.0
   %Y = fadd fast float %X ,%X
   %Z = fadd fast float %Y, %X
+  ret float %Z
+}
+
+define float @test11_reassoc(float %W) {
+; CHECK-LABEL: @test11_reassoc(
+; CHECK-NEXT:    [[X:%.*]] = fmul reassoc float %W, 1.270000e+02
+; CHECK-NEXT:    [[Y:%.*]] = fadd reassoc float [[X]], [[X]]
+; CHECK-NEXT:    [[Z:%.*]] = fadd reassoc float [[X]], [[Y]]
+; CHECK-NEXT:    ret float [[Z]]
+;
+  %X = fmul reassoc float %W, 127.0
+  %Y = fadd reassoc float %X ,%X
+  %Z = fadd reassoc float %Y, %X
   ret float %Z
 }
 
@@ -189,6 +279,23 @@ define float @test12(float %X) {
   ret float %Z
 }
 
+define float @test12_reassoc(float %X) {
+; CHECK-LABEL: @test12_reassoc(
+; CHECK-NEXT:    [[A:%.*]] = fsub reassoc float 1.000000e+00, %X
+; CHECK-NEXT:    [[B:%.*]] = fsub reassoc float 2.000000e+00, %X
+; CHECK-NEXT:    [[C:%.*]] = fsub reassoc float 3.000000e+00, %X
+; CHECK-NEXT:    [[Y:%.*]] = fadd reassoc float [[A]], [[B]]
+; CHECK-NEXT:    [[Z:%.*]] = fadd reassoc float [[C]], [[Y]]
+; CHECK-NEXT:    ret float [[Z]]
+;
+  %A = fsub reassoc float 1.000000e+00, %X
+  %B = fsub reassoc float 2.000000e+00, %X
+  %C = fsub reassoc float 3.000000e+00, %X
+  %Y = fadd reassoc float %A ,%B
+  %Z = fadd reassoc float %Y, %C
+  ret float %Z
+}
+
 define float @test13(float %X1, float %X2, float %X3) {
 ; CHECK-LABEL: @test13(
 ; CHECK-NEXT:    [[REASS_ADD:%.*]] = fsub fast float %X3, %X2
@@ -199,6 +306,21 @@ define float @test13(float %X1, float %X2, float %X3) {
   %B = fmul fast float %A, %X2   ; -X1*X2
   %C = fmul fast float %X1, %X3  ; X1*X3
   %D = fadd fast float %B, %C    ; -X1*X2 + X1*X3 -> X1*(X3-X2)
+  ret float %D
+}
+
+define float @test13_reassoc(float %X1, float %X2, float %X3) {
+; CHECK-LABEL: @test13_reassoc(
+; CHECK-NEXT:    [[A:%.*]] = fsub reassoc float 0.000000e+00, %X1
+; CHECK-NEXT:    [[B:%.*]] = fmul reassoc float [[A]], %X2
+; CHECK-NEXT:    [[C:%.*]] = fmul reassoc float %X1, %X3
+; CHECK-NEXT:    [[D:%.*]] = fadd reassoc float [[B]], [[C]]
+; CHECK-NEXT:    ret float [[D]]
+;
+  %A = fsub reassoc float 0.000000e+00, %X1
+  %B = fmul reassoc float %A, %X2   ; -X1*X2
+  %C = fmul reassoc float %X1, %X3  ; X1*X3
+  %D = fadd reassoc float %B, %C    ; -X1*X2 + X1*X3 -> X1*(X3-X2)
   ret float %D
 }
 
@@ -214,6 +336,19 @@ define float @test14(float %X1, float %X2) {
   ret float %D
 }
 
+define float @test14_reassoc(float %X1, float %X2) {
+; CHECK-LABEL: @test14_reassoc(
+; CHECK-NEXT:    [[B:%.*]] = fmul reassoc float %X1, 4.700000e+01
+; CHECK-NEXT:    [[C:%.*]] = fmul reassoc float %X2, 4.700000e+01
+; CHECK-NEXT:    [[D1:%.*]] = fsub reassoc float [[B]], [[C]]
+; CHECK-NEXT:    ret float [[D1]]
+;
+  %B = fmul reassoc float %X1, 47.   ; X1*47
+  %C = fmul reassoc float %X2, -47.  ; X2*-47
+  %D = fadd reassoc float %B, %C    ; X1*47 + X2*-47 -> 47*(X1-X2)
+  ret float %D
+}
+
 define float @test15(float %arg) {
 ; CHECK-LABEL: @test15(
 ; CHECK-NEXT:    [[T2:%.*]] = fmul fast float %arg, 1.440000e+02
@@ -221,6 +356,17 @@ define float @test15(float %arg) {
 ;
   %t1 = fmul fast float 1.200000e+01, %arg
   %t2 = fmul fast float %t1, 1.200000e+01
+  ret float %t2
+}
+
+define float @test15_reassoc(float %arg) {
+; CHECK-LABEL: @test15_reassoc(
+; CHECK-NEXT:    [[T1:%.*]] = fmul reassoc float %arg, 1.200000e+01
+; CHECK-NEXT:    [[T2:%.*]] = fmul reassoc float [[T1]], 1.200000e+01
+; CHECK-NEXT:    ret float [[T2]]
+;
+  %t1 = fmul reassoc float 1.200000e+01, %arg
+  %t2 = fmul reassoc float %t1, 1.200000e+01
   ret float %t2
 }
 
@@ -234,6 +380,21 @@ define float @test16(float %b, float %a) {
   %2 = fadd fast float %b, %1
   %3 = fsub fast float 0.0, %a
   %4 = fadd fast float %2, %3
+  ret float %4
+}
+
+define float @test16_reassoc(float %b, float %a) {
+; CHECK-LABEL: @test16_reassoc(
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc float %a, 1.234000e+03
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd reassoc float [[TMP1]], %b
+; CHECK-NEXT:    [[TMP3:%.*]] = fsub reassoc float 0.000000e+00, %a
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd reassoc float [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    ret float [[TMP4]]
+;
+  %1 = fadd reassoc float %a, 1234.0
+  %2 = fadd reassoc float %b, %1
+  %3 = fsub reassoc float 0.0, %a
+  %4 = fadd reassoc float %2, %3
   ret float %4
 }
 
@@ -254,6 +415,23 @@ define float @test17(float %a, float %b, float %z) {
   ret float %g
 }
 
+define float @test17_reassoc(float %a, float %b, float %z) {
+; CHECK-LABEL: @test17_reassoc(
+; CHECK-NEXT:    [[C:%.*]] = fsub reassoc float 0.000000e+00, %z
+; CHECK-NEXT:    [[D:%.*]] = fmul reassoc float %a, %b
+; CHECK-NEXT:    [[E:%.*]] = fmul reassoc float [[D]], [[C]]
+; CHECK-NEXT:    [[F:%.*]] = fmul reassoc float [[E]], 1.234500e+04
+; CHECK-NEXT:    [[G:%.*]] = fsub reassoc float 0.000000e+00, [[F]]
+; CHECK-NEXT:    ret float [[G]]
+;
+  %c = fsub reassoc float 0.000000e+00, %z
+  %d = fmul reassoc float %a, %b
+  %e = fmul reassoc float %c, %d
+  %f = fmul reassoc float %e, 1.234500e+04
+  %g = fsub reassoc float 0.000000e+00, %f
+  ret float %g
+}
+
 define float @test18(float %a, float %b, float %z) {
 ; CHECK-LABEL: @test18(
 ; CHECK-NEXT:    [[E:%.*]] = fmul fast float %a, 4.000000e+01
@@ -267,6 +445,21 @@ define float @test18(float %a, float %b, float %z) {
   ret float %f
 }
 
+define float @test18_reassoc(float %a, float %b, float %z) {
+; CHECK-LABEL: @test18_reassoc(
+; CHECK-NEXT:    [[D:%.*]] = fmul reassoc float %z, 4.000000e+01
+; CHECK-NEXT:    [[C:%.*]] = fsub reassoc float 0.000000e+00, [[D]]
+; CHECK-NEXT:    [[E:%.*]] = fmul reassoc float [[C]], %a
+; CHECK-NEXT:    [[F:%.*]] = fsub reassoc float 0.000000e+00, [[E]]
+; CHECK-NEXT:    ret float [[F]]
+;
+  %d = fmul reassoc float %z, 4.000000e+01
+  %c = fsub reassoc float 0.000000e+00, %d
+  %e = fmul reassoc float %a, %c
+  %f = fsub reassoc float 0.000000e+00, %e
+  ret float %f
+}
+
 ; With sub reassociation, constant folding can eliminate the 12 and -12 constants.
 define float @test19(float %A, float %B) {
 ; CHECK-LABEL: @test19(
@@ -276,6 +469,19 @@ define float @test19(float %A, float %B) {
   %X = fadd fast float -1.200000e+01, %A
   %Y = fsub fast float %X, %B
   %Z = fadd fast float %Y, 1.200000e+01
+  ret float %Z
+}
+
+define float @test19_reassoc(float %A, float %B) {
+; CHECK-LABEL: @test19_reassoc(
+; CHECK-NEXT:    [[X:%.*]] = fadd reassoc float %A, -1.200000e+01
+; CHECK-NEXT:    [[Y:%.*]] = fsub reassoc float [[X]], %B
+; CHECK-NEXT:    [[Z:%.*]] = fadd reassoc float [[Y]], 1.200000e+01
+; CHECK-NEXT:    ret float [[Z]]
+;
+  %X = fadd reassoc float -1.200000e+01, %A
+  %Y = fsub reassoc float %X, %B
+  %Z = fadd reassoc float %Y, 1.200000e+01
   ret float %Z
 }
 
@@ -295,3 +501,17 @@ define float @test20(float %a, float %b, float %c) nounwind  {
   %t7 = fsub fast float %t5, %a
   ret float %t7
 }
+
+define float @test20_reassoc(float %a, float %b, float %c) nounwind  {
+; CHECK-LABEL: @test20_reassoc(
+; CHECK-NEXT:    [[T3:%.*]] = fsub reassoc float %a, %b
+; CHECK-NEXT:    [[T5:%.*]] = fsub reassoc float [[T3]], %c
+; CHECK-NEXT:    [[T7:%.*]] = fsub reassoc float [[T5]], %a
+; CHECK-NEXT:    ret float [[T7]]
+;
+  %t3 = fsub reassoc float %a, %b
+  %t5 = fsub reassoc float %t3, %c
+  %t7 = fsub reassoc float %t5, %a
+  ret float %t7
+}
+

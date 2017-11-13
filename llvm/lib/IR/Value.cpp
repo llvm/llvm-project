@@ -50,6 +50,7 @@ Value::Value(Type *ty, unsigned scid)
     : VTy(checkType(ty)), UseList(nullptr), SubclassID(scid),
       HasValueHandle(0), SubclassOptionalData(0), SubclassData(0),
       NumUserOperands(0), IsUsedByMD(false), HasName(false) {
+  static_assert(ConstantFirstVal == 0, "!(SubclassID < ConstantFirstVal)");
   // FIXME: Why isn't this in the subclass gunk??
   // Note, we cannot call isa<CallInst> before the CallInst has been
   // constructed.
@@ -57,7 +58,7 @@ Value::Value(Type *ty, unsigned scid)
     assert((VTy->isFirstClassType() || VTy->isVoidTy() || VTy->isStructTy()) &&
            "invalid CallInst type!");
   else if (SubclassID != BasicBlockVal &&
-           (SubclassID < ConstantFirstVal || SubclassID > ConstantLastVal))
+           (/*SubclassID < ConstantFirstVal ||*/ SubclassID > ConstantLastVal))
     assert((VTy->isFirstClassType() || VTy->isVoidTy()) &&
            "Cannot create non-first-class values except for constants!");
   static_assert(sizeof(Value) == 2 * sizeof(void *) + 2 * sizeof(unsigned),

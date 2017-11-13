@@ -56,16 +56,10 @@
 #define HANDLE_CONSTANT_MARKER(MarkerName, ValueName)
 #endif
 
-HANDLE_VALUE(Argument)
-HANDLE_VALUE(BasicBlock)
+// Having constant first makes the range check for isa<Constant> faster
+// and smaller by one operation.
 
-// FIXME: It's awkward that Value.def knows about classes in Analysis. While
-// this doesn't introduce a strict link or include dependency, we should remove
-// the circular dependency eventually.
-HANDLE_MEMORY_VALUE(MemoryUse)
-HANDLE_MEMORY_VALUE(MemoryDef)
-HANDLE_MEMORY_VALUE(MemoryPhi)
-
+// Constant
 HANDLE_GLOBAL_VALUE(Function)
 HANDLE_GLOBAL_VALUE(GlobalAlias)
 HANDLE_GLOBAL_VALUE(GlobalIFunc)
@@ -88,19 +82,30 @@ HANDLE_CONSTANT(ConstantFP)
 HANDLE_CONSTANT(ConstantPointerNull)
 HANDLE_CONSTANT(ConstantTokenNone)
 
-HANDLE_METADATA_VALUE(MetadataAsValue)
-HANDLE_INLINE_ASM_VALUE(InlineAsm)
-
-HANDLE_INSTRUCTION(Instruction)
-// Enum values starting at InstructionVal are used for Instructions;
-// don't add new values here!
-
 HANDLE_CONSTANT_MARKER(ConstantFirstVal, Function)
 HANDLE_CONSTANT_MARKER(ConstantLastVal, ConstantTokenNone)
 HANDLE_CONSTANT_MARKER(ConstantDataFirstVal, UndefValue)
 HANDLE_CONSTANT_MARKER(ConstantDataLastVal, ConstantTokenNone)
 HANDLE_CONSTANT_MARKER(ConstantAggregateFirstVal, ConstantArray)
 HANDLE_CONSTANT_MARKER(ConstantAggregateLastVal, ConstantVector)
+
+HANDLE_VALUE(Argument)
+HANDLE_VALUE(BasicBlock)
+
+
+HANDLE_METADATA_VALUE(MetadataAsValue)
+HANDLE_INLINE_ASM_VALUE(InlineAsm)
+
+// FIXME: It's awkward that Value.def knows about classes in Analysis. While
+// this doesn't introduce a strict link or include dependency, we should remove
+// the circular dependency eventually.
+HANDLE_MEMORY_VALUE(MemoryUse)
+HANDLE_MEMORY_VALUE(MemoryDef)
+HANDLE_MEMORY_VALUE(MemoryPhi)
+
+HANDLE_INSTRUCTION(Instruction)
+// Enum values starting at InstructionVal are used for Instructions;
+// don't add new values here!
 
 #undef HANDLE_MEMORY_VALUE
 #undef HANDLE_GLOBAL_VALUE

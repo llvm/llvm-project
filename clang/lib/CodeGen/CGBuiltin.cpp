@@ -2109,15 +2109,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
   case Builtin::BIfmal:
   case Builtin::BI__builtin_fma:
   case Builtin::BI__builtin_fmaf:
-  case Builtin::BI__builtin_fmal: {
-    // Rewrite fma to intrinsic.
-    Value *FirstArg = EmitScalarExpr(E->getArg(0));
-    llvm::Type *ArgType = FirstArg->getType();
-    Value *F = CGM.getIntrinsic(Intrinsic::fma, ArgType);
-    return RValue::get(
-        Builder.CreateCall(F, {FirstArg, EmitScalarExpr(E->getArg(1)),
-                               EmitScalarExpr(E->getArg(2))}));
-  }
+  case Builtin::BI__builtin_fmal:
+    // A constant libcall or builtin is equivalent to the LLVM intrinsic.
+    if (FD->hasAttr<ConstAttr>())
+      return RValue::get(emitTernaryBuiltin(*this, E, Intrinsic::fma));
+    break;
 
   case Builtin::BI__builtin_signbit:
   case Builtin::BI__builtin_signbitf:
