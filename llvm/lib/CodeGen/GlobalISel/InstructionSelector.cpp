@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -96,6 +97,23 @@ bool InstructionSelector::isOperandImmEqual(
     if (auto VRegVal = getConstantVRegVal(MO.getReg(), MRI))
       return *VRegVal == Value;
   return false;
+}
+
+bool InstructionSelector::isBaseWithConstantOffset(
+    const MachineOperand &Root, const MachineRegisterInfo &MRI) const {
+  if (!Root.isReg())
+    return false;
+
+  MachineInstr *RootI = MRI.getVRegDef(Root.getReg());
+  if (RootI->getOpcode() != TargetOpcode::G_GEP)
+    return false;
+
+  MachineOperand &RHS = RootI->getOperand(2);
+  MachineInstr *RHSI = MRI.getVRegDef(RHS.getReg());
+  if (RHSI->getOpcode() != TargetOpcode::G_CONSTANT)
+    return false;
+
+  return true;
 }
 
 bool InstructionSelector::isObviouslySafeToFold(MachineInstr &MI) const {

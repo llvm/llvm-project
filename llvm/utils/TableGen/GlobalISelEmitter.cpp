@@ -775,8 +775,8 @@ std::set<LLTCodeGen> LLTOperandMatcher::KnownTypes;
 /// no reliable means to derive the missing type information from the pattern so
 /// imported rules must test the components of a pointer separately.
 ///
-/// SizeInBits must be non-zero and the matched pointer must be that size.
-/// TODO: Add support for iPTR via SizeInBits==0 and a subtarget query.
+/// If SizeInBits is zero, then the pointer size will be obtained from the
+/// subtarget.
 class PointerToAnyOperandMatcher : public OperandPredicateMatcher {
 protected:
   unsigned SizeInBits;
@@ -979,6 +979,14 @@ public:
 
   Error addTypeCheckPredicate(const EEVT::TypeSet &Ty,
                               bool OperandIsAPointer) {
+    if (!Ty.isConcrete())
+      return failedImport("unsupported typeset");
+
+    if (Ty.getConcrete() == MVT::iPTR && OperandIsAPointer) {
+      addPredicate<PointerToAnyOperandMatcher>(0);
+      return Error::success();
+    }
+
     auto OpTyOrNone = MVTToLLT(Ty.getConcrete());
     if (!OpTyOrNone)
       return failedImport("unsupported type");
@@ -2971,20 +2979,16 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
         "ComplexRendererFn("
      << Target.getName()
      << "InstructionSelector::*ComplexMatcherMemFn)(MachineOperand &) const;\n"
-     << "const MatcherInfoTy<PredicateBitset, ComplexMatcherMemFn> "
+     << "  const MatcherInfoTy<PredicateBitset, ComplexMatcherMemFn> "
         "MatcherInfo;\n"
+     << "  static " << Target.getName()
+     << "InstructionSelector::ComplexMatcherMemFn ComplexPredicateFns[];\n"
      << "#endif // ifdef GET_GLOBALISEL_TEMPORARIES_DECL\n\n";
 
   OS << "#ifdef GET_GLOBALISEL_TEMPORARIES_INIT\n"
      << ", State(" << MaxTemporaries << "),\n"
      << "MatcherInfo({TypeObjects, FeatureBitsets, I64ImmPredicateFns, "
-        "APIntImmPredicateFns, APFloatImmPredicateFns, {\n"
-     << "  nullptr, // GICP_Invalid\n";
-  for (const auto &Record : ComplexPredicates)
-    OS << "  &" << Target.getName()
-       << "InstructionSelector::" << Record->getValueAsString("MatcherFn")
-       << ", // " << Record->getName() << "\n";
-  OS << "}})\n"
+        "APIntImmPredicateFns, APFloatImmPredicateFns, ComplexPredicateFns})\n"
      << "#endif // ifdef GET_GLOBALISEL_TEMPORARIES_INIT\n\n";
 
   OS << "#ifdef GET_GLOBALISEL_IMPL\n";
@@ -3103,6 +3107,16 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
   emitImmPredicates(OS, "APInt", "const APInt &", [](const Record *R) {
     return R->getValueAsBit("IsAPInt");
   });
+  OS << "\n";
+
+  OS << Target.getName() << "InstructionSelector::ComplexMatcherMemFn\n"
+     << Target.getName() << "InstructionSelector::ComplexPredicateFns[] = {\n"
+     << "  nullptr, // GICP_Invalid\n";
+  for (const auto &Record : ComplexPredicates)
+    OS << "  &" << Target.getName()
+       << "InstructionSelector::" << Record->getValueAsString("MatcherFn")
+       << ", // " << Record->getName() << "\n";
+  OS << "};\n\n";
 
   OS << "bool " << Target.getName()
      << "InstructionSelector::selectImpl(MachineInstr &I) const {\n"
