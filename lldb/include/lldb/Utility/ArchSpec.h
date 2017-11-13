@@ -7,27 +7,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ArchSpec_h_
-#define liblldb_ArchSpec_h_
-
-#if defined(__cplusplus)
+#ifndef LLDB_UTILITY_ARCHSPEC_H
+#define LLDB_UTILITY_ARCHSPEC_H
 
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-enumerations.h"
-#include "lldb/lldb-private-enumerations.h"
 #include "lldb/lldb-forward.h"
+#include "lldb/lldb-private-enumerations.h"
 #include "llvm/ADT/StringRef.h" // for StringRef
 #include "llvm/ADT/Triple.h"
-
-#include <string> // for string
-
-#include <stddef.h> // for size_t
-#include <stdint.h> // for uint32_t
+#include <cstddef> // for size_t
+#include <cstdint> // for uint32_t
+#include <string>  // for string
 
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class ArchSpec ArchSpec.h "lldb/Core/ArchSpec.h"
+/// @class ArchSpec ArchSpec.h "lldb/Utility/ArchSpec.h"
 /// @brief An architecture specification class.
 ///
 /// A class designed to be created from a cpu type and subtype, a
@@ -564,7 +560,8 @@ public:
 
   void PiecewiseTripleCompare(const ArchSpec &other, bool &arch_different,
                               bool &vendor_different, bool &os_different,
-                              bool &os_version_different, bool &env_different) const;
+                              bool &os_version_different,
+                              bool &env_different) const;
 
   //------------------------------------------------------------------
   /// Detect whether this architecture uses thumb code exclusively
@@ -625,5 +622,4 @@ bool ParseMachCPUDashSubtypeTriple(llvm::StringRef triple_str, ArchSpec &arch);
 
 } // namespace lldb_private
 
-#endif // #if defined(__cplusplus)
-#endif // #ifndef liblldb_ArchSpec_h_
+#endif // #ifndef LLDB_UTILITY_ARCHSPEC_H

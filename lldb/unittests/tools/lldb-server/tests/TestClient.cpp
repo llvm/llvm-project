@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestClient.h"
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/common/TCPSocket.h"
 #include "lldb/Host/posix/ConnectionFileDescriptorPosix.h"

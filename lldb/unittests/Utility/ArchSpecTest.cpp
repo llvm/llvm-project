@@ -9,8 +9,7 @@
 
 #include "gtest/gtest.h"
 
-#include "lldb/Core/ArchSpec.h"
-
+#include "lldb/Utility/ArchSpec.h"
 #include "llvm/BinaryFormat/MachO.h"
 
 using namespace lldb;

@@ -11,8 +11,8 @@
 #define liblldb_ProcessInfo_h_
 
 // LLDB headers
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Interpreter/Args.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"
 
 namespace lldb_private {

@@ -27,7 +27,6 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Breakpoint/BreakpointSiteList.h"
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/Communication.h"
 #include "lldb/Core/Event.h"
@@ -46,6 +45,7 @@
 #include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Target/QueueList.h"
 #include "lldb/Target/ThreadList.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/NameMatches.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StructuredData.h"

@@ -10,7 +10,6 @@
 #include "lldb/Core/Value.h"
 
 #include "lldb/Core/Address.h"  // for Address
-#include "lldb/Core/ArchSpec.h" // for ArchSpec
 #include "lldb/Core/Module.h"
 #include "lldb/Core/State.h"
 #include "lldb/Symbol/CompilerType.h"

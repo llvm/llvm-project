@@ -13,7 +13,6 @@
 #include <cassert>
 #include <unordered_map>
 
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -24,6 +23,7 @@
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"

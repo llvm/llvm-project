@@ -7,14 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/ArchSpec.h"
+#include "lldb/Utility/ArchSpec.h"
 
 #include "lldb/Utility/NameMatches.h"
 #include "lldb/Utility/Stream.h" // for Stream
 #include "lldb/Utility/StringList.h"
 #include "lldb/lldb-defines.h" // for LLDB_INVALID_C...
-#include "lldb/lldb-forward.h" // for RegisterContextSP
-
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h" // for Twine
 #include "llvm/BinaryFormat/COFF.h"
@@ -22,10 +20,6 @@
 #include "llvm/BinaryFormat/MachO.h" // for CPUType::CPU_T...
 #include "llvm/Support/Compiler.h"   // for LLVM_FALLTHROUGH
 #include "llvm/Support/Host.h"
-
-#include <memory> // for shared_ptr
-#include <string>
-#include <tuple> // for tie, tuple
 
 using namespace lldb;
 using namespace lldb_private;
@@ -182,7 +176,7 @@ static const CoreDefinition g_core_definitions[] = {
      "ppc970"},
 
     {eByteOrderLittle, 8, 4, 4, llvm::Triple::ppc64le,
-      ArchSpec::eCore_ppc64le_generic, "powerpc64le"},
+     ArchSpec::eCore_ppc64le_generic, "powerpc64le"},
     {eByteOrderBig, 8, 4, 4, llvm::Triple::ppc64, ArchSpec::eCore_ppc64_generic,
      "powerpc64"},
     {eByteOrderBig, 8, 4, 4, llvm::Triple::ppc64,
@@ -460,7 +454,9 @@ static const ArchDefinitionEntry g_elf_arch_entries[] = {
 };
 
 static const ArchDefinition g_elf_arch_def = {
-    eArchTypeELF, llvm::array_lengthof(g_elf_arch_entries), g_elf_arch_entries,
+    eArchTypeELF,
+    llvm::array_lengthof(g_elf_arch_entries),
+    g_elf_arch_entries,
     "elf",
 };
 
@@ -482,8 +478,10 @@ static const ArchDefinitionEntry g_coff_arch_entries[] = {
 };
 
 static const ArchDefinition g_coff_arch_def = {
-    eArchTypeCOFF, llvm::array_lengthof(g_coff_arch_entries),
-    g_coff_arch_entries, "pe-coff",
+    eArchTypeCOFF,
+    llvm::array_lengthof(g_coff_arch_entries),
+    g_coff_arch_entries,
+    "pe-coff",
 };
 
 //===----------------------------------------------------------------------===//

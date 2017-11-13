@@ -17,8 +17,8 @@
 #include <stdlib.h>
 
 #include "lldb/Core/Address.h"
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Interpreter/Options.h"
+#include "lldb/Utility/ArchSpec.h"
 
 // These are for the Sourcename completers.
 // FIXME: Make a separate file for the completers.

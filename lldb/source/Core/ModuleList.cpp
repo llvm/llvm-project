@@ -8,8 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/ModuleList.h"
-
-#include "lldb/Core/ArchSpec.h"     // for ArchSpec
 #include "lldb/Core/FileSpecList.h" // for FileSpecList
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -18,6 +16,7 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolContext.h" // for SymbolContextList, SymbolCon...
 #include "lldb/Symbol/VariableList.h"
+#include "lldb/Utility/ArchSpec.h"    // for ArchSpec
 #include "lldb/Utility/ConstString.h" // for ConstString
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Logging.h" // for GetLogIfAnyCategoriesSet

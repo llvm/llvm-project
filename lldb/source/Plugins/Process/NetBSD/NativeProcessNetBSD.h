@@ -10,12 +10,8 @@
 #ifndef liblldb_NativeProcessNetBSD_H_
 #define liblldb_NativeProcessNetBSD_H_
 
-// C++ Includes
-
-// Other libraries and framework includes
-
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"
 
 #include "NativeThreadNetBSD.h"
