@@ -57,12 +57,12 @@ void RegisterLsanFlags(FlagParser *parser, Flags *f) {
 #define LOG_POINTERS(...)                           \
   do {                                              \
     if (flags()->log_pointers) Report(__VA_ARGS__); \
-  } while (0);
+  } while (0)
 
 #define LOG_THREADS(...)                           \
   do {                                             \
     if (flags()->log_threads) Report(__VA_ARGS__); \
-  } while (0);
+  } while (0)
 
 ALIGNED(64) static char suppression_placeholder[sizeof(SuppressionContext)];
 static SuppressionContext *suppression_ctx = nullptr;

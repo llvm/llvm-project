@@ -23,7 +23,6 @@
 #include "lldb/Breakpoint/BreakpointList.h"
 #include "lldb/Breakpoint/BreakpointName.h"
 #include "lldb/Breakpoint/WatchpointList.h"
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/Architecture.h"
 #include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/Disassembler.h"
@@ -35,6 +34,7 @@
 #include "lldb/Target/PathMappingList.h"
 #include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Target/SectionLoadHistory.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-public.h"
 

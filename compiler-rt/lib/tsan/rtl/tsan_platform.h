@@ -316,6 +316,38 @@ struct Mapping46 {
   static const uptr kVdsoBeg       = 0x7800000000000000ull;
 };
 
+/*
+C/C++ on linux/powerpc64 (47-bit VMA)
+0000 0000 1000 - 0100 0000 0000: main binary
+0100 0000 0000 - 0200 0000 0000: -
+0100 0000 0000 - 1000 0000 0000: shadow
+1000 0000 0000 - 1000 0000 0000: -
+1000 0000 0000 - 2000 0000 0000: metainfo (memory blocks and sync objects)
+2000 0000 0000 - 2000 0000 0000: -
+2000 0000 0000 - 2200 0000 0000: traces
+2200 0000 0000 - 7d00 0000 0000: -
+7d00 0000 0000 - 7e00 0000 0000: heap
+7e00 0000 0000 - 7e80 0000 0000: -
+7e80 0000 0000 - 8000 0000 0000: modules and main thread stack
+*/
+struct Mapping47 {
+  static const uptr kMetaShadowBeg = 0x100000000000ull;
+  static const uptr kMetaShadowEnd = 0x200000000000ull;
+  static const uptr kTraceMemBeg   = 0x200000000000ull;
+  static const uptr kTraceMemEnd   = 0x220000000000ull;
+  static const uptr kShadowBeg     = 0x010000000000ull;
+  static const uptr kShadowEnd     = 0x100000000000ull;
+  static const uptr kHeapMemBeg    = 0x7d0000000000ull;
+  static const uptr kHeapMemEnd    = 0x7e0000000000ull;
+  static const uptr kLoAppMemBeg   = 0x000000001000ull;
+  static const uptr kLoAppMemEnd   = 0x010000000000ull;
+  static const uptr kHiAppMemBeg   = 0x7e8000000000ull;
+  static const uptr kHiAppMemEnd   = 0x800000000000ull; // 47 bits
+  static const uptr kAppMemMsk     = 0x7c0000000000ull;
+  static const uptr kAppMemXor     = 0x020000000000ull;
+  static const uptr kVdsoBeg       = 0x7800000000000000ull;
+};
+
 // Indicates the runtime will define the memory regions at runtime.
 #define TSAN_RUNTIME_VMA 1
 #endif
@@ -442,11 +474,13 @@ uptr MappingArchImpl(void) {
   DCHECK(0);
   return 0;
 #elif defined(__powerpc64__)
-  if (vmaSize == 44)
-    return MappingImpl<Mapping44, Type>();
-  else
-    return MappingImpl<Mapping46, Type>();
+  switch (vmaSize) {
+    case 44: return MappingImpl<Mapping44, Type>();
+    case 46: return MappingImpl<Mapping46, Type>();
+    case 47: return MappingImpl<Mapping47, Type>();
+  }
   DCHECK(0);
+  return 0;
 #else
   return MappingImpl<Mapping, Type>();
 #endif
@@ -595,11 +629,13 @@ bool IsAppMem(uptr mem) {
   DCHECK(0);
   return false;
 #elif defined(__powerpc64__)
-  if (vmaSize == 44)
-    return IsAppMemImpl<Mapping44>(mem);
-  else
-    return IsAppMemImpl<Mapping46>(mem);
+  switch (vmaSize) {
+    case 44: return IsAppMemImpl<Mapping44>(mem);
+    case 46: return IsAppMemImpl<Mapping46>(mem);
+    case 47: return IsAppMemImpl<Mapping47>(mem);
+  }
   DCHECK(0);
+  return false;
 #else
   return IsAppMemImpl<Mapping>(mem);
 #endif
@@ -622,11 +658,13 @@ bool IsShadowMem(uptr mem) {
   DCHECK(0);
   return false;
 #elif defined(__powerpc64__)
-  if (vmaSize == 44)
-    return IsShadowMemImpl<Mapping44>(mem);
-  else
-    return IsShadowMemImpl<Mapping46>(mem);
+  switch (vmaSize) {
+    case 44: return IsShadowMemImpl<Mapping44>(mem);
+    case 46: return IsShadowMemImpl<Mapping46>(mem);
+    case 47: return IsShadowMemImpl<Mapping47>(mem);
+  }
   DCHECK(0);
+  return false;
 #else
   return IsShadowMemImpl<Mapping>(mem);
 #endif
@@ -649,11 +687,13 @@ bool IsMetaMem(uptr mem) {
   DCHECK(0);
   return false;
 #elif defined(__powerpc64__)
-  if (vmaSize == 44)
-    return IsMetaMemImpl<Mapping44>(mem);
-  else
-    return IsMetaMemImpl<Mapping46>(mem);
+  switch (vmaSize) {
+    case 44: return IsMetaMemImpl<Mapping44>(mem);
+    case 46: return IsMetaMemImpl<Mapping46>(mem);
+    case 47: return IsMetaMemImpl<Mapping47>(mem);
+  }
   DCHECK(0);
+  return false;
 #else
   return IsMetaMemImpl<Mapping>(mem);
 #endif
@@ -686,11 +726,13 @@ uptr MemToShadow(uptr x) {
   DCHECK(0);
   return 0;
 #elif defined(__powerpc64__)
-  if (vmaSize == 44)
-    return MemToShadowImpl<Mapping44>(x);
-  else
-    return MemToShadowImpl<Mapping46>(x);
+  switch (vmaSize) {
+    case 44: return MemToShadowImpl<Mapping44>(x);
+    case 46: return MemToShadowImpl<Mapping46>(x);
+    case 47: return MemToShadowImpl<Mapping47>(x);
+  }
   DCHECK(0);
+  return 0;
 #else
   return MemToShadowImpl<Mapping>(x);
 #endif
@@ -725,11 +767,13 @@ u32 *MemToMeta(uptr x) {
   DCHECK(0);
   return 0;
 #elif defined(__powerpc64__)
-  if (vmaSize == 44)
-    return MemToMetaImpl<Mapping44>(x);
-  else
-    return MemToMetaImpl<Mapping46>(x);
+  switch (vmaSize) {
+    case 44: return MemToMetaImpl<Mapping44>(x);
+    case 46: return MemToMetaImpl<Mapping46>(x);
+    case 47: return MemToMetaImpl<Mapping47>(x);
+  }
   DCHECK(0);
+  return 0;
 #else
   return MemToMetaImpl<Mapping>(x);
 #endif
@@ -777,11 +821,13 @@ uptr ShadowToMem(uptr s) {
   DCHECK(0);
   return 0;
 #elif defined(__powerpc64__)
-  if (vmaSize == 44)
-    return ShadowToMemImpl<Mapping44>(s);
-  else
-    return ShadowToMemImpl<Mapping46>(s);
+  switch (vmaSize) {
+    case 44: return ShadowToMemImpl<Mapping44>(s);
+    case 46: return ShadowToMemImpl<Mapping46>(s);
+    case 47: return ShadowToMemImpl<Mapping47>(s);
+  }
   DCHECK(0);
+  return 0;
 #else
   return ShadowToMemImpl<Mapping>(s);
 #endif
@@ -812,11 +858,13 @@ uptr GetThreadTrace(int tid) {
   DCHECK(0);
   return 0;
 #elif defined(__powerpc64__)
-  if (vmaSize == 44)
-    return GetThreadTraceImpl<Mapping44>(tid);
-  else
-    return GetThreadTraceImpl<Mapping46>(tid);
+  switch (vmaSize) {
+    case 44: return GetThreadTraceImpl<Mapping44>(tid);
+    case 46: return GetThreadTraceImpl<Mapping46>(tid);
+    case 47: return GetThreadTraceImpl<Mapping47>(tid);
+  }
   DCHECK(0);
+  return 0;
 #else
   return GetThreadTraceImpl<Mapping>(tid);
 #endif
@@ -842,11 +890,13 @@ uptr GetThreadTraceHeader(int tid) {
   DCHECK(0);
   return 0;
 #elif defined(__powerpc64__)
-  if (vmaSize == 44)
-    return GetThreadTraceHeaderImpl<Mapping44>(tid);
-  else
-    return GetThreadTraceHeaderImpl<Mapping46>(tid);
+  switch (vmaSize) {
+    case 44: return GetThreadTraceHeaderImpl<Mapping44>(tid);
+    case 46: return GetThreadTraceHeaderImpl<Mapping46>(tid);
+    case 47: return GetThreadTraceHeaderImpl<Mapping47>(tid);
+  }
   DCHECK(0);
+  return 0;
 #else
   return GetThreadTraceHeaderImpl<Mapping>(tid);
 #endif

@@ -31,6 +31,7 @@
 #include "lld/Common/LLVM.h"
 
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileOutputBuffer.h"
 
 namespace lld {
 
@@ -51,6 +52,8 @@ public:
   void log(const Twine &Msg);
   void message(const Twine &Msg);
   void warn(const Twine &Msg);
+
+  std::unique_ptr<llvm::FileOutputBuffer> OutputBuffer;
 
 private:
   void print(StringRef S, raw_ostream::Colors C);

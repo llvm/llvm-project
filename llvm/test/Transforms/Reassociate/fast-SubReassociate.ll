@@ -26,7 +26,23 @@ define float @test2(float %A, float %B) {
   %Y = fsub fast float %X, %W
   %Z = fadd fast float %Y, 1.200000e+01
   ret float %Z
+}
 
+; Check again using minimal subset of FMF.
+
+define float @test2_reassoc(float %A, float %B) {
+; CHECK-LABEL: @test2_reassoc(
+; CHECK-NEXT:    [[W:%.*]] = fadd reassoc float %B, 5.000000e+00
+; CHECK-NEXT:    [[X:%.*]] = fadd reassoc float %A, -7.000000e+00
+; CHECK-NEXT:    [[Y:%.*]] = fsub reassoc float [[X]], [[W]]
+; CHECK-NEXT:    [[Z:%.*]] = fadd reassoc float [[Y]], 1.200000e+01
+; CHECK-NEXT:    ret float [[Z]]
+;
+  %W = fadd reassoc float %B, 5.000000e+00
+  %X = fadd reassoc float %A, -7.000000e+00
+  %Y = fsub reassoc float %X, %W
+  %Z = fadd reassoc float %Y, 1.200000e+01
+  ret float %Z
 }
 
 define float @test3(float %A, float %B, float %C, float %D) {
@@ -47,6 +63,7 @@ define float @test3(float %A, float %B, float %C, float %D) {
 }
 
 ; With sub reassociation, constant folding can eliminate the two 12 constants.
+
 define float @test4(float %A, float %B, float %C, float %D) {
 ; FIXME: InstCombine should be able to get us to the following:
 ; %sum = fadd fast float %B, %A
@@ -65,6 +82,25 @@ define float @test4(float %A, float %B, float %C, float %D) {
   %O = fadd fast float %N, %C
   %P = fsub fast float %D, %O
   %Q = fadd fast float 1.200000e+01, %P
+  ret float %Q
+}
+
+; Check again using minimal subset of FMF.
+
+define float @test4_reassoc(float %A, float %B, float %C, float %D) {
+; CHECK-LABEL: @test4_reassoc(
+; CHECK-NEXT:    [[M:%.*]] = fadd reassoc float %A, 1.200000e+01
+; CHECK-NEXT:    [[N:%.*]] = fadd reassoc float [[M]], %B
+; CHECK-NEXT:    [[O:%.*]] = fadd reassoc float [[N]], %C
+; CHECK-NEXT:    [[P:%.*]] = fsub reassoc float %D, [[O]]
+; CHECK-NEXT:    [[Q:%.*]] = fadd reassoc float [[P]], 1.200000e+01
+; CHECK-NEXT:    ret float [[Q]]
+;
+  %M = fadd reassoc float 1.200000e+01, %A
+  %N = fadd reassoc float %M, %B
+  %O = fadd reassoc float %N, %C
+  %P = fsub reassoc float %D, %O
+  %Q = fadd reassoc float 1.200000e+01, %P
   ret float %Q
 }
 

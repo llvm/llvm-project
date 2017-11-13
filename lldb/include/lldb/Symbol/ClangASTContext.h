@@ -782,9 +782,14 @@ public:
 
   size_t GetNumTemplateArguments(lldb::opaque_compiler_type_t type) override;
 
-  CompilerType GetTemplateArgument(lldb::opaque_compiler_type_t type,
-                                   size_t idx,
-                                   lldb::TemplateArgumentKind &kind) override;
+  lldb::TemplateArgumentKind
+  GetTemplateArgumentKind(lldb::opaque_compiler_type_t type,
+                          size_t idx) override;
+  CompilerType GetTypeTemplateArgument(lldb::opaque_compiler_type_t type,
+                                       size_t idx) override;
+  std::pair<llvm::APSInt, CompilerType>
+  GetIntegralTemplateArgument(lldb::opaque_compiler_type_t type,
+                              size_t idx) override;
 
   CompilerType GetTypeForFormatters(void *type) override;
 
@@ -971,6 +976,9 @@ public:
     return m_origins;
   }
 protected:
+  const clang::ClassTemplateSpecializationDecl *
+  GetAsTemplateSpecialization(lldb::opaque_compiler_type_t type);
+
   //------------------------------------------------------------------
   // Classes that inherit from ClangASTContext can see and modify these
   //------------------------------------------------------------------

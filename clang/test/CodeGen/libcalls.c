@@ -58,22 +58,22 @@ void test_pow(float a0, double a1, long double a2) {
 // CHECK-YES-LABEL: define void @test_fma
 // CHECK-NO-LABEL: define void @test_fma
 void test_fma(float a0, double a1, long double a2) {
-    // CHECK-YES: call float @llvm.fma.f32
+    // CHECK-YES: call float @fmaf
     // CHECK-NO: call float @llvm.fma.f32
     float l0 = fmaf(a0, a0, a0);
 
-    // CHECK-YES: call double @llvm.fma.f64
+    // CHECK-YES: call double @fma
     // CHECK-NO: call double @llvm.fma.f64
     double l1 = fma(a1, a1, a1);
 
-    // CHECK-YES: call x86_fp80 @llvm.fma.f80
+    // CHECK-YES: call x86_fp80 @fmal
     // CHECK-NO: call x86_fp80 @llvm.fma.f80
     long double l2 = fmal(a2, a2, a2);
 }
 
-// CHECK-YES: declare float @llvm.fma.f32(float, float, float) [[NUW_RN:#[0-9]+]]
-// CHECK-YES: declare double @llvm.fma.f64(double, double, double) [[NUW_RN]]
-// CHECK-YES: declare x86_fp80 @llvm.fma.f80(x86_fp80, x86_fp80, x86_fp80) [[NUW_RN]]
+// CHECK-YES: declare float @fmaf(float, float, float)
+// CHECK-YES: declare double @fma(double, double, double)
+// CHECK-YES: declare x86_fp80 @fmal(x86_fp80, x86_fp80, x86_fp80)
 // CHECK-NO: declare float @llvm.fma.f32(float, float, float) [[NUW_RN2:#[0-9]+]]
 // CHECK-NO: declare double @llvm.fma.f64(double, double, double) [[NUW_RN2]]
 // CHECK-NO: declare x86_fp80 @llvm.fma.f80(x86_fp80, x86_fp80, x86_fp80) [[NUW_RN2]]
@@ -122,8 +122,6 @@ void test_builtins(double d, float f, long double ld) {
 // CHECK-YES-NOT: declare x86_fp80 @logl(x86_fp80) [[NUW_RN]]
 // CHECK-YES-NOT: declare float @logf(float) [[NUW_RN]]
 }
-
-// CHECK-YES: attributes [[NUW_RN]] = { nounwind readnone speculatable }
 
 // CHECK-NO-DAG: attributes [[NUW_RN]] = { nounwind readnone{{.*}} }
 // CHECK-NO-DAG: attributes [[NUW_RNI]] = { nounwind readnone speculatable }

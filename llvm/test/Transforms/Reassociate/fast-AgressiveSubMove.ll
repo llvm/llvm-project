@@ -23,3 +23,18 @@ define float @test2(float %A) {
   ret float %r
 }
 
+; Check again using minimal subset of FMF.
+
+define float @test2_reassoc(float %A) {
+; CHECK-LABEL: @test2_reassoc(
+; CHECK-NEXT:    [[X:%.*]] = fadd reassoc float %A, 1.000000e+00
+; CHECK-NEXT:    [[Y:%.*]] = fadd reassoc float %A, 1.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = fsub reassoc float [[X]], [[Y]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %X = fadd reassoc float 1.000000e+00, %A
+  %Y = fadd reassoc float 1.000000e+00, %A
+  %r = fsub reassoc float %X, %Y
+  ret float %r
+}
+

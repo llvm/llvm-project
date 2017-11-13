@@ -1,4 +1,4 @@
-//===-- HostTest.cpp --------------------------------------------*- C++ -*-===//
+//===-- HostInfoTest.cpp ----------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/HostInfo.h"
+#include "lldb/lldb-defines.h"
 #include "gtest/gtest.h"
 
 using namespace lldb_private;
@@ -37,4 +38,8 @@ TEST_F(HostInfoTest, GetAugmentedArchSpec) {
   EXPECT_EQ(spec.GetTriple().getOS(), triple.getOS());
   EXPECT_EQ(spec.GetTriple().getVendor(), triple.getVendor());
   EXPECT_EQ(spec.GetTriple().getEnvironment(), triple.getEnvironment());
+
+  // Test LLDB_ARCH_DEFAULT
+  EXPECT_EQ(HostInfo::GetAugmentedArchSpec(LLDB_ARCH_DEFAULT).GetTriple(),
+            HostInfo::GetArchitecture(HostInfo::eArchKindDefault).GetTriple());
 }

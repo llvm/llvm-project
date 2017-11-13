@@ -508,3 +508,14 @@ function(rt_externalize_debuginfo name)
     message(FATAL_ERROR "COMPILER_RT_EXTERNALIZE_DEBUGINFO isn't implemented for non-darwin platforms!")
   endif()
 endfunction()
+
+
+# Configure lit configuration files, including compiler-rt specific variables.
+function(configure_compiler_rt_lit_site_cfg input output)
+  set_llvm_build_mode()
+
+  string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} COMPILER_RT_RESOLVED_TEST_COMPILER ${COMPILER_RT_TEST_COMPILER})
+  string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} COMPILER_RT_RESOLVED_LIBRARY_OUTPUT_DIR ${COMPILER_RT_LIBRARY_OUTPUT_DIR})
+
+  configure_lit_site_cfg(${input} ${output})
+endfunction()
