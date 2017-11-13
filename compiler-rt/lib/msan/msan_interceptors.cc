@@ -1301,7 +1301,7 @@ static int sigaction_impl(int signo, const __sanitizer_sigaction *act,
     res = REAL(sigaction)(signo, pnew_act, oldact);
     if (res == 0 && oldact) {
       uptr cb = (uptr)oldact->sigaction;
-      if (cb != __sanitizer::sig_ign && cb != __sanitizer::sig_dfl) {
+      if (cb == (uptr)SignalAction || cb == (uptr)SignalHandler) {
         oldact->sigaction = (decltype(oldact->sigaction))old_cb;
       }
     }

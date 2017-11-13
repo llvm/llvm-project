@@ -365,8 +365,12 @@ public:
 
   size_t GetNumTemplateArguments() const;
 
-  CompilerType GetTemplateArgument(size_t idx,
-                                   lldb::TemplateArgumentKind &kind) const;
+  lldb::TemplateArgumentKind GetTemplateArgumentKind(size_t idx) const;
+  CompilerType GetTypeTemplateArgument(size_t idx) const;
+
+  // Returns the value of the template argument and its type. In case the
+  // argument is not found, returns an invalid CompilerType.
+  std::pair<llvm::APSInt, CompilerType> GetIntegralTemplateArgument(size_t idx) const;
 
   CompilerType GetTypeForFormatters() const;
 

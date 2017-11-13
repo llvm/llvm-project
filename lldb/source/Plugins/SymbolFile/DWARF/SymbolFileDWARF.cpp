@@ -13,7 +13,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Threading.h"
 
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -22,6 +21,7 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/Value.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"

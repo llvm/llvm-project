@@ -843,6 +843,9 @@ def VOP3OpSelMods0 : ComplexPattern<untyped, 3, "SelectVOP3OpSelMods0">;
 
 def VOP3PMadMixMods  : ComplexPattern<untyped, 2, "SelectVOP3PMadMixMods">;
 
+
+def Hi16Elt  : ComplexPattern<untyped, 1, "SelectHi16Elt">;
+
 //===----------------------------------------------------------------------===//
 // SI assembler operands
 //===----------------------------------------------------------------------===//

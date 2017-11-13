@@ -31,6 +31,10 @@
 #define M_SQRT2_F       0x1.6a09e6p+0f
 #define M_SQRT1_2_F     0x1.6a09e6p-1f
 
+#ifdef __CLC_INTERNAL
+#define M_LOG210_F      0x1.a934f0p+1f
+#endif
+
 #ifdef cl_khr_fp64
 
 #define HUGE_VAL        __builtin_huge_val()
@@ -58,6 +62,10 @@
 #define M_2_SQRTPI      0x1.20dd750429b6dp+0
 #define M_SQRT2         0x1.6a09e667f3bcdp+0
 #define M_SQRT1_2       0x1.6a09e667f3bcdp-1
+
+#ifdef __CLC_INTERNAL
+#define M_LOG210	0x1.a934f0979a371p+1
+#endif
 
 #endif
 

@@ -16,8 +16,8 @@
 #include "Plugins/UnwindAssembly/x86/x86AssemblyInspectionEngine.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/AddressRange.h"
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Symbol/UnwindPlan.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/StreamString.h"
 
 #include "llvm/Support/TargetSelect.h"

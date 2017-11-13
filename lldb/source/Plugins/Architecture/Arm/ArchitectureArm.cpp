@@ -10,10 +10,10 @@
 #include "Plugins/Architecture/Arm/ArchitectureArm.h"
 #include "Plugins/Process/Utility/ARMDefines.h"
 #include "Plugins/Process/Utility/InstructionUtils.h"
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/ArchSpec.h"
 
 using namespace lldb_private;
 using namespace lldb;

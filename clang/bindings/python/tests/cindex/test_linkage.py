@@ -15,7 +15,8 @@ class TestLinkage(unittest.TestCase):
         tu = get_tu("""
 void foo() { int no_linkage; }
 static int internal;
-namespace { extern int unique_external; }
+namespace { struct unique_external_type {} }
+unique_external_type unique_external;
 extern int external;
 """, lang = 'cpp')
 

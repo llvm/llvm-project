@@ -71,7 +71,7 @@ define double @test_simplify6(double %x) {
 define float @test_simplify7(float %x) {
 ; CHECK-LABEL: @test_simplify7(
   %retval = call float @powf(float %x, float 0.5)
-; CHECK-NEXT: [[SQRTF:%[a-z0-9]+]] = call float @sqrtf(float %x) [[NUW_RO:#[0-9]+]]
+; CHECK-NEXT: [[SQRTF:%[a-z0-9]+]] = call float @sqrtf(float %x) [[$NUW_RO:#[0-9]+]]
 ; CHECK-NEXT: [[FABSF:%[a-z0-9]+]] = call float @llvm.fabs.f32(float [[SQRTF]])
 ; CHECK-NEXT: [[FCMP:%[a-z0-9]+]] = fcmp oeq float %x, 0xFFF0000000000000
 ; CHECK-NEXT: [[SELECT:%[a-z0-9]+]] = select i1 [[FCMP]], float 0x7FF0000000000000, float [[FABSF]]
@@ -82,7 +82,7 @@ define float @test_simplify7(float %x) {
 define double @test_simplify8(double %x) {
 ; CHECK-LABEL: @test_simplify8(
   %retval = call double @pow(double %x, double 0.5)
-; CHECK-NEXT: [[SQRT:%[a-z0-9]+]] = call double @sqrt(double %x) [[NUW_RO]]
+; CHECK-NEXT: [[SQRT:%[a-z0-9]+]] = call double @sqrt(double %x) [[$NUW_RO]]
 ; CHECK-NEXT: [[FABS:%[a-z0-9]+]] = call double @llvm.fabs.f64(double [[SQRT]])
 ; CHECK-NEXT: [[FCMP:%[a-z0-9]+]] = fcmp oeq double %x, 0xFFF0000000000000
 ; CHECK-NEXT: [[SELECT:%[a-z0-9]+]] = select i1 [[FCMP]], double 0x7FF0000000000000, double [[FABS]]
@@ -175,7 +175,7 @@ define double @test_simplify17(double %x) {
 define float @test_simplify18(float %x) {
 ; CHECK-LABEL: @test_simplify18(
   %retval = call float @powf(float 10.0, float %x)
-; CHECK-EXP10: [[EXP10F:%[_a-z0-9]+]] = call float @__exp10f(float %x) [[NUW_RO:#[0-9]+]]
+; CHECK-EXP10: [[EXP10F:%[_a-z0-9]+]] = call float @__exp10f(float %x) [[$NUW_RO:#[0-9]+]]
   ret float %retval
 ; CHECK-EXP10: ret float [[EXP10F]]
 ; CHECK-NO-EXP10: call float @powf
@@ -184,11 +184,11 @@ define float @test_simplify18(float %x) {
 define double @test_simplify19(double %x) {
 ; CHECK-LABEL: @test_simplify19(
   %retval = call double @pow(double 10.0, double %x)
-; CHECK-EXP10: [[EXP10:%[_a-z0-9]+]] = call double @__exp10(double %x) [[NUW_RO]]
+; CHECK-EXP10: [[EXP10:%[_a-z0-9]+]] = call double @__exp10(double %x) [[$NUW_RO]]
   ret double %retval
 ; CHECK-EXP10: ret double [[EXP10]]
 ; CHECK-NO-EXP10: call double @pow
 }
 
-; CHECK: attributes [[NUW_RO]] = { nounwind readonly }
+; CHECK: attributes [[$NUW_RO]] = { nounwind readonly }
 

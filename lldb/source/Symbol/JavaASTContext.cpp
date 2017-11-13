@@ -7,9 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <sstream>
-
-#include "lldb/Core/ArchSpec.h"
+#include "lldb/Symbol/JavaASTContext.h"
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
@@ -17,11 +15,12 @@
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Symbol/CompilerType.h"
-#include "lldb/Symbol/JavaASTContext.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Stream.h"
+#include <sstream>
 
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserJava.h"
 
@@ -882,13 +881,6 @@ JavaASTContext::ConvertStringToFloatValue(lldb::opaque_compiler_type_t type,
 size_t
 JavaASTContext::GetNumTemplateArguments(lldb::opaque_compiler_type_t type) {
   return 0;
-}
-
-CompilerType
-JavaASTContext::GetTemplateArgument(lldb::opaque_compiler_type_t type,
-                                    size_t idx,
-                                    lldb::TemplateArgumentKind &kind) {
-  return CompilerType();
 }
 
 uint32_t JavaASTContext::GetNumFields(lldb::opaque_compiler_type_t type) {

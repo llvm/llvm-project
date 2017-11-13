@@ -441,7 +441,7 @@ define i32 @pr27968_0(i1 %c0, i32* %p) {
 ; CHECK-NEXT:    br label %if.end
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[LHS:%.*]] = phi i32 [ [[V]], %if.then ], [ 5, %entry ]
-; CHECK-NEXT:    br i1 icmp eq (i16* getelementptr inbounds ([5 x i16], [5 x i16]* @a, i64 0, i64 4), i16* @b), label [[REM]].is.safe, label [[REM]].is.unsafe
+; CHECK-NEXT:    br i1 icmp eq (i16* getelementptr inbounds ([5 x i16], [5 x i16]* @a, i64 0, i64 4), i16* @b), label %rem.is.safe, label %rem.is.unsafe
 ; CHECK:       rem.is.safe:
 ; CHECK-NEXT:    [[REM:%.*]] = srem i32 [[LHS]], zext (i1 icmp eq (i16* getelementptr inbounds ([5 x i16], [5 x i16]* @a, i64 0, i64 4), i16* @b) to i32)
 ; CHECK-NEXT:    ret i32 [[REM]]
@@ -476,7 +476,7 @@ define i32 @pr27968_1(i1 %c0, i1 %always_false, i32* %p) {
 ; CHECK-NEXT:    br label %if.end
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[LHS:%.*]] = phi i32 [ [[V]], %if.then ], [ 5, %entry ]
-; CHECK-NEXT:    br i1 %always_false, label [[REM]].is.safe, label [[REM]].is.unsafe
+; CHECK-NEXT:    br i1 %always_false, label %rem.is.safe, label %rem.is.unsafe
 ; CHECK:       rem.is.safe:
 ; CHECK-NEXT:    [[REM:%.*]] = srem i32 [[LHS]], -2147483648
 ; CHECK-NEXT:    ret i32 [[REM]]
@@ -511,7 +511,7 @@ define i32 @pr27968_2(i1 %c0, i32* %p) {
 ; CHECK-NEXT:    br label %if.end
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[LHS:%.*]] = phi i32 [ [[V]], %if.then ], [ 5, %entry ]
-; CHECK-NEXT:    br i1 icmp eq (i16* getelementptr inbounds ([5 x i16], [5 x i16]* @a, i64 0, i64 4), i16* @b), label [[REM]].is.safe, label [[REM]].is.unsafe
+; CHECK-NEXT:    br i1 icmp eq (i16* getelementptr inbounds ([5 x i16], [5 x i16]* @a, i64 0, i64 4), i16* @b), label %rem.is.safe, label %rem.is.unsafe
 ; CHECK:       rem.is.safe:
 ; CHECK-NEXT:    [[REM:%.*]] = urem i32 [[LHS]], zext (i1 icmp eq (i16* getelementptr inbounds ([5 x i16], [5 x i16]* @a, i64 0, i64 4), i16* @b) to i32)
 ; CHECK-NEXT:    ret i32 [[REM]]

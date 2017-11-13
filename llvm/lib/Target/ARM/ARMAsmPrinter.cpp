@@ -1683,7 +1683,7 @@ void ARMAsmPrinter::EmitInstruction(const MachineInstr *MI) {
       TmpInst.addOperand(MCOperand::createReg(ARM::PC));
       TmpInst.addOperand(MCOperand::createReg(MI->getOperand(0).getReg()));
       TmpInst.addOperand(MCOperand::createReg(MI->getOperand(1).getReg()));
-      TmpInst.addOperand(MCOperand::createImm(0));
+      TmpInst.addOperand(MCOperand::createImm(MI->getOperand(2).getImm()));
     }
     // Add predicate operands.
     TmpInst.addOperand(MCOperand::createImm(ARMCC::AL));

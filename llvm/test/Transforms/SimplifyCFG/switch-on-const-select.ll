@@ -1,4 +1,4 @@
-; RUN: opt < %s -simplifycfg -S | FileCheck %s
+; RUN: opt < %s -simplifycfg -S | FileCheck -enable-var-scope %s
 
 ; Test basic folding to a conditional branch.
 define i32 @foo(i64 %x, i64 %y) nounwind {
@@ -35,7 +35,7 @@ define i32 @bar(i64 %x, i64 %y) nounwind {
 ; CHECK-LABEL: @bar(
 entry:
 ; CHECK-NEXT: entry:
-; CHECK-NEXT: tail call void @bees.a() [[NUW:#[0-9]+]]
+; CHECK-NEXT: tail call void @bees.a() [[$NUW:#[0-9]+]]
 ; CHECK-NEXT: ret i32 0
     %lt = icmp slt i64 %x, %y
     %qux = select i1 %lt, i32 0, i32 2
@@ -61,7 +61,7 @@ define void @bazz(i64 %x, i64 %y) nounwind {
 ; CHECK-LABEL: @bazz(
 entry:
 ; CHECK-NEXT: entry:
-; CHECK-NEXT: tail call void @bees.b() [[NUW]]
+; CHECK-NEXT: tail call void @bees.b() [[$NUW]]
 ; CHECK-NEXT: ret void
     %lt = icmp slt i64 %x, %y
     %qux = select i1 %lt, i32 10, i32 12
@@ -86,7 +86,7 @@ define void @quux(i64 %x, i64 %y) nounwind {
 ; CHECK-LABEL: @quux(
 entry:
 ; CHECK-NEXT: entry:
-; CHECK-NEXT: tail call void @bees.a() [[NUW]]
+; CHECK-NEXT: tail call void @bees.a() [[$NUW]]
 ; CHECK-NEXT: ret void
     %lt = icmp slt i64 %x, %y
     %qux = select i1 %lt, i32 0, i32 0
@@ -137,5 +137,5 @@ declare void @llvm.trap() nounwind noreturn
 declare void @bees.a() nounwind
 declare void @bees.b() nounwind
 
-; CHECK: attributes [[NUW]] = { nounwind }
+; CHECK: attributes [[$NUW]] = { nounwind }
 ; CHECK: attributes #1 = { noreturn nounwind }

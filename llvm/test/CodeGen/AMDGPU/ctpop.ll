@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=FUNC -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=FUNC -check-prefix=VI %s
-; RUN: llc -march=r600 -mcpu=cypress -verify-machineinstrs < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=FUNC -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=FUNC -check-prefix=VI %s
+; RUN: llc -march=r600 -mcpu=cypress -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=EG -check-prefix=FUNC %s
 
 declare i32 @llvm.ctpop.i32(i32) nounwind readnone
 declare <2 x i32> @llvm.ctpop.v2i32(<2 x i32>) nounwind readnone
@@ -308,7 +308,7 @@ define amdgpu_kernel void @v_ctpop_i32_add_vvar_inv(i32 addrspace(1)* noalias %o
 ; SI: s_load_dword [[VAL:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0xd
 ; VI: s_load_dword [[VAL:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0x34
 ; GCN: s_bcnt1_i32_b32  [[SRESULT:s[0-9]+]], [[VAL]]
-; GCN: v_mov_b32_e32 [[RESULT]], [[SRESULT]]
+; GCN: v_mov_b32_e32 [[RESULT:v[0-9]+]], [[SRESULT]]
 ; GCN: buffer_store_dword [[RESULT]],
 ; GCN: s_endpgm
 ; EG: BCNT_INT

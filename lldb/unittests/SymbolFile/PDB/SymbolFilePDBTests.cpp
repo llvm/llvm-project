@@ -18,8 +18,8 @@
 #include "Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
 #include "Plugins/SymbolFile/PDB/SymbolFilePDB.h"
+#include "TestingSupport/TestUtilities.h"
 #include "lldb/Core/Address.h"
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/HostInfo.h"
@@ -27,8 +27,8 @@
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/LineTable.h"
 #include "lldb/Symbol/SymbolVendor.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"
-#include "TestingSupport/TestUtilities.h"
 
 #if defined(_MSC_VER)
 #include "lldb/Host/windows/windows.h"
