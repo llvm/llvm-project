@@ -23,6 +23,11 @@
 class GINodeEquiv<Instruction i, SDNode node> {
   Instruction I = i;
   SDNode Node = node;
+
+  // SelectionDAG has separate nodes for atomic and non-atomic memory operations
+  // (ISD::LOAD, ISD::ATOMIC_LOAD, ISD::STORE, ISD::ATOMIC_STORE) but GlobalISel
+  // stores this information in the MachineMemoryOperand.
+  bit CheckMMOIsNonAtomic = 0;
 }
 
 // These are defined in the same order as the G_* instructions.
@@ -71,6 +76,23 @@ def : GINodeEquiv<G_INTRINSIC_W_SIDE_EFFECTS, intrinsic_void>;
 def : GINodeEquiv<G_INTRINSIC_W_SIDE_EFFECTS, intrinsic_w_chain>;
 def : GINodeEquiv<G_BR, br>;
 def : GINodeEquiv<G_BSWAP, bswap>;
+
+// Broadly speaking G_LOAD is equivalent to ISD::LOAD but there are some
+// complications that tablegen must take care of. For example, Predicates such
+// as isSignExtLoad require that this is not a perfect 1:1 mapping since a
+// sign-extending load is (G_SEXT (G_LOAD x)) in GlobalISel. Additionally,
+// G_LOAD handles both atomic and non-atomic loads where as SelectionDAG had
+// separate nodes for them. This GINodeEquiv maps the non-atomic loads to
+// G_LOAD with a non-atomic MachineMemOperand.
+def : GINodeEquiv<G_LOAD, ld> { let CheckMMOIsNonAtomic = 1; }
+// Broadly speaking G_STORE is equivalent to ISD::STORE but there are some
+// complications that tablegen must take care of. For example, predicates such
+// as isTruncStore require that this is not a perfect 1:1 mapping since a
+// truncating store is (G_STORE (G_TRUNCATE x)) in GlobalISel. Additionally,
+// G_STORE handles both atomic and non-atomic stores where as SelectionDAG had
+// separate nodes for them. This GINodeEquiv maps the non-atomic stores to
+// G_STORE with a non-atomic MachineMemOperand.
+def : GINodeEquiv<G_STORE, st> { let CheckMMOIsNonAtomic = 1; }
 
 // Specifies the GlobalISel equivalents for SelectionDAG's ComplexPattern.
 // Should be used on defs that subclass GIComplexOperandMatcher<>.
