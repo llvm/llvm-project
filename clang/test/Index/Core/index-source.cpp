@@ -543,7 +543,7 @@ void foo() {
   __builtin_offsetof(Struct2, array[1][0].field);
 // CHECK: [[@LINE-1]]:31 | field/C | array | c:@N@index_offsetof@S@Struct2@FI@array | <no-cgname> | Ref,RelCont | rel: 1
 // CHECK-NEXT: RelCont | foo | c:@N@index_offsetof@F@foo#
-// CHECK: [[@LINE-3]]:42 | field/C | field | c:@N@index_offsetof@S@Struct@FI@field | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK: [[@LINE-3]]:43 | field/C | field | c:@N@index_offsetof@S@Struct@FI@field | <no-cgname> | Ref,RelCont | rel: 1
 // CHECK-NEXT: RelCont | foo | c:@N@index_offsetof@F@foo#
 }
 
