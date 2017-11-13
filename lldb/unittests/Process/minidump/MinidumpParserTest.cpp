@@ -15,20 +15,18 @@
 #include "Plugins/Process/minidump/RegisterContextMinidump_x86_32.h"
 #include "Plugins/Process/minidump/RegisterContextMinidump_x86_64.h"
 
-// Other libraries and framework includes
-#include "gtest/gtest.h"
-
-#include "lldb/Core/ArchSpec.h"
+#include "TestingSupport/TestUtilities.h"
 #include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/FileSpec.h"
-#include "TestingSupport/TestUtilities.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "gtest/gtest.h"
 
 // C includes
 

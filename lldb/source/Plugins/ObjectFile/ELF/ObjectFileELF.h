@@ -16,10 +16,8 @@
 // C++ Includes
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/UUID.h"
 #include "lldb/lldb-private.h"

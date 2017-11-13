@@ -156,7 +156,7 @@ template <class ELFT> void SymbolTable::addSymbolWrap(StringRef Name) {
     return;
   Symbol *Real = addUndefined<ELFT>(Saver.save("__real_" + Name));
   Symbol *Wrap = addUndefined<ELFT>(Saver.save("__wrap_" + Name));
-  WrappedSymbols.push_back({Sym, Real, Wrap, Sym->Binding, Real->Binding});
+  WrappedSymbols.push_back({Sym, Real, Wrap});
 
   // We want to tell LTO not to inline symbols to be overwritten
   // because LTO doesn't know the final symbol contents after renaming.
@@ -192,15 +192,13 @@ void SymbolTable::applySymbolWrap() {
 
     // Replace __real_sym with sym and sym with __wrap_sym.
     W.Real->copyFrom(W.Sym);
-    W.Real->Binding = W.RealBinding;
     W.Sym->copyFrom(W.Wrap);
-    W.Sym->Binding = W.SymBinding;
 
-    if (Real) {
-      // We now have two copies of __wrap_sym. Drop one.
-      W.Wrap->IsUsedInRegularObj = false;
+    // We now have two copies of __wrap_sym. Drop one.
+    W.Wrap->IsUsedInRegularObj = false;
+
+    if (Real)
       SymVector.push_back(Real);
-    }
   }
 }
 
