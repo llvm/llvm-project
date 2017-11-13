@@ -46,7 +46,7 @@ define i1 @test3(i32 %arg) {
 ; Negative test for when we know nothing
 define i1 @test4(i8 %arg) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[CNT:%.*]] = call i8 @llvm.ctpop.i8(i8 [[ARG:%.*]]), !range ![[RANGE:[0-9]+]]
+; CHECK-NEXT:    [[CNT:%.*]] = call i8 @llvm.ctpop.i8(i8 [[ARG:%.*]]), !range ![[$RANGE:[0-9]+]]
 ; CHECK-NEXT:    [[RES:%.*]] = icmp eq i8 [[CNT]], 2
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
@@ -94,4 +94,4 @@ define i1 @test6(i1 %arg) {
   ret i1 %cnt
 }
 
-; CHECK: ![[RANGE]] = !{i8 0, i8 9}
+; CHECK: ![[$RANGE]] = !{i8 0, i8 9}

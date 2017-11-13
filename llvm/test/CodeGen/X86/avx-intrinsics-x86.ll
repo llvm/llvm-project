@@ -592,10 +592,15 @@ declare <8 x float> @llvm.x86.avx.rcp.ps.256(<8 x float>) nounwind readnone
 
 
 define <4 x double> @test_x86_avx_round_pd_256(<4 x double> %a0) {
-; CHECK-LABEL: test_x86_avx_round_pd_256:
-; CHECK:       # BB#0:
-; CHECK-NEXT:    vroundpd $7, %ymm0, %ymm0 # encoding: [0xc4,0xe3,0x7d,0x09,0xc0,0x07]
-; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+; AVX-LABEL: test_x86_avx_round_pd_256:
+; AVX:       # BB#0:
+; AVX-NEXT:    vroundpd $7, %ymm0, %ymm0 # encoding: [0xc4,0xe3,0x7d,0x09,0xc0,0x07]
+; AVX-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+;
+; AVX512VL-LABEL: test_x86_avx_round_pd_256:
+; AVX512VL:       # BB#0:
+; AVX512VL-NEXT:    vrndscalepd $7, %ymm0, %ymm0 # encoding: [0x62,0xf3,0xfd,0x28,0x09,0xc0,0x07]
+; AVX512VL-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %res = call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %a0, i32 7) ; <<4 x double>> [#uses=1]
   ret <4 x double> %res
 }
@@ -603,10 +608,15 @@ declare <4 x double> @llvm.x86.avx.round.pd.256(<4 x double>, i32) nounwind read
 
 
 define <8 x float> @test_x86_avx_round_ps_256(<8 x float> %a0) {
-; CHECK-LABEL: test_x86_avx_round_ps_256:
-; CHECK:       # BB#0:
-; CHECK-NEXT:    vroundps $7, %ymm0, %ymm0 # encoding: [0xc4,0xe3,0x7d,0x08,0xc0,0x07]
-; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+; AVX-LABEL: test_x86_avx_round_ps_256:
+; AVX:       # BB#0:
+; AVX-NEXT:    vroundps $7, %ymm0, %ymm0 # encoding: [0xc4,0xe3,0x7d,0x08,0xc0,0x07]
+; AVX-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+;
+; AVX512VL-LABEL: test_x86_avx_round_ps_256:
+; AVX512VL:       # BB#0:
+; AVX512VL-NEXT:    vrndscaleps $7, %ymm0, %ymm0 # encoding: [0x62,0xf3,0x7d,0x28,0x08,0xc0,0x07]
+; AVX512VL-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %res = call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %a0, i32 7) ; <<8 x float>> [#uses=1]
   ret <8 x float> %res
 }

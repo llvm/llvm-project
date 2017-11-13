@@ -214,7 +214,7 @@ namespace llvm {
       // FP vector get exponent.
       FGETEXP_RND, FGETEXPS_RND,
       // Extract Normalized Mantissas.
-      VGETMANT, VGETMANTS,
+      VGETMANT, VGETMANT_RND, VGETMANTS, VGETMANTS_RND,
       // FP Scale.
       SCALEF,
       SCALEFS,
@@ -426,11 +426,13 @@ namespace llvm {
       VFIXUPIMM,
       VFIXUPIMMS,
       // Range Restriction Calculation For Packed Pairs of Float32/64 values.
-      VRANGE, VRANGES,
+      VRANGE, VRANGE_RND, VRANGES, VRANGES_RND,
       // Reduce - Perform Reduction Transformation on scalar\packed FP.
-      VREDUCE, VREDUCES,
+      VREDUCE, VREDUCE_RND, VREDUCES, VREDUCES_RND,
       // RndScale - Round FP Values To Include A Given Number Of Fraction Bits.
-      VRNDSCALE, VRNDSCALES,
+      // Also used by the legacy (V)ROUND intrinsics where we mask out the
+      // scaling part of the immediate.
+      VRNDSCALE, VRNDSCALE_RND, VRNDSCALES, VRNDSCALES_RND,
       // Tests Types Of a FP Values for packed types.
       VFPCLASS,
       // Tests Types Of a FP Values for scalar types.

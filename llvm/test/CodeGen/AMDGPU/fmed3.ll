@@ -1,9 +1,9 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=NOSNAN -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mattr=+fp-exceptions -verify-machineinstrs < %s | FileCheck -check-prefix=SNAN -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=NOSNAN -check-prefix=GCN -check-prefix=VI -check-prefix=GFX89 %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=+fp-exceptions -verify-machineinstrs < %s | FileCheck -check-prefix=SNAN -check-prefix=GCN -check-prefix=VI -check-prefix=GFX89 %s
-; RUN: llc -march=amdgcn -mcpu=gfx901 -verify-machineinstrs < %s | FileCheck -check-prefix=NOSNAN -check-prefix=GCN -check-prefix=GFX9 -check-prefix=GFX89 %s
-; RUN: llc -march=amdgcn -mcpu=gfx901 -mattr=+fp-exceptions -verify-machineinstrs < %s | FileCheck -check-prefix=SNAN -check-prefix=GCN -check-prefix=GFX9 -check-prefix=GFX89 %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=NOSNAN -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mattr=+fp-exceptions -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SNAN -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=NOSNAN -check-prefix=GCN -check-prefix=VI -check-prefix=GFX89 %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=+fp-exceptions -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SNAN -check-prefix=GCN -check-prefix=VI -check-prefix=GFX89 %s
+; RUN: llc -march=amdgcn -mcpu=gfx901 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=NOSNAN -check-prefix=GCN -check-prefix=GFX9 -check-prefix=GFX89 %s
+; RUN: llc -march=amdgcn -mcpu=gfx901 -mattr=+fp-exceptions -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SNAN -check-prefix=GCN -check-prefix=GFX9 -check-prefix=GFX89 %s
 
 
 ; GCN-LABEL: {{^}}v_test_nnan_input_fmed3_r_i_i_f32:
@@ -899,7 +899,7 @@ define amdgpu_kernel void @v_test_global_nnans_min_max_f32(float addrspace(1)* %
 ; VI: v_max_f16_e32 v{{[0-9]+}}, 2.0
 ; VI: v_min_f16_e32 v{{[0-9]+}}, 4.0
 
-; GFX9: v_add_f16_e32 v{{[0-9]+}}, 1.0
+; GFX9: v_add_f16_e32 [[ADD:v[0-9]+]], 1.0
 ; GFX9: v_med3_f16 v{{[0-9]+}}, [[ADD]], 2.0, 4.0
 define amdgpu_kernel void @v_test_nnan_input_fmed3_r_i_i_f16(half addrspace(1)* %out, half addrspace(1)* %aptr) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
