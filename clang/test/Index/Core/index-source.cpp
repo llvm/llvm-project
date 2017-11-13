@@ -525,3 +525,36 @@ struct rd33122110::Outer::Nested<int>;
 // CHECK-NEXT: RelCont | Nested | c:@N@rd33122110@S@Outer@S@Nested>#I
 // CHECK: [[@LINE-3]]:20 | struct/C++ | Outer | c:@N@rd33122110@S@Outer | <no-cgname> | Ref,RelCont | rel: 1
 // CHECK-NEXT: RelCont | Nested | c:@N@rd33122110@S@Outer@S@Nested>#I
+
+namespace index_offsetof {
+
+struct Struct {
+  int field;
+};
+
+struct Struct2 {
+  Struct array[4][2];
+};
+
+void foo() {
+  __builtin_offsetof(Struct, field);
+// CHECK: [[@LINE-1]]:30 | field/C | field | c:@N@index_offsetof@S@Struct@FI@field | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK-NEXT: RelCont | foo | c:@N@index_offsetof@F@foo#
+  __builtin_offsetof(Struct2, array[1][0].field);
+// CHECK: [[@LINE-1]]:31 | field/C | array | c:@N@index_offsetof@S@Struct2@FI@array | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK-NEXT: RelCont | foo | c:@N@index_offsetof@F@foo#
+// CHECK: [[@LINE-3]]:43 | field/C | field | c:@N@index_offsetof@S@Struct@FI@field | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK-NEXT: RelCont | foo | c:@N@index_offsetof@F@foo#
+}
+
+#define OFFSET_OF_(X, Y) __builtin_offsetof(X, Y)
+
+class SubclassOffsetof : public Struct {
+  void foo() {
+    OFFSET_OF_(SubclassOffsetof, field);
+// CHECK: [[@LINE-1]]:34 | field/C | field | c:@N@index_offsetof@S@Struct@FI@field | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK-NEXT: RelCont | foo | c:@N@index_offsetof@S@SubclassOffsetof@F@foo#
+  }
+};
+
+}
