@@ -293,6 +293,18 @@ public:
     return checkOccurrence(Expr->getExplicitProperty(), Expr->getLocation());
   }
 
+  bool VisitOffsetOfExpr(const OffsetOfExpr *S) {
+    for (unsigned I = 0, E = S->getNumComponents(); I != E; ++I) {
+      const OffsetOfNode &Component = S->getComponent(I);
+      if (Component.getKind() == OffsetOfNode::Field) {
+        if (!checkOccurrence(Component.getField(), Component.getLocEnd()))
+          return false;
+      }
+      // FIXME: Try to resolve dependent field references.
+    }
+    return true;
+  }
+
   // Other visitors:
 
   bool VisitTypeLoc(const TypeLoc Loc) {
