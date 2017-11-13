@@ -626,6 +626,11 @@ enum CXSymbolOccurrenceKind {
   CXSymbolOccurrence_MatchingFilename = 5,
 
   /**
+  * \brief This is an occurrence of an symbol name in a string literal.
+  */
+  CXSymbolOccurrence_MatchingStringLiteral = 6,
+
+  /**
   * \brief This is an occurrence of a symbol name that belongs to the extracted
   * declaration. Note: this occurrence can be in two replacements as we might
   * extract an out-of-line method that will be both declared and defined.
@@ -914,6 +919,7 @@ typedef struct {
    * engine requires the following cursor kinds for the following renamed
    * declaration:
    *   - ObjC methods:  CXCursor_ObjC(Instance/Class)MethodDecl
+   *   - ObjC class:    CXCursor_ObjCInterfaceDecl
    * Other declarations can use any other cursor cursor kinds.
    */
   enum CXCursorKind CursorKind;
