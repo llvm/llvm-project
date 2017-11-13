@@ -1,6 +1,6 @@
-; RUN: opt -S -O1 -mtriple=amdgcn---amdgiz -amdgpu-simplify-libcall <%s | FileCheck -check-prefix=GCN -check-prefix=GCN-POSTLINK %s
-; RUN: opt -S -O1 -mtriple=amdgcn---amdgiz -amdgpu-simplify-libcall -amdgpu-prelink <%s | FileCheck -check-prefix=GCN -check-prefix=GCN-PRELINK %s
-; RUN: opt -S -O1 -mtriple=amdgcn---amdgiz -amdgpu-use-native -amdgpu-prelink <%s | FileCheck -check-prefix=GCN -check-prefix=GCN-NATIVE %s
+; RUN: opt -S -O1 -mtriple=amdgcn---amdgiz -amdgpu-simplify-libcall < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-POSTLINK %s
+; RUN: opt -S -O1 -mtriple=amdgcn---amdgiz -amdgpu-simplify-libcall -amdgpu-prelink  <%s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-PRELINK %s
+; RUN: opt -S -O1 -mtriple=amdgcn---amdgiz -amdgpu-use-native -amdgpu-prelink < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-NATIVE %s
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_sincos
 ; GCN-POSTLINK: tail call fast float @_Z3sinf(
@@ -697,8 +697,8 @@ declare float @_Z6sincosfPf(float, float*)
 %opencl.reserve_id_t = type opaque
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_read_pipe(%opencl.pipe_t addrspace(1)* %p, i32 addrspace(1)* %ptr)
-; GCN-PRELINK: call i32 @__read_pipe_2_4(%opencl.pipe_t addrspace(1)* %{{.*}}, i32* %{{.*}}) #[[NOUNWIND:[0-9]+]]
-; GCN-PRELINK: call i32 @__read_pipe_4_4(%opencl.pipe_t addrspace(1)* %{{.*}}, %opencl.reserve_id_t addrspace(5)* %{{.*}}, i32 2, i32* %{{.*}}) #[[NOUNWIND]]
+; GCN-PRELINK: call i32 @__read_pipe_2_4(%opencl.pipe_t addrspace(1)* %{{.*}}, i32* %{{.*}}) #[[$NOUNWIND:[0-9]+]]
+; GCN-PRELINK: call i32 @__read_pipe_4_4(%opencl.pipe_t addrspace(1)* %{{.*}}, %opencl.reserve_id_t addrspace(5)* %{{.*}}, i32 2, i32* %{{.*}}) #[[$NOUNWIND]]
 define amdgpu_kernel void @test_read_pipe(%opencl.pipe_t addrspace(1)* %p, i32 addrspace(1)* %ptr) local_unnamed_addr {
 entry:
   %tmp = bitcast i32 addrspace(1)* %ptr to i8 addrspace(1)*
@@ -719,8 +719,8 @@ declare i32 @__read_pipe_4(%opencl.pipe_t addrspace(1)*, %opencl.reserve_id_t ad
 declare void @__commit_read_pipe(%opencl.pipe_t addrspace(1)*, %opencl.reserve_id_t addrspace(5)*, i32, i32)
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_write_pipe(%opencl.pipe_t addrspace(1)* %p, i32 addrspace(1)* %ptr)
-; GCN-PRELINK: call i32 @__write_pipe_2_4(%opencl.pipe_t addrspace(1)* %{{.*}}, i32* %{{.*}}) #[[NOUNWIND]]
-; GCN-PRELINK: call i32 @__write_pipe_4_4(%opencl.pipe_t addrspace(1)* %{{.*}}, %opencl.reserve_id_t addrspace(5)* %{{.*}}, i32 2, i32* %{{.*}}) #[[NOUNWIND]]
+; GCN-PRELINK: call i32 @__write_pipe_2_4(%opencl.pipe_t addrspace(1)* %{{.*}}, i32* %{{.*}}) #[[$NOUNWIND]]
+; GCN-PRELINK: call i32 @__write_pipe_4_4(%opencl.pipe_t addrspace(1)* %{{.*}}, %opencl.reserve_id_t addrspace(5)* %{{.*}}, i32 2, i32* %{{.*}}) #[[$NOUNWIND]]
 define amdgpu_kernel void @test_write_pipe(%opencl.pipe_t addrspace(1)* %p, i32 addrspace(1)* %ptr) local_unnamed_addr {
 entry:
   %tmp = bitcast i32 addrspace(1)* %ptr to i8 addrspace(1)*
@@ -743,15 +743,15 @@ declare void @__commit_write_pipe(%opencl.pipe_t addrspace(1)*, %opencl.reserve_
 %struct.S = type { [100 x i32] }
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_pipe_size
-; GCN-PRELINK: call i32 @__read_pipe_2_1(%opencl.pipe_t addrspace(1)* %{{.*}} i8* %{{.*}}) #[[NOUNWIND]]
-; GCN-PRELINK: call i32 @__read_pipe_2_2(%opencl.pipe_t addrspace(1)* %{{.*}} i16* %{{.*}}) #[[NOUNWIND]]
-; GCN-PRELINK: call i32 @__read_pipe_2_4(%opencl.pipe_t addrspace(1)* %{{.*}} i32* %{{.*}}) #[[NOUNWIND]]
-; GCN-PRELINK: call i32 @__read_pipe_2_8(%opencl.pipe_t addrspace(1)* %{{.*}} i64* %{{.*}}) #[[NOUNWIND]]
-; GCN-PRELINK: call i32 @__read_pipe_2_16(%opencl.pipe_t addrspace(1)* %{{.*}}, <2 x i64>* %{{.*}}) #[[NOUNWIND]]
-; GCN-PRELINK: call i32 @__read_pipe_2_32(%opencl.pipe_t addrspace(1)* %{{.*}}, <4 x i64>* %{{.*}} #[[NOUNWIND]]
-; GCN-PRELINK: call i32 @__read_pipe_2_64(%opencl.pipe_t addrspace(1)* %{{.*}}, <8 x i64>* %{{.*}} #[[NOUNWIND]]
-; GCN-PRELINK: call i32 @__read_pipe_2_128(%opencl.pipe_t addrspace(1)* %{{.*}}, <16 x i64>* %{{.*}} #[[NOUNWIND]]
-; GCN-PRELINK: call i32 @__read_pipe_2(%opencl.pipe_t addrspace(1)* %{{.*}}, i8* %{{.*}} i32 400, i32 4) #[[NOUNWIND]]
+; GCN-PRELINK: call i32 @__read_pipe_2_1(%opencl.pipe_t addrspace(1)* %{{.*}} i8* %{{.*}}) #[[$NOUNWIND]]
+; GCN-PRELINK: call i32 @__read_pipe_2_2(%opencl.pipe_t addrspace(1)* %{{.*}} i16* %{{.*}}) #[[$NOUNWIND]]
+; GCN-PRELINK: call i32 @__read_pipe_2_4(%opencl.pipe_t addrspace(1)* %{{.*}} i32* %{{.*}}) #[[$NOUNWIND]]
+; GCN-PRELINK: call i32 @__read_pipe_2_8(%opencl.pipe_t addrspace(1)* %{{.*}} i64* %{{.*}}) #[[$NOUNWIND]]
+; GCN-PRELINK: call i32 @__read_pipe_2_16(%opencl.pipe_t addrspace(1)* %{{.*}}, <2 x i64>* %{{.*}}) #[[$NOUNWIND]]
+; GCN-PRELINK: call i32 @__read_pipe_2_32(%opencl.pipe_t addrspace(1)* %{{.*}}, <4 x i64>* %{{.*}} #[[$NOUNWIND]]
+; GCN-PRELINK: call i32 @__read_pipe_2_64(%opencl.pipe_t addrspace(1)* %{{.*}}, <8 x i64>* %{{.*}} #[[$NOUNWIND]]
+; GCN-PRELINK: call i32 @__read_pipe_2_128(%opencl.pipe_t addrspace(1)* %{{.*}}, <16 x i64>* %{{.*}} #[[$NOUNWIND]]
+; GCN-PRELINK: call i32 @__read_pipe_2(%opencl.pipe_t addrspace(1)* %{{.*}}, i8* %{{.*}} i32 400, i32 4) #[[$NOUNWIND]]
 define amdgpu_kernel void @test_pipe_size(%opencl.pipe_t addrspace(1)* %p1, i8 addrspace(1)* %ptr1, %opencl.pipe_t addrspace(1)* %p2, i16 addrspace(1)* %ptr2, %opencl.pipe_t addrspace(1)* %p4, i32 addrspace(1)* %ptr4, %opencl.pipe_t addrspace(1)* %p8, i64 addrspace(1)* %ptr8, %opencl.pipe_t addrspace(1)* %p16, <2 x i64> addrspace(1)* %ptr16, %opencl.pipe_t addrspace(1)* %p32, <4 x i64> addrspace(1)* %ptr32, %opencl.pipe_t addrspace(1)* %p64, <8 x i64> addrspace(1)* %ptr64, %opencl.pipe_t addrspace(1)* %p128, <16 x i64> addrspace(1)* %ptr128, %opencl.pipe_t addrspace(1)* %pu, %struct.S addrspace(1)* %ptru) local_unnamed_addr #0 {
 entry:
   %tmp = addrspacecast i8 addrspace(1)* %ptr1 to i8*
@@ -783,5 +783,5 @@ entry:
   ret void
 }
 
-; CGN-PRELINK: attributes #[[NOUNWIND]] = { nounwind }
+; CGN-PRELINK: attributes #[[$NOUNWIND]] = { nounwind }
 attributes #0 = { nounwind }

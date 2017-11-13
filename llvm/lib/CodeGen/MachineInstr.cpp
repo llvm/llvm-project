@@ -765,6 +765,21 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST) const {
     OS << ")";
   }
 
+  if (const MDNode *Ranges = getRanges()) {
+    unsigned NumRanges = Ranges->getNumOperands();
+    if (NumRanges != 0) {
+      OS << "(ranges=";
+
+      for (unsigned I = 0; I != NumRanges; ++I) {
+        Ranges->getOperand(I)->printAsOperand(OS, MST);
+        if (I != NumRanges - 1)
+          OS << ',';
+      }
+
+      OS << ')';
+    }
+  }
+
   if (isNonTemporal())
     OS << "(nontemporal)";
   if (isDereferenceable())

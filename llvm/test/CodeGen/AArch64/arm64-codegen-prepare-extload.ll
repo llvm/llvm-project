@@ -1,6 +1,6 @@
-; RUN: opt -codegenprepare < %s -mtriple=aarch64-apple-ios -S | FileCheck %s --check-prefix=OPTALL --check-prefix=OPT --check-prefix=NONSTRESS
-; RUN: opt -codegenprepare < %s -mtriple=aarch64-apple-ios -S -stress-cgp-ext-ld-promotion | FileCheck %s --check-prefix=OPTALL --check-prefix=OPT --check-prefix=STRESS
-; RUN: opt -codegenprepare < %s -mtriple=aarch64-apple-ios -S -disable-cgp-ext-ld-promotion | FileCheck %s --check-prefix=OPTALL --check-prefix=DISABLE
+; RUN: opt -codegenprepare < %s -mtriple=aarch64-apple-ios -S | FileCheck -enable-var-scope %s --check-prefix=OPTALL --check-prefix=OPT --check-prefix=NONSTRESS
+; RUN: opt -codegenprepare < %s -mtriple=aarch64-apple-ios -S -stress-cgp-ext-ld-promotion | FileCheck -enable-var-scope %s --check-prefix=OPTALL --check-prefix=OPT --check-prefix=STRESS
+; RUN: opt -codegenprepare < %s -mtriple=aarch64-apple-ios -S -disable-cgp-ext-ld-promotion | FileCheck -enable-var-scope %s --check-prefix=OPTALL --check-prefix=DISABLE
 
 ; CodeGenPrepare should move the zext into the block with the load
 ; so that SelectionDAG can select it with the load.
@@ -81,8 +81,8 @@ false:
 ; #1 will not be removed as we do not know anything about %b.
 ; #2 may not be merged with the load because %t is used in a comparison.
 ; Since two extensions may be emitted in the end instead of one before the
-; transformation, the regular heuristic does not apply the optimization. 
-; 
+; transformation, the regular heuristic does not apply the optimization.
+;
 ; OPTALL-LABEL: @promoteTwoArgZext
 ; OPTALL: [[LD:%[a-zA-Z_0-9-]+]] = load i8, i8* %p
 ;
@@ -637,12 +637,12 @@ define i64 @doNotPromoteBecauseOfPairedLoad(i32* %p, i32 %cst) {
 define i64 @promoteZextShl(i1 %c, i16* %P) {
 entry:
 ; OPTALL-LABEL: promoteZextShl
-; OPTALL-LABEL: entry:
+; OPTALL: entry:
 ; OPT: %[[LD:.*]] = load i16, i16* %P
 ; OPT: %[[EXT:.*]] = zext i16 %[[LD]] to i64
-; OPT-LABEL: if.then:
+; OPT: if.then:
 ; OPT: shl nsw i64 %[[EXT]], 1
-; DISABLE-LABEL: if.then:
+; DISABLE: if.then:
 ; DISABLE: %r = sext i32 %shl2 to i64
   %ld = load i16, i16* %P
   br i1 %c, label %end, label %if.then

@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx901 -mattr=-flat-for-global,-fp64-fp16-denormals -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=CI %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx901 -mattr=-flat-for-global,-fp64-fp16-denormals -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GFX9 %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=CI %s
 
 
 ; GCN-LABEL: {{^}}s_pack_v2i16:
@@ -160,7 +160,7 @@ define amdgpu_kernel void @v_pack_v2i16_imm_hi(i32 addrspace(1)* %in0) #0 {
 
 ; GCN-LABEL: {{^}}v_pack_v2i16_inline_imm_hi:
 ; GFX9: global_load_dword [[VAL:v[0-9]+]]
-; GFX9: v_lshl_or_b32 [[PACKED:v[0-9]+]], 7, 16, [[VAL0]]
+; GFX9: v_lshl_or_b32 [[PACKED:v[0-9]+]], 7, 16, [[VAL]]
 ; GFX9: ; use [[PACKED]]
 define amdgpu_kernel void @v_pack_v2i16_inline_imm_hi(i32 addrspace(1)* %in0) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

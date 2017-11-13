@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -start-after=sink -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-SAFE -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -enable-no-signed-zeros-fp-math -march=amdgcn -mcpu=tahiti -start-after=sink -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-NSZ -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -start-after=sink -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-SAFE -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -enable-no-signed-zeros-fp-math -march=amdgcn -mcpu=tahiti -start-after=sink -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-NSZ -check-prefix=SI -check-prefix=FUNC %s
 
 ; --------------------------------------------------------------------------------
 ; fadd tests
@@ -59,7 +59,7 @@ define amdgpu_kernel void @v_fneg_add_store_use_add_f32(float addrspace(1)* %out
 ; GCN-SAFE: v_mul_f32_e32 [[MUL:v[0-9]+]], 4.0, [[ADD]]
 
 ; GCN-NSZ: v_sub_f32_e64 [[NEG_ADD:v[0-9]+]], -[[A]], [[B]]
-; GCN-NSZ-NEXT: v_mul_f32_e32 [[MUL:v[0-9]+]], -4.0, [[ADD]]
+; GCN-NSZ-NEXT: v_mul_f32_e32 [[MUL:v[0-9]+]], -4.0, [[NEG_ADD]]
 ; GCN: buffer_store_dword [[NEG_ADD]]
 ; GCN-NEXT: buffer_store_dword [[MUL]]
 define amdgpu_kernel void @v_fneg_add_multi_use_add_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
@@ -513,7 +513,7 @@ define amdgpu_kernel void @v_fneg_0_minnum_foldable_use_f32(float addrspace(1)* 
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 ; GCN: v_max_f32_e64 [[MAX0:v[0-9]+]], -[[A]], -[[B]]
-; GCN-NEXT: v_mul_f32_e32 [[MUL1:v[0-9]+]], -4.0, [[MUL0]]
+; GCN-NEXT: v_mul_f32_e32 [[MUL1:v[0-9]+]], -4.0, [[MAX0]]
 ; GCN-NEXT: buffer_store_dword [[MAX0]]
 ; GCN-NEXT: buffer_store_dword [[MUL1]]
 define amdgpu_kernel void @v_fneg_minnum_multi_use_minnum_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
@@ -660,7 +660,7 @@ define amdgpu_kernel void @v_fneg_0_maxnum_foldable_use_f32(float addrspace(1)* 
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 ; GCN: v_min_f32_e64 [[MAX0:v[0-9]+]], -[[A]], -[[B]]
-; GCN-NEXT: v_mul_f32_e32 [[MUL1:v[0-9]+]], -4.0, [[MUL0]]
+; GCN-NEXT: v_mul_f32_e32 [[MUL1:v[0-9]+]], -4.0, [[MAX0]]
 ; GCN-NEXT: buffer_store_dword [[MAX0]]
 ; GCN-NEXT: buffer_store_dword [[MUL1]]
 define amdgpu_kernel void @v_fneg_maxnum_multi_use_maxnum_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {

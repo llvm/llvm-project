@@ -3006,8 +3006,8 @@ define <2 x double> @test_roundpd(<2 x double> %a0, <2 x double> *%a1) {
 ;
 ; SKX-LABEL: test_roundpd:
 ; SKX:       # BB#0:
-; SKX-NEXT:    vroundpd $7, %xmm0, %xmm0 # sched: [8:0.67]
-; SKX-NEXT:    vroundpd $7, (%rdi), %xmm1 # sched: [14:0.67]
+; SKX-NEXT:    vrndscalepd $7, %xmm0, %xmm0 # sched: [8:0.67]
+; SKX-NEXT:    vrndscalepd $7, (%rdi), %xmm1 # sched: [14:0.67]
 ; SKX-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
@@ -3078,8 +3078,8 @@ define <4 x float> @test_roundps(<4 x float> %a0, <4 x float> *%a1) {
 ;
 ; SKX-LABEL: test_roundps:
 ; SKX:       # BB#0:
-; SKX-NEXT:    vroundps $7, %xmm0, %xmm0 # sched: [8:0.67]
-; SKX-NEXT:    vroundps $7, (%rdi), %xmm1 # sched: [14:0.67]
+; SKX-NEXT:    vrndscaleps $7, %xmm0, %xmm0 # sched: [8:0.67]
+; SKX-NEXT:    vrndscaleps $7, (%rdi), %xmm1 # sched: [14:0.67]
 ; SKX-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
@@ -3151,8 +3151,8 @@ define <2 x double> @test_roundsd(<2 x double> %a0, <2 x double> %a1, <2 x doubl
 ;
 ; SKX-LABEL: test_roundsd:
 ; SKX:       # BB#0:
-; SKX-NEXT:    vroundsd $7, %xmm1, %xmm0, %xmm1 # sched: [8:0.67]
-; SKX-NEXT:    vroundsd $7, (%rdi), %xmm0, %xmm0 # sched: [14:0.67]
+; SKX-NEXT:    vrndscalesd $7, %xmm1, %xmm0, %xmm1 # sched: [8:0.67]
+; SKX-NEXT:    vrndscalesd $7, (%rdi), %xmm0, %xmm0 # sched: [14:0.67]
 ; SKX-NEXT:    vaddpd %xmm0, %xmm1, %xmm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
@@ -3224,8 +3224,8 @@ define <4 x float> @test_roundss(<4 x float> %a0, <4 x float> %a1, <4 x float> *
 ;
 ; SKX-LABEL: test_roundss:
 ; SKX:       # BB#0:
-; SKX-NEXT:    vroundss $7, %xmm1, %xmm0, %xmm1 # sched: [8:0.67]
-; SKX-NEXT:    vroundss $7, (%rdi), %xmm0, %xmm0 # sched: [14:0.67]
+; SKX-NEXT:    vrndscaless $7, %xmm1, %xmm0, %xmm1 # sched: [8:0.67]
+; SKX-NEXT:    vrndscaless $7, (%rdi), %xmm0, %xmm0 # sched: [14:0.67]
 ; SKX-NEXT:    vaddps %xmm0, %xmm1, %xmm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
