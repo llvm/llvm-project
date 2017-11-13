@@ -77,7 +77,8 @@ protected:
   friend SymbolTable;
   explicit Symbol(Kind K, StringRef N = "")
       : SymbolKind(K), IsExternal(true), IsCOMDAT(false),
-        WrittenToSymtab(false), Name(N) {}
+        WrittenToSymtab(false), PendingArchiveLoad(false), IsGCRoot(false),
+        Name(N) {}
 
   const unsigned SymbolKind : 8;
   unsigned IsExternal : 1;
@@ -97,6 +98,9 @@ public:
   // name, which means that we have enqueued an archive member load and should
   // not load any more archive members to resolve the same symbol.
   unsigned PendingArchiveLoad : 1;
+
+  /// True if we've already added this symbol to the list of GC roots.
+  unsigned IsGCRoot : 1;
 
 protected:
   StringRef Name;
