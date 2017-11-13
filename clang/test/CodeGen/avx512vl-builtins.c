@@ -5602,73 +5602,85 @@ __m256i test_mm256_maskz_ternarylogic_epi64(__mmask8 __U, __m256i __A, __m256i _
 }
 __m256 test_mm256_shuffle_f32x4(__m256 __A, __m256 __B) {
   // CHECK-LABEL: @test_mm256_shuffle_f32x4
-  // CHECK: @llvm.x86.avx512.mask.shuf.f32x4
+  // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
   return _mm256_shuffle_f32x4(__A, __B, 3); 
 }
 
 __m256 test_mm256_mask_shuffle_f32x4(__m256 __W, __mmask8 __U, __m256 __A, __m256 __B) {
   // CHECK-LABEL: @test_mm256_mask_shuffle_f32x4
-  // CHECK: @llvm.x86.avx512.mask.shuf.f32x4
+  // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
+  // CHECK: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   return _mm256_mask_shuffle_f32x4(__W, __U, __A, __B, 3); 
 }
 
 __m256 test_mm256_maskz_shuffle_f32x4(__mmask8 __U, __m256 __A, __m256 __B) {
   // CHECK-LABEL: @test_mm256_maskz_shuffle_f32x4
-  // CHECK: @llvm.x86.avx512.mask.shuf.f32x4
+  // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
+  // CHECK: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   return _mm256_maskz_shuffle_f32x4(__U, __A, __B, 3); 
 }
 
 __m256d test_mm256_shuffle_f64x2(__m256d __A, __m256d __B) {
   // CHECK-LABEL: @test_mm256_shuffle_f64x2
-  // CHECK: @llvm.x86.avx512.mask.shuf.f64x2
+  // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
   return _mm256_shuffle_f64x2(__A, __B, 3); 
 }
 
 __m256d test_mm256_mask_shuffle_f64x2(__m256d __W, __mmask8 __U, __m256d __A, __m256d __B) {
   // CHECK-LABEL: @test_mm256_mask_shuffle_f64x2
-  // CHECK: @llvm.x86.avx512.mask.shuf.f64x2
+  // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
+  // CHECK: shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  // CHECK: select <4 x i1> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}}
   return _mm256_mask_shuffle_f64x2(__W, __U, __A, __B, 3); 
 }
 
 __m256d test_mm256_maskz_shuffle_f64x2(__mmask8 __U, __m256d __A, __m256d __B) {
   // CHECK-LABEL: @test_mm256_maskz_shuffle_f64x2
-  // CHECK: @llvm.x86.avx512.mask.shuf.f64x2
+  // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
+  // CHECK: shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  // CHECK: select <4 x i1> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}}
   return _mm256_maskz_shuffle_f64x2(__U, __A, __B, 3); 
 }
 
 __m256i test_mm256_shuffle_i32x4(__m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_shuffle_i32x4
-  // CHECK: @llvm.x86.avx512.mask.shuf.i32x4
+  // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
   return _mm256_shuffle_i32x4(__A, __B, 3); 
 }
 
 __m256i test_mm256_mask_shuffle_i32x4(__m256i __W, __mmask8 __U, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_mask_shuffle_i32x4
-  // CHECK: @llvm.x86.avx512.mask.shuf.i32x4
+  // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
+  // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
   return _mm256_mask_shuffle_i32x4(__W, __U, __A, __B, 3); 
 }
 
 __m256i test_mm256_maskz_shuffle_i32x4(__mmask8 __U, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_maskz_shuffle_i32x4
-  // CHECK: @llvm.x86.avx512.mask.shuf.i32x4
+  // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
+  // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
   return _mm256_maskz_shuffle_i32x4(__U, __A, __B, 3); 
 }
 
 __m256i test_mm256_shuffle_i64x2(__m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_shuffle_i64x2
-  // CHECK: @llvm.x86.avx512.mask.shuf.i64x2
+  // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
   return _mm256_shuffle_i64x2(__A, __B, 3); 
 }
 
 __m256i test_mm256_mask_shuffle_i64x2(__m256i __W, __mmask8 __U, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_mask_shuffle_i64x2
-  // CHECK: @llvm.x86.avx512.mask.shuf.i64x2
+  // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
+  // CHECK: shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  // CHECK: select <4 x i1> %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
   return _mm256_mask_shuffle_i64x2(__W, __U, __A, __B, 3); 
 }
 
 __m256i test_mm256_maskz_shuffle_i64x2(__mmask8 __U, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_maskz_shuffle_i64x2
-  // CHECK: @llvm.x86.avx512.mask.shuf.i64x2
+  // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
+  // CHECK: shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  // CHECK: select <4 x i1> %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
   return _mm256_maskz_shuffle_i64x2(__U, __A, __B, 3); 
 }
 
