@@ -21,7 +21,7 @@ define i32 @jump_table(i32 %c, i32 %a, i32 %b) #0 {
 
 ; CHECK-T2BASE: lsls    [[REG_OFFSET:r[0-9]+]], {{r[0-9]+}}, #2
 ; CHECK-T2BASE: adr     [[REG_JT:r[0-9]+]], .LJTI1_0
-; CHECK-T2BASE: adds    [[REG_ENTRY:r[0-9]+]], [[REG_OFFSET]], [[REG_JT]]
+; CHECK-T2BASE: adds    [[REG_ENTRY:r[0-9]+]], [[REG_JT]], [[REG_OFFSET]]
 ; CHECK-T2BASE: mov     pc, [[REG_ENTRY]]
 
 ; CHECK-LABEL: .LJTI1_0:

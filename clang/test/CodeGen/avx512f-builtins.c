@@ -3857,39 +3857,48 @@ __m512i test_mm512_maskz_permutex2var_epi64(__mmask8 __U, __m512i __A, __m512i _
 }
 __mmask16 test_mm512_testn_epi32_mask(__m512i __A, __m512i __B) {
   // CHECK-LABEL: @test_mm512_testn_epi32_mask
-  // CHECK: @llvm.x86.avx512.ptestnm.d.512
+  // CHECK: and <16 x i32> %{{.*}}, %{{.*}}
+  // CHECK: icmp eq <16 x i32> %{{.*}}, %{{.*}}
   return _mm512_testn_epi32_mask(__A, __B); 
 }
 
 __mmask16 test_mm512_mask_testn_epi32_mask(__mmask16 __U, __m512i __A, __m512i __B) {
   // CHECK-LABEL: @test_mm512_mask_testn_epi32_mask
-  // CHECK: @llvm.x86.avx512.ptestnm.d.512
+  // CHECK: and <16 x i32> %{{.*}}, %{{.*}}
+  // CHECK: icmp eq <16 x i32> %{{.*}}, %{{.*}}
+  // CHECK: and <16 x i1> %{{.*}}, %{{.*}}
   return _mm512_mask_testn_epi32_mask(__U, __A, __B); 
 }
 
 __mmask8 test_mm512_testn_epi64_mask(__m512i __A, __m512i __B) {
   // CHECK-LABEL: @test_mm512_testn_epi64_mask
-  // CHECK: @llvm.x86.avx512.ptestnm.q.512
+  // CHECK: and <16 x i32> %{{.*}}, %{{.*}}
+  // CHECK: icmp eq <8 x i64> %{{.*}}, %{{.*}}
   return _mm512_testn_epi64_mask(__A, __B); 
 }
 
 __mmask8 test_mm512_mask_testn_epi64_mask(__mmask8 __U, __m512i __A, __m512i __B) {
   // CHECK-LABEL: @test_mm512_mask_testn_epi64_mask
-  // CHECK: @llvm.x86.avx512.ptestnm.q.512
+  // CHECK: and <16 x i32> %{{.*}}, %{{.*}}
+  // CHECK: icmp eq <8 x i64> %{{.*}}, %{{.*}}
+  // CHECK: and <8 x i1> %{{.*}}, %{{.*}}
   return _mm512_mask_testn_epi64_mask(__U, __A, __B); 
 }
 
 __mmask16 test_mm512_mask_test_epi32_mask (__mmask16 __U, __m512i __A, __m512i __B)
 {
   // CHECK-LABEL: @test_mm512_mask_test_epi32_mask 
-  // CHECK: @llvm.x86.avx512.ptestm.d.512
+  // CHECK: and <16 x i32> %{{.*}}, %{{.*}}
+  // CHECK: icmp ne <16 x i32> %{{.*}}, %{{.*}}
   return _mm512_mask_test_epi32_mask (__U,__A,__B);
 }
 
 __mmask8 test_mm512_mask_test_epi64_mask (__mmask8 __U, __m512i __A, __m512i __B)
 {
   // CHECK-LABEL: @test_mm512_mask_test_epi64_mask 
-  // CHECK: @llvm.x86.avx512.ptestm.q.512
+  // CHECK: and <16 x i32> %{{.*}}, %{{.*}}
+  // CHECK: icmp ne <8 x i64> %{{.*}}, %{{.*}}
+  // CHECK: and <8 x i1> %{{.*}}, %{{.*}}
   return _mm512_mask_test_epi64_mask (__U,__A,__B);
 }
 
@@ -4484,73 +4493,81 @@ __m512i test_mm512_maskz_ternarylogic_epi64(__mmask8 __U, __m512i __A, __m512i _
 
 __m512 test_mm512_shuffle_f32x4(__m512 __A, __m512 __B) {
   // CHECK-LABEL: @test_mm512_shuffle_f32x4
-  // CHECK: @llvm.x86.avx512.mask.shuf.f32x4
+  // CHECK: shufflevector <16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 16, i32 17, i32 18, i32 19>
   return _mm512_shuffle_f32x4(__A, __B, 4); 
 }
 
 __m512 test_mm512_mask_shuffle_f32x4(__m512 __W, __mmask16 __U, __m512 __A, __m512 __B) {
   // CHECK-LABEL: @test_mm512_mask_shuffle_f32x4
-  // CHECK: @llvm.x86.avx512.mask.shuf.f32x4
+  // CHECK: shufflevector <16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 16, i32 17, i32 18, i32 19>
+  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   return _mm512_mask_shuffle_f32x4(__W, __U, __A, __B, 4); 
 }
 
 __m512 test_mm512_maskz_shuffle_f32x4(__mmask16 __U, __m512 __A, __m512 __B) {
   // CHECK-LABEL: @test_mm512_maskz_shuffle_f32x4
-  // CHECK: @llvm.x86.avx512.mask.shuf.f32x4
+  // CHECK: shufflevector <16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 16, i32 17, i32 18, i32 19>
+  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   return _mm512_maskz_shuffle_f32x4(__U, __A, __B, 4); 
 }
 
 __m512d test_mm512_shuffle_f64x2(__m512d __A, __m512d __B) {
   // CHECK-LABEL: @test_mm512_shuffle_f64x2
-  // CHECK: @llvm.x86.avx512.mask.shuf.f64x2
+  // CHECK: shufflevector <8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 8, i32 9>
   return _mm512_shuffle_f64x2(__A, __B, 4); 
 }
 
 __m512d test_mm512_mask_shuffle_f64x2(__m512d __W, __mmask8 __U, __m512d __A, __m512d __B) {
   // CHECK-LABEL: @test_mm512_mask_shuffle_f64x2
-  // CHECK: @llvm.x86.avx512.mask.shuf.f64x2
+  // CHECK: shufflevector <8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 8, i32 9>
+  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
   return _mm512_mask_shuffle_f64x2(__W, __U, __A, __B, 4); 
 }
 
 __m512d test_mm512_maskz_shuffle_f64x2(__mmask8 __U, __m512d __A, __m512d __B) {
   // CHECK-LABEL: @test_mm512_maskz_shuffle_f64x2
-  // CHECK: @llvm.x86.avx512.mask.shuf.f64x2
+  // CHECK: shufflevector <8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 8, i32 9>
+  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
   return _mm512_maskz_shuffle_f64x2(__U, __A, __B, 4); 
 }
 
 __m512i test_mm512_shuffle_i32x4(__m512i __A, __m512i __B) {
   // CHECK-LABEL: @test_mm512_shuffle_i32x4
-  // CHECK: @llvm.x86.avx512.mask.shuf.i32x4
+  // CHECK: shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 8, i32 9>
   return _mm512_shuffle_i32x4(__A, __B, 4); 
 }
 
 __m512i test_mm512_mask_shuffle_i32x4(__m512i __W, __mmask16 __U, __m512i __A, __m512i __B) {
   // CHECK-LABEL: @test_mm512_mask_shuffle_i32x4
-  // CHECK: @llvm.x86.avx512.mask.shuf.i32x4
+  // CHECK: shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 8, i32 9>
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
   return _mm512_mask_shuffle_i32x4(__W, __U, __A, __B, 4); 
 }
 
 __m512i test_mm512_maskz_shuffle_i32x4(__mmask16 __U, __m512i __A, __m512i __B) {
   // CHECK-LABEL: @test_mm512_maskz_shuffle_i32x4
-  // CHECK: @llvm.x86.avx512.mask.shuf.i32x4
+  // CHECK: shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 8, i32 9>
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
   return _mm512_maskz_shuffle_i32x4(__U, __A, __B, 4); 
 }
 
 __m512i test_mm512_shuffle_i64x2(__m512i __A, __m512i __B) {
   // CHECK-LABEL: @test_mm512_shuffle_i64x2
-  // CHECK: @llvm.x86.avx512.mask.shuf.i64x2
+  // CHECK: shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 8, i32 9>
   return _mm512_shuffle_i64x2(__A, __B, 4); 
 }
 
 __m512i test_mm512_mask_shuffle_i64x2(__m512i __W, __mmask8 __U, __m512i __A, __m512i __B) {
   // CHECK-LABEL: @test_mm512_mask_shuffle_i64x2
-  // CHECK: @llvm.x86.avx512.mask.shuf.i64x2
+  // CHECK: shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 8, i32 9>
+  // CHECK: select <8 x i1> %{{.*}}, <8 x i64> %{{.*}}, <8 x i64> %{{.*}}
   return _mm512_mask_shuffle_i64x2(__W, __U, __A, __B, 4); 
 }
 
 __m512i test_mm512_maskz_shuffle_i64x2(__mmask8 __U, __m512i __A, __m512i __B) {
   // CHECK-LABEL: @test_mm512_maskz_shuffle_i64x2
-  // CHECK: @llvm.x86.avx512.mask.shuf.i64x2
+  // CHECK: shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 8, i32 9>
+  // CHECK: select <8 x i1> %{{.*}}, <8 x i64> %{{.*}}, <8 x i64> %{{.*}}
   return _mm512_maskz_shuffle_i64x2(__U, __A, __B, 4); 
 }
 
