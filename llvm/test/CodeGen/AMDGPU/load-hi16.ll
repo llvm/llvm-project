@@ -503,4 +503,102 @@ entry:
   ret void
 }
 
+; FIXME: Remove m0 init and waitcnt between reads
+; FIXME: Is there a cost to using the extload over not?
+; GCN-LABEL: {{^}}load_local_v2i16_split:
+; GCN: s_waitcnt
+; GFX9-NEXT: s_mov_b32 m0, -1
+; GFX9-NEXT: ds_read_u16 v1, v0
+; GFX9-NEXT: s_waitcnt
+; GFX9-NEXT: ds_read_u16_d16_hi v1, v0 offset:2
+; GFX9-NEXT: s_waitcnt
+; GFX9-NEXT: v_mov_b32_e32 v0, v1
+; GFX9-NEXT: s_setpc_b64
+define <2 x i16> @load_local_v2i16_split(i16 addrspace(3)* %in) #0 {
+entry:
+  %gep = getelementptr inbounds i16, i16 addrspace(3)* %in, i32 1
+  %load0 = load volatile i16, i16 addrspace(3)* %in
+  %load1 = load volatile i16, i16 addrspace(3)* %gep
+  %build0 = insertelement <2 x i16> undef, i16 %load0, i32 0
+  %build1 = insertelement <2 x i16> %build0, i16 %load1, i32 1
+  ret <2 x i16> %build1
+}
+
+; FIXME: Remove waitcnt between reads
+; GCN-LABEL: {{^}}load_global_v2i16_split:
+; GCN: s_waitcnt
+; GFX9-NEXT: global_load_ushort v2
+; GFX9-NEXT: s_waitcnt
+; GFX9-NEXT: global_load_short_d16_hi v2
+; GFX9-NEXT: s_waitcnt
+; GFX9-NEXT: v_mov_b32_e32 v0, v2
+; GFX9-NEXT: s_setpc_b64
+define <2 x i16> @load_global_v2i16_split(i16 addrspace(1)* %in) #0 {
+entry:
+  %gep = getelementptr inbounds i16, i16 addrspace(1)* %in, i64 1
+  %load0 = load volatile i16, i16 addrspace(1)* %in
+  %load1 = load volatile i16, i16 addrspace(1)* %gep
+  %build0 = insertelement <2 x i16> undef, i16 %load0, i32 0
+  %build1 = insertelement <2 x i16> %build0, i16 %load1, i32 1
+  ret <2 x i16> %build1
+}
+
+; FIXME: Remove waitcnt between reads
+; GCN-LABEL: {{^}}load_flat_v2i16_split:
+; GCN: s_waitcnt
+; GFX9-NEXT: flat_load_ushort v2
+; GFX9-NEXT: s_waitcnt
+; GFX9-NEXT: flat_load_short_d16_hi v2
+; GFX9-NEXT: s_waitcnt
+; GFX9-NEXT: v_mov_b32_e32 v0, v2
+; GFX9-NEXT: s_setpc_b64
+define <2 x i16> @load_flat_v2i16_split(i16 addrspace(4)* %in) #0 {
+entry:
+  %gep = getelementptr inbounds i16, i16 addrspace(4)* %in, i64 1
+  %load0 = load volatile i16, i16 addrspace(4)* %in
+  %load1 = load volatile i16, i16 addrspace(4)* %gep
+  %build0 = insertelement <2 x i16> undef, i16 %load0, i32 0
+  %build1 = insertelement <2 x i16> %build0, i16 %load1, i32 1
+  ret <2 x i16> %build1
+}
+
+; FIXME: Remove waitcnt between reads
+; GCN-LABEL: {{^}}load_constant_v2i16_split:
+; GCN: s_waitcnt
+; GFX9-NEXT: global_load_ushort v2
+; GFX9-NEXT: s_waitcnt
+; GFX9-NEXT: global_load_short_d16_hi v2
+; GFX9-NEXT: s_waitcnt
+; GFX9-NEXT: v_mov_b32_e32 v0, v2
+; GFX9-NEXT: s_setpc_b64
+define <2 x i16> @load_constant_v2i16_split(i16 addrspace(2)* %in) #0 {
+entry:
+  %gep = getelementptr inbounds i16, i16 addrspace(2)* %in, i64 1
+  %load0 = load volatile i16, i16 addrspace(2)* %in
+  %load1 = load volatile i16, i16 addrspace(2)* %gep
+  %build0 = insertelement <2 x i16> undef, i16 %load0, i32 0
+  %build1 = insertelement <2 x i16> %build0, i16 %load1, i32 1
+  ret <2 x i16> %build1
+}
+
+; FIXME: Remove m0 init and waitcnt between reads
+; FIXME: Is there a cost to using the extload over not?
+; GCN-LABEL: {{^}}load_private_v2i16_split:
+; GCN: s_waitcnt
+; GFX9-NEXT: buffer_load_ushort v1, v0, s[0:3], s4 offen{{$}}
+; GFX9-NEXT: s_waitcnt
+; GFX9-NEXT: buffer_load_short_d16_hi v1, v0, s[0:3], s4 offen offset:2
+; GFX9-NEXT: s_waitcnt
+; GFX9-NEXT: v_mov_b32_e32 v0, v1
+; GFX9-NEXT: s_setpc_b64
+define <2 x i16> @load_private_v2i16_split(i16* %in) #0 {
+entry:
+  %gep = getelementptr inbounds i16, i16* %in, i32 1
+  %load0 = load volatile i16, i16* %in
+  %load1 = load volatile i16, i16* %gep
+  %build0 = insertelement <2 x i16> undef, i16 %load0, i32 0
+  %build1 = insertelement <2 x i16> %build0, i16 %load1, i32 1
+  ret <2 x i16> %build1
+}
+
 attributes #0 = { nounwind }

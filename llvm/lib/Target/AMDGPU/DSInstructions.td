@@ -559,6 +559,19 @@ multiclass DSReadPat_Hi16 <DS_Pseudo inst, PatFrag frag, ValueType vt = i16> {
   >;
 }
 
+multiclass DSReadPat_Lo16 <DS_Pseudo inst, PatFrag frag, ValueType vt = i16> {
+  def : GCNPat <
+    (build_vector (vt (frag (DS1Addr1Offset i32:$ptr, i32:$offset))), (vt (Hi16Elt vt:$hi))),
+    (v2i16 (inst $ptr, (as_i16imm $offset), 0, $hi))
+  >;
+
+  def : GCNPat <
+    (build_vector (f16 (bitconvert (vt (frag (DS1Addr1Offset i32:$ptr, i32:$offset))))), (f16 (Hi16Elt f16:$hi))),
+    (v2f16 (inst $ptr, (as_i16imm $offset), 0, $hi))
+  >;
+}
+
+
 def : DSReadPat <DS_READ_I8,  i32, sextloadi8_local_m0>;
 def : DSReadPat <DS_READ_U8,  i32, az_extloadi8_local_m0>;
 def : DSReadPat <DS_READ_I8,  i16, sextloadi8_local_m0>;
@@ -587,6 +600,11 @@ let AddedComplexity = 100 in {
 defm : DSReadPat_Hi16<DS_READ_U16_D16_HI, load_local>;
 defm : DSReadPat_Hi16<DS_READ_U8_D16_HI, az_extloadi8_local>;
 defm : DSReadPat_Hi16<DS_READ_I8_D16_HI, sextloadi8_local>;
+
+defm : DSReadPat_Lo16<DS_READ_U16_D16, load_local>;
+defm : DSReadPat_Lo16<DS_READ_U8_D16, az_extloadi8_local>;
+defm : DSReadPat_Lo16<DS_READ_I8_D16, sextloadi8_local>;
+
 }
 }
 

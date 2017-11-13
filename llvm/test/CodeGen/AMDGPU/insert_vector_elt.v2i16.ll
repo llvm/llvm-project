@@ -1,6 +1,6 @@
-; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=gfx901 -enable-amdgpu-aa=0 -mattr=+flat-for-global,-fp64-fp16-denormals < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -check-prefix=GFX89 %s
-; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=fiji -enable-amdgpu-aa=0 -mattr=+flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=CIVI -check-prefix=VI -check-prefix=GFX89 %s
-; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=hawaii -enable-amdgpu-aa=0 -mattr=+flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=CIVI -check-prefix=CI %s
+; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=gfx901 -enable-amdgpu-aa=0 -mattr=+flat-for-global,-fp64-fp16-denormals < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GFX9 -check-prefix=GFX89 %s
+; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=fiji -enable-amdgpu-aa=0 -mattr=+flat-for-global < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=CIVI -check-prefix=VI -check-prefix=GFX89 %s
+; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=hawaii -enable-amdgpu-aa=0 -mattr=+flat-for-global < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=CIVI -check-prefix=CI %s
 
 ; GCN-LABEL: {{^}}s_insertelement_v2i16_0:
 ; GCN: s_load_dword [[VEC:s[0-9]+]]
@@ -81,8 +81,9 @@ define amdgpu_kernel void @s_insertelement_v2i16_0_reghi(<2 x i16> addrspace(1)*
 ; GCN: s_load_dword [[ELT_ARG:s[0-9]+]], s[0:1]
 ; GCN: s_load_dword [[VEC:s[0-9]+]],
 
-; CIVI-DAG: s_and_b32 [[ELT1:s[0-9]+]], [[VEC]], 0xffff0000{{$}}
-; CIVI: s_or_b32 s{{[0-9]+}}, [[ELT0]], [[ELT1]]
+; CIVI-DAG: s_lshr_b32 [[ELT1:s[0-9]+]], [[ELT_ARG]], 16
+; CIVI-DAG: s_and_b32 [[ELT0:s[0-9]+]], [[VEC]], 0xffff0000{{$}}
+; CIVI: s_or_b32 s{{[0-9]+}}, [[ELT1]], [[ELT0]]
 
 ; GFX9: s_lshr_b32 [[ELT1:s[0-9]+]], [[ELT_ARG]], 16
 ; GFX9: s_pack_lh_b32_b16 s{{[0-9]+}}, [[ELT1]], [[VEC]]
@@ -174,7 +175,7 @@ define amdgpu_kernel void @s_insertelement_v2f16_0(<2 x half> addrspace(1)* %out
 }
 
 ; GCN-LABEL: {{^}}s_insertelement_v2f16_1:
-; GFX9: s_load_dword [[VEC:s[0-9]+]]
+; GCN: s_load_dword [[VEC:s[0-9]+]]
 ; GCN-NOT: s_lshr
 
 ; CIVI: s_and_b32 [[ELT0:s[0-9]+]], [[VEC]], 0xffff{{$}}

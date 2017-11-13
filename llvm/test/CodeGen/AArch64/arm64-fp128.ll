@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=arm64-linux-gnu -verify-machineinstrs -mcpu=cyclone -aarch64-enable-atomic-cfg-tidy=0 < %s | FileCheck %s
+; RUN: llc -mtriple=arm64-linux-gnu -verify-machineinstrs -mcpu=cyclone -aarch64-enable-atomic-cfg-tidy=0 < %s | FileCheck -enable-var-scope %s
 
 @lhs = global fp128 zeroinitializer, align 16
 @rhs = global fp128 zeroinitializer, align 16
@@ -262,7 +262,7 @@ define void @test_extend() {
 }
 
 define fp128 @test_neg(fp128 %in) {
-; CHECK: [[MINUS0:.LCPI[0-9]+_0]]:
+; CHECK: [[$MINUS0:.LCPI[0-9]+_0]]:
 ; Make sure the weird hex constant below *is* -0.0
 ; CHECK-NEXT: fp128 -0
 
@@ -272,7 +272,7 @@ define fp128 @test_neg(fp128 %in) {
   ; sure that doesn't happen.
   %ret = fsub fp128 0xL00000000000000008000000000000000, %in
 ; CHECK: mov v1.16b, v0.16b
-; CHECK: ldr q0, [{{x[0-9]+}}, :lo12:[[MINUS0]]]
+; CHECK: ldr q0, [{{x[0-9]+}}, :lo12:[[$MINUS0]]]
 ; CHECK: bl __subtf3
 
   ret fp128 %ret

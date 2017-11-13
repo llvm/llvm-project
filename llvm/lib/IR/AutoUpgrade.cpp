@@ -76,6 +76,8 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
   if (Name=="ssse3.pabs.b.128" || // Added in 6.0
       Name=="ssse3.pabs.w.128" || // Added in 6.0
       Name=="ssse3.pabs.d.128" || // Added in 6.0
+      Name.startswith("avx512.mask.shuf.i") || // Added in 6.0
+      Name.startswith("avx512.mask.shuf.f") || // Added in 6.0
       Name.startswith("avx2.pabs.") || // Added in 6.0
       Name.startswith("avx512.mask.pabs.") || // Added in 6.0
       Name.startswith("avx512.broadcastm") || // Added in 6.0
@@ -1270,7 +1272,29 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       else
         Rep = Builder.CreateShuffleVector(Load, UndefValue::get(Load->getType()),
                                           { 0, 1, 2, 3, 0, 1, 2, 3 });
-    } else if (IsX86 && (Name.startswith("avx512.mask.broadcastf") ||
+    } else if (IsX86 && (Name.startswith("avx512.mask.shuf.i") ||
+                         Name.startswith("avx512.mask.shuf.f"))) {
+      unsigned Imm = cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
+      Type *VT = CI->getType();
+      unsigned NumLanes = VT->getPrimitiveSizeInBits() / 128;
+      unsigned NumElementsInLane = 128 / VT->getScalarSizeInBits();
+      unsigned ControlBitsMask = NumLanes - 1;
+      unsigned NumControlBits = NumLanes / 2;
+      SmallVector<uint32_t, 8> ShuffleMask(0);
+
+      for (unsigned l = 0; l != NumLanes; ++l) {
+        unsigned LaneMask = (Imm >> (l * NumControlBits)) & ControlBitsMask;
+        // We actually need the other source.
+        if (l >= NumLanes / 2)
+          LaneMask += NumLanes;
+        for (unsigned i = 0; i != NumElementsInLane; ++i)
+          ShuffleMask.push_back(LaneMask * NumElementsInLane + i);
+      }
+      Rep = Builder.CreateShuffleVector(CI->getArgOperand(0),
+                                        CI->getArgOperand(1), ShuffleMask);
+      Rep = EmitX86Select(Builder, CI->getArgOperand(4), Rep,
+                          CI->getArgOperand(3));
+    }else if (IsX86 && (Name.startswith("avx512.mask.broadcastf") ||
                          Name.startswith("avx512.mask.broadcasti"))) {
       unsigned NumSrcElts =
                         CI->getArgOperand(0)->getType()->getVectorNumElements();

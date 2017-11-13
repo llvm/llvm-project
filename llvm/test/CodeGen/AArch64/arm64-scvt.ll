@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=arm64-eabi -mcpu=cyclone -aarch64-neon-syntax=apple | FileCheck %s
-; RUN: llc < %s -mtriple=arm64-eabi -mcpu=cortex-a57 | FileCheck --check-prefix=CHECK-A57 %s
+; RUN: llc < %s -mtriple=arm64-eabi -mcpu=cyclone -aarch64-neon-syntax=apple | FileCheck -enable-var-scope %s
+; RUN: llc < %s -mtriple=arm64-eabi -mcpu=cortex-a57 | FileCheck -enable-var-scope --check-prefix=CHECK-A57 %s
 ; rdar://13082402
 
 define float @t1(i32* nocapture %src) nounwind ssp {
@@ -439,7 +439,7 @@ entry:
 define float @sfct3(i32* nocapture %sp0) {
 ; CHECK-LABEL: sfct3:
 ; CHECK: ldr s[[REGNUM:[0-9]+]], [x0, #4]
-; CHECK-NEXT: scvtf [[REG:s[0-9]+]], s[[SEXTREG]]
+; CHECK-NEXT: scvtf [[REG:s[0-9]+]], s[[REGNUM]]
 ; CHECK-NEXT: fmul s0, [[REG]], [[REG]]
 entry:
   %addr = getelementptr i32, i32* %sp0, i64 1
@@ -500,7 +500,7 @@ entry:
 define float @sfct7(i32* nocapture %sp0, i64 %offset) {
 ; CHECK-LABEL: sfct7:
 ; CHECK: ldr s[[REGNUM:[0-9]+]], [x0, x1, lsl #2]
-; CHECK-NEXT: scvtf [[REG:s[0-9]+]], s[[SEXTREG]]
+; CHECK-NEXT: scvtf [[REG:s[0-9]+]], s[[REGNUM]]
 ; CHECK-NEXT: fmul s0, [[REG]], [[REG]]
 entry:
   %addr = getelementptr i32, i32* %sp0, i64 %offset
@@ -574,7 +574,7 @@ entry:
 define double @sfct12(i64* nocapture %sp0) {
 ; CHECK-LABEL: sfct12:
 ; CHECK: ldr d[[REGNUM:[0-9]+]], [x0, #8]
-; CHECK-NEXT: scvtf [[REG:d[0-9]+]], d[[SEXTREG]]
+; CHECK-NEXT: scvtf [[REG:d[0-9]+]], d[[REGNUM]]
 ; CHECK-NEXT: fmul d0, [[REG]], [[REG]]
 entry:
   %addr = getelementptr i64, i64* %sp0, i64 1
@@ -634,7 +634,7 @@ entry:
 define double @sfct16(i64* nocapture %sp0, i64 %offset) {
 ; CHECK-LABEL: sfct16:
 ; CHECK: ldr d[[REGNUM:[0-9]+]], [x0, x1, lsl #3]
-; CHECK-NEXT: scvtf [[REG:d[0-9]+]], d[[SEXTREG]]
+; CHECK-NEXT: scvtf [[REG:d[0-9]+]], d[[REGNUM]]
 ; CHECK-NEXT: fmul d0, [[REG]], [[REG]]
 entry:
   %addr = getelementptr i64, i64* %sp0, i64 %offset
@@ -684,7 +684,7 @@ define float @sfct18(i16* nocapture %sp0) {
 define float @sfct19(i32* nocapture %sp0) {
 ; CHECK-LABEL: sfct19:
 ; CHECK: ldur s[[REGNUM:[0-9]+]], [x0, #1]
-; CHECK-NEXT: scvtf [[REG:s[0-9]+]], s[[SEXTREG]]
+; CHECK-NEXT: scvtf [[REG:s[0-9]+]], s[[REGNUM]]
 ; CHECK-NEXT: fmul s0, [[REG]], [[REG]]
   %bitcast = ptrtoint i32* %sp0 to i64
   %add = add i64 %bitcast, 1
@@ -765,7 +765,7 @@ define double @sfct23(i32* nocapture %sp0) {
 define double @sfct24(i64* nocapture %sp0) {
 ; CHECK-LABEL: sfct24:
 ; CHECK: ldur d[[REGNUM:[0-9]+]], [x0, #1]
-; CHECK-NEXT: scvtf [[REG:d[0-9]+]], d[[SEXTREG]]
+; CHECK-NEXT: scvtf [[REG:d[0-9]+]], d[[REGNUM]]
 ; CHECK-NEXT: fmul d0, [[REG]], [[REG]]
   %bitcast = ptrtoint i64* %sp0 to i64
   %add = add i64 %bitcast, 1

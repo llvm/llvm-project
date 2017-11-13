@@ -1,4 +1,4 @@
-; RUN: opt -S -instcombine < %s | FileCheck %s
+; RUN: opt -S -instcombine < %s | FileCheck -enable-var-scope %s
 
 ; Check that instcombine preserves !prof metadata when removing function
 ; prototype casts.
@@ -8,7 +8,7 @@ declare void @__cxa_call_unexpected(i8*)
 declare void @foo(i16* %a)
 
 ; CHECK-LABEL: @test_call()
-; CHECK: call void @foo(i16* null), !prof ![[PROF:[0-9]+]]
+; CHECK: call void @foo(i16* null), !prof ![[$PROF:[0-9]+]]
 define void @test_call() {
   call void bitcast (void (i16*)* @foo to void (i8*)*) (i8* null), !prof !0
   ret void
@@ -16,7 +16,7 @@ define void @test_call() {
 
 ; CHECK-LABEL: @test_invoke()
 ; CHECK: invoke void @foo(i16* null)
-; CHECK-NEXT: to label %done unwind label %lpad, !prof ![[PROF]]
+; CHECK-NEXT: to label %done unwind label %lpad, !prof ![[$PROF]]
 define void @test_invoke() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
   invoke void bitcast (void (i16*)* @foo to void (i8*)*) (i8* null)
           to label %done unwind label %lpad, !prof !0
@@ -32,7 +32,7 @@ lpad:
   unreachable
 }
 
-; CHECK: ![[PROF]] = !{!"branch_weights", i32 2000}
+; CHECK: ![[$PROF]] = !{!"branch_weights", i32 2000}
 !0 = !{!"VP", i32 0, i64 2000, i64 -3913987384944532146, i64 2000}
 
 !llvm.module.flags = !{!1}

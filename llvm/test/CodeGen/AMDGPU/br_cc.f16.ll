@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=VI %s
 
 ; GCN-LABEL: {{^}}br_cc_f16:
 ; GCN: buffer_load_ushort v[[A_F16:[0-9]+]]
@@ -50,7 +50,7 @@ two:
 ; VI: s_cbranch_vccnz
 
 ; GCN: one{{$}}
-; VI: v_mov_b32_e32 v[[A_F16:[0-9]+]], 0x380{{0|1}}{{$}}
+; GCN: v_mov_b32_e32 v[[A_F16:[0-9]+]], 0x380{{0|1}}{{$}}
 
 ; SI: buffer_store_short v[[A_F16]]
 ; SI: s_endpgm
@@ -89,7 +89,7 @@ two:
 ; SI:  v_cvt_f16_f32_e32 v[[A_F16:[0-9]+]], v[[A_F32]]
 
 ; GCN: two{{$}}
-; VI:  v_mov_b32_e32 v[[B_F16:[0-9]+]], 0x3800{{$}}
+; GCN:  v_mov_b32_e32 v[[B_F16:[0-9]+]], 0x3800{{$}}
 ; GCN: buffer_store_short v[[B_F16]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @br_cc_f16_imm_b(

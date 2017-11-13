@@ -654,6 +654,30 @@ multiclass FlatSignedLoadPat_Hi16 <FLAT_Pseudo inst, SDPatternOperator node, Val
   >;
 }
 
+multiclass FlatLoadPat_Lo16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt = i16> {
+  def : GCNPat <
+    (build_vector (vt (node (FLATOffset i64:$vaddr, i16:$offset, i1:$slc))), (vt (Hi16Elt vt:$hi))),
+    (v2i16 (inst $vaddr, $offset, 0, $slc, $hi))
+  >;
+
+ def : GCNPat <
+    (build_vector (f16 (bitconvert (vt (node (FLATOffset i64:$vaddr, i16:$offset, i1:$slc))))), (f16 (Hi16Elt f16:$hi))),
+    (v2f16 (inst $vaddr, $offset, 0, $slc, $hi))
+  >;
+}
+
+multiclass FlatSignedLoadPat_Lo16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt = i16> {
+  def : GCNPat <
+    (build_vector (vt (node (FLATOffsetSigned i64:$vaddr, i16:$offset, i1:$slc))), (vt (Hi16Elt vt:$hi))),
+    (v2i16 (inst $vaddr, $offset, 0, $slc, $hi))
+  >;
+
+ def : GCNPat <
+    (build_vector (f16 (bitconvert (vt (node (FLATOffsetSigned i64:$vaddr, i16:$offset, i1:$slc))))), (f16 (Hi16Elt f16:$hi))),
+    (v2f16 (inst $vaddr, $offset, 0, $slc, $hi))
+  >;
+}
+
 class FlatLoadAtomicPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (vt (node (FLATAtomic i64:$vaddr, i16:$offset, i1:$slc))),
   (inst $vaddr, $offset, 0, $slc)
@@ -765,6 +789,12 @@ defm : FlatLoadPat_Hi16 <FLAT_LOAD_UBYTE_D16_HI, az_extloadi8_flat>;
 defm : FlatLoadPat_Hi16 <FLAT_LOAD_SBYTE_D16_HI, sextloadi8_flat>;
 defm : FlatLoadPat_Hi16 <FLAT_LOAD_SHORT_D16_HI, load_flat>;
 }
+
+let AddedComplexity = 9 in {
+defm : FlatLoadPat_Lo16 <FLAT_LOAD_UBYTE_D16, az_extloadi8_flat>;
+defm : FlatLoadPat_Lo16 <FLAT_LOAD_SBYTE_D16, sextloadi8_flat>;
+defm : FlatLoadPat_Lo16 <FLAT_LOAD_SHORT_D16, load_flat>;
+}
 }
 
 } // End OtherPredicates = [HasFlatAddressSpace]
@@ -801,6 +831,11 @@ def : FlatStoreSignedPat <GLOBAL_STORE_BYTE_D16_HI, truncstorei8_hi16_global, i3
 defm : FlatSignedLoadPat_Hi16 <GLOBAL_LOAD_UBYTE_D16_HI, az_extloadi8_global>;
 defm : FlatSignedLoadPat_Hi16 <GLOBAL_LOAD_SBYTE_D16_HI, sextloadi8_global>;
 defm : FlatSignedLoadPat_Hi16 <GLOBAL_LOAD_SHORT_D16_HI, load_global>;
+
+defm : FlatSignedLoadPat_Lo16 <GLOBAL_LOAD_UBYTE_D16, az_extloadi8_global>;
+defm : FlatSignedLoadPat_Lo16 <GLOBAL_LOAD_SBYTE_D16, sextloadi8_global>;
+defm : FlatSignedLoadPat_Lo16 <GLOBAL_LOAD_SHORT_D16, load_global>;
+
 }
 
 def : FlatStoreSignedAtomicPat <GLOBAL_STORE_DWORD, store_atomic_global, i32>;
