@@ -8830,7 +8830,7 @@ def err_omp_firstprivate_distribute_in_teams_reduction : Error<
 def err_omp_depend_clause_thread_simd : Error<
   "'depend' clauses cannot be mixed with '%0' clause">;
 def err_omp_depend_sink_expected_loop_iteration : Error<
-  "expected %0 loop iteration variable">;
+  "expected%select{| %1}0 loop iteration variable">;
 def err_omp_depend_sink_unexpected_expr : Error<
   "unexpected expression: number of expressions is larger than the number of associated loops">;
 def err_omp_depend_sink_expected_plus_minus : Error<
