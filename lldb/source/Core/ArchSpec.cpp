@@ -9,7 +9,6 @@
 
 #include "lldb/Core/ArchSpec.h"
 
-#include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/NameMatches.h"
 #include "lldb/Utility/Stream.h" // for Stream
 #include "lldb/Utility/StringList.h"
@@ -874,17 +873,7 @@ bool ArchSpec::SetTriple(llvm::StringRef triple) {
   if (ParseMachCPUDashSubtypeTriple(triple, *this))
     return true;
 
-  if (triple.startswith(LLDB_ARCH_DEFAULT)) {
-    // Special case for the current host default architectures...
-    if (triple.equals(LLDB_ARCH_DEFAULT_32BIT))
-      *this = HostInfo::GetArchitecture(HostInfo::eArchKind32);
-    else if (triple.equals(LLDB_ARCH_DEFAULT_64BIT))
-      *this = HostInfo::GetArchitecture(HostInfo::eArchKind64);
-    else if (triple.equals(LLDB_ARCH_DEFAULT))
-      *this = HostInfo::GetArchitecture(HostInfo::eArchKindDefault);
-  } else {
-    SetTriple(llvm::Triple(llvm::Triple::normalize(triple)));
-  }
+  SetTriple(llvm::Triple(llvm::Triple::normalize(triple)));
   return IsValid();
 }
 

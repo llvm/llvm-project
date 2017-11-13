@@ -105,6 +105,14 @@ const ArchSpec &HostInfoBase::GetArchitecture(ArchitectureKind arch_kind) {
                                               : g_fields->m_host_arch_32;
 }
 
+llvm::Optional<HostInfoBase::ArchitectureKind> HostInfoBase::ParseArchitectureKind(llvm::StringRef kind) {
+  return llvm::StringSwitch<llvm::Optional<ArchitectureKind>>(kind)
+      .Case(LLDB_ARCH_DEFAULT, eArchKindDefault)
+      .Case(LLDB_ARCH_DEFAULT_32BIT, eArchKind32)
+      .Case(LLDB_ARCH_DEFAULT_64BIT, eArchKind64)
+      .Default(llvm::None);
+}
+
 bool HostInfoBase::GetLLDBPath(lldb::PathType type, FileSpec &file_spec) {
   file_spec.Clear();
 
@@ -289,6 +297,9 @@ ArchSpec HostInfoBase::GetAugmentedArchSpec(llvm::StringRef triple) {
   llvm::Triple normalized_triple(llvm::Triple::normalize(triple));
   if (!ArchSpec::ContainsOnlyArch(normalized_triple))
     return ArchSpec(triple);
+
+  if (auto kind = HostInfo::ParseArchitectureKind(triple))
+    return HostInfo::GetArchitecture(*kind);
 
   llvm::Triple host_triple(llvm::sys::getDefaultTargetTriple());
 

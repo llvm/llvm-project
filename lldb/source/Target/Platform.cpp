@@ -976,6 +976,9 @@ ArchSpec Platform::GetAugmentedArchSpec(llvm::StringRef triple) {
   if (!ArchSpec::ContainsOnlyArch(normalized_triple))
     return ArchSpec(triple);
 
+  if (auto kind = HostInfo::ParseArchitectureKind(triple))
+    return HostInfo::GetArchitecture(*kind);
+
   ArchSpec compatible_arch;
   ArchSpec raw_arch(triple);
   if (!IsCompatibleArchitecture(raw_arch, false, &compatible_arch))

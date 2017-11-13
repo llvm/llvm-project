@@ -61,6 +61,8 @@ public:
   static const ArchSpec &
   GetArchitecture(ArchitectureKind arch_kind = eArchKindDefault);
 
+  static llvm::Optional<ArchitectureKind> ParseArchitectureKind(llvm::StringRef kind);
+
   //------------------------------------------------------------------
   /// Find a resource files that are related to LLDB.
   ///
