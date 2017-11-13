@@ -261,16 +261,16 @@ LockFileManager::LockFileState LockFileManager::getState() const {
   if (Owner)
     return LFS_Shared;
 
-  if (Error)
+  if (ErrorCode)
     return LFS_Error;
 
   return LFS_Owned;
 }
 
 std::string LockFileManager::getErrorMessage() const {
-  if (Error) {
+  if (ErrorCode) {
     std::string Str(ErrorDiagMsg);
-    std::string ErrCodeMsg = Error->message();
+    std::string ErrCodeMsg = ErrorCode.message();
     raw_string_ostream OSS(Str);
     if (!ErrCodeMsg.empty())
       OSS << ": " << ErrCodeMsg;
