@@ -1,6 +1,6 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=SIVI %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=SIVI %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=gfx901 -mattr=-flat-for-global,-fp64-fp16-denormals -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=SI -check-prefix=SIVI %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=VI -check-prefix=SIVI %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx901 -mattr=-flat-for-global,-fp64-fp16-denormals -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GFX9 %s
 
 ; GCN-LABEL: {{^}}fptrunc_f32_to_f16:
 ; GCN: buffer_load_dword v[[A_F32:[0-9]+]]
@@ -65,6 +65,9 @@ entry:
 ; GCN-DAG: v_cvt_f32_f64_e32 v[[A_F32_0:[0-9]+]], v{{\[}}[[A_F64_0]]:{{[0-9]+}}{{\]}}
 ; GCN-DAG: v_cvt_f32_f64_e32 v[[A_F32_1:[0-9]+]], v{{\[}}{{[0-9]+}}:[[A_F64_3]]{{\]}}
 ; GCN-DAG: v_cvt_f16_f32_e32 v[[R_F16_0:[0-9]+]], v[[A_F32_0]]
+;
+; SI-DAG: v_cvt_f16_f32_e32 v[[CVTHI:[0-9]+]], v[[A_F32_1]]
+; SI-DAG: v_lshlrev_b32_e32 v[[R_F16_HI:[0-9]+]], 16, v[[CVTHI]]
 
 ; VI: v_cvt_f16_f32_sdwa v[[R_F16_HI:[0-9]+]], v[[A_F32_1]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD
 

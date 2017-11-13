@@ -100,15 +100,16 @@ define amdgpu_kernel void @extract_vector_elt_v4i16(i16 addrspace(1)* %out, <4 x
 ; SICIVI: buffer_store_short
 ; SICIVI: buffer_store_short
 
-; GFX9: buffer_load_ushort
+; SICIVI: buffer_load_ushort
+; SICIVI: buffer_store_short
+
 ; GFX9: buffer_load_ushort
 ; GFX9: global_load_short_d16_hi
-
+; GFX9: global_load_short_d16 v
 ; GFX9: buffer_store_dword
 ; GFX9: buffer_store_dword
-
-; GCN: buffer_load_ushort
-; GCN: buffer_store_short
+; GFX9: buffer_load_ushort
+; GFX9: buffer_store_short
 define amdgpu_kernel void @dynamic_extract_vector_elt_v3i16(i16 addrspace(1)* %out, <3 x i16> %foo, i32 %idx) #0 {
   %p0 = extractelement <3 x i16> %foo, i32 %idx
   %out1 = getelementptr i16, i16 addrspace(1)* %out, i32 1

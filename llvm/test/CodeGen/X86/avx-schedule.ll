@@ -4046,8 +4046,8 @@ define <4 x double> @test_roundpd(<4 x double> %a0, <4 x double> *%a1) {
 ;
 ; SKX-LABEL: test_roundpd:
 ; SKX:       # BB#0:
-; SKX-NEXT:    vroundpd $7, %ymm0, %ymm0 # sched: [8:0.67]
-; SKX-NEXT:    vroundpd $7, (%rdi), %ymm1 # sched: [15:0.67]
+; SKX-NEXT:    vrndscalepd $7, %ymm0, %ymm0 # sched: [8:0.67]
+; SKX-NEXT:    vrndscalepd $7, (%rdi), %ymm1 # sched: [15:0.67]
 ; SKX-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
@@ -4110,8 +4110,8 @@ define <8 x float> @test_roundps(<8 x float> %a0, <8 x float> *%a1) {
 ;
 ; SKX-LABEL: test_roundps:
 ; SKX:       # BB#0:
-; SKX-NEXT:    vroundps $7, %ymm0, %ymm0 # sched: [8:0.67]
-; SKX-NEXT:    vroundps $7, (%rdi), %ymm1 # sched: [15:0.67]
+; SKX-NEXT:    vrndscaleps $7, %ymm0, %ymm0 # sched: [8:0.67]
+; SKX-NEXT:    vrndscaleps $7, (%rdi), %ymm1 # sched: [15:0.67]
 ; SKX-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;

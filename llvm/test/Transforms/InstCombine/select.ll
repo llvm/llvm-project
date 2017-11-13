@@ -1240,7 +1240,7 @@ define i8* @test83(i1 %flag) {
 ; CHECK:         %[[V:.*]] = load i64, i64* %[[X2]]
 ; CHECK-NEXT:    store i64 %[[V]], i64* %[[Y2]]
 ; CHECK-NEXT:    %[[C:.*]] = inttoptr i64 %[[V]] to i8*
-; CHECK-NEXT:    ret i8* %[[S]]
+; CHECK-NEXT:    ret i8* %[[C]]
 entry:
   %x = alloca i8*
   %y = alloca i64
