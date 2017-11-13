@@ -4358,12 +4358,7 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
   // Now that we determined the addressing expression we want to use and know
   // that we have to sink it into this block.  Check to see if we have already
   // done this for some other load/store instr in this block.  If so, reuse the
-  // computation.  Before attempting reuse, check if the address is valid as it
-  // may have been erased.
-  auto I = SunkAddrs.find(Addr);
-  if (I != SunkAddrs.end() && I->second && I->second->user_empty())
-    SunkAddrs.erase(I);
-
+  // computation.
   Value *&SunkAddr = SunkAddrs[Addr];
   if (SunkAddr) {
     DEBUG(dbgs() << "CGP: Reusing nonlocal addrmode: " << AddrMode << " for "

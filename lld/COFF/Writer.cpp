@@ -108,6 +108,7 @@ public:
 // The writer writes a SymbolTable result to a file.
 class Writer {
 public:
+  Writer() : Buffer(errorHandler().OutputBuffer) {}
   void run();
 
 private:
@@ -137,7 +138,7 @@ private:
   uint32_t getSizeOfInitializedData();
   std::map<StringRef, std::vector<DefinedImportData *>> binImports();
 
-  std::unique_ptr<FileOutputBuffer> Buffer;
+  std::unique_ptr<FileOutputBuffer> &Buffer;
   std::vector<OutputSection *> OutputSections;
   std::vector<char> Strtab;
   std::vector<llvm::object::coff_symbol16> OutputSymtab;

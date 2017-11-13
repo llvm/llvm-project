@@ -7,22 +7,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
-#include <list>
-
-#include "lldb/Core/ArchSpec.h"
+#include "lldb/Symbol/DWARFCallFrameInfo.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/dwarf.h"
 #include "lldb/Host/Host.h"
-#include "lldb/Symbol/DWARFCallFrameInfo.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timer.h"
+#include <list>
 
 using namespace lldb;
 using namespace lldb_private;

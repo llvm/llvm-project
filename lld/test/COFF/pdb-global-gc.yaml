@@ -1,7 +1,7 @@
 # RUN: yaml2obj %s -o %t.obj
 # RUN: llvm-mc %S/Inputs/pdb-global-gc.s -triple x86_64-windows-msvc -filetype=obj -o %t2.obj
 # RUN: lld-link %t.obj %t2.obj -debug -entry:main \
-# RUN:          -nodefaultlib -debug -out:%t.exe -pdb:%t.pdb -verbose
+# RUN:          -nodefaultlib -opt:ref -out:%t.exe -pdb:%t.pdb -verbose
 # RUN: llvm-pdbutil dump -symbols -globals %t.pdb | FileCheck %s
 
 # This tests the case where an __imp_ chunk is discarded by linker GC. The debug

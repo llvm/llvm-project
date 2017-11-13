@@ -192,8 +192,7 @@ bool AbstractListFrontEnd::Update() {
 
   if (list_type.GetNumTemplateArguments() == 0)
     return false;
-  TemplateArgumentKind kind;
-  m_element_type = list_type.GetTemplateArgument(0, kind);
+  m_element_type = list_type.GetTypeTemplateArgument(0);
 
   return false;
 }

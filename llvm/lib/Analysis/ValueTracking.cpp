@@ -2593,38 +2593,38 @@ Intrinsic::ID llvm::getIntrinsicForCallSite(ImmutableCallSite ICS,
 /// rounding modes!
 bool llvm::CannotBeNegativeZero(const Value *V, const TargetLibraryInfo *TLI,
                                 unsigned Depth) {
-  if (const ConstantFP *CFP = dyn_cast<ConstantFP>(V))
+  if (auto *CFP = dyn_cast<ConstantFP>(V))
     return !CFP->getValueAPF().isNegZero();
 
+  // Limit search depth.
   if (Depth == MaxDepth)
-    return false;  // Limit search depth.
+    return false;
 
-  const Operator *I = dyn_cast<Operator>(V);
-  if (!I) return false;
+  auto *Op = dyn_cast<Operator>(V);
+  if (!Op)
+    return false;
 
-  // Check if the nsz fast-math flag is set
-  if (const FPMathOperator *FPO = dyn_cast<FPMathOperator>(I))
+  // Check if the nsz fast-math flag is set.
+  if (auto *FPO = dyn_cast<FPMathOperator>(Op))
     if (FPO->hasNoSignedZeros())
       return true;
 
-  // (add x, 0.0) is guaranteed to return +0.0, not -0.0.
-  if (I->getOpcode() == Instruction::FAdd)
-    if (ConstantFP *CFP = dyn_cast<ConstantFP>(I->getOperand(1)))
-      if (CFP->isNullValue())
-        return true;
-
-  // sitofp and uitofp turn into +0.0 for zero.
-  if (isa<SIToFPInst>(I) || isa<UIToFPInst>(I))
+  // (fadd x, 0.0) is guaranteed to return +0.0, not -0.0.
+  if (match(Op, m_FAdd(m_Value(), m_Zero())))
     return true;
 
-  if (const CallInst *CI = dyn_cast<CallInst>(I)) {
-    Intrinsic::ID IID = getIntrinsicForCallSite(CI, TLI);
+  // sitofp and uitofp turn into +0.0 for zero.
+  if (isa<SIToFPInst>(Op) || isa<UIToFPInst>(Op))
+    return true;
+
+  if (auto *Call = dyn_cast<CallInst>(Op)) {
+    Intrinsic::ID IID = getIntrinsicForCallSite(Call, TLI);
     switch (IID) {
     default:
       break;
     // sqrt(-0.0) = -0.0, no other negative results are possible.
     case Intrinsic::sqrt:
-      return CannotBeNegativeZero(CI->getArgOperand(0), TLI, Depth + 1);
+      return CannotBeNegativeZero(Call->getArgOperand(0), TLI, Depth + 1);
     // fabs(x) != -0.0
     case Intrinsic::fabs:
       return true;

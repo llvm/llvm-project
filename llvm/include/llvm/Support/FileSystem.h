@@ -31,6 +31,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Chrono.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MD5.h"
@@ -693,6 +694,40 @@ std::error_code createUniqueFile(const Twine &Model, int &ResultFD,
 /// @brief Simpler version for clients that don't want an open file.
 std::error_code createUniqueFile(const Twine &Model,
                                  SmallVectorImpl<char> &ResultPath);
+
+/// Represents a temporary file.
+///
+/// The temporary file must be eventually discarded or given a final name and
+/// kept.
+///
+/// The destructor doesn't implicitly discard because there is no way to
+/// properly handle errors in a destructor.
+class TempFile {
+  bool Done = false;
+  TempFile(StringRef Name, int FD);
+
+public:
+  /// This creates a temporary file with createUniqueFile and schedules it for
+  /// deletion with sys::RemoveFileOnSignal.
+  static Expected<TempFile> create(const Twine &Model,
+                                   unsigned Mode = all_read | all_write);
+  TempFile(TempFile &&Other);
+
+  // Name of the temporary file.
+  std::string TmpName;
+
+  // The open file descriptor.
+  int FD = -1;
+
+  // Keep this with the given name.
+  Error keep(const Twine &Name);
+
+  // Delete the file.
+  Error discard();
+
+  // This checks that keep or delete was called.
+  ~TempFile();
+};
 
 /// @brief Create a file in the system temporary directory.
 ///

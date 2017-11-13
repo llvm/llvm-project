@@ -10,7 +10,7 @@
 #ifndef lldb_Host_HostInfoBase_h_
 #define lldb_Host_HostInfoBase_h_
 
-#include "lldb/Core/ArchSpec.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-enumerations.h"
 
@@ -60,6 +60,8 @@ public:
 
   static const ArchSpec &
   GetArchitecture(ArchitectureKind arch_kind = eArchKindDefault);
+
+  static llvm::Optional<ArchitectureKind> ParseArchitectureKind(llvm::StringRef kind);
 
   //------------------------------------------------------------------
   /// Find a resource files that are related to LLDB.

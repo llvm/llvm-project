@@ -332,6 +332,8 @@ def UseNegativeImmediates :
 let RecomputePerFunction = 1 in {
   def UseMovt          : Predicate<"Subtarget->useMovt(*MF)">;
   def DontUseMovt      : Predicate<"!Subtarget->useMovt(*MF)">;
+  def UseMovtInPic          : Predicate<"Subtarget->useMovt(*MF) && Subtarget->allowPositionIndependentMovt()">;
+  def DontUseMovtInPic      : Predicate<"!Subtarget->useMovt(*MF) || !Subtarget->allowPositionIndependentMovt()">;
 }
 def UseFPVMLx        : Predicate<"Subtarget->useFPVMLx()">;
 def UseMulOps        : Predicate<"Subtarget->useMulOps()">;
@@ -5644,26 +5646,26 @@ let isReMaterializable = 1 in {
 def MOV_ga_pcrel : PseudoInst<(outs GPR:$dst), (ins i32imm:$addr),
                               IIC_iMOVix2addpc,
                         [(set GPR:$dst, (ARMWrapperPIC tglobaladdr:$addr))]>,
-                        Requires<[IsARM, UseMovt]>;
+                        Requires<[IsARM, UseMovtInPic]>;
 
 def LDRLIT_ga_pcrel : PseudoInst<(outs GPR:$dst), (ins i32imm:$addr),
                                  IIC_iLoadiALU,
                                  [(set GPR:$dst,
                                        (ARMWrapperPIC tglobaladdr:$addr))]>,
-                      Requires<[IsARM, DontUseMovt]>;
+                      Requires<[IsARM, DontUseMovtInPic]>;
 
 let AddedComplexity = 10 in
 def LDRLIT_ga_pcrel_ldr : PseudoInst<(outs GPR:$dst), (ins i32imm:$addr),
                               NoItinerary,
                               [(set GPR:$dst,
                                     (load (ARMWrapperPIC tglobaladdr:$addr)))]>,
-                          Requires<[IsARM, DontUseMovt]>;
+                          Requires<[IsARM, DontUseMovtInPic]>;
 
 let AddedComplexity = 10 in
 def MOV_ga_pcrel_ldr : PseudoInst<(outs GPR:$dst), (ins i32imm:$addr),
                                 IIC_iMOVix2ld,
                     [(set GPR:$dst, (load (ARMWrapperPIC tglobaladdr:$addr)))]>,
-                    Requires<[IsARM, UseMovt]>;
+                    Requires<[IsARM, UseMovtInPic]>;
 } // isReMaterializable
 
 // The many different faces of TLS access.
@@ -5676,15 +5678,15 @@ def : Pat<(ARMWrapper tglobaltlsaddr:$src),
       Requires<[IsARM, DontUseMovt]>;
 
 def : Pat<(ARMWrapperPIC tglobaltlsaddr:$addr),
-          (MOV_ga_pcrel tglobaltlsaddr:$addr)>, Requires<[IsARM, UseMovt]>;
+          (MOV_ga_pcrel tglobaltlsaddr:$addr)>, Requires<[IsARM, UseMovtInPic]>;
 
 def : Pat<(ARMWrapperPIC tglobaltlsaddr:$addr),
           (LDRLIT_ga_pcrel tglobaltlsaddr:$addr)>,
-      Requires<[IsARM, DontUseMovt]>;
+      Requires<[IsARM, DontUseMovtInPic]>;
 let AddedComplexity = 10 in
 def : Pat<(load (ARMWrapperPIC tglobaltlsaddr:$addr)),
           (MOV_ga_pcrel_ldr tglobaltlsaddr:$addr)>,
-      Requires<[IsARM, UseMovt]>;
+      Requires<[IsARM, UseMovtInPic]>;
 
 
 // ConstantPool, GlobalAddress, and JumpTable

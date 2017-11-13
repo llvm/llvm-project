@@ -259,6 +259,8 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name.startswith("avx512.cvtmask2") || // Added in 5.0
       (Name.startswith("xop.vpcom") && // Added in 3.2
        F->arg_size() == 2) ||
+      Name.startswith("avx512.ptestm") || //Added in 6.0
+      Name.startswith("avx512.ptestnm") || //Added in 6.0
       Name.startswith("sse2.pavg") || // Added in 6.0
       Name.startswith("avx2.pavg") || // Added in 6.0
       Name.startswith("avx512.mask.pavg")) // Added in 6.0
@@ -826,6 +828,26 @@ static Value *upgradeIntMinMax(IRBuilder<> &Builder, CallInst &CI,
   return Res;
 }
 
+// Applying mask on vector of i1's and make sure result is at least 8 bits wide.
+static Value *ApplyX86MaskOn1BitsVec(IRBuilder<> &Builder,Value *Vec, Value *Mask,
+                                     unsigned NumElts) {
+  const auto *C = dyn_cast<Constant>(Mask);
+  if (!C || !C->isAllOnesValue())
+    Vec = Builder.CreateAnd(Vec, getX86MaskVec(Builder, Mask, NumElts));
+
+  if (NumElts < 8) {
+    uint32_t Indices[8];
+    for (unsigned i = 0; i != NumElts; ++i)
+      Indices[i] = i;
+    for (unsigned i = NumElts; i != 8; ++i)
+      Indices[i] = NumElts + i % NumElts;
+    Vec = Builder.CreateShuffleVector(Vec,
+                                      Constant::getNullValue(Vec->getType()),
+                                      Indices);
+  }
+  return Builder.CreateBitCast(Vec, Builder.getIntNTy(std::max(NumElts, 8U)));
+}
+
 static Value *upgradeMaskedCompare(IRBuilder<> &Builder, CallInst &CI,
                                    unsigned CC, bool Signed) {
   Value *Op0 = CI.getArgOperand(0);
@@ -851,22 +873,8 @@ static Value *upgradeMaskedCompare(IRBuilder<> &Builder, CallInst &CI,
   }
 
   Value *Mask = CI.getArgOperand(CI.getNumArgOperands() - 1);
-  const auto *C = dyn_cast<Constant>(Mask);
-  if (!C || !C->isAllOnesValue())
-    Cmp = Builder.CreateAnd(Cmp, getX86MaskVec(Builder, Mask, NumElts));
 
-  if (NumElts < 8) {
-    uint32_t Indices[8];
-    for (unsigned i = 0; i != NumElts; ++i)
-      Indices[i] = i;
-    for (unsigned i = NumElts; i != 8; ++i)
-      Indices[i] = NumElts + i % NumElts;
-    Cmp = Builder.CreateShuffleVector(Cmp,
-                                      Constant::getNullValue(Cmp->getType()),
-                                      Indices);
-  }
-  return Builder.CreateBitCast(Cmp, IntegerType::get(CI.getContext(),
-                                                     std::max(NumElts, 8U)));
+  return ApplyX86MaskOn1BitsVec(Builder, Cmp, Mask, NumElts);
 }
 
 // Replace a masked intrinsic with an older unmasked intrinsic.
@@ -1038,7 +1046,20 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                          ExtTy->getPrimitiveSizeInBits();
       Rep = Builder.CreateZExt(CI->getArgOperand(0), ExtTy);
       Rep = Builder.CreateVectorSplat(NumElts, Rep);
-    } else if (IsX86 && (Name.startswith("avx512.mask.pbroadcast"))) {
+    } else if (IsX86 && (Name.startswith("avx512.ptestm") ||
+                         Name.startswith("avx512.ptestnm"))) {
+      Value *Op0 = CI->getArgOperand(0);
+      Value *Op1 = CI->getArgOperand(1);
+      Value *Mask = CI->getArgOperand(2);
+      Rep = Builder.CreateAnd(Op0, Op1);
+      llvm::Type *Ty = Op0->getType();
+      Value *Zero = llvm::Constant::getNullValue(Ty);
+      ICmpInst::Predicate Pred =
+        Name.startswith("avx512.ptestm") ? ICmpInst::ICMP_NE : ICmpInst::ICMP_EQ;
+      Rep = Builder.CreateICmp(Pred, Rep, Zero);
+      unsigned NumElts = Op0->getType()->getVectorNumElements();
+      Rep = ApplyX86MaskOn1BitsVec(Builder, Rep, Mask, NumElts);
+    } else if (IsX86 && (Name.startswith("avx512.mask.pbroadcast"))){
       unsigned NumElts =
           CI->getArgOperand(1)->getType()->getVectorNumElements();
       Rep = Builder.CreateVectorSplat(NumElts, CI->getArgOperand(0));

@@ -228,7 +228,10 @@ namespace ARMII {
 
     /// MO_OPTION_MASK - Most flags are mutually exclusive; this mask selects
     /// just that part of the flag set.
-    MO_OPTION_MASK = 0x0f,
+    MO_OPTION_MASK = 0x3,
+
+    /// MO_GOT - On a symbol operand, this represents a GOT relative relocation.
+    MO_GOT = 0x8,
 
     /// MO_SBREL - On a symbol operand, this represents a static base relative
     /// relocation. Used in movw and movt instructions.

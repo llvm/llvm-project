@@ -324,6 +324,21 @@ static void CheckShadowMapping() {
   }
 }
 
+#if !SANITIZER_GO
+static void OnStackUnwind(const SignalContext &sig, const void *,
+                          BufferedStackTrace *stack) {
+  uptr top = 0;
+  uptr bottom = 0;
+  bool fast = common_flags()->fast_unwind_on_fatal;
+  if (fast) GetThreadStackTopAndBottom(false, &top, &bottom);
+  stack->Unwind(kStackTraceMax, sig.pc, sig.bp, sig.context, top, bottom, fast);
+}
+
+static void TsanOnDeadlySignal(int signo, void *siginfo, void *context) {
+  HandleDeadlySignal(siginfo, context, GetTid(), &OnStackUnwind, nullptr);
+}
+#endif
+
 void Initialize(ThreadState *thr) {
   // Thread safe because done before all threads exist.
   static bool is_initialized = false;
@@ -361,6 +376,7 @@ void Initialize(ThreadState *thr) {
 #if !SANITIZER_GO
   InitializeShadowMemory();
   InitializeAllocatorLate();
+  InstallDeadlySignalHandlers(TsanOnDeadlySignal);
 #endif
   // Setup correct file descriptor for error reports.
   __sanitizer_set_report_path(common_flags()->log_path);

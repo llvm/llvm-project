@@ -8,8 +8,6 @@
 // clang-format on
 
 // REQUIRES: x86-target-arch
-// FIXME: implement in other sanitizers.
-// XFAIL: tsan
 
 int main() {
 #if defined(__x86_64__)

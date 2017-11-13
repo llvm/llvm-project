@@ -3507,11 +3507,12 @@ TreePatternNode *GlobalISelEmitter::fixupPatternNode(TreePatternNode *N) {
       // must be transformed into:
       //   (sext:[i32] (ld:[i16] [iPTR])<<unindexed>>)
       //
-      // Likewise for zeroext-load.
+      // Likewise for zeroext-load and anyext-load.
 
       std::vector<TreePredicateFn> Predicates;
       bool IsSignExtLoad = false;
       bool IsZeroExtLoad = false;
+      bool IsAnyExtLoad = false;
       Record *MemVT = nullptr;
       for (const auto &P : N->getPredicateFns()) {
         if (P.isLoad() && P.isSignExtLoad()) {
@@ -3522,6 +3523,10 @@ TreePatternNode *GlobalISelEmitter::fixupPatternNode(TreePatternNode *N) {
           IsZeroExtLoad = true;
           continue;
         }
+        if (P.isLoad() && P.isAnyExtLoad()) {
+          IsAnyExtLoad = true;
+          continue;
+        }
         if (P.isLoad() && P.getMemoryVT()) {
           MemVT = P.getMemoryVT();
           continue;
@@ -3529,12 +3534,13 @@ TreePatternNode *GlobalISelEmitter::fixupPatternNode(TreePatternNode *N) {
         Predicates.push_back(P);
       }
 
-      if ((IsSignExtLoad || IsZeroExtLoad) && MemVT) {
-        assert(((IsSignExtLoad && !IsZeroExtLoad) ||
-                (!IsSignExtLoad && IsZeroExtLoad)) &&
-               "IsSignExtLoad and IsZeroExtLoad are mutually exclusive");
+      if ((IsSignExtLoad || IsZeroExtLoad || IsAnyExtLoad) && MemVT) {
+        assert((IsSignExtLoad + IsZeroExtLoad + IsAnyExtLoad) == 1 &&
+               "IsSignExtLoad, IsZeroExtLoad, IsAnyExtLoad are mutually exclusive");
         TreePatternNode *Ext = new TreePatternNode(
-            RK.getDef(IsSignExtLoad ? "sext" : "zext"), {N}, 1);
+            RK.getDef(IsSignExtLoad ? "sext"
+                                    : IsZeroExtLoad ? "zext" : "anyext"),
+            {N}, 1);
         Ext->setType(0, N->getType(0));
         N->clearPredicateFns();
         N->setPredicateFns(Predicates);

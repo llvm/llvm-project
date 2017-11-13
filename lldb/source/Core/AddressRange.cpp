@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/AddressRange.h"
-#include "lldb/Core/ArchSpec.h" // for ArchSpec
 #include "lldb/Core/Module.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h" // for ConstString

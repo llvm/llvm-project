@@ -538,8 +538,12 @@ bool ARMInstructionSelector::selectGlobal(MachineInstrBuilder &MIB,
             : (Indirect ? ARM::LDRLIT_ga_pcrel_ldr : ARM::LDRLIT_ga_pcrel);
     MIB->setDesc(TII.get(Opc));
 
+    int TargetFlags = ARMII::MO_NO_FLAG;
     if (STI.isTargetDarwin())
-      MIB->getOperand(1).setTargetFlags(ARMII::MO_NONLAZY);
+      TargetFlags |= ARMII::MO_NONLAZY;
+    if (STI.isGVInGOT(GV))
+      TargetFlags |= ARMII::MO_GOT;
+    MIB->getOperand(1).setTargetFlags(TargetFlags);
 
     if (Indirect)
       MIB.addMemOperand(MF.getMachineMemOperand(

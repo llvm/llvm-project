@@ -411,7 +411,6 @@ void CGOpenMPRuntimeNVPTX::emitSpmdKernel(const OMPExecutableDirective &D,
   CodeGen.setAction(Action);
   emitTargetOutlinedFunctionHelper(D, ParentName, OutlinedFn, OutlinedFnID,
                                    IsOffloadEntry, CodeGen);
-  return;
 }
 
 void CGOpenMPRuntimeNVPTX::emitSpmdEntryHeader(
