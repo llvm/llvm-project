@@ -898,13 +898,6 @@ JavaASTContext::GetNumTemplateArguments(lldb::opaque_compiler_type_t type) {
   return 0;
 }
 
-CompilerType
-JavaASTContext::GetTemplateArgument(lldb::opaque_compiler_type_t type,
-                                    size_t idx,
-                                    lldb::TemplateArgumentKind &kind) {
-  return CompilerType();
-}
-
 uint32_t JavaASTContext::GetNumFields(lldb::opaque_compiler_type_t type) {
   if (JavaObjectType *obj =
           llvm::dyn_cast<JavaObjectType>(static_cast<JavaType *>(type))) {

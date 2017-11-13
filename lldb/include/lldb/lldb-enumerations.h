@@ -775,8 +775,8 @@ enum TemplateArgumentKind {
   eTemplateArgumentKindTemplate,
   eTemplateArgumentKindTemplateExpansion,
   eTemplateArgumentKindExpression,
-  eTemplateArgumentKindPack
-
+  eTemplateArgumentKindPack,
+  eTemplateArgumentKindNullPtr,
 };
 
 //----------------------------------------------------------------------
