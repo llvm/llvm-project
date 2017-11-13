@@ -2329,8 +2329,8 @@ define <4 x double> @test_maxpd(<4 x double> %a0, <4 x double> %a1, <4 x double>
 ;
 ; SKX-LABEL: test_maxpd:
 ; SKX:       # BB#0:
-; SKX-NEXT:    vmaxpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; SKX-NEXT:    vmaxpd (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
+; SKX-NEXT:    vmaxpd %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
+; SKX-NEXT:    vmaxpd (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_maxpd:
@@ -2384,8 +2384,8 @@ define <8 x float> @test_maxps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a
 ;
 ; SKX-LABEL: test_maxps:
 ; SKX:       # BB#0:
-; SKX-NEXT:    vmaxps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; SKX-NEXT:    vmaxps (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
+; SKX-NEXT:    vmaxps %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
+; SKX-NEXT:    vmaxps (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_maxps:
@@ -2439,8 +2439,8 @@ define <4 x double> @test_minpd(<4 x double> %a0, <4 x double> %a1, <4 x double>
 ;
 ; SKX-LABEL: test_minpd:
 ; SKX:       # BB#0:
-; SKX-NEXT:    vminpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; SKX-NEXT:    vminpd (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
+; SKX-NEXT:    vminpd %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
+; SKX-NEXT:    vminpd (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_minpd:
@@ -2494,8 +2494,8 @@ define <8 x float> @test_minps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a
 ;
 ; SKX-LABEL: test_minps:
 ; SKX:       # BB#0:
-; SKX-NEXT:    vminps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; SKX-NEXT:    vminps (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
+; SKX-NEXT:    vminps %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
+; SKX-NEXT:    vminps (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_minps:

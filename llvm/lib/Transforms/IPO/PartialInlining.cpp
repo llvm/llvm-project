@@ -149,7 +149,12 @@ struct PartialInlinerImpl {
     // the return block.
     void NormalizeReturnBlock();
 
-    // Do function outlining:
+    // Do function outlining.
+    // NOTE: For vararg functions that do the vararg handling in the outlined
+    //       function, we temporarily generate IR that does not properly
+    //       forward varargs to the outlined function. Calling InlineFunction
+    //       will update calls to the outlined functions to properly forward
+    //       the varargs.
     Function *doFunctionOutlining();
 
     Function *OrigFunc = nullptr;
@@ -813,7 +818,8 @@ Function *PartialInlinerImpl::FunctionCloner::doFunctionOutlining() {
 
   // Extract the body of the if.
   OutlinedFunc = CodeExtractor(ToExtract, &DT, /*AggregateArgs*/ false,
-                               ClonedFuncBFI.get(), &BPI)
+                               ClonedFuncBFI.get(), &BPI,
+                               /* AllowVarargs */ true)
                      .extractCodeRegion();
 
   if (OutlinedFunc) {
@@ -938,7 +944,7 @@ bool PartialInlinerImpl::tryPartialInline(FunctionCloner &Cloner) {
        << ore::NV("Caller", CS.getCaller());
 
     InlineFunctionInfo IFI(nullptr, GetAssumptionCache, PSI);
-    if (!InlineFunction(CS, IFI))
+    if (!InlineFunction(CS, IFI, nullptr, true, Cloner.OutlinedFunc))
       continue;
 
     ORE.emit(OR);

@@ -78,7 +78,8 @@ AggregateArgsOpt("aggregate-extracted-args", cl::Hidden,
                  cl::desc("Aggregate arguments to code-extracted functions"));
 
 /// \brief Test whether a block is valid for extraction.
-bool CodeExtractor::isBlockValidForExtraction(const BasicBlock &BB) {
+bool CodeExtractor::isBlockValidForExtraction(const BasicBlock &BB,
+                                              bool AllowVarArgs) {
   // Landing pads must be in the function where they were inserted for cleanup.
   if (BB.isEHPad())
     return false;
@@ -110,14 +111,19 @@ bool CodeExtractor::isBlockValidForExtraction(const BasicBlock &BB) {
     }
   }
 
-  // Don't hoist code containing allocas, invokes, or vastarts.
+  // Don't hoist code containing allocas or invokes. If explicitly requested,
+  // allow vastart.
   for (BasicBlock::const_iterator I = BB.begin(), E = BB.end(); I != E; ++I) {
     if (isa<AllocaInst>(I) || isa<InvokeInst>(I))
       return false;
     if (const CallInst *CI = dyn_cast<CallInst>(I))
       if (const Function *F = CI->getCalledFunction())
-        if (F->getIntrinsicID() == Intrinsic::vastart)
-          return false;
+        if (F->getIntrinsicID() == Intrinsic::vastart) {
+          if (AllowVarArgs)
+            continue;
+          else
+            return false;
+        }
   }
 
   return true;
@@ -125,7 +131,8 @@ bool CodeExtractor::isBlockValidForExtraction(const BasicBlock &BB) {
 
 /// \brief Build a set of blocks to extract if the input blocks are viable.
 static SetVector<BasicBlock *>
-buildExtractionBlockSet(ArrayRef<BasicBlock *> BBs, DominatorTree *DT) {
+buildExtractionBlockSet(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
+                        bool AllowVarArgs) {
   assert(!BBs.empty() && "The set of blocks to extract must be non-empty");
   SetVector<BasicBlock *> Result;
 
@@ -138,7 +145,7 @@ buildExtractionBlockSet(ArrayRef<BasicBlock *> BBs, DominatorTree *DT) {
 
     if (!Result.insert(BB))
       llvm_unreachable("Repeated basic blocks in extraction input");
-    if (!CodeExtractor::isBlockValidForExtraction(*BB)) {
+    if (!CodeExtractor::isBlockValidForExtraction(*BB, AllowVarArgs)) {
       Result.clear();
       return Result;
     }
@@ -160,15 +167,18 @@ buildExtractionBlockSet(ArrayRef<BasicBlock *> BBs, DominatorTree *DT) {
 
 CodeExtractor::CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
                              bool AggregateArgs, BlockFrequencyInfo *BFI,
-                             BranchProbabilityInfo *BPI)
+                             BranchProbabilityInfo *BPI, bool AllowVarArgs)
     : DT(DT), AggregateArgs(AggregateArgs || AggregateArgsOpt), BFI(BFI),
-      BPI(BPI), Blocks(buildExtractionBlockSet(BBs, DT)) {}
+      BPI(BPI), AllowVarArgs(AllowVarArgs),
+      Blocks(buildExtractionBlockSet(BBs, DT, AllowVarArgs)) {}
 
 CodeExtractor::CodeExtractor(DominatorTree &DT, Loop &L, bool AggregateArgs,
                              BlockFrequencyInfo *BFI,
                              BranchProbabilityInfo *BPI)
     : DT(&DT), AggregateArgs(AggregateArgs || AggregateArgsOpt), BFI(BFI),
-      BPI(BPI), Blocks(buildExtractionBlockSet(L.getBlocks(), &DT)) {}
+      BPI(BPI), AllowVarArgs(false),
+      Blocks(buildExtractionBlockSet(L.getBlocks(), &DT,
+                                     /* AllowVarArgs */ false)) {}
 
 /// definedInRegion - Return true if the specified value is defined in the
 /// extracted region.
@@ -594,7 +604,8 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
     paramTy.push_back(PointerType::getUnqual(StructTy));
   }
   FunctionType *funcType =
-                  FunctionType::get(RetTy, paramTy, false);
+                  FunctionType::get(RetTy, paramTy,
+                                    AllowVarArgs && oldFunction->isVarArg());
 
   // Create the new function
   Function *newFunction = Function::Create(funcType,
@@ -957,12 +968,31 @@ Function *CodeExtractor::extractCodeRegion() {
   if (!isEligible())
     return nullptr;
 
-  ValueSet inputs, outputs, SinkingCands, HoistingCands;
-  BasicBlock *CommonExit = nullptr;
-
   // Assumption: this is a single-entry code region, and the header is the first
   // block in the region.
   BasicBlock *header = *Blocks.begin();
+  Function *oldFunction = header->getParent();
+
+  // For functions with varargs, check that varargs handling is only done in the
+  // outlined function, i.e vastart and vaend are only used in outlined blocks.
+  if (AllowVarArgs && oldFunction->getFunctionType()->isVarArg()) {
+    auto containsVarArgIntrinsic = [](Instruction &I) {
+      if (const CallInst *CI = dyn_cast<CallInst>(&I))
+        if (const Function *F = CI->getCalledFunction())
+          return F->getIntrinsicID() == Intrinsic::vastart ||
+                 F->getIntrinsicID() == Intrinsic::vaend;
+      return false;
+    };
+
+    for (auto &BB : *oldFunction) {
+      if (Blocks.count(&BB))
+        continue;
+      if (llvm::any_of(BB, containsVarArgIntrinsic))
+        return nullptr;
+    }
+  }
+  ValueSet inputs, outputs, SinkingCands, HoistingCands;
+  BasicBlock *CommonExit = nullptr;
 
   // Calculate the entry frequency of the new function before we change the root
   //   block.
@@ -983,8 +1013,6 @@ Function *CodeExtractor::extractCodeRegion() {
   // If we have any return instructions in the region, split those blocks so
   // that the return is not in the region.
   splitReturnBlocks();
-
-  Function *oldFunction = header->getParent();
 
   // This takes place of the original loop
   BasicBlock *codeReplacer = BasicBlock::Create(header->getContext(), 
