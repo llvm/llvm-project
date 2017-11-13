@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
 declare i32 @llvm.r600.read.tidig.x() #0
@@ -83,7 +83,8 @@ define amdgpu_kernel void @s_and_multi_use_constant_i32_0(i32 addrspace(1)* %out
 ; SI: s_and_b32 [[AND:s[0-9]+]], s{{[0-9]+}}, [[K]]
 ; SI: s_add_i32
 ; SI: s_add_i32 [[ADD:s[0-9]+]], s{{[0-9]+}}, [[K]]
-; SI: buffer_store_dword [[VK]]
+; SI: v_mov_b32_e32 [[VADD:v[0-9]+]], [[ADD]]
+; SI: buffer_store_dword [[VADD]]
 define amdgpu_kernel void @s_and_multi_use_constant_i32_1(i32 addrspace(1)* %out, i32 %a, i32 %b) {
   %and = and i32 %a, 1234567
   %foo = add i32 %and, 1234567

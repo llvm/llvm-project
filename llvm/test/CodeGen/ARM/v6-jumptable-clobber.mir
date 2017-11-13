@@ -245,7 +245,7 @@ body:             |
   
     %r0, dead %cpsr = tLSLri killed %r1, 2, 14, _
     %r1 = tLEApcrelJT %jump-table.0, 14, _
-    %r0 = tLDRr killed %r0, killed %r1, 14, _ :: (load 4 from jump-table)
+    %r0 = tLDRr killed %r1, killed %r0, 14, _ :: (load 4 from jump-table)
     tBR_JTr killed %r0, %jump-table.0
   
   bb.3.d2:
@@ -342,7 +342,7 @@ body:             |
   
     %r0, dead %cpsr = tLSLri killed %r1, 2, 14, _
     %r1 = tLEApcrelJT %jump-table.0, 14, _
-    %r0 = tLDRr killed %r0, killed %r1, 14, _ :: (load 4 from jump-table)
+    %r0 = tLDRr killed %r1, killed %r0, 14, _ :: (load 4 from jump-table)
     tBR_JTr killed %r0, %jump-table.0
   
   bb.3.d2:

@@ -5176,32 +5176,6 @@ SDValue SITargetLowering::performUCharToFloatCombine(SDNode *N,
   return SDValue();
 }
 
-/// \brief Return true if the given offset Size in bytes can be folded into
-/// the immediate offsets of a memory instruction for the given address space.
-static bool canFoldOffset(unsigned OffsetSize, unsigned AS,
-                          const SISubtarget &STI) {
-  auto AMDGPUASI = STI.getAMDGPUAS();
-  if (AS == AMDGPUASI.GLOBAL_ADDRESS) {
-    // MUBUF instructions a 12-bit offset in bytes.
-    return isUInt<12>(OffsetSize);
-  }
-  if (AS == AMDGPUASI.CONSTANT_ADDRESS) {
-    // SMRD instructions have an 8-bit offset in dwords on SI and
-    // a 20-bit offset in bytes on VI.
-    if (STI.getGeneration() >= SISubtarget::VOLCANIC_ISLANDS)
-      return isUInt<20>(OffsetSize);
-    else
-      return (OffsetSize % 4 == 0) && isUInt<8>(OffsetSize / 4);
-  }
-  if (AS == AMDGPUASI.LOCAL_ADDRESS ||
-      AS == AMDGPUASI.REGION_ADDRESS) {
-    // The single offset versions have a 16-bit offset in bytes.
-    return isUInt<16>(OffsetSize);
-  }
-  // Indirect register addressing does not use any offsets.
-  return false;
-}
-
 // (shl (add x, c1), c2) -> add (shl x, c2), (shl c1, c2)
 
 // This is a variant of
@@ -5218,11 +5192,15 @@ static bool canFoldOffset(unsigned OffsetSize, unsigned AS,
 //
 SDValue SITargetLowering::performSHLPtrCombine(SDNode *N,
                                                unsigned AddrSpace,
+                                               EVT MemVT,
                                                DAGCombinerInfo &DCI) const {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
 
-  if (N0.getOpcode() != ISD::ADD)
+  // We only do this to handle cases where it's profitable when there are
+  // multiple uses of the add, so defer to the standard combine.
+  // TODO: Support or
+  if (N0.getOpcode() != ISD::ADD || N0->hasOneUse())
     return SDValue();
 
   const ConstantSDNode *CN1 = dyn_cast<ConstantSDNode>(N1);
@@ -5236,7 +5214,12 @@ SDValue SITargetLowering::performSHLPtrCombine(SDNode *N,
   // If the resulting offset is too large, we can't fold it into the addressing
   // mode offset.
   APInt Offset = CAdd->getAPIntValue() << CN1->getAPIntValue();
-  if (!canFoldOffset(Offset.getZExtValue(), AddrSpace, *getSubtarget()))
+  Type *Ty = MemVT.getTypeForEVT(*DCI.DAG.getContext());
+
+  AddrMode AM;
+  AM.HasBaseReg = true;
+  AM.BaseOffs = Offset.getSExtValue();
+  if (!isLegalAddressingMode(DCI.DAG.getDataLayout(), AM, Ty, AddrSpace))
     return SDValue();
 
   SelectionDAG &DAG = DCI.DAG;
@@ -5246,7 +5229,12 @@ SDValue SITargetLowering::performSHLPtrCombine(SDNode *N,
   SDValue ShlX = DAG.getNode(ISD::SHL, SL, VT, N0.getOperand(0), N1);
   SDValue COffset = DAG.getConstant(Offset, SL, MVT::i32);
 
-  return DAG.getNode(ISD::ADD, SL, VT, ShlX, COffset);
+  SDNodeFlags Flags;
+  Flags.setNoUnsignedWrap(N->getFlags().hasNoUnsignedWrap() &&
+                          (N0.getOpcode() == ISD::OR ||
+                           N0->getFlags().hasNoUnsignedWrap()));
+
+  return DAG.getNode(ISD::ADD, SL, VT, ShlX, COffset, Flags);
 }
 
 SDValue SITargetLowering::performMemSDNodeCombine(MemSDNode *N,
@@ -5256,9 +5244,9 @@ SDValue SITargetLowering::performMemSDNodeCombine(MemSDNode *N,
   SDLoc SL(N);
 
   // TODO: We could also do this for multiplies.
-  unsigned AS = N->getAddressSpace();
-  if (Ptr.getOpcode() == ISD::SHL && AS != AMDGPUASI.PRIVATE_ADDRESS) {
-    SDValue NewPtr = performSHLPtrCombine(Ptr.getNode(), AS, DCI);
+  if (Ptr.getOpcode() == ISD::SHL) {
+    SDValue NewPtr = performSHLPtrCombine(Ptr.getNode(),  N->getAddressSpace(),
+                                          N->getMemoryVT(), DCI);
     if (NewPtr) {
       SmallVector<SDValue, 8> NewOps(N->op_begin(), N->op_end());
 

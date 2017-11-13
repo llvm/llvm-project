@@ -1,6 +1,6 @@
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tahiti -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=SIVI %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=GFX89 %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx901 -mattr=-flat-for-global -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -check-prefix=GFX89 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tahiti -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=SI -check-prefix=SIVI %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=VI -check-prefix=GFX89 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx901 -mattr=-flat-for-global -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GFX9 -check-prefix=GFX89 %s
 
 ; GCN-LABEL: {{^}}fpext_f16_to_f32
 ; GCN: buffer_load_ushort v[[A_F16:[0-9]+]]
@@ -180,7 +180,7 @@ entry:
 ; GCN-DAG: v_and_b32_e32 [[XOR:v[0-9]+]], 0x7fff, [[A]]
 
 ; SI-DAG: v_cvt_f32_f16_e32 [[CVT:v[0-9]+]], [[A]]
-; VI-DAG: v_cvt_f32_f16_e64 [[CVT:v[0-9]+]], |[[A]]|
+; GFX89-DAG: v_cvt_f32_f16_e64 [[CVT:v[0-9]+]], |[[A]]|
 
 ; GCN: store_dword [[CVT]]
 ; GCN: store_short [[XOR]]
@@ -226,7 +226,7 @@ entry:
 ; GCN-DAG: v_or_b32_e32 [[OR:v[0-9]+]], 0x8000, [[A]]
 
 ; SI: v_cvt_f32_f16_e32 [[CVT:v[0-9]+]], [[OR]]
-; VI-DAG: v_cvt_f32_f16_e64 [[CVT:v[0-9]+]], -|[[OR]]|
+; GFX89-DAG: v_cvt_f32_f16_e64 [[CVT:v[0-9]+]], -|[[OR]]|
 
 ; GCN: buffer_store_dword [[CVT]]
 ; GCN: buffer_store_short [[OR]]

@@ -2303,8 +2303,8 @@ define <2 x double> @test_maxpd(<2 x double> %a0, <2 x double> %a1, <2 x double>
 ;
 ; SKX-LABEL: test_maxpd:
 ; SKX:       # BB#0:
-; SKX-NEXT:    vmaxpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; SKX-NEXT:    vmaxpd (%rdi), %xmm0, %xmm0 # sched: [8:1.00]
+; SKX-NEXT:    vmaxpd %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vmaxpd (%rdi), %xmm0, %xmm0 # sched: [10:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_maxpd:
@@ -2437,8 +2437,8 @@ define <2 x double> @test_minpd(<2 x double> %a0, <2 x double> %a1, <2 x double>
 ;
 ; SKX-LABEL: test_minpd:
 ; SKX:       # BB#0:
-; SKX-NEXT:    vminpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; SKX-NEXT:    vminpd (%rdi), %xmm0, %xmm0 # sched: [8:1.00]
+; SKX-NEXT:    vminpd %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vminpd (%rdi), %xmm0, %xmm0 # sched: [10:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_minpd:

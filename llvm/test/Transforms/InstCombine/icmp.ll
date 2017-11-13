@@ -3270,3 +3270,19 @@ define i1 @knownbits8(i8 %a, i8 %b) {
   %c = icmp sgt i8 %b2, %a2
   ret i1 %c
 }
+
+; Make sure InstCombine doesn't try too hard to simplify the icmp and break the abs idiom
+define i32 @abs_preserve(i32 %x) {
+; CHECK-LABEL: @abs_preserve(
+; CHECK-NEXT:    [[A:%.*]] = shl nsw i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[A]], -1
+; CHECK-NEXT:    [[NEGA:%.*]] = sub i32 0, [[A]]
+; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[C]], i32 [[A]], i32 [[NEGA]]
+; CHECK-NEXT:    ret i32 [[ABS]]
+;
+  %a = mul nsw i32 %x, 2
+  %c = icmp sge i32 %a, 0
+  %nega = sub i32 0, %a
+  %abs = select i1 %c, i32 %a, i32 %nega
+  ret i32 %abs
+}

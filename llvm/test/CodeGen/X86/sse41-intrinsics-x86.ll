@@ -451,10 +451,15 @@ define <2 x double> @test_x86_sse41_round_pd(<2 x double> %a0) {
 ; SSE41-NEXT:    roundpd $7, %xmm0, %xmm0 ## encoding: [0x66,0x0f,0x3a,0x09,0xc0,0x07]
 ; SSE41-NEXT:    retl ## encoding: [0xc3]
 ;
-; VCHECK-LABEL: test_x86_sse41_round_pd:
-; VCHECK:       ## BB#0:
-; VCHECK-NEXT:    vroundpd $7, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x09,0xc0,0x07]
-; VCHECK-NEXT:    retl ## encoding: [0xc3]
+; AVX2-LABEL: test_x86_sse41_round_pd:
+; AVX2:       ## BB#0:
+; AVX2-NEXT:    vroundpd $7, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x09,0xc0,0x07]
+; AVX2-NEXT:    retl ## encoding: [0xc3]
+;
+; SKX-LABEL: test_x86_sse41_round_pd:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vrndscalepd $7, %xmm0, %xmm0 ## encoding: [0x62,0xf3,0xfd,0x08,0x09,0xc0,0x07]
+; SKX-NEXT:    retl ## encoding: [0xc3]
   %res = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %a0, i32 7) ; <<2 x double>> [#uses=1]
   ret <2 x double> %res
 }
@@ -467,10 +472,15 @@ define <4 x float> @test_x86_sse41_round_ps(<4 x float> %a0) {
 ; SSE41-NEXT:    roundps $7, %xmm0, %xmm0 ## encoding: [0x66,0x0f,0x3a,0x08,0xc0,0x07]
 ; SSE41-NEXT:    retl ## encoding: [0xc3]
 ;
-; VCHECK-LABEL: test_x86_sse41_round_ps:
-; VCHECK:       ## BB#0:
-; VCHECK-NEXT:    vroundps $7, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x08,0xc0,0x07]
-; VCHECK-NEXT:    retl ## encoding: [0xc3]
+; AVX2-LABEL: test_x86_sse41_round_ps:
+; AVX2:       ## BB#0:
+; AVX2-NEXT:    vroundps $7, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x08,0xc0,0x07]
+; AVX2-NEXT:    retl ## encoding: [0xc3]
+;
+; SKX-LABEL: test_x86_sse41_round_ps:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vrndscaleps $7, %xmm0, %xmm0 ## encoding: [0x62,0xf3,0x7d,0x08,0x08,0xc0,0x07]
+; SKX-NEXT:    retl ## encoding: [0xc3]
   %res = call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> %a0, i32 7) ; <<4 x float>> [#uses=1]
   ret <4 x float> %res
 }
@@ -483,10 +493,15 @@ define <2 x double> @test_x86_sse41_round_sd(<2 x double> %a0, <2 x double> %a1)
 ; SSE41-NEXT:    roundsd $7, %xmm1, %xmm0 ## encoding: [0x66,0x0f,0x3a,0x0b,0xc1,0x07]
 ; SSE41-NEXT:    retl ## encoding: [0xc3]
 ;
-; VCHECK-LABEL: test_x86_sse41_round_sd:
-; VCHECK:       ## BB#0:
-; VCHECK-NEXT:    vroundsd $7, %xmm1, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x0b,0xc1,0x07]
-; VCHECK-NEXT:    retl ## encoding: [0xc3]
+; AVX2-LABEL: test_x86_sse41_round_sd:
+; AVX2:       ## BB#0:
+; AVX2-NEXT:    vroundsd $7, %xmm1, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x0b,0xc1,0x07]
+; AVX2-NEXT:    retl ## encoding: [0xc3]
+;
+; SKX-LABEL: test_x86_sse41_round_sd:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vrndscalesd $7, %xmm1, %xmm0, %xmm0 ## encoding: [0x62,0xf3,0xfd,0x08,0x0b,0xc1,0x07]
+; SKX-NEXT:    retl ## encoding: [0xc3]
   %res = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %a0, <2 x double> %a1, i32 7) ; <<2 x double>> [#uses=1]
   ret <2 x double> %res
 }
@@ -500,11 +515,17 @@ define <2 x double> @test_x86_sse41_round_sd_load(<2 x double> %a0, <2 x double>
 ; SSE41-NEXT:    roundsd $7, (%eax), %xmm0 ## encoding: [0x66,0x0f,0x3a,0x0b,0x00,0x07]
 ; SSE41-NEXT:    retl ## encoding: [0xc3]
 ;
-; VCHECK-LABEL: test_x86_sse41_round_sd_load:
-; VCHECK:       ## BB#0:
-; VCHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
-; VCHECK-NEXT:    vroundsd $7, (%eax), %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x0b,0x00,0x07]
-; VCHECK-NEXT:    retl ## encoding: [0xc3]
+; AVX2-LABEL: test_x86_sse41_round_sd_load:
+; AVX2:       ## BB#0:
+; AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; AVX2-NEXT:    vroundsd $7, (%eax), %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x0b,0x00,0x07]
+; AVX2-NEXT:    retl ## encoding: [0xc3]
+;
+; SKX-LABEL: test_x86_sse41_round_sd_load:
+; SKX:       ## BB#0:
+; SKX-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; SKX-NEXT:    vrndscalesd $7, (%eax), %xmm0, %xmm0 ## encoding: [0x62,0xf3,0xfd,0x08,0x0b,0x00,0x07]
+; SKX-NEXT:    retl ## encoding: [0xc3]
   %a1b = load <2 x double>, <2 x double>* %a1
   %res = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %a0, <2 x double> %a1b, i32 7) ; <<2 x double>> [#uses=1]
   ret <2 x double> %res
@@ -517,10 +538,15 @@ define <4 x float> @test_x86_sse41_round_ss(<4 x float> %a0, <4 x float> %a1) {
 ; SSE41-NEXT:    roundss $7, %xmm1, %xmm0 ## encoding: [0x66,0x0f,0x3a,0x0a,0xc1,0x07]
 ; SSE41-NEXT:    retl ## encoding: [0xc3]
 ;
-; VCHECK-LABEL: test_x86_sse41_round_ss:
-; VCHECK:       ## BB#0:
-; VCHECK-NEXT:    vroundss $7, %xmm1, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x0a,0xc1,0x07]
-; VCHECK-NEXT:    retl ## encoding: [0xc3]
+; AVX2-LABEL: test_x86_sse41_round_ss:
+; AVX2:       ## BB#0:
+; AVX2-NEXT:    vroundss $7, %xmm1, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x0a,0xc1,0x07]
+; AVX2-NEXT:    retl ## encoding: [0xc3]
+;
+; SKX-LABEL: test_x86_sse41_round_ss:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vrndscaless $7, %xmm1, %xmm0, %xmm0 ## encoding: [0x62,0xf3,0x7d,0x08,0x0a,0xc1,0x07]
+; SKX-NEXT:    retl ## encoding: [0xc3]
   %res = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %a0, <4 x float> %a1, i32 7) ; <<4 x float>> [#uses=1]
   ret <4 x float> %res
 }

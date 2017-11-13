@@ -89,7 +89,7 @@ T1:
 F1:
 	%v2 = call i32 @f2()
 ; CHECK:   %v2 = call i32 @f2()
-; CHECK-NEXT:   br i1 %cond2, 
+; CHECK-NEXT:   br i1 %cond2,
 	br label %Merge
 
 Merge:
@@ -156,11 +156,11 @@ define i32 @test6(i32 %A) {
 ; CHECK: call void @f3()
 ; CHECK-NOT: br
 ; CHECK: ret i32 4
-    
+
 BB2:
 	call i32 @f1()
 	br label %BB1
-        
+
 
 BB1:
 	%tmp459 = icmp eq i32 %A, 42
@@ -217,7 +217,7 @@ define i32 @test8b(i1 %cond, i1 %cond2) {
 T0:
         %A = call i1 @test8a()
 	br i1 %A, label %T1, label %F1
-        
+
 ; CHECK: T0:
 ; CHECK-NEXT: call
 ; CHECK-NEXT: br i1 %A, label %T1, label %Y
@@ -305,7 +305,7 @@ define i32 @test10g(i1 %cond) {
 T1:
         %v1 = call i32 @test10f1()
         br label %Merge
-        
+
 ; CHECK: %v1 = call i32 @test10f1()
 ; CHECK-NEXT: call void @f3()
 ; CHECK-NEXT: ret i32 %v1
@@ -334,13 +334,13 @@ define i32 @test11(i32 %A) {
 ; CHECK-NEXT: br i1 %tmp455, label %BB4, label %BB2
 	%tmp455 = icmp eq i32 %A, 42
 	br i1 %tmp455, label %BB1, label %BB2
-        
+
 BB2:
 ; CHECK: call i32 @f1()
 ; CHECK-NEXT: ret i32 %C
 	%C = call i32 @f1()
 	ret i32 %C
-        
+
 
 BB1:
 	%tmp459 = icmp eq i32 %A, 43
@@ -366,7 +366,7 @@ entry:
 ; CHECK-NEXT: %cond = icmp eq i32 %A, 0
 ; CHECK-NEXT: br i1 %cond, label %bb1, label %return
 
-bb:                   
+bb:
   %B = call i32 @test10f2()
   br label %bb1
 
@@ -412,7 +412,7 @@ T2:
 
 F2:
 	ret i32 %v1
-        
+
 ; CHECK:   br i1 %cond, label %F2, label %Merge
 
 ; CHECK:      Merge:
@@ -491,9 +491,9 @@ F1:
 
 Merge:
 	%B = phi i32 [0, %Entry], [%v1, %F1]
-	%M = icmp eq i32 %B, 0 
+	%M = icmp eq i32 %B, 0
 	%M1 = zext i1 %M to i32
-	%N = icmp eq i32 %M1, 0 
+	%N = icmp eq i32 %M1, 0
 	br i1 %N, label %T2, label %F2
 
 ; CHECK: Merge:
@@ -501,7 +501,7 @@ Merge:
 ; CHECK-NEXT:   %v1 = call i32 @f1()
 
 T2:
-	%Q = call i32 @f2() 
+	%Q = call i32 @f2()
 	ret i32 %Q
 
 F2:
@@ -531,8 +531,8 @@ l2:
   br label %l3
 
 l3:
-; CHECK: call void @g() [[NOD:#[0-9]+]]
-; CHECK-NOT: call void @g() [[NOD]]
+; CHECK: call void @g() [[$NOD:#[0-9]+]]
+; CHECK-NOT: call void @g() [[$NOD]]
   call void @g() noduplicate
   %y = icmp ult i32 %p, 5
   br i1 %y, label %l4, label %l5
@@ -561,8 +561,8 @@ l2:
   br label %l3
 
 l3:
-; CHECK: call void @g() [[CON:#[0-9]+]]
-; CHECK-NOT: call void @g() [[CON]]
+; CHECK: call void @g() [[$CON:#[0-9]+]]
+; CHECK-NOT: call void @g() [[$CON]]
   call void @g() convergent
   %y = icmp ult i32 %p, 5
   br i1 %y, label %l4, label %l5
@@ -578,5 +578,5 @@ l5:
 }
 
 
-; CHECK: attributes [[NOD]] = { noduplicate }
-; CHECK: attributes [[CON]] = { convergent }
+; CHECK: attributes [[$NOD]] = { noduplicate }
+; CHECK: attributes [[$CON]] = { convergent }
