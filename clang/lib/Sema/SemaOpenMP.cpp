@@ -3111,8 +3111,8 @@ bool OpenMPIterationSpaceChecker::SetStep(Expr *NewStep, bool Subtract) {
   if (!NewStep->isValueDependent()) {
     // Check that the step is integer expression.
     SourceLocation StepLoc = NewStep->getLocStart();
-    ExprResult Val =
-        SemaRef.PerformOpenMPImplicitIntegerConversion(StepLoc, NewStep);
+    ExprResult Val = SemaRef.PerformOpenMPImplicitIntegerConversion(
+        StepLoc, getExprAsWritten(NewStep));
     if (Val.isInvalid())
       return true;
     NewStep = Val.get();

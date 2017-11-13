@@ -484,6 +484,18 @@ void loop_with_It(It<char> begin, It<char> end) {
 // CHECK: call void @__kmpc_for_static_init_8(
 // CHECK: call void @__kmpc_for_static_fini(
 
+void loop_with_It_plus(It<char> begin, It<char> end) {
+#pragma omp for
+  for (It<char> it = begin; it < end; it+=1) {
+    *it = 0;
+  }
+}
+
+// CHECK-LABEL: loop_with_It_plus
+// CHECK: call i32 @__kmpc_global_thread_num(
+// CHECK: call void @__kmpc_for_static_init_8(
+// CHECK: call void @__kmpc_for_static_fini(
+
 void loop_with_stmt_expr() {
 #pragma omp for
   for (int i = __extension__({float b = 0;b; }); i < __extension__({double c = 1;c; }); i += __extension__({char d = 1; d; }))
