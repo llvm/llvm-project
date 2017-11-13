@@ -150,6 +150,7 @@ namespace std
     template <size_t Len, size_t Align = most_stringent_alignment_requirement>
         struct aligned_storage;
     template <size_t Len, class... Types> struct aligned_union;
+    template <class T> struct remove_cvref; // C++20
 
     template <class T> struct decay;
     template <class... T> struct common_type;
@@ -202,6 +203,8 @@ namespace std
       using aligned_storage_t = typename aligned_storage<Len,Align>::type;  // C++14
     template <std::size_t Len, class... Types>
       using aligned_union_t   = typename aligned_union<Len,Types...>::type;  // C++14
+    template <class T>
+      using remove_cvref_t    = typename remove_cvref<T>::type;  // C++20
     template <class T>
       using decay_t           = typename decay<T>::type;  // C++14
     template <bool b, class T=void>
@@ -1140,6 +1143,17 @@ using __uncvref_t = typename __uncvref<_Tp>::type;
 template <class _Tp, class _Up>
 struct __is_same_uncvref : is_same<typename __uncvref<_Tp>::type,
                                    typename __uncvref<_Up>::type> {};
+
+#if _LIBCPP_STD_VER > 17
+// aligned_union - same as __uncvref
+template <class _Tp>
+struct remove_cvref {
+    using type = remove_cv_t<remove_reference_t<_Tp>>;
+};
+
+template <class _Tp> using remove_cvref_t = typename remove_cvref<_Tp>::type;
+#endif
+
 
 struct __any
 {
