@@ -40,13 +40,18 @@ struct IndexedSymbol {
   std::vector<IndexedOccurrence> IndexedOccurrences;
   /// Whether this symbol is an Objective-C selector.
   bool IsObjCSelector;
+  /// If true, indexed file renamer will look for matching textual occurrences
+  /// in string literal tokens.
+  bool SearchForStringLiteralOccurrences;
 
   IndexedSymbol(OldSymbolName Name,
                 std::vector<IndexedOccurrence> IndexedOccurrences,
-                bool IsObjCSelector)
+                bool IsObjCSelector,
+                bool SearchForStringLiteralOccurrences = false)
       : Name(std::move(Name)),
         IndexedOccurrences(std::move(IndexedOccurrences)),
-        IsObjCSelector(IsObjCSelector) {}
+        IsObjCSelector(IsObjCSelector),
+        SearchForStringLiteralOccurrences(SearchForStringLiteralOccurrences) {}
   IndexedSymbol(IndexedSymbol &&Other) = default;
   IndexedSymbol &operator=(IndexedSymbol &&Other) = default;
 };
