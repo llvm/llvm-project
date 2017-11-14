@@ -5793,14 +5793,21 @@ OperandMatchResultTy
 MipsAsmParser::parseInvNum(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   const MCExpr *IdVal;
-  // If the first token is '$' we may have register operand.
-  if (Parser.getTok().is(AsmToken::Dollar))
-    return MatchOperand_NoMatch;
+  // If the first token is '$' we may have register operand. We have to reject
+  // cases where it is not a register. Complicating the matter is that
+  // register names are not reserved across all ABIs.
+  // Peek past the dollar to see if it's a register name for this ABI.
   SMLoc S = Parser.getTok().getLoc();
+  if (Parser.getTok().is(AsmToken::Dollar)) {
+    return matchCPURegisterName(Parser.getLexer().peekTok().getString()) == -1
+               ? MatchOperand_ParseFail
+               : MatchOperand_NoMatch;
+  }
   if (getParser().parseExpression(IdVal))
     return MatchOperand_ParseFail;
   const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(IdVal);
-  assert(MCE && "Unexpected MCExpr type.");
+  if (!MCE)
+    return MatchOperand_NoMatch;
   int64_t Val = MCE->getValue();
   SMLoc E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
   Operands.push_back(MipsOperand::CreateImm(
