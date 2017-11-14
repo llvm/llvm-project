@@ -296,8 +296,8 @@ public:
                              SmallVectorImpl<diag::kind> &Diags) const;
 
   /// \brief Get the set of all diagnostic IDs.
-  void getAllDiagnostics(diag::Flavor Flavor,
-                         SmallVectorImpl<diag::kind> &Diags) const;
+  static void getAllDiagnostics(diag::Flavor Flavor,
+                                SmallVectorImpl<diag::kind> &Diags);
 
   /// \brief Get the diagnostic option with the closest edit distance to the
   /// given group name.

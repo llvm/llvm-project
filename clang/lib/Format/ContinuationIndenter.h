@@ -29,6 +29,7 @@ class SourceManager;
 namespace format {
 
 class AnnotatedLine;
+class BreakableToken;
 struct FormatToken;
 struct LineState;
 struct ParenState;
@@ -105,10 +106,19 @@ private:
   /// 
   /// \returns An extra penalty induced by reformatting the token.
   unsigned reformatRawStringLiteral(const FormatToken &Current,
-                                    unsigned StartColumn, LineState &State,
-                                    StringRef Delimiter,
+                                    LineState &State,
                                     const FormatStyle &RawStringStyle,
                                     bool DryRun);
+
+  /// \brief If the current token is at the end of the current line, handle
+  /// the transition to the next line.
+  unsigned handleEndOfLine(const FormatToken &Current, LineState &State,
+                           bool DryRun, bool AllowBreak);
+
+  /// \brief If \p Current is a raw string that is configured to be reformatted,
+  /// return the style to be used.
+  llvm::Optional<FormatStyle> getRawStringStyle(const FormatToken &Current,
+                                                const LineState &State);
 
   /// \brief If the current token sticks out over the end of the line, break
   /// it if possible.
@@ -120,7 +130,13 @@ private:
   /// penalty for the column limit violation in the last line (and in single
   /// line tokens) is handled in \c addNextStateToQueue.
   unsigned breakProtrudingToken(const FormatToken &Current, LineState &State,
-                                bool DryRun);
+                                bool AllowBreak, bool DryRun);
+
+  /// \brief Returns the \c BreakableToken starting at \p Current, or nullptr
+  /// if the current token cannot be broken.
+  std::unique_ptr<BreakableToken>
+  createBreakableToken(const FormatToken &Current, LineState &State,
+                       bool AllowBreak);
 
   /// \brief Appends the next token to \p State and updates information
   /// necessary for indentation.

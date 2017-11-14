@@ -3508,11 +3508,6 @@ enum CXErrorCode clang_parseTranslationUnit2FullArgv(
         llvm::makeArrayRef(unsaved_files, num_unsaved_files), options, out_TU);
   };
 
-  if (getenv("LIBCLANG_NOTHREADS")) {
-    ParseTranslationUnitImpl();
-    return result;
-  }
-
   llvm::CrashRecoveryContext CRC;
 
   if (!RunSafely(CRC, ParseTranslationUnitImpl)) {
@@ -3921,8 +3916,7 @@ int clang_saveTranslationUnit(CXTranslationUnit TU, const char *FileName,
     result = clang_saveTranslationUnit_Impl(TU, FileName, options);
   };
 
-  if (!CXXUnit->getDiagnostics().hasUnrecoverableErrorOccurred() ||
-      getenv("LIBCLANG_NOTHREADS")) {
+  if (!CXXUnit->getDiagnostics().hasUnrecoverableErrorOccurred()) {
     SaveTranslationUnitImpl();
 
     if (getenv("LIBCLANG_RESOURCE_USAGE"))
@@ -4044,11 +4038,6 @@ int clang_reparseTranslationUnit(CXTranslationUnit TU,
     result = clang_reparseTranslationUnit_Impl(
         TU, llvm::makeArrayRef(unsaved_files, num_unsaved_files), options);
   };
-
-  if (getenv("LIBCLANG_NOTHREADS")) {
-    ReparseTranslationUnitImpl();
-    return result;
-  }
 
   llvm::CrashRecoveryContext CRC;
 
@@ -8164,7 +8153,7 @@ bool RunSafely(llvm::CrashRecoveryContext &CRC, llvm::function_ref<void()> Fn,
                unsigned Size) {
   if (!Size)
     Size = GetSafetyThreadStackSize();
-  if (Size)
+  if (Size && !getenv("LIBCLANG_NOTHREADS"))
     return CRC.RunSafelyOnThread(Fn, Size);
   return CRC.RunSafely(Fn);
 }

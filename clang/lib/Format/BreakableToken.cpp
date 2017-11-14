@@ -749,6 +749,7 @@ BreakableLineCommentSection::BreakableLineCommentSection(
     Prefix.resize(Lines.size());
     OriginalPrefix.resize(Lines.size());
     for (size_t i = FirstLineIndex, e = Lines.size(); i < e; ++i) {
+      Lines[i] = Lines[i].ltrim(Blanks);
       // We need to trim the blanks in case this is not the first line in a
       // multiline comment. Then the indent is included in Lines[i].
       StringRef IndentPrefix =
