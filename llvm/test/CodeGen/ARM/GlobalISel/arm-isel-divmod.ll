@@ -1,7 +1,7 @@
-; RUN: llc -mtriple arm-gnueabi -mattr=+v6,+hwdiv-arm -global-isel %s -o - | FileCheck %s -check-prefixes=CHECK,HWDIV
-; RUN: llc -mtriple arm-gnueabi -mattr=+v6,-hwdiv-arm -global-isel %s -o - | FileCheck %s -check-prefixes=CHECK,SOFT-AEABI
-; RUN: llc -mtriple arm-gnu -mattr=+v6,+hwdiv-arm -global-isel %s -o - | FileCheck %s -check-prefixes=CHECK,HWDIV
-; RUN: llc -mtriple arm-gnu -mattr=+v6,-hwdiv-arm -global-isel %s -o - | FileCheck %s -check-prefixes=CHECK,SOFT-DEFAULT
+; RUN: llc -mtriple arm-gnueabi -mattr=+v6t2,+hwdiv-arm -global-isel %s -o - | FileCheck %s -check-prefixes=CHECK,HWDIV
+; RUN: llc -mtriple arm-gnueabi -mattr=+v6t2,-hwdiv-arm -global-isel %s -o - | FileCheck %s -check-prefixes=CHECK,SOFT-AEABI
+; RUN: llc -mtriple arm-gnu -mattr=+v6t2,+hwdiv-arm -global-isel %s -o - | FileCheck %s -check-prefixes=CHECK,HWDIV
+; RUN: llc -mtriple arm-gnu -mattr=+v6t2,-hwdiv-arm -global-isel %s -o - | FileCheck %s -check-prefixes=CHECK,SOFT-DEFAULT
 
 define arm_aapcscc i32 @test_sdiv_i32(i32 %a, i32 %b) {
 ; CHECK-LABEL: test_sdiv_i32:
