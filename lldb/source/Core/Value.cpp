@@ -142,6 +142,9 @@ Type *Value::GetType() {
 }
 
 size_t Value::AppendDataToHostBuffer(const Value &rhs) {
+  if (this == &rhs)
+    return 0;
+
   size_t curr_size = m_data_buffer.GetByteSize();
   Status error;
   switch (rhs.GetValueType()) {
