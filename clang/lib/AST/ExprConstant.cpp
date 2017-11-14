@@ -537,7 +537,7 @@ namespace {
   /// rules.  For example, the RHS of (0 && foo()) is not evaluated.  We can
   /// evaluate the expression regardless of what the RHS is, but C only allows
   /// certain things in certain situations.
-  struct LLVM_ALIGNAS(/*alignof(uint64_t)*/ 8) EvalInfo {
+  struct EvalInfo {
     ASTContext &Ctx;
 
     /// EvalStatus - Contains information about the evaluation.
@@ -977,24 +977,22 @@ namespace {
   /// RAII object used to optionally suppress diagnostics and side-effects from
   /// a speculative evaluation.
   class SpeculativeEvaluationRAII {
-    /// Pair of EvalInfo, and a bit that stores whether or not we were
-    /// speculatively evaluating when we created this RAII.
-    llvm::PointerIntPair<EvalInfo *, 1, bool> InfoAndOldSpecEval;
-    Expr::EvalStatus Old;
+    EvalInfo *Info = nullptr;
+    Expr::EvalStatus OldStatus;
+    bool OldIsSpeculativelyEvaluating;
 
     void moveFromAndCancel(SpeculativeEvaluationRAII &&Other) {
-      InfoAndOldSpecEval = Other.InfoAndOldSpecEval;
-      Old = Other.Old;
-      Other.InfoAndOldSpecEval.setPointer(nullptr);
+      Info = Other.Info;
+      OldStatus = Other.OldStatus;
+      Other.Info = nullptr;
     }
 
     void maybeRestoreState() {
-      EvalInfo *Info = InfoAndOldSpecEval.getPointer();
       if (!Info)
         return;
 
-      Info->EvalStatus = Old;
-      Info->IsSpeculativelyEvaluating = InfoAndOldSpecEval.getInt();
+      Info->EvalStatus = OldStatus;
+      Info->IsSpeculativelyEvaluating = OldIsSpeculativelyEvaluating;
     }
 
   public:
@@ -1002,8 +1000,8 @@ namespace {
 
     SpeculativeEvaluationRAII(
         EvalInfo &Info, SmallVectorImpl<PartialDiagnosticAt> *NewDiag = nullptr)
-        : InfoAndOldSpecEval(&Info, Info.IsSpeculativelyEvaluating),
-          Old(Info.EvalStatus) {
+        : Info(&Info), OldStatus(Info.EvalStatus),
+          OldIsSpeculativelyEvaluating(Info.IsSpeculativelyEvaluating) {
       Info.EvalStatus.Diag = NewDiag;
       Info.IsSpeculativelyEvaluating = true;
     }
