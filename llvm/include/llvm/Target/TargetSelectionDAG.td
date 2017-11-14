@@ -659,6 +659,8 @@ class PatFrag<dag ops, dag frag, code pred = [{}],
   bit IsLoad = ?;
   // Is the desired pre-packaged predicate for a store?
   bit IsStore = ?;
+  // Is the desired pre-packaged predicate for an atomic?
+  bit IsAtomic = ?;
 
   // cast<LoadSDNode>(N)->getAddressingMode() == ISD::UNINDEXED;
   // cast<StoreSDNode>(N)->getAddressingMode() == ISD::UNINDEXED;
@@ -1181,21 +1183,25 @@ multiclass ternary_atomic_op_ord<SDNode atomic_op> {
 
 multiclass binary_atomic_op<SDNode atomic_op> {
   def _8 : PatFrag<(ops node:$ptr, node:$val),
-                   (atomic_op  node:$ptr, node:$val), [{
-    return cast<AtomicSDNode>(N)->getMemoryVT() == MVT::i8;
-  }]>;
+                   (atomic_op  node:$ptr, node:$val)> {
+    let IsAtomic = 1;
+    let MemoryVT = i8;
+  }
   def _16 : PatFrag<(ops node:$ptr, node:$val),
-                    (atomic_op node:$ptr, node:$val), [{
-    return cast<AtomicSDNode>(N)->getMemoryVT() == MVT::i16;
-  }]>;
+                    (atomic_op node:$ptr, node:$val)> {
+    let IsAtomic = 1;
+    let MemoryVT = i16;
+  }
   def _32 : PatFrag<(ops node:$ptr, node:$val),
-                    (atomic_op node:$ptr, node:$val), [{
-    return cast<AtomicSDNode>(N)->getMemoryVT() == MVT::i32;
-  }]>;
+                    (atomic_op node:$ptr, node:$val)> {
+    let IsAtomic = 1;
+    let MemoryVT = i32;
+  }
   def _64 : PatFrag<(ops node:$ptr, node:$val),
-                    (atomic_op node:$ptr, node:$val), [{
-    return cast<AtomicSDNode>(N)->getMemoryVT() == MVT::i64;
-  }]>;
+                    (atomic_op node:$ptr, node:$val)> {
+    let IsAtomic = 1;
+    let MemoryVT = i64;
+  }
 
   defm NAME#_8  : binary_atomic_op_ord<atomic_op>;
   defm NAME#_16 : binary_atomic_op_ord<atomic_op>;
@@ -1205,21 +1211,25 @@ multiclass binary_atomic_op<SDNode atomic_op> {
 
 multiclass ternary_atomic_op<SDNode atomic_op> {
   def _8 : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
-                   (atomic_op  node:$ptr, node:$cmp, node:$val), [{
-    return cast<AtomicSDNode>(N)->getMemoryVT() == MVT::i8;
-  }]>;
+                   (atomic_op  node:$ptr, node:$cmp, node:$val)> {
+    let IsAtomic = 1;
+    let MemoryVT = i8;
+  }
   def _16 : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
-                    (atomic_op node:$ptr, node:$cmp, node:$val), [{
-    return cast<AtomicSDNode>(N)->getMemoryVT() == MVT::i16;
-  }]>;
+                    (atomic_op node:$ptr, node:$cmp, node:$val)> {
+    let IsAtomic = 1;
+    let MemoryVT = i16;
+  }
   def _32 : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
-                    (atomic_op node:$ptr, node:$cmp, node:$val), [{
-    return cast<AtomicSDNode>(N)->getMemoryVT() == MVT::i32;
-  }]>;
+                    (atomic_op node:$ptr, node:$cmp, node:$val)> {
+    let IsAtomic = 1;
+    let MemoryVT = i32;
+  }
   def _64 : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
-                    (atomic_op node:$ptr, node:$cmp, node:$val), [{
-    return cast<AtomicSDNode>(N)->getMemoryVT() == MVT::i64;
-  }]>;
+                    (atomic_op node:$ptr, node:$cmp, node:$val)> {
+    let IsAtomic = 1;
+    let MemoryVT = i64;
+  }
 
   defm NAME#_8  : ternary_atomic_op_ord<atomic_op>;
   defm NAME#_16 : ternary_atomic_op_ord<atomic_op>;
@@ -1243,24 +1253,28 @@ defm atomic_cmp_swap  : ternary_atomic_op<atomic_cmp_swap>;
 
 def atomic_load_8 :
   PatFrag<(ops node:$ptr),
-          (atomic_load node:$ptr), [{
-  return cast<AtomicSDNode>(N)->getMemoryVT() == MVT::i8;
-}]>;
+          (atomic_load node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = i8;
+}
 def atomic_load_16 :
   PatFrag<(ops node:$ptr),
-          (atomic_load node:$ptr), [{
-  return cast<AtomicSDNode>(N)->getMemoryVT() == MVT::i16;
-}]>;
+          (atomic_load node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = i16;
+}
 def atomic_load_32 :
   PatFrag<(ops node:$ptr),
-          (atomic_load node:$ptr), [{
-  return cast<AtomicSDNode>(N)->getMemoryVT() == MVT::i32;
-}]>;
+          (atomic_load node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = i32;
+}
 def atomic_load_64 :
   PatFrag<(ops node:$ptr),
-          (atomic_load node:$ptr), [{
-  return cast<AtomicSDNode>(N)->getMemoryVT() == MVT::i64;
-}]>;
+          (atomic_load node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = i64;
+}
 
 //===----------------------------------------------------------------------===//
 // Selection DAG Pattern Support.

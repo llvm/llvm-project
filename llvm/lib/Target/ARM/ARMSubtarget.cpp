@@ -344,11 +344,9 @@ bool ARMSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {
   return false;
 }
 
-ARMCP::ARMCPModifier ARMSubtarget::getCPModifier(const GlobalValue *GV) const {
-  if (isTargetELF() && TM.isPositionIndependent() &&
-      !TM.shouldAssumeDSOLocal(*GV->getParent(), GV))
-    return ARMCP::GOT_PREL;
-  return ARMCP::no_modifier;
+bool ARMSubtarget::isGVInGOT(const GlobalValue *GV) const {
+  return isTargetELF() && TM.isPositionIndependent() &&
+         !TM.shouldAssumeDSOLocal(*GV->getParent(), GV);
 }
 
 unsigned ARMSubtarget::getMispredictionPenalty() const {

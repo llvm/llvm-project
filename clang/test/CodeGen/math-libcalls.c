@@ -1,5 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -w -S -o - -emit-llvm              %s | FileCheck %s -check-prefix=NO__ERRNO
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -w -S -o - -emit-llvm -fmath-errno %s | FileCheck %s -check-prefix=HAS_ERRNO
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown     -w -S -o - -emit-llvm              %s | FileCheck %s --check-prefix=NO__ERRNO
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown     -w -S -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown-gnu -w -S -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO_GNU
+// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -w -S -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO_WIN
 
 // Test attributes and builtin codegen of math library calls.
 
@@ -145,9 +147,9 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // NO__ERRNO: declare double @cbrt(double) [[READNONE]]
 // NO__ERRNO: declare float @cbrtf(float) [[READNONE]]
 // NO__ERRNO: declare x86_fp80 @cbrtl(x86_fp80) [[READNONE]]
-// HAS_ERRNO: declare double @cbrt(double) [[NOT_READNONE]]
-// HAS_ERRNO: declare float @cbrtf(float) [[NOT_READNONE]]
-// HAS_ERRNO: declare x86_fp80 @cbrtl(x86_fp80) [[NOT_READNONE]]
+// HAS_ERRNO: declare double @cbrt(double) [[READNONE]]
+// HAS_ERRNO: declare float @cbrtf(float) [[READNONE]]
+// HAS_ERRNO: declare x86_fp80 @cbrtl(x86_fp80) [[READNONE]]
 
   ceil(f);       ceilf(f);      ceill(f);
 
@@ -244,9 +246,20 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // NO__ERRNO: declare double @llvm.fma.f64(double, double, double) [[READNONE_INTRINSIC]]
 // NO__ERRNO: declare float @llvm.fma.f32(float, float, float) [[READNONE_INTRINSIC]]
 // NO__ERRNO: declare x86_fp80 @llvm.fma.f80(x86_fp80, x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare double @llvm.fma.f64(double, double, double) [[READNONE_INTRINSIC:#[0-9]+]]
-// HAS_ERRNO: declare float @llvm.fma.f32(float, float, float) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare x86_fp80 @llvm.fma.f80(x86_fp80, x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
+// HAS_ERRNO: declare double @fma(double, double, double) [[NOT_READNONE]]
+// HAS_ERRNO: declare float @fmaf(float, float, float) [[NOT_READNONE]]
+// HAS_ERRNO: declare x86_fp80 @fmal(x86_fp80, x86_fp80, x86_fp80) [[NOT_READNONE]]
+
+// On GNU or Win, fma never sets errno, so we can convert to the intrinsic.
+
+// HAS_ERRNO_GNU: declare double @llvm.fma.f64(double, double, double) [[READNONE_INTRINSIC:#[0-9]+]]
+// HAS_ERRNO_GNU: declare float @llvm.fma.f32(float, float, float) [[READNONE_INTRINSIC]]
+// HAS_ERRNO_GNU: declare x86_fp80 @llvm.fma.f80(x86_fp80, x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
+
+// HAS_ERRNO_WIN: declare double @llvm.fma.f64(double, double, double) [[READNONE_INTRINSIC:#[0-9]+]]
+// HAS_ERRNO_WIN: declare float @llvm.fma.f32(float, float, float) [[READNONE_INTRINSIC]]
+// Long double is just double on win, so no f80 use/declaration.
+// HAS_ERRNO_WIN-NOT: declare x86_fp80 @llvm.fma.f80(x86_fp80, x86_fp80, x86_fp80)
 
   fmax(f,f);       fmaxf(f,f);      fmaxl(f,f);
 
@@ -528,5 +541,6 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: attributes [[NOT_READNONE]] = { nounwind "correctly{{.*}} }
 // HAS_ERRNO: attributes [[READNONE]] = { {{.*}}readnone{{.*}} }
 // HAS_ERRNO: attributes [[READONLY]] = { {{.*}}readonly{{.*}} }
-// HAS_ERRNO: attributes [[READNONE_INTRINSIC]] = { {{.*}}readnone{{.*}} }
 
+// HAS_ERRNO_GNU: attributes [[READNONE_INTRINSIC]] = { {{.*}}readnone{{.*}} }
+// HAS_ERRNO_WIN: attributes [[READNONE_INTRINSIC]] = { {{.*}}readnone{{.*}} }

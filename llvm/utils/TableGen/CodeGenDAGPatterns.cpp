@@ -818,32 +818,36 @@ TreePredicateFn::TreePredicateFn(TreePattern *N) : PatFragRec(N) {
 }
 
 bool TreePredicateFn::hasPredCode() const {
-  return isLoad() || isStore() ||
+  return isLoad() || isStore() || isAtomic() ||
          !PatFragRec->getRecord()->getValueAsString("PredicateCode").empty();
 }
 
 std::string TreePredicateFn::getPredCode() const {
   std::string Code = "";
 
+  if (!isLoad() && !isStore() && !isAtomic()) {
+    Record *MemoryVT = getMemoryVT();
+
+    if (MemoryVT)
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "MemoryVT requires IsLoad or IsStore");
+  }
+
   if (!isLoad() && !isStore()) {
     if (isUnindexed())
       PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
                       "IsUnindexed requires IsLoad or IsStore");
 
-    Record *MemoryVT = getMemoryVT();
     Record *ScalarMemoryVT = getScalarMemoryVT();
 
-    if (MemoryVT)
-      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "MemoryVT requires IsLoad or IsStore");
     if (ScalarMemoryVT)
       PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
                       "ScalarMemoryVT requires IsLoad or IsStore");
   }
 
-  if (isLoad() && isStore())
+  if (isLoad() + isStore() + isAtomic() > 1)
     PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                    "IsLoad and IsStore are mutually exclusive");
+                    "IsLoad, IsStore, and IsAtomic are mutually exclusive");
 
   if (isLoad()) {
     if (!isUnindexed() && !isNonExtLoad() && !isAnyExtLoad() &&
@@ -878,6 +882,23 @@ std::string TreePredicateFn::getPredCode() const {
     if (isTruncStore())
       PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
                       "IsTruncStore requires IsStore");
+  }
+
+  if (isAtomic()) {
+    if (getMemoryVT() == nullptr)
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "IsAtomic cannot be used by itself");
+  }
+  if (isLoad() || isStore() || isAtomic()) {
+    StringRef SDNodeName =
+        isLoad() ? "LoadSDNode" : isStore() ? "StoreSDNode" : "AtomicSDNode";
+
+    Record *MemoryVT = getMemoryVT();
+
+    if (MemoryVT)
+      Code += ("if (cast<" + SDNodeName + ">(N)->getMemoryVT() != MVT::" +
+               MemoryVT->getName() + ") return false;\n")
+                  .str();
   }
 
   if (isLoad() || isStore()) {
@@ -920,13 +941,8 @@ std::string TreePredicateFn::getPredCode() const {
             " if (!cast<StoreSDNode>(N)->isTruncatingStore()) return false;\n";
     }
 
-    Record *MemoryVT = getMemoryVT();
     Record *ScalarMemoryVT = getScalarMemoryVT();
 
-    if (MemoryVT)
-      Code += ("if (cast<" + SDNodeName + ">(N)->getMemoryVT() != MVT::" +
-               MemoryVT->getName() + ") return false;\n")
-                  .str();
     if (ScalarMemoryVT)
       Code += ("if (cast<" + SDNodeName +
                ">(N)->getMemoryVT().getScalarType() != MVT::" +
@@ -977,6 +993,9 @@ bool TreePredicateFn::isLoad() const {
 }
 bool TreePredicateFn::isStore() const {
   return isPredefinedPredicateEqualTo("IsStore", true);
+}
+bool TreePredicateFn::isAtomic() const {
+  return isPredefinedPredicateEqualTo("IsAtomic", true);
 }
 bool TreePredicateFn::isUnindexed() const {
   return isPredefinedPredicateEqualTo("IsUnindexed", true);

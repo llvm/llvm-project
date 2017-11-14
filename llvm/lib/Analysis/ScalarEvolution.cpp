@@ -4088,7 +4088,7 @@ class SCEVBackedgeConditionFolder
 public:
   static const SCEV *rewrite(const SCEV *S, const Loop *L,
                              ScalarEvolution &SE) {
-    bool IsPosBECond;
+    bool IsPosBECond = false;
     Value *BECond = nullptr;
     if (BasicBlock *Latch = L->getLoopLatch()) {
       BranchInst *BI = dyn_cast<BranchInst>(Latch->getTerminator());

@@ -486,6 +486,8 @@ public:
   bool isLoad() const;
   // Is the desired predefined predicate for a store?
   bool isStore() const;
+  // Is the desired predefined predicate for an atomic?
+  bool isAtomic() const;
 
   /// Is this predicate the predefined unindexed load predicate?
   /// Is this predicate the predefined unindexed store predicate?
