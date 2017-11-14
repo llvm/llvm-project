@@ -4761,26 +4761,26 @@ namespace std  // purposefully not versioned
 template <class _Integer>
   constexpr typename enable_if<is_integral_v<_Integer>, byte>::type &
   operator<<=(byte& __lhs, _Integer __shift) noexcept
-  { return __lhs = byte(static_cast<unsigned char>(__lhs) << __shift); }
+  { return __lhs = __lhs << __shift; }
   
 template <class _Integer>
   constexpr typename enable_if<is_integral_v<_Integer>, byte>::type
   operator<< (byte  __lhs, _Integer __shift) noexcept
-  { return         byte(static_cast<unsigned char>(__lhs) << __shift); }
+  { return static_cast<byte>(static_cast<unsigned char>(static_cast<unsigned int>(__lhs) << __shift)); }
 
 template <class _Integer>
   constexpr typename enable_if<is_integral_v<_Integer>, byte>::type &
   operator>>=(byte& __lhs, _Integer __shift) noexcept
-  { return __lhs = byte(static_cast<unsigned char>(__lhs) >> __shift); }
+  { return __lhs = __lhs >> __shift; }
 
 template <class _Integer>
   constexpr typename enable_if<is_integral_v<_Integer>, byte>::type
   operator>> (byte  __lhs, _Integer __shift) noexcept
-  { return         byte(static_cast<unsigned char>(__lhs) >> __shift); }
+  { return static_cast<byte>(static_cast<unsigned char>(static_cast<unsigned int>(__lhs) >> __shift)); }
   
 template <class _Integer>
   constexpr typename enable_if<is_integral_v<_Integer>, _Integer>::type
-  to_integer(byte __b) noexcept { return _Integer(__b); }
+  to_integer(byte __b) noexcept { return static_cast<_Integer>(__b); }
 
 }
 #endif
