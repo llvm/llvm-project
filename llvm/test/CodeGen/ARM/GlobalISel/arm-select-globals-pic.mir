@@ -56,7 +56,7 @@ body:             |
     %0(p0) = G_GLOBAL_VALUE @external_global
     ; DARWIN-MOVT: [[G:%[0-9]+]]:gpr = MOV_ga_pcrel_ldr {{.*}} @external_global :: (load 4 from got)
     ; DARWIN-NOMOVT: [[G:%[0-9]+]]:gpr = LDRLIT_ga_pcrel_ldr {{.*}}@external_global :: (load 4 from got)
-    ; ELF: [[G:%[0-9]+]]:gpr = LDRLIT_ga_pcrel_ldr @external_global :: (load 4 from got)
+    ; ELF: [[G:%[0-9]+]]:gpr = LDRLIT_ga_pcrel_ldr target-flags(<unknown>) @external_global :: (load 4 from got)
 
     %1(s32) = G_LOAD %0(p0) :: (load 4 from @external_global)
     ; CHECK: [[V:%[0-9]+]]:gpr = LDRi12 [[G]], 0, 14, _ :: (load 4 from @external_global)
@@ -108,7 +108,7 @@ body:             |
     %0(p0) = G_GLOBAL_VALUE @external_constant
     ; DARWIN-MOVT: [[G:%[0-9]+]]:gpr = MOV_ga_pcrel_ldr {{.*}} @external_constant :: (load 4 from got)
     ; DARWIN-NOMOVT: [[G:%[0-9]+]]:gpr = LDRLIT_ga_pcrel_ldr {{.*}}@external_constant :: (load 4 from got)
-    ; ELF: [[G:%[0-9]+]]:gpr = LDRLIT_ga_pcrel_ldr @external_constant :: (load 4 from got)
+    ; ELF: [[G:%[0-9]+]]:gpr = LDRLIT_ga_pcrel_ldr target-flags(<unknown>) @external_constant :: (load 4 from got)
 
     %1(s32) = G_LOAD %0(p0) :: (load 4 from @external_constant)
     ; CHECK: [[V:%[0-9]+]]:gpr = LDRi12 [[G]], 0, 14, _ :: (load 4 from @external_constant)

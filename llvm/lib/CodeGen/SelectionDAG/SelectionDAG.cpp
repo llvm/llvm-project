@@ -7042,18 +7042,23 @@ void SelectionDAG::transferDbgValues(SDValue From, SDValue To,
     auto *Expr = Dbg->getExpression();
     // If a fragment is requested, update the expression.
     if (SizeInBits) {
-      auto Fragment = DIExpression::createFragmentExpression(
-          Dbg->getExpression(), OffsetInBits, SizeInBits);
-      if (Fragment)
-        Expr = *Fragment;
+      // When splitting a larger (e.g., sign-extended) value whose
+      // lower bits are described with an SDDbgValue, do not attempt
+      // to transfer the SDDbgValue to the upper bits.
+      if (auto FI = Expr->getFragmentInfo())
+        if (OffsetInBits + SizeInBits > FI->SizeInBits)
+          continue;
+      auto Fragment = DIExpression::createFragmentExpression(Expr, OffsetInBits,
+                                                             SizeInBits);
+      if (!Fragment)
+        continue;
+      Expr = *Fragment;
     }
-    // Clone the SbgValue unless the fragment creation failed.
-    if (!SizeInBits || (SizeInBits && Expr)) {
-      SDDbgValue *Clone =
-          getDbgValue(Var, Expr, ToNode, To.getResNo(), Dbg->isIndirect(),
-                      Dbg->getDebugLoc(), Dbg->getOrder());
-      ClonedDVs.push_back(Clone);
-    }
+    // Clone the SDDbgValue and move it to To.
+    SDDbgValue *Clone =
+        getDbgValue(Var, Expr, ToNode, To.getResNo(), Dbg->isIndirect(),
+                    Dbg->getDebugLoc(), Dbg->getOrder());
+    ClonedDVs.push_back(Clone);
     Dbg->setIsInvalidated();
   }
 

@@ -2,7 +2,6 @@
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefix=ALL --check-prefix=AVX512BW
 ; RUN: llc < %s -mtriple=i386-unknown-linux-gnu -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefix=ALL --check-prefix=AVX512F-32
 
-
 declare <64 x i8> @llvm.x86.avx512.mask.pbroadcast.b.gpr.512(i8, <64 x i8>, i64)
 
   define <64 x i8>@test_int_x86_avx512_mask_pbroadcast_b_gpr_512(i8 %x0, <64 x i8> %x1, i64 %mask) {
@@ -3793,5 +3792,137 @@ define <64 x i8>@test_int_x86_avx512_mask_pabs_b_512(<64 x i8> %x0, <64 x i8> %x
   %res1 = call <64 x i8> @llvm.x86.avx512.mask.pabs.b.512(<64 x i8> %x0, <64 x i8> %x1, i64 -1)
   %res2 = add <64 x i8> %res, %res1
   ret <64 x i8> %res2
+}
+
+declare i64 @llvm.x86.avx512.ptestm.b.512(<64 x i8>, <64 x i8>, i64)
+
+define i64@test_int_x86_avx512_ptestm_b_512(<64 x i8> %x0, <64 x i8> %x1, i64 %x2) {
+; AVX512BW-LABEL: test_int_x86_avx512_ptestm_b_512:
+; AVX512BW:       ## BB#0:
+; AVX512BW-NEXT:    vptestmb %zmm1, %zmm0, %k0
+; AVX512BW-NEXT:    kmovq %rdi, %k1
+; AVX512BW-NEXT:    vptestmb %zmm1, %zmm0, %k1 {%k1}
+; AVX512BW-NEXT:    kmovq %k1, %rcx
+; AVX512BW-NEXT:    kmovq %k0, %rax
+; AVX512BW-NEXT:    addq %rcx, %rax
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_int_x86_avx512_ptestm_b_512:
+; AVX512F-32:       # BB#0:
+; AVX512F-32-NEXT:    subl $20, %esp
+; AVX512F-32-NEXT:    .cfi_def_cfa_offset 24
+; AVX512F-32-NEXT:    vptestmb %zmm1, %zmm0, %k0
+; AVX512F-32-NEXT:    kmovq {{[0-9]+}}(%esp), %k1
+; AVX512F-32-NEXT:    vptestmb %zmm1, %zmm0, %k1 {%k1}
+; AVX512F-32-NEXT:    kmovq %k1, (%esp)
+; AVX512F-32-NEXT:    movl (%esp), %eax
+; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; AVX512F-32-NEXT:    kmovq %k0, {{[0-9]+}}(%esp)
+; AVX512F-32-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; AVX512F-32-NEXT:    adcl {{[0-9]+}}(%esp), %edx
+; AVX512F-32-NEXT:    addl $20, %esp
+; AVX512F-32-NEXT:    vzeroupper
+; AVX512F-32-NEXT:    retl
+  %res = call i64 @llvm.x86.avx512.ptestm.b.512(<64 x i8> %x0, <64 x i8> %x1, i64 %x2)
+  %res1 = call i64 @llvm.x86.avx512.ptestm.b.512(<64 x i8> %x0, <64 x i8> %x1, i64-1)
+  %res2 = add i64 %res, %res1
+  ret i64 %res2
+}
+
+declare i32 @llvm.x86.avx512.ptestm.w.512(<32 x i16>, <32 x i16>, i32)
+
+define i32@test_int_x86_avx512_ptestm_w_512(<32 x i16> %x0, <32 x i16> %x1, i32 %x2) {
+; AVX512BW-LABEL: test_int_x86_avx512_ptestm_w_512:
+; AVX512BW:       ## BB#0:
+; AVX512BW-NEXT:    vptestmw %zmm1, %zmm0, %k0
+; AVX512BW-NEXT:    kmovd %edi, %k1
+; AVX512BW-NEXT:    vptestmw %zmm1, %zmm0, %k1 {%k1}
+; AVX512BW-NEXT:    kmovd %k1, %ecx
+; AVX512BW-NEXT:    kmovd %k0, %eax
+; AVX512BW-NEXT:    addl %ecx, %eax
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_int_x86_avx512_ptestm_w_512:
+; AVX512F-32:       # BB#0:
+; AVX512F-32-NEXT:    vptestmw %zmm1, %zmm0, %k0
+; AVX512F-32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
+; AVX512F-32-NEXT:    vptestmw %zmm1, %zmm0, %k1 {%k1}
+; AVX512F-32-NEXT:    kmovd %k1, %ecx
+; AVX512F-32-NEXT:    kmovd %k0, %eax
+; AVX512F-32-NEXT:    addl %ecx, %eax
+; AVX512F-32-NEXT:    vzeroupper
+; AVX512F-32-NEXT:    retl
+  %res = call i32 @llvm.x86.avx512.ptestm.w.512(<32 x i16> %x0, <32 x i16> %x1, i32 %x2)
+  %res1 = call i32 @llvm.x86.avx512.ptestm.w.512(<32 x i16> %x0, <32 x i16> %x1, i32-1)
+  %res2 = add i32 %res, %res1
+  ret i32 %res2
+}
+
+declare i64 @llvm.x86.avx512.ptestnm.b.512(<64 x i8>, <64 x i8>, i64 %x2)
+
+define i64@test_int_x86_avx512_ptestnm_b_512(<64 x i8> %x0, <64 x i8> %x1, i64 %x2) {
+; AVX512BW-LABEL: test_int_x86_avx512_ptestnm_b_512:
+; AVX512BW:       ## BB#0:
+; AVX512BW-NEXT:    vptestnmb %zmm1, %zmm0, %k0
+; AVX512BW-NEXT:    kmovq %rdi, %k1
+; AVX512BW-NEXT:    vptestnmb %zmm1, %zmm0, %k1 {%k1}
+; AVX512BW-NEXT:    kmovq %k1, %rcx
+; AVX512BW-NEXT:    kmovq %k0, %rax
+; AVX512BW-NEXT:    addq %rcx, %rax
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_int_x86_avx512_ptestnm_b_512:
+; AVX512F-32:       # BB#0:
+; AVX512F-32-NEXT:    subl $20, %esp
+; AVX512F-32-NEXT:    .cfi_def_cfa_offset 24
+; AVX512F-32-NEXT:    vptestnmb %zmm1, %zmm0, %k0
+; AVX512F-32-NEXT:    kmovq {{[0-9]+}}(%esp), %k1
+; AVX512F-32-NEXT:    vptestnmb %zmm1, %zmm0, %k1 {%k1}
+; AVX512F-32-NEXT:    kmovq %k1, (%esp)
+; AVX512F-32-NEXT:    movl (%esp), %eax
+; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; AVX512F-32-NEXT:    kmovq %k0, {{[0-9]+}}(%esp)
+; AVX512F-32-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; AVX512F-32-NEXT:    adcl {{[0-9]+}}(%esp), %edx
+; AVX512F-32-NEXT:    addl $20, %esp
+; AVX512F-32-NEXT:    vzeroupper
+; AVX512F-32-NEXT:    retl
+  %res = call i64 @llvm.x86.avx512.ptestnm.b.512(<64 x i8> %x0, <64 x i8> %x1, i64 %x2)
+  %res1 = call i64 @llvm.x86.avx512.ptestnm.b.512(<64 x i8> %x0, <64 x i8> %x1, i64-1)
+  %res2 = add i64 %res, %res1
+  ret i64 %res2
+}
+
+declare i32 @llvm.x86.avx512.ptestnm.w.512(<32 x i16>, <32 x i16>, i32 %x2)
+
+define i32@test_int_x86_avx512_ptestnm_w_512(<32 x i16> %x0, <32 x i16> %x1, i32 %x2) {
+; AVX512BW-LABEL: test_int_x86_avx512_ptestnm_w_512:
+; AVX512BW:       ## BB#0:
+; AVX512BW-NEXT:    vptestnmw %zmm1, %zmm0, %k0
+; AVX512BW-NEXT:    kmovd %edi, %k1
+; AVX512BW-NEXT:    vptestnmw %zmm1, %zmm0, %k1 {%k1}
+; AVX512BW-NEXT:    kmovd %k1, %ecx
+; AVX512BW-NEXT:    kmovd %k0, %eax
+; AVX512BW-NEXT:    addl %ecx, %eax
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_int_x86_avx512_ptestnm_w_512:
+; AVX512F-32:       # BB#0:
+; AVX512F-32-NEXT:    vptestnmw %zmm1, %zmm0, %k0
+; AVX512F-32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
+; AVX512F-32-NEXT:    vptestnmw %zmm1, %zmm0, %k1 {%k1}
+; AVX512F-32-NEXT:    kmovd %k1, %ecx
+; AVX512F-32-NEXT:    kmovd %k0, %eax
+; AVX512F-32-NEXT:    addl %ecx, %eax
+; AVX512F-32-NEXT:    vzeroupper
+; AVX512F-32-NEXT:    retl
+  %res = call i32 @llvm.x86.avx512.ptestnm.w.512(<32 x i16> %x0, <32 x i16> %x1, i32 %x2)
+  %res1 = call i32 @llvm.x86.avx512.ptestnm.w.512(<32 x i16> %x0, <32 x i16> %x1, i32-1)
+  %res2 = add i32 %res, %res1
+  ret i32 %res2
 }
 

@@ -203,7 +203,7 @@ this means are `Effective Go`_ and `Go Code Review Comments`_.
   https://golang.org/doc/effective_go.html
 
 .. _Go Code Review Comments:
-  https://code.google.com/p/go-wiki/wiki/CodeReviewComments
+  https://github.com/golang/go/wiki/CodeReviewComments
 
 Mechanical Source Issues
 ========================
