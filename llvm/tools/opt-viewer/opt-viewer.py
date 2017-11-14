@@ -119,17 +119,21 @@ class SourceFileRenderer:
 </head>
 <body>
 <div class="centered">
-<table>
+<table class="source">
+<thead>
 <tr>
-<td>Line</td>
-<td>Hotness</td>
-<td>Optimization</td>
-<td>Source</td>
-<td>Inline Context</td>
-</tr>''', file=self.stream)
+<th style="width: 2%">Line</td>
+<th style="width: 3%">Hotness</td>
+<th style="width: 10%">Optimization</td>
+<th style="width: 70%">Source</td>
+<th style="width: 15%">Inline Context</td>
+</tr>
+</thead>
+<tbody>''', file=self.stream)
         self.render_source_lines(self.source_stream, line_remarks)
 
         print('''
+</tbody>
 </table>
 </body>
 </html>''', file=self.stream)
