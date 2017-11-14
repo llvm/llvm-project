@@ -17,6 +17,12 @@ import functools
 from multiprocessing import Lock
 import os, os.path
 import subprocess
+try:
+    # The previously builtin function `intern()` was moved
+    # to the `sys` module in Python 3.
+    from sys import intern
+except:
+    pass
 
 import optpmap
 
