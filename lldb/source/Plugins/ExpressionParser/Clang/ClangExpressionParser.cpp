@@ -66,7 +66,6 @@
 #include "ClangPersistentVariables.h"
 #include "IRForTarget.h"
 
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/Module.h"

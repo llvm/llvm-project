@@ -7,11 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/Symbol.h"
@@ -19,6 +14,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/ArchSpec.h"
 
 #include "RegisterContextMacOSXFrameBackchain.h"
 

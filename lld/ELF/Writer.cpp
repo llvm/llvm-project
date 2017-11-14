@@ -22,7 +22,6 @@
 #include "lld/Common/Threads.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/FileOutputBuffer.h"
 #include <climits>
 
 using namespace llvm;
@@ -38,6 +37,7 @@ namespace {
 // The writer writes a SymbolTable result to a file.
 template <class ELFT> class Writer {
 public:
+  Writer() : Buffer(errorHandler().OutputBuffer) {}
   typedef typename ELFT::Shdr Elf_Shdr;
   typedef typename ELFT::Ehdr Elf_Ehdr;
   typedef typename ELFT::Phdr Elf_Phdr;
@@ -70,7 +70,7 @@ private:
   void writeSectionsBinary();
   void writeBuildId();
 
-  std::unique_ptr<FileOutputBuffer> Buffer;
+  std::unique_ptr<FileOutputBuffer> &Buffer;
 
   void addRelIpltSymbols();
   void addStartEndSymbols();

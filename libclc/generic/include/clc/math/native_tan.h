@@ -1,10 +1,9 @@
-//===-- generic/include/clc/math/native_tan.h -----------------------------===//
+#define __CLC_BODY <clc/math/unary_decl.inc>
+#define __CLC_FUNCTION native_tan
+#define __FLOAT_ONLY
 
-//
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under both the University of Illinois Open Source
-// License and the MIT license. See LICENSE.TXT for details.
-//
-//===----------------------------------------------------------------------===//
-#define native_tan tan
+#include <clc/math/gentype.inc>
+
+#undef __FLOAT_ONLY
+#undef __CLC_BODY
+#undef __CLC_FUNCTION

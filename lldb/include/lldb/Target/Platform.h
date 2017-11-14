@@ -21,10 +21,10 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Interpreter/Options.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-private-forward.h"

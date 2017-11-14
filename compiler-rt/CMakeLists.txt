@@ -43,6 +43,25 @@ mark_as_advanced(COMPILER_RT_BUILD_PROFILE)
 option(COMPILER_RT_BUILD_XRAY_NO_PREINIT "Build xray with no preinit patching" OFF)
 mark_as_advanced(COMPILER_RT_BUILD_XRAY_NO_PREINIT)
 
+set(COMPILER_RT_ASAN_SHADOW_SCALE ""
+    CACHE STRING "Override the shadow scale to be used in ASan runtime")
+
+if (NOT COMPILER_RT_ASAN_SHADOW_SCALE STREQUAL "")
+  # Check that the shadow scale value is valid.
+  if (NOT (COMPILER_RT_ASAN_SHADOW_SCALE GREATER -1 AND
+           COMPILER_RT_ASAN_SHADOW_SCALE LESS 8))
+    message(FATAL_ERROR "
+      Invalid ASan Shadow Scale '${COMPILER_RT_ASAN_SHADOW_SCALE}'.")
+  endif()
+
+  set(COMPILER_RT_ASAN_SHADOW_SCALE_LLVM_FLAG
+      -mllvm -asan-mapping-scale=${COMPILER_RT_ASAN_SHADOW_SCALE})
+  set(COMPILER_RT_ASAN_SHADOW_SCALE_DEFINITION
+      ASAN_SHADOW_SCALE=${COMPILER_RT_ASAN_SHADOW_SCALE})
+  set(COMPILER_RT_ASAN_SHADOW_SCALE_FLAG
+      -D${COMPILER_RT_ASAN_SHADOW_SCALE_DEFINITION})
+endif()
+
 set(COMPILER_RT_BAREMETAL_BUILD OFF CACHE BOOLEAN
   "Build for a bare-metal target.")
 

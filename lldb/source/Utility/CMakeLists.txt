@@ -40,6 +40,7 @@ if (LLVM_BUILD_STATIC)
 endif()
 
 add_lldb_library(lldbUtility
+  ArchSpec.cpp
   Baton.cpp
   Connection.cpp
   ConstString.cpp

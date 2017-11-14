@@ -9,11 +9,11 @@
 
 #include "lldb/Host/Config.h"
 
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostInfoBase.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -101,6 +101,14 @@ const ArchSpec &HostInfoBase::GetArchitecture(ArchitectureKind arch_kind) {
   // Otherwise prefer the 64-bit architecture if it is valid.
   return (g_fields->m_host_arch_64.IsValid()) ? g_fields->m_host_arch_64
                                               : g_fields->m_host_arch_32;
+}
+
+llvm::Optional<HostInfoBase::ArchitectureKind> HostInfoBase::ParseArchitectureKind(llvm::StringRef kind) {
+  return llvm::StringSwitch<llvm::Optional<ArchitectureKind>>(kind)
+      .Case(LLDB_ARCH_DEFAULT, eArchKindDefault)
+      .Case(LLDB_ARCH_DEFAULT_32BIT, eArchKind32)
+      .Case(LLDB_ARCH_DEFAULT_64BIT, eArchKind64)
+      .Default(llvm::None);
 }
 
 bool HostInfoBase::GetLLDBPath(lldb::PathType type, FileSpec &file_spec) {
@@ -257,6 +265,9 @@ ArchSpec HostInfoBase::GetAugmentedArchSpec(llvm::StringRef triple) {
   llvm::Triple normalized_triple(llvm::Triple::normalize(triple));
   if (!ArchSpec::ContainsOnlyArch(normalized_triple))
     return ArchSpec(triple);
+
+  if (auto kind = HostInfo::ParseArchitectureKind(triple))
+    return HostInfo::GetArchitecture(*kind);
 
   llvm::Triple host_triple(llvm::sys::getDefaultTargetTriple());
 

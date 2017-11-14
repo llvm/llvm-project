@@ -10,12 +10,12 @@
 #ifndef liblldb_Module_h_
 #define liblldb_Module_h_
 
-#include "lldb/Core/Address.h" // for Address
-#include "lldb/Core/ArchSpec.h"
+#include "lldb/Core/Address.h"    // for Address
 #include "lldb/Core/ModuleSpec.h" // for ModuleSpec
 #include "lldb/Symbol/SymbolContextScope.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/PathMappingList.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/ConstString.h" // for ConstString
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h" // for Status

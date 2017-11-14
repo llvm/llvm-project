@@ -355,7 +355,10 @@ void LinkerDriver::addLibSearchPaths() {
 
 Symbol *LinkerDriver::addUndefined(StringRef Name) {
   Symbol *B = Symtab->addUndefined(Name);
-  Config->GCRoot.insert(B);
+  if (!B->IsGCRoot) {
+    B->IsGCRoot = true;
+    Config->GCRoot.push_back(B);
+  }
   return B;
 }
 
@@ -896,49 +899,50 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (auto *Arg = Args.getLastArg(OPT_implib))
     Config->Implib = Arg->getValue();
 
-  // Handle /opt
+  // Handle /opt.
+  bool DoGC = !Args.hasArg(OPT_debug);
+  unsigned ICFLevel = 1; // 0: off, 1: limited, 2: on
   for (auto *Arg : Args.filtered(OPT_opt)) {
     std::string Str = StringRef(Arg->getValue()).lower();
     SmallVector<StringRef, 1> Vec;
     StringRef(Str).split(Vec, ',');
     for (StringRef S : Vec) {
-      if (S == "noref") {
-        Config->DoGC = false;
-        Config->DoICF = false;
-        continue;
-      }
-      if (S == "icf" || S.startswith("icf=")) {
-        Config->DoICF = true;
-        continue;
-      }
-      if (S == "noicf") {
-        Config->DoICF = false;
-        continue;
-      }
-      if (S.startswith("lldlto=")) {
+      if (S == "ref") {
+        DoGC = true;
+      } else if (S == "noref") {
+        DoGC = false;
+      } else if (S == "icf" || S.startswith("icf=")) {
+        ICFLevel = 2;
+      } else if (S == "noicf") {
+        ICFLevel = 0;
+      } else if (S.startswith("lldlto=")) {
         StringRef OptLevel = S.substr(7);
         if (OptLevel.getAsInteger(10, Config->LTOOptLevel) ||
             Config->LTOOptLevel > 3)
           error("/opt:lldlto: invalid optimization level: " + OptLevel);
-        continue;
-      }
-      if (S.startswith("lldltojobs=")) {
+      } else if (S.startswith("lldltojobs=")) {
         StringRef Jobs = S.substr(11);
         if (Jobs.getAsInteger(10, Config->LTOJobs) || Config->LTOJobs == 0)
           error("/opt:lldltojobs: invalid job count: " + Jobs);
-        continue;
-      }
-      if (S.startswith("lldltopartitions=")) {
+      } else if (S.startswith("lldltopartitions=")) {
         StringRef N = S.substr(17);
         if (N.getAsInteger(10, Config->LTOPartitions) ||
             Config->LTOPartitions == 0)
           error("/opt:lldltopartitions: invalid partition count: " + N);
-        continue;
-      }
-      if (S != "ref" && S != "lbr" && S != "nolbr")
+      } else if (S != "lbr" && S != "nolbr")
         error("/opt: unknown option: " + S);
     }
   }
+
+  // Limited ICF is enabled if GC is enabled and ICF was never mentioned
+  // explicitly.
+  // FIXME: LLD only implements "limited" ICF, i.e. it only merges identical
+  // code. If the user passes /OPT:ICF explicitly, LLD should merge identical
+  // comdat readonly data.
+  if (ICFLevel == 1 && !DoGC)
+    ICFLevel = 0;
+  Config->DoGC = DoGC;
+  Config->DoICF = ICFLevel > 0;
 
   // Handle /lldsavetemps
   if (Args.hasArg(OPT_lldsavetemps))

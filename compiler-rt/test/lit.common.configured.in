@@ -16,15 +16,16 @@ set_default("llvm_src_root", "@LLVM_MAIN_SRC_DIR@")
 set_default("llvm_obj_root", "@LLVM_BINARY_DIR@")
 set_default("compiler_rt_src_root", "@COMPILER_RT_SOURCE_DIR@")
 set_default("compiler_rt_obj_root", "@COMPILER_RT_BINARY_DIR@")
-set_default("llvm_tools_dir", "@LLVM_TOOLS_BINARY_DIR@")
+set_default("llvm_tools_dir", "@LLVM_TOOLS_DIR@")
 set_default("llvm_shlib_dir", "@LLVM_LIBRARY_OUTPUT_INTDIR@")
 set_default("gold_executable", "@GOLD_EXECUTABLE@")
-set_default("clang", "@COMPILER_RT_TEST_COMPILER@")
+set_default("clang", "@COMPILER_RT_RESOLVED_TEST_COMPILER@")
 set_default("compiler_id", "@COMPILER_RT_TEST_COMPILER_ID@")
 set_default("python_executable", "@PYTHON_EXECUTABLE@")
 set_default("compiler_rt_debug", @COMPILER_RT_DEBUG_PYBOOL@)
-set_default("compiler_rt_libdir", "@COMPILER_RT_LIBRARY_OUTPUT_DIR@")
+set_default("compiler_rt_libdir", "@COMPILER_RT_RESOLVED_LIBRARY_OUTPUT_DIR@")
 set_default("emulator", "@COMPILER_RT_EMULATOR@")
+set_default("asan_shadow_scale", "@COMPILER_RT_ASAN_SHADOW_SCALE@")
 set_default("ios", False)
 set_default("iossim", False)
 set_default("sanitizer_can_use_cxxabi", @SANITIZER_CAN_USE_CXXABI_PYBOOL@)
@@ -39,9 +40,14 @@ config.available_features.add('target-is-%s' % config.target_arch)
 # apply substitution.
 try:
   config.llvm_tools_dir = config.llvm_tools_dir % lit_config.params
+  config.clang = config.clang % lit_config.params
+  config.compiler_rt_libdir = config.compiler_rt_libdir % lit_config.params
 except KeyError as e:
   key, = e.args
   lit_config.fatal("unable to find %r parameter, use '--param=%s=VALUE'" % (key, key))
+
+if not os.path.exists(config.clang):
+  lit_config.fatal("Can't find compiler on path %r" % config.clang)
 
 # Setup attributes common for all compiler-rt projects.
 lit_config.load_config(config, "@COMPILER_RT_SOURCE_DIR@/test/lit.common.cfg")

@@ -1943,21 +1943,6 @@ static void rtl_sigaction(int sig, __sanitizer_siginfo *info, void *ctx) {
   rtl_generic_sighandler(true, sig, info, ctx);
 }
 
-static int sigaction_impl(int sig, __sanitizer_sigaction *act,
-                          __sanitizer_sigaction *old);
-static __sanitizer_sighandler_ptr signal_impl(int sig,
-                                              __sanitizer_sighandler_ptr h);
-
-TSAN_INTERCEPTOR(int, sigaction, int sig, __sanitizer_sigaction *act,
-                 __sanitizer_sigaction *old) {
-  return sigaction_impl(sig, act, old);
-}
-
-TSAN_INTERCEPTOR(__sanitizer_sighandler_ptr, signal, int sig,
-                 __sanitizer_sighandler_ptr h) {
-  return signal_impl(sig, h);
-}
-
 TSAN_INTERCEPTOR(int, raise, int sig) {
   SCOPED_TSAN_INTERCEPTOR(raise, sig);
   ThreadSignalContext *sctx = SigCtx(thr);
@@ -2271,16 +2256,28 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
 
 #include "sanitizer_common/sanitizer_common_interceptors.inc"
 
-// TODO(vitalybuka): use sanitizer_signal_interceptors.inc here.
+static int sigaction_impl(int sig, const __sanitizer_sigaction *act,
+                          __sanitizer_sigaction *old);
+static __sanitizer_sighandler_ptr signal_impl(int sig,
+                                              __sanitizer_sighandler_ptr h);
 
-int sigaction_impl(int sig, __sanitizer_sigaction *act,
+#define SIGNAL_INTERCEPTOR_SIGACTION_IMPL(signo, act, oldact) \
+  { return sigaction_impl(signo, act, oldact); }
+
+#define SIGNAL_INTERCEPTOR_SIGNAL_IMPL(func, signo, handler) \
+  { return (uptr)signal_impl(signo, (__sanitizer_sighandler_ptr)handler); }
+
+#include "sanitizer_common/sanitizer_signal_interceptors.inc"
+
+int sigaction_impl(int sig, const __sanitizer_sigaction *act,
                    __sanitizer_sigaction *old) {
   // Note: if we call REAL(sigaction) directly for any reason without proxying
   // the signal handler through rtl_sigaction, very bad things will happen.
   // The handler will run synchronously and corrupt tsan per-thread state.
   SCOPED_INTERCEPTOR_RAW(sigaction, sig, act, old);
   __sanitizer_sigaction *sigactions = interceptor_ctx()->sigactions;
-  if (old) internal_memcpy(old, &sigactions[sig], sizeof(*old));
+  __sanitizer_sigaction old_stored;
+  internal_memcpy(&old_stored, &sigactions[sig], sizeof(old_stored));
   if (act == 0) return 0;
   // Copy act into sigactions[sig].
   // Can't use struct copy, because compiler can emit call to memcpy.
@@ -2289,8 +2286,8 @@ int sigaction_impl(int sig, __sanitizer_sigaction *act,
   // some bytes from old value and some bytes from new value.
   // Use volatile to prevent insertion of memcpy.
   sigactions[sig].handler =
-      *(volatile __sanitizer_sighandler_ptr *)&act->handler;
-  sigactions[sig].sa_flags = *(volatile int *)&act->sa_flags;
+      *(volatile __sanitizer_sighandler_ptr const *)&act->handler;
+  sigactions[sig].sa_flags = *(volatile int const *)&act->sa_flags;
   internal_memcpy(&sigactions[sig].sa_mask, &act->sa_mask,
                   sizeof(sigactions[sig].sa_mask));
 #if !SANITIZER_FREEBSD && !SANITIZER_MAC && !SANITIZER_NETBSD
@@ -2306,7 +2303,13 @@ int sigaction_impl(int sig, __sanitizer_sigaction *act,
       newact.handler = rtl_sighandler;
   }
   ReleaseStore(thr, pc, (uptr)&sigactions[sig]);
-  int res = REAL(sigaction)(sig, &newact, 0);
+  int res = REAL(sigaction)(sig, &newact, old);
+  if (res == 0 && old) {
+    uptr cb = (uptr)old->sigaction;
+    if (cb == (uptr)rtl_sigaction || cb == (uptr)rtl_sighandler) {
+      internal_memcpy(old, &old_stored, sizeof(*old));
+    }
+  }
   return res;
 }
 
@@ -2506,6 +2509,7 @@ void InitializeInterceptors() {
   new(interceptor_ctx()) InterceptorContext();
 
   InitializeCommonInterceptors();
+  InitializeSignalInterceptors();
 
 #if !SANITIZER_MAC
   // We can not use TSAN_INTERCEPT to get setjmp addr,
@@ -2613,8 +2617,6 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT(rmdir);
   TSAN_INTERCEPT(closedir);
 
-  TSAN_INTERCEPT(sigaction);
-  TSAN_INTERCEPT(signal);
   TSAN_INTERCEPT(sigsuspend);
   TSAN_INTERCEPT(sigblock);
   TSAN_INTERCEPT(sigsetmask);

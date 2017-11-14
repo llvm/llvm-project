@@ -231,12 +231,6 @@ public:
     return 0;
   }
 
-  CompilerType GetTemplateArgument(lldb::opaque_compiler_type_t type,
-                                   size_t idx,
-                                   lldb::TemplateArgumentKind &kind) override {
-    return CompilerType();
-  }
-
   void DumpValue(lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx,
                  Stream *s, lldb::Format format, const DataExtractor &data,
                  lldb::offset_t data_offset, size_t data_byte_size,

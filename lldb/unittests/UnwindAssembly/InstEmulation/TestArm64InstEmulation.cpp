@@ -17,9 +17,9 @@
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/AddressRange.h"
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/UnwindAssembly.h"
+#include "lldb/Utility/ArchSpec.h"
 
 #include "Plugins/Disassembler/llvm/DisassemblerLLVMC.h"
 #include "Plugins/Instruction/ARM64/EmulateInstructionARM64.h"
