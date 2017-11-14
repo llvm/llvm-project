@@ -3061,11 +3061,12 @@ kmp_indirect_lock_t *__kmp_allocate_indirect_lock(void **user_lock,
     if (idx == __kmp_i_lock_table.size) {
       // Double up the space for block pointers
       int row = __kmp_i_lock_table.size / KMP_I_LOCK_CHUNK;
-      kmp_indirect_lock_t **old_table = __kmp_i_lock_table.table;
-      __kmp_i_lock_table.table = (kmp_indirect_lock_t **)__kmp_allocate(
+      kmp_indirect_lock_t **new_table = (kmp_indirect_lock_t **)__kmp_allocate(
           2 * row * sizeof(kmp_indirect_lock_t *));
-      KMP_MEMCPY(__kmp_i_lock_table.table, old_table,
+      KMP_MEMCPY(new_table, __kmp_i_lock_table.table,
                  row * sizeof(kmp_indirect_lock_t *));
+      kmp_indirect_lock_t **old_table = __kmp_i_lock_table.table;
+      __kmp_i_lock_table.table = new_table;
       __kmp_free(old_table);
       // Allocate new objects in the new blocks
       for (int i = row; i < 2 * row; ++i)
