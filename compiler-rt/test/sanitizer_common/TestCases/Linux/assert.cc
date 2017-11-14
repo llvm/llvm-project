@@ -7,9 +7,6 @@
 // RUN: %env_tool_opts=handle_abort=1 not         %run %t 2>&1 | FileCheck --check-prefix=CHECK1 %s
 // clang-format on
 
-// FIXME: implement in other sanitizers.
-// XFAIL: tsan
-
 #include <assert.h>
 #include <stdio.h>
 #include <sanitizer/asan_interface.h>
@@ -25,7 +22,6 @@ int main(int argc, char **argv) {
 
 // CHECK0-NOT: Sanitizer:DEADLYSIGNAL
 // CHECK1: ERROR: {{.*}}Sanitizer: ABRT
-// CHECK1-NEXT: {{ #0 }}
-// CHECK1-NEXT: {{ #1 }}
+// CHECK1: {{ #0 }}
 // CHECK1: DEATH CALLBACK
 // CHECK0-NOT: Sanitizer

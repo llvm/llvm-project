@@ -17,10 +17,6 @@
 // RUN: %env_tool_opts=handle_segv=2:allow_user_segv_handler=1 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK2
 // clang-format on
 
-// Remove when fixed: https://github.com/google/sanitizers/issues/637
-
-// XFAIL: tsan
-
 // Flaky errors in debuggerd with "waitpid returned unexpected pid (0)" in logcat.
 // UNSUPPORTED: android && i386-target-arch
 

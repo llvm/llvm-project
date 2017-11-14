@@ -255,6 +255,10 @@ void ReservedAddressRange::Unmap(uptr addr, uptr size) {
   // Only unmap if it covers the entire range.
   CHECK((addr == base_as_uptr) && (size == size_));
   UnmapOrDie(addr_as_void, size);
+  if (addr_as_void == base_) {
+    base_ = reinterpret_cast<void*>(addr + size);
+  }
+  size_ = size_ - size;
 }
 
 void *MmapFixedOrDieOnFatalError(uptr fixed_addr, uptr size) {
