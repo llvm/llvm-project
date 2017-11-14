@@ -1,3 +1,13 @@
+.source {
+  table-layout: fixed;
+  width: 100%;
+  white-space: nowrap;
+}
+.source td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .red {
   background-color: #ffd0d0;
 }
