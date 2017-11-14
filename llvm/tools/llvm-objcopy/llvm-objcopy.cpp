@@ -83,6 +83,8 @@ static cl::alias ToRemoveA("R", cl::desc("Alias for remove-section"),
                            cl::aliasopt(ToRemove));
 static cl::opt<bool> StripAll("strip-all",
                               cl::desc("Removes symbol, relocation, and debug information"));
+static cl::opt<bool> StripDebug("strip-debug",
+                                cl::desc("Removes all debug information"));
 static cl::opt<bool> StripSections("strip-sections",
                                    cl::desc("Remove all section headers"));
 static cl::opt<bool>
@@ -195,6 +197,12 @@ void CopyBinary(const ELFObjectFile<ELF64LE> &ObjFile) {
       return RemovePred(Sec) || (Sec.Flags & SHF_ALLOC) == 0;
     };
     Obj->WriteSectionHeaders = false;
+  }
+
+  if (StripDebug) {
+    RemovePred = [RemovePred](const SectionBase &Sec) {
+      return RemovePred(Sec) || Sec.Name.startswith(".debug");
+    };
   }
 
   Obj->removeSections(RemovePred);

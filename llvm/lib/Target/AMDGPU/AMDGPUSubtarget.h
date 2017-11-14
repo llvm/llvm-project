@@ -228,6 +228,10 @@ public:
     return WavefrontSize;
   }
 
+  unsigned getWavefrontSizeLog2() const {
+    return Log2_32(WavefrontSize);
+  }
+
   int getLocalMemorySize() const {
     return LocalMemorySize;
   }

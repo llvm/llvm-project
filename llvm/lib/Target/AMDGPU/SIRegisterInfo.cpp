@@ -435,6 +435,10 @@ static int getOffsetMUBUFStore(unsigned Opc) {
     return AMDGPU::BUFFER_STORE_DWORDX2_OFFSET;
   case AMDGPU::BUFFER_STORE_DWORDX4_OFFEN:
     return AMDGPU::BUFFER_STORE_DWORDX4_OFFSET;
+  case AMDGPU::BUFFER_STORE_SHORT_D16_HI_OFFEN:
+    return AMDGPU::BUFFER_STORE_SHORT_D16_HI_OFFSET;
+  case AMDGPU::BUFFER_STORE_BYTE_D16_HI_OFFEN:
+    return AMDGPU::BUFFER_STORE_BYTE_D16_HI_OFFSET;
   default:
     return -1;
   }
@@ -456,6 +460,18 @@ static int getOffsetMUBUFLoad(unsigned Opc) {
     return AMDGPU::BUFFER_LOAD_DWORDX2_OFFSET;
   case AMDGPU::BUFFER_LOAD_DWORDX4_OFFEN:
     return AMDGPU::BUFFER_LOAD_DWORDX4_OFFSET;
+  case AMDGPU::BUFFER_LOAD_UBYTE_D16_OFFEN:
+    return AMDGPU::BUFFER_LOAD_UBYTE_D16_OFFSET;
+  case AMDGPU::BUFFER_LOAD_UBYTE_D16_HI_OFFEN:
+    return AMDGPU::BUFFER_LOAD_UBYTE_D16_HI_OFFSET;
+  case AMDGPU::BUFFER_LOAD_SBYTE_D16_OFFEN:
+    return AMDGPU::BUFFER_LOAD_SBYTE_D16_OFFSET;
+  case AMDGPU::BUFFER_LOAD_SBYTE_D16_HI_OFFEN:
+    return AMDGPU::BUFFER_LOAD_SBYTE_D16_HI_OFFSET;
+  case AMDGPU::BUFFER_LOAD_SHORT_D16_OFFEN:
+    return AMDGPU::BUFFER_LOAD_SHORT_D16_OFFSET;
+  case AMDGPU::BUFFER_LOAD_SHORT_D16_HI_OFFEN:
+    return AMDGPU::BUFFER_LOAD_SHORT_D16_HI_OFFSET;
   default:
     return -1;
   }
@@ -479,7 +495,7 @@ static bool buildMUBUFOffsetLoadStore(const SIInstrInfo *TII,
     return false;
 
   const MachineOperand *Reg = TII->getNamedOperand(*MI, AMDGPU::OpName::vdata);
-  BuildMI(*MBB, MI, DL, TII->get(LoadStoreOp))
+  MachineInstrBuilder NewMI = BuildMI(*MBB, MI, DL, TII->get(LoadStoreOp))
     .add(*Reg)
     .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::srsrc))
     .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::soffset))
@@ -488,6 +504,11 @@ static bool buildMUBUFOffsetLoadStore(const SIInstrInfo *TII,
     .addImm(0) // slc
     .addImm(0) // tfe
     .setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
+
+  const MachineOperand *VDataIn = TII->getNamedOperand(*MI,
+                                                       AMDGPU::OpName::vdata_in);
+  if (VDataIn)
+    NewMI.add(*VDataIn);
   return true;
 }
 

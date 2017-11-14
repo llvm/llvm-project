@@ -191,8 +191,6 @@ template <class ELFT> RelType MIPS<ELFT>::getDynRel(RelType Type) const {
   return RelativeRel;
 }
 
-static bool isMicroMips() { return Config->EFlags & EF_MIPS_MICROMIPS; }
-
 template <class ELFT>
 void MIPS<ELFT>::writeGotPlt(uint8_t *Buf, const Symbol &) const {
   uint64_t VA = InX::Plt->getVA();

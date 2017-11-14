@@ -57,6 +57,13 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- New `objc-property-declaration
+  <http://clang.llvm.org/extra/clang-tidy/checks/objc-property-declaration.html>`_ check
+
+  Add new check for Objective-C code to ensure property
+  names follow the naming convention of Apple's programming
+  guide.
+
 - New `google-objc-global-variable-declaration
   <http://clang.llvm.org/extra/clang-tidy/checks/google-global-variable-declaration.html>`_ check
 

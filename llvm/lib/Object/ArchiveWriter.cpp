@@ -488,14 +488,12 @@ Error llvm::writeArchive(StringRef ArcName,
       Kind = object::Archive::K_GNU64;
   }
 
-  SmallString<128> TmpArchive;
-  int TmpArchiveFD;
-  if (auto EC = sys::fs::createUniqueFile(ArcName + ".temp-archive-%%%%%%%.a",
-                                          TmpArchiveFD, TmpArchive))
-    return errorCodeToError(EC);
+  Expected<sys::fs::TempFile> Temp =
+      sys::fs::TempFile::create(ArcName + ".temp-archive-%%%%%%%.a");
+  if (!Temp)
+    return Temp.takeError();
 
-  ToolOutputFile Output(TmpArchive, TmpArchiveFD);
-  raw_fd_ostream &Out = Output.os();
+  raw_fd_ostream Out(Temp->FD, false);
   if (Thin)
     Out << "!<thin>\n";
   else
@@ -507,8 +505,7 @@ Error llvm::writeArchive(StringRef ArcName,
   for (const MemberData &M : Data)
     Out << M.Header << M.Data << M.Padding;
 
-  Output.keep();
-  Out.close();
+  Out.flush();
 
   // At this point, we no longer need whatever backing memory
   // was used to generate the NewMembers. On Windows, this buffer
@@ -522,6 +519,5 @@ Error llvm::writeArchive(StringRef ArcName,
   // closed before we attempt to rename.
   OldArchiveBuf.reset();
 
-  sys::fs::rename(TmpArchive, ArcName);
-  return Error::success();
+  return Temp->keep(ArcName);
 }
