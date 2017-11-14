@@ -1509,7 +1509,7 @@ def tLDRLIT_ga_pcrel : PseudoInst<(outs tGPR:$dst), (ins i32imm:$addr),
                                   IIC_iLoadiALU,
                                   [(set tGPR:$dst,
                                         (ARMWrapperPIC tglobaladdr:$addr))]>,
-                       Requires<[IsThumb, DontUseMovt]>;
+                       Requires<[IsThumb, DontUseMovtInPic]>;
 
 def tLDRLIT_ga_abs : PseudoInst<(outs tGPR:$dst), (ins i32imm:$src),
                                 IIC_iLoad_i,
@@ -1520,7 +1520,7 @@ def tLDRLIT_ga_abs : PseudoInst<(outs tGPR:$dst), (ins i32imm:$src),
 // TLS globals
 def : Pat<(ARMWrapperPIC tglobaltlsaddr:$addr),
           (tLDRLIT_ga_pcrel tglobaltlsaddr:$addr)>,
-      Requires<[IsThumb, DontUseMovt]>;
+      Requires<[IsThumb, DontUseMovtInPic]>;
 def : Pat<(ARMWrapper tglobaltlsaddr:$addr),
           (tLDRLIT_ga_abs tglobaltlsaddr:$addr)>,
       Requires<[IsThumb, DontUseMovt]>;

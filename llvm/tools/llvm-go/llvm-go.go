@@ -92,7 +92,7 @@ func llvmFlags() compilerFlags {
 	ldflags := llvmConfig(args...)
 	if runtime.GOOS != "darwin" {
 		// OS X doesn't like -rpath with cgo. See:
-		// https://code.google.com/p/go/issues/detail?id=7293
+		// https://github.com/golang/go/issues/7293
 		ldflags = "-Wl,-rpath," + llvmConfig("--libdir") + " " + ldflags
 	}
 	return compilerFlags{

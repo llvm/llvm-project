@@ -1024,8 +1024,10 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
   O << "  OS << '\\t' << StringRef(AsmString, I);\n";
 
   O << "  if (AsmString[I] != '\\0') {\n";
-  O << "    if (AsmString[I] == ' ' || AsmString[I] == '\\t')";
+  O << "    if (AsmString[I] == ' ' || AsmString[I] == '\\t') {\n";
   O << "      OS << '\\t';\n";
+  O << "      ++I;\n";
+  O << "    }\n";
   O << "    do {\n";
   O << "      if (AsmString[I] == '$') {\n";
   O << "        ++I;\n";

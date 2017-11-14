@@ -290,7 +290,7 @@ static const MemoryMapParams Linux_MIPS64_MemoryMapParams = {
 
 // ppc64 Linux
 static const MemoryMapParams Linux_PowerPC64_MemoryMapParams = {
-  0x200000000000,  // AndMask
+  0xE00000000000,  // AndMask
   0x100000000000,  // XorMask
   0x080000000000,  // ShadowBase
   0x1C0000000000,  // OriginBase
@@ -2911,7 +2911,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   void visitLandingPadInst(LandingPadInst &I) {
     // Do nothing.
-    // See http://code.google.com/p/memory-sanitizer/issues/detail?id=1
+    // See https://github.com/google/sanitizers/issues/504
     setShadow(&I, getCleanShadow(&I));
     setOrigin(&I, getCleanOrigin());
   }

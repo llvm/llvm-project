@@ -3843,13 +3843,13 @@ let isReMaterializable = 1 in {
 def t2MOV_ga_pcrel : PseudoInst<(outs rGPR:$dst), (ins i32imm:$addr),
                                 IIC_iMOVix2addpc,
                           [(set rGPR:$dst, (ARMWrapperPIC tglobaladdr:$addr))]>,
-                          Requires<[IsThumb, HasV8MBaseline, UseMovt]>;
+                          Requires<[IsThumb, HasV8MBaseline, UseMovtInPic]>;
 
 }
 
 def : T2Pat<(ARMWrapperPIC tglobaltlsaddr :$dst),
             (t2MOV_ga_pcrel tglobaltlsaddr:$dst)>,
-      Requires<[IsThumb2, UseMovt]>;
+      Requires<[IsThumb2, UseMovtInPic]>;
 def : T2Pat<(ARMWrapper tglobaltlsaddr:$dst),
             (t2MOVi32imm tglobaltlsaddr:$dst)>,
       Requires<[IsThumb2, UseMovt]>;

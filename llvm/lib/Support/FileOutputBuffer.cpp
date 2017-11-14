@@ -17,7 +17,6 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/Signals.h"
 #include <system_error>
 
 #if !defined(_MSC_VER) && !defined(__MINGW32__)
@@ -34,9 +33,9 @@ using namespace llvm::sys;
 // with the temporary file on commit().
 class OnDiskBuffer : public FileOutputBuffer {
 public:
-  OnDiskBuffer(StringRef Path, StringRef TempPath,
+  OnDiskBuffer(StringRef Path, fs::TempFile Temp,
                std::unique_ptr<fs::mapped_file_region> Buf)
-      : FileOutputBuffer(Path), Buffer(std::move(Buf)), TempPath(TempPath) {}
+      : FileOutputBuffer(Path), Buffer(std::move(Buf)), Temp(std::move(Temp)) {}
 
   uint8_t *getBufferStart() const override { return (uint8_t *)Buffer->data(); }
 
@@ -51,21 +50,19 @@ public:
     Buffer.reset();
 
     // Atomically replace the existing file with the new one.
-    auto EC = fs::rename(TempPath, FinalPath);
-    sys::DontRemoveFileOnSignal(TempPath);
-    return errorCodeToError(EC);
+    return Temp.keep(FinalPath);
   }
 
   ~OnDiskBuffer() override {
     // Close the mapping before deleting the temp file, so that the removal
     // succeeds.
     Buffer.reset();
-    fs::remove(TempPath);
+    consumeError(Temp.discard());
   }
 
 private:
   std::unique_ptr<fs::mapped_file_region> Buffer;
-  std::string TempPath;
+  fs::TempFile Temp;
 };
 
 // A FileOutputBuffer which keeps data in memory and writes to the final
@@ -110,13 +107,11 @@ createInMemoryBuffer(StringRef Path, size_t Size, unsigned Mode) {
 
 static Expected<std::unique_ptr<OnDiskBuffer>>
 createOnDiskBuffer(StringRef Path, size_t Size, unsigned Mode) {
-  // Create new file in same directory but with random name.
-  SmallString<128> TempPath;
-  int FD;
-  if (auto EC = fs::createUniqueFile(Path + ".tmp%%%%%%%", FD, TempPath, Mode))
-    return errorCodeToError(EC);
-
-  sys::RemoveFileOnSignal(TempPath);
+  Expected<fs::TempFile> FileOrErr =
+      fs::TempFile::create(Path + ".tmp%%%%%%%", Mode);
+  if (!FileOrErr)
+    return FileOrErr.takeError();
+  fs::TempFile File = std::move(*FileOrErr);
 
 #ifndef LLVM_ON_WIN32
   // On Windows, CreateFileMapping (the mmap function on Windows)
@@ -124,18 +119,22 @@ createOnDiskBuffer(StringRef Path, size_t Size, unsigned Mode) {
   // extend the file beforehand. _chsize (ftruncate on Windows) is
   // pretty slow just like it writes specified amount of bytes,
   // so we should avoid calling that function.
-  if (auto EC = fs::resize_file(FD, Size))
+  if (auto EC = fs::resize_file(File.FD, Size)) {
+    consumeError(File.discard());
     return errorCodeToError(EC);
+  }
 #endif
 
   // Mmap it.
   std::error_code EC;
   auto MappedFile = llvm::make_unique<fs::mapped_file_region>(
-      FD, fs::mapped_file_region::readwrite, Size, 0, EC);
-  close(FD);
-  if (EC)
+      File.FD, fs::mapped_file_region::readwrite, Size, 0, EC);
+  if (EC) {
+    consumeError(File.discard());
     return errorCodeToError(EC);
-  return llvm::make_unique<OnDiskBuffer>(Path, TempPath, std::move(MappedFile));
+  }
+  return llvm::make_unique<OnDiskBuffer>(Path, std::move(File),
+                                         std::move(MappedFile));
 }
 
 // Create an instance of FileOutputBuffer.

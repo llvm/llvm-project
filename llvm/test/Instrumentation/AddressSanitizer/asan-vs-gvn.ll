@@ -1,7 +1,7 @@
 ; RUN: opt < %s -basicaa -gvn -asan -asan-module -S | FileCheck %s
 ; ASAN conflicts with load widening iff the widened load accesses data out of bounds
 ; (while the original unwidened loads do not).
-; http://code.google.com/p/address-sanitizer/issues/detail?id=20#c1
+; https://github.com/google/sanitizers/issues/20#issuecomment-136381262
 
 
 ; 32-bit little endian target.
