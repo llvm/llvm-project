@@ -80,7 +80,7 @@ class Remark(yaml.YAMLObject):
 
         def _reduce_memory_dict(old_dict):
             new_dict = dict()
-            for (k, v) in old_dict.iteritems():
+            for (k, v) in iteritems(old_dict):
                 if type(k) is str:
                     k = intern(k)
 
