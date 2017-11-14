@@ -46,8 +46,8 @@ if __name__ == '__main__':
     parser.add_argument('--output', '-o', default='diff.opt.yaml')
     args = parser.parse_args()
 
-    files1 = optrecord.find_opt_files([args.yaml_dir_or_file_1])
-    files2 = optrecord.find_opt_files([args.yaml_dir_or_file_2])
+    files1 = optrecord.find_opt_files(args.yaml_dir_or_file_1)
+    files2 = optrecord.find_opt_files(args.yaml_dir_or_file_2)
 
     print_progress = not args.no_progress_indicator
     all_remarks1, _, _ = optrecord.gather_results(files1, args.jobs, print_progress)
@@ -60,5 +60,10 @@ if __name__ == '__main__':
         r.Added = True
     for r in removed:
         r.Added = False
+
+    result = added | removed
+    for r in result:
+        r.recover_yaml_structure()
+
     with open(args.output, 'w') as stream:
-        yaml.dump_all(added | removed, stream)
+        yaml.dump_all(result, stream)
