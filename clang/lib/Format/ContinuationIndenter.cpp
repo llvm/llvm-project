@@ -1008,8 +1008,8 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
 
   moveStatePastFakeLParens(State, Newline);
   moveStatePastScopeCloser(State);
-  bool CanBreakProtrudingToken = !State.Stack.back().NoLineBreak &&
-                                 !State.Stack.back().NoLineBreakInOperand;
+  bool AllowBreak = !State.Stack.back().NoLineBreak &&
+                    !State.Stack.back().NoLineBreakInOperand;
   moveStatePastScopeOpener(State, Newline);
   moveStatePastFakeRParens(State);
 
@@ -1023,13 +1023,9 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
 
   State.Column += Current.ColumnWidth;
   State.NextToken = State.NextToken->Next;
-  unsigned Penalty = 0;
-  if (CanBreakProtrudingToken)
-    Penalty = breakProtrudingToken(Current, State, DryRun);
-  if (State.Column > getColumnLimit(State)) {
-    unsigned ExcessCharacters = State.Column - getColumnLimit(State);
-    Penalty += Style.PenaltyExcessCharacter * ExcessCharacters;
-  }
+
+  unsigned Penalty =
+      handleEndOfLine(Current, State, DryRun, AllowBreak);
 
   if (Current.Role)
     Current.Role->formatFromToken(State, this, DryRun);
@@ -1282,8 +1278,10 @@ static unsigned getLastLineEndColumn(StringRef Text, unsigned StartColumn,
 }
 
 unsigned ContinuationIndenter::reformatRawStringLiteral(
-    const FormatToken &Current, unsigned StartColumn, LineState &State,
-    StringRef Delimiter, const FormatStyle &RawStringStyle, bool DryRun) {
+    const FormatToken &Current, LineState &State,
+    const FormatStyle &RawStringStyle, bool DryRun) {
+  unsigned StartColumn = State.Column - Current.ColumnWidth;
+  auto Delimiter = *getRawStringDelimiter(Current.TokenText);
   // The text of a raw string is between the leading 'R"delimiter(' and the
   // trailing 'delimiter)"'.
   unsigned PrefixSize = 3 + Delimiter.size();
@@ -1353,9 +1351,6 @@ unsigned ContinuationIndenter::reformatRawStringLiteral(
 
 unsigned ContinuationIndenter::addMultilineToken(const FormatToken &Current,
                                                  LineState &State) {
-  if (!Current.IsMultiline)
-    return 0;
-
   // Break before further function parameters on all levels.
   for (unsigned i = 0, e = State.Stack.size(); i != e; ++i)
     State.Stack[i].BreakBeforeParameter = true;
@@ -1370,42 +1365,56 @@ unsigned ContinuationIndenter::addMultilineToken(const FormatToken &Current,
   return 0;
 }
 
-unsigned ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
-                                                    LineState &State,
-                                                    bool DryRun) {
+unsigned ContinuationIndenter::handleEndOfLine(const FormatToken &Current,
+                                               LineState &State, bool DryRun,
+                                               bool AllowBreak) {
+  unsigned Penalty = 0;
   // Compute the raw string style to use in case this is a raw string literal
   // that can be reformatted.
-  llvm::Optional<StringRef> Delimiter = None;
-  llvm::Optional<FormatStyle> RawStringStyle = None;
-  if (Current.isStringLiteral())
-    Delimiter = getRawStringDelimiter(Current.TokenText);
-  if (Delimiter)
-    RawStringStyle = RawStringFormats.get(*Delimiter);
+  auto RawStringStyle = getRawStringStyle(Current, State);
+  if (RawStringStyle) {
+    Penalty = reformatRawStringLiteral(Current, State, *RawStringStyle, DryRun);
+  } else if (Current.IsMultiline && Current.isNot(TT_BlockComment)) {
+    // Don't break multi-line tokens other than block comments and raw string
+    // literals. Instead, just update the state.
+    Penalty = addMultilineToken(Current, State);
+  } else if (State.Line->Type != LT_ImportStatement) {
+    // We generally don't break import statements.
+    Penalty = breakProtrudingToken(Current, State, AllowBreak, DryRun);
+  }
+  if (State.Column > getColumnLimit(State)) {
+    unsigned ExcessCharacters = State.Column - getColumnLimit(State);
+    Penalty += Style.PenaltyExcessCharacter * ExcessCharacters;
+  }
+  return Penalty;
+}
 
-  // Don't break multi-line tokens other than block comments and raw string
-  // literals. Instead, just update the state.
-  if (Current.isNot(TT_BlockComment) && !RawStringStyle && Current.IsMultiline)
-    return addMultilineToken(Current, State);
+llvm::Optional<FormatStyle>
+ContinuationIndenter::getRawStringStyle(const FormatToken &Current,
+                                        const LineState &State) {
+  if (!Current.isStringLiteral())
+    return None;
+  auto Delimiter = getRawStringDelimiter(Current.TokenText);
+  if (!Delimiter)
+    return None;
+  auto RawStringStyle = RawStringFormats.get(*Delimiter);
+  if (!RawStringStyle)
+    return None;
+  RawStringStyle->ColumnLimit = getColumnLimit(State);
+  return RawStringStyle;
+}
 
-  // Don't break implicit string literals or import statements.
-  if (Current.is(TT_ImplicitStringLiteral) ||
-      State.Line->Type == LT_ImportStatement)
-    return 0;
-
-  if (!Current.isStringLiteral() && !Current.is(tok::comment))
-    return 0;
-
-  std::unique_ptr<BreakableToken> Token;
+std::unique_ptr<BreakableToken> ContinuationIndenter::createBreakableToken(
+    const FormatToken &Current, LineState &State, bool AllowBreak) {
   unsigned StartColumn = State.Column - Current.ColumnWidth;
-  unsigned ColumnLimit = getColumnLimit(State);
-
   if (Current.isStringLiteral()) {
     // FIXME: String literal breaking is currently disabled for Java and JS, as
     // it requires strings to be merged using "+" which we don't support.
     if (Style.Language == FormatStyle::LK_Java ||
         Style.Language == FormatStyle::LK_JavaScript ||
-        !Style.BreakStringLiterals)
-      return 0;
+        !Style.BreakStringLiterals ||
+        !AllowBreak)
+      return nullptr;
 
     // Don't break string literals inside preprocessor directives (except for
     // #define directives, as their contents are stored in separate lines and
@@ -1413,17 +1422,12 @@ unsigned ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
     // This way we avoid breaking code with line directives and unknown
     // preprocessor directives that contain long string literals.
     if (State.Line->Type == LT_PreprocessorDirective)
-      return 0;
+      return nullptr;
     // Exempts unterminated string literals from line breaking. The user will
     // likely want to terminate the string before any line breaking is done.
     if (Current.IsUnterminatedLiteral)
-      return 0;
+      return nullptr;
 
-    if (RawStringStyle) {
-      RawStringStyle->ColumnLimit = ColumnLimit;
-      return reformatRawStringLiteral(Current, StartColumn, State, *Delimiter,
-                                      *RawStringStyle, DryRun);
-    } 
     StringRef Text = Current.TokenText;
     StringRef Prefix;
     StringRef Postfix;
@@ -1437,36 +1441,48 @@ unsigned ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
           Text.startswith(Prefix = "u8\"") ||
           Text.startswith(Prefix = "L\""))) ||
         (Text.startswith(Prefix = "_T(\"") && Text.endswith(Postfix = "\")"))) {
-      Token.reset(new BreakableStringLiteral(Current, StartColumn, Prefix,
-                                             Postfix, State.Line->InPPDirective,
-                                             Encoding, Style));
-    } else {
-      return 0;
+      return llvm::make_unique<BreakableStringLiteral>(
+          Current, StartColumn, Prefix, Postfix, State.Line->InPPDirective,
+          Encoding, Style);
     }
   } else if (Current.is(TT_BlockComment)) {
     if (!Style.ReflowComments ||
         // If a comment token switches formatting, like
         // /* clang-format on */, we don't want to break it further,
         // but we may still want to adjust its indentation.
-        switchesFormatting(Current))
-      return addMultilineToken(Current, State);
-    Token.reset(new BreakableBlockComment(
+        switchesFormatting(Current)) {
+      return nullptr;
+    }
+    return llvm::make_unique<BreakableBlockComment>(
         Current, StartColumn, Current.OriginalColumn, !Current.Previous,
-        State.Line->InPPDirective, Encoding, Style));
+        State.Line->InPPDirective, Encoding, Style);
   } else if (Current.is(TT_LineComment) &&
              (Current.Previous == nullptr ||
               Current.Previous->isNot(TT_ImplicitStringLiteral))) {
     if (!Style.ReflowComments ||
         CommentPragmasRegex.match(Current.TokenText.substr(2)) ||
         switchesFormatting(Current))
-      return 0;
-    Token.reset(new BreakableLineCommentSection(
+      return nullptr;
+    return llvm::make_unique<BreakableLineCommentSection>(
         Current, StartColumn, Current.OriginalColumn, !Current.Previous,
-        /*InPPDirective=*/false, Encoding, Style));
+        /*InPPDirective=*/false, Encoding, Style);
+  }
+  return nullptr;
+}
+
+unsigned ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
+                                                    LineState &State,
+                                                    bool AllowBreak,
+                                                    bool DryRun) {
+  std::unique_ptr<BreakableToken> Token =
+      createBreakableToken(Current, State, AllowBreak);
+  if (!Token)
+    return 0;
+  unsigned ColumnLimit = getColumnLimit(State);
+  unsigned StartColumn = State.Column - Current.ColumnWidth;
+  if (Current.is(TT_LineComment)) {
     // We don't insert backslashes when breaking line comments.
     ColumnLimit = Style.ColumnLimit;
-  } else {
-    return 0;
   }
   if (Current.UnbreakableTailLength >= ColumnLimit)
     return 0;

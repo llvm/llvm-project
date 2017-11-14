@@ -869,7 +869,7 @@ public:
       return parsePreprocessorDirective();
 
     // Directly allow to 'import <string-literal>' to support protocol buffer
-    // definitions (code.google.com/p/protobuf) or missing "#" (either way we
+    // definitions (github.com/google/protobuf) or missing "#" (either way we
     // should not break the line).
     IdentifierInfo *Info = CurrentToken->Tok.getIdentifierInfo();
     if ((Style.Language == FormatStyle::LK_Java &&

@@ -126,6 +126,13 @@ void test_not_unroll() {
 
 // CHECK: declare spir_func void @nodupfun(){{[^#]*}} #[[attr3:[0-9]+]]
 
+// CHECK-LABEL: @assume_convergent_asm
+// CHECK: tail call void asm sideeffect "s_barrier", ""() #4
+kernel void assume_convergent_asm()
+{
+  __asm__ volatile("s_barrier");
+}
+
 // CHECK: attributes #0 = { noinline norecurse nounwind "
 // CHECK: attributes #1 = { {{[^}]*}}convergent{{[^}]*}} }
 // CHECK: attributes #2 = { {{[^}]*}}convergent{{[^}]*}} }

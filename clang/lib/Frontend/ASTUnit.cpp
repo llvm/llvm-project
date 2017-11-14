@@ -264,8 +264,12 @@ static unsigned getDeclShowContexts(const NamedDecl *ND,
       Contexts |= (1LL << CodeCompletionContext::CCC_ObjCMessageReceiver);
     
     // In Objective-C, you can only be a subclass of another Objective-C class
-    if (isa<ObjCInterfaceDecl>(ND))
+    if (const auto *ID = dyn_cast<ObjCInterfaceDecl>(ND)) {
+      // Objective-C interfaces can be used in a class property expression.
+      if (ID->getDefinition())
+        Contexts |= (1LL << CodeCompletionContext::CCC_Expression);
       Contexts |= (1LL << CodeCompletionContext::CCC_ObjCInterfaceName);
+    }
 
     // Deal with tag names.
     if (isa<EnumDecl>(ND)) {
