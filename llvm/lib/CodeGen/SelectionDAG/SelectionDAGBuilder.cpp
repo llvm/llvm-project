@@ -134,6 +134,12 @@ LimitFPPrecision("limit-float-precision",
                  cl::location(LimitFloatPrecision),
                  cl::init(0));
 
+static cl::opt<unsigned> SwitchPeelThreshold(
+    "switch-peel-threshold", cl::Hidden, cl::init(66),
+    cl::desc("Set the case probability threshold for peeling the case from a "
+             "switch statement. A value greater than 100 will void this "
+             "optimization"));
+
 // Limit the width of DAG chains. This is important in general to prevent
 // DAG-based analysis from blowing up. For example, alias analysis and
 // load clustering may not complete in reasonable time. It is difficult to
@@ -8306,7 +8312,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     // The instruction result is the result of loading from the
     // hidden sret parameter.
     SmallVector<EVT, 1> PVTs;
-    Type *PtrRetTy = PointerType::getUnqual(OrigRetTy);
+    Type *PtrRetTy = OrigRetTy->getPointerTo(DL.getAllocaAddrSpace());
 
     ComputeValueVTs(*this, DL, PtrRetTy, PVTs);
     assert(PVTs.size() == 1 && "Pointers should fit in one register");
@@ -9834,6 +9840,74 @@ void SelectionDAGBuilder::splitWorkItem(SwitchWorkList &WorkList,
     SwitchCases.push_back(CB);
 }
 
+// Scale CaseProb after peeling a case with the probablity of PeeledCaseProb
+// from the swith statement.
+static BranchProbability scaleCaseProbality(BranchProbability CaseProb,
+                                            BranchProbability PeeledCaseProb) {
+  if (PeeledCaseProb == BranchProbability::getOne())
+    return BranchProbability::getZero();
+  BranchProbability SwitchProb = PeeledCaseProb.getCompl();
+  return BranchProbability(CaseProb.getNumerator(),
+                           SwitchProb.scale(CaseProb.getDenominator()));
+}
+
+// Try to peel the top probability case if it exceeds the threshold.
+// Return current MachineBasicBlock for the switch statement if the peeling
+// does not occur.
+// If the peeling is performed, return the newly created MachineBasicBlock
+// for the peeled switch statement. Also update Clusters to remove the peeled
+// case. PeeledCaseProb is the BranchProbability for the peeled case.
+MachineBasicBlock *SelectionDAGBuilder::peelDominantCaseCluster(
+    const SwitchInst &SI, CaseClusterVector &Clusters,
+    BranchProbability &PeeledCaseProb) {
+  MachineBasicBlock *SwitchMBB = FuncInfo.MBB;
+  // Don't perform if there is only one cluster or optimizing for size.
+  if (SwitchPeelThreshold > 100 || !FuncInfo.BPI || Clusters.size() < 2 ||
+      TM.getOptLevel() == CodeGenOpt::None ||
+      SwitchMBB->getParent()->getFunction()->optForMinSize())
+    return SwitchMBB;
+
+  BranchProbability TopCaseProb = BranchProbability(SwitchPeelThreshold, 100);
+  unsigned PeeledCaseIndex = 0;
+  bool SwitchPeeled = false;
+  for (unsigned Index = 0; Index < Clusters.size(); ++Index) {
+    CaseCluster &CC = Clusters[Index];
+    if (CC.Prob < TopCaseProb)
+      continue;
+    TopCaseProb = CC.Prob;
+    PeeledCaseIndex = Index;
+    SwitchPeeled = true;
+  }
+  if (!SwitchPeeled)
+    return SwitchMBB;
+
+  DEBUG(dbgs() << "Peeled one top case in switch stmt, prob: " << TopCaseProb
+               << "\n");
+
+  // Record the MBB for the peeled switch statement.
+  MachineFunction::iterator BBI(SwitchMBB);
+  ++BBI;
+  MachineBasicBlock *PeeledSwitchMBB =
+      FuncInfo.MF->CreateMachineBasicBlock(SwitchMBB->getBasicBlock());
+  FuncInfo.MF->insert(BBI, PeeledSwitchMBB);
+
+  ExportFromCurrentBlock(SI.getCondition());
+  auto PeeledCaseIt = Clusters.begin() + PeeledCaseIndex;
+  SwitchWorkListItem W = {SwitchMBB, PeeledCaseIt, PeeledCaseIt,
+                          nullptr,   nullptr,      TopCaseProb.getCompl()};
+  lowerWorkItem(W, SI.getCondition(), SwitchMBB, PeeledSwitchMBB);
+
+  Clusters.erase(PeeledCaseIt);
+  for (CaseCluster &CC : Clusters) {
+    DEBUG(dbgs() << "Scale the probablity for one cluster, before scaling: "
+                 << CC.Prob << "\n");
+    CC.Prob = scaleCaseProbality(CC.Prob, TopCaseProb);
+    DEBUG(dbgs() << "After scaling: " << CC.Prob << "\n");
+  }
+  PeeledCaseProb = TopCaseProb;
+  return PeeledSwitchMBB;
+}
+
 void SelectionDAGBuilder::visitSwitch(const SwitchInst &SI) {
   // Extract cases from the switch.
   BranchProbabilityInfo *BPI = FuncInfo.BPI;
@@ -9887,9 +9961,15 @@ void SelectionDAGBuilder::visitSwitch(const SwitchInst &SI) {
     }
   }
 
+  // The branch probablity of the peeled case.
+  BranchProbability PeeledCaseProb = BranchProbability::getZero();
+  MachineBasicBlock *PeeledSwitchMBB =
+      peelDominantCaseCluster(SI, Clusters, PeeledCaseProb);
+
   // If there is only the default destination, jump there directly.
   MachineBasicBlock *SwitchMBB = FuncInfo.MBB;
   if (Clusters.empty()) {
+    assert(PeeledSwitchMBB == SwitchMBB);
     SwitchMBB->addSuccessor(DefaultMBB);
     if (DefaultMBB != NextBlock(SwitchMBB)) {
       DAG.setRoot(DAG.getNode(ISD::BR, getCurSDLoc(), MVT::Other,
@@ -9921,8 +10001,14 @@ void SelectionDAGBuilder::visitSwitch(const SwitchInst &SI) {
   SwitchWorkList WorkList;
   CaseClusterIt First = Clusters.begin();
   CaseClusterIt Last = Clusters.end() - 1;
-  auto DefaultProb = getEdgeProbability(SwitchMBB, DefaultMBB);
-  WorkList.push_back({SwitchMBB, First, Last, nullptr, nullptr, DefaultProb});
+  auto DefaultProb = getEdgeProbability(PeeledSwitchMBB, DefaultMBB);
+  // Scale the branchprobability for DefaultMBB if the peel occurs and
+  // DefaultMBB is not replaced.
+  if (PeeledCaseProb != BranchProbability::getZero() &&
+      DefaultMBB == FuncInfo.MBBMap[SI.getDefaultDest()])
+    DefaultProb = scaleCaseProbality(DefaultProb, PeeledCaseProb);
+  WorkList.push_back(
+      {PeeledSwitchMBB, First, Last, nullptr, nullptr, DefaultProb});
 
   while (!WorkList.empty()) {
     SwitchWorkListItem W = WorkList.back();

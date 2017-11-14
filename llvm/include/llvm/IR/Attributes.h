@@ -225,8 +225,8 @@ public:
   static AttributeSet get(LLVMContext &C, const AttrBuilder &B);
   static AttributeSet get(LLVMContext &C, ArrayRef<Attribute> Attrs);
 
-  bool operator==(const AttributeSet &O) { return SetNode == O.SetNode; }
-  bool operator!=(const AttributeSet &O) { return !(*this == O); }
+  bool operator==(const AttributeSet &O) const { return SetNode == O.SetNode; }
+  bool operator!=(const AttributeSet &O) const { return !(*this == O); }
 
   /// Add an argument attribute. Returns a new set because attribute sets are
   /// immutable.

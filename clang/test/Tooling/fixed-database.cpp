@@ -8,7 +8,8 @@
 // RUN: echo "-Dklazz=class" >> %t/compile_flags.txt
 // RUN: echo '-std=c++11' >> %t/compile_flags.txt
 // RUN: clang-check "%t/Src/test.cpp" 2>&1
-// RUN: not clang-check "%s" 2>&1 | FileCheck "%s" -check-prefix=NODB
+// RUN: echo > %t/compile_flags.txt
+// RUN: not clang-check "%t/Src/test.cpp" 2>&1 | FileCheck "%s" -check-prefix=NODB
 
 // NODB: unknown type name 'klazz'
 klazz F{};

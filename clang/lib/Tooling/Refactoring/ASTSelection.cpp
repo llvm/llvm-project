@@ -115,6 +115,11 @@ public:
       return true;
     if (auto *Opaque = dyn_cast<OpaqueValueExpr>(S))
       return TraverseOpaqueValueExpr(Opaque);
+    // Avoid selecting implicit 'this' expressions.
+    if (auto *TE = dyn_cast<CXXThisExpr>(S)) {
+      if (TE->isImplicit())
+        return true;
+    }
     // FIXME (Alex Lorenz): Improve handling for macro locations.
     SourceSelectionKind SelectionKind =
         selectionKindFor(CharSourceRange::getTokenRange(S->getSourceRange()));
@@ -268,9 +273,15 @@ void SelectedNodeWithParents::canonicalize() {
   //      ~~~~~~             ~~~~~~~
   if (isa<StringLiteral>(S) && isa<ObjCStringLiteral>(Parent))
     Node = Parents.pop_back_val();
+  // The entire call should be selected when just the member expression
+  // that refers to the method is selected.
+  //    f.call(args)  becomes  f.call(args)
+  //      ~~~~                 ~~~~~~~~~~~~
+  else if (isa<MemberExpr>(S) && isa<CXXMemberCallExpr>(Parent) &&
+           cast<CXXMemberCallExpr>(Parent)->getCallee() == S)
+    Node = Parents.pop_back_val();
   // FIXME: Syntactic form -> Entire pseudo-object expr.
   // FIXME: Callee -> Call.
-  // FIXME: Callee member expr -> Call.
 }
 
 /// Finds the set of bottom-most selected AST nodes that are in the selection
@@ -383,10 +394,12 @@ bool CodeRangeASTSelection::isInFunctionLikeBodyOfCode() const {
     if (const auto *D = Node.get<Decl>()) {
       if (isFunctionLikeDeclaration(D))
         return IsPrevCompound;
-      // FIXME (Alex L): We should return false on top-level decls in functions
-      // e.g. we don't want to extract:
+      // Stop the search at any type declaration to avoid returning true for
+      // expressions in type declarations in functions, like:
       // function foo() { struct X {
       //   int m = /*selection:*/ 1 + 2 /*selection end*/; }; };
+      if (isa<TypeDecl>(D))
+        return false;
     }
     IsPrevCompound = Node.get<CompoundStmt>() != nullptr;
   }

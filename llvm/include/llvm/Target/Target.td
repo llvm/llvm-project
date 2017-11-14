@@ -906,7 +906,7 @@ def CFI_INSTRUCTION : Instruction {
   let InOperandList = (ins i32imm:$id);
   let AsmString = "";
   let hasCtrlDep = 1;
-  let hasSideEffects = 1;
+  let hasSideEffects = 0;
   let isNotDuplicable = 1;
 }
 def EH_LABEL : Instruction {
@@ -914,7 +914,7 @@ def EH_LABEL : Instruction {
   let InOperandList = (ins i32imm:$id);
   let AsmString = "";
   let hasCtrlDep = 1;
-  let hasSideEffects = 1;
+  let hasSideEffects = 0;
   let isNotDuplicable = 1;
 }
 def GC_LABEL : Instruction {
@@ -922,7 +922,7 @@ def GC_LABEL : Instruction {
   let InOperandList = (ins i32imm:$id);
   let AsmString = "";
   let hasCtrlDep = 1;
-  let hasSideEffects = 1;
+  let hasSideEffects = 0;
   let isNotDuplicable = 1;
 }
 def ANNOTATION_LABEL : Instruction {
@@ -930,7 +930,7 @@ def ANNOTATION_LABEL : Instruction {
   let InOperandList = (ins i32imm:$id);
   let AsmString = "";
   let hasCtrlDep = 1;
-  let hasSideEffects = 1;
+  let hasSideEffects = 0;
   let isNotDuplicable = 1;
 }
 def KILL : Instruction {

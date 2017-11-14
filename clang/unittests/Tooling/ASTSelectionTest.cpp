@@ -1004,4 +1004,56 @@ void foo() {
       SelectionFinderVisitor::Lang_OBJC);
 }
 
+TEST(ASTSelectionFinder, CanonicalizeMemberCalleeToCall) {
+  StringRef Source = R"(
+class AClass { public:
+  void method();
+  int afield;
+  void selectWholeCallWhenJustMethodSelected(int &i) {
+    method();
+  }
+};
+void selectWholeCallWhenJustMethodSelected() {
+  AClass a;
+  a.method();
+}
+void dontSelectArgument(AClass &a) {
+  a.selectWholeCallWhenJustMethodSelected(a.afield);
+}
+     )";
+  // Just 'method' with implicit 'this':
+  findSelectedASTNodesWithRange(
+      Source, {6, 5}, FileRange{{6, 5}, {6, 11}},
+      [](SourceRange SelectionRange, Optional<SelectedASTNode> Node) {
+        EXPECT_TRUE(Node);
+        Optional<CodeRangeASTSelection> SelectedCode =
+            CodeRangeASTSelection::create(SelectionRange, std::move(*Node));
+        EXPECT_TRUE(SelectedCode);
+        EXPECT_EQ(SelectedCode->size(), 1u);
+        EXPECT_TRUE(isa<CXXMemberCallExpr>((*SelectedCode)[0]));
+      });
+  // Just 'method':
+  findSelectedASTNodesWithRange(
+      Source, {11, 5}, FileRange{{11, 5}, {11, 11}},
+      [](SourceRange SelectionRange, Optional<SelectedASTNode> Node) {
+        EXPECT_TRUE(Node);
+        Optional<CodeRangeASTSelection> SelectedCode =
+            CodeRangeASTSelection::create(SelectionRange, std::move(*Node));
+        EXPECT_TRUE(SelectedCode);
+        EXPECT_EQ(SelectedCode->size(), 1u);
+        EXPECT_TRUE(isa<CXXMemberCallExpr>((*SelectedCode)[0]));
+      });
+  // Just 'afield', which should not select the call.
+  findSelectedASTNodesWithRange(
+      Source, {14, 5}, FileRange{{14, 45}, {14, 51}},
+      [](SourceRange SelectionRange, Optional<SelectedASTNode> Node) {
+        EXPECT_TRUE(Node);
+        Optional<CodeRangeASTSelection> SelectedCode =
+            CodeRangeASTSelection::create(SelectionRange, std::move(*Node));
+        EXPECT_TRUE(SelectedCode);
+        EXPECT_EQ(SelectedCode->size(), 1u);
+        EXPECT_FALSE(isa<CXXMemberCallExpr>((*SelectedCode)[0]));
+      });
+}
+
 } // end anonymous namespace

@@ -582,6 +582,16 @@ ModulePass *createNameAnonGlobalPass();
 // used.
 //
 FunctionPass *createLibCallsShrinkWrapPass();
+
+//===----------------------------------------------------------------------===//
+//
+// EntryExitInstrumenter pass - Instrument function entry/exit with calls to
+// mcount(), @__cyg_profile_func_{enter,exit} and the like. There are two
+// variants, intended to run pre- and post-inlining, respectively.
+//
+FunctionPass *createEntryExitInstrumenterPass();
+FunctionPass *createPostInlineEntryExitInstrumenterPass();
+
 } // End llvm namespace
 
 #endif

@@ -353,9 +353,9 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   OptSize = F.optForSize();
 
+  ProfileSummaryInfo *PSI =
+      getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
   if (ProfileGuidedSectionPrefix) {
-    ProfileSummaryInfo *PSI =
-        getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
     if (PSI->isFunctionHotInCallGraph(&F))
       F.setSectionPrefix(".hot");
     else if (PSI->isFunctionColdInCallGraph(&F))
@@ -364,7 +364,8 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
 
   /// This optimization identifies DIV instructions that can be
   /// profitably bypassed and carried out with a shorter, faster divide.
-  if (!OptSize && TLI && TLI->isSlowDivBypassed()) {
+  if (!OptSize && !PSI->hasHugeWorkingSetSize() && TLI &&
+      TLI->isSlowDivBypassed()) {
     const DenseMap<unsigned int, unsigned int> &BypassWidths =
        TLI->getBypassSlowDivWidths();
     BasicBlock* BB = &*F.begin();

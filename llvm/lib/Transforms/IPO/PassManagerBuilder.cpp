@@ -241,6 +241,7 @@ void PassManagerBuilder::addInstructionCombiningPass(
 void PassManagerBuilder::populateFunctionPassManager(
     legacy::FunctionPassManager &FPM) {
   addExtensionsToPM(EP_EarlyAsPossible, FPM);
+  FPM.add(createEntryExitInstrumenterPass());
 
   // Add LibraryInfo if we have some.
   if (LibraryInfo)

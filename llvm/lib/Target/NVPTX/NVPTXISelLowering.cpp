@@ -3321,6 +3321,16 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   switch (Intrinsic) {
   default:
     return false;
+  case Intrinsic::nvvm_match_all_sync_i32p:
+  case Intrinsic::nvvm_match_all_sync_i64p:
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    // memVT is bogus. These intrinsics have IntrInaccessibleMemOnly attribute
+    // in order to model data exchange with other threads, but perform no real
+    // memory accesses.
+    Info.memVT = MVT::i1;
+    Info.readMem = true;   // Our result depends on other thread's arguments.
+    Info.writeMem = true;  // Other threads depend on our thread's argument.
+    return true;
   case Intrinsic::nvvm_wmma_load_a_f16_col:
   case Intrinsic::nvvm_wmma_load_a_f16_row:
   case Intrinsic::nvvm_wmma_load_a_f16_col_stride:
