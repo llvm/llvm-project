@@ -9,6 +9,26 @@
 // CHECK: [[SSS_INT:.+]] = type { i32 }
 // CHECK-LOAD: [[SSS_INT:.+]] = type { i32 }
 
+// CHECK: add
+void add(short &out, short &in) {}
+
+#pragma omp declare reduction(my_add : short : add(omp_out, omp_in))
+
+// CHECK: define internal void @.
+// CHECK: call void @{{.+}}add{{.+}}(
+// CHECK: ret void
+
+// CHECK: foo_reduction_array
+void foo_reduction_array() {
+  short y[1];
+  // CHECK: call void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(
+#pragma omp parallel for reduction(my_add : y)
+  for (int i = 0; i < 1; i++) {
+  }
+}
+
+// CHECK: define internal void @
+
 #pragma omp declare reduction(+ : int, char : omp_out *= omp_in)
 // CHECK: define internal {{.*}}void @{{[^(]+}}(i32* noalias, i32* noalias)
 // CHECK: [[MUL:%.+]] = mul nsw i32
@@ -92,6 +112,22 @@ T foo(T a) {
   return a;
 }
 
+struct Summary {
+  void merge(const Summary& other) {}
+};
+
+template <typename K>
+void work() {
+  Summary global_summary;
+#pragma omp declare reduction(+ : Summary : omp_out.merge(omp_in))
+#pragma omp parallel for reduction(+ : global_summary)
+  for (int k = 1; k <= 100; ++k) {
+  }
+}
+
+struct A {};
+
+
 // CHECK-LABEL: @main
 int main() {
   int i = 0;
@@ -110,6 +146,8 @@ int main() {
   // CHECK: call {{.*}}void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(
   // CHECK: call {{.*}}void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(
   // CHECK: call {{.*}}void (%ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call({{[^@]*}} @{{[^@]*}}[[REGION:@[^ ]+]]
+  // CHECK-LABEL: work
+  work<A>();
   // CHECK-LABEL: foo
   return foo(15);
 }

@@ -771,7 +771,8 @@ static void emitInitWithReductionInitializer(CodeGenFunction &CGF,
 /// \param Init Initial expression of array.
 /// \param SrcAddr Address of the original array.
 static void EmitOMPAggregateInit(CodeGenFunction &CGF, Address DestAddr,
-                                 QualType Type, const Expr *Init,
+                                 QualType Type, bool EmitDeclareReductionInit,
+                                 const Expr *Init,
                                  const OMPDeclareReductionDecl *DRD,
                                  Address SrcAddr = Address::invalid()) {
   // Perform element-by-element initialization.
@@ -825,7 +826,7 @@ static void EmitOMPAggregateInit(CodeGenFunction &CGF, Address DestAddr,
   // Emit copy.
   {
     CodeGenFunction::RunCleanupsScope InitScope(CGF);
-    if (DRD && (DRD->getInitializer() || !Init)) {
+    if (EmitDeclareReductionInit) {
       emitInitWithReductionInitializer(CGF, DRD, Init, DestElementCurrent,
                                        SrcElementCurrent, ElementTy);
     } else
@@ -883,8 +884,12 @@ void ReductionCodeGen::emitAggregateInitialization(
   // captured region.
   auto *PrivateVD =
       cast<VarDecl>(cast<DeclRefExpr>(ClausesData[N].Private)->getDecl());
+  bool EmitDeclareReductionInit =
+      DRD && (DRD->getInitializer() || !PrivateVD->hasInit());
   EmitOMPAggregateInit(CGF, PrivateAddr, PrivateVD->getType(),
-                       DRD ? ClausesData[N].ReductionOp : PrivateVD->getInit(),
+                       EmitDeclareReductionInit,
+                       EmitDeclareReductionInit ? ClausesData[N].ReductionOp
+                                                : PrivateVD->getInit(),
                        DRD, SharedLVal.getAddress());
 }
 
