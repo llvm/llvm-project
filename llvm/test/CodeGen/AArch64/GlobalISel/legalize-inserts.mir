@@ -122,6 +122,8 @@ body: |
     %2:_(s64) = COPY %x2
     %3:_(s128) = G_MERGE_VALUES %0, %1
     %4:_(s128) = G_INSERT %3, %2, 32
+    %5:_(s64) = G_TRUNC %4
+    %x0 = COPY %5
     RET_ReallyLR
 ...
 
@@ -140,6 +142,8 @@ body: |
     %2:_(s32) = COPY %w2
     %3:_(s128) = G_MERGE_VALUES %0, %1
     %4:_(s128) = G_INSERT %3, %2, 32
+    %5:_(s64) = G_TRUNC %4
+    %x0 = COPY %5
     RET_ReallyLR
 ...
 
@@ -151,12 +155,15 @@ body: |
 
 
     ; CHECK-LABEL: name: test_inserts_nonpow2
-    ; CHECK: %5:_(s192) = G_MERGE_VALUES %3(s64), %1(s64), %2(s64)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = COPY %x3
+    ; CHECK: %x0 = COPY [[C]]
     %0:_(s64) = COPY %x0
     %1:_(s64) = COPY %x1
     %2:_(s64) = COPY %x2
     %3:_(s64) = COPY %x3
     %4:_(s192) = G_MERGE_VALUES %0, %1, %2
     %5:_(s192) = G_INSERT %4, %3, 0
+    %6:_(s64), %7:_(s64), %8:_(s64) = G_UNMERGE_VALUES %5
+    %x0 = COPY %6
     RET_ReallyLR
 ...
