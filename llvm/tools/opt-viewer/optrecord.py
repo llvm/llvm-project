@@ -179,7 +179,7 @@ class Remark(yaml.YAMLObject):
     @property
     def RelativeHotness(self):
         if self.max_hotness:
-            return "{}%".format(int(round(self.Hotness * 100 / self.max_hotness)))
+            return "{0:.2f}%".format(self.Hotness * 100. / self.max_hotness)
         else:
             return ''
 
