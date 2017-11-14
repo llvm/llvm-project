@@ -2504,14 +2504,13 @@ static void __kmp_realloc_task_deque(kmp_info_t *thread,
 // Deallocates a task deque for a particular thread. Happens at library
 // deallocation so don't need to reset all thread data fields.
 static void __kmp_free_task_deque(kmp_thread_data_t *thread_data) {
-  __kmp_acquire_bootstrap_lock(&thread_data->td.td_deque_lock);
-
   if (thread_data->td.td_deque != NULL) {
+    __kmp_acquire_bootstrap_lock(&thread_data->td.td_deque_lock);
     TCW_4(thread_data->td.td_deque_ntasks, 0);
     __kmp_free(thread_data->td.td_deque);
     thread_data->td.td_deque = NULL;
+    __kmp_release_bootstrap_lock(&thread_data->td.td_deque_lock);
   }
-  __kmp_release_bootstrap_lock(&thread_data->td.td_deque_lock);
 
 #ifdef BUILD_TIED_TASK_STACK
   // GEH: Figure out what to do here for td_susp_tied_tasks
