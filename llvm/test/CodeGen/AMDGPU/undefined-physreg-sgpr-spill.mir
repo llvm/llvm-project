@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 -run-pass si-optimize-exec-masking -verify-machineinstrs %s
+# RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 -run-pass si-optimize-exec-masking -verify-machineinstrs -o -  %s | FileCheck %s
 --- |
   define amdgpu_kernel void @undefined_physreg_sgpr_spill() #0 {
     unreachable
@@ -16,7 +16,7 @@
 # copy + s_and_b64 was turned into saveexec, deleting the copy,
 # leaving a spill of the undefined register.
 
-# CHECK-LABEL: {{^}}name: undefined_physreg_sgpr_spill:
+# CHECK-LABEL: name: undefined_physreg_sgpr_spill
 # CHECK: %sgpr0_sgpr1 = COPY %exec, implicit-def %exec
 # CHECK-NEXT: SI_SPILL_S64_SAVE %sgpr0_sgpr1,
 # CHECK-NEXT: %sgpr2_sgpr3 = S_AND_B64 killed %sgpr0_sgpr1, killed %vcc, implicit-def dead %scc
@@ -79,10 +79,7 @@ body:             |
 ---
 
 # Move spill to after future save instruction
-# CHECK-LABEL: {{^}}name: undefined_physreg_sgpr_spill_reorder:
-# CHECK: %sgpr0_sgpr1 = COPY %exec, implicit-def %exec
-# CHECK: %exec = COPY killed %sgpr2_sgpr3
-
+# CHECK-LABEL: {{^}}name: undefined_physreg_sgpr_spill_reorder
 # CHECK: %sgpr0_sgpr1 = COPY %exec, implicit-def %exec
 # CHECK: %sgpr2_sgpr3 = S_AND_B64 %sgpr0_sgpr1, killed %vcc, implicit-def dead %scc
 # CHECK: SI_SPILL_S64_SAVE killed %sgpr0_sgpr1, %stack.0, implicit %exec, implicit %sgpr8_sgpr9_sgpr10_sgpr11, implicit %sgpr13, implicit-def dead %m0 :: (store 8 into %stack.0, align 4)

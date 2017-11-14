@@ -5277,15 +5277,15 @@ public:
     // format:
     template <class _OutputIter>
         _OutputIter
-        format(_OutputIter __output, const char_type* __fmt_first,
+        format(_OutputIter __output_iter, const char_type* __fmt_first,
                const char_type* __fmt_last,
                regex_constants::match_flag_type __flags = regex_constants::format_default) const;
     template <class _OutputIter, class _ST, class _SA>
         _LIBCPP_INLINE_VISIBILITY
         _OutputIter
-        format(_OutputIter __output, const basic_string<char_type, _ST, _SA>& __fmt,
+        format(_OutputIter __output_iter, const basic_string<char_type, _ST, _SA>& __fmt,
                regex_constants::match_flag_type __flags = regex_constants::format_default) const
-            {return format(__output, __fmt.data(), __fmt.data() + __fmt.size(), __flags);}
+            {return format(__output_iter, __fmt.data(), __fmt.data() + __fmt.size(), __flags);}
     template <class _ST, class _SA>
         _LIBCPP_INLINE_VISIBILITY
         basic_string<char_type, _ST, _SA>
@@ -5397,7 +5397,7 @@ match_results<_BidirectionalIterator, _Allocator>::__init(unsigned __s,
 template <class _BidirectionalIterator, class _Allocator>
 template <class _OutputIter>
 _OutputIter
-match_results<_BidirectionalIterator, _Allocator>::format(_OutputIter __output,
+match_results<_BidirectionalIterator, _Allocator>::format(_OutputIter __output_iter,
         const char_type* __fmt_first, const char_type* __fmt_last,
         regex_constants::match_flag_type __flags) const
 {
@@ -5406,27 +5406,27 @@ match_results<_BidirectionalIterator, _Allocator>::format(_OutputIter __output,
         for (; __fmt_first != __fmt_last; ++__fmt_first)
         {
             if (*__fmt_first == '&')
-                __output = _VSTD::copy(__matches_[0].first, __matches_[0].second,
-                                   __output);
+                __output_iter = _VSTD::copy(__matches_[0].first, __matches_[0].second,
+                                   __output_iter);
             else if (*__fmt_first == '\\' && __fmt_first + 1 != __fmt_last)
             {
                 ++__fmt_first;
                 if ('0' <= *__fmt_first && *__fmt_first <= '9')
                 {
                     size_t __i = *__fmt_first - '0';
-                    __output = _VSTD::copy((*this)[__i].first,
-                                        (*this)[__i].second, __output);
+                    __output_iter = _VSTD::copy((*this)[__i].first,
+                                        (*this)[__i].second, __output_iter);
                 }
                 else
                 {
-                    *__output = *__fmt_first;
-                    ++__output;
+                    *__output_iter = *__fmt_first;
+                    ++__output_iter;
                 }
             }
             else
             {
-                *__output = *__fmt_first;
-                ++__output;
+                *__output_iter = *__fmt_first;
+                ++__output_iter;
             }
         }
     }
@@ -5439,21 +5439,21 @@ match_results<_BidirectionalIterator, _Allocator>::format(_OutputIter __output,
                 switch (__fmt_first[1])
                 {
                 case '$':
-                    *__output = *++__fmt_first;
-                    ++__output;
+                    *__output_iter = *++__fmt_first;
+                    ++__output_iter;
                     break;
                 case '&':
                     ++__fmt_first;
-                    __output = _VSTD::copy(__matches_[0].first, __matches_[0].second,
-                                       __output);
+                    __output_iter = _VSTD::copy(__matches_[0].first, __matches_[0].second,
+                                       __output_iter);
                     break;
                 case '`':
                     ++__fmt_first;
-                    __output = _VSTD::copy(__prefix_.first, __prefix_.second, __output);
+                    __output_iter = _VSTD::copy(__prefix_.first, __prefix_.second, __output_iter);
                     break;
                 case '\'':
                     ++__fmt_first;
-                    __output = _VSTD::copy(__suffix_.first, __suffix_.second, __output);
+                    __output_iter = _VSTD::copy(__suffix_.first, __suffix_.second, __output_iter);
                     break;
                 default:
                     if ('0' <= __fmt_first[1] && __fmt_first[1] <= '9')
@@ -5468,25 +5468,25 @@ match_results<_BidirectionalIterator, _Allocator>::format(_OutputIter __output,
                                 __throw_regex_error<regex_constants::error_escape>();
                             __idx = 10 * __idx + *__fmt_first - '0';
                         }
-                        __output = _VSTD::copy((*this)[__idx].first,
-                                            (*this)[__idx].second, __output);
+                        __output_iter = _VSTD::copy((*this)[__idx].first,
+                                            (*this)[__idx].second, __output_iter);
                     }
                     else
                     {
-                        *__output = *__fmt_first;
-                        ++__output;
+                        *__output_iter = *__fmt_first;
+                        ++__output_iter;
                     }
                     break;
                 }
             }
             else
             {
-                *__output = *__fmt_first;
-                ++__output;
+                *__output_iter = *__fmt_first;
+                ++__output_iter;
             }
         }
     }
-    return __output;
+    return __output_iter;
 }
 
 template <class _BidirectionalIterator, class _Allocator>
@@ -6494,7 +6494,7 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 template <class _OutputIterator, class _BidirectionalIterator,
           class _Traits, class _CharT>
 _OutputIterator
-regex_replace(_OutputIterator __output,
+regex_replace(_OutputIterator __output_iter,
               _BidirectionalIterator __first, _BidirectionalIterator __last,
               const basic_regex<_CharT, _Traits>& __e, const _CharT* __fmt,
               regex_constants::match_flag_type __flags = regex_constants::match_default)
@@ -6505,7 +6505,7 @@ regex_replace(_OutputIterator __output,
     if (__i == __eof)
     {
         if (!(__flags & regex_constants::format_no_copy))
-            __output = _VSTD::copy(__first, __last, __output);
+            __output_iter = _VSTD::copy(__first, __last, __output_iter);
     }
     else
     {
@@ -6513,29 +6513,29 @@ regex_replace(_OutputIterator __output,
         for (size_t __len = char_traits<_CharT>::length(__fmt); __i != __eof; ++__i)
         {
             if (!(__flags & regex_constants::format_no_copy))
-                __output = _VSTD::copy(__i->prefix().first, __i->prefix().second, __output);
-            __output = __i->format(__output, __fmt, __fmt + __len, __flags);
+                __output_iter = _VSTD::copy(__i->prefix().first, __i->prefix().second, __output_iter);
+            __output_iter = __i->format(__output_iter, __fmt, __fmt + __len, __flags);
             __lm = __i->suffix();
             if (__flags & regex_constants::format_first_only)
                 break;
         }
         if (!(__flags & regex_constants::format_no_copy))
-            __output = _VSTD::copy(__lm.first, __lm.second, __output);
+            __output_iter = _VSTD::copy(__lm.first, __lm.second, __output_iter);
     }
-    return __output;
+    return __output_iter;
 }
 
 template <class _OutputIterator, class _BidirectionalIterator,
           class _Traits, class _CharT, class _ST, class _SA>
 inline _LIBCPP_INLINE_VISIBILITY
 _OutputIterator
-regex_replace(_OutputIterator __output,
+regex_replace(_OutputIterator __output_iter,
               _BidirectionalIterator __first, _BidirectionalIterator __last,
               const basic_regex<_CharT, _Traits>& __e,
               const basic_string<_CharT, _ST, _SA>& __fmt,
               regex_constants::match_flag_type __flags = regex_constants::match_default)
 {
-    return _VSTD::regex_replace(__output, __first, __last, __e, __fmt.c_str(), __flags);
+    return _VSTD::regex_replace(__output_iter, __first, __last, __e, __fmt.c_str(), __flags);
 }
 
 template <class _Traits, class _CharT, class _ST, class _SA, class _FST,

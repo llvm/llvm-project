@@ -2,6 +2,8 @@
 // RUN: %clang_cc1 -fsanitize=local-bounds -fexperimental-new-pass-manager -emit-llvm -triple x86_64-apple-darwin10 %s -o - | FileCheck %s
 // RUN: %clang_cc1 -fsanitize=array-bounds -O -fsanitize-trap=array-bounds -emit-llvm -triple x86_64-apple-darwin10 -DNO_DYNAMIC %s -o - | FileCheck %s
 // RUN: %clang_cc1 -fsanitize=array-bounds -O -fsanitize-trap=array-bounds -fexperimental-new-pass-manager -emit-llvm -triple x86_64-apple-darwin10 -DNO_DYNAMIC %s -o - | FileCheck %s
+//
+// REQUIRES: x86-registered-target
 
 // CHECK-LABEL: @f
 double f(int b, int i) {
