@@ -486,6 +486,8 @@ public:
   bool isLoad() const;
   // Is the desired predefined predicate for a store?
   bool isStore() const;
+  // Is the desired predefined predicate for an atomic?
+  bool isAtomic() const;
 
   /// Is this predicate the predefined unindexed load predicate?
   /// Is this predicate the predefined unindexed store predicate?
@@ -502,6 +504,17 @@ public:
   bool isNonTruncStore() const;
   /// Is this predicate the predefined truncating store predicate?
   bool isTruncStore() const;
+
+  /// Is this predicate the predefined monotonic atomic predicate?
+  bool isAtomicOrderingMonotonic() const;
+  /// Is this predicate the predefined acquire atomic predicate?
+  bool isAtomicOrderingAcquire() const;
+  /// Is this predicate the predefined release atomic predicate?
+  bool isAtomicOrderingRelease() const;
+  /// Is this predicate the predefined acquire-release atomic predicate?
+  bool isAtomicOrderingAcquireRelease() const;
+  /// Is this predicate the predefined sequentially consistent atomic predicate?
+  bool isAtomicOrderingSequentiallyConsistent() const;
 
   /// If non-null, indicates that this predicate is a predefined memory VT
   /// predicate for a load/store and returns the ValueType record for the memory VT.

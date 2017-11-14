@@ -661,7 +661,9 @@ public:
   }
 
   /// Tests wether the target supports comdat
-  bool supportsCOMDAT() const { return !isOSBinFormatMachO(); }
+  bool supportsCOMDAT() const {
+    return !isOSBinFormatMachO() && !isOSBinFormatWasm();
+  }
 
   /// @}
   /// @name Mutators

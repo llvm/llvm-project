@@ -119,25 +119,30 @@ class SourceFileRenderer:
 </head>
 <body>
 <div class="centered">
-<table>
+<table class="source">
+<thead>
 <tr>
-<td>Line</td>
-<td>Hotness</td>
-<td>Optimization</td>
-<td>Source</td>
-<td>Inline Context</td>
-</tr>''', file=self.stream)
+<th style="width: 2%">Line</td>
+<th style="width: 3%">Hotness</td>
+<th style="width: 10%">Optimization</td>
+<th style="width: 70%">Source</td>
+<th style="width: 15%">Inline Context</td>
+</tr>
+</thead>
+<tbody>''', file=self.stream)
         self.render_source_lines(self.source_stream, line_remarks)
 
         print('''
+</tbody>
 </table>
 </body>
 </html>''', file=self.stream)
 
 
 class IndexRenderer:
-    def __init__(self, output_dir):
+    def __init__(self, output_dir, should_display_hotness):
         self.stream = open(os.path.join(output_dir, 'index.html'), 'w')
+        self.should_display_hotness = should_display_hotness
 
     def render_entry(self, r, odd):
         escaped_name = cgi.escape(r.DemangledFunctionName)
@@ -164,7 +169,12 @@ class IndexRenderer:
 <td>Function</td>
 <td>Pass</td>
 </tr>''', file=self.stream)
-        for i, remark in enumerate(all_remarks):
+
+        max_entries = None
+        if should_display_hotness:
+            max_entries = args.max_hottest_remarks_on_index
+
+        for i, remark in enumerate(all_remarks[:max_entries]):
             self.render_entry(remark, i % 2)
         print('''
 </table>
@@ -221,7 +231,7 @@ def generate_report(all_remarks,
         sorted_remarks = sorted(optrecord.itervalues(all_remarks), key=lambda r: (r.Hotness, r.File, r.Line, r.Column, r.PassWithDiffPrefix, r.yaml_tag, r.Function), reverse=True)
     else:
         sorted_remarks = sorted(optrecord.itervalues(all_remarks), key=lambda r: (r.File, r.Line, r.Column, r.PassWithDiffPrefix, r.yaml_tag, r.Function))
-    IndexRenderer(args.output_dir).render(sorted_remarks)
+    IndexRenderer(args.output_dir, should_display_hotness).render(sorted_remarks)
 
     shutil.copy(os.path.join(os.path.dirname(os.path.realpath(__file__)),
             "style.css"), output_dir)
@@ -259,6 +269,11 @@ if __name__ == '__main__':
         default=False,
         help='Do not display any indicator of how many YAML files were read '
              'or rendered into HTML.')
+    parser.add_argument(
+        '--max-hottest-remarks-on-index',
+        default=1000,
+        type=int,
+        help='Maximum number of the hottest remarks to appear on the index page')
     args = parser.parse_args()
 
     print_progress = not args.no_progress_indicator

@@ -38,7 +38,7 @@
 // Currently we have only AddressSanitizer instrumentation, but we're
 // planning to implement MemorySanitizer for inline assembly too. If
 // you're not familiar with AddressSanitizer algorithm, please, read
-// https://code.google.com/p/address-sanitizer/wiki/AddressSanitizerAlgorithm.
+// https://github.com/google/sanitizers/wiki/AddressSanitizerAlgorithm
 //
 // When inline assembly is parsed by an instance of X86AsmParser, all
 // instructions are emitted via EmitInstruction method. That's the

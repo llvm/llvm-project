@@ -56,7 +56,7 @@ private:
   SmallString<128> UniqueLockFileName;
 
   Optional<std::pair<std::string, int> > Owner;
-  Optional<std::error_code> Error;
+  std::error_code ErrorCode;
   std::string ErrorDiagMsg;
 
   LockFileManager(const LockFileManager &) = delete;
@@ -89,7 +89,7 @@ public:
 
   /// \brief Set error and error message
   void setError(const std::error_code &EC, StringRef ErrorMsg = "") {
-    Error = EC;
+    ErrorCode = EC;
     ErrorDiagMsg = ErrorMsg.str();
   }
 };

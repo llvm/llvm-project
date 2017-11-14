@@ -1233,21 +1233,21 @@ void TargetLoweringObjectFileCOFF::emitLinkerFlagsForGlobal(
 //                                  Wasm
 //===----------------------------------------------------------------------===//
 
-static const Comdat *getWasmComdat(const GlobalValue *GV) {
+static void checkWasmComdat(const GlobalValue *GV) {
   const Comdat *C = GV->getComdat();
   if (!C)
-    return nullptr;
+    return;
 
-  if (C->getSelectionKind() != Comdat::Any)
-    report_fatal_error("Wasm COMDATs only support SelectionKind::Any, '" +
-                       C->getName() + "' cannot be lowered.");
-
-  return C;
+  // TODO(sbc): At some point we may need COMDAT support but currently
+  // they are not supported.
+  report_fatal_error("WebAssembly doesn't support COMDATs, '" + C->getName() +
+                     "' cannot be lowered.");
 }
 
 MCSection *TargetLoweringObjectFileWasm::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   StringRef Name = GO->getSection();
+  checkWasmComdat(GO);
   return getContext().getWasmSection(Name, SectionKind::getData());
 }
 
@@ -1255,8 +1255,7 @@ static MCSectionWasm *selectWasmSectionForGlobal(
     MCContext &Ctx, const GlobalObject *GO, SectionKind Kind, Mangler &Mang,
     const TargetMachine &TM, bool EmitUniqueSection, unsigned *NextUniqueID) {
   StringRef Group = "";
-  if (getWasmComdat(GO))
-    llvm_unreachable("comdat not yet supported for wasm");
+  checkWasmComdat(GO);
 
   bool UniqueSectionNames = TM.getUniqueSectionNames();
   SmallString<128> Name = getSectionPrefixForGlobal(Kind);

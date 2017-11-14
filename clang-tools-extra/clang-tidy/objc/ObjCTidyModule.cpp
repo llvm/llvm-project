@@ -11,6 +11,7 @@
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
 #include "ForbiddenSubclassingCheck.h"
+#include "PropertyDeclarationCheck.h"
 
 using namespace clang::ast_matchers;
 
@@ -23,6 +24,8 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<ForbiddenSubclassingCheck>(
         "objc-forbidden-subclassing");
+    CheckFactories.registerCheck<PropertyDeclarationCheck>(
+        "objc-property-declaration");
   }
 };
 
