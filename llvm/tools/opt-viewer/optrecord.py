@@ -60,11 +60,34 @@ class Remark(yaml.YAMLObject):
     # Work-around for http://pyyaml.org/ticket/154.
     yaml_loader = Loader
 
-    def initmissing(self):
+    def _intern_strings(self):
+        self.Pass = intern(self.Pass)
+        self.Name = intern(self.Name)
+        self.Function = intern(self.Function)
+
+        # Intern key and value if string and recurse if value is a dictionary.
+        # This handles [{'Caller': ..., 'DebugLoc': { 'File': ... }}]
+        def _intern_dict(old_dict):
+            new_dict = dict()
+            for (k, v) in old_dict.iteritems():
+                if type(k) is str:
+                    k = intern(k)
+
+                if type(v) is str:
+                    v = intern(v)
+                elif type(v) is dict:
+                    v = _intern_dict(v)
+                new_dict[k] = v
+            return new_dict
+
+        self.Args = [_intern_dict(arg_dict) for arg_dict in self.Args]
+
+    def canonicalize(self):
         if not hasattr(self, 'Hotness'):
             self.Hotness = 0
         if not hasattr(self, 'Args'):
             self.Args = []
+        self._intern_strings()
 
     @property
     def File(self):
@@ -193,7 +216,7 @@ def get_remarks(input_file):
     with open(input_file) as f:
         docs = yaml.load_all(f, Loader=Loader)
         for remark in docs:
-            remark.initmissing()
+            remark.canonicalize()
             # Avoid remarks withoug debug location or if they are duplicated
             if not hasattr(remark, 'DebugLoc') or remark.key in all_remarks:
                 continue
