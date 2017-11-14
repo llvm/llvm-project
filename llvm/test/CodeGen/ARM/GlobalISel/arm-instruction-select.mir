@@ -8,6 +8,8 @@
   define void @test_trunc_and_anyext_s16() { ret void }
 
   define void @test_add_s32() { ret void }
+  define void @test_add_fold_imm_s32() { ret void }
+  define void @test_add_no_fold_imm_s32() #3 { ret void }
 
   define void @test_fadd_s32() #0 { ret void }
   define void @test_fadd_s64() #0 { ret void }
@@ -51,6 +53,7 @@
   attributes #0 = { "target-features"="+vfp2,-neonfp" }
   attributes #1 = { "target-features"="+v6" }
   attributes #2 = { "target-features"="+hwdiv-arm" }
+  attributes #3 = { "target-features"="+v6t2" }
 ...
 ---
 name:            test_trunc_and_zext_s1
@@ -253,6 +256,64 @@ body:             |
 
     %1(s32) = COPY %r1
     ; CHECK: [[VREGY:%[0-9]+]]:gpr = COPY %r1
+
+    %2(s32) = G_ADD %0, %1
+    ; CHECK: [[VREGSUM:%[0-9]+]]:gpr = ADDrr [[VREGX]], [[VREGY]], 14, _, _
+
+    %r0 = COPY %2(s32)
+    ; CHECK: %r0 = COPY [[VREGSUM]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_add_fold_imm_s32
+# CHECK-LABEL: name: test_add_fold_imm_s32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+body:             |
+  bb.0:
+    liveins: %r0
+
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY %r0
+
+    %1(s32) = G_CONSTANT i32 255
+    %2(s32) = G_ADD %0, %1
+    ; CHECK: [[VREGSUM:%[0-9]+]]:gpr = ADDri [[VREGX]], 255, 14, _, _
+
+    %r0 = COPY %2(s32)
+    ; CHECK: %r0 = COPY [[VREGSUM]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_add_no_fold_imm_s32
+# CHECK-LABEL: name: test_add_no_fold_imm_s32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+body:             |
+  bb.0:
+    liveins: %r0
+
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY %r0
+
+    %1(s32) = G_CONSTANT i32 65535
+    ; CHECK: [[VREGY:%[0-9]+]]:gpr = MOVi16 65535, 14, _
 
     %2(s32) = G_ADD %0, %1
     ; CHECK: [[VREGSUM:%[0-9]+]]:gpr = ADDrr [[VREGX]], [[VREGY]], 14, _, _
