@@ -3106,3 +3106,18 @@ This attribute can be added to an Objective-C ``@interface`` declaration to
 ensure that this class cannot be subclassed.
   }];
 }
+
+
+def SelectAnyDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+This attribute appertains to a global symbol, causing it to have a weak
+definition (
+`linkonce <https://llvm.org/docs/LangRef.html#linkage-types>`_
+), allowing the linker to select any definition.
+
+For more information see
+`gcc documentation <https://gcc.gnu.org/onlinedocs/gcc-7.2.0/gcc/Microsoft-Windows-Variable-Attributes.html>`_
+or `msvc documentation <https://docs.microsoft.com/pl-pl/cpp/cpp/selectany>`_.
+}];
+}
