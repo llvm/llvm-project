@@ -202,10 +202,6 @@ inline ModulePass *createDataFlowSanitizerPassForJIT(
 }
 #endif
 
-// BoundsChecking - This pass instruments the code to perform run-time bounds
-// checking on loads, stores, and other memory intrinsics.
-FunctionPass *createBoundsCheckingPass();
-
 /// \brief Calculate what to divide by to scale counts.
 ///
 /// Given the maximum count, calculate a divisor that will scale all the

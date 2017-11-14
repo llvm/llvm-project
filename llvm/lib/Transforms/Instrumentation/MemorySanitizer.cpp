@@ -2911,7 +2911,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   void visitLandingPadInst(LandingPadInst &I) {
     // Do nothing.
-    // See http://code.google.com/p/memory-sanitizer/issues/detail?id=1
+    // See https://github.com/google/sanitizers/issues/504
     setShadow(&I, getCleanShadow(&I));
     setOrigin(&I, getCleanOrigin());
   }

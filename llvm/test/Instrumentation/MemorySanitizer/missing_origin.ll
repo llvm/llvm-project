@@ -5,7 +5,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; Test that result origin is directy propagated from the argument,
 ; and is not affected by all the literal undef operands.
-; https://code.google.com/p/memory-sanitizer/issues/detail?id=56
+; https://github.com/google/sanitizers/issues/559
 
 define <4 x i32> @Shuffle(<4 x i32> %x) nounwind uwtable sanitize_memory {
 entry:
@@ -20,7 +20,7 @@ entry:
 
 
 ; Regression test for origin propagation in "select i1, float, float".
-; https://code.google.com/p/memory-sanitizer/issues/detail?id=78
+; https://github.com/google/sanitizers/issues/581
 
 define float @SelectFloat(i1 %b, float %x, float %y) nounwind uwtable sanitize_memory {
 entry:

@@ -712,6 +712,7 @@ public:
   static Expected<TempFile> create(const Twine &Model,
                                    unsigned Mode = all_read | all_write);
   TempFile(TempFile &&Other);
+  TempFile &operator=(TempFile &&Other);
 
   // Name of the temporary file.
   std::string TmpName;

@@ -124,7 +124,8 @@ C/C++ on Darwin/iOS/ARM64 (36-bit VMA, 64 GB VM)
 0c00 0000 00 - 0d00 0000 00: -                                    (4 GB)
 0d00 0000 00 - 0e00 0000 00: metainfo                             (4 GB)
 0e00 0000 00 - 0f00 0000 00: -                                    (4 GB)
-0f00 0000 00 - 1000 0000 00: traces                               (4 GB)
+0f00 0000 00 - 0fc0 0000 00: traces                               (3 GB)
+0fc0 0000 00 - 1000 0000 00: -
 */
 struct Mapping {
   static const uptr kLoAppMemBeg   = 0x0100000000ull;
@@ -136,9 +137,9 @@ struct Mapping {
   static const uptr kMetaShadowBeg = 0x0d00000000ull;
   static const uptr kMetaShadowEnd = 0x0e00000000ull;
   static const uptr kTraceMemBeg   = 0x0f00000000ull;
-  static const uptr kTraceMemEnd   = 0x1000000000ull;
-  static const uptr kHiAppMemBeg   = 0x1000000000ull;
-  static const uptr kHiAppMemEnd   = 0x1000000000ull;
+  static const uptr kTraceMemEnd   = 0x0fc0000000ull;
+  static const uptr kHiAppMemBeg   = 0x0fc0000000ull;
+  static const uptr kHiAppMemEnd   = 0x0fc0000000ull;
   static const uptr kAppMemMsk     =          0x0ull;
   static const uptr kAppMemXor     =          0x0ull;
   static const uptr kVdsoBeg       = 0x7000000000000000ull;

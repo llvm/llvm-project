@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9 %s
-; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -amdgpu-sroa=0 -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9 %s
+; RUN: llc -march=amdgcn -mcpu=fiji -amdgpu-sroa=0 -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI %s
 
 ; GCN-LABEL: {{^}}load_local_lo_v2i16_undeflo:
 ; GCN: s_waitcnt
@@ -585,6 +585,65 @@ entry:
   %load = load half, half addrspace(2)* %gep
   %build1 = insertelement <2 x half> %reg.bc, half %load, i32 0
   store <2 x half> %build1, <2 x half> addrspace(1)* undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}load_private_lo_v2i16_reglo_vreg_to_offset:
+; GFX9: buffer_store_dword
+; GFX9-NEXT: buffer_load_short_d16 v0, off, s[0:3], s5 offset:4094
+
+; VI: buffer_load_ushort v
+define void @load_private_lo_v2i16_reglo_vreg_to_offset(i32 %reg) #0 {
+entry:
+  %obj0 = alloca [10 x i32], align 4
+  %obj1 = alloca [4096 x i16], align 2
+  %reg.bc = bitcast i32 %reg to <2 x i16>
+  %bc = bitcast [10 x i32]* %obj0 to i32*
+  store volatile i32 123, i32* %bc
+  %gep = getelementptr inbounds [4096 x i16], [4096 x i16]* %obj1, i32 0, i32 2025
+  %load = load volatile i16, i16* %gep
+  %build1 = insertelement <2 x i16> %reg.bc, i16 %load, i32 0
+  store <2 x i16> %build1, <2 x i16> addrspace(1)* undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}load_private_lo_v2i16_reglo_vreg_sexti8_to_offset:
+; GFX9: buffer_store_dword
+; GFX9-NEXT: buffer_load_sbyte_d16 v0, off, s[0:3], s5 offset:4095
+
+; VI: buffer_load_sbyte v
+define void @load_private_lo_v2i16_reglo_vreg_sexti8_to_offset(i32 %reg) #0 {
+entry:
+  %obj0 = alloca [10 x i32], align 4
+  %obj1 = alloca [4096 x i8], align 2
+  %reg.bc = bitcast i32 %reg to <2 x i16>
+  %bc = bitcast [10 x i32]* %obj0 to i32*
+  store volatile i32 123, i32* %bc
+  %gep = getelementptr inbounds [4096 x i8], [4096 x i8]* %obj1, i32 0, i32 4051
+  %load = load volatile i8, i8* %gep
+  %load.ext = sext i8 %load to i16
+  %build1 = insertelement <2 x i16> %reg.bc, i16 %load.ext, i32 0
+  store <2 x i16> %build1, <2 x i16> addrspace(1)* undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}load_private_lo_v2i16_reglo_vreg_zexti8_to_offset:
+; GFX9: buffer_store_dword
+; GFX9-NEXT: buffer_load_ubyte_d16 v0, off, s[0:3], s5 offset:4095
+
+; VI: buffer_load_ubyte v
+define void @load_private_lo_v2i16_reglo_vreg_zexti8_to_offset(i32 %reg) #0 {
+entry:
+  %obj0 = alloca [10 x i32], align 4
+  %obj1 = alloca [4096 x i8], align 2
+  %reg.bc = bitcast i32 %reg to <2 x i16>
+  %bc = bitcast [10 x i32]* %obj0 to i32*
+  store volatile i32 123, i32* %bc
+  %gep = getelementptr inbounds [4096 x i8], [4096 x i8]* %obj1, i32 0, i32 4051
+  %load = load volatile i8, i8* %gep
+  %load.ext = zext i8 %load to i16
+  %build1 = insertelement <2 x i16> %reg.bc, i16 %load.ext, i32 0
+  store <2 x i16> %build1, <2 x i16> addrspace(1)* undef
   ret void
 }
 

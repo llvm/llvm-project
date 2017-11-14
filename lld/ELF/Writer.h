@@ -54,6 +54,7 @@ uint8_t getMipsFpAbiFlag(uint8_t OldFlag, uint8_t NewFlag,
                          llvm::StringRef FileName);
 
 bool isMipsN32Abi(const InputFile *F);
+bool isMicroMips();
 bool isMipsR6();
 } // namespace elf
 } // namespace lld
