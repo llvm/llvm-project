@@ -65,7 +65,7 @@ update_mbox(const __global amd_signal_t *sig)
     __global atomic_ulong *mb = (__global atomic_ulong *)sig->event_mailbox_ptr;
     if (mb) {
         uint id = sig->event_id;
-        atomic_store_explicit(mb, id, memory_order_release, memory_scope_all_svm_devices);
+        AS(mb, id, memory_order_release, memory_scope_all_svm_devices);
         __builtin_amdgcn_s_sendmsg(1 | (0 << 4), __llvm_amdgcn_readfirstlane(id) & 0xff);
     }
 }
@@ -145,14 +145,14 @@ OCKL_MANGLE_T(hsa_signal,store)(hsa_signal_t sig, long value, __ockl_memory_orde
         update_mbox(s);
     } else if (__oclc_ISA_version() >= 900) {
         // Hardware doorbell supports AQL semantics.
-        atomic_store_explicit((__global atomic_ulong *)s->hardware_doorbell_ptr, (ulong)value, memory_order_release, memory_scope_all_svm_devices);
+        AS((__global atomic_ulong *)s->hardware_doorbell_ptr, (ulong)value, memory_order_release, memory_scope_all_svm_devices);
     } else {
 
         {
             __global amd_queue_t * q = s->queue_ptr;
             __global atomic_uint *lp = (__global atomic_uint *)&q->legacy_doorbell_lock;
             uint e = 0;
-            while (!atomic_compare_exchange_strong_explicit(lp, &e, (uint)1, memory_order_acquire, memory_order_relaxed, memory_scope_all_svm_devices)) {
+            while (!AC(lp, &e, (uint)1, memory_order_acquire, memory_order_relaxed, memory_scope_all_svm_devices)) {
                 __llvm_amdgcn_s_sleep(1);
                 e = 0;
             }
@@ -160,7 +160,7 @@ OCKL_MANGLE_T(hsa_signal,store)(hsa_signal_t sig, long value, __ockl_memory_orde
             ulong legacy_dispatch_id = value + 1;
 
             if (legacy_dispatch_id > q->max_legacy_doorbell_dispatch_id_plus_1) {
-                atomic_store_explicit((__global atomic_ulong *)&q->max_legacy_doorbell_dispatch_id_plus_1, legacy_dispatch_id, memory_order_relaxed, memory_scope_all_svm_devices);
+                AS((__global atomic_ulong *)&q->max_legacy_doorbell_dispatch_id_plus_1, legacy_dispatch_id, memory_order_relaxed, memory_scope_all_svm_devices);
 
                 if (__oclc_ISA_version() < 800) {
                     legacy_dispatch_id = (ulong)(((uint)legacy_dispatch_id & ((q->hsa_queue.size << 1) - 1)) * 16);
@@ -169,7 +169,7 @@ OCKL_MANGLE_T(hsa_signal,store)(hsa_signal_t sig, long value, __ockl_memory_orde
                 *s->legacy_hardware_doorbell_ptr = (uint)legacy_dispatch_id;
             }
 
-            atomic_store_explicit(lp, 0, memory_order_release, memory_scope_all_svm_devices);
+            AS(lp, 0, memory_order_release, memory_scope_all_svm_devices);
         }
     }
 }
