@@ -58,3 +58,11 @@ void extractStatementExpression(const Rectangle &r) {
 // CHECK5-NEXT: "extracted(r)" [[@LINE-3]]:3 -> [[@LINE-3]]:21
 
 // RUN: clang-refactor-test perform -action extract -selected=%s:55:3-55:21 %s | FileCheck --check-prefix=CHECK5 %s
+;
+void extractFunctionCall() {
+  sumArea(0, 1);
+}
+// CHECK6: "static int extracted() {\nreturn sumArea(0, 1);\n}\n\n" [[@LINE-3]]:1 -> [[@LINE-3]]:1
+// CHECK6-NEXT: "extracted()" [[@LINE-3]]:3 -> [[@LINE-3]]:16
+
+// RUN: clang-refactor-test perform -action extract -selected=%s:63:3-63:10 %s | FileCheck --check-prefix=CHECK6 %s
