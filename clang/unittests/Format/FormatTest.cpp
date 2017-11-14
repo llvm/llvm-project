@@ -6319,7 +6319,8 @@ TEST_F(FormatTest, HandlesIncludeDirectives) {
                "#include_next <test.h>"
                "#include \"abc.h\" // this is included for ABC\n"
                "#include \"some long include\" // with a comment\n"
-               "#include \"some very long include paaaaaaaaaaaaaaaaaaaaaaath\"",
+               "#include \"some very long include path\"\n"
+               "#include <some/very/long/include/path>\n",
                getLLVMStyleWithColumns(35));
   EXPECT_EQ("#include \"a.h\"", format("#include  \"a.h\""));
   EXPECT_EQ("#include <a>", format("#include<a>"));
