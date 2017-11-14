@@ -82,7 +82,8 @@ class SourceFileRenderer:
         inlining_context = r.DemangledFunctionName
         dl = context.caller_loc.get(r.Function)
         if dl:
-            link = optrecord.make_link(dl['File'], dl['Line'] - 2)
+            dl_dict = dict(list(dl))
+            link = optrecord.make_link(dl_dict['File'], dl_dict['Line'] - 2)
             inlining_context = "<a href={link}>{r.DemangledFunctionName}</a>".format(**locals())
 
         # Column is the number of characters *including* tabs, keep those and
@@ -176,10 +177,11 @@ def map_remarks(all_remarks):
     for remark in optrecord.itervalues(all_remarks):
         if isinstance(remark, optrecord.Passed) and remark.Pass == "inline" and remark.Name == "Inlined":
             for arg in remark.Args:
-                caller = arg.get('Caller')
+                arg_dict = dict(list(arg))
+                caller = arg_dict.get('Caller')
                 if caller:
                     try:
-                        context.caller_loc[caller] = arg['DebugLoc']
+                        context.caller_loc[caller] = arg_dict['DebugLoc']
                     except KeyError:
                         pass
 
