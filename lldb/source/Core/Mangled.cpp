@@ -352,7 +352,8 @@ Mangled::GetDemangledName(lldb::LanguageType language) const {
         // when necessary
         demangled_name = FastDemangle(mangled_name, m_mangled.GetLength());
         if (!demangled_name)
-          demangled_name = __cxa_demangle(mangled_name, NULL, NULL, NULL);
+          demangled_name =
+              llvm::itaniumDemangle(mangled_name, NULL, NULL, NULL);
 #else
         demangled_name = abi::__cxa_demangle(mangled_name, NULL, NULL, NULL);
 #endif

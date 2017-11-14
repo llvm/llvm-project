@@ -735,6 +735,7 @@
 		4939EA8D1BD56B6D00084382 /* REPL.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4939EA8C1BD56B6D00084382 /* REPL.cpp */; };
 		494260DA14579144003C1C78 /* VerifyDecl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 494260D914579144003C1C78 /* VerifyDecl.cpp */; };
 		4947DE4A1E3C0B20008D6ED0 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 4947DE491E3C0B20008D6ED0 /* main.c */; };
+		4959511F1A1BC4BC00F6F8FC /* ClangModulesDeclVendor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4959511E1A1BC4BC00F6F8FC /* ClangModulesDeclVendor.cpp */; };
 		4966DCC4148978A10028481B /* ClangExternalASTSourceCommon.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4966DCC3148978A10028481B /* ClangExternalASTSourceCommon.cpp */; };
 		4971D4B51F30ECFB00823171 /* SBProcessInfo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4987FB1E1F30EC7E00E5C17D /* SBProcessInfo.cpp */; };
 		49753FB41BEAB2BB00019E45 /* lldb.1 in Copy Files */ = {isa = PBXBuildFile; fileRef = AF90106315AB7C5700FF120D /* lldb.1 */; };
@@ -745,7 +746,6 @@
 		4984BA181B979C08008658D4 /* ExpressionVariable.h in Headers */ = {isa = PBXBuildFile; fileRef = 4984BA171B979C08008658D4 /* ExpressionVariable.h */; };
 		498CF62C1BBDF8800067B8C5 /* SwiftPersistentExpressionState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 498CF62B1BBDF8800067B8C5 /* SwiftPersistentExpressionState.cpp */; };
 		499953B91E6E782100C64C09 /* OptionValueLanguage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 946216C11A97C080006E19CC /* OptionValueLanguage.cpp */; };
-		499953C01E6E78CD00C64C09 /* CxaDemangle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 499953BE1E6E78C200C64C09 /* CxaDemangle.cpp */; };
 		499953C11E6E792500C64C09 /* StringPrinter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C848DF518D2869F00EC6DD0 /* StringPrinter.cpp */; };
 		4999FD071BC355630014BA69 /* SwiftREPLMaterializer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4999FD061BC355630014BA69 /* SwiftREPLMaterializer.cpp */; };
 		49A1CAC51430E8DE00306AC9 /* ExpressionSourceCode.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49A1CAC31430E8BD00306AC9 /* ExpressionSourceCode.cpp */; };
@@ -761,7 +761,6 @@
 		49DCF6FE170E6B4A0092F75E /* IRMemoryMap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49DCF6FD170E6B4A0092F75E /* IRMemoryMap.cpp */; };
 		49DCF702170E70120092F75E /* Materializer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49DCF700170E70120092F75E /* Materializer.cpp */; };
 		49DEF1251CD7C6DF006A7C7D /* BlockPointer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49DEF11F1CD7BD90006A7C7D /* BlockPointer.cpp */; };
-		4959511F1A1BC4BC00F6F8FC /* ClangModulesDeclVendor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4959511E1A1BC4BC00F6F8FC /* ClangModulesDeclVendor.cpp */; };
 		49E4F66B1C9CAD16008487EA /* DiagnosticManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49E4F6681C9CAD12008487EA /* DiagnosticManager.cpp */; };
 		49F811F31E931B2100F4E163 /* CPlusPlusNameParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49F811EF1E931B1500F4E163 /* CPlusPlusNameParser.cpp */; };
 		49FE3ADF1E6770E300839A32 /* ModuleCache.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2654A67F1E54D59400DA1013 /* ModuleCache.cpp */; };
@@ -1037,6 +1036,7 @@
 		AF26703B1852D01E00B6CC36 /* QueueList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF2670391852D01E00B6CC36 /* QueueList.cpp */; };
 		AF27AD551D3603EA00CF2833 /* DynamicLoaderDarwin.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF27AD531D3603EA00CF2833 /* DynamicLoaderDarwin.cpp */; };
 		AF27AD561D3603EA00CF2833 /* DynamicLoaderDarwin.h in Headers */ = {isa = PBXBuildFile; fileRef = AF27AD541D3603EA00CF2833 /* DynamicLoaderDarwin.h */; };
+		AF27D46B1FBBB4E40028EE6A /* lldb.1 in Copy Files */ = {isa = PBXBuildFile; fileRef = AF90106315AB7C5700FF120D /* lldb.1 */; };
 		AF2907BF1D3F082400E10654 /* DynamicLoaderMacOS.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF2907BD1D3F082400E10654 /* DynamicLoaderMacOS.cpp */; };
 		AF2BA6EC1A707E3400C5248A /* UriParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 33064C991A5C7A330033D415 /* UriParser.cpp */; };
 		AF2BCA6C18C7EFDE005B4526 /* JITLoaderGDB.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF2BCA6918C7EFDE005B4526 /* JITLoaderGDB.cpp */; };
@@ -1064,9 +1064,9 @@
 		AF9107EE168570D200DBCD3C /* RegisterContextDarwin_arm64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF9107EC168570D200DBCD3C /* RegisterContextDarwin_arm64.cpp */; };
 		AF9107EF168570D200DBCD3C /* RegisterContextDarwin_arm64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF9107EC168570D200DBCD3C /* RegisterContextDarwin_arm64.cpp */; };
 		AF9B8F33182DB52900DA866F /* SystemRuntimeMacOSX.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF9B8F31182DB52900DA866F /* SystemRuntimeMacOSX.cpp */; };
-		AFA87A331BEC2D6700A7424F /* PlatformRemoteAppleTV.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFA87A311BEC2D6700A7424F /* PlatformRemoteAppleTV.cpp */; };
 		AF9FF1F51FAA79A400474976 /* LibCxxTuple.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF9FF1F41FAA79A400474976 /* LibCxxTuple.cpp */; };
 		AF9FF1F71FAA79FE00474976 /* LibCxxQueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF9FF1F61FAA79FE00474976 /* LibCxxQueue.cpp */; };
+		AFA87A331BEC2D6700A7424F /* PlatformRemoteAppleTV.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFA87A311BEC2D6700A7424F /* PlatformRemoteAppleTV.cpp */; };
 		AFAFD80A1E57E1B90017A14F /* ModuleCacheTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFAFD8091E57E1B90017A14F /* ModuleCacheTest.cpp */; };
 		AFB3D2801AC262AB003B4B30 /* MICmdCmdGdbShow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFB3D27E1AC262AB003B4B30 /* MICmdCmdGdbShow.cpp */; };
 		AFC1A8991BEAF27000681CFD /* ValueObjectConstResultImpl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 949ADF021406F648004833E1 /* ValueObjectConstResultImpl.cpp */; };
@@ -1328,7 +1328,7 @@
 			dstPath = "/$(DT_VARIANT)/$(LLDB_TOOLS_INSTALL_DIR)/../share/man/man1";
 			dstSubfolderSpec = 0;
 			files = (
-				49753FB41BEAB2BB00019E45 /* lldb.1 in Copy Files */,
+				AF27D46B1FBBB4E40028EE6A /* lldb.1 in Copy Files */,
 			);
 			name = "Copy Files";
 			runOnlyForDeploymentPostprocessing = 1;
@@ -1379,7 +1379,7 @@
 			dstPath = "/$(DT_VARIANT)/$(DEVELOPER_INSTALL_DIR)/usr/share/man/man1";
 			dstSubfolderSpec = 0;
 			files = (
-				49753FB41BEAB2BB00019E45 /* lldb.1 in CopyFiles */,
+				49753FB41BEAB2BB00019E45 /* lldb.1 in Copy Files */,
 			);
 			name = "Copy Files";
 			runOnlyForDeploymentPostprocessing = 1;
@@ -2625,8 +2625,6 @@
 		4997E6811A3B74AE00733D2F /* DeclVendor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DeclVendor.h; path = include/lldb/Symbol/DeclVendor.h; sourceTree = "<group>"; };
 		4997E6831A3B74D100733D2F /* AppleObjCDeclVendor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AppleObjCDeclVendor.cpp; sourceTree = "<group>"; };
 		4997E6841A3B74D100733D2F /* AppleObjCDeclVendor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppleObjCDeclVendor.h; sourceTree = "<group>"; };
-		499953BC1E6E789100C64C09 /* CxaDemangle.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CxaDemangle.h; path = include/lldb/Utility/CxaDemangle.h; sourceTree = "<group>"; };
-		499953BE1E6E78C200C64C09 /* CxaDemangle.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CxaDemangle.cpp; path = source/Utility/CxaDemangle.cpp; sourceTree = "<group>"; };
 		4999FD061BC355630014BA69 /* SwiftREPLMaterializer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SwiftREPLMaterializer.cpp; path = ExpressionParser/Swift/SwiftREPLMaterializer.cpp; sourceTree = "<group>"; };
 		4999FD081BC355840014BA69 /* SwiftREPLMaterializer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SwiftREPLMaterializer.h; path = ExpressionParser/Swift/SwiftREPLMaterializer.h; sourceTree = "<group>"; };
 		499F381E11A5B3F300F5CE02 /* CommandObjectArgs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CommandObjectArgs.h; path = source/Commands/CommandObjectArgs.h; sourceTree = "<group>"; };
@@ -2733,8 +2731,6 @@
 		4C848E0718D2892900EC6DD0 /* SwiftASTContext.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SwiftASTContext.cpp; path = source/Symbol/SwiftASTContext.cpp; sourceTree = "<group>"; };
 		4C848E0A18D28C0C00EC6DD0 /* SwiftLanguageRuntime.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = SwiftLanguageRuntime.cpp; path = source/Target/SwiftLanguageRuntime.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		4C848E0F18D28C7300EC6DD0 /* SwiftLanguageRuntime.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SwiftLanguageRuntime.h; path = include/lldb/Target/SwiftLanguageRuntime.h; sourceTree = "<group>"; };
-		4C7D48281F509CCD005314B4 /* BreakpointName.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = BreakpointName.cpp; path = source/Breakpoint/BreakpointName.cpp; sourceTree = "<group>"; };
-		4C7D482B1F509CF5005314B4 /* BreakpointName.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BreakpointName.h; path = include/lldb/Breakpoint/BreakpointName.h; sourceTree = "<group>"; };
 		4C88BC291BA3722B00AA0964 /* Expression.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Expression.cpp; path = source/Expression/Expression.cpp; sourceTree = "<group>"; };
 		4C98D3DA118FB96F00E575D0 /* ClangFunctionCaller.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ClangFunctionCaller.cpp; path = ExpressionParser/Clang/ClangFunctionCaller.cpp; sourceTree = "<group>"; };
 		4C98D3DB118FB96F00E575D0 /* IRExecutionUnit.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = IRExecutionUnit.cpp; path = source/Expression/IRExecutionUnit.cpp; sourceTree = "<group>"; };
@@ -3295,10 +3291,10 @@
 		AF9472701B575E5F0063D65C /* ValueObjectConstResultCast.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ValueObjectConstResultCast.h; path = include/lldb/Core/ValueObjectConstResultCast.h; sourceTree = "<group>"; };
 		AF9B8F31182DB52900DA866F /* SystemRuntimeMacOSX.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SystemRuntimeMacOSX.cpp; sourceTree = "<group>"; };
 		AF9B8F32182DB52900DA866F /* SystemRuntimeMacOSX.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SystemRuntimeMacOSX.h; sourceTree = "<group>"; };
-		AFA87A311BEC2D6700A7424F /* PlatformRemoteAppleTV.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformRemoteAppleTV.cpp; sourceTree = "<group>"; };
-		AFA87A321BEC2D6700A7424F /* PlatformRemoteAppleTV.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformRemoteAppleTV.h; sourceTree = "<group>"; };
 		AF9FF1F41FAA79A400474976 /* LibCxxTuple.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LibCxxTuple.cpp; path = Language/CPlusPlus/LibCxxTuple.cpp; sourceTree = "<group>"; };
 		AF9FF1F61FAA79FE00474976 /* LibCxxQueue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LibCxxQueue.cpp; path = Language/CPlusPlus/LibCxxQueue.cpp; sourceTree = "<group>"; };
+		AFA87A311BEC2D6700A7424F /* PlatformRemoteAppleTV.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformRemoteAppleTV.cpp; sourceTree = "<group>"; };
+		AFA87A321BEC2D6700A7424F /* PlatformRemoteAppleTV.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformRemoteAppleTV.h; sourceTree = "<group>"; };
 		AFAFD8091E57E1B90017A14F /* ModuleCacheTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ModuleCacheTest.cpp; path = Target/ModuleCacheTest.cpp; sourceTree = "<group>"; };
 		AFB3D27E1AC262AB003B4B30 /* MICmdCmdGdbShow.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = MICmdCmdGdbShow.cpp; path = "tools/lldb-mi/MICmdCmdGdbShow.cpp"; sourceTree = SOURCE_ROOT; };
 		AFB3D27F1AC262AB003B4B30 /* MICmdCmdGdbShow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MICmdCmdGdbShow.h; path = "tools/lldb-mi/MICmdCmdGdbShow.h"; sourceTree = SOURCE_ROOT; };
@@ -4556,8 +4552,6 @@
 				264723A511FA076E00DE380C /* CleanUp.h */,
 				26764C951E48F46F008D3573 /* ConstString.h */,
 				26764C961E48F482008D3573 /* ConstString.cpp */,
-				499953BC1E6E789100C64C09 /* CxaDemangle.h */,
-				499953BE1E6E78C200C64C09 /* CxaDemangle.cpp */,
 				49CA96F01E6AAC8E00C03FEE /* DataBuffer.h */,
 				49CA96F11E6AAC8E00C03FEE /* DataBufferHeap.h */,
 				49CA96E61E6AAC6600C03FEE /* DataBufferHeap.cpp */,
@@ -6654,6 +6648,18 @@
 			name = "SysV-mips";
 			sourceTree = "<group>";
 		};
+		9A1890301F47D5BC00394BCA /* TestingSupport */ = {
+			isa = PBXGroup;
+			children = (
+				9A1890311F47D5D400394BCA /* CMakeLists.txt */,
+				9A1890321F47D5D400394BCA /* MockTildeExpressionResolver.cpp */,
+				9A1890331F47D5D400394BCA /* MockTildeExpressionResolver.h */,
+				9A1890341F47D5D400394BCA /* TestUtilities.cpp */,
+				9A1890351F47D5D400394BCA /* TestUtilities.h */,
+			);
+			name = TestingSupport;
+			sourceTree = "<group>";
+		};
 		9A2057091F3B81DE00F6C293 /* DWARF */ = {
 			isa = PBXGroup;
 			children = (
@@ -6721,18 +6727,6 @@
 				9A2057451F3B905C00F6C293 /* RNBSocketTest.cpp */,
 			);
 			name = debugserver;
-			sourceTree = "<group>";
-		};
-		9A1890301F47D5BC00394BCA /* TestingSupport */ = {
-			isa = PBXGroup;
-			children = (
-				9A1890311F47D5D400394BCA /* CMakeLists.txt */,
-				9A1890321F47D5D400394BCA /* MockTildeExpressionResolver.cpp */,
-				9A1890331F47D5D400394BCA /* MockTildeExpressionResolver.h */,
-				9A1890341F47D5D400394BCA /* TestUtilities.cpp */,
-				9A1890351F47D5D400394BCA /* TestUtilities.h */,
-			);
-			name = TestingSupport;
 			sourceTree = "<group>";
 		};
 		AE44FB371BB35A2E0033EB62 /* Go */ = {
@@ -8120,7 +8114,6 @@
 				23D065901D4A7BEE0008EDE6 /* RenderScriptRuntime.cpp in Sources */,
 				2689009713353E4200698AC0 /* ObjectContainerUniversalMachO.cpp in Sources */,
 				2689009813353E4200698AC0 /* ELFHeader.cpp in Sources */,
-				499953C01E6E78CD00C64C09 /* CxaDemangle.cpp in Sources */,
 				2689009913353E4200698AC0 /* ObjectFileELF.cpp in Sources */,
 				2689009A13353E4200698AC0 /* ObjectFileMachO.cpp in Sources */,
 				2689009D13353E4200698AC0 /* GDBRemoteCommunication.cpp in Sources */,
