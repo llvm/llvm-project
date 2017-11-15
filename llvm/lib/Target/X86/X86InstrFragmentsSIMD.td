@@ -751,6 +751,15 @@ def memopv4f32 : PatFrag<(ops node:$ptr), (v4f32 (memop node:$ptr))>;
 def memopv2f64 : PatFrag<(ops node:$ptr), (v2f64 (memop node:$ptr))>;
 def memopv2i64 : PatFrag<(ops node:$ptr), (v2i64 (memop node:$ptr))>;
 
+// Hack because we can't write a tablegen pattern that requires the type
+// of result 1 to be checked. So explicitly force the mask to v2i1.
+def X86masked_gatherv2i64 : SDNode<"X86ISD::MGATHER",
+                                   SDTypeProfile<2, 3, [SDTCisVec<0>,
+                                                        SDTCisVT<1, v2i1>,
+                                                        SDTCisSameAs<0, 2>,
+                                                        SDTCisSameAs<1, 3>,
+                                                        SDTCisPtrTy<4>]>,
+                             [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def X86masked_gather  : SDNode<"X86ISD::MGATHER",  SDTMaskedGather,
                        [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 
@@ -778,7 +787,7 @@ def mgatherv2i64 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
   return false;
 }]>;
 def X86mgatherv2i64 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
-  (X86masked_gather node:$src1, node:$src2, node:$src3) , [{
+  (X86masked_gatherv2i64 node:$src1, node:$src2, node:$src3) , [{
   if (X86MaskedGatherSDNode *Mgt = dyn_cast<X86MaskedGatherSDNode>(N))
     return (Mgt->getIndex().getValueType() == MVT::v2i64 ||
             Mgt->getBasePtr().getValueType() == MVT::v2i64) &&

@@ -30,8 +30,7 @@ body: |
     ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
     ; CHECK: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
     ; CHECK: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[TRUNC]], [[TRUNC1]]
-    ; CHECK: [[TRUNC2:%[0-9]+]]:_(s8) = G_TRUNC [[MUL]](s32)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[TRUNC2]](s8)
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[MUL]](s32)
     ; CHECK: %x0 = COPY [[ANYEXT]](s64)
     %0(s64) = COPY %x0
     %1(s64) = COPY %x1
@@ -56,9 +55,14 @@ body: |
     ; CHECK: [[SMULH:%[0-9]+]]:_(s64) = G_SMULH [[COPY]], [[COPY1]]
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
     ; CHECK: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ne), [[SMULH]](s64), [[C]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP]](s32)
+    ; CHECK: %x0 = COPY [[MUL]](s64)
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[ICMP]](s32)
+    ; CHECK: %w0 = COPY [[COPY2]](s32)
     %0:_(s64) = COPY %x0
     %1:_(s64) = COPY %x1
     %2:_(s64), %3:_(s1) = G_SMULO %0, %1
+    %x0 = COPY %2
+    %4:_(s32) = G_ANYEXT %3
+    %w0 = COPY %4
 
 ...

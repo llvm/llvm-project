@@ -564,8 +564,7 @@ void Writer::createSymbolAndStringTable() {
     PointerToSymbolTable = FileOff;
     FileOff += OutputSymtab.size() * sizeof(coff_symbol16);
   }
-  if (!Strtab.empty())
-    FileOff += Strtab.size() + 4;
+  FileOff += Strtab.size() + 4;
   FileSize = alignTo(FileOff, SectorSize);
 }
 

@@ -5,6 +5,7 @@ add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
   CxxStringTypes.cpp
   LibCxx.cpp
   LibCxxAtomic.cpp
+  LibCxxBitset.cpp
   LibCxxInitializerList.cpp
   LibCxxList.cpp
   LibCxxMap.cpp

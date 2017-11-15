@@ -61,7 +61,7 @@ int main()
         const optional<X> opt;
         try
         {
-            opt.value();
+            (void)opt.value();
             assert(false);
         }
         catch (const bad_optional_access&)

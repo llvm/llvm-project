@@ -2149,10 +2149,11 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
                                           llvm::ConstantAsMetadata::get(Loc)));
   }
 
-  if (getLangOpts().CUDA && getLangOpts().CUDAIsDevice) {
-    // Conservatively, mark all inline asm blocks in CUDA as convergent
-    // (meaning, they may call an intrinsically convergent op, such as bar.sync,
-    // and so can't have certain optimizations applied around them).
+  if (getLangOpts().assumeFunctionsAreConvergent()) {
+    // Conservatively, mark all inline asm blocks in CUDA or OpenCL as
+    // convergent (meaning, they may call an intrinsically convergent op, such
+    // as bar.sync, and so can't have certain optimizations applied around
+    // them).
     Result->addAttribute(llvm::AttributeList::FunctionIndex,
                          llvm::Attribute::Convergent);
   }

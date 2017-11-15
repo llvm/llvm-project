@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9 %s
-; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -amdgpu-sroa=0 -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9 %s
+; RUN: llc -march=amdgcn -mcpu=fiji -amdgpu-sroa=0 -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI %s
 
 ; GCN-LABEL: {{^}}store_global_hi_v2i16:
 ; GCN: s_waitcnt
@@ -440,18 +440,18 @@ entry:
 
 ; GCN-LABEL: {{^}}store_private_hi_v2i16_max_offset:
 ; GCN: s_waitcnt
-; GFX9-NEXT: buffer_store_short_d16_hi v1, v0, s[0:3], s4 offen offset:4094{{$}}
+; GFX9: buffer_store_short_d16_hi v0, off, s[0:3], s5 offset:4094{{$}}
 
-; VI-NEXT: v_lshrrev_b32_e32 v1, 16, v1
-; VI-NEXT: buffer_store_short v1, v0, s[0:3], s4 offen offset:4094{{$}}
+; VI: v_lshrrev_b32_e32 v0, 16, v0
+; VI-NEXT: buffer_store_short v0, off, s[0:3], s5 offset:4094{{$}}
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
-define void @store_private_hi_v2i16_max_offset(i16* %out, i32 %arg) #0 {
+define void @store_private_hi_v2i16_max_offset(i16* byval %out, i32 %arg) #0 {
 entry:
   %value = bitcast i32 %arg to <2 x i16>
   %hi = extractelement <2 x i16> %value, i32 1
-  %gep = getelementptr inbounds i16, i16* %out, i64 2047
+  %gep = getelementptr inbounds i16, i16* %out, i64 2045
   store i16 %hi, i16* %gep
   ret void
 }
@@ -588,6 +588,41 @@ entry:
   %hi = extractelement <2 x i16> %value, i32 1
   %gep = getelementptr inbounds i16, i16 addrspace(3)* %out, i64 32767
   store i16 %hi, i16 addrspace(3)* %gep
+  ret void
+}
+
+; GCN-LABEL: {{^}}store_private_hi_v2i16_to_offset:
+; GCN: s_waitcnt
+; GFX9: buffer_store_dword
+; GFX9-NEXT: buffer_store_short_d16_hi v0, off, s[0:3], s5 offset:4094
+define void @store_private_hi_v2i16_to_offset(i32 %arg) #0 {
+entry:
+  %obj0 = alloca [10 x i32], align 4
+  %obj1 = alloca [4096 x i16], align 2
+  %bc = bitcast [10 x i32]* %obj0 to i32*
+  store volatile i32 123, i32* %bc
+  %value = bitcast i32 %arg to <2 x i16>
+  %hi = extractelement <2 x i16> %value, i32 1
+  %gep = getelementptr inbounds [4096 x i16], [4096 x i16]* %obj1, i32 0, i32 2025
+  store i16 %hi, i16* %gep
+  ret void
+}
+
+; GCN-LABEL: {{^}}store_private_hi_v2i16_i8_to_offset:
+; GCN: s_waitcnt
+; GFX9: buffer_store_dword
+; GFX9-NEXT: buffer_store_byte_d16_hi v0, off, s[0:3], s5 offset:4095
+define void @store_private_hi_v2i16_i8_to_offset(i32 %arg) #0 {
+entry:
+  %obj0 = alloca [10 x i32], align 4
+  %obj1 = alloca [4096 x i8], align 2
+  %bc = bitcast [10 x i32]* %obj0 to i32*
+  store volatile i32 123, i32* %bc
+  %value = bitcast i32 %arg to <2 x i16>
+  %hi = extractelement <2 x i16> %value, i32 1
+  %gep = getelementptr inbounds [4096 x i8], [4096 x i8]* %obj1, i32 0, i32 4051
+  %trunc = trunc i16 %hi to i8
+  store i8 %trunc, i8* %gep
   ret void
 }
 

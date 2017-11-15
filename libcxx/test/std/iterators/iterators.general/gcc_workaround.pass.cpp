@@ -11,10 +11,10 @@
 
 #include <string>
 
-void f(const std::string &s) { s.begin(); }
+void f(const std::string &s) { (void)s.begin(); }
 
 #include <vector>
 
-void AppendTo(const std::vector<char> &v) { v.begin(); }
+void AppendTo(const std::vector<char> &v) { (void)v.begin(); }
 
 int main() {}

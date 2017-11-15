@@ -384,5 +384,39 @@ define void @shl_add_ptr_combine_2use_both_max_private_offset(i16 zeroext %idx.a
   ret void
 }
 
+; GCN-LABEL: {{^}}shl_or_ptr_combine_2use_lds:
+; GCN: v_lshlrev_b32_e32 [[SCALE0:v[0-9]+]], 3, v0
+; GCN: ds_write_b32 [[SCALE0]], v{{[0-9]+}} offset:32
+
+; GCN: v_lshlrev_b32_e32 [[SCALE1:v[0-9]+]], 4, v0
+; GCN: ds_write_b32 [[SCALE1]], v{{[0-9]+}} offset:64
+define void @shl_or_ptr_combine_2use_lds(i32 %idx) #0 {
+  %idx.add = or i32 %idx, 4
+  %shl0 = shl i32 %idx.add, 3
+  %shl1 = shl i32 %idx.add, 4
+  %ptr0 = inttoptr i32 %shl0 to i32 addrspace(3)*
+  %ptr1 = inttoptr i32 %shl1 to i32 addrspace(3)*
+  store volatile i32 9, i32 addrspace(3)* %ptr0
+  store volatile i32 10, i32 addrspace(3)* %ptr1
+  ret void
+}
+
+; GCN-LABEL: {{^}}shl_or_ptr_combine_2use_max_lds_offset:
+; GCN-DAG: v_lshlrev_b32_e32 [[SCALE0:v[0-9]+]], 3, v0
+; GCN-DAG: v_lshlrev_b32_e32 [[SCALE1:v[0-9]+]], 4, v0
+; GCN-DAG: ds_write_b32 [[SCALE0]], v{{[0-9]+}} offset:65528
+; GCN-DAG: v_or_b32_e32 [[ADD1:v[0-9]+]], 0x1fff0, [[SCALE1]]
+; GCN: ds_write_b32 [[ADD1]], v{{[0-9]+$}}
+define void @shl_or_ptr_combine_2use_max_lds_offset(i32 %idx) #0 {
+  %idx.add = or i32 %idx, 8191
+  %shl0 = shl i32 %idx.add, 3
+  %shl1 = shl i32 %idx.add, 4
+  %ptr0 = inttoptr i32 %shl0 to i32 addrspace(3)*
+  %ptr1 = inttoptr i32 %shl1 to i32 addrspace(3)*
+  store volatile i32 9, i32 addrspace(3)* %ptr0
+  store volatile i32 10, i32 addrspace(3)* %ptr1
+  ret void
+}
+
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

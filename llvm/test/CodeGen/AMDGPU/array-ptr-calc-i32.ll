@@ -30,14 +30,14 @@ define amdgpu_kernel void @test_private_array_ptr_calc(i32 addrspace(1)* noalias
   %tid = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %mbcnt.lo)
   %a_ptr = getelementptr inbounds i32, i32 addrspace(1)* %inA, i32 %tid
   %b_ptr = getelementptr inbounds i32, i32 addrspace(1)* %inB, i32 %tid
-  %a = load i32, i32 addrspace(1)* %a_ptr
-  %b = load i32, i32 addrspace(1)* %b_ptr
+  %a = load i32, i32 addrspace(1)* %a_ptr, !range !0
+  %b = load i32, i32 addrspace(1)* %b_ptr, !range !0
   %result = add i32 %a, %b
   %alloca_ptr = getelementptr inbounds [16 x i32], [16 x i32]* %alloca, i32 1, i32 %b
   store i32 %result, i32* %alloca_ptr, align 4
   ; Dummy call
   call void @llvm.amdgcn.s.barrier()
-  %reload = load i32, i32* %alloca_ptr, align 4
+  %reload = load i32, i32* %alloca_ptr, align 4, !range !0
   %out_ptr = getelementptr inbounds i32, i32 addrspace(1)* %out, i32 %tid
   store i32 %reload, i32 addrspace(1)* %out_ptr, align 4
   ret void
@@ -46,3 +46,5 @@ define amdgpu_kernel void @test_private_array_ptr_calc(i32 addrspace(1)* noalias
 attributes #0 = { nounwind "amdgpu-waves-per-eu"="1,1" }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind convergent }
+
+!0 = !{i32 0, i32 65536 }

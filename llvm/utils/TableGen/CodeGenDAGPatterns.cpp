@@ -885,10 +885,30 @@ std::string TreePredicateFn::getPredCode() const {
   }
 
   if (isAtomic()) {
-    if (getMemoryVT() == nullptr)
+    if (getMemoryVT() == nullptr && !isAtomicOrderingMonotonic() &&
+        !isAtomicOrderingAcquire() && !isAtomicOrderingRelease() &&
+        !isAtomicOrderingAcquireRelease() &&
+        !isAtomicOrderingSequentiallyConsistent())
       PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
                       "IsAtomic cannot be used by itself");
+  } else {
+    if (isAtomicOrderingMonotonic())
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "IsAtomicOrderingMonotonic requires IsAtomic");
+    if (isAtomicOrderingAcquire())
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "IsAtomicOrderingAcquire requires IsAtomic");
+    if (isAtomicOrderingRelease())
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "IsAtomicOrderingRelease requires IsAtomic");
+    if (isAtomicOrderingAcquireRelease())
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "IsAtomicOrderingAcquireRelease requires IsAtomic");
+    if (isAtomicOrderingSequentiallyConsistent())
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "IsAtomicOrderingSequentiallyConsistent requires IsAtomic");
   }
+
   if (isLoad() || isStore() || isAtomic()) {
     StringRef SDNodeName =
         isLoad() ? "LoadSDNode" : isStore() ? "StoreSDNode" : "AtomicSDNode";
@@ -900,6 +920,22 @@ std::string TreePredicateFn::getPredCode() const {
                MemoryVT->getName() + ") return false;\n")
                   .str();
   }
+
+  if (isAtomic() && isAtomicOrderingMonotonic())
+    Code += "if (cast<AtomicSDNode>(N)->getOrdering() != "
+            "AtomicOrdering::Monotonic) return false;\n";
+  if (isAtomic() && isAtomicOrderingAcquire())
+    Code += "if (cast<AtomicSDNode>(N)->getOrdering() != "
+            "AtomicOrdering::Acquire) return false;\n";
+  if (isAtomic() && isAtomicOrderingRelease())
+    Code += "if (cast<AtomicSDNode>(N)->getOrdering() != "
+            "AtomicOrdering::Release) return false;\n";
+  if (isAtomic() && isAtomicOrderingAcquireRelease())
+    Code += "if (cast<AtomicSDNode>(N)->getOrdering() != "
+            "AtomicOrdering::AcquireRelease) return false;\n";
+  if (isAtomic() && isAtomicOrderingSequentiallyConsistent())
+    Code += "if (cast<AtomicSDNode>(N)->getOrdering() != "
+            "AtomicOrdering::SequentiallyConsistent) return false;\n";
 
   if (isLoad() || isStore()) {
     StringRef SDNodeName = isLoad() ? "LoadSDNode" : "StoreSDNode";
@@ -1017,6 +1053,22 @@ bool TreePredicateFn::isNonTruncStore() const {
 }
 bool TreePredicateFn::isTruncStore() const {
   return isPredefinedPredicateEqualTo("IsTruncStore", true);
+}
+bool TreePredicateFn::isAtomicOrderingMonotonic() const {
+  return isPredefinedPredicateEqualTo("IsAtomicOrderingMonotonic", true);
+}
+bool TreePredicateFn::isAtomicOrderingAcquire() const {
+  return isPredefinedPredicateEqualTo("IsAtomicOrderingAcquire", true);
+}
+bool TreePredicateFn::isAtomicOrderingRelease() const {
+  return isPredefinedPredicateEqualTo("IsAtomicOrderingRelease", true);
+}
+bool TreePredicateFn::isAtomicOrderingAcquireRelease() const {
+  return isPredefinedPredicateEqualTo("IsAtomicOrderingAcquireRelease", true);
+}
+bool TreePredicateFn::isAtomicOrderingSequentiallyConsistent() const {
+  return isPredefinedPredicateEqualTo("IsAtomicOrderingSequentiallyConsistent",
+                                      true);
 }
 Record *TreePredicateFn::getMemoryVT() const {
   Record *R = getOrigPatFragRecord()->getRecord();

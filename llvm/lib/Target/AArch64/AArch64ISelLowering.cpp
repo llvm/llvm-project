@@ -3795,7 +3795,8 @@ SDValue AArch64TargetLowering::LowerGlobalAddress(SDValue Op,
 SDValue
 AArch64TargetLowering::LowerDarwinGlobalTLSAddress(SDValue Op,
                                                    SelectionDAG &DAG) const {
-  assert(Subtarget->isTargetDarwin() && "TLS only supported on Darwin");
+  assert(Subtarget->isTargetDarwin() &&
+         "This function expects a Darwin target");
 
   SDLoc DL(Op);
   MVT PtrVT = getPointerTy(DAG.getDataLayout());

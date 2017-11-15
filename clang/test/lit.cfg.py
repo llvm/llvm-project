@@ -58,6 +58,8 @@ tool_dirs = [config.clang_tools_dir, config.llvm_tools_dir]
 
 tools = [
     'c-index-test', 'clang-check', 'clang-diff', 'clang-format', 'opt',
+    ToolSubst('%test_debuginfo', command=os.path.join(
+        config.llvm_src_root, 'utils', 'test_debuginfo.pl')),
     ToolSubst('%clang_func_map', command=FindTool(
         'clang-func-mapping'), unresolved='ignore'),
 ]

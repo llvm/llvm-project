@@ -971,21 +971,6 @@ def postidx_reg : MemOperand {
   let MIOperandInfo = (ops GPRnopc, i32imm);
 }
 
-
-// addrmode2 := reg +/- imm12
-//           := reg +/- reg shop imm
-//
-// FIXME: addrmode2 should be refactored the rest of the way to always
-// use explicit imm vs. reg versions above (addrmode_imm12 and ldst_so_reg).
-def AddrMode2AsmOperand : AsmOperandClass { let Name = "AddrMode2"; }
-def addrmode2 : MemOperand,
-                ComplexPattern<i32, 3, "SelectAddrMode2", []> {
-  let EncoderMethod = "getAddrMode2OpValue";
-  let PrintMethod = "printAddrMode2Operand";
-  let ParserMatchClass = AddrMode2AsmOperand;
-  let MIOperandInfo = (ops GPR:$base, GPR:$offsreg, i32imm:$offsimm);
-}
-
 def PostIdxRegShiftedAsmOperand : AsmOperandClass {
   let Name = "PostIdxRegShifted";
   let ParserMethod = "parsePostIdxReg";
@@ -2380,12 +2365,15 @@ let isBranch = 1, isTerminator = 1 in {
                       0, IIC_Br,
                       [(ARMbrjt GPR:$target, tjumptable:$jt)]>,
                       Sched<[WriteBr]>;
-    // FIXME: This shouldn't use the generic "addrmode2," but rather be split
-    // into i12 and rs suffixed versions.
-    def BR_JTm : ARMPseudoInst<(outs),
-                     (ins addrmode2:$target, i32imm:$jt),
+    def BR_JTm_i12 : ARMPseudoInst<(outs),
+                     (ins addrmode_imm12:$target, i32imm:$jt),
                      0, IIC_Br,
-                     [(ARMbrjt (i32 (load addrmode2:$target)),
+                     [(ARMbrjt (i32 (load addrmode_imm12:$target)),
+                               tjumptable:$jt)]>, Sched<[WriteBrTbl]>;
+    def BR_JTm_rs : ARMPseudoInst<(outs),
+                     (ins ldst_so_reg:$target, i32imm:$jt),
+                     0, IIC_Br,
+                     [(ARMbrjt (i32 (load ldst_so_reg:$target)),
                                tjumptable:$jt)]>, Sched<[WriteBrTbl]>;
     def BR_JTadd : ARMPseudoInst<(outs),
                    (ins GPR:$target, GPR:$idx, i32imm:$jt),

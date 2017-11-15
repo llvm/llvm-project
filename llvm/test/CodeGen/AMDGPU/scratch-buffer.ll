@@ -1,5 +1,5 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -verify-machineinstrs -march=amdgcn < %s | FileCheck -check-prefix=GCN %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -verify-machineinstrs -march=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -march=amdgcn < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -march=amdgcn -mcpu=tonga < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; When a frame index offset is more than 12-bits, make sure we don't store
 ; it in mubuf's offset field.
@@ -86,8 +86,21 @@ done:
   ret void
 }
 
+; GCN-LABEL: {{^}}neg_vaddr_offset_inbounds:
+; GCN: v_add_i32_e32 [[ADD:v[0-9]+]], vcc, 16, v{{[0-9]+}}
+; GCN: buffer_store_dword v{{[0-9]+}}, [[ADD]], s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen{{$}}
+define amdgpu_kernel void @neg_vaddr_offset_inbounds(i32 %offset) {
+entry:
+  %array = alloca [8192 x i32]
+  %ptr_offset = add i32 %offset, 4
+  %ptr = getelementptr inbounds [8192 x i32], [8192 x i32]* %array, i32 0, i32 %ptr_offset
+  store i32 0, i32* %ptr
+  ret void
+}
+
 ; GCN-LABEL: {{^}}neg_vaddr_offset:
-; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen offset:16{{$}}
+; GCN: v_add_i32_e32 [[ADD:v[0-9]+]], vcc, 16, v{{[0-9]+}}
+; GCN: buffer_store_dword v{{[0-9]+}}, [[ADD]], s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen{{$}}
 define amdgpu_kernel void @neg_vaddr_offset(i32 %offset) {
 entry:
   %array = alloca [8192 x i32]

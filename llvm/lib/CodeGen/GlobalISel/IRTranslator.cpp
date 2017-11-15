@@ -593,7 +593,7 @@ void IRTranslator::getStackGuard(unsigned DstReg,
                MachineMemOperand::MODereferenceable;
   *MemRefs =
       MF->getMachineMemOperand(MPInfo, Flags, DL->getPointerSizeInBits() / 8,
-                               DL->getPointerABIAlignment());
+                               DL->getPointerABIAlignment(0));
   MIB.setMemRefs(MemRefs, MemRefs + 1);
 }
 

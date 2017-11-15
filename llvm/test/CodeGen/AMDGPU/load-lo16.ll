@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9 %s
-; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -amdgpu-sroa=0 -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9 %s
+; RUN: llc -march=amdgcn -mcpu=fiji -amdgpu-sroa=0 -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI %s
 
 ; GCN-LABEL: {{^}}load_local_lo_v2i16_undeflo:
 ; GCN: s_waitcnt
@@ -340,17 +340,17 @@ entry:
 
 ; GCN-LABEL: {{^}}load_private_lo_v2i16_reglo_vreg:
 ; GCN: s_waitcnt
-; GFX9-NEXT: buffer_load_short_d16 v1, v0, s[0:3], s4 offen offset:4094{{$}}
+; GFX9: buffer_load_short_d16 v0, off, s[0:3], s5 offset:4094{{$}}
 ; GFX9-NEXT: s_waitcnt
-; GFX9-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v1
+; GFX9-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
 ; GFX9-NEXT: s_waitcnt
 ; GFX9-NEXT: s_setpc_b64
 
-; VI: buffer_load_ushort v{{[0-9]+}}, v0, s[0:3], s4 offen offset:4094{{$}}
-define void @load_private_lo_v2i16_reglo_vreg(i16* %in, i32 %reg) #0 {
+; VI: buffer_load_ushort v{{[0-9]+}}, off, s[0:3], s5 offset:4094{{$}}
+define void @load_private_lo_v2i16_reglo_vreg(i16* byval %in, i32 %reg) #0 {
 entry:
   %reg.bc = bitcast i32 %reg to <2 x i16>
-  %gep = getelementptr inbounds i16, i16* %in, i64 2047
+  %gep = getelementptr inbounds i16, i16* %in, i64 2045
   %load = load i16, i16* %gep
   %build1 = insertelement <2 x i16> %reg.bc, i16 %load, i32 0
   store <2 x i16> %build1, <2 x i16> addrspace(1)* undef
@@ -359,7 +359,7 @@ entry:
 
 ; GCN-LABEL: {{^}}load_private_lo_v2i16_reghi_vreg:
 ; GCN: s_waitcnt
-; GFX9-NEXT: buffer_load_ushort v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], s4 offen offset:4094{{$}}
+; GFX9: buffer_load_ushort v1, off, s[0:3], s5 offset:4094{{$}}
 ; GFX9-NEXT: s_waitcnt
 ; GFX9: v_and_b32
 ; GFX9: v_lshl_or_b32
@@ -368,10 +368,10 @@ entry:
 ; GFX9-NEXT: s_waitcnt
 ; GFX9-NEXT: s_setpc_b64
 
-; VI: buffer_load_ushort v{{[0-9]+}}, v0, s[0:3], s4 offen offset:4094{{$}}
-define void @load_private_lo_v2i16_reghi_vreg(i16* %in, i16 %reg) #0 {
+; VI: buffer_load_ushort v{{[0-9]+}}, off, s[0:3], s5 offset:4094{{$}}
+define void @load_private_lo_v2i16_reghi_vreg(i16* byval %in, i16 %reg) #0 {
 entry:
-  %gep = getelementptr inbounds i16, i16* %in, i64 2047
+  %gep = getelementptr inbounds i16, i16* %in, i64 2045
   %load = load i16, i16* %gep
   %build0 = insertelement <2 x i16> undef, i16 %reg, i32 1
   %build1 = insertelement <2 x i16> %build0, i16 %load, i32 0
@@ -381,17 +381,17 @@ entry:
 
 ; GCN-LABEL: {{^}}load_private_lo_v2f16_reglo_vreg:
 ; GCN: s_waitcnt
-; GFX9-NEXT: buffer_load_short_d16 v1, v0, s[0:3], s4 offen offset:4094{{$}}
+; GFX9: buffer_load_short_d16 v0, off, s[0:3], s5 offset:4094{{$}}
 ; GFX9-NEXT: s_waitcnt
-; GFX9-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v1
+; GFX9-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
 ; GFX9-NEXT: s_waitcnt
 ; GFX9-NEXT: s_setpc_b64
 
-; VI: buffer_load_ushort v{{[0-9]+}}, v0, s[0:3], s4 offen offset:4094{{$}}
-define void @load_private_lo_v2f16_reglo_vreg(half* %in, i32 %reg) #0 {
+; VI: buffer_load_ushort v{{[0-9]+}}, off, s[0:3], s5 offset:4094{{$}}
+define void @load_private_lo_v2f16_reglo_vreg(half* byval %in, i32 %reg) #0 {
 entry:
   %reg.bc = bitcast i32 %reg to <2 x half>
-  %gep = getelementptr inbounds half, half* %in, i64 2047
+  %gep = getelementptr inbounds half, half* %in, i64 2045
   %load = load half, half* %gep
   %build1 = insertelement <2 x half> %reg.bc, half %load, i32 0
   store <2 x half> %build1, <2 x half> addrspace(1)* undef
@@ -454,17 +454,17 @@ entry:
 
 ; GCN-LABEL: {{^}}load_private_lo_v2i16_reglo_vreg_zexti8:
 ; GCN: s_waitcnt
-; GFX9-NEXT: buffer_load_ubyte_d16 v1, v0, s[0:3], s4 offen offset:2047{{$}}
+; GFX9: buffer_load_ubyte_d16 v0, off, s[0:3], s5 offset:4095{{$}}
 ; GFX9-NEXT: s_waitcnt
-; GFX9-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v1
+; GFX9-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
 ; GFX9-NEXT: s_waitcnt
 ; GFX9-NEXT: s_setpc_b64
 
-; VI: buffer_load_ubyte v{{[0-9]+}}, v0, s[0:3], s4 offen offset:2047{{$}}
-define void @load_private_lo_v2i16_reglo_vreg_zexti8(i8* %in, i32 %reg) #0 {
+; VI: buffer_load_ubyte v{{[0-9]+}}, off, s[0:3], s5 offset:4095{{$}}
+define void @load_private_lo_v2i16_reglo_vreg_zexti8(i8* byval %in, i32 %reg) #0 {
 entry:
   %reg.bc = bitcast i32 %reg to <2 x i16>
-  %gep = getelementptr inbounds i8, i8* %in, i64 2047
+  %gep = getelementptr inbounds i8, i8* %in, i64 4091
   %load = load i8, i8* %gep
   %ext = zext i8 %load to i16
   %build1 = insertelement <2 x i16> %reg.bc, i16 %ext, i32 0
@@ -474,17 +474,17 @@ entry:
 
 ; GCN-LABEL: {{^}}load_private_lo_v2i16_reglo_vreg_sexti8:
 ; GCN: s_waitcnt
-; GFX9-NEXT: buffer_load_sbyte_d16 v1, v0, s[0:3], s4 offen offset:2047{{$}}
+; GFX9: buffer_load_sbyte_d16 v0, off, s[0:3], s5 offset:4095{{$}}
 ; GFX9-NEXT: s_waitcnt
-; GFX9-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v1
+; GFX9-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
 ; GFX9-NEXT: s_waitcnt
 ; GFX9-NEXT: s_setpc_b64
 
-; VI: buffer_load_sbyte v{{[0-9]+}}, v0, s[0:3], s4 offen offset:2047{{$}}
-define void @load_private_lo_v2i16_reglo_vreg_sexti8(i8* %in, i32 %reg) #0 {
+; VI: buffer_load_sbyte v{{[0-9]+}}, off, s[0:3], s5 offset:4095{{$}}
+define void @load_private_lo_v2i16_reglo_vreg_sexti8(i8* byval %in, i32 %reg) #0 {
 entry:
   %reg.bc = bitcast i32 %reg to <2 x i16>
-  %gep = getelementptr inbounds i8, i8* %in, i64 2047
+  %gep = getelementptr inbounds i8, i8* %in, i64 4091
   %load = load i8, i8* %gep
   %ext = sext i8 %load to i16
   %build1 = insertelement <2 x i16> %reg.bc, i16 %ext, i32 0
@@ -585,6 +585,65 @@ entry:
   %load = load half, half addrspace(2)* %gep
   %build1 = insertelement <2 x half> %reg.bc, half %load, i32 0
   store <2 x half> %build1, <2 x half> addrspace(1)* undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}load_private_lo_v2i16_reglo_vreg_to_offset:
+; GFX9: buffer_store_dword
+; GFX9-NEXT: buffer_load_short_d16 v0, off, s[0:3], s5 offset:4094
+
+; VI: buffer_load_ushort v
+define void @load_private_lo_v2i16_reglo_vreg_to_offset(i32 %reg) #0 {
+entry:
+  %obj0 = alloca [10 x i32], align 4
+  %obj1 = alloca [4096 x i16], align 2
+  %reg.bc = bitcast i32 %reg to <2 x i16>
+  %bc = bitcast [10 x i32]* %obj0 to i32*
+  store volatile i32 123, i32* %bc
+  %gep = getelementptr inbounds [4096 x i16], [4096 x i16]* %obj1, i32 0, i32 2025
+  %load = load volatile i16, i16* %gep
+  %build1 = insertelement <2 x i16> %reg.bc, i16 %load, i32 0
+  store <2 x i16> %build1, <2 x i16> addrspace(1)* undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}load_private_lo_v2i16_reglo_vreg_sexti8_to_offset:
+; GFX9: buffer_store_dword
+; GFX9-NEXT: buffer_load_sbyte_d16 v0, off, s[0:3], s5 offset:4095
+
+; VI: buffer_load_sbyte v
+define void @load_private_lo_v2i16_reglo_vreg_sexti8_to_offset(i32 %reg) #0 {
+entry:
+  %obj0 = alloca [10 x i32], align 4
+  %obj1 = alloca [4096 x i8], align 2
+  %reg.bc = bitcast i32 %reg to <2 x i16>
+  %bc = bitcast [10 x i32]* %obj0 to i32*
+  store volatile i32 123, i32* %bc
+  %gep = getelementptr inbounds [4096 x i8], [4096 x i8]* %obj1, i32 0, i32 4051
+  %load = load volatile i8, i8* %gep
+  %load.ext = sext i8 %load to i16
+  %build1 = insertelement <2 x i16> %reg.bc, i16 %load.ext, i32 0
+  store <2 x i16> %build1, <2 x i16> addrspace(1)* undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}load_private_lo_v2i16_reglo_vreg_zexti8_to_offset:
+; GFX9: buffer_store_dword
+; GFX9-NEXT: buffer_load_ubyte_d16 v0, off, s[0:3], s5 offset:4095
+
+; VI: buffer_load_ubyte v
+define void @load_private_lo_v2i16_reglo_vreg_zexti8_to_offset(i32 %reg) #0 {
+entry:
+  %obj0 = alloca [10 x i32], align 4
+  %obj1 = alloca [4096 x i8], align 2
+  %reg.bc = bitcast i32 %reg to <2 x i16>
+  %bc = bitcast [10 x i32]* %obj0 to i32*
+  store volatile i32 123, i32* %bc
+  %gep = getelementptr inbounds [4096 x i8], [4096 x i8]* %obj1, i32 0, i32 4051
+  %load = load volatile i8, i8* %gep
+  %load.ext = zext i8 %load to i16
+  %build1 = insertelement <2 x i16> %reg.bc, i16 %load.ext, i32 0
+  store <2 x i16> %build1, <2 x i16> addrspace(1)* undef
   ret void
 }
 

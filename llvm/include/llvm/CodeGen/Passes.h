@@ -43,9 +43,6 @@ namespace llvm {
   /// the entry block.
   FunctionPass *createUnreachableBlockEliminationPass();
 
-  /// Insert mcount-like function calls.
-  FunctionPass *createCountingFunctionInserterPass();
-
   /// MachineFunctionPrinter pass - This pass prints out the machine function to
   /// the given stream as a debugging tool.
   MachineFunctionPass *

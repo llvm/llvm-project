@@ -9,7 +9,7 @@
 //
 // This file is a part of AddressSanitizer, an address sanity checker.
 // Details of the algorithm:
-//  http://code.google.com/p/address-sanitizer/wiki/AddressSanitizerAlgorithm
+//  https://github.com/google/sanitizers/wiki/AddressSanitizerAlgorithm
 //
 //===----------------------------------------------------------------------===//
 
@@ -211,7 +211,13 @@ static cl::opt<bool>
     ClWithIfunc("asan-with-ifunc",
                 cl::desc("Access dynamic shadow through an ifunc global on "
                          "platforms that support this"),
-                cl::Hidden, cl::init(false));
+                cl::Hidden, cl::init(true));
+
+static cl::opt<bool> ClWithIfuncSuppressRemat(
+    "asan-with-ifunc-suppress-remat",
+    cl::desc("Suppress rematerialization of dynamic shadow address by passing "
+             "it through inline asm in prologue."),
+    cl::Hidden, cl::init(true));
 
 // This flag limits the number of instructions to be instrumented
 // in any given BB. Normally, this should be set to unlimited (INT_MAX),
@@ -988,8 +994,9 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
   void visitCallSite(CallSite CS) {
     Instruction *I = CS.getInstruction();
     if (CallInst *CI = dyn_cast<CallInst>(I)) {
-      HasNonEmptyInlineAsm |=
-          CI->isInlineAsm() && !CI->isIdenticalTo(EmptyInlineAsm.get());
+      HasNonEmptyInlineAsm |= CI->isInlineAsm() &&
+                              !CI->isIdenticalTo(EmptyInlineAsm.get()) &&
+                              I != ASan.LocalDynamicShadow;
       HasReturnsTwiceCall |= CI->canReturnTwice();
     }
   }
@@ -1121,11 +1128,6 @@ Value *AddressSanitizer::memToShadow(Value *Shadow, IRBuilder<> &IRB) {
   if (Mapping.Offset == 0) return Shadow;
   // (Shadow >> scale) | offset
   Value *ShadowBase;
-  if (Mapping.InGlobal)
-    return IRB.CreatePtrToInt(
-        IRB.CreateGEP(AsanShadowGlobal,
-                      {ConstantInt::get(IntptrTy, 0), Shadow}),
-        IntptrTy);
   if (LocalDynamicShadow)
     ShadowBase = LocalDynamicShadow;
   else
@@ -1642,7 +1644,7 @@ bool AddressSanitizerModule::ShouldInstrumentGlobal(GlobalVariable *G) {
 
     // Callbacks put into the CRT initializer/terminator sections
     // should not be instrumented.
-    // See https://code.google.com/p/address-sanitizer/issues/detail?id=305
+    // See https://github.com/google/sanitizers/issues/305
     // and http://msdn.microsoft.com/en-US/en-en/library/bb918180(v=vs.120).aspx
     if (Section.startswith(".CRT")) {
       DEBUG(dbgs() << "Ignoring a global initializer callback: " << *G << "\n");
@@ -1665,7 +1667,7 @@ bool AddressSanitizerModule::ShouldInstrumentGlobal(GlobalVariable *G) {
         DEBUG(dbgs() << "Ignoring ObjC runtime global: " << *G << "\n");
         return false;
       }
-      // See http://code.google.com/p/address-sanitizer/issues/detail?id=32
+      // See https://github.com/google/sanitizers/issues/32
       // Constant CFString instances are compiled in the following way:
       //  -- the string buffer is emitted into
       //     __TEXT,__cstring,cstring_literals
@@ -2343,13 +2345,29 @@ bool AddressSanitizer::maybeInsertAsanInitAtFunctionEntry(Function &F) {
 
 void AddressSanitizer::maybeInsertDynamicShadowAtFunctionEntry(Function &F) {
   // Generate code only when dynamic addressing is needed.
-  if (Mapping.Offset != kDynamicShadowSentinel || Mapping.InGlobal)
+  if (Mapping.Offset != kDynamicShadowSentinel)
     return;
 
   IRBuilder<> IRB(&F.front().front());
-  Value *GlobalDynamicAddress = F.getParent()->getOrInsertGlobal(
-      kAsanShadowMemoryDynamicAddress, IntptrTy);
-  LocalDynamicShadow = IRB.CreateLoad(GlobalDynamicAddress);
+  if (Mapping.InGlobal) {
+    if (ClWithIfuncSuppressRemat) {
+      // An empty inline asm with input reg == output reg.
+      // An opaque pointer-to-int cast, basically.
+      InlineAsm *Asm = InlineAsm::get(
+          FunctionType::get(IntptrTy, {AsanShadowGlobal->getType()}, false),
+          StringRef(""), StringRef("=r,0"),
+          /*hasSideEffects=*/false);
+      LocalDynamicShadow =
+          IRB.CreateCall(Asm, {AsanShadowGlobal}, ".asan.shadow");
+    } else {
+      LocalDynamicShadow =
+          IRB.CreatePointerCast(AsanShadowGlobal, IntptrTy, ".asan.shadow");
+    }
+  } else {
+    Value *GlobalDynamicAddress = F.getParent()->getOrInsertGlobal(
+        kAsanShadowMemoryDynamicAddress, IntptrTy);
+    LocalDynamicShadow = IRB.CreateLoad(GlobalDynamicAddress);
+  }
 }
 
 void AddressSanitizer::markEscapedLocalAllocas(Function &F) {
@@ -2496,7 +2514,7 @@ bool AddressSanitizer::runOnFunction(Function &F) {
   bool ChangedStack = FSP.runOnFunction();
 
   // We must unpoison the stack before every NoReturn call (throw, _exit, etc).
-  // See e.g. http://code.google.com/p/address-sanitizer/issues/detail?id=37
+  // See e.g. https://github.com/google/sanitizers/issues/37
   for (auto CI : NoReturnCalls) {
     IRBuilder<> IRB(CI);
     IRB.CreateCall(AsanHandleNoReturnFunc, {});

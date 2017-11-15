@@ -11,7 +11,7 @@ Content-Length: 148
 
 {"jsonrpc":"2.0","id":1,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":4,"character":7}}}
 Content-Length: 58
-# CHECK: {"id":1,"jsonrpc":"2.0","result":[
+# CHECK: {"id":1,"jsonrpc":"2.0","result":{"isIncomplete":false,"items":
 #
 # Keyword
 # CHECK-DAG: {"filterText":"int","insertText":"int","insertTextFormat":1,"kind":14,"label":"int","sortText":"000050int"}
@@ -31,6 +31,6 @@ Content-Length: 58
 # Function
 # CHECK-DAG: {"detail":"int","filterText":"function","insertText":"function()","insertTextFormat":1,"kind":3,"label":"function()","sortText":"000012function"}
 #
-# CHECK-SAME: ]}
+# CHECK-SAME: ]}}
 
 {"jsonrpc":"2.0","id":3,"method":"shutdown","params":null}

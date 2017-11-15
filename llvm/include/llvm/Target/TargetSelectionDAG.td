@@ -678,6 +678,17 @@ class PatFrag<dag ops, dag frag, code pred = [{}],
   // cast<StoreSDNode>(N)->isTruncatingStore();
   bit IsTruncStore = ?;
 
+  // cast<AtomicSDNode>(N)->getOrdering() == AtomicOrdering::Monotonic
+  bit IsAtomicOrderingMonotonic = ?;
+  // cast<AtomicSDNode>(N)->getOrdering() == AtomicOrdering::Acquire
+  bit IsAtomicOrderingAcquire = ?;
+  // cast<AtomicSDNode>(N)->getOrdering() == AtomicOrdering::Release
+  bit IsAtomicOrderingRelease = ?;
+  // cast<AtomicSDNode>(N)->getOrdering() == AtomicOrdering::AcquireRelease
+  bit IsAtomicOrderingAcquireRelease = ?;
+  // cast<AtomicSDNode>(N)->getOrdering() == AtomicOrdering::SequentiallyConsistent
+  bit IsAtomicOrderingSequentiallyConsistent = ?;
+
   // cast<LoadSDNode>(N)->getMemoryVT() == MVT::<VT>;
   // cast<StoreSDNode>(N)->getMemoryVT() == MVT::<VT>;
   ValueType MemoryVT = ?;
@@ -1137,48 +1148,58 @@ def setne  : PatFrag<(ops node:$lhs, node:$rhs),
 
 multiclass binary_atomic_op_ord<SDNode atomic_op> {
   def #NAME#_monotonic : PatFrag<(ops node:$ptr, node:$val),
-      (!cast<SDNode>(#NAME) node:$ptr, node:$val), [{
-        return cast<AtomicSDNode>(N)->getOrdering() == AtomicOrdering::Monotonic;
-  }]>;
+      (!cast<SDNode>(#NAME) node:$ptr, node:$val)> {
+    let IsAtomic = 1;
+    let IsAtomicOrderingMonotonic = 1;
+  }
   def #NAME#_acquire : PatFrag<(ops node:$ptr, node:$val),
-      (!cast<SDNode>(#NAME) node:$ptr, node:$val), [{
-        return cast<AtomicSDNode>(N)->getOrdering() == AtomicOrdering::Acquire;
-  }]>;
+      (!cast<SDNode>(#NAME) node:$ptr, node:$val)> {
+    let IsAtomic = 1;
+    let IsAtomicOrderingAcquire = 1;
+  }
   def #NAME#_release : PatFrag<(ops node:$ptr, node:$val),
-      (!cast<SDNode>(#NAME) node:$ptr, node:$val), [{
-        return cast<AtomicSDNode>(N)->getOrdering() == AtomicOrdering::Release;
-  }]>;
+      (!cast<SDNode>(#NAME) node:$ptr, node:$val)> {
+    let IsAtomic = 1;
+    let IsAtomicOrderingRelease = 1;
+  }
   def #NAME#_acq_rel : PatFrag<(ops node:$ptr, node:$val),
-      (!cast<SDNode>(#NAME) node:$ptr, node:$val), [{
-        return cast<AtomicSDNode>(N)->getOrdering() == AtomicOrdering::AcquireRelease;
-  }]>;
+      (!cast<SDNode>(#NAME) node:$ptr, node:$val)> {
+    let IsAtomic = 1;
+    let IsAtomicOrderingAcquireRelease = 1;
+  }
   def #NAME#_seq_cst : PatFrag<(ops node:$ptr, node:$val),
-      (!cast<SDNode>(#NAME) node:$ptr, node:$val), [{
-        return cast<AtomicSDNode>(N)->getOrdering() == AtomicOrdering::SequentiallyConsistent;
-  }]>;
+      (!cast<SDNode>(#NAME) node:$ptr, node:$val)> {
+    let IsAtomic = 1;
+    let IsAtomicOrderingSequentiallyConsistent = 1;
+  }
 }
 
 multiclass ternary_atomic_op_ord<SDNode atomic_op> {
   def #NAME#_monotonic : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
-      (!cast<SDNode>(#NAME) node:$ptr, node:$cmp, node:$val), [{
-        return cast<AtomicSDNode>(N)->getOrdering() == AtomicOrdering::Monotonic;
-  }]>;
+      (!cast<SDNode>(#NAME) node:$ptr, node:$cmp, node:$val)> {
+    let IsAtomic = 1;
+    let IsAtomicOrderingMonotonic = 1;
+  }
   def #NAME#_acquire : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
-      (!cast<SDNode>(#NAME) node:$ptr, node:$cmp, node:$val), [{
-        return cast<AtomicSDNode>(N)->getOrdering() == AtomicOrdering::Acquire;
-  }]>;
+      (!cast<SDNode>(#NAME) node:$ptr, node:$cmp, node:$val)> {
+    let IsAtomic = 1;
+    let IsAtomicOrderingAcquire = 1;
+  }
   def #NAME#_release : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
-      (!cast<SDNode>(#NAME) node:$ptr, node:$cmp, node:$val), [{
-        return cast<AtomicSDNode>(N)->getOrdering() == AtomicOrdering::Release;
-  }]>;
+      (!cast<SDNode>(#NAME) node:$ptr, node:$cmp, node:$val)> {
+    let IsAtomic = 1;
+    let IsAtomicOrderingRelease = 1;
+  }
   def #NAME#_acq_rel : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
-      (!cast<SDNode>(#NAME) node:$ptr, node:$cmp, node:$val), [{
-        return cast<AtomicSDNode>(N)->getOrdering() == AtomicOrdering::AcquireRelease;
-  }]>;
+      (!cast<SDNode>(#NAME) node:$ptr, node:$cmp, node:$val)> {
+    let IsAtomic = 1;
+    let IsAtomicOrderingAcquireRelease = 1;
+  }
   def #NAME#_seq_cst : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
-      (!cast<SDNode>(#NAME) node:$ptr, node:$cmp, node:$val), [{
-        return cast<AtomicSDNode>(N)->getOrdering() == AtomicOrdering::SequentiallyConsistent;
-  }]>;
+      (!cast<SDNode>(#NAME) node:$ptr, node:$cmp, node:$val)> {
+    let IsAtomic = 1;
+    let IsAtomicOrderingSequentiallyConsistent = 1;
+  }
 }
 
 multiclass binary_atomic_op<SDNode atomic_op> {

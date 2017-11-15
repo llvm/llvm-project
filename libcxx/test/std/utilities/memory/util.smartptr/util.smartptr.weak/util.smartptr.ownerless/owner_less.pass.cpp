@@ -112,11 +112,11 @@ int main()
     std::weak_ptr<int> wp1;
 
     std::owner_less<> cmp;
-    cmp(sp1, sp2);
-    cmp(sp1, wp1);
-    cmp(sp1, sp3);
-    cmp(wp1, sp1);
-    cmp(wp1, wp1);
+    assert(!cmp(sp1, sp2));
+    assert(!cmp(sp1, wp1));
+    assert(!cmp(sp1, sp3));
+    assert(!cmp(wp1, sp1));
+    assert(!cmp(wp1, wp1));
     ASSERT_NOEXCEPT(cmp(sp1, sp1));
     ASSERT_NOEXCEPT(cmp(sp1, wp1));
     ASSERT_NOEXCEPT(cmp(wp1, sp1));
@@ -126,7 +126,7 @@ int main()
     // test heterogeneous lookups
     std::set<std::shared_ptr<X>, std::owner_less<>> s;
     std::shared_ptr<void> vp;
-    s.find(vp);
+    assert(s.find(vp) == s.end());
     }
 #endif
 }

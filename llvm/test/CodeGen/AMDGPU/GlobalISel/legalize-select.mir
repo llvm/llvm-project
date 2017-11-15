@@ -31,5 +31,6 @@ body: |
     %3(s32) = G_CONSTANT i32 1
     %4(s32) = G_CONSTANT i32 2
     %5(s32) = G_SELECT %2, %3, %4
+    %vgpr0 = COPY %5
 
 ...

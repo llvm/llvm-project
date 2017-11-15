@@ -139,8 +139,7 @@ body:             |
     ; SOFT-DEFAULT: [[R32:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_SDIV
-    ; CHECK: [[R16:%[0-9]+]]:_(s16) = G_TRUNC [[R32]]
-    ; CHECK: [[R:%[0-9]+]]:_(s32) = G_SEXT [[R16]]
+    ; CHECK: [[R:%[0-9]+]]:_(s32) = G_ASHR
     ; SOFT-NOT: G_SDIV
     %4(s16) = G_SDIV %1, %3
     ; CHECK: %r0 = COPY [[R]]
@@ -192,8 +191,7 @@ body:             |
     ; SOFT-DEFAULT: [[R32:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_UDIV
-    ; CHECK: [[R16:%[0-9]+]]:_(s16) = G_TRUNC [[R32]]
-    ; CHECK: [[R:%[0-9]+]]:_(s32) = G_ZEXT [[R16]]
+    ; CHECK: [[R:%[0-9]+]]:_(s32) = G_AND
     ; SOFT-NOT: G_UDIV
     %4(s16) = G_UDIV %1, %3
     ; CHECK: %r0 = COPY [[R]]
@@ -247,8 +245,7 @@ body:             |
     ; SOFT-DEFAULT: [[R32:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_SDIV
-    ; CHECK: [[R8:%[0-9]+]]:_(s8) = G_TRUNC [[R32]]
-    ; CHECK: [[R:%[0-9]+]]:_(s32) = G_SEXT [[R8]]
+    ; CHECK: [[R:%[0-9]+]]:_(s32) = G_ASHR
     ; SOFT-NOT: G_SDIV
     %4(s8) = G_SDIV %1, %3
     ; CHECK: %r0 = COPY [[R]]
@@ -300,8 +297,7 @@ body:             |
     ; SOFT-DEFAULT: [[R32:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_UDIV
-    ; CHECK: [[R8:%[0-9]+]]:_(s8) = G_TRUNC [[R32]]
-    ; CHECK: [[R:%[0-9]+]]:_(s32) = G_ZEXT [[R8]]
+    ; CHECK: [[R:%[0-9]+]]:_(s32) = G_AND
     ; SOFT-NOT: G_UDIV
     %4(s8) = G_UDIV %1, %3
     ; CHECK: %r0 = COPY [[R]]
@@ -433,8 +429,7 @@ body:             |
     ; SOFT-DEFAULT: [[R32:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_SREM
-    ; CHECK: [[R16:%[0-9]+]]:_(s16) = G_TRUNC [[R32]]
-    ; CHECK: [[R:%[0-9]+]]:_(s32) = G_SEXT [[R16]]
+    ; CHECK: [[R:%[0-9]+]]:_(s32) = G_ASHR
     ; SOFT-NOT: G_SREM
     %4(s16) = G_SREM %1, %3
     ; CHECK: %r0 = COPY [[R]]
@@ -488,8 +483,7 @@ body:             |
     ; SOFT-DEFAULT: [[R32:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_UREM
-    ; CHECK: [[R16:%[0-9]+]]:_(s16) = G_TRUNC [[R32]]
-    ; CHECK: [[R:%[0-9]+]]:_(s32) = G_ZEXT [[R16]]
+    ; CHECK: [[R:%[0-9]+]]:_(s32) = G_AND
     ; SOFT-NOT: G_UREM
     %4(s16) = G_UREM %1, %3
     ; CHECK: %r0 = COPY [[R]]
@@ -545,8 +539,7 @@ body:             |
     ; SOFT-DEFAULT: [[R32:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_SREM
-    ; CHECK: [[R8:%[0-9]+]]:_(s8) = G_TRUNC [[R32]]
-    ; CHECK: [[R:%[0-9]+]]:_(s32) = G_SEXT [[R8]]
+    ; CHECK: [[R:%[0-9]+]]:_(s32) = G_ASHR
     ; SOFT-NOT: G_SREM
     %4(s8) = G_SREM %1, %3
     ; CHECK: %r0 = COPY [[R]]
@@ -600,8 +593,7 @@ body:             |
     ; SOFT-DEFAULT: [[R32:%[0-9]+]]:_(s32) = COPY %r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_UREM
-    ; CHECK: [[R8:%[0-9]+]]:_(s8) = G_TRUNC [[R32]]
-    ; CHECK: [[R:%[0-9]+]]:_(s32) = G_ZEXT [[R8]]
+    ; CHECK: [[R:%[0-9]+]]:_(s32) = G_AND
     ; SOFT-NOT: G_UREM
     %4(s8) = G_UREM %1, %3
     ; CHECK: %r0 = COPY [[R]]

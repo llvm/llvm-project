@@ -3,7 +3,7 @@
 ; FP128 registers part of the callee saved registers list in order to avoid
 ; spilling / reloading.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 | FileCheck %s
+; RUN: llc -switch-peel-threshold=101 < %s -mtriple=s390x-linux-gnu -mcpu=z13 | FileCheck %s
 
 %0 = type { %0*, %0*, %0*, i32, %1*, i64, i64, i64, i64, i64, i64, %2, %5, %7 }
 %1 = type { i32, i32, i32 (%1*, i64, i32)*, i32 (%1*, i64, i64, i32, i8**)*, i32 (%1*, i64, i64, i64, i32)*, i32 (%1*)*, void (i8*)*, i8*, i8* }

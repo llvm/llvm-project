@@ -84,6 +84,7 @@
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/InstrProfiling.h"
+#include "llvm/Transforms/Instrumentation/BoundsChecking.h"
 #include "llvm/Transforms/PGOInstrumentation.h"
 #include "llvm/Transforms/SampleProfile.h"
 #include "llvm/Transforms/Scalar/ADCE.h"
@@ -135,6 +136,7 @@
 #include "llvm/Transforms/Scalar/TailRecursionElimination.h"
 #include "llvm/Transforms/Utils/AddDiscriminators.h"
 #include "llvm/Transforms/Utils/BreakCriticalEdges.h"
+#include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Transforms/Utils/LCSSA.h"
 #include "llvm/Transforms/Utils/LibCallsShrinkWrap.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
@@ -755,8 +757,13 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   // Optimize parallel scalar instruction chains into SIMD instructions.
   OptimizePM.addPass(SLPVectorizerPass());
 
-  // Cleanup after all of the vectorizers.
-  OptimizePM.addPass(SimplifyCFGPass());
+  // Cleanup after all of the vectorizers. Simplification passes like CVP and
+  // GVN, loop transforms, and others have already run, so it's now better to
+  // convert to more optimized IR using more aggressive simplify CFG options.
+  OptimizePM.addPass(SimplifyCFGPass(SimplifyCFGOptions().
+                                         forwardSwitchCondToPhi(true).
+                                         convertSwitchToLookupTable(true).
+                                         needCanonicalLoops(false)));
   OptimizePM.addPass(InstCombinePass());
 
   // Unroll small loops to hide loop backedge latency and saturate any parallel

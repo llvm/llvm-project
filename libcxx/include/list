@@ -896,7 +896,7 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY
     size_type size() const _NOEXCEPT     {return base::__sz();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
     bool empty() const _NOEXCEPT         {return base::empty();}
     _LIBCPP_INLINE_VISIBILITY
     size_type max_size() const _NOEXCEPT

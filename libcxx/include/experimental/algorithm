@@ -61,9 +61,9 @@ template <class _PopulationIterator, class _SampleIterator, class _Distance,
           class _UniformRandomNumberGenerator>
 inline _LIBCPP_INLINE_VISIBILITY
 _SampleIterator sample(_PopulationIterator __first, _PopulationIterator __last,
-                       _SampleIterator __output, _Distance __n,
+                       _SampleIterator __output_iter, _Distance __n,
                        _UniformRandomNumberGenerator &&__g) {
-  return _VSTD::__sample(__first, __last, __output, __n, __g);
+  return _VSTD::__sample(__first, __last, __output_iter, __n, __g);
 }
 
 _LIBCPP_END_NAMESPACE_LFTS

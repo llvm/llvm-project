@@ -77,6 +77,7 @@ namespace clang {
     QualType VisitTemplateSpecializationType(const TemplateSpecializationType *T);
     QualType VisitElaboratedType(const ElaboratedType *T);
     // FIXME: DependentNameType
+    QualType VisitPackExpansionType(const PackExpansionType *T);
     // FIXME: DependentTemplateSpecializationType
     QualType VisitObjCInterfaceType(const ObjCInterfaceType *T);
     QualType VisitObjCObjectType(const ObjCObjectType *T);
@@ -149,6 +150,7 @@ namespace clang {
     Decl *VisitTypedefNameDecl(TypedefNameDecl *D, bool IsAlias);
     Decl *VisitTypedefDecl(TypedefDecl *D);
     Decl *VisitTypeAliasDecl(TypeAliasDecl *D);
+    Decl *VisitTypeAliasTemplateDecl(TypeAliasTemplateDecl *D);
     Decl *VisitLabelDecl(LabelDecl *D);
     Decl *VisitEnumDecl(EnumDecl *D);
     Decl *VisitRecordDecl(RecordDecl *D);
@@ -265,6 +267,7 @@ namespace clang {
     Expr *VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *E);
     Expr *VisitCXXTemporaryObjectExpr(CXXTemporaryObjectExpr *CE);
     Expr *VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *E);
+    Expr *VisitPackExpansionExpr(PackExpansionExpr *E);
     Expr *VisitCXXNewExpr(CXXNewExpr *CE);
     Expr *VisitCXXDeleteExpr(CXXDeleteExpr *E);
     Expr *VisitCXXConstructExpr(CXXConstructExpr *E);
@@ -765,6 +768,15 @@ QualType ASTNodeImporter::VisitElaboratedType(const ElaboratedType *T) {
 
   return Importer.getToContext().getElaboratedType(T->getKeyword(),
                                                    ToQualifier, ToNamedType);
+}
+
+QualType ASTNodeImporter::VisitPackExpansionType(const PackExpansionType *T) {
+  QualType Pattern = Importer.Import(T->getPattern());
+  if (Pattern.isNull())
+    return QualType();
+
+  return Importer.getToContext().getPackExpansionType(Pattern,
+                                                      T->getNumExpansions());
 }
 
 QualType ASTNodeImporter::VisitObjCInterfaceType(const ObjCInterfaceType *T) {
@@ -1485,6 +1497,63 @@ Decl *ASTNodeImporter::VisitTypedefDecl(TypedefDecl *D) {
 
 Decl *ASTNodeImporter::VisitTypeAliasDecl(TypeAliasDecl *D) {
   return VisitTypedefNameDecl(D, /*IsAlias=*/true);
+}
+
+Decl *ASTNodeImporter::VisitTypeAliasTemplateDecl(TypeAliasTemplateDecl *D) {
+  // Import the major distinguishing characteristics of this typedef.
+  DeclContext *DC, *LexicalDC;
+  DeclarationName Name;
+  SourceLocation Loc;
+  NamedDecl *ToD;
+  if (ImportDeclParts(D, DC, LexicalDC, Name, ToD, Loc))
+    return nullptr;
+  if (ToD)
+    return ToD;
+
+  // If this typedef is not in block scope, determine whether we've
+  // seen a typedef with the same name (that we can merge with) or any
+  // other entity by that name (which name lookup could conflict with).
+  if (!DC->isFunctionOrMethod()) {
+    SmallVector<NamedDecl *, 4> ConflictingDecls;
+    unsigned IDNS = Decl::IDNS_Ordinary;
+    SmallVector<NamedDecl *, 2> FoundDecls;
+    DC->getRedeclContext()->localUncachedLookup(Name, FoundDecls);
+    for (unsigned I = 0, N = FoundDecls.size(); I != N; ++I) {
+      if (!FoundDecls[I]->isInIdentifierNamespace(IDNS))
+        continue;
+      if (auto *FoundAlias =
+            dyn_cast<TypeAliasTemplateDecl>(FoundDecls[I]))
+          return Importer.Imported(D, FoundAlias);
+      ConflictingDecls.push_back(FoundDecls[I]);
+    }
+
+    if (!ConflictingDecls.empty()) {
+      Name = Importer.HandleNameConflict(Name, DC, IDNS,
+                                         ConflictingDecls.data(),
+                                         ConflictingDecls.size());
+      if (!Name)
+        return nullptr;
+    }
+  }
+
+  TemplateParameterList *Params = ImportTemplateParameterList(
+        D->getTemplateParameters());
+  if (!Params)
+    return nullptr;
+
+  NamedDecl *TemplDecl = cast_or_null<NamedDecl>(
+        Importer.Import(D->getTemplatedDecl()));
+  if (!TemplDecl)
+    return nullptr;
+
+  TypeAliasTemplateDecl *ToAlias = TypeAliasTemplateDecl::Create(
+        Importer.getToContext(), DC, Loc, Name, Params, TemplDecl);
+
+  ToAlias->setAccess(D->getAccess());
+  ToAlias->setLexicalDeclContext(LexicalDC);
+  Importer.Imported(D, ToAlias);
+  LexicalDC->addDeclInternal(ToAlias);
+  return ToD;
 }
 
 Decl *ASTNodeImporter::VisitLabelDecl(LabelDecl *D) {
@@ -5178,6 +5247,20 @@ ASTNodeImporter::VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *E) {
   // FIXME: Should ManglingNumber get numbers associated with 'to' context?
   ToMTE->setExtendingDecl(ExtendedBy, E->getManglingNumber());
   return ToMTE;
+}
+
+Expr *ASTNodeImporter::VisitPackExpansionExpr(PackExpansionExpr *E) {
+  QualType T = Importer.Import(E->getType());
+  if (T.isNull())
+    return nullptr;
+
+  Expr *Pattern = Importer.Import(E->getPattern());
+  if (!Pattern)
+    return nullptr;
+
+  return new (Importer.getToContext()) PackExpansionExpr(
+        T, Pattern, Importer.Import(E->getEllipsisLoc()),
+        E->getNumExpansions());
 }
 
 Expr *ASTNodeImporter::VisitCXXNewExpr(CXXNewExpr *CE) {

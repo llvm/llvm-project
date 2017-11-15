@@ -761,10 +761,12 @@ std::error_code createUniqueFile(const Twine &Model,
 }
 
 TempFile::TempFile(StringRef Name, int FD) : TmpName(Name), FD(FD) {}
-TempFile::TempFile(TempFile &&Other) {
+TempFile::TempFile(TempFile &&Other) { *this = std::move(Other); }
+TempFile &TempFile::operator=(TempFile &&Other) {
   TmpName = std::move(Other.TmpName);
   FD = Other.FD;
   Other.Done = true;
+  return *this;
 }
 
 TempFile::~TempFile() { assert(Done); }

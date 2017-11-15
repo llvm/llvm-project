@@ -13,4 +13,6 @@ body: |
     ; CHECK: [[DEF1:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
     ; CHECK: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[DEF]](s64), [[DEF1]](s64)
     %0:_(s128) = G_IMPLICIT_DEF
+    %1:_(s64) = G_TRUNC %0
+    %x0 = COPY %1
 ...

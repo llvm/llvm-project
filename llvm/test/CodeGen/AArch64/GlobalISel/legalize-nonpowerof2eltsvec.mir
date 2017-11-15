@@ -22,9 +22,15 @@ body: |
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY %w0
     ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY %w1
     ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY %w2
-    ; CHECK: [[MV:%[0-9]+]]:_(<3 x s32>) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32)
+    ; CHECK: %w0 = COPY [[COPY]](s32)
+    ; CHECK: %w1 = COPY [[COPY1]](s32)
+    ; CHECK: %w2 = COPY [[COPY2]](s32)
     %0(s32) = COPY %w0
     %1(s32) = COPY %w1
     %2(s32) = COPY %w2
     %3(<3 x s32>) = G_MERGE_VALUES %0(s32), %1(s32), %2(s32)
+    %4:_(s32), %5:_(s32), %6:_(s32) = G_UNMERGE_VALUES %3
+    %w0 = COPY %4
+    %w1 = COPY %5
+    %w2 = COPY %6
 ...

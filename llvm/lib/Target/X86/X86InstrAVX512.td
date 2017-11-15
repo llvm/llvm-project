@@ -8196,15 +8196,16 @@ defm : AVX512_pmovx_patterns<"VPMOVZX", X86vzext, zext_invec, loadi16_anyext>;
 // GATHER - SCATTER Operations
 
 multiclass avx512_gather<bits<8> opc, string OpcodeStr, X86VectorVTInfo _,
-                         X86MemOperand memop, PatFrag GatherNode> {
+                         X86MemOperand memop, PatFrag GatherNode,
+                         RegisterClass MaskRC = _.KRCWM> {
   let Constraints = "@earlyclobber $dst, $src1 = $dst, $mask = $mask_wb",
       ExeDomain = _.ExeDomain in
-  def rm  : AVX5128I<opc, MRMSrcMem, (outs _.RC:$dst, _.KRCWM:$mask_wb),
-            (ins _.RC:$src1, _.KRCWM:$mask, memop:$src2),
+  def rm  : AVX5128I<opc, MRMSrcMem, (outs _.RC:$dst, MaskRC:$mask_wb),
+            (ins _.RC:$src1, MaskRC:$mask, memop:$src2),
             !strconcat(OpcodeStr#_.Suffix,
             "\t{$src2, ${dst} {${mask}}|${dst} {${mask}}, $src2}"),
-            [(set _.RC:$dst, _.KRCWM:$mask_wb,
-              (GatherNode  (_.VT _.RC:$src1), _.KRCWM:$mask,
+            [(set _.RC:$dst, MaskRC:$mask_wb,
+              (GatherNode  (_.VT _.RC:$src1), MaskRC:$mask,
                      vectoraddr:$src2))]>, EVEX, EVEX_K,
              EVEX_CD8<_.EltSize, CD8VT1>;
 }
@@ -8241,7 +8242,8 @@ let Predicates = [HasVLX] in {
   defm NAME##D##SUFF##Z128: avx512_gather<dopc, OpcodeStr##"d", _.info128,
                                           vx128xmem, mgatherv4i32>, EVEX_V128;
   defm NAME##Q##SUFF##Z128: avx512_gather<qopc, OpcodeStr##"q", _.info128,
-                                          vx64xmem, X86mgatherv2i64>, EVEX_V128;
+                                          vx64xmem, X86mgatherv2i64, VK2WM>,
+                                          EVEX_V128;
 }
 }
 

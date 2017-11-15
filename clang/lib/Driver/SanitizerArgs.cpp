@@ -832,7 +832,7 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
 
   // MSan: Workaround for PR16386.
   // ASan: This is mainly to help LSan with cases such as
-  // https://code.google.com/p/address-sanitizer/issues/detail?id=373
+  // https://github.com/google/sanitizers/issues/373
   // We can't make this conditional on -fsanitize=leak, as that flag shouldn't
   // affect compilation.
   if (Sanitizers.has(Memory) || Sanitizers.has(Address))

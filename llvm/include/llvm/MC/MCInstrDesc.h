@@ -173,7 +173,7 @@ public:
   const MCPhysReg *ImplicitDefs; // Registers implicitly defined by this instr
   const MCOperandInfo *OpInfo;   // 'NumOperands' entries about operands
   // Subtarget feature that this is deprecated on, if any
-  // -1 implies this is not deprecated by any single feature. It may still be 
+  // -1 implies this is not deprecated by any single feature. It may still be
   // deprecated due to a "complex" reason, below.
   int64_t DeprecatedFeature;
 
@@ -579,8 +579,6 @@ public:
     }
     return -1;
   }
-
-private:
 
   /// \brief Return true if this instruction defines the specified physical
   /// register, either explicitly or implicitly.

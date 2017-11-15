@@ -80,7 +80,7 @@ void checkThrows(any& a)
 {
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
     try {
-        any_cast<Type>(a);
+        (void)any_cast<Type>(a);
         assert(false);
     } catch (bad_any_cast const &) {
             // do nothing
@@ -89,7 +89,7 @@ void checkThrows(any& a)
     }
 
     try {
-        any_cast<ConstT>(static_cast<any const&>(a));
+        (void)any_cast<ConstT>(static_cast<any const&>(a));
         assert(false);
     } catch (bad_any_cast const &) {
             // do nothing
@@ -103,7 +103,7 @@ void checkThrows(any& a)
             typename std::remove_reference<Type>::type&&,
             Type
         >::type;
-        any_cast<RefType>(static_cast<any&&>(a));
+        (void)any_cast<RefType>(static_cast<any&&>(a));
         assert(false);
     } catch (bad_any_cast const &) {
             // do nothing

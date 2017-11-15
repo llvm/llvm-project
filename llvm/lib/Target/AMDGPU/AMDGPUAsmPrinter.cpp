@@ -262,7 +262,7 @@ void AMDGPUAsmPrinter::readPALMetadata(Module &M) {
 void AMDGPUAsmPrinter::emitCommonFunctionComments(
   uint32_t NumVGPR,
   uint32_t NumSGPR,
-  uint32_t ScratchSize,
+  uint64_t ScratchSize,
   uint64_t CodeSize) {
   OutStreamer->emitRawComment(" codeLenInByte = " + Twine(CodeSize), false);
   OutStreamer->emitRawComment(" NumSgprs: " + Twine(NumSGPR), false);
@@ -600,7 +600,7 @@ AMDGPUAsmPrinter::SIFunctionResourceInfo AMDGPUAsmPrinter::analyzeResourceUsage(
 
   int32_t MaxVGPR = -1;
   int32_t MaxSGPR = -1;
-  uint32_t CalleeFrameSize = 0;
+  uint64_t CalleeFrameSize = 0;
 
   for (const MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB) {
@@ -718,7 +718,7 @@ AMDGPUAsmPrinter::SIFunctionResourceInfo AMDGPUAsmPrinter::analyzeResourceUsage(
           MaxSGPR = std::max(MaxSGPR, MaxSGPRGuess);
           MaxVGPR = std::max(MaxVGPR, 23);
 
-          CalleeFrameSize = std::max(CalleeFrameSize, 16384u);
+          CalleeFrameSize = std::max(CalleeFrameSize, UINT64_C(16384));
           Info.UsesVCC = true;
           Info.UsesFlatScratch = ST.hasFlatAddressSpace();
           Info.HasDynamicallySizedStack = true;
@@ -762,6 +762,12 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.VCCUsed = Info.UsesVCC;
   ProgInfo.FlatUsed = Info.UsesFlatScratch;
   ProgInfo.DynamicCallStack = Info.HasDynamicallySizedStack || Info.HasRecursion;
+
+  if (!isUInt<32>(ProgInfo.ScratchSize)) {
+    DiagnosticInfoStackSize DiagStackSize(*MF.getFunction(),
+                                          ProgInfo.ScratchSize, DS_Error);
+    MF.getFunction()->getContext().diagnose(DiagStackSize);
+  }
 
   const SISubtarget &STM = MF.getSubtarget<SISubtarget>();
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();

@@ -811,6 +811,10 @@ bool NVPTXDAGToDAGISel::tryIntrinsicChain(SDNode *N) {
   switch (IID) {
   default:
     return false;
+  case Intrinsic::nvvm_match_all_sync_i32p:
+  case Intrinsic::nvvm_match_all_sync_i64p:
+    SelectMatchAll(N);
+    return true;
   case Intrinsic::nvvm_ldg_global_f:
   case Intrinsic::nvvm_ldg_global_i:
   case Intrinsic::nvvm_ldg_global_p:
@@ -1025,10 +1029,6 @@ bool NVPTXDAGToDAGISel::tryIntrinsicNoChain(SDNode *N) {
   case Intrinsic::nvvm_texsurf_handle_internal:
     SelectTexSurfHandle(N);
     return true;
-  case Intrinsic::nvvm_match_all_sync_i32p:
-  case Intrinsic::nvvm_match_all_sync_i64p:
-    SelectMatchAll(N);
-    return true;
   case Intrinsic::nvvm_wmma_mma_sync_col_col_f16_f16:
   case Intrinsic::nvvm_wmma_mma_sync_col_col_f16_f16_satfinite:
   case Intrinsic::nvvm_wmma_mma_sync_col_col_f16_f32:
@@ -1076,11 +1076,11 @@ void NVPTXDAGToDAGISel::SelectTexSurfHandle(SDNode *N) {
 void NVPTXDAGToDAGISel::SelectMatchAll(SDNode *N) {
   SDLoc DL(N);
   enum { IS_I64 = 4, HAS_CONST_VALUE = 2, HAS_CONST_MASK = 1 };
-  unsigned IID = cast<ConstantSDNode>(N->getOperand(0))->getZExtValue();
+  unsigned IID = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
   unsigned OpcodeIndex =
       (IID == Intrinsic::nvvm_match_all_sync_i64p) ? IS_I64 : 0;
-  SDValue MaskOp = N->getOperand(1);
-  SDValue ValueOp = N->getOperand(2);
+  SDValue MaskOp = N->getOperand(2);
+  SDValue ValueOp = N->getOperand(3);
   if (ConstantSDNode *ValueConst = dyn_cast<ConstantSDNode>(ValueOp)) {
     OpcodeIndex |= HAS_CONST_VALUE;
     ValueOp = CurDAG->getTargetConstant(ValueConst->getZExtValue(), DL,
@@ -1097,9 +1097,9 @@ void NVPTXDAGToDAGISel::SelectMatchAll(SDNode *N) {
       NVPTX::MATCH_ALLP_SYNC_32ir, NVPTX::MATCH_ALLP_SYNC_32ii,
       NVPTX::MATCH_ALLP_SYNC_64rr, NVPTX::MATCH_ALLP_SYNC_64ri,
       NVPTX::MATCH_ALLP_SYNC_64ir, NVPTX::MATCH_ALLP_SYNC_64ii};
-  SDNode *NewNode = CurDAG->getMachineNode(Opcodes[OpcodeIndex], DL,
-                                           {ValueOp->getValueType(0), MVT::i1},
-                                           {MaskOp, ValueOp});
+  SDNode *NewNode = CurDAG->getMachineNode(
+      Opcodes[OpcodeIndex], DL, {ValueOp->getValueType(0), MVT::i1, MVT::Other},
+      {MaskOp, ValueOp});
   ReplaceNode(N, NewNode);
 }
 

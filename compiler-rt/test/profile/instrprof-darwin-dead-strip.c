@@ -35,6 +35,7 @@ int main() { return 0; }
 // PROF-NEXT:     Hash:
 // PROF-NEXT:     Counters: 1
 // PROF-NEXT:     Function count: 1
+// PROF-NEXT: Instrumentation level: Front-end
 // PROF-NEXT: Functions shown: 1
 // PROF-NEXT: Total functions: 1
 // PROF-NEXT: Maximum function count: 1
