@@ -264,6 +264,13 @@ public:
     return nullptr;
   }
 
+  /// \brief Get an LValue for the current ThreadID variable.
+  LValue getThreadIDVariableLValue(CodeGenFunction &CGF) override {
+    if (OuterRegionInfo)
+      return OuterRegionInfo->getThreadIDVariableLValue(CGF);
+    llvm_unreachable("No LValue for inlined OpenMP construct");
+  }
+
   /// \brief Get the name of the capture helper.
   StringRef getHelperName() const override {
     if (auto *OuterRegionInfo = getOldCSI())
