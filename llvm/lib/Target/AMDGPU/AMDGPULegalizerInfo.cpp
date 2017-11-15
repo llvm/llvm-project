@@ -49,6 +49,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo() {
 
   setAction({G_FCONSTANT, S32}, Legal);
 
+  setAction({G_FADD, S32}, Legal);
+
   setAction({G_FMUL, S32}, Legal);
 
   setAction({G_GEP, P1}, Legal);
