@@ -126,7 +126,7 @@ int main()
     // test heterogeneous lookups
     std::set<std::shared_ptr<X>, std::owner_less<>> s;
     std::shared_ptr<void> vp;
-    s.find(vp);
+    assert(s.find(vp) == s.end());
     }
 #endif
 }

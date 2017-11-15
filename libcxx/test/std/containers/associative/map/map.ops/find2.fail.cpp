@@ -34,7 +34,7 @@ int main()
     {
     typedef std::map<int, double, transparent_less_private> M;
 
-    M().find(C2Int{5});
+    (void)M().find(C2Int{5});
     }
 }
 #endif
