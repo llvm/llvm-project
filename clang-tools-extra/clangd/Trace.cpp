@@ -74,7 +74,7 @@ private:
 
   double timestamp() {
     using namespace std::chrono;
-    return duration<double, std::milli>(system_clock::now() - Start).count();
+    return duration<double, std::micro>(system_clock::now() - Start).count();
   }
 
   std::mutex Mu;
