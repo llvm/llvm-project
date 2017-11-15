@@ -44,8 +44,8 @@ define amdgpu_kernel void @v_ctpop_i32(i32 addrspace(1)* noalias %out, i32 addrs
 ; FUNC-LABEL: {{^}}v_ctpop_add_chain_i32:
 ; SI: buffer_load_dword [[VAL0:v[0-9]+]],
 ; SI: buffer_load_dword [[VAL1:v[0-9]+]],
-; VI: flat_load_dword [[VAL1:v[0-9]+]],
 ; VI: flat_load_dword [[VAL0:v[0-9]+]],
+; VI: flat_load_dword [[VAL1:v[0-9]+]],
 ; GCN: v_bcnt_u32_b32{{(_e64)*}} [[MIDRESULT:v[0-9]+]], [[VAL1]], 0
 ; SI: v_bcnt_u32_b32_e32 [[RESULT:v[0-9]+]], [[VAL0]], [[MIDRESULT]]
 ; VI: v_bcnt_u32_b32 [[RESULT:v[0-9]+]], [[VAL0]], [[MIDRESULT]]
@@ -58,8 +58,8 @@ define amdgpu_kernel void @v_ctpop_add_chain_i32(i32 addrspace(1)* noalias %out,
   %tid = call i32 @llvm.r600.read.tidig.x()
   %in0.gep = getelementptr i32, i32 addrspace(1)* %in0, i32 %tid
   %in1.gep = getelementptr i32, i32 addrspace(1)* %in1, i32 %tid
-  %val0 = load i32, i32 addrspace(1)* %in0.gep, align 4
-  %val1 = load i32, i32 addrspace(1)* %in1.gep, align 4
+  %val0 = load volatile i32, i32 addrspace(1)* %in0.gep, align 4
+  %val1 = load volatile i32, i32 addrspace(1)* %in1.gep, align 4
   %ctpop0 = call i32 @llvm.ctpop.i32(i32 %val0) nounwind readnone
   %ctpop1 = call i32 @llvm.ctpop.i32(i32 %val1) nounwind readnone
   %add = add i32 %ctpop0, %ctpop1

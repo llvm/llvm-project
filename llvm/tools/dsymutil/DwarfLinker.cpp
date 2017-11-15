@@ -555,7 +555,7 @@ class DwarfStreamer {
   /// @}
 
   /// The file we stream the linked Dwarf to.
-  std::unique_ptr<ToolOutputFile> OutFile;
+  raw_fd_ostream &OutFile;
 
   uint32_t RangesSectionSize;
   uint32_t LocSectionSize;
@@ -569,11 +569,8 @@ class DwarfStreamer {
                              const std::vector<CompileUnit::AccelInfo> &Names);
 
 public:
-  /// Actually create the streamer and the ouptut file.
-  ///
-  /// This could be done directly in the constructor, but it feels
-  /// more natural to handle errors through return value.
-  bool init(Triple TheTriple, StringRef OutputFilename);
+  DwarfStreamer(raw_fd_ostream &OutFile) : OutFile(OutFile) {}
+  bool init(Triple TheTriple);
 
   /// Dump the file to the disk.
   bool finish(const DebugMap &);
@@ -650,7 +647,7 @@ public:
 
 } // end anonymous namespace
 
-bool DwarfStreamer::init(Triple TheTriple, StringRef OutputFilename) {
+bool DwarfStreamer::init(Triple TheTriple) {
   std::string ErrorStr;
   std::string TripleName;
   StringRef Context = "dwarf streamer init";
@@ -692,16 +689,9 @@ bool DwarfStreamer::init(Triple TheTriple, StringRef OutputFilename) {
   if (!MCE)
     return error("no code emitter for target " + TripleName, Context);
 
-  // Create the output file.
-  std::error_code EC;
-  OutFile =
-      llvm::make_unique<ToolOutputFile>(OutputFilename, EC, sys::fs::F_None);
-  if (EC)
-    return error(Twine(OutputFilename) + ": " + EC.message(), Context);
-
   MCTargetOptions MCOptions = InitMCTargetOptionsFromFlags();
   MS = TheTarget->createMCObjectStreamer(
-      TheTriple, *MC, std::unique_ptr<MCAsmBackend>(MAB), OutFile->os(),
+      TheTriple, *MC, std::unique_ptr<MCAsmBackend>(MAB), OutFile,
       std::unique_ptr<MCCodeEmitter>(MCE), *MSTI, MCOptions.MCRelaxAll,
       MCOptions.MCIncrementalLinkerCompatible,
       /*DWARFMustBeAtTheEnd*/ false);
@@ -729,13 +719,9 @@ bool DwarfStreamer::init(Triple TheTriple, StringRef OutputFilename) {
 bool DwarfStreamer::finish(const DebugMap &DM) {
   bool Result = true;
   if (DM.getTriple().isOSDarwin() && !DM.getBinaryPath().empty())
-    Result = MachOUtils::generateDsymCompanion(DM, *MS, OutFile->os());
+    Result = MachOUtils::generateDsymCompanion(DM, *MS, OutFile);
   else
     MS->Finish();
-
-  // Declare success.
-  OutFile->keep();
-
   return Result;
 }
 
@@ -1210,9 +1196,8 @@ namespace {
 /// first step when we start processing a DebugMapObject.
 class DwarfLinker {
 public:
-  DwarfLinker(StringRef OutputFilename, const LinkOptions &Options)
-      : OutputFilename(OutputFilename), Options(Options),
-        BinHolder(Options.Verbose) {}
+  DwarfLinker(raw_fd_ostream &OutFile, const LinkOptions &Options)
+      : OutFile(OutFile), Options(Options), BinHolder(Options.Verbose) {}
 
   /// Link the contents of the DebugMap.
   bool link(const DebugMap &);
@@ -1535,7 +1520,7 @@ private:
   /// \defgroup Helpers Various helper methods.
   ///
   /// @{
-  bool createStreamer(const Triple &TheTriple, StringRef OutputFilename);
+  bool createStreamer(const Triple &TheTriple, raw_fd_ostream &OutFile);
 
   /// Attempt to load a debug object from disk.
   ErrorOr<const object::ObjectFile &> loadObject(BinaryHolder &BinaryHolder,
@@ -1543,7 +1528,7 @@ private:
                                                  const DebugMap &Map);
   /// @}
 
-  std::string OutputFilename;
+  raw_fd_ostream &OutFile;
   LinkOptions Options;
   BinaryHolder BinHolder;
   std::unique_ptr<DwarfStreamer> Streamer;
@@ -1876,12 +1861,12 @@ void DwarfLinker::reportWarning(const Twine &Warning,
 }
 
 bool DwarfLinker::createStreamer(const Triple &TheTriple,
-                                 StringRef OutputFilename) {
+                                 raw_fd_ostream &OutFile) {
   if (Options.NoOutput)
     return true;
 
-  Streamer = llvm::make_unique<DwarfStreamer>();
-  return Streamer->init(TheTriple, OutputFilename);
+  Streamer = llvm::make_unique<DwarfStreamer>(OutFile);
+  return Streamer->init(TheTriple);
 }
 
 /// Recursive helper to build the global DeclContext information and
@@ -3584,7 +3569,7 @@ void DwarfLinker::DIECloner::cloneAllCompileUnits(DWARFContext &DwarfContext) {
 }
 
 bool DwarfLinker::link(const DebugMap &Map) {
-  if (!createStreamer(Map.getTriple(), OutputFilename))
+  if (!createStreamer(Map.getTriple(), OutFile))
     return false;
 
   // Size of the DIEs (and headers) generated for the linked output.
@@ -3744,9 +3729,9 @@ bool error(const Twine &Error, const Twine &Context) {
   return false;
 }
 
-bool linkDwarf(StringRef OutputFilename, const DebugMap &DM,
+bool linkDwarf(raw_fd_ostream &OutFile, const DebugMap &DM,
                const LinkOptions &Options) {
-  DwarfLinker Linker(OutputFilename, Options);
+  DwarfLinker Linker(OutFile, Options);
   return Linker.link(DM);
 }
 

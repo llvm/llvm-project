@@ -7,7 +7,7 @@
 ; SI: NumVgprs: {{[1-9]$}}
 
 ; stores may alias loads
-; VI: NumSgprs: {{[1-5][0-9]$}}
+; VI: NumSgprs: {{[0-9]$}}
 ; VI: NumVgprs: {{[1-3][0-9]$}}
 
 define amdgpu_kernel void @load_fma_store(float addrspace(3)* nocapture readonly %in_arg, float addrspace(1)* nocapture %out_arg) {

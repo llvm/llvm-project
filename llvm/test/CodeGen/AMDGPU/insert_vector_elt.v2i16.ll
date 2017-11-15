@@ -261,12 +261,14 @@ define amdgpu_kernel void @v_insertelement_v2i16_0_inlineimm(<2 x i16> addrspace
 ; GCN-LABEL: {{^}}v_insertelement_v2i16_1:
 ; VI: v_mov_b32_e32 [[K:v[0-9]+]], 0x3e70000
 ; GCN-DAG: {{flat|global}}_load_dword [[VEC:v[0-9]+]]
-; CI: v_or_b32_e32 [[RES:v[0-9]+]], 0x3e70000, [[VEC]]
-; VI: v_or_b32_sdwa [[RES:v[0-9]+]], [[VEC]], [[K]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 
 ; GFX9-DAG: s_movk_i32 [[K:s[0-9]+]], 0x3e7
 ; GFX9-DAG: v_and_b32_e32 [[ELT0:v[0-9]+]], 0xffff, [[VEC]]
 ; GFX9: v_lshl_or_b32 [[RES:v[0-9]+]], [[K]], 16, [[ELT0]]
+
+; CI: v_and_b32_e32 [[AND:v[0-9]+]], 0xffff, [[VEC]]
+; CI: v_or_b32_e32 [[RES:v[0-9]+]], 0x3e70000, [[AND]]
+; VI: v_or_b32_sdwa [[RES:v[0-9]+]], [[VEC]], [[K]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 
 ; GCN: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RES]]
 define amdgpu_kernel void @v_insertelement_v2i16_1(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) #0 {
@@ -345,12 +347,15 @@ define amdgpu_kernel void @v_insertelement_v2f16_0_inlineimm(<2 x half> addrspac
 ; GCN-LABEL: {{^}}v_insertelement_v2f16_1:
 ; VI: v_mov_b32_e32 [[K:v[0-9]+]], 0x45000000
 ; GCN-DAG: {{flat|global}}_load_dword [[VEC:v[0-9]+]]
-; CI: v_or_b32_e32 [[RES:v[0-9]+]], 0x45000000, [[VEC]]
-; VI: v_or_b32_sdwa [[RES:v[0-9]+]], [[VEC]], [[K]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 
 ; GFX9-DAG: s_movk_i32 [[K:s[0-9]+]], 0x4500
 ; GFX9-DAG: v_and_b32_e32 [[ELT0:v[0-9]+]], 0xffff, [[VEC]]
 ; GFX9: v_lshl_or_b32 [[RES:v[0-9]+]], [[K]], 16, [[ELT0]]
+
+; CI: v_and_b32_e32 [[AND:v[0-9]+]], 0xffff, [[VEC]]
+; CI: v_or_b32_e32 [[RES:v[0-9]+]], 0x45000000, [[AND]]
+
+; VI: v_or_b32_sdwa [[RES:v[0-9]+]], [[VEC]], [[K]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 
 ; GCN: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RES]]
 define amdgpu_kernel void @v_insertelement_v2f16_1(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in) #0 {
@@ -423,11 +428,9 @@ define amdgpu_kernel void @v_insertelement_v2i16_dynamic_sgpr(<2 x i16> addrspac
 
 ; GCN-LABEL: {{^}}v_insertelement_v2i16_dynamic_vgpr:
 ; GFX89-DAG: s_mov_b32 [[MASKK:s[0-9]+]], 0xffff{{$}}
+; GCN-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x3e7
 ; GCN: {{flat|global}}_load_dword [[IDX:v[0-9]+]]
 ; GCN: {{flat|global}}_load_dword [[VEC:v[0-9]+]]
-; GCN-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x3e7
-
-; GCN-DAG:   v_mov_b32_e32 [[K:v[0-9]+]], 0x3e7
 
 ; GFX89-DAG: v_lshlrev_b32_e32 [[SCALED_IDX:v[0-9]+]], 16, [[IDX]]
 ; GFX89-DAG: v_lshlrev_b32_e64 [[MASK:v[0-9]+]], [[SCALED_IDX]], [[MASKK]]
@@ -452,11 +455,10 @@ define amdgpu_kernel void @v_insertelement_v2i16_dynamic_vgpr(<2 x i16> addrspac
 
 ; GCN-LABEL: {{^}}v_insertelement_v2f16_dynamic_vgpr:
 ; GFX89-DAG: s_mov_b32 [[MASKK:s[0-9]+]], 0xffff{{$}}
+; GCN-DAG:   v_mov_b32_e32 [[K:v[0-9]+]], 0x1234
+
 ; GCN: {{flat|global}}_load_dword [[IDX:v[0-9]+]]
 ; GCN: {{flat|global}}_load_dword [[VEC:v[0-9]+]]
-; GCN-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x1234
-
-; GCN-DAG:   v_mov_b32_e32 [[K:v[0-9]+]], 0x1234
 
 ; GFX89-DAG: v_lshlrev_b32_e32 [[SCALED_IDX:v[0-9]+]], 16, [[IDX]]
 ; GFX89-DAG: v_lshlrev_b32_e64 [[MASK:v[0-9]+]], [[SCALED_IDX]], [[MASKK]]

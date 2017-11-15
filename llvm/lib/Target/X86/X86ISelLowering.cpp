@@ -24900,6 +24900,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
                                    ToVecInt, DAG.getIntPtrConstant(i, dl)));
 
     Results.push_back(DAG.getBuildVector(DstVT, dl, Elts));
+    return;
   }
   }
 }
