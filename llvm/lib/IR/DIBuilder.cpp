@@ -24,11 +24,6 @@
 using namespace llvm;
 using namespace llvm::dwarf;
 
-cl::opt<bool>
-    UseDbgAddr("use-dbg-addr",
-                llvm::cl::desc("Use llvm.dbg.addr for all local variables"),
-                cl::init(false));
-
 DIBuilder::DIBuilder(Module &m, bool AllowUnresolvedNodes)
   : M(m), VMContext(M.getContext()), CUNode(nullptr),
       DeclareFn(nullptr), ValueFn(nullptr),
@@ -781,11 +776,6 @@ static Instruction *withDebugLoc(Instruction *I, const DILocation *DL) {
   return I;
 }
 
-static Function *getDeclareIntrin(Module &M) {
-  return Intrinsic::getDeclaration(&M, UseDbgAddr ? Intrinsic::dbg_addr
-                                                  : Intrinsic::dbg_declare);
-}
-
 Instruction *DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
                                       DIExpression *Expr, const DILocation *DL,
                                       Instruction *InsertBefore) {
@@ -795,7 +785,7 @@ Instruction *DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
              VarInfo->getScope()->getSubprogram() &&
          "Expected matching subprograms");
   if (!DeclareFn)
-    DeclareFn = getDeclareIntrin(M);
+    DeclareFn = Intrinsic::getDeclaration(&M, Intrinsic::dbg_declare);
 
   trackIfUnresolved(VarInfo);
   trackIfUnresolved(Expr);
@@ -814,7 +804,7 @@ Instruction *DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
              VarInfo->getScope()->getSubprogram() &&
          "Expected matching subprograms");
   if (!DeclareFn)
-    DeclareFn = getDeclareIntrin(M);
+    DeclareFn = Intrinsic::getDeclaration(&M, Intrinsic::dbg_declare);
 
   trackIfUnresolved(VarInfo);
   trackIfUnresolved(Expr);

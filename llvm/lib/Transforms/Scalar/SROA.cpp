@@ -4044,10 +4044,9 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
 
   // Migrate debug information from the old alloca to the new alloca(s)
   // and the individual partitions.
-  TinyPtrVector<DbgInfoIntrinsic *> DbgDeclares = FindDbgAddrUses(&AI);
-  if (!DbgDeclares.empty()) {
-    auto *Var = DbgDeclares.front()->getVariable();
-    auto *Expr = DbgDeclares.front()->getExpression();
+  if (DbgDeclareInst *DbgDecl = FindAllocaDbgDeclare(&AI)) {
+    auto *Var = DbgDecl->getVariable();
+    auto *Expr = DbgDecl->getExpression();
     DIBuilder DIB(*AI.getModule(), /*AllowUnresolved*/ false);
     uint64_t AllocaSize = DL.getTypeSizeInBits(AI.getAllocatedType());
     for (auto Fragment : Fragments) {
@@ -4081,12 +4080,12 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
           continue;
       }
 
-      // Remove any existing intrinsics describing the same alloca.
-      for (DbgInfoIntrinsic *OldDII : FindDbgAddrUses(Fragment.Alloca))
-        OldDII->eraseFromParent();
+      // Remove any existing dbg.declare intrinsic describing the same alloca.
+      if (DbgDeclareInst *OldDDI = FindAllocaDbgDeclare(Fragment.Alloca))
+        OldDDI->eraseFromParent();
 
       DIB.insertDeclare(Fragment.Alloca, Var, FragmentExpr,
-                        DbgDeclares.front()->getDebugLoc(), &AI);
+                        DbgDecl->getDebugLoc(), &AI);
     }
   }
   return Changed;
@@ -4191,15 +4190,6 @@ void SROA::deleteDeadInstructions(
     Instruction *I = DeadInsts.pop_back_val();
     DEBUG(dbgs() << "Deleting dead instruction: " << *I << "\n");
 
-    // If the instruction is an alloca, find the possible dbg.declare connected
-    // to it, and remove it too. We must do this before calling RAUW or we will
-    // not be able to find it.
-    if (AllocaInst *AI = dyn_cast<AllocaInst>(I)) {
-      DeletedAllocas.insert(AI);
-      for (DbgInfoIntrinsic *OldDII : FindDbgAddrUses(AI))
-        OldDII->eraseFromParent();
-    }
-
     I->replaceAllUsesWith(UndefValue::get(I->getType()));
 
     for (Use &Operand : I->operands())
@@ -4209,6 +4199,12 @@ void SROA::deleteDeadInstructions(
         if (isInstructionTriviallyDead(U))
           DeadInsts.insert(U);
       }
+
+    if (AllocaInst *AI = dyn_cast<AllocaInst>(I)) {
+      DeletedAllocas.insert(AI);
+      if (DbgDeclareInst *DbgDecl = FindAllocaDbgDeclare(AI))
+        DbgDecl->eraseFromParent();
+    }
 
     ++NumDeleted;
     I->eraseFromParent();
