@@ -545,6 +545,8 @@ Instruction *InstCombiner::narrowBinOp(TruncInst &Trunc) {
   if (!match(Trunc.getOperand(0), m_OneUse(m_BinOp(BinOp))))
     return nullptr;
 
+  Value *BinOp0 = BinOp->getOperand(0);
+  Value *BinOp1 = BinOp->getOperand(1);
   switch (BinOp->getOpcode()) {
   case Instruction::And:
   case Instruction::Or:
@@ -552,20 +554,31 @@ Instruction *InstCombiner::narrowBinOp(TruncInst &Trunc) {
   case Instruction::Add:
   case Instruction::Mul: {
     Constant *C;
-    if (match(BinOp->getOperand(1), m_Constant(C))) {
+    if (match(BinOp1, m_Constant(C))) {
       // trunc (binop X, C) --> binop (trunc X, C')
       Constant *NarrowC = ConstantExpr::getTrunc(C, DestTy);
-      Value *TruncX = Builder.CreateTrunc(BinOp->getOperand(0), DestTy);
+      Value *TruncX = Builder.CreateTrunc(BinOp0, DestTy);
       return BinaryOperator::Create(BinOp->getOpcode(), TruncX, NarrowC);
+    }
+    Value *X;
+    if (match(BinOp0, m_ZExtOrSExt(m_Value(X))) && X->getType() == DestTy) {
+      // trunc (binop (ext X), Y) --> binop X, (trunc Y)
+      Value *NarrowOp1 = Builder.CreateTrunc(BinOp1, DestTy);
+      return BinaryOperator::Create(BinOp->getOpcode(), X, NarrowOp1);
+    }
+    if (match(BinOp1, m_ZExtOrSExt(m_Value(X))) && X->getType() == DestTy) {
+      // trunc (binop Y, (ext X)) --> binop (trunc Y), X
+      Value *NarrowOp0 = Builder.CreateTrunc(BinOp0, DestTy);
+      return BinaryOperator::Create(BinOp->getOpcode(), NarrowOp0, X);
     }
     break;
   }
   case Instruction::Sub: {
     Constant *C;
-    if (match(BinOp->getOperand(0), m_Constant(C))) {
+    if (match(BinOp0, m_Constant(C))) {
       // trunc (binop C, X) --> binop (trunc C', X)
       Constant *NarrowC = ConstantExpr::getTrunc(C, DestTy);
-      Value *TruncX = Builder.CreateTrunc(BinOp->getOperand(1), DestTy);
+      Value *TruncX = Builder.CreateTrunc(BinOp1, DestTy);
       return BinaryOperator::Create(BinOp->getOpcode(), NarrowC, TruncX);
     }
     break;

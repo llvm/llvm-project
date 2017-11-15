@@ -61,16 +61,6 @@ Content-Length: 148
 # CHECK-NEXT:        "label": "fake::",
 # CHECK-NEXT:        "sortText": "000075fake"
 # CHECK-NEXT:      },
-# CHECK-NEXT:      {
-# CHECK-NEXT:        "detail": "fake &",
-# CHECK-NEXT:        "filterText": "operator=",
-# CHECK-NEXT:        "insertText": "operator=(${1:const fake &})",
-# CHECK-NEXT:        "insertTextFormat": 2,
-# CHECK-NEXT:        "kind": 2,
-# CHECK-NEXT:        "label": "operator=(const fake &)",
-# CHECK-NEXT:        "sortText": "000079operator="
-# CHECK-NEXT:      },
-# FIXME: Why do some buildbots show an extra operator==(fake&&) here?
 #      CHECK:      {
 #      CHECK:        "detail": "void",
 # CHECK-NEXT:        "filterText": "~fake",

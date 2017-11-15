@@ -99,7 +99,8 @@ def M1WriteLC : SchedWriteRes<[M1UnitA,
 def M1WriteLD : SchedWriteRes<[M1UnitA,
                                M1UnitL,
                                M1UnitL]> { let Latency = 5; }
-def M1WriteLH : SchedWriteRes<[]>        { let Latency = 5; }
+def M1WriteLH : SchedWriteRes<[]>        { let Latency = 5;
+                                           let NumMicroOps = 0; }
 def M1WriteLX : SchedWriteVariant<[SchedVar<M1ShiftLeftFastPred, [M1WriteL5]>,
                                    SchedVar<NoSchedPred,         [M1WriteA1,
                                                                   M1WriteL5]>]>;
@@ -159,12 +160,14 @@ def : WriteRes<WriteExtr, [M1UnitALU,
                            M1UnitALU]> { let Latency = 2; }
 
 // Addressing modes.
-def : WriteRes<WriteAdr, []> { let Latency = 1; }
+def : WriteRes<WriteAdr, []> { let Latency = 1;
+                               let NumMicroOps = 0; }
 def : SchedAlias<ReadAdrBase, M1ReadAdrBase>;
 
 // Load instructions.
 def : WriteRes<WriteLD,    [M1UnitL]>   { let Latency = 4; }
-def : WriteRes<WriteLDHi,  []>          { let Latency = 4; }
+def : WriteRes<WriteLDHi,  []>          { let Latency = 4;
+                                          let NumMicroOps = 0; }
 def : SchedAlias<WriteLDIdx, M1WriteLX>;
 
 // Store instructions.
@@ -432,31 +435,27 @@ def : InstRW<[M1WriteNEONI],  (instregex "^FMOV[DS][WX](High)?r")>;
 def : InstRW<[WriteVLD],    (instregex "^LDR[DSQ]l")>;
 def : InstRW<[WriteVLD],    (instregex "^LDUR[BDHSQ]i")>;
 def : InstRW<[WriteVLD,
-              WriteAdr,
-              ReadAdrBase], (instregex "^LDR[BDHSQ](post|pre)")>;
+              WriteAdr],    (instregex "^LDR[BDHSQ](post|pre)")>;
 def : InstRW<[WriteVLD],    (instregex "^LDR[BDHSQ]ui")>;
 def : InstRW<[M1WriteLX,
               ReadAdrBase], (instregex "^LDR[BDHS]ro[WX]")>;
 def : InstRW<[M1WriteLC,
               ReadAdrBase], (instregex "^LDRQro[WX]")>;
 def : InstRW<[WriteVLD,
-              M1WriteLH],  (instregex "^LDN?P[DS]i")>;
+              M1WriteLH],   (instregex "^LDN?P[DS]i")>;
 def : InstRW<[M1WriteLB,
-              M1WriteLH],  (instregex "^LDN?PQi")>;
+              M1WriteLH],   (instregex "^LDN?PQi")>;
 def : InstRW<[M1WriteLC,
               M1WriteLH,
-              WriteAdr,
-              ReadAdrBase], (instregex "^LDP[DS](post|pre)")>;
+              WriteAdr],    (instregex "^LDP[DS](post|pre)")>;
 def : InstRW<[M1WriteLD,
               M1WriteLH,
-              WriteAdr,
-              ReadAdrBase], (instregex "^LDPQ(post|pre)")>;
+              WriteAdr],    (instregex "^LDPQ(post|pre)")>;
 
 // FP store instructions.
 def : InstRW<[WriteVST],    (instregex "^STUR[BDHSQ]i")>;
 def : InstRW<[WriteVST,
-              WriteAdr,
-              ReadAdrBase], (instregex "^STR[BDHSQ](post|pre)")>;
+              WriteAdr],    (instregex "^STR[BDHSQ](post|pre)")>;
 def : InstRW<[WriteVST],    (instregex "^STR[BDHSQ]ui")>;
 def : InstRW<[M1WriteSY,
               ReadAdrBase], (instregex "^STR[BDHS]ro[WX]")>;
@@ -464,11 +463,9 @@ def : InstRW<[M1WriteSB,
               ReadAdrBase], (instregex "^STRQro[WX]")>;
 def : InstRW<[WriteVST],    (instregex "^STN?P[DSQ]i")>;
 def : InstRW<[WriteVST,
-              WriteAdr,
-              ReadAdrBase], (instregex "^STP[DS](post|pre)")>;
+              WriteAdr],    (instregex "^STP[DS](post|pre)")>;
 def : InstRW<[M1WriteSC,
-              WriteAdr,
-              ReadAdrBase], (instregex "^STPQ(post|pre)")>;
+              WriteAdr],    (instregex "^STPQ(post|pre)")>;
 
 // ASIMD instructions.
 def : InstRW<[M1WriteNMISC3], (instregex "^[SU]ABAL?v")>;

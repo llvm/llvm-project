@@ -7,15 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11, c++14
+
 // <iterator>
 // template <class C> constexpr auto size(const C& c) -> decltype(c.size());         // C++17
 // template <class T, size_t N> constexpr size_t size(const T (&array)[N]) noexcept; // C++17
-
-#include "test_macros.h"
-
-#if TEST_STD_VER <= 14
-int main () {}
-#else
 
 #include <iterator>
 #include <cassert>
@@ -24,33 +20,42 @@ int main () {}
 #include <list>
 #include <initializer_list>
 
+#include "test_macros.h"
+
 template<typename C>
 void test_const_container( const C& c )
 {
+//  Can't say noexcept here because the container might not be
     assert ( std::size(c)   == c.size());
 }
 
 template<typename T>
 void test_const_container( const std::initializer_list<T>& c)
 {
+//  ASSERT_NOEXCEPT(std::size(c));
+//  For some reason, there isn't a std::size() for initializer lists
     assert ( std::size(c)   == c.size());
 }
 
 template<typename C>
 void test_container( C& c)
 {
+//  Can't say noexcept here because the container might not be
     assert ( std::size(c)   == c.size());
 }
 
 template<typename T>
 void test_container( std::initializer_list<T>& c )
 {
+//  ASSERT_NOEXCEPT(std::size(c));
+//  For some reason, there isn't a std::size() for initializer lists
     assert ( std::size(c)   == c.size());
 }
 
 template<typename T, size_t Sz>
 void test_const_array( const T (&array)[Sz] )
 {
+    ASSERT_NOEXCEPT(std::size(array));
     assert ( std::size(array) == Sz );
 }
 
@@ -74,5 +79,3 @@ int main()
     static constexpr int arrA [] { 1, 2, 3 };
     test_const_array ( arrA );
 }
-
-#endif

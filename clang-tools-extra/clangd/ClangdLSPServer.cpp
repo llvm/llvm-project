@@ -132,9 +132,8 @@ void ClangdLSPServer::onRename(Ctx C, RenameParams &Params) {
   auto File = Params.textDocument.uri.file;
   auto Replacements = Server.rename(File, Params.position, Params.newName);
   if (!Replacements) {
-    C.replyError(
-        ErrorCode::InternalError,
-        llvm::toString(Replacements.takeError()));
+    C.replyError(ErrorCode::InternalError,
+                 llvm::toString(Replacements.takeError()));
     return;
   }
   std::string Code = Server.getDocument(File);

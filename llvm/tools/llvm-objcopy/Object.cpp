@@ -339,6 +339,16 @@ static bool segmentOverlapsSegment(const Segment &Child,
          Parent.OriginalOffset + Parent.FileSize > Child.OriginalOffset;
 }
 
+static bool compareSegments(const Segment *A, const Segment *B) {
+  // Any segment without a parent segment should come before a segment
+  // that has a parent segment.
+  if (A->OriginalOffset < B->OriginalOffset)
+    return true;
+  if (A->OriginalOffset > B->OriginalOffset)
+    return false;
+  return A->Index < B->Index;
+}
+
 template <class ELFT>
 void Object<ELFT>::readProgramHeaders(const ELFFile<ELFT> &ElfFile) {
   uint32_t Index = 0;
@@ -376,18 +386,11 @@ void Object<ELFT>::readProgramHeaders(const ELFFile<ELFT> &ElfFile) {
       if (&Child != &Parent && segmentOverlapsSegment(*Child, *Parent)) {
         // We want a canonical "most parental" segment but this requires
         // inspecting the ParentSegment.
-        if (Child->ParentSegment != nullptr) {
-          if (Child->ParentSegment->OriginalOffset > Parent->OriginalOffset) {
-            Child->ParentSegment = Parent.get();
-          } else if (Child->ParentSegment->Index > Parent->Index) {
-            // They must have equal OriginalOffsets so we need to disambiguate.
-            // To decide which is the parent we'll choose the one with the
-            // higher index.
+        if (compareSegments(Parent.get(), Child.get()))
+          if (Child->ParentSegment == nullptr ||
+              compareSegments(Parent.get(), Child->ParentSegment)) {
             Child->ParentSegment = Parent.get();
           }
-        } else {
-          Child->ParentSegment = Parent.get();
-        }
       }
     }
   }
@@ -698,40 +701,24 @@ static uint64_t alignToAddr(uint64_t Offset, uint64_t Addr, uint64_t Align) {
   return Offset + Diff;
 }
 
-template <class ELFT> void ELFObject<ELFT>::assignOffsets() {
-  // We need a temporary list of segments that has a special order to it
-  // so that we know that anytime ->ParentSegment is set that segment has
-  // already had it's offset properly set.
-  std::vector<Segment *> OrderedSegments;
-  for (auto &Segment : this->Segments)
-    OrderedSegments.push_back(Segment.get());
-  auto CompareSegments = [](const Segment *A, const Segment *B) {
-    // Any segment without a parent segment should come before a segment
-    // that has a parent segment.
-    if (A->OriginalOffset < B->OriginalOffset)
-      return true;
-    if (A->OriginalOffset > B->OriginalOffset)
-      return false;
-    return A->Index < B->Index;
-  };
-  std::stable_sort(std::begin(OrderedSegments), std::end(OrderedSegments),
-                   CompareSegments);
-  // The size of ELF + program headers will not change so it is ok to assume
-  // that the first offset of the first segment is a good place to start
-  // outputting sections. This covers both the standard case and the PT_PHDR
-  // case.
-  uint64_t Offset;
-  if (!OrderedSegments.empty()) {
-    Offset = OrderedSegments[0]->Offset;
-  } else {
-    Offset = sizeof(Elf_Ehdr);
-  }
+// Orders segments such that if x = y->ParentSegment then y comes before x.
+static void OrderSegments(std::vector<Segment *> &Segments) {
+  std::stable_sort(std::begin(Segments), std::end(Segments), compareSegments);
+}
+
+// This function finds a consistent layout for a list of segments starting from
+// an Offset. It assumes that Segments have been sorted by OrderSegments and
+// returns an Offset one past the end of the last segment.
+static uint64_t LayoutSegments(std::vector<Segment *> &Segments,
+                               uint64_t Offset) {
+  assert(std::is_sorted(std::begin(Segments), std::end(Segments),
+                        compareSegments));
   // The only way a segment should move is if a section was between two
   // segments and that section was removed. If that section isn't in a segment
   // then it's acceptable, but not ideal, to simply move it to after the
   // segments. So we can simply layout segments one after the other accounting
   // for alignment.
-  for (auto &Segment : OrderedSegments) {
+  for (auto &Segment : Segments) {
     // We assume that segments have been ordered by OriginalOffset and Index
     // such that a parent segment will always come before a child segment in
     // OrderedSegments. This means that the Offset of the ParentSegment should
@@ -746,6 +733,17 @@ template <class ELFT> void ELFObject<ELFT>::assignOffsets() {
     }
     Offset = std::max(Offset, Segment->Offset + Segment->FileSize);
   }
+  return Offset;
+}
+
+// This function finds a consistent layout for a list of sections. It assumes
+// that the ->ParentSegment of each section has already been laid out. The
+// supplied starting Offset is used for the starting offset of any section that
+// does not have a ParentSegment. It returns either the offset given if all
+// sections had a ParentSegment or an offset one past the last section if there
+// was a section that didn't have a ParentSegment.
+template <class SecPtr>
+static uint64_t LayoutSections(std::vector<SecPtr> &Sections, uint64_t Offset) {
   // Now the offset of every segment has been set we can assign the offsets
   // of each section. For sections that are covered by a segment we should use
   // the segment's original offset and the section's original offset to compute
@@ -753,7 +751,7 @@ template <class ELFT> void ELFObject<ELFT>::assignOffsets() {
   // of the segment we can assign a new offset to the section. For sections not
   // covered by segments we can just bump Offset to the next valid location.
   uint32_t Index = 1;
-  for (auto &Section : this->Sections) {
+  for (auto &Section : Sections) {
     Section->Index = Index++;
     if (Section->ParentSegment != nullptr) {
       auto Segment = Section->ParentSegment;
@@ -766,10 +764,33 @@ template <class ELFT> void ELFObject<ELFT>::assignOffsets() {
         Offset += Section->Size;
     }
   }
+  return Offset;
+}
 
-  if (this->WriteSectionHeaders) {
-    Offset = alignTo(Offset, sizeof(typename ELFT::Addr));
+template <class ELFT> void ELFObject<ELFT>::assignOffsets() {
+  // We need a temporary list of segments that has a special order to it
+  // so that we know that anytime ->ParentSegment is set that segment has
+  // already had its offset properly set.
+  std::vector<Segment *> OrderedSegments;
+  for (auto &Segment : this->Segments)
+    OrderedSegments.push_back(Segment.get());
+  OrderSegments(OrderedSegments);
+  // The size of ELF + program headers will not change so it is ok to assume
+  // that the first offset of the first segment is a good place to start
+  // outputting sections. This covers both the standard case and the PT_PHDR
+  // case.
+  uint64_t Offset;
+  if (!OrderedSegments.empty()) {
+    Offset = OrderedSegments[0]->Offset;
+  } else {
+    Offset = sizeof(Elf_Ehdr);
   }
+  Offset = LayoutSegments(OrderedSegments, Offset);
+  Offset = LayoutSections(this->Sections, Offset);
+  // If we need to write the section header table out then we need to align the
+  // Offset so that SHOffset is valid.
+  if (this->WriteSectionHeaders)
+    Offset = alignTo(Offset, sizeof(typename ELFT::Addr));
   this->SHOffset = Offset;
 }
 
@@ -823,33 +844,78 @@ template <class ELFT> size_t BinaryObject<ELFT>::totalSize() const {
 
 template <class ELFT>
 void BinaryObject<ELFT>::write(FileOutputBuffer &Out) const {
-  for (auto &Segment : this->Segments) {
-    // GNU objcopy does not output segments that do not cover a section. Such
-    // segments can sometimes be produced by LLD due to how LLD handles PT_PHDR.
-    if (Segment->Type == PT_LOAD && Segment->firstSection() != nullptr) {
-      Segment->writeSegment(Out);
-    }
+  for (auto &Section : this->Sections) {
+    if ((Section->Flags & SHF_ALLOC) == 0)
+      continue;
+    Section->writeSection(Out);
   }
 }
 
 template <class ELFT> void BinaryObject<ELFT>::finalize() {
-  // Put all segments in offset order.
-  auto CompareSegments = [](const SegPtr &A, const SegPtr &B) {
-    return A->Offset < B->Offset;
-  };
-  std::sort(std::begin(this->Segments), std::end(this->Segments),
-            CompareSegments);
-
-  uint64_t Offset = 0;
-  for (auto &Segment : this->Segments) {
-    if (Segment->Type == llvm::ELF::PT_LOAD &&
-        Segment->firstSection() != nullptr) {
-      Offset = alignToAddr(Offset, Segment->VAddr, Segment->Align);
-      Segment->Offset = Offset;
-      Offset += Segment->FileSize;
+  // TODO: Create a filter range to construct OrderedSegments from so that this
+  // code can be deduped with assignOffsets above. This should also solve the
+  // todo below for LayoutSections.
+  // We need a temporary list of segments that has a special order to it
+  // so that we know that anytime ->ParentSegment is set that segment has
+  // already had it's offset properly set. We only want to consider the segments
+  // that will affect layout of allocated sections so we only add those.
+  std::vector<Segment *> OrderedSegments;
+  for (auto &Section : this->Sections) {
+    if ((Section->Flags & SHF_ALLOC) != 0 &&
+        Section->ParentSegment != nullptr) {
+      OrderedSegments.push_back(Section->ParentSegment);
     }
   }
-  TotalSize = Offset;
+  OrderSegments(OrderedSegments);
+  // Because we add a ParentSegment for each section we might have duplicate
+  // segments in OrderedSegments. If there were duplicates then LayoutSegments
+  // would do very strange things.
+  auto End =
+      std::unique(std::begin(OrderedSegments), std::end(OrderedSegments));
+  OrderedSegments.erase(End, std::end(OrderedSegments));
+
+  // Modify the first segment so that there is no gap at the start. This allows
+  // our layout algorithm to proceed as expected while not out writing out the
+  // gap at the start.
+  if (!OrderedSegments.empty()) {
+    auto Seg = OrderedSegments[0];
+    auto Sec = Seg->firstSection();
+    auto Diff = Sec->OriginalOffset - Seg->OriginalOffset;
+    Seg->OriginalOffset += Diff;
+    // The size needs to be shrunk as well
+    Seg->FileSize -= Diff;
+    Seg->MemSize -= Diff;
+    // The VAddr needs to be adjusted so that the alignment is correct as well
+    Seg->VAddr += Diff;
+    Seg->PAddr = Seg->VAddr;
+    // We don't want this to be shifted by alignment so we need to set the
+    // alignment to zero.
+    Seg->Align = 0;
+  }
+
+  uint64_t Offset = LayoutSegments(OrderedSegments, 0);
+
+  // TODO: generalize LayoutSections to take a range. Pass a special range
+  // constructed from an iterator that skips values for which a predicate does
+  // not hold. Then pass such a range to LayoutSections instead of constructing
+  // AllocatedSections here.
+  std::vector<SectionBase *> AllocatedSections;
+  for (auto &Section : this->Sections) {
+    if ((Section->Flags & SHF_ALLOC) == 0)
+      continue;
+    AllocatedSections.push_back(Section.get());
+  }
+  LayoutSections(AllocatedSections, Offset);
+
+  // Now that every section has been laid out we just need to compute the total
+  // file size. This might not be the same as the offset returned by
+  // LayoutSections, because we want to truncate the last segment to the end of
+  // its last section, to match GNU objcopy's behaviour.
+  TotalSize = 0;
+  for (const auto &Section : AllocatedSections) {
+    if (Section->Type != SHT_NOBITS)
+      TotalSize = std::max(TotalSize, Section->Offset + Section->Size);
+  }
 }
 
 namespace llvm {

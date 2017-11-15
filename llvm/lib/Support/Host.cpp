@@ -322,6 +322,8 @@ enum VendorSignatures {
   SIG_AMD = 0x68747541 /* Auth */
 };
 
+// This should be kept in sync with libcc/compiler-rt as it should be used
+// by clang as a proxy for what's in libgcc/compiler-rt.
 enum ProcessorFeatures {
   FEATURE_CMOV = 0,
   FEATURE_MMX,
@@ -354,7 +356,8 @@ enum ProcessorFeatures {
   FEATURE_AVX5124VNNIW,
   FEATURE_AVX5124FMAPS,
   FEATURE_AVX512VPOPCNTDQ,
-  // Only one bit free left in the first 32 features.
+  // One bit free here.
+  // Features below here are not in libgcc/compiler-rt.
   FEATURE_MOVBE = 32,
   FEATURE_ADX,
   FEATURE_EM64T,

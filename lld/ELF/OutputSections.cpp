@@ -91,9 +91,10 @@ static bool canMergeToProgbits(unsigned Type) {
 void OutputSection::addSection(InputSection *IS) {
   if (!Live) {
     // If IS is the first section to be added to this section,
-    // initialize Type by IS->Type.
+    // initialize Type and Entsize from IS.
     Live = true;
     Type = IS->Type;
+    Entsize = IS->Entsize;
   } else {
     // Otherwise, check if new type or flags are compatible with existing ones.
     if ((Flags & (SHF_ALLOC | SHF_TLS)) != (IS->Flags & (SHF_ALLOC | SHF_TLS)))
@@ -124,13 +125,10 @@ void OutputSection::addSection(InputSection *IS) {
   this->Size = IS->OutSecOff + IS->getSize();
 
   // If this section contains a table of fixed-size entries, sh_entsize
-  // holds the element size. Consequently, if this contains two or more
-  // input sections, all of them must have the same sh_entsize. However,
-  // you can put different types of input sections into one output
-  // section by using linker scripts. I don't know what to do here.
-  // Probably we sholuld handle that as an error. But for now we just
-  // pick the largest sh_entsize.
-  this->Entsize = std::max(this->Entsize, IS->Entsize);
+  // holds the element size. If it contains elements of different size we
+  // set sh_entsize to 0.
+  if (Entsize != IS->Entsize)
+    Entsize = 0;
 
   if (!IS->Assigned) {
     IS->Assigned = true;

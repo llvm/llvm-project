@@ -319,16 +319,7 @@ template <class ELFT> bool ObjFile<ELFT>::shouldMerge(const Elf_Shdr &Sec) {
   if (Flags & SHF_WRITE)
     fatal(toString(this) + ": writable SHF_MERGE section is not supported");
 
-  // Don't try to merge if the alignment is larger than the sh_entsize and this
-  // is not SHF_STRINGS.
-  //
-  // Since this is not a SHF_STRINGS, we would need to pad after every entity.
-  // It would be equivalent for the producer of the .o to just set a larger
-  // sh_entsize.
-  if (Flags & SHF_STRINGS)
-    return true;
-
-  return Sec.sh_addralign <= EntSize;
+  return true;
 }
 
 template <class ELFT>
