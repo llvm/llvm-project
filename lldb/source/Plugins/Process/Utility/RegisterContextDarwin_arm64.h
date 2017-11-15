@@ -83,7 +83,7 @@ public:
 
   // mirrors <mach/arm/thread_status.h> arm_neon_state64_t
   struct FPU {
-    VReg v[32];
+    alignas(__uint128_t) VReg v[32];
     uint32_t fpsr;
     uint32_t fpcr;
   };
