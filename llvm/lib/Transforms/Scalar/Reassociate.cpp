@@ -143,20 +143,20 @@ XorOpnd::XorOpnd(Value *V) {
 /// Return true if V is an instruction of the specified opcode and if it
 /// only has one use.
 static BinaryOperator *isReassociableOp(Value *V, unsigned Opcode) {
-  if (V->hasOneUse() && isa<Instruction>(V) &&
-      cast<Instruction>(V)->getOpcode() == Opcode &&
-      (!isa<FPMathOperator>(V) || cast<Instruction>(V)->isFast()))
-    return cast<BinaryOperator>(V);
+  auto *I = dyn_cast<Instruction>(V);
+  if (I && I->hasOneUse() && I->getOpcode() == Opcode)
+    if (!isa<FPMathOperator>(I) || I->isFast())
+      return cast<BinaryOperator>(I);
   return nullptr;
 }
 
 static BinaryOperator *isReassociableOp(Value *V, unsigned Opcode1,
                                         unsigned Opcode2) {
-  if (V->hasOneUse() && isa<Instruction>(V) &&
-      (cast<Instruction>(V)->getOpcode() == Opcode1 ||
-       cast<Instruction>(V)->getOpcode() == Opcode2) &&
-      (!isa<FPMathOperator>(V) || cast<Instruction>(V)->isFast()))
-    return cast<BinaryOperator>(V);
+  auto *I = dyn_cast<Instruction>(V);
+  if (I && I->hasOneUse() &&
+      (I->getOpcode() == Opcode1 || I->getOpcode() == Opcode2))
+    if (!isa<FPMathOperator>(I) || I->isFast())
+      return cast<BinaryOperator>(I);
   return nullptr;
 }
 

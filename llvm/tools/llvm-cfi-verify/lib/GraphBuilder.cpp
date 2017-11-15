@@ -71,6 +71,30 @@ std::vector<uint64_t> GraphResult::flattenAddress(uint64_t Address) const {
   return Addresses;
 }
 
+void printPairToDOT(const FileAnalysis &Analysis, raw_ostream &OS,
+                          uint64_t From, uint64_t To) {
+  OS << "  \"" << format_hex(From, 2) << ": ";
+  Analysis.printInstruction(Analysis.getInstructionOrDie(From), OS);
+  OS << "\" -> \"" << format_hex(To, 2) << ": ";
+  Analysis.printInstruction(Analysis.getInstructionOrDie(To), OS);
+  OS << "\"\n";
+}
+
+void GraphResult::printToDOT(const FileAnalysis &Analysis,
+                             raw_ostream &OS) const {
+  std::map<uint64_t, uint64_t> SortedIntermediateNodes(
+      IntermediateNodes.begin(), IntermediateNodes.end());
+  OS << "digraph graph_" << format_hex(BaseAddress, 2) << " {\n";
+  for (const auto &KV : SortedIntermediateNodes)
+    printPairToDOT(Analysis, OS, KV.first, KV.second);
+
+  for (auto &BranchNode : ConditionalBranchNodes) {
+    for (auto &V : {BranchNode.Target, BranchNode.Fallthrough})
+      printPairToDOT(Analysis, OS, BranchNode.Address, V);
+  }
+  OS << "}\n";
+}
+
 GraphResult GraphBuilder::buildFlowGraph(const FileAnalysis &Analysis,
                                          uint64_t Address) {
   GraphResult Result;
@@ -277,6 +301,7 @@ void GraphBuilder::buildFlowGraphImpl(const FileAnalysis &Analysis,
     BranchNode.Target = 0;
     BranchNode.Fallthrough = 0;
     BranchNode.CFIProtection = false;
+    BranchNode.IndirectCFIsOnTargetPath = (BranchTarget == Address);
 
     if (BranchTarget == Address)
       BranchNode.Target = Address;

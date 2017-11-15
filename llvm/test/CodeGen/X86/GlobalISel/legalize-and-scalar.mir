@@ -45,11 +45,14 @@ body:             |
     ; CHECK: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
     ; CHECK: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
     ; CHECK: [[AND:%[0-9]+]]:_(s8) = G_AND [[TRUNC]], [[TRUNC1]]
-    ; CHECK: [[TRUNC2:%[0-9]+]]:_(s1) = G_TRUNC [[AND]](s8)
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[AND]](s8)
+    ; CHECK: %eax = COPY [[ANYEXT]](s32)
     ; CHECK: RET 0
     %0(s32) = COPY %edx
     %1(s1) = G_TRUNC %0(s32)
     %2(s1) = G_AND %1, %1
+    %3:_(s32) = G_ANYEXT %2
+    %eax = COPY %3
     RET 0
 ...
 ---

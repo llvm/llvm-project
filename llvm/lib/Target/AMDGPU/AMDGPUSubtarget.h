@@ -130,6 +130,7 @@ protected:
   bool DebuggerEmitPrologue;
 
   // Used as options.
+  bool EnableHugePrivateBuffer;
   bool EnableVGPRSpilling;
   bool EnablePromoteAlloca;
   bool EnableLoadStoreOpt;
@@ -349,6 +350,10 @@ public:
 
   TrapHandlerAbi getTrapHandlerAbi() const {
     return isAmdHsaOS() ? TrapHandlerAbiHsa : TrapHandlerAbiNone;
+  }
+
+  bool enableHugePrivateBuffer() const {
+    return EnableHugePrivateBuffer;
   }
 
   bool isPromoteAllocaEnabled() const {

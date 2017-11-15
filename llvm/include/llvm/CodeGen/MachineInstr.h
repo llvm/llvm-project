@@ -797,9 +797,14 @@ public:
 
   bool isEHLabel() const { return getOpcode() == TargetOpcode::EH_LABEL; }
   bool isGCLabel() const { return getOpcode() == TargetOpcode::GC_LABEL; }
+  bool isAnnotationLabel() const {
+    return getOpcode() == TargetOpcode::ANNOTATION_LABEL;
+  }
 
   /// Returns true if the MachineInstr represents a label.
-  bool isLabel() const { return isEHLabel() || isGCLabel(); }
+  bool isLabel() const {
+    return isEHLabel() || isGCLabel() || isAnnotationLabel();
+  }
 
   bool isCFIInstruction() const {
     return getOpcode() == TargetOpcode::CFI_INSTRUCTION;

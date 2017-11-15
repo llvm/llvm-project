@@ -35,8 +35,8 @@ define i32 @test_add_i32(i32 %arg1, i32 %arg2) {
 ;
 ; X32-LABEL: test_add_i32:
 ; X32:       # BB#0:
-; X32-NEXT:    movl 8(%esp), %eax
-; X32-NEXT:    addl 4(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    retl
   %ret = add i32 %arg1, %arg2
   ret i32 %ret
@@ -53,8 +53,8 @@ define i16 @test_add_i16(i16 %arg1, i16 %arg2) {
 ;
 ; X32-LABEL: test_add_i16:
 ; X32:       # BB#0:
-; X32-NEXT:    movzwl 8(%esp), %eax
-; X32-NEXT:    addw 4(%esp), %ax
+; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    addw {{[0-9]+}}(%esp), %ax
 ; X32-NEXT:    retl
   %ret = add i16 %arg1, %arg2
   ret i16 %ret
@@ -69,8 +69,8 @@ define i8 @test_add_i8(i8 %arg1, i8 %arg2) {
 ;
 ; X32-LABEL: test_add_i8:
 ; X32:       # BB#0:
-; X32-NEXT:    movb 8(%esp), %al
-; X32-NEXT:    addb 4(%esp), %al
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    addb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    retl
   %ret = add i8 %arg1, %arg2
   ret i8 %ret
@@ -82,15 +82,17 @@ define i32 @test_add_i1(i32 %arg1, i32 %arg2) {
 ; X64-NEXT:    cmpl %esi, %edi
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    addb %al, %al
+; X64-NEXT:    movzbl %al, %eax
 ; X64-NEXT:    andl $1, %eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_add_i1:
 ; X32:       # BB#0:
-; X32-NEXT:    movl 8(%esp), %eax
-; X32-NEXT:    cmpl %eax, 4(%esp)
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    cmpl %eax, {{[0-9]+}}(%esp)
 ; X32-NEXT:    sete %al
 ; X32-NEXT:    addb %al, %al
+; X32-NEXT:    movzbl %al, %eax
 ; X32-NEXT:    andl $1, %eax
 ; X32-NEXT:    retl
   %c = icmp eq i32 %arg1, %arg2

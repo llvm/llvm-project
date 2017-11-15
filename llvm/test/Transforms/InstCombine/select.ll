@@ -1490,3 +1490,55 @@ entry:
   %1 = select <4 x i1> %0, <4 x float> <float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000>, <4 x float> zeroinitializer
   ret <4 x float> %1
 }
+
+; select(C, binop(select(C, X, Y), W), Z) -> select(C, binop(X, W), Z)
+define i8 @test87(i1 %cond, i8 %w, i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @test87(
+; CHECK-NEXT:    [[B:%.*]] = add i8 [[X:%.*]], [[W:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[COND:%.*]], i8 [[B]], i8 [[Z:%.*]]
+; CHECK-NEXT:    ret i8 [[C]]
+;
+  %a = select i1 %cond, i8 %x, i8 %y
+  %b = add i8 %a, %w
+  %c = select i1 %cond, i8 %b, i8 %z
+  ret i8 %c
+}
+
+; select(C, binop(select(C, X, Y), W), Z) -> select(C, Z, binop(Y, W))
+define i8 @test88(i1 %cond, i8 %w, i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @test88(
+; CHECK-NEXT:    [[B:%.*]] = sub i8 [[Y:%.*]], [[W:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[COND:%.*]], i8 [[Z:%.*]], i8 [[B]]
+; CHECK-NEXT:    ret i8 [[C]]
+;
+  %a = select i1 %cond, i8 %x, i8 %y
+  %b = sub i8 %a, %w
+  %c = select i1 %cond, i8 %z, i8 %b
+  ret i8 %c
+}
+
+; select(C, Z, binop(W, select(C, X, Y))) -> select(C, binop(X, W), Z)
+define i8 @test89(i1 %cond, i8 %w, i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @test89(
+; CHECK-NEXT:    [[B:%.*]] = and i8 [[X:%.*]], [[W:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[COND:%.*]], i8 [[B]], i8 [[Z:%.*]]
+; CHECK-NEXT:    ret i8 [[C]]
+;
+  %a = select i1 %cond, i8 %x, i8 %y
+  %b = and i8 %w, %a
+  %c = select i1 %cond, i8 %b, i8 %z
+  ret i8 %c
+}
+
+; select(C, Z, binop(W, select(C, X, Y))) -> select(C, Z, binop(W, Y))
+define i8 @test90(i1 %cond, i8 %w, i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @test90(
+; CHECK-NEXT:    [[B:%.*]] = or i8 [[Y:%.*]], [[W:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[COND:%.*]], i8 [[Z:%.*]], i8 [[B]]
+; CHECK-NEXT:    ret i8 [[C]]
+;
+  %a = select i1 %cond, i8 %x, i8 %y
+  %b = or i8 %w, %a
+  %c = select i1 %cond, i8 %z, i8 %b
+  ret i8 %c
+}

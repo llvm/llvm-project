@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-linux-gnu %s -o - -jump-table-density=40 -verify-machineinstrs | FileCheck %s
+; RUN: llc -mtriple=x86_64-linux-gnu %s -o - -jump-table-density=40 -switch-peel-threshold=101 -verify-machineinstrs | FileCheck %s
 ; RUN: llc -mtriple=x86_64-linux-gnu %s -o - -O0 -jump-table-density=40 -verify-machineinstrs | FileCheck --check-prefix=NOOPT %s
 
 declare void @g(i32)

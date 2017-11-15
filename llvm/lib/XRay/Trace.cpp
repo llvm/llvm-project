@@ -606,7 +606,7 @@ Expected<Trace> llvm::xray::loadTraceFile(StringRef Filename, bool Sort) {
   }
 
   if (Sort)
-    std::sort(T.Records.begin(), T.Records.end(),
+    std::stable_sort(T.Records.begin(), T.Records.end(),
               [&](const XRayRecord &L, const XRayRecord &R) {
                 return L.TSC < R.TSC;
               });

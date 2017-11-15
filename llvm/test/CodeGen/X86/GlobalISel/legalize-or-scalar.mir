@@ -45,11 +45,17 @@ body:             |
     ; CHECK: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
     ; CHECK: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
     ; CHECK: [[OR:%[0-9]+]]:_(s8) = G_OR [[TRUNC]], [[TRUNC1]]
-    ; CHECK: [[TRUNC2:%[0-9]+]]:_(s1) = G_TRUNC [[OR]](s8)
+    ; CHECK: [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
+    ; CHECK: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 1
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s8) = COPY [[OR]](s8)
+    ; CHECK: [[AND:%[0-9]+]]:_(s8) = G_AND [[COPY1]], [[C]]
+    ; CHECK: G_STORE [[AND]](s8), [[DEF]](p0) :: (store 1)
     ; CHECK: RET 0
     %0(s32) = COPY %edx
     %1(s1) = G_TRUNC %0(s32)
     %2(s1) = G_OR %1, %1
+    %3:_(p0) = G_IMPLICIT_DEF
+    G_STORE %2, %3 :: (store 1)
     RET 0
 ...
 ---

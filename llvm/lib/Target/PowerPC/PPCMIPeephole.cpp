@@ -814,8 +814,12 @@ static bool eligibleForCompareElimination(MachineBasicBlock &MBB,
           !MRI->hasOneNonDBGUse(CndReg))
         return false;
 
-      // We skip this BB if a physical register is used in comparison.
       MachineInstr *CMPI = MRI->getVRegDef(CndReg);
+      // We assume compare and branch are in the same BB for ease of analysis.
+      if (CMPI->getParent() != &BB)
+        return false;
+
+      // We skip this BB if a physical register is used in comparison.
       for (MachineOperand &MO : CMPI->operands())
         if (MO.isReg() && !TargetRegisterInfo::isVirtualRegister(MO.getReg()))
           return false;
@@ -921,7 +925,7 @@ bool PPCMIPeephole::eliminateRedundantCompare(void) {
     //
     // As partially redundant case, we additionally handle if MBB2 has one
     // additional predecessor, which has only one successor (MBB2).
-    // In this case, we move the compre instruction originally in MBB2 into
+    // In this case, we move the compare instruction originally in MBB2 into
     // MBBtoMoveCmp. This partially redundant case is typically appear by
     // compiling a while loop; here, MBBtoMoveCmp is the loop preheader.
     //
