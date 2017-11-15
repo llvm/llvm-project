@@ -422,6 +422,12 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
 
   AddCXXSynthetic(
       cpp_category_sp,
+      lldb_private::formatters::LibcxxBitsetSyntheticFrontEndCreator,
+      "libc++ std::bitset synthetic children",
+      ConstString("^std::__(ndk)?1::bitset<.+>(( )?&)?$"), stl_synth_flags,
+      true);
+  AddCXXSynthetic(
+      cpp_category_sp,
       lldb_private::formatters::LibcxxStdVectorSyntheticFrontEndCreator,
       "libc++ std::vector synthetic children",
       ConstString("^std::__(ndk)?1::vector<.+>(( )?&)?$"), stl_synth_flags,
@@ -509,6 +515,11 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
 
   stl_summary_flags.SetDontShowChildren(false);
   stl_summary_flags.SetSkipPointers(false);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibcxxContainerSummaryProvider,
+                "libc++ std::bitset summary provider",
+                ConstString("^std::__(ndk)?1::bitset<.+>(( )?&)?$"),
+                stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::LibcxxContainerSummaryProvider,
                 "libc++ std::vector summary provider",

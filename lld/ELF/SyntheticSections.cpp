@@ -1621,7 +1621,16 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
       Symbol *Sym = Ent.Sym;
       if (Sym->isInPlt() && Sym->NeedsPltAddr)
         ESym->st_other |= STO_MIPS_PLT;
-
+      if (isMicroMips()) {
+        // Set STO_MIPS_MICROMIPS flag and less-significant bit for
+        // defined microMIPS symbols and shared symbols with PLT record.
+        if ((Sym->isDefined() && (Sym->StOther & STO_MIPS_MICROMIPS)) ||
+            (Sym->isShared() && Sym->NeedsPltAddr)) {
+          if (StrTabSec.isDynamic())
+            ESym->st_value |= 1;
+          ESym->st_other |= STO_MIPS_MICROMIPS;
+        }
+      }
       if (Config->Relocatable)
         if (auto *D = dyn_cast<Defined>(Sym))
           if (isMipsPIC<ELFT>(D))
