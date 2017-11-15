@@ -169,6 +169,15 @@ def GPR64sp0 : RegisterOperand<GPR64sp> {
   let ParserMatchClass = GPR64spPlus0Operand;
 }
 
+// GPR32/GPR64 but with zero-register substitution enabled.
+// TODO: Roll this out to GPR32/GPR64/GPR32all/GPR64all.
+def GPR32z : RegisterOperand<GPR32> {
+  let GIZeroRegister = WZR;
+}
+def GPR64z : RegisterOperand<GPR64> {
+  let GIZeroRegister = XZR;
+}
+
 // GPR register classes which include WZR/XZR AND SP/WSP. This is not a
 // constraint used by any instructions, it is used as a common super-class.
 def GPR32all : RegisterClass<"AArch64", [i32], 32, (add GPR32common, WZR, WSP)>;
