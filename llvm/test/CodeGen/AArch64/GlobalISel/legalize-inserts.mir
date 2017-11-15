@@ -90,11 +90,13 @@ body: |
 
       ; A narrow insert gets surrounded by a G_ANYEXT/G_TRUNC pair.
     ; CHECK-LABEL: name: test_inserts_4
-    ; CHECK: [[VALEXT:%[0-9]+]](s32) = G_ANYEXT %1(s8)
-    ; CHECK: [[VAL:%[0-9]+]](s32) = G_INSERT [[VALEXT]], %0(s1), 0
-    ; CHECK: %3(s8) = G_TRUNC [[VAL]](s32)
-    %0:_(s1) = COPY %w0
-    %1:_(s8) = COPY %w1
+    ; CHECK: [[VALEXT:%[0-9]+]](s32) = COPY %2(s32)
+    ; CHECK: [[VAL:%[0-9]+]](s32) = G_INSERT [[VALEXT]], %1(s1), 0
+    ; CHECK: %5(s8) = G_TRUNC [[VAL]](s32)
+    %4:_(s32) = COPY %w0
+    %0:_(s1) = G_TRUNC %4
+    %5:_(s32) = COPY %w1
+    %1:_(s8) = G_TRUNC %5
     %2:_(p0) = COPY %x2
     %3:_(s8) = G_INSERT %1(s8), %0(s1), 0
     G_STORE %3(s8), %2(p0) :: (store 1)
