@@ -72,7 +72,7 @@ int main()
 #ifndef TEST_HAS_NO_EXCEPTIONS
         try
         {
-            c.at(11);
+            (void)c.at(11);
             assert(false);
         }
         catch (std::out_of_range&)
@@ -130,7 +130,7 @@ int main()
 #ifndef TEST_HAS_NO_EXCEPTIONS
         try
         {
-            c.at(11);
+            (void)c.at(11);
             assert(false);
         }
         catch (std::out_of_range&)

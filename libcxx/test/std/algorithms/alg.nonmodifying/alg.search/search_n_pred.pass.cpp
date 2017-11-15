@@ -142,7 +142,7 @@ test()
     count_equal::count = 0;
 
     // Check that we properly convert the size argument to an integral.
-    std::search_n(Iter(ic), Iter(ic+sc), UserDefinedIntegral<unsigned>(4), 0, count_equal());
+    (void)std::search_n(Iter(ic), Iter(ic+sc), UserDefinedIntegral<unsigned>(4), 0, count_equal());
     count_equal::count = 0;
 }
 
