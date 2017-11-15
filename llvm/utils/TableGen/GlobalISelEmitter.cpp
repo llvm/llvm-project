@@ -517,6 +517,11 @@ class MatchAction;
 
 /// Generates code to check that a match rule matches.
 class RuleMatcher {
+public:
+  using ActionVec = std::vector<std::unique_ptr<MatchAction>>;
+  using action_iterator = ActionVec::iterator;
+
+protected:
   /// A list of matchers that all need to succeed for the current rule to match.
   /// FIXME: This currently supports a single match position but could be
   /// extended to support multiple positions to support div/rem fusion or
@@ -525,7 +530,7 @@ class RuleMatcher {
 
   /// A list of actions that need to be taken when all predicates in this rule
   /// have succeeded.
-  std::vector<std::unique_ptr<MatchAction>> Actions;
+  ActionVec Actions;
 
   using DefinedInsnVariablesMap =
       std::map<const InstructionMatcher *, unsigned>;
@@ -571,6 +576,8 @@ public:
   const std::vector<Record *> &getRequiredFeatures() const;
 
   template <class Kind, class... Args> Kind &addAction(Args &&... args);
+  template <class Kind, class... Args>
+  action_iterator insertAction(action_iterator InsertPt, Args &&... args);
 
   /// Define an instruction without emitting any code to do so.
   /// This is used for the root of the match.
@@ -604,6 +611,12 @@ public:
     bool R = MutatableInsns.erase(InsnMatcher);
     assert(R && "Reserving a mutatable insn that isn't available");
     (void)R;
+  }
+
+  action_iterator actions_begin() { return Actions.begin(); }
+  action_iterator actions_end() { return Actions.end(); }
+  iterator_range<action_iterator> actions() {
+    return make_range(actions_begin(), actions_end());
   }
 
   void defineOperand(StringRef SymbolicName, OperandMatcher &OM);
@@ -641,6 +654,8 @@ public:
   // FIXME: Remove this as soon as possible
   InstructionMatcher &insnmatcher_front() const { return *Matchers.front(); }
 };
+
+using action_iterator = RuleMatcher::action_iterator;
 
 template <class PredicateTy> class PredicateListMatcher {
 private:
@@ -1941,10 +1956,29 @@ const std::vector<Record *> &RuleMatcher::getRequiredFeatures() const {
   return RequiredFeatures;
 }
 
+// Emplaces an action of the specified Kind at the end of the action list.
+//
+// Returns a reference to the newly created action.
+//
+// Like std::vector::emplace_back(), may invalidate all iterators if the new
+// size exceeds the capacity. Otherwise, only invalidates the past-the-end
+// iterator.
 template <class Kind, class... Args>
 Kind &RuleMatcher::addAction(Args &&... args) {
   Actions.emplace_back(llvm::make_unique<Kind>(std::forward<Args>(args)...));
   return *static_cast<Kind *>(Actions.back().get());
+}
+// Emplaces an action of the specified Kind before the given insertion point.
+//
+// Returns an iterator pointing at the newly created instruction.
+//
+// Like std::vector::insert(), may invalidate all iterators if the new size
+// exceeds the capacity. Otherwise, only invalidates the iterators from the
+// insertion point onwards.
+template <class Kind, class... Args>
+action_iterator RuleMatcher::insertAction(action_iterator InsertPt,
+                                          Args &&... args) {
+  return Actions.insert(InsertPt, llvm::make_unique<Kind>(std::forward<Args>(args)...));
 }
 
 unsigned
@@ -2224,15 +2258,18 @@ private:
   Expected<BuildMIAction &>
   createAndImportInstructionRenderer(RuleMatcher &M,
                                      const TreePatternNode *Dst);
-  Expected<BuildMIAction &>
-  createInstructionRenderer(RuleMatcher &M, const TreePatternNode *Dst);
+  Expected<action_iterator>
+  createInstructionRenderer(action_iterator InsertPt, RuleMatcher &M,
+                            const TreePatternNode *Dst);
   void importExplicitDefRenderers(BuildMIAction &DstMIBuilder);
-  Expected<BuildMIAction &>
-  importExplicitUseRenderers(RuleMatcher &M, BuildMIAction &DstMIBuilder,
+  Expected<action_iterator>
+  importExplicitUseRenderers(action_iterator InsertPt, RuleMatcher &M,
+                             BuildMIAction &DstMIBuilder,
                              const llvm::TreePatternNode *Dst);
-  Error importExplicitUseRenderer(RuleMatcher &Rule,
-                                  BuildMIAction &DstMIBuilder,
-                                  TreePatternNode *DstChild) const;
+  Expected<action_iterator>
+  importExplicitUseRenderer(action_iterator InsertPt, RuleMatcher &Rule,
+                            BuildMIAction &DstMIBuilder,
+                            TreePatternNode *DstChild) const;
   Error importDefaultOperandRenderers(BuildMIAction &DstMIBuilder,
                                       DagInit *DefaultOps) const;
   Error
@@ -2560,8 +2597,8 @@ Error GlobalISelEmitter::importChildMatcher(RuleMatcher &Rule,
   return failedImport("Src pattern child is an unsupported kind");
 }
 
-Error GlobalISelEmitter::importExplicitUseRenderer(
-    RuleMatcher &Rule, BuildMIAction &DstMIBuilder,
+Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
+    action_iterator InsertPt, RuleMatcher &Rule, BuildMIAction &DstMIBuilder,
     TreePatternNode *DstChild) const {
   if (DstChild->getTransformFn() != nullptr) {
     return failedImport("Dst pattern child has transform fn " +
@@ -2573,7 +2610,7 @@ Error GlobalISelEmitter::importExplicitUseRenderer(
     DstMIBuilder.addRenderer<RenderComplexPatternOperand>(
         0, *std::get<0>(*SubOperand), DstChild->getName(),
         std::get<1>(*SubOperand), std::get<2>(*SubOperand));
-    return Error::success();
+    return InsertPt;
   }
 
   if (!DstChild->isLeaf()) {
@@ -2583,7 +2620,7 @@ Error GlobalISelEmitter::importExplicitUseRenderer(
       auto &ChildSDNI = CGP.getSDNodeInfo(DstChild->getOperator());
       if (ChildSDNI.getSDClassName() == "BasicBlockSDNode") {
         DstMIBuilder.addRenderer<CopyRenderer>(0, DstChild->getName());
-        return Error::success();
+        return InsertPt;
       }
     }
 
@@ -2594,11 +2631,11 @@ Error GlobalISelEmitter::importExplicitUseRenderer(
     if (DstChild->getOperator()->getName() == "imm") {
       DstMIBuilder.addRenderer<CopyConstantAsImmRenderer>(0,
                                                           DstChild->getName());
-      return Error::success();
+      return InsertPt;
     } else if (DstChild->getOperator()->getName() == "fpimm") {
       DstMIBuilder.addRenderer<CopyFConstantAsFPImmRenderer>(
           0, DstChild->getName());
-      return Error::success();
+      return InsertPt;
     }
 
     return failedImport("Dst pattern child isn't a leaf node or an MBB" + llvm::to_string(*DstChild));
@@ -2618,7 +2655,7 @@ Error GlobalISelEmitter::importExplicitUseRenderer(
 
     if (ChildRec->isSubClassOf("Register")) {
       DstMIBuilder.addRenderer<AddRegisterRenderer>(0, ChildRec);
-      return Error::success();
+      return InsertPt;
     }
 
     if (ChildRec->isSubClassOf("RegisterClass") ||
@@ -2628,11 +2665,11 @@ Error GlobalISelEmitter::importExplicitUseRenderer(
           !ChildRec->isValueUnset("GIZeroRegister")) {
         DstMIBuilder.addRenderer<CopyOrAddZeroRegRenderer>(
             0, DstChild->getName(), ChildRec->getValueAsDef("GIZeroRegister"));
-        return Error::success();
+        return InsertPt;
       }
 
       DstMIBuilder.addRenderer<CopyRenderer>(0, DstChild->getName());
-      return Error::success();
+      return InsertPt;
     }
 
     if (ChildRec->isSubClassOf("ComplexPattern")) {
@@ -2645,7 +2682,7 @@ Error GlobalISelEmitter::importExplicitUseRenderer(
       DstMIBuilder.addRenderer<RenderComplexPatternOperand>(
           0, *ComplexPattern->second, DstChild->getName(),
           OM.getAllocatedTemporariesBaseID());
-      return Error::success();
+      return InsertPt;
     }
 
     if (ChildRec->isSubClassOf("SDNodeXForm"))
@@ -2661,22 +2698,24 @@ Error GlobalISelEmitter::importExplicitUseRenderer(
 
 Expected<BuildMIAction &> GlobalISelEmitter::createAndImportInstructionRenderer(
     RuleMatcher &M, const TreePatternNode *Dst) {
-  auto DstMIBuilderOrError = createInstructionRenderer(M, Dst);
-  if (auto Error = DstMIBuilderOrError.takeError())
+  auto InsertPtOrError = createInstructionRenderer(M.actions_end(), M, Dst);
+  if (auto Error = InsertPtOrError.takeError())
     return std::move(Error);
 
-  BuildMIAction &DstMIBuilder = DstMIBuilderOrError.get();
+  action_iterator InsertPt = InsertPtOrError.get();
+  BuildMIAction &DstMIBuilder = *static_cast<BuildMIAction *>(InsertPt->get());
 
   importExplicitDefRenderers(DstMIBuilder);
 
-  if (auto Error = importExplicitUseRenderers(M, DstMIBuilder, Dst).takeError())
+  if (auto Error = importExplicitUseRenderers(InsertPt, M, DstMIBuilder, Dst)
+                       .takeError())
     return std::move(Error);
 
   return DstMIBuilder;
 }
 
-Expected<BuildMIAction &> GlobalISelEmitter::createInstructionRenderer(
-    RuleMatcher &M, const TreePatternNode *Dst) {
+Expected<action_iterator> GlobalISelEmitter::createInstructionRenderer(
+    action_iterator InsertPt, RuleMatcher &M, const TreePatternNode *Dst) {
   Record *DstOp = Dst->getOperator();
   if (!DstOp->isSubClassOf("Instruction")) {
     if (DstOp->isSubClassOf("ValueType"))
@@ -2693,9 +2732,9 @@ Expected<BuildMIAction &> GlobalISelEmitter::createInstructionRenderer(
   else if (DstI->TheDef->getName() == "EXTRACT_SUBREG")
     DstI = &Target.getInstruction(RK.getDef("COPY"));
 
-  auto &DstMIBuilder = M.addAction<BuildMIAction>(0, DstI);
+  InsertPt = M.insertAction<BuildMIAction>(InsertPt, 0, DstI);
 
-  return DstMIBuilder;
+  return InsertPt;
 }
 
 void GlobalISelEmitter::importExplicitDefRenderers(
@@ -2707,8 +2746,8 @@ void GlobalISelEmitter::importExplicitDefRenderers(
   }
 }
 
-Expected<BuildMIAction &> GlobalISelEmitter::importExplicitUseRenderers(
-    RuleMatcher &M, BuildMIAction &DstMIBuilder,
+Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
+    action_iterator InsertPt, RuleMatcher &M, BuildMIAction &DstMIBuilder,
     const llvm::TreePatternNode *Dst) {
   const CodeGenInstruction *DstI = DstMIBuilder.getCGI();
   CodeGenInstruction *OrigDstI = &Target.getInstruction(Dst->getOperator());
@@ -2734,7 +2773,7 @@ Expected<BuildMIAction &> GlobalISelEmitter::importExplicitUseRenderers(
 
       DstMIBuilder.addRenderer<CopySubRegRenderer>(
           0, Dst->getChild(0)->getName(), SubIdx);
-      return DstMIBuilder;
+      return InsertPt;
     }
 
     return failedImport("EXTRACT_SUBREG child #1 is not a subreg index");
@@ -2767,9 +2806,11 @@ Expected<BuildMIAction &> GlobalISelEmitter::importExplicitUseRenderers(
       continue;
     }
 
-    if (auto Error =
-            importExplicitUseRenderer(M, DstMIBuilder, Dst->getChild(Child)))
+    auto InsertPtOrError = importExplicitUseRenderer(InsertPt, M, DstMIBuilder,
+                                                     Dst->getChild(Child));
+    if (auto Error = InsertPtOrError.takeError())
       return std::move(Error);
+    InsertPt = InsertPtOrError.get();
     ++Child;
   }
 
@@ -2780,7 +2821,7 @@ Expected<BuildMIAction &> GlobalISelEmitter::importExplicitUseRenderers(
                         " explicit ones and " + llvm::to_string(NumDefaultOps) +
                         " default ones");
 
-  return DstMIBuilder;
+  return InsertPt;
 }
 
 Error GlobalISelEmitter::importDefaultOperandRenderers(
