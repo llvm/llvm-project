@@ -59,10 +59,9 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
   assert(&AArch64::FPRRegBank == &RBFPR &&
          "The order in RegBanks is messed up");
 
-  const RegisterBank &RBCCR = getRegBank(AArch64::CCRRegBankID);
+  const RegisterBank &RBCCR = getRegBank(AArch64::CCRegBankID);
   (void)RBCCR;
-  assert(&AArch64::CCRRegBank == &RBCCR &&
-         "The order in RegBanks is messed up");
+  assert(&AArch64::CCRegBank == &RBCCR && "The order in RegBanks is messed up");
 
   // The GPR register bank is fully defined by all the registers in
   // GR64all + its subclasses.
@@ -229,7 +228,7 @@ const RegisterBank &AArch64RegisterBankInfo::getRegBankFromRegClass(
   case AArch64::XSeqPairsClassRegClassID:
     return getRegBank(AArch64::GPRRegBankID);
   case AArch64::CCRRegClassID:
-    return getRegBank(AArch64::CCRRegBankID);
+    return getRegBank(AArch64::CCRegBankID);
   default:
     llvm_unreachable("Register class not supported");
   }
@@ -415,18 +414,21 @@ AArch64RegisterBankInfo::getSameKindOfOperandsMapping(
 const RegisterBankInfo::InstructionMapping &
 AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   const unsigned Opc = MI.getOpcode();
-  const MachineFunction &MF = *MI.getParent()->getParent();
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
 
   // Try the default logic for non-generic instructions that are either copies
   // or already have some operands assigned to banks.
-  if (!isPreISelGenericOpcode(Opc) ||
+  if ((Opc != TargetOpcode::COPY && !isPreISelGenericOpcode(Opc)) ||
       Opc == TargetOpcode::G_PHI) {
     const RegisterBankInfo::InstructionMapping &Mapping =
         getInstrMappingImpl(MI);
     if (Mapping.isValid())
       return Mapping;
   }
+
+  const MachineFunction &MF = *MI.getParent()->getParent();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const TargetSubtargetInfo &STI = MF.getSubtarget();
+  const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
 
   switch (Opc) {
     // G_{F|S|U}REM are not listed because they are not legal.
@@ -451,12 +453,39 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_FMUL:
   case TargetOpcode::G_FDIV:
     return getSameKindOfOperandsMapping(MI);
+  case TargetOpcode::COPY: {
+    unsigned DstReg = MI.getOperand(0).getReg();
+    unsigned SrcReg = MI.getOperand(1).getReg();
+    // Check if one of the register is not a generic register.
+    if ((TargetRegisterInfo::isPhysicalRegister(DstReg) ||
+         !MRI.getType(DstReg).isValid()) ||
+        (TargetRegisterInfo::isPhysicalRegister(SrcReg) ||
+         !MRI.getType(SrcReg).isValid())) {
+      const RegisterBank *DstRB = getRegBank(DstReg, MRI, TRI);
+      const RegisterBank *SrcRB = getRegBank(SrcReg, MRI, TRI);
+      if (!DstRB)
+        DstRB = SrcRB;
+      else if (!SrcRB)
+        SrcRB = DstRB;
+      // If both RB are null that means both registers are generic.
+      // We shouldn't be here.
+      assert(DstRB && SrcRB && "Both RegBank were nullptr");
+      unsigned Size = getSizeInBits(DstReg, MRI, TRI);
+      return getInstructionMapping(
+          DefaultMappingID, copyCost(*DstRB, *SrcRB, Size),
+          getCopyMapping(DstRB->getID(), SrcRB->getID(), Size),
+          // We only care about the mapping of the destination.
+          /*NumOperands*/ 1);
+    }
+    // Both registers are generic, use G_BITCAST.
+    LLVM_FALLTHROUGH;
+  }
   case TargetOpcode::G_BITCAST: {
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
     LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
     unsigned Size = DstTy.getSizeInBits();
-    bool DstIsGPR = !DstTy.isVector();
-    bool SrcIsGPR = !SrcTy.isVector();
+    bool DstIsGPR = !DstTy.isVector() && DstTy.getSizeInBits() <= 64;
+    bool SrcIsGPR = !SrcTy.isVector() && SrcTy.getSizeInBits() <= 64;
     const RegisterBank &DstRB =
         DstIsGPR ? AArch64::GPRRegBank : AArch64::FPRRegBank;
     const RegisterBank &SrcRB =
@@ -464,7 +493,8 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     return getInstructionMapping(
         DefaultMappingID, copyCost(DstRB, SrcRB, Size),
         getCopyMapping(DstRB.getID(), SrcRB.getID(), Size),
-        /*NumOperands*/ 2);
+        // We only care about the mapping of the destination for COPY.
+        /*NumOperands*/ Opc == TargetOpcode::G_BITCAST ? 2 : 1);
   }
   default:
     break;

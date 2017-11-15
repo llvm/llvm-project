@@ -672,7 +672,7 @@ public:
   /// but OPM_Int must have priority over OPM_RegBank since constant integers
   /// are represented by a virtual register defined by a G_CONSTANT instruction.
   enum PredicateKind {
-    OPM_Tie,
+    OPM_SameOperand,
     OPM_ComplexPattern,
     OPM_IntrinsicID,
     OPM_Instruction,
@@ -724,14 +724,14 @@ PredicateListMatcher<OperandPredicateMatcher>::getNoPredicateComment() const {
 /// Generates code to check that a register operand is defined by the same exact
 /// one as another.
 class SameOperandMatcher : public OperandPredicateMatcher {
-  std::string TiedTo;
+  std::string MatchingName;
 
 public:
-  SameOperandMatcher(StringRef TiedTo)
-      : OperandPredicateMatcher(OPM_Tie), TiedTo(TiedTo) {}
+  SameOperandMatcher(StringRef MatchingName)
+      : OperandPredicateMatcher(OPM_SameOperand), MatchingName(MatchingName) {}
 
   static bool classof(const OperandPredicateMatcher *P) {
-    return P->getKind() == OPM_Tie;
+    return P->getKind() == OPM_SameOperand;
   }
 
   void emitPredicateOpcodes(MatchTable &Table, RuleMatcher &Rule,
@@ -977,27 +977,7 @@ public:
 
   InstructionMatcher &getInstructionMatcher() const { return Insn; }
 
-  Error addTypeCheckPredicate(const EEVT::TypeSet &Ty,
-                              bool OperandIsAPointer) {
-    if (!Ty.isConcrete())
-      return failedImport("unsupported typeset");
-
-    if (Ty.getConcrete() == MVT::iPTR && OperandIsAPointer) {
-      addPredicate<PointerToAnyOperandMatcher>(0);
-      return Error::success();
-    }
-
-    auto OpTyOrNone = MVTToLLT(Ty.getConcrete());
-    if (!OpTyOrNone)
-      return failedImport("unsupported type");
-
-    if (OperandIsAPointer)
-      addPredicate<PointerToAnyOperandMatcher>(
-          OpTyOrNone->get().getSizeInBits());
-    else
-      addPredicate<LLTOperandMatcher>(*OpTyOrNone);
-    return Error::success();
-  }
+  Error addTypeCheckPredicate(const EEVT::TypeSet &Ty, bool OperandIsAPointer);
 
   /// Emit MatchTable opcodes to capture instructions into the MIs table.
   void emitCaptureOpcodes(MatchTable &Table, RuleMatcher &Rule,
@@ -1076,6 +1056,27 @@ PredicateListMatcher<OperandPredicateMatcher>::addPredicate(Args &&... args) {
     return None;
   Predicates.emplace_back(llvm::make_unique<Kind>(std::forward<Args>(args)...));
   return static_cast<Kind *>(Predicates.back().get());
+}
+
+Error OperandMatcher::addTypeCheckPredicate(const EEVT::TypeSet &Ty,
+                                            bool OperandIsAPointer) {
+  if (!Ty.isConcrete())
+    return failedImport("unsupported typeset");
+
+  if (Ty.getConcrete() == MVT::iPTR && OperandIsAPointer) {
+    addPredicate<PointerToAnyOperandMatcher>(0);
+    return Error::success();
+  }
+
+  auto OpTyOrNone = MVTToLLT(Ty.getConcrete());
+  if (!OpTyOrNone)
+    return failedImport("unsupported type");
+
+  if (OperandIsAPointer)
+    addPredicate<PointerToAnyOperandMatcher>(OpTyOrNone->get().getSizeInBits());
+  else
+    addPredicate<LLTOperandMatcher>(*OpTyOrNone);
+  return Error::success();
 }
 
 unsigned ComplexPatternOperandMatcher::getAllocatedTemporariesBaseID() const {
@@ -2092,7 +2093,7 @@ void SameOperandMatcher::emitPredicateOpcodes(MatchTable &Table,
                                               RuleMatcher &Rule,
                                               unsigned InsnVarID,
                                               unsigned OpIdx) const {
-  const OperandMatcher &OtherOM = Rule.getOperandMatcher(TiedTo);
+  const OperandMatcher &OtherOM = Rule.getOperandMatcher(MatchingName);
   unsigned OtherInsnVarID = Rule.getInsnVarID(OtherOM.getInstructionMatcher());
 
   Table << MatchTable::Opcode("GIM_CheckIsSameOperand")
@@ -2976,7 +2977,7 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
   OS << "#ifdef GET_GLOBALISEL_TEMPORARIES_DECL\n"
      << "  mutable MatcherState State;\n"
      << "  typedef "
-        "ComplexRendererFn("
+        "ComplexRendererFns("
      << Target.getName()
      << "InstructionSelector::*ComplexMatcherMemFn)(MachineOperand &) const;\n"
      << "  const MatcherInfoTy<PredicateBitset, ComplexMatcherMemFn> "

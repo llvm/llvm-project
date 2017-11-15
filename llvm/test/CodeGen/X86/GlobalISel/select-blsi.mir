@@ -4,9 +4,12 @@
 # Test that rules where multiple operands must be the same operand successfully
 # match. Also test that the rules do not match when they're not the same
 # operand.
+#
+# This test covers the case when OtherInsnID and OtherOpIdx are different in a
+# GIM_CheckIsSameOperand.
 
 ---
-name:            test_blsr32rr
+name:            test_blsi32rr
 alignment:       4
 legalized:       true
 regBankSelected: true
@@ -15,29 +18,29 @@ registers:
   - { id: 1, class: gpr }
   - { id: 2, class: gpr }
   - { id: 3, class: gpr }
-# G_ADD and G_AND both use %0 so we should match this.
+# G_SUB and G_AND both use %0 so we should match this.
 body:             |
   bb.1:
     liveins: %edi
 
-    ; CHECK-LABEL: name: test_blsr32rr
+    ; CHECK-LABEL: name: test_blsi32rr
     ; CHECK: registers:
     ; CHECK-NEXT: id: 0, class: gr32
     ; CHECK-NEXT: id: 1, class: gpr
     ; CHECK-NEXT: id: 2, class: gpr
     ; CHECK-NEXT: id: 3, class: gr32
     ; CHECK: [[COPY:%[0-9]+]] = COPY %edi
-    ; CHECK: [[BLSR32rr:%[0-9]+]] = BLSR32rr [[COPY]], implicit-def %eflags
-    ; CHECK: %edi = COPY [[BLSR32rr]]
+    ; CHECK: [[BLSI32rr:%[0-9]+]] = BLSI32rr [[COPY]], implicit-def %eflags
+    ; CHECK: %edi = COPY [[BLSI32rr]]
     %0(s32) = COPY %edi
-    %1(s32) = G_CONSTANT i32 -1
-    %2(s32) = G_ADD %0, %1
+    %1(s32) = G_CONSTANT i32 0
+    %2(s32) = G_SUB %1, %0
     %3(s32) = G_AND %2, %0
     %edi = COPY %3
 
 ...
 ---
-name:            test_blsr32rr_nomatch
+name:            test_blsi32rr_nomatch
 alignment:       4
 legalized:       true
 regBankSelected: true
@@ -46,25 +49,25 @@ registers:
   - { id: 1, class: gpr }
   - { id: 2, class: gpr }
   - { id: 3, class: gpr }
-# G_ADD and G_AND use different operands so we shouldn't match this.
+# G_SUB and G_AND use different operands so we shouldn't match this.
 body:             |
   bb.1:
     liveins: %edi
 
-    ; CHECK-LABEL: name: test_blsr32rr_nomatch
+    ; CHECK-LABEL: name: test_blsi32rr_nomatch
     ; CHECK: registers:
     ; CHECK-NEXT: id: 0, class: gr32
     ; CHECK-NEXT: id: 1, class: gr32
     ; CHECK-NEXT: id: 2, class: gr32
     ; CHECK-NEXT: id: 3, class: gr32
     ; CHECK: [[COPY:%[0-9]+]] = COPY %edi
-    ; CHECK: [[MOV32ri:%[0-9]+]] = MOV32ri 4294967295
-    ; CHECK: [[DEC32r:%[0-9]+]] = DEC32r [[MOV32ri]], implicit-def %eflags
-    ; CHECK: [[AND32rr:%[0-9]+]] = AND32rr [[DEC32r]], [[COPY]], implicit-def %eflags
+    ; CHECK: [[MOV32r0_:%[0-9]+]] = MOV32r0 implicit-def %eflags
+    ; CHECK: [[SUB32ri:%[0-9]+]] = SUB32ri [[MOV32r0_]], 0, implicit-def %eflags
+    ; CHECK: [[AND32rr:%[0-9]+]] = AND32rr [[SUB32ri]], [[COPY]], implicit-def %eflags
     ; CHECK: %edi = COPY [[AND32rr]]
     %0(s32) = COPY %edi
-    %1(s32) = G_CONSTANT i32 -1
-    %2(s32) = G_ADD %1, %1
+    %1(s32) = G_CONSTANT i32 0
+    %2(s32) = G_SUB %1, %1
     %3(s32) = G_AND %2, %0
     %edi = COPY %3
 ...
