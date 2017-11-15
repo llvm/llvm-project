@@ -526,5 +526,273 @@ bool HasNameMatcher::matchesNode(const NamedDecl &Node) const {
 }
 
 } // end namespace internal
+
+const internal::VariadicDynCastAllOfMatcher<Decl, TranslationUnitDecl>
+    translationUnitDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, TypedefDecl> typedefDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, TypedefNameDecl>
+    typedefNameDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, TypeAliasDecl> typeAliasDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, TypeAliasTemplateDecl>
+    typeAliasTemplateDecl;
+const internal::VariadicAllOfMatcher<Decl> decl;
+const internal::VariadicDynCastAllOfMatcher<Decl, LinkageSpecDecl>
+    linkageSpecDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, NamedDecl> namedDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, LabelDecl> labelDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, NamespaceDecl> namespaceDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, NamespaceAliasDecl>
+    namespaceAliasDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, RecordDecl> recordDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, CXXRecordDecl> cxxRecordDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, ClassTemplateDecl>
+    classTemplateDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl,
+                                            ClassTemplateSpecializationDecl>
+    classTemplateSpecializationDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, DeclaratorDecl>
+    declaratorDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, ParmVarDecl> parmVarDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, AccessSpecDecl>
+    accessSpecDecl;
+const internal::VariadicAllOfMatcher<CXXCtorInitializer> cxxCtorInitializer;
+const internal::VariadicAllOfMatcher<TemplateArgument> templateArgument;
+const internal::VariadicAllOfMatcher<TemplateName> templateName;
+const internal::VariadicDynCastAllOfMatcher<Decl, NonTypeTemplateParmDecl>
+    nonTypeTemplateParmDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, TemplateTypeParmDecl>
+    templateTypeParmDecl;
+const internal::VariadicAllOfMatcher<QualType> qualType;
+const internal::VariadicAllOfMatcher<Type> type;
+const internal::VariadicAllOfMatcher<TypeLoc> typeLoc;
+const internal::VariadicDynCastAllOfMatcher<Stmt, UnaryExprOrTypeTraitExpr>
+    unaryExprOrTypeTraitExpr;
+const internal::VariadicDynCastAllOfMatcher<Decl, ValueDecl> valueDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, CXXConstructorDecl>
+    cxxConstructorDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, CXXDestructorDecl>
+    cxxDestructorDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, EnumDecl> enumDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, EnumConstantDecl>
+    enumConstantDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, CXXMethodDecl> cxxMethodDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, CXXConversionDecl>
+    cxxConversionDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, VarDecl> varDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, FieldDecl> fieldDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, FunctionDecl> functionDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, FunctionTemplateDecl>
+    functionTemplateDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, FriendDecl> friendDecl;
+const internal::VariadicAllOfMatcher<Stmt> stmt;
+const internal::VariadicDynCastAllOfMatcher<Stmt, DeclStmt> declStmt;
+const internal::VariadicDynCastAllOfMatcher<Stmt, MemberExpr> memberExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CallExpr> callExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, LambdaExpr> lambdaExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CXXMemberCallExpr>
+    cxxMemberCallExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, ObjCMessageExpr>
+    objcMessageExpr;
+const internal::VariadicDynCastAllOfMatcher<Decl, ObjCInterfaceDecl>
+    objcInterfaceDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, ObjCImplementationDecl>
+    objcImplementationDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, ObjCProtocolDecl>
+    objcProtocolDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, ObjCCategoryDecl>
+    objcCategoryDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, ObjCCategoryImplDecl>
+    objcCategoryImplDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, ObjCMethodDecl>
+    objcMethodDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, ObjCIvarDecl> objcIvarDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, ObjCPropertyDecl>
+    objcPropertyDecl;
+const internal::VariadicDynCastAllOfMatcher<Stmt, ObjCAtThrowStmt>
+    objcThrowStmt;
+const internal::VariadicDynCastAllOfMatcher<Stmt, ObjCAtTryStmt> objcTryStmt;
+const internal::VariadicDynCastAllOfMatcher<Stmt, ObjCAtCatchStmt>
+    objcCatchStmt;
+const internal::VariadicDynCastAllOfMatcher<Stmt, ObjCAtFinallyStmt>
+    objcFinallyStmt;
+const internal::VariadicDynCastAllOfMatcher<Stmt, ExprWithCleanups>
+    exprWithCleanups;
+const internal::VariadicDynCastAllOfMatcher<Stmt, InitListExpr> initListExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CXXStdInitializerListExpr>
+    cxxStdInitializerListExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, ImplicitValueInitExpr>
+    implicitValueInitExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, ParenListExpr> parenListExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, SubstNonTypeTemplateParmExpr>
+    substNonTypeTemplateParmExpr;
+const internal::VariadicDynCastAllOfMatcher<Decl, UsingDecl> usingDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, UsingDirectiveDecl>
+    usingDirectiveDecl;
+const internal::VariadicDynCastAllOfMatcher<Stmt, UnresolvedLookupExpr>
+    unresolvedLookupExpr;
+const internal::VariadicDynCastAllOfMatcher<Decl, UnresolvedUsingValueDecl>
+    unresolvedUsingValueDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, UnresolvedUsingTypenameDecl>
+    unresolvedUsingTypenameDecl;
+const internal::VariadicDynCastAllOfMatcher<Stmt, ParenExpr> parenExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CXXConstructExpr>
+    cxxConstructExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CXXUnresolvedConstructExpr>
+    cxxUnresolvedConstructExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CXXThisExpr> cxxThisExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CXXBindTemporaryExpr>
+    cxxBindTemporaryExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, MaterializeTemporaryExpr>
+    materializeTemporaryExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CXXNewExpr> cxxNewExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CXXDeleteExpr> cxxDeleteExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, ArraySubscriptExpr>
+    arraySubscriptExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CXXDefaultArgExpr>
+    cxxDefaultArgExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CXXOperatorCallExpr>
+    cxxOperatorCallExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, Expr> expr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, DeclRefExpr> declRefExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, IfStmt> ifStmt;
+const internal::VariadicDynCastAllOfMatcher<Stmt, ForStmt> forStmt;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CXXForRangeStmt>
+    cxxForRangeStmt;
+const internal::VariadicDynCastAllOfMatcher<Stmt, WhileStmt> whileStmt;
+const internal::VariadicDynCastAllOfMatcher<Stmt, DoStmt> doStmt;
+const internal::VariadicDynCastAllOfMatcher<Stmt, BreakStmt> breakStmt;
+const internal::VariadicDynCastAllOfMatcher<Stmt, ContinueStmt> continueStmt;
+const internal::VariadicDynCastAllOfMatcher<Stmt, ReturnStmt> returnStmt;
+const internal::VariadicDynCastAllOfMatcher<Stmt, GotoStmt> gotoStmt;
+const internal::VariadicDynCastAllOfMatcher<Stmt, LabelStmt> labelStmt;
+const internal::VariadicDynCastAllOfMatcher<Stmt, AddrLabelExpr> addrLabelExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, SwitchStmt> switchStmt;
+const internal::VariadicDynCastAllOfMatcher<Stmt, SwitchCase> switchCase;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CaseStmt> caseStmt;
+const internal::VariadicDynCastAllOfMatcher<Stmt, DefaultStmt> defaultStmt;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CompoundStmt> compoundStmt;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CXXCatchStmt> cxxCatchStmt;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CXXTryStmt> cxxTryStmt;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CXXThrowExpr> cxxThrowExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, NullStmt> nullStmt;
+const internal::VariadicDynCastAllOfMatcher<Stmt, AsmStmt> asmStmt;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CXXBoolLiteralExpr>
+    cxxBoolLiteral;
+const internal::VariadicDynCastAllOfMatcher<Stmt, StringLiteral> stringLiteral;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CharacterLiteral>
+    characterLiteral;
+const internal::VariadicDynCastAllOfMatcher<Stmt, IntegerLiteral>
+    integerLiteral;
+const internal::VariadicDynCastAllOfMatcher<Stmt, FloatingLiteral> floatLiteral;
+const internal::VariadicDynCastAllOfMatcher<Stmt, UserDefinedLiteral>
+    userDefinedLiteral;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CompoundLiteralExpr>
+    compoundLiteralExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CXXNullPtrLiteralExpr>
+    cxxNullPtrLiteralExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, GNUNullExpr> gnuNullExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, AtomicExpr> atomicExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, StmtExpr> stmtExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, BinaryOperator>
+    binaryOperator;
+const internal::VariadicDynCastAllOfMatcher<Stmt, UnaryOperator> unaryOperator;
+const internal::VariadicDynCastAllOfMatcher<Stmt, ConditionalOperator>
+    conditionalOperator;
+const internal::VariadicDynCastAllOfMatcher<Stmt, BinaryConditionalOperator>
+    binaryConditionalOperator;
+const internal::VariadicDynCastAllOfMatcher<Stmt, OpaqueValueExpr>
+    opaqueValueExpr;
+const internal::VariadicDynCastAllOfMatcher<Decl, StaticAssertDecl>
+    staticAssertDecl;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CXXReinterpretCastExpr>
+    cxxReinterpretCastExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CXXStaticCastExpr>
+    cxxStaticCastExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CXXDynamicCastExpr>
+    cxxDynamicCastExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CXXConstCastExpr>
+    cxxConstCastExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CStyleCastExpr>
+    cStyleCastExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, ExplicitCastExpr>
+    explicitCastExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, ImplicitCastExpr>
+    implicitCastExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CastExpr> castExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CXXFunctionalCastExpr>
+    cxxFunctionalCastExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CXXTemporaryObjectExpr>
+    cxxTemporaryObjectExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, PredefinedExpr>
+    predefinedExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, DesignatedInitExpr>
+    designatedInitExpr;
+const internal::VariadicOperatorMatcherFunc<
+    2, std::numeric_limits<unsigned>::max()>
+    eachOf = {internal::DynTypedMatcher::VO_EachOf};
+const internal::VariadicOperatorMatcherFunc<
+    2, std::numeric_limits<unsigned>::max()>
+    anyOf = {internal::DynTypedMatcher::VO_AnyOf};
+const internal::VariadicOperatorMatcherFunc<
+    2, std::numeric_limits<unsigned>::max()>
+    allOf = {internal::DynTypedMatcher::VO_AllOf};
+const internal::VariadicFunction<internal::Matcher<NamedDecl>, StringRef,
+                                 internal::hasAnyNameFunc>
+    hasAnyName = {};
+const internal::ArgumentAdaptingMatcherFunc<internal::HasMatcher> has = {};
+const internal::ArgumentAdaptingMatcherFunc<internal::HasDescendantMatcher>
+    hasDescendant = {};
+const internal::ArgumentAdaptingMatcherFunc<internal::ForEachMatcher> forEach =
+    {};
+const internal::ArgumentAdaptingMatcherFunc<internal::ForEachDescendantMatcher>
+    forEachDescendant = {};
+const internal::ArgumentAdaptingMatcherFunc<
+    internal::HasParentMatcher,
+    internal::TypeList<Decl, NestedNameSpecifierLoc, Stmt, TypeLoc>,
+    internal::TypeList<Decl, NestedNameSpecifierLoc, Stmt, TypeLoc>>
+    hasParent = {};
+const internal::ArgumentAdaptingMatcherFunc<
+    internal::HasAncestorMatcher,
+    internal::TypeList<Decl, NestedNameSpecifierLoc, Stmt, TypeLoc>,
+    internal::TypeList<Decl, NestedNameSpecifierLoc, Stmt, TypeLoc>>
+    hasAncestor = {};
+const internal::VariadicOperatorMatcherFunc<1, 1> unless = {
+    internal::DynTypedMatcher::VO_UnaryNot};
+const internal::VariadicAllOfMatcher<NestedNameSpecifier> nestedNameSpecifier;
+const internal::VariadicAllOfMatcher<NestedNameSpecifierLoc>
+    nestedNameSpecifierLoc;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CUDAKernelCallExpr>
+    cudaKernelCallExpr;
+const AstTypeMatcher<BuiltinType> builtinType;
+const AstTypeMatcher<ArrayType> arrayType;
+const AstTypeMatcher<ComplexType> complexType;
+const AstTypeMatcher<ConstantArrayType> constantArrayType;
+const AstTypeMatcher<DependentSizedArrayType> dependentSizedArrayType;
+const AstTypeMatcher<IncompleteArrayType> incompleteArrayType;
+const AstTypeMatcher<VariableArrayType> variableArrayType;
+const AstTypeMatcher<AtomicType> atomicType;
+const AstTypeMatcher<AutoType> autoType;
+const AstTypeMatcher<FunctionType> functionType;
+const AstTypeMatcher<FunctionProtoType> functionProtoType;
+const AstTypeMatcher<ParenType> parenType;
+const AstTypeMatcher<BlockPointerType> blockPointerType;
+const AstTypeMatcher<MemberPointerType> memberPointerType;
+const AstTypeMatcher<PointerType> pointerType;
+const AstTypeMatcher<ObjCObjectPointerType> objcObjectPointerType;
+const AstTypeMatcher<ReferenceType> referenceType;
+const AstTypeMatcher<LValueReferenceType> lValueReferenceType;
+const AstTypeMatcher<RValueReferenceType> rValueReferenceType;
+const AstTypeMatcher<TypedefType> typedefType;
+const AstTypeMatcher<EnumType> enumType;
+const AstTypeMatcher<TemplateSpecializationType> templateSpecializationType;
+const AstTypeMatcher<UnaryTransformType> unaryTransformType;
+const AstTypeMatcher<RecordType> recordType;
+const AstTypeMatcher<TagType> tagType;
+const AstTypeMatcher<ElaboratedType> elaboratedType;
+const AstTypeMatcher<SubstTemplateTypeParmType> substTemplateTypeParmType;
+const AstTypeMatcher<TemplateTypeParmType> templateTypeParmType;
+const AstTypeMatcher<InjectedClassNameType> injectedClassNameType;
+const AstTypeMatcher<DecayedType> decayedType;
+
 } // end namespace ast_matchers
 } // end namespace clang

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-linux-gnu -stop-after=isel < %s  | FileCheck %s
+; RUN: llc -mtriple=x86_64-linux-gnu -stop-after=expand-isel-pseudos < %s  | FileCheck %s
 
 define i32 @foo(i32 %n) !prof !1 {
 entry:

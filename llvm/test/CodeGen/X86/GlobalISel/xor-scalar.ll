@@ -7,6 +7,7 @@ define i32 @test_xor_i1(i32 %arg1, i32 %arg2) {
 ; ALL-NEXT:    cmpl %esi, %edi
 ; ALL-NEXT:    sete %al
 ; ALL-NEXT:    xorb %al, %al
+; ALL-NEXT:    movzbl %al, %eax
 ; ALL-NEXT:    andl $1, %eax
 ; ALL-NEXT:    retq
   %c = icmp eq i32 %arg1, %arg2

@@ -124,12 +124,11 @@ char PostInlineEntryExitInstrumenter::ID = 0;
 INITIALIZE_PASS(
     EntryExitInstrumenter, "ee-instrument",
     "Instrument function entry/exit with calls to e.g. mcount() (pre inlining)",
-    false, false);
-
+    false, false)
 INITIALIZE_PASS(PostInlineEntryExitInstrumenter, "post-inline-ee-instrument",
                 "Instrument function entry/exit with calls to e.g. mcount() "
                 "(post inlining)",
-                false, false);
+                false, false)
 
 FunctionPass *llvm::createEntryExitInstrumenterPass() {
   return new EntryExitInstrumenter();

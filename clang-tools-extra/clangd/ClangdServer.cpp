@@ -222,11 +222,11 @@ std::future<void> ClangdServer::forceReparse(PathRef File) {
                                  std::move(TaggedFS));
 }
 
-std::future<Tagged<std::vector<CompletionItem>>>
+std::future<Tagged<CompletionList>>
 ClangdServer::codeComplete(PathRef File, Position Pos,
                            llvm::Optional<StringRef> OverridenContents,
                            IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS) {
-  using ResultType = Tagged<std::vector<CompletionItem>>;
+  using ResultType = Tagged<CompletionList>;
 
   std::promise<ResultType> ResultPromise;
 
@@ -242,11 +242,10 @@ ClangdServer::codeComplete(PathRef File, Position Pos,
 }
 
 void ClangdServer::codeComplete(
-    UniqueFunction<void(Tagged<std::vector<CompletionItem>>)> Callback,
-    PathRef File, Position Pos, llvm::Optional<StringRef> OverridenContents,
+    UniqueFunction<void(Tagged<CompletionList>)> Callback, PathRef File,
+    Position Pos, llvm::Optional<StringRef> OverridenContents,
     IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS) {
-  using CallbackType =
-      UniqueFunction<void(Tagged<std::vector<CompletionItem>>)>;
+  using CallbackType = UniqueFunction<void(Tagged<CompletionList>)>;
 
   std::string Contents;
   if (OverridenContents) {
@@ -283,7 +282,7 @@ void ClangdServer::codeComplete(
         // FIXME(ibiryukov): even if Preamble is non-null, we may want to check
         // both the old and the new version in case only one of them matches.
 
-        std::vector<CompletionItem> Result = clangd::codeComplete(
+        CompletionList Result = clangd::codeComplete(
             File, Resources->getCompileCommand(),
             Preamble ? &Preamble->Preamble : nullptr, Contents, Pos,
             TaggedFS.Value, PCHs, CodeCompleteOpts, Logger);

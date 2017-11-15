@@ -547,6 +547,18 @@ struct CompletionItem {
 
 bool operator<(const CompletionItem &, const CompletionItem &);
 
+/// Represents a collection of completion items to be presented in the editor.
+struct CompletionList {
+  /// The list is not complete. Further typing should result in recomputing the
+  /// list.
+  bool isIncomplete = false;
+
+  /// The completion items.
+  std::vector<CompletionItem> items;
+
+  static json::Expr unparse(const CompletionList &);
+};
+
 /// A single parameter of a particular signature.
 struct ParameterInformation {
 

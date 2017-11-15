@@ -1,4 +1,4 @@
-//===--- DeclCXX.cpp - C++ Declaration AST Node Implementation ------------===//
+//===- DeclCXX.cpp - C++ Declaration AST Node Implementation --------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,26 +10,51 @@
 // This file implements the C++ related Decl classes.
 //
 //===----------------------------------------------------------------------===//
+
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/ASTMutationListener.h"
+#include "clang/AST/ASTUnresolvedSet.h"
 #include "clang/AST/CXXInheritance.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/LambdaCapture.h"
+#include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/ODRHash.h"
+#include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/AST/UnresolvedSet.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/IdentifierTable.h"
-#include "llvm/ADT/STLExtras.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/LangOptions.h"
+#include "clang/Basic/OperatorKinds.h"
+#include "clang/Basic/PartialDiagnostic.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/Specifiers.h"
+#include "llvm/ADT/None.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+
 using namespace clang;
 
 //===----------------------------------------------------------------------===//
 // Decl Allocation/Deallocation Method Implementations
 //===----------------------------------------------------------------------===//
 
-void AccessSpecDecl::anchor() { }
+void AccessSpecDecl::anchor() {}
 
 AccessSpecDecl *AccessSpecDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
   return new (C, ID) AccessSpecDecl(EmptyShell());
@@ -76,9 +101,7 @@ CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
       ImplicitCopyAssignmentHasConstParam(true),
       HasDeclaredCopyConstructorWithConstParam(false),
       HasDeclaredCopyAssignmentWithConstParam(false), IsLambda(false),
-      IsParsingBaseSpecifiers(false), HasODRHash(false), ODRHash(0),
-      NumBases(0), NumVBases(0), Bases(), VBases(), Definition(D),
-      FirstFriend() {}
+      IsParsingBaseSpecifiers(false), HasODRHash(false), Definition(D) {}
 
 CXXBaseSpecifier *CXXRecordDecl::DefinitionData::getBasesSlowCase() const {
   return Bases.get(Definition->getASTContext().getExternalSource());
@@ -94,8 +117,7 @@ CXXRecordDecl::CXXRecordDecl(Kind K, TagKind TK, const ASTContext &C,
                              CXXRecordDecl *PrevDecl)
     : RecordDecl(K, TK, C, DC, StartLoc, IdLoc, Id, PrevDecl),
       DefinitionData(PrevDecl ? PrevDecl->DefinitionData
-                              : nullptr),
-      TemplateOrInstantiation() {}
+                              : nullptr) {}
 
 CXXRecordDecl *CXXRecordDecl::Create(const ASTContext &C, TagKind TK,
                                      DeclContext *DC, SourceLocation StartLoc,
@@ -402,7 +424,6 @@ unsigned CXXRecordDecl::getODRHash() const {
 
   return DefinitionData->ODRHash;
 }
-
 
 void CXXRecordDecl::addedClassSubobject(CXXRecordDecl *Subobj) {
   // C++11 [class.copy]p11:
@@ -1590,7 +1611,7 @@ bool CXXRecordDecl::mayBeAbstract() const {
   return false;
 }
 
-void CXXDeductionGuideDecl::anchor() { }
+void CXXDeductionGuideDecl::anchor() {}
 
 CXXDeductionGuideDecl *CXXDeductionGuideDecl::Create(
     ASTContext &C, DeclContext *DC, SourceLocation StartLoc, bool IsExplicit,
@@ -1607,7 +1628,7 @@ CXXDeductionGuideDecl *CXXDeductionGuideDecl::CreateDeserialized(ASTContext &C,
                                            nullptr, SourceLocation());
 }
 
-void CXXMethodDecl::anchor() { }
+void CXXMethodDecl::anchor() {}
 
 bool CXXMethodDecl::isStatic() const {
   const CXXMethodDecl *MD = getCanonicalDecl();
@@ -1954,43 +1975,34 @@ CXXCtorInitializer::CXXCtorInitializer(ASTContext &Context,
                                        SourceLocation L, Expr *Init,
                                        SourceLocation R,
                                        SourceLocation EllipsisLoc)
-  : Initializee(TInfo), MemberOrEllipsisLocation(EllipsisLoc), Init(Init), 
-    LParenLoc(L), RParenLoc(R), IsDelegating(false), IsVirtual(IsVirtual), 
-    IsWritten(false), SourceOrder(0)
-{
-}
+    : Initializee(TInfo), MemberOrEllipsisLocation(EllipsisLoc), Init(Init),
+      LParenLoc(L), RParenLoc(R), IsDelegating(false), IsVirtual(IsVirtual),
+      IsWritten(false), SourceOrder(0) {}
 
 CXXCtorInitializer::CXXCtorInitializer(ASTContext &Context,
                                        FieldDecl *Member,
                                        SourceLocation MemberLoc,
                                        SourceLocation L, Expr *Init,
                                        SourceLocation R)
-  : Initializee(Member), MemberOrEllipsisLocation(MemberLoc), Init(Init),
-    LParenLoc(L), RParenLoc(R), IsDelegating(false), IsVirtual(false),
-    IsWritten(false), SourceOrder(0)
-{
-}
+    : Initializee(Member), MemberOrEllipsisLocation(MemberLoc), Init(Init),
+      LParenLoc(L), RParenLoc(R), IsDelegating(false), IsVirtual(false),
+      IsWritten(false), SourceOrder(0) {}
 
 CXXCtorInitializer::CXXCtorInitializer(ASTContext &Context,
                                        IndirectFieldDecl *Member,
                                        SourceLocation MemberLoc,
                                        SourceLocation L, Expr *Init,
                                        SourceLocation R)
-  : Initializee(Member), MemberOrEllipsisLocation(MemberLoc), Init(Init),
-    LParenLoc(L), RParenLoc(R), IsDelegating(false), IsVirtual(false),
-    IsWritten(false), SourceOrder(0)
-{
-}
+    : Initializee(Member), MemberOrEllipsisLocation(MemberLoc), Init(Init),
+      LParenLoc(L), RParenLoc(R), IsDelegating(false), IsVirtual(false),
+      IsWritten(false), SourceOrder(0) {}
 
 CXXCtorInitializer::CXXCtorInitializer(ASTContext &Context,
                                        TypeSourceInfo *TInfo,
                                        SourceLocation L, Expr *Init, 
                                        SourceLocation R)
-  : Initializee(TInfo), MemberOrEllipsisLocation(), Init(Init),
-    LParenLoc(L), RParenLoc(R), IsDelegating(true), IsVirtual(false),
-    IsWritten(false), SourceOrder(0)
-{
-}
+    : Initializee(TInfo), Init(Init), LParenLoc(L), RParenLoc(R),
+      IsDelegating(true), IsVirtual(false), IsWritten(false), SourceOrder(0) {}
 
 TypeLoc CXXCtorInitializer::getBaseClassLoc() const {
   if (isBaseInitializer())
@@ -2030,7 +2042,7 @@ SourceRange CXXCtorInitializer::getSourceRange() const {
   return SourceRange(getSourceLocation(), getRParenLoc());
 }
 
-void CXXConstructorDecl::anchor() { }
+void CXXConstructorDecl::anchor() {}
 
 CXXConstructorDecl *CXXConstructorDecl::CreateDeserialized(ASTContext &C,
                                                            unsigned ID,
@@ -2173,7 +2185,7 @@ bool CXXConstructorDecl::isSpecializationCopyingObject() const {
   return true;  
 }
 
-void CXXDestructorDecl::anchor() { }
+void CXXDestructorDecl::anchor() {}
 
 CXXDestructorDecl *
 CXXDestructorDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
@@ -2205,7 +2217,7 @@ void CXXDestructorDecl::setOperatorDelete(FunctionDecl *OD, Expr *ThisArg) {
   }
 }
 
-void CXXConversionDecl::anchor() { }
+void CXXConversionDecl::anchor() {}
 
 CXXConversionDecl *
 CXXConversionDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
@@ -2235,7 +2247,7 @@ bool CXXConversionDecl::isLambdaToBlockPointerConversion() const {
          getConversionType()->isBlockPointerType();
 }
 
-void LinkageSpecDecl::anchor() { }
+void LinkageSpecDecl::anchor() {}
 
 LinkageSpecDecl *LinkageSpecDecl::Create(ASTContext &C,
                                          DeclContext *DC,
@@ -2252,7 +2264,7 @@ LinkageSpecDecl *LinkageSpecDecl::CreateDeserialized(ASTContext &C,
                                      SourceLocation(), lang_c, false);
 }
 
-void UsingDirectiveDecl::anchor() { }
+void UsingDirectiveDecl::anchor() {}
 
 UsingDirectiveDecl *UsingDirectiveDecl::Create(ASTContext &C, DeclContext *DC,
                                                SourceLocation L,
@@ -2286,7 +2298,7 @@ NamespaceDecl::NamespaceDecl(ASTContext &C, DeclContext *DC, bool Inline,
                              SourceLocation StartLoc, SourceLocation IdLoc,
                              IdentifierInfo *Id, NamespaceDecl *PrevDecl)
     : NamedDecl(Namespace, DC, IdLoc, Id), DeclContext(Namespace),
-      redeclarable_base(C), LocStart(StartLoc), RBraceLoc(),
+      redeclarable_base(C), LocStart(StartLoc),
       AnonOrFirstNamespaceAndInline(nullptr, Inline) {
   setPreviousDecl(PrevDecl);
 
@@ -2326,21 +2338,25 @@ bool NamespaceDecl::isOriginalNamespace() const { return isFirstDecl(); }
 NamespaceDecl *NamespaceDecl::getNextRedeclarationImpl() {
   return getNextRedeclaration();
 }
+
 NamespaceDecl *NamespaceDecl::getPreviousDeclImpl() {
   return getPreviousDecl();
 }
+
 NamespaceDecl *NamespaceDecl::getMostRecentDeclImpl() {
   return getMostRecentDecl();
 }
 
-void NamespaceAliasDecl::anchor() { }
+void NamespaceAliasDecl::anchor() {}
 
 NamespaceAliasDecl *NamespaceAliasDecl::getNextRedeclarationImpl() {
   return getNextRedeclaration();
 }
+
 NamespaceAliasDecl *NamespaceAliasDecl::getPreviousDeclImpl() {
   return getPreviousDecl();
 }
+
 NamespaceAliasDecl *NamespaceAliasDecl::getMostRecentDeclImpl() {
   return getMostRecentDecl();
 }
@@ -2367,7 +2383,7 @@ NamespaceAliasDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
                                         SourceLocation(), nullptr);
 }
 
-void UsingShadowDecl::anchor() { }
+void UsingShadowDecl::anchor() {}
 
 UsingShadowDecl::UsingShadowDecl(Kind K, ASTContext &C, DeclContext *DC,
                                  SourceLocation Loc, UsingDecl *Using,
@@ -2382,7 +2398,7 @@ UsingShadowDecl::UsingShadowDecl(Kind K, ASTContext &C, DeclContext *DC,
 
 UsingShadowDecl::UsingShadowDecl(Kind K, ASTContext &C, EmptyShell Empty)
     : NamedDecl(K, nullptr, SourceLocation(), DeclarationName()),
-      redeclarable_base(C), Underlying(), UsingOrNextShadow() {}
+      redeclarable_base(C) {}
 
 UsingShadowDecl *
 UsingShadowDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
@@ -2397,7 +2413,7 @@ UsingDecl *UsingShadowDecl::getUsingDecl() const {
   return cast<UsingDecl>(Shadow->UsingOrNextShadow);
 }
 
-void ConstructorUsingShadowDecl::anchor() { }
+void ConstructorUsingShadowDecl::anchor() {}
 
 ConstructorUsingShadowDecl *
 ConstructorUsingShadowDecl::Create(ASTContext &C, DeclContext *DC,
@@ -2416,7 +2432,7 @@ CXXRecordDecl *ConstructorUsingShadowDecl::getNominatedBaseClass() const {
   return getUsingDecl()->getQualifier()->getAsRecordDecl();
 }
 
-void UsingDecl::anchor() { }
+void UsingDecl::anchor() {}
 
 void UsingDecl::addShadowDecl(UsingShadowDecl *S) {
   assert(std::find(shadow_begin(), shadow_end(), S) == shadow_end() &&
@@ -2468,7 +2484,7 @@ SourceRange UsingDecl::getSourceRange() const {
   return SourceRange(Begin, getNameInfo().getEndLoc());
 }
 
-void UsingPackDecl::anchor() { }
+void UsingPackDecl::anchor() {}
 
 UsingPackDecl *UsingPackDecl::Create(ASTContext &C, DeclContext *DC,
                                      NamedDecl *InstantiatedFrom,
@@ -2488,7 +2504,7 @@ UsingPackDecl *UsingPackDecl::CreateDeserialized(ASTContext &C, unsigned ID,
   return Result;
 }
 
-void UnresolvedUsingValueDecl::anchor() { }
+void UnresolvedUsingValueDecl::anchor() {}
 
 UnresolvedUsingValueDecl *
 UnresolvedUsingValueDecl::Create(ASTContext &C, DeclContext *DC,
@@ -2516,7 +2532,7 @@ SourceRange UnresolvedUsingValueDecl::getSourceRange() const {
   return SourceRange(Begin, getNameInfo().getEndLoc());
 }
 
-void UnresolvedUsingTypenameDecl::anchor() { }
+void UnresolvedUsingTypenameDecl::anchor() {}
 
 UnresolvedUsingTypenameDecl *
 UnresolvedUsingTypenameDecl::Create(ASTContext &C, DeclContext *DC,
@@ -2538,7 +2554,7 @@ UnresolvedUsingTypenameDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
       SourceLocation(), nullptr, SourceLocation());
 }
 
-void StaticAssertDecl::anchor() { }
+void StaticAssertDecl::anchor() {}
 
 StaticAssertDecl *StaticAssertDecl::Create(ASTContext &C, DeclContext *DC,
                                            SourceLocation StaticAssertLoc,

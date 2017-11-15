@@ -15,69 +15,74 @@ Content-Length: 151
 {"jsonrpc":"2.0","id":2,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":12,"character":8}}}
 #      CHECK:  "id": 2,
 # CHECK-NEXT:  "jsonrpc": "2.0",
-# CHECK-NEXT:  "result": [
-# CHECK-NEXT:    {
-# CHECK-NEXT:      "detail": "void",
-# CHECK-NEXT:      "filterText": "priv",
-# CHECK-NEXT:      "insertText": "priv",
-# CHECK-NEXT:      "insertTextFormat": 1,
-# CHECK-NEXT:      "kind": 2,
-# CHECK-NEXT:      "label": "priv()",
-# CHECK-NEXT:      "sortText": "000034priv"
-# CHECK-NEXT:    },
-# CHECK-NEXT:    {
-# CHECK-NEXT:      "detail": "void",
-# CHECK-NEXT:      "filterText": "prot",
-# CHECK-NEXT:      "insertText": "prot",
-# CHECK-NEXT:      "insertTextFormat": 1,
-# CHECK-NEXT:      "kind": 2,
-# CHECK-NEXT:      "label": "prot()",
-# CHECK-NEXT:      "sortText": "000034prot"
-# CHECK-NEXT:    },
-# CHECK-NEXT:    {
-# CHECK-NEXT:      "detail": "void",
-# CHECK-NEXT:      "filterText": "pub",
-# CHECK-NEXT:      "insertText": "pub",
-# CHECK-NEXT:      "insertTextFormat": 1,
-# CHECK-NEXT:      "kind": 2,
-# CHECK-NEXT:      "label": "pub()",
-# CHECK-NEXT:      "sortText": "000034pub"
-# CHECK-NEXT:    },
+# CHECK-NEXT:  "result": {
+# CHECK-NEXT:    "isIncomplete": false,
+# CHECK-NEXT:    "items": [
+# CHECK-NEXT:      {
+# CHECK-NEXT:        "detail": "void",
+# CHECK-NEXT:        "filterText": "priv",
+# CHECK-NEXT:        "insertText": "priv",
+# CHECK-NEXT:        "insertTextFormat": 1,
+# CHECK-NEXT:        "kind": 2,
+# CHECK-NEXT:        "label": "priv()",
+# CHECK-NEXT:        "sortText": "000034priv"
+# CHECK-NEXT:      },
+# CHECK-NEXT:      {
+# CHECK-NEXT:        "detail": "void",
+# CHECK-NEXT:        "filterText": "prot",
+# CHECK-NEXT:        "insertText": "prot",
+# CHECK-NEXT:        "insertTextFormat": 1,
+# CHECK-NEXT:        "kind": 2,
+# CHECK-NEXT:        "label": "prot()",
+# CHECK-NEXT:        "sortText": "000034prot"
+# CHECK-NEXT:      },
+# CHECK-NEXT:      {
+# CHECK-NEXT:        "detail": "void",
+# CHECK-NEXT:        "filterText": "pub",
+# CHECK-NEXT:        "insertText": "pub",
+# CHECK-NEXT:        "insertTextFormat": 1,
+# CHECK-NEXT:        "kind": 2,
+# CHECK-NEXT:        "label": "pub()",
+# CHECK-NEXT:        "sortText": "000034pub"
+# CHECK-NEXT:      },
 Content-Length: 151
 
 {"jsonrpc":"2.0","id":3,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":17,"character":4}}}
 #      CHECK:  "id": 3,
 # CHECK-NEXT:  "jsonrpc": "2.0",
-# CHECK-NEXT:  "result": [
-# CHECK-NEXT:    {
-# CHECK-NEXT:      "detail": "void",
-# CHECK-NEXT:      "filterText": "pub",
-# CHECK-NEXT:      "insertText": "pub",
-# CHECK-NEXT:      "insertTextFormat": 1,
-# CHECK-NEXT:      "kind": 2,
-# CHECK-NEXT:      "label": "pub()",
-# CHECK-NEXT:      "sortText": "000034pub"
-# CHECK-NEXT:    },
+# CHECK-NEXT:  "result": {
+# CHECK-NEXT:    "isIncomplete": false,
+# CHECK-NEXT:    "items": [
+# CHECK-NEXT:      {
+# CHECK-NEXT:        "detail": "void",
+# CHECK-NEXT:        "filterText": "pub",
+# CHECK-NEXT:        "insertText": "pub",
+# CHECK-NEXT:        "insertTextFormat": 1,
+# CHECK-NEXT:        "kind": 2,
+# CHECK-NEXT:        "label": "pub()",
+# CHECK-NEXT:        "sortText": "000034pub"
+# CHECK-NEXT:      },
 # priv() and prot() are at the end of the list
-# CHECK-NEXT:    {
-#      CHECK:      "detail": "void",
-#      CHECK:      "filterText": "priv",
-# CHECK-NEXT:      "insertText": "priv",
-# CHECK-NEXT:      "insertTextFormat": 1,
-# CHECK-NEXT:      "kind": 2,
-# CHECK-NEXT:      "label": "priv()",
-# CHECK-NEXT:      "sortText": "200034priv"
-# CHECK-NEXT:    },
-# CHECK-NEXT:    {
-# CHECK-NEXT:      "detail": "void",
-# CHECK-NEXT:      "filterText": "prot",
-# CHECK-NEXT:      "insertText": "prot",
-# CHECK-NEXT:      "insertTextFormat": 1,
-# CHECK-NEXT:      "kind": 2,
-# CHECK-NEXT:      "label": "prot()",
-# CHECK-NEXT:      "sortText": "200034prot"
-# CHECK-NEXT:    }
-# CHECK-NEXT:  ]
+# CHECK-NEXT:      {
+#      CHECK:        "detail": "void",
+#      CHECK:        "filterText": "priv",
+# CHECK-NEXT:        "insertText": "priv",
+# CHECK-NEXT:        "insertTextFormat": 1,
+# CHECK-NEXT:        "kind": 2,
+# CHECK-NEXT:        "label": "priv()",
+# CHECK-NEXT:        "sortText": "200034priv"
+# CHECK-NEXT:      },
+# CHECK-NEXT:      {
+# CHECK-NEXT:        "detail": "void",
+# CHECK-NEXT:        "filterText": "prot",
+# CHECK-NEXT:        "insertText": "prot",
+# CHECK-NEXT:        "insertTextFormat": 1,
+# CHECK-NEXT:        "kind": 2,
+# CHECK-NEXT:        "label": "prot()",
+# CHECK-NEXT:        "sortText": "200034prot"
+# CHECK-NEXT:      }
+# CHECK-NEXT:    ]
+# CHECK-NEXT:  }
 Content-Length: 58
 
 {"jsonrpc":"2.0","id":4,"method":"shutdown","params":null}

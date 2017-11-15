@@ -1,14 +1,14 @@
 // RUN: %clang_cc1 -S -debug-info-kind=standalone -emit-llvm -o - %s -finstrument-functions -disable-llvm-passes | FileCheck %s
 
 int test1(int x) {
-// CHECK: define i32 @test1(i32 %x) #[[ATTR1:[0-9]+]]
+// CHECK: @test1(i32 {{.*}}%x) #[[ATTR1:[0-9]+]]
 // CHECK: ret
   return x;
 }
 
 int test2(int) __attribute__((no_instrument_function));
 int test2(int x) {
-// CHECK: define i32 @test2(i32 %x) #[[ATTR2:[0-9]+]]
+// CHECK: @test2(i32 {{.*}}%x) #[[ATTR2:[0-9]+]]
 // CHECK: ret
   return x;
 }

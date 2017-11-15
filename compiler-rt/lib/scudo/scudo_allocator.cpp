@@ -226,6 +226,12 @@ struct ScudoAllocator {
   bool ZeroContents;
   bool DeleteSizeMismatch;
 
+  bool CheckRssLimit;
+  uptr HardRssLimitMb;
+  uptr SoftRssLimitMb;
+  atomic_uint8_t RssLimitExceeded;
+  atomic_uint64_t RssLastCheckedAtNS;
+
   explicit ScudoAllocator(LinkerInitialized)
     : AllocatorQuarantine(LINKER_INITIALIZED) {}
 
@@ -270,6 +276,8 @@ struct ScudoAllocator {
 
     SetAllocatorMayReturnNull(common_flags()->allocator_may_return_null);
     BackendAllocator.init(common_flags()->allocator_release_to_os_interval_ms);
+    HardRssLimitMb = common_flags()->hard_rss_limit_mb;
+    SoftRssLimitMb = common_flags()->soft_rss_limit_mb;
     AllocatorQuarantine.Init(
         static_cast<uptr>(getFlags()->QuarantineSizeKb) << 10,
         static_cast<uptr>(getFlags()->ThreadLocalQuarantineSizeKb) << 10);
@@ -280,6 +288,10 @@ struct ScudoAllocator {
 
     GlobalPrng.init();
     Cookie = GlobalPrng.getU64();
+
+    CheckRssLimit = HardRssLimitMb || SoftRssLimitMb;
+    if (CheckRssLimit)
+      atomic_store_relaxed(&RssLastCheckedAtNS, NanoTime());
   }
 
   // Helper function that checks for a valid Scudo chunk. nullptr isn't.
@@ -291,6 +303,41 @@ struct ScudoAllocator {
     if (!IsAligned(UserBeg, MinAlignment))
       return false;
     return getScudoChunk(UserBeg)->isValid();
+  }
+
+  // Opportunistic RSS limit check. This will update the RSS limit status, if
+  // it can, every 100ms, otherwise it will just return the current one.
+  bool isRssLimitExceeded() {
+    u64 LastCheck = atomic_load_relaxed(&RssLastCheckedAtNS);
+    const u64 CurrentCheck = NanoTime();
+    if (LIKELY(CurrentCheck < LastCheck + (100ULL * 1000000ULL)))
+      return atomic_load_relaxed(&RssLimitExceeded);
+    if (!atomic_compare_exchange_weak(&RssLastCheckedAtNS, &LastCheck,
+                                      CurrentCheck, memory_order_relaxed))
+      return atomic_load_relaxed(&RssLimitExceeded);
+    // TODO(kostyak): We currently use sanitizer_common's GetRSS which reads the
+    //                RSS from /proc/self/statm by default. We might want to
+    //                call getrusage directly, even if it's less accurate.
+    const uptr CurrentRssMb = GetRSS() >> 20;
+    if (HardRssLimitMb && HardRssLimitMb < CurrentRssMb) {
+      Report("%s: hard RSS limit exhausted (%zdMb vs %zdMb)\n",
+             SanitizerToolName, HardRssLimitMb, CurrentRssMb);
+      DumpProcessMap();
+      Die();
+    }
+    if (SoftRssLimitMb) {
+      if (atomic_load_relaxed(&RssLimitExceeded)) {
+        if (CurrentRssMb <= SoftRssLimitMb)
+          atomic_store_relaxed(&RssLimitExceeded, false);
+      } else {
+        if (CurrentRssMb > SoftRssLimitMb) {
+          atomic_store_relaxed(&RssLimitExceeded, true);
+          Report("%s: soft RSS limit exhausted (%zdMb vs %zdMb)\n",
+                 SanitizerToolName, SoftRssLimitMb, CurrentRssMb);
+        }
+      }
+    }
+    return atomic_load_relaxed(&RssLimitExceeded);
   }
 
   // Allocates a chunk.
@@ -311,6 +358,9 @@ struct ScudoAllocator {
         NeededSize + (Alignment - AlignedChunkHeaderSize) : NeededSize;
     if (UNLIKELY(AlignedSize >= MaxAllowedMallocSize))
       return FailureHandler::OnBadRequest();
+
+    if (CheckRssLimit && UNLIKELY(isRssLimitExceeded()))
+        return FailureHandler::OnOOM();
 
     // Primary and Secondary backed allocations have a different treatment. We
     // deal with alignment requirements of Primary serviced allocations here,

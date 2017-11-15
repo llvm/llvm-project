@@ -259,6 +259,35 @@ struct SelectedNodeWithParents {
   /// when it makes sense to do so.
   void canonicalize();
 };
+
+enum SelectionCanonicalizationAction { KeepSelection, SelectParent };
+
+/// Returns the canonicalization action which should be applied to the
+/// selected statement.
+SelectionCanonicalizationAction
+getSelectionCanonizalizationAction(const Stmt *S, const Stmt *Parent) {
+  // Select the parent expression when:
+  // - The string literal in ObjC string literal is selected, e.g.:
+  //     @"test"   becomes   @"test"
+  //      ~~~~~~             ~~~~~~~
+  if (isa<StringLiteral>(S) && isa<ObjCStringLiteral>(Parent))
+    return SelectParent;
+  // The entire call should be selected when just the member expression
+  // that refers to the method or the decl ref that refers to the function
+  // is selected.
+  //    f.call(args)  becomes  f.call(args)
+  //      ~~~~                 ~~~~~~~~~~~~
+  //    func(args)  becomes  func(args)
+  //    ~~~~                 ~~~~~~~~~~
+  else if (const auto *CE = dyn_cast<CallExpr>(Parent)) {
+    if ((isa<MemberExpr>(S) || isa<DeclRefExpr>(S)) &&
+        CE->getCallee()->IgnoreImpCasts() == S)
+      return SelectParent;
+  }
+  // FIXME: Syntactic form -> Entire pseudo-object expr.
+  return KeepSelection;
+}
+
 } // end anonymous namespace
 
 void SelectedNodeWithParents::canonicalize() {
@@ -267,21 +296,27 @@ void SelectedNodeWithParents::canonicalize() {
   const Stmt *Parent = Parents[Parents.size() - 1].get().Node.get<Stmt>();
   if (!Parent)
     return;
-  // Select the parent expression when:
-  // - The string literal in ObjC string literal is selected, e.g.:
-  //     @"test"   becomes   @"test"
-  //      ~~~~~~             ~~~~~~~
-  if (isa<StringLiteral>(S) && isa<ObjCStringLiteral>(Parent))
-    Node = Parents.pop_back_val();
-  // The entire call should be selected when just the member expression
-  // that refers to the method is selected.
-  //    f.call(args)  becomes  f.call(args)
-  //      ~~~~                 ~~~~~~~~~~~~
-  else if (isa<MemberExpr>(S) && isa<CXXMemberCallExpr>(Parent) &&
-           cast<CXXMemberCallExpr>(Parent)->getCallee() == S)
-    Node = Parents.pop_back_val();
-  // FIXME: Syntactic form -> Entire pseudo-object expr.
-  // FIXME: Callee -> Call.
+
+  // Look through the implicit casts in the parents.
+  unsigned ParentIndex = 1;
+  for (; (ParentIndex + 1) <= Parents.size() && isa<ImplicitCastExpr>(Parent);
+       ++ParentIndex) {
+    const Stmt *NewParent =
+        Parents[Parents.size() - ParentIndex - 1].get().Node.get<Stmt>();
+    if (!NewParent)
+      break;
+    Parent = NewParent;
+  }
+
+  switch (getSelectionCanonizalizationAction(S, Parent)) {
+  case SelectParent:
+    Node = Parents[Parents.size() - ParentIndex];
+    for (; ParentIndex != 0; --ParentIndex)
+      Parents.pop_back();
+    break;
+  case KeepSelection:
+    break;
+  }
 }
 
 /// Finds the set of bottom-most selected AST nodes that are in the selection

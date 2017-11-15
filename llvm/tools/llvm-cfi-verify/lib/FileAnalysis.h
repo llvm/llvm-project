@@ -59,6 +59,9 @@ enum class CFIProtectionStatus {
   // There is a path to the instruction from a conditional branch that does not
   // properly check the destination for this vcall/icall.
   FAIL_BAD_CONDITIONAL_BRANCH,
+  // One of the operands of the indirect CF instruction is modified between the
+  // CFI-check and execution.
+  FAIL_REGISTER_CLOBBERED,
   // The instruction referenced does not exist. This normally indicates an
   // error in the program, where you try and validate a graph that was created
   // in a different FileAnalysis object.
@@ -144,6 +147,17 @@ public:
   // Returns whether the provided Graph represents a protected indirect control
   // flow instruction in this file.
   CFIProtectionStatus validateCFIProtection(const GraphResult &Graph) const;
+
+  // Returns the first place the operand register is clobbered between the CFI-
+  // check and the indirect CF instruction execution. If the register is not
+  // modified, returns the address of the indirect CF instruction. The result is
+  // undefined if the provided graph does not fall under either the
+  // FAIL_REGISTER_CLOBBERED or PROTECTED status (see CFIProtectionStatus).
+  uint64_t indirectCFOperandClobber(const GraphResult& Graph) const;
+
+  // Prints an instruction to the provided stream using this object's pretty-
+  // printers.
+  void printInstruction(const Instr &InstrMeta, raw_ostream &OS) const;
 
 protected:
   // Construct a blank object with the provided triple and features. Used in

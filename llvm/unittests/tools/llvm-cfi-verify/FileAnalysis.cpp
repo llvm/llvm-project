@@ -741,6 +741,72 @@ TEST_F(BasicFileAnalysisTest, UndefSearchLengthOneTestFarAway) {
   SearchLengthForUndef = PrevSearchLengthForUndef;
 }
 
+TEST_F(BasicFileAnalysisTest, CFIProtectionClobberSinglePathExplicit) {
+  if (!SuccessfullyInitialised)
+    return;
+  Analysis.parseSectionContents(
+      {
+          0x75, 0x02,                         // 0: jne 4 [+2]
+          0x0f, 0x0b,                         // 2: ud2
+          0x48, 0x05, 0x00, 0x00, 0x00, 0x00, // 4: add $0x0, %rax
+          0xff, 0x10,                         // 10: callq *(%rax)
+      },
+      0xDEADBEEF);
+  GraphResult Result = GraphBuilder::buildFlowGraph(Analysis, 0xDEADBEEF + 10);
+  EXPECT_EQ(CFIProtectionStatus::FAIL_REGISTER_CLOBBERED,
+            Analysis.validateCFIProtection(Result));
+}
+
+TEST_F(BasicFileAnalysisTest, CFIProtectionClobberSinglePathExplicit2) {
+  if (!SuccessfullyInitialised)
+    return;
+  Analysis.parseSectionContents(
+      {
+          0x75, 0x02,             // 0: jne 4 [+2]
+          0x0f, 0x0b,             // 2: ud2
+          0x48, 0x83, 0xc0, 0x00, // 4: add $0x0, %rax
+          0xff, 0x10,             // 8: callq *(%rax)
+      },
+      0xDEADBEEF);
+  GraphResult Result = GraphBuilder::buildFlowGraph(Analysis, 0xDEADBEEF + 8);
+  EXPECT_EQ(CFIProtectionStatus::FAIL_REGISTER_CLOBBERED,
+            Analysis.validateCFIProtection(Result));
+}
+
+TEST_F(BasicFileAnalysisTest, CFIProtectionClobberSinglePathImplicit) {
+  if (!SuccessfullyInitialised)
+    return;
+  Analysis.parseSectionContents(
+      {
+          0x75, 0x02,                   // 0: jne 4 [+2]
+          0x0f, 0x0b,                   // 2: ud2
+          0x05, 0x00, 0x00, 0x00, 0x00, // 4: add $0x0, %eax
+          0xff, 0x10,                   // 9: callq *(%rax)
+      },
+      0xDEADBEEF);
+  GraphResult Result = GraphBuilder::buildFlowGraph(Analysis, 0xDEADBEEF + 9);
+  EXPECT_EQ(CFIProtectionStatus::FAIL_REGISTER_CLOBBERED,
+            Analysis.validateCFIProtection(Result));
+}
+
+TEST_F(BasicFileAnalysisTest, CFIProtectionClobberDualPathImplicit) {
+  if (!SuccessfullyInitialised)
+    return;
+  Analysis.parseSectionContents(
+      {
+          0x75, 0x04, // 0: jne 6 [+4]
+          0x0f, 0x31, // 2: rdtsc (note: affects eax)
+          0xff, 0x10, // 4: callq *(%rax)
+          0x0f, 0x0b, // 6: ud2
+          0x75, 0xf9, // 8: jne 2 [-7]
+          0x0f, 0x0b, // 10: ud2
+      },
+      0xDEADBEEF);
+  GraphResult Result = GraphBuilder::buildFlowGraph(Analysis, 0xDEADBEEF + 4);
+  EXPECT_EQ(CFIProtectionStatus::FAIL_REGISTER_CLOBBERED,
+            Analysis.validateCFIProtection(Result));
+}
+
 } // anonymous namespace
 } // end namespace cfi_verify
 } // end namespace llvm

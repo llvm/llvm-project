@@ -48,7 +48,7 @@ int main()
 #ifndef TEST_HAS_NO_EXCEPTIONS
     try
     {
-        lk.try_lock_for(ms(5));
+        (void)lk.try_lock_for(ms(5));
         assert(false);
     }
     catch (std::system_error& e)
@@ -64,7 +64,7 @@ int main()
 #ifndef TEST_HAS_NO_EXCEPTIONS
     try
     {
-        lk.try_lock_for(ms(5));
+        (void)lk.try_lock_for(ms(5));
         assert(false);
     }
     catch (std::system_error& e)

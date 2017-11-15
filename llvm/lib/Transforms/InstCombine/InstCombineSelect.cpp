@@ -1643,6 +1643,46 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
     }
   }
 
+  // Try to simplify a binop sandwiched between 2 selects with the same
+  // condition.
+  // select(C, binop(select(C, X, Y), W), Z) -> select(C, binop(X, W), Z)
+  BinaryOperator *TrueBO;
+  if (match(TrueVal, m_OneUse(m_BinOp(TrueBO)))) {
+    if (auto *TrueBOSI = dyn_cast<SelectInst>(TrueBO->getOperand(0))) {
+      if (TrueBOSI->getCondition() == CondVal) {
+        TrueBO->setOperand(0, TrueBOSI->getTrueValue());
+        Worklist.Add(TrueBO);
+        return &SI;
+      }
+    }
+    if (auto *TrueBOSI = dyn_cast<SelectInst>(TrueBO->getOperand(1))) {
+      if (TrueBOSI->getCondition() == CondVal) {
+        TrueBO->setOperand(1, TrueBOSI->getTrueValue());
+        Worklist.Add(TrueBO);
+        return &SI;
+      }
+    }
+  }
+
+  // select(C, Z, binop(select(C, X, Y), W)) -> select(C, Z, binop(Y, W))
+  BinaryOperator *FalseBO;
+  if (match(FalseVal, m_OneUse(m_BinOp(FalseBO)))) {
+    if (auto *FalseBOSI = dyn_cast<SelectInst>(FalseBO->getOperand(0))) {
+      if (FalseBOSI->getCondition() == CondVal) {
+        FalseBO->setOperand(0, FalseBOSI->getFalseValue());
+        Worklist.Add(FalseBO);
+        return &SI;
+      }
+    }
+    if (auto *FalseBOSI = dyn_cast<SelectInst>(FalseBO->getOperand(1))) {
+      if (FalseBOSI->getCondition() == CondVal) {
+        FalseBO->setOperand(1, FalseBOSI->getFalseValue());
+        Worklist.Add(FalseBO);
+        return &SI;
+      }
+    }
+  }
+
   if (BinaryOperator::isNot(CondVal)) {
     SI.setOperand(0, BinaryOperator::getNotArgument(CondVal));
     SI.setOperand(1, FalseVal);

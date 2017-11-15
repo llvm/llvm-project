@@ -33,6 +33,6 @@ int main()
 {
     typedef std::multimap<int, double, transparent_less_private> M;
 
-    M().count(C2Int{5});
+    (void)M().count(C2Int{5});
 }
 #endif

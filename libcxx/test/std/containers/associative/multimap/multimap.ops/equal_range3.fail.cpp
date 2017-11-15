@@ -34,7 +34,7 @@ int main()
     {
     typedef std::multimap<int, double, transparent_less_not_a_type> M;
 
-    M().equal_range(C2Int{5});
+    (void)M().equal_range(C2Int{5});
     }
 }
 #endif

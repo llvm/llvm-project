@@ -134,7 +134,7 @@ int main()
 
 #ifndef TEST_HAS_NO_EXCEPTIONS
         try {
-            ptr->shared_from_this();
+            (void)ptr->shared_from_this();
             assert(false);
         } catch (std::bad_weak_ptr const&) {
         } catch (...) { assert(false); }

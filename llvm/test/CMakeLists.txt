@@ -61,6 +61,7 @@ set(LLVM_TEST_DEPENDS
           llvm-dwp
           llvm-extract
           llvm-isel-fuzzer
+          llvm-opt-fuzzer
           llvm-lib
           llvm-link
           llvm-lto2

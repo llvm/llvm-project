@@ -755,7 +755,7 @@ define void @test_cbw_cdq_cdqe_cqo_cwd_cwde() optsize {
 ; GENERIC-NEXT:    cltd # sched: [1:0.50]
 ; GENERIC-NEXT:    cltq # sched: [1:0.50]
 ; GENERIC-NEXT:    cqto # sched: [1:0.50]
-; GENERIC-NEXT:    cwtd
+; GENERIC-NEXT:    cwtd # sched: [2:1.00]
 ; GENERIC-NEXT:    cwtl # sched: [1:0.33]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -775,12 +775,12 @@ define void @test_cbw_cdq_cdqe_cqo_cwd_cwde() optsize {
 ; SLM-LABEL: test_cbw_cdq_cdqe_cqo_cwd_cwde:
 ; SLM:       # BB#0:
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    cbtw
-; SLM-NEXT:    cltd
-; SLM-NEXT:    cltq
-; SLM-NEXT:    cqto
-; SLM-NEXT:    cwtd
-; SLM-NEXT:    cwtl
+; SLM-NEXT:    cbtw # sched: [1:0.50]
+; SLM-NEXT:    cltd # sched: [1:0.50]
+; SLM-NEXT:    cltq # sched: [1:0.50]
+; SLM-NEXT:    cqto # sched: [1:0.50]
+; SLM-NEXT:    cwtd # sched: [1:0.50]
+; SLM-NEXT:    cwtl # sched: [1:0.50]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
@@ -791,7 +791,7 @@ define void @test_cbw_cdq_cdqe_cqo_cwd_cwde() optsize {
 ; SANDY-NEXT:    cltd # sched: [1:0.50]
 ; SANDY-NEXT:    cltq # sched: [1:0.50]
 ; SANDY-NEXT:    cqto # sched: [1:0.50]
-; SANDY-NEXT:    cwtd
+; SANDY-NEXT:    cwtd # sched: [2:1.00]
 ; SANDY-NEXT:    cwtl # sched: [1:0.33]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retq # sched: [1:1.00]
@@ -847,24 +847,24 @@ define void @test_cbw_cdq_cdqe_cqo_cwd_cwde() optsize {
 ; BTVER2-LABEL: test_cbw_cdq_cdqe_cqo_cwd_cwde:
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    cbtw
-; BTVER2-NEXT:    cltd
-; BTVER2-NEXT:    cltq
-; BTVER2-NEXT:    cqto
-; BTVER2-NEXT:    cwtd
-; BTVER2-NEXT:    cwtl
+; BTVER2-NEXT:    cbtw # sched: [1:0.50]
+; BTVER2-NEXT:    cltd # sched: [1:0.50]
+; BTVER2-NEXT:    cltq # sched: [1:0.50]
+; BTVER2-NEXT:    cqto # sched: [1:0.50]
+; BTVER2-NEXT:    cwtd # sched: [1:0.50]
+; BTVER2-NEXT:    cwtl # sched: [1:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_cbw_cdq_cdqe_cqo_cwd_cwde:
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    cbtw
-; ZNVER1-NEXT:    cltd
-; ZNVER1-NEXT:    cltq
-; ZNVER1-NEXT:    cqto
-; ZNVER1-NEXT:    cwtd
-; ZNVER1-NEXT:    cwtl
+; ZNVER1-NEXT:    cbtw # sched: [1:0.25]
+; ZNVER1-NEXT:    cltd # sched: [1:0.25]
+; ZNVER1-NEXT:    cltq # sched: [1:0.25]
+; ZNVER1-NEXT:    cqto # sched: [1:0.25]
+; ZNVER1-NEXT:    cwtd # sched: [1:0.25]
+; ZNVER1-NEXT:    cwtl # sched: [1:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm "cbw \0A\09 cdq \0A\09 cdqe \0A\09 cqo \0A\09 cwd \0A\09 cwde", ""() nounwind

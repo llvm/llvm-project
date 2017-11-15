@@ -1012,7 +1012,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     const_reverse_iterator crend() const _NOEXCEPT {return rend();}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
     bool      empty() const _NOEXCEPT {return __tree_.size() == 0;}
     _LIBCPP_INLINE_VISIBILITY
     size_type size() const _NOEXCEPT {return __tree_.size();}
@@ -1669,7 +1669,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     const_reverse_iterator crend() const _NOEXCEPT {return rend();}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
     bool empty() const _NOEXCEPT {return __tree_.size() == 0;}
     _LIBCPP_INLINE_VISIBILITY
     size_type size() const _NOEXCEPT {return __tree_.size();}

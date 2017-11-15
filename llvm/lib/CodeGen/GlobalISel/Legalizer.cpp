@@ -14,10 +14,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/CodeGen/GlobalISel/LegalizerCombiner.h"
+#include "llvm/CodeGen/GlobalISel/LegalizationArtifactCombiner.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/GlobalISel/GISelWorkList.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -52,6 +54,20 @@ void Legalizer::getAnalysisUsage(AnalysisUsage &AU) const {
 void Legalizer::init(MachineFunction &MF) {
 }
 
+static bool isArtifact(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  default:
+    return false;
+  case TargetOpcode::G_TRUNC:
+  case TargetOpcode::G_ZEXT:
+  case TargetOpcode::G_ANYEXT:
+  case TargetOpcode::G_SEXT:
+  case TargetOpcode::G_MERGE_VALUES:
+  case TargetOpcode::G_UNMERGE_VALUES:
+    return true;
+  }
+}
+
 bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
   // If the ISel pipeline failed, do not bother running that pass.
   if (MF.getProperties().hasProperty(
@@ -63,114 +79,108 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
   MachineOptimizationRemarkEmitter MORE(MF, /*MBFI=*/nullptr);
   LegalizerHelper Helper(MF);
 
-  // FIXME: an instruction may need more than one pass before it is legal. For
-  // example on most architectures <3 x i3> is doubly-illegal. It would
-  // typically proceed along a path like: <3 x i3> -> <3 x i8> -> <8 x i8>. We
-  // probably want a worklist of instructions rather than naive iterate until
-  // convergence for performance reasons.
-  bool Changed = false;
-  MachineBasicBlock::iterator NextMI;
-  using VecType = SmallSetVector<MachineInstr *, 8>;
-  VecType WorkList;
-  VecType CombineList;
-  for (auto &MBB : MF) {
-    for (auto MI = MBB.begin(); MI != MBB.end(); MI = NextMI) {
-      // Get the next Instruction before we try to legalize, because there's a
-      // good chance MI will be deleted.
-      NextMI = std::next(MI);
+  const size_t NumBlocks = MF.size();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
 
+  // Populate Insts
+  GISelWorkList<256> InstList;
+  GISelWorkList<128> ArtifactList;
+  ReversePostOrderTraversal<MachineFunction *> RPOT(&MF);
+  // Perform legalization bottom up so we can DCE as we legalize.
+  // Traverse BB in RPOT and within each basic block, add insts top down,
+  // so when we pop_back_val in the legalization process, we traverse bottom-up.
+  for (auto *MBB : RPOT) {
+    if (MBB->empty())
+      continue;
+    for (MachineInstr &MI : *MBB) {
       // Only legalize pre-isel generic instructions: others don't have types
       // and are assumed to be legal.
-      if (!isPreISelGenericOpcode(MI->getOpcode()))
+      if (!isPreISelGenericOpcode(MI.getOpcode()))
         continue;
-      unsigned NumNewInsns = 0;
-      WorkList.clear();
-      CombineList.clear();
-      Helper.MIRBuilder.recordInsertions([&](MachineInstr *MI) {
-        // Only legalize pre-isel generic instructions.
-        // Legalization process could generate Target specific pseudo
-        // instructions with generic types. Don't record them
-        if (isPreISelGenericOpcode(MI->getOpcode())) {
-          ++NumNewInsns;
-          WorkList.insert(MI);
-          CombineList.insert(MI);
-        }
-      });
-      WorkList.insert(&*MI);
-      LegalizerCombiner C(Helper.MIRBuilder, MF.getRegInfo(),
-                          Helper.getLegalizerInfo());
-      bool Changed = false;
-      LegalizerHelper::LegalizeResult Res;
-      do {
-        assert(!WorkList.empty() && "Expecting illegal ops");
-        while (!WorkList.empty()) {
-          NumNewInsns = 0;
-          MachineInstr *CurrInst = WorkList.pop_back_val();
-          Res = Helper.legalizeInstrStep(*CurrInst);
-          // Error out if we couldn't legalize this instruction. We may want to
-          // fall back to DAG ISel instead in the future.
-          if (Res == LegalizerHelper::UnableToLegalize) {
-            Helper.MIRBuilder.stopRecordingInsertions();
-            if (Res == LegalizerHelper::UnableToLegalize) {
-              reportGISelFailure(MF, TPC, MORE, "gisel-legalize",
-                                 "unable to legalize instruction", *CurrInst);
-              return false;
-            }
-          }
-          Changed |= Res == LegalizerHelper::Legalized;
-          // If CurrInst was legalized, there's a good chance that it might have
-          // been erased. So remove it from the Combine List.
-          if (Res == LegalizerHelper::Legalized)
-            CombineList.remove(CurrInst);
-
-#ifndef NDEBUG
-          if (NumNewInsns)
-            for (unsigned I = WorkList.size() - NumNewInsns,
-                          E = WorkList.size();
-                 I != E; ++I)
-              DEBUG(dbgs() << ".. .. New MI: " << *WorkList[I];);
-#endif
-        }
-        // Do the combines.
-        while (!CombineList.empty()) {
-          NumNewInsns = 0;
-          MachineInstr *CurrInst = CombineList.pop_back_val();
-          SmallVector<MachineInstr *, 4> DeadInstructions;
-          Changed |= C.tryCombineInstruction(*CurrInst, DeadInstructions);
-          for (auto *DeadMI : DeadInstructions) {
-            DEBUG(dbgs() << ".. Erasing Dead Instruction " << *DeadMI);
-            CombineList.remove(DeadMI);
-            WorkList.remove(DeadMI);
-            DeadMI->eraseFromParent();
-          }
-#ifndef NDEBUG
-          if (NumNewInsns)
-            for (unsigned I = CombineList.size() - NumNewInsns,
-                          E = CombineList.size();
-                 I != E; ++I)
-              DEBUG(dbgs() << ".. .. Combine New MI: " << *CombineList[I];);
-#endif
-        }
-      } while (!WorkList.empty());
-
-      Helper.MIRBuilder.stopRecordingInsertions();
+      if (isArtifact(MI))
+        ArtifactList.insert(&MI);
+      else
+        InstList.insert(&MI);
     }
   }
-
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  MachineIRBuilder MIRBuilder(MF);
-  LegalizerCombiner C(MIRBuilder, MRI, Helper.getLegalizerInfo());
-  for (auto &MBB : MF) {
-    for (auto MI = MBB.begin(); MI != MBB.end(); MI = NextMI) {
-      // Get the next Instruction before we try to legalize, because there's a
-      // good chance MI will be deleted.
-      // TOOD: Perhaps move this to a combiner pass later?.
-      NextMI = std::next(MI);
-      SmallVector<MachineInstr *, 4> DeadInsts;
-      Changed |= C.tryCombineMerges(*MI, DeadInsts);
-      for (auto *DeadMI : DeadInsts)
-        DeadMI->eraseFromParent();
+  Helper.MIRBuilder.recordInsertions([&](MachineInstr *MI) {
+    // Only legalize pre-isel generic instructions.
+    // Legalization process could generate Target specific pseudo
+    // instructions with generic types. Don't record them
+    if (isPreISelGenericOpcode(MI->getOpcode())) {
+      if (isArtifact(*MI))
+        ArtifactList.insert(MI);
+      else
+        InstList.insert(MI);
     }
+    DEBUG(dbgs() << ".. .. New MI: " << *MI;);
+  });
+  const LegalizerInfo &LInfo(Helper.getLegalizerInfo());
+  LegalizationArtifactCombiner ArtCombiner(Helper.MIRBuilder, MF.getRegInfo(), LInfo);
+  auto RemoveDeadInstFromLists = [&InstList,
+                                  &ArtifactList](MachineInstr *DeadMI) {
+    InstList.remove(DeadMI);
+    ArtifactList.remove(DeadMI);
+  };
+  bool Changed = false;
+  do {
+    while (!InstList.empty()) {
+      MachineInstr &MI = *InstList.pop_back_val();
+      assert(isPreISelGenericOpcode(MI.getOpcode()) && "Expecting generic opcode");
+      if (isTriviallyDead(MI, MRI)) {
+        DEBUG(dbgs() << MI << "Is dead; erasing.\n");
+        MI.eraseFromParentAndMarkDBGValuesForRemoval();
+        continue;
+      }
+
+      // Do the legalization for this instruction.
+      auto Res = Helper.legalizeInstrStep(MI);
+      // Error out if we couldn't legalize this instruction. We may want to
+      // fall back to DAG ISel instead in the future.
+      if (Res == LegalizerHelper::UnableToLegalize) {
+        Helper.MIRBuilder.stopRecordingInsertions();
+        reportGISelFailure(MF, TPC, MORE, "gisel-legalize",
+                           "unable to legalize instruction", MI);
+        return false;
+      }
+      Changed |= Res == LegalizerHelper::Legalized;
+    }
+    while (!ArtifactList.empty()) {
+      MachineInstr &MI = *ArtifactList.pop_back_val();
+      assert(isPreISelGenericOpcode(MI.getOpcode()) && "Expecting generic opcode");
+      if (isTriviallyDead(MI, MRI)) {
+        DEBUG(dbgs() << MI << "Is dead; erasing.\n");
+        RemoveDeadInstFromLists(&MI);
+        MI.eraseFromParentAndMarkDBGValuesForRemoval();
+        continue;
+      }
+      SmallVector<MachineInstr *, 4> DeadInstructions;
+      if (ArtCombiner.tryCombineInstruction(MI, DeadInstructions)) {
+        for (auto *DeadMI : DeadInstructions) {
+          DEBUG(dbgs() << ".. Erasing Dead Instruction " << *DeadMI);
+          RemoveDeadInstFromLists(DeadMI);
+          DeadMI->eraseFromParentAndMarkDBGValuesForRemoval();
+        }
+        Changed = true;
+        continue;
+      }
+      // If this was not an artifact (that could be combined away), this might
+      // need special handling. Add it to InstList, so when it's processed
+      // there, it has to be legal or specially handled.
+      else
+        InstList.insert(&MI);
+    }
+  } while (!InstList.empty());
+
+  // For now don't support if new blocks are inserted - we would need to fix the
+  // outerloop for that.
+  if (MF.size() != NumBlocks) {
+    MachineOptimizationRemarkMissed R("gisel-legalize", "GISelFailure",
+                                      MF.getFunction()->getSubprogram(),
+                                      /*MBB=*/nullptr);
+    R << "inserting blocks is not supported yet";
+    reportGISelFailure(MF, TPC, MORE, R);
+    return false;
   }
 
   return Changed;

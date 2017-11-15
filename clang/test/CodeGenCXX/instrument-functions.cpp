@@ -1,14 +1,14 @@
 // RUN: %clang_cc1 -S -emit-llvm -triple %itanium_abi_triple -o - %s -finstrument-functions -disable-llvm-passes | FileCheck %s
 
 int test1(int x) {
-// CHECK: define i32 @_Z5test1i(i32 %x) #[[ATTR1:[0-9]+]]
+// CHECK: @_Z5test1i(i32 {{.*}}%x) #[[ATTR1:[0-9]+]]
 // CHECK: ret
   return x;
 }
 
 int test2(int) __attribute__((no_instrument_function));
 int test2(int x) {
-// CHECK: define i32 @_Z5test2i(i32 %x) #[[ATTR2:[0-9]+]]
+// CHECK: @_Z5test2i(i32 {{.*}}%x) #[[ATTR2:[0-9]+]]
 // CHECK: ret
   return x;
 }

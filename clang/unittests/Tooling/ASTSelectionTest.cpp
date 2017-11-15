@@ -1056,4 +1056,30 @@ void dontSelectArgument(AClass &a) {
       });
 }
 
+TEST(ASTSelectionFinder, CanonicalizeFuncCalleeToCall) {
+  StringRef Source = R"(
+void function();
+
+void test() {
+  function();
+}
+     )";
+  // Just 'function':
+  findSelectedASTNodesWithRange(
+      Source, {5, 3}, FileRange{{5, 3}, {5, 11}},
+      [](SourceRange SelectionRange, Optional<SelectedASTNode> Node) {
+        EXPECT_TRUE(Node);
+        Node->dump();
+        Optional<CodeRangeASTSelection> SelectedCode =
+            CodeRangeASTSelection::create(SelectionRange, std::move(*Node));
+        EXPECT_TRUE(SelectedCode);
+        EXPECT_EQ(SelectedCode->size(), 1u);
+        EXPECT_TRUE(isa<CallExpr>((*SelectedCode)[0]));
+        EXPECT_TRUE(isa<CompoundStmt>(
+            SelectedCode->getParents()[SelectedCode->getParents().size() - 1]
+                .get()
+                .Node.get<Stmt>()));
+      });
+}
+
 } // end anonymous namespace

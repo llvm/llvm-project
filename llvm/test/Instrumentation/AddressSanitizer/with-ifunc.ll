@@ -1,7 +1,11 @@
-; Test -asan-force-dynamic-shadow flag.
+; Test -asan-with-ifunc flag.
 ;
-; RUN: opt -asan -asan-module -S -asan-with-ifunc=1 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-IFUNC
-; RUN: opt -asan -asan-module -S -asan-with-ifunc=0 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-NOIFUNC
+; RUN: opt -asan -asan-module -S -asan-with-ifunc=0 < %s | \
+; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-NOIFUNC
+; RUN: opt -asan -asan-module -S -asan-with-ifunc=1 -asan-with-ifunc-suppress-remat=0 < %s | \
+; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-IFUNC
+; RUN: opt -asan -asan-module -S -asan-with-ifunc=1 -asan-with-ifunc-suppress-remat=1 < %s | \
+; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-IFUNC-NOREMAT
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "armv7--linux-android"
@@ -17,7 +21,12 @@ define i32 @test_load(i32* %a) sanitize_address {
 
 ; CHECK-IFUNC-NEXT: %[[A:[^ ]*]] = ptrtoint i32* %a to i32
 ; CHECK-IFUNC-NEXT: %[[B:[^ ]*]] = lshr i32 %[[A]], 3
-; CHECK-IFUNC-NEXT: %[[C:[^ ]*]] = getelementptr [0 x i8], [0 x i8]* @__asan_shadow, i32 0, i32 %[[B]]
+; CHECK-IFUNC-NEXT: %[[C:[^ ]*]] = add i32 %[[B]], ptrtoint ([0 x i8]* @__asan_shadow to i32)
+
+; CHECK-IFUNC-NOREMAT-NEXT: %[[S:[^ ]*]] = call i32 asm "", "=r,0"([0 x i8]* @__asan_shadow)
+; CHECK-IFUNC-NOREMAT-NEXT: %[[A:[^ ]*]] = ptrtoint i32* %a to i32
+; CHECK-IFUNC-NOREMAT-NEXT: %[[B:[^ ]*]] = lshr i32 %[[A]], 3
+; CHECK-IFUNC-NOREMAT-NEXT: %[[C:[^ ]*]] = add i32 %[[B]], %[[S]]
 
 ; CHECK-NOIFUNC-NEXT: %[[SHADOW:[^ ]*]] = load i32, i32* @__asan_shadow_memory_dynamic_address
 ; CHECK-NOIFUNC-NEXT: %[[A:[^ ]*]] = ptrtoint i32* %a to i32
