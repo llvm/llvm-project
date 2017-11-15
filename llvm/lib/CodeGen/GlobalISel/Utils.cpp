@@ -129,3 +129,19 @@ const llvm::ConstantFP* llvm::getConstantFPVRegVal(unsigned VReg,
     return nullptr;
   return MI->getOperand(1).getFPImm();
 }
+
+llvm::MachineInstr *llvm::getOpcodeDef(unsigned Opcode, unsigned Reg,
+                                       const MachineRegisterInfo &MRI) {
+  auto *DefMI = MRI.getVRegDef(Reg);
+  auto DstTy = MRI.getType(DefMI->getOperand(0).getReg());
+  if (!DstTy.isValid())
+    return nullptr;
+  while (DefMI->getOpcode() == TargetOpcode::COPY) {
+    unsigned SrcReg = DefMI->getOperand(1).getReg();
+    auto SrcTy = MRI.getType(SrcReg);
+    if (!SrcTy.isValid() || SrcTy != DstTy)
+      break;
+    DefMI = MRI.getVRegDef(SrcReg);
+  }
+  return DefMI->getOpcode() == Opcode ? DefMI : nullptr;
+}
