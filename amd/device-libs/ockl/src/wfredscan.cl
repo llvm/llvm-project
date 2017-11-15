@@ -218,7 +218,7 @@ GENMAX(ulong)
     r = T##_##OP(r, v); \
  \
     t = T##_readlane(r, 32); \
-    v = (__llvm_amdgcn_read_exec_hi() & 1) ? t : ID; \
+    v = (__builtin_amdgcn_read_exec_hi() & 1) ? t : ID; \
     r = T##_##OP(T##_readlane(r, 0), v)
 
 
@@ -301,7 +301,7 @@ GENMAX(ulong)
     } \
  \
     T t32 = T##_readlane(r, 32); \
-    T v32 = (__llvm_amdgcn_read_exec_hi() & 1) ? t32 : ID; \
+    T v32 = (__builtin_amdgcn_read_exec_hi() & 1) ? t32 : ID; \
     r = T##_##OP(T##_readlane(r, 0), v32)
 
 // Inclusive scan with operation OP using swizzle
@@ -420,8 +420,8 @@ GENMAX(ulong)
 IATTR static bool
 fullwave(void)
 {
-    return __llvm_ctpop_i32(__llvm_amdgcn_read_exec_lo()) +
-           __llvm_ctpop_i32(__llvm_amdgcn_read_exec_hi()) == 64;
+    return __llvm_ctpop_i32(__builtin_amdgcn_read_exec_lo()) +
+           __llvm_ctpop_i32(__builtin_amdgcn_read_exec_hi()) == 64;
 }
 
 #define GENRED(T,OP,ID) \

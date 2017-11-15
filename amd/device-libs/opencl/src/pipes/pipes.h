@@ -51,10 +51,10 @@ reserve(volatile __global atomic_size_t *pi, size_t lim, size_t n)
 static inline size_t
 wave_reserve_1(volatile __global atomic_size_t *pi, size_t lim)
 {
-    size_t n = (size_t)(__llvm_ctpop_i32(__llvm_amdgcn_read_exec_lo()) +
-                        __llvm_ctpop_i32(__llvm_amdgcn_read_exec_hi()));
-    uint l = __llvm_amdgcn_mbcnt_hi(__llvm_amdgcn_read_exec_hi(),
-               __llvm_amdgcn_mbcnt_lo(__llvm_amdgcn_read_exec_lo(), 0u));
+    size_t n = (size_t)(__llvm_ctpop_i32(__builtin_amdgcn_read_exec_lo()) +
+                        __llvm_ctpop_i32(__builtin_amdgcn_read_exec_hi()));
+    uint l = __llvm_amdgcn_mbcnt_hi(__builtin_amdgcn_read_exec_hi(),
+               __llvm_amdgcn_mbcnt_lo(__builtin_amdgcn_read_exec_lo(), 0u));
     size_t i = 0;
 
     if (l == 0) {
@@ -74,7 +74,7 @@ wave_reserve_1(volatile __global atomic_size_t *pi, size_t lim)
     __builtin_amdgcn_wave_barrier();
 
     // Broadcast the result; the ctz tells us which lane has active lane id 0
-    uint k = (uint)__llvm_cttz_i64(__llvm_amdgcn_read_exec());
+    uint k = (uint)__llvm_cttz_i64(__builtin_amdgcn_read_exec());
     i = ((size_t)__llvm_amdgcn_readlane((uint)(i >> 32), k) << 32) |
         (size_t)__llvm_amdgcn_readlane((uint)i, k);
 

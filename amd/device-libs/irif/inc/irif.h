@@ -320,10 +320,6 @@ extern void __llvm_amdcgn_buffer_wbinvl1_vol(void) __asm("llvm.amdgcn.buffer.wbi
 extern __attribute__((const)) uint __llvm_amdgcn_mbcnt_lo(uint, uint) __asm("llvm.amdgcn.mbcnt.lo");
 extern __attribute__((const)) uint __llvm_amdgcn_mbcnt_hi(uint, uint) __asm("llvm.amdgcn.mbcnt.hi");
 
-extern __attribute__((convergent)) ulong __llvm_amdgcn_read_exec(void);
-extern __attribute__((convergent)) uint __llvm_amdgcn_read_exec_lo(void);
-extern __attribute__((convergent)) uint __llvm_amdgcn_read_exec_hi(void);
-
 extern uint __llvm_amdgcn_s_getreg(uint) __asm("llvm.amdgcn.s.getreg");
 
 extern uint __llvm_amdgcn_readfirstlane(uint) __asm("llvm.amdgcn.readfirstlane");

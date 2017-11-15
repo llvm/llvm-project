@@ -22,7 +22,7 @@ OCKL_MANGLE_I32(wfany)(int e)
 ATTR bool
 OCKL_MANGLE_I32(wfall)(int e)
 {
-    return __llvm_amdgcn_icmp_i32(e, 0, ICMP_NE) == __llvm_amdgcn_read_exec();
+    return __llvm_amdgcn_icmp_i32(e, 0, ICMP_NE) == __builtin_amdgcn_read_exec();
 }
 
  
@@ -30,6 +30,6 @@ ATTR bool
 OCKL_MANGLE_I32(wfsame)(int e)
 {
     ulong u = __llvm_amdgcn_icmp_i32(e, 0, ICMP_NE) != 0;
-    return (u == 0UL) | (u == __llvm_amdgcn_read_exec());
+    return (u == 0UL) | (u == __builtin_amdgcn_read_exec());
 }
 

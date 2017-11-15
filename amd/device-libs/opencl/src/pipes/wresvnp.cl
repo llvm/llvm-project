@@ -10,12 +10,12 @@
 size_t
 __amd_wresvn(volatile __global atomic_size_t *pidx, size_t lim, size_t n)
 {
-    uint alc = (size_t)(__llvm_ctpop_i32(__llvm_amdgcn_read_exec_lo()) +
-                        __llvm_ctpop_i32(__llvm_amdgcn_read_exec_hi()));
+    uint alc = (size_t)(__llvm_ctpop_i32(__builtin_amdgcn_read_exec_lo()) +
+                        __llvm_ctpop_i32(__builtin_amdgcn_read_exec_hi()));
     uint l = __llvm_amdgcn_mbcnt_hi(-1, __llvm_amdgcn_mbcnt_lo(-1, 0u));
     size_t rid;
 
-    if (__llvm_amdgcn_read_exec() == (1UL << alc) - 1UL) {
+    if (__builtin_amdgcn_read_exec() == (1UL << alc) - 1UL) {
         // Handle fully active subgroup
         uint sum = sub_group_scan_inclusive_add((uint)n);
         size_t idx = 0;
@@ -30,7 +30,7 @@ __amd_wresvn(volatile __global atomic_size_t *pidx, size_t lim, size_t n)
         const ulong nomsb = 0x7fffffffffffffffUL;
 
         // Step 1
-        ulong smask = __llvm_amdgcn_read_exec() & ((0x1UL << l) - 0x1UL);
+        ulong smask = __builtin_amdgcn_read_exec() & ((0x1UL << l) - 0x1UL);
         int slid = 63 - (int)clz(smask);
         uint t = __llvm_amdgcn_ds_bpermute(slid << 2, n);
         uint sum = n + (slid < 0 ? 0 : t);
@@ -123,13 +123,13 @@ __amd_wresvn(volatile __global atomic_size_t *pidx, size_t lim, size_t n)
         __builtin_amdgcn_wave_barrier();
 
         size_t idx = 0;
-        if (l == 63 - (int)clz(__llvm_amdgcn_read_exec())) {
+        if (l == 63 - (int)clz(__builtin_amdgcn_read_exec())) {
             idx = reserve(pidx, lim, (size_t)sum);
         }
         __builtin_amdgcn_wave_barrier();
 
         // Broadcast
-        uint k = 63u - (uint)clz(__llvm_amdgcn_read_exec());
+        uint k = 63u - (uint)clz(__builtin_amdgcn_read_exec());
         idx = ((size_t)__llvm_amdgcn_readlane((uint)(idx >> 32), k) << 32) |
               (size_t)__llvm_amdgcn_readlane((uint)idx, k);
         __builtin_amdgcn_wave_barrier();
