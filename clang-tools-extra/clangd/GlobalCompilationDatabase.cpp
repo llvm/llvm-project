@@ -31,11 +31,7 @@ static void addExtraFlags(tooling::CompileCommand &Command,
 }
 
 tooling::CompileCommand getDefaultCompileCommand(PathRef File) {
-  // We don't specify --std because we want to infer it from the filename.
-  // We force PC because PS4 will change --std from under us.
-  // FIXME: there must be a more principled way to do this!
-  std::vector<std::string> CommandLine{
-      "clang", "-fsyntax-only", "-target=unknown-pc-unknown", File.str()};
+  std::vector<std::string> CommandLine{"clang", "-fsyntax-only", File.str()};
   return tooling::CompileCommand(llvm::sys::path::parent_path(File),
                                  llvm::sys::path::filename(File), CommandLine,
                                  /*Output=*/"");
