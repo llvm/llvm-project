@@ -966,6 +966,12 @@ DSAStackTy::DSAVarData DSAStackTy::getTopDSA(ValueDecl *D, bool FromParent) {
     DVar.RefExpr = TI->getSecond().RefExpr.getPointer();
     DVar.CKind = OMPC_threadprivate;
     return DVar;
+  } else if (VD && VD->hasAttr<OMPThreadPrivateDeclAttr>()) {
+    DVar.RefExpr = buildDeclRefExpr(
+        SemaRef, VD, D->getType().getNonReferenceType(),
+        VD->getAttr<OMPThreadPrivateDeclAttr>()->getLocation());
+    DVar.CKind = OMPC_threadprivate;
+    addDSA(D, DVar.RefExpr, OMPC_threadprivate);
   }
 
   if (isStackEmpty())

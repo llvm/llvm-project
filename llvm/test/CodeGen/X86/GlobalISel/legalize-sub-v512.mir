@@ -44,6 +44,7 @@ body:             |
     %0(<64 x s8>) = IMPLICIT_DEF
     %1(<64 x s8>) = IMPLICIT_DEF
     %2(<64 x s8>) = G_SUB %0, %1
+    %zmm0 = COPY %2
     RET 0
 
 ...
@@ -68,6 +69,7 @@ body:             |
     %0(<32 x s16>) = IMPLICIT_DEF
     %1(<32 x s16>) = IMPLICIT_DEF
     %2(<32 x s16>) = G_SUB %0, %1
+    %zmm0 = COPY %2
     RET 0
 
 ...
@@ -92,6 +94,7 @@ body:             |
     %0(<16 x s32>) = IMPLICIT_DEF
     %1(<16 x s32>) = IMPLICIT_DEF
     %2(<16 x s32>) = G_SUB %0, %1
+    %zmm0 = COPY %2
     RET 0
 
 ...
@@ -116,6 +119,7 @@ body:             |
     %0(<8 x s64>) = IMPLICIT_DEF
     %1(<8 x s64>) = IMPLICIT_DEF
     %2(<8 x s64>) = G_SUB %0, %1
+    %zmm0 = COPY %2
     RET 0
 
 ...

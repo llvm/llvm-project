@@ -47,6 +47,15 @@ void CodeGenPGO::setFuncName(llvm::Function *Fn) {
   llvm::createPGOFuncNameMetadata(*Fn, FuncName);
 }
 
+/// The version of the PGO hash algorithm.
+enum PGOHashVersion : unsigned {
+  PGO_HASH_V1,
+  PGO_HASH_V2,
+
+  // Keep this set to the latest hash version.
+  PGO_HASH_LATEST = PGO_HASH_V2
+};
+
 namespace {
 /// \brief Stable hasher for PGO region counters.
 ///
@@ -61,6 +70,7 @@ namespace {
 class PGOHash {
   uint64_t Working;
   unsigned Count;
+  PGOHashVersion HashVersion;
   llvm::MD5 MD5;
 
   static const int NumBitsPerType = 6;
@@ -93,24 +103,53 @@ public:
     BinaryOperatorLAnd,
     BinaryOperatorLOr,
     BinaryConditionalOperator,
+    // The preceding values are available with PGO_HASH_V1.
+
+    EndOfScope,
+    IfThenBranch,
+    IfElseBranch,
+    GotoStmt,
+    IndirectGotoStmt,
+    BreakStmt,
+    ContinueStmt,
+    ReturnStmt,
+    ThrowExpr,
+    UnaryOperatorLNot,
+    BinaryOperatorLT,
+    BinaryOperatorGT,
+    BinaryOperatorLE,
+    BinaryOperatorGE,
+    BinaryOperatorEQ,
+    BinaryOperatorNE,
+    // The preceding values are available with PGO_HASH_V2.
 
     // Keep this last.  It's for the static assert that follows.
     LastHashType
   };
   static_assert(LastHashType <= TooBig, "Too many types in HashType");
 
-  // TODO: When this format changes, take in a version number here, and use the
-  // old hash calculation for file formats that used the old hash.
-  PGOHash() : Working(0), Count(0) {}
+  PGOHash(PGOHashVersion HashVersion)
+      : Working(0), Count(0), HashVersion(HashVersion), MD5() {}
   void combine(HashType Type);
   uint64_t finalize();
+  PGOHashVersion getHashVersion() const { return HashVersion; }
 };
 const int PGOHash::NumBitsPerType;
 const unsigned PGOHash::NumTypesPerWord;
 const unsigned PGOHash::TooBig;
 
+/// Get the PGO hash version used in the given indexed profile.
+static PGOHashVersion getPGOHashVersion(llvm::IndexedInstrProfReader *PGOReader,
+                                        CodeGenModule &CGM) {
+  if (PGOReader->getVersion() <= 4)
+    return PGO_HASH_V1;
+  return PGO_HASH_V2;
+}
+
 /// A RecursiveASTVisitor that fills a map of statements to PGO counters.
 struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
+  using Base = RecursiveASTVisitor<MapRegionCounters>;
+
   /// The next counter value to assign.
   unsigned NextCounter;
   /// The function hash.
@@ -118,8 +157,9 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
   /// The map of statements to counters.
   llvm::DenseMap<const Stmt *, unsigned> &CounterMap;
 
-  MapRegionCounters(llvm::DenseMap<const Stmt *, unsigned> &CounterMap)
-      : NextCounter(0), CounterMap(CounterMap) {}
+  MapRegionCounters(PGOHashVersion HashVersion,
+                    llvm::DenseMap<const Stmt *, unsigned> &CounterMap)
+      : NextCounter(0), Hash(HashVersion), CounterMap(CounterMap) {}
 
   // Blocks and lambdas are handled as separate functions, so we need not
   // traverse them in the parent context.
@@ -145,16 +185,66 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
     return true;
   }
 
-  bool VisitStmt(const Stmt *S) {
-    auto Type = getHashType(S);
-    if (Type == PGOHash::None)
-      return true;
+  /// If \p S gets a fresh counter, update the counter mappings. Return the
+  /// V1 hash of \p S.
+  PGOHash::HashType updateCounterMappings(Stmt *S) {
+    auto Type = getHashType(PGO_HASH_V1, S);
+    if (Type != PGOHash::None)
+      CounterMap[S] = NextCounter++;
+    return Type;
+  }
 
-    CounterMap[S] = NextCounter++;
-    Hash.combine(Type);
+  /// Include \p S in the function hash.
+  bool VisitStmt(Stmt *S) {
+    auto Type = updateCounterMappings(S);
+    if (Hash.getHashVersion() != PGO_HASH_V1)
+      Type = getHashType(Hash.getHashVersion(), S);
+    if (Type != PGOHash::None)
+      Hash.combine(Type);
     return true;
   }
-  PGOHash::HashType getHashType(const Stmt *S) {
+
+  bool TraverseIfStmt(IfStmt *If) {
+    // If we used the V1 hash, use the default traversal.
+    if (Hash.getHashVersion() == PGO_HASH_V1)
+      return Base::TraverseIfStmt(If);
+
+    // Otherwise, keep track of which branch we're in while traversing.
+    VisitStmt(If);
+    for (Stmt *CS : If->children()) {
+      if (!CS)
+        continue;
+      if (CS == If->getThen())
+        Hash.combine(PGOHash::IfThenBranch);
+      else if (CS == If->getElse())
+        Hash.combine(PGOHash::IfElseBranch);
+      TraverseStmt(CS);
+    }
+    Hash.combine(PGOHash::EndOfScope);
+    return true;
+  }
+
+// If the statement type \p N is nestable, and its nesting impacts profile
+// stability, define a custom traversal which tracks the end of the statement
+// in the hash (provided we're not using the V1 hash).
+#define DEFINE_NESTABLE_TRAVERSAL(N)                                           \
+  bool Traverse##N(N *S) {                                                     \
+    Base::Traverse##N(S);                                                      \
+    if (Hash.getHashVersion() != PGO_HASH_V1)                                  \
+      Hash.combine(PGOHash::EndOfScope);                                       \
+    return true;                                                               \
+  }
+
+  DEFINE_NESTABLE_TRAVERSAL(WhileStmt)
+  DEFINE_NESTABLE_TRAVERSAL(DoStmt)
+  DEFINE_NESTABLE_TRAVERSAL(ForStmt)
+  DEFINE_NESTABLE_TRAVERSAL(CXXForRangeStmt)
+  DEFINE_NESTABLE_TRAVERSAL(ObjCForCollectionStmt)
+  DEFINE_NESTABLE_TRAVERSAL(CXXTryStmt)
+  DEFINE_NESTABLE_TRAVERSAL(CXXCatchStmt)
+
+  /// Get version \p HashVersion of the PGO hash for \p S.
+  PGOHash::HashType getHashType(PGOHashVersion HashVersion, const Stmt *S) {
     switch (S->getStmtClass()) {
     default:
       break;
@@ -192,9 +282,53 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
         return PGOHash::BinaryOperatorLAnd;
       if (BO->getOpcode() == BO_LOr)
         return PGOHash::BinaryOperatorLOr;
+      if (HashVersion == PGO_HASH_V2) {
+        switch (BO->getOpcode()) {
+        default:
+          break;
+        case BO_LT:
+          return PGOHash::BinaryOperatorLT;
+        case BO_GT:
+          return PGOHash::BinaryOperatorGT;
+        case BO_LE:
+          return PGOHash::BinaryOperatorLE;
+        case BO_GE:
+          return PGOHash::BinaryOperatorGE;
+        case BO_EQ:
+          return PGOHash::BinaryOperatorEQ;
+        case BO_NE:
+          return PGOHash::BinaryOperatorNE;
+        }
+      }
       break;
     }
     }
+
+    if (HashVersion == PGO_HASH_V2) {
+      switch (S->getStmtClass()) {
+      default:
+        break;
+      case Stmt::GotoStmtClass:
+        return PGOHash::GotoStmt;
+      case Stmt::IndirectGotoStmtClass:
+        return PGOHash::IndirectGotoStmt;
+      case Stmt::BreakStmtClass:
+        return PGOHash::BreakStmt;
+      case Stmt::ContinueStmtClass:
+        return PGOHash::ContinueStmt;
+      case Stmt::ReturnStmtClass:
+        return PGOHash::ReturnStmt;
+      case Stmt::CXXThrowExprClass:
+        return PGOHash::ThrowExpr;
+      case Stmt::UnaryOperatorClass: {
+        const UnaryOperator *UO = cast<UnaryOperator>(S);
+        if (UO->getOpcode() == UO_LNot)
+          return PGOHash::UnaryOperatorLNot;
+        break;
+      }
+      }
+    }
+
     return PGOHash::None;
   }
 };
@@ -653,8 +787,14 @@ void CodeGenPGO::assignRegionCounters(GlobalDecl GD, llvm::Function *Fn) {
 }
 
 void CodeGenPGO::mapRegionCounters(const Decl *D) {
+  // Use the latest hash version when inserting instrumentation, but use the
+  // version in the indexed profile if we're reading PGO data.
+  PGOHashVersion HashVersion = PGO_HASH_LATEST;
+  if (auto *PGOReader = CGM.getPGOReader())
+    HashVersion = getPGOHashVersion(PGOReader, CGM);
+
   RegionCounterMap.reset(new llvm::DenseMap<const Stmt *, unsigned>);
-  MapRegionCounters Walker(*RegionCounterMap);
+  MapRegionCounters Walker(HashVersion, *RegionCounterMap);
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D))
     Walker.TraverseDecl(const_cast<FunctionDecl *>(FD));
   else if (const ObjCMethodDecl *MD = dyn_cast_or_null<ObjCMethodDecl>(D))

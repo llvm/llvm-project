@@ -1160,8 +1160,13 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFScratchOffen(SDNode *Parent,
     SDValue N1 = Addr.getOperand(1);
 
     // Offsets in vaddr must be positive.
+    //
+    // The total computation of vaddr + soffset + offset must not overflow.
+    // If vaddr is negative, even if offset is 0 the sgpr offset add will end up
+    // overflowing.
     ConstantSDNode *C1 = cast<ConstantSDNode>(N1);
-    if (SIInstrInfo::isLegalMUBUFImmOffset(C1->getZExtValue())) {
+    if (SIInstrInfo::isLegalMUBUFImmOffset(C1->getZExtValue()) &&
+        CurDAG->SignBitIsZero(N0)) {
       std::tie(VAddr, SOffset) = foldFrameIndex(N0);
       ImmOffset = CurDAG->getTargetConstant(C1->getZExtValue(), DL, MVT::i16);
       return true;

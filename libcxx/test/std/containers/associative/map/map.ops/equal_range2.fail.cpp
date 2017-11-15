@@ -34,7 +34,7 @@ int main()
     {
     typedef std::map<int, double, transparent_less_private> M;
 
-    M().equal_range(C2Int{5});
+    (void)M().equal_range(C2Int{5});
     }
 }
 #endif

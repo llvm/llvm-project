@@ -4392,6 +4392,20 @@ hasSameArgumentList(const Function *CallerFn, ImmutableCallSite CS) {
   return true;
 }
 
+// Returns true if TCO is possible between the callers and callees
+// calling conventions.
+static bool
+areCallingConvEligibleForTCO_64SVR4(CallingConv::ID CallerCC,
+                                    CallingConv::ID CalleeCC) {
+  // Tail or Sibling call optimization (TCO/SCO) needs callee and caller to
+  // have the same calling convention.
+  if (CallerCC != CalleeCC)
+    return false;
+
+  // Tail or Sibling calls can be done with fastcc/ccc.
+  return (CallerCC == CallingConv::Fast || CallerCC == CallingConv::C);
+}
+
 bool
 PPCTargetLowering::IsEligibleForTailCallOptimization_64SVR4(
                                     SDValue Callee,
@@ -4408,15 +4422,9 @@ PPCTargetLowering::IsEligibleForTailCallOptimization_64SVR4(
   // Variadic argument functions are not supported.
   if (isVarArg) return false;
 
-  MachineFunction &MF = DAG.getMachineFunction();
-  CallingConv::ID CallerCC = MF.getFunction()->getCallingConv();
-
-  // Tail or Sibling call optimization (TCO/SCO) needs callee and caller has
-  // the same calling convention
-  if (CallerCC != CalleeCC) return false;
-
-  // SCO support C calling convention
-  if (CalleeCC != CallingConv::Fast && CalleeCC != CallingConv::C)
+  auto *Caller = DAG.getMachineFunction().getFunction();
+  // Check that the calling conventions are compatible for tco.
+  if (!areCallingConvEligibleForTCO_64SVR4(Caller->getCallingConv(), CalleeCC))
     return false;
 
   // Caller contains any byval parameter is not supported.
@@ -4438,7 +4446,7 @@ PPCTargetLowering::IsEligibleForTailCallOptimization_64SVR4(
   // If the caller and callee potentially have different TOC bases then we
   // cannot tail call since we need to restore the TOC pointer after the call.
   // ref: https://bugzilla.mozilla.org/show_bug.cgi?id=973977
-  if (!callsShareTOCBase(MF.getFunction(), Callee, getTargetMachine()))
+  if (!callsShareTOCBase(Caller, Callee, getTargetMachine()))
     return false;
 
   // TCO allows altering callee ABI, so we don't have to check further.
@@ -4450,7 +4458,7 @@ PPCTargetLowering::IsEligibleForTailCallOptimization_64SVR4(
   // If callee use the same argument list that caller is using, then we can
   // apply SCO on this case. If it is not, then we need to check if callee needs
   // stack for passing arguments.
-  if (!hasSameArgumentList(MF.getFunction(), CS) &&
+  if (!hasSameArgumentList(Caller, CS) &&
       needStackSlotPassParameters(Subtarget, Outs)) {
     return false;
   }

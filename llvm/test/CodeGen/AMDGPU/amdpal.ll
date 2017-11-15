@@ -53,3 +53,6 @@ entry:
 }
 
 attributes #0 = { nounwind "amdgpu-git-ptr-high"="0x1234" }
+
+; Check we have CS_NUM_USED_VGPRS in PAL metadata.
+; PAL: .amd_amdgpu_pal_metadata {{.*}},0x10000027,

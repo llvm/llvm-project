@@ -59,7 +59,7 @@
 # DATA-NEXT:   Link: 0
 # DATA-NEXT:   Info: 0
 # DATA-NEXT:   AddressAlignment: 1
-# DATA-NEXT:   EntrySize: 0
+# DATA-NEXT:   EntrySize: 1
 # DATA-NEXT:   SectionData (
 # DATA-NEXT:     0000: 6C6F6E67 20756E73 69676E65 6420696E  |long unsigned in|
 # DATA-NEXT:     0010: 7400756E 7369676E 65642063 68617200  |t.unsigned char.|

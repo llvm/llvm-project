@@ -1291,36 +1291,12 @@ bool X86TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
 // rather than the full range of cpus.
 bool X86TargetInfo::validateCpuIs(StringRef FeatureStr) const {
   return llvm::StringSwitch<bool>(FeatureStr)
-      .Case("amd", true)
-      .Case("amdfam10h", true)
-      .Case("amdfam15h", true)
-      .Case("amdfam17h", true)
-      .Case("atom", true)
-      .Case("barcelona", true)
-      .Case("bdver1", true)
-      .Case("bdver2", true)
-      .Case("bdver3", true)
-      .Case("bdver4", true)
-      .Case("bonnell", true)
-      .Case("broadwell", true)
-      .Case("btver1", true)
-      .Case("btver2", true)
-      .Case("core2", true)
-      .Case("corei7", true)
-      .Case("haswell", true)
-      .Case("intel", true)
-      .Case("istanbul", true)
-      .Case("ivybridge", true)
-      .Case("knl", true)
-      .Case("nehalem", true)
-      .Case("sandybridge", true)
-      .Case("shanghai", true)
-      .Case("silvermont", true)
-      .Case("skylake", true)
-      .Case("skylake-avx512", true)
-      .Case("slm", true)
-      .Case("westmere", true)
-      .Case("znver1", true)
+#define X86_VENDOR(ENUM, STRING) .Case(STRING, true)
+#define X86_CPU_TYPE_COMPAT_WITH_ALIAS(ARCHNAME, ENUM, STR, ALIAS)             \
+  .Cases(STR, ALIAS, true)
+#define X86_CPU_TYPE_COMPAT(ARCHNAME, ENUM, STR) .Case(STR, true)
+#define X86_CPU_SUBTYPE_COMPAT(ARCHNAME, ENUM, STR) .Case(STR, true)
+#include "llvm/Support/X86TargetParser.def"
       .Default(false);
 }
 

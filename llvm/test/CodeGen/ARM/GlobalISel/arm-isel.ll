@@ -25,8 +25,9 @@ entry:
 
 define signext i1 @test_sext_i1(i1 %x) {
 ; CHECK-LABEL: test_sext_i1
-; CHECK: and r0, r0, #1
-; CHECK: rsb r0, r0, #0
+; CHECK: mov	r1, #31
+; CHECK: lsl	r0, r0, r1
+; CHECK: asr	r0, r0, r1
 ; CHECK: bx lr
 entry:
   ret i1 %x
@@ -34,15 +35,18 @@ entry:
 
 define zeroext i8 @test_ext_i8(i8 %x) {
 ; CHECK-LABEL: test_ext_i8:
-; CHECK: uxtb r0, r0
+; CHECK: and r0, r0, #255
 ; CHECK: bx lr
+
 entry:
   ret i8 %x
 }
 
 define signext i16 @test_ext_i16(i16 %x) {
 ; CHECK-LABEL: test_ext_i16:
-; CHECK: sxth r0, r0
+; CHECK: mov	r1, #16
+; CHECK: lsl	r0, r0, r1
+; CHECK: asr	r0, r0, r1
 ; CHECK: bx lr
 entry:
   ret i16 %x

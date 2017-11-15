@@ -181,7 +181,7 @@ public:
             : c(_VSTD::move(__s.c), __a) {}
 #endif  // _LIBCPP_CXX03_LANG
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
     bool empty()     const      {return c.empty();}
     _LIBCPP_INLINE_VISIBILITY
     size_type size() const      {return c.size();}

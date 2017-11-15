@@ -35,7 +35,7 @@ test(S s, typename S::size_type pos)
     {
         try
         {
-            s.at(pos);
+            (void)s.at(pos);
             assert(false);
         }
         catch (std::out_of_range&)
@@ -44,7 +44,7 @@ test(S s, typename S::size_type pos)
         }
         try
         {
-            cs.at(pos);
+            (void)cs.at(pos);
             assert(false);
         }
         catch (std::out_of_range&)

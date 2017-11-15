@@ -277,6 +277,12 @@ public:
                    SDValue V) const;
 
   void finalizeLowering(MachineFunction &MF) const override;
+
+  void computeKnownBitsForFrameIndex(const SDValue Op,
+                                     KnownBits &Known,
+                                     const APInt &DemandedElts,
+                                     const SelectionDAG &DAG,
+                                     unsigned Depth = 0) const override;
 };
 
 } // End namespace llvm

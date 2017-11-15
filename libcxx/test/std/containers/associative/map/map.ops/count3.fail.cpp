@@ -34,7 +34,7 @@ int main()
     {
     typedef std::map<int, double, transparent_less_not_a_type> M;
 
-    M().count(C2Int{5});
+    (void)M().count(C2Int{5});
     }
 }
 #endif

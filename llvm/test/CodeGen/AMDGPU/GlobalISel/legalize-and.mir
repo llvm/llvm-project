@@ -22,4 +22,5 @@ body: |
     %0(s32) = COPY %vgpr0
     %1(s32) = COPY %vgpr1
     %2(s32) = G_AND %0, %1
+    %vgpr0 = COPY %2
 ...

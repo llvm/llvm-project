@@ -45,11 +45,12 @@ body:             |
     ; CHECK: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
     ; CHECK: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
     ; CHECK: [[XOR:%[0-9]+]]:_(s8) = G_XOR [[TRUNC]], [[TRUNC1]]
-    ; CHECK: [[TRUNC2:%[0-9]+]]:_(s1) = G_TRUNC [[XOR]](s8)
     ; CHECK: RET 0
     %0(s32) = COPY %edx
     %1(s1) = G_TRUNC %0(s32)
     %2(s1) = G_XOR %1, %1
+    %3:_(p0) = G_IMPLICIT_DEF
+    G_STORE %2, %3 ::(store 1)
     RET 0
 ...
 ---

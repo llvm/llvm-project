@@ -2763,7 +2763,8 @@ SDValue ARMTargetLowering::LowerBlockAddress(SDValue Op,
 SDValue
 ARMTargetLowering::LowerGlobalTLSAddressDarwin(SDValue Op,
                                                SelectionDAG &DAG) const {
-  assert(Subtarget->isTargetDarwin() && "TLS only supported on Darwin");
+  assert(Subtarget->isTargetDarwin() &&
+         "This function expects a Darwin target");
   SDLoc DL(Op);
 
   // First step is to get the address of the actua global symbol. This is where

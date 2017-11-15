@@ -144,3 +144,11 @@ void *PR28739a = (__int128)(unsigned long)-1 + &PR28739a;
 void *PR28739b = &PR28739b + (__int128)(unsigned long)-1;
 __int128 PR28739c = (&PR28739c + (__int128)(unsigned long)-1) - &PR28739c;
 void *PR28739d = &(&PR28739d)[(__int128)(unsigned long)-1];
+
+struct PR35214_X {
+  int k;
+  int arr[];
+};
+int PR35214_x;
+int PR35214_y = ((struct PR35214_X *)&PR35214_x)->arr[1]; // expected-error {{not a compile-time constant}}
+int *PR35214_z = &((struct PR35214_X *)&PR35214_x)->arr[1]; // ok, &PR35214_x + 2
