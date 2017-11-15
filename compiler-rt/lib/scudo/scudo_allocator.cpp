@@ -162,55 +162,6 @@ ScudoChunk *getScudoChunk(uptr UserBeg) {
   return reinterpret_cast<ScudoChunk *>(UserBeg - AlignedChunkHeaderSize);
 }
 
-struct AllocatorOptions {
-  u32 QuarantineSizeKb;
-  u32 ThreadLocalQuarantineSizeKb;
-  u32 QuarantineChunksUpToSize;
-  bool MayReturnNull;
-  s32 ReleaseToOSIntervalMs;
-  bool DeallocationTypeMismatch;
-  bool DeleteSizeMismatch;
-  bool ZeroContents;
-
-  void setFrom(const Flags *f, const CommonFlags *cf);
-};
-
-void AllocatorOptions::setFrom(const Flags *f, const CommonFlags *cf) {
-  MayReturnNull = cf->allocator_may_return_null;
-  ReleaseToOSIntervalMs = cf->allocator_release_to_os_interval_ms;
-  QuarantineSizeKb = f->QuarantineSizeKb;
-  ThreadLocalQuarantineSizeKb = f->ThreadLocalQuarantineSizeKb;
-  QuarantineChunksUpToSize = f->QuarantineChunksUpToSize;
-  DeallocationTypeMismatch = f->DeallocationTypeMismatch;
-  DeleteSizeMismatch = f->DeleteSizeMismatch;
-  ZeroContents = f->ZeroContents;
-}
-
-static void initScudoInternal(const AllocatorOptions &Options);
-
-static bool ScudoInitIsRunning = false;
-
-void initScudo() {
-  SanitizerToolName = "Scudo";
-  CHECK(!ScudoInitIsRunning && "Scudo init calls itself!");
-  ScudoInitIsRunning = true;
-
-  // Check if hardware CRC32 is supported in the binary and by the platform, if
-  // so, opt for the CRC32 hardware version of the checksum.
-  if (computeHardwareCRC32 && testCPUFeature(CRC32CPUFeature))
-    atomic_store_relaxed(&HashAlgorithm, CRC32Hardware);
-
-  initFlags();
-
-  AllocatorOptions Options;
-  Options.setFrom(getFlags(), common_flags());
-  initScudoInternal(Options);
-
-  // TODO(kostyak): determine if MaybeStartBackgroudThread could be of some use.
-
-  ScudoInitIsRunning = false;
-}
-
 struct QuarantineCallback {
   explicit QuarantineCallback(AllocatorCache *Cache)
     : Cache_(Cache) {}
@@ -278,7 +229,10 @@ struct ScudoAllocator {
   explicit ScudoAllocator(LinkerInitialized)
     : AllocatorQuarantine(LINKER_INITIALIZED) {}
 
-  void init(const AllocatorOptions &Options) {
+  void init() {
+    SanitizerToolName = "Scudo";
+    initFlags();
+
     // Verify that the header offset field can hold the maximum offset. In the
     // case of the Secondary allocator, it takes care of alignment and the
     // offset will always be 0. In the case of the Primary, the worst case
@@ -309,15 +263,21 @@ struct ScudoAllocator {
                      "the header\n");
     }
 
-    DeallocationTypeMismatch = Options.DeallocationTypeMismatch;
-    DeleteSizeMismatch = Options.DeleteSizeMismatch;
-    ZeroContents = Options.ZeroContents;
-    SetAllocatorMayReturnNull(Options.MayReturnNull);
-    BackendAllocator.init(Options.ReleaseToOSIntervalMs);
+    // Check if hardware CRC32 is supported in the binary and by the platform,
+    // if so, opt for the CRC32 hardware version of the checksum.
+    if (computeHardwareCRC32 && testCPUFeature(CRC32CPUFeature))
+      atomic_store_relaxed(&HashAlgorithm, CRC32Hardware);
+
+    SetAllocatorMayReturnNull(common_flags()->allocator_may_return_null);
+    BackendAllocator.init(common_flags()->allocator_release_to_os_interval_ms);
     AllocatorQuarantine.Init(
-        static_cast<uptr>(Options.QuarantineSizeKb) << 10,
-        static_cast<uptr>(Options.ThreadLocalQuarantineSizeKb) << 10);
-    QuarantineChunksUpToSize = Options.QuarantineChunksUpToSize;
+        static_cast<uptr>(getFlags()->QuarantineSizeKb) << 10,
+        static_cast<uptr>(getFlags()->ThreadLocalQuarantineSizeKb) << 10);
+    QuarantineChunksUpToSize = getFlags()->QuarantineChunksUpToSize;
+    DeallocationTypeMismatch = getFlags()->DeallocationTypeMismatch;
+    DeleteSizeMismatch = getFlags()->DeleteSizeMismatch;
+    ZeroContents = getFlags()->ZeroContents;
+
     GlobalPrng.init();
     Cookie = GlobalPrng.getU64();
   }
@@ -591,8 +551,8 @@ static ScudoBackendAllocator &getBackendAllocator() {
   return Instance.BackendAllocator;
 }
 
-static void initScudoInternal(const AllocatorOptions &Options) {
-  Instance.init(Options);
+void initScudo() {
+  Instance.init();
 }
 
 void ScudoTSD::init(bool Shared) {
