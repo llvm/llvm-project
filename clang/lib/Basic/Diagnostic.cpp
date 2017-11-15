@@ -364,7 +364,7 @@ void DiagnosticsEngine::setSeverityForAll(diag::Flavor Flavor,
                                           SourceLocation Loc) {
   // Get all the diagnostics.
   SmallVector<diag::kind, 64> AllDiags;
-  Diags->getAllDiagnostics(Flavor, AllDiags);
+  DiagnosticIDs::getAllDiagnostics(Flavor, AllDiags);
 
   // Set the mapping.
   for (diag::kind Diag : AllDiags)
