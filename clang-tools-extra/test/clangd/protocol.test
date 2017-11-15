@@ -31,14 +31,17 @@ Content-Length: 146
 #
 #      CHECK:  "id": 1,
 # CHECK-NEXT:  "jsonrpc": "2.0",
-# CHECK-NEXT:  "result": [
-#      CHECK:      "filterText": "fake",
-# CHECK-NEXT:      "insertText": "fake",
-# CHECK-NEXT:      "insertTextFormat": 1,
-# CHECK-NEXT:      "kind": 7,
-# CHECK-NEXT:      "label": "fake::",
-# CHECK-NEXT:      "sortText": "000075fake"
-#      CHECK:  ]
+# CHECK-NEXT:  "result": {
+# CHECK-NEXT:    "isIncomplete": false,
+# CHECK-NEXT:    "items": [
+#      CHECK:        "filterText": "fake",
+# CHECK-NEXT:        "insertText": "fake",
+# CHECK-NEXT:        "insertTextFormat": 1,
+# CHECK-NEXT:        "kind": 7,
+# CHECK-NEXT:        "label": "fake::",
+# CHECK-NEXT:        "sortText": "000075fake"
+#      CHECK:    ]
+# CHECK-NEXT:  }
 
 X-Test: Testing
 Content-Type: application/vscode-jsonrpc; charset-utf-8
@@ -57,14 +60,17 @@ Content-Length: 146
 #
 #      CHECK:  "id": 3,
 # CHECK-NEXT:  "jsonrpc": "2.0",
-# CHECK-NEXT:  "result": [
-#      CHECK:      "filterText": "fake",
-# CHECK-NEXT:      "insertText": "fake",
-# CHECK-NEXT:      "insertTextFormat": 1,
-# CHECK-NEXT:      "kind": 7,
-# CHECK-NEXT:      "label": "fake::",
-# CHECK-NEXT:      "sortText": "000075fake"
-#      CHECK:  ]
+# CHECK-NEXT:  "result": {
+# CHECK-NEXT:    "isIncomplete": false,
+# CHECK-NEXT:    "items": [
+#      CHECK:        "filterText": "fake",
+# CHECK-NEXT:        "insertText": "fake",
+# CHECK-NEXT:        "insertTextFormat": 1,
+# CHECK-NEXT:        "kind": 7,
+# CHECK-NEXT:        "label": "fake::",
+# CHECK-NEXT:        "sortText": "000075fake"
+#      CHECK:    ]
+# CHECK-NEXT:  }
 # STDERR: Warning: Duplicate Content-Length header received. The previous value for this message (10) was ignored.
 
 Content-Type: application/vscode-jsonrpc; charset-utf-8
@@ -83,14 +89,17 @@ Content-Length: 146
 #
 #      CHECK:  "id": 5,
 # CHECK-NEXT:  "jsonrpc": "2.0",
-# CHECK-NEXT:  "result": [
-#      CHECK:      "filterText": "fake",
-# CHECK-NEXT:      "insertText": "fake",
-# CHECK-NEXT:      "insertTextFormat": 1,
-# CHECK-NEXT:      "kind": 7,
-# CHECK-NEXT:      "label": "fake::",
-# CHECK-NEXT:      "sortText": "000075fake"
-#      CHECK:  ]
+# CHECK-NEXT:  "result": {
+# CHECK-NEXT:    "isIncomplete": false,
+# CHECK-NEXT:    "items": [
+#      CHECK:        "filterText": "fake",
+# CHECK-NEXT:        "insertText": "fake",
+# CHECK-NEXT:        "insertTextFormat": 1,
+# CHECK-NEXT:        "kind": 7,
+# CHECK-NEXT:        "label": "fake::",
+# CHECK-NEXT:        "sortText": "000075fake"
+#      CHECK:    ]
+# CHECK-NEXT:  }
 Content-Length: 1024
 
 {"jsonrpc":"2.0","id":5,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:/main.cpp"},"position":{"line":3,"character":5}}}

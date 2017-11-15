@@ -625,6 +625,8 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
   if (ShowCounts && TextFormat)
     return 0;
   std::unique_ptr<ProfileSummary> PS(Builder.getSummary());
+  OS << "Instrumentation level: "
+     << (Reader->isIRLevelProfile() ? "IR" : "Front-end") << "\n";
   if (ShowAllFunctions || !ShowFunction.empty())
     OS << "Functions shown: " << ShownFunctions << "\n";
   OS << "Total functions: " << PS->getNumFunctions() << "\n";

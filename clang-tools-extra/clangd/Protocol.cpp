@@ -1043,6 +1043,13 @@ bool clangd::operator<(const CompletionItem &L, const CompletionItem &R) {
          (R.sortText.empty() ? R.label : R.sortText);
 }
 
+json::Expr CompletionList::unparse(const CompletionList &L) {
+  return json::obj{
+      {"isIncomplete", L.isIncomplete},
+      {"items", json::ary(L.items)},
+  };
+}
+
 json::Expr ParameterInformation::unparse(const ParameterInformation &PI) {
   assert(!PI.label.empty() && "parameter information label is required");
   json::obj Result{{"label", PI.label}};

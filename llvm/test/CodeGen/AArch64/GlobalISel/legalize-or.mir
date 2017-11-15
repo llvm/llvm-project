@@ -3,17 +3,9 @@
 
 ---
 name:            test_scalar_or_small
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
 body: |
   bb.0:
     liveins: %x0, %x1, %x2, %x3
-
     ; CHECK-LABEL: name: test_scalar_or_small
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY %x0
     ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY %x1
@@ -21,29 +13,17 @@ body: |
     ; CHECK: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
     ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[TRUNC]], [[TRUNC1]]
     ; CHECK: [[TRUNC2:%[0-9]+]]:_(s8) = G_TRUNC [[OR]](s32)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[TRUNC2]](s8)
-    ; CHECK: %x0 = COPY [[ANYEXT]](s64)
-    %0(s64) = COPY %x0
-    %1(s64) = COPY %x1
-    %2(s8) = G_TRUNC %0
-    %3(s8) = G_TRUNC %1
-    %4(s8) = G_OR %2, %3
-    %5(s64) = G_ANYEXT %4
-    %x0 = COPY %5
+    ; CHECK: %x0 = COPY [[TRUNC2]](s8)
+    %0:_(s64) = COPY %x0
+    %1:_(s64) = COPY %x1
+    %2:_(s8) = G_TRUNC %0
+    %3:_(s8) = G_TRUNC %1
+    %4:_(s8) = G_OR %2, %3
+    %x0 = COPY %4
 ...
 
 ---
 name:            test_big_scalar_power_of_2
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
-  - { id: 8, class: _ }
 body: |
   bb.0:
     liveins: %x0, %x1, %x2, %x3
@@ -61,14 +41,14 @@ body: |
     ; CHECK: %x0 = COPY [[OR]](s64)
     ; CHECK: %x1 = COPY [[OR1]](s64)
     ; CHECK: RET_ReallyLR implicit %x0, implicit %x1
-    %0(s64) = COPY %x0
-    %1(s64) = COPY %x1
-    %2(s64) = COPY %x2
-    %3(s64) = COPY %x3
-    %4(s128) = G_MERGE_VALUES %0, %1
-    %5(s128) = G_MERGE_VALUES %2, %3
-    %6(s128) = G_OR %4, %5
-    %7(s64), %8(s64) = G_UNMERGE_VALUES %6
+    %0:_(s64) = COPY %x0
+    %1:_(s64) = COPY %x1
+    %2:_(s64) = COPY %x2
+    %3:_(s64) = COPY %x3
+    %4:_(s128) = G_MERGE_VALUES %0, %1
+    %5:_(s128) = G_MERGE_VALUES %2, %3
+    %6:_(s128) = G_OR %4, %5
+    %7:_(s64), %8:_(s64) = G_UNMERGE_VALUES %6
     %x0 = COPY %7
     %x1 = COPY %8
     RET_ReallyLR implicit %x0, implicit %x1

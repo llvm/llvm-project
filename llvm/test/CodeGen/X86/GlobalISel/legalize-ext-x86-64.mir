@@ -172,9 +172,10 @@ body:             |
 
     ; CHECK-LABEL: name: test_zext_i1
     ; CHECK: [[COPY:%[0-9]+]]:_(s8) = COPY %dil
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY]](s8)
-    ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[TRUNC]](s1)
-    ; CHECK: %rax = COPY [[ZEXT]](s64)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[COPY]](s8)
+    ; CHECK: [[AND:%[0-9]+]]:_(s64) = G_AND [[ANYEXT]], [[C]]
+    ; CHECK: %rax = COPY [[AND]](s64)
     ; CHECK: RET 0, implicit %rax
     %0(s8) = COPY %dil
     %1(s1) = G_TRUNC %0(s8)
@@ -267,8 +268,7 @@ body:             |
 
     ; CHECK-LABEL: name: test_anyext_i1
     ; CHECK: [[COPY:%[0-9]+]]:_(s8) = COPY %dil
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY]](s8)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[TRUNC]](s1)
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[COPY]](s8)
     ; CHECK: %rax = COPY [[ANYEXT]](s64)
     ; CHECK: RET 0, implicit %rax
     %0(s8) = COPY %dil

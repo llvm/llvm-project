@@ -59,6 +59,7 @@ struct ConditionalBranchNode {
   //    is a CFI trap, and...
   //  - The exit point of the other basic block is an undirect CF instruction.
   bool CFIProtection;
+  bool IndirectCFIsOnTargetPath;
 };
 
 // The canonical graph result structure returned by GraphBuilder. The members
@@ -89,6 +90,9 @@ struct GraphResult {
   // base. The provided address must be part of this graph, and must not be a
   // conditional branch.
   std::vector<uint64_t> flattenAddress(uint64_t Address) const;
+
+  // Print the DOT representation of this result.
+  void printToDOT(const FileAnalysis &Analysis, raw_ostream &OS) const;
 };
 
 class GraphBuilder {

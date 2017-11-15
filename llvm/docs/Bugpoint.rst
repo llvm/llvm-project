@@ -151,6 +151,9 @@ non-obvious ways.  Here are some hints and tips:
   optimizations to be randomized and applied to the program. This process will
   repeat until a bug is found or the user kills ``bugpoint``.
 
+* ``bugpoint`` can produce IR which contains long names. To simplify the names,
+  run ``opt -strip -instnamer`` over the IR.
+
 What to do when bugpoint isn't enough
 =====================================
 	

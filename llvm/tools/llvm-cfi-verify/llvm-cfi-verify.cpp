@@ -37,6 +37,10 @@ cl::opt<std::string> InputFilename(cl::Positional, cl::desc("<input file>"),
 cl::opt<std::string> BlacklistFilename(cl::Positional,
                                        cl::desc("[blacklist file]"),
                                        cl::init("-"));
+cl::opt<bool> PrintGraphs(
+    "print-graphs",
+    cl::desc("Print graphs around indirect CF instructions in DOT format."),
+    cl::init(false));
 
 ExitOnError ExitOnErr;
 
@@ -62,10 +66,12 @@ void printIndirectCFInstructions(FileAnalysis &Analysis,
     else
       outs() << "U ";
 
-    outs() << format_hex(Address, 2) << " | "
-           << Analysis.getMCInstrInfo()->getName(
-                  InstrMeta.Instruction.getOpcode())
-           << " \n";
+    outs() << format_hex(Address, 2) << " | ";
+    Analysis.printInstruction(InstrMeta, outs());
+    outs() << " \n";
+
+    if (PrintGraphs)
+      Graph.printToDOT(Analysis, outs());
 
     if (IgnoreDWARFFlag) {
       if (CFIProtected)

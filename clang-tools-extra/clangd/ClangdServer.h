@@ -251,18 +251,17 @@ public:
   /// This method should only be called for currently tracked files. However, it
   /// is safe to call removeDocument for \p File after this method returns, even
   /// while returned future is not yet ready.
-  std::future<Tagged<std::vector<CompletionItem>>>
+  std::future<Tagged<CompletionList>>
   codeComplete(PathRef File, Position Pos,
                llvm::Optional<StringRef> OverridenContents = llvm::None,
                IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS = nullptr);
 
   /// A version of `codeComplete` that runs \p Callback on the processing thread
   /// when codeComplete results become available.
-  void codeComplete(
-      UniqueFunction<void(Tagged<std::vector<CompletionItem>>)> Callback,
-      PathRef File, Position Pos,
-      llvm::Optional<StringRef> OverridenContents = llvm::None,
-      IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS = nullptr);
+  void codeComplete(UniqueFunction<void(Tagged<CompletionList>)> Callback,
+                    PathRef File, Position Pos,
+                    llvm::Optional<StringRef> OverridenContents = llvm::None,
+                    IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS = nullptr);
 
   /// Provide signature help for \p File at \p Pos. If \p OverridenContents is
   /// not None, they will used only for signature help, i.e. no diagnostics

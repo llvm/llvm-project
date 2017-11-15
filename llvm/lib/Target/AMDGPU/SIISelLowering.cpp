@@ -94,6 +94,12 @@ static cl::opt<bool> EnableVGPRIndexMode(
   cl::desc("Use GPR indexing mode instead of movrel for vector indexing"),
   cl::init(false));
 
+static cl::opt<unsigned> AssumeFrameIndexHighZeroBits(
+  "amdgpu-frame-index-zero-bits",
+  cl::desc("High bits of frame index assumed to be zero"),
+  cl::init(5),
+  cl::ReallyHidden);
+
 static unsigned findFirstFreeSGPR(CCState &CCInfo) {
   unsigned NumSGPRs = AMDGPU::SGPR_32RegClass.getNumRegs();
   for (unsigned Reg = 0; Reg < NumSGPRs; ++Reg) {
@@ -1599,6 +1605,17 @@ SDValue SITargetLowering::LowerFormalArguments(
 
     Reg = MF.addLiveIn(Reg, RC);
     SDValue Val = DAG.getCopyFromReg(Chain, DL, Reg, VT);
+
+    if (Arg.Flags.isSRet() && !getSubtarget()->enableHugePrivateBuffer()) {
+      // The return object should be reasonably addressable.
+
+      // FIXME: This helps when the return is a real sret. If it is a
+      // automatically inserted sret (i.e. CanLowerReturn returns false), an
+      // extra copy is inserted in SelectionDAGBuilder which obscures this.
+      unsigned NumBits = 32 - AssumeFrameIndexHighZeroBits;
+      Val = DAG.getNode(ISD::AssertZext, DL, VT, Val,
+        DAG.getValueType(EVT::getIntegerVT(*DAG.getContext(), NumBits)));
+    }
 
     // If this is an 8 or 16-bit value, it is really passed promoted
     // to 32 bits. Insert an assert[sz]ext to capture this, then
@@ -3216,7 +3233,6 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return lowerEXTRACT_VECTOR_ELT(Op, DAG);
   case ISD::FP_ROUND:
     return lowerFP_ROUND(Op, DAG);
-
   case ISD::TRAP:
   case ISD::DEBUGTRAP:
     return lowerTRAP(Op, DAG);
@@ -5199,8 +5215,8 @@ SDValue SITargetLowering::performSHLPtrCombine(SDNode *N,
 
   // We only do this to handle cases where it's profitable when there are
   // multiple uses of the add, so defer to the standard combine.
-  // TODO: Support or
-  if (N0.getOpcode() != ISD::ADD || N0->hasOneUse())
+  if ((N0.getOpcode() != ISD::ADD && N0.getOpcode() != ISD::OR) ||
+      N0->hasOneUse())
     return SDValue();
 
   const ConstantSDNode *CN1 = dyn_cast<ConstantSDNode>(N1);
@@ -6996,4 +7012,22 @@ void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
                      Info->getScratchWaveOffsetReg());
 
   TargetLoweringBase::finalizeLowering(MF);
+}
+
+void SITargetLowering::computeKnownBitsForFrameIndex(const SDValue Op,
+                                                     KnownBits &Known,
+                                                     const APInt &DemandedElts,
+                                                     const SelectionDAG &DAG,
+                                                     unsigned Depth) const {
+  TargetLowering::computeKnownBitsForFrameIndex(Op, Known, DemandedElts,
+                                                DAG, Depth);
+
+  if (getSubtarget()->enableHugePrivateBuffer())
+    return;
+
+  // Technically it may be possible to have a dispatch with a single workitem
+  // that uses the full private memory size, but that's not really useful. We
+  // can't use vaddr in MUBUF instructions if we don't know the address
+  // calculation won't overflow, so assume the sign bit is never set.
+  Known.Zero.setHighBits(AssumeFrameIndexHighZeroBits);
 }

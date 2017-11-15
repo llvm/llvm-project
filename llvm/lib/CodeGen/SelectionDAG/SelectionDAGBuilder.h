@@ -369,6 +369,10 @@ private:
                      MachineBasicBlock *SwitchMBB,
                      MachineBasicBlock *DefaultMBB);
 
+  /// Peel the top probability case if it exceeds the threshold
+  MachineBasicBlock *peelDominantCaseCluster(const SwitchInst &SI,
+                                             CaseClusterVector &Clusters,
+                                             BranchProbability &PeeledCaseProb);
 
   /// A class which encapsulates all of the information needed to generate a
   /// stack protector check and signals to isel via its state being initialized

@@ -29,8 +29,7 @@ body: |
     ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
     ; CHECK: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
     ; CHECK: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[TRUNC]], [[TRUNC1]]
-    ; CHECK: [[TRUNC2:%[0-9]+]]:_(s8) = G_TRUNC [[SUB]](s32)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[TRUNC2]](s8)
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[SUB]](s32)
     ; CHECK: %x0 = COPY [[ANYEXT]](s64)
     %0(s64) = COPY %x0
     %1(s64) = COPY %x1

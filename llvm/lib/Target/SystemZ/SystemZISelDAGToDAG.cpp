@@ -992,7 +992,15 @@ bool SystemZDAGToDAGISel::tryRISBGZero(SDNode *N) {
   if (Subtarget->hasMiscellaneousExtensions())
     Opcode = SystemZ::RISBGN;
   EVT OpcodeVT = MVT::i64;
-  if (VT == MVT::i32 && Subtarget->hasHighWord()) {
+  if (VT == MVT::i32 && Subtarget->hasHighWord() &&
+      // We can only use the 32-bit instructions if all source bits are
+      // in the low 32 bits without wrapping, both after rotation (because
+      // of the smaller range for Start and End) and before rotation
+      // (because the input value is truncated).
+      RISBG.Start >= 32 && RISBG.End >= RISBG.Start &&
+      ((RISBG.Start + RISBG.Rotate) & 63) >= 32 &&
+      ((RISBG.End + RISBG.Rotate) & 63) >=
+      ((RISBG.Start + RISBG.Rotate) & 63)) {
     Opcode = SystemZ::RISBMux;
     OpcodeVT = MVT::i32;
     RISBG.Start &= 31;
@@ -1255,8 +1263,10 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
     // Fall through.
   or_xor:
     // If this is a 64-bit operation in which both 32-bit halves are nonzero,
-    // split the operation into two.
-    if (Node->getValueType(0) == MVT::i64)
+    // split the operation into two.  If both operands here happen to be
+    // constant, leave this to common code to optimize.
+    if (Node->getValueType(0) == MVT::i64 &&
+        Node->getOperand(0).getOpcode() != ISD::Constant)
       if (auto *Op1 = dyn_cast<ConstantSDNode>(Node->getOperand(1))) {
         uint64_t Val = Op1->getZExtValue();
         if (!SystemZ::isImmLF(Val) && !SystemZ::isImmHF(Val)) {

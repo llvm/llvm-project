@@ -276,7 +276,7 @@ class DwarfDebug : public DebugHandlerBase {
   // 0, referencing the comp_dir of all the type units that use it.
   MCDwarfDwoLineTable SplitTypeUnitFileTable;
   /// @}
-  
+
   /// True iff there are multiple CUs in this module.
   bool SingleCU;
   bool IsDarwin;
@@ -534,6 +534,9 @@ public:
   /// A helper function to check whether the DIE for a given Scope is
   /// going to be null.
   bool isLexicalScopeDIENull(LexicalScope *Scope);
+
+  /// Find the matching DwarfCompileUnit for the given CU DIE.
+  DwarfCompileUnit *lookupCU(const DIE *Die) { return CUDieMap.lookup(Die); }
 
   /// \defgroup DebuggerTuning Predicates to tune DWARF for a given debugger.
   ///
