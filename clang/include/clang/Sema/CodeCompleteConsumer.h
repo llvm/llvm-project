@@ -777,6 +777,12 @@ public:
                                            CodeCompletionTUInfo &CCTUInfo,
                                            bool IncludeBriefComments);
 
+  /// \brief Retrieve the name that should be used to order a result.
+  ///
+  /// If the name needs to be constructed as a string, that string will be
+  /// saved into Saved and the returned StringRef will refer to it.
+  StringRef getOrderedName(std::string &Saved) const;
+
 private:
   void computeCursorKindAndAvailability(bool Accessible = true);
 };

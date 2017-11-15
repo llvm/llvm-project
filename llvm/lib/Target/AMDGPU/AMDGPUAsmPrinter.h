@@ -41,7 +41,7 @@ private:
     // the end are tracked separately.
     int32_t NumVGPR = 0;
     int32_t NumExplicitSGPR = 0;
-    uint32_t PrivateSegmentSize = 0;
+    uint64_t PrivateSegmentSize = 0;
     bool UsesVCC = false;
     bool UsesFlatScratch = false;
     bool HasDynamicallySizedStack = false;
@@ -61,7 +61,7 @@ private:
     uint32_t DX10Clamp = 0;
     uint32_t DebugMode = 0;
     uint32_t IEEEMode = 0;
-    uint32_t ScratchSize = 0;
+    uint64_t ScratchSize = 0;
 
     uint64_t ComputePGMRSrc1 = 0;
 
@@ -144,7 +144,7 @@ private:
                        const SIProgramInfo &KernelInfo);
   void emitCommonFunctionComments(uint32_t NumVGPR,
                                   uint32_t NumSGPR,
-                                  uint32_t ScratchSize,
+                                  uint64_t ScratchSize,
                                   uint64_t CodeSize);
 
 public:

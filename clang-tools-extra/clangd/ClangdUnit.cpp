@@ -368,69 +368,42 @@ std::string getDocumentation(const CodeCompletionString &CCS) {
   return Result;
 }
 
-class CompletionItemsCollector : public CodeCompleteConsumer {
-public:
-  CompletionItemsCollector(const clang::CodeCompleteOptions &CodeCompleteOpts,
-                           std::vector<CompletionItem> &Items)
-      : CodeCompleteConsumer(CodeCompleteOpts, /*OutputIsBinary=*/false),
-        Items(Items),
-        Allocator(std::make_shared<clang::GlobalCodeCompletionAllocator>()),
-        CCTUInfo(Allocator) {}
+/// A scored code completion result.
+/// It may be promoted to a CompletionItem if it's among the top-ranked results.
+struct CompletionCandidate {
+  CompletionCandidate(CodeCompletionResult &Result)
+      : Result(&Result), Score(score(Result)) {}
 
-  void ProcessCodeCompleteResults(Sema &S, CodeCompletionContext Context,
-                                  CodeCompletionResult *Results,
-                                  unsigned NumResults) override final {
-    Items.reserve(NumResults);
-    for (unsigned I = 0; I < NumResults; ++I) {
-      auto &Result = Results[I];
-      const auto *CCS = Result.CreateCodeCompletionString(
-          S, Context, *Allocator, CCTUInfo,
-          CodeCompleteOpts.IncludeBriefComments);
-      assert(CCS && "Expected the CodeCompletionString to be non-null");
-      Items.push_back(ProcessCodeCompleteResult(Result, *CCS));
-    }
-    std::sort(Items.begin(), Items.end());
+  CodeCompletionResult *Result;
+  // Higher score is worse. FIXME: use a more natural scale!
+  int Score;
+
+  // Comparison reflects rank: better candidates are smaller.
+  bool operator<(const CompletionCandidate &C) const {
+    if (Score != C.Score)
+      return Score < C.Score;
+    return *Result < *C.Result;
   }
 
-  GlobalCodeCompletionAllocator &getAllocator() override { return *Allocator; }
-
-  CodeCompletionTUInfo &getCodeCompletionTUInfo() override { return CCTUInfo; }
+  std::string sortText() const {
+    // Fill in the sortText of the CompletionItem.
+    assert(Score <= 999999 && "Expecting score to have at most 6-digits");
+    std::string S, NameStorage;
+    StringRef Name = Result->getOrderedName(NameStorage);
+    llvm::raw_string_ostream(S)
+        << llvm::format("%06d%.*s", Score, Name.size(), Name.data());
+    return S;
+  }
 
 private:
-  CompletionItem
-  ProcessCodeCompleteResult(const CodeCompletionResult &Result,
-                            const CodeCompletionString &CCS) const {
-
-    // Adjust this to InsertTextFormat::Snippet iff we encounter a
-    // CK_Placeholder chunk in SnippetCompletionItemsCollector.
-    CompletionItem Item;
-    Item.insertTextFormat = InsertTextFormat::PlainText;
-
-    Item.documentation = getDocumentation(CCS);
-
-    // Fill in the label, detail, insertText and filterText fields of the
-    // CompletionItem.
-    ProcessChunks(CCS, Item);
-
-    // Fill in the kind field of the CompletionItem.
-    Item.kind = getKind(Result.Kind, Result.CursorKind);
-
-    FillSortText(CCS, Item);
-
-    return Item;
-  }
-
-  virtual void ProcessChunks(const CodeCompletionString &CCS,
-                             CompletionItem &Item) const = 0;
-
-  static int GetSortPriority(const CodeCompletionString &CCS) {
-    int Score = CCS.getPriority();
+  static int score(const CodeCompletionResult &Result) {
+    int Score = Result.Priority;
     // Fill in the sortText of the CompletionItem.
     assert(Score <= 99999 && "Expecting code completion result "
                              "priority to have at most 5-digits");
 
     const int Penalty = 100000;
-    switch (static_cast<CXAvailabilityKind>(CCS.getAvailability())) {
+    switch (static_cast<CXAvailabilityKind>(Result.Availability)) {
     case CXAvailability_Available:
       // No penalty.
       break;
@@ -444,21 +417,75 @@ private:
       Score += 3 * Penalty;
       break;
     }
-
     return Score;
   }
+};
 
-  static void FillSortText(const CodeCompletionString &CCS,
-                           CompletionItem &Item) {
-    int Priority = GetSortPriority(CCS);
-    // Fill in the sortText of the CompletionItem.
-    assert(Priority <= 999999 &&
-           "Expecting sort priority to have at most 6-digits");
-    llvm::raw_string_ostream(Item.sortText)
-        << llvm::format("%06d%s", Priority, Item.filterText.c_str());
+class CompletionItemsCollector : public CodeCompleteConsumer {
+public:
+  CompletionItemsCollector(const clangd::CodeCompleteOptions &CodeCompleteOpts,
+                           CompletionList &Items)
+      : CodeCompleteConsumer(CodeCompleteOpts.getClangCompleteOpts(),
+                             /*OutputIsBinary=*/false),
+        ClangdOpts(CodeCompleteOpts), Items(Items),
+        Allocator(std::make_shared<clang::GlobalCodeCompletionAllocator>()),
+        CCTUInfo(Allocator) {}
+
+  void ProcessCodeCompleteResults(Sema &S, CodeCompletionContext Context,
+                                  CodeCompletionResult *Results,
+                                  unsigned NumResults) override final {
+    std::priority_queue<CompletionCandidate> Candidates;
+    for (unsigned I = 0; I < NumResults; ++I) {
+      Candidates.emplace(Results[I]);
+      if (ClangdOpts.Limit && Candidates.size() > ClangdOpts.Limit) {
+        Candidates.pop();
+        Items.isIncomplete = true;
+      }
+    }
+    while (!Candidates.empty()) {
+      auto &Candidate = Candidates.top();
+      const auto *CCS = Candidate.Result->CreateCodeCompletionString(
+          S, Context, *Allocator, CCTUInfo,
+          CodeCompleteOpts.IncludeBriefComments);
+      assert(CCS && "Expected the CodeCompletionString to be non-null");
+      Items.items.push_back(ProcessCodeCompleteResult(Candidate, *CCS));
+      Candidates.pop();
+    }
+    std::reverse(Items.items.begin(), Items.items.end());
   }
 
-  std::vector<CompletionItem> &Items;
+  GlobalCodeCompletionAllocator &getAllocator() override { return *Allocator; }
+
+  CodeCompletionTUInfo &getCodeCompletionTUInfo() override { return CCTUInfo; }
+
+private:
+  CompletionItem
+  ProcessCodeCompleteResult(const CompletionCandidate &Candidate,
+                            const CodeCompletionString &CCS) const {
+
+    // Adjust this to InsertTextFormat::Snippet iff we encounter a
+    // CK_Placeholder chunk in SnippetCompletionItemsCollector.
+    CompletionItem Item;
+    Item.insertTextFormat = InsertTextFormat::PlainText;
+
+    Item.documentation = getDocumentation(CCS);
+    Item.sortText = Candidate.sortText();
+
+    // Fill in the label, detail, insertText and filterText fields of the
+    // CompletionItem.
+    ProcessChunks(CCS, Item);
+
+    // Fill in the kind field of the CompletionItem.
+    Item.kind = getKind(Candidate.Result->Kind, Candidate.Result->CursorKind);
+
+    return Item;
+  }
+
+  virtual void ProcessChunks(const CodeCompletionString &CCS,
+                             CompletionItem &Item) const = 0;
+
+  clangd::CodeCompleteOptions ClangdOpts;
+  CompletionList &Items;
   std::shared_ptr<clang::GlobalCodeCompletionAllocator> Allocator;
   CodeCompletionTUInfo CCTUInfo;
 
@@ -474,8 +501,8 @@ class PlainTextCompletionItemsCollector final
 
 public:
   PlainTextCompletionItemsCollector(
-      const clang::CodeCompleteOptions &CodeCompleteOpts,
-      std::vector<CompletionItem> &Items)
+      const clangd::CodeCompleteOptions &CodeCompleteOpts,
+      CompletionList &Items)
       : CompletionItemsCollector(CodeCompleteOpts, Items) {}
 
 private:
@@ -511,8 +538,8 @@ class SnippetCompletionItemsCollector final : public CompletionItemsCollector {
 
 public:
   SnippetCompletionItemsCollector(
-      const clang::CodeCompleteOptions &CodeCompleteOpts,
-      std::vector<CompletionItem> &Items)
+      const clangd::CodeCompleteOptions &CodeCompleteOpts,
+      CompletionList &Items)
       : CompletionItemsCollector(CodeCompleteOpts, Items) {}
 
 private:
@@ -795,7 +822,8 @@ clangd::CodeCompleteOptions::CodeCompleteOptions(bool EnableSnippets,
       IncludeMacros(IncludeMacros), IncludeGlobals(IncludeGlobals),
       IncludeBriefComments(IncludeBriefComments) {}
 
-clang::CodeCompleteOptions clangd::CodeCompleteOptions::getClangCompleteOpts() {
+clang::CodeCompleteOptions
+clangd::CodeCompleteOptions::getClangCompleteOpts() const {
   clang::CodeCompleteOptions Result;
   Result.IncludeCodePatterns = EnableSnippets && IncludeCodePatterns;
   Result.IncludeMacros = IncludeMacros;
@@ -805,25 +833,24 @@ clang::CodeCompleteOptions clangd::CodeCompleteOptions::getClangCompleteOpts() {
   return Result;
 }
 
-std::vector<CompletionItem>
+CompletionList
 clangd::codeComplete(PathRef FileName, const tooling::CompileCommand &Command,
                      PrecompiledPreamble const *Preamble, StringRef Contents,
                      Position Pos, IntrusiveRefCntPtr<vfs::FileSystem> VFS,
                      std::shared_ptr<PCHContainerOperations> PCHs,
                      clangd::CodeCompleteOptions Opts, clangd::Logger &Logger) {
-  std::vector<CompletionItem> Results;
+  CompletionList Results;
   std::unique_ptr<CodeCompleteConsumer> Consumer;
-  clang::CodeCompleteOptions ClangCompleteOpts = Opts.getClangCompleteOpts();
   if (Opts.EnableSnippets) {
-    Consumer = llvm::make_unique<SnippetCompletionItemsCollector>(
-        ClangCompleteOpts, Results);
+    Consumer =
+        llvm::make_unique<SnippetCompletionItemsCollector>(Opts, Results);
   } else {
-    Consumer = llvm::make_unique<PlainTextCompletionItemsCollector>(
-        ClangCompleteOpts, Results);
+    Consumer =
+        llvm::make_unique<PlainTextCompletionItemsCollector>(Opts, Results);
   }
-  invokeCodeComplete(std::move(Consumer), ClangCompleteOpts, FileName, Command,
-                     Preamble, Contents, Pos, std::move(VFS), std::move(PCHs),
-                     Logger);
+  invokeCodeComplete(std::move(Consumer), Opts.getClangCompleteOpts(), FileName,
+                     Command, Preamble, Contents, Pos, std::move(VFS),
+                     std::move(PCHs), Logger);
   return Results;
 }
 

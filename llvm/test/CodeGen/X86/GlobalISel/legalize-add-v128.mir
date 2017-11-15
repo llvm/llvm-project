@@ -39,10 +39,12 @@ body:             |
     ; ALL: [[DEF:%[0-9]+]]:_(<16 x s8>) = IMPLICIT_DEF
     ; ALL: [[DEF1:%[0-9]+]]:_(<16 x s8>) = IMPLICIT_DEF
     ; ALL: [[ADD:%[0-9]+]]:_(<16 x s8>) = G_ADD [[DEF]], [[DEF1]]
+    ; ALL: %xmm0 = COPY [[ADD]](<16 x s8>)
     ; ALL: RET 0
     %0(<16 x s8>) = IMPLICIT_DEF
     %1(<16 x s8>) = IMPLICIT_DEF
     %2(<16 x s8>) = G_ADD %0, %1
+    %xmm0 = COPY %2
     RET 0
 
 ...
@@ -63,10 +65,12 @@ body:             |
     ; ALL: [[DEF:%[0-9]+]]:_(<8 x s16>) = IMPLICIT_DEF
     ; ALL: [[DEF1:%[0-9]+]]:_(<8 x s16>) = IMPLICIT_DEF
     ; ALL: [[ADD:%[0-9]+]]:_(<8 x s16>) = G_ADD [[DEF]], [[DEF1]]
+    ; ALL: %xmm0 = COPY [[ADD]](<8 x s16>)
     ; ALL: RET 0
     %0(<8 x s16>) = IMPLICIT_DEF
     %1(<8 x s16>) = IMPLICIT_DEF
     %2(<8 x s16>) = G_ADD %0, %1
+    %xmm0 = COPY %2
     RET 0
 
 ...
@@ -87,10 +91,12 @@ body:             |
     ; ALL: [[DEF:%[0-9]+]]:_(<4 x s32>) = IMPLICIT_DEF
     ; ALL: [[DEF1:%[0-9]+]]:_(<4 x s32>) = IMPLICIT_DEF
     ; ALL: [[ADD:%[0-9]+]]:_(<4 x s32>) = G_ADD [[DEF]], [[DEF1]]
+    ; ALL: %xmm0 = COPY [[ADD]](<4 x s32>)
     ; ALL: RET 0
     %0(<4 x s32>) = IMPLICIT_DEF
     %1(<4 x s32>) = IMPLICIT_DEF
     %2(<4 x s32>) = G_ADD %0, %1
+    %xmm0 = COPY %2
     RET 0
 
 ...
@@ -111,10 +117,12 @@ body:             |
     ; ALL: [[DEF:%[0-9]+]]:_(<2 x s64>) = IMPLICIT_DEF
     ; ALL: [[DEF1:%[0-9]+]]:_(<2 x s64>) = IMPLICIT_DEF
     ; ALL: [[ADD:%[0-9]+]]:_(<2 x s64>) = G_ADD [[DEF]], [[DEF1]]
+    ; ALL: %xmm0 = COPY [[ADD]](<2 x s64>)
     ; ALL: RET 0
     %0(<2 x s64>) = IMPLICIT_DEF
     %1(<2 x s64>) = IMPLICIT_DEF
     %2(<2 x s64>) = G_ADD %0, %1
+    %xmm0 = COPY %2
     RET 0
 
 ...

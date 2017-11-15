@@ -625,8 +625,8 @@ void TargetPassConfig::addIRPasses() {
   if (getOptLevel() != CodeGenOpt::None && !DisablePartialLibcallInlining)
     addPass(createPartiallyInlineLibCallsPass());
 
-  // Insert calls to mcount-like functions.
-  addPass(createCountingFunctionInserterPass());
+  // Instrument function entry and exit, e.g. with calls to mcount().
+  addPass(createPostInlineEntryExitInstrumenterPass());
 
   // Add scalarization of target's unsupported masked memory intrinsics pass.
   // the unsupported intrinsic will be replaced with a chain of basic blocks,

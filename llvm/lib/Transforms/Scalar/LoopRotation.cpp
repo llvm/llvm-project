@@ -634,7 +634,7 @@ bool LoopRotate::processLoop(Loop *L) {
   if ((MadeChange || SimplifiedLatch) && LoopMD)
     L->setLoopID(LoopMD);
 
-  return MadeChange;
+  return MadeChange || SimplifiedLatch;
 }
 
 LoopRotatePass::LoopRotatePass(bool EnableHeaderDuplication)

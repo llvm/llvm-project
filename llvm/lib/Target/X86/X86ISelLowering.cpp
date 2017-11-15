@@ -24368,11 +24368,10 @@ static SDValue LowerMGATHER(SDValue Op, const X86Subtarget &Subtarget,
     // The mask should match the destination type. Extending mask with zeroes
     // is not necessary since instruction itself reads only two values from
     // memory.
-    Mask = ExtendToType(Mask, MVT::v4i1, DAG, false);
     SDValue Ops[] = { N->getChain(), Src0, Mask, N->getBasePtr(), Index };
     SDValue NewGather = DAG.getTargetMemSDNode<X86MaskedGatherSDNode>(
-      DAG.getVTList(MVT::v4i32, MVT::Other), Ops, dl, N->getMemoryVT(),
-      N->getMemOperand());
+      DAG.getVTList(MVT::v4i32, MVT::v2i1, MVT::Other), Ops, dl,
+      N->getMemoryVT(), N->getMemOperand());
 
     SDValue Sext = getExtendInVec(X86ISD::VSEXT, dl, MVT::v2i64,
                                   NewGather.getValue(0), DAG);
@@ -24392,16 +24391,16 @@ static SDValue LowerMGATHER(SDValue Op, const X86Subtarget &Subtarget,
         ISD::isBuildVectorAllZeros(Mask.getOperand(1).getNode()) &&
         Index.getOpcode() == ISD::CONCAT_VECTORS &&
         Index.getOperand(1).isUndef()) {
-      Mask = ExtendToType(Mask.getOperand(0), MVT::v4i1, DAG, false);
+      Mask = Mask.getOperand(0);
       Index = Index.getOperand(0);
     } else
       return Op;
     SDValue Ops[] = { N->getChain(), Src0, Mask, N->getBasePtr(), Index };
     SDValue NewGather = DAG.getTargetMemSDNode<X86MaskedGatherSDNode>(
-      DAG.getVTList(MVT::v4f32, MVT::Other), Ops, dl, N->getMemoryVT(),
-      N->getMemOperand());
+      DAG.getVTList(MVT::v4f32, MVT::v2i1, MVT::Other), Ops, dl,
+      N->getMemoryVT(), N->getMemOperand());
 
-    SDValue RetOps[] = { NewGather.getValue(0), NewGather.getValue(1) };
+    SDValue RetOps[] = { NewGather.getValue(0), NewGather.getValue(2) };
     return DAG.getMergeValues(RetOps, dl);
 
   }

@@ -1,17 +1,30 @@
 objc-general.m:__13+[A foreach:]_block_invoke
-10
+42129
 2
 2
 1
 
 objc-general.m:+[A foreach:]
-6
+401
 2
 1
 2
 
 main
-0
+24
 1
 1
 
+consecutive_objc_for_ranges
+1642897
+3
+0
+0
+0
+
+nested_objc_for_ranges
+1598545
+3
+0
+0
+0

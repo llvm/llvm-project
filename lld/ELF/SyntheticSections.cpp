@@ -2514,8 +2514,16 @@ void elf::mergeSections() {
     uint32_t Alignment = std::max<uint32_t>(MS->Alignment, MS->Entsize);
 
     auto I = llvm::find_if(MergeSections, [=](MergeSyntheticSection *Sec) {
+      // While we could create a single synthetic section for two different
+      // values of Entsize, it is better to take Entsize into consideration.
+      //
+      // With a single synthetic section no two pieces with different Entsize
+      // could be equal, so we may as well have two sections.
+      //
+      // Using Entsize in here also allows us to propagate it to the synthetic
+      // section.
       return Sec->Name == OutsecName && Sec->Flags == MS->Flags &&
-             Sec->Alignment == Alignment;
+             Sec->Entsize == MS->Entsize && Sec->Alignment == Alignment;
     });
     if (I == MergeSections.end()) {
       MergeSyntheticSection *Syn =
@@ -2523,6 +2531,7 @@ void elf::mergeSections() {
       MergeSections.push_back(Syn);
       I = std::prev(MergeSections.end());
       S = Syn;
+      Syn->Entsize = MS->Entsize;
     } else {
       S = nullptr;
     }

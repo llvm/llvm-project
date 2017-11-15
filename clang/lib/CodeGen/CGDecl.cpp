@@ -162,6 +162,10 @@ void CodeGenFunction::EmitVarDecl(const VarDecl &D) {
   // needs to be emitted like a static variable, e.g. a function-scope
   // variable in constant address space in OpenCL.
   if (D.getStorageDuration() != SD_Automatic) {
+    // Static sampler variables translated to function calls.
+    if (D.getType()->isSamplerT())
+      return;
+
     llvm::GlobalValue::LinkageTypes Linkage =
         CGM.getLLVMLinkageVarDefinition(&D, /*isConstant=*/false);
 

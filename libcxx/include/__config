@@ -121,6 +121,9 @@
 #ifndef __has_feature
 #define __has_feature(__x) 0
 #endif
+#ifndef __has_cpp_attribute
+#define __has_cpp_attribute(__x) 0
+#endif
 // '__is_identifier' returns '0' if '__x' is a reserved identifier provided by
 // the compiler and '1' otherwise.
 #ifndef __is_identifier
@@ -949,6 +952,18 @@ template <unsigned> struct __static_assert_check {};
 #define _LIBCPP_CONSTEXPR_AFTER_CXX14 constexpr
 #else
 #define _LIBCPP_CONSTEXPR_AFTER_CXX14
+#endif
+
+#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CXX14_CONSTEXPR)
+#define _LIBCPP_CONSTEXPR_AFTER_CXX17 constexpr
+#else
+#define _LIBCPP_CONSTEXPR_AFTER_CXX17
+#endif
+
+#if __has_cpp_attribute(nodiscard) && _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_DISABLE_NODISCARD_AFTER_CXX17)
+#define _LIBCPP_NODISCARD_AFTER_CXX17 [[nodiscard]]
+#else
+#define _LIBCPP_NODISCARD_AFTER_CXX17
 #endif
 
 // FIXME: Remove all usages of this macro once compilers catch up.

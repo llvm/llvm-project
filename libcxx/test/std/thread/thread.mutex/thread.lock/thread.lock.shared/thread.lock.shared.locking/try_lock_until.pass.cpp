@@ -49,7 +49,7 @@ int main()
 #ifndef TEST_HAS_NO_EXCEPTIONS
     try
     {
-        lk.try_lock_until(Clock::now());
+        (void)lk.try_lock_until(Clock::now());
         assert(false);
     }
     catch (std::system_error& e)
@@ -65,7 +65,7 @@ int main()
 #ifndef TEST_HAS_NO_EXCEPTIONS
     try
     {
-        lk.try_lock_until(Clock::now());
+        (void)lk.try_lock_until(Clock::now());
         assert(false);
     }
     catch (std::system_error& e)

@@ -170,6 +170,10 @@ if( NOT PURE_WINDOWS AND NOT LLVM_USE_SANITIZER MATCHES "Memory.*")
   endif()
 endif()
 
+if (LLVM_ENABLE_LIBXML2 STREQUAL "FORCE_ON" AND NOT LLVM_LIBXML2_ENABLED)
+  message(FATAL_ERROR "Failed to congifure libxml2")
+endif()
+
 check_library_exists(xar xar_open "" HAVE_LIBXAR)
 if(HAVE_LIBXAR)
   set(XAR_LIB xar)

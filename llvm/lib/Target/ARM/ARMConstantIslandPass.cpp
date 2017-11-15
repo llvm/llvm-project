@@ -564,7 +564,8 @@ void ARMConstantIslands::doInitialJumpTablePlacement(
     case ARM::BR_JTadd:
     case ARM::BR_JTr:
     case ARM::tBR_JTr:
-    case ARM::BR_JTm:
+    case ARM::BR_JTm_i12:
+    case ARM::BR_JTm_rs:
       JTOpcode = ARM::JUMPTABLE_ADDRS;
       break;
     case ARM::t2BR_JT:

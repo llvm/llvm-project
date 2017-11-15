@@ -26,6 +26,7 @@ add_tablegen(llvm-tblgen LLVM
   GlobalISelEmitter.cpp
   InfoByHwMode.cpp
   InstrInfoEmitter.cpp
+  InstrDocsEmitter.cpp
   IntrinsicEmitter.cpp
   OptParserEmitter.cpp
   PseudoLoweringEmitter.cpp

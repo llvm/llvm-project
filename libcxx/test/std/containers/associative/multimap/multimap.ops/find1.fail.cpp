@@ -34,7 +34,7 @@ int main()
     {
     typedef std::multimap<int, double, transparent_less_no_type> M;
 
-    M().find(C2Int{5});
+    (void)M().find(C2Int{5});
     }
 }
 #endif
