@@ -35,7 +35,7 @@ tooling::CompileCommand getDefaultCompileCommand(PathRef File) {
   // We force PC because PS4 will change --std from under us.
   // FIXME: there must be a more principled way to do this!
   std::vector<std::string> CommandLine{
-      "clang", "-fsyntax-only", "-triple=unknown-pc-unknown", File.str()};
+      "clang", "-fsyntax-only", "-target=unknown-pc-unknown", File.str()};
   return tooling::CompileCommand(llvm::sys::path::parent_path(File),
                                  llvm::sys::path::filename(File), CommandLine,
                                  /*Output=*/"");
