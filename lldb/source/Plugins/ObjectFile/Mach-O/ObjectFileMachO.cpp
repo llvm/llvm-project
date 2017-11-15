@@ -686,7 +686,7 @@ public:
       case FPURegSet: {
         uint8_t *fpu_reg_buf = (uint8_t *)&fpu.v[0];
         const int fpu_reg_buf_size = sizeof(fpu);
-        if (fpu_reg_buf_size == count * sizeof(uint32_t) &&
+        if (fpu_reg_buf_size == count &&
             data.ExtractBytes(offset, fpu_reg_buf_size, eByteOrderLittle,
                               fpu_reg_buf) == fpu_reg_buf_size) {
           SetError(FPURegSet, Read, 0);

@@ -1784,11 +1784,6 @@ public:
   /// instrumented with XRay nop sleds.
   bool ShouldXRayInstrumentFunction() const;
 
-  /// EmitFunctionInstrumentation - Emit LLVM code to call the specified
-  /// instrumentation function with the current function and the call site, if
-  /// function instrumentation is enabled.
-  void EmitFunctionInstrumentation(const char *Fn);
-
   /// Encode an address into a form suitable for use in a function prologue.
   llvm::Constant *EncodeAddrForUseInPrologue(llvm::Function *F,
                                              llvm::Constant *Addr);

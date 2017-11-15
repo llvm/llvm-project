@@ -1265,9 +1265,9 @@ const internal::VariadicDynCastAllOfMatcher<
   Decl,
   ObjCPropertyDecl> objcPropertyDecl;
 
-/// \brief Matches Objective-C @throw statements.
+/// \brief Matches Objective-C \@throw statements.
 ///
-/// Example matches @throw
+/// Example matches \@throw
 /// \code
 ///   @throw obj;
 /// \endcode
@@ -4201,11 +4201,19 @@ AST_MATCHER_P(AbstractConditionalOperator, hasFalseExpression,
 ///   extern int vb;  // Doesn't match, as it doesn't define the variable.
 ///   void fa() {}
 ///   void fb();  // Doesn't match, as it has no body.
+///   @interface X
+///   - (void)ma; // Doesn't match, interface is declaration.
+///   @end
+///   @implementation X
+///   - (void)ma {}
+///   @end
 /// \endcode
 ///
-/// Usable as: Matcher<TagDecl>, Matcher<VarDecl>, Matcher<FunctionDecl>
+/// Usable as: Matcher<TagDecl>, Matcher<VarDecl>, Matcher<FunctionDecl>,
+///   Matcher<ObjCMethodDecl>
 AST_POLYMORPHIC_MATCHER(isDefinition,
                         AST_POLYMORPHIC_SUPPORTED_TYPES(TagDecl, VarDecl,
+                                                        ObjCMethodDecl,
                                                         FunctionDecl)) {
   return Node.isThisDeclarationADefinition();
 }

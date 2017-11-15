@@ -10,7 +10,7 @@
 
 # CHECK:      Section {
 # CHECK:        Index:
-# CHECK:        Name: .rodata
+# CHECK:        Name: .rodata.1 (
 # CHECK-NEXT:   Type: SHT_PROGBITS
 # CHECK-NEXT:   Flags [
 # CHECK-NEXT:     SHF_ALLOC
@@ -29,7 +29,7 @@
 # CHECK-NEXT: }
 # CHECK:      Section {
 # CHECK:        Index:
-# CHECK:        Name: .rodata
+# CHECK:        Name: .rodata.2 (
 # CHECK-NEXT:   Type: SHT_PROGBITS
 # CHECK-NEXT:   Flags [
 # CHECK-NEXT:     SHF_ALLOC

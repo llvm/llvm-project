@@ -40,7 +40,7 @@ test(const S& s, typename S::size_type pos, typename S::size_type n1,
     {
         try
         {
-            s.compare(pos, n1, str, n2);
+            (void)s.compare(pos, n1, str, n2);
             assert(false);
         }
         catch (std::out_of_range&)

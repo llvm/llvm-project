@@ -3630,7 +3630,8 @@ unsigned FieldDecl::getFieldIndex() const {
   if (CachedFieldIndex) return CachedFieldIndex - 1;
 
   unsigned Index = 0;
-  const RecordDecl *RD = getParent();
+  const RecordDecl *RD = getParent()->getDefinition();
+  assert(RD && "requested index for field of struct with no definition");
 
   for (auto *Field : RD->fields()) {
     Field->getCanonicalDecl()->CachedFieldIndex = Index + 1;

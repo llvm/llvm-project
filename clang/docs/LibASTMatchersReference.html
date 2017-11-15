@@ -2746,8 +2746,8 @@ functionDecl(isDefaulted())
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('isDefinition2')"><a name="isDefinition2Anchor">isDefinition</a></td><td></td></tr>
-<tr><td colspan="4" class="doc" id="isDefinition2"><pre>Matches if a declaration has a body attached.
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('isDefinition3')"><a name="isDefinition3Anchor">isDefinition</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isDefinition3"><pre>Matches if a declaration has a body attached.
 
 Example matches A, va, fa
   class A {};
@@ -2756,8 +2756,15 @@ Example matches A, va, fa
   extern int vb;  Doesn't match, as it doesn't define the variable.
   void fa() {}
   void fb();  Doesn't match, as it has no body.
+  @interface X
+  - (void)ma; Doesn't match, interface is declaration.
+  @end
+  @implementation X
+  - (void)ma {}
+  @end
 
-Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagDecl.html">TagDecl</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;
+Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagDecl.html">TagDecl</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCMethodDecl.html">ObjCMethodDecl</a>&gt;
 </pre></td></tr>
 
 
@@ -3154,6 +3161,28 @@ a substring matched by the given RegExp.
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCMethodDecl.html">ObjCMethodDecl</a>&gt;</td><td class="name" onclick="toggle('isDefinition2')"><a name="isDefinition2Anchor">isDefinition</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isDefinition2"><pre>Matches if a declaration has a body attached.
+
+Example matches A, va, fa
+  class A {};
+  class B;  Doesn't match, as it has no body.
+  int va;
+  extern int vb;  Doesn't match, as it doesn't define the variable.
+  void fa() {}
+  void fb();  Doesn't match, as it has no body.
+  @interface X
+  - (void)ma; Doesn't match, interface is declaration.
+  @end
+  @implementation X
+  - (void)ma {}
+  @end
+
+Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagDecl.html">TagDecl</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCMethodDecl.html">ObjCMethodDecl</a>&gt;
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;</td><td class="name" onclick="toggle('asString0')"><a name="asString0Anchor">asString</a></td><td>std::string Name</td></tr>
 <tr><td colspan="4" class="doc" id="asString0"><pre>Matches if the matched type is represented by the given string.
 
@@ -3433,8 +3462,15 @@ Example matches A, va, fa
   extern int vb;  Doesn't match, as it doesn't define the variable.
   void fa() {}
   void fb();  Doesn't match, as it has no body.
+  @interface X
+  - (void)ma; Doesn't match, interface is declaration.
+  @end
+  @implementation X
+  - (void)ma {}
+  @end
 
-Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagDecl.html">TagDecl</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;
+Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagDecl.html">TagDecl</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCMethodDecl.html">ObjCMethodDecl</a>&gt;
 </pre></td></tr>
 
 
@@ -3696,8 +3732,15 @@ Example matches A, va, fa
   extern int vb;  Doesn't match, as it doesn't define the variable.
   void fa() {}
   void fb();  Doesn't match, as it has no body.
+  @interface X
+  - (void)ma; Doesn't match, interface is declaration.
+  @end
+  @implementation X
+  - (void)ma {}
+  @end
 
-Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagDecl.html">TagDecl</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;
+Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagDecl.html">TagDecl</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCMethodDecl.html">ObjCMethodDecl</a>&gt;
 </pre></td></tr>
 
 

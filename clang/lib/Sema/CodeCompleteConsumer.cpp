@@ -613,24 +613,20 @@ void CodeCompletionResult::computeCursorKindAndAvailability(bool Accessible) {
 ///
 /// If the name needs to be constructed as a string, that string will be
 /// saved into Saved and the returned StringRef will refer to it.
-static StringRef getOrderedName(const CodeCompletionResult &R,
-                                    std::string &Saved) {
-  switch (R.Kind) {
-    case CodeCompletionResult::RK_Keyword:
-      return R.Keyword;
-      
-    case CodeCompletionResult::RK_Pattern:
-      return R.Pattern->getTypedText();
-      
-    case CodeCompletionResult::RK_Macro:
-      return R.Macro->getName();
-      
-    case CodeCompletionResult::RK_Declaration:
+StringRef CodeCompletionResult::getOrderedName(std::string &Saved) const {
+  switch (Kind) {
+    case RK_Keyword:
+      return Keyword;
+    case RK_Pattern:
+      return Pattern->getTypedText();
+    case RK_Macro:
+      return Macro->getName();
+    case RK_Declaration:
       // Handle declarations below.
       break;
   }
   
-  DeclarationName Name = R.Declaration->getDeclName();
+  DeclarationName Name = Declaration->getDeclName();
   
   // If the name is a simple identifier (by far the common case), or a
   // zero-argument selector, just return a reference to that identifier.
@@ -648,8 +644,8 @@ static StringRef getOrderedName(const CodeCompletionResult &R,
 bool clang::operator<(const CodeCompletionResult &X, 
                       const CodeCompletionResult &Y) {
   std::string XSaved, YSaved;
-  StringRef XStr = getOrderedName(X, XSaved);
-  StringRef YStr = getOrderedName(Y, YSaved);
+  StringRef XStr = X.getOrderedName(XSaved);
+  StringRef YStr = Y.getOrderedName(YSaved);
   int cmp = XStr.compare_lower(YStr);
   if (cmp)
     return cmp < 0;
