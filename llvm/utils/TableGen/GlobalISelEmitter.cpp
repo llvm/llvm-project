@@ -1752,18 +1752,18 @@ class BuildMIAction : public MatchAction {
 private:
   unsigned InsnID;
   const CodeGenInstruction *I;
-  const InstructionMatcher &Matched;
+  const InstructionMatcher *Matched;
   std::vector<std::unique_ptr<OperandRenderer>> OperandRenderers;
 
   /// True if the instruction can be built solely by mutating the opcode.
   bool canMutate(RuleMatcher &Rule) const {
-    if (OperandRenderers.size() != Matched.getNumOperands())
+    if (OperandRenderers.size() != Matched->getNumOperands())
       return false;
 
     for (const auto &Renderer : enumerate(OperandRenderers)) {
       if (const auto *Copy = dyn_cast<CopyRenderer>(&*Renderer.value())) {
         const OperandMatcher &OM = Rule.getOperandMatcher(Copy->getSymbolicName());
-        if (&Matched != &OM.getInstructionMatcher() ||
+        if ((Matched != nullptr && Matched != &OM.getInstructionMatcher()) ||
             OM.getOperandIndex() != Renderer.index())
           return false;
       } else
@@ -1775,7 +1775,7 @@ private:
 
 public:
   BuildMIAction(unsigned InsnID, const CodeGenInstruction *I,
-                const InstructionMatcher &Matched)
+                const InstructionMatcher *Matched)
       : InsnID(InsnID), I(I), Matched(Matched) {}
 
   template <class Kind, class... Args>
@@ -2646,7 +2646,7 @@ Expected<BuildMIAction &> GlobalISelEmitter::createAndImportInstructionRenderer(
     IsExtractSubReg = true;
   }
 
-  auto &DstMIBuilder = M.addAction<BuildMIAction>(0, DstI, InsnMatcher);
+  auto &DstMIBuilder = M.addAction<BuildMIAction>(0, DstI, &InsnMatcher);
 
   // Render the explicit defs.
   for (unsigned I = 0; I < DstI->Operands.NumDefs; ++I) {
@@ -2797,7 +2797,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
       M.defineOperand(OM0.getSymbolicName(), OM0);
       OM0.addPredicate<RegisterBankOperandMatcher>(RC);
 
-      auto &DstMIBuilder = M.addAction<BuildMIAction>(0, &DstI, InsnMatcher);
+      auto &DstMIBuilder = M.addAction<BuildMIAction>(0, &DstI, &InsnMatcher);
       DstMIBuilder.addRenderer<CopyRenderer>(0, DstIOperand.Name);
       DstMIBuilder.addRenderer<CopyRenderer>(0, Dst->getName());
       M.addAction<ConstrainOperandToRegClassAction>(0, 0, RC);
