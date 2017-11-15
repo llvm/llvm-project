@@ -9,11 +9,11 @@
 
 #include "ClangdServer.h"
 #include "clang/Format/Format.h"
-#include "clang/Tooling/Refactoring/RefactoringResultConsumer.h"
-#include "clang/Tooling/Refactoring/Rename/RenamingAction.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Tooling/CompilationDatabase.h"
+#include "clang/Tooling/Refactoring/RefactoringResultConsumer.h"
+#include "clang/Tooling/Refactoring/Rename/RenamingAction.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
