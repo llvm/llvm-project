@@ -35,6 +35,10 @@ void test1 () {
 
     {
     SV sv1;
+    ASSERT_NOEXCEPT(sv1.size());
+    ASSERT_NOEXCEPT(sv1.empty());
+    ASSERT_NOEXCEPT(sv1.max_size());
+    ASSERT_NOEXCEPT(sv1.length());
     assert ( sv1.size() == 0 );
     assert ( sv1.empty());
     assert ( sv1.size() == sv1.length());
