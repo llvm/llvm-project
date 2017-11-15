@@ -455,8 +455,8 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
     LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
     unsigned Size = DstTy.getSizeInBits();
-    bool DstIsGPR = !DstTy.isVector();
-    bool SrcIsGPR = !SrcTy.isVector();
+    bool DstIsGPR = !DstTy.isVector() && DstTy.getSizeInBits() <= 64;
+    bool SrcIsGPR = !SrcTy.isVector() && SrcTy.getSizeInBits() <= 64;
     const RegisterBank &DstRB =
         DstIsGPR ? AArch64::GPRRegBank : AArch64::FPRRegBank;
     const RegisterBank &SrcRB =

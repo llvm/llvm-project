@@ -66,6 +66,7 @@
   define void @bitcast_s64_fpr() { ret void }
   define void @bitcast_s64_gpr_fpr() { ret void }
   define void @bitcast_s64_fpr_gpr() { ret void }
+  define void @bitcast_s128() { ret void }
 
   define i64 @greedyWithChainOfComputation(i64 %arg1, <2 x i32>* %addr) {
     %varg1 = bitcast i64 %arg1 to <2 x i32>
@@ -613,6 +614,32 @@ body:             |
 
     %0(<2 x s32>) = COPY %d0
     %1(s64) = G_BITCAST %0
+...
+
+---
+# CHECK-LABEL: name: bitcast_s128
+name:            bitcast_s128
+legalized: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _}
+  - { id: 1, class: _}
+  - { id: 2, class: _}
+  - { id: 3, class: _}
+# CHECK: registers:
+# CHECK:  - { id: 2, class: fpr, preferred-register: '' }
+# CHECK:  - { id: 3, class: fpr, preferred-register: '' }
+# CHECK: %2(<2 x s64>) = G_BITCAST %3(s128)
+body:             |
+  bb.1:
+    liveins: %x0, %x1
+    %0(s64) = COPY %x0
+    %1(s64) = COPY %x1
+    %3(s128) = G_MERGE_VALUES %0(s64), %1(s64)
+    %2(<2 x s64>) = G_BITCAST %3(s128)
+    %q0 = COPY %2(<2 x s64>)
+    RET_ReallyLR implicit %q0
+
 ...
 
 ---
