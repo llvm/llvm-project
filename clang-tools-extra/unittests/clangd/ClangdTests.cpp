@@ -619,16 +619,15 @@ struct bar { T x; };
 class ClangdCompletionTest : public ClangdVFSTest {
 protected:
   template <class Predicate>
-  bool ContainsItemPred(std::vector<CompletionItem> const &Items,
-                        Predicate Pred) {
-    for (const auto &Item : Items) {
+  bool ContainsItemPred(CompletionList const &Items, Predicate Pred) {
+    for (const auto &Item : Items.items) {
       if (Pred(Item))
         return true;
     }
     return false;
   }
 
-  bool ContainsItem(std::vector<CompletionItem> const &Items, StringRef Name) {
+  bool ContainsItem(CompletionList const &Items, StringRef Name) {
     return ContainsItemPred(Items, [Name](clangd::CompletionItem Item) {
       return Item.insertText == Name;
     });
@@ -692,6 +691,44 @@ int b =   ;
     EXPECT_TRUE(ContainsItem(CodeCompletionResults2, "aba"));
     EXPECT_FALSE(ContainsItem(CodeCompletionResults2, "cbc"));
   }
+}
+
+TEST_F(ClangdCompletionTest, Limit) {
+  MockFSProvider FS;
+  MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
+  CDB.ExtraClangFlags.push_back("-xc++");
+  ErrorCheckingDiagConsumer DiagConsumer;
+  clangd::CodeCompleteOptions Opts;
+  Opts.Limit = 2;
+  ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
+                      Opts, EmptyLogger::getInstance());
+
+  auto FooCpp = getVirtualTestFilePath("foo.cpp");
+  FS.Files[FooCpp] = "";
+  FS.ExpectedFile = FooCpp;
+  StringWithPos Completion = parseTextMarker(R"cpp(
+struct ClassWithMembers {
+  int AAA();
+  int BBB();
+  int CCC();
+}
+int main() { ClassWithMembers().{complete} }
+      )cpp",
+                                             "complete");
+  Server.addDocument(FooCpp, Completion.Text);
+
+  /// For after-dot completion we must always get consistent results.
+  auto Results = Server
+                     .codeComplete(FooCpp, Completion.MarkerPos,
+                                   StringRef(Completion.Text))
+                     .get()
+                     .Value;
+
+  EXPECT_TRUE(Results.isIncomplete);
+  EXPECT_EQ(Opts.Limit, Results.items.size());
+  EXPECT_TRUE(ContainsItem(Results, "AAA"));
+  EXPECT_TRUE(ContainsItem(Results, "BBB"));
+  EXPECT_FALSE(ContainsItem(Results, "CCC"));
 }
 
 TEST_F(ClangdCompletionTest, CompletionOptions) {
