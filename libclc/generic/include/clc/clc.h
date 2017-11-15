@@ -83,6 +83,8 @@
 #include <clc/math/log2.h>
 #include <clc/math/logb.h>
 #include <clc/math/mad.h>
+#include <clc/math/maxmag.h>
+#include <clc/math/minmag.h>
 #include <clc/math/modf.h>
 #include <clc/math/nextafter.h>
 #include <clc/math/pow.h>
