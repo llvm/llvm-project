@@ -313,6 +313,10 @@ private:
   ///    deconstructors of firstprivate C++ objects */
   /// } kmp_task_t;
   QualType KmpTaskTQTy;
+  /// Saved kmp_task_t for task directive.
+  QualType SavedKmpTaskTQTy;
+  /// Saved kmp_task_t for taskloop-based directive.
+  QualType SavedKmpTaskloopTQTy;
   /// \brief Type typedef struct kmp_depend_info {
   ///    kmp_intptr_t               base_addr;
   ///    size_t                     len;

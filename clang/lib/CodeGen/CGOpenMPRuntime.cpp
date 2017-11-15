@@ -4249,9 +4249,20 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
   // Build type kmp_routine_entry_t (if not built yet).
   emitKmpRoutineEntryT(KmpInt32Ty);
   // Build type kmp_task_t (if not built yet).
-  if (KmpTaskTQTy.isNull()) {
-    KmpTaskTQTy = C.getRecordType(createKmpTaskTRecordDecl(
-        CGM, D.getDirectiveKind(), KmpInt32Ty, KmpRoutineEntryPtrQTy));
+  if (isOpenMPTaskLoopDirective(D.getDirectiveKind())) {
+    if (SavedKmpTaskloopTQTy.isNull()) {
+      SavedKmpTaskloopTQTy = C.getRecordType(createKmpTaskTRecordDecl(
+          CGM, D.getDirectiveKind(), KmpInt32Ty, KmpRoutineEntryPtrQTy));
+    }
+    KmpTaskTQTy = SavedKmpTaskloopTQTy;
+  } else if (D.getDirectiveKind() == OMPD_task) {
+    assert(D.getDirectiveKind() == OMPD_task &&
+           "Expected taskloop or task directive");
+    if (SavedKmpTaskTQTy.isNull()) {
+      SavedKmpTaskTQTy = C.getRecordType(createKmpTaskTRecordDecl(
+          CGM, D.getDirectiveKind(), KmpInt32Ty, KmpRoutineEntryPtrQTy));
+    }
+    KmpTaskTQTy = SavedKmpTaskTQTy;
   }
   auto *KmpTaskTQTyRD = cast<RecordDecl>(KmpTaskTQTy->getAsTagDecl());
   // Build particular struct kmp_task_t for the given task.
