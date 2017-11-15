@@ -715,18 +715,6 @@ public:
   virtual unsigned countRendererFns() const { return 0; }
 };
 
-// Specialize OperandMatcher::addPredicate() to refrain from adding redundant
-// predicates.
-template <>
-template <class Kind, class... Args>
-Optional<Kind *>
-PredicateListMatcher<OperandPredicateMatcher>::addPredicate(Args &&... args) {
-  if (static_cast<OperandMatcher *>(this)->isSameAsAnotherOperand())
-    return None;
-  Predicates.emplace_back(llvm::make_unique<Kind>(std::forward<Args>(args)...));
-  return static_cast<Kind *>(Predicates.back().get());
-}
-
 template <>
 std::string
 PredicateListMatcher<OperandPredicateMatcher>::getNoPredicateComment() const {
@@ -989,27 +977,7 @@ public:
 
   InstructionMatcher &getInstructionMatcher() const { return Insn; }
 
-  Error addTypeCheckPredicate(const EEVT::TypeSet &Ty,
-                              bool OperandIsAPointer) {
-    if (!Ty.isConcrete())
-      return failedImport("unsupported typeset");
-
-    if (Ty.getConcrete() == MVT::iPTR && OperandIsAPointer) {
-      addPredicate<PointerToAnyOperandMatcher>(0);
-      return Error::success();
-    }
-
-    auto OpTyOrNone = MVTToLLT(Ty.getConcrete());
-    if (!OpTyOrNone)
-      return failedImport("unsupported type");
-
-    if (OperandIsAPointer)
-      addPredicate<PointerToAnyOperandMatcher>(
-          OpTyOrNone->get().getSizeInBits());
-    else
-      addPredicate<LLTOperandMatcher>(*OpTyOrNone);
-    return Error::success();
-  }
+  Error addTypeCheckPredicate(const EEVT::TypeSet &Ty, bool OperandIsAPointer);
 
   /// Emit MatchTable opcodes to capture instructions into the MIs table.
   void emitCaptureOpcodes(MatchTable &Table, RuleMatcher &Rule,
@@ -1077,6 +1045,39 @@ public:
     return false;
   }
 };
+
+// Specialize OperandMatcher::addPredicate() to refrain from adding redundant
+// predicates.
+template <>
+template <class Kind, class... Args>
+Optional<Kind *>
+PredicateListMatcher<OperandPredicateMatcher>::addPredicate(Args &&... args) {
+  if (static_cast<OperandMatcher *>(this)->isSameAsAnotherOperand())
+    return None;
+  Predicates.emplace_back(llvm::make_unique<Kind>(std::forward<Args>(args)...));
+  return static_cast<Kind *>(Predicates.back().get());
+}
+
+Error OperandMatcher::addTypeCheckPredicate(const EEVT::TypeSet &Ty,
+                                            bool OperandIsAPointer) {
+  if (!Ty.isConcrete())
+    return failedImport("unsupported typeset");
+
+  if (Ty.getConcrete() == MVT::iPTR && OperandIsAPointer) {
+    addPredicate<PointerToAnyOperandMatcher>(0);
+    return Error::success();
+  }
+
+  auto OpTyOrNone = MVTToLLT(Ty.getConcrete());
+  if (!OpTyOrNone)
+    return failedImport("unsupported type");
+
+  if (OperandIsAPointer)
+    addPredicate<PointerToAnyOperandMatcher>(OpTyOrNone->get().getSizeInBits());
+  else
+    addPredicate<LLTOperandMatcher>(*OpTyOrNone);
+  return Error::success();
+}
 
 unsigned ComplexPatternOperandMatcher::getAllocatedTemporariesBaseID() const {
   return Operand.getAllocatedTemporariesBaseID();
