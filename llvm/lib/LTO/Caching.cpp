@@ -48,27 +48,29 @@ Expected<NativeObjectCache> lto::localCache(StringRef CacheDirectoryPath,
     // file to the cache and calling AddBuffer to add it to the link.
     struct CacheStream : NativeObjectStream {
       AddBufferFn AddBuffer;
-      std::string TempFilename;
+      sys::fs::TempFile TempFile;
       std::string EntryPath;
       unsigned Task;
 
       CacheStream(std::unique_ptr<raw_pwrite_stream> OS, AddBufferFn AddBuffer,
-                  std::string TempFilename, std::string EntryPath,
+                  sys::fs::TempFile TempFile, std::string EntryPath,
                   unsigned Task)
           : NativeObjectStream(std::move(OS)), AddBuffer(std::move(AddBuffer)),
-            TempFilename(std::move(TempFilename)),
-            EntryPath(std::move(EntryPath)), Task(Task) {}
+            TempFile(std::move(TempFile)), EntryPath(std::move(EntryPath)),
+            Task(Task) {}
 
       ~CacheStream() {
-        // Make sure the file is closed before committing it.
+        // Make sure the stream is closed before committing it.
         OS.reset();
 
         // Open the file first to avoid racing with a cache pruner.
         ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
-            MemoryBuffer::getFile(TempFilename);
+            MemoryBuffer::getOpenFile(TempFile.FD, TempFile.TmpName,
+                                      /*FileSize*/ -1,
+                                      /*RequiresNullTerminator*/ false);
         if (!MBOrErr)
           report_fatal_error(Twine("Failed to open new cache file ") +
-                             TempFilename + ": " +
+                             TempFile.TmpName + ": " +
                              MBOrErr.getError().message() + "\n");
 
         // This is atomic on POSIX systems.
@@ -78,17 +80,26 @@ Expected<NativeObjectCache> lto::localCache(StringRef CacheDirectoryPath,
         // a copy of the bytes we wrote in that case. We do this instead of
         // just using the existing file, because the pruner might delete the
         // file before we get a chance to use it.
-        auto EC = sys::fs::rename(TempFilename, EntryPath);
-        if (EC == errc::permission_denied) {
-          auto MBCopy = MemoryBuffer::getMemBufferCopy(
-              (*MBOrErr)->getBuffer(), EntryPath);
+        Error E = TempFile.keep(EntryPath);
+        E = handleErrors(std::move(E), [&](const ECError &E) -> Error {
+          std::error_code EC = E.convertToErrorCode();
+          if (EC != errc::permission_denied)
+            return errorCodeToError(EC);
+
+          auto MBCopy = MemoryBuffer::getMemBufferCopy((*MBOrErr)->getBuffer(),
+                                                       EntryPath);
           MBOrErr = std::move(MBCopy);
-          sys::fs::remove(TempFilename);
-        } else if (EC) {
+
+          // FIXME: should we consume the discard error?
+          consumeError(TempFile.discard());
+
+          return Error::success();
+        });
+
+        if (E)
           report_fatal_error(Twine("Failed to rename temporary file ") +
-                             TempFilename + " to " + EntryPath + ": " +
-                             EC.message() + "\n");
-        }
+                             TempFile.TmpName + " to " + EntryPath + ": " +
+                             toString(std::move(E)) + "\n");
 
         AddBuffer(Task, std::move(*MBOrErr), EntryPath);
       }
@@ -96,21 +107,19 @@ Expected<NativeObjectCache> lto::localCache(StringRef CacheDirectoryPath,
 
     return [=](size_t Task) -> std::unique_ptr<NativeObjectStream> {
       // Write to a temporary to avoid race condition
-      int TempFD;
-      SmallString<64> TempFilenameModel, TempFilename;
+      SmallString<64> TempFilenameModel;
       sys::path::append(TempFilenameModel, CacheDirectoryPath, "Thin-%%%%%%.tmp.o");
-      std::error_code EC =
-          sys::fs::createUniqueFile(TempFilenameModel, TempFD, TempFilename,
-                                    sys::fs::owner_read | sys::fs::owner_write);
-      if (EC) {
-        errs() << "Error: " << EC.message() << "\n";
+      Expected<sys::fs::TempFile> Temp = sys::fs::TempFile::create(
+          TempFilenameModel, sys::fs::owner_read | sys::fs::owner_write);
+      if (!Temp) {
+        errs() << "Error: " << toString(Temp.takeError()) << "\n";
         report_fatal_error("ThinLTO: Can't get a temporary file");
       }
 
       // This CacheStream will move the temporary file into the cache when done.
       return llvm::make_unique<CacheStream>(
-          llvm::make_unique<raw_fd_ostream>(TempFD, /* ShouldClose */ true),
-          AddBuffer, TempFilename.str(), EntryPath.str(), Task);
+          llvm::make_unique<raw_fd_ostream>(Temp->FD, /* ShouldClose */ false),
+          AddBuffer, std::move(*Temp), EntryPath.str(), Task);
     };
   };
 }
