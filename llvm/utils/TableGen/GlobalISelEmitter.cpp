@@ -1733,16 +1733,14 @@ public:
 /// Generates a comment describing the matched rule being acted upon.
 class DebugCommentAction : public MatchAction {
 private:
-  const PatternToMatch &P;
+  std::string S;
 
 public:
-  DebugCommentAction(const PatternToMatch &P) : P(P) {}
+  DebugCommentAction(StringRef S) : S(S) {}
 
   void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule,
                          unsigned RecycleInsnID) const override {
-    Table << MatchTable::Comment(llvm::to_string(*P.getSrcPattern()) + "  =>  " +
-                               llvm::to_string(*P.getDstPattern()))
-          << MatchTable::LineBreak;
+    Table << MatchTable::Comment(S) << MatchTable::LineBreak;
   }
 };
 
@@ -2759,7 +2757,9 @@ Error GlobalISelEmitter::importImplicitDefRenderers(
 Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
   // Keep track of the matchers and actions to emit.
   RuleMatcher M(P.getSrcRecord()->getLoc());
-  M.addAction<DebugCommentAction>(P);
+  M.addAction<DebugCommentAction>(llvm::to_string(*P.getSrcPattern()) +
+                                  "  =>  " +
+                                  llvm::to_string(*P.getDstPattern()));
 
   if (auto Error = importRulePredicates(M, P.getPredicates()->getValues()))
     return std::move(Error);
