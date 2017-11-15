@@ -115,14 +115,14 @@ void test_make_any_throws()
 {
     {
         try {
-            std::make_any<Type>(101);
+            (void)std::make_any<Type>(101);
             assert(false);
         } catch (int const&) {
         }
     }
     {
         try {
-            std::make_any<Type>({1, 2, 3}, 101);
+            (void)std::make_any<Type>({1, 2, 3}, 101);
             assert(false);
         } catch (int const&) {
         }

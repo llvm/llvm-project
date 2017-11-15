@@ -263,7 +263,7 @@ struct CodeCompleteOptions {
                       bool IncludeBriefComments);
 
   /// Returns options that can be passed to clang's completion engine.
-  clang::CodeCompleteOptions getClangCompleteOpts();
+  clang::CodeCompleteOptions getClangCompleteOpts() const;
 
   /// When true, completion items will contain expandable code snippets in
   /// completion (e.g.  `return ${1:expression}` or `foo(${1:int a}, ${2:int
@@ -285,10 +285,14 @@ struct CodeCompleteOptions {
   /// FIXME(ibiryukov): it looks like turning this option on significantly slows
   /// down completion, investigate if it can be made faster.
   bool IncludeBriefComments = true;
+
+  /// Limit the number of results returned (0 means no limit).
+  /// If more results are available, we set CompletionList.isIncomplete.
+  size_t Limit = 0;
 };
 
 /// Get code completions at a specified \p Pos in \p FileName.
-std::vector<CompletionItem>
+CompletionList
 codeComplete(PathRef FileName, const tooling::CompileCommand &Command,
              PrecompiledPreamble const *Preamble, StringRef Contents,
              Position Pos, IntrusiveRefCntPtr<vfs::FileSystem> VFS,

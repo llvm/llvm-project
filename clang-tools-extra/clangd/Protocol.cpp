@@ -1043,6 +1043,13 @@ bool clangd::operator<(const CompletionItem &L, const CompletionItem &R) {
          (R.sortText.empty() ? R.label : R.sortText);
 }
 
+json::Expr CompletionList::unparse(const CompletionList &L) {
+  return json::obj{
+      {"isIncomplete", L.isIncomplete},
+      {"items", json::ary(L.items)},
+  };
+}
+
 json::Expr ParameterInformation::unparse(const ParameterInformation &PI) {
   assert(!PI.label.empty() && "parameter information label is required");
   json::obj Result{{"label", PI.label}};
@@ -1087,7 +1094,7 @@ RenameParams::parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger) {
 
     if (KeyValue == "textDocument") {
       auto *Value =
-        dyn_cast_or_null<llvm::yaml::MappingNode>(NextKeyValue.getValue());
+          dyn_cast_or_null<llvm::yaml::MappingNode>(NextKeyValue.getValue());
       if (!Value)
         continue;
       auto *Map = dyn_cast<llvm::yaml::MappingNode>(Value);

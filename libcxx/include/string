@@ -608,7 +608,7 @@ struct __libcpp_string_gets_noexcept_iterator
 
 template <class _CharT, class _Traits, class _Tp>
 struct __can_be_converted_to_string_view : public _LIBCPP_BOOL_CONSTANT(
-	( is_convertible<const _Tp&, basic_string_view<_CharT, _Traits> >::value &&
+    ( is_convertible<const _Tp&, basic_string_view<_CharT, _Traits> >::value &&
      !is_convertible<const _Tp&, const _CharT*>::value)) {};
 
 #ifdef _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
@@ -901,7 +901,8 @@ public:
     void shrink_to_fit() _NOEXCEPT {reserve();}
     _LIBCPP_INLINE_VISIBILITY
     void clear() _NOEXCEPT;
-    _LIBCPP_INLINE_VISIBILITY bool empty() const _NOEXCEPT {return size() == 0;}
+    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
+    bool empty() const _NOEXCEPT {return size() == 0;}
 
     _LIBCPP_INLINE_VISIBILITY const_reference operator[](size_type __pos) const _NOEXCEPT;
     _LIBCPP_INLINE_VISIBILITY reference       operator[](size_type __pos)       _NOEXCEPT;
@@ -1756,10 +1757,10 @@ template <class _CharT, class _Traits, class _Allocator>
 template <class _Tp>
 basic_string<_CharT, _Traits, _Allocator>::basic_string(
              const _Tp& __t, size_type __pos, size_type __n, const allocator_type& __a,
-			 typename enable_if<__can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value, void>::type *)
+             typename enable_if<__can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value, void>::type *)
     : __r_(__second_tag(), __a)
 {
-	__self_view __sv = __self_view(__t).substr(__pos, __n);
+    __self_view __sv = __self_view(__t).substr(__pos, __n);
     __init(__sv.data(), __sv.size());
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->__insert_c(this);
@@ -2145,7 +2146,7 @@ template <class _Tp>
 typename enable_if
 <
     __can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value,
-	basic_string<_CharT, _Traits, _Allocator>&
+    basic_string<_CharT, _Traits, _Allocator>&
 >::type
 basic_string<_CharT, _Traits, _Allocator>::assign(const _Tp & __t, size_type __pos, size_type __n)
 {
@@ -2493,7 +2494,7 @@ template <class _Tp>
 typename enable_if
 <
     __can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value,
-	basic_string<_CharT, _Traits, _Allocator>&
+    basic_string<_CharT, _Traits, _Allocator>&
 >::type
 basic_string<_CharT, _Traits, _Allocator>::insert(size_type __pos1, const _Tp& __t,
                                                   size_type __pos2, size_type __n)
@@ -2682,8 +2683,8 @@ template <class _CharT, class _Traits, class _Allocator>
 template <class _Tp>
 typename enable_if
 <
-	__can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value,
-	basic_string<_CharT, _Traits, _Allocator>&
+    __can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value,
+    basic_string<_CharT, _Traits, _Allocator>&
 >::type
 basic_string<_CharT, _Traits, _Allocator>::replace(size_type __pos1, size_type __n1, const _Tp& __t,
                                                    size_type __pos2, size_type __n2)
@@ -3462,8 +3463,8 @@ template <class _CharT, class _Traits, class _Allocator>
 template <class _Tp>
 typename enable_if
 <
-	__can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value,
-	int
+    __can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value,
+    int
 >::type
 basic_string<_CharT, _Traits, _Allocator>::compare(size_type __pos1,
                                                    size_type __n1,

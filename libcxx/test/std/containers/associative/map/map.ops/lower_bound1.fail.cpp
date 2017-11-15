@@ -34,7 +34,7 @@ int main()
     {
     typedef std::map<int, double, transparent_less_no_type> M;
 
-    M().lower_bound(C2Int{5});
+    (void)M().lower_bound(C2Int{5});
     }
 }
 #endif
