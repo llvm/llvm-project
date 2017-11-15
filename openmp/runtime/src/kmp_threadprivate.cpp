@@ -228,6 +228,13 @@ void __kmp_common_destroy_gtid(int gtid) {
   struct private_common *tn;
   struct shared_common *d_tn;
 
+  if (!TCR_4(__kmp_init_gtid)) {
+    // This is possible when one of multiple roots initiates early library
+    // termination in a sequential region while other teams are active, and its
+    // child threads are about to end.
+    return;
+  }
+
   KC_TRACE(10, ("__kmp_common_destroy_gtid: T#%d called\n", gtid));
   if ((__kmp_foreign_tp) ? (!KMP_INITIAL_GTID(gtid)) : (!KMP_UBER_GTID(gtid))) {
 
