@@ -20,7 +20,6 @@ import os
 import platform
 import unittest2
 
-
 class TestSwiftStepping(lldbtest.TestBase):
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
