@@ -26,7 +26,6 @@ class TestSwiftStructChangeRerun(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.skipIf(debug_info=decorators.no_match("dsym"))
-    @decorators.expectedFailureAll(bugnumber="rdar://35459092")
     @decorators.swiftTest
     def test_swift_struct_change_rerun(self):
         """Test that we display self correctly for an inline-initialized struct"""
@@ -104,7 +103,6 @@ class TestSwiftStructChangeRerun(TestBase):
         process = target.LaunchSimple(None, None, os.getcwd())
 
         self.assertTrue(process, PROCESS_IS_VALID)
-
         # Frame #0 should be at our breakpoint.
         threads = lldbutil.get_threads_stopped_at_breakpoint(
             process, breakpoint)
