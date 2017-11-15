@@ -26,11 +26,8 @@ body:             |
     liveins: %xmm0
 
     ; ALL-LABEL: name: test
-    ; ALL: registers:
-    ; ALL-NEXT: id: 0, class: fr32
-    ; ALL-NEXT: id: 1, class: fr64
-    ; ALL: [[COPY:%[0-9]+]] = COPY %xmm0
-    ; ALL: [[CVTSS2SDrr:%[0-9]+]] = CVTSS2SDrr [[COPY]]
+    ; ALL: [[COPY:%[0-9]+]]:fr32 = COPY %xmm0
+    ; ALL: [[CVTSS2SDrr:%[0-9]+]]:fr64 = CVTSS2SDrr [[COPY]]
     ; ALL: %xmm0 = COPY [[CVTSS2SDrr]]
     ; ALL: RET 0, implicit %xmm0
     %0(s32) = COPY %xmm0

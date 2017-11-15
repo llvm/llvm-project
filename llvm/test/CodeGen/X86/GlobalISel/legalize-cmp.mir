@@ -48,10 +48,10 @@ body:             |
     liveins: %edi, %esi
 
     ; CHECK-LABEL: name: test_cmp_i8
-    ; CHECK: [[COPY:%[0-9]+]](s8) = COPY %dil
-    ; CHECK: [[COPY1:%[0-9]+]](s8) = COPY %sil
-    ; CHECK: [[ICMP:%[0-9]+]](s1) = G_ICMP intpred(ult), [[COPY]](s8), [[COPY1]]
-    ; CHECK: [[ZEXT:%[0-9]+]](s32) = G_ZEXT [[ICMP]](s1)
+    ; CHECK: [[COPY:%[0-9]+]]:_(s8) = COPY %dil
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s8) = COPY %sil
+    ; CHECK: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ult), [[COPY]](s8), [[COPY1]]
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[ICMP]](s1)
     ; CHECK: %eax = COPY [[ZEXT]](s32)
     ; CHECK: RET 0, implicit %eax
     %0(s8) = COPY %dil
@@ -77,10 +77,10 @@ body:             |
     liveins: %edi, %esi
 
     ; CHECK-LABEL: name: test_cmp_i16
-    ; CHECK: [[COPY:%[0-9]+]](s16) = COPY %di
-    ; CHECK: [[COPY1:%[0-9]+]](s16) = COPY %si
-    ; CHECK: [[ICMP:%[0-9]+]](s1) = G_ICMP intpred(ult), [[COPY]](s16), [[COPY1]]
-    ; CHECK: [[ZEXT:%[0-9]+]](s32) = G_ZEXT [[ICMP]](s1)
+    ; CHECK: [[COPY:%[0-9]+]]:_(s16) = COPY %di
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s16) = COPY %si
+    ; CHECK: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ult), [[COPY]](s16), [[COPY1]]
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[ICMP]](s1)
     ; CHECK: %eax = COPY [[ZEXT]](s32)
     ; CHECK: RET 0, implicit %eax
     %0(s16) = COPY %di
@@ -106,10 +106,10 @@ body:             |
     liveins: %edi, %esi
 
     ; CHECK-LABEL: name: test_cmp_i32
-    ; CHECK: [[COPY:%[0-9]+]](s32) = COPY %edi
-    ; CHECK: [[COPY1:%[0-9]+]](s32) = COPY %esi
-    ; CHECK: [[ICMP:%[0-9]+]](s1) = G_ICMP intpred(ult), [[COPY]](s32), [[COPY1]]
-    ; CHECK: [[ZEXT:%[0-9]+]](s32) = G_ZEXT [[ICMP]](s1)
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY %edi
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY %esi
+    ; CHECK: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ult), [[COPY]](s32), [[COPY1]]
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[ICMP]](s1)
     ; CHECK: %eax = COPY [[ZEXT]](s32)
     ; CHECK: RET 0, implicit %eax
     %0(s32) = COPY %edi
@@ -135,10 +135,10 @@ body:             |
     liveins: %rdi, %rsi
 
     ; CHECK-LABEL: name: test_cmp_i64
-    ; CHECK: [[COPY:%[0-9]+]](s64) = COPY %rdi
-    ; CHECK: [[COPY1:%[0-9]+]](s64) = COPY %rsi
-    ; CHECK: [[ICMP:%[0-9]+]](s1) = G_ICMP intpred(ult), [[COPY]](s64), [[COPY1]]
-    ; CHECK: [[ZEXT:%[0-9]+]](s32) = G_ZEXT [[ICMP]](s1)
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY %rdi
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY %rsi
+    ; CHECK: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ult), [[COPY]](s64), [[COPY1]]
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[ICMP]](s1)
     ; CHECK: %eax = COPY [[ZEXT]](s32)
     ; CHECK: RET 0, implicit %eax
     %0(s64) = COPY %rdi
@@ -164,10 +164,10 @@ body:             |
     liveins: %rdi, %rsi
 
     ; CHECK-LABEL: name: test_cmp_p0
-    ; CHECK: [[COPY:%[0-9]+]](p0) = COPY %rdi
-    ; CHECK: [[COPY1:%[0-9]+]](p0) = COPY %rsi
-    ; CHECK: [[ICMP:%[0-9]+]](s1) = G_ICMP intpred(ult), [[COPY]](p0), [[COPY1]]
-    ; CHECK: [[ZEXT:%[0-9]+]](s32) = G_ZEXT [[ICMP]](s1)
+    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY %rdi
+    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY %rsi
+    ; CHECK: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ult), [[COPY]](p0), [[COPY1]]
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[ICMP]](s1)
     ; CHECK: %eax = COPY [[ZEXT]](s32)
     ; CHECK: RET 0, implicit %eax
     %0(p0) = COPY %rdi

@@ -76,9 +76,9 @@ body:             |
     liveins: %edi
 
     ; CHECK-LABEL: name: test_sext_i1
-    ; CHECK: [[COPY:%[0-9]+]](s8) = COPY %dil
-    ; CHECK: [[TRUNC:%[0-9]+]](s1) = G_TRUNC [[COPY]](s8)
-    ; CHECK: [[SEXT:%[0-9]+]](s64) = G_SEXT [[TRUNC]](s1)
+    ; CHECK: [[COPY:%[0-9]+]]:_(s8) = COPY %dil
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY]](s8)
+    ; CHECK: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[TRUNC]](s1)
     ; CHECK: %rax = COPY [[SEXT]](s64)
     ; CHECK: RET 0, implicit %rax
     %0(s8) = COPY %dil
@@ -101,8 +101,8 @@ body:             |
     liveins: %edi
 
     ; CHECK-LABEL: name: test_sext_i8
-    ; CHECK: [[COPY:%[0-9]+]](s8) = COPY %dil
-    ; CHECK: [[SEXT:%[0-9]+]](s64) = G_SEXT [[COPY]](s8)
+    ; CHECK: [[COPY:%[0-9]+]]:_(s8) = COPY %dil
+    ; CHECK: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[COPY]](s8)
     ; CHECK: %rax = COPY [[SEXT]](s64)
     ; CHECK: RET 0, implicit %rax
     %0(s8) = COPY %dil
@@ -124,8 +124,8 @@ body:             |
     liveins: %edi
 
     ; CHECK-LABEL: name: test_sext_i16
-    ; CHECK: [[COPY:%[0-9]+]](s16) = COPY %di
-    ; CHECK: [[SEXT:%[0-9]+]](s64) = G_SEXT [[COPY]](s16)
+    ; CHECK: [[COPY:%[0-9]+]]:_(s16) = COPY %di
+    ; CHECK: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[COPY]](s16)
     ; CHECK: %rax = COPY [[SEXT]](s64)
     ; CHECK: RET 0, implicit %rax
     %0(s16) = COPY %di
@@ -147,8 +147,8 @@ body:             |
     liveins: %edi
 
     ; CHECK-LABEL: name: test_sext_i32
-    ; CHECK: [[COPY:%[0-9]+]](s32) = COPY %edi
-    ; CHECK: [[SEXT:%[0-9]+]](s64) = G_SEXT [[COPY]](s32)
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY %edi
+    ; CHECK: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[COPY]](s32)
     ; CHECK: %rax = COPY [[SEXT]](s64)
     ; CHECK: RET 0, implicit %rax
     %0(s32) = COPY %edi
@@ -171,9 +171,9 @@ body:             |
     liveins: %edi
 
     ; CHECK-LABEL: name: test_zext_i1
-    ; CHECK: [[COPY:%[0-9]+]](s8) = COPY %dil
-    ; CHECK: [[TRUNC:%[0-9]+]](s1) = G_TRUNC [[COPY]](s8)
-    ; CHECK: [[ZEXT:%[0-9]+]](s64) = G_ZEXT [[TRUNC]](s1)
+    ; CHECK: [[COPY:%[0-9]+]]:_(s8) = COPY %dil
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY]](s8)
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[TRUNC]](s1)
     ; CHECK: %rax = COPY [[ZEXT]](s64)
     ; CHECK: RET 0, implicit %rax
     %0(s8) = COPY %dil
@@ -196,8 +196,8 @@ body:             |
     liveins: %edi
 
     ; CHECK-LABEL: name: test_zext_i8
-    ; CHECK: [[COPY:%[0-9]+]](s8) = COPY %dil
-    ; CHECK: [[ZEXT:%[0-9]+]](s64) = G_ZEXT [[COPY]](s8)
+    ; CHECK: [[COPY:%[0-9]+]]:_(s8) = COPY %dil
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY]](s8)
     ; CHECK: %rax = COPY [[ZEXT]](s64)
     ; CHECK: RET 0, implicit %rax
     %0(s8) = COPY %dil
@@ -219,8 +219,8 @@ body:             |
     liveins: %edi
 
     ; CHECK-LABEL: name: test_zext_i16
-    ; CHECK: [[COPY:%[0-9]+]](s16) = COPY %di
-    ; CHECK: [[ZEXT:%[0-9]+]](s64) = G_ZEXT [[COPY]](s16)
+    ; CHECK: [[COPY:%[0-9]+]]:_(s16) = COPY %di
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY]](s16)
     ; CHECK: %rax = COPY [[ZEXT]](s64)
     ; CHECK: RET 0, implicit %rax
     %0(s16) = COPY %di
@@ -242,8 +242,8 @@ body:             |
     liveins: %edi
 
     ; CHECK-LABEL: name: test_zext_i32
-    ; CHECK: [[COPY:%[0-9]+]](s32) = COPY %edi
-    ; CHECK: [[ZEXT:%[0-9]+]](s64) = G_ZEXT [[COPY]](s32)
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY %edi
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY]](s32)
     ; CHECK: %rax = COPY [[ZEXT]](s64)
     ; CHECK: RET 0, implicit %rax
     %0(s32) = COPY %edi
@@ -266,9 +266,9 @@ body:             |
     liveins: %edi
 
     ; CHECK-LABEL: name: test_anyext_i1
-    ; CHECK: [[COPY:%[0-9]+]](s8) = COPY %dil
-    ; CHECK: [[TRUNC:%[0-9]+]](s1) = G_TRUNC [[COPY]](s8)
-    ; CHECK: [[ANYEXT:%[0-9]+]](s64) = G_ANYEXT [[TRUNC]](s1)
+    ; CHECK: [[COPY:%[0-9]+]]:_(s8) = COPY %dil
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY]](s8)
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[TRUNC]](s1)
     ; CHECK: %rax = COPY [[ANYEXT]](s64)
     ; CHECK: RET 0, implicit %rax
     %0(s8) = COPY %dil
@@ -291,8 +291,8 @@ body:             |
     liveins: %edi
 
     ; CHECK-LABEL: name: test_anyext_i8
-    ; CHECK: [[COPY:%[0-9]+]](s8) = COPY %dil
-    ; CHECK: [[ANYEXT:%[0-9]+]](s64) = G_ANYEXT [[COPY]](s8)
+    ; CHECK: [[COPY:%[0-9]+]]:_(s8) = COPY %dil
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[COPY]](s8)
     ; CHECK: %rax = COPY [[ANYEXT]](s64)
     ; CHECK: RET 0, implicit %rax
     %0(s8) = COPY %dil
@@ -314,8 +314,8 @@ body:             |
     liveins: %edi
 
     ; CHECK-LABEL: name: test_anyext_i16
-    ; CHECK: [[COPY:%[0-9]+]](s16) = COPY %di
-    ; CHECK: [[ANYEXT:%[0-9]+]](s64) = G_ANYEXT [[COPY]](s16)
+    ; CHECK: [[COPY:%[0-9]+]]:_(s16) = COPY %di
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[COPY]](s16)
     ; CHECK: %rax = COPY [[ANYEXT]](s64)
     ; CHECK: RET 0, implicit %rax
     %0(s16) = COPY %di
@@ -337,8 +337,8 @@ body:             |
     liveins: %edi
 
     ; CHECK-LABEL: name: test_anyext_i32
-    ; CHECK: [[COPY:%[0-9]+]](s32) = COPY %edi
-    ; CHECK: [[ANYEXT:%[0-9]+]](s64) = G_ANYEXT [[COPY]](s32)
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY %edi
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[COPY]](s32)
     ; CHECK: %rax = COPY [[ANYEXT]](s64)
     ; CHECK: RET 0, implicit %rax
     %0(s32) = COPY %edi

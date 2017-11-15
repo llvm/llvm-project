@@ -14,7 +14,7 @@ body: |
   ; CHECK-NEXT: MOV64mr [[SLOT:%stack.[0-9]+]], 1, _, 0, _, [[VAL]]
   ; CHECK-NEXT: NOOP csr_noregs
   ; We need to reload before the (implicit) use.
-  ; CHECK-NEXT: [[RELOADED_VAL:%[0-9]+]] = MOV64rm [[SLOT]], 1, _, 0, _
+  ; CHECK-NEXT: [[RELOADED_VAL:%[0-9]+]]:gr64 = MOV64rm [[SLOT]], 1, _, 0, _
   ; CHECK-NEXT: NOOP implicit [[RELOADED_VAL]]
   NOOP implicit-def %0
   NOOP csr_noregs

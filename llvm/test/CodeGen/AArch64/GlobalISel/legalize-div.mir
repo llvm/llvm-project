@@ -26,30 +26,30 @@ body: |
     %2(s8) = G_TRUNC %0
     %3(s8) = G_TRUNC %1
 
-    ; CHECK: [[A:%.*]](s64) = COPY %x0
-    ; CHECK: [[B:%.*]](s64) = COPY %x1
-    ; CHECK: [[C1:%.*]](s32) = G_CONSTANT i32 24
-    ; CHECK: [[S1:%.*]](s32) = G_TRUNC [[A]]
-    ; CHECK: [[SHL1:%.*]](s32) = G_SHL [[S1]], [[C1]]
-    ; CHECK: [[SEXT1:%.*]](s32) = G_ASHR [[SHL1]], [[C1]]
-    ; CHECK: [[C2:%.*]](s32) = G_CONSTANT i32 24
-    ; CHECK: [[S2:%.*]](s32) = G_TRUNC [[B]]
-    ; CHECK: [[SHL2:%.*]](s32) = G_SHL [[S2]], [[C2]]
-    ; CHECK: [[SEXT2:%.*]](s32) = G_ASHR [[SHL2]], [[C2]]
-    ; CHECK: [[DIV:%.*]](s32) = G_SDIV [[SEXT1]], [[SEXT2]]
-    ; CHECK: [[RES:%.*]](s8) = G_TRUNC [[DIV]]
+    ; CHECK: [[A:%.*]]:_(s64) = COPY %x0
+    ; CHECK: [[B:%.*]]:_(s64) = COPY %x1
+    ; CHECK: [[C1:%.*]]:_(s32) = G_CONSTANT i32 24
+    ; CHECK: [[S1:%.*]]:_(s32) = G_TRUNC [[A]]
+    ; CHECK: [[SHL1:%.*]]:_(s32) = G_SHL [[S1]], [[C1]]
+    ; CHECK: [[SEXT1:%.*]]:_(s32) = G_ASHR [[SHL1]], [[C1]]
+    ; CHECK: [[C2:%.*]]:_(s32) = G_CONSTANT i32 24
+    ; CHECK: [[S2:%.*]]:_(s32) = G_TRUNC [[B]]
+    ; CHECK: [[SHL2:%.*]]:_(s32) = G_SHL [[S2]], [[C2]]
+    ; CHECK: [[SEXT2:%.*]]:_(s32) = G_ASHR [[SHL2]], [[C2]]
+    ; CHECK: [[DIV:%.*]]:_(s32) = G_SDIV [[SEXT1]], [[SEXT2]]
+    ; CHECK: [[RES:%.*]]:_(s8) = G_TRUNC [[DIV]]
 
     %4(s8) = G_SDIV %2, %3
 
 
-    ; CHECK: [[CMASK1:%.*]](s32) = G_CONSTANT i32 255
-    ; CHECK: [[T1:%.*]](s32) = G_TRUNC [[A]]
-    ; CHECK: [[LHS32:%.*]](s32) = G_AND [[T1]], [[CMASK1]]
-    ; CHECK: [[CMASK2:%.*]](s32) = G_CONSTANT i32 255
-    ; CHECK: [[T2:%.*]](s32) = G_TRUNC [[B]]
-    ; CHECK: [[RHS32:%.*]](s32) = G_AND [[T2]], [[CMASK2]]
-    ; CHECK: [[QUOT32:%[0-9]+]](s32) = G_UDIV [[LHS32]], [[RHS32]]
-    ; CHECK: [[RES:%[0-9]+]](s8) = G_TRUNC [[QUOT32]]
+    ; CHECK: [[CMASK1:%.*]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK: [[T1:%.*]]:_(s32) = G_TRUNC [[A]]
+    ; CHECK: [[LHS32:%.*]]:_(s32) = G_AND [[T1]], [[CMASK1]]
+    ; CHECK: [[CMASK2:%.*]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK: [[T2:%.*]]:_(s32) = G_TRUNC [[B]]
+    ; CHECK: [[RHS32:%.*]]:_(s32) = G_AND [[T2]], [[CMASK2]]
+    ; CHECK: [[QUOT32:%[0-9]+]]:_(s32) = G_UDIV [[LHS32]], [[RHS32]]
+    ; CHECK: [[RES:%[0-9]+]]:_(s8) = G_TRUNC [[QUOT32]]
     %5(s8) = G_UDIV %2, %3
 
 ...

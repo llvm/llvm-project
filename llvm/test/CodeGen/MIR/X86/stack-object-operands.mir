@@ -32,10 +32,10 @@ stack:
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: test
-    ; CHECK: [[MOV32rm:%[0-9]+]] = MOV32rm %fixed-stack.0, 1, _, 0, _
+    ; CHECK: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, _, 0, _
     ; CHECK: MOV32mr %stack.0.b, 1, _, 0, _, [[MOV32rm]]
     ; CHECK: MOV32mi %stack.1, 1, _, 0, _, 2
-    ; CHECK: [[MOV32rm1:%[0-9]+]] = MOV32rm %stack.0.b, 1, _, 0, _
+    ; CHECK: [[MOV32rm1:%[0-9]+]]:gr32 = MOV32rm %stack.0.b, 1, _, 0, _
     ; CHECK: %eax = COPY [[MOV32rm1]]
     ; CHECK: RETL %eax
     %0 = MOV32rm %fixed-stack.0, 1, _, 0, _

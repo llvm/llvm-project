@@ -24,11 +24,11 @@ body:             |
   bb.1 (%ir-block.0):
 
     ; CHECK-LABEL: name: test_sub_i1
-    ; CHECK: [[COPY:%[0-9]+]](s32) = COPY %edx
-    ; CHECK: [[TRUNC:%[0-9]+]](s8) = G_TRUNC [[COPY]](s32)
-    ; CHECK: [[TRUNC1:%[0-9]+]](s8) = G_TRUNC [[COPY]](s32)
-    ; CHECK: [[SUB:%[0-9]+]](s8) = G_SUB [[TRUNC]], [[TRUNC1]]
-    ; CHECK: [[TRUNC2:%[0-9]+]](s1) = G_TRUNC [[SUB]](s8)
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY %edx
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
+    ; CHECK: [[SUB:%[0-9]+]]:_(s8) = G_SUB [[TRUNC]], [[TRUNC1]]
+    ; CHECK: [[TRUNC2:%[0-9]+]]:_(s1) = G_TRUNC [[SUB]](s8)
     ; CHECK: RET 0
     %0(s32) = COPY %edx
     %1(s1) = G_TRUNC %0(s32)
@@ -51,9 +51,9 @@ body:             |
 
     ; CHECK-LABEL: name: test_sub_i32
     ; CHECK: liveins: %edi, %esi
-    ; CHECK: [[COPY:%[0-9]+]](s32) = COPY %edi
-    ; CHECK: [[COPY1:%[0-9]+]](s32) = COPY %esi
-    ; CHECK: [[SUB:%[0-9]+]](s32) = G_SUB [[COPY]], [[COPY1]]
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY %edi
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY %esi
+    ; CHECK: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[COPY]], [[COPY1]]
     ; CHECK: %eax = COPY [[SUB]](s32)
     ; CHECK: RET 0, implicit %eax
     %0(s32) = COPY %edi

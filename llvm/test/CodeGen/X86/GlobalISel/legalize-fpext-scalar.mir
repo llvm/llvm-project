@@ -22,8 +22,8 @@ body:             |
     liveins: %xmm0
 
     ; ALL-LABEL: name: test
-    ; ALL: [[COPY:%[0-9]+]](s32) = COPY %xmm0
-    ; ALL: [[FPEXT:%[0-9]+]](s64) = G_FPEXT [[COPY]](s32)
+    ; ALL: [[COPY:%[0-9]+]]:_(s32) = COPY %xmm0
+    ; ALL: [[FPEXT:%[0-9]+]]:_(s64) = G_FPEXT [[COPY]](s32)
     ; ALL: %xmm0 = COPY [[FPEXT]](s64)
     ; ALL: RET 0, implicit %xmm0
     %0(s32) = COPY %xmm0

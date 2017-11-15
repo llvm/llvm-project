@@ -3,21 +3,21 @@
 # Check that constant is in SGPR registers
 
 # GCN-LABEL: {{^}}name: const_to_sgpr{{$}}
-# GCN:        %[[HI:[0-9]+]] = S_MOV_B32 0
-# GCN-NEXT:   %[[LO:[0-9]+]] = S_MOV_B32 1048576
-# GCN-NEXT:   %[[SGPR_PAIR:[0-9]+]] = REG_SEQUENCE killed %[[LO]], 1, killed %[[HI]], 2
+# GCN:        %[[HI:[0-9]+]]:sreg_32_xm0 = S_MOV_B32 0
+# GCN-NEXT:   %[[LO:[0-9]+]]:sreg_32_xm0 = S_MOV_B32 1048576
+# GCN-NEXT:   %[[SGPR_PAIR:[0-9]+]]:sreg_64 = REG_SEQUENCE killed %[[LO]], 1, killed %[[HI]], 2
 # GCN-NEXT:   V_CMP_LT_U64_e64 killed %{{[0-9]+}}, %[[SGPR_PAIR]], implicit %exec
 
 
 # GCN-LABEL: {{^}}name: const_to_sgpr_multiple_use{{$}}
-# GCN:        %[[HI:[0-9]+]] = S_MOV_B32 0
-# GCN-NEXT:   %[[LO:[0-9]+]] = S_MOV_B32 1048576
-# GCN-NEXT:   %[[SGPR_PAIR:[0-9]+]] = REG_SEQUENCE killed %[[LO]], 1, killed %[[HI]], 2
+# GCN:        %[[HI:[0-9]+]]:sreg_32_xm0 = S_MOV_B32 0
+# GCN-NEXT:   %[[LO:[0-9]+]]:sreg_32_xm0 = S_MOV_B32 1048576
+# GCN-NEXT:   %[[SGPR_PAIR:[0-9]+]]:sreg_64 = REG_SEQUENCE killed %[[LO]], 1, killed %[[HI]], 2
 # GCN-NEXT:   V_CMP_LT_U64_e64 killed %{{[0-9]+}}, %[[SGPR_PAIR]], implicit %exec
 # GCN-NEXT:   V_CMP_LT_U64_e64 killed %{{[0-9]+}}, %[[SGPR_PAIR]], implicit %exec
 
 # GCN-LABEL: {{^}}name: const_to_sgpr_subreg{{$}}
-# GCN:       %[[OP0:[0-9]+]] = REG_SEQUENCE killed %{{[0-9]+}}, 1, killed %{{[0-9]+}}, 2
+# GCN:       %[[OP0:[0-9]+]]:vreg_64 = REG_SEQUENCE killed %{{[0-9]+}}, 1, killed %{{[0-9]+}}, 2
 # GCN-NEXT:  V_CMP_LT_U32_e64 killed %[[OP0]].sub0, 12, implicit %exec
 
 --- |

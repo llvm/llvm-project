@@ -143,24 +143,24 @@ body:             |
   ; ALL: bb.0.entry:
   ; ALL:   successors: %bb.1.cond.true(0x40000000), %bb.2.cond.false(0x40000000)
   ; ALL:   liveins: %edi, %edx, %esi
-  ; ALL:   [[COPY:%[0-9]+]](s32) = COPY %edi
-  ; ALL:   [[COPY1:%[0-9]+]](s1) = COPY %esi
-  ; ALL:   [[COPY2:%[0-9]+]](s1) = COPY %edx
-  ; ALL:   [[C:%[0-9]+]](s32) = G_CONSTANT i32 0
-  ; ALL:   [[ICMP:%[0-9]+]](s1) = G_ICMP intpred(sgt), [[COPY]](s32), [[C]]
+  ; ALL:   [[COPY:%[0-9]+]]:_(s32) = COPY %edi
+  ; ALL:   [[COPY1:%[0-9]+]]:_(s1) = COPY %esi
+  ; ALL:   [[COPY2:%[0-9]+]]:_(s1) = COPY %edx
+  ; ALL:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; ALL:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[COPY]](s32), [[C]]
   ; ALL:   G_BRCOND [[ICMP]](s1), %bb.1.cond.true
   ; ALL:   G_BR %bb.2.cond.false
   ; ALL: bb.1.cond.true:
   ; ALL:   successors: %bb.3.cond.end(0x80000000)
-  ; ALL:   [[ANYEXT:%[0-9]+]](s8) = G_ANYEXT [[COPY1]](s1)
+  ; ALL:   [[ANYEXT:%[0-9]+]]:_(s8) = G_ANYEXT [[COPY1]](s1)
   ; ALL:   G_BR %bb.3.cond.end
   ; ALL: bb.2.cond.false:
   ; ALL:   successors: %bb.3.cond.end(0x80000000)
-  ; ALL:   [[ANYEXT1:%[0-9]+]](s8) = G_ANYEXT [[COPY2]](s1)
+  ; ALL:   [[ANYEXT1:%[0-9]+]]:_(s8) = G_ANYEXT [[COPY2]](s1)
   ; ALL: bb.3.cond.end:
-  ; ALL:   [[PHI:%[0-9]+]](s8) = G_PHI [[ANYEXT]](s8), %bb.1.cond.true, [[ANYEXT1]](s8), %bb.2.cond.false
-  ; ALL:   [[TRUNC:%[0-9]+]](s1) = G_TRUNC [[PHI]](s8)
-  ; ALL:   [[ZEXT:%[0-9]+]](s8) = G_ZEXT [[TRUNC]](s1)
+  ; ALL:   [[PHI:%[0-9]+]]:_(s8) = G_PHI [[ANYEXT]](s8), %bb.1.cond.true, [[ANYEXT1]](s8), %bb.2.cond.false
+  ; ALL:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[PHI]](s8)
+  ; ALL:   [[ZEXT:%[0-9]+]]:_(s8) = G_ZEXT [[TRUNC]](s1)
   ; ALL:   %al = COPY [[ZEXT]](s8)
   ; ALL:   RET 0, implicit %al
   bb.1.entry:
@@ -216,11 +216,11 @@ body:             |
   ; ALL: bb.0.entry:
   ; ALL:   successors: %bb.1.cond.true(0x40000000), %bb.2.cond.false(0x40000000)
   ; ALL:   liveins: %edi, %edx, %esi
-  ; ALL:   [[COPY:%[0-9]+]](s32) = COPY %edi
-  ; ALL:   [[COPY1:%[0-9]+]](s8) = COPY %sil
-  ; ALL:   [[COPY2:%[0-9]+]](s8) = COPY %edx
-  ; ALL:   [[C:%[0-9]+]](s32) = G_CONSTANT i32 0
-  ; ALL:   [[ICMP:%[0-9]+]](s1) = G_ICMP intpred(sgt), [[COPY]](s32), [[C]]
+  ; ALL:   [[COPY:%[0-9]+]]:_(s32) = COPY %edi
+  ; ALL:   [[COPY1:%[0-9]+]]:_(s8) = COPY %sil
+  ; ALL:   [[COPY2:%[0-9]+]]:_(s8) = COPY %edx
+  ; ALL:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; ALL:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[COPY]](s32), [[C]]
   ; ALL:   G_BRCOND [[ICMP]](s1), %bb.1.cond.true
   ; ALL:   G_BR %bb.2.cond.false
   ; ALL: bb.1.cond.true:
@@ -229,7 +229,7 @@ body:             |
   ; ALL: bb.2.cond.false:
   ; ALL:   successors: %bb.3.cond.end(0x80000000)
   ; ALL: bb.3.cond.end:
-  ; ALL:   [[PHI:%[0-9]+]](s8) = G_PHI [[COPY1]](s8), %bb.1.cond.true, [[COPY2]](s8), %bb.2.cond.false
+  ; ALL:   [[PHI:%[0-9]+]]:_(s8) = G_PHI [[COPY1]](s8), %bb.1.cond.true, [[COPY2]](s8), %bb.2.cond.false
   ; ALL:   %al = COPY [[PHI]](s8)
   ; ALL:   RET 0, implicit %al
   bb.1.entry:
@@ -284,11 +284,11 @@ body:             |
   ; ALL: bb.0.entry:
   ; ALL:   successors: %bb.1.cond.true(0x40000000), %bb.2.cond.false(0x40000000)
   ; ALL:   liveins: %edi, %edx, %esi
-  ; ALL:   [[COPY:%[0-9]+]](s32) = COPY %edi
-  ; ALL:   [[COPY1:%[0-9]+]](s16) = COPY %si
-  ; ALL:   [[COPY2:%[0-9]+]](s16) = COPY %edx
-  ; ALL:   [[C:%[0-9]+]](s32) = G_CONSTANT i32 0
-  ; ALL:   [[ICMP:%[0-9]+]](s1) = G_ICMP intpred(sgt), [[COPY]](s32), [[C]]
+  ; ALL:   [[COPY:%[0-9]+]]:_(s32) = COPY %edi
+  ; ALL:   [[COPY1:%[0-9]+]]:_(s16) = COPY %si
+  ; ALL:   [[COPY2:%[0-9]+]]:_(s16) = COPY %edx
+  ; ALL:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; ALL:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[COPY]](s32), [[C]]
   ; ALL:   G_BRCOND [[ICMP]](s1), %bb.1.cond.true
   ; ALL:   G_BR %bb.2.cond.false
   ; ALL: bb.1.cond.true:
@@ -297,7 +297,7 @@ body:             |
   ; ALL: bb.2.cond.false:
   ; ALL:   successors: %bb.3.cond.end(0x80000000)
   ; ALL: bb.3.cond.end:
-  ; ALL:   [[PHI:%[0-9]+]](s16) = G_PHI [[COPY1]](s16), %bb.1.cond.true, [[COPY2]](s16), %bb.2.cond.false
+  ; ALL:   [[PHI:%[0-9]+]]:_(s16) = G_PHI [[COPY1]](s16), %bb.1.cond.true, [[COPY2]](s16), %bb.2.cond.false
   ; ALL:   %ax = COPY [[PHI]](s16)
   ; ALL:   RET 0, implicit %ax
   bb.1.entry:
@@ -352,11 +352,11 @@ body:             |
   ; ALL: bb.0.entry:
   ; ALL:   successors: %bb.1.cond.true(0x40000000), %bb.2.cond.false(0x40000000)
   ; ALL:   liveins: %edi, %edx, %esi
-  ; ALL:   [[COPY:%[0-9]+]](s32) = COPY %edi
-  ; ALL:   [[COPY1:%[0-9]+]](s32) = COPY %esi
-  ; ALL:   [[COPY2:%[0-9]+]](s32) = COPY %edx
-  ; ALL:   [[C:%[0-9]+]](s32) = G_CONSTANT i32 0
-  ; ALL:   [[ICMP:%[0-9]+]](s1) = G_ICMP intpred(sgt), [[COPY]](s32), [[C]]
+  ; ALL:   [[COPY:%[0-9]+]]:_(s32) = COPY %edi
+  ; ALL:   [[COPY1:%[0-9]+]]:_(s32) = COPY %esi
+  ; ALL:   [[COPY2:%[0-9]+]]:_(s32) = COPY %edx
+  ; ALL:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; ALL:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[COPY]](s32), [[C]]
   ; ALL:   G_BRCOND [[ICMP]](s1), %bb.1.cond.true
   ; ALL:   G_BR %bb.2.cond.false
   ; ALL: bb.1.cond.true:
@@ -365,7 +365,7 @@ body:             |
   ; ALL: bb.2.cond.false:
   ; ALL:   successors: %bb.3.cond.end(0x80000000)
   ; ALL: bb.3.cond.end:
-  ; ALL:   [[PHI:%[0-9]+]](s32) = G_PHI [[COPY1]](s32), %bb.1.cond.true, [[COPY2]](s32), %bb.2.cond.false
+  ; ALL:   [[PHI:%[0-9]+]]:_(s32) = G_PHI [[COPY1]](s32), %bb.1.cond.true, [[COPY2]](s32), %bb.2.cond.false
   ; ALL:   %eax = COPY [[PHI]](s32)
   ; ALL:   RET 0, implicit %eax
   bb.1.entry:
@@ -420,11 +420,11 @@ body:             |
   ; ALL: bb.0.entry:
   ; ALL:   successors: %bb.1.cond.true(0x40000000), %bb.2.cond.false(0x40000000)
   ; ALL:   liveins: %edi, %rdx, %rsi
-  ; ALL:   [[COPY:%[0-9]+]](s32) = COPY %edi
-  ; ALL:   [[COPY1:%[0-9]+]](s64) = COPY %rsi
-  ; ALL:   [[COPY2:%[0-9]+]](s64) = COPY %rdx
-  ; ALL:   [[C:%[0-9]+]](s32) = G_CONSTANT i32 0
-  ; ALL:   [[ICMP:%[0-9]+]](s1) = G_ICMP intpred(sgt), [[COPY]](s32), [[C]]
+  ; ALL:   [[COPY:%[0-9]+]]:_(s32) = COPY %edi
+  ; ALL:   [[COPY1:%[0-9]+]]:_(s64) = COPY %rsi
+  ; ALL:   [[COPY2:%[0-9]+]]:_(s64) = COPY %rdx
+  ; ALL:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; ALL:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[COPY]](s32), [[C]]
   ; ALL:   G_BRCOND [[ICMP]](s1), %bb.1.cond.true
   ; ALL:   G_BR %bb.2.cond.false
   ; ALL: bb.1.cond.true:
@@ -433,7 +433,7 @@ body:             |
   ; ALL: bb.2.cond.false:
   ; ALL:   successors: %bb.3.cond.end(0x80000000)
   ; ALL: bb.3.cond.end:
-  ; ALL:   [[PHI:%[0-9]+]](s64) = G_PHI [[COPY1]](s64), %bb.1.cond.true, [[COPY2]](s64), %bb.2.cond.false
+  ; ALL:   [[PHI:%[0-9]+]]:_(s64) = G_PHI [[COPY1]](s64), %bb.1.cond.true, [[COPY2]](s64), %bb.2.cond.false
   ; ALL:   %rax = COPY [[PHI]](s64)
   ; ALL:   RET 0, implicit %rax
   bb.1.entry:
@@ -488,11 +488,11 @@ body:             |
   ; ALL: bb.0.entry:
   ; ALL:   successors: %bb.1.cond.true(0x40000000), %bb.2.cond.false(0x40000000)
   ; ALL:   liveins: %edi, %xmm0, %xmm1
-  ; ALL:   [[COPY:%[0-9]+]](s32) = COPY %edi
-  ; ALL:   [[COPY1:%[0-9]+]](s32) = COPY %xmm0
-  ; ALL:   [[COPY2:%[0-9]+]](s32) = COPY %xmm1
-  ; ALL:   [[C:%[0-9]+]](s32) = G_CONSTANT i32 0
-  ; ALL:   [[ICMP:%[0-9]+]](s1) = G_ICMP intpred(sgt), [[COPY]](s32), [[C]]
+  ; ALL:   [[COPY:%[0-9]+]]:_(s32) = COPY %edi
+  ; ALL:   [[COPY1:%[0-9]+]]:_(s32) = COPY %xmm0
+  ; ALL:   [[COPY2:%[0-9]+]]:_(s32) = COPY %xmm1
+  ; ALL:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; ALL:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[COPY]](s32), [[C]]
   ; ALL:   G_BRCOND [[ICMP]](s1), %bb.1.cond.true
   ; ALL:   G_BR %bb.2.cond.false
   ; ALL: bb.1.cond.true:
@@ -501,7 +501,7 @@ body:             |
   ; ALL: bb.2.cond.false:
   ; ALL:   successors: %bb.3.cond.end(0x80000000)
   ; ALL: bb.3.cond.end:
-  ; ALL:   [[PHI:%[0-9]+]](s32) = G_PHI [[COPY1]](s32), %bb.1.cond.true, [[COPY2]](s32), %bb.2.cond.false
+  ; ALL:   [[PHI:%[0-9]+]]:_(s32) = G_PHI [[COPY1]](s32), %bb.1.cond.true, [[COPY2]](s32), %bb.2.cond.false
   ; ALL:   %xmm0 = COPY [[PHI]](s32)
   ; ALL:   RET 0, implicit %xmm0
   bb.1.entry:
@@ -556,11 +556,11 @@ body:             |
   ; ALL: bb.0.entry:
   ; ALL:   successors: %bb.1.cond.true(0x40000000), %bb.2.cond.false(0x40000000)
   ; ALL:   liveins: %edi, %xmm0, %xmm1
-  ; ALL:   [[COPY:%[0-9]+]](s32) = COPY %edi
-  ; ALL:   [[COPY1:%[0-9]+]](s64) = COPY %xmm0
-  ; ALL:   [[COPY2:%[0-9]+]](s64) = COPY %xmm1
-  ; ALL:   [[C:%[0-9]+]](s32) = G_CONSTANT i32 0
-  ; ALL:   [[ICMP:%[0-9]+]](s1) = G_ICMP intpred(sgt), [[COPY]](s32), [[C]]
+  ; ALL:   [[COPY:%[0-9]+]]:_(s32) = COPY %edi
+  ; ALL:   [[COPY1:%[0-9]+]]:_(s64) = COPY %xmm0
+  ; ALL:   [[COPY2:%[0-9]+]]:_(s64) = COPY %xmm1
+  ; ALL:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; ALL:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[COPY]](s32), [[C]]
   ; ALL:   G_BRCOND [[ICMP]](s1), %bb.1.cond.true
   ; ALL:   G_BR %bb.2.cond.false
   ; ALL: bb.1.cond.true:
@@ -569,7 +569,7 @@ body:             |
   ; ALL: bb.2.cond.false:
   ; ALL:   successors: %bb.3.cond.end(0x80000000)
   ; ALL: bb.3.cond.end:
-  ; ALL:   [[PHI:%[0-9]+]](s64) = G_PHI [[COPY1]](s64), %bb.1.cond.true, [[COPY2]](s64), %bb.2.cond.false
+  ; ALL:   [[PHI:%[0-9]+]]:_(s64) = G_PHI [[COPY1]](s64), %bb.1.cond.true, [[COPY2]](s64), %bb.2.cond.false
   ; ALL:   %xmm0 = COPY [[PHI]](s64)
   ; ALL:   RET 0, implicit %xmm0
   bb.1.entry:

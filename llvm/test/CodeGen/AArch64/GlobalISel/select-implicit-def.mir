@@ -18,11 +18,8 @@ registers:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: implicit_def
-    ; CHECK: registers:
-    ; CHECK-NEXT: id: 0, class: gpr32
-    ; CHECK-NEXT: id: 1, class: gpr32
-    ; CHECK: [[DEF:%[0-9]+]] = IMPLICIT_DEF
-    ; CHECK: [[ADDWrr:%[0-9]+]] = ADDWrr [[DEF]], [[DEF]]
+    ; CHECK: [[DEF:%[0-9]+]]:gpr32 = IMPLICIT_DEF
+    ; CHECK: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[DEF]], [[DEF]]
     ; CHECK: %w0 = COPY [[ADDWrr]]
     %0(s32) = G_IMPLICIT_DEF
     %1(s32) = G_ADD %0, %0

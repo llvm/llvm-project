@@ -47,11 +47,11 @@ registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
   - { id: 2, class: vecr }
-# AVX2:                %2 = VPADDBYrr %0, %1
+# AVX2:                %2:vr256 = VPADDBYrr %0, %1
 #
-# AVX512VL:            %2 = VPADDBYrr %0, %1
+# AVX512VL:            %2:vr256 = VPADDBYrr %0, %1
 #
-# AVX512BWVL:          %2 = VPADDBZ256rr %0, %1
+# AVX512BWVL:          %2:vr256x = VPADDBZ256rr %0, %1
 body:             |
   bb.1 (%ir-block.0):
     liveins: %ymm0, %ymm1
@@ -87,11 +87,11 @@ registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
   - { id: 2, class: vecr }
-# AVX2:                %2 = VPADDWYrr %0, %1
+# AVX2:                %2:vr256 = VPADDWYrr %0, %1
 #
-# AVX512VL:            %2 = VPADDWYrr %0, %1
+# AVX512VL:            %2:vr256 = VPADDWYrr %0, %1
 #
-# AVX512BWVL:          %2 = VPADDWZ256rr %0, %1
+# AVX512BWVL:          %2:vr256x = VPADDWZ256rr %0, %1
 body:             |
   bb.1 (%ir-block.0):
     liveins: %ymm0, %ymm1
@@ -127,11 +127,11 @@ registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
   - { id: 2, class: vecr }
-# AVX2:                %2 = VPADDDYrr %0, %1
+# AVX2:                %2:vr256 = VPADDDYrr %0, %1
 #
-# AVX512VL:            %2 = VPADDDZ256rr %0, %1
+# AVX512VL:            %2:vr256x = VPADDDZ256rr %0, %1
 #
-# AVX512BWVL:          %2 = VPADDDZ256rr %0, %1
+# AVX512BWVL:          %2:vr256x = VPADDDZ256rr %0, %1
 body:             |
   bb.1 (%ir-block.0):
     liveins: %ymm0, %ymm1
@@ -167,11 +167,11 @@ registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
   - { id: 2, class: vecr }
-# AVX2:                %2 = VPADDQYrr %0, %1
+# AVX2:                %2:vr256 = VPADDQYrr %0, %1
 #
-# AVX512VL:            %2 = VPADDQZ256rr %0, %1
+# AVX512VL:            %2:vr256x = VPADDQZ256rr %0, %1
 #
-# AVX512BWVL:          %2 = VPADDQZ256rr %0, %1
+# AVX512BWVL:          %2:vr256x = VPADDQZ256rr %0, %1
 body:             |
   bb.1 (%ir-block.0):
     liveins: %ymm0, %ymm1

@@ -1,7 +1,7 @@
 # RUN: llc -mtriple=i386-linux-gnu   -mattr=+sse2 -global-isel -run-pass=legalizer %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=X32
 # RUN: llc -mtriple=x86_64-linux-gnu              -global-isel -run-pass=legalizer %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=X64
 
---- | 
+--- |
   define void @test_constant() { ret void }
   define void @test_fconstant() { ret void }
 
@@ -9,7 +9,7 @@
 ---
 name:            test_constant
 # ALL-LABEL: name:            test_constant
-registers:       
+registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
   - { id: 2, class: _ }
@@ -17,24 +17,24 @@ registers:
   - { id: 4, class: _ }
 body:             |
   bb.1 (%ir-block.0):
-    ; ALL: %5(s8) = G_CONSTANT i8 -1
-    ; ALL: %0(s1) = G_TRUNC %5(s8)
+    ; ALL: %5:_(s8) = G_CONSTANT i8 -1
+    ; ALL: %0:_(s1) = G_TRUNC %5(s8)
     %0(s1) = G_CONSTANT i1 1
 
-    ; ALL: %1(s8) = G_CONSTANT i8 8    
-    %1(s8) = G_CONSTANT i8 8   
+    ; ALL: %1:_(s8) = G_CONSTANT i8 8
+    %1(s8) = G_CONSTANT i8 8
 
-    ; ALL: %2(s16) = G_CONSTANT i16 16
+    ; ALL: %2:_(s16) = G_CONSTANT i16 16
     %2(s16) = G_CONSTANT i16 16
 
-    ; ALL: %3(s32) = G_CONSTANT i32 32
+    ; ALL: %3:_(s32) = G_CONSTANT i32 32
     %3(s32) = G_CONSTANT i32 32
 
-    ; X64: %4(s64) = G_CONSTANT i64 64
-    
-    ; X32: %6(s32) = G_CONSTANT i32 64
-    ; X32: %7(s32) = G_CONSTANT i32 0
-    ; X32: %4(s64) = G_MERGE_VALUES %6(s32), %7(s32) 
+    ; X64: %4:_(s64) = G_CONSTANT i64 64
+
+    ; X32: %6:_(s32) = G_CONSTANT i32 64
+    ; X32: %7:_(s32) = G_CONSTANT i32 0
+    ; X32: %4:_(s64) = G_MERGE_VALUES %6(s32), %7(s32)
     %4(s64) = G_CONSTANT i64 64
 
     RET 0
@@ -47,8 +47,8 @@ registers:
   - { id: 1, class: _ }
 body: |
   bb.0:
-    ; ALL: %0(s32) = G_FCONSTANT  float 1.000000e+00
-    ; ALL: %1(s64) = G_FCONSTANT  double 2.000000e+00
+    ; ALL: %0:_(s32) = G_FCONSTANT  float 1.000000e+00
+    ; ALL: %1:_(s64) = G_FCONSTANT  double 2.000000e+00
 
     %0(s32) = G_FCONSTANT float 1.0
     %1(s64) = G_FCONSTANT double 2.0
