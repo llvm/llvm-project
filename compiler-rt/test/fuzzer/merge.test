@@ -58,7 +58,11 @@ MERGE_WITH_CRASH: MERGE-OUTER: succesfull in 2 attempt(s)
 MERGE_WITH_CRASH: MERGE-OUTER: 3 new files
 
 # Check that we actually limit the size with max_len
+RUN: rm %t/T1/*
+RUN: echo 'FUZZER' > %t/T2/FUZZER
 RUN: %t-FullCoverageSetTest -merge=1 %t/T1 %t/T2  -max_len=5 2>&1 | FileCheck %s --check-prefix=MERGE_LEN5
+RUN: not grep FUZZER %t/T1/*
+RUN: grep FUZZE %t/T1/*
 MERGE_LEN5: MERGE-OUTER: succesfull in 1 attempt(s)
 
 RUN: rm -rf  %t/T1/* %t/T2/*

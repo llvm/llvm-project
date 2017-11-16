@@ -83,7 +83,7 @@ void *AsanDoesNotSupportStaticLinkage() {
 }
 
 #if ASAN_PREMAP_SHADOW
-uptr FindDynamicShadowStart() {
+uptr FindPremappedShadowStart() {
   uptr granularity = GetMmapGranularity();
   uptr shadow_start = reinterpret_cast<uptr>(&__asan_shadow);
   uptr shadow_size = PremapShadowSize();
@@ -93,8 +93,14 @@ uptr FindDynamicShadowStart() {
   IncreaseTotalMmap(shadow_size + granularity);
   return shadow_start;
 }
-#else
+#endif
+
 uptr FindDynamicShadowStart() {
+#if ASAN_PREMAP_SHADOW
+  if (!PremapShadowFailed())
+    return FindPremappedShadowStart();
+#endif
+
   uptr granularity = GetMmapGranularity();
   uptr alignment = granularity * 8;
   uptr left_padding = granularity;
@@ -112,7 +118,6 @@ uptr FindDynamicShadowStart() {
 
   return shadow_start;
 }
-#endif
 
 void AsanApplyToGlobals(globals_op_fptr op, const void *needle) {
   UNIMPLEMENTED();

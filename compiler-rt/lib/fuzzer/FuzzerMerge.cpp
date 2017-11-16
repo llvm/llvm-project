@@ -379,7 +379,7 @@ void Fuzzer::CrashResistantMerge(const Vector<std::string> &Args,
   Printf("MERGE-OUTER: %zd new files with %zd new features added\n",
          NewFiles.size(), NumNewFeatures);
   for (auto &F: NewFiles)
-    WriteToOutputCorpus(FileToVector(F));
+    WriteToOutputCorpus(FileToVector(F, MaxInputLen));
   // We are done, delete the control file if it was a temporary one.
   if (!MergeControlFilePathOrNull)
     RemoveFile(CFPath);
