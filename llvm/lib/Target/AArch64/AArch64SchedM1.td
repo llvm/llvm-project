@@ -111,15 +111,18 @@ def M1WriteS4 : SchedWriteRes<[M1UnitS]>   { let Latency = 4; }
 def M1WriteSA : SchedWriteRes<[M1UnitS,
                                M1UnitFST,
                                M1UnitS,
-                               M1UnitFST]> { let Latency = 1; }
+                               M1UnitFST]> { let Latency = 1;
+                                             let NumMicroOps = 2; }
 def M1WriteSB : SchedWriteRes<[M1UnitS,
                                M1UnitFST,
-                               M1UnitA]>   { let Latency = 2; }
+                               M1UnitA]>   { let Latency = 2;
+                                             let NumMicroOps = 2; }
 def M1WriteSC : SchedWriteRes<[M1UnitS,
                                M1UnitFST,
                                M1UnitS,
                                M1UnitFST,
-                               M1UnitA]>   { let Latency = 1; }
+                               M1UnitA]>   { let Latency = 3;
+                                             let NumMicroOps = 3; }
 def M1WriteSX : SchedWriteVariant<[SchedVar<M1ShiftLeftFastPred, [M1WriteS1]>,
                                    SchedVar<NoSchedPred,         [M1WriteA1,
                                                                   M1WriteS1]>]>;
@@ -193,7 +196,8 @@ def : WriteRes<WriteVLD,   [M1UnitL]> { let Latency = 5; }
 
 // FP store instructions.
 def : WriteRes<WriteVST, [M1UnitS,
-                          M1UnitFST]> { let Latency = 1; }
+                          M1UnitFST]> { let Latency = 1;
+                                        let NumMicroOps = 1; }
 
 // ASIMD FP instructions.
 def : WriteRes<WriteV, [M1UnitFADD]> { let Latency = 3; }
@@ -335,12 +339,14 @@ def M1WriteVSTC    : WriteSequence<[WriteVST], 4>;
 def M1WriteVSTD    : SchedWriteRes<[M1UnitS,
                                     M1UnitFST,
                                     M1UnitFST]>    { let Latency = 7;
+                                                     let NumMicroOps = 2;
                                                      let ResourceCycles = [7]; }
 def M1WriteVSTE    : SchedWriteRes<[M1UnitS,
                                     M1UnitFST,
                                     M1UnitS,
                                     M1UnitFST,
                                     M1UnitFST]>    { let Latency = 8;
+                                                     let NumMicroOps = 3;
                                                      let ResourceCycles = [8]; }
 def M1WriteVSTF    : SchedWriteRes<[M1UnitNALU,
                                     M1UnitS,
@@ -349,6 +355,7 @@ def M1WriteVSTF    : SchedWriteRes<[M1UnitNALU,
                                     M1UnitFST,
                                     M1UnitFST,
                                     M1UnitFST]>     { let Latency = 15;
+                                                      let NumMicroOps = 5;
                                                       let ResourceCycles = [15]; }
 def M1WriteVSTG    : SchedWriteRes<[M1UnitNALU,
                                     M1UnitS,
@@ -359,12 +366,14 @@ def M1WriteVSTG    : SchedWriteRes<[M1UnitNALU,
                                     M1UnitFST,
                                     M1UnitFST,
                                     M1UnitFST]>     { let Latency = 16;
+                                                      let NumMicroOps = 6;
                                                       let ResourceCycles = [16]; }
 def M1WriteVSTH    : SchedWriteRes<[M1UnitNALU,
                                     M1UnitS,
                                     M1UnitFST,
                                     M1UnitFST,
                                     M1UnitFST]>      { let Latency = 14;
+                                                       let NumMicroOps = 4;
                                                        let ResourceCycles = [14]; }
 def M1WriteVSTI    : SchedWriteRes<[M1UnitNALU,
                                     M1UnitS,
@@ -377,6 +386,7 @@ def M1WriteVSTI    : SchedWriteRes<[M1UnitNALU,
                                     M1UnitFST,
                                     M1UnitFST,
                                     M1UnitFST]>      { let Latency = 17;
+                                                       let NumMicroOps = 7;
                                                        let ResourceCycles = [17]; }
 
 // Branch instructions

@@ -64,4 +64,4 @@ void GetStackTrace(__sanitizer::BufferedStackTrace *stack,
 extern bool lsan_inited;
 extern bool lsan_init_is_running;
 
-extern "C" void __lsan_init();
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __lsan_init();
