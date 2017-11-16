@@ -31,7 +31,7 @@ public:
   /// loaded only from \p CompileCommandsDir. Otherwise, clangd will look
   /// for compile_commands.json in all parent directories of each file.
   ClangdLSPServer(JSONOutput &Out, unsigned AsyncThreadsCount,
-                  bool SnippetCompletions,
+                  bool StorePreamblesInMemory, bool SnippetCompletions,
                   llvm::Optional<StringRef> ResourceDir,
                   llvm::Optional<Path> CompileCommandsDir);
 

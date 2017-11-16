@@ -27,7 +27,7 @@ define i32 @test(i32, i32) local_unnamed_addr #0 {
   br label %13
 ; CHECK: r1 <<= 32
 ; CHECK: r1 >>= 32
-; CHECK: if r1 != 2 goto 6 <LBB0_2>
+; CHECK: if r1 != 2 goto +6 <LBB0_2>
 
 ; <label>:8:                                      ; preds = %2
   %9 = icmp eq i32 %0, %1
@@ -38,7 +38,7 @@ define i32 @test(i32, i32) local_unnamed_addr #0 {
 ; CHECK: r0 = *(u32 *)(r1 + 0)
 ; CHECK: r0 *= r0
 ; CHECK: r0 <<= 1
-; CHECK: goto 7 <LBB0_4>
+; CHECK: goto +7 <LBB0_4>
 
 ; <label>:11:                                     ; preds = %8
   %12 = shl nsw i32 %10, 2
@@ -49,7 +49,7 @@ define i32 @test(i32, i32) local_unnamed_addr #0 {
 ; CHECK: r0 = *(u32 *)(r3 + 0)
 ; CHECK: r2 <<= 32
 ; CHECK: r2 >>= 32
-; CHECK: if r1 == r2 goto 4 <LBB0_5>
+; CHECK: if r1 == r2 goto +4 <LBB0_5>
 ; CHECK: r0 <<= 2
 
 ; <label>:13:                                     ; preds = %4, %11

@@ -2476,3 +2476,66 @@ define <1 x i32> @v1_gather(<1 x i32*> %ptr, <1 x i1> %mask, <1 x i32> %src0) {
   ret <1 x i32>%res
 }
 declare <1 x i32> @llvm.masked.gather.v1i32.v1p0i32(<1 x i32*>, i32, <1 x i1>, <1 x i32>)
+
+; Make sure we don't crash when the index element type is larger than i64 and we need to widen the result
+; This experienced a bad interaction when we widened and then tried to split.
+define <2 x float> @large_index(float* %base, <2 x i128> %ind, <2 x i1> %mask, <2 x float> %src0) {
+; KNL_64-LABEL: large_index:
+; KNL_64:       # BB#0:
+; KNL_64-NEXT:    # kill: %XMM1<def> %XMM1<kill> %YMM1<def>
+; KNL_64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,2],zero,zero
+; KNL_64-NEXT:    vmovaps %xmm0, %xmm0
+; KNL_64-NEXT:    vmovq %rcx, %xmm2
+; KNL_64-NEXT:    vmovq %rsi, %xmm3
+; KNL_64-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
+; KNL_64-NEXT:    vpslld $31, %ymm0, %ymm0
+; KNL_64-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; KNL_64-NEXT:    vgatherqps (%rdi,%zmm2,4), %ymm1 {%k1}
+; KNL_64-NEXT:    vmovaps %xmm1, %xmm0
+; KNL_64-NEXT:    vzeroupper
+; KNL_64-NEXT:    retq
+;
+; KNL_32-LABEL: large_index:
+; KNL_32:       # BB#0:
+; KNL_32-NEXT:    # kill: %XMM1<def> %XMM1<kill> %YMM1<def>
+; KNL_32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,2],zero,zero
+; KNL_32-NEXT:    vmovaps %xmm0, %xmm0
+; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; KNL_32-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; KNL_32-NEXT:    vpinsrd $1, {{[0-9]+}}(%esp), %xmm2, %xmm2
+; KNL_32-NEXT:    vpinsrd $2, {{[0-9]+}}(%esp), %xmm2, %xmm2
+; KNL_32-NEXT:    vpinsrd $3, {{[0-9]+}}(%esp), %xmm2, %xmm2
+; KNL_32-NEXT:    vpslld $31, %ymm0, %ymm0
+; KNL_32-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; KNL_32-NEXT:    vgatherqps (%eax,%zmm2,4), %ymm1 {%k1}
+; KNL_32-NEXT:    vmovaps %xmm1, %xmm0
+; KNL_32-NEXT:    vzeroupper
+; KNL_32-NEXT:    retl
+;
+; SKX-LABEL: large_index:
+; SKX:       # BB#0:
+; SKX-NEXT:    vpsllq $63, %xmm0, %xmm0
+; SKX-NEXT:    vptestmq %xmm0, %xmm0, %k1
+; SKX-NEXT:    vmovq %rcx, %xmm0
+; SKX-NEXT:    vmovq %rsi, %xmm2
+; SKX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm2[0],xmm0[0]
+; SKX-NEXT:    vgatherqps (%rdi,%xmm0,4), %xmm1 {%k1}
+; SKX-NEXT:    vmovaps %xmm1, %xmm0
+; SKX-NEXT:    retq
+;
+; SKX_32-LABEL: large_index:
+; SKX_32:       # BB#0:
+; SKX_32-NEXT:    vpsllq $63, %xmm0, %xmm0
+; SKX_32-NEXT:    vptestmq %xmm0, %xmm0, %k1
+; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SKX_32-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SKX_32-NEXT:    vpinsrd $1, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; SKX_32-NEXT:    vpinsrd $2, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; SKX_32-NEXT:    vpinsrd $3, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; SKX_32-NEXT:    vgatherqps (%eax,%xmm0,4), %xmm1 {%k1}
+; SKX_32-NEXT:    vmovaps %xmm1, %xmm0
+; SKX_32-NEXT:    retl
+  %gep.random = getelementptr float, float* %base, <2 x i128> %ind
+  %res = call <2 x float> @llvm.masked.gather.v2f32.v2p0f32(<2 x float*> %gep.random, i32 4, <2 x i1> %mask, <2 x float> %src0)
+  ret <2 x float>%res
+}

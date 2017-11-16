@@ -1,6 +1,6 @@
 // RUN: %clang %target_itanium_abi_host_triple -O0 -g %s -c -o %t.o
 // RUN: %clang %target_itanium_abi_host_triple %t.o -o %t.out -framework Foundation
-// RUN: %test_debuginfo %s %t.out 
+// RUN: %test_debuginfo %s %t.out
 
 // REQUIRES: system-darwin
 

@@ -19,7 +19,7 @@ struct ChildOverride : Left, Right {
 extern "C" void foo(void *);
 
 void call_left_no_override(ChildNoOverride *child) {
-// CHECK: define void @"\01?call_left_no_override
+// CHECK-LABEL: define void @"\01?call_left_no_override
 // CHECK: %[[CHILD:.*]] = load %struct.ChildNoOverride
 
   child->left();
@@ -34,7 +34,8 @@ void call_left_no_override(ChildNoOverride *child) {
 }
 
 void ChildOverride::left() {
-// CHECK: define x86_thiscallcc void @"\01?left@ChildOverride@@UAEXXZ"(%struct.ChildOverride* %[[THIS:.*]])
+// CHECK-LABEL: define x86_thiscallcc void @"\01?left@ChildOverride@@UAEXXZ"
+// CHECK-SAME: (%struct.ChildOverride* %[[THIS:.*]])
 //
 // No need to adjust 'this' as the ChildOverride's layout begins with Left.
 // CHECK: %[[THIS_ADDR:.*]] = alloca %struct.ChildOverride*, align 4
@@ -48,7 +49,7 @@ void ChildOverride::left() {
 }
 
 void call_left_override(ChildOverride *child) {
-// CHECK: define void @"\01?call_left_override
+// CHECK-LABEL: define void @"\01?call_left_override
 // CHECK: %[[CHILD:.*]] = load %struct.ChildOverride
 
   child->left();
@@ -62,7 +63,7 @@ void call_left_override(ChildOverride *child) {
 }
 
 void call_right_no_override(ChildNoOverride *child) {
-// CHECK: define void @"\01?call_right_no_override
+// CHECK-LABEL: define void @"\01?call_right_no_override
 // CHECK: %[[CHILD:.*]] = load %struct.ChildNoOverride
 
   child->right();
@@ -82,25 +83,27 @@ void call_right_no_override(ChildNoOverride *child) {
 }
 
 void ChildOverride::right() {
-// CHECK: define x86_thiscallcc void @"\01?right@ChildOverride@@UAEXXZ"(i8*
+// CHECK-LABEL: define x86_thiscallcc void @"\01?right@ChildOverride@@UAEXXZ"(i8*
 //
 // ChildOverride::right gets 'this' cast to Right* in ECX (i.e. this+4) so we
 // need to adjust 'this' before use.
 //
 // CHECK: %[[THIS_ADDR:.*]] = alloca %struct.ChildOverride*, align 4
-// CHECK: %[[THIS_i8:.*]] = getelementptr inbounds i8, i8* %[[ECX:.*]], i32 -4
-// CHECK: %[[THIS:.*]] = bitcast i8* %[[THIS_i8]] to %struct.ChildOverride*
-// CHECK: store %struct.ChildOverride* %[[THIS]], %struct.ChildOverride** %[[THIS_ADDR]], align 4
+// CHECK: %[[THIS_INIT:.*]] = bitcast i8* %[[ECX:.*]] to %struct.ChildOverride*
+// CHECK: store %struct.ChildOverride* %[[THIS_INIT]], %struct.ChildOverride** %[[THIS_ADDR]], align 4
+// CHECK: %[[THIS_RELOAD:.*]] = load %struct.ChildOverride*, %struct.ChildOverride** %[[THIS_ADDR]]
+// CHECK: %[[THIS_i8:.*]] = bitcast %struct.ChildOverride* %[[THIS_RELOAD]] to i8*
+// CHECK: %[[THIS_ADJUSTED:.*]] = getelementptr inbounds i8, i8* %[[THIS_i8]], i32 -4
+// CHECK: %[[THIS:.*]] = bitcast i8* %[[THIS_ADJUSTED]] to %struct.ChildOverride*
 
   foo(this);
-// CHECK: %[[THIS:.*]] = load %struct.ChildOverride*, %struct.ChildOverride** %[[THIS_ADDR]]
 // CHECK: %[[THIS_PARAM:.*]] = bitcast %struct.ChildOverride* %[[THIS]] to i8*
 // CHECK: call void @foo(i8* %[[THIS_PARAM]])
 // CHECK: ret
 }
 
 void call_right_override(ChildOverride *child) {
-// CHECK: define void @"\01?call_right_override
+// CHECK-LABEL: define void @"\01?call_right_override
 // CHECK: %[[CHILD:.*]] = load %struct.ChildOverride
 
   child->right();
@@ -127,15 +130,17 @@ struct GrandchildOverride : ChildOverride {
 };
 
 void GrandchildOverride::right() {
-// CHECK: define x86_thiscallcc void @"\01?right@GrandchildOverride@@UAEXXZ"(i8*
+// CHECK-LABEL: define x86_thiscallcc void @"\01?right@GrandchildOverride@@UAEXXZ"(i8*
 //
 // CHECK: %[[THIS_ADDR:.*]] = alloca %struct.GrandchildOverride*, align 4
-// CHECK: %[[THIS_i8:.*]] = getelementptr inbounds i8, i8* %[[ECX:.*]], i32 -4
-// CHECK: %[[THIS:.*]] = bitcast i8* %[[THIS_i8]] to %struct.GrandchildOverride*
-// CHECK: store %struct.GrandchildOverride* %[[THIS]], %struct.GrandchildOverride** %[[THIS_ADDR]], align 4
+// CHECK: %[[THIS_INIT:.*]] = bitcast i8* %[[ECX:.*]] to %struct.GrandchildOverride*
+// CHECK: store %struct.GrandchildOverride* %[[THIS_INIT]], %struct.GrandchildOverride** %[[THIS_ADDR]], align 4
+// CHECK: %[[THIS_RELOAD:.*]] = load %struct.GrandchildOverride*, %struct.GrandchildOverride** %[[THIS_ADDR]]
+// CHECK: %[[THIS_i8:.*]] = bitcast %struct.GrandchildOverride* %[[THIS_RELOAD]] to i8*
+// CHECK: %[[THIS_ADJUSTED:.*]] = getelementptr inbounds i8, i8* %[[THIS_i8]], i32 -4
+// CHECK: %[[THIS:.*]] = bitcast i8* %[[THIS_ADJUSTED]] to %struct.GrandchildOverride*
 
   foo(this);
-// CHECK: %[[THIS:.*]] = load %struct.GrandchildOverride*, %struct.GrandchildOverride** %[[THIS_ADDR]]
 // CHECK: %[[THIS_PARAM:.*]] = bitcast %struct.GrandchildOverride* %[[THIS]] to i8*
 // CHECK: call void @foo(i8* %[[THIS_PARAM]])
 // CHECK: ret
@@ -148,19 +153,19 @@ void call_grandchild_right(GrandchildOverride *obj) {
 
 void emit_ctors() {
   Left l;
-  // CHECK: define {{.*}} @"\01??0Left@@QAE@XZ"
+  // CHECK-LABEL: define {{.*}} @"\01??0Left@@QAE@XZ"
   // CHECK-NOT: getelementptr
   // CHECK:   store i32 (...)** bitcast ({ [1 x i8*] }* @"\01??_7Left@@6B@" to i32 (...)**)
   // CHECK: ret
 
   Right r;
-  // CHECK: define {{.*}} @"\01??0Right@@QAE@XZ"
+  // CHECK-LABEL: define {{.*}} @"\01??0Right@@QAE@XZ"
   // CHECK-NOT: getelementptr
   // CHECK:   store i32 (...)** bitcast ({ [1 x i8*] }* @"\01??_7Right@@6B@" to i32 (...)**)
   // CHECK: ret
 
   ChildOverride co;
-  // CHECK: define {{.*}} @"\01??0ChildOverride@@QAE@XZ"
+  // CHECK-LABEL: define {{.*}} @"\01??0ChildOverride@@QAE@XZ"
   // CHECK:   %[[THIS:.*]] = load %struct.ChildOverride*, %struct.ChildOverride**
   // CHECK:   %[[VFPTR:.*]] = bitcast %struct.ChildOverride* %[[THIS]] to i32 (...)***
   // CHECK:   store i32 (...)** bitcast ({ [1 x i8*] }* @"\01??_7ChildOverride@@6BLeft@@@" to i32 (...)**), i32 (...)*** %[[VFPTR]]
@@ -171,7 +176,7 @@ void emit_ctors() {
   // CHECK: ret
 
   GrandchildOverride gc;
-  // CHECK: define {{.*}} @"\01??0GrandchildOverride@@QAE@XZ"
+  // CHECK-LABEL: define {{.*}} @"\01??0GrandchildOverride@@QAE@XZ"
   // CHECK:   %[[THIS:.*]] = load %struct.GrandchildOverride*, %struct.GrandchildOverride**
   // CHECK:   %[[VFPTR:.*]] = bitcast %struct.GrandchildOverride* %[[THIS]] to i32 (...)***
   // CHECK:   store i32 (...)** bitcast ({ [1 x i8*] }* @"\01??_7GrandchildOverride@@6BLeft@@@" to i32 (...)**), i32 (...)*** %[[VFPTR]]

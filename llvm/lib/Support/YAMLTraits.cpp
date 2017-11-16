@@ -160,7 +160,8 @@ bool Input::preflightKey(const char *Key, bool Required, bool, bool &UseDefault,
 
   MapHNode *MN = dyn_cast<MapHNode>(CurrentNode);
   if (!MN) {
-    setError(CurrentNode, "not a mapping");
+    if (Required || !isa<EmptyHNode>(CurrentNode))
+      setError(CurrentNode, "not a mapping");
     return false;
   }
   MN->ValidKeys.push_back(Key);

@@ -1,0 +1,41 @@
+# Ensures that implicitly added sections can be ordered within Sections.
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj -sections %t | FileCheck %s --check-prefix=SECTION
+# RUN: llvm-nm -dynamic %t | FileCheck %s --check-prefix=SYMBOL
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+Sections:
+  - Name: .data
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_WRITE ]
+DynamicSymbols:
+  Global:
+    - Name: dynglobal
+      Type: STT_OBJECT
+      Section: .data
+  Weak:
+    - Name: dynweak
+      Type: STT_OBJECT
+      Section: .data
+  Local:
+    - Name: dynlocal
+      Type: STT_OBJECT
+      Section: .data
+
+# SECTION: Name: .dynsym
+# SECTION-NEXT: Type: SHT_DYNSYM
+# SECTION-NEXT: Flags
+# SECTION-NEXT: SHF_ALLOC
+# SECTION: Name: .dynstr
+# SECTION-NEXT: Type: SHT_STRTAB
+# SECTION-NEXT: Flags
+# SECTION-NEXT: SHF_ALLOC
+
+# SYMBOL-DAG: D dynglobal
+# SYMBOL-DAG: V dynweak
+# SYMBOL-DAG: d dynlocal

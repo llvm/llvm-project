@@ -723,6 +723,9 @@ public:
   // Keep this with the given name.
   Error keep(const Twine &Name);
 
+  // Keep this with the temporary name.
+  Error keep();
+
   // Delete the file.
   Error discard();
 

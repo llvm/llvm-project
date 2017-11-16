@@ -9,10 +9,14 @@
 
 #include "llvm/FuzzMutate/FuzzerCLI.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/Bitcode/BitcodeReader.h"
+#include "llvm/Bitcode/BitcodeWriter.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -130,4 +134,36 @@ int llvm::runFuzzerOnInputs(int ArgC, char *ArgV[], FuzzerTestFun TestOne,
             Buf->getBufferSize());
   }
   return 0;
+}
+
+std::unique_ptr<Module> llvm::parseModule(
+    const uint8_t *Data, size_t Size, LLVMContext &Context) {
+
+  if (Size <= 1)
+    // We get bogus data given an empty corpus - just create a new module.
+    return llvm::make_unique<Module>("M", Context);
+
+  auto Buffer = MemoryBuffer::getMemBuffer(
+      StringRef(reinterpret_cast<const char *>(Data), Size), "Fuzzer input",
+      /*RequiresNullTerminator=*/false);
+
+  SMDiagnostic Err;
+  auto M = parseBitcodeFile(Buffer->getMemBufferRef(), Context);
+  if (Error E = M.takeError()) {
+    errs() << toString(std::move(E)) << "\n";
+    return nullptr;
+  }
+  return std::move(M.get());
+}
+
+size_t llvm::writeModule(const Module &M, uint8_t *Dest, size_t MaxSize) {
+  std::string Buf;
+  {
+    raw_string_ostream OS(Buf);
+    WriteBitcodeToFile(&M, OS);
+  }
+  if (Buf.size() > MaxSize)
+      return 0;
+  memcpy(Dest, Buf.data(), Buf.size());
+  return Buf.size();
 }

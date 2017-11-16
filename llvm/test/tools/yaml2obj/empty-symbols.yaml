@@ -1,0 +1,10 @@
+# Ensure yaml2obj doesn't error on empty optional mappings, such as Symbols
+# RUN: yaml2obj %s -o %t
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+Symbols:

@@ -17,11 +17,13 @@ if(LLVM_ENABLE_DIA_SDK)
     DIA/DIAEnumLineNumbers.cpp
     DIA/DIAEnumSourceFiles.cpp
     DIA/DIAEnumSymbols.cpp
+    DIA/DIAEnumTables.cpp
     DIA/DIAError.cpp
     DIA/DIALineNumber.cpp
     DIA/DIARawSymbol.cpp
     DIA/DIASession.cpp
     DIA/DIASourceFile.cpp
+    DIA/DIATable.cpp
     )
 
     set(LIBPDB_ADDITIONAL_HEADER_DIRS "${LLVM_MAIN_INCLUDE_DIR}/llvm/DebugInfo/PDB/DIA")
