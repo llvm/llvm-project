@@ -82,6 +82,8 @@ public:
 
   std::unique_ptr<IPDBEnumDataStreams> getDebugStreams() const override;
 
+  std::unique_ptr<IPDBEnumTables> getEnumTables() const override;
+
   PDBFile &getPDBFile() { return *Pdb; }
   const PDBFile &getPDBFile() const { return *Pdb; }
 

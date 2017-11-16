@@ -1,6 +1,6 @@
 // RUN: %clang %target_itanium_abi_host_triple -O0 -g %s -c -o %t.o
 // RUN: %clang %target_itanium_abi_host_triple %t.o -o %t.out -framework Foundation
-// RUN: %test_debuginfo %s %t.out 
+// RUN: %test_debuginfo %s %t.out
 
 // REQUIRES: system-darwin
 // Radar 9279956
@@ -24,9 +24,9 @@ extern void foo(void(^)(void));
  int master = 0;
  __block int m2 = 0;
  __block int dbTransaction = 0;
- int (^x)(void) = ^(void) { (void) self; 
-	(void) master; 
-	(void) dbTransaction; 
+ int (^x)(void) = ^(void) { (void) self;
+	(void) master;
+	(void) dbTransaction;
 	m2++;
 	return m2;
 	};

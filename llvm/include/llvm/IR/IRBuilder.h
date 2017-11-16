@@ -1810,26 +1810,28 @@ public:
 
   /// \brief Create an invariant.group.barrier intrinsic call, that stops
   /// optimizer to propagate equality using invariant.group metadata.
-  /// If Ptr type is different from i8*, it's casted to i8* before call
-  /// and casted back to Ptr type after call.
+  /// If Ptr type is different from pointer to i8, it's casted to pointer to i8
+  /// in the same address space before call and casted back to Ptr type after
+  /// call.
   Value *CreateInvariantGroupBarrier(Value *Ptr) {
+    assert(isa<PointerType>(Ptr->getType()) &&
+           "invariant.group.barrier only applies to pointers.");
+    auto *PtrType = Ptr->getType();
+    auto *Int8PtrTy = getInt8PtrTy(PtrType->getPointerAddressSpace());
+    if (PtrType != Int8PtrTy)
+      Ptr = CreateBitCast(Ptr, Int8PtrTy);
     Module *M = BB->getParent()->getParent();
-    Function *FnInvariantGroupBarrier = Intrinsic::getDeclaration(M,
-            Intrinsic::invariant_group_barrier);
+    Function *FnInvariantGroupBarrier = Intrinsic::getDeclaration(
+        M, Intrinsic::invariant_group_barrier, {Int8PtrTy});
 
-    Type *ArgumentAndReturnType = FnInvariantGroupBarrier->getReturnType();
-    assert(ArgumentAndReturnType ==
-        FnInvariantGroupBarrier->getFunctionType()->getParamType(0) &&
-        "InvariantGroupBarrier should take and return the same type");
-    Type *PtrType = Ptr->getType();
-
-    bool PtrTypeConversionNeeded = PtrType != ArgumentAndReturnType;
-    if (PtrTypeConversionNeeded)
-      Ptr = CreateBitCast(Ptr, ArgumentAndReturnType);
+    assert(FnInvariantGroupBarrier->getReturnType() == Int8PtrTy &&
+           FnInvariantGroupBarrier->getFunctionType()->getParamType(0) ==
+               Int8PtrTy &&
+           "InvariantGroupBarrier should take and return the same type");
 
     CallInst *Fn = CreateCall(FnInvariantGroupBarrier, {Ptr});
 
-    if (PtrTypeConversionNeeded)
+    if (PtrType != Int8PtrTy)
       return CreateBitCast(Fn, PtrType);
     return Fn;
   }

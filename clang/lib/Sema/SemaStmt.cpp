@@ -527,7 +527,9 @@ Sema::ActOnIfStmt(SourceLocation IfLoc, bool IsConstexpr, Stmt *InitStmt,
                        CondExpr->getExprLoc()))
     CommaVisitor(*this).Visit(CondExpr);
 
-  if (!elseStmt)
+  if (elseStmt)
+    DiagnoseEmptyStmtBody(ElseLoc, elseStmt, diag::warn_empty_else_body);
+  else
     DiagnoseEmptyStmtBody(CondExpr->getLocEnd(), thenStmt,
                           diag::warn_empty_if_body);
 

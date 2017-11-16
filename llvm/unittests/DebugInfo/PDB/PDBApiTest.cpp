@@ -14,6 +14,7 @@
 #include "llvm/DebugInfo/PDB/IPDBRawSymbol.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
 #include "llvm/DebugInfo/PDB/IPDBSourceFile.h"
+#include "llvm/DebugInfo/PDB/IPDBTable.h"
 
 #include "llvm/DebugInfo/PDB/PDBSymbol.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolAnnotation.h"
@@ -118,6 +119,10 @@ class MockSession : public IPDBSession {
   std::unique_ptr<IPDBEnumDataStreams> getDebugStreams() const override {
     return nullptr;
   }
+
+  std::unique_ptr<IPDBEnumTables> getEnumTables() const override {
+    return nullptr;
+  }
 };
 
 class MockRawSymbol : public IPDBRawSymbol {
@@ -151,6 +156,10 @@ public:
   void getBackEndVersion(VersionInfo &Version) const override {}
 
   PDB_SymType getSymTag() const override { return Type; }
+
+  std::string getUndecoratedNameEx(PDB_UndnameFlags Flags) const override {
+    return {};
+  }
 
   MOCK_SYMBOL_ACCESSOR(getAccess)
   MOCK_SYMBOL_ACCESSOR(getAddressOffset)

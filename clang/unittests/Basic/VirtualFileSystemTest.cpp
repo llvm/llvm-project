@@ -829,6 +829,19 @@ TEST_F(InMemoryFileSystemTest, AddFileWithPerms) {
             Stat->getPermissions());
 }
 
+TEST_F(InMemoryFileSystemTest, AddDirectoryThenAddChild) {
+  FS.addFile("/a", 0, MemoryBuffer::getMemBuffer(""), /*User=*/None,
+             /*Group=*/None, sys::fs::file_type::directory_file);
+  FS.addFile("/a/b", 0, MemoryBuffer::getMemBuffer("abc"), /*User=*/None,
+             /*Group=*/None, sys::fs::file_type::regular_file);
+  auto Stat = FS.status("/a");
+  ASSERT_FALSE(Stat.getError()) << Stat.getError() << "\n" << FS.toString();
+  ASSERT_TRUE(Stat->isDirectory());
+  Stat = FS.status("/a/b");
+  ASSERT_FALSE(Stat.getError()) << Stat.getError() << "\n" << FS.toString();
+  ASSERT_TRUE(Stat->isRegularFile());
+}
+
 // NOTE: in the tests below, we use '//root/' as our root directory, since it is
 // a legal *absolute* path on Windows as well as *nix.
 class VFSFromYAMLTest : public ::testing::Test {

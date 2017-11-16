@@ -24,6 +24,10 @@
 using namespace clang;
 using namespace clang::clangd;
 
+namespace {
+enum class PCHStorageFlag { Disk, Memory };
+}
+
 static llvm::cl::opt<Path> CompileCommandsDir(
     "compile-commands-dir",
     llvm::cl::desc("Specify a path to look for compile_commands.json. If path "
@@ -44,6 +48,15 @@ static llvm::cl::opt<bool> EnableSnippets(
 static llvm::cl::opt<bool>
     PrettyPrint("pretty", llvm::cl::desc("Pretty-print JSON output"),
                 llvm::cl::init(false));
+
+static llvm::cl::opt<PCHStorageFlag> PCHStorage(
+    "pch-storage",
+    llvm::cl::desc("Storing PCHs in memory increases memory usages, but may "
+                   "improve performance"),
+    llvm::cl::values(
+        clEnumValN(PCHStorageFlag::Disk, "disk", "store PCHs on disk"),
+        clEnumValN(PCHStorageFlag::Memory, "memory", "store PCHs in memory")),
+    llvm::cl::init(PCHStorageFlag::Disk));
 
 static llvm::cl::opt<bool> RunSynchronously(
     "run-synchronously",
@@ -127,6 +140,16 @@ int main(int argc, char *argv[]) {
     CompileCommandsDirPath = CompileCommandsDir;
   }
 
+  bool StorePreamblesInMemory;
+  switch (PCHStorage) {
+  case PCHStorageFlag::Memory:
+    StorePreamblesInMemory = true;
+    break;
+  case PCHStorageFlag::Disk:
+    StorePreamblesInMemory = false;
+    break;
+  }
+
   llvm::Optional<StringRef> ResourceDirRef = None;
   if (!ResourceDir.empty())
     ResourceDirRef = ResourceDir;
@@ -135,8 +158,9 @@ int main(int argc, char *argv[]) {
   llvm::sys::ChangeStdinToBinary();
 
   // Initialize and run ClangdLSPServer.
-  ClangdLSPServer LSPServer(Out, WorkerThreadsCount, EnableSnippets,
-                            ResourceDirRef, CompileCommandsDirPath);
+  ClangdLSPServer LSPServer(Out, WorkerThreadsCount, StorePreamblesInMemory,
+                            EnableSnippets, ResourceDirRef,
+                            CompileCommandsDirPath);
   constexpr int NoShutdownRequestErrorCode = 1;
   llvm::set_thread_name("clangd.main");
   return LSPServer.run(std::cin) ? 0 : NoShutdownRequestErrorCode;

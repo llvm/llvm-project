@@ -32,6 +32,16 @@ namespace llvm {
 Triple TargetTriple;
 }
 
+DiscardTemp::~DiscardTemp() {
+  if (SaveTemps) {
+    if (Error E = File.keep())
+      errs() << "Failed to keep temp file " << toString(std::move(E)) << '\n';
+    return;
+  }
+  if (Error E = File.discard())
+    errs() << "Failed to delete temp file " << toString(std::move(E)) << '\n';
+}
+
 // Anonymous namespace to define command line options for debugging.
 //
 namespace {

@@ -56,7 +56,7 @@ my $my_debugger = $ENV{'DEBUGGER'};
 if (!$my_debugger) {
     if ($use_lldb) {
         my $path = dirname(Cwd::abs_path($0));
-        $my_debugger = "/usr/bin/env python $path/../tools/clang/test/debuginfo-tests/llgdb.py";
+        $my_debugger = "/usr/bin/env python $path/../tools/clang/test/debuginfo-tests/tests/llgdb.py";
     } else {
         $my_debugger = "gdb";
     }

@@ -101,6 +101,7 @@ public:
   uint32_t getTypeId() const override;
   uint32_t getUavSlot() const override;
   std::string getUndecoratedName() const override;
+  std::string getUndecoratedNameEx(PDB_UndnameFlags Flags) const override;
   uint32_t getUnmodifiedTypeId() const override;
   uint32_t getUpperBoundId() const override;
   Variant getValue() const override;

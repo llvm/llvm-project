@@ -1,6 +1,6 @@
 // RUN: %clangxx %target_itanium_abi_host_triple -O0 -g %s -c -o %t.o
 // RUN: %clangxx %target_itanium_abi_host_triple %t.o -o %t.out
-// RUN: %test_debuginfo %s %t.out 
+// RUN: %test_debuginfo %s %t.out
 // Radar 8775834
 // DEBUGGER: break 62
 // DEBUGGER: r
@@ -24,7 +24,7 @@ protected:
     int m_int;
 };
 
-A::A (int i) : 
+A::A (int i) :
     m_int(i)
 {
 }
@@ -50,11 +50,11 @@ class B
 {
 public:
     B () {}
-    
+
     A AInstance();
 };
 
-A 
+A
 B::AInstance()
 {
     A a(12);
@@ -65,7 +65,7 @@ int main (int argc, char const *argv[])
 {
     B b;
     int return_val = b.AInstance().get_int();
-    
+
     A a(b.AInstance());
     return return_val;
 }
