@@ -2602,8 +2602,8 @@ static MachineBasicBlock::iterator loadM0FromVGPR(const SIInstrInfo *TII,
   MachineBasicBlock::iterator I(&MI);
 
   unsigned DstReg = MI.getOperand(0).getReg();
-  unsigned SaveExec = MRI.createVirtualRegister(&AMDGPU::SReg_64RegClass);
-  unsigned TmpExec = MRI.createVirtualRegister(&AMDGPU::SReg_64RegClass);
+  unsigned SaveExec = MRI.createVirtualRegister(&AMDGPU::SReg_64_XEXECRegClass);
+  unsigned TmpExec = MRI.createVirtualRegister(&AMDGPU::SReg_64_XEXECRegClass);
 
   BuildMI(MBB, I, DL, TII->get(TargetOpcode::IMPLICIT_DEF), TmpExec);
 
@@ -2954,13 +2954,57 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
   }
 
   switch (MI.getOpcode()) {
-  case AMDGPU::SI_INIT_M0:
+  case AMDGPU::S_ADD_U64_PSEUDO:
+  case AMDGPU::S_SUB_U64_PSEUDO: {
+    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+    const DebugLoc &DL = MI.getDebugLoc();
+
+    MachineOperand &Dest = MI.getOperand(0);
+    MachineOperand &Src0 = MI.getOperand(1);
+    MachineOperand &Src1 = MI.getOperand(2);
+
+    unsigned DestSub0 = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+    unsigned DestSub1 = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+
+    MachineOperand Src0Sub0 = TII->buildExtractSubRegOrImm(MI, MRI,
+     Src0, &AMDGPU::SReg_64RegClass, AMDGPU::sub0,
+     &AMDGPU::SReg_32_XM0RegClass);
+    MachineOperand Src0Sub1 = TII->buildExtractSubRegOrImm(MI, MRI,
+      Src0, &AMDGPU::SReg_64RegClass, AMDGPU::sub1,
+      &AMDGPU::SReg_32_XM0RegClass);
+
+    MachineOperand Src1Sub0 = TII->buildExtractSubRegOrImm(MI, MRI,
+      Src1, &AMDGPU::SReg_64RegClass, AMDGPU::sub0,
+      &AMDGPU::SReg_32_XM0RegClass);
+    MachineOperand Src1Sub1 = TII->buildExtractSubRegOrImm(MI, MRI,
+      Src1, &AMDGPU::SReg_64RegClass, AMDGPU::sub1,
+      &AMDGPU::SReg_32_XM0RegClass);
+
+    bool IsAdd = (MI.getOpcode() == AMDGPU::S_ADD_U64_PSEUDO);
+
+    unsigned LoOpc = IsAdd ? AMDGPU::S_ADD_U32 : AMDGPU::S_SUB_U32;
+    unsigned HiOpc = IsAdd ? AMDGPU::S_ADDC_U32 : AMDGPU::S_SUBB_U32;
+    BuildMI(*BB, MI, DL, TII->get(LoOpc), DestSub0)
+      .add(Src0Sub0)
+      .add(Src1Sub0);
+    BuildMI(*BB, MI, DL, TII->get(HiOpc), DestSub1)
+      .add(Src0Sub1)
+      .add(Src1Sub1);
+    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::REG_SEQUENCE), Dest.getReg())
+      .addReg(DestSub0)
+      .addImm(AMDGPU::sub0)
+      .addReg(DestSub1)
+      .addImm(AMDGPU::sub1);
+    MI.eraseFromParent();
+    return BB;
+  }
+  case AMDGPU::SI_INIT_M0: {
     BuildMI(*BB, MI.getIterator(), MI.getDebugLoc(),
             TII->get(AMDGPU::S_MOV_B32), AMDGPU::M0)
         .add(MI.getOperand(0));
     MI.eraseFromParent();
     return BB;
-
+  }
   case AMDGPU::SI_INIT_EXEC:
     // This should be before all vector instructions.
     BuildMI(*BB, &*BB->begin(), MI.getDebugLoc(), TII->get(AMDGPU::S_MOV_B64),

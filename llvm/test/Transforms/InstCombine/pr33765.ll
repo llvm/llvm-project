@@ -10,9 +10,8 @@ define void @patatino(i8 %beth) {
 ; CHECK:       if.then9:
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i32 [[CONV]], [[CONV]]
 ; CHECK-NEXT:    [[TINKY:%.*]] = load i16, i16* @glob, align 2
-; CHECK-NEXT:    [[CONV131:%.*]] = zext i16 [[TINKY]] to i32
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[MUL]], [[CONV131]]
-; CHECK-NEXT:    [[CONV14:%.*]] = trunc i32 [[AND]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[MUL]] to i16
+; CHECK-NEXT:    [[CONV14:%.*]] = and i16 [[TINKY]], [[TMP1]]
 ; CHECK-NEXT:    store i16 [[CONV14]], i16* @glob, align 2
 ; CHECK-NEXT:    ret void
 ;

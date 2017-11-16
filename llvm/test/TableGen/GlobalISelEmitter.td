@@ -153,7 +153,7 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:    &MyTargetInstructionSelector::selectComplexPatternRR, // gi_complex_rr
 // CHECK-NEXT:  }
 
-// CHECK: bool MyTargetInstructionSelector::selectImpl(MachineInstr &I) const {
+// CHECK: bool MyTargetInstructionSelector::selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const {
 // CHECK-NEXT: MachineFunction &MF = *I.getParent()->getParent();
 // CHECK-NEXT: MachineRegisterInfo &MRI = MF.getRegInfo();
 // CHECK:      AvailableFunctionFeatures = computeAvailableFunctionFeatures(&STI, &MF);
@@ -899,6 +899,6 @@ def BR : I<(outs), (ins unknown:$target),
 
 // CHECK-NEXT:    GIM_Reject,
 // CHECK-NEXT:  };
-// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable0, TII, MRI, TRI, RBI, AvailableFeatures)) {
+// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable0, TII, MRI, TRI, RBI, AvailableFeatures, CoverageInfo)) {
 // CHECK-NEXT:    return true;
 // CHECK-NEXT:  }

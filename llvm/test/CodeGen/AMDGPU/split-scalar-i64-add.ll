@@ -7,8 +7,11 @@ declare i32 @llvm.amdgcn.workitem.id.x() readnone
 ; set in vcc, which is undefined since the low scalar half add sets
 ; scc instead.
 
+; FIXME: SIShrinkInstructions should force immediate fold.
+
 ; FUNC-LABEL: {{^}}imp_def_vcc_split_i64_add_0:
-; SI: v_add_i32_e32 v{{[0-9]+}}, vcc, 0x18f, v{{[0-9]+}}
+; SI: s_movk_i32 [[K:s[0-9]+]], 0x18f
+; SI: v_add_i32_e32 v{{[0-9]+}}, vcc, [[K]], v{{[0-9]+}}
 ; SI: v_addc_u32_e32 v{{[0-9]+}}, vcc, 0, v{{[0-9]+}}, vcc
 define amdgpu_kernel void @imp_def_vcc_split_i64_add_0(i64 addrspace(1)* %out, i32 addrspace(1)* %in, i32 %s.val) {
   %v.val = load volatile i32, i32 addrspace(1)* %in

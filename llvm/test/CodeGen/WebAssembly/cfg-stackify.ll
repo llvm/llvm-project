@@ -1,5 +1,5 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -switch-peel-threshold=100 | FileCheck %s
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals -tail-dup-placement=0 -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -switch-peel-threshold=100 | FileCheck -check-prefix=OPT %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals -tail-dup-placement=0 -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 | FileCheck -check-prefix=OPT %s
 
 ; Test the CFG stackifier pass.
 
@@ -892,19 +892,20 @@ end:
 ; CHECK:       .LBB19_4:
 ; CHECK-NEXT:  loop    {{$}}
 ; CHECK-NOT:   block
-; CHECK:       br_if    3, {{[^,]+}}{{$}}
-; CHECK:       block   {{$}}
-; CHECK:       br_table  {{[^,]+}}, 1, 0, 4, 2, 3, 1{{$}}
-; CHECK-NEXT:  .LBB19_6:
-; CHECK-NEXT:  end_block{{$}}
+; CHECK:       br_if    0, {{[^,]+}}{{$}}
 ; CHECK-NEXT:  end_loop{{$}}
+; CHECK:       br_if    1, {{[^,]+}}{{$}}
+; CHECK-NOT:   block
+; CHECK:       br_if    0, {{[^,]+}}{{$}}
 ; CHECK-NEXT:  end_loop{{$}}
+; CHECK-NOT:   block
+; CHECK:       br_if    1, {{[^,]+}}{{$}}
 ; CHECK-NEXT:  return{{$}}
-; CHECK-NEXT:  .LBB19_7:
+; CHECK-NEXT:  .LBB19_9:
 ; CHECK-NEXT:  end_block{{$}}
 ; CHECK-NOT:   block
 ; CHECK:       br       0{{$}}
-; CHECK-NEXT:  .LBB19_8:
+; CHECK-NEXT:  .LBB19_10:
 ; OPT-LABEL: test10:
 ; OPT:       .LBB19_1:
 ; OPT-NEXT:  loop    {{$}}
@@ -917,19 +918,20 @@ end:
 ; OPT:       .LBB19_4:
 ; OPT-NEXT:  loop    {{$}}
 ; OPT-NOT:   block
-; OPT:       br_if    3, {{[^,]+}}{{$}}
-; OPT:       block
-; OPT:       br_table  {{[^,]+}}, 1, 0, 4, 2, 3, 1{{$}}
-; OPT-NEXT:  .LBB19_6:
-; OPT-NEXT:  end_block{{$}}
+; OPT:       br_if    0, {{[^,]+}}{{$}}
 ; OPT-NEXT:  end_loop{{$}}
+; OPT:       br_if    1, {{[^,]+}}{{$}}
+; OPT-NOT:   block
+; OPT:       br_if    0, {{[^,]+}}{{$}}
 ; OPT-NEXT:  end_loop{{$}}
+; OPT-NOT:   block
+; OPT:       br_if    1, {{[^,]+}}{{$}}
 ; OPT-NEXT:  return{{$}}
-; OPT-NEXT:  .LBB19_7:
+; OPT-NEXT:  .LBB19_9:
 ; OPT-NEXT:  end_block{{$}}
 ; OPT-NOT:   block
 ; OPT:       br       0{{$}}
-; OPT-NEXT:  .LBB19_8:
+; OPT-NEXT:  .LBB19_10:
 define void @test10() {
 bb0:
   br label %bb1

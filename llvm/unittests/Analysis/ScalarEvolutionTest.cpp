@@ -1113,5 +1113,76 @@ TEST_F(ScalarEvolutionsTest, SCEVFoldSumOfTruncs) {
   EXPECT_EQ(Expr, ZeroConst);
 }
 
+// Check that we can correctly identify the points at which the SCEV of the
+// AddRec can be expanded.
+TEST_F(ScalarEvolutionsTest, SCEVExpanderIsSafeToExpandAt) {
+  /*
+   * Create the following code:
+   * func(i64 addrspace(10)* %arg)
+   * top:
+   *  br label %L.ph
+   * L.ph:
+   *  br label %L
+   * L:
+   *  %phi = phi i64 [i64 0, %L.ph], [ %add, %L2 ]
+   *  %add = add i64 %phi2, 1
+   *  %cond = icmp slt i64 %add, 1000; then becomes 2000.
+   *  br i1 %cond, label %post, label %L2
+   * post:
+   *  ret void
+   *
+   */
+
+  // Create a module with non-integral pointers in it's datalayout
+  Module NIM("nonintegral", Context);
+  std::string DataLayout = M.getDataLayoutStr();
+  if (!DataLayout.empty())
+    DataLayout += "-";
+  DataLayout += "ni:10";
+  NIM.setDataLayout(DataLayout);
+
+  Type *T_int64 = Type::getInt64Ty(Context);
+  Type *T_pint64 = T_int64->getPointerTo(10);
+
+  FunctionType *FTy =
+      FunctionType::get(Type::getVoidTy(Context), {T_pint64}, false);
+  Function *F = cast<Function>(NIM.getOrInsertFunction("foo", FTy));
+
+  BasicBlock *Top = BasicBlock::Create(Context, "top", F);
+  BasicBlock *LPh = BasicBlock::Create(Context, "L.ph", F);
+  BasicBlock *L = BasicBlock::Create(Context, "L", F);
+  BasicBlock *Post = BasicBlock::Create(Context, "post", F);
+
+  IRBuilder<> Builder(Top);
+  Builder.CreateBr(LPh);
+
+  Builder.SetInsertPoint(LPh);
+  Builder.CreateBr(L);
+
+  Builder.SetInsertPoint(L);
+  PHINode *Phi = Builder.CreatePHI(T_int64, 2);
+  auto *Add = cast<Instruction>(
+      Builder.CreateAdd(Phi, ConstantInt::get(T_int64, 1), "add"));
+  auto *Limit = ConstantInt::get(T_int64, 1000);
+  auto *Cond = cast<Instruction>(
+      Builder.CreateICmp(ICmpInst::ICMP_SLT, Add, Limit, "cond"));
+  Builder.CreateCondBr(Cond, L, Post);
+  Phi->addIncoming(ConstantInt::get(T_int64, 0), LPh);
+  Phi->addIncoming(Add, L);
+
+  Builder.SetInsertPoint(Post);
+  Builder.CreateRetVoid();
+
+  ScalarEvolution SE = buildSE(*F);
+  const SCEV *S = SE.getSCEV(Phi);
+  EXPECT_TRUE(isa<SCEVAddRecExpr>(S));
+  const SCEVAddRecExpr *AR = cast<SCEVAddRecExpr>(S);
+  EXPECT_TRUE(AR->isAffine());
+  EXPECT_FALSE(isSafeToExpandAt(AR, Top->getTerminator(), SE));
+  EXPECT_FALSE(isSafeToExpandAt(AR, LPh->getTerminator(), SE));
+  EXPECT_TRUE(isSafeToExpandAt(AR, L->getTerminator(), SE));
+  EXPECT_TRUE(isSafeToExpandAt(AR, Post->getTerminator(), SE));
+}
+
 }  // end anonymous namespace
 }  // end namespace llvm

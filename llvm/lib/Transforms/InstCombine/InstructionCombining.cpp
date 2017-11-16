@@ -3113,6 +3113,7 @@ static bool AddReachableCodeToWorklist(BasicBlock *BB, const DataLayout &DL,
       if (isInstructionTriviallyDead(Inst, TLI)) {
         ++NumDeadInst;
         DEBUG(dbgs() << "IC: DCE: " << *Inst << '\n');
+        salvageDebugInfo(*Inst);
         Inst->eraseFromParent();
         MadeIRChange = true;
         continue;

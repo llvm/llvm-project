@@ -798,12 +798,9 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
 /// additional opportunities have been exposed.
 static Value *NegateValue(Value *V, Instruction *BI,
                           SetVector<AssertingVH<Instruction>> &ToRedo) {
-  if (Constant *C = dyn_cast<Constant>(V)) {
-    if (C->getType()->isFPOrFPVectorTy()) {
-      return ConstantExpr::getFNeg(C);
-    }
-    return ConstantExpr::getNeg(C);
-  }
+  if (auto *C = dyn_cast<Constant>(V))
+    return C->getType()->isFPOrFPVectorTy() ? ConstantExpr::getFNeg(C) :
+                                              ConstantExpr::getNeg(C);
 
   // We are trying to expose opportunity for reassociation.  One of the things
   // that we want to do to achieve this is to push a negation as deep into an

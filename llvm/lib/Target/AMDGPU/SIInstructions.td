@@ -108,8 +108,8 @@ def V_CNDMASK_B64_PSEUDO : VOP3Common <(outs VReg_64:$vdst),
   let usesCustomInserter = 1;
 }
 
-// 64-bit vector move instruction.  This is mainly used by the SIFoldOperands
-// pass to enable folding of inline immediates.
+// 64-bit vector move instruction. This is mainly used by the
+// SIFoldOperands pass to enable folding of inline immediates.
 def V_MOV_B64_PSEUDO : VPseudoInstSI <(outs VReg_64:$vdst),
                                       (ins VSrc_b64:$src0)>;
 
@@ -146,6 +146,24 @@ def V_SET_INACTIVE_B64 : VPseudoInstSI <(outs VReg_64:$vdst),
   [(set i64:$vdst, (int_amdgcn_set_inactive i64:$src, i64:$inactive))]> {
   let Constraints = "$src = $vdst";
 }
+
+
+let usesCustomInserter = 1, Defs = [SCC] in {
+def S_ADD_U64_PSEUDO : SPseudoInstSI <
+  (outs SReg_64:$vdst), (ins SSrc_b64:$src0, SSrc_b64:$src1),
+  [(set SReg_64:$vdst, (add i64:$src0, i64:$src1))]
+>;
+
+def S_SUB_U64_PSEUDO : SPseudoInstSI <
+  (outs SReg_64:$vdst), (ins SSrc_b64:$src0, SSrc_b64:$src1),
+  [(set SReg_64:$vdst, (sub i64:$src0, i64:$src1))]
+>;
+
+def S_ADDC_U64_PSEUDO : SPseudoInstSI <(outs SReg_64:$vdst, SReg_64:$sdst),
+                                       (ins SSrc_b64:$src0, SSrc_b64:$src1)>;
+def S_SUBC_U64_PSEUDO : SPseudoInstSI <(outs SReg_64:$vdst, SReg_64:$sdst),
+                                       (ins SSrc_b64:$src0, SSrc_b64:$src1)>;
+} // End usesCustomInserter = 1, Defs = [SCC]
 
 let usesCustomInserter = 1, SALU = 1 in {
 def GET_GROUPSTATICSIZE : PseudoInstSI <(outs SReg_32:$sdst), (ins),

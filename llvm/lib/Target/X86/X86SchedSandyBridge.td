@@ -865,6 +865,7 @@ def SBWriteResGroup15 : SchedWriteRes<[SBPort0,SBPort015]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
+def: InstRW<[SBWriteResGroup15], (instregex "CWD")>;
 def: InstRW<[SBWriteResGroup15], (instregex "FNSTSW16r")>;
 
 def SBWriteResGroup16 : SchedWriteRes<[SBPort1,SBPort05]> {

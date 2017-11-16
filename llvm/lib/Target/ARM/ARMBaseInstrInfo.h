@@ -468,10 +468,10 @@ bool isCondBranchOpcode(int Opc) {
   return Opc == ARM::Bcc || Opc == ARM::tBcc || Opc == ARM::t2Bcc;
 }
 
-static inline
-bool isJumpTableBranchOpcode(int Opc) {
-  return Opc == ARM::BR_JTr || Opc == ARM::BR_JTm || Opc == ARM::BR_JTadd ||
-    Opc == ARM::tBR_JTr || Opc == ARM::t2BR_JT;
+static inline bool isJumpTableBranchOpcode(int Opc) {
+  return Opc == ARM::BR_JTr || Opc == ARM::BR_JTm_i12 ||
+         Opc == ARM::BR_JTm_rs || Opc == ARM::BR_JTadd || Opc == ARM::tBR_JTr ||
+         Opc == ARM::t2BR_JT;
 }
 
 static inline

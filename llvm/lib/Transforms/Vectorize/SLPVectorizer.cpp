@@ -4452,19 +4452,51 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   unsigned Sz = R.getVectorElementSize(I0);
   unsigned MinVF = std::max(2U, R.getMinVecRegSize() / Sz);
   unsigned MaxVF = std::max<unsigned>(PowerOf2Floor(VL.size()), MinVF);
-  if (MaxVF < 2)
-    return false;
+  if (MaxVF < 2) {
+     R.getORE()->emit([&]() {
+         return OptimizationRemarkMissed(
+                    SV_NAME, "SmallVF", I0)
+                << "Cannot SLP vectorize list: vectorization factor "
+                << "less than 2 is not supported";
+     });
+     return false;
+  }
 
   for (Value *V : VL) {
     Type *Ty = V->getType();
-    if (!isValidElementType(Ty))
+    if (!isValidElementType(Ty)) {
+      // NOTE: the following will give user internal llvm type name, which may not be useful
+      R.getORE()->emit([&]() {
+          std::string type_str;
+          llvm::raw_string_ostream rso(type_str);
+          Ty->print(rso);
+          return OptimizationRemarkMissed(
+                     SV_NAME, "UnsupportedType", I0)
+                 << "Cannot SLP vectorize list: type "
+                 << rso.str() + " is unsupported by vectorizer";
+      });
       return false;
+    }
     Instruction *Inst = dyn_cast<Instruction>(V);
-    if (!Inst || Inst->getOpcode() != Opcode0)
+
+    if (!Inst)
+        return false;
+    if (Inst->getOpcode() != Opcode0) {
+      R.getORE()->emit([&]() {
+          return OptimizationRemarkMissed(
+                     SV_NAME, "InequableTypes", I0)
+                 << "Cannot SLP vectorize list: not all of the "
+                 << "parts of scalar instructions are of the same type: "
+                 << ore::NV("Instruction1Opcode", I0) << " and "
+                 << ore::NV("Instruction2Opcode", Inst);
+      });
       return false;
+    }
   }
 
   bool Changed = false;
+  bool CandidateFound = false;
+  int MinCost = SLPCostThreshold;
 
   // Keep track of values that were deleted by vectorizing in the loop below.
   SmallVector<WeakTrackingVH, 8> TrackValues(VL.begin(), VL.end());
@@ -4518,14 +4550,16 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
 
       R.computeMinimumValueSizes();
       int Cost = R.getTreeCost();
+      CandidateFound = true;
+      MinCost = std::min(MinCost, Cost);
 
       if (Cost < -SLPCostThreshold) {
         DEBUG(dbgs() << "SLP: Vectorizing list at cost:" << Cost << ".\n");
         R.getORE()->emit(OptimizationRemark(SV_NAME, "VectorizedList",
-                                            cast<Instruction>(Ops[0]))
-                         << "SLP vectorized with cost " << ore::NV("Cost", Cost)
-                         << " and with tree size "
-                         << ore::NV("TreeSize", R.getTreeSize()));
+                                                    cast<Instruction>(Ops[0]))
+                                 << "SLP vectorized with cost " << ore::NV("Cost", Cost)
+                                 << " and with tree size "
+                                 << ore::NV("TreeSize", R.getTreeSize()));
 
         Value *VectorizedRoot = R.vectorizeTree();
 
@@ -4560,6 +4594,22 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
     }
   }
 
+  if (!Changed && CandidateFound) {
+    R.getORE()->emit([&]() {
+        return OptimizationRemarkMissed(
+                   SV_NAME, "NotBeneficial",  I0)
+               << "List vectorization was possible but not beneficial with cost "
+               << ore::NV("Cost", MinCost) << " >= "
+               << ore::NV("Treshold", -SLPCostThreshold);
+    });
+  } else if (!Changed) {
+    R.getORE()->emit([&]() {
+        return OptimizationRemarkMissed(
+                   SV_NAME, "NotPossible", I0)
+               << "Cannot SLP vectorize list: vectorization was impossible"
+               << " with available vectorization factors";
+    });
+  }
   return Changed;
 }
 
@@ -5268,17 +5318,27 @@ public:
       // Estimate cost.
       int Cost =
           V.getTreeCost() + getReductionCost(TTI, ReducedVals[i], ReduxWidth);
-      if (Cost >= -SLPCostThreshold)
-        break;
+      if (Cost >= -SLPCostThreshold) {
+          V.getORE()->emit([&]() {
+              return OptimizationRemarkMissed(
+                         SV_NAME, "HorSLPNotBeneficial", cast<Instruction>(VL[0]))
+                     << "Vectorizing horizontal reduction is possible"
+                     << "but not beneficial with cost "
+                     << ore::NV("Cost", Cost) << " and threshold "
+                     << ore::NV("Threshold", -SLPCostThreshold);
+          });
+          break;
+      }
 
       DEBUG(dbgs() << "SLP: Vectorizing horizontal reduction at cost:" << Cost
                    << ". (HorRdx)\n");
-      auto *I0 = cast<Instruction>(VL[0]);
-      V.getORE()->emit(
-          OptimizationRemark(SV_NAME, "VectorizedHorizontalReduction", I0)
+      V.getORE()->emit([&]() {
+          return OptimizationRemark(
+                     SV_NAME, "VectorizedHorizontalReduction", cast<Instruction>(VL[0]))
           << "Vectorized horizontal reduction with cost "
           << ore::NV("Cost", Cost) << " and with tree size "
-          << ore::NV("TreeSize", V.getTreeSize()));
+          << ore::NV("TreeSize", V.getTreeSize());
+      });
 
       // Vectorize a tree.
       DebugLoc Loc = cast<Instruction>(ReducedVals[i])->getDebugLoc();
