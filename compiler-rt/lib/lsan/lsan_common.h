@@ -27,9 +27,9 @@
 // because of "small" (4 bytes) pointer size that leads to high false negative
 // ratio on large leaks. But we still want to have it for some 32 bit arches
 // (e.g. x86), see https://github.com/google/sanitizers/issues/403.
-// To enable LeakSanitizer on new architecture, one need to implement
-// internal_clone function as well as (probably) adjust TLS machinery for
-// new architecture inside sanitizer library.
+// To enable LeakSanitizer on a new architecture, one needs to implement the
+// internal_clone function as well as (probably) adjust the TLS machinery for
+// the new architecture inside the sanitizer library.
 #if (SANITIZER_LINUX && !SANITIZER_ANDROID || SANITIZER_MAC) && \
     (SANITIZER_WORDSIZE == 64) &&                               \
     (defined(__x86_64__) || defined(__mips64) || defined(__aarch64__) || \
