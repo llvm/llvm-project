@@ -32,17 +32,17 @@ Target &llvm::getTheMips64elTarget() {
 extern "C" void LLVMInitializeMipsTargetInfo() {
   RegisterTarget<Triple::mips,
                  /*HasJIT=*/true>
-      X(getTheMipsTarget(), "mips", "Mips");
+      X(getTheMipsTarget(), "mips", "Mips", "Mips");
 
   RegisterTarget<Triple::mipsel,
                  /*HasJIT=*/true>
-      Y(getTheMipselTarget(), "mipsel", "Mipsel");
+      Y(getTheMipselTarget(), "mipsel", "Mipsel", "Mips");
 
   RegisterTarget<Triple::mips64,
                  /*HasJIT=*/true>
-      A(getTheMips64Target(), "mips64", "Mips64 [experimental]");
+      A(getTheMips64Target(), "mips64", "Mips64 [experimental]", "Mips");
 
   RegisterTarget<Triple::mips64el,
                  /*HasJIT=*/true>
-      B(getTheMips64elTarget(), "mips64el", "Mips64el [experimental]");
+      B(getTheMips64elTarget(), "mips64el", "Mips64el [experimental]", "Mips");
 }

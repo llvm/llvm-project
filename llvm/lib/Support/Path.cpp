@@ -772,13 +772,14 @@ TempFile &TempFile::operator=(TempFile &&Other) {
 TempFile::~TempFile() { assert(Done); }
 
 Error TempFile::discard() {
-  if (Done)
-    return Error::success();
   Done = true;
   // Always try to close and remove.
-  std::error_code RemoveEC = fs::remove(TmpName);
-  sys::DontRemoveFileOnSignal(TmpName);
-  if (close(FD) == -1) {
+  std::error_code RemoveEC;
+  if (!TmpName.empty()) {
+    RemoveEC = fs::remove(TmpName);
+    sys::DontRemoveFileOnSignal(TmpName);
+  }
+  if (FD != -1 && close(FD) == -1) {
     std::error_code EC = std::error_code(errno, std::generic_category());
     return errorCodeToError(EC);
   }
@@ -791,10 +792,16 @@ Error TempFile::keep(const Twine &Name) {
   // Always try to close and rename.
   std::error_code RenameEC = fs::rename(TmpName, Name);
   sys::DontRemoveFileOnSignal(TmpName);
+
+  if (!RenameEC)
+    TmpName = "";
+
   if (close(FD) == -1) {
     std::error_code EC(errno, std::generic_category());
     return errorCodeToError(EC);
   }
+  FD = -1;
+
   return errorCodeToError(RenameEC);
 }
 

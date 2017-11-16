@@ -69,8 +69,9 @@ define i64 @mad_u64_u32_zextops_commute(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
 ; GCN-LABEL: {{^}}mad_i64_i32_sextops_i32_i128:
 ; CI: v_mad_u64_u32
 ; CI: v_mad_u64_u32
-; CI: v_mad_u64_u32
 ; CI: v_mad_i64_i32
+; CI: v_mad_u64_u32
+
 
 ; SI-NOT: v_mad_
 define i128 @mad_i64_i32_sextops_i32_i128(i32 %arg0, i32 %arg1, i128 %arg2) #0 {

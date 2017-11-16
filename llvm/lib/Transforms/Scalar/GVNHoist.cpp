@@ -578,7 +578,7 @@ private:
 
   // Returns true when the values are flowing out to each edge.
   bool valueAnticipable(CHIArgs C, TerminatorInst *TI) const {
-    if (TI->getNumSuccessors() > std::distance(C.begin(), C.end()))
+    if (TI->getNumSuccessors() > (unsigned)std::distance(C.begin(), C.end()))
       return false; // Not enough args in this CHI.
 
     for (auto CHI : C) {

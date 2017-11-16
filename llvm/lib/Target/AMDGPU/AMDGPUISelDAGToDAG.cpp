@@ -459,10 +459,8 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
   // We are selecting i64 ADD here instead of custom lower it during
   // DAG legalization, so we can fold some i64 ADDs used for address
   // calculation into the LOAD and STORE instructions.
-  case ISD::ADD:
   case ISD::ADDC:
   case ISD::ADDE:
-  case ISD::SUB:
   case ISD::SUBC:
   case ISD::SUBE: {
     if (N->getValueType(0) != MVT::i64)

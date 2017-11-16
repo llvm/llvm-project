@@ -972,7 +972,8 @@ public:
     _LIBCPP_INLINE_VISIBILITY path extension()      const { return string_type(__extension()); }
 
     // query
-    _LIBCPP_INLINE_VISIBILITY bool empty() const _NOEXCEPT { return __pn_.empty(); }
+    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY 
+    bool empty() const _NOEXCEPT { return __pn_.empty(); }
 
     _LIBCPP_INLINE_VISIBILITY bool has_root_name()      const { return !__root_name().empty(); }
     _LIBCPP_INLINE_VISIBILITY bool has_root_directory() const { return !__root_directory().empty(); }

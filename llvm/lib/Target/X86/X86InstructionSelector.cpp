@@ -61,13 +61,13 @@ public:
   X86InstructionSelector(const X86TargetMachine &TM, const X86Subtarget &STI,
                          const X86RegisterBankInfo &RBI);
 
-  bool select(MachineInstr &I) const override;
+  bool select(MachineInstr &I, CodeGenCoverage &CoverageInfo) const override;
   static const char *getName() { return DEBUG_TYPE; }
 
 private:
   /// tblgen-erated 'select' implementation, used as the initial selector for
   /// the patterns that don't require complex C++.
-  bool selectImpl(MachineInstr &I) const;
+  bool selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
 
   // TODO: remove after supported by Tablegen-erated instruction selection.
   unsigned getLoadStoreOp(const LLT &Ty, const RegisterBank &RB, unsigned Opc,
@@ -93,9 +93,11 @@ private:
                    MachineFunction &MF) const;
   bool selectCopy(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectUnmergeValues(MachineInstr &I, MachineRegisterInfo &MRI,
-                           MachineFunction &MF) const;
+                           MachineFunction &MF,
+                           CodeGenCoverage &CoverageInfo) const;
   bool selectMergeValues(MachineInstr &I, MachineRegisterInfo &MRI,
-                         MachineFunction &MF) const;
+                         MachineFunction &MF,
+                         CodeGenCoverage &CoverageInfo) const;
   bool selectInsert(MachineInstr &I, MachineRegisterInfo &MRI,
                     MachineFunction &MF) const;
   bool selectExtract(MachineInstr &I, MachineRegisterInfo &MRI,
@@ -294,7 +296,8 @@ bool X86InstructionSelector::selectCopy(MachineInstr &I,
   return true;
 }
 
-bool X86InstructionSelector::select(MachineInstr &I) const {
+bool X86InstructionSelector::select(MachineInstr &I,
+                                    CodeGenCoverage &CoverageInfo) const {
   assert(I.getParent() && "Instruction should be in a basic block!");
   assert(I.getParent()->getParent() && "Instruction should be in a function!");
 
@@ -318,7 +321,7 @@ bool X86InstructionSelector::select(MachineInstr &I) const {
   assert(I.getNumOperands() == I.getNumExplicitOperands() &&
          "Generic instruction has unexpected implicit operands\n");
 
-  if (selectImpl(I))
+  if (selectImpl(I, CoverageInfo))
     return true;
 
   DEBUG(dbgs() << " C++ instruction selection: "; I.print(dbgs()));
@@ -350,9 +353,9 @@ bool X86InstructionSelector::select(MachineInstr &I) const {
   case TargetOpcode::G_UADDE:
     return selectUadde(I, MRI, MF);
   case TargetOpcode::G_UNMERGE_VALUES:
-    return selectUnmergeValues(I, MRI, MF);
+    return selectUnmergeValues(I, MRI, MF, CoverageInfo);
   case TargetOpcode::G_MERGE_VALUES:
-    return selectMergeValues(I, MRI, MF);
+    return selectMergeValues(I, MRI, MF, CoverageInfo);
   case TargetOpcode::G_EXTRACT:
     return selectExtract(I, MRI, MF);
   case TargetOpcode::G_INSERT:
@@ -1093,9 +1096,9 @@ bool X86InstructionSelector::selectInsert(MachineInstr &I,
   return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
 }
 
-bool X86InstructionSelector::selectUnmergeValues(MachineInstr &I,
-                                                 MachineRegisterInfo &MRI,
-                                                 MachineFunction &MF) const {
+bool X86InstructionSelector::selectUnmergeValues(
+    MachineInstr &I, MachineRegisterInfo &MRI, MachineFunction &MF,
+    CodeGenCoverage &CoverageInfo) const {
   assert((I.getOpcode() == TargetOpcode::G_UNMERGE_VALUES) &&
          "unexpected instruction");
 
@@ -1111,7 +1114,7 @@ bool X86InstructionSelector::selectUnmergeValues(MachineInstr &I,
              .addReg(SrcReg)
              .addImm(Idx * DefSize);
 
-    if (!select(ExtrInst))
+    if (!select(ExtrInst, CoverageInfo))
       return false;
   }
 
@@ -1119,9 +1122,9 @@ bool X86InstructionSelector::selectUnmergeValues(MachineInstr &I,
   return true;
 }
 
-bool X86InstructionSelector::selectMergeValues(MachineInstr &I,
-                                               MachineRegisterInfo &MRI,
-                                               MachineFunction &MF) const {
+bool X86InstructionSelector::selectMergeValues(
+    MachineInstr &I, MachineRegisterInfo &MRI, MachineFunction &MF,
+    CodeGenCoverage &CoverageInfo) const {
   assert((I.getOpcode() == TargetOpcode::G_MERGE_VALUES) &&
          "unexpected instruction");
 
@@ -1153,7 +1156,7 @@ bool X86InstructionSelector::selectMergeValues(MachineInstr &I,
 
     DefReg = Tmp;
 
-    if (!select(InsertInst))
+    if (!select(InsertInst, CoverageInfo))
       return false;
   }
 
@@ -1161,7 +1164,7 @@ bool X86InstructionSelector::selectMergeValues(MachineInstr &I,
                                     TII.get(TargetOpcode::COPY), DstReg)
                                 .addReg(DefReg);
 
-  if (!select(CopyInst))
+  if (!select(CopyInst, CoverageInfo))
     return false;
 
   I.eraseFromParent();

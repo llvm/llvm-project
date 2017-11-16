@@ -138,7 +138,7 @@ tools = [
 tools.extend([
     'lli', 'lli-child-target', 'llvm-ar', 'llvm-as', 'llvm-bcanalyzer', 'llvm-config', 'llvm-cov',
     'llvm-cxxdump', 'llvm-cvtres', 'llvm-diff', 'llvm-dis', 'llvm-dsymutil',
-    'llvm-dwarfdump', 'llvm-extract', 'llvm-isel-fuzzer', 'llvm-lib',
+    'llvm-dwarfdump', 'llvm-extract', 'llvm-isel-fuzzer', 'llvm-opt-fuzzer', 'llvm-lib',
     'llvm-link', 'llvm-lto', 'llvm-lto2', 'llvm-mc', 'llvm-mcmarkup',
     'llvm-modextract', 'llvm-nm', 'llvm-objcopy', 'llvm-objdump',
     'llvm-pdbutil', 'llvm-profdata', 'llvm-ranlib', 'llvm-readobj',

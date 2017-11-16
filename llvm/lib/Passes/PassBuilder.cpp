@@ -757,8 +757,13 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   // Optimize parallel scalar instruction chains into SIMD instructions.
   OptimizePM.addPass(SLPVectorizerPass());
 
-  // Cleanup after all of the vectorizers.
-  OptimizePM.addPass(SimplifyCFGPass());
+  // Cleanup after all of the vectorizers. Simplification passes like CVP and
+  // GVN, loop transforms, and others have already run, so it's now better to
+  // convert to more optimized IR using more aggressive simplify CFG options.
+  OptimizePM.addPass(SimplifyCFGPass(SimplifyCFGOptions().
+                                         forwardSwitchCondToPhi(true).
+                                         convertSwitchToLookupTable(true).
+                                         needCanonicalLoops(false)));
   OptimizePM.addPass(InstCombinePass());
 
   // Unroll small loops to hide loop backedge latency and saturate any parallel
