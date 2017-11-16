@@ -134,7 +134,9 @@ namespace llvm {
   };
 } // end llvm namespace
 
+#ifndef NDEBUG
 LLVM_DUMP_METHOD void BindingKey::dump() const { llvm::errs() << *this; }
+#endif
 
 //===----------------------------------------------------------------------===//
 // Actual Store type.

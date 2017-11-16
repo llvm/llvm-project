@@ -73,13 +73,15 @@ Expected<NativeObjectCache> lto::localCache(StringRef CacheDirectoryPath,
                              TempFile.TmpName + ": " +
                              MBOrErr.getError().message() + "\n");
 
-        // This is atomic on POSIX systems.
-        // On Windows, it can fail with permission denied if the destination
-        // file already exists. Since the existing file should be semantically
-        // equivalent to the one we are trying to write, we give AddBuffer
-        // a copy of the bytes we wrote in that case. We do this instead of
-        // just using the existing file, because the pruner might delete the
-        // file before we get a chance to use it.
+        // On POSIX systems, this will atomically replace the destination if
+        // it already exists. We try to emulate this on Windows, but this may
+        // fail with a permission denied error (for example, if the destination
+        // is currently opened by another process that does not give us the
+        // sharing permissions we need). Since the existing file should be
+        // semantically equivalent to the one we are trying to write, we give
+        // AddBuffer a copy of the bytes we wrote in that case. We do this
+        // instead of just using the existing file, because the pruner might
+        // delete the file before we get a chance to use it.
         Error E = TempFile.keep(EntryPath);
         E = handleErrors(std::move(E), [&](const ECError &E) -> Error {
           std::error_code EC = E.convertToErrorCode();

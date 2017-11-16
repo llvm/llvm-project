@@ -461,7 +461,8 @@ bool DAGTypeLegalizer::ScalarizeVectorOperand(SDNode *N, unsigned OpNo) {
       N->dump(&DAG);
       dbgs() << "\n";
 #endif
-      llvm_unreachable("Do not know how to scalarize this operator's operand!");
+      report_fatal_error("Do not know how to scalarize this operator's "
+                         "operand!\n");
     case ISD::BITCAST:
       Res = ScalarizeVecOp_BITCAST(N);
       break;

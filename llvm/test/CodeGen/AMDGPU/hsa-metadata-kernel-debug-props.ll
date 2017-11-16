@@ -1,6 +1,7 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -filetype=obj -o - < %s | llvm-readobj -elf-output-style=GNU -notes | FileCheck --check-prefix=CHECK --check-prefix=GFX700 --check-prefix=NOTES %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx800 -filetype=obj -o - < %s | llvm-readobj -elf-output-style=GNU -notes | FileCheck --check-prefix=CHECK --check-prefix=GFX800 --check-prefix=NOTES %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=obj -o - < %s | llvm-readobj -elf-output-style=GNU -notes | FileCheck --check-prefix=CHECK --check-prefix=GFX900 --check-prefix=NOTES %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa-amdgiz -mcpu=gfx700 -filetype=obj -o - < %s | llvm-readobj -elf-output-style=GNU -notes | FileCheck --check-prefix=CHECK --check-prefix=GFX700 --check-prefix=NOTES %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa-amdgiz -mcpu=gfx800 -filetype=obj -o - < %s | llvm-readobj -elf-output-style=GNU -notes | FileCheck --check-prefix=CHECK --check-prefix=GFX800 --check-prefix=NOTES %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa-amdgiz -mcpu=gfx900 -filetype=obj -o - < %s | llvm-readobj -elf-output-style=GNU -notes | FileCheck --check-prefix=CHECK --check-prefix=GFX900 --check-prefix=NOTES %s
+target datalayout = "A5"
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
@@ -20,16 +21,16 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 ; CHECK:        WavefrontPrivateSegmentOffsetSGPR: 11
 define amdgpu_kernel void @test(i32 addrspace(1)* %A) #0 !dbg !7 !kernel_arg_addr_space !12 !kernel_arg_access_qual !13 !kernel_arg_type !14 !kernel_arg_base_type !14 !kernel_arg_type_qual !15 {
 entry:
-  %A.addr = alloca i32 addrspace(1)*, align 4
-  store i32 addrspace(1)* %A, i32 addrspace(1)** %A.addr, align 4
-  call void @llvm.dbg.declare(metadata i32 addrspace(1)** %A.addr, metadata !16, metadata !17), !dbg !18
-  %0 = load i32 addrspace(1)*, i32 addrspace(1)** %A.addr, align 4, !dbg !19
+  %A.addr = alloca i32 addrspace(1)*, align 4, addrspace(5)
+  store i32 addrspace(1)* %A, i32 addrspace(1)* addrspace(5)* %A.addr, align 4
+  call void @llvm.dbg.declare(metadata i32 addrspace(1)* addrspace(5)* %A.addr, metadata !16, metadata !17), !dbg !18
+  %0 = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(5)* %A.addr, align 4, !dbg !19
   %arrayidx = getelementptr inbounds i32, i32 addrspace(1)* %0, i64 0, !dbg !19
   store i32 777, i32 addrspace(1)* %arrayidx, align 4, !dbg !20
-  %1 = load i32 addrspace(1)*, i32 addrspace(1)** %A.addr, align 4, !dbg !21
+  %1 = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(5)* %A.addr, align 4, !dbg !21
   %arrayidx1 = getelementptr inbounds i32, i32 addrspace(1)* %1, i64 1, !dbg !21
   store i32 888, i32 addrspace(1)* %arrayidx1, align 4, !dbg !22
-  %2 = load i32 addrspace(1)*, i32 addrspace(1)** %A.addr, align 4, !dbg !23
+  %2 = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(5)* %A.addr, align 4, !dbg !23
   %arrayidx2 = getelementptr inbounds i32, i32 addrspace(1)* %2, i64 2, !dbg !23
   store i32 999, i32 addrspace(1)* %arrayidx2, align 4, !dbg !24
   ret void, !dbg !25
@@ -56,7 +57,7 @@ attributes #0 = { noinline nounwind "correctly-rounded-divide-sqrt-fp-math"="fal
 !11 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !12 = !{i32 1}
 !13 = !{!"none"}
-!14 = !{!"int*"}
+!14 = !{!"int addrspace(5)*"}
 !15 = !{!""}
 !16 = !DILocalVariable(name: "A", arg: 1, scope: !7, file: !1, line: 1, type: !10)
 !17 = !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)

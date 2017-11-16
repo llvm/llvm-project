@@ -2478,6 +2478,9 @@ bool X86TTIImpl::isLSRCostLess(TargetTransformInfo::LSRCost &C1,
 }
 
 bool X86TTIImpl::isLegalMaskedLoad(Type *DataTy) {
+  // The backend can't handle a single element vector.
+  if (isa<VectorType>(DataTy) && DataTy->getVectorNumElements() == 1)
+    return false;
   Type *ScalarTy = DataTy->getScalarType();
   int DataWidth = isa<PointerType>(ScalarTy) ?
     DL.getPointerSizeInBits() : ScalarTy->getPrimitiveSizeInBits();
@@ -2501,8 +2504,13 @@ bool X86TTIImpl::isLegalMaskedGather(Type *DataTy) {
   // the vector type.
   // The Scalarizer asks again about legality. It sends a vector type.
   // In this case we can reject non-power-of-2 vectors.
-  if (isa<VectorType>(DataTy) && !isPowerOf2_32(DataTy->getVectorNumElements()))
-    return false;
+  // We also reject single element vectors as the type legalizer can't
+  // scalarize it.
+  if (isa<VectorType>(DataTy)) {
+    unsigned NumElts = DataTy->getVectorNumElements();
+    if (NumElts == 1 || !isPowerOf2_32(NumElts))
+      return false;
+  }
   Type *ScalarTy = DataTy->getScalarType();
   int DataWidth = isa<PointerType>(ScalarTy) ?
     DL.getPointerSizeInBits() : ScalarTy->getPrimitiveSizeInBits();

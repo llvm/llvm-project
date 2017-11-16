@@ -548,13 +548,14 @@ static unsigned ReplaceCounter = 0;
 
 char HCE::ID = 0;
 
+#ifndef NDEBUG
 LLVM_DUMP_METHOD void RangeTree::dump() const {
   dbgs() << "Root: " << Root << '\n';
   if (Root)
     dump(Root);
 }
 
-void RangeTree::dump(const Node *N) const {
+LLVM_DUMP_METHOD void RangeTree::dump(const Node *N) const {
   dbgs() << "Node: " << N << '\n';
   dbgs() << "  Height: " << N->Height << '\n';
   dbgs() << "  Count: " << N->Count << '\n';
@@ -568,6 +569,7 @@ void RangeTree::dump(const Node *N) const {
   if (N->Right)
     dump(N->Right);
 }
+#endif
 
 void RangeTree::order(Node *N, SmallVectorImpl<Node*> &Seq) const {
   if (N == nullptr)

@@ -46,7 +46,7 @@ protected:
     data* reserved;
 };
 // CHECK: <Declaration>class Test {}</Declaration>
-// CHECK: <Declaration>Test() : reserved(new Test::data()) {}</Declaration>
+// CHECK: <Declaration>Test()</Declaration>
 // CHECK: <Declaration>unsigned int getID() const</Declaration>
 // CHECK: <Declaration>~Test(){{( noexcept)?}}</Declaration>
 // CHECK: <Declaration>Test::data *reserved</Declaration>

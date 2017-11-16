@@ -50,6 +50,15 @@ uptr PremapShadow() {
   return shadow_start;
 }
 
+bool PremapShadowFailed() {
+  uptr shadow = reinterpret_cast<uptr>(&__asan_shadow);
+  uptr resolver = reinterpret_cast<uptr>(&__asan_premap_shadow);
+  // shadow == resolver is how Android KitKat and older handles ifunc.
+  // shadow == 0 just in case.
+  if (shadow == 0 || shadow == resolver)
+    return true;
+  return false;
+}
 } // namespace __asan
 
 extern "C" {
