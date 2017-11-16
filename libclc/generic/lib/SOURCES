@@ -118,6 +118,8 @@ math/log1p.cl
 math/log2.cl
 math/logb.cl
 math/mad.cl
+math/maxmag.cl
+math/minmag.cl
 math/modf.cl
 math/native_cos.cl
 math/native_divide.cl
