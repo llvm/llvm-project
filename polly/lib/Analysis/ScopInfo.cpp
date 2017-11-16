@@ -4840,13 +4840,14 @@ void Scop::buildSchedule(RegionNode *RN, LoopStackTy &LoopStack, LoopInfo &LI) {
     }
   }
 
-  auto &LoopData = LoopStack.back();
-  LoopData.NumBlocksProcessed += getNumBlocksInRegionNode(RN);
+  assert(LoopStack.rbegin() != LoopStack.rend());
+  auto LoopData = LoopStack.rbegin();
+  LoopData->NumBlocksProcessed += getNumBlocksInRegionNode(RN);
 
   for (auto *Stmt : getStmtListFor(RN)) {
     auto *UDomain = isl_union_set_from_set(Stmt->getDomain().release());
     auto *StmtSchedule = isl_schedule_from_domain(UDomain);
-    LoopData.Schedule = combineInSequence(LoopData.Schedule, StmtSchedule);
+    LoopData->Schedule = combineInSequence(LoopData->Schedule, StmtSchedule);
   }
 
   // Check if we just processed the last node in this loop. If we did, finalize
@@ -4858,25 +4859,27 @@ void Scop::buildSchedule(RegionNode *RN, LoopStackTy &LoopStack, LoopInfo &LI) {
   //
   // Then continue to check surrounding loops, which might also have been
   // completed by this node.
-  while (LoopData.L &&
-         LoopData.NumBlocksProcessed == getNumBlocksInLoop(LoopData.L)) {
-    auto *Schedule = LoopData.Schedule;
-    auto NumBlocksProcessed = LoopData.NumBlocksProcessed;
+  size_t Dimension = LoopStack.size();
+  while (LoopData->L &&
+         LoopData->NumBlocksProcessed == getNumBlocksInLoop(LoopData->L)) {
+    auto *Schedule = LoopData->Schedule;
+    auto NumBlocksProcessed = LoopData->NumBlocksProcessed;
 
-    LoopStack.pop_back();
-    auto &NextLoopData = LoopStack.back();
+    assert(std::next(LoopData) != LoopStack.rend());
+    ++LoopData;
+    --Dimension;
 
     if (Schedule) {
       isl::union_set Domain = give(isl_schedule_get_domain(Schedule));
-      isl::multi_union_pw_aff MUPA = mapToDimension(Domain, LoopStack.size());
+      isl::multi_union_pw_aff MUPA = mapToDimension(Domain, Dimension);
       Schedule = isl_schedule_insert_partial_schedule(Schedule, MUPA.release());
-      NextLoopData.Schedule =
-          combineInSequence(NextLoopData.Schedule, Schedule);
+      LoopData->Schedule = combineInSequence(LoopData->Schedule, Schedule);
     }
 
-    NextLoopData.NumBlocksProcessed += NumBlocksProcessed;
-    LoopData = NextLoopData;
+    LoopData->NumBlocksProcessed += NumBlocksProcessed;
   }
+  // Now pop all loops processed up there from the LoopStack
+  LoopStack.erase(LoopStack.begin() + Dimension, LoopStack.end());
 }
 
 ArrayRef<ScopStmt *> Scop::getStmtListFor(BasicBlock *BB) const {
