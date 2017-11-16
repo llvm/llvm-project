@@ -250,7 +250,9 @@ static std::string getOutputFileName(llvm::StringRef InputFile,
   return BundleDir.str();
 }
 
-void llvm::dsymutil::exitDsymutil(int ExitStatus) {
+/// Exit the dsymutil process, cleaning up every temporary files that we
+/// created.
+static LLVM_ATTRIBUTE_NORETURN void exitDsymutil(int ExitStatus) {
   // Cleanup temporary files.
   llvm::sys::RunInterruptHandlers();
   exit(ExitStatus);
