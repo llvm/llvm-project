@@ -39,6 +39,7 @@ add_lldb_library(lldbPluginProcessUtility PLUGIN
   RegisterContextPOSIX_arm64.cpp
   RegisterContextPOSIX_mips64.cpp
   RegisterContextPOSIX_powerpc.cpp
+  RegisterContextPOSIX_ppc64le.cpp
   RegisterContextPOSIX_s390x.cpp
   RegisterContextPOSIX_x86.cpp
   RegisterContextThreadMemory.cpp
