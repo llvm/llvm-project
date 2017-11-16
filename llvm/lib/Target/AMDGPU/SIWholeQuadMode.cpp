@@ -103,6 +103,7 @@ public:
   explicit PrintState(int State) : State(State) {}
 };
 
+#ifndef NDEBUG
 static raw_ostream &operator<<(raw_ostream &OS, const PrintState &PS) {
   if (PS.State & StateWQM)
     OS << "WQM";
@@ -119,6 +120,7 @@ static raw_ostream &operator<<(raw_ostream &OS, const PrintState &PS) {
 
   return OS;
 }
+#endif
 
 struct InstrInfo {
   char Needs = 0;
@@ -219,7 +221,8 @@ FunctionPass *llvm::createSIWholeQuadModePass() {
   return new SIWholeQuadMode;
 }
 
-void SIWholeQuadMode::printInfo() {
+#ifndef NDEBUG
+LLVM_DUMP_METHOD void SIWholeQuadMode::printInfo() {
   for (const auto &BII : Blocks) {
     dbgs() << "\nBB#" << BII.first->getNumber() << ":\n"
            << "  InNeeds = " << PrintState(BII.second.InNeeds)
@@ -236,6 +239,7 @@ void SIWholeQuadMode::printInfo() {
     }
   }
 }
+#endif
 
 void SIWholeQuadMode::markInstruction(MachineInstr &MI, char Flag,
                                       std::vector<WorkItem> &Worklist) {

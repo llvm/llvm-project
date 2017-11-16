@@ -787,11 +787,9 @@ void Writer::createSEHTable(OutputSection *RData) {
     if (!File->SEHCompat)
       return;
     for (Symbol *B : File->SEHandlers) {
-      // Make sure the handler is still live. Assume all handlers are regular
-      // symbols.
-      auto *D = dyn_cast<DefinedRegular>(B);
-      if (D && D->getChunk()->isLive())
-        Handlers.insert(D);
+      // Make sure the handler is still live.
+      if (B->isLive())
+        Handlers.insert(cast<Defined>(B));
     }
   }
 

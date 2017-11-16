@@ -9847,8 +9847,10 @@ static BranchProbability scaleCaseProbality(BranchProbability CaseProb,
   if (PeeledCaseProb == BranchProbability::getOne())
     return BranchProbability::getZero();
   BranchProbability SwitchProb = PeeledCaseProb.getCompl();
-  return BranchProbability(CaseProb.getNumerator(),
-                           SwitchProb.scale(CaseProb.getDenominator()));
+
+  uint32_t Numerator = CaseProb.getNumerator();
+  uint32_t Denominator = SwitchProb.scale(CaseProb.getDenominator());
+  return BranchProbability(Numerator, std::max(Numerator, Denominator));
 }
 
 // Try to peel the top probability case if it exceeds the threshold.

@@ -2293,4 +2293,9 @@ bool isSafeToExpand(const SCEV *S, ScalarEvolution &SE) {
   visitAll(S, Search);
   return !Search.IsUnsafe;
 }
+
+bool isSafeToExpandAt(const SCEV *S, const Instruction *InsertionPoint,
+                      ScalarEvolution &SE) {
+  return isSafeToExpand(S, SE) && SE.dominates(S, InsertionPoint->getParent());
+}
 }
