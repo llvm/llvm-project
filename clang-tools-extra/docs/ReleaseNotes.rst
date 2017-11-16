@@ -57,6 +57,11 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- New `google-avoid-throwing-objc-exception
+  <http://clang.llvm.org/extra/clang-tidy/checks/google-objc-avoid-throwing-exception.html>`_ check
+
+  Add new check to detect throwing exceptions in Objective-C code, which should be avoided.
+
 - New `objc-property-declaration
   <http://clang.llvm.org/extra/clang-tidy/checks/objc-property-declaration.html>`_ check
 

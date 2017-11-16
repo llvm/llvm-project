@@ -36,6 +36,7 @@
 // Project includes
 #include "ProcessElfCore.h"
 #include "ThreadElfCore.h"
+#include "elf-core-enums.h"
 
 using namespace lldb_private;
 
@@ -427,40 +428,6 @@ lldb::addr_t ProcessElfCore::GetImageInfoAddress() {
   return LLDB_INVALID_ADDRESS;
 }
 
-/// Core files PT_NOTE segment descriptor types
-enum {
-  NT_PRSTATUS = 1,
-  NT_FPREGSET,
-  NT_PRPSINFO,
-  NT_TASKSTRUCT,
-  NT_PLATFORM,
-  NT_AUXV,
-  NT_FILE = 0x46494c45,
-  NT_PRXFPREG = 0x46e62b7f,
-  NT_SIGINFO = 0x53494749,
-  NT_OPENBSD_PROCINFO = 10,
-  NT_OPENBSD_AUXV = 11,
-  NT_OPENBSD_REGS = 20,
-  NT_OPENBSD_FPREGS = 21,
-};
-
-namespace FREEBSD {
-
-enum {
-  NT_PRSTATUS = 1,
-  NT_FPREGSET,
-  NT_PRPSINFO,
-  NT_THRMISC = 7,
-  NT_PROCSTAT_AUXV = 16,
-  NT_PPC_VMX = 0x100
-};
-}
-
-namespace NETBSD {
-
-enum { NT_PROCINFO = 1, NT_AUXV, NT_AMD64_REGS = 33, NT_AMD64_FPREGS = 35 };
-}
-
 // Parse a FreeBSD NT_PRSTATUS note - see FreeBSD sys/procfs.h for details.
 static void ParseFreeBSDPrStatus(ThreadData &thread_data, DataExtractor &data,
                                  ArchSpec &arch) {
@@ -563,8 +530,12 @@ Status ProcessElfCore::ParseThreadContextsFromNoteSegment(
     note.Parse(segment_data, &offset);
 
     // Beginning of new thread
-    if ((note.n_type == NT_PRSTATUS && have_prstatus) ||
-        (note.n_type == NT_PRPSINFO && have_prpsinfo)) {
+    if (((note.n_type == LINUX::NT_PRSTATUS ||
+          note.n_type == FREEBSD::NT_PRSTATUS) &&
+         have_prstatus) ||
+        ((note.n_type == LINUX::NT_PRPSINFO ||
+          note.n_type == FREEBSD::NT_PRPSINFO) &&
+         have_prpsinfo)) {
       assert(thread_data->gpregset.GetByteSize() > 0);
       // Add the new thread to thread list
       m_thread_data.push_back(*thread_data);
@@ -627,22 +598,22 @@ Status ProcessElfCore::ParseThreadContextsFromNoteSegment(
       // "OpenBSD@nnn" so match on the initial part of the string.
       m_os = llvm::Triple::OpenBSD;
       switch (note.n_type) {
-      case NT_OPENBSD_PROCINFO:
+      case OPENBSD::NT_PROCINFO:
         ParseOpenBSDProcInfo(*thread_data, note_data);
         break;
-      case NT_OPENBSD_AUXV:
+      case OPENBSD::NT_AUXV:
         m_auxv = DataExtractor(note_data);
         break;
-      case NT_OPENBSD_REGS:
+      case OPENBSD::NT_REGS:
         thread_data->gpregset = note_data;
         break;
-      case NT_OPENBSD_FPREGS:
+      case OPENBSD::NT_FPREGS:
         thread_data->fpregset = note_data;
         break;
       }
     } else if (note.n_name == "CORE") {
       switch (note.n_type) {
-      case NT_PRSTATUS:
+      case LINUX::NT_PRSTATUS:
         have_prstatus = true;
         error = prstatus.Parse(note_data, arch);
         if (error.Fail())
@@ -652,17 +623,22 @@ Status ProcessElfCore::ParseThreadContextsFromNoteSegment(
         header_size = ELFLinuxPrStatus::GetSize(arch);
         len = note_data.GetByteSize() - header_size;
         thread_data->gpregset = DataExtractor(note_data, header_size, len);
+
+        if (arch.GetCore() == ArchSpec::eCore_ppc64le_generic)
+          thread_data->regsets.insert(
+              std::make_pair(note.n_type, thread_data->gpregset));
         break;
-      case NT_FPREGSET:
+      case LINUX::NT_FPREGSET:
         // In a i386 core file NT_FPREGSET is present, but it's not the result
         // of the FXSAVE instruction like in 64 bit files.
         // The result from FXSAVE is in NT_PRXFPREG for i386 core files
-        if (arch.GetCore() == ArchSpec::eCore_x86_64_x86_64)
+        if (arch.GetCore() == ArchSpec::eCore_x86_64_x86_64 || arch.IsMIPS())
           thread_data->fpregset = note_data;
-        else if(arch.IsMIPS())
-          thread_data->fpregset = note_data;
+        else if (arch.GetCore() == ArchSpec::eCore_ppc64le_generic) {
+          thread_data->regsets.insert(std::make_pair(note.n_type, note_data));
+        }
         break;
-      case NT_PRPSINFO:
+      case LINUX::NT_PRPSINFO:
         have_prpsinfo = true;
         error = prpsinfo.Parse(note_data, arch);
         if (error.Fail())
@@ -670,10 +646,10 @@ Status ProcessElfCore::ParseThreadContextsFromNoteSegment(
         thread_data->name = prpsinfo.pr_fname;
         SetID(prpsinfo.pr_pid);
         break;
-      case NT_AUXV:
+      case LINUX::NT_AUXV:
         m_auxv = DataExtractor(note_data);
         break;
-      case NT_FILE: {
+      case LINUX::NT_FILE: {
         m_nt_file_entries.clear();
         lldb::offset_t offset = 0;
         const uint64_t count = note_data.GetAddress(&offset);
@@ -691,7 +667,7 @@ Status ProcessElfCore::ParseThreadContextsFromNoteSegment(
             m_nt_file_entries[i].path.SetCString(path);
         }
       } break;
-      case NT_SIGINFO: {
+      case LINUX::NT_SIGINFO: {
         error = siginfo.Parse(note_data, arch);
         if (error.Fail())
           return error;
@@ -702,8 +678,14 @@ Status ProcessElfCore::ParseThreadContextsFromNoteSegment(
       }
     } else if (note.n_name == "LINUX") {
       switch (note.n_type) {
-      case NT_PRXFPREG:
+      case LINUX::NT_PRXFPREG:
         thread_data->fpregset = note_data;
+        break;
+      case LINUX::NT_PPC_VMX:
+      case LINUX::NT_PPC_VSX:
+        if (arch.GetCore() == ArchSpec::eCore_ppc64le_generic)
+          thread_data->regsets.insert(std::make_pair(note.n_type, note_data));
+        break;
       }
     }
 
