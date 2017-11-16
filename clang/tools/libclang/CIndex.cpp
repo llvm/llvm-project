@@ -877,6 +877,9 @@ bool CursorVisitor::VisitFieldDecl(FieldDecl *D) {
   if (Expr *BitWidth = D->getBitWidth())
     return Visit(MakeCXCursor(BitWidth, StmtParent, TU, RegionOfInterest));
 
+  if (Expr *Init = D->getInClassInitializer())
+    return Visit(MakeCXCursor(Init, StmtParent, TU, RegionOfInterest));
+
   return false;
 }
 

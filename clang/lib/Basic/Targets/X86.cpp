@@ -1504,121 +1504,19 @@ bool X86TargetInfo::checkCPUKind(CPUKind Kind) const {
   case CK_Generic:
     // No processor selected!
     return false;
-
-  case CK_i386:
-  case CK_i486:
-  case CK_WinChipC6:
-  case CK_WinChip2:
-  case CK_C3:
-  case CK_i586:
-  case CK_Pentium:
-  case CK_PentiumMMX:
-  case CK_PentiumPro:
-  case CK_Pentium2:
-  case CK_Pentium3:
-  case CK_PentiumM:
-  case CK_Yonah:
-  case CK_C3_2:
-  case CK_Pentium4:
-  case CK_Lakemont:
-  case CK_Prescott:
-  case CK_K6:
-  case CK_K6_2:
-  case CK_K6_3:
-  case CK_Athlon:
-  case CK_AthlonXP:
-  case CK_Geode:
-    // Only accept certain architectures when compiling in 32-bit mode.
-    if (getTriple().getArch() != llvm::Triple::x86)
-      return false;
-
-    LLVM_FALLTHROUGH;
-  case CK_Nocona:
-  case CK_Core2:
-  case CK_Penryn:
-  case CK_Bonnell:
-  case CK_Silvermont:
-  case CK_Goldmont:
-  case CK_Nehalem:
-  case CK_Westmere:
-  case CK_SandyBridge:
-  case CK_IvyBridge:
-  case CK_Haswell:
-  case CK_Broadwell:
-  case CK_SkylakeClient:
-  case CK_SkylakeServer:
-  case CK_Cannonlake:
-  case CK_KNL:
-  case CK_KNM:
-  case CK_K8:
-  case CK_K8SSE3:
-  case CK_AMDFAM10:
-  case CK_BTVER1:
-  case CK_BTVER2:
-  case CK_BDVER1:
-  case CK_BDVER2:
-  case CK_BDVER3:
-  case CK_BDVER4:
-  case CK_ZNVER1:
-  case CK_x86_64:
-    return true;
+#define PROC(ENUM, STRING, IS64BIT)                                            \
+  case CK_##ENUM:                                                              \
+    return IS64BIT || getTriple().getArch() == llvm::Triple::x86;
+#include "clang/Basic/X86Target.def"
   }
   llvm_unreachable("Unhandled CPU kind");
 }
 
 X86TargetInfo::CPUKind X86TargetInfo::getCPUKind(StringRef CPU) const {
   return llvm::StringSwitch<CPUKind>(CPU)
-      .Case("i386", CK_i386)
-      .Case("i486", CK_i486)
-      .Case("winchip-c6", CK_WinChipC6)
-      .Case("winchip2", CK_WinChip2)
-      .Case("c3", CK_C3)
-      .Case("i586", CK_i586)
-      .Case("pentium", CK_Pentium)
-      .Case("pentium-mmx", CK_PentiumMMX)
-      .Cases("i686", "pentiumpro", CK_PentiumPro)
-      .Case("pentium2", CK_Pentium2)
-      .Cases("pentium3", "pentium3m", CK_Pentium3)
-      .Case("pentium-m", CK_PentiumM)
-      .Case("c3-2", CK_C3_2)
-      .Case("yonah", CK_Yonah)
-      .Cases("pentium4", "pentium4m", CK_Pentium4)
-      .Case("prescott", CK_Prescott)
-      .Case("nocona", CK_Nocona)
-      .Case("core2", CK_Core2)
-      .Case("penryn", CK_Penryn)
-      .Cases("bonnell", "atom", CK_Bonnell)
-      .Cases("silvermont", "slm", CK_Silvermont)
-      .Case("goldmont", CK_Goldmont)
-      .Cases("nehalem", "corei7", CK_Nehalem)
-      .Case("westmere", CK_Westmere)
-      .Cases("sandybridge", "corei7-avx", CK_SandyBridge)
-      .Cases("ivybridge", "core-avx-i", CK_IvyBridge)
-      .Cases("haswell", "core-avx2", CK_Haswell)
-      .Case("broadwell", CK_Broadwell)
-      .Case("skylake", CK_SkylakeClient)
-      .Cases("skylake-avx512", "skx", CK_SkylakeServer)
-      .Case("cannonlake", CK_Cannonlake)
-      .Case("knl", CK_KNL)
-      .Case("knm", CK_KNM)
-      .Case("lakemont", CK_Lakemont)
-      .Case("k6", CK_K6)
-      .Case("k6-2", CK_K6_2)
-      .Case("k6-3", CK_K6_3)
-      .Cases("athlon", "athlon-tbird", CK_Athlon)
-      .Cases("athlon-xp", "athlon-mp", "athlon-4", CK_AthlonXP)
-      .Cases("k8", "athlon64", "athlon-fx", "opteron", CK_K8)
-      .Cases("k8-sse3", "athlon64-sse3", "opteron-sse3", CK_K8SSE3)
-      .Cases("amdfam10", "barcelona", CK_AMDFAM10)
-      .Case("btver1", CK_BTVER1)
-      .Case("btver2", CK_BTVER2)
-      .Case("bdver1", CK_BDVER1)
-      .Case("bdver2", CK_BDVER2)
-      .Case("bdver3", CK_BDVER3)
-      .Case("bdver4", CK_BDVER4)
-      .Case("znver1", CK_ZNVER1)
-      .Case("x86-64", CK_x86_64)
-      .Case("geode", CK_Geode)
+#define PROC(ENUM, STRING, IS64BIT) .Case(STRING, CK_##ENUM)
+#define PROC_ALIAS(ENUM, ALIAS) .Case(ALIAS, CK_##ENUM)
+#include "clang/Basic/X86Target.def"
       .Default(CK_Generic);
 }
 
