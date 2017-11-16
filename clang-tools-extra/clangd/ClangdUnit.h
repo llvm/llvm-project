@@ -143,10 +143,12 @@ public:
   // deferRebuild will hold references to it.
   static std::shared_ptr<CppFile>
   Create(PathRef FileName, tooling::CompileCommand Command,
+         bool StorePreamblesInMemory,
          std::shared_ptr<PCHContainerOperations> PCHs, clangd::Logger &Logger);
 
 private:
   CppFile(PathRef FileName, tooling::CompileCommand Command,
+          bool StorePreamblesInMemory,
           std::shared_ptr<PCHContainerOperations> PCHs, clangd::Logger &Logger);
 
 public:
@@ -222,6 +224,7 @@ private:
 
   Path FileName;
   tooling::CompileCommand Command;
+  bool StorePreamblesInMemory;
 
   /// Mutex protects all fields, declared below it, FileName and Command are not
   /// mutated.

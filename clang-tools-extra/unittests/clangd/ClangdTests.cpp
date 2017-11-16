@@ -332,6 +332,7 @@ protected:
     ErrorCheckingDiagConsumer DiagConsumer;
     MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
     ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
+                        /*StorePreamblesInMemory=*/true,
                         clangd::CodeCompleteOptions(),
                         EmptyLogger::getInstance());
     for (const auto &FileWithContents : ExtraFiles)
@@ -396,6 +397,7 @@ TEST_F(ClangdVFSTest, Reparse) {
   ErrorCheckingDiagConsumer DiagConsumer;
   MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
   ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
+                      /*StorePreamblesInMemory=*/true,
                       clangd::CodeCompleteOptions(),
                       EmptyLogger::getInstance());
 
@@ -442,6 +444,7 @@ TEST_F(ClangdVFSTest, ReparseOnHeaderChange) {
   MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
 
   ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
+                      /*StorePreamblesInMemory=*/true,
                       clangd::CodeCompleteOptions(),
                       EmptyLogger::getInstance());
 
@@ -490,7 +493,9 @@ TEST_F(ClangdVFSTest, CheckVersions) {
   MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
   // Run ClangdServer synchronously.
   ClangdServer Server(CDB, DiagConsumer, FS,
-                      /*AsyncThreadsCount=*/0, clangd::CodeCompleteOptions(),
+                      /*AsyncThreadsCount=*/0,
+                      /*StorePreamblesInMemory=*/true,
+                      clangd::CodeCompleteOptions(),
                       EmptyLogger::getInstance());
 
   auto FooCpp = getVirtualTestFilePath("foo.cpp");
@@ -524,7 +529,9 @@ TEST_F(ClangdVFSTest, SearchLibDir) {
                               "-stdlib=libstdc++"});
   // Run ClangdServer synchronously.
   ClangdServer Server(CDB, DiagConsumer, FS,
-                      /*AsyncThreadsCount=*/0, clangd::CodeCompleteOptions(),
+                      /*AsyncThreadsCount=*/0,
+                      /*StorePreamblesInMemory=*/true,
+                      clangd::CodeCompleteOptions(),
                       EmptyLogger::getInstance());
 
   // Just a random gcc version string
@@ -573,7 +580,9 @@ TEST_F(ClangdVFSTest, ForceReparseCompileCommand) {
   ErrorCheckingDiagConsumer DiagConsumer;
   MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
   ClangdServer Server(CDB, DiagConsumer, FS,
-                      /*AsyncThreadsCount=*/0, clangd::CodeCompleteOptions(),
+                      /*AsyncThreadsCount=*/0,
+                      /*StorePreamblesInMemory=*/true,
+                      clangd::CodeCompleteOptions(),
                       EmptyLogger::getInstance());
   // No need to sync reparses, because reparses are performed on the calling
   // thread to true.
@@ -641,6 +650,7 @@ TEST_F(ClangdCompletionTest, CheckContentsOverride) {
   MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
 
   ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
+                      /*StorePreamblesInMemory=*/true,
                       clangd::CodeCompleteOptions(),
                       EmptyLogger::getInstance());
 
@@ -701,7 +711,8 @@ TEST_F(ClangdCompletionTest, Limit) {
   clangd::CodeCompleteOptions Opts;
   Opts.Limit = 2;
   ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
-                      Opts, EmptyLogger::getInstance());
+                      /*StorePreamblesInMemory=*/true, Opts,
+                      EmptyLogger::getInstance());
 
   auto FooCpp = getVirtualTestFilePath("foo.cpp");
   FS.Files[FooCpp] = "";
@@ -796,7 +807,8 @@ int test() {
 
   auto TestWithOpts = [&](clangd::CodeCompleteOptions Opts) {
     ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
-                        Opts, EmptyLogger::getInstance());
+                        /*StorePreamblesInMemory=*/true, Opts,
+                        EmptyLogger::getInstance());
     // No need to sync reparses here as there are no asserts on diagnostics (or
     // other async operations).
     Server.addDocument(FooCpp, GlobalCompletion.Text);
@@ -989,6 +1001,7 @@ int d;
   {
     MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
     ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
+                        /*StorePreamblesInMemory=*/true,
                         clangd::CodeCompleteOptions(),
                         EmptyLogger::getInstance());
 
@@ -1149,6 +1162,7 @@ TEST_F(ClangdVFSTest, CheckSourceHeaderSwitch) {
   MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
 
   ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
+                      /*StorePreamblesInMemory=*/true,
                       clangd::CodeCompleteOptions(),
                       EmptyLogger::getInstance());
 
@@ -1275,7 +1289,8 @@ int d;
       std::move(StartSecondReparsePromise));
 
   MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
-  ClangdServer Server(CDB, DiagConsumer, FS, 4, clangd::CodeCompleteOptions(),
+  ClangdServer Server(CDB, DiagConsumer, FS, 4, /*StorePreamblesInMemory=*/true,
+                      clangd::CodeCompleteOptions(),
                       EmptyLogger::getInstance());
   Server.addDocument(FooCpp, SourceContentsWithErrors);
   StartSecondReparse.wait();
