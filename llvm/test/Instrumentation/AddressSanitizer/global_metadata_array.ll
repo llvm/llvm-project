@@ -24,6 +24,8 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; Check that location descriptors and global names were passed into __asan_register_globals:
 ; CHECK: i64 ptrtoint ([7 x i8]* [[VARNAME]] to i64)
 ; CHECK: i64 ptrtoint ({ [22 x i8]*, i32, i32 }* [[LOCDESCR]] to i64)
+; Check alignment of metadata_array.
+; CHECK-S5-SAME: {{align 32$}}
 
 ; Function Attrs: nounwind sanitize_address
 define internal void @__cxx_global_var_init() #0 section ".text.startup" {

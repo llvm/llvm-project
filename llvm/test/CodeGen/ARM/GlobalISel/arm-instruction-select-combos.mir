@@ -12,6 +12,14 @@
   define void @test_shifts_no_revsh_features() #1 { ret void }
   define void @test_shifts_no_revsh_constants() #0 { ret void }
 
+  define void @test_bicrr() { ret void }
+  define void @test_bicrr_commutative() { ret void }
+
+  define void @test_bicri() { ret void }
+  define void @test_bicri_commutative_xor() { ret void }
+  define void @test_bicri_commutative_and() { ret void }
+  define void @test_bicri_commutative_both() { ret void }
+
   attributes #0 = { "target-features"="+v6" }
   attributes #1 = { "target-features"="-v6" }
   attributes #2 = { "target-features"="+v6t2" }
@@ -366,4 +374,202 @@ body:             |
     %r0 = COPY %9(s32)
 
     BX_RET 14, _, implicit %r0
+...
+---
+name:            test_bicrr
+# CHECK-LABEL: name: test_bicrr
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+  - { id: 4, class: gprb }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY %r0
+    ; CHECK: [[VREGY:%[0-9]+]]:gpr = COPY %r1
+
+    %2(s32) = G_CONSTANT i32 -1
+    %3(s32) = G_XOR %1, %2
+    %4(s32) = G_AND %0, %3
+    ; CHECK: [[VREGR:%[0-9]+]]:gpr = BICrr [[VREGX]], [[VREGY]], 14, _, _
+
+    %r0 = COPY %4(s32)
+    ; CHECK: %r0 = COPY [[VREGR]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_bicrr_commutative
+# CHECK-LABEL: name: test_bicrr_commutative
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+  - { id: 4, class: gprb }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY %r0
+    ; CHECK: [[VREGY:%[0-9]+]]:gpr = COPY %r1
+
+    %2(s32) = G_CONSTANT i32 -1
+    %3(s32) = G_XOR %1, %2
+    %4(s32) = G_AND %3, %0
+    ; CHECK: [[VREGR:%[0-9]+]]:gpr = BICrr [[VREGX]], [[VREGY]], 14, _, _
+
+    %r0 = COPY %4(s32)
+    ; CHECK: %r0 = COPY [[VREGR]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_bicri
+# CHECK-LABEL: name: test_bicri
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+  - { id: 4, class: gprb }
+body:             |
+  bb.0:
+    liveins: %r0
+
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY %r0
+
+    %1(s32) = G_CONSTANT i32 192
+
+    %2(s32) = G_CONSTANT i32 -1
+    %3(s32) = G_XOR %1, %2
+    %4(s32) = G_AND %0, %3
+    ; CHECK: [[VREGR:%[0-9]+]]:gpr = BICri [[VREGX]], 192, 14, _, _
+
+    %r0 = COPY %4(s32)
+    ; CHECK: %r0 = COPY [[VREGR]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_bicri_commutative_xor
+# CHECK-LABEL: name: test_bicri_commutative_xor
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+  - { id: 4, class: gprb }
+body:             |
+  bb.0:
+    liveins: %r0
+
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY %r0
+
+    %1(s32) = G_CONSTANT i32 192
+
+    %2(s32) = G_CONSTANT i32 -1
+    %3(s32) = G_XOR %2, %1
+    %4(s32) = G_AND %0, %3
+    ; CHECK: [[VREGR:%[0-9]+]]:gpr = BICri [[VREGX]], 192, 14, _, _
+
+    %r0 = COPY %4(s32)
+    ; CHECK: %r0 = COPY [[VREGR]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_bicri_commutative_and
+# CHECK-LABEL: name: test_bicri_commutative_and
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+  - { id: 4, class: gprb }
+body:             |
+  bb.0:
+    liveins: %r0
+
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY %r0
+
+    %1(s32) = G_CONSTANT i32 192
+
+    %2(s32) = G_CONSTANT i32 -1
+    %3(s32) = G_XOR %1, %2
+    %4(s32) = G_AND %3, %0
+    ; CHECK: [[VREGR:%[0-9]+]]:gpr = BICri [[VREGX]], 192, 14, _, _
+
+    %r0 = COPY %4(s32)
+    ; CHECK: %r0 = COPY [[VREGR]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_bicri_commutative_both
+# CHECK-LABEL: name: test_bicri_commutative_both
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+  - { id: 4, class: gprb }
+body:             |
+  bb.0:
+    liveins: %r0
+
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY %r0
+
+    %1(s32) = G_CONSTANT i32 192
+
+    %2(s32) = G_CONSTANT i32 -1
+    %3(s32) = G_XOR %2, %1
+    %4(s32) = G_AND %3, %0
+    ; CHECK: [[VREGR:%[0-9]+]]:gpr = BICri [[VREGX]], 192, 14, _, _
+
+    %r0 = COPY %4(s32)
+    ; CHECK: %r0 = COPY [[VREGR]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
 ...

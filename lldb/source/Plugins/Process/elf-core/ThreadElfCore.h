@@ -18,6 +18,7 @@
 // Project includes
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "llvm/ADT/DenseMap.h"
 
 struct compat_timeval {
   alignas(8) uint64_t tv_sec;
@@ -131,6 +132,7 @@ struct ThreadData {
   lldb_private::DataExtractor gpregset;
   lldb_private::DataExtractor fpregset;
   lldb_private::DataExtractor vregset;
+  llvm::DenseMap<uint32_t, lldb_private::DataExtractor> regsets;
   lldb::tid_t tid;
   int signo = 0;
   int prstatus_sig = 0;
@@ -179,6 +181,7 @@ protected:
   lldb_private::DataExtractor m_gpregset_data;
   lldb_private::DataExtractor m_fpregset_data;
   lldb_private::DataExtractor m_vregset_data;
+  llvm::DenseMap<uint32_t, lldb_private::DataExtractor> m_regsets_data;
 
   bool CalculateStopInfo() override;
 };

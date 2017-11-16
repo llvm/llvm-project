@@ -1161,9 +1161,9 @@ define void @test_cpuid() optsize {
 
 ; TODO - test_sahf
 
-; TODO - test_sal
-; TODO - test_shl
 ; TODO - test_sar
+; TODO - test_shl
+; TODO - test_shr
 
 ; TODO - test_sbb
 
@@ -1175,9 +1175,498 @@ define void @test_cpuid() optsize {
 
 ; TODO - test_setcc
 
-; TODO - test_shld
-; TODO - test_shr
-; TODO - test_shrd
+define void @test_shld_shrd_16(i16 %a0, i16 %a1, i16 *%a2) optsize {
+; GENERIC-LABEL: test_shld_shrd_16:
+; GENERIC:       # BB#0:
+; GENERIC-NEXT:    #APP
+; GENERIC-NEXT:    shldw %cl, %si, %di # sched: [4:1.50]
+; GENERIC-NEXT:    shldw %cl, %si, (%rdx) # sched: [10:1.50]
+; GENERIC-NEXT:    shldw $7, %si, %di # sched: [2:0.67]
+; GENERIC-NEXT:    shldw $7, %si, (%rdx) # sched: [8:1.00]
+; GENERIC-NEXT:    #NO_APP
+; GENERIC-NEXT:    #APP
+; GENERIC-NEXT:    shrdw %cl, %si, %di # sched: [4:1.50]
+; GENERIC-NEXT:    shrdw %cl, %si, (%rdx) # sched: [10:1.50]
+; GENERIC-NEXT:    shrdw $7, %si, %di # sched: [2:0.67]
+; GENERIC-NEXT:    shrdw $7, %si, (%rdx) # sched: [8:1.00]
+; GENERIC-NEXT:    #NO_APP
+; GENERIC-NEXT:    retq # sched: [1:1.00]
+;
+; ATOM-LABEL: test_shld_shrd_16:
+; ATOM:       # BB#0:
+; ATOM-NEXT:    #APP
+; ATOM-NEXT:    shldw %cl, %si, %di # sched: [6:3.00]
+; ATOM-NEXT:    shldw %cl, %si, (%rdx) # sched: [6:3.00]
+; ATOM-NEXT:    shldw $7, %si, %di # sched: [6:3.00]
+; ATOM-NEXT:    shldw $7, %si, (%rdx) # sched: [6:3.00]
+; ATOM-NEXT:    #NO_APP
+; ATOM-NEXT:    #APP
+; ATOM-NEXT:    shrdw %cl, %si, %di # sched: [6:3.00]
+; ATOM-NEXT:    shrdw %cl, %si, (%rdx) # sched: [6:3.00]
+; ATOM-NEXT:    shrdw $7, %si, %di # sched: [6:3.00]
+; ATOM-NEXT:    shrdw $7, %si, (%rdx) # sched: [6:3.00]
+; ATOM-NEXT:    #NO_APP
+; ATOM-NEXT:    retq # sched: [79:39.50]
+;
+; SLM-LABEL: test_shld_shrd_16:
+; SLM:       # BB#0:
+; SLM-NEXT:    #APP
+; SLM-NEXT:    shldw %cl, %si, %di # sched: [1:1.00]
+; SLM-NEXT:    shldw %cl, %si, (%rdx) # sched: [4:2.00]
+; SLM-NEXT:    shldw $7, %si, %di # sched: [1:1.00]
+; SLM-NEXT:    shldw $7, %si, (%rdx) # sched: [4:2.00]
+; SLM-NEXT:    #NO_APP
+; SLM-NEXT:    #APP
+; SLM-NEXT:    shrdw %cl, %si, %di # sched: [1:1.00]
+; SLM-NEXT:    shrdw %cl, %si, (%rdx) # sched: [4:2.00]
+; SLM-NEXT:    shrdw $7, %si, %di # sched: [1:1.00]
+; SLM-NEXT:    shrdw $7, %si, (%rdx) # sched: [4:2.00]
+; SLM-NEXT:    #NO_APP
+; SLM-NEXT:    retq # sched: [4:1.00]
+;
+; SANDY-LABEL: test_shld_shrd_16:
+; SANDY:       # BB#0:
+; SANDY-NEXT:    #APP
+; SANDY-NEXT:    shldw %cl, %si, %di # sched: [4:1.50]
+; SANDY-NEXT:    shldw %cl, %si, (%rdx) # sched: [10:1.50]
+; SANDY-NEXT:    shldw $7, %si, %di # sched: [2:0.67]
+; SANDY-NEXT:    shldw $7, %si, (%rdx) # sched: [8:1.00]
+; SANDY-NEXT:    #NO_APP
+; SANDY-NEXT:    #APP
+; SANDY-NEXT:    shrdw %cl, %si, %di # sched: [4:1.50]
+; SANDY-NEXT:    shrdw %cl, %si, (%rdx) # sched: [10:1.50]
+; SANDY-NEXT:    shrdw $7, %si, %di # sched: [2:0.67]
+; SANDY-NEXT:    shrdw $7, %si, (%rdx) # sched: [8:1.00]
+; SANDY-NEXT:    #NO_APP
+; SANDY-NEXT:    retq # sched: [1:1.00]
+;
+; HASWELL-LABEL: test_shld_shrd_16:
+; HASWELL:       # BB#0:
+; HASWELL-NEXT:    #APP
+; HASWELL-NEXT:    shldw %cl, %si, %di # sched: [6:1.00]
+; HASWELL-NEXT:    shldw %cl, %si, (%rdx) # sched: [6:1.00]
+; HASWELL-NEXT:    shldw $7, %si, %di # sched: [3:1.00]
+; HASWELL-NEXT:    shldw $7, %si, (%rdx) # sched: [4:1.00]
+; HASWELL-NEXT:    #NO_APP
+; HASWELL-NEXT:    #APP
+; HASWELL-NEXT:    shrdw %cl, %si, %di # sched: [6:1.00]
+; HASWELL-NEXT:    shrdw %cl, %si, (%rdx) # sched: [6:1.00]
+; HASWELL-NEXT:    shrdw $7, %si, %di # sched: [3:1.00]
+; HASWELL-NEXT:    shrdw $7, %si, (%rdx) # sched: [4:1.00]
+; HASWELL-NEXT:    #NO_APP
+; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; BROADWELL-LABEL: test_shld_shrd_16:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    #APP
+; BROADWELL-NEXT:    shldw %cl, %si, %di # sched: [6:1.00]
+; BROADWELL-NEXT:    shldw %cl, %si, (%rdx) # sched: [11:1.00]
+; BROADWELL-NEXT:    shldw $7, %si, %di # sched: [3:1.00]
+; BROADWELL-NEXT:    shldw $7, %si, (%rdx) # sched: [9:1.00]
+; BROADWELL-NEXT:    #NO_APP
+; BROADWELL-NEXT:    #APP
+; BROADWELL-NEXT:    shrdw %cl, %si, %di # sched: [6:1.00]
+; BROADWELL-NEXT:    shrdw %cl, %si, (%rdx) # sched: [11:1.00]
+; BROADWELL-NEXT:    shrdw $7, %si, %di # sched: [3:1.00]
+; BROADWELL-NEXT:    shrdw $7, %si, (%rdx) # sched: [9:1.00]
+; BROADWELL-NEXT:    #NO_APP
+; BROADWELL-NEXT:    retq # sched: [7:1.00]
+;
+; SKYLAKE-LABEL: test_shld_shrd_16:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    #APP
+; SKYLAKE-NEXT:    shldw %cl, %si, %di # sched: [6:1.00]
+; SKYLAKE-NEXT:    shldw %cl, %si, (%rdx) # sched: [11:1.00]
+; SKYLAKE-NEXT:    shldw $7, %si, %di # sched: [3:1.00]
+; SKYLAKE-NEXT:    shldw $7, %si, (%rdx) # sched: [9:1.00]
+; SKYLAKE-NEXT:    #NO_APP
+; SKYLAKE-NEXT:    #APP
+; SKYLAKE-NEXT:    shrdw %cl, %si, %di # sched: [6:1.00]
+; SKYLAKE-NEXT:    shrdw %cl, %si, (%rdx) # sched: [11:1.00]
+; SKYLAKE-NEXT:    shrdw $7, %si, %di # sched: [3:1.00]
+; SKYLAKE-NEXT:    shrdw $7, %si, (%rdx) # sched: [9:1.00]
+; SKYLAKE-NEXT:    #NO_APP
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
+;
+; SKX-LABEL: test_shld_shrd_16:
+; SKX:       # BB#0:
+; SKX-NEXT:    #APP
+; SKX-NEXT:    shldw %cl, %si, %di # sched: [6:1.00]
+; SKX-NEXT:    shldw %cl, %si, (%rdx) # sched: [11:1.00]
+; SKX-NEXT:    shldw $7, %si, %di # sched: [3:1.00]
+; SKX-NEXT:    shldw $7, %si, (%rdx) # sched: [9:1.00]
+; SKX-NEXT:    #NO_APP
+; SKX-NEXT:    #APP
+; SKX-NEXT:    shrdw %cl, %si, %di # sched: [6:1.00]
+; SKX-NEXT:    shrdw %cl, %si, (%rdx) # sched: [11:1.00]
+; SKX-NEXT:    shrdw $7, %si, %di # sched: [3:1.00]
+; SKX-NEXT:    shrdw $7, %si, (%rdx) # sched: [9:1.00]
+; SKX-NEXT:    #NO_APP
+; SKX-NEXT:    retq # sched: [7:1.00]
+;
+; BTVER2-LABEL: test_shld_shrd_16:
+; BTVER2:       # BB#0:
+; BTVER2-NEXT:    #APP
+; BTVER2-NEXT:    shldw %cl, %si, %di # sched: [1:0.50]
+; BTVER2-NEXT:    shldw %cl, %si, (%rdx) # sched: [4:1.00]
+; BTVER2-NEXT:    shldw $7, %si, %di # sched: [1:0.50]
+; BTVER2-NEXT:    shldw $7, %si, (%rdx) # sched: [4:1.00]
+; BTVER2-NEXT:    #NO_APP
+; BTVER2-NEXT:    #APP
+; BTVER2-NEXT:    shrdw %cl, %si, %di # sched: [1:0.50]
+; BTVER2-NEXT:    shrdw %cl, %si, (%rdx) # sched: [4:1.00]
+; BTVER2-NEXT:    shrdw $7, %si, %di # sched: [1:0.50]
+; BTVER2-NEXT:    shrdw $7, %si, (%rdx) # sched: [4:1.00]
+; BTVER2-NEXT:    #NO_APP
+; BTVER2-NEXT:    retq # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_shld_shrd_16:
+; ZNVER1:       # BB#0:
+; ZNVER1-NEXT:    #APP
+; ZNVER1-NEXT:    shldw %cl, %si, %di # sched: [100:?]
+; ZNVER1-NEXT:    shldw %cl, %si, (%rdx) # sched: [100:?]
+; ZNVER1-NEXT:    shldw $7, %si, %di # sched: [1:0.25]
+; ZNVER1-NEXT:    shldw $7, %si, (%rdx) # sched: [5:0.50]
+; ZNVER1-NEXT:    #NO_APP
+; ZNVER1-NEXT:    #APP
+; ZNVER1-NEXT:    shrdw %cl, %si, %di # sched: [100:?]
+; ZNVER1-NEXT:    shrdw %cl, %si, (%rdx) # sched: [100:?]
+; ZNVER1-NEXT:    shrdw $7, %si, %di # sched: [1:0.25]
+; ZNVER1-NEXT:    shrdw $7, %si, (%rdx) # sched: [5:0.50]
+; ZNVER1-NEXT:    #NO_APP
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
+  call void asm sideeffect "shld $1, $0 \0A\09 shld $1, $2 \0A\09 shld $3, $1, $0 \0A\09 shld $3, $1, $2", "r,r,*m,i"(i16 %a0, i16 %a1, i16 *%a2, i8 7)
+  call void asm sideeffect "shrd $1, $0 \0A\09 shrd $1, $2 \0A\09 shrd $3, $1, $0 \0A\09 shrd $3, $1, $2", "r,r,*m,i"(i16 %a0, i16 %a1, i16 *%a2, i8 7)
+  ret void
+}
+define void @test_shld_shrd_32(i32 %a0, i32 %a1, i32 *%a2) optsize {
+; GENERIC-LABEL: test_shld_shrd_32:
+; GENERIC:       # BB#0:
+; GENERIC-NEXT:    #APP
+; GENERIC-NEXT:    shldl %cl, %esi, %edi # sched: [4:1.50]
+; GENERIC-NEXT:    shldl %cl, %esi, (%rdx) # sched: [10:1.50]
+; GENERIC-NEXT:    shldl $7, %esi, %edi # sched: [2:0.67]
+; GENERIC-NEXT:    shldl $7, %esi, (%rdx) # sched: [8:1.00]
+; GENERIC-NEXT:    #NO_APP
+; GENERIC-NEXT:    #APP
+; GENERIC-NEXT:    shrdl %cl, %esi, %edi # sched: [4:1.50]
+; GENERIC-NEXT:    shrdl %cl, %esi, (%rdx) # sched: [10:1.50]
+; GENERIC-NEXT:    shrdl $7, %esi, %edi # sched: [2:0.67]
+; GENERIC-NEXT:    shrdl $7, %esi, (%rdx) # sched: [8:1.00]
+; GENERIC-NEXT:    #NO_APP
+; GENERIC-NEXT:    retq # sched: [1:1.00]
+;
+; ATOM-LABEL: test_shld_shrd_32:
+; ATOM:       # BB#0:
+; ATOM-NEXT:    #APP
+; ATOM-NEXT:    shldl %cl, %esi, %edi # sched: [2:1.00]
+; ATOM-NEXT:    shldl %cl, %esi, (%rdx) # sched: [4:2.00]
+; ATOM-NEXT:    shldl $7, %esi, %edi # sched: [2:1.00]
+; ATOM-NEXT:    shldl $7, %esi, (%rdx) # sched: [4:2.00]
+; ATOM-NEXT:    #NO_APP
+; ATOM-NEXT:    #APP
+; ATOM-NEXT:    shrdl %cl, %esi, %edi # sched: [2:1.00]
+; ATOM-NEXT:    shrdl %cl, %esi, (%rdx) # sched: [4:2.00]
+; ATOM-NEXT:    shrdl $7, %esi, %edi # sched: [2:1.00]
+; ATOM-NEXT:    shrdl $7, %esi, (%rdx) # sched: [4:2.00]
+; ATOM-NEXT:    #NO_APP
+; ATOM-NEXT:    retq # sched: [79:39.50]
+;
+; SLM-LABEL: test_shld_shrd_32:
+; SLM:       # BB#0:
+; SLM-NEXT:    #APP
+; SLM-NEXT:    shldl %cl, %esi, %edi # sched: [1:1.00]
+; SLM-NEXT:    shldl %cl, %esi, (%rdx) # sched: [4:2.00]
+; SLM-NEXT:    shldl $7, %esi, %edi # sched: [1:1.00]
+; SLM-NEXT:    shldl $7, %esi, (%rdx) # sched: [4:2.00]
+; SLM-NEXT:    #NO_APP
+; SLM-NEXT:    #APP
+; SLM-NEXT:    shrdl %cl, %esi, %edi # sched: [1:1.00]
+; SLM-NEXT:    shrdl %cl, %esi, (%rdx) # sched: [4:2.00]
+; SLM-NEXT:    shrdl $7, %esi, %edi # sched: [1:1.00]
+; SLM-NEXT:    shrdl $7, %esi, (%rdx) # sched: [4:2.00]
+; SLM-NEXT:    #NO_APP
+; SLM-NEXT:    retq # sched: [4:1.00]
+;
+; SANDY-LABEL: test_shld_shrd_32:
+; SANDY:       # BB#0:
+; SANDY-NEXT:    #APP
+; SANDY-NEXT:    shldl %cl, %esi, %edi # sched: [4:1.50]
+; SANDY-NEXT:    shldl %cl, %esi, (%rdx) # sched: [10:1.50]
+; SANDY-NEXT:    shldl $7, %esi, %edi # sched: [2:0.67]
+; SANDY-NEXT:    shldl $7, %esi, (%rdx) # sched: [8:1.00]
+; SANDY-NEXT:    #NO_APP
+; SANDY-NEXT:    #APP
+; SANDY-NEXT:    shrdl %cl, %esi, %edi # sched: [4:1.50]
+; SANDY-NEXT:    shrdl %cl, %esi, (%rdx) # sched: [10:1.50]
+; SANDY-NEXT:    shrdl $7, %esi, %edi # sched: [2:0.67]
+; SANDY-NEXT:    shrdl $7, %esi, (%rdx) # sched: [8:1.00]
+; SANDY-NEXT:    #NO_APP
+; SANDY-NEXT:    retq # sched: [1:1.00]
+;
+; HASWELL-LABEL: test_shld_shrd_32:
+; HASWELL:       # BB#0:
+; HASWELL-NEXT:    #APP
+; HASWELL-NEXT:    shldl %cl, %esi, %edi # sched: [6:1.00]
+; HASWELL-NEXT:    shldl %cl, %esi, (%rdx) # sched: [6:1.00]
+; HASWELL-NEXT:    shldl $7, %esi, %edi # sched: [3:1.00]
+; HASWELL-NEXT:    shldl $7, %esi, (%rdx) # sched: [4:1.00]
+; HASWELL-NEXT:    #NO_APP
+; HASWELL-NEXT:    #APP
+; HASWELL-NEXT:    shrdl %cl, %esi, %edi # sched: [6:1.00]
+; HASWELL-NEXT:    shrdl %cl, %esi, (%rdx) # sched: [6:1.00]
+; HASWELL-NEXT:    shrdl $7, %esi, %edi # sched: [3:1.00]
+; HASWELL-NEXT:    shrdl $7, %esi, (%rdx) # sched: [4:1.00]
+; HASWELL-NEXT:    #NO_APP
+; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; BROADWELL-LABEL: test_shld_shrd_32:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    #APP
+; BROADWELL-NEXT:    shldl %cl, %esi, %edi # sched: [6:1.00]
+; BROADWELL-NEXT:    shldl %cl, %esi, (%rdx) # sched: [11:1.00]
+; BROADWELL-NEXT:    shldl $7, %esi, %edi # sched: [3:1.00]
+; BROADWELL-NEXT:    shldl $7, %esi, (%rdx) # sched: [9:1.00]
+; BROADWELL-NEXT:    #NO_APP
+; BROADWELL-NEXT:    #APP
+; BROADWELL-NEXT:    shrdl %cl, %esi, %edi # sched: [6:1.00]
+; BROADWELL-NEXT:    shrdl %cl, %esi, (%rdx) # sched: [11:1.00]
+; BROADWELL-NEXT:    shrdl $7, %esi, %edi # sched: [3:1.00]
+; BROADWELL-NEXT:    shrdl $7, %esi, (%rdx) # sched: [9:1.00]
+; BROADWELL-NEXT:    #NO_APP
+; BROADWELL-NEXT:    retq # sched: [7:1.00]
+;
+; SKYLAKE-LABEL: test_shld_shrd_32:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    #APP
+; SKYLAKE-NEXT:    shldl %cl, %esi, %edi # sched: [6:1.00]
+; SKYLAKE-NEXT:    shldl %cl, %esi, (%rdx) # sched: [11:1.00]
+; SKYLAKE-NEXT:    shldl $7, %esi, %edi # sched: [3:1.00]
+; SKYLAKE-NEXT:    shldl $7, %esi, (%rdx) # sched: [9:1.00]
+; SKYLAKE-NEXT:    #NO_APP
+; SKYLAKE-NEXT:    #APP
+; SKYLAKE-NEXT:    shrdl %cl, %esi, %edi # sched: [6:1.00]
+; SKYLAKE-NEXT:    shrdl %cl, %esi, (%rdx) # sched: [11:1.00]
+; SKYLAKE-NEXT:    shrdl $7, %esi, %edi # sched: [3:1.00]
+; SKYLAKE-NEXT:    shrdl $7, %esi, (%rdx) # sched: [9:1.00]
+; SKYLAKE-NEXT:    #NO_APP
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
+;
+; SKX-LABEL: test_shld_shrd_32:
+; SKX:       # BB#0:
+; SKX-NEXT:    #APP
+; SKX-NEXT:    shldl %cl, %esi, %edi # sched: [6:1.00]
+; SKX-NEXT:    shldl %cl, %esi, (%rdx) # sched: [11:1.00]
+; SKX-NEXT:    shldl $7, %esi, %edi # sched: [3:1.00]
+; SKX-NEXT:    shldl $7, %esi, (%rdx) # sched: [9:1.00]
+; SKX-NEXT:    #NO_APP
+; SKX-NEXT:    #APP
+; SKX-NEXT:    shrdl %cl, %esi, %edi # sched: [6:1.00]
+; SKX-NEXT:    shrdl %cl, %esi, (%rdx) # sched: [11:1.00]
+; SKX-NEXT:    shrdl $7, %esi, %edi # sched: [3:1.00]
+; SKX-NEXT:    shrdl $7, %esi, (%rdx) # sched: [9:1.00]
+; SKX-NEXT:    #NO_APP
+; SKX-NEXT:    retq # sched: [7:1.00]
+;
+; BTVER2-LABEL: test_shld_shrd_32:
+; BTVER2:       # BB#0:
+; BTVER2-NEXT:    #APP
+; BTVER2-NEXT:    shldl %cl, %esi, %edi # sched: [1:0.50]
+; BTVER2-NEXT:    shldl %cl, %esi, (%rdx) # sched: [4:1.00]
+; BTVER2-NEXT:    shldl $7, %esi, %edi # sched: [1:0.50]
+; BTVER2-NEXT:    shldl $7, %esi, (%rdx) # sched: [4:1.00]
+; BTVER2-NEXT:    #NO_APP
+; BTVER2-NEXT:    #APP
+; BTVER2-NEXT:    shrdl %cl, %esi, %edi # sched: [1:0.50]
+; BTVER2-NEXT:    shrdl %cl, %esi, (%rdx) # sched: [4:1.00]
+; BTVER2-NEXT:    shrdl $7, %esi, %edi # sched: [1:0.50]
+; BTVER2-NEXT:    shrdl $7, %esi, (%rdx) # sched: [4:1.00]
+; BTVER2-NEXT:    #NO_APP
+; BTVER2-NEXT:    retq # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_shld_shrd_32:
+; ZNVER1:       # BB#0:
+; ZNVER1-NEXT:    #APP
+; ZNVER1-NEXT:    shldl %cl, %esi, %edi # sched: [100:?]
+; ZNVER1-NEXT:    shldl %cl, %esi, (%rdx) # sched: [100:?]
+; ZNVER1-NEXT:    shldl $7, %esi, %edi # sched: [1:0.25]
+; ZNVER1-NEXT:    shldl $7, %esi, (%rdx) # sched: [5:0.50]
+; ZNVER1-NEXT:    #NO_APP
+; ZNVER1-NEXT:    #APP
+; ZNVER1-NEXT:    shrdl %cl, %esi, %edi # sched: [100:?]
+; ZNVER1-NEXT:    shrdl %cl, %esi, (%rdx) # sched: [100:?]
+; ZNVER1-NEXT:    shrdl $7, %esi, %edi # sched: [1:0.25]
+; ZNVER1-NEXT:    shrdl $7, %esi, (%rdx) # sched: [5:0.50]
+; ZNVER1-NEXT:    #NO_APP
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
+  call void asm sideeffect "shld $1, $0 \0A\09 shld $1, $2 \0A\09 shld $3, $1, $0 \0A\09 shld $3, $1, $2", "r,r,*m,i"(i32 %a0, i32 %a1, i32 *%a2, i8 7)
+  call void asm sideeffect "shrd $1, $0 \0A\09 shrd $1, $2 \0A\09 shrd $3, $1, $0 \0A\09 shrd $3, $1, $2", "r,r,*m,i"(i32 %a0, i32 %a1, i32 *%a2, i8 7)
+  ret void
+}
+define void @test_shld_shrd_64(i64 %a0, i64 %a1, i64 *%a2) optsize {
+; GENERIC-LABEL: test_shld_shrd_64:
+; GENERIC:       # BB#0:
+; GENERIC-NEXT:    #APP
+; GENERIC-NEXT:    shldq %cl, %rsi, %rdi # sched: [4:1.50]
+; GENERIC-NEXT:    shldq %cl, %rsi, (%rdx) # sched: [10:1.50]
+; GENERIC-NEXT:    shldq $7, %rsi, %rdi # sched: [2:0.67]
+; GENERIC-NEXT:    shldq $7, %rsi, (%rdx) # sched: [8:1.00]
+; GENERIC-NEXT:    #NO_APP
+; GENERIC-NEXT:    #APP
+; GENERIC-NEXT:    shrdq %cl, %rsi, %rdi # sched: [4:1.50]
+; GENERIC-NEXT:    shrdq %cl, %rsi, (%rdx) # sched: [10:1.50]
+; GENERIC-NEXT:    shrdq $7, %rsi, %rdi # sched: [2:0.67]
+; GENERIC-NEXT:    shrdq $7, %rsi, (%rdx) # sched: [8:1.00]
+; GENERIC-NEXT:    #NO_APP
+; GENERIC-NEXT:    retq # sched: [1:1.00]
+;
+; ATOM-LABEL: test_shld_shrd_64:
+; ATOM:       # BB#0:
+; ATOM-NEXT:    #APP
+; ATOM-NEXT:    shldq %cl, %rsi, %rdi # sched: [8:4.00]
+; ATOM-NEXT:    shldq %cl, %rsi, (%rdx) # sched: [9:4.50]
+; ATOM-NEXT:    shldq $7, %rsi, %rdi # sched: [9:4.50]
+; ATOM-NEXT:    shldq $7, %rsi, (%rdx) # sched: [9:4.50]
+; ATOM-NEXT:    #NO_APP
+; ATOM-NEXT:    #APP
+; ATOM-NEXT:    shrdq %cl, %rsi, %rdi # sched: [8:4.00]
+; ATOM-NEXT:    shrdq %cl, %rsi, (%rdx) # sched: [9:4.50]
+; ATOM-NEXT:    shrdq $7, %rsi, %rdi # sched: [9:4.50]
+; ATOM-NEXT:    shrdq $7, %rsi, (%rdx) # sched: [9:4.50]
+; ATOM-NEXT:    #NO_APP
+; ATOM-NEXT:    retq # sched: [79:39.50]
+;
+; SLM-LABEL: test_shld_shrd_64:
+; SLM:       # BB#0:
+; SLM-NEXT:    #APP
+; SLM-NEXT:    shldq %cl, %rsi, %rdi # sched: [1:1.00]
+; SLM-NEXT:    shldq %cl, %rsi, (%rdx) # sched: [4:2.00]
+; SLM-NEXT:    shldq $7, %rsi, %rdi # sched: [1:1.00]
+; SLM-NEXT:    shldq $7, %rsi, (%rdx) # sched: [4:2.00]
+; SLM-NEXT:    #NO_APP
+; SLM-NEXT:    #APP
+; SLM-NEXT:    shrdq %cl, %rsi, %rdi # sched: [1:1.00]
+; SLM-NEXT:    shrdq %cl, %rsi, (%rdx) # sched: [4:2.00]
+; SLM-NEXT:    shrdq $7, %rsi, %rdi # sched: [1:1.00]
+; SLM-NEXT:    shrdq $7, %rsi, (%rdx) # sched: [4:2.00]
+; SLM-NEXT:    #NO_APP
+; SLM-NEXT:    retq # sched: [4:1.00]
+;
+; SANDY-LABEL: test_shld_shrd_64:
+; SANDY:       # BB#0:
+; SANDY-NEXT:    #APP
+; SANDY-NEXT:    shldq %cl, %rsi, %rdi # sched: [4:1.50]
+; SANDY-NEXT:    shldq %cl, %rsi, (%rdx) # sched: [10:1.50]
+; SANDY-NEXT:    shldq $7, %rsi, %rdi # sched: [2:0.67]
+; SANDY-NEXT:    shldq $7, %rsi, (%rdx) # sched: [8:1.00]
+; SANDY-NEXT:    #NO_APP
+; SANDY-NEXT:    #APP
+; SANDY-NEXT:    shrdq %cl, %rsi, %rdi # sched: [4:1.50]
+; SANDY-NEXT:    shrdq %cl, %rsi, (%rdx) # sched: [10:1.50]
+; SANDY-NEXT:    shrdq $7, %rsi, %rdi # sched: [2:0.67]
+; SANDY-NEXT:    shrdq $7, %rsi, (%rdx) # sched: [8:1.00]
+; SANDY-NEXT:    #NO_APP
+; SANDY-NEXT:    retq # sched: [1:1.00]
+;
+; HASWELL-LABEL: test_shld_shrd_64:
+; HASWELL:       # BB#0:
+; HASWELL-NEXT:    #APP
+; HASWELL-NEXT:    shldq %cl, %rsi, %rdi # sched: [6:1.00]
+; HASWELL-NEXT:    shldq %cl, %rsi, (%rdx) # sched: [6:1.00]
+; HASWELL-NEXT:    shldq $7, %rsi, %rdi # sched: [3:1.00]
+; HASWELL-NEXT:    shldq $7, %rsi, (%rdx) # sched: [4:1.00]
+; HASWELL-NEXT:    #NO_APP
+; HASWELL-NEXT:    #APP
+; HASWELL-NEXT:    shrdq %cl, %rsi, %rdi # sched: [6:1.00]
+; HASWELL-NEXT:    shrdq %cl, %rsi, (%rdx) # sched: [6:1.00]
+; HASWELL-NEXT:    shrdq $7, %rsi, %rdi # sched: [3:1.00]
+; HASWELL-NEXT:    shrdq $7, %rsi, (%rdx) # sched: [4:1.00]
+; HASWELL-NEXT:    #NO_APP
+; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; BROADWELL-LABEL: test_shld_shrd_64:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    #APP
+; BROADWELL-NEXT:    shldq %cl, %rsi, %rdi # sched: [6:1.00]
+; BROADWELL-NEXT:    shldq %cl, %rsi, (%rdx) # sched: [11:1.00]
+; BROADWELL-NEXT:    shldq $7, %rsi, %rdi # sched: [3:1.00]
+; BROADWELL-NEXT:    shldq $7, %rsi, (%rdx) # sched: [9:1.00]
+; BROADWELL-NEXT:    #NO_APP
+; BROADWELL-NEXT:    #APP
+; BROADWELL-NEXT:    shrdq %cl, %rsi, %rdi # sched: [6:1.00]
+; BROADWELL-NEXT:    shrdq %cl, %rsi, (%rdx) # sched: [11:1.00]
+; BROADWELL-NEXT:    shrdq $7, %rsi, %rdi # sched: [3:1.00]
+; BROADWELL-NEXT:    shrdq $7, %rsi, (%rdx) # sched: [9:1.00]
+; BROADWELL-NEXT:    #NO_APP
+; BROADWELL-NEXT:    retq # sched: [7:1.00]
+;
+; SKYLAKE-LABEL: test_shld_shrd_64:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    #APP
+; SKYLAKE-NEXT:    shldq %cl, %rsi, %rdi # sched: [6:1.00]
+; SKYLAKE-NEXT:    shldq %cl, %rsi, (%rdx) # sched: [11:1.00]
+; SKYLAKE-NEXT:    shldq $7, %rsi, %rdi # sched: [3:1.00]
+; SKYLAKE-NEXT:    shldq $7, %rsi, (%rdx) # sched: [9:1.00]
+; SKYLAKE-NEXT:    #NO_APP
+; SKYLAKE-NEXT:    #APP
+; SKYLAKE-NEXT:    shrdq %cl, %rsi, %rdi # sched: [6:1.00]
+; SKYLAKE-NEXT:    shrdq %cl, %rsi, (%rdx) # sched: [11:1.00]
+; SKYLAKE-NEXT:    shrdq $7, %rsi, %rdi # sched: [3:1.00]
+; SKYLAKE-NEXT:    shrdq $7, %rsi, (%rdx) # sched: [9:1.00]
+; SKYLAKE-NEXT:    #NO_APP
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
+;
+; SKX-LABEL: test_shld_shrd_64:
+; SKX:       # BB#0:
+; SKX-NEXT:    #APP
+; SKX-NEXT:    shldq %cl, %rsi, %rdi # sched: [6:1.00]
+; SKX-NEXT:    shldq %cl, %rsi, (%rdx) # sched: [11:1.00]
+; SKX-NEXT:    shldq $7, %rsi, %rdi # sched: [3:1.00]
+; SKX-NEXT:    shldq $7, %rsi, (%rdx) # sched: [9:1.00]
+; SKX-NEXT:    #NO_APP
+; SKX-NEXT:    #APP
+; SKX-NEXT:    shrdq %cl, %rsi, %rdi # sched: [6:1.00]
+; SKX-NEXT:    shrdq %cl, %rsi, (%rdx) # sched: [11:1.00]
+; SKX-NEXT:    shrdq $7, %rsi, %rdi # sched: [3:1.00]
+; SKX-NEXT:    shrdq $7, %rsi, (%rdx) # sched: [9:1.00]
+; SKX-NEXT:    #NO_APP
+; SKX-NEXT:    retq # sched: [7:1.00]
+;
+; BTVER2-LABEL: test_shld_shrd_64:
+; BTVER2:       # BB#0:
+; BTVER2-NEXT:    #APP
+; BTVER2-NEXT:    shldq %cl, %rsi, %rdi # sched: [1:0.50]
+; BTVER2-NEXT:    shldq %cl, %rsi, (%rdx) # sched: [4:1.00]
+; BTVER2-NEXT:    shldq $7, %rsi, %rdi # sched: [1:0.50]
+; BTVER2-NEXT:    shldq $7, %rsi, (%rdx) # sched: [4:1.00]
+; BTVER2-NEXT:    #NO_APP
+; BTVER2-NEXT:    #APP
+; BTVER2-NEXT:    shrdq %cl, %rsi, %rdi # sched: [1:0.50]
+; BTVER2-NEXT:    shrdq %cl, %rsi, (%rdx) # sched: [4:1.00]
+; BTVER2-NEXT:    shrdq $7, %rsi, %rdi # sched: [1:0.50]
+; BTVER2-NEXT:    shrdq $7, %rsi, (%rdx) # sched: [4:1.00]
+; BTVER2-NEXT:    #NO_APP
+; BTVER2-NEXT:    retq # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_shld_shrd_64:
+; ZNVER1:       # BB#0:
+; ZNVER1-NEXT:    #APP
+; ZNVER1-NEXT:    shldq %cl, %rsi, %rdi # sched: [100:?]
+; ZNVER1-NEXT:    shldq %cl, %rsi, (%rdx) # sched: [100:?]
+; ZNVER1-NEXT:    shldq $7, %rsi, %rdi # sched: [1:0.25]
+; ZNVER1-NEXT:    shldq $7, %rsi, (%rdx) # sched: [5:0.50]
+; ZNVER1-NEXT:    #NO_APP
+; ZNVER1-NEXT:    #APP
+; ZNVER1-NEXT:    shrdq %cl, %rsi, %rdi # sched: [100:?]
+; ZNVER1-NEXT:    shrdq %cl, %rsi, (%rdx) # sched: [100:?]
+; ZNVER1-NEXT:    shrdq $7, %rsi, %rdi # sched: [1:0.25]
+; ZNVER1-NEXT:    shrdq $7, %rsi, (%rdx) # sched: [5:0.50]
+; ZNVER1-NEXT:    #NO_APP
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
+  call void asm sideeffect "shld $1, $0 \0A\09 shld $1, $2 \0A\09 shld $3, $1, $0 \0A\09 shld $3, $1, $2", "r,r,*m,i"(i64 %a0, i64 %a1, i64 *%a2, i8 7)
+  call void asm sideeffect "shrd $1, $0 \0A\09 shrd $1, $2 \0A\09 shrd $3, $1, $0 \0A\09 shrd $3, $1, $2", "r,r,*m,i"(i64 %a0, i64 %a1, i64 *%a2, i8 7)
+  ret void
+}
 
 ; TODO - test_stc
 ; TODO - test_std

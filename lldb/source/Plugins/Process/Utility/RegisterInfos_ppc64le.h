@@ -98,10 +98,10 @@
       DEFINE_GPR(r30, NULL, LLDB_INVALID_REGNUM),                              \
       DEFINE_GPR(r31, NULL, LLDB_INVALID_REGNUM),                              \
       DEFINE_GPR(pc, "pc", LLDB_REGNUM_GENERIC_PC),                            \
-      DEFINE_GPR(lr, "lr", LLDB_REGNUM_GENERIC_RA),                            \
       DEFINE_GPR(msr, "msr", LLDB_INVALID_REGNUM),                             \
       DEFINE_GPR(origr3, "orig_r3", LLDB_INVALID_REGNUM),                      \
       DEFINE_GPR(ctr, "ctr", LLDB_INVALID_REGNUM),                             \
+      DEFINE_GPR(lr, "lr", LLDB_REGNUM_GENERIC_RA),                            \
       DEFINE_GPR(xer, "xer", LLDB_INVALID_REGNUM),                             \
       DEFINE_GPR(cr, "cr", LLDB_REGNUM_GENERIC_FLAGS),                         \
       DEFINE_GPR(softe, "softe", LLDB_INVALID_REGNUM),                         \
