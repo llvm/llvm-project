@@ -1,4 +1,4 @@
-//===- GlobalsStream.h - PDB Index of Symbols by Name ------ ----*- C++ -*-===//
+//===- GlobalsStream.h - PDB Index of Symbols by Name -----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

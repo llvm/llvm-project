@@ -1978,6 +1978,8 @@ void AddressSanitizerModule::InstrumentGlobalsWithMetadataArray(
   auto AllGlobals = new GlobalVariable(
       M, ArrayOfGlobalStructTy, false, GlobalVariable::InternalLinkage,
       ConstantArray::get(ArrayOfGlobalStructTy, MetadataInitializers), "");
+  if (Mapping.Scale > 3)
+    AllGlobals->setAlignment(1ULL << Mapping.Scale);
 
   IRB.CreateCall(AsanRegisterGlobals,
                  {IRB.CreatePointerCast(AllGlobals, IntptrTy),
@@ -2817,9 +2819,10 @@ void FunctionStackPoisoner::processStaticAllocas() {
 
   // Minimal header size (left redzone) is 4 pointers,
   // i.e. 32 bytes on 64-bit platforms and 16 bytes in 32-bit platforms.
-  size_t MinHeaderSize = ASan.LongSize / 2;
+  size_t Granularity = 1ULL << Mapping.Scale;
+  size_t MinHeaderSize = std::max((size_t)ASan.LongSize / 2, Granularity);
   const ASanStackFrameLayout &L =
-      ComputeASanStackFrameLayout(SVD, 1ULL << Mapping.Scale, MinHeaderSize);
+      ComputeASanStackFrameLayout(SVD, Granularity, MinHeaderSize);
 
   // Build AllocaToSVDMap for ASanStackVariableDescription lookup.
   DenseMap<const AllocaInst *, ASanStackVariableDescription *> AllocaToSVDMap;

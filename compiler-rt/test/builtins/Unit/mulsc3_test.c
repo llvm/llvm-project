@@ -1,6 +1,4 @@
 // RUN: %clang_builtins %s %librt -lm -o %t && %run %t
-// UNSUPPORTED: armhf-target-arch
-// see pr 32475.
 //===-- mulsc3_test.c - Test __mulsc3 -------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

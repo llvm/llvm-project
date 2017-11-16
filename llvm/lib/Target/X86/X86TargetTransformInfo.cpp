@@ -2647,6 +2647,9 @@ int X86TTIImpl::getInterleavedMemoryOpCostAVX2(unsigned Opcode, Type *VecTy,
   // The cost of the loads/stores is accounted for separately.
   //
   static const CostTblEntry AVX2InterleavedLoadTbl[] = {
+    { 2, MVT::v4i64, 6 }, //(load 8i64 and) deinterleave into 2 x 4i64
+    { 2, MVT::v4f64, 6 }, //(load 8f64 and) deinterleave into 2 x 4f64
+
     { 3, MVT::v2i8,  10 }, //(load 6i8 and)  deinterleave into 3 x 2i8
     { 3, MVT::v4i8,  4 },  //(load 12i8 and) deinterleave into 3 x 4i8
     { 3, MVT::v8i8,  9 },  //(load 24i8 and) deinterleave into 3 x 8i8
@@ -2664,6 +2667,9 @@ int X86TTIImpl::getInterleavedMemoryOpCostAVX2(unsigned Opcode, Type *VecTy,
   };
 
   static const CostTblEntry AVX2InterleavedStoreTbl[] = {
+    { 2, MVT::v4i64, 6 }, //interleave into 2 x 4i64 into 8i64 (and store)
+    { 2, MVT::v4f64, 6 }, //interleave into 2 x 4f64 into 8f64 (and store)
+
     { 3, MVT::v2i8,  7 },  //interleave 3 x 2i8  into 6i8 (and store)
     { 3, MVT::v4i8,  8 },  //interleave 3 x 4i8  into 12i8 (and store)
     { 3, MVT::v8i8,  11 }, //interleave 3 x 8i8  into 24i8 (and store)

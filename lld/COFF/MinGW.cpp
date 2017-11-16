@@ -91,7 +91,15 @@ AutoExporter::AutoExporter() {
 bool AutoExporter::shouldExport(Defined *Sym) const {
   if (!Sym || !Sym->isLive() || !Sym->getChunk())
     return false;
+  // Only allow the symbol kinds that make sense to export; in particular,
+  // disallow import symbols.
+  if (!isa<DefinedRegular>(Sym) && !isa<DefinedCommon>(Sym))
+    return false;
   if (ExcludeSymbols.count(Sym->getName()))
+    return false;
+  // Check that file is non-null before dereferencing it, symbols not
+  // originating in regular object files probably shouldn't be exported.
+  if (!Sym->getFile())
     return false;
   StringRef LibName = sys::path::filename(Sym->getFile()->ParentName);
   // Drop the file extension.

@@ -8041,13 +8041,24 @@ SDValue DAGCombiner::ReduceLoadWidth(SDNode *N) {
     ExtType = ISD::SEXTLOAD;
     ExtVT = cast<VTSDNode>(N->getOperand(1))->getVT();
   } else if (Opc == ISD::SRL) {
-    // Another special-case: SRL is basically zero-extending a narrower value.
+    // Another special-case: SRL is basically zero-extending a narrower value,
+    // or it maybe shifting a higher subword, half or byte into the lowest
+    // bits.
     ExtType = ISD::ZEXTLOAD;
     N0 = SDValue(N, 0);
-    ConstantSDNode *N01 = dyn_cast<ConstantSDNode>(N0.getOperand(1));
-    if (!N01) return SDValue();
-    ExtVT = EVT::getIntegerVT(*DAG.getContext(),
-                              VT.getSizeInBits() - N01->getZExtValue());
+
+    auto *LN0 = dyn_cast<LoadSDNode>(N0.getOperand(0));
+    auto *N01 = dyn_cast<ConstantSDNode>(N0.getOperand(1));
+    if (!N01 || !LN0)
+      return SDValue();
+
+    uint64_t ShiftAmt = N01->getZExtValue();
+    uint64_t MemoryWidth = LN0->getMemoryVT().getSizeInBits();
+    if (LN0->getExtensionType() != ISD::SEXTLOAD && MemoryWidth > ShiftAmt)
+      ExtVT = EVT::getIntegerVT(*DAG.getContext(), MemoryWidth - ShiftAmt);
+    else
+      ExtVT = EVT::getIntegerVT(*DAG.getContext(),
+                                VT.getSizeInBits() - ShiftAmt);
   }
   if (LegalOperations && !TLI.isLoadExtLegal(ExtType, VT, ExtVT))
     return SDValue();
