@@ -1013,24 +1013,6 @@ static void checkAndSanitizeDiags(SmallVectorImpl<StoredDiagnostic> &
   }
 }
 
-static IntrusiveRefCntPtr<vfs::FileSystem> createVFSOverlayForPreamblePCH(
-    StringRef PCHFilename,
-    IntrusiveRefCntPtr<vfs::FileSystem> RealFS,
-    IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
-  // We want only the PCH file from the real filesystem to be available,
-  // so we create an in-memory VFS with just that and overlay it on top.
-  auto Buf = RealFS->getBufferForFile(PCHFilename);
-  if (!Buf)
-    return VFS;
-  IntrusiveRefCntPtr<vfs::InMemoryFileSystem>
-      PCHFS(new vfs::InMemoryFileSystem());
-  PCHFS->addFile(PCHFilename, 0, std::move(*Buf));
-  IntrusiveRefCntPtr<vfs::OverlayFileSystem>
-      Overlay(new vfs::OverlayFileSystem(VFS));
-  Overlay->pushOverlay(PCHFS);
-  return Overlay;
-}
-
 /// Parse the source file into a translation unit using the given compiler
 /// invocation, replacing the current translation unit.
 ///
@@ -1042,6 +1024,19 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
   if (!Invocation)
     return true;
 
+  auto CCInvocation = std::make_shared<CompilerInvocation>(*Invocation);
+  if (OverrideMainBuffer) {
+    assert(Preamble &&
+           "No preamble was built, but OverrideMainBuffer is not null");
+    IntrusiveRefCntPtr<vfs::FileSystem> OldVFS = VFS;
+    Preamble->AddImplicitPreamble(*CCInvocation, VFS, OverrideMainBuffer.get());
+    if (OldVFS != VFS && FileMgr) {
+      assert(OldVFS == FileMgr->getVirtualFileSystem() &&
+             "VFS passed to Parse and VFS in FileMgr are different");
+      FileMgr = new FileManager(FileMgr->getFileSystemOpts(), VFS);
+    }
+  }
+
   // Create the compiler instance to use for building the AST.
   std::unique_ptr<CompilerInstance> Clang(
       new CompilerInstance(std::move(PCHContainerOps)));
@@ -1052,29 +1047,11 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     Clang->setVirtualFileSystem(VFS);
   }
 
-  // Make sure we can access the PCH file even if we're using a VFS
-  if (!VFS && FileMgr)
-    VFS = FileMgr->getVirtualFileSystem();
-  IntrusiveRefCntPtr<vfs::FileSystem> RealFS = vfs::getRealFileSystem();
-  if (OverrideMainBuffer && VFS && RealFS && VFS != RealFS &&
-      !VFS->exists(Preamble->GetPCHPath())) {
-    // We have a slight inconsistency here -- we're using the VFS to
-    // read files, but the PCH was generated in the real file system.
-    VFS = createVFSOverlayForPreamblePCH(Preamble->GetPCHPath(), RealFS, VFS);
-    if (FileMgr) {
-      FileMgr = new FileManager(FileMgr->getFileSystemOpts(), VFS);
-      Clang->setFileManager(FileMgr.get());
-    }
-    else {
-      Clang->setVirtualFileSystem(VFS);
-    }
-  }
-
   // Recover resources if we crash before exiting this method.
   llvm::CrashRecoveryContextCleanupRegistrar<CompilerInstance>
     CICleanup(Clang.get());
 
-  Clang->setInvocation(std::make_shared<CompilerInvocation>(*Invocation));
+  Clang->setInvocation(CCInvocation);
   OriginalSourceFile = Clang->getFrontendOpts().Inputs[0].getFile();
     
   // Set up diagnostics, capturing any diagnostics that would
@@ -1128,9 +1105,6 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
   // If the main file has been overridden due to the use of a preamble,
   // make that override happen and introduce the preamble.
   if (OverrideMainBuffer) {
-    assert(Preamble && "No preamble was built, but OverrideMainBuffer is not null");
-    Preamble->AddImplicitPreamble(Clang->getInvocation(), OverrideMainBuffer.get());
-    
     // The stored diagnostic has the old source manager in it; update
     // the locations to refer into the new source manager. Since we've
     // been careful to make sure that the source manager's state
@@ -1319,7 +1293,7 @@ ASTUnit::getMainBufferWithPrecompiledPreamble(
 
     llvm::ErrorOr<PrecompiledPreamble> NewPreamble = PrecompiledPreamble::Build(
         PreambleInvocationIn, MainFileBuffer.get(), Bounds, *Diagnostics, VFS,
-        PCHContainerOps, Callbacks);
+        PCHContainerOps, /*StoreInMemory=*/false, Callbacks);
     if (NewPreamble) {
       Preamble = std::move(*NewPreamble);
       PreambleRebuildCounter = 1;
@@ -2195,8 +2169,16 @@ void ASTUnit::CodeComplete(
   // If the main file has been overridden due to the use of a preamble,
   // make that override happen and introduce the preamble.
   if (OverrideMainBuffer) {
-    assert(Preamble && "No preamble was built, but OverrideMainBuffer is not null");
-    Preamble->AddImplicitPreamble(Clang->getInvocation(), OverrideMainBuffer.get());
+    assert(Preamble &&
+           "No preamble was built, but OverrideMainBuffer is not null");
+
+    auto VFS = FileMgr.getVirtualFileSystem();
+    Preamble->AddImplicitPreamble(Clang->getInvocation(), VFS,
+                                  OverrideMainBuffer.get());
+    // FIXME: there is no way to update VFS if it was changed by
+    // AddImplicitPreamble as FileMgr is accepted as a parameter by this method.
+    // We use on-disk preambles instead and rely on FileMgr's VFS to ensure the
+    // PCH files are always readable.
     OwnedBuffers.push_back(OverrideMainBuffer.release());
   } else {
     PreprocessorOpts.PrecompiledPreambleBytes.first = 0;

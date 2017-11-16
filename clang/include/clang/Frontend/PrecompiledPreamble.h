@@ -17,6 +17,7 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/Support/AlignOf.h"
 #include "llvm/Support/MD5.h"
 #include <memory>
 #include <system_error>
@@ -47,7 +48,7 @@ class PreambleCallbacks;
 /// reuse the PCH for the subsequent runs. Use BuildPreamble to create PCH and
 /// CanReusePreamble + AddImplicitPreamble to make use of it.
 class PrecompiledPreamble {
-  class TempPCHFile;
+  class PCHStorage;
   struct PreambleFileHash;
 
 public:
@@ -70,6 +71,9 @@ public:
   ///
   /// \param PCHContainerOps An instance of PCHContainerOperations.
   ///
+  /// \param StoreInMemory Store PCH in memory. If false, PCH will be stored in
+  /// a temporary file.
+  ///
   /// \param Callbacks A set of callbacks to be executed when building
   /// the preamble.
   static llvm::ErrorOr<PrecompiledPreamble>
@@ -77,16 +81,13 @@ public:
         const llvm::MemoryBuffer *MainFileBuffer, PreambleBounds Bounds,
         DiagnosticsEngine &Diagnostics, IntrusiveRefCntPtr<vfs::FileSystem> VFS,
         std::shared_ptr<PCHContainerOperations> PCHContainerOps,
-        PreambleCallbacks &Callbacks);
+        bool StoreInMemory, PreambleCallbacks &Callbacks);
 
   PrecompiledPreamble(PrecompiledPreamble &&) = default;
   PrecompiledPreamble &operator=(PrecompiledPreamble &&) = default;
 
   /// PreambleBounds used to build the preamble.
   PreambleBounds getBounds() const;
-
-  /// The temporary file path at which the preamble PCH was placed.
-  StringRef GetPCHPath() const { return PCHFile.getFilePath(); }
 
   /// Check whether PrecompiledPreamble can be reused for the new contents(\p
   /// MainFileBuffer) of the main file.
@@ -95,12 +96,14 @@ public:
                 vfs::FileSystem *VFS) const;
 
   /// Changes options inside \p CI to use PCH from this preamble. Also remaps
-  /// main file to \p MainFileBuffer.
+  /// main file to \p MainFileBuffer and updates \p VFS to ensure the preamble
+  /// is accessible.
   void AddImplicitPreamble(CompilerInvocation &CI,
+                           IntrusiveRefCntPtr<vfs::FileSystem> &VFS,
                            llvm::MemoryBuffer *MainFileBuffer) const;
 
 private:
-  PrecompiledPreamble(TempPCHFile PCHFile, std::vector<char> PreambleBytes,
+  PrecompiledPreamble(PCHStorage Storage, std::vector<char> PreambleBytes,
                       bool PreambleEndsAtStartOfLine,
                       llvm::StringMap<PreambleFileHash> FilesInPreamble);
 
@@ -142,6 +145,44 @@ private:
     llvm::Optional<std::string> FilePath;
   };
 
+  class InMemoryPreamble {
+  public:
+    std::string Data;
+  };
+
+  class PCHStorage {
+  public:
+    enum class Kind { Empty, InMemory, TempFile };
+
+    PCHStorage() = default;
+    PCHStorage(TempPCHFile File);
+    PCHStorage(InMemoryPreamble Memory);
+
+    PCHStorage(const PCHStorage &) = delete;
+    PCHStorage &operator=(const PCHStorage &) = delete;
+
+    PCHStorage(PCHStorage &&Other);
+    PCHStorage &operator=(PCHStorage &&Other);
+
+    ~PCHStorage();
+
+    Kind getKind() const;
+
+    TempPCHFile &asFile();
+    const TempPCHFile &asFile() const;
+
+    InMemoryPreamble &asMemory();
+    const InMemoryPreamble &asMemory() const;
+
+  private:
+    void destroy();
+    void setEmpty();
+
+  private:
+    Kind StorageKind = Kind::Empty;
+    llvm::AlignedCharArrayUnion<TempPCHFile, InMemoryPreamble> Storage = {};
+  };
+
   /// Data used to determine if a file used in the preamble has been changed.
   struct PreambleFileHash {
     /// All files have size set.
@@ -171,8 +212,15 @@ private:
     }
   };
 
-  /// Manages the lifetime of temporary file that stores a PCH.
-  TempPCHFile PCHFile;
+  /// Sets up the PreprocessorOptions and changes VFS, so that PCH stored in \p
+  /// Storage is accessible to clang. This method is an implementation detail of
+  /// AddImplicitPreamble.
+  static void setupPreambleStorage(const PCHStorage &Storage,
+                                   PreprocessorOptions &PreprocessorOpts,
+                                   IntrusiveRefCntPtr<vfs::FileSystem> &VFS);
+
+  /// Manages the memory buffer or temporary file that stores the PCH.
+  PCHStorage Storage;
   /// Keeps track of the files that were used when computing the
   /// preamble, with both their buffer size and their modification time.
   ///

@@ -66,7 +66,7 @@ if.then:
 ; CHECK: getelementptr i8, {{.+}} 40
   %v1 = load i32, i32* %casted, align 4
   call void @foo(i32 %v1)
-; CHECK-NOT: getelementptr i8, {{.+}}, 40
+; CHECK-NOT: getelementptr i8, {{.+}} 40
   %v2 = load i32, i32* %casted, align 4
   call void @foo(i32 %v2)
   br label %fallthrough

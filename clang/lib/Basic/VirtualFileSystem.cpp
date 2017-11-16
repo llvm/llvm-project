@@ -527,13 +527,19 @@ bool InMemoryFileSystem::addFile(const Twine &P, time_t ModificationTime,
     ++I;
     if (!Node) {
       if (I == E) {
-        // End of the path, create a new file.
+        // End of the path, create a new file or directory.
         Status Stat(P.str(), getNextVirtualUniqueID(),
                     llvm::sys::toTimePoint(ModificationTime), ResolvedUser,
                     ResolvedGroup, Buffer->getBufferSize(), ResolvedType,
                     ResolvedPerms);
-        Dir->addChild(Name, llvm::make_unique<detail::InMemoryFile>(
-                                std::move(Stat), std::move(Buffer)));
+        std::unique_ptr<detail::InMemoryNode> Child;
+        if (ResolvedType == sys::fs::file_type::directory_file) {
+          Child.reset(new detail::InMemoryDirectory(std::move(Stat)));
+        } else {
+          Child.reset(new detail::InMemoryFile(std::move(Stat),
+                                               std::move(Buffer)));
+        }
+        Dir->addChild(Name, std::move(Child));
         return true;
       }
 

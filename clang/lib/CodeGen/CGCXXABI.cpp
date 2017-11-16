@@ -149,12 +149,15 @@ void CGCXXABI::buildThisParam(CodeGenFunction &CGF, FunctionArgList &params) {
   }
 }
 
-void CGCXXABI::EmitThisParam(CodeGenFunction &CGF) {
+llvm::Value *CGCXXABI::loadIncomingCXXThis(CodeGenFunction &CGF) {
+  return CGF.Builder.CreateLoad(CGF.GetAddrOfLocalVar(getThisDecl(CGF)),
+                                "this");
+}
+
+void CGCXXABI::setCXXABIThisValue(CodeGenFunction &CGF, llvm::Value *ThisPtr) {
   /// Initialize the 'this' slot.
   assert(getThisDecl(CGF) && "no 'this' variable for function");
-  CGF.CXXABIThisValue
-    = CGF.Builder.CreateLoad(CGF.GetAddrOfLocalVar(getThisDecl(CGF)),
-                             "this");
+  CGF.CXXABIThisValue = ThisPtr;
 }
 
 void CGCXXABI::EmitReturnFromThunk(CodeGenFunction &CGF,

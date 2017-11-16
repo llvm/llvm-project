@@ -11,6 +11,7 @@
 #include "llvm/DebugInfo/PDB/DIA/DIAEnumDebugStreams.h"
 #include "llvm/DebugInfo/PDB/DIA/DIAEnumLineNumbers.h"
 #include "llvm/DebugInfo/PDB/DIA/DIAEnumSourceFiles.h"
+#include "llvm/DebugInfo/PDB/DIA/DIAEnumTables.h"
 #include "llvm/DebugInfo/PDB/DIA/DIAError.h"
 #include "llvm/DebugInfo/PDB/DIA/DIARawSymbol.h"
 #include "llvm/DebugInfo/PDB/DIA/DIASourceFile.h"
@@ -300,4 +301,12 @@ std::unique_ptr<IPDBEnumDataStreams> DIASession::getDebugStreams() const {
     return nullptr;
 
   return llvm::make_unique<DIAEnumDebugStreams>(DiaEnumerator);
+}
+
+std::unique_ptr<IPDBEnumTables> DIASession::getEnumTables() const {
+  CComPtr<IDiaEnumTables> DiaEnumerator;
+  if (S_OK != Session->getEnumTables(&DiaEnumerator))
+    return nullptr;
+
+  return llvm::make_unique<DIAEnumTables>(DiaEnumerator);
 }

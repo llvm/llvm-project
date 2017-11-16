@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 %s -fno-rtti -triple=i386-pc-win32 -emit-llvm -o %t
+// RUN: %clang_cc1 %s -fno-rtti -std=c++11 -Wno-inaccessible-base -triple=i386-pc-win32 -emit-llvm -o %t
 // RUN: FileCheck %s < %t
 // RUN: FileCheck --check-prefix=CHECK2 %s < %t
 
 // For now, just make sure x86_64 doesn't crash.
-// RUN: %clang_cc1 %s -fno-rtti -triple=x86_64-pc-win32 -emit-llvm -o %t
+// RUN: %clang_cc1 %s -fno-rtti -std=c++11 -Wno-inaccessible-base -triple=x86_64-pc-win32 -emit-llvm -o %t
 
 struct VBase {
   virtual ~VBase();
@@ -52,12 +52,14 @@ B::B() {
 
 B::~B() {
   // CHECK-LABEL: define x86_thiscallcc void @"\01??1B@@UAE@XZ"
-  // Adjust the this parameter:
-  // CHECK:   %[[THIS_PARAM_i8:.*]] = bitcast %struct.B* {{.*}} to i8*
-  // CHECK:   %[[THIS_i8:.*]] = getelementptr inbounds i8, i8* %[[THIS_PARAM_i8]], i32 -8
-  // CHECK:   %[[THIS:.*]] = bitcast i8* %[[THIS_i8]] to %struct.B*
-  // CHECK:   store %struct.B* %[[THIS]], %struct.B** %[[THIS_ADDR:.*]], align 4
-  // CHECK:   %[[THIS:.*]] = load %struct.B*, %struct.B** %[[THIS_ADDR]]
+  // Store initial this:
+  // CHECK:   %[[THIS_ADDR:.*]] = alloca %struct.B*
+  // CHECK:   store %struct.B* %{{.*}}, %struct.B** %[[THIS_ADDR]], align 4
+  // Reload and adjust the this parameter:
+  // CHECK:   %[[THIS_RELOAD:.*]] = load %struct.B*, %struct.B** %[[THIS_ADDR]]
+  // CHECK:   %[[THIS_UNADJ_i8:.*]] = bitcast %struct.B* %[[THIS_RELOAD]] to i8*
+  // CHECK:   %[[THIS_ADJ_i8:.*]] = getelementptr inbounds i8, i8* %[[THIS_UNADJ_i8]], i32 -8
+  // CHECK:   %[[THIS:.*]] = bitcast i8* %[[THIS_ADJ_i8]] to %struct.B*
 
   // Restore the vfptr that could have been changed by a subclass.
   // CHECK:   %[[THIS_i8:.*]] = bitcast %struct.B* %[[THIS]] to i8*
@@ -97,11 +99,11 @@ B::~B() {
   // CHECK2: ret
 
   // CHECK2-LABEL: define linkonce_odr x86_thiscallcc i8* @"\01??_GB@@UAEPAXI@Z"
-  // CHECK2:   %[[THIS_PARAM_i8:.*]] = bitcast %struct.B* {{.*}} to i8*
+  // CHECK2:   store %struct.B* %{{.*}}, %struct.B** %[[THIS_ADDR:.*]], align 4
+  // CHECK2:   %[[THIS:.*]] = load %struct.B*, %struct.B** %[[THIS_ADDR]]
+  // CHECK2:   %[[THIS_PARAM_i8:.*]] = bitcast %struct.B* %[[THIS]] to i8*
   // CHECK2:   %[[THIS_i8:.*]] = getelementptr inbounds i8, i8* %[[THIS_PARAM_i8:.*]], i32 -8
   // CHECK2:   %[[THIS:.*]] = bitcast i8* %[[THIS_i8]] to %struct.B*
-  // CHECK2:   store %struct.B* %[[THIS]], %struct.B** %[[THIS_ADDR:.*]], align 4
-  // CHECK2:   %[[THIS:.*]] = load %struct.B*, %struct.B** %[[THIS_ADDR]]
   // CHECK2:   call x86_thiscallcc void @"\01??_DB@@QAEXXZ"(%struct.B* %[[THIS]])
   // ...
   // CHECK2: ret
@@ -113,13 +115,17 @@ void B::foo() {
 // B::foo gets 'this' cast to VBase* in ECX (i.e. this+8) so we
 // need to adjust 'this' before use.
 //
-// CHECK: %[[THIS_ADDR:.*]] = alloca %struct.B*, align 4
-// CHECK: %[[THIS_i8:.*]] = getelementptr inbounds i8, i8* %[[ECX:.*]], i32 -8
-// CHECK: %[[THIS:.*]] = bitcast i8* %[[THIS_i8]] to %struct.B*
-// CHECK: store %struct.B* %[[THIS]], %struct.B** %[[THIS_ADDR]], align 4
+// Store initial this:
+// CHECK:   %[[THIS_ADDR:.*]] = alloca %struct.B*
+// CHECK:   store %struct.B* %{{.*}}, %struct.B** %[[THIS_ADDR]], align 4
+//
+// Reload and adjust the this parameter:
+// CHECK:   %[[THIS_RELOAD:.*]] = load %struct.B*, %struct.B** %[[THIS_ADDR]]
+// CHECK:   %[[THIS_UNADJ_i8:.*]] = bitcast %struct.B* %[[THIS_RELOAD]] to i8*
+// CHECK:   %[[THIS_ADJ_i8:.*]] = getelementptr inbounds i8, i8* %[[THIS_UNADJ_i8]], i32 -8
+// CHECK:   %[[THIS:.*]] = bitcast i8* %[[THIS_ADJ_i8]] to %struct.B*
 
   field = 42;
-// CHECK: %[[THIS:.*]] = load %struct.B*, %struct.B** %[[THIS_ADDR]]
 // CHECK: %[[THIS8:.*]] = bitcast %struct.B* %[[THIS]] to i8*
 // CHECK: %[[VBPTR:.*]] = getelementptr inbounds i8, i8* %[[THIS8]], i32 0
 // CHECK: %[[VBPTR8:.*]] = bitcast i8* %[[VBPTR]] to i32**
@@ -284,11 +290,16 @@ struct D : virtual Z, B, C {
 
 D::~D() {
   // CHECK-LABEL: define x86_thiscallcc void @"\01??1D@diamond@@UAE@XZ"(%"struct.diamond::D"*{{.*}})
-  // CHECK: %[[ARG_i8:.*]] = bitcast %"struct.diamond::D"* %{{.*}} to i8*
-  // CHECK: %[[THIS_i8:.*]] = getelementptr inbounds i8, i8* %[[ARG_i8]], i32 -24
-  // CHECK: %[[THIS:.*]] = bitcast i8* %[[THIS_i8]] to %"struct.diamond::D"*
-  // CHECK: store %"struct.diamond::D"* %[[THIS]], %"struct.diamond::D"** %[[THIS_VAL:.*]], align 4
-  // CHECK: %[[THIS:.*]] = load %"struct.diamond::D"*, %"struct.diamond::D"** %[[THIS_VAL]]
+  // Store initial this:
+  // CHECK: %[[THIS_ADDR:.*]] = alloca %"struct.diamond::D"*
+  // CHECK: store %"struct.diamond::D"* %{{.*}}, %"struct.diamond::D"** %[[THIS_ADDR]], align 4
+  //
+  // Reload and adjust the this parameter:
+  // CHECK: %[[THIS_RELOAD:.*]] = load %"struct.diamond::D"*, %"struct.diamond::D"** %[[THIS_ADDR]]
+  // CHECK: %[[THIS_UNADJ_i8:.*]] = bitcast %"struct.diamond::D"* %[[THIS_RELOAD]] to i8*
+  // CHECK: %[[THIS_ADJ_i8:.*]] = getelementptr inbounds i8, i8* %[[THIS_UNADJ_i8]], i32 -24
+  // CHECK: %[[THIS:.*]] = bitcast i8* %[[THIS_ADJ_i8]] to %"struct.diamond::D"*
+  //
   // CHECK: %[[D_i8:.*]] = bitcast %"struct.diamond::D"* %[[THIS]] to i8*
   // CHECK: %[[C_i8:.*]] = getelementptr inbounds i8, i8* %[[D_i8]], i32 4
   // CHECK: %[[C:.*]] = bitcast i8* %[[C_i8]] to %"struct.diamond::C"*

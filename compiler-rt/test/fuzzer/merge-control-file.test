@@ -27,6 +27,16 @@ OK_0: MERGE-OUTER: 3 new files with {{.*}} new features added
 
 RUN: rm -f %t/T1/*; cp %t/T0/* %t/T1
 RUN: echo 3 > %t/MCF; echo 0 >> %t/MCF; echo %t/T1/1 >> %t/MCF; echo %t/T1/2 >> %t/MCF; echo %t/T1/3 >> %t/MCF
+RUN: %t/T -merge=1 %t/T1 %t/T2 -merge_control_file=%t/MCF -save_coverage_summary=%t/SUMMARY 2>&1 | FileCheck %s --check-prefix=SAVE_SUMMARY
+SAVE_SUMMARY: MERGE-OUTER: writing coverage summary for 3 files to {{.*}}/SUMMARY
+
+RUN: rm -f %t/T1/*; cp %t/T0/* %t/T1
+RUN: echo 3 > %t/MCF; echo 0 >> %t/MCF; echo %t/T1/1 >> %t/MCF; echo %t/T1/2 >> %t/MCF; echo %t/T1/3 >> %t/MCF
+RUN: %t/T -merge=1 %t/T1 %t/T2 -merge_control_file=%t/MCF -load_coverage_summary=%t/SUMMARY 2>&1 | FileCheck %s --check-prefix=LOAD_SUMMARY
+LOAD_SUMMARY: MERGE-OUTER: coverage summary loaded from
+
+RUN: rm -f %t/T1/*; cp %t/T0/* %t/T1
+RUN: echo 3 > %t/MCF; echo 0 >> %t/MCF; echo %t/T1/1 >> %t/MCF; echo %t/T1/2 >> %t/MCF; echo %t/T1/3 >> %t/MCF
 RUN: echo STARTED 0 1 >> %t/MCF
 RUN: echo DONE 0 11 >> %t/MCF
 RUN: echo STARTED 1 2 >> %t/MCF

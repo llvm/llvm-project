@@ -428,8 +428,8 @@ MachineRegisterInfo::EmitLiveInCopies(MachineBasicBlock *EntryMBB,
   // Emit the copies into the top of the block.
   for (unsigned i = 0, e = LiveIns.size(); i != e; ++i)
     if (LiveIns[i].second) {
-      if (use_empty(LiveIns[i].second)) {
-        // The livein has no uses. Drop it.
+      if (use_nodbg_empty(LiveIns[i].second)) {
+        // The livein has no non-dbg uses. Drop it.
         //
         // It would be preferable to have isel avoid creating live-in
         // records for unused arguments in the first place, but it's

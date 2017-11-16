@@ -282,6 +282,9 @@ The most important command line options are:
 ``-use_counters``
   Use `coverage counters`_ to generate approximate counts of how often code
   blocks are hit; defaults to 1.
+``-reduce_inputs``
+  Try to reduce the size of inputs while preserving their full feature sets;
+  defaults to 1.
 ``-use_value_profile``
   Use `value profile`_ to guide corpus expansion; defaults to 0.
 ``-only_ascii``

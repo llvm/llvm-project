@@ -24,11 +24,13 @@ class LinuxCoreTestCase(TestBase):
     _mips64_n64_pid = 25619
     _mips64_n32_pid = 3670
     _mips_o32_pid = 3532
+    _ppc64le_pid = 28147
 
     _i386_regions = 4
     _x86_64_regions = 5
     _s390x_regions = 2
     _mips_regions = 5
+    _ppc64le_regions = 2
 
     def setUp(self):
         super(LinuxCoreTestCase, self).setUp()
@@ -55,6 +57,12 @@ class LinuxCoreTestCase(TestBase):
     def test_mips_n64(self):
         """Test that lldb can read the process information from an MIPS N64 linux core file """
         self.do_test("linux-mips64el-gnuabi64", self._mips64_n64_pid, self._mips_regions)
+
+    @skipIf(oslist=['windows'])
+    @skipIf(triple='^mips')
+    def test_ppc64le(self):
+        """Test that lldb can read the process information from an ppc64le linux core file."""
+        self.do_test("linux-ppc64le", self._ppc64le_pid, self._ppc64le_regions)
 
     @skipIf(oslist=['windows'])
     @skipIf(triple='^mips')

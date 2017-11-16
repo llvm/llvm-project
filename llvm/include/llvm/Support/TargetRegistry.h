@@ -890,7 +890,7 @@ struct TargetRegistry {
 /// }
 /// extern "C" void LLVMInitializeFooTargetInfo() {
 ///   RegisterTarget<Triple::foo> X(getTheFooTarget(), "foo", "Foo
-///   description");
+///   description", "Foo" /* Backend Name */);
 /// }
 template <Triple::ArchType TargetArchType = Triple::UnknownArch,
           bool HasJIT = false>

@@ -118,11 +118,6 @@ static cl::list<std::string> OptArgs("opt-args", cl::Positional,
                                      cl::desc("<opt arguments>..."),
                                      cl::ZeroOrMore, cl::PositionalEatsArgs);
 
-struct DiscardTemp {
-  sys::fs::TempFile &File;
-  ~DiscardTemp() { consumeError(File.discard()); }
-};
-
 /// runPasses - Run the specified passes on Program, outputting a bitcode file
 /// and writing the filename into OutputFile if successful.  If the
 /// optimizations fail for some reason (optimizer crashes), return true,

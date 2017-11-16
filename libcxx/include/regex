@@ -5240,11 +5240,11 @@ public:
 
     // size:
     _LIBCPP_INLINE_VISIBILITY
-    size_type size() const {return __matches_.size();}
+    size_type size() const _NOEXCEPT {return __matches_.size();}
     _LIBCPP_INLINE_VISIBILITY
-    size_type max_size() const {return __matches_.max_size();}
-    _LIBCPP_INLINE_VISIBILITY
-    bool empty() const {return size() == 0;}
+    size_type max_size() const _NOEXCEPT {return __matches_.max_size();}
+    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
+    bool empty() const _NOEXCEPT {return size() == 0;}
 
     // element access:
     _LIBCPP_INLINE_VISIBILITY

@@ -1,4 +1,5 @@
 # RUN: clangd -pretty -run-synchronously < %s | FileCheck -strict-whitespace %s
+# RUN: clangd -pretty -run-synchronously -pch-storage=memory < %s | FileCheck -strict-whitespace %s
 # It is absolutely vital that this file has CRLF line endings.
 #
 Content-Length: 125

@@ -1790,9 +1790,27 @@ end(const _Cp& __c)
 #endif  // !defined(_LIBCPP_CXX03_LANG)
 
 #if _LIBCPP_STD_VER > 14
+
+// #if _LIBCPP_STD_VER > 11
+// template <>
+// struct _LIBCPP_TEMPLATE_VIS plus<void>
+// {
+//     template <class _T1, class _T2>
+//     _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
+//     auto operator()(_T1&& __t, _T2&& __u) const
+//     _NOEXCEPT_(noexcept(_VSTD::forward<_T1>(__t) + _VSTD::forward<_T2>(__u)))
+//     -> decltype        (_VSTD::forward<_T1>(__t) + _VSTD::forward<_T2>(__u))
+//         { return        _VSTD::forward<_T1>(__t) + _VSTD::forward<_T2>(__u); }
+//     typedef void is_transparent;
+// };
+// #endif
+
 template <class _Cont>
 inline _LIBCPP_INLINE_VISIBILITY
-constexpr auto size(const _Cont& __c) -> decltype(__c.size()) { return __c.size(); }
+constexpr auto size(const _Cont& __c)
+_NOEXCEPT_(noexcept(__c.size()))
+-> decltype        (__c.size())
+{ return            __c.size(); }
 
 template <class _Tp, size_t _Sz>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -1800,7 +1818,10 @@ constexpr size_t size(const _Tp (&)[_Sz]) noexcept { return _Sz; }
 
 template <class _Cont>
 _LIBCPP_NODISCARD_AFTER_CXX17 inline _LIBCPP_INLINE_VISIBILITY
-constexpr auto empty(const _Cont& __c) -> decltype(__c.empty()) { return __c.empty(); }
+constexpr auto empty(const _Cont& __c)
+_NOEXCEPT_(noexcept(__c.empty()))
+-> decltype        (__c.empty())
+{ return            __c.empty(); }
 
 template <class _Tp, size_t _Sz>
 _LIBCPP_NODISCARD_AFTER_CXX17 inline _LIBCPP_INLINE_VISIBILITY
@@ -1812,11 +1833,17 @@ constexpr bool empty(initializer_list<_Ep> __il) noexcept { return __il.size() =
 
 template <class _Cont> constexpr
 inline _LIBCPP_INLINE_VISIBILITY
-auto data(_Cont& __c) -> decltype(__c.data()) { return __c.data(); }
+auto data(_Cont& __c)
+_NOEXCEPT_(noexcept(__c.data()))
+-> decltype        (__c.data())
+{ return            __c.data(); }
 
 template <class _Cont> constexpr
 inline _LIBCPP_INLINE_VISIBILITY
-auto data(const _Cont& __c) -> decltype(__c.data()) { return __c.data(); }
+auto data(const _Cont& __c)
+_NOEXCEPT_(noexcept(__c.data()))
+-> decltype        (__c.data()) 
+{ return            __c.data(); }
 
 template <class _Tp, size_t _Sz>
 inline _LIBCPP_INLINE_VISIBILITY
