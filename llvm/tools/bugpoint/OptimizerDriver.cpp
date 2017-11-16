@@ -118,6 +118,11 @@ static cl::list<std::string> OptArgs("opt-args", cl::Positional,
                                      cl::desc("<opt arguments>..."),
                                      cl::ZeroOrMore, cl::PositionalEatsArgs);
 
+struct DiscardTemp {
+  sys::fs::TempFile &File;
+  ~DiscardTemp() { consumeError(File.discard()); }
+};
+
 /// runPasses - Run the specified passes on Program, outputting a bitcode file
 /// and writing the filename into OutputFile if successful.  If the
 /// optimizations fail for some reason (optimizer crashes), return true,
@@ -144,23 +149,22 @@ bool BugDriver::runPasses(Module *Program,
   OutputFilename = UniqueFilename.str();
 
   // set up the input file name
-  SmallString<128> InputFilename;
-  int InputFD;
-  EC = sys::fs::createUniqueFile(OutputPrefix + "-input-%%%%%%%.bc", InputFD,
-                                 InputFilename);
-  if (EC) {
+  Expected<sys::fs::TempFile> Temp =
+      sys::fs::TempFile::create(OutputPrefix + "-input-%%%%%%%.bc");
+  if (!Temp) {
     errs() << getToolName()
-           << ": Error making unique filename: " << EC.message() << "\n";
+           << ": Error making unique filename: " << toString(Temp.takeError())
+           << "\n";
     return 1;
   }
+  DiscardTemp Discard{*Temp};
+  raw_fd_ostream OS(Temp->FD, /*shouldClose*/ false);
 
-  ToolOutputFile InFile(InputFilename, InputFD);
-
-  WriteBitcodeToFile(Program, InFile.os(), PreserveBitcodeUseListOrder);
-  InFile.os().close();
-  if (InFile.os().has_error()) {
-    errs() << "Error writing bitcode file: " << InputFilename << "\n";
-    InFile.os().clear_error();
+  WriteBitcodeToFile(Program, OS, PreserveBitcodeUseListOrder);
+  OS.flush();
+  if (OS.has_error()) {
+    errs() << "Error writing bitcode file: " << Temp->TmpName << "\n";
+    OS.clear_error();
     return 1;
   }
 
@@ -188,9 +192,6 @@ bool BugDriver::runPasses(Module *Program,
     errs() << "Cannot find `valgrind' in PATH!\n";
     return 1;
   }
-
-  // Ok, everything that could go wrong before running opt is done.
-  InFile.keep();
 
   // setup the child process' arguments
   SmallVector<const char *, 8> Args;
@@ -220,7 +221,7 @@ bool BugDriver::runPasses(Module *Program,
                                                 E = pass_args.end();
        I != E; ++I)
     Args.push_back(I->c_str());
-  Args.push_back(InputFilename.c_str());
+  Args.push_back(Temp->TmpName.c_str());
   for (unsigned i = 0; i < NumExtraArgs; ++i)
     Args.push_back(*ExtraArgs);
   Args.push_back(nullptr);
@@ -247,7 +248,7 @@ bool BugDriver::runPasses(Module *Program,
     sys::fs::remove(OutputFilename);
 
   // Remove the temporary input file as well
-  sys::fs::remove(InputFilename.c_str());
+  consumeError(Temp->discard());
 
   if (!Quiet) {
     if (result == 0)

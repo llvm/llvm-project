@@ -57,7 +57,7 @@ define amdgpu_kernel void @test_sub_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32
 ; VI: v_sub_i16_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
 define amdgpu_kernel void @test_sub_i16(i16 addrspace(1)* %out, i16 addrspace(1)* %in) {
     %b_ptr = getelementptr i16, i16 addrspace(1)* %in, i16 1
-    %a = load i16, i16 addrspace(1)* %in 
+    %a = load i16, i16 addrspace(1)* %in
     %b = load i16, i16 addrspace(1)* %b_ptr
     %result = sub i16 %a, %b
     store i16 %result, i16 addrspace(1)* %out
@@ -71,7 +71,7 @@ define amdgpu_kernel void @test_sub_i16(i16 addrspace(1)* %out, i16 addrspace(1)
 
 define amdgpu_kernel void @test_sub_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) {
     %b_ptr = getelementptr <2 x i16>, <2 x i16> addrspace(1)* %in, i16 1
-    %a = load <2 x i16>, <2 x i16> addrspace(1) * %in 
+    %a = load <2 x i16>, <2 x i16> addrspace(1) * %in
     %b = load <2 x i16>, <2 x i16> addrspace(1) * %b_ptr
     %result = sub <2 x i16> %a, %b
     store <2 x i16> %result, <2 x i16> addrspace(1)* %out
@@ -87,7 +87,7 @@ define amdgpu_kernel void @test_sub_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16
 
 define amdgpu_kernel void @test_sub_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> addrspace(1)* %in) {
     %b_ptr = getelementptr <4 x i16>, <4 x i16> addrspace(1)* %in, i16 1
-    %a = load <4 x i16>, <4 x i16> addrspace(1) * %in 
+    %a = load <4 x i16>, <4 x i16> addrspace(1) * %in
     %b = load <4 x i16>, <4 x i16> addrspace(1) * %b_ptr
     %result = sub <4 x i16> %a, %b
     store <4 x i16> %result, <4 x i16> addrspace(1)* %out
@@ -146,13 +146,13 @@ define amdgpu_kernel void @v_test_sub_v2i64(<2 x i64> addrspace(1)* %out, <2 x i
 }
 
 ; FUNC-LABEL: {{^}}v_test_sub_v4i64:
-; SI: v_subrev_i32_e32
+; SI: v_sub_i32_e32
 ; SI: v_subb_u32_e32
-; SI: v_subrev_i32_e32
+; SI: v_sub_i32_e32
 ; SI: v_subb_u32_e32
-; SI: v_subrev_i32_e32
+; SI: v_sub_i32_e32
 ; SI: v_subb_u32_e32
-; SI: v_subrev_i32_e32
+; SI: v_sub_i32_e32
 ; SI: v_subb_u32_e32
 define amdgpu_kernel void @v_test_sub_v4i64(<4 x i64> addrspace(1)* %out, <4 x i64> addrspace(1)* noalias %inA, <4 x i64> addrspace(1)* noalias %inB) {
   %tid = call i32 @llvm.r600.read.tidig.x() readnone

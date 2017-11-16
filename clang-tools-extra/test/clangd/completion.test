@@ -61,16 +61,7 @@ Content-Length: 148
 # CHECK-NEXT:      "label": "fake::",
 # CHECK-NEXT:      "sortText": "000075fake"
 # CHECK-NEXT:    },
-# CHECK-NEXT:    {
-# CHECK-NEXT:      "detail": "fake &",
-# CHECK-NEXT:      "filterText": "operator=",
-# CHECK-NEXT:      "insertText": "operator=",
-# CHECK-NEXT:      "insertTextFormat": 1,
-# CHECK-NEXT:      "kind": 2,
-# CHECK-NEXT:      "label": "operator=(const fake &)",
-# CHECK-NEXT:      "sortText": "000079operator="
-# CHECK-NEXT:    },
-# FIXME: Why do some buildbots show an extra operator==(fake&&) here?
+# FIXME: Why do buildbots show different operator=s here?
 #      CHECK:    {
 #      CHECK:      "detail": "void",
 # CHECK-NEXT:      "filterText": "~fake",
@@ -133,15 +124,6 @@ Content-Length: 148
 # CHECK-NEXT:      "label": "fake::",
 # CHECK-NEXT:      "sortText": "000075fake"
 # CHECK-NEXT:    },
-# CHECK-NEXT:    {
-# CHECK-NEXT:      "detail": "fake &",
-# CHECK-NEXT:      "filterText": "operator=",
-# CHECK-NEXT:      "insertText": "operator=",
-# CHECK-NEXT:      "insertTextFormat": 1,
-# CHECK-NEXT:      "kind": 2,
-# CHECK-NEXT:      "label": "operator=(const fake &)",
-# CHECK-NEXT:      "sortText": "000079operator="
-# CHECK-NEXT:    },
 #      CHECK:    {
 #      CHECK:      "detail": "void",
 # CHECK-NEXT:      "filterText": "~fake",
@@ -181,15 +163,6 @@ Content-Length: 148
 # CHECK-NEXT:      "kind": 7,
 # CHECK-NEXT:      "label": "fancy::",
 # CHECK-NEXT:      "sortText": "000075fancy"
-# CHECK-NEXT:    },
-# CHECK-NEXT:    {
-# CHECK-NEXT:      "detail": "fancy &",
-# CHECK-NEXT:      "filterText": "operator=",
-# CHECK-NEXT:      "insertText": "operator=",
-# CHECK-NEXT:      "insertTextFormat": 1,
-# CHECK-NEXT:      "kind": 2,
-# CHECK-NEXT:      "label": "operator=(const fancy &)",
-# CHECK-NEXT:      "sortText": "000079operator="
 # CHECK-NEXT:    },
 #      CHECK:    {
 #      CHECK:      "detail": "void",

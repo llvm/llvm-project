@@ -151,8 +151,10 @@ non-obvious ways.  Here are some hints and tips:
   optimizations to be randomized and applied to the program. This process will
   repeat until a bug is found or the user kills ``bugpoint``.
 
-* ``bugpoint`` can produce IR which contains long names. To simplify the names,
-  run ``opt -strip -instnamer`` over the IR.
+* ``bugpoint`` can produce IR which contains long names. Run ``opt
+  -metarenamer`` over the IR to rename everything using easy-to-read,
+  metasyntactic names. Alternatively, run ``opt -strip -instnamer`` to rename
+  everything with very short (often purely numeric) names.
 
 What to do when bugpoint isn't enough
 =====================================

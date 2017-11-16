@@ -15,6 +15,7 @@
 #include "BPF.h"
 #include "InstPrinter/BPFInstPrinter.h"
 #include "MCTargetDesc/BPFMCAsmInfo.h"
+#include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -68,6 +69,35 @@ static MCInstPrinter *createBPFMCInstPrinter(const Triple &T,
   return nullptr;
 }
 
+namespace {
+
+class BPFMCInstrAnalysis : public MCInstrAnalysis {
+public:
+  explicit BPFMCInstrAnalysis(const MCInstrInfo *Info)
+      : MCInstrAnalysis(Info) {}
+
+  bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
+                      uint64_t &Target) const override {
+    // The target is the 3rd operand of cond inst and the 1st of uncond inst.
+    int64_t Imm;
+    if (isConditionalBranch(Inst)) {
+      Imm = Inst.getOperand(2).getImm();
+    } else if (isUnconditionalBranch(Inst))
+      Imm = Inst.getOperand(0).getImm();
+    else
+      return false;
+
+    Target = Addr + Size + Imm * Size;
+    return true;
+  }
+};
+
+} // end anonymous namespace
+
+static MCInstrAnalysis *createBPFInstrAnalysis(const MCInstrInfo *Info) {
+  return new BPFMCInstrAnalysis(Info);
+}
+
 extern "C" void LLVMInitializeBPFTargetMC() {
   for (Target *T :
        {&getTheBPFleTarget(), &getTheBPFbeTarget(), &getTheBPFTarget()}) {
@@ -89,6 +119,9 @@ extern "C" void LLVMInitializeBPFTargetMC() {
 
     // Register the MCInstPrinter.
     TargetRegistry::RegisterMCInstPrinter(*T, createBPFMCInstPrinter);
+
+    // Register the MC instruction analyzer.
+    TargetRegistry::RegisterMCInstrAnalysis(*T, createBPFInstrAnalysis);
   }
 
   // Register the MC code emitter
@@ -114,4 +147,5 @@ extern "C" void LLVMInitializeBPFTargetMC() {
     TargetRegistry::RegisterMCAsmBackend(getTheBPFTarget(),
                                          createBPFbeAsmBackend);
   }
+
 }

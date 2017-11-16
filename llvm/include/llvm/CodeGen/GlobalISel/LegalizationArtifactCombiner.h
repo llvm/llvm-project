@@ -36,8 +36,8 @@ public:
                         SmallVectorImpl<MachineInstr *> &DeadInsts) {
     if (MI.getOpcode() != TargetOpcode::G_ANYEXT)
       return false;
-    if (MachineInstr *DefMI =
-            getOpcodeDef(TargetOpcode::G_TRUNC, MI.getOperand(1).getReg())) {
+    if (MachineInstr *DefMI = getOpcodeDef(TargetOpcode::G_TRUNC,
+                                           MI.getOperand(1).getReg(), MRI)) {
       DEBUG(dbgs() << ".. Combine MI: " << MI;);
       unsigned DstReg = MI.getOperand(0).getReg();
       unsigned SrcReg = DefMI->getOperand(1).getReg();
@@ -55,8 +55,8 @@ public:
 
     if (MI.getOpcode() != TargetOpcode::G_ZEXT)
       return false;
-    if (MachineInstr *DefMI =
-            getOpcodeDef(TargetOpcode::G_TRUNC, MI.getOperand(1).getReg())) {
+    if (MachineInstr *DefMI = getOpcodeDef(TargetOpcode::G_TRUNC,
+                                           MI.getOperand(1).getReg(), MRI)) {
       unsigned DstReg = MI.getOperand(0).getReg();
       LLT DstTy = MRI.getType(DstReg);
       if (isInstUnsupported(TargetOpcode::G_AND, DstTy) ||
@@ -83,8 +83,8 @@ public:
 
     if (MI.getOpcode() != TargetOpcode::G_SEXT)
       return false;
-    if (MachineInstr *DefMI =
-            getOpcodeDef(TargetOpcode::G_TRUNC, MI.getOperand(1).getReg())) {
+    if (MachineInstr *DefMI = getOpcodeDef(TargetOpcode::G_TRUNC,
+                                           MI.getOperand(1).getReg(), MRI)) {
       unsigned DstReg = MI.getOperand(0).getReg();
       LLT DstTy = MRI.getType(DstReg);
       if (isInstUnsupported(TargetOpcode::G_SHL, DstTy) ||
@@ -118,7 +118,7 @@ public:
       return false;
 
     if (MachineInstr *DefMI = getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF,
-                                           MI.getOperand(1).getReg())) {
+                                           MI.getOperand(1).getReg(), MRI)) {
       unsigned DstReg = MI.getOperand(0).getReg();
       LLT DstTy = MRI.getType(DstReg);
       if (isInstUnsupported(TargetOpcode::G_IMPLICIT_DEF, DstTy))
@@ -247,23 +247,6 @@ private:
     auto Action = LI.getAction({Opcode, 0, DstTy});
     return Action.first == LegalizerInfo::LegalizeAction::Unsupported ||
            Action.first == LegalizerInfo::LegalizeAction::NotFound;
-  }
-  /// See if Reg is defined by an single def instruction that is
-  /// Opcode. Also try to do trivial folding if it's a COPY with
-  /// same types. Returns null otherwise.
-  MachineInstr *getOpcodeDef(unsigned Opcode, unsigned Reg) {
-    auto *DefMI = MRI.getVRegDef(Reg);
-    auto DstTy = MRI.getType(DefMI->getOperand(0).getReg());
-    if (!DstTy.isValid())
-      return nullptr;
-    while (DefMI->getOpcode() == TargetOpcode::COPY) {
-      unsigned SrcReg = DefMI->getOperand(1).getReg();
-      auto SrcTy = MRI.getType(SrcReg);
-      if (!SrcTy.isValid() || SrcTy != DstTy)
-        break;
-      DefMI = MRI.getVRegDef(SrcReg);
-    }
-    return DefMI->getOpcode() == Opcode ? DefMI : nullptr;
   }
 };
 
