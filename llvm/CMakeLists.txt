@@ -203,10 +203,6 @@ include(VersionFromVCS)
 option(LLVM_APPEND_VC_REV
   "Embed the version control system revision id in LLVM" ON)
 
-if( LLVM_APPEND_VC_REV )
-  add_version_info_from_vcs(PACKAGE_VERSION)
-endif()
-
 set(PACKAGE_NAME LLVM)
 set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
 set(PACKAGE_BUGREPORT "http://llvm.org/bugs/")
