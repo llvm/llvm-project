@@ -1501,6 +1501,13 @@ bool LoopConstrainer::run() {
       ExitPreLoopAtSCEV = SE.getAddExpr(*SR.HighLimit, MinusOneS);
     }
 
+    if (!isSafeToExpandAt(ExitPreLoopAtSCEV, InsertPt, SE)) {
+      DEBUG(dbgs() << "irce: could not prove that it is safe to expand the"
+                   << " preloop exit limit " << *ExitPreLoopAtSCEV
+                   << " at block " << InsertPt->getParent()->getName() << "\n");
+      return false;
+    }
+
     ExitPreLoopAt = Expander.expandCodeFor(ExitPreLoopAtSCEV, IVTy, InsertPt);
     ExitPreLoopAt->setName("exit.preloop.at");
   }
@@ -1518,6 +1525,13 @@ bool LoopConstrainer::run() {
         return false;
       }
       ExitMainLoopAtSCEV = SE.getAddExpr(*SR.LowLimit, MinusOneS);
+    }
+
+    if (!isSafeToExpandAt(ExitMainLoopAtSCEV, InsertPt, SE)) {
+      DEBUG(dbgs() << "irce: could not prove that it is safe to expand the"
+                   << " main loop exit limit " << *ExitMainLoopAtSCEV
+                   << " at block " << InsertPt->getParent()->getName() << "\n");
+      return false;
     }
 
     ExitMainLoopAt = Expander.expandCodeFor(ExitMainLoopAtSCEV, IVTy, InsertPt);
