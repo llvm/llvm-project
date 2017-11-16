@@ -15,6 +15,7 @@
 #include "../readability/NamespaceCommentCheck.h"
 #include "../readability/RedundantSmartptrGetCheck.h"
 #include "AvoidCStyleCastsCheck.h"
+#include "AvoidThrowingObjCExceptionCheck.h"
 #include "DefaultArgumentsCheck.h"
 #include "ExplicitConstructorCheck.h"
 #include "ExplicitMakePairCheck.h"
@@ -49,6 +50,8 @@ class GoogleModule : public ClangTidyModule {
         "google-explicit-constructor");
     CheckFactories.registerCheck<readability::GlobalNamesInHeadersCheck>(
         "google-global-names-in-headers");
+    CheckFactories.registerCheck<objc::AvoidThrowingObjCExceptionCheck>(
+        "google-objc-avoid-throwing-exception");
     CheckFactories.registerCheck<objc::GlobalVariableDeclarationCheck>(
         "google-objc-global-variable-declaration");
     CheckFactories.registerCheck<runtime::IntegerTypesCheck>(

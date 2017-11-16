@@ -49,6 +49,7 @@ module Clang_Basic {
   textual header "Basic/OperatorKinds.def"
   textual header "Basic/Sanitizers.def"
   textual header "Basic/TokenKinds.def"
+  textual header "Basic/X86Target.def"
 
   module * { export * }
 }

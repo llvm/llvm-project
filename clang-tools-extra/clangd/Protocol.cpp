@@ -1094,7 +1094,7 @@ RenameParams::parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger) {
 
     if (KeyValue == "textDocument") {
       auto *Value =
-        dyn_cast_or_null<llvm::yaml::MappingNode>(NextKeyValue.getValue());
+          dyn_cast_or_null<llvm::yaml::MappingNode>(NextKeyValue.getValue());
       if (!Value)
         continue;
       auto *Map = dyn_cast<llvm::yaml::MappingNode>(Value);

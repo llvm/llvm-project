@@ -94,20 +94,18 @@ TEST(JSONExprTests, PrettyPrinting) {
   }
 })";
 
-  EXPECT_EQ(
-      str,
-      sp(obj{
-          {"empty_object", obj{}},
-          {"empty_array", {}},
-          {"full_array", {1, nullptr}},
-          {"full_object",
-           obj{
-               {"nested_array",
-                {obj{
-                    {"property", "value"},
-                }}},
-           }},
-      }));
+  EXPECT_EQ(str, sp(obj{
+                     {"empty_object", obj{}},
+                     {"empty_array", {}},
+                     {"full_array", {1, nullptr}},
+                     {"full_object",
+                      obj{
+                          {"nested_array",
+                           {obj{
+                               {"property", "value"},
+                           }}},
+                      }},
+                 }));
 }
 
 } // namespace
