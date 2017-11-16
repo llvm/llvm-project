@@ -11,3 +11,4 @@
   evpe 4          # CHECK: error: invalid operand for instruction
   evpe $4, $5     # CHECK: error: invalid operand for instruction
   evpe $5, 0($5)  # CHECK: error: invalid operand for instruction
+  # FIXME: add tests for mftr/mttr.
