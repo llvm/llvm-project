@@ -29,7 +29,8 @@ std::shared_ptr<CppFile> CppFileCollection::removeIfPresent(PathRef File) {
 CppFileCollection::RecreateResult
 CppFileCollection::recreateFileIfCompileCommandChanged(
     PathRef File, PathRef ResourceDir, GlobalCompilationDatabase &CDB,
-    std::shared_ptr<PCHContainerOperations> PCHs, clangd::Logger &Logger) {
+    bool StorePreamblesInMemory, std::shared_ptr<PCHContainerOperations> PCHs,
+    clangd::Logger &Logger) {
   auto NewCommand = getCompileCommand(CDB, File, ResourceDir);
 
   std::lock_guard<std::mutex> Lock(Mutex);
@@ -40,13 +41,15 @@ CppFileCollection::recreateFileIfCompileCommandChanged(
   if (It == OpenedFiles.end()) {
     It = OpenedFiles
              .try_emplace(File, CppFile::Create(File, std::move(NewCommand),
+                                                StorePreamblesInMemory,
                                                 std::move(PCHs), Logger))
              .first;
   } else if (!compileCommandsAreEqual(It->second->getCompileCommand(),
                                       NewCommand)) {
     Result.RemovedFile = std::move(It->second);
     It->second =
-        CppFile::Create(File, std::move(NewCommand), std::move(PCHs), Logger);
+        CppFile::Create(File, std::move(NewCommand), StorePreamblesInMemory,
+                        std::move(PCHs), Logger);
   }
   Result.FileInCollection = It->second;
   return Result;

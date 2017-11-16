@@ -411,7 +411,8 @@ void InputSection::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
       }
 
       if (Config->IsRela) {
-        P->r_addend += Sym.getVA() - Section->getOutputSection()->Addr;
+        P->r_addend =
+            Sym.getVA(getAddend<ELFT>(Rel)) - Section->getOutputSection()->Addr;
       } else if (Config->Relocatable) {
         const uint8_t *BufLoc = Sec->Data.begin() + Rel.r_offset;
         Sec->Relocations.push_back({R_ABS, Type, Rel.r_offset,
