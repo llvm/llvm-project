@@ -57,12 +57,8 @@ fixedStack:
 body:             |
   bb.1 (%ir-block.0):
     ; ALL-LABEL: name: test_load_i8
-    ; ALL: registers:
-    ; ALL-NEXT: id: 0, class: gr32
-    ; ALL-NEXT: id: 1, class: gpr
-    ; ALL-NEXT: id: 2, class: gr8
-    ; ALL: [[MOV32rm:%[0-9]+]] = MOV32rm %fixed-stack.0, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.0, align 0)
-    ; ALL: [[MOV8rm:%[0-9]+]] = MOV8rm [[MOV32rm]], 1, _, 0, _ :: (load 1 from %ir.p1)
+    ; ALL: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.0, align 0)
+    ; ALL: [[MOV8rm:%[0-9]+]]:gr8 = MOV8rm [[MOV32rm]], 1, _, 0, _ :: (load 1 from %ir.p1)
     ; ALL: %al = COPY [[MOV8rm]]
     ; ALL: RET 0, implicit %al
     %1(p0) = G_FRAME_INDEX %fixed-stack.0
@@ -86,12 +82,8 @@ fixedStack:
 body:             |
   bb.1 (%ir-block.0):
     ; ALL-LABEL: name: test_load_i16
-    ; ALL: registers:
-    ; ALL-NEXT: id: 0, class: gr32
-    ; ALL-NEXT: id: 1, class: gpr
-    ; ALL-NEXT: id: 2, class: gr16
-    ; ALL: [[MOV32rm:%[0-9]+]] = MOV32rm %fixed-stack.0, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.0, align 0)
-    ; ALL: [[MOV16rm:%[0-9]+]] = MOV16rm [[MOV32rm]], 1, _, 0, _ :: (load 2 from %ir.p1)
+    ; ALL: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.0, align 0)
+    ; ALL: [[MOV16rm:%[0-9]+]]:gr16 = MOV16rm [[MOV32rm]], 1, _, 0, _ :: (load 2 from %ir.p1)
     ; ALL: %ax = COPY [[MOV16rm]]
     ; ALL: RET 0, implicit %ax
     %1(p0) = G_FRAME_INDEX %fixed-stack.0
@@ -115,12 +107,8 @@ fixedStack:
 body:             |
   bb.1 (%ir-block.0):
     ; ALL-LABEL: name: test_load_i32
-    ; ALL: registers:
-    ; ALL-NEXT: id: 0, class: gr32
-    ; ALL-NEXT: id: 1, class: gpr
-    ; ALL-NEXT: id: 2, class: gr32
-    ; ALL: [[MOV32rm:%[0-9]+]] = MOV32rm %fixed-stack.0, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.0, align 0)
-    ; ALL: [[MOV32rm1:%[0-9]+]] = MOV32rm [[MOV32rm]], 1, _, 0, _ :: (load 4 from %ir.p1)
+    ; ALL: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.0, align 0)
+    ; ALL: [[MOV32rm1:%[0-9]+]]:gr32 = MOV32rm [[MOV32rm]], 1, _, 0, _ :: (load 4 from %ir.p1)
     ; ALL: %eax = COPY [[MOV32rm1]]
     ; ALL: RET 0, implicit %eax
     %1(p0) = G_FRAME_INDEX %fixed-stack.0
@@ -146,13 +134,8 @@ fixedStack:
 body:             |
   bb.1 (%ir-block.0):
     ; ALL-LABEL: name: test_store_i8
-    ; ALL: registers:
-    ; ALL-NEXT: id: 0, class: gr8
-    ; ALL-NEXT: id: 1, class: gr32
-    ; ALL-NEXT: id: 2, class: gpr
-    ; ALL-NEXT: id: 3, class: gpr
-    ; ALL: [[MOV8rm:%[0-9]+]] = MOV8rm %fixed-stack.0, 1, _, 0, _ :: (invariant load 1 from %fixed-stack.0, align 0)
-    ; ALL: [[MOV32rm:%[0-9]+]] = MOV32rm %fixed-stack.1, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.1, align 0)
+    ; ALL: [[MOV8rm:%[0-9]+]]:gr8 = MOV8rm %fixed-stack.0, 1, _, 0, _ :: (invariant load 1 from %fixed-stack.0, align 0)
+    ; ALL: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.1, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.1, align 0)
     ; ALL: MOV8mr [[MOV32rm]], 1, _, 0, _, [[MOV8rm]] :: (store 1 into %ir.p1)
     ; ALL: %eax = COPY [[MOV32rm]]
     ; ALL: RET 0, implicit %eax
@@ -181,13 +164,8 @@ fixedStack:
 body:             |
   bb.1 (%ir-block.0):
     ; ALL-LABEL: name: test_store_i16
-    ; ALL: registers:
-    ; ALL-NEXT: id: 0, class: gr16
-    ; ALL-NEXT: id: 1, class: gr32
-    ; ALL-NEXT: id: 2, class: gpr
-    ; ALL-NEXT: id: 3, class: gpr
-    ; ALL: [[MOV16rm:%[0-9]+]] = MOV16rm %fixed-stack.0, 1, _, 0, _ :: (invariant load 2 from %fixed-stack.0, align 0)
-    ; ALL: [[MOV32rm:%[0-9]+]] = MOV32rm %fixed-stack.1, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.1, align 0)
+    ; ALL: [[MOV16rm:%[0-9]+]]:gr16 = MOV16rm %fixed-stack.0, 1, _, 0, _ :: (invariant load 2 from %fixed-stack.0, align 0)
+    ; ALL: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.1, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.1, align 0)
     ; ALL: MOV16mr [[MOV32rm]], 1, _, 0, _, [[MOV16rm]] :: (store 2 into %ir.p1)
     ; ALL: %eax = COPY [[MOV32rm]]
     ; ALL: RET 0, implicit %eax
@@ -216,13 +194,8 @@ fixedStack:
 body:             |
   bb.1 (%ir-block.0):
     ; ALL-LABEL: name: test_store_i32
-    ; ALL: registers:
-    ; ALL-NEXT: id: 0, class: gr32
-    ; ALL-NEXT: id: 1, class: gr32
-    ; ALL-NEXT: id: 2, class: gpr
-    ; ALL-NEXT: id: 3, class: gpr
-    ; ALL: [[MOV32rm:%[0-9]+]] = MOV32rm %fixed-stack.0, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.0, align 0)
-    ; ALL: [[MOV32rm1:%[0-9]+]] = MOV32rm %fixed-stack.1, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.1, align 0)
+    ; ALL: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.0, align 0)
+    ; ALL: [[MOV32rm1:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.1, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.1, align 0)
     ; ALL: MOV32mr [[MOV32rm1]], 1, _, 0, _, [[MOV32rm]] :: (store 4 into %ir.p1)
     ; ALL: %eax = COPY [[MOV32rm1]]
     ; ALL: RET 0, implicit %eax
@@ -249,12 +222,8 @@ fixedStack:
 body:             |
   bb.1 (%ir-block.0):
     ; ALL-LABEL: name: test_load_ptr
-    ; ALL: registers:
-    ; ALL-NEXT: id: 0, class: gr32
-    ; ALL-NEXT: id: 1, class: gpr
-    ; ALL-NEXT: id: 2, class: gr32
-    ; ALL: [[MOV32rm:%[0-9]+]] = MOV32rm %fixed-stack.0, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.0, align 0)
-    ; ALL: [[MOV32rm1:%[0-9]+]] = MOV32rm [[MOV32rm]], 1, _, 0, _ :: (load 4 from %ir.ptr1)
+    ; ALL: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.0, align 0)
+    ; ALL: [[MOV32rm1:%[0-9]+]]:gr32 = MOV32rm [[MOV32rm]], 1, _, 0, _ :: (load 4 from %ir.ptr1)
     ; ALL: %eax = COPY [[MOV32rm1]]
     ; ALL: RET 0, implicit %eax
     %1(p0) = G_FRAME_INDEX %fixed-stack.0
@@ -280,13 +249,8 @@ fixedStack:
 body:             |
   bb.1 (%ir-block.0):
     ; ALL-LABEL: name: test_store_ptr
-    ; ALL: registers:
-    ; ALL-NEXT: id: 0, class: gr32
-    ; ALL-NEXT: id: 1, class: gr32
-    ; ALL-NEXT: id: 2, class: gpr
-    ; ALL-NEXT: id: 3, class: gpr
-    ; ALL: [[MOV32rm:%[0-9]+]] = MOV32rm %fixed-stack.0, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.0, align 0)
-    ; ALL: [[MOV32rm1:%[0-9]+]] = MOV32rm %fixed-stack.1, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.1, align 0)
+    ; ALL: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.0, align 0)
+    ; ALL: [[MOV32rm1:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.1, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.1, align 0)
     ; ALL: MOV32mr [[MOV32rm]], 1, _, 0, _, [[MOV32rm1]] :: (store 4 into %ir.ptr1)
     ; ALL: RET 0
     %2(p0) = G_FRAME_INDEX %fixed-stack.1

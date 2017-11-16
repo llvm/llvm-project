@@ -97,7 +97,8 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
         }
       });
       WorkList.insert(&*MI);
-      LegalizerCombiner C(Helper.MIRBuilder, MF.getRegInfo());
+      LegalizerCombiner C(Helper.MIRBuilder, MF.getRegInfo(),
+                          Helper.getLegalizerInfo());
       bool Changed = false;
       LegalizerHelper::LegalizeResult Res;
       do {
@@ -158,7 +159,7 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
   MachineIRBuilder MIRBuilder(MF);
-  LegalizerCombiner C(MIRBuilder, MRI);
+  LegalizerCombiner C(MIRBuilder, MRI, Helper.getLegalizerInfo());
   for (auto &MBB : MF) {
     for (auto MI = MBB.begin(); MI != MBB.end(); MI = NextMI) {
       // Get the next Instruction before we try to legalize, because there's a

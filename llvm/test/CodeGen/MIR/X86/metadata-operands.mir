@@ -50,7 +50,7 @@ stack:
 body: |
   bb.0.entry:
     liveins: %edi
-    ; CHECK:      %0 = COPY %edi
+    ; CHECK:      %0:gr32 = COPY %edi
     ; CHECK-NEXT: DBG_VALUE _, 0, !11, !DIExpression()
     %0 = COPY %edi
     DBG_VALUE _, 0, !12, !DIExpression()

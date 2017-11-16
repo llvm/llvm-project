@@ -3,35 +3,35 @@
 
 # GFX89-LABEL: {{^}}name: vop1_instructions
 
-# GFX89: %{{[0-9]+}} = V_MOV_B32_sdwa 0, %{{[0-9]+}}, 0, 5, 0, 5, implicit %exec
-# GFX89: %{{[0-9]+}} = V_FRACT_F32_sdwa 0, %{{[0-9]+}}, 0, 0, 5, 0, 6, implicit %exec
-# GFX89: %{{[0-9]+}} = V_SIN_F32_sdwa 0, %{{[0-9]+}}, 0, 0, 5, 0, 5, implicit %exec
-# GFX89: %{{[0-9]+}} = V_CVT_U32_F32_sdwa 0, %{{[0-9]+}}, 0, 5, 0, 5, implicit %exec
-# GFX89: %{{[0-9]+}} = V_CVT_F32_I32_sdwa 0, %{{[0-9]+}}, 0, 0, 5, 0, 6, implicit %exec
+# GFX89: %{{[0-9]+}}:vgpr_32 = V_MOV_B32_sdwa 0, %{{[0-9]+}}, 0, 5, 0, 5, implicit %exec
+# GFX89: %{{[0-9]+}}:vgpr_32 = V_FRACT_F32_sdwa 0, %{{[0-9]+}}, 0, 0, 5, 0, 6, implicit %exec
+# GFX89: %{{[0-9]+}}:vgpr_32 = V_SIN_F32_sdwa 0, %{{[0-9]+}}, 0, 0, 5, 0, 5, implicit %exec
+# GFX89: %{{[0-9]+}}:vgpr_32 = V_CVT_U32_F32_sdwa 0, %{{[0-9]+}}, 0, 5, 0, 5, implicit %exec
+# GFX89: %{{[0-9]+}}:vgpr_32 = V_CVT_F32_I32_sdwa 0, %{{[0-9]+}}, 0, 0, 5, 0, 6, implicit %exec
 
 
-# GFX89: %{{[0-9]+}} = V_MOV_B32_sdwa 0, %{{[0-9]+}}, 0, 6, 0, 5, implicit %exec
-# GFX89: %{{[0-9]+}} = V_FRACT_F32_sdwa 0, %{{[0-9]+}}, 0, 0, 5, 0, 6, implicit %exec
-# GFX89: %{{[0-9]+}} = V_SIN_F32_sdwa 0, %{{[0-9]+}}, 0, 0, 5, 0, 5, implicit %exec
-# GFX89: %{{[0-9]+}} = V_CVT_U32_F32_sdwa 0, %{{[0-9]+}}, 0, 5, 0, 5, implicit %exec
-# GFX89: %{{[0-9]+}} = V_CVT_F32_I32_sdwa 0, %{{[0-9]+}}, 0, 0, 5, 0, 6, implicit %exec
+# GFX89: %{{[0-9]+}}:vgpr_32 = V_MOV_B32_sdwa 0, %{{[0-9]+}}, 0, 6, 0, 5, implicit %exec
+# GFX89: %{{[0-9]+}}:vgpr_32 = V_FRACT_F32_sdwa 0, %{{[0-9]+}}, 0, 0, 5, 0, 6, implicit %exec
+# GFX89: %{{[0-9]+}}:vgpr_32 = V_SIN_F32_sdwa 0, %{{[0-9]+}}, 0, 0, 5, 0, 5, implicit %exec
+# GFX89: %{{[0-9]+}}:vgpr_32 = V_CVT_U32_F32_sdwa 0, %{{[0-9]+}}, 0, 5, 0, 5, implicit %exec
+# GFX89: %{{[0-9]+}}:vgpr_32 = V_CVT_F32_I32_sdwa 0, %{{[0-9]+}}, 0, 0, 5, 0, 6, implicit %exec
 
 
-# VI: %{{[0-9]+}} = V_FRACT_F32_sdwa 1, %{{[0-9]+}}, 0, 0, 5, 0, 5, implicit %exec
-# VI: %{{[0-9]+}} = V_SIN_F32_sdwa 0, %{{[0-9]+}}, 1, 0, 5, 0, 5, implicit %exec
-# VI: %{{[0-9]+}} = V_CVT_U32_F32_sdwa 1, %{{[0-9]+}}, 0, 5, 0, 5, implicit %exec
-# VI: %{{[0-9]+}} = V_CVT_F32_I32_e64 %{{[0-9]+}}, 0, 1, implicit %exec
+# VI: %{{[0-9]+}}:vgpr_32 = V_FRACT_F32_sdwa 1, %{{[0-9]+}}, 0, 0, 5, 0, 5, implicit %exec
+# VI: %{{[0-9]+}}:vgpr_32 = V_SIN_F32_sdwa 0, %{{[0-9]+}}, 1, 0, 5, 0, 5, implicit %exec
+# VI: %{{[0-9]+}}:vgpr_32 = V_CVT_U32_F32_sdwa 1, %{{[0-9]+}}, 0, 5, 0, 5, implicit %exec
+# VI: %{{[0-9]+}}:vgpr_32 = V_CVT_F32_I32_e64 %{{[0-9]+}}, 0, 1, implicit %exec
 
-# GFX9: %{{[0-9]+}} = V_FRACT_F32_sdwa 1, %{{[0-9]+}}, 0, 0, 5, 0, 5, implicit %exec
-# GFX9: %{{[0-9]+}} = V_SIN_F32_sdwa 0, %{{[0-9]+}}, 1, 0, 5, 0, 5, implicit %exec
-# GFX9: %{{[0-9]+}} = V_CVT_U32_F32_sdwa 1, %{{[0-9]+}}, 0, 5, 0, 5, implicit %exec
-# GFX9: %{{[0-9]+}} = V_CVT_F32_I32_sdwa 0, %{{[0-9]+}}, 0, 1, 5, 0, 5, implicit %exec
+# GFX9: %{{[0-9]+}}:vgpr_32 = V_FRACT_F32_sdwa 1, %{{[0-9]+}}, 0, 0, 5, 0, 5, implicit %exec
+# GFX9: %{{[0-9]+}}:vgpr_32 = V_SIN_F32_sdwa 0, %{{[0-9]+}}, 1, 0, 5, 0, 5, implicit %exec
+# GFX9: %{{[0-9]+}}:vgpr_32 = V_CVT_U32_F32_sdwa 1, %{{[0-9]+}}, 0, 5, 0, 5, implicit %exec
+# GFX9: %{{[0-9]+}}:vgpr_32 = V_CVT_F32_I32_sdwa 0, %{{[0-9]+}}, 0, 1, 5, 0, 5, implicit %exec
 
 
 ---
 name:            vop1_instructions
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: vreg_64 }
   - { id: 1, class: vreg_64 }
   - { id: 2, class: sreg_64 }
@@ -85,7 +85,7 @@ registers:
 body:             |
   bb.0:
     liveins: %vgpr0_vgpr1, %vgpr2_vgpr3, %sgpr30_sgpr31
-  
+
     %2 = COPY %sgpr30_sgpr31
     %1 = COPY %vgpr2_vgpr3
     %0 = COPY %vgpr0_vgpr1
@@ -148,45 +148,45 @@ body:             |
 # GCN-LABEL: {{^}}name: vop2_instructions
 
 
-# VI: %{{[0-9]+}} = V_AND_B32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 0, 6, 5, implicit %exec
-# VI: %{{[0-9]+}} = V_ADD_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 0, 5, 0, 5, 1, implicit %exec
-# VI: %{{[0-9]+}} = V_SUB_F16_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 0, 6, 0, 5, 1, implicit %exec
-# VI: %{{[0-9]+}} = V_MAC_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, 6, 0, 6, 1, implicit %exec
-# VI: %{{[0-9]+}} = V_MAC_F16_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, 6, 0, 5, 1, implicit %exec
+# VI: %{{[0-9]+}}:vgpr_32 = V_AND_B32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 0, 6, 5, implicit %exec
+# VI: %{{[0-9]+}}:vgpr_32 = V_ADD_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 0, 5, 0, 5, 1, implicit %exec
+# VI: %{{[0-9]+}}:vgpr_32 = V_SUB_F16_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 0, 6, 0, 5, 1, implicit %exec
+# VI: %{{[0-9]+}}:vgpr_32 = V_MAC_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, 6, 0, 6, 1, implicit %exec
+# VI: %{{[0-9]+}}:vgpr_32 = V_MAC_F16_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, 6, 0, 5, 1, implicit %exec
 
-# GFX9: %{{[0-9]+}} = V_AND_B32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 0, 6, 5, implicit %exec
-# GFX9: %{{[0-9]+}} = V_ADD_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 0, 5, 0, 5, 1, implicit %exec
-# GFX9: %{{[0-9]+}} = V_SUB_F16_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 0, 6, 0, 5, 1, implicit %exec
-# GFX9: %{{[0-9]+}} = V_MAC_F32_e32 %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, implicit %exec
-# GFX9: %{{[0-9]+}} = V_MAC_F16_e32 %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, implicit %exec
-
-
-# VI: %{{[0-9]+}} = V_AND_B32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 5, 0, 6, 5, implicit %exec
-# VI: %{{[0-9]+}} = V_ADD_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 0, 5, 0, 5, 1, implicit %exec
-# VI: %{{[0-9]+}} = V_SUB_F16_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 0, 5, 0, 6, 1, implicit %exec
-# VI: %{{[0-9]+}} = V_MAC_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, 6, 0, 6, 1, implicit %exec
-# VI: %{{[0-9]+}} = V_MAC_F16_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, 6, 0, 5, 1, implicit %exec
-
-# GFX9: %{{[0-9]+}} = V_AND_B32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 5, 0, 6, 5, implicit %exec
-# GFX9: %{{[0-9]+}} = V_ADD_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 0, 5, 0, 5, 1, implicit %exec
-# GFX9: %{{[0-9]+}} = V_SUB_F16_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 0, 5, 0, 6, 1, implicit %exec
-# GFX9: %{{[0-9]+}} = V_MAC_F32_e64 0, 23, 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 0, implicit %exec
-# GFX9: %{{[0-9]+}} = V_MAC_F16_e64 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 0, implicit %exec
+# GFX9: %{{[0-9]+}}:vgpr_32 = V_AND_B32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 0, 6, 5, implicit %exec
+# GFX9: %{{[0-9]+}}:vgpr_32 = V_ADD_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 0, 5, 0, 5, 1, implicit %exec
+# GFX9: %{{[0-9]+}}:vgpr_32 = V_SUB_F16_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 0, 6, 0, 5, 1, implicit %exec
+# GFX9: %{{[0-9]+}}:vgpr_32 = V_MAC_F32_e32 %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, implicit %exec
+# GFX9: %{{[0-9]+}}:vgpr_32 = V_MAC_F16_e32 %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, implicit %exec
 
 
-# VI: %{{[0-9]+}} = V_ADD_F32_sdwa 0, %{{[0-9]+}}, 1, %{{[0-9]+}}, 0, 0, 5, 0, 5, 1, implicit %exec
-# VI: %{{[0-9]+}} = V_SUB_F16_sdwa 1, %{{[0-9]+}}, 1, %{{[0-9]+}}, 0, 0, 5, 0, 6, 1, implicit %exec
-# VI: %{{[0-9]+}} = V_MAC_F32_sdwa 1, %{{[0-9]+}}, 1, %{{[0-9]+}}, %{{[0-9]+}}, 1, 0, 6, 0, 6, 1, implicit %exec
-# VI: %{{[0-9]+}} = V_MAC_F16_e64 1, %{{[0-9]+}}, 1, %{{[0-9]+}}, 1, %{{[0-9]+}}, 0, 2, implicit %exec
+# VI: %{{[0-9]+}}:vgpr_32 = V_AND_B32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 5, 0, 6, 5, implicit %exec
+# VI: %{{[0-9]+}}:vgpr_32 = V_ADD_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 0, 5, 0, 5, 1, implicit %exec
+# VI: %{{[0-9]+}}:vgpr_32 = V_SUB_F16_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 0, 5, 0, 6, 1, implicit %exec
+# VI: %{{[0-9]+}}:vgpr_32 = V_MAC_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, 6, 0, 6, 1, implicit %exec
+# VI: %{{[0-9]+}}:vgpr_32 = V_MAC_F16_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, 6, 0, 5, 1, implicit %exec
 
-# GFX9: %{{[0-9]+}} = V_ADD_F32_sdwa 0, %{{[0-9]+}}, 1, %{{[0-9]+}}, 0, 0, 5, 0, 5, 1, implicit %exec
-# GFX9: %{{[0-9]+}} = V_SUB_F16_sdwa 1, %{{[0-9]+}}, 1, %{{[0-9]+}}, 0, 0, 5, 0, 6, 1, implicit %exec
-# GFX9: %{{[0-9]+}} = V_MAC_F32_e64 1, 23, 1, %{{[0-9]+}}, 1, %{{[0-9]+}}, 1, 0, implicit %exec
-# GFX9: %{{[0-9]+}} = V_MAC_F16_e64 1, %{{[0-9]+}}, 1, %{{[0-9]+}}, 1, %{{[0-9]+}}, 0, 2, implicit %exec
+# GFX9: %{{[0-9]+}}:vgpr_32 = V_AND_B32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 5, 0, 6, 5, implicit %exec
+# GFX9: %{{[0-9]+}}:vgpr_32 = V_ADD_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 0, 5, 0, 5, 1, implicit %exec
+# GFX9: %{{[0-9]+}}:vgpr_32 = V_SUB_F16_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 0, 5, 0, 6, 1, implicit %exec
+# GFX9: %{{[0-9]+}}:vgpr_32 = V_MAC_F32_e64 0, 23, 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 0, implicit %exec
+# GFX9: %{{[0-9]+}}:vgpr_32 = V_MAC_F16_e64 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 0, implicit %exec
+
+
+# VI: %{{[0-9]+}}:vgpr_32 = V_ADD_F32_sdwa 0, %{{[0-9]+}}, 1, %{{[0-9]+}}, 0, 0, 5, 0, 5, 1, implicit %exec
+# VI: %{{[0-9]+}}:vgpr_32 = V_SUB_F16_sdwa 1, %{{[0-9]+}}, 1, %{{[0-9]+}}, 0, 0, 5, 0, 6, 1, implicit %exec
+# VI: %{{[0-9]+}}:vgpr_32 = V_MAC_F32_sdwa 1, %{{[0-9]+}}, 1, %{{[0-9]+}}, %{{[0-9]+}}, 1, 0, 6, 0, 6, 1, implicit %exec
+# VI: %{{[0-9]+}}:vgpr_32 = V_MAC_F16_e64 1, %{{[0-9]+}}, 1, %{{[0-9]+}}, 1, %{{[0-9]+}}, 0, 2, implicit %exec
+
+# GFX9: %{{[0-9]+}}:vgpr_32 = V_ADD_F32_sdwa 0, %{{[0-9]+}}, 1, %{{[0-9]+}}, 0, 0, 5, 0, 5, 1, implicit %exec
+# GFX9: %{{[0-9]+}}:vgpr_32 = V_SUB_F16_sdwa 1, %{{[0-9]+}}, 1, %{{[0-9]+}}, 0, 0, 5, 0, 6, 1, implicit %exec
+# GFX9: %{{[0-9]+}}:vgpr_32 = V_MAC_F32_e64 1, 23, 1, %{{[0-9]+}}, 1, %{{[0-9]+}}, 1, 0, implicit %exec
+# GFX9: %{{[0-9]+}}:vgpr_32 = V_MAC_F16_e64 1, %{{[0-9]+}}, 1, %{{[0-9]+}}, 1, %{{[0-9]+}}, 0, 2, implicit %exec
 
 name:            vop2_instructions
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: vreg_64 }
   - { id: 1, class: vreg_64 }
   - { id: 2, class: sreg_64 }
@@ -252,7 +252,7 @@ registers:
 body:             |
   bb.0:
     liveins: %vgpr0_vgpr1, %vgpr2_vgpr3, %sgpr30_sgpr31
-  
+
     %2 = COPY %sgpr30_sgpr31
     %1 = COPY %vgpr2_vgpr3
     %0 = COPY %vgpr0_vgpr1
@@ -324,7 +324,7 @@ body:             |
 
 # GCN-LABEL: {{^}}name: vopc_instructions
 
-# GFX89: %{{[0-9]+}} = V_MOV_B32_e32 123, implicit %exec
+# GFX89: %{{[0-9]+}}:vgpr_32 = V_MOV_B32_e32 123, implicit %exec
 # GFX89: %vcc = V_CMP_EQ_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit-def %vcc, implicit %exec
 # GFX89: %vcc = V_CMPX_GT_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit-def %vcc, implicit-def %exec, implicit %exec
 # GFX89: %vcc = V_CMP_LT_I32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit-def %vcc, implicit %exec
@@ -332,16 +332,16 @@ body:             |
 
 
 # VI: %vcc = V_CMP_EQ_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit-def %vcc, implicit %exec
-# VI: %{{[0-9]+}} = V_CMPX_GT_F32_e64 0, 23, 0, killed %{{[0-9]+}}, 0, implicit-def %exec, implicit %exec
+# VI: %{{[0-9]+}}:sreg_64 = V_CMPX_GT_F32_e64 0, 23, 0, killed %{{[0-9]+}}, 0, implicit-def %exec, implicit %exec
 # VI: %vcc = V_CMP_LT_I32_sdwa 0, %{{[0-9]+}}, 0, %3, 0, 6, 4, implicit-def %vcc, implicit %exec
-# VI: %{{[0-9]+}} = V_CMPX_EQ_I32_e64 23, killed %{{[0-9]+}}, implicit-def %exec, implicit %exec
+# VI: %{{[0-9]+}}:sreg_64 = V_CMPX_EQ_I32_e64 23, killed %{{[0-9]+}}, implicit-def %exec, implicit %exec
 
 # GFX9: %vcc = V_CMP_EQ_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit-def %vcc, implicit %exec
-# GFX9: %{{[0-9]+}} = V_MOV_B32_e32 23, implicit %exec
-# GFX9: %{{[0-9]+}} = V_CMPX_GT_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit-def %vcc, implicit-def %exec, implicit %exec
+# GFX9: %{{[0-9]+}}:vgpr_32 = V_MOV_B32_e32 23, implicit %exec
+# GFX9: %{{[0-9]+}}:sreg_64 = V_CMPX_GT_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit-def %vcc, implicit-def %exec, implicit %exec
 # GFX9: %vcc = V_CMP_LT_I32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit-def %vcc, implicit %exec
-# GFX9: %{{[0-9]+}} = V_MOV_B32_e32 23, implicit %exec
-# GFX9: %{{[0-9]+}} = V_CMPX_EQ_I32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit-def %vcc, implicit-def %exec, implicit %exec
+# GFX9: %{{[0-9]+}}:vgpr_32 = V_MOV_B32_e32 23, implicit %exec
+# GFX9: %{{[0-9]+}}:sreg_64 = V_CMPX_EQ_I32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit-def %vcc, implicit-def %exec, implicit %exec
 
 
 # VI: %vcc = V_CMP_EQ_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 1, 6, 4, implicit-def %vcc, implicit %exec
@@ -364,7 +364,7 @@ body:             |
 
 name:            vopc_instructions
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: vreg_64 }
   - { id: 1, class: vreg_64 }
   - { id: 2, class: sreg_64 }
@@ -397,7 +397,7 @@ registers:
 body:             |
   bb.0:
     liveins: %vgpr0_vgpr1, %vgpr2_vgpr3, %sgpr30_sgpr31
-  
+
     %2 = COPY %sgpr30_sgpr31
     %1 = COPY %vgpr2_vgpr3
     %0 = COPY %vgpr0_vgpr1

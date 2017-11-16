@@ -41,9 +41,9 @@ regBankSelected: true
 registers:
   - { id: 0, class: gpr, preferred-register: '' }
   - { id: 1, class: gpr, preferred-register: '' }
-# ALL:          %0 = COPY %al
-# ALL-NEXT:     %2 = SUBREG_TO_REG 0, %0, 1
-# ALL-NEXT:     %1 = AND32ri8 %2, 1, implicit-def %eflags
+# ALL:          %0:gr8 = COPY %al
+# ALL-NEXT:     %2:gr32 = SUBREG_TO_REG 0, %0, 1
+# ALL-NEXT:     %1:gr32 = AND32ri8 %2, 1, implicit-def %eflags
 # ALL-NEXT:     %eax = COPY %1
 # ALL-NEXT:     RET 0, implicit %eax
 body:             |
@@ -68,8 +68,8 @@ regBankSelected: true
 registers:
   - { id: 0, class: gpr, preferred-register: '' }
   - { id: 1, class: gpr, preferred-register: '' }
-# ALL:          %0 = COPY %al
-# ALL-NEXT:     %1 = MOVZX32rr8 %0
+# ALL:          %0:gr8 = COPY %al
+# ALL-NEXT:     %1:gr32 = MOVZX32rr8 %0
 # ALL-NEXT:     %eax = COPY %1
 # ALL-NEXT:     RET 0, implicit %eax
 body:             |
@@ -94,8 +94,8 @@ regBankSelected: true
 registers:
   - { id: 0, class: gpr, preferred-register: '' }
   - { id: 1, class: gpr, preferred-register: '' }
-# ALL:          %0 = COPY %al
-# ALL-NEXT:     %1 = MOVZX32rr8 %0
+# ALL:          %0:gr8 = COPY %al
+# ALL-NEXT:     %1:gr32 = MOVZX32rr8 %0
 # ALL-NEXT:     %eax = COPY %1
 # ALL-NEXT:     RET 0, implicit %eax
 body:             |
@@ -120,8 +120,8 @@ regBankSelected: true
 registers:
   - { id: 0, class: gpr, preferred-register: '' }
   - { id: 1, class: gpr, preferred-register: '' }
-# ALL:          %0 = COPY %ax
-# ALL-NEXT:     %1 = MOVZX32rr16 %0
+# ALL:          %0:gr16 = COPY %ax
+# ALL-NEXT:     %1:gr32 = MOVZX32rr16 %0
 # ALL-NEXT:     %eax = COPY %1
 # ALL-NEXT:     RET 0, implicit %eax
 body:             |
@@ -145,8 +145,8 @@ regBankSelected: true
 # ALL-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
 registers:
   - { id: 0, class: gpr, preferred-register: '' }
-# ALL:          %0 = COPY %dl
-# ALL-NEXT:     %1 = SUBREG_TO_REG 0, %0, 1
+# ALL:          %0:gr8 = COPY %dl
+# ALL-NEXT:     %1:gr32 = SUBREG_TO_REG 0, %0, 1
 # ALL-NEXT:     %eax = COPY %1
 # ALL-NEXT:     RET 0, implicit %eax
 body:             |
@@ -169,8 +169,8 @@ regBankSelected: true
 # ALL-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
 registers:
   - { id: 0, class: gpr, preferred-register: '' }
-# ALL:          %0 = COPY %dx
-# ALL-NEXT:     %1 = SUBREG_TO_REG 0, %0, 3
+# ALL:          %0:gr16 = COPY %dx
+# ALL-NEXT:     %1:gr32 = SUBREG_TO_REG 0, %0, 3
 # ALL-NEXT:     %eax = COPY %1
 # ALL-NEXT:     RET 0, implicit %eax
 body:             |

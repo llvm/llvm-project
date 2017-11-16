@@ -44,15 +44,15 @@ body: |
   bb.0.entry:
     successors: %bb.2.exit, %bb.1.less
     liveins: %edi
-    ; CHECK:      %0 = COPY %edi
-    ; CHECK-NEXT: %1 = SUB32ri8 %0, 10
+    ; CHECK:      %0:gr32 = COPY %edi
+    ; CHECK-NEXT: %1:gr32 = SUB32ri8 %0, 10
     %0 = COPY %edi
     %1 = SUB32ri8 %0, 10, implicit-def %eflags
     JG_1 %bb.2.exit, implicit %eflags
     JMP_1 %bb.1.less
 
   bb.1.less:
-    ; CHECK:      %2 = MOV32r0
+    ; CHECK:      %2:gr32 = MOV32r0
     ; CHECK-NEXT: %eax = COPY %2
     %2 = MOV32r0 implicit-def %eflags
     %eax = COPY %2
@@ -78,15 +78,15 @@ body: |
   bb.0.entry:
     successors: %bb.2.exit, %bb.1.less
     liveins: %edi
-    ; CHECK:      %0 = COPY %edi
-    ; CHECK-NEXT: %1 = SUB32ri8 %0, 10
+    ; CHECK:      %0:gr32 = COPY %edi
+    ; CHECK-NEXT: %1:gr32 = SUB32ri8 %0, 10
     %2 = COPY %edi
     %0 = SUB32ri8 %2, 10, implicit-def %eflags
     JG_1 %bb.2.exit, implicit %eflags
     JMP_1 %bb.1.less
 
   bb.1.less:
-    ; CHECK:      %2 = MOV32r0
+    ; CHECK:      %2:gr32 = MOV32r0
     ; CHECK-NEXT: %eax = COPY %2
     %10 = MOV32r0 implicit-def %eflags
     %eax = COPY %10

@@ -6,10 +6,10 @@
 # aren't made in users before the def is seen.
 
 # GCN-LABEL: name: mov_in_use_list_2x{{$}}
-# GCN: %2 = V_MOV_B32_e32 0, implicit %exec
-# GCN-NEXT: %3 = COPY undef %0
+# GCN: %2:vgpr_32 = V_MOV_B32_e32 0, implicit %exec
+# GCN-NEXT: %3:vgpr_32 = COPY undef %0
 
-# GCN: %1 = V_MOV_B32_e32 0, implicit %exec
+# GCN: %1:vgpr_32 = V_MOV_B32_e32 0, implicit %exec
 
 
 name: mov_in_use_list_2x

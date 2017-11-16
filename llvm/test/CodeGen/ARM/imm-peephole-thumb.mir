@@ -1,17 +1,17 @@
 # RUN: llc -run-pass=peephole-opt %s -o - | FileCheck %s
 
-# CHECK: [[IN:%.*]] = COPY %r0
-# CHECK: [[SUM1TMP:%.*]] = t2ADDri [[IN]], 25600
-# CHECK: [[SUM1:%.*]] = t2ADDri killed [[SUM1TMP]], 133
+# CHECK: [[IN:%.*]]:gprnopc = COPY %r0
+# CHECK: [[SUM1TMP:%.*]]:rgpr = t2ADDri [[IN]], 25600
+# CHECK: [[SUM1:%.*]]:rgpr = t2ADDri killed [[SUM1TMP]], 133
 
-# CHECK: [[SUM2TMP:%.*]] = t2SUBri [[IN]], 25600
-# CHECK: [[SUM2:%.*]] = t2SUBri killed [[SUM2TMP]], 133
+# CHECK: [[SUM2TMP:%.*]]:rgpr = t2SUBri [[IN]], 25600
+# CHECK: [[SUM2:%.*]]:rgpr = t2SUBri killed [[SUM2TMP]], 133
 
-# CHECK: [[SUM3TMP:%.*]] = t2SUBri [[IN]], 25600
-# CHECK: [[SUM3:%.*]] = t2SUBri killed [[SUM3TMP]], 133
+# CHECK: [[SUM3TMP:%.*]]:rgpr = t2SUBri [[IN]], 25600
+# CHECK: [[SUM3:%.*]]:rgpr = t2SUBri killed [[SUM3TMP]], 133
 
-# CHECK: [[SUM4TMP:%.*]] = t2ADDri killed [[IN]], 25600
-# CHECK: [[SUM4:%.*]] = t2ADDri killed [[SUM4TMP]], 133
+# CHECK: [[SUM4TMP:%.*]]:rgpr = t2ADDri killed [[IN]], 25600
+# CHECK: [[SUM4:%.*]]:rgpr = t2ADDri killed [[SUM4TMP]], 133
 
 
 --- |
@@ -56,4 +56,3 @@ body:             |
     tBX_RET 14, _, implicit %r0
 
 ...
-
