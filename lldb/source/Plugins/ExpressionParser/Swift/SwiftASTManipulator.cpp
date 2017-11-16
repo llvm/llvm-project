@@ -1374,7 +1374,7 @@ bool SwiftASTManipulator::AddExternalVariables(
           is_static, specifier, is_capture_list, loc, name, var_type,
           containing_function);
       redirected_var_decl->setInterfaceType(
-          containing_function->mapTypeOutOfContext(var_type));
+          var_type->mapTypeOutOfContext());
       redirected_var_decl->setDebuggerVar(true);
       redirected_var_decl->setImplicit(true);
 
