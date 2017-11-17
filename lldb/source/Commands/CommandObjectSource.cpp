@@ -902,7 +902,7 @@ protected:
       // We don't care about the column here.
       const uint32_t column = 0;
       return target->GetSourceManager().DisplaySourceLinesWithLineNumbers(
-          start_file, line_no, 0, m_options.num_lines, column, "",
+          start_file, line_no, column, 0, m_options.num_lines, "",
           &result.GetOutputStream(), GetBreakpointLocations());
     } else {
       result.AppendErrorWithFormat(
@@ -1161,7 +1161,7 @@ protected:
                   ? sc.line_entry.column
                   : 0;
           target->GetSourceManager().DisplaySourceLinesWithLineNumbers(
-              sc.comp_unit, sc.line_entry.line, lines_to_back_up, column,
+              sc.comp_unit, sc.line_entry.line, column, lines_to_back_up,
               m_options.num_lines - lines_to_back_up, "->",
               &result.GetOutputStream(), GetBreakpointLocations());
           result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -1283,8 +1283,9 @@ protected:
             m_options.num_lines = 10;
           const uint32_t column = 0;
           target->GetSourceManager().DisplaySourceLinesWithLineNumbers(
-              sc.comp_unit, m_options.start_line, 0, m_options.num_lines,
-              column, "", &result.GetOutputStream(), GetBreakpointLocations());
+              sc.comp_unit, m_options.start_line, column, 
+              0, m_options.num_lines,
+              "", &result.GetOutputStream(), GetBreakpointLocations());
 
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {

@@ -282,9 +282,9 @@ define amdgpu_kernel void @add_inline_imm_neg_4.0_v2f16(<2 x half> addrspace(1)*
 ; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 0.5
 ; GFX9: buffer_store_dword [[REG]]
 
-; VI: v_mov_b32_e32 [[CONST05:v[0-9]+]], 0x3800
 ; VI: buffer_load_dword
 ; VI-NOT: and
+; VI: v_mov_b32_e32 [[CONST05:v[0-9]+]], 0x3800
 ; VI-DAG: v_add_f16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, [[CONST05]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; VI-DAG: v_add_f16_e32 v{{[0-9]+}}, 0.5, v{{[0-9]+}}
 ; VI: v_or_b32

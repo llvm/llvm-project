@@ -19,8 +19,8 @@
 
 #include "AntiDepBreaker.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 #include <map>
 #include <set>
 #include <vector>

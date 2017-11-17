@@ -1,5 +1,4 @@
 # Check that libFuzzer honors SIGUSR1/SIGUSR2
-REQUIRES: linux
 RUN: rm -rf %t
 RUN: mkdir -p %t
 RUN: %cpp_compiler %S/SleepOneSecondTest.cpp -o %t/LFSIGUSR
@@ -15,7 +14,7 @@ RUN: echo g > %t/C2/g
 
 RUN: %t/LFSIGUSR -merge=1 -merge_control_file=%t/MCF %t/C1 %t/C2  2>  %t/log & export PID=$!
 RUN: sleep 3
-RUN: pkill -f -SIGUSR2 %t/LFSIGUSR
+RUN: pkill -SIGUSR2 -f %t/LFSIGUSR
 RUN: sleep 3
 RUN: cat %t/log | FileCheck %s
 RUN: grep C2/g %t/MCF

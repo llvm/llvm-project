@@ -3,7 +3,7 @@
 // RUN: %run %t 10
 //
 // FIXME: fix 32-bits.
-// REQUIRES: asan-64-bits
+// REQUIRES: asan-64-bits, shadow-scale-3
 // FIXME: Implement ASan intra-object padding in Clang's MS record layout
 // UNSUPPORTED: win32
 #include <stdio.h>

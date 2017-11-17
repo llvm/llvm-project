@@ -1,4 +1,4 @@
-//==- Target/TargetRegisterInfo.h - Target Register Information --*- C++ -*-==//
+//==- CodeGen/TargetRegisterInfo.h - Target Register Information -*- C++ -*-==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TARGET_TARGETREGISTERINFO_H
-#define LLVM_TARGET_TARGETREGISTERINFO_H
+#ifndef LLVM_CODEGEN_TARGETREGISTERINFO_H
+#define LLVM_CODEGEN_TARGETREGISTERINFO_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
@@ -1163,4 +1163,4 @@ Printable PrintVRegOrUnit(unsigned VRegOrUnit, const TargetRegisterInfo *TRI);
 
 } // end namespace llvm
 
-#endif // LLVM_TARGET_TARGETREGISTERINFO_H
+#endif // LLVM_CODEGEN_TARGETREGISTERINFO_H

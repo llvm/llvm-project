@@ -1,6 +1,7 @@
 ; Test basic address sanitizer instrumentation.
 ;
-; RUN: opt < %s -asan -asan-module -S | FileCheck %s
+; RUN: opt < %s -asan -asan-module -S | FileCheck --check-prefixes=CHECK,CHECK-S3 %s
+; RUN: opt < %s -asan -asan-module -asan-mapping-scale=5 -S | FileCheck --check-prefixes=CHECK,CHECK-S5 %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-unknown-linux-gnu"
@@ -10,7 +11,8 @@ define i32 @test_load(i32* %a) sanitize_address {
 ; CHECK-LABEL: @test_load
 ; CHECK-NOT: load
 ; CHECK:   %[[LOAD_ADDR:[^ ]*]] = ptrtoint i32* %a to i64
-; CHECK:   lshr i64 %[[LOAD_ADDR]], 3
+; CHECK-S3:   lshr i64 %[[LOAD_ADDR]], 3
+; CHECK-S5:   lshr i64 %[[LOAD_ADDR]], 5
 ; CHECK:   {{or|add}}
 ; CHECK:   %[[LOAD_SHADOW_PTR:[^ ]*]] = inttoptr
 ; CHECK:   %[[LOAD_SHADOW:[^ ]*]] = load i8, i8* %[[LOAD_SHADOW_PTR]]
@@ -18,7 +20,8 @@ define i32 @test_load(i32* %a) sanitize_address {
 ; CHECK:   br i1 %{{.*}}, label %{{.*}}, label %{{.*}}!prof ![[PROF:[0-9]+]]
 ;
 ; First instrumentation block refines the shadow test.
-; CHECK:   and i64 %[[LOAD_ADDR]], 7
+; CHECK-S3:   and i64 %[[LOAD_ADDR]], 7
+; CHECK-S5:   and i64 %[[LOAD_ADDR]], 31
 ; CHECK:   add i64 %{{.*}}, 3
 ; CHECK:   trunc i64 %{{.*}} to i8
 ; CHECK:   icmp sge i8 %{{.*}}, %[[LOAD_SHADOW]]
@@ -43,7 +46,8 @@ define void @test_store(i32* %a) sanitize_address {
 ; CHECK-LABEL: @test_store
 ; CHECK-NOT: store
 ; CHECK:   %[[STORE_ADDR:[^ ]*]] = ptrtoint i32* %a to i64
-; CHECK:   lshr i64 %[[STORE_ADDR]], 3
+; CHECK-S3:   lshr i64 %[[STORE_ADDR]], 3
+; CHECK-S5:   lshr i64 %[[STORE_ADDR]], 5
 ; CHECK:   {{or|add}}
 ; CHECK:   %[[STORE_SHADOW_PTR:[^ ]*]] = inttoptr
 ; CHECK:   %[[STORE_SHADOW:[^ ]*]] = load i8, i8* %[[STORE_SHADOW_PTR]]
@@ -51,7 +55,8 @@ define void @test_store(i32* %a) sanitize_address {
 ; CHECK:   br i1 %{{.*}}, label %{{.*}}, label %{{.*}}
 ;
 ; First instrumentation block refines the shadow test.
-; CHECK:   and i64 %[[STORE_ADDR]], 7
+; CHECK-S3:   and i64 %[[STORE_ADDR]], 7
+; CHECK-S5:   and i64 %[[STORE_ADDR]], 31
 ; CHECK:   add i64 %{{.*}}, 3
 ; CHECK:   trunc i64 %{{.*}} to i8
 ; CHECK:   icmp sge i8 %{{.*}}, %[[STORE_SHADOW]]

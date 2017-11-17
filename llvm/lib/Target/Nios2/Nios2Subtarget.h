@@ -16,7 +16,7 @@
 
 #include "Nios2FrameLowering.h"
 #include "Nios2InstrInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 
 #define GET_SUBTARGETINFO_HEADER
 #include "Nios2GenSubtargetInfo.inc"

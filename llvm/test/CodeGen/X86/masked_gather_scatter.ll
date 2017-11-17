@@ -2539,3 +2539,66 @@ define <2 x float> @large_index(float* %base, <2 x i128> %ind, <2 x i1> %mask, <
   %res = call <2 x float> @llvm.masked.gather.v2f32.v2p0f32(<2 x float*> %gep.random, i32 4, <2 x i1> %mask, <2 x float> %src0)
   ret <2 x float>%res
 }
+
+; Make sure we allow index to be sign extended from a smaller than i32 element size.
+define <16 x float> @sext_i8_index(float* %base, <16 x i8> %ind) {
+; KNL_64-LABEL: sext_i8_index:
+; KNL_64:       # BB#0:
+; KNL_64-NEXT:    vpmovsxbw %xmm0, %ymm0
+; KNL_64-NEXT:    vpmovsxwq %xmm0, %zmm1
+; KNL_64-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; KNL_64-NEXT:    vpmovsxwq %xmm0, %zmm0
+; KNL_64-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_64-NEXT:    kxnorw %k0, %k0, %k2
+; KNL_64-NEXT:    vgatherqps (%rdi,%zmm0,4), %ymm2 {%k2}
+; KNL_64-NEXT:    vgatherqps (%rdi,%zmm1,4), %ymm0 {%k1}
+; KNL_64-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
+; KNL_64-NEXT:    retq
+;
+; KNL_32-LABEL: sext_i8_index:
+; KNL_32:       # BB#0:
+; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; KNL_32-NEXT:    vpmovsxbw %xmm0, %ymm0
+; KNL_32-NEXT:    vpmovsxwq %xmm0, %zmm1
+; KNL_32-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; KNL_32-NEXT:    vpmovsxwq %xmm0, %zmm0
+; KNL_32-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_32-NEXT:    kxnorw %k0, %k0, %k2
+; KNL_32-NEXT:    vgatherqps (%eax,%zmm0,4), %ymm2 {%k2}
+; KNL_32-NEXT:    vgatherqps (%eax,%zmm1,4), %ymm0 {%k1}
+; KNL_32-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
+; KNL_32-NEXT:    retl
+;
+; SKX-LABEL: sext_i8_index:
+; SKX:       # BB#0:
+; SKX-NEXT:    vpmovsxbw %xmm0, %ymm0
+; SKX-NEXT:    vpmovsxwq %xmm0, %zmm1
+; SKX-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; SKX-NEXT:    vpmovsxwq %xmm0, %zmm0
+; SKX-NEXT:    kxnorw %k0, %k0, %k1
+; SKX-NEXT:    kxnorw %k0, %k0, %k2
+; SKX-NEXT:    vgatherqps (%rdi,%zmm0,4), %ymm2 {%k2}
+; SKX-NEXT:    vgatherqps (%rdi,%zmm1,4), %ymm0 {%k1}
+; SKX-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
+; SKX-NEXT:    retq
+;
+; SKX_32-LABEL: sext_i8_index:
+; SKX_32:       # BB#0:
+; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SKX_32-NEXT:    vpmovsxbw %xmm0, %ymm0
+; SKX_32-NEXT:    vpmovsxwq %xmm0, %zmm1
+; SKX_32-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; SKX_32-NEXT:    vpmovsxwq %xmm0, %zmm0
+; SKX_32-NEXT:    kxnorw %k0, %k0, %k1
+; SKX_32-NEXT:    kxnorw %k0, %k0, %k2
+; SKX_32-NEXT:    vgatherqps (%eax,%zmm0,4), %ymm2 {%k2}
+; SKX_32-NEXT:    vgatherqps (%eax,%zmm1,4), %ymm0 {%k1}
+; SKX_32-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
+; SKX_32-NEXT:    retl
+
+  %sext_ind = sext <16 x i8> %ind to <16 x i64>
+  %gep.random = getelementptr float, float *%base, <16 x i64> %sext_ind
+
+  %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> %gep.random, i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x float> undef)
+  ret <16 x float>%res
+}
