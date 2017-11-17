@@ -5,13 +5,14 @@ LLD is a linker from the LLVM project. That is a drop-in replacement
 for system linkers and runs much faster than them. It also provides
 features that are useful for toolchain developers.
 
-The linker supports ELF (Unix), PE/COFF (Windows) and Mach-O (macOS)
-in descending order of completeness. Internally, LLD consists of three
-different linkers. The ELF port is the one that will be described in
-this document. The PE/COFF port is almost complete except the lack of
-the Windows debug info (PDB) support. The Mach-O port is built based
-on a different architecture than the ELF or COFF ports. For the
-details about Mach-O, please read :doc:`AtomLLD`.
+The linker supports ELF (Unix), PE/COFF (Windows), Mach-O (macOS) and
+WebAssembly in descending order of completeness. Internally, LLD consists of
+several different linkers. The ELF port is the one that will be described in
+this document. The PE/COFF port is almost complete except the lack of the
+Windows debug info (PDB) support. The WebAssembly port is still a work in
+progress (See :doc:`WebAssembly`).  The Mach-O port is built based on a
+different architecture than the others. For the details about Mach-O, please
+read :doc:`AtomLLD`.
 
 Features
 --------
@@ -172,5 +173,6 @@ document soon.
 
    NewLLD
    AtomLLD
+   WebAssembly
    windows_support
    ReleaseNotes

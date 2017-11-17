@@ -115,6 +115,9 @@ class InstSI <dag outs, dag ins, string asm = "",
   // of a packed output register.
   field bit ClampHi = 0;
 
+  // This bit indicates that this is a packed VOP3P instruction
+  field bit IsPacked = 0;
+
   // These need to be kept in sync with the enum in SIInstrFlags.
   let TSFlags{0} = SALU;
   let TSFlags{1} = VALU;
@@ -167,6 +170,8 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{46} = IntClamp;
   let TSFlags{47} = ClampLo;
   let TSFlags{48} = ClampHi;
+
+  let TSFlags{49} = IsPacked;
 
   let SchedRW = [Write32Bit];
 

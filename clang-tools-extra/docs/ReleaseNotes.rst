@@ -136,6 +136,11 @@ Improvements to clang-tidy
   Checks if the required file flag ``MFD_CLOEXEC`` is present in the argument
   of ``memfd_create()``.
 
+- New `bugprone-copy-constructor-init
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-copy-constructor-init.html>`_ check
+
+  Finds copy constructors which don't call the copy constructor of the base class.
+
 - New `bugprone-integer-division
   <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-integer-division.html>`_ check
 

@@ -906,7 +906,7 @@ static bool sink(Instruction &I, LoopInfo *LI, DominatorTree *DT,
       continue;
 
     if (!DT->isReachableFromEntry(User->getParent())) {
-      User->replaceUsesOfWith(&I, UndefValue::get(I.getType()));
+      U = UndefValue::get(I.getType());
       continue;
     }
 

@@ -217,6 +217,19 @@ public:
     // shouldn't impact anything.
   }
 
+  /// Restart the current loop.
+  ///
+  /// Loop passes should call this method to indicate the current loop has been
+  /// sufficiently changed that it should be re-visited from the begining of
+  /// the loop pass pipeline rather than continuing.
+  void revisitCurrentLoop() {
+    // Tell the currently in-flight pipeline to stop running.
+    SkipCurrentLoop = true;
+
+    // And insert ourselves back into the worklist.
+    Worklist.insert(CurrentL);
+  }
+
 private:
   template <typename LoopPassT> friend class llvm::FunctionToLoopPassAdaptor;
 

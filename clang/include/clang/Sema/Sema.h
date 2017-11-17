@@ -9690,6 +9690,7 @@ public:
   class ConditionResult {
     Decl *ConditionVar;
     FullExprArg Condition;
+    SourceLocation RParenLoc;
     bool Invalid;
     bool HasKnownValue;
     bool KnownValue;
@@ -9713,6 +9714,9 @@ public:
       return std::make_pair(cast_or_null<VarDecl>(ConditionVar),
                             Condition.get());
     }
+
+    void setRParenLoc(SourceLocation Loc) { RParenLoc = Loc; }
+
     llvm::Optional<bool> getKnownValue() const {
       if (!HasKnownValue)
         return None;

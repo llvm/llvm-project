@@ -36,8 +36,10 @@ namespace llvm {
 /// of the loop, to make the unswitching opportunity obvious.
 ///
 class SimpleLoopUnswitchPass : public PassInfoMixin<SimpleLoopUnswitchPass> {
+  bool NonTrivial;
+
 public:
-  SimpleLoopUnswitchPass() = default;
+  SimpleLoopUnswitchPass(bool NonTrivial = false) : NonTrivial(NonTrivial) {}
 
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
                         LoopStandardAnalysisResults &AR, LPMUpdater &U);
@@ -46,7 +48,7 @@ public:
 /// Create the legacy pass object for the simple loop unswitcher.
 ///
 /// See the documentaion for `SimpleLoopUnswitchPass` for details.
-Pass *createSimpleLoopUnswitchLegacyPass();
+Pass *createSimpleLoopUnswitchLegacyPass(bool NonTrivial = false);
 
 } // end namespace llvm
 
