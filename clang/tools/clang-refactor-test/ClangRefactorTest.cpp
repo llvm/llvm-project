@@ -1350,39 +1350,51 @@ int initiateAndPerformAction(CXTranslationUnit TU, ArrayRef<const char *> Args,
   return 0;
 }
 
+struct MainTU {
+  CXIndex CIdx;
+  CXTranslationUnit TU = nullptr;
+
+  MainTU() {
+    CIdx = clang_createIndex(0, 0);
+  }
+  ~MainTU() {
+    if (TU)
+      clang_disposeTranslationUnit(TU);
+    clang_disposeIndex(CIdx);
+  }
+};
+
 int main(int argc, const char **argv) {
   cl::HideUnrelatedOptions(opts::ClangRefactorTestOptions);
 
   cl::ParseCommandLineOptions(argc, argv, "Clang refactoring test tool\n");
   cl::PrintOptionValues();
 
-  CXIndex CIdx = clang_createIndex(0, 0);
+  MainTU MainTranslationUnit;
 
   std::vector<const char *> Args;
   for (const auto &Arg : opts::CompilerArguments) {
     Args.push_back(Arg.c_str());
   }
-  CXTranslationUnit TU;
   CXErrorCode Err = clang_parseTranslationUnit2(
-      CIdx,
+      MainTranslationUnit.CIdx,
       opts::IgnoreFilenameForInitiationTU ? nullptr : opts::FileName.c_str(),
-      Args.data(), Args.size(), 0, 0, CXTranslationUnit_KeepGoing, &TU);
+      Args.data(), Args.size(), 0, 0, CXTranslationUnit_KeepGoing,
+      &MainTranslationUnit.TU);
   if (Err != CXError_Success) {
     errs() << "error: failed to load '" << opts::FileName << "'\n";
     return 1;
   }
 
   if (opts::RenameInitiateSubcommand || opts::RenameInitiateUSRSubcommand)
-    return rename(TU, CIdx, Args);
+    return rename(MainTranslationUnit.TU, MainTranslationUnit.CIdx, Args);
   else if (opts::RenameIndexedFileSubcommand)
-    return renameIndexedFile(CIdx, Args);
+    return renameIndexedFile(MainTranslationUnit.CIdx, Args);
   else if (opts::ListRefactoringActionsSubcommand)
-    return listRefactoringActions(TU);
+    return listRefactoringActions(MainTranslationUnit.TU);
   else if (opts::InitiateActionSubcommand || opts::PerformActionSubcommand)
-    return initiateAndPerformAction(TU, Args, CIdx);
-
-  clang_disposeTranslationUnit(TU);
-  clang_disposeIndex(CIdx);
+    return initiateAndPerformAction(MainTranslationUnit.TU, Args,
+                                    MainTranslationUnit.CIdx);
 
   return 0;
 }
