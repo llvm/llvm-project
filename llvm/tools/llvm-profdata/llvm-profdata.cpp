@@ -37,8 +37,8 @@ using namespace llvm;
 
 enum ProfileFormat { PF_None = 0, PF_Text, PF_Binary, PF_GCC };
 
-static void exitWithError(const Twine &Message, StringRef Whence = "",
-                          StringRef Hint = "") {
+static void exitWithError(Twine Message, std::string Whence = "",
+                          std::string Hint = "") {
   errs() << "error: ";
   if (!Whence.empty())
     errs() << Whence << ": ";
@@ -119,7 +119,7 @@ struct WriterContext {
   std::mutex Lock;
   InstrProfWriter Writer;
   Error Err;
-  StringRef ErrWhence;
+  std::string ErrWhence;
   std::mutex &ErrLock;
   SmallSet<instrprof_error, 4> &WriterErrorCodes;
 
@@ -137,6 +137,9 @@ static void loadInput(const WeightedFile &Input, WriterContext *WC) {
   if (WC->Err)
     return;
 
+  // Copy the filename, because llvm::ThreadPool copied the input "const
+  // WeightedFile &" by value, making a reference to the filename within it
+  // invalid outside of this packaged task.
   WC->ErrWhence = Input.Filename;
 
   auto ReaderOrErr = InstrProfReader::create(Input.Filename);
@@ -180,6 +183,11 @@ static void loadInput(const WeightedFile &Input, WriterContext *WC) {
 
 /// Merge the \p Src writer context into \p Dst.
 static void mergeWriterContexts(WriterContext *Dst, WriterContext *Src) {
+  // If we've already seen a hard error, continuing with the merge would
+  // clobber it.
+  if (Dst->Err || Src->Err)
+    return;
+
   bool Reported = false;
   Dst->Writer.mergeRecordsFromWriter(std::move(Src->Writer), [&](Error E) {
     if (Reported) {
