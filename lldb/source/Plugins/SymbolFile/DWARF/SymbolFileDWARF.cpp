@@ -209,6 +209,10 @@ static const char *resolveCompDir(const char *path_from_dwarf) {
   return nullptr;
 }
 
+DWARFCompileUnit *SymbolFileDWARF::GetBaseCompileUnit() {
+  return nullptr;
+}
+
 void SymbolFileDWARF::Initialize() {
   LogChannelDWARF::Initialize();
   PluginManager::RegisterPlugin(GetPluginNameStatic(),

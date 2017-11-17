@@ -58,7 +58,7 @@ class GCNHazardRecognizer final : public ScheduleHazardRecognizer {
                                 [](MachineInstr *) { return true; });
   int getWaitStatesSinceSetReg(function_ref<bool(MachineInstr *)> IsHazard);
 
-  int checkSMEMSoftClauseHazards(MachineInstr *SMEM);
+  int checkSoftClauseHazards(MachineInstr *SMEM);
   int checkSMRDHazards(MachineInstr *SMRD);
   int checkVMEMHazards(MachineInstr* VMEM);
   int checkDPPHazards(MachineInstr *DPP);

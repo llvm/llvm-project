@@ -400,7 +400,7 @@ static void discoverAndMapSubloop(LoopT *L, ArrayRef<BlockT *> Backedges,
       // Discover a subloop of this loop.
       Subloop->setParentLoop(L);
       ++NumSubloops;
-      NumBlocks += Subloop->getBlocks().capacity();
+      NumBlocks += Subloop->getBlocksVector().capacity();
       PredBB = Subloop->getHeader();
       // Continue traversal along predecessors that are not loop-back edges from
       // within this subloop tree itself. Note that a predecessor may directly

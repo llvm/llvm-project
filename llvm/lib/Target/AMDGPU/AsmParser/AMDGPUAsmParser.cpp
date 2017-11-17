@@ -1077,10 +1077,7 @@ public:
                OptionalImmIndexMap &OptionalIdx);
   void cvtVOP3OpSel(MCInst &Inst, const OperandVector &Operands);
   void cvtVOP3(MCInst &Inst, const OperandVector &Operands);
-  void cvtVOP3PImpl(MCInst &Inst, const OperandVector &Operands,
-                    bool IsPacked);
   void cvtVOP3P(MCInst &Inst, const OperandVector &Operands);
-  void cvtVOP3P_NotPacked(MCInst &Inst, const OperandVector &Operands);
 
   void cvtVOP3Interp(MCInst &Inst, const OperandVector &Operands);
 
@@ -4320,11 +4317,13 @@ void AMDGPUAsmParser::cvtVOP3(MCInst &Inst, const OperandVector &Operands) {
   cvtVOP3(Inst, Operands, OptionalIdx);
 }
 
-void AMDGPUAsmParser::cvtVOP3PImpl(MCInst &Inst,
-                                   const OperandVector &Operands,
-                                   bool IsPacked) {
+void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst,
+                               const OperandVector &Operands) {
   OptionalImmIndexMap OptIdx;
-  int Opc = Inst.getOpcode();
+  const int Opc = Inst.getOpcode();
+  const MCInstrDesc &Desc = MII.get(Opc);
+
+  const bool IsPacked = (Desc.TSFlags & SIInstrFlags::IsPacked) != 0;
 
   cvtVOP3(Inst, Operands, OptIdx);
 
@@ -4340,7 +4339,6 @@ void AMDGPUAsmParser::cvtVOP3PImpl(MCInst &Inst,
 
   int OpSelHiIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel_hi);
   if (OpSelHiIdx != -1) {
-    // TODO: Should we change the printing to match?
     int DefaultVal = IsPacked ? -1 : 0;
     addOptionalImmOperand(Inst, Operands, OptIdx, AMDGPUOperand::ImmTyOpSelHi,
                           DefaultVal);
@@ -4400,15 +4398,6 @@ void AMDGPUAsmParser::cvtVOP3PImpl(MCInst &Inst,
 
     Inst.getOperand(ModIdx).setImm(Inst.getOperand(ModIdx).getImm() | ModVal);
   }
-}
-
-void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands) {
-  cvtVOP3PImpl(Inst, Operands, true);
-}
-
-void AMDGPUAsmParser::cvtVOP3P_NotPacked(MCInst &Inst,
-                                         const OperandVector &Operands) {
-  cvtVOP3PImpl(Inst, Operands, false);
 }
 
 //===----------------------------------------------------------------------===//

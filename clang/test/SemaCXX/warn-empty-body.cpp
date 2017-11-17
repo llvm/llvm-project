@@ -301,3 +301,14 @@ void test7(int x, int y) {
   if (x) IDENTITY(); // no-warning
 }
 
+#define SOME_IF(A) if (A)
+#define IF_ELSE(A) if (A); else
+
+
+void test_macros() {
+  SOME_IF(0);
+  IF_ELSE(0);
+
+  IDENTITY(if (0);) // expected-warning{{if statement has empty body}} expected-note{{separate line}}
+  IDENTITY(if (0); else;) // expected-warning{{else clause has empty body}} expected-note{{separate line}}}
+}

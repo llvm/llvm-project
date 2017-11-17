@@ -806,8 +806,12 @@ public:
     return getGeneration() >= AMDGPUSubtarget::GFX9;
   }
 
-  bool hasReadM0Hazard() const {
+  bool hasReadM0MovRelInterpHazard() const {
     return getGeneration() >= AMDGPUSubtarget::GFX9;
+  }
+
+  bool hasReadM0SendMsgHazard() const {
+    return getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS;
   }
 
   unsigned getKernArgSegmentSize(const MachineFunction &MF,

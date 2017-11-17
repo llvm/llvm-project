@@ -1,5 +1,5 @@
-The ELF and COFF Linkers
-========================
+The ELF, COFF and Wasm Linkers
+==============================
 
 The ELF Linker as a Library
 ---------------------------
@@ -33,11 +33,12 @@ between speed, simplicity and extensibility.
 
   We implemented the linkers as native linkers for each file format.
 
-  The two linkers share the same design but do not share code.
+  The linkers share the same design but share very little code.
   Sharing code makes sense if the benefit is worth its cost.
-  In our case, ELF and COFF are different enough that we thought the layer to
-  abstract the differences wouldn't worth its complexity and run-time cost.
-  Elimination of the abstract layer has greatly simplified the implementation.
+  In our case, the object formats are different enough that we thought the layer
+  to abstract the differences wouldn't be worth its complexity and run-time
+  cost.  Elimination of the abstract layer has greatly simplified the
+  implementation.
 
 * Speed by design
 
