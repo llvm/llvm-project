@@ -11,6 +11,7 @@
 #define LLD_ELF_FILESYSTEM_H
 
 #include "lld/Common/LLVM.h"
+#include <system_error>
 
 namespace lld {
 namespace elf {

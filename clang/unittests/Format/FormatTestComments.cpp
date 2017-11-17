@@ -2078,6 +2078,22 @@ TEST_F(FormatTestComments, ReflowsComments) {
                    "       // longsec\n",
                    getLLVMStyleWithColumns(20)));
 
+  // Simple case that correctly handles reflow in parameter lists.
+  EXPECT_EQ("a = f(/* looooooooong\n"
+            "       * long long\n"
+            "       */\n"
+            "      a);",
+            format("a = f(/* looooooooong long\n* long\n*/ a);",
+                   getLLVMStyleWithColumns(22)));
+  // Tricky case that has fewer lines if we reflow the comment, ending up with
+  // fewer lines.
+  EXPECT_EQ("a = f(/* loooooong\n"
+            "       * long long\n"
+            "       */\n"
+            "      a);",
+            format("a = f(/* loooooong long\n* long\n*/ a);",
+                   getLLVMStyleWithColumns(22)));
+
   // Keep empty comment lines.
   EXPECT_EQ("/**/", format(" /**/", getLLVMStyleWithColumns(20)));
   EXPECT_EQ("/* */", format(" /* */", getLLVMStyleWithColumns(20)));
@@ -2426,9 +2442,13 @@ TEST_F(FormatTestComments, BlockCommentsAtEndOfLine) {
 
 TEST_F(FormatTestComments, BreaksAfterMultilineBlockCommentsInParamLists) {
   EXPECT_EQ("a = f(/* long\n"
-            "         long\n"
-            "       */\n"
+            "         long */\n"
             "      a);",
+            format("a = f(/* long long */ a);", getLLVMStyleWithColumns(16)));
+  EXPECT_EQ("a = f(\n"
+            "    /* long\n"
+            "       long */\n"
+            "    a);",
             format("a = f(/* long long */ a);", getLLVMStyleWithColumns(15)));
 
   EXPECT_EQ("a = f(/* long\n"
@@ -2438,7 +2458,7 @@ TEST_F(FormatTestComments, BreaksAfterMultilineBlockCommentsInParamLists) {
             format("a = f(/* long\n"
                    "         long\n"
                    "       */a);",
-                   getLLVMStyleWithColumns(15)));
+                   getLLVMStyleWithColumns(16)));
 
   EXPECT_EQ("a = f(/* long\n"
             "         long\n"
@@ -2447,7 +2467,7 @@ TEST_F(FormatTestComments, BreaksAfterMultilineBlockCommentsInParamLists) {
             format("a = f(/* long\n"
                    "         long\n"
                    "       */ a);",
-                   getLLVMStyleWithColumns(15)));
+                   getLLVMStyleWithColumns(16)));
 
   EXPECT_EQ("a = f(/* long\n"
             "         long\n"
@@ -2456,23 +2476,35 @@ TEST_F(FormatTestComments, BreaksAfterMultilineBlockCommentsInParamLists) {
             format("a = f(/* long\n"
                    "         long\n"
                    "       */ (1 + 1));",
-                   getLLVMStyleWithColumns(15)));
+                   getLLVMStyleWithColumns(16)));
 
   EXPECT_EQ(
       "a = f(a,\n"
       "      /* long\n"
-      "         long\n"
-      "       */\n"
+      "         long */\n"
       "      b);",
+      format("a = f(a, /* long long */ b);", getLLVMStyleWithColumns(16)));
+  EXPECT_EQ(
+      "a = f(\n"
+      "    a,\n"
+      "    /* long\n"
+      "       long */\n"
+      "    b);",
       format("a = f(a, /* long long */ b);", getLLVMStyleWithColumns(15)));
 
-  EXPECT_EQ(
-      "a = f(a,\n"
-      "      /* long\n"
-      "         long\n"
-      "       */\n"
-      "      (1 + 1));",
-      format("a = f(a, /* long long */ (1 + 1));", getLLVMStyleWithColumns(15)));
+  EXPECT_EQ("a = f(a,\n"
+            "      /* long\n"
+            "         long */\n"
+            "      (1 + 1));",
+            format("a = f(a, /* long long */ (1 + 1));",
+                   getLLVMStyleWithColumns(16)));
+  EXPECT_EQ("a = f(\n"
+            "    a,\n"
+            "    /* long\n"
+            "       long */\n"
+            "    (1 + 1));",
+            format("a = f(a, /* long long */ (1 + 1));",
+                   getLLVMStyleWithColumns(15)));
 }
 
 TEST_F(FormatTestComments, IndentLineCommentsInStartOfBlockAtEndOfFile) {
