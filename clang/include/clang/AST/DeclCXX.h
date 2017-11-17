@@ -2061,7 +2061,11 @@ public:
   /// True if this method is user-declared and was not
   /// deleted or defaulted on its first declaration.
   bool isUserProvided() const {
-    return !(isDeleted() || getCanonicalDecl()->isDefaulted());
+    auto *DeclAsWritten = this;
+    if (auto *Pattern = getTemplateInstantiationPattern())
+      DeclAsWritten = cast<CXXMethodDecl>(Pattern);
+    return !(DeclAsWritten->isDeleted() ||
+             DeclAsWritten->getCanonicalDecl()->isDefaulted());
   }
 
   void addOverriddenMethod(const CXXMethodDecl *MD);

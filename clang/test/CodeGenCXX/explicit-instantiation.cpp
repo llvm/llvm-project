@@ -170,3 +170,22 @@ void use() {
   f<int>();
 }
 }
+
+namespace DefaultedMembers {
+  struct B { B(); B(const B&); ~B(); };
+  template<typename T> struct A : B {
+    A() = default;
+    ~A() = default;
+  };
+  extern template struct A<int>;
+
+  // CHECK-LABEL: define {{.*}} @_ZN16DefaultedMembers1AIiEC2Ev
+  // CHECK-LABEL: define {{.*}} @_ZN16DefaultedMembers1AIiED2Ev
+  A<int> ai;
+
+  // CHECK-LABEL: define {{.*}} @_ZN16DefaultedMembers1AIiEC2ERKS1_
+  A<int> ai2(ai);
+
+  // CHECK-NOT: @_ZN16DefaultedMembers1AIcE
+  template struct A<char>;
+}

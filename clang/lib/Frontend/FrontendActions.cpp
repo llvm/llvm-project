@@ -80,9 +80,12 @@ DeclContextPrintAction::CreateASTConsumer(CompilerInstance &CI,
 std::unique_ptr<ASTConsumer>
 GeneratePCHAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   std::string Sysroot;
+  if (!ComputeASTConsumerArguments(CI, /*ref*/ Sysroot))
+    return nullptr;
+
   std::string OutputFile;
   std::unique_ptr<raw_pwrite_stream> OS =
-      ComputeASTConsumerArguments(CI, InFile, Sysroot, OutputFile);
+      CreateOutputFile(CI, InFile, /*ref*/ OutputFile);
   if (!OS)
     return nullptr;
 
@@ -103,17 +106,20 @@ GeneratePCHAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   return llvm::make_unique<MultiplexConsumer>(std::move(Consumers));
 }
 
-std::unique_ptr<raw_pwrite_stream>
-GeneratePCHAction::ComputeASTConsumerArguments(CompilerInstance &CI,
-                                               StringRef InFile,
-                                               std::string &Sysroot,
-                                               std::string &OutputFile) {
+bool GeneratePCHAction::ComputeASTConsumerArguments(CompilerInstance &CI,
+                                                    std::string &Sysroot) {
   Sysroot = CI.getHeaderSearchOpts().Sysroot;
   if (CI.getFrontendOpts().RelocatablePCH && Sysroot.empty()) {
     CI.getDiagnostics().Report(diag::err_relocatable_without_isysroot);
-    return nullptr;
+    return false;
   }
 
+  return true;
+}
+
+std::unique_ptr<llvm::raw_pwrite_stream>
+GeneratePCHAction::CreateOutputFile(CompilerInstance &CI, StringRef InFile,
+                                    std::string &OutputFile) {
   // We use createOutputFile here because this is exposed via libclang, and we
   // must disable the RemoveFileOnSignal behavior.
   // We use a temporary to avoid race conditions.
