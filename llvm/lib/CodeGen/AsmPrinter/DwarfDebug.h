@@ -283,7 +283,7 @@ class DwarfDebug : public DebugHandlerBase {
   // 0, referencing the comp_dir of all the type units that use it.
   MCDwarfDwoLineTable SplitTypeUnitFileTable;
   /// @}
-  
+
   /// True iff there are multiple CUs in this module.
   bool SingleCU;
   bool IsDarwin;
@@ -562,6 +562,9 @@ public:
   bool isLexicalScopeDIENull(LexicalScope *Scope);
 
   bool hasDwarfPubSections(bool includeMinimalInlineScopes) const;
+
+  /// Find the matching DwarfCompileUnit for the given CU DIE.
+  DwarfCompileUnit *lookupCU(const DIE *Die) { return CUDieMap.lookup(Die); }
 };
 } // End of namespace llvm
 
