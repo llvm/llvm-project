@@ -382,8 +382,6 @@ inline bool LocalAddressSpace::findUnwindSections(pint_t targetAddr,
           found_obj = true;
       } else if (!strncmp((const char *)pish->Name, ".eh_frame",
                           IMAGE_SIZEOF_SHORT_NAME)) {
-        // FIXME: This section name actually is truncated, ideally we
-        // should locate and check the full long name instead.
         info.dwarf_section = begin;
         info.dwarf_section_length = pish->Misc.VirtualSize;
         found_hdr = true;
