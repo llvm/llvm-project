@@ -235,7 +235,7 @@ prepareCompilerInstance(std::unique_ptr<clang::CompilerInvocation> CI,
   // NOTE: we use Buffer.get() when adding remapped files, so we have to make
   // sure it will be released if no error is emitted.
   if (Preamble) {
-    Preamble->AddImplicitPreamble(*CI, Buffer.get());
+    Preamble->AddImplicitPreamble(*CI, VFS, Buffer.get());
   } else {
     CI->getPreprocessorOpts().addRemappedFile(
         CI->getFrontendOpts().Inputs[0].getFile(), Buffer.get());
@@ -1137,16 +1137,20 @@ PreambleData::PreambleData(PrecompiledPreamble Preamble,
 
 std::shared_ptr<CppFile>
 CppFile::Create(PathRef FileName, tooling::CompileCommand Command,
+                bool StorePreamblesInMemory,
                 std::shared_ptr<PCHContainerOperations> PCHs,
                 clangd::Logger &Logger) {
-  return std::shared_ptr<CppFile>(
-      new CppFile(FileName, std::move(Command), std::move(PCHs), Logger));
+  return std::shared_ptr<CppFile>(new CppFile(FileName, std::move(Command),
+                                              StorePreamblesInMemory,
+                                              std::move(PCHs), Logger));
 }
 
 CppFile::CppFile(PathRef FileName, tooling::CompileCommand Command,
+                 bool StorePreamblesInMemory,
                  std::shared_ptr<PCHContainerOperations> PCHs,
                  clangd::Logger &Logger)
-    : FileName(FileName), Command(std::move(Command)), RebuildCounter(0),
+    : FileName(FileName), Command(std::move(Command)),
+      StorePreamblesInMemory(StorePreamblesInMemory), RebuildCounter(0),
       RebuildInProgress(false), PCHs(std::move(PCHs)), Logger(Logger) {
 
   std::lock_guard<std::mutex> Lock(Mutex);
@@ -1290,6 +1294,7 @@ CppFile::deferRebuild(StringRef NewContents,
       CppFilePreambleCallbacks SerializedDeclsCollector;
       auto BuiltPreamble = PrecompiledPreamble::Build(
           *CI, ContentsBuffer.get(), Bounds, *PreambleDiagsEngine, VFS, PCHs,
+          /*StoreInMemory=*/That->StorePreamblesInMemory,
           SerializedDeclsCollector);
 
       if (BuiltPreamble) {

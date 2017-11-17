@@ -42,3 +42,4 @@ int main(int argc, char **argv) {
 // CHECK-63: 'CCC'{{.*}} <== {{.*}}partially underflows this variable
 // CHECK-73: 'CCC'{{.*}} <== {{.*}}partially overflows this variable
 // CHECK-74: 'CCC'{{.*}} <== {{.*}}overflows this variable
+// REQUIRES: shadow-scale-3
