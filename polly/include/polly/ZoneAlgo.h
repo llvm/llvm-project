@@ -25,6 +25,7 @@ class Value;
 class LoopInfo;
 class Loop;
 class PHINode;
+class raw_ostream;
 } // namespace llvm
 
 namespace polly {

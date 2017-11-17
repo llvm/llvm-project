@@ -367,37 +367,12 @@ void InductiveRangeCheck::extractRangeChecksFromCond(
   if (!Visited.insert(Condition).second)
     return;
 
+  // TODO: Do the same for OR, XOR, NOT etc?
   if (match(Condition, m_And(m_Value(), m_Value()))) {
-    SmallVector<InductiveRangeCheck, 8> SubChecks;
     extractRangeChecksFromCond(L, SE, cast<User>(Condition)->getOperandUse(0),
-                               SubChecks, Visited);
+                               Checks, Visited);
     extractRangeChecksFromCond(L, SE, cast<User>(Condition)->getOperandUse(1),
-                               SubChecks, Visited);
-
-    if (SubChecks.size() == 2) {
-      // Handle a special case where we know how to merge two checks separately
-      // checking the upper and lower bounds into a full range check.
-      const auto &RChkA = SubChecks[0];
-      const auto &RChkB = SubChecks[1];
-      if ((RChkA.End == RChkB.End || !RChkA.End || !RChkB.End) &&
-          RChkA.Begin == RChkB.Begin && RChkA.Step == RChkB.Step &&
-          RChkA.IsSigned == RChkB.IsSigned) {
-        // If RChkA.Kind == RChkB.Kind then we just found two identical checks.
-        // But if one of them is a RANGE_CHECK_LOWER and the other is a
-        // RANGE_CHECK_UPPER (only possibility if they're different) then
-        // together they form a RANGE_CHECK_BOTH.
-        SubChecks[0].Kind =
-            (InductiveRangeCheck::RangeCheckKind)(RChkA.Kind | RChkB.Kind);
-        SubChecks[0].End = RChkA.End ? RChkA.End : RChkB.End;
-        SubChecks[0].CheckUse = &ConditionUse;
-        SubChecks[0].IsSigned = RChkA.IsSigned;
-
-        // We updated one of the checks in place, now erase the other.
-        SubChecks.pop_back();
-      }
-    }
-
-    Checks.insert(Checks.end(), SubChecks.begin(), SubChecks.end());
+                               Checks, Visited);
     return;
   }
 

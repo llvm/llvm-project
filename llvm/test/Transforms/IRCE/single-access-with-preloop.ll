@@ -40,13 +40,24 @@ define void @single_access_with_preloop(i32 *%arr, i32 *%a_len_ptr, i32 %n, i32 
 
 
 ; CHECK: [[not_safe_start_2:[^ ]+]] = add i32 %offset, -1
-; CHECK: [[not_safe_end:[^ ]+]] = sub i32 [[not_safe_start_2]], %len
-; CHECK: [[not_exit_mainloop_at_cond_loclamp:[^ ]+]] = icmp sgt i32 [[not_safe_end]], [[not_n]]
-; CHECK: [[not_exit_mainloop_at_loclamp:[^ ]+]] = select i1 [[not_exit_mainloop_at_cond_loclamp]], i32 [[not_safe_end]], i32 [[not_n]]
-; CHECK: [[exit_mainloop_at_loclamp:[^ ]+]] = sub i32 -1, [[not_exit_mainloop_at_loclamp]]
-; CHECK: [[exit_mainloop_at_cmp:[^ ]+]] = icmp sgt i32 [[exit_mainloop_at_loclamp]], 0
-; CHECK: [[exit_mainloop_at:[^ ]+]] = select i1 [[exit_mainloop_at_cmp]], i32 [[exit_mainloop_at_loclamp]], i32 0
+; CHECK: [[not_safe_upper_end:[^ ]+]] = sub i32 [[not_safe_start_2]], %len
+; CHECK: [[not_exit_mainloop_at_cond_loclamp:[^ ]+]] = icmp sgt i32 [[not_safe_upper_end]], [[not_n]]
+; CHECK: [[not_exit_mainloop_at_loclamp:[^ ]+]] = select i1 [[not_exit_mainloop_at_cond_loclamp]], i32 [[not_safe_upper_end]], i32 [[not_n]]
+; CHECK: [[not_safe_lower_end:[^ ]+]] = add i32 %offset, -2147483648
+; CHECK: [[not_exit_mainloop_at_cond_hiclamp:[^ ]+]] = icmp sgt i32 [[not_exit_mainloop_at_loclamp]], [[not_safe_lower_end]]
+; CHECK: [[not_exit_mainloop_at_hiclamp:[^ ]+]] = select i1 [[not_exit_mainloop_at_cond_hiclamp]], i32 [[not_exit_mainloop_at_loclamp]], i32 [[not_safe_lower_end]]
+; CHECK: [[exit_mainloop_at_hiclamp:[^ ]+]] = sub i32 -1, [[not_exit_mainloop_at_hiclamp]]
+; CHECK: [[exit_mainloop_at_cmp:[^ ]+]] = icmp sgt i32 [[exit_mainloop_at_hiclamp]], 0
+; CHECK: [[exit_mainloop_at:[^ ]+]] = select i1 [[exit_mainloop_at_cmp]], i32 [[exit_mainloop_at_hiclamp]], i32 0
 
+; CHECK: mainloop:
+; CHECK: br label %loop
+
+; CHECK: loop:
+; CHECK: %abc.high = icmp slt i32 %array.idx, %len
+; CHECK: %abc.low = icmp sge i32 %array.idx, 0
+; CHECK: %abc = and i1 true, true
+; CHECK: br i1 %abc, label %in.bounds, label %out.of.bounds.loopexit8
 
 ; CHECK: in.bounds:
 ; CHECK: [[continue_mainloop_cond:[^ ]+]] = icmp slt i32 %idx.next, [[exit_mainloop_at]]

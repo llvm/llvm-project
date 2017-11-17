@@ -496,7 +496,7 @@ template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
 
     // Unlike other synthetic sections, mergeable output sections contain data
     // copied from input sections, and there may be a relocation pointing to its
-    // contents if -emit-reloc is given.
+    // contents if -r or -emit-reloc are given.
     if (isa<SyntheticSection>(IS) && !(IS->Flags & SHF_MERGE))
       continue;
 
