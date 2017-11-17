@@ -12817,10 +12817,13 @@ This intrinsic indicates that the memory is mutable again.
 
 Syntax:
 """""""
+This is an overloaded intrinsic. The memory object can belong to any address
+space. The returned pointer must belong to the same address space as the
+argument.
 
 ::
 
-      declare i8* @llvm.invariant.group.barrier(i8* <ptr>)
+      declare i8* @llvm.invariant.group.barrier.p0i8(i8* <ptr>)
 
 Overview:
 """""""""

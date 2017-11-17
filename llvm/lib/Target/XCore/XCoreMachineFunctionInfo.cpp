@@ -9,8 +9,8 @@
 
 #include "XCoreMachineFunctionInfo.h"
 #include "XCoreInstrInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Function.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 
 using namespace llvm;
 

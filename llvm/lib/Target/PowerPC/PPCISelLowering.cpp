@@ -52,6 +52,8 @@
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/CallingConv.h"
@@ -83,10 +85,8 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
-#include "llvm/Target/TargetRegisterInfo.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -12223,9 +12223,24 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
                                 cast<StoreSDNode>(N)->getMemOperand());
     }
 
+    // STORE Constant:i32<0>  ->  STORE<trunc to i32> Constant:i64<0>
+    // So it can increase the chance of CSE constant construction.
+    EVT VT = N->getOperand(1).getValueType();
+    if (Subtarget.isPPC64() && !DCI.isBeforeLegalize() &&
+        isa<ConstantSDNode>(N->getOperand(1)) && VT == MVT::i32) {
+      SDValue Const64 = DAG.getConstant(N->getConstantOperandVal(1), dl,
+                                        MVT::i64);
+      // DAG.getTruncStore() can't be used here because it doesn't accept
+      // the general (base + offset) addressing mode.
+      // So we use UpdateNodeOperands and setTruncatingStore instead.
+      DAG.UpdateNodeOperands(N, N->getOperand(0), Const64, N->getOperand(2),
+                             N->getOperand(3));
+      cast<StoreSDNode>(N)->setTruncatingStore(true);
+      return SDValue(N, 0);
+    }
+
     // For little endian, VSX stores require generating xxswapd/lxvd2x.
     // Not needed on ISA 3.0 based CPUs since we have a non-permuting store.
-    EVT VT = N->getOperand(1).getValueType();
     if (VT.isSimple()) {
       MVT StoreVT = VT.getSimpleVT();
       if (Subtarget.needsSwapsForVSXMemOps() &&

@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TARGET_COSTTABLE_H_
-#define LLVM_TARGET_COSTTABLE_H_
+#ifndef LLVM_CODEGEN_COSTTABLE_H_
+#define LLVM_CODEGEN_COSTTABLE_H_
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -66,5 +66,4 @@ ConvertCostTableLookup(ArrayRef<TypeConversionCostTblEntry> Tbl,
 
 } // namespace llvm
 
-
-#endif /* LLVM_TARGET_COSTTABLE_H_ */
+#endif /* LLVM_CODEGEN_COSTTABLE_H_ */

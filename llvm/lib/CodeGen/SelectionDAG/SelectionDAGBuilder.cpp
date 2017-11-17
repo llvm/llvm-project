@@ -57,6 +57,10 @@
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/IR/Argument.h"
@@ -101,12 +105,8 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetIntrinsicInfo.h"
-#include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetOpcodes.h"
 #include "llvm/Target/TargetOptions.h"
-#include "llvm/Target/TargetRegisterInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -3508,7 +3508,7 @@ void SelectionDAGBuilder::visitAlloca(const AllocaInst &I) {
 
   SDValue AllocSize = getValue(I.getArraySize());
 
-  EVT IntPtr = TLI.getPointerTy(DAG.getDataLayout());
+  EVT IntPtr = TLI.getPointerTy(DAG.getDataLayout(), DL.getAllocaAddrSpace());
   if (AllocSize.getValueType() != IntPtr)
     AllocSize = DAG.getZExtOrTrunc(AllocSize, dl, IntPtr);
 
@@ -3529,17 +3529,15 @@ void SelectionDAGBuilder::visitAlloca(const AllocaInst &I) {
   // an address inside an alloca.
   SDNodeFlags Flags;
   Flags.setNoUnsignedWrap(true);
-  AllocSize = DAG.getNode(ISD::ADD, dl,
-                          AllocSize.getValueType(), AllocSize,
-                          DAG.getIntPtrConstant(StackAlign - 1, dl), Flags);
+  AllocSize = DAG.getNode(ISD::ADD, dl, AllocSize.getValueType(), AllocSize,
+                          DAG.getConstant(StackAlign - 1, dl, IntPtr), Flags);
 
   // Mask out the low bits for alignment purposes.
-  AllocSize = DAG.getNode(ISD::AND, dl,
-                          AllocSize.getValueType(), AllocSize,
-                          DAG.getIntPtrConstant(~(uint64_t)(StackAlign - 1),
-                                                dl));
+  AllocSize =
+      DAG.getNode(ISD::AND, dl, AllocSize.getValueType(), AllocSize,
+                  DAG.getConstant(~(uint64_t)(StackAlign - 1), dl, IntPtr));
 
-  SDValue Ops[] = { getRoot(), AllocSize, DAG.getIntPtrConstant(Align, dl) };
+  SDValue Ops[] = {getRoot(), AllocSize, DAG.getConstant(Align, dl, IntPtr)};
   SDVTList VTs = DAG.getVTList(AllocSize.getValueType(), MVT::Other);
   SDValue DSA = DAG.getNode(ISD::DYNAMIC_STACKALLOC, dl, VTs, Ops);
   setValue(&I, DSA);
@@ -3904,13 +3902,6 @@ static bool getUniformBase(const Value* &Ptr, SDValue& Base, SDValue& Index,
   Base = SDB->getValue(Ptr);
   Index = SDB->getValue(IndexVal);
 
-  // Suppress sign extension.
-  if (SExtInst* Sext = dyn_cast<SExtInst>(IndexVal)) {
-    if (SDB->findValue(Sext->getOperand(0))) {
-      IndexVal = Sext->getOperand(0);
-      Index = SDB->getValue(IndexVal);
-    }
-  }
   if (!Index.getValueType().isVector()) {
     unsigned GEPWidth = GEP->getType()->getVectorNumElements();
     EVT VT = EVT::getVectorVT(Context, Index.getValueType(), GEPWidth);

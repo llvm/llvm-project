@@ -1,4 +1,4 @@
-//===-- llvm/Target/TargetLoweringObjectFile.h - Object Info ----*- C++ -*-===//
+//===-- llvm/CodeGen/TargetLoweringObjectFile.h - Object Info ---*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TARGET_TARGETLOWERINGOBJECTFILE_H
-#define LLVM_TARGET_TARGETLOWERINGOBJECTFILE_H
+#ifndef LLVM_CODEGEN_TARGETLOWERINGOBJECTFILE_H
+#define LLVM_CODEGEN_TARGETLOWERINGOBJECTFILE_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
@@ -191,4 +191,4 @@ protected:
 
 } // end namespace llvm
 
-#endif // LLVM_TARGET_TARGETLOWERINGOBJECTFILE_H
+#endif // LLVM_CODEGEN_TARGETLOWERINGOBJECTFILE_H

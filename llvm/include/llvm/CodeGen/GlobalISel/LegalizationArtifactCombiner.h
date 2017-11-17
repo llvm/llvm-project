@@ -235,12 +235,46 @@ public:
 private:
   /// Mark MI as dead. If a def of one of MI's operands, DefMI, would also be
   /// dead due to MI being killed, then mark DefMI as dead too.
+  /// Some of the combines (extends(trunc)), try to walk through redundant
+  /// copies in between the extends and the truncs, and this attempts to collect
+  /// the in between copies if they're dead.
   void markInstAndDefDead(MachineInstr &MI, MachineInstr &DefMI,
                           SmallVectorImpl<MachineInstr *> &DeadInsts) {
     DeadInsts.push_back(&MI);
-    if (MRI.hasOneUse(DefMI.getOperand(0).getReg()))
+
+    // Collect all the copy instructions that are made dead, due to deleting
+    // this instruction. Collect all of them until the Trunc(DefMI).
+    // Eg,
+    // %1(s1) = G_TRUNC %0(s32)
+    // %2(s1) = COPY %1(s1)
+    // %3(s1) = COPY %2(s1)
+    // %4(s32) = G_ANYEXT %3(s1)
+    // In this case, we would have replaced %4 with a copy of %0,
+    // and as a result, %3, %2, %1 are dead.
+    MachineInstr *PrevMI = &MI;
+    while (PrevMI != &DefMI) {
+      // If we're dealing with G_UNMERGE_VALUES, tryCombineMerges doesn't really try
+      // to fold copies in between and we can ignore them here.
+      if (PrevMI->getOpcode() == TargetOpcode::G_UNMERGE_VALUES)
+        break;
+      unsigned PrevRegSrc = PrevMI->getOperand(1).getReg();
+      MachineInstr *TmpDef = MRI.getVRegDef(PrevRegSrc);
+      if (MRI.hasOneUse(PrevRegSrc)) {
+        if (TmpDef != &DefMI) {
+          assert(TmpDef->getOpcode() == TargetOpcode::COPY &&
+                 "Expecting copy here");
+          DeadInsts.push_back(TmpDef);
+        }
+      } else
+        break;
+      PrevMI = TmpDef;
+    }
+    if ((PrevMI == &DefMI ||
+         DefMI.getOpcode() == TargetOpcode::G_MERGE_VALUES) &&
+        MRI.hasOneUse(DefMI.getOperand(0).getReg()))
       DeadInsts.push_back(&DefMI);
   }
+
   /// Checks if the target legalizer info has specified anything about the
   /// instruction, or if unsupported.
   bool isInstUnsupported(unsigned Opcode, const LLT &DstTy) const {

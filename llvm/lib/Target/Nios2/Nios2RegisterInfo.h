@@ -15,7 +15,7 @@
 #define LLVM_LIB_TARGET_NIOS2_NIOS2REGISTERINFO_H
 
 #include "Nios2.h"
-#include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 
 #define GET_REGINFO_HEADER
 #include "Nios2GenRegisterInfo.inc"

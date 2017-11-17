@@ -19,4 +19,4 @@
 type = Library
 name = FuzzMutate
 parent = Libraries
-required_libraries = Analysis Core Scalar Support Target
+required_libraries = Analysis BitReader BitWriter Core Scalar Support Target

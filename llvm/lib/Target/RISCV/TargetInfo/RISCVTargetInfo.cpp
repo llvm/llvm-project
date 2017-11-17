@@ -24,7 +24,7 @@ Target &getTheRISCV64Target() {
 
 extern "C" void LLVMInitializeRISCVTargetInfo() {
   RegisterTarget<Triple::riscv32> X(getTheRISCV32Target(), "riscv32",
-                                    "32-bit RISC-V");
+                                    "32-bit RISC-V", "RISCV");
   RegisterTarget<Triple::riscv64> Y(getTheRISCV64Target(), "riscv64",
-                                    "64-bit RISC-V");
+                                    "64-bit RISC-V", "RISCV");
 }

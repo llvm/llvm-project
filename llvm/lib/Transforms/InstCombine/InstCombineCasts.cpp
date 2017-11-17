@@ -552,8 +552,15 @@ Instruction *InstCombiner::narrowBinOp(TruncInst &Trunc) {
   case Instruction::Or:
   case Instruction::Xor:
   case Instruction::Add:
+  case Instruction::Sub:
   case Instruction::Mul: {
     Constant *C;
+    if (match(BinOp0, m_Constant(C))) {
+      // trunc (binop C, X) --> binop (trunc C', X)
+      Constant *NarrowC = ConstantExpr::getTrunc(C, DestTy);
+      Value *TruncX = Builder.CreateTrunc(BinOp1, DestTy);
+      return BinaryOperator::Create(BinOp->getOpcode(), NarrowC, TruncX);
+    }
     if (match(BinOp1, m_Constant(C))) {
       // trunc (binop X, C) --> binop (trunc X, C')
       Constant *NarrowC = ConstantExpr::getTrunc(C, DestTy);
@@ -570,16 +577,6 @@ Instruction *InstCombiner::narrowBinOp(TruncInst &Trunc) {
       // trunc (binop Y, (ext X)) --> binop (trunc Y), X
       Value *NarrowOp0 = Builder.CreateTrunc(BinOp0, DestTy);
       return BinaryOperator::Create(BinOp->getOpcode(), NarrowOp0, X);
-    }
-    break;
-  }
-  case Instruction::Sub: {
-    Constant *C;
-    if (match(BinOp0, m_Constant(C))) {
-      // trunc (binop C, X) --> binop (trunc C', X)
-      Constant *NarrowC = ConstantExpr::getTrunc(C, DestTy);
-      Value *TruncX = Builder.CreateTrunc(BinOp1, DestTy);
-      return BinaryOperator::Create(BinOp->getOpcode(), NarrowC, TruncX);
     }
     break;
   }

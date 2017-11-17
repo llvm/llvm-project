@@ -40,7 +40,10 @@ GCNHazardRecognizer::GCNHazardRecognizer(const MachineFunction &MF) :
   CurrCycleInstr(nullptr),
   MF(MF),
   ST(MF.getSubtarget<SISubtarget>()),
-  TII(*ST.getInstrInfo()) {
+  TII(*ST.getInstrInfo()),
+  TRI(TII.getRegisterInfo()),
+  ClauseUses(TRI.getNumRegUnits()),
+  ClauseDefs(TRI.getNumRegUnits()) {
   MaxLookAhead = 5;
 }
 
@@ -258,18 +261,34 @@ int GCNHazardRecognizer::getWaitStatesSinceSetReg(
 // No-op Hazard Detection
 //===----------------------------------------------------------------------===//
 
-static void addRegsToSet(iterator_range<MachineInstr::const_mop_iterator> Ops,
-                         std::set<unsigned> &Set) {
+static void addRegUnits(const SIRegisterInfo &TRI,
+                        BitVector &BV, unsigned Reg) {
+  for (MCRegUnitIterator RUI(Reg, &TRI); RUI.isValid(); ++RUI)
+    BV.set(*RUI);
+}
+
+static void addRegsToSet(const SIRegisterInfo &TRI,
+                         iterator_range<MachineInstr::const_mop_iterator> Ops,
+                         BitVector &Set) {
   for (const MachineOperand &Op : Ops) {
     if (Op.isReg())
-      Set.insert(Op.getReg());
+      addRegUnits(TRI, Set, Op.getReg());
   }
 }
 
+void GCNHazardRecognizer::addClauseInst(const MachineInstr &MI) {
+  // XXX: Do we need to worry about implicit operands
+  addRegsToSet(TRI, MI.defs(), ClauseDefs);
+  addRegsToSet(TRI, MI.uses(), ClauseUses);
+}
+
 int GCNHazardRecognizer::checkSMEMSoftClauseHazards(MachineInstr *SMEM) {
-  // SMEM soft clause are only present on VI+
-  if (ST.getGeneration() < SISubtarget::VOLCANIC_ISLANDS)
+  // SMEM soft clause are only present on VI+, and only matter if xnack is
+  // enabled.
+  if (!ST.isXNACKEnabled())
     return 0;
+
+  resetClause();
 
   // A soft-clause is any group of consecutive SMEM instructions.  The
   // instructions in this group may return out of order and/or may be
@@ -281,21 +300,16 @@ int GCNHazardRecognizer::checkSMEMSoftClauseHazards(MachineInstr *SMEM) {
   // (including itself). If we encounter this situaion, we need to break the
   // clause by inserting a non SMEM instruction.
 
-  std::set<unsigned> ClauseDefs;
-  std::set<unsigned> ClauseUses;
-
   for (MachineInstr *MI : EmittedInstrs) {
-
     // When we hit a non-SMEM instruction then we have passed the start of the
     // clause and we can stop.
     if (!MI || !SIInstrInfo::isSMRD(*MI))
       break;
 
-    addRegsToSet(MI->defs(), ClauseDefs);
-    addRegsToSet(MI->uses(), ClauseUses);
+    addClauseInst(*MI);
   }
 
-  if (ClauseDefs.empty())
+  if (ClauseDefs.none())
     return 0;
 
   // FIXME: When we support stores, we need to make sure not to put loads and
@@ -304,21 +318,11 @@ int GCNHazardRecognizer::checkSMEMSoftClauseHazards(MachineInstr *SMEM) {
   if (SMEM->mayStore())
     return 1;
 
-  addRegsToSet(SMEM->defs(), ClauseDefs);
-  addRegsToSet(SMEM->uses(), ClauseUses);
-
-  std::vector<unsigned> Result(std::max(ClauseDefs.size(), ClauseUses.size()));
-  std::vector<unsigned>::iterator End;
-
-  End = std::set_intersection(ClauseDefs.begin(), ClauseDefs.end(),
-                              ClauseUses.begin(), ClauseUses.end(), Result.begin());
+  addClauseInst(*SMEM);
 
   // If the set of defs and uses intersect then we cannot add this instruction
   // to the clause, so we have a hazard.
-  if (End != Result.begin())
-    return 1;
-
-  return 0;
+  return ClauseDefs.anyCommon(ClauseUses) ? 1 : 0;
 }
 
 int GCNHazardRecognizer::checkSMRDHazards(MachineInstr *SMRD) {
@@ -337,16 +341,7 @@ int GCNHazardRecognizer::checkSMRDHazards(MachineInstr *SMRD) {
   auto IsHazardDefFn = [this] (MachineInstr *MI) { return TII.isVALU(*MI); };
   auto IsBufferHazardDefFn = [this] (MachineInstr *MI) { return TII.isSALU(*MI); };
 
-  bool IsBufferSMRD = SMRD->getOpcode() == AMDGPU::S_BUFFER_LOAD_DWORD_IMM ||
-                      SMRD->getOpcode() == AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM ||
-                      SMRD->getOpcode() == AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM ||
-                      SMRD->getOpcode() == AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM ||
-                      SMRD->getOpcode() == AMDGPU::S_BUFFER_LOAD_DWORDX16_IMM ||
-                      SMRD->getOpcode() == AMDGPU::S_BUFFER_LOAD_DWORD_SGPR ||
-                      SMRD->getOpcode() == AMDGPU::S_BUFFER_LOAD_DWORDX2_SGPR ||
-                      SMRD->getOpcode() == AMDGPU::S_BUFFER_LOAD_DWORDX4_SGPR ||
-                      SMRD->getOpcode() == AMDGPU::S_BUFFER_LOAD_DWORDX8_SGPR ||
-                      SMRD->getOpcode() == AMDGPU::S_BUFFER_LOAD_DWORDX16_SGPR;
+  bool IsBufferSMRD = TII.isBufferSMRD(*SMRD);
 
   for (const MachineOperand &Use : SMRD->uses()) {
     if (!Use.isReg())

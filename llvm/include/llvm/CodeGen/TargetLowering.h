@@ -1,4 +1,4 @@
-//===- llvm/Target/TargetLowering.h - Target Lowering Info ------*- C++ -*-===//
+//===- llvm/CodeGen/TargetLowering.h - Target Lowering Info -----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -20,8 +20,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TARGET_TARGETLOWERING_H
-#define LLVM_TARGET_TARGETLOWERING_H
+#ifndef LLVM_CODEGEN_TARGETLOWERING_H
+#define LLVM_CODEGEN_TARGETLOWERING_H
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/CodeGen/TargetCallingConv.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallSite.h"
@@ -51,7 +52,6 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Target/TargetCallingConv.h"
 #include "llvm/Target/TargetMachine.h"
 #include <algorithm>
 #include <cassert>
@@ -3512,4 +3512,4 @@ void GetReturnInfo(Type *ReturnType, AttributeList attr,
 
 } // end namespace llvm
 
-#endif // LLVM_TARGET_TARGETLOWERING_H
+#endif // LLVM_CODEGEN_TARGETLOWERING_H

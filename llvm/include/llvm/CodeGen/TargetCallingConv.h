@@ -1,4 +1,4 @@
-//===-- llvm/Target/TargetCallingConv.h - Calling Convention ----*- C++ -*-===//
+//===-- llvm/CodeGen/TargetCallingConv.h - Calling Convention ---*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TARGET_TARGETCALLINGCONV_H
-#define LLVM_TARGET_TARGETCALLINGCONV_H
+#ifndef LLVM_CODEGEN_TARGETCALLINGCONV_H
+#define LLVM_CODEGEN_TARGETCALLINGCONV_H
 
 #include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/ValueTypes.h"
@@ -201,4 +201,4 @@ namespace ISD {
 } // end namespace ISD
 } // end namespace llvm
 
-#endif // LLVM_TARGET_TARGETCALLINGCONV_H
+#endif // LLVM_CODEGEN_TARGETCALLINGCONV_H

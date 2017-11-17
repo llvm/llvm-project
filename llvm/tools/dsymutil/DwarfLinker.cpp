@@ -1303,9 +1303,9 @@ private:
   /// Recursively add the debug info in this clang module .pcm
   /// file (and all the modules imported by it in a bottom-up fashion)
   /// to Units.
-  void loadClangModule(StringRef Filename, StringRef ModulePath,
-                       StringRef ModuleName, uint64_t DwoId,
-                       DebugMap &ModuleMap, unsigned Indent = 0);
+  Error loadClangModule(StringRef Filename, StringRef ModulePath,
+                        StringRef ModuleName, uint64_t DwoId,
+                        DebugMap &ModuleMap, unsigned Indent = 0);
 
   /// Flags passed to DwarfLinker::lookForDIEsToKeep
   enum TravesalFlags {
@@ -3410,7 +3410,11 @@ bool DwarfLinker::registerModuleReference(
   // Cyclic dependencies are disallowed by Clang, but we still
   // shouldn't run into an infinite loop, so mark it as processed now.
   ClangModules.insert({PCMfile, DwoId});
-  loadClangModule(PCMfile, PCMpath, Name, DwoId, ModuleMap, Indent + 2);
+  if (Error E = loadClangModule(PCMfile, PCMpath, Name, DwoId, ModuleMap,
+                                Indent + 2)) {
+    consumeError(std::move(E));
+    return false;
+  }
   return true;
 }
 
@@ -3429,9 +3433,9 @@ DwarfLinker::loadObject(BinaryHolder &BinaryHolder, DebugMapObject &Obj,
   return ErrOrObj;
 }
 
-void DwarfLinker::loadClangModule(StringRef Filename, StringRef ModulePath,
-                                  StringRef ModuleName, uint64_t DwoId,
-                                  DebugMap &ModuleMap, unsigned Indent) {
+Error DwarfLinker::loadClangModule(StringRef Filename, StringRef ModulePath,
+                                   StringRef ModuleName, uint64_t DwoId,
+                                   DebugMap &ModuleMap, unsigned Indent) {
   SmallString<80> Path(Options.PrependPath);
   if (sys::path::is_relative(Filename))
     sys::path::append(Path, ModulePath, Filename);
@@ -3473,7 +3477,7 @@ void DwarfLinker::loadClangModule(StringRef Filename, StringRef ModulePath,
         }
       }
     }
-    return;
+    return Error::success();
   }
 
   std::unique_ptr<CompileUnit> Unit;
@@ -3488,9 +3492,12 @@ void DwarfLinker::loadClangModule(StringRef Filename, StringRef ModulePath,
     auto CUDie = CU->getUnitDIE(false);
     if (!registerModuleReference(CUDie, *CU, ModuleMap, Indent)) {
       if (Unit) {
-        errs() << Filename << ": Clang modules are expected to have exactly"
-               << " 1 compile unit.\n";
-        exitDsymutil(1);
+        std::string Err =
+            (Filename +
+             ": Clang modules are expected to have exactly 1 compile unit.\n")
+                .str();
+        errs() << Err;
+        return make_error<StringError>(Err, inconvertibleErrorCode());
       }
       // FIXME: Until PR27449 (https://llvm.org/bugs/show_bug.cgi?id=27449) is
       // fixed in clang, only warn about DWO_id mismatches in verbose mode.
@@ -3516,7 +3523,7 @@ void DwarfLinker::loadClangModule(StringRef Filename, StringRef ModulePath,
     }
   }
   if (!Unit->getOrigUnit().getUnitDIE().hasChildren())
-    return;
+    return Error::success();
   if (Options.Verbose) {
     outs().indent(Indent);
     outs() << "cloning .debug_info from " << Filename << "\n";
@@ -3526,6 +3533,7 @@ void DwarfLinker::loadClangModule(StringRef Filename, StringRef ModulePath,
   CompileUnits.push_back(std::move(Unit));
   DIECloner(*this, RelocMgr, DIEAlloc, CompileUnits, Options)
       .cloneAllCompileUnits(*DwarfContext);
+  return Error::success();
 }
 
 void DwarfLinker::DIECloner::cloneAllCompileUnits(DWARFContext &DwarfContext) {

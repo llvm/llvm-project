@@ -57,55 +57,55 @@
   goto Llabel0               // BPF_JA
   call 1                     // BPF_CALL
   exit                       // BPF_EXIT
-// CHECK: 05 00 1a 00 00 00 00 00 	goto 26
+// CHECK: 05 00 1a 00 00 00 00 00 	goto +26
 // CHECK: 85 00 00 00 01 00 00 00 	call 1
 // CHECK: 95 00 00 00 00 00 00 00 	exit
 
   if r0 == r1 goto Llabel0   // BPF_JEQ  | BPF_X
   if r3 != r4 goto Llabel0   // BPF_JNE  | BPF_X
-// CHECK: 1d 10 17 00 00 00 00 00 	if r0 == r1 goto 23
-// CHECK: 5d 43 16 00 00 00 00 00 	if r3 != r4 goto 22
+// CHECK: 1d 10 17 00 00 00 00 00 	if r0 == r1 goto +23
+// CHECK: 5d 43 16 00 00 00 00 00 	if r3 != r4 goto +22
 
   if r1 > r2 goto Llabel0    // BPF_JGT  | BPF_X
   if r2 >= r3 goto Llabel0   // BPF_JGE  | BPF_X
   if r4 s> r5 goto Llabel0   // BPF_JSGT | BPF_X
   if r5 s>= r6 goto Llabel0  // BPF_JSGE | BPF_X
-// CHECK: 2d 21 15 00 00 00 00 00 	if r1 > r2 goto 21
-// CHECK: 3d 32 14 00 00 00 00 00 	if r2 >= r3 goto 20
-// CHECK: 6d 54 13 00 00 00 00 00 	if r4 s> r5 goto 19
-// CHECK: 7d 65 12 00 00 00 00 00 	if r5 s>= r6 goto 18
+// CHECK: 2d 21 15 00 00 00 00 00 	if r1 > r2 goto +21
+// CHECK: 3d 32 14 00 00 00 00 00 	if r2 >= r3 goto +20
+// CHECK: 6d 54 13 00 00 00 00 00 	if r4 s> r5 goto +19
+// CHECK: 7d 65 12 00 00 00 00 00 	if r5 s>= r6 goto +18
 
   if r6 < r7 goto Llabel0    // BPF_JLT  | BPF_X
   if r7 <= r8 goto Llabel0   // BPF_JLE  | BPF_X
   if r8 s< r9 goto Llabel0   // BPF_JSLT | BPF_X
   if r9 s<= r10 goto Llabel0 // BPF_JSLE | BPF_X
-// CHECK: ad 76 11 00 00 00 00 00 	if r6 < r7 goto 17
-// CHECK: bd 87 10 00 00 00 00 00 	if r7 <= r8 goto 16
-// CHECK: cd 98 0f 00 00 00 00 00 	if r8 s< r9 goto 15
-// CHECK: dd a9 0e 00 00 00 00 00 	if r9 s<= r10 goto 14
+// CHECK: ad 76 11 00 00 00 00 00 	if r6 < r7 goto +17
+// CHECK: bd 87 10 00 00 00 00 00 	if r7 <= r8 goto +16
+// CHECK: cd 98 0f 00 00 00 00 00 	if r8 s< r9 goto +15
+// CHECK: dd a9 0e 00 00 00 00 00 	if r9 s<= r10 goto +14
 
   if r0 == 0 goto Llabel0           // BPF_JEQ  | BPF_K
   if r3 != -1 goto Llabel0          // BPF_JNE  | BPF_K
-// CHECK: 15 00 0d 00 00 00 00 00 	if r0 == 0 goto 13
-// CHECK: 55 03 0c 00 ff ff ff ff 	if r3 != -1 goto 12
+// CHECK: 15 00 0d 00 00 00 00 00 	if r0 == 0 goto +13
+// CHECK: 55 03 0c 00 ff ff ff ff 	if r3 != -1 goto +12
 
   if r1 > 64 goto Llabel0           // BPF_JGT  | BPF_K
   if r2 >= 0xffffffff goto Llabel0  // BPF_JGE  | BPF_K
   if r4 s> 0xffffffff goto Llabel0  // BPF_JSGT | BPF_K
   if r5 s>= 0x7fffffff goto Llabel0 // BPF_JSGE | BPF_K
-// CHECK: 25 01 0b 00 40 00 00 00 	if r1 > 64 goto 11
-// CHECK: 35 02 0a 00 ff ff ff ff 	if r2 >= -1 goto 10
-// CHECK: 65 04 09 00 ff ff ff ff 	if r4 s> -1 goto 9
-// CHECK: 75 05 08 00 ff ff ff 7f 	if r5 s>= 2147483647 goto 8
+// CHECK: 25 01 0b 00 40 00 00 00 	if r1 > 64 goto +11
+// CHECK: 35 02 0a 00 ff ff ff ff 	if r2 >= -1 goto +10
+// CHECK: 65 04 09 00 ff ff ff ff 	if r4 s> -1 goto +9
+// CHECK: 75 05 08 00 ff ff ff 7f 	if r5 s>= 2147483647 goto +8
 
   if r6 < 0xff goto Llabel0         // BPF_JLT  | BPF_K
   if r7 <= 0xffff goto Llabel0      // BPF_JLE  | BPF_K
   if r8 s< 0 goto Llabel0           // BPF_JSLT | BPF_K
   if r9 s<= -1 goto Llabel0         // BPF_JSLE | BPF_K
-// CHECK: a5 06 07 00 ff 00 00 00 	if r6 < 255 goto 7
-// CHECK: b5 07 06 00 ff ff 00 00 	if r7 <= 65535 goto 6
-// CHECK: c5 08 05 00 00 00 00 00 	if r8 s< 0 goto 5
-// CHECK: d5 09 04 00 ff ff ff ff 	if r9 s<= -1 goto 4
+// CHECK: a5 06 07 00 ff 00 00 00 	if r6 < 255 goto +7
+// CHECK: b5 07 06 00 ff ff 00 00 	if r7 <= 65535 goto +6
+// CHECK: c5 08 05 00 00 00 00 00 	if r8 s< 0 goto +5
+// CHECK: d5 09 04 00 ff ff ff ff 	if r9 s<= -1 goto +4
 
 // ======== BPF_ALU64 Class ========
   r0 += r1    // BPF_ADD  | BPF_X

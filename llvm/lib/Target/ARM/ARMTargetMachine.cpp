@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ARM.h"
-#include "ARMSubtarget.h"
-#include "ARMMacroFusion.h"
 #include "ARMTargetMachine.h"
+#include "ARM.h"
+#include "ARMMacroFusion.h"
+#include "ARMSubtarget.h"
 #include "ARMTargetObjectFile.h"
 #include "ARMTargetTransformInfo.h"
 #include "MCTargetDesc/ARMMCTargetDesc.h"
@@ -34,6 +34,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetLoweringObjectFile.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/DataLayout.h"
@@ -44,7 +45,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TargetParser.h"
 #include "llvm/Support/TargetRegistry.h"
-#include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Scalar.h"
 #include <cassert>

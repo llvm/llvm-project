@@ -46,7 +46,9 @@ def BPFWrapper      : SDNode<"BPFISD::Wrapper", SDT_BPFWrapper>;
 def BPFIsLittleEndian : Predicate<"CurDAG->getDataLayout().isLittleEndian()">;
 def BPFIsBigEndian    : Predicate<"!CurDAG->getDataLayout().isLittleEndian()">;
 
-def brtarget : Operand<OtherVT>;
+def brtarget : Operand<OtherVT> {
+  let PrintMethod = "printBrTargetOperand";
+}
 def calltarget : Operand<i64>;
 
 def u64imm   : Operand<i64> {

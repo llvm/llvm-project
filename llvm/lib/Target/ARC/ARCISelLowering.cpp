@@ -487,7 +487,7 @@ SDValue ARCTargetLowering::LowerCallArguments(
       switch (RegVT.getSimpleVT().SimpleTy) {
       default: {
         DEBUG(errs() << "LowerFormalArguments Unhandled argument type: "
-                     << RegVT.getSimpleVT().SimpleTy << "\n");
+                     << (unsigned)RegVT.getSimpleVT().SimpleTy << "\n");
         llvm_unreachable("Unhandled LowerFormalArguments type.");
       }
       case MVT::i32:

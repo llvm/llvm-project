@@ -933,6 +933,7 @@ void MappingTraits<ELFYAML::Object>::mapping(IO &IO, ELFYAML::Object &Object) {
   IO.mapOptional("ProgramHeaders", Object.ProgramHeaders);
   IO.mapOptional("Sections", Object.Sections);
   IO.mapOptional("Symbols", Object.Symbols);
+  IO.mapOptional("DynamicSymbols", Object.DynamicSymbols);
   IO.setContext(nullptr);
 }
 
