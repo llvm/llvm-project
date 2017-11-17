@@ -1443,8 +1443,9 @@ void ItaniumCXXABI::EmitInstanceFunctionProlog(CodeGenFunction &CGF) {
   if (CGF.CurFuncDecl && CGF.CurFuncDecl->hasAttr<NakedAttr>())
     return;
 
-  /// Initialize the 'this' slot.
-  EmitThisParam(CGF);
+  /// Initialize the 'this' slot. In the Itanium C++ ABI, no prologue
+  /// adjustments are required, becuase they are all handled by thunks.
+  setCXXABIThisValue(CGF, loadIncomingCXXThis(CGF));
 
   /// Initialize the 'vtt' slot if needed.
   if (getStructorImplicitParamDecl(CGF)) {
