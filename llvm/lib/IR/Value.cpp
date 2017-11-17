@@ -15,6 +15,7 @@
 #include "LLVMContextImpl.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -456,6 +457,7 @@ void Value::replaceUsesOutsideBlock(Value *New, BasicBlock *BB) {
 }
 
 void Value::replaceUsesExceptBlockAddr(Value *New) {
+  SmallSetVector<Constant *, 4> Constants;
   use_iterator UI = use_begin(), E = use_end();
   for (; UI != E;) {
     Use &U = *UI;
@@ -468,13 +470,19 @@ void Value::replaceUsesExceptBlockAddr(Value *New) {
     // constant because they are uniqued.
     if (auto *C = dyn_cast<Constant>(U.getUser())) {
       if (!isa<GlobalValue>(C)) {
-        C->handleOperandChange(this, New);
+        // Save unique users to avoid processing operand replacement
+        // more than once.
+        Constants.insert(C);
         continue;
       }
     }
 
     U.set(New);
   }
+
+  // Process operand replacement of saved constants.
+  for (auto *C : Constants)
+    C->handleOperandChange(this, New);
 }
 
 namespace {

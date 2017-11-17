@@ -22,6 +22,7 @@
 #include "llvm/Support/Error.h"
 
 namespace llvm {
+class MemoryBuffer;
 namespace pdb {
 class PDBFile;
 
@@ -81,6 +82,8 @@ public:
   getSourceFileById(uint32_t FileId) const override;
 
   std::unique_ptr<IPDBEnumDataStreams> getDebugStreams() const override;
+
+  std::unique_ptr<IPDBEnumTables> getEnumTables() const override;
 
   PDBFile &getPDBFile() { return *Pdb; }
   const PDBFile &getPDBFile() const { return *Pdb; }

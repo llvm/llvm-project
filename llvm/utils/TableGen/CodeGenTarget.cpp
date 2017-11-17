@@ -348,7 +348,7 @@ GetInstByName(const char *Name,
 void CodeGenTarget::ComputeInstrsByEnum() const {
   static const char *const FixedInstrs[] = {
 #define HANDLE_TARGET_OPCODE(OPC) #OPC,
-#include "llvm/Target/TargetOpcodes.def"
+#include "llvm/CodeGen/TargetOpcodes.def"
       nullptr};
   const auto &Insts = getInstructions();
   for (const char *const *p = FixedInstrs; *p; ++p) {

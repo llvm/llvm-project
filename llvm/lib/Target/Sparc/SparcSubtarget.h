@@ -18,9 +18,9 @@
 #include "SparcISelLowering.h"
 #include "SparcInstrInfo.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
-#include "llvm/IR/DataLayout.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/DataLayout.h"
 #include <string>
 
 #define GET_SUBTARGETINFO_HEADER

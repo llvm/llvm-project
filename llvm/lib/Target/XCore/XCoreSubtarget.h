@@ -18,9 +18,9 @@
 #include "XCoreISelLowering.h"
 #include "XCoreInstrInfo.h"
 #include "XCoreSelectionDAGInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 #include <string>
 
 #define GET_SUBTARGETINFO_HEADER

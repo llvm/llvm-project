@@ -1,6 +1,7 @@
-; RUN: opt < %s -asan -asan-module -asan-globals-live-support=0 -mtriple=x86_64-unknown-linux-gnu -S | FileCheck %s
-; RUN: opt < %s -asan -asan-module -asan-globals-live-support=0 -mtriple=x86_64-apple-macosx10.11.0 -S | FileCheck %s
-; RUN: opt < %s -asan -asan-module -asan-globals-live-support=0 -mtriple=x86_64-pc-windows-msvc19.0.24215 -S | FileCheck %s
+; RUN: opt < %s -asan -asan-module -asan-globals-live-support=0 -mtriple=x86_64-unknown-linux-gnu -S | FileCheck --check-prefixes=CHECK,CHECK-S3 %s
+; RUN: opt < %s -asan -asan-module -asan-globals-live-support=0 -mtriple=x86_64-apple-macosx10.11.0 -S | FileCheck --check-prefixes=CHECK,CHECK-S3 %s
+; RUN: opt < %s -asan -asan-module -asan-globals-live-support=0 -mtriple=x86_64-pc-windows-msvc19.0.24215 -S | FileCheck --check-prefixes=CHECK,CHECK-S3 %s
+; RUN: opt < %s -asan -asan-module -asan-globals-live-support=0 -asan-mapping-scale=5 -mtriple=x86_64-unknown-linux-gnu -S | FileCheck --check-prefixes=CHECK,CHECK-S5 %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -24,6 +25,8 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; Check that location descriptors and global names were passed into __asan_register_globals:
 ; CHECK: i64 ptrtoint ([7 x i8]* [[VARNAME]] to i64)
 ; CHECK: i64 ptrtoint ({ [22 x i8]*, i32, i32 }* [[LOCDESCR]] to i64)
+; Check alignment of metadata_array.
+; CHECK-S5-SAME: {{align 32$}}
 
 ; Function Attrs: nounwind sanitize_address
 define internal void @__cxx_global_var_init() #0 section ".text.startup" {

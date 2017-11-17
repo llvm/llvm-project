@@ -98,9 +98,8 @@ define i16 @narrow_zext_add(i16 %x16, i32 %y32) {
 
 define i16 @narrow_sext_sub(i16 %x16, i32 %y32) {
 ; CHECK-LABEL: @narrow_sext_sub(
-; CHECK-NEXT:    [[X321:%.*]] = zext i16 %x16 to i32
-; CHECK-NEXT:    [[B:%.*]] = sub i32 [[X321]], %y32
-; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[B]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 %y32 to i16
+; CHECK-NEXT:    [[R:%.*]] = sub i16 %x16, [[TMP1]]
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %x32 = sext i16 %x16 to i32
@@ -111,9 +110,8 @@ define i16 @narrow_sext_sub(i16 %x16, i32 %y32) {
 
 define i16 @narrow_zext_sub(i16 %x16, i32 %y32) {
 ; CHECK-LABEL: @narrow_zext_sub(
-; CHECK-NEXT:    [[X32:%.*]] = zext i16 %x16 to i32
-; CHECK-NEXT:    [[B:%.*]] = sub i32 [[X32]], %y32
-; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[B]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 %y32 to i16
+; CHECK-NEXT:    [[R:%.*]] = sub i16 %x16, [[TMP1]]
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %x32 = zext i16 %x16 to i32
@@ -264,9 +262,8 @@ define <2 x i16> @narrow_zext_add_commute(<2 x i16> %x16, <2 x i32> %y32) {
 define <2 x i16> @narrow_sext_sub_commute(<2 x i16> %x16, <2 x i32> %y32) {
 ; CHECK-LABEL: @narrow_sext_sub_commute(
 ; CHECK-NEXT:    [[Y32OP0:%.*]] = sdiv <2 x i32> %y32, <i32 7, i32 -17>
-; CHECK-NEXT:    [[X321:%.*]] = zext <2 x i16> %x16 to <2 x i32>
-; CHECK-NEXT:    [[B:%.*]] = sub <2 x i32> [[Y32OP0]], [[X321]]
-; CHECK-NEXT:    [[R:%.*]] = trunc <2 x i32> [[B]] to <2 x i16>
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i32> [[Y32OP0]] to <2 x i16>
+; CHECK-NEXT:    [[R:%.*]] = sub <2 x i16> [[TMP1]], %x16
 ; CHECK-NEXT:    ret <2 x i16> [[R]]
 ;
   %y32op0 = sdiv <2 x i32> %y32, <i32 7, i32 -17>
@@ -279,9 +276,8 @@ define <2 x i16> @narrow_sext_sub_commute(<2 x i16> %x16, <2 x i32> %y32) {
 define <2 x i16> @narrow_zext_sub_commute(<2 x i16> %x16, <2 x i32> %y32) {
 ; CHECK-LABEL: @narrow_zext_sub_commute(
 ; CHECK-NEXT:    [[Y32OP0:%.*]] = sdiv <2 x i32> %y32, <i32 7, i32 -17>
-; CHECK-NEXT:    [[X32:%.*]] = zext <2 x i16> %x16 to <2 x i32>
-; CHECK-NEXT:    [[B:%.*]] = sub <2 x i32> [[Y32OP0]], [[X32]]
-; CHECK-NEXT:    [[R:%.*]] = trunc <2 x i32> [[B]] to <2 x i16>
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i32> [[Y32OP0]] to <2 x i16>
+; CHECK-NEXT:    [[R:%.*]] = sub <2 x i16> [[TMP1]], %x16
 ; CHECK-NEXT:    ret <2 x i16> [[R]]
 ;
   %y32op0 = sdiv <2 x i32> %y32, <i32 7, i32 -17>

@@ -23,6 +23,7 @@ public:
 
   void EmitAssemblerFlag(MCAssemblerFlag Flag) override;
   void EmitThumbFunc(MCSymbol *Symbol) override;
+  void FinishImpl() override;
 };
 
 void ARMWinCOFFStreamer::EmitAssemblerFlag(MCAssemblerFlag Flag) {
@@ -36,6 +37,12 @@ void ARMWinCOFFStreamer::EmitAssemblerFlag(MCAssemblerFlag Flag) {
 
 void ARMWinCOFFStreamer::EmitThumbFunc(MCSymbol *Symbol) {
   getAssembler().setIsThumbFunc(Symbol);
+}
+
+void ARMWinCOFFStreamer::FinishImpl() {
+  EmitFrames(nullptr);
+
+  MCWinCOFFStreamer::FinishImpl();
 }
 }
 

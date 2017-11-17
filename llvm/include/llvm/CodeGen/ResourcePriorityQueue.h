@@ -21,8 +21,8 @@
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/MC/MCInstrItineraries.h"
-#include "llvm/Target/TargetRegisterInfo.h"
 
 namespace llvm {
   class ResourcePriorityQueue;

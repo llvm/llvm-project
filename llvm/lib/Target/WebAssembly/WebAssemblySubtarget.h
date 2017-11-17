@@ -20,7 +20,7 @@
 #include "WebAssemblyISelLowering.h"
 #include "WebAssemblyInstrInfo.h"
 #include "WebAssemblySelectionDAGInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include <string>
 
 #define GET_SUBTARGETINFO_HEADER

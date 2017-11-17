@@ -20,6 +20,9 @@
 #include "llvm/Support/Endian.h"
 
 namespace llvm {
+
+class MemoryBuffer;
+
 namespace rc {
 
 struct SearchParams {

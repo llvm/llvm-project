@@ -1,4 +1,4 @@
-//===-- llvm/Target/TargetOpcodes.h - Target Indep Opcodes ------*- C++ -*-===//
+//===-- llvm/CodeGen/TargetOpcodes.h - Target Indep Opcodes -----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TARGET_TARGETOPCODES_H
-#define LLVM_TARGET_TARGETOPCODES_H
+#ifndef LLVM_CODEGEN_TARGETOPCODES_H
+#define LLVM_CODEGEN_TARGETOPCODES_H
 
 namespace llvm {
 
@@ -22,7 +22,7 @@ namespace TargetOpcode {
 enum {
 #define HANDLE_TARGET_OPCODE(OPC) OPC,
 #define HANDLE_TARGET_OPCODE_MARKER(IDENT, OPC) IDENT = OPC,
-#include "llvm/Target/TargetOpcodes.def"
+#include "llvm/CodeGen/TargetOpcodes.def"
 };
 } // end namespace TargetOpcode
 

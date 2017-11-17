@@ -32,8 +32,8 @@
 
 #include "llvm/ADT/SparseSet.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
-#include "llvm/Target/TargetRegisterInfo.h"
 #include <cassert>
 #include <utility>
 

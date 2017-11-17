@@ -11,9 +11,9 @@
 #define LLVM_LIB_TARGET_NVPTX_NVPTXTARGETOBJECTFILE_H
 
 #include "NVPTXSection.h"
+#include "llvm/CodeGen/TargetLoweringObjectFile.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/SectionKind.h"
-#include "llvm/Target/TargetLoweringObjectFile.h"
 
 namespace llvm {
 

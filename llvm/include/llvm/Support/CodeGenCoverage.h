@@ -17,6 +17,7 @@
 
 namespace llvm {
 class LLVMContext;
+class MemoryBuffer;
 
 class CodeGenCoverage {
 protected:
