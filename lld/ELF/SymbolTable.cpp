@@ -236,7 +236,6 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name) {
   if (IsNew) {
     Sym = (Symbol *)make<SymbolUnion>();
     Sym->InVersionScript = false;
-    Sym->Binding = STB_WEAK;
     Sym->Visibility = STV_DEFAULT;
     Sym->IsUsedInRegularObj = false;
     Sym->ExportDynamic = false;
@@ -279,7 +278,7 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name, uint8_t Type,
 }
 
 template <class ELFT> Symbol *SymbolTable::addUndefined(StringRef Name) {
-  return addUndefined<ELFT>(Name, /*IsLocal=*/false, STB_GLOBAL, STV_DEFAULT,
+  return addUndefined<ELFT>(Name, STB_GLOBAL, STV_DEFAULT,
                             /*Type*/ 0,
                             /*CanOmitFromDynSym*/ false, /*File*/ nullptr);
 }
@@ -287,7 +286,7 @@ template <class ELFT> Symbol *SymbolTable::addUndefined(StringRef Name) {
 static uint8_t getVisibility(uint8_t StOther) { return StOther & 3; }
 
 template <class ELFT>
-Symbol *SymbolTable::addUndefined(StringRef Name, bool IsLocal, uint8_t Binding,
+Symbol *SymbolTable::addUndefined(StringRef Name, uint8_t Binding,
                                   uint8_t StOther, uint8_t Type,
                                   bool CanOmitFromDynSym, InputFile *File) {
   Symbol *S;
@@ -298,8 +297,7 @@ Symbol *SymbolTable::addUndefined(StringRef Name, bool IsLocal, uint8_t Binding,
   // An undefined symbol with non default visibility must be satisfied
   // in the same DSO.
   if (WasInserted || (isa<SharedSymbol>(S) && Visibility != STV_DEFAULT)) {
-    S->Binding = Binding;
-    replaceSymbol<Undefined>(S, File, Name, IsLocal, StOther, Type);
+    replaceSymbol<Undefined>(S, File, Name, Binding, StOther, Type);
     return S;
   }
   if (Binding != STB_WEAK) {
@@ -311,10 +309,12 @@ Symbol *SymbolTable::addUndefined(StringRef Name, bool IsLocal, uint8_t Binding,
   if (auto *L = dyn_cast<Lazy>(S)) {
     // An undefined weak will not fetch archive members. See comment on Lazy in
     // Symbols.h for the details.
-    if (S->isWeak())
+    if (Binding == STB_WEAK) {
       L->Type = Type;
-    else if (InputFile *F = L->fetch())
+      L->Binding = STB_WEAK;
+    } else if (InputFile *F = L->fetch()) {
       addFile<ELFT>(F);
+    }
   }
   return S;
 }
@@ -359,11 +359,8 @@ static int compareDefined(Symbol *S, bool WasInserted, uint8_t Binding,
 static int compareDefinedNonCommon(Symbol *S, bool WasInserted, uint8_t Binding,
                                    bool IsAbsolute, uint64_t Value,
                                    StringRef Name) {
-  if (int Cmp = compareDefined(S, WasInserted, Binding, Name)) {
-    if (Cmp > 0)
-      S->Binding = Binding;
+  if (int Cmp = compareDefined(S, WasInserted, Binding, Name))
     return Cmp;
-  }
   if (auto *R = dyn_cast<Defined>(S)) {
     if (R->Section && isa<BssSection>(R->Section)) {
       // Non-common symbols take precedence over common symbols.
@@ -392,9 +389,7 @@ Symbol *SymbolTable::addCommon(StringRef N, uint64_t Size, uint32_t Alignment,
     Bss->Live = !Config->GcSections;
     InputSections.push_back(Bss);
 
-    S->Binding = Binding;
-    replaceSymbol<Defined>(S, File, N, /*IsLocal=*/false, StOther, Type, 0,
-                           Size, Bss);
+    replaceSymbol<Defined>(S, File, N, Binding, StOther, Type, 0, Size, Bss);
   } else if (Cmp == 0) {
     auto *D = cast<Defined>(S);
     auto *Bss = dyn_cast_or_null<BssSection>(D->Section);
@@ -473,8 +468,8 @@ Symbol *SymbolTable::addRegular(StringRef Name, uint8_t StOther, uint8_t Type,
   int Cmp = compareDefinedNonCommon(S, WasInserted, Binding, Section == nullptr,
                                     Value, Name);
   if (Cmp > 0)
-    replaceSymbol<Defined>(S, File, Name, /*IsLocal=*/false, StOther, Type,
-                           Value, Size, Section);
+    replaceSymbol<Defined>(S, File, Name, Binding, StOther, Type, Value, Size,
+                           Section);
   else if (Cmp == 0)
     reportDuplicate<ELFT>(S, dyn_cast_or_null<InputSectionBase>(Section),
                           Value);
@@ -500,10 +495,14 @@ void SymbolTable::addShared(StringRef Name, SharedFile<ELFT> *File,
   // in the same DSO.
   if (WasInserted || ((S->isUndefined() || S->isLazy()) &&
                       S->getVisibility() == STV_DEFAULT)) {
+    uint8_t Binding = S->Binding;
     replaceSymbol<SharedSymbol>(S, File, Name, Sym.st_other, Sym.getType(),
                                 Sym.st_value, Sym.st_size, Alignment, Verdef);
-    if (!S->isWeak())
-      File->IsUsed = true;
+    if (!WasInserted) {
+      S->Binding = Binding;
+      if (!S->isWeak())
+        File->IsUsed = true;
+    }
   }
 }
 
@@ -517,8 +516,7 @@ Symbol *SymbolTable::addBitcode(StringRef Name, uint8_t Binding,
   int Cmp = compareDefinedNonCommon(S, WasInserted, Binding,
                                     /*IsAbs*/ false, /*Value*/ 0, Name);
   if (Cmp > 0)
-    replaceSymbol<Defined>(S, F, Name, /*IsLocal=*/false, StOther, Type, 0, 0,
-                           nullptr);
+    replaceSymbol<Defined>(S, F, Name, Binding, StOther, Type, 0, 0, nullptr);
   else if (Cmp == 0)
     reportDuplicate(S, F);
   return S;
@@ -550,6 +548,7 @@ Symbol *SymbolTable::addLazyArchive(StringRef Name, ArchiveFile *F,
   // Symbols.h for the details.
   if (S->isWeak()) {
     replaceSymbol<LazyArchive>(S, F, Sym, S->Type);
+    S->Binding = STB_WEAK;
     return S;
   }
   std::pair<MemoryBufferRef, uint64_t> MBInfo = F->getMember(&Sym);
@@ -784,18 +783,14 @@ template Symbol *SymbolTable::addUndefined<ELF32BE>(StringRef);
 template Symbol *SymbolTable::addUndefined<ELF64LE>(StringRef);
 template Symbol *SymbolTable::addUndefined<ELF64BE>(StringRef);
 
-template Symbol *SymbolTable::addUndefined<ELF32LE>(StringRef, bool, uint8_t,
-                                                    uint8_t, uint8_t, bool,
-                                                    InputFile *);
-template Symbol *SymbolTable::addUndefined<ELF32BE>(StringRef, bool, uint8_t,
-                                                    uint8_t, uint8_t, bool,
-                                                    InputFile *);
-template Symbol *SymbolTable::addUndefined<ELF64LE>(StringRef, bool, uint8_t,
-                                                    uint8_t, uint8_t, bool,
-                                                    InputFile *);
-template Symbol *SymbolTable::addUndefined<ELF64BE>(StringRef, bool, uint8_t,
-                                                    uint8_t, uint8_t, bool,
-                                                    InputFile *);
+template Symbol *SymbolTable::addUndefined<ELF32LE>(StringRef, uint8_t, uint8_t,
+                                                    uint8_t, bool, InputFile *);
+template Symbol *SymbolTable::addUndefined<ELF32BE>(StringRef, uint8_t, uint8_t,
+                                                    uint8_t, bool, InputFile *);
+template Symbol *SymbolTable::addUndefined<ELF64LE>(StringRef, uint8_t, uint8_t,
+                                                    uint8_t, bool, InputFile *);
+template Symbol *SymbolTable::addUndefined<ELF64BE>(StringRef, uint8_t, uint8_t,
+                                                    uint8_t, bool, InputFile *);
 
 template void SymbolTable::addCombinedLTOObject<ELF32LE>();
 template void SymbolTable::addCombinedLTOObject<ELF32BE>();

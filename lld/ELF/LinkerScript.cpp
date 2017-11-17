@@ -132,7 +132,6 @@ void LinkerScript::addSymbol(SymbolAssignment *Cmd) {
   std::tie(Sym, std::ignore) = Symtab->insert(Cmd->Name, /*Type*/ 0, Visibility,
                                               /*CanOmitFromDynSym*/ false,
                                               /*File*/ nullptr);
-  Sym->Binding = STB_GLOBAL;
   ExprValue Value = Cmd->Expression();
   SectionBase *Sec = Value.isAbsolute() ? nullptr : Value.Sec;
 
@@ -149,7 +148,7 @@ void LinkerScript::addSymbol(SymbolAssignment *Cmd) {
   // write expressions like this: `alignment = 16; . = ALIGN(., alignment)`.
   uint64_t SymValue = Value.Sec ? 0 : Value.getValue();
 
-  replaceSymbol<Defined>(Sym, nullptr, Cmd->Name, /*IsLocal=*/false, Visibility,
+  replaceSymbol<Defined>(Sym, nullptr, Cmd->Name, STB_GLOBAL, Visibility,
                          STT_NOTYPE, SymValue, 0, Sec);
   Cmd->Sym = cast<Defined>(Sym);
 }
@@ -466,9 +465,9 @@ static OutputSection *addInputSec(StringMap<OutputSection *> &Map,
     return Out->RelocationSection;
   }
 
-  // When control reaches here, mergeable sections have already been
-  // merged except the -r case. If that's the case, we do not combine them
-  // and let final link to handle this optimization.
+  // When control reaches here, mergeable sections have already been merged into
+  // synthetic sections. For relocatable case we want to create one output
+  // section per syntetic section so that they have a valid sh_entsize.
   if (Config->Relocatable && (IS->Flags & SHF_MERGE))
     return createSection(IS, OutsecName);
 

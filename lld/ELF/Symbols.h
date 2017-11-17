@@ -94,7 +94,7 @@ public:
   bool isUndefined() const { return SymbolKind == UndefinedKind; }
   bool isDefined() const { return SymbolKind == DefinedKind; }
   bool isShared() const { return SymbolKind == SharedKind; }
-  bool isLocal() const { return IsLocal; }
+  bool isLocal() const { return Binding == llvm::ELF::STB_LOCAL; }
 
   bool isLazy() const {
     return SymbolKind == LazyArchiveKind || SymbolKind == LazyObjectKind;
@@ -130,16 +130,14 @@ public:
   uint32_t GlobalDynIndex = -1;
 
 protected:
-  Symbol(Kind K, StringRefZ Name, bool IsLocal, uint8_t StOther, uint8_t Type)
-      : SymbolKind(K), IsLocal(IsLocal), NeedsPltAddr(false),
+  Symbol(Kind K, StringRefZ Name, uint8_t Binding, uint8_t StOther,
+         uint8_t Type)
+      : Binding(Binding), SymbolKind(K), NeedsPltAddr(false),
         IsInGlobalMipsGot(false), Is32BitMipsGot(false), IsInIplt(false),
         IsInIgot(false), IsPreemptible(false), Type(Type), StOther(StOther),
         Name(Name) {}
 
   const unsigned SymbolKind : 8;
-
-  // True if this is a local symbol.
-  unsigned IsLocal : 1;
 
 public:
   // True the symbol should point to its PLT entry.
@@ -184,10 +182,12 @@ protected:
 // Represents a symbol that is defined in the current output file.
 class Defined : public Symbol {
 public:
-  Defined(StringRefZ Name, bool IsLocal, uint8_t StOther, uint8_t Type,
+  Defined(StringRefZ Name, uint8_t Binding, uint8_t StOther, uint8_t Type,
           uint64_t Value, uint64_t Size, SectionBase *Section)
-      : Symbol(DefinedKind, Name, IsLocal, StOther, Type), Value(Value),
-        Size(Size), Section(Section) {}
+      : Symbol(DefinedKind, Name, Binding, StOther, Type), Value(Value),
+        Size(Size), Section(Section) {
+    this->Binding = Binding;
+  }
 
   static bool classof(const Symbol *S) { return S->isDefined(); }
 
@@ -198,8 +198,10 @@ public:
 
 class Undefined : public Symbol {
 public:
-  Undefined(StringRefZ Name, bool IsLocal, uint8_t StOther, uint8_t Type)
-      : Symbol(UndefinedKind, Name, IsLocal, StOther, Type) {}
+  Undefined(StringRefZ Name, uint8_t Binding, uint8_t StOther, uint8_t Type)
+      : Symbol(UndefinedKind, Name, Binding, StOther, Type) {
+    this->Binding = Binding;
+  }
 
   static bool classof(const Symbol *S) { return S->kind() == UndefinedKind; }
 };
@@ -210,7 +212,7 @@ public:
 
   SharedSymbol(StringRef Name, uint8_t StOther, uint8_t Type, uint64_t Value,
                uint64_t Size, uint32_t Alignment, const void *Verdef)
-      : Symbol(SharedKind, Name, /*IsLocal=*/false, StOther, Type),
+      : Symbol(SharedKind, Name, llvm::ELF::STB_WEAK, StOther, Type),
         Verdef(Verdef), Value(Value), Size(Size), Alignment(Alignment) {
     // GNU ifunc is a mechanism to allow user-supplied functions to
     // resolve PLT slot values at load-time. This is contrary to the
@@ -266,7 +268,7 @@ public:
 
 protected:
   Lazy(Kind K, StringRef Name, uint8_t Type)
-      : Symbol(K, Name, /*IsLocal=*/false, llvm::ELF::STV_DEFAULT, Type) {}
+      : Symbol(K, Name, llvm::ELF::STB_GLOBAL, llvm::ELF::STV_DEFAULT, Type) {}
 };
 
 // This class represents a symbol defined in an archive file. It is
@@ -354,7 +356,6 @@ void replaceSymbol(Symbol *S, InputFile *File, ArgT &&... Arg) {
   new (S) T(std::forward<ArgT>(Arg)...);
   S->File = File;
 
-  S->Binding = Sym.Binding;
   S->VersionId = Sym.VersionId;
   S->Visibility = Sym.Visibility;
   S->IsUsedInRegularObj = Sym.IsUsedInRegularObj;
