@@ -23,7 +23,7 @@ class BugproneModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<CopyConstructorInitCheck>(
-        "misc-copy-constructor-init");
+        "bugprone-copy-constructor-init");
     CheckFactories.registerCheck<IntegerDivisionCheck>(
         "bugprone-integer-division");
     CheckFactories.registerCheck<SuspiciousMemsetUsageCheck>(

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-copy-constructor-init %t
+// RUN: %check_clang_tidy %s bugprone-copy-constructor-init %t
 
 class NonCopyable {
 public:
@@ -79,7 +79,7 @@ class X : public Copyable, public EmptyCopyable {
 
 class X2 : public Copyable2 {
   X2(const X2 &other) {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: calling a base constructor other than the copy constructor [misc-copy-constructor-init]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: calling a base constructor other than the copy constructor [bugprone-copy-constructor-init]
   // CHECK-FIXES: X2(const X2 &other)  : Copyable2(other) {}
 };
 
