@@ -198,3 +198,15 @@ __block void(^myBlock)(void) = ^{
    };
 
 }
+
+typedef void (^a_block_t)(void);
+
+@interface HonorNoEscape
+- (void)addStuffUsingBlock:(__attribute__((noescape)) a_block_t)block;
+@end
+
+void testNoEscape(HonorNoEscape *obj) {
+  [obj addStuffUsingBlock:^{
+    (void)obj; // ok.
+  }];
+}
