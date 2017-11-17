@@ -178,10 +178,14 @@ public:
   void deregisterEHFrames() override {}
 
   void preallocateSlab(uint64_t Size) {
-    std::string Err;
-    sys::MemoryBlock MB = sys::Memory::AllocateRWX(Size, nullptr, &Err);
+    std::error_code EC;
+    sys::MemoryBlock MB =
+      sys::Memory::allocateMappedMemory(Size, nullptr,
+                                        sys::Memory::MF_READ |
+                                        sys::Memory::MF_WRITE,
+                                        EC);
     if (!MB.base())
-      report_fatal_error("Can't allocate enough memory: " + Err);
+      report_fatal_error("Can't allocate enough memory: " + EC.message());
 
     PreallocSlab = MB;
     UsePreallocation = true;
@@ -222,10 +226,14 @@ uint8_t *TrivialMemoryManager::allocateCodeSection(uintptr_t Size,
   if (UsePreallocation)
     return allocateFromSlab(Size, Alignment, true /* isCode */);
 
-  std::string Err;
-  sys::MemoryBlock MB = sys::Memory::AllocateRWX(Size, nullptr, &Err);
+  std::error_code EC;
+  sys::MemoryBlock MB =
+    sys::Memory::allocateMappedMemory(Size, nullptr,
+                                      sys::Memory::MF_READ |
+                                      sys::Memory::MF_WRITE,
+                                      EC);
   if (!MB.base())
-    report_fatal_error("MemoryManager allocation failed: " + Err);
+    report_fatal_error("MemoryManager allocation failed: " + EC.message());
   FunctionMemory.push_back(MB);
   return (uint8_t*)MB.base();
 }
@@ -242,10 +250,14 @@ uint8_t *TrivialMemoryManager::allocateDataSection(uintptr_t Size,
   if (UsePreallocation)
     return allocateFromSlab(Size, Alignment, false /* isCode */);
 
-  std::string Err;
-  sys::MemoryBlock MB = sys::Memory::AllocateRWX(Size, nullptr, &Err);
+  std::error_code EC;
+  sys::MemoryBlock MB =
+    sys::Memory::allocateMappedMemory(Size, nullptr,
+                                      sys::Memory::MF_READ |
+                                      sys::Memory::MF_WRITE,
+                                      EC);
   if (!MB.base())
-    report_fatal_error("MemoryManager allocation failed: " + Err);
+    report_fatal_error("MemoryManager allocation failed: " + EC.message());
   DataMemory.push_back(MB);
   return (uint8_t*)MB.base();
 }
@@ -453,9 +465,11 @@ static int executeInput() {
 
     // Make sure the memory is executable.
     // setExecutable will call InvalidateInstructionCache.
-    std::string ErrorStr;
-    if (!sys::Memory::setExecutable(FM, &ErrorStr))
-      ErrorAndExit("unable to mark function executable: '" + ErrorStr + "'");
+    if (auto EC = sys::Memory::protectMappedMemory(FM,
+                                                   sys::Memory::MF_READ |
+                                                   sys::Memory::MF_EXEC))
+      ErrorAndExit("unable to mark function executable: '" + EC.message() +
+                   "'");
   }
 
   // Dispatch to _main().

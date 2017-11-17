@@ -11,7 +11,7 @@
 #define LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZREGISTERINFO_H
 
 #include "SystemZ.h"
-#include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 
 #define GET_REGINFO_HEADER
 #include "SystemZGenRegisterInfo.inc"

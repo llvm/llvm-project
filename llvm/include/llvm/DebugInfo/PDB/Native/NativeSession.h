@@ -22,6 +22,7 @@
 #include "llvm/Support/Error.h"
 
 namespace llvm {
+class MemoryBuffer;
 namespace pdb {
 class PDBFile;
 

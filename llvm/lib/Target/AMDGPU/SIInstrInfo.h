@@ -416,6 +416,19 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::SMRD;
   }
 
+  bool isBufferSMRD(const MachineInstr &MI) const {
+    if (!isSMRD(MI))
+      return false;
+
+    // Check that it is using a buffer resource.
+    int Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::sbase);
+    if (Idx == -1) // e.g. s_memtime
+      return false;
+
+    const auto RCID = MI.getDesc().OpInfo[Idx].RegClass;
+    return RCID == AMDGPU::SReg_128RegClassID;
+  }
+
   static bool isDS(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::DS;
   }

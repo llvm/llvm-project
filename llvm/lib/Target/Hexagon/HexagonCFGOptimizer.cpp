@@ -15,9 +15,9 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 #include <cassert>
 #include <vector>
 

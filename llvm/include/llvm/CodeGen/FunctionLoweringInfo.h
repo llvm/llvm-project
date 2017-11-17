@@ -23,11 +23,11 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/KnownBits.h"
-#include "llvm/Target/TargetRegisterInfo.h"
 #include <cassert>
 #include <utility>
 #include <vector>

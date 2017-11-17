@@ -13,8 +13,8 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Target/TargetLowering.h"
 #include <cstdint>
 
 using namespace llvm;

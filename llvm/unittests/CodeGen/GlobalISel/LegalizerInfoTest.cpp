@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
-#include "llvm/Target/TargetOpcodes.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;

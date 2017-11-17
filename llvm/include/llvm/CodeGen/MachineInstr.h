@@ -22,11 +22,11 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/ArrayRecycler.h"
-#include "llvm/Target/TargetOpcodes.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>

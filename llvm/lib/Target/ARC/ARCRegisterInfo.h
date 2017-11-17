@@ -14,7 +14,7 @@
 #ifndef LLVM_LIB_TARGET_ARC_ARCREGISTERINFO_H
 #define LLVM_LIB_TARGET_ARC_ARCREGISTERINFO_H
 
-#include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 
 #define GET_REGINFO_HEADER
 #include "ARCGenRegisterInfo.inc"

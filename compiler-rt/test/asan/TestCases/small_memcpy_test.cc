@@ -7,6 +7,7 @@
 // RUN: not %run %t 32 48 2>&1 | FileCheck %s --check-prefix=CHECK
 // RUN: not %run %t 40 56 2>&1 | FileCheck %s --check-prefix=CHECK
 // RUN: not %run %t 48 64 2>&1 | FileCheck %s --check-prefix=CHECK
+// REQUIRES: shadow-scale-3
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>

@@ -27,14 +27,12 @@ module LLVM_Backend {
     // These are intended for (repeated) textual inclusion.
     textual header "CodeGen/DIEValue.def"
     textual header "CodeGen/RuntimeLibcalls.def"
+    textual header "CodeGen/TargetOpcodes.def"
   }
 
   module Target {
     umbrella "Target"
     module * { export * }
-
-    // This is intended for (repeated) textual inclusion.
-    textual header "Target/TargetOpcodes.def"
   }
 }
 

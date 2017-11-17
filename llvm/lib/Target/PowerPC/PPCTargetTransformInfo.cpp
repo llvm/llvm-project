@@ -10,10 +10,10 @@
 #include "PPCTargetTransformInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
+#include "llvm/CodeGen/CostTable.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Target/CostTable.h"
-#include "llvm/Target/TargetLowering.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "ppctti"

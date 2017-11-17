@@ -17,9 +17,9 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Target/TargetRegisterInfo.h"
 
 #define DEBUG_TYPE "arc-frame-lowering"
 
