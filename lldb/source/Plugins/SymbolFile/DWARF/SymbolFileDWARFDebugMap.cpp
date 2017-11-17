@@ -1481,11 +1481,20 @@ SymbolFileDWARFDebugMap::GetASTData(lldb::LanguageType language) {
       if (file_spec.Exists()) {
         // We found the source data for the AST data blob.
         // Read it in and add it to our return vector.
-        ast_datas.push_back(DataBufferLLVM::CreateFromPath(file_spec.GetPath()));
-        if (log)
-          log->Printf("SymbolFileDWARFDebugMap::%s() - found and loaded AST "
-                      "data from file %s",
-                      __FUNCTION__, file_spec.GetPath().c_str());
+        std::shared_ptr<DataBufferLLVM> data_buf_sp 
+                = DataBufferLLVM::CreateFromPath(file_spec.GetPath());
+        if (data_buf_sp) {
+          ast_datas.push_back(data_buf_sp);
+          if (log)
+            log->Printf("SymbolFileDWARFDebugMap::%s() - found and loaded AST "
+                        "data from file %s",
+                        __FUNCTION__, file_spec.GetPath().c_str());
+        } else if (log) {
+          if (log)
+            log->Printf("SymbolFileDWARFDebugMap::%s() - got empty data buffer "
+                        "SP from extant file %s",
+                        __FUNCTION__, file_spec.GetPath().c_str());        
+        }
       } else {
         if (log)
           log->Printf("SymbolFileDWARFDebugMap::%s() - found reference to AST "
