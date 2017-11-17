@@ -181,7 +181,7 @@ std::string Base64(const Unit &U) {
 
 std::string DescribePC(const char *SymbolizedFMT, uintptr_t PC) {
   if (!EF->__sanitizer_symbolize_pc) return "<can not symbolize>";
-  char PcDescr[1024];
+  char PcDescr[1024] = {};
   EF->__sanitizer_symbolize_pc(reinterpret_cast<void*>(PC),
                                SymbolizedFMT, PcDescr, sizeof(PcDescr));
   PcDescr[sizeof(PcDescr) - 1] = 0;  // Just in case.
