@@ -3,7 +3,7 @@
 ; RUN: llc -march=amdgcn -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CIVI,CI %s
 
 ; GCN-LABEL: {{^}}v_mad_mix_f32_f16lo_f16lo_f16lo:
-; GFX9: v_mad_mix_f32 v0, v0, v1, v2 ; encoding: [0x00,0x40,0xa0,0xd3,0x00,0x03,0x0a,0x1c]
+; GFX9: v_mad_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,1] ; encoding: [0x00,0x40,0xa0,0xd3,0x00,0x03,0x0a,0x1c]
 ; VI: v_mac_f32
 ; CI: v_mad_f32
 define float @v_mad_mix_f32_f16lo_f16lo_f16lo(half %src0, half %src1, half %src2) #0 {
@@ -15,7 +15,7 @@ define float @v_mad_mix_f32_f16lo_f16lo_f16lo(half %src0, half %src1, half %src2
 }
 
 ; GCN-LABEL: {{^}}v_mad_mix_f32_f16hi_f16hi_f16hi_int:
-; GFX9: v_mad_mix_f32 v0, v0, v1, v2 op_sel:[1,1,1] ; encoding
+; GFX9: v_mad_mix_f32 v0, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] ; encoding
 ; CIVI: v_mac_f32
 define float @v_mad_mix_f32_f16hi_f16hi_f16hi_int(i32 %src0, i32 %src1, i32 %src2) #0 {
   %src0.hi = lshr i32 %src0, 16
@@ -35,7 +35,7 @@ define float @v_mad_mix_f32_f16hi_f16hi_f16hi_int(i32 %src0, i32 %src1, i32 %src
 }
 
 ; GCN-LABEL: {{^}}v_mad_mix_f32_f16hi_f16hi_f16hi_elt:
-; GFX9: v_mad_mix_f32 v0, v0, v1, v2 op_sel:[1,1,1] ; encoding
+; GFX9: v_mad_mix_f32 v0, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] ; encoding
 ; VI: v_mac_f32
 ; CI: v_mad_f32
 define float @v_mad_mix_f32_f16hi_f16hi_f16hi_elt(<2 x half> %src0, <2 x half> %src1, <2 x half> %src2) #0 {
@@ -51,8 +51,8 @@ define float @v_mad_mix_f32_f16hi_f16hi_f16hi_elt(<2 x half> %src0, <2 x half> %
 
 ; GCN-LABEL: {{^}}v_mad_mix_v2f32:
 ; GFX9: v_mov_b32_e32 v3, v1
-; GFX9-NEXT: v_mad_mix_f32 v1, v0, v3, v2 op_sel:[1,1,1]
-; GFX9-NEXT: v_mad_mix_f32 v0, v0, v3, v2
+; GFX9-NEXT: v_mad_mix_f32 v1, v0, v3, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GFX9-NEXT: v_mad_mix_f32 v0, v0, v3, v2 op_sel_hi:[1,1,1]
 
 ; CIVI: v_mac_f32
 define <2 x float> @v_mad_mix_v2f32(<2 x half> %src0, <2 x half> %src1, <2 x half> %src2) #0 {
@@ -66,8 +66,8 @@ define <2 x float> @v_mad_mix_v2f32(<2 x half> %src0, <2 x half> %src1, <2 x hal
 ; GCN-LABEL: {{^}}v_mad_mix_v2f32_shuffle:
 ; GCN: s_waitcnt
 ; GFX9-NEXT: v_mov_b32_e32 v3, v1
-; GFX9-NEXT: v_mad_mix_f32 v1, v0, v3, v2 op_sel:[0,1,1]
-; GFX9-NEXT: v_mad_mix_f32 v0, v0, v3, v2 op_sel:[1,0,1]
+; GFX9-NEXT: v_mad_mix_f32 v1, v0, v3, v2 op_sel:[0,1,1] op_sel_hi:[1,1,1]
+; GFX9-NEXT: v_mad_mix_f32 v0, v0, v3, v2 op_sel:[1,0,1] op_sel_hi:[1,1,1]
 ; GFX9-NEXT: s_setpc_b64
 
 ; CIVI: v_mac_f32
@@ -84,7 +84,7 @@ define <2 x float> @v_mad_mix_v2f32_shuffle(<2 x half> %src0, <2 x half> %src1, 
 
 ; GCN-LABEL: {{^}}v_mad_mix_f32_negf16lo_f16lo_f16lo:
 ; GFX9: s_waitcnt
-; GFX9-NEXT: v_mad_mix_f32 v0, -v0, v1, v2 ; encoding
+; GFX9-NEXT: v_mad_mix_f32 v0, -v0, v1, v2 op_sel_hi:[1,1,1] ; encoding
 ; GFX9-NEXT: s_setpc_b64
 
 ; CIVI: v_mad_f32
@@ -98,7 +98,7 @@ define float @v_mad_mix_f32_negf16lo_f16lo_f16lo(half %src0, half %src1, half %s
 }
 
 ; GCN-LABEL: {{^}}v_mad_mix_f32_absf16lo_f16lo_f16lo:
-; GFX9: v_mad_mix_f32 v0, |v0|, v1, v2
+; GFX9: v_mad_mix_f32 v0, |v0|, v1, v2 op_sel_hi:[1,1,1]
 
 ; CIVI: v_mad_f32
 define float @v_mad_mix_f32_absf16lo_f16lo_f16lo(half %src0, half %src1, half %src2) #0 {
@@ -112,7 +112,7 @@ define float @v_mad_mix_f32_absf16lo_f16lo_f16lo(half %src0, half %src1, half %s
 
 ; GCN-LABEL: {{^}}v_mad_mix_f32_negabsf16lo_f16lo_f16lo:
 ; GFX9: s_waitcnt
-; GFX9-NEXT: v_mad_mix_f32 v0, -|v0|, v1, v2
+; GFX9-NEXT: v_mad_mix_f32 v0, -|v0|, v1, v2 op_sel_hi:[1,1,1]
 ; GFX9-NEXT: s_setpc_b64
 
 ; CIVI: v_mad_f32
@@ -282,7 +282,7 @@ define <2 x float> @v_mad_mix_v2f32_f32imminv2pi(<2 x half> %src0, <2 x half> %s
 }
 
 ; GCN-LABEL: {{^}}v_mad_mix_clamp_f32_f16hi_f16hi_f16hi_elt:
-; GFX9: v_mad_mix_f32 v0, v0, v1, v2 op_sel:[1,1,1] clamp ; encoding
+; GFX9: v_mad_mix_f32 v0, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp ; encoding
 ; VI: v_mac_f32_e64 v{{[0-9]}}, v{{[0-9]}}, v{{[0-9]}} clamp{{$}}
 ; CI: v_mad_f32 v{{[0-9]}}, v{{[0-9]}}, v{{[0-9]}}, v{{[0-9]}} clamp{{$}}
 define float @v_mad_mix_clamp_f32_f16hi_f16hi_f16hi_elt(<2 x half> %src0, <2 x half> %src1, <2 x half> %src2) #0 {
@@ -375,7 +375,7 @@ define float @v_mad_mix_f32_f16lo_f16lo_f32_denormals_fmulfadd(half %src0, half 
 
 ; GCN-LABEL: {{^}}v_mad_mix_f32_f16lo_f16lo_f16lo_f32_flush_fmulfadd:
 ; GCN: s_waitcnt
-; GFX9-NEXT: v_mad_mix_f32 v0, v0, v1, v2 ; encoding
+; GFX9-NEXT: v_mad_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,1] ; encoding
 ; GFX9-NEXT: s_setpc_b64
 define float @v_mad_mix_f32_f16lo_f16lo_f16lo_f32_flush_fmulfadd(half %src0, half %src1, half %src2) #0 {
   %src0.ext = fpext half %src0 to float
@@ -400,7 +400,7 @@ define float @v_mad_mix_f32_f16lo_f16lo_f32_flush_fmulfadd(half %src0, half %src
 
 ; GCN-LABEL: {{^}}v_mad_mix_f32_negprecvtf16lo_f16lo_f16lo:
 ; GFX9: s_waitcnt
-; GFX9-NEXT: v_mad_mix_f32 v0, -v0, v1, v2 ; encoding
+; GFX9-NEXT: v_mad_mix_f32 v0, -v0, v1, v2 op_sel_hi:[1,1,1] ; encoding
 ; GFX9-NEXT: s_setpc_b64
 
 ; CIVI: v_mad_f32
@@ -433,7 +433,7 @@ define float @v_mad_mix_f32_precvtnegf16hi_abs_f16lo_f16lo(i32 %src0.arg, half %
 
 ; GCN-LABEL: {{^}}v_mad_mix_f32_precvtabsf16hi_f16lo_f16lo:
 ; GFX9: s_waitcnt
-; GFX9-NEXT: v_mad_mix_f32 v0, |v0|, v1, v2 op_sel:[1,0,0]
+; GFX9-NEXT: v_mad_mix_f32 v0, |v0|, v1, v2 op_sel:[1,0,0] op_sel_hi:[1,1,1]
 ; GFX9-NEXT: s_setpc_b64
 define float @v_mad_mix_f32_precvtabsf16hi_f16lo_f16lo(i32 %src0.arg, half %src1, half %src2) #0 {
   %src0.arg.bc = bitcast i32 %src0.arg to <2 x half>
@@ -448,7 +448,7 @@ define float @v_mad_mix_f32_precvtabsf16hi_f16lo_f16lo(i32 %src0.arg, half %src1
 
 ; GCN-LABEL: {{^}}v_mad_mix_f32_preextractfneg_f16hi_f16lo_f16lo:
 ; GFX9: s_waitcnt
-; GFX9-NEXT: v_mad_mix_f32 v0, -v0, v1, v2 op_sel:[1,0,0]
+; GFX9-NEXT: v_mad_mix_f32 v0, -v0, v1, v2 op_sel:[1,0,0] op_sel_hi:[1,1,1]
 ; GFX9-NEXT: s_setpc_b64
 define float @v_mad_mix_f32_preextractfneg_f16hi_f16lo_f16lo(i32 %src0.arg, half %src1, half %src2) #0 {
   %src0.arg.bc = bitcast i32 %src0.arg to <2 x half>
@@ -465,7 +465,7 @@ define float @v_mad_mix_f32_preextractfneg_f16hi_f16lo_f16lo(i32 %src0.arg, half
 ; GCN-LABEL: {{^}}v_mad_mix_f32_preextractfabs_f16hi_f16lo_f16lo:
 ; GFX9: s_waitcnt
 ; GFX9-NEXT: v_and_b32_e32 v0, 0x7fff0000, v0
-; GFX9-NEXT: v_mad_mix_f32 v0, v0, v1, v2 op_sel:[1,0,0]
+; GFX9-NEXT: v_mad_mix_f32 v0, v0, v1, v2 op_sel:[1,0,0] op_sel_hi:[1,1,1]
 ; GFX9-NEXT: s_setpc_b64
 define float @v_mad_mix_f32_preextractfabs_f16hi_f16lo_f16lo(i32 %src0.arg, half %src1, half %src2) #0 {
   %src0.arg.bc = bitcast i32 %src0.arg to <2 x half>
@@ -482,7 +482,7 @@ define float @v_mad_mix_f32_preextractfabs_f16hi_f16lo_f16lo(i32 %src0.arg, half
 ; GCN-LABEL: {{^}}v_mad_mix_f32_preextractfabsfneg_f16hi_f16lo_f16lo:
 ; GFX9: s_waitcnt
 ; GFX9-NEXT: v_and_b32_e32 v0, 0x7fff0000, v0
-; GFX9-NEXT: v_mad_mix_f32 v0, -v0, v1, v2 op_sel:[1,0,0]
+; GFX9-NEXT: v_mad_mix_f32 v0, -v0, v1, v2 op_sel:[1,0,0] op_sel_hi:[1,1,1]
 ; GFX9-NEXT: s_setpc_b64
 define float @v_mad_mix_f32_preextractfabsfneg_f16hi_f16lo_f16lo(i32 %src0.arg, half %src1, half %src2) #0 {
   %src0.arg.bc = bitcast i32 %src0.arg to <2 x half>

@@ -181,43 +181,7 @@ static bool createBundleDir(llvm::StringRef BundleBase) {
   return true;
 }
 
-static std::error_code getUniqueFile(const llvm::Twine &Model, int &ResultFD,
-                                     llvm::SmallVectorImpl<char> &ResultPath) {
-  // If in NoOutput mode, use the createUniqueFile variant that
-  // doesn't open the file but still generates a somewhat unique
-  // name. In the real usage scenario, we'll want to ensure that the
-  // file is trully unique, and creating it is the only way to achieve
-  // that.
-  if (NoOutput)
-    return llvm::sys::fs::createUniqueFile(Model, ResultPath);
-  return llvm::sys::fs::createUniqueFile(Model, ResultFD, ResultPath);
-}
-
-static std::string getOutputFileName(llvm::StringRef InputFile,
-                                     bool TempFile = false) {
-  if (TempFile) {
-    llvm::SmallString<128> TmpFile;
-    llvm::sys::path::system_temp_directory(true, TmpFile);
-    llvm::StringRef Basename =
-        OutputFileOpt.empty() ? InputFile : llvm::StringRef(OutputFileOpt);
-    llvm::sys::path::append(TmpFile, llvm::sys::path::filename(Basename));
-
-    int FD;
-    llvm::SmallString<128> UniqueFile;
-    if (auto EC = getUniqueFile(TmpFile + ".tmp%%%%%.dwarf", FD, UniqueFile)) {
-      llvm::errs() << "error: failed to create temporary outfile '"
-                   << TmpFile << "': " << EC.message() << '\n';
-      return "";
-    }
-    llvm::sys::RemoveFileOnSignal(UniqueFile);
-    if (!NoOutput) {
-      // Close the file immediately. We know it is unique. It will be
-      // reopened and written to later.
-      llvm::raw_fd_ostream CloseImmediately(FD, true /* shouldClose */, true);
-    }
-    return UniqueFile.str();
-  }
-
+static std::string getOutputFileName(llvm::StringRef InputFile) {
   if (FlatOut) {
     // If a flat dSYM has been requested, things are pretty simple.
     if (OutputFileOpt.empty()) {
@@ -250,21 +214,32 @@ static std::string getOutputFileName(llvm::StringRef InputFile,
   return BundleDir.str();
 }
 
-/// Exit the dsymutil process, cleaning up every temporary files that we
-/// created.
-static LLVM_ATTRIBUTE_NORETURN void exitDsymutil(int ExitStatus) {
-  // Cleanup temporary files.
-  llvm::sys::RunInterruptHandlers();
-  exit(ExitStatus);
+static Expected<sys::fs::TempFile> createTempFile() {
+  llvm::SmallString<128> TmpModel;
+  llvm::sys::path::system_temp_directory(true, TmpModel);
+  llvm::sys::path::append(TmpModel, "dsym.tmp%%%%%.dwarf");
+  return sys::fs::TempFile::create(TmpModel);
 }
+
+namespace {
+struct TempFileVector {
+  std::vector<sys::fs::TempFile> Files;
+  ~TempFileVector() {
+    for (sys::fs::TempFile &Tmp : Files) {
+      if (Error E = Tmp.discard())
+        errs() << toString(std::move(E));
+    }
+  }
+};
+} // namespace
 
 int main(int argc, char **argv) {
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
   llvm::PrettyStackTraceProgram StackPrinter(argc, argv);
   llvm::llvm_shutdown_obj Shutdown;
   LinkOptions Options;
-  void *MainAddr = (void *)(intptr_t)&exitDsymutil;
-  std::string SDKPath = llvm::sys::fs::getMainExecutable(argv[0], MainAddr);
+  void *P = (void *)(intptr_t)getOutputFileName;
+  std::string SDKPath = llvm::sys::fs::getMainExecutable(argv[0], P);
   SDKPath = llvm::sys::path::parent_path(SDKPath);
 
   HideUnrelatedOptions(DsymCategory);
@@ -310,14 +285,14 @@ int main(int argc, char **argv) {
     if (Arch != "*" && Arch != "all" &&
         !llvm::object::MachOObjectFile::isValidArch(Arch)) {
       llvm::errs() << "error: Unsupported cpu architecture: '" << Arch << "'\n";
-      exitDsymutil(1);
+      return 1;
     }
 
   for (auto &InputFile : InputFiles) {
     // Dump the symbol table for each input file and requested arch
     if (DumpStab) {
       if (!dumpStab(InputFile, ArchFlags, OsoPrependPath))
-        exitDsymutil(1);
+        return 1;
       continue;
     }
 
@@ -327,12 +302,12 @@ int main(int argc, char **argv) {
     if (auto EC = DebugMapPtrsOrErr.getError()) {
       llvm::errs() << "error: cannot parse the debug map for \"" << InputFile
                    << "\": " << EC.message() << '\n';
-      exitDsymutil(1);
+      return 1;
     }
 
     if (DebugMapPtrsOrErr->empty()) {
       llvm::errs() << "error: no architecture to link\n";
-      exitDsymutil(1);
+      return 1;
     }
 
     if (NumThreads == 0)
@@ -346,6 +321,7 @@ int main(int argc, char **argv) {
     // temporary files.
     bool NeedsTempFiles = !DumpDebugMap && (*DebugMapPtrsOrErr).size() != 1;
     llvm::SmallVector<MachOUtils::ArchAndFilename, 4> TempFiles;
+    TempFileVector TempFileStore;
     for (auto &Map : *DebugMapPtrsOrErr) {
       if (Verbose || DumpDebugMap)
         Map->print(llvm::outs());
@@ -358,19 +334,30 @@ int main(int argc, char **argv) {
                      << MachOUtils::getArchName(Map->getTriple().getArchName())
                      << ")\n";
 
-      std::string OutputFile = getOutputFileName(InputFile, NeedsTempFiles);
-
-      auto LinkLambda = [OutputFile, Options, &Map]() {
-        if (OutputFile.empty())
-          exitDsymutil(1);
+      std::string OutputFile = getOutputFileName(InputFile);
+      std::unique_ptr<raw_fd_ostream> OS;
+      if (NeedsTempFiles) {
+        Expected<sys::fs::TempFile> T = createTempFile();
+        if (!T) {
+          errs() << toString(T.takeError());
+          return 1;
+        }
+        OS = llvm::make_unique<raw_fd_ostream>(T->FD, /*shouldClose*/ false);
+        OutputFile = T->TmpName;
+        TempFileStore.Files.push_back(std::move(*T));
+      } else {
         std::error_code EC;
-        raw_fd_ostream OS(NoOutput ? "-" : OutputFile, EC, sys::fs::F_None);
+        OS = llvm::make_unique<raw_fd_ostream>(NoOutput ? "-" : OutputFile, EC,
+                                         sys::fs::F_None);
         if (EC) {
           errs() << OutputFile << ": " << EC.message();
-          exitDsymutil(1);
+          return 1;
         }
-        if (!linkDwarf(OS, *Map, Options))
-          exitDsymutil(1);
+      }
+
+      std::atomic_char AllOK(1);
+      auto LinkLambda = [&]() {
+        AllOK.fetch_and(linkDwarf(*OS, *Map, Options));
       };
 
       // FIXME: The DwarfLinker can have some very deep recursion that can max
@@ -383,6 +370,8 @@ int main(int argc, char **argv) {
         Threads.async(LinkLambda);
         Threads.wait();
       }
+      if (!AllOK)
+        return 1;
 
       if (NeedsTempFiles)
         TempFiles.emplace_back(Map->getTriple().getArchName().str(),
@@ -393,8 +382,8 @@ int main(int argc, char **argv) {
     if (NeedsTempFiles &&
         !MachOUtils::generateUniversalBinary(
             TempFiles, getOutputFileName(InputFile), Options, SDKPath))
-      exitDsymutil(1);
+      return 1;
   }
 
-  exitDsymutil(0);
+  return 0;
 }

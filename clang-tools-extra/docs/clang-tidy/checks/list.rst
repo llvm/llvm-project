@@ -17,6 +17,7 @@ Clang-Tidy Checks
    android-cloexec-open
    android-cloexec-socket
    boost-use-to-string
+   bugprone-copy-constructor-init
    bugprone-integer-division
    bugprone-suspicious-memset-usage
    bugprone-undefined-memory-manipulation

@@ -701,8 +701,18 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
     State.Stack.back().BreakBeforeParameter = false;
 
   if (!DryRun) {
+    unsigned MaxEmptyLinesToKeep = Style.MaxEmptyLinesToKeep + 1;
+    if (Current.is(tok::r_brace) && Current.MatchingParen &&
+        // Only strip trailing empty lines for l_braces that have children, i.e.
+        // for function expressions (lambdas, arrows, etc).
+        !Current.MatchingParen->Children.empty()) {
+      // lambdas and arrow functions are expressions, thus their r_brace is not
+      // on its own line, and thus not covered by UnwrappedLineFormatter's logic
+      // about removing empty lines on closing blocks. Special case them here.
+      MaxEmptyLinesToKeep = 1;
+    }
     unsigned Newlines = std::max(
-        1u, std::min(Current.NewlinesBefore, Style.MaxEmptyLinesToKeep + 1));
+        1u, std::min(Current.NewlinesBefore, MaxEmptyLinesToKeep));
     bool ContinuePPDirective =
         State.Line->InPPDirective && State.Line->Type != LT_ImportStatement;
     Whitespaces.replaceWhitespace(Current, Newlines, State.Column, State.Column,
