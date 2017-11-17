@@ -591,18 +591,16 @@ template <class ELFT> Symbol *ObjFile<ELFT>::createSymbol(const Elf_Sym *Sym) {
 
     StringRefZ Name = this->StringTable.data() + Sym->st_name;
     if (Sym->st_shndx == SHN_UNDEF)
-      return make<Undefined>(Name, /*IsLocal=*/true, StOther, Type);
+      return make<Undefined>(Name, Binding, StOther, Type);
 
-    return make<Defined>(Name, /*IsLocal=*/true, StOther, Type, Value, Size,
-                         Sec);
+    return make<Defined>(Name, Binding, StOther, Type, Value, Size, Sec);
   }
 
   StringRef Name = check(Sym->getName(this->StringTable), toString(this));
 
   switch (Sym->st_shndx) {
   case SHN_UNDEF:
-    return Symtab->addUndefined<ELFT>(Name, /*IsLocal=*/false, Binding, StOther,
-                                      Type,
+    return Symtab->addUndefined<ELFT>(Name, Binding, StOther, Type,
                                       /*CanOmitFromDynSym=*/false, this);
   case SHN_COMMON:
     if (Value == 0 || Value >= UINT32_MAX)
@@ -618,8 +616,7 @@ template <class ELFT> Symbol *ObjFile<ELFT>::createSymbol(const Elf_Sym *Sym) {
   case STB_WEAK:
   case STB_GNU_UNIQUE:
     if (Sec == &InputSection::Discarded)
-      return Symtab->addUndefined<ELFT>(Name, /*IsLocal=*/false, Binding,
-                                        StOther, Type,
+      return Symtab->addUndefined<ELFT>(Name, Binding, StOther, Type,
                                         /*CanOmitFromDynSym=*/false, this);
     return Symtab->addRegular<ELFT>(Name, StOther, Type, Value, Size, Binding,
                                     Sec, this);
@@ -907,12 +904,12 @@ static Symbol *createBitcodeSymbol(const std::vector<bool> &KeptComdats,
 
   int C = ObjSym.getComdatIndex();
   if (C != -1 && !KeptComdats[C])
-    return Symtab->addUndefined<ELFT>(NameRef, /*IsLocal=*/false, Binding,
-                                      Visibility, Type, CanOmitFromDynSym, F);
+    return Symtab->addUndefined<ELFT>(NameRef, Binding, Visibility, Type,
+                                      CanOmitFromDynSym, F);
 
   if (ObjSym.isUndefined())
-    return Symtab->addUndefined<ELFT>(NameRef, /*IsLocal=*/false, Binding,
-                                      Visibility, Type, CanOmitFromDynSym, F);
+    return Symtab->addUndefined<ELFT>(NameRef, Binding, Visibility, Type,
+                                      CanOmitFromDynSym, F);
 
   if (ObjSym.isCommon())
     return Symtab->addCommon(NameRef, ObjSym.getCommonSize(),
