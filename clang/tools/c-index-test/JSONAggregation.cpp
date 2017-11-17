@@ -9,6 +9,7 @@
 
 #include "JSONAggregation.h"
 #include "indexstore/IndexStoreCXX.h"
+#include "clang/Frontend/Utils.h"
 #include "clang/Index/IndexDataStoreSymbolUtils.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Allocator.h"
@@ -398,6 +399,7 @@ bool index::aggregateDataAsJSON(StringRef StorePath, raw_ostream &OS) {
   if (err)
     return true;
   aggregator->dumpJSON(OS);
+  BuryPointer(aggregator);
   return false;
 }
 
