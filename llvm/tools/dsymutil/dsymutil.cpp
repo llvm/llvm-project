@@ -341,12 +341,12 @@ int main(int argc, char **argv) {
           errs() << toString(T.takeError());
           return 1;
         }
-        OS = make_unique<raw_fd_ostream>(T->FD, /*shouldClose*/ false);
+        OS = llvm::make_unique<raw_fd_ostream>(T->FD, /*shouldClose*/ false);
         OutputFile = T->TmpName;
         TempFileStore.Files.push_back(std::move(*T));
       } else {
         std::error_code EC;
-        OS = make_unique<raw_fd_ostream>(NoOutput ? "-" : OutputFile, EC,
+        OS = llvm::make_unique<raw_fd_ostream>(NoOutput ? "-" : OutputFile, EC,
                                          sys::fs::F_None);
         if (EC) {
           errs() << OutputFile << ": " << EC.message();
