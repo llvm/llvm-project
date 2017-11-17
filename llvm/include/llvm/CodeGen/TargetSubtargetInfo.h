@@ -1,4 +1,4 @@
-//===- llvm/Target/TargetSubtargetInfo.h - Target Information ---*- C++ -*-===//
+//===- llvm/CodeGen/TargetSubtargetInfo.h - Target Information --*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TARGET_TARGETSUBTARGETINFO_H
-#define LLVM_TARGET_TARGETSUBTARGETINFO_H
+#ifndef LLVM_CODEGEN_TARGETSUBTARGETINFO_H
+#define LLVM_CODEGEN_TARGETSUBTARGETINFO_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
@@ -252,4 +252,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_TARGET_TARGETSUBTARGETINFO_H
+#endif // LLVM_CODEGEN_TARGETSUBTARGETINFO_H

@@ -18,7 +18,7 @@
 #include "Lanai.h"
 #include "LanaiRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
-#include "llvm/Target/TargetLowering.h"
+#include "llvm/CodeGen/TargetLowering.h"
 
 namespace llvm {
 namespace LanaiISD {

@@ -24,6 +24,7 @@ struct D : virtual C {
 D::D() {}  // Forces vftable emission.
 
 // CHECK-LABEL: define linkonce_odr x86_thiscallcc void @"\01?f@D@@$4PPPPPPPM@A@AEXXZ"
+// Note that the vtordisp is applied before really adjusting to D*.
 // CHECK: %[[ECX:.*]] = load %struct.D*, %struct.D** %{{.*}}
 // CHECK: %[[ECX_i8:.*]] = bitcast %struct.D* %[[ECX]] to i8*
 // CHECK: %[[VTORDISP_PTR_i8:.*]] = getelementptr inbounds i8, i8* %[[ECX_i8]], i32 -4

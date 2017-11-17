@@ -48,6 +48,10 @@
 #include <android/api-level.h>
 #endif
 
+#if SANITIZER_ANDROID && __ANDROID_API__ < 21
+#include <android/log.h>
+#endif
+
 #if !SANITIZER_ANDROID
 #include <elf.h>
 #include <unistd.h>
@@ -312,7 +316,7 @@ uptr ThreadSelf() {
 }
 #endif  // (x86_64 || i386 || MIPS) && SANITIZER_LINUX
 
-#if SANITIZER_FREEBSD
+#if SANITIZER_FREEBSD || SANITIZER_NETBSD
 static void **ThreadSelfSegbase() {
   void **segbase = 0;
 # if defined(__i386__)
@@ -322,7 +326,7 @@ static void **ThreadSelfSegbase() {
   // sysarch(AMD64_GET_FSBASE, segbase);
   __asm __volatile("movq %%fs:0, %0" : "=r" (segbase));
 # else
-#  error "unsupported CPU arch for FreeBSD platform"
+#  error "unsupported CPU arch"
 # endif
   return segbase;
 }
@@ -330,9 +334,7 @@ static void **ThreadSelfSegbase() {
 uptr ThreadSelf() {
   return (uptr)ThreadSelfSegbase()[2];
 }
-#elif SANITIZER_NETBSD
-uptr ThreadSelf() { return (uptr)pthread_self(); }
-#endif  // SANITIZER_NETBSD
+#endif  // SANITIZER_FREEBSD || SANITIZER_NETBSD
 
 #if !SANITIZER_GO
 static void GetTls(uptr *addr, uptr *size) {
@@ -350,7 +352,7 @@ static void GetTls(uptr *addr, uptr *size) {
   *addr = 0;
   *size = 0;
 # endif
-#elif SANITIZER_FREEBSD
+#elif SANITIZER_FREEBSD || SANITIZER_NETBSD
   void** segbase = ThreadSelfSegbase();
   *addr = 0;
   *size = 0;
@@ -363,7 +365,7 @@ static void GetTls(uptr *addr, uptr *size) {
     *addr = (uptr) dtv[2];
     *size = (*addr == 0) ? 0 : ((uptr) segbase[0] - (uptr) dtv[2]);
   }
-#elif SANITIZER_ANDROID || SANITIZER_NETBSD
+#elif SANITIZER_ANDROID
   *addr = 0;
   *size = 0;
 #else
@@ -534,9 +536,12 @@ uptr GetRSS() {
   return rss * GetPageSizeCached();
 }
 
+// 64-bit Android targets don't provide the deprecated __android_log_write.
+// Starting with the L release, syslog() works and is preferable to
+// __android_log_write.
 #if SANITIZER_LINUX
 
-# if SANITIZER_ANDROID
+#if SANITIZER_ANDROID
 static atomic_uint8_t android_log_initialized;
 
 void AndroidLogInit() {
@@ -547,53 +552,35 @@ void AndroidLogInit() {
 static bool ShouldLogAfterPrintf() {
   return atomic_load(&android_log_initialized, memory_order_acquire);
 }
-
-extern "C" SANITIZER_WEAK_ATTRIBUTE
-int async_safe_write_log(int pri, const char* tag, const char* msg);
-extern "C" SANITIZER_WEAK_ATTRIBUTE
-int __android_log_write(int prio, const char* tag, const char* msg);
-
-// ANDROID_LOG_INFO is 4, but can't be resolved at runtime.
-#define SANITIZER_ANDROID_LOG_INFO 4
-
-// async_safe_write_log is basically __android_log_write but is only available
-// in recent versions of Bionic. __android_log_write was deprecated along the
-// way, so fallback to syslog if neither exists. The non-syslog alternatives
-// do not allocate memory and are preferable. Also syslog is broken pre-L, this
-// is another reason why we prefer __android_log_write if available.
-void WriteOneLineToSyslog(const char *s) {
-  if (&async_safe_write_log) {
-    async_safe_write_log(SANITIZER_ANDROID_LOG_INFO, GetProcessName(), s);
-  } else if (&__android_log_write) {
-    __android_log_write(SANITIZER_ANDROID_LOG_INFO, nullptr, s);
-  } else {
-    syslog(LOG_INFO, "%s", s);
-  }
-}
-
-extern "C" SANITIZER_WEAK_ATTRIBUTE
-void android_set_abort_message(const char *);
-
-void SetAbortMessage(const char *str) {
-  if (&android_set_abort_message)
-    android_set_abort_message(str);
-}
-# else
+#else
 void AndroidLogInit() {}
 
 static bool ShouldLogAfterPrintf() { return true; }
+#endif  // SANITIZER_ANDROID
 
-void WriteOneLineToSyslog(const char *s) { syslog(LOG_INFO, "%s", s); }
-
-void SetAbortMessage(const char *str) {}
-# endif  // SANITIZER_ANDROID
+void WriteOneLineToSyslog(const char *s) {
+#if SANITIZER_ANDROID &&__ANDROID_API__ < 21
+  __android_log_write(ANDROID_LOG_INFO, NULL, s);
+#else
+  syslog(LOG_INFO, "%s", s);
+#endif
+}
 
 void LogMessageOnPrintf(const char *str) {
   if (common_flags()->log_to_syslog && ShouldLogAfterPrintf())
     WriteToSyslog(str);
 }
 
-#endif  // SANITIZER_LINUX
+#if SANITIZER_ANDROID
+extern "C" __attribute__((weak)) void android_set_abort_message(const char *);
+void SetAbortMessage(const char *str) {
+  if (&android_set_abort_message) android_set_abort_message(str);
+}
+#else
+void SetAbortMessage(const char *str) {}
+#endif
+
+#endif // SANITIZER_LINUX
 
 } // namespace __sanitizer
 

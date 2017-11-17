@@ -22,8 +22,8 @@
 #include "LanaiTargetMachine.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Target/TargetLowering.h"
 
 namespace llvm {
 class LanaiTTIImpl : public BasicTTIImplBase<LanaiTTIImpl> {

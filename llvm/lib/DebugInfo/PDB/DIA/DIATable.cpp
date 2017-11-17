@@ -58,4 +58,5 @@ PDB_TableType DIATable::getTableType() const {
     return PDB_TableType::InputAssemblyFiles;
   if (Name16 == DiaTable_Dbg)
     return PDB_TableType::Dbg;
+  return PDB_TableType::TableInvalid;
 }

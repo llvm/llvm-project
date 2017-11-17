@@ -74,6 +74,16 @@ bool BugDriver::writeProgramToFile(const std::string &Filename, int FD,
   return writeProgramToFileAux(Out, M);
 }
 
+bool BugDriver::writeProgramToFile(int FD, const Module *M) const {
+  raw_fd_ostream OS(FD, /*shouldClose*/ false);
+  WriteBitcodeToFile(M, OS, PreserveBitcodeUseListOrder);
+  OS.flush();
+  if (!OS.has_error())
+    return false;
+  OS.clear_error();
+  return true;
+}
+
 bool BugDriver::writeProgramToFile(const std::string &Filename,
                                    const Module *M) const {
   std::error_code EC;
@@ -117,11 +127,6 @@ cl::opt<bool> SilencePasses(
 static cl::list<std::string> OptArgs("opt-args", cl::Positional,
                                      cl::desc("<opt arguments>..."),
                                      cl::ZeroOrMore, cl::PositionalEatsArgs);
-
-struct DiscardTemp {
-  sys::fs::TempFile &File;
-  ~DiscardTemp() { consumeError(File.discard()); }
-};
 
 /// runPasses - Run the specified passes on Program, outputting a bitcode file
 /// and writing the filename into OutputFile if successful.  If the

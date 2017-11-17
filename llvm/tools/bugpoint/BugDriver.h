@@ -18,6 +18,7 @@
 
 #include "llvm/IR/ValueMap.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <memory>
 #include <string>
@@ -270,12 +271,18 @@ public:
   bool writeProgramToFile(const std::string &Filename, const Module *M) const;
   bool writeProgramToFile(const std::string &Filename, int FD,
                           const Module *M) const;
+  bool writeProgramToFile(int FD, const Module *M) const;
 
 private:
   /// initializeExecutionEnvironment - This method is used to set up the
   /// environment for executing LLVM programs.
   ///
   Error initializeExecutionEnvironment();
+};
+
+struct DiscardTemp {
+  sys::fs::TempFile &File;
+  ~DiscardTemp();
 };
 
 ///  Given a bitcode or assembly input filename, parse and return it, or return

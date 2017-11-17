@@ -1,7 +1,7 @@
 ; RUN: opt < %s -instcombine -S | FileCheck %s
 
-define double @pow_half(double %x) {
-; CHECK-LABEL: @pow_half(
+define double @pow_intrinsic_half_fast(double %x) {
+; CHECK-LABEL: @pow_intrinsic_half_fast(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call fast double @sqrt(double %x) #1
 ; CHECK-NEXT:    ret double [[SQRT]]
 ;
@@ -9,38 +9,60 @@ define double @pow_half(double %x) {
   ret double %pow
 }
 
-define double @pow_neghalf(double %x) {
-; CHECK-LABEL: @pow_neghalf(
-; CHECK-NEXT:    [[SQRT:%.*]] = call fast double @sqrt(double %x) #1
-; CHECK-NEXT:    [[SQRTRECIP:%.*]] = fdiv fast double 1.000000e+00, [[SQRT]]
-; CHECK-NEXT:    ret double [[SQRTRECIP]]
+define <2 x double> @pow_intrinsic_half_approx(<2 x double> %x) {
+; CHECK-LABEL: @pow_intrinsic_half_approx(
+; CHECK-NEXT:    [[POW:%.*]] = call afn <2 x double> @llvm.pow.v2f64(<2 x double> %x, <2 x double> <double 5.000000e-01, double 5.000000e-01>)
+; CHECK-NEXT:    ret <2 x double> [[POW]]
 ;
-  %pow = call fast double @llvm.pow.f64(double %x, double -5.000000e-01)
-  ret double %pow
+  %pow = call afn <2 x double> @llvm.pow.v2f64(<2 x double> %x, <2 x double> <double 5.0e-01, double 5.0e-01>)
+  ret <2 x double> %pow
 }
 
-define double @pow_half_approx(double %x) {
-; CHECK-LABEL: @pow_half_approx(
-; CHECK-NEXT:    [[SQRT:%.*]] = call double @sqrt(double %x) #1
+define double @pow_libcall_half_approx(double %x) {
+; CHECK-LABEL: @pow_libcall_half_approx(
+; CHECK-NEXT:    [[SQRT:%.*]] = call double @sqrt(double %x)
 ; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fabs.f64(double [[SQRT]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = fcmp oeq double %x, 0xFFF0000000000000
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], double 0x7FF0000000000000, double [[TMP1]]
 ; CHECK-NEXT:    ret double [[TMP3]]
 ;
-  %pow = call afn double @llvm.pow.f64(double %x, double 5.000000e-01)
+  %pow = call afn double @pow(double %x, double 5.0e-01)
   ret double %pow
 }
 
-define double @pow_neghalf_approx(double %x) {
-; CHECK-LABEL: @pow_neghalf_approx(
+define <2 x double> @pow_intrinsic_neghalf_fast(<2 x double> %x) {
+; CHECK-LABEL: @pow_intrinsic_neghalf_fast(
+; CHECK-NEXT:    [[POW:%.*]] = call fast <2 x double> @llvm.pow.v2f64(<2 x double> %x, <2 x double> <double -5.000000e-01, double -5.000000e-01>)
+; CHECK-NEXT:    ret <2 x double> [[POW]]
+;
+  %pow = call fast <2 x double> @llvm.pow.v2f64(<2 x double> %x, <2 x double> <double -5.0e-01, double -5.0e-01>)
+  ret <2 x double> %pow
+}
+
+define double @pow_intrinsic_neghalf_approx(double %x) {
+; CHECK-LABEL: @pow_intrinsic_neghalf_approx(
 ; CHECK-NEXT:    [[POW:%.*]] = call afn double @llvm.pow.f64(double %x, double -5.000000e-01)
 ; CHECK-NEXT:    ret double [[POW]]
 ;
-  %pow = call afn double @llvm.pow.f64(double %x, double -5.000000e-01)
+  %pow = call afn double @llvm.pow.f64(double %x, double -5.0e-01)
   ret double %pow
 }
 
+define float @pow_libcall_neghalf_fast(float %x) {
+; CHECK-LABEL: @pow_libcall_neghalf_fast(
+; CHECK-NEXT:    [[SQRTF:%.*]] = call fast float @sqrtf(float %x)
+; CHECK-NEXT:    [[SQRTRECIP:%.*]] = fdiv fast float 1.000000e+00, [[SQRTF]]
+; CHECK-NEXT:    ret float [[SQRTRECIP]]
+;
+  %pow = call fast float @powf(float %x, float -5.0e-01)
+  ret float %pow
+}
+
 declare double @llvm.pow.f64(double, double) #0
+declare <2 x double> @llvm.pow.v2f64(<2 x double>, <2 x double>) #0
+declare double @pow(double, double)
+declare float @powf(float, float)
 
 attributes #0 = { nounwind readnone speculatable }
 attributes #1 = { nounwind readnone }
+

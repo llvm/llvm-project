@@ -18,7 +18,7 @@
 #include "ARCISelLowering.h"
 #include "ARCInstrInfo.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include <string>
 
 #define GET_SUBTARGETINFO_HEADER

@@ -16,7 +16,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/Target/TargetCallingConv.h"
+#include "llvm/CodeGen/TargetCallingConv.h"
 
 namespace llvm {
 

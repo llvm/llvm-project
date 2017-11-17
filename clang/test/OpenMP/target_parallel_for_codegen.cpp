@@ -105,6 +105,7 @@ int foo(int n) {
   // CHECK:       [[END]]
   #pragma omp target parallel for
   for (int i = 3; i < 32; i += 5) {
+#pragma omp cancel for
   }
 
   // CHECK:       call void [[HVT1:@.+]](i[[SZ]] {{[^,]+}}, i{{32|64}}{{[*]*}} {{[^)]+}})
@@ -323,8 +324,9 @@ int foo(int n) {
 //
 //
 // CHECK:       define internal {{.*}}void [[OMP_OUTLINED]](i32* noalias %.global_tid., i32* noalias %.bound_tid.)
+// CHECK:       call i32 @__kmpc_cancel(%ident_t* @
 // CHECK:       ret void
-// CHECK-NEXT:  }
+// CHECK:       }
 
 
 // CHECK:       define internal void [[HVT1]](i[[SZ]] %{{.+}}, i{{32|64}}{{[*]*.*}} %{{.+}})

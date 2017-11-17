@@ -16,7 +16,7 @@
 #define LLVM_AVR_ISEL_LOWERING_H
 
 #include "llvm/CodeGen/CallingConvLower.h"
-#include "llvm/Target/TargetLowering.h"
+#include "llvm/CodeGen/TargetLowering.h"
 
 namespace llvm {
 

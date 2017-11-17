@@ -35,10 +35,10 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/Pass.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 #include <map>
 
 using namespace llvm;

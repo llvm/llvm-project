@@ -805,6 +805,22 @@ Error TempFile::keep(const Twine &Name) {
   return errorCodeToError(RenameEC);
 }
 
+Error TempFile::keep() {
+  assert(!Done);
+  Done = true;
+
+  sys::DontRemoveFileOnSignal(TmpName);
+  TmpName = "";
+
+  if (close(FD) == -1) {
+    std::error_code EC(errno, std::generic_category());
+    return errorCodeToError(EC);
+  }
+  FD = -1;
+
+  return Error::success();
+}
+
 Expected<TempFile> TempFile::create(const Twine &Model, unsigned Mode) {
   int FD;
   SmallString<128> ResultPath;
