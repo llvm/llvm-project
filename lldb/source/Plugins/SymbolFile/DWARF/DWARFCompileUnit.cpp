@@ -620,6 +620,10 @@ void DWARFCompileUnit::Index(NameToDIE &func_basenames,
                              NameToDIE &objc_class_selectors,
                              NameToDIE &globals, NameToDIE &types,
                              NameToDIE &namespaces) {
+  assert(!m_dwarf2Data->GetBaseCompileUnit() &&
+         "DWARFCompileUnit associated with .dwo or .dwp "
+         "should not be indexed directly");
+
   Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_LOOKUPS));
 
   if (log) {

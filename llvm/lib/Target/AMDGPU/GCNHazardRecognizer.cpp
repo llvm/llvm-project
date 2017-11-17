@@ -87,6 +87,18 @@ static bool isSMovRel(unsigned Opcode) {
   }
 }
 
+static bool isSendMsgTraceDataOrGDS(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case AMDGPU::S_SENDMSG:
+  case AMDGPU::S_SENDMSGHALT:
+  case AMDGPU::S_TTRACEDATA:
+    return true;
+  default:
+    // TODO: GDS
+    return false;
+  }
+}
+
 static unsigned getHWReg(const SIInstrInfo *TII, const MachineInstr &RegInstr) {
   const MachineOperand *RegOp = TII->getNamedOperand(RegInstr,
                                                      AMDGPU::OpName::simm16);
@@ -100,7 +112,10 @@ GCNHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
   if (SIInstrInfo::isSMRD(*MI) && checkSMRDHazards(MI) > 0)
     return NoopHazard;
 
-  if (SIInstrInfo::isVMEM(*MI) && checkVMEMHazards(MI) > 0)
+  // FIXME: Should flat be considered vmem?
+  if ((SIInstrInfo::isVMEM(*MI) ||
+       SIInstrInfo::isFLAT(*MI))
+      && checkVMEMHazards(MI) > 0)
     return NoopHazard;
 
   if (SIInstrInfo::isVALU(*MI) && checkVALUHazards(MI) > 0)
@@ -124,7 +139,12 @@ GCNHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
   if (isRFE(MI->getOpcode()) && checkRFEHazards(MI) > 0)
     return NoopHazard;
 
-  if ((TII.isVINTRP(*MI) || isSMovRel(MI->getOpcode())) &&
+  if (ST.hasReadM0MovRelInterpHazard() &&
+      (TII.isVINTRP(*MI) || isSMovRel(MI->getOpcode())) &&
+      checkReadM0Hazards(MI) > 0)
+    return NoopHazard;
+
+  if (ST.hasReadM0SendMsgHazard() && isSendMsgTraceDataOrGDS(*MI) &&
       checkReadM0Hazards(MI) > 0)
     return NoopHazard;
 
@@ -144,26 +164,20 @@ unsigned GCNHazardRecognizer::PreEmitNoops(MachineInstr *MI) {
   if (SIInstrInfo::isSMRD(*MI))
     return std::max(WaitStates, checkSMRDHazards(MI));
 
-  if (SIInstrInfo::isVALU(*MI)) {
-      WaitStates = std::max(WaitStates, checkVALUHazards(MI));
+  if (SIInstrInfo::isVALU(*MI))
+    WaitStates = std::max(WaitStates, checkVALUHazards(MI));
 
-    if (SIInstrInfo::isVMEM(*MI))
-      WaitStates = std::max(WaitStates, checkVMEMHazards(MI));
+  if (SIInstrInfo::isVMEM(*MI) || SIInstrInfo::isFLAT(*MI))
+    WaitStates = std::max(WaitStates, checkVMEMHazards(MI));
 
-    if (SIInstrInfo::isDPP(*MI))
-      WaitStates = std::max(WaitStates, checkDPPHazards(MI));
+  if (SIInstrInfo::isDPP(*MI))
+    WaitStates = std::max(WaitStates, checkDPPHazards(MI));
 
-    if (isDivFMas(MI->getOpcode()))
-      WaitStates = std::max(WaitStates, checkDivFMasHazards(MI));
+  if (isDivFMas(MI->getOpcode()))
+    WaitStates = std::max(WaitStates, checkDivFMasHazards(MI));
 
-    if (isRWLane(MI->getOpcode()))
-      WaitStates = std::max(WaitStates, checkRWLaneHazards(MI));
-
-    if (TII.isVINTRP(*MI))
-      WaitStates = std::max(WaitStates, checkReadM0Hazards(MI));
-
-    return WaitStates;
-  }
+  if (isRWLane(MI->getOpcode()))
+    WaitStates = std::max(WaitStates, checkRWLaneHazards(MI));
 
   if (isSGetReg(MI->getOpcode()))
     return std::max(WaitStates, checkGetRegHazards(MI));
@@ -174,7 +188,11 @@ unsigned GCNHazardRecognizer::PreEmitNoops(MachineInstr *MI) {
   if (isRFE(MI->getOpcode()))
     return std::max(WaitStates, checkRFEHazards(MI));
 
-  if (TII.isVINTRP(*MI) || isSMovRel(MI->getOpcode()))
+  if (ST.hasReadM0MovRelInterpHazard() && (TII.isVINTRP(*MI) ||
+                                           isSMovRel(MI->getOpcode())))
+    return std::max(WaitStates, checkReadM0Hazards(MI));
+
+  if (ST.hasReadM0SendMsgHazard() && isSendMsgTraceDataOrGDS(*MI))
     return std::max(WaitStates, checkReadM0Hazards(MI));
 
   return WaitStates;
@@ -282,11 +300,13 @@ void GCNHazardRecognizer::addClauseInst(const MachineInstr &MI) {
   addRegsToSet(TRI, MI.uses(), ClauseUses);
 }
 
-int GCNHazardRecognizer::checkSMEMSoftClauseHazards(MachineInstr *SMEM) {
+int GCNHazardRecognizer::checkSoftClauseHazards(MachineInstr *MEM) {
   // SMEM soft clause are only present on VI+, and only matter if xnack is
   // enabled.
   if (!ST.isXNACKEnabled())
     return 0;
+
+  bool IsSMRD = TII.isSMRD(*MEM);
 
   resetClause();
 
@@ -303,7 +323,10 @@ int GCNHazardRecognizer::checkSMEMSoftClauseHazards(MachineInstr *SMEM) {
   for (MachineInstr *MI : EmittedInstrs) {
     // When we hit a non-SMEM instruction then we have passed the start of the
     // clause and we can stop.
-    if (!MI || !SIInstrInfo::isSMRD(*MI))
+    if (!MI)
+      break;
+
+    if (IsSMRD != SIInstrInfo::isSMRD(*MI))
       break;
 
     addClauseInst(*MI);
@@ -312,13 +335,13 @@ int GCNHazardRecognizer::checkSMEMSoftClauseHazards(MachineInstr *SMEM) {
   if (ClauseDefs.none())
     return 0;
 
-  // FIXME: When we support stores, we need to make sure not to put loads and
-  // stores in the same clause if they use the same address.  For now, just
-  // start a new clause whenever we see a store.
-  if (SMEM->mayStore())
+  // We need to make sure not to put loads and stores in the same clause if they
+  // use the same address. For now, just start a new clause whenever we see a
+  // store.
+  if (MEM->mayStore())
     return 1;
 
-  addClauseInst(*SMEM);
+  addClauseInst(*MEM);
 
   // If the set of defs and uses intersect then we cannot add this instruction
   // to the clause, so we have a hazard.
@@ -329,7 +352,7 @@ int GCNHazardRecognizer::checkSMRDHazards(MachineInstr *SMRD) {
   const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
   int WaitStatesNeeded = 0;
 
-  WaitStatesNeeded = checkSMEMSoftClauseHazards(SMRD);
+  WaitStatesNeeded = checkSoftClauseHazards(SMRD);
 
   // This SMRD hazard only affects SI.
   if (ST.getGeneration() != SISubtarget::SOUTHERN_ISLANDS)
@@ -369,18 +392,15 @@ int GCNHazardRecognizer::checkSMRDHazards(MachineInstr *SMRD) {
 }
 
 int GCNHazardRecognizer::checkVMEMHazards(MachineInstr* VMEM) {
-  const SIInstrInfo *TII = ST.getInstrInfo();
-
   if (ST.getGeneration() < SISubtarget::VOLCANIC_ISLANDS)
     return 0;
 
-  const SIRegisterInfo &TRI = TII->getRegisterInfo();
+  int WaitStatesNeeded = checkSoftClauseHazards(VMEM);
 
   // A read of an SGPR by a VMEM instruction requires 5 wait states when the
   // SGPR was written by a VALU Instruction.
-  int VmemSgprWaitStates = 5;
-  int WaitStatesNeeded = 0;
-  auto IsHazardDefFn = [TII] (MachineInstr *MI) { return TII->isVALU(*MI); };
+  const int VmemSgprWaitStates = 5;
+  auto IsHazardDefFn = [this] (MachineInstr *MI) { return TII.isVALU(*MI); };
 
   for (const MachineOperand &Use : VMEM->uses()) {
     if (!Use.isReg() || TRI.isVGPR(MF.getRegInfo(), Use.getReg()))
@@ -598,11 +618,8 @@ int GCNHazardRecognizer::checkAnyInstHazards(MachineInstr *MI) {
 }
 
 int GCNHazardRecognizer::checkReadM0Hazards(MachineInstr *MI) {
-  if (!ST.hasReadM0Hazard())
-    return 0;
-
   const SIInstrInfo *TII = ST.getInstrInfo();
-  int SMovRelWaitStates = 1;
+  const int SMovRelWaitStates = 1;
   auto IsHazardFn = [TII] (MachineInstr *MI) {
     return TII->isSALU(*MI);
   };

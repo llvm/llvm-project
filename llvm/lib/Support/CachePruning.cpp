@@ -161,7 +161,7 @@ bool llvm::pruneCache(StringRef Path, CachePruningPolicy Policy) {
       return false;
     }
   } else {
-    if (Policy.Interval == seconds(0)) {
+    if (Policy.Interval != seconds(0)) {
       // Check whether the time stamp is older than our pruning interval.
       // If not, do nothing.
       const auto TimeStampModTime = FileStatus.getLastModificationTime();

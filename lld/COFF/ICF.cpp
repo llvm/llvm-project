@@ -73,12 +73,23 @@ uint32_t ICF::getHash(SectionChunk *C) {
 // 2017) says that /opt:icf folds both functions and read-only data.
 // Despite that, the MSVC linker folds only functions. We found
 // a few instances of programs that are not safe for data merging.
-// Therefore, we merge only functions just like the MSVC tool.
+// Therefore, we merge only functions just like the MSVC tool. However, we merge
+// identical .xdata sections, because the address of unwind information is
+// insignificant to the user program and the Visual C++ linker does this.
 bool ICF::isEligible(SectionChunk *C) {
+  // Non-comdat chunks, dead chunks, and writable chunks are not elegible.
+  bool Writable = C->getPermissions() & llvm::COFF::IMAGE_SCN_MEM_WRITE;
+  if (!C->isCOMDAT() || !C->isLive() || Writable)
+    return false;
+
+  // Code sections with external symbols are eligible.
   bool Global = C->Sym && C->Sym->isExternal();
   bool Executable = C->getPermissions() & llvm::COFF::IMAGE_SCN_MEM_EXECUTE;
-  bool Writable = C->getPermissions() & llvm::COFF::IMAGE_SCN_MEM_WRITE;
-  return C->isCOMDAT() && C->isLive() && Global && Executable && !Writable;
+  if (Global && Executable)
+    return true;
+
+  // .xdata unwind info sections are eligble.
+  return C->getSectionName().split('$').first == ".xdata";
 }
 
 // Split an equivalence class into smaller classes.

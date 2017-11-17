@@ -402,6 +402,37 @@ TEST(ClangToolTest, ArgumentAdjusters) {
   EXPECT_FALSE(Found);
 }
 
+// Check getClangStripDependencyFileAdjuster doesn't strip args after -MD/-MMD.
+TEST(ClangToolTest, StripDependencyFileAdjuster) {
+  FixedCompilationDatabase Compilations("/", {"-MD", "-c", "-MMD", "-w"});
+
+  ClangTool Tool(Compilations, std::vector<std::string>(1, "/a.cc"));
+  Tool.mapVirtualFile("/a.cc", "void a() {}");
+
+  std::unique_ptr<FrontendActionFactory> Action(
+      newFrontendActionFactory<SyntaxOnlyAction>());
+
+  CommandLineArguments FinalArgs;
+  ArgumentsAdjuster CheckFlagsAdjuster =
+    [&FinalArgs](const CommandLineArguments &Args, StringRef /*unused*/) {
+      FinalArgs = Args;
+      return Args;
+    };
+  Tool.clearArgumentsAdjusters();
+  Tool.appendArgumentsAdjuster(getClangStripDependencyFileAdjuster());
+  Tool.appendArgumentsAdjuster(CheckFlagsAdjuster);
+  Tool.run(Action.get());
+
+  auto HasFlag = [&FinalArgs](const std::string &Flag) {
+    return std::find(FinalArgs.begin(), FinalArgs.end(), Flag) !=
+           FinalArgs.end();
+  };
+  EXPECT_FALSE(HasFlag("-MD"));
+  EXPECT_FALSE(HasFlag("-MMD"));
+  EXPECT_TRUE(HasFlag("-c"));
+  EXPECT_TRUE(HasFlag("-w"));
+}
+
 namespace {
 /// Find a target name such that looking for it in TargetRegistry by that name
 /// returns the same target. We expect that there is at least one target

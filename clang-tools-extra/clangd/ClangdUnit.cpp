@@ -1245,7 +1245,9 @@ CppFile::deferRebuild(StringRef NewContents,
   // Don't let this CppFile die before rebuild is finished.
   std::shared_ptr<CppFile> That = shared_from_this();
   auto FinishRebuild = [OldPreamble, VFS, RequestRebuildCounter, PCHs,
-                        That](std::string NewContents)
+                        That](std::string NewContents) mutable // 'mutable' to
+                                                               // allow changing
+                                                               // OldPreamble.
       -> llvm::Optional<std::vector<DiagWithFixIts>> {
     // Only one execution of this method is possible at a time.
     // RebuildGuard will wait for any ongoing rebuilds to finish and will put us
@@ -1276,14 +1278,19 @@ CppFile::deferRebuild(StringRef NewContents,
         llvm::MemoryBuffer::getMemBufferCopy(NewContents, That->FileName);
 
     // A helper function to rebuild the preamble or reuse the existing one. Does
-    // not mutate any fields, only does the actual computation.
-    auto DoRebuildPreamble = [&]() -> std::shared_ptr<const PreambleData> {
+    // not mutate any fields of CppFile, only does the actual computation.
+    // Lamdba is marked mutable to call reset() on OldPreamble.
+    auto DoRebuildPreamble =
+        [&]() mutable -> std::shared_ptr<const PreambleData> {
       auto Bounds =
           ComputePreambleBounds(*CI->getLangOpts(), ContentsBuffer.get(), 0);
       if (OldPreamble && OldPreamble->Preamble.CanReuse(
                              *CI, ContentsBuffer.get(), Bounds, VFS.get())) {
         return OldPreamble;
       }
+      // We won't need the OldPreamble anymore, release it so it can be deleted
+      // (if there are no other references to it).
+      OldPreamble.reset();
 
       trace::Span Tracer(llvm::Twine("Preamble: ") + That->FileName);
       std::vector<DiagWithFixIts> PreambleDiags;

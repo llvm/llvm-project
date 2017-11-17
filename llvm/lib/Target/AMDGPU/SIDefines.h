@@ -82,7 +82,10 @@ enum : uint64_t {
 
   // Clamps hi component of register.
   // ClampLo and ClampHi set for packed clamp.
-  ClampHi = UINT64_C(1) << 48
+  ClampHi = UINT64_C(1) << 48,
+
+  // Is a packed VOP3P instruction.
+  IsPacked = UINT64_C(1) << 49
 };
 
 // v_cmp_class_* etc. use a 10-bit mask for what operation is checked.

@@ -280,8 +280,9 @@ computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
         // Skip inline assembly calls.
         if (CI && CI->isInlineAsm())
           continue;
-        assert(CalledValue && !isa<Constant>(CalledValue) &&
-               "Expected indirect call");
+        // Skip direct calls.
+        if (!CalledValue || isa<Constant>(CalledValue))
+          continue;
 
         uint32_t NumVals, NumCandidates;
         uint64_t TotalCount;

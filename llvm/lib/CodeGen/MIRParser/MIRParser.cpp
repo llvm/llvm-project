@@ -441,6 +441,7 @@ bool MIRParserImpl::parseRegisterInfo(PerFunctionMIParsingState &PFS,
 
     if (StringRef(VReg.Class.Value).equals("_")) {
       Info.Kind = VRegInfo::GENERIC;
+      Info.D.RegBank = nullptr;
     } else {
       const auto *RC = getRegClass(MF, VReg.Class.Value);
       if (RC) {
