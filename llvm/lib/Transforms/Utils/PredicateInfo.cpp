@@ -611,6 +611,11 @@ void PredicateInfo::renameUses(SmallPtrSetImpl<Value *> &OpSet) {
     }
 
     convertUsesToDFSOrdered(Op, OrderedUses);
+    // Here we require a stable sort because we do not bother to try to
+    // assign an order to the operands the uses represent. Thus, two
+    // uses in the same instruction do not have a strict sort order
+    // currently and will be considered equal. We could get rid of the
+    // stable sort by creating one if we wanted.
     std::stable_sort(OrderedUses.begin(), OrderedUses.end(), Compare);
     SmallVector<ValueDFS, 8> RenameStack;
     // For each use, sorted into dfs order, push values and replaces uses with

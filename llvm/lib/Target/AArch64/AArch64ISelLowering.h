@@ -18,9 +18,9 @@
 #include "AArch64.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/SelectionDAG.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Instruction.h"
-#include "llvm/Target/TargetLowering.h"
 
 namespace llvm {
 

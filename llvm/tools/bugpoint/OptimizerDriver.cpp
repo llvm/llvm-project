@@ -74,6 +74,16 @@ bool BugDriver::writeProgramToFile(const std::string &Filename, int FD,
   return writeProgramToFileAux(Out, M);
 }
 
+bool BugDriver::writeProgramToFile(int FD, const Module *M) const {
+  raw_fd_ostream OS(FD, /*shouldClose*/ false);
+  WriteBitcodeToFile(M, OS, PreserveBitcodeUseListOrder);
+  OS.flush();
+  if (!OS.has_error())
+    return false;
+  OS.clear_error();
+  return true;
+}
+
 bool BugDriver::writeProgramToFile(const std::string &Filename,
                                    const Module *M) const {
   std::error_code EC;

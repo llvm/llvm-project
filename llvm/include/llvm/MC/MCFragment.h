@@ -17,6 +17,7 @@
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/SMLoc.h"
 #include <cstdint>
 #include <utility>

@@ -16,6 +16,10 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/ObjectUtils.h"
 #include "llvm/Bitcode/BitcodeReader.h"
+#include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetLoweringObjectFile.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/LLVMContext.h"
@@ -40,10 +44,6 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/Target/TargetLowering.h"
-#include "llvm/Target/TargetLoweringObjectFile.h"
-#include "llvm/Target/TargetRegisterInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 #include "llvm/Transforms/Utils/GlobalStatus.h"
 #include <system_error>
 using namespace llvm;

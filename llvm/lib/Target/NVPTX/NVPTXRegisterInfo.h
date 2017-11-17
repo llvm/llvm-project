@@ -15,7 +15,7 @@
 #define LLVM_LIB_TARGET_NVPTX_NVPTXREGISTERINFO_H
 
 #include "ManagedStringPool.h"
-#include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include <sstream>
 
 #define GET_REGINFO_HEADER

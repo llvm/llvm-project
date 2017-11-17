@@ -17,8 +17,8 @@
 #include "X86RegisterInfo.h"
 #include "X86Subtarget.h"
 #include "llvm/CodeGen/SelectionDAG.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/DerivedTypes.h"
-#include "llvm/Target/TargetLowering.h"
 
 using namespace llvm;
 

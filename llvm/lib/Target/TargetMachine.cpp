@@ -14,6 +14,9 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetLoweringObjectFile.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
@@ -26,9 +29,6 @@
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/SectionKind.h"
-#include "llvm/Target/TargetLowering.h"
-#include "llvm/Target/TargetLoweringObjectFile.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 using namespace llvm;
 
 //---------------------------------------------------------------------------

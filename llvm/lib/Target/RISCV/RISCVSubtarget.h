@@ -18,9 +18,9 @@
 #include "RISCVISelLowering.h"
 #include "RISCVInstrInfo.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 
 #define GET_SUBTARGETINFO_HEADER
 #include "RISCVGenSubtargetInfo.inc"

@@ -16,9 +16,8 @@
 // CHECK-kernel-64-bits: || `[0x28{{0+}}, 0x3{{f+}}]` || HighShadow ||
 // CHECK-kernel-64-bits: || `[0x24{{0+}}, 0x27{{f+}}]` || ShadowGap  ||
 //
-// REQUIRES: i386-target-arch
+// REQUIRES: i386-target-arch, shadow-scale-3
 
 int main() {
   return 0;
 }
-

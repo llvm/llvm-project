@@ -59,6 +59,8 @@
 #include "llvm/CodeGen/PBQPRAConstraint.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
@@ -70,8 +72,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Printable.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetRegisterInfo.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>

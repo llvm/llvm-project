@@ -271,6 +271,7 @@ public:
   bool writeProgramToFile(const std::string &Filename, const Module *M) const;
   bool writeProgramToFile(const std::string &Filename, int FD,
                           const Module *M) const;
+  bool writeProgramToFile(int FD, const Module *M) const;
 
 private:
   /// initializeExecutionEnvironment - This method is used to set up the

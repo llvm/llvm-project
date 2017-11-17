@@ -20,13 +20,13 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/Support/LowLevelTypeImpl.h"
-#include "llvm/Target/TargetOpcodes.h"
-#include <cstdint>
 #include <cassert>
+#include <cstdint>
 #include <tuple>
-#include <utility>
 #include <unordered_map>
+#include <utility>
 
 namespace llvm {
 

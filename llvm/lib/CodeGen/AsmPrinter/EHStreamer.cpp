@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/TargetLoweringObjectFile.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -29,7 +30,6 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Target/TargetLoweringObjectFile.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>

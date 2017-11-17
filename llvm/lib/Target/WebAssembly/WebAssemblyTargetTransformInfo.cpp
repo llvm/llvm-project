@@ -14,8 +14,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyTargetTransformInfo.h"
+#include "llvm/CodeGen/CostTable.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Target/CostTable.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "wasmtti"
