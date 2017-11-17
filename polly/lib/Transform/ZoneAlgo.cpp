@@ -154,6 +154,7 @@
 #include "polly/Support/GICHelper.h"
 #include "polly/Support/ISLTools.h"
 #include "polly/Support/VirtualInstruction.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/ADT/Statistic.h"
 
 #define DEBUG_TYPE "polly-zone"

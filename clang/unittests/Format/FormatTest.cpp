@@ -8002,9 +8002,9 @@ TEST_F(FormatTest, BreakStringLiteralsBeforeUnbreakableTokenSequence) {
             "    \"f\");",
             format("someFunction1234567890(\"aaabbbcccdddeeefff\");",
                    getLLVMStyleWithColumns(24)));
-  EXPECT_EQ("someFunction(\"aaabbbcc \"\n"
-            "             \"ddde \"\n"
-            "             \"efff\");",
+  EXPECT_EQ("someFunction(\n"
+            "    \"aaabbbcc ddde \"\n"
+            "    \"efff\");",
             format("someFunction(\"aaabbbcc ddde efff\");",
                    getLLVMStyleWithColumns(25)));
   EXPECT_EQ("someFunction(\"aaabbbccc \"\n"
@@ -8023,10 +8023,9 @@ TEST_F(FormatTest, BreakStringLiteralsBeforeUnbreakableTokenSequence) {
             "  int i;",
             format("#define A string s = \"1234567890\"; int i;",
                    getLLVMStyleWithColumns(20)));
-  // FIXME: Put additional penalties on breaking at non-whitespace locations.
-  EXPECT_EQ("someFunction(\"aaabbbcc \"\n"
-            "             \"dddeeeff\"\n"
-            "             \"f\");",
+  EXPECT_EQ("someFunction(\n"
+            "    \"aaabbbcc \"\n"
+            "    \"dddeeefff\");",
             format("someFunction(\"aaabbbcc dddeeefff\");",
                    getLLVMStyleWithColumns(25)));
 }
@@ -9893,6 +9892,108 @@ TEST_F(FormatTest, UnderstandPragmaOption) {
   verifyFormat("#pragma option -C -A");
 
   EXPECT_EQ("#pragma option -C -A", format("#pragma    option   -C   -A"));
+}
+
+TEST_F(FormatTest, OptimizeBreakPenaltyVsExcess) {
+  FormatStyle Style = getLLVMStyle();
+  Style.ColumnLimit = 20;
+
+  verifyFormat("int a; // the\n"
+               "       // comment", Style);
+  EXPECT_EQ("int a; /* first line\n"
+            "        * second\n"
+            "        * line third\n"
+            "        * line\n"
+            "        */",
+            format("int a; /* first line\n"
+                   "        * second\n"
+                   "        * line third\n"
+                   "        * line\n"
+                   "        */",
+                   Style));
+  EXPECT_EQ("int a; // first line\n"
+            "       // second\n"
+            "       // line third\n"
+            "       // line",
+            format("int a; // first line\n"
+                   "       // second line\n"
+                   "       // third line",
+                   Style));
+
+  Style.PenaltyExcessCharacter = 90;
+  verifyFormat("int a; // the comment", Style);
+  EXPECT_EQ("int a; // the\n"
+            "       // comment aa",
+            format("int a; // the comment aa", Style));
+  EXPECT_EQ("int a; // first line\n"
+            "       // second line\n"
+            "       // third line",
+            format("int a; // first line\n"
+                   "       // second line\n"
+                   "       // third line",
+                   Style));
+  EXPECT_EQ("int a; /* first line\n"
+            "        * second line\n"
+            "        * third line\n"
+            "        */",
+            format("int a; /* first line\n"
+                   "        * second line\n"
+                   "        * third line\n"
+                   "        */",
+                   Style));
+  // FIXME: Investigate why this is not getting the same layout as the test
+  // above.
+  EXPECT_EQ("int a; /* first line\n"
+            "        * second\n"
+            "        * line third\n"
+            "        * line\n"
+            "        */",
+            format("int a; /* first line second line third line"
+                   "\n*/",
+                   Style));
+
+  EXPECT_EQ("// foo bar baz bazfoo\n"
+            "// foo bar\n",
+            format("// foo bar baz bazfoo\n"
+                   "// foo            bar\n",
+                   Style));
+  EXPECT_EQ("// foo bar baz bazfoo\n"
+            "// foo bar\n",
+            format("// foo bar baz      bazfoo\n"
+                   "// foo            bar\n",
+                   Style));
+
+  // FIXME: Optimally, we'd keep bazfoo on the first line and reflow bar to the
+  // next one.
+  EXPECT_EQ("// foo bar baz\n"
+            "// bazfoo bar foo\n"
+            "// bar\n",
+            format("// foo bar baz      bazfoo bar\n"
+                   "// foo            bar\n",
+                   Style));
+
+  EXPECT_EQ("// foo bar baz bazfoo\n"
+            "// foo bar baz\n"
+            "// bazfoo bar foo\n"
+            "// bar\n",
+            format("// foo bar baz      bazfoo\n"
+                   "// foo bar baz      bazfoo bar\n"
+                   "// foo bar\n",
+                   Style));
+
+  // FIXME: Optimally, we'd keep 'bar' in the last line at the end of the line,
+  // as it does not actually protrude far enough to make breaking pay off.
+  // Unfortunately, due to how reflowing is currently implemented, we already
+  // check the column limit after the reflowing decision and extend the reflow
+  // range, so we will not take whitespace compression into account.
+  EXPECT_EQ("// foo bar baz bazfoo\n"
+            "// foo bar baz\n"
+            "// bazfoo bar foo\n"
+            "// bar\n",
+            format("// foo bar baz      bazfoo\n"
+                   "// foo bar baz      bazfoo bar\n"
+                   "// foo           bar\n",
+                   Style));
 }
 
 #define EXPECT_ALL_STYLES_EQUAL(Styles)                                        \

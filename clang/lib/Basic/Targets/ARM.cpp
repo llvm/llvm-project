@@ -1002,6 +1002,7 @@ void MinGWARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   DefineStd(Builder, "WIN32", Opts);
   DefineStd(Builder, "WINNT", Opts);
   Builder.defineMacro("_ARM_");
+  Builder.defineMacro("__ARM_DWARF_EH__");
   addMinGWDefines(Opts, Builder);
 }
 

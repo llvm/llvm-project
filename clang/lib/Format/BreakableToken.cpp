@@ -605,9 +605,9 @@ unsigned BreakableBlockComment::getLineLengthAfterSplitBefore(
   }
 }
 
-bool BreakableBlockComment::introducesBreakBefore(unsigned LineIndex) const {
+bool BreakableBlockComment::introducesBreakBeforeToken() const {
   // A break is introduced when we want delimiters on newline.
-  return LineIndex == 0 && DelimitersOnNewline &&
+  return DelimitersOnNewline &&
          Lines[0].substr(1).find_first_not_of(Blanks) != StringRef::npos;
 }
 

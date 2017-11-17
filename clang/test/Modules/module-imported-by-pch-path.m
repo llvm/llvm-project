@@ -12,6 +12,6 @@ void test() {
   (void)MyModuleVersion; // should be found by implicit import
 }
 
-// CHECK: module 'MyModule' in AST file '{{.*MyModule.*pcm}}' (imported by AST file '[[PCH:.*header.pch]]') is not defined in any loaded module map file; maybe you need to load '[[PATH:.*folder-with-modulemap]]/module.modulemap'
+// CHECK: module 'MyModule' in AST file '{{.*MyModule.*pcm}}' (imported by AST file '[[PCH:.*header.pch]]') is not defined in any loaded module map file; maybe you need to load '[[PATH:.*folder-with-modulemap]]
 // CHECK: consider adding '[[PATH]]' to the header search path
 // CHECK: imported by '[[PCH]]'
