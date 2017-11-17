@@ -137,9 +137,9 @@ public:
     return Split(StringRef::npos, 0);
   }
 
-  /// \brief Returns if a break before the content at \p LineIndex will be
-  /// inserted after the whitespace preceding the content has been reformatted.
-  virtual bool introducesBreakBefore(unsigned LineIndex) const {
+  /// \brief Returns whether there will be a line break at the start of the
+  /// token.
+  virtual bool introducesBreakBeforeToken() const {
     return false;
   }
 
@@ -347,7 +347,7 @@ public:
   Split getSplitBefore(unsigned LineIndex, unsigned PreviousEndColumn,
                        unsigned ColumnLimit,
                        llvm::Regex &CommentPragmasRegex) const override;
-  bool introducesBreakBefore(unsigned LineIndex) const override;
+  bool introducesBreakBeforeToken() const override;
   unsigned getLineLengthAfterSplitBefore(unsigned LineIndex,
                                          unsigned TailOffset,
                                          unsigned PreviousEndColumn,

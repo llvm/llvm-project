@@ -7027,16 +7027,31 @@ SDDbgValue *SelectionDAG::getFrameIndexDbgValue(DIVariable *Var,
 }
 
 void SelectionDAG::transferDbgValues(SDValue From, SDValue To,
-                                     unsigned OffsetInBits,
-                                     unsigned SizeInBits) {
+                                     unsigned OffsetInBits, unsigned SizeInBits,
+                                     bool InvalidateDbg) {
   SDNode *FromNode = From.getNode();
   SDNode *ToNode = To.getNode();
-  assert(FromNode != ToNode);
+  assert(FromNode && ToNode && "Can't modify dbg values");
+
+  // PR35338
+  // TODO: assert(From != To && "Redundant dbg value transfer");
+  // TODO: assert(FromNode != ToNode && "Intranode dbg value transfer");
+  if (From == To || FromNode == ToNode)
+    return;
+
+  if (!FromNode->getHasDebugValue())
+    return;
 
   SmallVector<SDDbgValue *, 2> ClonedDVs;
   for (SDDbgValue *Dbg : GetDbgValues(FromNode)) {
-    if (Dbg->getKind() != SDDbgValue::SDNODE)
-      break;
+    if (Dbg->getKind() != SDDbgValue::SDNODE || Dbg->isInvalidated())
+      continue;
+
+    // TODO: assert(!Dbg->isInvalidated() && "Transfer of invalid dbg value");
+
+    // Just transfer the dbg value attached to From.
+    if (Dbg->getResNo() != From.getResNo())
+      continue;
 
     DIVariable *Var = Dbg->getVariable();
     auto *Expr = Dbg->getExpression();
@@ -7059,7 +7074,9 @@ void SelectionDAG::transferDbgValues(SDValue From, SDValue To,
         getDbgValue(Var, Expr, ToNode, To.getResNo(), Dbg->isIndirect(),
                     Dbg->getDebugLoc(), Dbg->getOrder());
     ClonedDVs.push_back(Clone);
-    Dbg->setIsInvalidated();
+
+    if (InvalidateDbg)
+      Dbg->setIsInvalidated();
   }
 
   for (SDDbgValue *Dbg : ClonedDVs)
@@ -7137,7 +7154,7 @@ void SelectionDAG::ReplaceAllUsesWith(SDValue FromN, SDValue To) {
   assert(From != To.getNode() && "Cannot replace uses of with self");
 
   // Preserve Debug Values
-  TransferDbgValues(FromN, To);
+  transferDbgValues(FromN, To);
 
   // Iterate over all the existing uses of From. New uses will be added
   // to the beginning of the use list, which we avoid visiting.
@@ -7196,7 +7213,7 @@ void SelectionDAG::ReplaceAllUsesWith(SDNode *From, SDNode *To) {
   for (unsigned i = 0, e = From->getNumValues(); i != e; ++i)
     if (From->hasAnyUseOfValue(i)) {
       assert((i < To->getNumValues()) && "Invalid To location");
-      TransferDbgValues(SDValue(From, i), SDValue(To, i));
+      transferDbgValues(SDValue(From, i), SDValue(To, i));
     }
 
   // Iterate over just the existing users of From. See the comments in
@@ -7240,7 +7257,7 @@ void SelectionDAG::ReplaceAllUsesWith(SDNode *From, const SDValue *To) {
 
   // Preserve Debug Info.
   for (unsigned i = 0, e = From->getNumValues(); i != e; ++i)
-    TransferDbgValues(SDValue(From, i), *To);
+    transferDbgValues(SDValue(From, i), *To);
 
   // Iterate over just the existing users of From. See the comments in
   // the ReplaceAllUsesWith above.
@@ -7287,7 +7304,7 @@ void SelectionDAG::ReplaceAllUsesOfValueWith(SDValue From, SDValue To){
   }
 
   // Preserve Debug Info.
-  TransferDbgValues(From, To);
+  transferDbgValues(From, To);
 
   // Iterate over just the existing users of From. See the comments in
   // the ReplaceAllUsesWith above.
@@ -7365,7 +7382,7 @@ void SelectionDAG::ReplaceAllUsesOfValuesWith(const SDValue *From,
   if (Num == 1)
     return ReplaceAllUsesOfValueWith(*From, *To);
 
-  TransferDbgValues(*From, *To);
+  transferDbgValues(*From, *To);
 
   // Read up all the uses and make records of them. This helps
   // processing new uses that are introduced during the
@@ -7512,31 +7529,6 @@ void SelectionDAG::AddDbgValue(SDDbgValue *DB, SDNode *SD, bool isParameter) {
     SD->setHasDebugValue(true);
   }
   DbgInfo->add(DB, SD, isParameter);
-}
-
-/// Transfer SDDbgValues. Called in replace nodes.
-void SelectionDAG::TransferDbgValues(SDValue From, SDValue To) {
-  if (From == To || !From.getNode()->getHasDebugValue())
-    return;
-  SDNode *FromNode = From.getNode();
-  SDNode *ToNode = To.getNode();
-  SmallVector<SDDbgValue *, 2> ClonedDVs;
-  for (auto *Dbg : GetDbgValues(FromNode)) {
-    // Only add Dbgvalues attached to same ResNo.
-    if (Dbg->getKind() == SDDbgValue::SDNODE &&
-        Dbg->getSDNode() == From.getNode() &&
-        Dbg->getResNo() == From.getResNo() && !Dbg->isInvalidated()) {
-      assert(FromNode != ToNode &&
-             "Should not transfer Debug Values intranode");
-      SDDbgValue *Clone = getDbgValue(Dbg->getVariable(), Dbg->getExpression(),
-                                      ToNode, To.getResNo(), Dbg->isIndirect(),
-                                      Dbg->getDebugLoc(), Dbg->getOrder());
-      ClonedDVs.push_back(Clone);
-      Dbg->setIsInvalidated();
-    }
-  }
-  for (SDDbgValue *I : ClonedDVs)
-    AddDbgValue(I, ToNode, false);
 }
 
 SDValue SelectionDAG::makeEquivalentMemoryOrdering(LoadSDNode *OldLoad,

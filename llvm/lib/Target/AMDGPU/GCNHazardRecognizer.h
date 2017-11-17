@@ -14,6 +14,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPUHAZARDRECOGNIZERS_H
 #define LLVM_LIB_TARGET_AMDGPUHAZARDRECOGNIZERS_H
 
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/ScheduleHazardRecognizer.h"
 #include <list>
@@ -24,6 +25,7 @@ class MachineFunction;
 class MachineInstr;
 class ScheduleDAG;
 class SIInstrInfo;
+class SIRegisterInfo;
 class SISubtarget;
 
 class GCNHazardRecognizer final : public ScheduleHazardRecognizer {
@@ -35,6 +37,20 @@ class GCNHazardRecognizer final : public ScheduleHazardRecognizer {
   const MachineFunction &MF;
   const SISubtarget &ST;
   const SIInstrInfo &TII;
+  const SIRegisterInfo &TRI;
+
+  /// RegUnits of uses in the current soft memory clause.
+  BitVector ClauseUses;
+
+  /// RegUnits of defs in the current soft memory clause.
+  BitVector ClauseDefs;
+
+  void resetClause() {
+    ClauseUses.reset();
+    ClauseDefs.reset();
+  }
+
+  void addClauseInst(const MachineInstr &MI);
 
   int getWaitStatesSince(function_ref<bool(MachineInstr *)> IsHazard);
   int getWaitStatesSinceDef(unsigned Reg,
