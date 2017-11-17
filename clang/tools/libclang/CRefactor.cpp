@@ -903,6 +903,8 @@ public:
               std::string(clang_getCString(
                   FileReplacements[I - NumRemoved - 1].ReplacementString)) +
               RefReplacement.ReplacementString;
+          clang_disposeString(
+              FileReplacements[I - NumRemoved - 1].ReplacementString);
           FileReplacements[I - NumRemoved - 1].ReplacementString =
               cxstring::createDup(Replacement);
           NumRemoved++;
@@ -962,6 +964,8 @@ public:
                 std::string(clang_getCString(
                     FileReplacements[I - NumRemoved - 1].ReplacementString)) +
                 RefReplacement.ReplacementString;
+            clang_disposeString(
+                FileReplacements[I - NumRemoved - 1].ReplacementString);
             FileReplacements[I - NumRemoved - 1].ReplacementString =
                 cxstring::createDup(Replacement);
             NumRemoved++;
