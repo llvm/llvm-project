@@ -410,6 +410,8 @@ public:
       switch(ConstraintCode[0]) {
       default:
         break;
+      case 'o':
+        return InlineAsm::Constraint_o;
       case 'Q':
         return InlineAsm::Constraint_Q;
       case 'R':
