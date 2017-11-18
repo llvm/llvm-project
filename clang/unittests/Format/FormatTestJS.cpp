@@ -1606,6 +1606,17 @@ TEST_F(FormatTestJS, TypeInterfaceLineWrapping) {
       Style);
 }
 
+TEST_F(FormatTestJS, RemoveEmptyLinesInArrowFunctions) {
+  verifyFormat("x = () => {\n"
+               "  foo();\n"
+               "};\n",
+               "x = () => {\n"
+               "\n"
+               "  foo();\n"
+               "\n"
+               "};\n");
+}
+
 TEST_F(FormatTestJS, Modules) {
   verifyFormat("import SomeThing from 'some/module.js';");
   verifyFormat("import {X, Y} from 'some/module.js';");

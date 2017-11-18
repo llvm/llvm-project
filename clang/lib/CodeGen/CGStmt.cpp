@@ -2268,7 +2268,6 @@ CodeGenFunction::GenerateCapturedStmtFunction(const CapturedStmt &S) {
   Args.append(CD->param_begin(), CD->param_end());
 
   // Create the function declaration.
-  FunctionType::ExtInfo ExtInfo;
   const CGFunctionInfo &FuncInfo =
     CGM.getTypes().arrangeBuiltinFunctionDeclaration(Ctx.VoidTy, Args);
   llvm::FunctionType *FuncLLVMTy = CGM.getTypes().GetFunctionType(FuncInfo);

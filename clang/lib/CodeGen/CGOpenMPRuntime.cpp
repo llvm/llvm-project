@@ -3923,7 +3923,6 @@ static llvm::Value *emitDestructorsFunction(CodeGenModule &CGM,
                                 ImplicitParamDecl::Other);
   Args.push_back(&GtidArg);
   Args.push_back(&TaskTypeArg);
-  FunctionType::ExtInfo Info;
   auto &DestructorFnInfo =
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(KmpInt32Ty, Args);
   auto *DestructorFnTy = CGM.getTypes().GetFunctionType(DestructorFnInfo);
@@ -7130,6 +7129,10 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
     case Stmt::OMPTargetParallelForSimdDirectiveClass:
       CodeGenFunction::EmitOMPTargetParallelForSimdDeviceFunction(
           CGM, ParentName, cast<OMPTargetParallelForSimdDirective>(*S));
+      break;
+    case Stmt::OMPTargetSimdDirectiveClass:
+      CodeGenFunction::EmitOMPTargetSimdDeviceFunction(
+          CGM, ParentName, cast<OMPTargetSimdDirective>(*S));
       break;
     default:
       llvm_unreachable("Unknown target directive for OpenMP device codegen.");

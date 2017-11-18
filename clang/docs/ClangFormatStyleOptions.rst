@@ -994,9 +994,9 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-    Constructor()
-        : initializer1(),
-          initializer2()
+      Constructor()
+          : initializer1(),
+            initializer2()
 
   * ``BCIS_BeforeComma`` (in configuration: ``BeforeComma``)
     Break constructor initializers before the colon and commas, and align
@@ -1004,18 +1004,18 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-    Constructor()
-        : initializer1()
-        , initializer2()
+      Constructor()
+          : initializer1()
+          , initializer2()
 
   * ``BCIS_AfterColon`` (in configuration: ``AfterColon``)
     Break constructor initializers after the colon and commas.
 
     .. code-block:: c++
 
-    Constructor() :
-        initializer1(),
-        initializer2()
+      Constructor() :
+          initializer1(),
+          initializer2()
 
 
 

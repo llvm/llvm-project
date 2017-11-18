@@ -11652,9 +11652,15 @@ void Sema::checkRetainCycles(ObjCMessageExpr *msg) {
   }
 
   // Check whether the receiver is captured by any of the arguments.
-  for (unsigned i = 0, e = msg->getNumArgs(); i != e; ++i)
-    if (Expr *capturer = findCapturingExpr(*this, msg->getArg(i), owner))
+  const ObjCMethodDecl *MD = msg->getMethodDecl();
+  for (unsigned i = 0, e = msg->getNumArgs(); i != e; ++i) {
+    if (Expr *capturer = findCapturingExpr(*this, msg->getArg(i), owner)) {
+      // noescape blocks should not be retained by the method.
+      if (MD && MD->parameters()[i]->hasAttr<NoEscapeAttr>())
+        continue;
       return diagnoseRetainCycle(*this, capturer, owner);
+    }
+  }
 }
 
 /// Check a property assign to see if it's likely to cause a retain cycle.
@@ -11815,7 +11821,7 @@ static bool ShouldDiagnoseEmptyStmtBody(const SourceManager &SourceMgr,
 
   // Get line numbers of statement and body.
   bool StmtLineInvalid;
-  unsigned StmtLine = SourceMgr.getPresumedLineNumber(StmtLoc,
+  unsigned StmtLine = SourceMgr.getSpellingLineNumber(StmtLoc,
                                                       &StmtLineInvalid);
   if (StmtLineInvalid)
     return false;
