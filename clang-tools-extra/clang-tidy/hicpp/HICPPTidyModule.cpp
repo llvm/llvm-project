@@ -35,6 +35,7 @@
 #include "../readability/FunctionSizeCheck.h"
 #include "../readability/IdentifierNamingCheck.h"
 #include "ExceptionBaseclassCheck.h"
+#include "MultiwayPathsCoveredCheck.h"
 #include "NoAssemblerCheck.h"
 #include "SignedBitwiseCheck.h"
 
@@ -53,6 +54,8 @@ public:
         "hicpp-exception-baseclass");
     CheckFactories.registerCheck<SignedBitwiseCheck>(
         "hicpp-signed-bitwise");
+    CheckFactories.registerCheck<MultiwayPathsCoveredCheck>(
+        "hicpp-multiway-paths-covered");
     CheckFactories.registerCheck<google::ExplicitConstructorCheck>(
         "hicpp-explicit-conversions");
     CheckFactories.registerCheck<readability::FunctionSizeCheck>(

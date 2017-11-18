@@ -14,10 +14,10 @@
 #include "Filesystem.h"
 #include "Config.h"
 #include "lld/Common/Threads.h"
-#include "llvm/Config/config.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
-#if defined(HAVE_UNISTD_H)
+#if LLVM_ON_UNIX
 #include <unistd.h>
 #endif
 #include <thread>
