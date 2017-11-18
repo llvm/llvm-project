@@ -71,6 +71,16 @@ class Run(object):
                                     (self.lit_config,
                                      self.parallelism_semaphores))
 
+        # Install a console-control signal handler on Windows.
+        if win32api is not None:
+            def console_ctrl_handler(type):
+                print('\nCtrl-C detected, terminating.')
+                pool.terminate()
+                pool.join()
+                abort_now()
+                return True
+            win32api.SetConsoleCtrlHandler(console_ctrl_handler, True)
+
         try:
             async_results = [pool.apply_async(worker_run_one_test,
                                               args=(test_index, test),
@@ -125,16 +135,6 @@ class Run(object):
         # Don't do anything if we aren't going to run any tests.
         if not self.tests or jobs == 0:
             return
-
-        # Install a console-control signal handler on Windows.
-        if win32api is not None:
-            def console_ctrl_handler(type):
-                print('\nCtrl-C detected, terminating.')
-                pool.terminate()
-                pool.join()
-                abort_now()
-                return True
-            win32api.SetConsoleCtrlHandler(console_ctrl_handler, True)
 
         # Save the display object on the runner so that we can update it from
         # our task completion callback.

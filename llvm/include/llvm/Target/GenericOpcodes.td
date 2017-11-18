@@ -469,7 +469,7 @@ def G_FLOG2 : Instruction {
 // Generic load. Expects a MachineMemOperand in addition to explicit operands.
 def G_LOAD : Instruction {
   let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type1:$addr);
+  let InOperandList = (ins ptype1:$addr);
   let hasSideEffects = 0;
   let mayLoad = 1;
 }
@@ -477,7 +477,7 @@ def G_LOAD : Instruction {
 // Generic store. Expects a MachineMemOperand in addition to explicit operands.
 def G_STORE : Instruction {
   let OutOperandList = (outs);
-  let InOperandList = (ins type0:$src, type1:$addr);
+  let InOperandList = (ins type0:$src, ptype1:$addr);
   let hasSideEffects = 0;
   let mayStore = 1;
 }

@@ -129,43 +129,6 @@ Module *Module::GetAllocatedModuleAtIndex(size_t idx) {
   return nullptr;
 }
 
-#if 0
-// These functions help us to determine if modules are still loaded, yet don't require that
-// you have a command interpreter and can easily be called from an external debugger.
-namespace lldb {
-
-    void
-    ClearModuleInfo (void)
-    {
-        const bool mandatory = true;
-        ModuleList::RemoveOrphanSharedModules(mandatory);
-    }
-    
-    void
-    DumpModuleInfo (void)
-    {
-        Mutex::Locker locker (Module::GetAllocationModuleCollectionMutex());
-        ModuleCollection &modules = GetModuleCollection();
-        const size_t count = modules.size();
-        printf ("%s: %" PRIu64 " modules:\n", LLVM_PRETTY_FUNCTION, (uint64_t)count);
-        for (size_t i = 0; i < count; ++i)
-        {
-            
-            StreamString strm;
-            Module *module = modules[i];
-            const bool in_shared_module_list = ModuleList::ModuleIsInCache (module);
-            module->GetDescription(&strm, eDescriptionLevelFull);
-            printf ("%p: shared = %i, ref_count = %3u, module = %s\n", 
-                    module, 
-                    in_shared_module_list,
-                    (uint32_t)module->use_count(), 
-                    strm.GetString().c_str());
-        }
-    }
-}
-
-#endif
-
 Module::Module(const ModuleSpec &module_spec)
     : m_object_offset(0), m_file_has_changed(false),
       m_first_file_changed_log(false) {

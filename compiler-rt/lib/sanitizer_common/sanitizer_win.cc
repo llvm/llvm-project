@@ -70,10 +70,6 @@ uptr GetMaxUserVirtualAddress() {
   return (uptr)si.lpMaximumApplicationAddress;
 }
 
-uptr GetMaxVirtualAddress() {
-  return GetMaxUserVirtualAddress();
-}
-
 bool FileExists(const char *filename) {
   return ::GetFileAttributesA(filename) != INVALID_FILE_ATTRIBUTES;
 }
