@@ -1012,8 +1012,6 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       Args.hasFlag(OPT_allowisolation, OPT_allowisolation_no, true);
   Config->NxCompat = Args.hasFlag(OPT_nxcompat, OPT_nxcompat_no, true);
   Config->TerminalServerAware = Args.hasFlag(OPT_tsaware, OPT_tsaware_no, true);
-  if (Args.hasArg(OPT_nosymtab))
-    Config->WriteSymtab = false;
 
   Config->MapFile = getMapFile(Args);
 

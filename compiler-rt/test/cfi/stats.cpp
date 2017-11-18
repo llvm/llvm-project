@@ -1,4 +1,4 @@
-// RUN: %clangxx_cfi -g -fsanitize-stats -o %t %s
+// RUN: %clangxx_cfi %debug_info_flags -fsanitize-stats -o %t %s
 // RUN: env SANITIZER_STATS_PATH=%t.stats %run %t
 // RUN: sanstats %t.stats | FileCheck %s
 

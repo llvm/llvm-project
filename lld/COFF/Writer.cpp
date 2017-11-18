@@ -118,7 +118,7 @@ private:
   void createExportTable();
   void assignAddresses();
   void removeEmptySections();
-  void createSymbolAndStringTable();
+  void createStringTable();
   void openFile(StringRef OutputPath);
   template <typename PEHeaderTy> void writeHeader();
   void createSEHTable(OutputSection *RData);
@@ -126,9 +126,6 @@ private:
   void writeSections();
   void writeBuildId();
   void sortExceptionTable();
-
-  llvm::Optional<coff_symbol16> createSymbol(Defined *D);
-  size_t addEntryToStringTable(StringRef Str);
 
   OutputSection *findSection(StringRef Name);
   OutputSection *createSection(StringRef Name);
@@ -154,7 +151,7 @@ private:
   ArrayRef<uint8_t> SectionTable;
 
   uint64_t FileSize;
-  uint32_t PointerToSymbolTable = 0;
+  uint32_t PointerToStringTable = 0;
   uint64_t SizeOfImage;
   uint64_t SizeOfHeaders;
 };
@@ -293,7 +290,7 @@ void Writer::run() {
   assignAddresses();
   removeEmptySections();
   setSectionPermissions();
-  createSymbolAndStringTable();
+  createStringTable();
 
   // We must do this before opening the output file, as it depends on being able
   // to read the contents of the existing output file.
@@ -470,72 +467,7 @@ void Writer::removeEmptySections() {
     Sec->SectionIndex = Idx++;
 }
 
-size_t Writer::addEntryToStringTable(StringRef Str) {
-  assert(Str.size() > COFF::NameSize);
-  size_t OffsetOfEntry = Strtab.size() + 4; // +4 for the size field
-  Strtab.insert(Strtab.end(), Str.begin(), Str.end());
-  Strtab.push_back('\0');
-  return OffsetOfEntry;
-}
-
-Optional<coff_symbol16> Writer::createSymbol(Defined *Def) {
-  // Relative symbols are unrepresentable in a COFF symbol table.
-  if (isa<DefinedSynthetic>(Def))
-    return None;
-
-  // Don't write dead symbols or symbols in codeview sections to the symbol
-  // table.
-  if (!Def->isLive())
-    return None;
-  if (auto *D = dyn_cast<DefinedRegular>(Def))
-    if (D->getChunk()->isCodeView())
-      return None;
-
-  coff_symbol16 Sym;
-  StringRef Name = Def->getName();
-  if (Name.size() > COFF::NameSize) {
-    Sym.Name.Offset.Zeroes = 0;
-    Sym.Name.Offset.Offset = addEntryToStringTable(Name);
-  } else {
-    memset(Sym.Name.ShortName, 0, COFF::NameSize);
-    memcpy(Sym.Name.ShortName, Name.data(), Name.size());
-  }
-
-  if (auto *D = dyn_cast<DefinedCOFF>(Def)) {
-    COFFSymbolRef Ref = D->getCOFFSymbol();
-    Sym.Type = Ref.getType();
-    Sym.StorageClass = Ref.getStorageClass();
-  } else {
-    Sym.Type = IMAGE_SYM_TYPE_NULL;
-    Sym.StorageClass = IMAGE_SYM_CLASS_EXTERNAL;
-  }
-  Sym.NumberOfAuxSymbols = 0;
-
-  switch (Def->kind()) {
-  case Symbol::DefinedAbsoluteKind:
-    Sym.Value = Def->getRVA();
-    Sym.SectionNumber = IMAGE_SYM_ABSOLUTE;
-    break;
-  default: {
-    uint64_t RVA = Def->getRVA();
-    OutputSection *Sec = nullptr;
-    for (OutputSection *S : OutputSections) {
-      if (S->getRVA() > RVA)
-        break;
-      Sec = S;
-    }
-    Sym.Value = RVA - Sec->getRVA();
-    Sym.SectionNumber = Sec->SectionIndex;
-    break;
-  }
-  }
-  return Sym;
-}
-
-void Writer::createSymbolAndStringTable() {
-  if (!Config->Debug || !Config->WriteSymtab)
-    return;
-
+void Writer::createStringTable() {
   // Name field in the section table is 8 byte long. Longer names need
   // to be written to the string table. First, construct string table.
   for (OutputSection *Sec : OutputSections) {
@@ -549,31 +481,19 @@ void Writer::createSymbolAndStringTable() {
     // to libunwind.
     if ((Sec->getPermissions() & IMAGE_SCN_MEM_DISCARDABLE) == 0)
       continue;
-    Sec->setStringTableOff(addEntryToStringTable(Name));
+    Sec->setStringTableOff(Strtab.size() + 4); // +4 for the size field
+    Strtab.insert(Strtab.end(), Name.begin(), Name.end());
+    Strtab.push_back('\0');
   }
 
-  for (ObjFile *File : ObjFile::Instances) {
-    for (Symbol *B : File->getSymbols()) {
-      auto *D = dyn_cast<Defined>(B);
-      if (!D || D->WrittenToSymtab)
-        continue;
-      D->WrittenToSymtab = true;
-
-      if (Optional<coff_symbol16> Sym = createSymbol(D))
-        OutputSymtab.push_back(*Sym);
-    }
-  }
+  if (Strtab.empty())
+    return;
 
   OutputSection *LastSection = OutputSections.back();
-  // We position the symbol table to be adjacent to the end of the last section.
-  uint64_t FileOff = LastSection->getFileOff() +
-                     alignTo(LastSection->getRawSize(), SectorSize);
-  if (!OutputSymtab.empty()) {
-    PointerToSymbolTable = FileOff;
-    FileOff += OutputSymtab.size() * sizeof(coff_symbol16);
-  }
-  FileOff += Strtab.size() + 4;
-  FileSize = alignTo(FileOff, SectorSize);
+  // We position the string table to be adjacent to the end of the last section.
+  PointerToStringTable = LastSection->getFileOff() +
+                         alignTo(LastSection->getRawSize(), SectorSize);
+  FileSize = alignTo(PointerToStringTable + Strtab.size() + 4, SectorSize);
 }
 
 // Visits all sections to assign incremental, non-overlapping RVAs and
@@ -760,22 +680,18 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   SectionTable = ArrayRef<uint8_t>(
       Buf - OutputSections.size() * sizeof(coff_section), Buf);
 
-  if (OutputSymtab.empty())
+  // The string table normally follows the symbol table, but because we always
+  // emit an empty symbol table, the string table appears at the location of the
+  // symbol table.
+  COFF->PointerToSymbolTable = PointerToStringTable;
+  COFF->NumberOfSymbols = 0;
+  if (Strtab.empty())
     return;
 
-  COFF->PointerToSymbolTable = PointerToSymbolTable;
-  uint32_t NumberOfSymbols = OutputSymtab.size();
-  COFF->NumberOfSymbols = NumberOfSymbols;
-  auto *SymbolTable = reinterpret_cast<coff_symbol16 *>(
-      Buffer->getBufferStart() + COFF->PointerToSymbolTable);
-  for (size_t I = 0; I != NumberOfSymbols; ++I)
-    SymbolTable[I] = OutputSymtab[I];
-  // Create the string table, it follows immediately after the symbol table.
-  // The first 4 bytes is length including itself.
-  Buf = reinterpret_cast<uint8_t *>(&SymbolTable[NumberOfSymbols]);
-  write32le(Buf, Strtab.size() + 4);
-  if (!Strtab.empty())
-    memcpy(Buf + 4, Strtab.data(), Strtab.size());
+  auto *StringTable = Buffer->getBufferStart() + PointerToStringTable;
+  // Create the string table. The first 4 bytes is length including itself.
+  write32le(StringTable, Strtab.size() + 4);
+  memcpy(StringTable + 4, Strtab.data(), Strtab.size());
 }
 
 void Writer::openFile(StringRef Path) {
