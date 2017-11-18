@@ -1436,8 +1436,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
     }
 
     // Emit DWARF info specifying the offsets of the callee-saved registers.
-    if (PushedRegs)
-      emitCalleeSavedFrameMoves(MBB, MBBI, DL);
+    emitCalleeSavedFrameMoves(MBB, MBBI, DL);
   }
 
   // X86 Interrupt handling function cannot assume anything about the direction
