@@ -316,7 +316,7 @@ class LLVMConfig(object):
                 return tool
 
         # Otherwise look in the path.
-        tool = lit.util.which(name, self.config.llvm_tools_dir)
+        tool = lit.util.which(name, self.config.environment['PATH'])
 
         if required and not tool:
             message = "couldn't find '{}' program".format(name)

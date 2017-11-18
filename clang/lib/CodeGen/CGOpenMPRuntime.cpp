@@ -3923,7 +3923,6 @@ static llvm::Value *emitDestructorsFunction(CodeGenModule &CGM,
                                 ImplicitParamDecl::Other);
   Args.push_back(&GtidArg);
   Args.push_back(&TaskTypeArg);
-  FunctionType::ExtInfo Info;
   auto &DestructorFnInfo =
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(KmpInt32Ty, Args);
   auto *DestructorFnTy = CGM.getTypes().GetFunctionType(DestructorFnInfo);

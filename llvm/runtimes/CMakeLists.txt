@@ -247,7 +247,6 @@ else() # if this is included from LLVM's CMake
                                         -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON
                                         ${${target}_extra_args}
                              TOOLCHAIN_TOOLS clang lld llvm-ar llvm-ranlib
-                             PASSTHROUGH_PREFIXES COMPILER_RT
                              USE_TOOLCHAIN
                              ${EXTRA_ARGS})
   endfunction()
