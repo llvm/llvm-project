@@ -210,6 +210,8 @@ AsmToken AsmLexer::LexLineComment() {
   int CurChar = getNextChar();
   while (CurChar != '\n' && CurChar != '\r' && CurChar != EOF)
     CurChar = getNextChar();
+  if (CurChar == '\r' && CurPtr != CurBuf.end() && *CurPtr == '\n')
+    ++CurPtr;
 
   // If we have a CommentConsumer, notify it about the comment.
   if (CommentConsumer) {

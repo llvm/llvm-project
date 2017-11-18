@@ -32,7 +32,7 @@
 ; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold.so \
 ; RUN:     --plugin-opt=thinlto \
 ; RUN:     --plugin-opt=cache-dir=%t.cache \
-; RUN:     --plugin-opt=cache-policy=prune_after=1h \
+; RUN:     --plugin-opt=cache-policy=prune_after=1h:prune_interval=0s \
 ; RUN:     -o %t3.o %t2.o %t.o
 
 ; Two cached objects, plus a timestamp file and "foo", minus the file we removed.
@@ -46,7 +46,7 @@
 ; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold.so \
 ; RUN:     --plugin-opt=thinlto \
 ; RUN:     --plugin-opt=cache-dir=%t.cache \
-; RUN:     --plugin-opt=cache-policy=cache_size_bytes=128k \
+; RUN:     --plugin-opt=cache-policy=cache_size_bytes=128k:prune_interval=0s \
 ; RUN:     -o %t3.o %t2.o %t.o
 ; RUN: ls %t.cache | count 5
 
@@ -55,7 +55,7 @@
 ; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold.so \
 ; RUN:     --plugin-opt=thinlto \
 ; RUN:     --plugin-opt=cache-dir=%t.cache \
-; RUN:     --plugin-opt=cache-policy=cache_size_bytes=32k \
+; RUN:     --plugin-opt=cache-policy=cache_size_bytes=32k:prune_interval=0s \
 ; RUN:     -o %t3.o %t2.o %t.o
 ; RUN: ls %t.cache | count 4
 
