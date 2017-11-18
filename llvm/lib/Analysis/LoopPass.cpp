@@ -46,8 +46,7 @@ public:
   }
 
   bool runOnLoop(Loop *L, LPPassManager &) override {
-    auto BBI = find_if(L->blocks().begin(), L->blocks().end(),
-                       [](BasicBlock *BB) { return BB; });
+    auto BBI = llvm::find_if(L->blocks(), [](BasicBlock *BB) { return BB; });
     if (BBI != L->blocks().end() &&
         isFunctionInPrintList((*BBI)->getParent()->getName())) {
       printLoop(*L, OS, Banner);

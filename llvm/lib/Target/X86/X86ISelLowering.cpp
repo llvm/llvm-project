@@ -24353,10 +24353,10 @@ static SDValue LowerMGATHER(SDValue Op, const X86Subtarget &Subtarget,
     SDValue NewGather = DAG.getMaskedGather(DAG.getVTList(NewVT, MVT::Other),
                                             N->getMemoryVT(), dl, Ops,
                                             N->getMemOperand());
-    SDValue Exract = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, VT,
-                                 NewGather.getValue(0),
-                                 DAG.getIntPtrConstant(0, dl));
-    SDValue RetOps[] = {Exract, NewGather.getValue(1)};
+    SDValue Extract = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, VT,
+                                  NewGather.getValue(0),
+                                  DAG.getIntPtrConstant(0, dl));
+    SDValue RetOps[] = {Extract, NewGather.getValue(1)};
     return DAG.getMergeValues(RetOps, dl);
   }
   if (N->getMemoryVT() == MVT::v2i32 && Subtarget.hasVLX()) {

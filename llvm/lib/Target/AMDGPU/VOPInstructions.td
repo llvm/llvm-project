@@ -80,6 +80,7 @@ class VOP3_Pseudo <string opName, VOPProfile P, list<dag> pattern = [],
   let isCodeGenOnly = 1;
   let UseNamedOperandTable = 1;
   let VOP3_OPSEL = isVop3OpSel;
+  let IsPacked = P.IsPacked;
 
   string Mnemonic = opName;
   string AsmOperands = !if(isVop3OpSel,
@@ -114,12 +115,11 @@ class VOP3_Pseudo <string opName, VOPProfile P, list<dag> pattern = [],
 
   let AsmVariantName = AMDGPUAsmVariants.VOP3;
   let AsmMatchConverter =
-    !if(!and(P.IsPacked, isVOP3P),
+    !if(isVOP3P,
         "cvtVOP3P",
-        !if(isVOP3P, "cvtVOP3P_NotPacked",
-          !if(!or(P.HasModifiers, !or(P.HasOMod, P.HasIntClamp)),
-              "cvtVOP3",
-              "")));
+        !if(!or(P.HasModifiers, !or(P.HasOMod, P.HasIntClamp)),
+            "cvtVOP3",
+            ""));
 
   VOPProfile Pfl = P;
 }

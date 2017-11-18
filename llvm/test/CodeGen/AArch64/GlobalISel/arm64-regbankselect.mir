@@ -69,6 +69,7 @@
   define void @bitcast_s128() { ret void }
   define void @copy_s128() { ret void }
   define void @copy_s128_from_load() { ret void }
+  define void @copy_fp16() { ret void }
 
   define i64 @greedyWithChainOfComputation(i64 %arg1, <2 x i32>* %addr) {
     %varg1 = bitcast i64 %arg1 to <2 x i32>
@@ -96,6 +97,19 @@
   define void @fp16Ext32() { ret void }
   define void @fp16Ext64() { ret void }
   define void @fp32Ext64() { ret void }
+
+  define half @passFp16(half %p) {
+  entry:
+    ret half %p
+  }
+
+  define half @passFp16ViaAllocas(half %p) {
+  entry:
+    %p.addr = alloca half, align 2
+    store half %p, half* %p.addr, align 2
+    %0 = load half, half* %p.addr, align 2
+    ret half %0
+  }
 ...
 
 ---
@@ -624,6 +638,34 @@ body:             |
 
 ...
 
+---
+# CHECK-LABEL: name: copy_fp16
+# This test checks that we issue the proper mapping
+# for copy of size == 16 when the destination is a fpr
+# physical register and the source a gpr.
+# We used to crash because we thought that mapping couldn't
+# exist in a copy.
+name:            copy_fp16
+legalized: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _}
+  - { id: 1, class: _}
+# CHECK: registers:
+# CHECK:  - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:  - { id: 1, class: gpr, preferred-register: '' }
+# CHECK: %0:gpr(s32) = COPY %w0
+# CHECK-NEXT: %1:gpr(s16) = G_TRUNC %0(s32)
+body:             |
+  bb.1:
+    liveins: %w0
+    %0(s32) = COPY %w0
+    %1(s16) = G_TRUNC %0(s32)
+    %h0 = COPY %1(s16)
+    RET_ReallyLR implicit %h0
+
+...
+
 
 ---
 # Make sure the greedy mode is able to take advantage of the
@@ -844,5 +886,71 @@ body:             |
     %1(s64) = G_FPEXT %0(s32)
     %d0 = COPY %1(s64)
     RET_ReallyLR implicit %d0
+
+...
+
+---
+# Make sure we map FP16 ABI on FPR register bank.
+# CHECK-LABEL: name: passFp16
+# CHECK: registers:
+# CHECK:  - { id: 0, class: fpr, preferred-register: '' }
+# CHECK:  %0:fpr(s16) = COPY %h0
+# CHECK-NEXT: %h0 = COPY %0(s16)
+name:            passFp16
+alignment:       2
+legalized:       true
+registers:
+  - { id: 0, class: _ }
+body:             |
+  bb.1.entry:
+    liveins: %h0
+
+    %0(s16) = COPY %h0
+    %h0 = COPY %0(s16)
+    RET_ReallyLR implicit %h0
+
+...
+---
+# Make sure we properly detect fp types through copies.
+# In that example, the copy comes from an ABI lowering of a fp type.
+# CHECK-LABEL: name: passFp16ViaAllocas
+# CHECK: registers:
+# CHECK:  - { id: 0, class: fpr, preferred-register: '' }
+# CHECK:  - { id: 1, class: gpr, preferred-register: '' }
+# CHECK:  - { id: 2, class: fpr, preferred-register: '' }
+#
+# CHECK:  %0:fpr(s16) = COPY %h0
+# CHECK-NEXT: %1:gpr(p0) = G_FRAME_INDEX %stack.0.p.addr
+# If we didn't look through the copy for %0, the default mapping
+# would have been on GPR and we would have to insert a copy to move
+# the value away from FPR (h0).
+# CHECK-NEXT: G_STORE %0(s16), %1(p0) :: (store 2 into %ir.p.addr)
+# If we didn't look through the copy for %2, the default mapping
+# would have been on GPR and we would have to insert a copy to move
+# the value to FPR (h0).
+# CHECK-NEXT: %2:fpr(s16) = G_LOAD %1(p0) :: (load 2 from %ir.p.addr)
+# CHECK-NEXT: %h0 = COPY %2(s16)
+name:            passFp16ViaAllocas
+alignment:       2
+legalized:       true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+frameInfo:
+  maxAlignment:    2
+stack:
+  - { id: 0, name: p.addr, size: 2, alignment: 2, stack-id: 0 }
+body:             |
+  bb.1.entry:
+    liveins: %h0
+
+    %0(s16) = COPY %h0
+    %1(p0) = G_FRAME_INDEX %stack.0.p.addr
+    G_STORE %0(s16), %1(p0) :: (store 2 into %ir.p.addr)
+    %2(s16) = G_LOAD %1(p0) :: (load 2 from %ir.p.addr)
+    %h0 = COPY %2(s16)
+    RET_ReallyLR implicit %h0
 
 ...
