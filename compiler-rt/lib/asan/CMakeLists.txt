@@ -21,7 +21,6 @@ set(ASAN_SOURCES
   asan_memory_profile.cc
   asan_poisoning.cc
   asan_posix.cc
-  asan_premap_shadow.cc
   asan_report.cc
   asan_rtl.cc
   asan_shadow_setup.cc

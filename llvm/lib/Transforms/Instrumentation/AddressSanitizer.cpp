@@ -137,8 +137,8 @@ static const char *const kAsanUnregisterElfGlobalsName =
 static const char *const kAsanPoisonGlobalsName = "__asan_before_dynamic_init";
 static const char *const kAsanUnpoisonGlobalsName = "__asan_after_dynamic_init";
 static const char *const kAsanInitName = "__asan_init";
-static const char *const kAsanVersionCheckNamePrefix =
-    "__asan_version_mismatch_check_v";
+static const char *const kAsanVersionCheckName =
+    "__asan_version_mismatch_check_v8";
 static const char *const kAsanPtrCmp = "__sanitizer_ptr_cmp";
 static const char *const kAsanPtrSub = "__sanitizer_ptr_sub";
 static const char *const kAsanHandleNoReturnName = "__asan_handle_no_return";
@@ -207,18 +207,6 @@ static cl::opt<bool> ClForceDynamicShadow(
     "asan-force-dynamic-shadow",
     cl::desc("Load shadow address into a local variable for each function"),
     cl::Hidden, cl::init(false));
-
-static cl::opt<bool>
-    ClWithIfunc("asan-with-ifunc",
-                cl::desc("Access dynamic shadow through an ifunc global on "
-                         "platforms that support this"),
-                cl::Hidden, cl::init(true));
-
-static cl::opt<bool> ClWithIfuncSuppressRemat(
-    "asan-with-ifunc-suppress-remat",
-    cl::desc("Suppress rematerialization of dynamic shadow address by passing "
-             "it through inline asm in prologue."),
-    cl::Hidden, cl::init(true));
 
 // This flag limits the number of instructions to be instrumented
 // in any given BB. Normally, this should be set to unlimited (INT_MAX),
@@ -460,14 +448,10 @@ private:
 
 /// This struct defines the shadow mapping using the rule:
 ///   shadow = (mem >> Scale) ADD-or-OR Offset.
-/// If InGlobal is true, then
-///   extern char __asan_shadow[];
-///   shadow = (mem >> Scale) + &__asan_shadow
 struct ShadowMapping {
   int Scale;
   uint64_t Offset;
   bool OrShadowOffset;
-  bool InGlobal;
 };
 
 } // end anonymous namespace
@@ -489,7 +473,6 @@ static ShadowMapping getShadowMapping(Triple &TargetTriple, int LongSize,
                   TargetTriple.getArch() == Triple::mipsel;
   bool IsMIPS64 = TargetTriple.getArch() == Triple::mips64 ||
                   TargetTriple.getArch() == Triple::mips64el;
-  bool IsArmOrThumb = TargetTriple.isARM() || TargetTriple.isThumb();
   bool IsAArch64 = TargetTriple.getArch() == Triple::aarch64;
   bool IsWindows = TargetTriple.isOSWindows();
   bool IsFuchsia = TargetTriple.isOSFuchsia();
@@ -502,8 +485,10 @@ static ShadowMapping getShadowMapping(Triple &TargetTriple, int LongSize,
   }
 
   if (LongSize == 32) {
+    // Android is always PIE, which means that the beginning of the address
+    // space is always available.
     if (IsAndroid)
-      Mapping.Offset = kDynamicShadowSentinel;
+      Mapping.Offset = 0;
     else if (IsMIPS32)
       Mapping.Offset = kMIPS32_ShadowOffset32;
     else if (IsFreeBSD)
@@ -567,9 +552,6 @@ static ShadowMapping getShadowMapping(Triple &TargetTriple, int LongSize,
   Mapping.OrShadowOffset = !IsAArch64 && !IsPPC64 && !IsSystemZ && !IsPS4CPU &&
                            !(Mapping.Offset & (Mapping.Offset - 1)) &&
                            Mapping.Offset != kDynamicShadowSentinel;
-  bool IsAndroidWithIfuncSupport =
-      IsAndroid && !TargetTriple.isAndroidVersionLT(21);
-  Mapping.InGlobal = ClWithIfunc && IsAndroidWithIfuncSupport && IsArmOrThumb;
 
   return Mapping;
 }
@@ -692,7 +674,6 @@ private:
   DominatorTree *DT;
   Function *AsanHandleNoReturnFunc;
   Function *AsanPtrCmpFunction, *AsanPtrSubFunction;
-  Constant *AsanShadowGlobal;
 
   // These arrays is indexed by AccessIsWrite, Experiment and log2(AccessSize).
   Function *AsanErrorCallback[2][2][kNumberOfAccessSizes];
@@ -765,7 +746,6 @@ private:
   size_t MinRedzoneSizeForGlobal() const {
     return RedzoneSizeForScale(Mapping.Scale);
   }
-  int GetAsanVersion(const Module &M) const;
 
   GlobalsMetadata GlobalsMD;
   bool CompileKernel;
@@ -998,9 +978,8 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
   void visitCallSite(CallSite CS) {
     Instruction *I = CS.getInstruction();
     if (CallInst *CI = dyn_cast<CallInst>(I)) {
-      HasNonEmptyInlineAsm |= CI->isInlineAsm() &&
-                              !CI->isIdenticalTo(EmptyInlineAsm.get()) &&
-                              I != ASan.LocalDynamicShadow;
+      HasNonEmptyInlineAsm |=
+          CI->isInlineAsm() && !CI->isIdenticalTo(EmptyInlineAsm.get());
       HasReturnsTwiceCall |= CI->canReturnTwice();
     }
   }
@@ -2181,16 +2160,6 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M, bool
   return true;
 }
 
-int AddressSanitizerModule::GetAsanVersion(const Module &M) const {
-  int LongSize = M.getDataLayout().getPointerSizeInBits();
-  bool isAndroid = Triple(M.getTargetTriple()).isAndroid();
-  int Version = 8;
-  // 32-bit Android is one version ahead because of the switch to dynamic
-  // shadow.
-  Version += (LongSize == 32 && isAndroid);
-  return Version;
-}
-
 bool AddressSanitizerModule::runOnModule(Module &M) {
   C = &(M.getContext());
   int LongSize = M.getDataLayout().getPointerSizeInBits();
@@ -2204,11 +2173,9 @@ bool AddressSanitizerModule::runOnModule(Module &M) {
 
   // Create a module constructor. A destructor is created lazily because not all
   // platforms, and not all modules need it.
-  std::string VersionCheckName =
-      kAsanVersionCheckNamePrefix + std::to_string(GetAsanVersion(M));
   std::tie(AsanCtorFunction, std::ignore) = createSanitizerCtorAndInitFunctions(
       M, kAsanModuleCtorName, kAsanInitName, /*InitArgTypes=*/{},
-      /*InitArgs=*/{}, VersionCheckName);
+      /*InitArgs=*/{}, kAsanVersionCheckName);
 
   bool CtorComdat = true;
   bool Changed = false;
@@ -2307,9 +2274,6 @@ void AddressSanitizer::initializeCallbacks(Module &M) {
   EmptyAsm = InlineAsm::get(FunctionType::get(IRB.getVoidTy(), false),
                             StringRef(""), StringRef(""),
                             /*hasSideEffects=*/true);
-  if (Mapping.InGlobal)
-    AsanShadowGlobal = M.getOrInsertGlobal("__asan_shadow",
-                                           ArrayType::get(IRB.getInt8Ty(), 0));
 }
 
 // virtual
@@ -2355,25 +2319,9 @@ void AddressSanitizer::maybeInsertDynamicShadowAtFunctionEntry(Function &F) {
     return;
 
   IRBuilder<> IRB(&F.front().front());
-  if (Mapping.InGlobal) {
-    if (ClWithIfuncSuppressRemat) {
-      // An empty inline asm with input reg == output reg.
-      // An opaque pointer-to-int cast, basically.
-      InlineAsm *Asm = InlineAsm::get(
-          FunctionType::get(IntptrTy, {AsanShadowGlobal->getType()}, false),
-          StringRef(""), StringRef("=r,0"),
-          /*hasSideEffects=*/false);
-      LocalDynamicShadow =
-          IRB.CreateCall(Asm, {AsanShadowGlobal}, ".asan.shadow");
-    } else {
-      LocalDynamicShadow =
-          IRB.CreatePointerCast(AsanShadowGlobal, IntptrTy, ".asan.shadow");
-    }
-  } else {
-    Value *GlobalDynamicAddress = F.getParent()->getOrInsertGlobal(
-        kAsanShadowMemoryDynamicAddress, IntptrTy);
-    LocalDynamicShadow = IRB.CreateLoad(GlobalDynamicAddress);
-  }
+  Value *GlobalDynamicAddress = F.getParent()->getOrInsertGlobal(
+      kAsanShadowMemoryDynamicAddress, IntptrTy);
+  LocalDynamicShadow = IRB.CreateLoad(GlobalDynamicAddress);
 }
 
 void AddressSanitizer::markEscapedLocalAllocas(Function &F) {

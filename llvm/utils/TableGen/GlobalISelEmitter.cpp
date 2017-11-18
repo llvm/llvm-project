@@ -2546,10 +2546,7 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
       // SelectionDAG allows pointers to be represented with iN since it doesn't
       // distinguish between pointers and integers but they are different types in GlobalISel.
       // Coerce integers to pointers to address space 0 if the context indicates a pointer.
-      // TODO: Find a better way to do this, SDTCisPtrTy?
-      bool OperandIsAPointer =
-          (SrcGIOrNull->TheDef->getName() == "G_LOAD" && i == 0) ||
-          (SrcGIOrNull->TheDef->getName() == "G_STORE" && i == 1);
+      bool OperandIsAPointer = SrcGIOrNull->isOperandAPointer(i);
 
       // For G_INTRINSIC/G_INTRINSIC_W_SIDE_EFFECTS, the operand immediately
       // following the defs is an intrinsic ID.

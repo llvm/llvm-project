@@ -792,6 +792,7 @@ def f64imm : Operand<f64>;
 // have the same LLT).
 class TypedOperand<string Ty> : Operand<untyped> {
   let OperandType = Ty;
+  bit IsPointer = 0;
 }
 
 def type0 : TypedOperand<"OPERAND_GENERIC_0">;
@@ -800,6 +801,15 @@ def type2 : TypedOperand<"OPERAND_GENERIC_2">;
 def type3 : TypedOperand<"OPERAND_GENERIC_3">;
 def type4 : TypedOperand<"OPERAND_GENERIC_4">;
 def type5 : TypedOperand<"OPERAND_GENERIC_5">;
+
+let IsPointer = 1 in {
+  def ptype0 : TypedOperand<"OPERAND_GENERIC_0">;
+  def ptype1 : TypedOperand<"OPERAND_GENERIC_1">;
+  def ptype2 : TypedOperand<"OPERAND_GENERIC_2">;
+  def ptype3 : TypedOperand<"OPERAND_GENERIC_3">;
+  def ptype4 : TypedOperand<"OPERAND_GENERIC_4">;
+  def ptype5 : TypedOperand<"OPERAND_GENERIC_5">;
+}
 
 /// zero_reg definition - Special node to stand for the zero register.
 ///
