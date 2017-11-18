@@ -39,7 +39,7 @@ llvm_config.use_default_substitutions()
 llvm_config.use_lld()
 
 tool_patterns = [
-    'llvm-as', 'llvm-mc', 'llvm-nm',
+    'llc', 'llvm-as', 'llvm-mc', 'llvm-nm',
     'llvm-objdump', 'llvm-pdbutil', 'llvm-readobj', 'obj2yaml', 'yaml2obj']
 
 llvm_config.add_tool_substitutions(tool_patterns)
@@ -67,6 +67,7 @@ llvm_config.feature_config(
                           'Mips': 'mips',
                           'PowerPC': 'ppc',
                           'Sparc': 'sparc',
+                          'WebAssembly': 'wasm',
                           'X86': 'x86'})
      ])
 

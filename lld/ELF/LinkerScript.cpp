@@ -465,9 +465,9 @@ static OutputSection *addInputSec(StringMap<OutputSection *> &Map,
     return Out->RelocationSection;
   }
 
-  // When control reaches here, mergeable sections have already been
-  // merged except the -r case. If that's the case, we do not combine them
-  // and let final link to handle this optimization.
+  // When control reaches here, mergeable sections have already been merged into
+  // synthetic sections. For relocatable case we want to create one output
+  // section per syntetic section so that they have a valid sh_entsize.
   if (Config->Relocatable && (IS->Flags & SHF_MERGE))
     return createSection(IS, OutsecName);
 
