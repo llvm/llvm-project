@@ -611,7 +611,15 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       if (!VReg)
         break;
       MachineInstr *DefMI = MRI.getVRegDef(VReg);
-      if (isPreISelGenericFloatingPointOpcode(DefMI->getOpcode()))
+      unsigned DefOpc = DefMI->getOpcode();
+      if (isPreISelGenericFloatingPointOpcode(DefOpc) ||
+          // Check if we come from a copy-like instruction with
+          // floating point constraints. In that case, we are still
+          // fed by fp instructions, but indirectly
+          // (e.g., through ABI copies).
+          ((DefOpc == TargetOpcode::COPY || DefMI->isPHI()) &&
+           getRegBank(DefMI->getOperand(0).getReg(), MRI, TRI) ==
+               &AArch64::FPRRegBank))
         OpRegBankIdx[0] = PMI_FirstFPR;
       break;
     }
