@@ -917,7 +917,7 @@ body:             |
 # CHECK: registers:
 # CHECK:  - { id: 0, class: fpr, preferred-register: '' }
 # CHECK:  - { id: 1, class: gpr, preferred-register: '' }
-# CHECK:  - { id: 2, class: gpr, preferred-register: '' }
+# CHECK:  - { id: 2, class: fpr, preferred-register: '' }
 #
 # CHECK:  %0:fpr(s16) = COPY %h0
 # CHECK-NEXT: %1:gpr(p0) = G_FRAME_INDEX %stack.0.p.addr
@@ -925,7 +925,10 @@ body:             |
 # would have been on GPR and we would have to insert a copy to move
 # the value away from FPR (h0).
 # CHECK-NEXT: G_STORE %0(s16), %1(p0) :: (store 2 into %ir.p.addr)
-# CHECK-NEXT: %2:gpr(s16) = G_LOAD %1(p0) :: (load 2 from %ir.p.addr)
+# If we didn't look through the copy for %2, the default mapping
+# would have been on GPR and we would have to insert a copy to move
+# the value to FPR (h0).
+# CHECK-NEXT: %2:fpr(s16) = G_LOAD %1(p0) :: (load 2 from %ir.p.addr)
 # CHECK-NEXT: %h0 = COPY %2(s16)
 name:            passFp16ViaAllocas
 alignment:       2

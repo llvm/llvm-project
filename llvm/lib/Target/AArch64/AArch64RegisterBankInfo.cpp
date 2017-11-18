@@ -594,15 +594,24 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       // In that case, we want the default mapping to be on FPR
       // instead of blind map every scalar to GPR.
       for (const MachineInstr &UseMI :
-           MRI.use_instructions(MI.getOperand(0).getReg()))
+           MRI.use_instructions(MI.getOperand(0).getReg())) {
         // If we have at least one direct use in a FP instruction,
         // assume this was a floating point load in the IR.
         // If it was not, we would have had a bitcast before
         // reaching that instruction.
-        if (isPreISelGenericFloatingPointOpcode(UseMI.getOpcode())) {
+        unsigned UseOpc = UseMI.getOpcode();
+        if (isPreISelGenericFloatingPointOpcode(UseOpc) ||
+            // Check if we feed a copy-like instruction with
+            // floating point constraints. In that case, we are still
+            // feeding fp instructions, but indirectly
+            // (e.g., through ABI copies).
+            ((UseOpc == TargetOpcode::COPY || UseMI.isPHI()) &&
+             getRegBank(UseMI.getOperand(0).getReg(), MRI, TRI) ==
+                 &AArch64::FPRRegBank)) {
           OpRegBankIdx[0] = PMI_FirstFPR;
           break;
         }
+      }
     break;
   case TargetOpcode::G_STORE:
     // Check if that store is fed by fp instructions.
