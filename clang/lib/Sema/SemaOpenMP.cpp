@@ -1303,6 +1303,17 @@ unsigned Sema::getOpenMPNestingLevel() const {
   return DSAStack->getNestingLevel();
 }
 
+bool Sema::isInOpenMPTargetExecutionDirective() const {
+  return (isOpenMPTargetExecutionDirective(DSAStack->getCurrentDirective()) &&
+          !DSAStack->isClauseParsingMode()) ||
+         DSAStack->hasDirective(
+             [](OpenMPDirectiveKind K, const DeclarationNameInfo &,
+                SourceLocation) -> bool {
+               return isOpenMPTargetExecutionDirective(K);
+             },
+             false);
+}
+
 VarDecl *Sema::IsOpenMPCapturedDecl(ValueDecl *D) {
   assert(LangOpts.OpenMP && "OpenMP is not allowed");
   D = getCanonicalDecl(D);
@@ -1315,18 +1326,8 @@ VarDecl *Sema::IsOpenMPCapturedDecl(ValueDecl *D) {
   // inserted here once support for 'declare target' is added.
   //
   auto *VD = dyn_cast<VarDecl>(D);
-  if (VD && !VD->hasLocalStorage()) {
-    if (isOpenMPTargetExecutionDirective(DSAStack->getCurrentDirective()) &&
-        !DSAStack->isClauseParsingMode())
-      return VD;
-    if (DSAStack->hasDirective(
-            [](OpenMPDirectiveKind K, const DeclarationNameInfo &,
-               SourceLocation) -> bool {
-              return isOpenMPTargetExecutionDirective(K);
-            },
-            false))
-      return VD;
-  }
+  if (VD && !VD->hasLocalStorage() && isInOpenMPTargetExecutionDirective())
+    return VD;
 
   if (DSAStack->getCurrentDirective() != OMPD_unknown &&
       (!DSAStack->isClauseParsingMode() ||
@@ -9812,6 +9813,12 @@ static bool ActOnOMPReductionKindClause(
     if ((OASE && !ConstantLengthOASE) ||
         (!OASE && !ASE &&
          D->getType().getNonReferenceType()->isVariablyModifiedType())) {
+      if (!Context.getTargetInfo().isVLASupported() &&
+          S.shouldDiagnoseTargetSupportFromOpenMP()) {
+        S.Diag(ELoc, diag::err_omp_reduction_vla_unsupported) << !!OASE;
+        S.Diag(ELoc, diag::note_vla_unsupported);
+        continue;
+      }
       // For arrays/array sections only:
       // Create pseudo array type for private copy. The size for this array will
       // be generated during codegen.

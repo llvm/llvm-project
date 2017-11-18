@@ -195,11 +195,11 @@ End:
 
 ;CHECK-LABEL: @test_nonconst_nonconst_phi
 ;CHECK-LABEL: Tail.predBB1.split:
-;CHECK: %[[CALL1:.*]] = call i32 @callee(i32* %a, i32 %v, i32 1)
+;CHECK: %[[CALL1:.*]] = call i32 @callee(i32* %a, i32 %v, i32 2)
 ;CHECK-LABEL: Tail.predBB2.split:
-;CHECK: %[[CALL2:.*]] = call i32 @callee(i32* %a, i32 %v, i32 2)
+;CHECK: %[[CALL2:.*]] = call i32 @callee(i32* %a, i32 %v, i32 1)
 ;CHECK-LABEL: Tail
-;CHECK: %p = phi i32 [ 1, %Tail.predBB1.split ], [ 2, %Tail.predBB2.split ]
+;CHECK: %p = phi i32 [ 2, %Tail.predBB1.split ], [ 1, %Tail.predBB2.split ]
 ;CHECK: %[[MERGED:.*]] = phi i32 [ %[[CALL1]], %Tail.predBB1.split ], [ %[[CALL2]], %Tail.predBB2.split ]
 ;CHECK: ret i32 %[[MERGED]]
 define i32 @test_nonconst_nonconst_phi(i32* %a, i32* %b, i32 %v, i32 %v2) {
@@ -216,6 +216,30 @@ Tail:
   %r = call i32 @callee(i32* %a, i32 %v, i32 %p)
   ret i32 %r
 
+End:
+  ret i32 %v
+}
+
+;CHECK-LABEL: @test_cfg_no_or_phi
+;CHECK-LABEL: Tail.predBB1.split
+;CHECK: %[[CALL1:.*]] = call i32 @callee(i32* %a, i32 %v, i32 2)
+;CHECK-LABEL: Tail.predBB2.split:
+;CHECK: %[[CALL2:.*]] = call i32 @callee(i32* %a, i32 %v, i32 1)
+;CHECK-LABEL: Tail
+;CHECK: %p = phi i32 [ 2, %Tail.predBB1.split ], [ 1, %Tail.predBB2.split ]
+;CHECK: %[[MERGED:.*]] = phi i32 [ %[[CALL1]], %Tail.predBB1.split ], [ %[[CALL2]], %Tail.predBB2.split ]
+;CHECK: ret i32 %[[MERGED]]
+define i32 @test_cfg_no_or_phi(i32* %a,  i32 %v) {
+entry:
+  br i1 undef, label %TBB0, label %TBB1
+TBB0:
+  br i1 undef, label %Tail, label %End
+TBB1:
+  br i1 undef, label %Tail, label %End
+Tail:
+  %p = phi i32[1,%TBB0], [2, %TBB1]
+  %r = call i32 @callee(i32* %a, i32 %v, i32 %p)
+  ret i32 %r
 End:
   ret i32 %v
 }

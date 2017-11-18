@@ -72,10 +72,11 @@ RegisterBankInfo::ValueMapping AArch64GenRegisterBankInfo::ValMappings[]{
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR64 - PMI_Min], 1},
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR64 - PMI_Min], 1},
     // Cross register bank copies.
-    // 25: FPR 16-bit value to GPR 16-bit (invalid). <-- This must match
-    //                                               FirstCrossRegCpyIdx.
-    {nullptr, 1},
-    {nullptr, 1},
+    // 25: FPR 16-bit value to GPR 16-bit. <-- This must match
+    //                                         FirstCrossRegCpyIdx.
+    // Note: This is the kind of copy we see with physical registers.
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR16 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},
     // 27: FPR 32-bit value to GPR 32-bit value.
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR32 - PMI_Min], 1},
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},

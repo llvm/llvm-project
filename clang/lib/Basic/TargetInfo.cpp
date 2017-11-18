@@ -31,6 +31,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : TargetOpts(), Triple(T) {
   // SPARC.  These should be overridden by concrete targets as needed.
   BigEndian = !T.isLittleEndian();
   TLSSupported = true;
+  VLASupported = true;
   NoAsmVariants = false;
   HasFloat128 = false;
   PointerWidth = PointerAlign = 32;

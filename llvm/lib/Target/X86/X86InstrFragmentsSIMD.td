@@ -765,103 +765,76 @@ def X86masked_gather  : SDNode<"X86ISD::MGATHER",  SDTMaskedGather,
 
 def mgatherv4i32 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
   (masked_gather node:$src1, node:$src2, node:$src3) , [{
-  if (MaskedGatherSDNode *Mgt = dyn_cast<MaskedGatherSDNode>(N))
-    return (Mgt->getIndex().getValueType() == MVT::v4i32 ||
-            Mgt->getBasePtr().getValueType() == MVT::v4i32);
-  return false;
+  MaskedGatherSDNode *Mgt = cast<MaskedGatherSDNode>(N);
+  return Mgt->getIndex().getValueType() == MVT::v4i32;
 }]>;
 
 def mgatherv8i32 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
   (masked_gather node:$src1, node:$src2, node:$src3) , [{
-  if (MaskedGatherSDNode *Mgt = dyn_cast<MaskedGatherSDNode>(N))
-    return (Mgt->getIndex().getValueType() == MVT::v8i32 ||
-            Mgt->getBasePtr().getValueType() == MVT::v8i32);
-  return false;
+  MaskedGatherSDNode *Mgt = cast<MaskedGatherSDNode>(N);
+  return Mgt->getIndex().getValueType() == MVT::v8i32;
 }]>;
 
 def mgatherv2i64 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
   (masked_gather node:$src1, node:$src2, node:$src3) , [{
-  if (MaskedGatherSDNode *Mgt = dyn_cast<MaskedGatherSDNode>(N))
-    return (Mgt->getIndex().getValueType() == MVT::v2i64 ||
-            Mgt->getBasePtr().getValueType() == MVT::v2i64);
-  return false;
+  MaskedGatherSDNode *Mgt = cast<MaskedGatherSDNode>(N);
+  return Mgt->getIndex().getValueType() == MVT::v2i64;
 }]>;
 def X86mgatherv2i64 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
   (X86masked_gatherv2i64 node:$src1, node:$src2, node:$src3) , [{
-  if (X86MaskedGatherSDNode *Mgt = dyn_cast<X86MaskedGatherSDNode>(N))
-    return (Mgt->getIndex().getValueType() == MVT::v2i64 ||
-            Mgt->getBasePtr().getValueType() == MVT::v2i64) &&
-           (Mgt->getMemoryVT() == MVT::v2i32 ||
-            Mgt->getMemoryVT() == MVT::v2f32);
-  return false;
+  X86MaskedGatherSDNode *Mgt = cast<X86MaskedGatherSDNode>(N);
+  return Mgt->getIndex().getValueType() == MVT::v2i64 &&
+         (Mgt->getMemoryVT() == MVT::v2i32 || Mgt->getMemoryVT() == MVT::v2f32);
 }]>;
 def mgatherv4i64 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
   (masked_gather node:$src1, node:$src2, node:$src3) , [{
-  if (MaskedGatherSDNode *Mgt = dyn_cast<MaskedGatherSDNode>(N))
-    return (Mgt->getIndex().getValueType() == MVT::v4i64 ||
-            Mgt->getBasePtr().getValueType() == MVT::v4i64);
-  return false;
+  MaskedGatherSDNode *Mgt = cast<MaskedGatherSDNode>(N);
+  return Mgt->getIndex().getValueType() == MVT::v4i64;
 }]>;
 def mgatherv8i64 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
   (masked_gather node:$src1, node:$src2, node:$src3) , [{
-  if (MaskedGatherSDNode *Mgt = dyn_cast<MaskedGatherSDNode>(N))
-    return (Mgt->getIndex().getValueType() == MVT::v8i64 ||
-            Mgt->getBasePtr().getValueType() == MVT::v8i64);
-  return false;
+  MaskedGatherSDNode *Mgt = cast<MaskedGatherSDNode>(N);
+  return Mgt->getIndex().getValueType() == MVT::v8i64;
 }]>;
 def mgatherv16i32 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
   (masked_gather node:$src1, node:$src2, node:$src3) , [{
-  if (MaskedGatherSDNode *Mgt = dyn_cast<MaskedGatherSDNode>(N))
-    return (Mgt->getIndex().getValueType() == MVT::v16i32 ||
-            Mgt->getBasePtr().getValueType() == MVT::v16i32);
-  return false;
+  MaskedGatherSDNode *Mgt = cast<MaskedGatherSDNode>(N);
+  return Mgt->getIndex().getValueType() == MVT::v16i32;
 }]>;
 
 def mscatterv2i64 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
   (masked_scatter node:$src1, node:$src2, node:$src3) , [{
-  if (MaskedScatterSDNode *Sc = dyn_cast<MaskedScatterSDNode>(N))
-    return (Sc->getIndex().getValueType() == MVT::v2i64 ||
-            Sc->getBasePtr().getValueType() == MVT::v2i64);
-  return false;
+  MaskedScatterSDNode *Sc = cast<MaskedScatterSDNode>(N);
+  return Sc->getIndex().getValueType() == MVT::v2i64;
 }]>;
 
 def mscatterv4i32 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
   (masked_scatter node:$src1, node:$src2, node:$src3) , [{
-  if (MaskedScatterSDNode *Sc = dyn_cast<MaskedScatterSDNode>(N))
-    return (Sc->getIndex().getValueType() == MVT::v4i32 ||
-            Sc->getBasePtr().getValueType() == MVT::v4i32);
-  return false;
+  MaskedScatterSDNode *Sc = cast<MaskedScatterSDNode>(N);
+  return Sc->getIndex().getValueType() == MVT::v4i32;
 }]>;
 
 def mscatterv4i64 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
   (masked_scatter node:$src1, node:$src2, node:$src3) , [{
-  if (MaskedScatterSDNode *Sc = dyn_cast<MaskedScatterSDNode>(N))
-    return (Sc->getIndex().getValueType() == MVT::v4i64 ||
-            Sc->getBasePtr().getValueType() == MVT::v4i64);
-  return false;
+  MaskedScatterSDNode *Sc = cast<MaskedScatterSDNode>(N);
+  return Sc->getIndex().getValueType() == MVT::v4i64;
 }]>;
 
 def mscatterv8i32 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
   (masked_scatter node:$src1, node:$src2, node:$src3) , [{
-  if (MaskedScatterSDNode *Sc = dyn_cast<MaskedScatterSDNode>(N))
-    return (Sc->getIndex().getValueType() == MVT::v8i32 ||
-            Sc->getBasePtr().getValueType() == MVT::v8i32);
-  return false;
+  MaskedScatterSDNode *Sc = cast<MaskedScatterSDNode>(N);
+  return Sc->getIndex().getValueType() == MVT::v8i32;
 }]>;
 
 def mscatterv8i64 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
   (masked_scatter node:$src1, node:$src2, node:$src3) , [{
-  if (MaskedScatterSDNode *Sc = dyn_cast<MaskedScatterSDNode>(N))
-    return (Sc->getIndex().getValueType() == MVT::v8i64 ||
-            Sc->getBasePtr().getValueType() == MVT::v8i64);
-  return false;
+  MaskedScatterSDNode *Sc = cast<MaskedScatterSDNode>(N);
+  return Sc->getIndex().getValueType() == MVT::v8i64;
 }]>;
 def mscatterv16i32 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
   (masked_scatter node:$src1, node:$src2, node:$src3) , [{
-  if (MaskedScatterSDNode *Sc = dyn_cast<MaskedScatterSDNode>(N))
-    return (Sc->getIndex().getValueType() == MVT::v16i32 ||
-            Sc->getBasePtr().getValueType() == MVT::v16i32);
-  return false;
+  MaskedScatterSDNode *Sc = cast<MaskedScatterSDNode>(N);
+  return Sc->getIndex().getValueType() == MVT::v16i32;
 }]>;
 
 // 128-bit bitconvert pattern fragments
