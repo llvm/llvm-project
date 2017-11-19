@@ -245,8 +245,6 @@ public:
 
   bool SupportsProfiling() const override;
 
-  bool SupportsObjCGC() const override { return false; }
-
   bool UseDwarfDebugFlags() const override;
 
   bool UseSjLjExceptions(const llvm::opt::ArgList &Args) const override {
@@ -454,8 +452,6 @@ public:
 
     return 0;
   }
-
-  bool SupportsObjCGC() const override;
 
   void CheckObjCARC() const override;
 
