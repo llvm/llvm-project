@@ -367,10 +367,10 @@ class LLVMConfig(object):
         self.clear_environment(possibly_dangerous_env_vars)
 
         # Tweak the PATH to include the tools dir and the scripts dir.
-        paths = [self.config.llvm_tools_dir]
-        tools = getattr(self.config, 'clang_tools_dir', None)
-        if tools:
-            paths = paths + [tools]
+        # Put Clang first to avoid LLVM from overriding out-of-tree clang builds.
+        possible_paths = ['clang_tools_dir', 'llvm_tools_dir']
+        paths = [getattr(self.config, pp) for pp in possible_paths
+                 if getattr(self.config, pp, None)]
         self.with_environment('PATH', paths, append_path=True)
 
         paths = [self.config.llvm_shlib_dir, self.config.llvm_libs_dir]

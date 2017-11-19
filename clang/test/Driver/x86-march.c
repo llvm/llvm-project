@@ -60,6 +60,10 @@
 // RUN:   | FileCheck %s -check-prefix=cannonlake
 // cannonlake: "-target-cpu" "cannonlake"
 //
+// RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=icelake 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=icelake
+// icelake: "-target-cpu" "icelake"
+//
 // RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=lakemont 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=lakemont
 // lakemont: "-target-cpu" "lakemont"

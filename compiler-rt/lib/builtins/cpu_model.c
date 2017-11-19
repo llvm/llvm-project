@@ -75,6 +75,7 @@ enum ProcessorSubtypes {
   INTEL_COREI7_BROADWELL,
   INTEL_COREI7_SKYLAKE,
   INTEL_COREI7_SKYLAKE_AVX512,
+  INTEL_COREI7_CANNONLAKE,
   CPU_SUBTYPE_MAX
 };
 
@@ -338,6 +339,12 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     case 0x55:
       *Type = INTEL_COREI7;
       *Subtype = INTEL_COREI7_SKYLAKE_AVX512; // "skylake-avx512"
+      break;
+
+    // Cannonlake:
+    case 0x66:
+      *Type = INTEL_COREI7;
+      *Subtype = INTEL_COREI7_CANNONLAKE; // "cannonlake"
       break;
 
     case 0x1c: // Most 45 nm Intel Atom processors

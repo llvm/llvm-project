@@ -76,9 +76,11 @@
 // its vtable and typeinfo to libc++ rather than having all other libraries
 // using that class define their own copies.
 #define _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
-
 // Enable optimized version of __do_get_(un)signed which avoids redundant copies.
 #define _LIBCPP_ABI_OPTIMIZED_LOCALE_NUM_GET
+// Use the smallest possible integer type to represent the index of the variant.
+// Previously libc++ used "unsigned int" exclusivly.
+#define _LIBCPP_ABI_VARIANT_INDEX_TYPE_OPTIMIZATION
 #elif _LIBCPP_ABI_VERSION == 1
 #if !defined(_LIBCPP_OBJECT_FORMAT_COFF)
 // Enable compiling copies of now inline methods into the dylib to support

@@ -43,6 +43,7 @@ public:
     assert(getTriple().getEnvironment() == llvm::Triple::UnknownEnvironment &&
            "SPIR target must use unknown environment type");
     TLSSupported = false;
+    VLASupported = false;
     LongWidth = LongAlign = 64;
     AddrSpaceMap = &SPIRAddrSpaceMap;
     UseAddrSpaceMapMangling = true;

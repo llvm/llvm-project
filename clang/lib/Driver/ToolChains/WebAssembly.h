@@ -49,7 +49,6 @@ private:
   bool isPICDefaultForced() const override;
   bool IsIntegratedAssemblerDefault() const override;
   bool hasBlocksRuntime() const override;
-  bool SupportsObjCGC() const override;
   bool SupportsProfiling() const override;
   bool HasNativeLLVMSupport() const override;
   void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
