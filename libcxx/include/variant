@@ -207,6 +207,7 @@ namespace std {
 #include <tuple>
 #include <type_traits>
 #include <utility>
+#include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -283,7 +284,28 @@ struct _LIBCPP_TEMPLATE_VIS variant_alternative<_Ip, variant<_Types...>> {
 };
 
 constexpr size_t variant_npos = static_cast<size_t>(-1);
-constexpr unsigned int __variant_npos = static_cast<unsigned int>(-1);
+
+constexpr int __choose_index_type(unsigned int __num_elem) {
+  if (__num_elem < std::numeric_limits<unsigned char>::max())
+    return 0;
+  if (__num_elem < std::numeric_limits<unsigned short>::max())
+    return 1;
+  return 2;
+}
+
+template <size_t _NumAlts>
+using __variant_index_t =
+#ifndef _LIBCPP_ABI_VARIANT_INDEX_TYPE_OPTIMIZATION
+  unsigned int;
+#else
+  std::tuple_element_t<
+      __choose_index_type(_NumAlts),
+      std::tuple<unsigned char, unsigned short, unsigned int>
+  >;
+#endif
+
+template <class _IndexType>
+constexpr _IndexType __variant_npos = static_cast<_IndexType>(-1);
 
 namespace __find_detail {
 
@@ -647,9 +669,11 @@ _LIBCPP_VARIANT_UNION(_Trait::_Unavailable, ~__union() = delete;);
 template <_Trait _DestructibleTrait, class... _Types>
 class _LIBCPP_TEMPLATE_VIS __base {
 public:
+  using __index_t = __variant_index_t<sizeof...(_Types)>;
+
   inline _LIBCPP_INLINE_VISIBILITY
   explicit constexpr __base(__valueless_t tag) noexcept
-      : __data(tag), __index(__variant_npos) {}
+      : __data(tag), __index(__variant_npos<__index_t>) {}
 
   template <size_t _Ip, class... _Args>
   inline _LIBCPP_INLINE_VISIBILITY
@@ -665,7 +689,7 @@ public:
 
   inline _LIBCPP_INLINE_VISIBILITY
   constexpr size_t index() const noexcept {
-    return __index == __variant_npos ? variant_npos : __index;
+    return __index == __variant_npos<__index_t> ? variant_npos : __index;
   }
 
 protected:
@@ -685,7 +709,7 @@ protected:
   static constexpr size_t __size() { return sizeof...(_Types); }
 
   __union<_DestructibleTrait, 0, _Types...> __data;
-  unsigned int __index;
+  __index_t __index;
 
   friend struct __access::__base;
   friend struct __visitation::__base;
@@ -696,10 +720,11 @@ class _LIBCPP_TEMPLATE_VIS __destructor;
 
 #define _LIBCPP_VARIANT_DESTRUCTOR(destructible_trait, destructor, destroy)    \
   template <class... _Types>                                                   \
-  class _LIBCPP_TEMPLATE_VIS __destructor<__traits<_Types...>,                \
+  class _LIBCPP_TEMPLATE_VIS __destructor<__traits<_Types...>,                 \
                                            destructible_trait>                 \
       : public __base<destructible_trait, _Types...> {                         \
     using __base_type = __base<destructible_trait, _Types...>;                 \
+    using __index_t = typename __base_type::__index_t;                         \
                                                                                \
   public:                                                                      \
     using __base_type::__base_type;                                            \
@@ -719,7 +744,7 @@ class _LIBCPP_TEMPLATE_VIS __destructor;
 _LIBCPP_VARIANT_DESTRUCTOR(
     _Trait::_TriviallyAvailable,
     ~__destructor() = default;,
-    void __destroy() noexcept { this->__index = __variant_npos; });
+    void __destroy() noexcept { this->__index = __variant_npos<__index_t>; });
 
 _LIBCPP_VARIANT_DESTRUCTOR(
     _Trait::_Available,
@@ -733,7 +758,7 @@ _LIBCPP_VARIANT_DESTRUCTOR(
             },
             *this);
       }
-      this->__index = __variant_npos;
+      this->__index = __variant_npos<__index_t>;
     });
 
 _LIBCPP_VARIANT_DESTRUCTOR(
