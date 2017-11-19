@@ -213,6 +213,9 @@ namespace std {
 #pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 namespace std { // explicitly not using versioning namespace
 
 class _LIBCPP_EXCEPTION_ABI bad_variant_access : public exception {
@@ -1585,5 +1588,7 @@ struct _LIBCPP_TEMPLATE_VIS hash<monostate> {
 #endif  // _LIBCPP_STD_VER > 14
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif  // _LIBCPP_VARIANT
