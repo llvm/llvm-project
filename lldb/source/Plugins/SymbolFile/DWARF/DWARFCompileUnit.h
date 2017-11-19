@@ -41,26 +41,24 @@ public:
   void Clear();
   bool Verify(lldb_private::Stream *s) const;
   void Dump(lldb_private::Stream *s) const;
+  // Offset of the initial length field.
   dw_offset_t GetOffset() const { return m_offset; }
   lldb::user_id_t GetID() const;
-  uint32_t Size() const {
-    return m_is_dwarf64 ? 23
-                        : 11; /* Size in bytes of the compile unit header */
-  }
+  // Size in bytes of the initial length + compile unit header.
+  uint32_t Size() const { return m_is_dwarf64 ? 23 : 11; }
   bool ContainsDIEOffset(dw_offset_t die_offset) const {
     return die_offset >= GetFirstDIEOffset() &&
            die_offset < GetNextCompileUnitOffset();
   }
   dw_offset_t GetFirstDIEOffset() const { return m_offset + Size(); }
   dw_offset_t GetNextCompileUnitOffset() const {
-    return m_offset + m_length + (m_is_dwarf64 ? 12 : 4);
+    return m_offset + (m_is_dwarf64 ? 12 : 4) + m_length;
   }
+  // Size of the CU data (without initial length and without header).
   size_t GetDebugInfoSize() const {
-    return m_length + (m_is_dwarf64 ? 12 : 4) - Size(); /* Size in bytes of the
-                                                           .debug_info data
-                                                           associated with this
-                                                           compile unit. */
+    return (m_is_dwarf64 ? 12 : 4) + m_length - Size();
   }
+  // Size of the CU data incl. header but without initial length.
   uint32_t GetLength() const { return m_length; }
   uint16_t GetVersion() const { return m_version; }
   const DWARFAbbreviationDeclarationSet *GetAbbreviations() const {
@@ -175,6 +173,7 @@ protected:
                                                         // DW_TAG_subprogram
                                                         // DIEs
   dw_addr_t m_base_addr;
+  // Offset of the initial length field.
   dw_offset_t m_offset;
   dw_offset_t m_length;
   uint16_t m_version;
