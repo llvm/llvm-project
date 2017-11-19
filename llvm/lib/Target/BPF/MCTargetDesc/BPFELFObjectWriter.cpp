@@ -44,6 +44,7 @@ unsigned BPFELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
     llvm_unreachable("invalid fixup kind!");
   case FK_SecRel_8:
     return ELF::R_BPF_64_64;
+  case FK_PCRel_4:
   case FK_SecRel_4:
     return ELF::R_BPF_64_32;
   case FK_Data_8:

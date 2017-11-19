@@ -70,7 +70,8 @@ protected:
     IntelSkylake,
     IntelKNL,
     IntelSKX,
-    IntelCannonlake
+    IntelCannonlake,
+    IntelIcelake,
   };
 
   /// X86 processor family: Intel Atom, and others
