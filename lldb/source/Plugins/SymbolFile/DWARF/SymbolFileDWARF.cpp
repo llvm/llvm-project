@@ -216,6 +216,10 @@ static inline bool IsSwiftLanguage(LanguageType language) {
          ((uint32_t)language == (uint32_t)llvm::dwarf::DW_LANG_Swift);
 }
 
+DWARFCompileUnit *SymbolFileDWARF::GetBaseCompileUnit() {
+  return nullptr;
+}
+
 void SymbolFileDWARF::Initialize() {
   LogChannelDWARF::Initialize();
   PluginManager::RegisterPlugin(GetPluginNameStatic(),

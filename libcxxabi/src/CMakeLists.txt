@@ -151,7 +151,13 @@ endif()
 
 # Build the static library.
 if (LIBCXXABI_ENABLE_STATIC)
-  add_library(cxxabi_static STATIC $<TARGET_OBJECTS:cxxabi_objects>)
+  set(cxxabi_static_sources $<TARGET_OBJECTS:cxxabi_objects>)
+  if (LIBCXXABI_USE_LLVM_UNWINDER AND LIBCXXABI_ENABLE_STATIC_UNWINDER)
+    if (TARGET unwind_static OR HAVE_LIBUNWIND)
+      list(APPEND cxxabi_static_sources $<TARGET_OBJECTS:unwind_objects>)
+    endif()
+  endif()
+  add_library(cxxabi_static STATIC ${cxxabi_static_sources})
   target_link_libraries(cxxabi_static ${LIBCXXABI_LIBRARIES})
   set_target_properties(cxxabi_static
                         PROPERTIES
@@ -173,12 +179,14 @@ endif()
 # Add a meta-target for both libraries.
 add_custom_target(cxxabi DEPENDS ${LIBCXXABI_TARGETS})
 
-install(TARGETS ${LIBCXXABI_TARGETS}
-  LIBRARY DESTINATION ${LIBCXXABI_INSTALL_PREFIX}lib${LIBCXXABI_LIBDIR_SUFFIX} COMPONENT cxxabi
-  ARCHIVE DESTINATION ${LIBCXXABI_INSTALL_PREFIX}lib${LIBCXXABI_LIBDIR_SUFFIX} COMPONENT cxxabi
-  )
+if (LIBCXXABI_INSTALL_LIBRARY)
+  install(TARGETS ${LIBCXXABI_TARGETS}
+    LIBRARY DESTINATION ${LIBCXXABI_INSTALL_PREFIX}lib${LIBCXXABI_LIBDIR_SUFFIX} COMPONENT cxxabi
+    ARCHIVE DESTINATION ${LIBCXXABI_INSTALL_PREFIX}lib${LIBCXXABI_LIBDIR_SUFFIX} COMPONENT cxxabi
+    )
+endif()
 
-if (NOT CMAKE_CONFIGURATION_TYPES)
+if (NOT CMAKE_CONFIGURATION_TYPES AND LIBCXXABI_INSTALL_LIBRARY)
   add_custom_target(install-cxxabi
     DEPENDS cxxabi
     COMMAND "${CMAKE_COMMAND}"
