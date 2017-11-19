@@ -169,6 +169,92 @@ define <8 x double> @test_rcp_pd_512(<8 x double> %a0) {
 }
 declare <8 x double> @llvm.x86.avx512.rcp14.pd.512(<8 x double>, <8 x double>, i8) nounwind readnone
 
+declare <2 x double> @llvm.x86.avx512.mask.rndscale.sd(<2 x double>, <2 x double>, <2 x double>, i8, i32, i32)
+
+define <2 x double> @test_rndscale_sd(<2 x double> %a, <2 x double> %b) {
+; CHECK-LABEL: test_rndscale_sd:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vrndscalesd $11, %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %res = call <2 x double> @llvm.x86.avx512.mask.rndscale.sd(<2 x double> %a, <2 x double> %b, <2 x double> undef, i8 -1, i32 11, i32 4)
+  ret <2 x double>%res
+}
+
+define <2 x double> @test_rndscale_sd_mask(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
+; CHECK-LABEL: test_rndscale_sd_mask:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vrndscalesd $11, %xmm1, %xmm0, %xmm2 {%k1}
+; CHECK-NEXT:    vmovapd %xmm2, %xmm0
+; CHECK-NEXT:    retq
+  %res = call <2 x double> @llvm.x86.avx512.mask.rndscale.sd(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask, i32 11, i32 4)
+  ret <2 x double>%res
+}
+
+define <2 x double> @test_rndscale_sd_mask_load(<2 x double> %a, <2 x double>* %bptr, <2 x double> %c, i8 %mask) {
+; CHECK-LABEL: test_rndscale_sd_mask_load:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %esi, %k1
+; CHECK-NEXT:    vrndscalesd $11, (%rdi), %xmm0, %xmm1 {%k1}
+; CHECK-NEXT:    vmovapd %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %b = load <2 x double>, <2 x double>* %bptr
+  %res = call <2 x double> @llvm.x86.avx512.mask.rndscale.sd(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask, i32 11, i32 4)
+  ret <2 x double>%res
+}
+
+define <2 x double> @test_rndscale_sd_maskz(<2 x double> %a, <2 x double> %b, i8 %mask) {
+; CHECK-LABEL: test_rndscale_sd_maskz:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vrndscalesd $11, %xmm1, %xmm0, %xmm0 {%k1} {z}
+; CHECK-NEXT:    retq
+  %res = call <2 x double> @llvm.x86.avx512.mask.rndscale.sd(<2 x double> %a, <2 x double> %b, <2 x double> zeroinitializer, i8 %mask, i32 11, i32 4)
+  ret <2 x double>%res
+}
+
+declare <4 x float> @llvm.x86.avx512.mask.rndscale.ss(<4 x float>, <4 x float>, <4 x float>, i8, i32, i32)
+
+define <4 x float> @test_rndscale_ss(<4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: test_rndscale_ss:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vrndscaless $11, %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %res = call <4 x float> @llvm.x86.avx512.mask.rndscale.ss(<4 x float> %a, <4 x float> %b, <4 x float> undef, i8 -1, i32 11, i32 4)
+  ret <4 x float>%res
+}
+
+define <4 x float> @test_rndscale_ss_load(<4 x float> %a, <4 x float>* %bptr) {
+; CHECK-LABEL: test_rndscale_ss_load:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vrndscaless $11, (%rdi), %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %b = load <4 x float>, <4 x float>* %bptr
+  %res = call <4 x float> @llvm.x86.avx512.mask.rndscale.ss(<4 x float> %a, <4 x float> %b, <4 x float> undef, i8 -1, i32 11, i32 4)
+  ret <4 x float>%res
+}
+
+define <4 x float> @test_rndscale_ss_mask(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
+; CHECK-LABEL: test_rndscale_ss_mask:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vrndscaless $11, %xmm1, %xmm0, %xmm2 {%k1}
+; CHECK-NEXT:    vmovaps %xmm2, %xmm0
+; CHECK-NEXT:    retq
+  %res = call <4 x float> @llvm.x86.avx512.mask.rndscale.ss(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask, i32 11, i32 4)
+  ret <4 x float>%res
+}
+
+define <4 x float> @test_rndscale_ss_maskz(<4 x float> %a, <4 x float> %b, i8 %mask) {
+; CHECK-LABEL: test_rndscale_ss_maskz:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vrndscaless $11, %xmm1, %xmm0, %xmm0 {%k1} {z}
+; CHECK-NEXT:    retq
+  %res = call <4 x float> @llvm.x86.avx512.mask.rndscale.ss(<4 x float> %a, <4 x float> %b, <4 x float> zeroinitializer, i8 %mask, i32 11, i32 4)
+  ret <4 x float>%res
+}
+
 declare <8 x double> @llvm.x86.avx512.mask.rndscale.pd.512(<8 x double>, i32, <8 x double>, i8, i32)
 
 define <8 x double> @test7(<8 x double> %a) {
