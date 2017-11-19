@@ -70,11 +70,11 @@ declare void @dummy1(%struct.bitmap*, %struct.bitmap*, %struct.bitmap*, %struct.
 
 ;CHECK-LABEL: @caller2
 ;CHECK-LABEL: CallSiteBB.predBB1.split:
-;CHECK: call void @dummy4()
-;CHECK-LABEL: CallSiteBB.predBB2.split:
 ;CHECK: call void @dummy3()
+;CHECK-LABEL: CallSiteBB.predBB2.split:
+;CHECK: call void @dummy4()
 ;CheCK-LABEL: CallSiteBB:
-;CHECK: %phi.call = phi i1 [ false, %CallSiteBB.predBB1.split ], [ true, %CallSiteBB.predBB2.split ]
+;CHECK: %phi.call = phi i1 [ true, %CallSiteBB.predBB1.split ], [ false, %CallSiteBB.predBB2.split ]
 ;CHECK: call void @foo(i1 %phi.call)
 define void @caller2(i1 %c, %struct.bitmap* %a_elt, %struct.bitmap* %b_elt, %struct.bitmap* %c_elt) {
 entry:

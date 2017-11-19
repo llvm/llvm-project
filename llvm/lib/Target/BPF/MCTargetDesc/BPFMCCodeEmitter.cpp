@@ -100,7 +100,7 @@ unsigned BPFMCCodeEmitter::getMachineOpValue(const MCInst &MI,
 
   if (MI.getOpcode() == BPF::JAL)
     // func call name
-    Fixups.push_back(MCFixup::create(0, Expr, FK_SecRel_4));
+    Fixups.push_back(MCFixup::create(0, Expr, FK_PCRel_4));
   else if (MI.getOpcode() == BPF::LD_imm64)
     Fixups.push_back(MCFixup::create(0, Expr, FK_SecRel_8));
   else
