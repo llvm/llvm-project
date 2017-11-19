@@ -92,6 +92,7 @@ void verifycpustrings() {
   (void)__builtin_cpu_is("broadwell");
   (void)__builtin_cpu_is("btver1");
   (void)__builtin_cpu_is("btver2");
+  (void)__builtin_cpu_is("cannonlake");
   (void)__builtin_cpu_is("core2");
   (void)__builtin_cpu_is("corei7");
   (void)__builtin_cpu_is("haswell");
@@ -99,6 +100,7 @@ void verifycpustrings() {
   (void)__builtin_cpu_is("istanbul");
   (void)__builtin_cpu_is("ivybridge");
   (void)__builtin_cpu_is("knl");
+  (void)__builtin_cpu_is("knm");
   (void)__builtin_cpu_is("nehalem");
   (void)__builtin_cpu_is("sandybridge");
   (void)__builtin_cpu_is("shanghai");

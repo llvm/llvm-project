@@ -129,6 +129,9 @@ static Distro::DistroType DetectDistro(vfs::FileSystem &VFS) {
   if (VFS.exists("/etc/exherbo-release"))
     return Distro::Exherbo;
 
+  if (VFS.exists("/etc/alpine-release"))
+    return Distro::AlpineLinux;
+
   if (VFS.exists("/etc/arch-release"))
     return Distro::ArchLinux;
 
