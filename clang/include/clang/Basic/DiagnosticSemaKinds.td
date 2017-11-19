@@ -141,6 +141,10 @@ def err_vla_decl_has_extern_linkage : Error<
   "variable length array declaration cannot have 'extern' linkage">;
 def ext_vla_folded_to_constant : Extension<
   "variable length array folded to constant array as an extension">, InGroup<GNUFoldingConstant>;
+def err_vla_unsupported : Error<
+  "variable length arrays are not supported for the current target">;
+def note_vla_unsupported : Note<
+  "variable length arrays are not supported for the current target">;
 
 // C99 variably modified types
 def err_variably_modified_template_arg : Error<
@@ -8985,6 +8989,8 @@ def err_omp_reduction_non_addressable_expression : Error<
   "expected addressable reduction item for the task-based directives">;
 def err_omp_reduction_with_nogroup : Error<
   "'reduction' clause cannot be used with 'nogroup' clause">;
+def err_omp_reduction_vla_unsupported : Error<
+  "cannot generate code for reduction on %select{|array section, which requires a }0variable length array">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {

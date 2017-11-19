@@ -152,6 +152,22 @@
 // RUN: %clang %s -target i386-unknown-linux -shared -pie -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NO-PIE
 //
+// On Musl Linux, PIE is enabled by default, but can be disabled.
+// RUN: %clang -c %s -target x86_64-linux-musl -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
+// RUN: %clang -c %s -target i686-linux-musl -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
+// RUN: %clang -c %s -target armv6-linux-musleabihf -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
+// RUN: %clang -c %s -target armv7-linux-musleabihf -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
+// RUN: %clang %s -target x86_64-linux-musl -nopie -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-NO-PIE
+// RUN: %clang %s -target x86_64-linux-musl -pie -nopie -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-NO-PIE
+// RUN: %clang %s -target x86_64-linux-musl -nopie -pie -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
+//
 // Darwin is a beautiful and unique snowflake when it comes to these flags.
 // When targeting a 32-bit darwin system, only level 2 is supported. On 64-bit
 // targets, there is simply nothing you can do, there is no PIE, there is only

@@ -81,6 +81,7 @@ Clang-Tidy Checks
    hicpp-invalid-access-moved (redirects to misc-use-after-move) <hicpp-invalid-access-moved>
    hicpp-member-init (redirects to cppcoreguidelines-pro-type-member-init) <hicpp-member-init>
    hicpp-move-const-arg (redirects to misc-move-const-arg) <hicpp-move-const-arg>
+   hicpp-multiway-paths-covered
    hicpp-named-parameter (redirects to readability-named-parameter) <hicpp-named-parameter>
    hicpp-new-delete-operators (redirects to misc-new-delete-overloads) <hicpp-new-delete-operators>
    hicpp-no-array-decay (redirects to cppcoreguidelines-pro-bounds-array-to-pointer-decay) <hicpp-no-array-decay>

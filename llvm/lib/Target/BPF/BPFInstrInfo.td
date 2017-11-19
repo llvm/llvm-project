@@ -400,6 +400,18 @@ class CALL<string OpcodeStr>
   let BPFClass = BPF_JMP;
 }
 
+class CALLX<string OpcodeStr>
+    : TYPE_ALU_JMP<BPF_CALL.Value, BPF_X.Value,
+                   (outs),
+                   (ins calltarget:$BrDst),
+                   !strconcat(OpcodeStr, " $BrDst"),
+                   []> {
+  bits<32> BrDst;
+
+  let Inst{31-0} = BrDst;
+  let BPFClass = BPF_JMP;
+}
+
 // Jump always
 let isBranch = 1, isTerminator = 1, hasDelaySlot=0, isBarrier = 1 in {
   def JMP : BRANCH<BPF_JA, "goto", [(br bb:$BrDst)]>;
@@ -410,6 +422,7 @@ let isCall=1, hasDelaySlot=0, Uses = [R11],
     // Potentially clobbered registers
     Defs = [R0, R1, R2, R3, R4, R5] in {
   def JAL  : CALL<"call">;
+  def JALX  : CALLX<"callx">;
 }
 
 class NOP_I<string OpcodeStr>
@@ -476,6 +489,7 @@ def : Pat<(i64 (and (i64 GPR:$src), 0xffffFFFF)),
 def : Pat<(BPFcall tglobaladdr:$dst), (JAL tglobaladdr:$dst)>;
 def : Pat<(BPFcall texternalsym:$dst), (JAL texternalsym:$dst)>;
 def : Pat<(BPFcall imm:$dst), (JAL imm:$dst)>;
+def : Pat<(BPFcall GPR:$dst), (JALX GPR:$dst)>;
 
 // Loads
 def : Pat<(extloadi8  ADDRri:$src), (i64 (LDB ADDRri:$src))>;

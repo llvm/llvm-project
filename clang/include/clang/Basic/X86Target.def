@@ -139,6 +139,10 @@ PROC_ALIAS(SkylakeServer, "skx")
 /// Cannonlake client microarchitecture based processors.
 PROC(Cannonlake, "cannonlake", PROC_64_BIT)
 
+/// \name Icelake Client
+/// Icelake client microarchitecture based processors.
+PROC(Icelake, "icelake", PROC_64_BIT)
+
 /// \name Knights Landing
 /// Knights Landing processor.
 PROC(KNL, "knl", PROC_64_BIT)
