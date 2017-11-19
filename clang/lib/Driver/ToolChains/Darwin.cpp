@@ -2041,8 +2041,6 @@ void Darwin::addStartObjectFileArgs(const ArgList &Args,
   }
 }
 
-bool Darwin::SupportsObjCGC() const { return isTargetMacOS(); }
-
 void Darwin::CheckObjCARC() const {
   if (isTargetIOSBased() || isTargetWatchOSBased() ||
       (isTargetMacOS() && !isMacosxVersionLT(10, 6)))
