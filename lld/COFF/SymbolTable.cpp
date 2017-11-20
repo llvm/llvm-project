@@ -148,7 +148,7 @@ void SymbolTable::reportRemainingUndefines() {
 
   for (ObjFile *File : ObjFile::Instances)
     for (Symbol *Sym : File->getSymbols())
-      if (Undefs.count(Sym))
+      if (Sym && Undefs.count(Sym))
         errorOrWarn(toString(File) + ": undefined symbol: " + Sym->getName());
 }
 

@@ -130,7 +130,7 @@ private:
   bool splitAlloca(AllocaInst &AI, sroa::AllocaSlices &AS);
   bool runOnAlloca(AllocaInst &AI);
   void clobberUse(Use &U);
-  void deleteDeadInstructions(SmallPtrSetImpl<AllocaInst *> &DeletedAllocas);
+  bool deleteDeadInstructions(SmallPtrSetImpl<AllocaInst *> &DeletedAllocas);
   bool promoteAllocas(Function &F);
 };
 

@@ -107,13 +107,14 @@ static SIEncodingFamily subtargetEncodingFamily(const AMDGPUSubtarget &ST) {
 
 int AMDGPUInstrInfo::pseudoToMCOpcode(int Opcode) const {
   SIEncodingFamily Gen = subtargetEncodingFamily(ST);
+
+  if ((get(Opcode).TSFlags & SIInstrFlags::renamedInGFX9) != 0 &&
+    ST.getGeneration() >= AMDGPUSubtarget::GFX9)
+    Gen = SIEncodingFamily::GFX9;
+
   if (get(Opcode).TSFlags & SIInstrFlags::SDWA)
     Gen = ST.getGeneration() == AMDGPUSubtarget::GFX9 ? SIEncodingFamily::SDWA9
                                                       : SIEncodingFamily::SDWA;
-
-  if ((get(Opcode).TSFlags & SIInstrFlags::F16_ZFILL) != 0 &&
-      ST.getGeneration() >= AMDGPUSubtarget::GFX9)
-    Gen = SIEncodingFamily::GFX9;
 
   int MCOp = AMDGPU::getMCOpcode(Opcode, Gen);
 

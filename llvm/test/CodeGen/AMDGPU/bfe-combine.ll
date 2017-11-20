@@ -9,8 +9,8 @@
 ; VI-SDWA: v_lshlrev_b32_sdwa v[[ADDRBASE:[0-9]+]], v[[SHIFT]], v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_1
 ; CI: v_lshrrev_b32_e32 v[[SHR:[0-9]+]], 6, v{{[0-9]+}}
 ; CI: v_and_b32_e32 v[[ADDRLO:[0-9]+]], 0x3fc, v[[SHR]]
-; VI: v_add_i32_e32 v[[ADDRLO:[0-9]+]], vcc, s{{[0-9]+}}, v[[ADDRBASE]]
-; VI-SDWA: v_add_i32_e32 v[[ADDRLO:[0-9]+]], vcc, s{{[0-9]+}}, v[[ADDRBASE]]
+; VI: v_add_u32_e32 v[[ADDRLO:[0-9]+]], vcc, s{{[0-9]+}}, v[[ADDRBASE]]
+; VI-SDWA: v_add_u32_e32 v[[ADDRLO:[0-9]+]], vcc, s{{[0-9]+}}, v[[ADDRBASE]]
 ; GCN: load_dword v{{[0-9]+}}, v{{\[}}[[ADDRLO]]:
 define amdgpu_kernel void @bfe_combine8(i32 addrspace(1)* nocapture %arg, i32 %x) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x() #2
@@ -29,11 +29,11 @@ define amdgpu_kernel void @bfe_combine8(i32 addrspace(1)* nocapture %arg, i32 %x
 ; VI-SDWA: v_mov_b32_e32 v[[SHIFT:[0-9]+]], 15
 ; VI-SDWA: v_lshlrev_b32_sdwa v[[ADDRBASE1:[0-9]+]], v[[SHIFT]], v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; VI-SDWA: v_lshlrev_b64 v{{\[}}[[ADDRBASE:[0-9]+]]:{{[^\]+}}], 2, v{{\[}}[[ADDRBASE1]]:{{[^\]+}}]
-; VI-SDWA: v_add_i32_e32 v[[ADDRLO:[0-9]+]], vcc, s{{[0-9]+}}, v[[ADDRBASE]]
+; VI-SDWA: v_add_u32_e32 v[[ADDRLO:[0-9]+]], vcc, s{{[0-9]+}}, v[[ADDRBASE]]
 ; CI: v_lshrrev_b32_e32 v[[SHR:[0-9]+]], 1, v{{[0-9]+}}
 ; CI: v_and_b32_e32 v[[AND:[0-9]+]], 0x7fff8000, v[[SHR]]
 ; CI: v_lshl_b64 v{{\[}}[[ADDRLO:[0-9]+]]:{{[^\]+}}], v{{\[}}[[AND]]:{{[^\]+}}], 2
-; VI: v_add_i32_e32 v[[ADDRLO:[0-9]+]], vcc, s{{[0-9]+}}, v[[ADDRBASE]]
+; VI: v_add_u32_e32 v[[ADDRLO:[0-9]+]], vcc, s{{[0-9]+}}, v[[ADDRBASE]]
 ; GCN: load_dword v{{[0-9]+}}, v{{\[}}[[ADDRLO]]:
 define amdgpu_kernel void @bfe_combine16(i32 addrspace(1)* nocapture %arg, i32 %x) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x() #2

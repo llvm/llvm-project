@@ -1128,7 +1128,7 @@ public:
     const value_type* c_str() const _NOEXCEPT {return data();}
     _LIBCPP_INLINE_VISIBILITY
     const value_type* data() const _NOEXCEPT  {return _VSTD::__to_raw_pointer(__get_pointer());}
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER > 14 || defined(_LIBCPP_BUILDING_LIBRARY)
     _LIBCPP_INLINE_VISIBILITY
     value_type* data()             _NOEXCEPT  {return _VSTD::__to_raw_pointer(__get_pointer());}
 #endif

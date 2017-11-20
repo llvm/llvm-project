@@ -95,11 +95,11 @@ v_mul_i32_i24_e64 v1, s2, 3
 v_mul_i32_i24_e64 v1, 3, s3
 
 // SICI: v_add_i32_e32 v0, vcc, 0.5, v0 ; encoding: [0xf0,0x00,0x00,0x4a]
-// VI: v_add_i32_e32 v0, vcc, 0.5, v0 ; encoding: [0xf0,0x00,0x00,0x32]
+// NOVI: error: instruction not supported on this GPU
 v_add_i32_e32 v0, vcc, 0.5, v0
 
 // SICI: v_add_i32_e32 v0, vcc, 0x40480000, v0 ; encoding: [0xff,0x00,0x00,0x4a,0x00,0x00,0x48,0x40]
-// VI: v_add_i32_e32 v0, vcc, 0x40480000, v0 ; encoding: [0xff,0x00,0x00,0x32,0x00,0x00,0x48,0x40]
+// NOVI: error: instruction not supported on this GPU
 v_add_i32_e32 v0, vcc, 3.125, v0
 
 //===----------------------------------------------------------------------===//
@@ -271,59 +271,59 @@ v_mbcnt_lo_u32_b32_e64 v1, v2, v3
 v_mbcnt_hi_u32_b32_e64 v1, v2, v3
 
 // SICI: v_add_i32_e32 v1, vcc, v2, v3 ; encoding: [0x02,0x07,0x02,0x4a]
-// VI:   v_add_i32_e32 v1, vcc, v2, v3 ; encoding: [0x02,0x07,0x02,0x32]
+// NOVI: error: instruction not supported on this GPU
 v_add_i32_e32 v1, vcc, v2, v3
 
 // SICI: v_add_i32_e64 v1, s[0:1], v2, v3 ; encoding: [0x01,0x00,0x4a,0xd2,0x02,0x07,0x02,0x00]
-// VI:   v_add_i32_e64 v1, s[0:1], v2, v3 ; encoding: [0x01,0x00,0x19,0xd1,0x02,0x07,0x02,0x00]
+// NOVI: error: instruction not supported on this GPU
 v_add_i32 v1, s[0:1], v2, v3
 
 // SICI: v_add_i32_e64 v1, s[0:1], v2, v3 ; encoding: [0x01,0x00,0x4a,0xd2,0x02,0x07,0x02,0x00]
-// VI:   v_add_i32_e64 v1, s[0:1], v2, v3 ; encoding: [0x01,0x00,0x19,0xd1,0x02,0x07,0x02,0x00]
+// NOVI: error: instruction not supported on this GPU
 v_add_i32_e64 v1, s[0:1], v2, v3
 
 // SICI: v_add_i32_e64 v1, vcc, v2, v3 ; encoding: [0x01,0x6a,0x4a,0xd2,0x02,0x07,0x02,0x00]
-// VI:   v_add_i32_e64 v1, vcc, v2, v3 ; encoding: [0x01,0x6a,0x19,0xd1,0x02,0x07,0x02,0x00]
+// NOVI: error: instruction not supported on this GPU
 v_add_i32_e64 v1, vcc, v2, v3
 
-// SICI: v_add_i32_e32 v1, vcc, v2, v3 ; encoding: [0x02,0x07,0x02,0x4a]
-// VI:   v_add_i32_e32 v1, vcc, v2, v3 ; encoding: [0x02,0x07,0x02,0x32]
+// NOSICI: error: instruction not supported on this GPU
+// VI: v_add_u32_e32 v1, vcc, v2, v3   ; encoding: [0x02,0x07,0x02,0x32]
 v_add_u32 v1, vcc, v2, v3
 
-// SICI: v_add_i32_e64 v1, s[0:1], v2, v3 ; encoding: [0x01,0x00,0x4a,0xd2,0x02,0x07,0x02,0x00]
-// VI:   v_add_i32_e64 v1, s[0:1], v2, v3 ; encoding: [0x01,0x00,0x19,0xd1,0x02,0x07,0x02,0x00]
+// NOSICI: error: instruction not supported on this GPU
+// VI: v_add_u32_e64 v1, s[0:1], v2, v3 ; encoding: [0x01,0x00,0x19,0xd1,0x02,0x07,0x02,0x00]
 v_add_u32 v1, s[0:1], v2, v3
 
 // SICI: v_sub_i32_e32 v1, vcc, v2, v3 ; encoding: [0x02,0x07,0x02,0x4c]
-// VI:   v_sub_i32_e32 v1, vcc, v2, v3 ; encoding: [0x02,0x07,0x02,0x34]
+// NOVI: error: instruction not supported on this GPU
 v_sub_i32 v1, vcc, v2, v3
 
 // SICI: v_sub_i32_e64 v1, s[0:1], v2, v3 ; encoding: [0x01,0x00,0x4c,0xd2,0x02,0x07,0x02,0x00]
-// VI:   v_sub_i32_e64 v1, s[0:1], v2, v3 ; encoding: [0x01,0x00,0x1a,0xd1,0x02,0x07,0x02,0x00]
+// NOVI: error: instruction not supported on this GPU
 v_sub_i32 v1, s[0:1], v2, v3
 
-// SICI: v_sub_i32_e32 v1, vcc, v2, v3 ; encoding: [0x02,0x07,0x02,0x4c]
-// VI:   v_sub_i32_e32 v1, vcc, v2, v3 ; encoding: [0x02,0x07,0x02,0x34]
+// NOSICI: error: instruction not supported on this GPU
+// VI:   v_sub_u32_e32 v1, vcc, v2, v3 ; encoding: [0x02,0x07,0x02,0x34]
 v_sub_u32 v1, vcc, v2, v3
 
-// SICI: v_sub_i32_e64 v1, s[0:1], v2, v3 ; encoding: [0x01,0x00,0x4c,0xd2,0x02,0x07,0x02,0x00]
-// VI:   v_sub_i32_e64 v1, s[0:1], v2, v3 ; encoding: [0x01,0x00,0x1a,0xd1,0x02,0x07,0x02,0x00]
+// NOSICI: error: instruction not supported on this GPU
+// VI:   v_sub_u32_e64 v1, s[0:1], v2, v3 ; encoding: [0x01,0x00,0x1a,0xd1,0x02,0x07,0x02,0x00]
 v_sub_u32 v1, s[0:1], v2, v3
 
 // SICI: v_subrev_i32_e32 v1, vcc, v2, v3 ; encoding: [0x02,0x07,0x02,0x4e]
-// VI:   v_subrev_i32_e32 v1, vcc, v2, v3 ; encoding: [0x02,0x07,0x02,0x36]
+// NOVI: error: instruction not supported on this GPU
 v_subrev_i32 v1, vcc, v2, v3
 
 // SICI: v_subrev_i32_e64 v1, s[0:1], v2, v3 ; encoding: [0x01,0x00,0x4e,0xd2,0x02,0x07,0x02,0x00]
-// VI:   v_subrev_i32_e64 v1, s[0:1], v2, v3 ; encoding: [0x01,0x00,0x1b,0xd1,0x02,0x07,0x02,0x00]
+// NOVI: error: instruction not supported on this GPU
 v_subrev_i32 v1, s[0:1], v2, v3
 
-// SICI: v_subrev_i32_e32 v1, vcc, v2, v3 ; encoding: [0x02,0x07,0x02,0x4e]
-// VI:   v_subrev_i32_e32 v1, vcc, v2, v3 ; encoding: [0x02,0x07,0x02,0x36]
+// NOSICI: error: instruction not supported on this GPU
+// VI:   v_subrev_u32_e32 v1, vcc, v2, v3 ; encoding: [0x02,0x07,0x02,0x36]
 v_subrev_u32 v1, vcc, v2, v3
 
-// SICI: v_subrev_i32_e64 v1, s[0:1], v2, v3 ; encoding: [0x01,0x00,0x4e,0xd2,0x02,0x07,0x02,0x00]
-// VI:   v_subrev_i32_e64 v1, s[0:1], v2, v3 ; encoding: [0x01,0x00,0x1b,0xd1,0x02,0x07,0x02,0x00]
+// NOSICI: error: instruction not supported on this GPU
+// VI:   v_subrev_u32_e64 v1, s[0:1], v2, v3 ; encoding: [0x01,0x00,0x1b,0xd1,0x02,0x07,0x02,0x00]
 v_subrev_u32 v1, s[0:1], v2, v3
 
 // SICI: v_addc_u32_e32 v1, vcc, v2, v3, vcc ; encoding: [0x02,0x07,0x02,0x50]

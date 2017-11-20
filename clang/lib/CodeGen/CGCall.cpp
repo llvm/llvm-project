@@ -1739,7 +1739,7 @@ void CodeGenModule::ConstructDefaultFnAttrList(StringRef Name, bool HasOptnone,
         llvm::toStringRef(CodeGenOpts.CorrectlyRoundedDivSqrt));
 
     // TODO: Reciprocal estimate codegen options should apply to instructions?
-    std::vector<std::string> &Recips = getTarget().getTargetOpts().Reciprocals;
+    const std::vector<std::string> &Recips = CodeGenOpts.Reciprocals;
     if (!Recips.empty())
       FuncAttrs.addAttribute("reciprocal-estimates",
                              llvm::join(Recips, ","));

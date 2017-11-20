@@ -22,7 +22,7 @@ define amdgpu_kernel void @s_usubo_i64_zext(i64 addrspace(1)* %out, i64 %a, i64 
 ; FIXME: Could do scalar
 
 ; FUNC-LABEL: {{^}}s_usubo_i32:
-; GCN: v_sub_i32_e32 v{{[0-9]+}}, vcc, s{{[0-9]+}}, v{{[0-9]+}}
+; GCN: v_sub_{{[iu]}}32_e32 v{{[0-9]+}}, vcc, s{{[0-9]+}}, v{{[0-9]+}}
 ; GCN: v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1, vcc
 
 ; EG-DAG: SUBB_UINT
@@ -37,7 +37,7 @@ define amdgpu_kernel void @s_usubo_i32(i32 addrspace(1)* %out, i1 addrspace(1)* 
 }
 
 ; FUNC-LABEL: {{^}}v_usubo_i32:
-; GCN: v_sub_i32_e32 v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}}
+; GCN: v_sub_{{[iu]}}32_e32 v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}}
 ; GCN: v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1, vcc
 
 ; EG-DAG: SUBB_UINT
@@ -58,7 +58,7 @@ define amdgpu_kernel void @v_usubo_i32(i32 addrspace(1)* %out, i1 addrspace(1)* 
 }
 
 ; FUNC-LABEL: {{^}}v_usubo_i32_novcc:
-; GCN: v_sub_i32_e32 v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}}
+; GCN: v_sub_{{[iu]}}32_e32 v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}}
 ; GCN: v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1, vcc
 
 ; EG-DAG: SUBB_UINT
@@ -97,7 +97,7 @@ define amdgpu_kernel void @s_usubo_i64(i64 addrspace(1)* %out, i1 addrspace(1)* 
 }
 
 ; FUNC-LABEL: {{^}}v_usubo_i64:
-; GCN: v_sub_i32
+; GCN: v_sub_{{[iu]}}32
 ; GCN: v_subb_u32
 
 ; EG-DAG: SUBB_UINT

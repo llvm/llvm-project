@@ -91,6 +91,7 @@ sw.bb:                                            ; preds = %indirectgoto, %disp
 
 TARGET_1:                                         ; preds = %indirectgoto
   br label %sw.bb6
+; USE: br label %sw.bb6, !irr_loop {{.*}}
 
 sw.bb6:                                           ; preds = %TARGET_1, %dispatch_op.sw.bb6_crit_edge
   br i1 %tobool, label %dispatch_op, label %if.then
@@ -102,6 +103,7 @@ if.then:                                          ; preds = %sw.bb6
 
 TARGET_2:                                         ; preds = %indirectgoto
   br label %sw.bb15
+; USE: br label %sw.bb15, !irr_loop {{.*}}
 
 sw.bb15:                                          ; preds = %TARGET_2, %dispatch_op
   br i1 %tobool, label %if.then18, label %exit

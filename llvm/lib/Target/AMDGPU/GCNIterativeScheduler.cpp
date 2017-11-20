@@ -39,7 +39,9 @@ namespace llvm {
 std::vector<const SUnit *> makeMinRegSchedule(ArrayRef<const SUnit *> TopRoots,
                                               const ScheduleDAG &DAG);
 
-} // end namespace llvm
+  std::vector<const SUnit*> makeGCNILPScheduler(ArrayRef<const SUnit*> BotRoots,
+    const ScheduleDAG &DAG);
+}
 
 // shim accessors for different order containers
 static inline MachineInstr *getMachineInstr(MachineInstr *MI) {
@@ -141,6 +143,7 @@ class GCNIterativeScheduler::BuildDAG {
   GCNIterativeScheduler &Sch;
   SmallVector<SUnit *, 8> TopRoots;
 
+  SmallVector<SUnit*, 8> BotRoots;
 public:
   BuildDAG(const Region &R, GCNIterativeScheduler &_Sch)
     : Sch(_Sch) {
@@ -151,8 +154,6 @@ public:
     Sch.buildSchedGraph(Sch.AA, nullptr, nullptr, nullptr,
                         /*TrackLaneMask*/true);
     Sch.Topo.InitDAGTopologicalSorting();
-
-    SmallVector<SUnit *, 8> BotRoots;
     Sch.findRootsAndBiasEdges(TopRoots, BotRoots);
   }
 
@@ -163,6 +164,9 @@ public:
 
   ArrayRef<const SUnit *> getTopRoots() const {
     return TopRoots;
+  }
+  ArrayRef<SUnit*> getBottomRoots() const {
+    return BotRoots;
   }
 };
 
@@ -323,6 +327,7 @@ void GCNIterativeScheduler::finalizeSchedule() { // overriden
   case SCHEDULE_MINREGONLY: scheduleMinReg(); break;
   case SCHEDULE_MINREGFORCED: scheduleMinReg(true); break;
   case SCHEDULE_LEGACYMAXOCCUPANCY: scheduleLegacyMaxOccupancy(); break;
+  case SCHEDULE_ILP: scheduleILP(false); break;
   }
 }
 
@@ -551,5 +556,45 @@ void GCNIterativeScheduler::scheduleMinReg(bool force) {
     DEBUG(printSchedResult(dbgs(), R, RP));
 
     MaxPressure = RP;
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// ILP scheduler port
+
+void GCNIterativeScheduler::scheduleILP(
+  bool TryMaximizeOccupancy) {
+  const auto &ST = MF.getSubtarget<SISubtarget>();
+  auto TgtOcc = std::min(ST.getOccupancyWithLocalMemSize(MF),
+                         ST.getWavesPerEU(*MF.getFunction()).second);
+
+  sortRegionsByPressure(TgtOcc);
+  auto Occ = Regions.front()->MaxPressure.getOccupancy(ST);
+
+  if (TryMaximizeOccupancy && Occ < TgtOcc)
+    Occ = tryMaximizeOccupancy(TgtOcc);
+
+  TgtOcc = std::min(Occ, TgtOcc);
+  DEBUG(dbgs() << "Scheduling using default scheduler, "
+    "target occupancy = " << TgtOcc << '\n');
+
+  for (auto R : Regions) {
+    BuildDAG DAG(*R, *this);
+    const auto ILPSchedule = makeGCNILPScheduler(DAG.getBottomRoots(), *this);
+
+    const auto RP = getSchedulePressure(*R, ILPSchedule);
+    DEBUG(printSchedRP(dbgs(), R->MaxPressure, RP));
+
+    if (RP.getOccupancy(ST) < TgtOcc) {
+      DEBUG(dbgs() << "Didn't fit into target occupancy O" << TgtOcc);
+      if (R->BestSchedule.get() &&
+        R->BestSchedule->MaxPressure.getOccupancy(ST) >= TgtOcc) {
+        DEBUG(dbgs() << ", scheduling minimal register\n");
+        scheduleBest(*R);
+      }
+    } else {
+      scheduleRegion(*R, ILPSchedule, RP);
+      DEBUG(printSchedResult(dbgs(), R, RP));
+    }
   }
 }

@@ -98,7 +98,7 @@ entry:
 ; GCN: s_waitcnt
 ; GFX9-NEXT: global_store_short_d16_hi v[0:1], v2, off offset:4094
 
-; VI-DAG: v_add_i32_e32
+; VI-DAG: v_add_u32_e32
 ; VI-DAG: v_addc_u32_e32
 ; VI-DAG: v_lshrrev_b32_e32 v2, 16, v2
 
@@ -119,7 +119,7 @@ entry:
 ; GCN: s_waitcnt
 ; GFX9-NEXT: global_store_short_d16_hi v[0:1], v2, off offset:-4096{{$}}
 
-; VI-DAG: v_add_i32_e32
+; VI-DAG: v_add_u32_e32
 ; VI-DAG: v_addc_u32_e32
 ; VI-DAG: v_lshrrev_b32_e32 v2, 16, v2
 
@@ -139,7 +139,7 @@ entry:
 ; GCN: s_waitcnt
 ; GFX9-NEXT: global_store_byte_d16_hi v[0:1], v2, off offset:4095
 
-; VI-DAG: v_add_i32_e32
+; VI-DAG: v_add_u32_e32
 ; VI-DAG: v_addc_u32_e32
 ; VI-DAG: v_lshrrev_b32_e32 v2, 16, v2
 ; VI: flat_store_byte v[0:1], v{{[0-9]$}}
@@ -160,7 +160,7 @@ entry:
 ; GCN: s_waitcnt
 ; GFX9-NEXT: global_store_byte_d16_hi v[0:1], v2, off offset:-4095
 
-; VI-DAG: v_add_i32_e32
+; VI-DAG: v_add_u32_e32
 ; VI-DAG: v_addc_u32_e32
 ; VI-DAG: v_lshrrev_b32_e32 v2, 16, v2
 
@@ -272,7 +272,7 @@ entry:
 ; GCN: s_waitcnt
 ; GFX9-NEXT: flat_store_short_d16_hi v[0:1], v2 offset:4094{{$}}
 
-; VI-DAG: v_add_i32_e32
+; VI-DAG: v_add_u32_e32
 ; VI-DAG: v_addc_u32_e32
 ; VI-DAG: v_lshrrev_b32_e32 v2, 16, v2
 ; VI: flat_store_short v[0:1], v2{{$}}
@@ -289,8 +289,9 @@ entry:
 
 ; GCN-LABEL: {{^}}store_flat_hi_v2i16_neg_offset:
 ; GCN: s_waitcnt
-; GCN: v_add_i32_e32
-; GCN: v_addc_u32_e32
+; GCN: v_add_{{[_cou]*}}32_e32
+; VI: v_addc_u32_e32
+; GFX9: v_addc_co_u32_e32
 
 ; GFX9-NEXT: flat_store_short_d16_hi v[0:1], v2{{$}}
 ; VI: flat_store_short v[0:1], v2{{$}}
@@ -310,7 +311,7 @@ entry:
 ; GFX9-NEXT: flat_store_byte_d16_hi v[0:1], v2 offset:4095{{$}}
 
 ; VI-DAG: v_lshrrev_b32_e32 v2, 16, v2
-; VI-DAG: v_add_i32_e32
+; VI-DAG: v_add_u32_e32
 ; VI-DAG: v_addc_u32_e32
 ; VI: flat_store_byte v[0:1], v2{{$}}
 ; GCN-NEXT: s_waitcnt
@@ -327,8 +328,9 @@ entry:
 
 ; GCN-LABEL: {{^}}store_flat_hi_v2i16_i8_neg_offset:
 ; GCN: s_waitcnt
-; GCN-DAG: v_add_i32_e32
-; GCN-DAG: v_addc_u32_e32
+; GCN-DAG: v_add_{{[_cou]*}}32_e32
+; VI-DAG: v_addc_u32_e32
+; GFX9-DAG: v_addc_co_u32_e32
 
 ; GFX9-NEXT: flat_store_byte_d16_hi v[0:1], v2{{$}}
 ; VI-DAG: v_lshrrev_b32_e32 v2, 16, v2

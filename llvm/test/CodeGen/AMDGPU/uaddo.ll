@@ -22,7 +22,7 @@ define amdgpu_kernel void @s_uaddo_i64_zext(i64 addrspace(1)* %out, i64 %a, i64 
 ; FIXME: Could do scalar
 
 ; FUNC-LABEL: {{^}}s_uaddo_i32:
-; GCN: v_add_i32_e32 v{{[0-9]+}}, vcc, s{{[0-9]+}}, v{{[0-9]+}}
+; GCN: v_add_{{[iu]}}32_e32 v{{[0-9]+}}, vcc, s{{[0-9]+}}, v{{[0-9]+}}
 ; GCN: v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1, vcc
 
 ; EG: ADDC_UINT
@@ -37,7 +37,7 @@ define amdgpu_kernel void @s_uaddo_i32(i32 addrspace(1)* %out, i1 addrspace(1)* 
 }
 
 ; FUNC-LABEL: {{^}}v_uaddo_i32:
-; GCN: v_add_i32_e32 v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}}
+; GCN: v_add_{{[iu]}}32_e32 v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}}
 ; GCN: v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1, vcc
 
 ; EG: ADDC_UINT
@@ -58,7 +58,7 @@ define amdgpu_kernel void @v_uaddo_i32(i32 addrspace(1)* %out, i1 addrspace(1)* 
 }
 
 ; FUNC-LABEL: {{^}}v_uaddo_i32_novcc:
-; GCN: v_add_i32_e32 v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}}
+; GCN: v_add_{{[iu]}}32_e32 v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}}
 ; GCN: v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1, vcc
 
 ; EG: ADDC_UINT
@@ -95,7 +95,7 @@ define amdgpu_kernel void @s_uaddo_i64(i64 addrspace(1)* %out, i1 addrspace(1)* 
 }
 
 ; FUNC-LABEL: {{^}}v_uaddo_i64:
-; GCN: v_add_i32
+; GCN: v_add_{{[iu]}}32
 ; GCN: v_addc_u32
 
 ; EG: ADDC_UINT

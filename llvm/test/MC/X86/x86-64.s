@@ -1082,8 +1082,8 @@ decl %eax // CHECK:	decl	%eax # encoding: [0xff,0xc8]
 
 
 // rdar://8208615
-mov (%rsi), %gs  // CHECK: movl	(%rsi), %gs # encoding: [0x8e,0x2e]
-mov %gs, (%rsi)  // CHECK: movl	%gs, (%rsi) # encoding: [0x8c,0x2e]
+mov (%rsi), %gs  // CHECK: movw	(%rsi), %gs # encoding: [0x8e,0x2e]
+mov %gs, (%rsi)  // CHECK: movw	%gs, (%rsi) # encoding: [0x8c,0x2e]
 
 
 // rdar://8431864

@@ -1485,10 +1485,10 @@ entry:
 ; P9BE: xvcvspsxws v2, [[REG1]]
 ; P9LE: [[REG1:[vs0-9]+]], 0, r3
 ; P9LE: xvcvspsxws v2, [[REG1]]
-; P8BE: lxsspx [[REG1:f[0-9]+]], 0, r3
+; P8BE: lfsx [[REG1:f[0-9]+]], 0, r3
 ; P8BE: xscvdpsxws f[[REG2:[0-9]+]], [[REG1]]
 ; P8BE: xxspltw v2, vs[[REG2]], 1
-; P8LE: lxsspx [[REG1:f[0-9]+]], 0, r3
+; P8LE: lfsx [[REG1:f[0-9]+]], 0, r3
 ; P8LE: xscvdpsxws f[[REG2:[vs0-9]+]], [[REG1]]
 ; P8LE: xxspltw v2, vs[[REG2]], 1
 }
@@ -1880,11 +1880,11 @@ entry:
 ; P9LE: xscvdpsxws
 ; P9LE: xxspltw
 ; P9LE: blr
-; P8BE: lxsdx
+; P8BE: lfdx
 ; P8BE: xscvdpsxws
 ; P8BE: xxspltw
 ; P8BE: blr
-; P8LE: lxsdx
+; P8LE: lfdx
 ; P8LE: xscvdpsxws
 ; P8LE: xxspltw
 ; P8LE: blr
@@ -2645,10 +2645,10 @@ entry:
 ; P9BE: xvcvspuxws v2, [[REG1]]
 ; P9LE: [[REG1:[vs0-9]+]], 0, r3
 ; P9LE: xvcvspuxws v2, [[REG1]]
-; P8BE: lxsspx [[REG1:f[0-9]+]], 0, r3
+; P8BE: lfsx [[REG1:f[0-9]+]], 0, r3
 ; P8BE: xscvdpuxws f[[REG2:[0-9]+]], [[REG1]]
 ; P8BE: xxspltw v2, vs[[REG2]], 1
-; P8LE: lxsspx [[REG1:f[0-9]+]], 0, r3
+; P8LE: lfsx [[REG1:f[0-9]+]], 0, r3
 ; P8LE: xscvdpuxws f[[REG2:[vs0-9]+]], [[REG1]]
 ; P8LE: xxspltw v2, vs[[REG2]], 1
 }
@@ -3040,11 +3040,11 @@ entry:
 ; P9LE: xscvdpuxws
 ; P9LE: xxspltw
 ; P9LE: blr
-; P8BE: lxsdx
+; P8BE: lfdx
 ; P8BE: xscvdpuxws
 ; P8BE: xxspltw
 ; P8BE: blr
-; P8LE: lxsdx
+; P8LE: lfdx
 ; P8LE: xscvdpuxws
 ; P8LE: xxspltw
 ; P8LE: blr
@@ -3508,13 +3508,13 @@ entry:
 ; P9LE: xxmrghd
 ; P9LE-NEXT: xvcvdpsxds v2
 ; P9LE-NEXT: blr
-; P8BE: lxsspx
-; P8BE: lxsspx
+; P8BE: lfsx
+; P8BE: lfsx
 ; P8BE: xxmrghd
 ; P8BE-NEXT: xvcvdpsxds v2
 ; P8BE-NEXT: blr
-; P8LE: lxsspx
-; P8LE: lxsspx
+; P8LE: lfsx
+; P8LE: lfsx
 ; P8LE: xxmrghd
 ; P8LE-NEXT: xvcvdpsxds v2
 ; P8LE-NEXT: blr
@@ -3546,13 +3546,13 @@ entry:
 ; P9LE: xxmrghd
 ; P9LE-NEXT: xvcvdpsxds v2
 ; P9LE-NEXT: blr
-; P8BE: lxsspx
-; P8BE: lxsspx
+; P8BE: lfsx
+; P8BE: lfsx
 ; P8BE: xxmrghd
 ; P8BE-NEXT: xvcvdpsxds v2
 ; P8BE-NEXT: blr
-; P8LE: lxsspx
-; P8LE: lxsspx
+; P8LE: lfsx
+; P8LE: lfsx
 ; P8LE: xxmrghd
 ; P8LE-NEXT: xvcvdpsxds v2
 ; P8LE-NEXT: blr
@@ -3591,13 +3591,13 @@ entry:
 ; P9LE-NEXT: blr
 ; P8BE: sldi
 ; P8BE: lfsux
-; P8BE: lxsspx
+; P8BE: lfsx
 ; P8BE: xxmrghd
 ; P8BE-NEXT: xvcvdpsxds v2
 ; P8BE-NEXT: blr
 ; P8LE: sldi
 ; P8LE: lfsux
-; P8LE: lxsspx
+; P8LE: lfsx
 ; P8LE: xxmrghd
 ; P8LE-NEXT: xvcvdpsxds v2
 ; P8LE-NEXT: blr
@@ -3636,13 +3636,13 @@ entry:
 ; P9LE-NEXT: blr
 ; P8BE: sldi
 ; P8BE: lfsux
-; P8BE: lxsspx
+; P8BE: lfsx
 ; P8BE: xxmrghd
 ; P8BE-NEXT: xvcvdpsxds v2
 ; P8BE-NEXT: blr
 ; P8LE: sldi
 ; P8LE: lfsux
-; P8LE: lxsspx
+; P8LE: lfsx
 ; P8LE: xxmrghd
 ; P8LE-NEXT: xvcvdpsxds v2
 ; P8LE-NEXT: blr
@@ -3693,11 +3693,11 @@ entry:
 ; P9LE-NEXT: xscvdpsxds
 ; P9LE-NEXT: xxspltd v2
 ; P9LE-NEXT: blr
-; P8BE: lxsspx
+; P8BE: lfsx
 ; P8BE-NEXT: xscvdpsxds
 ; P8BE-NEXT: xxspltd v2
 ; P8BE-NEXT: blr
-; P8LE: lxsspx
+; P8LE: lfsx
 ; P8LE-NEXT: xscvdpsxds
 ; P8LE-NEXT: xxspltd v2
 ; P8LE-NEXT: blr
@@ -4412,13 +4412,13 @@ entry:
 ; P9LE: xxmrghd
 ; P9LE-NEXT: xvcvdpuxds v2
 ; P9LE-NEXT: blr
-; P8BE: lxsspx
-; P8BE: lxsspx
+; P8BE: lfsx
+; P8BE: lfsx
 ; P8BE: xxmrghd
 ; P8BE-NEXT: xvcvdpuxds v2
 ; P8BE-NEXT: blr
-; P8LE: lxsspx
-; P8LE: lxsspx
+; P8LE: lfsx
+; P8LE: lfsx
 ; P8LE: xxmrghd
 ; P8LE-NEXT: xvcvdpuxds v2
 ; P8LE-NEXT: blr
@@ -4450,13 +4450,13 @@ entry:
 ; P9LE: xxmrghd
 ; P9LE-NEXT: xvcvdpuxds v2
 ; P9LE-NEXT: blr
-; P8BE: lxsspx
-; P8BE: lxsspx
+; P8BE: lfsx
+; P8BE: lfsx
 ; P8BE: xxmrghd
 ; P8BE-NEXT: xvcvdpuxds v2
 ; P8BE-NEXT: blr
-; P8LE: lxsspx
-; P8LE: lxsspx
+; P8LE: lfsx
+; P8LE: lfsx
 ; P8LE: xxmrghd
 ; P8LE-NEXT: xvcvdpuxds v2
 ; P8LE-NEXT: blr
@@ -4495,13 +4495,13 @@ entry:
 ; P9LE-NEXT: blr
 ; P8BE: sldi
 ; P8BE: lfsux
-; P8BE: lxsspx
+; P8BE: lfsx
 ; P8BE: xxmrghd
 ; P8BE-NEXT: xvcvdpuxds v2
 ; P8BE-NEXT: blr
 ; P8LE: sldi
 ; P8LE: lfsux
-; P8LE: lxsspx
+; P8LE: lfsx
 ; P8LE: xxmrghd
 ; P8LE-NEXT: xvcvdpuxds v2
 ; P8LE-NEXT: blr
@@ -4540,13 +4540,13 @@ entry:
 ; P9LE-NEXT: blr
 ; P8BE: sldi
 ; P8BE: lfsux
-; P8BE: lxsspx
+; P8BE: lfsx
 ; P8BE: xxmrghd
 ; P8BE-NEXT: xvcvdpuxds v2
 ; P8BE-NEXT: blr
 ; P8LE: sldi
 ; P8LE: lfsux
-; P8LE: lxsspx
+; P8LE: lfsx
 ; P8LE: xxmrghd
 ; P8LE-NEXT: xvcvdpuxds v2
 ; P8LE-NEXT: blr
@@ -4597,11 +4597,11 @@ entry:
 ; P9LE-NEXT: xscvdpuxds
 ; P9LE-NEXT: xxspltd v2
 ; P9LE-NEXT: blr
-; P8BE: lxsspx
+; P8BE: lfsx
 ; P8BE-NEXT: xscvdpuxds
 ; P8BE-NEXT: xxspltd v2
 ; P8BE-NEXT: blr
-; P8LE: lxsspx
+; P8LE: lfsx
 ; P8LE-NEXT: xscvdpuxds
 ; P8LE-NEXT: xxspltd v2
 ; P8LE-NEXT: blr

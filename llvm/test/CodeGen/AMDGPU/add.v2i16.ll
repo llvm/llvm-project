@@ -52,8 +52,8 @@ define amdgpu_kernel void @s_test_add_self_v2i16(<2 x i16> addrspace(1)* %out, <
 ; GCN-LABEL: {{^}}s_test_add_v2i16_kernarg:
 ; GFX9: v_pk_add_u16 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
 
-; VI: v_add_i32
-; VI: v_add_i32_sdwa
+; VI: v_add_u32
+; VI: v_add_u32_sdwa
 define amdgpu_kernel void @s_test_add_v2i16_kernarg(<2 x i16> addrspace(1)* %out, <2 x i16> %a, <2 x i16> %b) #1 {
   %add = add <2 x i16> %a, %b
   store <2 x i16> %add, <2 x i16> addrspace(1)* %out

@@ -169,7 +169,7 @@ main_body:
 ;CHECK: s_or_saveexec_b64 s{{\[[0-9]+:[0-9]+\]}}, -1
 ;CHECK: buffer_load_dword
 ;CHECK: buffer_load_dword
-;CHECK: v_add_i32_e32
+;CHECK: v_add_{{[iu]}}32_e32
 define amdgpu_ps float @test_wwm2(i32 inreg %idx0, i32 inreg %idx1) {
 main_body:
   %src0 = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> undef, i32 %idx0, i32 0, i1 0, i1 0)
@@ -303,7 +303,7 @@ endif:
 ;CHECK: v_mov_b32_e32
 ;CHECK: s_not_b64 exec, exec
 ;CHECK: s_or_saveexec_b64 s{{\[[0-9]+:[0-9]+\]}}, -1
-;CHECK: v_add_i32_e32
+;CHECK: v_add_{{[iu]}}32_e32
 define amdgpu_ps void @test_set_inactive1(i32 inreg %idx) {
 main_body:
   %src = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> undef, i32 %idx, i32 0, i1 0, i1 0)

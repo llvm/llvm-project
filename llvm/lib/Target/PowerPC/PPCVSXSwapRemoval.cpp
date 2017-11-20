@@ -353,6 +353,8 @@ bool PPCVSXSwapRemoval::gatherVectorInstructions() {
         break;
       case PPC::LXSDX:
       case PPC::LXSSPX:
+      case PPC::XFLOADf64:
+      case PPC::XFLOADf32:
         // A load of a floating-point value into the high-order half of
         // a vector register is safe, provided that we introduce a swap
         // following the load, which will be done by the SUBREG_TO_REG

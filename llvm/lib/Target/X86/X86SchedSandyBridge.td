@@ -1550,7 +1550,7 @@ def SBWriteResGroup49 : SchedWriteRes<[SBPort5,SBPort23]> {
   let ResourceCycles = [1,1];
 }
 def: InstRW<[SBWriteResGroup49], (instregex "JMP(16|32|64)m")>;
-def: InstRW<[SBWriteResGroup49], (instregex "MOV64sm")>;
+def: InstRW<[SBWriteResGroup49], (instregex "MOV16sm")>;
 
 def SBWriteResGroup50 : SchedWriteRes<[SBPort23,SBPort05]> {
   let Latency = 6;

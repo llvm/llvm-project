@@ -8094,8 +8094,6 @@ def err_switch_incomplete_class_type : Error<
 
 def warn_empty_if_body : Warning<
   "if statement has empty body">, InGroup<EmptyBody>;
-def warn_empty_else_body : Warning<
-  "else clause has empty body">, InGroup<EmptyBody>;
 def warn_empty_for_body : Warning<
   "for loop has empty body">, InGroup<EmptyBody>;
 def warn_empty_range_based_for_body : Warning<

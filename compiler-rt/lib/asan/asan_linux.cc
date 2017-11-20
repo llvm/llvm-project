@@ -17,6 +17,7 @@
 
 #include "asan_interceptors.h"
 #include "asan_internal.h"
+#include "asan_premap_shadow.h"
 #include "asan_thread.h"
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_freebsd.h"
@@ -81,9 +82,51 @@ void *AsanDoesNotSupportStaticLinkage() {
   return &_DYNAMIC;  // defined in link.h
 }
 
+static void UnmapFromTo(uptr from, uptr to) {
+  CHECK(to >= from);
+  if (to == from) return;
+  uptr res = internal_munmap(reinterpret_cast<void *>(from), to - from);
+  if (UNLIKELY(internal_iserror(res))) {
+    Report(
+        "ERROR: AddresSanitizer failed to unmap 0x%zx (%zd) bytes at address "
+        "%p\n",
+        to - from, to - from, from);
+    CHECK("unable to unmap" && 0);
+  }
+}
+
+#if ASAN_PREMAP_SHADOW
+uptr FindPremappedShadowStart() {
+  uptr granularity = GetMmapGranularity();
+  uptr shadow_start = reinterpret_cast<uptr>(&__asan_shadow);
+  uptr premap_shadow_size = PremapShadowSize();
+  uptr shadow_size = RoundUpTo(kHighShadowEnd, granularity);
+  // We may have mapped too much. Release extra memory.
+  UnmapFromTo(shadow_start + shadow_size, shadow_start + premap_shadow_size);
+  return shadow_start;
+}
+#endif
+
 uptr FindDynamicShadowStart() {
-  UNREACHABLE("FindDynamicShadowStart is not available");
-  return 0;
+#if ASAN_PREMAP_SHADOW
+  if (!PremapShadowFailed())
+    return FindPremappedShadowStart();
+#endif
+
+  uptr granularity = GetMmapGranularity();
+  uptr alignment = granularity * 8;
+  uptr left_padding = granularity;
+  uptr shadow_size = RoundUpTo(kHighShadowEnd, granularity);
+  uptr map_size = shadow_size + left_padding + alignment;
+
+  uptr map_start = (uptr)MmapNoAccess(map_size);
+  CHECK_NE(map_start, ~(uptr)0);
+
+  uptr shadow_start = RoundUpTo(map_start + left_padding, alignment);
+  UnmapFromTo(map_start, shadow_start - left_padding);
+  UnmapFromTo(shadow_start + shadow_size, map_start + map_size);
+
+  return shadow_start;
 }
 
 void AsanApplyToGlobals(globals_op_fptr op, const void *needle) {
