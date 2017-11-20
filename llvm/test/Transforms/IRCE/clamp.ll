@@ -4,7 +4,7 @@
 ; calculation of post-loop exit condition.
 
 ; CHECK-LABEL: irce: in function test_01: constrained Loop at depth 1 containing: %loop<header><exiting>,%in_bounds<exiting>,%not_zero<latch><exiting>
-; CHECK-LABEL: irce: in function test_02: constrained Loop at depth 1 containing: %loop<header><exiting>,%in_bounds<latch><exiting>
+; CHECK-NOT: irce: in function test_02: constrained Loop
 
 define void @test_01() {
 
@@ -69,42 +69,9 @@ in_bounds:                                       ; preds = %loop
 
 define void @test_02() {
 
-; CHECK-LABEL: test_02
-; CHECK-NOT:   br i1 false, label %loop.preloop.preheader, label %preloop.pseudo.exit
-; CHECK-NOT:   postloop
-; CHECK:       entry:
-; CHECK-NEXT:    br i1 true, label %loop.preloop.preheader, label %preloop.pseudo.exit
-; CHECK:       mainloop:
-; CHECK-NEXT:    br label %loop
-; CHECK:       loop:
-; CHECK-NEXT:    %iv1 = phi i64 [ %iv1.preloop.copy, %mainloop ], [ %iv1.next, %in_bounds ]
-; CHECK-NEXT:    %iv2 = phi i64 [ %iv2.preloop.copy, %mainloop ], [ %iv2.next, %in_bounds ]
-; CHECK-NEXT:    %iv2.offset = add i64 %iv2, 1
-; CHECK-NEXT:    %rc = icmp ult i64 %iv2.offset, 400
-; CHECK-NEXT:    br i1 true, label %in_bounds, label %bci_321.loopexit1
-; CHECK:       in_bounds:
-; CHECK-NEXT:    %iv1.next = add nuw nsw i64 %iv1, 2
-; CHECK-NEXT:    %iv2.next = add nuw nsw i64 %iv2, 2
-; CHECK-NEXT:    %cond = icmp ugt i64 %iv1, 204
-; CHECK-NEXT:    br i1 %cond, label %bci_321.loopexit1, label %loop
-; CHECK:       loop.preloop:
-; CHECK-NEXT:    %iv1.preloop = phi i64 [ %iv1.next.preloop, %in_bounds.preloop ], [ 3, %loop.preloop.preheader ]
-; CHECK-NEXT:    %iv2.preloop = phi i64 [ %iv2.next.preloop, %in_bounds.preloop ], [ 4294967295, %loop.preloop.preheader ]
-; CHECK-NEXT:    %iv2.offset.preloop = add i64 %iv2.preloop, 1
-; CHECK-NEXT:    %rc.preloop = icmp ult i64 %iv2.offset.preloop, 400
-; CHECK-NEXT:    br i1 %rc.preloop, label %in_bounds.preloop, label %bci_321.loopexit
-; CHECK:       in_bounds.preloop:
-; CHECK-NEXT:    %iv1.next.preloop = add nuw nsw i64 %iv1.preloop, 2
-; CHECK-NEXT:    %iv2.next.preloop = add nuw nsw i64 %iv2.preloop, 2
-; CHECK-NEXT:    %cond.preloop = icmp ugt i64 %iv1.preloop, 204
-; CHECK-NEXT:    [[C0:%[^ ]+]] = icmp ult i64 %iv1.preloop, 205
-; CHECK-NEXT:    [[C1:%[^ ]+]] = xor i1 [[C0]], true
-; CHECK-NEXT:    br i1 [[C1]], label %preloop.exit.selector, label %loop.preloop
-; CHECK:       preloop.pseudo.exit:
-; CHECK-NEXT:    %iv1.preloop.copy = phi i64 [ 3, %entry ], [ %iv1.next.preloop.lcssa, %preloop.exit.selector ]
-; CHECK-NEXT:    %iv2.preloop.copy = phi i64 [ 4294967295, %entry ], [ %iv2.next.preloop.lcssa, %preloop.exit.selector ]
-; CHECK-NEXT:    %indvar.end = phi i64 [ 1, %entry ], [ %iv1.preloop.lcssa, %preloop.exit.selector ]
-; CHECK-NEXT:    br label %mainloop
+; Now IRCE is smart enough to understand that the safe range here is empty.
+; Previously it executed the entire loop in safe preloop and never actually
+; entered the main loop.
 
 entry:
   br label %loop

@@ -5,10 +5,8 @@
 
 define i1 @ord1(float %x, float %y) {
 ; CHECK-LABEL: @ord1(
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ord float 0.000000e+00, %x
 ; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ord float %x, %y
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = fcmp ord float 0.0, %x
   %cmp2 = fcmp ord float %x, %y
@@ -18,10 +16,8 @@ define i1 @ord1(float %x, float %y) {
 
 define i1 @ord2(double %x, double %y) {
 ; CHECK-LABEL: @ord2(
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ord double 4.200000e+01, %x
 ; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ord double %y, %x
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = fcmp ord double 42.0, %x
   %cmp2 = fcmp ord double %y, %x
@@ -31,10 +27,8 @@ define i1 @ord2(double %x, double %y) {
 
 define <2 x i1> @ord3(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @ord3(
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ord <2 x float> %x, zeroinitializer
 ; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ord <2 x float> %x, %y
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP2]]
 ;
   %cmp1 = fcmp ord <2 x float> %x, zeroinitializer
   %cmp2 = fcmp ord <2 x float> %x, %y
@@ -44,10 +38,8 @@ define <2 x i1> @ord3(<2 x float> %x, <2 x float> %y) {
 
 define <2 x i1> @ord4(<2 x double> %x, <2 x double> %y) {
 ; CHECK-LABEL: @ord4(
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ord <2 x double> %x, <double 4.200000e+01, double 4.200000e+01>
 ; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ord <2 x double> %y, %x
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP2]]
 ;
   %cmp1 = fcmp ord <2 x double> %x, <double 42.0, double 42.0>
   %cmp2 = fcmp ord <2 x double> %y, %x
@@ -57,11 +49,8 @@ define <2 x i1> @ord4(<2 x double> %x, <2 x double> %y) {
 
 define i1 @ord5(float %x, float %y) {
 ; CHECK-LABEL: @ord5(
-; CHECK-NEXT:    [[NNAN:%.*]] = fdiv nnan float %x, %y
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ord float %x, %y
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ord float [[NNAN]], %x
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %nnan = fdiv nnan float %x, %y
   %cmp1 = fcmp ord float %x, %y
@@ -73,9 +62,7 @@ define i1 @ord5(float %x, float %y) {
 define i1 @ord6(double %x, double %y) {
 ; CHECK-LABEL: @ord6(
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ord double %y, %x
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ord double 4.200000e+01, %x
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %cmp1 = fcmp ord double %y, %x
   %cmp2 = fcmp ord double 42.0, %x
@@ -86,9 +73,7 @@ define i1 @ord6(double %x, double %y) {
 define <2 x i1> @ord7(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @ord7(
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ord <2 x float> %x, %y
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ord <2 x float> %x, zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP1]]
 ;
   %cmp1 = fcmp ord <2 x float> %x, %y
   %cmp2 = fcmp ord <2 x float> %x, zeroinitializer
@@ -99,9 +84,7 @@ define <2 x i1> @ord7(<2 x float> %x, <2 x float> %y) {
 define <2 x i1> @ord8(<2 x double> %x, <2 x double> %y) {
 ; CHECK-LABEL: @ord8(
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ord <2 x double> %y, %x
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ord <2 x double> %x, <double 0.000000e+00, double 4.200000e+01>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP1]]
 ;
   %cmp1 = fcmp ord <2 x double> %y, %x
   %cmp2 = fcmp ord <2 x double> %x, <double 0.0, double 42.0>
@@ -111,10 +94,8 @@ define <2 x i1> @ord8(<2 x double> %x, <2 x double> %y) {
 
 define i1 @uno1(float %x, float %y) {
 ; CHECK-LABEL: @uno1(
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp uno float 0.000000e+00, %x
 ; CHECK-NEXT:    [[CMP2:%.*]] = fcmp uno float %x, %y
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = fcmp uno float 0.0, %x
   %cmp2 = fcmp uno float %x, %y
@@ -124,10 +105,8 @@ define i1 @uno1(float %x, float %y) {
 
 define i1 @uno2(double %x, double %y) {
 ; CHECK-LABEL: @uno2(
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp uno double 4.200000e+01, %x
 ; CHECK-NEXT:    [[CMP2:%.*]] = fcmp uno double %y, %x
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = fcmp uno double 42.0, %x
   %cmp2 = fcmp uno double %y, %x
@@ -137,10 +116,8 @@ define i1 @uno2(double %x, double %y) {
 
 define <2 x i1> @uno3(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @uno3(
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp uno <2 x float> %x, zeroinitializer
 ; CHECK-NEXT:    [[CMP2:%.*]] = fcmp uno <2 x float> %x, %y
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP2]]
 ;
   %cmp1 = fcmp uno <2 x float> %x, zeroinitializer
   %cmp2 = fcmp uno <2 x float> %x, %y
@@ -150,10 +127,8 @@ define <2 x i1> @uno3(<2 x float> %x, <2 x float> %y) {
 
 define <2 x i1> @uno4(<2 x double> %x, <2 x double> %y) {
 ; CHECK-LABEL: @uno4(
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp uno <2 x double> %x, <double 4.200000e+01, double 4.200000e+01>
 ; CHECK-NEXT:    [[CMP2:%.*]] = fcmp uno <2 x double> %y, %x
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP2]]
 ;
   %cmp1 = fcmp uno <2 x double> %x, <double 42.0, double 42.0>
   %cmp2 = fcmp uno <2 x double> %y, %x
@@ -164,9 +139,7 @@ define <2 x i1> @uno4(<2 x double> %x, <2 x double> %y) {
 define i1 @uno5(float %x, float %y) {
 ; CHECK-LABEL: @uno5(
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp uno float %x, %y
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp uno float 0.000000e+00, %x
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %cmp1 = fcmp uno float %x, %y
   %cmp2 = fcmp uno float 0.0, %x
@@ -177,9 +150,7 @@ define i1 @uno5(float %x, float %y) {
 define i1 @uno6(double %x, double %y) {
 ; CHECK-LABEL: @uno6(
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp uno double %y, %x
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp uno double 4.200000e+01, %x
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %cmp1 = fcmp uno double %y, %x
   %cmp2 = fcmp uno double 42.0, %x
@@ -189,11 +160,8 @@ define i1 @uno6(double %x, double %y) {
 
 define <2 x i1> @uno7(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @uno7(
-; CHECK-NEXT:    [[NNAN:%.*]] = fdiv nnan <2 x float> %x, %y
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp uno <2 x float> %x, %y
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp uno <2 x float> %x, [[NNAN]]
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP1]]
 ;
   %nnan = fdiv nnan <2 x float> %x, %y
   %cmp1 = fcmp uno <2 x float> %x, %y
@@ -205,9 +173,7 @@ define <2 x i1> @uno7(<2 x float> %x, <2 x float> %y) {
 define <2 x i1> @uno8(<2 x double> %x, <2 x double> %y) {
 ; CHECK-LABEL: @uno8(
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp uno <2 x double> %y, %x
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp uno <2 x double> %x, <double 0x7FF0000000000000, double 4.200000e+01>
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP1]]
 ;
   %cmp1 = fcmp uno <2 x double> %y, %x
   %cmp2 = fcmp uno <2 x double> %x, <double 0x7ff0000000000000, double 42.0>

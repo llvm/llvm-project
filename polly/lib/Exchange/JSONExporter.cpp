@@ -210,53 +210,45 @@ typedef Dependences::StatementToIslMapTy StatementToIslMapTy;
 ///
 /// @returns True if the import succeeded, otherwise False.
 static bool importContext(Scop &S, Json::Value &JScop) {
-  isl_set *OldContext = S.getContext().release();
+  isl::set OldContext = S.getContext();
 
   // Check if key 'context' is present.
   if (!JScop.isMember("context")) {
     errs() << "JScop file has no key named 'context'.\n";
-    isl_set_free(OldContext);
     return false;
   }
 
-  isl_set *NewContext =
-      isl_set_read_from_str(S.getIslCtx(), JScop["context"].asCString());
+  isl::set NewContext =
+      isl::set{S.getIslCtx().get(), JScop["context"].asString()};
 
   // Check whether the context was parsed successfully.
   if (!NewContext) {
     errs() << "The context was not parsed successfully by ISL.\n";
-    isl_set_free(NewContext);
-    isl_set_free(OldContext);
     return false;
   }
 
   // Check if the isl_set is a parameter set.
-  if (!isl_set_is_params(NewContext)) {
+  if (!NewContext.is_params()) {
     errs() << "The isl_set is not a parameter set.\n";
-    isl_set_free(NewContext);
-    isl_set_free(OldContext);
     return false;
   }
 
-  unsigned OldContextDim = isl_set_dim(OldContext, isl_dim_param);
-  unsigned NewContextDim = isl_set_dim(NewContext, isl_dim_param);
+  unsigned OldContextDim = OldContext.dim(isl::dim::param);
+  unsigned NewContextDim = NewContext.dim(isl::dim::param);
 
   // Check if the imported context has the right number of parameters.
   if (OldContextDim != NewContextDim) {
     errs() << "Imported context has the wrong number of parameters : "
            << "Found " << NewContextDim << " Expected " << OldContextDim
            << "\n";
-    isl_set_free(NewContext);
-    isl_set_free(OldContext);
     return false;
   }
 
   for (unsigned i = 0; i < OldContextDim; i++) {
-    isl_id *Id = isl_set_get_dim_id(OldContext, isl_dim_param, i);
-    NewContext = isl_set_set_dim_id(NewContext, isl_dim_param, i, Id);
+    isl::id Id = OldContext.get_dim_id(isl::dim::param, i);
+    NewContext = NewContext.set_dim_id(isl::dim::param, i, Id);
   }
 
-  isl_set_free(OldContext);
   S.setContext(NewContext);
   return true;
 }
@@ -301,7 +293,8 @@ static bool importSchedule(Scop &S, Json::Value &JScop, const Dependences &D) {
     Json::Value Schedule = statements[Index]["schedule"];
     assert(!Schedule.asString().empty() &&
            "Schedules that contain extension nodes require special handling.");
-    isl_map *Map = isl_map_read_from_str(S.getIslCtx(), Schedule.asCString());
+    isl_map *Map =
+        isl_map_read_from_str(S.getIslCtx().get(), Schedule.asCString());
 
     // Check whether the schedule was parsed successfully
     if (!Map) {
@@ -337,13 +330,12 @@ static bool importSchedule(Scop &S, Json::Value &JScop, const Dependences &D) {
     return false;
   }
 
-  auto ScheduleMap = isl_union_map_empty(S.getParamSpace().release());
+  auto ScheduleMap = isl::union_map::empty(S.getParamSpace());
   for (ScopStmt &Stmt : S) {
     if (NewSchedule.find(&Stmt) != NewSchedule.end())
-      ScheduleMap = isl_union_map_add_map(ScheduleMap, NewSchedule[&Stmt]);
+      ScheduleMap = ScheduleMap.add_map(isl::manage(NewSchedule[&Stmt]));
     else
-      ScheduleMap =
-          isl_union_map_add_map(ScheduleMap, Stmt.getSchedule().release());
+      ScheduleMap = ScheduleMap.add_map(Stmt.getSchedule());
   }
 
   S.setSchedule(ScheduleMap);
@@ -409,7 +401,7 @@ importAccesses(Scop &S, Json::Value &JScop, const DataLayout &DL,
       }
       Json::Value Accesses = JsonMemoryAccess["relation"];
       isl_map *NewAccessMap =
-          isl_map_read_from_str(S.getIslCtx(), Accesses.asCString());
+          isl_map_read_from_str(S.getIslCtx().get(), Accesses.asCString());
 
       // Check whether the access was parsed successfully
       if (!NewAccessMap) {

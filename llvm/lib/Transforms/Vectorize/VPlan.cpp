@@ -46,6 +46,14 @@ using namespace llvm;
 
 #define DEBUG_TYPE "vplan"
 
+raw_ostream &llvm::operator<<(raw_ostream &OS, const VPValue &V) {
+  if (const VPInstruction *Instr = dyn_cast<VPInstruction>(&V))
+    Instr->print(OS);
+  else
+    V.printAsOperand(OS);
+  return OS;
+}
+
 /// \return the VPBasicBlock that is the entry of Block, possibly indirectly.
 const VPBasicBlock *VPBlockBase::getEntryBasicBlock() const {
   const VPBlockBase *Block = this;
@@ -212,10 +220,68 @@ void VPRegionBlock::execute(VPTransformState *State) {
   State->Instance.reset();
 }
 
+void VPInstruction::generateInstruction(VPTransformState &State,
+                                        unsigned Part) {
+  IRBuilder<> &Builder = State.Builder;
+
+  if (Instruction::isBinaryOp(getOpcode())) {
+    Value *A = State.get(getOperand(0), Part);
+    Value *B = State.get(getOperand(1), Part);
+    Value *V = Builder.CreateBinOp((Instruction::BinaryOps)getOpcode(), A, B);
+    State.set(this, V, Part);
+    return;
+  }
+
+  switch (getOpcode()) {
+  case VPInstruction::Not: {
+    Value *A = State.get(getOperand(0), Part);
+    Value *V = Builder.CreateNot(A);
+    State.set(this, V, Part);
+    break;
+  }
+  default:
+    llvm_unreachable("Unsupported opcode for instruction");
+  }
+}
+
+void VPInstruction::execute(VPTransformState &State) {
+  assert(!State.Instance && "VPInstruction executing an Instance");
+  for (unsigned Part = 0; Part < State.UF; ++Part)
+    generateInstruction(State, Part);
+}
+
+void VPInstruction::print(raw_ostream &O, const Twine &Indent) const {
+  O << " +\n" << Indent << "\"EMIT ";
+  print(O);
+  O << "\\l\"";
+}
+
+void VPInstruction::print(raw_ostream &O) const {
+  printAsOperand(O);
+  O << " = ";
+
+  switch (getOpcode()) {
+  case VPInstruction::Not:
+    O << "not";
+    break;
+  default:
+    O << Instruction::getOpcodeName(getOpcode());
+  }
+
+  for (const VPValue *Operand : operands()) {
+    O << " ";
+    Operand->printAsOperand(O);
+  }
+}
+
 /// Generate the code inside the body of the vectorized loop. Assumes a single
 /// LoopVectorBody basic-block was created for this. Introduce additional
 /// basic-blocks as needed, and fill them all.
 void VPlan::execute(VPTransformState *State) {
+  // 0. Set the reverse mapping from VPValues to Values for code generation.
+  for (auto &Entry : Value2VPValue)
+    State->VPValue2Value[Entry.second] = Entry.first;
+
   BasicBlock *VectorPreHeaderBB = State->CFG.PrevBB;
   BasicBlock *VectorHeaderBB = VectorPreHeaderBB->getSingleSuccessor();
   assert(VectorHeaderBB && "Loop preheader does not have a single successor.");
@@ -316,6 +382,14 @@ void VPlanPrinter::dump() {
   OS << "graph [labelloc=t, fontsize=30; label=\"Vectorization Plan";
   if (!Plan.getName().empty())
     OS << "\\n" << DOT::EscapeString(Plan.getName());
+  if (!Plan.Value2VPValue.empty()) {
+    OS << ", where:";
+    for (auto Entry : Plan.Value2VPValue) {
+      OS << "\\n" << *Entry.second;
+      OS << DOT::EscapeString(" := ");
+      Entry.first->printAsOperand(OS, false);
+    }
+  }
   OS << "\"]\n";
   OS << "node [shape=rect, fontname=Courier, fontsize=30]\n";
   OS << "edge [fontname=Courier, fontsize=30]\n";

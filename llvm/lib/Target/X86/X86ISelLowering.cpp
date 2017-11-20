@@ -970,6 +970,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::BITREVERSE, VT, Custom);
   }
 
+  // Special handling for masked gather of 2 elements
+  if (Subtarget.hasAVX2() && !Subtarget.hasAVX512())
+    setOperationAction(ISD::MGATHER, MVT::v2i64, Custom);
+
   if (!Subtarget.useSoftFloat() && Subtarget.hasFp256()) {
     bool HasInt256 = Subtarget.hasInt256();
 
@@ -24301,8 +24305,8 @@ static SDValue LowerMSTORE(SDValue Op, const X86Subtarget &Subtarget,
 
 static SDValue LowerMGATHER(SDValue Op, const X86Subtarget &Subtarget,
                             SelectionDAG &DAG) {
-  assert(Subtarget.hasAVX512() &&
-         "MGATHER/MSCATTER are supported on AVX-512 arch only");
+  assert(Subtarget.hasAVX2() &&
+         "MGATHER/MSCATTER are supported on AVX-512/AVX-2 arch only");
 
   MaskedGatherSDNode *N = cast<MaskedGatherSDNode>(Op.getNode());
   SDLoc dl(Op);
@@ -24316,7 +24320,7 @@ static SDValue LowerMGATHER(SDValue Op, const X86Subtarget &Subtarget,
   unsigned NumElts = VT.getVectorNumElements();
   assert(VT.getScalarSizeInBits() >= 32 && "Unsupported gather op");
 
-  if (!Subtarget.hasVLX() && !VT.is512BitVector() &&
+  if (Subtarget.hasAVX512() && !Subtarget.hasVLX() && !VT.is512BitVector() &&
       !Index.getSimpleValueType().is512BitVector()) {
     // AVX512F supports only 512-bit vectors. Or data or index should
     // be 512 bit wide. If now the both index and data are 256-bit, but
@@ -24359,7 +24363,7 @@ static SDValue LowerMGATHER(SDValue Op, const X86Subtarget &Subtarget,
     SDValue RetOps[] = {Extract, NewGather.getValue(1)};
     return DAG.getMergeValues(RetOps, dl);
   }
-  if (N->getMemoryVT() == MVT::v2i32 && Subtarget.hasVLX()) {
+  if (N->getMemoryVT() == MVT::v2i32) {
     // There is a special case when the return type is v2i32 is illegal and
     // the type legaizer extended it to v2i64. Without this conversion we end up
     // with VPGATHERQQ (reading q-words from the memory) instead of VPGATHERQD.
@@ -24367,16 +24371,26 @@ static SDValue LowerMGATHER(SDValue Op, const X86Subtarget &Subtarget,
     // with index v2i64 and value type v4i32.
     assert(VT == MVT::v2i64 && Src0.getValueType() == MVT::v2i64 &&
            "Unexpected type in masked gather");
-    Src0 = DAG.getVectorShuffle(MVT::v4i32, dl,
-                                DAG.getBitcast(MVT::v4i32, Src0),
-                                DAG.getUNDEF(MVT::v4i32), { 0, 2, -1, -1 });
+    Src0 = 
+        DAG.getVectorShuffle(MVT::v4i32, dl, DAG.getBitcast(MVT::v4i32, Src0),
+                             DAG.getUNDEF(MVT::v4i32), { 0, 2, -1, -1 });
     // The mask should match the destination type. Extending mask with zeroes
     // is not necessary since instruction itself reads only two values from
     // memory.
+    SDVTList VTList; 
+    if (Subtarget.hasVLX()) {
+      Mask = ExtendToType(Mask, MVT::v4i1, DAG, false);
+      VTList = DAG.getVTList(MVT::v4i32, MVT::v2i1, MVT::Other);
+    }  
+    else {
+      Mask =
+          DAG.getVectorShuffle(MVT::v4i32, dl, DAG.getBitcast(MVT::v4i32, Mask),
+                               DAG.getUNDEF(MVT::v4i32), {0, 2, -1, -1});
+      VTList = DAG.getVTList(MVT::v4i32, MVT::Other);                               
+    }                               
     SDValue Ops[] = { N->getChain(), Src0, Mask, N->getBasePtr(), Index };
     SDValue NewGather = DAG.getTargetMemSDNode<X86MaskedGatherSDNode>(
-      DAG.getVTList(MVT::v4i32, MVT::v2i1, MVT::Other), Ops, dl,
-      N->getMemoryVT(), N->getMemOperand());
+      VTList, Ops, dl, N->getMemoryVT(), N->getMemOperand());
 
     SDValue Sext = getExtendInVec(X86ISD::VSEXT, dl, MVT::v2i64,
                                   NewGather.getValue(0), DAG);

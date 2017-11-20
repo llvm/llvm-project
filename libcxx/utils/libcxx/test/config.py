@@ -579,6 +579,9 @@ class Configuration(object):
         # Disable availability unless explicitely requested
         if not self.with_availability:
             self.cxx.flags += ['-D_LIBCPP_DISABLE_AVAILABILITY']
+        # FIXME(EricWF): variant_size.pass.cpp requires a slightly larger
+        # template depth with older Clang versions.
+        self.cxx.addFlagIfSupported('-ftemplate-depth=270')
 
     def configure_compile_flags_header_includes(self):
         support_path = os.path.join(self.libcxx_src_root, 'test', 'support')

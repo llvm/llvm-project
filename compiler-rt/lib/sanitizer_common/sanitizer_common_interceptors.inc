@@ -3828,6 +3828,15 @@ INTERCEPTOR(int, pthread_mutex_unlock, void *m) {
 #define INIT_PTHREAD_MUTEX_UNLOCK
 #endif
 
+#if SANITIZER_NETBSD
+INTERCEPTOR(void, __libc_mutex_lock, void *m) \
+  ALIAS(WRAPPER_NAME(pthread_mutex_lock));
+INTERCEPTOR(void, __libc_mutex_unlock, void *m) \
+  ALIAS(WRAPPER_NAME(pthread_mutex_unlock));
+INTERCEPTOR(void, __libc_thr_setcancelstate, int state, int *oldstate) \
+  ALIAS(WRAPPER_NAME(pthread_setcancelstate));
+#endif
+
 #if SANITIZER_INTERCEPT_GETMNTENT || SANITIZER_INTERCEPT_GETMNTENT_R
 static void write_mntent(void *ctx, __sanitizer_mntent *mnt) {
   COMMON_INTERCEPTOR_WRITE_RANGE(ctx, mnt, sizeof(*mnt));
@@ -6471,4 +6480,10 @@ static void InitializeCommonInterceptors() {
   INIT_GETLOADAVG;
   INIT_WCSLEN;
   INIT_WCSCAT;
+
+#if SANITIZER_NETBSD
+  COMMON_INTERCEPT_FUNCTION(__libc_mutex_lock);
+  COMMON_INTERCEPT_FUNCTION(__libc_mutex_unlock);
+  COMMON_INTERCEPT_FUNCTION(__libc_thr_setcancelstate);
+#endif
 }

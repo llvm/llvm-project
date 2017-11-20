@@ -8326,36 +8326,52 @@ let Predicates = [HasAVX2, NoVLX] in {
 
 //===----------------------------------------------------------------------===//
 // VGATHER - GATHER Operations
-multiclass avx2_gather<bits<8> opc, string OpcodeStr, RegisterClass RC256,
+multiclass avx2_gather<bits<8> opc, string OpcodeStr, ValueType VTx,
+                       ValueType VTy, PatFrag GatherNode128, 
+                       PatFrag GatherNode256, RegisterClass RC256,
                        X86MemOperand memop128, X86MemOperand memop256> {
   def rm  : AVX28I<opc, MRMSrcMem4VOp3, (outs VR128:$dst, VR128:$mask_wb),
             (ins VR128:$src1, memop128:$src2, VR128:$mask),
             !strconcat(OpcodeStr,
               "\t{$mask, $src2, $dst|$dst, $src2, $mask}"),
-            []>, VEX;
+            [(set (VTx VR128:$dst), VR128:$mask_wb,
+                  (GatherNode128  (VTx VR128:$src1), VR128:$mask,
+                                vectoraddr:$src2))]>, VEX;
   def Yrm : AVX28I<opc, MRMSrcMem4VOp3, (outs RC256:$dst, RC256:$mask_wb),
             (ins RC256:$src1, memop256:$src2, RC256:$mask),
             !strconcat(OpcodeStr,
               "\t{$mask, $src2, $dst|$dst, $src2, $mask}"),
-            []>, VEX, VEX_L;
+            [(set (VTy RC256:$dst), RC256:$mask_wb,
+                  (GatherNode256  (VTy RC256:$src1), RC256:$mask,
+                                vectoraddr:$src2))]>, VEX, VEX_L;
 }
 
-let mayLoad = 1, hasSideEffects = 0, Constraints
-  = "@earlyclobber $dst,@earlyclobber $mask_wb, $src1 = $dst, $mask = $mask_wb"
-  in {
-  defm VPGATHERDQ : avx2_gather<0x90, "vpgatherdq", VR256, vx128mem, vx256mem>, VEX_W;
-  defm VPGATHERQQ : avx2_gather<0x91, "vpgatherqq", VR256, vx128mem, vy256mem>, VEX_W;
-  defm VPGATHERDD : avx2_gather<0x90, "vpgatherdd", VR256, vx128mem, vy256mem>;
-  defm VPGATHERQD : avx2_gather<0x91, "vpgatherqd", VR128, vx64mem, vy128mem>;
+let Predicates = [UseAVX2] in {
+  let mayLoad = 1, hasSideEffects = 0, Constraints
+    = "@earlyclobber $dst,@earlyclobber $mask_wb, $src1 = $dst, $mask = $mask_wb"
+    in {
+    defm VPGATHERDQ : avx2_gather<0x90, "vpgatherdq", v2i64, v4i64, avx2_mvpgatherdq_pd_xmm,
+                        avx2_mvpgatherdq_pd_ymm, VR256, vx128mem, vx256mem>, VEX_W;
+    defm VPGATHERQQ : avx2_gather<0x91, "vpgatherqq", v2i64, v4i64, avx2_mvpgatherqq_pd_xmm,
+                        avx2_mvpgatherqq_pd_ymm, VR256, vx128mem, vy256mem>, VEX_W;
+    defm VPGATHERDD : avx2_gather<0x90, "vpgatherdd", v4i32, v8i32, avx2_mvpgatherdd_ps_xmm,
+                        avx2_mvpgatherdd_ps_ymm, VR256, vx128mem, vy256mem>;
+    defm VPGATHERQD : avx2_gather<0x91, "vpgatherqd", v4i32, v4i32, avx2_mvpgatherqd_ps_xmm,
+                        avx2_mvpgatherqd_ps_ymm, VR128, vx64mem, vy128mem>;
 
-  let ExeDomain = SSEPackedDouble in {
-    defm VGATHERDPD : avx2_gather<0x92, "vgatherdpd", VR256, vx128mem, vx256mem>, VEX_W;
-    defm VGATHERQPD : avx2_gather<0x93, "vgatherqpd", VR256, vx128mem, vy256mem>, VEX_W;
-  }
+    let ExeDomain = SSEPackedDouble in {
+      defm VGATHERDPD : avx2_gather<0x92, "vgatherdpd", v2f64, v4f64, avx2_mvpgatherdq_pd_xmm,
+                          avx2_mvpgatherdq_pd_ymm, VR256, vx128mem, vx256mem>, VEX_W;
+      defm VGATHERQPD : avx2_gather<0x93, "vgatherqpd", v2f64, v4f64, avx2_mvpgatherqq_pd_xmm,
+                          avx2_mvpgatherqq_pd_ymm, VR256, vx128mem, vy256mem>, VEX_W;
+    }
 
-  let ExeDomain = SSEPackedSingle in {
-    defm VGATHERDPS : avx2_gather<0x92, "vgatherdps", VR256, vx128mem, vy256mem>;
-    defm VGATHERQPS : avx2_gather<0x93, "vgatherqps", VR128, vx64mem, vy128mem>;
+    let ExeDomain = SSEPackedSingle in {
+      defm VGATHERDPS : avx2_gather<0x92, "vgatherdps", v4f32, v8f32, avx2_mvpgatherdd_ps_xmm,
+                          avx2_mvpgatherdd_ps_ymm, VR256, vx128mem, vy256mem>;
+      defm VGATHERQPS : avx2_gather<0x93, "vgatherqps", v4f32, v4f32, avx2_mvpgatherqd_ps_xmm,
+                          avx2_mvpgatherqd_ps_ymm, VR128, vx64mem, vy128mem>;    
+    }
   }
 }
 
