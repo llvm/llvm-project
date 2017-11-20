@@ -77,7 +77,7 @@ public:
     DEBUG(dbgs() << "Gisted, flattened new schedule:\n");
     DEBUG(printSchedule(dbgs(), NewSchedule, 2));
 
-    S.setSchedule(NewSchedule.take());
+    S.setSchedule(NewSchedule);
     return false;
   }
 

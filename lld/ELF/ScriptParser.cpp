@@ -350,20 +350,12 @@ void ScriptParser::readInclude() {
     return;
   }
 
-  // https://sourceware.org/binutils/docs/ld/File-Commands.html:
-  // The file will be searched for in the current directory, and in any
-  // directory specified with the -L option.
-  if (sys::fs::exists(Tok)) {
-    if (Optional<MemoryBufferRef> MB = readFile(Tok))
-      tokenize(*MB);
-    return;
-  }
-  if (Optional<std::string> Path = findFromSearchPaths(Tok)) {
+  if (Optional<std::string> Path = searchLinkerScript(Tok)) {
     if (Optional<MemoryBufferRef> MB = readFile(*Path))
       tokenize(*MB);
     return;
   }
-  setError("cannot open " + Tok);
+  setError("cannot find linker script " + Tok);
 }
 
 void ScriptParser::readOutput() {

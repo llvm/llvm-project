@@ -1374,7 +1374,7 @@ bool ScheduleTreeOptimizer::isProfitableSchedule(Scop &S,
   // optimizations, by comparing (yet to be defined) performance metrics
   // before/after the scheduling optimizer
   // (e.g., #stride-one accesses)
-  if (S.containsExtensionNode(NewSchedule.get()))
+  if (S.containsExtensionNode(NewSchedule))
     return true;
   auto NewScheduleMap = NewSchedule.get_map();
   auto OldSchedule = S.getSchedule();
@@ -1582,7 +1582,7 @@ bool IslScheduleOptimizer::runOnScop(Scop &S) {
     IslOuterCoincidence = 0;
   }
 
-  isl_ctx *Ctx = S.getIslCtx();
+  isl_ctx *Ctx = S.getIslCtx().get();
 
   isl_options_set_schedule_outer_coincidence(Ctx, IslOuterCoincidence);
   isl_options_set_schedule_serialize_sccs(Ctx, IslSerializeSCCs);
@@ -1634,7 +1634,7 @@ bool IslScheduleOptimizer::runOnScop(Scop &S) {
   NumAffineLoopsOptimized += ScopStats.NumAffineLoops;
   NumBoxedLoopsOptimized += ScopStats.NumBoxedLoops;
 
-  S.setScheduleTree(NewSchedule.release());
+  S.setScheduleTree(NewSchedule);
   S.markAsOptimized();
 
   if (OptimizedScops)

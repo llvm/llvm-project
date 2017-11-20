@@ -862,8 +862,12 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
       addFile(Arg->getValue(), /*WithLOption=*/false);
       break;
     case OPT_script:
-      if (Optional<MemoryBufferRef> MB = readFile(Arg->getValue()))
-        readLinkerScript(*MB);
+      if (Optional<std::string> Path = searchLinkerScript(Arg->getValue())) {
+        if (Optional<MemoryBufferRef> MB = readFile(*Path))
+          readLinkerScript(*MB);
+        break;
+      }
+      error(Twine("cannot find linker script ") + Arg->getValue());
       break;
     case OPT_as_needed:
       Config->AsNeeded = true;

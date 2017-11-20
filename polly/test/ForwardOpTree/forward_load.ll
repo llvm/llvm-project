@@ -49,7 +49,7 @@ return:
 
 ; CHECK:      Stmt_bodyB
 ; CHECK-NEXT:         ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:             null;
+; CHECK-NEXT:             ;
 ; CHECK-NEXT:        new: [n] -> { Stmt_bodyB[i0] -> MemRef_B[i0] };
 ; CHECK-NEXT:         MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [n] -> { Stmt_bodyB[i0] -> MemRef_A[i0] };

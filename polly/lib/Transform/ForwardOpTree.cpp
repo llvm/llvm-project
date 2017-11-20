@@ -962,7 +962,7 @@ public:
     LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
 
     {
-      IslMaxOperationsGuard MaxOpGuard(S.getIslCtx(), MaxOps, false);
+      IslMaxOperationsGuard MaxOpGuard(S.getIslCtx().get(), MaxOps, false);
       Impl = llvm::make_unique<ForwardOpTreeImpl>(&S, &LI, MaxOpGuard);
 
       if (AnalyzeKnown) {
