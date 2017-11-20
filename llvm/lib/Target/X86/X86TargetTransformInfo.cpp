@@ -2368,8 +2368,9 @@ int X86TTIImpl::getGSVectorCost(unsigned Opcode, Type *SrcVTy, Value *Ptr,
 
   // Trying to reduce IndexSize to 32 bits for vector 16.
   // By default the IndexSize is equal to pointer size.
-  unsigned IndexSize = (VF >= 16) ? getIndexSizeInBits(Ptr, DL) :
-    DL.getPointerSizeInBits();
+  unsigned IndexSize = (ST->hasAVX512() && VF >= 16)
+                           ? getIndexSizeInBits(Ptr, DL)
+                           : DL.getPointerSizeInBits();
 
   Type *IndexVTy = VectorType::get(IntegerType::get(SrcVTy->getContext(),
                                                     IndexSize), VF);
@@ -2385,7 +2386,9 @@ int X86TTIImpl::getGSVectorCost(unsigned Opcode, Type *SrcVTy, Value *Ptr,
 
   // The gather / scatter cost is given by Intel architects. It is a rough
   // number since we are looking at one instruction in a time.
-  const int GSOverhead = 2;
+  const int GSOverhead = (Opcode == Instruction::Load)
+                             ? ST->getGatherOverhead()
+                             : ST->getScatterOverhead();
   return GSOverhead + VF * getMemoryOpCost(Opcode, SrcVTy->getScalarType(),
                                            Alignment, AddressSpace);
 }
@@ -2456,7 +2459,7 @@ int X86TTIImpl::getGatherScatterOpCost(unsigned Opcode, Type *SrcVTy,
   // the mask vector will add more instructions. Right now we give the scalar
   // cost of vector-4 for KNL. TODO: Check, maybe the gather/scatter instruction
   // is better in the VariableMask case.
-  if (VF == 2 || (VF == 4 && !ST->hasVLX()))
+  if (ST->hasAVX512() && (VF == 2 || (VF == 4 && !ST->hasVLX())))
     Scalarize = true;
 
   if (Scalarize)
@@ -2515,11 +2518,15 @@ bool X86TTIImpl::isLegalMaskedGather(Type *DataTy) {
   int DataWidth = isa<PointerType>(ScalarTy) ?
     DL.getPointerSizeInBits() : ScalarTy->getPrimitiveSizeInBits();
 
-  // AVX-512 allows gather and scatter
-  return (DataWidth == 32 || DataWidth == 64) && ST->hasAVX512();
+  // AVX-512 and Skylake AVX2 allows gather and scatter
+  return (DataWidth == 32 || DataWidth == 64) && (ST->hasAVX512() ||
+      ST->getProcFamily() == X86Subtarget::IntelSkylake);
 }
 
 bool X86TTIImpl::isLegalMaskedScatter(Type *DataType) {
+  // AVX2 doesn't support scatter
+  if (!ST->hasAVX512())
+    return false;
   return isLegalMaskedGather(DataType);
 }
 
