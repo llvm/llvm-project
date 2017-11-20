@@ -259,7 +259,7 @@ Symbol *ObjFile::createDefined(COFFSymbolRef Sym, const void *AuxP,
     fatal("broken object file: " + toString(this));
 
   // Nothing else to do without a section chunk.
-  auto *SC = cast_or_null<SectionChunk>(SparseChunks[SectionNumber]);
+  auto *SC = SparseChunks[SectionNumber];
   if (!SC)
     return nullptr;
 
@@ -267,8 +267,7 @@ Symbol *ObjFile::createDefined(COFFSymbolRef Sym, const void *AuxP,
   if (IsFirst && AuxP) {
     auto *Aux = reinterpret_cast<const coff_aux_section_definition *>(AuxP);
     if (Aux->Selection == IMAGE_COMDAT_SELECT_ASSOCIATIVE)
-      if (auto *ParentSC = cast_or_null<SectionChunk>(
-              SparseChunks[Aux->getNumber(Sym.isBigObj())])) {
+      if (auto *ParentSC = SparseChunks[Aux->getNumber(Sym.isBigObj())]) {
         ParentSC->addAssociative(SC);
         // If we already discarded the parent, discard the child.
         if (ParentSC->isDiscarded())
