@@ -131,6 +131,7 @@ private:
   // Math Library Optimizations
   Value *optimizeCos(CallInst *CI, IRBuilder<> &B);
   Value *optimizePow(CallInst *CI, IRBuilder<> &B);
+  Value *replacePowWithSqrt(CallInst *Pow, IRBuilder<> &B);
   Value *optimizeExp2(CallInst *CI, IRBuilder<> &B);
   Value *optimizeFMinFMax(CallInst *CI, IRBuilder<> &B);
   Value *optimizeLog(CallInst *CI, IRBuilder<> &B);

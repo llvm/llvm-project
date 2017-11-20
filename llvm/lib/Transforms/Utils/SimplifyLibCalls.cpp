@@ -1074,6 +1074,51 @@ static Value *getPow(Value *InnerChain[33], unsigned Exp, IRBuilder<> &B) {
   return InnerChain[Exp];
 }
 
+/// Use square root in place of pow(x, +/-0.5).
+Value *LibCallSimplifier::replacePowWithSqrt(CallInst *Pow, IRBuilder<> &B) {
+  // TODO: There is some subset of 'fast' under which these transforms should
+  // be allowed.
+  if (!Pow->isFast())
+    return nullptr;
+
+  const APFloat *Arg1C;
+  if (!match(Pow->getArgOperand(1), m_APFloat(Arg1C)))
+    return nullptr;
+  if (!Arg1C->isExactlyValue(0.5) && !Arg1C->isExactlyValue(-0.5))
+    return nullptr;
+
+  // Fast-math flags from the pow() are propagated to all replacement ops.
+  IRBuilder<>::FastMathFlagGuard Guard(B);
+  B.setFastMathFlags(Pow->getFastMathFlags());
+  Type *Ty = Pow->getType();
+  Value *Sqrt;
+  if (Pow->hasFnAttr(Attribute::ReadNone)) {
+    // We know that errno is never set, so replace with an intrinsic:
+    // pow(x, 0.5) --> llvm.sqrt(x)
+    // llvm.pow(x, 0.5) --> llvm.sqrt(x)
+    auto *F = Intrinsic::getDeclaration(Pow->getModule(), Intrinsic::sqrt, Ty);
+    Sqrt = B.CreateCall(F, Pow->getArgOperand(0));
+  } else if (hasUnaryFloatFn(TLI, Ty, LibFunc_sqrt, LibFunc_sqrtf,
+                             LibFunc_sqrtl)) {
+    // Errno could be set, so we must use a sqrt libcall.
+    // TODO: We also should check that the target can in fact lower the sqrt
+    // libcall. We currently have no way to ask this question, so we ask
+    // whether the target has a sqrt libcall which is not exactly the same.
+    Sqrt = emitUnaryFloatFnCall(Pow->getArgOperand(0),
+                                TLI->getName(LibFunc_sqrt), B,
+                                Pow->getCalledFunction()->getAttributes());
+  } else {
+    // We can't replace with an intrinsic or a libcall.
+    return nullptr;
+  }
+
+  // If this is pow(x, -0.5), get the reciprocal.
+  if (Arg1C->isExactlyValue(-0.5))
+    Sqrt = B.CreateFDiv(ConstantFP::get(Ty, 1.0), Sqrt);
+
+  return Sqrt;
+}
+
 Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
   Value *Ret = nullptr;
@@ -1124,6 +1169,9 @@ Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
     }
   }
 
+  if (Value *Sqrt = replacePowWithSqrt(CI, B))
+    return Sqrt;
+
   ConstantFP *Op2C = dyn_cast<ConstantFP>(Op2);
   if (!Op2C)
     return Ret;
@@ -1131,42 +1179,10 @@ Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
   if (Op2C->getValueAPF().isZero()) // pow(x, 0.0) -> 1.0
     return ConstantFP::get(CI->getType(), 1.0);
 
-  if (Op2C->isExactlyValue(-0.5) &&
-      hasUnaryFloatFn(TLI, Op2->getType(), LibFunc_sqrt, LibFunc_sqrtf,
-                      LibFunc_sqrtl)) {
-    // If -ffast-math:
-    // pow(x, -0.5) -> 1.0 / sqrt(x)
-    if (CI->isFast()) {
-      IRBuilder<>::FastMathFlagGuard Guard(B);
-      B.setFastMathFlags(CI->getFastMathFlags());
-
-      // TODO: If the pow call is an intrinsic, we should lower to the sqrt
-      // intrinsic, so we match errno semantics.  We also should check that the
-      // target can in fact lower the sqrt intrinsic -- we currently have no way
-      // to ask this question other than asking whether the target has a sqrt
-      // libcall, which is a sufficient but not necessary condition.
-      Value *Sqrt = emitUnaryFloatFnCall(Op1, TLI->getName(LibFunc_sqrt), B,
-                                         Callee->getAttributes());
-
-      return B.CreateFDiv(ConstantFP::get(CI->getType(), 1.0), Sqrt, "sqrtrecip");
-    }
-  }
-
+  // FIXME: Correct the transforms and pull this into replacePowWithSqrt().
   if (Op2C->isExactlyValue(0.5) &&
       hasUnaryFloatFn(TLI, Op2->getType(), LibFunc_sqrt, LibFunc_sqrtf,
                       LibFunc_sqrtl)) {
-
-    // In -ffast-math, pow(x, 0.5) -> sqrt(x).
-    if (CI->isFast()) {
-      IRBuilder<>::FastMathFlagGuard Guard(B);
-      B.setFastMathFlags(CI->getFastMathFlags());
-
-      // TODO: As above, we should lower to the sqrt intrinsic if the pow is an
-      // intrinsic, to match errno semantics.
-      return emitUnaryFloatFnCall(Op1, TLI->getName(LibFunc_sqrt), B,
-                                  Callee->getAttributes());
-    }
-
     // Expand pow(x, 0.5) to (x == -infinity ? +infinity : fabs(sqrt(x))).
     // This is faster than calling pow, and still handles negative zero
     // and negative infinity correctly.
