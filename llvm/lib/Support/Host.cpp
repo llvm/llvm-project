@@ -1183,95 +1183,91 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
 
   getX86CpuIDAndInfo(1, &EAX, &EBX, &ECX, &EDX);
 
-  Features["cmov"] = (EDX >> 15) & 1;
-  Features["mmx"] = (EDX >> 23) & 1;
-  Features["sse"] = (EDX >> 25) & 1;
-  Features["sse2"] = (EDX >> 26) & 1;
-  Features["sse3"] = (ECX >> 0) & 1;
-  Features["ssse3"] = (ECX >> 9) & 1;
+  Features["cmov"]   = (EDX >> 15) & 1;
+  Features["mmx"]    = (EDX >> 23) & 1;
+  Features["sse"]    = (EDX >> 25) & 1;
+  Features["sse2"]   = (EDX >> 26) & 1;
+
+  Features["sse3"]   = (ECX >>  0) & 1;
+  Features["pclmul"] = (ECX >>  1) & 1;
+  Features["ssse3"]  = (ECX >>  9) & 1;
+  Features["cx16"]   = (ECX >> 13) & 1;
   Features["sse4.1"] = (ECX >> 19) & 1;
   Features["sse4.2"] = (ECX >> 20) & 1;
-
-  Features["pclmul"] = (ECX >> 1) & 1;
-  Features["cx16"] = (ECX >> 13) & 1;
-  Features["movbe"] = (ECX >> 22) & 1;
+  Features["movbe"]  = (ECX >> 22) & 1;
   Features["popcnt"] = (ECX >> 23) & 1;
-  Features["aes"] = (ECX >> 25) & 1;
-  Features["rdrnd"] = (ECX >> 30) & 1;
+  Features["aes"]    = (ECX >> 25) & 1;
+  Features["rdrnd"]  = (ECX >> 30) & 1;
 
   // If CPUID indicates support for XSAVE, XRESTORE and AVX, and XGETBV
   // indicates that the AVX registers will be saved and restored on context
   // switch, then we have full AVX support.
   bool HasAVXSave = ((ECX >> 27) & 1) && ((ECX >> 28) & 1) &&
                     !getX86XCR0(&EAX, &EDX) && ((EAX & 0x6) == 0x6);
-  Features["avx"] = HasAVXSave;
-  Features["fma"] = HasAVXSave && (ECX >> 12) & 1;
-  Features["f16c"] = HasAVXSave && (ECX >> 29) & 1;
-
-  // Only enable XSAVE if OS has enabled support for saving YMM state.
-  Features["xsave"] = HasAVXSave && (ECX >> 26) & 1;
-
   // AVX512 requires additional context to be saved by the OS.
   bool HasAVX512Save = HasAVXSave && ((EAX & 0xe0) == 0xe0);
+
+  Features["avx"]   = HasAVXSave;
+  Features["fma"]   = ((ECX >> 12) & 1) && HasAVXSave;
+  // Only enable XSAVE if OS has enabled support for saving YMM state.
+  Features["xsave"] = ((ECX >> 26) & 1) && HasAVXSave;
+  Features["f16c"]  = ((ECX >> 29) & 1) && HasAVXSave;
 
   unsigned MaxExtLevel;
   getX86CpuIDAndInfo(0x80000000, &MaxExtLevel, &EBX, &ECX, &EDX);
 
   bool HasExtLeaf1 = MaxExtLevel >= 0x80000001 &&
                      !getX86CpuIDAndInfo(0x80000001, &EAX, &EBX, &ECX, &EDX);
-  Features["lzcnt"] = HasExtLeaf1 && ((ECX >> 5) & 1);
-  Features["sse4a"] = HasExtLeaf1 && ((ECX >> 6) & 1);
-  Features["prfchw"] = HasExtLeaf1 && ((ECX >> 8) & 1);
-  Features["xop"] = HasExtLeaf1 && ((ECX >> 11) & 1) && HasAVXSave;
-  Features["lwp"] = HasExtLeaf1 && ((ECX >> 15) & 1);
-  Features["fma4"] = HasExtLeaf1 && ((ECX >> 16) & 1) && HasAVXSave;
-  Features["tbm"] = HasExtLeaf1 && ((ECX >> 21) & 1);
+  Features["lzcnt"]  = HasExtLeaf1 && ((ECX >>  5) & 1);
+  Features["sse4a"]  = HasExtLeaf1 && ((ECX >>  6) & 1);
+  Features["prfchw"] = HasExtLeaf1 && ((ECX >>  8) & 1);
+  Features["xop"]    = HasExtLeaf1 && ((ECX >> 11) & 1) && HasAVXSave;
+  Features["lwp"]    = HasExtLeaf1 && ((ECX >> 15) & 1);
+  Features["fma4"]   = HasExtLeaf1 && ((ECX >> 16) & 1) && HasAVXSave;
+  Features["tbm"]    = HasExtLeaf1 && ((ECX >> 21) & 1);
   Features["mwaitx"] = HasExtLeaf1 && ((ECX >> 29) & 1);
 
   bool HasExtLeaf8 = MaxExtLevel >= 0x80000008 &&
-                     !getX86CpuIDAndInfoEx(0x80000008,0x0, &EAX, &EBX, &ECX, &EDX);
+                     !getX86CpuIDAndInfo(0x80000008, &EAX, &EBX, &ECX, &EDX);
   Features["clzero"] = HasExtLeaf8 && ((EBX >> 0) & 1);
 
   bool HasLeaf7 =
       MaxLevel >= 7 && !getX86CpuIDAndInfoEx(0x7, 0x0, &EAX, &EBX, &ECX, &EDX);
 
+  Features["fsgsbase"]   = HasLeaf7 && ((EBX >>  0) & 1);
+  Features["sgx"]        = HasLeaf7 && ((EBX >>  2) & 1);
+  Features["bmi"]        = HasLeaf7 && ((EBX >>  3) & 1);
   // AVX2 is only supported if we have the OS save support from AVX.
-  Features["avx2"] = HasAVXSave && HasLeaf7 && ((EBX >> 5) & 1);
-
-  Features["fsgsbase"] = HasLeaf7 && ((EBX >> 0) & 1);
-  Features["sgx"] = HasLeaf7 && ((EBX >> 2) & 1);
-  Features["bmi"] = HasLeaf7 && ((EBX >> 3) & 1);
-  Features["bmi2"] = HasLeaf7 && ((EBX >> 8) & 1);
-  Features["rtm"] = HasLeaf7 && ((EBX >> 11) & 1);
-  Features["rdseed"] = HasLeaf7 && ((EBX >> 18) & 1);
-  Features["adx"] = HasLeaf7 && ((EBX >> 19) & 1);
-  Features["clflushopt"] = HasLeaf7 && ((EBX >> 23) & 1);
-  Features["clwb"] = HasLeaf7 && ((EBX >> 24) & 1);
-  Features["sha"] = HasLeaf7 && ((EBX >> 29) & 1);
-
+  Features["avx2"]       = HasLeaf7 && ((EBX >>  5) & 1) && HasAVXSave;
+  Features["bmi2"]       = HasLeaf7 && ((EBX >>  8) & 1);
+  Features["rtm"]        = HasLeaf7 && ((EBX >> 11) & 1);
   // AVX512 is only supported if the OS supports the context save for it.
-  Features["avx512f"] = HasLeaf7 && ((EBX >> 16) & 1) && HasAVX512Save;
-  Features["avx512dq"] = HasLeaf7 && ((EBX >> 17) & 1) && HasAVX512Save;
+  Features["avx512f"]    = HasLeaf7 && ((EBX >> 16) & 1) && HasAVX512Save;
+  Features["avx512dq"]   = HasLeaf7 && ((EBX >> 17) & 1) && HasAVX512Save;
+  Features["rdseed"]     = HasLeaf7 && ((EBX >> 18) & 1);
+  Features["adx"]        = HasLeaf7 && ((EBX >> 19) & 1);
   Features["avx512ifma"] = HasLeaf7 && ((EBX >> 21) & 1) && HasAVX512Save;
-  Features["avx512pf"] = HasLeaf7 && ((EBX >> 26) & 1) && HasAVX512Save;
-  Features["avx512er"] = HasLeaf7 && ((EBX >> 27) & 1) && HasAVX512Save;
-  Features["avx512cd"] = HasLeaf7 && ((EBX >> 28) & 1) && HasAVX512Save;
-  Features["avx512bw"] = HasLeaf7 && ((EBX >> 30) & 1) && HasAVX512Save;
-  Features["avx512vl"] = HasLeaf7 && ((EBX >> 31) & 1) && HasAVX512Save;
+  Features["clflushopt"] = HasLeaf7 && ((EBX >> 23) & 1);
+  Features["clwb"]       = HasLeaf7 && ((EBX >> 24) & 1);
+  Features["avx512pf"]   = HasLeaf7 && ((EBX >> 26) & 1) && HasAVX512Save;
+  Features["avx512er"]   = HasLeaf7 && ((EBX >> 27) & 1) && HasAVX512Save;
+  Features["avx512cd"]   = HasLeaf7 && ((EBX >> 28) & 1) && HasAVX512Save;
+  Features["sha"]        = HasLeaf7 && ((EBX >> 29) & 1);
+  Features["avx512bw"]   = HasLeaf7 && ((EBX >> 30) & 1) && HasAVX512Save;
+  Features["avx512vl"]   = HasLeaf7 && ((EBX >> 31) & 1) && HasAVX512Save;
 
-  Features["prefetchwt1"] = HasLeaf7 && (ECX & 1);
-  Features["avx512vbmi"] = HasLeaf7 && ((ECX >> 1) & 1) && HasAVX512Save;
+  Features["prefetchwt1"]     = HasLeaf7 && ((ECX >>  0) & 1);
+  Features["avx512vbmi"]      = HasLeaf7 && ((ECX >>  1) & 1) && HasAVX512Save;
   Features["avx512vpopcntdq"] = HasLeaf7 && ((ECX >> 14) & 1) && HasAVX512Save;
-  // Enable protection keys
-  Features["pku"] = HasLeaf7 && ((ECX >> 4) & 1);
+  Features["pku"]             = HasLeaf7 && ((ECX >> 4) & 1);
 
   bool HasLeafD = MaxLevel >= 0xd &&
                   !getX86CpuIDAndInfoEx(0xd, 0x1, &EAX, &EBX, &ECX, &EDX);
 
   // Only enable XSAVE if OS has enabled support for saving YMM state.
-  Features["xsaveopt"] = HasAVXSave && HasLeafD && ((EAX >> 0) & 1);
-  Features["xsavec"] = HasAVXSave && HasLeafD && ((EAX >> 1) & 1);
-  Features["xsaves"] = HasAVXSave && HasLeafD && ((EAX >> 3) & 1);
+  Features["xsaveopt"] = HasLeafD && ((EAX >> 0) & 1) && HasAVXSave;
+  Features["xsavec"]   = HasLeafD && ((EAX >> 1) & 1) && HasAVXSave;
+  Features["xsaves"]   = HasLeafD && ((EAX >> 3) & 1) && HasAVXSave;
 
   return true;
 }

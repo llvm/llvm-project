@@ -15,8 +15,10 @@
 ///    treated as proper graphs for generic algorithms;
 /// 3. Pure virtual VPRecipeBase serving as the base class for recipes contained
 ///    within VPBasicBlocks;
-/// 4. The VPlan class holding a candidate for vectorization;
-/// 5. The VPlanPrinter class providing a way to print a plan in dot format.
+/// 4. VPInstruction, a concrete Recipe and VPUser modeling a single planned
+///    instruction;
+/// 5. The VPlan class holding a candidate for vectorization;
+/// 6. The VPlanPrinter class providing a way to print a plan in dot format;
 /// These are documented in docs/VectorizationPlan.rst.
 //
 //===----------------------------------------------------------------------===//
@@ -24,6 +26,7 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_VPLAN_H
 #define LLVM_TRANSFORMS_VECTORIZE_VPLAN_H
 
+#include "VPlanValue.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/Optional.h"
@@ -38,6 +41,13 @@
 #include <cstddef>
 #include <map>
 #include <string>
+
+// The (re)use of existing LoopVectorize classes is subject to future VPlan
+// refactoring.
+namespace {
+class LoopVectorizationLegality;
+class LoopVectorizationCostModel;
+} // namespace
 
 namespace llvm {
 
@@ -82,6 +92,8 @@ struct VPIteration {
 /// Entries from either map can be retrieved using the getVectorValue and
 /// getScalarValue functions, which assert that the desired value exists.
 struct VectorizerValueMap {
+  friend struct VPTransformState;
+
 private:
   /// The unroll factor. Each entry in the vector map contains UF vector values.
   unsigned UF;
@@ -195,14 +207,21 @@ public:
   }
 };
 
+/// This class is used to enable the VPlan to invoke a method of ILV. This is
+/// needed until the method is refactored out of ILV and becomes reusable.
+struct VPCallback {
+  virtual ~VPCallback() {}
+  virtual Value *getOrCreateVectorValues(Value *V, unsigned Part) = 0;
+};
+
 /// VPTransformState holds information passed down when "executing" a VPlan,
 /// needed for generating the output IR.
 struct VPTransformState {
   VPTransformState(unsigned VF, unsigned UF, LoopInfo *LI, DominatorTree *DT,
                    IRBuilder<> &Builder, VectorizerValueMap &ValueMap,
-                   InnerLoopVectorizer *ILV)
-      : VF(VF), UF(UF), LI(LI), DT(DT), Builder(Builder), ValueMap(ValueMap),
-        ILV(ILV) {}
+                   InnerLoopVectorizer *ILV, VPCallback &Callback)
+      : VF(VF), UF(UF), Instance(), LI(LI), DT(DT), Builder(Builder),
+        ValueMap(ValueMap), ILV(ILV), Callback(Callback) {}
 
   /// The chosen Vectorization and Unroll Factors of the loop being vectorized.
   unsigned VF;
@@ -212,6 +231,37 @@ struct VPTransformState {
   /// that all instances are to be generated, using either scalar or vector
   /// instructions.
   Optional<VPIteration> Instance;
+
+  struct DataState {
+    /// A type for vectorized values in the new loop. Each value from the
+    /// original loop, when vectorized, is represented by UF vector values in
+    /// the new unrolled loop, where UF is the unroll factor.
+    typedef SmallVector<Value *, 2> PerPartValuesTy;
+
+    DenseMap<VPValue *, PerPartValuesTy> PerPartOutput;
+  } Data;
+
+  /// Get the generated Value for a given VPValue and a given Part. Note that
+  /// as some Defs are still created by ILV and managed in its ValueMap, this
+  /// method will delegate the call to ILV in such cases in order to provide
+  /// callers a consistent API.
+  /// \see set.
+  Value *get(VPValue *Def, unsigned Part) {
+    // If Values have been set for this Def return the one relevant for \p Part.
+    if (Data.PerPartOutput.count(Def))
+      return Data.PerPartOutput[Def][Part];
+    // Def is managed by ILV: bring the Values from ValueMap.
+    return Callback.getOrCreateVectorValues(VPValue2Value[Def], Part);
+  }
+
+  /// Set the generated Value for a given VPValue and a given Part.
+  void set(VPValue *Def, Value *V, unsigned Part) {
+    if (!Data.PerPartOutput.count(Def)) {
+      DataState::PerPartValuesTy Entry(UF);
+      Data.PerPartOutput[Def] = Entry;
+    }
+    Data.PerPartOutput[Def][Part] = V;
+  }
 
   /// Hold state information used when constructing the CFG of the output IR,
   /// traversing the VPBasicBlocks and generating corresponding IR BasicBlocks.
@@ -247,8 +297,14 @@ struct VPTransformState {
   /// Values of the output IR.
   VectorizerValueMap &ValueMap;
 
+  /// Hold a reference to a mapping between VPValues in VPlan and original
+  /// Values they correspond to.
+  VPValue2ValueTy VPValue2Value;
+
   /// Hold a pointer to InnerLoopVectorizer to reuse its IR generation methods.
   InnerLoopVectorizer *ILV;
+
+  VPCallback &Callback;
 };
 
 /// VPBlockBase is the building block of the Hierarchical Control-Flow Graph.
@@ -454,6 +510,7 @@ public:
   using VPRecipeTy = enum {
     VPBlendSC,
     VPBranchOnMaskSC,
+    VPInstructionSC,
     VPInterleaveSC,
     VPPredInstPHISC,
     VPReplicateSC,
@@ -481,6 +538,52 @@ public:
 
   /// Each recipe prints itself.
   virtual void print(raw_ostream &O, const Twine &Indent) const = 0;
+};
+
+/// This is a concrete Recipe that models a single VPlan-level instruction.
+/// While as any Recipe it may generate a sequence of IR instructions when
+/// executed, these instructions would always form a single-def expression as
+/// the VPInstruction is also a single def-use vertex.
+class VPInstruction : public VPUser, public VPRecipeBase {
+public:
+  /// VPlan opcodes, extending LLVM IR with idiomatics instructions.
+  enum { Not = Instruction::OtherOpsEnd + 1 };
+
+private:
+  typedef unsigned char OpcodeTy;
+  OpcodeTy Opcode;
+
+  /// Utility method serving execute(): generates a single instance of the
+  /// modeled instruction.
+  void generateInstruction(VPTransformState &State, unsigned Part);
+
+public:
+  VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands)
+      : VPUser(VPValue::VPInstructionSC, Operands),
+        VPRecipeBase(VPRecipeBase::VPInstructionSC), Opcode(Opcode) {}
+
+  /// Method to support type inquiry through isa, cast, and dyn_cast.
+  static inline bool classof(const VPValue *V) {
+    return V->getVPValueID() == VPValue::VPInstructionSC;
+  }
+
+  /// Method to support type inquiry through isa, cast, and dyn_cast.
+  static inline bool classof(const VPRecipeBase *R) {
+    return R->getVPRecipeID() == VPRecipeBase::VPInstructionSC;
+  }
+
+  unsigned getOpcode() const { return Opcode; }
+
+  /// Generate the instruction.
+  /// TODO: We currently execute only per-part unless a specific instance is
+  /// provided.
+  void execute(VPTransformState &State) override;
+
+  /// Print the Recipe.
+  void print(raw_ostream &O, const Twine &Indent) const override;
+
+  /// Print the VPInstruction.
+  void print(raw_ostream &O) const;
 };
 
 /// VPBasicBlock serves as the leaf of the Hierarchical Control-Flow Graph. It
@@ -539,14 +642,16 @@ public:
     return V->getVPBlockID() == VPBlockBase::VPBasicBlockSC;
   }
 
-  /// Augment the existing recipes of a VPBasicBlock with an additional
-  /// \p Recipe as the last recipe.
-  void appendRecipe(VPRecipeBase *Recipe) {
+  void insert(VPRecipeBase *Recipe, iterator InsertPt) {
     assert(Recipe && "No recipe to append.");
     assert(!Recipe->Parent && "Recipe already in VPlan");
     Recipe->Parent = this;
-    return Recipes.push_back(Recipe);
+    Recipes.insert(InsertPt, Recipe);
   }
+
+  /// Augment the existing recipes of a VPBasicBlock with an additional
+  /// \p Recipe as the last recipe.
+  void appendRecipe(VPRecipeBase *Recipe) { insert(Recipe, end()); }
 
   /// The method which generates the output IR instructions that correspond to
   /// this VPBasicBlock, thereby "executing" the VPlan.
@@ -620,6 +725,8 @@ public:
 /// Hierarchical-CFG of VPBasicBlocks and VPRegionBlocks rooted at an Entry
 /// VPBlock.
 class VPlan {
+  friend class VPlanPrinter;
+
 private:
   /// Hold the single entry to the Hierarchical CFG of the VPlan.
   VPBlockBase *Entry;
@@ -630,12 +737,18 @@ private:
   /// Holds the name of the VPlan, for printing.
   std::string Name;
 
+  /// Holds a mapping between Values and their corresponding VPValue inside
+  /// VPlan.
+  Value2VPValueTy Value2VPValue;
+
 public:
   VPlan(VPBlockBase *Entry = nullptr) : Entry(Entry) {}
 
   ~VPlan() {
     if (Entry)
       VPBlockBase::deleteCFG(Entry);
+    for (auto &MapEntry : Value2VPValue)
+      delete MapEntry.second;
   }
 
   /// Generate the IR code for this VPlan.
@@ -653,6 +766,18 @@ public:
   const std::string &getName() const { return Name; }
 
   void setName(const Twine &newName) { Name = newName.str(); }
+
+  void addVPValue(Value *V) {
+    assert(V && "Trying to add a null Value to VPlan");
+    assert(!Value2VPValue.count(V) && "Value already exists in VPlan");
+    Value2VPValue[V] = new VPValue();
+  }
+
+  VPValue *getVPValue(Value *V) {
+    assert(V && "Trying to get the VPValue of a null Value");
+    assert(Value2VPValue.count(V) && "Value does not exist in VPlan");
+    return Value2VPValue[V];
+  }
 
 private:
   /// Add to the given dominator tree the header block and every new basic block
