@@ -160,7 +160,7 @@ private:
   // Nonexistent section indices are filled with null pointers.
   // (Because section number is 1-based, the first slot is always a
   // null pointer.)
-  std::vector<Chunk *> SparseChunks;
+  std::vector<SectionChunk *> SparseChunks;
 
   // List of all symbols referenced or defined by this file.
   std::vector<Symbol *> SymbolBodies;

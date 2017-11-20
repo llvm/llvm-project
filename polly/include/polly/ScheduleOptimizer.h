@@ -353,5 +353,4 @@ private:
 /// @param ScheduleRange A range of a map, which describes a prefix schedule
 ///                      relation.
 isl::set getPartialTilePrefixes(isl::set ScheduleRange, int VectorWidth);
-
 #endif // POLLY_SCHEDULEOPTIMIZER_H
