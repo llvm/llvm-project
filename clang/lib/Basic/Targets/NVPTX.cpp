@@ -41,6 +41,7 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
          "NVPTX only supports 32- and 64-bit modes.");
 
   TLSSupported = false;
+  VLASupported = false;
   AddrSpaceMap = &NVPTXAddrSpaceMap;
   UseAddrSpaceMapMangling = true;
 

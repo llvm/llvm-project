@@ -98,9 +98,6 @@ bool WebAssembly::isPICDefaultForced() const { return false; }
 
 bool WebAssembly::IsIntegratedAssemblerDefault() const { return true; }
 
-// TODO: Support Objective C stuff.
-bool WebAssembly::SupportsObjCGC() const { return false; }
-
 bool WebAssembly::hasBlocksRuntime() const { return false; }
 
 // TODO: Support profiling.

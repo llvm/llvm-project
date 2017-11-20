@@ -118,6 +118,26 @@ define <4 x float> @test_rcp28_ss(<4 x float> %a0) {
 }
 declare <4 x float> @llvm.x86.avx512.rcp28.ss(<4 x float>, <4 x float>, <4 x float>, i8, i32) nounwind readnone
 
+define <4 x float> @test_rcp28_ss_load(<4 x float> %a0, <4 x float>* %a1ptr) {
+; CHECK-LABEL: test_rcp28_ss_load:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    vrcp28ss (%rdi), %xmm0, %xmm0 # encoding: [0x62,0xf2,0x7d,0x08,0xcb,0x07]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %a1 = load <4 x float>, <4 x float>* %a1ptr
+  %res = call <4 x float> @llvm.x86.avx512.rcp28.ss(<4 x float> %a0, <4 x float> %a1, <4 x float> undef, i8 -1, i32 4) ; <<4 x float>> [#uses=1]
+  ret <4 x float> %res
+}
+
+define <4 x float> @test_rsqrt28_ss_load(<4 x float> %a0, <4 x float>* %a1ptr) {
+; CHECK-LABEL: test_rsqrt28_ss_load:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    vrsqrt28ss (%rdi), %xmm0, %xmm0 # encoding: [0x62,0xf2,0x7d,0x08,0xcd,0x07]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %a1 = load <4 x float>, <4 x float>* %a1ptr
+  %res = call <4 x float> @llvm.x86.avx512.rsqrt28.ss(<4 x float> %a0, <4 x float> %a1, <4 x float> undef, i8 -1, i32 4) ; <<4 x float>> [#uses=1]
+  ret <4 x float> %res
+}
+
 define <4 x float> @test_rsqrt28_ss_maskz(<4 x float> %a0, i8 %mask) {
 ; CHECK-LABEL: test_rsqrt28_ss_maskz:
 ; CHECK:       # BB#0:
@@ -137,6 +157,30 @@ define <4 x float> @test_rsqrt28_ss_mask(<4 x float> %a0, <4 x float> %b0, <4 x 
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %res = call <4 x float> @llvm.x86.avx512.rsqrt28.ss(<4 x float> %a0, <4 x float> %b0, <4 x float> %c0, i8 %mask, i32 8) ;
   ret <4 x float> %res
+}
+
+define <2 x double> @test_rcp28_sd_mask_load(<2 x double> %a0, <2 x double>* %a1ptr, <2 x double> %a2, i8 %mask) {
+; CHECK-LABEL: test_rcp28_sd_mask_load:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
+; CHECK-NEXT:    vrcp28sd %xmm0, %xmm0, %xmm1 {%k1} # encoding: [0x62,0xf2,0xfd,0x09,0xcb,0xc8]
+; CHECK-NEXT:    vmovapd %xmm1, %xmm0 # encoding: [0xc5,0xf9,0x28,0xc1]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %a1 = load <2 x double>, <2 x double>* %a1ptr
+  %res = call <2 x double> @llvm.x86.avx512.rcp28.sd(<2 x double> %a0, <2 x double> %a0, <2 x double> %a2, i8 %mask, i32 4) ;
+  ret <2 x double> %res
+}
+declare <2 x double> @llvm.x86.avx512.rcp28.sd(<2 x double>, <2 x double>, <2 x double>, i8, i32) nounwind readnone
+
+define <2 x double> @test_rsqrt28_sd_maskz_load(<2 x double> %a0, <2 x double>* %a1ptr, i8 %mask) {
+; CHECK-LABEL: test_rsqrt28_sd_maskz_load:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
+; CHECK-NEXT:    vrsqrt28sd %xmm0, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0x89,0xcd,0xc0]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %a1 = load <2 x double>, <2 x double>* %a1ptr
+  %res = call <2 x double> @llvm.x86.avx512.rsqrt28.sd(<2 x double> %a0, <2 x double> %a0, <2 x double> zeroinitializer, i8 %mask, i32 4) ;
+  ret <2 x double> %res
 }
 
 define <2 x double> @test_rsqrt28_sd_maskz(<2 x double> %a0, i8 %mask) {

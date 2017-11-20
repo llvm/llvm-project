@@ -351,10 +351,10 @@ static isl::ast_expr buildCondition(Scop &S, isl::ast_build Build,
                                     const Scop::MinMaxAccessTy *It0,
                                     const Scop::MinMaxAccessTy *It1) {
 
-  isl::pw_multi_aff AFirst = isl::manage(isl_pw_multi_aff_copy(It0->first));
-  isl::pw_multi_aff ASecond = isl::manage(isl_pw_multi_aff_copy(It0->second));
-  isl::pw_multi_aff BFirst = isl::manage(isl_pw_multi_aff_copy(It1->first));
-  isl::pw_multi_aff BSecond = isl::manage(isl_pw_multi_aff_copy(It1->second));
+  isl::pw_multi_aff AFirst = It0->first;
+  isl::pw_multi_aff ASecond = It0->second;
+  isl::pw_multi_aff BFirst = It1->first;
+  isl::pw_multi_aff BSecond = It1->second;
 
   isl::id Left = AFirst.get_tuple_id(isl::dim::set);
   isl::id Right = BFirst.get_tuple_id(isl::dim::set);
@@ -529,10 +529,9 @@ void IslAst::init(const Dependences &D) {
   // We can not perform the dependence analysis and, consequently,
   // the parallel code generation in case the schedule tree contains
   // extension nodes.
-  auto *ScheduleTree = S.getScheduleTree().release();
+  auto ScheduleTree = S.getScheduleTree();
   PerformParallelTest =
       PerformParallelTest && !S.containsExtensionNode(ScheduleTree);
-  isl_schedule_free(ScheduleTree);
 
   // Skip AST and code generation if there was no benefit achieved.
   if (!benefitsFromPolly(S, PerformParallelTest))
@@ -543,9 +542,9 @@ void IslAst::init(const Dependences &D) {
   BeneficialAffineLoops += ScopStats.NumAffineLoops;
   BeneficialBoxedLoops += ScopStats.NumBoxedLoops;
 
-  isl_ctx *Ctx = S.getIslCtx();
-  isl_options_set_ast_build_atomic_upper_bound(Ctx, true);
-  isl_options_set_ast_build_detect_min_max(Ctx, true);
+  auto Ctx = S.getIslCtx();
+  isl_options_set_ast_build_atomic_upper_bound(Ctx.get(), true);
+  isl_options_set_ast_build_detect_min_max(Ctx.get(), true);
   isl_ast_build *Build;
   AstBuildUserInfo BuildInfo;
 
@@ -677,7 +676,7 @@ isl_ast_build *IslAstInfo::getBuild(__isl_keep isl_ast_node *Node) {
 IslAstInfo IslAstAnalysis::run(Scop &S, ScopAnalysisManager &SAM,
                                ScopStandardAnalysisResults &SAR) {
   return {S, SAM.getResult<DependenceAnalysis>(S, SAR).getDependences(
-                 Dependences::AL_Statement)};
+              Dependences::AL_Statement)};
 }
 
 static __isl_give isl_printer *cbPrintUser(__isl_take isl_printer *P,
@@ -749,14 +748,14 @@ void IslAstInfo::print(raw_ostream &OS) {
   isl_ast_expr *RunCondition = Ast.getRunCondition();
   char *RtCStr, *AstStr;
 
-  Options = isl_ast_print_options_alloc(S.getIslCtx());
+  Options = isl_ast_print_options_alloc(S.getIslCtx().get());
 
   if (PrintAccesses)
     Options =
         isl_ast_print_options_set_print_user(Options, cbPrintUser, nullptr);
   Options = isl_ast_print_options_set_print_for(Options, cbPrintFor, nullptr);
 
-  isl_printer *P = isl_printer_to_str(S.getIslCtx());
+  isl_printer *P = isl_printer_to_str(S.getIslCtx().get());
   P = isl_printer_set_output_format(P, ISL_FORMAT_C);
   P = isl_printer_print_ast_expr(P, RunCondition);
   RtCStr = isl_printer_get_str(P);
