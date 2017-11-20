@@ -284,10 +284,20 @@ void ScopedInterceptor::DisableIgnores() {
 }
 
 #define TSAN_INTERCEPT(func) INTERCEPT_FUNCTION(func)
-#if SANITIZER_FREEBSD || SANITIZER_NETBSD
+#if SANITIZER_FREEBSD
 # define TSAN_INTERCEPT_VER(func, ver) INTERCEPT_FUNCTION(func)
+# define TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(func)
+# define TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS_THR(func)
+#elif SANITIZER_NETBSD
+# define TSAN_INTERCEPT_VER(func, ver) INTERCEPT_FUNCTION(func)
+# define TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(func) \
+         INTERCEPT_FUNCTION(__libc_##func)
+# define TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS_THR(func) \
+         INTERCEPT_FUNCTION(__libc_thr_##func)
 #else
 # define TSAN_INTERCEPT_VER(func, ver) INTERCEPT_FUNCTION_VER(func, ver)
+# define TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(func)
+# define TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS_THR(func)
 #endif
 
 #define READ_STRING_OF_LEN(thr, pc, s, len, n)                 \
@@ -2475,6 +2485,23 @@ TSAN_INTERCEPTOR(void, _lwp_exit) {
 #define TSAN_MAYBE_INTERCEPT__LWP_EXIT
 #endif
 
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, cond_init, void *c, void *a);
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, cond_signal, void *c);
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, cond_broadcast, void *c);
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, cond_wait, void *c, void *m);
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, cond_destroy, void *c);
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, mutex_init, void *m, void *a);
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, mutex_destroy, void *m);
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, mutex_trylock, void *m);
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_init, void *m, void *a);
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_destroy, void *m);
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_rdlock, void *m);
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_tryrdlock, void *m);
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_wrlock, void *m);
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_trywrlock, void *m);
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_unlock, void *m);
+TSAN_INTERCEPTOR_NETBSD_ALIAS_THR(int, once, void *o, void (*f)());
+
 namespace __tsan {
 
 static void finalize(void *arg) {
@@ -2663,6 +2690,23 @@ void InitializeInterceptors() {
     Die();
   }
 #endif
+
+  TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(cond_init);
+  TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(cond_signal);
+  TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(cond_broadcast);
+  TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(cond_wait);
+  TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(cond_destroy);
+  TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(mutex_init);
+  TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(mutex_destroy);
+  TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(mutex_trylock);
+  TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(rwlock_init);
+  TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(rwlock_destroy);
+  TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(rwlock_rdlock);
+  TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(rwlock_tryrdlock);
+  TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(rwlock_wrlock);
+  TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(rwlock_trywrlock);
+  TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(rwlock_unlock);
+  TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS_THR(once);
 
   FdInit();
 }

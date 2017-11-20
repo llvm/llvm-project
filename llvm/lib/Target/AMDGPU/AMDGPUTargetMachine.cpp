@@ -219,6 +219,16 @@ static ScheduleDAGInstrs *createMinRegScheduler(MachineSchedContext *C) {
     GCNIterativeScheduler::SCHEDULE_MINREGFORCED);
 }
 
+static ScheduleDAGInstrs *
+createIterativeILPMachineScheduler(MachineSchedContext *C) {
+  auto DAG = new GCNIterativeScheduler(C,
+    GCNIterativeScheduler::SCHEDULE_ILP);
+  DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
+  DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
+  DAG->addMutation(createAMDGPUMacroFusionDAGMutation());
+  return DAG;
+}
+
 static MachineSchedRegistry
 R600SchedRegistry("r600", "Run R600's custom scheduler",
                    createR600MachineScheduler);
@@ -241,6 +251,11 @@ static MachineSchedRegistry
 GCNMinRegSchedRegistry("gcn-minreg",
   "Run GCN iterative scheduler for minimal register usage (experimental)",
   createMinRegScheduler);
+
+static MachineSchedRegistry
+GCNILPSchedRegistry("gcn-ilp",
+  "Run GCN iterative scheduler for ILP scheduling (experimental)",
+  createIterativeILPMachineScheduler);
 
 static StringRef computeDataLayout(const Triple &TT) {
   if (TT.getArch() == Triple::r600) {

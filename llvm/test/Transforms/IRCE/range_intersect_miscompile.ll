@@ -2,8 +2,8 @@
 
 ; CHECK-LABEL: irce: in function test_01: constrained Loop at depth 1 containing:
 ; CHECK-LABEL: irce: in function test_02: constrained Loop at depth 1 containing:
-; CHECK-NOT: irce: in function test_03: constrained Loop
-; CHECK-NOT: irce: in function test_04: constrained Loop
+; CHECK-LABEL: irce: in function test_03: constrained Loop at depth 1 containing:
+; CHECK-LABEL: irce: in function test_04: constrained Loop at depth 1 containing:
 ; CHECK-LABEL: irce: in function test_05: constrained Loop at depth 1 containing:
 
 ; This test used to demonstrate a miscompile: the outer loop's IV iterates in
@@ -120,11 +120,18 @@ deopt:                                          ; preds = %range_check_block
 }
 
 ; Range check is made against 0, so the safe iteration range is empty. IRCE
-; should not apply.
+; should not apply to the inner loop. The condition %tmp2 can be eliminated.
 
 define void @test_03() {
 
 ; CHECK-LABEL: test_03
+; CHECK-NOT:   preloop
+; CHECK-NOT:   postloop
+; CHECK:         %tmp2 = icmp sgt i32 %iv.prev, -1
+; CHECK-NEXT:    br i1 true, label %loop_header.split.us, label %exit
+; CHECK:       range_check_block:
+; CHECK-NEXT:    %range_check = icmp slt i32 %iv, 0
+; CHECK-NEXT:    br i1 %range_check, label %loop_latch, label %deopt
 
 entry:
   br label %loop_header
@@ -162,10 +169,18 @@ deopt:                                          ; preds = %range_check_block
 
 ; We do not know whether %n is positive or negative, so we prohibit IRCE in
 ; order to avoid incorrect intersection of signed and unsigned ranges.
+; The condition %tmp2 can be eliminated.
 
 define void @test_04(i32* %p) {
 
 ; CHECK-LABEL: test_04
+; CHECK-NOT:   preloop
+; CHECK-NOT:   postloop
+; CHECK:         %tmp2 = icmp sgt i32 %iv.prev, -1
+; CHECK-NEXT:    br i1 true, label %loop_header.split.us, label %exit
+; CHECK:       range_check_block:
+; CHECK-NEXT:    %range_check = icmp slt i32 %iv, %n
+; CHECK-NEXT:    br i1 %range_check, label %loop_latch, label %deopt
 
 entry:
   %n = load i32, i32* %p

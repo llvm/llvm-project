@@ -17,7 +17,7 @@ entry:
 
 ; CHECK-NOT: mtvsrwa
 ; CHECK-NOT: mtfprwa
-; CHECK: lxsiwax [[REG:[0-9]+]], {{.*}}
+; CHECK: lfiwax [[REG:[0-9]+]], {{.*}}
 ; CHECK-NOT: mtvsrwa
 ; CHECK-NOT: mtfprwa
 ; CHECK: xscvsxdsp {{.*}}, [[REG]]
@@ -40,7 +40,7 @@ entry:
 
 ; CHECK-NOT: mtvsrwa
 ; CHECK-NOT: mtfprwa
-; CHECK: lxsiwax [[REG:[0-9]+]], {{.*}}
+; CHECK: lfiwax [[REG:[0-9]+]], {{.*}}
 ; CHECK-NOT: mtvsrwa
 ; CHECK-NOT: mtfprwa
 ; CHECK: xscvsxdsp {{.*}}, [[REG]]

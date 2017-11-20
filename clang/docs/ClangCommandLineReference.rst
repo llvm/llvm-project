@@ -524,9 +524,9 @@ Serialize compiler diagnostics to a file
 
 .. option:: -shared, --shared
 
-.. option:: -shared-libasan
-
 .. option:: -shared-libgcc
+
+.. option:: -shared-libsan, -shared-libasan
 
 .. option:: -single\_module
 
@@ -535,6 +535,8 @@ Serialize compiler diagnostics to a file
 .. option:: -static, --static
 
 .. option:: -static-libgcc
+
+.. option:: -static-libsan
 
 .. option:: -static-libstdc++
 
@@ -587,6 +589,8 @@ Show commands to run and use verbose output
 Verify the binary representation of debug output
 
 .. option:: --version
+
+Print version information
 
 .. option:: -w, --no-warnings
 
@@ -702,6 +706,10 @@ Print source range spans in numeric form
 
 Enables an experimental new pass manager in LLVM.
 
+.. option:: -ffine-grained-bitfield-accesses, -fno-fine-grained-bitfield-accesses
+
+Use separate accesses for bitfields with legal widths and alignments.
+
 .. option:: -finline-functions, -fno-inline-functions
 
 Inline suitable functions
@@ -742,7 +750,7 @@ Enable control flow integrity (CFI) checks for cross-DSO calls.
 
 .. option:: -fsanitize-cfi-icall-generalize-pointers
 
-Generalize pointers in function type signatures used for Control Flow Integrity (CFI) indirect call checking
+Generalize pointers in CFI indirect call type signature checks
 
 .. option:: -fsanitize-coverage=<arg1>,<arg2>..., -fno-sanitize-coverage=<arg1>,<arg2>...
 
@@ -760,7 +768,7 @@ Enable origins tracking in MemorySanitizer
 
 Enable origins tracking in MemorySanitizer
 
-.. option:: -fsanitize-memory-use-after-dtor
+.. option:: -fsanitize-memory-use-after-dtor, -fno-sanitize-memory-use-after-dtor
 
 Enable use-after-destroy detection in MemorySanitizer
 
@@ -1267,6 +1275,10 @@ Print a template comparison tree for differing templates
 
 Allow '$' in identifiers
 
+.. option:: -fdouble-square-bracket-attributes, -fno-double-square-bracket-attributes
+
+Enable '\[\[\]\]' attributes in all C and C++ language modes
+
 .. option:: -fdwarf-directory-asm, -fno-dwarf-directory-asm
 
 .. option:: -felide-constructors, -fno-elide-constructors
@@ -1348,6 +1360,10 @@ Implicitly search the file system for module map files.
 .. option:: -finstrument-functions
 
 Generate calls to instrument function entry and exit
+
+.. option:: -finstrument-functions-after-inlining
+
+Like -finstrument-functions, but insert the calls after inlining
 
 .. option:: -fintegrated-as, -fno-integrated-as, -integrated-as
 
@@ -1560,6 +1576,10 @@ Override the default ABI to return all structs on the stack
 .. option:: -fpic, -fno-pic
 
 .. option:: -fpie, -fno-pie
+
+.. option:: -fplt, -fno-plt
+
+Use the PLT to make function calls
 
 .. option:: -fplugin=<dsopath>
 
@@ -2166,6 +2186,10 @@ Generate code which only uses the general purpose registers (AArch64 only)
 
 AMDGPU
 ------
+.. option:: -mxnack, -mno-xnack
+
+Enable XNACK (AMDGPU only)
+
 ARM
 ---
 .. option:: -ffixed-r9
@@ -2196,9 +2220,17 @@ Disallow use of CRC instructions (ARM only)
 
 Disallow generation of deprecated IT blocks for ARMv8. It is on by default for ARMv8 Thumb mode.
 
+.. option:: -mtp=<arg>
+
+Read thread pointer from coprocessor register (ARM only)
+
 .. option:: -munaligned-access, -mno-unaligned-access
 
 Allow memory accesses to be unaligned (AArch32/AArch64 only)
+
+Hexagon
+-------
+.. option:: -mieee-rnd-near
 
 Hexagon
 -------
@@ -2210,7 +2242,15 @@ Enable Hexagon Vector eXtensions
 
 Enable Hexagon Double Vector eXtensions
 
-.. option:: -mieee-rnd-near
+.. option:: -mhvx-length=<arg>
+
+Set Hexagon Vector Length
+
+.. program:: clang1
+.. option:: -mhvx=<arg>
+.. program:: clang
+
+Enable Hexagon Vector eXtensions
 
 PowerPC
 -------

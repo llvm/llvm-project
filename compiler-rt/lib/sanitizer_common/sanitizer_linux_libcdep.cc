@@ -48,10 +48,6 @@
 #include <android/api-level.h>
 #endif
 
-#if SANITIZER_ANDROID && __ANDROID_API__ < 21
-#include <android/log.h>
-#endif
-
 #if !SANITIZER_ANDROID
 #include <elf.h>
 #include <unistd.h>
@@ -536,12 +532,9 @@ uptr GetRSS() {
   return rss * GetPageSizeCached();
 }
 
-// 64-bit Android targets don't provide the deprecated __android_log_write.
-// Starting with the L release, syslog() works and is preferable to
-// __android_log_write.
 #if SANITIZER_LINUX
 
-#if SANITIZER_ANDROID
+# if SANITIZER_ANDROID
 static atomic_uint8_t android_log_initialized;
 
 void AndroidLogInit() {
@@ -552,35 +545,55 @@ void AndroidLogInit() {
 static bool ShouldLogAfterPrintf() {
   return atomic_load(&android_log_initialized, memory_order_acquire);
 }
-#else
+
+extern "C" SANITIZER_WEAK_ATTRIBUTE
+int async_safe_write_log(int pri, const char* tag, const char* msg);
+extern "C" SANITIZER_WEAK_ATTRIBUTE
+int __android_log_write(int prio, const char* tag, const char* msg);
+
+// ANDROID_LOG_INFO is 4, but can't be resolved at runtime.
+#define SANITIZER_ANDROID_LOG_INFO 4
+
+// async_safe_write_log is a new public version of __libc_write_log that is
+// used behind syslog. It is preferable to syslog as it will not do any dynamic
+// memory allocation or formatting.
+// If the function is not available, syslog is preferred for L+ (it was broken
+// pre-L) as __android_log_write triggers a racey behavior with the strncpy
+// interceptor. Fallback to __android_log_write pre-L.
+void WriteOneLineToSyslog(const char *s) {
+  if (&async_safe_write_log) {
+    async_safe_write_log(SANITIZER_ANDROID_LOG_INFO, GetProcessName(), s);
+  } else if (AndroidGetApiLevel() > ANDROID_KITKAT) {
+    syslog(LOG_INFO, "%s", s);
+  } else {
+    CHECK(&__android_log_write);
+    __android_log_write(SANITIZER_ANDROID_LOG_INFO, nullptr, s);
+  }
+}
+
+extern "C" SANITIZER_WEAK_ATTRIBUTE
+void android_set_abort_message(const char *);
+
+void SetAbortMessage(const char *str) {
+  if (&android_set_abort_message)
+    android_set_abort_message(str);
+}
+# else
 void AndroidLogInit() {}
 
 static bool ShouldLogAfterPrintf() { return true; }
-#endif  // SANITIZER_ANDROID
 
-void WriteOneLineToSyslog(const char *s) {
-#if SANITIZER_ANDROID &&__ANDROID_API__ < 21
-  __android_log_write(ANDROID_LOG_INFO, NULL, s);
-#else
-  syslog(LOG_INFO, "%s", s);
-#endif
-}
+void WriteOneLineToSyslog(const char *s) { syslog(LOG_INFO, "%s", s); }
+
+void SetAbortMessage(const char *str) {}
+# endif  // SANITIZER_ANDROID
 
 void LogMessageOnPrintf(const char *str) {
   if (common_flags()->log_to_syslog && ShouldLogAfterPrintf())
     WriteToSyslog(str);
 }
 
-#if SANITIZER_ANDROID
-extern "C" __attribute__((weak)) void android_set_abort_message(const char *);
-void SetAbortMessage(const char *str) {
-  if (&android_set_abort_message) android_set_abort_message(str);
-}
-#else
-void SetAbortMessage(const char *str) {}
-#endif
-
-#endif // SANITIZER_LINUX
+#endif  // SANITIZER_LINUX
 
 } // namespace __sanitizer
 

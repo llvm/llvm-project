@@ -95,9 +95,9 @@ class InstSI <dag outs, dag ins, string asm = "",
   // Is it possible for this instruction to be atomic?
   field bit maybeAtomic = 0;
 
-  // This bit indicates that this is a 16-bit instruction which zero-fills
-  // unused bits in dst. Note that new GFX9 opcodes preserve unused bits.
-  field bit F16_ZFILL = 0;
+  // This bit indicates that this is a VI instruction which is renamed
+  // in GFX9. Required for correct mapping from pseudo to MC.
+  field bit renamedInGFX9 = 0;
 
   // This bit indicates that this has a floating point result type, so
   // the clamp modifier has floating point semantics.
@@ -164,7 +164,7 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{42} = VOP3_OPSEL;
 
   let TSFlags{43} = maybeAtomic;
-  let TSFlags{44} = F16_ZFILL;
+  let TSFlags{44} = renamedInGFX9;
 
   let TSFlags{45} = FPClamp;
   let TSFlags{46} = IntClamp;

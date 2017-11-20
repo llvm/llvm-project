@@ -4,7 +4,7 @@
 
 ; GCN-LABEL: {{^}}i32_fastcc_i32_i32:
 ; GCN: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT: v_add_i32_e32 v0, vcc, v1, v0
+; GCN-NEXT: v_add_{{[_coiu]*}}32_e32 v0, vcc, v1, v0
 ; GCN-NEXT: s_setpc_b64
 define fastcc i32 @i32_fastcc_i32_i32(i32 %arg0, i32 %arg1) #1 {
   %add0 = add i32 %arg0, %arg1
@@ -13,7 +13,7 @@ define fastcc i32 @i32_fastcc_i32_i32(i32 %arg0, i32 %arg1) #1 {
 
 ; GCN-LABEL: {{^}}i32_fastcc_i32_i32_stack_object:
 ; GCN: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN: v_add_i32_e32 v0, vcc, v1, v
+; GCN: v_add_{{[_coiu]*}}32_e32 v0, vcc, v1, v
 ; GCN: s_mov_b32 s5, s32
 ; GCN: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s5 offset:24
 ; GCN: s_waitcnt vmcnt(0)
@@ -83,7 +83,7 @@ entry:
 ; GCN-NEXT: s_mov_b32 s5, s32
 ; GCN-NEXT: buffer_load_dword v1, off, s[0:3], s5 offset:4
 ; GCN-NEXT: s_waitcnt vmcnt(0)
-; GCN-NEXT: v_add_i32_e32 v0, vcc, v1, v0
+; GCN-NEXT: v_add_{{[_coiu]*}}32_e32 v0, vcc, v1, v0
 ; GCN-NEXT: s_setpc_b64 s[30:31]
 define fastcc i32 @i32_fastcc_i32_byval_i32(i32 %arg0, i32* byval align 4 %arg1) #1 {
   %arg1.load = load i32, i32* %arg1, align 4
@@ -122,9 +122,9 @@ entry:
 ; GCN: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-DAG: buffer_load_dword [[LOAD_0:v[0-9]+]], off, s[0:3], s5 offset:4
 ; GCN-DAG: buffer_load_dword [[LOAD_1:v[0-9]+]], off, s[0:3], s5 offset:8
-; GCN-DAG: v_add_i32_e32 v0, vcc, v1, v0
-; GCN: v_add_i32_e32 v0, vcc, [[LOAD_0]], v0
-; GCN: v_add_i32_e32 v0, vcc, [[LOAD_1]], v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 v0, vcc, v1, v0
+; GCN: v_add_{{[_coiu]*}}32_e32 v0, vcc, [[LOAD_0]], v0
+; GCN: v_add_{{[_coiu]*}}32_e32 v0, vcc, [[LOAD_1]], v0
 ; GCN-NEXT: s_setpc_b64
 define fastcc i32 @i32_fastcc_i32_i32_a32i32(i32 %arg0, i32 %arg1, [32 x i32] %large) #1 {
   %val_firststack = extractvalue [32 x i32] %large, 30

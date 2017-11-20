@@ -250,8 +250,8 @@ bool MachineCSE::hasLivePhysRegDefUses(const MachineInstr *MI,
       continue;
     if (TargetRegisterInfo::isVirtualRegister(Reg))
       continue;
-    // Reading constant physregs is ok.
-    if (!MRI->isConstantPhysReg(Reg))
+    // Reading either caller preserved or constant physregs is ok.
+    if (!MRI->isCallerPreservedOrConstPhysReg(Reg))
       for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)
         PhysRefs.insert(*AI);
   }

@@ -51,17 +51,9 @@ enum Style {
 } // end namespace PICStyles
 
 class X86Subtarget final : public X86GenSubtargetInfo {
-protected:
-  enum X86SSEEnum {
-    NoSSE, SSE1, SSE2, SSE3, SSSE3, SSE41, SSE42, AVX, AVX2, AVX512F
-  };
-
-  enum X863DNowEnum {
-    NoThreeDNow, MMX, ThreeDNow, ThreeDNowA
-  };
-
+public:  
   enum X86ProcFamilyEnum {
-    Others, 
+    Others,
     IntelAtom,
     IntelSLM,
     IntelGLM,
@@ -72,6 +64,15 @@ protected:
     IntelSKX,
     IntelCannonlake,
     IntelIcelake,
+  };
+
+protected:
+  enum X86SSEEnum {
+    NoSSE, SSE1, SSE2, SSE3, SSSE3, SSE41, SSE42, AVX, AVX2, AVX512F
+  };
+
+  enum X863DNowEnum {
+    NoThreeDNow, MMX, ThreeDNow, ThreeDNowA
   };
 
   /// X86 processor family: Intel Atom, and others

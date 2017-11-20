@@ -1,4 +1,5 @@
 ; RUN: opt -S -mtriple=x86_64-apple-darwin -mcpu=core-avx2 -cost-model -analyze < %s | FileCheck %s --check-prefix=AVX2
+; RUN: opt -S -mtriple=x86_64-apple-darwin -mcpu=skylake -cost-model -analyze < %s | FileCheck %s --check-prefix=SKL
 ; RUN: opt -S -mtriple=x86_64-apple-darwin -mcpu=knl -cost-model -analyze < %s | FileCheck %s --check-prefix=KNL
 ; RUN: opt -S -mtriple=x86_64-apple-darwin -mcpu=skx -cost-model -analyze < %s | FileCheck %s --check-prefix=SKX
 
@@ -72,6 +73,9 @@ define <2 x double> @test_gather_2f64(<2 x double*> %ptrs, <2 x i1> %mask, <2 x 
 ; AVX2-LABEL: test_gather_2f64
 ; AVX2: Found an estimated cost of 7 {{.*}}.gather
 
+; SKL-LABEL: test_gather_2f64
+; SKL: Found an estimated cost of 4 {{.*}}.gather
+
 ; KNL-LABEL: test_gather_2f64
 ; KNL: Found an estimated cost of 7 {{.*}}.gather
 
@@ -88,6 +92,9 @@ define <4 x i32> @test_gather_4i32(<4 x i32*> %ptrs, <4 x i1> %mask, <4 x i32> %
 ; AVX2-LABEL: test_gather_4i32
 ; AVX2: Found an estimated cost of 16 {{.*}}.gather
 
+; SKL-LABEL: test_gather_4i32
+; SKL: Found an estimated cost of 6 {{.*}}.gather
+
 ; KNL-LABEL: test_gather_4i32
 ; KNL: Found an estimated cost of 16 {{.*}}.gather
 
@@ -102,6 +109,9 @@ define <4 x i32> @test_gather_4i32_const_mask(<4 x i32*> %ptrs, <4 x i32> %src0)
 
 ; AVX2-LABEL: test_gather_4i32_const_mask
 ; AVX2: Found an estimated cost of 8 {{.*}}.gather
+
+; SKL-LABEL: test_gather_4i32_const_mask
+; SKL: Found an estimated cost of 6 {{.*}}.gather
 
 ; KNL-LABEL: test_gather_4i32_const_mask
 ; KNL: Found an estimated cost of 8 {{.*}}.gather
@@ -118,6 +128,9 @@ define <16 x float> @test_gather_16f32_const_mask(float* %base, <16 x i32> %ind)
 
 ; AVX2-LABEL: test_gather_16f32_const_mask
 ; AVX2: Found an estimated cost of 30 {{.*}}.gather
+
+; SKL-LABEL: test_gather_16f32_const_mask
+; SKL: Found an estimated cost of 24 {{.*}}.gather
 
 ; KNL-LABEL: test_gather_16f32_const_mask
 ; KNL: Found an estimated cost of 18 {{.*}}.gather
@@ -137,6 +150,9 @@ define <16 x float> @test_gather_16f32_var_mask(float* %base, <16 x i32> %ind, <
 ; AVX2-LABEL: test_gather_16f32_var_mask
 ; AVX2: Found an estimated cost of 62 {{.*}}.gather
 
+; SKL-LABEL: test_gather_16f32_var_mask
+; SKL: Found an estimated cost of 24 {{.*}}.gather
+
 ; KNL-LABEL: test_gather_16f32_var_mask
 ; KNL: Found an estimated cost of 18 {{.*}}.gather
 
@@ -155,6 +171,9 @@ define <16 x float> @test_gather_16f32_ra_var_mask(<16 x float*> %ptrs, <16 x i3
 ; AVX2-LABEL: test_gather_16f32_ra_var_mask
 ; AVX2: Found an estimated cost of 62 {{.*}}.gather
 
+; SKL-LABEL: test_gather_16f32_ra_var_mask
+; SKL: Found an estimated cost of 24 {{.*}}.gather
+
 ; KNL-LABEL: test_gather_16f32_ra_var_mask
 ; KNL: Found an estimated cost of 20 {{.*}}.gather
 
@@ -172,6 +191,9 @@ define <16 x float> @test_gather_16f32_const_mask2(float* %base, <16 x i32> %ind
 
 ; AVX2-LABEL: test_gather_16f32_const_mask2
 ; AVX2: Found an estimated cost of 30 {{.*}}.gather
+
+; SKL-LABEL: test_gather_16f32_const_mask2
+; SKL: Found an estimated cost of 24 {{.*}}.gather
 
 ; KNL-LABEL: test_gather_16f32_const_mask2
 ; KNL: Found an estimated cost of 18 {{.*}}.gather
@@ -193,6 +215,9 @@ define void @test_scatter_16i32(i32* %base, <16 x i32> %ind, i16 %mask, <16 x i3
 ; AVX2-LABEL: test_scatter_16i32
 ; AVX2: Found an estimated cost of 64 {{.*}}.scatter
 
+; SKL-LABEL: test_scatter_16i32
+; SKL: Found an estimated cost of 64 {{.*}}.scatter
+
 ; KNL-LABEL: test_scatter_16i32
 ; KNL: Found an estimated cost of 18 {{.*}}.scatter
 
@@ -212,6 +237,9 @@ define void @test_scatter_8i32(<8 x i32>%a1, <8 x i32*> %ptr, <8 x i1>%mask) {
 ; AVX2-LABEL: test_scatter_8i32
 ; AVX2: Found an estimated cost of 32 {{.*}}.scatter
 
+; SKL-LABEL: test_scatter_8i32
+; SKL: Found an estimated cost of 32 {{.*}}.scatter
+
 ; KNL-LABEL: test_scatter_8i32
 ; KNL: Found an estimated cost of 10 {{.*}}.scatter
 
@@ -228,6 +256,9 @@ define void @test_scatter_4i32(<4 x i32>%a1, <4 x i32*> %ptr, <4 x i1>%mask) {
 ; AVX2-LABEL: test_scatter_4i32
 ; AVX2: Found an estimated cost of 16 {{.*}}.scatter
 
+; SKL-LABEL: test_scatter_4i32
+; SKL: Found an estimated cost of 16 {{.*}}.scatter
+
 ; KNL-LABEL: test_scatter_4i32
 ; KNL: Found an estimated cost of 16 {{.*}}.scatter
 
@@ -242,6 +273,9 @@ define <4 x float> @test_gather_4f32(float* %ptr, <4 x i32> %ind, <4 x i1>%mask)
 
 ; AVX2-LABEL: test_gather_4f32
 ; AVX2: Found an estimated cost of 15 {{.*}}.gather
+
+; SKL-LABEL: test_gather_4f32
+; SKL: Found an estimated cost of 6 {{.*}}.gather
 
 ; KNL-LABEL: test_gather_4f32
 ; KNL: Found an estimated cost of 15 {{.*}}.gather
@@ -260,6 +294,9 @@ define <4 x float> @test_gather_4f32_const_mask(float* %ptr, <4 x i32> %ind) {
 
 ; AVX2-LABEL: test_gather_4f32_const_mask
 ; AVX2: Found an estimated cost of 7 {{.*}}.gather
+
+; SKL-LABEL: test_gather_4f32_const_mask
+; SKL: Found an estimated cost of 6 {{.*}}.gather
 
 ; KNL-LABEL: test_gather_4f32_const_mask
 ; KNL: Found an estimated cost of 7 {{.*}}.gather

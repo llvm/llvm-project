@@ -6,7 +6,7 @@
 
 ; GCN-LABEL: {{^}}v_test_i32_x_sub_64:
 ; GCN: {{buffer|flat}}_load_dword [[X:v[0-9]+]]
-; GCN: v_subrev_i32_e32 v{{[0-9]+}}, vcc, 64, [[X]]
+; GCN: v_subrev_{{[iu]}}32_e32 v{{[0-9]+}}, vcc, 64, [[X]]
 define amdgpu_kernel void @v_test_i32_x_sub_64(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -21,8 +21,8 @@ define amdgpu_kernel void @v_test_i32_x_sub_64(i32 addrspace(1)* %out, i32 addrs
 ; GCN-LABEL: {{^}}v_test_i32_x_sub_64_multi_use:
 ; GCN: {{buffer|flat}}_load_dword [[X:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[Y:v[0-9]+]]
-; GCN-DAG: v_subrev_i32_e32 v{{[0-9]+}}, vcc, 64, [[X]]
-; GCN-DAG: v_subrev_i32_e32 v{{[0-9]+}}, vcc, 64, [[Y]]
+; GCN-DAG: v_subrev_{{[iu]}}32_e32 v{{[0-9]+}}, vcc, 64, [[X]]
+; GCN-DAG: v_subrev_{{[iu]}}32_e32 v{{[0-9]+}}, vcc, 64, [[Y]]
 define amdgpu_kernel void @v_test_i32_x_sub_64_multi_use(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -39,7 +39,7 @@ define amdgpu_kernel void @v_test_i32_x_sub_64_multi_use(i32 addrspace(1)* %out,
 
 ; GCN-LABEL: {{^}}v_test_i32_64_sub_x:
 ; GCN: {{buffer|flat}}_load_dword [[X:v[0-9]+]]
-; GCN: v_sub_i32_e32 v{{[0-9]+}}, vcc, 64, [[X]]
+; GCN: v_sub_{{[iu]}}32_e32 v{{[0-9]+}}, vcc, 64, [[X]]
 define amdgpu_kernel void @v_test_i32_64_sub_x(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -53,7 +53,7 @@ define amdgpu_kernel void @v_test_i32_64_sub_x(i32 addrspace(1)* %out, i32 addrs
 
 ; GCN-LABEL: {{^}}v_test_i32_x_sub_65:
 ; GCN: {{buffer|flat}}_load_dword [[X:v[0-9]+]]
-; GCN: v_add_i32_e32 v{{[0-9]+}}, vcc, 0xffffffbf, [[X]]
+; GCN: v_add_{{[iu]}}32_e32 v{{[0-9]+}}, vcc, 0xffffffbf, [[X]]
 define amdgpu_kernel void @v_test_i32_x_sub_65(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -67,7 +67,7 @@ define amdgpu_kernel void @v_test_i32_x_sub_65(i32 addrspace(1)* %out, i32 addrs
 
 ; GCN-LABEL: {{^}}v_test_i32_65_sub_x:
 ; GCN: {{buffer|flat}}_load_dword [[X:v[0-9]+]]
-; GCN: v_sub_i32_e32 v{{[0-9]+}}, vcc, 0x41, [[X]]
+; GCN: v_sub_{{[iu]}}32_e32 v{{[0-9]+}}, vcc, 0x41, [[X]]
 define amdgpu_kernel void @v_test_i32_65_sub_x(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -81,7 +81,7 @@ define amdgpu_kernel void @v_test_i32_65_sub_x(i32 addrspace(1)* %out, i32 addrs
 
 ; GCN-LABEL: {{^}}v_test_i32_x_sub_neg16:
 ; GCN: {{buffer|flat}}_load_dword [[X:v[0-9]+]]
-; GCN: v_add_i32_e32 v{{[0-9]+}}, vcc, 16, [[X]]
+; GCN: v_add_{{[iu]}}32_e32 v{{[0-9]+}}, vcc, 16, [[X]]
 define amdgpu_kernel void @v_test_i32_x_sub_neg16(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -95,7 +95,7 @@ define amdgpu_kernel void @v_test_i32_x_sub_neg16(i32 addrspace(1)* %out, i32 ad
 
 ; GCN-LABEL: {{^}}v_test_i32_neg16_sub_x:
 ; GCN: {{buffer|flat}}_load_dword [[X:v[0-9]+]]
-; GCN: v_sub_i32_e32 v{{[0-9]+}}, vcc, -16, [[X]]
+; GCN: v_sub_{{[iu]}}32_e32 v{{[0-9]+}}, vcc, -16, [[X]]
 define amdgpu_kernel void @v_test_i32_neg16_sub_x(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -109,7 +109,7 @@ define amdgpu_kernel void @v_test_i32_neg16_sub_x(i32 addrspace(1)* %out, i32 ad
 
 ; GCN-LABEL: {{^}}v_test_i32_x_sub_neg17:
 ; GCN: {{buffer|flat}}_load_dword [[X:v[0-9]+]]
-; GCN: v_add_i32_e32 v{{[0-9]+}}, vcc, 17, [[X]]
+; GCN: v_add_{{[iu]}}32_e32 v{{[0-9]+}}, vcc, 17, [[X]]
 define amdgpu_kernel void @v_test_i32_x_sub_neg17(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
@@ -123,7 +123,7 @@ define amdgpu_kernel void @v_test_i32_x_sub_neg17(i32 addrspace(1)* %out, i32 ad
 
 ; GCN-LABEL: {{^}}v_test_i32_neg17_sub_x:
 ; GCN: {{buffer|flat}}_load_dword [[X:v[0-9]+]]
-; GCN: v_sub_i32_e32 v{{[0-9]+}}, vcc, 0xffffffef, [[X]]
+; GCN: v_sub_{{[iu]}}32_e32 v{{[0-9]+}}, vcc, 0xffffffef, [[X]]
 define amdgpu_kernel void @v_test_i32_neg17_sub_x(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64

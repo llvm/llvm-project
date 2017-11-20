@@ -3,56 +3,56 @@
 
 define <16 x i8> @ins16bw(<16 x i8> %tmp1, i8 %tmp2) {
 ; CHECK-LABEL: ins16bw:
-; CHECK: ins {{v[0-9]+}}.b[15], {{w[0-9]+}}
+; CHECK: mov {{v[0-9]+}}.b[15], {{w[0-9]+}}
   %tmp3 = insertelement <16 x i8> %tmp1, i8 %tmp2, i32 15
   ret <16 x i8> %tmp3
 }
 
 define <8 x i16> @ins8hw(<8 x i16> %tmp1, i16 %tmp2) {
 ; CHECK-LABEL: ins8hw:
-; CHECK: ins {{v[0-9]+}}.h[6], {{w[0-9]+}}
+; CHECK: mov {{v[0-9]+}}.h[6], {{w[0-9]+}}
   %tmp3 = insertelement <8 x i16> %tmp1, i16 %tmp2, i32 6
   ret <8 x i16> %tmp3
 }
 
 define <4 x i32> @ins4sw(<4 x i32> %tmp1, i32 %tmp2) {
 ; CHECK-LABEL: ins4sw:
-; CHECK: ins {{v[0-9]+}}.s[2], {{w[0-9]+}}
+; CHECK: mov {{v[0-9]+}}.s[2], {{w[0-9]+}}
   %tmp3 = insertelement <4 x i32> %tmp1, i32 %tmp2, i32 2
   ret <4 x i32> %tmp3
 }
 
 define <2 x i64> @ins2dw(<2 x i64> %tmp1, i64 %tmp2) {
 ; CHECK-LABEL: ins2dw:
-; CHECK: ins {{v[0-9]+}}.d[1], {{x[0-9]+}}
+; CHECK: mov {{v[0-9]+}}.d[1], {{x[0-9]+}}
   %tmp3 = insertelement <2 x i64> %tmp1, i64 %tmp2, i32 1
   ret <2 x i64> %tmp3
 }
 
 define <8 x i8> @ins8bw(<8 x i8> %tmp1, i8 %tmp2) {
 ; CHECK-LABEL: ins8bw:
-; CHECK: ins {{v[0-9]+}}.b[5], {{w[0-9]+}}
+; CHECK: mov {{v[0-9]+}}.b[5], {{w[0-9]+}}
   %tmp3 = insertelement <8 x i8> %tmp1, i8 %tmp2, i32 5
   ret <8 x i8> %tmp3
 }
 
 define <4 x i16> @ins4hw(<4 x i16> %tmp1, i16 %tmp2) {
 ; CHECK-LABEL: ins4hw:
-; CHECK: ins {{v[0-9]+}}.h[3], {{w[0-9]+}}
+; CHECK: mov {{v[0-9]+}}.h[3], {{w[0-9]+}}
   %tmp3 = insertelement <4 x i16> %tmp1, i16 %tmp2, i32 3
   ret <4 x i16> %tmp3
 }
 
 define <2 x i32> @ins2sw(<2 x i32> %tmp1, i32 %tmp2) {
 ; CHECK-LABEL: ins2sw:
-; CHECK: ins {{v[0-9]+}}.s[1], {{w[0-9]+}}
+; CHECK: mov {{v[0-9]+}}.s[1], {{w[0-9]+}}
   %tmp3 = insertelement <2 x i32> %tmp1, i32 %tmp2, i32 1
   ret <2 x i32> %tmp3
 }
 
 define <16 x i8> @ins16b16(<16 x i8> %tmp1, <16 x i8> %tmp2) {
 ; CHECK-LABEL: ins16b16:
-; CHECK: ins {{v[0-9]+}}.b[15], {{v[0-9]+}}.b[2]
+; CHECK: mov {{v[0-9]+}}.b[15], {{v[0-9]+}}.b[2]
   %tmp3 = extractelement <16 x i8> %tmp1, i32 2
   %tmp4 = insertelement <16 x i8> %tmp2, i8 %tmp3, i32 15
   ret <16 x i8> %tmp4
@@ -60,7 +60,7 @@ define <16 x i8> @ins16b16(<16 x i8> %tmp1, <16 x i8> %tmp2) {
 
 define <8 x i16> @ins8h8(<8 x i16> %tmp1, <8 x i16> %tmp2) {
 ; CHECK-LABEL: ins8h8:
-; CHECK: ins {{v[0-9]+}}.h[7], {{v[0-9]+}}.h[2]
+; CHECK: mov {{v[0-9]+}}.h[7], {{v[0-9]+}}.h[2]
   %tmp3 = extractelement <8 x i16> %tmp1, i32 2
   %tmp4 = insertelement <8 x i16> %tmp2, i16 %tmp3, i32 7
   ret <8 x i16> %tmp4
@@ -68,7 +68,7 @@ define <8 x i16> @ins8h8(<8 x i16> %tmp1, <8 x i16> %tmp2) {
 
 define <4 x i32> @ins4s4(<4 x i32> %tmp1, <4 x i32> %tmp2) {
 ; CHECK-LABEL: ins4s4:
-; CHECK: ins {{v[0-9]+}}.s[1], {{v[0-9]+}}.s[2]
+; CHECK: mov {{v[0-9]+}}.s[1], {{v[0-9]+}}.s[2]
   %tmp3 = extractelement <4 x i32> %tmp1, i32 2
   %tmp4 = insertelement <4 x i32> %tmp2, i32 %tmp3, i32 1
   ret <4 x i32> %tmp4
@@ -76,7 +76,7 @@ define <4 x i32> @ins4s4(<4 x i32> %tmp1, <4 x i32> %tmp2) {
 
 define <2 x i64> @ins2d2(<2 x i64> %tmp1, <2 x i64> %tmp2) {
 ; CHECK-LABEL: ins2d2:
-; CHECK: ins {{v[0-9]+}}.d[1], {{v[0-9]+}}.d[0]
+; CHECK: mov {{v[0-9]+}}.d[1], {{v[0-9]+}}.d[0]
   %tmp3 = extractelement <2 x i64> %tmp1, i32 0
   %tmp4 = insertelement <2 x i64> %tmp2, i64 %tmp3, i32 1
   ret <2 x i64> %tmp4
@@ -84,7 +84,7 @@ define <2 x i64> @ins2d2(<2 x i64> %tmp1, <2 x i64> %tmp2) {
 
 define <4 x float> @ins4f4(<4 x float> %tmp1, <4 x float> %tmp2) {
 ; CHECK-LABEL: ins4f4:
-; CHECK: ins {{v[0-9]+}}.s[1], {{v[0-9]+}}.s[2]
+; CHECK: mov {{v[0-9]+}}.s[1], {{v[0-9]+}}.s[2]
   %tmp3 = extractelement <4 x float> %tmp1, i32 2
   %tmp4 = insertelement <4 x float> %tmp2, float %tmp3, i32 1
   ret <4 x float> %tmp4
@@ -92,7 +92,7 @@ define <4 x float> @ins4f4(<4 x float> %tmp1, <4 x float> %tmp2) {
 
 define <2 x double> @ins2df2(<2 x double> %tmp1, <2 x double> %tmp2) {
 ; CHECK-LABEL: ins2df2:
-; CHECK: ins {{v[0-9]+}}.d[1], {{v[0-9]+}}.d[0]
+; CHECK: mov {{v[0-9]+}}.d[1], {{v[0-9]+}}.d[0]
   %tmp3 = extractelement <2 x double> %tmp1, i32 0
   %tmp4 = insertelement <2 x double> %tmp2, double %tmp3, i32 1
   ret <2 x double> %tmp4
@@ -100,7 +100,7 @@ define <2 x double> @ins2df2(<2 x double> %tmp1, <2 x double> %tmp2) {
 
 define <16 x i8> @ins8b16(<8 x i8> %tmp1, <16 x i8> %tmp2) {
 ; CHECK-LABEL: ins8b16:
-; CHECK: ins {{v[0-9]+}}.b[15], {{v[0-9]+}}.b[2]
+; CHECK: mov {{v[0-9]+}}.b[15], {{v[0-9]+}}.b[2]
   %tmp3 = extractelement <8 x i8> %tmp1, i32 2
   %tmp4 = insertelement <16 x i8> %tmp2, i8 %tmp3, i32 15
   ret <16 x i8> %tmp4
@@ -108,7 +108,7 @@ define <16 x i8> @ins8b16(<8 x i8> %tmp1, <16 x i8> %tmp2) {
 
 define <8 x i16> @ins4h8(<4 x i16> %tmp1, <8 x i16> %tmp2) {
 ; CHECK-LABEL: ins4h8:
-; CHECK: ins {{v[0-9]+}}.h[7], {{v[0-9]+}}.h[2]
+; CHECK: mov {{v[0-9]+}}.h[7], {{v[0-9]+}}.h[2]
   %tmp3 = extractelement <4 x i16> %tmp1, i32 2
   %tmp4 = insertelement <8 x i16> %tmp2, i16 %tmp3, i32 7
   ret <8 x i16> %tmp4
@@ -116,7 +116,7 @@ define <8 x i16> @ins4h8(<4 x i16> %tmp1, <8 x i16> %tmp2) {
 
 define <4 x i32> @ins2s4(<2 x i32> %tmp1, <4 x i32> %tmp2) {
 ; CHECK-LABEL: ins2s4:
-; CHECK: ins {{v[0-9]+}}.s[1], {{v[0-9]+}}.s[1]
+; CHECK: mov {{v[0-9]+}}.s[1], {{v[0-9]+}}.s[1]
   %tmp3 = extractelement <2 x i32> %tmp1, i32 1
   %tmp4 = insertelement <4 x i32> %tmp2, i32 %tmp3, i32 1
   ret <4 x i32> %tmp4
@@ -124,7 +124,7 @@ define <4 x i32> @ins2s4(<2 x i32> %tmp1, <4 x i32> %tmp2) {
 
 define <2 x i64> @ins1d2(<1 x i64> %tmp1, <2 x i64> %tmp2) {
 ; CHECK-LABEL: ins1d2:
-; CHECK: ins {{v[0-9]+}}.d[1], {{v[0-9]+}}.d[0]
+; CHECK: mov {{v[0-9]+}}.d[1], {{v[0-9]+}}.d[0]
   %tmp3 = extractelement <1 x i64> %tmp1, i32 0
   %tmp4 = insertelement <2 x i64> %tmp2, i64 %tmp3, i32 1
   ret <2 x i64> %tmp4
@@ -132,7 +132,7 @@ define <2 x i64> @ins1d2(<1 x i64> %tmp1, <2 x i64> %tmp2) {
 
 define <4 x float> @ins2f4(<2 x float> %tmp1, <4 x float> %tmp2) {
 ; CHECK-LABEL: ins2f4:
-; CHECK: ins {{v[0-9]+}}.s[1], {{v[0-9]+}}.s[1]
+; CHECK: mov {{v[0-9]+}}.s[1], {{v[0-9]+}}.s[1]
   %tmp3 = extractelement <2 x float> %tmp1, i32 1
   %tmp4 = insertelement <4 x float> %tmp2, float %tmp3, i32 1
   ret <4 x float> %tmp4
@@ -148,7 +148,7 @@ define <2 x double> @ins1f2(<1 x double> %tmp1, <2 x double> %tmp2) {
 
 define <8 x i8> @ins16b8(<16 x i8> %tmp1, <8 x i8> %tmp2) {
 ; CHECK-LABEL: ins16b8:
-; CHECK: ins {{v[0-9]+}}.b[7], {{v[0-9]+}}.b[2]
+; CHECK: mov {{v[0-9]+}}.b[7], {{v[0-9]+}}.b[2]
   %tmp3 = extractelement <16 x i8> %tmp1, i32 2
   %tmp4 = insertelement <8 x i8> %tmp2, i8 %tmp3, i32 7
   ret <8 x i8> %tmp4
@@ -156,7 +156,7 @@ define <8 x i8> @ins16b8(<16 x i8> %tmp1, <8 x i8> %tmp2) {
 
 define <4 x i16> @ins8h4(<8 x i16> %tmp1, <4 x i16> %tmp2) {
 ; CHECK-LABEL: ins8h4:
-; CHECK: ins {{v[0-9]+}}.h[3], {{v[0-9]+}}.h[2]
+; CHECK: mov {{v[0-9]+}}.h[3], {{v[0-9]+}}.h[2]
   %tmp3 = extractelement <8 x i16> %tmp1, i32 2
   %tmp4 = insertelement <4 x i16> %tmp2, i16 %tmp3, i32 3
   ret <4 x i16> %tmp4
@@ -164,7 +164,7 @@ define <4 x i16> @ins8h4(<8 x i16> %tmp1, <4 x i16> %tmp2) {
 
 define <2 x i32> @ins4s2(<4 x i32> %tmp1, <2 x i32> %tmp2) {
 ; CHECK-LABEL: ins4s2:
-; CHECK: ins {{v[0-9]+}}.s[1], {{v[0-9]+}}.s[2]
+; CHECK: mov {{v[0-9]+}}.s[1], {{v[0-9]+}}.s[2]
   %tmp3 = extractelement <4 x i32> %tmp1, i32 2
   %tmp4 = insertelement <2 x i32> %tmp2, i32 %tmp3, i32 1
   ret <2 x i32> %tmp4
@@ -172,7 +172,7 @@ define <2 x i32> @ins4s2(<4 x i32> %tmp1, <2 x i32> %tmp2) {
 
 define <1 x i64> @ins2d1(<2 x i64> %tmp1, <1 x i64> %tmp2) {
 ; CHECK-LABEL: ins2d1:
-; CHECK: ins {{v[0-9]+}}.d[0], {{v[0-9]+}}.d[0]
+; CHECK: mov {{v[0-9]+}}.d[0], {{v[0-9]+}}.d[0]
   %tmp3 = extractelement <2 x i64> %tmp1, i32 0
   %tmp4 = insertelement <1 x i64> %tmp2, i64 %tmp3, i32 0
   ret <1 x i64> %tmp4
@@ -180,7 +180,7 @@ define <1 x i64> @ins2d1(<2 x i64> %tmp1, <1 x i64> %tmp2) {
 
 define <2 x float> @ins4f2(<4 x float> %tmp1, <2 x float> %tmp2) {
 ; CHECK-LABEL: ins4f2:
-; CHECK: ins {{v[0-9]+}}.s[1], {{v[0-9]+}}.s[2]
+; CHECK: mov {{v[0-9]+}}.s[1], {{v[0-9]+}}.s[2]
   %tmp3 = extractelement <4 x float> %tmp1, i32 2
   %tmp4 = insertelement <2 x float> %tmp2, float %tmp3, i32 1
   ret <2 x float> %tmp4
@@ -196,7 +196,7 @@ define <1 x double> @ins2f1(<2 x double> %tmp1, <1 x double> %tmp2) {
 
 define <8 x i8> @ins8b8(<8 x i8> %tmp1, <8 x i8> %tmp2) {
 ; CHECK-LABEL: ins8b8:
-; CHECK: ins {{v[0-9]+}}.b[4], {{v[0-9]+}}.b[2]
+; CHECK: mov {{v[0-9]+}}.b[4], {{v[0-9]+}}.b[2]
   %tmp3 = extractelement <8 x i8> %tmp1, i32 2
   %tmp4 = insertelement <8 x i8> %tmp2, i8 %tmp3, i32 4
   ret <8 x i8> %tmp4
@@ -204,7 +204,7 @@ define <8 x i8> @ins8b8(<8 x i8> %tmp1, <8 x i8> %tmp2) {
 
 define <4 x i16> @ins4h4(<4 x i16> %tmp1, <4 x i16> %tmp2) {
 ; CHECK-LABEL: ins4h4:
-; CHECK: ins {{v[0-9]+}}.h[3], {{v[0-9]+}}.h[2]
+; CHECK: mov {{v[0-9]+}}.h[3], {{v[0-9]+}}.h[2]
   %tmp3 = extractelement <4 x i16> %tmp1, i32 2
   %tmp4 = insertelement <4 x i16> %tmp2, i16 %tmp3, i32 3
   ret <4 x i16> %tmp4
@@ -212,7 +212,7 @@ define <4 x i16> @ins4h4(<4 x i16> %tmp1, <4 x i16> %tmp2) {
 
 define <2 x i32> @ins2s2(<2 x i32> %tmp1, <2 x i32> %tmp2) {
 ; CHECK-LABEL: ins2s2:
-; CHECK: ins {{v[0-9]+}}.s[1], {{v[0-9]+}}.s[0]
+; CHECK: mov {{v[0-9]+}}.s[1], {{v[0-9]+}}.s[0]
   %tmp3 = extractelement <2 x i32> %tmp1, i32 0
   %tmp4 = insertelement <2 x i32> %tmp2, i32 %tmp3, i32 1
   ret <2 x i32> %tmp4
@@ -220,7 +220,7 @@ define <2 x i32> @ins2s2(<2 x i32> %tmp1, <2 x i32> %tmp2) {
 
 define <1 x i64> @ins1d1(<1 x i64> %tmp1, <1 x i64> %tmp2) {
 ; CHECK-LABEL: ins1d1:
-; CHECK: ins {{v[0-9]+}}.d[0], {{v[0-9]+}}.d[0]
+; CHECK: mov {{v[0-9]+}}.d[0], {{v[0-9]+}}.d[0]
   %tmp3 = extractelement <1 x i64> %tmp1, i32 0
   %tmp4 = insertelement <1 x i64> %tmp2, i64 %tmp3, i32 0
   ret <1 x i64> %tmp4
@@ -228,7 +228,7 @@ define <1 x i64> @ins1d1(<1 x i64> %tmp1, <1 x i64> %tmp2) {
 
 define <2 x float> @ins2f2(<2 x float> %tmp1, <2 x float> %tmp2) {
 ; CHECK-LABEL: ins2f2:
-; CHECK: ins {{v[0-9]+}}.s[1], {{v[0-9]+}}.s[0]
+; CHECK: mov {{v[0-9]+}}.s[1], {{v[0-9]+}}.s[0]
   %tmp3 = extractelement <2 x float> %tmp1, i32 0
   %tmp4 = insertelement <2 x float> %tmp2, float %tmp3, i32 1
   ret <2 x float> %tmp4
@@ -236,7 +236,7 @@ define <2 x float> @ins2f2(<2 x float> %tmp1, <2 x float> %tmp2) {
 
 define <1 x double> @ins1df1(<1 x double> %tmp1, <1 x double> %tmp2) {
 ; CHECK-LABEL: ins1df1:
-; CHECK-NOT: ins {{v[0-9]+}}
+; CHECK-NOT: mov {{v[0-9]+}}
   %tmp3 = extractelement <1 x double> %tmp1, i32 0
   %tmp4 = insertelement <1 x double> %tmp2, double %tmp3, i32 0
   ret <1 x double> %tmp4
@@ -388,28 +388,28 @@ define i64 @smovx2s(<2 x i32> %tmp1) {
 
 define <8 x i8> @test_vcopy_lane_s8(<8 x i8> %v1, <8 x i8> %v2) {
 ; CHECK-LABEL: test_vcopy_lane_s8:
-; CHECK: ins  {{v[0-9]+}}.b[5], {{v[0-9]+}}.b[3]
+; CHECK: mov  {{v[0-9]+}}.b[5], {{v[0-9]+}}.b[3]
   %vset_lane = shufflevector <8 x i8> %v1, <8 x i8> %v2, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 11, i32 6, i32 7>
   ret <8 x i8> %vset_lane
 }
 
 define <16 x i8> @test_vcopyq_laneq_s8(<16 x i8> %v1, <16 x i8> %v2) {
 ; CHECK-LABEL: test_vcopyq_laneq_s8:
-; CHECK: ins  {{v[0-9]+}}.b[14], {{v[0-9]+}}.b[6]
+; CHECK: mov  {{v[0-9]+}}.b[14], {{v[0-9]+}}.b[6]
   %vset_lane = shufflevector <16 x i8> %v1, <16 x i8> %v2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 22, i32 15>
   ret <16 x i8> %vset_lane
 }
 
 define <8 x i8> @test_vcopy_lane_swap_s8(<8 x i8> %v1, <8 x i8> %v2) {
 ; CHECK-LABEL: test_vcopy_lane_swap_s8:
-; CHECK: ins {{v[0-9]+}}.b[7], {{v[0-9]+}}.b[0]
+; CHECK: mov {{v[0-9]+}}.b[7], {{v[0-9]+}}.b[0]
   %vset_lane = shufflevector <8 x i8> %v1, <8 x i8> %v2, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 0>
   ret <8 x i8> %vset_lane
 }
 
 define <16 x i8> @test_vcopyq_laneq_swap_s8(<16 x i8> %v1, <16 x i8> %v2) {
 ; CHECK-LABEL: test_vcopyq_laneq_swap_s8:
-; CHECK: ins {{v[0-9]+}}.b[0], {{v[0-9]+}}.b[15]
+; CHECK: mov {{v[0-9]+}}.b[0], {{v[0-9]+}}.b[15]
   %vset_lane = shufflevector <16 x i8> %v1, <16 x i8> %v2, <16 x i32> <i32 15, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ret <16 x i8> %vset_lane
 }
@@ -907,9 +907,9 @@ define <8 x i8> @getl(<16 x i8> %x) #0 {
 ; CHECK-DAG: and [[MASKED_IDX:x[0-9]+]], x0, #0x7
 ; CHECK: bfi [[PTR:x[0-9]+]], [[MASKED_IDX]], #1, #3
 ; CHECK-DAG: ldr h[[R:[0-9]+]], {{\[}}[[PTR]]{{\]}}
-; CHECK-DAG: ins v[[R]].h[1], v0.h[1]
-; CHECK-DAG: ins v[[R]].h[2], v0.h[2]
-; CHECK-DAG: ins v[[R]].h[3], v0.h[3]
+; CHECK-DAG: mov v[[R]].h[1], v0.h[1]
+; CHECK-DAG: mov v[[R]].h[2], v0.h[2]
+; CHECK-DAG: mov v[[R]].h[3], v0.h[3]
 define <4 x i16> @test_extracts_inserts_varidx_extract(<8 x i16> %x, i32 %idx) {
   %tmp = extractelement <8 x i16> %x, i32 %idx
   %tmp2 = insertelement <4 x i16> undef, i16 %tmp, i32 0
@@ -927,9 +927,9 @@ define <4 x i16> @test_extracts_inserts_varidx_extract(<8 x i16> %x, i32 %idx) {
 ; CHECK: bfi x9, [[MASKED_IDX]], #1, #2
 ; CHECK: st1 { v0.h }[0], [x9]
 ; CHECK-DAG: ldr d[[R:[0-9]+]]
-; CHECK-DAG: ins v[[R]].h[1], v0.h[1]
-; CHECK-DAG: ins v[[R]].h[2], v0.h[2]
-; CHECK-DAG: ins v[[R]].h[3], v0.h[3]
+; CHECK-DAG: mov v[[R]].h[1], v0.h[1]
+; CHECK-DAG: mov v[[R]].h[2], v0.h[2]
+; CHECK-DAG: mov v[[R]].h[3], v0.h[3]
 define <4 x i16> @test_extracts_inserts_varidx_insert(<8 x i16> %x, i32 %idx) {
   %tmp = extractelement <8 x i16> %x, i32 0
   %tmp2 = insertelement <4 x i16> undef, i16 %tmp, i32 %idx
@@ -1125,7 +1125,7 @@ define <2 x i32> @test_concat_diff_v1i32_v1i32(i32 %a, i32 %b) {
 ; CHECK-LABEL: test_concat_diff_v1i32_v1i32:
 ; CHECK: sqabs s{{[0-9]+}}, s{{[0-9]+}}
 ; CHECK: sqabs s{{[0-9]+}}, s{{[0-9]+}}
-; CHECK: ins {{v[0-9]+}}.s[1], w{{[0-9]+}}
+; CHECK: mov {{v[0-9]+}}.s[1], w{{[0-9]+}}
 entry:
   %c = tail call i32 @llvm.aarch64.neon.sqabs.i32(i32 %a)
   %d = insertelement <2 x i32> undef, i32 %c, i32 0
@@ -1137,7 +1137,7 @@ entry:
 
 define <16 x i8> @test_concat_v16i8_v16i8_v16i8(<16 x i8> %x, <16 x i8> %y) #0 {
 ; CHECK-LABEL: test_concat_v16i8_v16i8_v16i8:
-; CHECK: ins {{v[0-9]+}}.d[1], {{v[0-9]+}}.d[0]
+; CHECK: mov {{v[0-9]+}}.d[1], {{v[0-9]+}}.d[0]
 entry:
   %vecinit30 = shufflevector <16 x i8> %x, <16 x i8> %y, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
   ret <16 x i8> %vecinit30
@@ -1145,7 +1145,7 @@ entry:
 
 define <16 x i8> @test_concat_v16i8_v8i8_v16i8(<8 x i8> %x, <16 x i8> %y) #0 {
 ; CHECK-LABEL: test_concat_v16i8_v8i8_v16i8:
-; CHECK: ins {{v[0-9]+}}.d[1], {{v[0-9]+}}.d[0]
+; CHECK: mov {{v[0-9]+}}.d[1], {{v[0-9]+}}.d[0]
 entry:
   %vecext = extractelement <8 x i8> %x, i32 0
   %vecinit = insertelement <16 x i8> undef, i8 %vecext, i32 0
@@ -1169,7 +1169,7 @@ entry:
 
 define <16 x i8> @test_concat_v16i8_v16i8_v8i8(<16 x i8> %x, <8 x i8> %y) #0 {
 ; CHECK-LABEL: test_concat_v16i8_v16i8_v8i8:
-; CHECK: ins {{v[0-9]+}}.d[1], {{v[0-9]+}}.d[0]
+; CHECK: mov {{v[0-9]+}}.d[1], {{v[0-9]+}}.d[0]
 entry:
   %vecext = extractelement <16 x i8> %x, i32 0
   %vecinit = insertelement <16 x i8> undef, i8 %vecext, i32 0
@@ -1208,7 +1208,7 @@ entry:
 
 define <16 x i8> @test_concat_v16i8_v8i8_v8i8(<8 x i8> %x, <8 x i8> %y) #0 {
 ; CHECK-LABEL: test_concat_v16i8_v8i8_v8i8:
-; CHECK: ins {{v[0-9]+}}.d[1], {{v[0-9]+}}.d[0]
+; CHECK: mov {{v[0-9]+}}.d[1], {{v[0-9]+}}.d[0]
 entry:
   %vecext = extractelement <8 x i8> %x, i32 0
   %vecinit = insertelement <16 x i8> undef, i8 %vecext, i32 0
@@ -1247,7 +1247,7 @@ entry:
 
 define <8 x i16> @test_concat_v8i16_v8i16_v8i16(<8 x i16> %x, <8 x i16> %y) #0 {
 ; CHECK-LABEL: test_concat_v8i16_v8i16_v8i16:
-; CHECK: ins {{v[0-9]+}}.d[1], {{v[0-9]+}}.d[0]
+; CHECK: mov {{v[0-9]+}}.d[1], {{v[0-9]+}}.d[0]
 entry:
   %vecinit14 = shufflevector <8 x i16> %x, <8 x i16> %y, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
   ret <8 x i16> %vecinit14
@@ -1255,7 +1255,7 @@ entry:
 
 define <8 x i16> @test_concat_v8i16_v4i16_v8i16(<4 x i16> %x, <8 x i16> %y) #0 {
 ; CHECK-LABEL: test_concat_v8i16_v4i16_v8i16:
-; CHECK: ins {{v[0-9]+}}.d[1], {{v[0-9]+}}.d[0]
+; CHECK: mov {{v[0-9]+}}.d[1], {{v[0-9]+}}.d[0]
 entry:
   %vecext = extractelement <4 x i16> %x, i32 0
   %vecinit = insertelement <8 x i16> undef, i16 %vecext, i32 0
@@ -1271,7 +1271,7 @@ entry:
 
 define <8 x i16> @test_concat_v8i16_v8i16_v4i16(<8 x i16> %x, <4 x i16> %y) #0 {
 ; CHECK-LABEL: test_concat_v8i16_v8i16_v4i16:
-; CHECK: ins {{v[0-9]+}}.d[1], {{v[0-9]+}}.d[0]
+; CHECK: mov {{v[0-9]+}}.d[1], {{v[0-9]+}}.d[0]
 entry:
   %vecext = extractelement <8 x i16> %x, i32 0
   %vecinit = insertelement <8 x i16> undef, i16 %vecext, i32 0
@@ -1294,7 +1294,7 @@ entry:
 
 define <8 x i16> @test_concat_v8i16_v4i16_v4i16(<4 x i16> %x, <4 x i16> %y) #0 {
 ; CHECK-LABEL: test_concat_v8i16_v4i16_v4i16:
-; CHECK: ins {{v[0-9]+}}.d[1], {{v[0-9]+}}.d[0]
+; CHECK: mov {{v[0-9]+}}.d[1], {{v[0-9]+}}.d[0]
 entry:
   %vecext = extractelement <4 x i16> %x, i32 0
   %vecinit = insertelement <8 x i16> undef, i16 %vecext, i32 0
@@ -1317,7 +1317,7 @@ entry:
 
 define <4 x i32> @test_concat_v4i32_v4i32_v4i32(<4 x i32> %x, <4 x i32> %y) #0 {
 ; CHECK-LABEL: test_concat_v4i32_v4i32_v4i32:
-; CHECK: ins {{v[0-9]+}}.d[1], {{v[0-9]+}}.d[0]
+; CHECK: mov {{v[0-9]+}}.d[1], {{v[0-9]+}}.d[0]
 entry:
   %vecinit6 = shufflevector <4 x i32> %x, <4 x i32> %y, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
   ret <4 x i32> %vecinit6
@@ -1325,7 +1325,7 @@ entry:
 
 define <4 x i32> @test_concat_v4i32_v2i32_v4i32(<2 x i32> %x, <4 x i32> %y) #0 {
 ; CHECK-LABEL: test_concat_v4i32_v2i32_v4i32:
-; CHECK: ins {{v[0-9]+}}.d[1], {{v[0-9]+}}.d[0]
+; CHECK: mov {{v[0-9]+}}.d[1], {{v[0-9]+}}.d[0]
 entry:
   %vecext = extractelement <2 x i32> %x, i32 0
   %vecinit = insertelement <4 x i32> undef, i32 %vecext, i32 0
@@ -1337,7 +1337,7 @@ entry:
 
 define <4 x i32> @test_concat_v4i32_v4i32_v2i32(<4 x i32> %x, <2 x i32> %y) #0 {
 ; CHECK-LABEL: test_concat_v4i32_v4i32_v2i32:
-; CHECK: ins {{v[0-9]+}}.d[1], {{v[0-9]+}}.d[0]
+; CHECK: mov {{v[0-9]+}}.d[1], {{v[0-9]+}}.d[0]
 entry:
   %vecext = extractelement <4 x i32> %x, i32 0
   %vecinit = insertelement <4 x i32> undef, i32 %vecext, i32 0
@@ -1352,7 +1352,7 @@ entry:
 
 define <4 x i32> @test_concat_v4i32_v2i32_v2i32(<2 x i32> %x, <2 x i32> %y) #0 {
 ; CHECK-LABEL: test_concat_v4i32_v2i32_v2i32:
-; CHECK: ins {{v[0-9]+}}.d[1], {{v[0-9]+}}.d[0]
+; CHECK: mov {{v[0-9]+}}.d[1], {{v[0-9]+}}.d[0]
 entry:
   %vecinit6 = shufflevector <2 x i32> %x, <2 x i32> %y, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   ret <4 x i32> %vecinit6
@@ -1389,7 +1389,7 @@ entry:
 
 define <2 x i64> @test_concat_v2i64_v1i64_v1i64(<1 x i64> %x, <1 x i64> %y) #0 {
 ; CHECK-LABEL: test_concat_v2i64_v1i64_v1i64:
-; CHECK: ins {{v[0-9]+}}.d[1], {{v[0-9]+}}.d[0]
+; CHECK: mov {{v[0-9]+}}.d[1], {{v[0-9]+}}.d[0]
 entry:
   %vecext = extractelement <1 x i64> %x, i32 0
   %vecinit = insertelement <2 x i64> undef, i64 %vecext, i32 0

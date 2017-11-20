@@ -1034,10 +1034,10 @@ entry:
 define <4 x float> @insertVarF(<4 x float> %a, float %f, i32 %el) {
 entry:
 ; CHECK-LABEL: insertVarF
-; CHECK: stxsspx 1,
+; CHECK: stfsx 1,
 ; CHECK: lxv
 ; CHECK-BE-LABEL: insertVarF
-; CHECK-BE: stxsspx 1,
+; CHECK-BE: stfsx 1,
 ; CHECK-BE: lxv
   %vecins = insertelement <4 x float> %a, float %f, i32 %el
   ret <4 x float> %vecins
