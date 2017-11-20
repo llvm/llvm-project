@@ -33,10 +33,12 @@ static const TargetRegisterClass *getRC32(MachineOperand &MO,
   const TargetRegisterClass *RC = MRI->getRegClass(MO.getReg());
 
   if (SystemZ::GR32BitRegClass.hasSubClassEq(RC) ||
-      MO.getSubReg() == SystemZ::subreg_l32)
+      MO.getSubReg() == SystemZ::subreg_l32 ||
+      MO.getSubReg() == SystemZ::subreg_hl32)
     return &SystemZ::GR32BitRegClass;
   if (SystemZ::GRH32BitRegClass.hasSubClassEq(RC) ||
-      MO.getSubReg() == SystemZ::subreg_h32)
+      MO.getSubReg() == SystemZ::subreg_h32 ||
+      MO.getSubReg() == SystemZ::subreg_hh32)
     return &SystemZ::GRH32BitRegClass;
 
   if (VRM && VRM->hasPhys(MO.getReg())) {

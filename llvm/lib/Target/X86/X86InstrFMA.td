@@ -15,7 +15,7 @@
 // FMA3 - Intel 3 operand Fused Multiply-Add instructions
 //===----------------------------------------------------------------------===//
 
-// For all FMA opcodes declared in fma3p_rm_* and fma3s_rm_* milticlasses
+// For all FMA opcodes declared in fma3p_rm_* and fma3s_rm_* multiclasses
 // defined below, both the register and memory variants are commutable.
 // For the register form the commutable operands are 1, 2 and 3.
 // For the memory variant the folded operand must be in 3. Thus,

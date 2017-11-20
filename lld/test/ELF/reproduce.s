@@ -34,23 +34,27 @@
 # RUN: echo > file
 # RUN: echo > file2
 # RUN: echo "_start" > order
+# RUN: mkdir "sysroot with spaces"
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o 'foo bar'
 # RUN: ld.lld --reproduce repro2.tar 'foo bar' -L"foo bar" -Lfile -Tfile2 \
 # RUN:   --dynamic-list dyn -rpath file --script=file --symbol-ordering-file order \
+# RUN:   --sysroot "sysroot with spaces" --sysroot="sysroot with spaces" \
 # RUN:   --version-script ver --dynamic-linker "some unusual/path" -soname 'foo bar' \
 # RUN:   -soname='foo bar'
 # RUN: tar xf repro2.tar
 # RUN: FileCheck %s --check-prefix=RSP2 < repro2/response.txt
 # RSP2:      --chroot .
 # RSP2:      "{{.*}}foo bar"
-# RSP2-NEXT: --library-path "{{.*}}foo bar"
-# RSP2-NEXT: --library-path {{.+}}file
-# RSP2-NEXT: --script {{.+}}file2
-# RSP2-NEXT: --dynamic-list {{.+}}dyn
-# RSP2-NEXT: -rpath {{.+}}file
-# RSP2-NEXT: --script {{.+}}file
-# RSP2-NEXT: --symbol-ordering-file [[PATH:.+]]order
-# RSP2-NEXT: --version-script [[PATH]]ver
+# RSP2-NEXT: --library-path "[[BASEDIR:.+]]/foo bar"
+# RSP2-NEXT: --library-path [[BASEDIR]]/file
+# RSP2-NEXT: --script [[BASEDIR]]/file2
+# RSP2-NEXT: --dynamic-list [[BASEDIR]]/dyn
+# RSP2-NEXT: -rpath [[BASEDIR]]/file
+# RSP2-NEXT: --script [[BASEDIR]]/file
+# RSP2-NEXT: --symbol-ordering-file [[BASEDIR]]/order
+# RSP2-NEXT: --sysroot "[[BASEDIR]]/sysroot with spaces"
+# RSP2-NEXT: --sysroot "[[BASEDIR]]/sysroot with spaces"
+# RSP2-NEXT: --version-script [[BASEDIR]]/ver
 # RSP2-NEXT: --dynamic-linker "some unusual/path"
 # RSP2-NEXT: -soname "foo bar"
 # RSP2-NEXT: -soname "foo bar"

@@ -49,7 +49,7 @@ define amdgpu_kernel void @s_saddo_i64(i64 addrspace(1)* %out, i1 addrspace(1)* 
 }
 
 ; FUNC-LABEL: {{^}}v_saddo_i64:
-; SI: v_add_i32
+; SI: v_add_{{[iu]}}32
 ; SI: v_addc_u32
 define amdgpu_kernel void @v_saddo_i64(i64 addrspace(1)* %out, i1 addrspace(1)* %carryout, i64 addrspace(1)* %aptr, i64 addrspace(1)* %bptr) nounwind {
   %a = load i64, i64 addrspace(1)* %aptr, align 4

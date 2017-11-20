@@ -711,7 +711,8 @@ def : InstRW<[P9_LS_5C, IP_AGEN_1C, DISP_1C, DISP_1C],
     LXV,
     LXVX,
     LXSD,
-    DFLOADf64
+    DFLOADf64,
+    XFLOADf64
 )>;
 
 // 4 Cycle load uses a single slice.
@@ -751,7 +752,10 @@ def : InstRW<[P9_LoadAndALUOp_7C, IP_AGEN_1C, IP_EXEC_1C,
     LXSSPX,
     LXSIWAX,
     LXSSP,
-    DFLOADf32
+    DFLOADf32,
+    XFLOADf32,
+    LIWAX,
+    LIWZX
 )>;
 
 // Cracked Load that requires the PM resource.
@@ -781,7 +785,10 @@ def : InstRW<[P9_LS_1C, IP_EXEC_1C, IP_AGEN_1C, DISP_1C, DISP_1C, DISP_1C],
     STXSSPX,
     STXSIWX,
     DFSTOREf32,
-    DFSTOREf64
+    DFSTOREf64,
+    XFSTOREf32,
+    XFSTOREf64,
+    STIWX
 )>;
 
 // Store operation that requires the whole superslice.

@@ -1198,7 +1198,11 @@ void Driver::handleAutocompletions(StringRef PassedFlags) const {
   // case-insensitive sorting for consistency with the -help option
   // which prints out options in the case-insensitive alphabetical order.
   std::sort(SuggestedCompletions.begin(), SuggestedCompletions.end(),
-            [](StringRef A, StringRef B) { return A.compare_lower(B) < 0; });
+            [](StringRef A, StringRef B) {
+              if (int X = A.compare_lower(B))
+                return X < 0;
+              return A.compare(B) > 0;
+            });
 
   llvm::outs() << llvm::join(SuggestedCompletions, "\n") << '\n';
 }

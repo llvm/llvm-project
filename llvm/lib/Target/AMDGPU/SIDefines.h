@@ -69,7 +69,7 @@ enum : uint64_t {
   VOPAsmPrefer32Bit = UINT64_C(1) << 41,
   VOP3_OPSEL = UINT64_C(1) << 42,
   maybeAtomic = UINT64_C(1) << 43,
-  F16_ZFILL = UINT64_C(1) << 44,
+  renamedInGFX9 = UINT64_C(1) << 44,
 
   // Is a clamp on FP type.
   FPClamp = UINT64_C(1) << 45,

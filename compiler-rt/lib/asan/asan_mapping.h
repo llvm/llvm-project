@@ -161,7 +161,7 @@ static const u64 kWindowsShadowOffset32 = 3ULL << 28;  // 0x30000000
 #  define SHADOW_OFFSET (0)
 #elif SANITIZER_WORDSIZE == 32
 #  if SANITIZER_ANDROID
-#    define SHADOW_OFFSET (0)
+#    define SHADOW_OFFSET __asan_shadow_memory_dynamic_address
 #  elif defined(__mips__)
 #    define SHADOW_OFFSET kMIPS32_ShadowOffset32
 #  elif SANITIZER_FREEBSD
@@ -203,6 +203,12 @@ static const u64 kWindowsShadowOffset32 = 3ULL << 28;  // 0x30000000
 #  else
 #   define SHADOW_OFFSET kDefaultShort64bitShadowOffset
 #  endif
+#endif
+
+#if SANITIZER_ANDROID && defined(__arm__)
+# define ASAN_PREMAP_SHADOW 1
+#else
+# define ASAN_PREMAP_SHADOW 0
 #endif
 
 #define SHADOW_GRANULARITY (1ULL << SHADOW_SCALE)

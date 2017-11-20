@@ -81,7 +81,7 @@ define amdgpu_kernel void @v_pack_v2i16(i32 addrspace(1)* %in0, i32 addrspace(1)
 ; GFX9: v_and_b32_e32 [[MASKED:v[0-9]+]], 0xffff, [[VAL0]]
 ; GFX9: v_lshl_or_b32 [[PACKED:v[0-9]+]], [[VAL1]], 16, [[MASKED]]
 
-; GFX9: v_add_i32_e32 v{{[0-9]+}}, vcc, 9, [[PACKED]]
+; GFX9: v_add_co_u32_e32 v{{[0-9]+}}, vcc, 9, [[PACKED]]
 define amdgpu_kernel void @v_pack_v2i16_user(i32 addrspace(1)* %in0, i32 addrspace(1)* %in1) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64

@@ -126,7 +126,7 @@ define amdgpu_kernel void @s_ctlz_zero_undef_i64_trunc(i32 addrspace(1)* noalias
 ; GCN-DAG: {{buffer|flat}}_load_dwordx2 v{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}
 ; GCN-DAG: v_cmp_eq_u32_e32 vcc, 0, v[[HI]]
 ; GCN-DAG: v_ffbh_u32_e32 [[FFBH_LO:v[0-9]+]], v[[LO]]
-; GCN-DAG: v_add_i32_e32 [[ADD:v[0-9]+]], vcc, 32, [[FFBH_LO]]
+; GCN-DAG: v_add_{{[iu]}}32_e32 [[ADD:v[0-9]+]], vcc, 32, [[FFBH_LO]]
 ; GCN-DAG: v_ffbh_u32_e32 [[FFBH_HI:v[0-9]+]], v[[HI]]
 ; GCN-DAG: v_cndmask_b32_e32 v[[CTLZ:[0-9]+]], [[FFBH_HI]], [[FFBH_LO]]
 ; GCN: {{buffer|flat}}_store_dwordx2 {{.*}}v{{\[}}[[CTLZ]]:[[CTLZ_HI:[0-9]+]]{{\]}}

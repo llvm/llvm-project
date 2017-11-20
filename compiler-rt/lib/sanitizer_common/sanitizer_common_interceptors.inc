@@ -3829,11 +3829,11 @@ INTERCEPTOR(int, pthread_mutex_unlock, void *m) {
 #endif
 
 #if SANITIZER_NETBSD
-INTERCEPTOR(void, __libc_mutex_lock, void *m) \
+INTERCEPTOR(int, __libc_mutex_lock, void *m) \
   ALIAS(WRAPPER_NAME(pthread_mutex_lock));
-INTERCEPTOR(void, __libc_mutex_unlock, void *m) \
+INTERCEPTOR(int, __libc_mutex_unlock, void *m) \
   ALIAS(WRAPPER_NAME(pthread_mutex_unlock));
-INTERCEPTOR(void, __libc_thr_setcancelstate, int state, int *oldstate) \
+INTERCEPTOR(int, __libc_thr_setcancelstate, int state, int *oldstate) \
   ALIAS(WRAPPER_NAME(pthread_setcancelstate));
 #endif
 

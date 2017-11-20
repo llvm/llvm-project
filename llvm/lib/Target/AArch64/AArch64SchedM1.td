@@ -84,6 +84,9 @@ def M1WriteAC : SchedWriteRes<[M1UnitALU,
                                M1UnitALU,
                                M1UnitC]>   { let Latency = 2;
                                              let NumMicroOps = 3; }
+def M1WriteAD : SchedWriteRes<[M1UnitALU,
+                               M1UnitC]>   { let Latency = 2;
+                                             let NumMicroOps = 2; }
 def M1WriteAX : SchedWriteVariant<[SchedVar<M1ShiftLeftFastPred, [M1WriteA1]>,
                                    SchedVar<NoSchedPred,         [M1WriteAA]>]>;
 def M1WriteC1 : SchedWriteRes<[M1UnitC]>   { let Latency = 1; }
@@ -429,8 +432,7 @@ def : InstRW<[M1WriteB1], (instrs Bcc)>;
 def : InstRW<[M1WriteA1], (instrs BL)>;
 def : InstRW<[M1WriteBX], (instrs BLR)>;
 def : InstRW<[M1WriteC1], (instregex "^CBN?Z[WX]")>;
-def : InstRW<[M1WriteC1,
-              M1WriteA2], (instregex "^TBN?Z[WX]")>;
+def : InstRW<[M1WriteAD], (instregex "^TBN?Z[WX]")>;
 
 // Arithmetic and logical integer instructions.
 def : InstRW<[M1WriteA1], (instrs COPY)>;

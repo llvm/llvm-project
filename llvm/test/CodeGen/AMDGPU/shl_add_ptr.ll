@@ -35,7 +35,7 @@ define amdgpu_kernel void @load_shl_base_lds_0(float addrspace(1)* %out, i32 add
 ; GCN-LABEL: {{^}}load_shl_base_lds_1:
 ; GCN: v_lshlrev_b32_e32 [[PTR:v[0-9]+]], 2, {{v[0-9]+}}
 ; GCN: ds_read_b32 [[RESULT:v[0-9]+]], [[PTR]] offset:8
-; GCN: v_add_i32_e32 [[ADDUSE:v[0-9]+]], vcc, 8, v{{[0-9]+}}
+; GCN: v_add_{{[iu]}}32_e32 [[ADDUSE:v[0-9]+]], vcc, 8, v{{[0-9]+}}
 ; GCN-DAG: buffer_store_dword [[RESULT]]
 ; GCN-DAG: buffer_store_dword [[ADDUSE]]
 ; GCN: s_endpgm
@@ -301,7 +301,7 @@ define void @shl_add_ptr_combine_2use_lds(i32 %idx) #0 {
 ; GCN-DAG: v_lshlrev_b32_e32 [[SCALE0:v[0-9]+]], 3, v0
 ; GCN-DAG: v_lshlrev_b32_e32 [[SCALE1:v[0-9]+]], 4, v0
 ; GCN-DAG: ds_write_b32 [[SCALE0]], v{{[0-9]+}} offset:65528
-; GCN-DAG: v_add_i32_e32 [[ADD1:v[0-9]+]], vcc, 0x1fff0, [[SCALE1]]
+; GCN-DAG: v_add_{{[iu]}}32_e32 [[ADD1:v[0-9]+]], vcc, 0x1fff0, [[SCALE1]]
 ; GCN: ds_write_b32 [[ADD1]], v{{[0-9]+$}}
 define void @shl_add_ptr_combine_2use_max_lds_offset(i32 %idx) #0 {
   %idx.add = add nuw i32 %idx, 8191
@@ -315,7 +315,7 @@ define void @shl_add_ptr_combine_2use_max_lds_offset(i32 %idx) #0 {
 }
 
 ; GCN-LABEL: {{^}}shl_add_ptr_combine_2use_both_max_lds_offset:
-; GCN: v_add_i32_e32 [[ADD:v[0-9]+]], vcc, 0x1000, v0
+; GCN: v_add_{{[iu]}}32_e32 [[ADD:v[0-9]+]], vcc, 0x1000, v0
 ; GCN-DAG: v_lshlrev_b32_e32 [[SCALE0:v[0-9]+]], 4, [[ADD]]
 ; GCN-DAG: v_lshlrev_b32_e32 [[SCALE1:v[0-9]+]], 5, [[ADD]]
 ; GCN-DAG: ds_write_b32 [[SCALE0]], v{{[0-9]+$}}
@@ -353,7 +353,7 @@ define void @shl_add_ptr_combine_2use_private(i16 zeroext %idx.arg) #0 {
 ; GCN-DAG: v_lshlrev_b32_e32 [[SCALE0:v[0-9]+]], 3, v0
 ; GCN-DAG: v_lshlrev_b32_e32 [[SCALE1:v[0-9]+]], 4, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[SCALE0]], s[0:3], s4 offen offset:4088
-; GCN-DAG: v_add_i32_e32 [[ADD:v[0-9]+]], vcc, 0x1ff0, [[SCALE1]]
+; GCN-DAG: v_add_{{[iu]}}32_e32 [[ADD:v[0-9]+]], vcc, 0x1ff0, [[SCALE1]]
 ; GCN: buffer_store_dword v{{[0-9]+}}, [[ADD]], s[0:3], s4 offen{{$}}
 define void @shl_add_ptr_combine_2use_max_private_offset(i16 zeroext %idx.arg) #0 {
   %idx = zext i16 %idx.arg to i32
@@ -367,7 +367,7 @@ define void @shl_add_ptr_combine_2use_max_private_offset(i16 zeroext %idx.arg) #
   ret void
 }
 ; GCN-LABEL: {{^}}shl_add_ptr_combine_2use_both_max_private_offset:
-; GCN: v_add_i32_e32 [[ADD:v[0-9]+]], vcc, 0x100, v0
+; GCN: v_add_{{[iu]}}32_e32 [[ADD:v[0-9]+]], vcc, 0x100, v0
 ; GCN-DAG: v_lshlrev_b32_e32 [[SCALE0:v[0-9]+]], 4, [[ADD]]
 ; GCN-DAG: v_lshlrev_b32_e32 [[SCALE1:v[0-9]+]], 5, [[ADD]]
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[SCALE0]], s[0:3], s4 offen{{$}}
