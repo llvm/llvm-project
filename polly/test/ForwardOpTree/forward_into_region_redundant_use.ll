@@ -43,7 +43,7 @@ end:
 ; CHECK-NEXT:             }
 ; CHECK-NEXT:     Stmt_nonaffine__TO__end
 ; CHECK-NEXT:             ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:                 null;
+; CHECK-NEXT:                 ;
 ; CHECK-NEXT:            new: [p] -> { Stmt_nonaffine__TO__end[] -> MemRef_A[0] };
 ; CHECK-NEXT:             MayWriteAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:                 [p] -> { Stmt_nonaffine__TO__end[] -> MemRef_A[0] };

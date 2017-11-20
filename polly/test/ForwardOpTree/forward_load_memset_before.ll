@@ -70,7 +70,7 @@ return:
 ; CHECK-NEXT:             }
 ; CHECK-NEXT:     Stmt_bodyC
 ; CHECK-NEXT:             ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:                 null;
+; CHECK-NEXT:                 ;
 ; CHECK-NEXT:            new: [n] -> { Stmt_bodyC[i0] -> MemRef_B[8i0] };
 ; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:                 [n] -> { Stmt_bodyC[i0] -> MemRef_A[o0] : 8i0 <= o0 <= 7 + 8i0 };

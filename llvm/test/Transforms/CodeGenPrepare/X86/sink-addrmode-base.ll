@@ -473,3 +473,38 @@ fallthrough:
   %v = load i64 , i64* %p1, align 8
   ret i64 %v
 }
+
+; The same two addr modes by different paths
+define i32 @test18(i1 %cond1, i1 %cond2, i64* %b1, i64* %b2) {
+; CHECK-LABEL: @test18
+entry:
+  %g1 = getelementptr inbounds i64, i64* %b2, i64 5
+  %bc1 = bitcast i64* %g1 to i32*
+  br i1 %cond1, label %if.then1, label %if.then2
+
+if.then1:
+  %g2 = getelementptr inbounds i64, i64* %b1, i64 5
+  %bc2 = bitcast i64* %g2 to i32*
+  br label %fallthrough
+
+if.then2:
+  %bc1_1 = bitcast i64* %g1 to i32*
+  br i1 %cond2, label %fallthrough, label %if.then3
+
+if.then3:
+  %bc1_2 = bitcast i64* %g1 to i32*
+  br label %fallthrough
+
+fallthrough:
+; CHECK-YES: sunk_phi
+; CHECK-NO-LABEL: fallthrough:
+; CHECK-NO: phi
+; CHECK-NO-NEXT: load
+  %c = phi i32* [%bc2, %if.then1], [%bc1_1, %if.then2], [%bc1_2, %if.then3]
+  %v1 = load i32, i32* %c, align 4
+  %g1_1 = getelementptr inbounds i64, i64* %b2, i64 5
+  %bc1_1_1 = bitcast i64* %g1_1 to i32*
+  %v2 = load i32, i32* %bc1_1_1, align 4
+  %v = add i32 %v1, %v2
+  ret i32 %v
+}
