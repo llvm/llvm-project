@@ -24,7 +24,7 @@ define void @void_func_i1_zeroext(i1 zeroext %arg0) #0 {
 
 ; GCN-LABEL: {{^}}void_func_i1_signext:
 ; GCN: s_waitcnt
-; GCN-NEXT: v_add_i32_e32 v0, vcc, 12, v0
+; GCN-NEXT: v_add_{{[_coiu]*}}32_e32 v0, vcc, 12, v0
 ; GCN-NOT: v0
 ; GCN: buffer_store_dword v0, off
 define void @void_func_i1_signext(i1 signext %arg0) #0 {
@@ -60,7 +60,7 @@ define void @void_func_i8(i8 %arg0) #0 {
 
 ; GCN-LABEL: {{^}}void_func_i8_zeroext:
 ; GCN-NOT: and_b32
-; GCN: v_add_i32_e32 v0, vcc, 12, v0
+; GCN: v_add_{{[_coiu]*}}32_e32 v0, vcc, 12, v0
 define void @void_func_i8_zeroext(i8 zeroext %arg0) #0 {
   %ext = zext i8 %arg0 to i32
   %add = add i32 %ext, 12
@@ -70,7 +70,7 @@ define void @void_func_i8_zeroext(i8 zeroext %arg0) #0 {
 
 ; GCN-LABEL: {{^}}void_func_i8_signext:
 ; GCN-NOT: v_bfe_i32
-; GCN: v_add_i32_e32 v0, vcc, 12, v0
+; GCN: v_add_{{[_coiu]*}}32_e32 v0, vcc, 12, v0
 define void @void_func_i8_signext(i8 signext %arg0) #0 {
   %ext = sext i8 %arg0 to i32
   %add = add i32 %ext, 12
@@ -87,7 +87,7 @@ define void @void_func_i16(i16 %arg0) #0 {
 
 ; GCN-LABEL: {{^}}void_func_i16_zeroext:
 ; GCN-NOT: v0
-; GCN: v_add_i32_e32 v0, vcc, 12, v0
+; GCN: v_add_{{[_coiu]*}}32_e32 v0, vcc, 12, v0
 define void @void_func_i16_zeroext(i16 zeroext %arg0) #0 {
   %ext = zext i16 %arg0 to i32
   %add = add i32 %ext, 12
@@ -97,7 +97,7 @@ define void @void_func_i16_zeroext(i16 zeroext %arg0) #0 {
 
 ; GCN-LABEL: {{^}}void_func_i16_signext:
 ; GCN-NOT: v0
-; GCN: v_add_i32_e32 v0, vcc, 12, v0
+; GCN: v_add_{{[_coiu]*}}32_e32 v0, vcc, 12, v0
 define void @void_func_i16_signext(i16 signext %arg0) #0 {
   %ext = sext i16 %arg0 to i32
   %add = add i32 %ext, 12

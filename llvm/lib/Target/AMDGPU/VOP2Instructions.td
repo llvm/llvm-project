@@ -143,20 +143,22 @@ multiclass VOP2bInst <string opName,
                       VOPProfile P,
                       SDPatternOperator node = null_frag,
                       string revOp = opName,
+                      bit GFX9Renamed = 0,
                       bit useSGPRInput = !eq(P.NumSrcArgs, 3)> {
+  let renamedInGFX9 = GFX9Renamed in {
+    let SchedRW = [Write32Bit, WriteSALU] in {
+      let Uses = !if(useSGPRInput, [VCC, EXEC], [EXEC]), Defs = [VCC] in {
+        def _e32 : VOP2_Pseudo <opName, P>,
+                   Commutable_REV<revOp#"_e32", !eq(revOp, opName)>;
 
-  let SchedRW = [Write32Bit, WriteSALU] in {
-    let Uses = !if(useSGPRInput, [VCC, EXEC], [EXEC]), Defs = [VCC] in {
-      def _e32 : VOP2_Pseudo <opName, P>,
-                 Commutable_REV<revOp#"_e32", !eq(revOp, opName)>;
-
-      def _sdwa  : VOP2_SDWA_Pseudo <opName, P> {
-        let AsmMatchConverter = "cvtSdwaVOP2b";
+        def _sdwa  : VOP2_SDWA_Pseudo <opName, P> {
+          let AsmMatchConverter = "cvtSdwaVOP2b";
+        }
       }
-    }
 
-    def _e64 : VOP3_Pseudo <opName, P, getVOP2Pat64<node, P>.ret>,
-               Commutable_REV<revOp#"_e64", !eq(revOp, opName)>;
+      def _e64 : VOP3_Pseudo <opName, P, getVOP2Pat64<node, P>.ret>,
+                 Commutable_REV<revOp#"_e64", !eq(revOp, opName)>;
+    }
   }
 }
 
@@ -278,13 +280,13 @@ def VOP2b_I32_I1_I32_I32_I1 : VOPProfile<[i32, i32, i32, i1]> {
 
   let InsSDWA = (ins Src0ModSDWA:$src0_modifiers, Src0SDWA:$src0,
                      Src1ModSDWA:$src1_modifiers, Src1SDWA:$src1,
-                     clampmod:$clamp, omod:$omod,
+                     clampmod:$clamp,
                      dst_sel:$dst_sel, dst_unused:$dst_unused,
                      src0_sel:$src0_sel, src1_sel:$src1_sel);
 
   let InsDPP = (ins DstRCDPP:$old,
-                    Src0Mod:$src0_modifiers, Src0DPP:$src0,
-                    Src1Mod:$src1_modifiers, Src1DPP:$src1,
+                    Src0DPP:$src0,
+                    Src1DPP:$src1,
                     dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
                     bank_mask:$bank_mask, bound_ctrl:$bound_ctrl);
   let HasExt = 1;
@@ -370,12 +372,12 @@ def V_MADAK_F32 : VOP2_Pseudo <"v_madak_f32", VOP_MADAK_F32, [], "">;
 
 // V_ADD_I32, V_SUB_I32, and V_SUBREV_I32 where renamed to *_U32 in VI,
 // but the VI instructions behave the same as the SI versions.
-defm V_ADD_I32 : VOP2bInst <"v_add_i32", VOP2b_I32_I1_I32_I32>;
-defm V_SUB_I32 : VOP2bInst <"v_sub_i32", VOP2b_I32_I1_I32_I32>;
-defm V_SUBREV_I32 : VOP2bInst <"v_subrev_i32", VOP2b_I32_I1_I32_I32, null_frag, "v_sub_i32">;
-defm V_ADDC_U32 : VOP2bInst <"v_addc_u32", VOP2b_I32_I1_I32_I32_I1>;
-defm V_SUBB_U32 : VOP2bInst <"v_subb_u32", VOP2b_I32_I1_I32_I32_I1>;
-defm V_SUBBREV_U32 : VOP2bInst <"v_subbrev_u32", VOP2b_I32_I1_I32_I32_I1, null_frag, "v_subb_u32">;
+defm V_ADD_I32 : VOP2bInst <"v_add_i32", VOP2b_I32_I1_I32_I32, null_frag, "v_add_i32", 1>;
+defm V_SUB_I32 : VOP2bInst <"v_sub_i32", VOP2b_I32_I1_I32_I32, null_frag, "v_sub_i32", 1>;
+defm V_SUBREV_I32 : VOP2bInst <"v_subrev_i32", VOP2b_I32_I1_I32_I32, null_frag, "v_sub_i32", 1>;
+defm V_ADDC_U32 : VOP2bInst <"v_addc_u32", VOP2b_I32_I1_I32_I32_I1, null_frag, "v_addc_u32", 1>;
+defm V_SUBB_U32 : VOP2bInst <"v_subb_u32", VOP2b_I32_I1_I32_I32_I1, null_frag, "v_subb_u32", 1>;
+defm V_SUBBREV_U32 : VOP2bInst <"v_subbrev_u32", VOP2b_I32_I1_I32_I32_I1, null_frag, "v_subb_u32", 1>;
 
 
 let SubtargetPredicate = HasAddNoCarryInsts in {
@@ -660,8 +662,8 @@ defm V_CVT_PK_I16_I32     : VOP2_Real_e32e64_si <0x31>;
 // VI
 //===----------------------------------------------------------------------===//
 
-class VOP2_DPP <bits<6> op, VOP2_Pseudo ps, VOPProfile P = ps.Pfl> :
-  VOP_DPP <ps.OpName, P> {
+class VOP2_DPP <bits<6> op, VOP2_Pseudo ps, string OpName = ps.OpName, VOPProfile P = ps.Pfl> :
+  VOP_DPP <OpName, P> {
   let Defs = ps.Defs;
   let Uses = ps.Uses;
   let SchedRW = ps.SchedRW;
@@ -712,12 +714,6 @@ multiclass VOP2_Real_e64only_vi <bits<10> op> {
     }
 }
 
-multiclass Base_VOP2be_Real_e32e64_vi <bits<6> op> : VOP2_Real_e32_vi<op> {
-  def _e64_vi :
-    VOP3_Real<!cast<VOP3_Pseudo>(NAME#"_e64"), SIEncodingFamily.VI>,
-    VOP3be_vi <{0, 1, 0, 0, op{5-0}}, !cast<VOP3_Pseudo>(NAME#"_e64").Pfl>;
-}
-
 multiclass Base_VOP2_Real_e32e64_vi <bits<6> op> :
   VOP2_Real_e32_vi<op>,
   VOP2_Real_e64_vi<{0, 1, 0, 0, op{5-0}}>;
@@ -736,12 +732,85 @@ multiclass VOP2_SDWA9_Real <bits<6> op> {
     VOP2_SDWA9Ae <op{5-0}, !cast<VOP2_SDWA_Pseudo>(NAME#"_sdwa").Pfl>;
 }
 
-multiclass VOP2be_Real_e32e64_vi <bits<6> op> :
-  Base_VOP2be_Real_e32e64_vi<op>, VOP2_SDWA_Real<op>, VOP2_SDWA9_Real<op> {
-  // For now left dpp only for asm/dasm
-  // TODO: add corresponding pseudo
-  def _dpp : VOP2_DPP<op, !cast<VOP2_Pseudo>(NAME#"_e32")>;
+let AssemblerPredicates = [isVIOnly] in {
+
+multiclass VOP2be_Real_e32e64_vi_only <bits<6> op, string OpName, string AsmName> {
+  def _e32_vi :
+    VOP2_Real<!cast<VOP2_Pseudo>(OpName#"_e32"), SIEncodingFamily.VI>,
+    VOP2e<op{5-0}, !cast<VOP2_Pseudo>(OpName#"_e32").Pfl> {
+      VOP2_Pseudo ps = !cast<VOP2_Pseudo>(OpName#"_e32");
+      let AsmString = AsmName # ps.AsmOperands;
+      let DecoderNamespace = "VI";
+    }
+  def _e64_vi :
+    VOP3_Real<!cast<VOP3_Pseudo>(OpName#"_e64"), SIEncodingFamily.VI>,
+    VOP3be_vi <{0, 1, 0, 0, op{5-0}}, !cast<VOP3_Pseudo>(OpName#"_e64").Pfl> {
+      VOP3_Pseudo ps = !cast<VOP3_Pseudo>(OpName#"_e64");
+      let AsmString = AsmName # ps.AsmOperands;
+      let DecoderNamespace = "VI";
+    }
+  def _sdwa_vi :
+    VOP_SDWA_Real <!cast<VOP2_SDWA_Pseudo>(OpName#"_sdwa")>,
+    VOP2_SDWAe <op{5-0}, !cast<VOP2_SDWA_Pseudo>(OpName#"_sdwa").Pfl> {
+      VOP2_SDWA_Pseudo ps = !cast<VOP2_SDWA_Pseudo>(OpName#"_sdwa");
+      let AsmString = AsmName # ps.AsmOperands;
+    }
+  def _dpp :
+    VOP2_DPP<op, !cast<VOP2_Pseudo>(OpName#"_e32"), AsmName>;
 }
+}
+
+let AssemblerPredicates = [isGFX9] in {
+
+multiclass VOP2be_Real_e32e64_gfx9 <bits<6> op, string OpName, string AsmName> {
+  def _e32_gfx9 :
+    VOP2_Real<!cast<VOP2_Pseudo>(OpName#"_e32"), SIEncodingFamily.GFX9>,
+    VOP2e<op{5-0}, !cast<VOP2_Pseudo>(OpName#"_e32").Pfl> {
+      VOP2_Pseudo ps = !cast<VOP2_Pseudo>(OpName#"_e32");
+      let AsmString = AsmName # ps.AsmOperands;
+      let DecoderNamespace = "GFX9";
+    }
+  def _e64_gfx9 :
+    VOP3_Real<!cast<VOP3_Pseudo>(OpName#"_e64"), SIEncodingFamily.GFX9>,
+    VOP3be_vi <{0, 1, 0, 0, op{5-0}}, !cast<VOP3_Pseudo>(OpName#"_e64").Pfl> {
+      VOP3_Pseudo ps = !cast<VOP3_Pseudo>(OpName#"_e64");
+      let AsmString = AsmName # ps.AsmOperands;
+      let DecoderNamespace = "GFX9";
+    }
+  def _sdwa_gfx9 :
+    VOP_SDWA9_Real <!cast<VOP2_SDWA_Pseudo>(OpName#"_sdwa")>,
+    VOP2_SDWA9Ae <op{5-0}, !cast<VOP2_SDWA_Pseudo>(OpName#"_sdwa").Pfl> {
+      VOP2_SDWA_Pseudo ps = !cast<VOP2_SDWA_Pseudo>(OpName#"_sdwa");
+      let AsmString = AsmName # ps.AsmOperands;
+    }
+  def _dpp_gfx9 :
+    VOP2_DPP<op, !cast<VOP2_Pseudo>(OpName#"_e32"), AsmName> {
+      let DecoderNamespace = "SDWA9";
+    }
+}
+
+multiclass VOP2_Real_e32e64_gfx9 <bits<6> op> {
+  def _e32_gfx9 :
+    VOP2_Real<!cast<VOP2_Pseudo>(NAME#"_e32"), SIEncodingFamily.GFX9>,
+    VOP2e<op{5-0}, !cast<VOP2_Pseudo>(NAME#"_e32").Pfl>{
+      let DecoderNamespace = "GFX9";
+    }
+  def _e64_gfx9 :
+    VOP3_Real<!cast<VOP3_Pseudo>(NAME#"_e64"), SIEncodingFamily.GFX9>,
+    VOP3e_vi <{0, 1, 0, 0, op{5-0}}, !cast<VOP3_Pseudo>(NAME#"_e64").Pfl> {
+      let DecoderNamespace = "GFX9";
+    }
+  def _sdwa_gfx9 :
+    VOP_SDWA9_Real <!cast<VOP2_SDWA_Pseudo>(NAME#"_sdwa")>,
+    VOP2_SDWA9Ae <op{5-0}, !cast<VOP2_SDWA_Pseudo>(NAME#"_sdwa").Pfl> {
+    }
+  def _dpp_gfx9 :
+    VOP2_DPP<op, !cast<VOP2_Pseudo>(NAME#"_e32")> {
+      let DecoderNamespace = "SDWA9";
+    }
+}
+
+} // AssemblerPredicates = [isGFX9]
 
 multiclass VOP2_Real_e32e64_vi <bits<6> op> :
   Base_VOP2_Real_e32e64_vi<op>, VOP2_SDWA_Real<op>, VOP2_SDWA9_Real<op> {
@@ -775,12 +844,24 @@ defm V_XOR_B32            : VOP2_Real_e32e64_vi <0x15>;
 defm V_MAC_F32            : VOP2_Real_e32e64_vi <0x16>;
 defm V_MADMK_F32          : VOP2_Real_MADK_vi <0x17>;
 defm V_MADAK_F32          : VOP2_Real_MADK_vi <0x18>;
-defm V_ADD_I32            : VOP2be_Real_e32e64_vi <0x19>;
-defm V_SUB_I32            : VOP2be_Real_e32e64_vi <0x1a>;
-defm V_SUBREV_I32         : VOP2be_Real_e32e64_vi <0x1b>;
-defm V_ADDC_U32           : VOP2be_Real_e32e64_vi <0x1c>;
-defm V_SUBB_U32           : VOP2be_Real_e32e64_vi <0x1d>;
-defm V_SUBBREV_U32        : VOP2be_Real_e32e64_vi <0x1e>;
+
+defm V_ADD_U32            : VOP2be_Real_e32e64_vi_only <0x19, "V_ADD_I32",     "v_add_u32">;
+defm V_SUB_U32            : VOP2be_Real_e32e64_vi_only <0x1a, "V_SUB_I32",     "v_sub_u32">;
+defm V_SUBREV_U32         : VOP2be_Real_e32e64_vi_only <0x1b, "V_SUBREV_I32",  "v_subrev_u32">;
+defm V_ADDC_U32           : VOP2be_Real_e32e64_vi_only <0x1c, "V_ADDC_U32",    "v_addc_u32">;
+defm V_SUBB_U32           : VOP2be_Real_e32e64_vi_only <0x1d, "V_SUBB_U32",    "v_subb_u32">;
+defm V_SUBBREV_U32        : VOP2be_Real_e32e64_vi_only <0x1e, "V_SUBBREV_U32", "v_subbrev_u32">;
+
+defm V_ADD_CO_U32         : VOP2be_Real_e32e64_gfx9 <0x19, "V_ADD_I32",     "v_add_co_u32">;
+defm V_SUB_CO_U32         : VOP2be_Real_e32e64_gfx9 <0x1a, "V_SUB_I32",     "v_sub_co_u32">;
+defm V_SUBREV_CO_U32      : VOP2be_Real_e32e64_gfx9 <0x1b, "V_SUBREV_I32",  "v_subrev_co_u32">;
+defm V_ADDC_CO_U32        : VOP2be_Real_e32e64_gfx9 <0x1c, "V_ADDC_U32",    "v_addc_co_u32">;
+defm V_SUBB_CO_U32        : VOP2be_Real_e32e64_gfx9 <0x1d, "V_SUBB_U32",    "v_subb_co_u32">;
+defm V_SUBBREV_CO_U32     : VOP2be_Real_e32e64_gfx9 <0x1e, "V_SUBBREV_U32", "v_subbrev_co_u32">;
+
+defm V_ADD_U32            : VOP2_Real_e32e64_gfx9 <0x34>;
+defm V_SUB_U32            : VOP2_Real_e32e64_gfx9 <0x35>;
+defm V_SUBREV_U32         : VOP2_Real_e32e64_gfx9 <0x36>;
 
 defm V_READLANE_B32       : VOP32_Real_vi <0x289>;
 defm V_WRITELANE_B32      : VOP32_Real_vi <0x28a>;
@@ -840,9 +921,3 @@ def : SI2_VI3Alias <"v_cvt_pknorm_u16_f32", V_CVT_PKNORM_U16_F32_e64_vi>;
 def : SI2_VI3Alias <"v_cvt_pkrtz_f16_f32", V_CVT_PKRTZ_F16_F32_e64_vi>;
 
 } // End SubtargetPredicate = isVI
-
-let SubtargetPredicate = HasAddNoCarryInsts in {
-defm V_ADD_U32 : VOP2_Real_e32e64_vi <0x34>;
-defm V_SUB_U32 : VOP2_Real_e32e64_vi <0x35>;
-defm V_SUBREV_U32 : VOP2_Real_e32e64_vi <0x36>;
-}

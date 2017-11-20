@@ -32,7 +32,8 @@ public:
   enum StrategyKind {
     SCHEDULE_MINREGONLY,
     SCHEDULE_MINREGFORCED,
-    SCHEDULE_LEGACYMAXOCCUPANCY
+    SCHEDULE_LEGACYMAXOCCUPANCY,
+    SCHEDULE_ILP
   };
 
   GCNIterativeScheduler(MachineSchedContext *C,
@@ -108,6 +109,7 @@ protected:
 
   void scheduleLegacyMaxOccupancy(bool TryMaximizeOccupancy = true);
   void scheduleMinReg(bool force = false);
+  void scheduleILP(bool TryMaximizeOccupancy = true);
 
   void printRegions(raw_ostream &OS) const;
   void printSchedResult(raw_ostream &OS,

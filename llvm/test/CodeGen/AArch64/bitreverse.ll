@@ -11,7 +11,7 @@ define <2 x i16> @f(<2 x i16> %a) {
 ; CHECK-DAG: fmov s0, [[REG2]]
 ; CHECK-DAG: mov [[REG3:w[0-9]+]], v0.s[1]
 ; CHECK-DAG: rbit [[REG4:w[0-9]+]], [[REG3]]
-; CHECK-DAG: ins v0.s[1], [[REG4]]
+; CHECK-DAG: mov v0.s[1], [[REG4]]
 ; CHECK-DAG: ushr v0.2s, v0.2s, #16
   %b = call <2 x i16> @llvm.bitreverse.v2i16(<2 x i16> %a)
   ret <2 x i16> %b

@@ -238,26 +238,6 @@ void test6(int x, int y) {
   }
 }
 
-void test_if_else(int x) {
-  if (x); // expected-warning{{if statement has empty body}} expected-note{{separate line}}
-
-  if (x)
-    ; // no-warning
-
-  if (x)
-    ; // no-warning
-  else
-    ; // no-warning
-
-  if (x)
-    ; // no-warning
-  else; // expected-warning{{else clause has empty body}} expected-note{{separate line}}
-
-  if (x)
-    ; // no-warning
-  else EMPTY(x); // no-warning
-}
-
 void test_errors(int x) {
   if (1)
     aa; // expected-error{{use of undeclared identifier}}
@@ -301,14 +281,3 @@ void test7(int x, int y) {
   if (x) IDENTITY(); // no-warning
 }
 
-#define SOME_IF(A) if (A)
-#define IF_ELSE(A) if (A); else
-
-
-void test_macros() {
-  SOME_IF(0);
-  IF_ELSE(0);
-
-  IDENTITY(if (0);) // expected-warning{{if statement has empty body}} expected-note{{separate line}}
-  IDENTITY(if (0); else;) // expected-warning{{else clause has empty body}} expected-note{{separate line}}}
-}

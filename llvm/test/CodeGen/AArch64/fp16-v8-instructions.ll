@@ -202,7 +202,7 @@ define <8 x half> @s_to_h(<8 x float> %a) {
 ; CHECK-LABEL: s_to_h:
 ; CHECK-DAG: fcvtn v0.4h, v0.4s
 ; CHECK-DAG: fcvtn [[REG:v[0-9+]]].4h, v1.4s
-; CHECK: ins v0.d[1], [[REG]].d[0]
+; CHECK: mov v0.d[1], [[REG]].d[0]
   %1 = fptrunc <8 x float> %a to <8 x half>
   ret <8 x half> %1
 }
@@ -221,14 +221,14 @@ define <8 x half> @d_to_h(<8 x double> %a) {
 ; CHECK-DAG: fcvt h
 ; CHECK-DAG: fcvt h
 ; CHECK-DAG: fcvt h
-; CHECK-DAG: ins v{{[0-9]+}}.h
-; CHECK-DAG: ins v{{[0-9]+}}.h
-; CHECK-DAG: ins v{{[0-9]+}}.h
-; CHECK-DAG: ins v{{[0-9]+}}.h
-; CHECK-DAG: ins v{{[0-9]+}}.h
-; CHECK-DAG: ins v{{[0-9]+}}.h
-; CHECK-DAG: ins v{{[0-9]+}}.h
-; CHECK-DAG: ins v{{[0-9]+}}.h
+; CHECK-DAG: mov v{{[0-9]+}}.h
+; CHECK-DAG: mov v{{[0-9]+}}.h
+; CHECK-DAG: mov v{{[0-9]+}}.h
+; CHECK-DAG: mov v{{[0-9]+}}.h
+; CHECK-DAG: mov v{{[0-9]+}}.h
+; CHECK-DAG: mov v{{[0-9]+}}.h
+; CHECK-DAG: mov v{{[0-9]+}}.h
+; CHECK-DAG: mov v{{[0-9]+}}.h
   %1 = fptrunc <8 x double> %a to <8 x half>
   ret <8 x half> %1
 }
@@ -243,6 +243,13 @@ define <8 x float> @h_to_s(<8 x half> %a) {
 
 define <8 x double> @h_to_d(<8 x half> %a) {
 ; CHECK-LABEL: h_to_d:
+; CHECK-DAG: mov h{{[0-9]+}}, v0.h
+; CHECK-DAG: mov h{{[0-9]+}}, v0.h
+; CHECK-DAG: mov h{{[0-9]+}}, v0.h
+; CHECK-DAG: mov h{{[0-9]+}}, v0.h
+; CHECK-DAG: mov h{{[0-9]+}}, v0.h
+; CHECK-DAG: mov h{{[0-9]+}}, v0.h
+; CHECK-DAG: mov h{{[0-9]+}}, v0.h
 ; CHECK-DAG: fcvt d
 ; CHECK-DAG: fcvt d
 ; CHECK-DAG: fcvt d
@@ -251,10 +258,6 @@ define <8 x double> @h_to_d(<8 x half> %a) {
 ; CHECK-DAG: fcvt d
 ; CHECK-DAG: fcvt d
 ; CHECK-DAG: fcvt d
-; CHECK-DAG: ins
-; CHECK-DAG: ins
-; CHECK-DAG: ins
-; CHECK-DAG: ins
   %1 = fpext <8 x half> %a to <8 x double>
   ret <8 x double> %1
 }
@@ -284,7 +287,7 @@ define <8 x half> @sitofp_i8(<8 x i8> %a) #0 {
 ; CHECK-DAG: scvtf [[LOF:v[0-9]+\.4s]], [[LO]]
 ; CHECK-DAG: fcvtn v[[LOREG:[0-9]+]].4h, [[LOF]]
 ; CHECK-DAG: fcvtn v0.4h, [[HIF]]
-; CHECK: ins v0.d[1], v[[LOREG]].d[0]
+; CHECK: mov v0.d[1], v[[LOREG]].d[0]
   %1 = sitofp <8 x i8> %a to <8 x half>
   ret <8 x half> %1
 }
@@ -298,7 +301,7 @@ define <8 x half> @sitofp_i16(<8 x i16> %a) #0 {
 ; CHECK-DAG: scvtf [[LOF:v[0-9]+\.4s]], [[LO]]
 ; CHECK-DAG: fcvtn v[[LOREG:[0-9]+]].4h, [[LOF]]
 ; CHECK-DAG: fcvtn v0.4h, [[HIF]]
-; CHECK: ins v0.d[1], v[[LOREG]].d[0]
+; CHECK: mov v0.d[1], v[[LOREG]].d[0]
   %1 = sitofp <8 x i16> %a to <8 x half>
   ret <8 x half> %1
 }
@@ -310,7 +313,7 @@ define <8 x half> @sitofp_i32(<8 x i32> %a) #0 {
 ; CHECK-DAG: scvtf [[OP2:v[0-9]+\.4s]], v1.4s
 ; CHECK-DAG: fcvtn v[[REG:[0-9]+]].4h, [[OP2]]
 ; CHECK-DAG: fcvtn v0.4h, [[OP1]]
-; CHECK: ins v0.d[1], v[[REG]].d[0]
+; CHECK: mov v0.d[1], v[[REG]].d[0]
   %1 = sitofp <8 x i32> %a to <8 x half>
   ret <8 x half> %1
 }
@@ -336,7 +339,7 @@ define <8 x half> @uitofp_i8(<8 x i8> %a) #0 {
 ; CHECK-DAG: ucvtf [[LOF:v[0-9]+\.4s]], [[LO]]
 ; CHECK-DAG: fcvtn v[[LOREG:[0-9]+]].4h, [[LOF]]
 ; CHECK-DAG: fcvtn v0.4h, [[HIF]]
-; CHECK: ins v0.d[1], v[[LOREG]].d[0]
+; CHECK: mov v0.d[1], v[[LOREG]].d[0]
   %1 = uitofp <8 x i8> %a to <8 x half>
   ret <8 x half> %1
 }
@@ -350,7 +353,7 @@ define <8 x half> @uitofp_i16(<8 x i16> %a) #0 {
 ; CHECK-DAG: ucvtf [[LOF:v[0-9]+\.4s]], [[LO]]
 ; CHECK-DAG: fcvtn v[[LOREG:[0-9]+]].4h, [[LOF]]
 ; CHECK-DAG: fcvtn v0.4h, [[HIF]]
-; CHECK: ins v0.d[1], v[[LOREG]].d[0]
+; CHECK: mov v0.d[1], v[[LOREG]].d[0]
   %1 = uitofp <8 x i16> %a to <8 x half>
   ret <8 x half> %1
 }
@@ -362,7 +365,7 @@ define <8 x half> @uitofp_i32(<8 x i32> %a) #0 {
 ; CHECK-DAG: ucvtf [[OP2:v[0-9]+\.4s]], v1.4s
 ; CHECK-DAG: fcvtn v[[REG:[0-9]+]].4h, [[OP2]]
 ; CHECK-DAG: fcvtn v0.4h, [[OP1]]
-; CHECK: ins v0.d[1], v[[REG]].d[0]
+; CHECK: mov v0.d[1], v[[REG]].d[0]
   %1 = uitofp <8 x i32> %a to <8 x half>
   ret <8 x half> %1
 }

@@ -780,7 +780,7 @@ define double @sel_constants_frem_constant(i1 %cond) {
 ; ALL-NEXT:  .LBB38_2:
 ; ALL-NEXT:    addis 3, 2, .LCPI38_1@toc@ha
 ; ALL-NEXT:    addi 3, 3, .LCPI38_1@toc@l
-; ALL-NEXT:    lxsspx 1, 0, 3
+; ALL-NEXT:    lfsx 1, 0, 3
 ; ALL-NEXT:    blr
   %sel = select i1 %cond, double -4.0, double 23.3
   %bo = frem double %sel, 5.1

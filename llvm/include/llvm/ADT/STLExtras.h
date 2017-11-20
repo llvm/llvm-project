@@ -130,6 +130,52 @@ inline void deleter(T *Ptr) {
 //     Extra additions to <iterator>
 //===----------------------------------------------------------------------===//
 
+namespace adl_detail {
+
+using std::begin;
+
+template <typename ContainerTy>
+auto adl_begin(ContainerTy &&container)
+    -> decltype(begin(std::forward<ContainerTy>(container))) {
+  return begin(std::forward<ContainerTy>(container));
+}
+
+using std::end;
+
+template <typename ContainerTy>
+auto adl_end(ContainerTy &&container)
+    -> decltype(end(std::forward<ContainerTy>(container))) {
+  return end(std::forward<ContainerTy>(container));
+}
+
+using std::swap;
+
+template <typename T>
+void adl_swap(T &&lhs, T &&rhs) noexcept(noexcept(swap(std::declval<T>(),
+                                                       std::declval<T>()))) {
+  swap(std::forward<T>(lhs), std::forward<T>(rhs));
+}
+
+} // end namespace adl_detail
+
+template <typename ContainerTy>
+auto adl_begin(ContainerTy &&container)
+    -> decltype(adl_detail::adl_begin(std::forward<ContainerTy>(container))) {
+  return adl_detail::adl_begin(std::forward<ContainerTy>(container));
+}
+
+template <typename ContainerTy>
+auto adl_end(ContainerTy &&container)
+    -> decltype(adl_detail::adl_end(std::forward<ContainerTy>(container))) {
+  return adl_detail::adl_end(std::forward<ContainerTy>(container));
+}
+
+template <typename T>
+void adl_swap(T &&lhs, T &&rhs) noexcept(
+    noexcept(adl_detail::adl_swap(std::declval<T>(), std::declval<T>()))) {
+  adl_detail::adl_swap(std::forward<T>(lhs), std::forward<T>(rhs));
+}
+
 // mapped_iterator - This is a simple iterator adapter that causes a function to
 // be applied whenever operator* is invoked on the iterator.
 
@@ -758,106 +804,105 @@ void DeleteContainerSeconds(Container &C) {
 /// pass begin/end explicitly.
 template <typename R, typename UnaryPredicate>
 UnaryPredicate for_each(R &&Range, UnaryPredicate P) {
-  return std::for_each(std::begin(Range), std::end(Range), P);
+  return std::for_each(adl_begin(Range), adl_end(Range), P);
 }
 
 /// Provide wrappers to std::all_of which take ranges instead of having to pass
 /// begin/end explicitly.
 template <typename R, typename UnaryPredicate>
 bool all_of(R &&Range, UnaryPredicate P) {
-  return std::all_of(std::begin(Range), std::end(Range), P);
+  return std::all_of(adl_begin(Range), adl_end(Range), P);
 }
 
 /// Provide wrappers to std::any_of which take ranges instead of having to pass
 /// begin/end explicitly.
 template <typename R, typename UnaryPredicate>
 bool any_of(R &&Range, UnaryPredicate P) {
-  return std::any_of(std::begin(Range), std::end(Range), P);
+  return std::any_of(adl_begin(Range), adl_end(Range), P);
 }
 
 /// Provide wrappers to std::none_of which take ranges instead of having to pass
 /// begin/end explicitly.
 template <typename R, typename UnaryPredicate>
 bool none_of(R &&Range, UnaryPredicate P) {
-  return std::none_of(std::begin(Range), std::end(Range), P);
+  return std::none_of(adl_begin(Range), adl_end(Range), P);
 }
 
 /// Provide wrappers to std::find which take ranges instead of having to pass
 /// begin/end explicitly.
 template <typename R, typename T>
-auto find(R &&Range, const T &Val) -> decltype(std::begin(Range)) {
-  return std::find(std::begin(Range), std::end(Range), Val);
+auto find(R &&Range, const T &Val) -> decltype(adl_begin(Range)) {
+  return std::find(adl_begin(Range), adl_end(Range), Val);
 }
 
 /// Provide wrappers to std::find_if which take ranges instead of having to pass
 /// begin/end explicitly.
 template <typename R, typename UnaryPredicate>
-auto find_if(R &&Range, UnaryPredicate P) -> decltype(std::begin(Range)) {
-  return std::find_if(std::begin(Range), std::end(Range), P);
+auto find_if(R &&Range, UnaryPredicate P) -> decltype(adl_begin(Range)) {
+  return std::find_if(adl_begin(Range), adl_end(Range), P);
 }
 
 template <typename R, typename UnaryPredicate>
-auto find_if_not(R &&Range, UnaryPredicate P) -> decltype(std::begin(Range)) {
-  return std::find_if_not(std::begin(Range), std::end(Range), P);
+auto find_if_not(R &&Range, UnaryPredicate P) -> decltype(adl_begin(Range)) {
+  return std::find_if_not(adl_begin(Range), adl_end(Range), P);
 }
 
 /// Provide wrappers to std::remove_if which take ranges instead of having to
 /// pass begin/end explicitly.
 template <typename R, typename UnaryPredicate>
-auto remove_if(R &&Range, UnaryPredicate P) -> decltype(std::begin(Range)) {
-  return std::remove_if(std::begin(Range), std::end(Range), P);
+auto remove_if(R &&Range, UnaryPredicate P) -> decltype(adl_begin(Range)) {
+  return std::remove_if(adl_begin(Range), adl_end(Range), P);
 }
 
 /// Provide wrappers to std::copy_if which take ranges instead of having to
 /// pass begin/end explicitly.
 template <typename R, typename OutputIt, typename UnaryPredicate>
 OutputIt copy_if(R &&Range, OutputIt Out, UnaryPredicate P) {
-  return std::copy_if(std::begin(Range), std::end(Range), Out, P);
+  return std::copy_if(adl_begin(Range), adl_end(Range), Out, P);
 }
 
 /// Wrapper function around std::find to detect if an element exists
 /// in a container.
 template <typename R, typename E>
 bool is_contained(R &&Range, const E &Element) {
-  return std::find(std::begin(Range), std::end(Range), Element) !=
-         std::end(Range);
+  return std::find(adl_begin(Range), adl_end(Range), Element) != adl_end(Range);
 }
 
 /// Wrapper function around std::count to count the number of times an element
 /// \p Element occurs in the given range \p Range.
 template <typename R, typename E>
-auto count(R &&Range, const E &Element) -> typename std::iterator_traits<
-    decltype(std::begin(Range))>::difference_type {
-  return std::count(std::begin(Range), std::end(Range), Element);
+auto count(R &&Range, const E &Element) ->
+    typename std::iterator_traits<decltype(adl_begin(Range))>::difference_type {
+  return std::count(adl_begin(Range), adl_end(Range), Element);
 }
 
 /// Wrapper function around std::count_if to count the number of times an
 /// element satisfying a given predicate occurs in a range.
 template <typename R, typename UnaryPredicate>
-auto count_if(R &&Range, UnaryPredicate P) -> typename std::iterator_traits<
-    decltype(std::begin(Range))>::difference_type {
-  return std::count_if(std::begin(Range), std::end(Range), P);
+auto count_if(R &&Range, UnaryPredicate P) ->
+    typename std::iterator_traits<decltype(adl_begin(Range))>::difference_type {
+  return std::count_if(adl_begin(Range), adl_end(Range), P);
 }
 
 /// Wrapper function around std::transform to apply a function to a range and
 /// store the result elsewhere.
 template <typename R, typename OutputIt, typename UnaryPredicate>
 OutputIt transform(R &&Range, OutputIt d_first, UnaryPredicate P) {
-  return std::transform(std::begin(Range), std::end(Range), d_first, P);
+  return std::transform(adl_begin(Range), adl_end(Range), d_first, P);
 }
 
 /// Provide wrappers to std::partition which take ranges instead of having to
 /// pass begin/end explicitly.
 template <typename R, typename UnaryPredicate>
-auto partition(R &&Range, UnaryPredicate P) -> decltype(std::begin(Range)) {
-  return std::partition(std::begin(Range), std::end(Range), P);
+auto partition(R &&Range, UnaryPredicate P) -> decltype(adl_begin(Range)) {
+  return std::partition(adl_begin(Range), adl_end(Range), P);
 }
 
 /// Provide wrappers to std::lower_bound which take ranges instead of having to
 /// pass begin/end explicitly.
 template <typename R, typename ForwardIt>
-auto lower_bound(R &&Range, ForwardIt I) -> decltype(std::begin(Range)) {
-  return std::lower_bound(std::begin(Range), std::end(Range), I);
+auto lower_bound(R &&Range, ForwardIt I) -> decltype(adl_begin(Range)) {
+  return std::lower_bound(adl_begin(Range), adl_end(Range), I);
 }
 
 /// \brief Given a range of type R, iterate the entire range and return a
@@ -866,7 +911,7 @@ auto lower_bound(R &&Range, ForwardIt I) -> decltype(std::begin(Range)) {
 template <unsigned Size, typename R>
 SmallVector<typename std::remove_const<detail::ValueOfRange<R>>::type, Size>
 to_vector(R &&Range) {
-  return {std::begin(Range), std::end(Range)};
+  return {adl_begin(Range), adl_end(Range)};
 }
 
 /// Provide a container algorithm similar to C++ Library Fundamentals v2's

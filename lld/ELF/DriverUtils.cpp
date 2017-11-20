@@ -160,6 +160,7 @@ std::string elf::createResponseFile(const opt::InputArgList &Args) {
     case OPT_rpath:
     case OPT_script:
     case OPT_symbol_ordering_file:
+    case OPT_sysroot:
     case OPT_version_script:
       OS << Arg->getSpelling() << " " << quote(rewritePath(Arg->getValue()))
          << "\n";
@@ -206,4 +207,13 @@ Optional<std::string> elf::searchLibrary(StringRef Name) {
       return S;
   }
   return None;
+}
+
+// If a linker script doesn't exist in the current directory, we also look for
+// the script in the '-L' search paths. This matches the behaviour of both '-T'
+// and linker script INPUT() directives in ld.bfd.
+Optional<std::string> elf::searchLinkerScript(StringRef Name) {
+  if (fs::exists(Name))
+    return Name.str();
+  return findFromSearchPaths(Name);
 }

@@ -38,11 +38,11 @@ entry:
 ; GCN-DAG: s_add_u32 s32, s32, 0xb00{{$}}
 
 ; GCN-DAG: buffer_load_dword [[LOAD0:v[0-9]+]], off, s[0:3], s5 offset:4{{$}}
-; GCN: v_add_i32_e32 [[ADD0:v[0-9]+]], vcc, 1, [[LOAD0]]
+; GCN: v_add_{{[iu]}}32_e32 [[ADD0:v[0-9]+]], vcc, 1, [[LOAD0]]
 ; GCN: buffer_store_dword [[ADD0]], off, s[0:3], s5 offset:4{{$}}
 
 ; GCN: buffer_load_dword [[LOAD1:v[0-9]+]], off, s[0:3], s5 offset:20{{$}}
-; GCN: v_add_i32_e32 [[ADD1:v[0-9]+]], vcc, 2, [[LOAD1]]
+; GCN: v_add_{{[iu]}}32_e32 [[ADD1:v[0-9]+]], vcc, 2, [[LOAD1]]
 
 ; GCN: s_swappc_b64
 

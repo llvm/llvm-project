@@ -20,7 +20,7 @@ entry:
 ; BOTH-LABEL: {{^}}v_rotl_i64:
 ; SI-DAG: v_lshl_b64
 ; VI-DAG: v_lshlrev_b64
-; BOTH-DAG: v_sub_i32
+; BOTH-DAG: v_sub_{{[iu]}}32
 ; SI: v_lshr_b64
 ; VI: v_lshrrev_b64
 ; BOTH: v_or_b32

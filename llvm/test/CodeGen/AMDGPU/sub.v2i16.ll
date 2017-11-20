@@ -49,8 +49,8 @@ define amdgpu_kernel void @s_test_sub_self_v2i16(<2 x i16> addrspace(1)* %out, <
 ; GCN-LABEL: {{^}}s_test_sub_v2i16_kernarg:
 ; GFX9: v_pk_sub_i16 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
 
-; VI: v_subrev_i32_e32
-; VI: v_subrev_i32_sdwa v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI: v_subrev_u32_e32
+; VI: v_subrev_u32_sdwa v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 define amdgpu_kernel void @s_test_sub_v2i16_kernarg(<2 x i16> addrspace(1)* %out, <2 x i16> %a, <2 x i16> %b) #1 {
   %add = sub <2 x i16> %a, %b
   store <2 x i16> %add, <2 x i16> addrspace(1)* %out

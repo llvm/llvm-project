@@ -560,7 +560,7 @@ done:
 }
 
 ; GCN-LABEL: {{^}}move_to_valu_vgpr_operand_phi:
-; GCN: v_add_i32_e32
+; GCN: v_add_{{[iu]}}32_e32
 ; GCN: ds_write_b32
 define void @move_to_valu_vgpr_operand_phi(i32 addrspace(3)* %out) {
 bb0:

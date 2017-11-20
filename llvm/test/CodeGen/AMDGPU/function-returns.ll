@@ -396,100 +396,100 @@ define void @void_func_sret_struct_i8_i32({ i8, i32 }* sret %arg0) #0 {
 
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_4:v[0-9]+]], vcc, 4, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_4:v[0-9]+]], vcc, 4, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_4]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_8:v[0-9]+]], vcc, 8, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_8:v[0-9]+]], vcc, 8, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_8]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_12:v[0-9]+]], vcc, 12, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_12:v[0-9]+]], vcc, 12, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_12]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_16:v[0-9]+]], vcc, 16, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_16:v[0-9]+]], vcc, 16, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_16]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_20:v[0-9]+]], vcc, 20, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_20:v[0-9]+]], vcc, 20, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_20]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_24:v[0-9]+]], vcc, 24, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_24:v[0-9]+]], vcc, 24, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_24]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_28:v[0-9]+]], vcc, 28, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_28:v[0-9]+]], vcc, 28, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_28]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_32:v[0-9]+]], vcc, 32, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_32:v[0-9]+]], vcc, 32, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_32]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_36:v[0-9]+]], vcc, 36, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_36:v[0-9]+]], vcc, 36, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_36]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_40:v[0-9]+]], vcc, 40, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_40:v[0-9]+]], vcc, 40, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_40]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_44:v[0-9]+]], vcc, 44, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_44:v[0-9]+]], vcc, 44, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_44]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_48:v[0-9]+]], vcc, 48, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_48:v[0-9]+]], vcc, 48, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_48]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_52:v[0-9]+]], vcc, 52, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_52:v[0-9]+]], vcc, 52, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_52]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_56:v[0-9]+]], vcc, 56, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_56:v[0-9]+]], vcc, 56, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_56]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_60:v[0-9]+]], vcc, 60, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_60:v[0-9]+]], vcc, 60, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_60]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_64:v[0-9]+]], vcc, 64, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_64:v[0-9]+]], vcc, 64, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_64]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_68:v[0-9]+]], vcc, 0x44, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_68:v[0-9]+]], vcc, 0x44, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_68]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_72:v[0-9]+]], vcc, 0x48, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_72:v[0-9]+]], vcc, 0x48, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_72]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_76:v[0-9]+]], vcc, 0x4c, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_76:v[0-9]+]], vcc, 0x4c, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_76]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_80:v[0-9]+]], vcc, 0x50, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_80:v[0-9]+]], vcc, 0x50, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_80]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_84:v[0-9]+]], vcc, 0x54, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_84:v[0-9]+]], vcc, 0x54, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_84]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_88:v[0-9]+]], vcc, 0x58, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_88:v[0-9]+]], vcc, 0x58, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_88]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_92:v[0-9]+]], vcc, 0x5c, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_92:v[0-9]+]], vcc, 0x5c, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_92]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_96:v[0-9]+]], vcc, 0x60, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_96:v[0-9]+]], vcc, 0x60, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_96]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_100:v[0-9]+]], vcc, 0x64, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_100:v[0-9]+]], vcc, 0x64, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_100]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_104:v[0-9]+]], vcc, 0x68, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_104:v[0-9]+]], vcc, 0x68, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_104]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_108:v[0-9]+]], vcc, 0x6c, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_108:v[0-9]+]], vcc, 0x6c, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_108]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_112:v[0-9]+]], vcc, 0x70, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_112:v[0-9]+]], vcc, 0x70, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_112]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_116:v[0-9]+]], vcc, 0x74, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_116:v[0-9]+]], vcc, 0x74, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_116]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_120:v[0-9]+]], vcc, 0x78, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_120:v[0-9]+]], vcc, 0x78, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_120]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_124:v[0-9]+]], vcc, 0x7c, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_124:v[0-9]+]], vcc, 0x7c, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_124]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_128:v[0-9]+]], vcc, 0x80, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_128:v[0-9]+]], vcc, 0x80, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_128]], s[0:3], s4 offen{{$}}
 
 ; GCN: buffer_load_dword v34
@@ -510,100 +510,100 @@ define <33 x i32> @v33i32_func_void() #0 {
 
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_4:v[0-9]+]], vcc, 4, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_4:v[0-9]+]], vcc, 4, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_4]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_8:v[0-9]+]], vcc, 8, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_8:v[0-9]+]], vcc, 8, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_8]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_12:v[0-9]+]], vcc, 12, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_12:v[0-9]+]], vcc, 12, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_12]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_16:v[0-9]+]], vcc, 16, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_16:v[0-9]+]], vcc, 16, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_16]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_20:v[0-9]+]], vcc, 20, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_20:v[0-9]+]], vcc, 20, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_20]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_24:v[0-9]+]], vcc, 24, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_24:v[0-9]+]], vcc, 24, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_24]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_28:v[0-9]+]], vcc, 28, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_28:v[0-9]+]], vcc, 28, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_28]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_32:v[0-9]+]], vcc, 32, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_32:v[0-9]+]], vcc, 32, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_32]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_36:v[0-9]+]], vcc, 36, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_36:v[0-9]+]], vcc, 36, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_36]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_40:v[0-9]+]], vcc, 40, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_40:v[0-9]+]], vcc, 40, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_40]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_44:v[0-9]+]], vcc, 44, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_44:v[0-9]+]], vcc, 44, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_44]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_48:v[0-9]+]], vcc, 48, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_48:v[0-9]+]], vcc, 48, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_48]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_52:v[0-9]+]], vcc, 52, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_52:v[0-9]+]], vcc, 52, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_52]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_56:v[0-9]+]], vcc, 56, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_56:v[0-9]+]], vcc, 56, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_56]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_60:v[0-9]+]], vcc, 60, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_60:v[0-9]+]], vcc, 60, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_60]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_64:v[0-9]+]], vcc, 64, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_64:v[0-9]+]], vcc, 64, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_64]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_68:v[0-9]+]], vcc, 0x44, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_68:v[0-9]+]], vcc, 0x44, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_68]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_72:v[0-9]+]], vcc, 0x48, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_72:v[0-9]+]], vcc, 0x48, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_72]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_76:v[0-9]+]], vcc, 0x4c, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_76:v[0-9]+]], vcc, 0x4c, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_76]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_80:v[0-9]+]], vcc, 0x50, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_80:v[0-9]+]], vcc, 0x50, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_80]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_84:v[0-9]+]], vcc, 0x54, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_84:v[0-9]+]], vcc, 0x54, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_84]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_88:v[0-9]+]], vcc, 0x58, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_88:v[0-9]+]], vcc, 0x58, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_88]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_92:v[0-9]+]], vcc, 0x5c, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_92:v[0-9]+]], vcc, 0x5c, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_92]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_96:v[0-9]+]], vcc, 0x60, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_96:v[0-9]+]], vcc, 0x60, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_96]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_100:v[0-9]+]], vcc, 0x64, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_100:v[0-9]+]], vcc, 0x64, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_100]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_104:v[0-9]+]], vcc, 0x68, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_104:v[0-9]+]], vcc, 0x68, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_104]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_108:v[0-9]+]], vcc, 0x6c, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_108:v[0-9]+]], vcc, 0x6c, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_108]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_112:v[0-9]+]], vcc, 0x70, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_112:v[0-9]+]], vcc, 0x70, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_112]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_116:v[0-9]+]], vcc, 0x74, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_116:v[0-9]+]], vcc, 0x74, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_116]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_120:v[0-9]+]], vcc, 0x78, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_120:v[0-9]+]], vcc, 0x78, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_120]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_124:v[0-9]+]], vcc, 0x7c, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_124:v[0-9]+]], vcc, 0x7c, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_124]], s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_128:v[0-9]+]], vcc, 0x80, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_128:v[0-9]+]], vcc, 0x80, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_128]], s[0:3], s4 offen{{$}}
 
 ; GCN: buffer_load_dword v34
@@ -623,11 +623,11 @@ define { <32 x i32>, i32 } @struct_v32i32_i32_func_void() #0 {
 
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, v0, s[0:3], s4 offen{{$}}
 
-; GCN-DAG: v_add_i32_e32 [[ADD_128:v[0-9]+]], vcc, 0x80, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_128:v[0-9]+]], vcc, 0x80, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_128]], s[0:3], s4 offen{{$}}
 
 
-; GCN-DAG: v_add_i32_e32 [[ADD_256:v[0-9]+]], vcc, 0xfc, v0
+; GCN-DAG: v_add_{{[_coiu]*}}32_e32 [[ADD_256:v[0-9]+]], vcc, 0xfc, v0
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ADD_256]], s[0:3], s4 offen{{$}}
 
 ; GCN: buffer_load_dword v33

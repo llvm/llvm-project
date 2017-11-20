@@ -54,8 +54,6 @@ public:
   /// be a list of strings starting with by '+' or '-'.
   std::vector<std::string> Features;
 
-  std::vector<std::string> Reciprocals;
-
   /// Supported OpenCL extensions and optional core features.
   OpenCLOptions SupportedOpenCLOptions;
 

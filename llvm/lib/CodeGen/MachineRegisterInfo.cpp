@@ -487,6 +487,13 @@ bool MachineRegisterInfo::isConstantPhysReg(unsigned PhysReg) const {
   return true;
 }
 
+bool
+MachineRegisterInfo::isCallerPreservedOrConstPhysReg(unsigned PhysReg) const {
+  const TargetRegisterInfo *TRI = getTargetRegisterInfo();
+  return isConstantPhysReg(PhysReg) ||
+      TRI->isCallerPreservedPhysReg(PhysReg, *MF);
+}
+
 /// markUsesInDebugValueAsUndef - Mark every DBG_VALUE referencing the
 /// specified register as undefined which causes the DBG_VALUE to be
 /// deleted during LiveDebugVariables analysis.
