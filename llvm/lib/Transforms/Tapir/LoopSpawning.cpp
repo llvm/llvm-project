@@ -532,8 +532,9 @@ PHINode* LoopOutline::canonicalizeIVs(Type *Ty) {
 
   BasicBlock* Header = L->getHeader();
   Module* M = Header->getParent()->getParent();
+  const DataLayout &DL = M->getDataLayout();
 
-  SCEVExpander Exp(SE, M->getDataLayout(), "ls");
+  SCEVExpander Exp(SE, DL, "ls");
 
   PHINode *CanonicalIV = Exp.getOrInsertCanonicalInductionVariable(L, Ty);
   DEBUG(dbgs() << "LS Canonical induction variable " << *CanonicalIV << "\n");
@@ -875,6 +876,32 @@ static void getEHExits(Loop *L, const BasicBlock *DesignatedExitBlock,
   }
 }
 
+/// Convert a pointer to an integer type.
+///
+/// Copied from Transforms/Vectorizer/LoopVectorize.cpp.
+static Type *convertPointerToIntegerType(const DataLayout &DL, Type *Ty) {
+  if (Ty->isPointerTy())
+    return DL.getIntPtrType(Ty);
+
+  // It is possible that char's or short's overflow when we ask for the loop's
+  // trip count, work around this by changing the type size.
+  if (Ty->getScalarSizeInBits() < 32)
+    return Type::getInt32Ty(Ty->getContext());
+
+  return Ty;
+}
+
+/// Get the wider of two integer types.
+///
+/// Copied from Transforms/Vectorizer/LoopVectorize.cpp.
+static Type *getWiderType(const DataLayout &DL, Type *Ty0, Type *Ty1) {
+  Ty0 = convertPointerToIntegerType(DL, Ty0);
+  Ty1 = convertPointerToIntegerType(DL, Ty1);
+  if (Ty0->getScalarSizeInBits() > Ty1->getScalarSizeInBits())
+    return Ty0;
+  return Ty1;
+}
+
 /// Top-level call to convert loop to spawn its iterations in a
 /// divide-and-conquer fashion.
 bool DACLoopSpawning::processLoop() {
@@ -968,8 +995,19 @@ bool DACLoopSpawning::processLoop() {
   // ORE.emit(OptimizationRemarkAnalysis(LS_NAME, "LoopLimit", L->getStartLoc(),
   //                                     Header)
   //          << "loop limit: " << NV("Limit", Limit));
+  /// Determine the type of the canonical IV.
+  Type *CanonicalIVTy = Limit->getType();
+  {
+    const DataLayout &DL = M->getDataLayout();
+    for (BasicBlock::iterator II = Header->begin(); isa<PHINode>(II); ++II) {
+      PHINode *PN = cast<PHINode>(II);
+      if (PN->getType()->isFloatingPointTy()) continue;
+      CanonicalIVTy = getWiderType(DL, PN->getType(), CanonicalIVTy);
+    }
+    Limit = SE.getNoopOrAnyExtend(Limit, CanonicalIVTy);
+  }
   /// Clean up the loop's induction variables.
-  PHINode *CanonicalIV = canonicalizeIVs(Limit->getType());
+  PHINode *CanonicalIV = canonicalizeIVs(CanonicalIVTy);
   if (!CanonicalIV) {
     DEBUG(dbgs() << "Could not get canonical IV.\n");
     // emitAnalysis(LoopSpawningReport()
@@ -1085,7 +1123,7 @@ bool DACLoopSpawning::processLoop() {
     return false;
 
   // Insert the computation for the loop limit into the Preheader.
-  Value *LimitVar = Exp.expandCodeFor(Limit, Limit->getType(),
+  Value *LimitVar = Exp.expandCodeFor(Limit, CanonicalIVTy,
                                       Preheader->getTerminator());
   DEBUG(dbgs() << "LimitVar: " << *LimitVar << "\n");
 
