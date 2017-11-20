@@ -82,10 +82,8 @@ bool ICF::isEligible(SectionChunk *C) {
   if (!C->isCOMDAT() || !C->isLive() || Writable)
     return false;
 
-  // Code sections with external symbols are eligible.
-  bool Global = C->Sym && C->Sym->isExternal();
-  bool Executable = C->getPermissions() & llvm::COFF::IMAGE_SCN_MEM_EXECUTE;
-  if (Global && Executable)
+  // Code sections are eligible.
+  if (C->getPermissions() & llvm::COFF::IMAGE_SCN_MEM_EXECUTE)
     return true;
 
   // .xdata unwind info sections are eligble.
