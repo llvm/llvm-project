@@ -97,7 +97,14 @@ void addCygMingDefines(const LangOptions &Opts, MacroBuilder &Builder) {
   }
 }
 
-void addMinGWDefines(const LangOptions &Opts, MacroBuilder &Builder) {
+void addMinGWDefines(const llvm::Triple &Triple, const LangOptions &Opts,
+                     MacroBuilder &Builder) {
+  DefineStd(Builder, "WIN32", Opts);
+  DefineStd(Builder, "WINNT", Opts);
+  if (Triple.isArch64Bit()) {
+    DefineStd(Builder, "WIN64", Opts);
+    Builder.defineMacro("__MINGW64__");
+  }
   Builder.defineMacro("__MSVCRT__");
   Builder.defineMacro("__MINGW32__");
   addCygMingDefines(Opts, Builder);

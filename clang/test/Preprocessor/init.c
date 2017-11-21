@@ -1438,6 +1438,11 @@
 // AARCH64-DARWIN: #define __WINT_WIDTH__ 32
 // AARCH64-DARWIN: #define __aarch64__ 1
 
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=thumbv7-windows-msvc < /dev/null | FileCheck -match-full-lines -check-prefix ARM-MSVC %s
+//
+// ARM-MSVC: #define _M_ARM_NT 1
+// ARM-MSVC: #define _WIN32 1
+
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=aarch64-windows-msvc < /dev/null | FileCheck -match-full-lines -check-prefix AARCH64-MSVC %s
 //
 // AARCH64-MSVC: #define _INTEGRAL_MAX_BITS 64

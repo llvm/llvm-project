@@ -854,13 +854,7 @@ class AESAI<bits<8> o, Format F, dag outs, dag ins, string asm,
 // PCLMUL Instruction Templates
 class PCLMULIi8<bits<8> o, Format F, dag outs, dag ins, string asm,
                list<dag>pattern, InstrItinClass itin = NoItinerary>
-      : Ii8<o, F, outs, ins, asm, pattern, itin, SSEPackedInt>, TAPD,
-        Requires<[NoAVX, HasPCLMUL]>;
-
-class AVXPCLMULIi8<bits<8> o, Format F, dag outs, dag ins, string asm,
-                  list<dag>pattern, InstrItinClass itin = NoItinerary>
-      : Ii8<o, F, outs, ins, asm, pattern, itin, SSEPackedInt>, TAPD,
-        VEX_4V, Requires<[HasAVX, HasPCLMUL]>;
+      : Ii8<o, F, outs, ins, asm, pattern, itin, SSEPackedInt>, TAPD;
 
 // FMA3 Instruction Templates
 class FMA3<bits<8> o, Format F, dag outs, dag ins, string asm,

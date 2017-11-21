@@ -16171,7 +16171,7 @@ static void checkModuleImportContext(Sema &S, Module *M,
     DC = LSD->getParent();
   }
 
-  while (isa<LinkageSpecDecl>(DC))
+  while (isa<LinkageSpecDecl>(DC) || isa<ExportDecl>(DC))
     DC = DC->getParent();
 
   if (!isa<TranslationUnitDecl>(DC)) {
@@ -16349,12 +16349,17 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
     IdentifierLocs.push_back(Path[I].second);
   }
 
-  TranslationUnitDecl *TU = getASTContext().getTranslationUnitDecl();
-  ImportDecl *Import = ImportDecl::Create(Context, TU, StartLoc,
+  ImportDecl *Import = ImportDecl::Create(Context, CurContext, StartLoc,
                                           Mod, IdentifierLocs);
   if (!ModuleScopes.empty())
     Context.addModuleInitializer(ModuleScopes.back().Module, Import);
-  TU->addDecl(Import);
+  CurContext->addDecl(Import);
+
+  // Re-export the module if needed.
+  if (Import->isExported() &&
+      !ModuleScopes.empty() && ModuleScopes.back().ModuleInterface)
+    getCurrentModule()->Exports.emplace_back(Mod, false);
+
   return Import;
 }
 

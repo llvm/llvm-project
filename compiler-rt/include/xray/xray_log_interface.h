@@ -223,10 +223,17 @@ XRayLogFlushStatus __xray_log_flushLog();
 
 namespace __xray {
 
-// Options used by the LLVM XRay FDR implementation.
+/// Options used by the LLVM XRay FDR logging implementation.
 struct FDRLoggingOptions {
   bool ReportErrors = false;
   int Fd = -1;
+};
+
+/// Options used by the LLVM XRay Basic (Naive) logging implementation.
+struct BasicLoggingOptions {
+  int DurationFilterMicros = 0;
+  size_t MaxStackDepth = 0;
+  size_t ThreadBufferSize = 0;
 };
 
 } // namespace __xray

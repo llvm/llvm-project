@@ -410,11 +410,6 @@ public:
                         ? "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
                         : "e-m:e-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32");
   }
-
-  void getTargetDefines(const LangOptions &Opts,
-                        MacroBuilder &Builder) const override {
-    WindowsTargetInfo<X86_32TargetInfo>::getTargetDefines(Opts, Builder);
-  }
 };
 
 // x86-32 Windows Visual Studio target
@@ -451,10 +446,7 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override {
     WindowsX86_32TargetInfo::getTargetDefines(Opts, Builder);
-    DefineStd(Builder, "WIN32", Opts);
-    DefineStd(Builder, "WINNT", Opts);
     Builder.defineMacro("_X86_");
-    addMinGWDefines(Opts, Builder);
   }
 };
 
@@ -658,12 +650,6 @@ public:
     IntPtrType = SignedLongLong;
   }
 
-  void getTargetDefines(const LangOptions &Opts,
-                        MacroBuilder &Builder) const override {
-    WindowsTargetInfo<X86_64TargetInfo>::getTargetDefines(Opts, Builder);
-    Builder.defineMacro("_WIN64");
-  }
-
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return TargetInfo::CharPtrBuiltinVaList;
   }
@@ -726,9 +712,6 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override {
     WindowsX86_64TargetInfo::getTargetDefines(Opts, Builder);
-    DefineStd(Builder, "WIN64", Opts);
-    Builder.defineMacro("__MINGW64__");
-    addMinGWDefines(Opts, Builder);
 
     // GCC defines this macro when it is using __gxx_personality_seh0.
     if (!Opts.SjLjExceptions)
