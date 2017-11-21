@@ -344,7 +344,7 @@ bool Parser::parseUnicode(std::string &Out) {
     uint16_t Second;
     if (!Parse4Hex(Second))
       return false;
-    if (Second < 0xDC00 && Second >= 0xE000) {
+    if (Second < 0xDC00 || Second >= 0xE000) {
       Invalid();      // Leading surrogate not followed by trailing.
       First = Second; // Second escape still needs to be processed.
       continue;
