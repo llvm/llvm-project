@@ -107,29 +107,7 @@ static bool isValidBaseType(QualType QTy) {
   return false;
 }
 
-llvm::MDNode *CodeGenTBAA::getTypeInfo(QualType QTy) {
-  // At -O0 or relaxed aliasing, TBAA is not emitted for regular types.
-  if (CodeGenOpts.OptimizationLevel == 0 || CodeGenOpts.RelaxedAliasing)
-    return nullptr;
-
-  // If the type has the may_alias attribute (even on a typedef), it is
-  // effectively in the general char alias class.
-  if (TypeHasMayAlias(QTy))
-    return getChar();
-
-  // We need this function to not fall back to returning the "omnipotent char"
-  // type node for aggregate and union types. Otherwise, any dereference of an
-  // aggregate will result into the may-alias access descriptor, meaning all
-  // subsequent accesses to direct and indirect members of that aggregate will
-  // be considered may-alias too.
-  // TODO: Combine getTypeInfo() and getBaseTypeInfo() into a single function.
-  if (isValidBaseType(QTy))
-    return getBaseTypeInfo(QTy);
-
-  const Type *Ty = Context.getCanonicalType(QTy).getTypePtr();
-  if (llvm::MDNode *N = MetadataCache[Ty])
-    return N;
-
+llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
   // Handle builtin types.
   if (const BuiltinType *BTy = dyn_cast<BuiltinType>(Ty)) {
     switch (BTy->getKind()) {
@@ -160,8 +138,7 @@ llvm::MDNode *CodeGenTBAA::getTypeInfo(QualType QTy) {
     // treating wchar_t, char16_t, and char32_t as distinct from their
     // "underlying types".
     default:
-      return MetadataCache[Ty] =
-        createTBAAScalarType(BTy->getName(Features), getChar());
+      return createTBAAScalarType(BTy->getName(Features), getChar());
     }
   }
 
@@ -169,14 +146,13 @@ llvm::MDNode *CodeGenTBAA::getTypeInfo(QualType QTy) {
   // an object through a glvalue of other than one of the following types the
   // behavior is undefined: [...] a char, unsigned char, or std::byte type."
   if (Ty->isStdByteType())
-    return MetadataCache[Ty] = getChar();
+    return getChar();
 
   // Handle pointers and references.
   // TODO: Implement C++'s type "similarity" and consider dis-"similar"
   // pointers distinct.
   if (Ty->isPointerType() || Ty->isReferenceType())
-    return MetadataCache[Ty] = createTBAAScalarType("any pointer",
-                                                    getChar());
+    return createTBAAScalarType("any pointer", getChar());
 
   // Enum types are distinct types. In C++ they have "underlying types",
   // however they aren't related for TBAA.
@@ -186,16 +162,46 @@ llvm::MDNode *CodeGenTBAA::getTypeInfo(QualType QTy) {
     // TODO: Is there a way to get a program-wide unique name for a
     // decl with local linkage or no linkage?
     if (!Features.CPlusPlus || !ETy->getDecl()->isExternallyVisible())
-      return MetadataCache[Ty] = getChar();
+      return getChar();
 
     SmallString<256> OutName;
     llvm::raw_svector_ostream Out(OutName);
     MContext.mangleTypeName(QualType(ETy, 0), Out);
-    return MetadataCache[Ty] = createTBAAScalarType(OutName, getChar());
+    return createTBAAScalarType(OutName, getChar());
   }
 
   // For now, handle any other kind of type conservatively.
-  return MetadataCache[Ty] = getChar();
+  return getChar();
+}
+
+llvm::MDNode *CodeGenTBAA::getTypeInfo(QualType QTy) {
+  // At -O0 or relaxed aliasing, TBAA is not emitted for regular types.
+  if (CodeGenOpts.OptimizationLevel == 0 || CodeGenOpts.RelaxedAliasing)
+    return nullptr;
+
+  // If the type has the may_alias attribute (even on a typedef), it is
+  // effectively in the general char alias class.
+  if (TypeHasMayAlias(QTy))
+    return getChar();
+
+  // We need this function to not fall back to returning the "omnipotent char"
+  // type node for aggregate and union types. Otherwise, any dereference of an
+  // aggregate will result into the may-alias access descriptor, meaning all
+  // subsequent accesses to direct and indirect members of that aggregate will
+  // be considered may-alias too.
+  // TODO: Combine getTypeInfo() and getBaseTypeInfo() into a single function.
+  if (isValidBaseType(QTy))
+    return getBaseTypeInfo(QTy);
+
+  const Type *Ty = Context.getCanonicalType(QTy).getTypePtr();
+  if (llvm::MDNode *N = MetadataCache[Ty])
+    return N;
+
+  // Note that the following helper call is allowed to add new nodes to the
+  // cache, which invalidates all its previously obtained iterators. So we
+  // first generate the node for the type and then add that node to the cache.
+  llvm::MDNode *TypeNode = getTypeInfoHelper(Ty);
+  return MetadataCache[Ty] = TypeNode;
 }
 
 TBAAAccessInfo CodeGenTBAA::getVTablePtrAccessInfo() {
@@ -259,15 +265,8 @@ CodeGenTBAA::getTBAAStructInfo(QualType QTy) {
   return StructMetadataCache[Ty] = nullptr;
 }
 
-llvm::MDNode *CodeGenTBAA::getBaseTypeInfo(QualType QTy) {
-  if (!isValidBaseType(QTy))
-    return nullptr;
-
-  const Type *Ty = Context.getCanonicalType(QTy).getTypePtr();
-  if (llvm::MDNode *N = BaseTypeMetadataCache[Ty])
-    return N;
-
-  if (const RecordType *TTy = QTy->getAs<RecordType>()) {
+llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
+  if (auto *TTy = dyn_cast<RecordType>(Ty)) {
     const RecordDecl *RD = TTy->getDecl()->getDefinition();
 
     const ASTRecordLayout &Layout = Context.getASTRecordLayout(RD);
@@ -293,11 +292,25 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfo(QualType QTy) {
       OutName = RD->getName();
     }
     // Create the struct type node with a vector of pairs (offset, type).
-    return BaseTypeMetadataCache[Ty] =
-      MDHelper.createTBAAStructTypeNode(OutName, Fields);
+    return MDHelper.createTBAAStructTypeNode(OutName, Fields);
   }
 
-  return BaseTypeMetadataCache[Ty] = nullptr;
+  return nullptr;
+}
+
+llvm::MDNode *CodeGenTBAA::getBaseTypeInfo(QualType QTy) {
+  if (!isValidBaseType(QTy))
+    return nullptr;
+
+  const Type *Ty = Context.getCanonicalType(QTy).getTypePtr();
+  if (llvm::MDNode *N = BaseTypeMetadataCache[Ty])
+    return N;
+
+  // Note that the following helper call is allowed to add new nodes to the
+  // cache, which invalidates all its previously obtained iterators. So we
+  // first generate the node for the type and then add that node to the cache.
+  llvm::MDNode *TypeNode = getBaseTypeInfoHelper(Ty);
+  return BaseTypeMetadataCache[Ty] = TypeNode;
 }
 
 llvm::MDNode *CodeGenTBAA::getAccessTagInfo(TBAAAccessInfo Info) {

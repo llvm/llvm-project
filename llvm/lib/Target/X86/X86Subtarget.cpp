@@ -292,12 +292,14 @@ void X86Subtarget::initializeEnvironment() {
   HasPOPCNT = false;
   HasSSE4A = false;
   HasAES = false;
+  HasVAES = false;
   HasFXSR = false;
   HasXSAVE = false;
   HasXSAVEOPT = false;
   HasXSAVEC = false;
   HasXSAVES = false;
   HasPCLMUL = false;
+  HasVPCLMULQDQ = false;
   HasFMA = false;
   HasFMA4 = false;
   HasXOP = false;
@@ -311,6 +313,7 @@ void X86Subtarget::initializeEnvironment() {
   HasBMI = false;
   HasBMI2 = false;
   HasVBMI = false;
+  HasVBMI2 = false;
   HasIFMA = false;
   HasRTM = false;
   HasERI = false;
@@ -322,6 +325,8 @@ void X86Subtarget::initializeEnvironment() {
   HasVLX = false;
   HasADX = false;
   HasPKU = false;
+  HasVNNI = false;
+  HasBITALG = false;
   HasSHA = false;
   HasPRFCHW = false;
   HasRDSEED = false;

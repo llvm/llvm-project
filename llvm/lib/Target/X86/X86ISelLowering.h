@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetOptions.h"
 
 namespace llvm {
@@ -390,6 +391,11 @@ namespace llvm {
       PSHUFHW,
       PSHUFLW,
       SHUFP,
+      // VBMI2 Concat & Shift.
+      VSHLD,
+      VSHRD,
+      VSHLDV,
+      VSHRDV,
       //Shuffle Packed Values at 128-bit granularity.
       SHUF128,
       MOVDDUP,
@@ -474,6 +480,12 @@ namespace llvm {
       // NOTE: These are different than the instruction and perform
       // op0 x op1 + op2.
       VPMADD52L, VPMADD52H,
+
+      // VNNI
+      VPDPBUSD,
+      VPDPBUSDS,
+      VPDPWSSD,
+      VPDPWSSDS,
 
       // FMA nodes.
       // We use the target independent ISD::FMA for the non-inverted case.
@@ -664,8 +676,14 @@ namespace llvm {
     void markLibCallAttributes(MachineFunction *MF, unsigned CC,
                                ArgListTy &Args) const override;
 
-    MVT getScalarShiftAmountTy(const DataLayout &, EVT) const override {
-      return MVT::i8;
+    // For i512, DAGTypeLegalizer::SplitInteger needs a shift amount 256,
+    // which cannot be held by i8, therefore use i16 instead. In all the
+    // other situations i8 is sufficient.
+    MVT getScalarShiftAmountTy(const DataLayout &, EVT VT) const override {
+      MVT T = VT.getSizeInBits() >= 512 ? MVT::i16 : MVT::i8;
+      assert((VT.getSizeInBits() + 1) / 2 < (1U << T.getSizeInBits()) &&
+             "Scalar shift amount type too small");
+      return T;
     }
 
     const MCExpr *

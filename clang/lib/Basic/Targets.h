@@ -40,7 +40,7 @@ void defineCPUMacros(clang::MacroBuilder &Builder, llvm::StringRef CPUName,
                      bool Tuning = true);
 
 LLVM_LIBRARY_VISIBILITY
-void addMinGWDefines(const clang::LangOptions &Opts,
+void addMinGWDefines(const llvm::Triple &Triple, const clang::LangOptions &Opts,
                      clang::MacroBuilder &Builder);
 
 LLVM_LIBRARY_VISIBILITY

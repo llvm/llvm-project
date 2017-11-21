@@ -1556,6 +1556,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
   }
 
+  if (Subtarget.hasBITALG())
+    for (auto VT : { MVT::v64i8, MVT::v32i16, MVT::v32i8,
+                     MVT::v16i16, MVT::v16i8, MVT::v8i16 })
+      setOperationAction(ISD::CTPOP, VT, Legal);
+
   // We want to custom lower some of our intrinsics.
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
@@ -25090,6 +25095,10 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::PACKUS:             return "X86ISD::PACKUS";
   case X86ISD::PALIGNR:            return "X86ISD::PALIGNR";
   case X86ISD::VALIGN:             return "X86ISD::VALIGN";
+  case X86ISD::VSHLD:              return "X86ISD::VSHLD";
+  case X86ISD::VSHRD:              return "X86ISD::VSHRD";
+  case X86ISD::VSHLDV:             return "X86ISD::VSHLDV";
+  case X86ISD::VSHRDV:             return "X86ISD::VSHRDV";
   case X86ISD::PSHUFD:             return "X86ISD::PSHUFD";
   case X86ISD::PSHUFHW:            return "X86ISD::PSHUFHW";
   case X86ISD::PSHUFLW:            return "X86ISD::PSHUFLW";
@@ -25246,6 +25255,10 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::CVTS2UI_RND:        return "X86ISD::CVTS2UI_RND";
   case X86ISD::LWPINS:             return "X86ISD::LWPINS";
   case X86ISD::MGATHER:            return "X86ISD::MGATHER";
+  case X86ISD::VPDPBUSD:           return "X86ISD::VPDPBUSD";
+  case X86ISD::VPDPBUSDS:          return "X86ISD::VPDPBUSDS";
+  case X86ISD::VPDPWSSD:           return "X86ISD::VPDPWSSD";
+  case X86ISD::VPDPWSSDS:          return "X86ISD::VPDPWSSDS";
   }
   return nullptr;
 }

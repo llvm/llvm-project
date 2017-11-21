@@ -2,6 +2,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefix=ALL --check-prefix=AVX --check-prefix=AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefix=ALL --check-prefix=AVX --check-prefix=AVX2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vpopcntdq | FileCheck %s --check-prefix=ALL --check-prefix=AVX --check-prefix=AVX512VPOPCNTDQ
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bitalg | FileCheck %s --check-prefix=ALL --check-prefix=AVX --check-prefix=BITALG_NOVLX
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bitalg,+avx512vl | FileCheck %s --check-prefix=ALL --check-prefix=BITALG
 
 define <4 x i64> @testv4i64(<4 x i64> %in) nounwind {
 ; AVX1-LABEL: testv4i64:
@@ -159,6 +161,18 @@ define <16 x i16> @testv16i16(<16 x i16> %in) nounwind {
 ; AVX512VPOPCNTDQ-NEXT:    vpopcntd %zmm0, %zmm0
 ; AVX512VPOPCNTDQ-NEXT:    vpmovdw %zmm0, %ymm0
 ; AVX512VPOPCNTDQ-NEXT:    retq
+;
+; BITALG_NOVLX-LABEL: testv16i16:
+; BITALG_NOVLX:       # BB#0:
+; BITALG_NOVLX-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; BITALG_NOVLX-NEXT:    vpopcntw %zmm0, %zmm0
+; BITALG_NOVLX-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
+; BITALG_NOVLX-NEXT:    retq
+;
+; BITALG-LABEL: testv16i16:
+; BITALG:       # BB#0:
+; BITALG-NEXT:    vpopcntw %ymm0, %ymm0
+; BITALG-NEXT:    retq
   %out = call <16 x i16> @llvm.ctpop.v16i16(<16 x i16> %in)
   ret <16 x i16> %out
 }
@@ -207,6 +221,18 @@ define <32 x i8> @testv32i8(<32 x i8> %in) nounwind {
 ; AVX512VPOPCNTDQ-NEXT:    vpshufb %ymm0, %ymm3, %ymm0
 ; AVX512VPOPCNTDQ-NEXT:    vpaddb %ymm2, %ymm0, %ymm0
 ; AVX512VPOPCNTDQ-NEXT:    retq
+;
+; BITALG_NOVLX-LABEL: testv32i8:
+; BITALG_NOVLX:       # BB#0:
+; BITALG_NOVLX-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; BITALG_NOVLX-NEXT:    vpopcntb %zmm0, %zmm0
+; BITALG_NOVLX-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
+; BITALG_NOVLX-NEXT:    retq
+;
+; BITALG-LABEL: testv32i8:
+; BITALG:       # BB#0:
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
+; BITALG-NEXT:    retq
   %out = call <32 x i8> @llvm.ctpop.v32i8(<32 x i8> %in)
   ret <32 x i8> %out
 }
