@@ -1962,8 +1962,8 @@
 //------------------------------------------------------------------------------
         ldr x3, [x4, #25], #0
         ldr x4, [x9, #0], #4
-// CHECK-ERROR-AARCH64: error: {{expected symbolic reference or integer|index must be a multiple of 8}} in range [0, 32760]
-// CHECK-ERROR-ARM64: error: expected label or encodable integer pc offset
+// CHECK-ERROR-AARCH64: error: invalid operand for instruction
+// CHECK-ERROR-ARM64: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         ldr x3, [x4, #25], #0
 // CHECK-ERROR-NEXT:                 ^
 // CHECK-ERROR-AARCH64-NEXT: error: expected label or encodable integer pc offset
@@ -2196,7 +2196,7 @@
 // CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldrh w9, [sp, #-257]!
 // CHECK-ERROR-NEXT:                  ^
-// CHECK-ERROR-NEXT: error: expected label or encodable integer pc offset
+// CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         ldr w1, [x19, #256]!
 // CHECK-ERROR-NEXT:                            ^
 // CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
@@ -2221,7 +2221,7 @@
 // CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldrsh x22, [x13, #-257]!
 // CHECK-ERROR-NEXT:                    ^
-// CHECK-ERROR-NEXT: error: expected label or encodable integer pc offset
+// CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         ldrsw x2, [x3, #256]!
 // CHECK-ERROR-NEXT:                             ^
 // CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
@@ -2298,13 +2298,13 @@
 // CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldr h3, [x13, #-257]!
 // CHECK-ERROR-NEXT:                 ^
-// CHECK-ERROR-NEXT: error: expected label or encodable integer pc offset
+// CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         ldr s3, [x3, #256]!
 // CHECK-ERROR-NEXT:                           ^
 // CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldr s3, [x13, #-257]!
 // CHECK-ERROR-NEXT:                 ^
-// CHECK-ERROR-NEXT: error: expected label or encodable integer pc offset
+// CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         ldr d3, [x3, #256]!
 // CHECK-ERROR-NEXT:                           ^
 // CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
@@ -2397,7 +2397,7 @@
 //// 32-bit addresses
         ldr w0, [w20]
         ldrsh x3, [wsp]
-// CHECK-ERROR: error: expected label or encodable integer pc offset
+// CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         ldr w0, [w20]
 // CHECK-ERROR-NEXT:                  ^
 // CHECK-ERROR-NEXT: error: invalid operand for instruction
@@ -2435,7 +2435,7 @@
 // CHECK-ERROR-ARM64-NEXT: error: prefetch operand out of range, [0,31] expected
 // CHECK-ERROR-NEXT:        prfm #32, [sp, #8]
 // CHECK-ERROR-NEXT:             ^
-// CHECK-ERROR-NEXT: error: expected label or encodable integer pc offset
+// CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:        prfm pldl1strm, [w3, #8]
 // CHECK-ERROR-NEXT:                         ^
 // CHECK-ERROR-AARCH64-NEXT: error: operand specifier not recognised
@@ -2453,7 +2453,7 @@
         ldr w10, [x6, x9, sxtw #2]
         ldr w11, [x7, w2, lsl #2]
         ldr w12, [x8, w1, sxtx]
-// CHECK-ERROR-NEXT: error: expected label or encodable integer pc offset
+// CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:        ldr w3, [xzr, x3]
 // CHECK-ERROR-NEXT:                 ^
 // CHECK-ERROR-NEXT: error: expected #imm after shift specifier
@@ -3106,10 +3106,10 @@
         movk w3, #:abs_g0:sym
         movz x3, #:abs_g0_nc:sym
         movn x4, #:abs_g0_nc:sym
-// CHECK-ERROR: error: {{expected relocated symbol or|immediate must be an}} integer in range [0, 65535]
+// CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         movz x12, #:abs_g0:sym, lsl #16
 // CHECK-ERROR-NEXT:                                 ^
-// CHECK-ERROR-NEXT: error: {{expected relocated symbol or|immediate must be an}} integer in range [0, 65535]
+// CHECK-ERROR:  error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         movz x12, #:abs_g0:sym, lsl #0
 // CHECK-ERROR-NEXT:                                 ^
 // CHECK-ERROR-AARCH64-NEXT: error: {{expected relocated symbol or|immediate must be an}} integer in range [0, 65535]

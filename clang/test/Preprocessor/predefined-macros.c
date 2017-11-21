@@ -193,12 +193,69 @@
 // MSCOPE:#define __OPENCL_MEMORY_SCOPE_WORK_GROUP 1
 // MSCOPE:#define __OPENCL_MEMORY_SCOPE_WORK_ITEM 0
 
+// RUN: %clang_cc1 -triple i386-windows %s -E -dM -o - \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-X86-WIN
+
+// CHECK-X86-WIN-NOT: #define WIN32 1
+// CHECK-X86-WIN-NOT: #define WIN64 1
+// CHECK-X86-WIN-NOT: #define WINNT 1
+// CHECK-X86-WIN: #define _WIN32 1
+// CHECK-X86-WIN-NOT: #define _WIN64 1
+
+// RUN: %clang_cc1 -triple thumbv7-windows %s -E -dM -o - \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-ARM-WIN
+
+// CHECK-ARM-WIN-NOT: #define WIN32 1
+// CHECK-ARM-WIN-NOT: #define WIN64 1
+// CHECK-ARM-WIN-NOT: #define WINNT 1
+// CHECK-ARM-WIN: #define _WIN32 1
+// CHECK-ARM-WIN-NOT: #define _WIN64 1
+
+// RUN: %clang_cc1 -triple x86_64-windows %s -E -dM -o - \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-AMD64-WIN
+
+// CHECK-AMD64-WIN-NOT: #define WIN32 1
+// CHECK-AMD64-WIN-NOT: #define WIN64 1
+// CHECK-AMD64-WIN-NOT: #define WINNT 1
+// CHECK-AMD64-WIN: #define _WIN32 1
+// CHECK-AMD64-WIN: #define _WIN64 1
+
 // RUN: %clang_cc1 -triple aarch64-windows %s -E -dM -o - \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-ARM64-WIN
 
+// CHECK-ARM64-WIN-NOT: #define WIN32 1
+// CHECK-ARM64-WIN-NOT: #define WIN64 1
+// CHECK-ARM64-WIN-NOT: #define WINNT 1
 // CHECK-ARM64-WIN: #define _M_ARM64 1
 // CHECK-ARM64-WIN: #define _WIN32 1
 // CHECK-ARM64-WIN: #define _WIN64 1
+
+// RUN: %clang_cc1 -triple i686-windows-gnu %s -E -dM -o - \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-X86-MINGW
+
+// CHECK-X86-MINGW: #define WIN32 1
+// CHECK-X86-MINGW-NOT: #define WIN64 1
+// CHECK-X86-MINGW: #define WINNT 1
+// CHECK-X86-MINGW: #define _WIN32 1
+// CHECK-X86-MINGW-NOT: #define _WIN64 1
+
+// RUN: %clang_cc1 -triple thumbv7-windows-gnu %s -E -dM -o - \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-ARM-MINGW
+
+// CHECK-ARM-MINGW: #define WIN32 1
+// CHECK-ARM-MINGW-NOT: #define WIN64 1
+// CHECK-ARM-MINGW: #define WINNT 1
+// CHECK-ARM-MINGW: #define _WIN32 1
+// CHECK-ARM-MINGW-NOT: #define _WIN64 1
+
+// RUN: %clang_cc1 -triple x86_64-windows-gnu %s -E -dM -o - \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-AMD64-MINGW
+
+// CHECK-AMD64-MINGW: #define WIN32 1
+// CHECK-AMD64-MINGW: #define WIN64 1
+// CHECK-AMD64-MINGW: #define WINNT 1
+// CHECK-AMD64-MINGW: #define _WIN32 1
+// CHECK-AMD64-MINGW: #define _WIN64 1
 
 // RUN: %clang_cc1 -triple aarch64-windows-gnu %s -E -dM -o - \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-ARM64-MINGW
@@ -206,6 +263,7 @@
 // CHECK-ARM64-MINGW-NOT: #define _M_ARM64 1
 // CHECK-ARM64-MINGW: #define WIN32 1
 // CHECK-ARM64-MINGW: #define WIN64 1
+// CHECK-ARM64-MINGW: #define WINNT 1
 // CHECK-ARM64-MINGW: #define _WIN32 1
 // CHECK-ARM64-MINGW: #define _WIN64 1
 // CHECK-ARM64-MINGW: #define __aarch64__ 1

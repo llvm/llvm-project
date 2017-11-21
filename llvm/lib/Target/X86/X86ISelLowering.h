@@ -391,6 +391,11 @@ namespace llvm {
       PSHUFHW,
       PSHUFLW,
       SHUFP,
+      // VBMI2 Concat & Shift.
+      VSHLD,
+      VSHRD,
+      VSHLDV,
+      VSHRDV,
       //Shuffle Packed Values at 128-bit granularity.
       SHUF128,
       MOVDDUP,
@@ -475,6 +480,12 @@ namespace llvm {
       // NOTE: These are different than the instruction and perform
       // op0 x op1 + op2.
       VPMADD52L, VPMADD52H,
+
+      // VNNI
+      VPDPBUSD,
+      VPDPBUSDS,
+      VPDPWSSD,
+      VPDPWSSDS,
 
       // FMA nodes.
       // We use the target independent ISD::FMA for the non-inverted case.

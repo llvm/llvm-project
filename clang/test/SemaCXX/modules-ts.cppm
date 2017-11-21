@@ -52,10 +52,6 @@ export {} // expected-error {{export declaration cannot be empty}}
 export { ; }
 export { static_assert(true); }
 
-// FIXME: These diagnostics are not very good.
-export import foo; // expected-error {{expected unqualified-id}}
-export { import foo; } // expected-error {{expected unqualified-id}}
-
 int use_b = b;
 int use_n = n; // FIXME: this should not be visible, because it is not exported
 

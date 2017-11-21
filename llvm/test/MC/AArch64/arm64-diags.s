@@ -9,7 +9,7 @@ foo:
   ldr x3, [foo + 4]
 ; CHECK:  ldr x3, foo+4               ; encoding: [0bAAA00011,A,A,0x58]
 ; CHECK:                              ;   fixup A - offset: 0, value: foo+4, kind: fixup_aarch64_ldr_pcrel_imm19
-; CHECK-ERRORS: error: expected label or encodable integer pc offset
+; CHECK-ERRORS: error: invalid operand for instruction
 
 ; The last argument should be flagged as an error.  rdar://9576009
   ld4.8b	{v0, v1, v2, v3}, [x0], #33
@@ -42,13 +42,13 @@ foo:
 ; CHECK-ERRORS: error: index must be an integer in range [-256, 255].
 ; CHECK-ERRORS:         ldr x0, [x0, #804]!
 ; CHECK-ERRORS:                 ^
-; CHECK-ERRORS: error: expected label or encodable integer pc offset
+; CHECK-ERRORS: error: invalid operand for instruction
 ; CHECK-ERRORS:         ldr w0, [w0, #301]!
 ; CHECK-ERRORS:                  ^
 ; CHECK-ERRORS: error: index must be an integer in range [-256, 255].
 ; CHECK-ERRORS:         ldr x0, [x0], #804
 ; CHECK-ERRORS:                       ^
-; CHECK-ERRORS: error: expected label or encodable integer pc offset
+; CHECK-ERRORS: error: invalid operand for instruction
 ; CHECK-ERRORS:         ldr w0, [w0], #301
 ; CHECK-ERRORS:                  ^
 ; CHECK-ERRORS: error: index must be a multiple of 4 in range [-256, 252].
@@ -477,7 +477,7 @@ tlbi vale3
 ; CHECK-ERRORS: error: too few operands for instruction
 ; CHECK-ERRORS:   b.ne
 ; CHECK-ERRORS:   ^
-; CHECK-ERRORS: error: expected label or encodable integer pc offset
+; CHECK-ERRORS: error: invalid operand for instruction
 ; CHECK-ERRORS:   b.eq 0, 0
 ; CHECK-ERRORS:           ^
 
