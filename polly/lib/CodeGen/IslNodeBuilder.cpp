@@ -902,6 +902,8 @@ IslNodeBuilder::createNewAccesses(ScopStmt *Stmt,
     // isl cannot generate an index expression for access-nothing accesses.
     isl::set AccDomain =
         give(isl_pw_multi_aff_domain(isl_pw_multi_aff_copy(PWAccRel)));
+    isl::set Context = S.getContext();
+    AccDomain = AccDomain.intersect_params(Context);
     if (isl_set_is_empty(AccDomain.keep()) == isl_bool_true) {
       isl_pw_multi_aff_free(PWAccRel);
       continue;
