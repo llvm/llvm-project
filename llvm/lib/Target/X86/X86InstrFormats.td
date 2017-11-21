@@ -157,10 +157,9 @@ def EncEVEX   : Encoding<3>;
 class OperandSize<bits<2> val> {
   bits<2> Value = val;
 }
-def OpSizeFixed  : OperandSize<0>; // Never needs a 0x66 prefix.
-def OpSize16     : OperandSize<1>; // Needs 0x66 prefix in 32-bit mode.
-def OpSize32     : OperandSize<2>; // Needs 0x66 prefix in 16-bit mode.
-def OpSizeIgnore : OperandSize<3>; // Takes 0x66 prefix, never emits.
+def OpSizeFixed : OperandSize<0>; // Never needs a 0x66 prefix.
+def OpSize16    : OperandSize<1>; // Needs 0x66 prefix in 32-bit mode.
+def OpSize32    : OperandSize<2>; // Needs 0x66 prefix in 16-bit mode.
 
 // Address size for encodings that change based on mode.
 class AddressSize<bits<2> val> {
@@ -175,7 +174,6 @@ def AdSize64 : AddressSize<3>; // Encodes a 64-bit address.
 // emitter that various prefix bytes are required.
 class OpSize16 { OperandSize OpSize = OpSize16; }
 class OpSize32 { OperandSize OpSize = OpSize32; }
-class OpSizeIgnore { OperandSize OpSize = OpSizeIgnore; }
 class AdSize16 { AddressSize AdSize = AdSize16; }
 class AdSize32 { AddressSize AdSize = AdSize32; }
 class AdSize64 { AddressSize AdSize = AdSize64; }

@@ -793,6 +793,15 @@ const AstTypeMatcher<SubstTemplateTypeParmType> substTemplateTypeParmType;
 const AstTypeMatcher<TemplateTypeParmType> templateTypeParmType;
 const AstTypeMatcher<InjectedClassNameType> injectedClassNameType;
 const AstTypeMatcher<DecayedType> decayedType;
+AST_TYPELOC_TRAVERSE_MATCHER_DEF(hasElementType,
+                                 AST_POLYMORPHIC_SUPPORTED_TYPES(ArrayType,
+                                                                 ComplexType));
+AST_TYPELOC_TRAVERSE_MATCHER_DEF(hasValueType,
+                                 AST_POLYMORPHIC_SUPPORTED_TYPES(AtomicType));
+AST_TYPELOC_TRAVERSE_MATCHER_DEF(
+    pointee,
+    AST_POLYMORPHIC_SUPPORTED_TYPES(BlockPointerType, MemberPointerType,
+                                    PointerType, ReferenceType));
 
 } // end namespace ast_matchers
 } // end namespace clang

@@ -243,16 +243,21 @@ def LZCNT     : VISInstFormat<0b000010111, (outs I64Regs:$rd),
                    (ins I64Regs:$rs2), "lzcnt $rs2, $rd", []>;
 
 let rs1 = 0 in {
-def MOVSTOSW : VISInstFormat<0b100010011, (outs I64Regs:$rd),
-                   (ins DFPRegs:$rs2), "movstosw $rs2, $rd", []>;
-def MOVSTOUW : VISInstFormat<0b100010001, (outs I64Regs:$rd),
-                   (ins DFPRegs:$rs2), "movstouw $rs2, $rd", []>;
-def MOVDTOX  : VISInstFormat<0b100010000, (outs I64Regs:$rd),
-                   (ins DFPRegs:$rs2), "movdtox $rs2, $rd", []>;
-def MOVWTOS  :  VISInstFormat<0b100011001, (outs DFPRegs:$rd),
-                   (ins I64Regs:$rs2), "movdtox $rs2, $rd", []>;
-def MOVXTOD  :  VISInstFormat<0b100011000, (outs DFPRegs:$rd),
-                   (ins I64Regs:$rs2), "movdtox $rs2, $rd", []>;
+def MOVSTOSW : VISInstFormat<0b100010011, (outs I64Regs:$rd), (ins FPRegs:$rs2), 
+                   "movstosw $rs2, $rd", 
+                   [(set I64Regs:$rd, (sext (i32 (bitconvert FPRegs:$rs2))))]>;
+def MOVSTOUW : VISInstFormat<0b100010001, (outs I64Regs:$rd), (ins FPRegs:$rs2), 
+                   "movstouw $rs2, $rd", 
+                   [(set I64Regs:$rd, (zext (i32 (bitconvert FPRegs:$rs2))))]>;
+def MOVDTOX  : VISInstFormat<0b100010000, (outs I64Regs:$rd), (ins DFPRegs:$rs2), 
+                   "movdtox $rs2, $rd", 
+                   [(set I64Regs:$rd, (bitconvert DFPRegs:$rs2))]>;
+def MOVWTOS  :  VISInstFormat<0b100011001, (outs FPRegs:$rd), (ins IntRegs:$rs2), 
+                   "movwtos $rs2, $rd", 
+                   [(set FPRegs:$rd, (bitconvert i32:$rs2))]>;
+def MOVXTOD  :  VISInstFormat<0b100011000, (outs DFPRegs:$rd), (ins I64Regs:$rs2),
+                   "movxtod $rs2, $rd", 
+                   [(set DFPRegs:$rd, (bitconvert I64Regs:$rs2))]>;
 }
 
 def PDISTN   : VISInst<0b000111111, "pdistn">;

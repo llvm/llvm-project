@@ -1016,6 +1016,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       Args.hasFlag(OPT_allowisolation, OPT_allowisolation_no, true);
   Config->NxCompat = Args.hasFlag(OPT_nxcompat, OPT_nxcompat_no, true);
   Config->TerminalServerAware = Args.hasFlag(OPT_tsaware, OPT_tsaware_no, true);
+  Config->DebugDwarf = Args.hasArg(OPT_debug_dwarf);
 
   Config->MapFile = getMapFile(Args);
 

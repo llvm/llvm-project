@@ -355,12 +355,12 @@ cmovnae	%bx,%bx
 // CHECK:  encoding: [0x66,0x8c,0xc8]
         movw %cs, %ax
 
-// CHECK: movw	%cs, (%eax)
+// CHECK: movl	%cs, (%eax)
 // CHECK:  encoding: [0x8c,0x08]
-        mov %cs, (%eax)
+        movl %cs, (%eax)
 
 // CHECK: movw	%cs, (%eax)
-// CHECK:  encoding: [0x8c,0x08]
+// CHECK:  encoding: [0x66,0x8c,0x08]
         movw %cs, (%eax)
 
 // CHECK: movl	%eax, %cs
@@ -379,12 +379,12 @@ cmovnae	%bx,%bx
 // CHECK:  encoding: [0x8e,0xc8]
         mov %ax, %cs
 
-// CHECK: movw	(%eax), %cs
+// CHECK: movl	(%eax), %cs
 // CHECK:  encoding: [0x8e,0x08]
-        mov (%eax), %cs
+        movl (%eax), %cs
 
 // CHECK: movw	(%eax), %cs
-// CHECK:  encoding: [0x8e,0x08]
+// CHECK:  encoding: [0x66,0x8e,0x08]
         movw (%eax), %cs
 
 // radr://8033374
