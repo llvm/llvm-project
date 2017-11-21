@@ -4,6 +4,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512cd,+avx512vl | FileCheck %s --check-prefix=ALL --check-prefix=AVX --check-prefix=AVX512CDVL
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512cd,-avx512vl | FileCheck %s --check-prefix=ALL --check-prefix=AVX --check-prefix=AVX512CD
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vpopcntdq | FileCheck %s --check-prefix=ALL --check-prefix=AVX --check-prefix=AVX512VPOPCNTDQ
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bitalg | FileCheck %s --check-prefix=ALL --check-prefix=BITALG_NOVLX
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bitalg,+avx512vl | FileCheck %s --check-prefix=ALL --check-prefix=BITALG
 ;
 ; Just one 32-bit run to make sure we do reasonable things for i64 tzcnt.
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefix=ALL --check-prefix=X32-AVX --check-prefix=X32-AVX2
@@ -589,6 +591,27 @@ define <16 x i16> @testv16i16(<16 x i16> %in) nounwind {
 ; AVX512VPOPCNTDQ-NEXT:    vpmovdw %zmm0, %ymm0
 ; AVX512VPOPCNTDQ-NEXT:    retq
 ;
+; BITALG_NOVLX-LABEL: testv16i16:
+; BITALG_NOVLX:       # BB#0:
+; BITALG_NOVLX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG_NOVLX-NEXT:    vpsubw %ymm0, %ymm1, %ymm1
+; BITALG_NOVLX-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; BITALG_NOVLX-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; BITALG_NOVLX-NEXT:    vpaddw %ymm1, %ymm0, %ymm0
+; BITALG_NOVLX-NEXT:    vpopcntw %zmm0, %zmm0
+; BITALG_NOVLX-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
+; BITALG_NOVLX-NEXT:    retq
+;
+; BITALG-LABEL: testv16i16:
+; BITALG:       # BB#0:
+; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpsubw %ymm0, %ymm1, %ymm1
+; BITALG-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; BITALG-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; BITALG-NEXT:    vpaddw %ymm1, %ymm0, %ymm0
+; BITALG-NEXT:    vpopcntw %ymm0, %ymm0
+; BITALG-NEXT:    retq
+;
 ; X32-AVX-LABEL: testv16i16:
 ; X32-AVX:       # BB#0:
 ; X32-AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
@@ -838,6 +861,27 @@ define <32 x i8> @testv32i8(<32 x i8> %in) nounwind {
 ; AVX512VPOPCNTDQ-NEXT:    vpshufb %ymm0, %ymm3, %ymm0
 ; AVX512VPOPCNTDQ-NEXT:    vpaddb %ymm2, %ymm0, %ymm0
 ; AVX512VPOPCNTDQ-NEXT:    retq
+;
+; BITALG_NOVLX-LABEL: testv32i8:
+; BITALG_NOVLX:       # BB#0:
+; BITALG_NOVLX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG_NOVLX-NEXT:    vpsubb %ymm0, %ymm1, %ymm1
+; BITALG_NOVLX-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; BITALG_NOVLX-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; BITALG_NOVLX-NEXT:    vpaddb %ymm1, %ymm0, %ymm0
+; BITALG_NOVLX-NEXT:    vpopcntb %zmm0, %zmm0
+; BITALG_NOVLX-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
+; BITALG_NOVLX-NEXT:    retq
+;
+; BITALG-LABEL: testv32i8:
+; BITALG:       # BB#0:
+; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpsubb %ymm0, %ymm1, %ymm1
+; BITALG-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; BITALG-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; BITALG-NEXT:    vpaddb %ymm1, %ymm0, %ymm0
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
+; BITALG-NEXT:    retq
 ;
 ; X32-AVX-LABEL: testv32i8:
 ; X32-AVX:       # BB#0:

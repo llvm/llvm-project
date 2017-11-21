@@ -832,15 +832,22 @@ def NoVLX        : Predicate<"!Subtarget->hasVLX()">;
 def NoVLX_Or_NoBWI : Predicate<"!Subtarget->hasVLX() || !Subtarget->hasBWI()">;
 def NoVLX_Or_NoDQI : Predicate<"!Subtarget->hasVLX() || !Subtarget->hasDQI()">;
 def PKU        : Predicate<"Subtarget->hasPKU()">;
+def HasVNNI    : Predicate<"Subtarget->hasVNNI()">;
 
+def HasBITALG    : Predicate<"Subtarget->hasBITALG()">;
 def HasPOPCNT    : Predicate<"Subtarget->hasPOPCNT()">;
 def HasAES       : Predicate<"Subtarget->hasAES()">;
+def HasVAES      : Predicate<"Subtarget->hasVAES()">;
+def NoVLX_Or_NoVAES : Predicate<"!Subtarget->hasVLX() || !Subtarget->hasVAES()">;
 def HasFXSR      : Predicate<"Subtarget->hasFXSR()">;
 def HasXSAVE     : Predicate<"Subtarget->hasXSAVE()">;
 def HasXSAVEOPT  : Predicate<"Subtarget->hasXSAVEOPT()">;
 def HasXSAVEC    : Predicate<"Subtarget->hasXSAVEC()">;
 def HasXSAVES    : Predicate<"Subtarget->hasXSAVES()">;
 def HasPCLMUL    : Predicate<"Subtarget->hasPCLMUL()">;
+def NoVLX_Or_NoVPCLMULQDQ :
+                    Predicate<"!Subtarget->hasVLX() || !Subtarget->hasVPCLMULQDQ()">;
+def HasVPCLMULQDQ : Predicate<"Subtarget->hasVPCLMULQDQ()">;
 def HasFMA       : Predicate<"Subtarget->hasFMA()">;
 def HasFMA4      : Predicate<"Subtarget->hasFMA4()">;
 def HasXOP       : Predicate<"Subtarget->hasXOP()">;
@@ -857,6 +864,7 @@ def HasBMI2      : Predicate<"Subtarget->hasBMI2()">;
 def NoBMI2       : Predicate<"!Subtarget->hasBMI2()">;
 def HasVBMI      : Predicate<"Subtarget->hasVBMI()">,
                      AssemblerPredicate<"FeatureVBMI", "AVX-512 VBMI ISA">;
+def HasVBMI2     : Predicate<"Subtarget->hasVBMI2()">;
 def HasIFMA      : Predicate<"Subtarget->hasIFMA()">,
                      AssemblerPredicate<"FeatureIFMA", "AVX-512 IFMA ISA">;
 def HasRTM       : Predicate<"Subtarget->hasRTM()">;

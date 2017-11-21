@@ -159,3 +159,68 @@ indirectgoto:                                     ; preds = %if.then18, %if.then
 ; CHECK-NEXT: - sw.default: {{.*}} count = 0
 ; CHECK-NEXT: - exit: {{.*}} count = 1
 ; CHECK-NEXT: - indirectgoto: {{.*}} count = 399, irr_loop_header_weight = 400
+
+; Missing some irr loop annotations.
+; Function Attrs: noinline norecurse nounwind uwtable
+define i32 @_Z11irreduciblePh2(i8* nocapture readonly %p) !prof !27 {
+entry:
+  %0 = load i32, i32* @tracing, align 4
+  %1 = trunc i32 %0 to i8
+  %tobool = icmp eq i32 %0, 0
+  br label %for.cond1
+
+for.cond1:                                        ; preds = %sw.default, %entry
+  br label %dispatch_op
+
+dispatch_op:                                      ; preds = %sw.bb6, %for.cond1
+switch i8 %1, label %sw.default [
+    i8 0, label %sw.bb
+    i8 1, label %dispatch_op.sw.bb6_crit_edge
+    i8 2, label %sw.bb15
+  ], !prof !36
+
+dispatch_op.sw.bb6_crit_edge:                     ; preds = %dispatch_op
+  br label %sw.bb6
+
+sw.bb:                                            ; preds = %indirectgoto, %dispatch_op
+  br label %exit
+
+TARGET_1:                                         ; preds = %indirectgoto
+  br label %sw.bb6
+
+sw.bb6:                                           ; preds = %TARGET_1, %dispatch_op.sw.bb6_crit_edge
+  br i1 %tobool, label %dispatch_op, label %if.then, !prof !37  ; Missing !irr_loop !38
+
+if.then:                                          ; preds = %sw.bb6
+  br label %indirectgoto
+
+TARGET_2:                                         ; preds = %indirectgoto
+  br label %sw.bb15
+
+sw.bb15:                                          ; preds = %TARGET_2, %dispatch_op
+  br i1 %tobool, label %if.then18, label %exit, !prof !39, !irr_loop !40
+
+if.then18:                                        ; preds = %sw.bb15
+  br label %indirectgoto
+
+unknown_op:                                       ; preds = %indirectgoto
+  br label %sw.default
+
+sw.default:                                       ; preds = %unknown_op, %dispatch_op
+  br label %for.cond1
+
+exit:                                             ; preds = %sw.bb15, %sw.bb
+  ret i32 0
+
+indirectgoto:                                     ; preds = %if.then18, %if.then
+  %idxprom21 = zext i32 %0 to i64
+  %arrayidx22 = getelementptr inbounds [256 x i8*], [256 x i8*]* @targets, i64 0, i64 %idxprom21
+  %target = load i8*, i8** %arrayidx22, align 8
+  indirectbr i8* %target, [label %unknown_op, label %sw.bb, label %TARGET_1, label %TARGET_2], !prof !41, !irr_loop !42
+}
+
+; CHECK-LABEL: Printing analysis {{.*}} for function '_Z11irreduciblePh2':
+; CHECK: block-frequency-info: _Z11irreduciblePh2
+; CHECK: - sw.bb6: {{.*}} count = 100
+; CHECK: - sw.bb15: {{.*}} count = 100, irr_loop_header_weight = 100
+; CHECK: - indirectgoto: {{.*}} count = 400, irr_loop_header_weight = 400

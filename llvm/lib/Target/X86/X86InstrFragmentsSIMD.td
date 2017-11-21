@@ -350,6 +350,19 @@ def X86PAlignr : SDNode<"X86ISD::PALIGNR",
                                              SDTCisVT<3, i8>]>>;
 def X86VAlign  : SDNode<"X86ISD::VALIGN", SDTShuff3OpI>;
 
+def X86VShld   : SDNode<"X86ISD::VSHLD", SDTShuff3OpI>;
+def X86VShrd   : SDNode<"X86ISD::VSHRD", SDTShuff3OpI>;
+def X86VShldv  : SDNode<"X86ISD::VSHLDV",
+                        SDTypeProfile<1, 3, [SDTCisVec<0>,
+                                             SDTCisSameAs<0,1>,
+                                             SDTCisSameAs<0,2>,
+                                             SDTCisSameAs<0,3>]>>;
+def X86VShrdv  : SDNode<"X86ISD::VSHRDV",
+                        SDTypeProfile<1, 3, [SDTCisVec<0>,
+                                             SDTCisSameAs<0,1>,
+                                             SDTCisSameAs<0,2>,
+                                             SDTCisSameAs<0,3>]>>;
+
 def X86Conflict : SDNode<"X86ISD::CONFLICT", SDTIntUnaryOp>;
 
 def X86PShufd  : SDNode<"X86ISD::PSHUFD", SDTShuff2OpI>;
@@ -520,6 +533,15 @@ def x86vpmadd52h     : SDNode<"X86ISD::VPMADD52H",     SDTIFma, [SDNPCommutative
 
 def X86rsqrt14   : SDNode<"X86ISD::RSQRT14",  SDTFPUnaryOp>;
 def X86rcp14     : SDNode<"X86ISD::RCP14",    SDTFPUnaryOp>;
+
+// VNNI
+def SDTVnni : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisSameAs<0,1>,
+                                   SDTCisSameAs<1,2>, SDTCisSameAs<1,3>]>;
+def X86Vpdpbusd  : SDNode<"X86ISD::VPDPBUSD", SDTVnni>;
+def X86Vpdpbusds : SDNode<"X86ISD::VPDPBUSDS", SDTVnni>;
+def X86Vpdpwssd  : SDNode<"X86ISD::VPDPWSSD", SDTVnni>;
+def X86Vpdpwssds : SDNode<"X86ISD::VPDPWSSDS", SDTVnni>;
+
 def X86rsqrt28   : SDNode<"X86ISD::RSQRT28",  SDTFPUnaryOpRound>;
 def X86rcp28     : SDNode<"X86ISD::RCP28",    SDTFPUnaryOpRound>;
 def X86exp2      : SDNode<"X86ISD::EXP2",     SDTFPUnaryOpRound>;
@@ -1104,88 +1126,67 @@ def masked_truncstore_us_vi32 : PatFrag<(ops node:$src1, node:$src2, node:$src3)
 
 // AVX2 special nodes
 // masked gather of AVX2 where mask elements are i32
-def avx2_x86_masked_gather_32 : SDNode<"X86ISD::MGATHER",
+def avx2_x86_masked_gather : SDNode<"X86ISD::MGATHER",
       SDTypeProfile<2, 3, [
         SDTCisVec<0>, SDTCisVec<1>, SDTCisSameAs<0, 2>, SDTCisSameAs<1, 3>,
-        SDTCisPtrTy<4>, SDTCVecEltisVT<1, i32>, SDTCisSameNumEltsAs<0, 1>]>,
+        SDTCisPtrTy<4>, SDTCisInt<1>, SDTCisSameSizeAs<0, 1>,
+        SDTCisSameNumEltsAs<0, 1>]>,
       [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 
-def avx2_masked_gather_32 : SDNode<"ISD::MGATHER",
+def avx2_masked_gather : SDNode<"ISD::MGATHER",
       SDTypeProfile<2, 3, [
         SDTCisVec<0>, SDTCisVec<1>, SDTCisSameAs<0, 2>, SDTCisSameAs<1, 3>,
-        SDTCisPtrTy<4>, SDTCVecEltisVT<1, i32>, SDTCisSameNumEltsAs<0, 1>]>,
-      [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-
-// masked gather of AVX2 where mask elements are i64
-def avx2_masked_gather_64 : SDNode<"ISD::MGATHER",
-      SDTypeProfile<2, 3, [
-        SDTCisVec<0>, SDTCisVec<1>, SDTCisSameAs<0, 2>, SDTCisSameAs<1, 3>,
-        SDTCisPtrTy<4>, SDTCVecEltisVT<1, i64>, SDTCisSameNumEltsAs<0, 1>]>,
+        SDTCisPtrTy<4>, SDTCisInt<1>, SDTCisSameSizeAs<0, 1>,
+        SDTCisSameNumEltsAs<0, 1>]>,
       [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 
 // dword gathers
 def avx2_mvpgatherdd_ps_xmm : PatFrag<(ops node:$src1, node:$src2, node:$src3),
-  (avx2_masked_gather_32 node:$src1, node:$src2, node:$src3) , [{
-  if (MaskedGatherSDNode *Mgt = dyn_cast<MaskedGatherSDNode>(N))
-    return (Mgt->getIndex().getValueType() == MVT::v4i32 ||
-            Mgt->getBasePtr().getValueType() == MVT::v4i32);
-  return false;
+  (avx2_masked_gather node:$src1, node:$src2, node:$src3) , [{
+  MaskedGatherSDNode *Mgt = cast<MaskedGatherSDNode>(N);
+  return Mgt->getIndex().getValueType() == MVT::v4i32;
 }]>;
 
 def avx2_mvpgatherqd_ps_xmm : PatFrag<(ops node:$src1, node:$src2, node:$src3),
-  (avx2_x86_masked_gather_32 node:$src1, node:$src2, node:$src3) , [{
-  if (X86MaskedGatherSDNode *Mgt = dyn_cast<X86MaskedGatherSDNode>(N))
-    return (Mgt->getIndex().getValueType() == MVT::v2i64 ||
-            Mgt->getBasePtr().getValueType() == MVT::v2i64);
-  return false;
+  (avx2_x86_masked_gather node:$src1, node:$src2, node:$src3) , [{
+  X86MaskedGatherSDNode *Mgt = cast<X86MaskedGatherSDNode>(N);
+  return Mgt->getIndex().getValueType() == MVT::v2i64;
 }]>;
 
 def avx2_mvpgatherdd_ps_ymm : PatFrag<(ops node:$src1, node:$src2, node:$src3),
-  (avx2_masked_gather_32 node:$src1, node:$src2, node:$src3) , [{
-  if (MaskedGatherSDNode *Mgt = dyn_cast<MaskedGatherSDNode>(N))
-    return (Mgt->getIndex().getValueType() == MVT::v8i32 ||
-            Mgt->getBasePtr().getValueType() == MVT::v8i32);
-  return false;
+  (avx2_masked_gather node:$src1, node:$src2, node:$src3) , [{
+  MaskedGatherSDNode *Mgt = cast<MaskedGatherSDNode>(N);
+  return Mgt->getIndex().getValueType() == MVT::v8i32;
 }]>;
 
 def avx2_mvpgatherqd_ps_ymm : PatFrag<(ops node:$src1, node:$src2, node:$src3),
-  (avx2_masked_gather_32 node:$src1, node:$src2, node:$src3) , [{
-  if (MaskedGatherSDNode *Mgt = dyn_cast<MaskedGatherSDNode>(N))
-    return (Mgt->getIndex().getValueType() == MVT::v4i64 ||
-            Mgt->getBasePtr().getValueType() == MVT::v4i64);
-  return false;
+  (avx2_masked_gather node:$src1, node:$src2, node:$src3) , [{
+  MaskedGatherSDNode *Mgt = cast<MaskedGatherSDNode>(N);
+  return Mgt->getIndex().getValueType() == MVT::v4i64;
 }]>;
 
 // qwords
 def avx2_mvpgatherdq_pd_xmm : PatFrag<(ops node:$src1, node:$src2, node:$src3),
-  (avx2_masked_gather_64 node:$src1, node:$src2, node:$src3) , [{
-  if (MaskedGatherSDNode *Mgt = dyn_cast<MaskedGatherSDNode>(N))
-    return (Mgt->getIndex().getValueType() == MVT::v2i32 ||
-            Mgt->getBasePtr().getValueType() == MVT::v2i32);
-  return false;
+  (avx2_masked_gather node:$src1, node:$src2, node:$src3) , [{
+  MaskedGatherSDNode *Mgt = cast<MaskedGatherSDNode>(N);
+  return Mgt->getIndex().getValueType() == MVT::v2i32;
 }]>;
 
 def avx2_mvpgatherqq_pd_xmm : PatFrag<(ops node:$src1, node:$src2, node:$src3),
-  (avx2_masked_gather_64 node:$src1, node:$src2, node:$src3) , [{
-  if (MaskedGatherSDNode *Mgt = dyn_cast<MaskedGatherSDNode>(N))
-    return (Mgt->getIndex().getValueType() == MVT::v2i64 ||
-            Mgt->getBasePtr().getValueType() == MVT::v2i64) &&
-            Mgt->getMemoryVT().is128BitVector();
-  return false;
+  (avx2_masked_gather node:$src1, node:$src2, node:$src3) , [{
+  MaskedGatherSDNode *Mgt = dyn_cast<MaskedGatherSDNode>(N);
+  return Mgt->getIndex().getValueType() == MVT::v2i64 &&
+         Mgt->getMemoryVT().is128BitVector();
 }]>;
 
 def avx2_mvpgatherdq_pd_ymm : PatFrag<(ops node:$src1, node:$src2, node:$src3),
-  (avx2_masked_gather_64 node:$src1, node:$src2, node:$src3) , [{
-  if (MaskedGatherSDNode *Mgt = dyn_cast<MaskedGatherSDNode>(N))
-    return (Mgt->getIndex().getValueType() == MVT::v4i32 ||
-            Mgt->getBasePtr().getValueType() == MVT::v4i32);
-  return false;
+  (avx2_masked_gather node:$src1, node:$src2, node:$src3) , [{
+  MaskedGatherSDNode *Mgt = cast<MaskedGatherSDNode>(N);
+  return Mgt->getIndex().getValueType() == MVT::v4i32;
 }]>;
 
 def avx2_mvpgatherqq_pd_ymm : PatFrag<(ops node:$src1, node:$src2, node:$src3),
-  (avx2_masked_gather_64 node:$src1, node:$src2, node:$src3) , [{
-  if (MaskedGatherSDNode *Mgt = dyn_cast<MaskedGatherSDNode>(N))
-    return (Mgt->getIndex().getValueType() == MVT::v4i64 ||
-            Mgt->getBasePtr().getValueType() == MVT::v4i64);
-  return false;
+  (avx2_masked_gather node:$src1, node:$src2, node:$src3) , [{
+  MaskedGatherSDNode *Mgt = cast<MaskedGatherSDNode>(N);
+  return Mgt->getIndex().getValueType() == MVT::v4i64;
 }]>;

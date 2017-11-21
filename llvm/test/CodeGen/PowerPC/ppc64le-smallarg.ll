@@ -43,7 +43,7 @@ entry:
 }
 ; CHECK: @callee2
 ; CHECK: addi [[TOCREG:[0-9]+]], 1, 136
-; CHECK: lxsspx {{[0-9]+}}, {{[0-9]+}}, [[TOCREG]]
+; CHECK: lfsx {{[0-9]+}}, {{[0-9]+}}, [[TOCREG]]
 ; CHECK: blr
 
 define void @caller2() {
@@ -54,7 +54,7 @@ entry:
 }
 ; CHECK: @caller2
 ; CHECK: addi [[TOCOFF:[0-9]+]], {{[0-9]+}}, 136
-; CHECK: stxsspx {{[0-9]+}}, 0, [[TOCOFF]]
+; CHECK: stfsx {{[0-9]+}}, 0, [[TOCOFF]]
 ; CHECK: bl test2
 
 declare float @test2(float, float, float, float, float, float, float, float, float, float, float, float, float, float)

@@ -124,9 +124,7 @@ int main(int argc_, const char *argv_[]) {
     const Twine TokenNames[] = {
 #define TOKEN(Name) #Name,
 #define SHORT_TOKEN(Name, Ch) #Name,
-#include "ResourceScriptTokenList.h"
-#undef TOKEN
-#undef SHORT_TOKEN
+#include "ResourceScriptTokenList.def"
     };
 
     for (const RCToken &Token : Tokens) {

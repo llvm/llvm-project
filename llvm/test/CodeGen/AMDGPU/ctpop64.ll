@@ -188,7 +188,7 @@ define amdgpu_kernel void @s_ctpop_i65(i32 addrspace(1)* noalias %out, i65 %val)
 ; GCN-DAG: v_bcnt_u32_b32{{(_e64)*}} [[MIDRESULT2:v[0-9]+]], v[[VAL0]], 0
 ; GCN-DAG: v_bcnt_u32_b32{{(_e32)*(_e64)*}} [[MIDRESULT3:v[0-9]+]], v{{[0-9]+}}, [[MIDRESULT2]]
 
-; GCN: v_add_i32_e32 [[RESULT:v[0-9]+]], vcc, [[MIDRESULT1]], [[MIDRESULT2]]
+; GCN: v_add_{{[iu]}}32_e32 [[RESULT:v[0-9]+]], vcc, [[MIDRESULT1]], [[MIDRESULT2]]
 
 ; GCN: buffer_store_dword [[RESULT]],
 ; GCN: s_endpgm

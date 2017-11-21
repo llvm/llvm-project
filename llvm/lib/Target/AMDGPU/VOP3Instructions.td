@@ -410,7 +410,7 @@ def V_MAD_I64_I32 : VOP3Inst <"v_mad_i64_i32", VOP3b_I64_I1_I32_I32_I64>;
 
 let SubtargetPredicate = Has16BitInsts in {
 
-let F16_ZFILL = 1 in {
+let renamedInGFX9 = 1 in {
 def V_DIV_FIXUP_F16 : VOP3Inst <"v_div_fixup_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, AMDGPUdiv_fixup>;
 }
 let SubtargetPredicate = isGFX9 in {
@@ -419,7 +419,7 @@ def V_DIV_FIXUP_F16_gfx9 : VOP3Inst <"v_div_fixup_f16_gfx9", VOP3_Profile<VOP_F1
 
 let isCommutable = 1 in {
 
-let F16_ZFILL = 1 in {
+let renamedInGFX9 = 1 in {
 def V_MAD_F16 : VOP3Inst <"v_mad_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, fmad>;
 def V_MAD_U16 : VOP3Inst <"v_mad_u16", VOP3_Profile<VOP_I16_I16_I16_I16, VOP3_CLAMP>>;
 def V_MAD_I16 : VOP3Inst <"v_mad_i16", VOP3_Profile<VOP_I16_I16_I16_I16, VOP3_CLAMP>>;
@@ -506,6 +506,9 @@ def V_MAD_I32_I16 : VOP3Inst <"v_mad_i32_i16", VOP3_Profile<VOP_I32_I16_I16_I32,
 
 def V_CVT_PKNORM_I16_F16 : VOP3Inst <"v_cvt_pknorm_i16_f16", VOP3_Profile<VOP_B32_F16_F16, VOP3_OPSEL>>;
 def V_CVT_PKNORM_U16_F16 : VOP3Inst <"v_cvt_pknorm_u16_f16", VOP3_Profile<VOP_B32_F16_F16, VOP3_OPSEL>>;
+
+def V_ADD_I32_gfx9 : VOP3Inst <"v_add_i32_gfx9", VOP3_Profile<VOP_I32_I32_I32>>;
+def V_SUB_I32_gfx9 : VOP3Inst <"v_sub_i32_gfx9", VOP3_Profile<VOP_I32_I32_I32>>;
 } // End SubtargetPredicate = isGFX9
 
 //===----------------------------------------------------------------------===//
@@ -703,6 +706,14 @@ multiclass VOP3OpSel_F16_Real_gfx9<bits<10> op, string AsmName> {
             }
 }
 
+multiclass VOP3_Real_gfx9<bits<10> op, string AsmName> {
+  def _vi : VOP3_Real<!cast<VOP3_Pseudo>(NAME), SIEncodingFamily.GFX9>,
+              VOP3e_vi <op, !cast<VOP3_Pseudo>(NAME).Pfl> {
+              VOP3_Pseudo ps = !cast<VOP3_Pseudo>(NAME);
+              let AsmString = AsmName # ps.AsmOperands;
+            }
+}
+
 } // End AssemblerPredicates = [isGFX9], DecoderNamespace = "GFX9"
 
 defm V_MAD_U64_U32      : VOP3be_Real_vi <0x1E8>;
@@ -768,6 +779,9 @@ defm V_MAD_U16_gfx9         : VOP3OpSel_F16_Real_gfx9 <0x204, "v_mad_u16">;
 defm V_MAD_I16_gfx9         : VOP3OpSel_F16_Real_gfx9 <0x205, "v_mad_i16">;
 defm V_FMA_F16_gfx9         : VOP3OpSel_F16_Real_gfx9 <0x206, "v_fma_f16">;
 defm V_DIV_FIXUP_F16_gfx9   : VOP3OpSel_F16_Real_gfx9 <0x207, "v_div_fixup_f16">;
+
+defm V_ADD_I32_gfx9         : VOP3_Real_gfx9 <0x29c, "v_add_i32">;
+defm V_SUB_I32_gfx9         : VOP3_Real_gfx9 <0x29d, "v_sub_i32">;
 
 defm V_INTERP_P1_F32_e64  : VOP3Interp_Real_vi <0x270>;
 defm V_INTERP_P2_F32_e64  : VOP3Interp_Real_vi <0x271>;

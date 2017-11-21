@@ -25,7 +25,8 @@ namespace RISCVISD {
 enum NodeType : unsigned {
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
   RET_FLAG,
-  CALL
+  CALL,
+  SELECT_CC
 };
 }
 
@@ -41,6 +42,10 @@ public:
 
   // This method returns the name of a target specific DAG node.
   const char *getTargetNodeName(unsigned Opcode) const override;
+
+  MachineBasicBlock *
+  EmitInstrWithCustomInserter(MachineInstr &MI,
+                              MachineBasicBlock *BB) const override;
 
 private:
   // Lower incoming arguments, copy physregs into vregs
@@ -60,6 +65,9 @@ private:
     return true;
   }
   SDValue lowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerExternalSymbol(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerSELECT(SDValue Op, SelectionDAG &DAG) const;
 };
 }
 

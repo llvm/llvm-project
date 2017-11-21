@@ -3,6 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bw | FileCheck %s --check-prefix=AVX512 --check-prefix=AVX512BW
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vpopcntdq | FileCheck %s --check-prefix=AVX512 --check-prefix=AVX512VPOPCNTDQ --check-prefix=AVX512VPOPCNTDQ-NOBW
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vpopcntdq,+avx512bw | FileCheck %s --check-prefix=AVX512 --check-prefix=AVX512VPOPCNTDQ --check-prefix=AVX512VPOPCNTDQ-BW
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bitalg | FileCheck %s --check-prefix=AVX512 --check-prefix=BITALG
 
 define <8 x i64> @testv8i64(<8 x i64> %in) nounwind {
 ; AVX512F-LABEL: testv8i64:
@@ -172,6 +173,11 @@ define <32 x i16> @testv32i16(<32 x i16> %in) nounwind {
 ; AVX512VPOPCNTDQ-BW-NEXT:    vpaddb %zmm0, %zmm1, %zmm0
 ; AVX512VPOPCNTDQ-BW-NEXT:    vpsrlw $8, %zmm0, %zmm0
 ; AVX512VPOPCNTDQ-BW-NEXT:    retq
+;
+; BITALG-LABEL: testv32i16:
+; BITALG:       # BB#0:
+; BITALG-NEXT:    vpopcntw %zmm0, %zmm0
+; BITALG-NEXT:    retq
   %out = call <32 x i16> @llvm.ctpop.v32i16(<32 x i16> %in)
   ret <32 x i16> %out
 }
@@ -236,6 +242,11 @@ define <64 x i8> @testv64i8(<64 x i8> %in) nounwind {
 ; AVX512VPOPCNTDQ-BW-NEXT:    vpshufb %zmm0, %zmm3, %zmm0
 ; AVX512VPOPCNTDQ-BW-NEXT:    vpaddb %zmm2, %zmm0, %zmm0
 ; AVX512VPOPCNTDQ-BW-NEXT:    retq
+;
+; BITALG-LABEL: testv64i8:
+; BITALG:       # BB#0:
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
+; BITALG-NEXT:    retq
   %out = call <64 x i8> @llvm.ctpop.v64i8(<64 x i8> %in)
   ret <64 x i8> %out
 }
