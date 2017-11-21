@@ -3091,8 +3091,8 @@ public:
 
     PPCGProg->n_array =
         ValidSAIs.size(); // std::distance(S->array_begin(), S->array_end());
-    PPCGProg->array = isl_calloc_array(S->getIslCtx().get(), struct gpu_array_info,
-                                       PPCGProg->n_array);
+    PPCGProg->array = isl_calloc_array(
+        S->getIslCtx().get(), struct gpu_array_info, PPCGProg->n_array);
 
     createArrays(PPCGProg, ValidSAIs);
 

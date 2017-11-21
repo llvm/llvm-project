@@ -185,7 +185,6 @@ isl::union_map MaximalStaticExpander::filterDependences(
 
   Dependences.foreach_map([&MapDependences, &AccessDomainId,
                            &SAI](isl::map Map) -> isl::stat {
-
     // Filter out Statement to Statement dependences.
     if (!Map.can_curry())
       return isl::stat::ok;
