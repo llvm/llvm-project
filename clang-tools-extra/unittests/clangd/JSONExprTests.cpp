@@ -15,6 +15,9 @@
 namespace clang {
 namespace clangd {
 namespace json {
+void PrintTo(const Expr &E, std::ostream *OS) {
+  llvm::raw_os_ostream(*OS) << llvm::formatv("{0:2}", E);
+}
 namespace {
 
 std::string s(const Expr &E) { return llvm::formatv("{0}", E).str(); }
@@ -106,6 +109,77 @@ TEST(JSONExprTests, PrettyPrinting) {
                            }}},
                       }},
                  }));
+}
+
+TEST(JSONTest, Parse) {
+  auto Compare = [](llvm::StringRef S, Expr Expected) {
+    if (auto E = parse(S)) {
+      // Compare both string forms and with operator==, in case we have bugs.
+      EXPECT_EQ(*E, Expected);
+      EXPECT_EQ(sp(*E), sp(Expected));
+    } else {
+      handleAllErrors(E.takeError(), [S](const llvm::ErrorInfoBase &E) {
+        FAIL() << "Failed to parse JSON >>> " << S << " <<<: " << E.message();
+      });
+    }
+  };
+
+  Compare(R"(true)", true);
+  Compare(R"(false)", false);
+  Compare(R"(null)", nullptr);
+
+  Compare(R"(42)", 42);
+  Compare(R"(2.5)", 2.5);
+  Compare(R"(2e50)", 2e50);
+  Compare(R"(1.2e3456789)", 1.0 / 0.0);
+
+  Compare(R"("foo")", "foo");
+  Compare(R"("\"\\\b\f\n\r\t")", "\"\\\b\f\n\r\t");
+  Compare(R"("\u0000")", llvm::StringRef("\0", 1));
+  Compare("\"\x7f\"", "\x7f");
+  Compare(R"("\ud801\udc37")", "\U00010437"); // UTF16 surrogate pair escape.
+  Compare("\"\xE2\x82\xAC\xF0\x9D\x84\x9E\"", "\u20ac\U0001d11e"); // UTF8
+  Compare(R"("\ud801")", "\ufffd"); // Invalid codepoint.
+
+  Compare(R"({"":0,"":0})", obj{{"", 0}});
+  Compare(R"({"obj":{},"arr":[]})", obj{{"obj", obj{}}, {"arr", {}}});
+  Compare(R"({"\n":{"\u0000":[[[[]]]]}})",
+          obj{{"\n", obj{
+                         {llvm::StringRef("\0", 1), {{{{}}}}},
+                     }}});
+  Compare("\r[\n\t] ", {});
+}
+
+TEST(JSONTest, ParseErrors) {
+  auto ExpectErr = [](llvm::StringRef Msg, llvm::StringRef S) {
+    if (auto E = parse(S)) {
+      // Compare both string forms and with operator==, in case we have bugs.
+      FAIL() << "Parsed JSON >>> " << S << " <<< but wanted error: " << Msg;
+    } else {
+      handleAllErrors(E.takeError(), [S, Msg](const llvm::ErrorInfoBase &E) {
+        EXPECT_THAT(E.message(), testing::HasSubstr(Msg)) << S;
+      });
+    }
+  };
+  ExpectErr("Unexpected EOF", "");
+  ExpectErr("Unexpected EOF", "[");
+  ExpectErr("Text after end of document", "[][]");
+  ExpectErr("Text after end of document", "[][]");
+  ExpectErr("Invalid bareword", "fuzzy");
+  ExpectErr("Expected , or ]", "[2?]");
+  ExpectErr("Expected object key", "{a:2}");
+  ExpectErr("Expected : after object key", R"({"a",2})");
+  ExpectErr("Expected , or } after object property", R"({"a":2 "b":3})");
+  ExpectErr("Expected JSON value", R"([&%!])");
+  ExpectErr("Invalid number", "1e1.0");
+  ExpectErr("Unterminated string", R"("abc\"def)");
+  ExpectErr("Control character in string", "\"abc\ndef\"");
+  ExpectErr("Invalid escape sequence", R"("\030")");
+  ExpectErr("Invalid \\u escape sequence", R"("\usuck")");
+  ExpectErr("[3:3, byte=19]", R"({
+  "valid": 1,
+  invalid: 2
+})");
 }
 
 } // namespace
