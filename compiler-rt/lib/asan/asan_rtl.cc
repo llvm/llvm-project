@@ -407,6 +407,7 @@ static void AsanInitInternal() {
   MaybeReexec();
 
   // Setup internal allocator callback.
+  SetLowLevelAllocateMinAlignment(SHADOW_GRANULARITY);
   SetLowLevelAllocateCallback(OnLowLevelAllocate);
 
   InitializeAsanInterceptors();
