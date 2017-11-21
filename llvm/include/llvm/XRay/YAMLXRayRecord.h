@@ -86,16 +86,6 @@ template <> struct MappingTraits<xray::YAMLXRayRecord> {
   static constexpr bool flow = true;
 };
 
-template <> struct SequenceTraits<std::vector<uint64_t>> {
-  static constexpr bool flow = true;
-  static size_t size(IO &IO, std::vector<uint64_t> &V) { return V.size(); }
-  static uint64_t &element(IO &IO, std::vector<uint64_t> &V, size_t Index) {
-    if (Index >= V.size())
-      V.resize(Index + 1);
-    return V[Index];
-  }
-};
-
 template <> struct MappingTraits<xray::YAMLXRayTrace> {
   static void mapping(IO &IO, xray::YAMLXRayTrace &Trace) {
     // A trace file contains two parts, the header and the list of all the

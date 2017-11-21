@@ -1866,8 +1866,10 @@ static bool runIPSCCP(Module &M, const DataLayout &DL,
     if (Solver.isBlockExecutable(&F.front()))
       for (Function::arg_iterator AI = F.arg_begin(), E = F.arg_end(); AI != E;
            ++AI) {
-        if (!AI->use_empty() && tryToReplaceWithConstant(Solver, &*AI))
+        if (!AI->use_empty() && tryToReplaceWithConstant(Solver, &*AI)) {
           ++IPNumArgsElimed;
+          continue;
+        }
 
         if (!AI->use_empty() && tryToReplaceWithConstantRange(Solver, &*AI))
           ++IPNumRangeInfoUsed;

@@ -1150,8 +1150,6 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("fxsr", true)
       .Case("lwp", true)
       .Case("lzcnt", true)
-      .Case("mm3dnow", true)
-      .Case("mm3dnowa", true)
       .Case("mmx", true)
       .Case("movbe", true)
       .Case("mpx", true)

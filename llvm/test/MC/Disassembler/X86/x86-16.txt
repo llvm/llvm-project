@@ -207,7 +207,7 @@
 # CHECK: movw %cs, %ax
 0x8c 0xc8
 
-# CHECK: movw %cs, (%eax)
+# CHECK: movl %cs, (%eax)
 0x67 0x66 0x8c 0x08
 
 # CHECK: movw %cs, (%eax)
@@ -216,7 +216,7 @@
 # CHECK: movl %eax, %cs
 0x66 0x8e 0xc8
 
-# CHECK: movw (%eax), %cs
+# CHECK: movl (%eax), %cs
 0x67 0x66 0x8e 0x08
 
 # CHECK: movw (%eax), %cs

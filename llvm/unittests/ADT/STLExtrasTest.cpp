@@ -256,7 +256,7 @@ TEST(STLExtrasTest, CountAdaptor) {
 }
 
 TEST(STLExtrasTest, for_each) {
-  std::vector<int> v{ 0, 1, 2, 3, 4 };
+  std::vector<int> v{0, 1, 2, 3, 4};
   int count = 0;
 
   llvm::for_each(v, [&count](int) { ++count; });
@@ -326,4 +326,42 @@ TEST(STLExtrasTest, EraseIf) {
   EXPECT_EQ(7, V[3]);
 }
 
+namespace some_namespace {
+struct some_struct {
+  std::vector<int> data;
+  std::string swap_val;
+};
+
+std::vector<int>::const_iterator begin(const some_struct &s) {
+  return s.data.begin();
 }
+
+std::vector<int>::const_iterator end(const some_struct &s) {
+  return s.data.end();
+}
+
+void swap(some_struct &lhs, some_struct &rhs) {
+  // make swap visible as non-adl swap would even seem to
+  // work with std::swap which defaults to moving
+  lhs.swap_val = "lhs";
+  rhs.swap_val = "rhs";
+}
+} // namespace some_namespace
+
+TEST(STLExtrasTest, ADLTest) {
+  some_namespace::some_struct s{{1, 2, 3, 4, 5}, ""};
+  some_namespace::some_struct s2{{2, 4, 6, 8, 10}, ""};
+
+  EXPECT_EQ(*adl_begin(s), 1);
+  EXPECT_EQ(*(adl_end(s) - 1), 5);
+
+  adl_swap(s, s2);
+  EXPECT_EQ(s.swap_val, "lhs");
+  EXPECT_EQ(s2.swap_val, "rhs");
+
+  int count = 0;
+  llvm::for_each(s, [&count](int) { ++count; });
+  EXPECT_EQ(5, count);
+}
+
+} // namespace
