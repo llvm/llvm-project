@@ -137,12 +137,12 @@ TEST(JSONTest, Parse) {
   Compare(R"("\"\\\b\f\n\r\t")", "\"\\\b\f\n\r\t");
   Compare(R"("\u0000")", llvm::StringRef("\0", 1));
   Compare("\"\x7f\"", "\x7f");
-  Compare(R"("\ud801\udc37")", "\U00010437"); // UTF16 surrogate pair escape.
-  Compare("\"\xE2\x82\xAC\xF0\x9D\x84\x9E\"", "\u20ac\U0001d11e"); // UTF8
+  Compare(R"("\ud801\udc37")", u8"\U00010437"); // UTF16 surrogate pair escape.
+  Compare("\"\xE2\x82\xAC\xF0\x9D\x84\x9E\"", u8"\u20ac\U0001d11e"); // UTF8
   Compare(
       R"("LoneLeading=\ud801, LoneTrailing=\udc01, LeadingLeadingTrailing=\ud801\ud801\udc37")",
-      "LoneLeading=\ufffd, LoneTrailing=\ufffd, "
-      "LeadingLeadingTrailing=\ufffd\U00010437"); // Invalid unicode.
+      u8"LoneLeading=\ufffd, LoneTrailing=\ufffd, "
+      u8"LeadingLeadingTrailing=\ufffd\U00010437"); // Invalid unicode.
 
   Compare(R"({"":0,"":0})", obj{{"", 0}});
   Compare(R"({"obj":{},"arr":[]})", obj{{"obj", obj{}}, {"arr", {}}});
