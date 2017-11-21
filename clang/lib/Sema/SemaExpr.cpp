@@ -12588,15 +12588,7 @@ ExprResult Sema::BuildBuiltinOffsetOf(SourceLocation BuiltinLoc,
       && RequireCompleteType(BuiltinLoc, ArgTy,
                              diag::err_offsetof_incomplete_type, TypeRange))
     return ExprError();
-  
-  // offsetof with non-identifier designators (e.g. "offsetof(x, a.b[c])") are a
-  // GCC extension, diagnose them.
-  // FIXME: This diagnostic isn't actually visible because the location is in
-  // a system header!
-  if (Components.size() != 1)
-    Diag(BuiltinLoc, diag::ext_offsetof_extended_field_designator)
-      << SourceRange(Components[1].LocStart, Components.back().LocEnd);
-  
+
   bool DidWarnAboutNonPOD = false;
   QualType CurrentType = ArgTy;
   SmallVector<OffsetOfNode, 4> Comps;

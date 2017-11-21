@@ -14,18 +14,18 @@
 double *g;
 
 // CK1: @g = global double*
-// CK1: [[MTYPE00:@.+]] = {{.*}}constant [1 x i32] [i32 99]
-// CK1: [[MTYPE01:@.+]] = {{.*}}constant [1 x i32] [i32 99]
-// CK1: [[MTYPE03:@.+]] = {{.*}}constant [1 x i32] [i32 99]
-// CK1: [[MTYPE04:@.+]] = {{.*}}constant [1 x i32] [i32 99]
-// CK1: [[MTYPE05:@.+]] = {{.*}}constant [1 x i32] [i32 99]
-// CK1: [[MTYPE06:@.+]] = {{.*}}constant [1 x i32] [i32 99]
-// CK1: [[MTYPE07:@.+]] = {{.*}}constant [1 x i32] [i32 99]
-// CK1: [[MTYPE08:@.+]] = {{.*}}constant [2 x i32] [{{i32 35, i32 99|i32 99, i32 35}}]
-// CK1: [[MTYPE09:@.+]] = {{.*}}constant [2 x i32] [i32 99, i32 99]
-// CK1: [[MTYPE10:@.+]] = {{.*}}constant [2 x i32] [i32 99, i32 99]
-// CK1: [[MTYPE11:@.+]] = {{.*}}constant [2 x i32] [i32 96, i32 35]
-// CK1: [[MTYPE12:@.+]] = {{.*}}constant [2 x i32] [i32 96, i32 35]
+// CK1: [[MTYPE00:@.+]] = {{.*}}constant [1 x i64] [i64 99]
+// CK1: [[MTYPE01:@.+]] = {{.*}}constant [1 x i64] [i64 99]
+// CK1: [[MTYPE03:@.+]] = {{.*}}constant [1 x i64] [i64 99]
+// CK1: [[MTYPE04:@.+]] = {{.*}}constant [1 x i64] [i64 99]
+// CK1: [[MTYPE05:@.+]] = {{.*}}constant [1 x i64] [i64 99]
+// CK1: [[MTYPE06:@.+]] = {{.*}}constant [1 x i64] [i64 99]
+// CK1: [[MTYPE07:@.+]] = {{.*}}constant [1 x i64] [i64 99]
+// CK1: [[MTYPE08:@.+]] = {{.*}}constant [2 x i64] [{{i64 35, i64 99|i64 99, i64 35}}]
+// CK1: [[MTYPE09:@.+]] = {{.*}}constant [2 x i64] [i64 99, i64 99]
+// CK1: [[MTYPE10:@.+]] = {{.*}}constant [2 x i64] [i64 99, i64 99]
+// CK1: [[MTYPE11:@.+]] = {{.*}}constant [2 x i64] [i64 96, i64 35]
+// CK1: [[MTYPE12:@.+]] = {{.*}}constant [2 x i64] [i64 96, i64 35]
 
 // CK1-LABEL: @_Z3foo
 template<typename T>
@@ -330,10 +330,10 @@ void bar(float *&a, int *&b) {
 #ifdef CK2
 
 // CK2: [[ST:%.+]] = type { double*, double** }
-// CK2: [[MTYPE00:@.+]] = {{.*}}constant [2 x i32] [i32 35, i32 83]
-// CK2: [[MTYPE01:@.+]] = {{.*}}constant [3 x i32] [i32 32, i32 19, i32 83]
-// CK2: [[MTYPE02:@.+]] = {{.*}}constant [2 x i32] [i32 96, i32 35]
-// CK2: [[MTYPE03:@.+]] = {{.*}}constant [4 x i32] [i32 96, i32 32, i32 19, i32 83]
+// CK2: [[MTYPE00:@.+]] = {{.*}}constant [2 x i64] [i64 35, i64 83]
+// CK2: [[MTYPE01:@.+]] = {{.*}}constant [3 x i64] [i64 32, i64 19, i64 83]
+// CK2: [[MTYPE02:@.+]] = {{.*}}constant [2 x i64] [i64 96, i64 35]
+// CK2: [[MTYPE03:@.+]] = {{.*}}constant [4 x i64] [i64 96, i64 32, i64 19, i64 83]
 
 template <typename T>
 struct ST {

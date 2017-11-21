@@ -20,7 +20,7 @@ int main() {
   for (std::regex_constants::syntax_option_type op :
        {std::regex::basic, std::regex::grep}) {
     try {
-      (void)std::regex("a\\{100000000000000000\\}", op);
+      TEST_IGNORE_NODISCARD std::regex("a\\{100000000000000000\\}", op);
       assert(false);
     } catch (const std::regex_error &e) {
       assert(e.code() == std::regex_constants::error_badbrace);
@@ -30,7 +30,7 @@ int main() {
        {std::regex::ECMAScript, std::regex::extended, std::regex::egrep,
         std::regex::awk}) {
     try {
-      (void)std::regex("a{100000000000000000}", op);
+      TEST_IGNORE_NODISCARD std::regex("a{100000000000000000}", op);
       assert(false);
     } catch (const std::regex_error &e) {
       assert(e.code() == std::regex_constants::error_badbrace);

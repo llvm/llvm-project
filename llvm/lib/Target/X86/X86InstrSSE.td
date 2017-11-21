@@ -7242,24 +7242,37 @@ def AESKEYGENASSIST128rm : AESAI<0xDF, MRMSrcMem, (outs VR128:$dst),
 // PCLMUL Instructions
 //===----------------------------------------------------------------------===//
 
-// SSE carry-less Multiplication instructions
-let Constraints = "$src1 = $dst", Predicates = [NoAVX, HasPCLMUL] in {
-  let isCommutable = 1 in
-  def PCLMULQDQrr : PCLMULIi8<0x44, MRMSrcReg, (outs VR128:$dst),
-            (ins VR128:$src1, VR128:$src2, u8imm:$src3),
-            "pclmulqdq\t{$src3, $src2, $dst|$dst, $src2, $src3}",
-            [(set VR128:$dst,
-              (int_x86_pclmulqdq VR128:$src1, VR128:$src2, imm:$src3))],
-            IIC_SSE_PCLMULQDQ_RR>, Sched<[WriteCLMul]>;
+// Immediate transform to help with commuting.
+def PCLMULCommuteImm : SDNodeXForm<imm, [{
+  uint8_t Imm = N->getZExtValue();
+  return getI8Imm((uint8_t)((Imm >> 4) | (Imm << 4)), SDLoc(N));
+}]>;
 
-  def PCLMULQDQrm : PCLMULIi8<0x44, MRMSrcMem, (outs VR128:$dst),
-            (ins VR128:$src1, i128mem:$src2, u8imm:$src3),
-            "pclmulqdq\t{$src3, $src2, $dst|$dst, $src2, $src3}",
-            [(set VR128:$dst,
-               (int_x86_pclmulqdq VR128:$src1, (memopv2i64 addr:$src2),
-                imm:$src3))],
-            IIC_SSE_PCLMULQDQ_RR>, Sched<[WriteCLMulLd, ReadAfterLd]>;
-}
+// SSE carry-less Multiplication instructions
+let Predicates = [NoAVX, HasPCLMUL] in {
+  let Constraints = "$src1 = $dst" in {
+    let isCommutable = 1 in
+    def PCLMULQDQrr : PCLMULIi8<0x44, MRMSrcReg, (outs VR128:$dst),
+              (ins VR128:$src1, VR128:$src2, u8imm:$src3),
+              "pclmulqdq\t{$src3, $src2, $dst|$dst, $src2, $src3}",
+              [(set VR128:$dst,
+                (int_x86_pclmulqdq VR128:$src1, VR128:$src2, imm:$src3))],
+              IIC_SSE_PCLMULQDQ_RR>, Sched<[WriteCLMul]>;
+
+    def PCLMULQDQrm : PCLMULIi8<0x44, MRMSrcMem, (outs VR128:$dst),
+              (ins VR128:$src1, i128mem:$src2, u8imm:$src3),
+              "pclmulqdq\t{$src3, $src2, $dst|$dst, $src2, $src3}",
+              [(set VR128:$dst,
+                 (int_x86_pclmulqdq VR128:$src1, (memopv2i64 addr:$src2),
+                  imm:$src3))],
+              IIC_SSE_PCLMULQDQ_RR>, Sched<[WriteCLMulLd, ReadAfterLd]>;
+  } // Constraints = "$src1 = $dst"
+
+  def : Pat<(int_x86_pclmulqdq (memopv2i64 addr:$src2), VR128:$src1,
+                                (i8 imm:$src3)),
+            (PCLMULQDQrm VR128:$src1, addr:$src2,
+                          (PCLMULCommuteImm imm:$src3))>;
+} // Predicates = [NoAVX, HasPCLMUL]
 
 // SSE aliases
 foreach HI = ["hq","lq"] in
@@ -7289,6 +7302,12 @@ multiclass vpclmulqdq<RegisterClass RC, X86MemOperand MemOp,
             [(set RC:$dst,
                (IntId RC:$src1, (LdFrag addr:$src2), imm:$src3))]>,
             Sched<[WriteCLMulLd, ReadAfterLd]>;
+
+  // We can commute a load in the first operand by swapping the sources and
+  // rotating the immediate.
+  def : Pat<(IntId (LdFrag addr:$src2), RC:$src1, (i8 imm:$src3)),
+            (!cast<Instruction>(NAME#"rm") RC:$src1, addr:$src2,
+                                           (PCLMULCommuteImm imm:$src3))>;
 }
 
 let Predicates = [HasAVX, NoVLX_Or_NoVPCLMULQDQ, HasPCLMUL] in
@@ -7320,28 +7339,6 @@ multiclass vpclmulqdq_aliases<string InstStr, RegisterClass RC,
 // AVX aliases
 defm : vpclmulqdq_aliases<"VPCLMULQDQ", VR128, i128mem>;
 defm : vpclmulqdq_aliases<"VPCLMULQDQY", VR256, i256mem>;
-
-// Immediate transform to help with commuting.
-def PCLMULCommuteImm : SDNodeXForm<imm, [{
-  uint8_t Imm = N->getZExtValue();
-  return getI8Imm((uint8_t)((Imm >> 4) | (Imm << 4)), SDLoc(N));
-}]>;
-
-// We can commute a load in the first operand by swapping the sources and
-// rotating the immediate.
-let Predicates = [HasAVX, HasPCLMUL] in {
-  def : Pat<(int_x86_pclmulqdq (loadv2i64 addr:$src2), VR128:$src1,
-                                (i8 imm:$src3)),
-            (VPCLMULQDQrm VR128:$src1, addr:$src2,
-                          (PCLMULCommuteImm imm:$src3))>;
-}
-
-let Predicates = [NoAVX, HasPCLMUL] in {
-  def : Pat<(int_x86_pclmulqdq (loadv2i64 addr:$src2), VR128:$src1,
-                                (i8 imm:$src3)),
-            (PCLMULQDQrm VR128:$src1, addr:$src2,
-                          (PCLMULCommuteImm imm:$src3))>;
-}
 
 //===----------------------------------------------------------------------===//
 // SSE4A Instructions

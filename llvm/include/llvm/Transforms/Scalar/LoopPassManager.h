@@ -285,13 +285,17 @@ public:
       return PA;
 
     // Get the analysis results needed by loop passes.
+    MemorySSA *MSSA = EnableMSSALoopDependency
+                          ? (&AM.getResult<MemorySSAAnalysis>(F).getMSSA())
+                          : nullptr;
     LoopStandardAnalysisResults LAR = {AM.getResult<AAManager>(F),
                                        AM.getResult<AssumptionAnalysis>(F),
                                        AM.getResult<DominatorTreeAnalysis>(F),
                                        AM.getResult<LoopAnalysis>(F),
                                        AM.getResult<ScalarEvolutionAnalysis>(F),
                                        AM.getResult<TargetLibraryAnalysis>(F),
-                                       AM.getResult<TargetIRAnalysis>(F)};
+                                       AM.getResult<TargetIRAnalysis>(F),
+                                       MSSA};
 
     // Setup the loop analysis manager from its proxy. It is important that
     // this is only done when there are loops to process and we have built the
@@ -359,6 +363,8 @@ public:
     PA.preserve<DominatorTreeAnalysis>();
     PA.preserve<LoopAnalysis>();
     PA.preserve<ScalarEvolutionAnalysis>();
+    // FIXME: Uncomment this when all loop passes preserve MemorySSA
+    // PA.preserve<MemorySSAAnalysis>();
     // FIXME: What we really want to do here is preserve an AA category, but
     // that concept doesn't exist yet.
     PA.preserve<AAManager>();

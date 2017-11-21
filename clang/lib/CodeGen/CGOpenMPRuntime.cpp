@@ -668,26 +668,26 @@ enum OpenMPRTLFunction {
   //
   // Offloading related calls
   //
-  // Call to int32_t __tgt_target(int32_t device_id, void *host_ptr, int32_t
-  // arg_num, void** args_base, void **args, size_t *arg_sizes, int32_t
+  // Call to int32_t __tgt_target(int64_t device_id, void *host_ptr, int32_t
+  // arg_num, void** args_base, void **args, size_t *arg_sizes, int64_t
   // *arg_types);
   OMPRTL__tgt_target,
-  // Call to int32_t __tgt_target_teams(int32_t device_id, void *host_ptr,
-  // int32_t arg_num, void** args_base, void **args, size_t *arg_sizes,
-  // int32_t *arg_types, int32_t num_teams, int32_t thread_limit);
+  // Call to int32_t __tgt_target_teams(int64_t device_id, void *host_ptr,
+  // int32_t arg_num, void** args_base, void **args, size_t *arg_sizes, int64_t
+  // *arg_types, int32_t num_teams, int32_t thread_limit);
   OMPRTL__tgt_target_teams,
   // Call to void __tgt_register_lib(__tgt_bin_desc *desc);
   OMPRTL__tgt_register_lib,
   // Call to void __tgt_unregister_lib(__tgt_bin_desc *desc);
   OMPRTL__tgt_unregister_lib,
-  // Call to void __tgt_target_data_begin(int32_t device_id, int32_t arg_num,
-  // void** args_base, void **args, size_t *arg_sizes, int32_t *arg_types);
+  // Call to void __tgt_target_data_begin(int64_t device_id, int32_t arg_num,
+  // void** args_base, void **args, size_t *arg_sizes, int64_t *arg_types);
   OMPRTL__tgt_target_data_begin,
-  // Call to void __tgt_target_data_end(int32_t device_id, int32_t arg_num,
-  // void** args_base, void **args, size_t *arg_sizes, int32_t *arg_types);
+  // Call to void __tgt_target_data_end(int64_t device_id, int32_t arg_num,
+  // void** args_base, void **args, size_t *arg_sizes, int64_t *arg_types);
   OMPRTL__tgt_target_data_end,
-  // Call to void __tgt_target_data_update(int32_t device_id, int32_t arg_num,
-  // void** args_base, void **args, size_t *arg_sizes, int32_t *arg_types);
+  // Call to void __tgt_target_data_update(int64_t device_id, int32_t arg_num,
+  // void** args_base, void **args, size_t *arg_sizes, int64_t *arg_types);
   OMPRTL__tgt_target_data_update,
 };
 
@@ -2017,32 +2017,32 @@ CGOpenMPRuntime::createRuntimeFunction(unsigned Function) {
     break;
   }
   case OMPRTL__tgt_target: {
-    // Build int32_t __tgt_target(int32_t device_id, void *host_ptr, int32_t
-    // arg_num, void** args_base, void **args, size_t *arg_sizes, int32_t
+    // Build int32_t __tgt_target(int64_t device_id, void *host_ptr, int32_t
+    // arg_num, void** args_base, void **args, size_t *arg_sizes, int64_t
     // *arg_types);
-    llvm::Type *TypeParams[] = {CGM.Int32Ty,
+    llvm::Type *TypeParams[] = {CGM.Int64Ty,
                                 CGM.VoidPtrTy,
                                 CGM.Int32Ty,
                                 CGM.VoidPtrPtrTy,
                                 CGM.VoidPtrPtrTy,
                                 CGM.SizeTy->getPointerTo(),
-                                CGM.Int32Ty->getPointerTo()};
+                                CGM.Int64Ty->getPointerTo()};
     llvm::FunctionType *FnTy =
         llvm::FunctionType::get(CGM.Int32Ty, TypeParams, /*isVarArg*/ false);
     RTLFn = CGM.CreateRuntimeFunction(FnTy, "__tgt_target");
     break;
   }
   case OMPRTL__tgt_target_teams: {
-    // Build int32_t __tgt_target_teams(int32_t device_id, void *host_ptr,
+    // Build int32_t __tgt_target_teams(int64_t device_id, void *host_ptr,
     // int32_t arg_num, void** args_base, void **args, size_t *arg_sizes,
-    // int32_t *arg_types, int32_t num_teams, int32_t thread_limit);
-    llvm::Type *TypeParams[] = {CGM.Int32Ty,
+    // int64_t *arg_types, int32_t num_teams, int32_t thread_limit);
+    llvm::Type *TypeParams[] = {CGM.Int64Ty,
                                 CGM.VoidPtrTy,
                                 CGM.Int32Ty,
                                 CGM.VoidPtrPtrTy,
                                 CGM.VoidPtrPtrTy,
                                 CGM.SizeTy->getPointerTo(),
-                                CGM.Int32Ty->getPointerTo(),
+                                CGM.Int64Ty->getPointerTo(),
                                 CGM.Int32Ty,
                                 CGM.Int32Ty};
     llvm::FunctionType *FnTy =
@@ -2071,42 +2071,42 @@ CGOpenMPRuntime::createRuntimeFunction(unsigned Function) {
     break;
   }
   case OMPRTL__tgt_target_data_begin: {
-    // Build void __tgt_target_data_begin(int32_t device_id, int32_t arg_num,
-    // void** args_base, void **args, size_t *arg_sizes, int32_t *arg_types);
-    llvm::Type *TypeParams[] = {CGM.Int32Ty,
+    // Build void __tgt_target_data_begin(int64_t device_id, int32_t arg_num,
+    // void** args_base, void **args, size_t *arg_sizes, int64_t *arg_types);
+    llvm::Type *TypeParams[] = {CGM.Int64Ty,
                                 CGM.Int32Ty,
                                 CGM.VoidPtrPtrTy,
                                 CGM.VoidPtrPtrTy,
                                 CGM.SizeTy->getPointerTo(),
-                                CGM.Int32Ty->getPointerTo()};
+                                CGM.Int64Ty->getPointerTo()};
     llvm::FunctionType *FnTy =
         llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ false);
     RTLFn = CGM.CreateRuntimeFunction(FnTy, "__tgt_target_data_begin");
     break;
   }
   case OMPRTL__tgt_target_data_end: {
-    // Build void __tgt_target_data_end(int32_t device_id, int32_t arg_num,
-    // void** args_base, void **args, size_t *arg_sizes, int32_t *arg_types);
-    llvm::Type *TypeParams[] = {CGM.Int32Ty,
+    // Build void __tgt_target_data_end(int64_t device_id, int32_t arg_num,
+    // void** args_base, void **args, size_t *arg_sizes, int64_t *arg_types);
+    llvm::Type *TypeParams[] = {CGM.Int64Ty,
                                 CGM.Int32Ty,
                                 CGM.VoidPtrPtrTy,
                                 CGM.VoidPtrPtrTy,
                                 CGM.SizeTy->getPointerTo(),
-                                CGM.Int32Ty->getPointerTo()};
+                                CGM.Int64Ty->getPointerTo()};
     llvm::FunctionType *FnTy =
         llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ false);
     RTLFn = CGM.CreateRuntimeFunction(FnTy, "__tgt_target_data_end");
     break;
   }
   case OMPRTL__tgt_target_data_update: {
-    // Build void __tgt_target_data_update(int32_t device_id, int32_t arg_num,
-    // void** args_base, void **args, size_t *arg_sizes, int32_t *arg_types);
-    llvm::Type *TypeParams[] = {CGM.Int32Ty,
+    // Build void __tgt_target_data_update(int64_t device_id, int32_t arg_num,
+    // void** args_base, void **args, size_t *arg_sizes, int64_t *arg_types);
+    llvm::Type *TypeParams[] = {CGM.Int64Ty,
                                 CGM.Int32Ty,
                                 CGM.VoidPtrPtrTy,
                                 CGM.VoidPtrPtrTy,
                                 CGM.SizeTy->getPointerTo(),
-                                CGM.Int32Ty->getPointerTo()};
+                                CGM.Int64Ty->getPointerTo()};
     llvm::FunctionType *FnTy =
         llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ false);
     RTLFn = CGM.CreateRuntimeFunction(FnTy, "__tgt_target_data_update");
@@ -6017,7 +6017,7 @@ public:
 
   typedef SmallVector<BasePointerInfo, 16> MapBaseValuesArrayTy;
   typedef SmallVector<llvm::Value *, 16> MapValuesArrayTy;
-  typedef SmallVector<unsigned, 16> MapFlagsArrayTy;
+  typedef SmallVector<uint64_t, 16> MapFlagsArrayTy;
 
 private:
   /// \brief Directive from where the map clauses were extracted.
@@ -6082,10 +6082,10 @@ private:
   /// a flag marking the map as a pointer if requested. Add a flag marking the
   /// map as the first one of a series of maps that relate to the same map
   /// expression.
-  unsigned getMapTypeBits(OpenMPMapClauseKind MapType,
+  uint64_t getMapTypeBits(OpenMPMapClauseKind MapType,
                           OpenMPMapClauseKind MapTypeModifier, bool AddPtrFlag,
                           bool AddIsTargetParamFlag) const {
-    unsigned Bits = 0u;
+    uint64_t Bits = 0u;
     switch (MapType) {
     case OMPC_MAP_alloc:
     case OMPC_MAP_release:
@@ -6319,7 +6319,7 @@ private:
       }
     }
 
-    unsigned DefaultFlags = IsImplicit ? OMP_MAP_IMPLICIT : 0;
+    uint64_t DefaultFlags = IsImplicit ? OMP_MAP_IMPLICIT : 0;
     for (; I != CE; ++I) {
       auto Next = std::next(I);
 
@@ -6866,7 +6866,7 @@ static void emitOffloadingArraysArgument(
         llvm::ArrayType::get(CGM.SizeTy, Info.NumberOfPtrs), Info.SizesArray,
         /*Idx0=*/0, /*Idx1=*/0);
     MapTypesArrayArg = CGF.Builder.CreateConstInBoundsGEP2_32(
-        llvm::ArrayType::get(CGM.Int32Ty, Info.NumberOfPtrs),
+        llvm::ArrayType::get(CGM.Int64Ty, Info.NumberOfPtrs),
         Info.MapTypesArray,
         /*Idx0=*/0,
         /*Idx1=*/0);
@@ -6875,7 +6875,7 @@ static void emitOffloadingArraysArgument(
     PointersArrayArg = llvm::ConstantPointerNull::get(CGM.VoidPtrPtrTy);
     SizesArrayArg = llvm::ConstantPointerNull::get(CGM.SizeTy->getPointerTo());
     MapTypesArrayArg =
-        llvm::ConstantPointerNull::get(CGM.Int32Ty->getPointerTo());
+        llvm::ConstantPointerNull::get(CGM.Int64Ty->getPointerTo());
   }
 }
 
@@ -6977,11 +6977,12 @@ void CGOpenMPRuntime::emitTargetCall(CodeGenFunction &CGF,
 
     // Emit device ID if any.
     llvm::Value *DeviceID;
-    if (Device)
+    if (Device) {
       DeviceID = CGF.Builder.CreateIntCast(CGF.EmitScalarExpr(Device),
-                                           CGF.Int32Ty, /*isSigned=*/true);
-    else
-      DeviceID = CGF.Builder.getInt32(OMP_DEVICEID_UNDEF);
+                                           CGF.Int64Ty, /*isSigned=*/true);
+    } else {
+      DeviceID = CGF.Builder.getInt64(OMP_DEVICEID_UNDEF);
+    }
 
     // Emit the number of elements in the offloading arrays.
     llvm::Value *PointerNum = CGF.Builder.getInt32(BasePointers.size());
@@ -7311,11 +7312,12 @@ void CGOpenMPRuntime::emitTargetDataCalls(
 
     // Emit device ID if any.
     llvm::Value *DeviceID = nullptr;
-    if (Device)
+    if (Device) {
       DeviceID = CGF.Builder.CreateIntCast(CGF.EmitScalarExpr(Device),
-                                           CGF.Int32Ty, /*isSigned=*/true);
-    else
-      DeviceID = CGF.Builder.getInt32(OMP_DEVICEID_UNDEF);
+                                           CGF.Int64Ty, /*isSigned=*/true);
+    } else {
+      DeviceID = CGF.Builder.getInt64(OMP_DEVICEID_UNDEF);
+    }
 
     // Emit the number of elements in the offloading arrays.
     auto *PointerNum = CGF.Builder.getInt32(Info.NumberOfPtrs);
@@ -7346,11 +7348,12 @@ void CGOpenMPRuntime::emitTargetDataCalls(
 
     // Emit device ID if any.
     llvm::Value *DeviceID = nullptr;
-    if (Device)
+    if (Device) {
       DeviceID = CGF.Builder.CreateIntCast(CGF.EmitScalarExpr(Device),
-                                           CGF.Int32Ty, /*isSigned=*/true);
-    else
-      DeviceID = CGF.Builder.getInt32(OMP_DEVICEID_UNDEF);
+                                           CGF.Int64Ty, /*isSigned=*/true);
+    } else {
+      DeviceID = CGF.Builder.getInt64(OMP_DEVICEID_UNDEF);
+    }
 
     // Emit the number of elements in the offloading arrays.
     auto *PointerNum = CGF.Builder.getInt32(Info.NumberOfPtrs);
@@ -7432,11 +7435,12 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
 
     // Emit device ID if any.
     llvm::Value *DeviceID = nullptr;
-    if (Device)
+    if (Device) {
       DeviceID = CGF.Builder.CreateIntCast(CGF.EmitScalarExpr(Device),
-                                           CGF.Int32Ty, /*isSigned=*/true);
-    else
-      DeviceID = CGF.Builder.getInt32(OMP_DEVICEID_UNDEF);
+                                           CGF.Int64Ty, /*isSigned=*/true);
+    } else {
+      DeviceID = CGF.Builder.getInt64(OMP_DEVICEID_UNDEF);
+    }
 
     // Emit the number of elements in the offloading arrays.
     auto *PointerNum = CGF.Builder.getInt32(BasePointers.size());

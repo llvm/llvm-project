@@ -8794,12 +8794,14 @@ public:
   /// parsing of the associated statement.
   StmtResult ActOnOpenMPTargetEnterDataDirective(ArrayRef<OMPClause *> Clauses,
                                                  SourceLocation StartLoc,
-                                                 SourceLocation EndLoc);
+                                                 SourceLocation EndLoc,
+                                                 Stmt *AStmt);
   /// \brief Called on well-formed '\#pragma omp target exit data' after
   /// parsing of the associated statement.
   StmtResult ActOnOpenMPTargetExitDataDirective(ArrayRef<OMPClause *> Clauses,
                                                 SourceLocation StartLoc,
-                                                SourceLocation EndLoc);
+                                                SourceLocation EndLoc,
+                                                Stmt *AStmt);
   /// \brief Called on well-formed '\#pragma omp target parallel' after
   /// parsing of the associated statement.
   StmtResult ActOnOpenMPTargetParallelDirective(ArrayRef<OMPClause *> Clauses,
@@ -8848,7 +8850,8 @@ public:
   /// \brief Called on well-formed '\#pragma omp target update'.
   StmtResult ActOnOpenMPTargetUpdateDirective(ArrayRef<OMPClause *> Clauses,
                                               SourceLocation StartLoc,
-                                              SourceLocation EndLoc);
+                                              SourceLocation EndLoc,
+                                              Stmt *AStmt);
   /// \brief Called on well-formed '\#pragma omp distribute parallel for' after
   /// parsing of the associated statement.
   StmtResult ActOnOpenMPDistributeParallelForDirective(

@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <type_traits>
+#include "test_macros.h"
 
 constexpr struct {
   int x;
@@ -137,7 +138,7 @@ int main()
 //  LWG#2837
     {
     auto res1 = std::lcm(static_cast<std::int64_t>(1234), INT32_MIN);
-    (void)std::lcm(INT_MIN, 2UL);   // this used to trigger UBSAN
+    TEST_IGNORE_NODISCARD std::lcm(INT_MIN, 2UL);   // this used to trigger UBSAN
     static_assert(std::is_same_v<decltype(res1), std::int64_t>, "");
     assert(res1 == 1324997410816LL);
     }

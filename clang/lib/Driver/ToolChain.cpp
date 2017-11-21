@@ -215,6 +215,10 @@ StringRef ToolChain::getDefaultUniversalArchName() const {
   }
 }
 
+std::string ToolChain::getInputFilename(const InputInfo &Input) const {
+  return Input.getFilename();
+}
+
 bool ToolChain::IsUnwindTablesDefault(const ArgList &Args) const {
   return false;
 }

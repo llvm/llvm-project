@@ -892,7 +892,6 @@ class MemorySSA::CachingWalker final : public MemorySSAWalker {
   bool AutoResetWalker = true;
 
   MemoryAccess *getClobberingMemoryAccess(MemoryAccess *, UpwardsMemoryQuery &);
-  void verifyRemoved(MemoryAccess *);
 
 public:
   CachingWalker(MemorySSA *, AliasAnalysis *, DominatorTree *);

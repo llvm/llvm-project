@@ -601,8 +601,9 @@ void SubtargetEmitter::EmitProcessorResources(const CodeGenProcModel &ProcModel,
     else {
       // Find the SuperIdx
       if (PRDef->getValueInit("Super")->isComplete()) {
-        SuperDef = SchedModels.findProcResUnits(
-          PRDef->getValueAsDef("Super"), ProcModel);
+        SuperDef =
+            SchedModels.findProcResUnits(PRDef->getValueAsDef("Super"),
+                                         ProcModel, PRDef->getLoc());
         SuperIdx = ProcModel.getProcResourceIdx(SuperDef);
       }
       NumUnits = PRDef->getValueAsInt("NumUnits");
@@ -739,7 +740,7 @@ void SubtargetEmitter::ExpandProcResources(RecVec &PRVec,
       SubResources = PRDef->getValueAsListOfDefs("Resources");
     else {
       SubResources.push_back(PRDef);
-      PRDef = SchedModels.findProcResUnits(PRVec[i], PM);
+      PRDef = SchedModels.findProcResUnits(PRDef, PM, PRDef->getLoc());
       for (Record *SubDef = PRDef;
            SubDef->getValueInit("Super")->isComplete();) {
         if (SubDef->isSubClassOf("ProcResGroup")) {
@@ -748,7 +749,8 @@ void SubtargetEmitter::ExpandProcResources(RecVec &PRVec,
                           " cannot be a super resources.");
         }
         Record *SuperDef =
-          SchedModels.findProcResUnits(SubDef->getValueAsDef("Super"), PM);
+            SchedModels.findProcResUnits(SubDef->getValueAsDef("Super"), PM,
+                                         SubDef->getLoc());
         PRVec.push_back(SuperDef);
         Cycles.push_back(Cycles[i]);
         SubDef = SuperDef;

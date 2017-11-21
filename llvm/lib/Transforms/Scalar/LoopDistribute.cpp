@@ -995,7 +995,7 @@ PreservedAnalyses LoopDistributePass::run(Function &F,
   auto &LAM = AM.getResult<LoopAnalysisManagerFunctionProxy>(F).getManager();
   std::function<const LoopAccessInfo &(Loop &)> GetLAA =
       [&](Loop &L) -> const LoopAccessInfo & {
-    LoopStandardAnalysisResults AR = {AA, AC, DT, LI, SE, TLI, TTI};
+    LoopStandardAnalysisResults AR = {AA, AC, DT, LI, SE, TLI, TTI, nullptr};
     return LAM.getResult<LoopAccessAnalysis>(L, AR);
   };
 

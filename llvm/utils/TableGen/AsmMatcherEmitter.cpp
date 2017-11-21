@@ -3313,7 +3313,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     OS << "            DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \"recording too-few-operands near miss\\n\");\n";
     OS << "            OperandNearMiss =\n";
     OS << "                NearMissInfo::getTooFewOperands(Formal, it->Opcode);\n";
-    OS << "          } else {\n";
+    OS << "          } else if (OperandNearMiss.getKind() != NearMissInfo::NearMissTooFewOperands) {\n";
     OS << "            // If more than one operand is invalid, give up on this match entry.\n";
     OS << "            DEBUG_WITH_TYPE(\n";
     OS << "                \"asm-matcher\",\n";
@@ -3323,6 +3323,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     OS << "          }\n";
     OS << "        } else {\n";
     OS << "          DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \"but formal operand not required\\n\");\n";
+    OS << "          break;\n";
     OS << "        }\n";
     OS << "        continue;\n";
   } else {
@@ -3397,9 +3398,10 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     OS << "      // target predicate, that diagnostic is preferred.\n";
     OS << "      if (!HadMatchOtherThanPredicate &&\n";
     OS << "          (it == MnemonicRange.first || ErrorInfo <= ActualIdx)) {\n";
-    OS << "        if (Diag != Match_InvalidOperand || ErrorInfo != ActualIdx)\n";
-    OS << "          RetCode = Diag;\n";
     OS << "        ErrorInfo = ActualIdx;\n";
+    OS << "        // InvalidOperand is the default. Prefer specificity.\n";
+    OS << "        if (Diag != Match_InvalidOperand)\n";
+    OS << "          RetCode = Diag;\n";
     OS << "      }\n";
     OS << "      // Otherwise, just reject this instance of the mnemonic.\n";
     OS << "      OperandsValid = false;\n";

@@ -34,7 +34,7 @@ int main()
     {
     typedef std::multimap<int, double, transparent_less_no_type> M;
 
-    (void)M().lower_bound(C2Int{5});
+    TEST_IGNORE_NODISCARD M().lower_bound(C2Int{5});
     }
 }
 #endif

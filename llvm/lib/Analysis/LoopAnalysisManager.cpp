@@ -11,15 +11,21 @@
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/IR/Dominators.h"
 
 using namespace llvm;
 
+namespace llvm {
+/// Enables memory ssa as a dependency for loop passes in legacy pass manager.
+cl::opt<bool> EnableMSSALoopDependency(
+    "enable-mssa-loop-dependency", cl::Hidden, cl::init(false),
+    cl::desc("Enable MemorySSA dependency for loop pass manager"));
+
 // Explicit template instantiations and specialization defininitions for core
 // template typedefs.
-namespace llvm {
 template class AllAnalysesOn<Loop>;
 template class AnalysisManager<Loop, LoopStandardAnalysisResults &>;
 template class InnerAnalysisManagerProxy<LoopAnalysisManager, Function>;
@@ -45,12 +51,16 @@ bool LoopAnalysisManagerFunctionProxy::Result::invalidate(
   // loop analyses declare any dependencies on these and use the more general
   // invalidation logic below to act on that.
   auto PAC = PA.getChecker<LoopAnalysisManagerFunctionProxy>();
+  bool invalidateMemorySSAAnalysis = false;
+  if (EnableMSSALoopDependency)
+    invalidateMemorySSAAnalysis = Inv.invalidate<MemorySSAAnalysis>(F, PA);
   if (!(PAC.preserved() || PAC.preservedSet<AllAnalysesOn<Function>>()) ||
       Inv.invalidate<AAManager>(F, PA) ||
       Inv.invalidate<AssumptionAnalysis>(F, PA) ||
       Inv.invalidate<DominatorTreeAnalysis>(F, PA) ||
       Inv.invalidate<LoopAnalysis>(F, PA) ||
-      Inv.invalidate<ScalarEvolutionAnalysis>(F, PA)) {
+      Inv.invalidate<ScalarEvolutionAnalysis>(F, PA) ||
+      invalidateMemorySSAAnalysis) {
     // Note that the LoopInfo may be stale at this point, however the loop
     // objects themselves remain the only viable keys that could be in the
     // analysis manager's cache. So we just walk the keys and forcibly clear
@@ -137,7 +147,9 @@ PreservedAnalyses llvm::getLoopPassPreservedAnalyses() {
   PA.preserve<LoopAnalysis>();
   PA.preserve<LoopAnalysisManagerFunctionProxy>();
   PA.preserve<ScalarEvolutionAnalysis>();
-  // TODO: What we really want to do here is preserve an AA category, but that
+  // FIXME: Uncomment this when all loop passes preserve MemorySSA
+  // PA.preserve<MemorySSAAnalysis>();
+  // FIXME: What we really want to do here is preserve an AA category, but that
   // concept doesn't exist yet.
   PA.preserve<AAManager>();
   PA.preserve<BasicAA>();
