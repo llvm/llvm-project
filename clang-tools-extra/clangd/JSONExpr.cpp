@@ -1,6 +1,16 @@
+//=== JSONExpr.cpp - JSON expressions, parsing and serialization - C++ -*-===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===---------------------------------------------------------------------===//
+
 #include "JSONExpr.h"
 
 #include "llvm/Support/Format.h"
+#include <cctype>
 
 using namespace llvm;
 namespace clang {
