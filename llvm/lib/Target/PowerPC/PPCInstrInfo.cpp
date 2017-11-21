@@ -1977,29 +1977,13 @@ PPCInstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
   return makeArrayRef(TargetFlags);
 }
 
-bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
-  auto &MBB = *MI.getParent();
-  auto DL = MI.getDebugLoc();
-  switch (MI.getOpcode()) {
-  case TargetOpcode::LOAD_STACK_GUARD: {
-    assert(Subtarget.isTargetLinux() &&
-           "Only Linux target is expected to contain LOAD_STACK_GUARD");
-    const int64_t Offset = Subtarget.isPPC64() ? -0x7010 : -0x7008;
-    const unsigned Reg = Subtarget.isPPC64() ? PPC::X13 : PPC::R2;
-    MI.setDesc(get(Subtarget.isPPC64() ? PPC::LD : PPC::LWZ));
-    MachineInstrBuilder(*MI.getParent()->getParent(), MI)
-        .addImm(Offset)
-        .addReg(Reg);
-    return true;
-  }
-  case PPC::DFLOADf32:
-  case PPC::DFLOADf64:
-  case PPC::DFSTOREf32:
-  case PPC::DFSTOREf64: {
-    assert(Subtarget.hasP9Vector() &&
-           "Invalid D-Form Pseudo-ops on non-P9 target.");
-    assert(MI.getOperand(2).isReg() && MI.getOperand(1).isImm() &&
-           "D-form op must have register and immediate operands");
+// Expand VSX Memory Pseudo instruction to either a VSX or a FP instruction.
+// The VSX versions have the advantage of a full 64-register target whereas
+// the FP ones have the advantage of lower latency and higher throughput. So
+// what we are after is using the faster instructions in low register pressure
+// situations and using the larger register file in high register pressure
+// situations.
+bool PPCInstrInfo::expandVSXMemPseudo(MachineInstr &MI) const {
     unsigned UpperOpcode, LowerOpcode;
     switch (MI.getOpcode()) {
     case PPC::DFLOADf32:
@@ -2018,7 +2002,38 @@ bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       UpperOpcode = PPC::STXSD;
       LowerOpcode = PPC::STFD;
       break;
+    case PPC::XFLOADf32:
+      UpperOpcode = PPC::LXSSPX;
+      LowerOpcode = PPC::LFSX;
+      break;
+    case PPC::XFLOADf64:
+      UpperOpcode = PPC::LXSDX;
+      LowerOpcode = PPC::LFDX;
+      break;
+    case PPC::XFSTOREf32:
+      UpperOpcode = PPC::STXSSPX;
+      LowerOpcode = PPC::STFSX;
+      break;
+    case PPC::XFSTOREf64:
+      UpperOpcode = PPC::STXSDX;
+      LowerOpcode = PPC::STFDX;
+      break;
+    case PPC::LIWAX:
+      UpperOpcode = PPC::LXSIWAX;
+      LowerOpcode = PPC::LFIWAX;
+      break;
+    case PPC::LIWZX:
+      UpperOpcode = PPC::LXSIWZX;
+      LowerOpcode = PPC::LFIWZX;
+      break;
+    case PPC::STIWX:
+      UpperOpcode = PPC::STXSIWX;
+      LowerOpcode = PPC::STFIWX;
+      break;
+    default:
+      llvm_unreachable("Unknown Operation!");
     }
+
     unsigned TargetReg = MI.getOperand(0).getReg();
     unsigned Opcode;
     if ((TargetReg >= PPC::F0 && TargetReg <= PPC::F31) ||
@@ -2028,6 +2043,52 @@ bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       Opcode = UpperOpcode;
     MI.setDesc(get(Opcode));
     return true;
+}
+
+bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
+  auto &MBB = *MI.getParent();
+  auto DL = MI.getDebugLoc();
+
+  switch (MI.getOpcode()) {
+  case TargetOpcode::LOAD_STACK_GUARD: {
+    assert(Subtarget.isTargetLinux() &&
+           "Only Linux target is expected to contain LOAD_STACK_GUARD");
+    const int64_t Offset = Subtarget.isPPC64() ? -0x7010 : -0x7008;
+    const unsigned Reg = Subtarget.isPPC64() ? PPC::X13 : PPC::R2;
+    MI.setDesc(get(Subtarget.isPPC64() ? PPC::LD : PPC::LWZ));
+    MachineInstrBuilder(*MI.getParent()->getParent(), MI)
+        .addImm(Offset)
+        .addReg(Reg);
+    return true;
+  }
+  case PPC::DFLOADf32:
+  case PPC::DFLOADf64:
+  case PPC::DFSTOREf32:
+  case PPC::DFSTOREf64: {
+    assert(Subtarget.hasP9Vector() &&
+           "Invalid D-Form Pseudo-ops on Pre-P9 target.");
+    assert(MI.getOperand(2).isReg() && MI.getOperand(1).isImm() &&
+           "D-form op must have register and immediate operands");
+    return expandVSXMemPseudo(MI);
+  }
+  case PPC::XFLOADf32:
+  case PPC::XFSTOREf32:
+  case PPC::LIWAX:
+  case PPC::LIWZX:
+  case PPC::STIWX: {
+    assert(Subtarget.hasP8Vector() &&
+           "Invalid X-Form Pseudo-ops on Pre-P8 target.");
+    assert(MI.getOperand(2).isReg() && MI.getOperand(1).isReg() &&
+           "X-form op must have register and register operands");
+    return expandVSXMemPseudo(MI);
+  }
+  case PPC::XFLOADf64:
+  case PPC::XFSTOREf64: {
+    assert(Subtarget.hasVSX() &&
+           "Invalid X-Form Pseudo-ops on target that has no VSX.");
+    assert(MI.getOperand(2).isReg() && MI.getOperand(1).isReg() &&
+           "X-form op must have register and register operands");
+    return expandVSXMemPseudo(MI);
   }
   case PPC::SPILLTOVSR_LD: {
     unsigned TargetReg = MI.getOperand(0).getReg();

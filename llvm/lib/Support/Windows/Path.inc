@@ -418,29 +418,10 @@ static std::error_code rename_internal(HANDLE FromHandle, const Twine &To,
   return std::error_code();
 }
 
-std::error_code rename(const Twine &From, const Twine &To) {
-  // Convert to utf-16.
-  SmallVector<wchar_t, 128> WideFrom;
+static std::error_code rename_handle(HANDLE FromHandle, const Twine &To) {
   SmallVector<wchar_t, 128> WideTo;
-  if (std::error_code EC = widenPath(From, WideFrom))
-    return EC;
   if (std::error_code EC = widenPath(To, WideTo))
     return EC;
-
-  ScopedFileHandle FromHandle;
-  // Retry this a few times to defeat badly behaved file system scanners.
-  for (unsigned Retry = 0; Retry != 200; ++Retry) {
-    if (Retry != 0)
-      ::Sleep(10);
-    FromHandle =
-        ::CreateFileW(WideFrom.begin(), GENERIC_READ | DELETE,
-                      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                      NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (FromHandle)
-      break;
-  }
-  if (!FromHandle)
-    return mapWindowsError(GetLastError());
 
   // We normally expect this loop to succeed after a few iterations. If it
   // requires more than 200 tries, it's more likely that the failures are due to
@@ -452,6 +433,9 @@ std::error_code rename(const Twine &From, const Twine &To) {
         std::error_code(ERROR_CALL_NOT_IMPLEMENTED, std::system_category())) {
       // Wine doesn't support SetFileInformationByHandle in rename_internal.
       // Fall back to MoveFileEx.
+      SmallVector<wchar_t, MAX_PATH> WideFrom;
+      if (std::error_code EC2 = realPathFromHandle(FromHandle, WideFrom))
+        return EC2;
       if (::MoveFileExW(WideFrom.begin(), WideTo.begin(),
                         MOVEFILE_REPLACE_EXISTING))
         return std::error_code();
@@ -527,6 +511,30 @@ std::error_code rename(const Twine &From, const Twine &To) {
 
   // The most likely root cause.
   return errc::permission_denied;
+}
+
+std::error_code rename(const Twine &From, const Twine &To) {
+  // Convert to utf-16.
+  SmallVector<wchar_t, 128> WideFrom;
+  if (std::error_code EC = widenPath(From, WideFrom))
+    return EC;
+
+  ScopedFileHandle FromHandle;
+  // Retry this a few times to defeat badly behaved file system scanners.
+  for (unsigned Retry = 0; Retry != 200; ++Retry) {
+    if (Retry != 0)
+      ::Sleep(10);
+    FromHandle =
+        ::CreateFileW(WideFrom.begin(), GENERIC_READ | DELETE,
+                      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                      NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (FromHandle)
+      break;
+  }
+  if (!FromHandle)
+    return mapWindowsError(GetLastError());
+
+  return rename_handle(FromHandle, To);
 }
 
 std::error_code resize_file(int FD, uint64_t Size) {

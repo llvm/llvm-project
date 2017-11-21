@@ -65,7 +65,7 @@ define amdgpu_kernel void @bfe_u32_zextload_i8(i32 addrspace(1)* %out, i8 addrsp
 
 ; GCN-LABEL: {{^}}bfe_u32_zext_in_reg_i8:
 ; GCN: buffer_load_dword
-; GCN: v_add_i32
+; GCN: v_add_{{[iu]}}32
 ; GCN-NEXT: v_and_b32_e32
 ; FIXME: Should be using s_add_i32
 ; GCN-NOT: {{[^@]}}bfe
@@ -81,7 +81,7 @@ define amdgpu_kernel void @bfe_u32_zext_in_reg_i8(i32 addrspace(1)* %out, i32 ad
 
 ; GCN-LABEL: {{^}}bfe_u32_zext_in_reg_i16:
 ; GCN: buffer_load_dword
-; GCN: v_add_i32
+; GCN: v_add_{{[iu]}}32
 ; GCN-NEXT: v_and_b32_e32
 ; GCN-NOT: {{[^@]}}bfe
 ; GCN: s_endpgm
@@ -96,7 +96,7 @@ define amdgpu_kernel void @bfe_u32_zext_in_reg_i16(i32 addrspace(1)* %out, i32 a
 
 ; GCN-LABEL: {{^}}bfe_u32_zext_in_reg_i8_offset_1:
 ; GCN: buffer_load_dword
-; GCN: v_add_i32
+; GCN: v_add_{{[iu]}}32
 ; GCN: bfe
 ; GCN: s_endpgm
 define amdgpu_kernel void @bfe_u32_zext_in_reg_i8_offset_1(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
@@ -110,7 +110,7 @@ define amdgpu_kernel void @bfe_u32_zext_in_reg_i8_offset_1(i32 addrspace(1)* %ou
 
 ; GCN-LABEL: {{^}}bfe_u32_zext_in_reg_i8_offset_3:
 ; GCN: buffer_load_dword
-; GCN: v_add_i32
+; GCN: v_add_{{[iu]}}32
 ; GCN-NEXT: v_and_b32_e32 {{v[0-9]+}}, 0xf8
 ; GCN-NEXT: bfe
 ; GCN: s_endpgm
@@ -125,7 +125,7 @@ define amdgpu_kernel void @bfe_u32_zext_in_reg_i8_offset_3(i32 addrspace(1)* %ou
 
 ; GCN-LABEL: {{^}}bfe_u32_zext_in_reg_i8_offset_7:
 ; GCN: buffer_load_dword
-; GCN: v_add_i32
+; GCN: v_add_{{[iu]}}32
 ; GCN-NEXT: v_and_b32_e32 {{v[0-9]+}}, 0x80
 ; GCN-NEXT: bfe
 ; GCN: s_endpgm
@@ -140,7 +140,7 @@ define amdgpu_kernel void @bfe_u32_zext_in_reg_i8_offset_7(i32 addrspace(1)* %ou
 
 ; GCN-LABEL: {{^}}bfe_u32_zext_in_reg_i16_offset_8:
 ; GCN: buffer_load_dword
-; GCN: v_add_i32
+; GCN: v_add_{{[iu]}}32
 ; GCN-NEXT: bfe
 ; GCN: s_endpgm
 define amdgpu_kernel void @bfe_u32_zext_in_reg_i16_offset_8(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {

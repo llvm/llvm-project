@@ -126,9 +126,9 @@ entry:
 ; CHECK-LABEL: nosplat_v4i32:
 ; CHECK: str w0,
 ; CHECK: ldr q[[REG1:[0-9]+]],
-; CHECK-DAG: ins v[[REG1]].s[1], w0
-; CHECK-DAG: ins v[[REG1]].s[2], w0
-; CHECK-DAG: ins v[[REG1]].s[3], w0
+; CHECK-DAG: mov v[[REG1]].s[1], w0
+; CHECK-DAG: mov v[[REG1]].s[2], w0
+; CHECK-DAG: mov v[[REG1]].s[3], w0
 ; CHECK: ext v[[REG2:[0-9]+]].16b, v[[REG1]].16b, v[[REG1]].16b, #8
 ; CHECK: stp d[[REG1]], d[[REG2]], [x1]
 ; CHECK: ret
@@ -148,9 +148,9 @@ define void @nosplat2_v4i32(i32 %v, i32 *%p, <4 x i32> %vin) {
 entry:
 
 ; CHECK-LABEL: nosplat2_v4i32:
-; CHECK: ins v[[REG1]].s[1], w0
-; CHECK-DAG: ins v[[REG1]].s[2], w0
-; CHECK-DAG: ins v[[REG1]].s[3], w0
+; CHECK: mov v[[REG1]].s[1], w0
+; CHECK-DAG: mov v[[REG1]].s[2], w0
+; CHECK-DAG: mov v[[REG1]].s[3], w0
 ; CHECK: ext v[[REG2:[0-9]+]].16b, v[[REG1]].16b, v[[REG1]].16b, #8
 ; CHECK: stp d[[REG1]], d[[REG2]], [x1]
 ; CHECK: ret

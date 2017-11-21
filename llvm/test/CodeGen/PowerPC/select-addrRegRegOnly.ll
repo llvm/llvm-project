@@ -6,7 +6,7 @@ define float @testSingleAccess(i32* nocapture readonly %arr) local_unnamed_addr 
 ; CHECK-LABEL: testSingleAccess:
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    addi 3, 3, 8
-; CHECK-NEXT:    lxsiwax 0, 0, 3
+; CHECK-NEXT:    lfiwax 0, 0, 3
 ; CHECK-NEXT:    xscvsxdsp 1, 0
 ; CHECK-NEXT:    blr
 entry:

@@ -245,9 +245,7 @@ Error RCParser::consumeType(Kind TokenKind) {
 #define SHORT_TOKEN(TokenName, TokenCh)                                        \
   case Kind::TokenName:                                                        \
     return getExpectedError(#TokenCh);
-#include "ResourceScriptTokenList.h"
-#undef SHORT_TOKEN
-#undef TOKEN
+#include "ResourceScriptTokenList.def"
   }
 
   llvm_unreachable("All case options exhausted.");

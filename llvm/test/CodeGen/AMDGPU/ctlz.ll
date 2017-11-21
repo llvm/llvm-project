@@ -112,7 +112,7 @@ define amdgpu_kernel void @v_ctlz_v4i32(<4 x i32> addrspace(1)* noalias %out, <4
 ; GCN: v_cndmask_b32_e32 [[SELECT:v[0-9]+]], 32, [[FFBH]], vcc
 
 ; SI: v_subrev_i32_e32 [[RESULT:v[0-9]+]], vcc, 24, [[SELECT]]
-; VI: v_add_i32_e32 [[RESULT:v[0-9]+]], vcc, -16, [[SELECT]]
+; VI: v_add_u32_e32 [[RESULT:v[0-9]+]], vcc, -16, [[SELECT]]
 ; GCN: buffer_store_byte [[RESULT]],
 ; GCN: s_endpgm
 define amdgpu_kernel void @v_ctlz_i8(i8 addrspace(1)* noalias %out, i8 addrspace(1)* noalias %valptr) nounwind {
@@ -151,7 +151,7 @@ define amdgpu_kernel void @s_ctlz_i64_trunc(i32 addrspace(1)* noalias %out, i64 
 ; GCN-DAG: {{buffer|flat}}_load_dwordx2 v{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}
 ; GCN-DAG: v_cmp_eq_u32_e32 vcc, 0, v[[HI]]
 ; GCN-DAG: v_ffbh_u32_e32 [[FFBH_LO:v[0-9]+]], v[[LO]]
-; GCN-DAG: v_add_i32_e32 [[ADD:v[0-9]+]], vcc, 32, [[FFBH_LO]]
+; GCN-DAG: v_add_{{[iu]}}32_e32 [[ADD:v[0-9]+]], vcc, 32, [[FFBH_LO]]
 ; GCN-DAG: v_ffbh_u32_e32 [[FFBH_HI:v[0-9]+]], v[[HI]]
 ; GCN-DAG: v_cndmask_b32_e32 v[[CTLZ:[0-9]+]], [[FFBH_HI]], [[ADD]], vcc
 ; GCN-DAG: v_or_b32_e32 [[OR:v[0-9]+]], v[[LO]], v[[HI]]

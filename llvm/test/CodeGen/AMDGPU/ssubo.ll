@@ -51,7 +51,7 @@ define amdgpu_kernel void @s_ssubo_i64(i64 addrspace(1)* %out, i1 addrspace(1)* 
 }
 
 ; FUNC-LABEL: {{^}}v_ssubo_i64:
-; SI: v_sub_i32_e32
+; SI: v_sub_{{[iu]}}32_e32
 ; SI: v_subb_u32_e32
 define amdgpu_kernel void @v_ssubo_i64(i64 addrspace(1)* %out, i1 addrspace(1)* %carryout, i64 addrspace(1)* %aptr, i64 addrspace(1)* %bptr) nounwind {
   %a = load i64, i64 addrspace(1)* %aptr, align 4

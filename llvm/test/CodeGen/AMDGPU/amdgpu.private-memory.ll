@@ -391,7 +391,7 @@ entry:
 ; FUNC-LABEL: ptrtoint:
 ; SI-NOT: ds_write
 ; SI: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen
-; SI: v_add_i32_e32 [[ADD_OFFSET:v[0-9]+]], vcc, 5,
+; SI: v_add_{{[iu]}}32_e32 [[ADD_OFFSET:v[0-9]+]], vcc, 5,
 ; SI: buffer_load_dword v{{[0-9]+}}, [[ADD_OFFSET:v[0-9]+]], s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen ;
 define amdgpu_kernel void @ptrtoint(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
   %alloca = alloca [16 x i32]
