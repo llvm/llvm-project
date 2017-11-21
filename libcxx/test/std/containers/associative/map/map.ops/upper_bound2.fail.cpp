@@ -34,7 +34,7 @@ int main()
     {
     typedef std::map<int, double, transparent_less_private> M;
 
-    (void)M().upper_bound(C2Int{5});
+    TEST_IGNORE_NODISCARD M().upper_bound(C2Int{5});
     }
 }
 #endif

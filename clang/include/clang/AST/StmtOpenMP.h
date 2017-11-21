@@ -2348,7 +2348,7 @@ class OMPTargetEnterDataDirective : public OMPExecutableDirective {
                               unsigned NumClauses)
       : OMPExecutableDirective(this, OMPTargetEnterDataDirectiveClass,
                                OMPD_target_enter_data, StartLoc, EndLoc,
-                               NumClauses, /*NumChildren=*/0) {}
+                               NumClauses, /*NumChildren=*/1) {}
 
   /// \brief Build an empty directive.
   ///
@@ -2358,7 +2358,7 @@ class OMPTargetEnterDataDirective : public OMPExecutableDirective {
       : OMPExecutableDirective(this, OMPTargetEnterDataDirectiveClass,
                                OMPD_target_enter_data, SourceLocation(),
                                SourceLocation(), NumClauses,
-                               /*NumChildren=*/0) {}
+                               /*NumChildren=*/1) {}
 
 public:
   /// \brief Creates directive with a list of \a Clauses.
@@ -2367,11 +2367,11 @@ public:
   /// \param StartLoc Starting location of the directive kind.
   /// \param EndLoc Ending Location of the directive.
   /// \param Clauses List of clauses.
+  /// \param AssociatedStmt Statement, associated with the directive.
   ///
-  static OMPTargetEnterDataDirective *Create(const ASTContext &C,
-                                             SourceLocation StartLoc,
-                                             SourceLocation EndLoc,
-                                             ArrayRef<OMPClause *> Clauses);
+  static OMPTargetEnterDataDirective *
+  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+         ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt);
 
   /// \brief Creates an empty directive with the place for \a N clauses.
   ///
@@ -2407,7 +2407,7 @@ class OMPTargetExitDataDirective : public OMPExecutableDirective {
                              unsigned NumClauses)
       : OMPExecutableDirective(this, OMPTargetExitDataDirectiveClass,
                                OMPD_target_exit_data, StartLoc, EndLoc,
-                               NumClauses, /*NumChildren=*/0) {}
+                               NumClauses, /*NumChildren=*/1) {}
 
   /// \brief Build an empty directive.
   ///
@@ -2417,7 +2417,7 @@ class OMPTargetExitDataDirective : public OMPExecutableDirective {
       : OMPExecutableDirective(this, OMPTargetExitDataDirectiveClass,
                                OMPD_target_exit_data, SourceLocation(),
                                SourceLocation(), NumClauses,
-                               /*NumChildren=*/0) {}
+                               /*NumChildren=*/1) {}
 
 public:
   /// \brief Creates directive with a list of \a Clauses.
@@ -2426,11 +2426,11 @@ public:
   /// \param StartLoc Starting location of the directive kind.
   /// \param EndLoc Ending Location of the directive.
   /// \param Clauses List of clauses.
+  /// \param AssociatedStmt Statement, associated with the directive.
   ///
-  static OMPTargetExitDataDirective *Create(const ASTContext &C,
-                                            SourceLocation StartLoc,
-                                            SourceLocation EndLoc,
-                                            ArrayRef<OMPClause *> Clauses);
+  static OMPTargetExitDataDirective *
+  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+         ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt);
 
   /// \brief Creates an empty directive with the place for \a N clauses.
   ///
@@ -2984,7 +2984,7 @@ class OMPTargetUpdateDirective : public OMPExecutableDirective {
                            unsigned NumClauses)
       : OMPExecutableDirective(this, OMPTargetUpdateDirectiveClass,
                                OMPD_target_update, StartLoc, EndLoc, NumClauses,
-                               0) {}
+                               1) {}
 
   /// \brief Build an empty directive.
   ///
@@ -2993,7 +2993,7 @@ class OMPTargetUpdateDirective : public OMPExecutableDirective {
   explicit OMPTargetUpdateDirective(unsigned NumClauses)
       : OMPExecutableDirective(this, OMPTargetUpdateDirectiveClass,
                                OMPD_target_update, SourceLocation(),
-                               SourceLocation(), NumClauses, 0) {}
+                               SourceLocation(), NumClauses, 1) {}
 
 public:
   /// \brief Creates directive with a list of \a Clauses.
@@ -3002,11 +3002,11 @@ public:
   /// \param StartLoc Starting location of the directive kind.
   /// \param EndLoc Ending Location of the directive.
   /// \param Clauses List of clauses.
+  /// \param AssociatedStmt Statement, associated with the directive.
   ///
-  static OMPTargetUpdateDirective *Create(const ASTContext &C,
-                                          SourceLocation StartLoc,
-                                          SourceLocation EndLoc,
-                                          ArrayRef<OMPClause *> Clauses);
+  static OMPTargetUpdateDirective *
+  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+         ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt);
 
   /// \brief Creates an empty directive with the place for \a NumClauses
   /// clauses.

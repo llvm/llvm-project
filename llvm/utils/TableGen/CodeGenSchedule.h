@@ -382,8 +382,8 @@ public:
   unsigned findSchedClassIdx(Record *ItinClassDef, ArrayRef<unsigned> Writes,
                              ArrayRef<unsigned> Reads) const;
 
-  Record *findProcResUnits(Record *ProcResKind,
-                           const CodeGenProcModel &PM) const;
+  Record *findProcResUnits(Record *ProcResKind, const CodeGenProcModel &PM,
+                           ArrayRef<SMLoc> Loc) const;
 
 private:
   void collectProcModels();
@@ -432,7 +432,8 @@ private:
   void collectRWResources(ArrayRef<unsigned> Writes, ArrayRef<unsigned> Reads,
                           ArrayRef<unsigned> ProcIndices);
 
-  void addProcResource(Record *ProcResourceKind, CodeGenProcModel &PM);
+  void addProcResource(Record *ProcResourceKind, CodeGenProcModel &PM,
+                       ArrayRef<SMLoc> Loc);
 
   void addWriteRes(Record *ProcWriteResDef, unsigned PIdx);
 

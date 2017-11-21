@@ -26,6 +26,7 @@ const char *SanitizerToolName = "SanitizerTool";
 
 atomic_uint32_t current_verbosity;
 uptr PageSizeCached;
+u32 NumberOfCPUsCached;
 
 // PID of the tracer task in StopTheWorld. It shares the address space with the
 // main process, but has a different PID and thus requires special handling.

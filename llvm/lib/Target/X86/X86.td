@@ -680,7 +680,13 @@ class CannonlakeProc<string Name> : ProcModel<Name, SkylakeServerModel,
 def : CannonlakeProc<"cannonlake">;
 
 def ICLFeatures : ProcessorFeatures<CNLFeatures.Value, [
-  // TODO: Insert features here.
+  FeatureBITALG,
+  FeatureVAES,
+  FeatureVBMI2,
+  FeatureVNNI,
+  FeatureVPCLMULQDQ,
+  FeatureVPOPCNTDQ
+  // TODO: Add GFNI when it is implemented.
 ]>;
 
 class IcelakeProc<string Name> : ProcModel<Name, SkylakeServerModel,

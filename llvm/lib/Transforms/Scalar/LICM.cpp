@@ -42,6 +42,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
+#include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
@@ -114,7 +115,7 @@ CloneInstructionInExitBlock(Instruction &I, BasicBlock &ExitBlock, PHINode &PN,
 namespace {
 struct LoopInvariantCodeMotion {
   bool runOnLoop(Loop *L, AliasAnalysis *AA, LoopInfo *LI, DominatorTree *DT,
-                 TargetLibraryInfo *TLI, ScalarEvolution *SE,
+                 TargetLibraryInfo *TLI, ScalarEvolution *SE, MemorySSA *MSSA,
                  OptimizationRemarkEmitter *ORE, bool DeleteAST);
 
   DenseMap<Loop *, AliasSetTracker *> &getLoopToAliasSetMap() {
@@ -146,6 +147,9 @@ struct LegacyLICMPass : public LoopPass {
     }
 
     auto *SE = getAnalysisIfAvailable<ScalarEvolutionWrapperPass>();
+    MemorySSA *MSSA = EnableMSSALoopDependency
+                          ? (&getAnalysis<MemorySSAWrapperPass>().getMSSA())
+                          : nullptr;
     // For the old PM, we can't use OptimizationRemarkEmitter as an analysis
     // pass.  Function analyses need to be preserved across loop transformations
     // but ORE cannot be preserved (see comment before the pass definition).
@@ -155,7 +159,7 @@ struct LegacyLICMPass : public LoopPass {
                           &getAnalysis<LoopInfoWrapperPass>().getLoopInfo(),
                           &getAnalysis<DominatorTreeWrapperPass>().getDomTree(),
                           &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(),
-                          SE ? &SE->getSE() : nullptr, &ORE, false);
+                          SE ? &SE->getSE() : nullptr, MSSA, &ORE, false);
   }
 
   /// This transformation requires natural loop information & requires that
@@ -164,6 +168,8 @@ struct LegacyLICMPass : public LoopPass {
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
+    if (EnableMSSALoopDependency)
+      AU.addRequired<MemorySSAWrapperPass>();
     getLoopAnalysisUsage(AU);
   }
 
@@ -204,7 +210,8 @@ PreservedAnalyses LICMPass::run(Loop &L, LoopAnalysisManager &AM,
                        "cached at a higher level");
 
   LoopInvariantCodeMotion LICM;
-  if (!LICM.runOnLoop(&L, &AR.AA, &AR.LI, &AR.DT, &AR.TLI, &AR.SE, ORE, true))
+  if (!LICM.runOnLoop(&L, &AR.AA, &AR.LI, &AR.DT, &AR.TLI, &AR.SE, AR.MSSA, ORE,
+                      true))
     return PreservedAnalyses::all();
 
   auto PA = getLoopPassPreservedAnalyses();
@@ -217,6 +224,7 @@ INITIALIZE_PASS_BEGIN(LegacyLICMPass, "licm", "Loop Invariant Code Motion",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(LoopPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
 INITIALIZE_PASS_END(LegacyLICMPass, "licm", "Loop Invariant Code Motion", false,
                     false)
 
@@ -231,7 +239,7 @@ Pass *llvm::createLICMPass() { return new LegacyLICMPass(); }
 bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AliasAnalysis *AA,
                                         LoopInfo *LI, DominatorTree *DT,
                                         TargetLibraryInfo *TLI,
-                                        ScalarEvolution *SE,
+                                        ScalarEvolution *SE, MemorySSA *MSSA,
                                         OptimizationRemarkEmitter *ORE,
                                         bool DeleteAST) {
   bool Changed = false;

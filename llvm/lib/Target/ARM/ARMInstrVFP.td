@@ -255,28 +255,6 @@ def VLSTM : AXSI4<(outs), (ins GPRnopc:$Rn, pred:$p), IndexModeNone,
     let mayStore    = 1;
 }
 
-
-// FLDM/FSTM - Load / Store multiple single / double precision registers for
-// pre-ARMv6 cores.
-// These instructions are deprecated!
-def : VFP2MnemonicAlias<"fldmias", "vldmia">;
-def : VFP2MnemonicAlias<"fldmdbs", "vldmdb">;
-def : VFP2MnemonicAlias<"fldmeas", "vldmdb">;
-def : VFP2MnemonicAlias<"fldmfds", "vldmia">;
-def : VFP2MnemonicAlias<"fldmiad", "vldmia">;
-def : VFP2MnemonicAlias<"fldmdbd", "vldmdb">;
-def : VFP2MnemonicAlias<"fldmead", "vldmdb">;
-def : VFP2MnemonicAlias<"fldmfdd", "vldmia">;
-
-def : VFP2MnemonicAlias<"fstmias", "vstmia">;
-def : VFP2MnemonicAlias<"fstmdbs", "vstmdb">;
-def : VFP2MnemonicAlias<"fstmeas", "vstmia">;
-def : VFP2MnemonicAlias<"fstmfds", "vstmdb">;
-def : VFP2MnemonicAlias<"fstmiad", "vstmia">;
-def : VFP2MnemonicAlias<"fstmdbd", "vstmdb">;
-def : VFP2MnemonicAlias<"fstmead", "vstmia">;
-def : VFP2MnemonicAlias<"fstmfdd", "vstmdb">;
-
 def : InstAlias<"vpush${p} $r", (VSTMDDB_UPD SP, pred:$p, dpr_reglist:$r), 0>,
                 Requires<[HasVFP2]>;
 def : InstAlias<"vpush${p} $r", (VSTMSDB_UPD SP, pred:$p, spr_reglist:$r), 0>,
@@ -297,6 +275,8 @@ defm : VFPDTAnyInstAlias<"vpop${p}", "$r",
 // FLDMX, FSTMX - Load and store multiple unknown precision registers for
 // pre-armv6 cores.
 // These instruction are deprecated so we don't want them to get selected.
+// However, there is no UAL syntax for them, so we keep them around for
+// (dis)assembly only.
 multiclass vfp_ldstx_mult<string asm, bit L_bit> {
   // Unknown precision
   def XIA :

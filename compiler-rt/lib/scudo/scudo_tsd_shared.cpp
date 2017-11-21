@@ -24,17 +24,10 @@ static atomic_uint32_t CurrentIndex;
 static ScudoTSD *TSDs;
 static u32 NumberOfTSDs;
 
-// sysconf(_SC_NPROCESSORS_{CONF,ONLN}) cannot be used as they allocate memory.
-static u32 getNumberOfCPUs() {
-  cpu_set_t CPUs;
-  CHECK_EQ(sched_getaffinity(0, sizeof(cpu_set_t), &CPUs), 0);
-  return CPU_COUNT(&CPUs);
-}
-
 static void initOnce() {
   CHECK_EQ(pthread_key_create(&PThreadKey, NULL), 0);
   initScudo();
-  NumberOfTSDs = Min(Max(1U, getNumberOfCPUs()),
+  NumberOfTSDs = Min(Max(1U, GetNumberOfCPUsCached()),
                      static_cast<u32>(SCUDO_SHARED_TSD_POOL_SIZE));
   TSDs = reinterpret_cast<ScudoTSD *>(
       MmapOrDie(sizeof(ScudoTSD) * NumberOfTSDs, "ScudoTSDs"));

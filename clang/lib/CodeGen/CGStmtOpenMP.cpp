@@ -4085,7 +4085,14 @@ void CodeGenFunction::EmitOMPTargetEnterDataDirective(
   if (auto *C = S.getSingleClause<OMPDeviceClause>())
     Device = C->getDevice();
 
-  CGM.getOpenMPRuntime().emitTargetDataStandAloneCall(*this, S, IfCond, Device);
+  auto &&CodeGen = [&S, IfCond, Device](CodeGenFunction &CGF,
+                                        PrePostActionTy &) {
+    CGF.CGM.getOpenMPRuntime().emitTargetDataStandAloneCall(CGF, S, IfCond,
+                                                            Device);
+  };
+  OMPLexicalScope Scope(*this, S, /*AsInlined=*/true);
+  CGM.getOpenMPRuntime().emitInlinedDirective(*this, OMPD_target_enter_data,
+                                              CodeGen);
 }
 
 void CodeGenFunction::EmitOMPTargetExitDataDirective(
@@ -4105,7 +4112,14 @@ void CodeGenFunction::EmitOMPTargetExitDataDirective(
   if (auto *C = S.getSingleClause<OMPDeviceClause>())
     Device = C->getDevice();
 
-  CGM.getOpenMPRuntime().emitTargetDataStandAloneCall(*this, S, IfCond, Device);
+  auto &&CodeGen = [&S, IfCond, Device](CodeGenFunction &CGF,
+                                        PrePostActionTy &) {
+    CGF.CGM.getOpenMPRuntime().emitTargetDataStandAloneCall(CGF, S, IfCond,
+                                                            Device);
+  };
+  OMPLexicalScope Scope(*this, S, /*AsInlined=*/true);
+  CGM.getOpenMPRuntime().emitInlinedDirective(*this, OMPD_target_exit_data,
+                                              CodeGen);
 }
 
 static void emitTargetParallelRegion(CodeGenFunction &CGF,
@@ -4404,5 +4418,12 @@ void CodeGenFunction::EmitOMPTargetUpdateDirective(
   if (auto *C = S.getSingleClause<OMPDeviceClause>())
     Device = C->getDevice();
 
-  CGM.getOpenMPRuntime().emitTargetDataStandAloneCall(*this, S, IfCond, Device);
+  auto &&CodeGen = [&S, IfCond, Device](CodeGenFunction &CGF,
+                                        PrePostActionTy &) {
+    CGF.CGM.getOpenMPRuntime().emitTargetDataStandAloneCall(CGF, S, IfCond,
+                                                            Device);
+  };
+  OMPLexicalScope Scope(*this, S, /*AsInlined=*/true);
+  CGM.getOpenMPRuntime().emitInlinedDirective(*this, OMPD_target_update,
+                                              CodeGen);
 }

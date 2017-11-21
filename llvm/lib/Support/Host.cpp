@@ -1258,19 +1258,13 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
 
   Features["prefetchwt1"]     = HasLeaf7 && ((ECX >>  0) & 1);
   Features["avx512vbmi"]      = HasLeaf7 && ((ECX >>  1) & 1) && HasAVX512Save;
+  Features["pku"]             = HasLeaf7 && ((ECX >>  4) & 1);
   Features["avx512vbmi2"]     = HasLeaf7 && ((ECX >>  6) & 1) && HasAVX512Save;
+  Features["vaes"]            = HasLeaf7 && ((ECX >>  9) & 1) && HasAVXSave;
+  Features["vpclmulqdq"]      = HasLeaf7 && ((ECX >> 10) & 1) && HasAVXSave;
+  Features["avx512vnni"]      = HasLeaf7 && ((ECX >> 11) & 1) && HasAVX512Save;
+  Features["avx512bitalg"]    = HasLeaf7 && ((ECX >> 12) & 1) && HasAVX512Save;
   Features["avx512vpopcntdq"] = HasLeaf7 && ((ECX >> 14) & 1) && HasAVX512Save;
-  Features["pku"]             = HasLeaf7 && ((ECX >> 4) & 1);
-  Features["vaes"] = HasLeaf7 && ((ECX >> 9) & 1) && HasAVXSave;
-
-  // VPCLMULQDQ (carry-less multiplication quadword)
-  Features["vpclmulqdq"] = HasLeaf7 && ((ECX >> 10) & 1) && HasAVXSave;
-
-  // Enable Vector Neural Network Instructions
-  Features["avx512vnni"] = HasLeaf7 && ((ECX >> 11) & 1) && HasAVX512Save;
-
-  // Enable Bit Algorithms
-  Features["avx512bitalg"] = HasLeaf7 && ((ECX >> 12) & 1) && HasAVX512Save;
 
   bool HasLeafD = MaxLevel >= 0xd &&
                   !getX86CpuIDAndInfoEx(0xd, 0x1, &EAX, &EBX, &ECX, &EDX);

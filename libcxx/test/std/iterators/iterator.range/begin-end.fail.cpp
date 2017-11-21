@@ -43,9 +43,9 @@ namespace Foo {
 
 int main(){
 // Bug #28927 - shouldn't find these via ADL
-    (void) std::cbegin (Foo::FakeContainer());
-    (void) std::cend   (Foo::FakeContainer());
-    (void) std::crbegin(Foo::FakeContainer());
-    (void) std::crend  (Foo::FakeContainer());
+    TEST_IGNORE_NODISCARD  std::cbegin (Foo::FakeContainer());
+    TEST_IGNORE_NODISCARD  std::cend   (Foo::FakeContainer());
+    TEST_IGNORE_NODISCARD  std::crbegin(Foo::FakeContainer());
+    TEST_IGNORE_NODISCARD  std::crend  (Foo::FakeContainer());
 }
 #endif

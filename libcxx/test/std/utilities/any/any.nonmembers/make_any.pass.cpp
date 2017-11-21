@@ -115,14 +115,14 @@ void test_make_any_throws()
 {
     {
         try {
-            (void)std::make_any<Type>(101);
+            TEST_IGNORE_NODISCARD std::make_any<Type>(101);
             assert(false);
         } catch (int const&) {
         }
     }
     {
         try {
-            (void)std::make_any<Type>({1, 2, 3}, 101);
+            TEST_IGNORE_NODISCARD std::make_any<Type>({1, 2, 3}, 101);
             assert(false);
         } catch (int const&) {
         }

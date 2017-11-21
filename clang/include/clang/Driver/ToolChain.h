@@ -40,6 +40,7 @@ namespace driver {
   class Compilation;
   class CudaInstallationDetector;
   class Driver;
+  class InputInfo;
   class JobAction;
   class RegisterEffectiveTriple;
   class SanitizerArgs;
@@ -171,6 +172,11 @@ public:
   /// example when compiling CUDA code for the GPU, the triple might be NVPTX,
   /// while the aux triple is the host (CPU) toolchain, e.g. x86-linux-gnu.
   virtual const llvm::Triple *getAuxTriple() const { return nullptr; }
+
+  /// Some toolchains need to modify the file name, for example to replace the
+  /// extension for object files with .cubin for OpenMP offloading to Nvidia
+  /// GPUs.
+  virtual std::string getInputFilename(const InputInfo &Input) const;
 
   llvm::Triple::ArchType getArch() const { return Triple.getArch(); }
   StringRef getArchName() const { return Triple.getArchName(); }

@@ -2247,6 +2247,32 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
                              ParamsParallel);
     break;
   }
+  case OMPD_target_update:
+  case OMPD_target_enter_data:
+  case OMPD_target_exit_data: {
+    QualType KmpInt32Ty = Context.getIntTypeForBitwidth(32, 1);
+    QualType Args[] = {Context.VoidPtrTy.withConst().withRestrict()};
+    FunctionProtoType::ExtProtoInfo EPI;
+    EPI.Variadic = true;
+    QualType CopyFnType = Context.getFunctionType(Context.VoidTy, Args, EPI);
+    Sema::CapturedParamNameType Params[] = {
+        std::make_pair(".global_tid.", KmpInt32Ty),
+        std::make_pair(".part_id.", Context.getPointerType(KmpInt32Ty)),
+        std::make_pair(".privates.", Context.VoidPtrTy.withConst()),
+        std::make_pair(".copy_fn.",
+                       Context.getPointerType(CopyFnType).withConst()),
+        std::make_pair(".task_t.", Context.VoidPtrTy.withConst()),
+        std::make_pair(StringRef(), QualType()) // __context with shared vars
+    };
+    ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
+                             Params);
+    // Mark this captured region as inlined, because we don't use outlined
+    // function directly.
+    getCurCapturedRegion()->TheCapturedDecl->addAttr(
+        AlwaysInlineAttr::CreateImplicit(
+            Context, AlwaysInlineAttr::Keyword_forceinline, SourceRange()));
+    break;
+  }
   case OMPD_threadprivate:
   case OMPD_taskyield:
   case OMPD_barrier:
@@ -2254,13 +2280,10 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
   case OMPD_cancellation_point:
   case OMPD_cancel:
   case OMPD_flush:
-  case OMPD_target_enter_data:
-  case OMPD_target_exit_data:
   case OMPD_declare_reduction:
   case OMPD_declare_simd:
   case OMPD_declare_target:
   case OMPD_end_declare_target:
-  case OMPD_target_update:
     llvm_unreachable("OpenMP Directive is not allowed");
   case OMPD_unknown:
     llvm_unreachable("Unknown OpenMP directive");
@@ -2993,12 +3016,12 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
     break;
   case OMPD_target_enter_data:
     Res = ActOnOpenMPTargetEnterDataDirective(ClausesWithImplicit, StartLoc,
-                                              EndLoc);
+                                              EndLoc, AStmt);
     AllowedNameModifiers.push_back(OMPD_target_enter_data);
     break;
   case OMPD_target_exit_data:
     Res = ActOnOpenMPTargetExitDataDirective(ClausesWithImplicit, StartLoc,
-                                             EndLoc);
+                                             EndLoc, AStmt);
     AllowedNameModifiers.push_back(OMPD_target_exit_data);
     break;
   case OMPD_taskloop:
@@ -3016,9 +3039,8 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
                                          EndLoc, VarsWithInheritedDSA);
     break;
   case OMPD_target_update:
-    assert(!AStmt && "Statement is not allowed for target update");
-    Res =
-        ActOnOpenMPTargetUpdateDirective(ClausesWithImplicit, StartLoc, EndLoc);
+    Res = ActOnOpenMPTargetUpdateDirective(ClausesWithImplicit, StartLoc,
+                                           EndLoc, AStmt);
     AllowedNameModifiers.push_back(OMPD_target_update);
     break;
   case OMPD_distribute_parallel_for:
@@ -6423,7 +6445,28 @@ StmtResult Sema::ActOnOpenMPTargetDataDirective(ArrayRef<OMPClause *> Clauses,
 StmtResult
 Sema::ActOnOpenMPTargetEnterDataDirective(ArrayRef<OMPClause *> Clauses,
                                           SourceLocation StartLoc,
-                                          SourceLocation EndLoc) {
+                                          SourceLocation EndLoc, Stmt *AStmt) {
+  if (!AStmt)
+    return StmtError();
+
+  CapturedStmt *CS = cast<CapturedStmt>(AStmt);
+  // 1.2.2 OpenMP Language Terminology
+  // Structured block - An executable statement with a single entry at the
+  // top and a single exit at the bottom.
+  // The point of exit cannot be a branch out of the structured block.
+  // longjmp() and throw() must not violate the entry/exit criteria.
+  CS->getCapturedDecl()->setNothrow();
+  for (int ThisCaptureLevel = getOpenMPCaptureLevels(OMPD_target_enter_data);
+       ThisCaptureLevel > 1; --ThisCaptureLevel) {
+    CS = cast<CapturedStmt>(CS->getCapturedStmt());
+    // 1.2.2 OpenMP Language Terminology
+    // Structured block - An executable statement with a single entry at the
+    // top and a single exit at the bottom.
+    // The point of exit cannot be a branch out of the structured block.
+    // longjmp() and throw() must not violate the entry/exit criteria.
+    CS->getCapturedDecl()->setNothrow();
+  }
+
   // OpenMP [2.10.2, Restrictions, p. 99]
   // At least one map clause must appear on the directive.
   if (!hasClauses(Clauses, OMPC_map)) {
@@ -6432,14 +6475,35 @@ Sema::ActOnOpenMPTargetEnterDataDirective(ArrayRef<OMPClause *> Clauses,
     return StmtError();
   }
 
-  return OMPTargetEnterDataDirective::Create(Context, StartLoc, EndLoc,
-                                             Clauses);
+  return OMPTargetEnterDataDirective::Create(Context, StartLoc, EndLoc, Clauses,
+                                             AStmt);
 }
 
 StmtResult
 Sema::ActOnOpenMPTargetExitDataDirective(ArrayRef<OMPClause *> Clauses,
                                          SourceLocation StartLoc,
-                                         SourceLocation EndLoc) {
+                                         SourceLocation EndLoc, Stmt *AStmt) {
+  if (!AStmt)
+    return StmtError();
+
+  CapturedStmt *CS = cast<CapturedStmt>(AStmt);
+  // 1.2.2 OpenMP Language Terminology
+  // Structured block - An executable statement with a single entry at the
+  // top and a single exit at the bottom.
+  // The point of exit cannot be a branch out of the structured block.
+  // longjmp() and throw() must not violate the entry/exit criteria.
+  CS->getCapturedDecl()->setNothrow();
+  for (int ThisCaptureLevel = getOpenMPCaptureLevels(OMPD_target_exit_data);
+       ThisCaptureLevel > 1; --ThisCaptureLevel) {
+    CS = cast<CapturedStmt>(CS->getCapturedStmt());
+    // 1.2.2 OpenMP Language Terminology
+    // Structured block - An executable statement with a single entry at the
+    // top and a single exit at the bottom.
+    // The point of exit cannot be a branch out of the structured block.
+    // longjmp() and throw() must not violate the entry/exit criteria.
+    CS->getCapturedDecl()->setNothrow();
+  }
+
   // OpenMP [2.10.3, Restrictions, p. 102]
   // At least one map clause must appear on the directive.
   if (!hasClauses(Clauses, OMPC_map)) {
@@ -6448,17 +6512,41 @@ Sema::ActOnOpenMPTargetExitDataDirective(ArrayRef<OMPClause *> Clauses,
     return StmtError();
   }
 
-  return OMPTargetExitDataDirective::Create(Context, StartLoc, EndLoc, Clauses);
+  return OMPTargetExitDataDirective::Create(Context, StartLoc, EndLoc, Clauses,
+                                            AStmt);
 }
 
 StmtResult Sema::ActOnOpenMPTargetUpdateDirective(ArrayRef<OMPClause *> Clauses,
                                                   SourceLocation StartLoc,
-                                                  SourceLocation EndLoc) {
+                                                  SourceLocation EndLoc,
+                                                  Stmt *AStmt) {
+  if (!AStmt)
+    return StmtError();
+
+  CapturedStmt *CS = cast<CapturedStmt>(AStmt);
+  // 1.2.2 OpenMP Language Terminology
+  // Structured block - An executable statement with a single entry at the
+  // top and a single exit at the bottom.
+  // The point of exit cannot be a branch out of the structured block.
+  // longjmp() and throw() must not violate the entry/exit criteria.
+  CS->getCapturedDecl()->setNothrow();
+  for (int ThisCaptureLevel = getOpenMPCaptureLevels(OMPD_target_update);
+       ThisCaptureLevel > 1; --ThisCaptureLevel) {
+    CS = cast<CapturedStmt>(CS->getCapturedStmt());
+    // 1.2.2 OpenMP Language Terminology
+    // Structured block - An executable statement with a single entry at the
+    // top and a single exit at the bottom.
+    // The point of exit cannot be a branch out of the structured block.
+    // longjmp() and throw() must not violate the entry/exit criteria.
+    CS->getCapturedDecl()->setNothrow();
+  }
+
   if (!hasClauses(Clauses, OMPC_to, OMPC_from)) {
     Diag(StartLoc, diag::err_omp_at_least_one_motion_clause_required);
     return StmtError();
   }
-  return OMPTargetUpdateDirective::Create(Context, StartLoc, EndLoc, Clauses);
+  return OMPTargetUpdateDirective::Create(Context, StartLoc, EndLoc, Clauses,
+                                          AStmt);
 }
 
 StmtResult Sema::ActOnOpenMPTeamsDirective(ArrayRef<OMPClause *> Clauses,
@@ -6860,7 +6948,6 @@ StmtResult Sema::ActOnOpenMPTargetSimdDirective(
     // longjmp() and throw() must not violate the entry/exit criteria.
     CS->getCapturedDecl()->setNothrow();
   }
-
 
   OMPLoopDirective::HelperExprs B;
   // In presence of clause 'collapse' with number of loops, it will define the
