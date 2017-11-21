@@ -284,10 +284,20 @@ void ScopedInterceptor::DisableIgnores() {
 }
 
 #define TSAN_INTERCEPT(func) INTERCEPT_FUNCTION(func)
-#if SANITIZER_FREEBSD || SANITIZER_NETBSD
+#if SANITIZER_FREEBSD
 # define TSAN_INTERCEPT_VER(func, ver) INTERCEPT_FUNCTION(func)
+# define TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(func)
+# define TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS_THR(func)
+#elif SANITIZER_NETBSD
+# define TSAN_INTERCEPT_VER(func, ver) INTERCEPT_FUNCTION(func)
+# define TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(func) \
+         INTERCEPT_FUNCTION(__libc_##func)
+# define TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS_THR(func) \
+         INTERCEPT_FUNCTION(__libc_thr_##func)
 #else
 # define TSAN_INTERCEPT_VER(func, ver) INTERCEPT_FUNCTION_VER(func, ver)
+# define TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(func)
+# define TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS_THR(func)
 #endif
 
 #define READ_STRING_OF_LEN(thr, pc, s, len, n)                 \
@@ -1344,10 +1354,15 @@ TSAN_INTERCEPTOR(int, pthread_once, void *o, void (*f)()) {
   if (o == 0 || f == 0)
     return errno_EINVAL;
   atomic_uint32_t *a;
-  if (!SANITIZER_MAC)
-    a = static_cast<atomic_uint32_t*>(o);
-  else  // On OS X, pthread_once_t has a header with a long-sized signature.
+
+  if (SANITIZER_MAC)
     a = static_cast<atomic_uint32_t*>((void *)((char *)o + sizeof(long_t)));
+  else if (SANITIZER_NETBSD)
+    a = static_cast<atomic_uint32_t*>
+          ((void *)((char *)o + __sanitizer::pthread_mutex_t_sz));
+  else
+    a = static_cast<atomic_uint32_t*>(o);
+
   u32 v = atomic_load(a, memory_order_acquire);
   if (v == 0 && atomic_compare_exchange_strong(a, &v, 1,
                                                memory_order_relaxed)) {
@@ -2277,33 +2292,35 @@ int sigaction_impl(int sig, const __sanitizer_sigaction *act,
   SCOPED_INTERCEPTOR_RAW(sigaction, sig, act, old);
   __sanitizer_sigaction *sigactions = interceptor_ctx()->sigactions;
   __sanitizer_sigaction old_stored;
-  internal_memcpy(&old_stored, &sigactions[sig], sizeof(old_stored));
-  if (act == 0) return 0;
-  // Copy act into sigactions[sig].
-  // Can't use struct copy, because compiler can emit call to memcpy.
-  // Can't use internal_memcpy, because it copies byte-by-byte,
-  // and signal handler reads the handler concurrently. It it can read
-  // some bytes from old value and some bytes from new value.
-  // Use volatile to prevent insertion of memcpy.
-  sigactions[sig].handler =
-      *(volatile __sanitizer_sighandler_ptr const *)&act->handler;
-  sigactions[sig].sa_flags = *(volatile int const *)&act->sa_flags;
-  internal_memcpy(&sigactions[sig].sa_mask, &act->sa_mask,
-                  sizeof(sigactions[sig].sa_mask));
-#if !SANITIZER_FREEBSD && !SANITIZER_MAC && !SANITIZER_NETBSD
-  sigactions[sig].sa_restorer = act->sa_restorer;
-#endif
+  if (old) internal_memcpy(&old_stored, &sigactions[sig], sizeof(old_stored));
   __sanitizer_sigaction newact;
-  internal_memcpy(&newact, act, sizeof(newact));
-  internal_sigfillset(&newact.sa_mask);
-  if ((uptr)act->handler != sig_ign && (uptr)act->handler != sig_dfl) {
-    if (newact.sa_flags & SA_SIGINFO)
-      newact.sigaction = rtl_sigaction;
-    else
-      newact.handler = rtl_sighandler;
+  if (act) {
+    // Copy act into sigactions[sig].
+    // Can't use struct copy, because compiler can emit call to memcpy.
+    // Can't use internal_memcpy, because it copies byte-by-byte,
+    // and signal handler reads the handler concurrently. It it can read
+    // some bytes from old value and some bytes from new value.
+    // Use volatile to prevent insertion of memcpy.
+    sigactions[sig].handler =
+        *(volatile __sanitizer_sighandler_ptr const *)&act->handler;
+    sigactions[sig].sa_flags = *(volatile int const *)&act->sa_flags;
+    internal_memcpy(&sigactions[sig].sa_mask, &act->sa_mask,
+                    sizeof(sigactions[sig].sa_mask));
+#if !SANITIZER_FREEBSD && !SANITIZER_MAC && !SANITIZER_NETBSD
+    sigactions[sig].sa_restorer = act->sa_restorer;
+#endif
+    internal_memcpy(&newact, act, sizeof(newact));
+    internal_sigfillset(&newact.sa_mask);
+    if ((uptr)act->handler != sig_ign && (uptr)act->handler != sig_dfl) {
+      if (newact.sa_flags & SA_SIGINFO)
+        newact.sigaction = rtl_sigaction;
+      else
+        newact.handler = rtl_sighandler;
+    }
+    ReleaseStore(thr, pc, (uptr)&sigactions[sig]);
+    act = &newact;
   }
-  ReleaseStore(thr, pc, (uptr)&sigactions[sig]);
-  int res = REAL(sigaction)(sig, &newact, old);
+  int res = REAL(sigaction)(sig, act, old);
   if (res == 0 && old) {
     uptr cb = (uptr)old->sigaction;
     if (cb == (uptr)rtl_sigaction || cb == (uptr)rtl_sighandler) {
@@ -2474,6 +2491,23 @@ TSAN_INTERCEPTOR(void, _lwp_exit) {
 #else
 #define TSAN_MAYBE_INTERCEPT__LWP_EXIT
 #endif
+
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, cond_init, void *c, void *a);
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, cond_signal, void *c);
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, cond_broadcast, void *c);
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, cond_wait, void *c, void *m);
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, cond_destroy, void *c);
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, mutex_init, void *m, void *a);
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, mutex_destroy, void *m);
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, mutex_trylock, void *m);
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_init, void *m, void *a);
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_destroy, void *m);
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_rdlock, void *m);
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_tryrdlock, void *m);
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_wrlock, void *m);
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_trywrlock, void *m);
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_unlock, void *m);
+TSAN_INTERCEPTOR_NETBSD_ALIAS_THR(int, once, void *o, void (*f)());
 
 namespace __tsan {
 
@@ -2663,6 +2697,23 @@ void InitializeInterceptors() {
     Die();
   }
 #endif
+
+  TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(cond_init);
+  TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(cond_signal);
+  TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(cond_broadcast);
+  TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(cond_wait);
+  TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(cond_destroy);
+  TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(mutex_init);
+  TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(mutex_destroy);
+  TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(mutex_trylock);
+  TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(rwlock_init);
+  TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(rwlock_destroy);
+  TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(rwlock_rdlock);
+  TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(rwlock_tryrdlock);
+  TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(rwlock_wrlock);
+  TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(rwlock_trywrlock);
+  TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(rwlock_unlock);
+  TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS_THR(once);
 
   FdInit();
 }

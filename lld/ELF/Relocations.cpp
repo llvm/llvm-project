@@ -1224,6 +1224,8 @@ ThunkSection *ThunkCreator::getISThunkSec(InputSection *IS) {
   OutputSection *TOS = IS->getParent();
   for (BaseCommand *BC : TOS->SectionCommands)
     if (auto *ISD = dyn_cast<InputSectionDescription>(BC)) {
+      if (ISD->Sections.empty())
+        continue;
       InputSection *first = ISD->Sections.front();
       InputSection *last = ISD->Sections.back();
       if (IS->OutSecOff >= first->OutSecOff &&

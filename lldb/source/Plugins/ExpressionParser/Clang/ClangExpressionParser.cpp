@@ -350,7 +350,6 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
       LLDB_LOGV(log, "LinkerVersion: '{0}'", opts.LinkerVersion);
       StringList::LogDump(log, opts.FeaturesAsWritten, "FeaturesAsWritten");
       StringList::LogDump(log, opts.Features, "Features");
-      StringList::LogDump(log, opts.Reciprocals, "Reciprocals");
     }
 
   // 4. Create and install the target on the compiler.

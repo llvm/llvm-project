@@ -2,10 +2,12 @@
 
 // RUN: %clangxx_xray -fxray-instrument -std=c++11 -ffunction-sections \
 // RUN:     -fdata-sections -fpic -fpie -Wl,--gc-sections %s -o %t
-// RUN: XRAY_OPTIONS="patch_premain=true verbosity=1 xray_logfile_base=pic-test-logging-" %run %t 2>&1 | FileCheck %s
+// RUN: rm pic-test-logging-* || true
+// RUN: XRAY_OPTIONS="patch_premain=true verbosity=1 xray_naive_log=true \
+// RUN:     xray_logfile_base=pic-test-logging-" %run %t 2>&1 | FileCheck %s
 // After all that, clean up the output xray log.
 //
-// RUN: rm pic-test-logging-*
+// RUN: rm pic-test-logging-* || true
 
 // UNSUPPORTED: target-is-mips64,target-is-mips64el
 

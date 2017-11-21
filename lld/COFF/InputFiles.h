@@ -110,12 +110,12 @@ public:
   MachineTypes getMachineType() override;
   std::vector<Chunk *> &getChunks() { return Chunks; }
   std::vector<SectionChunk *> &getDebugChunks() { return DebugChunks; }
-  std::vector<Symbol *> &getSymbols() { return SymbolBodies; }
+  std::vector<Symbol *> &getSymbols() { return Symbols; }
 
   // Returns a Symbol object for the SymbolIndex'th symbol in the
   // underlying object file.
   Symbol *getSymbol(uint32_t SymbolIndex) {
-    return SparseSymbolBodies[SymbolIndex];
+    return Symbols[SymbolIndex];
   }
 
   // Returns the underying COFF file.
@@ -162,14 +162,11 @@ private:
   // null pointer.)
   std::vector<SectionChunk *> SparseChunks;
 
-  // List of all symbols referenced or defined by this file.
-  std::vector<Symbol *> SymbolBodies;
-
-  // This vector contains the same symbols as SymbolBodies, but they
-  // are indexed such that you can get a Symbol by symbol
+  // This vector contains a list of all symbols defined or referenced by this
+  // file. They are indexed such that you can get a Symbol by symbol
   // index. Nonexistent indices (which are occupied by auxiliary
   // symbols in the real symbol table) are filled with null pointers.
-  std::vector<Symbol *> SparseSymbolBodies;
+  std::vector<Symbol *> Symbols;
 };
 
 // This type represents import library members that contain DLL names

@@ -252,7 +252,19 @@ void SectionChunk::writeTo(uint8_t *Buf) const {
     // Get the output section of the symbol for this relocation.  The output
     // section is needed to compute SECREL and SECTION relocations used in debug
     // info.
-    Defined *Sym = cast<Defined>(File->getSymbol(Rel.SymbolTableIndex));
+    auto *Sym =
+        dyn_cast_or_null<Defined>(File->getSymbol(Rel.SymbolTableIndex));
+    if (!Sym) {
+      if (isCodeView() || isDWARF())
+        continue;
+      // Symbols in early discarded sections are represented using null pointers,
+      // so we need to retrieve the name from the object file.
+      COFFSymbolRef Sym =
+          check(File->getCOFFObj()->getSymbol(Rel.SymbolTableIndex));
+      StringRef Name;
+      File->getCOFFObj()->getSymbolName(Sym, Name);
+      fatal("relocation against symbol in discarded section: " + Name);
+    }
     Chunk *C = Sym->getChunk();
     OutputSection *OS = C ? C->getOutputSection() : nullptr;
 
@@ -328,7 +340,8 @@ void SectionChunk::getBaserels(std::vector<Baserel> *Res) {
     uint8_t Ty = getBaserelType(Rel);
     if (Ty == IMAGE_REL_BASED_ABSOLUTE)
       continue;
-    if (isa<DefinedAbsolute>(File->getSymbol(Rel.SymbolTableIndex)))
+    Symbol *Target = File->getSymbol(Rel.SymbolTableIndex);
+    if (!Target || isa<DefinedAbsolute>(Target))
       continue;
     Res->emplace_back(RVA + Rel.VirtualAddress, Ty);
   }
