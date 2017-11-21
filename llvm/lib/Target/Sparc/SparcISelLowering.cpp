@@ -1559,9 +1559,6 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::FP_TO_UINT, MVT::i64, Custom);
   setOperationAction(ISD::UINT_TO_FP, MVT::i64, Custom);
 
-  setOperationAction(ISD::BITCAST, MVT::f32, Expand);
-  setOperationAction(ISD::BITCAST, MVT::i32, Expand);
-
   // Sparc has no select or setcc: expand to SELECT_CC.
   setOperationAction(ISD::SELECT, MVT::i32, Expand);
   setOperationAction(ISD::SELECT, MVT::f32, Expand);
@@ -1590,13 +1587,14 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::EH_SJLJ_SETJMP, MVT::i32, Custom);
   setOperationAction(ISD::EH_SJLJ_LONGJMP, MVT::Other, Custom);
 
+  setOperationAction(ISD::BITCAST, MVT::i32, Custom);
+  setOperationAction(ISD::BITCAST, MVT::f32, Custom);
+
   if (Subtarget->is64Bit()) {
     setOperationAction(ISD::ADDC, MVT::i64, Custom);
     setOperationAction(ISD::ADDE, MVT::i64, Custom);
     setOperationAction(ISD::SUBC, MVT::i64, Custom);
     setOperationAction(ISD::SUBE, MVT::i64, Custom);
-    setOperationAction(ISD::BITCAST, MVT::f64, Expand);
-    setOperationAction(ISD::BITCAST, MVT::i64, Expand);
     setOperationAction(ISD::SELECT, MVT::i64, Expand);
     setOperationAction(ISD::SETCC, MVT::i64, Expand);
     setOperationAction(ISD::BR_CC, MVT::i64, Custom);
@@ -1610,6 +1608,9 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ROTL , MVT::i64, Expand);
     setOperationAction(ISD::ROTR , MVT::i64, Expand);
     setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i64, Custom);
+
+    setOperationAction(ISD::BITCAST, MVT::i64, Custom);
+    setOperationAction(ISD::BITCAST, MVT::f64, Custom);
   }
 
   // ATOMICs.
@@ -2425,23 +2426,76 @@ static SDValue LowerFP_TO_UINT(SDValue Op, SelectionDAG &DAG,
                          1);
 }
 
-static SDValue LowerUINT_TO_FP(SDValue Op, SelectionDAG &DAG,
-                               const SparcTargetLowering &TLI,
-                               bool hasHardQuad) {
+SDValue SparcTargetLowering::LowerBITCAST(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc dl(Op);
+  EVT SrcVT = Op.getOperand(0).getValueType();
+
+  EVT DstVT = Op.getValueType();
+
+  if (Subtarget->isVIS3()) {
+    if (DstVT == MVT::f32 && SrcVT == MVT::i32) {
+      return Op; // Legal
+    } else if (DstVT == MVT::f64 && SrcVT == MVT::i64) {
+      return (Subtarget->is64Bit())
+                 ? Op
+                 : SDValue(); // Legal on 64 bit, otherwise Expand
+    } else if (DstVT == MVT::i64 && SrcVT == MVT::f64) {
+      return (Subtarget->is64Bit())
+                 ? Op
+                 : SDValue(); // Legal on 64 bit, otherwise Expand
+    }
+  }
+
+  // Expand
+  return SDValue();
+}
+
+SDValue SparcTargetLowering::LowerUINT_TO_FP(SDValue Op,
+                                             SelectionDAG &DAG) const {
   SDLoc dl(Op);
   EVT OpVT = Op.getOperand(0).getValueType();
   assert(OpVT == MVT::i32 || OpVT == MVT::i64);
 
-  // Expand if it does not involve f128 or the target has support for
-  // quad floating point instructions and the operand type is legal.
-  if (Op.getValueType() != MVT::f128 || (hasHardQuad && TLI.isTypeLegal(OpVT)))
-    return SDValue();
+  // Expand f128 operations to fp128 ABI calls.
+  if (Op.getValueType() == MVT::f128 &&
+      (!Subtarget->hasHardQuad() || !isTypeLegal(OpVT))) {
+    return LowerF128Op(Op, DAG,
+                       getLibcallName(OpVT == MVT::i32
+                                          ? RTLIB::UINTTOFP_I32_F128
+                                          : RTLIB::UINTTOFP_I64_F128),
+                       1);
+  }
 
-  return TLI.LowerF128Op(Op, DAG,
-                         TLI.getLibcallName(OpVT == MVT::i32
-                                            ? RTLIB::UINTTOFP_I32_F128
-                                            : RTLIB::UINTTOFP_I64_F128),
-                         1);
+  // Since UINT_TO_FP is legal (it's marked custom), dag combiner won't
+  // optimize it to a SINT_TO_FP when the sign bit is known zero. Perform
+  // the optimization here.
+  if (DAG.SignBitIsZero(Op.getOperand(0))) {
+
+    EVT floatVT = MVT::f32;
+    unsigned IntToFloatOpcode = SPISD::ITOF;
+
+    if (OpVT == MVT::i64) {
+      floatVT = MVT::f64;
+      IntToFloatOpcode = SPISD::XTOF;
+    }
+
+    // Convert the int value to FP in an FP register.
+    SDValue FloatTmp = DAG.getNode(ISD::BITCAST, dl, floatVT, Op.getOperand(0));
+
+    return DAG.getNode(IntToFloatOpcode, dl, Op.getValueType(), FloatTmp);
+  }
+
+  if (OpVT == MVT::i32 && Subtarget->is64Bit()) {
+
+    SDValue Int64Tmp =
+        DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, Op.getOperand(0));
+
+    SDValue Float64Tmp = DAG.getNode(ISD::BITCAST, dl, MVT::f64, Int64Tmp);
+
+    return DAG.getNode(SPISD::XTOF, dl, Op.getValueType(), Float64Tmp);
+  }
+
+  return SDValue();
 }
 
 static SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG,
@@ -3059,8 +3113,7 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const {
                                                        hasHardQuad);
   case ISD::FP_TO_UINT:         return LowerFP_TO_UINT(Op, DAG, *this,
                                                        hasHardQuad);
-  case ISD::UINT_TO_FP:         return LowerUINT_TO_FP(Op, DAG, *this,
-                                                       hasHardQuad);
+  case ISD::UINT_TO_FP:         return LowerUINT_TO_FP(Op, DAG);
   case ISD::BR_CC:              return LowerBR_CC(Op, DAG, *this,
                                                   hasHardQuad);
   case ISD::SELECT_CC:          return LowerSELECT_CC(Op, DAG, *this,
@@ -3097,6 +3150,7 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ATOMIC_LOAD:
   case ISD::ATOMIC_STORE:       return LowerATOMIC_LOAD_STORE(Op, DAG);
   case ISD::INTRINSIC_WO_CHAIN: return LowerINTRINSIC_WO_CHAIN(Op, DAG);
+  case ISD::BITCAST:            return LowerBITCAST(Op, DAG);
   }
 }
 

@@ -212,9 +212,7 @@ Error Tokenizer::consumeToken(const Kind TokenKind) {
   // One-character token consumption.
 #define TOKEN(Name)
 #define SHORT_TOKEN(Name, Ch) case Kind::Name:
-#include "ResourceScriptTokenList.h"
-#undef TOKEN
-#undef SHORT_TOKEN
+#include "ResourceScriptTokenList.def"
     advance();
     return Error::success();
 
@@ -340,9 +338,7 @@ Kind Tokenizer::classifyCurrentToken() const {
 #define SHORT_TOKEN(Name, Ch)                                                  \
   case Ch:                                                                     \
     return Kind::Name;
-#include "ResourceScriptTokenList.h"
-#undef TOKEN
-#undef SHORT_TOKEN
+#include "ResourceScriptTokenList.def"
 
   default:
     return Kind::Invalid;
