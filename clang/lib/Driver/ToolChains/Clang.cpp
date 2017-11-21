@@ -1889,6 +1889,15 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
       switch (C.getDefaultToolChain().getArch()) {
       default:
         break;
+      case llvm::Triple::thumb:
+      case llvm::Triple::thumbeb:
+      case llvm::Triple::arm:
+      case llvm::Triple::armeb:
+        if (Value == "-mthumb")
+          // -mthumb has already been processed in ComputeLLVMTriple()
+          // recognize but skip over here.
+          continue;
+        break;
       case llvm::Triple::mips:
       case llvm::Triple::mipsel:
       case llvm::Triple::mips64:

@@ -4803,9 +4803,9 @@ AST_MATCHER(Type, realFloatingPointType) {
 ///   matches "int b[7]"
 ///
 /// Usable as: Matcher<ArrayType>, Matcher<ComplexType>
-AST_TYPELOC_TRAVERSE_MATCHER(hasElementType, getElement,
-                             AST_POLYMORPHIC_SUPPORTED_TYPES(ArrayType,
-                                                             ComplexType));
+AST_TYPELOC_TRAVERSE_MATCHER_DECL(hasElementType, getElement,
+                                  AST_POLYMORPHIC_SUPPORTED_TYPES(ArrayType,
+                                                                  ComplexType));
 
 /// \brief Matches C arrays with a specified constant size.
 ///
@@ -4921,8 +4921,8 @@ extern const AstTypeMatcher<AtomicType> atomicType;
 ///  matches "_Atomic(int) i"
 ///
 /// Usable as: Matcher<AtomicType>
-AST_TYPELOC_TRAVERSE_MATCHER(hasValueType, getValue,
-                             AST_POLYMORPHIC_SUPPORTED_TYPES(AtomicType));
+AST_TYPELOC_TRAVERSE_MATCHER_DECL(hasValueType, getValue,
+                                  AST_POLYMORPHIC_SUPPORTED_TYPES(AtomicType));
 
 /// \brief Matches types nodes representing C++11 auto types.
 ///
@@ -5115,11 +5115,10 @@ extern const AstTypeMatcher<RValueReferenceType> rValueReferenceType;
 ///
 /// Usable as: Matcher<BlockPointerType>, Matcher<MemberPointerType>,
 ///   Matcher<PointerType>, Matcher<ReferenceType>
-AST_TYPELOC_TRAVERSE_MATCHER(pointee, getPointee,
-                             AST_POLYMORPHIC_SUPPORTED_TYPES(BlockPointerType,
-                                                             MemberPointerType,
-                                                             PointerType,
-                                                             ReferenceType));
+AST_TYPELOC_TRAVERSE_MATCHER_DECL(
+    pointee, getPointee,
+    AST_POLYMORPHIC_SUPPORTED_TYPES(BlockPointerType, MemberPointerType,
+                                    PointerType, ReferenceType));
 
 /// \brief Matches typedef types.
 ///
