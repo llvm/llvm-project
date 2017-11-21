@@ -541,11 +541,30 @@ std::string ToolChain::ComputeLLVMTriple(const ArgList &Args,
           << tools::arm::getARMArch(MArch, getTriple()) << "ARM";
     }
 
-    // Assembly files should start in ARM mode, unless arch is M-profile.
-    // Windows is always thumb.
-    if ((InputType != types::TY_PP_Asm && Args.hasFlag(options::OPT_mthumb,
-         options::OPT_mno_thumb, ThumbDefault)) || IsMProfile ||
-         getTriple().isOSWindows()) {
+    // Check to see if an explicit choice to use thumb has been made via
+    // -mthumb. For assembler files we must check for -mthumb in the options
+    // passed to the assember via -Wa or -Xassembler.
+    bool IsThumb = false;
+    if (InputType != types::TY_PP_Asm)
+      IsThumb = Args.hasFlag(options::OPT_mthumb, options::OPT_mno_thumb,
+                              ThumbDefault);
+    else {
+      // Ideally we would check for these flags in
+      // CollectArgsForIntegratedAssembler but we can't change the ArchName at
+      // that point. There is no assembler equivalent of -mno-thumb, -marm, or
+      // -mno-arm.
+      for (const Arg *A :
+           Args.filtered(options::OPT_Wa_COMMA, options::OPT_Xassembler)) {
+        for (StringRef Value : A->getValues()) {
+          if (Value == "-mthumb")
+            IsThumb = true;
+        }
+      }
+    }
+    // Assembly files should start in ARM mode, unless arch is M-profile, or
+    // -mthumb has been passed explicitly to the assembler. Windows is always
+    // thumb.
+    if (IsThumb || IsMProfile || getTriple().isOSWindows()) {
       if (IsBigEndian)
         ArchName = "thumbeb";
       else
