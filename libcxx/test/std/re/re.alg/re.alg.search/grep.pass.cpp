@@ -33,7 +33,7 @@ extern "C" void LLVMFuzzerTestOneInput(const char *data)
             std::regex::flag_type flag = std::regex_constants::grep;
             std::string s((const char *)data, size);
             std::regex re(s, flag);
-            (void)std::regex_match(s, re);
+            TEST_IGNORE_NODISCARD std::regex_match(s, re);
         }
         catch (std::regex_error &) {}
     }
