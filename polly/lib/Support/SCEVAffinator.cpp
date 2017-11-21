@@ -122,7 +122,8 @@ void SCEVAffinator::takeNonNegativeAssumption(PWACtx &PWAC) {
   PWAC.second = isl_set_union(PWAC.second, isl_set_copy(NegDom));
   auto *Restriction = BB ? NegDom : isl_set_params(NegDom);
   auto DL = BB ? BB->getTerminator()->getDebugLoc() : DebugLoc();
-  S->recordAssumption(UNSIGNED, isl::manage(Restriction), DL, AS_RESTRICTION, BB);
+  S->recordAssumption(UNSIGNED, isl::manage(Restriction), DL, AS_RESTRICTION,
+                      BB);
 }
 
 __isl_give PWACtx SCEVAffinator::getPWACtxFromPWA(__isl_take isl_pw_aff *PWA) {
@@ -168,7 +169,8 @@ __isl_give PWACtx SCEVAffinator::checkForWrapping(const SCEV *Expr,
   if (isl_set_is_empty(NotEqualSet))
     isl_set_free(NotEqualSet);
   else
-    S->recordAssumption(WRAPPING, isl::manage(NotEqualSet), Loc, AS_RESTRICTION, BB);
+    S->recordAssumption(WRAPPING, isl::manage(NotEqualSet), Loc, AS_RESTRICTION,
+                        BB);
 
   return PWAC;
 }
@@ -317,7 +319,8 @@ SCEVAffinator::visitTruncateExpr(const SCEVTruncateExpr *Expr) {
     OutOfBoundsDom = isl_set_params(OutOfBoundsDom);
   }
 
-  S->recordAssumption(UNSIGNED, isl::manage(OutOfBoundsDom), DebugLoc(), AS_RESTRICTION, BB);
+  S->recordAssumption(UNSIGNED, isl::manage(OutOfBoundsDom), DebugLoc(),
+                      AS_RESTRICTION, BB);
 
   return OpPWAC;
 }

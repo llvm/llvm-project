@@ -736,3 +736,9 @@ foo2:
 @ CHECK-ERRORS: error: immediate operand must an even number in the range [0, 30]
 @ CHECK-ERRORS: error: immediate operand must a number in the range [0, 255]
 @ CHECK-ERRORS: error: immediate operand must an even number in the range [0, 30]
+
+        @ Generic error for too few operands
+        adds
+        adds r0
+@ CHECK-ERRORS: error: too few operands for instruction
+@ CHECK-ERRORS: error: too few operands for instruction

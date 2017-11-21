@@ -526,7 +526,10 @@ def reglist : Operand<i32> {
 
 def GPRPairOp : RegisterOperand<GPRPair, "printGPRPairOperand">;
 
-def DPRRegListAsmOperand : AsmOperandClass { let Name = "DPRRegList"; }
+def DPRRegListAsmOperand : AsmOperandClass {
+  let Name = "DPRRegList";
+  let DiagnosticType = "DPR_RegList";
+}
 def dpr_reglist : Operand<i32> {
   let EncoderMethod = "getRegisterListOpValue";
   let ParserMatchClass = DPRRegListAsmOperand;
@@ -534,7 +537,10 @@ def dpr_reglist : Operand<i32> {
   let DecoderMethod = "DecodeDPRRegListOperand";
 }
 
-def SPRRegListAsmOperand : AsmOperandClass { let Name = "SPRRegList"; }
+def SPRRegListAsmOperand : AsmOperandClass {
+  let Name = "SPRRegList";
+  let DiagnosticString = "operand must be a list of registers in range [s0, s31]";
+}
 def spr_reglist : Operand<i32> {
   let EncoderMethod = "getRegisterListOpValue";
   let ParserMatchClass = SPRRegListAsmOperand;

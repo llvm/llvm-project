@@ -15,25 +15,25 @@ double *g;
 
 // CK1: @g = global double*
 // CK1: [[SIZES00:@.+]] = {{.+}}constant [1 x i[[sz:64|32]]] [i{{64|32}} {{8|4}}]
-// CK1: [[TYPES00:@.+]] = {{.+}}constant [1 x i32] [i32 288]
+// CK1: [[TYPES00:@.+]] = {{.+}}constant [1 x i64] [i64 288]
 
 // CK1: [[SIZES01:@.+]] = {{.+}}constant [1 x i[[sz]]] [i[[sz]] {{8|4}}]
-// CK1: [[TYPES01:@.+]] = {{.+}}constant [1 x i32] [i32 288]
+// CK1: [[TYPES01:@.+]] = {{.+}}constant [1 x i64] [i64 288]
 
 // CK1: [[SIZES02:@.+]] = {{.+}}constant [1 x i[[sz]]] [i[[sz]] {{8|4}}]
-// CK1: [[TYPES02:@.+]] = {{.+}}constant [1 x i32] [i32 288]
+// CK1: [[TYPES02:@.+]] = {{.+}}constant [1 x i64] [i64 288]
 
 // CK1: [[SIZES03:@.+]] = {{.+}}constant [1 x i[[sz]]] [i[[sz]] {{8|4}}]
-// CK1: [[TYPES03:@.+]] = {{.+}}constant [1 x i32] [i32 288]
+// CK1: [[TYPES03:@.+]] = {{.+}}constant [1 x i64] [i64 288]
 
 // CK1: [[SIZES04:@.+]] = {{.+}}constant [1 x i[[sz]]] [i[[sz]] {{8|4}}]
-// CK1: [[TYPES04:@.+]] = {{.+}}constant [1 x i32] [i32 288]
+// CK1: [[TYPES04:@.+]] = {{.+}}constant [1 x i64] [i64 288]
 
 // CK1: [[SIZES05:@.+]] = {{.+}}constant [1 x i[[sz]]] [i[[sz]] {{8|4}}]
-// CK1: [[TYPES05:@.+]] = {{.+}}constant [1 x i32] [i32 288]
+// CK1: [[TYPES05:@.+]] = {{.+}}constant [1 x i64] [i64 288]
 
 // CK1: [[SIZES06:@.+]] = {{.+}}constant [2 x i[[sz]]] [i[[sz]] {{8|4}}, i[[sz]] {{8|4}}]
-// CK1: [[TYPES06:@.+]] = {{.+}}constant [2 x i32] [i32 288, i32 288]
+// CK1: [[TYPES06:@.+]] = {{.+}}constant [2 x i64] [i64 288, i64 288]
 
 // CK1-LABEL: @_Z3foo
 template<typename T>
@@ -41,7 +41,7 @@ void foo(float *&lr, T *&tr) {
   float *l;
   T *t;
 
-  // CK1-DAG: call i32 @__tgt_target(i32 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES00]]{{.+}}, {{.+}}[[TYPES00]]{{.+}})
+  // CK1-DAG: call i32 @__tgt_target(i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES00]]{{.+}}, {{.+}}[[TYPES00]]{{.+}})
   // CK1-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
   // CK1-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
   // CK1-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
@@ -58,7 +58,7 @@ void foo(float *&lr, T *&tr) {
     ++g;
   }
 
-  // CK1-DAG: call i32 @__tgt_target(i32 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES01]]{{.+}}, {{.+}}[[TYPES01]]{{.+}})
+  // CK1-DAG: call i32 @__tgt_target(i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES01]]{{.+}}, {{.+}}[[TYPES01]]{{.+}})
   // CK1-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
   // CK1-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
   // CK1-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
@@ -75,7 +75,7 @@ void foo(float *&lr, T *&tr) {
     ++l;
   }
 
-  // CK1-DAG: call i32 @__tgt_target(i32 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES02]]{{.+}}, {{.+}}[[TYPES02]]{{.+}})
+  // CK1-DAG: call i32 @__tgt_target(i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES02]]{{.+}}, {{.+}}[[TYPES02]]{{.+}})
   // CK1-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
   // CK1-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
   // CK1-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
@@ -92,7 +92,7 @@ void foo(float *&lr, T *&tr) {
     ++t;
   }
 
-  // CK1-DAG: call i32 @__tgt_target(i32 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES03]]{{.+}}, {{.+}}[[TYPES03]]{{.+}})
+  // CK1-DAG: call i32 @__tgt_target(i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES03]]{{.+}}, {{.+}}[[TYPES03]]{{.+}})
   // CK1-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
   // CK1-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
   // CK1-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
@@ -110,7 +110,7 @@ void foo(float *&lr, T *&tr) {
     ++lr;
   }
 
-  // CK1-DAG: call i32 @__tgt_target(i32 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES04]]{{.+}}, {{.+}}[[TYPES04]]{{.+}})
+  // CK1-DAG: call i32 @__tgt_target(i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES04]]{{.+}}, {{.+}}[[TYPES04]]{{.+}})
   // CK1-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
   // CK1-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
   // CK1-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
@@ -128,7 +128,7 @@ void foo(float *&lr, T *&tr) {
     ++tr;
   }
 
-  // CK1-DAG: call i32 @__tgt_target(i32 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES05]]{{.+}}, {{.+}}[[TYPES05]]{{.+}})
+  // CK1-DAG: call i32 @__tgt_target(i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES05]]{{.+}}, {{.+}}[[TYPES05]]{{.+}})
   // CK1-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
   // CK1-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
   // CK1-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
@@ -146,7 +146,7 @@ void foo(float *&lr, T *&tr) {
     ++tr;
   }
 
-  // CK1-DAG: call i32 @__tgt_target(i32 {{.+}}, i8* {{.+}}, i32 2, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES06]]{{.+}}, {{.+}}[[TYPES06]]{{.+}})
+  // CK1-DAG: call i32 @__tgt_target(i64 {{.+}}, i8* {{.+}}, i32 2, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES06]]{{.+}}, {{.+}}[[TYPES06]]{{.+}})
   // CK1-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
   // CK1-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
   // CK1-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0
@@ -191,13 +191,13 @@ void bar(float *&a, int *&b) {
 // CK2: [[ST:%.+]] = type { double*, double** }
 
 // CK2: [[SIZE00:@.+]] = {{.+}}constant [1 x i[[sz:64|32]]] [i{{64|32}} {{8|4}}]
-// CK2: [[MTYPE00:@.+]] = {{.+}}constant [1 x i32] [i32 33]
+// CK2: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 33]
 
 // CK2: [[SIZE01:@.+]] = {{.+}}constant [2 x i[[sz]]] [i[[sz]] {{8|4}}, i[[sz]] {{8|4}}]
-// CK2: [[MTYPE01:@.+]] = {{.+}}constant [2 x i32] [i32 32, i32 17]
+// CK2: [[MTYPE01:@.+]] = {{.+}}constant [2 x i64] [i64 32, i64 17]
 
 // CK2: [[SIZE02:@.+]] = {{.+}}constant [3 x i[[sz]]] [i[[sz]] {{8|4}}, i[[sz]] {{8|4}}, i[[sz]] {{8|4}}]
-// CK2: [[MTYPE02:@.+]] = {{.+}}constant [3 x i32] [i32 33, i32 0, i32 17]
+// CK2: [[MTYPE02:@.+]] = {{.+}}constant [3 x i64] [i64 33, i64 0, i64 17]
 
 template <typename T>
 struct ST {
@@ -209,7 +209,7 @@ struct ST {
   void foo(double *&arg) {
     int *la = 0;
 
-    // CK2-DAG: call i32 @__tgt_target(i32 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE00]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE00]]{{.+}})
+    // CK2-DAG: call i32 @__tgt_target(i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE00]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE00]]{{.+}})
     // CK2-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
     // CK2-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
@@ -225,7 +225,7 @@ struct ST {
       a++;
     }
 
-    // CK2-DAG: call i32 @__tgt_target(i32 {{[^,]+}}, i8* {{[^,]+}}, i32 2, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[SIZE01]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[MTYPE01]]{{.+}})
+    // CK2-DAG: call i32 @__tgt_target(i64 {{[^,]+}}, i8* {{[^,]+}}, i32 2, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[SIZE01]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[MTYPE01]]{{.+}})
     // CK2-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
     // CK2-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
@@ -249,7 +249,7 @@ struct ST {
       b++;
     }
 
-    // CK2-DAG: call i32 @__tgt_target(i32 {{[^,]+}}, i8* {{[^,]+}}, i32 3, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[3 x i{{.+}}]* [[SIZE02]], {{.+}}getelementptr {{.+}}[3 x i{{.+}}]* [[MTYPE02]]{{.+}})
+    // CK2-DAG: call i32 @__tgt_target(i64 {{[^,]+}}, i8* {{[^,]+}}, i32 3, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[3 x i{{.+}}]* [[SIZE02]], {{.+}}getelementptr {{.+}}[3 x i{{.+}}]* [[MTYPE02]]{{.+}})
     // CK2-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
     // CK2-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 

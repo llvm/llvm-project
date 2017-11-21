@@ -676,7 +676,7 @@ isl_ast_build *IslAstInfo::getBuild(__isl_keep isl_ast_node *Node) {
 IslAstInfo IslAstAnalysis::run(Scop &S, ScopAnalysisManager &SAM,
                                ScopStandardAnalysisResults &SAR) {
   return {S, SAM.getResult<DependenceAnalysis>(S, SAR).getDependences(
-              Dependences::AL_Statement)};
+                 Dependences::AL_Statement)};
 }
 
 static __isl_give isl_printer *cbPrintUser(__isl_take isl_printer *P,

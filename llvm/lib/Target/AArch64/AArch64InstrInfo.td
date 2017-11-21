@@ -552,8 +552,7 @@ def MSRpstateImm1 : MSRpstateImm0_1;
 def MSRpstateImm4 : MSRpstateImm0_15;
 
 // The thread pointer (on Linux, at least, where this has been implemented) is
-// TPIDR_EL0.  Add pseudo op so we can mark it as not having any side effects.
-let hasSideEffects = 0 in
+// TPIDR_EL0.
 def MOVbaseTLS : Pseudo<(outs GPR64:$dst), (ins),
                        [(set GPR64:$dst, AArch64threadpointer)]>, Sched<[WriteSys]>;
 

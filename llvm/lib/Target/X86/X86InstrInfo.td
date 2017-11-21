@@ -3165,8 +3165,8 @@ def : InstAlias<"jmpl\t$seg, $off",  (FARJMP32i  i32imm:$off, i16imm:$seg)>, Req
 // Force mov without a suffix with a segment and mem to prefer the 'l' form of
 // the move.  All segment/mem forms are equivalent, this has the shortest
 // encoding.
-def : InstAlias<"mov\t{$mem, $seg|$seg, $mem}", (MOV32sm SEGMENT_REG:$seg, i32mem:$mem), 0>;
-def : InstAlias<"mov\t{$seg, $mem|$mem, $seg}", (MOV32ms i32mem:$mem, SEGMENT_REG:$seg), 0>;
+def : InstAlias<"mov\t{$mem, $seg|$seg, $mem}", (MOV16sm SEGMENT_REG:$seg, i16mem:$mem), 0>;
+def : InstAlias<"mov\t{$seg, $mem|$mem, $seg}", (MOV16ms i16mem:$mem, SEGMENT_REG:$seg), 0>;
 
 // Match 'movq <largeimm>, <reg>' as an alias for movabsq.
 def : InstAlias<"mov{q}\t{$imm, $reg|$reg, $imm}", (MOV64ri GR64:$reg, i64imm:$imm), 0>;

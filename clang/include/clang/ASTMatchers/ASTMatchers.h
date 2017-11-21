@@ -5817,6 +5817,17 @@ AST_MATCHER(NamedDecl, hasExternalFormalLinkage) {
   return Node.hasExternalFormalLinkage();
 }
 
+/// \brief Matches a declaration that has default arguments.
+///
+/// Example matches y (matcher = parmVarDecl(hasDefaultArgument()))
+/// \code
+/// void x(int val) {}
+/// void y(int val = 0) {}
+/// \endcode
+AST_MATCHER(ParmVarDecl, hasDefaultArgument) { 
+  return Node.hasDefaultArg(); 
+}
+
 } // namespace ast_matchers
 } // namespace clang
 

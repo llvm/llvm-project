@@ -145,3 +145,9 @@ foo2:
 @ CHECK-ERRORS-V7: error: instruction requires: arm-mode
 @ CHECK-ERRORS-V8: error: invalid instruction
 @ CHECK-ERRORS-V8: error: invalid instruction
+
+        @ Generic error for too few operands
+        adds
+        adds r0
+@ CHECK-ERRORS: error: too few operands for instruction
+@ CHECK-ERRORS: error: too few operands for instruction
