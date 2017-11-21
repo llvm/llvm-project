@@ -73,6 +73,7 @@ INLINE uptr GetPageSizeCached() {
   return PageSizeCached;
 }
 uptr GetMmapGranularity();
+uptr GetMaxVirtualAddress();
 uptr GetMaxUserVirtualAddress();
 // Threads
 tid_t GetTid();
@@ -205,6 +206,8 @@ class LowLevelAllocator {
   char *allocated_end_;
   char *allocated_current_;
 };
+// Set the min alignment of LowLevelAllocator to at least alignment.
+void SetLowLevelAllocateMinAlignment(uptr alignment);
 typedef void (*LowLevelAllocateCallback)(uptr ptr, uptr size);
 // Allows to register tool-specific callbacks for LowLevelAllocator.
 // Passing NULL removes the callback.

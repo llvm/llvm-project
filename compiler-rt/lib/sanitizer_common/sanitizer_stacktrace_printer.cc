@@ -29,6 +29,80 @@ static const char *StripFunctionName(const char *function, const char *prefix) {
   return function;
 }
 
+static const char *DemangleFunctionName(const char *function) {
+  if (!function) return nullptr;
+
+  // NetBSD uses indirection for old threading functions for historical reasons
+  // The mangled names are internal implementation detail and should not be
+  // exposed even in backtraces.
+#if SANITIZER_NETBSD
+  if (!internal_strcmp(function, "__libc_mutex_init"))
+    return "pthread_mutex_init";
+  if (!internal_strcmp(function, "__libc_mutex_lock"))
+    return "pthread_mutex_lock";
+  if (!internal_strcmp(function, "__libc_mutex_trylock"))
+    return "pthread_mutex_trylock";
+  if (!internal_strcmp(function, "__libc_mutex_unlock"))
+    return "pthread_mutex_unlock";
+  if (!internal_strcmp(function, "__libc_mutex_destroy"))
+    return "pthread_mutex_destroy";
+  if (!internal_strcmp(function, "__libc_mutexattr_init"))
+    return "pthread_mutexattr_init";
+  if (!internal_strcmp(function, "__libc_mutexattr_settype"))
+    return "pthread_mutexattr_settype";
+  if (!internal_strcmp(function, "__libc_mutexattr_destroy"))
+    return "pthread_mutexattr_destroy";
+  if (!internal_strcmp(function, "__libc_cond_init"))
+    return "pthread_cond_init";
+  if (!internal_strcmp(function, "__libc_cond_signal"))
+    return "pthread_cond_signal";
+  if (!internal_strcmp(function, "__libc_cond_broadcast"))
+    return "pthread_cond_broadcast";
+  if (!internal_strcmp(function, "__libc_cond_wait"))
+    return "pthread_cond_wait";
+  if (!internal_strcmp(function, "__libc_cond_timedwait"))
+    return "pthread_cond_timedwait";
+  if (!internal_strcmp(function, "__libc_cond_destroy"))
+    return "pthread_cond_destroy";
+  if (!internal_strcmp(function, "__libc_rwlock_init"))
+    return "pthread_rwlock_init";
+  if (!internal_strcmp(function, "__libc_rwlock_rdlock"))
+    return "pthread_rwlock_rdlock";
+  if (!internal_strcmp(function, "__libc_rwlock_wrlock"))
+    return "pthread_rwlock_wrlock";
+  if (!internal_strcmp(function, "__libc_rwlock_tryrdlock"))
+    return "pthread_rwlock_tryrdlock";
+  if (!internal_strcmp(function, "__libc_rwlock_trywrlock"))
+    return "pthread_rwlock_trywrlock";
+  if (!internal_strcmp(function, "__libc_rwlock_unlock"))
+    return "pthread_rwlock_unlock";
+  if (!internal_strcmp(function, "__libc_rwlock_destroy"))
+    return "pthread_rwlock_destroy";
+  if (!internal_strcmp(function, "__libc_thr_keycreate"))
+    return "pthread_key_create";
+  if (!internal_strcmp(function, "__libc_thr_setspecific"))
+    return "pthread_setspecific";
+  if (!internal_strcmp(function, "__libc_thr_getspecific"))
+    return "pthread_getspecific";
+  if (!internal_strcmp(function, "__libc_thr_keydelete"))
+    return "pthread_key_delete";
+  if (!internal_strcmp(function, "__libc_thr_once"))
+    return "pthread_once";
+  if (!internal_strcmp(function, "__libc_thr_self"))
+    return "pthread_self";
+  if (!internal_strcmp(function, "__libc_thr_exit"))
+    return "pthread_exit";
+  if (!internal_strcmp(function, "__libc_thr_setcancelstate"))
+    return "pthread_setcancelstate";
+  if (!internal_strcmp(function, "__libc_thr_equal"))
+    return "pthread_equal";
+  if (!internal_strcmp(function, "__libc_thr_curcpu"))
+    return "pthread_curcpu_np";
+#endif
+
+  return function;
+}
+
 static const char kDefaultFormat[] = "    #%n %p %F %L";
 
 void RenderFrame(InternalScopedString *buffer, const char *format, int frame_no,
@@ -60,7 +134,9 @@ void RenderFrame(InternalScopedString *buffer, const char *format, int frame_no,
       buffer->append("0x%zx", info.module_offset);
       break;
     case 'f':
-      buffer->append("%s", StripFunctionName(info.function, strip_func_prefix));
+      buffer->append("%s",
+        DemangleFunctionName(
+          StripFunctionName(info.function, strip_func_prefix)));
       break;
     case 'q':
       buffer->append("0x%zx", info.function_offset != AddressInfo::kUnknown
@@ -81,7 +157,8 @@ void RenderFrame(InternalScopedString *buffer, const char *format, int frame_no,
       // Function name and offset, if file is unknown.
       if (info.function) {
         buffer->append("in %s",
-                       StripFunctionName(info.function, strip_func_prefix));
+                       DemangleFunctionName(
+                         StripFunctionName(info.function, strip_func_prefix)));
         if (!info.file && info.function_offset != AddressInfo::kUnknown)
           buffer->append("+0x%zx", info.function_offset);
       }
