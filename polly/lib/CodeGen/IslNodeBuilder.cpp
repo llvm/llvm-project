@@ -1072,7 +1072,7 @@ bool IslNodeBuilder::materializeValue(isl_id *Id) {
           auto MemInst = MemAccInst::dyn_cast(Inst);
           auto Address = MemInst ? MemInst.getPointerOperand() : nullptr;
           if (Address && SE.getUnknown(UndefValue::get(Address->getType())) ==
-                  SE.getPointerBase(SE.getSCEV(Address))) {
+                             SE.getPointerBase(SE.getSCEV(Address))) {
           } else if (S.getStmtFor(Inst)) {
             IsDead = false;
           } else {
