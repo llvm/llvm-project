@@ -22,7 +22,7 @@ public:
   //------------------------------------------------------------------
   /// This is currently intended to handle cases where a
   /// program stops at an instruction that won't get executed and it
-  /// allows the stop reasonm, like "breakpoint hit", to be replaced
+  /// allows the stop reason, like "breakpoint hit", to be replaced
   /// with a different stop reason like "no stop reason".
   ///
   /// This is specifically used for ARM in Thumb code when we stop in

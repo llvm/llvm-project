@@ -3,7 +3,7 @@
 ; RUN: opt -S -hexagon-emit-lookup-tables=false -O2 < %s | FileCheck %s -check-prefix=DISABLE
 
 
-; ENABLE: @{{.*}} = private unnamed_addr constant [6 x i32] [i32 9, i32 20, i32 14, i32 22, i32 12, i32 5] 
+; ENABLE: @{{.*}} = private unnamed_addr constant [6 x i32] [i32 9, i32 20, i32 14, i32 22, i32 12, i32 5]
 ; DISABLE-NOT: @{{.*}} = private unnamed_addr constant [6 x i32] [i32 9, i32 20, i32 14, i32 22, i32 12, i32 5]
 ; DISABLE : = phi i32 [ 19, %{{.*}} ], [ 5, %{{.*}} ], [ 12, %{{.*}} ], [ 22, %{{.*}} ], [ 14, %{{.*}} ], [ 20, %{{.*}} ], [ 9, %{{.*}} ]
 

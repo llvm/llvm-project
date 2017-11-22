@@ -346,6 +346,10 @@ void test_firstprivate() {
 #pragma omp taskloop simd lastprivate(x, y, z) firstprivate(x, y, z)
   for (i = 0; i < 16; ++i)
     ;
+// expected-error@+1 {{the value of 'simdlen' parameter must be less than or equal to the value of the 'safelen' parameter}}
+#pragma omp taskloop simd simdlen(64) safelen(8)
+  for (i = 0; i < 16; ++i)
+    ;
 }
 
 void test_loop_messages() {

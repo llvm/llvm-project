@@ -21,7 +21,7 @@
 namespace __scudo {
 
 template <class Dest, class Source>
-inline Dest bit_cast(const Source& source) {
+INLINE Dest bit_cast(const Source& source) {
   static_assert(sizeof(Dest) == sizeof(Source), "Sizes are not equal!");
   Dest dest;
   memcpy(&dest, &source, sizeof(dest));
@@ -30,11 +30,7 @@ inline Dest bit_cast(const Source& source) {
 
 void NORETURN dieWithMessage(const char *Format, ...);
 
-enum CPUFeature {
-  CRC32CPUFeature = 0,
-  MaxCPUFeature,
-};
-bool testCPUFeature(CPUFeature Feature);
+bool hasHardwareCRC32();
 
 INLINE u64 rotl(const u64 X, int K) {
   return (X << K) | (X >> (64 - K));

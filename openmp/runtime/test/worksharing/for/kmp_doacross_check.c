@@ -24,7 +24,7 @@ int main()
   dims.lo = 1;
   dims.up = N-1;
   dims.st = 1;
-  #pragma omp parallel
+  #pragma omp parallel num_threads(4)
   {
     int i, gtid;
     long long vec;

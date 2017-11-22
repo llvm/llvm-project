@@ -13,48 +13,17 @@
 
 #include "scudo_utils.h"
 
-#include <stdarg.h>
 #if defined(__x86_64__) || defined(__i386__)
 # include <cpuid.h>
-#endif
-#if defined(__arm__) || defined(__aarch64__)
-# if SANITIZER_ANDROID && __ANDROID_API__ < 21
-// getauxval() was introduced with API level 18 for ARM and 21 for AArch64.
-// Emulate it using /proc/self/auxv for lower API levels.
+#elif defined(__arm__) || defined(__aarch64__)
+# include "sanitizer_common/sanitizer_getauxval.h"
+# if SANITIZER_POSIX
 #  include "sanitizer_common/sanitizer_posix.h"
-
 #  include <fcntl.h>
-
-#  define AT_HWCAP 16
-
-namespace __sanitizer {
-
-uptr getauxval(uptr Type) {
-  uptr F = internal_open("/proc/self/auxv", O_RDONLY);
-  if (internal_iserror(F))
-    return 0;
-  struct { uptr Tag; uptr Value; } Entry;
-  uptr Result = 0;
-  for (;;) {
-    uptr N = internal_read(F, &Entry, sizeof(Entry));
-    if (internal_iserror(N))
-      break;
-    if (N == 0 || N != sizeof(Entry) || (Entry.Tag == 0 && Entry.Value == 0))
-      break;
-    if (Entry.Tag == Type) {
-      Result =  Entry.Value;
-      break;
-    }
-  }
-  internal_close(F);
-  return Result;
-}
-
-}  // namespace __sanitizer
-# else
-#  include <sys/auxv.h>
 # endif
 #endif
+
+#include <stdarg.h>
 
 // TODO(kostyak): remove __sanitizer *Printf uses in favor for our own less
 //                complicated string formatting code. The following is a
@@ -68,13 +37,12 @@ extern int VSNPrintf(char *buff, int buff_length, const char *format,
 
 namespace __scudo {
 
-FORMAT(1, 2)
-void NORETURN dieWithMessage(const char *Format, ...) {
+FORMAT(1, 2) void NORETURN dieWithMessage(const char *Format, ...) {
   // Our messages are tiny, 256 characters is more than enough.
   char Message[256];
   va_list Args;
   va_start(Args, Format);
-  __sanitizer::VSNPrintf(Message, sizeof(Message), Format, Args);
+  VSNPrintf(Message, sizeof(Message), Format, Args);
   va_end(Args);
   RawWrite(Message);
   Die();
@@ -83,74 +51,58 @@ void NORETURN dieWithMessage(const char *Format, ...) {
 #if defined(__x86_64__) || defined(__i386__)
 // i386 and x86_64 specific code to detect CRC32 hardware support via CPUID.
 // CRC32 requires the SSE 4.2 instruction set.
-typedef struct {
-  u32 Eax;
-  u32 Ebx;
-  u32 Ecx;
-  u32 Edx;
-} CPUIDRegs;
-
-static void getCPUID(CPUIDRegs *Regs, u32 Level) {
-  __get_cpuid(Level, &Regs->Eax, &Regs->Ebx, &Regs->Ecx, &Regs->Edx);
-}
-
-CPUIDRegs getCPUFeatures() {
-  CPUIDRegs VendorRegs = {};
-  getCPUID(&VendorRegs, 0);
-  bool IsIntel =
-      (VendorRegs.Ebx == signature_INTEL_ebx) &&
-      (VendorRegs.Edx == signature_INTEL_edx) &&
-      (VendorRegs.Ecx == signature_INTEL_ecx);
-  bool IsAMD =
-      (VendorRegs.Ebx == signature_AMD_ebx) &&
-      (VendorRegs.Edx == signature_AMD_edx) &&
-      (VendorRegs.Ecx == signature_AMD_ecx);
-  // Default to an empty feature set if not on a supported CPU.
-  CPUIDRegs FeaturesRegs = {};
-  if (IsIntel || IsAMD) {
-    getCPUID(&FeaturesRegs, 1);
-  }
-  return FeaturesRegs;
-}
-
 # ifndef bit_SSE4_2
 #  define bit_SSE4_2 bit_SSE42  // clang and gcc have different defines.
 # endif
-
-bool testCPUFeature(CPUFeature Feature) {
-  CPUIDRegs FeaturesRegs = getCPUFeatures();
-
-  switch (Feature) {
-    case CRC32CPUFeature:  // CRC32 is provided by SSE 4.2.
-      return !!(FeaturesRegs.Ecx & bit_SSE4_2);
-    default:
-      break;
-  }
-  return false;
+bool hasHardwareCRC32() {
+  u32 Eax, Ebx, Ecx, Edx;
+  __get_cpuid(0, &Eax, &Ebx, &Ecx, &Edx);
+  const bool IsIntel = (Ebx == signature_INTEL_ebx) &&
+                       (Edx == signature_INTEL_edx) &&
+                       (Ecx == signature_INTEL_ecx);
+  const bool IsAMD = (Ebx == signature_AMD_ebx) &&
+                     (Edx == signature_AMD_edx) &&
+                     (Ecx == signature_AMD_ecx);
+  if (!IsIntel && !IsAMD)
+    return false;
+  __get_cpuid(1, &Eax, &Ebx, &Ecx, &Edx);
+  return !!(Ecx & bit_SSE4_2);
 }
 #elif defined(__arm__) || defined(__aarch64__)
-// For ARM and AArch64, hardware CRC32 support is indicated in the AT_HWVAL
+// For ARM and AArch64, hardware CRC32 support is indicated in the AT_HWCAP
 // auxiliary vector.
-
+# ifndef AT_HWCAP
+#  define AT_HWCAP 16
+# endif
 # ifndef HWCAP_CRC32
 #  define HWCAP_CRC32 (1 << 7)  // HWCAP_CRC32 is missing on older platforms.
 # endif
-
-bool testCPUFeature(CPUFeature Feature) {
-  uptr HWCap = getauxval(AT_HWCAP);
-
-  switch (Feature) {
-    case CRC32CPUFeature:
-      return !!(HWCap & HWCAP_CRC32);
-    default:
+# if SANITIZER_POSIX
+bool hasHardwareCRC32ARMPosix() {
+  uptr F = internal_open("/proc/self/auxv", O_RDONLY);
+  if (internal_iserror(F))
+    return false;
+  struct { uptr Tag; uptr Value; } Entry = { 0, 0 };
+  for (;;) {
+    uptr N = internal_read(F, &Entry, sizeof(Entry));
+    if (internal_iserror(N) || N != sizeof(Entry) ||
+        (Entry.Tag == 0 && Entry.Value == 0) || Entry.Tag == AT_HWCAP)
       break;
   }
-  return false;
+  internal_close(F);
+  return (Entry.Tag == AT_HWCAP && (Entry.Value & HWCAP_CRC32) != 0);
+}
+# else
+bool hasHardwareCRC32ARMPosix() { return false; }
+# endif  // SANITIZER_POSIX
+
+bool hasHardwareCRC32() {
+  if (&getauxval)
+    return !!(getauxval(AT_HWCAP) & HWCAP_CRC32);
+  return hasHardwareCRC32ARMPosix();
 }
 #else
-bool testCPUFeature(CPUFeature Feature) {
-  return false;
-}
+bool hasHardwareCRC32() { return false; }
 #endif  // defined(__x86_64__) || defined(__i386__)
 
 }  // namespace __scudo
