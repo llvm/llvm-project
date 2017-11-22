@@ -204,6 +204,28 @@ static void dumpStringOffsetsSection(raw_ostream &OS, StringRef SectionName,
   }
 }
 
+// We want to supply the Unit associated with a .debug_line[.dwo] table when
+// we dump it, if possible, but still dump the table even if there isn't a Unit.
+// Therefore, collect up handles on all the Units that point into the
+// line-table section.
+typedef std::map<uint64_t, DWARFUnit *> LineToUnitMap;
+
+static LineToUnitMap
+buildLineToUnitMap(DWARFContext::cu_iterator_range CUs,
+                   DWARFContext::tu_section_iterator_range TUSections) {
+  LineToUnitMap LineToUnit;
+  for (const auto &CU : CUs)
+    if (auto CUDIE = CU->getUnitDIE())
+      if (auto StmtOffset = toSectionOffset(CUDIE.find(DW_AT_stmt_list)))
+        LineToUnit.insert(std::make_pair(*StmtOffset, &*CU));
+  for (const auto &TUS : TUSections)
+    for (const auto &TU : TUS)
+      if (auto TUDIE = TU->getUnitDIE())
+        if (auto StmtOffset = toSectionOffset(TUDIE.find(DW_AT_stmt_list)))
+          LineToUnit.insert(std::make_pair(*StmtOffset, &*TU));
+  return LineToUnit;
+}
+
 void DWARFContext::dump(
     raw_ostream &OS, DIDumpOptions DumpOpts,
     std::array<Optional<uint64_t>, DIDT_ID_Count> DumpOffsets) {
@@ -310,48 +332,57 @@ void DWARFContext::dump(
       set.dump(OS);
   }
 
-  uint8_t savedAddressByteSize = 0;
   if (shouldDump(Explicit, ".debug_line", DIDT_ID_DebugLine,
                  DObj->getLineSection().Data)) {
-    for (const auto &CU : compile_units()) {
-      savedAddressByteSize = CU->getAddressByteSize();
-      auto CUDIE = CU->getUnitDIE();
-      if (!CUDIE)
+    LineToUnitMap LineToUnit =
+        buildLineToUnitMap(compile_units(), type_unit_sections());
+    unsigned Offset = 0;
+    DWARFDataExtractor LineData(*DObj, DObj->getLineSection(), isLittleEndian(),
+                                0);
+    while (Offset < LineData.getData().size()) {
+      DWARFUnit *U = nullptr;
+      auto It = LineToUnit.find(Offset);
+      if (It != LineToUnit.end()) {
+        U = It->second;
+        LineData.setAddressSize(U->getAddressByteSize());
+      }
+      DWARFDebugLine::LineTable LineTable;
+      if (DumpOffset && Offset != *DumpOffset) {
+        // Find the size of this part of the line table section and skip it.
+        unsigned OldOffset = Offset;
+        LineTable.Prologue.parse(LineData, &Offset, U);
+        Offset = OldOffset + LineTable.Prologue.TotalLength +
+                 LineTable.Prologue.sizeofTotalLength();
         continue;
-      if (auto StmtOffset = toSectionOffset(CUDIE.find(DW_AT_stmt_list))) {
-        if (DumpOffset && *StmtOffset != *DumpOffset)
-          continue;
-        DWARFDataExtractor lineData(*DObj, DObj->getLineSection(),
-                                    isLittleEndian(), savedAddressByteSize);
-        DWARFDebugLine::LineTable LineTable;
-        uint32_t Offset = *StmtOffset;
-        // Verbose dumping is done during parsing and not on the intermediate
-        // representation.
-        OS << "debug_line[" << format("0x%8.8x", Offset) << "]\n";
-        if (DumpOpts.Verbose) {
-          LineTable.parse(lineData, &Offset, &*CU, &OS);
-        } else {
-          LineTable.parse(lineData, &Offset, &*CU);
-          LineTable.dump(OS);
-        }
+      }
+      // Verbose dumping is done during parsing and not on the intermediate
+      // representation.
+      OS << "debug_line[" << format("0x%8.8x", Offset) << "]\n";
+      if (DumpOpts.Verbose) {
+        LineTable.parse(LineData, &Offset, U, &OS);
+      } else {
+        LineTable.parse(LineData, &Offset, U);
+        LineTable.dump(OS);
       }
     }
   }
 
-  // FIXME: This seems sketchy.
-  for (const auto &CU : compile_units()) {
-    savedAddressByteSize = CU->getAddressByteSize();
-    break;
-  }
   if (shouldDump(ExplicitDWO, ".debug_line.dwo", DIDT_ID_DebugLine,
                  DObj->getLineDWOSection().Data)) {
-    unsigned stmtOffset = 0;
-    DWARFDataExtractor lineData(*DObj, DObj->getLineDWOSection(),
-                                isLittleEndian(), savedAddressByteSize);
-    DWARFDebugLine::LineTable LineTable;
-    while (LineTable.Prologue.parse(lineData, &stmtOffset, nullptr)) {
+    LineToUnitMap LineToUnit =
+        buildLineToUnitMap(dwo_compile_units(), dwo_type_unit_sections());
+    unsigned Offset = 0;
+    DWARFDataExtractor LineData(*DObj, DObj->getLineDWOSection(),
+                                isLittleEndian(), 0);
+    while (Offset < LineData.getData().size()) {
+      DWARFUnit *U = nullptr;
+      auto It = LineToUnit.find(Offset);
+      if (It != LineToUnit.end())
+        U = It->second;
+      DWARFDebugLine::LineTable LineTable;
+      if (!LineTable.Prologue.parse(LineData, &Offset, U))
+        break;
       LineTable.dump(OS);
-      LineTable.clear();
     }
   }
 
@@ -393,6 +424,11 @@ void DWARFContext::dump(
     // last compile unit (there is no easy and fast way to associate address
     // range list and the compile unit it describes).
     // FIXME: savedAddressByteSize seems sketchy.
+    uint8_t savedAddressByteSize = 0;
+    for (const auto &CU : compile_units()) {
+      savedAddressByteSize = CU->getAddressByteSize();
+      break;
+    }
     DWARFDataExtractor rangesData(*DObj, DObj->getRangeSection(),
                                   isLittleEndian(), savedAddressByteSize);
     uint32_t offset = 0;
