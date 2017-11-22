@@ -27,6 +27,29 @@ if(${LIBOMPTARGET_STANDALONE_BUILD})
     "C compiler to use for testing OpenMP offloading library")
   set(LIBOMPTARGET_TEST_CXX_COMPILER ${CMAKE_CXX_COMPILER} CACHE STRING
     "C++ compiler to use for testing OpenMP offloading library")
+
+  if (NOT(${LIBOMPTARGET_TEST_C_COMPILER} MATCHES "clang" AND ${LIBOMPTARGET_TEST_CXX_COMPILER} MATCHES "clang"))
+    libomptarget_say("Can only test with Clang compiler!")
+    libomptarget_warning_say("The check-libomptarget target will not be available!")
+    return()
+  endif()
+
+  execute_process(
+    COMMAND ${LIBOMPTARGET_TEST_C_COMPILER} --version
+    OUTPUT_VARIABLE TEST_COMPILER_VERSION)
+  string(REGEX MATCH "version ([0-9.]+)" TEST_COMPILER_VERSION ${TEST_COMPILER_VERSION})
+  if (NOT(TEST_COMPILER_VERSION))
+    libomptarget_say("Unable to determine Clang compiler version!")
+    libomptarget_warning_say("The check-libomptarget target will not be available!")
+    return()
+  endif()
+  set(TEST_COMPILER_VERSION ${CMAKE_MATCH_1})
+  if (TEST_COMPILER_VERSION VERSION_LESS 6.0.0)
+    libomptarget_say("Clang compiler version does not implement all codegen, please update to 6.0.0!")
+    libomptarget_warning_say("The check-libomptarget target will not be available!")
+    return()
+  endif()
+
   set(LIBOMPTARGET_TEST_OPENMP_FLAG -fopenmp CACHE STRING
     "OpenMP compiler flag to use for testing OpenMP offloading library")
   find_program(LIBOMPTARGET_LLVM_LIT_EXECUTABLE

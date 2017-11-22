@@ -997,7 +997,7 @@ template <class ELFT> void DynamicSection<ELFT>::addEntries() {
          InX::DynStrTab->addString(Config->Rpath)});
   for (InputFile *File : SharedFiles) {
     SharedFile<ELFT> *F = cast<SharedFile<ELFT>>(File);
-    if (F->isNeeded())
+    if (F->IsNeeded)
       add({DT_NEEDED, InX::DynStrTab->addString(F->SoName)});
   }
   if (!Config->SoName.empty())
