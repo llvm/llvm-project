@@ -383,7 +383,7 @@ DWARFDebugLine::getLineTable(uint32_t Offset) const {
 }
 
 const DWARFDebugLine::LineTable *
-DWARFDebugLine::getOrParseLineTable(const DWARFDataExtractor &DebugLineData,
+DWARFDebugLine::getOrParseLineTable(DWARFDataExtractor &DebugLineData,
                                     uint32_t Offset, const DWARFUnit *U) {
   std::pair<LineTableIter, bool> Pos =
       LineTableMap.insert(LineTableMapTy::value_type(Offset, LineTable()));
@@ -395,7 +395,7 @@ DWARFDebugLine::getOrParseLineTable(const DWARFDataExtractor &DebugLineData,
   return LT;
 }
 
-bool DWARFDebugLine::LineTable::parse(const DWARFDataExtractor &DebugLineData,
+bool DWARFDebugLine::LineTable::parse(DWARFDataExtractor &DebugLineData,
                                       uint32_t *OffsetPtr, const DWARFUnit *U,
                                       raw_ostream *OS) {
   const uint32_t DebugLineOffset = *OffsetPtr;
@@ -413,6 +413,13 @@ bool DWARFDebugLine::LineTable::parse(const DWARFDataExtractor &DebugLineData,
 
   const uint32_t EndOffset =
       DebugLineOffset + Prologue.TotalLength + Prologue.sizeofTotalLength();
+
+  // See if we should tell the data extractor the address size.
+  if (DebugLineData.getAddressSize() == 0)
+    DebugLineData.setAddressSize(Prologue.getAddressSize());
+  else
+    assert(Prologue.getAddressSize() == 0 ||
+           Prologue.getAddressSize() == DebugLineData.getAddressSize());
 
   ParsingState State(this);
 
@@ -467,6 +474,13 @@ bool DWARFDebugLine::LineTable::parse(const DWARFDataExtractor &DebugLineData,
         // relocatable address. All of the other statement program opcodes
         // that affect the address register add a delta to it. This instruction
         // stores a relocatable value into it instead.
+        //
+        // Make sure the extractor knows the address size.  If not, infer it
+        // from the size of the operand.
+        if (DebugLineData.getAddressSize() == 0)
+          DebugLineData.setAddressSize(Len - 1);
+        else
+          assert(DebugLineData.getAddressSize() == Len - 1);
         State.Row.Address = DebugLineData.getRelocatedAddress(OffsetPtr);
         if (OS)
           *OS << format(" (0x%16.16" PRIx64 ")", State.Row.Address);

@@ -342,10 +342,9 @@ void DWARFContext::dump(
     while (Offset < LineData.getData().size()) {
       DWARFUnit *U = nullptr;
       auto It = LineToUnit.find(Offset);
-      if (It != LineToUnit.end()) {
+      if (It != LineToUnit.end())
         U = It->second;
-        LineData.setAddressSize(U->getAddressByteSize());
-      }
+      LineData.setAddressSize(U ? U->getAddressByteSize() : 0);
       DWARFDebugLine::LineTable LineTable;
       if (DumpOffset && Offset != *DumpOffset) {
         // Find the size of this part of the line table section and skip it.
