@@ -90,6 +90,10 @@ bool ToolChain::useIntegratedAs() const {
                       IsIntegratedAssemblerDefault());
 }
 
+bool ToolChain::useRelaxRelocations() const {
+  return ENABLE_X86_RELAX_RELOCATIONS;
+}
+
 const SanitizerArgs& ToolChain::getSanitizerArgs() const {
   if (!SanitizerArguments.get())
     SanitizerArguments.reset(new SanitizerArgs(*this, Args));
@@ -213,6 +217,10 @@ StringRef ToolChain::getDefaultUniversalArchName() const {
   default:
     return Triple.getArchName();
   }
+}
+
+std::string ToolChain::getInputFilename(const InputInfo &Input) const {
+  return Input.getFilename();
 }
 
 bool ToolChain::IsUnwindTablesDefault(const ArgList &Args) const {

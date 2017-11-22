@@ -577,17 +577,17 @@ void t40(float a) {
 void t41(unsigned short a) {
 // CHECK-LABEL: define void @t41(i16 zeroext %a)
   __asm mov cs, a;
-// CHECK: mov cs, word ptr $0
+// CHECK: mov cs, $0
   __asm mov ds, a;
-// CHECK: mov ds, word ptr $1
+// CHECK: mov ds, $1
   __asm mov es, a;
-// CHECK: mov es, word ptr $2
+// CHECK: mov es, $2
   __asm mov fs, a;
-// CHECK: mov fs, word ptr $3
+// CHECK: mov fs, $3
   __asm mov gs, a;
-// CHECK: mov gs, word ptr $4
+// CHECK: mov gs, $4
   __asm mov ss, a;
-// CHECK: mov ss, word ptr $5
+// CHECK: mov ss, $5
 // CHECK: "*m,*m,*m,*m,*m,*m,~{dirflag},~{fpsr},~{flags}"(i16* {{.*}}, i16* {{.*}}, i16* {{.*}}, i16* {{.*}}, i16* {{.*}}, i16* {{.*}})
 }
 
@@ -659,6 +659,17 @@ void t46() {
   // CHECK-LABEL: define void @t46
   __asm add eax, -128[eax]
   // CHECK: call void asm sideeffect inteldialect "add eax, [eax + $$-128]", "~{eax},~{flags},~{dirflag},~{fpsr},~{flags}"()
+}
+
+void t47() {
+  // CHECK-LABEL: define void @t47
+  __asm {
+    bndmk bnd0, dword ptr [eax]
+    bndmk bnd1, dword ptr [ebx]
+    bndmk bnd2, dword ptr [ecx]
+    bndmk bnd3, dword ptr [edx]
+  }
+  // CHECK: call void asm sideeffect inteldialect "bndmk bnd0, dword ptr [eax]\0A\09bndmk bnd1, dword ptr [ebx]\0A\09bndmk bnd2, dword ptr [ecx]\0A\09bndmk bnd3, dword ptr [edx]", "~{bnd0},~{bnd1},~{bnd2},~{bnd3},~{dirflag},~{fpsr},~{flags}"()
 }
 
 void dot_operator(){

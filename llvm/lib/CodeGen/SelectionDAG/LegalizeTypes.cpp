@@ -1172,9 +1172,11 @@ void DAGTypeLegalizer::SplitInteger(SDValue Op,
   assert(LoVT.getSizeInBits() + HiVT.getSizeInBits() ==
          Op.getValueSizeInBits() && "Invalid integer splitting!");
   Lo = DAG.getNode(ISD::TRUNCATE, dl, LoVT, Op);
-  Hi = DAG.getNode(ISD::SRL, dl, Op.getValueType(), Op,
-                   DAG.getConstant(LoVT.getSizeInBits(), dl,
-                                   TLI.getPointerTy(DAG.getDataLayout())));
+  Hi =
+      DAG.getNode(ISD::SRL, dl, Op.getValueType(), Op,
+                  DAG.getConstant(LoVT.getSizeInBits(), dl,
+                                  TLI.getScalarShiftAmountTy(
+                                      DAG.getDataLayout(), Op.getValueType())));
   Hi = DAG.getNode(ISD::TRUNCATE, dl, HiVT, Hi);
 }
 

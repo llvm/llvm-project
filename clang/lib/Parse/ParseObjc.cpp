@@ -81,8 +81,10 @@ Parser::DeclGroupPtrTy Parser::ParseObjCAtDirectives() {
     SingleDecl = ParseObjCPropertyDynamic(AtLoc);
     break;
   case tok::objc_import:
-    if (getLangOpts().Modules || getLangOpts().DebuggerSupport)
-      return ParseModuleImport(AtLoc);
+    if (getLangOpts().Modules || getLangOpts().DebuggerSupport) {
+      SingleDecl = ParseModuleImport(AtLoc);
+      break;
+    }
     Diag(AtLoc, diag::err_atimport);
     SkipUntil(tok::semi);
     return Actions.ConvertDeclToDeclGroup(nullptr);

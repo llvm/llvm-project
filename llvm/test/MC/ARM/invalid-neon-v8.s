@@ -72,3 +72,9 @@ vmull.p64 s1, d2, d3
 @ CHECK: error: operand must be a register in range [q0, q15]
 vmullge.p64 q0, d16, d17
 @ CHECK: error: instruction 'vmull' is not predicable, but condition code specified
+
+// These instructions are predicable in VFP but not in NEON
+vrintzeq.f32 d0, d1
+vrintxgt.f32 d0, d1
+@ CHECK: error: invalid operand for instruction
+@ CHECK: error: invalid operand for instruction

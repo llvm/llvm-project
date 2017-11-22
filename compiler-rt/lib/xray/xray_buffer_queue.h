@@ -28,9 +28,14 @@ namespace __xray {
 /// trace collection.
 class BufferQueue {
  public:
+  struct alignas(64) BufferExtents {
+    __sanitizer::atomic_uint64_t Size;
+  };
+
   struct Buffer {
     void *Buffer = nullptr;
     size_t Size = 0;
+    BufferExtents* Extents;
   };
 
  private:

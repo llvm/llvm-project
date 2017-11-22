@@ -700,7 +700,6 @@ void BlockGenerator::generateScalarStores(
                 Address, Val->getType()->getPointerTo());
 
           Builder.CreateStore(Val, Address);
-
         });
   }
 }
@@ -1597,7 +1596,6 @@ void RegionGenerator::generateScalarStores(
     std::string Subject = MA->getId().get_name();
     generateConditionalExecution(
         Stmt, AccDom, Subject.c_str(), [&, this, MA]() {
-
           Value *NewVal = getExitScalar(MA, LTS, BBMap);
           Value *Address = getImplicitAddress(*MA, getLoopForStmt(Stmt), LTS,
                                               BBMap, NewAccesses);

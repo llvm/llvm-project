@@ -122,9 +122,6 @@ class LLVM_LIBRARY_VISIBILITY MinGWARM64TargetInfo
     : public WindowsARM64TargetInfo {
 public:
   MinGWARM64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
-
-  void getTargetDefines(const LangOptions &Opts,
-                        MacroBuilder &Builder) const override;
 };
 
 class LLVM_LIBRARY_VISIBILITY AArch64beTargetInfo : public AArch64TargetInfo {

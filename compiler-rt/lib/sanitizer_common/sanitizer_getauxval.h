@@ -8,7 +8,8 @@
 //===----------------------------------------------------------------------===//
 //
 // Common getauxval() guards and definitions.
-// getauxval() is not defined until glbc version 2.16.
+// getauxval() is not defined until glibc version 2.16, or until API level 21
+// for Android.
 //
 //===----------------------------------------------------------------------===//
 
@@ -25,7 +26,7 @@
 #define __GLIBC_PREREQ(x, y) 0
 #endif
 
-#if __GLIBC_PREREQ(2, 16)
+#if __GLIBC_PREREQ(2, 16) || (SANITIZER_ANDROID && __ANDROID_API__ >= 21)
 # define SANITIZER_USE_GETAUXVAL 1
 #else
 # define SANITIZER_USE_GETAUXVAL 0

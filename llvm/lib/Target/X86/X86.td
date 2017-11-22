@@ -152,14 +152,26 @@ def FeatureVLX     : SubtargetFeature<"avx512vl", "HasVLX", "true",
 def FeatureVBMI     : SubtargetFeature<"avx512vbmi", "HasVBMI", "true",
                       "Enable AVX-512 Vector Byte Manipulation Instructions",
                                       [FeatureBWI]>;
+def FeatureVBMI2    : SubtargetFeature<"avx512vbmi2", "HasVBMI2", "true",
+                      "Enable AVX-512 further Vector Byte Manipulation Instructions",
+                                      [FeatureBWI]>;
 def FeatureIFMA     : SubtargetFeature<"avx512ifma", "HasIFMA", "true",
                       "Enable AVX-512 Integer Fused Multiple-Add",
                                       [FeatureAVX512]>;
 def FeaturePKU   : SubtargetFeature<"pku", "HasPKU", "true",
                       "Enable protection keys">;
+def FeatureVNNI    : SubtargetFeature<"avx512vnni", "HasVNNI", "true",
+                          "Enable AVX-512 Vector Neural Network Instructions",
+                                      [FeatureAVX512]>;
+def FeatureBITALG  : SubtargetFeature<"avx512bitalg", "HasBITALG", "true",
+                       "Enable AVX-512 Bit Algorithms",
+                        [FeatureBWI]>;
 def FeaturePCLMUL  : SubtargetFeature<"pclmul", "HasPCLMUL", "true",
                          "Enable packed carry-less multiplication instructions",
                                [FeatureSSE2]>;
+def FeatureVPCLMULQDQ : SubtargetFeature<"vpclmulqdq", "HasVPCLMULQDQ", "true",
+                                         "Enable vpclmulqdq instructions",
+                                         [FeatureAVX, FeaturePCLMUL]>;
 def FeatureFMA4    : SubtargetFeature<"fma4", "HasFMA4", "true",
                                       "Enable four-operand fused multiple-add",
                                       [FeatureAVX, FeatureSSE4A]>;
@@ -172,6 +184,9 @@ def FeatureSSEUnalignedMem : SubtargetFeature<"sse-unaligned-mem",
 def FeatureAES     : SubtargetFeature<"aes", "HasAES", "true",
                                       "Enable AES instructions",
                                       [FeatureSSE2]>;
+def FeatureVAES    : SubtargetFeature<"vaes", "HasVAES", "true",
+                       "Promote selected AES instructions to AVX512/AVX registers",
+                        [FeatureAVX, FeatureAES]>;
 def FeatureTBM     : SubtargetFeature<"tbm", "HasTBM", "true",
                                       "Enable TBM instructions">;
 def FeatureLWP     : SubtargetFeature<"lwp", "HasLWP", "true",
@@ -665,7 +680,13 @@ class CannonlakeProc<string Name> : ProcModel<Name, SkylakeServerModel,
 def : CannonlakeProc<"cannonlake">;
 
 def ICLFeatures : ProcessorFeatures<CNLFeatures.Value, [
-  // TODO: Insert features here.
+  FeatureBITALG,
+  FeatureVAES,
+  FeatureVBMI2,
+  FeatureVNNI,
+  FeatureVPCLMULQDQ,
+  FeatureVPOPCNTDQ
+  // TODO: Add GFNI when it is implemented.
 ]>;
 
 class IcelakeProc<string Name> : ProcModel<Name, SkylakeServerModel,

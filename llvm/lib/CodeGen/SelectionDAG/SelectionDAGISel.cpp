@@ -2775,6 +2775,12 @@ static unsigned IsPredicateKnownToFail(const unsigned char *Table,
     Result = !::CheckType(Table, Index, N, SDISel.TLI,
                           SDISel.CurDAG->getDataLayout());
     return Index;
+  case SelectionDAGISel::OPC_CheckTypeRes: {
+    unsigned Res = Table[Index++];
+    Result = !::CheckType(Table, Index, N.getValue(Res), SDISel.TLI,
+                          SDISel.CurDAG->getDataLayout());
+    return Index;
+  }
   case SelectionDAGISel::OPC_CheckChild0Type:
   case SelectionDAGISel::OPC_CheckChild1Type:
   case SelectionDAGISel::OPC_CheckChild2Type:
@@ -3176,6 +3182,14 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
                        CurDAG->getDataLayout()))
         break;
       continue;
+
+    case OPC_CheckTypeRes: {
+      unsigned Res = MatcherTable[MatcherIndex++];
+      if (!::CheckType(MatcherTable, MatcherIndex, N.getValue(Res), TLI,
+                       CurDAG->getDataLayout()))
+        break;
+      continue;
+    }
 
     case OPC_SwitchOpcode: {
       unsigned CurNodeOpcode = N.getOpcode();

@@ -344,7 +344,8 @@ bool SILoadStoreOptimizer::findMatchingInst(CombineInfo &CI) {
       }
 
       if (MBBI->mayLoadOrStore() &&
-        !memAccessesCanBeReordered(*CI.I, *MBBI, TII, AA)) {
+        (!memAccessesCanBeReordered(*CI.I, *MBBI, TII, AA) ||
+         !canMoveInstsAcrossMemOp(*MBBI, CI.InstsToMove, TII, AA))) {
         // We fail condition #1, but we may still be able to satisfy condition
         // #2.  Add this instruction to the move list and then we will check
         // if condition #2 holds once we have selected the matching instruction.

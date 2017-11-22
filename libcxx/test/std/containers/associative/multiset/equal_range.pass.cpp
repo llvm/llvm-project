@@ -77,7 +77,7 @@ int main()
             9,
             9
         };
-        M m(ar, ar+sizeof(ar)/sizeof(ar[0]));
+        const M m(ar, ar+sizeof(ar)/sizeof(ar[0]));
         R r = m.equal_range(4);
         assert(r.first  == next(m.begin(), 0));
         assert(r.second == next(m.begin(), 0));
@@ -156,7 +156,7 @@ int main()
             9,
             9
         };
-        M m(ar, ar+sizeof(ar)/sizeof(ar[0]));
+        const M m(ar, ar+sizeof(ar)/sizeof(ar[0]));
         R r = m.equal_range(4);
         assert(r.first  == next(m.begin(), 0));
         assert(r.second == next(m.begin(), 0));

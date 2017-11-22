@@ -78,7 +78,7 @@ int bar(int n){
   //
   // CHECK: [[AWAIT_WORK]]
   // CHECK: call void @llvm.nvvm.barrier0()
-  // CHECK: [[KPR:%.+]] = call i1 @__kmpc_kernel_parallel(i8** [[OMP_WORK_FN]])
+  // CHECK: [[KPR:%.+]] = call i1 @__kmpc_kernel_parallel(i8** [[OMP_WORK_FN]],
   // CHECK: [[KPRB:%.+]] = zext i1 [[KPR]] to i8
   // store i8 [[KPRB]], i8* [[OMP_EXEC_STATUS]], align 1
   // CHECK: [[WORK:%.+]] = load i8*, i8** [[OMP_WORK_FN]],
@@ -92,20 +92,20 @@ int bar(int n){
   //
   // CHECK: [[EXEC_PARALLEL]]
   // CHECK: [[WF1:%.+]] = load i8*, i8** [[OMP_WORK_FN]],
-  // CHECK: [[WM1:%.+]] = icmp eq i8* [[WF1]], bitcast (void (i32*, i32*)* [[PARALLEL_FN1:@.+]] to i8*)
+  // CHECK: [[WM1:%.+]] = icmp eq i8* [[WF1]], bitcast (void (i16, i32, i8**)* [[PARALLEL_FN1:@.+]]_wrapper to i8*)
   // CHECK: br i1 [[WM1]], label {{%?}}[[EXEC_PFN1:.+]], label {{%?}}[[CHECK_NEXT1:.+]]
   //
   // CHECK: [[EXEC_PFN1]]
-  // CHECK: call void [[PARALLEL_FN1]](
+  // CHECK: call void [[PARALLEL_FN1]]_wrapper(
   // CHECK: br label {{%?}}[[TERM_PARALLEL:.+]]
   //
   // CHECK: [[CHECK_NEXT1]]
   // CHECK: [[WF2:%.+]] = load i8*, i8** [[OMP_WORK_FN]],
-  // CHECK: [[WM2:%.+]] = icmp eq i8* [[WF2]], bitcast (void (i32*, i32*)* [[PARALLEL_FN2:@.+]] to i8*)
+  // CHECK: [[WM2:%.+]] = icmp eq i8* [[WF2]], bitcast (void (i16, i32, i8**)* [[PARALLEL_FN2:@.+]]_wrapper to i8*)
   // CHECK: br i1 [[WM2]], label {{%?}}[[EXEC_PFN2:.+]], label {{%?}}[[CHECK_NEXT2:.+]]
   //
   // CHECK: [[EXEC_PFN2]]
-  // CHECK: call void [[PARALLEL_FN2]](
+  // CHECK: call void [[PARALLEL_FN2]]_wrapper(
   // CHECK: br label {{%?}}[[TERM_PARALLEL:.+]]
   //
   // CHECK: [[CHECK_NEXT2]]
@@ -152,13 +152,13 @@ int bar(int n){
   // CHECK-DAG: [[MWS:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
   // CHECK: [[MTMP1:%.+]] = sub i32 [[MNTH]], [[MWS]]
   // CHECK: call void @__kmpc_kernel_init(i32 [[MTMP1]]
-  // CHECK: call void @__kmpc_kernel_prepare_parallel(i8* bitcast (void (i32*, i32*)* [[PARALLEL_FN1]] to i8*))
+  // CHECK: call void @__kmpc_kernel_prepare_parallel(i8* bitcast (void (i16, i32, i8**)* [[PARALLEL_FN1]]_wrapper to i8*),
   // CHECK: call void @llvm.nvvm.barrier0()
   // CHECK: call void @llvm.nvvm.barrier0()
   // CHECK: call void @__kmpc_serialized_parallel(
   // CHECK: {{call|invoke}} void [[PARALLEL_FN3:@.+]](
   // CHECK: call void @__kmpc_end_serialized_parallel(
-  // CHECK: call void @__kmpc_kernel_prepare_parallel(i8* bitcast (void (i32*, i32*)* [[PARALLEL_FN2]] to i8*))
+  // CHECK: call void @__kmpc_kernel_prepare_parallel(i8* bitcast (void (i16, i32, i8**)* [[PARALLEL_FN2]]_wrapper to i8*),
   // CHECK: call void @llvm.nvvm.barrier0()
   // CHECK: call void @llvm.nvvm.barrier0()
   // CHECK-64-DAG: load i32, i32* [[REF_A]]
@@ -203,7 +203,7 @@ int bar(int n){
   //
   // CHECK: [[AWAIT_WORK]]
   // CHECK: call void @llvm.nvvm.barrier0()
-  // CHECK: [[KPR:%.+]] = call i1 @__kmpc_kernel_parallel(i8** [[OMP_WORK_FN]])
+  // CHECK: [[KPR:%.+]] = call i1 @__kmpc_kernel_parallel(i8** [[OMP_WORK_FN]],
   // CHECK: [[KPRB:%.+]] = zext i1 [[KPR]] to i8
   // store i8 [[KPRB]], i8* [[OMP_EXEC_STATUS]], align 1
   // CHECK: [[WORK:%.+]] = load i8*, i8** [[OMP_WORK_FN]],
@@ -217,11 +217,11 @@ int bar(int n){
   //
   // CHECK: [[EXEC_PARALLEL]]
   // CHECK: [[WF:%.+]] = load i8*, i8** [[OMP_WORK_FN]],
-  // CHECK: [[WM:%.+]] = icmp eq i8* [[WF]], bitcast (void (i32*, i32*)* [[PARALLEL_FN4:@.+]] to i8*)
+  // CHECK: [[WM:%.+]] = icmp eq i8* [[WF]], bitcast (void (i16, i32, i8**)* [[PARALLEL_FN4:@.+]]_wrapper to i8*)
   // CHECK: br i1 [[WM]], label {{%?}}[[EXEC_PFN:.+]], label {{%?}}[[CHECK_NEXT:.+]]
   //
   // CHECK: [[EXEC_PFN]]
-  // CHECK: call void [[PARALLEL_FN4]](
+  // CHECK: call void [[PARALLEL_FN4]]_wrapper(
   // CHECK: br label {{%?}}[[TERM_PARALLEL:.+]]
   //
   // CHECK: [[CHECK_NEXT]]
@@ -283,7 +283,7 @@ int bar(int n){
   // CHECK: br i1 [[CMP]], label {{%?}}[[IF_THEN:.+]], label {{%?}}[[IF_ELSE:.+]]
   //
   // CHECK: [[IF_THEN]]
-  // CHECK: call void @__kmpc_kernel_prepare_parallel(i8* bitcast (void (i32*, i32*)* [[PARALLEL_FN4]] to i8*))
+  // CHECK: call void @__kmpc_kernel_prepare_parallel(i8* bitcast (void (i16, i32, i8**)* [[PARALLEL_FN4]]_wrapper to i8*),
   // CHECK: call void @llvm.nvvm.barrier0()
   // CHECK: call void @llvm.nvvm.barrier0()
   // CHECK: br label {{%?}}[[IF_END:.+]]

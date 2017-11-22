@@ -33,6 +33,6 @@ int main()
 {
     typedef std::multimap<int, double, transparent_less_private> M;
 
-    (void)M().count(C2Int{5});
+    TEST_IGNORE_NODISCARD M().count(C2Int{5});
 }
 #endif

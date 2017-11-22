@@ -157,9 +157,10 @@ def EncEVEX   : Encoding<3>;
 class OperandSize<bits<2> val> {
   bits<2> Value = val;
 }
-def OpSizeFixed : OperandSize<0>; // Never needs a 0x66 prefix.
-def OpSize16    : OperandSize<1>; // Needs 0x66 prefix in 32-bit mode.
-def OpSize32    : OperandSize<2>; // Needs 0x66 prefix in 16-bit mode.
+def OpSizeFixed  : OperandSize<0>; // Never needs a 0x66 prefix.
+def OpSize16     : OperandSize<1>; // Needs 0x66 prefix in 32-bit mode.
+def OpSize32     : OperandSize<2>; // Needs 0x66 prefix in 16-bit mode.
+def OpSizeIgnore : OperandSize<3>; // Takes 0x66 prefix, never emits.
 
 // Address size for encodings that change based on mode.
 class AddressSize<bits<2> val> {
@@ -174,6 +175,7 @@ def AdSize64 : AddressSize<3>; // Encodes a 64-bit address.
 // emitter that various prefix bytes are required.
 class OpSize16 { OperandSize OpSize = OpSize16; }
 class OpSize32 { OperandSize OpSize = OpSize32; }
+class OpSizeIgnore { OperandSize OpSize = OpSizeIgnore; }
 class AdSize16 { AddressSize AdSize = AdSize16; }
 class AdSize32 { AddressSize AdSize = AdSize32; }
 class AdSize64 { AddressSize AdSize = AdSize64; }
@@ -854,13 +856,7 @@ class AESAI<bits<8> o, Format F, dag outs, dag ins, string asm,
 // PCLMUL Instruction Templates
 class PCLMULIi8<bits<8> o, Format F, dag outs, dag ins, string asm,
                list<dag>pattern, InstrItinClass itin = NoItinerary>
-      : Ii8<o, F, outs, ins, asm, pattern, itin, SSEPackedInt>, TAPD,
-        Requires<[NoAVX, HasPCLMUL]>;
-
-class AVXPCLMULIi8<bits<8> o, Format F, dag outs, dag ins, string asm,
-                  list<dag>pattern, InstrItinClass itin = NoItinerary>
-      : Ii8<o, F, outs, ins, asm, pattern, itin, SSEPackedInt>, TAPD,
-        VEX_4V, Requires<[HasAVX, HasPCLMUL]>;
+      : Ii8<o, F, outs, ins, asm, pattern, itin, SSEPackedInt>, TAPD;
 
 // FMA3 Instruction Templates
 class FMA3<bits<8> o, Format F, dag outs, dag ins, string asm,

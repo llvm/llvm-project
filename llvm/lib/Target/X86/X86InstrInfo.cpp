@@ -5255,7 +5255,11 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                                    OpIdx1, OpIdx2);
   }
   case X86::PCLMULQDQrr:
-  case X86::VPCLMULQDQrr:{
+  case X86::VPCLMULQDQrr:
+  case X86::VPCLMULQDQYrr:
+  case X86::VPCLMULQDQZrr:
+  case X86::VPCLMULQDQZ128rr:
+  case X86::VPCLMULQDQZ256rr: {
     // SRC1 64bits = Imm[0] ? SRC1[127:64] : SRC1[63:0]
     // SRC2 64bits = Imm[4] ? SRC2[127:64] : SRC2[63:0]
     unsigned Imm = MI.getOperand(3).getImm();

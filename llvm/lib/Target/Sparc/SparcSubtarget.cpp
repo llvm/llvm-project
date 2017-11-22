@@ -33,6 +33,8 @@ SparcSubtarget &SparcSubtarget::initializeSubtargetDependencies(StringRef CPU,
   IsLeon = false;
   V8DeprecatedInsts = false;
   IsVIS = false;
+  IsVIS2 = false;
+  IsVIS3 = false;
   HasHardQuad = false;
   UsePopc = false;
   UseSoftFloat = false;

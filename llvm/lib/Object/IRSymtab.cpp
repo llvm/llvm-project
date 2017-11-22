@@ -72,7 +72,7 @@ struct Builder {
           BumpPtrAllocator &Alloc)
       : Symtab(Symtab), StrtabBuilder(StrtabBuilder), Saver(Alloc) {}
 
-  DenseMap<const Comdat *, unsigned> ComdatMap;
+  DenseMap<const Comdat *, int> ComdatMap;
   Mangler Mang;
   Triple TT;
 
@@ -96,6 +96,8 @@ struct Builder {
     Symtab.insert(Symtab.end(), reinterpret_cast<const char *>(Objs.data()),
                   reinterpret_cast<const char *>(Objs.data() + Objs.size()));
   }
+
+  Expected<int> getComdatIndex(const Comdat *C, const Module *M);
 
   Error addModule(Module *M);
   Error addSymbol(const ModuleSymbolTable &Msymtab,
@@ -138,6 +140,35 @@ Error Builder::addModule(Module *M) {
       return Err;
 
   return Error::success();
+}
+
+Expected<int> Builder::getComdatIndex(const Comdat *C, const Module *M) {
+  auto P = ComdatMap.insert(std::make_pair(C, Comdats.size()));
+  if (P.second) {
+    std::string Name;
+    if (TT.isOSBinFormatCOFF()) {
+      const GlobalValue *GV = M->getNamedValue(C->getName());
+      if (!GV)
+        return make_error<StringError>("Could not find leader",
+                                       inconvertibleErrorCode());
+      // Internal leaders do not affect symbol resolution, therefore they do not
+      // appear in the symbol table.
+      if (GV->hasLocalLinkage()) {
+        P.first->second = -1;
+        return -1;
+      }
+      llvm::raw_string_ostream OS(Name);
+      Mang.getNameWithPrefix(OS, GV, false);
+    } else {
+      Name = C->getName();
+    }
+
+    storage::Comdat Comdat;
+    setStr(Comdat.Name, Saver.save(Name));
+    Comdats.push_back(Comdat);
+  }
+
+  return P.first->second;
 }
 
 Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
@@ -216,14 +247,10 @@ Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
     return make_error<StringError>("Unable to determine comdat of alias!",
                                    inconvertibleErrorCode());
   if (const Comdat *C = Base->getComdat()) {
-    auto P = ComdatMap.insert(std::make_pair(C, Comdats.size()));
-    Sym.ComdatIndex = P.first->second;
-
-    if (P.second) {
-      storage::Comdat Comdat;
-      setStr(Comdat.Name, C->getName());
-      Comdats.push_back(Comdat);
-    }
+    Expected<int> ComdatIndexOrErr = getComdatIndex(C, GV->getParent());
+    if (!ComdatIndexOrErr)
+      return ComdatIndexOrErr.takeError();
+    Sym.ComdatIndex = *ComdatIndexOrErr;
   }
 
   if (TT.isOSBinFormatCOFF()) {

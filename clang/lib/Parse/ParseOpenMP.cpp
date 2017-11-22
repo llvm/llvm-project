@@ -1086,6 +1086,15 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       AssociatedStmt = ParseStatement();
       Actions.ActOnFinishOfCompoundStmt();
       AssociatedStmt = Actions.ActOnOpenMPRegionEnd(AssociatedStmt, Clauses);
+    } else if (DKind == OMPD_target_update || DKind == OMPD_target_enter_data ||
+               DKind == OMPD_target_exit_data) {
+      Sema::CompoundScopeRAII CompoundScope(Actions);
+      Actions.ActOnOpenMPRegionStart(DKind, getCurScope());
+      Actions.ActOnStartOfCompoundStmt();
+      AssociatedStmt =
+          Actions.ActOnCompoundStmt(Loc, Loc, llvm::None, /*isStmtExpr=*/false);
+      Actions.ActOnFinishOfCompoundStmt();
+      AssociatedStmt = Actions.ActOnOpenMPRegionEnd(AssociatedStmt, Clauses);
     }
     Directive = Actions.ActOnOpenMPExecutableDirective(
         DKind, DirName, CancelRegion, Clauses, AssociatedStmt.get(), Loc,

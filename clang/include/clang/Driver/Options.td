@@ -1030,6 +1030,8 @@ def finstrument_functions : Flag<["-"], "finstrument-functions">, Group<f_Group>
   HelpText<"Generate calls to instrument function entry and exit">;
 def finstrument_functions_after_inlining : Flag<["-"], "finstrument-functions-after-inlining">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Like -finstrument-functions, but insert the calls after inlining">;
+def finstrument_function_entry_bare : Flag<["-"], "finstrument-function-entry-bare">, Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"Instrument function entry only, after inlining, without arguments to the instrumentation call">;
 
 def fxray_instrument : Flag<["-"], "fxray-instrument">, Group<f_Group>,
   Flags<[CC1Option]>,
