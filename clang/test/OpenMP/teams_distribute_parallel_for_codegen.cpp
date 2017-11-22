@@ -32,6 +32,7 @@ int teams_argument_global(int n){
   #pragma omp teams distribute parallel for num_teams(te), thread_limit(th)
   for(int i = 0; i < n; i++) {
     a[i] = 0;
+    #pragma omp cancel for
   }
 
   // CK1: call i32 @__tgt_target(i64 -1, i8* @{{[^,]+}}, i32 2, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i64* {{.+}}@{{[^,]+}}, i32 0, i32 0))

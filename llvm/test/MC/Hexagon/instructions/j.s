@@ -201,6 +201,6 @@ if (r17<=#0) jump:t 0
 
 # Transfer and jump
 # CHECK: 00 d5 09 16
-{ r17 = #21 ; jump 0} 
+{ r17 = #21 ; jump 0 }
 # CHECK: 00 c9 0d 17
 { r17 = r21 ; jump 0 }

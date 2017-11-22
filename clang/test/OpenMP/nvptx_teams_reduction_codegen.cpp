@@ -84,7 +84,7 @@ int bar(int n){
   // CHECK: br label %[[EXIT]]
   //
   // CHECK: [[EXIT]]
-  // CHECK: call void @__kmpc_kernel_deinit()
+  // CHECK: call void @__kmpc_kernel_deinit(
 
   //
   // Reduction function
@@ -360,7 +360,7 @@ int bar(int n){
   // CHECK: br label %[[EXIT]]
   //
   // CHECK: [[EXIT]]
-  // CHECK: call void @__kmpc_kernel_deinit()
+  // CHECK: call void @__kmpc_kernel_deinit(
 
   //
   // Reduction function
@@ -776,7 +776,7 @@ int bar(int n){
   // CHECK: br label %[[EXIT]]
   //
   // CHECK: [[EXIT]]
-  // CHECK: call void @__kmpc_kernel_deinit()
+  // CHECK: call void @__kmpc_kernel_deinit(
 
   //
   // Reduction function

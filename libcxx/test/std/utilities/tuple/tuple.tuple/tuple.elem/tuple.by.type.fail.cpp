@@ -11,6 +11,7 @@
 
 #include <tuple>
 #include <string>
+#include "test_macros.h"
 
 struct UserType {};
 

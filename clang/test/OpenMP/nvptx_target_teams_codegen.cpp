@@ -121,11 +121,13 @@ int bar(int n){
   // CHECK: [[ACV:%.+]] = load i[[SZ]], i[[SZ]]* [[AC]], align
   // CHECK: store i[[SZ]] [[ACV]], i[[SZ]]* [[A_ADDR_T:%.+]], align
   // CHECK: [[CONV2:%.+]] = bitcast i[[SZ]]* [[A_ADDR_T]] to i8*
-  // CHECK: store i8 49, i8* [[CONV2]], align
+  // CHECK: [[LD_CONV2:%.+]] = load i8, i8* [[CONV2]],
+  // CHECK: store i8 [[LD_CONV2]], i8* [[A_PRIV:%[^,]+]],
+  // CHECK: store i8 49, i8* [[A_PRIV]], align
   // CHECK: br label {{%?}}[[TERMINATE:.+]]
   //
   // CHECK: [[TERMINATE]]
-  // CHECK: call void @__kmpc_kernel_deinit()
+  // CHECK: call void @__kmpc_kernel_deinit(
   // CHECK: call void @llvm.nvvm.barrier0()
   // CHECK: br label {{%?}}[[EXIT]]
   //
@@ -207,11 +209,13 @@ int bar(int n){
   // CHECK: [[ACV:%.+]] = load i[[SZ]], i[[SZ]]* [[AC]], align
   // CHECK: store i[[SZ]] [[ACV]], i[[SZ]]* [[AA_ADDR_T:%.+]], align
   // CHECK: [[CONV2:%.+]] = bitcast i[[SZ]]* [[AA_ADDR_T]] to i16*
-  // CHECK: store i16 1, i16* [[CONV2]], align
+  // CHECK: [[LD_CONV2:%.+]] = load i16, i16* [[CONV2]],
+  // CHECK: store i16 [[LD_CONV2]], i16* [[A_PRIV:%[^,]+]],
+  // CHECK: store i16 1, i16* [[A_PRIV]], align
   // CHECK: br label {{%?}}[[TERMINATE:.+]]
   //
   // CHECK: [[TERMINATE]]
-  // CHECK: call void @__kmpc_kernel_deinit()
+  // CHECK: call void @__kmpc_kernel_deinit(
   // CHECK: call void @llvm.nvvm.barrier0()
   // CHECK: br label {{%?}}[[EXIT]]
   //

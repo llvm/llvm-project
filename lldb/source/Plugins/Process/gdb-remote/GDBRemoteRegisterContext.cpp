@@ -178,7 +178,7 @@ bool GDBRemoteRegisterContext::GetPrimordialRegister(
     const RegisterInfo *reg_info, GDBRemoteCommunicationClient &gdb_comm) {
   const uint32_t lldb_reg = reg_info->kinds[eRegisterKindLLDB];
   const uint32_t remote_reg = reg_info->kinds[eRegisterKindProcessPlugin];
-  StringExtractorGDBRemote response;
+
   if (DataBufferSP buffer_sp =
           gdb_comm.ReadRegister(m_thread.GetProtocolID(), remote_reg))
     return PrivateSetRegisterValue(

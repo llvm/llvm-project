@@ -70,7 +70,7 @@ llvm::Optional<unsigned> X86TTIImpl::getCacheSize(
   TargetTransformInfo::CacheLevel Level) const {
   switch (Level) {
   case TargetTransformInfo::CacheLevel::L1D:
-    //   - Penry
+    //   - Penryn
     //   - Nehalem
     //   - Westmere
     //   - Sandy Bridge
@@ -81,7 +81,7 @@ llvm::Optional<unsigned> X86TTIImpl::getCacheSize(
     //   - Kabylake
     return 32 * 1024;  //  32 KByte
   case TargetTransformInfo::CacheLevel::L2D:
-    //   - Penry
+    //   - Penryn
     //   - Nehalem
     //   - Westmere
     //   - Sandy Bridge
@@ -98,7 +98,7 @@ llvm::Optional<unsigned> X86TTIImpl::getCacheSize(
 
 llvm::Optional<unsigned> X86TTIImpl::getCacheAssociativity(
   TargetTransformInfo::CacheLevel Level) const {
-  //   - Penry
+  //   - Penryn
   //   - Nehalem
   //   - Westmere
   //   - Sandy Bridge

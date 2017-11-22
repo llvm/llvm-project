@@ -456,6 +456,10 @@ namespace std {
 #define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK __attribute__((__no_sanitize__("unsigned-integer-overflow")))
 #endif 
 
+#if __has_builtin(__builtin_launder)
+#define	_LIBCPP_COMPILER_HAS_BUILTIN_LAUNDER
+#endif
+
 #elif defined(_LIBCPP_COMPILER_GCC)
 
 #define _ALIGNAS(x) __attribute__((__aligned__(x)))
@@ -536,6 +540,10 @@ namespace std {
 
 #if !defined(_LIBCPP_HAS_NO_ASAN) && !defined(__SANITIZE_ADDRESS__)
 #define _LIBCPP_HAS_NO_ASAN
+#endif
+
+#if _GNUC_VER >= 700
+#define	_LIBCPP_COMPILER_HAS_BUILTIN_LAUNDER
 #endif
 
 #elif defined(_LIBCPP_COMPILER_MSVC)

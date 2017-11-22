@@ -970,13 +970,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::BITREVERSE, VT, Custom);
   }
 
-  // Special handling for masked gather of 2 elements
-  if (Subtarget.hasAVX2()) {
-    for (auto VT : { MVT::v4i32, MVT::v8i32, MVT::v2i64, MVT::v4i64,
-                     MVT::v4f32, MVT::v8f32, MVT::v2f64, MVT::v4f64 })
-      setOperationAction(ISD::MGATHER,  VT, Custom);
-  }
-
   if (!Subtarget.useSoftFloat() && Subtarget.hasFp256()) {
     bool HasInt256 = Subtarget.hasInt256();
 
@@ -1138,6 +1131,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationPromotedToType(ISD::XOR,    VT, MVT::v4i64);
       setOperationPromotedToType(ISD::LOAD,   VT, MVT::v4i64);
       setOperationPromotedToType(ISD::SELECT, VT, MVT::v4i64);
+    }
+
+    if (HasInt256) {
+      for (auto VT : { MVT::v4i32, MVT::v8i32, MVT::v2i64, MVT::v4i64,
+                       MVT::v4f32, MVT::v8f32, MVT::v2f64, MVT::v4f64 })
+        setOperationAction(ISD::MGATHER,  VT, Custom);
     }
   }
 
@@ -1494,11 +1493,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::MSTORE,              VT, Action);
     }
 
-    if (Subtarget.hasCDI()) {
-      setOperationAction(ISD::CTLZ,            MVT::v32i16, Custom);
-      setOperationAction(ISD::CTLZ,            MVT::v64i8,  Custom);
-    }
-
     for (auto VT : { MVT::v64i8, MVT::v32i16 }) {
       setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
       setOperationAction(ISD::VSELECT,      VT, Custom);
@@ -1510,6 +1504,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::MSTORE,       VT, Legal);
       setOperationAction(ISD::CTPOP,        VT, Custom);
       setOperationAction(ISD::CTTZ,         VT, Custom);
+      setOperationAction(ISD::CTLZ,         VT, Custom);
       setOperationAction(ISD::SMAX,         VT, Legal);
       setOperationAction(ISD::UMAX,         VT, Legal);
       setOperationAction(ISD::SMIN,         VT, Legal);
@@ -1522,6 +1517,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     for (auto ExtType : {ISD::ZEXTLOAD, ISD::SEXTLOAD}) {
       setLoadExtAction(ExtType, MVT::v32i16, MVT::v32i8, Legal);
+    }
+
+    if (Subtarget.hasBITALG()) {
+      for (auto VT : { MVT::v64i8, MVT::v32i16, MVT::v32i8,
+                       MVT::v16i16, MVT::v16i8, MVT::v8i16 })
+        setOperationAction(ISD::CTPOP, VT, Legal);
     }
   }
 
@@ -1556,11 +1557,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::UMIN, VT, Legal);
     }
   }
-
-  if (Subtarget.hasBITALG())
-    for (auto VT : { MVT::v64i8, MVT::v32i16, MVT::v32i8,
-                     MVT::v16i16, MVT::v16i8, MVT::v8i16 })
-      setOperationAction(ISD::CTPOP, VT, Legal);
 
   // We want to custom lower some of our intrinsics.
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
@@ -21677,7 +21673,14 @@ static SDValue LowerVectorCTLZInRegLUT(SDValue Op, const SDLoc &DL,
   SDValue NibbleShift = DAG.getConstant(0x4, DL, CurrVT);
   SDValue Lo = DAG.getNode(ISD::AND, DL, CurrVT, Op0, NibbleMask);
   SDValue Hi = DAG.getNode(ISD::SRL, DL, CurrVT, Op0, NibbleShift);
-  SDValue HiZ = DAG.getSetCC(DL, CurrVT, Hi, Zero, ISD::SETEQ);
+  SDValue HiZ;
+  if (CurrVT.is512BitVector()) {
+    MVT MaskVT = MVT::getVectorVT(MVT::i1, CurrVT.getVectorNumElements());
+    HiZ = DAG.getSetCC(DL, MaskVT, Hi, Zero, ISD::SETEQ);
+    HiZ = DAG.getNode(ISD::SIGN_EXTEND, DL, CurrVT, HiZ);
+  } else {
+    HiZ = DAG.getSetCC(DL, CurrVT, Hi, Zero, ISD::SETEQ);
+  }
 
   Lo = DAG.getNode(X86ISD::PSHUFB, DL, CurrVT, InRegLUT, Lo);
   Hi = DAG.getNode(X86ISD::PSHUFB, DL, CurrVT, InRegLUT, Hi);
@@ -21697,8 +21700,15 @@ static SDValue LowerVectorCTLZInRegLUT(SDValue Op, const SDLoc &DL,
     SDValue Shift = DAG.getConstant(CurrScalarSizeInBits, DL, NextVT);
 
     // Check if the upper half of the input element is zero.
-    SDValue HiZ = DAG.getSetCC(DL, CurrVT, DAG.getBitcast(CurrVT, Op0),
-                               DAG.getBitcast(CurrVT, Zero), ISD::SETEQ);
+    if (CurrVT.is512BitVector()) {
+      MVT MaskVT = MVT::getVectorVT(MVT::i1, CurrVT.getVectorNumElements());
+      HiZ = DAG.getSetCC(DL, MaskVT, DAG.getBitcast(CurrVT, Op0),
+                         DAG.getBitcast(CurrVT, Zero), ISD::SETEQ);
+      HiZ = DAG.getNode(ISD::SIGN_EXTEND, DL, CurrVT, HiZ);
+    } else {
+      HiZ = DAG.getSetCC(DL, CurrVT, DAG.getBitcast(CurrVT, Op0),
+                         DAG.getBitcast(CurrVT, Zero), ISD::SETEQ);
+    }
     HiZ = DAG.getBitcast(NextVT, HiZ);
 
     // Move the upper/lower halves to the lower bits as we'll be extending to

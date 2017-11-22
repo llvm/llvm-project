@@ -158,7 +158,7 @@ struct S {
 // CHECK: [[ST_VAL:%.+]] = load i64, i64* [[ST]],
 // CHECK: [[NUM_TASKS:%.+]] = zext i32 %{{.+}} to i64
 // CHECK: call void @__kmpc_taskloop(%ident_t* [[DEFLOC]], i32 [[GTID]], i8* [[TASKV]], i32 1, i64* [[DOWN]], i64* [[UP]], i64 [[ST_VAL]], i32 0, i32 2, i64 [[NUM_TASKS]], i8* null)
-#pragma omp taskloop simd shared(c) num_tasks(a) simdlen(64) safelen(8)
+#pragma omp taskloop simd shared(c) num_tasks(a) simdlen(8) safelen(64)
     for (a = 0; a < c; ++a)
       ;
   }
@@ -201,6 +201,6 @@ struct S {
 // CHECK: !{!"llvm.loop.vectorize.enable", i1 true}
 // CHECK: !{!"llvm.loop.vectorize.width", i32 4}
 // CHECK: !{!"llvm.loop.vectorize.width", i32 32}
-// CHECK: !{!"llvm.loop.vectorize.width", i32 64}
+// CHECK: !{!"llvm.loop.vectorize.width", i32 8}
 
 #endif

@@ -5,7 +5,7 @@
 @A = common global [400 x i8] zeroinitializer, align 8
 @C = common global [400 x i8] zeroinitializer, align 8
 
-define void @run() nounwind {
+define void @run(i8 %v) nounwind {
 entry:
   br label %polly.loop_body
 
@@ -19,7 +19,11 @@ polly.loop_body:                                  ; preds = %entry, %polly.loop_
   %p_arrayidx = getelementptr [400 x i8], [400 x i8]* @B, i32 0, i32 %polly.loopiv25
   %vector_ptr = bitcast i8* %p_arrayidx to <4 x i8>*
   %_p_vec_full = load <4 x i8>, <4 x i8>* %vector_ptr, align 8
-  %mulp_vec = mul <4 x i8> %_p_vec_full, <i8 7, i8 7, i8 7, i8 7>
+  %vec0 = insertelement <4 x i8> undef, i8 %v, i32 0
+  %vec1 = insertelement <4 x i8> %vec0, i8 %v, i32 1
+  %vec2 = insertelement <4 x i8> %vec1, i8 %v, i32 2
+  %vec3 = insertelement <4 x i8> %vec2, i8 %v, i32 3
+  %mulp_vec = mul <4 x i8> %_p_vec_full, %vec3
   %vector_ptr14 = bitcast i8* %p_arrayidx1 to <4 x i8>*
   %_p_vec_full15 = load <4 x i8>, <4 x i8>* %vector_ptr14, align 8
   %addp_vec = add <4 x i8> %_p_vec_full15, %mulp_vec
