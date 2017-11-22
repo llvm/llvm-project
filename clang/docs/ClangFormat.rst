@@ -11,7 +11,7 @@ Standalone Tool
 ===============
 
 :program:`clang-format` is located in `clang/tools/clang-format` and can be used
-to format C/C++/Obj-C code.
+to format C/C++/Java/JavaScript/Objective-C/Protobuf code.
 
 .. code-block:: console
 

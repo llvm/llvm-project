@@ -1522,14 +1522,9 @@ bool X86DAGToDAGISel::selectVectorAddr(SDNode *Parent, SDValue N, SDValue &Base,
                                        SDValue &Scale, SDValue &Index,
                                        SDValue &Disp, SDValue &Segment) {
   X86ISelAddressMode AM;
-  if (auto Mgs = dyn_cast<MaskedGatherScatterSDNode>(Parent)) {
-    AM.IndexReg = Mgs->getIndex();
-    AM.Scale = Mgs->getValue().getScalarValueSizeInBits() / 8;
-  } else {
-    auto X86Gather = cast<X86MaskedGatherSDNode>(Parent);
-    AM.IndexReg = X86Gather->getIndex();
-    AM.Scale = X86Gather->getValue().getScalarValueSizeInBits() / 8;
-  }
+  auto *Mgs = cast<X86MaskedGatherScatterSDNode>(Parent);
+  AM.IndexReg = Mgs->getIndex();
+  AM.Scale = Mgs->getValue().getScalarValueSizeInBits() / 8;
 
   unsigned AddrSpace = cast<MemSDNode>(Parent)->getPointerInfo().getAddrSpace();
   // AddrSpace 256 -> GS, 257 -> FS, 258 -> SS.
