@@ -173,6 +173,10 @@ Possible key-value pairs are:
   ``cache_size_bytes=1g`` on its own will cause both the 1GB and default 75%
   policies to be applied unless the default ``cache_size`` is overridden.
 
+- ``cache_size_files=X``:
+  Set the maximum number of files in the cache directory. Set to 0 to indicate
+  no limit. The default is 1000000 files.
+
 - ``prune_after=Xs``, ``prune_after=Xm``, ``prune_after=Xh``: Sets the
   expiration time for cache files to ``X`` seconds (or minutes, hours
   respectively).  When a file hasn't been accessed for ``prune_after`` seconds,

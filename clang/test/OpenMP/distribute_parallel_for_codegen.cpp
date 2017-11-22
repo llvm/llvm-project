@@ -28,6 +28,7 @@ T tmain() {
   #pragma omp teams
   #pragma omp distribute parallel for
   for (int i = 0; i < n; ++i) {
+    #pragma omp cancel for
     a[i] = b[i] + c[i];
   }
 

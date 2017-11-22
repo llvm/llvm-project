@@ -116,3 +116,14 @@ void test_ordered() {
     ;
 }
 
+void test_cancel() {
+#pragma omp target
+#pragma omp teams
+#pragma omp distribute parallel for
+  for (int i = 0; i < 16; ++i)
+    for (int j = 0; j < 16; ++j) {
+#pragma omp cancel for
+    ;
+    }
+}
+

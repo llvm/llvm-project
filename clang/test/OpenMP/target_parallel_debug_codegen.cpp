@@ -111,3 +111,13 @@ int main() {
 // CHECK: addrspacecast [10 x [10 x i32]]* %{{.+}} to [10 x [10 x i32]] addrspace(1)*
 // CHECK: call void @__omp_offloading_{{[^(]+}}([10 x [10 x [10 x i32]]] addrspace(1)* {{[^,]+}}, i32 addrspace(1)* {{[^,]+}}, [10 x [10 x i32]] addrspace(1)* {{[^,]+}}, i8 addrspace(1)* {{[^)]+}})
 
+// CHECK: !DILocalVariable(name: ".global_tid.",
+// CHECK-SAME: DIFlagArtificial
+// CHECK: !DILocalVariable(name: ".bound_tid.",
+// CHECK-SAME: DIFlagArtificial
+// CHECK: !DILocalVariable(name: "c",
+// CHECK-SAMEi-NOT: DIFlagArtificial
+// CHECK: !DILocalVariable(name: "a",
+// CHECK-SAMEi-NOT: DIFlagArtificial
+// CHECK: !DILocalVariable(name: "b",
+// CHECK-SAMEi-NOT: DIFlagArtificial

@@ -24,8 +24,10 @@ protected:
 public:
   S7(typename T::type v) : a(v) {
 #pragma omp target teams distribute parallel for private(a) private(this->a) private(T::a)
-    for (int k = 0; k < a.a; ++k)
+    for (int k = 0; k < a.a; ++k) {
       ++this->a.a;
+#pragma omp cancel for
+    }
   }
   S7 &operator=(S7 &s) {
 #pragma omp target teams distribute parallel for private(a) private(this->a)
@@ -43,6 +45,7 @@ public:
   }
 };
 // CHECK: #pragma omp target teams distribute parallel for private(this->a) private(this->a) private(T::a)
+// CHECK: #pragma omp cancel for
 // CHECK: #pragma omp target teams distribute parallel for private(this->a) private(this->a)
 // CHECK: #pragma omp target teams distribute parallel for default(none) private(b) firstprivate(argv) shared(d) reduction(+: c) reduction(max: e) num_teams(f) thread_limit(d)
 
