@@ -264,7 +264,7 @@ Expected<bool> hasObjCCategoryInModule(BitstreamCursor &Stream) {
       if (convertToString(Record, 0, S))
         return error("Invalid record");
       // Check for the i386 and other (x86_64, ARM) conventions
-      if (S.find("__DATA, __objc_catlist") != std::string::npos ||
+      if (S.find("__DATA,__objc_catlist") != std::string::npos ||
           S.find("__OBJC,__category") != std::string::npos)
         return true;
       break;
