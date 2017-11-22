@@ -2305,6 +2305,35 @@ bool llvm::UpgradeModuleFlags(Module &M) {
   return Changed;
 }
 
+void llvm::UpgradeSectionAttributes(Module &M) {
+  auto TrimSpaces = [](StringRef Section) -> std::string {
+    SmallVector<StringRef, 5> Components;
+    Section.split(Components, ',');
+
+    SmallString<32> Buffer;
+    raw_svector_ostream OS(Buffer);
+
+    for (auto Component : Components)
+      OS << ',' << Component.trim();
+
+    return OS.str().substr(1);
+  };
+
+  for (auto &GV : M.globals()) {
+    if (!GV.hasSection())
+      continue;
+
+    StringRef Section = GV.getSection();
+
+    if (!Section.startswith("__DATA, __objc_catlist"))
+      continue;
+
+    // __DATA, __objc_catlist, regular, no_dead_strip
+    // __DATA,__objc_catlist,regular,no_dead_strip
+    GV.setSection(TrimSpaces(Section));
+  }
+}
+
 static bool isOldLoopArgument(Metadata *MD) {
   auto *T = dyn_cast_or_null<MDTuple>(MD);
   if (!T)
