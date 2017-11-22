@@ -655,7 +655,7 @@ ArchiveFile::getMember(const Archive::Symbol *Sym) {
 template <class ELFT>
 SharedFile<ELFT>::SharedFile(MemoryBufferRef M, StringRef DefaultSoName)
     : ELFFileBase<ELFT>(Base::SharedKind, M), SoName(DefaultSoName),
-      AsNeeded(Config->AsNeeded) {}
+      IsNeeded(!Config->AsNeeded) {}
 
 // Partially parse the shared object file so that we can call
 // getSoName on this object.

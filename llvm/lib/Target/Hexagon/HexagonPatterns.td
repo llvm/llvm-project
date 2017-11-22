@@ -1130,6 +1130,16 @@ def: Pat<(or (or (shl (or (shl (i32 (extloadi8 (add I32:$b, 3))),
              (zextloadi8 I32:$b)),
          (A2_swiz (L2_loadri_io IntRegs:$b, 0))>;
 
+let AddedComplexity = 200 in {
+  def: Pat<(or (shl I32:$Rt, (i32 16)), (and I32:$Rs, (i32 65535))),
+           (A2_combine_ll I32:$Rt, I32:$Rs)>;
+  def: Pat<(or (shl I32:$Rt, (i32 16)), (srl I32:$Rs, (i32 16))),
+           (A2_combine_lh I32:$Rt, I32:$Rs)>;
+  def: Pat<(or (and I32:$Rt, (i32 268431360)), (and I32:$Rs, (i32 65535))),
+           (A2_combine_hl I32:$Rt, I32:$Rs)>;
+  def: Pat<(or (and I32:$Rt, (i32 268431360)), (srl I32:$Rs, (i32 16))),
+           (A2_combine_hh I32:$Rt, I32:$Rs)>;
+}
 
 def SDTHexagonVShift
   : SDTypeProfile<1, 2, [SDTCisSameAs<0, 1>, SDTCisVec<0>, SDTCisVT<2, i32>]>;

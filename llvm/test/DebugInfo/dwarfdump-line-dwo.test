@@ -1,6 +1,0 @@
-RUN: llvm-dwarfdump -v %p/Inputs/dwarfdump-line-dwo.elf-x86-64 | FileCheck %s
-
-CHECK: .debug_line.dwo contents:
-CHECK: version: 4
-CHECK: max_ops_per_inst: 1
-CHECK: file_names[  1]{{.*}}dwarfdump-line-dwo.cc

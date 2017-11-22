@@ -219,7 +219,7 @@ public:
     void clear();
 
     /// Parse prologue and all rows.
-    bool parse(const DWARFDataExtractor &DebugLineData, uint32_t *OffsetPtr,
+    bool parse(DWARFDataExtractor &DebugLineData, uint32_t *OffsetPtr,
                const DWARFUnit *U, raw_ostream *OS = nullptr);
 
     using RowVector = std::vector<Row>;
@@ -237,7 +237,7 @@ public:
   };
 
   const LineTable *getLineTable(uint32_t Offset) const;
-  const LineTable *getOrParseLineTable(const DWARFDataExtractor &DebugLineData,
+  const LineTable *getOrParseLineTable(DWARFDataExtractor &DebugLineData,
                                        uint32_t Offset, const DWARFUnit *U);
 
 private:

@@ -46,6 +46,8 @@ typedef void (*new_handler)();
 new_handler set_new_handler(new_handler new_p) noexcept;
 new_handler get_new_handler() noexcept;
 
+// 21.6.4, pointer optimization barrier
+template <class T> constexpr T* launder(T* p) noexcept; // C++17
 }  // std
 
 void* operator new(std::size_t size);                                   // replaceable
@@ -247,6 +249,29 @@ void __throw_bad_array_length()
 #else
 	_VSTD::abort();
 #endif
+}
+#endif
+
+template <class _Tp>
+_LIBCPP_NODISCARD_AFTER_CXX17 inline 
+_LIBCPP_CONSTEXPR _Tp* __launder(_Tp* __p) _NOEXCEPT
+{
+    static_assert (!(is_function<_Tp>::value), "can't launder functions" );
+    static_assert (!(is_same<void, typename remove_cv<_Tp>::type>::value), "can't launder cv-void" );
+#ifdef _LIBCPP_COMPILER_HAS_BUILTIN_LAUNDER
+    return __builtin_launder(__p);
+#else
+    return __p;
+#endif
+}
+
+
+#if _LIBCPP_STD_VER > 14
+template <class _Tp>
+_LIBCPP_NODISCARD_AFTER_CXX17 inline _LIBCPP_INLINE_VISIBILITY
+constexpr _Tp* launder(_Tp* __p) noexcept
+{
+    return __launder(__p);
 }
 #endif
 

@@ -64,4 +64,4 @@ b1:
   ret i64 %v4
 }
 
-attributes #0 = { nounwind readnone }
+attributes #0 = { optnone noinline nounwind readnone }

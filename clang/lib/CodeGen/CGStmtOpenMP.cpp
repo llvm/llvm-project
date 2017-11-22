@@ -311,6 +311,16 @@ static llvm::Function *emitOutlinedFunctionPrologue(
       CD->param_begin(),
       std::next(CD->param_begin(), CD->getContextParamPosition()));
   auto I = FO.S->captures().begin();
+  FunctionDecl *DebugFunctionDecl = nullptr;
+  if (!FO.UIntPtrCastRequired) {
+    FunctionProtoType::ExtProtoInfo EPI;
+    DebugFunctionDecl = FunctionDecl::Create(
+        Ctx, Ctx.getTranslationUnitDecl(), FO.S->getLocStart(),
+        SourceLocation(), DeclarationName(), Ctx.VoidTy,
+        Ctx.getTrivialTypeSourceInfo(
+            Ctx.getFunctionType(Ctx.VoidTy, llvm::None, EPI)),
+        SC_Static, /*isInlineSpecified=*/false, /*hasWrittenPrototype=*/false);
+  }
   for (auto *FD : RD->fields()) {
     QualType ArgType = FD->getType();
     IdentifierInfo *II = nullptr;
@@ -338,9 +348,17 @@ static llvm::Function *emitOutlinedFunctionPrologue(
     }
     if (ArgType->isVariablyModifiedType())
       ArgType = getCanonicalParamType(Ctx, ArgType);
-    auto *Arg =
-        ImplicitParamDecl::Create(Ctx, /*DC=*/nullptr, FD->getLocation(), II,
-                                  ArgType, ImplicitParamDecl::Other);
+    VarDecl *Arg;
+    if (DebugFunctionDecl && (CapVar || I->capturesThis())) {
+      Arg = ParmVarDecl::Create(
+          Ctx, DebugFunctionDecl,
+          CapVar ? CapVar->getLocStart() : FD->getLocStart(),
+          CapVar ? CapVar->getLocation() : FD->getLocation(), II, ArgType,
+          /*TInfo=*/nullptr, SC_None, /*DefArg=*/nullptr);
+    } else {
+      Arg = ImplicitParamDecl::Create(Ctx, /*DC=*/nullptr, FD->getLocation(),
+                                      II, ArgType, ImplicitParamDecl::Other);
+    }
     Args.emplace_back(Arg);
     // Do not cast arguments if we emit function with non-original types.
     TargetArgs.emplace_back(
@@ -1990,13 +2008,27 @@ emitInnerParallelForWhenCombined(CodeGenFunction &CGF,
                                  CodeGenFunction::JumpDest LoopExit) {
   auto &&CGInlinedWorksharingLoop = [&S](CodeGenFunction &CGF,
                                          PrePostActionTy &) {
+    bool HasCancel = false;
+    if (!isOpenMPSimdDirective(S.getDirectiveKind())) {
+      if (const auto *D = dyn_cast<OMPTeamsDistributeParallelForDirective>(&S))
+        HasCancel = D->hasCancel();
+      else if (const auto *D = dyn_cast<OMPDistributeParallelForDirective>(&S))
+        HasCancel = D->hasCancel();
+      else if (const auto *D =
+                   dyn_cast<OMPTargetTeamsDistributeParallelForDirective>(&S))
+        HasCancel = D->hasCancel();
+    }
+    CodeGenFunction::OMPCancelStackRAII CancelRegion(CGF, S.getDirectiveKind(),
+                                                     HasCancel);
     CGF.EmitOMPWorksharingLoop(S, S.getPrevEnsureUpperBound(),
                                emitDistributeParallelForInnerBounds,
                                emitDistributeParallelForDispatchBounds);
   };
 
   emitCommonOMPParallelDirective(
-      CGF, S, OMPD_for, CGInlinedWorksharingLoop,
+      CGF, S,
+      isOpenMPSimdDirective(S.getDirectiveKind()) ? OMPD_for_simd : OMPD_for,
+      CGInlinedWorksharingLoop,
       emitDistributeParallelForDistributeInnerBoundParams);
 }
 
@@ -2007,10 +2039,8 @@ void CodeGenFunction::EmitOMPDistributeParallelForDirective(
                               S.getDistInc());
   };
   OMPLexicalScope Scope(*this, S, /*AsInlined=*/true);
-  OMPCancelStackRAII CancelRegion(*this, OMPD_distribute_parallel_for,
-                                  /*HasCancel=*/false);
   CGM.getOpenMPRuntime().emitInlinedDirective(*this, OMPD_distribute, CodeGen,
-                                              /*HasCancel=*/false);
+                                              S.hasCancel());
 }
 
 void CodeGenFunction::EmitOMPDistributeParallelForSimdDirective(
@@ -3812,11 +3842,20 @@ static void emitTargetTeamsRegion(CodeGenFunction &CGF, PrePostActionTy &Action,
                                   const OMPTargetTeamsDirective &S) {
   auto *CS = S.getCapturedStmt(OMPD_teams);
   Action.Enter(CGF);
-  auto &&CodeGen = [CS](CodeGenFunction &CGF, PrePostActionTy &) {
-    // TODO: Add support for clauses.
+  // Emit teams region as a standalone region.
+  auto &&CodeGen = [&S, CS](CodeGenFunction &CGF, PrePostActionTy &Action) {
+    CodeGenFunction::OMPPrivateScope PrivateScope(CGF);
+    (void)CGF.EmitOMPFirstprivateClause(S, PrivateScope);
+    CGF.EmitOMPPrivateClause(S, PrivateScope);
+    CGF.EmitOMPReductionClauseInit(S, PrivateScope);
+    (void)PrivateScope.Privatize();
+    Action.Enter(CGF);
     CGF.EmitStmt(CS->getCapturedStmt());
+    CGF.EmitOMPReductionClauseFinal(S, /*ReductionKind=*/OMPD_teams);
   };
   emitCommonOMPTeamsDirective(CGF, S, OMPD_teams, CodeGen);
+  emitPostUpdateForReductionClause(
+      CGF, S, [](CodeGenFunction &) -> llvm::Value * { return nullptr; });
 }
 
 void CodeGenFunction::EmitOMPTargetTeamsDeviceFunction(
@@ -3876,8 +3915,8 @@ void CodeGenFunction::EmitOMPTeamsDistributeParallelForDirective(
     OMPPrivateScope PrivateScope(CGF);
     CGF.EmitOMPReductionClauseInit(S, PrivateScope);
     (void)PrivateScope.Privatize();
-    CGF.CGM.getOpenMPRuntime().emitInlinedDirective(CGF, OMPD_distribute,
-                                                    CodeGenDistribute);
+    CGF.CGM.getOpenMPRuntime().emitInlinedDirective(
+        CGF, OMPD_distribute, CodeGenDistribute, S.hasCancel());
     CGF.EmitOMPReductionClauseFinal(S, /*ReductionKind=*/OMPD_teams);
   };
   emitCommonOMPTeamsDirective(*this, S, OMPD_distribute_parallel_for, CodeGen);
@@ -3912,7 +3951,9 @@ CodeGenFunction::getOMPCancelDestination(OpenMPDirectiveKind Kind) {
   assert(Kind == OMPD_for || Kind == OMPD_section || Kind == OMPD_sections ||
          Kind == OMPD_parallel_sections || Kind == OMPD_parallel_for ||
          Kind == OMPD_distribute_parallel_for ||
-         Kind == OMPD_target_parallel_for);
+         Kind == OMPD_target_parallel_for ||
+         Kind == OMPD_teams_distribute_parallel_for ||
+         Kind == OMPD_target_teams_distribute_parallel_for);
   return OMPCancelStack.getExitBlock();
 }
 
