@@ -420,7 +420,7 @@ class CFGBuilder {
   BackpatchBlocksTy BackpatchBlocks;
 
   // A list of labels whose address has been taken (for indirect gotos).
-  typedef llvm::SmallPtrSet<LabelDecl*, 5> LabelSetTy;
+  typedef llvm::SmallSetVector<LabelDecl*, 8> LabelSetTy;
   LabelSetTy AddressTakenLabels;
 
   bool badCFG;

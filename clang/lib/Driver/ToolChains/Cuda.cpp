@@ -301,10 +301,7 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("--gpu-name");
   CmdArgs.push_back(Args.MakeArgString(CudaArchToString(gpu_arch)));
   CmdArgs.push_back("--output-file");
-  SmallString<256> OutputFileName(Output.getFilename());
-  if (JA.isOffloading(Action::OFK_OpenMP))
-    llvm::sys::path::replace_extension(OutputFileName, "cubin");
-  CmdArgs.push_back(Args.MakeArgString(OutputFileName));
+  CmdArgs.push_back(Args.MakeArgString(TC.getInputFilename(Output)));
   for (const auto& II : Inputs)
     CmdArgs.push_back(Args.MakeArgString(II.getFilename()));
 
@@ -431,11 +428,8 @@ void NVPTX::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
     if (!II.isFilename())
       continue;
 
-    SmallString<256> Name(II.getFilename());
-    llvm::sys::path::replace_extension(Name, "cubin");
-
-    const char *CubinF =
-        C.addTempFile(C.getArgs().MakeArgString(Name));
+    const char *CubinF = C.addTempFile(
+        C.getArgs().MakeArgString(getToolChain().getInputFilename(II)));
 
     CmdArgs.push_back(CubinF);
   }
@@ -461,6 +455,20 @@ CudaToolChain::CudaToolChain(const Driver &D, const llvm::Triple &Triple,
   // Lookup binaries into the driver directory, this is used to
   // discover the clang-offload-bundler executable.
   getProgramPaths().push_back(getDriver().Dir);
+}
+
+std::string CudaToolChain::getInputFilename(const InputInfo &Input) const {
+  // Only object files are changed, for example assembly files keep their .s
+  // extensions. CUDA also continues to use .o as they don't use nvlink but
+  // fatbinary.
+  if (!(OK == Action::OFK_OpenMP && Input.getType() == types::TY_Object))
+    return ToolChain::getInputFilename(Input);
+
+  // Replace extension for object files with cubin because nvlink relies on
+  // these particular file names.
+  SmallString<256> Filename(ToolChain::getInputFilename(Input));
+  llvm::sys::path::replace_extension(Filename, "cubin");
+  return Filename.str();
 }
 
 void CudaToolChain::addClangTargetOptions(

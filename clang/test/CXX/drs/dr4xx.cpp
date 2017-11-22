@@ -593,10 +593,10 @@ namespace dr447 { // dr447: yes
     U<__builtin_offsetof(A, n)>::type a;
     U<__builtin_offsetof(T, n)>::type b; // expected-error +{{}} expected-warning 0+{{}}
     // as an extension, we allow the member-designator to include array indices
-    g(__builtin_offsetof(A, a[0])).h<int>(); // expected-error {{extension}}
-    g(__builtin_offsetof(A, a[N])).h<int>(); // expected-error {{extension}}
-    U<__builtin_offsetof(A, a[0])>::type c; // expected-error {{extension}}
-    U<__builtin_offsetof(A, a[N])>::type d; // expected-error {{extension}} expected-error +{{}} expected-warning 0+{{}}
+    g(__builtin_offsetof(A, a[0])).h<int>();
+    g(__builtin_offsetof(A, a[N])).h<int>();
+    U<__builtin_offsetof(A, a[0])>::type c;
+    U<__builtin_offsetof(A, a[N])>::type d; // expected-error +{{}} expected-warning 0+{{}}
   }
 }
 
