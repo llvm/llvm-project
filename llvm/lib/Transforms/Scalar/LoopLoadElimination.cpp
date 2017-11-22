@@ -666,7 +666,8 @@ PreservedAnalyses LoopLoadEliminationPass::run(Function &F,
   auto &LAM = AM.getResult<LoopAnalysisManagerFunctionProxy>(F).getManager();
   bool Changed = eliminateLoadsAcrossLoops(
       F, LI, DT, [&](Loop &L) -> const LoopAccessInfo & {
-        LoopStandardAnalysisResults AR = {AA, AC, DT, LI, SE, TLI, TTI};
+        LoopStandardAnalysisResults AR = {AA, AC,  DT,  LI,
+                                          SE, TLI, TTI, nullptr};
         return LAM.getResult<LoopAccessAnalysis>(L, AR);
       });
 

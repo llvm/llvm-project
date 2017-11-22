@@ -65,21 +65,16 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   // Instruction Selection not handled by the auto-generated tablegen selection
   // should be handled here.
   EVT VT = Node->getValueType(0);
-  switch (Opcode) {
-  case ISD::Constant:
-    if (VT == XLenVT) {
-      ConstantSDNode *ConstNode = cast<ConstantSDNode>(Node);
-      // Materialize zero constants as copies from X0. This allows the coalescer
-      // to propagate these into other instructions.
-      if (ConstNode->isNullValue()) {
-        SDValue New = CurDAG->getCopyFromReg(CurDAG->getEntryNode(),
-                                             SDLoc(Node), RISCV::X0, XLenVT);
-        return ReplaceNode(Node, New.getNode());
-      }
+  if (Opcode == ISD::Constant && VT == XLenVT) {
+    auto *ConstNode = cast<ConstantSDNode>(Node);
+    // Materialize zero constants as copies from X0. This allows the coalescer
+    // to propagate these into other instructions.
+    if (ConstNode->isNullValue()) {
+      SDValue New = CurDAG->getCopyFromReg(CurDAG->getEntryNode(), SDLoc(Node),
+                                           RISCV::X0, XLenVT);
+      ReplaceNode(Node, New.getNode());
+      return;
     }
-    break;
-  default:
-    break;
   }
 
   // Select the default instruction.

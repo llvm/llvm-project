@@ -69,9 +69,8 @@ static const unsigned GPRDecoderTable[] = {
 static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, uint64_t RegNo,
                                            uint64_t Address,
                                            const void *Decoder) {
-   if (RegNo > sizeof(GPRDecoderTable)) {
+   if (RegNo > sizeof(GPRDecoderTable))
      return MCDisassembler::Fail;
-   }
 
    // We must define our own mapping from RegNo to register identifier.
    // Accessing index RegNo in the register class will work in the case that

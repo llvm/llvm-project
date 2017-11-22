@@ -3313,7 +3313,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     OS << "            DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \"recording too-few-operands near miss\\n\");\n";
     OS << "            OperandNearMiss =\n";
     OS << "                NearMissInfo::getTooFewOperands(Formal, it->Opcode);\n";
-    OS << "          } else {\n";
+    OS << "          } else if (OperandNearMiss.getKind() != NearMissInfo::NearMissTooFewOperands) {\n";
     OS << "            // If more than one operand is invalid, give up on this match entry.\n";
     OS << "            DEBUG_WITH_TYPE(\n";
     OS << "                \"asm-matcher\",\n";
@@ -3323,6 +3323,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     OS << "          }\n";
     OS << "        } else {\n";
     OS << "          DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \"but formal operand not required\\n\");\n";
+    OS << "          break;\n";
     OS << "        }\n";
     OS << "        continue;\n";
   } else {

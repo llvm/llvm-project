@@ -244,6 +244,15 @@ enum ProcessorSubtypes : unsigned {
   CPU_SUBTYPE_MAX
 };
 
+// This should be kept in sync with libcc/compiler-rt as it should be used
+// by clang as a proxy for what's in libgcc/compiler-rt.
+enum ProcessorFeatures {
+#define X86_FEATURE(VAL, ENUM) \
+  ENUM = VAL,
+#include "llvm/Support/X86TargetParser.def"
+
+};
+
 } // namespace X86
 
 } // namespace llvm

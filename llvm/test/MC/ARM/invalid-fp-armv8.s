@@ -81,7 +81,7 @@ vcvtthi.f16.f64 q0, d3
 vrintrlo.f32.f32 d3, q0
 @ V8: error: invalid instruction
 vrintxcs.f32.f32 d3, d0
-@ V8: error: instruction requires: NEON
+@ V8: error: invalid instruction
 
 vrinta.f64.f64 s3, q0
 @ V8: error: invalid instruction
