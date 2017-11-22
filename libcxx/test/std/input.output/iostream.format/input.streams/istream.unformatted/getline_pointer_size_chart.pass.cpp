@@ -7,6 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: with_system_cxx_lib=macosx10.13
+// XFAIL: with_system_cxx_lib=macosx10.12
+// XFAIL: with_system_cxx_lib=macosx10.11
+// XFAIL: with_system_cxx_lib=macosx10.10
+// XFAIL: with_system_cxx_lib=macosx10.9
+// XFAIL: with_system_cxx_lib=macosx10.8
+// XFAIL: with_system_cxx_lib=macosx10.7
+
 // <istream>
 
 // basic_istream<charT,traits>& getline(char_type* s, streamsize n, char_type delim);
