@@ -2586,7 +2586,7 @@ public:
                       "Fullpath or basename for module to load.", ""),
         m_load_option(LLDB_OPT_SET_1, false, "load", 'l',
                       "Write file contents to the memory.", false, true),
-        m_pc_option(LLDB_OPT_SET_1, false, "--set-pc-to-entry", 'p',
+        m_pc_option(LLDB_OPT_SET_1, false, "set-pc-to-entry", 'p',
                     "Set PC to the entry point."
                     " Only applicable with '--load' option.",
                     false, true),

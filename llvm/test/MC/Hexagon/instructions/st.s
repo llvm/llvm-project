@@ -287,7 +287,7 @@ if (!p3) memh(r17++#10) = r21
 { p3 = r5
   if (p3.new) memh(r17++#10) = r21 }
 # CHECK: 03 40 45 85
-# CHECK-NEXT: af f5 51 ab 
+# CHECK-NEXT: af f5 51 ab
 { p3 = r5
   if (!p3.new) memh(r17++#10) = r21 }
 # CHECK: 2b f5 71 ab
@@ -390,7 +390,7 @@ if (!p3) memw(r17+#84)=#31
   if (!p3.new) memw(r17+#84)=#31 }
 # CHECK: ab df 91 40
 if (p3) memw(r17+#84) = r31
-# CHECK: ab df 91 44 
+# CHECK: ab df 91 44
 if (!p3) memw(r17+#84) = r31
 # CHECK: 03 40 45 85
 # CHECK-NEXT: ab df 91 42

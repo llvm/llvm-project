@@ -252,9 +252,6 @@ bool BugDriver::runPasses(Module *Program,
   if (DeleteOutput || result != 0)
     sys::fs::remove(OutputFilename);
 
-  // Remove the temporary input file as well
-  consumeError(Temp->discard());
-
   if (!Quiet) {
     if (result == 0)
       outs() << "Success!\n";

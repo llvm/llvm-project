@@ -278,15 +278,24 @@ template <class ELFT> void MIPS<ELFT>::writePltHeader(uint8_t *Buf) const {
     write32<E>(Buf + 4, 0x8dd90000);  // lw    $25, %lo(&GOTPLT[0])($14)
     write32<E>(Buf + 8, 0x25ce0000);  // addiu $14, $14, %lo(&GOTPLT[0])
     write32<E>(Buf + 12, 0x030ec023); // subu  $24, $24, $14
+    write32<E>(Buf + 16, 0x03e07825); // move  $15, $31
+    write32<E>(Buf + 20, 0x0018c082); // srl   $24, $24, 2
+  } else if (ELFT::Is64Bits) {
+    write32<E>(Buf, 0x3c0e0000);      // lui   $14, %hi(&GOTPLT[0])
+    write32<E>(Buf + 4, 0xddd90000);  // ld    $25, %lo(&GOTPLT[0])($14)
+    write32<E>(Buf + 8, 0x25ce0000);  // addiu $14, $14, %lo(&GOTPLT[0])
+    write32<E>(Buf + 12, 0x030ec023); // subu  $24, $24, $14
+    write32<E>(Buf + 16, 0x03e07825); // move  $15, $31
+    write32<E>(Buf + 20, 0x0018c0c2); // srl   $24, $24, 3
   } else {
     write32<E>(Buf, 0x3c1c0000);      // lui   $28, %hi(&GOTPLT[0])
     write32<E>(Buf + 4, 0x8f990000);  // lw    $25, %lo(&GOTPLT[0])($28)
     write32<E>(Buf + 8, 0x279c0000);  // addiu $28, $28, %lo(&GOTPLT[0])
     write32<E>(Buf + 12, 0x031cc023); // subu  $24, $24, $28
+    write32<E>(Buf + 16, 0x03e07825); // move  $15, $31
+    write32<E>(Buf + 20, 0x0018c082); // srl   $24, $24, 2
   }
 
-  write32<E>(Buf + 16, 0x03e07825); // move  $15, $31
-  write32<E>(Buf + 20, 0x0018c082); // srl   $24, $24, 2
   write32<E>(Buf + 24, 0x0320f809); // jalr  $25
   write32<E>(Buf + 28, 0x2718fffe); // subu  $24, $24, 2
 

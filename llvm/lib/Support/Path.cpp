@@ -779,10 +779,16 @@ Error TempFile::discard() {
     RemoveEC = fs::remove(TmpName);
     sys::DontRemoveFileOnSignal(TmpName);
   }
+
+  if (!RemoveEC)
+    TmpName = "";
+
   if (FD != -1 && close(FD) == -1) {
     std::error_code EC = std::error_code(errno, std::generic_category());
     return errorCodeToError(EC);
   }
+  FD = -1;
+
   return errorCodeToError(RemoveEC);
 }
 

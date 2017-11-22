@@ -46,6 +46,15 @@ struct CachePruningPolicy {
   /// of available space on the disk will be reduced to the amount of available
   /// space. A value of 0 disables the absolute size-based pruning.
   uint64_t MaxSizeBytes = 0;
+
+  /// The maximum number of files in the cache directory. A value of 0 disables
+  /// the number of files based pruning.
+  ///
+  /// This defaults to 1000000 because with that many files there are
+  /// diminishing returns on the effectiveness of the cache, and some file
+  /// systems have a limit on how many files can be contained in a directory
+  /// (notably ext4, which is limited to around 6000000 files).
+  uint64_t MaxSizeFiles = 1000000;
 };
 
 /// Parse the given string as a cache pruning policy. Defaults are taken from a

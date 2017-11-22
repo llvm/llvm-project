@@ -1151,7 +1151,7 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
       EVT RegVT = VA.getLocVT();
       if (RegVT == MVT::i8 || RegVT == MVT::i16 ||
           RegVT == MVT::i32 || RegVT == MVT::f32) {
-        unsigned VReg = 
+        unsigned VReg =
           RegInfo.createVirtualRegister(&Hexagon::IntRegsRegClass);
         RegInfo.addLiveIn(VA.getLocReg(), VReg);
         SDValue Copy = DAG.getCopyFromReg(Chain, dl, VReg, RegVT);
@@ -2461,151 +2461,159 @@ HexagonTargetLowering::LowerVECTOR_SHIFT(SDValue Op, SelectionDAG &DAG) const {
 }
 
 SDValue
-HexagonTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
-  BuildVectorSDNode *BVN = cast<BuildVectorSDNode>(Op.getNode());
-  SDLoc dl(Op);
-  EVT VT = Op.getValueType();
+HexagonTargetLowering::buildVector32(ArrayRef<SDValue> Elem, const SDLoc &dl,
+                                     MVT VecTy, SelectionDAG &DAG) const {
+  MVT ElemTy = VecTy.getVectorElementType();
+  assert(VecTy.getVectorNumElements() == Elem.size());
 
-  unsigned Size = VT.getSizeInBits();
+  SmallVector<ConstantSDNode*,4> Consts;
+  bool AllConst = true;
+  for (SDValue V : Elem) {
+    if (V.getOpcode() == ISD::UNDEF)
+      V = DAG.getConstant(0, dl, ElemTy);
+    auto *C = dyn_cast<ConstantSDNode>(V.getNode());
+    Consts.push_back(C);
+    AllConst = AllConst && C != nullptr;
+  }
 
-  // Only handle vectors of 64 bits or shorter.
-  if (Size > 64)
-    return SDValue();
+  unsigned First, Num = Elem.size();
+  for (First = 0; First != Num; ++First)
+    if (Elem[First].getOpcode() != ISD::UNDEF)
+      break;
+  if (First == Num)
+    return DAG.getUNDEF(VecTy);
 
-  unsigned NElts = BVN->getNumOperands();
-
-  // Try to generate a SPLAT instruction.
-  if (VT == MVT::v4i8 || VT == MVT::v4i16 || VT == MVT::v2i32) {
-    APInt APSplatBits, APSplatUndef;
-    unsigned SplatBitSize;
-    bool HasAnyUndefs;
-    if (BVN->isConstantSplat(APSplatBits, APSplatUndef, SplatBitSize,
-                             HasAnyUndefs, 0, false)) {
-      if (SplatBitSize == VT.getVectorElementType().getSizeInBits()) {
-        unsigned ZV = APSplatBits.getZExtValue();
-        assert(SplatBitSize <= 32 && "Can only handle up to i32");
-        // Sign-extend the splat value from SplatBitSize to 32.
-        int32_t SV = SplatBitSize < 32
-                        ? int32_t(ZV << (32-SplatBitSize)) >> (32-SplatBitSize)
-                        : int32_t(ZV);
-        return DAG.getNode(HexagonISD::VSPLAT, dl, VT,
-                           DAG.getConstant(SV, dl, MVT::i32));
-      }
+  if (ElemTy == MVT::i16) {
+    assert(Elem.size() == 2);
+    if (AllConst) {
+      uint32_t V = (Consts[0]->getZExtValue() & 0xFFFF) |
+                   Consts[1]->getZExtValue() << 16;
+      return DAG.getBitcast(MVT::v2i16, DAG.getConstant(V, dl, MVT::i32));
     }
+    SDNode *N = DAG.getMachineNode(Hexagon::A2_combine_ll, dl, MVT::i32,
+                                   { Elem[1], Elem[0] });
+    return DAG.getBitcast(MVT::v2i16, SDValue(N,0));
   }
 
-  // Try to generate COMBINE to build v2i32 vectors.
-  if (VT.getSimpleVT() == MVT::v2i32) {
-    SDValue V0 = BVN->getOperand(0);
-    SDValue V1 = BVN->getOperand(1);
-
-    if (V0.isUndef())
-      V0 = DAG.getConstant(0, dl, MVT::i32);
-    if (V1.isUndef())
-      V1 = DAG.getConstant(0, dl, MVT::i32);
-
-    ConstantSDNode *C0 = dyn_cast<ConstantSDNode>(V0);
-    ConstantSDNode *C1 = dyn_cast<ConstantSDNode>(V1);
-    // If the element isn't a constant, it is in a register:
-    // generate a COMBINE Register Register instruction.
-    if (!C0 || !C1)
-      return DAG.getNode(HexagonISD::COMBINE, dl, VT, V1, V0);
-
-    // If one of the operands is an 8 bit integer constant, generate
-    // a COMBINE Immediate Immediate instruction.
-    if (isInt<8>(C0->getSExtValue()) ||
-        isInt<8>(C1->getSExtValue()))
-      return DAG.getNode(HexagonISD::COMBINE, dl, VT, V1, V0);
+  // First try generating a constant.
+  assert(ElemTy == MVT::i8 && Num == 4);
+  if (AllConst) {
+    int32_t V = (Consts[0]->getZExtValue() & 0xFF) |
+                (Consts[1]->getZExtValue() & 0xFF) << 8 |
+                (Consts[1]->getZExtValue() & 0xFF) << 16 |
+                Consts[2]->getZExtValue() << 24;
+    return DAG.getBitcast(MVT::v4i8, DAG.getConstant(V, dl, MVT::i32));
   }
 
-  // Try to generate a S2_packhl to build v2i16 vectors.
-  if (VT.getSimpleVT() == MVT::v2i16) {
-    for (unsigned i = 0, e = NElts; i != e; ++i) {
-      if (BVN->getOperand(i).isUndef())
-        continue;
-      ConstantSDNode *Cst = dyn_cast<ConstantSDNode>(BVN->getOperand(i));
-      // If the element isn't a constant, it is in a register:
-      // generate a S2_packhl instruction.
-      if (!Cst) {
-        SDValue pack = DAG.getNode(HexagonISD::PACKHL, dl, MVT::v4i16,
-                                   BVN->getOperand(1), BVN->getOperand(0));
-
-        return DAG.getTargetExtractSubreg(Hexagon::isub_lo, dl, MVT::v2i16,
-                                          pack);
-      }
-    }
-  }
-
-  // In the general case, generate a CONST32 or a CONST64 for constant vectors,
-  // and insert_vector_elt for all the other cases.
-  uint64_t Res = 0;
-  unsigned EltSize = Size / NElts;
-  SDValue ConstVal;
-  uint64_t Mask = ~uint64_t(0ULL) >> (64 - EltSize);
-  bool HasNonConstantElements = false;
-
-  for (unsigned i = 0, e = NElts; i != e; ++i) {
-    // LLVM's BUILD_VECTOR operands are in Little Endian mode, whereas Hexagon's
-    // combine, const64, etc. are Big Endian.
-    unsigned OpIdx = NElts - i - 1;
-    SDValue Operand = BVN->getOperand(OpIdx);
-    if (Operand.isUndef())
+  // Then try splat.
+  bool IsSplat = true;
+  for (unsigned i = 0; i != Num; ++i) {
+    if (i == First)
       continue;
+    if (Elem[i] == Elem[First] || Elem[i].getOpcode() == ISD::UNDEF)
+      continue;
+    IsSplat = false;
+    break;
+  }
+  if (IsSplat)
+    return DAG.getNode(HexagonISD::VSPLAT, dl, VecTy, Elem[First]);
 
-    int64_t Val = 0;
-    if (ConstantSDNode *Cst = dyn_cast<ConstantSDNode>(Operand))
-      Val = Cst->getSExtValue();
-    else
-      HasNonConstantElements = true;
+  // Generate
+  //   (zxtb(Elem[0]) | (zxtb(Elem[1]) << 8)) |
+  //   (zxtb(Elem[2]) | (zxtb(Elem[3]) << 8)) << 16
+  SDValue S8 = DAG.getConstant(8, dl, MVT::i32);
+  SDValue S16 = DAG.getConstant(16, dl, MVT::i32);
+  SDValue V0 = DAG.getZExtOrTrunc(Elem[0], dl, MVT::i32);
+  SDValue V1 = DAG.getZExtOrTrunc(Elem[2], dl, MVT::i32);
+  SDValue V2 = DAG.getNode(ISD::SHL, dl, MVT::i32, {Elem[1], S8});
+  SDValue V3 = DAG.getNode(ISD::SHL, dl, MVT::i32, {Elem[3], S8});
+  SDValue V4 = DAG.getNode(ISD::OR, dl, MVT::i32, {V0, V2});
+  SDValue V5 = DAG.getNode(ISD::OR, dl, MVT::i32, {V1, V3});
+  SDValue V6 = DAG.getNode(ISD::SHL, dl, MVT::i32, {V5, S16});
+  SDValue V7 = DAG.getNode(ISD::OR, dl, MVT::i32, {V4, V6});
+  return DAG.getBitcast(MVT::v4i8, V7);
+}
 
-    Val &= Mask;
-    Res = (Res << EltSize) | Val;
+SDValue
+HexagonTargetLowering::buildVector64(ArrayRef<SDValue> Elem, const SDLoc &dl,
+                                     MVT VecTy, SelectionDAG &DAG) const {
+  MVT ElemTy = VecTy.getVectorElementType();
+  assert(VecTy.getVectorNumElements() == Elem.size());
+
+  SmallVector<ConstantSDNode*,8> Consts;
+  bool AllConst = true;
+  for (SDValue V : Elem) {
+    if (V.getOpcode() == ISD::UNDEF)
+      V = DAG.getConstant(0, dl, ElemTy);
+    auto *C = dyn_cast<ConstantSDNode>(V.getNode());
+    Consts.push_back(C);
+    AllConst = AllConst && C != nullptr;
   }
 
-  if (Size > 64)
-    return SDValue();
+  unsigned First, Num = Elem.size();
+  for (First = 0; First != Num; ++First)
+    if (Elem[First].getOpcode() != ISD::UNDEF)
+      break;
+  if (First == Num)
+    return DAG.getUNDEF(VecTy);
 
-  if (Size == 64)
-    ConstVal = DAG.getConstant(Res, dl, MVT::i64);
-  else
-    ConstVal = DAG.getConstant(Res, dl, MVT::i32);
-
-  // When there are non constant operands, add them with INSERT_VECTOR_ELT to
-  // ConstVal, the constant part of the vector.
-  if (HasNonConstantElements) {
-    EVT EltVT = VT.getVectorElementType();
-    SDValue Width = DAG.getConstant(EltVT.getSizeInBits(), dl, MVT::i64);
-    SDValue Shifted = DAG.getNode(ISD::SHL, dl, MVT::i64, Width,
-                                  DAG.getConstant(32, dl, MVT::i64));
-
-    for (unsigned i = 0, e = NElts; i != e; ++i) {
-      // LLVM's BUILD_VECTOR operands are in Little Endian mode, whereas Hexagon
-      // is Big Endian.
-      unsigned OpIdx = NElts - i - 1;
-      SDValue Operand = BVN->getOperand(OpIdx);
-      if (isa<ConstantSDNode>(Operand))
-        // This operand is already in ConstVal.
+  // First try splat if possible.
+  if (ElemTy == MVT::i16) {
+    bool IsSplat = true;
+    for (unsigned i = 0; i != Num; ++i) {
+      if (i == First)
         continue;
-
-      if (VT.getSizeInBits() == 64 &&
-          Operand.getValueSizeInBits() == 32) {
-        SDValue C = DAG.getConstant(0, dl, MVT::i32);
-        Operand = DAG.getNode(HexagonISD::COMBINE, dl, VT, C, Operand);
-      }
-
-      SDValue Idx = DAG.getConstant(OpIdx, dl, MVT::i64);
-      SDValue Offset = DAG.getNode(ISD::MUL, dl, MVT::i64, Idx, Width);
-      SDValue Combined = DAG.getNode(ISD::OR, dl, MVT::i64, Shifted, Offset);
-      const SDValue Ops[] = {ConstVal, Operand, Combined};
-
-      if (VT.getSizeInBits() == 32)
-        ConstVal = DAG.getNode(HexagonISD::INSERTRP, dl, MVT::i32, Ops);
-      else
-        ConstVal = DAG.getNode(HexagonISD::INSERTRP, dl, MVT::i64, Ops);
+      if (Elem[i] == Elem[First] || Elem[i].getOpcode() == ISD::UNDEF)
+        continue;
+      IsSplat = false;
+      break;
     }
+    if (IsSplat)
+      return DAG.getNode(HexagonISD::VSPLAT, dl, VecTy, Elem[First]);
   }
 
-  return DAG.getNode(ISD::BITCAST, dl, VT, ConstVal);
+  // Then try constant.
+  if (AllConst) {
+    uint64_t Val = 0;
+    unsigned W = ElemTy.getSizeInBits();
+    uint64_t Mask = (ElemTy == MVT::i8)  ? 0xFFull
+                  : (ElemTy == MVT::i16) ? 0xFFFFull : 0xFFFFFFFFull;
+    for (unsigned i = 0; i != Num; ++i)
+      Val = (Val << W) | (Consts[i]->getZExtValue() & Mask);
+    SDValue V0 = DAG.getConstant(Val, dl, MVT::i64);
+    return DAG.getBitcast(VecTy, V0);
+  }
+
+  // Build two 32-bit vectors and concatenate.
+  MVT HalfTy = MVT::getVectorVT(ElemTy, Num/2);
+  SDValue L = (ElemTy == MVT::i32)
+                ? Elem[0]
+                : buildVector32({Elem.data(), Num/2}, dl, HalfTy, DAG);
+  SDValue H = (ElemTy == MVT::i32)
+                ? Elem[1]
+                : buildVector32({Elem.data()+Num/2, Num/2}, dl, HalfTy, DAG);
+  unsigned Id = Hexagon::DoubleRegsRegClassID;
+  SDNode *N = DAG.getMachineNode(TargetOpcode::REG_SEQUENCE, dl, VecTy,
+                { DAG.getTargetConstant(Id, dl, MVT::i32),
+                  L, DAG.getTargetConstant(Hexagon::isub_lo, dl, MVT::i32),
+                  H, DAG.getTargetConstant(Hexagon::isub_hi, dl, MVT::i32) });
+  return SDValue(N, 0);
+}
+
+SDValue
+HexagonTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
+  MVT VT = Op.getValueType().getSimpleVT();
+  unsigned BW = VT.getSizeInBits();
+  if (BW == 32 || BW == 64) {
+    SmallVector<SDValue,8> Ops;
+    for (unsigned i = 0, e = Op.getNumOperands(); i != e; ++i)
+      Ops.push_back(Op.getOperand(i));
+    if (BW == 32)
+      return buildVector32(Ops, SDLoc(Op), VT, DAG);
+    return buildVector64(Ops, SDLoc(Op), VT, DAG);
+  }
+
+  return SDValue();
 }
 
 SDValue
