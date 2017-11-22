@@ -2271,6 +2271,24 @@ bool llvm::UpgradeModuleFlags(Module &M) {
         }
       }
     }
+    // Upgrade Objective-C Image Info Section. Removed the whitespce in the
+    // section name so that llvm-lto will not complain about mismatching
+    // module flags that is functionally the same.
+    if (ID->getString() == "Objective-C Image Info Section") {
+      if (auto *Value = dyn_cast_or_null<MDString>(Op->getOperand(2))) {
+        SmallVector<StringRef, 4> ValueComp;
+        Value->getString().split(ValueComp, " ");
+        if (ValueComp.size() != 1) {
+          std::string NewValue;
+          for (auto &S : ValueComp)
+            NewValue += S.str();
+          Metadata *Ops[3] = {Op->getOperand(0), Op->getOperand(1),
+                              MDString::get(M.getContext(), NewValue)};
+          ModFlags->setOperand(I, MDNode::get(M.getContext(), Ops));
+          Changed = true;
+        }
+      }
+    }
   }
 
   // "Objective-C Class Properties" is recently added for Objective-C. We
