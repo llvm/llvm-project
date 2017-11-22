@@ -1127,7 +1127,11 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
     add({DT_MIPS_FLAGS, RHF_NOTPOT});
     add({DT_MIPS_BASE_ADDRESS, Target->getImageBase()});
     add({DT_MIPS_SYMTABNO, InX::DynSymTab->getNumSymbols()});
-    add({DT_MIPS_LOCAL_GOTNO, InX::MipsGot->getLocalEntriesNum()});
+
+    // The number of local GOT entries has not yet been finalized. This value
+    // will be set in writeTo().
+    add({DT_MIPS_LOCAL_GOTNO, uint64_t(0)});
+
     if (const Symbol *B = InX::MipsGot->getFirstGlobalEntry())
       add({DT_MIPS_GOTSYM, B->DynsymIndex});
     else
@@ -1162,7 +1166,10 @@ template <class ELFT> void DynamicSection<ELFT>::writeTo(uint8_t *Buf) {
       P->d_un.d_ptr = E.Sym->getVA();
       break;
     case Entry::PlainInt:
-      P->d_un.d_val = E.Val;
+      if (Config->EMachine == EM_MIPS && E.Tag == DT_MIPS_LOCAL_GOTNO)
+        P->d_un.d_val = InX::MipsGot->getLocalEntriesNum();
+      else
+        P->d_un.d_val = E.Val;
       break;
     }
     ++P;

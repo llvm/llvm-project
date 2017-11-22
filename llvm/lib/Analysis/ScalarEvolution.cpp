@@ -10927,9 +10927,11 @@ ScalarEvolution::computeLoopDisposition(const SCEV *S, const Loop *L) {
     if (!L)
       return LoopVariant;
 
-    // This recurrence is variant w.r.t. L if L contains AR's loop.
-    if (L->contains(AR->getLoop()))
+    // Everything that is not defined at loop entry is variant.
+    if (DT.dominates(L->getHeader(), AR->getLoop()->getHeader()))
       return LoopVariant;
+    assert(!L->contains(AR->getLoop()) && "Containing loop's header does not"
+           " dominate the contained loop's header?");
 
     // This recurrence is invariant w.r.t. L if AR's loop contains L.
     if (AR->getLoop()->contains(L))

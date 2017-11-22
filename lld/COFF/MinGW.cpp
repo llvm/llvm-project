@@ -19,7 +19,7 @@ using namespace llvm;
 using namespace llvm::COFF;
 
 AutoExporter::AutoExporter() {
-  if (Config->Machine == I386)
+  if (Config->Machine == I386) {
     ExcludeSymbols = {
         "__NULL_IMPORT_DESCRIPTOR",
         "__pei386_runtime_relocator",
@@ -35,7 +35,7 @@ AutoExporter::AutoExporter() {
         "_DllEntryPoint@12",
         "_DllMainCRTStartup@12",
     };
-  else
+  } else {
     ExcludeSymbols = {
         "_NULL_IMPORT_DESCRIPTOR",
         "_pei386_runtime_relocator",
@@ -51,6 +51,7 @@ AutoExporter::AutoExporter() {
         "DllEntryPoint",
         "DllMainCRTStartup",
     };
+  }
 
   ExcludeLibs = {
       "libgcc",
@@ -91,25 +92,28 @@ AutoExporter::AutoExporter() {
 bool AutoExporter::shouldExport(Defined *Sym) const {
   if (!Sym || !Sym->isLive() || !Sym->getChunk())
     return false;
+
   // Only allow the symbol kinds that make sense to export; in particular,
   // disallow import symbols.
   if (!isa<DefinedRegular>(Sym) && !isa<DefinedCommon>(Sym))
     return false;
   if (ExcludeSymbols.count(Sym->getName()))
     return false;
+
   // Check that file is non-null before dereferencing it, symbols not
   // originating in regular object files probably shouldn't be exported.
   if (!Sym->getFile())
     return false;
+
   StringRef LibName = sys::path::filename(Sym->getFile()->ParentName);
+
   // Drop the file extension.
   LibName = LibName.substr(0, LibName.rfind('.'));
-  if (ExcludeLibs.count(LibName))
-    return false;
+  if (!LibName.empty())
+    return !ExcludeLibs.count(LibName);
+
   StringRef FileName = sys::path::filename(Sym->getFile()->getName());
-  if (LibName.empty() && ExcludeObjects.count(FileName))
-    return false;
-  return true;
+  return !ExcludeObjects.count(FileName);
 }
 
 void coff::writeDefFile(StringRef Name) {
