@@ -143,6 +143,14 @@ class CodeGenTBAA {
   /// pointer to another node in the type DAG.
   llvm::MDNode *createTBAAScalarType(StringRef Name, llvm::MDNode *Parent);
 
+  /// getTypeInfoHelper - An internal helper function to generate metadata used
+  /// to describe accesses to objects of the given type.
+  llvm::MDNode *getTypeInfoHelper(const Type *Ty);
+
+  /// getBaseTypeInfoHelper - An internal helper function to generate metadata
+  /// used to describe accesses to objects of the given base type.
+  llvm::MDNode *getBaseTypeInfoHelper(const Type *Ty);
+
 public:
   CodeGenTBAA(ASTContext &Ctx, llvm::LLVMContext &VMContext,
               const CodeGenOptions &CGO,

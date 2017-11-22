@@ -5,6 +5,7 @@
 // RUN:     --sysroot=%S/platform 2>&1 \
 // RUN:     | FileCheck -check-prefixes=CHECK,CHECK-AARCH64 %s
 // CHECK: {{.*}}clang{{.*}}" "-cc1"
+// CHECK: "--mrelax-relocations"
 // CHECK: "-munwind-tables"
 // CHECK: "-fuse-init-array"
 // CHECK: "-isysroot" "[[SYSROOT:[^"]+]]"

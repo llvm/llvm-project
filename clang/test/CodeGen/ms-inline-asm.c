@@ -577,17 +577,17 @@ void t40(float a) {
 void t41(unsigned short a) {
 // CHECK-LABEL: define void @t41(i16 zeroext %a)
   __asm mov cs, a;
-// CHECK: mov cs, word ptr $0
+// CHECK: mov cs, $0
   __asm mov ds, a;
-// CHECK: mov ds, word ptr $1
+// CHECK: mov ds, $1
   __asm mov es, a;
-// CHECK: mov es, word ptr $2
+// CHECK: mov es, $2
   __asm mov fs, a;
-// CHECK: mov fs, word ptr $3
+// CHECK: mov fs, $3
   __asm mov gs, a;
-// CHECK: mov gs, word ptr $4
+// CHECK: mov gs, $4
   __asm mov ss, a;
-// CHECK: mov ss, word ptr $5
+// CHECK: mov ss, $5
 // CHECK: "*m,*m,*m,*m,*m,*m,~{dirflag},~{fpsr},~{flags}"(i16* {{.*}}, i16* {{.*}}, i16* {{.*}}, i16* {{.*}}, i16* {{.*}}, i16* {{.*}})
 }
 

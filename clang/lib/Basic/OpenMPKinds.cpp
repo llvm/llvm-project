@@ -935,6 +935,11 @@ void clang::getOpenMPCaptureRegions(
     CaptureRegions.push_back(OMPD_target);
     CaptureRegions.push_back(OMPD_parallel);
     break;
+  case OMPD_target_enter_data:
+  case OMPD_target_exit_data:
+  case OMPD_target_update:
+    CaptureRegions.push_back(OMPD_task);
+    break;
   case OMPD_threadprivate:
   case OMPD_taskyield:
   case OMPD_barrier:
@@ -942,13 +947,10 @@ void clang::getOpenMPCaptureRegions(
   case OMPD_cancellation_point:
   case OMPD_cancel:
   case OMPD_flush:
-  case OMPD_target_enter_data:
-  case OMPD_target_exit_data:
   case OMPD_declare_reduction:
   case OMPD_declare_simd:
   case OMPD_declare_target:
   case OMPD_end_declare_target:
-  case OMPD_target_update:
     llvm_unreachable("OpenMP Directive is not allowed");
   case OMPD_unknown:
     llvm_unreachable("Unknown OpenMP directive");

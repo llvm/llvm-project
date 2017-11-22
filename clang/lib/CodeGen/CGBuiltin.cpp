@@ -7547,82 +7547,16 @@ Value *CodeGenFunction::EmitX86CpuSupports(const CallExpr *E) {
 }
 
 Value *CodeGenFunction::EmitX86CpuSupports(ArrayRef<StringRef> FeatureStrs) {
-  // TODO: When/if this becomes more than x86 specific then use a TargetInfo
-  // based mapping.
   // Processor features and mapping to processor feature value.
-  enum X86Features {
-    CMOV = 0,
-    MMX,
-    POPCNT,
-    SSE,
-    SSE2,
-    SSE3,
-    SSSE3,
-    SSE4_1,
-    SSE4_2,
-    AVX,
-    AVX2,
-    SSE4_A,
-    FMA4,
-    XOP,
-    FMA,
-    AVX512F,
-    BMI,
-    BMI2,
-    AES,
-    PCLMUL,
-    AVX512VL,
-    AVX512BW,
-    AVX512DQ,
-    AVX512CD,
-    AVX512ER,
-    AVX512PF,
-    AVX512VBMI,
-    AVX512IFMA,
-    AVX5124VNNIW,
-    AVX5124FMAPS,
-    AVX512VPOPCNTDQ,
-    MAX
-  };
 
   uint32_t FeaturesMask = 0;
 
   for (const StringRef &FeatureStr : FeatureStrs) {
-    X86Features Feature =
-        StringSwitch<X86Features>(FeatureStr)
-            .Case("cmov", X86Features::CMOV)
-            .Case("mmx", X86Features::MMX)
-            .Case("popcnt", X86Features::POPCNT)
-            .Case("sse", X86Features::SSE)
-            .Case("sse2", X86Features::SSE2)
-            .Case("sse3", X86Features::SSE3)
-            .Case("ssse3", X86Features::SSSE3)
-            .Case("sse4.1", X86Features::SSE4_1)
-            .Case("sse4.2", X86Features::SSE4_2)
-            .Case("avx", X86Features::AVX)
-            .Case("avx2", X86Features::AVX2)
-            .Case("sse4a", X86Features::SSE4_A)
-            .Case("fma4", X86Features::FMA4)
-            .Case("xop", X86Features::XOP)
-            .Case("fma", X86Features::FMA)
-            .Case("avx512f", X86Features::AVX512F)
-            .Case("bmi", X86Features::BMI)
-            .Case("bmi2", X86Features::BMI2)
-            .Case("aes", X86Features::AES)
-            .Case("pclmul", X86Features::PCLMUL)
-            .Case("avx512vl", X86Features::AVX512VL)
-            .Case("avx512bw", X86Features::AVX512BW)
-            .Case("avx512dq", X86Features::AVX512DQ)
-            .Case("avx512cd", X86Features::AVX512CD)
-            .Case("avx512er", X86Features::AVX512ER)
-            .Case("avx512pf", X86Features::AVX512PF)
-            .Case("avx512vbmi", X86Features::AVX512VBMI)
-            .Case("avx512ifma", X86Features::AVX512IFMA)
-            .Case("avx5124vnniw", X86Features::AVX5124VNNIW)
-            .Case("avx5124fmaps", X86Features::AVX5124FMAPS)
-            .Case("avx512vpopcntdq", X86Features::AVX512VPOPCNTDQ)
-            .Default(X86Features::MAX);
-    assert(Feature != X86Features::MAX && "Invalid feature!");
+    unsigned Feature =
+        StringSwitch<unsigned>(FeatureStr)
+#define X86_FEATURE_COMPAT(VAL, ENUM, STR) .Case(STR, VAL)
+#include "llvm/Support/X86TargetParser.def"
+        ;
     FeaturesMask |= (1U << Feature);
   }
 

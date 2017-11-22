@@ -1991,5 +1991,12 @@ TEST(HasExternalFormalLinkage, Basic) {
                       namedDecl(hasExternalFormalLinkage())));
 }
 
+TEST(HasDefaultArgument, Basic) {
+  EXPECT_TRUE(matches("void x(int val = 0) {}", 
+                      parmVarDecl(hasDefaultArgument())));
+  EXPECT_TRUE(notMatches("void x(int val) {}",
+                      parmVarDecl(hasDefaultArgument())));
+}
+
 } // namespace ast_matchers
 } // namespace clang
