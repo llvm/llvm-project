@@ -497,11 +497,14 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
   }
 
  case Matcher::CheckType:
-    assert(cast<CheckTypeMatcher>(N)->getResNo() == 0 &&
-           "FIXME: Add support for CheckType of resno != 0");
-    OS << "OPC_CheckType, "
-       << getEnumName(cast<CheckTypeMatcher>(N)->getType()) << ",\n";
-    return 2;
+    if (cast<CheckTypeMatcher>(N)->getResNo() == 0) {
+      OS << "OPC_CheckType, "
+         << getEnumName(cast<CheckTypeMatcher>(N)->getType()) << ",\n";
+      return 2;
+    }
+    OS << "OPC_CheckTypeRes, " << cast<CheckTypeMatcher>(N)->getResNo()
+       << ", " << getEnumName(cast<CheckTypeMatcher>(N)->getType()) << ",\n";
+    return 3;
 
   case Matcher::CheckChildType:
     OS << "OPC_CheckChild"
