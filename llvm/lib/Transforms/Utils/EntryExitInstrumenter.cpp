@@ -29,7 +29,8 @@ static void insertCall(Function &CurFn, StringRef Func,
       Func == "\01_mcount" ||
       Func == "\01mcount" ||
       Func == "__mcount" ||
-      Func == "_mcount") {
+      Func == "_mcount" ||
+      Func == "__cyg_profile_func_enter_bare") {
     Constant *Fn = M.getOrInsertFunction(Func, Type::getVoidTy(C));
     CallInst::Create(Fn, "", InsertionPt);
     return;

@@ -73,6 +73,10 @@ define void @f6() #6 { entry: ret void }
 ; CHECK-LABEL: define void @f6
 ; CHECK: call void @_mcount
 
+define void @f7() #7 { entry: ret void }
+; CHECK-LABEL: define void @f7
+; CHECK: call void @__cyg_profile_func_enter_bare
+
 
 ; The attributes are "consumed" when the instrumentation is inserted.
 ; CHECK: attributes
@@ -84,3 +88,4 @@ attributes #3 = { "instrument-function-entry-inlined"="\01_mcount" }
 attributes #4 = { "instrument-function-entry-inlined"="\01mcount" }
 attributes #5 = { "instrument-function-entry-inlined"="__mcount" }
 attributes #6 = { "instrument-function-entry-inlined"="_mcount" }
+attributes #7 = { "instrument-function-entry-inlined"="__cyg_profile_func_enter_bare" }

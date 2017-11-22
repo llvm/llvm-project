@@ -1672,7 +1672,8 @@ void CodeGenSchedModels::collectRWResources(ArrayRef<unsigned> Writes,
 
 // Find the processor's resource units for this kind of resource.
 Record *CodeGenSchedModels::findProcResUnits(Record *ProcResKind,
-                                             const CodeGenProcModel &PM) const {
+                                             const CodeGenProcModel &PM,
+                                             ArrayRef<SMLoc> Loc) const {
   if (ProcResKind->isSubClassOf("ProcResourceUnits"))
     return ProcResKind;
 
@@ -1684,7 +1685,7 @@ Record *CodeGenSchedModels::findProcResUnits(Record *ProcResKind,
     if (ProcResDef->getValueAsDef("Kind") == ProcResKind
         && ProcResDef->getValueAsDef("SchedModel") == PM.ModelDef) {
       if (ProcUnitDef) {
-        PrintFatalError(ProcResDef->getLoc(),
+        PrintFatalError(Loc,
                         "Multiple ProcessorResourceUnits associated with "
                         + ProcResKind->getName());
       }
@@ -1695,7 +1696,7 @@ Record *CodeGenSchedModels::findProcResUnits(Record *ProcResKind,
     if (ProcResGroup == ProcResKind
         && ProcResGroup->getValueAsDef("SchedModel") == PM.ModelDef) {
       if (ProcUnitDef) {
-        PrintFatalError((ProcResGroup)->getLoc(),
+        PrintFatalError(Loc,
                         "Multiple ProcessorResourceUnits associated with "
                         + ProcResKind->getName());
       }
@@ -1703,7 +1704,7 @@ Record *CodeGenSchedModels::findProcResUnits(Record *ProcResKind,
     }
   }
   if (!ProcUnitDef) {
-    PrintFatalError(ProcResKind->getLoc(),
+    PrintFatalError(Loc,
                     "No ProcessorResources associated with "
                     + ProcResKind->getName());
   }
@@ -1712,9 +1713,10 @@ Record *CodeGenSchedModels::findProcResUnits(Record *ProcResKind,
 
 // Iteratively add a resource and its super resources.
 void CodeGenSchedModels::addProcResource(Record *ProcResKind,
-                                         CodeGenProcModel &PM) {
+                                         CodeGenProcModel &PM,
+                                         ArrayRef<SMLoc> Loc) {
   while (true) {
-    Record *ProcResUnits = findProcResUnits(ProcResKind, PM);
+    Record *ProcResUnits = findProcResUnits(ProcResKind, PM, Loc);
 
     // See if this ProcResource is already associated with this processor.
     if (is_contained(PM.ProcResourceDefs, ProcResUnits))
@@ -1744,7 +1746,7 @@ void CodeGenSchedModels::addWriteRes(Record *ProcWriteResDef, unsigned PIdx) {
   RecVec ProcResDefs = ProcWriteResDef->getValueAsListOfDefs("ProcResources");
   for (RecIter WritePRI = ProcResDefs.begin(), WritePRE = ProcResDefs.end();
        WritePRI != WritePRE; ++WritePRI) {
-    addProcResource(*WritePRI, ProcModels[PIdx]);
+    addProcResource(*WritePRI, ProcModels[PIdx], ProcWriteResDef->getLoc());
   }
 }
 

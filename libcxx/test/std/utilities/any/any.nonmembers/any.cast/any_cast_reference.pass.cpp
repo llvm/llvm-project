@@ -80,7 +80,7 @@ void checkThrows(any& a)
 {
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
     try {
-        (void)any_cast<Type>(a);
+        TEST_IGNORE_NODISCARD any_cast<Type>(a);
         assert(false);
     } catch (bad_any_cast const &) {
             // do nothing
@@ -89,7 +89,7 @@ void checkThrows(any& a)
     }
 
     try {
-        (void)any_cast<ConstT>(static_cast<any const&>(a));
+        TEST_IGNORE_NODISCARD any_cast<ConstT>(static_cast<any const&>(a));
         assert(false);
     } catch (bad_any_cast const &) {
             // do nothing
@@ -103,7 +103,7 @@ void checkThrows(any& a)
             typename std::remove_reference<Type>::type&&,
             Type
         >::type;
-        (void)any_cast<RefType>(static_cast<any&&>(a));
+        TEST_IGNORE_NODISCARD any_cast<RefType>(static_cast<any&&>(a));
         assert(false);
     } catch (bad_any_cast const &) {
             // do nothing
@@ -111,13 +111,13 @@ void checkThrows(any& a)
         assert(false);
     }
 #else
-    ((void)a);
+    (TEST_IGNORE_NODISCARD a);
 #endif
 }
 
 void test_cast_empty() {
     // None of these operations should allocate.
-    DisableAllocationGuard g; ((void)g);
+    DisableAllocationGuard g; (TEST_IGNORE_NODISCARD g);
     any a;
     checkThrows<int>(a);
 }
