@@ -271,7 +271,7 @@ struct ScudoAllocator {
 
     // Check if hardware CRC32 is supported in the binary and by the platform,
     // if so, opt for the CRC32 hardware version of the checksum.
-    if (computeHardwareCRC32 && testCPUFeature(CRC32CPUFeature))
+    if (&computeHardwareCRC32 && hasHardwareCRC32())
       atomic_store_relaxed(&HashAlgorithm, CRC32Hardware);
 
     SetAllocatorMayReturnNull(common_flags()->allocator_may_return_null);
