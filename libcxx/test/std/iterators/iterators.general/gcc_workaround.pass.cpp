@@ -10,11 +10,12 @@
 // Tests workaround for  https://gcc.gnu.org/bugzilla/show_bug.cgi?id=64816.
 
 #include <string>
+#include "test_macros.h"
 
-void f(const std::string &s) { (void)s.begin(); }
+void f(const std::string &s) { TEST_IGNORE_NODISCARD s.begin(); }
 
 #include <vector>
 
-void AppendTo(const std::vector<char> &v) { (void)v.begin(); }
+void AppendTo(const std::vector<char> &v) { TEST_IGNORE_NODISCARD v.begin(); }
 
 int main() {}

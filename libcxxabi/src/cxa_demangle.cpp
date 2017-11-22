@@ -7,6 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// FIXME: (possibly) incomplete list of features that clang mangles that this
+// file does not yet support:
+//   - enable_if attribute
+//   - decomposition declarations
+//   - C++ modules TS
+
 #define _LIBCPP_NO_EXCEPTIONS
 
 #include "__cxxabi_config.h"

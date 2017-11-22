@@ -172,8 +172,7 @@ void ObjFile::initializeChunks() {
 
 void ObjFile::initializeSymbols() {
   uint32_t NumSymbols = COFFObj->getNumberOfSymbols();
-  SymbolBodies.reserve(NumSymbols);
-  SparseSymbolBodies.resize(NumSymbols);
+  Symbols.resize(NumSymbols);
 
   SmallVector<std::pair<Symbol *, uint32_t>, 8> WeakAliases;
   int32_t LastSectionNumber = 0;
@@ -197,10 +196,7 @@ void ObjFile::initializeSymbols() {
     } else {
       Sym = createDefined(COFFSym, AuxP, IsFirst);
     }
-    if (Sym) {
-      SymbolBodies.push_back(Sym);
-      SparseSymbolBodies[I] = Sym;
-    }
+    Symbols[I] = Sym;
     I += COFFSym.getNumberOfAuxSymbols();
     LastSectionNumber = COFFSym.getSectionNumber();
   }
@@ -208,7 +204,7 @@ void ObjFile::initializeSymbols() {
   for (auto &KV : WeakAliases) {
     Symbol *Sym = KV.first;
     uint32_t Idx = KV.second;
-    checkAndSetWeakAlias(Symtab, this, Sym, SparseSymbolBodies[Idx]);
+    checkAndSetWeakAlias(Symtab, this, Sym, Symbols[Idx]);
   }
 }
 
@@ -301,7 +297,7 @@ void ObjFile::initializeSEH() {
   auto *I = reinterpret_cast<const ulittle32_t *>(A.data());
   auto *E = reinterpret_cast<const ulittle32_t *>(A.data() + A.size());
   for (; I != E; ++I)
-    SEHandlers.insert(SparseSymbolBodies[*I]);
+    SEHandlers.insert(Symbols[*I]);
 }
 
 MachineTypes ObjFile::getMachineType() {

@@ -11,17 +11,18 @@
 
 #include <tuple>
 #include <string>
+#include "test_macros.h"
 
 struct UserType {};
 
 void test_bad_index() {
     std::tuple<long, long, char, std::string, char, UserType, char> t1;
-    (void)std::get<int>(t1); // expected-error@tuple:* {{type not found}}
-    (void)std::get<long>(t1); // expected-note {{requested here}}
-    (void)std::get<char>(t1); // expected-note {{requested here}}
+    TEST_IGNORE_NODISCARD std::get<int>(t1); // expected-error@tuple:* {{type not found}}
+    TEST_IGNORE_NODISCARD std::get<long>(t1); // expected-note {{requested here}}
+    TEST_IGNORE_NODISCARD std::get<char>(t1); // expected-note {{requested here}}
         // expected-error@tuple:* 2 {{type occurs more than once}}
     std::tuple<> t0;
-    (void)std::get<char*>(t0); // expected-node {{requested here}}
+    TEST_IGNORE_NODISCARD std::get<char*>(t0); // expected-node {{requested here}}
         // expected-error@tuple:* 1 {{type not in empty type list}}
 }
 

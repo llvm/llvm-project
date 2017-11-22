@@ -34,7 +34,7 @@ int main()
     {
     typedef std::map<int, double, transparent_less_no_type> M;
 
-    (void)M().count(C2Int{5});
+    TEST_IGNORE_NODISCARD M().count(C2Int{5});
     }
 }
 #endif

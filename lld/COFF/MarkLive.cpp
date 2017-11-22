@@ -63,7 +63,8 @@ void markLive(const std::vector<Chunk *> &Chunks) {
 
     // Mark all symbols listed in the relocation table for this section.
     for (Symbol *B : SC->symbols())
-      AddSym(B);
+      if (B)
+        AddSym(B);
 
     // Mark associative sections if any.
     for (SectionChunk *C : SC->children())

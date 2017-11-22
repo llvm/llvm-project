@@ -1,4 +1,4 @@
-//===--- JSONExpr.h - composable JSON expressions ---------------*- C++ -*-===//
+//===--- JSONExpr.h - JSON expressions, parsing and serialization - C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,6 +7,8 @@
 //
 //===---------------------------------------------------------------------===//
 
+// FIXME: rename to JSON.h now that the scope is wider?
+
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_JSON_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_JSON_H
 
@@ -14,6 +16,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -21,10 +24,12 @@ namespace clang {
 namespace clangd {
 namespace json {
 
-// An Expr is an opaque temporary JSON structure used to compose documents.
+// An Expr is an JSON value of unknown type.
 // They can be copied, but should generally be moved.
 //
-// You can implicitly construct literals from:
+// === Composing expressions ===
+//
+// You can implicitly construct Exprs from:
 //   - strings: std::string, SmallString, formatv, StringRef, char*
 //              (char*, and StringRef are references, not copies!)
 //   - numbers
@@ -39,25 +44,62 @@ namespace json {
 // These can be list-initialized, or used to build up collections in a loop.
 // json::ary(Collection) converts all items in a collection to Exprs.
 //
+// === Inspecting expressions ===
+//
+// Each Expr is one of the JSON kinds:
+//   null    (nullptr_t)
+//   boolean (bool)
+//   number  (double)
+//   string  (StringRef)
+//   array   (json::ary)
+//   object  (json::obj)
+//
+// The kind can be queried directly, or implicitly via the typed accessors:
+//   if (Optional<StringRef> S = E.string())
+//     assert(E.kind() == Expr::String);
+//
+// Array and Object also have typed indexing accessors for easy traversal:
+//   Expected<Expr> E = parse(R"( {"options": {"font": "sans-serif"}} )");
+//   if (json::obj* O = E->object())
+//     if (json::obj* Opts = O->object("options"))
+//       if (Optional<StringRef> Font = Opts->string("font"))
+//         assert(Opts->at("font").kind() == Expr::String);
+//
+// === Serialization ===
+//
 // Exprs can be serialized to JSON:
 //   1) raw_ostream << Expr                    // Basic formatting.
 //   2) raw_ostream << formatv("{0}", Expr)    // Basic formatting.
 //   3) raw_ostream << formatv("{0:2}", Expr)  // Pretty-print with indent 2.
+//
+// And parsed:
+//   Expected<Expr> E = json::parse("[1, 2, null]");
+//   assert(E && E->kind() == Expr::Array);
 class Expr {
 public:
-  class Object;
+  enum Kind {
+    Null,
+    Boolean,
+    Number,
+    String,
+    Array,
+    Object,
+  };
+  class ObjectExpr;
   class ObjectKey;
-  class Array;
+  class ArrayExpr;
 
   // It would be nice to have Expr() be null. But that would make {} null too...
   Expr(const Expr &M) { copyFrom(M); }
   Expr(Expr &&M) { moveFrom(std::move(M)); }
   // "cheating" move-constructor for moving from initializer_list.
   Expr(const Expr &&M) { moveFrom(std::move(M)); }
-  Expr(std::initializer_list<Expr> Elements) : Expr(Array(Elements)) {}
-  Expr(Array &&Elements) : Type(T_Array) { create<Array>(std::move(Elements)); }
-  Expr(Object &&Properties) : Type(T_Object) {
-    create<Object>(std::move(Properties));
+  Expr(std::initializer_list<Expr> Elements) : Expr(ArrayExpr(Elements)) {}
+  Expr(ArrayExpr &&Elements) : Type(T_Array) {
+    create<ArrayExpr>(std::move(Elements));
+  }
+  Expr(ObjectExpr &&Properties) : Type(T_Object) {
+    create<ObjectExpr>(std::move(Properties));
   }
   // Strings: types with value semantics.
   Expr(std::string &&V) : Type(T_String) { create<std::string>(std::move(V)); }
@@ -104,6 +146,61 @@ public:
   }
   ~Expr() { destroy(); }
 
+  Kind kind() const {
+    switch (Type) {
+    case T_Null:
+      return Null;
+    case T_Boolean:
+      return Boolean;
+    case T_Number:
+      return Number;
+    case T_String:
+    case T_StringRef:
+      return String;
+    case T_Object:
+      return Object;
+    case T_Array:
+      return Array;
+    }
+    llvm_unreachable("Unknown kind");
+  }
+
+  // Typed accessors return None/nullptr if the Expr is not of this type.
+  llvm::Optional<std::nullptr_t> null() const {
+    if (LLVM_LIKELY(Type == T_Null))
+      return nullptr;
+    return llvm::None;
+  }
+  llvm::Optional<bool> boolean() const {
+    if (LLVM_LIKELY(Type == T_Null))
+      return as<bool>();
+    return llvm::None;
+  }
+  llvm::Optional<double> number() const {
+    if (LLVM_LIKELY(Type == T_Number))
+      return as<double>();
+    return llvm::None;
+  }
+  llvm::Optional<llvm::StringRef> string() const {
+    if (Type == T_String)
+      return llvm::StringRef(as<std::string>());
+    if (LLVM_LIKELY(Type == T_StringRef))
+      return as<llvm::StringRef>();
+    return llvm::None;
+  }
+  const ObjectExpr *object() const {
+    return LLVM_LIKELY(Type == T_Object) ? &as<ObjectExpr>() : nullptr;
+  }
+  ObjectExpr *object() {
+    return LLVM_LIKELY(Type == T_Object) ? &as<ObjectExpr>() : nullptr;
+  }
+  const ArrayExpr *array() const {
+    return LLVM_LIKELY(Type == T_Array) ? &as<ArrayExpr>() : nullptr;
+  }
+  ArrayExpr *array() {
+    return LLVM_LIKELY(Type == T_Array) ? &as<ArrayExpr>() : nullptr;
+  }
+
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Expr &);
 
 private:
@@ -137,10 +234,8 @@ private:
   mutable ExprType Type;
 
 public:
-  // ObjectKey is a used to capture keys in Expr::Objects. It's like Expr but:
+  // ObjectKey is a used to capture keys in Expr::ObjectExpr. Like Expr but:
   //   - only strings are allowed
-  //   - it's copyable (for std::map)
-  //   - we're slightly more eager to copy, to allow efficient key compares
   //   - it's optimized for the string literal case (Owned == nullptr)
   class ObjectKey {
   public:
@@ -183,12 +278,12 @@ public:
     llvm::StringRef Data;
   };
 
-  class Object : public std::map<ObjectKey, Expr> {
+  class ObjectExpr : public std::map<ObjectKey, Expr> {
   public:
-    explicit Object() {}
+    explicit ObjectExpr() {}
     // Use a custom struct for list-init, because pair forces extra copies.
     struct KV;
-    explicit Object(std::initializer_list<KV> Properties);
+    explicit ObjectExpr(std::initializer_list<KV> Properties);
 
     // Allow [] as if Expr was default-constructible as null.
     Expr &operator[](const ObjectKey &K) {
@@ -199,15 +294,15 @@ public:
     }
   };
 
-  class Array : public std::vector<Expr> {
+  class ArrayExpr : public std::vector<Expr> {
   public:
-    explicit Array() {}
-    explicit Array(std::initializer_list<Expr> Elements) {
+    explicit ArrayExpr() {}
+    explicit ArrayExpr(std::initializer_list<Expr> Elements) {
       reserve(Elements.size());
       for (const Expr &V : Elements)
         emplace_back(std::move(V));
     };
-    template <typename Collection> explicit Array(const Collection &C) {
+    template <typename Collection> explicit ArrayExpr(const Collection &C) {
       for (const auto &V : C)
         emplace_back(V);
     }
@@ -215,23 +310,50 @@ public:
 
 private:
   mutable llvm::AlignedCharArrayUnion<bool, double, llvm::StringRef,
-                                      std::string, Array, Object>
+                                      std::string, ArrayExpr, ObjectExpr>
       Union;
 };
 
-struct Expr::Object::KV {
+bool operator==(const Expr &, const Expr &);
+inline bool operator!=(const Expr &L, const Expr &R) { return !(L == R); }
+inline bool operator==(const Expr::ObjectKey &L, const Expr::ObjectKey &R) {
+  return llvm::StringRef(L) == llvm::StringRef(R);
+}
+inline bool operator!=(const Expr::ObjectKey &L, const Expr::ObjectKey &R) {
+  return !(L == R);
+}
+
+struct Expr::ObjectExpr::KV {
   ObjectKey K;
   Expr V;
 };
 
-inline Expr::Object::Object(std::initializer_list<KV> Properties) {
+inline Expr::ObjectExpr::ObjectExpr(std::initializer_list<KV> Properties) {
   for (const auto &P : Properties)
     emplace(std::move(P.K), std::move(P.V));
 }
 
 // Give Expr::{Object,Array} more convenient names for literal use.
-using obj = Expr::Object;
-using ary = Expr::Array;
+using obj = Expr::ObjectExpr;
+using ary = Expr::ArrayExpr;
+
+llvm::Expected<Expr> parse(llvm::StringRef JSON);
+
+class ParseError : public llvm::ErrorInfo<ParseError> {
+  const char *Msg;
+  unsigned Line, Column, Offset;
+
+public:
+  static char ID;
+  ParseError(const char *Msg, unsigned Line, unsigned Column, unsigned Offset)
+      : Msg(Msg), Line(Line), Column(Column), Offset(Offset) {}
+  void log(llvm::raw_ostream &OS) const override {
+    OS << llvm::formatv("[{0}:{1}, byte={2}]: {3}", Line, Column, Offset, Msg);
+  }
+  std::error_code convertToErrorCode() const override {
+    return llvm::inconvertibleErrorCode();
+  }
+};
 
 } // namespace json
 } // namespace clangd
