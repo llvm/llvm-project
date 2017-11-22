@@ -162,6 +162,7 @@ public:
     case T_Array:
       return Array;
     }
+    llvm_unreachable("Unknown kind");
   }
 
   // Typed accessors return None/nullptr if the Expr is not of this type.

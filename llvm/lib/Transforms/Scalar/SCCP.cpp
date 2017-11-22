@@ -1615,8 +1615,15 @@ static bool tryToReplaceWithConstantRange(SCCPSolver &Solver, Value *V) {
     if (!Icmp || !Solver.isBlockExecutable(Icmp->getParent()))
       continue;
 
-    auto A = Solver.getLatticeValueFor(Icmp->getOperand(0));
-    auto B = Solver.getLatticeValueFor(Icmp->getOperand(1));
+    auto getIcmpLatticeValue = [&](Value *Op) {
+      if (auto *C = dyn_cast<Constant>(Op))
+        return ValueLatticeElement::get(C);
+      return Solver.getLatticeValueFor(Op);
+    };
+
+    ValueLatticeElement A = getIcmpLatticeValue(Icmp->getOperand(0));
+    ValueLatticeElement B = getIcmpLatticeValue(Icmp->getOperand(1));
+
     Constant *C = nullptr;
     if (A.satisfiesPredicate(Icmp->getPredicate(), B))
       C = ConstantInt::getTrue(Icmp->getType());

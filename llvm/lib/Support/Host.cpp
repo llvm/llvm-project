@@ -322,49 +322,6 @@ enum VendorSignatures {
   SIG_AMD = 0x68747541 /* Auth */
 };
 
-// This should be kept in sync with libcc/compiler-rt as it should be used
-// by clang as a proxy for what's in libgcc/compiler-rt.
-enum ProcessorFeatures {
-  FEATURE_CMOV = 0,
-  FEATURE_MMX,
-  FEATURE_POPCNT,
-  FEATURE_SSE,
-  FEATURE_SSE2,
-  FEATURE_SSE3,
-  FEATURE_SSSE3,
-  FEATURE_SSE4_1,
-  FEATURE_SSE4_2,
-  FEATURE_AVX,
-  FEATURE_AVX2,
-  FEATURE_SSE4_A,
-  FEATURE_FMA4,
-  FEATURE_XOP,
-  FEATURE_FMA,
-  FEATURE_AVX512F,
-  FEATURE_BMI,
-  FEATURE_BMI2,
-  FEATURE_AES,
-  FEATURE_PCLMUL,
-  FEATURE_AVX512VL,
-  FEATURE_AVX512BW,
-  FEATURE_AVX512DQ,
-  FEATURE_AVX512CD,
-  FEATURE_AVX512ER,
-  FEATURE_AVX512PF,
-  FEATURE_AVX512VBMI,
-  FEATURE_AVX512IFMA,
-  FEATURE_AVX5124VNNIW,
-  FEATURE_AVX5124FMAPS,
-  FEATURE_AVX512VPOPCNTDQ,
-  // One bit free here.
-  // Features below here are not in libgcc/compiler-rt.
-  FEATURE_MOVBE = 32,
-  FEATURE_ADX,
-  FEATURE_EM64T,
-  FEATURE_CLFLUSHOPT,
-  FEATURE_SHA,
-};
-
 // The check below for i386 was copied from clang's cpuid.h (__get_cpuid_max).
 // Check motivated by bug reports for OpenSSL crashing on CPUs without CPUID
 // support. Consequently, for i386, the presence of CPUID is checked first
@@ -523,7 +480,7 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     *Type = X86::INTEL_i486;
     break;
   case 5:
-    if (Features & (1 << FEATURE_MMX)) {
+    if (Features & (1 << X86::FEATURE_MMX)) {
       *Type = X86::INTEL_PENTIUM_MMX;
       break;
     }
@@ -677,25 +634,25 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       break;
 
     default: // Unknown family 6 CPU, try to guess.
-      if (Features & (1 << FEATURE_AVX512VBMI)) {
+      if (Features & (1 << X86::FEATURE_AVX512VBMI)) {
         *Type = X86::INTEL_COREI7;
         *Subtype = X86::INTEL_COREI7_CANNONLAKE;
         break;
       }
 
-      if (Features & (1 << FEATURE_AVX512VL)) {
+      if (Features & (1 << X86::FEATURE_AVX512VL)) {
         *Type = X86::INTEL_COREI7;
         *Subtype = X86::INTEL_COREI7_SKYLAKE_AVX512;
         break;
       }
 
-      if (Features & (1 << FEATURE_AVX512ER)) {
+      if (Features & (1 << X86::FEATURE_AVX512ER)) {
         *Type = X86::INTEL_KNL; // knl
         break;
       }
 
-      if (Features2 & (1 << (FEATURE_CLFLUSHOPT - 32))) {
-        if (Features2 & (1 << (FEATURE_SHA - 32))) {
+      if (Features2 & (1 << (X86::FEATURE_CLFLUSHOPT - 32))) {
+        if (Features2 & (1 << (X86::FEATURE_SHA - 32))) {
           *Type = X86::INTEL_GOLDMONT;
         } else {
           *Type = X86::INTEL_COREI7;
@@ -703,23 +660,23 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
         }
         break;
       }
-      if (Features2 & (1 << (FEATURE_ADX - 32))) {
+      if (Features2 & (1 << (X86::FEATURE_ADX - 32))) {
         *Type = X86::INTEL_COREI7;
         *Subtype = X86::INTEL_COREI7_BROADWELL;
         break;
       }
-      if (Features & (1 << FEATURE_AVX2)) {
+      if (Features & (1 << X86::FEATURE_AVX2)) {
         *Type = X86::INTEL_COREI7;
         *Subtype = X86::INTEL_COREI7_HASWELL;
         break;
       }
-      if (Features & (1 << FEATURE_AVX)) {
+      if (Features & (1 << X86::FEATURE_AVX)) {
         *Type = X86::INTEL_COREI7;
         *Subtype = X86::INTEL_COREI7_SANDYBRIDGE;
         break;
       }
-      if (Features & (1 << FEATURE_SSE4_2)) {
-        if (Features2 & (1 << (FEATURE_MOVBE - 32))) {
+      if (Features & (1 << X86::FEATURE_SSE4_2)) {
+        if (Features2 & (1 << (X86::FEATURE_MOVBE - 32))) {
           *Type = X86::INTEL_SILVERMONT;
         } else {
           *Type = X86::INTEL_COREI7;
@@ -727,13 +684,13 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
         }
         break;
       }
-      if (Features & (1 << FEATURE_SSE4_1)) {
+      if (Features & (1 << X86::FEATURE_SSE4_1)) {
         *Type = X86::INTEL_CORE2; // "penryn"
         *Subtype = X86::INTEL_CORE2_45;
         break;
       }
-      if (Features & (1 << FEATURE_SSSE3)) {
-        if (Features2 & (1 << (FEATURE_MOVBE - 32))) {
+      if (Features & (1 << X86::FEATURE_SSSE3)) {
+        if (Features2 & (1 << (X86::FEATURE_MOVBE - 32))) {
           *Type = X86::INTEL_BONNELL; // "bonnell"
         } else {
           *Type = X86::INTEL_CORE2; // "core2"
@@ -741,24 +698,24 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
         }
         break;
       }
-      if (Features2 & (1 << (FEATURE_EM64T - 32))) {
+      if (Features2 & (1 << (X86::FEATURE_EM64T - 32))) {
         *Type = X86::INTEL_CORE2; // "core2"
         *Subtype = X86::INTEL_CORE2_65;
         break;
       }
-      if (Features & (1 << FEATURE_SSE3)) {
+      if (Features & (1 << X86::FEATURE_SSE3)) {
         *Type = X86::INTEL_CORE_DUO;
         break;
       }
-      if (Features & (1 << FEATURE_SSE2)) {
+      if (Features & (1 << X86::FEATURE_SSE2)) {
         *Type = X86::INTEL_PENTIUM_M;
         break;
       }
-      if (Features & (1 << FEATURE_SSE)) {
+      if (Features & (1 << X86::FEATURE_SSE)) {
         *Type = X86::INTEL_PENTIUM_III;
         break;
       }
-      if (Features & (1 << FEATURE_MMX)) {
+      if (Features & (1 << X86::FEATURE_MMX)) {
         *Type = X86::INTEL_PENTIUM_II;
         break;
       }
@@ -767,11 +724,11 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     }
     break;
   case 15: {
-    if (Features2 & (1 << (FEATURE_EM64T - 32))) {
+    if (Features2 & (1 << (X86::FEATURE_EM64T - 32))) {
       *Type = X86::INTEL_NOCONA;
       break;
     }
-    if (Features & (1 << FEATURE_SSE3)) {
+    if (Features & (1 << X86::FEATURE_SSE3)) {
       *Type = X86::INTEL_PRESCOTT;
       break;
     }
@@ -813,14 +770,14 @@ static void getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     }
     break;
   case 6:
-    if (Features & (1 << FEATURE_SSE)) {
+    if (Features & (1 << X86::FEATURE_SSE)) {
       *Type = X86::AMD_ATHLON_XP;
       break; // "athlon-xp"
     }
     *Type = X86::AMD_ATHLON;
     break; // "athlon"
   case 15:
-    if (Features & (1 << FEATURE_SSE3)) {
+    if (Features & (1 << X86::FEATURE_SSE3)) {
       *Type = X86::AMD_K8SSE3;
       break; // "k8-sse3"
     }
@@ -882,33 +839,33 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   unsigned EAX, EBX;
 
   if ((EDX >> 15) & 1)
-    Features |= 1 << FEATURE_CMOV;
+    Features |= 1 << X86::FEATURE_CMOV;
   if ((EDX >> 23) & 1)
-    Features |= 1 << FEATURE_MMX;
+    Features |= 1 << X86::FEATURE_MMX;
   if ((EDX >> 25) & 1)
-    Features |= 1 << FEATURE_SSE;
+    Features |= 1 << X86::FEATURE_SSE;
   if ((EDX >> 26) & 1)
-    Features |= 1 << FEATURE_SSE2;
+    Features |= 1 << X86::FEATURE_SSE2;
 
   if ((ECX >> 0) & 1)
-    Features |= 1 << FEATURE_SSE3;
+    Features |= 1 << X86::FEATURE_SSE3;
   if ((ECX >> 1) & 1)
-    Features |= 1 << FEATURE_PCLMUL;
+    Features |= 1 << X86::FEATURE_PCLMUL;
   if ((ECX >> 9) & 1)
-    Features |= 1 << FEATURE_SSSE3;
+    Features |= 1 << X86::FEATURE_SSSE3;
   if ((ECX >> 12) & 1)
-    Features |= 1 << FEATURE_FMA;
+    Features |= 1 << X86::FEATURE_FMA;
   if ((ECX >> 19) & 1)
-    Features |= 1 << FEATURE_SSE4_1;
+    Features |= 1 << X86::FEATURE_SSE4_1;
   if ((ECX >> 20) & 1)
-    Features |= 1 << FEATURE_SSE4_2;
+    Features |= 1 << X86::FEATURE_SSE4_2;
   if ((ECX >> 23) & 1)
-    Features |= 1 << FEATURE_POPCNT;
+    Features |= 1 << X86::FEATURE_POPCNT;
   if ((ECX >> 25) & 1)
-    Features |= 1 << FEATURE_AES;
+    Features |= 1 << X86::FEATURE_AES;
 
   if ((ECX >> 22) & 1)
-    Features2 |= 1 << (FEATURE_MOVBE - 32);
+    Features2 |= 1 << (X86::FEATURE_MOVBE - 32);
 
   // If CPUID indicates support for XSAVE, XRESTORE and AVX, and XGETBV
   // indicates that the AVX registers will be saved and restored on context
@@ -919,49 +876,49 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   bool HasAVX512Save = HasAVX && ((EAX & 0xe0) == 0xe0);
 
   if (HasAVX)
-    Features |= 1 << FEATURE_AVX;
+    Features |= 1 << X86::FEATURE_AVX;
 
   bool HasLeaf7 =
       MaxLeaf >= 0x7 && !getX86CpuIDAndInfoEx(0x7, 0x0, &EAX, &EBX, &ECX, &EDX);
 
   if (HasLeaf7 && ((EBX >> 3) & 1))
-    Features |= 1 << FEATURE_BMI;
+    Features |= 1 << X86::FEATURE_BMI;
   if (HasLeaf7 && ((EBX >> 5) & 1) && HasAVX)
-    Features |= 1 << FEATURE_AVX2;
+    Features |= 1 << X86::FEATURE_AVX2;
   if (HasLeaf7 && ((EBX >> 9) & 1))
-    Features |= 1 << FEATURE_BMI2;
+    Features |= 1 << X86::FEATURE_BMI2;
   if (HasLeaf7 && ((EBX >> 16) & 1) && HasAVX512Save)
-    Features |= 1 << FEATURE_AVX512F;
+    Features |= 1 << X86::FEATURE_AVX512F;
   if (HasLeaf7 && ((EBX >> 17) & 1) && HasAVX512Save)
-    Features |= 1 << FEATURE_AVX512DQ;
+    Features |= 1 << X86::FEATURE_AVX512DQ;
   if (HasLeaf7 && ((EBX >> 19) & 1))
-    Features2 |= 1 << (FEATURE_ADX - 32);
+    Features2 |= 1 << (X86::FEATURE_ADX - 32);
   if (HasLeaf7 && ((EBX >> 21) & 1) && HasAVX512Save)
-    Features |= 1 << FEATURE_AVX512IFMA;
+    Features |= 1 << X86::FEATURE_AVX512IFMA;
   if (HasLeaf7 && ((EBX >> 23) & 1))
-    Features2 |= 1 << (FEATURE_CLFLUSHOPT - 32);
+    Features2 |= 1 << (X86::FEATURE_CLFLUSHOPT - 32);
   if (HasLeaf7 && ((EBX >> 26) & 1) && HasAVX512Save)
-    Features |= 1 << FEATURE_AVX512PF;
+    Features |= 1 << X86::FEATURE_AVX512PF;
   if (HasLeaf7 && ((EBX >> 27) & 1) && HasAVX512Save)
-    Features |= 1 << FEATURE_AVX512ER;
+    Features |= 1 << X86::FEATURE_AVX512ER;
   if (HasLeaf7 && ((EBX >> 28) & 1) && HasAVX512Save)
-    Features |= 1 << FEATURE_AVX512CD;
+    Features |= 1 << X86::FEATURE_AVX512CD;
   if (HasLeaf7 && ((EBX >> 29) & 1))
-    Features2 |= 1 << (FEATURE_SHA - 32);
+    Features2 |= 1 << (X86::FEATURE_SHA - 32);
   if (HasLeaf7 && ((EBX >> 30) & 1) && HasAVX512Save)
-    Features |= 1 << FEATURE_AVX512BW;
+    Features |= 1 << X86::FEATURE_AVX512BW;
   if (HasLeaf7 && ((EBX >> 31) & 1) && HasAVX512Save)
-    Features |= 1 << FEATURE_AVX512VL;
+    Features |= 1 << X86::FEATURE_AVX512VL;
 
   if (HasLeaf7 && ((ECX >> 1) & 1) && HasAVX512Save)
-    Features |= 1 << FEATURE_AVX512VBMI;
+    Features |= 1 << X86::FEATURE_AVX512VBMI;
   if (HasLeaf7 && ((ECX >> 14) & 1) && HasAVX512Save)
-    Features |= 1 << FEATURE_AVX512VPOPCNTDQ;
+    Features |= 1 << X86::FEATURE_AVX512VPOPCNTDQ;
 
   if (HasLeaf7 && ((EDX >> 2) & 1) && HasAVX512Save)
-    Features |= 1 << FEATURE_AVX5124VNNIW;
+    Features |= 1 << X86::FEATURE_AVX5124VNNIW;
   if (HasLeaf7 && ((EDX >> 3) & 1) && HasAVX512Save)
-    Features |= 1 << FEATURE_AVX5124FMAPS;
+    Features |= 1 << X86::FEATURE_AVX5124FMAPS;
 
   unsigned MaxExtLevel;
   getX86CpuIDAndInfo(0x80000000, &MaxExtLevel, &EBX, &ECX, &EDX);
@@ -969,14 +926,14 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   bool HasExtLeaf1 = MaxExtLevel >= 0x80000001 &&
                      !getX86CpuIDAndInfo(0x80000001, &EAX, &EBX, &ECX, &EDX);
   if (HasExtLeaf1 && ((ECX >> 6) & 1))
-    Features |= 1 << FEATURE_SSE4_A;
+    Features |= 1 << X86::FEATURE_SSE4_A;
   if (HasExtLeaf1 && ((ECX >> 11) & 1))
-    Features |= 1 << FEATURE_XOP;
+    Features |= 1 << X86::FEATURE_XOP;
   if (HasExtLeaf1 && ((ECX >> 16) & 1))
-    Features |= 1 << FEATURE_FMA4;
+    Features |= 1 << X86::FEATURE_FMA4;
 
   if (HasExtLeaf1 && ((EDX >> 29) & 1))
-    Features2 |= 1 << (FEATURE_EM64T - 32);
+    Features2 |= 1 << (X86::FEATURE_EM64T - 32);
 
   *FeaturesOut  = Features;
   *Features2Out = Features2;
