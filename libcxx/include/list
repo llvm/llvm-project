@@ -992,6 +992,15 @@ public:
     void push_front(const value_type& __x);
     void push_back(const value_type& __x);
 
+#ifndef _LIBCPP_CXX03_LANG
+    template <class _Arg>
+    _LIBCPP_INLINE_VISIBILITY
+    void __emplace_back(_Arg&& __arg) { emplace_back(_VSTD::forward<_Arg>(__arg)); }
+#else
+    _LIBCPP_INLINE_VISIBILITY
+    void __emplace_back(value_type const& __arg) { push_back(__arg); }
+#endif
+
     iterator insert(const_iterator __p, const value_type& __x);
     iterator insert(const_iterator __p, size_type __n, const value_type& __x);
     template <class _InpIter>
@@ -1189,7 +1198,7 @@ list<_Tp, _Alloc>::list(_InpIter __f, _InpIter __l,
     __get_db()->__insert_c(this);
 #endif
     for (; __f != __l; ++__f)
-        push_back(*__f);
+        __emplace_back(*__f);
 }
 
 template <class _Tp, class _Alloc>
@@ -1202,7 +1211,7 @@ list<_Tp, _Alloc>::list(_InpIter __f, _InpIter __l, const allocator_type& __a,
     __get_db()->__insert_c(this);
 #endif
     for (; __f != __l; ++__f)
-        push_back(*__f);
+        __emplace_back(*__f);
 }
 
 template <class _Tp, class _Alloc>
