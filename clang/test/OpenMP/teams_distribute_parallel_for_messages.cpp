@@ -107,3 +107,12 @@ void test_ordered() {
     ;
 }
 
+void test_cancel() {
+#pragma omp target
+#pragma omp teams distribute parallel for
+  for (int i = 0; i < 16; ++i) {
+#pragma omp cancel for
+    ;
+  }
+}
+
