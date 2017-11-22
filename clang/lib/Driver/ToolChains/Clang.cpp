@@ -1869,7 +1869,7 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   // arg after parsing the '-I' arg.
   bool TakeNextArg = false;
 
-  bool UseRelaxRelocations = ENABLE_X86_RELAX_RELOCATIONS;
+  bool UseRelaxRelocations = C.getDefaultToolChain().useRelaxRelocations();
   const char *MipsTargetFeature = nullptr;
   for (const Arg *A :
        Args.filtered(options::OPT_Wa_COMMA, options::OPT_Xassembler)) {
