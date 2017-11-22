@@ -137,6 +137,7 @@ private:
   CompilerType m_element_type;
   uint64_t m_key_stride;
   uint64_t m_value_stride;
+  uint64_t m_key_stride_padded;
   std::map<lldb::addr_t, uint64_t> m_bitmask_cache;
 };
 
