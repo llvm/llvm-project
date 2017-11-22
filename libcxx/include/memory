@@ -46,6 +46,9 @@ struct pointer_traits<T*>
     static pointer pointer_to(<details>) noexcept;
 };
 
+template <class T> constexpr T* to_address(T* p) noexcept; // C++20
+template <class Ptr> auto to_address(const Ptr& p) noexcept; // C++20
+
 template <class Alloc>
 struct allocator_traits
 {
@@ -1090,13 +1093,14 @@ struct __const_void_pointer<_Ptr, _Alloc, false>
 };
 
 template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
 _Tp*
 __to_raw_pointer(_Tp* __p) _NOEXCEPT
 {
     return __p;
 }
 
+#if _LIBCPP_STD_VER <= 17
 template <class _Pointer>
 inline _LIBCPP_INLINE_VISIBILITY
 typename pointer_traits<_Pointer>::element_type*
@@ -1104,6 +1108,41 @@ __to_raw_pointer(_Pointer __p) _NOEXCEPT
 {
     return _VSTD::__to_raw_pointer(__p.operator->());
 }
+#else
+template <class _Pointer>
+inline _LIBCPP_INLINE_VISIBILITY
+auto
+__to_raw_pointer(const _Pointer& __p) _NOEXCEPT
+-> decltype(pointer_traits<_Pointer>::to_address(__p))
+{
+    return pointer_traits<_Pointer>::to_address(__p);
+}
+
+template <class _Pointer, class... _None>
+inline _LIBCPP_INLINE_VISIBILITY
+auto
+__to_raw_pointer(const _Pointer& __p, _None...) _NOEXCEPT
+{
+    return _VSTD::__to_raw_pointer(__p.operator->());
+}
+
+template <class _Tp>
+inline _LIBCPP_INLINE_VISIBILITY constexpr
+_Tp*
+to_address(_Tp* __p) _NOEXCEPT
+{
+    static_assert(!is_function_v<_Tp>, "_Tp is a function type");
+    return __p;
+}
+
+template <class _Pointer>
+inline _LIBCPP_INLINE_VISIBILITY
+auto
+to_address(const _Pointer& __p) _NOEXCEPT
+{
+    return _VSTD::__to_raw_pointer(__p);
+}
+#endif
 
 template <class _Tp, class = void>
 struct __has_size_type : false_type {};
