@@ -131,7 +131,7 @@ TEST(JSONTest, Parse) {
   Compare(R"(42)", 42);
   Compare(R"(2.5)", 2.5);
   Compare(R"(2e50)", 2e50);
-  Compare(R"(1.2e3456789)", 1.0 / 0.0);
+  Compare(R"(1.2e3456789)", std::numeric_limits<double>::infinity());
 
   Compare(R"("foo")", "foo");
   Compare(R"("\"\\\b\f\n\r\t")", "\"\\\b\f\n\r\t");

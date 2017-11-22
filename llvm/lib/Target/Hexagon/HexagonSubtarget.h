@@ -181,6 +181,15 @@ public:
   /// dependency.
   void adjustSchedDependency(SUnit *def, SUnit *use, SDep& dep) const override;
 
+  unsigned getVectorLength() const {
+    assert(useHVXOps());
+    if (useHVX64BOps())
+      return 64;
+    if (useHVX128BOps())
+      return 128;
+    llvm_unreachable("Invalid HVX vector length settings");
+  }
+
   unsigned getL1CacheLineSize() const;
   unsigned getL1PrefetchDistance() const;
 

@@ -932,6 +932,15 @@ void CheckNoDeepBind(const char *filename, int flag);
 // be used to seed a PRNG. Defaults to blocking like the underlying syscall.
 bool GetRandom(void *buffer, uptr length, bool blocking = true);
 
+// Returns the number of logical processors on the system.
+u32 GetNumberOfCPUs();
+extern u32 NumberOfCPUsCached;
+INLINE u32 GetNumberOfCPUsCached() {
+  if (!NumberOfCPUsCached)
+    NumberOfCPUsCached = GetNumberOfCPUs();
+  return NumberOfCPUsCached;
+}
+
 }  // namespace __sanitizer
 
 inline void *operator new(__sanitizer::operator_new_size_type size,

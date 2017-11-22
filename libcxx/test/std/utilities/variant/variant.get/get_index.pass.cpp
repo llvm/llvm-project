@@ -259,7 +259,7 @@ void test_throws_for_all_value_categories() {
   auto test = [](auto idx, auto &&v) {
     using Idx = decltype(idx);
     try {
-      (void)std::get<Idx::value>(std::forward<decltype(v)>(v));
+      TEST_IGNORE_NODISCARD std::get<Idx::value>(std::forward<decltype(v)>(v));
     } catch (const std::bad_variant_access &) {
       return true;
     } catch (...) { /* ... */

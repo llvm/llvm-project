@@ -17,6 +17,15 @@ define i32 @fun() {
   ret i32 0
 }
 
+; CHECK: D------X @fun2@8
+; CHECK-NEXT: comdat @fun2@8
+$fun2 = comdat any
+define x86_fastcallcc i32 @fun2(i32 inreg %a, i32 inreg %b) comdat {
+entry:
+  %add = add nsw i32 %b, %a
+  ret i32 %add
+}
+
 ; CHECK: H------- _g1
 @g1 = hidden global i32 0
 
@@ -43,11 +52,19 @@ define i32 @fun() {
 @g8 = common global i32 0, align 8
 
 ; CHECK: D------- _g9
-; CHECK-NEXT: comdat g9
+; CHECK-NEXT: comdat _g9
 $g9 = comdat any
 @g9 = global i32 0, comdat
 
-; CHECK: D--WI--- _g10
-; CHECK-NEXT: comdat g9
+; CHECK-NOT: _g10
+$g10 = comdat any
+@g10 = internal global i32 0, comdat
+
+; CHECK: D------- _g11
+; CHECK-NOT: comdat
+@g11 = global i32 0, comdat($g10)
+
+; CHECK: D--WI--- _a1
+; CHECK-NEXT: comdat _g9
 ; CHECK-NEXT: fallback _g9
-@g10 = weak alias i32, i32* @g9
+@a1 = weak alias i32, i32* @g9

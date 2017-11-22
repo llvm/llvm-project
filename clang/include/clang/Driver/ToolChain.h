@@ -316,6 +316,9 @@ public:
   /// mixed dispatch method be used?
   virtual bool UseObjCMixedDispatch() const { return false; }
 
+  /// \brief Check whether to enable x86 relax relocations by default.
+  virtual bool useRelaxRelocations() const;
+
   /// GetDefaultStackProtectorLevel - Get the default stack protector level for
   /// this tool chain (0=off, 1=on, 2=strong, 3=all).
   virtual unsigned GetDefaultStackProtectorLevel(bool KernelOrKext) const {

@@ -1,4 +1,4 @@
-//===--- NestedNameSpecifier.cpp - C++ nested name specifiers -----*- C++ -*-=//
+//===- NestedNameSpecifier.cpp - C++ nested name specifiers ---------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,16 +11,28 @@
 //  a C++ nested-name-specifier.
 //
 //===----------------------------------------------------------------------===//
+
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/PrettyPrinter.h"
+#include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
-#include "llvm/Support/AlignOf.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/LangOptions.h"
+#include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <cassert>
+#include <cstdlib>
+#include <cstring>
 
 using namespace clang;
 
@@ -375,22 +387,20 @@ NestedNameSpecifierLoc::getDataLength(NestedNameSpecifier *Qualifier) {
   return Length;
 }
 
-namespace {
-  /// \brief Load a (possibly unaligned) source location from a given address
-  /// and offset.
-  SourceLocation LoadSourceLocation(void *Data, unsigned Offset) {
-    unsigned Raw;
-    memcpy(&Raw, static_cast<char *>(Data) + Offset, sizeof(unsigned));
-    return SourceLocation::getFromRawEncoding(Raw);
-  }
+/// \brief Load a (possibly unaligned) source location from a given address
+/// and offset.
+static SourceLocation LoadSourceLocation(void *Data, unsigned Offset) {
+  unsigned Raw;
+  memcpy(&Raw, static_cast<char *>(Data) + Offset, sizeof(unsigned));
+  return SourceLocation::getFromRawEncoding(Raw);
+}
   
-  /// \brief Load a (possibly unaligned) pointer from a given address and
-  /// offset.
-  void *LoadPointer(void *Data, unsigned Offset) {
-    void *Result;
-    memcpy(&Result, static_cast<char *>(Data) + Offset, sizeof(void*));
-    return Result;
-  }
+/// \brief Load a (possibly unaligned) pointer from a given address and
+/// offset.
+static void *LoadPointer(void *Data, unsigned Offset) {
+  void *Result;
+  memcpy(&Result, static_cast<char *>(Data) + Offset, sizeof(void*));
+  return Result;
 }
 
 SourceRange NestedNameSpecifierLoc::getSourceRange() const {
@@ -446,53 +456,49 @@ TypeLoc NestedNameSpecifierLoc::getTypeLoc() const {
   return TypeLoc(Qualifier->getAsType(), TypeData);
 }
 
-namespace {
-  void Append(char *Start, char *End, char *&Buffer, unsigned &BufferSize,
+static void Append(char *Start, char *End, char *&Buffer, unsigned &BufferSize,
               unsigned &BufferCapacity) {
-    if (Start == End)
-      return;
+  if (Start == End)
+    return;
 
-    if (BufferSize + (End - Start) > BufferCapacity) {
-      // Reallocate the buffer.
-      unsigned NewCapacity = std::max(
-          (unsigned)(BufferCapacity ? BufferCapacity * 2 : sizeof(void *) * 2),
-          (unsigned)(BufferSize + (End - Start)));
-      char *NewBuffer = static_cast<char *>(malloc(NewCapacity));
-      if (BufferCapacity) {
-        memcpy(NewBuffer, Buffer, BufferSize);
-        free(Buffer);
-      }
-      Buffer = NewBuffer;
-      BufferCapacity = NewCapacity;
+  if (BufferSize + (End - Start) > BufferCapacity) {
+    // Reallocate the buffer.
+    unsigned NewCapacity = std::max(
+        (unsigned)(BufferCapacity ? BufferCapacity * 2 : sizeof(void *) * 2),
+        (unsigned)(BufferSize + (End - Start)));
+    char *NewBuffer = static_cast<char *>(malloc(NewCapacity));
+    if (BufferCapacity) {
+      memcpy(NewBuffer, Buffer, BufferSize);
+      free(Buffer);
     }
-    
-    memcpy(Buffer + BufferSize, Start, End - Start);
-    BufferSize += End-Start;
+    Buffer = NewBuffer;
+    BufferCapacity = NewCapacity;
   }
+
+  memcpy(Buffer + BufferSize, Start, End - Start);
+  BufferSize += End-Start;
+}
   
-  /// \brief Save a source location to the given buffer.
-  void SaveSourceLocation(SourceLocation Loc, char *&Buffer,
-                          unsigned &BufferSize, unsigned &BufferCapacity) {
-    unsigned Raw = Loc.getRawEncoding();
-    Append(reinterpret_cast<char *>(&Raw),
-           reinterpret_cast<char *>(&Raw) + sizeof(unsigned),
-           Buffer, BufferSize, BufferCapacity);
-  }
+/// \brief Save a source location to the given buffer.
+static void SaveSourceLocation(SourceLocation Loc, char *&Buffer,
+                               unsigned &BufferSize, unsigned &BufferCapacity) {
+  unsigned Raw = Loc.getRawEncoding();
+  Append(reinterpret_cast<char *>(&Raw),
+         reinterpret_cast<char *>(&Raw) + sizeof(unsigned),
+         Buffer, BufferSize, BufferCapacity);
+}
   
-  /// \brief Save a pointer to the given buffer.
-  void SavePointer(void *Ptr, char *&Buffer, unsigned &BufferSize,
-                   unsigned &BufferCapacity) {
-    Append(reinterpret_cast<char *>(&Ptr),
-           reinterpret_cast<char *>(&Ptr) + sizeof(void *),
-           Buffer, BufferSize, BufferCapacity);
-  }
+/// \brief Save a pointer to the given buffer.
+static void SavePointer(void *Ptr, char *&Buffer, unsigned &BufferSize,
+                        unsigned &BufferCapacity) {
+  Append(reinterpret_cast<char *>(&Ptr),
+         reinterpret_cast<char *>(&Ptr) + sizeof(void *),
+         Buffer, BufferSize, BufferCapacity);
 }
 
 NestedNameSpecifierLocBuilder::
 NestedNameSpecifierLocBuilder(const NestedNameSpecifierLocBuilder &Other) 
-  : Representation(Other.Representation), Buffer(nullptr),
-    BufferSize(0), BufferCapacity(0)
-{
+    : Representation(Other.Representation) {
   if (!Other.Buffer)
     return;
   

@@ -43,7 +43,7 @@ int main()
 #ifndef TEST_HAS_NO_EXCEPTIONS
     try
     {
-        (void)lk.try_lock();
+        TEST_IGNORE_NODISCARD lk.try_lock();
         assert(false);
     }
     catch (std::system_error& e)
@@ -59,7 +59,7 @@ int main()
 #ifndef TEST_HAS_NO_EXCEPTIONS
     try
     {
-        (void)lk.try_lock();
+        TEST_IGNORE_NODISCARD lk.try_lock();
         assert(false);
     }
     catch (std::system_error& e)

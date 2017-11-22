@@ -1101,6 +1101,11 @@ bool GetRandom(void *buffer, uptr length, bool blocking) {
   UNIMPLEMENTED();
 }
 
+// FIXME: implement on this platform.
+u32 GetNumberOfCPUs() {
+  UNIMPLEMENTED();
+}
+
 }  // namespace __sanitizer
 
 #endif  // _WIN32

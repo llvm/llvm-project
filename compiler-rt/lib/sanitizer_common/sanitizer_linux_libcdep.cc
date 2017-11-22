@@ -37,7 +37,12 @@
 #if SANITIZER_FREEBSD
 #include <pthread_np.h>
 #include <osreldate.h>
+#include <sys/sysctl.h>
 #define pthread_getattr_np pthread_attr_get_np
+#endif
+
+#if SANITIZER_NETBSD
+#include <sys/sysctl.h>
 #endif
 
 #if SANITIZER_LINUX
@@ -46,6 +51,16 @@
 
 #if SANITIZER_ANDROID
 #include <android/api-level.h>
+#if !defined(CPU_COUNT) && !defined(__aarch64__)
+#include <dirent.h>
+#include <fcntl.h>
+struct __sanitizer::linux_dirent {
+  long           d_ino;
+  off_t          d_off;
+  unsigned short d_reclen;
+  char           d_name[];
+};
+#endif
 #endif
 
 #if !SANITIZER_ANDROID
@@ -530,6 +545,59 @@ uptr GetRSS() {
   while (*pos >= '0' && *pos <= '9')
     rss = rss * 10 + *pos++ - '0';
   return rss * GetPageSizeCached();
+}
+
+// sysconf(_SC_NPROCESSORS_{CONF,ONLN}) cannot be used as they allocate memory.
+u32 GetNumberOfCPUs() {
+#if SANITIZER_FREEBSD || SANITIZER_NETBSD
+  u32 ncpu;
+  int req[2];
+  size_t len = sizeof(ncpu);
+  req[0] = CTL_HW;
+  req[1] = HW_NCPU;
+  CHECK_EQ(sysctl(req, 2, &ncpu, &len, NULL, 0), 0);
+  return ncpu;
+#elif SANITIZER_ANDROID && !defined(CPU_COUNT) && !defined(__aarch64__)
+  // Fall back to /sys/devices/system/cpu on Android when cpu_set_t doesn't
+  // exist in sched.h. That is the case for toolchains generated with older
+  // NDKs.
+  // This code doesn't work on AArch64 because internal_getdents makes use of
+  // the 64bit getdents syscall, but cpu_set_t seems to always exist on AArch64.
+  uptr fd = internal_open("/sys/devices/system/cpu", O_RDONLY | O_DIRECTORY);
+  if (internal_iserror(fd))
+    return 0;
+  InternalScopedBuffer<u8> buffer(4096);
+  uptr bytes_read = buffer.size();
+  uptr n_cpus = 0;
+  u8 *d_type;
+  struct linux_dirent *entry = (struct linux_dirent *)&buffer[bytes_read];
+  while (true) {
+    if ((u8 *)entry >= &buffer[bytes_read]) {
+      bytes_read = internal_getdents(fd, (struct linux_dirent *)buffer.data(),
+                                     buffer.size());
+      if (internal_iserror(bytes_read) || !bytes_read)
+        break;
+      entry = (struct linux_dirent *)buffer.data();
+    }
+    d_type = (u8 *)entry + entry->d_reclen - 1;
+    if (d_type >= &buffer[bytes_read] ||
+        (u8 *)&entry->d_name[3] >= &buffer[bytes_read])
+      break;
+    if (entry->d_ino != 0 && *d_type == DT_DIR) {
+      if (entry->d_name[0] == 'c' && entry->d_name[1] == 'p' &&
+          entry->d_name[2] == 'u' &&
+          entry->d_name[3] >= '0' && entry->d_name[3] <= '9')
+        n_cpus++;
+    }
+    entry = (struct linux_dirent *)(((u8 *)entry) + entry->d_reclen);
+  }
+  internal_close(fd);
+  return n_cpus;
+#else
+  cpu_set_t CPUs;
+  CHECK_EQ(sched_getaffinity(0, sizeof(cpu_set_t), &CPUs), 0);
+  return CPU_COUNT(&CPUs);
+#endif
 }
 
 #if SANITIZER_LINUX

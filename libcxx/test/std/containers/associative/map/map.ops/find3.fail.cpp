@@ -34,7 +34,7 @@ int main()
     {
     typedef std::map<int, double, transparent_less_not_a_type> M;
 
-    (void)M().find(C2Int{5});
+    TEST_IGNORE_NODISCARD M().find(C2Int{5});
     }
 }
 #endif
