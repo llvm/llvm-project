@@ -53,21 +53,28 @@ void MisplacedOperatorInStrlenInAllocCheck::registerMatchers(
       callExpr(callee(Alloc0Func), hasArgument(0, BadArg)).bind("Alloc"), this);
   Finder->addMatcher(
       callExpr(callee(Alloc1Func), hasArgument(1, BadArg)).bind("Alloc"), this);
+  Finder->addMatcher(
+      cxxNewExpr(isArray(), hasArraySize(BadArg)).bind("Alloc"), this);
 }
 
 void MisplacedOperatorInStrlenInAllocCheck::check(
     const MatchFinder::MatchResult &Result) {
-  const auto *Alloc = Result.Nodes.getNodeAs<CallExpr>("Alloc");
+  const Expr *Alloc = Result.Nodes.getNodeAs<CallExpr>("Alloc");
+  if (!Alloc)
+    Alloc = Result.Nodes.getNodeAs<CXXNewExpr>("Alloc");
+  assert(Alloc && "Matched node bound by 'Alloc' shoud be either 'CallExpr'"
+         " or 'CXXNewExpr'");
+
   const auto *StrLen = Result.Nodes.getNodeAs<CallExpr>("StrLen");
   const auto *BinOp = Result.Nodes.getNodeAs<BinaryOperator>("BinOp");
 
   const StringRef StrLenText = Lexer::getSourceText(
       CharSourceRange::getTokenRange(StrLen->getSourceRange()),
       *Result.SourceManager, getLangOpts());
-  const StringRef StrLenBegin = StrLenText.substr(0, StrLenText.find('(') + 1);
   const StringRef Arg0Text = Lexer::getSourceText(
       CharSourceRange::getTokenRange(StrLen->getArg(0)->getSourceRange()),
       *Result.SourceManager, getLangOpts());
+  const StringRef StrLenBegin = StrLenText.substr(0, StrLenText.find(Arg0Text));
   const StringRef StrLenEnd = StrLenText.substr(
       StrLenText.find(Arg0Text) + Arg0Text.size(), StrLenText.size());
 
