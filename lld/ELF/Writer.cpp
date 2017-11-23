@@ -1511,10 +1511,26 @@ template <class ELFT> std::vector<PhdrEntry *> Writer<ELFT>::createPhdrs() {
 
   // PT_GNU_RELRO includes all sections that should be marked as
   // read-only by dynamic linker after proccessing relocations.
+  // Current dynamic loaders only support one PT_GNU_RELRO PHDR, give
+  // an error message if more than one PT_GNU_RELRO PHDR is required.
   PhdrEntry *RelRo = make<PhdrEntry>(PT_GNU_RELRO, PF_R);
-  for (OutputSection *Sec : OutputSections)
-    if (needsPtLoad(Sec) && isRelroSection(Sec))
-      RelRo->add(Sec);
+  bool InRelroPhdr = false;
+  bool IsRelroFinished = false;
+  for (OutputSection *Sec : OutputSections) {
+    if (!needsPtLoad(Sec))
+      continue;
+    if (isRelroSection(Sec)) {
+      InRelroPhdr = true;
+      if (!IsRelroFinished)
+        RelRo->add(Sec);
+      else
+        error("section: " + Sec->Name + " is not contiguous with other relro" +
+              " sections");
+    } else if (InRelroPhdr) {
+      InRelroPhdr = false;
+      IsRelroFinished = true;
+    }
+  }
   if (RelRo->FirstSec)
     Ret.push_back(RelRo);
 
