@@ -270,6 +270,11 @@ namespace HexagonISD {
     }
 
   protected:
+    SDValue buildVector32(ArrayRef<SDValue> Elem, const SDLoc &dl, MVT VecTy,
+                          SelectionDAG &DAG) const;
+    SDValue buildVector64(ArrayRef<SDValue> Elem, const SDLoc &dl, MVT VecTy,
+                          SelectionDAG &DAG) const;
+
     std::pair<const TargetRegisterClass*, uint8_t>
     findRepresentativeClass(const TargetRegisterInfo *TRI, MVT VT)
         const override;

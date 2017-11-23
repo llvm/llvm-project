@@ -1525,7 +1525,7 @@ struct MultiClass {
 };
 
 class RecordKeeper {
-  using RecordMap = std::map<StringRef, std::unique_ptr<Record>>;
+  using RecordMap = std::map<std::string, std::unique_ptr<Record>>;
   RecordMap Classes, Defs;
 
 public:

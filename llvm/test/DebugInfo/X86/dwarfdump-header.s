@@ -22,6 +22,14 @@ str_LT_5b:
         .section .debug_str.dwo,"MS",@progbits,1
 dwo_TU_5:
         .asciz "V5_split_type_unit"
+dwo_producer:
+        .asciz "Handmade DWO producer"
+dwo_CU_5:
+        .asciz "V5_dwo_compile_unit"
+dwo_LT_5a:
+        .asciz "DWODirectory5a"
+dwo_LT_5b:
+        .asciz "DWODirectory5b"
 
 # All CUs/TUs use the same abbrev section for simplicity.
         .section .debug_abbrev,"",@progbits
@@ -61,6 +69,8 @@ dwo_TU_5:
         .byte 0x0e  # DW_FORM_strp
         .byte 0x03  # DW_AT_name
         .byte 0x0e  # DW_FORM_strp
+        .byte 0x10  # DW_AT_stmt_list
+        .byte 0x17  # DW_FORM_sec_offset
         .byte 0x00  # EOM(1)
         .byte 0x00  # EOM(2)
         .byte 0x02  # Abbrev code
@@ -116,6 +126,29 @@ CU_5_end:
 
 # CHECK: 0x00000019: Compile Unit: length = 0x00000016 version = 0x0005 unit_type = DW_UT_compile abbr_offset = 0x0000 addr_size = 0x08 (next unit at 0x00000033)
 # CHECK: 0x00000025: DW_TAG_compile_unit
+
+        .section .debug_info.dwo,"",@progbits
+# CHECK-LABEL: .debug_info.dwo
+
+# DWARF v5 split CU header.
+        .long  CU_split_5_end-CU_split_5_version # Length of Unit
+CU_split_5_version:
+        .short 5                # DWARF version number
+        .byte 5                 # DWARF Unit Type
+        .byte 8                 # Address Size (in bytes)
+        .long .debug_abbrev.dwo # Offset Into Abbrev. Section
+# The split compile-unit DIE, with DW_AT_producer, DW_AT_name, DW_AT_stmt_list.
+        .byte 1
+        .long dwo_producer
+        .long dwo_CU_5
+        .long dwo_LH_5_start
+        .byte 0 # NULL
+CU_split_5_end:
+
+# CHECK: 0x00000000: Compile Unit: length = 0x00000016 version = 0x0005 unit_type = DW_UT_split_compile abbr_offset = 0x0000 addr_size = 0x08 (next unit at 0x0000001a)
+# CHECK: 0x0000000c: DW_TAG_compile_unit
+# CHECK-NEXT: DW_AT_producer {{.*}} "Handmade DWO producer"
+# CHECK-NEXT: DW_AT_name {{.*}} "V5_dwo_compile_unit"
 
         .section .debug_types,"",@progbits
 # CHECK-LABEL: .debug_types contents:
@@ -298,4 +331,78 @@ LH_5_end:
 # CHECK-NOT: include_directories
 # CHECK: file_names[  1]    1 0x00000051 0x00000052 File5a{{$}}
 # CHECK: file_names[  2]    2 0x00000053 0x00000054 File5b{{$}}
+# CHECK-NOT: file_names
+
+	.section .debug_line.dwo,"",@progbits
+# CHECK-LABEL: .debug_line.dwo
+
+# DWARF v5 DWO line-table header.
+dwo_LH_5_start:
+        .long   dwo_LH_5_end-dwo_LH_5_version   # Length of Unit
+dwo_LH_5_version:
+        .short  5               # DWARF version number
+        .byte   8               # Address Size
+        .byte   0               # Segment Selector Size
+        .long   dwo_LH_5_header_end-dwo_LH_5_params # Length of Prologue
+dwo_LH_5_params:
+        .byte   1               # Minimum Instruction Length
+        .byte   1               # Maximum Operations per Instruction
+        .byte   1               # Default is_stmt
+        .byte   -5              # Line Base
+        .byte   14              # Line Range
+        .byte   13              # Opcode Base
+        .byte   0               # Standard Opcode Lengths
+        .byte   1
+        .byte   1
+        .byte   1
+        .byte   1
+        .byte   0
+        .byte   0
+        .byte   0
+        .byte   1
+        .byte   0
+        .byte   0
+        .byte   1
+        # Directory table format
+        .byte   1               # One element per directory entry
+        .byte   1               # DW_LNCT_path
+        .byte   0x0e            # DW_FORM_strp (-> .debug_str.dwo)
+        # Directory table entries
+        .byte   2               # Two directories
+        .long   dwo_LT_5a
+        .long   dwo_LT_5b
+        # File table format
+        .byte   4               # Four elements per file entry
+        .byte   1               # DW_LNCT_path
+        .byte   0x08            # DW_FORM_string
+        .byte   2               # DW_LNCT_directory_index
+        .byte   0x0b            # DW_FORM_data1
+        .byte   3               # DW_LNCT_timestamp
+        .byte   0x0f            # DW_FORM_udata
+        .byte   4               # DW_LNCT_size
+        .byte   0x0f            # DW_FORM_udata
+        # File table entries
+        .byte   2               # Two files
+        .asciz "DWOFile5a"
+        .byte   1
+        .byte   0x15
+        .byte   0x25
+        .asciz "DWOFile5b"
+        .byte   2
+        .byte   0x35
+        .byte   0x45
+dwo_LH_5_header_end:
+        # Line number program, which is empty.
+dwo_LH_5_end:
+
+# CHECK: Line table prologue:
+# CHECK: version: 5
+# CHECK: address_size: 8
+# CHECK: seg_select_size: 0
+# CHECK: max_ops_per_inst: 1
+# CHECK: include_directories[  1] = 'DWODirectory5a'
+# CHECK: include_directories[  2] = 'DWODirectory5b'
+# CHECK-NOT: include_directories
+# CHECK: file_names[  1]    1 0x00000015 0x00000025 DWOFile5a{{$}}
+# CHECK: file_names[  2]    2 0x00000035 0x00000045 DWOFile5b{{$}}
 # CHECK-NOT: file_names

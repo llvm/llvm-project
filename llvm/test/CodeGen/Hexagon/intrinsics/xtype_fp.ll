@@ -342,7 +342,7 @@ declare float @llvm.hexagon.F2.sfimm.n(i32)
 define float @F2_sfimm_n() {
   %z = call float @llvm.hexagon.F2.sfimm.n(i32 0)
   ret float %z
-} 
+}
 ; CHECK: = sfmake(#0):neg
 
 declare double @llvm.hexagon.F2.dfimm.p(i32)

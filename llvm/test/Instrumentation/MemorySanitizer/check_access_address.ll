@@ -26,3 +26,25 @@ entry:
 ; CHECK-LABEL: @ByValArgumentShadowSmallAlignment
 ; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* {{.*}}, i8* {{.*}}, i64 2, i32 2, i1 false)
 ; CHECK: ret i16
+
+
+; Check instrumentation of stores. The check must precede the shadow store.
+
+define void @Store(i32* nocapture %p, i32 %x) nounwind uwtable sanitize_memory {
+entry:
+  store i32 %x, i32* %p, align 4
+  ret void
+}
+
+; CHECK-LABEL: @Store
+; CHECK: load {{.*}} @__msan_param_tls
+; CHECK: icmp
+; CHECK: br i1
+; CHECK: <label>
+; CHECK: call void @__msan_warning_noreturn
+; CHECK: <label>
+; CHECK: store
+; CHECK: store i32 %x
+; CHECK: ret void
+
+

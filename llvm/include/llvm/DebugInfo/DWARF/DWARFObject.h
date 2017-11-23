@@ -10,6 +10,7 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFOBJECT_H
 #define LLVM_DEBUGINFO_DWARF_DWARFOBJECT_H
 
+#include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
 #include "llvm/Object/ObjectFile.h"
 
