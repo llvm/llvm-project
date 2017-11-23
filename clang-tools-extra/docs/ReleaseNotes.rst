@@ -57,6 +57,9 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- The 'misc-argument-comment' check was renamed to `bugprone-argument-comment
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-argument-comment.html>`_
+
 - The 'misc-string-constructor' check was renamed to `bugprone-string-constructor
   <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-string-constructor.html>`_
 

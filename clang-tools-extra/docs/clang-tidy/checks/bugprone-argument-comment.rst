@@ -1,7 +1,7 @@
-.. title:: clang-tidy - misc-argument-comment
+.. title:: clang-tidy - bugprone-argument-comment
 
-misc-argument-comment
-=====================
+bugprone-argument-comment
+=========================
 
 Checks that argument comments match parameter names.
 

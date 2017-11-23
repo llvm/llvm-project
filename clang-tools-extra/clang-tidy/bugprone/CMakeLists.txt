@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS support)
 
 add_clang_library(clangTidyBugproneModule
+  ArgumentCommentCheck.cpp
   BugproneTidyModule.cpp
   CopyConstructorInitCheck.cpp
   IntegerDivisionCheck.cpp
