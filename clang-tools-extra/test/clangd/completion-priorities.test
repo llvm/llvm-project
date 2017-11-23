@@ -25,7 +25,7 @@ Content-Length: 151
 # CHECK-NEXT:        "insertTextFormat": 1,
 # CHECK-NEXT:        "kind": 2,
 # CHECK-NEXT:        "label": "priv()",
-# CHECK-NEXT:        "sortText": "000034priv"
+# CHECK-NEXT:        "sortText": "{{.*}}priv"
 # CHECK-NEXT:      },
 # CHECK-NEXT:      {
 # CHECK-NEXT:        "detail": "void",
@@ -34,7 +34,7 @@ Content-Length: 151
 # CHECK-NEXT:        "insertTextFormat": 1,
 # CHECK-NEXT:        "kind": 2,
 # CHECK-NEXT:        "label": "prot()",
-# CHECK-NEXT:        "sortText": "000034prot"
+# CHECK-NEXT:        "sortText": "{{.*}}prot"
 # CHECK-NEXT:      },
 # CHECK-NEXT:      {
 # CHECK-NEXT:        "detail": "void",
@@ -43,7 +43,7 @@ Content-Length: 151
 # CHECK-NEXT:        "insertTextFormat": 1,
 # CHECK-NEXT:        "kind": 2,
 # CHECK-NEXT:        "label": "pub()",
-# CHECK-NEXT:        "sortText": "000034pub"
+# CHECK-NEXT:        "sortText": "{{.*}}pub"
 # CHECK-NEXT:      },
 Content-Length: 151
 
@@ -60,29 +60,11 @@ Content-Length: 151
 # CHECK-NEXT:        "insertTextFormat": 1,
 # CHECK-NEXT:        "kind": 2,
 # CHECK-NEXT:        "label": "pub()",
-# CHECK-NEXT:        "sortText": "000034pub"
-# CHECK-NEXT:      },
-# priv() and prot() are at the end of the list
-# CHECK-NEXT:      {
-#      CHECK:        "detail": "void",
-#      CHECK:        "filterText": "priv",
-# CHECK-NEXT:        "insertText": "priv",
-# CHECK-NEXT:        "insertTextFormat": 1,
-# CHECK-NEXT:        "kind": 2,
-# CHECK-NEXT:        "label": "priv()",
-# CHECK-NEXT:        "sortText": "200034priv"
-# CHECK-NEXT:      },
-# CHECK-NEXT:      {
-# CHECK-NEXT:        "detail": "void",
-# CHECK-NEXT:        "filterText": "prot",
-# CHECK-NEXT:        "insertText": "prot",
-# CHECK-NEXT:        "insertTextFormat": 1,
-# CHECK-NEXT:        "kind": 2,
-# CHECK-NEXT:        "label": "prot()",
-# CHECK-NEXT:        "sortText": "200034prot"
+# CHECK-NEXT:        "sortText": "{{.*}}pub"
 # CHECK-NEXT:      }
-# CHECK-NEXT:    ]
-# CHECK-NEXT:  }
+#  CHECK-NOT:        "label": "priv()",
+#  CHECK-NOT:        "label": "prot()",
+#      CHECK:    ]
 Content-Length: 58
 
 {"jsonrpc":"2.0","id":4,"method":"shutdown","params":null}

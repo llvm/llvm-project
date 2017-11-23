@@ -1,7 +1,6 @@
 set(LLVM_LINK_COMPONENTS support)
 
 add_clang_library(clangTidyMiscModule
-  ArgumentCommentCheck.cpp
   AssertSideEffectCheck.cpp
   ForwardingReferenceOverloadCheck.cpp
   LambdaFunctionNameCheck.cpp
@@ -31,7 +30,6 @@ add_clang_library(clangTidyMiscModule
   SizeofExpressionCheck.cpp
   StaticAssertCheck.cpp
   StringCompareCheck.cpp
-  StringConstructorCheck.cpp
   StringIntegerAssignmentCheck.cpp
   StringLiteralWithEmbeddedNulCheck.cpp
   SuspiciousEnumUsageCheck.cpp

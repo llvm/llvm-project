@@ -15,7 +15,7 @@
 
 namespace clang {
 namespace tidy {
-namespace misc {
+namespace bugprone {
 
 /// Checks that argument comments match parameter names.
 ///
@@ -48,7 +48,7 @@ private:
                      llvm::ArrayRef<const Expr *> Args);
 };
 
-} // namespace misc
+} // namespace bugprone
 } // namespace tidy
 } // namespace clang
 

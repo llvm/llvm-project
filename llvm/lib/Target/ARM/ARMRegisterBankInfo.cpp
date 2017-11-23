@@ -243,7 +243,9 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     break;
   }
   case G_FADD:
-  case G_FSUB: {
+  case G_FSUB:
+  case G_FMUL:
+  case G_FDIV: {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
     OperandsMapping =Ty.getSizeInBits() == 64
                           ? &ARM::ValueMappings[ARM::DPR3OpsIdx]

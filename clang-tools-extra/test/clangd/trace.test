@@ -1,4 +1,4 @@
-# RUN: clangd -run-synchronously -trace %t < %s && FileCheck %s < %t
+# RUN: clangd -pretty -run-synchronously -trace %t < %s && FileCheck %s < %t
 # It is absolutely vital that this file has CRLF line endings.
 #
 Content-Length: 125
@@ -8,9 +8,19 @@ Content-Length: 125
 Content-Length: 152
 
 {"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///foo.c","languageId":"c","version":1,"text":"void main() {}"}}}
-# CHECK: "textDocument/didOpen"
-# CHECK: "Preamble: /foo.c"
-# CHECK: "Build: /foo.c"
+#      CHECK: {"displayTimeUnit":"ns","traceEvents":[
+# Start opening the doc.
+#      CHECK: "name": "textDocument/didOpen"
+#      CHECK: "ph": "E"
+# Start building the preamble.
+#      CHECK: "name": "Preamble"
+#      CHECK: },
+# Finish building the preamble, with filename.
+#      CHECK: "File": "/foo.c"
+# CHECK-NEXT: },
+# CHECK-NEXT: "ph": "E"
+# Start building the file.
+#      CHECK: "name": "Build"
 Content-Length: 44
 
 {"jsonrpc":"2.0","id":5,"method":"shutdown"}
