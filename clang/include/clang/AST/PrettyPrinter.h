@@ -51,7 +51,8 @@ struct PrintingPolicy {
       TerseOutput(false), PolishForDeclaration(false),
       Half(LO.Half), MSWChar(LO.MicrosoftExt && !LO.WChar),
       IncludeNewlines(true), MSVCFormatting(false),
-      ConstantsAsWritten(false), SuppressImplicitBase(false) { }
+      ConstantsAsWritten(false), SuppressImplicitBase(false),
+      FullyQualifiedName(false) { }
 
   /// Adjust this printing policy for cases where it's known that we're
   /// printing C++ code (for instance, if AST dumping reaches a C++-only
@@ -220,6 +221,10 @@ struct PrintingPolicy {
 
   /// When true, don't print the implicit 'self' or 'this' expressions.
   bool SuppressImplicitBase : 1;
+
+  /// When true, print the fully qualified name of function declarations.
+  /// This is the opposite of SuppressScope and thus overrules it.
+  bool FullyQualifiedName : 1;
 };
 
 } // end namespace clang

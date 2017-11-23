@@ -104,15 +104,17 @@ PrintedDeclMatches(StringRef Code, const std::vector<std::string> &Args,
   return ::testing::AssertionSuccess();
 }
 
-::testing::AssertionResult PrintedDeclCXX98Matches(StringRef Code,
-                                                   StringRef DeclName,
-                                                   StringRef ExpectedPrinted) {
+::testing::AssertionResult
+PrintedDeclCXX98Matches(StringRef Code, StringRef DeclName,
+                        StringRef ExpectedPrinted,
+                        PrintingPolicyModifier PolicyModifier = nullptr) {
   std::vector<std::string> Args(1, "-std=c++98");
   return PrintedDeclMatches(Code,
                             Args,
                             namedDecl(hasName(DeclName)).bind("id"),
                             ExpectedPrinted,
-                            "input.cc");
+                            "input.cc",
+                            PolicyModifier);
 }
 
 ::testing::AssertionResult
@@ -348,6 +350,47 @@ TEST(DeclPrinter, TestFunctionDecl1) {
     "void A();",
     "A",
     "void A()"));
+}
+
+TEST(DeclPrinter, TestFreeFunctionDecl_FullyQualifiedName) {
+    ASSERT_TRUE(PrintedDeclCXX98Matches(
+      "void A();",
+      "A",
+      "void A()",
+      [](PrintingPolicy &Policy){ Policy.FullyQualifiedName = true; }));
+}
+
+TEST(DeclPrinter, TestFreeFunctionDeclInNamespace_FullyQualifiedName) {
+    ASSERT_TRUE(PrintedDeclCXX98Matches(
+      "namespace X { void A(); };",
+      "A",
+      "void X::A()",
+      [](PrintingPolicy &Policy){ Policy.FullyQualifiedName = true; }));
+}
+
+TEST(DeclPrinter, TestMemberFunction_FullyQualifiedName) {
+    ASSERT_TRUE(PrintedDeclCXX98Matches(
+      "struct X { void A(); };",
+      "A",
+      "void X::A()",
+      [](PrintingPolicy &Policy){ Policy.FullyQualifiedName = true; }));
+}
+
+TEST(DeclPrinter, TestMemberFunctionInNamespace_FullyQualifiedName) {
+    ASSERT_TRUE(PrintedDeclCXX98Matches(
+      "namespace Z { struct X { void A(); }; }",
+      "A",
+      "void Z::X::A()",
+      [](PrintingPolicy &Policy){ Policy.FullyQualifiedName = true; }));
+}
+
+TEST(DeclPrinter, TestMemberFunctionOutside_FullyQualifiedName) {
+    ASSERT_TRUE(PrintedDeclCXX98Matches(
+      "struct X { void A(); };"
+       "void X::A() {}",
+      functionDecl(hasName("A"), isDefinition()).bind("id"),
+      "void X::A()",
+      [](PrintingPolicy &Policy){ Policy.FullyQualifiedName = true; }));
 }
 
 TEST(DeclPrinter, TestFunctionDecl2) {
