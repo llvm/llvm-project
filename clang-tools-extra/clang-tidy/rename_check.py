@@ -226,6 +226,13 @@ def main():
     replaceInFile(filename, generateCommentLineSource(originalName),
                   generateCommentLineSource(filename))
     replaceInFile(filename, header_guard_old, header_guard_new)
+
+    if args.new_check_name + '.rst' in filename:
+      replaceInFile(
+          filename,
+          args.old_check_name + '\n' + '=' * len(args.old_check_name) + '\n',
+          args.new_check_name + '\n' + '=' * len(args.new_check_name) + '\n')
+
     replaceInFile(filename, args.old_check_name, args.new_check_name)
     replaceInFile(filename, check_name_camel, new_check_name_camel)
 
