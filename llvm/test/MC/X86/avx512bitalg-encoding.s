@@ -112,3 +112,59 @@
 // CHECK: encoding: [0x62,0xa2,0xfd,0x4a,0x54,0xac,0xf1,0x02,0x00,0x00,0xe0]
           vpopcntw  -536870910(%rcx,%r14,8), %zmm21 {%k2}
 
+// CHECK: vpshufbitqmb %zmm2, %zmm23, %k1
+// CHECK: encoding: [0x62,0xf2,0x45,0x40,0x8f,0xca]
+          vpshufbitqmb %zmm2, %zmm23, %k1
+
+// CHECK: vpshufbitqmb %zmm2, %zmm23, %k1 {%k2}
+// CHECK: encoding: [0x62,0xf2,0x45,0x42,0x8f,0xca]
+          vpshufbitqmb %zmm2, %zmm23, %k1 {%k2}
+
+// CHECK: vpshufbitqmb  (%rcx), %zmm23, %k1
+// CHECK: encoding: [0x62,0xf2,0x45,0x40,0x8f,0x09]
+          vpshufbitqmb  (%rcx), %zmm23, %k1
+
+// CHECK: vpshufbitqmb  -256(%rsp), %zmm23, %k1
+// CHECK: encoding: [0x62,0xf2,0x45,0x40,0x8f,0x4c,0x24,0xfc]
+          vpshufbitqmb  -256(%rsp), %zmm23, %k1
+
+// CHECK: vpshufbitqmb  256(%rsp), %zmm23, %k1
+// CHECK: encoding: [0x62,0xf2,0x45,0x40,0x8f,0x4c,0x24,0x04]
+          vpshufbitqmb  256(%rsp), %zmm23, %k1
+
+// CHECK: vpshufbitqmb  268435456(%rcx,%r14,8), %zmm23, %k1
+// CHECK: encoding: [0x62,0xb2,0x45,0x40,0x8f,0x8c,0xf1,0x00,0x00,0x00,0x10]
+          vpshufbitqmb  268435456(%rcx,%r14,8), %zmm23, %k1
+
+// CHECK: vpshufbitqmb  -536870912(%rcx,%r14,8), %zmm23, %k1
+// CHECK: encoding: [0x62,0xb2,0x45,0x40,0x8f,0x8c,0xf1,0x00,0x00,0x00,0xe0]
+          vpshufbitqmb  -536870912(%rcx,%r14,8), %zmm23, %k1
+
+// CHECK: vpshufbitqmb  -536870910(%rcx,%r14,8), %zmm23, %k1
+// CHECK: encoding: [0x62,0xb2,0x45,0x40,0x8f,0x8c,0xf1,0x02,0x00,0x00,0xe0]
+          vpshufbitqmb  -536870910(%rcx,%r14,8), %zmm23, %k1
+
+// CHECK: vpshufbitqmb  (%rcx), %zmm23, %k1 {%k2}
+// CHECK: encoding: [0x62,0xf2,0x45,0x42,0x8f,0x09]
+          vpshufbitqmb  (%rcx), %zmm23, %k1 {%k2}
+
+// CHECK: vpshufbitqmb  -256(%rsp), %zmm23, %k1 {%k2}
+// CHECK: encoding: [0x62,0xf2,0x45,0x42,0x8f,0x4c,0x24,0xfc]
+          vpshufbitqmb  -256(%rsp), %zmm23, %k1 {%k2}
+
+// CHECK: vpshufbitqmb  256(%rsp), %zmm23, %k1 {%k2}
+// CHECK: encoding: [0x62,0xf2,0x45,0x42,0x8f,0x4c,0x24,0x04]
+          vpshufbitqmb  256(%rsp), %zmm23, %k1 {%k2}
+
+// CHECK: vpshufbitqmb  268435456(%rcx,%r14,8), %zmm23, %k1 {%k2}
+// CHECK: encoding: [0x62,0xb2,0x45,0x42,0x8f,0x8c,0xf1,0x00,0x00,0x00,0x10]
+          vpshufbitqmb  268435456(%rcx,%r14,8), %zmm23, %k1 {%k2}
+
+// CHECK: vpshufbitqmb  -536870912(%rcx,%r14,8), %zmm23, %k1 {%k2}
+// CHECK: encoding: [0x62,0xb2,0x45,0x42,0x8f,0x8c,0xf1,0x00,0x00,0x00,0xe0]
+          vpshufbitqmb  -536870912(%rcx,%r14,8), %zmm23, %k1 {%k2}
+
+// CHECK: vpshufbitqmb  -536870910(%rcx,%r14,8), %zmm23, %k1 {%k2}
+// CHECK: encoding: [0x62,0xb2,0x45,0x42,0x8f,0x8c,0xf1,0x02,0x00,0x00,0xe0]
+          vpshufbitqmb  -536870910(%rcx,%r14,8), %zmm23, %k1 {%k2}
+

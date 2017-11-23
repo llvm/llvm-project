@@ -58,15 +58,15 @@ struct ELFLinuxPrStatus {
 
   ELFLinuxPrStatus();
 
-  lldb_private::Status Parse(lldb_private::DataExtractor &data,
-                             lldb_private::ArchSpec &arch);
+  lldb_private::Status Parse(const lldb_private::DataExtractor &data,
+                             const lldb_private::ArchSpec &arch);
 
   // Return the bytesize of the structure
   // 64 bit - just sizeof
   // 32 bit - hardcoded because we are reusing the struct, but some of the
   // members are smaller -
   // so the layout is not the same
-  static size_t GetSize(lldb_private::ArchSpec &arch);
+  static size_t GetSize(const lldb_private::ArchSpec &arch);
 };
 
 static_assert(sizeof(ELFLinuxPrStatus) == 112,
@@ -79,7 +79,7 @@ struct ELFLinuxSigInfo {
 
   ELFLinuxSigInfo();
 
-  lldb_private::Status Parse(lldb_private::DataExtractor &data,
+  lldb_private::Status Parse(const lldb_private::DataExtractor &data,
                              const lldb_private::ArchSpec &arch);
 
   // Return the bytesize of the structure
@@ -114,15 +114,15 @@ struct ELFLinuxPrPsInfo {
 
   ELFLinuxPrPsInfo();
 
-  lldb_private::Status Parse(lldb_private::DataExtractor &data,
-                             lldb_private::ArchSpec &arch);
+  lldb_private::Status Parse(const lldb_private::DataExtractor &data,
+                             const lldb_private::ArchSpec &arch);
 
   // Return the bytesize of the structure
   // 64 bit - just sizeof
   // 32 bit - hardcoded because we are reusing the struct, but some of the
   // members are smaller -
   // so the layout is not the same
-  static size_t GetSize(lldb_private::ArchSpec &arch);
+  static size_t GetSize(const lldb_private::ArchSpec &arch);
 };
 
 static_assert(sizeof(ELFLinuxPrPsInfo) == 136,

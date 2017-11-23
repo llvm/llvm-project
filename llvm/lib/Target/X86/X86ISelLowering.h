@@ -519,6 +519,9 @@ namespace llvm {
       COMPRESS,
       EXPAND,
 
+      // Bits shuffle
+      VPSHUFBITQMB,
+
       // Convert Unsigned/Integer to Floating-Point Value with rounding mode.
       SINT_TO_FP_RND, UINT_TO_FP_RND,
       SCALAR_SINT_TO_FP_RND, SCALAR_UINT_TO_FP_RND,

@@ -830,10 +830,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       StoreInst *NewSI =
           IRB.CreateAlignedStore(Shadow, ShadowPtr, SI->getAlignment());
       DEBUG(dbgs() << "  STORE: " << *NewSI << "\n");
-      (void)NewSI;
 
       if (ClCheckAccessAddress)
-        insertShadowCheck(Addr, SI);
+        insertShadowCheck(Addr, NewSI);
 
       if (SI->isAtomic())
         SI->setOrdering(addReleaseOrdering(SI->getOrdering()));

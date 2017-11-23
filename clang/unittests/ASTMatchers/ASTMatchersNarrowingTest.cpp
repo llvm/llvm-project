@@ -1998,5 +1998,15 @@ TEST(HasDefaultArgument, Basic) {
                       parmVarDecl(hasDefaultArgument())));
 }
 
+TEST(IsArray, Basic) {
+  EXPECT_TRUE(matches("struct MyClass {}; MyClass *p1 = new MyClass[10];",
+                      cxxNewExpr(isArray())));
+}
+
+TEST(HasArraySize, Basic) {
+  EXPECT_TRUE(matches("struct MyClass {}; MyClass *p1 = new MyClass[10];",
+                      cxxNewExpr(hasArraySize(integerLiteral(equals(10))))));
+}
+
 } // namespace ast_matchers
 } // namespace clang

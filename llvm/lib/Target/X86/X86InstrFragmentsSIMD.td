@@ -575,6 +575,13 @@ def X86compress: SDNode<"X86ISD::COMPRESS", SDTypeProfile<1, 1,
 def X86expand  : SDNode<"X86ISD::EXPAND", SDTypeProfile<1, 1,
                               [SDTCisSameAs<0, 1>, SDTCisVec<1>]>, []>;
 
+// vpshufbitqmb
+def X86Vpshufbitqmb : SDNode<"X86ISD::VPSHUFBITQMB",
+                             SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>,
+                                                  SDTCisSameAs<1,2>,
+                                                  SDTCVecEltisVT<0,i1>,
+                                                  SDTCisSameNumEltsAs<0,1>]>>;
+
 def SDTintToFPRound: SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisFP<0>,
                                           SDTCisSameAs<0,1>, SDTCisInt<2>,
                                           SDTCisVT<3, i32>]>;

@@ -4,6 +4,7 @@ add_clang_library(clangTidyBugproneModule
   BugproneTidyModule.cpp
   CopyConstructorInitCheck.cpp
   IntegerDivisionCheck.cpp
+  MisplacedOperatorInStrlenInAllocCheck.cpp
   SuspiciousMemsetUsageCheck.cpp
   UndefinedMemoryManipulationCheck.cpp
 
