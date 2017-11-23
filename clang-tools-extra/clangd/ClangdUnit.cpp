@@ -375,49 +375,61 @@ struct CompletionCandidate {
       : Result(&Result), Score(score(Result)) {}
 
   CodeCompletionResult *Result;
-  // Higher score is worse. FIXME: use a more natural scale!
-  int Score;
+  float Score; // 0 to 1, higher is better.
 
   // Comparison reflects rank: better candidates are smaller.
   bool operator<(const CompletionCandidate &C) const {
     if (Score != C.Score)
-      return Score < C.Score;
+      return Score > C.Score;
     return *Result < *C.Result;
   }
 
+  // Returns a string that sorts in the same order as operator<, for LSP.
+  // Conceptually, this is [-Score, Name]. We convert -Score to an integer, and
+  // hex-encode it for readability. Example: [0.5, "foo"] -> "41000000foo"
   std::string sortText() const {
-    // Fill in the sortText of the CompletionItem.
-    assert(Score <= 999999 && "Expecting score to have at most 6-digits");
     std::string S, NameStorage;
-    StringRef Name = Result->getOrderedName(NameStorage);
-    llvm::raw_string_ostream(S)
-        << llvm::format("%06d%.*s", Score, Name.size(), Name.data());
-    return S;
+    llvm::raw_string_ostream OS(S);
+    write_hex(OS, encodeFloat(-Score), llvm::HexPrintStyle::Lower,
+              /*Width=*/2 * sizeof(Score));
+    OS << Result->getOrderedName(NameStorage);
+    return OS.str();
   }
 
 private:
-  static int score(const CodeCompletionResult &Result) {
-    int Score = Result.Priority;
-    // Fill in the sortText of the CompletionItem.
-    assert(Score <= 99999 && "Expecting code completion result "
-                             "priority to have at most 5-digits");
+  static float score(const CodeCompletionResult &Result) {
+    // Priority 80 is a really bad score.
+    float Score = 1 - std::min<float>(80, Result.Priority) / 80;
 
-    const int Penalty = 100000;
     switch (static_cast<CXAvailabilityKind>(Result.Availability)) {
     case CXAvailability_Available:
       // No penalty.
       break;
     case CXAvailability_Deprecated:
-      Score += Penalty;
+      Score *= 0.1;
       break;
     case CXAvailability_NotAccessible:
-      Score += 2 * Penalty;
-      break;
     case CXAvailability_NotAvailable:
-      Score += 3 * Penalty;
+      Score = 0;
       break;
     }
     return Score;
+  }
+
+  // Produces an integer that sorts in the same order as F.
+  // That is: a < b <==> encodeFloat(a) < encodeFloat(b).
+  static uint32_t encodeFloat(float F) {
+    static_assert(std::numeric_limits<float>::is_iec559, "");
+    static_assert(sizeof(float) == sizeof(uint32_t), "");
+    constexpr uint32_t TopBit = ~(~uint32_t{0} >> 1);
+
+    // Get the bits of the float. Endianness is the same as for integers.
+    uint32_t U;
+    memcpy(&U, &F, sizeof(float));
+    // IEEE 754 floats compare like sign-magnitude integers.
+    if (U & TopBit)    // Negative float.
+      return 0 - U;    // Map onto the low half of integers, order reversed.
+    return U + TopBit; // Positive floats map onto the high half of integers.
   }
 };
 
@@ -436,7 +448,12 @@ public:
                                   unsigned NumResults) override final {
     std::priority_queue<CompletionCandidate> Candidates;
     for (unsigned I = 0; I < NumResults; ++I) {
-      Candidates.emplace(Results[I]);
+      auto &Result = Results[I];
+      if (!ClangdOpts.IncludeIneligibleResults &&
+          (Result.Availability == CXAvailability_NotAvailable ||
+           Result.Availability == CXAvailability_NotAccessible))
+        continue;
+      Candidates.emplace(Result);
       if (ClangdOpts.Limit && Candidates.size() > ClangdOpts.Limit) {
         Candidates.pop();
         Items.isIncomplete = true;
@@ -805,22 +822,6 @@ bool invokeCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
 }
 
 } // namespace
-
-clangd::CodeCompleteOptions::CodeCompleteOptions(
-    bool EnableSnippetsAndCodePatterns)
-    : CodeCompleteOptions() {
-  EnableSnippets = EnableSnippetsAndCodePatterns;
-  IncludeCodePatterns = EnableSnippetsAndCodePatterns;
-}
-
-clangd::CodeCompleteOptions::CodeCompleteOptions(bool EnableSnippets,
-                                                 bool IncludeCodePatterns,
-                                                 bool IncludeMacros,
-                                                 bool IncludeGlobals,
-                                                 bool IncludeBriefComments)
-    : EnableSnippets(EnableSnippets), IncludeCodePatterns(IncludeCodePatterns),
-      IncludeMacros(IncludeMacros), IncludeGlobals(IncludeGlobals),
-      IncludeBriefComments(IncludeBriefComments) {}
 
 clang::CodeCompleteOptions
 clangd::CodeCompleteOptions::getClangCompleteOpts() const {
@@ -1292,7 +1293,8 @@ CppFile::deferRebuild(StringRef NewContents,
       // (if there are no other references to it).
       OldPreamble.reset();
 
-      trace::Span Tracer(llvm::Twine("Preamble: ") + That->FileName);
+      trace::Span Tracer("Preamble");
+      SPAN_ATTACH(Tracer, "File", That->FileName);
       std::vector<DiagWithFixIts> PreambleDiags;
       StoreDiagsConsumer PreambleDiagnosticsConsumer(/*ref*/ PreambleDiags);
       IntrusiveRefCntPtr<DiagnosticsEngine> PreambleDiagsEngine =
@@ -1341,7 +1343,8 @@ CppFile::deferRebuild(StringRef NewContents,
     // Compute updated AST.
     llvm::Optional<ParsedAST> NewAST;
     {
-      trace::Span Tracer(llvm::Twine("Build: ") + That->FileName);
+      trace::Span Tracer("Build");
+      SPAN_ATTACH(Tracer, "File", That->FileName);
       NewAST = ParsedAST::Build(
           std::move(CI), PreambleForAST, SerializedPreambleDecls,
           std::move(ContentsBuffer), PCHs, VFS, That->Logger);

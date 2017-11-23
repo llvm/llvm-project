@@ -255,16 +255,6 @@ private:
 };
 
 struct CodeCompleteOptions {
-  CodeCompleteOptions() = default;
-
-  /// Uses default values for all flags, but sets EnableSnippets and
-  /// IncludeCodePatterns to the value of EnableSnippetsAndCodePatterns.
-  explicit CodeCompleteOptions(bool EnableSnippetsAndCodePatterns);
-
-  CodeCompleteOptions(bool EnableSnippets, bool IncludeCodePatterns,
-                      bool IncludeMacros, bool IncludeGlobals,
-                      bool IncludeBriefComments);
-
   /// Returns options that can be passed to clang's completion engine.
   clang::CodeCompleteOptions getClangCompleteOpts() const;
 
@@ -276,7 +266,7 @@ struct CodeCompleteOptions {
   /// Add code patterns to completion results.
   /// If EnableSnippets is false, this options is ignored and code patterns will
   /// always be omitted.
-  bool IncludeCodePatterns = false;
+  bool IncludeCodePatterns = true;
 
   /// Add macros to code completion results.
   bool IncludeMacros = true;
@@ -288,6 +278,10 @@ struct CodeCompleteOptions {
   /// FIXME(ibiryukov): it looks like turning this option on significantly slows
   /// down completion, investigate if it can be made faster.
   bool IncludeBriefComments = true;
+
+  /// Include results that are not legal completions in the current context.
+  /// For example, private members are usually inaccessible.
+  bool IncludeIneligibleResults = false;
 
   /// Limit the number of results returned (0 means no limit).
   /// If more results are available, we set CompletionList.isIncomplete.

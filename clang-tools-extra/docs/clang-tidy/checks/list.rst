@@ -17,6 +17,7 @@ Clang-Tidy Checks
    android-cloexec-open
    android-cloexec-socket
    boost-use-to-string
+   bugprone-argument-comment
    bugprone-copy-constructor-init
    bugprone-integer-division
    bugprone-misplaced-operator-in-strlen-in-alloc
@@ -105,7 +106,6 @@ Clang-Tidy Checks
    llvm-include-order
    llvm-namespace-comment
    llvm-twine-local
-   misc-argument-comment
    misc-assert-side-effect
    misc-bool-pointer-implicit-conversion
    misc-dangling-handle

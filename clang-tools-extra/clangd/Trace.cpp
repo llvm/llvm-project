@@ -27,13 +27,17 @@ namespace {
 // Perhaps we should replace this by something that disturbs performance less.
 class Tracer {
 public:
-  Tracer(raw_ostream &Out)
-      : Out(Out), Sep(""), Start(std::chrono::system_clock::now()) {
+  Tracer(raw_ostream &Out, bool Pretty)
+      : Out(Out), Sep(""), Start(std::chrono::system_clock::now()),
+        JSONFormat(Pretty ? "{0:2}" : "{0}") {
     // The displayTimeUnit must be ns to avoid low-precision overlap
     // calculations!
     Out << R"({"displayTimeUnit":"ns","traceEvents":[)"
         << "\n";
-    rawEvent("M", R"("name": "process_name", "args":{"name":"clangd"})");
+    rawEvent("M", json::obj{
+                      {"name", "process_name"},
+                      {"args", json::obj{{"name", "clangd"}}},
+                  });
   }
 
   ~Tracer() {
@@ -43,7 +47,7 @@ public:
 
   // Record an event on the current thread. ph, pid, tid, ts are set.
   // Contents must be a list of the other JSON key/values.
-  template <typename T> void event(StringRef Phase, const T &Contents) {
+  void event(StringRef Phase, json::obj &&Contents) {
     uint64_t TID = get_threadid();
     std::lock_guard<std::mutex> Lock(Mu);
     // If we haven't already, emit metadata describing this thread.
@@ -51,24 +55,26 @@ public:
       SmallString<32> Name;
       get_thread_name(Name);
       if (!Name.empty()) {
-        rawEvent(
-            "M",
-            formatv(
-                R"("tid": {0}, "name": "thread_name", "args":{"name":"{1}"})",
-                TID, StringRef(&Name[0], Name.size())));
+        rawEvent("M", json::obj{
+                          {"tid", TID},
+                          {"name", "thread_name"},
+                          {"args", json::obj{{"name", Name}}},
+                      });
       }
     }
-    rawEvent(Phase, formatv(R"("ts":{0}, "tid":{1}, {2})", timestamp(), TID,
-                            Contents));
+    Contents["ts"] = timestamp();
+    Contents["tid"] = TID;
+    rawEvent(Phase, std::move(Contents));
   }
 
 private:
   // Record an event. ph and pid are set.
   // Contents must be a list of the other JSON key/values.
-  template <typename T>
-  void rawEvent(StringRef Phase, const T &Contents) /*REQUIRES(Mu)*/ {
+  void rawEvent(StringRef Phase, json::obj &&Event) /*REQUIRES(Mu)*/ {
     // PID 0 represents the clangd process.
-    Out << Sep << R"({"pid":0, "ph":")" << Phase << "\", " << Contents << "}";
+    Event["pid"] = 0;
+    Event["ph"] = Phase;
+    Out << Sep << formatv(JSONFormat, json::Expr(std::move(Event)));
     Sep = ",\n";
   }
 
@@ -82,14 +88,15 @@ private:
   const char *Sep /*GUARDED_BY(Mu)*/;
   DenseSet<uint64_t> ThreadsWithMD /*GUARDED_BY(Mu)*/;
   const sys::TimePoint<> Start;
+  const char *JSONFormat;
 };
 
 static Tracer *T = nullptr;
 } // namespace
 
-std::unique_ptr<Session> Session::create(raw_ostream &OS) {
+std::unique_ptr<Session> Session::create(raw_ostream &OS, bool Pretty) {
   assert(!T && "A session is already active");
-  T = new Tracer(OS);
+  T = new Tracer(OS, Pretty);
   return std::unique_ptr<Session>(new Session());
 }
 
@@ -101,19 +108,25 @@ Session::~Session() {
 void log(const Twine &Message) {
   if (!T)
     return;
-  T->event("i", formatv(R"("name":"{0}")", yaml::escape(Message.str())));
+  T->event("i", json::obj{
+                    {"name", "Log"},
+                    {"args", json::obj{{"Message", Message.str()}}},
+                });
 }
 
-Span::Span(const Twine &Text) {
+Span::Span(std::string Name) {
   if (!T)
     return;
-  T->event("B", formatv(R"("name":"{0}")", yaml::escape(Text.str())));
+  T->event("B", json::obj{{"name", std::move(Name)}});
+  Args = llvm::make_unique<json::obj>();
 }
 
 Span::~Span() {
   if (!T)
     return;
-  T->event("E", R"("_":0)" /* Dummy property to ensure valid JSON */);
+  if (!Args)
+    Args = llvm::make_unique<json::obj>();
+  T->event("E", Args ? json::obj{{"args", std::move(*Args)}} : json::obj{});
 }
 
 } // namespace trace

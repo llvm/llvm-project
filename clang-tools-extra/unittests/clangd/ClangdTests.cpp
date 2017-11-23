@@ -788,6 +788,8 @@ struct ClassWithMembers {
   int method();
 
   int field;
+private:
+  int private_field;
 };
 
 int test() {
@@ -828,7 +830,10 @@ int test() {
       // Class members. The only items that must be present in after-dor
       // completion.
       EXPECT_TRUE(ContainsItem(Results, MethodItemText));
+      EXPECT_TRUE(ContainsItem(Results, MethodItemText));
       EXPECT_TRUE(ContainsItem(Results, "field"));
+      EXPECT_EQ(Opts.IncludeIneligibleResults,
+                ContainsItem(Results, "private_field"));
       // Global items.
       EXPECT_FALSE(ContainsItem(Results, "global_var"));
       EXPECT_FALSE(ContainsItem(Results, GlobalFuncItemText));
@@ -889,18 +894,26 @@ int test() {
     }
   };
 
-  for (bool IncludeMacros : {true, false})
-    for (bool IncludeGlobals : {true, false})
-      for (bool IncludeBriefComments : {true, false})
-        for (bool EnableSnippets : {true, false})
+  clangd::CodeCompleteOptions CCOpts;
+  for (bool IncludeMacros : {true, false}){
+    CCOpts.IncludeMacros = IncludeMacros;
+    for (bool IncludeGlobals : {true, false}){
+      CCOpts.IncludeGlobals = IncludeGlobals;
+      for (bool IncludeBriefComments : {true, false}){
+        CCOpts.IncludeBriefComments = IncludeBriefComments;
+        for (bool EnableSnippets : {true, false}){
+          CCOpts.EnableSnippets = EnableSnippets;
           for (bool IncludeCodePatterns : {true, false}) {
-            TestWithOpts(clangd::CodeCompleteOptions(
-                /*EnableSnippets=*/EnableSnippets,
-                /*IncludeCodePatterns=*/IncludeCodePatterns,
-                /*IncludeMacros=*/IncludeMacros,
-                /*IncludeGlobals=*/IncludeGlobals,
-                /*IncludeBriefComments=*/IncludeBriefComments));
+            CCOpts.IncludeCodePatterns = IncludeCodePatterns;
+            for (bool IncludeIneligibleResults : {true, false}) {
+              CCOpts.IncludeIneligibleResults = IncludeIneligibleResults;
+              TestWithOpts(CCOpts);
+            }
           }
+        }
+      }
+    }
+  }
 }
 
 class ClangdThreadingTest : public ClangdVFSTest {};

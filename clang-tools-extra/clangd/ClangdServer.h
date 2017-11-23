@@ -182,9 +182,6 @@ public:
   /// AsyncThreadsCount worker threads. However, if \p AsyncThreadsCount is 0,
   /// all requests will be processed on the calling thread.
   ///
-  /// When \p SnippetCompletions is true, completion items will be presented
-  /// with embedded snippets. Otherwise, plaintext items will be presented.
-  ///
   /// ClangdServer uses \p FSProvider to get an instance of vfs::FileSystem for
   /// each parsing request. Results of code completion and diagnostics also
   /// include a tag, that \p FSProvider returns along with the vfs::FileSystem.
@@ -213,7 +210,7 @@ public:
                DiagnosticsConsumer &DiagConsumer,
                FileSystemProvider &FSProvider, unsigned AsyncThreadsCount,
                bool StorePreamblesInMemory,
-               clangd::CodeCompleteOptions CodeCompleteOpts,
+               const clangd::CodeCompleteOptions &CodeCompleteOpts,
                clangd::Logger &Logger,
                llvm::Optional<StringRef> ResourceDir = llvm::None);
 

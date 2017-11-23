@@ -169,11 +169,14 @@ ClangdScheduler::~ClangdScheduler() {
     Worker.join();
 }
 
-ClangdServer::ClangdServer(
-    GlobalCompilationDatabase &CDB, DiagnosticsConsumer &DiagConsumer,
-    FileSystemProvider &FSProvider, unsigned AsyncThreadsCount,
-    bool StorePreamblesInMemory, clangd::CodeCompleteOptions CodeCompleteOpts,
-    clangd::Logger &Logger, llvm::Optional<StringRef> ResourceDir)
+ClangdServer::ClangdServer(GlobalCompilationDatabase &CDB,
+                           DiagnosticsConsumer &DiagConsumer,
+                           FileSystemProvider &FSProvider,
+                           unsigned AsyncThreadsCount,
+                           bool StorePreamblesInMemory,
+                           const clangd::CodeCompleteOptions &CodeCompleteOpts,
+                           clangd::Logger &Logger,
+                           llvm::Optional<StringRef> ResourceDir)
     : Logger(Logger), CDB(CDB), DiagConsumer(DiagConsumer),
       FSProvider(FSProvider),
       ResourceDir(ResourceDir ? ResourceDir->str() : getStandardResourceDir()),
