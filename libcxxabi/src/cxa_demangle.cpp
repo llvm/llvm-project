@@ -184,6 +184,7 @@ public:
     KConversionOperatorType,
     KPostfixQualifiedType,
     KNameType,
+    KAbiTagAttr,
     KObjCProtoName,
     KPointerType,
     KLValueReferenceType,
@@ -388,6 +389,21 @@ public:
   StringView getBaseName() const override { return Name; }
 
   void printLeft(OutputStream &s) const override { s += Name; }
+};
+
+class AbiTagAttr final : public Node {
+  const Node* Base;
+  StringView Tag;
+public:
+  AbiTagAttr(const Node* Base_, StringView Tag_)
+      : Node(KAbiTagAttr), Base(Base_), Tag(Tag_) {}
+
+  void printLeft(OutputStream &S) const override {
+    Base->printLeft(S);
+    S += "[abi:";
+    S += Tag;
+    S += "]";
+  }
 };
 
 class ObjCProtoName : public Node {
@@ -1801,10 +1817,9 @@ parse_floating_number(const char* first, const char* last, Db& db)
     return first;
 }
 
-// <source-name> ::= <positive length number> <identifier>
-
+// <positive length number> ::= [0-9]*
 const char*
-parse_source_name(const char* first, const char* last, Db& db)
+parse_positive_integer(const char* first, const char* last, size_t* out)
 {
     if (first != last)
     {
@@ -1819,15 +1834,53 @@ parse_source_name(const char* first, const char* last, Db& db)
                 if (++t == last)
                     return first;
             }
-            if (static_cast<size_t>(last - t) >= n)
-            {
-                StringView r(t, t + n);
-                if (r.substr(0, 10) == "_GLOBAL__N")
-                    db.Names.push_back(db.make<NameType>("(anonymous namespace)"));
-                else
-                    db.Names.push_back(db.make<NameType>(r));
-                first = t + n;
-            }
+            *out = n;
+            first = t;
+        }
+    }
+    return first;
+}
+
+// extension
+// <abi-tag-seq> ::= <abi-tag>*
+// <abi-tag>     ::= B <positive length number> <identifier>
+const char*
+parse_abi_tag_seq(const char* first, const char* last, Db& db)
+{
+    while (first != last && *first == 'B' && first+1 != last)
+    {
+        size_t length;
+        const char* t = parse_positive_integer(first+1, last, &length);
+        if (t == first+1)
+            return first;
+        if (static_cast<size_t>(last - t) < length || db.Names.empty())
+            return first;
+        db.Names.back() = db.make<AbiTagAttr>(
+            db.Names.back(), StringView(t, t + length));
+        first = t + length;
+    }
+    return first;
+}
+
+// <source-name> ::= <positive length number> <identifier> [<abi-tag-seq>]
+const char*
+parse_source_name(const char* first, const char* last, Db& db)
+{
+    if (first != last)
+    {
+        size_t length;
+        const char* t = parse_positive_integer(first, last, &length);
+        if (t == first)
+            return first;
+        if (static_cast<size_t>(last - t) >= length)
+        {
+            StringView r(t, t + length);
+            if (r.substr(0, 10) == "_GLOBAL__N")
+                db.Names.push_back(db.make<NameType>("(anonymous namespace)"));
+            else
+                db.Names.push_back(db.make<NameType>(r));
+            first = t + length;
+            first = parse_abi_tag_seq(first, last, db);
         }
     }
     return first;
@@ -3763,10 +3816,11 @@ parse_type(const char* first, const char* last, Db& db)
 //                   ::= rs    # >>            
 //                   ::= rS    # >>=           
 //                   ::= v <digit> <source-name>        # vendor extended operator
-
+//   extension       ::= <operator-name> <abi-tag-seq>
 const char*
 parse_operator_name(const char* first, const char* last, Db& db)
 {
+    const char* original_first = first;
     if (last - first >= 2)
     {
         switch (first[0])
@@ -4063,6 +4117,10 @@ parse_operator_name(const char* first, const char* last, Db& db)
             break;
         }
     }
+
+    if (original_first != first)
+        first = parse_abi_tag_seq(first, last, db);
+
     return first;
 }
 
@@ -4299,7 +4357,7 @@ Node* maybe_change_special_sub_name(Node* inp, Db& db)
 //                  ::= D1    # complete object destructor
 //                  ::= D2    # base object destructor
 //   extension      ::= D5    # ?
-
+//   extension      ::= <ctor-dtor-name> <abi-tag-seq>
 const char*
 parse_ctor_dtor_name(const char* first, const char* last, Db& db)
 {
@@ -4321,6 +4379,7 @@ parse_ctor_dtor_name(const char* first, const char* last, Db& db)
                 db.Names.push_back(
                     db.make<CtorDtorName>(db.Names.back(), false));
                 first += 2;
+                first = parse_abi_tag_seq(first, last, db);
                 db.ParsedCtorDtorCV = true;
                 break;
             }
@@ -4337,6 +4396,7 @@ parse_ctor_dtor_name(const char* first, const char* last, Db& db)
                 db.Names.push_back(
                     db.make<CtorDtorName>(db.Names.back(), true));
                 first += 2;
+                first = parse_abi_tag_seq(first, last, db);
                 db.ParsedCtorDtorCV = true;
                 break;
             }
@@ -4346,13 +4406,12 @@ parse_ctor_dtor_name(const char* first, const char* last, Db& db)
     return first;
 }
 
-// <unnamed-type-name> ::= Ut [ <nonnegative number> ] _
+// <unnamed-type-name> ::= Ut [<nonnegative number>] _ [<abi-tag-seq>]
 //                     ::= <closure-type-name>
 // 
 // <closure-type-name> ::= Ul <lambda-sig> E [ <nonnegative number> ] _ 
 // 
 // <lambda-sig> ::= <parameter type>+  # Parameter types or "v" if the lambda has no parameters
-
 const char*
 parse_unnamed_type_name(const char* first, const char* last, Db& db)
 {
@@ -4379,6 +4438,7 @@ parse_unnamed_type_name(const char* first, const char* last, Db& db)
                 return first;
             db.Names.push_back(db.make<UnnamedTypeName>(count));
             first = t0 + 1;
+            first = parse_abi_tag_seq(first, last, db);
           }
             break;
         case 'l':

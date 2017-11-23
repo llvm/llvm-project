@@ -271,7 +271,7 @@ template <class _Tp>
 _LIBCPP_NODISCARD_AFTER_CXX17 inline _LIBCPP_INLINE_VISIBILITY
 constexpr _Tp* launder(_Tp* __p) noexcept
 {
-    return __launder(__p);
+    return _VSTD::__launder(__p);
 }
 #endif
 
