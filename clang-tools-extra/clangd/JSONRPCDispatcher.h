@@ -13,6 +13,7 @@
 #include "JSONExpr.h"
 #include "Logger.h"
 #include "Protocol.h"
+#include "Trace.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
@@ -55,8 +56,13 @@ private:
 /// Context object passed to handlers to allow replies.
 class RequestContext {
 public:
-  RequestContext(JSONOutput &Out, llvm::Optional<json::Expr> ID)
-      : Out(Out), ID(std::move(ID)) {}
+  RequestContext(JSONOutput &Out, StringRef Method,
+                 llvm::Optional<json::Expr> ID)
+      : Out(Out), ID(std::move(ID)),
+        Tracer(llvm::make_unique<trace::Span>(Method)) {
+    if (this->ID)
+      SPAN_ATTACH(tracer(), "ID", *this->ID);
+  }
 
   /// Sends a successful reply.
   void reply(json::Expr &&Result);
@@ -65,9 +71,12 @@ public:
   /// Sends a request to the client.
   void call(llvm::StringRef Method, json::Expr &&Params);
 
+  trace::Span &tracer() { return *Tracer; }
+
 private:
   JSONOutput &Out;
   llvm::Optional<json::Expr> ID;
+  std::unique_ptr<trace::Span> Tracer;
 };
 
 /// Main JSONRPC entry point. This parses the JSONRPC "header" and calls the

@@ -10,6 +10,7 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
+#include "ArgumentCommentCheck.h"
 #include "CopyConstructorInitCheck.h"
 #include "IntegerDivisionCheck.h"
 #include "MisplacedOperatorInStrlenInAllocCheck.h"
@@ -24,6 +25,8 @@ namespace bugprone {
 class BugproneModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<ArgumentCommentCheck>(
+        "bugprone-argument-comment");
     CheckFactories.registerCheck<CopyConstructorInitCheck>(
         "bugprone-copy-constructor-init");
     CheckFactories.registerCheck<IntegerDivisionCheck>(

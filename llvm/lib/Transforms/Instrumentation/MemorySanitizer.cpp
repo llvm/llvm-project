@@ -1076,9 +1076,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   /// \brief Compute the shadow address for a retval.
   Value *getShadowPtrForRetval(Value *A, IRBuilder<> &IRB) {
-    Value *Base = IRB.CreatePointerCast(MS.RetvalTLS, MS.IntptrTy);
-    return IRB.CreateIntToPtr(Base, PointerType::get(getShadowTy(A), 0),
-                              "_msret");
+    return IRB.CreatePointerCast(MS.RetvalTLS,
+                                 PointerType::get(getShadowTy(A), 0),
+                                 "_msret");
   }
 
   /// \brief Compute the origin address for a retval.
