@@ -75,3 +75,11 @@ void intentional3(char *name) {
   // CHECK-MESSAGES-NOT: :[[@LINE-1]]:28: warning: addition operator is applied to the argument of strlen
   // If expression is in extra parentheses, consider it as intentional
 }
+
+void (*(*const alloc_ptr)(size_t)) = malloc;
+
+void bad_indirect_alloc(char *name) {
+  char *new_name = (char *)alloc_ptr(strlen(name + 1));
+  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: addition operator is applied to the argument of strlen
+  // CHECK-FIXES: {{^  char \*new_name = \(char \*\)alloc_ptr\(}}strlen(name) + 1{{\);$}}
+}
