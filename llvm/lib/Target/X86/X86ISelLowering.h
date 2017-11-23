@@ -18,7 +18,6 @@
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetOptions.h"
 
 namespace llvm {
@@ -336,6 +335,9 @@ namespace llvm {
       // Vector integer comparisons, the result is in a mask vector.
       PCMPEQM, PCMPGTM,
 
+      // v8i16 Horizontal minimum and position.
+      PHMINPOS,
+
       MULTISHIFT,
 
       /// Vector comparison generating mask bits for fp and
@@ -520,6 +522,9 @@ namespace llvm {
       COMPRESS,
       EXPAND,
 
+      // Bits shuffle
+      VPSHUFBITQMB,
+
       // Convert Unsigned/Integer to Floating-Point Value with rounding mode.
       SINT_TO_FP_RND, UINT_TO_FP_RND,
       SCALAR_SINT_TO_FP_RND, SCALAR_UINT_TO_FP_RND,
@@ -676,14 +681,8 @@ namespace llvm {
     void markLibCallAttributes(MachineFunction *MF, unsigned CC,
                                ArgListTy &Args) const override;
 
-    // For i512, DAGTypeLegalizer::SplitInteger needs a shift amount 256,
-    // which cannot be held by i8, therefore use i16 instead. In all the
-    // other situations i8 is sufficient.
     MVT getScalarShiftAmountTy(const DataLayout &, EVT VT) const override {
-      MVT T = VT.getSizeInBits() >= 512 ? MVT::i16 : MVT::i8;
-      assert((VT.getSizeInBits() + 1) / 2 < (1U << T.getSizeInBits()) &&
-             "Scalar shift amount type too small");
-      return T;
+      return MVT::i8;
     }
 
     const MCExpr *

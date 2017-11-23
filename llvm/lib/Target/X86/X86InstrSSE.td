@@ -6188,22 +6188,20 @@ let Defs = [EFLAGS], Predicates = [HasPOPCNT] in {
                        Sched<[WriteFAddLd]>, XS;
 }
 
-
-
 // SS41I_unop_rm_int_v16 - SSE 4.1 unary operator whose type is v8i16.
 multiclass SS41I_unop_rm_int_v16<bits<8> opc, string OpcodeStr,
-                                 Intrinsic IntId128, PatFrag ld_frag,
+                                 SDNode OpNode, PatFrag ld_frag,
                                  X86FoldableSchedWrite Sched> {
   def rr128 : SS48I<opc, MRMSrcReg, (outs VR128:$dst),
                     (ins VR128:$src),
                     !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
-                    [(set VR128:$dst, (IntId128 VR128:$src))]>,
+                    [(set VR128:$dst, (v8i16 (OpNode (v8i16 VR128:$src))))]>,
                     Sched<[Sched]>;
   def rm128 : SS48I<opc, MRMSrcMem, (outs VR128:$dst),
                      (ins i128mem:$src),
                      !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
                      [(set VR128:$dst,
-                       (IntId128 (bitconvert (ld_frag addr:$src))))]>,
+                       (v8i16 (OpNode (v8i16 (bitconvert (ld_frag addr:$src))))))]>,
                     Sched<[Sched.Folded]>;
 }
 
@@ -6211,10 +6209,10 @@ multiclass SS41I_unop_rm_int_v16<bits<8> opc, string OpcodeStr,
 // model, although the naming is misleading.
 let Predicates = [HasAVX] in
 defm VPHMINPOSUW : SS41I_unop_rm_int_v16 <0x41, "vphminposuw",
-                                         int_x86_sse41_phminposuw, loadv2i64,
+                                         X86phminpos, loadv2i64,
                                          WriteVecIMul>, VEX, VEX_WIG;
 defm PHMINPOSUW : SS41I_unop_rm_int_v16 <0x41, "phminposuw",
-                                         int_x86_sse41_phminposuw, memopv2i64,
+                                         X86phminpos, memopv2i64,
                                          WriteVecIMul>;
 
 /// SS48I_binop_rm - Simple SSE41 binary operator.

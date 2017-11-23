@@ -182,6 +182,9 @@ def X86cmpmu    : SDNode<"X86ISD::CMPMU",    X86CmpMaskCC>;
 def X86cmpms    : SDNode<"X86ISD::FSETCCM",   X86CmpMaskCCScalar>;
 def X86cmpmsRnd : SDNode<"X86ISD::FSETCCM_RND",   X86CmpMaskCCScalarRound>;
 
+def X86phminpos: SDNode<"X86ISD::PHMINPOS", 
+                 SDTypeProfile<1, 1, [SDTCisVT<0, v8i16>, SDTCisVT<1, v8i16>]>>;
+
 def X86vshiftuniform : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisSameAs<0,1>,
                                             SDTCisVec<2>, SDTCisInt<0>,
                                             SDTCisInt<1>]>;
@@ -574,6 +577,13 @@ def X86compress: SDNode<"X86ISD::COMPRESS", SDTypeProfile<1, 1,
                               [SDTCisSameAs<0, 1>, SDTCisVec<1>]>, []>;
 def X86expand  : SDNode<"X86ISD::EXPAND", SDTypeProfile<1, 1,
                               [SDTCisSameAs<0, 1>, SDTCisVec<1>]>, []>;
+
+// vpshufbitqmb
+def X86Vpshufbitqmb : SDNode<"X86ISD::VPSHUFBITQMB",
+                             SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>,
+                                                  SDTCisSameAs<1,2>,
+                                                  SDTCVecEltisVT<0,i1>,
+                                                  SDTCisSameNumEltsAs<0,1>]>>;
 
 def SDTintToFPRound: SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisFP<0>,
                                           SDTCisSameAs<0,1>, SDTCisInt<2>,

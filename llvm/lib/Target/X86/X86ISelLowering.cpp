@@ -548,8 +548,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   } else if (UseX87 && X86ScalarSSEf32) {
     // Use SSE for f32, x87 for f64.
     // Set up the FP register classes.
-    addRegisterClass(MVT::f32, Subtarget.hasAVX512() ? &X86::FR32XRegClass
-                                                     : &X86::FR32RegClass);
+    addRegisterClass(MVT::f32, &X86::FR32RegClass);
     addRegisterClass(MVT::f64, &X86::RFP64RegClass);
 
     // Use ANDPS to simulate FABS.
@@ -8113,8 +8112,8 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
     }
 
     for (unsigned i = 0; i < 2; ++i) {
-      switch ((NonZeros & (0x3 << i*2)) >> (i*2)) {
-        default: break;
+      switch ((NonZeros >> (i*2)) & 0x3) {
+        default: llvm_unreachable("Unexpected NonZero count");
         case 0:
           Ops[i] = Ops[i*2];  // Must be a zero vector.
           break;
@@ -8141,57 +8140,56 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getVectorShuffle(VT, dl, Ops[0], Ops[1], MaskVec);
   }
 
-  if (Values.size() > 1 && VT.is128BitVector()) {
-    // Check for a build vector from mostly shuffle plus few inserting.
-    if (SDValue Sh = buildFromShuffleMostly(Op, DAG))
-      return Sh;
+  assert(Values.size() > 1 && "Expected non-undef and non-splat vector");
 
-    // For SSE 4.1, use insertps to put the high elements into the low element.
-    if (Subtarget.hasSSE41()) {
-      SDValue Result;
-      if (!Op.getOperand(0).isUndef())
-        Result = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VT, Op.getOperand(0));
-      else
-        Result = DAG.getUNDEF(VT);
+  // Check for a build vector from mostly shuffle plus few inserting.
+  if (SDValue Sh = buildFromShuffleMostly(Op, DAG))
+    return Sh;
 
-      for (unsigned i = 1; i < NumElems; ++i) {
-        if (Op.getOperand(i).isUndef()) continue;
-        Result = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, VT, Result,
-                             Op.getOperand(i), DAG.getIntPtrConstant(i, dl));
-      }
-      return Result;
+  // For SSE 4.1, use insertps to put the high elements into the low element.
+  if (Subtarget.hasSSE41()) {
+    SDValue Result;
+    if (!Op.getOperand(0).isUndef())
+      Result = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VT, Op.getOperand(0));
+    else
+      Result = DAG.getUNDEF(VT);
+
+    for (unsigned i = 1; i < NumElems; ++i) {
+      if (Op.getOperand(i).isUndef()) continue;
+      Result = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, VT, Result,
+                           Op.getOperand(i), DAG.getIntPtrConstant(i, dl));
     }
-
-    // Otherwise, expand into a number of unpckl*, start by extending each of
-    // our (non-undef) elements to the full vector width with the element in the
-    // bottom slot of the vector (which generates no code for SSE).
-    SmallVector<SDValue, 8> Ops(NumElems);
-    for (unsigned i = 0; i < NumElems; ++i) {
-      if (!Op.getOperand(i).isUndef())
-        Ops[i] = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VT, Op.getOperand(i));
-      else
-        Ops[i] = DAG.getUNDEF(VT);
-    }
-
-    // Next, we iteratively mix elements, e.g. for v4f32:
-    //   Step 1: unpcklps 0, 1 ==> X: <?, ?, 1, 0>
-    //         : unpcklps 2, 3 ==> Y: <?, ?, 3, 2>
-    //   Step 2: unpcklpd X, Y ==>    <3, 2, 1, 0>
-    for (unsigned Scale = 1; Scale < NumElems; Scale *= 2) {
-      // Generate scaled UNPCKL shuffle mask.
-      SmallVector<int, 16> Mask;
-      for(unsigned i = 0; i != Scale; ++i)
-        Mask.push_back(i);
-      for (unsigned i = 0; i != Scale; ++i)
-        Mask.push_back(NumElems+i);
-      Mask.append(NumElems - Mask.size(), SM_SentinelUndef);
-
-      for (unsigned i = 0, e = NumElems / (2 * Scale); i != e; ++i)
-        Ops[i] = DAG.getVectorShuffle(VT, dl, Ops[2*i], Ops[(2*i)+1], Mask);
-    }
-    return Ops[0];
+    return Result;
   }
-  return SDValue();
+
+  // Otherwise, expand into a number of unpckl*, start by extending each of
+  // our (non-undef) elements to the full vector width with the element in the
+  // bottom slot of the vector (which generates no code for SSE).
+  SmallVector<SDValue, 8> Ops(NumElems);
+  for (unsigned i = 0; i < NumElems; ++i) {
+    if (!Op.getOperand(i).isUndef())
+      Ops[i] = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VT, Op.getOperand(i));
+    else
+      Ops[i] = DAG.getUNDEF(VT);
+  }
+
+  // Next, we iteratively mix elements, e.g. for v4f32:
+  //   Step 1: unpcklps 0, 1 ==> X: <?, ?, 1, 0>
+  //         : unpcklps 2, 3 ==> Y: <?, ?, 3, 2>
+  //   Step 2: unpcklpd X, Y ==>    <3, 2, 1, 0>
+  for (unsigned Scale = 1; Scale < NumElems; Scale *= 2) {
+    // Generate scaled UNPCKL shuffle mask.
+    SmallVector<int, 16> Mask;
+    for(unsigned i = 0; i != Scale; ++i)
+      Mask.push_back(i);
+    for (unsigned i = 0; i != Scale; ++i)
+      Mask.push_back(NumElems+i);
+    Mask.append(NumElems - Mask.size(), SM_SentinelUndef);
+
+    for (unsigned i = 0, e = NumElems / (2 * Scale); i != e; ++i)
+      Ops[i] = DAG.getVectorShuffle(VT, dl, Ops[2*i], Ops[(2*i)+1], Mask);
+  }
+  return Ops[0];
 }
 
 // 256-bit AVX can use the vinsertf128 instruction
@@ -25075,6 +25073,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::PCMPGT:             return "X86ISD::PCMPGT";
   case X86ISD::PCMPEQM:            return "X86ISD::PCMPEQM";
   case X86ISD::PCMPGTM:            return "X86ISD::PCMPGTM";
+  case X86ISD::PHMINPOS:           return "X86ISD::PHMINPOS";
   case X86ISD::ADD:                return "X86ISD::ADD";
   case X86ISD::SUB:                return "X86ISD::SUB";
   case X86ISD::ADC:                return "X86ISD::ADC";
@@ -25269,6 +25268,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::VPDPBUSDS:          return "X86ISD::VPDPBUSDS";
   case X86ISD::VPDPWSSD:           return "X86ISD::VPDPWSSD";
   case X86ISD::VPDPWSSDS:          return "X86ISD::VPDPWSSDS";
+  case X86ISD::VPSHUFBITQMB:       return "X86ISD::VPSHUFBITQMB";
   }
   return nullptr;
 }
@@ -30327,6 +30327,66 @@ static SDValue createPSADBW(SelectionDAG &DAG, const SDValue &Zext0,
   return DAG.getNode(X86ISD::PSADBW, DL, SadVT, SadOp0, SadOp1);
 }
 
+// Attempt to replace an min/max v8i16 horizontal reduction with PHMINPOSUW.
+static SDValue combineHorizontalMinMaxResult(SDNode *Extract, SelectionDAG &DAG,
+                                             const X86Subtarget &Subtarget) {
+  // Bail without SSE41.
+  if (!Subtarget.hasSSE41())
+    return SDValue();
+
+  EVT ExtractVT = Extract->getValueType(0);
+  if (ExtractVT != MVT::i16)
+    return SDValue();
+
+  // Check for SMAX/SMIN/UMAX/UMIN horizontal reduction patterns.
+  unsigned BinOp;
+  SDValue Src = matchBinOpReduction(
+      Extract, BinOp, {ISD::SMAX, ISD::SMIN, ISD::UMAX, ISD::UMIN});
+  if (!Src)
+    return SDValue();
+
+  EVT SrcVT = Src.getValueType();
+  EVT SrcSVT = SrcVT.getScalarType();
+  if (SrcSVT != MVT::i16 || (SrcVT.getSizeInBits() % 128) != 0)
+    return SDValue();
+
+  SDLoc DL(Extract);
+  SDValue MinPos = Src;
+
+  // First, reduce the source down to 128-bit, applying BinOp to lo/hi.
+  while (SrcVT.getSizeInBits() > 128) {
+    unsigned NumElts = SrcVT.getVectorNumElements();
+    unsigned NumSubElts = NumElts / 2;
+    SrcVT = EVT::getVectorVT(*DAG.getContext(), SrcSVT, NumSubElts);
+    unsigned SubSizeInBits = SrcVT.getSizeInBits();
+    SDValue Lo = extractSubVector(MinPos, 0, DAG, DL, SubSizeInBits);
+    SDValue Hi = extractSubVector(MinPos, NumSubElts, DAG, DL, SubSizeInBits);
+    MinPos = DAG.getNode(BinOp, DL, SrcVT, Lo, Hi);
+  }
+  assert(SrcVT == MVT::v8i16 && "Unexpected value type");
+
+  // PHMINPOSUW applies to UMIN(v8i16), for SMIN/SMAX/UMAX we must apply a mask
+  // to flip the value accordingly.
+  SDValue Mask;
+  if (BinOp == ISD::SMAX)
+    Mask = DAG.getConstant(APInt::getSignedMaxValue(16), DL, SrcVT);
+  else if (BinOp == ISD::SMIN)
+    Mask = DAG.getConstant(APInt::getSignedMinValue(16), DL, SrcVT);
+  else if (BinOp == ISD::UMAX)
+    Mask = DAG.getConstant(APInt::getAllOnesValue(16), DL, SrcVT);
+
+  if (Mask)
+    MinPos = DAG.getNode(ISD::XOR, DL, SrcVT, Mask, MinPos);
+
+  MinPos = DAG.getNode(X86ISD::PHMINPOS, DL, SrcVT, MinPos);
+
+  if (Mask)
+    MinPos = DAG.getNode(ISD::XOR, DL, SrcVT, Mask, MinPos);
+
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ExtractVT, MinPos,
+                     DAG.getIntPtrConstant(0, DL));
+}
+
 // Attempt to replace an all_of/any_of style horizontal reduction with a MOVMSK.
 static SDValue combineHorizontalPredicateResult(SDNode *Extract,
                                                 SelectionDAG &DAG,
@@ -30633,6 +30693,10 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
   // Attempt to replace an all_of/any_of horizontal reduction with a MOVMSK.
   if (SDValue Cmp = combineHorizontalPredicateResult(N, DAG, Subtarget))
     return Cmp;
+
+  // Attempt to replace min/max v8i16 reductions with PHMINPOSUW.
+  if (SDValue MinMax = combineHorizontalMinMaxResult(N, DAG, Subtarget))
+    return MinMax;
 
   // Only operate on vectors of 4 elements, where the alternative shuffling
   // gets to be more expensive.

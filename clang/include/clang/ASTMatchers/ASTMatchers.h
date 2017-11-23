@@ -5828,6 +5828,31 @@ AST_MATCHER(ParmVarDecl, hasDefaultArgument) {
   return Node.hasDefaultArg(); 
 }
 
+/// \brief Matches array new expressions.
+///
+/// Given:
+/// \code
+///   MyClass *p1 = new MyClass[10];
+/// \endcode
+/// cxxNewExpr(isArray())
+///   matches the expression 'new MyClass[10]'.
+AST_MATCHER(CXXNewExpr, isArray) {
+  return Node.isArray();
+}
+
+/// \brief Matches array new expressions with a given array size.
+///
+/// Given:
+/// \code
+///   MyClass *p1 = new MyClass[10];
+/// \endcode
+/// cxxNewExpr(hasArraySize(intgerLiteral(equals(10))))
+///   matches the expression 'new MyClass[10]'.
+AST_MATCHER_P(CXXNewExpr, hasArraySize, internal::Matcher<Expr>, InnerMatcher) {
+  return Node.isArray() &&
+    InnerMatcher.matches(*Node.getArraySize(), Finder, Builder);
+}
+
 } // namespace ast_matchers
 } // namespace clang
 
