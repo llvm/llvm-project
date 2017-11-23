@@ -61,7 +61,7 @@ def deleteMatchingLines(fileName, pattern):
     lines = f.readlines()
 
   not_matching_lines = [l for l in lines if not re.search(pattern, l)]
-  if not_matching_lines.count == lines.count:
+  if len(not_matching_lines) == len(lines):
     return False
 
   print("Removing lines matching '%s' in '%s'..." % (pattern, fileName))
