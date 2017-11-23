@@ -1292,6 +1292,13 @@ static const IntrinsicData  IntrinsicsWithoutChain[] = {
   X86_INTRINSIC_DATA(avx512_mask_vpshrdv_w_256, FMA_OP_MASK, X86ISD::VSHRDV, 0),
   X86_INTRINSIC_DATA(avx512_mask_vpshrdv_w_512, FMA_OP_MASK, X86ISD::VSHRDV, 0),
 
+  X86_INTRINSIC_DATA(avx512_mask_vpshufbitqmb_128, CMP_MASK,
+                     X86ISD::VPSHUFBITQMB, 0),
+  X86_INTRINSIC_DATA(avx512_mask_vpshufbitqmb_256, CMP_MASK,
+                     X86ISD::VPSHUFBITQMB, 0),
+  X86_INTRINSIC_DATA(avx512_mask_vpshufbitqmb_512, CMP_MASK,
+                     X86ISD::VPSHUFBITQMB, 0),
+
   X86_INTRINSIC_DATA(avx512_mask3_vfmadd_pd_128, FMA_OP_MASK3, ISD::FMA, 0),
   X86_INTRINSIC_DATA(avx512_mask3_vfmadd_pd_256, FMA_OP_MASK3, ISD::FMA, 0),
   X86_INTRINSIC_DATA(avx512_mask3_vfmadd_pd_512, FMA_OP_MASK3, ISD::FMA,
@@ -1672,6 +1679,7 @@ static const IntrinsicData  IntrinsicsWithoutChain[] = {
   X86_INTRINSIC_DATA(sse3_hsub_ps,      INTR_TYPE_2OP, X86ISD::FHSUB, 0),
   X86_INTRINSIC_DATA(sse41_insertps,    INTR_TYPE_3OP, X86ISD::INSERTPS, 0),
   X86_INTRINSIC_DATA(sse41_packusdw,    INTR_TYPE_2OP, X86ISD::PACKUS, 0),
+  X86_INTRINSIC_DATA(sse41_phminposuw,  INTR_TYPE_1OP, X86ISD::PHMINPOS, 0),
   X86_INTRINSIC_DATA(sse41_pmuldq,      INTR_TYPE_2OP, X86ISD::PMULDQ, 0),
   X86_INTRINSIC_DATA(sse41_round_pd,    ROUNDP, X86ISD::VRNDSCALE, 0),
   X86_INTRINSIC_DATA(sse41_round_ps,    ROUNDP, X86ISD::VRNDSCALE, 0),
