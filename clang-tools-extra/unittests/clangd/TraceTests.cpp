@@ -116,7 +116,7 @@ TEST(TraceTest, SmokeTest) {
   ASSERT_NE(++Event, Events->end()) << "Expected span start";
   EXPECT_TRUE(VerifyObject(*Event, {{"ph", "B"}, {"name", "A"}}));
   ASSERT_NE(++Event, Events->end()) << "Expected log message";
-  EXPECT_TRUE(VerifyObject(*Event, {{"ph", "i"}, {"name", "B"}}));
+  EXPECT_TRUE(VerifyObject(*Event, {{"ph", "i"}, {"name", "Log"}}));
   ASSERT_NE(++Event, Events->end()) << "Expected span end";
   EXPECT_TRUE(VerifyObject(*Event, {{"ph", "E"}}));
   ASSERT_EQ(++Event, Events->end());

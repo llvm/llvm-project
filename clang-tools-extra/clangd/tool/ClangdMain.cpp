@@ -124,7 +124,7 @@ int main(int argc, char *argv[]) {
       TraceFile.reset();
       llvm::errs() << "Error while opening trace file: " << EC.message();
     } else {
-      TraceSession = trace::Session::create(*TraceStream);
+      TraceSession = trace::Session::create(*TraceStream, PrettyPrint);
     }
   }
 

@@ -1293,7 +1293,8 @@ CppFile::deferRebuild(StringRef NewContents,
       // (if there are no other references to it).
       OldPreamble.reset();
 
-      trace::Span Tracer(llvm::Twine("Preamble: ") + That->FileName);
+      trace::Span Tracer("Preamble");
+      SPAN_ATTACH(Tracer, "File", That->FileName);
       std::vector<DiagWithFixIts> PreambleDiags;
       StoreDiagsConsumer PreambleDiagnosticsConsumer(/*ref*/ PreambleDiags);
       IntrusiveRefCntPtr<DiagnosticsEngine> PreambleDiagsEngine =
@@ -1342,7 +1343,8 @@ CppFile::deferRebuild(StringRef NewContents,
     // Compute updated AST.
     llvm::Optional<ParsedAST> NewAST;
     {
-      trace::Span Tracer(llvm::Twine("Build: ") + That->FileName);
+      trace::Span Tracer("Build");
+      SPAN_ATTACH(Tracer, "File", That->FileName);
       NewAST = ParsedAST::Build(
           std::move(CI), PreambleForAST, SerializedPreambleDecls,
           std::move(ContentsBuffer), PCHs, VFS, That->Logger);
