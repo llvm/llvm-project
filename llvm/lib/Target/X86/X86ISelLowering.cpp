@@ -5013,6 +5013,7 @@ static bool isMaskedZeroUpperBitsvXi1(unsigned int Opcode) {
   case X86ISD::PCMPGTM:
   case X86ISD::CMPM:
   case X86ISD::CMPMU:
+  case X86ISD::CMPM_RND:
     return true;
   }
 }
@@ -17569,14 +17570,12 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
       if (Cond == ISD::SETUEQ) {
         CC0 = 3; // UNORD
         CC1 = 0; // EQ
-        CombineOpc = Opc == X86ISD::CMPP ? static_cast<unsigned>(X86ISD::FOR) :
-                                           static_cast<unsigned>(ISD::OR);
+        CombineOpc = X86ISD::FOR;
       } else {
         assert(Cond == ISD::SETONE);
         CC0 = 7; // ORD
         CC1 = 4; // NEQ
-        CombineOpc = Opc == X86ISD::CMPP ? static_cast<unsigned>(X86ISD::FAND) :
-                                           static_cast<unsigned>(ISD::AND);
+        CombineOpc = X86ISD::FAND;
       }
 
       SDValue Cmp0 = DAG.getNode(Opc, dl, VT, Op0, Op1,
@@ -17900,20 +17899,7 @@ SDValue X86TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
         return Op0;
 
       CCode = X86::GetOppositeBranchCondition(CCode);
-      SDValue SetCC = getSETCC(CCode, Op0.getOperand(1), dl, DAG);
-      if (VT == MVT::i1)
-        return DAG.getNode(ISD::TRUNCATE, dl, MVT::i1, SetCC);
-      return SetCC;
-    }
-  }
-  if (Op0.getValueType() == MVT::i1 && (CC == ISD::SETEQ || CC == ISD::SETNE)) {
-    if (isOneConstant(Op1)) {
-      ISD::CondCode NewCC = ISD::getSetCCInverse(CC, true);
-      return DAG.getSetCC(dl, VT, Op0, DAG.getConstant(0, dl, MVT::i1), NewCC);
-    }
-    if (!isNullConstant(Op1)) {
-      SDValue Xor = DAG.getNode(ISD::XOR, dl, MVT::i1, Op0, Op1);
-      return DAG.getSetCC(dl, VT, Xor, DAG.getConstant(0, dl, MVT::i1), CC);
+      return getSETCC(CCode, Op0.getOperand(1), dl, DAG);
     }
   }
 
@@ -17924,10 +17910,7 @@ SDValue X86TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
 
   SDValue EFLAGS = EmitCmp(Op0, Op1, X86CC, dl, DAG);
   EFLAGS = ConvertCmpIfNecessary(EFLAGS, DAG);
-  SDValue SetCC = getSETCC(X86CC, EFLAGS, dl, DAG);
-  if (VT == MVT::i1)
-    return DAG.getNode(ISD::TRUNCATE, dl, MVT::i1, SetCC);
-  return SetCC;
+  return getSETCC(X86CC, EFLAGS, dl, DAG);
 }
 
 SDValue X86TargetLowering::LowerSETCCCARRY(SDValue Op, SelectionDAG &DAG) const {
@@ -17948,10 +17931,7 @@ SDValue X86TargetLowering::LowerSETCCCARRY(SDValue Op, SelectionDAG &DAG) const 
 
   SDVTList VTs = DAG.getVTList(LHS.getValueType(), MVT::i32);
   SDValue Cmp = DAG.getNode(X86ISD::SBB, DL, VTs, LHS, RHS, Carry.getValue(1));
-  SDValue SetCC = getSETCC(CC, Cmp.getValue(1), DL, DAG);
-  if (Op.getSimpleValueType() == MVT::i1)
-    return DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, SetCC);
-  return SetCC;
+  return getSETCC(CC, Cmp.getValue(1), DL, DAG);
 }
 
 /// Return true if opcode is a X86 logical comparison.
@@ -19589,13 +19569,11 @@ static SDValue getVectorMaskingNode(SDValue Op, SDValue Mask,
 
   switch (Op.getOpcode()) {
   default: break;
-  case X86ISD::PCMPEQM:
-  case X86ISD::PCMPGTM:
   case X86ISD::CMPM:
+  case X86ISD::CMPM_RND:
   case X86ISD::CMPMU:
     return DAG.getNode(ISD::AND, dl, VT, Op, VMask);
   case X86ISD::VFPCLASS:
-    case X86ISD::VFPCLASSS:
     return DAG.getNode(ISD::OR, dl, VT, Op, VMask);
   case X86ISD::VTRUNC:
   case X86ISD::VTRUNCS:
@@ -25073,6 +25051,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::PCMPGT:             return "X86ISD::PCMPGT";
   case X86ISD::PCMPEQM:            return "X86ISD::PCMPEQM";
   case X86ISD::PCMPGTM:            return "X86ISD::PCMPGTM";
+  case X86ISD::PHMINPOS:           return "X86ISD::PHMINPOS";
   case X86ISD::ADD:                return "X86ISD::ADD";
   case X86ISD::SUB:                return "X86ISD::SUB";
   case X86ISD::ADC:                return "X86ISD::ADC";
@@ -25267,6 +25246,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::VPDPBUSDS:          return "X86ISD::VPDPBUSDS";
   case X86ISD::VPDPWSSD:           return "X86ISD::VPDPWSSD";
   case X86ISD::VPDPWSSDS:          return "X86ISD::VPDPWSSDS";
+  case X86ISD::VPSHUFBITQMB:       return "X86ISD::VPSHUFBITQMB";
   }
   return nullptr;
 }
@@ -30325,6 +30305,66 @@ static SDValue createPSADBW(SelectionDAG &DAG, const SDValue &Zext0,
   return DAG.getNode(X86ISD::PSADBW, DL, SadVT, SadOp0, SadOp1);
 }
 
+// Attempt to replace an min/max v8i16 horizontal reduction with PHMINPOSUW.
+static SDValue combineHorizontalMinMaxResult(SDNode *Extract, SelectionDAG &DAG,
+                                             const X86Subtarget &Subtarget) {
+  // Bail without SSE41.
+  if (!Subtarget.hasSSE41())
+    return SDValue();
+
+  EVT ExtractVT = Extract->getValueType(0);
+  if (ExtractVT != MVT::i16)
+    return SDValue();
+
+  // Check for SMAX/SMIN/UMAX/UMIN horizontal reduction patterns.
+  unsigned BinOp;
+  SDValue Src = matchBinOpReduction(
+      Extract, BinOp, {ISD::SMAX, ISD::SMIN, ISD::UMAX, ISD::UMIN});
+  if (!Src)
+    return SDValue();
+
+  EVT SrcVT = Src.getValueType();
+  EVT SrcSVT = SrcVT.getScalarType();
+  if (SrcSVT != MVT::i16 || (SrcVT.getSizeInBits() % 128) != 0)
+    return SDValue();
+
+  SDLoc DL(Extract);
+  SDValue MinPos = Src;
+
+  // First, reduce the source down to 128-bit, applying BinOp to lo/hi.
+  while (SrcVT.getSizeInBits() > 128) {
+    unsigned NumElts = SrcVT.getVectorNumElements();
+    unsigned NumSubElts = NumElts / 2;
+    SrcVT = EVT::getVectorVT(*DAG.getContext(), SrcSVT, NumSubElts);
+    unsigned SubSizeInBits = SrcVT.getSizeInBits();
+    SDValue Lo = extractSubVector(MinPos, 0, DAG, DL, SubSizeInBits);
+    SDValue Hi = extractSubVector(MinPos, NumSubElts, DAG, DL, SubSizeInBits);
+    MinPos = DAG.getNode(BinOp, DL, SrcVT, Lo, Hi);
+  }
+  assert(SrcVT == MVT::v8i16 && "Unexpected value type");
+
+  // PHMINPOSUW applies to UMIN(v8i16), for SMIN/SMAX/UMAX we must apply a mask
+  // to flip the value accordingly.
+  SDValue Mask;
+  if (BinOp == ISD::SMAX)
+    Mask = DAG.getConstant(APInt::getSignedMaxValue(16), DL, SrcVT);
+  else if (BinOp == ISD::SMIN)
+    Mask = DAG.getConstant(APInt::getSignedMinValue(16), DL, SrcVT);
+  else if (BinOp == ISD::UMAX)
+    Mask = DAG.getConstant(APInt::getAllOnesValue(16), DL, SrcVT);
+
+  if (Mask)
+    MinPos = DAG.getNode(ISD::XOR, DL, SrcVT, Mask, MinPos);
+
+  MinPos = DAG.getNode(X86ISD::PHMINPOS, DL, SrcVT, MinPos);
+
+  if (Mask)
+    MinPos = DAG.getNode(ISD::XOR, DL, SrcVT, Mask, MinPos);
+
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ExtractVT, MinPos,
+                     DAG.getIntPtrConstant(0, DL));
+}
+
 // Attempt to replace an all_of/any_of style horizontal reduction with a MOVMSK.
 static SDValue combineHorizontalPredicateResult(SDNode *Extract,
                                                 SelectionDAG &DAG,
@@ -30631,6 +30671,10 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
   // Attempt to replace an all_of/any_of horizontal reduction with a MOVMSK.
   if (SDValue Cmp = combineHorizontalPredicateResult(N, DAG, Subtarget))
     return Cmp;
+
+  // Attempt to replace min/max v8i16 reductions with PHMINPOSUW.
+  if (SDValue MinMax = combineHorizontalMinMaxResult(N, DAG, Subtarget))
+    return MinMax;
 
   // Only operate on vectors of 4 elements, where the alternative shuffling
   // gets to be more expensive.

@@ -222,7 +222,6 @@ entry:
 ; MM64: dsrl    $[[T3:[0-9]+]], $[[T2]], 32
 ; MM64: dsubu   $2, $[[T0]], $[[T3]]
 ; MM64: dsubu   $3, $5, $7
-; MM64: jr      $ra
 
   %r = sub i128 %a, %b
   ret i128 %r

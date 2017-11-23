@@ -1100,7 +1100,7 @@ entry:
 ; MM32R6-DAG:    cmp.le.s $[[T3:f[0-9]+]], $[[T0]], $[[T2]]
 ; MM32R6-DAG:    mfc1     $[[T4:[0-9]+]], $[[T3:f[0-9]+]]
 ; MM32R6-DAG:    andi16   $[[T5:[0-9]+]], $[[T4]], 1
-; MM32R6-DAG:    bnez     $[[T5]],
+; MM32R6-DAG:    bnezc    $[[T5]],
 
 ; MM64R6-DAG:    add.s    $[[T0:f[0-9]+]], $f13, $f12
 ; MM64R6-DAG:    lui      $[[T1:[0-9]+]], %highest(.LCPI32_0)
@@ -1112,7 +1112,7 @@ entry:
 ; MM64R6-DAG:    cmp.le.s $[[T7:f[0-9]+]], $[[T0]], $[[T6]]
 ; MM64R6-DAG:    mfc1     $[[T8:[0-9]+]], $[[T7]]
 ; MM64R6-DAG:    andi16   $[[T9:[0-9]+]], $[[T8]], 1
-; MM64R6-DAG:    bnez     $[[T9]],
+; MM64R6-DAG:    bnezc    $[[T9]],
 
   %add = fadd fast float %at, %angle
   %cmp = fcmp ogt float %add, 1.000000e+00
@@ -1170,7 +1170,7 @@ entry:
 ; MM32R6-DAG:    cmp.le.d $[[T3:f[0-9]+]], $[[T0]], $[[T2]]
 ; MM32R6-DAG:    mfc1     $[[T4:[0-9]+]], $[[T3]]
 ; MM32R6-DAG:    andi16   $[[T5:[0-9]+]], $[[T4]], 1
-; MM32R6-DAG:    bnez     $[[T5]],
+; MM32R6-DAG:    bnezc    $[[T5]],
 
 ; MM64R6-DAG:    add.d    $[[T0:f[0-9]+]], $f13, $f12
 ; MM64R6-DAG:    lui      $[[T1:[0-9]+]], %highest(.LCPI33_0)
@@ -1182,7 +1182,7 @@ entry:
 ; MM64R6-DAG:    cmp.le.d $[[T7:f[0-9]+]], $[[T0]], $[[T6]]
 ; MM64R6-DAG:    mfc1     $[[T8:[0-9]+]], $[[T7]]
 ; MM64R6-DAG:    andi16   $[[T9:[0-9]+]], $[[T8]], 1
-; MM64R6-DAG:    bnez     $[[T9]],
+; MM64R6-DAG:    bnezc    $[[T9]],
 
   %add = fadd fast double %at, %angle
   %cmp = fcmp ogt double %add, 1.000000e+00
