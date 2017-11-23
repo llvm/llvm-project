@@ -119,6 +119,34 @@ define <2 x i64> @testv2i64(<2 x i64> %in) nounwind {
 ; AVX512VPOPCNTDQ-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
 ; AVX512VPOPCNTDQ-NEXT:    vzeroupper
 ; AVX512VPOPCNTDQ-NEXT:    retq
+;
+; BITALG_NOVLX-LABEL: testv2i64:
+; BITALG_NOVLX:       # BB#0:
+; BITALG_NOVLX-NEXT:    vmovdqa {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; BITALG_NOVLX-NEXT:    vpand %xmm1, %xmm0, %xmm2
+; BITALG_NOVLX-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
+; BITALG_NOVLX-NEXT:    vpshufb %xmm2, %xmm3, %xmm2
+; BITALG_NOVLX-NEXT:    vpsrlw $4, %xmm0, %xmm0
+; BITALG_NOVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; BITALG_NOVLX-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
+; BITALG_NOVLX-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
+; BITALG_NOVLX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG_NOVLX-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
+; BITALG_NOVLX-NEXT:    retq
+;
+; BITALG-LABEL: testv2i64:
+; BITALG:       # BB#0:
+; BITALG-NEXT:    vmovdqa {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; BITALG-NEXT:    vpand %xmm1, %xmm0, %xmm2
+; BITALG-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
+; BITALG-NEXT:    vpshufb %xmm2, %xmm3, %xmm2
+; BITALG-NEXT:    vpsrlw $4, %xmm0, %xmm0
+; BITALG-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
+; BITALG-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
+; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    retq
   %out = call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %in)
   ret <2 x i64> %out
 }
@@ -261,6 +289,42 @@ define <4 x i32> @testv4i32(<4 x i32> %in) nounwind {
 ; AVX512VPOPCNTDQ-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
 ; AVX512VPOPCNTDQ-NEXT:    vzeroupper
 ; AVX512VPOPCNTDQ-NEXT:    retq
+;
+; BITALG_NOVLX-LABEL: testv4i32:
+; BITALG_NOVLX:       # BB#0:
+; BITALG_NOVLX-NEXT:    vmovdqa {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; BITALG_NOVLX-NEXT:    vpand %xmm1, %xmm0, %xmm2
+; BITALG_NOVLX-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
+; BITALG_NOVLX-NEXT:    vpshufb %xmm2, %xmm3, %xmm2
+; BITALG_NOVLX-NEXT:    vpsrlw $4, %xmm0, %xmm0
+; BITALG_NOVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; BITALG_NOVLX-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
+; BITALG_NOVLX-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
+; BITALG_NOVLX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG_NOVLX-NEXT:    vpunpckhdq {{.*#+}} xmm2 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; BITALG_NOVLX-NEXT:    vpsadbw %xmm1, %xmm2, %xmm2
+; BITALG_NOVLX-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; BITALG_NOVLX-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
+; BITALG_NOVLX-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
+; BITALG_NOVLX-NEXT:    retq
+;
+; BITALG-LABEL: testv4i32:
+; BITALG:       # BB#0:
+; BITALG-NEXT:    vmovdqa {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; BITALG-NEXT:    vpand %xmm1, %xmm0, %xmm2
+; BITALG-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
+; BITALG-NEXT:    vpshufb %xmm2, %xmm3, %xmm2
+; BITALG-NEXT:    vpsrlw $4, %xmm0, %xmm0
+; BITALG-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
+; BITALG-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
+; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpunpckhdq {{.*#+}} xmm2 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; BITALG-NEXT:    vpsadbw %xmm1, %xmm2, %xmm2
+; BITALG-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
+; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
+; BITALG-NEXT:    retq
   %out = call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %in)
   ret <4 x i32> %out
 }
@@ -527,6 +591,16 @@ define <2 x i64> @foldv2i64() nounwind {
 ; AVX:       # BB#0:
 ; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [1,64]
 ; AVX-NEXT:    retq
+;
+; BITALG_NOVLX-LABEL: foldv2i64:
+; BITALG_NOVLX:       # BB#0:
+; BITALG_NOVLX-NEXT:    vmovaps {{.*#+}} xmm0 = [1,64]
+; BITALG_NOVLX-NEXT:    retq
+;
+; BITALG-LABEL: foldv2i64:
+; BITALG:       # BB#0:
+; BITALG-NEXT:    vmovaps {{.*#+}} xmm0 = [1,64]
+; BITALG-NEXT:    retq
   %out = call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> <i64 256, i64 -1>)
   ret <2 x i64> %out
 }
@@ -541,6 +615,16 @@ define <4 x i32> @foldv4i32() nounwind {
 ; AVX:       # BB#0:
 ; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [1,32,0,8]
 ; AVX-NEXT:    retq
+;
+; BITALG_NOVLX-LABEL: foldv4i32:
+; BITALG_NOVLX:       # BB#0:
+; BITALG_NOVLX-NEXT:    vmovaps {{.*#+}} xmm0 = [1,32,0,8]
+; BITALG_NOVLX-NEXT:    retq
+;
+; BITALG-LABEL: foldv4i32:
+; BITALG:       # BB#0:
+; BITALG-NEXT:    vmovaps {{.*#+}} xmm0 = [1,32,0,8]
+; BITALG-NEXT:    retq
   %out = call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> <i32 256, i32 -1, i32 0, i32 255>)
   ret <4 x i32> %out
 }
@@ -555,6 +639,16 @@ define <8 x i16> @foldv8i16() nounwind {
 ; AVX:       # BB#0:
 ; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [1,16,0,8,0,3,2,3]
 ; AVX-NEXT:    retq
+;
+; BITALG_NOVLX-LABEL: foldv8i16:
+; BITALG_NOVLX:       # BB#0:
+; BITALG_NOVLX-NEXT:    vmovaps {{.*#+}} xmm0 = [1,16,0,8,0,3,2,3]
+; BITALG_NOVLX-NEXT:    retq
+;
+; BITALG-LABEL: foldv8i16:
+; BITALG:       # BB#0:
+; BITALG-NEXT:    vmovaps {{.*#+}} xmm0 = [1,16,0,8,0,3,2,3]
+; BITALG-NEXT:    retq
   %out = call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> <i16 256, i16 -1, i16 0, i16 255, i16 -65536, i16 7, i16 24, i16 88>)
   ret <8 x i16> %out
 }
@@ -569,6 +663,16 @@ define <16 x i8> @foldv16i8() nounwind {
 ; AVX:       # BB#0:
 ; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [0,8,0,8,0,3,2,3,7,7,1,1,1,1,1,1]
 ; AVX-NEXT:    retq
+;
+; BITALG_NOVLX-LABEL: foldv16i8:
+; BITALG_NOVLX:       # BB#0:
+; BITALG_NOVLX-NEXT:    vmovaps {{.*#+}} xmm0 = [0,8,0,8,0,3,2,3,7,7,1,1,1,1,1,1]
+; BITALG_NOVLX-NEXT:    retq
+;
+; BITALG-LABEL: foldv16i8:
+; BITALG:       # BB#0:
+; BITALG-NEXT:    vmovaps {{.*#+}} xmm0 = [0,8,0,8,0,3,2,3,7,7,1,1,1,1,1,1]
+; BITALG-NEXT:    retq
   %out = call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> <i8 256, i8 -1, i8 0, i8 255, i8 -65536, i8 7, i8 24, i8 88, i8 -2, i8 254, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32>)
   ret <16 x i8> %out
 }

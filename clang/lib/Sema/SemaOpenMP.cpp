@@ -2593,7 +2593,8 @@ static bool checkNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
              (ParentRegion == OMPD_for || ParentRegion == OMPD_parallel_for ||
               ParentRegion == OMPD_target_parallel_for ||
               ParentRegion == OMPD_distribute_parallel_for ||
-              ParentRegion == OMPD_teams_distribute_parallel_for)) ||
+              ParentRegion == OMPD_teams_distribute_parallel_for ||
+              ParentRegion == OMPD_target_teams_distribute_parallel_for)) ||
             (CancelRegion == OMPD_taskgroup && ParentRegion == OMPD_task) ||
             (CancelRegion == OMPD_sections &&
              (ParentRegion == OMPD_section || ParentRegion == OMPD_sections ||
@@ -7324,7 +7325,8 @@ StmtResult Sema::ActOnOpenMPTargetTeamsDistributeParallelForDirective(
 
   getCurFunction()->setHasBranchProtectedScope();
   return OMPTargetTeamsDistributeParallelForDirective::Create(
-      Context, StartLoc, EndLoc, NestedLoopCount, Clauses, AStmt, B);
+      Context, StartLoc, EndLoc, NestedLoopCount, Clauses, AStmt, B,
+      DSAStack->isCancelRegion());
 }
 
 StmtResult Sema::ActOnOpenMPTargetTeamsDistributeParallelForSimdDirective(

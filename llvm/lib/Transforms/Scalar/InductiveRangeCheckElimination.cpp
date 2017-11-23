@@ -1667,7 +1667,8 @@ InductiveRangeCheck::computeSafeIterationSpace(
       //   Rule 3: Y <s (X - SINT_MAX) ---> (X - SINT_MAX).
       // It gives us smax(Y, X - SINT_MAX) to substract in all cases.
       const SCEV *XMinusSIntMax = SE.getMinusSCEV(X, SIntMax);
-      return SE.getMinusSCEV(X, SE.getSMaxExpr(Y, XMinusSIntMax));
+      return SE.getMinusSCEV(X, SE.getSMaxExpr(Y, XMinusSIntMax),
+                             SCEV::FlagNSW);
     } else
       // X is a number from unsigned range, Y is interpreted as signed.
       // Even if Y is SINT_MIN, (X - Y) does not reach UINT_MAX. So the only
@@ -1679,7 +1680,7 @@ InductiveRangeCheck::computeSafeIterationSpace(
       // If 0 <= X < Y, we should stop at 0 and can only substract X.
       //   Rule 3: Y >s X ---> X.
       // It gives us smin(X, Y) to substract in all cases.
-      return SE.getMinusSCEV(X, SE.getSMinExpr(X, Y));
+      return SE.getMinusSCEV(X, SE.getSMinExpr(X, Y), SCEV::FlagNUW);
   };
   const SCEV *M = SE.getMinusSCEV(C, A);
   const SCEV *Zero = SE.getZero(M->getType());

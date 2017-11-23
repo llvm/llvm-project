@@ -2978,6 +2978,7 @@ void ASTStmtReader::VisitOMPTargetTeamsDistributeDirective(
 void ASTStmtReader::VisitOMPTargetTeamsDistributeParallelForDirective(
     OMPTargetTeamsDistributeParallelForDirective *D) {
   VisitOMPLoopDirective(D);
+  D->setHasCancel(Record.readInt());
 }
 
 void ASTStmtReader::VisitOMPTargetTeamsDistributeParallelForSimdDirective(

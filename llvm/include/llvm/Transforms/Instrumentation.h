@@ -22,20 +22,6 @@
 #include <string>
 #include <vector>
 
-#if defined(__GNUC__) && defined(__linux__) && !defined(ANDROID)
-inline void *getDFSanArgTLSPtrForJIT() {
-  extern __thread __attribute__((tls_model("initial-exec")))
-    void *__dfsan_arg_tls;
-  return (void *)&__dfsan_arg_tls;
-}
-
-inline void *getDFSanRetValTLSPtrForJIT() {
-  extern __thread __attribute__((tls_model("initial-exec")))
-    void *__dfsan_retval_tls;
-  return (void *)&__dfsan_retval_tls;
-}
-#endif
-
 namespace llvm {
 
 class FunctionPass;
@@ -193,14 +179,6 @@ struct SanitizerCoverageOptions {
 // Insert SanitizerCoverage instrumentation.
 ModulePass *createSanitizerCoverageModulePass(
     const SanitizerCoverageOptions &Options = SanitizerCoverageOptions());
-
-#if defined(__GNUC__) && defined(__linux__) && !defined(ANDROID)
-inline ModulePass *createDataFlowSanitizerPassForJIT(
-    const std::vector<std::string> &ABIListFiles = std::vector<std::string>()) {
-  return createDataFlowSanitizerPass(ABIListFiles, getDFSanArgTLSPtrForJIT,
-                                     getDFSanRetValTLSPtrForJIT);
-}
-#endif
 
 /// \brief Calculate what to divide by to scale counts.
 ///
