@@ -124,15 +124,6 @@ struct Section {
   ArrayRef<uint8_t> content;
   Relocations     relocations;
   IndirectSymbols indirectSymbols;
-
-#ifndef NDEBUG
-  raw_ostream& operator<<(raw_ostream &OS) const {
-    dump(OS);
-    return OS;
-  }
-
-  void dump(raw_ostream &OS = llvm::dbgs()) const;
-#endif
 };
 
 

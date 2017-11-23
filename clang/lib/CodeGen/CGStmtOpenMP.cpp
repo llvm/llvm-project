@@ -2014,6 +2014,9 @@ emitInnerParallelForWhenCombined(CodeGenFunction &CGF,
         HasCancel = D->hasCancel();
       else if (const auto *D = dyn_cast<OMPDistributeParallelForDirective>(&S))
         HasCancel = D->hasCancel();
+      else if (const auto *D =
+                   dyn_cast<OMPTargetTeamsDistributeParallelForDirective>(&S))
+        HasCancel = D->hasCancel();
     }
     CodeGenFunction::OMPCancelStackRAII CancelRegion(CGF, S.getDirectiveKind(),
                                                      HasCancel);
@@ -3949,7 +3952,8 @@ CodeGenFunction::getOMPCancelDestination(OpenMPDirectiveKind Kind) {
          Kind == OMPD_parallel_sections || Kind == OMPD_parallel_for ||
          Kind == OMPD_distribute_parallel_for ||
          Kind == OMPD_target_parallel_for ||
-         Kind == OMPD_teams_distribute_parallel_for);
+         Kind == OMPD_teams_distribute_parallel_for ||
+         Kind == OMPD_target_teams_distribute_parallel_for);
   return OMPCancelStack.getExitBlock();
 }
 

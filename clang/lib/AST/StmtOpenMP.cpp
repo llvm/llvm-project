@@ -1624,7 +1624,7 @@ OMPTargetTeamsDistributeParallelForDirective *
 OMPTargetTeamsDistributeParallelForDirective::Create(
     const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
     unsigned CollapsedNum, ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt,
-    const HelperExprs &Exprs) {
+    const HelperExprs &Exprs, bool HasCancel) {
   auto Size =
       llvm::alignTo(sizeof(OMPTargetTeamsDistributeParallelForDirective),
                     alignof(OMPClause *));
@@ -1670,6 +1670,7 @@ OMPTargetTeamsDistributeParallelForDirective::Create(
   Dir->setCombinedCond(Exprs.DistCombinedFields.Cond);
   Dir->setCombinedNextLowerBound(Exprs.DistCombinedFields.NLB);
   Dir->setCombinedNextUpperBound(Exprs.DistCombinedFields.NUB);
+  Dir->HasCancel = HasCancel;
   return Dir;
 }
 
