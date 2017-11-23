@@ -42,8 +42,18 @@ static llvm::cl::opt<unsigned>
 static llvm::cl::opt<bool> EnableSnippets(
     "enable-snippets",
     llvm::cl::desc(
-        "Present snippet completions instead of plaintext completions"),
-    llvm::cl::init(false));
+        "Present snippet completions instead of plaintext completions. "
+        "This also enables code pattern results." /* FIXME: should it? */),
+    llvm::cl::init(clangd::CodeCompleteOptions().EnableSnippets));
+
+// FIXME: Flags are the wrong mechanism for user preferences.
+// We should probably read a dotfile or similar.
+static llvm::cl::opt<bool> IncludeIneligibleResults(
+    "include-ineligible-results",
+    llvm::cl::desc(
+        "Include ineligible completion results (e.g. private members)"),
+    llvm::cl::init(clangd::CodeCompleteOptions().IncludeIneligibleResults),
+    llvm::cl::Hidden);
 
 static llvm::cl::opt<bool>
     PrettyPrint("pretty", llvm::cl::desc("Pretty-print JSON output"),
@@ -157,9 +167,12 @@ int main(int argc, char *argv[]) {
   // Change stdin to binary to not lose \r\n on windows.
   llvm::sys::ChangeStdinToBinary();
 
+  clangd::CodeCompleteOptions CCOpts;
+  CCOpts.EnableSnippets = EnableSnippets;
+  CCOpts.IncludeIneligibleResults = IncludeIneligibleResults;
   // Initialize and run ClangdLSPServer.
   ClangdLSPServer LSPServer(Out, WorkerThreadsCount, StorePreamblesInMemory,
-                            EnableSnippets, ResourceDirRef,
+                            CCOpts, ResourceDirRef,
                             CompileCommandsDirPath);
   constexpr int NoShutdownRequestErrorCode = 1;
   llvm::set_thread_name("clangd.main");

@@ -10,14 +10,10 @@ Content-Length: 220
 Content-Length: 148
 
 {"jsonrpc":"2.0","id":1,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":4,"character":7}}}
-Content-Length: 58
 # CHECK: {"id":1,"jsonrpc":"2.0","result":{"isIncomplete":false,"items":
 #
 # Keyword
 # CHECK-DAG: {"filterText":"int","insertText":"int","insertTextFormat":1,"kind":14,"label":"int","sortText":"000050int"}
-#
-# Code pattern
-# CHECK-DAG: {"filterText":"static_cast","insertText":"static_cast<${1:type}>(${2:expression})","insertTextFormat":2,"kind":15,"label":"static_cast<type>(expression)","sortText":"000040static_cast"}
 #
 # Struct
 # CHECK-DAG: {"filterText":"Struct","insertText":"Struct","insertTextFormat":1,"kind":7,"label":"Struct","sortText":"000050Struct"}
@@ -32,5 +28,15 @@ Content-Length: 58
 # CHECK-DAG: {"detail":"int","filterText":"function","insertText":"function()","insertTextFormat":1,"kind":3,"label":"function()","sortText":"000012function"}
 #
 # CHECK-SAME: ]}}
+Content-Length: 146
+
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///main.cpp","languageId":"cpp","version":1,"text":"whi"}}}
+Content-Length: 148
+
+{"jsonrpc":"2.0","id":2,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":1,"character":3}}}
+# Code pattern (unfortunately there are none in expression context)
+# CHECK-DAG: {"filterText":"namespace","insertText":"namespace ${1:identifier}{${2:declarations}\n}","insertTextFormat":2,"kind":15,"label":"namespace identifier{declarations}","sortText":"000040namespace"}
+#
+Content-Length: 58
 
 {"jsonrpc":"2.0","id":3,"method":"shutdown","params":null}

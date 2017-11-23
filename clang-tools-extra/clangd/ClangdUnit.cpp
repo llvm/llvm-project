@@ -436,7 +436,12 @@ public:
                                   unsigned NumResults) override final {
     std::priority_queue<CompletionCandidate> Candidates;
     for (unsigned I = 0; I < NumResults; ++I) {
-      Candidates.emplace(Results[I]);
+      auto &Result = Results[I];
+      if (!ClangdOpts.IncludeIneligibleResults &&
+          (Result.Availability == CXAvailability_NotAvailable ||
+           Result.Availability == CXAvailability_NotAccessible))
+        continue;
+      Candidates.emplace(Result);
       if (ClangdOpts.Limit && Candidates.size() > ClangdOpts.Limit) {
         Candidates.pop();
         Items.isIncomplete = true;
@@ -805,22 +810,6 @@ bool invokeCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
 }
 
 } // namespace
-
-clangd::CodeCompleteOptions::CodeCompleteOptions(
-    bool EnableSnippetsAndCodePatterns)
-    : CodeCompleteOptions() {
-  EnableSnippets = EnableSnippetsAndCodePatterns;
-  IncludeCodePatterns = EnableSnippetsAndCodePatterns;
-}
-
-clangd::CodeCompleteOptions::CodeCompleteOptions(bool EnableSnippets,
-                                                 bool IncludeCodePatterns,
-                                                 bool IncludeMacros,
-                                                 bool IncludeGlobals,
-                                                 bool IncludeBriefComments)
-    : EnableSnippets(EnableSnippets), IncludeCodePatterns(IncludeCodePatterns),
-      IncludeMacros(IncludeMacros), IncludeGlobals(IncludeGlobals),
-      IncludeBriefComments(IncludeBriefComments) {}
 
 clang::CodeCompleteOptions
 clangd::CodeCompleteOptions::getClangCompleteOpts() const {
