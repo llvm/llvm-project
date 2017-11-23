@@ -564,6 +564,27 @@ TEST_F(FileSystemTest, RealPath) {
   ASSERT_NO_ERROR(fs::remove_directories(Twine(TestDirectory) + "/test1"));
 }
 
+TEST_F(FileSystemTest, TempFileKeepDiscard) {
+  // We can keep then discard.
+  auto TempFileOrError = fs::TempFile::create(TestDirectory + "/test-%%%%");
+  ASSERT_TRUE((bool)TempFileOrError);
+  fs::TempFile File = std::move(*TempFileOrError);
+  ASSERT_FALSE((bool)File.keep(TestDirectory + "/keep"));
+  ASSERT_FALSE((bool)File.discard());
+  ASSERT_TRUE(fs::exists(TestDirectory + "/keep"));
+  ASSERT_NO_ERROR(fs::remove(TestDirectory + "/keep"));
+}
+
+TEST_F(FileSystemTest, TempFileDiscardDiscard) {
+  // We can discard twice.
+  auto TempFileOrError = fs::TempFile::create(TestDirectory + "/test-%%%%");
+  ASSERT_TRUE((bool)TempFileOrError);
+  fs::TempFile File = std::move(*TempFileOrError);
+  ASSERT_FALSE((bool)File.discard());
+  ASSERT_FALSE((bool)File.discard());
+  ASSERT_FALSE(fs::exists(TestDirectory + "/keep"));
+}
+
 TEST_F(FileSystemTest, TempFiles) {
   // Create a temp file.
   int FileDescriptor;

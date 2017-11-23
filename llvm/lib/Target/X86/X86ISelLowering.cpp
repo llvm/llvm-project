@@ -548,8 +548,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   } else if (UseX87 && X86ScalarSSEf32) {
     // Use SSE for f32, x87 for f64.
     // Set up the FP register classes.
-    addRegisterClass(MVT::f32, Subtarget.hasAVX512() ? &X86::FR32XRegClass
-                                                     : &X86::FR32RegClass);
+    addRegisterClass(MVT::f32, &X86::FR32RegClass);
     addRegisterClass(MVT::f64, &X86::RFP64RegClass);
 
     // Use ANDPS to simulate FABS.
@@ -970,13 +969,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::BITREVERSE, VT, Custom);
   }
 
-  // Special handling for masked gather of 2 elements
-  if (Subtarget.hasAVX2()) {
-    for (auto VT : { MVT::v4i32, MVT::v8i32, MVT::v2i64, MVT::v4i64,
-                     MVT::v4f32, MVT::v8f32, MVT::v2f64, MVT::v4f64 })
-      setOperationAction(ISD::MGATHER,  VT, Custom);
-  }
-
   if (!Subtarget.useSoftFloat() && Subtarget.hasFp256()) {
     bool HasInt256 = Subtarget.hasInt256();
 
@@ -1138,6 +1130,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationPromotedToType(ISD::XOR,    VT, MVT::v4i64);
       setOperationPromotedToType(ISD::LOAD,   VT, MVT::v4i64);
       setOperationPromotedToType(ISD::SELECT, VT, MVT::v4i64);
+    }
+
+    if (HasInt256) {
+      for (auto VT : { MVT::v4i32, MVT::v8i32, MVT::v2i64, MVT::v4i64,
+                       MVT::v4f32, MVT::v8f32, MVT::v2f64, MVT::v4f64 })
+        setOperationAction(ISD::MGATHER,  VT, Custom);
     }
   }
 
@@ -1494,11 +1492,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::MSTORE,              VT, Action);
     }
 
-    if (Subtarget.hasCDI()) {
-      setOperationAction(ISD::CTLZ,            MVT::v32i16, Custom);
-      setOperationAction(ISD::CTLZ,            MVT::v64i8,  Custom);
-    }
-
     for (auto VT : { MVT::v64i8, MVT::v32i16 }) {
       setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
       setOperationAction(ISD::VSELECT,      VT, Custom);
@@ -1510,6 +1503,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::MSTORE,       VT, Legal);
       setOperationAction(ISD::CTPOP,        VT, Custom);
       setOperationAction(ISD::CTTZ,         VT, Custom);
+      setOperationAction(ISD::CTLZ,         VT, Custom);
       setOperationAction(ISD::SMAX,         VT, Legal);
       setOperationAction(ISD::UMAX,         VT, Legal);
       setOperationAction(ISD::SMIN,         VT, Legal);
@@ -1522,6 +1516,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     for (auto ExtType : {ISD::ZEXTLOAD, ISD::SEXTLOAD}) {
       setLoadExtAction(ExtType, MVT::v32i16, MVT::v32i8, Legal);
+    }
+
+    if (Subtarget.hasBITALG()) {
+      for (auto VT : { MVT::v64i8, MVT::v32i16, MVT::v32i8,
+                       MVT::v16i16, MVT::v16i8, MVT::v8i16 })
+        setOperationAction(ISD::CTPOP, VT, Legal);
     }
   }
 
@@ -1556,11 +1556,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::UMIN, VT, Legal);
     }
   }
-
-  if (Subtarget.hasBITALG())
-    for (auto VT : { MVT::v64i8, MVT::v32i16, MVT::v32i8,
-                     MVT::v16i16, MVT::v16i8, MVT::v8i16 })
-      setOperationAction(ISD::CTPOP, VT, Legal);
 
   // We want to custom lower some of our intrinsics.
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
@@ -8117,8 +8112,8 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
     }
 
     for (unsigned i = 0; i < 2; ++i) {
-      switch ((NonZeros & (0x3 << i*2)) >> (i*2)) {
-        default: break;
+      switch ((NonZeros >> (i*2)) & 0x3) {
+        default: llvm_unreachable("Unexpected NonZero count");
         case 0:
           Ops[i] = Ops[i*2];  // Must be a zero vector.
           break;
@@ -8145,57 +8140,56 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getVectorShuffle(VT, dl, Ops[0], Ops[1], MaskVec);
   }
 
-  if (Values.size() > 1 && VT.is128BitVector()) {
-    // Check for a build vector from mostly shuffle plus few inserting.
-    if (SDValue Sh = buildFromShuffleMostly(Op, DAG))
-      return Sh;
+  assert(Values.size() > 1 && "Expected non-undef and non-splat vector");
 
-    // For SSE 4.1, use insertps to put the high elements into the low element.
-    if (Subtarget.hasSSE41()) {
-      SDValue Result;
-      if (!Op.getOperand(0).isUndef())
-        Result = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VT, Op.getOperand(0));
-      else
-        Result = DAG.getUNDEF(VT);
+  // Check for a build vector from mostly shuffle plus few inserting.
+  if (SDValue Sh = buildFromShuffleMostly(Op, DAG))
+    return Sh;
 
-      for (unsigned i = 1; i < NumElems; ++i) {
-        if (Op.getOperand(i).isUndef()) continue;
-        Result = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, VT, Result,
-                             Op.getOperand(i), DAG.getIntPtrConstant(i, dl));
-      }
-      return Result;
+  // For SSE 4.1, use insertps to put the high elements into the low element.
+  if (Subtarget.hasSSE41()) {
+    SDValue Result;
+    if (!Op.getOperand(0).isUndef())
+      Result = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VT, Op.getOperand(0));
+    else
+      Result = DAG.getUNDEF(VT);
+
+    for (unsigned i = 1; i < NumElems; ++i) {
+      if (Op.getOperand(i).isUndef()) continue;
+      Result = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, VT, Result,
+                           Op.getOperand(i), DAG.getIntPtrConstant(i, dl));
     }
-
-    // Otherwise, expand into a number of unpckl*, start by extending each of
-    // our (non-undef) elements to the full vector width with the element in the
-    // bottom slot of the vector (which generates no code for SSE).
-    SmallVector<SDValue, 8> Ops(NumElems);
-    for (unsigned i = 0; i < NumElems; ++i) {
-      if (!Op.getOperand(i).isUndef())
-        Ops[i] = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VT, Op.getOperand(i));
-      else
-        Ops[i] = DAG.getUNDEF(VT);
-    }
-
-    // Next, we iteratively mix elements, e.g. for v4f32:
-    //   Step 1: unpcklps 0, 1 ==> X: <?, ?, 1, 0>
-    //         : unpcklps 2, 3 ==> Y: <?, ?, 3, 2>
-    //   Step 2: unpcklpd X, Y ==>    <3, 2, 1, 0>
-    for (unsigned Scale = 1; Scale < NumElems; Scale *= 2) {
-      // Generate scaled UNPCKL shuffle mask.
-      SmallVector<int, 16> Mask;
-      for(unsigned i = 0; i != Scale; ++i)
-        Mask.push_back(i);
-      for (unsigned i = 0; i != Scale; ++i)
-        Mask.push_back(NumElems+i);
-      Mask.append(NumElems - Mask.size(), SM_SentinelUndef);
-
-      for (unsigned i = 0, e = NumElems / (2 * Scale); i != e; ++i)
-        Ops[i] = DAG.getVectorShuffle(VT, dl, Ops[2*i], Ops[(2*i)+1], Mask);
-    }
-    return Ops[0];
+    return Result;
   }
-  return SDValue();
+
+  // Otherwise, expand into a number of unpckl*, start by extending each of
+  // our (non-undef) elements to the full vector width with the element in the
+  // bottom slot of the vector (which generates no code for SSE).
+  SmallVector<SDValue, 8> Ops(NumElems);
+  for (unsigned i = 0; i < NumElems; ++i) {
+    if (!Op.getOperand(i).isUndef())
+      Ops[i] = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VT, Op.getOperand(i));
+    else
+      Ops[i] = DAG.getUNDEF(VT);
+  }
+
+  // Next, we iteratively mix elements, e.g. for v4f32:
+  //   Step 1: unpcklps 0, 1 ==> X: <?, ?, 1, 0>
+  //         : unpcklps 2, 3 ==> Y: <?, ?, 3, 2>
+  //   Step 2: unpcklpd X, Y ==>    <3, 2, 1, 0>
+  for (unsigned Scale = 1; Scale < NumElems; Scale *= 2) {
+    // Generate scaled UNPCKL shuffle mask.
+    SmallVector<int, 16> Mask;
+    for(unsigned i = 0; i != Scale; ++i)
+      Mask.push_back(i);
+    for (unsigned i = 0; i != Scale; ++i)
+      Mask.push_back(NumElems+i);
+    Mask.append(NumElems - Mask.size(), SM_SentinelUndef);
+
+    for (unsigned i = 0, e = NumElems / (2 * Scale); i != e; ++i)
+      Ops[i] = DAG.getVectorShuffle(VT, dl, Ops[2*i], Ops[(2*i)+1], Mask);
+  }
+  return Ops[0];
 }
 
 // 256-bit AVX can use the vinsertf128 instruction
@@ -21677,7 +21671,14 @@ static SDValue LowerVectorCTLZInRegLUT(SDValue Op, const SDLoc &DL,
   SDValue NibbleShift = DAG.getConstant(0x4, DL, CurrVT);
   SDValue Lo = DAG.getNode(ISD::AND, DL, CurrVT, Op0, NibbleMask);
   SDValue Hi = DAG.getNode(ISD::SRL, DL, CurrVT, Op0, NibbleShift);
-  SDValue HiZ = DAG.getSetCC(DL, CurrVT, Hi, Zero, ISD::SETEQ);
+  SDValue HiZ;
+  if (CurrVT.is512BitVector()) {
+    MVT MaskVT = MVT::getVectorVT(MVT::i1, CurrVT.getVectorNumElements());
+    HiZ = DAG.getSetCC(DL, MaskVT, Hi, Zero, ISD::SETEQ);
+    HiZ = DAG.getNode(ISD::SIGN_EXTEND, DL, CurrVT, HiZ);
+  } else {
+    HiZ = DAG.getSetCC(DL, CurrVT, Hi, Zero, ISD::SETEQ);
+  }
 
   Lo = DAG.getNode(X86ISD::PSHUFB, DL, CurrVT, InRegLUT, Lo);
   Hi = DAG.getNode(X86ISD::PSHUFB, DL, CurrVT, InRegLUT, Hi);
@@ -21697,8 +21698,15 @@ static SDValue LowerVectorCTLZInRegLUT(SDValue Op, const SDLoc &DL,
     SDValue Shift = DAG.getConstant(CurrScalarSizeInBits, DL, NextVT);
 
     // Check if the upper half of the input element is zero.
-    SDValue HiZ = DAG.getSetCC(DL, CurrVT, DAG.getBitcast(CurrVT, Op0),
-                               DAG.getBitcast(CurrVT, Zero), ISD::SETEQ);
+    if (CurrVT.is512BitVector()) {
+      MVT MaskVT = MVT::getVectorVT(MVT::i1, CurrVT.getVectorNumElements());
+      HiZ = DAG.getSetCC(DL, MaskVT, DAG.getBitcast(CurrVT, Op0),
+                         DAG.getBitcast(CurrVT, Zero), ISD::SETEQ);
+      HiZ = DAG.getNode(ISD::SIGN_EXTEND, DL, CurrVT, HiZ);
+    } else {
+      HiZ = DAG.getSetCC(DL, CurrVT, DAG.getBitcast(CurrVT, Op0),
+                         DAG.getBitcast(CurrVT, Zero), ISD::SETEQ);
+    }
     HiZ = DAG.getBitcast(NextVT, HiZ);
 
     // Move the upper/lower halves to the lower bits as we'll be extending to

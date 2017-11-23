@@ -63,7 +63,7 @@ let Namespace = "Hexagon" in {
 
   // Rc - control registers
   class Rc<bits<5> num, string n,
-           list<string> alt = [], list<Register> alias = []> : 
+           list<string> alt = [], list<Register> alias = []> :
         HexagonReg<num, n, alt, alias> {
     let Num = num;
   }
@@ -285,7 +285,7 @@ def HvxQR : RegisterClass<"Hexagon", [VecI1], 512, (add Q0, Q1, Q2, Q3)> {
 }
 
 let Size = 32 in
-def PredRegs : RegisterClass<"Hexagon", 
+def PredRegs : RegisterClass<"Hexagon",
   [i1, v2i1, v4i1, v8i1, v4i8, v2i16, i32], 32, (add P0, P1, P2, P3)>;
 
 let Size = 32 in

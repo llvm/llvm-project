@@ -28,17 +28,18 @@ namespace {
 
 class Tag {
 private:
-  StringRef Id;
+  const std::string *Id;
   SMLoc Loc;
 public:
-  Tag(StringRef Name, const SMLoc Location) : Id(Name), Loc(Location) {}
-  int operator<(const Tag &B) const { return Id < B.Id; }
+  Tag(const std::string &Name, const SMLoc Location)
+      : Id(&Name), Loc(Location) {}
+  int operator<(const Tag &B) const { return *Id < *B.Id; }
   void emit(raw_ostream &OS) const {
     const MemoryBuffer *CurMB =
         SrcMgr.getMemoryBuffer(SrcMgr.FindBufferContainingLoc(Loc));
     auto BufferName = CurMB->getBufferIdentifier();
     std::pair<unsigned, unsigned> LineAndColumn = SrcMgr.getLineAndColumn(Loc);
-    OS << Id << "\t" << BufferName << "\t" << LineAndColumn.first << "\n";
+    OS << *Id << "\t" << BufferName << "\t" << LineAndColumn.first << "\n";
   }
 };
 

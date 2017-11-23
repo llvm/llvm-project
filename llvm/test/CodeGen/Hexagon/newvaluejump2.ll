@@ -1,6 +1,6 @@
 ; RUN: llc -march=hexagon -mcpu=hexagonv5 -disable-hexagon-misched < %s \
 ; RUN:    | FileCheck %s
-; Check that we generate new value jump, both registers, with one 
+; Check that we generate new value jump, both registers, with one
 ; of the registers as new.
 
 @Reg = common global i32 0, align 4
