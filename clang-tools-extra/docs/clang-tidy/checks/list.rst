@@ -20,6 +20,7 @@ Clang-Tidy Checks
    bugprone-copy-constructor-init
    bugprone-integer-division
    bugprone-misplaced-operator-in-strlen-in-alloc
+   bugprone-string-constructor
    bugprone-suspicious-memset-usage
    bugprone-undefined-memory-manipulation
    cert-dcl03-c (redirects to misc-static-assert) <cert-dcl03-c>
@@ -132,7 +133,6 @@ Clang-Tidy Checks
    misc-sizeof-expression
    misc-static-assert
    misc-string-compare
-   misc-string-constructor
    misc-string-integer-assignment
    misc-string-literal-with-embedded-nul
    misc-suspicious-enum-usage

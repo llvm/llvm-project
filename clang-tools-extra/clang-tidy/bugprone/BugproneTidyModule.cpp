@@ -13,6 +13,7 @@
 #include "CopyConstructorInitCheck.h"
 #include "IntegerDivisionCheck.h"
 #include "MisplacedOperatorInStrlenInAllocCheck.h"
+#include "StringConstructorCheck.h"
 #include "SuspiciousMemsetUsageCheck.h"
 #include "UndefinedMemoryManipulationCheck.h"
 
@@ -29,6 +30,8 @@ public:
         "bugprone-integer-division");
     CheckFactories.registerCheck<MisplacedOperatorInStrlenInAllocCheck>(
         "bugprone-misplaced-operator-in-strlen-in-alloc");
+    CheckFactories.registerCheck<StringConstructorCheck>(
+        "bugprone-string-constructor");
     CheckFactories.registerCheck<SuspiciousMemsetUsageCheck>(
         "bugprone-suspicious-memset-usage");
     CheckFactories.registerCheck<UndefinedMemoryManipulationCheck>(

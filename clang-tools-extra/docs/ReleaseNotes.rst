@@ -57,6 +57,9 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- The 'misc-string-constructor' check was renamed to `bugprone-string-constructor
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-string-constructor.html>`_
+
 - New `google-avoid-throwing-objc-exception
   <http://clang.llvm.org/extra/clang-tidy/checks/google-objc-avoid-throwing-exception.html>`_ check
 
