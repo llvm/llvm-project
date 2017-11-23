@@ -10,6 +10,10 @@
 #ifndef LLDB_ELF_CORE_ENUMS_H
 #define LLDB_ELF_CORE_ENUMS_H
 
+#include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
+#include "lldb/Utility/DataExtractor.h"
+
+namespace lldb_private {
 /// Core files PT_NOTE segment descriptor types
 
 namespace FREEBSD {
@@ -51,5 +55,12 @@ enum {
   NT_PRXFPREG = 0x46e62b7f,
 };
 }
+
+struct CoreNote {
+  ELFNote info;
+  DataExtractor data;
+};
+
+} // namespace lldb_private
 
 #endif // #ifndef LLDB_ELF_CORE_ENUMS_H

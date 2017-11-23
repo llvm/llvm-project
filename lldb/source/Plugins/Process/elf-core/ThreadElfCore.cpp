@@ -259,7 +259,7 @@ ELFLinuxPrStatus::ELFLinuxPrStatus() {
   memset(this, 0, sizeof(ELFLinuxPrStatus));
 }
 
-size_t ELFLinuxPrStatus::GetSize(lldb_private::ArchSpec &arch) {
+size_t ELFLinuxPrStatus::GetSize(const lldb_private::ArchSpec &arch) {
   constexpr size_t mips_linux_pr_status_size_o32 = 96;
   constexpr size_t mips_linux_pr_status_size_n32 = 72;
   if (arch.IsMIPS()) {
@@ -285,7 +285,8 @@ size_t ELFLinuxPrStatus::GetSize(lldb_private::ArchSpec &arch) {
   }
 }
 
-Status ELFLinuxPrStatus::Parse(DataExtractor &data, ArchSpec &arch) {
+Status ELFLinuxPrStatus::Parse(const DataExtractor &data,
+                               const ArchSpec &arch) {
   Status error;
   if (GetSize(arch) > data.GetByteSize()) {
     error.SetErrorStringWithFormat(
@@ -334,7 +335,7 @@ ELFLinuxPrPsInfo::ELFLinuxPrPsInfo() {
   memset(this, 0, sizeof(ELFLinuxPrPsInfo));
 }
 
-size_t ELFLinuxPrPsInfo::GetSize(lldb_private::ArchSpec &arch) {
+size_t ELFLinuxPrPsInfo::GetSize(const lldb_private::ArchSpec &arch) {
   constexpr size_t mips_linux_pr_psinfo_size_o32_n32 = 128;
   if (arch.IsMIPS()) {
     uint8_t address_byte_size = arch.GetAddressByteSize();
@@ -355,7 +356,8 @@ size_t ELFLinuxPrPsInfo::GetSize(lldb_private::ArchSpec &arch) {
   }
 }
 
-Status ELFLinuxPrPsInfo::Parse(DataExtractor &data, ArchSpec &arch) {
+Status ELFLinuxPrPsInfo::Parse(const DataExtractor &data,
+                               const ArchSpec &arch) {
   Status error;
   ByteOrder byteorder = data.GetByteOrder();
   if (GetSize(arch) > data.GetByteSize()) {
@@ -424,7 +426,7 @@ size_t ELFLinuxSigInfo::GetSize(const lldb_private::ArchSpec &arch) {
   }
 }
 
-Status ELFLinuxSigInfo::Parse(DataExtractor &data, const ArchSpec &arch) {
+Status ELFLinuxSigInfo::Parse(const DataExtractor &data, const ArchSpec &arch) {
   Status error;
   if (GetSize(arch) > data.GetByteSize()) {
     error.SetErrorStringWithFormat(

@@ -127,12 +127,12 @@ void __tgt_unregister_lib(__tgt_bin_desc *desc);
 // creates the host to target data mapping, stores it in the
 // libomptarget.so internal structure (an entry in a stack of data maps) and
 // passes the data to the device;
-void __tgt_target_data_begin(int32_t device_id, int32_t arg_num,
+void __tgt_target_data_begin(int64_t device_id, int32_t arg_num,
                              void **args_base, void **args, int64_t *arg_sizes,
-                             int32_t *arg_types);
-void __tgt_target_data_begin_nowait(int32_t device_id, int32_t arg_num,
+                             int64_t *arg_types);
+void __tgt_target_data_begin_nowait(int64_t device_id, int32_t arg_num,
                                     void **args_base, void **args,
-                                    int64_t *arg_sizes, int32_t *arg_types,
+                                    int64_t *arg_sizes, int64_t *arg_types,
                                     int32_t depNum, void *depList,
                                     int32_t noAliasDepNum,
                                     void *noAliasDepList);
@@ -140,21 +140,21 @@ void __tgt_target_data_begin_nowait(int32_t device_id, int32_t arg_num,
 // passes data from the target, release target memory and destroys the
 // host-target mapping (top entry from the stack of data maps) created by
 // the last __tgt_target_data_begin
-void __tgt_target_data_end(int32_t device_id, int32_t arg_num, void **args_base,
-                           void **args, int64_t *arg_sizes, int32_t *arg_types);
-void __tgt_target_data_end_nowait(int32_t device_id, int32_t arg_num,
+void __tgt_target_data_end(int64_t device_id, int32_t arg_num, void **args_base,
+                           void **args, int64_t *arg_sizes, int64_t *arg_types);
+void __tgt_target_data_end_nowait(int64_t device_id, int32_t arg_num,
                                   void **args_base, void **args,
-                                  int64_t *arg_sizes, int32_t *arg_types,
+                                  int64_t *arg_sizes, int64_t *arg_types,
                                   int32_t depNum, void *depList,
                                   int32_t noAliasDepNum, void *noAliasDepList);
 
 /// passes data to/from the target
-void __tgt_target_data_update(int32_t device_id, int32_t arg_num,
+void __tgt_target_data_update(int64_t device_id, int32_t arg_num,
                               void **args_base, void **args, int64_t *arg_sizes,
-                              int32_t *arg_types);
-void __tgt_target_data_update_nowait(int32_t device_id, int32_t arg_num,
+                              int64_t *arg_types);
+void __tgt_target_data_update_nowait(int64_t device_id, int32_t arg_num,
                                      void **args_base, void **args,
-                                     int64_t *arg_sizes, int32_t *arg_types,
+                                     int64_t *arg_sizes, int64_t *arg_types,
                                      int32_t depNum, void *depList,
                                      int32_t noAliasDepNum,
                                      void *noAliasDepList);
@@ -165,25 +165,25 @@ void __tgt_target_data_update_nowait(int32_t device_id, int32_t arg_num,
 // same action as data_end above. The following types are used; this
 // function returns 0 if it was able to transfer the execution to a
 // target and an int different from zero otherwise.
-int __tgt_target(int32_t device_id, void *host_ptr, int32_t arg_num,
+int __tgt_target(int64_t device_id, void *host_ptr, int32_t arg_num,
                  void **args_base, void **args, int64_t *arg_sizes,
-                 int32_t *arg_types);
-int __tgt_target_nowait(int32_t device_id, void *host_ptr, int32_t arg_num,
+                 int64_t *arg_types);
+int __tgt_target_nowait(int64_t device_id, void *host_ptr, int32_t arg_num,
                         void **args_base, void **args, int64_t *arg_sizes,
-                        int32_t *arg_types, int32_t depNum, void *depList,
+                        int64_t *arg_types, int32_t depNum, void *depList,
                         int32_t noAliasDepNum, void *noAliasDepList);
 
-int __tgt_target_teams(int32_t device_id, void *host_ptr, int32_t arg_num,
+int __tgt_target_teams(int64_t device_id, void *host_ptr, int32_t arg_num,
                        void **args_base, void **args, int64_t *arg_sizes,
-                       int32_t *arg_types, int32_t num_teams,
+                       int64_t *arg_types, int32_t num_teams,
                        int32_t thread_limit);
-int __tgt_target_teams_nowait(int32_t device_id, void *host_ptr,
+int __tgt_target_teams_nowait(int64_t device_id, void *host_ptr,
                               int32_t arg_num, void **args_base, void **args,
-                              int64_t *arg_sizes, int32_t *arg_types,
+                              int64_t *arg_sizes, int64_t *arg_types,
                               int32_t num_teams, int32_t thread_limit,
                               int32_t depNum, void *depList,
                               int32_t noAliasDepNum, void *noAliasDepList);
-void __kmpc_push_target_tripcount(int32_t device_id, uint64_t loop_tripcount);
+void __kmpc_push_target_tripcount(int64_t device_id, uint64_t loop_tripcount);
 
 #ifdef __cplusplus
 }

@@ -77,7 +77,8 @@ protected:
   friend SymbolTable;
   explicit Symbol(Kind K, StringRef N = "")
       : SymbolKind(K), IsExternal(true), IsCOMDAT(false),
-        PendingArchiveLoad(false), IsGCRoot(false), Name(N) {}
+        WrittenToSymtab(false), PendingArchiveLoad(false), IsGCRoot(false),
+        Name(N) {}
 
   const unsigned SymbolKind : 8;
   unsigned IsExternal : 1;
@@ -86,6 +87,10 @@ protected:
   unsigned IsCOMDAT : 1;
 
 public:
+  // This bit is used by Writer::createSymbolAndStringTable() to prevent
+  // symbols from being written to the symbol table more than once.
+  unsigned WrittenToSymtab : 1;
+
   // True if this symbol was referenced by a regular (non-bitcode) object.
   unsigned IsUsedInRegularObj : 1;
 

@@ -320,9 +320,7 @@ public:
   std::map<const Elf_Verdef *, NeededVer> VerdefMap;
 
   // Used for --as-needed
-  bool AsNeeded = false;
-  bool IsUsed = false;
-  bool isNeeded() const { return !AsNeeded || IsUsed; }
+  bool IsNeeded;
 };
 
 class BinaryFile : public InputFile {
