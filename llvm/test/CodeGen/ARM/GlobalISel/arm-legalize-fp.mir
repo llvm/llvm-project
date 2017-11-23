@@ -17,6 +17,9 @@
   define void @test_fmul_float() { ret void }
   define void @test_fmul_double() { ret void }
 
+  define void @test_fdiv_float() { ret void }
+  define void @test_fdiv_double() { ret void }
+
   define void @test_fcmp_true_s32() { ret void }
   define void @test_fcmp_false_s32() { ret void }
 
@@ -500,6 +503,93 @@ body:             |
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_FMUL
     %6(s64) = G_FMUL %4, %5
+    ; HARD-DAG: G_UNMERGE_VALUES [[R]](s64)
+    %7(s32),%8(s32) = G_UNMERGE_VALUES %6(s64)
+    %r0 = COPY %7(s32)
+    %r1 = COPY %8(s32)
+    BX_RET 14, _, implicit %r0, implicit %r1
+...
+---
+name:            test_fdiv_float
+# CHECK-LABEL: name: test_fdiv_float
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]]:_(s32) = COPY %r1
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    ; HARD: [[R:%[0-9]+]]:_(s32) = G_FDIV [[X]], [[Y]]
+    ; SOFT-NOT: G_FDIV
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: %r0 = COPY [[X]]
+    ; SOFT-DAG: %r1 = COPY [[Y]]
+    ; SOFT-AEABI: BL $__aeabi_fdiv, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BL $__divsf3, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT: [[R:%[0-9]+]]:_(s32) = COPY %r0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT-NOT: G_FDIV
+    %2(s32) = G_FDIV %0, %1
+    ; CHECK: %r0 = COPY [[R]]
+    %r0 = COPY %2(s32)
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_fdiv_double
+# CHECK-LABEL: name: test_fdiv_double
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+  - { id: 5, class: _ }
+  - { id: 6, class: _ }
+  - { id: 7, class: _ }
+  - { id: 8, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1, %r2, %r3
+
+    ; CHECK-DAG: [[X0:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[X1:%[0-9]+]]:_(s32) = COPY %r1
+    ; CHECK-DAG: [[Y0:%[0-9]+]]:_(s32) = COPY %r2
+    ; CHECK-DAG: [[Y1:%[0-9]+]]:_(s32) = COPY %r3
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    %2(s32) = COPY %r2
+    %3(s32) = COPY %r3
+    ; HARD-DAG: [[X:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[X0]]
+    ; HARD-DAG: [[Y:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[Y0]]
+    %4(s64) = G_MERGE_VALUES %0(s32), %1(s32)
+    %5(s64) = G_MERGE_VALUES %2(s32), %3(s32)
+    ; HARD: [[R:%[0-9]+]]:_(s64) = G_FDIV [[X]], [[Y]]
+    ; SOFT-NOT: G_FDIV
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: %r{{[0-1]}} = COPY [[X0]]
+    ; SOFT-DAG: %r{{[0-1]}} = COPY [[X1]]
+    ; SOFT-DAG: %r{{[2-3]}} = COPY [[Y0]]
+    ; SOFT-DAG: %r{{[2-3]}} = COPY [[Y1]]
+    ; SOFT-AEABI: BL $__aeabi_ddiv, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0, implicit-def %r1
+    ; SOFT-DEFAULT: BL $__divdf3, {{.*}}, implicit %r0, implicit %r1, implicit %r2, implicit %r3, implicit-def %r0, implicit-def %r1
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT-NOT: G_FDIV
+    %6(s64) = G_FDIV %4, %5
     ; HARD-DAG: G_UNMERGE_VALUES [[R]](s64)
     %7(s32),%8(s32) = G_UNMERGE_VALUES %6(s64)
     %r0 = COPY %7(s32)
