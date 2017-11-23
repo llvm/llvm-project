@@ -21,7 +21,7 @@ Content-Length: 151
 # CHECK-NEXT:        "insertTextFormat": 1,
 # CHECK-NEXT:        "kind": 2,
 # CHECK-NEXT:        "label": "bar() const",
-# CHECK-NEXT:        "sortText": "000037bar"
+# CHECK-NEXT:        "sortText": "{{.*}}bar"
 # CHECK-NEXT:      },
 # CHECK-NEXT:      {
 # CHECK-NEXT:        "detail": "int",
@@ -30,7 +30,7 @@ Content-Length: 151
 # CHECK-NEXT:        "insertTextFormat": 1,
 # CHECK-NEXT:        "kind": 2,
 # CHECK-NEXT:        "label": "Foo::foo() const",
-# CHECK-NEXT:        "sortText": "000037foo"
+# CHECK-NEXT:        "sortText": "{{.*}}foo"
 # CHECK-NEXT:      },
 # Ineligible private functions are not present.
 #  CHECK-NOT:        "label": "foo() const",

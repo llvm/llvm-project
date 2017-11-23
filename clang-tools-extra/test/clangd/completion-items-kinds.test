@@ -12,20 +12,20 @@ Content-Length: 148
 {"jsonrpc":"2.0","id":1,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":4,"character":7}}}
 # CHECK: {"id":1,"jsonrpc":"2.0","result":{"isIncomplete":false,"items":
 #
-# Keyword
-# CHECK-DAG: {"filterText":"int","insertText":"int","insertTextFormat":1,"kind":14,"label":"int","sortText":"000050int"}
-#
-# Struct
-# CHECK-DAG: {"filterText":"Struct","insertText":"Struct","insertTextFormat":1,"kind":7,"label":"Struct","sortText":"000050Struct"}
-#
-# Macro
-# CHECK-DAG: {"filterText":"MACRO","insertText":"MACRO","insertTextFormat":1,"kind":1,"label":"MACRO","sortText":"000070MACRO"}
+# Function
+# CHECK: {"detail":"int","filterText":"function","insertText":"function()","insertTextFormat":1,"kind":3,"label":"function()","sortText":"{{.*}}function"}
 #
 # Variable
-# CHECK-DAG: {"detail":"int","filterText":"variable","insertText":"variable","insertTextFormat":1,"kind":6,"label":"variable","sortText":"000012variable"}
+# CHECK: {"detail":"int","filterText":"variable","insertText":"variable","insertTextFormat":1,"kind":6,"label":"variable","sortText":"{{.*}}variable"}
 #
-# Function
-# CHECK-DAG: {"detail":"int","filterText":"function","insertText":"function()","insertTextFormat":1,"kind":3,"label":"function()","sortText":"000012function"}
+# Keyword
+# CHECK: {"filterText":"int","insertText":"int","insertTextFormat":1,"kind":14,"label":"int","sortText":"{{.*}}int"}
+#
+# Struct
+# CHECK: {"filterText":"Struct","insertText":"Struct","insertTextFormat":1,"kind":7,"label":"Struct","sortText":"{{.*}}Struct"}
+#
+# Macro
+# CHECK: {"filterText":"MACRO","insertText":"MACRO","insertTextFormat":1,"kind":1,"label":"MACRO","sortText":"{{.*}}MACRO"}
 #
 # CHECK-SAME: ]}}
 Content-Length: 146
@@ -35,7 +35,7 @@ Content-Length: 148
 
 {"jsonrpc":"2.0","id":2,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":1,"character":3}}}
 # Code pattern (unfortunately there are none in expression context)
-# CHECK-DAG: {"filterText":"namespace","insertText":"namespace ${1:identifier}{${2:declarations}\n}","insertTextFormat":2,"kind":15,"label":"namespace identifier{declarations}","sortText":"000040namespace"}
+# CHECK-DAG: {"filterText":"namespace","insertText":"namespace ${1:identifier}{${2:declarations}\n}","insertTextFormat":2,"kind":15,"label":"namespace identifier{declarations}","sortText":"{{.*}}namespace"}
 #
 Content-Length: 58
 
