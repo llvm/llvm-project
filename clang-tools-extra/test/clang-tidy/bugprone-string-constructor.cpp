@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-string-constructor %t
+// RUN: %check_clang_tidy %s bugprone-string-constructor %t
 
 namespace std {
 template <typename T>
@@ -21,7 +21,7 @@ extern const char kText3[];
 
 void Test() {
   std::string str('x', 4);
-  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: string constructor parameters are probably swapped; expecting string(count, character) [misc-string-constructor]
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: string constructor parameters are probably swapped; expecting string(count, character) [bugprone-string-constructor]
   // CHECK-FIXES: std::string str(4, 'x');
   std::wstring wstr(L'x', 4);
   // CHECK-MESSAGES: [[@LINE-1]]:16: warning: string constructor parameters are probably swapped

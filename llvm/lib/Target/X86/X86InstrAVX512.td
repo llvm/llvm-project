@@ -10215,3 +10215,30 @@ defm VPOPCNTW : avx512_unary_rm_vl<0x54, "vpopcntw", ctpop,
                                    avx512vl_i16_info, HasBITALG>,
                 avx512_unary_lowering<ctpop, avx512vl_i16_info, HasBITALG>, VEX_W;
 
+multiclass VPSHUFBITQMB_rm<X86VectorVTInfo VTI> {
+  defm rr : AVX512_maskable_cmp<0x8F, MRMSrcReg, VTI, (outs VTI.KRC:$dst),
+                                (ins VTI.RC:$src1, VTI.RC:$src2),
+                                "vpshufbitqmb",
+                                "$src2, $src1", "$src1, $src2",
+                                (X86Vpshufbitqmb (VTI.VT VTI.RC:$src1),
+                                 (VTI.VT VTI.RC:$src2))>, EVEX_4V, T8PD;
+  defm rm : AVX512_maskable_cmp<0x8F, MRMSrcMem, VTI, (outs VTI.KRC:$dst),
+                                (ins VTI.RC:$src1, VTI.MemOp:$src2),
+                                "vpshufbitqmb",
+                                "$src2, $src1", "$src1, $src2",
+                                (X86Vpshufbitqmb (VTI.VT VTI.RC:$src1),
+                                 (VTI.VT (bitconvert (VTI.LdFrag addr:$src2))))>,
+                                EVEX_4V, EVEX_CD8<8, CD8VF>, T8PD;
+}
+
+multiclass VPSHUFBITQMB_common<AVX512VLVectorVTInfo VTI> {
+  let Predicates = [HasBITALG] in
+  defm Z      : VPSHUFBITQMB_rm<VTI.info512>, EVEX_V512;
+  let Predicates = [HasBITALG, HasVLX] in {
+    defm Z256 : VPSHUFBITQMB_rm<VTI.info256>, EVEX_V256;
+    defm Z128 : VPSHUFBITQMB_rm<VTI.info128>, EVEX_V128;
+  }
+}
+
+defm VPSHUFBITQMB : VPSHUFBITQMB_common<avx512vl_i8_info>;
+

@@ -335,6 +335,9 @@ namespace llvm {
       // Vector integer comparisons, the result is in a mask vector.
       PCMPEQM, PCMPGTM,
 
+      // v8i16 Horizontal minimum and position.
+      PHMINPOS,
+
       MULTISHIFT,
 
       /// Vector comparison generating mask bits for fp and
@@ -518,6 +521,9 @@ namespace llvm {
       // Compress and expand.
       COMPRESS,
       EXPAND,
+
+      // Bits shuffle
+      VPSHUFBITQMB,
 
       // Convert Unsigned/Integer to Floating-Point Value with rounding mode.
       SINT_TO_FP_RND, UINT_TO_FP_RND,

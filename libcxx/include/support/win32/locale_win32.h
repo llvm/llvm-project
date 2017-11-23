@@ -14,6 +14,7 @@
 #include <__config>
 #include <stdio.h>
 #include <xlocinfo.h> // _locale_t
+#include <__nullptr>
 
 #define LC_COLLATE_MASK _M_COLLATE
 #define LC_CTYPE_MASK _M_CTYPE
@@ -28,13 +29,77 @@
                      | LC_NUMERIC_MASK \
                      | LC_TIME_MASK )
 
-#define locale_t _locale_t
+class locale_t {
+public:
+    locale_t()
+        : __locale(nullptr), __locale_str(nullptr) {}
+    locale_t(std::nullptr_t)
+        : __locale(nullptr), __locale_str(nullptr) {}
+    locale_t(_locale_t __locale, const char* __locale_str)
+        : __locale(__locale), __locale_str(__locale_str) {}
+
+    friend bool operator==(const locale_t& __left, const locale_t& __right) {
+        return __left.__locale == __right.__locale;
+    }
+
+    friend bool operator==(const locale_t& __left, int __right) {
+        return __left.__locale == nullptr && __right == 0;
+    }
+
+    friend bool operator==(const locale_t& __left, std::nullptr_t) {
+        return __left.__locale == nullptr;
+    }
+
+    friend bool operator==(int __left, const locale_t& __right) {
+        return __left == 0 && nullptr == __right.__locale;
+    }
+
+    friend bool operator==(std::nullptr_t, const locale_t& __right) {
+        return nullptr == __right.__locale;
+    }
+
+    friend bool operator!=(const locale_t& __left, const locale_t& __right) {
+        return !(__left == __right);
+    }
+
+    friend bool operator!=(const locale_t& __left, int __right) {
+        return !(__left == __right);
+    }
+
+    friend bool operator!=(const locale_t& __left, std::nullptr_t __right) {
+        return !(__left == __right);
+    }
+
+    friend bool operator!=(int __left, const locale_t& __right) {
+        return !(__left == __right);
+    }
+
+    friend bool operator!=(std::nullptr_t __left, const locale_t& __right) {
+        return !(__left == __right);
+    }
+
+    operator bool() const {
+        return __locale != nullptr;
+    }
+
+    const char* __get_locale() const { return __locale_str; }
+
+    operator _locale_t() const {
+        return __locale;
+    }
+private:
+    _locale_t __locale;
+    const char* __locale_str;
+};
 
 // Locale management functions
 #define freelocale _free_locale
 // FIXME: base currently unused. Needs manual work to construct the new locale
 locale_t newlocale( int mask, const char * locale, locale_t base );
-locale_t uselocale( locale_t newloc );
+// uselocale can't be implemented on Windows because Windows allows partial modification
+// of thread-local locale and so _get_current_locale() returns a copy while uselocale does
+// not create any copies.
+// We can still implement raii even without uselocale though.
 
 
 lconv *localeconv_l( locale_t loc );

@@ -7,19 +7,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_STRING_CONSTRUCTOR_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_STRING_CONSTRUCTOR_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_STRING_CONSTRUCTOR_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_STRING_CONSTRUCTOR_H
 
 #include "../ClangTidy.h"
 
 namespace clang {
 namespace tidy {
-namespace misc {
+namespace bugprone {
 
 /// Finds suspicious string constructor and check their parameters.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc-string-constructor.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-string-constructor.html
 class StringConstructorCheck : public ClangTidyCheck {
 public:
   StringConstructorCheck(StringRef Name, ClangTidyContext *Context);
@@ -32,8 +32,8 @@ private:
   const unsigned int LargeLengthThreshold;
 };
 
-} // namespace misc
+} // namespace bugprone
 } // namespace tidy
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_STRING_CONSTRUCTOR_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_STRING_CONSTRUCTOR_H
