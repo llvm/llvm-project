@@ -19,6 +19,7 @@ Clang-Tidy Checks
    boost-use-to-string
    bugprone-copy-constructor-init
    bugprone-integer-division
+   bugprone-misplaced-operator-in-strlen-in-alloc
    bugprone-suspicious-memset-usage
    bugprone-undefined-memory-manipulation
    cert-dcl03-c (redirects to misc-static-assert) <cert-dcl03-c>
