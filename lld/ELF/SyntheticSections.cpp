@@ -983,25 +983,58 @@ DynamicSection<ELFT>::DynamicSection()
   addEntries();
 }
 
+template <class ELFT>
+void DynamicSection<ELFT>::add(int32_t Tag, std::function<uint64_t()> Fn) {
+  Entries.push_back({Tag, Fn});
+}
+
+template <class ELFT>
+void DynamicSection<ELFT>::addInt(int32_t Tag, uint64_t Val) {
+  Entries.push_back({Tag, [=] { return Val; }});
+}
+
+template <class ELFT>
+void DynamicSection<ELFT>::addInSec(int32_t Tag, InputSection *Sec) {
+  Entries.push_back(
+      {Tag, [=] { return Sec->getParent()->Addr + Sec->OutSecOff; }});
+}
+
+template <class ELFT>
+void DynamicSection<ELFT>::addOutSec(int32_t Tag, OutputSection *Sec) {
+  Entries.push_back({Tag, [=] { return Sec->Addr; }});
+}
+
+template <class ELFT>
+void DynamicSection<ELFT>::addSize(int32_t Tag, OutputSection *Sec) {
+  Entries.push_back({Tag, [=] { return Sec->Size; }});
+}
+
+template <class ELFT>
+void DynamicSection<ELFT>::addSym(int32_t Tag, Symbol *Sym) {
+  Entries.push_back({Tag, [=] { return Sym->getVA(); }});
+}
+
 // There are some dynamic entries that don't depend on other sections.
 // Such entries can be set early.
 template <class ELFT> void DynamicSection<ELFT>::addEntries() {
   // Add strings to .dynstr early so that .dynstr's size will be
   // fixed early.
   for (StringRef S : Config->FilterList)
-    add({DT_FILTER, InX::DynStrTab->addString(S)});
+    addInt(DT_FILTER, InX::DynStrTab->addString(S));
   for (StringRef S : Config->AuxiliaryList)
-    add({DT_AUXILIARY, InX::DynStrTab->addString(S)});
+    addInt(DT_AUXILIARY, InX::DynStrTab->addString(S));
+
   if (!Config->Rpath.empty())
-    add({Config->EnableNewDtags ? DT_RUNPATH : DT_RPATH,
-         InX::DynStrTab->addString(Config->Rpath)});
+    addInt(Config->EnableNewDtags ? DT_RUNPATH : DT_RPATH,
+           InX::DynStrTab->addString(Config->Rpath));
+
   for (InputFile *File : SharedFiles) {
     SharedFile<ELFT> *F = cast<SharedFile<ELFT>>(File);
     if (F->IsNeeded)
-      add({DT_NEEDED, InX::DynStrTab->addString(F->SoName)});
+      addInt(DT_NEEDED, InX::DynStrTab->addString(F->SoName));
   }
   if (!Config->SoName.empty())
-    add({DT_SONAME, InX::DynStrTab->addString(Config->SoName)});
+    addInt(DT_SONAME, InX::DynStrTab->addString(Config->SoName));
 
   // Set DT_FLAGS and DT_FLAGS_1.
   uint32_t DtFlags = 0;
@@ -1022,9 +1055,9 @@ template <class ELFT> void DynamicSection<ELFT>::addEntries() {
   }
 
   if (DtFlags)
-    add({DT_FLAGS, DtFlags});
+    addInt(DT_FLAGS, DtFlags);
   if (DtFlags1)
-    add({DT_FLAGS_1, DtFlags1});
+    addInt(DT_FLAGS_1, DtFlags1);
 
   // DT_DEBUG is a pointer to debug informaion used by debuggers at runtime. We
   // need it for each process, so we don't write it for DSOs. The loader writes
@@ -1035,7 +1068,7 @@ template <class ELFT> void DynamicSection<ELFT>::addEntries() {
   // debugger this information. Such systems may choose make .dynamic read-only.
   // If the target is such a system (used -z rodynamic) don't write DT_DEBUG.
   if (!Config->Shared && !Config->Relocatable && !Config->ZRodynamic)
-    add({DT_DEBUG, (uint64_t)0});
+    addInt(DT_DEBUG, 0);
 }
 
 // Add remaining entries to complete .dynamic contents.
@@ -1045,13 +1078,12 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
 
   this->Link = InX::DynStrTab->getParent()->SectionIndex;
   if (In<ELFT>::RelaDyn->getParent() && !In<ELFT>::RelaDyn->empty()) {
-    add({In<ELFT>::RelaDyn->DynamicTag, In<ELFT>::RelaDyn});
-    add({In<ELFT>::RelaDyn->SizeDynamicTag, In<ELFT>::RelaDyn->getParent(),
-         Entry::SecSize});
+    addInSec(In<ELFT>::RelaDyn->DynamicTag, In<ELFT>::RelaDyn);
+    addSize(In<ELFT>::RelaDyn->SizeDynamicTag, In<ELFT>::RelaDyn->getParent());
 
     bool IsRela = Config->IsRela;
-    add({IsRela ? DT_RELAENT : DT_RELENT,
-         uint64_t(IsRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel))});
+    addInt(IsRela ? DT_RELAENT : DT_RELENT,
+           IsRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel));
 
     // MIPS dynamic loader does not support RELCOUNT tag.
     // The problem is in the tight relation between dynamic
@@ -1059,89 +1091,87 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
     if (Config->EMachine != EM_MIPS) {
       size_t NumRelativeRels = In<ELFT>::RelaDyn->getRelativeRelocCount();
       if (Config->ZCombreloc && NumRelativeRels)
-        add({IsRela ? DT_RELACOUNT : DT_RELCOUNT, NumRelativeRels});
+        addInt(IsRela ? DT_RELACOUNT : DT_RELCOUNT, NumRelativeRels);
     }
   }
   if (In<ELFT>::RelaPlt->getParent() && !In<ELFT>::RelaPlt->empty()) {
-    add({DT_JMPREL, In<ELFT>::RelaPlt});
-    add({DT_PLTRELSZ, In<ELFT>::RelaPlt->getParent(), Entry::SecSize});
+    addInSec(DT_JMPREL, In<ELFT>::RelaPlt);
+    addSize(DT_PLTRELSZ, In<ELFT>::RelaPlt->getParent());
     switch (Config->EMachine) {
     case EM_MIPS:
-      add({DT_MIPS_PLTGOT, InX::GotPlt});
+      addInSec(DT_MIPS_PLTGOT, InX::GotPlt);
       break;
     case EM_SPARCV9:
-      add({DT_PLTGOT, InX::Plt});
+      addInSec(DT_PLTGOT, InX::Plt);
       break;
     default:
-      add({DT_PLTGOT, InX::GotPlt});
+      addInSec(DT_PLTGOT, InX::GotPlt);
       break;
     }
-    add({DT_PLTREL, uint64_t(Config->IsRela ? DT_RELA : DT_REL)});
+    addInt(DT_PLTREL, Config->IsRela ? DT_RELA : DT_REL);
   }
 
-  add({DT_SYMTAB, InX::DynSymTab});
-  add({DT_SYMENT, sizeof(Elf_Sym)});
-  add({DT_STRTAB, InX::DynStrTab});
-  add({DT_STRSZ, InX::DynStrTab->getSize()});
+  addInSec(DT_SYMTAB, InX::DynSymTab);
+  addInt(DT_SYMENT, sizeof(Elf_Sym));
+  addInSec(DT_STRTAB, InX::DynStrTab);
+  addInt(DT_STRSZ, InX::DynStrTab->getSize());
   if (!Config->ZText)
-    add({DT_TEXTREL, (uint64_t)0});
+    addInt(DT_TEXTREL, 0);
   if (InX::GnuHashTab)
-    add({DT_GNU_HASH, InX::GnuHashTab});
+    addInSec(DT_GNU_HASH, InX::GnuHashTab);
   if (InX::HashTab)
-    add({DT_HASH, InX::HashTab});
+    addInSec(DT_HASH, InX::HashTab);
 
   if (Out::PreinitArray) {
-    add({DT_PREINIT_ARRAY, Out::PreinitArray});
-    add({DT_PREINIT_ARRAYSZ, Out::PreinitArray, Entry::SecSize});
+    addOutSec(DT_PREINIT_ARRAY, Out::PreinitArray);
+    addSize(DT_PREINIT_ARRAYSZ, Out::PreinitArray);
   }
   if (Out::InitArray) {
-    add({DT_INIT_ARRAY, Out::InitArray});
-    add({DT_INIT_ARRAYSZ, Out::InitArray, Entry::SecSize});
+    addOutSec(DT_INIT_ARRAY, Out::InitArray);
+    addSize(DT_INIT_ARRAYSZ, Out::InitArray);
   }
   if (Out::FiniArray) {
-    add({DT_FINI_ARRAY, Out::FiniArray});
-    add({DT_FINI_ARRAYSZ, Out::FiniArray, Entry::SecSize});
+    addOutSec(DT_FINI_ARRAY, Out::FiniArray);
+    addSize(DT_FINI_ARRAYSZ, Out::FiniArray);
   }
 
   if (Symbol *B = Symtab->find(Config->Init))
     if (B->isDefined())
-      add({DT_INIT, B});
+      addSym(DT_INIT, B);
   if (Symbol *B = Symtab->find(Config->Fini))
     if (B->isDefined())
-      add({DT_FINI, B});
+      addSym(DT_FINI, B);
 
   bool HasVerNeed = In<ELFT>::VerNeed->getNeedNum() != 0;
   if (HasVerNeed || In<ELFT>::VerDef)
-    add({DT_VERSYM, In<ELFT>::VerSym});
+    addInSec(DT_VERSYM, In<ELFT>::VerSym);
   if (In<ELFT>::VerDef) {
-    add({DT_VERDEF, In<ELFT>::VerDef});
-    add({DT_VERDEFNUM, getVerDefNum()});
+    addInSec(DT_VERDEF, In<ELFT>::VerDef);
+    addInt(DT_VERDEFNUM, getVerDefNum());
   }
   if (HasVerNeed) {
-    add({DT_VERNEED, In<ELFT>::VerNeed});
-    add({DT_VERNEEDNUM, In<ELFT>::VerNeed->getNeedNum()});
+    addInSec(DT_VERNEED, In<ELFT>::VerNeed);
+    addInt(DT_VERNEEDNUM, In<ELFT>::VerNeed->getNeedNum());
   }
 
   if (Config->EMachine == EM_MIPS) {
-    add({DT_MIPS_RLD_VERSION, 1});
-    add({DT_MIPS_FLAGS, RHF_NOTPOT});
-    add({DT_MIPS_BASE_ADDRESS, Target->getImageBase()});
-    add({DT_MIPS_SYMTABNO, InX::DynSymTab->getNumSymbols()});
+    addInt(DT_MIPS_RLD_VERSION, 1);
+    addInt(DT_MIPS_FLAGS, RHF_NOTPOT);
+    addInt(DT_MIPS_BASE_ADDRESS, Target->getImageBase());
+    addInt(DT_MIPS_SYMTABNO, InX::DynSymTab->getNumSymbols());
 
-    // The number of local GOT entries has not yet been finalized. This value
-    // will be set in writeTo().
-    add({DT_MIPS_LOCAL_GOTNO, uint64_t(0)});
+    add(DT_MIPS_LOCAL_GOTNO, [] { return InX::MipsGot->getLocalEntriesNum(); });
 
     if (const Symbol *B = InX::MipsGot->getFirstGlobalEntry())
-      add({DT_MIPS_GOTSYM, B->DynsymIndex});
+      addInt(DT_MIPS_GOTSYM, B->DynsymIndex);
     else
-      add({DT_MIPS_GOTSYM, InX::DynSymTab->getNumSymbols()});
-    add({DT_PLTGOT, InX::MipsGot});
+      addInt(DT_MIPS_GOTSYM, InX::DynSymTab->getNumSymbols());
+    addInSec(DT_PLTGOT, InX::MipsGot);
     if (InX::MipsRldMap)
-      add({DT_MIPS_RLD_MAP, InX::MipsRldMap});
+      addInSec(DT_MIPS_RLD_MAP, InX::MipsRldMap);
   }
 
-  add({DT_NULL, (uint64_t)0});
+  addInt(DT_NULL, 0);
 
   getParent()->Link = this->Link;
   this->Size = Entries.size() * this->Entsize;
@@ -1150,28 +1180,9 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
 template <class ELFT> void DynamicSection<ELFT>::writeTo(uint8_t *Buf) {
   auto *P = reinterpret_cast<Elf_Dyn *>(Buf);
 
-  for (const Entry &E : Entries) {
-    P->d_tag = E.Tag;
-    switch (E.Kind) {
-    case Entry::SecAddr:
-      P->d_un.d_ptr = E.OutSec->Addr;
-      break;
-    case Entry::InSecAddr:
-      P->d_un.d_ptr = E.InSec->getParent()->Addr + E.InSec->OutSecOff;
-      break;
-    case Entry::SecSize:
-      P->d_un.d_val = E.OutSec->Size;
-      break;
-    case Entry::SymAddr:
-      P->d_un.d_ptr = E.Sym->getVA();
-      break;
-    case Entry::PlainInt:
-      if (Config->EMachine == EM_MIPS && E.Tag == DT_MIPS_LOCAL_GOTNO)
-        P->d_un.d_val = InX::MipsGot->getLocalEntriesNum();
-      else
-        P->d_un.d_val = E.Val;
-      break;
-    }
+  for (std::pair<int32_t, std::function<uint64_t()>> &KV : Entries) {
+    P->d_tag = KV.first;
+    P->d_un.d_val = KV.second();
     ++P;
   }
 }

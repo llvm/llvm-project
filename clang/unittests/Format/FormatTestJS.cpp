@@ -1110,6 +1110,10 @@ TEST_F(FormatTestJS, ForLoops) {
                "}");
   verifyFormat("for (let {a, b} of x) {\n"
                "}");
+  verifyFormat("for (let {a, b} of [x]) {\n"
+               "}");
+  verifyFormat("for (let [a, b] of [x]) {\n"
+               "}");
   verifyFormat("for (let {a, b} in x) {\n"
                "}");
 }

@@ -202,6 +202,22 @@ static cl::opt<bool>
 AddrSinkNewSelects("addr-sink-new-select", cl::Hidden, cl::init(false),
                    cl::desc("Allow creation of selects in Address sinking."));
 
+static cl::opt<bool> AddrSinkCombineBaseReg(
+    "addr-sink-combine-base-reg", cl::Hidden, cl::init(true),
+    cl::desc("Allow combining of BaseReg field in Address sinking."));
+
+static cl::opt<bool> AddrSinkCombineBaseGV(
+    "addr-sink-combine-base-gv", cl::Hidden, cl::init(true),
+    cl::desc("Allow combining of BaseGV field in Address sinking."));
+
+static cl::opt<bool> AddrSinkCombineBaseOffs(
+    "addr-sink-combine-base-offs", cl::Hidden, cl::init(true),
+    cl::desc("Allow combining of BaseOffs field in Address sinking."));
+
+static cl::opt<bool> AddrSinkCombineScaledReg(
+    "addr-sink-combine-scaled-reg", cl::Hidden, cl::init(true),
+    cl::desc("Allow combining of ScaledReg field in Address sinking."));
+
 namespace {
 
 using SetOfInstrs = SmallPtrSet<Instruction *, 16>;
@@ -2073,6 +2089,59 @@ struct ExtAddrMode : public TargetLowering::AddrMode {
 
     return false;
   }
+
+  Value *GetFieldAsValue(FieldName Field, Type *IntPtrTy) {
+    switch (Field) {
+    default:
+      return nullptr;
+    case BaseRegField:
+      return BaseReg;
+    case BaseGVField:
+      return BaseGV;
+    case ScaledRegField:
+      return ScaledReg;
+    case BaseOffsField:
+      return ConstantInt::get(IntPtrTy, BaseOffs);
+    }
+  }
+
+  void SetCombinedField(FieldName Field, Value *V,
+                        const SmallVectorImpl<ExtAddrMode> &AddrModes) {
+    switch (Field) {
+    default:
+      llvm_unreachable("Unhandled fields are expected to be rejected earlier");
+      break;
+    case ExtAddrMode::BaseRegField:
+      BaseReg = V;
+      break;
+    case ExtAddrMode::BaseGVField:
+      // A combined BaseGV is an Instruction, not a GlobalValue, so it goes
+      // in the BaseReg field.
+      assert(BaseReg == nullptr);
+      BaseReg = V;
+      BaseGV = nullptr;
+      break;
+    case ExtAddrMode::ScaledRegField:
+      ScaledReg = V;
+      // If we have a mix of scaled and unscaled addrmodes then we want scale
+      // to be the scale and not zero.
+      if (!Scale)
+        for (const ExtAddrMode &AM : AddrModes)
+          if (AM.Scale) {
+            Scale = AM.Scale;
+            break;
+          }
+      break;
+    case ExtAddrMode::BaseOffsField:
+      // The offset is no longer a constant, so it goes in ScaledReg with a
+      // scale of 1.
+      assert(ScaledReg == nullptr);
+      ScaledReg = V;
+      Scale = 1;
+      BaseOffs = 0;
+      break;
+    }
+  }
 };
 
 } // end anonymous namespace
@@ -2800,12 +2869,14 @@ public:
     else if (DifferentField != ThisDifferentField)
       DifferentField = ExtAddrMode::MultipleFields;
 
-    // If NewAddrMode differs in only one dimension then we can handle it by
+    // If NewAddrMode differs in only one dimension, and that dimension isn't
+    // the amount that ScaledReg is scaled by, then we can handle it by
     // inserting a phi/select later on. Even if NewAddMode is the same
     // we still need to collect it due to original value is different.
     // And later we will need all original values as anchors during
     // finding the common Phi node.
-    if (DifferentField != ExtAddrMode::MultipleFields) {
+    if (DifferentField != ExtAddrMode::MultipleFields &&
+        DifferentField != ExtAddrMode::ScaleField) {
       AddrModes.emplace_back(NewAddrMode);
       return true;
     }
@@ -2833,12 +2904,7 @@ public:
     if (AllAddrModesTrivial)
       return false;
 
-    if (DisableComplexAddrModes)
-      return false;
-
-    // For now we support only different base registers.
-    // TODO: enable others.
-    if (DifferentField != ExtAddrMode::BaseRegField)
+    if (!addrModeCombiningAllowed())
       return false;
 
     // Build a map between <original value, basic block where we saw it> to
@@ -2848,7 +2914,7 @@ public:
 
     Value *CommonValue = findCommon(Map);
     if (CommonValue)
-      AddrModes[0].BaseReg = CommonValue;
+      AddrModes[0].SetCombinedField(DifferentField, CommonValue, AddrModes);
     return CommonValue != nullptr;
   }
 
@@ -2862,14 +2928,13 @@ private:
     // Keep track of keys where the value is null. We will need to replace it
     // with constant null when we know the common type.
     SmallVector<ValueInBB, 2> NullValue;
+    Type *IntPtrTy = SQ.DL.getIntPtrType(AddrModes[0].OriginalValue->getType());
     for (auto &AM : AddrModes) {
       BasicBlock *BB = nullptr;
       if (Instruction *I = dyn_cast<Instruction>(AM.OriginalValue))
         BB = I->getParent();
 
-      // For now we support only base register as different field.
-      // TODO: Enable others.
-      Value *DV = AM.BaseReg;
+      Value *DV = AM.GetFieldAsValue(DifferentField, IntPtrTy);
       if (DV) {
         if (CommonType)
           assert(CommonType == DV->getType() && "Different types detected!");
@@ -3180,6 +3245,23 @@ private:
         for (auto B : predecessors(CurrentBlock))
           Worklist.push_back({ CurrentPhi->getIncomingValueForBlock(B), B });
       }
+    }
+  }
+
+  bool addrModeCombiningAllowed() {
+    if (DisableComplexAddrModes)
+      return false;
+    switch (DifferentField) {
+    default:
+      return false;
+    case ExtAddrMode::BaseRegField:
+      return AddrSinkCombineBaseReg;
+    case ExtAddrMode::BaseGVField:
+      return AddrSinkCombineBaseGV;
+    case ExtAddrMode::BaseOffsField:
+      return AddrSinkCombineBaseOffs;
+    case ExtAddrMode::ScaledRegField:
+      return AddrSinkCombineScaledReg;
     }
   }
 };

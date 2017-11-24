@@ -289,7 +289,14 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
 
   InX::Bss = make<BssSection>(".bss", 0, 1);
   Add(InX::Bss);
-  InX::BssRelRo = make<BssSection>(".bss.rel.ro", 0, 1);
+
+  // If there is a SECTIONS command and a .data.rel.ro section name use name
+  // .data.rel.ro.bss so that we match in the .data.rel.ro output section.
+  // This makes sure our relro is contiguous.
+  bool HasDataRelRo =
+      Script->HasSectionsCommand && findSection(".data.rel.ro");
+  InX::BssRelRo = make<BssSection>(
+      HasDataRelRo ? ".data.rel.ro.bss" : ".bss.rel.ro", 0, 1);
   Add(InX::BssRelRo);
 
   // Add MIPS-specific sections.
