@@ -9,8 +9,8 @@ add_clang_library(clangDaemon
   ClangdUnitStore.cpp
   DraftStore.cpp
   GlobalCompilationDatabase.cpp
-  JSONRPCDispatcher.cpp
   JSONExpr.cpp
+  JSONRPCDispatcher.cpp
   Logger.cpp
   Protocol.cpp
   ProtocolHandlers.cpp

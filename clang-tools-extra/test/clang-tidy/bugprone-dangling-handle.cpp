@@ -1,6 +1,6 @@
-// RUN: %check_clang_tidy %s misc-dangling-handle %t -- \
+// RUN: %check_clang_tidy %s bugprone-dangling-handle %t -- \
 // RUN:   -config="{CheckOptions: \
-// RUN:             [{key: misc-dangling-handle.HandleClasses, \
+// RUN:             [{key: bugprone-dangling-handle.HandleClasses, \
 // RUN:               value: 'std::basic_string_view; ::llvm::StringRef;'}]}" \
 // RUN:   -- -std=c++11
 
@@ -79,7 +79,7 @@ std::string ReturnsAString();
 
 void Positives() {
   std::string_view view1 = std::string();
-  // CHECK-MESSAGES: [[@LINE-1]]:20: warning: std::basic_string_view outlives its value [misc-dangling-handle]
+  // CHECK-MESSAGES: [[@LINE-1]]:20: warning: std::basic_string_view outlives its value [bugprone-dangling-handle]
 
   std::string_view view_2 = ReturnsAString();
   // CHECK-MESSAGES: [[@LINE-1]]:20: warning: std::basic_string_view outlives

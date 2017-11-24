@@ -699,9 +699,7 @@ void PrecompiledPreamble::setupPreambleStorage(
     StringRef PCHPath = getInMemoryPreamblePath();
     PreprocessorOpts.ImplicitPCHInclude = PCHPath;
 
-    // FIMXE(ibiryukov): Preambles can be large. We should allow shared access
-    // to the preamble data instead of copying it here.
-    auto Buf = llvm::MemoryBuffer::getMemBufferCopy(Storage.asMemory().Data);
+    auto Buf = llvm::MemoryBuffer::getMemBuffer(Storage.asMemory().Data);
     VFS = createVFSOverlayForPreamblePCH(PCHPath, std::move(Buf), VFS);
   }
 }

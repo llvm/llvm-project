@@ -57,6 +57,9 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- The 'misc-dangling-handle' check was renamed to `bugprone-dangling-handle
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-dangling-handle.html>`_
+
 - The 'misc-argument-comment' check was renamed to `bugprone-argument-comment
   <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-argument-comment.html>`_
 

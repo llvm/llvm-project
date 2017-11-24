@@ -2397,9 +2397,11 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     if ((Left.isOneOf(Keywords.kw_let, Keywords.kw_var, Keywords.kw_in,
                       tok::kw_const) ||
          // "of" is only a keyword if it appears after another identifier
-         // (e.g. as "const x of y" in a for loop).
+         // (e.g. as "const x of y" in a for loop), or after a destructuring
+         // operation (const [x, y] of z, const {a, b} of c).
          (Left.is(Keywords.kw_of) && Left.Previous &&
-          Left.Previous->Tok.getIdentifierInfo())) &&
+          (Left.Previous->Tok.getIdentifierInfo() ||
+           Left.Previous->isOneOf(tok::r_square, tok::r_brace)))) &&
         (!Left.Previous || !Left.Previous->is(tok::period)))
       return true;
     if (Left.isOneOf(tok::kw_for, Keywords.kw_as) && Left.Previous &&

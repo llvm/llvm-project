@@ -19,6 +19,7 @@ Clang-Tidy Checks
    boost-use-to-string
    bugprone-argument-comment
    bugprone-copy-constructor-init
+   bugprone-dangling-handle
    bugprone-integer-division
    bugprone-misplaced-operator-in-strlen-in-alloc
    bugprone-string-constructor
@@ -108,7 +109,6 @@ Clang-Tidy Checks
    llvm-twine-local
    misc-assert-side-effect
    misc-bool-pointer-implicit-conversion
-   misc-dangling-handle
    misc-definitions-in-headers
    misc-fold-init-type
    misc-forward-declaration-namespace
