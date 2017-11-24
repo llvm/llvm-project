@@ -196,8 +196,8 @@ def main():
 
   clang_tidy_path = os.path.dirname(__file__)
 
-  header_guard_old = args.old_check_name.upper().replace('-', '_')
-  header_guard_new = args.new_check_name.upper().replace('-', '_')
+  header_guard_old = (old_module + '_' + check_name_camel).upper()
+  header_guard_new = (new_module + '_' + new_check_name_camel).upper()
 
   old_module_path = os.path.join(clang_tidy_path, old_module)
   new_module_path = os.path.join(clang_tidy_path, new_module)

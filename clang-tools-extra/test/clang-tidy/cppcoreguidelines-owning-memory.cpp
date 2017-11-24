@@ -54,7 +54,7 @@ unique_ptr<int *> returns_no_owner5() {
 }
 
 /// FIXME: CSA finds it, but the report is misleading. Ownersemantics can catch this
-/// by flow analysis similar to misc-use-after-move.
+/// by flow analysis similar to bugprone-use-after-move.
 void csa_not_finding_leak() {
   gsl::owner<int *> o1 = new int(42); // Ok
 

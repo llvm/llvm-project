@@ -18,13 +18,22 @@ Clang-Tidy Checks
    android-cloexec-socket
    boost-use-to-string
    bugprone-argument-comment
+   bugprone-assert-side-effect
+   bugprone-bool-pointer-implicit-conversion
    bugprone-copy-constructor-init
    bugprone-dangling-handle
+   bugprone-fold-init-type
+   bugprone-forward-declaration-namespace
+   bugprone-inaccurate-erase
    bugprone-integer-division
    bugprone-misplaced-operator-in-strlen-in-alloc
+   bugprone-move-forwarding-reference
+   bugprone-multiple-statement-macro
    bugprone-string-constructor
    bugprone-suspicious-memset-usage
    bugprone-undefined-memory-manipulation
+   bugprone-use-after-move
+   bugprone-virtual-near-miss
    cert-dcl03-c (redirects to misc-static-assert) <cert-dcl03-c>
    cert-dcl21-cpp
    cert-dcl50-cpp
@@ -82,7 +91,7 @@ Clang-Tidy Checks
    hicpp-exception-baseclass
    hicpp-explicit-conversions (redirects to google-explicit-constructor) <hicpp-explicit-conversions>
    hicpp-function-size (redirects to readability-function-size) <hicpp-function-size>
-   hicpp-invalid-access-moved (redirects to misc-use-after-move) <hicpp-invalid-access-moved>
+   hicpp-invalid-access-moved (redirects to bugprone-use-after-move) <hicpp-invalid-access-moved>
    hicpp-member-init (redirects to cppcoreguidelines-pro-type-member-init) <hicpp-member-init>
    hicpp-move-const-arg (redirects to misc-move-const-arg) <hicpp-move-const-arg>
    hicpp-named-parameter (redirects to readability-named-parameter) <hicpp-named-parameter>
@@ -107,13 +116,8 @@ Clang-Tidy Checks
    llvm-include-order
    llvm-namespace-comment
    llvm-twine-local
-   misc-assert-side-effect
-   misc-bool-pointer-implicit-conversion
    misc-definitions-in-headers
-   misc-fold-init-type
-   misc-forward-declaration-namespace
    misc-forwarding-reference-overload
-   misc-inaccurate-erase
    misc-incorrect-roundings
    misc-inefficient-algorithm
    misc-lambda-function-name
@@ -123,8 +127,6 @@ Clang-Tidy Checks
    misc-misplaced-widening-cast
    misc-move-const-arg
    misc-move-constructor-init
-   misc-move-forwarding-reference
-   misc-multiple-statement-macro
    misc-new-delete-overloads
    misc-noexcept-move-constructor
    misc-non-copyable-objects
@@ -148,8 +150,6 @@ Clang-Tidy Checks
    misc-unused-parameters
    misc-unused-raii
    misc-unused-using-decls
-   misc-use-after-move
-   misc-virtual-near-miss
    modernize-avoid-bind
    modernize-deprecated-headers
    modernize-loop-convert

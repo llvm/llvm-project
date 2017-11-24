@@ -10,13 +10,8 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
-#include "AssertSideEffectCheck.h"
-#include "BoolPointerImplicitConversionCheck.h"
 #include "DefinitionsInHeadersCheck.h"
-#include "FoldInitTypeCheck.h"
-#include "ForwardDeclarationNamespaceCheck.h"
 #include "ForwardingReferenceOverloadCheck.h"
-#include "InaccurateEraseCheck.h"
 #include "IncorrectRoundings.h"
 #include "InefficientAlgorithmCheck.h"
 #include "LambdaFunctionNameCheck.h"
@@ -26,8 +21,6 @@
 #include "MisplacedWideningCastCheck.h"
 #include "MoveConstantArgumentCheck.h"
 #include "MoveConstructorInitCheck.h"
-#include "MoveForwardingReferenceCheck.h"
-#include "MultipleStatementMacroCheck.h"
 #include "NewDeleteOverloadsCheck.h"
 #include "NoexceptMoveConstructorCheck.h"
 #include "NonCopyableObjects.h"
@@ -51,8 +44,6 @@
 #include "UnusedParametersCheck.h"
 #include "UnusedRAIICheck.h"
 #include "UnusedUsingDeclsCheck.h"
-#include "UseAfterMoveCheck.h"
-#include "VirtualNearMissCheck.h"
 
 namespace clang {
 namespace tidy {
@@ -61,8 +52,6 @@ namespace misc {
 class MiscModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
-    CheckFactories.registerCheck<AssertSideEffectCheck>(
-        "misc-assert-side-effect");
     CheckFactories.registerCheck<ForwardingReferenceOverloadCheck>(
         "misc-forwarding-reference-overload");
     CheckFactories.registerCheck<LambdaFunctionNameCheck>(
@@ -70,14 +59,8 @@ public:
     CheckFactories.registerCheck<MisplacedConstCheck>("misc-misplaced-const");
     CheckFactories.registerCheck<UnconventionalAssignOperatorCheck>(
         "misc-unconventional-assign-operator");
-    CheckFactories.registerCheck<BoolPointerImplicitConversionCheck>(
-        "misc-bool-pointer-implicit-conversion");
     CheckFactories.registerCheck<DefinitionsInHeadersCheck>(
         "misc-definitions-in-headers");
-    CheckFactories.registerCheck<FoldInitTypeCheck>("misc-fold-init-type");
-    CheckFactories.registerCheck<ForwardDeclarationNamespaceCheck>(
-        "misc-forward-declaration-namespace");
-    CheckFactories.registerCheck<InaccurateEraseCheck>("misc-inaccurate-erase");
     CheckFactories.registerCheck<IncorrectRoundings>(
         "misc-incorrect-roundings");
     CheckFactories.registerCheck<InefficientAlgorithmCheck>(
@@ -92,10 +75,6 @@ public:
         "misc-move-const-arg");
     CheckFactories.registerCheck<MoveConstructorInitCheck>(
         "misc-move-constructor-init");
-    CheckFactories.registerCheck<MoveForwardingReferenceCheck>(
-        "misc-move-forwarding-reference");
-    CheckFactories.registerCheck<MultipleStatementMacroCheck>(
-        "misc-multiple-statement-macro");
     CheckFactories.registerCheck<NewDeleteOverloadsCheck>(
         "misc-new-delete-overloads");
     CheckFactories.registerCheck<NoexceptMoveConstructorCheck>(
@@ -136,9 +115,6 @@ public:
     CheckFactories.registerCheck<UnusedRAIICheck>("misc-unused-raii");
     CheckFactories.registerCheck<UnusedUsingDeclsCheck>(
         "misc-unused-using-decls");
-    CheckFactories.registerCheck<UseAfterMoveCheck>("misc-use-after-move");
-    CheckFactories.registerCheck<VirtualNearMissCheck>(
-        "misc-virtual-near-miss");
   }
 };
 

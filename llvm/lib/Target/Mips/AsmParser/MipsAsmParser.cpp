@@ -2273,8 +2273,10 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
 
   // We know we emitted an instruction on the MER_NotAMacro or MER_Success path.
   // If we're in microMIPS mode then we must also set EF_MIPS_MICROMIPS.
-  if (inMicroMipsMode())
+  if (inMicroMipsMode()) {
     TOut.setUsesMicroMips();
+    TOut.updateABIInfo(*this);
+  }
 
   // If this instruction has a delay slot and .set reorder is active,
   // emit a NOP after it.
