@@ -879,8 +879,7 @@ void clangd::dumpAST(ParsedAST &AST, llvm::raw_ostream &OS) {
 
 llvm::Optional<ParsedAST>
 ParsedAST::Build(std::unique_ptr<clang::CompilerInvocation> CI,
-                 const PrecompiledPreamble *Preamble,
-                 ArrayRef<serialization::DeclID> PreambleDeclIDs,
+                 std::shared_ptr<const PreambleData> Preamble,
                  std::unique_ptr<llvm::MemoryBuffer> Buffer,
                  std::shared_ptr<PCHContainerOperations> PCHs,
                  IntrusiveRefCntPtr<vfs::FileSystem> VFS,
@@ -889,8 +888,10 @@ ParsedAST::Build(std::unique_ptr<clang::CompilerInvocation> CI,
   std::vector<DiagWithFixIts> ASTDiags;
   StoreDiagsConsumer UnitDiagsConsumer(/*ref*/ ASTDiags);
 
+  const PrecompiledPreamble *PreamblePCH =
+      Preamble ? &Preamble->Preamble : nullptr;
   auto Clang = prepareCompilerInstance(
-      std::move(CI), Preamble, std::move(Buffer), std::move(PCHs),
+      std::move(CI), PreamblePCH, std::move(Buffer), std::move(PCHs),
       std::move(VFS), /*ref*/ UnitDiagsConsumer);
 
   // Recover resources if we crash before exiting this method.
@@ -912,15 +913,8 @@ ParsedAST::Build(std::unique_ptr<clang::CompilerInvocation> CI,
   Clang->getDiagnostics().setClient(new EmptyDiagsConsumer);
 
   std::vector<const Decl *> ParsedDecls = Action->takeTopLevelDecls();
-  std::vector<serialization::DeclID> PendingDecls;
-  if (Preamble) {
-    PendingDecls.reserve(PreambleDeclIDs.size());
-    PendingDecls.insert(PendingDecls.begin(), PreambleDeclIDs.begin(),
-                        PreambleDeclIDs.end());
-  }
-
-  return ParsedAST(std::move(Clang), std::move(Action), std::move(ParsedDecls),
-                   std::move(PendingDecls), std::move(ASTDiags));
+  return ParsedAST(std::move(Preamble), std::move(Clang), std::move(Action),
+                   std::move(ParsedDecls), std::move(ASTDiags));
 }
 
 namespace {
@@ -1061,24 +1055,25 @@ std::vector<Location> clangd::findDefinitions(ParsedAST &AST, Position Pos,
 }
 
 void ParsedAST::ensurePreambleDeclsDeserialized() {
-  if (PendingTopLevelDecls.empty())
+  if (PreambleDeclsDeserialized || !Preamble)
     return;
 
   std::vector<const Decl *> Resolved;
-  Resolved.reserve(PendingTopLevelDecls.size());
+  Resolved.reserve(Preamble->TopLevelDeclIDs.size());
 
   ExternalASTSource &Source = *getASTContext().getExternalSource();
-  for (serialization::DeclID TopLevelDecl : PendingTopLevelDecls) {
+  for (serialization::DeclID TopLevelDecl : Preamble->TopLevelDeclIDs) {
     // Resolve the declaration ID to an actual declaration, possibly
     // deserializing the declaration in the process.
     if (Decl *D = Source.GetExternalDecl(TopLevelDecl))
       Resolved.push_back(D);
   }
 
-  TopLevelDecls.reserve(TopLevelDecls.size() + PendingTopLevelDecls.size());
+  TopLevelDecls.reserve(TopLevelDecls.size() +
+                        Preamble->TopLevelDeclIDs.size());
   TopLevelDecls.insert(TopLevelDecls.begin(), Resolved.begin(), Resolved.end());
 
-  PendingTopLevelDecls.clear();
+  PreambleDeclsDeserialized = true;
 }
 
 ParsedAST::ParsedAST(ParsedAST &&Other) = default;
@@ -1112,14 +1107,21 @@ const std::vector<DiagWithFixIts> &ParsedAST::getDiagnostics() const {
   return Diags;
 }
 
-ParsedAST::ParsedAST(std::unique_ptr<CompilerInstance> Clang,
+PreambleData::PreambleData(PrecompiledPreamble Preamble,
+                           std::vector<serialization::DeclID> TopLevelDeclIDs,
+                           std::vector<DiagWithFixIts> Diags)
+    : Preamble(std::move(Preamble)),
+      TopLevelDeclIDs(std::move(TopLevelDeclIDs)), Diags(std::move(Diags)) {}
+
+ParsedAST::ParsedAST(std::shared_ptr<const PreambleData> Preamble,
+                     std::unique_ptr<CompilerInstance> Clang,
                      std::unique_ptr<FrontendAction> Action,
                      std::vector<const Decl *> TopLevelDecls,
-                     std::vector<serialization::DeclID> PendingTopLevelDecls,
                      std::vector<DiagWithFixIts> Diags)
-    : Clang(std::move(Clang)), Action(std::move(Action)),
-      Diags(std::move(Diags)), TopLevelDecls(std::move(TopLevelDecls)),
-      PendingTopLevelDecls(std::move(PendingTopLevelDecls)) {
+    : Preamble(std::move(Preamble)), Clang(std::move(Clang)),
+      Action(std::move(Action)), Diags(std::move(Diags)),
+      TopLevelDecls(std::move(TopLevelDecls)),
+      PreambleDeclsDeserialized(false) {
   assert(this->Clang);
   assert(this->Action);
 }
@@ -1129,12 +1131,6 @@ ParsedASTWrapper::ParsedASTWrapper(ParsedASTWrapper &&Wrapper)
 
 ParsedASTWrapper::ParsedASTWrapper(llvm::Optional<ParsedAST> AST)
     : AST(std::move(AST)) {}
-
-PreambleData::PreambleData(PrecompiledPreamble Preamble,
-                           std::vector<serialization::DeclID> TopLevelDeclIDs,
-                           std::vector<DiagWithFixIts> Diags)
-    : Preamble(std::move(Preamble)),
-      TopLevelDeclIDs(std::move(TopLevelDeclIDs)), Diags(std::move(Diags)) {}
 
 std::shared_ptr<CppFile>
 CppFile::Create(PathRef FileName, tooling::CompileCommand Command,
@@ -1330,12 +1326,8 @@ CppFile::deferRebuild(StringRef NewContents,
     } // unlock Mutex
 
     // Prepare the Preamble and supplementary data for rebuilding AST.
-    const PrecompiledPreamble *PreambleForAST = nullptr;
-    ArrayRef<serialization::DeclID> SerializedPreambleDecls = llvm::None;
     std::vector<DiagWithFixIts> Diagnostics;
     if (NewPreamble) {
-      PreambleForAST = &NewPreamble->Preamble;
-      SerializedPreambleDecls = NewPreamble->TopLevelDeclIDs;
       Diagnostics.insert(Diagnostics.begin(), NewPreamble->Diags.begin(),
                          NewPreamble->Diags.end());
     }
@@ -1345,9 +1337,9 @@ CppFile::deferRebuild(StringRef NewContents,
     {
       trace::Span Tracer("Build");
       SPAN_ATTACH(Tracer, "File", That->FileName);
-      NewAST = ParsedAST::Build(
-          std::move(CI), PreambleForAST, SerializedPreambleDecls,
-          std::move(ContentsBuffer), PCHs, VFS, That->Logger);
+      NewAST =
+          ParsedAST::Build(std::move(CI), std::move(NewPreamble),
+                           std::move(ContentsBuffer), PCHs, VFS, That->Logger);
     }
 
     if (NewAST) {
