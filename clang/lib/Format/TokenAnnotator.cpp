@@ -2397,9 +2397,11 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     if ((Left.isOneOf(Keywords.kw_let, Keywords.kw_var, Keywords.kw_in,
                       tok::kw_const) ||
          // "of" is only a keyword if it appears after another identifier
-         // (e.g. as "const x of y" in a for loop).
+         // (e.g. as "const x of y" in a for loop), or after a destructuring
+         // operation (const [x, y] of z, const {a, b} of c).
          (Left.is(Keywords.kw_of) && Left.Previous &&
-          Left.Previous->Tok.getIdentifierInfo())) &&
+          (Left.Previous->Tok.getIdentifierInfo() ||
+           Left.Previous->isOneOf(tok::r_square, tok::r_brace)))) &&
         (!Left.Previous || !Left.Previous->is(tok::period)))
       return true;
     if (Left.isOneOf(tok::kw_for, Keywords.kw_as) && Left.Previous &&
@@ -2431,8 +2433,9 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
       return false;
     if (Right.is(TT_JsNonNullAssertion))
       return false;
-    if (Left.is(TT_JsNonNullAssertion) && Right.is(Keywords.kw_as))
-      return true; // "x! as string"
+    if (Left.is(TT_JsNonNullAssertion) &&
+        Right.isOneOf(Keywords.kw_as, Keywords.kw_in))
+      return true; // "x! as string", "x! in y"
   } else if (Style.Language == FormatStyle::LK_Java) {
     if (Left.is(tok::r_square) && Right.is(tok::l_brace))
       return true;
@@ -2696,13 +2699,16 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
   } else if (Style.Language == FormatStyle::LK_JavaScript) {
     const FormatToken *NonComment = Right.getPreviousNonComment();
     if (NonComment &&
-        NonComment->isOneOf(tok::kw_return, tok::kw_continue, tok::kw_break,
-                            tok::kw_throw, Keywords.kw_interface,
+        NonComment->isOneOf(tok::kw_return, Keywords.kw_yield, tok::kw_continue,
+                            tok::kw_break, tok::kw_throw, Keywords.kw_interface,
                             Keywords.kw_type, tok::kw_static, tok::kw_public,
                             tok::kw_private, tok::kw_protected,
                             Keywords.kw_readonly, Keywords.kw_abstract,
                             Keywords.kw_get, Keywords.kw_set))
       return false; // Otherwise automatic semicolon insertion would trigger.
+    if (Left.Tok.getIdentifierInfo() &&
+        Right.startsSequence(tok::l_square, tok::r_square))
+      return false;  // breaking in "foo[]" creates illegal TS type syntax.
     if (Left.is(TT_JsFatArrow) && Right.is(tok::l_brace))
       return false;
     if (Left.is(TT_JsTypeColon))

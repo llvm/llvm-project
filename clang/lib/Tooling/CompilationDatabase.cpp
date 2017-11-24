@@ -112,6 +112,15 @@ CompilationDatabase::autoDetectFromDirectory(StringRef SourceDir,
   return DB;
 }
 
+std::vector<CompileCommand> CompilationDatabase::getAllCompileCommands() const {
+  std::vector<CompileCommand> Result;
+  for (const auto &File : getAllFiles()) {
+    auto C = getCompileCommands(File);
+    std::move(C.begin(), C.end(), std::back_inserter(Result));
+  }
+  return Result;
+}
+
 CompilationDatabasePlugin::~CompilationDatabasePlugin() {}
 
 namespace {
@@ -340,16 +349,6 @@ FixedCompilationDatabase::getCompileCommands(StringRef FilePath) const {
   Result[0].CommandLine.push_back(FilePath);
   Result[0].Filename = FilePath;
   return Result;
-}
-
-std::vector<std::string>
-FixedCompilationDatabase::getAllFiles() const {
-  return std::vector<std::string>();
-}
-
-std::vector<CompileCommand>
-FixedCompilationDatabase::getAllCompileCommands() const {
-  return std::vector<CompileCommand>();
 }
 
 namespace {
