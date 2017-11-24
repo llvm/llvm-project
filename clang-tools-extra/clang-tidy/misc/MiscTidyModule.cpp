@@ -12,7 +12,6 @@
 #include "../ClangTidyModuleRegistry.h"
 #include "AssertSideEffectCheck.h"
 #include "BoolPointerImplicitConversionCheck.h"
-#include "DanglingHandleCheck.h"
 #include "DefinitionsInHeadersCheck.h"
 #include "FoldInitTypeCheck.h"
 #include "ForwardDeclarationNamespaceCheck.h"
@@ -73,7 +72,6 @@ public:
         "misc-unconventional-assign-operator");
     CheckFactories.registerCheck<BoolPointerImplicitConversionCheck>(
         "misc-bool-pointer-implicit-conversion");
-    CheckFactories.registerCheck<DanglingHandleCheck>("misc-dangling-handle");
     CheckFactories.registerCheck<DefinitionsInHeadersCheck>(
         "misc-definitions-in-headers");
     CheckFactories.registerCheck<FoldInitTypeCheck>("misc-fold-init-type");

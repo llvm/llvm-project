@@ -12,6 +12,7 @@
 #include "../ClangTidyModuleRegistry.h"
 #include "ArgumentCommentCheck.h"
 #include "CopyConstructorInitCheck.h"
+#include "DanglingHandleCheck.h"
 #include "IntegerDivisionCheck.h"
 #include "MisplacedOperatorInStrlenInAllocCheck.h"
 #include "StringConstructorCheck.h"
@@ -29,6 +30,8 @@ public:
         "bugprone-argument-comment");
     CheckFactories.registerCheck<CopyConstructorInitCheck>(
         "bugprone-copy-constructor-init");
+    CheckFactories.registerCheck<DanglingHandleCheck>(
+        "bugprone-dangling-handle");
     CheckFactories.registerCheck<IntegerDivisionCheck>(
         "bugprone-integer-division");
     CheckFactories.registerCheck<MisplacedOperatorInStrlenInAllocCheck>(
