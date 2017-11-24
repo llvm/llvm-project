@@ -10,6 +10,7 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
+#include "../bugprone/UseAfterMoveCheck.h"
 #include "../cppcoreguidelines/NoMallocCheck.h"
 #include "../cppcoreguidelines/ProBoundsArrayToPointerDecayCheck.h"
 #include "../cppcoreguidelines/ProTypeMemberInitCheck.h"
@@ -22,7 +23,6 @@
 #include "../misc/NoexceptMoveConstructorCheck.h"
 #include "../misc/StaticAssertCheck.h"
 #include "../misc/UndelegatedConstructor.h"
-#include "../misc/UseAfterMoveCheck.h"
 #include "../modernize/DeprecatedHeadersCheck.h"
 #include "../modernize/UseAutoCheck.h"
 #include "../modernize/UseEmplaceCheck.h"
@@ -59,7 +59,7 @@ public:
         "hicpp-function-size");
     CheckFactories.registerCheck<readability::IdentifierNamingCheck>(
         "hicpp-named-parameter");
-    CheckFactories.registerCheck<misc::UseAfterMoveCheck>(
+    CheckFactories.registerCheck<bugprone::UseAfterMoveCheck>(
         "hicpp-invalid-access-moved");
     CheckFactories.registerCheck<cppcoreguidelines::ProTypeMemberInitCheck>(
         "hicpp-member-init");

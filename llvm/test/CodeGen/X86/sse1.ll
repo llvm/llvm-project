@@ -219,126 +219,20 @@ define <4 x i32> @PR30512(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; post-legalization to cause the crash seen in:
 ; https://llvm.org/bugs/show_bug.cgi?id=31672
 ; Is there a way to do that without an unsafe/fast sqrt intrinsic call?
-; Also, although the goal for adding this test is to prove that we
-; don't crash, I have no idea what this code is doing, so I'm keeping
-; the full codegen checks in case there's motivation to improve this.
+;
+; We now no longer try to lower sqrt using rsqrt with SSE1 only as the
+; v4i32 vselect mentioned above should never have been created. We ended up
+; scalarizing it anyway.
 
 define <2 x float> @PR31672() #0 {
 ; X32-LABEL: PR31672:
 ; X32:       # BB#0:
-; X32-NEXT:    pushl %ebp
-; X32-NEXT:    movl %esp, %ebp
-; X32-NEXT:    andl $-16, %esp
-; X32-NEXT:    subl $80, %esp
-; X32-NEXT:    xorps %xmm0, %xmm0
-; X32-NEXT:    movaps {{.*#+}} xmm1 = <42,3,u,u>
-; X32-NEXT:    movaps %xmm1, %xmm2
-; X32-NEXT:    cmpeqps %xmm0, %xmm2
-; X32-NEXT:    movaps %xmm2, {{[0-9]+}}(%esp)
-; X32-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
-; X32-NEXT:    rsqrtps %xmm1, %xmm0
-; X32-NEXT:    mulps %xmm0, %xmm1
-; X32-NEXT:    mulps %xmm0, %xmm1
-; X32-NEXT:    addps {{\.LCPI.*}}, %xmm1
-; X32-NEXT:    mulps {{\.LCPI.*}}, %xmm0
-; X32-NEXT:    mulps %xmm1, %xmm0
-; X32-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    andl %eax, %ecx
-; X32-NEXT:    notl %eax
-; X32-NEXT:    andl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    orl %ecx, %eax
-; X32-NEXT:    movl %eax, (%esp)
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    andl %eax, %ecx
-; X32-NEXT:    notl %eax
-; X32-NEXT:    andl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    orl %ecx, %eax
-; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    andl %ecx, %edx
-; X32-NEXT:    notl %ecx
-; X32-NEXT:    andl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    orl %edx, %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    andl %eax, %ecx
-; X32-NEXT:    notl %eax
-; X32-NEXT:    andl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    orl %ecx, %eax
-; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X32-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X32-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; X32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; X32-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; X32-NEXT:    movl %ebp, %esp
-; X32-NEXT:    popl %ebp
+; X32-NEXT:    sqrtps {{\.LCPI.*}}, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: PR31672:
 ; X64:       # BB#0:
-; X64-NEXT:    xorps %xmm0, %xmm0
-; X64-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movaps {{.*#+}} xmm1 = <42,3,u,u>
-; X64-NEXT:    cmpeqps %xmm1, %xmm0
-; X64-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    rsqrtps %xmm1, %xmm0
-; X64-NEXT:    mulps %xmm0, %xmm1
-; X64-NEXT:    mulps %xmm0, %xmm1
-; X64-NEXT:    addps {{.*}}(%rip), %xmm1
-; X64-NEXT:    mulps {{.*}}(%rip), %xmm0
-; X64-NEXT:    mulps %xmm1, %xmm0
-; X64-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %r8
-; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rsi
-; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %r9
-; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rdi
-; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    andl %edi, %eax
-; X64-NEXT:    movl %edi, %ecx
-; X64-NEXT:    notl %ecx
-; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %r10
-; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rdx
-; X64-NEXT:    andl %edx, %ecx
-; X64-NEXT:    orl %eax, %ecx
-; X64-NEXT:    movl %ecx, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    shrq $32, %rsi
-; X64-NEXT:    shrq $32, %rdi
-; X64-NEXT:    andl %edi, %esi
-; X64-NEXT:    notl %edi
-; X64-NEXT:    shrq $32, %rdx
-; X64-NEXT:    andl %edi, %edx
-; X64-NEXT:    orl %esi, %edx
-; X64-NEXT:    movl %edx, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movl %r8d, %eax
-; X64-NEXT:    andl %r9d, %eax
-; X64-NEXT:    movl %r9d, %ecx
-; X64-NEXT:    notl %ecx
-; X64-NEXT:    andl %r10d, %ecx
-; X64-NEXT:    orl %eax, %ecx
-; X64-NEXT:    movl %ecx, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    shrq $32, %r8
-; X64-NEXT:    shrq $32, %r9
-; X64-NEXT:    andl %r9d, %r8d
-; X64-NEXT:    notl %r9d
-; X64-NEXT:    shrq $32, %r10
-; X64-NEXT:    andl %r9d, %r10d
-; X64-NEXT:    orl %r8d, %r10d
-; X64-NEXT:    movl %r10d, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; X64-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; X64-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-NEXT:    sqrtps {{.*}}(%rip), %xmm0
 ; X64-NEXT:    retq
   %t0 = call fast <2 x float> @llvm.sqrt.v2f32(<2 x float> <float 42.0, float 3.0>)
   ret <2 x float> %t0

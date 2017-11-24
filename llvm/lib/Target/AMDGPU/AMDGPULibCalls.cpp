@@ -217,8 +217,8 @@ INITIALIZE_PASS(AMDGPUUseNativeCalls, "amdgpu-usenative",
                 false, false)
 
 template <typename IRB>
-CallInst *CreateCallEx(IRB &B, Value *Callee, Value *Arg, const Twine &Name="")
-{
+static CallInst *CreateCallEx(IRB &B, Value *Callee, Value *Arg,
+                              const Twine &Name = "") {
   CallInst *R = B.CreateCall(Callee, Arg, Name);
   if (Function* F = dyn_cast<Function>(Callee))
     R->setCallingConv(F->getCallingConv());
@@ -226,8 +226,8 @@ CallInst *CreateCallEx(IRB &B, Value *Callee, Value *Arg, const Twine &Name="")
 }
 
 template <typename IRB>
-CallInst *CreateCallEx2(IRB &B, Value *Callee, Value *Arg1, Value *Arg2,
-                        const Twine &Name="") {
+static CallInst *CreateCallEx2(IRB &B, Value *Callee, Value *Arg1, Value *Arg2,
+                               const Twine &Name = "") {
   CallInst *R = B.CreateCall(Callee, {Arg1, Arg2}, Name);
   if (Function* F = dyn_cast<Function>(Callee))
     R->setCallingConv(F->getCallingConv());
