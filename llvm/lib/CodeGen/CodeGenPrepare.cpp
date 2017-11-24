@@ -245,8 +245,10 @@ class TypePromotionTransaction;
 
     /// Keeps track of non-local addresses that have been sunk into a block.
     /// This allows us to avoid inserting duplicate code for blocks with
-    /// multiple load/stores of the same address.
-    ValueMap<Value*, Value*> SunkAddrs;
+    /// multiple load/stores of the same address. The usage of WeakTrackingVH
+    /// enables SunkAddrs to be treated as a cache whose entries can be
+    /// invalidated if a sunken address computation has been erased.
+    ValueMap<Value*, WeakTrackingVH> SunkAddrs;
 
     /// Keeps track of all instructions inserted for the current function.
     SetOfInstrs InsertedInsts;
@@ -4436,9 +4438,13 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
 
   // Now that we determined the addressing expression we want to use and know
   // that we have to sink it into this block.  Check to see if we have already
-  // done this for some other load/store instr in this block.  If so, reuse the
-  // computation.
-  Value *&SunkAddr = SunkAddrs[Addr];
+  // done this for some other load/store instr in this block.  If so, reuse
+  // the computation.  Before attempting reuse, check if the address is valid
+  // as it may have been erased.
+
+  WeakTrackingVH SunkAddrVH = SunkAddrs[Addr];
+
+  Value * SunkAddr = SunkAddrVH.pointsToAliveValue() ? SunkAddrVH : nullptr;
   if (SunkAddr) {
     DEBUG(dbgs() << "CGP: Reusing nonlocal addrmode: " << AddrMode << " for "
                  << *MemoryInst << "\n");
@@ -4663,6 +4669,9 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
   }
 
   MemoryInst->replaceUsesOfWith(Repl, SunkAddr);
+  // Store the newly computed address into the cache. In the case we reused a
+  // value, this should be idempotent.
+  SunkAddrs[Addr] = WeakTrackingVH(SunkAddr);
 
   // If we have no uses, recursively delete the value and all dead instructions
   // using it.

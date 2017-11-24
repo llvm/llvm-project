@@ -1123,6 +1123,7 @@ TEST_F(FormatTestJS, WrapRespectsAutomaticSemicolonInsertion) {
   // would change due to automatic semicolon insertion.
   // See http://www.ecma-international.org/ecma-262/5.1/#sec-7.9.1.
   verifyFormat("return aaaaa;", getGoogleJSStyleWithColumns(10));
+  verifyFormat("yield aaaaa;", getGoogleJSStyleWithColumns(10));
   verifyFormat("return /* hello! */ aaaaa;", getGoogleJSStyleWithColumns(10));
   verifyFormat("continue aaaaa;", getGoogleJSStyleWithColumns(10));
   verifyFormat("continue /* hello! */ aaaaa;", getGoogleJSStyleWithColumns(10));
@@ -1425,6 +1426,8 @@ TEST_F(FormatTestJS, TypeAnnotations) {
   verifyFormat(
       "var someValue = (v as aaaaaaaaaaaaaaaaaaaa<T>[])\n"
       "                    .someFunction(aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);");
+  verifyFormat("const xIsALongIdent:\n""    YJustBarelyFitsLinex[];",
+      getGoogleJSStyleWithColumns(20));
 }
 
 TEST_F(FormatTestJS, UnionIntersectionTypes) {
@@ -1908,6 +1911,7 @@ TEST_F(FormatTestJS, CastSyntax) {
   verifyFormat("x = x as {a: string};");
   verifyFormat("x = x as (string);");
   verifyFormat("x = x! as (string);");
+  verifyFormat("x = y! in z;");
   verifyFormat("var x = something.someFunction() as\n"
                "    something;",
                getGoogleJSStyleWithColumns(40));

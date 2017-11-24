@@ -185,9 +185,7 @@ public:
   Defined(StringRefZ Name, uint8_t Binding, uint8_t StOther, uint8_t Type,
           uint64_t Value, uint64_t Size, SectionBase *Section)
       : Symbol(DefinedKind, Name, Binding, StOther, Type), Value(Value),
-        Size(Size), Section(Section) {
-    this->Binding = Binding;
-  }
+        Size(Size), Section(Section) {}
 
   static bool classof(const Symbol *S) { return S->isDefined(); }
 
@@ -199,9 +197,7 @@ public:
 class Undefined : public Symbol {
 public:
   Undefined(StringRefZ Name, uint8_t Binding, uint8_t StOther, uint8_t Type)
-      : Symbol(UndefinedKind, Name, Binding, StOther, Type) {
-    this->Binding = Binding;
-  }
+      : Symbol(UndefinedKind, Name, Binding, StOther, Type) {}
 
   static bool classof(const Symbol *S) { return S->kind() == UndefinedKind; }
 };

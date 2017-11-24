@@ -17187,8 +17187,11 @@ SDValue X86TargetLowering::getSqrtEstimate(SDValue Op,
   // instructions: convert to single, rsqrtss, convert back to double, refine
   // (3 steps = at least 13 insts). If an 'rsqrtsd' variant was added to the ISA
   // along with FMA, this could be a throughput win.
+  // TODO: SQRT requires SSE2 to prevent the introduction of an illegal v4i32
+  // after legalize types.
   if ((VT == MVT::f32 && Subtarget.hasSSE1()) ||
-      (VT == MVT::v4f32 && Subtarget.hasSSE1()) ||
+      (VT == MVT::v4f32 && Subtarget.hasSSE1() && Reciprocal) ||
+      (VT == MVT::v4f32 && Subtarget.hasSSE2() && !Reciprocal) ||
       (VT == MVT::v8f32 && Subtarget.hasAVX())) {
     if (RefinementSteps == ReciprocalEstimate::Unspecified)
       RefinementSteps = 1;

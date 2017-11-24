@@ -261,10 +261,10 @@ static std::vector<MachineInstr *> populateCandidates(MachineBasicBlock *MBB) {
   return Candidates;
 }
 
-void doCandidateWalk(std::vector<TypedVReg> &VRegs,
-                     std::queue <TypedVReg> &RegQueue,
-                     std::vector<MachineInstr *> &VisitedMIs,
-                     const MachineBasicBlock *MBB) {
+static void doCandidateWalk(std::vector<TypedVReg> &VRegs,
+                            std::queue<TypedVReg> &RegQueue,
+                            std::vector<MachineInstr *> &VisitedMIs,
+                            const MachineBasicBlock *MBB) {
 
   const MachineFunction &MF = *MBB->getParent();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
