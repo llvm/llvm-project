@@ -58076,5 +58076,117 @@ entry:
   ret i64 %3
 }
 
-
-
+; Test that we understand that cmpps with rounding zeros the upper bits of the mask register.
+define i32 @test_cmpm_rnd_zero(<16 x float> %a, <16 x float> %b) {
+; VLX-LABEL: test_cmpm_rnd_zero:
+; VLX:       # BB#0:
+; VLX-NEXT:    vcmpleps {sae}, %zmm1, %zmm0, %k0
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    vzeroupper
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_cmpm_rnd_zero:
+; NoVLX:       # BB#0:
+; NoVLX-NEXT:    pushq %rbp
+; NoVLX-NEXT:    .cfi_def_cfa_offset 16
+; NoVLX-NEXT:    .cfi_offset %rbp, -16
+; NoVLX-NEXT:    movq %rsp, %rbp
+; NoVLX-NEXT:    .cfi_def_cfa_register %rbp
+; NoVLX-NEXT:    pushq %r15
+; NoVLX-NEXT:    pushq %r14
+; NoVLX-NEXT:    pushq %r13
+; NoVLX-NEXT:    pushq %r12
+; NoVLX-NEXT:    pushq %rbx
+; NoVLX-NEXT:    andq $-32, %rsp
+; NoVLX-NEXT:    subq $32, %rsp
+; NoVLX-NEXT:    .cfi_offset %rbx, -56
+; NoVLX-NEXT:    .cfi_offset %r12, -48
+; NoVLX-NEXT:    .cfi_offset %r13, -40
+; NoVLX-NEXT:    .cfi_offset %r14, -32
+; NoVLX-NEXT:    .cfi_offset %r15, -24
+; NoVLX-NEXT:    vcmpleps {sae}, %zmm1, %zmm0, %k0
+; NoVLX-NEXT:    kxorw %k0, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kshiftlw $14, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r8d
+; NoVLX-NEXT:    kshiftlw $15, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
+; NoVLX-NEXT:    kshiftlw $13, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r9d
+; NoVLX-NEXT:    kshiftlw $12, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r11d
+; NoVLX-NEXT:    kshiftlw $11, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r14d
+; NoVLX-NEXT:    kshiftlw $10, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r15d
+; NoVLX-NEXT:    kshiftlw $9, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r12d
+; NoVLX-NEXT:    kshiftlw $8, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %r13d
+; NoVLX-NEXT:    kshiftlw $7, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %esi
+; NoVLX-NEXT:    kshiftlw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %ebx
+; NoVLX-NEXT:    kshiftlw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edi
+; NoVLX-NEXT:    kshiftlw $4, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftlw $3, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftlw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    vmovd %r10d, %xmm0
+; NoVLX-NEXT:    kmovw %k1, %r10d
+; NoVLX-NEXT:    kshiftlw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $15, %k1, %k1
+; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %r11d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $4, %r14d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r15d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r12d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r13d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $8, %esi, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $9, %ebx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $10, %edi, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $11, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $12, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    kshiftrw $15, %k0, %k0
+; NoVLX-NEXT:    vpinsrb $13, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $14, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
+; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
+; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; NoVLX-NEXT:    kmovw %k0, (%rsp)
+; NoVLX-NEXT:    movl (%rsp), %eax
+; NoVLX-NEXT:    leaq -40(%rbp), %rsp
+; NoVLX-NEXT:    popq %rbx
+; NoVLX-NEXT:    popq %r12
+; NoVLX-NEXT:    popq %r13
+; NoVLX-NEXT:    popq %r14
+; NoVLX-NEXT:    popq %r15
+; NoVLX-NEXT:    popq %rbp
+; NoVLX-NEXT:    vzeroupper
+; NoVLX-NEXT:    retq
+  %res = call i16 @llvm.x86.avx512.mask.cmp.ps.512(<16 x float> %a, <16 x float> %b, i32 2, i16 -1, i32 8)
+  %cast = bitcast i16 %res to <16 x i1>
+  %shuffle = shufflevector <16 x i1> %cast, <16 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  %cast2 = bitcast <32 x i1> %shuffle to i32
+  ret i32 %cast2
+}

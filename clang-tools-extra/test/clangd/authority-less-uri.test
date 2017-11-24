@@ -25,7 +25,7 @@ Content-Length: 146
 # CHECK-NEXT:        "insertTextFormat": 1,
 # CHECK-NEXT:        "kind": 7,
 # CHECK-NEXT:        "label": "fake::",
-# CHECK-NEXT:        "sortText": "000075fake"
+# CHECK-NEXT:        "sortText": "{{.*}}fake"
 #      CHECK:    ]
 # CHECK-NEXT:  }
 Content-Length: 172
@@ -43,7 +43,7 @@ Content-Length: 172
 # CHECK-NEXT:        "insertTextFormat": 1,
 # CHECK-NEXT:        "kind": 7,
 # CHECK-NEXT:        "label": "fake::",
-# CHECK-NEXT:        "sortText": "000075fake"
+# CHECK-NEXT:        "sortText": "{{.*}}fake"
 #      CHECK:    ]
 # CHECK-NEXT:  }
 Content-Length: 44

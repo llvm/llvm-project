@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-argument-comment %t
+// RUN: %check_clang_tidy %s bugprone-argument-comment %t
 
 // FIXME: clang-tidy should provide a -verify mode to make writing these checks
 // easier and more accurate.
@@ -14,8 +14,15 @@ void g() {
   f(/*y=*/0, /*z=*/0);
   // CHECK-FIXES: {{^}}  f(/*y=*/0, /*z=*/0);
 
+  f(/*x=*/1, /*y=*/1);
+
   ffff(0 /*aaaa=*/, /*bbbb*/ 0); // Unsupported formats.
 }
+
+struct C {
+  C(int x, int y);
+};
+C c(/*x=*/0, /*y=*/0);
 
 struct Closure {};
 
@@ -45,11 +52,38 @@ void templates() {
 
 #define FALSE 0
 void qqq(bool aaa);
-void f() { qqq(/*bbb=*/FALSE); }
-// CHECK-MESSAGES: [[@LINE-1]]:16: warning: argument name 'bbb' in comment does not match parameter name 'aaa'
-// CHECK-FIXES: void f() { qqq(/*bbb=*/FALSE); }
+void f2() { qqq(/*bbb=*/FALSE); }
+// CHECK-MESSAGES: [[@LINE-1]]:17: warning: argument name 'bbb' in comment does not match parameter name 'aaa'
+// CHECK-FIXES: void f2() { qqq(/*bbb=*/FALSE); }
 
-void f(bool _with_underscores_);
+void f3(bool _with_underscores_);
 void ignores_underscores() {
-  f(/*With_Underscores=*/false);
+  f3(/*With_Underscores=*/false);
+}
+
+namespace ThisEditDistanceAboveThreshold {
+void f4(int xxx);
+void g() { f4(/*xyz=*/0); }
+// CHECK-MESSAGES: [[@LINE-1]]:15: warning: argument name 'xyz' in comment does not match parameter name 'xxx'
+// CHECK-FIXES: void g() { f4(/*xyz=*/0); }
+}
+
+namespace OtherEditDistanceAboveThreshold {
+void f5(int xxx, int yyy);
+void g() { f5(/*Zxx=*/0, 0); }
+// CHECK-MESSAGES: [[@LINE-1]]:15: warning: argument name 'Zxx' in comment does not match parameter name 'xxx'
+// CHECK-FIXES: void g() { f5(/*xxx=*/0, 0); }
+struct C2 {
+  C2(int xxx, int yyy);
+};
+C2 c2(/*Zxx=*/0, 0);
+// CHECK-MESSAGES: [[@LINE-1]]:7: warning: argument name 'Zxx' in comment does not match parameter name 'xxx'
+// CHECK-FIXES: C2 c2(/*xxx=*/0, 0);
+}
+
+namespace OtherEditDistanceBelowThreshold {
+void f6(int xxx, int yyy);
+void g() { f6(/*xxy=*/0, 0); }
+// CHECK-MESSAGES: [[@LINE-1]]:15: warning: argument name 'xxy' in comment does not match parameter name 'xxx'
+// CHECK-FIXES: void g() { f6(/*xxy=*/0, 0); }
 }
