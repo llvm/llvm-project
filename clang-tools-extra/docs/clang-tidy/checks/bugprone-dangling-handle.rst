@@ -1,7 +1,7 @@
-.. title:: clang-tidy - misc-dangling-handle
+.. title:: clang-tidy - bugprone-dangling-handle
 
-misc-dangling-handle
-====================
+bugprone-dangling-handle
+========================
 
 Detect dangling references in value handles like
 ``std::experimental::string_view``.

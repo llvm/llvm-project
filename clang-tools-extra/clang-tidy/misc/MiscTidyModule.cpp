@@ -10,10 +10,8 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
-#include "ArgumentCommentCheck.h"
 #include "AssertSideEffectCheck.h"
 #include "BoolPointerImplicitConversionCheck.h"
-#include "DanglingHandleCheck.h"
 #include "DefinitionsInHeadersCheck.h"
 #include "FoldInitTypeCheck.h"
 #include "ForwardDeclarationNamespaceCheck.h"
@@ -38,7 +36,6 @@
 #include "SizeofExpressionCheck.h"
 #include "StaticAssertCheck.h"
 #include "StringCompareCheck.h"
-#include "StringConstructorCheck.h"
 #include "StringIntegerAssignmentCheck.h"
 #include "StringLiteralWithEmbeddedNulCheck.h"
 #include "SuspiciousEnumUsageCheck.h"
@@ -64,7 +61,6 @@ namespace misc {
 class MiscModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
-    CheckFactories.registerCheck<ArgumentCommentCheck>("misc-argument-comment");
     CheckFactories.registerCheck<AssertSideEffectCheck>(
         "misc-assert-side-effect");
     CheckFactories.registerCheck<ForwardingReferenceOverloadCheck>(
@@ -76,7 +72,6 @@ public:
         "misc-unconventional-assign-operator");
     CheckFactories.registerCheck<BoolPointerImplicitConversionCheck>(
         "misc-bool-pointer-implicit-conversion");
-    CheckFactories.registerCheck<DanglingHandleCheck>("misc-dangling-handle");
     CheckFactories.registerCheck<DefinitionsInHeadersCheck>(
         "misc-definitions-in-headers");
     CheckFactories.registerCheck<FoldInitTypeCheck>("misc-fold-init-type");
@@ -114,8 +109,6 @@ public:
         "misc-sizeof-expression");
     CheckFactories.registerCheck<StaticAssertCheck>("misc-static-assert");
     CheckFactories.registerCheck<StringCompareCheck>("misc-string-compare");
-    CheckFactories.registerCheck<StringConstructorCheck>(
-        "misc-string-constructor");
     CheckFactories.registerCheck<StringIntegerAssignmentCheck>(
         "misc-string-integer-assignment");
     CheckFactories.registerCheck<StringLiteralWithEmbeddedNulCheck>(

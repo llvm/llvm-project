@@ -64,10 +64,12 @@ struct CompileCommand {
 
 /// \brief Interface for compilation databases.
 ///
-/// A compilation database allows the user to retrieve all compile command lines
-/// that a specified file is compiled with in a project.
-/// The retrieved compile command lines can be used to run clang tools over
-/// a subset of the files in a project.
+/// A compilation database allows the user to retrieve compile command lines
+/// for the files in a project.
+///
+/// Many implementations are enumerable, allowing all command lines to be
+/// retrieved. These can be used to run clang tools over a subset of the files
+/// in a project.
 class CompilationDatabase {
 public:
   virtual ~CompilationDatabase();
@@ -114,7 +116,10 @@ public:
     StringRef FilePath) const = 0;
 
   /// \brief Returns the list of all files available in the compilation database.
-  virtual std::vector<std::string> getAllFiles() const = 0;
+  ///
+  /// By default, returns nothing. Implementations should override this if they
+  /// can enumerate their source files.
+  virtual std::vector<std::string> getAllFiles() const { return {}; }
 
   /// \brief Returns all compile commands for all the files in the compilation
   /// database.
@@ -122,7 +127,10 @@ public:
   /// FIXME: Add a layer in Tooling that provides an interface to run a tool
   /// over all files in a compilation database. Not all build systems have the
   /// ability to provide a feasible implementation for \c getAllCompileCommands.
-  virtual std::vector<CompileCommand> getAllCompileCommands() const = 0;
+  ///
+  /// By default, this is implemented in terms of getAllFiles() and
+  /// getCompileCommands(). Subclasses may override this for efficiency.
+  virtual std::vector<CompileCommand> getAllCompileCommands() const;
 };
 
 /// \brief Interface for compilation database plugins.
@@ -149,6 +157,7 @@ public:
 /// \brief A compilation database that returns a single compile command line.
 ///
 /// Useful when we want a tool to behave more like a compiler invocation.
+/// This compilation database is not enumerable: getAllFiles() returns {}.
 class FixedCompilationDatabase : public CompilationDatabase {
 public:
   /// \brief Creates a FixedCompilationDatabase from the arguments after "--".
@@ -198,17 +207,6 @@ public:
   /// and 'FilePath' as positional argument.
   std::vector<CompileCommand>
   getCompileCommands(StringRef FilePath) const override;
-
-  /// \brief Returns the list of all files available in the compilation database.
-  ///
-  /// Note: This is always an empty list for the fixed compilation database.
-  std::vector<std::string> getAllFiles() const override;
-
-  /// \brief Returns all compile commands for all the files in the compilation
-  /// database.
-  ///
-  /// Note: This is always an empty list for the fixed compilation database.
-  std::vector<CompileCommand> getAllCompileCommands() const override;
 
 private:
   /// This is built up to contain a single entry vector to be returned from

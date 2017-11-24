@@ -28,3 +28,6 @@
 
 .globl _start
 _start:
+
+.data
+  .dc.a foo

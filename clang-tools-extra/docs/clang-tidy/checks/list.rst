@@ -17,9 +17,12 @@ Clang-Tidy Checks
    android-cloexec-open
    android-cloexec-socket
    boost-use-to-string
+   bugprone-argument-comment
    bugprone-copy-constructor-init
+   bugprone-dangling-handle
    bugprone-integer-division
    bugprone-misplaced-operator-in-strlen-in-alloc
+   bugprone-string-constructor
    bugprone-suspicious-memset-usage
    bugprone-undefined-memory-manipulation
    cert-dcl03-c (redirects to misc-static-assert) <cert-dcl03-c>
@@ -104,10 +107,8 @@ Clang-Tidy Checks
    llvm-include-order
    llvm-namespace-comment
    llvm-twine-local
-   misc-argument-comment
    misc-assert-side-effect
    misc-bool-pointer-implicit-conversion
-   misc-dangling-handle
    misc-definitions-in-headers
    misc-fold-init-type
    misc-forward-declaration-namespace
@@ -132,7 +133,6 @@ Clang-Tidy Checks
    misc-sizeof-expression
    misc-static-assert
    misc-string-compare
-   misc-string-constructor
    misc-string-integer-assignment
    misc-string-literal-with-embedded-nul
    misc-suspicious-enum-usage

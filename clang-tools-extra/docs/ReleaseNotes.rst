@@ -57,6 +57,15 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- The 'misc-dangling-handle' check was renamed to `bugprone-dangling-handle
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-dangling-handle.html>`_
+
+- The 'misc-argument-comment' check was renamed to `bugprone-argument-comment
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-argument-comment.html>`_
+
+- The 'misc-string-constructor' check was renamed to `bugprone-string-constructor
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-string-constructor.html>`_
+
 - New `google-avoid-throwing-objc-exception
   <http://clang.llvm.org/extra/clang-tidy/checks/google-objc-avoid-throwing-exception.html>`_ check
 
@@ -92,7 +101,7 @@ Improvements to clang-tidy
   ``strlen()``, ``strnlen()``, ``strnlen_s()``, ``wcslen()``, ``wcsnlen()``, and
   ``wcsnlen_s()`` instead of the result and the value is used as an argument to
   a memory allocation function (``malloc()``, ``calloc()``, ``realloc()``,
-  ``alloca()``).
+  ``alloca()``) or the ``new[]`` operator in `C++`.
 
 - Renamed checks to use correct term "implicit conversion" instead of "implicit
   cast" and modified messages and option names accordingly:

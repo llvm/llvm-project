@@ -1,7 +1,7 @@
-.. title:: clang-tidy - misc-string-constructor
+.. title:: clang-tidy - bugprone-string-constructor
 
-misc-string-constructor
-=======================
+bugprone-string-constructor
+===========================
 
 Finds string constructors that are suspicious and probably errors.
 

@@ -39,7 +39,7 @@ Content-Length: 146
 # CHECK-NEXT:        "insertTextFormat": 1,
 # CHECK-NEXT:        "kind": 7,
 # CHECK-NEXT:        "label": "fake::",
-# CHECK-NEXT:        "sortText": "000075fake"
+# CHECK-NEXT:        "sortText": "{{.*}}"
 #      CHECK:    ]
 # CHECK-NEXT:  }
 
@@ -68,7 +68,7 @@ Content-Length: 146
 # CHECK-NEXT:        "insertTextFormat": 1,
 # CHECK-NEXT:        "kind": 7,
 # CHECK-NEXT:        "label": "fake::",
-# CHECK-NEXT:        "sortText": "000075fake"
+# CHECK-NEXT:        "sortText": "{{.*}}"
 #      CHECK:    ]
 # CHECK-NEXT:  }
 # STDERR: Warning: Duplicate Content-Length header received. The previous value for this message (10) was ignored.
@@ -97,7 +97,7 @@ Content-Length: 146
 # CHECK-NEXT:        "insertTextFormat": 1,
 # CHECK-NEXT:        "kind": 7,
 # CHECK-NEXT:        "label": "fake::",
-# CHECK-NEXT:        "sortText": "000075fake"
+# CHECK-NEXT:        "sortText": "{{.*}}"
 #      CHECK:    ]
 # CHECK-NEXT:  }
 Content-Length: 1024

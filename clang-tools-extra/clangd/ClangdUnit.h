@@ -48,6 +48,17 @@ struct DiagWithFixIts {
   llvm::SmallVector<tooling::Replacement, 1> FixIts;
 };
 
+// Stores Preamble and associated data.
+struct PreambleData {
+  PreambleData(PrecompiledPreamble Preamble,
+               std::vector<serialization::DeclID> TopLevelDeclIDs,
+               std::vector<DiagWithFixIts> Diags);
+
+  PrecompiledPreamble Preamble;
+  std::vector<serialization::DeclID> TopLevelDeclIDs;
+  std::vector<DiagWithFixIts> Diags;
+};
+
 /// Stores and provides access to parsed AST.
 class ParsedAST {
 public:
@@ -55,8 +66,7 @@ public:
   /// it is reused during parsing.
   static llvm::Optional<ParsedAST>
   Build(std::unique_ptr<clang::CompilerInvocation> CI,
-        const PrecompiledPreamble *Preamble,
-        ArrayRef<serialization::DeclID> PreambleDeclIDs,
+        std::shared_ptr<const PreambleData> Preamble,
         std::unique_ptr<llvm::MemoryBuffer> Buffer,
         std::shared_ptr<PCHContainerOperations> PCHs,
         IntrusiveRefCntPtr<vfs::FileSystem> VFS, clangd::Logger &Logger);
@@ -80,15 +90,18 @@ public:
   const std::vector<DiagWithFixIts> &getDiagnostics() const;
 
 private:
-  ParsedAST(std::unique_ptr<CompilerInstance> Clang,
+  ParsedAST(std::shared_ptr<const PreambleData> Preamble,
+            std::unique_ptr<CompilerInstance> Clang,
             std::unique_ptr<FrontendAction> Action,
             std::vector<const Decl *> TopLevelDecls,
-            std::vector<serialization::DeclID> PendingTopLevelDecls,
             std::vector<DiagWithFixIts> Diags);
 
 private:
   void ensurePreambleDeclsDeserialized();
 
+  // In-memory preambles must outlive the AST, it is important that this member
+  // goes before Clang and Action.
+  std::shared_ptr<const PreambleData> Preamble;
   // We store an "incomplete" FrontendAction (i.e. no EndSourceFile was called
   // on it) and CompilerInstance used to run it. That way we don't have to do
   // complex memory management of all Clang structures on our own. (They are
@@ -100,7 +113,7 @@ private:
   // Data, stored after parsing.
   std::vector<DiagWithFixIts> Diags;
   std::vector<const Decl *> TopLevelDecls;
-  std::vector<serialization::DeclID> PendingTopLevelDecls;
+  bool PreambleDeclsDeserialized;
 };
 
 // Provides thread-safe access to ParsedAST.
@@ -122,17 +135,6 @@ private:
   // implement some features.
   mutable std::mutex Mutex;
   mutable llvm::Optional<ParsedAST> AST;
-};
-
-// Stores Preamble and associated data.
-struct PreambleData {
-  PreambleData(PrecompiledPreamble Preamble,
-               std::vector<serialization::DeclID> TopLevelDeclIDs,
-               std::vector<DiagWithFixIts> Diags);
-
-  PrecompiledPreamble Preamble;
-  std::vector<serialization::DeclID> TopLevelDeclIDs;
-  std::vector<DiagWithFixIts> Diags;
 };
 
 /// Manages resources, required by clangd. Allows to rebuild file with new
@@ -255,16 +257,6 @@ private:
 };
 
 struct CodeCompleteOptions {
-  CodeCompleteOptions() = default;
-
-  /// Uses default values for all flags, but sets EnableSnippets and
-  /// IncludeCodePatterns to the value of EnableSnippetsAndCodePatterns.
-  explicit CodeCompleteOptions(bool EnableSnippetsAndCodePatterns);
-
-  CodeCompleteOptions(bool EnableSnippets, bool IncludeCodePatterns,
-                      bool IncludeMacros, bool IncludeGlobals,
-                      bool IncludeBriefComments);
-
   /// Returns options that can be passed to clang's completion engine.
   clang::CodeCompleteOptions getClangCompleteOpts() const;
 
@@ -276,7 +268,7 @@ struct CodeCompleteOptions {
   /// Add code patterns to completion results.
   /// If EnableSnippets is false, this options is ignored and code patterns will
   /// always be omitted.
-  bool IncludeCodePatterns = false;
+  bool IncludeCodePatterns = true;
 
   /// Add macros to code completion results.
   bool IncludeMacros = true;
@@ -288,6 +280,10 @@ struct CodeCompleteOptions {
   /// FIXME(ibiryukov): it looks like turning this option on significantly slows
   /// down completion, investigate if it can be made faster.
   bool IncludeBriefComments = true;
+
+  /// Include results that are not legal completions in the current context.
+  /// For example, private members are usually inaccessible.
+  bool IncludeIneligibleResults = false;
 
   /// Limit the number of results returned (0 means no limit).
   /// If more results are available, we set CompletionList.isIncomplete.

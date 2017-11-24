@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-argument-comment %t -- \
+// RUN: %check_clang_tidy %s bugprone-argument-comment %t -- \
 // RUN:   -config="{CheckOptions: [{key: StrictMode, value: 1}]}" --
 
 void f(int _with_underscores_);

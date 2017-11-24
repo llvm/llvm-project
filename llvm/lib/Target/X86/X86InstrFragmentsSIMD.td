@@ -182,6 +182,9 @@ def X86cmpmu    : SDNode<"X86ISD::CMPMU",    X86CmpMaskCC>;
 def X86cmpms    : SDNode<"X86ISD::FSETCCM",   X86CmpMaskCCScalar>;
 def X86cmpmsRnd : SDNode<"X86ISD::FSETCCM_RND",   X86CmpMaskCCScalarRound>;
 
+def X86phminpos: SDNode<"X86ISD::PHMINPOS", 
+                 SDTypeProfile<1, 1, [SDTCisVT<0, v8i16>, SDTCisVT<1, v8i16>]>>;
+
 def X86vshiftuniform : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisSameAs<0,1>,
                                             SDTCisVec<2>, SDTCisInt<0>,
                                             SDTCisInt<1>]>;

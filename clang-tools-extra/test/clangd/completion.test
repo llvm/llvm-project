@@ -25,7 +25,7 @@ Content-Length: 148
 # CHECK-NEXT:      "insertTextFormat": 1,
 # CHECK-NEXT:      "kind": 5,
 # CHECK-NEXT:      "label": "a",
-# CHECK-NEXT:      "sortText": "000035a"
+# CHECK-NEXT:      "sortText": "{{.*}}a"
 # CHECK-NEXT:    },
 # CHECK-NEXT:    {
 # CHECK-NEXT:      "detail": "int",
@@ -34,7 +34,7 @@ Content-Length: 148
 # CHECK-NEXT:      "insertTextFormat": 1,
 # CHECK-NEXT:      "kind": 5,
 # CHECK-NEXT:      "label": "bb",
-# CHECK-NEXT:      "sortText": "000035bb"
+# CHECK-NEXT:      "sortText": "{{.*}}bb"
 # CHECK-NEXT:    },
 # CHECK-NEXT:    {
 # CHECK-NEXT:      "detail": "int",
@@ -43,7 +43,7 @@ Content-Length: 148
 # CHECK-NEXT:      "insertTextFormat": 1,
 # CHECK-NEXT:      "kind": 5,
 # CHECK-NEXT:      "label": "ccc",
-# CHECK-NEXT:      "sortText": "000035ccc"
+# CHECK-NEXT:      "sortText": "{{.*}}ccc"
 # CHECK-NEXT:    },
 # CHECK-NEXT:    {
 # CHECK-NEXT:      "detail": "int",
@@ -52,7 +52,7 @@ Content-Length: 148
 # CHECK-NEXT:      "insertTextFormat": 1,
 # CHECK-NEXT:      "kind": 2,
 # CHECK-NEXT:      "label": "f(int i, const float f) const",
-# CHECK-NEXT:      "sortText": "000035f"
+# CHECK-NEXT:      "sortText": "{{.*}}f"
 # CHECK-NEXT:    },
 # CHECK-NEXT:    {
 # CHECK-NEXT:      "filterText": "fake",
@@ -60,7 +60,7 @@ Content-Length: 148
 # CHECK-NEXT:      "insertTextFormat": 1,
 # CHECK-NEXT:      "kind": 7,
 # CHECK-NEXT:      "label": "fake::",
-# CHECK-NEXT:      "sortText": "000075fake"
+# CHECK-NEXT:      "sortText": "{{.*}}fake"
 # CHECK-NEXT:    },
 # FIXME: Why do buildbots show different operator=s here?
 #      CHECK:    {
@@ -70,7 +70,7 @@ Content-Length: 148
 # CHECK-NEXT:      "insertTextFormat": 1,
 # CHECK-NEXT:      "kind": 4,
 # CHECK-NEXT:      "label": "~fake()",
-# CHECK-NEXT:      "sortText": "000079~fake"
+# CHECK-NEXT:      "sortText": "{{.*}}~fake"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
 Content-Length: 148
@@ -88,7 +88,7 @@ Content-Length: 148
 # CHECK-NEXT:      "insertTextFormat": 1,
 # CHECK-NEXT:      "kind": 5,
 # CHECK-NEXT:      "label": "a",
-# CHECK-NEXT:      "sortText": "000035a"
+# CHECK-NEXT:      "sortText": "{{.*}}"
 # CHECK-NEXT:    },
 # CHECK-NEXT:    {
 # CHECK-NEXT:      "detail": "int",
@@ -97,7 +97,7 @@ Content-Length: 148
 # CHECK-NEXT:      "insertTextFormat": 1,
 # CHECK-NEXT:      "kind": 5,
 # CHECK-NEXT:      "label": "bb",
-# CHECK-NEXT:      "sortText": "000035bb"
+# CHECK-NEXT:      "sortText": "{{.*}}"
 # CHECK-NEXT:    },
 # CHECK-NEXT:    {
 # CHECK-NEXT:      "detail": "int",
@@ -106,7 +106,7 @@ Content-Length: 148
 # CHECK-NEXT:      "insertTextFormat": 1,
 # CHECK-NEXT:      "kind": 5,
 # CHECK-NEXT:      "label": "ccc",
-# CHECK-NEXT:      "sortText": "000035ccc"
+# CHECK-NEXT:      "sortText": "{{.*}}"
 # CHECK-NEXT:    },
 # CHECK-NEXT:    {
 # CHECK-NEXT:      "detail": "int",
@@ -115,7 +115,7 @@ Content-Length: 148
 # CHECK-NEXT:      "insertTextFormat": 1,
 # CHECK-NEXT:      "kind": 2,
 # CHECK-NEXT:      "label": "f(int i, const float f) const",
-# CHECK-NEXT:      "sortText": "000035f"
+# CHECK-NEXT:      "sortText": "{{.*}}"
 # CHECK-NEXT:    },
 # CHECK-NEXT:    {
 # CHECK-NEXT:      "filterText": "fake",
@@ -123,7 +123,7 @@ Content-Length: 148
 # CHECK-NEXT:      "insertTextFormat": 1,
 # CHECK-NEXT:      "kind": 7,
 # CHECK-NEXT:      "label": "fake::",
-# CHECK-NEXT:      "sortText": "000075fake"
+# CHECK-NEXT:      "sortText": "{{.*}}"
 # CHECK-NEXT:    },
 #      CHECK:    {
 #      CHECK:      "detail": "void",
@@ -132,7 +132,7 @@ Content-Length: 148
 # CHECK-NEXT:      "insertTextFormat": 1,
 # CHECK-NEXT:      "kind": 4,
 # CHECK-NEXT:      "label": "~fake()",
-# CHECK-NEXT:      "sortText": "000079~fake"
+# CHECK-NEXT:      "sortText": "{{.*}}"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
 # Update the source file and check for completions again.
@@ -155,7 +155,7 @@ Content-Length: 148
 # CHECK-NEXT:      "insertTextFormat": 1,
 # CHECK-NEXT:      "kind": 2,
 # CHECK-NEXT:      "label": "func()",
-# CHECK-NEXT:      "sortText": "000034func"
+# CHECK-NEXT:      "sortText": "{{.*}}"
 # CHECK-NEXT:    },
 # CHECK-NEXT:    {
 # CHECK-NEXT:      "filterText": "fancy",
@@ -163,7 +163,7 @@ Content-Length: 148
 # CHECK-NEXT:      "insertTextFormat": 1,
 # CHECK-NEXT:      "kind": 7,
 # CHECK-NEXT:      "label": "fancy::",
-# CHECK-NEXT:      "sortText": "000075fancy"
+# CHECK-NEXT:      "sortText": "{{.*}}"
 # CHECK-NEXT:    },
 #      CHECK:    {
 #      CHECK:      "detail": "void",
@@ -172,7 +172,7 @@ Content-Length: 148
 # CHECK-NEXT:      "insertTextFormat": 1,
 # CHECK-NEXT:      "kind": 4,
 # CHECK-NEXT:      "label": "~fancy()",
-# CHECK-NEXT:      "sortText": "000079~fancy"
+# CHECK-NEXT:      "sortText": "{{.*}}"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
 Content-Length: 44

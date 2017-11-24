@@ -519,7 +519,7 @@ bool operator==(const Expr &L, const Expr &R) {
   case Expr::Object:
     return *L.object() == *R.object();
   }
-  llvm_unreachable("Unknown expressiopn kind");
+  llvm_unreachable("Unknown expression kind");
 }
 } // namespace json
 } // namespace clangd
