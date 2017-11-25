@@ -57,6 +57,42 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- The 'misc-virtual-near-miss' check was renamed to `bugprone-virtual-near-miss
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-virtual-near-miss.html>`_
+
+- The 'misc-use-after-move' check was renamed to `bugprone-use-after-move
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-use-after-move.html>`_
+
+- The 'misc-multiple-statement-macro' check was renamed to `bugprone-multiple-statement-macro
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-multiple-statement-macro.html>`_
+
+- The 'misc-move-forwarding-reference' check was renamed to `bugprone-move-forwarding-reference
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-move-forwarding-reference.html>`_
+
+- The 'misc-inaccurate-erase' check was renamed to `bugprone-inaccurate-erase
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-inaccurate-erase.html>`_
+
+- The 'misc-forward-declaration-namespace' check was renamed to `bugprone-forward-declaration-namespace
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-forward-declaration-namespace.html>`_
+
+- The 'misc-fold-init-type' check was renamed to `bugprone-fold-init-type
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-fold-init-type.html>`_
+
+- The 'misc-bool-pointer-implicit-conversion' check was renamed to `bugprone-bool-pointer-implicit-conversion
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-bool-pointer-implicit-conversion.html>`_
+
+- The 'misc-assert-side-effect' check was renamed to `bugprone-assert-side-effect
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-assert-side-effect.html>`_
+
+- The 'misc-dangling-handle' check was renamed to `bugprone-dangling-handle
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-dangling-handle.html>`_
+
+- The 'misc-argument-comment' check was renamed to `bugprone-argument-comment
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-argument-comment.html>`_
+
+- The 'misc-string-constructor' check was renamed to `bugprone-string-constructor
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-string-constructor.html>`_
+
 - New `google-avoid-throwing-objc-exception
   <http://clang.llvm.org/extra/clang-tidy/checks/google-objc-avoid-throwing-exception.html>`_ check
 
@@ -84,6 +120,15 @@ Improvements to clang-tidy
   Ensures Objective-C classes do not subclass any classes which are
   not intended to be subclassed. Includes a list of classes from Foundation
   and UIKit which are documented as not supporting subclassing.
+
+- New `bugprone-misplaced-operator-in-strlen-in-alloc
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-misplaced-operator-in-strlen-in-alloc.html>`_ check
+
+  Finds cases where ``1`` is added to the string in the argument to
+  ``strlen()``, ``strnlen()``, ``strnlen_s()``, ``wcslen()``, ``wcsnlen()``, and
+  ``wcsnlen_s()`` instead of the result and the value is used as an argument to
+  a memory allocation function (``malloc()``, ``calloc()``, ``realloc()``,
+  ``alloca()``) or the ``new[]`` operator in `C++`.
 
 - Renamed checks to use correct term "implicit conversion" instead of "implicit
   cast" and modified messages and option names accordingly:

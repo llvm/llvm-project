@@ -59,6 +59,7 @@ void RequestContext::reply(json::Expr &&Result) {
     Out.log("Attempted to reply to a notification!\n");
     return;
   }
+  SPAN_ATTACH(tracer(), "Reply", Result);
   Out.writeMessage(json::obj{
       {"jsonrpc", "2.0"},
       {"id", *ID},
@@ -69,6 +70,9 @@ void RequestContext::reply(json::Expr &&Result) {
 void RequestContext::replyError(ErrorCode code,
                                 const llvm::StringRef &Message) {
   Out.log("Error " + Twine(static_cast<int>(code)) + ": " + Message + "\n");
+  SPAN_ATTACH(tracer(), "Error",
+              (json::obj{{"code", static_cast<int>(code)},
+                         {"message", Message.str()}}));
   if (ID) {
     Out.writeMessage(json::obj{
         {"jsonrpc", "2.0"},
@@ -82,6 +86,8 @@ void RequestContext::replyError(ErrorCode code,
 void RequestContext::call(StringRef Method, json::Expr &&Params) {
   // FIXME: Generate/Increment IDs for every request so that we can get proper
   // replies once we need to.
+  SPAN_ATTACH(tracer(), "Call",
+              (json::obj{{"method", Method.str()}, {"params", Params}}));
   Out.writeMessage(json::obj{
       {"jsonrpc", "2.0"},
       {"id", 1},
@@ -104,8 +110,7 @@ callHandler(const llvm::StringMap<JSONRPCDispatcher::Handler> &Handlers,
   llvm::StringRef MethodStr = Method->getValue(MethodStorage);
   auto I = Handlers.find(MethodStr);
   auto &Handler = I != Handlers.end() ? I->second : UnknownHandler;
-  trace::Span Tracer(MethodStr);
-  Handler(RequestContext(Out, std::move(ID)), Params);
+  Handler(RequestContext(Out, MethodStr, std::move(ID)), Params);
 }
 
 bool JSONRPCDispatcher::call(StringRef Content, JSONOutput &Out) const {
@@ -249,7 +254,6 @@ void clangd::runLanguageServerLoop(std::istream &In, JSONOutput &Out,
       std::vector<char> JSON(ContentLength + 1, '\0');
       llvm::StringRef JSONRef;
       {
-        trace::Span Tracer("Reading request");
         // Now read the JSON. Insert a trailing null byte as required by the
         // YAML parser.
         In.read(JSON.data(), ContentLength);

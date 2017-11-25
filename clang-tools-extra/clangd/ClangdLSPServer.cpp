@@ -236,14 +236,12 @@ void ClangdLSPServer::onSwitchSourceHeader(Ctx C,
 
 ClangdLSPServer::ClangdLSPServer(JSONOutput &Out, unsigned AsyncThreadsCount,
                                  bool StorePreamblesInMemory,
-                                 bool SnippetCompletions,
+                                 const clangd::CodeCompleteOptions &CCOpts,
                                  llvm::Optional<StringRef> ResourceDir,
                                  llvm::Optional<Path> CompileCommandsDir)
     : Out(Out), CDB(/*Logger=*/Out, std::move(CompileCommandsDir)),
       Server(CDB, /*DiagConsumer=*/*this, FSProvider, AsyncThreadsCount,
-             StorePreamblesInMemory,
-             clangd::CodeCompleteOptions(
-                 /*EnableSnippetsAndCodePatterns=*/SnippetCompletions),
+             StorePreamblesInMemory, CCOpts,
              /*Logger=*/Out, ResourceDir) {}
 
 bool ClangdLSPServer::run(std::istream &In) {

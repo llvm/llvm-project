@@ -375,49 +375,61 @@ struct CompletionCandidate {
       : Result(&Result), Score(score(Result)) {}
 
   CodeCompletionResult *Result;
-  // Higher score is worse. FIXME: use a more natural scale!
-  int Score;
+  float Score; // 0 to 1, higher is better.
 
   // Comparison reflects rank: better candidates are smaller.
   bool operator<(const CompletionCandidate &C) const {
     if (Score != C.Score)
-      return Score < C.Score;
+      return Score > C.Score;
     return *Result < *C.Result;
   }
 
+  // Returns a string that sorts in the same order as operator<, for LSP.
+  // Conceptually, this is [-Score, Name]. We convert -Score to an integer, and
+  // hex-encode it for readability. Example: [0.5, "foo"] -> "41000000foo"
   std::string sortText() const {
-    // Fill in the sortText of the CompletionItem.
-    assert(Score <= 999999 && "Expecting score to have at most 6-digits");
     std::string S, NameStorage;
-    StringRef Name = Result->getOrderedName(NameStorage);
-    llvm::raw_string_ostream(S)
-        << llvm::format("%06d%.*s", Score, Name.size(), Name.data());
-    return S;
+    llvm::raw_string_ostream OS(S);
+    write_hex(OS, encodeFloat(-Score), llvm::HexPrintStyle::Lower,
+              /*Width=*/2 * sizeof(Score));
+    OS << Result->getOrderedName(NameStorage);
+    return OS.str();
   }
 
 private:
-  static int score(const CodeCompletionResult &Result) {
-    int Score = Result.Priority;
-    // Fill in the sortText of the CompletionItem.
-    assert(Score <= 99999 && "Expecting code completion result "
-                             "priority to have at most 5-digits");
+  static float score(const CodeCompletionResult &Result) {
+    // Priority 80 is a really bad score.
+    float Score = 1 - std::min<float>(80, Result.Priority) / 80;
 
-    const int Penalty = 100000;
     switch (static_cast<CXAvailabilityKind>(Result.Availability)) {
     case CXAvailability_Available:
       // No penalty.
       break;
     case CXAvailability_Deprecated:
-      Score += Penalty;
+      Score *= 0.1f;
       break;
     case CXAvailability_NotAccessible:
-      Score += 2 * Penalty;
-      break;
     case CXAvailability_NotAvailable:
-      Score += 3 * Penalty;
+      Score = 0;
       break;
     }
     return Score;
+  }
+
+  // Produces an integer that sorts in the same order as F.
+  // That is: a < b <==> encodeFloat(a) < encodeFloat(b).
+  static uint32_t encodeFloat(float F) {
+    static_assert(std::numeric_limits<float>::is_iec559, "");
+    static_assert(sizeof(float) == sizeof(uint32_t), "");
+    constexpr uint32_t TopBit = ~(~uint32_t{0} >> 1);
+
+    // Get the bits of the float. Endianness is the same as for integers.
+    uint32_t U;
+    memcpy(&U, &F, sizeof(float));
+    // IEEE 754 floats compare like sign-magnitude integers.
+    if (U & TopBit)    // Negative float.
+      return 0 - U;    // Map onto the low half of integers, order reversed.
+    return U + TopBit; // Positive floats map onto the high half of integers.
   }
 };
 
@@ -436,7 +448,12 @@ public:
                                   unsigned NumResults) override final {
     std::priority_queue<CompletionCandidate> Candidates;
     for (unsigned I = 0; I < NumResults; ++I) {
-      Candidates.emplace(Results[I]);
+      auto &Result = Results[I];
+      if (!ClangdOpts.IncludeIneligibleResults &&
+          (Result.Availability == CXAvailability_NotAvailable ||
+           Result.Availability == CXAvailability_NotAccessible))
+        continue;
+      Candidates.emplace(Result);
       if (ClangdOpts.Limit && Candidates.size() > ClangdOpts.Limit) {
         Candidates.pop();
         Items.isIncomplete = true;
@@ -806,22 +823,6 @@ bool invokeCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
 
 } // namespace
 
-clangd::CodeCompleteOptions::CodeCompleteOptions(
-    bool EnableSnippetsAndCodePatterns)
-    : CodeCompleteOptions() {
-  EnableSnippets = EnableSnippetsAndCodePatterns;
-  IncludeCodePatterns = EnableSnippetsAndCodePatterns;
-}
-
-clangd::CodeCompleteOptions::CodeCompleteOptions(bool EnableSnippets,
-                                                 bool IncludeCodePatterns,
-                                                 bool IncludeMacros,
-                                                 bool IncludeGlobals,
-                                                 bool IncludeBriefComments)
-    : EnableSnippets(EnableSnippets), IncludeCodePatterns(IncludeCodePatterns),
-      IncludeMacros(IncludeMacros), IncludeGlobals(IncludeGlobals),
-      IncludeBriefComments(IncludeBriefComments) {}
-
 clang::CodeCompleteOptions
 clangd::CodeCompleteOptions::getClangCompleteOpts() const {
   clang::CodeCompleteOptions Result;
@@ -878,8 +879,7 @@ void clangd::dumpAST(ParsedAST &AST, llvm::raw_ostream &OS) {
 
 llvm::Optional<ParsedAST>
 ParsedAST::Build(std::unique_ptr<clang::CompilerInvocation> CI,
-                 const PrecompiledPreamble *Preamble,
-                 ArrayRef<serialization::DeclID> PreambleDeclIDs,
+                 std::shared_ptr<const PreambleData> Preamble,
                  std::unique_ptr<llvm::MemoryBuffer> Buffer,
                  std::shared_ptr<PCHContainerOperations> PCHs,
                  IntrusiveRefCntPtr<vfs::FileSystem> VFS,
@@ -888,8 +888,10 @@ ParsedAST::Build(std::unique_ptr<clang::CompilerInvocation> CI,
   std::vector<DiagWithFixIts> ASTDiags;
   StoreDiagsConsumer UnitDiagsConsumer(/*ref*/ ASTDiags);
 
+  const PrecompiledPreamble *PreamblePCH =
+      Preamble ? &Preamble->Preamble : nullptr;
   auto Clang = prepareCompilerInstance(
-      std::move(CI), Preamble, std::move(Buffer), std::move(PCHs),
+      std::move(CI), PreamblePCH, std::move(Buffer), std::move(PCHs),
       std::move(VFS), /*ref*/ UnitDiagsConsumer);
 
   // Recover resources if we crash before exiting this method.
@@ -911,15 +913,8 @@ ParsedAST::Build(std::unique_ptr<clang::CompilerInvocation> CI,
   Clang->getDiagnostics().setClient(new EmptyDiagsConsumer);
 
   std::vector<const Decl *> ParsedDecls = Action->takeTopLevelDecls();
-  std::vector<serialization::DeclID> PendingDecls;
-  if (Preamble) {
-    PendingDecls.reserve(PreambleDeclIDs.size());
-    PendingDecls.insert(PendingDecls.begin(), PreambleDeclIDs.begin(),
-                        PreambleDeclIDs.end());
-  }
-
-  return ParsedAST(std::move(Clang), std::move(Action), std::move(ParsedDecls),
-                   std::move(PendingDecls), std::move(ASTDiags));
+  return ParsedAST(std::move(Preamble), std::move(Clang), std::move(Action),
+                   std::move(ParsedDecls), std::move(ASTDiags));
 }
 
 namespace {
@@ -1060,24 +1055,25 @@ std::vector<Location> clangd::findDefinitions(ParsedAST &AST, Position Pos,
 }
 
 void ParsedAST::ensurePreambleDeclsDeserialized() {
-  if (PendingTopLevelDecls.empty())
+  if (PreambleDeclsDeserialized || !Preamble)
     return;
 
   std::vector<const Decl *> Resolved;
-  Resolved.reserve(PendingTopLevelDecls.size());
+  Resolved.reserve(Preamble->TopLevelDeclIDs.size());
 
   ExternalASTSource &Source = *getASTContext().getExternalSource();
-  for (serialization::DeclID TopLevelDecl : PendingTopLevelDecls) {
+  for (serialization::DeclID TopLevelDecl : Preamble->TopLevelDeclIDs) {
     // Resolve the declaration ID to an actual declaration, possibly
     // deserializing the declaration in the process.
     if (Decl *D = Source.GetExternalDecl(TopLevelDecl))
       Resolved.push_back(D);
   }
 
-  TopLevelDecls.reserve(TopLevelDecls.size() + PendingTopLevelDecls.size());
+  TopLevelDecls.reserve(TopLevelDecls.size() +
+                        Preamble->TopLevelDeclIDs.size());
   TopLevelDecls.insert(TopLevelDecls.begin(), Resolved.begin(), Resolved.end());
 
-  PendingTopLevelDecls.clear();
+  PreambleDeclsDeserialized = true;
 }
 
 ParsedAST::ParsedAST(ParsedAST &&Other) = default;
@@ -1111,14 +1107,21 @@ const std::vector<DiagWithFixIts> &ParsedAST::getDiagnostics() const {
   return Diags;
 }
 
-ParsedAST::ParsedAST(std::unique_ptr<CompilerInstance> Clang,
+PreambleData::PreambleData(PrecompiledPreamble Preamble,
+                           std::vector<serialization::DeclID> TopLevelDeclIDs,
+                           std::vector<DiagWithFixIts> Diags)
+    : Preamble(std::move(Preamble)),
+      TopLevelDeclIDs(std::move(TopLevelDeclIDs)), Diags(std::move(Diags)) {}
+
+ParsedAST::ParsedAST(std::shared_ptr<const PreambleData> Preamble,
+                     std::unique_ptr<CompilerInstance> Clang,
                      std::unique_ptr<FrontendAction> Action,
                      std::vector<const Decl *> TopLevelDecls,
-                     std::vector<serialization::DeclID> PendingTopLevelDecls,
                      std::vector<DiagWithFixIts> Diags)
-    : Clang(std::move(Clang)), Action(std::move(Action)),
-      Diags(std::move(Diags)), TopLevelDecls(std::move(TopLevelDecls)),
-      PendingTopLevelDecls(std::move(PendingTopLevelDecls)) {
+    : Preamble(std::move(Preamble)), Clang(std::move(Clang)),
+      Action(std::move(Action)), Diags(std::move(Diags)),
+      TopLevelDecls(std::move(TopLevelDecls)),
+      PreambleDeclsDeserialized(false) {
   assert(this->Clang);
   assert(this->Action);
 }
@@ -1128,12 +1131,6 @@ ParsedASTWrapper::ParsedASTWrapper(ParsedASTWrapper &&Wrapper)
 
 ParsedASTWrapper::ParsedASTWrapper(llvm::Optional<ParsedAST> AST)
     : AST(std::move(AST)) {}
-
-PreambleData::PreambleData(PrecompiledPreamble Preamble,
-                           std::vector<serialization::DeclID> TopLevelDeclIDs,
-                           std::vector<DiagWithFixIts> Diags)
-    : Preamble(std::move(Preamble)),
-      TopLevelDeclIDs(std::move(TopLevelDeclIDs)), Diags(std::move(Diags)) {}
 
 std::shared_ptr<CppFile>
 CppFile::Create(PathRef FileName, tooling::CompileCommand Command,
@@ -1292,7 +1289,8 @@ CppFile::deferRebuild(StringRef NewContents,
       // (if there are no other references to it).
       OldPreamble.reset();
 
-      trace::Span Tracer(llvm::Twine("Preamble: ") + That->FileName);
+      trace::Span Tracer("Preamble");
+      SPAN_ATTACH(Tracer, "File", That->FileName);
       std::vector<DiagWithFixIts> PreambleDiags;
       StoreDiagsConsumer PreambleDiagnosticsConsumer(/*ref*/ PreambleDiags);
       IntrusiveRefCntPtr<DiagnosticsEngine> PreambleDiagsEngine =
@@ -1328,12 +1326,8 @@ CppFile::deferRebuild(StringRef NewContents,
     } // unlock Mutex
 
     // Prepare the Preamble and supplementary data for rebuilding AST.
-    const PrecompiledPreamble *PreambleForAST = nullptr;
-    ArrayRef<serialization::DeclID> SerializedPreambleDecls = llvm::None;
     std::vector<DiagWithFixIts> Diagnostics;
     if (NewPreamble) {
-      PreambleForAST = &NewPreamble->Preamble;
-      SerializedPreambleDecls = NewPreamble->TopLevelDeclIDs;
       Diagnostics.insert(Diagnostics.begin(), NewPreamble->Diags.begin(),
                          NewPreamble->Diags.end());
     }
@@ -1341,10 +1335,11 @@ CppFile::deferRebuild(StringRef NewContents,
     // Compute updated AST.
     llvm::Optional<ParsedAST> NewAST;
     {
-      trace::Span Tracer(llvm::Twine("Build: ") + That->FileName);
-      NewAST = ParsedAST::Build(
-          std::move(CI), PreambleForAST, SerializedPreambleDecls,
-          std::move(ContentsBuffer), PCHs, VFS, That->Logger);
+      trace::Span Tracer("Build");
+      SPAN_ATTACH(Tracer, "File", That->FileName);
+      NewAST =
+          ParsedAST::Build(std::move(CI), std::move(NewPreamble),
+                           std::move(ContentsBuffer), PCHs, VFS, That->Logger);
     }
 
     if (NewAST) {
