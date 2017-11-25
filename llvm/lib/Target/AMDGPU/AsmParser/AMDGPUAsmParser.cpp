@@ -132,6 +132,7 @@ public:
     ImmTyIdxen,
     ImmTyAddr64,
     ImmTyOffset,
+    ImmTyInstOffset,
     ImmTyOffset0,
     ImmTyOffset1,
     ImmTyGLC,
@@ -294,8 +295,8 @@ public:
   bool isOffset0() const { return isImmTy(ImmTyOffset0) && isUInt<16>(getImm()); }
   bool isOffset1() const { return isImmTy(ImmTyOffset1) && isUInt<8>(getImm()); }
 
-  bool isOffsetU12() const { return isImmTy(ImmTyOffset) && isUInt<12>(getImm()); }
-  bool isOffsetS13() const { return isImmTy(ImmTyOffset) && isInt<13>(getImm()); }
+  bool isOffsetU12() const { return (isImmTy(ImmTyOffset) || isImmTy(ImmTyInstOffset)) && isUInt<12>(getImm()); }
+  bool isOffsetS13() const { return (isImmTy(ImmTyOffset) || isImmTy(ImmTyInstOffset)) && isInt<13>(getImm()); }
   bool isGDS() const { return isImmTy(ImmTyGDS); }
   bool isGLC() const { return isImmTy(ImmTyGLC); }
   bool isSLC() const { return isImmTy(ImmTySLC); }
@@ -642,6 +643,7 @@ public:
     case ImmTyIdxen: OS << "Idxen"; break;
     case ImmTyAddr64: OS << "Addr64"; break;
     case ImmTyOffset: OS << "Offset"; break;
+    case ImmTyInstOffset: OS << "InstOffset"; break;
     case ImmTyOffset0: OS << "Offset0"; break;
     case ImmTyOffset1: OS << "Offset1"; break;
     case ImmTyGLC: OS << "GLC"; break;
@@ -4107,6 +4109,7 @@ static const OptionalOperand AMDGPUOptionalOperandTable[] = {
   {"offset1", AMDGPUOperand::ImmTyOffset1, false, nullptr},
   {"gds",     AMDGPUOperand::ImmTyGDS, true, nullptr},
   {"offset",  AMDGPUOperand::ImmTyOffset, false, nullptr},
+  {"inst_offset", AMDGPUOperand::ImmTyInstOffset, false, nullptr},
   {"dfmt",    AMDGPUOperand::ImmTyDFMT, false, nullptr},
   {"nfmt",    AMDGPUOperand::ImmTyNFMT, false, nullptr},
   {"glc",     AMDGPUOperand::ImmTyGLC, true, nullptr},

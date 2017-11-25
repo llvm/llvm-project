@@ -742,8 +742,8 @@ class Type;
 
     const SCEV *visitAddRecExpr(const SCEVAddRecExpr *Expr) {
       SmallVector<const SCEV *, 2> Operands;
-      for (int i = 0, e = Expr->getNumOperands(); i < e; ++i)
-        Operands.push_back(visit(Expr->getOperand(i)));
+      for (const SCEV *Op : Expr->operands())
+        Operands.push_back(visit(Op));
 
       const Loop *L = Expr->getLoop();
       const SCEV *Res = SE.getAddRecExpr(Operands, L, Expr->getNoWrapFlags());

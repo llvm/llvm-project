@@ -196,8 +196,10 @@ def main():
 
   clang_tidy_path = os.path.dirname(__file__)
 
-  header_guard_old = args.old_check_name.upper().replace('-', '_')
-  header_guard_new = args.new_check_name.upper().replace('-', '_')
+  header_guard_variants = [
+      (old_module + '_' + new_check_name_camel).upper(),
+      args.old_check_name.replace('-', '_').upper()]
+  header_guard_new = (new_module + '_' + new_check_name_camel).upper()
 
   old_module_path = os.path.join(clang_tidy_path, old_module)
   new_module_path = os.path.join(clang_tidy_path, new_module)
@@ -225,7 +227,8 @@ def main():
                   generateCommentLineHeader(filename))
     replaceInFile(filename, generateCommentLineSource(originalName),
                   generateCommentLineSource(filename))
-    replaceInFile(filename, header_guard_old, header_guard_new)
+    for header_guard in header_guard_variants:
+      replaceInFile(filename, header_guard, header_guard_new)
 
     if args.new_check_name + '.rst' in filename:
       replaceInFile(

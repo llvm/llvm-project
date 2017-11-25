@@ -361,6 +361,7 @@ void MipsAsmPrinter::EmitFunctionEntryLabel() {
   if (Subtarget->inMicroMipsMode()) {
     TS.emitDirectiveSetMicroMips();
     TS.setUsesMicroMips();
+    TS.updateABIInfo(*Subtarget);
   } else
     TS.emitDirectiveSetNoMicroMips();
 

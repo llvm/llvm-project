@@ -136,10 +136,10 @@ static bool updateIDomWithKnownCommonDominator(BasicBlock *BB,
 // FIXME: Neither of these issues are a big deal and could be addressed with
 // some amount of refactoring of IDFCalculator. That would allow us to share
 // the core logic here (which is solving the same core problem).
-void appendDomFrontier(DomTreeNode *Node,
-                       SmallSetVector<BasicBlock *, 4> &Worklist,
-                       SmallVectorImpl<DomTreeNode *> &DomNodes,
-                       SmallPtrSetImpl<BasicBlock *> &DomSet) {
+static void appendDomFrontier(DomTreeNode *Node,
+                              SmallSetVector<BasicBlock *, 4> &Worklist,
+                              SmallVectorImpl<DomTreeNode *> &DomNodes,
+                              SmallPtrSetImpl<BasicBlock *> &DomSet) {
   assert(DomNodes.empty() && "Must start with no dominator nodes.");
   assert(DomSet.empty() && "Must start with an empty dominator set.");
 

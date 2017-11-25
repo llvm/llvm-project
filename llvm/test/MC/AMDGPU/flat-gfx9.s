@@ -31,6 +31,10 @@ flat_atomic_add v[3:4], v5 offset:8 slc
 // GFX9: flat_atomic_add v[3:4], v5 offset:8 slc ; encoding: [0x08,0x00,0x0a,0xdd,0x03,0x05,0x00,0x00]
 // VIERR: :1: error: invalid operand for instruction
 
+flat_atomic_add v[3:4], v5 inst_offset:8 slc
+// GFX9: flat_atomic_add v[3:4], v5 offset:8 slc ; encoding: [0x08,0x00,0x0a,0xdd,0x03,0x05,0x00,0x00]
+// VIERR: :1: error: invalid operand for instruction
+
 flat_atomic_swap v[3:4], v5 offset:16
 // GFX9: flat_atomic_swap v[3:4], v5 offset:16 ; encoding: [0x10,0x00,0x00,0xdd,0x03,0x05,0x00,0x00]
 // VIERR: :1: error: invalid operand for instruction
