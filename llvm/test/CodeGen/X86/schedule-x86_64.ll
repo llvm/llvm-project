@@ -1291,14 +1291,14 @@ define void @test_shld_shrd_16(i16 %a0, i16 %a1, i16 *%a2) optsize {
 ; BTVER2-LABEL: test_shld_shrd_16:
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    shldw %cl, %si, %di # sched: [1:0.50]
-; BTVER2-NEXT:    shrdw %cl, %si, %di # sched: [1:0.50]
-; BTVER2-NEXT:    shldw %cl, %si, (%rdx) # sched: [4:1.00]
-; BTVER2-NEXT:    shrdw %cl, %si, (%rdx) # sched: [4:1.00]
-; BTVER2-NEXT:    shldw $7, %si, %di # sched: [1:0.50]
-; BTVER2-NEXT:    shrdw $7, %si, %di # sched: [1:0.50]
-; BTVER2-NEXT:    shldw $7, %si, (%rdx) # sched: [4:1.00]
-; BTVER2-NEXT:    shrdw $7, %si, (%rdx) # sched: [4:1.00]
+; BTVER2-NEXT:    shldw %cl, %si, %di # sched: [4:4.00]
+; BTVER2-NEXT:    shrdw %cl, %si, %di # sched: [4:4.00]
+; BTVER2-NEXT:    shldw %cl, %si, (%rdx) # sched: [9:11.00]
+; BTVER2-NEXT:    shrdw %cl, %si, (%rdx) # sched: [9:11.00]
+; BTVER2-NEXT:    shldw $7, %si, %di # sched: [3:3.00]
+; BTVER2-NEXT:    shrdw $7, %si, %di # sched: [3:3.00]
+; BTVER2-NEXT:    shldw $7, %si, (%rdx) # sched: [9:11.00]
+; BTVER2-NEXT:    shrdw $7, %si, (%rdx) # sched: [9:11.00]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -1434,14 +1434,14 @@ define void @test_shld_shrd_32(i32 %a0, i32 %a1, i32 *%a2) optsize {
 ; BTVER2-LABEL: test_shld_shrd_32:
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    shldl %cl, %esi, %edi # sched: [1:0.50]
-; BTVER2-NEXT:    shrdl %cl, %esi, %edi # sched: [1:0.50]
-; BTVER2-NEXT:    shldl %cl, %esi, (%rdx) # sched: [4:1.00]
-; BTVER2-NEXT:    shrdl %cl, %esi, (%rdx) # sched: [4:1.00]
-; BTVER2-NEXT:    shldl $7, %esi, %edi # sched: [1:0.50]
-; BTVER2-NEXT:    shrdl $7, %esi, %edi # sched: [1:0.50]
-; BTVER2-NEXT:    shldl $7, %esi, (%rdx) # sched: [4:1.00]
-; BTVER2-NEXT:    shrdl $7, %esi, (%rdx) # sched: [4:1.00]
+; BTVER2-NEXT:    shldl %cl, %esi, %edi # sched: [4:4.00]
+; BTVER2-NEXT:    shrdl %cl, %esi, %edi # sched: [4:4.00]
+; BTVER2-NEXT:    shldl %cl, %esi, (%rdx) # sched: [9:11.00]
+; BTVER2-NEXT:    shrdl %cl, %esi, (%rdx) # sched: [9:11.00]
+; BTVER2-NEXT:    shldl $7, %esi, %edi # sched: [3:3.00]
+; BTVER2-NEXT:    shrdl $7, %esi, %edi # sched: [3:3.00]
+; BTVER2-NEXT:    shldl $7, %esi, (%rdx) # sched: [9:11.00]
+; BTVER2-NEXT:    shrdl $7, %esi, (%rdx) # sched: [9:11.00]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -1577,14 +1577,14 @@ define void @test_shld_shrd_64(i64 %a0, i64 %a1, i64 *%a2) optsize {
 ; BTVER2-LABEL: test_shld_shrd_64:
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    shldq %cl, %rsi, %rdi # sched: [1:0.50]
-; BTVER2-NEXT:    shrdq %cl, %rsi, %rdi # sched: [1:0.50]
-; BTVER2-NEXT:    shldq %cl, %rsi, (%rdx) # sched: [4:1.00]
-; BTVER2-NEXT:    shrdq %cl, %rsi, (%rdx) # sched: [4:1.00]
-; BTVER2-NEXT:    shldq $7, %rsi, %rdi # sched: [1:0.50]
-; BTVER2-NEXT:    shrdq $7, %rsi, %rdi # sched: [1:0.50]
-; BTVER2-NEXT:    shldq $7, %rsi, (%rdx) # sched: [4:1.00]
-; BTVER2-NEXT:    shrdq $7, %rsi, (%rdx) # sched: [4:1.00]
+; BTVER2-NEXT:    shldq %cl, %rsi, %rdi # sched: [4:4.00]
+; BTVER2-NEXT:    shrdq %cl, %rsi, %rdi # sched: [4:4.00]
+; BTVER2-NEXT:    shldq %cl, %rsi, (%rdx) # sched: [9:11.00]
+; BTVER2-NEXT:    shrdq %cl, %rsi, (%rdx) # sched: [9:11.00]
+; BTVER2-NEXT:    shldq $7, %rsi, %rdi # sched: [3:3.00]
+; BTVER2-NEXT:    shrdq $7, %rsi, %rdi # sched: [3:3.00]
+; BTVER2-NEXT:    shldq $7, %rsi, (%rdx) # sched: [9:11.00]
+; BTVER2-NEXT:    shrdq $7, %rsi, (%rdx) # sched: [9:11.00]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
