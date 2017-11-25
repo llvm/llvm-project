@@ -1067,11 +1067,10 @@ define void @merge_4i32_i32_combine(<4 x i32>* %dst, i32* %src) {
 ; X32-SSE1:       # BB#0:
 ; X32-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-SSE1-NEXT:    movl (%ecx), %ecx
-; X32-SSE1-NEXT:    movl %ecx, (%eax)
-; X32-SSE1-NEXT:    movl $0, 12(%eax)
-; X32-SSE1-NEXT:    movl $0, 8(%eax)
-; X32-SSE1-NEXT:    movl $0, 4(%eax)
+; X32-SSE1-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X32-SSE1-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X32-SSE1-NEXT:    andps %xmm0, %xmm1
+; X32-SSE1-NEXT:    movaps %xmm1, (%eax)
 ; X32-SSE1-NEXT:    retl
 ;
 ; X32-SSE41-LABEL: merge_4i32_i32_combine:

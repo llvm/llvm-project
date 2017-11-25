@@ -617,7 +617,9 @@ private:
       break;
     case tok::kw_for:
       if (Style.Language == FormatStyle::LK_JavaScript) {
-        if (Tok->Previous && Tok->Previous->is(tok::period))
+        // x.for and {for: ...}
+        if ((Tok->Previous && Tok->Previous->is(tok::period)) ||
+            (Tok->Next && Tok->Next->is(tok::colon)))
           break;
         // JS' for await ( ...
         if (CurrentToken && CurrentToken->is(Keywords.kw_await))

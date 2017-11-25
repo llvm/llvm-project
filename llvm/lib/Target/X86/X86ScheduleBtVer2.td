@@ -135,6 +135,30 @@ def : WriteRes<WriteLEA, [JALU01]>;
 
 defm : JWriteResIntPair<WriteShift, JALU01, 1>;
 
+def WriteSHLDrri : SchedWriteRes<[JALU01]> {
+  let Latency = 3;
+  let ResourceCycles = [6];
+  let NumMicroOps = 6;
+}
+def: InstRW<[WriteSHLDrri], (instregex "SHLD(16|32|64)rri8")>;
+def: InstRW<[WriteSHLDrri], (instregex "SHRD(16|32|64)rri8")>;
+
+def WriteSHLDrrCL : SchedWriteRes<[JALU01]> {
+  let Latency = 4;
+  let ResourceCycles = [8];
+  let NumMicroOps = 7;
+}
+def: InstRW<[WriteSHLDrrCL], (instregex "SHLD(16|32|64)rrCL")>;
+def: InstRW<[WriteSHLDrrCL], (instregex "SHRD(16|32|64)rrCL")>;
+
+def WriteSHLDm : SchedWriteRes<[JLAGU, JALU01]> {
+  let Latency = 9;
+  let ResourceCycles = [1, 22];
+  let NumMicroOps = 8;
+}
+def: InstRW<[WriteSHLDm], (instregex "SHLD(16|32|64)mr(i8|CL)")>;
+def: InstRW<[WriteSHLDm], (instregex "SHRD(16|32|64)mr(i8|CL)")>;
+
 ////////////////////////////////////////////////////////////////////////////////
 // Loads, stores, and moves, not folded with other operations.
 // FIXME: Split x86 and SSE load/store/moves

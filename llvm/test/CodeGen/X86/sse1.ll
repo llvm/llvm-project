@@ -158,56 +158,81 @@ define <4 x float> @PR28044(<4 x float> %a0, <4 x float> %a1) nounwind {
 define <4 x i32> @PR30512(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X32-LABEL: PR30512:
 ; X32:       # BB#0:
-; X32-NEXT:    pushl %ebp
 ; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    pushl %edi
 ; X32-NEXT:    pushl %esi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; X32-NEXT:    subl $16, %esp
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    xorl %ecx, %ecx
-; X32-NEXT:    cmpl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    sete %cl
-; X32-NEXT:    xorl %edx, %edx
-; X32-NEXT:    cmpl {{[0-9]+}}(%esp), %ebx
-; X32-NEXT:    sete %dl
 ; X32-NEXT:    xorl %ebx, %ebx
 ; X32-NEXT:    cmpl {{[0-9]+}}(%esp), %edi
 ; X32-NEXT:    sete %bl
-; X32-NEXT:    xorl %eax, %eax
+; X32-NEXT:    negl %ebx
+; X32-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; X32-NEXT:    xorl %ebx, %ebx
 ; X32-NEXT:    cmpl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    sete %al
-; X32-NEXT:    movl %eax, 12(%ebp)
-; X32-NEXT:    movl %ebx, 8(%ebp)
-; X32-NEXT:    movl %edx, 4(%ebp)
-; X32-NEXT:    movl %ecx, (%ebp)
-; X32-NEXT:    movl %ebp, %eax
+; X32-NEXT:    sete %bl
+; X32-NEXT:    negl %ebx
+; X32-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; X32-NEXT:    xorl %ebx, %ebx
+; X32-NEXT:    cmpl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    sete %bl
+; X32-NEXT:    negl %ebx
+; X32-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; X32-NEXT:    xorl %edx, %edx
+; X32-NEXT:    cmpl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    sete %dl
+; X32-NEXT:    negl %edx
+; X32-NEXT:    movl %edx, (%esp)
+; X32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X32-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X32-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; X32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X32-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X32-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
+; X32-NEXT:    movlhps {{.*#+}} xmm2 = xmm2[0],xmm1[0]
+; X32-NEXT:    andps {{\.LCPI.*}}, %xmm2
+; X32-NEXT:    movaps %xmm2, (%eax)
+; X32-NEXT:    addl $16, %esp
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %edi
 ; X32-NEXT:    popl %ebx
-; X32-NEXT:    popl %ebp
 ; X32-NEXT:    retl $4
 ;
 ; X64-LABEL: PR30512:
 ; X64:       # BB#0:
 ; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    cmpl {{[0-9]+}}(%rsp), %r8d
+; X64-NEXT:    sete %al
+; X64-NEXT:    negl %eax
+; X64-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    cmpl {{[0-9]+}}(%rsp), %ecx
+; X64-NEXT:    sete %al
+; X64-NEXT:    negl %eax
+; X64-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    cmpl {{[0-9]+}}(%rsp), %edx
+; X64-NEXT:    sete %al
+; X64-NEXT:    negl %eax
+; X64-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpl %r9d, %esi
 ; X64-NEXT:    sete %al
-; X64-NEXT:    xorl %esi, %esi
-; X64-NEXT:    cmpl {{[0-9]+}}(%rsp), %edx
-; X64-NEXT:    sete %sil
-; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    cmpl {{[0-9]+}}(%rsp), %ecx
-; X64-NEXT:    sete %dl
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    cmpl {{[0-9]+}}(%rsp), %r8d
-; X64-NEXT:    sete %cl
-; X64-NEXT:    movl %ecx, 12(%rdi)
-; X64-NEXT:    movl %edx, 8(%rdi)
-; X64-NEXT:    movl %esi, 4(%rdi)
-; X64-NEXT:    movl %eax, (%rdi)
+; X64-NEXT:    negl %eax
+; X64-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X64-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X64-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
+; X64-NEXT:    movlhps {{.*#+}} xmm2 = xmm2[0],xmm1[0]
+; X64-NEXT:    andps {{.*}}(%rip), %xmm2
+; X64-NEXT:    movaps %xmm2, (%rdi)
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    retq
   %cmp = icmp eq <4 x i32> %x, %y
