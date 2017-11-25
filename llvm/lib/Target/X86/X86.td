@@ -308,6 +308,14 @@ def FeatureMacroFusion
     : SubtargetFeature<"macrofusion", "HasMacroFusion", "true",
                  "Various instructions can be fused with conditional branches">;
 
+// Gather is available since Haswell (AVX2 set). So technically, we can
+// generate Gathers on all AVX2 processors. But the overhead on HSW is high.
+// Skylake Client processor has faster Gathers than HSW and performance is
+// similar to Skylake Server (AVX-512).
+def FeatureHasFastGather
+    : SubtargetFeature<"fast-gather", "HasFastGather", "true",
+                       "Indicates if gather is reasonably fast.">;
+
 //===----------------------------------------------------------------------===//
 // X86 processors supported.
 //===----------------------------------------------------------------------===//
@@ -613,7 +621,8 @@ def SKLFeatures : ProcessorFeatures<BDWFeatures.Value, [
 
 class SkylakeClientProc<string Name> : ProcModel<Name, SkylakeClientModel,
                                                  SKLFeatures.Value, [
-  ProcIntelSKL
+  ProcIntelSKL,
+  FeatureHasFastGather
 ]>;
 def : SkylakeClientProc<"skylake">;
 
@@ -637,7 +646,8 @@ class KnightsLandingProc<string Name> : ProcModel<Name, HaswellModel,
                                                   KNLFeatures.Value, [
   ProcIntelKNL,
   FeatureSlowTwoMemOps,
-  FeatureFastPartialYMMorZMMWrite
+  FeatureFastPartialYMMorZMMWrite,
+  FeatureHasFastGather
 ]>;
 def : KnightsLandingProc<"knl">;
 
@@ -646,6 +656,7 @@ class KnightsMillProc<string Name> : ProcModel<Name, HaswellModel,
   ProcIntelKNL,
   FeatureSlowTwoMemOps,
   FeatureFastPartialYMMorZMMWrite,
+  FeatureHasFastGather,
   FeatureVPOPCNTDQ
 ]>;
 def : KnightsMillProc<"knm">; // TODO Add AVX5124FMAPS/AVX5124VNNIW features
@@ -662,7 +673,8 @@ def SKXFeatures : ProcessorFeatures<SKLFeatures.Value, [
 
 class SkylakeServerProc<string Name> : ProcModel<Name, SkylakeServerModel,
                                                  SKXFeatures.Value, [
-  ProcIntelSKX
+  ProcIntelSKX,
+  FeatureHasFastGather
 ]>;
 def : SkylakeServerProc<"skylake-avx512">;
 def : SkylakeServerProc<"skx">; // Legacy alias.
@@ -675,7 +687,8 @@ def CNLFeatures : ProcessorFeatures<SKXFeatures.Value, [
 
 class CannonlakeProc<string Name> : ProcModel<Name, SkylakeServerModel,
                                               CNLFeatures.Value, [
-  ProcIntelCNL
+  ProcIntelCNL,
+  FeatureHasFastGather
 ]>;
 def : CannonlakeProc<"cannonlake">;
 
@@ -691,7 +704,8 @@ def ICLFeatures : ProcessorFeatures<CNLFeatures.Value, [
 
 class IcelakeProc<string Name> : ProcModel<Name, SkylakeServerModel,
                                            ICLFeatures.Value, [
-  ProcIntelICL
+  ProcIntelICL,
+  FeatureHasFastGather
 ]>;
 def : IcelakeProc<"icelake">;
 

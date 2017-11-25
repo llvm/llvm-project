@@ -505,6 +505,9 @@ namespace llvm {
       FMADDSUB_RND,
       FMSUBADD_RND,
 
+      // FMA4 specific scalar intrinsics bits that zero the non-scalar bits.
+      FMADD4S, FNMADD4S, FMSUB4S, FNMSUB4S,
+
       // Scalar intrinsic FMA.
       FMADDS1, FMADDS3,
       FNMADDS1, FNMADDS3,

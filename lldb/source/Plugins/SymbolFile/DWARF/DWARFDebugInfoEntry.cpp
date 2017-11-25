@@ -1314,19 +1314,6 @@ bool DWARFDebugInfoEntry::AppendTypeName(SymbolFileDWARF *dwarf2Data,
   return false;
 }
 
-bool DWARFDebugInfoEntry::Contains(const DWARFDebugInfoEntry *die) const {
-  if (die) {
-    const dw_offset_t die_offset = die->GetOffset();
-    if (die_offset > GetOffset()) {
-      const DWARFDebugInfoEntry *sibling = GetSibling();
-      assert(sibling); // TODO: take this out
-      if (sibling)
-        return die_offset < sibling->GetOffset();
-    }
-  }
-  return false;
-}
-
 //----------------------------------------------------------------------
 // BuildAddressRangeTable
 //----------------------------------------------------------------------

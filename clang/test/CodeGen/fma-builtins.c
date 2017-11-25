@@ -43,13 +43,15 @@ __m128d test_mm_fmsub_pd(__m128d a, __m128d b, __m128d c) {
 
 __m128 test_mm_fmsub_ss(__m128 a, __m128 b, __m128 c) {
   // CHECK-LABEL: test_mm_fmsub_ss
-  // CHECK: @llvm.x86.fma.vfmsub.ss
+  // CHECK: [[NEG:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.+}}
+  // CHECK: @llvm.x86.fma.vfmadd.ss(<4 x float> %{{.+}}, <4 x float> %{{.+}}, <4 x float> [[NEG]])
   return _mm_fmsub_ss(a, b, c);
 }
 
 __m128d test_mm_fmsub_sd(__m128d a, __m128d b, __m128d c) {
   // CHECK-LABEL: test_mm_fmsub_sd
-  // CHECK: @llvm.x86.fma.vfmsub.sd
+  // CHECK: [[NEG:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.+}}
+  // CHECK: @llvm.x86.fma.vfmadd.sd(<2 x double> %{{.+}}, <2 x double> %{{.+}}, <2 x double> [[NEG]])
   return _mm_fmsub_sd(a, b, c);
 }
 
@@ -69,13 +71,15 @@ __m128d test_mm_fnmadd_pd(__m128d a, __m128d b, __m128d c) {
 
 __m128 test_mm_fnmadd_ss(__m128 a, __m128 b, __m128 c) {
   // CHECK-LABEL: test_mm_fnmadd_ss
-  // CHECK: @llvm.x86.fma.vfnmadd.ss
+  // CHECK: [[NEG:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.+}}
+  // CHECK: @llvm.x86.fma.vfmadd.ss(<4 x float> %{{.+}}, <4 x float> [[NEG]], <4 x float> %{{.+}})
   return _mm_fnmadd_ss(a, b, c);
 }
 
 __m128d test_mm_fnmadd_sd(__m128d a, __m128d b, __m128d c) {
   // CHECK-LABEL: test_mm_fnmadd_sd
-  // CHECK: @llvm.x86.fma.vfnmadd.sd
+  // CHECK: [[NEG:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.+}}
+  // CHECK: @llvm.x86.fma.vfmadd.sd(<2 x double> %{{.+}}, <2 x double> [[NEG]], <2 x double> %{{.+}})
   return _mm_fnmadd_sd(a, b, c);
 }
 
@@ -97,13 +101,17 @@ __m128d test_mm_fnmsub_pd(__m128d a, __m128d b, __m128d c) {
 
 __m128 test_mm_fnmsub_ss(__m128 a, __m128 b, __m128 c) {
   // CHECK-LABEL: test_mm_fnmsub_ss
-  // CHECK: @llvm.x86.fma.vfnmsub.ss
+  // CHECK: [[NEG:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.+}}
+  // CHECK: [[NEG2:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.+}}
+  // CHECK: @llvm.x86.fma.vfmadd.ss(<4 x float> %{{.+}}, <4 x float> [[NEG]], <4 x float> [[NEG2]])
   return _mm_fnmsub_ss(a, b, c);
 }
 
 __m128d test_mm_fnmsub_sd(__m128d a, __m128d b, __m128d c) {
   // CHECK-LABEL: test_mm_fnmsub_sd
-  // CHECK: @llvm.x86.fma.vfnmsub.sd
+  // CHECK: [[NEG:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.+}}
+  // CHECK: [[NEG2:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.+}}
+  // CHECK: @llvm.x86.fma.vfmadd.sd(<2 x double> %{{.+}}, <2 x double> [[NEG]], <2 x double> [[NEG2]])
   return _mm_fnmsub_sd(a, b, c);
 }
 

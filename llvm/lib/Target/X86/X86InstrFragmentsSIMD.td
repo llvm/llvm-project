@@ -506,6 +506,12 @@ def X86FnmsubRnd    : SDNode<"X86ISD::FNMSUB_RND",    SDTFmaRound, [SDNPCommutat
 def X86FmaddsubRnd  : SDNode<"X86ISD::FMADDSUB_RND",  SDTFmaRound, [SDNPCommutative]>;
 def X86FmsubaddRnd  : SDNode<"X86ISD::FMSUBADD_RND",  SDTFmaRound, [SDNPCommutative]>;
 
+// Scalar FMA4 intrinsics which zero the non-scalar bits.
+def X86Fmadd4s  : SDNode<"X86ISD::FMADD4S",  SDTFPTernaryOp, [SDNPCommutative]>;
+def X86Fnmadd4s : SDNode<"X86ISD::FNMADD4S", SDTFPTernaryOp, [SDNPCommutative]>;
+def X86Fmsub4s  : SDNode<"X86ISD::FMSUB4S",  SDTFPTernaryOp, [SDNPCommutative]>;
+def X86Fnmsub4s : SDNode<"X86ISD::FNMSUB4S", SDTFPTernaryOp, [SDNPCommutative]>;
+
 // Scalar FMA intrinsics with passthru bits in operand 1.
 def X86Fmadds1  : SDNode<"X86ISD::FMADDS1",  SDTFPTernaryOp>;
 def X86Fnmadds1 : SDNode<"X86ISD::FNMADDS1", SDTFPTernaryOp>;
