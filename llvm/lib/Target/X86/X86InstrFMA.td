@@ -253,18 +253,18 @@ let Constraints = "$src1 = $dst", isCommutable = 1, isCodeGenOnly = 1,
     hasSideEffects = 0 in
 multiclass fma3s_rm_int<bits<8> opc, string OpcodeStr,
                         Operand memopr, RegisterClass RC> {
-  def r_Int : FMA3S<opc, MRMSrcReg, (outs RC:$dst),
-                    (ins RC:$src1, RC:$src2, RC:$src3),
-                    !strconcat(OpcodeStr,
-                               "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
-                    []>;
+  def r_Int : FMA3S_Int<opc, MRMSrcReg, (outs RC:$dst),
+                        (ins RC:$src1, RC:$src2, RC:$src3),
+                        !strconcat(OpcodeStr,
+                                   "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
+                        []>;
 
   let mayLoad = 1 in
-  def m_Int : FMA3S<opc, MRMSrcMem, (outs RC:$dst),
-                    (ins RC:$src1, RC:$src2, memopr:$src3),
-                    !strconcat(OpcodeStr,
-                               "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
-                    []>;
+  def m_Int : FMA3S_Int<opc, MRMSrcMem, (outs RC:$dst),
+                        (ins RC:$src1, RC:$src2, memopr:$src3),
+                        !strconcat(OpcodeStr,
+                                   "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
+                        []>;
 }
 
 // The FMA 213 form is created for lowering of scalar FMA intrinscis
@@ -385,20 +385,20 @@ let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in
 multiclass fma4s_int<bits<8> opc, string OpcodeStr, Operand memop,
                      ValueType VT, ComplexPattern mem_cpat, SDNode OpNode> {
 let isCodeGenOnly = 1 in {
-  def rr_Int : FMA4S<opc, MRMSrcRegOp4, (outs VR128:$dst),
+  def rr_Int : FMA4S_Int<opc, MRMSrcRegOp4, (outs VR128:$dst),
                (ins VR128:$src1, VR128:$src2, VR128:$src3),
                !strconcat(OpcodeStr,
                "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
                [(set VR128:$dst,
                  (VT (OpNode VR128:$src1, VR128:$src2, VR128:$src3)))]>, VEX_W,
                VEX_LIG;
-  def rm_Int : FMA4S<opc, MRMSrcMemOp4, (outs VR128:$dst),
+  def rm_Int : FMA4S_Int<opc, MRMSrcMemOp4, (outs VR128:$dst),
                (ins VR128:$src1, VR128:$src2, memop:$src3),
                !strconcat(OpcodeStr,
                "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
                [(set VR128:$dst, (VT (OpNode VR128:$src1, VR128:$src2,
                                   mem_cpat:$src3)))]>, VEX_W, VEX_LIG;
-  def mr_Int : FMA4S<opc, MRMSrcMem, (outs VR128:$dst),
+  def mr_Int : FMA4S_Int<opc, MRMSrcMem, (outs VR128:$dst),
                (ins VR128:$src1, memop:$src2, VR128:$src3),
                !strconcat(OpcodeStr,
                "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
@@ -406,7 +406,7 @@ let isCodeGenOnly = 1 in {
                  (VT (OpNode VR128:$src1, mem_cpat:$src2, VR128:$src3)))]>,
                VEX_LIG;
 let hasSideEffects = 0 in
-  def rr_Int_REV : FMA4S<opc, MRMSrcReg, (outs VR128:$dst),
+  def rr_Int_REV : FMA4S_Int<opc, MRMSrcReg, (outs VR128:$dst),
                (ins VR128:$src1, VR128:$src2, VR128:$src3),
                !strconcat(OpcodeStr,
                "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
@@ -476,18 +476,18 @@ let ExeDomain = SSEPackedSingle in {
   // Scalar Instructions
   defm VFMADDSS4  : fma4s<0x6A, "vfmaddss", FR32, f32mem, f32, X86Fmadd, loadf32>,
                     fma4s_int<0x6A, "vfmaddss", ssmem, v4f32, sse_load_f32,
-                              X86Fmadds1>;
+                              X86Fmadd4s>;
   defm VFMSUBSS4  : fma4s<0x6E, "vfmsubss", FR32, f32mem, f32, X86Fmsub, loadf32>,
                     fma4s_int<0x6E, "vfmsubss", ssmem, v4f32, sse_load_f32,
-                              X86Fmsubs1>;
+                              X86Fmsub4s>;
   defm VFNMADDSS4 : fma4s<0x7A, "vfnmaddss", FR32, f32mem, f32,
                           X86Fnmadd, loadf32>,
                     fma4s_int<0x7A, "vfnmaddss", ssmem, v4f32, sse_load_f32,
-                              X86Fnmadds1>;
+                              X86Fnmadd4s>;
   defm VFNMSUBSS4 : fma4s<0x7E, "vfnmsubss", FR32, f32mem, f32,
                           X86Fnmsub, loadf32>,
                     fma4s_int<0x7E, "vfnmsubss", ssmem, v4f32, sse_load_f32,
-                              X86Fnmsubs1>;
+                              X86Fnmsub4s>;
   // Packed Instructions
   defm VFMADDPS4    : fma4p<0x68, "vfmaddps", X86Fmadd, v4f32, v8f32,
                             loadv4f32, loadv8f32>;
@@ -507,18 +507,18 @@ let ExeDomain = SSEPackedDouble in {
   // Scalar Instructions
   defm VFMADDSD4  : fma4s<0x6B, "vfmaddsd", FR64, f64mem, f64, X86Fmadd, loadf64>,
                     fma4s_int<0x6B, "vfmaddsd", sdmem, v2f64, sse_load_f64,
-                              X86Fmadds1>;
+                              X86Fmadd4s>;
   defm VFMSUBSD4  : fma4s<0x6F, "vfmsubsd", FR64, f64mem, f64, X86Fmsub, loadf64>,
                     fma4s_int<0x6F, "vfmsubsd", sdmem, v2f64, sse_load_f64,
-                              X86Fmsubs1>;
+                              X86Fmsub4s>;
   defm VFNMADDSD4 : fma4s<0x7B, "vfnmaddsd", FR64, f64mem, f64,
                           X86Fnmadd, loadf64>,
                     fma4s_int<0x7B, "vfnmaddsd", sdmem, v2f64, sse_load_f64,
-                              X86Fnmadds1>;
+                              X86Fnmadd4s>;
   defm VFNMSUBSD4 : fma4s<0x7F, "vfnmsubsd", FR64, f64mem, f64,
                           X86Fnmsub, loadf64>,
                     fma4s_int<0x7F, "vfnmsubsd", sdmem, v2f64, sse_load_f64,
-                              X86Fnmsubs1>;
+                              X86Fnmsub4s>;
   // Packed Instructions
   defm VFMADDPD4    : fma4p<0x69, "vfmaddpd", X86Fmadd, v2f64, v4f64,
                             loadv2f64, loadv4f64>;

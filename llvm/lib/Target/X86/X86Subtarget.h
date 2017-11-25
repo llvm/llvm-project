@@ -229,6 +229,10 @@ protected:
   /// of a YMM or ZMM register without clearing the upper part.
   bool HasFastPartialYMMorZMMWrite;
 
+  /// True if gather is reasonably fast. This is true for Skylake client and
+  /// all AVX-512 CPUs.
+  bool HasFastGather;
+
   /// True if hardware SQRTSS instruction is at least as fast (latency) as
   /// RSQRTSS followed by a Newton-Raphson iteration.
   bool HasFastScalarFSQRT;
@@ -478,7 +482,7 @@ public:
   bool hasVPCLMULQDQ() const { return HasVPCLMULQDQ; }
   // Prefer FMA4 to FMA - its better for commutation/memory folding and
   // has equal or better performance on all supported targets.
-  bool hasFMA() const { return HasFMA && !HasFMA4; }
+  bool hasFMA() const { return HasFMA; }
   bool hasFMA4() const { return HasFMA4; }
   bool hasAnyFMA() const { return hasFMA() || hasFMA4(); }
   bool hasXOP() const { return HasXOP; }
@@ -514,6 +518,7 @@ public:
   bool hasFastPartialYMMorZMMWrite() const {
     return HasFastPartialYMMorZMMWrite;
   }
+  bool hasFastGather() const { return HasFastGather; }
   bool hasFastScalarFSQRT() const { return HasFastScalarFSQRT; }
   bool hasFastVectorFSQRT() const { return HasFastVectorFSQRT; }
   bool hasFastLZCNT() const { return HasFastLZCNT; }

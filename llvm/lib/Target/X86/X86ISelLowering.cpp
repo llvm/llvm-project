@@ -25169,6 +25169,10 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::FNMADDS3_RND:       return "X86ISD::FNMADDS3_RND";
   case X86ISD::FMSUBS3_RND:        return "X86ISD::FMSUBS3_RND";
   case X86ISD::FNMSUBS3_RND:       return "X86ISD::FNMSUBS3_RND";
+  case X86ISD::FMADD4S:            return "X86ISD::FMADD4S";
+  case X86ISD::FNMADD4S:           return "X86ISD::FNMADD4S";
+  case X86ISD::FMSUB4S:            return "X86ISD::FMSUB4S";
+  case X86ISD::FNMSUB4S:           return "X86ISD::FNMSUB4S";
   case X86ISD::VPMADD52H:          return "X86ISD::VPMADD52H";
   case X86ISD::VPMADD52L:          return "X86ISD::VPMADD52L";
   case X86ISD::VRNDSCALE:          return "X86ISD::VRNDSCALE";
@@ -35724,6 +35728,13 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
     case X86ISD::FNMADD: NewOpcode = X86ISD::FNMADDS3_RND; break;
     case X86ISD::FNMSUB: NewOpcode = X86ISD::FNMSUBS3_RND; break;
     }
+  } else if (N->getOpcode() == X86ISD::FMADD4S) {
+    switch (NewOpcode) {
+    case ISD::FMA:       NewOpcode = X86ISD::FMADD4S; break;
+    case X86ISD::FMSUB:  NewOpcode = X86ISD::FMSUB4S; break;
+    case X86ISD::FNMADD: NewOpcode = X86ISD::FNMADD4S; break;
+    case X86ISD::FNMSUB: NewOpcode = X86ISD::FNMSUB4S; break;
+    }
   } else {
     llvm_unreachable("Unexpected opcode!");
   }
@@ -37092,6 +37103,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::FMADDS3_RND:
   case X86ISD::FMADDS1:
   case X86ISD::FMADDS3:
+  case X86ISD::FMADD4S:
   case ISD::FMA:            return combineFMA(N, DAG, Subtarget);
   case X86ISD::FMADDSUB_RND:
   case X86ISD::FMSUBADD_RND:
