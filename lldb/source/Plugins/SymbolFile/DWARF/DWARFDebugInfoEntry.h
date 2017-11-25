@@ -60,18 +60,6 @@ public:
         m_empty_children(false), m_abbr_idx(0), m_has_children(false),
         m_tag(0) {}
 
-  void Clear() {
-    m_offset = DW_INVALID_OFFSET;
-    m_parent_idx = 0;
-    m_sibling_idx = 0;
-    m_empty_children = false;
-    m_abbr_idx = 0;
-    m_has_children = false;
-    m_tag = 0;
-  }
-
-  bool Contains(const DWARFDebugInfoEntry *die) const;
-
   void BuildAddressRangeTable(SymbolFileDWARF *dwarf2Data,
                               const DWARFCompileUnit *cu,
                               DWARFDebugAranges *debug_aranges) const;
@@ -210,8 +198,6 @@ public:
   bool IsNULL() const { return m_abbr_idx == 0; }
 
   dw_offset_t GetOffset() const { return m_offset; }
-
-  void SetOffset(dw_offset_t offset) { m_offset = offset; }
 
   bool HasChildren() const { return m_has_children; }
 
