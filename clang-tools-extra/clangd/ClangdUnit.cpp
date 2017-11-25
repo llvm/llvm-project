@@ -406,7 +406,7 @@ private:
       // No penalty.
       break;
     case CXAvailability_Deprecated:
-      Score *= 0.1;
+      Score *= 0.1f;
       break;
     case CXAvailability_NotAccessible:
     case CXAvailability_NotAvailable:
