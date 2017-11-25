@@ -38,66 +38,12 @@ define <4 x float> @test_mm_add_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 define <4 x float> @test_mm_and_ps(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_and_ps:
 ; X32:       # BB#0:
-; X32-NEXT:    pushl %ebp
-; X32-NEXT:    movl %esp, %ebp
-; X32-NEXT:    pushl %esi
-; X32-NEXT:    andl $-16, %esp
-; X32-NEXT:    subl $64, %esp
-; X32-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    movaps %xmm1, {{[0-9]+}}(%esp)
-; X32-NEXT:    andl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    movl %esi, (%esp)
-; X32-NEXT:    andl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X32-NEXT:    andl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X32-NEXT:    andl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X32-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X32-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; X32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; X32-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; X32-NEXT:    leal -4(%ebp), %esp
-; X32-NEXT:    popl %esi
-; X32-NEXT:    popl %ebp
+; X32-NEXT:    andps %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_and_ps:
 ; X64:       # BB#0:
-; X64-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %r8
-; X64-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rdx
-; X64-NEXT:    movq %rdx, %rsi
-; X64-NEXT:    andl %eax, %edx
-; X64-NEXT:    shrq $32, %rax
-; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
-; X64-NEXT:    movq %rcx, %rdi
-; X64-NEXT:    andl %r8d, %ecx
-; X64-NEXT:    shrq $32, %r8
-; X64-NEXT:    shrq $32, %rsi
-; X64-NEXT:    shrq $32, %rdi
-; X64-NEXT:    movl %ecx, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    andl %r8d, %edi
-; X64-NEXT:    movl %edi, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movl %edx, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    andl %eax, %esi
-; X64-NEXT:    movl %esi, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; X64-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; X64-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-NEXT:    andps %xmm1, %xmm0
 ; X64-NEXT:    retq
   %arg0 = bitcast <4 x float> %a0 to <4 x i32>
   %arg1 = bitcast <4 x float> %a1 to <4 x i32>
@@ -109,74 +55,12 @@ define <4 x float> @test_mm_and_ps(<4 x float> %a0, <4 x float> %a1) nounwind {
 define <4 x float> @test_mm_andnot_ps(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_andnot_ps:
 ; X32:       # BB#0:
-; X32-NEXT:    pushl %ebp
-; X32-NEXT:    movl %esp, %ebp
-; X32-NEXT:    pushl %esi
-; X32-NEXT:    andl $-16, %esp
-; X32-NEXT:    subl $64, %esp
-; X32-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    movaps %xmm1, {{[0-9]+}}(%esp)
-; X32-NEXT:    notl %edx
-; X32-NEXT:    notl %esi
-; X32-NEXT:    notl %ecx
-; X32-NEXT:    notl %eax
-; X32-NEXT:    andl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl %eax, (%esp)
-; X32-NEXT:    andl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X32-NEXT:    andl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp)
-; X32-NEXT:    andl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X32-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X32-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; X32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; X32-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; X32-NEXT:    leal -4(%ebp), %esp
-; X32-NEXT:    popl %esi
-; X32-NEXT:    popl %ebp
+; X32-NEXT:    andnps %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_andnot_ps:
 ; X64:       # BB#0:
-; X64-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
-; X64-NEXT:    movq %rcx, %rdx
-; X64-NEXT:    shrq $32, %rdx
-; X64-NEXT:    movq %rax, %rsi
-; X64-NEXT:    shrq $32, %rsi
-; X64-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rdi
-; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %r8
-; X64-NEXT:    notl %eax
-; X64-NEXT:    andl %edi, %eax
-; X64-NEXT:    shrq $32, %rdi
-; X64-NEXT:    notl %ecx
-; X64-NEXT:    andl %r8d, %ecx
-; X64-NEXT:    shrq $32, %r8
-; X64-NEXT:    notl %esi
-; X64-NEXT:    notl %edx
-; X64-NEXT:    movl %ecx, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    andl %r8d, %edx
-; X64-NEXT:    movl %edx, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    andl %edi, %esi
-; X64-NEXT:    movl %esi, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; X64-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; X64-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-NEXT:    andnps %xmm1, %xmm0
 ; X64-NEXT:    retq
   %arg0 = bitcast <4 x float> %a0 to <4 x i32>
   %arg1 = bitcast <4 x float> %a1 to <4 x i32>
@@ -1262,66 +1146,12 @@ define <4 x float> @test_mm_mul_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 define <4 x float> @test_mm_or_ps(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_or_ps:
 ; X32:       # BB#0:
-; X32-NEXT:    pushl %ebp
-; X32-NEXT:    movl %esp, %ebp
-; X32-NEXT:    pushl %esi
-; X32-NEXT:    andl $-16, %esp
-; X32-NEXT:    subl $64, %esp
-; X32-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    movaps %xmm1, {{[0-9]+}}(%esp)
-; X32-NEXT:    orl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    movl %esi, (%esp)
-; X32-NEXT:    orl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X32-NEXT:    orl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X32-NEXT:    orl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X32-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X32-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; X32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; X32-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; X32-NEXT:    leal -4(%ebp), %esp
-; X32-NEXT:    popl %esi
-; X32-NEXT:    popl %ebp
+; X32-NEXT:    orps %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_or_ps:
 ; X64:       # BB#0:
-; X64-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %r8
-; X64-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rdx
-; X64-NEXT:    movq %rdx, %rsi
-; X64-NEXT:    orl %eax, %edx
-; X64-NEXT:    shrq $32, %rax
-; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
-; X64-NEXT:    movq %rcx, %rdi
-; X64-NEXT:    orl %r8d, %ecx
-; X64-NEXT:    shrq $32, %r8
-; X64-NEXT:    shrq $32, %rsi
-; X64-NEXT:    shrq $32, %rdi
-; X64-NEXT:    movl %ecx, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    orl %r8d, %edi
-; X64-NEXT:    movl %edi, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movl %edx, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    orl %eax, %esi
-; X64-NEXT:    movl %esi, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; X64-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; X64-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-NEXT:    orps %xmm1, %xmm0
 ; X64-NEXT:    retq
   %arg0 = bitcast <4 x float> %a0 to <4 x i32>
   %arg1 = bitcast <4 x float> %a1 to <4 x i32>
@@ -2224,66 +2054,12 @@ define <4 x float> @test_mm_unpacklo_ps(<4 x float> %a0, <4 x float> %a1) nounwi
 define <4 x float> @test_mm_xor_ps(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_xor_ps:
 ; X32:       # BB#0:
-; X32-NEXT:    pushl %ebp
-; X32-NEXT:    movl %esp, %ebp
-; X32-NEXT:    pushl %esi
-; X32-NEXT:    andl $-16, %esp
-; X32-NEXT:    subl $64, %esp
-; X32-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    movaps %xmm1, {{[0-9]+}}(%esp)
-; X32-NEXT:    xorl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    movl %esi, (%esp)
-; X32-NEXT:    xorl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X32-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X32-NEXT:    xorl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X32-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X32-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; X32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; X32-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; X32-NEXT:    leal -4(%ebp), %esp
-; X32-NEXT:    popl %esi
-; X32-NEXT:    popl %ebp
+; X32-NEXT:    xorps %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_xor_ps:
 ; X64:       # BB#0:
-; X64-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %r8
-; X64-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rdx
-; X64-NEXT:    movq %rdx, %rsi
-; X64-NEXT:    xorl %eax, %edx
-; X64-NEXT:    shrq $32, %rax
-; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
-; X64-NEXT:    movq %rcx, %rdi
-; X64-NEXT:    xorl %r8d, %ecx
-; X64-NEXT:    shrq $32, %r8
-; X64-NEXT:    shrq $32, %rsi
-; X64-NEXT:    shrq $32, %rdi
-; X64-NEXT:    movl %ecx, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    xorl %r8d, %edi
-; X64-NEXT:    movl %edi, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movl %edx, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    xorl %eax, %esi
-; X64-NEXT:    movl %esi, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; X64-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; X64-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-NEXT:    xorps %xmm1, %xmm0
 ; X64-NEXT:    retq
   %arg0 = bitcast <4 x float> %a0 to <4 x i32>
   %arg1 = bitcast <4 x float> %a1 to <4 x i32>
