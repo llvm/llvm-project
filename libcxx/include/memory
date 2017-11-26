@@ -84,8 +84,8 @@ struct allocator_traits
     template <class T> using rebind_alloc  = Alloc::rebind<U>::other | Alloc<T, Args...>;
     template <class T> using rebind_traits = allocator_traits<rebind_alloc<T>>;
 
-    static pointer allocate(allocator_type& a, size_type n);
-    static pointer allocate(allocator_type& a, size_type n, const_void_pointer hint);
+    static pointer allocate(allocator_type& a, size_type n);                          // [[nodiscard]] in C++20
+    static pointer allocate(allocator_type& a, size_type n, const_void_pointer hint); // [[nodiscard]] in C++20
 
     static void deallocate(allocator_type& a, pointer p, size_type n) noexcept;
 
@@ -1536,10 +1536,10 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
         {typedef allocator_traits<typename rebind_alloc<_Tp>::other> other;};
 #endif  // _LIBCPP_CXX03_LANG
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
     static pointer allocate(allocator_type& __a, size_type __n)
         {return __a.allocate(__n);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
     static pointer allocate(allocator_type& __a, size_type __n, const_void_pointer __hint)
         {return __allocate(__a, __n, __hint,
             __has_allocate_hint<allocator_type, size_type, const_void_pointer>());}
@@ -1778,7 +1778,8 @@ public:
         {return _VSTD::addressof(__x);}
     _LIBCPP_INLINE_VISIBILITY const_pointer address(const_reference __x) const _NOEXCEPT
         {return _VSTD::addressof(__x);}
-    _LIBCPP_INLINE_VISIBILITY pointer allocate(size_type __n, allocator<void>::const_pointer = 0)
+    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY 
+    pointer allocate(size_type __n, allocator<void>::const_pointer = 0)
         {
         if (__n > max_size())
             __throw_length_error("allocator<T>::allocate(size_t n)"
