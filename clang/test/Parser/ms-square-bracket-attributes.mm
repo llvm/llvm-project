@@ -133,7 +133,7 @@ void use_it() {
   (void)__uuidof(OuterClass::sic);
 }
 
-// expected-warning@+1 {{'uuid' attribute only applies to classes}}
+// expected-warning@+1 {{'uuid' attribute only applies to structs, unions, classes, and enums}}
 [uuid("000000A0-0000-0000-C000-000000000049")] void f();
 }
 

@@ -525,6 +525,47 @@ TEST(ImportType, ImportPackExpansion) {
                                          declRefExpr()))))))))));
 }
 
+/// \brief Matches __builtin_types_compatible_p:
+/// GNU extension to check equivalent types
+/// Given
+/// \code
+///   __builtin_types_compatible_p(int, int)
+/// \endcode
+//  will generate TypeTraitExpr <...> 'int'
+const internal::VariadicDynCastAllOfMatcher<Stmt, TypeTraitExpr> typeTraitExpr;
+
+TEST(ImportExpr, ImportTypeTraitExpr) {
+  MatchVerifier<Decl> Verifier;
+  EXPECT_TRUE(testImport("void declToImport() { "
+                         "  __builtin_types_compatible_p(int, int);"
+                         "}",
+                         Lang_C, "", Lang_C, Verifier,
+                         functionDecl(
+                           hasBody(
+                             compoundStmt(
+                               has(
+                                 typeTraitExpr(hasType(asString("int")))))))));
+}
+
+TEST(ImportExpr, ImportTypeTraitExprValDep) {
+  MatchVerifier<Decl> Verifier;
+  EXPECT_TRUE(testImport("template<typename T> struct declToImport {"
+                         "  void m() { __is_pod(T); }"
+                         "};"
+                         "void f() { declToImport<int>().m(); }",
+                         Lang_CXX11, "", Lang_CXX11, Verifier,
+                         classTemplateDecl(
+                           has(
+                             cxxRecordDecl(
+                               has(
+                                 functionDecl(
+                                   hasBody(
+                                     compoundStmt(
+                                       has(
+                                         typeTraitExpr(
+                                           hasType(booleanType())
+                                           )))))))))));
+}
 
 } // end namespace ast_matchers
 } // end namespace clang

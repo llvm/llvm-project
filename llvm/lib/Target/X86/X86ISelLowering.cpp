@@ -2149,8 +2149,7 @@ static void Passv64i1ArgInRegs(
     const SDLoc &Dl, SelectionDAG &DAG, SDValue Chain, SDValue &Arg,
     SmallVector<std::pair<unsigned, SDValue>, 8> &RegsToPass, CCValAssign &VA,
     CCValAssign &NextVA, const X86Subtarget &Subtarget) {
-  assert((Subtarget.hasBWI() || Subtarget.hasBMI()) &&
-         "Expected AVX512BW or AVX512BMI target!");
+  assert(Subtarget.hasBWI() && "Expected AVX512BW target!");
   assert(Subtarget.is32Bit() && "Expecting 32 bit target");
   assert(Arg.getValueType() == MVT::i64 && "Expecting 64 bit value");
   assert(VA.isRegLoc() && NextVA.isRegLoc() &&
