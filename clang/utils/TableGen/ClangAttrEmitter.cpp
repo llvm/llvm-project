@@ -3029,136 +3029,72 @@ static void GenerateDefaultAppertainsTo(raw_ostream &OS) {
   OS << "}\n\n";
 }
 
+static std::string GetDiagnosticSpelling(const Record &R) {
+  std::string Ret = R.getValueAsString("DiagSpelling");
+  if (!Ret.empty())
+    return Ret;
+
+  // If we couldn't find the DiagSpelling in this object, we can check to see
+  // if the object is one that has a base, and if it is, loop up to the Base
+  // member recursively.
+  std::string Super = R.getSuperClasses().back().first->getName();
+  if (Super == "DDecl" || Super == "DStmt")
+    return GetDiagnosticSpelling(*R.getValueAsDef("Base"));
+
+  return "";
+}
+
 static std::string CalculateDiagnostic(const Record &S) {
   // If the SubjectList object has a custom diagnostic associated with it,
   // return that directly.
   const StringRef CustomDiag = S.getValueAsString("CustomDiag");
   if (!CustomDiag.empty())
-    return CustomDiag;
+    return ("\"" + Twine(CustomDiag) + "\"").str();
 
-  // Given the list of subjects, determine what diagnostic best fits.
-  enum {
-    Func = 1U << 0,
-    Var = 1U << 1,
-    ObjCMethod = 1U << 2,
-    Param = 1U << 3,
-    Class = 1U << 4,
-    GenericRecord = 1U << 5,
-    Type = 1U << 6,
-    ObjCIVar = 1U << 7,
-    ObjCProp = 1U << 8,
-    ObjCInterface = 1U << 9,
-    Block = 1U << 10,
-    Namespace = 1U << 11,
-    Field = 1U << 12,
-    CXXMethod = 1U << 13,
-    ObjCProtocol = 1U << 14,
-    Enum = 1U << 15,
-    Named = 1U << 16,
-  };
-  uint32_t SubMask = 0;
-
+  std::vector<std::string> DiagList;
   std::vector<Record *> Subjects = S.getValueAsListOfDefs("Subjects");
   for (const auto *Subject : Subjects) {
     const Record &R = *Subject;
-    std::string Name;
-
-    if (R.isSubClassOf("SubsetSubject")) {
-      PrintError(R.getLoc(), "SubsetSubjects should use a custom diagnostic");
-      // As a fallback, look through the SubsetSubject to see what its base
-      // type is, and use that. This needs to be updated if SubsetSubjects
-      // are allowed within other SubsetSubjects.
-      Name = R.getValueAsDef("Base")->getName();
-    } else
-      Name = R.getName();
-
-    uint32_t V = StringSwitch<uint32_t>(Name)
-                   .Case("Function", Func)
-                   .Case("Var", Var)
-                   .Case("ObjCMethod", ObjCMethod)
-                   .Case("ParmVar", Param)
-                   .Case("TypedefName", Type)
-                   .Case("ObjCIvar", ObjCIVar)
-                   .Case("ObjCProperty", ObjCProp)
-                   .Case("Record", GenericRecord)
-                   .Case("ObjCInterface", ObjCInterface)
-                   .Case("ObjCProtocol", ObjCProtocol)
-                   .Case("Block", Block)
-                   .Case("CXXRecord", Class)
-                   .Case("Namespace", Namespace)
-                   .Case("Field", Field)
-                   .Case("CXXMethod", CXXMethod)
-                   .Case("Enum", Enum)
-                   .Case("Named", Named)
-                   .Default(0);
-    if (!V) {
-      // Something wasn't in our mapping, so be helpful and let the developer
-      // know about it.
-      PrintFatalError(R.getLoc(), "Unknown subject type: " + R.getName());
-      return "";
+    // Get the diagnostic text from the Decl or Stmt node given.
+    std::string V = GetDiagnosticSpelling(R);
+    if (V.empty()) {
+      PrintError(R.getLoc(),
+                 "Could not determine diagnostic spelling for the node: " +
+                     R.getName() + "; please add one to DeclNodes.td");
+    } else {
+      // The node may contain a list of elements itself, so split the elements
+      // by a comma, and trim any whitespace.
+      SmallVector<StringRef, 2> Frags;
+      llvm::SplitString(V, Frags, ",");
+      for (auto Str : Frags) {
+        DiagList.push_back(Str.trim());
+      }
     }
-
-    SubMask |= V;
   }
 
-  switch (SubMask) {
-    // For the simple cases where there's only a single entry in the mask, we
-    // don't have to resort to bit fiddling.
-    case Func:  return "ExpectedFunction";
-    case Var:   return "ExpectedVariable";
-    case Param: return "ExpectedParameter";
-    case Class: return "ExpectedClass";
-    case Enum:  return "ExpectedEnum";
-    case CXXMethod:
-      // FIXME: Currently, this maps to ExpectedMethod based on existing code,
-      // but should map to something a bit more accurate at some point.
-    case ObjCMethod:  return "ExpectedMethod";
-    case Type:  return "ExpectedType";
-    case ObjCInterface: return "ExpectedObjectiveCInterface";
-    case ObjCProtocol: return "ExpectedObjectiveCProtocol";
-    
-    // "GenericRecord" means struct, union or class; check the language options
-    // and if not compiling for C++, strip off the class part. Note that this
-    // relies on the fact that the context for this declares "Sema &S".
-    case GenericRecord:
-      return "(S.getLangOpts().CPlusPlus ? ExpectedStructOrUnionOrClass : "
-                                           "ExpectedStructOrUnion)";
-    case Func | ObjCMethod | Block: return "ExpectedFunctionMethodOrBlock";
-    case Func | ObjCMethod | Class: return "ExpectedFunctionMethodOrClass";
-    case Func | Param:
-    case Func | ObjCMethod | Param: return "ExpectedFunctionMethodOrParameter";
-    case Func | ObjCMethod: return "ExpectedFunctionOrMethod";
-    case Func | Var: return "ExpectedVariableOrFunction";
-
-    // If not compiling for C++, the class portion does not apply.
-    case Func | Var | Class:
-      return "(S.getLangOpts().CPlusPlus ? ExpectedFunctionVariableOrClass : "
-                                           "ExpectedVariableOrFunction)";
-
-    case Func | Var | Class | ObjCInterface:
-      return "(S.getLangOpts().CPlusPlus"
-             "     ? ((S.getLangOpts().ObjC1 || S.getLangOpts().ObjC2)"
-             "            ? ExpectedFunctionVariableClassOrObjCInterface"
-             "            : ExpectedFunctionVariableOrClass)"
-             "     : ((S.getLangOpts().ObjC1 || S.getLangOpts().ObjC2)"
-             "            ? ExpectedFunctionVariableOrObjCInterface"
-             "            : ExpectedVariableOrFunction))";
-
-    case ObjCMethod | ObjCProp: return "ExpectedMethodOrProperty";
-    case Func | ObjCMethod | ObjCProp:
-      return "ExpectedFunctionOrMethodOrProperty";
-    case ObjCProtocol | ObjCInterface:
-      return "ExpectedObjectiveCInterfaceOrProtocol";
-    case Field | Var: return "ExpectedFieldOrGlobalVar";
-
-    case Named:
-      return "ExpectedNamedDecl";
+  if (DiagList.empty()) {
+    PrintFatalError(S.getLoc(),
+                    "Could not deduce diagnostic argument for Attr subjects");
+    return "";
   }
 
-  PrintFatalError(S.getLoc(),
-                  "Could not deduce diagnostic argument for Attr subjects");
+  // FIXME: this is not particularly good for localization purposes and ideally
+  // should be part of the diagnostics engine itself with some sort of list
+  // specifier.
 
-  return "";
+  // A single member of the list can be returned directly.
+  if (DiagList.size() == 1)
+    return '"' + DiagList.front() + '"';
+
+  if (DiagList.size() == 2)
+    return '"' + DiagList[0] + " and " + DiagList[1] + '"';
+
+  // If there are more than two in the list, we serialize the first N - 1
+  // elements with a comma. This leaves the string in the state: foo, bar,
+  // baz (but misses quux). We can then add ", and " for the last element
+  // manually.
+  std::string Diag = llvm::join(DiagList.begin(), DiagList.end() - 1, ", ");
+  return '"' + Diag + ", and " + *(DiagList.end() - 1) + '"';
 }
 
 static std::string GetSubjectWithSuffix(const Record *R) {
@@ -3245,8 +3181,8 @@ static std::string GenerateAppertainsTo(const Record &Attr, raw_ostream &OS) {
   }
   SS << ") {\n";
   SS << "    S.Diag(Attr.getLoc(), diag::";
-  SS << (Warn ? "warn_attribute_wrong_decl_type" :
-               "err_attribute_wrong_decl_type");
+  SS << (Warn ? "warn_attribute_wrong_decl_type_str" :
+               "err_attribute_wrong_decl_type_str");
   SS << ")\n";
   SS << "      << Attr.getName() << ";
   SS << CalculateDiagnostic(*SubjectObj) << ";\n";

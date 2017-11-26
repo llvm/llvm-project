@@ -57,7 +57,7 @@ void test22() {
   atest4<int, 5>();
 }
 
-// expected-warning@+1 {{'assume_aligned' attribute only applies to functions and methods}}
+// expected-warning@+1 {{'assume_aligned' attribute only applies to Objective-C methods and functions}}
 class __attribute__((assume_aligned(32))) x {
   int y;
 };

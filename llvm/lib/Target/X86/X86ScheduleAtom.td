@@ -338,6 +338,7 @@ def AtomItineraries : ProcessorItineraries<
   InstrItinData<IIC_MMX_PEXTR,   [InstrStage<4, [Port0, Port1]>] >,
   InstrItinData<IIC_MMX_PINSRW,  [InstrStage<1, [Port0]>] >,
   InstrItinData<IIC_MMX_MASKMOV, [InstrStage<1, [Port0]>] >,
+  InstrItinData<IIC_MMX_MOVMSK, [InstrStage<3, [Port0]>] >,
   // conversions
   // from/to PD
   InstrItinData<IIC_MMX_CVT_PD_RR, [InstrStage<7, [Port0, Port1]>] >,
