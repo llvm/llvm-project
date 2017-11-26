@@ -21,6 +21,7 @@ ThreadContextBase::ThreadContextBase(u32 tid)
       status(ThreadStatusInvalid),
       detached(false), workerthread(false), parent_tid(0), next(0) {
   name[0] = '\0';
+  atomic_store(&thread_destroyed, 0, memory_order_release);
 }
 
 ThreadContextBase::~ThreadContextBase() {
@@ -42,6 +43,14 @@ void ThreadContextBase::SetDead() {
   status = ThreadStatusDead;
   user_id = 0;
   OnDead();
+}
+
+void ThreadContextBase::SetDestroyed() {
+  atomic_store(&thread_destroyed, 1, memory_order_release);
+}
+
+bool ThreadContextBase::GetDestroyed() {
+  return !!atomic_load(&thread_destroyed, memory_order_acquire);
 }
 
 void ThreadContextBase::SetJoined(void *arg) {
@@ -85,6 +94,7 @@ void ThreadContextBase::SetCreated(uptr _user_id, u64 _unique_id,
 void ThreadContextBase::Reset() {
   status = ThreadStatusInvalid;
   SetName(0);
+  atomic_store(&thread_destroyed, 0, memory_order_release);
   OnReset();
 }
 
@@ -243,16 +253,25 @@ void ThreadRegistry::DetachThread(u32 tid, void *arg) {
 }
 
 void ThreadRegistry::JoinThread(u32 tid, void *arg) {
-  BlockingMutexLock l(&mtx_);
-  CHECK_LT(tid, n_contexts_);
-  ThreadContextBase *tctx = threads_[tid];
-  CHECK_NE(tctx, 0);
-  if (tctx->status == ThreadStatusInvalid) {
-    Report("%s: Join of non-existent thread\n", SanitizerToolName);
-    return;
-  }
-  tctx->SetJoined(arg);
-  QuarantinePush(tctx);
+  bool destroyed = false;
+  do {
+    {
+      BlockingMutexLock l(&mtx_);
+      CHECK_LT(tid, n_contexts_);
+      ThreadContextBase *tctx = threads_[tid];
+      CHECK_NE(tctx, 0);
+      if (tctx->status == ThreadStatusInvalid) {
+        Report("%s: Join of non-existent thread\n", SanitizerToolName);
+        return;
+      }
+      if ((destroyed = tctx->GetDestroyed())) {
+        tctx->SetJoined(arg);
+        QuarantinePush(tctx);
+      }
+    }
+    if (!destroyed)
+      internal_sched_yield();
+  } while (!destroyed);
 }
 
 // Normally this is called when the thread is about to exit.  If
@@ -281,6 +300,7 @@ void ThreadRegistry::FinishThread(u32 tid) {
     tctx->SetDead();
     QuarantinePush(tctx);
   }
+  tctx->SetDestroyed();
 }
 
 void ThreadRegistry::StartThread(u32 tid, tid_t os_id, bool workerthread,
