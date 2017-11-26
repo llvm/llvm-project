@@ -4092,8 +4092,7 @@ public:
     Value *BECond = nullptr;
     if (BasicBlock *Latch = L->getLoopLatch()) {
       BranchInst *BI = dyn_cast<BranchInst>(Latch->getTerminator());
-      if (BI && BI->isConditional() &&
-          BI->getSuccessor(0) != BI->getSuccessor(1)) {
+      if (BI && BI->isConditional()) {
         BECond = BI->getCondition();
         IsPosBECond = BI->getSuccessor(0) == L->getHeader();
       } else {

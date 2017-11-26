@@ -1217,6 +1217,7 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["avx512vbmi"]      = HasLeaf7 && ((ECX >>  1) & 1) && HasAVX512Save;
   Features["pku"]             = HasLeaf7 && ((ECX >>  4) & 1);
   Features["avx512vbmi2"]     = HasLeaf7 && ((ECX >>  6) & 1) && HasAVX512Save;
+  Features["gfni"]            = HasLeaf7 && ((ECX >>  8) & 1);
   Features["vaes"]            = HasLeaf7 && ((ECX >>  9) & 1) && HasAVXSave;
   Features["vpclmulqdq"]      = HasLeaf7 && ((ECX >> 10) & 1) && HasAVXSave;
   Features["avx512vnni"]      = HasLeaf7 && ((ECX >> 11) & 1) && HasAVX512Save;
