@@ -426,7 +426,7 @@ def IIC_MMX_PSHUF : InstrItinClass;
 def IIC_MMX_PEXTR : InstrItinClass;
 def IIC_MMX_PINSRW : InstrItinClass;
 def IIC_MMX_MASKMOV : InstrItinClass;
-
+def IIC_MMX_MOVMSK : InstrItinClass;
 def IIC_MMX_CVT_PD_RR : InstrItinClass;
 def IIC_MMX_CVT_PD_RM : InstrItinClass;
 def IIC_MMX_CVT_PS_RR : InstrItinClass;

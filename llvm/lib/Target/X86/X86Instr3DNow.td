@@ -33,11 +33,6 @@ class I3DNow_conv<bits<8> o, Format F, dag ins, string Mnemonic, list<dag> pat>
   let isAsmParserOnly = 1;
 }
 
-multiclass I3DNow_binop_rm<bits<8> opc, string Mn> {
-  def rr : I3DNow_binop<opc, MRMSrcReg, (ins VR64:$src1, VR64:$src2), Mn, []>;
-  def rm : I3DNow_binop<opc, MRMSrcMem, (ins VR64:$src1, i64mem:$src2), Mn, []>;
-}
-
 multiclass I3DNow_binop_rm_int<bits<8> opc, string Mn, bit Commutable = 0,
                                string Ver = ""> {
   let isCommutable = Commutable in
@@ -48,11 +43,6 @@ multiclass I3DNow_binop_rm_int<bits<8> opc, string Mn, bit Commutable = 0,
     [(set VR64:$dst, (!cast<Intrinsic>(
       !strconcat("int_x86_3dnow", Ver, "_", Mn)) VR64:$src1,
         (bitconvert (load_mmx addr:$src2))))]>;
-}
-
-multiclass I3DNow_conv_rm<bits<8> opc, string Mn> {
-  def rr : I3DNow_conv<opc, MRMSrcReg, (ins VR64:$src1), Mn, []>;
-  def rm : I3DNow_conv<opc, MRMSrcMem, (ins i64mem:$src1), Mn, []>;
 }
 
 multiclass I3DNow_conv_rm_int<bits<8> opc, string Mn, string Ver = ""> {
@@ -84,7 +74,6 @@ defm PFSUB    : I3DNow_binop_rm_int<0x9A, "pfsub", 1>;
 defm PFSUBR   : I3DNow_binop_rm_int<0xAA, "pfsubr", 1>;
 defm PI2FD    : I3DNow_conv_rm_int<0x0D, "pi2fd">;
 defm PMULHRW  : I3DNow_binop_rm_int<0xB7, "pmulhrw", 1>;
-
 
 def FEMMS : I3DNow<0x0E, RawFrm, (outs), (ins), "femms",
                    [(int_x86_mmx_femms)]>;

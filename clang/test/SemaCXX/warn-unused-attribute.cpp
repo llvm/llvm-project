@@ -15,6 +15,6 @@ int main(void) {
   TestNormal normal;
   used.use();
 
-  int i __attribute__((warn_unused)) = 12; // expected-warning {{'warn_unused' attribute only applies to struct, union or class}}
+  int i __attribute__((warn_unused)) = 12; // expected-warning {{'warn_unused' attribute only applies to structs, unions, and classes}}
   return i;
 }
