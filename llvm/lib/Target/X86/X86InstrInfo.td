@@ -848,6 +848,7 @@ def HasPCLMUL    : Predicate<"Subtarget->hasPCLMUL()">;
 def NoVLX_Or_NoVPCLMULQDQ :
                     Predicate<"!Subtarget->hasVLX() || !Subtarget->hasVPCLMULQDQ()">;
 def HasVPCLMULQDQ : Predicate<"Subtarget->hasVPCLMULQDQ()">;
+def HasGFNI      : Predicate<"Subtarget->hasGFNI()">;
 def HasFMA       : Predicate<"Subtarget->hasFMA()">;
 def HasFMA4      : Predicate<"Subtarget->hasFMA4()">;
 def NoFMA4       : Predicate<"!Subtarget->hasFMA4()">;

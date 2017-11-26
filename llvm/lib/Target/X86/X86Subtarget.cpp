@@ -299,6 +299,7 @@ void X86Subtarget::initializeEnvironment() {
   HasXSAVES = false;
   HasPCLMUL = false;
   HasVPCLMULQDQ = false;
+  HasGFNI = false;
   HasFMA = false;
   HasFMA4 = false;
   HasXOP = false;

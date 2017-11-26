@@ -169,6 +169,9 @@ def FeatureBITALG  : SubtargetFeature<"avx512bitalg", "HasBITALG", "true",
 def FeaturePCLMUL  : SubtargetFeature<"pclmul", "HasPCLMUL", "true",
                          "Enable packed carry-less multiplication instructions",
                                [FeatureSSE2]>;
+def FeatureGFNI    : SubtargetFeature<"gfni", "HasGFNI", "true",
+                         "Enable Galois Field Arithmetic Instructions",
+                               [FeatureSSE2]>;
 def FeatureVPCLMULQDQ : SubtargetFeature<"vpclmulqdq", "HasVPCLMULQDQ", "true",
                                          "Enable vpclmulqdq instructions",
                                          [FeatureAVX, FeaturePCLMUL]>;
@@ -698,8 +701,8 @@ def ICLFeatures : ProcessorFeatures<CNLFeatures.Value, [
   FeatureVBMI2,
   FeatureVNNI,
   FeatureVPCLMULQDQ,
-  FeatureVPOPCNTDQ
-  // TODO: Add GFNI when it is implemented.
+  FeatureVPOPCNTDQ,
+  FeatureGFNI
 ]>;
 
 class IcelakeProc<string Name> : ProcModel<Name, SkylakeServerModel,

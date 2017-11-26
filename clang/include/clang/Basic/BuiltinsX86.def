@@ -638,6 +638,16 @@ TARGET_BUILTIN(__builtin_ia32_xrstors, "vv*ULLi", "", "xsaves")
 TARGET_BUILTIN(__builtin_ia32_xsavec, "vv*ULLi", "", "xsavec")
 TARGET_BUILTIN(__builtin_ia32_xsaves, "vv*ULLi", "", "xsaves")
 
+// SHSTK
+TARGET_BUILTIN(__builtin_ia32_incsspd, "vUi", "u", "shstk")
+TARGET_BUILTIN(__builtin_ia32_rdsspd, "UiUi", "Un", "shstk")
+TARGET_BUILTIN(__builtin_ia32_saveprevssp, "v", "", "shstk")
+TARGET_BUILTIN(__builtin_ia32_rstorssp, "vv*", "", "shstk")
+TARGET_BUILTIN(__builtin_ia32_wrssd, "vUiv*", "", "shstk")
+TARGET_BUILTIN(__builtin_ia32_wrussd, "vUiv*", "", "shstk")
+TARGET_BUILTIN(__builtin_ia32_setssbsy, "v", "", "shstk")
+TARGET_BUILTIN(__builtin_ia32_clrssbsy, "vv*", "", "shstk")
+
 //CLFLUSHOPT
 TARGET_BUILTIN(__builtin_ia32_clflushopt, "vvC*", "", "clflushopt")
 

@@ -2537,7 +2537,10 @@ def mxsaveopt : Flag<["-"], "mxsaveopt">, Group<m_x86_Features_Group>;
 def mno_xsaveopt : Flag<["-"], "mno-xsaveopt">, Group<m_x86_Features_Group>;
 def mxsaves : Flag<["-"], "mxsaves">, Group<m_x86_Features_Group>;
 def mno_xsaves : Flag<["-"], "mno-xsaves">, Group<m_x86_Features_Group>;
-
+def mshstk : Flag<["-"], "mshstk">, Group<m_x86_Features_Group>;
+def mno_shstk : Flag<["-"], "mno-shstk">, Group<m_x86_Features_Group>;
+def mibt : Flag<["-"], "mibt">, Group<m_x86_Features_Group>;
+def mno_ibt : Flag<["-"], "mno-ibt">, Group<m_x86_Features_Group>;
 
 // These are legacy user-facing driver-level option spellings. They are always
 // aliases for options that are spelled using the more common Unix / GNU flag

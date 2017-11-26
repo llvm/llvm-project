@@ -128,6 +128,9 @@ protected:
   bool HasPCLMUL;
   bool HasVPCLMULQDQ;
 
+  /// Target has Galois Field Arithmetic instructions
+  bool HasGFNI;
+
   /// Target has 3-operand fused multiply-add
   bool HasFMA;
 
@@ -480,6 +483,7 @@ public:
   bool hasXSAVES() const { return HasXSAVES; }
   bool hasPCLMUL() const { return HasPCLMUL; }
   bool hasVPCLMULQDQ() const { return HasVPCLMULQDQ; }
+  bool hasGFNI() const { return HasGFNI; }
   // Prefer FMA4 to FMA - its better for commutation/memory folding and
   // has equal or better performance on all supported targets.
   bool hasFMA() const { return HasFMA; }
