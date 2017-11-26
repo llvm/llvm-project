@@ -30,7 +30,7 @@ int main()
     assert(c.size() == 1);
     c.push_back(true);
     assert(c.size() == 2);
-    c.push_back(C::value_type(3));
+    c.push_back(false);
     assert(c.size() == 3);
     c.erase(c.begin());
     assert(c.size() == 2);
@@ -49,7 +49,7 @@ int main()
     assert(c.size() == 1);
     c.push_back(true);
     assert(c.size() == 2);
-    c.push_back(C::value_type(3));
+    c.push_back(false);
     assert(c.size() == 3);
     c.erase(c.begin());
     assert(c.size() == 2);
