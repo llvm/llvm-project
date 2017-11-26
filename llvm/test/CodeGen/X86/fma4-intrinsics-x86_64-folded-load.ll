@@ -3,50 +3,50 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=bdver2 -mattr=+avx,-fma | FileCheck %s
 
 ; VFMADD
-define < 4 x float > @test_x86_fma_vfmadd_ss_load(< 4 x float > %a0, < 4 x float > %a1, float* %a2) {
-; CHECK-LABEL: test_x86_fma_vfmadd_ss_load:
+define < 4 x float > @test_x86_fma4_vfmadd_ss_load(< 4 x float > %a0, < 4 x float > %a1, float* %a2) {
+; CHECK-LABEL: test_x86_fma4_vfmadd_ss_load:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vfmaddss (%rdi), %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %x = load float , float *%a2
   %y = insertelement <4 x float> undef, float %x, i32 0
-  %res = call < 4 x float > @llvm.x86.fma.vfmadd.ss(< 4 x float > %a0, < 4 x float > %a1, < 4 x float > %y)
+  %res = call < 4 x float > @llvm.x86.fma4.vfmadd.ss(< 4 x float > %a0, < 4 x float > %a1, < 4 x float > %y)
   ret < 4 x float > %res
 }
-define < 4 x float > @test_x86_fma_vfmadd_ss_load2(< 4 x float > %a0, float* %a1, < 4 x float > %a2) {
-; CHECK-LABEL: test_x86_fma_vfmadd_ss_load2:
+define < 4 x float > @test_x86_fma4_vfmadd_ss_load2(< 4 x float > %a0, float* %a1, < 4 x float > %a2) {
+; CHECK-LABEL: test_x86_fma4_vfmadd_ss_load2:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vfmaddss %xmm1, (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %x = load float , float *%a1
   %y = insertelement <4 x float> undef, float %x, i32 0
-  %res = call < 4 x float > @llvm.x86.fma.vfmadd.ss(< 4 x float > %a0, < 4 x float > %y, < 4 x float > %a2)
+  %res = call < 4 x float > @llvm.x86.fma4.vfmadd.ss(< 4 x float > %a0, < 4 x float > %y, < 4 x float > %a2)
   ret < 4 x float > %res
 }
 
-declare < 4 x float > @llvm.x86.fma.vfmadd.ss(< 4 x float >, < 4 x float >, < 4 x float >) nounwind readnone
+declare < 4 x float > @llvm.x86.fma4.vfmadd.ss(< 4 x float >, < 4 x float >, < 4 x float >) nounwind readnone
 
-define < 2 x double > @test_x86_fma_vfmadd_sd_load(< 2 x double > %a0, < 2 x double > %a1, double* %a2) {
-; CHECK-LABEL: test_x86_fma_vfmadd_sd_load:
+define < 2 x double > @test_x86_fma4_vfmadd_sd_load(< 2 x double > %a0, < 2 x double > %a1, double* %a2) {
+; CHECK-LABEL: test_x86_fma4_vfmadd_sd_load:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vfmaddsd (%rdi), %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %x = load double , double *%a2
   %y = insertelement <2 x double> undef, double %x, i32 0
-  %res = call < 2 x double > @llvm.x86.fma.vfmadd.sd(< 2 x double > %a0, < 2 x double > %a1, < 2 x double > %y)
+  %res = call < 2 x double > @llvm.x86.fma4.vfmadd.sd(< 2 x double > %a0, < 2 x double > %a1, < 2 x double > %y)
   ret < 2 x double > %res
 }
-define < 2 x double > @test_x86_fma_vfmadd_sd_load2(< 2 x double > %a0, double* %a1, < 2 x double > %a2) {
-; CHECK-LABEL: test_x86_fma_vfmadd_sd_load2:
+define < 2 x double > @test_x86_fma4_vfmadd_sd_load2(< 2 x double > %a0, double* %a1, < 2 x double > %a2) {
+; CHECK-LABEL: test_x86_fma4_vfmadd_sd_load2:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vfmaddsd %xmm1, (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %x = load double , double *%a1
   %y = insertelement <2 x double> undef, double %x, i32 0
-  %res = call < 2 x double > @llvm.x86.fma.vfmadd.sd(< 2 x double > %a0, < 2 x double > %y, < 2 x double > %a2)
+  %res = call < 2 x double > @llvm.x86.fma4.vfmadd.sd(< 2 x double > %a0, < 2 x double > %y, < 2 x double > %a2)
   ret < 2 x double > %res
 }
-declare < 2 x double > @llvm.x86.fma.vfmadd.sd(< 2 x double >, < 2 x double >, < 2 x double >) nounwind readnone
+declare < 2 x double > @llvm.x86.fma4.vfmadd.sd(< 2 x double >, < 2 x double >, < 2 x double >) nounwind readnone
 define < 4 x float > @test_x86_fma_vfmadd_ps_load(< 4 x float > %a0, < 4 x float > %a1, < 4 x float >* %a2) {
 ; CHECK-LABEL: test_x86_fma_vfmadd_ps_load:
 ; CHECK:       # BB#0:
