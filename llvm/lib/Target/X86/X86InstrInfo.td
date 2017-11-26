@@ -848,6 +848,7 @@ def HasPCLMUL    : Predicate<"Subtarget->hasPCLMUL()">;
 def NoVLX_Or_NoVPCLMULQDQ :
                     Predicate<"!Subtarget->hasVLX() || !Subtarget->hasVPCLMULQDQ()">;
 def HasVPCLMULQDQ : Predicate<"Subtarget->hasVPCLMULQDQ()">;
+def HasGFNI      : Predicate<"Subtarget->hasGFNI()">;
 def HasFMA       : Predicate<"Subtarget->hasFMA()">;
 def HasFMA4      : Predicate<"Subtarget->hasFMA4()">;
 def NoFMA4       : Predicate<"!Subtarget->hasFMA4()">;
@@ -880,6 +881,8 @@ def HasCLZERO    : Predicate<"Subtarget->hasCLZERO()">;
 def FPStackf32   : Predicate<"!Subtarget->hasSSE1()">;
 def FPStackf64   : Predicate<"!Subtarget->hasSSE2()">;
 def HasMPX       : Predicate<"Subtarget->hasMPX()">;
+def HasSHSTK     : Predicate<"Subtarget->hasSHSTK()">;
+def HasIBT       : Predicate<"Subtarget->hasIBT()">;
 def HasCLFLUSHOPT : Predicate<"Subtarget->hasCLFLUSHOPT()">;
 def HasCLWB      : Predicate<"Subtarget->hasCLWB()">;
 def HasCmpxchg16b: Predicate<"Subtarget->hasCmpxchg16b()">;

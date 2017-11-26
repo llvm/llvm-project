@@ -128,6 +128,9 @@ protected:
   bool HasPCLMUL;
   bool HasVPCLMULQDQ;
 
+  /// Target has Galois Field Arithmetic instructions
+  bool HasGFNI;
+
   /// Target has 3-operand fused multiply-add
   bool HasFMA;
 
@@ -317,6 +320,14 @@ protected:
   /// Processor supports MPX - Memory Protection Extensions
   bool HasMPX;
 
+  /// Processor supports CET SHSTK - Control-Flow Enforcement Technology
+  /// using Shadow Stack
+  bool HasSHSTK;
+
+  /// Processor supports CET IBT - Control-Flow Enforcement Technology
+  /// using Indirect Branch Tracking
+  bool HasIBT;
+
   /// Processor has Software Guard Extensions
   bool HasSGX;
 
@@ -480,6 +491,7 @@ public:
   bool hasXSAVES() const { return HasXSAVES; }
   bool hasPCLMUL() const { return HasPCLMUL; }
   bool hasVPCLMULQDQ() const { return HasVPCLMULQDQ; }
+  bool hasGFNI() const { return HasGFNI; }
   // Prefer FMA4 to FMA - its better for commutation/memory folding and
   // has equal or better performance on all supported targets.
   bool hasFMA() const { return HasFMA; }
@@ -544,6 +556,8 @@ public:
   bool hasVNNI() const { return HasVNNI; }
   bool hasBITALG() const { return HasBITALG; }
   bool hasMPX() const { return HasMPX; }
+  bool hasSHSTK() const { return HasSHSTK; }
+  bool hasIBT() const { return HasIBT; }
   bool hasCLFLUSHOPT() const { return HasCLFLUSHOPT; }
   bool hasCLWB() const { return HasCLWB; }
 

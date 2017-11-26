@@ -333,6 +333,10 @@
 
 // ADX: #define __ADX__ 1
 
+// RUN: %clang -target i386-unknown-unknown -mshstk -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=CETSS %s
+
+// CETSS: #define __SHSTK__ 1
+
 // RUN: %clang -target i386-unknown-unknown -march=atom -mrdseed -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=RDSEED %s
 
 // RDSEED: #define __RDSEED__ 1

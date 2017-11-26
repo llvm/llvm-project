@@ -25254,6 +25254,9 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::VPDPWSSD:           return "X86ISD::VPDPWSSD";
   case X86ISD::VPDPWSSDS:          return "X86ISD::VPDPWSSDS";
   case X86ISD::VPSHUFBITQMB:       return "X86ISD::VPSHUFBITQMB";
+  case X86ISD::GF2P8MULB:          return "X86ISD::GF2P8MULB";
+  case X86ISD::GF2P8AFFINEQB:      return "X86ISD::GF2P8AFFINEQB";
+  case X86ISD::GF2P8AFFINEINVQB:   return "X86ISD::GF2P8AFFINEINVQB";
   }
   return nullptr;
 }
