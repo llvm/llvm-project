@@ -309,6 +309,7 @@ INTERCEPTOR(void, _ZdaPvRKSt9nothrow_t, void *ptr, std::nothrow_t const&)
 
 ///// Thread initialization and finalization. /////
 
+#if !SANITIZER_NETBSD
 static unsigned g_thread_finalize_key;
 
 static void thread_finalize(void *v) {
@@ -322,6 +323,18 @@ static void thread_finalize(void *v) {
   }
   ThreadFinish();
 }
+#endif
+
+#if SANITIZER_NETBSD
+INTERCEPTOR(void, _lwp_exit) {
+  ENSURE_LSAN_INITED;
+  ThreadFinish();
+  REAL(_lwp_exit)();
+}
+#define LSAN_MAYBE_INTERCEPT__LWP_EXIT INTERCEPT_FUNCTION(_lwp_exit)
+#else
+#define LSAN_MAYBE_INTERCEPT__LWP_EXIT
+#endif
 
 struct ThreadParam {
   void *(*callback)(void *arg);
@@ -335,11 +348,13 @@ extern "C" void *__lsan_thread_start_func(void *arg) {
   void *param = p->param;
   // Wait until the last iteration to maximize the chance that we are the last
   // destructor to run.
+#if !SANITIZER_NETBSD
   if (pthread_setspecific(g_thread_finalize_key,
                           (void*)GetPthreadDestructorIterations())) {
     Report("LeakSanitizer: failed to set thread key.\n");
     Die();
   }
+#endif
   int tid = 0;
   while ((tid = atomic_load(&p->tid, memory_order_acquire)) == 0)
     internal_sched_yield();
@@ -427,10 +442,14 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(pthread_join);
   INTERCEPT_FUNCTION(_exit);
 
+  LSAN_MAYBE_INTERCEPT__LWP_EXIT;
+
+#if !SANITIZER_NETBSD
   if (pthread_key_create(&g_thread_finalize_key, &thread_finalize)) {
     Report("LeakSanitizer: failed to create thread key.\n");
     Die();
   }
+#endif
 }
 
 } // namespace __lsan

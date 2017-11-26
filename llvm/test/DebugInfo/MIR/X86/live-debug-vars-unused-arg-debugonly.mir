@@ -136,11 +136,11 @@ body:             |
     DBG_VALUE debug-use %2, debug-use _, !23, !DIExpression(), debug-location !32
     %3 = MOV32rm %rip, 1, _, @bar + 4, _, debug-location !33 :: (dereferenceable load 4 from `i32* getelementptr inbounds ([2 x i32], [2 x i32]* @bar, i64 0, i64 1)`, !tbaa !28)
     DBG_VALUE debug-use %3, debug-use _, !24, !DIExpression(), debug-location !34
-    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead %rsp, implicit-def dead %eflags, implicit %rsp, debug-location !35
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead %rsp, implicit-def dead %eflags, implicit-def dead %ssp, implicit %rsp, implicit %ssp, debug-location !35
     %edi = COPY %2, debug-location !35
     %esi = COPY %3, debug-location !35
-    CALL64pcrel32 @foo, csr_64, implicit %rsp, implicit killed %edi, implicit killed %esi, implicit-def %rsp, debug-location !35
-    ADJCALLSTACKUP64 0, 0, implicit-def dead %rsp, implicit-def dead %eflags, implicit %rsp, debug-location !35
+    CALL64pcrel32 @foo, csr_64, implicit %rsp, implicit %ssp, implicit killed %edi, implicit killed %esi, implicit-def %rsp, debug-location !35
+    ADJCALLSTACKUP64 0, 0, implicit-def dead %rsp, implicit-def dead %eflags, implicit-def dead %ssp, implicit %rsp, implicit %ssp, debug-location !35
     %eax = MOV32r0 implicit-def dead %eflags, debug-location !36
     RET 0, killed %eax, debug-location !36
 

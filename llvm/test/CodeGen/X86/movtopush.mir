@@ -33,14 +33,14 @@
 ...
 ---
 # CHECK-LABEL: test9
-# CHECK:      ADJCALLSTACKDOWN32 16, 0, 16, implicit-def dead %esp, implicit-def dead %eflags, implicit %esp
+# CHECK:      ADJCALLSTACKDOWN32 16, 0, 16, implicit-def dead %esp, implicit-def dead %eflags, implicit-def dead %ssp, implicit %esp, implicit %ssp
 # CHECK-NEXT: PUSH32i8 4, implicit-def %esp, implicit %esp
 # CHECK-NEXT: PUSH32i8 3, implicit-def %esp, implicit %esp
 # CHECK-NEXT: PUSH32i8 2, implicit-def %esp, implicit %esp
 # CHECK-NEXT: PUSH32i8 1, implicit-def %esp, implicit %esp
-# CHECK-NEXT: CALLpcrel32 @good, csr_32, implicit %esp, implicit-def %esp
-# CHECK-NEXT: ADJCALLSTACKUP32 16, 0, implicit-def dead %esp, implicit-def dead %eflags, implicit %esp
-# CHECK-NEXT: ADJCALLSTACKDOWN32 20, 0, 20, implicit-def dead %esp, implicit-def dead %eflags, implicit %esp
+# CHECK-NEXT: CALLpcrel32 @good, csr_32, implicit %esp, implicit %ssp, implicit-def %esp, implicit-def %ssp
+# CHECK-NEXT: ADJCALLSTACKUP32 16, 0, implicit-def dead %esp, implicit-def dead %eflags, implicit-def dead %ssp, implicit %esp, implicit %ssp
+# CHECK-NEXT: ADJCALLSTACKDOWN32 20, 0, 20, implicit-def dead %esp, implicit-def dead %eflags, implicit-def dead %ssp, implicit %esp, implicit %ssp
 # CHECK-NEXT: %1:gr32 = MOV32rm %stack.2.s, 1, _, 0, _ :: (load 4 from %stack.2.s, align 8)
 # CHECK-NEXT: %2:gr32 = MOV32rm %stack.2.s, 1, _, 4, _ :: (load 4 from %stack.2.s + 4)
 # CHECK-NEXT: %4:gr32 = LEA32r %stack.0.p, 1, _, 0, _
@@ -50,8 +50,8 @@
 # CHECK-NEXT: PUSH32i8 6, implicit-def %esp, implicit %esp
 # CHECK-NEXT: PUSH32r %2, implicit-def %esp, implicit %esp
 # CHECK-NEXT: PUSH32r %1, implicit-def %esp, implicit %esp
-# CHECK-NEXT: CALLpcrel32 @struct, csr_32, implicit %esp, implicit-def %esp
-# CHECK-NEXT: ADJCALLSTACKUP32 20, 0, implicit-def dead %esp, implicit-def dead %eflags, implicit %esp
+# CHECK-NEXT: CALLpcrel32 @struct, csr_32, implicit %esp, implicit %ssp, implicit-def %esp, implicit-def %ssp
+# CHECK-NEXT: ADJCALLSTACKUP32 20, 0, implicit-def dead %esp, implicit-def dead %eflags, implicit-def dead %ssp, implicit %esp, implicit %ssp
 # CHECK-NEXT: RET 0
 name:            test9
 alignment:       0
@@ -99,15 +99,15 @@ stack:
 constants:
 body:             |
   bb.0.entry:
-    ADJCALLSTACKDOWN32 16, 0, 0, implicit-def dead %esp, implicit-def dead %eflags, implicit %esp
+    ADJCALLSTACKDOWN32 16, 0, 0, implicit-def dead %esp, implicit-def dead %eflags, implicit-def dead %ssp, implicit %esp, implicit %ssp
     %0 = COPY %esp
     MOV32mi %0, 1, _, 12, _, 4 :: (store 4 into stack + 12)
     MOV32mi %0, 1, _, 8, _, 3 :: (store 4 into stack + 8)
     MOV32mi %0, 1, _, 4, _, 2 :: (store 4 into stack + 4)
     MOV32mi %0, 1, _, 0, _, 1 :: (store 4 into stack)
-    CALLpcrel32 @good, csr_32, implicit %esp, implicit-def %esp
-    ADJCALLSTACKUP32 16, 0, implicit-def dead %esp, implicit-def dead %eflags, implicit %esp
-    ADJCALLSTACKDOWN32 20, 0, 0, implicit-def dead %esp, implicit-def dead %eflags, implicit %esp
+    CALLpcrel32 @good, csr_32, implicit %esp, implicit %ssp, implicit-def %esp, implicit-def %ssp
+    ADJCALLSTACKUP32 16, 0, implicit-def dead %esp, implicit-def dead %eflags, implicit-def dead %ssp, implicit %esp, implicit %ssp
+    ADJCALLSTACKDOWN32 20, 0, 0, implicit-def dead %esp, implicit-def dead %eflags, implicit-def dead %ssp, implicit %esp, implicit %ssp
     %1 = MOV32rm %stack.2.s, 1, _, 0, _ :: (load 4 from %stack.2.s, align 8)
     %2 = MOV32rm %stack.2.s, 1, _, 4, _ :: (load 4 from %stack.2.s + 4)
     %3 = COPY %esp
@@ -118,8 +118,8 @@ body:             |
     %5 = LEA32r %stack.1.q, 1, _, 0, _
     MOV32mr %3, 1, _, 12, _, killed %5 :: (store 4 into stack + 12)
     MOV32mi %3, 1, _, 8, _, 6 :: (store 4 into stack + 8)
-    CALLpcrel32 @struct, csr_32, implicit %esp, implicit-def %esp
-    ADJCALLSTACKUP32 20, 0, implicit-def dead %esp, implicit-def dead %eflags, implicit %esp
+    CALLpcrel32 @struct, csr_32, implicit %esp, implicit %ssp, implicit-def %esp, implicit-def %ssp,
+    ADJCALLSTACKUP32 20, 0, implicit-def dead %esp, implicit-def dead %eflags, implicit-def dead %ssp, implicit %esp, implicit %ssp
     RET 0
 
 ...

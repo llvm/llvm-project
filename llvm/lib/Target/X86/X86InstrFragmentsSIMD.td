@@ -672,6 +672,11 @@ def X86vfproundRnd: SDNode<"X86ISD::VFPROUND_RND",
 
 def X86cvt2mask   : SDNode<"X86ISD::CVT2MASK", SDTIntTruncOp>;
 
+// galois field arithmetic
+def X86GF2P8affineinvqb : SDNode<"X86ISD::GF2P8AFFINEINVQB", SDTBlend>;
+def X86GF2P8affineqb    : SDNode<"X86ISD::GF2P8AFFINEQB", SDTBlend>;
+def X86GF2P8mulb        : SDNode<"X86ISD::GF2P8MULB", SDTIntBinOp>;
+
 //===----------------------------------------------------------------------===//
 // SSE Complex Patterns
 //===----------------------------------------------------------------------===//

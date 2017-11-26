@@ -169,6 +169,9 @@ def FeatureBITALG  : SubtargetFeature<"avx512bitalg", "HasBITALG", "true",
 def FeaturePCLMUL  : SubtargetFeature<"pclmul", "HasPCLMUL", "true",
                          "Enable packed carry-less multiplication instructions",
                                [FeatureSSE2]>;
+def FeatureGFNI    : SubtargetFeature<"gfni", "HasGFNI", "true",
+                         "Enable Galois Field Arithmetic Instructions",
+                               [FeatureSSE2]>;
 def FeatureVPCLMULQDQ : SubtargetFeature<"vpclmulqdq", "HasVPCLMULQDQ", "true",
                                          "Enable vpclmulqdq instructions",
                                          [FeatureAVX, FeaturePCLMUL]>;
@@ -210,6 +213,10 @@ def FeatureADX     : SubtargetFeature<"adx", "HasADX", "true",
 def FeatureSHA     : SubtargetFeature<"sha", "HasSHA", "true",
                                       "Enable SHA instructions",
                                       [FeatureSSE2]>;
+def FeatureSHSTK   : SubtargetFeature<"shstk", "HasSHSTK", "true",
+                       "Support CET Shadow-Stack instructions">;
+def FeatureIBT     : SubtargetFeature<"ibt", "HasIBT", "true",
+                       "Support CET Indirect-Branch-Tracking instructions">;
 def FeaturePRFCHW  : SubtargetFeature<"prfchw", "HasPRFCHW", "true",
                                       "Support PRFCHW instructions">;
 def FeatureRDSEED  : SubtargetFeature<"rdseed", "HasRDSEED", "true",
@@ -698,8 +705,8 @@ def ICLFeatures : ProcessorFeatures<CNLFeatures.Value, [
   FeatureVBMI2,
   FeatureVNNI,
   FeatureVPCLMULQDQ,
-  FeatureVPOPCNTDQ
-  // TODO: Add GFNI when it is implemented.
+  FeatureVPOPCNTDQ,
+  FeatureGFNI
 ]>;
 
 class IcelakeProc<string Name> : ProcModel<Name, SkylakeServerModel,
