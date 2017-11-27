@@ -334,6 +334,8 @@ void X86Subtarget::initializeEnvironment() {
   HasMWAITX = false;
   HasCLZERO = false;
   HasMPX = false;
+  HasSHSTK = false;
+  HasIBT = false;
   HasSGX = false;
   HasCLFLUSHOPT = false;
   HasCLWB = false;

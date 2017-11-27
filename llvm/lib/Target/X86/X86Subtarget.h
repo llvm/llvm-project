@@ -320,6 +320,14 @@ protected:
   /// Processor supports MPX - Memory Protection Extensions
   bool HasMPX;
 
+  /// Processor supports CET SHSTK - Control-Flow Enforcement Technology
+  /// using Shadow Stack
+  bool HasSHSTK;
+
+  /// Processor supports CET IBT - Control-Flow Enforcement Technology
+  /// using Indirect Branch Tracking
+  bool HasIBT;
+
   /// Processor has Software Guard Extensions
   bool HasSGX;
 
@@ -548,6 +556,8 @@ public:
   bool hasVNNI() const { return HasVNNI; }
   bool hasBITALG() const { return HasBITALG; }
   bool hasMPX() const { return HasMPX; }
+  bool hasSHSTK() const { return HasSHSTK; }
+  bool hasIBT() const { return HasIBT; }
   bool hasCLFLUSHOPT() const { return HasCLFLUSHOPT; }
   bool hasCLWB() const { return HasCLWB; }
 

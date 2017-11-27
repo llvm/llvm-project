@@ -64,6 +64,35 @@ let TargetPrefix = "x86" in {
 }
 
 //===----------------------------------------------------------------------===//
+// CET SS
+let TargetPrefix = "x86" in {
+  def int_x86_incsspd : GCCBuiltin<"__builtin_ia32_incsspd">,
+              Intrinsic<[], [llvm_i32_ty], []>;
+  def int_x86_incsspq : GCCBuiltin<"__builtin_ia32_incsspq">,
+              Intrinsic<[], [llvm_i64_ty], []>;
+  def int_x86_rdsspd : GCCBuiltin<"__builtin_ia32_rdsspd">,
+              Intrinsic<[llvm_i32_ty], [llvm_i32_ty], []>;
+  def int_x86_rdsspq : GCCBuiltin<"__builtin_ia32_rdsspq">,
+              Intrinsic<[llvm_i64_ty], [llvm_i64_ty], []>;
+  def int_x86_saveprevssp : GCCBuiltin<"__builtin_ia32_saveprevssp">,
+              Intrinsic<[], [], []>;
+  def int_x86_rstorssp : GCCBuiltin<"__builtin_ia32_rstorssp">,
+              Intrinsic<[], [llvm_ptr_ty], []>;
+  def int_x86_wrssd : GCCBuiltin<"__builtin_ia32_wrssd">,
+              Intrinsic<[], [llvm_i32_ty, llvm_ptr_ty], []>;
+  def int_x86_wrssq : GCCBuiltin<"__builtin_ia32_wrssq">,
+              Intrinsic<[], [llvm_i64_ty, llvm_ptr_ty], []>;
+  def int_x86_wrussd : GCCBuiltin<"__builtin_ia32_wrussd">,
+              Intrinsic<[], [llvm_i32_ty, llvm_ptr_ty], []>;
+  def int_x86_wrussq : GCCBuiltin<"__builtin_ia32_wrussq">,
+              Intrinsic<[], [llvm_i64_ty, llvm_ptr_ty], []>;
+  def int_x86_setssbsy : GCCBuiltin<"__builtin_ia32_setssbsy">,
+              Intrinsic<[], [], []>;
+  def int_x86_clrssbsy : GCCBuiltin<"__builtin_ia32_clrssbsy">,
+              Intrinsic<[], [llvm_ptr_ty], []>;
+}
+
+//===----------------------------------------------------------------------===//
 // 3DNow!
 
 let TargetPrefix = "x86" in {
