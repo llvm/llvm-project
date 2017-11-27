@@ -228,7 +228,7 @@ public:
     TypeBuilderCache::iterator I = cache.find(&C);
     if (I != cache.end())
       return I->second;
-    StructType *ExistingTy = StructType::getOrCreate(C, "struct.__cilkrts_pedigree_int");
+    StructType *ExistingTy = StructType::getOrCreate(C, "__internal_struct.__cilkrts_pedigree_int");
     cache[&C] = ExistingTy;
     StructType *NewTy = StructType::create(C);
     NewTy->setBody(
@@ -257,7 +257,7 @@ public:
     if (I != cache.end())
       return I->second;
     // Try looking up this type by name.
-    StructType *Ty = StructType::getOrCreate(C, "struct.__cilkrts_worker_int");
+    StructType *Ty = StructType::getOrCreate(C, "__internal_struct.__cilkrts_worker_int");
     assert(Ty->isOpaque() &&
            "Conflicting definition of type struct.__cilkrts_worker.");
     cache[&C] = Ty;
@@ -303,7 +303,7 @@ public:
     TypeBuilderCache::iterator I = cache.find(&C);
     if (I != cache.end())
       return I->second;
-    StructType *Ty = StructType::create(C, "struct.__cilkrts_stack_frame_int");
+    StructType *Ty = StructType::create(C, "__internal_struct.__cilkrts_stack_frame_int");
     cache[&C] = Ty;
     Ty->setBody(
         TypeBuilder<uint32_t,               X>::get(C), // flags

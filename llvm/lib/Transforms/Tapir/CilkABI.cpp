@@ -722,7 +722,7 @@ Value* GetOrInitCilkStackFrame(Function& F,
     }
   }
   Value *args[1] = { alloc };
-  if (Helper)
+  if (Helper || fastCilk)
     IRB.CreateCall(CILKRTS_FUNC(enter_frame_fast_1, *F.getParent()), args);
   else
     IRB.CreateCall(CILKRTS_FUNC(enter_frame_1, *F.getParent()), args);
