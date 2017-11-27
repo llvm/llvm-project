@@ -535,7 +535,7 @@ void ExprEngine::VisitCompoundLiteralExpr(const CompoundLiteralExpr *CL,
   const Expr *Init = CL->getInitializer();
   SVal V = State->getSVal(CL->getInitializer(), LCtx);
 
-  if (isa<CXXConstructExpr>(Init)) {
+  if (isa<CXXConstructExpr>(Init) || isa<CXXStdInitializerListExpr>(Init)) {
     // No work needed. Just pass the value up to this expression.
   } else {
     assert(isa<InitListExpr>(Init));
