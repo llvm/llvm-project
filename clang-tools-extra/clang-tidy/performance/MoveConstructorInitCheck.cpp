@@ -19,7 +19,7 @@ using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
-namespace misc {
+namespace performance {
 
 MoveConstructorInitCheck::MoveConstructorInitCheck(StringRef Name,
                                                    ClangTidyContext *Context)
@@ -105,6 +105,6 @@ void MoveConstructorInitCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
                 utils::IncludeSorter::toString(IncludeStyle));
 }
 
-} // namespace misc
+} // namespace performance
 } // namespace tidy
 } // namespace clang

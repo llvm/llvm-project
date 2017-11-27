@@ -843,7 +843,7 @@ CodeActionParams::parse(llvm::yaml::MappingNode *Params,
   return Result;
 }
 
-llvm::Optional<std::map<std::string, std::vector<TextEdit>>>
+static llvm::Optional<std::map<std::string, std::vector<TextEdit>>>
 parseWorkspaceEditChange(llvm::yaml::MappingNode *Params,
                          clangd::Logger &Logger) {
   std::map<std::string, std::vector<TextEdit>> Result;

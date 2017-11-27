@@ -13,14 +13,12 @@
 #include "DefinitionsInHeadersCheck.h"
 #include "ForwardingReferenceOverloadCheck.h"
 #include "IncorrectRoundings.h"
-#include "InefficientAlgorithmCheck.h"
 #include "LambdaFunctionNameCheck.h"
 #include "MacroParenthesesCheck.h"
 #include "MacroRepeatedSideEffectsCheck.h"
 #include "MisplacedConstCheck.h"
 #include "MisplacedWideningCastCheck.h"
 #include "MoveConstantArgumentCheck.h"
-#include "MoveConstructorInitCheck.h"
 #include "NewDeleteOverloadsCheck.h"
 #include "NoexceptMoveConstructorCheck.h"
 #include "NonCopyableObjects.h"
@@ -63,8 +61,6 @@ public:
         "misc-definitions-in-headers");
     CheckFactories.registerCheck<IncorrectRoundings>(
         "misc-incorrect-roundings");
-    CheckFactories.registerCheck<InefficientAlgorithmCheck>(
-        "misc-inefficient-algorithm");
     CheckFactories.registerCheck<MacroParenthesesCheck>(
         "misc-macro-parentheses");
     CheckFactories.registerCheck<MacroRepeatedSideEffectsCheck>(
@@ -73,8 +69,6 @@ public:
         "misc-misplaced-widening-cast");
     CheckFactories.registerCheck<MoveConstantArgumentCheck>(
         "misc-move-const-arg");
-    CheckFactories.registerCheck<MoveConstructorInitCheck>(
-        "misc-move-constructor-init");
     CheckFactories.registerCheck<NewDeleteOverloadsCheck>(
         "misc-new-delete-overloads");
     CheckFactories.registerCheck<NoexceptMoveConstructorCheck>(

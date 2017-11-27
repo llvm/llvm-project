@@ -1,7 +1,7 @@
-.. title:: clang-tidy - misc-move-constructor-init
+.. title:: clang-tidy - performance-move-constructor-init
 
-misc-move-constructor-init
-==========================
+performance-move-constructor-init
+=================================
 
 "cert-oop11-cpp" redirects here as an alias for this check.
 
