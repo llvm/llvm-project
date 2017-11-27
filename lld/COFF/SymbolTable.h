@@ -83,9 +83,12 @@ public:
   Symbol *addUndefined(StringRef Name, InputFile *F, bool IsWeakAlias);
   void addLazy(ArchiveFile *F, const Archive::Symbol Sym);
   Symbol *addAbsolute(StringRef N, COFFSymbolRef S);
-  Symbol *addRegular(InputFile *F, StringRef N, bool IsCOMDAT,
+  Symbol *addRegular(InputFile *F, StringRef N,
                      const llvm::object::coff_symbol_generic *S = nullptr,
                      SectionChunk *C = nullptr);
+  std::pair<Symbol *, bool>
+  addComdat(InputFile *F, StringRef N,
+            const llvm::object::coff_symbol_generic *S = nullptr);
   Symbol *addCommon(InputFile *F, StringRef N, uint64_t Size,
                     const llvm::object::coff_symbol_generic *S = nullptr,
                     CommonChunk *C = nullptr);

@@ -169,7 +169,6 @@ public:
   SectionChunk *getChunk() const { return *Data; }
   uint32_t getValue() const { return Sym->Value; }
 
-private:
   SectionChunk **Data;
 };
 
