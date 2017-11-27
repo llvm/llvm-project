@@ -13,7 +13,7 @@ struct [[nodiscard("Wrong")]] S3 { // expected-error {{'nodiscard' cannot have a
 [[nodiscard]] int f1(void);
 enum [[nodiscard]] E1 { One };
 
-[[nodiscard]] int i; // expected-warning {{'nodiscard' attribute only applies to functions, methods, enums, and classes}}
+[[nodiscard]] int i; // expected-warning {{'nodiscard' attribute only applies to Objective-C methods, enums, structs, unions, classes, functions, and function pointers}}
 
 struct [[nodiscard]] S4 {
   int i;

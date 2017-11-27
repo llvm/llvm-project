@@ -4427,11 +4427,11 @@ namespace pt_guard_attribute_type {
   int j PT_GUARDED_VAR;  // expected-warning {{'pt_guarded_var' only applies to pointer types; type here is 'int'}}
 
   void test() {
-    int i PT_GUARDED_BY(sls_mu);  // expected-warning {{'pt_guarded_by' attribute only applies to fields and global variables}}
-    int j PT_GUARDED_VAR;  // expected-warning {{'pt_guarded_var' attribute only applies to fields and global variables}}
+    int i PT_GUARDED_BY(sls_mu);  // expected-warning {{'pt_guarded_by' attribute only applies to non-static data members and global variables}}
+    int j PT_GUARDED_VAR;  // expected-warning {{'pt_guarded_var' attribute only applies to non-static data members and global variables}}
 
-    typedef int PT_GUARDED_BY(sls_mu) bad1;  // expected-warning {{'pt_guarded_by' attribute only applies to fields and global variables}}
-    typedef int PT_GUARDED_VAR bad2;  // expected-warning {{'pt_guarded_var' attribute only applies to fields and global variables}}
+    typedef int PT_GUARDED_BY(sls_mu) bad1;  // expected-warning {{'pt_guarded_by' attribute only applies to}}
+    typedef int PT_GUARDED_VAR bad2;  // expected-warning {{'pt_guarded_var' attribute only applies to}}
   }
 }  // end namespace pt_guard_attribute_type
 

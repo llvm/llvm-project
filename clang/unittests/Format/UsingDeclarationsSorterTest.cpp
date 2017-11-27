@@ -142,7 +142,6 @@ TEST_F(UsingDeclarationsSorterTest, UsingDeclarationOrder) {
 
 TEST_F(UsingDeclarationsSorterTest, SortsStably) {
   EXPECT_EQ("using a;\n"
-            "using a;\n"
             "using A;\n"
             "using a;\n"
             "using A;\n"
@@ -151,10 +150,7 @@ TEST_F(UsingDeclarationsSorterTest, SortsStably) {
             "using a;\n"
             "using B;\n"
             "using b;\n"
-            "using b;\n"
             "using B;\n"
-            "using b;\n"
-            "using b;\n"
             "using b;\n"
             "using B;\n"
             "using b;",
@@ -353,6 +349,25 @@ TEST_F(UsingDeclarationsSorterTest, SortsUsingDeclarationsWithLeadingkComments) 
             "/* comment */ using b;",
             sortUsingDeclarations("/* comment */ using b;\n"
                                   "/* comment */ using a;"));
+}
+
+TEST_F(UsingDeclarationsSorterTest, DeduplicatesUsingDeclarations) {
+  EXPECT_EQ("using a;\n"
+            "using b;\n"
+            "using c;\n"
+            "\n"
+            "using a;\n"
+            "using e;",
+            sortUsingDeclarations("using c;\n"
+                                  "using a;\n"
+                                  "using b;\n"
+                                  "using a;\n"
+                                  "using b;\n"
+                                  "\n"
+                                  "using e;\n"
+                                  "using a;\n"
+                                  "using e;"));
+
 }
 
 } // end namespace

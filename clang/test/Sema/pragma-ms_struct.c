@@ -25,7 +25,7 @@ struct {
 } __attribute__((__ms_struct__)) t1;
 
 struct S {
-		   double __attribute__((ms_struct)) d;	// expected-warning {{'ms_struct' attribute only applies to struct or union}}
+		   double __attribute__((ms_struct)) d;	// expected-warning {{'ms_struct' attribute only applies to structs, unions, and classes}}
                    unsigned long bf_1 : 12;
                    unsigned long : 0;
                    unsigned long bf_2 : 12;
@@ -36,7 +36,7 @@ enum
   A = 0,
   B,
   C
-} __attribute__((ms_struct)) e1; // expected-warning {{'ms_struct' attribute only applies to struct or union}}
+} __attribute__((ms_struct)) e1; // expected-warning {{'ms_struct' attribute only applies to}}
 
 // rdar://10513599
 #pragma ms_struct on

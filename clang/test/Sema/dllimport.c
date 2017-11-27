@@ -6,17 +6,17 @@
 
 // Invalid usage.
 __declspec(dllimport) typedef int typedef1;
-// expected-warning@-1{{'dllimport' attribute only applies to variables and functions}}
+// expected-warning@-1{{'dllimport' attribute only applies to functions, variables, classes, and Objective-C interfaces}}
 typedef __declspec(dllimport) int typedef2;
-// expected-warning@-1{{'dllimport' attribute only applies to variables and functions}}
+// expected-warning@-1{{'dllimport' attribute only applies to}}
 typedef int __declspec(dllimport) typedef3;
-// expected-warning@-1{{'dllimport' attribute only applies to variables and functions}}
+// expected-warning@-1{{'dllimport' attribute only applies to}}
 typedef __declspec(dllimport) void (*FunTy)();
-// expected-warning@-1{{'dllimport' attribute only applies to variables and functions}}
+// expected-warning@-1{{'dllimport' attribute only applies to}}
 enum __declspec(dllimport) Enum { EnumVal };
-// expected-warning@-1{{'dllimport' attribute only applies to variables and functions}}
+// expected-warning@-1{{'dllimport' attribute only applies to}}
 struct __declspec(dllimport) Record {};
-// expected-warning@-1{{'dllimport' attribute only applies to variables and functions}}
+// expected-warning@-1{{'dllimport' attribute only applies to}}
 
 
 

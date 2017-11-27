@@ -72,7 +72,7 @@ struct TemplatedStruct {
                                               // expected-warning@-1{{deprecated}}
 
   // Check attribute on methods - it is invalid.
-  __attribute__((mode(QI))) T g1() { return 0; } // expected-error{{'mode' attribute only applies to variables, enums, fields and typedefs}}
+  __attribute__((mode(QI))) T g1() { return 0; } // expected-error{{'mode' attribute only applies to variables, enums, typedefs, and non-static data members}}
 };
 
 

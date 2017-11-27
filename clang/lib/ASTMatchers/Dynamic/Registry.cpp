@@ -234,6 +234,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(hasAnyUsingShadowDecl);
   REGISTER_MATCHER(hasArgument);
   REGISTER_MATCHER(hasArgumentOfType);
+  REGISTER_MATCHER(hasArraySize);
   REGISTER_MATCHER(hasAttr);
   REGISTER_MATCHER(hasAutomaticStorageDuration);
   REGISTER_MATCHER(hasBase);
@@ -317,6 +318,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(isAnonymous);
   REGISTER_MATCHER(isAnyCharacter);
   REGISTER_MATCHER(isAnyPointer);
+  REGISTER_MATCHER(isArray);
   REGISTER_MATCHER(isArrow);
   REGISTER_MATCHER(isBaseInitializer);
   REGISTER_MATCHER(isBitField);

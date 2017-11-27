@@ -425,11 +425,15 @@ SanitizerMask NetBSD::getSupportedSanitizers() const {
     Res |= SanitizerKind::Function;
     Res |= SanitizerKind::Leak;
     Res |= SanitizerKind::SafeStack;
+    Res |= SanitizerKind::Scudo;
     Res |= SanitizerKind::Vptr;
   }
   if (IsX86_64) {
+    Res |= SanitizerKind::Efficiency;
     Res |= SanitizerKind::Fuzzer;
     Res |= SanitizerKind::FuzzerNoLink;
+    Res |= SanitizerKind::KernelAddress;
+    Res |= SanitizerKind::Memory;
     Res |= SanitizerKind::Thread;
   }
   return Res;
