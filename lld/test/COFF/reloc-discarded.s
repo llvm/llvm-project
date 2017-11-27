@@ -18,6 +18,7 @@ main_global:
 
 	.section	.CRT$XCU,"dr",associative,main_global
 	.p2align	3
+	.globl assoc_global
 assoc_global:
 	.quad	main_global
 
