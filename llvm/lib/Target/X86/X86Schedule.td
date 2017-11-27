@@ -432,6 +432,15 @@ def IIC_MMX_CVT_PD_RM : InstrItinClass;
 def IIC_MMX_CVT_PS_RR : InstrItinClass;
 def IIC_MMX_CVT_PS_RM : InstrItinClass;
 
+def IIC_3DNOW_FALU_RM : InstrItinClass;
+def IIC_3DNOW_FALU_RR : InstrItinClass;
+def IIC_3DNOW_FCVT_F2I_RM : InstrItinClass;
+def IIC_3DNOW_FCVT_F2I_RR : InstrItinClass;
+def IIC_3DNOW_FCVT_I2F_RM : InstrItinClass;
+def IIC_3DNOW_FCVT_I2F_RR : InstrItinClass;
+def IIC_3DNOW_MISC_FUNC_REG : InstrItinClass;
+def IIC_3DNOW_MISC_FUNC_MEM : InstrItinClass;
+
 def IIC_CMPX_LOCK : InstrItinClass;
 def IIC_CMPX_LOCK_8 : InstrItinClass;
 def IIC_CMPX_LOCK_8B : InstrItinClass;
