@@ -16,6 +16,8 @@
 
 namespace llvm {
 
+class MachineInstr;
+
 // Worklist which mostly works similar to InstCombineWorkList, but on MachineInstrs.
 // The main difference with something like a SetVector is that erasing an element doesn't
 // move all elements over one place - instead just nulls out the element of the vector.
