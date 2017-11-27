@@ -507,6 +507,9 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
        ++I)
     Reserved.set(*I);
 
+  // Set the Shadow Stack Pointer as reserved.
+  Reserved.set(X86::SSP);
+
   // Set the instruction pointer register and its aliases as reserved.
   for (MCSubRegIterator I(X86::RIP, this, /*IncludeSelf=*/true); I.isValid();
        ++I)

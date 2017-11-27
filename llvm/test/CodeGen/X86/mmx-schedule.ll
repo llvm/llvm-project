@@ -4088,22 +4088,22 @@ declare x86_mmx @llvm.x86.mmx.pminu.b(x86_mmx, x86_mmx) nounwind readnone
 define i32 @test_pmovmskb(x86_mmx %a0) optsize {
 ; GENERIC-LABEL: test_pmovmskb:
 ; GENERIC:       # BB#0:
-; GENERIC-NEXT:    pmovmskb %mm0, %eax
+; GENERIC-NEXT:    pmovmskb %mm0, %eax # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_pmovmskb:
 ; ATOM:       # BB#0:
-; ATOM-NEXT:    pmovmskb %mm0, %eax
+; ATOM-NEXT:    pmovmskb %mm0, %eax # sched: [3:3.00]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_pmovmskb:
 ; SLM:       # BB#0:
-; SLM-NEXT:    pmovmskb %mm0, %eax
+; SLM-NEXT:    pmovmskb %mm0, %eax # sched: [1:0.50]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_pmovmskb:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    pmovmskb %mm0, %eax
+; SANDY-NEXT:    pmovmskb %mm0, %eax # sched: [1:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pmovmskb:
@@ -4128,7 +4128,7 @@ define i32 @test_pmovmskb(x86_mmx %a0) optsize {
 ;
 ; BTVER2-LABEL: test_pmovmskb:
 ; BTVER2:       # BB#0:
-; BTVER2-NEXT:    pmovmskb %mm0, %eax
+; BTVER2-NEXT:    pmovmskb %mm0, %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pmovmskb:

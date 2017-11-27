@@ -4049,9 +4049,6 @@ namespace {
 
 class SCEVInitRewriter : public SCEVRewriteVisitor<SCEVInitRewriter> {
 public:
-  SCEVInitRewriter(const Loop *L, ScalarEvolution &SE)
-      : SCEVRewriteVisitor(SE), L(L) {}
-
   static const SCEV *rewrite(const SCEV *S, const Loop *L,
                              ScalarEvolution &SE) {
     SCEVInitRewriter Rewriter(L, SE);
@@ -4076,6 +4073,9 @@ public:
   bool isValid() { return Valid; }
 
 private:
+  explicit SCEVInitRewriter(const Loop *L, ScalarEvolution &SE)
+      : SCEVRewriteVisitor(SE), L(L) {}
+
   const Loop *L;
   bool Valid = true;
 };
@@ -4093,6 +4093,8 @@ public:
     if (BasicBlock *Latch = L->getLoopLatch()) {
       BranchInst *BI = dyn_cast<BranchInst>(Latch->getTerminator());
       if (BI && BI->isConditional()) {
+        assert(BI->getSuccessor(0) != BI->getSuccessor(1) &&
+               "Both outgoing branches should not target same header!");
         BECond = BI->getCondition();
         IsPosBECond = BI->getSuccessor(0) == L->getHeader();
       } else {
@@ -4160,9 +4162,6 @@ SCEVBackedgeConditionFolder::compareWithBackedgeCondition(Value *IC) {
 
 class SCEVShiftRewriter : public SCEVRewriteVisitor<SCEVShiftRewriter> {
 public:
-  SCEVShiftRewriter(const Loop *L, ScalarEvolution &SE)
-      : SCEVRewriteVisitor(SE), L(L) {}
-
   static const SCEV *rewrite(const SCEV *S, const Loop *L,
                              ScalarEvolution &SE) {
     SCEVShiftRewriter Rewriter(L, SE);
@@ -4187,6 +4186,9 @@ public:
   bool isValid() { return Valid; }
 
 private:
+  explicit SCEVShiftRewriter(const Loop *L, ScalarEvolution &SE)
+      : SCEVRewriteVisitor(SE), L(L) {}
+
   const Loop *L;
   bool Valid = true;
 };
@@ -11342,10 +11344,6 @@ namespace {
 
 class SCEVPredicateRewriter : public SCEVRewriteVisitor<SCEVPredicateRewriter> {
 public:
-  SCEVPredicateRewriter(const Loop *L, ScalarEvolution &SE,
-                        SmallPtrSetImpl<const SCEVPredicate *> *NewPreds,
-                        SCEVUnionPredicate *Pred)
-      : SCEVRewriteVisitor(SE), NewPreds(NewPreds), Pred(Pred), L(L) {}
 
   /// Rewrites \p S in the context of a loop L and the SCEV predication
   /// infrastructure.
@@ -11406,6 +11404,11 @@ public:
   }
 
 private:
+  explicit SCEVPredicateRewriter(const Loop *L, ScalarEvolution &SE,
+                        SmallPtrSetImpl<const SCEVPredicate *> *NewPreds,
+                        SCEVUnionPredicate *Pred)
+      : SCEVRewriteVisitor(SE), NewPreds(NewPreds), Pred(Pred), L(L) {}
+
   bool addOverflowAssumption(const SCEVPredicate *P) {
     if (!NewPreds) {
       // Check if we've already made this assumption.

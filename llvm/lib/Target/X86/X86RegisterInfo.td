@@ -308,6 +308,9 @@ def BND1 : X86Reg<"bnd1",   1>;
 def BND2 : X86Reg<"bnd2",   2>;
 def BND3 : X86Reg<"bnd3",   3>;
 
+// CET registers - Shadow Stack Pointer
+def SSP : X86Reg<"ssp", 0>;
+
 //===----------------------------------------------------------------------===//
 // Register Class Definitions... now that we have all of the pieces, define the
 // top-level register classes.  The order specified in the register list is
