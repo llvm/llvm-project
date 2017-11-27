@@ -301,6 +301,21 @@ public:
     return Operands[i];
   }
 
+  /// Return true if operand \p OpIdx is a subregister index.
+  bool isOperandSubregIdx(unsigned OpIdx) const {
+    assert(getOperand(OpIdx).getType() == MachineOperand::MO_Immediate &&
+           "Expected MO_Immediate operand type.");
+    if (isExtractSubreg() && OpIdx == 2)
+      return true;
+    if (isInsertSubreg() && OpIdx == 3)
+      return true;
+    if (isRegSequence() && OpIdx > 1 && (OpIdx % 2) == 0)
+      return true;
+    if (isSubregToReg() && OpIdx == 3)
+      return true;
+    return false;
+  }
+
   /// Returns the number of non-implicit operands.
   unsigned getNumExplicitOperands() const;
 
