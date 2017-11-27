@@ -361,6 +361,7 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.ExperimentalAutoDetectBinPacking);
     IO.mapOptional("FixNamespaceComments", Style.FixNamespaceComments);
     IO.mapOptional("ForEachMacros", Style.ForEachMacros);
+    IO.mapOptional("IncludeBlocks", Style.IncludeBlocks);
     IO.mapOptional("IncludeCategories", Style.IncludeCategories);
     IO.mapOptional("IncludeIsMainRegex", Style.IncludeIsMainRegex);
     IO.mapOptional("IndentCaseLabels", Style.IndentCaseLabels);
@@ -441,6 +442,14 @@ template <> struct MappingTraits<FormatStyle::IncludeCategory> {
   static void mapping(IO &IO, FormatStyle::IncludeCategory &Category) {
     IO.mapOptional("Regex", Category.Regex);
     IO.mapOptional("Priority", Category.Priority);
+  }
+};
+
+template <> struct ScalarEnumerationTraits<FormatStyle::IncludeBlocksStyle> {
+  static void enumeration(IO &IO, FormatStyle::IncludeBlocksStyle &Value) {
+    IO.enumCase(Value, "Preserve", FormatStyle::IBS_Preserve);
+    IO.enumCase(Value, "Merge", FormatStyle::IBS_Merge);
+    IO.enumCase(Value, "Regroup", FormatStyle::IBS_Regroup);
   }
 };
 
@@ -614,6 +623,7 @@ FormatStyle getLLVMStyle() {
                                  {"^(<|\"(gtest|gmock|isl|json)/)", 3},
                                  {".*", 1}};
   LLVMStyle.IncludeIsMainRegex = "(Test)?$";
+  LLVMStyle.IncludeBlocks = FormatStyle::IBS_Preserve;
   LLVMStyle.IndentCaseLabels = false;
   LLVMStyle.IndentPPDirectives = FormatStyle::PPDIS_None;
   LLVMStyle.IndentWrappedFunctionNames = false;
@@ -1420,19 +1430,27 @@ static void sortCppIncludes(const FormatStyle &Style,
                             }),
                 Indices.end());
 
+  int CurrentCategory = Includes.front().Category;
+
   // If the #includes are out of order, we generate a single replacement fixing
   // the entire block. Otherwise, no replacement is generated.
   if (Indices.size() == Includes.size() &&
-      std::is_sorted(Indices.begin(), Indices.end()))
+      std::is_sorted(Indices.begin(), Indices.end()) &&
+      Style.IncludeBlocks == FormatStyle::IBS_Preserve)
     return;
 
   std::string result;
   for (unsigned Index : Indices) {
-    if (!result.empty())
+    if (!result.empty()) {
       result += "\n";
+      if (Style.IncludeBlocks == FormatStyle::IBS_Regroup &&
+          CurrentCategory != Includes[Index].Category)
+        result += "\n";
+    }
     result += Includes[Index].Text;
     if (Cursor && CursorIndex == Index)
       *Cursor = IncludesBeginOffset + result.size() - CursorToEOLOffset;
+    CurrentCategory = Includes[Index].Category;
   }
 
   auto Err = Replaces.add(tooling::Replacement(
@@ -1540,6 +1558,10 @@ tooling::Replacements sortCppIncludes(const FormatStyle &Style, StringRef Code,
     else if (Trimmed == "// clang-format on")
       FormattingOff = false;
 
+    const bool EmptyLineSkipped =
+        Trimmed.empty() && (Style.IncludeBlocks == FormatStyle::IBS_Merge ||
+                            Style.IncludeBlocks == FormatStyle::IBS_Regroup);
+
     if (!FormattingOff && !Line.endswith("\\")) {
       if (IncludeRegex.match(Line, &Matches)) {
         StringRef IncludeName = Matches[2];
@@ -1549,7 +1571,7 @@ tooling::Replacements sortCppIncludes(const FormatStyle &Style, StringRef Code,
         if (Category == 0)
           MainIncludeFound = true;
         IncludesInBlock.push_back({IncludeName, Line, Prev, Category});
-      } else if (!IncludesInBlock.empty()) {
+      } else if (!IncludesInBlock.empty() && !EmptyLineSkipped) {
         sortCppIncludes(Style, IncludesInBlock, Ranges, FileName, Replaces,
                         Cursor);
         IncludesInBlock.clear();

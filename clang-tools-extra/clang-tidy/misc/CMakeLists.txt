@@ -7,13 +7,11 @@ add_clang_library(clangTidyMiscModule
   UnconventionalAssignOperatorCheck.cpp
   DefinitionsInHeadersCheck.cpp
   IncorrectRoundings.cpp
-  InefficientAlgorithmCheck.cpp
   MacroParenthesesCheck.cpp
   MacroRepeatedSideEffectsCheck.cpp
   MiscTidyModule.cpp
   MisplacedWideningCastCheck.cpp
   MoveConstantArgumentCheck.cpp
-  MoveConstructorInitCheck.cpp
   NewDeleteOverloadsCheck.cpp
   NoexceptMoveConstructorCheck.cpp
   NonCopyableObjects.cpp

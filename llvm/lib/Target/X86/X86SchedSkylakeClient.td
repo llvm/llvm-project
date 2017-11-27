@@ -132,7 +132,7 @@ defm : SKLWriteResPair<WriteFDiv,   SKLPort0, 12>; // 10-14 cycles. // Floating 
 defm : SKLWriteResPair<WriteFSqrt,  SKLPort0, 15>; // Floating point square root.
 defm : SKLWriteResPair<WriteFRcp,   SKLPort0, 5>; // Floating point reciprocal estimate.
 defm : SKLWriteResPair<WriteFRsqrt, SKLPort0, 5>; // Floating point reciprocal square root estimate.
-// defm WriteFMA    : X86SchedWritePair; // Fused Multiply Add.
+defm : SKLWriteResPair<WriteFMA,    SKLPort01, 4>; // Fused Multiply Add.
 defm : SKLWriteResPair<WriteFShuffle,  SKLPort5,  1>; // Floating point vector shuffles.
 defm : SKLWriteResPair<WriteFBlend,  SKLPort015,  1>; // Floating point vector blends.
 def : WriteRes<WriteFVarBlend, [SKLPort5]> { // Fp vector variable blends.	       

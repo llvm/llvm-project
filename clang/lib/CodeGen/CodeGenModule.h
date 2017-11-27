@@ -664,7 +664,7 @@ public:
 
   /// getTBAAVTablePtrAccessInfo - Get the TBAA information that describes an
   /// access to a virtual table pointer.
-  TBAAAccessInfo getTBAAVTablePtrAccessInfo();
+  TBAAAccessInfo getTBAAVTablePtrAccessInfo(llvm::Type *VTablePtrType);
 
   llvm::MDNode *getTBAAStructInfo(QualType QTy);
 

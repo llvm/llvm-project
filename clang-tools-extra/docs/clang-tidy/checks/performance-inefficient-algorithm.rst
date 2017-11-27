@@ -1,7 +1,7 @@
-.. title:: clang-tidy - misc-inefficient-algorithm
+.. title:: clang-tidy - performance-inefficient-algorithm
 
-misc-inefficient-algorithm
-==========================
+performance-inefficient-algorithm
+=================================
 
 
 Warns on inefficient use of STL algorithms on associative containers.

@@ -136,7 +136,7 @@ CodeGenModule::CodeGenModule(ASTContext &C, const HeaderSearchOptions &HSO,
   // Enable TBAA unless it's suppressed. ThreadSanitizer needs TBAA even at O0.
   if (LangOpts.Sanitize.has(SanitizerKind::Thread) ||
       (!CodeGenOpts.RelaxedAliasing && CodeGenOpts.OptimizationLevel > 0))
-    TBAA.reset(new CodeGenTBAA(Context, VMContext, CodeGenOpts, getLangOpts(),
+    TBAA.reset(new CodeGenTBAA(Context, TheModule, CodeGenOpts, getLangOpts(),
                                getCXXABI().getMangleContext()));
 
   // If debug info or coverage generation is enabled, create the CGDebugInfo
@@ -579,13 +579,20 @@ llvm::MDNode *CodeGenModule::getTBAATypeInfo(QualType QTy) {
 }
 
 TBAAAccessInfo CodeGenModule::getTBAAAccessInfo(QualType AccessType) {
-  return TBAAAccessInfo(getTBAATypeInfo(AccessType));
+  // Pointee values may have incomplete types, but they shall never be
+  // dereferenced.
+  if (AccessType->isIncompleteType())
+    return TBAAAccessInfo::getIncompleteInfo();
+
+  uint64_t Size = Context.getTypeSizeInChars(AccessType).getQuantity();
+  return TBAAAccessInfo(getTBAATypeInfo(AccessType), Size);
 }
 
-TBAAAccessInfo CodeGenModule::getTBAAVTablePtrAccessInfo() {
+TBAAAccessInfo
+CodeGenModule::getTBAAVTablePtrAccessInfo(llvm::Type *VTablePtrType) {
   if (!TBAA)
     return TBAAAccessInfo();
-  return TBAA->getVTablePtrAccessInfo();
+  return TBAA->getVTablePtrAccessInfo(VTablePtrType);
 }
 
 llvm::MDNode *CodeGenModule::getTBAAStructInfo(QualType QTy) {

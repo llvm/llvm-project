@@ -1173,6 +1173,45 @@ the configuration (without a prefix: ``Auto``).
 
   For example: BOOST_FOREACH.
 
+**IncludeBlocks** (``IncludeBlocksStyle``)
+  Dependent on the value, multiple ``#include`` blocks can be sorted
+  as one and divided based on category.
+
+  Possible values:
+
+  * ``IBS_Preserve`` (in configuration: ``Preserve``)
+    Sort each ``#include`` block separately.
+
+    .. code-block:: c++
+
+       #include "b.h"               into      #include "b.h"
+
+       #include <lib/main.h>                  #include "a.h"
+       #include "a.h"                         #include <lib/main.h>
+
+  * ``IBS_Merge`` (in configuration: ``Merge``)
+    Merge multiple ``#include`` blocks together and sort as one.
+
+    .. code-block:: c++
+
+       #include "b.h"               into      #include "a.h"
+                                              #include "b.h"
+       #include <lib/main.h>                  #include <lib/main.h>
+       #include "a.h"
+
+  * ``IBS_Regroup`` (in configuration: ``Regroup``)
+    Merge multiple ``#include`` blocks together and sort as one.
+    Then split into groups based on category priority. See ``IncludeCategories``.
+
+    .. code-block:: c++
+
+       #include "b.h"               into      #include "a.h"
+                                              #include "b.h"
+       #include <lib/main.h>
+       #include "a.h"                         #include <lib/main.h>
+
+
+
 **IncludeCategories** (``std::vector<IncludeCategory>``)
   Regular expressions denoting the different ``#include`` categories
   used for ordering ``#includes``.
