@@ -249,7 +249,7 @@ def : WriteRes<WriteMicrocoded, [FPC_RSV0]> { let Latency = 100; }
 def : WriteRes<WriteFence, [MEC_RSV]>;
 def : WriteRes<WriteNop, []>;
 
-// AVX is not supported on that architecture, but we should define the basic
+// AVX/FMA is not supported on that architecture, but we should define the basic
 // scheduling resources anyway.
 def  : WriteRes<WriteIMulH, [FPC_RSV0]>;
 defm : SMWriteResPair<WriteVarBlend, FPC_RSV0, 1>;
@@ -257,4 +257,5 @@ defm : SMWriteResPair<WriteFVarBlend, FPC_RSV0, 1>;
 defm : SMWriteResPair<WriteFShuffle256, FPC_RSV0,  1>;
 defm : SMWriteResPair<WriteShuffle256, FPC_RSV0,  1>;
 defm : SMWriteResPair<WriteVarVecShift, FPC_RSV0,  1>;
+defm : SMWriteResPair<WriteFMA, FPC_RSV0,  1>;
 } // SchedModel

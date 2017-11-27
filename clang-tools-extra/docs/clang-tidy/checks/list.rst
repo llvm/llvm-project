@@ -51,7 +51,7 @@ Clang-Tidy Checks
    cert-flp30-c
    cert-msc30-c (redirects to cert-msc50-cpp) <cert-msc30-c>
    cert-msc50-cpp
-   cert-oop11-cpp (redirects to misc-move-constructor-init) <cert-oop11-cpp>
+   cert-oop11-cpp (redirects to performance-move-constructor-init) <cert-oop11-cpp>
    cppcoreguidelines-c-copy-assignment-signature (redirects to misc-unconventional-assign-operator) <cppcoreguidelines-c-copy-assignment-signature>
    cppcoreguidelines-interfaces-global-init
    cppcoreguidelines-no-malloc
@@ -119,14 +119,12 @@ Clang-Tidy Checks
    misc-definitions-in-headers
    misc-forwarding-reference-overload
    misc-incorrect-roundings
-   misc-inefficient-algorithm
    misc-lambda-function-name
    misc-macro-parentheses
    misc-macro-repeated-side-effects
    misc-misplaced-const
    misc-misplaced-widening-cast
    misc-move-const-arg
-   misc-move-constructor-init
    misc-new-delete-overloads
    misc-noexcept-move-constructor
    misc-non-copyable-objects
@@ -181,8 +179,10 @@ Clang-Tidy Checks
    performance-faster-string-find
    performance-for-range-copy
    performance-implicit-conversion-in-loop
+   performance-inefficient-algorithm
    performance-inefficient-string-concatenation
    performance-inefficient-vector-operation
+   performance-move-constructor-init
    performance-type-promotion-in-math-fn
    performance-unnecessary-copy-initialization
    performance-unnecessary-value-param

@@ -57,6 +57,12 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- The 'misc-move-constructor-init' check was renamed to `performance-move-constructor-init
+  <http://clang.llvm.org/extra/clang-tidy/checks/performance-move-constructor-init.html>`_
+
+- The 'misc-inefficient-algorithm' check was renamed to `performance-inefficient-algorithm
+  <http://clang.llvm.org/extra/clang-tidy/checks/performance-inefficient-algorithm.html>`_
+
 - The 'misc-virtual-near-miss' check was renamed to `bugprone-virtual-near-miss
   <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-virtual-near-miss.html>`_
 

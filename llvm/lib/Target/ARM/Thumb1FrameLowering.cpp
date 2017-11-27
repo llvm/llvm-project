@@ -647,7 +647,7 @@ bool Thumb1FrameLowering::emitPopSpecialFixUp(MachineBasicBlock &MBB,
     BuildMI(MBB, MBBI, dl, TII.get(ARM::tLDRspi))
       .addReg(PopReg, RegState::Define)
       .addReg(ARM::SP)
-      .addImm(MBBI->getNumOperands() - 3)
+      .addImm(MBBI->getNumExplicitOperands() - 2)
       .add(predOps(ARMCC::AL));
     // Move from the temporary register to the LR.
     BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVr))

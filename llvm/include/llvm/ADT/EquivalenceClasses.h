@@ -239,6 +239,16 @@ public:
     return L1;
   }
 
+  // isEquivalent - Return true if V1 is equivalent to V2. This can happen if
+  // V1 is equal to V2 or if they belong to one equivalence class.
+  bool isEquivalent(const ElemTy &V1, const ElemTy &V2) const {
+    // Fast path: any element is equivalent to itself.
+    if (V1 == V2)
+      return true;
+    auto It = findLeader(V1);
+    return It != member_end() && It == findLeader(V2);
+  }
+
   class member_iterator : public std::iterator<std::forward_iterator_tag,
                                                const ElemTy, ptrdiff_t> {
     friend class EquivalenceClasses;

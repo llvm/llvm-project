@@ -2080,16 +2080,14 @@ struct ExtAddrMode : public TargetLowering::AddrMode {
       return static_cast<FieldName>(Result);
   }
 
-  // AddrModes with a baseReg or gv where the reg/gv is
-  // the only populated field are trivial.
+  // An AddrMode is trivial if it involves no calculation i.e. it is just a base
+  // with no offset.
   bool isTrivial() {
-    if (BaseGV && !BaseOffs && !Scale && !BaseReg)
-      return true;
-
-    if (!BaseGV && !BaseOffs && !Scale && BaseReg)
-      return true;
-
-    return false;
+    // An AddrMode is (BaseGV + BaseReg + BaseOffs + ScaleReg * Scale) so it is
+    // trivial if at most one of these terms is nonzero, except that BaseGV and
+    // BaseReg both being zero actually means a null pointer value, which we
+    // consider to be 'non-zero' here.
+    return !BaseOffs && !Scale && !(BaseGV && BaseReg);
   }
 
   Value *GetFieldAsValue(FieldName Field, Type *IntPtrTy) {
