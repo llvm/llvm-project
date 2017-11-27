@@ -99,7 +99,7 @@ Improvements to clang-tidy
 - The 'misc-string-constructor' check was renamed to `bugprone-string-constructor
   <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-string-constructor.html>`_
 
-- New `google-avoid-throwing-objc-exception
+- New `google-objc-avoid-throwing-exception
   <http://clang.llvm.org/extra/clang-tidy/checks/google-objc-avoid-throwing-exception.html>`_ check
 
   Add new check to detect throwing exceptions in Objective-C code, which should be avoided.
