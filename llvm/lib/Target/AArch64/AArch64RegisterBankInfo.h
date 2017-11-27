@@ -25,10 +25,10 @@ class TargetRegisterInfo;
 
 class AArch64GenRegisterBankInfo : public RegisterBankInfo {
 protected:
-
   enum PartialMappingIdx {
     PMI_None = -1,
-    PMI_FPR32 = 1,
+    PMI_FPR16 = 1,
+    PMI_FPR32,
     PMI_FPR64,
     PMI_FPR128,
     PMI_FPR256,
@@ -37,7 +37,7 @@ protected:
     PMI_GPR64,
     PMI_FirstGPR = PMI_GPR32,
     PMI_LastGPR = PMI_GPR64,
-    PMI_FirstFPR = PMI_FPR32,
+    PMI_FirstFPR = PMI_FPR16,
     PMI_LastFPR = PMI_FPR512,
     PMI_Min = PMI_FirstFPR,
   };
@@ -49,10 +49,10 @@ protected:
   enum ValueMappingIdx {
     InvalidIdx = 0,
     First3OpsIdx = 1,
-    Last3OpsIdx = 19,
+    Last3OpsIdx = 22,
     DistanceBetweenRegBanks = 3,
-    FirstCrossRegCpyIdx = 22,
-    LastCrossRegCpyIdx = 34,
+    FirstCrossRegCpyIdx = 25,
+    LastCrossRegCpyIdx = 39,
     DistanceBetweenCrossRegCpy = 2
   };
 

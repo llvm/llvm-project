@@ -87,9 +87,9 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
   assert(checkPartialMappingIdx(PMI_FirstGPR, PMI_LastGPR,
                                 {PMI_GPR32, PMI_GPR64}) &&
          "PartialMappingIdx's are incorrectly ordered");
-  assert(checkPartialMappingIdx(
-             PMI_FirstFPR, PMI_LastFPR,
-             {PMI_FPR32, PMI_FPR64, PMI_FPR128, PMI_FPR256, PMI_FPR512}) &&
+  assert(checkPartialMappingIdx(PMI_FirstFPR, PMI_LastFPR,
+                                {PMI_FPR16, PMI_FPR32, PMI_FPR64, PMI_FPR128,
+                                 PMI_FPR256, PMI_FPR512}) &&
          "PartialMappingIdx's are incorrectly ordered");
 // Now, the content.
 // Check partial mapping.
@@ -102,6 +102,7 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
 
   CHECK_PARTIALMAP(PMI_GPR32, 0, 32, RBGPR);
   CHECK_PARTIALMAP(PMI_GPR64, 0, 64, RBGPR);
+  CHECK_PARTIALMAP(PMI_FPR16, 0, 16, RBFPR);
   CHECK_PARTIALMAP(PMI_FPR32, 0, 32, RBFPR);
   CHECK_PARTIALMAP(PMI_FPR64, 0, 64, RBFPR);
   CHECK_PARTIALMAP(PMI_FPR128, 0, 128, RBFPR);
@@ -121,6 +122,7 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
 
   CHECK_VALUEMAP(GPR, 32);
   CHECK_VALUEMAP(GPR, 64);
+  CHECK_VALUEMAP(FPR, 16);
   CHECK_VALUEMAP(FPR, 32);
   CHECK_VALUEMAP(FPR, 64);
   CHECK_VALUEMAP(FPR, 128);
