@@ -42,6 +42,13 @@ Non-comprehensive list of changes in this release
   longer used back in 2014 but we didn't get around to removing it. Now it is
   gone. The SLP vectorizer is the suggested non-loop vectorization pass.
 
+* The backend name was added to the Target Registry to allow run-time
+  information to be fed back into TableGen. Out-of-tree targets will need to add
+  the name used in the `def X : Target` definition to the call to
+  `RegisterTarget`.
+
+* Note..
+
 * A new tool opt-viewer.py has been added to visualize optimization remarks in
   HTML.  The tool processes the YAML files produced by clang with the
   -fsave-optimization-record option.
