@@ -1293,6 +1293,13 @@ static llvm::Value *emitParallelOrTeamsOutlinedFunction(
     HasCancel = OPFD->hasCancel();
   else if (auto *OPFD = dyn_cast<OMPTargetParallelForDirective>(&D))
     HasCancel = OPFD->hasCancel();
+  else if (auto *OPFD = dyn_cast<OMPDistributeParallelForDirective>(&D))
+    HasCancel = OPFD->hasCancel();
+  else if (auto *OPFD = dyn_cast<OMPTeamsDistributeParallelForDirective>(&D))
+    HasCancel = OPFD->hasCancel();
+  else if (auto *OPFD =
+               dyn_cast<OMPTargetTeamsDistributeParallelForDirective>(&D))
+    HasCancel = OPFD->hasCancel();
   CGOpenMPOutlinedRegionInfo CGInfo(*CS, ThreadIDVar, CodeGen, InnermostKind,
                                     HasCancel, OutlinedHelperName);
   CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);

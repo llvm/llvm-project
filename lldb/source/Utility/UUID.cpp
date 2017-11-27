@@ -109,7 +109,7 @@ bool UUID::SetBytes(const void *uuid_bytes, uint32_t num_uuid_bytes) {
   return false;
 }
 
-size_t UUID::GetByteSize() { return m_num_uuid_bytes; }
+size_t UUID::GetByteSize() const { return m_num_uuid_bytes; }
 
 bool UUID::IsValid() const {
   return m_uuid[0] || m_uuid[1] || m_uuid[2] || m_uuid[3] || m_uuid[4] ||

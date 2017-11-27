@@ -286,6 +286,7 @@ uptr ReservedAddressRange::Init(uptr size, const char *name, uptr fixed_addr) {
   }
   size_ = size;
   name_ = name;
+  (void)os_handle_;  // unsupported
   return reinterpret_cast<uptr>(base_);
 }
 

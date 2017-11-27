@@ -82,8 +82,13 @@ static cl::list<std::string> ToRemove("remove-section",
                                       cl::value_desc("section"));
 static cl::alias ToRemoveA("R", cl::desc("Alias for remove-section"),
                            cl::aliasopt(ToRemove));
-static cl::opt<bool> StripAll("strip-all",
-                              cl::desc("Removes symbol, relocation, and debug information"));
+static cl::opt<bool> StripAll(
+    "strip-all",
+    cl::desc(
+        "Removes non-allocated sections other than .gnu.warning* sections"));
+static cl::opt<bool>
+    StripAllGNU("strip-all-gnu",
+                cl::desc("Removes symbol, relocation, and debug information"));
 static cl::opt<bool> StripDebug("strip-debug",
                                 cl::desc("Removes all debug information"));
 static cl::opt<bool> StripSections("strip-sections",
@@ -178,7 +183,7 @@ void CopyBinary(const ELFObjectFile<ELFT> &ObjFile) {
       return OnlyKeepDWOPred(*Obj, Sec) || RemovePred(Sec);
     };
 
-  if (StripAll)
+  if (StripAllGNU)
     RemovePred = [RemovePred, &Obj](const SectionBase &Sec) {
       if (RemovePred(Sec))
         return true;
@@ -214,6 +219,17 @@ void CopyBinary(const ELFObjectFile<ELFT> &ObjFile) {
       if (RemovePred(Sec))
         return true;
       if (&Sec == Obj->getSectionHeaderStrTab())
+        return false;
+      return (Sec.Flags & SHF_ALLOC) == 0;
+    };
+
+  if (StripAll)
+    RemovePred = [RemovePred, &Obj](const SectionBase &Sec) {
+      if (RemovePred(Sec))
+        return true;
+      if (&Sec == Obj->getSectionHeaderStrTab())
+        return false;
+      if (Sec.Name.startswith(".gnu.warning"))
         return false;
       return (Sec.Flags & SHF_ALLOC) == 0;
     };

@@ -174,6 +174,7 @@ Clang-Tidy Checks
    modernize-use-using
    mpi-buffer-deref
    mpi-type-mismatch
+   objc-avoid-spinlock
    objc-forbidden-subclassing
    objc-property-declaration
    performance-faster-string-find

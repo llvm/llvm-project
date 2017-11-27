@@ -36,7 +36,7 @@ public:
 
   Error readBytes(uint32_t Offset, uint32_t Size,
                   ArrayRef<uint8_t> &Buffer) override {
-    if (auto EC = checkOffset(Offset, Size))
+    if (auto EC = checkOffsetForRead(Offset, Size))
       return EC;
     uint32_t S = startIndex(Offset);
     auto Ref = Data.drop_front(S);
@@ -55,7 +55,7 @@ public:
 
   Error readLongestContiguousChunk(uint32_t Offset,
                                    ArrayRef<uint8_t> &Buffer) override {
-    if (auto EC = checkOffset(Offset, 1))
+    if (auto EC = checkOffsetForRead(Offset, 1))
       return EC;
     uint32_t S = startIndex(Offset);
     Buffer = Data.drop_front(S);
@@ -65,7 +65,7 @@ public:
   uint32_t getLength() override { return Data.size(); }
 
   Error writeBytes(uint32_t Offset, ArrayRef<uint8_t> SrcData) override {
-    if (auto EC = checkOffset(Offset, SrcData.size()))
+    if (auto EC = checkOffsetForWrite(Offset, SrcData.size()))
       return EC;
     if (SrcData.empty())
       return Error::success();
@@ -267,6 +267,56 @@ TEST_F(BinaryStreamTest, StreamRefBounds) {
   }
 }
 
+TEST_F(BinaryStreamTest, StreamRefDynamicSize) {
+  StringRef Strings[] = {"1", "2", "3", "4"};
+  AppendingBinaryByteStream Stream(support::little);
+
+  BinaryStreamWriter Writer(Stream);
+  BinaryStreamReader Reader(Stream);
+  const uint8_t *Byte;
+  StringRef Str;
+
+  // When the stream is empty, it should report a 0 length and we should get an
+  // error trying to read even 1 byte from it.
+  BinaryStreamRef ConstRef(Stream);
+  EXPECT_EQ(0U, ConstRef.getLength());
+  EXPECT_THAT_ERROR(Reader.readObject(Byte), Failed());
+
+  // But if we write to it, its size should increase and we should be able to
+  // read not just a byte, but the string that was written.
+  EXPECT_THAT_ERROR(Writer.writeCString(Strings[0]), Succeeded());
+  EXPECT_EQ(2U, ConstRef.getLength());
+  EXPECT_THAT_ERROR(Reader.readObject(Byte), Succeeded());
+
+  Reader.setOffset(0);
+  EXPECT_THAT_ERROR(Reader.readCString(Str), Succeeded());
+  EXPECT_EQ(Str, Strings[0]);
+
+  // If we drop some bytes from the front, we should still track the length as
+  // the
+  // underlying stream grows.
+  BinaryStreamRef Dropped = ConstRef.drop_front(1);
+  EXPECT_EQ(1U, Dropped.getLength());
+
+  EXPECT_THAT_ERROR(Writer.writeCString(Strings[1]), Succeeded());
+  EXPECT_EQ(4U, ConstRef.getLength());
+  EXPECT_EQ(3U, Dropped.getLength());
+
+  // If we drop zero bytes from the back, we should continue tracking the
+  // length.
+  Dropped = Dropped.drop_back(0);
+  EXPECT_THAT_ERROR(Writer.writeCString(Strings[2]), Succeeded());
+  EXPECT_EQ(6U, ConstRef.getLength());
+  EXPECT_EQ(5U, Dropped.getLength());
+
+  // If we drop non-zero bytes from the back, we should stop tracking the
+  // length.
+  Dropped = Dropped.drop_back(1);
+  EXPECT_THAT_ERROR(Writer.writeCString(Strings[3]), Succeeded());
+  EXPECT_EQ(8U, ConstRef.getLength());
+  EXPECT_EQ(4U, Dropped.getLength());
+}
+
 TEST_F(BinaryStreamTest, DropOperations) {
   std::vector<uint8_t> InputData = {1, 2, 3, 4, 5, 4, 3, 2, 1};
   auto RefData = makeArrayRef(InputData);
@@ -343,6 +393,25 @@ TEST_F(BinaryStreamTest, MutableBinaryByteStreamBounds) {
     // 2. If the write is too big, it should fail.
     EXPECT_THAT_ERROR(Stream.Output->writeBytes(3, BigData), Failed());
   }
+}
+
+TEST_F(BinaryStreamTest, AppendingStream) {
+  AppendingBinaryByteStream Stream(llvm::support::little);
+  EXPECT_EQ(0U, Stream.getLength());
+
+  std::vector<uint8_t> InputData = {'T', 'e', 's', 't', 'T', 'e', 's', 't'};
+  auto Test = makeArrayRef(InputData).take_front(4);
+  // Writing past the end of the stream is an error.
+  EXPECT_THAT_ERROR(Stream.writeBytes(4, Test), Failed());
+
+  // Writing exactly at the end of the stream is ok.
+  EXPECT_THAT_ERROR(Stream.writeBytes(0, Test), Succeeded());
+  EXPECT_EQ(Test, Stream.data());
+
+  // And now that the end of the stream is where we couldn't write before, now
+  // we can write.
+  EXPECT_THAT_ERROR(Stream.writeBytes(4, Test), Succeeded());
+  EXPECT_EQ(MutableArrayRef<uint8_t>(InputData), Stream.data());
 }
 
 // Test that FixedStreamArray works correctly.
@@ -691,6 +760,23 @@ TEST_F(BinaryStreamTest, StringWriterStrings) {
       InStrings.push_back(S);
     }
     EXPECT_EQ(makeArrayRef(Strings), makeArrayRef(InStrings));
+  }
+}
+
+TEST_F(BinaryStreamTest, StreamWriterAppend) {
+  StringRef Strings[] = {"First", "Second", "Third", "Fourth"};
+  AppendingBinaryByteStream Stream(support::little);
+  BinaryStreamWriter Writer(Stream);
+
+  for (auto &Str : Strings) {
+    EXPECT_THAT_ERROR(Writer.writeCString(Str), Succeeded());
+  }
+
+  BinaryStreamReader Reader(Stream);
+  for (auto &Str : Strings) {
+    StringRef S;
+    EXPECT_THAT_ERROR(Reader.readCString(S), Succeeded());
+    EXPECT_EQ(Str, S);
   }
 }
 }

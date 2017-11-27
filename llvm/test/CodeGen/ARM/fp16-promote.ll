@@ -817,25 +817,37 @@ define void @test_fmuladd(half* %p, half* %q, half* %r) #0 {
 
 ; CHECK-ALL-LABEL: test_insertelement:
 ; CHECK-ALL: sub sp, sp, #8
-; CHECK-ALL: ldrh
-; CHECK-ALL: ldrh
-; CHECK-ALL: ldrh
-; CHECK-ALL: ldrh
-; CHECK-ALL-DAG: strh
-; CHECK-ALL-DAG: strh
-; CHECK-ALL-DAG: mov
-; CHECK-ALL-DAG: ldrh
-; CHECK-ALL-DAG: orr
-; CHECK-ALL-DAG: strh
-; CHECK-ALL-DAG: strh
-; CHECK-ALL-DAG: strh
-; CHECK-ALL-DAG: ldrh
-; CHECK-ALL-DAG: ldrh
-; CHECK-ALL-DAG: ldrh
-; CHECK-ALL-DAG: strh
-; CHECK-ALL-DAG: strh
-; CHECK-ALL-DAG: strh
-; CHECK-ALL-DAG: strh
+
+; CHECK-VFP:	and	
+; CHECK-VFP:	mov	
+; CHECK-VFP:	ldrd	
+; CHECK-VFP:	orr	
+; CHECK-VFP:	ldrh	
+; CHECK-VFP:	stm	
+; CHECK-VFP:	strh	
+; CHECK-VFP:	ldm	
+; CHECK-VFP:	stm	
+
+; CHECK-NOVFP: ldrh
+; CHECK-NOVFP: ldrh
+; CHECK-NOVFP: ldrh
+; CHECK-NOVFP: ldrh
+; CHECK-NOVFP-DAG: strh
+; CHECK-NOVFP-DAG: strh
+; CHECK-NOVFP-DAG: mov
+; CHECK-NOVFP-DAG: ldrh
+; CHECK-NOVFP-DAG: orr
+; CHECK-NOVFP-DAG: strh
+; CHECK-NOVFP-DAG: strh
+; CHECK-NOVFP-DAG: strh
+; CHECK-NOVFP-DAG: ldrh
+; CHECK-NOVFP-DAG: ldrh
+; CHECK-NOVFP-DAG: ldrh
+; CHECK-NOVFP-DAG: strh
+; CHECK-NOVFP-DAG: strh
+; CHECK-NOVFP-DAG: strh
+; CHECK-NOVFP-DAG: strh
+
 ; CHECK-ALL: add sp, sp, #8
 define void @test_insertelement(half* %p, <4 x half>* %q, i32 %i) #0 {
   %a = load half, half* %p, align 2

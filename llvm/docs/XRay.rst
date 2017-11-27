@@ -75,11 +75,11 @@ GCC-style attributes or C++11-style attributes.
 
 .. code-block:: c++
 
-    [[clang::xray_always_intrument]] void always_instrumented();
+    [[clang::xray_always_instrument]] void always_instrumented();
 
     [[clang::xray_never_instrument]] void never_instrumented();
 
-    void alt_always_instrumented() __attribute__((xray_always_intrument));
+    void alt_always_instrumented() __attribute__((xray_always_instrument));
 
     void alt_never_instrumented() __attribute__((xray_never_instrument));
 

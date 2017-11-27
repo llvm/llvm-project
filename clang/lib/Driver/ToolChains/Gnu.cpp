@@ -42,6 +42,24 @@ static bool forwardToGCC(const Option &O) {
          !O.hasFlag(options::DriverOption) && !O.hasFlag(options::LinkerInput);
 }
 
+// Switch CPU names not recognized by GNU assembler to a close CPU that it does
+// recognize, instead of a lower march from being picked in the absence of a cpu
+// flag.
+static void normalizeCPUNamesForAssembler(const ArgList &Args,
+                                          ArgStringList &CmdArgs) {
+  if (Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
+    StringRef CPUArg(A->getValue());
+    if (CPUArg.equals_lower("krait"))
+      CmdArgs.push_back("-mcpu=cortex-a15");
+    else if(CPUArg.equals_lower("kryo") ||
+            CPUArg.equals_lower("falkor") ||
+            CPUArg.equals_lower("saphira"))
+      CmdArgs.push_back("-mcpu=cortex-a57");
+    else
+      Args.AddLastArg(CmdArgs, options::OPT_mcpu_EQ);
+  }
+}
+
 void tools::gcc::Common::ConstructJob(Compilation &C, const JobAction &JA,
                                       const InputInfo &Output,
                                       const InputInfoList &Inputs,
@@ -652,23 +670,16 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
     }
 
     Args.AddLastArg(CmdArgs, options::OPT_march_EQ);
+    normalizeCPUNamesForAssembler(Args, CmdArgs);
 
-    // FIXME: remove krait check when GNU tools support krait cpu
-    // for now replace it with -mcpu=cortex-a15 to avoid a lower
-    // march from being picked in the absence of a cpu flag.
-    Arg *A;
-    if ((A = Args.getLastArg(options::OPT_mcpu_EQ)) &&
-        StringRef(A->getValue()).equals_lower("krait"))
-      CmdArgs.push_back("-mcpu=cortex-a15");
-    else
-      Args.AddLastArg(CmdArgs, options::OPT_mcpu_EQ);
     Args.AddLastArg(CmdArgs, options::OPT_mfpu_EQ);
     break;
   }
   case llvm::Triple::aarch64:
   case llvm::Triple::aarch64_be: {
     Args.AddLastArg(CmdArgs, options::OPT_march_EQ);
-    Args.AddLastArg(CmdArgs, options::OPT_mcpu_EQ);
+    normalizeCPUNamesForAssembler(Args, CmdArgs);
+
     break;
   }
   case llvm::Triple::mips:
