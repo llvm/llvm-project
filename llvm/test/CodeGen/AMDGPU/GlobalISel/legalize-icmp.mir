@@ -21,7 +21,11 @@ body: |
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY %vgpr0
     ; CHECK: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[C]](s32), [[COPY]]
+    ; CHECK: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[C]], [[COPY]]
+    ; CHECK: %vgpr0 = COPY [[SELECT]](s32)
     %0(s32) = G_CONSTANT i32 0
     %1(s32) = COPY %vgpr0
     %2(s1) = G_ICMP intpred(ne), %0, %1
+    %3:_(s32) = G_SELECT %2(s1), %0(s32), %1(s32)
+    %vgpr0 = COPY %3
 ...
