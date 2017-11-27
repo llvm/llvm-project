@@ -199,6 +199,11 @@ def SSE_INTALU_ITINS_SHUFF_P : OpndItins<
   IIC_SSE_INTALU_P_RR, IIC_SSE_INTALU_P_RM
 >;
 
+let Sched = WriteShuffle in
+def SSE_PACK : OpndItins<
+  IIC_SSE_PACK, IIC_SSE_PACK
+>;
+
 let Sched = WriteMPSAD in
 def DEFAULT_ITINS_MPSADSCHED :  OpndItins<
   IIC_ALU_NONMEM, IIC_ALU_MEM
@@ -5760,18 +5765,6 @@ let ExeDomain = SSEPackedSingle in {
     defm INSERTPS : SS41I_insertf32<0x21, "insertps", 1, SSE_INSERT_ITINS>;
 }
 
-let Predicates = [UseSSE41] in {
-  // If we're inserting an element from a load or a null pshuf of a load,
-  // fold the load into the insertps instruction.
-  def : Pat<(v4f32 (X86insertps (v4f32 VR128:$src1), (X86PShufd (v4f32
-                       (scalar_to_vector (loadf32 addr:$src2))), (i8 0)),
-                   imm:$src3)),
-            (INSERTPSrm VR128:$src1, addr:$src2, imm:$src3)>;
-  def : Pat<(v4f32 (X86insertps (v4f32 VR128:$src1), (X86PShufd
-                      (loadv4f32 addr:$src2), (i8 0)), imm:$src3)),
-            (INSERTPSrm VR128:$src1, addr:$src2, imm:$src3)>;
-}
-
 let Predicates = [UseAVX] in {
   // If we're inserting an element from a vbroadcast of a load, fold the
   // load into the X86insertps instruction.
@@ -5819,7 +5812,7 @@ let ExeDomain = SSEPackedDouble in {
                     !strconcat(OpcodeStr,
                     "pd\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
                     [(set RC:$dst, (VT64 (OpNode RC:$src1, imm:$src2)))],
-                    IIC_SSE_ROUNDPS_REG>, Sched<[WriteFAdd]>;
+                    IIC_SSE_ROUNDPD_REG>, Sched<[WriteFAdd]>;
 
   // Vector intrinsic operation, mem
   def PDm : SS4AIi8<opcpd, MRMSrcMem,
@@ -5828,7 +5821,7 @@ let ExeDomain = SSEPackedDouble in {
                     "pd\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
                     [(set RC:$dst,
                           (VT64 (OpNode (mem_frag64 addr:$src1),imm:$src2)))],
-                          IIC_SSE_ROUNDPS_REG>, Sched<[WriteFAddLd]>;
+                          IIC_SSE_ROUNDPD_REG>, Sched<[WriteFAddLd]>;
 } // ExeDomain = SSEPackedDouble
 }
 

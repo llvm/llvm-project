@@ -251,8 +251,7 @@ entry:
 
 ; R600: MOVA_INT
 
-; SI-PROMOTE-DAG: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offset:4 ; encoding:
-; SI-PROMOTE-DAG: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offset:5 ; encoding:
+; SI-PROMOTE-DAG: buffer_store_short v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offset:4 ; encoding:
 
 ; SI-ALLOCA-DAG: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offset:4 ; encoding: [0x04,0x00,0x60,0xe0
 ; SI-ALLOCA-DAG: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offset:5 ; encoding: [0x05,0x00,0x60,0xe0

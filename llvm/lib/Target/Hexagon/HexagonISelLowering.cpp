@@ -129,8 +129,6 @@ namespace {
 
 // Implement calling convention for Hexagon.
 
-static bool isHvxVectorType(MVT ty);
-
 static bool
 CC_Hexagon(unsigned ValNo, MVT ValVT,
            MVT LocVT, CCValAssign::LocInfo LocInfo,
@@ -291,7 +289,8 @@ static bool CC_Hexagon (unsigned ValNo, MVT ValVT, MVT LocVT,
     return false;
   }
 
-  if (isHvxVectorType(LocVT)) {
+  auto &HST = State.getMachineFunction().getSubtarget<HexagonSubtarget>();
+  if (HST.isHVXVectorType(LocVT)) {
     if (!CC_HexagonVector(ValNo, ValVT, LocVT, LocInfo, ArgFlags, State))
       return false;
   }
@@ -553,28 +552,6 @@ static SDValue CreateCopyOfByValArgument(SDValue Src, SDValue Dst,
                        MachinePointerInfo(), MachinePointerInfo());
 }
 
-static bool isHvxVectorType(MVT Ty) {
-  switch (Ty.SimpleTy) {
-  case MVT::v8i64:
-  case MVT::v16i32:
-  case MVT::v32i16:
-  case MVT::v64i8:
-  case MVT::v16i64:
-  case MVT::v32i32:
-  case MVT::v64i16:
-  case MVT::v128i8:
-  case MVT::v32i64:
-  case MVT::v64i32:
-  case MVT::v128i16:
-  case MVT::v256i8:
-  case MVT::v512i1:
-  case MVT::v1024i1:
-    return true;
-  default:
-    return false;
-  }
-}
-
 bool
 HexagonTargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool isVarArg,
@@ -774,7 +751,7 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     SDValue Arg = OutVals[i];
     ISD::ArgFlagsTy Flags = Outs[i].Flags;
     // Record if we need > 8 byte alignment on an argument.
-    bool ArgAlign = isHvxVectorType(VA.getValVT());
+    bool ArgAlign = Subtarget.isHVXVectorType(VA.getValVT());
     NeedsArgAlign |= ArgAlign;
 
     // Promote the value if needed.
@@ -2727,7 +2704,7 @@ HexagonTargetLowering::LowerEXTRACT_VECTOR(SDValue Op,
   // If we are dealing with EXTRACT_SUBVECTOR on a HVX type, we may
   // be able to simplify it to an EXTRACT_SUBREG.
   if (Op.getOpcode() == ISD::EXTRACT_SUBVECTOR && Subtarget.useHVXOps() &&
-      isHvxVectorType(Op.getValueType().getSimpleVT()))
+      Subtarget.isHVXVectorType(Op.getValueType().getSimpleVT()))
     return LowerEXTRACT_SUBVECTOR_HVX(Op, DAG);
 
   EVT VT = Op.getValueType();

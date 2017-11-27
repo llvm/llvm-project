@@ -44,6 +44,11 @@ Non-comprehensive list of changes in this release
   ``llvm::sys::ExecuteNoWait`` was changed to an ``ArrayRef`` of optional
   ``StringRef``'s to make it safer and more convenient to use.
 
+* The backend name was added to the Target Registry to allow run-time
+  information to be fed back into TableGen. Out-of-tree targets will need to add
+  the name used in the `def X : Target` definition to the call to
+  `RegisterTarget`.
+
 * Note..
 
 .. NOTE

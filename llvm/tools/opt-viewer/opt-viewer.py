@@ -258,7 +258,7 @@ if __name__ == '__main__':
         type=int,
         help='Max job count (defaults to %(default)s, the current CPU count)')
     parser.add_argument(
-        '-source-dir',
+        '--source-dir',
         '-s',
         default='',
         help='set source directory')

@@ -1722,7 +1722,7 @@ EVT X86TargetLowering::getSetCCResultType(const DataLayout &DL,
     MVT VVT = VT.getSimpleVT();
     const unsigned NumElts = VVT.getVectorNumElements();
     MVT EltVT = VVT.getVectorElementType();
-    if (VVT.is512BitVector()) {
+    if (VVT.getSizeInBits() >= 512) {
       if (Subtarget.hasAVX512())
         if (EltVT == MVT::i32 || EltVT == MVT::i64 ||
             EltVT == MVT::f32 || EltVT == MVT::f64)
@@ -28343,7 +28343,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   // Which shuffle domains are permitted?
   // Permit domain crossing at higher combine depths.
   bool AllowFloatDomain = FloatDomain || (Depth > 3);
-  bool AllowIntDomain = (!FloatDomain || (Depth > 3)) &&
+  bool AllowIntDomain = (!FloatDomain || (Depth > 3)) && Subtarget.hasSSE2() &&
                         (!MaskVT.is256BitVector() || Subtarget.hasAVX2());
 
   // Determine zeroable mask elements.

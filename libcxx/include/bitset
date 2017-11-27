@@ -503,7 +503,10 @@ template <size_t _Size>
 inline
 _LIBCPP_CONSTEXPR
 __bitset<1, _Size>::__bitset(unsigned long long __v) _NOEXCEPT
-    : __first_(static_cast<__storage_type>(__v))
+    : __first_(
+        _Size == __bits_per_word ? static_cast<__storage_type>(__v)
+                                 : static_cast<__storage_type>(__v) & ((__storage_type(1) << _Size) - 1)
+    )
 {
 }
 

@@ -234,9 +234,17 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
     WithColor(OS, Color) << Name;
   else if (Attr == DW_AT_decl_line || Attr == DW_AT_call_line)
     OS << *formValue.getAsUnsignedConstant();
-  else if (Attr == DW_AT_location || Attr == DW_AT_frame_base ||
-           Attr == DW_AT_data_member_location ||
-           Attr == DW_AT_GNU_call_site_value)
+  else if (Attr == DW_AT_high_pc && !DumpOpts.ShowForm && !DumpOpts.Verbose &&
+           formValue.getAsUnsignedConstant()) {
+    // Print the actual address rather than the offset.
+    uint64_t LowPC, HighPC, Index;
+    if (Die.getLowAndHighPC(LowPC, HighPC, Index))
+      OS << format("0x%016" PRIx64, HighPC);
+    else
+      formValue.dump(OS, DumpOpts);
+  } else if (Attr == DW_AT_location || Attr == DW_AT_frame_base ||
+             Attr == DW_AT_data_member_location ||
+             Attr == DW_AT_GNU_call_site_value)
     dumpLocation(OS, formValue, U, sizeof(BaseIndent) + Indent + 4, DumpOpts);
   else
     formValue.dump(OS, DumpOpts);

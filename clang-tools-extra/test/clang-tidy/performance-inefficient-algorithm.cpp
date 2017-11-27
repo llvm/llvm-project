@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-inefficient-algorithm %t
+// RUN: %check_clang_tidy %s performance-inefficient-algorithm %t
 
 namespace std {
 template <typename T> struct less {
@@ -78,7 +78,7 @@ template <typename T> void f(const T &t) {
 int main() {
   std::set<int> s;
   auto it = std::find(s.begin(), s.end(), 43);
-  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: this STL algorithm call should be replaced with a container method [misc-inefficient-algorithm]
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: this STL algorithm call should be replaced with a container method [performance-inefficient-algorithm]
   // CHECK-FIXES: {{^  }}auto it = s.find(43);{{$}}
   auto c = count(s.begin(), s.end(), 43);
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: this STL algorithm call should be
@@ -107,7 +107,7 @@ int main() {
   // CHECK-FIXES: {{^  }}msptr->find(46);{{$}}
 
   it = std::find(s.begin(), s.end(), 43, std::greater<int>());
-  // CHECK-MESSAGES: :[[@LINE-1]]:42: warning: different comparers used in the algorithm and the container [misc-inefficient-algorithm]
+  // CHECK-MESSAGES: :[[@LINE-1]]:42: warning: different comparers used in the algorithm and the container [performance-inefficient-algorithm]
 
   FIND_IN_SET(s);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this STL algorithm call should be

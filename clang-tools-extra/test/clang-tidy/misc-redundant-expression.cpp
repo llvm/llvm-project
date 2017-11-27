@@ -124,15 +124,35 @@ int TestConditional(int x, int y) {
 #undef COND_OP_MACRO
 #undef COND_OP_OTHER_MACRO
 
+// Overloaded operators that compare two instances of a struct.
 struct MyStruct {
-  int x;
+  int x;  
+  bool operator==(const MyStruct& rhs) const {return this->x == rhs.x; } // not modifing
+  bool operator>=(const MyStruct& rhs) const { return this->x >= rhs.x; } // not modifing
+  bool operator<=(MyStruct& rhs) const { return this->x <= rhs.x; }
+  bool operator&&(const MyStruct& rhs){ this->x++; return this->x && rhs.x; }
 } Q;
 
-bool operator==(const MyStruct& lhs, const MyStruct& rhs) { return lhs.x == rhs.x; }
+bool operator!=(const MyStruct& lhs, const MyStruct& rhs) { return lhs.x == rhs.x; } // not modifing
+bool operator<(const MyStruct& lhs, const MyStruct& rhs) { return lhs.x < rhs.x; } // not modifing
+bool operator>(const MyStruct& lhs, MyStruct& rhs) { rhs.x--; return lhs.x > rhs.x; }
+bool operator||(MyStruct& lhs, const MyStruct& rhs) { lhs.x++; return lhs.x || rhs.x; }
 
-bool TestOperator(MyStruct& S) {
+bool TestOverloadedOperator(MyStruct& S) {
   if (S == Q) return false;
+
+  if (S <= S) return false;
+  if (S && S) return false;
+  if (S > S) return false;
+  if (S || S) return false;
+
   if (S == S) return true;
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: both sides of overloaded operator are equivalent
+  if (S < S) return true;
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: both sides of overloaded operator are equivalent
+  if (S != S) return true;
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: both sides of overloaded operator are equivalent
+  if (S >= S) return true;
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: both sides of overloaded operator are equivalent
 }
 
@@ -176,7 +196,7 @@ template <typename T, typename U>
 void TemplateCheck() {
   static_assert(T::Value == U::Value, "should be identical");
   static_assert(T::Value == T::Value, "should be identical");
-  // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: both sides of overloaded operator are equivalent
+  // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: both sides of operator are equivalent
 }
 void TestTemplate() { TemplateCheck<MyClass, MyClass>(); }
 
@@ -281,9 +301,46 @@ int TestBitwise(int X, int Y) {
   return 0;
 }
 
+// Overloaded operators that compare an instance of a struct and an integer
+// constant.
+struct S {
+  S() { x = 1; }
+  int x;
+  // Overloaded comparison operators without any possible side effect.
+  bool operator==(const int &i) const { return x == i; } // not modifying
+  bool operator!=(int i) const { return x != i; } // not modifying
+  bool operator>(const int &i) const { return x > i; } // not modifying
+  bool operator<(int i) const { return x < i; } // not modifying
+};
+
+bool operator<=(const S &s, int i) { return s.x <= i; } // not modifying
+bool operator>=(const S &s, const int &i) { return s.x >= i; } // not modifying
+
+struct S2 {
+  S2() { x = 1; }
+  int x;
+  // Overloaded comparison operators that are able to modify their params.
+  bool operator==(const int &i) {
+    this->x++;
+    return x == i;
+  }
+  bool operator!=(int i) { return x != i; }
+  bool operator>(const int &i) { return x > i; }
+  bool operator<(int i) {
+    this->x--;
+    return x < i;
+  }
+};
+
+bool operator>=(S2 &s, const int &i) { return s.x >= i; }
+bool operator<=(S2 &s, int i) {
+  s.x++;
+  return s.x <= i;
+}
+
 int TestLogical(int X, int Y){
 #define CONFIG 0
-  if (CONFIG && X) return 1; // OK, consts from macros are considered intentional
+  if (CONFIG && X) return 1;
 #undef CONFIG
 #define CONFIG 1
   if (CONFIG || X) return 1;
@@ -331,6 +388,24 @@ int TestLogical(int X, int Y){
   if (!X && Y) return 1;
   if (!X && Y == 0) return 1;
   if (X == 10 && Y != 10) return 1;
+
+  // Test for overloaded operators with constant params.
+  S s1;
+  if (s1 == 1 && s1 == 1) return true;
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: equivalent expression on both sides of logical operator
+  if (s1 == 1 || s1 != 1) return true;
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: logical expression is always true
+  if (s1 > 1 && s1 < 1) return true;
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: logical expression is always false
+  if (s1 >= 1 || s1 <= 1) return true;
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: logical expression is always true
+
+  // Test for overloaded operators that may modify their params.
+  S2 s2;
+  if (s2 == 1 || s2 != 1) return true;
+  if (s2 == 1 || s2 == 1) return true;
+  if (s2 > 1 && s2 < 1) return true;
+  if (s2 >= 1 || s2 <= 1) return true;
 }
 
 int TestRelational(int X, int Y) {
