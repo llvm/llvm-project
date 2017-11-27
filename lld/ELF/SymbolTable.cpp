@@ -304,7 +304,8 @@ Symbol *SymbolTable::addUndefined(StringRef Name, uint8_t Binding,
     if (!S->isDefined())
       S->Binding = Binding;
     if (auto *SS = dyn_cast<SharedSymbol>(S))
-      SS->getFile<ELFT>()->IsNeeded = true;
+      if (!Config->GcSections)
+        SS->getFile<ELFT>()->IsNeeded = true;
   }
   if (auto *L = dyn_cast<Lazy>(S)) {
     // An undefined weak will not fetch archive members. See comment on Lazy in
@@ -500,7 +501,7 @@ void SymbolTable::addShared(StringRef Name, SharedFile<ELFT> *File,
                                 Sym.st_value, Sym.st_size, Alignment, Verdef);
     if (!WasInserted) {
       S->Binding = Binding;
-      if (!S->isWeak())
+      if (!S->isWeak() && !Config->GcSections)
         File->IsNeeded = true;
     }
   }
