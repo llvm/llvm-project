@@ -16,9 +16,6 @@
 
 // class packaged_task<R(ArgTypes...)>
 
-// template <class F, class Allocator>
-//     explicit packaged_task(allocator_arg_t, const Allocator& a, F&& f);
-
 #include <future>
 #include <cassert>
 
