@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MOVECONSTRUCTORINITCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MOVECONSTRUCTORINITCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_MOVECONSTRUCTORINITCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_MOVECONSTRUCTORINITCHECK_H
 
 #include "../ClangTidy.h"
 #include "../utils/IncludeInserter.h"
@@ -17,13 +17,13 @@
 
 namespace clang {
 namespace tidy {
-namespace misc {
+namespace performance {
 
 /// The check flags user-defined move constructors that have a ctor-initializer
 /// initializing a member or base class through a copy constructor instead of a
 /// move constructor.
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc-move-constructor-init.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/performance-move-constructor-init.html
 class MoveConstructorInitCheck : public ClangTidyCheck {
 public:
   MoveConstructorInitCheck(StringRef Name, ClangTidyContext *Context);
@@ -37,8 +37,8 @@ private:
   const utils::IncludeSorter::IncludeStyle IncludeStyle;
 };
 
-} // namespace misc
+} // namespace performance
 } // namespace tidy
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MOVECONSTRUCTORINITCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_MOVECONSTRUCTORINITCHECK_H
