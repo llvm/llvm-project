@@ -116,7 +116,13 @@ bool InstructionSelector::isBaseWithConstantOffset(
   return true;
 }
 
-bool InstructionSelector::isObviouslySafeToFold(MachineInstr &MI) const {
+bool InstructionSelector::isObviouslySafeToFold(MachineInstr &MI,
+                                                MachineInstr &IntoMI) const {
+  // Immediate neighbours are already folded.
+  if (MI.getParent() == IntoMI.getParent() &&
+      std::next(MI.getIterator()) == IntoMI.getIterator())
+    return true;
+
   return !MI.mayLoadOrStore() && !MI.hasUnmodeledSideEffects() &&
          MI.implicit_operands().begin() == MI.implicit_operands().end();
 }
