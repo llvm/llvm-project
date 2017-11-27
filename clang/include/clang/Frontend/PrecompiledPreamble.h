@@ -98,6 +98,10 @@ public:
   /// Changes options inside \p CI to use PCH from this preamble. Also remaps
   /// main file to \p MainFileBuffer and updates \p VFS to ensure the preamble
   /// is accessible.
+  /// For in-memory preambles, PrecompiledPreamble instance continues to own
+  /// the MemoryBuffer with the Preamble after this method returns. The caller
+  /// is reponsible for making sure the PrecompiledPreamble instance outlives
+  /// the compiler run and the AST that will be using the PCH.
   void AddImplicitPreamble(CompilerInvocation &CI,
                            IntrusiveRefCntPtr<vfs::FileSystem> &VFS,
                            llvm::MemoryBuffer *MainFileBuffer) const;

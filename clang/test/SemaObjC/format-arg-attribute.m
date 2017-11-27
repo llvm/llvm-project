@@ -9,9 +9,9 @@ extern void fc1 (const NSString *) __attribute__((format_arg));  // expected-err
 extern void fc2 (const NSString *) __attribute__((format_arg())); // expected-error {{'format_arg' attribute takes one argument}}
 extern void fc3 (const NSString *) __attribute__((format_arg(1, 2))); // expected-error {{'format_arg' attribute takes one argument}}
 
-struct s1 { int i; } __attribute__((format_arg(1)));  // expected-warning {{'format_arg' attribute only applies to non-K&R-style functions}}
-union u1 { int i; } __attribute__((format_arg(1)));  // expected-warning {{'format_arg' attribute only applies to non-K&R-style functions}}
-enum e1 { E1V0 } __attribute__((format_arg(1))); // expected-warning {{'format_arg' attribute only applies to non-K&R-style functions}}
+struct s1 { int i; } __attribute__((format_arg(1)));  // expected-warning {{'format_arg' attribute only applies to Objective-C methods and non-K&R-style functions}}
+union u1 { int i; } __attribute__((format_arg(1)));  // expected-warning {{'format_arg' attribute only applies to}}
+enum e1 { E1V0 } __attribute__((format_arg(1))); // expected-warning {{'format_arg' attribute only applies to}}
 
 extern NSString *ff3 (const NSString *) __attribute__((format_arg(3-2)));
 extern NSString *ff4 (const NSString *) __attribute__((format_arg(foo))); // expected-error {{use of undeclared identifier 'foo'}}

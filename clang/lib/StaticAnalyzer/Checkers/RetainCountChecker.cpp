@@ -1201,10 +1201,10 @@ RetainSummaryManager::getFunctionSummary(const FunctionDecl *FD) {
         break;
       }
 
-      // For the Disk Arbitration API (DiskArbitration/DADisk.h)
-      if (cocoa::isRefType(RetTy, "DADisk") ||
-          cocoa::isRefType(RetTy, "DADissenter") ||
-          cocoa::isRefType(RetTy, "DASessionRef")) {
+      // For all other CF-style types, use the Create/Get
+      // rule for summaries but don't support Retain functions
+      // with framework-specific prefixes.
+      if (coreFoundation::isCFObjectRef(RetTy)) {
         S = getCFCreateGetRuleSummary(FD);
         break;
       }

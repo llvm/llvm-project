@@ -130,4 +130,4 @@ int main() {
 
 // We had a problem where we'd skip all attributes that follow a late-parsed
 // attribute in a single __attribute__.
-void run() __attribute__((guarded_by(mu1), guarded_by(mu1))); // expected-warning 2{{only applies to fields and global variables}}
+void run() __attribute__((guarded_by(mu1), guarded_by(mu1))); // expected-warning 2{{only applies to non-static data members and global variables}}

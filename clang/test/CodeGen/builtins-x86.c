@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -DUSE_64 -triple x86_64-unknown-unknown -target-feature +fxsr -target-feature +avx -target-feature +xsaveopt -target-feature +xsaves -target-feature +xsavec -target-feature +mwaitx -target-feature +clzero -emit-llvm -o %t %s
-// RUN: %clang_cc1 -DUSE_ALL -triple x86_64-unknown-unknown -target-feature +fxsr -target-feature +avx -target-feature +xsaveopt -target-feature +xsaves -target-feature +xsavec -target-feature +mwaitx -target-feature +clzero -fsyntax-only -o %t %s
+// RUN: %clang_cc1 -DUSE_64 -triple x86_64-unknown-unknown -target-feature +fxsr -target-feature +avx -target-feature +xsaveopt -target-feature +xsaves -target-feature +xsavec -target-feature +mwaitx -target-feature +clzero -target-feature +ibt -target-feature +shstk -emit-llvm -o %t %s
+// RUN: %clang_cc1 -DUSE_ALL -triple x86_64-unknown-unknown -target-feature +fxsr -target-feature +avx -target-feature +xsaveopt -target-feature +xsaves -target-feature +xsavec -target-feature +mwaitx -target-feature +ibt -target-feature +shstk -target-feature +clzero -fsyntax-only -o %t %s
 
 #ifdef USE_ALL
 #define USE_3DNOW
@@ -256,6 +256,19 @@ void f0() {
   tmp_V4s = __builtin_ia32_packssdw(tmp_V2i, tmp_V2i);
   tmp_V8c = __builtin_ia32_packuswb(tmp_V4s, tmp_V4s);
   tmp_i = __builtin_ia32_vec_ext_v2si(tmp_V2i, 0);
+
+  __builtin_ia32_incsspd(tmp_Ui);
+  __builtin_ia32_incsspq(tmp_ULLi);
+  tmp_Ui = __builtin_ia32_rdsspd(tmp_Ui);
+  tmp_ULLi = __builtin_ia32_rdsspq(tmp_ULLi);
+  __builtin_ia32_saveprevssp();
+  __builtin_ia32_rstorssp(tmp_vp);
+  __builtin_ia32_wrssd(tmp_Ui, tmp_vp);
+  __builtin_ia32_wrssq(tmp_ULLi, tmp_vp);
+  __builtin_ia32_wrussd(tmp_Ui, tmp_vp);
+  __builtin_ia32_wrussq(tmp_ULLi, tmp_vp);
+  __builtin_ia32_setssbsy();
+  __builtin_ia32_clrssbsy(tmp_vp);
 
   (void) __builtin_ia32_ldmxcsr(tmp_Ui);
   (void) _mm_setcsr(tmp_Ui);

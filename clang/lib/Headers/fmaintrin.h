@@ -70,13 +70,13 @@ _mm_fmsub_pd(__m128d __A, __m128d __B, __m128d __C)
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_fmsub_ss(__m128 __A, __m128 __B, __m128 __C)
 {
-  return (__m128)__builtin_ia32_vfmsubss3((__v4sf)__A, (__v4sf)__B, (__v4sf)__C);
+  return (__m128)__builtin_ia32_vfmaddss3((__v4sf)__A, (__v4sf)__B, -(__v4sf)__C);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_fmsub_sd(__m128d __A, __m128d __B, __m128d __C)
 {
-  return (__m128d)__builtin_ia32_vfmsubsd3((__v2df)__A, (__v2df)__B, (__v2df)__C);
+  return (__m128d)__builtin_ia32_vfmaddsd3((__v2df)__A, (__v2df)__B, -(__v2df)__C);
 }
 
 static __inline__ __m128 __DEFAULT_FN_ATTRS
@@ -94,13 +94,13 @@ _mm_fnmadd_pd(__m128d __A, __m128d __B, __m128d __C)
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_fnmadd_ss(__m128 __A, __m128 __B, __m128 __C)
 {
-  return (__m128)__builtin_ia32_vfnmaddss3((__v4sf)__A, (__v4sf)__B, (__v4sf)__C);
+  return (__m128)__builtin_ia32_vfmaddss3((__v4sf)__A, -(__v4sf)__B, (__v4sf)__C);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_fnmadd_sd(__m128d __A, __m128d __B, __m128d __C)
 {
-  return (__m128d)__builtin_ia32_vfnmaddsd3((__v2df)__A, (__v2df)__B, (__v2df)__C);
+  return (__m128d)__builtin_ia32_vfmaddsd3((__v2df)__A, -(__v2df)__B, (__v2df)__C);
 }
 
 static __inline__ __m128 __DEFAULT_FN_ATTRS
@@ -118,13 +118,13 @@ _mm_fnmsub_pd(__m128d __A, __m128d __B, __m128d __C)
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_fnmsub_ss(__m128 __A, __m128 __B, __m128 __C)
 {
-  return (__m128)__builtin_ia32_vfnmsubss3((__v4sf)__A, (__v4sf)__B, (__v4sf)__C);
+  return (__m128)__builtin_ia32_vfmaddss3((__v4sf)__A, -(__v4sf)__B, -(__v4sf)__C);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_fnmsub_sd(__m128d __A, __m128d __B, __m128d __C)
 {
-  return (__m128d)__builtin_ia32_vfnmsubsd3((__v2df)__A, (__v2df)__B, (__v2df)__C);
+  return (__m128d)__builtin_ia32_vfmaddsd3((__v2df)__A, -(__v2df)__B, -(__v2df)__C);
 }
 
 static __inline__ __m128 __DEFAULT_FN_ATTRS

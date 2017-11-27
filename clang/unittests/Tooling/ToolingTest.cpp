@@ -564,5 +564,31 @@ TEST(ClangToolTest, InjectDiagnosticConsumerInBuildASTs) {
 }
 #endif
 
+TEST(runToolOnCode, TestResetDiagnostics) {
+  // This is a tool that resets the diagnostic during the compilation.
+  struct ResetDiagnosticAction : public clang::ASTFrontendAction {
+    std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &Compiler,
+                                                   StringRef) override {
+      struct Consumer : public clang::ASTConsumer {
+        bool HandleTopLevelDecl(clang::DeclGroupRef D) override {
+          auto &Diags = (*D.begin())->getASTContext().getDiagnostics();
+          // Ignore any error
+          Diags.Reset();
+          // Disable warnings because computing the CFG might crash.
+          Diags.setIgnoreAllWarnings(true);
+          return true;
+        }
+      };
+      return llvm::make_unique<Consumer>();
+    }
+  };
+
+  // Should not crash
+  EXPECT_FALSE(
+      runToolOnCode(new ResetDiagnosticAction,
+                    "struct Foo { Foo(int); ~Foo(); struct Fwd _fwd; };"
+                    "void func() { long x; Foo f(x); }"));
+}
+
 } // end namespace tooling
 } // end namespace clang
