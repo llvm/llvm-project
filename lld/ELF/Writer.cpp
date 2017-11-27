@@ -448,8 +448,9 @@ static bool includeInSymtab(const Symbol &B) {
     if (auto *S = dyn_cast<MergeInputSection>(Sec))
       if (!S->getSectionPiece(D->Value)->Live)
         return false;
+    return true;
   }
-  return true;
+  return B.Used;
 }
 
 // Local symbols are not in the linker's symbol table. This function scans

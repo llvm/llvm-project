@@ -8466,3 +8466,82 @@ def : Pat<(xor FR128:$src1, FR128:$src2),
           (COPY_TO_REGCLASS
            (XORPSrr (COPY_TO_REGCLASS FR128:$src1, VR128),
                     (COPY_TO_REGCLASS FR128:$src2, VR128)), FR128)>;
+
+//===----------------------------------------------------------------------===//
+// GFNI instructions
+//===----------------------------------------------------------------------===//
+
+multiclass GF2P8MULB_rm<string OpcodeStr, ValueType OpVT,
+                        RegisterClass RC, PatFrag MemOpFrag,
+                        X86MemOperand X86MemOp, bit Is2Addr = 0> {
+  let ExeDomain = SSEPackedInt,
+      AsmString = !if(Is2Addr,
+        OpcodeStr##"\t{$src2, $dst|$dst, $src2}",
+        OpcodeStr##"\t{$src2, $src1, $dst|$dst, $src1, $src2}") in {
+    let isCommutable = 1 in
+    def rr : PDI<0xCF, MRMSrcReg, (outs RC:$dst), (ins RC:$src1, RC:$src2), "",
+                 [(set RC:$dst, (OpVT (X86GF2P8mulb RC:$src1, RC:$src2)))],
+                 SSE_INTALU_ITINS_P.rr>,
+             Sched<[SSE_INTALU_ITINS_P.Sched]>, T8PD;
+
+    def rm : PDI<0xCF, MRMSrcMem, (outs RC:$dst), (ins RC:$src1, X86MemOp:$src2), "",
+                 [(set RC:$dst, (OpVT (X86GF2P8mulb RC:$src1,
+                                 (bitconvert (MemOpFrag addr:$src2)))))],
+                 SSE_INTALU_ITINS_P.rm>,
+             Sched<[SSE_INTALU_ITINS_P.Sched.Folded, ReadAfterLd]>, T8PD;
+  }
+}
+
+multiclass GF2P8AFFINE_rmi<bits<8> Op, string OpStr, ValueType OpVT,
+                           SDNode OpNode, RegisterClass RC, PatFrag MemOpFrag,
+                           X86MemOperand X86MemOp, bit Is2Addr = 0> {
+  let AsmString = !if(Is2Addr,
+      OpStr##"\t{$src3, $src2, $dst|$dst, $src2, $src3}",
+      OpStr##"\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}") in {
+  def rri : Ii8<Op, MRMSrcReg, (outs RC:$dst),
+              (ins RC:$src1, RC:$src2, u8imm:$src3), "",
+              [(set RC:$dst, (OpVT (OpNode RC:$src1, RC:$src2, imm:$src3)))],
+              SSE_INTALU_ITINS_P.rr, SSEPackedInt>,
+              Sched<[WriteVecALU]>;
+  def rmi : Ii8<Op, MRMSrcMem, (outs RC:$dst),
+              (ins RC:$src1, X86MemOp:$src2, u8imm:$src3), "",
+              [(set RC:$dst, (OpVT (OpNode RC:$src1,
+                                    (bitconvert (MemOpFrag addr:$src2)),
+                              imm:$src3)))],
+              SSE_INTALU_ITINS_P.rm, SSEPackedInt>,
+              Sched<[WriteVecALU.Folded, ReadAfterLd]>;
+  }
+}
+
+multiclass GF2P8AFFINE_common<bits<8> Op, string OpStr, SDNode OpNode> {
+  let Constraints = "$src1 = $dst",
+      Predicates  = [HasGFNI, UseSSE2] in
+  defm NAME         : GF2P8AFFINE_rmi<Op, OpStr, v16i8, OpNode,
+                                      VR128, loadv2i64, i128mem, 1>;
+  let Predicates  = [HasGFNI, HasAVX, NoVLX_Or_NoBWI] in {
+    defm V##NAME    : GF2P8AFFINE_rmi<Op, "v"##OpStr, v16i8, OpNode, VR128,
+                                      loadv2i64, i128mem>, VEX_4V, VEX_W;
+    defm V##NAME##Y : GF2P8AFFINE_rmi<Op, "v"##OpStr, v32i8, OpNode, VR256,
+                                      loadv4i64, i256mem>, VEX_4V, VEX_L, VEX_W;
+  }
+}
+
+// GF2P8MULB
+let Constraints = "$src1 = $dst",
+    Predicates  = [HasGFNI, UseSSE2] in
+defm GF2P8MULB      : GF2P8MULB_rm<"gf2p8mulb", v16i8, VR128, memopv2i64,
+                                    i128mem, 1>;
+let Predicates  = [HasGFNI, HasAVX, NoVLX_Or_NoBWI] in {
+  defm VGF2P8MULB   : GF2P8MULB_rm<"vgf2p8mulb", v16i8, VR128, loadv2i64,
+                                   i128mem>, VEX_4V;
+  defm VGF2P8MULBY  : GF2P8MULB_rm<"vgf2p8mulb", v32i8, VR256, loadv4i64,
+                                   i256mem>, VEX_4V, VEX_L;
+}
+// GF2P8AFFINEINVQB, GF2P8AFFINEQB
+let isCommutable = 0 in {
+  defm GF2P8AFFINEINVQB : GF2P8AFFINE_common<0xCF, "gf2p8affineinvqb",
+                                             X86GF2P8affineinvqb>, TAPD;
+  defm GF2P8AFFINEQB    : GF2P8AFFINE_common<0xCE, "gf2p8affineqb",
+                                             X86GF2P8affineqb>, TAPD;
+}
+

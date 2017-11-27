@@ -69,10 +69,12 @@ include "clang/Basic/StmtNodes.td"
 //
 // The code fragment is a boolean expression that will confirm that the subject
 // meets the requirements; the subject will have the name S, and will have the
-// type specified by the base. It should be a simple boolean expression.
-class SubsetSubject<AttrSubject base, code check> : AttrSubject {
+// type specified by the base. It should be a simple boolean expression. The
+// diagnostic string should be a comma-separated list of subject names.
+class SubsetSubject<AttrSubject base, code check, string diag> : AttrSubject {
   AttrSubject Base = base;
   code CheckCode = check;
+  string DiagSpelling = diag;
 }
 
 // This is the type of a variable which C++11 allows alignas(...) to appertain
@@ -81,32 +83,38 @@ def NormalVar : SubsetSubject<Var,
                               [{S->getStorageClass() != VarDecl::Register &&
                                 S->getKind() != Decl::ImplicitParam &&
                                 S->getKind() != Decl::ParmVar &&
-                                S->getKind() != Decl::NonTypeTemplateParm}]>;
+                                S->getKind() != Decl::NonTypeTemplateParm}],
+                              "local variables">;
 def NonParmVar : SubsetSubject<Var,
-                               [{S->getKind() != Decl::ParmVar}]>;
+                               [{S->getKind() != Decl::ParmVar}],
+                               "variables and functions">;
 def NonBitField : SubsetSubject<Field,
-                                [{!S->isBitField()}]>;
+                                [{!S->isBitField()}],
+                                "non-bit-field non-static data members">;
 
 def ObjCInstanceMethod : SubsetSubject<ObjCMethod,
-                                       [{S->isInstanceMethod()}]>;
+                                       [{S->isInstanceMethod()}],
+                                       "Objective-C instance methods">;
 
 def ObjCInterfaceDeclInitMethod : SubsetSubject<ObjCMethod,
                                [{S->getMethodFamily() == OMF_init &&
                                  (isa<ObjCInterfaceDecl>(S->getDeclContext()) ||
                                   (isa<ObjCCategoryDecl>(S->getDeclContext()) &&
-            cast<ObjCCategoryDecl>(S->getDeclContext())->IsClassExtension()))}]>;
+            cast<ObjCCategoryDecl>(S->getDeclContext())->IsClassExtension()))}],
+            "init methods of interface or class extension declarations">;
 
 def Struct : SubsetSubject<Record,
-                           [{!S->isUnion()}]>;
+                           [{!S->isUnion()}], "structs">;
 
 def TLSVar : SubsetSubject<Var,
-                           [{S->getTLSKind() != 0}]>;
+                           [{S->getTLSKind() != 0}], "thread-local variables">;
 
 def SharedVar : SubsetSubject<Var,
-                              [{S->hasGlobalStorage() && !S->getTLSKind()}]>;
+                              [{S->hasGlobalStorage() && !S->getTLSKind()}],
+                              "global variables">;
 
 def GlobalVar : SubsetSubject<Var,
-                             [{S->hasGlobalStorage()}]>;
+                             [{S->hasGlobalStorage()}], "global variables">;
 
 // FIXME: this hack is needed because DeclNodes.td defines the base Decl node
 // type to be a class, not a definition. This makes it impossible to create an
@@ -115,11 +123,12 @@ def GlobalVar : SubsetSubject<Var,
 // the case of a SubsetSubject, there's no way to express it without this hack.
 def DeclBase : AttrSubject;
 def FunctionLike : SubsetSubject<DeclBase,
-                                  [{S->getFunctionType(false) != nullptr}]>;
+                                 [{S->getFunctionType(false) != nullptr}],
+                                 "functions, function pointers">;
 
-def OpenCLKernelFunction : SubsetSubject<Function, [{
-  S->hasAttr<OpenCLKernelAttr>()
-}]>;
+def OpenCLKernelFunction
+    : SubsetSubject<Function, [{S->hasAttr<OpenCLKernelAttr>()}],
+                    "kernel functions">;
 
 // HasFunctionProto is a more strict version of FunctionLike, so it should
 // never be specified in a Subjects list along with FunctionLike (due to the
@@ -128,7 +137,8 @@ def HasFunctionProto : SubsetSubject<DeclBase,
                                      [{(S->getFunctionType(true) != nullptr &&
                               isa<FunctionProtoType>(S->getFunctionType())) ||
                                        isa<ObjCMethodDecl>(S) ||
-                                       isa<BlockDecl>(S)}]>;
+                                       isa<BlockDecl>(S)}],
+                                     "non-K&R-style functions">;
 
 // A single argument to an attribute
 class Argument<string name, bit optional, bit fake = 0> {
@@ -502,8 +512,7 @@ class IgnoredAttr : Attr {
 def AbiTag : Attr {
   let Spellings = [GCC<"abi_tag">];
   let Args = [VariadicStringArgument<"Tags">];
-  let Subjects = SubjectList<[Struct, Var, Function, Namespace], ErrorDiag,
-      "ExpectedStructClassVariableFunctionOrInlineNamespace">;
+  let Subjects = SubjectList<[Struct, Var, Function, Namespace], ErrorDiag>;
   let MeaningfulToClassTemplateDefinition = 1;
   let Documentation = [AbiTagsDocs];
 }
@@ -517,8 +526,7 @@ def AddressSpace : TypeAttr {
 def Alias : Attr {
   let Spellings = [GCC<"alias">];
   let Args = [StringArgument<"Aliasee">];
-  let Subjects = SubjectList<[Function, GlobalVar], ErrorDiag,
-                             "ExpectedFunctionOrGlobalVar">;
+  let Subjects = SubjectList<[Function, GlobalVar], ErrorDiag>;
   let Documentation = [Undocumented];
 }
 
@@ -548,8 +556,7 @@ def AlignValue : Attr {
     // , Declspec<"align_value">
   ];
   let Args = [ExprArgument<"Alignment">];
-  let Subjects = SubjectList<[Var, TypedefName], WarnDiag,
-                             "ExpectedVariableOrTypedef">;
+  let Subjects = SubjectList<[Var, TypedefName]>;
   let Documentation = [AlignValueDocs];
 }
 
@@ -569,8 +576,7 @@ def AlwaysInline : InheritableAttr {
 def XRayInstrument : InheritableAttr {
   let Spellings = [Clang<"xray_always_instrument">,
                    Clang<"xray_never_instrument">];
-  let Subjects = SubjectList<[CXXMethod, ObjCMethod, Function], WarnDiag,
-                              "ExpectedFunctionOrMethod">;
+  let Subjects = SubjectList<[Function, ObjCMethod]>;
   let Accessors = [Accessor<"alwaysXRayInstrument",
                      [Clang<"xray_always_instrument">]>,
                    Accessor<"neverXRayInstrument",
@@ -580,16 +586,14 @@ def XRayInstrument : InheritableAttr {
 
 def XRayLogArgs : InheritableAttr {
   let Spellings = [Clang<"xray_log_args">];
-  let Subjects = SubjectList<
-      [CXXMethod, ObjCMethod, Function], WarnDiag, "ExpectedFunctionOrMethod"
-  >;
+  let Subjects = SubjectList<[Function, ObjCMethod]>;
   let Args = [UnsignedArgument<"ArgumentCount">];
   let Documentation = [XRayDocs];
 }
 
 def TLSModel : InheritableAttr {
   let Spellings = [GCC<"tls_model">];
-  let Subjects = SubjectList<[TLSVar], ErrorDiag, "ExpectedTLSVar">;
+  let Subjects = SubjectList<[TLSVar], ErrorDiag>;
   let Args = [StringArgument<"Model">];
   let Documentation = [TLSModelDocs];
 }
@@ -855,8 +859,7 @@ def CUDALaunchBounds : InheritableAttr {
   let Spellings = [GNU<"launch_bounds">, Declspec<"__launch_bounds__">];
   let Args = [ExprArgument<"MaxThreads">, ExprArgument<"MinBlocks", 1>];
   let LangOpts = [CUDA];
-  let Subjects = SubjectList<[ObjCMethod, FunctionLike], WarnDiag,
-                             "ExpectedFunctionOrMethod">;
+  let Subjects = SubjectList<[ObjCMethod, FunctionLike]>;
   // An AST node is created for this attribute, but is not used by other parts
   // of the compiler. However, this node needs to exist in the AST because
   // non-LLVM backends may be relying on the attribute's presence.
@@ -908,8 +911,7 @@ def OpenCLAccess : Attr {
   let Spellings = [Keyword<"__read_only">, Keyword<"read_only">,
                    Keyword<"__write_only">, Keyword<"write_only">,
                    Keyword<"__read_write">, Keyword<"read_write">];
-  let Subjects = SubjectList<[ParmVar, TypedefName], ErrorDiag,
-                             "ExpectedParameterOrTypedef">;
+  let Subjects = SubjectList<[ParmVar, TypedefName], ErrorDiag>;
   let Accessors = [Accessor<"isReadOnly", [Keyword<"__read_only">,
                                            Keyword<"read_only">]>,
                    Accessor<"isReadWrite", [Keyword<"__read_write">,
@@ -1063,16 +1065,14 @@ def Format : InheritableAttr {
   let Spellings = [GCC<"format">];
   let Args = [IdentifierArgument<"Type">, IntArgument<"FormatIdx">,
               IntArgument<"FirstArg">];
-  let Subjects = SubjectList<[ObjCMethod, Block, HasFunctionProto], WarnDiag,
-                             "ExpectedFunctionWithProtoType">;
+  let Subjects = SubjectList<[ObjCMethod, Block, HasFunctionProto]>;
   let Documentation = [FormatDocs];
 }
 
 def FormatArg : InheritableAttr {
   let Spellings = [GCC<"format_arg">];
   let Args = [IntArgument<"FormatIdx">];
-  let Subjects = SubjectList<[ObjCMethod, HasFunctionProto], WarnDiag,
-                             "ExpectedFunctionWithProtoType">;
+  let Subjects = SubjectList<[ObjCMethod, HasFunctionProto]>;
   let Documentation = [Undocumented];
 }
 
@@ -1092,8 +1092,7 @@ def Hot : InheritableAttr {
 
 def IBAction : InheritableAttr {
   let Spellings = [GNU<"ibaction">];
-  let Subjects = SubjectList<[ObjCInstanceMethod], WarnDiag,
-                             "ExpectedObjCInstanceMethod">;
+  let Subjects = SubjectList<[ObjCInstanceMethod]>;
   // An AST node is created for this attribute, but is not used by other parts
   // of the compiler. However, this node needs to exist in the AST because
   // external tools rely on it.
@@ -1205,8 +1204,7 @@ def MipsShortCall : InheritableAttr, TargetSpecificAttr<TargetAnyMips> {
 
 def Mode : Attr {
   let Spellings = [GCC<"mode">];
-  let Subjects = SubjectList<[Var, Enum, TypedefName, Field], ErrorDiag,
-                             "ExpectedVariableEnumFieldOrTypedef">;
+  let Subjects = SubjectList<[Var, Enum, TypedefName, Field], ErrorDiag>;
   let Args = [IdentifierArgument<"Mode">];
   let Documentation = [Undocumented];
 }
@@ -1255,8 +1253,7 @@ def NoCommon : InheritableAttr {
 
 def NoDebug : InheritableAttr {
   let Spellings = [GCC<"nodebug">];
-  let Subjects = SubjectList<[FunctionLike, ObjCMethod, NonParmVar], WarnDiag,
-                              "ExpectedVariableOrFunction">;
+  let Subjects = SubjectList<[FunctionLike, ObjCMethod, NonParmVar]>;
   let Documentation = [NoDebugDocs];
 }
 
@@ -1311,28 +1308,28 @@ def AMDGPUFlatWorkGroupSize : InheritableAttr {
   let Spellings = [GNU<"amdgpu_flat_work_group_size">];
   let Args = [UnsignedArgument<"Min">, UnsignedArgument<"Max">];
   let Documentation = [AMDGPUFlatWorkGroupSizeDocs];
-  let Subjects = SubjectList<[Function], ErrorDiag, "ExpectedKernelFunction">;
+  let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
 }
 
 def AMDGPUWavesPerEU : InheritableAttr {
   let Spellings = [GNU<"amdgpu_waves_per_eu">];
   let Args = [UnsignedArgument<"Min">, UnsignedArgument<"Max", 1>];
   let Documentation = [AMDGPUWavesPerEUDocs];
-  let Subjects = SubjectList<[Function], ErrorDiag, "ExpectedKernelFunction">;
+  let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
 }
 
 def AMDGPUNumSGPR : InheritableAttr {
   let Spellings = [GNU<"amdgpu_num_sgpr">];
   let Args = [UnsignedArgument<"NumSGPR">];
   let Documentation = [AMDGPUNumSGPRNumVGPRDocs];
-  let Subjects = SubjectList<[Function], ErrorDiag, "ExpectedKernelFunction">;
+  let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
 }
 
 def AMDGPUNumVGPR : InheritableAttr {
   let Spellings = [GNU<"amdgpu_num_vgpr">];
   let Args = [UnsignedArgument<"NumVGPR">];
   let Documentation = [AMDGPUNumSGPRNumVGPRDocs];
-  let Subjects = SubjectList<[Function], ErrorDiag, "ExpectedKernelFunction">;
+  let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
 }
 
 def NoSplitStack : InheritableAttr {
@@ -1344,7 +1341,7 @@ def NoSplitStack : InheritableAttr {
 def NonNull : InheritableParamAttr {
   let Spellings = [GCC<"nonnull">];
   let Subjects = SubjectList<[ObjCMethod, HasFunctionProto, ParmVar], WarnDiag,
-                             "ExpectedFunctionMethodOrParameter">;
+                             "functions, methods, and parameters">;
   let Args = [VariadicUnsignedArgument<"Args">];
   let AdditionalMembers =
 [{bool isNonNull(unsigned idx) const {
@@ -1362,8 +1359,7 @@ def NonNull : InheritableParamAttr {
 
 def ReturnsNonNull : InheritableAttr {
   let Spellings = [GCC<"returns_nonnull">];
-  let Subjects = SubjectList<[ObjCMethod, Function], WarnDiag,
-                             "ExpectedFunctionOrMethod">;
+  let Subjects = SubjectList<[ObjCMethod, Function]>;
   let Documentation = [ReturnsNonNullDocs];
 }
 
@@ -1412,8 +1408,7 @@ def AssumeAligned : InheritableAttr {
 
 def AllocAlign : InheritableAttr {
   let Spellings = [GCC<"alloc_align">];
-  let Subjects = SubjectList<[HasFunctionProto], WarnDiag,
-                             "ExpectedFunctionWithProtoType">;
+  let Subjects = SubjectList<[HasFunctionProto]>;
   let Args = [IntArgument<"ParamIndex">];
   let Documentation = [AllocAlignDocs];
 }
@@ -1451,8 +1446,7 @@ def NvWeak : IgnoredAttr {
 
 def ObjCBridge : InheritableAttr {
   let Spellings = [GNU<"objc_bridge">];
-  let Subjects = SubjectList<[Record, TypedefName], ErrorDiag,
-                             "ExpectedStructOrUnionOrTypedef">;
+  let Subjects = SubjectList<[Record, TypedefName], ErrorDiag>;
   let Args = [IdentifierArgument<"BridgedType">];
   let Documentation = [Undocumented];
 }
@@ -1568,8 +1562,7 @@ def ObjCExplicitProtocolImpl : InheritableAttr {
 
 def ObjCDesignatedInitializer : Attr {
   let Spellings = [GNU<"objc_designated_initializer">];
-  let Subjects = SubjectList<[ObjCInterfaceDeclInitMethod], ErrorDiag,
-                             "ExpectedObjCInterfaceDeclInitMethod">;
+  let Subjects = SubjectList<[ObjCInterfaceDeclInitMethod], ErrorDiag>;
   let Documentation = [Undocumented];
 }
 
@@ -1588,7 +1581,7 @@ def ObjCRuntimeVisible : Attr {
 
 def ObjCBoxable : Attr {
   let Spellings = [GNU<"objc_boxable">];
-  let Subjects = SubjectList<[Record], ErrorDiag, "ExpectedStructOrUnion">;
+  let Subjects = SubjectList<[Record], ErrorDiag>;
   let Documentation = [ObjCBoxableDocs];
 }
 
@@ -1625,8 +1618,7 @@ def Ownership : InheritableAttr {
     }
   }];
   let Args = [IdentifierArgument<"Module">, VariadicUnsignedArgument<"Args">];
-  let Subjects = SubjectList<[HasFunctionProto], WarnDiag,
-                             "ExpectedFunctionWithProtoType">;
+  let Subjects = SubjectList<[HasFunctionProto]>;
   let Documentation = [Undocumented];
 }
 
@@ -1672,8 +1664,7 @@ def ReqdWorkGroupSize : InheritableAttr {
 
 def RequireConstantInit : InheritableAttr {
   let Spellings = [Clang<"require_constant_initialization">];
-  let Subjects = SubjectList<[GlobalVar], ErrorDiag,
-                              "ExpectedStaticOrTLSVar">;
+  let Subjects = SubjectList<[GlobalVar], ErrorDiag>;
   let Documentation = [RequireConstantInitDocs];
   let LangOpts = [CPlusPlus];
 }
@@ -1697,9 +1688,8 @@ def InitPriority : InheritableAttr {
 def Section : InheritableAttr {
   let Spellings = [GCC<"section">, Declspec<"allocate">];
   let Args = [StringArgument<"Name">];
-  let Subjects = SubjectList<[Function, GlobalVar,
-                              ObjCMethod, ObjCProperty], ErrorDiag,
-                             "ExpectedFunctionGlobalVarMethodOrProperty">;
+  let Subjects =
+      SubjectList<[ Function, GlobalVar, ObjCMethod, ObjCProperty ], ErrorDiag>;
   let Documentation = [SectionDocs];
 }
 
@@ -1707,8 +1697,7 @@ def PragmaClangBSSSection : InheritableAttr {
   // This attribute has no spellings as it is only ever created implicitly.
   let Spellings = [];
   let Args = [StringArgument<"Name">];
-  let Subjects = SubjectList<[GlobalVar], ErrorDiag,
-                             "ExpectedFunctionMethodOrGlobalVar">;
+  let Subjects = SubjectList<[GlobalVar], ErrorDiag>;
   let Documentation = [Undocumented];
 }
 
@@ -1716,8 +1705,7 @@ def PragmaClangDataSection : InheritableAttr {
   // This attribute has no spellings as it is only ever created implicitly.
   let Spellings = [];
   let Args = [StringArgument<"Name">];
-  let Subjects = SubjectList<[GlobalVar], ErrorDiag,
-                             "ExpectedFunctionMethodOrGlobalVar">;
+  let Subjects = SubjectList<[GlobalVar], ErrorDiag>;
   let Documentation = [Undocumented];
 }
 
@@ -1725,8 +1713,7 @@ def PragmaClangRodataSection : InheritableAttr {
   // This attribute has no spellings as it is only ever created implicitly.
   let Spellings = [];
   let Args = [StringArgument<"Name">];
-  let Subjects = SubjectList<[GlobalVar], ErrorDiag,
-                             "ExpectedFunctionMethodOrGlobalVar">;
+  let Subjects = SubjectList<[GlobalVar], ErrorDiag>;
   let Documentation = [Undocumented];
 }
 
@@ -1734,8 +1721,7 @@ def PragmaClangTextSection : InheritableAttr {
   // This attribute has no spellings as it is only ever created implicitly.
   let Spellings = [];
   let Args = [StringArgument<"Name">];
-  let Subjects = SubjectList<[Function], ErrorDiag,
-                             "ExpectedFunctionMethodOrGlobalVar">;
+  let Subjects = SubjectList<[Function], ErrorDiag>;
   let Documentation = [Undocumented];
 }
 
@@ -1935,8 +1921,7 @@ def Unused : InheritableAttr {
   let Spellings = [CXX11<"", "maybe_unused", 201603>, GCC<"unused">,
                    C2x<"", "maybe_unused">];
   let Subjects = SubjectList<[Var, ObjCIvar, Type, Enum, EnumConstant, Label,
-                              Field, ObjCMethod, FunctionLike], WarnDiag,
-                             "ExpectedForMaybeUnused">;
+                              Field, ObjCMethod, FunctionLike]>;
   let Documentation = [WarnMaybeUnusedDocs];
 }
 
@@ -1948,7 +1933,7 @@ def Used : InheritableAttr {
 def Uuid : InheritableAttr {
   let Spellings = [Declspec<"uuid">, Microsoft<"uuid">];
   let Args = [StringArgument<"Guid">];
-  let Subjects = SubjectList<[Record, Enum], WarnDiag, "ExpectedEnumOrClass">;
+  let Subjects = SubjectList<[Record, Enum]>;
   // FIXME: Allow expressing logical AND for LangOpts. Our condition should be:
   // CPlusPlus && (MicrosoftExt || Borland)
   let LangOpts = [MicrosoftExt, Borland];
@@ -2004,8 +1989,7 @@ def WarnUnusedResult : InheritableAttr {
   let Spellings = [CXX11<"", "nodiscard", 201603>, C2x<"", "nodiscard">,
                    CXX11<"clang", "warn_unused_result">,
                    GCC<"warn_unused_result">];
-  let Subjects = SubjectList<[ObjCMethod, Enum, Record, FunctionLike],
-                             WarnDiag, "ExpectedFunctionMethodEnumOrClass">;
+  let Subjects = SubjectList<[ObjCMethod, Enum, Record, FunctionLike]>;
   let Documentation = [WarnUnusedResultsDocs];
 }
 
@@ -2061,8 +2045,7 @@ def X86ForceAlignArgPointer : InheritableAttr, TargetSpecificAttr<TargetAnyX86> 
 def NoSanitize : InheritableAttr {
   let Spellings = [Clang<"no_sanitize">];
   let Args = [VariadicStringArgument<"Sanitizers">];
-  let Subjects = SubjectList<[Function, ObjCMethod, GlobalVar], ErrorDiag,
-    "ExpectedFunctionMethodOrGlobalVar">;
+  let Subjects = SubjectList<[Function, ObjCMethod, GlobalVar], ErrorDiag>;
   let Documentation = [NoSanitizeDocs];
   let AdditionalMembers = [{
     SanitizerMask getMask() const {
@@ -2084,8 +2067,7 @@ def NoSanitizeSpecific : InheritableAttr {
                    GCC<"no_sanitize_address">,
                    GCC<"no_sanitize_thread">,
                    GNU<"no_sanitize_memory">];
-  let Subjects = SubjectList<[Function, GlobalVar], ErrorDiag,
-        "ExpectedFunctionOrGlobalVar">;
+  let Subjects = SubjectList<[Function, GlobalVar], ErrorDiag>;
   let Documentation = [NoSanitizeAddressDocs, NoSanitizeThreadDocs,
                        NoSanitizeMemoryDocs];
   let ASTNode = 0;
@@ -2095,15 +2077,13 @@ def NoSanitizeSpecific : InheritableAttr {
 
 def GuardedVar : InheritableAttr {
   let Spellings = [GNU<"guarded_var">];
-  let Subjects = SubjectList<[Field, SharedVar], WarnDiag,
-                             "ExpectedFieldOrGlobalVar">;
+  let Subjects = SubjectList<[Field, SharedVar]>;
   let Documentation = [Undocumented];
 }
 
 def PtGuardedVar : InheritableAttr {
   let Spellings = [GNU<"pt_guarded_var">];
-  let Subjects = SubjectList<[Field, SharedVar], WarnDiag,
-                             "ExpectedFieldOrGlobalVar">;
+  let Subjects = SubjectList<[Field, SharedVar]>;
   let Documentation = [Undocumented];
 }
 
@@ -2122,8 +2102,7 @@ def ScopedLockable : InheritableAttr {
 
 def Capability : InheritableAttr {
   let Spellings = [Clang<"capability">, Clang<"shared_capability">];
-  let Subjects = SubjectList<[Record, TypedefName], ErrorDiag,
-                             "ExpectedStructOrUnionOrTypedef">;
+  let Subjects = SubjectList<[Record, TypedefName], ErrorDiag>;
   let Args = [StringArgument<"Name">];
   let Accessors = [Accessor<"isShared",
                     [Clang<"shared_capability">]>];
@@ -2228,8 +2207,7 @@ def GuardedBy : InheritableAttr {
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let DuplicatesAllowedWhileMerging = 1;
-  let Subjects = SubjectList<[Field, SharedVar], WarnDiag,
-                             "ExpectedFieldOrGlobalVar">;
+  let Subjects = SubjectList<[Field, SharedVar]>;
   let Documentation = [Undocumented];
 }
 
@@ -2240,8 +2218,7 @@ def PtGuardedBy : InheritableAttr {
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let DuplicatesAllowedWhileMerging = 1;
-  let Subjects = SubjectList<[Field, SharedVar], WarnDiag,
-                             "ExpectedFieldOrGlobalVar">;
+  let Subjects = SubjectList<[Field, SharedVar]>;
   let Documentation = [Undocumented];
 }
 
@@ -2252,8 +2229,7 @@ def AcquiredAfter : InheritableAttr {
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let DuplicatesAllowedWhileMerging = 1;
-  let Subjects = SubjectList<[Field, SharedVar], WarnDiag,
-                             "ExpectedFieldOrGlobalVar">;
+  let Subjects = SubjectList<[Field, SharedVar]>;
   let Documentation = [Undocumented];
 }
 
@@ -2264,8 +2240,7 @@ def AcquiredBefore : InheritableAttr {
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let DuplicatesAllowedWhileMerging = 1;
-  let Subjects = SubjectList<[Field, SharedVar], WarnDiag,
-                             "ExpectedFieldOrGlobalVar">;
+  let Subjects = SubjectList<[Field, SharedVar]>;
   let Documentation = [Undocumented];
 }
 

@@ -10242,3 +10242,55 @@ multiclass VPSHUFBITQMB_common<AVX512VLVectorVTInfo VTI> {
 
 defm VPSHUFBITQMB : VPSHUFBITQMB_common<avx512vl_i8_info>;
 
+//===----------------------------------------------------------------------===//
+// GFNI
+//===----------------------------------------------------------------------===//
+
+multiclass GF2P8MULB_avx512_common<bits<8> Op, string OpStr, SDNode OpNode> {
+  let Predicates = [HasGFNI, HasAVX512, HasBWI] in
+  defm Z      : avx512_binop_rm<Op, OpStr, OpNode, v64i8_info,
+                                SSE_INTALU_ITINS_P, 1>, EVEX_V512;
+  let Predicates = [HasGFNI, HasVLX, HasBWI] in {
+    defm Z256 : avx512_binop_rm<Op, OpStr, OpNode, v32i8x_info,
+                                SSE_INTALU_ITINS_P, 1>, EVEX_V256;
+    defm Z128 : avx512_binop_rm<Op, OpStr, OpNode, v16i8x_info,
+                                SSE_INTALU_ITINS_P, 1>, EVEX_V128;
+  }
+}
+
+defm GF2P8MULB : GF2P8MULB_avx512_common<0xCF, "vgf2p8mulb", X86GF2P8mulb>,
+                 EVEX_CD8<8, CD8VF>, T8PD;
+
+multiclass GF2P8AFFINE_avx512_rmb_imm<bits<8> Op, string OpStr, SDNode OpNode,
+                                      X86VectorVTInfo VTI,
+                                      X86VectorVTInfo BcstVTI>
+           : avx512_3Op_rm_imm8<Op, OpStr, OpNode, VTI, VTI> {
+  let ExeDomain = VTI.ExeDomain in
+  defm rmbi : AVX512_maskable<Op, MRMSrcMem, VTI, (outs VTI.RC:$dst),
+                (ins VTI.RC:$src1, VTI.ScalarMemOp:$src2, u8imm:$src3),
+                OpStr, "$src3, ${src2}"##BcstVTI.BroadcastStr##", $src1",
+                "$src1, ${src2}"##BcstVTI.BroadcastStr##", $src3",
+                (OpNode (VTI.VT VTI.RC:$src1),
+                 (bitconvert (BcstVTI.VT (X86VBroadcast (loadi64 addr:$src2)))),
+                 (i8 imm:$src3))>, EVEX_B;
+}
+
+multiclass GF2P8AFFINE_avx512_common<bits<8> Op, string OpStr, SDNode OpNode> {
+  let Predicates = [HasGFNI, HasAVX512, HasBWI] in
+  defm Z      : GF2P8AFFINE_avx512_rmb_imm<Op, OpStr, OpNode, v64i8_info,
+                                           v8i64_info>, EVEX_V512;
+  let Predicates = [HasGFNI, HasVLX, HasBWI] in {
+    defm Z256 : GF2P8AFFINE_avx512_rmb_imm<Op, OpStr, OpNode, v32i8x_info,
+                                           v4i64x_info>, EVEX_V256;
+    defm Z128 : GF2P8AFFINE_avx512_rmb_imm<Op, OpStr, OpNode, v16i8x_info,
+                                           v2i64x_info>, EVEX_V128;
+  }
+}
+
+defm GF2P8AFFINEINVQB : GF2P8AFFINE_avx512_common<0xCF, "vgf2p8affineinvqb",
+                                                  X86GF2P8affineinvqb>,
+                        EVEX_4V, EVEX_CD8<8, CD8VF>, VEX_W, AVX512AIi8Base;
+defm GF2P8AFFINEQB    : GF2P8AFFINE_avx512_common<0xCE, "vgf2p8affineqb",
+                                                  X86GF2P8affineqb>,
+                        EVEX_4V, EVEX_CD8<8, CD8VF>, VEX_W, AVX512AIi8Base;
+

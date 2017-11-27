@@ -2149,8 +2149,7 @@ static void Passv64i1ArgInRegs(
     const SDLoc &Dl, SelectionDAG &DAG, SDValue Chain, SDValue &Arg,
     SmallVector<std::pair<unsigned, SDValue>, 8> &RegsToPass, CCValAssign &VA,
     CCValAssign &NextVA, const X86Subtarget &Subtarget) {
-  assert((Subtarget.hasBWI() || Subtarget.hasBMI()) &&
-         "Expected AVX512BW or AVX512BMI target!");
+  assert(Subtarget.hasBWI() && "Expected AVX512BW target!");
   assert(Subtarget.is32Bit() && "Expecting 32 bit target");
   assert(Arg.getValueType() == MVT::i64 && "Expecting 64 bit value");
   assert(VA.isRegLoc() && NextVA.isRegLoc() &&
@@ -17187,8 +17186,11 @@ SDValue X86TargetLowering::getSqrtEstimate(SDValue Op,
   // instructions: convert to single, rsqrtss, convert back to double, refine
   // (3 steps = at least 13 insts). If an 'rsqrtsd' variant was added to the ISA
   // along with FMA, this could be a throughput win.
+  // TODO: SQRT requires SSE2 to prevent the introduction of an illegal v4i32
+  // after legalize types.
   if ((VT == MVT::f32 && Subtarget.hasSSE1()) ||
-      (VT == MVT::v4f32 && Subtarget.hasSSE1()) ||
+      (VT == MVT::v4f32 && Subtarget.hasSSE1() && Reciprocal) ||
+      (VT == MVT::v4f32 && Subtarget.hasSSE2() && !Reciprocal) ||
       (VT == MVT::v8f32 && Subtarget.hasAVX())) {
     if (RefinementSteps == ReciprocalEstimate::Unspecified)
       RefinementSteps = 1;
@@ -25166,6 +25168,10 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::FNMADDS3_RND:       return "X86ISD::FNMADDS3_RND";
   case X86ISD::FMSUBS3_RND:        return "X86ISD::FMSUBS3_RND";
   case X86ISD::FNMSUBS3_RND:       return "X86ISD::FNMSUBS3_RND";
+  case X86ISD::FMADD4S:            return "X86ISD::FMADD4S";
+  case X86ISD::FNMADD4S:           return "X86ISD::FNMADD4S";
+  case X86ISD::FMSUB4S:            return "X86ISD::FMSUB4S";
+  case X86ISD::FNMSUB4S:           return "X86ISD::FNMSUB4S";
   case X86ISD::VPMADD52H:          return "X86ISD::VPMADD52H";
   case X86ISD::VPMADD52L:          return "X86ISD::VPMADD52L";
   case X86ISD::VRNDSCALE:          return "X86ISD::VRNDSCALE";
@@ -25247,6 +25253,9 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::VPDPWSSD:           return "X86ISD::VPDPWSSD";
   case X86ISD::VPDPWSSDS:          return "X86ISD::VPDPWSSDS";
   case X86ISD::VPSHUFBITQMB:       return "X86ISD::VPSHUFBITQMB";
+  case X86ISD::GF2P8MULB:          return "X86ISD::GF2P8MULB";
+  case X86ISD::GF2P8AFFINEQB:      return "X86ISD::GF2P8AFFINEQB";
+  case X86ISD::GF2P8AFFINEINVQB:   return "X86ISD::GF2P8AFFINEINVQB";
   }
   return nullptr;
 }
@@ -32964,6 +32973,16 @@ static SDValue combineAndMaskToShift(SDNode *N, SelectionDAG &DAG,
 static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
+  EVT VT = N->getValueType(0);
+
+  // If this is SSE1 only convert to FAND to avoid scalarization.
+  if (Subtarget.hasSSE1() && !Subtarget.hasSSE2() && VT == MVT::v4i32) {
+    return DAG.getBitcast(
+        MVT::v4i32, DAG.getNode(X86ISD::FAND, SDLoc(N), MVT::v4f32,
+                                DAG.getBitcast(MVT::v4f32, N->getOperand(0)),
+                                DAG.getBitcast(MVT::v4f32, N->getOperand(1))));
+  }
+
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
@@ -32978,8 +32997,6 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue ShiftRight = combineAndMaskToShift(N, DAG, Subtarget))
     return ShiftRight;
-
-  EVT VT = N->getValueType(0);
 
   // Attempt to recursively combine a bitmask AND with shuffles.
   if (VT.isVector() && (VT.getScalarSizeInBits() % 8) == 0) {
@@ -33263,6 +33280,18 @@ static SDValue combineOrCmpEqZeroToCtlzSrl(SDNode *N, SelectionDAG &DAG,
 static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
                          TargetLowering::DAGCombinerInfo &DCI,
                          const X86Subtarget &Subtarget) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  EVT VT = N->getValueType(0);
+
+  // If this is SSE1 only convert to FOR to avoid scalarization.
+  if (Subtarget.hasSSE1() && !Subtarget.hasSSE2() && VT == MVT::v4i32) {
+    return DAG.getBitcast(MVT::v4i32,
+                          DAG.getNode(X86ISD::FOR, SDLoc(N), MVT::v4f32,
+                                      DAG.getBitcast(MVT::v4f32, N0),
+                                      DAG.getBitcast(MVT::v4f32, N1)));
+  }
+
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
@@ -33274,10 +33303,6 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue R = combineLogicBlendIntoPBLENDV(N, DAG, Subtarget))
     return R;
-
-  SDValue N0 = N->getOperand(0);
-  SDValue N1 = N->getOperand(1);
-  EVT VT = N->getValueType(0);
 
   if (VT != MVT::i16 && VT != MVT::i32 && VT != MVT::i64)
     return SDValue();
@@ -34954,6 +34979,15 @@ static SDValue foldXor1SetCC(SDNode *N, SelectionDAG &DAG) {
 static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
+  // If this is SSE1 only convert to FXOR to avoid scalarization.
+  if (Subtarget.hasSSE1() && !Subtarget.hasSSE2() &&
+      N->getValueType(0) == MVT::v4i32) {
+    return DAG.getBitcast(
+        MVT::v4i32, DAG.getNode(X86ISD::FXOR, SDLoc(N), MVT::v4f32,
+                                DAG.getBitcast(MVT::v4f32, N->getOperand(0)),
+                                DAG.getBitcast(MVT::v4f32, N->getOperand(1))));
+  }
+
   if (SDValue Cmp = foldVectorXorShiftIntoCmp(N, DAG, Subtarget))
     return Cmp;
 
@@ -35005,10 +35039,13 @@ static SDValue combineFAndFNotToFAndn(SDNode *N, SelectionDAG &DAG,
 
   // Vector types are handled in combineANDXORWithAllOnesIntoANDNP().
   if (!((VT == MVT::f32 && Subtarget.hasSSE1()) ||
-        (VT == MVT::f64 && Subtarget.hasSSE2())))
+        (VT == MVT::f64 && Subtarget.hasSSE2()) ||
+        (VT == MVT::v4f32 && Subtarget.hasSSE1() && !Subtarget.hasSSE2())))
     return SDValue();
 
   auto isAllOnesConstantFP = [](SDValue V) {
+    if (V.getSimpleValueType().isVector())
+      return ISD::isBuildVectorAllOnes(V.getNode());
     auto *C = dyn_cast<ConstantFPSDNode>(V);
     return C && C->getConstantFPValue()->isAllOnesValue();
   };
@@ -35693,6 +35730,13 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
     case X86ISD::FNMADD: NewOpcode = X86ISD::FNMADDS3_RND; break;
     case X86ISD::FNMSUB: NewOpcode = X86ISD::FNMSUBS3_RND; break;
     }
+  } else if (N->getOpcode() == X86ISD::FMADD4S) {
+    switch (NewOpcode) {
+    case ISD::FMA:       NewOpcode = X86ISD::FMADD4S; break;
+    case X86ISD::FMSUB:  NewOpcode = X86ISD::FMSUB4S; break;
+    case X86ISD::FNMADD: NewOpcode = X86ISD::FNMADD4S; break;
+    case X86ISD::FNMSUB: NewOpcode = X86ISD::FNMSUB4S; break;
+    }
   } else {
     llvm_unreachable("Unexpected opcode!");
   }
@@ -35871,22 +35915,18 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
       return V;
   }
 
-  if (VT.getScalarType() == MVT::i1 &&
+  if (VT.isVector() && VT.getVectorElementType() == MVT::i1 &&
       (CC == ISD::SETNE || CC == ISD::SETEQ || ISD::isSignedIntSetCC(CC))) {
-    bool IsSEXT0 =
-        (LHS.getOpcode() == ISD::SIGN_EXTEND) &&
-        (LHS.getOperand(0).getValueType().getScalarType() == MVT::i1);
-    bool IsVZero1 = ISD::isBuildVectorAllZeros(RHS.getNode());
-
-    if (!IsSEXT0 || !IsVZero1) {
-      // Swap the operands and update the condition code.
+    // Put build_vectors on the right.
+    if (LHS.getOpcode() == ISD::BUILD_VECTOR) {
       std::swap(LHS, RHS);
       CC = ISD::getSetCCSwappedOperands(CC);
-
-      IsSEXT0 = (LHS.getOpcode() == ISD::SIGN_EXTEND) &&
-                (LHS.getOperand(0).getValueType().getScalarType() == MVT::i1);
-      IsVZero1 = ISD::isBuildVectorAllZeros(RHS.getNode());
     }
+
+    bool IsSEXT0 =
+        (LHS.getOpcode() == ISD::SIGN_EXTEND) &&
+        (LHS.getOperand(0).getValueType().getVectorElementType() == MVT::i1);
+    bool IsVZero1 = ISD::isBuildVectorAllZeros(RHS.getNode());
 
     if (IsSEXT0 && IsVZero1) {
       assert(VT == LHS.getOperand(0).getValueType() &&
@@ -37065,6 +37105,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::FMADDS3_RND:
   case X86ISD::FMADDS1:
   case X86ISD::FMADDS3:
+  case X86ISD::FMADD4S:
   case ISD::FMA:            return combineFMA(N, DAG, Subtarget);
   case X86ISD::FMADDSUB_RND:
   case X86ISD::FMSUBADD_RND:

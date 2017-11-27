@@ -685,6 +685,10 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasSHA = true;
     } else if (Feature == "+mpx") {
       HasMPX = true;
+    } else if (Feature == "+shstk") {
+      HasSHSTK = true;
+    } else if (Feature == "+ibt") {
+      HasIBT = true;
     } else if (Feature == "+movbe") {
       HasMOVBE = true;
     } else if (Feature == "+sgx") {
@@ -1031,6 +1035,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__CLWB__");
   if (HasMPX)
     Builder.defineMacro("__MPX__");
+  if (HasSHSTK)
+    Builder.defineMacro("__SHSTK__");
   if (HasSGX)
     Builder.defineMacro("__SGX__");
   if (HasPREFETCHWT1)
@@ -1215,6 +1221,8 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("mmx", MMX3DNowLevel >= MMX)
       .Case("movbe", HasMOVBE)
       .Case("mpx", HasMPX)
+      .Case("shstk", HasSHSTK)
+      .Case("ibt", HasIBT)
       .Case("pclmul", HasPCLMUL)
       .Case("pku", HasPKU)
       .Case("popcnt", HasPOPCNT)

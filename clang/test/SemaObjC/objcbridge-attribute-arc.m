@@ -32,7 +32,7 @@ typedef XXX *CFUColor2Ref;
 
 @interface I
 {
-   __attribute__((objc_bridge(NSError))) void * color; // expected-error {{'objc_bridge' attribute only applies to structs, unions, and typedefs}};
+   __attribute__((objc_bridge(NSError))) void * color; // expected-error {{'objc_bridge' attribute only applies to structs, unions, classes, and typedefs}};
 }
 @end
 

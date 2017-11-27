@@ -15,7 +15,7 @@ __launch_bounds__(128, -7) void TestNegArg2(void); // expected-warning {{'launch
 __launch_bounds__(1, 2, 3) void Test3Args(void); // expected-error {{'launch_bounds' attribute takes no more than 2 arguments}}
 __launch_bounds__() void TestNoArgs(void); // expected-error {{'launch_bounds' attribute takes at least 1 argument}}
 
-int TestNoFunction __launch_bounds__(128, 7); // expected-warning {{'launch_bounds' attribute only applies to functions and methods}}
+int TestNoFunction __launch_bounds__(128, 7); // expected-warning {{'launch_bounds' attribute only applies to Objective-C methods, functions, and function pointers}}
 
 __launch_bounds__(true) void TestBool(void);
 __launch_bounds__(128.0) void TestFP(void); // expected-error {{'launch_bounds' attribute requires parameter 0 to be an integer constant}}

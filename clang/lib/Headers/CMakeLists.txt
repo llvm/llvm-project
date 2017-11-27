@@ -30,6 +30,7 @@ set(files
   __clang_cuda_intrinsics.h
   __clang_cuda_math_forward_declares.h
   __clang_cuda_runtime_wrapper.h
+  cetintrin.h
   clzerointrin.h
   cpuid.h
   clflushoptintrin.h
