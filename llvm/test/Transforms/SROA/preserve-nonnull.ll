@@ -3,6 +3,8 @@
 ; Make sure that SROA doesn't lose nonnull metadata
 ; on loads from allocas that get optimized out.
 
+%pair = type { i64, [0 x i64], [1 x i64] }
+
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32, i1)
 
 ; Check that we do basic propagation of nonnull when rewriting.
@@ -40,6 +42,23 @@ entry:
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %_buf_i8, i8* %_arg_i8, i64 8, i32 8, i1 false)
   %ret = load float*, float** %buf, align 8, !nonnull !0
   ret float* %ret
+}
+
+; Make sure we propagate the !range attribute when we expand loads.
+define i64 @propagate_range(%pair* dereferenceable(16)) {
+; CHECK-LABEL: define i64 @propagate_range(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:      %[[SROA_IDX:.*]] = getelementptr inbounds %pair
+; CHECK-NEXT:      %[[RESULT:.*]] = load i64, i64* %[[SROA_IDX]], align 8, !range !1
+; CHECK:           ret i64 %[[RESULT]]
+start:
+  %a = alloca %pair
+  %1 = bitcast %pair* %0 to i8*
+  %2 = bitcast %pair* %a to i8*
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %2, i8* %1, i64 16, i32 8, i1 false)
+  %3 = getelementptr inbounds %pair, %pair* %a, i32 0, i32 0
+  %4 = load i64, i64* %3, !range !1
+  ret i64 %4
 }
 
 ; Make sure we properly handle the !nonnull attribute when we convert
@@ -90,3 +109,4 @@ entry:
 }
 
 !0 = !{}
+!1 = !{i64 0, i64 2}

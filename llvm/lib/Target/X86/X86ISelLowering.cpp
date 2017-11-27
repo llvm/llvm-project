@@ -1202,8 +1202,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::UINT_TO_FP,         MVT::v4i1,  Custom);
     setOperationAction(ISD::SINT_TO_FP,         MVT::v2i1,  Custom);
     setOperationAction(ISD::UINT_TO_FP,         MVT::v2i1,  Custom);
-    setOperationAction(ISD::FP_ROUND,           MVT::v8f32, Legal);
-    setOperationAction(ISD::FP_EXTEND,          MVT::v8f32, Legal);
 
     setTruncStoreAction(MVT::v8i64,   MVT::v8i8,   Legal);
     setTruncStoreAction(MVT::v8i64,   MVT::v8i16,  Legal);
@@ -1722,7 +1720,7 @@ EVT X86TargetLowering::getSetCCResultType(const DataLayout &DL,
     MVT VVT = VT.getSimpleVT();
     const unsigned NumElts = VVT.getVectorNumElements();
     MVT EltVT = VVT.getVectorElementType();
-    if (VVT.is512BitVector()) {
+    if (VVT.getSizeInBits() >= 512) {
       if (Subtarget.hasAVX512())
         if (EltVT == MVT::i32 || EltVT == MVT::i64 ||
             EltVT == MVT::f32 || EltVT == MVT::f64)
@@ -28343,7 +28341,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   // Which shuffle domains are permitted?
   // Permit domain crossing at higher combine depths.
   bool AllowFloatDomain = FloatDomain || (Depth > 3);
-  bool AllowIntDomain = (!FloatDomain || (Depth > 3)) &&
+  bool AllowIntDomain = (!FloatDomain || (Depth > 3)) && Subtarget.hasSSE2() &&
                         (!MaskVT.is256BitVector() || Subtarget.hasAVX2());
 
   // Determine zeroable mask elements.

@@ -47,6 +47,11 @@ inline StringRef toStringRef(ArrayRef<uint8_t> Input) {
   return StringRef(reinterpret_cast<const char *>(Input.begin()), Input.size());
 }
 
+/// Construct a string ref from an array ref of unsigned chars.
+inline ArrayRef<uint8_t> arrayRefFromStringRef(StringRef Input) {
+  return {Input.bytes_begin(), Input.bytes_end()};
+}
+
 /// Interpret the given character \p C as a hexadecimal digit and return its
 /// value.
 ///

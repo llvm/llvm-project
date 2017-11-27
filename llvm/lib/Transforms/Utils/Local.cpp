@@ -1947,18 +1947,24 @@ void llvm::copyNonnullMetadata(const LoadInst &OldLI, MDNode *N,
 void llvm::copyRangeMetadata(const DataLayout &DL, const LoadInst &OldLI,
                              MDNode *N, LoadInst &NewLI) {
   auto *NewTy = NewLI.getType();
+  auto *OldTy = OldLI.getType();
 
-  // Give up unless it is converted to a pointer where there is a single very
-  // valuable mapping we can do reliably.
-  // FIXME: It would be nice to propagate this in more ways, but the type
-  // conversions make it hard.
-  if (!NewTy->isPointerTy())
+  if (DL.getTypeStoreSizeInBits(NewTy) == DL.getTypeSizeInBits(OldTy) &&
+      NewTy->isIntegerTy()) {
+    // An integer with the same number of bits - give it the range
+    // metadata!.
+    NewLI.setMetadata(LLVMContext::MD_range, N);
     return;
+  }
 
-  unsigned BitWidth = DL.getTypeSizeInBits(NewTy);
-  if (!getConstantRangeFromMetadata(*N).contains(APInt(BitWidth, 0))) {
-    MDNode *NN = MDNode::get(OldLI.getContext(), None);
-    NewLI.setMetadata(LLVMContext::MD_nonnull, NN);
+  if (NewTy->isPointerTy()) {
+    // Try to convert the !range metadata to !nonnull metadata on the
+    // new pointer.
+    unsigned BitWidth = DL.getTypeSizeInBits(NewTy);
+    if (!getConstantRangeFromMetadata(*N).contains(APInt(BitWidth, 0))) {
+      MDNode *NN = MDNode::get(OldLI.getContext(), None);
+      NewLI.setMetadata(LLVMContext::MD_nonnull, NN);
+    }
   }
 }
 

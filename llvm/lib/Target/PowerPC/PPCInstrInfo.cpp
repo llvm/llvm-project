@@ -2266,6 +2266,20 @@ static bool isZeroExtendingOp(const MachineInstr &MI) {
   return false;
 }
 
+// This function returns true if the input MachineInstr is a TOC save
+// instruction.
+bool PPCInstrInfo::isTOCSaveMI(const MachineInstr &MI) const {
+  if (!MI.getOperand(1).isImm() || !MI.getOperand(2).isReg())
+    return false;
+  unsigned TOCSaveOffset = Subtarget.getFrameLowering()->getTOCSaveOffset();
+  unsigned StackOffset = MI.getOperand(1).getImm();
+  unsigned StackReg = MI.getOperand(2).getReg();
+  if (StackReg == PPC::X1 && StackOffset == TOCSaveOffset)
+    return true;
+
+  return false;
+}
+
 // We limit the max depth to track incoming values of PHIs or binary ops
 // (e.g. AND) to avoid exsessive cost.
 const unsigned MAX_DEPTH = 1;

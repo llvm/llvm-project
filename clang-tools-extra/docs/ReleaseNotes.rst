@@ -57,6 +57,11 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- New `objc-avoid-spinlock
+  <http://clang.llvm.org/extra/clang-tidy/checks/objc-avoid-spinlock.html>`_ check
+
+  Add new check to detect the use of OSSpinlock.
+
 - The 'misc-move-constructor-init' check was renamed to `performance-move-constructor-init
   <http://clang.llvm.org/extra/clang-tidy/checks/performance-move-constructor-init.html>`_
 
@@ -99,7 +104,7 @@ Improvements to clang-tidy
 - The 'misc-string-constructor' check was renamed to `bugprone-string-constructor
   <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-string-constructor.html>`_
 
-- New `google-avoid-throwing-objc-exception
+- New `google-objc-avoid-throwing-exception
   <http://clang.llvm.org/extra/clang-tidy/checks/google-objc-avoid-throwing-exception.html>`_ check
 
   Add new check to detect throwing exceptions in Objective-C code, which should be avoided.

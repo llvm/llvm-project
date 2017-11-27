@@ -22,5 +22,6 @@ add_clang_library(clangTidyCERTModule
   clangTidy
   clangTidyGoogleModule
   clangTidyMiscModule
+  clangTidyPerformanceModule
   clangTidyUtils
   )

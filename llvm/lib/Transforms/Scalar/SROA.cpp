@@ -2455,15 +2455,10 @@ private:
       // are different types, for example by mapping !nonnull metadata to
       // !range metadata by modeling the null pointer constant converted to the
       // integer type.
-      // FIXME: Add support for range metadata here. Currently the utilities
-      // for this don't propagate range metadata in trivial cases from one
-      // integer load to another, don't handle non-addrspace-0 null pointers
-      // correctly, and don't have any support for mapping ranges as the
-      // integer type becomes winder or narrower.
       if (MDNode *N = LI.getMetadata(LLVMContext::MD_nonnull))
         copyNonnullMetadata(LI, N, *NewLI);
-
-      // Try to preserve nonnull metadata
+      if (MDNode *N = LI.getMetadata(LLVMContext::MD_range))
+        copyRangeMetadata(DL, LI, N, *NewLI);
       V = NewLI;
 
       // If this is an integer load past the end of the slice (which means the
@@ -3654,7 +3649,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
                          PartPtrTy, BasePtr->getName() + "."),
           getAdjustedAlignment(LI, PartOffset, DL), /*IsVolatile*/ false,
           LI->getName());
-      PLoad->copyMetadata(*LI, LLVMContext::MD_mem_parallel_loop_access); 
+      PLoad->copyMetadata(*LI, LLVMContext::MD_mem_parallel_loop_access);
 
       // Append this load onto the list of split loads so we can find it later
       // to rewrite the stores.

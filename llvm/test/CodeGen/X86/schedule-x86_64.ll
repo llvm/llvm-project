@@ -1072,6 +1072,90 @@ define void @test_cpuid() optsize {
 ; TODO - test_int
 ; TODO - test_into
 
+define void @test_invlpg_invlpga(i8 *%a0) optsize {
+; GENERIC-LABEL: test_invlpg_invlpga:
+; GENERIC:       # BB#0:
+; GENERIC-NEXT:    #APP
+; GENERIC-NEXT:    invlpg (%rdi) # sched: [100:0.33]
+; GENERIC-NEXT:    invlpga %ecx, %rax # sched: [100:0.33]
+; GENERIC-NEXT:    #NO_APP
+; GENERIC-NEXT:    retq # sched: [1:1.00]
+;
+; ATOM-LABEL: test_invlpg_invlpga:
+; ATOM:       # BB#0:
+; ATOM-NEXT:    #APP
+; ATOM-NEXT:    invlpg (%rdi) # sched: [71:35.50]
+; ATOM-NEXT:    invlpga %ecx, %rax # sched: [71:35.50]
+; ATOM-NEXT:    #NO_APP
+; ATOM-NEXT:    retq # sched: [79:39.50]
+;
+; SLM-LABEL: test_invlpg_invlpga:
+; SLM:       # BB#0:
+; SLM-NEXT:    #APP
+; SLM-NEXT:    invlpg (%rdi) # sched: [100:1.00]
+; SLM-NEXT:    invlpga %ecx, %rax # sched: [100:1.00]
+; SLM-NEXT:    #NO_APP
+; SLM-NEXT:    retq # sched: [4:1.00]
+;
+; SANDY-LABEL: test_invlpg_invlpga:
+; SANDY:       # BB#0:
+; SANDY-NEXT:    #APP
+; SANDY-NEXT:    invlpg (%rdi) # sched: [100:0.33]
+; SANDY-NEXT:    invlpga %ecx, %rax # sched: [100:0.33]
+; SANDY-NEXT:    #NO_APP
+; SANDY-NEXT:    retq # sched: [1:1.00]
+;
+; HASWELL-LABEL: test_invlpg_invlpga:
+; HASWELL:       # BB#0:
+; HASWELL-NEXT:    #APP
+; HASWELL-NEXT:    invlpg (%rdi) # sched: [100:0.25]
+; HASWELL-NEXT:    invlpga %ecx, %rax # sched: [100:0.25]
+; HASWELL-NEXT:    #NO_APP
+; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; BROADWELL-LABEL: test_invlpg_invlpga:
+; BROADWELL:       # BB#0:
+; BROADWELL-NEXT:    #APP
+; BROADWELL-NEXT:    invlpg (%rdi) # sched: [100:0.25]
+; BROADWELL-NEXT:    invlpga %ecx, %rax # sched: [100:0.25]
+; BROADWELL-NEXT:    #NO_APP
+; BROADWELL-NEXT:    retq # sched: [7:1.00]
+;
+; SKYLAKE-LABEL: test_invlpg_invlpga:
+; SKYLAKE:       # BB#0:
+; SKYLAKE-NEXT:    #APP
+; SKYLAKE-NEXT:    invlpg (%rdi) # sched: [100:0.25]
+; SKYLAKE-NEXT:    invlpga %ecx, %rax # sched: [100:0.25]
+; SKYLAKE-NEXT:    #NO_APP
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
+;
+; SKX-LABEL: test_invlpg_invlpga:
+; SKX:       # BB#0:
+; SKX-NEXT:    #APP
+; SKX-NEXT:    invlpg (%rdi) # sched: [100:0.25]
+; SKX-NEXT:    invlpga %ecx, %rax # sched: [100:0.25]
+; SKX-NEXT:    #NO_APP
+; SKX-NEXT:    retq # sched: [7:1.00]
+;
+; BTVER2-LABEL: test_invlpg_invlpga:
+; BTVER2:       # BB#0:
+; BTVER2-NEXT:    #APP
+; BTVER2-NEXT:    invlpg (%rdi) # sched: [100:0.17]
+; BTVER2-NEXT:    invlpga %ecx, %rax # sched: [100:0.17]
+; BTVER2-NEXT:    #NO_APP
+; BTVER2-NEXT:    retq # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_invlpg_invlpga:
+; ZNVER1:       # BB#0:
+; ZNVER1-NEXT:    #APP
+; ZNVER1-NEXT:    invlpg (%rdi) # sched: [100:?]
+; ZNVER1-NEXT:    invlpga %ecx, %rax # sched: [100:?]
+; ZNVER1-NEXT:    #NO_APP
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
+  tail call void asm sideeffect "invlpg $0 \0A\09 invlpga %ecx, %rax", "*m"(i8 *%a0) nounwind
+  ret void
+}
+
 ; TODO - test_jcc
 ; TODO - test_jcxz
 ; TODO - test_jwcxz
