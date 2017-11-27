@@ -73,7 +73,7 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name) {
 void SymbolTable::reportDuplicate(Symbol *Existing, InputFile *NewFile) {
   error("duplicate symbol: " + toString(*Existing) + "\n>>> defined in " +
         toString(Existing->getFile()) + "\n>>> defined in " +
-        (NewFile ? toString(NewFile) : "<internal>"));
+        toString(NewFile));
 }
 
 static void checkSymbolTypes(Symbol *Existing, InputFile *F,
@@ -86,13 +86,10 @@ static void checkSymbolTypes(Symbol *Existing, InputFile *F,
   if (Existing->isFunction() == NewIsFunction)
     return;
 
-  std::string Filename = "<builtin>";
-  if (Existing->getFile())
-    Filename = toString(Existing->getFile());
   error("symbol type mismatch: " + New->Name + "\n>>> defined as " +
-        (Existing->isFunction() ? "Function" : "Global") + " in " + Filename +
-        "\n>>> defined as " + (NewIsFunction ? "Function" : "Global") + " in " +
-        F->getName());
+        (Existing->isFunction() ? "Function" : "Global") + " in " +
+        toString(Existing->getFile()) + "\n>>> defined as " +
+        (NewIsFunction ? "Function" : "Global") + " in " + F->getName());
 }
 
 Symbol *SymbolTable::addDefinedGlobal(StringRef Name) {

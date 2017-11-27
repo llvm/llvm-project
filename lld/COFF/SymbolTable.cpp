@@ -200,8 +200,7 @@ void SymbolTable::addLazy(ArchiveFile *F, const Archive::Symbol Sym) {
 
 void SymbolTable::reportDuplicate(Symbol *Existing, InputFile *NewFile) {
   error("duplicate symbol: " + toString(*Existing) + " in " +
-        toString(Existing->getFile()) + " and in " +
-        (NewFile ? toString(NewFile) : "(internal)"));
+        toString(Existing->getFile()) + " and in " + toString(NewFile));
 }
 
 Symbol *SymbolTable::addAbsolute(StringRef N, COFFSymbolRef Sym) {

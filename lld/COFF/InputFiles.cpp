@@ -411,7 +411,7 @@ static StringRef getBasename(StringRef Path) {
 // Returns a string in the format of "foo.obj" or "foo.obj(bar.lib)".
 std::string lld::toString(coff::InputFile *File) {
   if (!File)
-    return "(internal)";
+    return "<internal>";
   if (File->ParentName.empty())
     return File->getName().lower();
 
