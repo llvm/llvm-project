@@ -100,9 +100,9 @@ available_targets = {
                 {'gpu' : 'barts',   'aliases' : ['turks', 'caicos'] },
                 {'gpu' : 'cayman',  'aliases' : ['aruba']} ]},
   'amdgcn--': { 'devices' :
-                [{'gpu' : 'tahiti', 'aliases' : ['pitcairn', 'verde', 'oland', 'hainan', 'bonaire', 'kabini', 'kaveri', 'hawaii','mullins','tonga','carrizo','iceland','fiji','stoney','polaris10','polaris11']} ]},
+                [{'gpu' : 'tahiti', 'aliases' : ['pitcairn', 'verde', 'oland', 'hainan', 'bonaire', 'kabini', 'kaveri', 'hawaii', 'mullins', 'tonga', 'iceland', 'carrizo', 'fiji', 'stoney', 'polaris10', 'polaris11', 'gfx900']} ]},
   'amdgcn--amdhsa': { 'devices' :
-                      [{'gpu' : '', 'aliases' : ['bonaire', 'hawaii', 'kabini', 'kaveri', 'mullins', 'carrizo', 'stoney', 'fiji', 'iceland', 'tonga','polaris10','polaris11']} ]},
+                      [{'gpu' : '', 'aliases' : ['bonaire', 'kabini', 'kaveri', 'hawaii', 'mullins', 'tonga', 'iceland', 'carrizo', 'fiji', 'stoney', 'polaris10', 'polaris11', 'gfx900']} ]},
   'nvptx--'   : { 'devices' : [{'gpu' : '', 'aliases' : []} ]},
   'nvptx64--' : { 'devices' : [{'gpu' : '', 'aliases' : []} ]},
   'nvptx--nvidiacl'   : { 'devices' : [{'gpu' : '', 'aliases' : []} ]},

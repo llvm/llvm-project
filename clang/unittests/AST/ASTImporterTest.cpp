@@ -567,5 +567,21 @@ TEST(ImportExpr, ImportTypeTraitExprValDep) {
                                            )))))))))));
 }
 
+const internal::VariadicDynCastAllOfMatcher<Expr, CXXPseudoDestructorExpr>
+    cxxPseudoDestructorExpr;
+
+TEST(ImportExpr, ImportCXXPseudoDestructorExpr) {
+  MatchVerifier<Decl> Verifier;
+  EXPECT_TRUE(
+      testImport("typedef int T;"
+                 "void declToImport(int *p) {"
+                 "  T t;"
+                 "  p->T::~T();"
+                 "}",
+                 Lang_CXX, "", Lang_CXX, Verifier,
+                 functionDecl(has(compoundStmt(has(
+                     callExpr(has(cxxPseudoDestructorExpr()))))))));
+}
+
 } // end namespace ast_matchers
 } // end namespace clang
