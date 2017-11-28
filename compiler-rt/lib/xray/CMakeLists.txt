@@ -65,19 +65,53 @@ append_list_if(
 append_list_if(
   COMPILER_RT_BUILD_XRAY_NO_PREINIT XRAY_NO_PREINIT XRAY_COMMON_DEFINITIONS)
 
-add_compiler_rt_object_libraries(RTXray
-  ARCHS ${XRAY_SUPPORTED_ARCH}
-  SOURCES ${XRAY_SOURCES} CFLAGS ${XRAY_CFLAGS}
-  DEFS ${XRAY_COMMON_DEFINITIONS})
-
 add_compiler_rt_component(xray)
 
 set(XRAY_COMMON_RUNTIME_OBJECT_LIBS
+    RTXray
     RTSanitizerCommon
     RTSanitizerCommonLibc)
 
+if (APPLE)
+  set(XRAY_LINK_LIBS ${SANITIZER_COMMON_LINK_LIBS})
+  set(XRAY_ASM_SOURCES xray_trampoline_x86_64.S)
+
+  if (${CMAKE_GENERATOR} STREQUAL "Xcode")
+    enable_language(ASM)
+  else()
+    set_source_files_properties(${XRAY_ASM_SOURCES} PROPERTIES LANGUAGE C)
+  endif()
+
+  add_weak_symbols("sanitizer_common" WEAK_SYMBOL_LINK_FLAGS)
+  add_weak_symbols("xray" WEAK_SYMBOL_LINK_FLAGS)
+
+  add_compiler_rt_object_libraries(RTXray
+    OS ${XRAY_SUPPORTED_OS}
+    ARCHS ${XRAY_SUPPORTED_ARCH}
+    SOURCES ${x86_64_SOURCES}
+    CFLAGS ${XRAY_CFLAGS}
+    DEFS ${XRAY_COMMON_DEFINITIONS})
+
+  # We only support running on osx for now.
+  add_compiler_rt_runtime(clang_rt.xray
+    STATIC
+    OS ${XRAY_SUPPORTED_OS}
+    ARCHS ${XRAY_SUPPORTED_ARCH}
+    OBJECT_LIBS RTXray
+                RTSanitizerCommon
+                RTSanitizerCommonLibc
+    CFLAGS ${XRAY_CFLAGS}
+    DEFS ${XRAY_COMMON_DEFINITIONS}
+    LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS} ${WEAK_SYMBOL_LINK_FLAGS}
+    LINK_LIBS ${XRAY_LINK_LIBS}
+    PARENT_TARGET xray)
+else()
 foreach(arch ${XRAY_SUPPORTED_ARCH})
   if(CAN_TARGET_${arch})
+    add_compiler_rt_object_libraries(RTXray
+      ARCHS ${XRAY_SUPPORTED_ARCH}
+      SOURCES ${XRAY_SOURCES} CFLAGS ${XRAY_CFLAGS}
+      DEFS ${XRAY_COMMON_DEFINITIONS})
     add_compiler_rt_runtime(clang_rt.xray
      STATIC
      ARCHS ${arch}
@@ -88,6 +122,7 @@ foreach(arch ${XRAY_SUPPORTED_ARCH})
      PARENT_TARGET xray)
   endif()
 endforeach()
+endif()
 
 if(COMPILER_RT_INCLUDE_TESTS)
   add_subdirectory(tests)
