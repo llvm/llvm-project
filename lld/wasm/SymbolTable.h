@@ -58,7 +58,7 @@ public:
 private:
   std::pair<Symbol *, bool> insert(StringRef Name);
 
-  llvm::DenseMap<llvm::CachedHashStringRef, Symbol *> Symtab;
+  llvm::DenseMap<llvm::CachedHashStringRef, Symbol *> SymMap;
 };
 
 extern SymbolTable *Symtab;

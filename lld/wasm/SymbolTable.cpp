@@ -34,7 +34,7 @@ void SymbolTable::addFile(InputFile *File) {
 
 void SymbolTable::reportRemainingUndefines() {
   std::unordered_set<Symbol *> Undefs;
-  for (auto &I : Symtab) {
+  for (auto &I : SymMap) {
     Symbol *Sym = I.second;
     if (Sym->isUndefined() && !Sym->isWeak() &&
         Config->AllowUndefinedSymbols.count(Sym->getName()) == 0) {
@@ -56,14 +56,14 @@ void SymbolTable::reportRemainingUndefines() {
 }
 
 Symbol *SymbolTable::find(StringRef Name) {
-  auto It = Symtab.find(CachedHashStringRef(Name));
-  if (It == Symtab.end())
+  auto It = SymMap.find(CachedHashStringRef(Name));
+  if (It == SymMap.end())
     return nullptr;
   return It->second;
 }
 
 std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name) {
-  Symbol *&Sym = Symtab[CachedHashStringRef(Name)];
+  Symbol *&Sym = SymMap[CachedHashStringRef(Name)];
   if (Sym)
     return {Sym, false};
   Sym = make<Symbol>(Name, false);

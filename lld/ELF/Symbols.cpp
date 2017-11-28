@@ -11,12 +11,12 @@
 #include "InputFiles.h"
 #include "InputSection.h"
 #include "OutputSections.h"
-#include "Strings.h"
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Writer.h"
 
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Strings.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Path.h"
 #include <cstring>
@@ -315,7 +315,7 @@ void elf::printTraceSymbol(Symbol *Sym) {
 // Returns a symbol for an error message.
 std::string lld::toString(const Symbol &B) {
   if (Config->Demangle)
-    if (Optional<std::string> S = demangle(B.getName()))
+    if (Optional<std::string> S = demangleItanium(B.getName()))
       return *S;
   return B.getName();
 }

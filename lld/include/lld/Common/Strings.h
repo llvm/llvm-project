@@ -7,19 +7,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLD_WASM_STRINGS_H
-#define LLD_WASM_STRINGS_H
+#ifndef LLD_STRINGS_H
+#define LLD_STRINGS_H
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include <string>
 
 namespace lld {
-namespace wasm {
-
-std::string displayName(llvm::StringRef Name);
-
-} // namespace wasm
-} // namespace lld
+// Returns a demangled C++ symbol name. If Name is not a mangled
+// name, it returns Optional::None.
+llvm::Optional<std::string> demangleItanium(llvm::StringRef Name);
+}
 
 #endif
