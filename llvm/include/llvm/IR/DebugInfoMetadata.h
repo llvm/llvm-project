@@ -2091,6 +2091,8 @@ public:
   DITypeRef getType() const { return DITypeRef(getRawType()); }
   uint32_t getAlignInBits() const { return AlignInBits; }
   uint32_t getAlignInBytes() const { return getAlignInBits() / CHAR_BIT; }
+  /// Determines the size of the variable's type.
+  Optional<uint64_t> getSizeInBits() const;
 
   StringRef getFilename() const {
     if (auto *F = getFile())

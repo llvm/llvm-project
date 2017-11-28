@@ -14,6 +14,12 @@ constexpr typename std::remove_reference<_Tp>::type &&move(_Tp &&__t) {
   return static_cast<typename std::remove_reference<_Tp>::type &&>(__t);
 }
 
+template <typename _Tp>
+constexpr _Tp &&
+forward(typename remove_reference<_Tp>::type &__t) noexcept {
+  return static_cast<_Tp &&>(__t);
+}
+
 } // namespace std
 
 class A {
@@ -22,6 +28,19 @@ public:
   A(const A &rhs) {}
   A(A &&rhs) {}
 };
+
+struct TriviallyCopyable {
+  int i;
+};
+
+void f(TriviallyCopyable) {}
+
+void g() {
+  TriviallyCopyable obj;
+  f(std::move(obj));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: std::move of the variable 'obj' of the trivially-copyable type 'TriviallyCopyable' has no effect; remove std::move() [misc-move-const-arg]
+  // CHECK-FIXES: f(obj);
+}
 
 int f1() {
   return std::move(42);
@@ -175,4 +194,41 @@ template <class T>
 void Q(T);
 void moveOnlyNegatives(MoveOnly val) {
   Q(std::move(val));
+}
+
+void fmovable(MoveSemantics);
+
+void lambda1() {
+  auto f = [](MoveSemantics m) {
+    fmovable(std::move(m));
+  };
+  f(MoveSemantics());
+}
+
+template<class T> struct function {};
+
+template<typename Result, typename... Args>
+class function<Result(Args...)> {
+public:
+  function() = default;
+  void operator()(Args... args) const {
+    fmovable(std::forward<Args>(args)...);
+  }
+};
+
+void functionInvocation() {
+  function<void(MoveSemantics)> callback;
+  MoveSemantics m;
+  callback(std::move(m));
+}
+
+void lambda2() {
+  function<void(MoveSemantics)> callback;
+
+  auto f = [callback = std::move(callback)](MoveSemantics m) mutable {
+    // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: std::move of the variable 'callback' of the trivially-copyable type 'function<void (MoveSemantics)>' has no effect; remove std::move()
+    // CHECK-FIXES: auto f = [callback = callback](MoveSemantics m) mutable {
+    callback(std::move(m));
+  };
+  f(MoveSemantics());
 }

@@ -36,6 +36,11 @@ static void ReplaceCallWithArg(const CallExpr *Call, DiagnosticBuilder &Diag,
   }
 }
 
+void MoveConstantArgumentCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "CheckTriviallyCopyableMove", CheckTriviallyCopyableMove);
+}
+
 void MoveConstantArgumentCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus)
     return;
@@ -85,6 +90,10 @@ void MoveConstantArgumentCheck::check(const MatchFinder::MatchResult &Result) {
           return;
       }
     }
+
+    if (!IsConstArg && IsTriviallyCopyable && !CheckTriviallyCopyableMove)
+      return;
+
     bool IsVariable = isa<DeclRefExpr>(Arg);
     const auto *Var =
         IsVariable ? dyn_cast<DeclRefExpr>(Arg)->getDecl() : nullptr;

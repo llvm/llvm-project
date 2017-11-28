@@ -21,7 +21,7 @@ using namespace llvm::object;
 
 // Returns a symbol name for an error message.
 std::string lld::toString(coff::Symbol &B) {
-  if (Optional<std::string> S = coff::demangle(B.getName()))
+  if (Optional<std::string> S = coff::demangleMSVC(B.getName()))
     return ("\"" + *S + "\" (" + B.getName() + ")").str();
   return B.getName();
 }

@@ -61,8 +61,13 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
   uint64_t Start = OS.tell();
 
   uint64_t Binary = getBinaryCodeForInstr(MI, Fixups, STI);
-  assert(Binary < UINT8_MAX && "Multi-byte opcodes not supported yet");
-  OS << uint8_t(Binary);
+  if (Binary <= UINT8_MAX) {
+    OS << uint8_t(Binary);
+  } else {
+    assert(Binary <= UINT16_MAX && "Several-byte opcodes not supported yet");
+    OS << uint8_t(Binary >> 8)
+       << uint8_t(Binary);
+  }
 
   // For br_table instructions, encode the size of the table. In the MCInst,
   // there's an index operand, one operand for each table entry, and the
