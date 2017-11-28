@@ -62,7 +62,7 @@ def main():
 
   # Determine range to format.
   if vim.eval('exists("l:lines")') == '1':
-    lines = vim.eval('l:lines')
+    lines = ['-lines', vim.eval('l:lines')]
   elif vim.eval('exists("l:formatdiff")') == '1':
     with open(vim.current.buffer.name, 'r') as f:
       ondisk = f.read().splitlines();
