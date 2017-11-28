@@ -30,7 +30,6 @@
 #include "InputFiles.h"
 #include "InputSection.h"
 #include "LinkerScript.h"
-#include "Memory.h"
 #include "OutputSections.h"
 #include "ScriptParser.h"
 #include "Strings.h"
@@ -38,8 +37,10 @@
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Writer.h"
+#include "lld/Common/Args.h"
 #include "lld/Common/Driver.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Memory.h"
 #include "lld/Common/Threads.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/StringExtras.h"
@@ -63,10 +64,6 @@ using namespace lld::elf;
 
 Configuration *elf::Config;
 LinkerDriver *elf::Driver;
-
-BumpPtrAllocator elf::BAlloc;
-StringSaver elf::Saver{BAlloc};
-std::vector<SpecificAllocBase *> elf::SpecificAllocBase::Instances;
 
 static void setConfigs();
 
@@ -293,16 +290,6 @@ static void checkOptions(opt::InputArgList &Args) {
   }
 }
 
-static int getInteger(opt::InputArgList &Args, unsigned Key, int Default) {
-  int V = Default;
-  if (auto *Arg = Args.getLastArg(Key)) {
-    StringRef S = Arg->getValue();
-    if (!to_integer(S, V, 10))
-      error(Arg->getSpelling() + ": number expected, but got '" + S + "'");
-  }
-  return V;
-}
-
 static const char *getReproduceOption(opt::InputArgList &Args) {
   if (auto *Arg = Args.getLastArg(OPT_reproduce))
     return Arg->getValue();
@@ -316,26 +303,12 @@ static bool hasZOption(opt::InputArgList &Args, StringRef Key) {
   return false;
 }
 
-static uint64_t getZOptionValue(opt::InputArgList &Args, StringRef Key,
-                                uint64_t Default) {
-  for (auto *Arg : Args.filtered(OPT_z)) {
-    std::pair<StringRef, StringRef> KV = StringRef(Arg->getValue()).split('=');
-    if (KV.first == Key) {
-      uint64_t Result = Default;
-      if (!to_integer(KV.second, Result))
-        error("invalid " + Key + ": " + KV.second);
-      return Result;
-    }
-  }
-  return Default;
-}
-
 void LinkerDriver::main(ArrayRef<const char *> ArgsArr, bool CanExitEarly) {
   ELFOptTable Parser;
   opt::InputArgList Args = Parser.parse(ArgsArr.slice(1));
 
   // Interpret this flag early because error() depends on them.
-  errorHandler().ErrorLimit = getInteger(Args, OPT_error_limit, 20);
+  errorHandler().ErrorLimit = args::getInteger(Args, OPT_error_limit, 20);
 
   // Handle -help
   if (Args.hasArg(OPT_help)) {
@@ -413,15 +386,8 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr, bool CanExitEarly) {
   }
 }
 
-static std::vector<StringRef> getArgs(opt::InputArgList &Args, int Id) {
-  std::vector<StringRef> V;
-  for (auto *Arg : Args.filtered(Id))
-    V.push_back(Arg->getValue());
-  return V;
-}
-
 static std::string getRpath(opt::InputArgList &Args) {
-  std::vector<StringRef> V = getArgs(Args, OPT_rpath);
+  std::vector<StringRef> V = args::getStrings(Args, OPT_rpath);
   return llvm::join(V.begin(), V.end(), ":");
 }
 
@@ -596,19 +562,6 @@ getBuildId(opt::InputArgList &Args) {
   return {BuildIdKind::None, {}};
 }
 
-static std::vector<StringRef> getLines(MemoryBufferRef MB) {
-  SmallVector<StringRef, 0> Arr;
-  MB.getBuffer().split(Arr, '\n');
-
-  std::vector<StringRef> Ret;
-  for (StringRef S : Arr) {
-    S = S.trim();
-    if (!S.empty())
-      Ret.push_back(S);
-  }
-  return Ret;
-}
-
 static bool getCompressDebugSections(opt::InputArgList &Args) {
   StringRef S = Args.getLastArgValue(OPT_compress_debug_sections, "none");
   if (S == "none")
@@ -631,7 +584,7 @@ static int parseInt(StringRef S, opt::Arg *Arg) {
 void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->AllowMultipleDefinition =
       Args.hasArg(OPT_allow_multiple_definition) || hasZOption(Args, "muldefs");
-  Config->AuxiliaryList = getArgs(Args, OPT_auxiliary);
+  Config->AuxiliaryList = args::getStrings(Args, OPT_auxiliary);
   Config->Bsymbolic = Args.hasArg(OPT_Bsymbolic);
   Config->BsymbolicFunctions = Args.hasArg(OPT_Bsymbolic_functions);
   Config->Chroot = Args.getLastArgValue(OPT_chroot);
@@ -651,7 +604,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
       Args.hasFlag(OPT_export_dynamic, OPT_no_export_dynamic, false);
   errorHandler().FatalWarnings =
       Args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false);
-  Config->FilterList = getArgs(Args, OPT_filter);
+  Config->FilterList = args::getStrings(Args, OPT_filter);
   Config->Fini = Args.getLastArgValue(OPT_fini, "_fini");
   Config->GcSections = Args.hasFlag(OPT_gc_sections, OPT_no_gc_sections, false);
   Config->GdbIndex = Args.hasFlag(OPT_gdb_index, OPT_no_gdb_index, false);
@@ -659,8 +612,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->Init = Args.getLastArgValue(OPT_init, "_init");
   Config->LTOAAPipeline = Args.getLastArgValue(OPT_lto_aa_pipeline);
   Config->LTONewPmPasses = Args.getLastArgValue(OPT_lto_newpm_passes);
-  Config->LTOO = getInteger(Args, OPT_lto_O, 2);
-  Config->LTOPartitions = getInteger(Args, OPT_lto_partitions, 1);
+  Config->LTOO = args::getInteger(Args, OPT_lto_O, 2);
+  Config->LTOPartitions = args::getInteger(Args, OPT_lto_partitions, 1);
   Config->MapFile = Args.getLastArgValue(OPT_Map);
   Config->NoGnuUnique = Args.hasArg(OPT_no_gnu_unique);
   Config->NoUndefinedVersion = Args.hasArg(OPT_no_undefined_version);
@@ -670,7 +623,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->Omagic = Args.hasFlag(OPT_omagic, OPT_no_omagic, false);
   Config->OptRemarksFilename = Args.getLastArgValue(OPT_opt_remarks_filename);
   Config->OptRemarksWithHotness = Args.hasArg(OPT_opt_remarks_with_hotness);
-  Config->Optimize = getInteger(Args, OPT_O, 1);
+  Config->Optimize = args::getInteger(Args, OPT_O, 1);
   Config->OrphanHandling = getOrphanHandling(Args);
   Config->OutputFile = Args.getLastArgValue(OPT_o);
   Config->Pie = Args.hasFlag(OPT_pie, OPT_nopie, false);
@@ -679,7 +632,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->Rpath = getRpath(Args);
   Config->Relocatable = Args.hasArg(OPT_relocatable);
   Config->SaveTemps = Args.hasArg(OPT_save_temps);
-  Config->SearchPaths = getArgs(Args, OPT_library_path);
+  Config->SearchPaths = args::getStrings(Args, OPT_library_path);
   Config->SectionStartMap = getSectionStartMap(Args);
   Config->Shared = Args.hasArg(OPT_shared);
   Config->SingleRoRx = Args.hasArg(OPT_no_rosegment);
@@ -693,10 +646,10 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ThinLTOCachePolicy = check(
       parseCachePruningPolicy(Args.getLastArgValue(OPT_thinlto_cache_policy)),
       "--thinlto-cache-policy: invalid cache policy");
-  Config->ThinLTOJobs = getInteger(Args, OPT_thinlto_jobs, -1u);
+  Config->ThinLTOJobs = args::getInteger(Args, OPT_thinlto_jobs, -1u);
   ThreadsEnabled = Args.hasFlag(OPT_threads, OPT_no_threads, true);
   Config->Trace = Args.hasArg(OPT_trace);
-  Config->Undefined = getArgs(Args, OPT_undefined);
+  Config->Undefined = args::getStrings(Args, OPT_undefined);
   Config->UnresolvedSymbols = getUnresolvedSymbolPolicy(Args);
   Config->Verbose = Args.hasArg(OPT_verbose);
   errorHandler().Verbose = Config->Verbose;
@@ -710,7 +663,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ZOrigin = hasZOption(Args, "origin");
   Config->ZRelro = !hasZOption(Args, "norelro");
   Config->ZRodynamic = hasZOption(Args, "rodynamic");
-  Config->ZStackSize = getZOptionValue(Args, "stack-size", 0);
+  Config->ZStackSize = args::getZOptionValue(Args, OPT_z, "stack-size", 0);
   Config->ZText = !hasZOption(Args, "notext");
   Config->ZWxneeded = hasZOption(Args, "wxneeded");
 
@@ -785,14 +738,14 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
 
   if (auto *Arg = Args.getLastArg(OPT_symbol_ordering_file))
     if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
-      Config->SymbolOrderingFile = getLines(*Buffer);
+      Config->SymbolOrderingFile = args::getLines(*Buffer);
 
   // If --retain-symbol-file is used, we'll keep only the symbols listed in
   // the file and discard all others.
   if (auto *Arg = Args.getLastArg(OPT_retain_symbols_file)) {
     Config->DefaultSymbolVersion = VER_NDX_LOCAL;
     if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
-      for (StringRef S : getLines(*Buffer))
+      for (StringRef S : args::getLines(*Buffer))
         Config->VersionScriptGlobals.push_back(
             {S, /*IsExternCpp*/ false, /*HasWildcard*/ false});
   }
@@ -923,8 +876,8 @@ void LinkerDriver::inferMachineType() {
 // Parse -z max-page-size=<value>. The default value is defined by
 // each target.
 static uint64_t getMaxPageSize(opt::InputArgList &Args) {
-  uint64_t Val =
-      getZOptionValue(Args, "max-page-size", Target->DefaultMaxPageSize);
+  uint64_t Val = args::getZOptionValue(Args, OPT_z, "max-page-size",
+                                       Target->DefaultMaxPageSize);
   if (!isPowerOf2_64(Val))
     error("max-page-size: value isn't a power of 2");
   return Val;
@@ -1117,6 +1070,21 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     });
 
   Config->EFlags = Target->calcEFlags();
+
+  if (Config->EMachine == EM_ARM) {
+    // FIXME: These warnings can be removed when lld only uses these features
+    // when the input objects have been compiled with an architecture that
+    // supports them.
+    if (Config->ARMHasBlx == false)
+      warn("lld uses blx instruction, no object with architecture supporting "
+           "feature detected.");
+    if (Config->ARMJ1J2BranchEncoding == false)
+      warn("lld uses extended branch encoding, no object with architecture "
+           "supporting feature detected.");
+    if (Config->ARMHasMovtMovw == false)
+      warn("lld may use movt/movw, no object with architecture supporting "
+           "feature detected.");
+  }
 
   // This adds a .comment section containing a version string. We have to add it
   // before decompressAndMergeSections because the .comment section is a

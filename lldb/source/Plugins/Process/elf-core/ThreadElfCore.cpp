@@ -47,9 +47,7 @@ using namespace lldb_private;
 //----------------------------------------------------------------------
 ThreadElfCore::ThreadElfCore(Process &process, const ThreadData &td)
     : Thread(process, td.tid), m_thread_name(td.name), m_thread_reg_ctx_sp(),
-      m_signo(td.signo), m_gpregset_data(td.gpregset),
-      m_fpregset_data(td.fpregset), m_vregset_data(td.vregset),
-      m_regsets_data(td.regsets) {}
+      m_signo(td.signo), m_gpregset_data(td.gpregset), m_notes(td.notes) {}
 
 ThreadElfCore::~ThreadElfCore() { DestroyThread(); }
 
@@ -197,40 +195,39 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
     switch (arch.GetMachine()) {
     case llvm::Triple::aarch64:
       m_thread_reg_ctx_sp.reset(new RegisterContextCorePOSIX_arm64(
-          *this, reg_interface, m_gpregset_data, m_fpregset_data));
+          *this, reg_interface, m_gpregset_data, m_notes));
       break;
     case llvm::Triple::arm:
       m_thread_reg_ctx_sp.reset(new RegisterContextCorePOSIX_arm(
-          *this, reg_interface, m_gpregset_data, m_fpregset_data));
+          *this, reg_interface, m_gpregset_data, m_notes));
       break;
     case llvm::Triple::mipsel:
     case llvm::Triple::mips:
       m_thread_reg_ctx_sp.reset(new RegisterContextCorePOSIX_mips64(
-         *this, reg_interface, m_gpregset_data, m_fpregset_data));
+          *this, reg_interface, m_gpregset_data, m_notes));
       break;
     case llvm::Triple::mips64:
     case llvm::Triple::mips64el:
       m_thread_reg_ctx_sp.reset(new RegisterContextCorePOSIX_mips64(
-          *this, reg_interface, m_gpregset_data, m_fpregset_data));
+          *this, reg_interface, m_gpregset_data, m_notes));
       break;
     case llvm::Triple::ppc:
     case llvm::Triple::ppc64:
       m_thread_reg_ctx_sp.reset(new RegisterContextCorePOSIX_powerpc(
-          *this, reg_interface, m_gpregset_data, m_fpregset_data,
-          m_vregset_data));
+          *this, reg_interface, m_gpregset_data, m_notes));
       break;
     case llvm::Triple::ppc64le:
       m_thread_reg_ctx_sp.reset(new RegisterContextCorePOSIX_ppc64le(
-          *this, reg_interface, m_regsets_data));
+          *this, reg_interface, m_gpregset_data, m_notes));
       break;
     case llvm::Triple::systemz:
       m_thread_reg_ctx_sp.reset(new RegisterContextCorePOSIX_s390x(
-          *this, reg_interface, m_gpregset_data, m_fpregset_data));
+          *this, reg_interface, m_gpregset_data, m_notes));
       break;
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
       m_thread_reg_ctx_sp.reset(new RegisterContextCorePOSIX_x86_64(
-          *this, reg_interface, m_gpregset_data, m_fpregset_data));
+          *this, reg_interface, m_gpregset_data, m_notes));
       break;
     default:
       break;

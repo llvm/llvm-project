@@ -22,13 +22,13 @@
 
 #include "InputSection.h"
 #include "LinkerScript.h"
-#include "Memory.h"
 #include "OutputSections.h"
 #include "Strings.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "Target.h"
 #include "Writer.h"
+#include "lld/Common/Memory.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Object/ELF.h"
 #include <functional>
@@ -63,6 +63,12 @@ template <class ELFT, class RelT>
 static void resolveReloc(InputSectionBase &Sec, RelT &Rel,
                          std::function<void(InputSectionBase *, uint64_t)> Fn) {
   Symbol &B = Sec.getFile<ELFT>()->getRelocTargetSym(Rel);
+
+  // If a symbol is referenced in a live section, it is used.
+  B.Used = true;
+  if (auto *SS = dyn_cast<SharedSymbol>(&B))
+    if (!SS->isWeak())
+      SS->getFile<ELFT>()->IsNeeded = true;
 
   if (auto *D = dyn_cast<Defined>(&B)) {
     if (!D->Section)
