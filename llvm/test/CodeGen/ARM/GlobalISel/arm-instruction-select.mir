@@ -17,6 +17,9 @@
   define void @test_fsub_s32() #0 { ret void }
   define void @test_fsub_s64() #0 { ret void }
 
+  define void @test_fmul_s32() #0 { ret void }
+  define void @test_fmul_s64() #0 { ret void }
+
   define void @test_sub_s32() { ret void }
   define void @test_sub_imm_s32() { ret void }
   define void @test_sub_rev_imm_s32() { ret void }
@@ -435,6 +438,66 @@ body:             |
 
     %2(s64) = G_FSUB %0, %1
     ; CHECK: [[VREGSUM:%[0-9]+]]:dpr = VSUBD [[VREGX]], [[VREGY]], 14, _
+
+    %d0 = COPY %2(s64)
+    ; CHECK: %d0 = COPY [[VREGSUM]]
+
+    BX_RET 14, _, implicit %d0
+    ; CHECK: BX_RET 14, _, implicit %d0
+...
+---
+name:            test_fmul_s32
+# CHECK-LABEL: name: test_fmul_s32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: fprb }
+  - { id: 1, class: fprb }
+  - { id: 2, class: fprb }
+body:             |
+  bb.0:
+    liveins: %s0, %s1
+
+    %0(s32) = COPY %s0
+    ; CHECK: [[VREGX:%[0-9]+]]:spr = COPY %s0
+
+    %1(s32) = COPY %s1
+    ; CHECK: [[VREGY:%[0-9]+]]:spr = COPY %s1
+
+    %2(s32) = G_FMUL %0, %1
+    ; CHECK: [[VREGSUM:%[0-9]+]]:spr = VMULS [[VREGX]], [[VREGY]], 14, _
+
+    %s0 = COPY %2(s32)
+    ; CHECK: %s0 = COPY [[VREGSUM]]
+
+    BX_RET 14, _, implicit %s0
+    ; CHECK: BX_RET 14, _, implicit %s0
+...
+---
+name:            test_fmul_s64
+# CHECK-LABEL: name: test_fmul_s64
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: fprb }
+  - { id: 1, class: fprb }
+  - { id: 2, class: fprb }
+body:             |
+  bb.0:
+    liveins: %d0, %d1
+
+    %0(s64) = COPY %d0
+    ; CHECK: [[VREGX:%[0-9]+]]:dpr = COPY %d0
+
+    %1(s64) = COPY %d1
+    ; CHECK: [[VREGY:%[0-9]+]]:dpr = COPY %d1
+
+    %2(s64) = G_FMUL %0, %1
+    ; CHECK: [[VREGSUM:%[0-9]+]]:dpr = VMULD [[VREGX]], [[VREGY]], 14, _
 
     %d0 = COPY %2(s64)
     ; CHECK: %d0 = COPY [[VREGSUM]]
