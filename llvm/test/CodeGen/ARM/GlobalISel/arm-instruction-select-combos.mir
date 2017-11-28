@@ -461,6 +461,11 @@ body:             |
     %0(s32) = COPY %r0
     ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY %r0
 
+    ; This test and the following ones are a bit contrived, since they use a
+    ; G_XOR that can be constant-folded. They exist mostly to validate the
+    ; TableGen pattern that defines BICri. We also have a pattern for matching a
+    ; G_AND with a G_CONSTANT operand directly, which is the more common case,
+    ; but that will be covered by different tests.
     %1(s32) = G_CONSTANT i32 192
 
     %2(s32) = G_CONSTANT i32 -1
