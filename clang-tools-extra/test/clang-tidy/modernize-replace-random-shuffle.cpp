@@ -34,21 +34,21 @@ int main() {
   std::vector<int> vec;
 
   std::random_shuffle(vec.begin(), vec.end());
-  // CHECK-MESSAGE: [[@LINE-1]]:3: warning: 'std::random_shuffle' has been removed in C++17; use 'std::shuffle' instead
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: 'std::random_shuffle' has been removed in C++17; use 'std::shuffle' instead
   // CHECK-FIXES: std::shuffle(vec.begin(), vec.end(), std::mt19937(std::random_device()()));
 
   std::shuffle(vec.begin(), vec.end());
 
   random_shuffle(vec.begin(), vec.end());
-  // CHECK-MESSAGE: [[@LINE-1]]:3: warning: 'std::random_shuffle' has been removed in C++17; use 'std::shuffle' instead
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: 'std::random_shuffle' has been removed in C++17; use 'std::shuffle' instead
   // CHECK-FIXES: shuffle(vec.begin(), vec.end(), std::mt19937(std::random_device()()));
   
   std::random_shuffle(vec.begin(), vec.end(), myrandom);
-  // CHECK-MESSAGE: [[@LINE-1]]:3: warning: 'std::random_shuffle' has been removed in C++17; use 'std::shuffle' and an alternative random mechanism instead
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: 'std::random_shuffle' has been removed in C++17; use 'std::shuffle' and an alternative random mechanism instead
   // CHECK-FIXES: std::shuffle(vec.begin(), vec.end(), std::mt19937(std::random_device()()));
 
   random_shuffle(vec.begin(), vec.end(), myrandom);
-  // CHECK-MESSAGE: [[@LINE-1]]:3: warning: 'std::random_shuffle' has been removed in C++17; use 'std::shuffle' and an alternative random mechanism instead
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: 'std::random_shuffle' has been removed in C++17; use 'std::shuffle' and an alternative random mechanism instead
   // CHECK-FIXES: shuffle(vec.begin(), vec.end(), std::mt19937(std::random_device()()));
 
   shuffle(vec.begin(), vec.end());

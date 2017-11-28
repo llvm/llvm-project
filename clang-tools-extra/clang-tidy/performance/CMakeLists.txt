@@ -7,7 +7,9 @@ add_clang_library(clangTidyPerformanceModule
   InefficientAlgorithmCheck.cpp
   InefficientStringConcatenationCheck.cpp
   InefficientVectorOperationCheck.cpp
+  MoveConstArgCheck.cpp
   MoveConstructorInitCheck.cpp
+  NoexceptMoveConstructorCheck.cpp
   PerformanceTidyModule.cpp
   TypePromotionInMathFnCheck.cpp
   UnnecessaryCopyInitialization.cpp
