@@ -141,7 +141,6 @@ void Symbol::copyFrom(Symbol *Other) {
   Symbol Sym = *this;
   memcpy(this, Other, sizeof(SymbolUnion));
 
-  Binding = Sym.Binding;
   VersionId = Sym.VersionId;
   Visibility = Sym.Visibility;
   IsUsedInRegularObj = Sym.IsUsedInRegularObj;

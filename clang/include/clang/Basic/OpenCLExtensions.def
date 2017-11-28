@@ -79,6 +79,10 @@ OPENCLEXT_INTERNAL(cl_clang_storage_class_specifiers, 100, ~0U)
 OPENCLEXT_INTERNAL(cl_amd_media_ops, 100, ~0U)
 OPENCLEXT_INTERNAL(cl_amd_media_ops2, 100, ~0U)
 
+// Intel OpenCL extensions
+OPENCLEXT_INTERNAL(cl_intel_subgroups, 120, ~0U)
+OPENCLEXT_INTERNAL(cl_intel_subgroups_short, 120, ~0U)
+
 #undef OPENCLEXT_INTERNAL
 
 #ifdef OPENCLEXT

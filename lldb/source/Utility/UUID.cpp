@@ -21,11 +21,10 @@
 
 namespace lldb_private {
 
-UUID::UUID() : m_num_uuid_bytes(16) { ::memset(m_uuid, 0, sizeof(m_uuid)); }
+UUID::UUID() { Clear(); }
 
 UUID::UUID(const UUID &rhs) {
-  m_num_uuid_bytes = rhs.m_num_uuid_bytes;
-  ::memcpy(m_uuid, rhs.m_uuid, sizeof(m_uuid));
+  SetBytes(rhs.m_uuid, rhs.m_num_uuid_bytes);
 }
 
 UUID::UUID(const void *uuid_bytes, uint32_t num_uuid_bytes) {

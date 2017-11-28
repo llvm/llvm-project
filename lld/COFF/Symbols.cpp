@@ -9,9 +9,9 @@
 
 #include "Symbols.h"
 #include "InputFiles.h"
-#include "Memory.h"
 #include "Strings.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Memory.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"

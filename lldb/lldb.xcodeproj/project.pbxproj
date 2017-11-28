@@ -728,6 +728,7 @@
 		4C877B391F30EF990068FCFB /* SBProcessInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = 4987FB201F30EC9900E5C17D /* SBProcessInfo.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		4C88BC2A1BA3722B00AA0964 /* Expression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C88BC291BA3722B00AA0964 /* Expression.cpp */; };
 		4C88BC2D1BA391B000AA0964 /* UserExpression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C0083331B9A5DE200D5CF24 /* UserExpression.cpp */; };
+		4CA9D1401FCE07CD00300E18 /* RegisterUtilities.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CA9D13C1FCE07AF00300E18 /* RegisterUtilities.cpp */; };
 		4CAA19E61F5A40040099E692 /* BreakpointName.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C7D48281F509CCD005314B4 /* BreakpointName.cpp */; };
 		4CABA9E0134A8BCD00539BDD /* ValueObjectMemory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CABA9DF134A8BCD00539BDD /* ValueObjectMemory.cpp */; };
 		4CC7C6501D5298F30076FF94 /* OCamlLanguage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CC7C64D1D5298E20076FF94 /* OCamlLanguage.cpp */; };
@@ -2583,6 +2584,8 @@
 		4C98D3E1118FB98F00E575D0 /* IRExecutionUnit.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = IRExecutionUnit.h; path = include/lldb/Expression/IRExecutionUnit.h; sourceTree = "<group>"; };
 		4CA9637911B6E99A00780E28 /* CommandObjectApropos.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CommandObjectApropos.cpp; path = source/Commands/CommandObjectApropos.cpp; sourceTree = "<group>"; };
 		4CA9637A11B6E99A00780E28 /* CommandObjectApropos.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CommandObjectApropos.h; path = source/Commands/CommandObjectApropos.h; sourceTree = "<group>"; };
+		4CA9D13C1FCE07AF00300E18 /* RegisterUtilities.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RegisterUtilities.cpp; sourceTree = "<group>"; };
+		4CA9D13D1FCE07AF00300E18 /* RegisterUtilities.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RegisterUtilities.h; sourceTree = "<group>"; };
 		4CAA56121422D96A001FFA01 /* BreakpointResolverFileRegex.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BreakpointResolverFileRegex.h; path = include/lldb/Breakpoint/BreakpointResolverFileRegex.h; sourceTree = "<group>"; };
 		4CAA56141422D986001FFA01 /* BreakpointResolverFileRegex.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = BreakpointResolverFileRegex.cpp; path = source/Breakpoint/BreakpointResolverFileRegex.cpp; sourceTree = "<group>"; };
 		4CAB257C18EC9DB800BAD33E /* SafeMachO.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SafeMachO.h; path = include/lldb/Utility/SafeMachO.h; sourceTree = "<group>"; };
@@ -4847,6 +4850,8 @@
 				267F684E1CC02E270086832B /* RegisterContextPOSIXCore_s390x.h */,
 				26BC17A618C7F4CB00D2196D /* RegisterContextPOSIXCore_x86_64.cpp */,
 				26BC17A718C7F4CB00D2196D /* RegisterContextPOSIXCore_x86_64.h */,
+				4CA9D13C1FCE07AF00300E18 /* RegisterUtilities.cpp */,
+				4CA9D13D1FCE07AF00300E18 /* RegisterUtilities.h */,
 				26BC17A818C7F4CB00D2196D /* ThreadElfCore.cpp */,
 				26BC17A918C7F4CB00D2196D /* ThreadElfCore.h */,
 			);
@@ -7818,6 +7823,7 @@
 				2689010413353E6F00698AC0 /* ThreadPlanStepInRange.cpp in Sources */,
 				2689010513353E6F00698AC0 /* ThreadPlanStepOverRange.cpp in Sources */,
 				3FDFE56D19AF9C44009756A7 /* HostThreadPosix.cpp in Sources */,
+				4CA9D1401FCE07CD00300E18 /* RegisterUtilities.cpp in Sources */,
 				AF235EB51FBE7858009C5541 /* RegisterInfoPOSIX_ppc64le.cpp in Sources */,
 				2689010613353E6F00698AC0 /* ThreadPlanRunToAddress.cpp in Sources */,
 				2689010713353E6F00698AC0 /* ThreadPlanStepThrough.cpp in Sources */,
