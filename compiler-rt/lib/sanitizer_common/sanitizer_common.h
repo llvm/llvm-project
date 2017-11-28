@@ -142,6 +142,7 @@ class ReservedAddressRange {
   void* base_;
   uptr size_;
   const char* name_;
+  uptr os_handle_;
 };
 
 typedef void (*fill_profile_f)(uptr start, uptr rss, bool file,

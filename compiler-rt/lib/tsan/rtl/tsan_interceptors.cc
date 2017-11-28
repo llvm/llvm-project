@@ -2337,7 +2337,7 @@ static __sanitizer_sighandler_ptr signal_impl(int sig,
   internal_memset(&act.sa_mask, -1, sizeof(act.sa_mask));
   act.sa_flags = 0;
   __sanitizer_sigaction old;
-  int res = sigaction(sig, &act, &old);
+  int res = sigaction_symname(sig, &act, &old);
   if (res) return (__sanitizer_sighandler_ptr)sig_err;
   return old.handler;
 }
