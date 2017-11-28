@@ -27,3 +27,11 @@ Here are examples of each of the three cases:
   void f(const string &s);
   string s;
   f(std::move(s));  // Warning: passing result of std::move as a const reference argument; no move will actually happen
+
+Options
+-------
+
+.. option:: CheckTriviallyCopyableMove
+
+   If non-zero, enables detection of trivially copyable types that do not
+   have a move constructor. Default is non-zero.

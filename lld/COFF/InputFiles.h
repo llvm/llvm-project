@@ -142,19 +142,7 @@ private:
   void initializeSymbols();
   void initializeSEH();
 
-  SectionChunk *
-  readSection(uint32_t SectionNumber,
-              const llvm::object::coff_aux_section_definition *Def);
-
-  void readAssociativeDefinition(
-      COFFSymbolRef COFFSym,
-      const llvm::object::coff_aux_section_definition *Def);
-
-  llvm::Optional<Symbol *>
-  createDefined(COFFSymbolRef Sym,
-                std::vector<const llvm::object::coff_aux_section_definition *>
-                    &ComdatDefs);
-  Symbol *createRegular(COFFSymbolRef Sym);
+  Symbol *createDefined(COFFSymbolRef Sym, const void *Aux, bool IsFirst);
   Symbol *createUndefined(COFFSymbolRef Sym);
 
   std::unique_ptr<COFFObjectFile> COFFObj;

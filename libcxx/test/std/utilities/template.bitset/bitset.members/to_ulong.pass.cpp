@@ -16,12 +16,9 @@
 #include <climits>
 #include <cassert>
 
-#include <iostream>
-
 template <std::size_t N>
 void test_to_ulong()
 {
-    std::cout << "Testing size = " << N << std::endl;
     const std::size_t M = sizeof(unsigned long) * CHAR_BIT < N ? sizeof(unsigned long) * CHAR_BIT : N;
     const bool is_M_zero = std::integral_constant<bool, M == 0>::value; // avoid compiler warnings
     const std::size_t X = is_M_zero ? sizeof(unsigned long) * CHAR_BIT - 1 : sizeof(unsigned long) * CHAR_BIT - M;
@@ -37,13 +34,12 @@ void test_to_ulong()
     for (std::size_t i = 0; i < sizeof(tests)/sizeof(tests[0]); ++i)
     {
         std::size_t j = tests[i];
-    std::cout << "  Testing value = " << j << std::endl;
         std::bitset<N> v(j);
         assert(j == v.to_ulong());
     }
 
     { // test values bigger than can fit into the bitset
-    const unsigned long val = 0xAAAAAAAAULL;
+    const unsigned long val = 0x5AFFFFA5ULL;
     const bool canFit = N < sizeof(unsigned long) * CHAR_BIT;
     const unsigned long mask = canFit ? (1ULL << N) - 1 : (unsigned long)(-1);
     std::bitset<N> v(val);

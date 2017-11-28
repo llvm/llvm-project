@@ -57,6 +57,11 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- New `objc-avoid-spinlock
+  <http://clang.llvm.org/extra/clang-tidy/checks/objc-avoid-spinlock.html>`_ check
+
+  Add new check to detect the use of OSSpinlock.
+
 - The 'misc-move-constructor-init' check was renamed to `performance-move-constructor-init
   <http://clang.llvm.org/extra/clang-tidy/checks/performance-move-constructor-init.html>`_
 

@@ -159,9 +159,10 @@ public:
   void addAssociative(SectionChunk *Child);
 
   StringRef getDebugName() override;
+  void setSymbol(DefinedRegular *S) { if (!Sym) Sym = S; }
 
-  // Returns true if the chunk was not dropped by GC.
-  bool isLive() { return Live; }
+  // Returns true if the chunk was not dropped by GC or COMDAT deduplication.
+  bool isLive() { return Live && !Discarded; }
 
   // Used by the garbage collector.
   void markLive() {
@@ -169,6 +170,13 @@ public:
     assert(!isLive() && "Cannot mark an already live section!");
     Live = true;
   }
+
+  // Returns true if this chunk was dropped by COMDAT deduplication.
+  bool isDiscarded() const { return Discarded; }
+
+  // Used by the SymbolTable when discarding unused comdat sections. This is
+  // redundant when GC is enabled, as all comdat sections will start out dead.
+  void markDiscarded() { Discarded = true; }
 
   // True if this is a codeview debug info chunk. These will not be laid out in
   // the image. Instead they will end up in the PDB, if one is requested.
@@ -205,14 +213,14 @@ public:
   // The file that this chunk was created from.
   ObjFile *File;
 
-  // The COMDAT leader symbol if this is a COMDAT chunk.
-  DefinedRegular *Sym = nullptr;
-
 private:
   StringRef SectionName;
   std::vector<SectionChunk *> AssocChildren;
   llvm::iterator_range<const coff_relocation *> Relocs;
   size_t NumRelocs;
+
+  // True if this chunk was discarded because it was a duplicate comdat section.
+  bool Discarded;
 
   // Used by the garbage collector.
   bool Live;
@@ -220,6 +228,9 @@ private:
   // Used for ICF (Identical COMDAT Folding)
   void replace(SectionChunk *Other);
   uint32_t Class[2] = {0, 0};
+
+  // Sym points to a section symbol if this is a COMDAT chunk.
+  DefinedRegular *Sym = nullptr;
 };
 
 // A chunk for common symbols. Common chunks don't have actual data.
