@@ -159,7 +159,7 @@ bool RegBankSelect::repairReg(
   // same types because the type is a placeholder when this function is called.
   MachineInstr *MI =
       MIRBuilder.buildInstrNoInsert(TargetOpcode::COPY).addDef(Dst).addUse(Src);
-  DEBUG(dbgs() << "Copy: " << PrintReg(Src) << " to: " << PrintReg(Dst)
+  DEBUG(dbgs() << "Copy: " << printReg(Src) << " to: " << printReg(Dst)
                << '\n');
   // TODO:
   // Check if MI is legal. if not, we need to legalize all the

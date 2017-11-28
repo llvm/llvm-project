@@ -1143,8 +1143,8 @@ struct VirtReg2IndexFunctor {
 ///   %EAX            - a physical register
 ///   %physreg17      - a physical register when no TRI instance given.
 ///
-/// Usage: OS << PrintReg(Reg, TRI) << '\n';
-Printable PrintReg(unsigned Reg, const TargetRegisterInfo *TRI = nullptr,
+/// Usage: OS << printReg(Reg, TRI, SubRegIdx) << '\n';
+Printable printReg(unsigned Reg, const TargetRegisterInfo *TRI = nullptr,
                    unsigned SubRegIdx = 0);
 
 /// Create Printable object to print register units on a \ref raw_ostream.
@@ -1154,12 +1154,12 @@ Printable PrintReg(unsigned Reg, const TargetRegisterInfo *TRI = nullptr,
 ///   AL      - Single root.
 ///   FP0~ST7 - Dual roots.
 ///
-/// Usage: OS << PrintRegUnit(Unit, TRI) << '\n';
-Printable PrintRegUnit(unsigned Unit, const TargetRegisterInfo *TRI);
+/// Usage: OS << printRegUnit(Unit, TRI) << '\n';
+Printable printRegUnit(unsigned Unit, const TargetRegisterInfo *TRI);
 
 /// \brief Create Printable object to print virtual registers and physical
 /// registers on a \ref raw_ostream.
-Printable PrintVRegOrUnit(unsigned VRegOrUnit, const TargetRegisterInfo *TRI);
+Printable printVRegOrUnit(unsigned VRegOrUnit, const TargetRegisterInfo *TRI);
 
 } // end namespace llvm
 

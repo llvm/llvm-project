@@ -123,7 +123,6 @@ if config.have_ocamlopt:
     ocamlopt_command = '%s ocamlopt -cclib -L%s -cclib -Wl,-rpath,%s %s' % (
         config.ocamlfind_executable, config.llvm_lib_dir, config.llvm_lib_dir, config.ocaml_flags)
 
-opt_viewer_cmd = '%s %s/tools/opt-viewer/opt-viewer.py' % (sys.executable, config.llvm_src_root)
 
 tools = [
     ToolSubst('%lli', FindTool('lli'), post='.', extra_args=lli_args),
@@ -133,7 +132,6 @@ tools = [
     ToolSubst('%ld64', ld64_cmd, unresolved='ignore'),
     ToolSubst('%ocamlc', ocamlc_command, unresolved='ignore'),
     ToolSubst('%ocamlopt', ocamlopt_command, unresolved='ignore'),
-    ToolSubst('%opt-viewer', opt_viewer_cmd),
 ]
 
 # FIXME: Why do we have both `lli` and `%lli` that do slightly different things?
@@ -288,6 +286,3 @@ if config.have_libxar:
 
 if config.llvm_libxml2_enabled == '1':
     config.available_features.add('libxml2')
-
-if config.have_opt_viewer_modules:
-    config.available_features.add('have_opt_viewer_modules')

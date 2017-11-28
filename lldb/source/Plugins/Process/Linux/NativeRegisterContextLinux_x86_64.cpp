@@ -528,6 +528,22 @@ NativeRegisterContextLinux_x86_64::ReadRegister(const RegisterInfo *reg_info,
   return error;
 }
 
+void NativeRegisterContextLinux_x86_64::UpdateXSTATEforWrite(
+    uint32_t reg_index) {
+  XSAVE_HDR::XFeature &xstate_bv = m_fpr.xstate.xsave.header.xstate_bv;
+  if (IsFPR(reg_index)) {
+    // IsFPR considers both %st and %xmm registers as floating point, but these
+    // map to two features. Set both flags, just in case.
+    xstate_bv |= XSAVE_HDR::XFeature::FP | XSAVE_HDR::XFeature::SSE;
+  } else if (IsAVX(reg_index)) {
+    // Lower bytes of some %ymm registers are shared with %xmm registers.
+    xstate_bv |= XSAVE_HDR::XFeature::YMM | XSAVE_HDR::XFeature::SSE;
+  } else if (IsMPX(reg_index)) {
+    // MPX registers map to two XSAVE features.
+    xstate_bv |= XSAVE_HDR::XFeature::BNDREGS | XSAVE_HDR::XFeature::BNDCSR;
+  }
+}
+
 Status NativeRegisterContextLinux_x86_64::WriteRegister(
     const RegisterInfo *reg_info, const RegisterValue &reg_value) {
   assert(reg_info && "reg_info is null");
@@ -537,6 +553,8 @@ Status NativeRegisterContextLinux_x86_64::WriteRegister(
     return Status("no lldb regnum for %s", reg_info && reg_info->name
                                                ? reg_info->name
                                                : "<unknown register>");
+
+  UpdateXSTATEforWrite(reg_index);
 
   if (IsGPR(reg_index))
     return WriteRegisterRaw(reg_index, reg_value);

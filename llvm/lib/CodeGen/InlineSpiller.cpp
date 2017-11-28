@@ -921,7 +921,7 @@ void InlineSpiller::insertSpill(unsigned NewVReg, bool isKill,
 
 /// spillAroundUses - insert spill code around each use of Reg.
 void InlineSpiller::spillAroundUses(unsigned Reg) {
-  DEBUG(dbgs() << "spillAroundUses " << PrintReg(Reg) << '\n');
+  DEBUG(dbgs() << "spillAroundUses " << printReg(Reg) << '\n');
   LiveInterval &OldLI = LIS.getInterval(Reg);
 
   // Iterate over instructions using Reg.
@@ -1077,7 +1077,7 @@ void InlineSpiller::spill(LiveRangeEdit &edit) {
   DEBUG(dbgs() << "Inline spilling "
                << TRI.getRegClassName(MRI.getRegClass(edit.getReg()))
                << ':' << edit.getParent()
-               << "\nFrom original " << PrintReg(Original) << '\n');
+               << "\nFrom original " << printReg(Original) << '\n');
   assert(edit.getParent().isSpillable() &&
          "Attempting to spill already spilled value.");
   assert(DeadDefs.empty() && "Previous spill didn't remove dead defs");

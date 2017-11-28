@@ -28,7 +28,7 @@ Content-Length: 146
 # CHECK-NEXT:        "sortText": "{{.*}}fake"
 #      CHECK:    ]
 # CHECK-NEXT:  }
-Content-Length: 172
+Content-Length: 173
 
 {"jsonrpc":"2.0","id":2,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///main.cpp"},"uri":"file:///main.cpp","position":{"line":3,"character":5}}}
 # Test params parsing in the presence of a 1.x-compatible client (inlined "uri")
@@ -51,4 +51,4 @@ Content-Length: 44
 {"jsonrpc":"2.0","id":3,"method":"shutdown"}
 Content-Length: 33
 
-{"jsonrpc":"2.0":"method":"exit"}
+{"jsonrpc":"2.0","method":"exit"}

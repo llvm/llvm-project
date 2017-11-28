@@ -830,8 +830,8 @@ void HexagonInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 #ifndef NDEBUG
   // Show the invalid registers to ease debugging.
   dbgs() << "Invalid registers for copy in BB#" << MBB.getNumber()
-         << ": " << PrintReg(DestReg, &HRI)
-         << " = " << PrintReg(SrcReg, &HRI) << '\n';
+         << ": " << printReg(DestReg, &HRI)
+         << " = " << printReg(SrcReg, &HRI) << '\n';
 #endif
   llvm_unreachable("Unimplemented");
 }

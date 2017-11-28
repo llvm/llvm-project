@@ -17,7 +17,6 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/Support/YAMLParser.h"
 #include <iosfwd>
 #include <mutex>
 
@@ -30,7 +29,7 @@ class JSONOutput : public Logger {
 public:
   JSONOutput(llvm::raw_ostream &Outs, llvm::raw_ostream &Logs,
              llvm::raw_ostream *InputMirror = nullptr, bool Pretty = false)
-      : Outs(Outs), Logs(Logs), InputMirror(InputMirror), Pretty(Pretty) {}
+      : Pretty(Pretty), Outs(Outs), Logs(Logs), InputMirror(InputMirror) {}
 
   /// Emit a JSONRPC message.
   void writeMessage(const json::Expr &Result);
@@ -44,11 +43,13 @@ public:
   /// Unlike other methods of JSONOutput, mirrorInput is not thread-safe.
   void mirrorInput(const Twine &Message);
 
+  // Whether output should be pretty-printed.
+  const bool Pretty;
+
 private:
   llvm::raw_ostream &Outs;
   llvm::raw_ostream &Logs;
   llvm::raw_ostream *InputMirror;
-  bool Pretty;
 
   std::mutex StreamMutex;
 };
@@ -84,8 +85,7 @@ private:
 class JSONRPCDispatcher {
 public:
   // A handler responds to requests for a particular method name.
-  using Handler =
-      std::function<void(RequestContext, llvm::yaml::MappingNode *)>;
+  using Handler = std::function<void(RequestContext, const json::Expr &)>;
 
   /// Create a new JSONRPCDispatcher. UnknownHandler is called when an unknown
   /// method is received.
@@ -96,7 +96,7 @@ public:
   void registerHandler(StringRef Method, Handler H);
 
   /// Parses a JSONRPC message and calls the Handler for it.
-  bool call(StringRef Content, JSONOutput &Out) const;
+  bool call(const json::Expr &Message, JSONOutput &Out) const;
 
 private:
   llvm::StringMap<Handler> Handlers;

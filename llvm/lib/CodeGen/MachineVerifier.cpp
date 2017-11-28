@@ -528,14 +528,14 @@ void MachineVerifier::report_context_liverange(const LiveRange &LR) const {
 }
 
 void MachineVerifier::report_context_vreg(unsigned VReg) const {
-  errs() << "- v. register: " << PrintReg(VReg, TRI) << '\n';
+  errs() << "- v. register: " << printReg(VReg, TRI) << '\n';
 }
 
 void MachineVerifier::report_context_vreg_regunit(unsigned VRegOrUnit) const {
   if (TargetRegisterInfo::isVirtualRegister(VRegOrUnit)) {
     report_context_vreg(VRegOrUnit);
   } else {
-    errs() << "- regunit:     " << PrintRegUnit(VRegOrUnit, TRI) << '\n';
+    errs() << "- regunit:     " << printRegUnit(VRegOrUnit, TRI) << '\n';
   }
 }
 
@@ -1688,7 +1688,7 @@ void MachineVerifier::visitMachineFunctionAfter() {
          ++I)
       if (MInfo.regsKilled.count(*I)) {
         report("Virtual register killed in block, but needed live out.", &MBB);
-        errs() << "Virtual register " << PrintReg(*I)
+        errs() << "Virtual register " << printReg(*I)
             << " is used after the block.\n";
       }
   }
@@ -1721,13 +1721,13 @@ void MachineVerifier::verifyLiveVariables() {
       if (MInfo.vregsRequired.count(Reg)) {
         if (!VI.AliveBlocks.test(MBB.getNumber())) {
           report("LiveVariables: Block missing from AliveBlocks", &MBB);
-          errs() << "Virtual register " << PrintReg(Reg)
+          errs() << "Virtual register " << printReg(Reg)
               << " must be live through the block.\n";
         }
       } else {
         if (VI.AliveBlocks.test(MBB.getNumber())) {
           report("LiveVariables: Block should not be in AliveBlocks", &MBB);
-          errs() << "Virtual register " << PrintReg(Reg)
+          errs() << "Virtual register " << printReg(Reg)
               << " is not needed live through the block.\n";
         }
       }
@@ -1746,7 +1746,7 @@ void MachineVerifier::verifyLiveIntervals() {
 
     if (!LiveInts->hasInterval(Reg)) {
       report("Missing live interval for virtual register", MF);
-      errs() << PrintReg(Reg, TRI) << " still has defs or uses\n";
+      errs() << printReg(Reg, TRI) << " still has defs or uses\n";
       continue;
     }
 

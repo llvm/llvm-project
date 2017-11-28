@@ -364,7 +364,7 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
 #ifndef NDEBUG
     if (MBB->pred_empty()) {
       MBB->getParent()->verify();
-      errs() << "Use of " << PrintReg(PhysReg)
+      errs() << "Use of " << printReg(PhysReg)
              << " does not have a corresponding definition on every path:\n";
       const MachineInstr *MI = Indexes->getInstructionFromIndex(Use);
       if (MI != nullptr)
@@ -376,7 +376,7 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
         !MBB->isLiveIn(PhysReg)) {
       MBB->getParent()->verify();
       const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
-      errs() << "The register " << PrintReg(PhysReg, TRI)
+      errs() << "The register " << printReg(PhysReg, TRI)
              << " needs to be live in to BB#" << MBB->getNumber()
              << ", but is missing from the live-in list.\n";
       report_fatal_error("Invalid global physical register");

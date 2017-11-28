@@ -139,7 +139,7 @@ void ClangdLSPServer::onRename(Ctx C, RenameParams &Params) {
   std::string Code = Server.getDocument(File);
   std::vector<TextEdit> Edits = replacementsToEdits(Code, *Replacements);
   WorkspaceEdit WE;
-  WE.changes = {{llvm::yaml::escape(Params.textDocument.uri.uri), Edits}};
+  WE.changes = {{Params.textDocument.uri.uri, Edits}};
   C.reply(WorkspaceEdit::unparse(WE));
 }
 
@@ -249,7 +249,7 @@ bool ClangdLSPServer::run(std::istream &In) {
 
   // Set up JSONRPCDispatcher.
   JSONRPCDispatcher Dispatcher(
-      [](RequestContext Ctx, llvm::yaml::MappingNode *Params) {
+      [](RequestContext Ctx, const json::Expr &Params) {
         Ctx.replyError(ErrorCode::MethodNotFound, "method not found");
       });
   registerCallbackHandlers(Dispatcher, Out, /*Callbacks=*/*this);
