@@ -848,7 +848,7 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
         Info.vol ? MachineMemOperand::MOVolatile : MachineMemOperand::MONone;
     Flags |=
         Info.readMem ? MachineMemOperand::MOLoad : MachineMemOperand::MOStore;
-    uint64_t Size = Info.memVT.getSizeInBits() >> 3;
+    uint64_t Size = Info.memVT.getStoreSize();
     MIB.addMemOperand(MF->getMachineMemOperand(MachinePointerInfo(Info.ptrVal),
                                                Flags, Size, Info.align));
   }
