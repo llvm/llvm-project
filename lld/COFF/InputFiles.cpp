@@ -116,7 +116,6 @@ void ObjFile::parse() {
   // Read section and symbol tables.
   initializeChunks();
   initializeSymbols();
-  initializeSEH();
 }
 
 // We set SectionChunk pointers in the SparseChunks vector to this value
@@ -153,7 +152,12 @@ SectionChunk *ObjFile::readSection(uint32_t SectionNumber,
     fatal("getSectionName failed: #" + Twine(SectionNumber) + ": " +
           EC.message());
   if (Name == ".sxdata") {
-    SXData = Sec;
+    ArrayRef<uint8_t> Data;
+    COFFObj->getSectionContents(Sec, Data);
+    if (Data.size() % 4 != 0)
+      fatal(".sxdata must be an array of symbol table indices");
+    SXData = {reinterpret_cast<const ulittle32_t *>(Data.data()),
+              Data.size() / 4};
     return nullptr;
   }
   if (Name == ".drectve") {
@@ -368,20 +372,6 @@ Optional<Symbol *> ObjFile::createDefined(
   if (SparseChunks[SectionNumber] == PendingComdat)
     return None;
   return createRegular(Sym);
-}
-
-void ObjFile::initializeSEH() {
-  if (!SEHCompat || !SXData)
-    return;
-  ArrayRef<uint8_t> A;
-  COFFObj->getSectionContents(SXData, A);
-  if (A.size() % 4 != 0)
-    fatal(".sxdata must be an array of symbol table indices");
-  auto *I = reinterpret_cast<const ulittle32_t *>(A.data());
-  auto *E = reinterpret_cast<const ulittle32_t *>(A.data() + A.size());
-  for (; I != E; ++I)
-    if (Symbols[*I])
-      SEHandlers.insert(Symbols[*I]);
 }
 
 MachineTypes ObjFile::getMachineType() {

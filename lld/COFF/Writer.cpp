@@ -799,11 +799,10 @@ void Writer::createSEHTable(OutputSection *RData) {
   for (ObjFile *File : ObjFile::Instances) {
     if (!File->SEHCompat)
       return;
-    for (Symbol *B : File->SEHandlers) {
-      // Make sure the handler is still live.
-      if (B->isLive())
-        Handlers.insert(cast<Defined>(B));
-    }
+    for (uint32_t I : File->SXData)
+      if (Symbol *B = File->getSymbol(I))
+        if (B->isLive())
+          Handlers.insert(cast<Defined>(B));
   }
 
   if (Handlers.empty())

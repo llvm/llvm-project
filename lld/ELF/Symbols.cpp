@@ -142,7 +142,6 @@ void Symbol::copyFrom(Symbol *Other) {
   memcpy(this, Other, sizeof(SymbolUnion));
 
   VersionId = Sym.VersionId;
-  Visibility = Sym.Visibility;
   IsUsedInRegularObj = Sym.IsUsedInRegularObj;
   ExportDynamic = Sym.ExportDynamic;
   CanInline = Sym.CanInline;

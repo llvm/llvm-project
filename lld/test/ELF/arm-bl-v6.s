@@ -1,6 +1,6 @@
 // RUN: llvm-mc -filetype=obj -triple=arm-none-linux-gnueabi %s -o %t
 // RUN: ld.lld %t -o %t2 2>&1 | FileCheck %s
-// Requires: arm
+// REQUIRES: arm
 
 // On Arm v6 the range of a Thumb BL instruction is only 4 megabytes as the
 // extended range encoding is not supported. The following example has a Thumb
