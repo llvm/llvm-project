@@ -78,6 +78,20 @@ inline bool isAlpha(char C) {
 /// lowercase letter as classified by "C" locale.
 inline bool isAlnum(char C) { return isAlpha(C) || isDigit(C); }
 
+/// Returns the corresponding lowercase character if \p x is uppercase.
+inline char toLower(char x) {
+  if (x >= 'A' && x <= 'Z')
+    return x - 'A' + 'a';
+  return x;
+}
+
+/// Returns the corresponding uppercase character if \p x is lowercase.
+inline char toUpper(char x) {
+  if (x >= 'a' && x <= 'z')
+    return x - 'a' + 'A';
+  return x;
+}
+
 inline std::string utohexstr(uint64_t X, bool LowerCase = false) {
   char Buffer[17];
   char *BufPtr = std::end(Buffer);
@@ -253,6 +267,9 @@ inline StringRef getOrdinalSuffix(unsigned Val) {
 /// PrintEscapedString - Print each character of the specified string, escaping
 /// it if it is not printable or if it is an escape char.
 void PrintEscapedString(StringRef Name, raw_ostream &Out);
+
+/// printLowerCase - Print each character as lowercase if it is uppercase.
+void printLowerCase(StringRef String, raw_ostream &Out);
 
 namespace detail {
 

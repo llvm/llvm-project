@@ -60,19 +60,23 @@ class SourceFileRenderer:
 
     def render_source_lines(self, stream, line_remarks):
         file_text = stream.read()
-        html_highlighted = highlight(
+
+        if args.no_highlight:
+            html_highlighted = file_text
+        else:
+            html_highlighted = highlight(
             file_text,
-            self.cpp_lexer,
-            self.html_formatter)
+                self.cpp_lexer,
+                self.html_formatter)
 
-        # On Python 3, pygments.highlight() returns a bytes object, not a str.
-        if sys.version_info >= (3, 0):
-          html_highlighted = html_highlighted.decode('utf-8')
+            # On Python 3, pygments.highlight() returns a bytes object, not a str.
+            if sys.version_info >= (3, 0):
+              html_highlighted = html_highlighted.decode('utf-8')
 
-        # Take off the header and footer, these must be
-        #   reapplied line-wise, within the page structure
-        html_highlighted = html_highlighted.replace('<div class="highlight"><pre>', '')
-        html_highlighted = html_highlighted.replace('</pre></div>', '')
+            # Take off the header and footer, these must be
+            #   reapplied line-wise, within the page structure
+            html_highlighted = html_highlighted.replace('<div class="highlight"><pre>', '')
+            html_highlighted = html_highlighted.replace('</pre></div>', '')
 
         for (linenum, html_line) in enumerate(html_highlighted.split('\n'), start=1):
             print('''
@@ -274,6 +278,11 @@ if __name__ == '__main__':
         default=1000,
         type=int,
         help='Maximum number of the hottest remarks to appear on the index page')
+    parser.add_argument(
+        '--no-highlight',
+        action='store_true',
+        default=False,
+        help='Do not use a syntax highlighter when rendering the source code')
     args = parser.parse_args()
 
     print_progress = not args.no_progress_indicator

@@ -368,7 +368,7 @@ void HexagonBlockRanges::computeInitialLiveRanges(InstrIndexMap &IndexMap,
       }
     }
     // Defs and clobbers can overlap, e.g.
-    // %D0<def,dead> = COPY %vreg5, %R0<imp-def>, %R1<imp-def>
+    // %d0<def,dead> = COPY %vreg5, %r0<imp-def>, %r1<imp-def>
     for (RegisterRef R : Defs)
       Clobbers.erase(R);
 
@@ -531,7 +531,7 @@ raw_ostream &llvm::operator<<(raw_ostream &OS,
                               const HexagonBlockRanges::PrintRangeMap &P) {
   for (auto &I : P.Map) {
     const HexagonBlockRanges::RangeList &RL = I.second;
-    OS << PrintReg(I.first.Reg, &P.TRI, I.first.Sub) << " -> " << RL << "\n";
+    OS << printReg(I.first.Reg, &P.TRI, I.first.Sub) << " -> " << RL << "\n";
   }
   return OS;
 }

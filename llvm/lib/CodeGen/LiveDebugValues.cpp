@@ -457,7 +457,7 @@ void LiveDebugValues::transferSpillInst(MachineInstr &MI,
   // Check if the register is the location of a debug value.
   for (unsigned ID : OpenRanges.getVarLocs()) {
     if (VarLocIDs[ID].isDescribedByReg() == Reg) {
-      DEBUG(dbgs() << "Spilling Register " << PrintReg(Reg, TRI) << '('
+      DEBUG(dbgs() << "Spilling Register " << printReg(Reg, TRI) << '('
                    << VarLocIDs[ID].Var.getVar()->getName() << ")\n");
 
       // Create a DBG_VALUE instruction to describe the Var in its spilled

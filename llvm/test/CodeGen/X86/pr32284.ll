@@ -308,7 +308,7 @@ entry:
 define void @f2() {
 ; X86-O0-LABEL: f2:
 ; X86-O0:       # BB#0: # %entry
-; X86-O0-NEXT:    # implicit-def: %RAX
+; X86-O0-NEXT:    # implicit-def: %rax
 ; X86-O0-NEXT:    movzbl var_7, %ecx
 ; X86-O0-NEXT:    cmpb $0, var_7
 ; X86-O0-NEXT:    setne %dl
@@ -361,7 +361,7 @@ define void @f2() {
 ; 686-O0-NEXT:    .cfi_def_cfa_offset 14
 ; 686-O0-NEXT:    .cfi_offset %esi, -12
 ; 686-O0-NEXT:    .cfi_offset %edi, -8
-; 686-O0-NEXT:    # implicit-def: %EAX
+; 686-O0-NEXT:    # implicit-def: %eax
 ; 686-O0-NEXT:    movzbl var_7, %ecx
 ; 686-O0-NEXT:    cmpb $0, var_7
 ; 686-O0-NEXT:    setne %dl

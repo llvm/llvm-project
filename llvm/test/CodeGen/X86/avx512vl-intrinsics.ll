@@ -718,7 +718,7 @@ define i8 @test_cmpps_256(<8 x float> %a, <8 x float> %b) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vcmpleps %ymm1, %ymm0, %k0 ## encoding: [0x62,0xf1,0x7c,0x28,0xc2,0xc1,0x02]
 ; CHECK-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
-; CHECK-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
+; CHECK-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
    %res = call i8 @llvm.x86.avx512.mask.cmp.ps.256(<8 x float> %a, <8 x float> %b, i32 2, i8 -1)
    ret i8 %res
@@ -730,7 +730,7 @@ define i8 @test_cmpps_128(<4 x float> %a, <4 x float> %b) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vcmpleps %xmm1, %xmm0, %k0 ## encoding: [0x62,0xf1,0x7c,0x08,0xc2,0xc1,0x02]
 ; CHECK-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
-; CHECK-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
+; CHECK-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
    %res = call i8 @llvm.x86.avx512.mask.cmp.ps.128(<4 x float> %a, <4 x float> %b, i32 2, i8 -1)
    ret i8 %res
@@ -742,7 +742,7 @@ define i8 @test_cmppd_256(<4 x double> %a, <4 x double> %b) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vcmplepd %ymm1, %ymm0, %k0 ## encoding: [0x62,0xf1,0xfd,0x28,0xc2,0xc1,0x02]
 ; CHECK-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
-; CHECK-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
+; CHECK-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
    %res = call i8 @llvm.x86.avx512.mask.cmp.pd.256(<4 x double> %a, <4 x double> %b, i32 2, i8 -1)
    ret i8 %res
@@ -754,7 +754,7 @@ define i8 @test_cmppd_128(<2 x double> %a, <2 x double> %b) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vcmplepd %xmm1, %xmm0, %k0 ## encoding: [0x62,0xf1,0xfd,0x08,0xc2,0xc1,0x02]
 ; CHECK-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
-; CHECK-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
+; CHECK-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
    %res = call i8 @llvm.x86.avx512.mask.cmp.pd.128(<2 x double> %a, <2 x double> %b, i32 2, i8 -1)
    ret i8 %res

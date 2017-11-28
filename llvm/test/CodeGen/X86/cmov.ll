@@ -83,7 +83,7 @@ define i1 @test4() nounwind {
 ; CHECK-NEXT:    shrb $7, %al
 ; CHECK-NEXT:    movzbl %al, %ecx
 ; CHECK-NEXT:    xorl $1, %ecx
-; CHECK-NEXT:    # kill: %CL<def> %CL<kill> %ECX<kill>
+; CHECK-NEXT:    # kill: %cl<def> %cl<kill> %ecx<kill>
 ; CHECK-NEXT:    sarl %cl, %edx
 ; CHECK-NEXT:    movb {{.*}}(%rip), %al
 ; CHECK-NEXT:    testb %al, %al

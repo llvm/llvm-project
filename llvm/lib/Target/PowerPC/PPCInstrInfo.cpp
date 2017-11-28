@@ -2315,10 +2315,10 @@ PPCInstrInfo::isSignOrZeroExtended(const MachineInstr &MI, bool SignExt,
 
       // For a method return value, we check the ZExt/SExt flags in attribute.
       // We assume the following code sequence for method call.
-      //   ADJCALLSTACKDOWN 32, %R1<imp-def,dead>, %R1<imp-use>
+      //   ADJCALLSTACKDOWN 32, %r1<imp-def,dead>, %r1<imp-use>
       //   BL8_NOP <ga:@func>,...
-      //   ADJCALLSTACKUP 32, 0, %R1<imp-def,dead>, %R1<imp-use>
-      //   %vreg5<def> = COPY %X3; G8RC:%vreg5
+      //   ADJCALLSTACKUP 32, 0, %r1<imp-def,dead>, %r1<imp-use>
+      //   %vreg5<def> = COPY %x3; G8RC:%vreg5
       if (SrcReg == PPC::X3) {
         const MachineBasicBlock *MBB = MI.getParent();
         MachineBasicBlock::const_instr_iterator II =

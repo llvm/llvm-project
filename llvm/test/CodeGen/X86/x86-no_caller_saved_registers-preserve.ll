@@ -3,10 +3,10 @@
 
 ;; In functions with 'no_caller_saved_registers' attribute, all registers should
 ;; be preserved except for registers used for passing/returning arguments.
-;; In the following function registers %RDI, %RSI and %XMM0 are used to store
-;; arguments %a0, %a1 and %b0 accordingally. The value is returned in %RAX.
+;; In the following function registers %rdi, %rsi and %xmm0 are used to store
+;; arguments %a0, %a1 and %b0 accordingally. The value is returned in %rax.
 ;; The above registers should not be preserved, however other registers
-;; (that are modified by the function) should be preserved (%RDX and %XMM1).
+;; (that are modified by the function) should be preserved (%rdx and %xmm1).
 define x86_64_sysvcc i32 @bar(i32 %a0, i32 %a1, float %b0) #0 {
 ; CHECK-LABEL: bar:
 ; CHECK:       # BB#0:
@@ -27,7 +27,7 @@ define x86_64_sysvcc i32 @bar(i32 %a0, i32 %a1, float %b0) #0 {
 
 ;; Because "bar" has 'no_caller_saved_registers' attribute, function "foo"
 ;; doesn't need to preserve registers except for the arguments passed 
-;; to "bar" (%ESI, %EDI and %XMM0).
+;; to "bar" (%esi, %edi and %xmm0).
 define x86_64_sysvcc float @foo(i32 %a0, i32 %a1, float %b0) {
 ; CHECK-LABEL: foo
 ; CHECK:       movaps  %xmm0, %xmm1

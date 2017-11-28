@@ -54,7 +54,7 @@ define i4 @v4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64> %c, <4 x i64> %d) {
 ; SSE2-SSSE3-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm1[0,2]
 ; SSE2-SSSE3-NEXT:    andps %xmm0, %xmm2
 ; SSE2-SSSE3-NEXT:    movmskps %xmm2, %eax
-; SSE2-SSSE3-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; SSE2-SSSE3-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX1-LABEL: v4i64:
@@ -71,7 +71,7 @@ define i4 @v4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64> %c, <4 x i64> %d) {
 ; AVX1-NEXT:    vpackssdw %xmm1, %xmm2, %xmm1
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovmskps %xmm0, %eax
-; AVX1-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; AVX1-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -85,7 +85,7 @@ define i4 @v4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64> %c, <4 x i64> %d) {
 ; AVX2-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovmskps %xmm0, %eax
-; AVX2-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; AVX2-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -126,7 +126,7 @@ define i4 @v4f64(<4 x double> %a, <4 x double> %b, <4 x double> %c, <4 x double>
 ; SSE2-SSSE3-NEXT:    shufps {{.*#+}} xmm6 = xmm6[0,2],xmm7[0,2]
 ; SSE2-SSSE3-NEXT:    andps %xmm2, %xmm6
 ; SSE2-SSSE3-NEXT:    movmskps %xmm6, %eax
-; SSE2-SSSE3-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; SSE2-SSSE3-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX12-LABEL: v4f64:
@@ -139,7 +139,7 @@ define i4 @v4f64(<4 x double> %a, <4 x double> %b, <4 x double> %c, <4 x double>
 ; AVX12-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
 ; AVX12-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX12-NEXT:    vmovmskps %xmm0, %eax
-; AVX12-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; AVX12-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; AVX12-NEXT:    vzeroupper
 ; AVX12-NEXT:    retq
 ;
@@ -180,7 +180,7 @@ define i16 @v16i16(<16 x i16> %a, <16 x i16> %b, <16 x i16> %c, <16 x i16> %d) {
 ; SSE2-SSSE3-NEXT:    packsswb %xmm5, %xmm4
 ; SSE2-SSSE3-NEXT:    pand %xmm0, %xmm4
 ; SSE2-SSSE3-NEXT:    pmovmskb %xmm4, %eax
-; SSE2-SSSE3-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; SSE2-SSSE3-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX1-LABEL: v16i16:
@@ -197,7 +197,7 @@ define i16 @v16i16(<16 x i16> %a, <16 x i16> %b, <16 x i16> %c, <16 x i16> %d) {
 ; AVX1-NEXT:    vpacksswb %xmm1, %xmm2, %xmm1
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmovmskb %xmm0, %eax
-; AVX1-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; AVX1-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -211,7 +211,7 @@ define i16 @v16i16(<16 x i16> %a, <16 x i16> %b, <16 x i16> %c, <16 x i16> %d) {
 ; AVX2-NEXT:    vpacksswb %xmm2, %xmm1, %xmm1
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpmovmskb %xmm0, %eax
-; AVX2-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; AVX2-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -226,7 +226,7 @@ define i16 @v16i16(<16 x i16> %a, <16 x i16> %b, <16 x i16> %c, <16 x i16> %d) {
 ; AVX512F-NEXT:    vpslld $31, %zmm0, %zmm0
 ; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0 {%k1}
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; AVX512F-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
@@ -235,7 +235,7 @@ define i16 @v16i16(<16 x i16> %a, <16 x i16> %b, <16 x i16> %c, <16 x i16> %d) {
 ; AVX512BW-NEXT:    vpcmpgtw %ymm1, %ymm0, %k1
 ; AVX512BW-NEXT:    vpcmpgtw %ymm3, %ymm2, %k0 {%k1}
 ; AVX512BW-NEXT:    kmovd %k0, %eax
-; AVX512BW-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; AVX512BW-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
   %x0 = icmp sgt <16 x i16> %a, %b
@@ -257,7 +257,7 @@ define i8 @v8i32(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i32> %d) {
 ; SSE2-SSSE3-NEXT:    pand %xmm0, %xmm4
 ; SSE2-SSSE3-NEXT:    packsswb %xmm0, %xmm4
 ; SSE2-SSSE3-NEXT:    pmovmskb %xmm4, %eax
-; SSE2-SSSE3-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; SSE2-SSSE3-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX1-LABEL: v8i32:
@@ -275,7 +275,7 @@ define i8 @v8i32(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i32> %d) {
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmovmskb %xmm0, %eax
-; AVX1-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; AVX1-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -290,7 +290,7 @@ define i8 @v8i32(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i32> %d) {
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    vpmovmskb %xmm0, %eax
-; AVX2-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; AVX2-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -299,7 +299,7 @@ define i8 @v8i32(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i32> %d) {
 ; AVX512F-NEXT:    vpcmpgtd %ymm1, %ymm0, %k1
 ; AVX512F-NEXT:    vpcmpgtd %ymm3, %ymm2, %k0 {%k1}
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; AVX512F-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
@@ -308,7 +308,7 @@ define i8 @v8i32(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i32> %d) {
 ; AVX512BW-NEXT:    vpcmpgtd %ymm1, %ymm0, %k1
 ; AVX512BW-NEXT:    vpcmpgtd %ymm3, %ymm2, %k0 {%k1}
 ; AVX512BW-NEXT:    kmovd %k0, %eax
-; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; AVX512BW-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
   %x0 = icmp sgt <8 x i32> %a, %b
@@ -330,7 +330,7 @@ define i8 @v8f32(<8 x float> %a, <8 x float> %b, <8 x float> %c, <8 x float> %d)
 ; SSE2-SSSE3-NEXT:    pand %xmm2, %xmm6
 ; SSE2-SSSE3-NEXT:    packsswb %xmm0, %xmm6
 ; SSE2-SSSE3-NEXT:    pmovmskb %xmm6, %eax
-; SSE2-SSSE3-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; SSE2-SSSE3-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX12-LABEL: v8f32:
@@ -344,7 +344,7 @@ define i8 @v8f32(<8 x float> %a, <8 x float> %b, <8 x float> %c, <8 x float> %d)
 ; AVX12-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX12-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; AVX12-NEXT:    vpmovmskb %xmm0, %eax
-; AVX12-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; AVX12-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; AVX12-NEXT:    vzeroupper
 ; AVX12-NEXT:    retq
 ;
@@ -353,7 +353,7 @@ define i8 @v8f32(<8 x float> %a, <8 x float> %b, <8 x float> %c, <8 x float> %d)
 ; AVX512F-NEXT:    vcmpltps %ymm0, %ymm1, %k1
 ; AVX512F-NEXT:    vcmpltps %ymm2, %ymm3, %k0 {%k1}
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; AVX512F-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
@@ -362,7 +362,7 @@ define i8 @v8f32(<8 x float> %a, <8 x float> %b, <8 x float> %c, <8 x float> %d)
 ; AVX512BW-NEXT:    vcmpltps %ymm0, %ymm1, %k1
 ; AVX512BW-NEXT:    vcmpltps %ymm2, %ymm3, %k0 {%k1}
 ; AVX512BW-NEXT:    kmovd %k0, %eax
-; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; AVX512BW-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
   %x0 = fcmp ogt <8 x float> %a, %b

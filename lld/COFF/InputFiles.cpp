@@ -380,7 +380,8 @@ void ObjFile::initializeSEH() {
   auto *I = reinterpret_cast<const ulittle32_t *>(A.data());
   auto *E = reinterpret_cast<const ulittle32_t *>(A.data() + A.size());
   for (; I != E; ++I)
-    SEHandlers.insert(Symbols[*I]);
+    if (Symbols[*I])
+      SEHandlers.insert(Symbols[*I]);
 }
 
 MachineTypes ObjFile::getMachineType() {

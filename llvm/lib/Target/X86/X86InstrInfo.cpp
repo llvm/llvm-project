@@ -10879,7 +10879,7 @@ X86InstrInfo::getOutliningType(MachineInstr &MI) const {
   // FIXME: There are instructions which are being manually built without
   // explicit uses/defs so we also have to check the MCInstrDesc. We should be
   // able to remove the extra checks once those are fixed up. For example,
-  // sometimes we might get something like %RAX<def> = POP64r 1. This won't be
+  // sometimes we might get something like %rax<def> = POP64r 1. This won't be
   // caught by modifiesRegister or readsRegister even though the instruction
   // really ought to be formed so that modifiesRegister/readsRegister would
   // catch it.

@@ -1295,6 +1295,16 @@ non-AMD key names should be prefixed by "*vendor-name*.".
                                                            code is capable of
                                                            supporting XNACK. See
                                                            :ref:`amdgpu-target-features`.
+     "NumSpilledSGPRs"            integer                  Number of stores from
+                                                           a scalar register to
+                                                           a register allocator
+                                                           created spill
+                                                           location.
+     "NumSpilledVGPRs"            integer                  Number of stores from
+                                                           a vector register to
+                                                           a register allocator
+                                                           created spill
+                                                           location.
      ============================ ============== ========= =====================
 
 ..

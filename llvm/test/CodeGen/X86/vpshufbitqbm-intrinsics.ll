@@ -8,7 +8,7 @@ define i16 @test_vpshufbitqmb_128(<16 x i8> %a, <16 x i8> %b, i16 %mask) {
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    vpshufbitqmb %xmm1, %xmm0, %k0 {%k1}
 ; CHECK-NEXT:    kmovd %k0, %eax
-; CHECK-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
+; CHECK-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
 ; CHECK-NEXT:    retq
   %res = call i16 @llvm.x86.avx512.mask.vpshufbitqmb.128(<16 x i8> %a, <16 x i8> %b, i16 %mask)
   ret i16 %res

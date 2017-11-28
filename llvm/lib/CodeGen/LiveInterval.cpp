@@ -986,7 +986,7 @@ void LiveInterval::SubRange::print(raw_ostream &OS) const {
 }
 
 void LiveInterval::print(raw_ostream &OS) const {
-  OS << PrintReg(reg) << ' ';
+  OS << printReg(reg) << ' ';
   super::print(OS);
   // Print subranges
   for (const SubRange &SR : subranges())

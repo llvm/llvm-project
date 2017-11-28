@@ -8,19 +8,19 @@ define x86_regcallcc i1 @test_argReti1(i1 %a)  {
 ; X32-LABEL: test_argReti1:
 ; X32:       # BB#0:
 ; X32-NEXT:    incb %al
-; X32-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; X32-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; X32-NEXT:    retl
 ;
 ; WIN64-LABEL: test_argReti1:
 ; WIN64:       # BB#0:
 ; WIN64-NEXT:    incb %al
-; WIN64-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; WIN64-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; WIN64-NEXT:    retq
 ;
 ; LINUXOSX64-LABEL: test_argReti1:
 ; LINUXOSX64:       # BB#0:
 ; LINUXOSX64-NEXT:    incb %al
-; LINUXOSX64-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; LINUXOSX64-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; LINUXOSX64-NEXT:    retq
   %add = add i1 %a, 1
   ret i1 %add
@@ -75,19 +75,19 @@ define x86_regcallcc i8 @test_argReti8(i8 %a)  {
 ; X32-LABEL: test_argReti8:
 ; X32:       # BB#0:
 ; X32-NEXT:    incb %al
-; X32-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; X32-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; X32-NEXT:    retl
 ;
 ; WIN64-LABEL: test_argReti8:
 ; WIN64:       # BB#0:
 ; WIN64-NEXT:    incb %al
-; WIN64-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; WIN64-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; WIN64-NEXT:    retq
 ;
 ; LINUXOSX64-LABEL: test_argReti8:
 ; LINUXOSX64:       # BB#0:
 ; LINUXOSX64-NEXT:    incb %al
-; LINUXOSX64-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; LINUXOSX64-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; LINUXOSX64-NEXT:    retq
   %add = add i8 %a, 1
   ret i8 %add
@@ -142,19 +142,19 @@ define x86_regcallcc i16 @test_argReti16(i16 %a)  {
 ; X32-LABEL: test_argReti16:
 ; X32:       # BB#0:
 ; X32-NEXT:    incl %eax
-; X32-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; X32-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; X32-NEXT:    retl
 ;
 ; WIN64-LABEL: test_argReti16:
 ; WIN64:       # BB#0:
 ; WIN64-NEXT:    incl %eax
-; WIN64-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; WIN64-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; WIN64-NEXT:    retq
 ;
 ; LINUXOSX64-LABEL: test_argReti16:
 ; LINUXOSX64:       # BB#0:
 ; LINUXOSX64-NEXT:    incl %eax
-; LINUXOSX64-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; LINUXOSX64-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; LINUXOSX64-NEXT:    retq
   %add = add i16 %a, 1
   ret i16 %add
@@ -167,9 +167,9 @@ define x86_regcallcc i16 @test_CallargReti16(i16 %a)  {
 ; X32-NEXT:    pushl %esp
 ; X32-NEXT:    incl %eax
 ; X32-NEXT:    calll _test_argReti16
-; X32-NEXT:    # kill: %AX<def> %AX<kill> %EAX<def>
+; X32-NEXT:    # kill: %ax<def> %ax<kill> %eax<def>
 ; X32-NEXT:    incl %eax
-; X32-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; X32-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; X32-NEXT:    popl %esp
 ; X32-NEXT:    retl
 ;
@@ -180,9 +180,9 @@ define x86_regcallcc i16 @test_CallargReti16(i16 %a)  {
 ; WIN64-NEXT:    .seh_endprologue
 ; WIN64-NEXT:    incl %eax
 ; WIN64-NEXT:    callq test_argReti16
-; WIN64-NEXT:    # kill: %AX<def> %AX<kill> %EAX<def>
+; WIN64-NEXT:    # kill: %ax<def> %ax<kill> %eax<def>
 ; WIN64-NEXT:    incl %eax
-; WIN64-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; WIN64-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; WIN64-NEXT:    popq %rsp
 ; WIN64-NEXT:    retq
 ; WIN64-NEXT:    .seh_handlerdata
@@ -196,9 +196,9 @@ define x86_regcallcc i16 @test_CallargReti16(i16 %a)  {
 ; LINUXOSX64-NEXT:    .cfi_offset %rsp, -16
 ; LINUXOSX64-NEXT:    incl %eax
 ; LINUXOSX64-NEXT:    callq test_argReti16
-; LINUXOSX64-NEXT:    # kill: %AX<def> %AX<kill> %EAX<def>
+; LINUXOSX64-NEXT:    # kill: %ax<def> %ax<kill> %eax<def>
 ; LINUXOSX64-NEXT:    incl %eax
-; LINUXOSX64-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; LINUXOSX64-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; LINUXOSX64-NEXT:    popq %rsp
 ; LINUXOSX64-NEXT:    retq
   %b = add i16 %a, 1
@@ -849,7 +849,7 @@ define x86_regcallcc <16 x i32> @test_CallargRet512Vector(<16 x i32> %a)  {
   ret <16 x i32> %c
 }
 
-; Test regcall when running multiple input parameters - callee saved XMMs
+; Test regcall when running multiple input parameters - callee saved xmms
 define x86_regcallcc <32 x float> @testf32_inp(<32 x float> %a, <32 x float> %b, <32 x float> %c) nounwind {
 ; X32-LABEL: testf32_inp:
 ; X32:       # BB#0:

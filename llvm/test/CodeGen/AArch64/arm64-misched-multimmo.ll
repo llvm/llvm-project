@@ -8,11 +8,11 @@
 ; Check that no scheduling dependencies are created between the paired loads and the store during post-RA MI scheduling.
 ;
 ; CHECK-LABEL: # Machine code for function foo:
-; CHECK: SU(2):   %W{{[0-9]+}}<def>, %W{{[0-9]+}}<def> = LDPWi
+; CHECK: SU(2):   %w{{[0-9]+}}<def>, %w{{[0-9]+}}<def> = LDPWi
 ; CHECK: Successors:
 ; CHECK-NOT: ch SU(4)
 ; CHECK: SU(3)
-; CHECK: SU(4):   STRWui %WZR, %X{{[0-9]+}}
+; CHECK: SU(4):   STRWui %wzr, %x{{[0-9]+}}
 define i32 @foo() {
 entry:
   %0 = load i32, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @G2, i64 0, i64 0), align 4

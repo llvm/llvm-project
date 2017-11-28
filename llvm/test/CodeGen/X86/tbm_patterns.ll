@@ -151,7 +151,7 @@ define i32 @test_x86_tbm_blcfill_u32_z(i32 %a, i32 %b) nounwind {
 define i32 @test_x86_tbm_blcfill_u32_z2(i32 %a, i32 %b, i32 %c) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blcfill_u32_z2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; CHECK-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; CHECK-NEXT:    leal 1(%rdi), %eax
 ; CHECK-NEXT:    testl %edi, %eax
 ; CHECK-NEXT:    cmovnel %edx, %esi
@@ -230,7 +230,7 @@ define i32 @test_x86_tbm_blci_u32_z(i32 %a, i32 %b) nounwind {
 define i32 @test_x86_tbm_blci_u32_z2(i32 %a, i32 %b, i32 %c) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blci_u32_z2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; CHECK-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; CHECK-NEXT:    leal 1(%rdi), %eax
 ; CHECK-NEXT:    notl %eax
 ; CHECK-NEXT:    orl %edi, %eax
@@ -419,7 +419,7 @@ define i32 @test_x86_tbm_blcmsk_u32_z(i32 %a, i32 %b) nounwind {
 define i32 @test_x86_tbm_blcmsk_u32_z2(i32 %a, i32 %b, i32 %c) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blcmsk_u32_z2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; CHECK-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; CHECK-NEXT:    leal 1(%rdi), %eax
 ; CHECK-NEXT:    xorl %edi, %eax
 ; CHECK-NEXT:    cmovnel %edx, %esi
@@ -496,7 +496,7 @@ define i32 @test_x86_tbm_blcs_u32_z(i32 %a, i32 %b) nounwind {
 define i32 @test_x86_tbm_blcs_u32_z2(i32 %a, i32 %b, i32 %c) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blcs_u32_z2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; CHECK-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; CHECK-NEXT:    leal 1(%rdi), %eax
 ; CHECK-NEXT:    orl %edi, %eax
 ; CHECK-NEXT:    cmovnel %edx, %esi
@@ -573,7 +573,7 @@ define i32 @test_x86_tbm_blsfill_u32_z(i32 %a, i32 %b) nounwind {
 define i32 @test_x86_tbm_blsfill_u32_z2(i32 %a, i32 %b, i32 %c) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blsfill_u32_z2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; CHECK-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; CHECK-NEXT:    leal -1(%rdi), %eax
 ; CHECK-NEXT:    orl %edi, %eax
 ; CHECK-NEXT:    cmovnel %edx, %esi

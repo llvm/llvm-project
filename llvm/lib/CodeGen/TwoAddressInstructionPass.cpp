@@ -589,23 +589,23 @@ isProfitableToCommute(unsigned regA, unsigned regB, unsigned regC,
   // e.g.
   // %reg1028<def> = EXTRACT_SUBREG %reg1027<kill>, 1
   // %reg1029<def> = MOV8rr %reg1028
-  // %reg1029<def> = SHR8ri %reg1029, 7, %EFLAGS<imp-def,dead>
+  // %reg1029<def> = SHR8ri %reg1029, 7, %eflags<imp-def,dead>
   // insert => %reg1030<def> = MOV8rr %reg1028
-  // %reg1030<def> = ADD8rr %reg1028<kill>, %reg1029<kill>, %EFLAGS<imp-def,dead>
+  // %reg1030<def> = ADD8rr %reg1028<kill>, %reg1029<kill>, %eflags<imp-def,dead>
   // In this case, it might not be possible to coalesce the second MOV8rr
   // instruction if the first one is coalesced. So it would be profitable to
   // commute it:
   // %reg1028<def> = EXTRACT_SUBREG %reg1027<kill>, 1
   // %reg1029<def> = MOV8rr %reg1028
-  // %reg1029<def> = SHR8ri %reg1029, 7, %EFLAGS<imp-def,dead>
+  // %reg1029<def> = SHR8ri %reg1029, 7, %eflags<imp-def,dead>
   // insert => %reg1030<def> = MOV8rr %reg1029
-  // %reg1030<def> = ADD8rr %reg1029<kill>, %reg1028<kill>, %EFLAGS<imp-def,dead>
+  // %reg1030<def> = ADD8rr %reg1029<kill>, %reg1028<kill>, %eflags<imp-def,dead>
 
   if (!isPlainlyKilled(MI, regC, LIS))
     return false;
 
   // Ok, we have something like:
-  // %reg1030<def> = ADD8rr %reg1028<kill>, %reg1029<kill>, %EFLAGS<imp-def,dead>
+  // %reg1030<def> = ADD8rr %reg1028<kill>, %reg1029<kill>, %eflags<imp-def,dead>
   // let's see if it's worth commuting it.
 
   // Look for situations like this:

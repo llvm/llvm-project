@@ -2499,16 +2499,18 @@ HexagonTargetLowering::buildVector32(ArrayRef<SDValue> Elem, const SDLoc &dl,
   //   (zxtb(Elem[0]) | (zxtb(Elem[1]) << 8)) |
   //   (zxtb(Elem[2]) | (zxtb(Elem[3]) << 8)) << 16
   SDValue S8 = DAG.getConstant(8, dl, MVT::i32);
-  SDValue S16 = DAG.getConstant(16, dl, MVT::i32);
-  SDValue V0 = DAG.getZExtOrTrunc(Elem[0], dl, MVT::i32);
-  SDValue V1 = DAG.getZExtOrTrunc(Elem[2], dl, MVT::i32);
-  SDValue V2 = DAG.getNode(ISD::SHL, dl, MVT::i32, {Elem[1], S8});
-  SDValue V3 = DAG.getNode(ISD::SHL, dl, MVT::i32, {Elem[3], S8});
-  SDValue V4 = DAG.getNode(ISD::OR, dl, MVT::i32, {V0, V2});
-  SDValue V5 = DAG.getNode(ISD::OR, dl, MVT::i32, {V1, V3});
-  SDValue V6 = DAG.getNode(ISD::SHL, dl, MVT::i32, {V5, S16});
-  SDValue V7 = DAG.getNode(ISD::OR, dl, MVT::i32, {V4, V6});
-  return DAG.getBitcast(MVT::v4i8, V7);
+  SDValue V0 = DAG.getZeroExtendInReg(Elem[0], dl, MVT::i8);
+  SDValue V1 = DAG.getZeroExtendInReg(Elem[1], dl, MVT::i8);
+  SDValue V2 = DAG.getZeroExtendInReg(Elem[2], dl, MVT::i8);
+  SDValue V3 = DAG.getZeroExtendInReg(Elem[3], dl, MVT::i8);
+
+  SDValue V4 = DAG.getNode(ISD::SHL, dl, MVT::i32, {V1, S8});
+  SDValue V5 = DAG.getNode(ISD::SHL, dl, MVT::i32, {V3, S8});
+  SDValue V6 = DAG.getNode(ISD::OR, dl, MVT::i32, {V0, V4});
+  SDValue V7 = DAG.getNode(ISD::OR, dl, MVT::i32, {V2, V5});
+  SDNode *T0 = DAG.getMachineNode(Hexagon::A2_combine_ll, dl, MVT::i32,
+                                  {V7, V6});
+  return DAG.getBitcast(MVT::v4i8, SDValue(T0,0));
 }
 
 SDValue

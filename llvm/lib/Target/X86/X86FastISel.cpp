@@ -1976,9 +1976,9 @@ bool X86FastISel::X86SelectDivRem(const Instruction *I) {
   // Generate the DIV/IDIV instruction.
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
           TII.get(OpEntry.OpDivRem)).addReg(Op1Reg);
-  // For i8 remainder, we can't reference AH directly, as we'll end
-  // up with bogus copies like %R9B = COPY %AH. Reference AX
-  // instead to prevent AH references in a REX instruction.
+  // For i8 remainder, we can't reference ah directly, as we'll end
+  // up with bogus copies like %r9b = COPY %ah. Reference ax
+  // instead to prevent ah references in a rex instruction.
   //
   // The current assumption of the fast register allocator is that isel
   // won't generate explicit references to the GR8_NOREX registers. If

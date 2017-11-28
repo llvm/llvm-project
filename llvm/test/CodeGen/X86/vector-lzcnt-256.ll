@@ -162,9 +162,9 @@ define <4 x i64> @testv4i64(<4 x i64> %in) nounwind {
 ;
 ; AVX512CD-LABEL: testv4i64:
 ; AVX512CD:       # BB#0:
-; AVX512CD-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; AVX512CD-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; AVX512CD-NEXT:    vplzcntq %zmm0, %zmm0
-; AVX512CD-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
+; AVX512CD-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
 ; AVX512CD-NEXT:    retq
 ;
 ; X32-AVX-LABEL: testv4i64:
@@ -354,9 +354,9 @@ define <4 x i64> @testv4i64u(<4 x i64> %in) nounwind {
 ;
 ; AVX512CD-LABEL: testv4i64u:
 ; AVX512CD:       # BB#0:
-; AVX512CD-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; AVX512CD-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; AVX512CD-NEXT:    vplzcntq %zmm0, %zmm0
-; AVX512CD-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
+; AVX512CD-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
 ; AVX512CD-NEXT:    retq
 ;
 ; X32-AVX-LABEL: testv4i64u:
@@ -521,9 +521,9 @@ define <8 x i32> @testv8i32(<8 x i32> %in) nounwind {
 ;
 ; AVX512CD-LABEL: testv8i32:
 ; AVX512CD:       # BB#0:
-; AVX512CD-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; AVX512CD-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; AVX512CD-NEXT:    vplzcntd %zmm0, %zmm0
-; AVX512CD-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
+; AVX512CD-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
 ; AVX512CD-NEXT:    retq
 ;
 ; X32-AVX-LABEL: testv8i32:
@@ -683,9 +683,9 @@ define <8 x i32> @testv8i32u(<8 x i32> %in) nounwind {
 ;
 ; AVX512CD-LABEL: testv8i32u:
 ; AVX512CD:       # BB#0:
-; AVX512CD-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; AVX512CD-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; AVX512CD-NEXT:    vplzcntd %zmm0, %zmm0
-; AVX512CD-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
+; AVX512CD-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
 ; AVX512CD-NEXT:    retq
 ;
 ; X32-AVX-LABEL: testv8i32u:

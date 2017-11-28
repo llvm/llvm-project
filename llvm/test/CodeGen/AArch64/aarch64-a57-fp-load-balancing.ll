@@ -296,7 +296,7 @@ declare double @hh(double) #1
 
 ; Check that we correctly deal with repeated operands.
 ; The following testcase creates:
-;   %D1<def> = FADDDrr %D0<kill>, %D0
+;   %d1<def> = FADDDrr %d0<kill>, %d0
 ; We'll get a crash if we naively look at the first operand, remove it
 ; from the substitution list then look at the second operand.
 

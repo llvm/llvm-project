@@ -10,6 +10,9 @@
 ; CHECK-NEXT:   EnumValue: 5436
 ; CHECK-NEXT:   Name: EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE5437
 ; CHECK-NEXT: }
+; CHECK:        EnumValue: 5695
+; CHECK-NEXT:   Name: EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE5696
+; CHECK-NEXT: }
 ; CHECK-NOT: ContinuationIndex
 
 ; CHECK-LABEL: FieldList (0x1001)
@@ -51,6 +54,18 @@
 ; CHECK-NEXT:   Name: EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE1
 ; CHECK-NEXT: }
 ; CHECK: ContinuationIndex: <field list> (0x1003)
+
+; CHECK-LABEL: Enum (0x1005) {
+; CHECK-NEXT:    TypeLeafKind: LF_ENUM (0x1507)
+; CHECK-NEXT:    NumEnumerators: 5696
+; CHECK-NEXT:    Properties [ (0x200)
+; CHECK-NEXT:      HasUniqueName (0x200)
+; CHECK-NEXT:    ]
+; CHECK-NEXT:    UnderlyingType: int (0x74)
+; CHECK-NEXT:    FieldListType: <field list> (0x1004)
+; CHECK-NEXT:    Name: BigThing
+; CHECK-NEXT:    LinkageName: .?AW4BigThing@@
+; CHECK-NEXT:  }
 
 ; ModuleID = 't.cpp'
 source_filename = "t.cpp"

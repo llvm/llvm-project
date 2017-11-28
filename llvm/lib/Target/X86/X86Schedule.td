@@ -477,6 +477,8 @@ def IIC_FXTRACT : InstrItinClass;
 def IIC_FPREM1 : InstrItinClass;
 def IIC_FPSTP : InstrItinClass;
 def IIC_FPREM : InstrItinClass;
+def IIC_FSIGN : InstrItinClass;
+def IIC_FSQRT : InstrItinClass;
 def IIC_FYL2XP1 : InstrItinClass;
 def IIC_FSINCOS : InstrItinClass;
 def IIC_FRNDINT : InstrItinClass;

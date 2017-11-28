@@ -10149,7 +10149,7 @@ static SDValue lowerVectorShuffleAsElementInsertion(
         return SDValue();
 
       // Zero-extend directly to i32.
-      ExtVT = MVT::v4i32;
+      ExtVT = MVT::getVectorVT(MVT::i32, ExtVT.getSizeInBits() / 32);
       V2S = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, V2S);
     }
     V2 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, ExtVT, V2S);

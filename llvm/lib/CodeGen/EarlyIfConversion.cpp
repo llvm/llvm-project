@@ -317,7 +317,7 @@ bool SSAIfConv::findInsertionPoint() {
         dbgs() << "Would clobber";
         for (SparseSet<unsigned>::const_iterator
              i = LiveRegUnits.begin(), e = LiveRegUnits.end(); i != e; ++i)
-          dbgs() << ' ' << PrintRegUnit(*i, TRI);
+          dbgs() << ' ' << printRegUnit(*i, TRI);
         dbgs() << " live before " << *I;
       });
       continue;

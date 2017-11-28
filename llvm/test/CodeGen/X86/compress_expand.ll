@@ -72,11 +72,11 @@ define <4 x float> @test4(float* %base, <4 x float> %src0) {
 ;
 ; KNL-LABEL: test4:
 ; KNL:       # BB#0:
-; KNL-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<def>
+; KNL-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<def>
 ; KNL-NEXT:    movw $7, %ax
 ; KNL-NEXT:    kmovw %eax, %k1
 ; KNL-NEXT:    vexpandps (%rdi), %zmm0 {%k1}
-; KNL-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
+; KNL-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<kill>
 ; KNL-NEXT:    retq
   %res = call <4 x float> @llvm.masked.expandload.v4f32(float* %base, <4 x i1> <i1 true, i1 true, i1 true, i1 false>, <4 x float> %src0)
   ret <4 x float>%res
@@ -92,11 +92,11 @@ define <2 x i64> @test5(i64* %base, <2 x i64> %src0) {
 ;
 ; KNL-LABEL: test5:
 ; KNL:       # BB#0:
-; KNL-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<def>
+; KNL-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<def>
 ; KNL-NEXT:    movb $2, %al
 ; KNL-NEXT:    kmovw %eax, %k1
 ; KNL-NEXT:    vpexpandq (%rdi), %zmm0 {%k1}
-; KNL-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
+; KNL-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<kill>
 ; KNL-NEXT:    retq
   %res = call <2 x i64> @llvm.masked.expandload.v2i64(i64* %base, <2 x i1> <i1 false, i1 true>, <2 x i64> %src0)
   ret <2 x i64>%res
@@ -137,7 +137,7 @@ define void @test7(float* %base, <8 x float> %V, <8 x i1> %mask) {
 ;
 ; KNL-LABEL: test7:
 ; KNL:       # BB#0:
-; KNL-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; KNL-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; KNL-NEXT:    vpmovsxwq %xmm1, %zmm1
 ; KNL-NEXT:    vpsllq $63, %zmm1, %zmm1
 ; KNL-NEXT:    vptestmq %zmm1, %zmm1, %k1
@@ -198,7 +198,7 @@ define void @test10(i64* %base, <4 x i64> %V, <4 x i1> %mask) {
 ;
 ; KNL-LABEL: test10:
 ; KNL:       # BB#0:
-; KNL-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; KNL-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; KNL-NEXT:    vpslld $31, %xmm1, %xmm1
 ; KNL-NEXT:    vpsrad $31, %xmm1, %xmm1
 ; KNL-NEXT:    vpmovsxdq %xmm1, %ymm1
@@ -221,7 +221,7 @@ define void @test11(i64* %base, <2 x i64> %V, <2 x i1> %mask) {
 ;
 ; KNL-LABEL: test11:
 ; KNL:       # BB#0:
-; KNL-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<def>
+; KNL-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<def>
 ; KNL-NEXT:    vpsllq $63, %xmm1, %xmm1
 ; KNL-NEXT:    vpsraq $63, %zmm1, %zmm1
 ; KNL-NEXT:    vmovdqa %xmm1, %xmm1
@@ -243,7 +243,7 @@ define void @test12(float* %base, <4 x float> %V, <4 x i1> %mask) {
 ;
 ; KNL-LABEL: test12:
 ; KNL:       # BB#0:
-; KNL-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<def>
+; KNL-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<def>
 ; KNL-NEXT:    vpslld $31, %xmm1, %xmm1
 ; KNL-NEXT:    vpsrad $31, %xmm1, %xmm1
 ; KNL-NEXT:    vmovdqa %xmm1, %xmm1
@@ -266,7 +266,7 @@ define <2 x float> @test13(float* %base, <2 x float> %src0, <2 x i32> %trigger) 
 ;
 ; KNL-LABEL: test13:
 ; KNL:       # BB#0:
-; KNL-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<def>
+; KNL-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<def>
 ; KNL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; KNL-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
 ; KNL-NEXT:    vpcmpeqq %xmm2, %xmm1, %xmm1
@@ -275,7 +275,7 @@ define <2 x float> @test13(float* %base, <2 x float> %src0, <2 x i32> %trigger) 
 ; KNL-NEXT:    vpslld $31, %zmm1, %zmm1
 ; KNL-NEXT:    vptestmd %zmm1, %zmm1, %k1
 ; KNL-NEXT:    vexpandps (%rdi), %zmm0 {%k1}
-; KNL-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
+; KNL-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<kill>
 ; KNL-NEXT:    retq
   %mask = icmp eq <2 x i32> %trigger, zeroinitializer
   %res = call <2 x float> @llvm.masked.expandload.v2f32(float* %base, <2 x i1> %mask, <2 x float> %src0)
@@ -293,7 +293,7 @@ define void @test14(float* %base, <2 x float> %V, <2 x i32> %trigger) {
 ;
 ; KNL-LABEL: test14:
 ; KNL:       # BB#0:
-; KNL-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<def>
+; KNL-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<def>
 ; KNL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; KNL-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
 ; KNL-NEXT:    vpcmpeqq %xmm2, %xmm1, %xmm1

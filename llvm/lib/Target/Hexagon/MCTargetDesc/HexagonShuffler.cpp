@@ -465,7 +465,7 @@ bool HexagonShuffler::check() {
       foundBranches[1]->Core.setUnits(jumpSlots[i].second);
 
       HexagonUnitAuction AuctionCore(reservedSlots);
-      std::sort(begin(), end(), HexagonInstr::lessCore);
+      std::stable_sort(begin(), end(), HexagonInstr::lessCore);
 
       // see if things ok with that instruction being pinned to slot "slotJump"
       bool bFail = false;
@@ -495,7 +495,7 @@ bool HexagonShuffler::check() {
     slot3ISJ->Core.setUnits(saveUnits & slotThree);
 
     HexagonUnitAuction AuctionCore(reservedSlots);
-    std::sort(begin(), end(), HexagonInstr::lessCore);
+    std::stable_sort(begin(), end(), HexagonInstr::lessCore);
 
     // see if things ok with that instruction being pinned to slot #3
     bool bFail = false;
@@ -519,7 +519,7 @@ bool HexagonShuffler::check() {
   if (validateSlots) {
     HexagonUnitAuction AuctionCore(reservedSlots);
 
-    std::sort(begin(), end(), HexagonInstr::lessCore);
+    std::stable_sort(begin(), end(), HexagonInstr::lessCore);
 
     for (iterator I = begin(); I != end(); ++I)
       if (!AuctionCore.bid(I->Core.getUnits())) {
@@ -528,7 +528,7 @@ bool HexagonShuffler::check() {
       }
   }
   // Verify the CVI slot subscriptions.
-  std::sort(begin(), end(), HexagonInstr::lessCVI);
+  std::stable_sort(begin(), end(), HexagonInstr::lessCVI);
   // create vector of hvx instructions to check
   HVXInstsT hvxInsts;
   hvxInsts.clear();
@@ -584,7 +584,7 @@ bool HexagonShuffler::shuffle() {
       if (slotWeight)
         // Sort the packet, favoring source order,
         // beginning after the previous slot.
-        std::sort(ISJ, Packet.end());
+        std::stable_sort(ISJ, Packet.end());
       else
         // Skip unused slot.
         ++emptySlots;

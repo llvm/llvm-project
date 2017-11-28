@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64LegalizerInfo.h"
+#include "AArch64Subtarget.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -127,7 +128,7 @@ widen_1_8_16_32(const LegalizerInfo::SizeAndActionsVec &v) {
   return result;
 }
 
-AArch64LegalizerInfo::AArch64LegalizerInfo() {
+AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
   using namespace TargetOpcode;
   const LLT p0 = LLT::pointer(0, 64);
   const LLT s1 = LLT::scalar(1);
@@ -348,6 +349,22 @@ AArch64LegalizerInfo::AArch64LegalizerInfo() {
 
   for (auto Ty : {s8, s16, s32, s64, p0})
     setAction({G_VAARG, Ty}, Custom);
+
+  if (ST.hasLSE()) {
+    for (auto Ty : {s8, s16, s32, s64})
+      setAction({G_ATOMIC_CMPXCHG, Ty}, Legal);
+    setAction({G_ATOMIC_CMPXCHG, 1, p0}, Legal);
+
+    for (auto Op :
+         {G_ATOMICRMW_XCHG, G_ATOMICRMW_ADD, G_ATOMICRMW_SUB, G_ATOMICRMW_AND,
+          G_ATOMICRMW_OR, G_ATOMICRMW_XOR, G_ATOMICRMW_MIN, G_ATOMICRMW_MAX,
+          G_ATOMICRMW_UMIN, G_ATOMICRMW_UMAX}) {
+      for (auto Ty : {s8, s16, s32, s64}) {
+        setAction({Op, Ty}, Legal);
+      }
+      setAction({Op, 1, p0}, Legal);
+    }
+  }
 
   computeTables();
 }

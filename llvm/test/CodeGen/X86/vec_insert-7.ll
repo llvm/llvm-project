@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-apple-darwin9 -mattr=+mmx,+sse4.2 | FileCheck %s --check-prefix=X32
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin9 -mattr=+mmx,+sse4.2 | FileCheck %s --check-prefix=X64
 
-; MMX insertelement is not available; these are promoted to XMM.
+; MMX insertelement is not available; these are promoted to xmm.
 ; (Without SSE they are split to two ints, and the code is much better.)
 
 define x86_mmx @mmx_movzl(x86_mmx %x) nounwind {

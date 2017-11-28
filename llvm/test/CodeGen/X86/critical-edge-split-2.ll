@@ -25,7 +25,7 @@ define i16 @test1(i1 zeroext %C, i8** nocapture %argv) nounwind ssp {
 ; CHECK-NEXT:    divl %esi
 ; CHECK-NEXT:    movl %edx, %eax
 ; CHECK-NEXT:  .LBB0_2: # %cond.end.i
-; CHECK-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; CHECK-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; CHECK-NEXT:    retq
 entry:
   br i1 %C, label %cond.end.i, label %cond.false.i

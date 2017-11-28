@@ -49,7 +49,7 @@ define i16 @select_i16_neg1_or_0(i1 %a) {
 ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    andl $1, %eax
 ; X32-NEXT:    negl %eax
-; X32-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; X32-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; X32-NEXT:    retl
   %b = sext i1 %a to i16
   ret i16 %b
@@ -66,7 +66,7 @@ define i16 @select_i16_neg1_or_0_zeroext(i1 zeroext %a) {
 ; X32:       # BB#0:
 ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    negl %eax
-; X32-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; X32-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; X32-NEXT:    retl
   %b = sext i1 %a to i16
   ret i16 %b
@@ -109,7 +109,7 @@ define i32 @select_i32_neg1_or_0_zeroext(i1 zeroext %a) {
 define i64 @select_i64_neg1_or_0(i1 %a) {
 ; X64-LABEL: select_i64_neg1_or_0:
 ; X64:       # BB#0:
-; X64-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; X64-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; X64-NEXT:    andl $1, %edi
 ; X64-NEXT:    negq %rdi
 ; X64-NEXT:    movq %rdi, %rax

@@ -20,7 +20,7 @@ while.end:
 }
 
 ; CHECK-LABEL: test
-; CHECK:       #DEBUG_VALUE: test:w <- [DW_OP_plus_uconst 8] [%RSP+0]
+; CHECK:       #DEBUG_VALUE: test:w <- [DW_OP_plus_uconst 8] [%rsp+0]
 ; DWARF:  DW_AT_location [DW_FORM_sec_offset] (
 ; DWARF-NEXT:   {{.*}} - {{.*}}: DW_OP_breg7 RSP+8)
 

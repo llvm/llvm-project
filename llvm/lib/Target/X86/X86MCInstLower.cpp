@@ -961,7 +961,7 @@ void X86AsmPrinter::LowerPATCHABLE_OP(const MachineInstr &MI,
       // This is an optimization that lets us get away without emitting a nop in
       // many cases.
       //
-      // NB! In some cases the encoding for PUSH64r (e.g. PUSH64r %R9) takes two
+      // NB! In some cases the encoding for PUSH64r (e.g. PUSH64r %r9) takes two
       // bytes too, so the check on MinSize is important.
       MCI.setOpcode(X86::PUSH64rmr);
     } else {

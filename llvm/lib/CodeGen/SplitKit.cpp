@@ -1140,7 +1140,7 @@ bool SplitEditor::transferValues() {
 
       // The interval [Start;End) is continuously mapped to RegIdx, ParentVNI.
       DEBUG(dbgs() << " [" << Start << ';' << End << ")=" << RegIdx
-                   << '(' << PrintReg(Edit->get(RegIdx)) << ')');
+                   << '(' << printReg(Edit->get(RegIdx)) << ')');
       LiveInterval &LI = LIS.getInterval(Edit->get(RegIdx));
 
       // Check for a simply defined value that can be blitted directly.

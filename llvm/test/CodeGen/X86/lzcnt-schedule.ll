@@ -13,7 +13,7 @@ define i16 @test_ctlz_i16(i16 zeroext %a0, i16 *%a1) {
 ; GENERIC-NEXT:    lzcntw (%rsi), %cx
 ; GENERIC-NEXT:    lzcntw %di, %ax
 ; GENERIC-NEXT:    orl %ecx, %eax # sched: [1:0.33]
-; GENERIC-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; GENERIC-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_ctlz_i16:
@@ -21,7 +21,7 @@ define i16 @test_ctlz_i16(i16 zeroext %a0, i16 *%a1) {
 ; HASWELL-NEXT:    lzcntw (%rsi), %cx # sched: [3:1.00]
 ; HASWELL-NEXT:    lzcntw %di, %ax # sched: [3:1.00]
 ; HASWELL-NEXT:    orl %ecx, %eax # sched: [1:0.25]
-; HASWELL-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; HASWELL-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_ctlz_i16:
@@ -29,7 +29,7 @@ define i16 @test_ctlz_i16(i16 zeroext %a0, i16 *%a1) {
 ; BROADWELL-NEXT:    lzcntw (%rsi), %cx # sched: [8:1.00]
 ; BROADWELL-NEXT:    lzcntw %di, %ax # sched: [3:1.00]
 ; BROADWELL-NEXT:    orl %ecx, %eax # sched: [1:0.25]
-; BROADWELL-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; BROADWELL-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_ctlz_i16:
@@ -37,7 +37,7 @@ define i16 @test_ctlz_i16(i16 zeroext %a0, i16 *%a1) {
 ; SKYLAKE-NEXT:    lzcntw (%rsi), %cx # sched: [8:1.00]
 ; SKYLAKE-NEXT:    lzcntw %di, %ax # sched: [3:1.00]
 ; SKYLAKE-NEXT:    orl %ecx, %eax # sched: [1:0.25]
-; SKYLAKE-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; SKYLAKE-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_ctlz_i16:
@@ -45,7 +45,7 @@ define i16 @test_ctlz_i16(i16 zeroext %a0, i16 *%a1) {
 ; BTVER2-NEXT:    lzcntw (%rsi), %cx
 ; BTVER2-NEXT:    lzcntw %di, %ax
 ; BTVER2-NEXT:    orl %ecx, %eax # sched: [1:0.50]
-; BTVER2-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; BTVER2-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_ctlz_i16:
@@ -53,7 +53,7 @@ define i16 @test_ctlz_i16(i16 zeroext %a0, i16 *%a1) {
 ; ZNVER1-NEXT:    lzcntw (%rsi), %cx # sched: [6:0.50]
 ; ZNVER1-NEXT:    lzcntw %di, %ax # sched: [2:0.25]
 ; ZNVER1-NEXT:    orl %ecx, %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; ZNVER1-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load i16, i16 *%a1
   %2 = tail call i16 @llvm.ctlz.i16( i16 %1, i1 false )

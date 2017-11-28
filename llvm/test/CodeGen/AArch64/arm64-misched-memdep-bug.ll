@@ -9,11 +9,11 @@
 ; CHECK:   Successors:
 ; CHECK-NEXT:    SU(5): Data Latency=4 Reg=%vreg2
 ; CHECK-NEXT:    SU(4): Ord  Latency=0
-; CHECK: SU(3):   STRWui %WZR, %vreg0, 0; mem:ST4[%ptr1] GPR64common:%vreg0
+; CHECK: SU(3):   STRWui %wzr, %vreg0, 0; mem:ST4[%ptr1] GPR64common:%vreg0
 ; CHECK:   Successors:
 ; CHECK: SU(4): Ord  Latency=0
-; CHECK: SU(4):   STRWui %WZR, %vreg1, 0; mem:ST4[%ptr2] GPR64common:%vreg1
-; CHECK: SU(5):   %W0<def> = COPY %vreg2; GPR32:%vreg2
+; CHECK: SU(4):   STRWui %wzr, %vreg1, 0; mem:ST4[%ptr2] GPR64common:%vreg1
+; CHECK: SU(5):   %w0<def> = COPY %vreg2; GPR32:%vreg2
 ; CHECK: ** ScheduleDAGMI::schedule picking next node
 define i32 @misched_bug(i32* %ptr1, i32* %ptr2) {
 entry:

@@ -371,12 +371,13 @@ public:
 
   /// substPhysReg - Substitute the current register with the physical register
   /// Reg, taking any existing SubReg into account. For instance,
-  /// substPhysReg(%EAX) will change %reg1024:sub_8bit to %AL.
+  /// substPhysReg(%eax) will change %reg1024:sub_8bit to %al.
   ///
   void substPhysReg(unsigned Reg, const TargetRegisterInfo&);
 
   void setIsUse(bool Val = true) { setIsDef(!Val); }
 
+  /// Change a def to a use, or a use to a def.
   void setIsDef(bool Val = true);
 
   void setImplicit(bool Val = true) {
@@ -575,14 +576,16 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// Returns true if this operand is identical to the specified operand except
-  /// for liveness related flags (isKill, isUndef and isDead).
+  /// for liveness related flags (isKill, isUndef and isDead). Note that this
+  /// should stay in sync with the hash_value overload below.
   bool isIdenticalTo(const MachineOperand &Other) const;
 
   /// \brief MachineOperand hash_value overload.
   ///
   /// Note that this includes the same information in the hash that
   /// isIdenticalTo uses for comparison. It is thus suited for use in hash
-  /// tables which use that function for equality comparisons only.
+  /// tables which use that function for equality comparisons only. This must
+  /// stay exactly in sync with isIdenticalTo above.
   friend hash_code hash_value(const MachineOperand &MO);
 
   /// ChangeToImmediate - Replace this operand with a new immediate operand of
@@ -641,8 +644,7 @@ public:
                                   bool isKill = false, bool isDead = false,
                                   bool isUndef = false,
                                   bool isEarlyClobber = false,
-                                  unsigned SubReg = 0,
-                                  bool isDebug = false,
+                                  unsigned SubReg = 0, bool isDebug = false,
                                   bool isInternalRead = false) {
     assert(!(isDead && !isDef) && "Dead flag on non-def");
     assert(!(isKill && isDef) && "Kill flag on def");
@@ -690,8 +692,7 @@ public:
     Op.setTargetFlags(TargetFlags);
     return Op;
   }
-  static MachineOperand CreateJTI(unsigned Idx,
-                                  unsigned char TargetFlags = 0) {
+  static MachineOperand CreateJTI(unsigned Idx, unsigned char TargetFlags = 0) {
     MachineOperand Op(MachineOperand::MO_JumpTableIndex);
     Op.setIndex(Idx);
     Op.setTargetFlags(TargetFlags);
@@ -722,12 +723,12 @@ public:
     return Op;
   }
   /// CreateRegMask - Creates a register mask operand referencing Mask.  The
-  /// operand does not take ownership of the memory referenced by Mask, it must
-  /// remain valid for the lifetime of the operand.
+  /// operand does not take ownership of the memory referenced by Mask, it
+  /// must remain valid for the lifetime of the operand.
   ///
-  /// A RegMask operand represents a set of non-clobbered physical registers on
-  /// an instruction that clobbers many registers, typically a call.  The bit
-  /// mask has a bit set for each physreg that is preserved by this
+  /// A RegMask operand represents a set of non-clobbered physical registers
+  /// on an instruction that clobbers many registers, typically a call.  The
+  /// bit mask has a bit set for each physreg that is preserved by this
   /// instruction, as described in the documentation for
   /// TargetRegisterInfo::getCallPreservedMask().
   ///
@@ -780,7 +781,10 @@ public:
 
   friend class MachineInstr;
   friend class MachineRegisterInfo;
+
 private:
+  // If this operand is currently a register operand, and if this is in a
+  // function, deregister the operand from the register's use/def list.
   void removeRegFromUses();
 
   /// Artificial kinds for DenseMap usage.
@@ -795,9 +799,9 @@ private:
   // Methods for handling register use/def lists.
   //===--------------------------------------------------------------------===//
 
-  /// isOnRegUseList - Return true if this operand is on a register use/def list
-  /// or false if not.  This can only be called for register operands that are
-  /// part of a machine instruction.
+  /// isOnRegUseList - Return true if this operand is on a register use/def
+  /// list or false if not.  This can only be called for register operands
+  /// that are part of a machine instruction.
   bool isOnRegUseList() const {
     assert(isReg() && "Can only add reg operand to use lists");
     return Contents.Reg.Prev != nullptr;
@@ -826,14 +830,14 @@ template <> struct DenseMapInfo<MachineOperand> {
   }
 };
 
-inline raw_ostream &operator<<(raw_ostream &OS, const MachineOperand& MO) {
+inline raw_ostream &operator<<(raw_ostream &OS, const MachineOperand &MO) {
   MO.print(OS, nullptr);
   return OS;
 }
 
-  // See friend declaration above. This additional declaration is required in
-  // order to compile LLVM with IBM xlC compiler.
-  hash_code hash_value(const MachineOperand &MO);
-} // End llvm namespace
+// See friend declaration above. This additional declaration is required in
+// order to compile LLVM with IBM xlC compiler.
+hash_code hash_value(const MachineOperand &MO);
+} // namespace llvm
 
 #endif

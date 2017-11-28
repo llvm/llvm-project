@@ -498,7 +498,7 @@ bool ImplicitNullChecks::analyzeBlockForNullChecks(
 
   // Starting with a code fragment like:
   //
-  //   test %RAX, %RAX
+  //   test %rax, %rax
   //   jne LblNotNull
   //
   //  LblNull:
@@ -508,13 +508,13 @@ bool ImplicitNullChecks::analyzeBlockForNullChecks(
   //   Inst0
   //   Inst1
   //   ...
-  //   Def = Load (%RAX + <offset>)
+  //   Def = Load (%rax + <offset>)
   //   ...
   //
   //
   // we want to end up with
   //
-  //   Def = FaultingLoad (%RAX + <offset>), LblNull
+  //   Def = FaultingLoad (%rax + <offset>), LblNull
   //   jmp LblNotNull ;; explicit or fallthrough
   //
   //  LblNotNull:
@@ -528,11 +528,11 @@ bool ImplicitNullChecks::analyzeBlockForNullChecks(
   //
   // To see why this is legal, consider the two possibilities:
   //
-  //  1. %RAX is null: since we constrain <offset> to be less than PageSize, the
+  //  1. %rax is null: since we constrain <offset> to be less than PageSize, the
   //     load instruction dereferences the null page, causing a segmentation
   //     fault.
   //
-  //  2. %RAX is not null: in this case we know that the load cannot fault, as
+  //  2. %rax is not null: in this case we know that the load cannot fault, as
   //     otherwise the load would've faulted in the original program too and the
   //     original program would've been undefined.
   //

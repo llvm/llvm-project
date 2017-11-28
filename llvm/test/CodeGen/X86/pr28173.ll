@@ -27,7 +27,7 @@ define i16 @foo16(i1 zeroext %i) #0 {
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    movzbl %dil, %eax
 ; CHECK-NEXT:    orl $65534, %eax # imm = 0xFFFE
-; CHECK-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; CHECK-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; CHECK-NEXT:    retq
   br label %bb
 
@@ -45,7 +45,7 @@ define i16 @foo16_1(i1 zeroext %i, i32 %j) #0 {
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    movzbl %dil, %eax
 ; CHECK-NEXT:    orl $2, %eax
-; CHECK-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; CHECK-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; CHECK-NEXT:    retq
   br label %bb
 

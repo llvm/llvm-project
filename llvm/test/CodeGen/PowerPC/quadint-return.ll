@@ -14,6 +14,6 @@ entry:
 
 ; CHECK: ********** Function: foo
 ; CHECK: ********** FAST REGISTER ALLOCATION **********
-; CHECK: %X3<def> = COPY %vreg
-; CHECK-NEXT: %X4<def> = COPY %vreg
+; CHECK: %x3<def> = COPY %vreg
+; CHECK-NEXT: %x4<def> = COPY %vreg
 ; CHECK-NEXT: BLR

@@ -426,7 +426,8 @@ Error TypeRecordMapping::visitKnownMember(CVMemberRecord &CVR,
 
 Error TypeRecordMapping::visitKnownMember(CVMemberRecord &CVR,
                                           OneMethodRecord &Record) {
-  MapOneMethodRecord Mapper(false);
+  const bool IsFromOverloadList = (TypeKind == LF_METHODLIST);
+  MapOneMethodRecord Mapper(IsFromOverloadList);
   return Mapper(IO, Record);
 }
 

@@ -23,7 +23,7 @@ Lfunc_begin0:
 	subl	$8, %esp
 	leal	-4(%ebp), %eax
 Lvar_begin0:
-	#DEBUG_VALUE: g:x <- %EAX
+	#DEBUG_VALUE: g:x <- %eax
 	.cv_loc	0 1 4 7                 # <stdin>:4:7
 	movl	$0, -4(%ebp)
 	.cv_loc	0 1 5 3                 # <stdin>:5:3

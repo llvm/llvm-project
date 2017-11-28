@@ -87,7 +87,7 @@ LiveIntervalUnion::print(raw_ostream &OS, const TargetRegisterInfo *TRI) const {
   }
   for (LiveSegments::const_iterator SI = Segments.begin(); SI.valid(); ++SI) {
     OS << " [" << SI.start() << ' ' << SI.stop() << "):"
-       << PrintReg(SI.value()->reg, TRI);
+       << printReg(SI.value()->reg, TRI);
   }
   OS << '\n';
 }

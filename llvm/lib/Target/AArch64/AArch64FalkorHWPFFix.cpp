@@ -740,7 +740,7 @@ void FalkorHWPFFix::runOnLoop(MachineLoop &L, MachineFunction &Fn) {
         if (TagMap.count(NewTag))
           continue;
 
-        DEBUG(dbgs() << "Changing base reg to: " << PrintReg(ScratchReg, TRI)
+        DEBUG(dbgs() << "Changing base reg to: " << printReg(ScratchReg, TRI)
                      << '\n');
 
         // Rewrite:
@@ -760,7 +760,7 @@ void FalkorHWPFFix::runOnLoop(MachineLoop &L, MachineFunction &Fn) {
         // well to update the real base register.
         if (LdI.IsPrePost) {
           DEBUG(dbgs() << "Doing post MOV of incremented reg: "
-                       << PrintReg(ScratchReg, TRI) << '\n');
+                       << printReg(ScratchReg, TRI) << '\n');
           MI.getOperand(0).setReg(
               ScratchReg); // Change tied operand pre/post update dest.
           BuildMI(*MBB, std::next(MachineBasicBlock::iterator(MI)), DL,

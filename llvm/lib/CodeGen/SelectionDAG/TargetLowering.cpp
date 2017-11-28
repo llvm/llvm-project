@@ -3495,7 +3495,7 @@ TargetLowering::expandUnalignedLoad(LoadSDNode *LD, SelectionDAG &DAG) const {
     // Copy the value to a (aligned) stack slot using (unaligned) integer
     // loads and stores, then do a (aligned) load from the stack slot.
     MVT RegVT = getRegisterType(*DAG.getContext(), intVT);
-    unsigned LoadedBytes = LoadedVT.getSizeInBits() / 8;
+    unsigned LoadedBytes = LoadedVT.getStoreSize();
     unsigned RegBytes = RegVT.getSizeInBits() / 8;
     unsigned NumRegs = (LoadedBytes + RegBytes - 1) / RegBytes;
 
@@ -3650,7 +3650,7 @@ SDValue TargetLowering::expandUnalignedStore(StoreSDNode *ST,
                       EVT::getIntegerVT(*DAG.getContext(),
                                         StoredVT.getSizeInBits()));
     EVT PtrVT = Ptr.getValueType();
-    unsigned StoredBytes = StoredVT.getSizeInBits() / 8;
+    unsigned StoredBytes = StoredVT.getStoreSize();
     unsigned RegBytes = RegVT.getSizeInBits() / 8;
     unsigned NumRegs = (StoredBytes + RegBytes - 1) / RegBytes;
 
@@ -3772,7 +3772,7 @@ TargetLowering::IncrementMemoryAddress(SDValue Addr, SDValue Mask,
                                     AddrVT);
     Increment = DAG.getNode(ISD::MUL, DL, AddrVT, Increment, Scale);
   } else
-    Increment = DAG.getConstant(DataVT.getSizeInBits() / 8, DL, AddrVT);
+    Increment = DAG.getConstant(DataVT.getStoreSize(), DL, AddrVT);
 
   return DAG.getNode(ISD::ADD, DL, AddrVT, Addr, Increment);
 }

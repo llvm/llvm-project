@@ -11,7 +11,7 @@ define i8 @foo(i8 %tmp325) {
 ; CHECK-NEXT:    shrl $12, %eax
 ; CHECK-NEXT:    movzwl %ax, %eax
 ; CHECK-NEXT:    movb $37, %dl
-; CHECK-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; CHECK-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; CHECK-NEXT:    mulb %dl
 ; CHECK-NEXT:    subb %al, %cl
 ; CHECK-NEXT:    movl %ecx, %eax
