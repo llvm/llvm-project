@@ -52,7 +52,7 @@ struct PrintingPolicy {
       Half(LO.Half), MSWChar(LO.MicrosoftExt && !LO.WChar),
       IncludeNewlines(true), MSVCFormatting(false),
       ConstantsAsWritten(false), SuppressImplicitBase(false),
-      UseStdFunctionForLambda(false)
+      UseStdFunctionForLambda(false),
       FullyQualifiedName(false) { }
 
   /// Adjust this printing policy for cases where it's known that we're
