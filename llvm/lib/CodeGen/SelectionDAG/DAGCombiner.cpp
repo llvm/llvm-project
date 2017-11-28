@@ -7783,10 +7783,7 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
       // If the desired elements are smaller or larger than the source
       // elements we can use a matching integer vector type and then
       // truncate/sign extend.
-      EVT MatchingElementType = EVT::getIntegerVT(
-          *DAG.getContext(), N00VT.getScalarSizeInBits());
-      EVT MatchingVectorType = EVT::getVectorVT(
-          *DAG.getContext(), MatchingElementType, N00VT.getVectorNumElements());
+      EVT MatchingVectorType = N00VT.changeVectorElementTypeToInteger();
       SDValue VsetCC =
           DAG.getNode(ISD::SETCC, DL, MatchingVectorType, N0.getOperand(0),
                       N0.getOperand(1), N0.getOperand(2));
@@ -7948,13 +7945,16 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
     // aext(setcc) -> aext(vsetcc)
     // Only do this before legalize for now.
     if (VT.isVector() && !LegalOperations) {
-      EVT N0VT = N0.getOperand(0).getValueType();
-        // We know that the # elements of the results is the same as the
-        // # elements of the compare (and the # elements of the compare result
-        // for that matter).  Check to see that they are the same size.  If so,
-        // we know that the element size of the sext'd result matches the
-        // element size of the compare operands.
-      if (VT.getSizeInBits() == N0VT.getSizeInBits())
+      EVT N00VT = N0.getOperand(0).getValueType();
+      if (getSetCCResultType(N00VT) == N0.getValueType())
+        return SDValue();
+
+      // We know that the # elements of the results is the same as the
+      // # elements of the compare (and the # elements of the compare result
+      // for that matter).  Check to see that they are the same size.  If so,
+      // we know that the element size of the sext'd result matches the
+      // element size of the compare operands.
+      if (VT.getSizeInBits() == N00VT.getSizeInBits())
         return DAG.getSetCC(SDLoc(N), VT, N0.getOperand(0),
                              N0.getOperand(1),
                              cast<CondCodeSDNode>(N0.getOperand(2))->get());
@@ -7962,7 +7962,7 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
       // elements we can use a matching integer vector type and then
       // truncate/any extend
       else {
-        EVT MatchingVectorType = N0VT.changeVectorElementTypeToInteger();
+        EVT MatchingVectorType = N00VT.changeVectorElementTypeToInteger();
         SDValue VsetCC =
           DAG.getSetCC(SDLoc(N), MatchingVectorType, N0.getOperand(0),
                         N0.getOperand(1),
@@ -17424,7 +17424,11 @@ void DAGCombiner::GatherAllAliases(SDNode *N, SDValue OriginalChain,
 /// Walk up chain skipping non-aliasing memory nodes, looking for a better chain
 /// (aliasing node.)
 SDValue DAGCombiner::FindBetterChain(SDNode *N, SDValue OldChain) {
-  SmallVector<SDValue, 8> Aliases;  // Ops for replacing token factor.
+  if (OptLevel == CodeGenOpt::None)
+    return OldChain;
+
+  // Ops for replacing token factor.
+  SmallVector<SDValue, 8> Aliases;
 
   // Accumulate all the aliases to this node.
   GatherAllAliases(N, OldChain, Aliases);
@@ -17454,6 +17458,9 @@ SDValue DAGCombiner::FindBetterChain(SDNode *N, SDValue OldChain) {
 // to go from a partially-merged state to the desired final
 // fully-merged state.
 bool DAGCombiner::findBetterNeighborChains(StoreSDNode *St) {
+  if (OptLevel == CodeGenOpt::None)
+    return false;
+
   // This holds the base pointer, index, and the offset in bytes from the base
   // pointer.
   BaseIndexOffset BasePtr = BaseIndexOffset::match(St->getBasePtr(), DAG);

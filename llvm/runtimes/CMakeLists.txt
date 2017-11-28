@@ -15,6 +15,35 @@ foreach(entry ${entries})
   endif()
 endforeach()
 
+# Side-by-side subprojects layout.
+set(LLVM_ALL_RUNTIMES "libcxx;libcxxabi;libunwind;compiler-rt")
+set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
+  "Semicolon-separated list of runtimes to build (${LLVM_ALL_RUNTIMES}), or \"all\".")
+if(LLVM_ENABLE_RUNTIMES STREQUAL "all" )
+  set(LLVM_ENABLE_RUNTIMES ${LLVM_ALL_RUNTIMES})
+endif()
+foreach(proj ${LLVM_ENABLE_RUNTIMES})
+  set(proj_dir "${CMAKE_CURRENT_SOURCE_DIR}/../../${proj}")
+  if(IS_DIRECTORY ${proj_dir} AND EXISTS ${proj_dir}/CMakeLists.txt)
+    list(APPEND runtimes ${proj_dir})
+  else()
+    message(FATAL_ERROR "LLVM_ENABLE_RUNTIMES requests ${proj} but directory not found: ${proj_dir}")
+  endif()
+  string(TOUPPER "${proj}" canon_name)
+  STRING(REGEX REPLACE "-" "_" canon_name ${canon_name})
+  set(LLVM_EXTERNAL_${canon_name}_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../${proj}")
+endforeach()
+
+function(get_compiler_rt_path path)
+  foreach(entry ${runtimes})
+    get_filename_component(projName ${entry} NAME)
+    if("${projName}" MATCHES "compiler-rt")
+      set(${path} ${entry} PARENT_SCOPE)
+      return()
+    endif()
+  endforeach()
+endfunction()
+
 # If this file is acting as a top-level CMake invocation, this code path is
 # triggered by the external project call for the runtimes target below.
 if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
@@ -38,12 +67,7 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   # to make this work smoothly we ensure that compiler-rt is added first in
   # the list of sub-projects. This allows other sub-projects to have checks
   # like `if(TARGET asan)` to enable building with asan.
-  foreach(entry ${runtimes})
-    if("${entry}" MATCHES "compiler-rt")
-      set(compiler_rt_path ${entry})
-      break()
-    endif()
-  endforeach()
+  get_compiler_rt_path(compiler_rt_path)
   if(compiler_rt_path)
     list(REMOVE_ITEM runtimes ${compiler_rt_path})
     if(NOT LLVM_BUILD_COMPILER_RT)
@@ -100,7 +124,7 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
     set(${canon_name}_STANDALONE_BUILD On)
 
     if(LLVM_RUNTIMES_TARGET)
-      if(NOT "${entry}" MATCHES "compiler-rt")
+      if(NOT "${projName}" MATCHES "compiler-rt")
         set(${canon_name}_INSTALL_PREFIX "lib/${LLVM_RUNTIMES_PREFIX}/" CACHE STRING "" FORCE)
       endif()
     endif()
@@ -120,7 +144,7 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
     get_filename_component(projName ${entry} NAME)
 
     if(LLVM_RUNTIMES_TARGET)
-      if(NOT "${entry}" MATCHES "compiler-rt")
+      if(NOT "${projName}" MATCHES "compiler-rt")
         set(LLVM_BINARY_DIR "${LLVM_LIBRARY_DIR}/${LLVM_RUNTIMES_PREFIX}")
         set(LLVM_LIBDIR_SUFFIX "${LLVM_RUNTIMES_LIBDIR_SUFFIX}")
         set(LLVM_LIBRARY_OUTPUT_INTDIR "${LLVM_LIBRARY_DIR}/${LLVM_RUNTIMES_PREFIX}lib${LLVM_RUNTIMES_LIBDIR_SUFFIX}")
@@ -134,7 +158,7 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
     set_property(GLOBAL PROPERTY LLVM_LIT_DEPENDS)
     set_property(GLOBAL PROPERTY LLVM_LIT_EXTRA_ARGS)
 
-    add_subdirectory(${projName})
+    add_subdirectory(${entry} ${projName})
 
     get_property(LLVM_LIT_TESTSUITES GLOBAL PROPERTY LLVM_LIT_TESTSUITES)
     get_property(LLVM_LIT_PARAMS GLOBAL PROPERTY LLVM_LIT_PARAMS)
@@ -147,7 +171,7 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
     list(APPEND RUNTIMES_LIT_EXTRA_ARGS ${LLVM_LIT_EXTRA_ARGS})
 
     if(LLVM_RUNTIMES_TARGET)
-      if(NOT "${entry}" MATCHES "compiler-rt")
+      if(NOT "${projName}" MATCHES "compiler-rt")
         set(LLVM_BINARY_DIR "${SAFE_LLVM_BINARY_DIR}")
         set(LLVM_LIBRARY_OUTPUT_INTDIR "${SAFE_LLVM_LIBRARY_OUTPUT_INTDIR}")
         set(LLVM_RUNTIME_OUTPUT_INTDIR "${SAFE_LLVM_RUNTIME_OUTPUT_INTDIR}")
@@ -205,9 +229,9 @@ else() # if this is included from LLVM's CMake
     set(EXTRA_ARGS EXCLUDE_FROM_ALL)
   endif()
 
-  function(builtin_default_target)
+  function(builtin_default_target compiler_rt_path)
     llvm_ExternalProject_Add(builtins
-                             ${CMAKE_CURRENT_SOURCE_DIR}/compiler-rt/lib/builtins
+                             ${compiler_rt_path}/lib/builtins
                              CMAKE_ARGS -DLLVM_LIBRARY_OUTPUT_INTDIR=${LLVM_LIBRARY_DIR}
                                         -DLLVM_RUNTIME_OUTPUT_INTDIR=${LLVM_TOOLS_BINARY_DIR}
                                         -DCMAKE_C_COMPILER_TARGET=${TARGET_TRIPLE}
@@ -219,7 +243,7 @@ else() # if this is included from LLVM's CMake
                              ${EXTRA_ARGS})
   endfunction()
 
-  function(builtin_register_target target)
+  function(builtin_register_target compiler_rt_path target)
     string(REPLACE "-" ";" builtin_target_list ${target})
     foreach(item ${builtin_target_list})
       string(TOLOWER "${item}" item_lower)
@@ -237,7 +261,7 @@ else() # if this is included from LLVM's CMake
     endforeach()
 
     llvm_ExternalProject_Add(builtins-${target}
-                             ${CMAKE_CURRENT_SOURCE_DIR}/compiler-rt/lib/builtins
+                             ${compiler_rt_path}/lib/builtins
                              CMAKE_ARGS -DLLVM_LIBRARY_OUTPUT_INTDIR=${LLVM_LIBRARY_DIR}
                                         -DLLVM_RUNTIME_OUTPUT_INTDIR=${LLVM_TOOLS_BINARY_DIR}
                                         -DCMAKE_C_COMPILER_TARGET=${target}
@@ -254,12 +278,13 @@ else() # if this is included from LLVM's CMake
   # If compiler-rt is present we need to build the builtin libraries first. This
   # is required because the other runtimes need the builtin libraries present
   # before the just-built compiler can pass the configuration tests.
-  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/compiler-rt)
+  get_compiler_rt_path(compiler_rt_path)
+  if(compiler_rt_path)
     if(NOT LLVM_BUILTIN_TARGETS)
-      builtin_default_target()
+      builtin_default_target(${compiler_rt_path})
     else()
       if("default" IN_LIST LLVM_BUILTIN_TARGETS)
-        builtin_default_target()
+        builtin_default_target(${compiler_rt_path})
         list(REMOVE_ITEM LLVM_BUILTIN_TARGETS "default")
       else()
         add_custom_target(builtins)
@@ -267,7 +292,7 @@ else() # if this is included from LLVM's CMake
       endif()
 
       foreach(target ${LLVM_BUILTIN_TARGETS})
-        builtin_register_target(${target})
+        builtin_register_target(${compiler_rt_path} ${target})
 
         add_dependencies(builtins builtins-${target})
         add_dependencies(install-builtins install-builtins-${target})
@@ -326,7 +351,8 @@ else() # if this is included from LLVM's CMake
                                         -DCMAKE_C_COMPILER_WORKS=ON
                                         -DCMAKE_CXX_COMPILER_WORKS=ON
                                         -DCMAKE_ASM_COMPILER_WORKS=ON
-                             PASSTHROUGH_PREFIXES ${ARG_PREFIXES}
+                             PASSTHROUGH_PREFIXES LLVM_ENABLE_RUNTIMES
+                                                  ${ARG_PREFIXES}
                              EXTRA_TARGETS ${extra_targets}
                                            ${test_targets}
                                            ${SUB_COMPONENTS}
@@ -399,6 +425,7 @@ else() # if this is included from LLVM's CMake
                                         -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON
                                         -DLLVM_RUNTIMES_TARGET=${name}
                                         ${${name}_extra_args}
+                             PASSTHROUGH_PREFIXES LLVM_ENABLE_RUNTIMES
                              TOOLCHAIN_TOOLS clang lld llvm-ar llvm-ranlib
                              EXTRA_TARGETS ${${name}_extra_targets}
                                            ${${name}_test_targets}

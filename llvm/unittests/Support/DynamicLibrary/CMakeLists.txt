@@ -24,5 +24,12 @@ function(dynlib_add_module NAME)
   add_dependencies(DynamicLibraryTests ${NAME})
 endfunction(dynlib_add_module)
 
+# Revert -Wl,-z,nodelete on this test since it relies on the file
+# being unloaded.
+if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+  string(REPLACE "-Wl,-z,nodelete" "" CMAKE_SHARED_LINKER_FLAGS
+    ${CMAKE_SHARED_LINKER_FLAGS})
+endif()
+
 dynlib_add_module(PipSqueak)
 dynlib_add_module(SecondLib)

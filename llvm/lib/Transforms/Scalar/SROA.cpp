@@ -4106,6 +4106,7 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
   if (!DbgDeclares.empty()) {
     auto *Var = DbgDeclares.front()->getVariable();
     auto *Expr = DbgDeclares.front()->getExpression();
+    auto VarSize = Var->getSizeInBits();
     DIBuilder DIB(*AI.getModule(), /*AllowUnresolved*/ false);
     uint64_t AllocaSize = DL.getTypeSizeInBits(AI.getAllocatedType());
     for (auto Fragment : Fragments) {
@@ -4133,10 +4134,14 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
                  "new fragment is outside of original fragment");
           Start -= OrigFragment->OffsetInBits;
         }
-        if (auto E = DIExpression::createFragmentExpression(Expr, Start, Size))
-          FragmentExpr = *E;
-        else
-          continue;
+        // Avoid creating a fragment expression that covers the entire variable.
+        if (!VarSize || *VarSize != Size) {
+          if (auto E =
+                  DIExpression::createFragmentExpression(Expr, Start, Size))
+            FragmentExpr = *E;
+          else
+            continue;
+        }
       }
 
       // Remove any existing intrinsics describing the same alloca.

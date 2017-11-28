@@ -1185,8 +1185,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FP_TO_UINT,         MVT::v4i32, Legal);
     setOperationAction(ISD::FP_TO_UINT,         MVT::v2i32, Custom);
     setOperationAction(ISD::SINT_TO_FP,         MVT::v16i32, Legal);
-    setOperationAction(ISD::SINT_TO_FP,         MVT::v8i1,   Custom);
-    setOperationAction(ISD::SINT_TO_FP,         MVT::v16i1,  Custom);
     setOperationAction(ISD::SINT_TO_FP,         MVT::v16i8,  Promote);
     setOperationAction(ISD::SINT_TO_FP,         MVT::v16i16, Promote);
     setOperationAction(ISD::UINT_TO_FP,         MVT::v16i32, Legal);
@@ -1202,8 +1200,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::UINT_TO_FP,         MVT::v4i1,  Custom);
     setOperationAction(ISD::SINT_TO_FP,         MVT::v2i1,  Custom);
     setOperationAction(ISD::UINT_TO_FP,         MVT::v2i1,  Custom);
-    setOperationAction(ISD::FP_ROUND,           MVT::v8f32, Legal);
-    setOperationAction(ISD::FP_EXTEND,          MVT::v8f32, Legal);
 
     setTruncStoreAction(MVT::v8i64,   MVT::v8i8,   Legal);
     setTruncStoreAction(MVT::v8i64,   MVT::v8i16,  Legal);
@@ -1245,13 +1241,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       }
     }
     if (Subtarget.hasVLX()) {
-      setOperationAction(ISD::SINT_TO_FP,       MVT::v8i32, Legal);
-      setOperationAction(ISD::UINT_TO_FP,       MVT::v8i32, Legal);
-      setOperationAction(ISD::FP_TO_SINT,       MVT::v8i32, Legal);
-      setOperationAction(ISD::FP_TO_UINT,       MVT::v8i32, Legal);
-      setOperationAction(ISD::SINT_TO_FP,       MVT::v4i32, Legal);
-      setOperationAction(ISD::FP_TO_SINT,       MVT::v4i32, Legal);
-      setOperationAction(ISD::FP_TO_UINT,       MVT::v4i32, Legal);
       setOperationAction(ISD::ZERO_EXTEND,      MVT::v4i32, Custom);
       setOperationAction(ISD::ZERO_EXTEND,      MVT::v2i64, Custom);
       setOperationAction(ISD::SIGN_EXTEND,      MVT::v4i32, Custom);
@@ -1266,9 +1255,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::ANY_EXTEND,         MVT::v8i64, Custom);
     setOperationAction(ISD::SIGN_EXTEND,        MVT::v16i32, Custom);
     setOperationAction(ISD::SIGN_EXTEND,        MVT::v8i64, Custom);
+
     setOperationAction(ISD::SIGN_EXTEND,        MVT::v16i8, Custom);
+    setOperationAction(ISD::ZERO_EXTEND,        MVT::v16i8, Custom);
     setOperationAction(ISD::SIGN_EXTEND,        MVT::v8i16, Custom);
+    setOperationAction(ISD::ZERO_EXTEND,        MVT::v8i16, Custom);
     setOperationAction(ISD::SIGN_EXTEND,        MVT::v16i16, Custom);
+    setOperationAction(ISD::ZERO_EXTEND,        MVT::v16i16, Custom);
 
     for (auto VT : { MVT::v16f32, MVT::v8f64 }) {
       setOperationAction(ISD::FFLOOR,           VT, Legal);
@@ -1718,25 +1711,22 @@ EVT X86TargetLowering::getSetCCResultType(const DataLayout &DL,
   if (!VT.isVector())
     return MVT::i8;
 
+  if (VT.getSizeInBits() >= 512) {
+    EVT EltVT = VT.getVectorElementType();
+    const unsigned NumElts = VT.getVectorNumElements();
+    if (Subtarget.hasAVX512())
+      if (EltVT == MVT::i32 || EltVT == MVT::i64 ||
+          EltVT == MVT::f32 || EltVT == MVT::f64)
+        return EVT::getVectorVT(Context, MVT::i1, NumElts);
+    if (Subtarget.hasBWI())
+      if (EltVT == MVT::i8 || EltVT == MVT::i16)
+        return EVT::getVectorVT(Context, MVT::i1, NumElts);
+  }
+
   if (VT.isSimple()) {
     MVT VVT = VT.getSimpleVT();
     const unsigned NumElts = VVT.getVectorNumElements();
     MVT EltVT = VVT.getVectorElementType();
-    if (VVT.is512BitVector()) {
-      if (Subtarget.hasAVX512())
-        if (EltVT == MVT::i32 || EltVT == MVT::i64 ||
-            EltVT == MVT::f32 || EltVT == MVT::f64)
-          switch(NumElts) {
-          case  8: return MVT::v8i1;
-          case 16: return MVT::v16i1;
-        }
-      if (Subtarget.hasBWI())
-        if (EltVT == MVT::i8 || EltVT == MVT::i16)
-          switch(NumElts) {
-          case 32: return MVT::v32i1;
-          case 64: return MVT::v64i1;
-        }
-    }
 
     if (Subtarget.hasBWI() && Subtarget.hasVLX())
       return MVT::getVectorVT(MVT::i1, NumElts);
@@ -28343,7 +28333,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   // Which shuffle domains are permitted?
   // Permit domain crossing at higher combine depths.
   bool AllowFloatDomain = FloatDomain || (Depth > 3);
-  bool AllowIntDomain = (!FloatDomain || (Depth > 3)) &&
+  bool AllowIntDomain = (!FloatDomain || (Depth > 3)) && Subtarget.hasSSE2() &&
                         (!MaskVT.is256BitVector() || Subtarget.hasAVX2());
 
   // Determine zeroable mask elements.

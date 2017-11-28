@@ -42,7 +42,7 @@ private:
   void printU4ImmDecOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printU8ImmDecOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printU16ImmDecOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
-  void printS16ImmDecOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+  void printS13ImmDecOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printU32ImmOperand(const MCInst *MI, unsigned OpNo,
                           const MCSubtargetInfo &STI, raw_ostream &O);
   void printNamedBit(const MCInst *MI, unsigned OpNo, raw_ostream &O,

@@ -281,6 +281,10 @@ bool TargetTransformInfo::haveFastSqrt(Type *Ty) const {
   return TTIImpl->haveFastSqrt(Ty);
 }
 
+bool TargetTransformInfo::isFCmpOrdCheaperThanFCmpZero(Type *Ty) const {
+  return TTIImpl->isFCmpOrdCheaperThanFCmpZero(Ty);
+}
+
 int TargetTransformInfo::getFPOpCost(Type *Ty) const {
   int Cost = TTIImpl->getFPOpCost(Ty);
   assert(Cost >= 0 && "TTI should not produce negative costs!");

@@ -3,7 +3,7 @@
 
 ; PR31455 - https://bugs.llvm.org/show_bug.cgi?id=31455
 ; We have to assume that errno can be set, so we have to make a libcall in that case.
-; But it's better for perf to check that the argument is valid rather than the result of 
+; But it's better for perf to check that the argument is valid rather than the result of
 ; sqrtss/sqrtsd.
 ; Note: This is really a test of the -partially-inline-libcalls IR pass (and we have an IR test
 ; for that), but we're checking the final asm to make sure that comes out as expected too.
@@ -11,11 +11,11 @@
 define float @f(float %val) nounwind {
 ; CHECK-LABEL: f:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    sqrtss %xmm0, %xmm1
-; CHECK-NEXT:    ucomiss %xmm1, %xmm1
-; CHECK-NEXT:    jp .LBB0_2
+; CHECK-NEXT:    xorps %xmm1, %xmm1
+; CHECK-NEXT:    ucomiss %xmm1, %xmm0
+; CHECK-NEXT:    jb .LBB0_2
 ; CHECK-NEXT:  # BB#1: # %.split
-; CHECK-NEXT:    movaps %xmm1, %xmm0
+; CHECK-NEXT:    sqrtss %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB0_2: # %call.sqrt
 ; CHECK-NEXT:    jmp sqrtf # TAILCALL
@@ -26,11 +26,11 @@ define float @f(float %val) nounwind {
 define double @d(double %val) nounwind {
 ; CHECK-LABEL: d:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    sqrtsd %xmm0, %xmm1
-; CHECK-NEXT:    ucomisd %xmm1, %xmm1
-; CHECK-NEXT:    jp .LBB1_2
+; CHECK-NEXT:    xorps %xmm1, %xmm1
+; CHECK-NEXT:    ucomisd %xmm1, %xmm0
+; CHECK-NEXT:    jb .LBB1_2
 ; CHECK-NEXT:  # BB#1: # %.split
-; CHECK-NEXT:    movapd %xmm1, %xmm0
+; CHECK-NEXT:    sqrtsd %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB1_2: # %call.sqrt
 ; CHECK-NEXT:    jmp sqrt # TAILCALL
