@@ -441,7 +441,11 @@ void RegisterBankInfo::applyDefaultMapping(const OperandsMapper &OpdMapper) {
     LLT OrigTy = MRI.getType(OrigReg);
     LLT NewTy = MRI.getType(NewReg);
     if (OrigTy != NewTy) {
-      assert(OrigTy.getSizeInBits() == NewTy.getSizeInBits() &&
+      // The default mapping is not supposed to change the size of
+      // the storage. However, right now we don't necessarily bump all
+      // the types to storage size. For instance, we can consider
+      // s16 G_AND legal whereas the storage size is going to be 32.
+      assert(OrigTy.getSizeInBits() <= NewTy.getSizeInBits() &&
              "Types with difference size cannot be handled by the default "
              "mapping");
       DEBUG(dbgs() << "\nChange type of new opd from " << NewTy << " to "

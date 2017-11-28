@@ -284,6 +284,12 @@ template <typename T> class ArrayRef;
     /// include text from the specified variant, returning the new string.
     static std::string FlattenAsmStringVariants(StringRef AsmString,
                                                 unsigned Variant);
+
+    // Is the specified operand in a generic instruction implicitly a pointer.
+    // This can be used on intructions that use typeN or ptypeN to identify
+    // operands that should be considered as pointers even though SelectionDAG
+    // didn't make a distinction between integer and pointers.
+    bool isOperandAPointer(unsigned i) const;
   };
 
 

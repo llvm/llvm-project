@@ -86,9 +86,9 @@ const Target *TargetRegistry::lookupTarget(const std::string &TT,
   return &*I;
 }
 
-void TargetRegistry::RegisterTarget(Target &T,
-                                    const char *Name,
+void TargetRegistry::RegisterTarget(Target &T, const char *Name,
                                     const char *ShortDesc,
+                                    const char *BackendName,
                                     Target::ArchMatchFnTy ArchMatchFn,
                                     bool HasJIT) {
   assert(Name && ShortDesc && ArchMatchFn &&
@@ -105,6 +105,7 @@ void TargetRegistry::RegisterTarget(Target &T,
 
   T.Name = Name;
   T.ShortDesc = ShortDesc;
+  T.BackendName = BackendName;
   T.ArchMatchFn = ArchMatchFn;
   T.HasJIT = HasJIT;
 }
