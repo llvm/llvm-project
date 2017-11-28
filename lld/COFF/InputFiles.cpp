@@ -119,55 +119,115 @@ void ObjFile::parse() {
   initializeSEH();
 }
 
+// We set SectionChunk pointers in the SparseChunks vector to this value
+// temporarily to mark comdat sections as having an unknown resolution. As we
+// walk the object file's symbol table, once we visit either a leader symbol or
+// an associative section definition together with the parent comdat's leader,
+// we set the pointer to either nullptr (to mark the section as discarded) or a
+// valid SectionChunk for that section.
+static SectionChunk *const PendingComdat = reinterpret_cast<SectionChunk *>(1);
+
 void ObjFile::initializeChunks() {
   uint32_t NumSections = COFFObj->getNumberOfSections();
   Chunks.reserve(NumSections);
   SparseChunks.resize(NumSections + 1);
   for (uint32_t I = 1; I < NumSections + 1; ++I) {
     const coff_section *Sec;
-    StringRef Name;
     if (auto EC = COFFObj->getSection(I, Sec))
       fatal("getSection failed: #" + Twine(I) + ": " + EC.message());
-    if (auto EC = COFFObj->getSectionName(Sec, Name))
-      fatal("getSectionName failed: #" + Twine(I) + ": " + EC.message());
-    if (Name == ".sxdata") {
-      SXData = Sec;
-      continue;
-    }
-    if (Name == ".drectve") {
-      ArrayRef<uint8_t> Data;
-      COFFObj->getSectionContents(Sec, Data);
-      Directives = std::string((const char *)Data.data(), Data.size());
-      continue;
-    }
 
-    // Object files may have DWARF debug info or MS CodeView debug info
-    // (or both).
-    //
-    // DWARF sections don't need any special handling from the perspective
-    // of the linker; they are just a data section containing relocations.
-    // We can just link them to complete debug info.
-    //
-    // CodeView needs a linker support. We need to interpret and debug
-    // info, and then write it to a separate .pdb file.
-
-    // Ignore debug info unless /debug is given.
-    if (!Config->Debug && Name.startswith(".debug"))
-      continue;
-
-    if (Sec->Characteristics & llvm::COFF::IMAGE_SCN_LNK_REMOVE)
-      continue;
-    auto *C = make<SectionChunk>(this, Sec);
-
-    // CodeView sections are stored to a different vector because they are not
-    // linked in the regular manner.
-    if (C->isCodeView())
-      DebugChunks.push_back(C);
+    if (Sec->Characteristics & IMAGE_SCN_LNK_COMDAT)
+      SparseChunks[I] = PendingComdat;
     else
-      Chunks.push_back(C);
-
-    SparseChunks[I] = C;
+      SparseChunks[I] = readSection(I, nullptr);
   }
+}
+
+SectionChunk *ObjFile::readSection(uint32_t SectionNumber,
+                                   const coff_aux_section_definition *Def) {
+  const coff_section *Sec;
+  StringRef Name;
+  if (auto EC = COFFObj->getSection(SectionNumber, Sec))
+    fatal("getSection failed: #" + Twine(SectionNumber) + ": " + EC.message());
+  if (auto EC = COFFObj->getSectionName(Sec, Name))
+    fatal("getSectionName failed: #" + Twine(SectionNumber) + ": " +
+          EC.message());
+  if (Name == ".sxdata") {
+    SXData = Sec;
+    return nullptr;
+  }
+  if (Name == ".drectve") {
+    ArrayRef<uint8_t> Data;
+    COFFObj->getSectionContents(Sec, Data);
+    Directives = std::string((const char *)Data.data(), Data.size());
+    return nullptr;
+  }
+
+  // Object files may have DWARF debug info or MS CodeView debug info
+  // (or both).
+  //
+  // DWARF sections don't need any special handling from the perspective
+  // of the linker; they are just a data section containing relocations.
+  // We can just link them to complete debug info.
+  //
+  // CodeView needs a linker support. We need to interpret and debug
+  // info, and then write it to a separate .pdb file.
+
+  // Ignore debug info unless /debug is given.
+  if (!Config->Debug && Name.startswith(".debug"))
+    return nullptr;
+
+  if (Sec->Characteristics & llvm::COFF::IMAGE_SCN_LNK_REMOVE)
+    return nullptr;
+  auto *C = make<SectionChunk>(this, Sec);
+  if (Def)
+    C->Checksum = Def->CheckSum;
+
+  // CodeView sections are stored to a different vector because they are not
+  // linked in the regular manner.
+  if (C->isCodeView())
+    DebugChunks.push_back(C);
+  else
+    Chunks.push_back(C);
+
+  return C;
+}
+
+void ObjFile::readAssociativeDefinition(
+    COFFSymbolRef Sym, const coff_aux_section_definition *Def) {
+  SectionChunk *Parent = SparseChunks[Def->getNumber(Sym.isBigObj())];
+
+  // If the parent is pending, it probably means that its section definition
+  // appears after us in the symbol table. Leave the associated section as
+  // pending; we will handle it during the second pass in initializeSymbols().
+  if (Parent == PendingComdat)
+    return;
+
+  // Check whether the parent is prevailing. If it is, so are we, and we read
+  // the section; otherwise mark it as discarded.
+  int32_t SectionNumber = Sym.getSectionNumber();
+  if (Parent) {
+    SparseChunks[SectionNumber] = readSection(SectionNumber, Def);
+    if (SparseChunks[SectionNumber])
+      Parent->addAssociative(SparseChunks[SectionNumber]);
+  } else {
+    SparseChunks[SectionNumber] = nullptr;
+  }
+}
+
+Symbol *ObjFile::createRegular(COFFSymbolRef Sym) {
+  SectionChunk *SC = SparseChunks[Sym.getSectionNumber()];
+  if (Sym.isExternal()) {
+    StringRef Name;
+    COFFObj->getSymbolName(Sym, Name);
+    if (SC)
+      return Symtab->addRegular(this, Name, Sym.getGeneric(), SC);
+    return Symtab->addUndefined(Name, this, false);
+  }
+  if (SC)
+    return make<DefinedRegular>(this, /*Name*/ "", false,
+                                /*IsExternal*/ false, Sym.getGeneric(), SC);
+  return nullptr;
 }
 
 void ObjFile::initializeSymbols() {
@@ -175,30 +235,43 @@ void ObjFile::initializeSymbols() {
   Symbols.resize(NumSymbols);
 
   SmallVector<std::pair<Symbol *, uint32_t>, 8> WeakAliases;
-  int32_t LastSectionNumber = 0;
+  std::vector<uint32_t> PendingIndexes;
+  PendingIndexes.reserve(NumSymbols);
+
+  std::vector<const coff_aux_section_definition *> ComdatDefs(
+      COFFObj->getNumberOfSections() + 1);
 
   for (uint32_t I = 0; I < NumSymbols; ++I) {
     COFFSymbolRef COFFSym = check(COFFObj->getSymbol(I));
-
-    const void *AuxP = nullptr;
-    if (COFFSym.getNumberOfAuxSymbols())
-      AuxP = check(COFFObj->getSymbol(I + 1)).getRawPtr();
-    bool IsFirst = (LastSectionNumber != COFFSym.getSectionNumber());
-
-    Symbol *Sym = nullptr;
     if (COFFSym.isUndefined()) {
-      Sym = createUndefined(COFFSym);
+      Symbols[I] = createUndefined(COFFSym);
     } else if (COFFSym.isWeakExternal()) {
-      Sym = createUndefined(COFFSym);
-      uint32_t TagIndex =
-          static_cast<const coff_aux_weak_external *>(AuxP)->TagIndex;
-      WeakAliases.emplace_back(Sym, TagIndex);
+      Symbols[I] = createUndefined(COFFSym);
+      uint32_t TagIndex = COFFSym.getAux<coff_aux_weak_external>()->TagIndex;
+      WeakAliases.emplace_back(Symbols[I], TagIndex);
+    } else if (Optional<Symbol *> OptSym = createDefined(COFFSym, ComdatDefs)) {
+      Symbols[I] = *OptSym;
     } else {
-      Sym = createDefined(COFFSym, AuxP, IsFirst);
+      // createDefined() returns None if a symbol belongs to a section that
+      // was pending at the point when the symbol was read. This can happen in
+      // two cases:
+      // 1) section definition symbol for a comdat leader;
+      // 2) symbol belongs to a comdat section associated with a section whose
+      //    section definition symbol appears later in the symbol table.
+      // In both of these cases, we can expect the section to be resolved by
+      // the time we finish visiting the remaining symbols in the symbol
+      // table. So we postpone the handling of this symbol until that time.
+      PendingIndexes.push_back(I);
     }
-    Symbols[I] = Sym;
     I += COFFSym.getNumberOfAuxSymbols();
-    LastSectionNumber = COFFSym.getSectionNumber();
+  }
+
+  for (uint32_t I : PendingIndexes) {
+    COFFSymbolRef Sym = check(COFFObj->getSymbol(I));
+    if (auto *Def = Sym.getSectionDefinition())
+      if (Def->Selection == IMAGE_COMDAT_SELECT_ASSOCIATIVE)
+        readAssociativeDefinition(Sym, Def);
+    Symbols[I] = createRegular(Sym);
   }
 
   for (auto &KV : WeakAliases) {
@@ -214,8 +287,9 @@ Symbol *ObjFile::createUndefined(COFFSymbolRef Sym) {
   return Symtab->addUndefined(Name, this, Sym.isWeakExternal());
 }
 
-Symbol *ObjFile::createDefined(COFFSymbolRef Sym, const void *AuxP,
-                               bool IsFirst) {
+Optional<Symbol *> ObjFile::createDefined(
+    COFFSymbolRef Sym,
+    std::vector<const coff_aux_section_definition *> &ComdatDefs) {
   StringRef Name;
   if (Sym.isCommon()) {
     auto *C = make<CommonChunk>(Sym);
@@ -254,37 +328,46 @@ Symbol *ObjFile::createDefined(COFFSymbolRef Sym, const void *AuxP,
   if ((uint32_t)SectionNumber >= SparseChunks.size())
     fatal("broken object file: " + toString(this));
 
-  // Nothing else to do without a section chunk.
-  auto *SC = SparseChunks[SectionNumber];
-  if (!SC)
-    return nullptr;
-
-  // Handle section definitions
-  if (IsFirst && AuxP) {
-    auto *Aux = reinterpret_cast<const coff_aux_section_definition *>(AuxP);
-    if (Aux->Selection == IMAGE_COMDAT_SELECT_ASSOCIATIVE)
-      if (auto *ParentSC = SparseChunks[Aux->getNumber(Sym.isBigObj())]) {
-        ParentSC->addAssociative(SC);
-        // If we already discarded the parent, discard the child.
-        if (ParentSC->isDiscarded())
-          SC->markDiscarded();
-      }
-    SC->Checksum = Aux->CheckSum;
+  // Handle comdat leader symbols.
+  if (const coff_aux_section_definition *Def = ComdatDefs[SectionNumber]) {
+    ComdatDefs[SectionNumber] = nullptr;
+    Symbol *Leader;
+    bool Prevailing;
+    if (Sym.isExternal()) {
+      COFFObj->getSymbolName(Sym, Name);
+      std::tie(Leader, Prevailing) =
+          Symtab->addComdat(this, Name, Sym.getGeneric());
+    } else {
+      Leader = make<DefinedRegular>(this, /*Name*/ "", false,
+                                    /*IsExternal*/ false, Sym.getGeneric());
+      Prevailing = true;
+    }
+    if (Prevailing) {
+      SectionChunk *C = readSection(SectionNumber, Def);
+      SparseChunks[SectionNumber] = C;
+      C->Sym = cast<DefinedRegular>(Leader);
+      cast<DefinedRegular>(Leader)->Data = &C->Repl;
+    } else {
+      SparseChunks[SectionNumber] = nullptr;
+    }
+    return Leader;
   }
 
-  DefinedRegular *B;
-  if (Sym.isExternal()) {
-    COFFObj->getSymbolName(Sym, Name);
-    Symbol *S =
-        Symtab->addRegular(this, Name, SC->isCOMDAT(), Sym.getGeneric(), SC);
-    B = cast<DefinedRegular>(S);
-  } else
-    B = make<DefinedRegular>(this, /*Name*/ "", SC->isCOMDAT(),
-                             /*IsExternal*/ false, Sym.getGeneric(), SC);
-  if (SC->isCOMDAT() && Sym.getValue() == 0 && !AuxP)
-    SC->setSymbol(B);
+  // Read associative section definitions and prepare to handle the comdat
+  // leader symbol by setting the section's ComdatDefs pointer if we encounter a
+  // non-associative comdat.
+  if (SparseChunks[SectionNumber] == PendingComdat) {
+    if (auto *Def = Sym.getSectionDefinition()) {
+      if (Def->Selection == IMAGE_COMDAT_SELECT_ASSOCIATIVE)
+        readAssociativeDefinition(Sym, Def);
+      else
+        ComdatDefs[SectionNumber] = Def;
+    }
+  }
 
-  return B;
+  if (SparseChunks[SectionNumber] == PendingComdat)
+    return None;
+  return createRegular(Sym);
 }
 
 void ObjFile::initializeSEH() {
@@ -361,8 +444,12 @@ void ImportFile::parse() {
 void BitcodeFile::parse() {
   Obj = check(lto::InputFile::create(MemoryBufferRef(
       MB.getBuffer(), Saver.save(ParentName + MB.getBufferIdentifier()))));
+  std::vector<std::pair<Symbol *, bool>> Comdat(Obj->getComdatTable().size());
+  for (size_t I = 0; I != Obj->getComdatTable().size(); ++I)
+    Comdat[I] = Symtab->addComdat(this, Saver.save(Obj->getComdatTable()[I]));
   for (const lto::InputFile::Symbol &ObjSym : Obj->symbols()) {
     StringRef SymName = Saver.save(ObjSym.getName());
+    int ComdatIndex = ObjSym.getComdatIndex();
     Symbol *Sym;
     if (ObjSym.isUndefined()) {
       Sym = Symtab->addUndefined(SymName, this, false);
@@ -374,9 +461,15 @@ void BitcodeFile::parse() {
       std::string Fallback = ObjSym.getCOFFWeakExternalFallback();
       Symbol *Alias = Symtab->addUndefined(Saver.save(Fallback));
       checkAndSetWeakAlias(Symtab, this, Sym, Alias);
+    } else if (ComdatIndex != -1) {
+      if (SymName == Obj->getComdatTable()[ComdatIndex])
+        Sym = Comdat[ComdatIndex].first;
+      else if (Comdat[ComdatIndex].second)
+        Sym = Symtab->addRegular(this, SymName);
+      else
+        Sym = Symtab->addUndefined(SymName, this, false);
     } else {
-      bool IsCOMDAT = ObjSym.getComdatIndex() != -1;
-      Sym = Symtab->addRegular(this, SymName, IsCOMDAT);
+      Sym = Symtab->addRegular(this, SymName);
     }
     SymbolBodies.push_back(Sym);
   }

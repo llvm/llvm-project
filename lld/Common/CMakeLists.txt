@@ -5,6 +5,7 @@ endif()
 add_lld_library(lldCommon
   ErrorHandler.cpp
   Reproduce.cpp
+  Strings.cpp
   TargetOptionsCommandFlags.cpp
   Threads.cpp
   Version.cpp
@@ -14,6 +15,7 @@ add_lld_library(lldCommon
 
   LINK_COMPONENTS
   Codegen
+  Demangle
   MC
   Option
   Support

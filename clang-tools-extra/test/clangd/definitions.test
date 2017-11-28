@@ -101,7 +101,7 @@ Content-Length: 149
 # CHECK-NEXT:      "uri": "file:///{{([A-Z]:/)?}}main.cpp"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
-Content-Length: 187
+Content-Length: 188
 
 {"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///main.cpp","version":4},"contentChanges":[{"text":"int main() {\n   main();\n   return 0;\n}"}]}}
 
@@ -126,7 +126,7 @@ Content-Length: 148
 # CHECK-NEXT:      "uri": "file:///{{([A-Z]:/)?}}main.cpp"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
-Content-Length: 208
+Content-Length: 209
 
 {"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///main.cpp","version":5},"contentChanges":[{"text":"struct Foo {\n};\nint main() {\n   Foo bar;\n   return 0;\n}\n"}]}}
 
@@ -151,7 +151,7 @@ Content-Length: 148
 # CHECK-NEXT:      "uri": "file:///{{([A-Z]:/)?}}main.cpp"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
-Content-Length: 231
+Content-Length: 232
 
 {"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///main.cpp","version":5},"contentChanges":[{"text":"namespace n1 {\nstruct Foo {\n};\n}\nint main() {\n   n1::Foo bar;\n   return 0;\n}\n"}]}}
 
@@ -176,7 +176,7 @@ Content-Length: 148
 # CHECK-NEXT:      "uri": "file:///{{([A-Z]:/)?}}main.cpp"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
-Content-Length: 215
+Content-Length: 216
 
 {"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///main.cpp","version":6},"contentChanges":[{"text":"struct Foo {\n  int x;\n};\nint main() {\n   Foo bar;\n   bar.x;\n}\n"}]}}
 
@@ -201,7 +201,7 @@ Content-Length: 148
 # CHECK-NEXT:      "uri": "file:///{{([A-Z]:/)?}}main.cpp"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
-Content-Length: 220
+Content-Length: 221
 
 {"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///main.cpp","version":7},"contentChanges":[{"text":"struct Foo {\n  void x();\n};\nint main() {\n   Foo bar;\n   bar.x();\n}\n"}]}}
 
@@ -226,7 +226,7 @@ Content-Length: 148
 # CHECK-NEXT:      "uri": "file:///{{([A-Z]:/)?}}main.cpp"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
-Content-Length: 240
+Content-Length: 241
 
 {"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///main.cpp","version":7},"contentChanges":[{"text":"struct Foo {\n};\ntypedef Foo TypedefFoo;\nint main() {\n   TypedefFoo bar;\n   return 0;\n}\n"}]}}
 
@@ -251,7 +251,7 @@ Content-Length: 149
 # CHECK-NEXT:      "uri": "file:///{{([A-Z]:/)?}}main.cpp"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
-Content-Length: 254
+Content-Length: 253
 
 {"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///main.cpp","version":7},"contentChanges":[{"text":"template <typename MyTemplateParam>\nvoid foo() {\n MyTemplateParam a;\n}\nint main() {\n   return 0;\n}\n"}]}}
 
@@ -262,7 +262,7 @@ Content-Length: 149
 #      CHECK:  "id": 1,
 # CHECK-NEXT:  "jsonrpc": "2.0",
 # CHECK-NEXT:  "result": []
-Content-Length: 256
+Content-Length: 257
 
 {"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///main.cpp","version":7},"contentChanges":[{"text":"namespace ns {\nstruct Foo {\nstatic void bar() {}\n};\n}\nint main() {\n   ns::Foo::bar();\n   return 0;\n}\n"}]}}
 
@@ -418,4 +418,4 @@ Content-Length: 48
 {"jsonrpc":"2.0","id":10000,"method":"shutdown"}
 Content-Length: 33
 
-{"jsonrpc":"2.0":"method":"exit"}
+{"jsonrpc":"2.0","method":"exit"}

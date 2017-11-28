@@ -21,6 +21,7 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Strings.h"
 #include "llvm/ADT/STLExtras.h"
 
 using namespace llvm;
@@ -304,8 +305,7 @@ Symbol *SymbolTable::addUndefined(StringRef Name, uint8_t Binding,
     S->Binding = Binding;
   if (Binding != STB_WEAK) {
     if (auto *SS = dyn_cast<SharedSymbol>(S))
-      if (!Config->GcSections)
-        SS->getFile<ELFT>()->IsNeeded = true;
+      SS->getFile<ELFT>()->IsNeeded = true;
   }
   if (auto *L = dyn_cast<Lazy>(S)) {
     // An undefined weak will not fetch archive members. See comment on Lazy in
@@ -500,7 +500,7 @@ void SymbolTable::addShared(StringRef Name, SharedFile<ELFT> *File,
                                 Alignment, Verdef);
     if (!WasInserted) {
       S->Binding = Binding;
-      if (!S->isWeak() && !Config->GcSections)
+      if (!S->isWeak())
         File->IsNeeded = true;
     }
   }
@@ -631,7 +631,7 @@ StringMap<std::vector<Symbol *>> &SymbolTable::getDemangledSyms() {
     for (Symbol *Sym : SymVector) {
       if (!Sym->isDefined())
         continue;
-      if (Optional<std::string> S = demangle(Sym->getName()))
+      if (Optional<std::string> S = demangleItanium(Sym->getName()))
         (*DemangledSyms)[*S].push_back(Sym);
       else
         (*DemangledSyms)[Sym->getName()].push_back(Sym);
