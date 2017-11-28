@@ -55,14 +55,14 @@ namespace json {
 //   object  (json::obj)
 //
 // The kind can be queried directly, or implicitly via the typed accessors:
-//   if (Optional<StringRef> S = E.string())
+//   if (Optional<StringRef> S = E.asString()
 //     assert(E.kind() == Expr::String);
 //
 // Array and Object also have typed indexing accessors for easy traversal:
 //   Expected<Expr> E = parse(R"( {"options": {"font": "sans-serif"}} )");
-//   if (json::obj* O = E->object())
-//     if (json::obj* Opts = O->object("options"))
-//       if (Optional<StringRef> Font = Opts->string("font"))
+//   if (json::obj* O = E->asObject())
+//     if (json::obj* Opts = O->getObject("options"))
+//       if (Optional<StringRef> Font = Opts->getString("font"))
 //         assert(Opts->at("font").kind() == Expr::String);
 //
 // === Serialization ===
@@ -166,38 +166,38 @@ public:
   }
 
   // Typed accessors return None/nullptr if the Expr is not of this type.
-  llvm::Optional<std::nullptr_t> null() const {
+  llvm::Optional<std::nullptr_t> asNull() const {
     if (LLVM_LIKELY(Type == T_Null))
       return nullptr;
     return llvm::None;
   }
-  llvm::Optional<bool> boolean() const {
-    if (LLVM_LIKELY(Type == T_Null))
+  llvm::Optional<bool> asBoolean() const {
+    if (LLVM_LIKELY(Type == T_Boolean))
       return as<bool>();
     return llvm::None;
   }
-  llvm::Optional<double> number() const {
+  llvm::Optional<double> asNumber() const {
     if (LLVM_LIKELY(Type == T_Number))
       return as<double>();
     return llvm::None;
   }
-  llvm::Optional<llvm::StringRef> string() const {
+  llvm::Optional<llvm::StringRef> asString() const {
     if (Type == T_String)
       return llvm::StringRef(as<std::string>());
     if (LLVM_LIKELY(Type == T_StringRef))
       return as<llvm::StringRef>();
     return llvm::None;
   }
-  const ObjectExpr *object() const {
+  const ObjectExpr *asObject() const {
     return LLVM_LIKELY(Type == T_Object) ? &as<ObjectExpr>() : nullptr;
   }
-  ObjectExpr *object() {
+  ObjectExpr *asObject() {
     return LLVM_LIKELY(Type == T_Object) ? &as<ObjectExpr>() : nullptr;
   }
-  const ArrayExpr *array() const {
+  const ArrayExpr *asArray() const {
     return LLVM_LIKELY(Type == T_Array) ? &as<ArrayExpr>() : nullptr;
   }
-  ArrayExpr *array() {
+  ArrayExpr *asArray() {
     return LLVM_LIKELY(Type == T_Array) ? &as<ArrayExpr>() : nullptr;
   }
 
@@ -292,6 +292,63 @@ public:
     Expr &operator[](ObjectKey &&K) {
       return emplace(std::move(K), Expr(nullptr)).first->second;
     }
+
+    // Look up a property, returning nullptr if it doesn't exist.
+    json::Expr *get(const ObjectKey &K) {
+      auto I = find(K);
+      if (I == end())
+        return nullptr;
+      return &I->second;
+    }
+    const json::Expr *get(const ObjectKey &K) const {
+      auto I = find(K);
+      if (I == end())
+        return nullptr;
+      return &I->second;
+    }
+    // Typed accessors return None/nullptr if
+    //   - the property doesn't exist
+    //   - or it has the wrong type
+    llvm::Optional<std::nullptr_t> getNull(const ObjectKey &K) const {
+      if (auto *V = get(K))
+        return V->asNull();
+      return llvm::None;
+    }
+    llvm::Optional<bool> getBoolean(const ObjectKey &K) const {
+      if (auto *V = get(K))
+        return V->asBoolean();
+      return llvm::None;
+    }
+    llvm::Optional<double> getNumber(const ObjectKey &K) const {
+      if (auto *V = get(K))
+        return V->asNumber();
+      return llvm::None;
+    }
+    llvm::Optional<llvm::StringRef> getString(const ObjectKey &K) const {
+      if (auto *V = get(K))
+        return V->asString();
+      return llvm::None;
+    }
+    const ObjectExpr *getObject(const ObjectKey &K) const {
+      if (auto *V = get(K))
+        return V->asObject();
+      return nullptr;
+    }
+    ObjectExpr *getObject(const ObjectKey &K) {
+      if (auto *V = get(K))
+        return V->asObject();
+      return nullptr;
+    }
+    const ArrayExpr *getArray(const ObjectKey &K) const {
+      if (auto *V = get(K))
+        return V->asArray();
+      return nullptr;
+    }
+    ArrayExpr *getArray(const ObjectKey &K) {
+      if (auto *V = get(K))
+        return V->asArray();
+      return nullptr;
+    }
   };
 
   class ArrayExpr : public std::vector<Expr> {
@@ -306,6 +363,26 @@ public:
       for (const auto &V : C)
         emplace_back(V);
     }
+
+    // Typed accessors return None/nullptr if the element has the wrong type.
+    llvm::Optional<std::nullptr_t> getNull(size_t I) const {
+      return (*this)[I].asNull();
+    }
+    llvm::Optional<bool> getBoolean(size_t I) const {
+      return (*this)[I].asBoolean();
+    }
+    llvm::Optional<double> getNumber(size_t I) const {
+      return (*this)[I].asNumber();
+    }
+    llvm::Optional<llvm::StringRef> getString(size_t I) const {
+      return (*this)[I].asString();
+    }
+    const ObjectExpr *getObject(size_t I) const {
+      return (*this)[I].asObject();
+    }
+    ObjectExpr *getObject(size_t I) { return (*this)[I].asObject(); }
+    const ArrayExpr *getArray(size_t I) const { return (*this)[I].asArray(); }
+    ArrayExpr *getArray(size_t I) { return (*this)[I].asArray(); }
   };
 
 private:

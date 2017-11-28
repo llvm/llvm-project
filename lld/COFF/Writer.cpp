@@ -322,6 +322,11 @@ void Writer::run() {
 
 static StringRef getOutputSection(StringRef Name) {
   StringRef S = Name.split('$').first;
+
+  // Treat a later period as a separator for MinGW, for sections like
+  // ".ctors.01234".
+  S = S.substr(0, S.find('.', 1));
+
   auto It = Config->Merge.find(S);
   if (It == Config->Merge.end())
     return S;
