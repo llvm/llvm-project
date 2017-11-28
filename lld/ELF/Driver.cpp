@@ -30,7 +30,6 @@
 #include "InputFiles.h"
 #include "InputSection.h"
 #include "LinkerScript.h"
-#include "Memory.h"
 #include "OutputSections.h"
 #include "ScriptParser.h"
 #include "Strings.h"
@@ -41,6 +40,7 @@
 #include "lld/Common/Args.h"
 #include "lld/Common/Driver.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Memory.h"
 #include "lld/Common/Threads.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/StringExtras.h"
@@ -64,10 +64,6 @@ using namespace lld::elf;
 
 Configuration *elf::Config;
 LinkerDriver *elf::Driver;
-
-BumpPtrAllocator elf::BAlloc;
-StringSaver elf::Saver{BAlloc};
-std::vector<SpecificAllocBase *> elf::SpecificAllocBase::Instances;
 
 static void setConfigs();
 

@@ -44,13 +44,13 @@
 #include "Relocations.h"
 #include "Config.h"
 #include "LinkerScript.h"
-#include "Memory.h"
 #include "OutputSections.h"
 #include "Strings.h"
 #include "SymbolTable.h"
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Thunks.h"
+#include "lld/Common/Memory.h"
 
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/raw_ostream.h"
@@ -541,6 +541,7 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol *SS) {
     Sym->CopyRelSec = Sec;
     Sym->IsPreemptible = false;
     Sym->IsUsedInRegularObj = true;
+    Sym->Used = true;
   }
 
   In<ELFT>::RelaDyn->addReloc({Target->CopyRel, Sec, 0, false, SS, 0});

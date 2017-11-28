@@ -61,6 +61,7 @@ Name prefix            Description
 ``cert-``              Checks related to CERT Secure Coding Guidelines.
 ``cppcoreguidelines-`` Checks related to C++ Core Guidelines.
 ``clang-analyzer-``    Clang Static Analyzer checks.
+``fuchsia-``           Checks related to Fuchsia coding conventions.
 ``google-``            Checks related to Google coding conventions.
 ``hicpp-``             Checks related to High Integrity C++ Coding Standard.
 ``llvm-``              Checks related to the LLVM coding conventions.

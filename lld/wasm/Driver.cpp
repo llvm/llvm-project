@@ -9,11 +9,11 @@
 
 #include "lld/Common/Driver.h"
 #include "Config.h"
-#include "Memory.h"
 #include "SymbolTable.h"
 #include "Writer.h"
 #include "lld/Common/Args.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Memory.h"
 #include "lld/Common/Threads.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/Twine.h"
@@ -61,9 +61,7 @@ private:
 
 } // anonymous namespace
 
-std::vector<SpecificAllocBase *> lld::wasm::SpecificAllocBase::Instances;
 Configuration *lld::wasm::Config;
-BumpPtrAllocator lld::wasm::BAlloc;
 
 bool lld::wasm::link(ArrayRef<const char *> Args, bool CanExitEarly,
                      raw_ostream &Error) {

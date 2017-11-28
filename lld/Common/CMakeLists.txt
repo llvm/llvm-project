@@ -5,6 +5,7 @@ endif()
 add_lld_library(lldCommon
   Args.cpp
   ErrorHandler.cpp
+  Memory.cpp
   Reproduce.cpp
   Strings.cpp
   TargetOptionsCommandFlags.cpp
