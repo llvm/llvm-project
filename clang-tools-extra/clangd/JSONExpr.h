@@ -181,6 +181,16 @@ public:
       return as<double>();
     return llvm::None;
   }
+  llvm::Optional<int64_t> asInteger() const {
+    if (LLVM_LIKELY(Type == T_Number)) {
+      double D = as<double>();
+      if (LLVM_LIKELY(std::modf(D, &D) == 0 &&
+                      D >= std::numeric_limits<int64_t>::min() &&
+                      D <= std::numeric_limits<int64_t>::max()))
+        return D;
+    }
+    return llvm::None;
+  }
   llvm::Optional<llvm::StringRef> asString() const {
     if (Type == T_String)
       return llvm::StringRef(as<std::string>());
@@ -324,6 +334,11 @@ public:
         return V->asNumber();
       return llvm::None;
     }
+    llvm::Optional<int64_t> getInteger(const ObjectKey &K) const {
+      if (auto *V = get(K))
+        return V->asInteger();
+      return llvm::None;
+    }
     llvm::Optional<llvm::StringRef> getString(const ObjectKey &K) const {
       if (auto *V = get(K))
         return V->asString();
@@ -373,6 +388,9 @@ public:
     }
     llvm::Optional<double> getNumber(size_t I) const {
       return (*this)[I].asNumber();
+    }
+    llvm::Optional<int64_t> getInteger(size_t I) const {
+      return (*this)[I].asInteger();
     }
     llvm::Optional<llvm::StringRef> getString(size_t I) const {
       return (*this)[I].asString();

@@ -79,7 +79,7 @@ Content-Length: 10
 {"jsonrpc":"2.0","id":4,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:/main.cpp"},"position":{"line":3,"character":5}}}
 # Test message with malformed Content-Length
 #
-# STDERR: JSON dispatch failed!
+# STDERR: JSON parse error
 # Ensure we recover by sending another (valid) message
 
 Content-Length: 146
