@@ -23,14 +23,11 @@
 
 #include "JSONExpr.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/Support/YAMLParser.h"
 #include <string>
 #include <vector>
 
 namespace clang {
 namespace clangd {
-
-class Logger;
 
 enum class ErrorCode {
   // Defined by JSON RPC.
@@ -54,7 +51,7 @@ struct URI {
   static URI fromUri(llvm::StringRef uri);
   static URI fromFile(llvm::StringRef file);
 
-  static URI parse(llvm::yaml::ScalarNode *Param);
+  static URI parse(llvm::StringRef U) { return fromUri(U); }
   static json::Expr unparse(const URI &U);
 
   friend bool operator==(const URI &LHS, const URI &RHS) {
@@ -74,8 +71,7 @@ struct TextDocumentIdentifier {
   /// The text document's URI.
   URI uri;
 
-  static llvm::Optional<TextDocumentIdentifier>
-  parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger);
+  static llvm::Optional<TextDocumentIdentifier> parse(const json::Expr &Params);
 };
 
 struct Position {
@@ -94,8 +90,7 @@ struct Position {
            std::tie(RHS.line, RHS.character);
   }
 
-  static llvm::Optional<Position> parse(llvm::yaml::MappingNode *Params,
-                                        clangd::Logger &Logger);
+  static llvm::Optional<Position> parse(const json::Expr &Params);
   static json::Expr unparse(const Position &P);
 };
 
@@ -113,8 +108,7 @@ struct Range {
     return std::tie(LHS.start, LHS.end) < std::tie(RHS.start, RHS.end);
   }
 
-  static llvm::Optional<Range> parse(llvm::yaml::MappingNode *Params,
-                                     clangd::Logger &Logger);
+  static llvm::Optional<Range> parse(const json::Expr &Params);
   static json::Expr unparse(const Range &P);
 };
 
@@ -141,8 +135,7 @@ struct Location {
 struct Metadata {
   std::vector<std::string> extraFlags;
 
-  static llvm::Optional<Metadata> parse(llvm::yaml::MappingNode *Params,
-                                        clangd::Logger &Logger);
+  static llvm::Optional<Metadata> parse(const json::Expr &Params);
 };
 
 struct TextEdit {
@@ -154,8 +147,7 @@ struct TextEdit {
   /// empty string.
   std::string newText;
 
-  static llvm::Optional<TextEdit> parse(llvm::yaml::MappingNode *Params,
-                                        clangd::Logger &Logger);
+  static llvm::Optional<TextEdit> parse(const json::Expr &Params);
   static json::Expr unparse(const TextEdit &P);
 };
 
@@ -172,8 +164,7 @@ struct TextDocumentItem {
   /// The content of the opened text document.
   std::string text;
 
-  static llvm::Optional<TextDocumentItem> parse(llvm::yaml::MappingNode *Params,
-                                                clangd::Logger &Logger);
+  static llvm::Optional<TextDocumentItem> parse(const json::Expr &Params);
 };
 
 enum class TraceLevel {
@@ -183,8 +174,7 @@ enum class TraceLevel {
 };
 
 struct NoParams {
-  static llvm::Optional<NoParams> parse(llvm::yaml::MappingNode *Params,
-                                        Logger &Logger) {
+  static llvm::Optional<NoParams> parse(const json::Expr &Params) {
     return NoParams{};
   }
 };
@@ -218,8 +208,7 @@ struct InitializeParams {
 
   /// The initial trace setting. If omitted trace is disabled ('off').
   llvm::Optional<TraceLevel> trace;
-  static llvm::Optional<InitializeParams> parse(llvm::yaml::MappingNode *Params,
-                                                clangd::Logger &Logger);
+  static llvm::Optional<InitializeParams> parse(const json::Expr &Params);
 };
 
 struct DidOpenTextDocumentParams {
@@ -230,7 +219,7 @@ struct DidOpenTextDocumentParams {
   llvm::Optional<Metadata> metadata;
 
   static llvm::Optional<DidOpenTextDocumentParams>
-  parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger);
+  parse(const json::Expr &Params);
 };
 
 struct DidCloseTextDocumentParams {
@@ -238,7 +227,7 @@ struct DidCloseTextDocumentParams {
   TextDocumentIdentifier textDocument;
 
   static llvm::Optional<DidCloseTextDocumentParams>
-  parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger);
+  parse(const json::Expr &Params);
 };
 
 struct TextDocumentContentChangeEvent {
@@ -246,7 +235,7 @@ struct TextDocumentContentChangeEvent {
   std::string text;
 
   static llvm::Optional<TextDocumentContentChangeEvent>
-  parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger);
+  parse(const json::Expr &Params);
 };
 
 struct DidChangeTextDocumentParams {
@@ -259,7 +248,7 @@ struct DidChangeTextDocumentParams {
   std::vector<TextDocumentContentChangeEvent> contentChanges;
 
   static llvm::Optional<DidChangeTextDocumentParams>
-  parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger);
+  parse(const json::Expr &Params);
 };
 
 enum class FileChangeType {
@@ -277,8 +266,7 @@ struct FileEvent {
   /// The change type.
   FileChangeType type;
 
-  static llvm::Optional<FileEvent> parse(llvm::yaml::MappingNode *Params,
-                                         clangd::Logger &Logger);
+  static llvm::Optional<FileEvent> parse(const json::Expr &Params);
 };
 
 struct DidChangeWatchedFilesParams {
@@ -286,7 +274,7 @@ struct DidChangeWatchedFilesParams {
   std::vector<FileEvent> changes;
 
   static llvm::Optional<DidChangeWatchedFilesParams>
-  parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger);
+  parse(const json::Expr &Params);
 };
 
 struct FormattingOptions {
@@ -296,8 +284,7 @@ struct FormattingOptions {
   /// Prefer spaces over tabs.
   bool insertSpaces;
 
-  static llvm::Optional<FormattingOptions>
-  parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger);
+  static llvm::Optional<FormattingOptions> parse(const json::Expr &Params);
   static json::Expr unparse(const FormattingOptions &P);
 };
 
@@ -312,7 +299,7 @@ struct DocumentRangeFormattingParams {
   FormattingOptions options;
 
   static llvm::Optional<DocumentRangeFormattingParams>
-  parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger);
+  parse(const json::Expr &Params);
 };
 
 struct DocumentOnTypeFormattingParams {
@@ -329,7 +316,7 @@ struct DocumentOnTypeFormattingParams {
   FormattingOptions options;
 
   static llvm::Optional<DocumentOnTypeFormattingParams>
-  parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger);
+  parse(const json::Expr &Params);
 };
 
 struct DocumentFormattingParams {
@@ -340,7 +327,7 @@ struct DocumentFormattingParams {
   FormattingOptions options;
 
   static llvm::Optional<DocumentFormattingParams>
-  parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger);
+  parse(const json::Expr &Params);
 };
 
 struct Diagnostic {
@@ -372,16 +359,14 @@ struct Diagnostic {
            std::tie(RHS.range, RHS.severity, RHS.message);
   }
 
-  static llvm::Optional<Diagnostic> parse(llvm::yaml::MappingNode *Params,
-                                          clangd::Logger &Logger);
+  static llvm::Optional<Diagnostic> parse(const json::Expr &Params);
 };
 
 struct CodeActionContext {
   /// An array of diagnostics.
   std::vector<Diagnostic> diagnostics;
 
-  static llvm::Optional<CodeActionContext>
-  parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger);
+  static llvm::Optional<CodeActionContext> parse(const json::Expr &Params);
 };
 
 struct CodeActionParams {
@@ -394,8 +379,7 @@ struct CodeActionParams {
   /// Context carrying additional information.
   CodeActionContext context;
 
-  static llvm::Optional<CodeActionParams> parse(llvm::yaml::MappingNode *Params,
-                                                clangd::Logger &Logger);
+  static llvm::Optional<CodeActionParams> parse(const json::Expr &Params);
 };
 
 struct WorkspaceEdit {
@@ -405,8 +389,7 @@ struct WorkspaceEdit {
   /// Note: "documentChanges" is not currently used because currently there is
   /// no support for versioned edits.
 
-  static llvm::Optional<WorkspaceEdit> parse(llvm::yaml::MappingNode *Params,
-                                             clangd::Logger &Logger);
+  static llvm::Optional<WorkspaceEdit> parse(const json::Expr &Params);
   static json::Expr unparse(const WorkspaceEdit &WE);
 };
 
@@ -429,8 +412,7 @@ struct ExecuteCommandParams {
 
   llvm::Optional<WorkspaceEdit> workspaceEdit;
 
-  static llvm::Optional<ExecuteCommandParams>
-  parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger);
+  static llvm::Optional<ExecuteCommandParams> parse(const json::Expr &Params);
 };
 
 struct ApplyWorkspaceEditParams {
@@ -446,7 +428,7 @@ struct TextDocumentPositionParams {
   Position position;
 
   static llvm::Optional<TextDocumentPositionParams>
-  parse(llvm::yaml::MappingNode *Params, clangd::Logger &Logger);
+  parse(const json::Expr &Params);
 };
 
 /// The kind of a completion entry.
@@ -611,8 +593,7 @@ struct RenameParams {
   /// The new name of the symbol.
   std::string newName;
 
-  static llvm::Optional<RenameParams> parse(llvm::yaml::MappingNode *Params,
-                                            clangd::Logger &Logger);
+  static llvm::Optional<RenameParams> parse(const json::Expr &Params);
 };
 
 } // namespace clangd

@@ -205,6 +205,7 @@ TEST(JSONTest, Inspection) {
   EXPECT_TRUE(O->getNull("null"));
 
   EXPECT_EQ(O->getNumber("number"), llvm::Optional<double>(2.78));
+  EXPECT_FALSE(O->getInteger("number"));
   EXPECT_EQ(O->getString("string"), llvm::Optional<llvm::StringRef>("json"));
   ASSERT_FALSE(O->getObject("missing"));
   ASSERT_FALSE(O->getObject("array"));
@@ -216,6 +217,7 @@ TEST(JSONTest, Inspection) {
   EXPECT_EQ(A->getBoolean(1), llvm::Optional<bool>(true));
   ASSERT_TRUE(A->getArray(4));
   EXPECT_EQ(*A->getArray(4), (ary{1, 2, 3}));
+  EXPECT_EQ(A->getArray(4)->getInteger(1), llvm::Optional<int64_t>(2));
   int I = 0;
   for (Expr &E : *A) {
     if (I++ == 5) {
