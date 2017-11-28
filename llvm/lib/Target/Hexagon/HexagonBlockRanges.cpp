@@ -531,7 +531,7 @@ raw_ostream &llvm::operator<<(raw_ostream &OS,
                               const HexagonBlockRanges::PrintRangeMap &P) {
   for (auto &I : P.Map) {
     const HexagonBlockRanges::RangeList &RL = I.second;
-    OS << PrintReg(I.first.Reg, &P.TRI, I.first.Sub) << " -> " << RL << "\n";
+    OS << printReg(I.first.Reg, &P.TRI, I.first.Sub) << " -> " << RL << "\n";
   }
   return OS;
 }

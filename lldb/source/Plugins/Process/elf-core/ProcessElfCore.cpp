@@ -32,11 +32,9 @@
 
 #include "Plugins/DynamicLoader/POSIX-DYLD/DynamicLoaderPOSIXDYLD.h"
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
-
-// Project includes
+#include "Plugins/Process/elf-core/RegisterUtilities.h"
 #include "ProcessElfCore.h"
 #include "ThreadElfCore.h"
-#include "elf-core-enums.h"
 
 using namespace lldb_private;
 
@@ -524,12 +522,6 @@ llvm::Error ProcessElfCore::parseFreeBSDNotes(llvm::ArrayRef<CoreNote> notes) {
       have_prstatus = true;
       ParseFreeBSDPrStatus(thread_data, note.data, GetArchitecture());
       break;
-    case FREEBSD::NT_FPREGSET:
-      thread_data.fpregset = note.data;
-      break;
-    case FREEBSD::NT_PPC_VMX:
-      thread_data.vregset = note.data;
-      break;
     case FREEBSD::NT_PRPSINFO:
       have_prpsinfo = true;
       break;
@@ -543,6 +535,7 @@ llvm::Error ProcessElfCore::parseFreeBSDNotes(llvm::ArrayRef<CoreNote> notes) {
       m_auxv = DataExtractor(note.data, 4, note.data.GetByteSize() - 4);
       break;
     default:
+      thread_data.notes.push_back(note);
       break;
     }
   }
@@ -563,24 +556,21 @@ llvm::Error ProcessElfCore::parseNetBSDNotes(llvm::ArrayRef<CoreNote> notes) {
     if (!llvm::StringRef(note.info.n_name).startswith("NetBSD-CORE"))
       continue;
 
-    if (note.info.n_type == NETBSD::NT_PROCINFO) {
+    switch (note.info.n_type) {
+    case NETBSD::NT_PROCINFO:
       ParseNetBSDProcInfo(thread_data, note.data);
-      continue;
-    }
-    if (note.info.n_type == NETBSD::NT_AUXV) {
+      break;
+    case NETBSD::NT_AUXV:
       m_auxv = note.data;
-      continue;
-    }
+      break;
 
-    if (GetArchitecture().GetMachine() == llvm::Triple::x86_64) {
-      switch (note.info.n_type) {
-      case NETBSD::NT_AMD64_REGS:
+    case NETBSD::NT_AMD64_REGS:
+      if (GetArchitecture().GetMachine() == llvm::Triple::x86_64)
         thread_data.gpregset = note.data;
-        break;
-      case NETBSD::NT_AMD64_FPREGS:
-        thread_data.fpregset = note.data;
-        break;
-      }
+      break;
+    default:
+      thread_data.notes.push_back(note);
+      break;
     }
   }
   if (thread_data.gpregset.GetByteSize() == 0) {
@@ -610,8 +600,8 @@ llvm::Error ProcessElfCore::parseOpenBSDNotes(llvm::ArrayRef<CoreNote> notes) {
     case OPENBSD::NT_REGS:
       thread_data.gpregset = note.data;
       break;
-    case OPENBSD::NT_FPREGS:
-      thread_data.fpregset = note.data;
+    default:
+      thread_data.notes.push_back(note);
       break;
     }
   }
@@ -667,8 +657,6 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
       uint32_t header_size = ELFLinuxPrStatus::GetSize(arch);
       size_t len = note.data.GetByteSize() - header_size;
       thread_data.gpregset = DataExtractor(note.data, header_size, len);
-      if (arch.GetCore() == ArchSpec::eCore_ppc64le_generic)
-        thread_data.regsets.try_emplace(note.info.n_type, thread_data.gpregset);
       break;
     }
     case LINUX::NT_PRPSINFO: {
@@ -711,25 +699,8 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
     case LINUX::NT_AUXV:
       m_auxv = note.data;
       break;
-    case LINUX::NT_FPREGSET:
-      // In a i386 core file NT_FPREGSET is present, but it's not the result
-      // of the FXSAVE instruction like in 64 bit files.
-      // The result from FXSAVE is in NT_PRXFPREG for i386 core files
-      //
-
-      if (arch.GetCore() == ArchSpec::eCore_x86_64_x86_64 || arch.IsMIPS())
-        thread_data.fpregset = note.data;
-      else if (arch.GetCore() == ArchSpec::eCore_ppc64le_generic) {
-        thread_data.regsets.insert(std::make_pair(note.info.n_type, note.data));
-      }
-      break;
-    case LINUX::NT_PPC_VMX:
-    case LINUX::NT_PPC_VSX:
-      if (arch.GetCore() == ArchSpec::eCore_ppc64le_generic)
-        thread_data.regsets.insert(std::make_pair(note.info.n_type, note.data));
-      break;
-    case LINUX::NT_PRXFPREG:
-      thread_data.fpregset = note.data;
+    default:
+      thread_data.notes.push_back(note);
       break;
     }
   }

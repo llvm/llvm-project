@@ -192,8 +192,8 @@ template <> struct BlockScalarTraits<Module> {
 } // end namespace yaml
 } // end namespace llvm
 
-static void printReg(unsigned Reg, raw_ostream &OS,
-                     const TargetRegisterInfo *TRI) {
+static void printRegMIR(unsigned Reg, raw_ostream &OS,
+                        const TargetRegisterInfo *TRI) {
   // TODO: Print Stack Slots.
   if (!Reg)
     OS << '_';
@@ -205,10 +205,10 @@ static void printReg(unsigned Reg, raw_ostream &OS,
     llvm_unreachable("Can't print this kind of register yet");
 }
 
-static void printReg(unsigned Reg, yaml::StringValue &Dest,
-                     const TargetRegisterInfo *TRI) {
+static void printRegMIR(unsigned Reg, yaml::StringValue &Dest,
+                        const TargetRegisterInfo *TRI) {
   raw_string_ostream OS(Dest.Value);
-  printReg(Reg, OS, TRI);
+  printRegMIR(Reg, OS, TRI);
 }
 
 void MIRPrinter::print(const MachineFunction &MF) {
@@ -262,7 +262,7 @@ static void printCustomRegMask(const uint32_t *RegMask, raw_ostream &OS,
     if (RegMask[I / 32] & (1u << (I % 32))) {
       if (IsRegInRegMaskFound)
         OS << ',';
-      printReg(I, OS, TRI);
+      printRegMIR(I, OS, TRI);
       IsRegInRegMaskFound = true;
     }
   }
@@ -305,16 +305,16 @@ void MIRPrinter::convert(yaml::MachineFunction &MF,
     printRegClassOrBank(Reg, VReg.Class, RegInfo, TRI);
     unsigned PreferredReg = RegInfo.getSimpleHint(Reg);
     if (PreferredReg)
-      printReg(PreferredReg, VReg.PreferredRegister, TRI);
+      printRegMIR(PreferredReg, VReg.PreferredRegister, TRI);
     MF.VirtualRegisters.push_back(VReg);
   }
 
   // Print the live ins.
   for (std::pair<unsigned, unsigned> LI : RegInfo.liveins()) {
     yaml::MachineFunctionLiveIn LiveIn;
-    printReg(LI.first, LiveIn.Register, TRI);
+    printRegMIR(LI.first, LiveIn.Register, TRI);
     if (LI.second)
-      printReg(LI.second, LiveIn.VirtualRegister, TRI);
+      printRegMIR(LI.second, LiveIn.VirtualRegister, TRI);
     MF.LiveIns.push_back(LiveIn);
   }
 
@@ -324,7 +324,7 @@ void MIRPrinter::convert(yaml::MachineFunction &MF,
     std::vector<yaml::FlowStringValue> CalleeSavedRegisters;
     for (const MCPhysReg *I = CalleeSavedRegs; *I; ++I) {
       yaml::FlowStringValue Reg;
-      printReg(*I, Reg, TRI);
+      printRegMIR(*I, Reg, TRI);
       CalleeSavedRegisters.push_back(Reg);
     }
     MF.CalleeSavedRegisters = CalleeSavedRegisters;
@@ -415,7 +415,7 @@ void MIRPrinter::convertStackObjects(yaml::MachineFunction &YMF,
 
   for (const auto &CSInfo : MFI.getCalleeSavedInfo()) {
     yaml::StringValue Reg;
-    printReg(CSInfo.getReg(), Reg, TRI);
+    printRegMIR(CSInfo.getReg(), Reg, TRI);
     auto StackObjectInfo = StackObjectOperandMapping.find(CSInfo.getFrameIdx());
     assert(StackObjectInfo != StackObjectOperandMapping.end() &&
            "Invalid stack object index");
@@ -648,7 +648,7 @@ void MIPrinter::print(const MachineBasicBlock &MBB) {
       if (!First)
         OS << ", ";
       First = false;
-      printReg(LI.PhysReg, OS, &TRI);
+      printRegMIR(LI.PhysReg, OS, &TRI);
       if (!LI.LaneMask.all())
         OS << ":0x" << PrintLaneMask(LI.LaneMask);
     }
@@ -949,7 +949,7 @@ void MIPrinter::print(const MachineInstr &MI, unsigned OpIdx,
       OS << "early-clobber ";
     if (Op.isDebug())
       OS << "debug-use ";
-    printReg(Reg, OS, TRI);
+    printRegMIR(Reg, OS, TRI);
     // Print the sub register.
     if (Op.getSubReg() != 0)
       OS << '.' << TRI->getSubRegIndexName(Op.getSubReg());
@@ -1041,7 +1041,7 @@ void MIPrinter::print(const MachineInstr &MI, unsigned OpIdx,
       if (RegMask[Reg / 32] & (1U << (Reg % 32))) {
         if (IsCommaNeeded)
           OS << ", ";
-        printReg(Reg, OS, TRI);
+        printRegMIR(Reg, OS, TRI);
         IsCommaNeeded = true;
       }
     }
@@ -1210,7 +1210,7 @@ static void printCFIRegister(unsigned DwarfReg, raw_ostream &OS,
     OS << "<badreg>";
     return;
   }
-  printReg(Reg, OS, TRI);
+  printRegMIR(Reg, OS, TRI);
 }
 
 void MIPrinter::print(const MCCFIInstruction &CFI,

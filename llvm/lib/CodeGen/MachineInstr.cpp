@@ -391,7 +391,7 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
                            const TargetIntrinsicInfo *IntrinsicInfo) const {
   switch (getType()) {
   case MachineOperand::MO_Register:
-    OS << PrintReg(getReg(), TRI, getSubReg());
+    OS << printReg(getReg(), TRI, getSubReg());
 
     if (isDef() || isKill() || isDead() || isImplicit() || isUndef() ||
         isInternalRead() || isEarlyClobber() || isTied()) {
@@ -520,7 +520,7 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
       if (getRegMask()[MaskWord] & (1 << MaskBit)) {
         if (PrintRegMaskNumRegs < 0 ||
             NumRegsEmitted <= static_cast<unsigned>(PrintRegMaskNumRegs)) {
-          OS << " " << PrintReg(i, TRI);
+          OS << " " << printReg(i, TRI);
           NumRegsEmitted++;
         }
         NumRegsInMask++;
@@ -2123,14 +2123,14 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
       else
         OS << " "
            << TRI->getRegClassName(RC.get<const TargetRegisterClass *>());
-      OS << ':' << PrintReg(VirtRegs[i]);
+      OS << ':' << printReg(VirtRegs[i]);
       for (unsigned j = i+1; j != VirtRegs.size();) {
         if (MRI->getRegClassOrRegBank(VirtRegs[j]) != RC) {
           ++j;
           continue;
         }
         if (VirtRegs[i] != VirtRegs[j])
-          OS << "," << PrintReg(VirtRegs[j]);
+          OS << "," << printReg(VirtRegs[j]);
         VirtRegs.erase(VirtRegs.begin()+j);
       }
     }

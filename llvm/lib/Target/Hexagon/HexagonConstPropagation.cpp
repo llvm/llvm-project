@@ -88,7 +88,7 @@ namespace {
       : Reg(MO.getReg()), SubReg(MO.getSubReg()) {}
 
     void print(const TargetRegisterInfo *TRI = nullptr) const {
-      dbgs() << PrintReg(Reg, TRI, SubReg);
+      dbgs() << printReg(Reg, TRI, SubReg);
     }
 
     bool operator== (const Register &R) const {
@@ -610,7 +610,7 @@ uint32_t LatticeCell::properties() const {
 void MachineConstPropagator::CellMap::print(raw_ostream &os,
       const TargetRegisterInfo &TRI) const {
   for (auto &I : Map)
-    dbgs() << "  " << PrintReg(I.first, &TRI) << " -> " << I.second << '\n';
+    dbgs() << "  " << printReg(I.first, &TRI) << " -> " << I.second << '\n';
 }
 #endif
 
@@ -659,7 +659,7 @@ Bottomize:
     LatticeCell SrcC;
     bool Eval = MCE.evaluate(UseR, Cells.get(UseR.Reg), SrcC);
     DEBUG(dbgs() << "  edge from BB#" << PBN << ": "
-                 << PrintReg(UseR.Reg, &MCE.TRI, UseR.SubReg)
+                 << printReg(UseR.Reg, &MCE.TRI, UseR.SubReg)
                  << SrcC << '\n');
     Changed |= Eval ? DefC.meet(SrcC)
                     : DefC.setBottom();
@@ -778,7 +778,7 @@ void MachineConstPropagator::visitBranchesFrom(const MachineInstr &BrI) {
 }
 
 void MachineConstPropagator::visitUsesOf(unsigned Reg) {
-  DEBUG(dbgs() << "Visiting uses of " << PrintReg(Reg, &MCE.TRI)
+  DEBUG(dbgs() << "Visiting uses of " << printReg(Reg, &MCE.TRI)
                << Cells.get(Reg) << '\n');
   for (MachineInstr &MI : MRI->use_nodbg_instructions(Reg)) {
     // Do not process non-executable instructions. They can become exceutable
@@ -2788,7 +2788,7 @@ bool HexagonConstEvaluator::rewriteHexConstDefs(MachineInstr &MI,
       HasUse = true;
       // PHIs can legitimately have "top" cells after propagation.
       if (!MI.isPHI() && !Inputs.has(R.Reg)) {
-        dbgs() << "Top " << PrintReg(R.Reg, &HRI, R.SubReg)
+        dbgs() << "Top " << printReg(R.Reg, &HRI, R.SubReg)
                << " in MI: " << MI;
         continue;
       }
@@ -2804,7 +2804,7 @@ bool HexagonConstEvaluator::rewriteHexConstDefs(MachineInstr &MI,
           if (!MO.isReg() || !MO.isUse() || MO.isImplicit())
             continue;
           unsigned R = MO.getReg();
-          dbgs() << PrintReg(R, &TRI) << ": " << Inputs.get(R) << "\n";
+          dbgs() << printReg(R, &TRI) << ": " << Inputs.get(R) << "\n";
         }
       }
     }

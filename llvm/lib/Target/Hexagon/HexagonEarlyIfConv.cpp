@@ -144,7 +144,7 @@ namespace {
                           const PrintFP &P) LLVM_ATTRIBUTE_UNUSED;
   raw_ostream &operator<<(raw_ostream &OS, const PrintFP &P) {
     OS << "{ SplitB:" << PrintMB(P.FP.SplitB)
-       << ", PredR:" << PrintReg(P.FP.PredR, &P.TRI)
+       << ", PredR:" << printReg(P.FP.PredR, &P.TRI)
        << ", TrueB:" << PrintMB(P.FP.TrueB)
        << ", FalseB:" << PrintMB(P.FP.FalseB)
        << ", JoinB:" << PrintMB(P.FP.JoinB) << " }";

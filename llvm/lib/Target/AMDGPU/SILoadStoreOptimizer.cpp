@@ -14,7 +14,7 @@
 // ==>
 //   ds_read2_b32 v[0:1], v2, offset0:4 offset1:8
 //
-// The same is done for certain SMEM opcodes, e.g.:
+// The same is done for certain SMEM and VMEM opcodes, e.g.:
 //  s_buffer_load_dword s4, s[0:3], 4
 //  s_buffer_load_dword s5, s[0:3], 8
 // ==>
@@ -892,14 +892,13 @@ bool SILoadStoreOptimizer::runOnMachineFunction(MachineFunction &MF) {
   DEBUG(dbgs() << "Running SILoadStoreOptimizer\n");
 
   bool Modified = false;
-  CreatedX2 = 0;
 
-  for (MachineBasicBlock &MBB : MF)
+  for (MachineBasicBlock &MBB : MF) {
+    CreatedX2 = 0;
     Modified |= optimizeBlock(MBB);
 
-  // Run again to convert x2 to x4.
-  if (CreatedX2 >= 1) {
-    for (MachineBasicBlock &MBB : MF)
+    // Run again to convert x2 to x4.
+    if (CreatedX2 >= 1)
       Modified |= optimizeBlock(MBB);
   }
 

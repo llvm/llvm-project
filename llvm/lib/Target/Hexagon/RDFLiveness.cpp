@@ -62,7 +62,7 @@ namespace rdf {
   raw_ostream &operator<< (raw_ostream &OS, const Print<Liveness::RefMap> &P) {
     OS << '{';
     for (auto &I : P.Obj) {
-      OS << ' ' << PrintReg(I.first, &P.G.getTRI()) << '{';
+      OS << ' ' << printReg(I.first, &P.G.getTRI()) << '{';
       for (auto J = I.second.begin(), E = I.second.end(); J != E; ) {
         OS << Print<NodeId>(J->first, P.G) << PrintLaneMaskOpt(J->second);
         if (++J != E)

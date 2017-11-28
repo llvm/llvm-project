@@ -134,15 +134,15 @@ bool RenameIndependentSubregs::renameComponents(LiveInterval &LI) const {
   const TargetRegisterClass *RegClass = MRI->getRegClass(Reg);
   SmallVector<LiveInterval*, 4> Intervals;
   Intervals.push_back(&LI);
-  DEBUG(dbgs() << PrintReg(Reg) << ": Found " << Classes.getNumClasses()
+  DEBUG(dbgs() << printReg(Reg) << ": Found " << Classes.getNumClasses()
         << " equivalence classes.\n");
-  DEBUG(dbgs() << PrintReg(Reg) << ": Splitting into newly created:");
+  DEBUG(dbgs() << printReg(Reg) << ": Splitting into newly created:");
   for (unsigned I = 1, NumClasses = Classes.getNumClasses(); I < NumClasses;
        ++I) {
     unsigned NewVReg = MRI->createVirtualRegister(RegClass);
     LiveInterval &NewLI = LIS->createEmptyInterval(NewVReg);
     Intervals.push_back(&NewLI);
-    DEBUG(dbgs() << ' ' << PrintReg(NewVReg));
+    DEBUG(dbgs() << ' ' << printReg(NewVReg));
   }
   DEBUG(dbgs() << '\n');
 

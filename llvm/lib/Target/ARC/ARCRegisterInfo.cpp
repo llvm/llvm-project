@@ -66,8 +66,8 @@ static void ReplaceFrameIndex(MachineBasicBlock::iterator II,
           MBB.getParent()->getSubtarget().getRegisterInfo();
       BaseReg = RS->scavengeRegister(&ARC::GPR32RegClass, II, SPAdj);
       assert(BaseReg && "Register scavenging failed.");
-      DEBUG(dbgs() << "Scavenged register " << PrintReg(BaseReg, TRI)
-                   << " for FrameReg=" << PrintReg(FrameReg, TRI)
+      DEBUG(dbgs() << "Scavenged register " << printReg(BaseReg, TRI)
+                   << " for FrameReg=" << printReg(FrameReg, TRI)
                    << "+Offset=" << Offset << "\n");
       (void)TRI;
       RS->setRegUsed(BaseReg);

@@ -182,7 +182,7 @@ namespace llvm {
 
 void BitTracker::print_cells(raw_ostream &OS) const {
   for (const std::pair<unsigned, RegisterCell> P : Map)
-    dbgs() << PrintReg(P.first, &ME.TRI) << " -> " << P.second << "\n";
+    dbgs() << printReg(P.first, &ME.TRI) << " -> " << P.second << "\n";
 }
 
 BitTracker::BitTracker(const MachineEvaluator &E, MachineFunction &F)
@@ -794,14 +794,14 @@ void BT::visitPHI(const MachineInstr &PI) {
     RegisterRef RU = PI.getOperand(i);
     RegisterCell ResC = ME.getCell(RU, Map);
     if (Trace)
-      dbgs() << " input reg: " << PrintReg(RU.Reg, &ME.TRI, RU.Sub)
+      dbgs() << " input reg: " << printReg(RU.Reg, &ME.TRI, RU.Sub)
              << " cell: " << ResC << "\n";
     Changed |= DefC.meet(ResC, DefRR.Reg);
   }
 
   if (Changed) {
     if (Trace)
-      dbgs() << "Output: " << PrintReg(DefRR.Reg, &ME.TRI, DefRR.Sub)
+      dbgs() << "Output: " << printReg(DefRR.Reg, &ME.TRI, DefRR.Sub)
              << " cell: " << DefC << "\n";
     ME.putCell(DefRR, DefC, Map);
     visitUsesOf(DefRR.Reg);
@@ -826,13 +826,13 @@ void BT::visitNonBranch(const MachineInstr &MI) {
       if (!MO.isReg() || !MO.isUse())
         continue;
       RegisterRef RU(MO);
-      dbgs() << "  input reg: " << PrintReg(RU.Reg, &ME.TRI, RU.Sub)
+      dbgs() << "  input reg: " << printReg(RU.Reg, &ME.TRI, RU.Sub)
              << " cell: " << ME.getCell(RU, Map) << "\n";
     }
     dbgs() << "Outputs:\n";
     for (const std::pair<unsigned, RegisterCell> &P : ResMap) {
       RegisterRef RD(P.first);
-      dbgs() << "  " << PrintReg(P.first, &ME.TRI) << " cell: "
+      dbgs() << "  " << printReg(P.first, &ME.TRI) << " cell: "
              << ME.getCell(RD, ResMap) << "\n";
     }
   }
@@ -949,7 +949,7 @@ void BT::visitBranchesFrom(const MachineInstr &BI) {
 
 void BT::visitUsesOf(unsigned Reg) {
   if (Trace)
-    dbgs() << "visiting uses of " << PrintReg(Reg, &ME.TRI) << "\n";
+    dbgs() << "visiting uses of " << printReg(Reg, &ME.TRI) << "\n";
 
   for (const MachineInstr &UseI : MRI.use_nodbg_instructions(Reg)) {
     if (!InstrExec.count(&UseI))

@@ -97,7 +97,7 @@ void RegisterPressure::dump(const TargetRegisterInfo *TRI) const {
   dumpRegSetPressure(MaxSetPressure, TRI);
   dbgs() << "Live In: ";
   for (const RegisterMaskPair &P : LiveInRegs) {
-    dbgs() << PrintVRegOrUnit(P.RegUnit, TRI);
+    dbgs() << printVRegOrUnit(P.RegUnit, TRI);
     if (!P.LaneMask.all())
       dbgs() << ':' << PrintLaneMask(P.LaneMask);
     dbgs() << ' ';
@@ -105,7 +105,7 @@ void RegisterPressure::dump(const TargetRegisterInfo *TRI) const {
   dbgs() << '\n';
   dbgs() << "Live Out: ";
   for (const RegisterMaskPair &P : LiveOutRegs) {
-    dbgs() << PrintVRegOrUnit(P.RegUnit, TRI);
+    dbgs() << printVRegOrUnit(P.RegUnit, TRI);
     if (!P.LaneMask.all())
       dbgs() << ':' << PrintLaneMask(P.LaneMask);
     dbgs() << ' ';
