@@ -3,7 +3,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+ssse3 | FileCheck %s --check-prefixes=SSE2-SSSE3,SSSE3
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefixes=AVX12,AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=AVX12,AVX2
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512vl,+avx512bw | FileCheck %s --check-prefixes=AVX512
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f | FileCheck %s --check-prefixes=AVX512,AVX512F
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512vl,+avx512bw | FileCheck %s --check-prefixes=AVX512,AVX512VLBW
 
 ;
 ; 128-bit vectors
@@ -45,16 +46,27 @@ define <2 x i64> @ext_i2_2i64(i2 %a0) {
 ; AVX2-NEXT:    vpsrlq $63, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: ext_i2_2i64:
-; AVX512:       # BB#0:
-; AVX512-NEXT:    andb $3, %dil
-; AVX512-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
-; AVX512-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; AVX512-NEXT:    kmovd %eax, %k1
-; AVX512-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0 {%k1} {z}
-; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: ext_i2_2i64:
+; AVX512F:       # BB#0:
+; AVX512F-NEXT:    andb $3, %dil
+; AVX512F-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0 {%k1} {z}
+; AVX512F-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512VLBW-LABEL: ext_i2_2i64:
+; AVX512VLBW:       # BB#0:
+; AVX512VLBW-NEXT:    andb $3, %dil
+; AVX512VLBW-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; AVX512VLBW-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; AVX512VLBW-NEXT:    kmovd %eax, %k1
+; AVX512VLBW-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0 {%k1} {z}
+; AVX512VLBW-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
+; AVX512VLBW-NEXT:    vzeroupper
+; AVX512VLBW-NEXT:    retq
   %1 = bitcast i2 %a0 to <2 x i1>
   %2 = zext <2 x i1> %1 to <2 x i64>
   ret <2 x i64> %2
@@ -91,16 +103,28 @@ define <4 x i32> @ext_i4_4i32(i4 %a0) {
 ; AVX2-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: ext_i4_4i32:
-; AVX512:       # BB#0:
-; AVX512-NEXT:    andb $15, %dil
-; AVX512-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
-; AVX512-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; AVX512-NEXT:    kmovd %eax, %k1
-; AVX512-NEXT:    vpbroadcastd {{.*}}(%rip), %ymm0 {%k1} {z}
-; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: ext_i4_4i32:
+; AVX512F:       # BB#0:
+; AVX512F-NEXT:    andb $15, %dil
+; AVX512F-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vpmovqd %zmm0, %ymm0
+; AVX512F-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512VLBW-LABEL: ext_i4_4i32:
+; AVX512VLBW:       # BB#0:
+; AVX512VLBW-NEXT:    andb $15, %dil
+; AVX512VLBW-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; AVX512VLBW-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; AVX512VLBW-NEXT:    kmovd %eax, %k1
+; AVX512VLBW-NEXT:    vpbroadcastd {{.*}}(%rip), %ymm0 {%k1} {z}
+; AVX512VLBW-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
+; AVX512VLBW-NEXT:    vzeroupper
+; AVX512VLBW-NEXT:    retq
   %1 = bitcast i4 %a0 to <4 x i1>
   %2 = zext <4 x i1> %1 to <4 x i32>
   ret <4 x i32> %2
@@ -139,50 +163,19 @@ define <8 x i16> @ext_i8_8i16(i8 %a0) {
 ; AVX2-NEXT:    vpsrlw $15, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: ext_i8_8i16:
-; AVX512:       # BB#0:
-; AVX512-NEXT:    kmovd %edi, %k5
-; AVX512-NEXT:    kshiftlw $8, %k5, %k0
-; AVX512-NEXT:    kshiftrw $15, %k0, %k0
-; AVX512-NEXT:    kshiftlw $9, %k5, %k1
-; AVX512-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512-NEXT:    kshiftlw $10, %k5, %k2
-; AVX512-NEXT:    kshiftrw $15, %k2, %k2
-; AVX512-NEXT:    kshiftlw $11, %k5, %k3
-; AVX512-NEXT:    kshiftrw $15, %k3, %k3
-; AVX512-NEXT:    kshiftlw $12, %k5, %k4
-; AVX512-NEXT:    kshiftrw $15, %k4, %k4
-; AVX512-NEXT:    kshiftlw $13, %k5, %k6
-; AVX512-NEXT:    kshiftrw $15, %k6, %k6
-; AVX512-NEXT:    kshiftlw $15, %k5, %k7
-; AVX512-NEXT:    kshiftrw $15, %k7, %k7
-; AVX512-NEXT:    kshiftlw $14, %k5, %k5
-; AVX512-NEXT:    kshiftrw $15, %k5, %k5
-; AVX512-NEXT:    kmovd %k5, %eax
-; AVX512-NEXT:    andl $1, %eax
-; AVX512-NEXT:    kmovd %k7, %ecx
-; AVX512-NEXT:    andl $1, %ecx
-; AVX512-NEXT:    vmovd %ecx, %xmm0
-; AVX512-NEXT:    vpinsrw $1, %eax, %xmm0, %xmm0
-; AVX512-NEXT:    kmovd %k6, %eax
-; AVX512-NEXT:    andl $1, %eax
-; AVX512-NEXT:    vpinsrw $2, %eax, %xmm0, %xmm0
-; AVX512-NEXT:    kmovd %k4, %eax
-; AVX512-NEXT:    andl $1, %eax
-; AVX512-NEXT:    vpinsrw $3, %eax, %xmm0, %xmm0
-; AVX512-NEXT:    kmovd %k3, %eax
-; AVX512-NEXT:    andl $1, %eax
-; AVX512-NEXT:    vpinsrw $4, %eax, %xmm0, %xmm0
-; AVX512-NEXT:    kmovd %k2, %eax
-; AVX512-NEXT:    andl $1, %eax
-; AVX512-NEXT:    vpinsrw $5, %eax, %xmm0, %xmm0
-; AVX512-NEXT:    kmovd %k1, %eax
-; AVX512-NEXT:    andl $1, %eax
-; AVX512-NEXT:    vpinsrw $6, %eax, %xmm0, %xmm0
-; AVX512-NEXT:    kmovd %k0, %eax
-; AVX512-NEXT:    andl $1, %eax
-; AVX512-NEXT:    vpinsrw $7, %eax, %xmm0, %xmm0
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: ext_i8_8i16:
+; AVX512F:       # BB#0:
+; AVX512F-NEXT:    kmovw %edi, %k1
+; AVX512F-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vpmovqw %zmm0, %xmm0
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512VLBW-LABEL: ext_i8_8i16:
+; AVX512VLBW:       # BB#0:
+; AVX512VLBW-NEXT:    kmovd %edi, %k1
+; AVX512VLBW-NEXT:    vmovdqu16 {{.*}}(%rip), %xmm0 {%k1} {z}
+; AVX512VLBW-NEXT:    retq
   %1 = bitcast i8 %a0 to <8 x i1>
   %2 = zext <8 x i1> %1 to <8 x i16>
   ret <8 x i16> %2
@@ -235,98 +228,19 @@ define <16 x i8> @ext_i16_16i8(i16 %a0) {
 ; AVX2-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: ext_i16_16i8:
-; AVX512:       # BB#0:
-; AVX512-NEXT:    pushq %rbp
-; AVX512-NEXT:    .cfi_def_cfa_offset 16
-; AVX512-NEXT:    pushq %r15
-; AVX512-NEXT:    .cfi_def_cfa_offset 24
-; AVX512-NEXT:    pushq %r14
-; AVX512-NEXT:    .cfi_def_cfa_offset 32
-; AVX512-NEXT:    pushq %r13
-; AVX512-NEXT:    .cfi_def_cfa_offset 40
-; AVX512-NEXT:    pushq %r12
-; AVX512-NEXT:    .cfi_def_cfa_offset 48
-; AVX512-NEXT:    pushq %rbx
-; AVX512-NEXT:    .cfi_def_cfa_offset 56
-; AVX512-NEXT:    .cfi_offset %rbx, -56
-; AVX512-NEXT:    .cfi_offset %r12, -48
-; AVX512-NEXT:    .cfi_offset %r13, -40
-; AVX512-NEXT:    .cfi_offset %r14, -32
-; AVX512-NEXT:    .cfi_offset %r15, -24
-; AVX512-NEXT:    .cfi_offset %rbp, -16
-; AVX512-NEXT:    kmovd %edi, %k0
-; AVX512-NEXT:    kshiftlw $14, %k0, %k1
-; AVX512-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512-NEXT:    kmovd %k1, %r8d
-; AVX512-NEXT:    kshiftlw $15, %k0, %k1
-; AVX512-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512-NEXT:    kmovd %k1, %r9d
-; AVX512-NEXT:    kshiftlw $13, %k0, %k1
-; AVX512-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512-NEXT:    kmovd %k1, %r10d
-; AVX512-NEXT:    kshiftlw $12, %k0, %k1
-; AVX512-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512-NEXT:    kmovd %k1, %r11d
-; AVX512-NEXT:    kshiftlw $11, %k0, %k1
-; AVX512-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512-NEXT:    kmovd %k1, %r14d
-; AVX512-NEXT:    kshiftlw $10, %k0, %k1
-; AVX512-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512-NEXT:    kmovd %k1, %r15d
-; AVX512-NEXT:    kshiftlw $9, %k0, %k1
-; AVX512-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512-NEXT:    kmovd %k1, %r12d
-; AVX512-NEXT:    kshiftlw $8, %k0, %k1
-; AVX512-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512-NEXT:    kmovd %k1, %r13d
-; AVX512-NEXT:    kshiftlw $7, %k0, %k1
-; AVX512-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512-NEXT:    kmovd %k1, %esi
-; AVX512-NEXT:    kshiftlw $6, %k0, %k1
-; AVX512-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512-NEXT:    kmovd %k1, %ebx
-; AVX512-NEXT:    kshiftlw $5, %k0, %k1
-; AVX512-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512-NEXT:    kmovd %k1, %ebp
-; AVX512-NEXT:    kshiftlw $4, %k0, %k1
-; AVX512-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512-NEXT:    kmovd %k1, %edi
-; AVX512-NEXT:    kshiftlw $3, %k0, %k1
-; AVX512-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512-NEXT:    kmovd %k1, %eax
-; AVX512-NEXT:    kshiftlw $2, %k0, %k1
-; AVX512-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512-NEXT:    kmovd %k1, %ecx
-; AVX512-NEXT:    kshiftlw $1, %k0, %k1
-; AVX512-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512-NEXT:    kmovd %k1, %edx
-; AVX512-NEXT:    kshiftrw $15, %k0, %k0
-; AVX512-NEXT:    vmovd %r9d, %xmm0
-; AVX512-NEXT:    kmovd %k0, %r9d
-; AVX512-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; AVX512-NEXT:    vpinsrb $2, %r10d, %xmm0, %xmm0
-; AVX512-NEXT:    vpinsrb $3, %r11d, %xmm0, %xmm0
-; AVX512-NEXT:    vpinsrb $4, %r14d, %xmm0, %xmm0
-; AVX512-NEXT:    vpinsrb $5, %r15d, %xmm0, %xmm0
-; AVX512-NEXT:    vpinsrb $6, %r12d, %xmm0, %xmm0
-; AVX512-NEXT:    vpinsrb $7, %r13d, %xmm0, %xmm0
-; AVX512-NEXT:    vpinsrb $8, %esi, %xmm0, %xmm0
-; AVX512-NEXT:    vpinsrb $9, %ebx, %xmm0, %xmm0
-; AVX512-NEXT:    vpinsrb $10, %ebp, %xmm0, %xmm0
-; AVX512-NEXT:    vpinsrb $11, %edi, %xmm0, %xmm0
-; AVX512-NEXT:    vpinsrb $12, %eax, %xmm0, %xmm0
-; AVX512-NEXT:    vpinsrb $13, %ecx, %xmm0, %xmm0
-; AVX512-NEXT:    vpinsrb $14, %edx, %xmm0, %xmm0
-; AVX512-NEXT:    vpinsrb $15, %r9d, %xmm0, %xmm0
-; AVX512-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
-; AVX512-NEXT:    popq %rbx
-; AVX512-NEXT:    popq %r12
-; AVX512-NEXT:    popq %r13
-; AVX512-NEXT:    popq %r14
-; AVX512-NEXT:    popq %r15
-; AVX512-NEXT:    popq %rbp
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: ext_i16_16i8:
+; AVX512F:       # BB#0:
+; AVX512F-NEXT:    kmovw %edi, %k1
+; AVX512F-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512VLBW-LABEL: ext_i16_16i8:
+; AVX512VLBW:       # BB#0:
+; AVX512VLBW-NEXT:    kmovd %edi, %k1
+; AVX512VLBW-NEXT:    vmovdqu8 {{.*}}(%rip), %xmm0 {%k1} {z}
+; AVX512VLBW-NEXT:    retq
   %1 = bitcast i16 %a0 to <16 x i1>
   %2 = zext <16 x i1> %1 to <16 x i8>
   ret <16 x i8> %2
@@ -387,15 +301,25 @@ define <4 x i64> @ext_i4_4i64(i4 %a0) {
 ; AVX2-NEXT:    vpsrlq $63, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: ext_i4_4i64:
-; AVX512:       # BB#0:
-; AVX512-NEXT:    andb $15, %dil
-; AVX512-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
-; AVX512-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; AVX512-NEXT:    kmovd %eax, %k1
-; AVX512-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0 {%k1} {z}
-; AVX512-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: ext_i4_4i64:
+; AVX512F:       # BB#0:
+; AVX512F-NEXT:    andb $15, %dil
+; AVX512F-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0 {%k1} {z}
+; AVX512F-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
+; AVX512F-NEXT:    retq
+;
+; AVX512VLBW-LABEL: ext_i4_4i64:
+; AVX512VLBW:       # BB#0:
+; AVX512VLBW-NEXT:    andb $15, %dil
+; AVX512VLBW-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; AVX512VLBW-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; AVX512VLBW-NEXT:    kmovd %eax, %k1
+; AVX512VLBW-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0 {%k1} {z}
+; AVX512VLBW-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
+; AVX512VLBW-NEXT:    retq
   %1 = bitcast i4 %a0 to <4 x i1>
   %2 = zext <4 x i1> %1 to <4 x i64>
   ret <4 x i64> %2
@@ -445,11 +369,18 @@ define <8 x i32> @ext_i8_8i32(i8 %a0) {
 ; AVX2-NEXT:    vpsrld $31, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: ext_i8_8i32:
-; AVX512:       # BB#0:
-; AVX512-NEXT:    kmovd %edi, %k1
-; AVX512-NEXT:    vpbroadcastd {{.*}}(%rip), %ymm0 {%k1} {z}
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: ext_i8_8i32:
+; AVX512F:       # BB#0:
+; AVX512F-NEXT:    kmovw %edi, %k1
+; AVX512F-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vpmovqd %zmm0, %ymm0
+; AVX512F-NEXT:    retq
+;
+; AVX512VLBW-LABEL: ext_i8_8i32:
+; AVX512VLBW:       # BB#0:
+; AVX512VLBW-NEXT:    kmovd %edi, %k1
+; AVX512VLBW-NEXT:    vpbroadcastd {{.*}}(%rip), %ymm0 {%k1} {z}
+; AVX512VLBW-NEXT:    retq
   %1 = bitcast i8 %a0 to <8 x i1>
   %2 = zext <8 x i1> %1 to <8 x i32>
   ret <8 x i32> %2
@@ -501,11 +432,18 @@ define <16 x i16> @ext_i16_16i16(i16 %a0) {
 ; AVX2-NEXT:    vpsrlw $15, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: ext_i16_16i16:
-; AVX512:       # BB#0:
-; AVX512-NEXT:    kmovd %edi, %k1
-; AVX512-NEXT:    vmovdqu16 {{.*}}(%rip), %ymm0 {%k1} {z}
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: ext_i16_16i16:
+; AVX512F:       # BB#0:
+; AVX512F-NEXT:    kmovw %edi, %k1
+; AVX512F-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vpmovdw %zmm0, %ymm0
+; AVX512F-NEXT:    retq
+;
+; AVX512VLBW-LABEL: ext_i16_16i16:
+; AVX512VLBW:       # BB#0:
+; AVX512VLBW-NEXT:    kmovd %edi, %k1
+; AVX512VLBW-NEXT:    vmovdqu16 {{.*}}(%rip), %ymm0 {%k1} {z}
+; AVX512VLBW-NEXT:    retq
   %1 = bitcast i16 %a0 to <16 x i1>
   %2 = zext <16 x i1> %1 to <16 x i16>
   ret <16 x i16> %2
@@ -573,11 +511,33 @@ define <32 x i8> @ext_i32_32i8(i32 %a0) {
 ; AVX2-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: ext_i32_32i8:
-; AVX512:       # BB#0:
-; AVX512-NEXT:    kmovd %edi, %k1
-; AVX512-NEXT:    vmovdqu8 {{.*}}(%rip), %ymm0 {%k1} {z}
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: ext_i32_32i8:
+; AVX512F:       # BB#0:
+; AVX512F-NEXT:    pushq %rbp
+; AVX512F-NEXT:    .cfi_def_cfa_offset 16
+; AVX512F-NEXT:    .cfi_offset %rbp, -16
+; AVX512F-NEXT:    movq %rsp, %rbp
+; AVX512F-NEXT:    .cfi_def_cfa_register %rbp
+; AVX512F-NEXT:    andq $-32, %rsp
+; AVX512F-NEXT:    subq $32, %rsp
+; AVX512F-NEXT:    movl %edi, (%rsp)
+; AVX512F-NEXT:    movl {{.*}}(%rip), %eax
+; AVX512F-NEXT:    kmovw (%rsp), %k1
+; AVX512F-NEXT:    kmovw {{[0-9]+}}(%rsp), %k2
+; AVX512F-NEXT:    vpbroadcastd %eax, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX512F-NEXT:    vpbroadcastd %eax, %zmm1 {%k2} {z}
+; AVX512F-NEXT:    vpmovdb %zmm1, %xmm1
+; AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512F-NEXT:    movq %rbp, %rsp
+; AVX512F-NEXT:    popq %rbp
+; AVX512F-NEXT:    retq
+;
+; AVX512VLBW-LABEL: ext_i32_32i8:
+; AVX512VLBW:       # BB#0:
+; AVX512VLBW-NEXT:    kmovd %edi, %k1
+; AVX512VLBW-NEXT:    vmovdqu8 {{.*}}(%rip), %ymm0 {%k1} {z}
+; AVX512VLBW-NEXT:    retq
   %1 = bitcast i32 %a0 to <32 x i1>
   %2 = zext <32 x i1> %1 to <32 x i8>
   ret <32 x i8> %2
@@ -665,11 +625,17 @@ define <8 x i64> @ext_i8_8i64(i8 %a0) {
 ; AVX2-NEXT:    vpsrlq $63, %ymm1, %ymm1
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: ext_i8_8i64:
-; AVX512:       # BB#0:
-; AVX512-NEXT:    kmovd %edi, %k1
-; AVX512-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0 {%k1} {z}
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: ext_i8_8i64:
+; AVX512F:       # BB#0:
+; AVX512F-NEXT:    kmovw %edi, %k1
+; AVX512F-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0 {%k1} {z}
+; AVX512F-NEXT:    retq
+;
+; AVX512VLBW-LABEL: ext_i8_8i64:
+; AVX512VLBW:       # BB#0:
+; AVX512VLBW-NEXT:    kmovd %edi, %k1
+; AVX512VLBW-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0 {%k1} {z}
+; AVX512VLBW-NEXT:    retq
   %1 = bitcast i8 %a0 to <8 x i1>
   %2 = zext <8 x i1> %1 to <8 x i64>
   ret <8 x i64> %2
@@ -742,11 +708,17 @@ define <16 x i32> @ext_i16_16i32(i16 %a0) {
 ; AVX2-NEXT:    vpsrld $31, %ymm1, %ymm1
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: ext_i16_16i32:
-; AVX512:       # BB#0:
-; AVX512-NEXT:    kmovd %edi, %k1
-; AVX512-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0 {%k1} {z}
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: ext_i16_16i32:
+; AVX512F:       # BB#0:
+; AVX512F-NEXT:    kmovw %edi, %k1
+; AVX512F-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0 {%k1} {z}
+; AVX512F-NEXT:    retq
+;
+; AVX512VLBW-LABEL: ext_i16_16i32:
+; AVX512VLBW:       # BB#0:
+; AVX512VLBW-NEXT:    kmovd %edi, %k1
+; AVX512VLBW-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0 {%k1} {z}
+; AVX512VLBW-NEXT:    retq
   %1 = bitcast i16 %a0 to <16 x i1>
   %2 = zext <16 x i1> %1 to <16 x i32>
   ret <16 x i32> %2
@@ -826,11 +798,36 @@ define <32 x i16> @ext_i32_32i16(i32 %a0) {
 ; AVX2-NEXT:    vpsrlw $15, %ymm1, %ymm1
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: ext_i32_32i16:
-; AVX512:       # BB#0:
-; AVX512-NEXT:    kmovd %edi, %k1
-; AVX512-NEXT:    vmovdqu16 {{.*}}(%rip), %zmm0 {%k1} {z}
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: ext_i32_32i16:
+; AVX512F:       # BB#0:
+; AVX512F-NEXT:    pushq %rbp
+; AVX512F-NEXT:    .cfi_def_cfa_offset 16
+; AVX512F-NEXT:    .cfi_offset %rbp, -16
+; AVX512F-NEXT:    movq %rsp, %rbp
+; AVX512F-NEXT:    .cfi_def_cfa_register %rbp
+; AVX512F-NEXT:    andq $-32, %rsp
+; AVX512F-NEXT:    subq $32, %rsp
+; AVX512F-NEXT:    movl %edi, (%rsp)
+; AVX512F-NEXT:    kmovw (%rsp), %k1
+; AVX512F-NEXT:    kmovw {{[0-9]+}}(%rsp), %k2
+; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k2} {z}
+; AVX512F-NEXT:    vpmovdb %zmm0, %xmm1
+; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm2 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; AVX512F-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; AVX512F-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
+; AVX512F-NEXT:    vpand %xmm2, %xmm1, %xmm1
+; AVX512F-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
+; AVX512F-NEXT:    movq %rbp, %rsp
+; AVX512F-NEXT:    popq %rbp
+; AVX512F-NEXT:    retq
+;
+; AVX512VLBW-LABEL: ext_i32_32i16:
+; AVX512VLBW:       # BB#0:
+; AVX512VLBW-NEXT:    kmovd %edi, %k1
+; AVX512VLBW-NEXT:    vmovdqu16 {{.*}}(%rip), %zmm0 {%k1} {z}
+; AVX512VLBW-NEXT:    retq
   %1 = bitcast i32 %a0 to <32 x i1>
   %2 = zext <32 x i1> %1 to <32 x i16>
   ret <32 x i16> %2
@@ -937,11 +934,42 @@ define <64 x i8> @ext_i64_64i8(i64 %a0) {
 ; AVX2-NEXT:    vpand %ymm3, %ymm1, %ymm1
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: ext_i64_64i8:
-; AVX512:       # BB#0:
-; AVX512-NEXT:    kmovq %rdi, %k1
-; AVX512-NEXT:    vmovdqu8 {{.*}}(%rip), %zmm0 {%k1} {z}
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: ext_i64_64i8:
+; AVX512F:       # BB#0:
+; AVX512F-NEXT:    pushq %rbp
+; AVX512F-NEXT:    .cfi_def_cfa_offset 16
+; AVX512F-NEXT:    .cfi_offset %rbp, -16
+; AVX512F-NEXT:    movq %rsp, %rbp
+; AVX512F-NEXT:    .cfi_def_cfa_register %rbp
+; AVX512F-NEXT:    andq $-32, %rsp
+; AVX512F-NEXT:    subq $64, %rsp
+; AVX512F-NEXT:    movl %edi, (%rsp)
+; AVX512F-NEXT:    shrq $32, %rdi
+; AVX512F-NEXT:    movl %edi, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    movl {{.*}}(%rip), %eax
+; AVX512F-NEXT:    kmovw (%rsp), %k1
+; AVX512F-NEXT:    kmovw {{[0-9]+}}(%rsp), %k2
+; AVX512F-NEXT:    vpbroadcastd %eax, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX512F-NEXT:    vpbroadcastd %eax, %zmm1 {%k2} {z}
+; AVX512F-NEXT:    vpmovdb %zmm1, %xmm1
+; AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512F-NEXT:    kmovw {{[0-9]+}}(%rsp), %k1
+; AVX512F-NEXT:    kmovw {{[0-9]+}}(%rsp), %k2
+; AVX512F-NEXT:    vpbroadcastd %eax, %zmm1 {%k1} {z}
+; AVX512F-NEXT:    vpmovdb %zmm1, %xmm1
+; AVX512F-NEXT:    vpbroadcastd %eax, %zmm2 {%k2} {z}
+; AVX512F-NEXT:    vpmovdb %zmm2, %xmm2
+; AVX512F-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; AVX512F-NEXT:    movq %rbp, %rsp
+; AVX512F-NEXT:    popq %rbp
+; AVX512F-NEXT:    retq
+;
+; AVX512VLBW-LABEL: ext_i64_64i8:
+; AVX512VLBW:       # BB#0:
+; AVX512VLBW-NEXT:    kmovq %rdi, %k1
+; AVX512VLBW-NEXT:    vmovdqu8 {{.*}}(%rip), %zmm0 {%k1} {z}
+; AVX512VLBW-NEXT:    retq
   %1 = bitcast i64 %a0 to <64 x i1>
   %2 = zext <64 x i1> %1 to <64 x i8>
   ret <64 x i8> %2

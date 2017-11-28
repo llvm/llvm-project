@@ -37,6 +37,14 @@ void test_to_ulong()
         std::bitset<N> v(j);
         assert(j == v.to_ulong());
     }
+
+    { // test values bigger than can fit into the bitset
+    const unsigned long val = 0x5AFFFFA5ULL;
+    const bool canFit = N < sizeof(unsigned long) * CHAR_BIT;
+    const unsigned long mask = canFit ? (1ULL << N) - 1 : (unsigned long)(-1);
+    std::bitset<N> v(val);
+    assert(v.to_ulong() == (val & mask)); // we shouldn't return bit patterns from outside the limits of the bitset.
+    }
 }
 
 int main()

@@ -47,7 +47,6 @@ add_lld_library(lldELF
   BinaryFormat
   Core
   DebugInfoDWARF
-  Demangle
   LTO
   MC
   Object

@@ -230,7 +230,7 @@ static bool markTails(Function &F, bool &AllCallsAreTailCalls,
         Escaped = ESCAPED;
 
       CallInst *CI = dyn_cast<CallInst>(&I);
-      if (!CI || CI->isTailCall())
+      if (!CI || CI->isTailCall() || isa<DbgInfoIntrinsic>(&I))
         continue;
 
       bool IsNoTail = CI->isNoTailCall() || CI->hasOperandBundles();

@@ -297,6 +297,10 @@ public:
            TLI->isOperationLegalOrCustom(ISD::FSQRT, VT);
   }
 
+  bool isFCmpOrdCheaperThanFCmpZero(Type *Ty) {
+    return true;
+  }
+
   unsigned getFPOpCost(Type *Ty) {
     // By default, FP instructions are no more expensive since they are
     // implemented in HW.  Target specific TTI can override this.

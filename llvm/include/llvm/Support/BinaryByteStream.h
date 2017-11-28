@@ -41,7 +41,7 @@ public:
 
   Error readBytes(uint32_t Offset, uint32_t Size,
                   ArrayRef<uint8_t> &Buffer) override {
-    if (auto EC = checkOffset(Offset, Size))
+    if (auto EC = checkOffsetForRead(Offset, Size))
       return EC;
     Buffer = Data.slice(Offset, Size);
     return Error::success();
@@ -49,7 +49,7 @@ public:
 
   Error readLongestContiguousChunk(uint32_t Offset,
                                    ArrayRef<uint8_t> &Buffer) override {
-    if (auto EC = checkOffset(Offset, 1))
+    if (auto EC = checkOffsetForRead(Offset, 1))
       return EC;
     Buffer = Data.slice(Offset);
     return Error::success();
@@ -114,7 +114,7 @@ public:
     if (Buffer.empty())
       return Error::success();
 
-    if (auto EC = checkOffset(Offset, Buffer.size()))
+    if (auto EC = checkOffsetForWrite(Offset, Buffer.size()))
       return EC;
 
     uint8_t *DataPtr = const_cast<uint8_t *>(Data.data());
@@ -129,6 +129,72 @@ public:
 private:
   MutableArrayRef<uint8_t> Data;
   BinaryByteStream ImmutableStream;
+};
+
+/// \brief An implementation of WritableBinaryStream which can write at its end
+/// causing the underlying data to grow.  This class owns the underlying data.
+class AppendingBinaryByteStream : public WritableBinaryStream {
+  std::vector<uint8_t> Data;
+  llvm::support::endianness Endian;
+
+public:
+  AppendingBinaryByteStream() = default;
+  AppendingBinaryByteStream(llvm::support::endianness Endian)
+      : Endian(Endian) {}
+
+  void clear() { Data.clear(); }
+
+  llvm::support::endianness getEndian() const override { return Endian; }
+
+  Error readBytes(uint32_t Offset, uint32_t Size,
+                  ArrayRef<uint8_t> &Buffer) override {
+    if (auto EC = checkOffsetForWrite(Offset, Buffer.size()))
+      return EC;
+
+    Buffer = makeArrayRef(Data).slice(Offset, Size);
+    return Error::success();
+  }
+
+  Error readLongestContiguousChunk(uint32_t Offset,
+                                   ArrayRef<uint8_t> &Buffer) override {
+    if (auto EC = checkOffsetForWrite(Offset, 1))
+      return EC;
+
+    Buffer = makeArrayRef(Data).slice(Offset);
+    return Error::success();
+  }
+
+  uint32_t getLength() override { return Data.size(); }
+
+  Error writeBytes(uint32_t Offset, ArrayRef<uint8_t> Buffer) override {
+    if (Buffer.empty())
+      return Error::success();
+
+    // This is well-defined for any case except where offset is strictly
+    // greater than the current length.  If offset is equal to the current
+    // length, we can still grow.  If offset is beyond the current length, we
+    // would have to decide how to deal with the intermediate uninitialized
+    // bytes.  So we punt on that case for simplicity and just say it's an
+    // error.
+    if (Offset > getLength())
+      return make_error<BinaryStreamError>(stream_error_code::invalid_offset);
+
+    uint32_t RequiredSize = Offset + Buffer.size();
+    if (RequiredSize > Data.size())
+      Data.resize(RequiredSize);
+
+    ::memcpy(Data.data() + Offset, Buffer.data(), Buffer.size());
+    return Error::success();
+  }
+
+  Error commit() override { return Error::success(); }
+
+  /// \brief Return the properties of this stream.
+  virtual BinaryStreamFlags getFlags() const override {
+    return BSF_Write | BSF_Append;
+  }
+
+  MutableArrayRef<uint8_t> data() { return Data; }
 };
 
 /// \brief An implementation of WritableBinaryStream backed by an llvm

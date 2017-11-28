@@ -21,6 +21,7 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Strings.h"
 #include "llvm/ADT/STLExtras.h"
 
 using namespace llvm;
@@ -145,7 +146,7 @@ Defined *SymbolTable::addAbsolute(StringRef Name, uint8_t Visibility,
 // Set a flag for --trace-symbol so that we can print out a log message
 // if a new symbol with the same name is inserted into the symbol table.
 void SymbolTable::trace(StringRef Name) {
-  Symtab.insert({CachedHashStringRef(Name), -1});
+  SymMap.insert({CachedHashStringRef(Name), -1});
 }
 
 // Rename SYM as __wrap_SYM. The original symbol is preserved as __real_SYM.
@@ -222,7 +223,7 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name) {
   if (Pos != StringRef::npos && Pos + 1 < Name.size() && Name[Pos + 1] == '@')
     Name = Name.take_front(Pos);
 
-  auto P = Symtab.insert({CachedHashStringRef(Name), (int)SymVector.size()});
+  auto P = SymMap.insert({CachedHashStringRef(Name), (int)SymVector.size()});
   int &SymIndex = P.first->second;
   bool IsNew = P.second;
   bool Traced = false;
@@ -300,22 +301,19 @@ Symbol *SymbolTable::addUndefined(StringRef Name, uint8_t Binding,
     replaceSymbol<Undefined>(S, File, Name, Binding, StOther, Type);
     return S;
   }
+  if (S->isShared() || S->isLazy() || (S->isUndefined() && Binding != STB_WEAK))
+    S->Binding = Binding;
   if (Binding != STB_WEAK) {
-    if (!S->isDefined())
-      S->Binding = Binding;
     if (auto *SS = dyn_cast<SharedSymbol>(S))
-      if (!Config->GcSections)
-        SS->getFile<ELFT>()->IsNeeded = true;
+      SS->getFile<ELFT>()->IsNeeded = true;
   }
   if (auto *L = dyn_cast<Lazy>(S)) {
     // An undefined weak will not fetch archive members. See comment on Lazy in
     // Symbols.h for the details.
-    if (Binding == STB_WEAK) {
+    if (Binding == STB_WEAK)
       L->Type = Type;
-      L->Binding = STB_WEAK;
-    } else if (InputFile *F = L->fetch()) {
+    else if (InputFile *F = L->fetch())
       addFile<ELFT>(F);
-    }
   }
   return S;
 }
@@ -497,11 +495,12 @@ void SymbolTable::addShared(StringRef Name, SharedFile<ELFT> *File,
   if (WasInserted || ((S->isUndefined() || S->isLazy()) &&
                       S->getVisibility() == STV_DEFAULT)) {
     uint8_t Binding = S->Binding;
-    replaceSymbol<SharedSymbol>(S, File, Name, Sym.st_other, Sym.getType(),
-                                Sym.st_value, Sym.st_size, Alignment, Verdef);
+    replaceSymbol<SharedSymbol>(S, File, Name, Sym.getBinding(), Sym.st_other,
+                                Sym.getType(), Sym.st_value, Sym.st_size,
+                                Alignment, Verdef);
     if (!WasInserted) {
       S->Binding = Binding;
-      if (!S->isWeak() && !Config->GcSections)
+      if (!S->isWeak())
         File->IsNeeded = true;
     }
   }
@@ -524,8 +523,8 @@ Symbol *SymbolTable::addBitcode(StringRef Name, uint8_t Binding,
 }
 
 Symbol *SymbolTable::find(StringRef Name) {
-  auto It = Symtab.find(CachedHashStringRef(Name));
-  if (It == Symtab.end())
+  auto It = SymMap.find(CachedHashStringRef(Name));
+  if (It == SymMap.end())
     return nullptr;
   if (It->second == -1)
     return nullptr;
@@ -632,7 +631,7 @@ StringMap<std::vector<Symbol *>> &SymbolTable::getDemangledSyms() {
     for (Symbol *Sym : SymVector) {
       if (!Sym->isDefined())
         continue;
-      if (Optional<std::string> S = demangle(Sym->getName()))
+      if (Optional<std::string> S = demangleItanium(Sym->getName()))
         (*DemangledSyms)[*S].push_back(Sym);
       else
         (*DemangledSyms)[Sym->getName()].push_back(Sym);

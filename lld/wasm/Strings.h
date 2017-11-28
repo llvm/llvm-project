@@ -17,10 +17,6 @@
 namespace lld {
 namespace wasm {
 
-// Returns a demangled C++ symbol name. If Name is not a mangled
-// name, it returns Optional::None.
-llvm::Optional<std::string> demangle(llvm::StringRef Name);
-
 std::string displayName(llvm::StringRef Name);
 
 } // namespace wasm

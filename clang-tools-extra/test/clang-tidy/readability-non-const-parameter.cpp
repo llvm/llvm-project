@@ -277,3 +277,13 @@ public:
     int x = *p;
   }
 };
+
+extern char foo(char *s); // 1
+// CHECK-FIXES: {{^}}extern char foo(const char *s); // 1{{$}}
+// CHECK-MESSAGES: :[[@LINE+1]]:16: warning: pointer parameter 's' can be
+char foo(char *s) {
+  // CHECK-FIXES: {{^}}char foo(const char *s) {{{$}}
+  return *s;
+}
+char foo(char *s); // 2
+// CHECK-FIXES: {{^}}char foo(const char *s); // 2{{$}}

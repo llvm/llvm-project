@@ -413,7 +413,7 @@ public:
   /// Allow store merging after legalization in addition to before legalization.
   /// This may catch stores that do not exist earlier (eg, stores created from
   /// intrinsics).
-  virtual bool mergeStoresAfterLegalization() const { return false; }
+  virtual bool mergeStoresAfterLegalization() const { return true; }
 
   /// Returns if it's reasonable to merge stores to MemVT size.
   virtual bool canMergeStoresTo(unsigned AS, EVT MemVT,

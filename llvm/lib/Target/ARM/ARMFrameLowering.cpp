@@ -482,7 +482,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   if (DPRCSSize > 0) {
     // Since vpush register list cannot have gaps, there may be multiple vpush
     // instructions in the prologue.
-    while (MBBI->getOpcode() == ARM::VSTMDDB_UPD) {
+    while (MBBI != MBB.end() && MBBI->getOpcode() == ARM::VSTMDDB_UPD) {
       DefCFAOffsetCandidates.addInst(MBBI, sizeOfSPAdjustment(*MBBI));
       LastPush = MBBI++;
     }
