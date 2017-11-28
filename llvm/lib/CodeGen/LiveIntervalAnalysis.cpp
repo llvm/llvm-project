@@ -157,7 +157,7 @@ void LiveIntervals::print(raw_ostream &OS, const Module* ) const {
   // Dump the regunits.
   for (unsigned Unit = 0, UnitE = RegUnitRanges.size(); Unit != UnitE; ++Unit)
     if (LiveRange *LR = RegUnitRanges[Unit])
-      OS << PrintRegUnit(Unit, TRI) << ' ' << *LR << '\n';
+      OS << printRegUnit(Unit, TRI) << ' ' << *LR << '\n';
 
   // Dump the virtregs.
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
@@ -335,7 +335,7 @@ void LiveIntervals::computeLiveInRegUnits() {
         }
         VNInfo *VNI = LR->createDeadDef(Begin, getVNInfoAllocator());
         (void)VNI;
-        DEBUG(dbgs() << ' ' << PrintRegUnit(Unit, TRI) << '#' << VNI->id);
+        DEBUG(dbgs() << ' ' << printRegUnit(Unit, TRI) << '#' << VNI->id);
       }
     }
     DEBUG(dbgs() << '\n');
@@ -995,11 +995,11 @@ private:
     DEBUG({
       dbgs() << "     ";
       if (TargetRegisterInfo::isVirtualRegister(Reg)) {
-        dbgs() << PrintReg(Reg);
+        dbgs() << printReg(Reg);
         if (LaneMask.any())
           dbgs() << " L" << PrintLaneMask(LaneMask);
       } else {
-        dbgs() << PrintRegUnit(Reg, &TRI);
+        dbgs() << printRegUnit(Reg, &TRI);
       }
       dbgs() << ":\t" << LR << '\n';
     });

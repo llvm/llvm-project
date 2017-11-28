@@ -357,7 +357,7 @@ namespace {
     }
 
     void print(raw_ostream &OS, const TargetRegisterInfo *TRI = nullptr) const {
-      if (isReg()) { OS << PrintReg(Contents.R.Reg, TRI, Contents.R.Sub); }
+      if (isReg()) { OS << printReg(Contents.R.Reg, TRI, Contents.R.Sub); }
       if (isImm()) { OS << Contents.ImmVal; }
     }
   };

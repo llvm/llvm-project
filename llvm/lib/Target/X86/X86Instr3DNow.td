@@ -43,7 +43,7 @@ def I3DNOW_PSHUF_ITINS : OpndItins<
 }
 
 class I3DNow<bits<8> o, Format F, dag outs, dag ins, string asm, list<dag> pat,
-             InstrItinClass itin = NoItinerary>
+             InstrItinClass itin>
       : I<o, F, outs, ins, asm, pat, itin>, TB, Requires<[Has3DNow]> {
 }
 
@@ -114,15 +114,17 @@ defm PI2FD    : I3DNow_conv_rm_int<0x0D, "pi2fd", I3DNOW_FCVT_I2F_ITINS>;
 defm PMULHRW  : I3DNow_binop_rm_int<0xB7, "pmulhrw", I3DNOW_MISC_FUNC_ITINS, 1>;
 
 def FEMMS : I3DNow<0x0E, RawFrm, (outs), (ins), "femms",
-                   [(int_x86_mmx_femms)]>;
+                   [(int_x86_mmx_femms)], IIC_MMX_EMMS>;
 
+let SchedRW = [WriteLoad] in {
 def PREFETCH : I3DNow<0x0D, MRM0m, (outs), (ins i8mem:$addr),
                       "prefetch\t$addr",
-                      [(prefetch addr:$addr, (i32 0), imm, (i32 1))]>;
-
+                      [(prefetch addr:$addr, (i32 0), imm, (i32 1))],
+                      IIC_SSE_PREFETCH>;
 def PREFETCHW : I<0x0D, MRM1m, (outs), (ins i8mem:$addr), "prefetchw\t$addr",
-                  [(prefetch addr:$addr, (i32 1), (i32 3), (i32 1))]>, TB,
-                Requires<[HasPrefetchW]>;
+                  [(prefetch addr:$addr, (i32 1), (i32 3), (i32 1))],
+                  IIC_SSE_PREFETCH>, TB, Requires<[HasPrefetchW]>;
+}
 
 // "3DNowA" instructions
 defm PF2IW    : I3DNow_conv_rm_int<0x1C, "pf2iw", I3DNOW_FCVT_F2I_ITINS, "a">;

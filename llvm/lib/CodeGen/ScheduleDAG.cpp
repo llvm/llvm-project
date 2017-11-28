@@ -80,7 +80,7 @@ raw_ostream &SDep::print(raw_ostream &OS, const TargetRegisterInfo *TRI) const {
   case Data:
     OS << " Latency=" << getLatency();
     if (TRI && isAssignedRegDep())
-      OS << " Reg=" << PrintReg(getReg(), TRI);
+      OS << " Reg=" << printReg(getReg(), TRI);
     break;
   case Anti:
   case Output:

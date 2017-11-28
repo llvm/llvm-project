@@ -528,7 +528,7 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
       OS << LBB->getName() << " ";
     OS << (const void*)BBDN->getBasicBlock() << ">";
   } else if (const RegisterSDNode *R = dyn_cast<RegisterSDNode>(this)) {
-    OS << ' ' << PrintReg(R->getReg(),
+    OS << ' ' << printReg(R->getReg(),
                           G ? G->getSubtarget().getRegisterInfo() : nullptr);
   } else if (const ExternalSymbolSDNode *ES =
              dyn_cast<ExternalSymbolSDNode>(this)) {

@@ -52,6 +52,7 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -530,10 +531,8 @@ static MCSectionELF *getStaticStructorSection(MCContext &Ctx, bool UseInitArray,
       Name = ".ctors";
     else
       Name = ".dtors";
-    if (Priority != 65535) {
-      Name += '.';
-      Name += utostr(65535 - Priority);
-    }
+    if (Priority != 65535)
+      raw_string_ostream(Name) << format(".%05u", 65535 - Priority);
     Type = ELF::SHT_PROGBITS;
   }
 
@@ -1212,16 +1211,38 @@ void TargetLoweringObjectFileCOFF::Initialize(MCContext &Ctx,
   }
 }
 
+static MCSectionCOFF *getCOFFStaticStructorSection(MCContext &Ctx,
+                                                   const Triple &T, bool IsCtor,
+                                                   unsigned Priority,
+                                                   const MCSymbol *KeySym,
+                                                   MCSectionCOFF *Default) {
+  if (T.isKnownWindowsMSVCEnvironment() || T.isWindowsItaniumEnvironment())
+    return Ctx.getAssociativeCOFFSection(Default, KeySym, 0);
+
+  std::string Name = IsCtor ? ".ctors" : ".dtors";
+  if (Priority != 65535)
+    raw_string_ostream(Name) << format(".%05u", 65535 - Priority);
+
+  return Ctx.getAssociativeCOFFSection(
+      Ctx.getCOFFSection(Name, COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+                                   COFF::IMAGE_SCN_MEM_READ |
+                                   COFF::IMAGE_SCN_MEM_WRITE,
+                         SectionKind::getData()),
+      KeySym, 0);
+}
+
 MCSection *TargetLoweringObjectFileCOFF::getStaticCtorSection(
     unsigned Priority, const MCSymbol *KeySym) const {
-  return getContext().getAssociativeCOFFSection(
-      cast<MCSectionCOFF>(StaticCtorSection), KeySym, 0);
+  return getCOFFStaticStructorSection(getContext(), getTargetTriple(), true,
+                                      Priority, KeySym,
+                                      cast<MCSectionCOFF>(StaticCtorSection));
 }
 
 MCSection *TargetLoweringObjectFileCOFF::getStaticDtorSection(
     unsigned Priority, const MCSymbol *KeySym) const {
-  return getContext().getAssociativeCOFFSection(
-      cast<MCSectionCOFF>(StaticDtorSection), KeySym, 0);
+  return getCOFFStaticStructorSection(getContext(), getTargetTriple(), false,
+                                      Priority, KeySym,
+                                      cast<MCSectionCOFF>(StaticDtorSection));
 }
 
 void TargetLoweringObjectFileCOFF::emitLinkerFlagsForGlobal(

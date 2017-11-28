@@ -104,7 +104,7 @@ BT::BitMask HexagonEvaluator::mask(unsigned Reg, unsigned Sub) const {
       break;
   }
 #ifndef NDEBUG
-  dbgs() << PrintReg(Reg, &TRI, Sub) << " in reg class "
+  dbgs() << printReg(Reg, &TRI, Sub) << " in reg class "
          << TRI.getRegClassName(&RC) << '\n';
 #endif
   llvm_unreachable("Unexpected register/subregister");

@@ -14,33 +14,33 @@
 #include "lldb/Utility/DataBufferHeap.h"
 
 #include "Plugins/Process/Utility/lldb-ppc64le-register-enums.h"
-#include "elf-core-enums.h"
+#include "Plugins/Process/elf-core/RegisterUtilities.h"
 
 using namespace lldb_private;
 
 RegisterContextCorePOSIX_ppc64le::RegisterContextCorePOSIX_ppc64le(
     Thread &thread, RegisterInfoInterface *register_info,
-    const llvm::DenseMap<uint32_t, lldb_private::DataExtractor> &regsets)
+    const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
     : RegisterContextPOSIX_ppc64le(thread, 0, register_info) {
-  DataExtractor gpregset = regsets.lookup(LINUX::NT_PRSTATUS);
   m_gpr_buffer.reset(
       new DataBufferHeap(gpregset.GetDataStart(), gpregset.GetByteSize()));
   m_gpr.SetData(m_gpr_buffer);
   m_gpr.SetByteOrder(gpregset.GetByteOrder());
 
-  DataExtractor fpregset = regsets.lookup(LINUX::NT_FPREGSET);
+  ArchSpec arch = register_info->GetTargetArchitecture();
+  DataExtractor fpregset = getRegset(notes, arch.GetTriple(), FPR_Desc);
   m_fpr_buffer.reset(
       new DataBufferHeap(fpregset.GetDataStart(), fpregset.GetByteSize()));
   m_fpr.SetData(m_fpr_buffer);
   m_fpr.SetByteOrder(fpregset.GetByteOrder());
 
-  DataExtractor vmxregset = regsets.lookup(LINUX::NT_PPC_VMX);
+  DataExtractor vmxregset = getRegset(notes, arch.GetTriple(), PPC_VMX_Desc);
   m_vmx_buffer.reset(
       new DataBufferHeap(vmxregset.GetDataStart(), vmxregset.GetByteSize()));
   m_vmx.SetData(m_vmx_buffer);
   m_vmx.SetByteOrder(vmxregset.GetByteOrder());
 
-  DataExtractor vsxregset = regsets.lookup(LINUX::NT_PPC_VSX);
+  DataExtractor vsxregset = getRegset(notes, arch.GetTriple(), PPC_VSX_Desc);
   m_vsx_buffer.reset(
       new DataBufferHeap(vsxregset.GetDataStart(), vsxregset.GetByteSize()));
   m_vsx.SetData(m_vsx_buffer);

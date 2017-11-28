@@ -1918,28 +1918,29 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
   if (!MRI->hasOneNonDBGUse(Reg))
     return false;
 
+  switch (DefMI.getOpcode()) {
+  default:
+    return false;
+  case AMDGPU::S_MOV_B64:
+    // TODO: We could fold 64-bit immediates, but this get compilicated
+    // when there are sub-registers.
+    return false;
+
+  case AMDGPU::V_MOV_B32_e32:
+  case AMDGPU::S_MOV_B32:
+    break;
+  }
+
+  const MachineOperand *ImmOp = getNamedOperand(DefMI, AMDGPU::OpName::src0);
+  assert(ImmOp);
+  // FIXME: We could handle FrameIndex values here.
+  if (!ImmOp->isImm())
+    return false;
+
   unsigned Opc = UseMI.getOpcode();
   if (Opc == AMDGPU::COPY) {
     bool isVGPRCopy = RI.isVGPR(*MRI, UseMI.getOperand(0).getReg());
-    switch (DefMI.getOpcode()) {
-    default:
-      return false;
-    case AMDGPU::S_MOV_B64:
-      // TODO: We could fold 64-bit immediates, but this get compilicated
-      // when there are sub-registers.
-      return false;
-
-    case AMDGPU::V_MOV_B32_e32:
-    case AMDGPU::S_MOV_B32:
-      break;
-    }
     unsigned NewOpc = isVGPRCopy ? AMDGPU::V_MOV_B32_e32 : AMDGPU::S_MOV_B32;
-    const MachineOperand *ImmOp = getNamedOperand(DefMI, AMDGPU::OpName::src0);
-    assert(ImmOp);
-    // FIXME: We could handle FrameIndex values here.
-    if (!ImmOp->isImm()) {
-      return false;
-    }
     UseMI.setDesc(get(NewOpc));
     UseMI.getOperand(1).ChangeToImmediate(ImmOp->getImm());
     UseMI.addImplicitDefUseOperands(*UseMI.getParent()->getParent());
@@ -1953,15 +1954,13 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
     if (hasAnyModifiersSet(UseMI))
       return false;
 
-    const MachineOperand &ImmOp = DefMI.getOperand(1);
-
     // If this is a free constant, there's no reason to do this.
     // TODO: We could fold this here instead of letting SIFoldOperands do it
     // later.
     MachineOperand *Src0 = getNamedOperand(UseMI, AMDGPU::OpName::src0);
 
     // Any src operand can be used for the legality check.
-    if (isInlineConstant(UseMI, *Src0, ImmOp))
+    if (isInlineConstant(UseMI, *Src0, *ImmOp))
       return false;
 
     bool IsF32 = Opc == AMDGPU::V_MAD_F32 || Opc == AMDGPU::V_MAC_F32_e64;
@@ -1979,7 +1978,7 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
 
       // We need to swap operands 0 and 1 since madmk constant is at operand 1.
 
-      const int64_t Imm = DefMI.getOperand(1).getImm();
+      const int64_t Imm = ImmOp->getImm();
 
       // FIXME: This would be a lot easier if we could return a new instruction
       // instead of having to modify in place.
@@ -2024,7 +2023,7 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       if (!Src1->isReg() || RI.isSGPRClass(MRI->getRegClass(Src1->getReg())))
         return false;
 
-      const int64_t Imm = DefMI.getOperand(1).getImm();
+      const int64_t Imm = ImmOp->getImm();
 
       // FIXME: This would be a lot easier if we could return a new instruction
       // instead of having to modify in place.

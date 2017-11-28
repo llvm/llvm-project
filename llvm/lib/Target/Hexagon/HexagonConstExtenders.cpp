@@ -422,7 +422,7 @@ namespace {
   LLVM_ATTRIBUTE_UNUSED
   raw_ostream &operator<< (raw_ostream &OS, const PrintRegister &P) {
     if (P.Rs.Reg != 0)
-      OS << PrintReg(P.Rs.Reg, &P.HRI, P.Rs.Sub);
+      OS << printReg(P.Rs.Reg, &P.HRI, P.Rs.Sub);
     else
       OS << "noreg";
     return OS;
@@ -439,7 +439,7 @@ namespace {
   raw_ostream &operator<< (raw_ostream &OS, const PrintExpr &P) {
     OS << "## " << (P.Ex.Neg ? "- " : "+ ");
     if (P.Ex.Rs.Reg != 0)
-      OS << PrintReg(P.Ex.Rs.Reg, &P.HRI, P.Ex.Rs.Sub);
+      OS << printReg(P.Ex.Rs.Reg, &P.HRI, P.Ex.Rs.Sub);
     else
       OS << "__";
     OS << " << " << P.Ex.S;
@@ -468,7 +468,7 @@ namespace {
     const auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
     OS << "bb#" << MBB.getNumber() << ": ";
     if (ED.Rd.Reg != 0)
-      OS << PrintReg(ED.Rd.Reg, &HRI, ED.Rd.Sub);
+      OS << printReg(ED.Rd.Reg, &HRI, ED.Rd.Sub);
     else
       OS << "__";
     OS << " = " << PrintExpr(ED.Expr, HRI);
