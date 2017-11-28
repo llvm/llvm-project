@@ -17,8 +17,8 @@
 // Other libraries and framework includes
 #include "Plugins/Process/Utility/RegisterContextLinux_i386.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_x86_64.h"
-
 #include "Plugins/Process/elf-core/RegisterContextPOSIXCore_x86_64.h"
+#include "Plugins/Process/elf-core/RegisterUtilities.h"
 
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StopInfo.h"
@@ -74,20 +74,18 @@ ThreadMinidump::CreateRegisterContextForFrame(StackFrame *frame) {
       reg_interface = new RegisterContextLinux_i386(arch);
       lldb::DataBufferSP buf =
           ConvertMinidumpContext_x86_32(m_gpregset_data, reg_interface);
-      DataExtractor gpregs(buf, lldb::eByteOrderLittle, 4);
-      DataExtractor fpregs;
+      DataExtractor gpregset(buf, lldb::eByteOrderLittle, 4);
       m_thread_reg_ctx_sp.reset(new RegisterContextCorePOSIX_x86_64(
-          *this, reg_interface, gpregs, fpregs));
+          *this, reg_interface, gpregset, {}));
       break;
     }
     case llvm::Triple::x86_64: {
       reg_interface = new RegisterContextLinux_x86_64(arch);
       lldb::DataBufferSP buf =
           ConvertMinidumpContext_x86_64(m_gpregset_data, reg_interface);
-      DataExtractor gpregs(buf, lldb::eByteOrderLittle, 8);
-      DataExtractor fpregs;
+      DataExtractor gpregset(buf, lldb::eByteOrderLittle, 8);
       m_thread_reg_ctx_sp.reset(new RegisterContextCorePOSIX_x86_64(
-          *this, reg_interface, gpregs, fpregs));
+          *this, reg_interface, gpregset, {}));
       break;
     }
     default:

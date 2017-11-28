@@ -1,13 +1,23 @@
-// RUN: %check_clang_tidy %s misc-move-const-arg %t
+// RUN: %check_clang_tidy %s performance-move-const-arg %t
 
 namespace std {
-template <typename> struct remove_reference;
+template <typename>
+struct remove_reference;
 
-template <typename _Tp> struct remove_reference { typedef _Tp type; };
+template <typename _Tp>
+struct remove_reference {
+  typedef _Tp type;
+};
 
-template <typename _Tp> struct remove_reference<_Tp &> { typedef _Tp type; };
+template <typename _Tp>
+struct remove_reference<_Tp &> {
+  typedef _Tp type;
+};
 
-template <typename _Tp> struct remove_reference<_Tp &&> { typedef _Tp type; };
+template <typename _Tp>
+struct remove_reference<_Tp &&> {
+  typedef _Tp type;
+};
 
 template <typename _Tp>
 constexpr typename std::remove_reference<_Tp>::type &&move(_Tp &&__t) {
@@ -38,13 +48,13 @@ void f(TriviallyCopyable) {}
 void g() {
   TriviallyCopyable obj;
   f(std::move(obj));
-  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: std::move of the variable 'obj' of the trivially-copyable type 'TriviallyCopyable' has no effect; remove std::move() [misc-move-const-arg]
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: std::move of the variable 'obj' of the trivially-copyable type 'TriviallyCopyable' has no effect; remove std::move() [performance-move-const-arg]
   // CHECK-FIXES: f(obj);
 }
 
 int f1() {
   return std::move(42);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: std::move of the expression of the trivially-copyable type 'int' has no effect; remove std::move() [misc-move-const-arg]
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: std::move of the expression of the trivially-copyable type 'int' has no effect; remove std::move() [performance-move-const-arg]
   // CHECK-FIXES: return 42;
 }
 
@@ -64,11 +74,14 @@ A f4(A x4) { return std::move(x4); }
 
 A f5(const A x5) {
   return std::move(x5);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: std::move of the const variable 'x5' has no effect; remove std::move() or make the variable non-const [misc-move-const-arg]
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: std::move of the const variable 'x5' has no effect; remove std::move() or make the variable non-const [performance-move-const-arg]
   // CHECK-FIXES: return x5;
 }
 
-template <typename T> T f6(const T x6) { return std::move(x6); }
+template <typename T>
+T f6(const T x6) {
+  return std::move(x6);
+}
 
 void f7() { int a = f6(10); }
 
@@ -83,9 +96,10 @@ void f8() {
 #define M2(x) std::move(x)
 int f9() { return M2(1); }
 
-template <typename T> T f10(const int x10) {
+template <typename T>
+T f10(const int x10) {
   return std::move(x10);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: std::move of the const variable 'x10' of the trivially-copyable type 'const int' has no effect; remove std::move() [misc-move-const-arg]
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: std::move of the const variable 'x10' of the trivially-copyable type 'const int' has no effect; remove std::move() [performance-move-const-arg]
   // CHECK-FIXES: return x10;
 }
 void f11() {
@@ -94,7 +108,7 @@ void f11() {
 }
 
 class NoMoveSemantics {
- public:
+public:
   NoMoveSemantics();
   NoMoveSemantics(const NoMoveSemantics &);
 
@@ -134,7 +148,7 @@ void moveToConstReferencePositives() {
 }
 
 class MoveSemantics {
- public:
+public:
   MoveSemantics();
   MoveSemantics(MoveSemantics &&);
 

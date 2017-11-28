@@ -23,6 +23,8 @@
 #include "llvm/LTO/LTO.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/ELFObjectFile.h"
+#include "llvm/Support/ARMAttributeParser.h"
+#include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/raw_ostream.h"
@@ -394,6 +396,48 @@ void ObjFile<ELFT>::initializeSections(
   }
 }
 
+// The ARM support in lld makes some use of instructions that are not available
+// on all ARM architectures. Namely:
+// - Use of BLX instruction for interworking between ARM and Thumb state.
+// - Use of the extended Thumb branch encoding in relocation.
+// - Use of the MOVT/MOVW instructions in Thumb Thunks.
+// The ARM Attributes section contains information about the architecture chosen
+// at compile time. We follow the convention that if at least one input object
+// is compiled with an architecture that supports these features then lld is
+// permitted to use them.
+static void updateSupportedARMFeatures(const ARMAttributeParser &Attributes) {
+  if (!Attributes.hasAttribute(ARMBuildAttrs::CPU_arch))
+    return;
+  auto Arch = Attributes.getAttributeValue(ARMBuildAttrs::CPU_arch);
+  switch (Arch) {
+  case ARMBuildAttrs::Pre_v4:
+  case ARMBuildAttrs::v4:
+  case ARMBuildAttrs::v4T:
+    // Architectures prior to v5 do not support BLX instruction
+    break;
+  case ARMBuildAttrs::v5T:
+  case ARMBuildAttrs::v5TE:
+  case ARMBuildAttrs::v5TEJ:
+  case ARMBuildAttrs::v6:
+  case ARMBuildAttrs::v6KZ:
+  case ARMBuildAttrs::v6K:
+    Config->ARMHasBlx = true;
+    // Architectures used in pre-Cortex processors do not support
+    // The J1 = 1 J2 = 1 Thumb branch range extension, with the exception
+    // of Architecture v6T2 (arm1156t2-s and arm1156t2f-s) that do.
+    break;
+  default:
+    // All other Architectures have BLX and extended branch encoding
+    Config->ARMHasBlx = true;
+    Config->ARMJ1J2BranchEncoding = true;
+    if (Arch != ARMBuildAttrs::v6_M && Arch != ARMBuildAttrs::v6S_M)
+      // All Architectures used in Cortex processors with the exception
+      // of v6-M and v6S-M have the MOVT and MOVW instructions.
+      Config->ARMHasMovtMovw = true;
+    break;
+  }
+}
+
 template <class ELFT>
 InputSectionBase *ObjFile<ELFT>::getRelocTarget(const Elf_Shdr &Sec) {
   uint32_t Idx = Sec.sh_info;
@@ -426,16 +470,20 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
   StringRef Name = getSectionName(Sec);
 
   switch (Sec.sh_type) {
-  case SHT_ARM_ATTRIBUTES:
-    // FIXME: ARM meta-data section. Retain the first attribute section
-    // we see. The eglibc ARM dynamic loaders require the presence of an
-    // attribute section for dlopen to work.
-    // In a full implementation we would merge all attribute sections.
+  case SHT_ARM_ATTRIBUTES: {
+    ARMAttributeParser Attributes;
+    ArrayRef<uint8_t> Contents = check(this->getObj().getSectionContents(&Sec));
+    Attributes.Parse(Contents, /*isLittle*/Config->EKind == ELF32LEKind);
+    updateSupportedARMFeatures(Attributes);
+    // FIXME: Retain the first attribute section we see. The eglibc ARM
+    // dynamic loaders require the presence of an attribute section for dlopen
+    // to work. In a full implementation we would merge all attribute sections.
     if (InX::ARMAttributes == nullptr) {
       InX::ARMAttributes = make<InputSection>(this, &Sec, Name);
       return InX::ARMAttributes;
     }
     return &InputSection::Discarded;
+  }
   case SHT_RELA:
   case SHT_REL: {
     // Find the relocation target section and associate this

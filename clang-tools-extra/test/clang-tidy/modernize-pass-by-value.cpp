@@ -202,7 +202,7 @@ struct S {
 template <typename T, int N> struct array { T A[N]; };
 
 // Test that types that are trivially copyable will not use std::move. This will
-// cause problems with misc-move-const-arg, as it will revert it.
+// cause problems with performance-move-const-arg, as it will revert it.
 struct T {
   T(array<int, 10> a) : a_(a) {}
   // CHECK-FIXES: T(array<int, 10> a) : a_(a) {}
