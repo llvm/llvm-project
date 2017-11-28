@@ -8,7 +8,7 @@
 // (defined in sanitizer_thread_registry.cc). It might seem a bug on glibc,
 // however the same version GLIBC-2.17 will not make fail the test on 
 // powerpc64 BE (VMA=46)
-// XFAIL: powerpc64-unknown-linux-gnu
+// UNSUPPORTED: powerpc64-unknown-linux-gnu
 
 #include "test.h"
 

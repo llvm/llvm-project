@@ -19,6 +19,7 @@
 #include "WebAssemblyTargetMachine.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
@@ -182,6 +183,134 @@ MVT WebAssemblyTargetLowering::getScalarShiftAmountTy(const DataLayout & /*DL*/,
   assert(Result != MVT::INVALID_SIMPLE_VALUE_TYPE &&
          "Unable to represent scalar shift amount type");
   return Result;
+}
+
+// Lower an fp-to-int conversion operator from the LLVM opcode, which has an
+// undefined result on invalid/overflow, to the WebAssembly opcode, which
+// traps on invalid/overflow.
+static MachineBasicBlock *
+LowerFPToInt(
+    MachineInstr &MI,
+    DebugLoc DL,
+    MachineBasicBlock *BB,
+    const TargetInstrInfo &TII,
+    bool IsUnsigned,
+    bool Int64,
+    bool Float64,
+    unsigned LoweredOpcode
+) {
+  MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+
+  unsigned OutReg = MI.getOperand(0).getReg();
+  unsigned InReg = MI.getOperand(1).getReg();
+
+  unsigned Abs = Float64 ? WebAssembly::ABS_F64 : WebAssembly::ABS_F32;
+  unsigned FConst = Float64 ? WebAssembly::CONST_F64 : WebAssembly::CONST_F32;
+  unsigned LT = Float64 ? WebAssembly::LT_F64 : WebAssembly::LT_F32;
+  unsigned IConst = Int64 ? WebAssembly::CONST_I64 : WebAssembly::CONST_I32;
+  int64_t Limit = Int64 ? INT64_MIN : INT32_MIN;
+  int64_t Substitute = IsUnsigned ? 0 : Limit;
+  double CmpVal = IsUnsigned ? -(double)Limit * 2.0 : -(double)Limit;
+  auto &Context = BB->getParent()->getFunction()->getContext();
+  Type *Ty = Float64 ? Type::getDoubleTy(Context) : Type::getFloatTy(Context);
+
+  const BasicBlock *LLVM_BB = BB->getBasicBlock();
+  MachineFunction *F = BB->getParent();
+  MachineBasicBlock *TrueMBB = F->CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *FalseMBB = F->CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *DoneMBB = F->CreateMachineBasicBlock(LLVM_BB);
+
+  MachineFunction::iterator It = ++BB->getIterator();
+  F->insert(It, FalseMBB);
+  F->insert(It, TrueMBB);
+  F->insert(It, DoneMBB);
+
+  // Transfer the remainder of BB and its successor edges to DoneMBB.
+  DoneMBB->splice(DoneMBB->begin(), BB,
+                  std::next(MachineBasicBlock::iterator(MI)),
+                  BB->end());
+  DoneMBB->transferSuccessorsAndUpdatePHIs(BB);
+
+  BB->addSuccessor(TrueMBB);
+  BB->addSuccessor(FalseMBB);
+  TrueMBB->addSuccessor(DoneMBB);
+  FalseMBB->addSuccessor(DoneMBB);
+
+  unsigned Tmp0, Tmp1, Tmp2, Tmp3, Tmp4;
+  Tmp0 = MRI.createVirtualRegister(MRI.getRegClass(InReg));
+  Tmp1 = MRI.createVirtualRegister(MRI.getRegClass(InReg));
+  Tmp2 = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
+  Tmp3 = MRI.createVirtualRegister(MRI.getRegClass(OutReg));
+  Tmp4 = MRI.createVirtualRegister(MRI.getRegClass(OutReg));
+
+  MI.eraseFromParent();
+  if (IsUnsigned) {
+    Tmp0 = InReg;
+  } else {
+    BuildMI(BB, DL, TII.get(Abs), Tmp0)
+        .addReg(InReg);
+  }
+  BuildMI(BB, DL, TII.get(FConst), Tmp1)
+      .addFPImm(cast<ConstantFP>(ConstantFP::get(Ty, CmpVal)));
+  BuildMI(BB, DL, TII.get(LT), Tmp2)
+      .addReg(Tmp0)
+      .addReg(Tmp1);
+  BuildMI(BB, DL, TII.get(WebAssembly::BR_IF))
+      .addMBB(TrueMBB)
+      .addReg(Tmp2);
+
+  BuildMI(FalseMBB, DL, TII.get(IConst), Tmp3)
+      .addImm(Substitute);
+  BuildMI(FalseMBB, DL, TII.get(WebAssembly::BR))
+      .addMBB(DoneMBB);
+  BuildMI(TrueMBB, DL, TII.get(LoweredOpcode), Tmp4)
+      .addReg(InReg);
+
+  BuildMI(*DoneMBB, DoneMBB->begin(), DL, TII.get(TargetOpcode::PHI), OutReg)
+      .addReg(Tmp3)
+      .addMBB(FalseMBB)
+      .addReg(Tmp4)
+      .addMBB(TrueMBB);
+
+  return DoneMBB;
+}
+
+MachineBasicBlock *
+WebAssemblyTargetLowering::EmitInstrWithCustomInserter(
+    MachineInstr &MI,
+    MachineBasicBlock *BB
+) const {
+  const TargetInstrInfo &TII = *Subtarget->getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
+
+  switch (MI.getOpcode()) {
+  default: llvm_unreachable("Unexpected instr type to insert");
+  case WebAssembly::FP_TO_SINT_I32_F32:
+    return LowerFPToInt(MI, DL, BB, TII, false, false, false,
+                        WebAssembly::I32_TRUNC_S_F32);
+  case WebAssembly::FP_TO_UINT_I32_F32:
+    return LowerFPToInt(MI, DL, BB, TII, true, false, false,
+                        WebAssembly::I32_TRUNC_U_F32);
+  case WebAssembly::FP_TO_SINT_I64_F32:
+    return LowerFPToInt(MI, DL, BB, TII, false, true, false,
+                        WebAssembly::I64_TRUNC_S_F32);
+  case WebAssembly::FP_TO_UINT_I64_F32:
+    return LowerFPToInt(MI, DL, BB, TII, true, true, false,
+                        WebAssembly::I64_TRUNC_U_F32);
+  case WebAssembly::FP_TO_SINT_I32_F64:
+    return LowerFPToInt(MI, DL, BB, TII, false, false, true,
+                        WebAssembly::I32_TRUNC_S_F64);
+  case WebAssembly::FP_TO_UINT_I32_F64:
+    return LowerFPToInt(MI, DL, BB, TII, true, false, true,
+                        WebAssembly::I32_TRUNC_U_F64);
+  case WebAssembly::FP_TO_SINT_I64_F64:
+    return LowerFPToInt(MI, DL, BB, TII, false, true, true,
+                        WebAssembly::I64_TRUNC_S_F64);
+  case WebAssembly::FP_TO_UINT_I64_F64:
+    return LowerFPToInt(MI, DL, BB, TII, true, true, true,
+                        WebAssembly::I64_TRUNC_U_F64);
+  llvm_unreachable("Unexpected instruction to emit with custom inserter");
+  }
 }
 
 const char *WebAssemblyTargetLowering::getTargetNodeName(

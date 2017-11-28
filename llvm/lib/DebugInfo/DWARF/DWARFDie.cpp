@@ -306,17 +306,16 @@ Optional<DWARFFormValue>
 DWARFDie::findRecursively(ArrayRef<dwarf::Attribute> Attrs) const {
   if (!isValid())
     return None;
-  auto Die = *this;
-  if (auto Value = Die.find(Attrs))
+  if (auto Value = find(Attrs))
     return Value;
-  if (auto D = Die.getAttributeValueAsReferencedDie(DW_AT_abstract_origin))
-    Die = D;
-  if (auto Value = Die.find(Attrs))
-    return Value;
-  if (auto D = Die.getAttributeValueAsReferencedDie(DW_AT_specification))
-    Die = D;
-  if (auto Value = Die.find(Attrs))
-    return Value;
+  if (auto Die = getAttributeValueAsReferencedDie(DW_AT_abstract_origin)) {
+    if (auto Value = Die.findRecursively(Attrs))
+      return Value;
+  }
+  if (auto Die = getAttributeValueAsReferencedDie(DW_AT_specification)) {
+    if (auto Value = Die.findRecursively(Attrs))
+      return Value;
+  }
   return None;
 }
 
