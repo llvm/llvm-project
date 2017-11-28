@@ -93,7 +93,8 @@ def NonBitField : SubsetSubject<Field,
                                 "non-bit-field non-static data members">;
 
 def ObjCClassMethod : SubsetSubject<ObjCMethod,
-                                    [{!S->isInstanceMethod()}]>;
+                                    [{!S->isInstanceMethod()}],
+                                    "Objective-C class methods">;
 
 def ObjCInstanceMethod : SubsetSubject<ObjCMethod,
                                        [{S->isInstanceMethod()}],
