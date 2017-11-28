@@ -29,11 +29,11 @@ extern "C" void LLVMInitializeAArch64TargetInfo() {
   // Now register the "arm64" name for use with "-march". We don't want it to
   // take possession of the Triple::aarch64 tag though.
   TargetRegistry::RegisterTarget(getTheARM64Target(), "arm64",
-                                 "ARM64 (little endian)",
+                                 "ARM64 (little endian)", "AArch64",
                                  [](Triple::ArchType) { return false; }, true);
 
   RegisterTarget<Triple::aarch64, /*HasJIT=*/true> Z(
-      getTheAArch64leTarget(), "aarch64", "AArch64 (little endian)");
+      getTheAArch64leTarget(), "aarch64", "AArch64 (little endian)", "AArch64");
   RegisterTarget<Triple::aarch64_be, /*HasJIT=*/true> W(
-      getTheAArch64beTarget(), "aarch64_be", "AArch64 (big endian)");
+      getTheAArch64beTarget(), "aarch64_be", "AArch64 (big endian)", "AArch64");
 }

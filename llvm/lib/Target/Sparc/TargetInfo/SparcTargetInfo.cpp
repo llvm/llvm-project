@@ -27,9 +27,9 @@ Target &llvm::getTheSparcelTarget() {
 
 extern "C" void LLVMInitializeSparcTargetInfo() {
   RegisterTarget<Triple::sparc, /*HasJIT=*/true> X(getTheSparcTarget(), "sparc",
-                                                   "Sparc");
-  RegisterTarget<Triple::sparcv9, /*HasJIT=*/true> Y(getTheSparcV9Target(),
-                                                     "sparcv9", "Sparc V9");
-  RegisterTarget<Triple::sparcel, /*HasJIT=*/true> Z(getTheSparcelTarget(),
-                                                     "sparcel", "Sparc LE");
+                                                   "Sparc", "Sparc");
+  RegisterTarget<Triple::sparcv9, /*HasJIT=*/true> Y(
+      getTheSparcV9Target(), "sparcv9", "Sparc V9", "Sparc");
+  RegisterTarget<Triple::sparcel, /*HasJIT=*/true> Z(
+      getTheSparcelTarget(), "sparcel", "Sparc LE", "Sparc");
 }

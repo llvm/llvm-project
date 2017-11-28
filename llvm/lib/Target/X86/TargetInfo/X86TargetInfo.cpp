@@ -22,8 +22,8 @@ Target &llvm::getTheX86_64Target() {
 
 extern "C" void LLVMInitializeX86TargetInfo() {
   RegisterTarget<Triple::x86, /*HasJIT=*/true> X(
-      getTheX86_32Target(), "x86", "32-bit X86: Pentium-Pro and above");
+      getTheX86_32Target(), "x86", "32-bit X86: Pentium-Pro and above", "X86");
 
   RegisterTarget<Triple::x86_64, /*HasJIT=*/true> Y(
-      getTheX86_64Target(), "x86-64", "64-bit X86: EM64T and AMD64");
+      getTheX86_64Target(), "x86-64", "64-bit X86: EM64T and AMD64", "X86");
 }
