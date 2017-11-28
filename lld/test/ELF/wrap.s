@@ -15,10 +15,16 @@
 // RUN: llvm-readobj -t %t3 | FileCheck -check-prefix=SYM %s
 // SYM:      Name: foo
 // SYM-NEXT: Value: 0x11000
+// SYM-NEXT: Size:
+// SYM-NEXT: Binding: Global
 // SYM:      Name: __wrap_foo
 // SYM-NEXT: Value: 0x11010
+// SYM-NEXT: Size:
+// SYM-NEXT: Binding: Weak
 // SYM:      Name: __real_foo
 // SYM-NEXT: Value: 0x11020
+// SYM-NEXT: Size:
+// SYM-NEXT: Binding: Global
 
 .global _start
 _start:

@@ -3,6 +3,7 @@ if(NOT LLD_BUILT_STANDALONE)
 endif()
 
 add_lld_library(lldCommon
+  Args.cpp
   ErrorHandler.cpp
   Reproduce.cpp
   Strings.cpp

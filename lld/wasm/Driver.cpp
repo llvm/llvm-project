@@ -12,6 +12,7 @@
 #include "Memory.h"
 #include "SymbolTable.h"
 #include "Writer.h"
+#include "lld/Common/Args.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Threads.h"
 #include "lld/Common/Version.h"
@@ -103,52 +104,6 @@ static const opt::OptTable::Info OptInfo[] = {
 #include "Options.inc"
 #undef OPTION
 };
-
-static std::vector<StringRef> getArgs(opt::InputArgList &Args, int Id) {
-  std::vector<StringRef> V;
-  for (auto *Arg : Args.filtered(Id))
-    V.push_back(Arg->getValue());
-  return V;
-}
-
-static int getInteger(opt::InputArgList &Args, unsigned Key, int Default) {
-  int V = Default;
-  if (auto *Arg = Args.getLastArg(Key)) {
-    StringRef S = Arg->getValue();
-    if (S.getAsInteger(10, V))
-      error(Arg->getSpelling() + ": number expected, but got " + S);
-  }
-  return V;
-}
-
-static uint64_t getZOptionValue(opt::InputArgList &Args, StringRef Key,
-                                uint64_t Default) {
-  for (auto *Arg : Args.filtered(OPT_z)) {
-    StringRef Value = Arg->getValue();
-    size_t Pos = Value.find("=");
-    if (Pos != StringRef::npos && Key == Value.substr(0, Pos)) {
-      Value = Value.substr(Pos + 1);
-      uint64_t Res;
-      if (Value.getAsInteger(0, Res))
-        error("invalid " + Key + ": " + Value);
-      return Res;
-    }
-  }
-  return Default;
-}
-
-static std::vector<StringRef> getLines(MemoryBufferRef MB) {
-  SmallVector<StringRef, 0> Arr;
-  MB.getBuffer().split(Arr, '\n');
-
-  std::vector<StringRef> Ret;
-  for (StringRef S : Arr) {
-    S = S.trim();
-    if (!S.empty() && S[0] != '#')
-      Ret.push_back(S);
-  }
-  return Ret;
-}
 
 // Set color diagnostics according to -color-diagnostics={auto,always,never}
 // or -no-color-diagnostics flags.
@@ -283,7 +238,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     V.push_back(Arg->getValue());
   cl::ParseCommandLineOptions(V.size(), V.data());
 
-  errorHandler().ErrorLimit = getInteger(Args, OPT_error_limit, 20);
+  errorHandler().ErrorLimit = args::getInteger(Args, OPT_error_limit, 20);
 
   if (Args.hasArg(OPT_version) || Args.hasArg(OPT_v)) {
     outs() << getLLDVersion() << "\n";
@@ -296,21 +251,22 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Config->ImportMemory = Args.hasArg(OPT_import_memory);
   Config->OutputFile = Args.getLastArgValue(OPT_o);
   Config->Relocatable = Args.hasArg(OPT_relocatable);
-  Config->SearchPaths = getArgs(Args, OPT_L);
+  Config->SearchPaths = args::getStrings(Args, OPT_L);
   Config->StripAll = Args.hasArg(OPT_strip_all);
   Config->StripDebug = Args.hasArg(OPT_strip_debug);
   Config->Sysroot = Args.getLastArgValue(OPT_sysroot);
   errorHandler().Verbose = Args.hasArg(OPT_verbose);
   ThreadsEnabled = Args.hasFlag(OPT_threads, OPT_no_threads, true);
 
-  Config->InitialMemory = getInteger(Args, OPT_initial_memory, 0);
-  Config->GlobalBase = getInteger(Args, OPT_global_base, 1024);
-  Config->MaxMemory = getInteger(Args, OPT_max_memory, 0);
-  Config->ZStackSize = getZOptionValue(Args, "stack-size", WasmPageSize);
+  Config->InitialMemory = args::getInteger(Args, OPT_initial_memory, 0);
+  Config->GlobalBase = args::getInteger(Args, OPT_global_base, 1024);
+  Config->MaxMemory = args::getInteger(Args, OPT_max_memory, 0);
+  Config->ZStackSize =
+      args::getZOptionValue(Args, OPT_z, "stack-size", WasmPageSize);
 
   if (auto *Arg = Args.getLastArg(OPT_allow_undefined_file))
     if (Optional<MemoryBufferRef> Buf = readFile(Arg->getValue()))
-      for (StringRef Sym : getLines(*Buf))
+      for (StringRef Sym : args::getLines(*Buf))
         Config->AllowUndefinedSymbols.insert(Sym);
 
   if (Config->OutputFile.empty())
