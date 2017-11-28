@@ -159,9 +159,7 @@ body:             |
   ; ALL:   [[ANYEXT1:%[0-9]+]]:_(s8) = G_ANYEXT [[COPY2]](s1)
   ; ALL: bb.3.cond.end:
   ; ALL:   [[PHI:%[0-9]+]]:_(s8) = G_PHI [[ANYEXT]](s8), %bb.1.cond.true, [[ANYEXT1]](s8), %bb.2.cond.false
-  ; ALL:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[PHI]](s8)
-  ; ALL:   [[ZEXT:%[0-9]+]]:_(s8) = G_ZEXT [[TRUNC]](s1)
-  ; ALL:   %al = COPY [[ZEXT]](s8)
+  ; ALL:   %al = COPY
   ; ALL:   RET 0, implicit %al
   bb.1.entry:
     successors: %bb.2.cond.true(0x40000000), %bb.3.cond.false(0x40000000)

@@ -45,8 +45,8 @@ define i32 @test_sub_i1(i32 %arg1, i32 %arg2) {
 ; X64-LABEL: test_sub_i1:
 ; X64:       # BB#0:
 ; X64-NEXT:    subb %sil, %dil
-; X64-NEXT:    andl $1, %edi
-; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movzbl %dil, %eax
+; X64-NEXT:    andl $1, %eax
 ; X64-NEXT:    retq
   %a1 = trunc i32 %arg1 to i1
   %a2 = trunc i32 %arg2 to i1
