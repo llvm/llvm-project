@@ -1,4 +1,4 @@
-//===--- MoveConstantArgumentCheck.h - clang-tidy -------------------------===//
+//===--- MoveConstArgCheck.h - clang-tidy -------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,7 +14,7 @@
 
 namespace clang {
 namespace tidy {
-namespace misc {
+namespace performance {
 
 /// Find casts of calculation results to bigger type. Typically from int to
 ///
@@ -22,9 +22,9 @@ namespace misc {
 ///
 ///   - `CheckTriviallyCopyableMove`: Whether to check for trivially-copyable
 //      types as their objects are not moved but copied. Enabled by default.
-class MoveConstantArgumentCheck : public ClangTidyCheck {
+class MoveConstArgCheck : public ClangTidyCheck {
 public:
-  MoveConstantArgumentCheck(StringRef Name, ClangTidyContext *Context)
+  MoveConstArgCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
         CheckTriviallyCopyableMove(
             Options.get("CheckTriviallyCopyableMove", true)) {}
@@ -36,7 +36,7 @@ private:
   const bool CheckTriviallyCopyableMove;
 };
 
-} // namespace misc
+} // namespace performance
 } // namespace tidy
 } // namespace clang
 

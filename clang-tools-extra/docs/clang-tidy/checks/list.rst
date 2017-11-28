@@ -93,7 +93,7 @@ Clang-Tidy Checks
    hicpp-function-size (redirects to readability-function-size) <hicpp-function-size>
    hicpp-invalid-access-moved (redirects to bugprone-use-after-move) <hicpp-invalid-access-moved>
    hicpp-member-init (redirects to cppcoreguidelines-pro-type-member-init) <hicpp-member-init>
-   hicpp-move-const-arg (redirects to misc-move-const-arg) <hicpp-move-const-arg>
+   hicpp-move-const-arg (redirects to performance-move-const-arg) <hicpp-move-const-arg>
    hicpp-named-parameter (redirects to readability-named-parameter) <hicpp-named-parameter>
    hicpp-new-delete-operators (redirects to misc-new-delete-overloads) <hicpp-new-delete-operators>
    hicpp-no-array-decay (redirects to cppcoreguidelines-pro-bounds-array-to-pointer-decay) <hicpp-no-array-decay>
@@ -124,9 +124,7 @@ Clang-Tidy Checks
    misc-macro-repeated-side-effects
    misc-misplaced-const
    misc-misplaced-widening-cast
-   misc-move-const-arg
    misc-new-delete-overloads
-   misc-noexcept-move-constructor
    misc-non-copyable-objects
    misc-redundant-expression
    misc-sizeof-container
@@ -183,7 +181,9 @@ Clang-Tidy Checks
    performance-inefficient-algorithm
    performance-inefficient-string-concatenation
    performance-inefficient-vector-operation
+   performance-move-const-arg
    performance-move-constructor-init
+   performance-noexcept-move-constructor
    performance-type-promotion-in-math-fn
    performance-unnecessary-copy-initialization
    performance-unnecessary-value-param

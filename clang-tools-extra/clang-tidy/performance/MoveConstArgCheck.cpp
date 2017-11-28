@@ -1,4 +1,4 @@
-//===--- MoveConstantArgumentCheck.cpp - clang-tidy -----------------------===//
+//===--- MoveConstArgCheck.cpp - clang-tidy -----------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MoveConstantArgumentCheck.h"
+#include "MoveConstArgCheck.h"
 
 #include "clang/Lex/Lexer.h"
 
@@ -15,7 +15,7 @@ using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
-namespace misc {
+namespace performance {
 
 static void ReplaceCallWithArg(const CallExpr *Call, DiagnosticBuilder &Diag,
                                const SourceManager &SM,
@@ -36,12 +36,11 @@ static void ReplaceCallWithArg(const CallExpr *Call, DiagnosticBuilder &Diag,
   }
 }
 
-void MoveConstantArgumentCheck::storeOptions(
-    ClangTidyOptions::OptionMap &Opts) {
+void MoveConstArgCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "CheckTriviallyCopyableMove", CheckTriviallyCopyableMove);
 }
 
-void MoveConstantArgumentCheck::registerMatchers(MatchFinder *Finder) {
+void MoveConstArgCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus)
     return;
 
@@ -60,7 +59,7 @@ void MoveConstantArgumentCheck::registerMatchers(MatchFinder *Finder) {
                      this);
 }
 
-void MoveConstantArgumentCheck::check(const MatchFinder::MatchResult &Result) {
+void MoveConstArgCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *CallMove = Result.Nodes.getNodeAs<CallExpr>("call-move");
   const auto *ReceivingExpr = Result.Nodes.getNodeAs<Expr>("receiving-expr");
   const Expr *Arg = CallMove->getArg(0);
@@ -117,6 +116,6 @@ void MoveConstantArgumentCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
-} // namespace misc
+} // namespace performance
 } // namespace tidy
 } // namespace clang
