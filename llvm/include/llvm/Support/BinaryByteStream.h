@@ -135,7 +135,7 @@ private:
 /// causing the underlying data to grow.  This class owns the underlying data.
 class AppendingBinaryByteStream : public WritableBinaryStream {
   std::vector<uint8_t> Data;
-  llvm::support::endianness Endian;
+  llvm::support::endianness Endian = llvm::support::little;
 
 public:
   AppendingBinaryByteStream() = default;
@@ -153,6 +153,10 @@ public:
 
     Buffer = makeArrayRef(Data).slice(Offset, Size);
     return Error::success();
+  }
+
+  void insert(uint32_t Offset, ArrayRef<uint8_t> Bytes) {
+    Data.insert(Data.begin() + Offset, Bytes.begin(), Bytes.end());
   }
 
   Error readLongestContiguousChunk(uint32_t Offset,

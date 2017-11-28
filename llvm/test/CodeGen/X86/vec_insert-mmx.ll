@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-darwin -mattr=+mmx,+sse2 | FileCheck %s --check-prefix=X32
 ; RUN: llc < %s -mtriple=x86_64-darwin -mattr=+mmx,+sse4.1 | FileCheck %s --check-prefix=X64
 
-; This is not an MMX operation; promoted to XMM.
+; This is not an MMX operation; promoted to xmm.
 define x86_mmx @t0(i32 %A) nounwind {
 ; X32-LABEL: t0:
 ; X32:       ## BB#0:
@@ -16,7 +16,7 @@ define x86_mmx @t0(i32 %A) nounwind {
 ;
 ; X64-LABEL: t0:
 ; X64:       ## BB#0:
-; X64-NEXT:    ## kill: %EDI<def> %EDI<kill> %RDI<def>
+; X64-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
 ; X64-NEXT:    movq %rdi, %xmm0
 ; X64-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6,7]
 ; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]

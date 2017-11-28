@@ -157,7 +157,7 @@ void LiveIntervals::print(raw_ostream &OS, const Module* ) const {
   // Dump the regunits.
   for (unsigned Unit = 0, UnitE = RegUnitRanges.size(); Unit != UnitE; ++Unit)
     if (LiveRange *LR = RegUnitRanges[Unit])
-      OS << PrintRegUnit(Unit, TRI) << ' ' << *LR << '\n';
+      OS << printRegUnit(Unit, TRI) << ' ' << *LR << '\n';
 
   // Dump the virtregs.
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
@@ -335,7 +335,7 @@ void LiveIntervals::computeLiveInRegUnits() {
         }
         VNInfo *VNI = LR->createDeadDef(Begin, getVNInfoAllocator());
         (void)VNI;
-        DEBUG(dbgs() << ' ' << PrintRegUnit(Unit, TRI) << '#' << VNI->id);
+        DEBUG(dbgs() << ' ' << printRegUnit(Unit, TRI) << '#' << VNI->id);
       }
     }
     DEBUG(dbgs() << '\n');
@@ -698,11 +698,11 @@ void LiveIntervals::addKillFlags(const VirtRegMap *VRM) {
       // Check if any of the regunits are live beyond the end of RI. That could
       // happen when a physreg is defined as a copy of a virtreg:
       //
-      //   %EAX = COPY %vreg5
-      //   FOO %vreg5         <--- MI, cancel kill because %EAX is live.
-      //   BAR %EAX<kill>
+      //   %eax = COPY %vreg5
+      //   FOO %vreg5         <--- MI, cancel kill because %eax is live.
+      //   BAR %eax<kill>
       //
-      // There should be no kill flag on FOO when %vreg5 is rewritten as %EAX.
+      // There should be no kill flag on FOO when %vreg5 is rewritten as %eax.
       for (auto &RUP : RU) {
         const LiveRange &RURange = *RUP.first;
         LiveRange::const_iterator &I = RUP.second;
@@ -995,11 +995,11 @@ private:
     DEBUG({
       dbgs() << "     ";
       if (TargetRegisterInfo::isVirtualRegister(Reg)) {
-        dbgs() << PrintReg(Reg);
+        dbgs() << printReg(Reg);
         if (LaneMask.any())
           dbgs() << " L" << PrintLaneMask(LaneMask);
       } else {
-        dbgs() << PrintRegUnit(Reg, &TRI);
+        dbgs() << printRegUnit(Reg, &TRI);
       }
       dbgs() << ":\t" << LR << '\n';
     });

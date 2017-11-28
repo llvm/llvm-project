@@ -13,7 +13,7 @@ define i32 @PR22970_i32(i32* nocapture readonly, i32) {
 ;
 ; X64-LABEL: PR22970_i32:
 ; X64:       # BB#0:
-; X64-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
+; X64-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; X64-NEXT:    andl $4095, %esi # imm = 0xFFF
 ; X64-NEXT:    movl 32(%rdi,%rsi,4), %eax
 ; X64-NEXT:    retq

@@ -22,14 +22,14 @@ tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK: Adding MCLOH_AdrpAdrp:
-    ; CHECK-NEXT: %X1<def> = ADRP <ga:@g3>
-    ; CHECK-NEXT: %X1<def> = ADRP <ga:@g4>
+    ; CHECK-NEXT: %x1<def> = ADRP <ga:@g3>
+    ; CHECK-NEXT: %x1<def> = ADRP <ga:@g4>
     ; CHECK-NEXT: Adding MCLOH_AdrpAdrp:
-    ; CHECK-NEXT: %X1<def> = ADRP <ga:@g2>
-    ; CHECK-NEXT: %X1<def> = ADRP <ga:@g3>
+    ; CHECK-NEXT: %x1<def> = ADRP <ga:@g2>
+    ; CHECK-NEXT: %x1<def> = ADRP <ga:@g3>
     ; CHECK-NEXT: Adding MCLOH_AdrpAdrp:
-    ; CHECK-NEXT: %X0<def> = ADRP <ga:@g0>
-    ; CHECK-NEXT: %X0<def> = ADRP <ga:@g1>
+    ; CHECK-NEXT: %x0<def> = ADRP <ga:@g0>
+    ; CHECK-NEXT: %x0<def> = ADRP <ga:@g1>
     %x0 = ADRP target-flags(aarch64-page) @g0
     %x0 = ADRP target-flags(aarch64-page) @g1
     %x1 = ADRP target-flags(aarch64-page) @g2
@@ -38,11 +38,11 @@ body: |
 
   bb.1:
     ; CHECK-NEXT: Adding MCLOH_AdrpAdd:
-    ; CHECK-NEXT: %X20<def> = ADRP <ga:@g0>
-    ; CHECK-NEXT: %X3<def> = ADDXri %X20, <ga:@g0>
+    ; CHECK-NEXT: %x20<def> = ADRP <ga:@g0>
+    ; CHECK-NEXT: %x3<def> = ADDXri %x20, <ga:@g0>
     ; CHECK-NEXT: Adding MCLOH_AdrpAdd:
-    ; CHECK-NEXT: %X1<def> = ADRP <ga:@g0>
-    ; CHECK-NEXT: %X1<def> = ADDXri %X1, <ga:@g0>
+    ; CHECK-NEXT: %x1<def> = ADRP <ga:@g0>
+    ; CHECK-NEXT: %x1<def> = ADDXri %x1, <ga:@g0>
     %x1 = ADRP target-flags(aarch64-page) @g0
     %x9 = SUBXri undef %x11, 5, 0 ; should not affect MCLOH formation
     %x1 = ADDXri %x1, target-flags(aarch64-pageoff) @g0, 0
@@ -73,11 +73,11 @@ body: |
 
   bb.5:
     ; CHECK-NEXT: Adding MCLOH_AdrpLdr:
-    ; CHECK-NEXT: %X5<def> = ADRP <ga:@g2>
-    ; CHECK-NEXT: %S6<def> = LDRSui %X5, <ga:@g2>
+    ; CHECK-NEXT: %x5<def> = ADRP <ga:@g2>
+    ; CHECK-NEXT: %s6<def> = LDRSui %x5, <ga:@g2>
     ; CHECK-NEXT: Adding MCLOH_AdrpLdr:
-    ; CHECK-NEXT: %X4<def> = ADRP <ga:@g2>
-    ; CHECK-NEXT: %X4<def> = LDRXui %X4, <ga:@g2>
+    ; CHECK-NEXT: %x4<def> = ADRP <ga:@g2>
+    ; CHECK-NEXT: %x4<def> = LDRXui %x4, <ga:@g2>
     %x4 = ADRP target-flags(aarch64-page) @g2
     %x4 = LDRXui %x4, target-flags(aarch64-pageoff) @g2
     %x5 = ADRP target-flags(aarch64-page) @g2
@@ -85,11 +85,11 @@ body: |
 
   bb.6:
     ; CHECK-NEXT: Adding MCLOH_AdrpLdrGot:
-    ; CHECK-NEXT: %X5<def> = ADRP <ga:@g2>
-    ; CHECK-NEXT: %X6<def> = LDRXui %X5, <ga:@g2>
+    ; CHECK-NEXT: %x5<def> = ADRP <ga:@g2>
+    ; CHECK-NEXT: %x6<def> = LDRXui %x5, <ga:@g2>
     ; CHECK-NEXT: Adding MCLOH_AdrpLdrGot:
-    ; CHECK-NEXT: %X4<def> = ADRP <ga:@g2>
-    ; CHECK-NEXT: %X4<def> = LDRXui %X4, <ga:@g2>
+    ; CHECK-NEXT: %x4<def> = ADRP <ga:@g2>
+    ; CHECK-NEXT: %x4<def> = LDRXui %x4, <ga:@g2>
     %x4 = ADRP target-flags(aarch64-page, aarch64-got) @g2
     %x4 = LDRXui %x4, target-flags(aarch64-pageoff, aarch64-got) @g2
     %x5 = ADRP target-flags(aarch64-page, aarch64-got) @g2
@@ -104,24 +104,24 @@ body: |
 
   bb.8:
     ; CHECK-NEXT: Adding MCLOH_AdrpAddLdr:
-    ; CHECK-NEXT: %X7<def> = ADRP <ga:@g3>[TF=1]
-    ; CHECK-NEXT: %X8<def> = ADDXri %X7, <ga:@g3>
-    ; CHECK-NEXT: %D1<def> = LDRDui %X8, 8
+    ; CHECK-NEXT: %x7<def> = ADRP <ga:@g3>[TF=1]
+    ; CHECK-NEXT: %x8<def> = ADDXri %x7, <ga:@g3>
+    ; CHECK-NEXT: %d1<def> = LDRDui %x8, 8
     %x7 = ADRP target-flags(aarch64-page) @g3
     %x8 = ADDXri %x7, target-flags(aarch64-pageoff) @g3, 0
     %d1 = LDRDui %x8, 8
 
   bb.9:
     ; CHECK-NEXT: Adding MCLOH_AdrpAdd:
-    ; CHECK-NEXT: %X3<def> = ADRP <ga:@g3>
-    ; CHECK-NEXT: %X3<def> = ADDXri %X3, <ga:@g3>
+    ; CHECK-NEXT: %x3<def> = ADRP <ga:@g3>
+    ; CHECK-NEXT: %x3<def> = ADDXri %x3, <ga:@g3>
     ; CHECK-NEXT: Adding MCLOH_AdrpAdd:
-    ; CHECK-NEXT: %X5<def> = ADRP <ga:@g3>
-    ; CHECK-NEXT: %X2<def> = ADDXri %X5, <ga:@g3>
+    ; CHECK-NEXT: %x5<def> = ADRP <ga:@g3>
+    ; CHECK-NEXT: %x2<def> = ADDXri %x5, <ga:@g3>
     ; CHECK-NEXT: Adding MCLOH_AdrpAddStr:
-    ; CHECK-NEXT: %X1<def> = ADRP <ga:@g3>
-    ; CHECK-NEXT: %X1<def> = ADDXri %X1, <ga:@g3>
-    ; CHECK-NEXT: STRXui %XZR, %X1, 16
+    ; CHECK-NEXT: %x1<def> = ADRP <ga:@g3>
+    ; CHECK-NEXT: %x1<def> = ADDXri %x1, <ga:@g3>
+    ; CHECK-NEXT: STRXui %xzr, %x1, 16
     %x1 = ADRP target-flags(aarch64-page) @g3
     %x1 = ADDXri %x1, target-flags(aarch64-pageoff) @g3, 0
     STRXui %xzr, %x1, 16
@@ -138,12 +138,12 @@ body: |
 
   bb.10:
     ; CHECK-NEXT: Adding MCLOH_AdrpLdr:
-    ; CHECK-NEXT: %X2<def> = ADRP <ga:@g3>
-    ; CHECK-NEXT: %X2<def> = LDRXui %X2, <ga:@g3>
+    ; CHECK-NEXT: %x2<def> = ADRP <ga:@g3>
+    ; CHECK-NEXT: %x2<def> = LDRXui %x2, <ga:@g3>
     ; CHECK-NEXT: Adding MCLOH_AdrpLdrGotLdr:
-    ; CHECK-NEXT: %X1<def> = ADRP <ga:@g4>
-    ; CHECK-NEXT: %X1<def> = LDRXui %X1, <ga:@g4>
-    ; CHECK-NEXT: %X1<def> = LDRXui %X1, 24
+    ; CHECK-NEXT: %x1<def> = ADRP <ga:@g4>
+    ; CHECK-NEXT: %x1<def> = LDRXui %x1, <ga:@g4>
+    ; CHECK-NEXT: %x1<def> = LDRXui %x1, 24
     %x1 = ADRP target-flags(aarch64-page, aarch64-got) @g4
     %x1 = LDRXui %x1, target-flags(aarch64-pageoff, aarch64-got) @g4
     %x1 = LDRXui %x1, 24
@@ -154,12 +154,12 @@ body: |
 
   bb.11:
     ; CHECK-NEXT: Adding MCLOH_AdrpLdr
-    ; CHECK-NEXT: %X5<def> = ADRP <ga:@g1>
-    ; CHECK-NEXT: %X5<def> = LDRXui %X5, <ga:@g1>
+    ; CHECK-NEXT: %x5<def> = ADRP <ga:@g1>
+    ; CHECK-NEXT: %x5<def> = LDRXui %x5, <ga:@g1>
     ; CHECK-NEXT: Adding MCLOH_AdrpLdrGotStr:
-    ; CHECK-NEXT: %X1<def> = ADRP <ga:@g4>
-    ; CHECK-NEXT: %X1<def> = LDRXui %X1, <ga:@g4>
-    ; CHECK-NEXT: STRXui %XZR, %X1, 32
+    ; CHECK-NEXT: %x1<def> = ADRP <ga:@g4>
+    ; CHECK-NEXT: %x1<def> = LDRXui %x1, <ga:@g4>
+    ; CHECK-NEXT: STRXui %xzr, %x1, 32
     %x1 = ADRP target-flags(aarch64-page, aarch64-got) @g4
     %x1 = LDRXui %x1, target-flags(aarch64-pageoff, aarch64-got) @g4
     STRXui %xzr, %x1, 32
@@ -171,9 +171,9 @@ body: |
   bb.12:
     ; CHECK-NOT: MCLOH_AdrpAdrp
     ; CHECK: Adding MCLOH_AdrpAddLdr
-    ; %X9<def> = ADRP <ga:@g4>
-    ; %X9<def> = ADDXri %X9, <ga:@g4>
-    ; %X5<def> = LDRXui %X9, 0
+    ; %x9<def> = ADRP <ga:@g4>
+    ; %x9<def> = ADDXri %x9, <ga:@g4>
+    ; %x5<def> = LDRXui %x9, 0
     %x9 = ADRP target-flags(aarch64-page, aarch64-got) @g4
     %x9 = ADDXri %x9, target-flags(aarch64-pageoff, aarch64-got) @g4, 0
     %x5 = LDRXui %x9, 0

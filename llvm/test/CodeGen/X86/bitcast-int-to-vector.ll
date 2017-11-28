@@ -10,7 +10,7 @@ define i1 @foo(i64 %a) {
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    fucompp
 ; X86-NEXT:    fnstsw %ax
-; X86-NEXT:    # kill: %AH<def> %AH<kill> %AX<kill>
+; X86-NEXT:    # kill: %ah<def> %ah<kill> %ax<kill>
 ; X86-NEXT:    sahf
 ; X86-NEXT:    setp %al
 ; X86-NEXT:    retl

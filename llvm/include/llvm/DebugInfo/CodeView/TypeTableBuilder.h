@@ -1,4 +1,4 @@
-//===- TypeTableBuilder.h ---------------------------------------*- C++ -*-===//
+//===- TypeTableBuilder.h ----------------------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,123 +11,74 @@
 #define LLVM_DEBUGINFO_CODEVIEW_TYPETABLEBUILDER_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/DebugInfo/CodeView/RecordSerialization.h"
+#include "llvm/DebugInfo/CodeView/SimpleTypeSerializer.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
-#include "llvm/DebugInfo/CodeView/TypeSerializer.h"
+#include "llvm/DebugInfo/CodeView/TypeRecordMapping.h"
+#include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/BinaryByteStream.h"
+#include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/Error.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
-#include <type_traits>
+#include <memory>
+#include <vector>
 
 namespace llvm {
 namespace codeview {
 
-class TypeTableBuilder {
-private:
-  TypeIndex handleError(Error EC) const {
-    assert(false && "Couldn't write Type!");
-    consumeError(std::move(EC));
-    return TypeIndex();
-  }
+class ContinuationRecordBuilder;
+class TypeHasher;
 
-  BumpPtrAllocator &Allocator;
-  TypeSerializer Serializer;
+class TypeTableBuilder : public TypeVisitorCallbacks {
+
+  BumpPtrAllocator &RecordStorage;
+  SimpleTypeSerializer SimpleSerializer;
+
+  /// Private type record hashing implementation details are handled here.
+  std::unique_ptr<TypeHasher> Hasher;
+
+  /// Contains a list of all records indexed by TypeIndex.toArrayIndex().
+  SmallVector<ArrayRef<uint8_t>, 2> SeenRecords;
+
+  /// Temporary storage that we use to copy a record's data while re-writing
+  /// its type indices.
+  SmallVector<uint8_t, 256> RemapStorage;
 
 public:
-  explicit TypeTableBuilder(BumpPtrAllocator &Allocator,
-                            bool WriteUnique = true)
-      : Allocator(Allocator), Serializer(Allocator, WriteUnique) {}
-  TypeTableBuilder(const TypeTableBuilder &) = delete;
-  TypeTableBuilder &operator=(const TypeTableBuilder &) = delete;
+  explicit TypeTableBuilder(BumpPtrAllocator &Storage, bool Hash = true);
+  ~TypeTableBuilder() override;
 
-  bool empty() const { return Serializer.records().empty(); }
+  void reset();
 
-  BumpPtrAllocator &getAllocator() const { return Allocator; }
+  bool empty() const { return SeenRecords.empty(); }
 
-  template <typename T> TypeIndex writeKnownType(T &Record) {
-    static_assert(!std::is_same<T, FieldListRecord>::value,
-                  "Can't serialize FieldList!");
+  TypeIndex nextTypeIndex() const;
 
-    CVType Type;
-    Type.Type = static_cast<TypeLeafKind>(Record.getKind());
-    if (auto EC = Serializer.visitTypeBegin(Type))
-      return handleError(std::move(EC));
-    if (auto EC = Serializer.visitKnownRecord(Type, Record))
-      return handleError(std::move(EC));
+  BumpPtrAllocator &getAllocator() { return RecordStorage; }
 
-    auto ExpectedIndex = Serializer.visitTypeEndGetIndex(Type);
-    if (!ExpectedIndex)
-      return handleError(ExpectedIndex.takeError());
+  ArrayRef<ArrayRef<uint8_t>> records() const;
+  TypeIndex insertRecordBytes(ArrayRef<uint8_t> &Record);
+  TypeIndex insertRecord(const RemappedType &Record);
+  TypeIndex insertRecord(ContinuationRecordBuilder &Builder);
 
-    return *ExpectedIndex;
-  }
-
-  TypeIndex writeSerializedRecord(ArrayRef<uint8_t> Record) {
-    return Serializer.insertRecordBytes(Record);
-  }
-
-  TypeIndex writeSerializedRecord(const RemappedType &Record) {
-    return Serializer.insertRecord(Record);
+  template <typename T> TypeIndex writeLeafType(T &Record) {
+    ArrayRef<uint8_t> Data = SimpleSerializer.serialize(Record);
+    return insertRecordBytes(Data);
   }
 
   template <typename TFunc> void ForEachRecord(TFunc Func) {
     uint32_t Index = TypeIndex::FirstNonSimpleIndex;
 
-    for (auto Record : Serializer.records()) {
+    for (auto Record : SeenRecords) {
       Func(TypeIndex(Index), Record);
       ++Index;
     }
-  }
-
-  ArrayRef<ArrayRef<uint8_t>> records() const { return Serializer.records(); }
-};
-
-class FieldListRecordBuilder {
-  TypeTableBuilder &TypeTable;
-  BumpPtrAllocator Allocator;
-  TypeSerializer TempSerializer;
-  CVType Type;
-
-public:
-  explicit FieldListRecordBuilder(TypeTableBuilder &TypeTable)
-      : TypeTable(TypeTable), TempSerializer(Allocator, false) {
-    Type.Type = TypeLeafKind::LF_FIELDLIST;
-  }
-
-  void begin() {
-    TempSerializer.reset();
-
-    if (auto EC = TempSerializer.visitTypeBegin(Type))
-      consumeError(std::move(EC));
-  }
-
-  template <typename T> void writeMemberType(T &Record) {
-    CVMemberRecord CVMR;
-    CVMR.Kind = static_cast<TypeLeafKind>(Record.getKind());
-    if (auto EC = TempSerializer.visitMemberBegin(CVMR))
-      consumeError(std::move(EC));
-    if (auto EC = TempSerializer.visitKnownMember(CVMR, Record))
-      consumeError(std::move(EC));
-    if (auto EC = TempSerializer.visitMemberEnd(CVMR))
-      consumeError(std::move(EC));
-  }
-
-  TypeIndex end(bool Write) {
-    TypeIndex Index;
-    if (auto EC = TempSerializer.visitTypeEnd(Type)) {
-      consumeError(std::move(EC));
-      return TypeIndex();
-    }
-
-    if (Write) {
-      for (auto Record : TempSerializer.records())
-        Index = TypeTable.writeSerializedRecord(Record);
-    }
-
-    return Index;
   }
 };
 

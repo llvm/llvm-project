@@ -1673,7 +1673,7 @@ declare <4 x double> @llvm.x86.avx512.mask.broadcastf64x2.256(<2 x double>, <4 x
 define <4 x double>@test_int_x86_avx512_mask_broadcastf64x2_256(<2 x double> %x0, <4 x double> %x2, i8 %mask) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_broadcastf64x2_256:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    ## kill: %XMM0<def> %XMM0<kill> %YMM0<def>
+; CHECK-NEXT:    ## kill: %xmm0<def> %xmm0<kill> %ymm0<def>
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm2 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x7d,0x18,0xd0,0x01]
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vinsertf64x2 $1, %xmm0, %ymm0, %ymm1 {%k1} ## encoding: [0x62,0xf3,0xfd,0x29,0x18,0xc8,0x01]
@@ -1708,7 +1708,7 @@ declare <4 x i64> @llvm.x86.avx512.mask.broadcasti64x2.256(<2 x i64>, <4 x i64>,
 define <4 x i64>@test_int_x86_avx512_mask_broadcasti64x2_256(<2 x i64> %x0, <4 x i64> %x2, i8 %mask) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_broadcasti64x2_256:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    ## kill: %XMM0<def> %XMM0<kill> %YMM0<def>
+; CHECK-NEXT:    ## kill: %xmm0<def> %xmm0<kill> %ymm0<def>
 ; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm2 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x7d,0x38,0xd0,0x01]
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vinserti64x2 $1, %xmm0, %ymm0, %ymm1 {%k1} ## encoding: [0x62,0xf3,0xfd,0x29,0x38,0xc8,0x01]
@@ -1743,7 +1743,7 @@ declare <8 x float> @llvm.x86.avx512.mask.broadcastf32x2.256(<4 x float>, <8 x f
 define <8 x float>@test_int_x86_avx512_mask_broadcastf32x2_256(<4 x float> %x0, <8 x float> %x2, i8 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_broadcastf32x2_256:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    ## kill: %XMM0<def> %XMM0<kill> %YMM0<def>
+; CHECK-NEXT:    ## kill: %xmm0<def> %xmm0<kill> %ymm0<def>
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm2 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x7d,0x18,0xd0,0x01]
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vinsertf32x4 $1, %xmm0, %ymm0, %ymm1 {%k1} ## encoding: [0x62,0xf3,0x7d,0x29,0x18,0xc8,0x01]
@@ -1764,7 +1764,7 @@ declare <8 x i32> @llvm.x86.avx512.mask.broadcasti32x2.256(<4 x i32>, <8 x i32>,
 define <8 x i32>@test_int_x86_avx512_mask_broadcasti32x2_256(<4 x i32> %x0, <8 x i32> %x2, i8 %x3, i64 * %y_ptr) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_broadcasti32x2_256:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    ## kill: %XMM0<def> %XMM0<kill> %YMM0<def>
+; CHECK-NEXT:    ## kill: %xmm0<def> %xmm0<kill> %ymm0<def>
 ; CHECK-NEXT:    vmovq (%rsi), %xmm2 ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x7e,0x16]
 ; CHECK-NEXT:    ## xmm2 = mem[0],zero
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]

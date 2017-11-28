@@ -14,7 +14,7 @@ define i32 @test_lshr_and(i32 %x) {
 ;
 ; X64-LABEL: test_lshr_and:
 ; X64:       # BB#0:
-; X64-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; X64-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; X64-NEXT:    shrl $2, %edi
 ; X64-NEXT:    andl $3, %edi
 ; X64-NEXT:    movl array(,%rdi,4), %eax
@@ -102,7 +102,7 @@ define i32* @test_exact4(i32 %a, i32 %b, i32* %x)  {
 ;
 ; X64-LABEL: test_exact4:
 ; X64:       # BB#0:
-; X64-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
+; X64-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; X64-NEXT:    subl %edi, %esi
 ; X64-NEXT:    shrl $3, %esi
 ; X64-NEXT:    leaq (%rdx,%rsi,4), %rax
@@ -124,7 +124,7 @@ define i32* @test_exact5(i32 %a, i32 %b, i32* %x)  {
 ;
 ; X64-LABEL: test_exact5:
 ; X64:       # BB#0:
-; X64-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
+; X64-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; X64-NEXT:    subl %edi, %esi
 ; X64-NEXT:    shrl $3, %esi
 ; X64-NEXT:    leaq (%rdx,%rsi,4), %rax
@@ -145,7 +145,7 @@ define i32* @test_exact6(i32 %a, i32 %b, i32* %x)  {
 ;
 ; X64-LABEL: test_exact6:
 ; X64:       # BB#0:
-; X64-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
+; X64-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; X64-NEXT:    subl %edi, %esi
 ; X64-NEXT:    leaq (%rsi,%rdx), %rax
 ; X64-NEXT:    retq

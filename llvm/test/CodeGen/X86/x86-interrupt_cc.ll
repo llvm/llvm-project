@@ -1,7 +1,7 @@
 ; RUN: llc -verify-machineinstrs -mtriple=x86_64-apple-macosx -show-mc-encoding -mattr=+avx512f < %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK64
 ; RUN: llc -verify-machineinstrs -mtriple=i386-apple-macosx -show-mc-encoding -mattr=+avx512f < %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK32
 
-; Make sure we spill the high numbered ZMM registers and K registers with the right encoding.
+; Make sure we spill the high numbered zmm registers and K registers with the right encoding.
 ; CHECK-LABEL: foo
 ; CHECK: kmovq %k7, {{.+}}
 ; CHECK64:      encoding: [0xc4,0xe1,0xf8,0x91,0xbc,0x24,0x68,0x08,0x00,0x00]

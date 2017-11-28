@@ -1991,9 +1991,9 @@ unsigned PPCFastISel::PPCMaterializeGV(const GlobalValue *GV, MVT VT) {
     // or externally available linkage, a non-local function address, or a
     // jump table address (not yet needed), or if we are generating code
     // for large code model, we generate:
-    //       LDtocL(GV, ADDIStocHA(%X2, GV))
+    //       LDtocL(GV, ADDIStocHA(%x2, GV))
     // Otherwise we generate:
-    //       ADDItocL(ADDIStocHA(%X2, GV), GV)
+    //       ADDItocL(ADDIStocHA(%x2, GV), GV)
     // Either way, start with the ADDIStocHA:
     unsigned HighPartReg = createResultReg(RC);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(PPC::ADDIStocHA),

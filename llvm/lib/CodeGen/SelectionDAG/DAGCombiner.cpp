@@ -8638,7 +8638,7 @@ SDValue DAGCombiner::CombineConsecutiveLoads(SDNode *N, EVT VT) {
       LD1->getAddressSpace() != LD2->getAddressSpace())
     return SDValue();
   EVT LD1VT = LD1->getValueType(0);
-  unsigned LD1Bytes = LD1VT.getSizeInBits() / 8;
+  unsigned LD1Bytes = LD1VT.getStoreSize();
   if (ISD::isNON_EXTLoad(LD2) && LD2->hasOneUse() &&
       DAG.areNonVolatileConsecutiveLoads(LD2, LD1, LD1Bytes, 1)) {
     unsigned Align = LD1->getAlignment();
@@ -12621,8 +12621,8 @@ bool DAGCombiner::MergeStoresOfConstantsOrVecElts(
   // The latest Node in the DAG.
   SDLoc DL(StoreNodes[0].MemNode);
 
-  int64_t ElementSizeBytes = MemVT.getSizeInBits() / 8;
-  unsigned SizeInBits = NumStores * ElementSizeBytes * 8;
+  int64_t ElementSizeBits = MemVT.getStoreSizeInBits();
+  unsigned SizeInBits = NumStores * ElementSizeBits;
   unsigned NumMemElts = MemVT.isVector() ? MemVT.getVectorNumElements() : 1;
 
   EVT StoreTy;
@@ -12644,17 +12644,17 @@ bool DAGCombiner::MergeStoresOfConstantsOrVecElts(
         if (MemVT != Val.getValueType()) {
           Val = peekThroughBitcast(Val);
           // Deal with constants of wrong size.
-          if (ElementSizeBytes * 8 != Val.getValueSizeInBits()) {
+          if (ElementSizeBits != Val.getValueSizeInBits()) {
             EVT IntMemVT =
                 EVT::getIntegerVT(*DAG.getContext(), MemVT.getSizeInBits());
             if (auto *CFP = dyn_cast<ConstantFPSDNode>(Val))
               Val = DAG.getConstant(
                   CFP->getValueAPF().bitcastToAPInt().zextOrTrunc(
-                      8 * ElementSizeBytes),
+                      ElementSizeBits),
                   SDLoc(CFP), IntMemVT);
             else if (auto *C = dyn_cast<ConstantSDNode>(Val))
               Val = DAG.getConstant(
-                  C->getAPIntValue().zextOrTrunc(8 * ElementSizeBytes),
+                  C->getAPIntValue().zextOrTrunc(ElementSizeBits),
                   SDLoc(C), IntMemVT);
           }
           // Make sure correctly size type is the correct type.
@@ -12716,7 +12716,7 @@ bool DAGCombiner::MergeStoresOfConstantsOrVecElts(
       StoreSDNode *St  = cast<StoreSDNode>(StoreNodes[Idx].MemNode);
 
       SDValue Val = St->getValue();
-      StoreInt <<= ElementSizeBytes * 8;
+      StoreInt <<= ElementSizeBits;
       if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Val)) {
         StoreInt |= C->getAPIntValue().zextOrTrunc(SizeInBits);
       } else if (ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Val)) {
@@ -12914,7 +12914,7 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
     return false;
 
   EVT MemVT = St->getMemoryVT();
-  int64_t ElementSizeBytes = MemVT.getSizeInBits() / 8;
+  int64_t ElementSizeBytes = MemVT.getStoreSize();
   unsigned NumMemElts = MemVT.isVector() ? MemVT.getVectorNumElements() : 1;
 
   if (MemVT.getSizeInBits() * 2 > MaximumLegalStoreInBits)

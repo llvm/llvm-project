@@ -12,7 +12,6 @@
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeRecordMapping.h"
-#include "llvm/DebugInfo/CodeView/TypeSerializer.h"
 #include "llvm/DebugInfo/CodeView/TypeTableBuilder.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
@@ -108,7 +107,7 @@ public:
       Stream << "Array [" << I << "]";
       AR.Name = GlobalState->Strings.save(Stream.str());
       GlobalState->Records.push_back(AR);
-      GlobalState->Indices.push_back(Builder.writeKnownType(AR));
+      GlobalState->Indices.push_back(Builder.writeLeafType(AR));
 
       CVType Type(TypeLeafKind::LF_ARRAY, Builder.records().back());
       GlobalState->TypeVector.push_back(Type);
@@ -363,13 +362,13 @@ TEST_F(RandomAccessVisitorTest, CrossChunkName) {
   Class.DerivationList = TypeIndex::fromArrayIndex(0);
   Class.FieldList = TypeIndex::fromArrayIndex(0);
   Class.VTableShape = TypeIndex::fromArrayIndex(0);
-  TypeIndex IndexZero = Builder.writeKnownType(Class);
+  TypeIndex IndexZero = Builder.writeLeafType(Class);
 
   // TypeIndex 1 refers to type index 0.
   ModifierRecord Modifier(TypeRecordKind::Modifier);
   Modifier.ModifiedType = TypeIndex::fromArrayIndex(0);
   Modifier.Modifiers = ModifierOptions::Const;
-  TypeIndex IndexOne = Builder.writeKnownType(Modifier);
+  TypeIndex IndexOne = Builder.writeLeafType(Modifier);
 
   // set up a type stream that refers to the above two serialized records.
   std::vector<CVType> TypeArray;

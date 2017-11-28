@@ -84,7 +84,7 @@ define i16 @test_zext_cmp3(i16 %a, i16 %b) {
 ; ALL-NEXT:    sete %cl
 ; ALL-NEXT:    orb %al, %cl
 ; ALL-NEXT:    movzbl %cl, %eax
-; ALL-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; ALL-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; ALL-NEXT:    retq
   %cmp = icmp eq i16 %a, 0
   %cmp1 = icmp eq i16 %b, 0
@@ -128,7 +128,7 @@ define i32 @test_zext_cmp5(i64 %a, i64 %b) {
 ; FASTLZCNT-NEXT:    lzcntq %rsi, %rax
 ; FASTLZCNT-NEXT:    orl %ecx, %eax
 ; FASTLZCNT-NEXT:    shrl $6, %eax
-; FASTLZCNT-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
+; FASTLZCNT-NEXT:    # kill: %eax<def> %eax<kill> %rax<kill>
 ; FASTLZCNT-NEXT:    retq
 ;
 ; NOFASTLZCNT-LABEL: test_zext_cmp5:
@@ -267,7 +267,7 @@ define i32 @test_zext_cmp9(i32 %a, i64 %b) {
 ; FASTLZCNT-NEXT:    shrl $5, %ecx
 ; FASTLZCNT-NEXT:    shrl $6, %eax
 ; FASTLZCNT-NEXT:    orl %ecx, %eax
-; FASTLZCNT-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
+; FASTLZCNT-NEXT:    # kill: %eax<def> %eax<kill> %rax<kill>
 ; FASTLZCNT-NEXT:    retq
 ;
 ; NOFASTLZCNT-LABEL: test_zext_cmp9:

@@ -42,10 +42,10 @@ if.end4:                                          ; preds = %if.end
 if.then6:                                         ; preds = %if.end4
   %call7 = tail call fastcc signext i32 @call3(i32 signext %a, i32 signext %b, i32 signext %c)
   br label %return
-; No duplication here because the calling convention mismatch means we won't tail-call
+; tail calling a fastcc function from a ccc function is supported.
 ; CHECK_LABEL: if.then13:
-; CHECK:       tail call fastcc signext i32 @call3
-; CHECK-NEXT:  br
+; CHECK:       %[[T2:[a-zA-Z0-9]+]] = tail call fastcc signext i32 @call3
+; CHECK-NEXT:  ret i32 %[[T2]]
 
 return:                                           ; preds = %if.end4, %if.then6, %if.then2, %if.then
   %retval.0 = phi i32 [ %call, %if.then ], [ %call3, %if.then2 ], [ %call7, %if.then6 ], [ %c, %if.end4 ]

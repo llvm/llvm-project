@@ -102,7 +102,7 @@ define void @float_call_signbit(double %n) {
 ; CHECK:       ## BB#0: ## %entry
 ; CHECK-NEXT:    movq %xmm0, %rdi
 ; CHECK-NEXT:    shrq $63, %rdi
-; CHECK-NEXT:    ## kill: %EDI<def> %EDI<kill> %RDI<kill>
+; CHECK-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<kill>
 ; CHECK-NEXT:    jmp _float_call_signbit_callee ## TAILCALL
 entry:
   %t0 = bitcast double %n to i64

@@ -356,6 +356,28 @@ define i64 @test_pmulhrw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 }
 declare x86_mmx @llvm.x86.3dnow.pmulhrw(x86_mmx, x86_mmx) nounwind readnone
 
+define void @test_prefetch(i8* %a0) optsize {
+; CHECK-LABEL: test_prefetch:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    prefetch (%rdi) # sched: [5:0.50]
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    retq # sched: [1:1.00]
+  tail call void asm sideeffect "prefetch $0", "*m"(i8 *%a0) nounwind
+  ret void
+}
+
+define void @test_prefetchw(i8* %a0) optsize {
+; CHECK-LABEL: test_prefetchw:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    prefetchw (%rdi) # sched: [5:0.50]
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    retq # sched: [1:1.00]
+  tail call void asm sideeffect "prefetchw $0", "*m"(i8 *%a0) nounwind
+  ret void
+}
+
 define i64 @test_pswapd(x86_mmx* %a0) optsize {
 ; CHECK-LABEL: test_pswapd:
 ; CHECK:       # BB#0:

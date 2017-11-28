@@ -60,11 +60,11 @@ namespace llvm {
 /// expands to the following machine code:
 ///
 /// BB#0: derived from LLVM BB %entry
-///    Live Ins: %F1 %F3 %X6
+///    Live Ins: %f1 %f3 %x6
 ///        <SNIP1>
-///        %vreg0<def> = COPY %F1; F8RC:%vreg0
+///        %vreg0<def> = COPY %f1; F8RC:%vreg0
 ///        %vreg5<def> = CMPLWI %vreg4<kill>, 0; CRRC:%vreg5 GPRC:%vreg4
-///        %vreg8<def> = LXSDX %ZERO8, %vreg7<kill>, %RM<imp-use>;
+///        %vreg8<def> = LXSDX %zero8, %vreg7<kill>, %rm<imp-use>;
 ///                    mem:LD8[ConstantPool] F8RC:%vreg8 G8RC:%vreg7
 ///        BCC 76, %vreg5, <BB#2>; CRRC:%vreg5
 ///    Successors according to CFG: BB#1(?%) BB#2(?%)
@@ -90,7 +90,7 @@ namespace llvm {
 ///        %vreg13<def> = PHI %vreg12, <BB#3>, %vreg2, <BB#2>;
 ///                     F8RC:%vreg13,%vreg12,%vreg2
 ///        <SNIP3>
-///        BLR8 %LR8<imp-use>, %RM<imp-use>, %F1<imp-use>
+///        BLR8 %lr8<imp-use>, %rm<imp-use>, %f1<imp-use>
 ///
 /// When this pattern is detected, branch coalescing will try to collapse
 /// it by moving code in BB#2 to BB#0 and/or BB#4 and removing BB#3.
@@ -98,11 +98,11 @@ namespace llvm {
 /// If all conditions are meet, IR should collapse to:
 ///
 /// BB#0: derived from LLVM BB %entry
-///    Live Ins: %F1 %F3 %X6
+///    Live Ins: %f1 %f3 %x6
 ///        <SNIP1>
-///        %vreg0<def> = COPY %F1; F8RC:%vreg0
+///        %vreg0<def> = COPY %f1; F8RC:%vreg0
 ///        %vreg5<def> = CMPLWI %vreg4<kill>, 0; CRRC:%vreg5 GPRC:%vreg4
-///        %vreg8<def> = LXSDX %ZERO8, %vreg7<kill>, %RM<imp-use>;
+///        %vreg8<def> = LXSDX %zero8, %vreg7<kill>, %rm<imp-use>;
 ///                     mem:LD8[ConstantPool] F8RC:%vreg8 G8RC:%vreg7
 ///        <SNIP2>
 ///        BCC 76, %vreg5, <BB#4>; CRRC:%vreg5
@@ -120,7 +120,7 @@ namespace llvm {
 ///        %vreg13<def> = PHI %vreg12, <BB#1>, %vreg2, <BB#0>;
 ///                     F8RC:%vreg13,%vreg12,%vreg2
 ///        <SNIP3>
-///        BLR8 %LR8<imp-use>, %RM<imp-use>, %F1<imp-use>
+///        BLR8 %lr8<imp-use>, %rm<imp-use>, %f1<imp-use>
 ///
 /// Branch Coalescing does not split blocks, it moves everything in the same
 /// direction ensuring it does not break use/definition semantics.

@@ -20,12 +20,12 @@
 //     ...
 //     %vreg16<def> = NOT_p %vreg15<kill>
 //     ...
-//     JMP_c %vreg16<kill>, <BB#1>, %PC<imp-def,dead>
+//     JMP_c %vreg16<kill>, <BB#1>, %pc<imp-def,dead>
 //
 //     Into
 //     %vreg15<def> = CMPGTrr %vreg6, %vreg2;
 //     ...
-//     JMP_cNot %vreg15<kill>, <BB#1>, %PC<imp-def,dead>;
+//     JMP_cNot %vreg15<kill>, <BB#1>, %pc<imp-def,dead>;
 //
 // Note: The peephole pass makes the instrucstions like
 // %vreg170<def> = SXTW %vreg166 or %vreg16<def> = NOT_p %vreg15<kill>

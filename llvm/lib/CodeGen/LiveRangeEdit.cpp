@@ -465,7 +465,7 @@ LiveRangeEdit::calculateRegClassAndHint(MachineFunction &MF,
     if (MRI.recomputeRegClass(LI.reg))
       DEBUG({
         const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-        dbgs() << "Inflated " << PrintReg(LI.reg) << " to "
+        dbgs() << "Inflated " << printReg(LI.reg) << " to "
                << TRI->getRegClassName(MRI.getRegClass(LI.reg)) << '\n';
       });
     VRAI.calculateSpillWeightAndHint(LI);

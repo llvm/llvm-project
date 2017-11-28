@@ -20,6 +20,7 @@
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
+#include "llvm/DebugInfo/CodeView/ContinuationRecordBuilder.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeTableBuilder.h"
@@ -82,7 +83,7 @@ struct LeafRecordBase {
   virtual ~LeafRecordBase() = default;
 
   virtual void map(yaml::IO &io) = 0;
-  virtual CVType toCodeViewRecord(TypeTableBuilder &TTB) const = 0;
+  virtual CVType toCodeViewRecord(TypeTableBuilder &TS) const = 0;
   virtual Error fromCodeViewRecord(CVType Type) = 0;
 };
 
@@ -96,9 +97,9 @@ template <typename T> struct LeafRecordImpl : public LeafRecordBase {
     return TypeDeserializer::deserializeAs<T>(Type, Record);
   }
 
-  CVType toCodeViewRecord(TypeTableBuilder &TTB) const override {
-    TTB.writeKnownType(Record);
-    return CVType(Kind, TTB.records().back());
+  CVType toCodeViewRecord(TypeTableBuilder &TS) const override {
+    TS.writeLeafType(Record);
+    return CVType(Kind, TS.records().back());
   }
 
   mutable T Record;
@@ -108,7 +109,7 @@ template <> struct LeafRecordImpl<FieldListRecord> : public LeafRecordBase {
   explicit LeafRecordImpl(TypeLeafKind K) : LeafRecordBase(K) {}
 
   void map(yaml::IO &io) override;
-  CVType toCodeViewRecord(TypeTableBuilder &TTB) const override;
+  CVType toCodeViewRecord(TypeTableBuilder &TS) const override;
   Error fromCodeViewRecord(CVType Type) override;
 
   std::vector<MemberRecord> Members;
@@ -121,7 +122,7 @@ struct MemberRecordBase {
   virtual ~MemberRecordBase() = default;
 
   virtual void map(yaml::IO &io) = 0;
-  virtual void writeTo(FieldListRecordBuilder &FLRB) = 0;
+  virtual void writeTo(ContinuationRecordBuilder &CRB) = 0;
 };
 
 template <typename T> struct MemberRecordImpl : public MemberRecordBase {
@@ -130,8 +131,8 @@ template <typename T> struct MemberRecordImpl : public MemberRecordBase {
 
   void map(yaml::IO &io) override;
 
-  void writeTo(FieldListRecordBuilder &FLRB) override {
-    FLRB.writeMemberType(Record);
+  void writeTo(ContinuationRecordBuilder &CRB) override {
+    CRB.writeMemberType(Record);
   }
 
   mutable T Record;
@@ -489,14 +490,14 @@ Error LeafRecordImpl<FieldListRecord>::fromCodeViewRecord(CVType Type) {
 }
 
 CVType
-LeafRecordImpl<FieldListRecord>::toCodeViewRecord(TypeTableBuilder &TTB) const {
-  FieldListRecordBuilder FLRB(TTB);
-  FLRB.begin();
+LeafRecordImpl<FieldListRecord>::toCodeViewRecord(TypeTableBuilder &TS) const {
+  ContinuationRecordBuilder CRB;
+  CRB.begin(ContinuationRecordKind::FieldList);
   for (const auto &Member : Members) {
-    Member.Member->writeTo(FLRB);
+    Member.Member->writeTo(CRB);
   }
-  FLRB.end(true);
-  return CVType(Kind, TTB.records().back());
+  TS.insertRecord(CRB);
+  return CVType(Kind, TS.records().back());
 }
 
 void MappingTraits<OneMethodRecord>::mapping(IO &io, OneMethodRecord &Record) {
@@ -681,13 +682,8 @@ Expected<LeafRecord> LeafRecord::fromCodeViewRecord(CVType Type) {
   return make_error<CodeViewError>(cv_error_code::corrupt_record);
 }
 
-CVType LeafRecord::toCodeViewRecord(BumpPtrAllocator &Alloc) const {
-  TypeTableBuilder TTB(Alloc);
-  return Leaf->toCodeViewRecord(TTB);
-}
-
-CVType LeafRecord::toCodeViewRecord(TypeTableBuilder &TTB) const {
-  return Leaf->toCodeViewRecord(TTB);
+CVType LeafRecord::toCodeViewRecord(TypeTableBuilder &Serializer) const {
+  return Leaf->toCodeViewRecord(Serializer);
 }
 
 namespace llvm {
@@ -786,10 +782,10 @@ llvm::CodeViewYAML::fromDebugT(ArrayRef<uint8_t> DebugT) {
 
 ArrayRef<uint8_t> llvm::CodeViewYAML::toDebugT(ArrayRef<LeafRecord> Leafs,
                                                BumpPtrAllocator &Alloc) {
-  TypeTableBuilder TTB(Alloc, false);
+  TypeTableBuilder TS(Alloc, false);
   uint32_t Size = sizeof(uint32_t);
   for (const auto &Leaf : Leafs) {
-    CVType T = Leaf.toCodeViewRecord(TTB);
+    CVType T = Leaf.Leaf->toCodeViewRecord(TS);
     Size += T.length();
     assert(T.length() % 4 == 0 && "Improper type record alignment!");
   }
@@ -798,7 +794,7 @@ ArrayRef<uint8_t> llvm::CodeViewYAML::toDebugT(ArrayRef<LeafRecord> Leafs,
   BinaryStreamWriter Writer(Output, support::little);
   ExitOnError Err("Error writing type record to .debug$T section");
   Err(Writer.writeInteger<uint32_t>(COFF::DEBUG_SECTION_MAGIC));
-  for (const auto &R : TTB.records()) {
+  for (const auto &R : TS.records()) {
     Err(Writer.writeBytes(R));
   }
   assert(Writer.bytesRemaining() == 0 && "Didn't write all type record bytes!");

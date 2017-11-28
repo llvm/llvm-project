@@ -64,7 +64,7 @@ define void @foo() {
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    divl %ecx
-; X64-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<def>
+; X64-NEXT:    # kill: %eax<def> %eax<kill> %rax<def>
 ; X64-NEXT:  .LBB0_3:
 ; X64-NEXT:    testq %rax, %rax
 ; X64-NEXT:    setne -{{[0-9]+}}(%rsp)

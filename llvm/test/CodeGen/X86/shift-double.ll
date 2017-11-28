@@ -278,7 +278,7 @@ define i32 @test11(i32 %hi, i32 %lo, i32 %bits) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    andl $31, %ecx
-; X86-NEXT:    # kill: %CL<def> %CL<kill> %ECX<kill>
+; X86-NEXT:    # kill: %cl<def> %cl<kill> %ecx<kill>
 ; X86-NEXT:    shldl %cl, %edx, %eax
 ; X86-NEXT:    retl
 ;
@@ -304,7 +304,7 @@ define i32 @test12(i32 %hi, i32 %lo, i32 %bits) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    andl $31, %ecx
-; X86-NEXT:    # kill: %CL<def> %CL<kill> %ECX<kill>
+; X86-NEXT:    # kill: %cl<def> %cl<kill> %ecx<kill>
 ; X86-NEXT:    shrdl %cl, %edx, %eax
 ; X86-NEXT:    retl
 ;

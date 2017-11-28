@@ -107,9 +107,10 @@ static Function *CreateWrapper(Function *F, FunctionType *Ty) {
   // Determine what arguments to pass.
   SmallVector<Value *, 4> Args;
   Function::arg_iterator AI = Wrapper->arg_begin();
+  Function::arg_iterator AE = Wrapper->arg_end();
   FunctionType::param_iterator PI = F->getFunctionType()->param_begin();
   FunctionType::param_iterator PE = F->getFunctionType()->param_end();
-  for (; AI != Wrapper->arg_end() && PI != PE; ++AI, ++PI) {
+  for (; AI != AE && PI != PE; ++AI, ++PI) {
     if (AI->getType() != *PI) {
       Wrapper->eraseFromParent();
       return nullptr;
@@ -118,6 +119,9 @@ static Function *CreateWrapper(Function *F, FunctionType *Ty) {
   }
   for (; PI != PE; ++PI)
     Args.push_back(UndefValue::get(*PI));
+  if (F->isVarArg())
+    for (; AI != AE; ++AI)
+      Args.push_back(&*AI);
 
   CallInst *Call = CallInst::Create(F, Args, "", BB);
 
@@ -156,11 +160,6 @@ bool FixFunctionBitcasts::runOnModule(Module &M) {
     // to be later casted to something else, we can't generate a wrapper for it.
     // Just ignore such casts for now.
     if (!Ty)
-      continue;
-
-    // Wasm varargs are not ABI-compatible with non-varargs. Just ignore
-    // such casts for now.
-    if (Ty->isVarArg() || F->isVarArg())
       continue;
 
     auto Pair = Wrappers.insert(std::make_pair(std::make_pair(F, Ty), nullptr));

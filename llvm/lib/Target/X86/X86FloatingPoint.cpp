@@ -516,7 +516,7 @@ void FPS::setupBlockStack() {
 
   // Push the fixed live-in registers.
   for (unsigned i = Bundle.FixCount; i > 0; --i) {
-    DEBUG(dbgs() << "Live-in st(" << (i-1) << "): %FP"
+    DEBUG(dbgs() << "Live-in st(" << (i-1) << "): %fp"
                  << unsigned(Bundle.FixStack[i-1]) << '\n');
     pushReg(Bundle.FixStack[i-1]);
   }
@@ -893,7 +893,7 @@ void FPS::adjustLiveRegs(unsigned Mask, MachineBasicBlock::iterator I) {
   while (Kills && Defs) {
     unsigned KReg = countTrailingZeros(Kills);
     unsigned DReg = countTrailingZeros(Defs);
-    DEBUG(dbgs() << "Renaming %FP" << KReg << " as imp %FP" << DReg << "\n");
+    DEBUG(dbgs() << "Renaming %fp" << KReg << " as imp %fp" << DReg << "\n");
     std::swap(Stack[getSlot(KReg)], Stack[getSlot(DReg)]);
     std::swap(RegMap[KReg], RegMap[DReg]);
     Kills &= ~(1 << KReg);
@@ -907,7 +907,7 @@ void FPS::adjustLiveRegs(unsigned Mask, MachineBasicBlock::iterator I) {
       unsigned KReg = getStackEntry(0);
       if (!(Kills & (1 << KReg)))
         break;
-      DEBUG(dbgs() << "Popping %FP" << KReg << "\n");
+      DEBUG(dbgs() << "Popping %fp" << KReg << "\n");
       popStackAfter(I2);
       Kills &= ~(1 << KReg);
     }
@@ -916,7 +916,7 @@ void FPS::adjustLiveRegs(unsigned Mask, MachineBasicBlock::iterator I) {
   // Manually kill the rest.
   while (Kills) {
     unsigned KReg = countTrailingZeros(Kills);
-    DEBUG(dbgs() << "Killing %FP" << KReg << "\n");
+    DEBUG(dbgs() << "Killing %fp" << KReg << "\n");
     freeStackSlotBefore(I, KReg);
     Kills &= ~(1 << KReg);
   }
@@ -924,7 +924,7 @@ void FPS::adjustLiveRegs(unsigned Mask, MachineBasicBlock::iterator I) {
   // Load zeros for all the imp-defs.
   while(Defs) {
     unsigned DReg = countTrailingZeros(Defs);
-    DEBUG(dbgs() << "Defining %FP" << DReg << " as 0\n");
+    DEBUG(dbgs() << "Defining %fp" << DReg << " as 0\n");
     BuildMI(*MBB, I, DebugLoc(), TII->get(X86::LD_F0));
     pushReg(DReg);
     Defs &= ~(1 << DReg);

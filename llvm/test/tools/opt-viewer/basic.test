@@ -1,0 +1,9 @@
+# Since we're performing a full compare of the generate HTML files disable
+# syntax highlighting; pygments generates slightly different code with
+# different versions.
+
+RUN: %opt-viewer -s %p/Inputs -o %t %p/Inputs/basic/or.yaml --no-highlight
+RUN: diff %p/Outputs/basic/index.html %t/index.html
+RUN: diff %p/Outputs/basic/basic_or.h.html %t/basic_or.h.html
+RUN: diff %p/Outputs/basic/basic_or.c.html %t/basic_or.c.html
+RUN: ls %t/style.css

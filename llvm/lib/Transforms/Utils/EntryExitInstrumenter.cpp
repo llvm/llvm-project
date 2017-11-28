@@ -10,6 +10,7 @@
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
@@ -19,7 +20,7 @@
 using namespace llvm;
 
 static void insertCall(Function &CurFn, StringRef Func,
-                       Instruction *InsertionPt) {
+                       Instruction *InsertionPt, DebugLoc DL) {
   Module &M = *InsertionPt->getParent()->getParent()->getParent();
   LLVMContext &C = InsertionPt->getParent()->getContext();
 
@@ -32,7 +33,8 @@ static void insertCall(Function &CurFn, StringRef Func,
       Func == "_mcount" ||
       Func == "__cyg_profile_func_enter_bare") {
     Constant *Fn = M.getOrInsertFunction(Func, Type::getVoidTy(C));
-    CallInst::Create(Fn, "", InsertionPt);
+    CallInst *Call = CallInst::Create(Fn, "", InsertionPt);
+    Call->setDebugLoc(DL);
     return;
   }
 
@@ -46,11 +48,14 @@ static void insertCall(Function &CurFn, StringRef Func,
         Intrinsic::getDeclaration(&M, Intrinsic::returnaddress),
         ArrayRef<Value *>(ConstantInt::get(Type::getInt32Ty(C), 0)), "",
         InsertionPt);
+    RetAddr->setDebugLoc(DL);
 
     Value *Args[] = {ConstantExpr::getBitCast(&CurFn, Type::getInt8PtrTy(C)),
                      RetAddr};
 
-    CallInst::Create(Fn, ArrayRef<Value *>(Args), "", InsertionPt);
+    CallInst *Call =
+        CallInst::Create(Fn, ArrayRef<Value *>(Args), "", InsertionPt);
+    Call->setDebugLoc(DL);
     return;
   }
 
@@ -76,7 +81,11 @@ static bool runOnFunction(Function &F, bool PostInlining) {
   // run later for some reason.
 
   if (!EntryFunc.empty()) {
-    insertCall(F, EntryFunc, &*F.begin()->getFirstInsertionPt());
+    DebugLoc DL;
+    if (auto SP = F.getSubprogram())
+      DL = DebugLoc::get(SP->getScopeLine(), 0, SP);
+
+    insertCall(F, EntryFunc, &*F.begin()->getFirstInsertionPt(), DL);
     Changed = true;
     F.removeAttribute(AttributeList::FunctionIndex, EntryAttr);
   }
@@ -84,8 +93,14 @@ static bool runOnFunction(Function &F, bool PostInlining) {
   if (!ExitFunc.empty()) {
     for (BasicBlock &BB : F) {
       TerminatorInst *T = BB.getTerminator();
+      DebugLoc DL;
+      if (DebugLoc TerminatorDL = T->getDebugLoc())
+        DL = TerminatorDL;
+      else if (auto SP = F.getSubprogram())
+        DL = DebugLoc::get(0, 0, SP);
+
       if (isa<ReturnInst>(T)) {
-        insertCall(F, ExitFunc, T);
+        insertCall(F, ExitFunc, T, DL);
         Changed = true;
       }
     }

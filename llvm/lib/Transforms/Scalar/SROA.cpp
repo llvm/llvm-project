@@ -4134,6 +4134,15 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
                  "new fragment is outside of original fragment");
           Start -= OrigFragment->OffsetInBits;
         }
+
+        // The alloca may be larger than the variable.
+        if (VarSize) {
+          if (Size > *VarSize)
+            Size = *VarSize;
+          if (Size == 0 || Start + Size > *VarSize)
+            continue;
+        }
+
         // Avoid creating a fragment expression that covers the entire variable.
         if (!VarSize || *VarSize != Size) {
           if (auto E =

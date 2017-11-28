@@ -1208,7 +1208,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
 
   DEBUG(dbgs() << "*** determineCalleeSaves\nUsed CSRs:";
         for (unsigned Reg : SavedRegs.set_bits())
-          dbgs() << ' ' << PrintReg(Reg, RegInfo);
+          dbgs() << ' ' << printReg(Reg, RegInfo);
         dbgs() << "\n";);
 
   // If any callee-saved registers are used, the frame cannot be eliminated.
@@ -1233,7 +1233,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   // here.
   if (BigStack) {
     if (!ExtraCSSpill && UnspilledCSGPR != AArch64::NoRegister) {
-      DEBUG(dbgs() << "Spilling " << PrintReg(UnspilledCSGPR, RegInfo)
+      DEBUG(dbgs() << "Spilling " << printReg(UnspilledCSGPR, RegInfo)
             << " to get a scratch register.\n");
       SavedRegs.set(UnspilledCSGPR);
       // MachO's compact unwind format relies on all registers being stored in

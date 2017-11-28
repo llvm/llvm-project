@@ -20,7 +20,7 @@ define i64 @Test_get_quotient(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    divl %esi
-; CHECK-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<def>
+; CHECK-NEXT:    # kill: %eax<def> %eax<kill> %rax<def>
 ; CHECK-NEXT:    retq
   %result = sdiv i64 %a, %b
   ret i64 %result
@@ -43,7 +43,7 @@ define i64 @Test_get_remainder(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    divl %esi
-; CHECK-NEXT:    # kill: %EDX<def> %EDX<kill> %RDX<def>
+; CHECK-NEXT:    # kill: %edx<def> %edx<kill> %rdx<def>
 ; CHECK-NEXT:    movq %rdx, %rax
 ; CHECK-NEXT:    retq
   %result = srem i64 %a, %b
@@ -67,8 +67,8 @@ define i64 @Test_get_quotient_and_remainder(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    divl %esi
-; CHECK-NEXT:    # kill: %EDX<def> %EDX<kill> %RDX<def>
-; CHECK-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<def>
+; CHECK-NEXT:    # kill: %edx<def> %edx<kill> %rdx<def>
+; CHECK-NEXT:    # kill: %eax<def> %eax<kill> %rax<def>
 ; CHECK-NEXT:    addq %rdx, %rax
 ; CHECK-NEXT:    retq
   %resultdiv = sdiv i64 %a, %b

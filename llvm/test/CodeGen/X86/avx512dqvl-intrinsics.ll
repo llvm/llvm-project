@@ -560,7 +560,7 @@ define i8 @test_int_x86_avx512_mask_fpclass_ps_128(<4 x float> %x0, i8 %x1) {
 ; CHECK-NEXT:    vfpclassps $4, %xmm0, %k0 ## encoding: [0x62,0xf3,0x7d,0x08,0x66,0xc0,0x04]
 ; CHECK-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
 ; CHECK-NEXT:    addb %cl, %al ## encoding: [0x00,0xc8]
-; CHECK-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
+; CHECK-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call i8 @llvm.x86.avx512.mask.fpclass.ps.128(<4 x float> %x0, i32 2, i8 %x1)
   %res1 = call i8 @llvm.x86.avx512.mask.fpclass.ps.128(<4 x float> %x0, i32 4, i8 -1)
@@ -579,7 +579,7 @@ define i8 @test_int_x86_avx512_mask_fpclass_ps_256(<8 x float> %x0, i8 %x1) {
 ; CHECK-NEXT:    vfpclassps $4, %ymm0, %k0 ## encoding: [0x62,0xf3,0x7d,0x28,0x66,0xc0,0x04]
 ; CHECK-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
 ; CHECK-NEXT:    addb %cl, %al ## encoding: [0x00,0xc8]
-; CHECK-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
+; CHECK-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call i8 @llvm.x86.avx512.mask.fpclass.ps.256(<8 x float> %x0, i32 2, i8 %x1)
   %res1 = call i8 @llvm.x86.avx512.mask.fpclass.ps.256(<8 x float> %x0, i32 4, i8 -1)
@@ -598,7 +598,7 @@ define i8 @test_int_x86_avx512_mask_fpclass_pd_128(<2 x double> %x0, i8 %x1) {
 ; CHECK-NEXT:    vfpclasspd $2, %xmm0, %k0 ## encoding: [0x62,0xf3,0xfd,0x08,0x66,0xc0,0x02]
 ; CHECK-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
 ; CHECK-NEXT:    addb %cl, %al ## encoding: [0x00,0xc8]
-; CHECK-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
+; CHECK-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res =  call i8 @llvm.x86.avx512.mask.fpclass.pd.128(<2 x double> %x0, i32 4, i8 %x1)
   %res1 = call i8 @llvm.x86.avx512.mask.fpclass.pd.128(<2 x double> %x0, i32 2, i8 -1)
@@ -617,7 +617,7 @@ define i8 @test_int_x86_avx512_mask_fpclass_pd_256(<4 x double> %x0, i8 %x1) {
 ; CHECK-NEXT:    vfpclasspd $4, %ymm0, %k0 ## encoding: [0x62,0xf3,0xfd,0x28,0x66,0xc0,0x04]
 ; CHECK-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
 ; CHECK-NEXT:    addb %cl, %al ## encoding: [0x00,0xc8]
-; CHECK-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
+; CHECK-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call i8 @llvm.x86.avx512.mask.fpclass.pd.256(<4 x double> %x0, i32 2, i8 %x1)
   %res1 = call i8 @llvm.x86.avx512.mask.fpclass.pd.256(<4 x double> %x0, i32 4, i8 -1)
@@ -632,7 +632,7 @@ define i8@test_int_x86_avx512_cvtd2mask_128(<4 x i32> %x0) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpmovd2m %xmm0, %k0 ## encoding: [0x62,0xf2,0x7e,0x08,0x39,0xc0]
 ; CHECK-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
-; CHECK-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
+; CHECK-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
     %res = call i8 @llvm.x86.avx512.cvtd2mask.128(<4 x i32> %x0)
     ret i8 %res
@@ -645,7 +645,7 @@ define i8@test_int_x86_avx512_cvtd2mask_256(<8 x i32> %x0) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpmovd2m %ymm0, %k0 ## encoding: [0x62,0xf2,0x7e,0x28,0x39,0xc0]
 ; CHECK-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
-; CHECK-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
+; CHECK-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
     %res = call i8 @llvm.x86.avx512.cvtd2mask.256(<8 x i32> %x0)
     ret i8 %res
@@ -658,7 +658,7 @@ define i8@test_int_x86_avx512_cvtq2mask_128(<2 x i64> %x0) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpmovq2m %xmm0, %k0 ## encoding: [0x62,0xf2,0xfe,0x08,0x39,0xc0]
 ; CHECK-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
-; CHECK-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
+; CHECK-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
     %res = call i8 @llvm.x86.avx512.cvtq2mask.128(<2 x i64> %x0)
     ret i8 %res
@@ -671,7 +671,7 @@ define i8@test_int_x86_avx512_cvtq2mask_256(<4 x i64> %x0) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpmovq2m %ymm0, %k0 ## encoding: [0x62,0xf2,0xfe,0x28,0x39,0xc0]
 ; CHECK-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
-; CHECK-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
+; CHECK-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
     %res = call i8 @llvm.x86.avx512.cvtq2mask.256(<4 x i64> %x0)
     ret i8 %res

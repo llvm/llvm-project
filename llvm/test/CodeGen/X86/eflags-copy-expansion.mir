@@ -48,7 +48,7 @@ body:             |
     ; Save AL.
     ; CHECK: PUSH32r killed %eax
 
-    ; Copy EDI into EFLAGS
+    ; Copy edi into EFLAGS
     ; CHECK-NEXT: %eax = MOV32rr %edi
     ; CHECK-NEXT: %al = ADD8ri %al, 127, implicit-def %eflags
     ; CHECK-NEXT: SAHF implicit-def %eflags, implicit %ah

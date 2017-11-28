@@ -578,7 +578,7 @@ define i16 @test_v8i16_sext(<8 x i16> %a0, <8 x i16> %a1) {
 ; SSE-NEXT:    pmovmskb %xmm0, %eax
 ; SSE-NEXT:    negl %eax
 ; SSE-NEXT:    sbbl %eax, %eax
-; SSE-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; SSE-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_v8i16_sext:
@@ -587,7 +587,7 @@ define i16 @test_v8i16_sext(<8 x i16> %a0, <8 x i16> %a1) {
 ; AVX-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX-NEXT:    negl %eax
 ; AVX-NEXT:    sbbl %eax, %eax
-; AVX-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; AVX-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_v8i16_sext:
@@ -601,7 +601,7 @@ define i16 @test_v8i16_sext(<8 x i16> %a0, <8 x i16> %a1) {
 ; AVX512-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; AVX512-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; AVX512-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; AVX512-NEXT:    retq
   %c = icmp sgt <8 x i16> %a0, %a1
   %s = sext <8 x i1> %c to <8 x i16>
@@ -624,7 +624,7 @@ define i16 @test_v16i16_sext(<16 x i16> %a0, <16 x i16> %a1) {
 ; SSE-NEXT:    pmovmskb %xmm0, %eax
 ; SSE-NEXT:    negl %eax
 ; SSE-NEXT:    sbbl %eax, %eax
-; SSE-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; SSE-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test_v16i16_sext:
@@ -642,7 +642,7 @@ define i16 @test_v16i16_sext(<16 x i16> %a0, <16 x i16> %a1) {
 ; AVX1-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; AVX1-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -652,7 +652,7 @@ define i16 @test_v16i16_sext(<16 x i16> %a0, <16 x i16> %a1) {
 ; AVX2-NEXT:    vpmovmskb %ymm0, %eax
 ; AVX2-NEXT:    negl %eax
 ; AVX2-NEXT:    sbbl %eax, %eax
-; AVX2-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; AVX2-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -669,7 +669,7 @@ define i16 @test_v16i16_sext(<16 x i16> %a0, <16 x i16> %a1) {
 ; AVX512-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; AVX512-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; AVX512-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %c = icmp sgt <16 x i16> %a0, %a1
@@ -695,7 +695,7 @@ define i16 @test_v16i16_legal_sext(<16 x i16> %a0, <16 x i16> %a1) {
 ; SSE-NEXT:    pmovmskb %xmm0, %eax
 ; SSE-NEXT:    negl %eax
 ; SSE-NEXT:    sbbl %eax, %eax
-; SSE-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; SSE-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test_v16i16_legal_sext:
@@ -708,7 +708,7 @@ define i16 @test_v16i16_legal_sext(<16 x i16> %a0, <16 x i16> %a1) {
 ; AVX1-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX1-NEXT:    negl %eax
 ; AVX1-NEXT:    sbbl %eax, %eax
-; AVX1-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; AVX1-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -720,7 +720,7 @@ define i16 @test_v16i16_legal_sext(<16 x i16> %a0, <16 x i16> %a1) {
 ; AVX2-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX2-NEXT:    negl %eax
 ; AVX2-NEXT:    sbbl %eax, %eax
-; AVX2-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; AVX2-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -738,7 +738,7 @@ define i16 @test_v16i16_legal_sext(<16 x i16> %a0, <16 x i16> %a1) {
 ; AVX512-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vpextrb $0, %xmm0, %eax
 ; AVX512-NEXT:    movsbl %al, %eax
-; AVX512-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; AVX512-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %c  = icmp sgt <16 x i16> %a0, %a1
@@ -763,7 +763,7 @@ define i8 @test_v16i8_sext(<16 x i8> %a0, <16 x i8> %a1) {
 ; SSE-NEXT:    pmovmskb %xmm0, %eax
 ; SSE-NEXT:    negl %eax
 ; SSE-NEXT:    sbbl %eax, %eax
-; SSE-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; SSE-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_v16i8_sext:
@@ -772,7 +772,7 @@ define i8 @test_v16i8_sext(<16 x i8> %a0, <16 x i8> %a1) {
 ; AVX-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX-NEXT:    negl %eax
 ; AVX-NEXT:    sbbl %eax, %eax
-; AVX-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; AVX-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_v16i8_sext:
@@ -788,7 +788,7 @@ define i8 @test_v16i8_sext(<16 x i8> %a0, <16 x i8> %a1) {
 ; AVX512-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; AVX512-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vpextrb $0, %xmm0, %eax
-; AVX512-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; AVX512-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; AVX512-NEXT:    retq
   %c = icmp sgt <16 x i8> %a0, %a1
   %s = sext <16 x i1> %c to <16 x i8>
@@ -813,7 +813,7 @@ define i8 @test_v32i8_sext(<32 x i8> %a0, <32 x i8> %a1) {
 ; SSE-NEXT:    pmovmskb %xmm0, %eax
 ; SSE-NEXT:    negl %eax
 ; SSE-NEXT:    sbbl %eax, %eax
-; SSE-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; SSE-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test_v32i8_sext:
@@ -833,7 +833,7 @@ define i8 @test_v32i8_sext(<32 x i8> %a0, <32 x i8> %a1) {
 ; AVX1-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; AVX1-NEXT:    vpextrb $0, %xmm0, %eax
-; AVX1-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; AVX1-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -843,7 +843,7 @@ define i8 @test_v32i8_sext(<32 x i8> %a0, <32 x i8> %a1) {
 ; AVX2-NEXT:    vpmovmskb %ymm0, %eax
 ; AVX2-NEXT:    negl %eax
 ; AVX2-NEXT:    sbbl %eax, %eax
-; AVX2-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; AVX2-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -862,7 +862,7 @@ define i8 @test_v32i8_sext(<32 x i8> %a0, <32 x i8> %a1) {
 ; AVX512-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; AVX512-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vpextrb $0, %xmm0, %eax
-; AVX512-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; AVX512-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %c  = icmp sgt <32 x i8> %a0, %a1

@@ -6600,7 +6600,7 @@ void SITargetLowering::adjustWritemask(MachineSDNode *&Node,
         I->getMachineOpcode() != TargetOpcode::EXTRACT_SUBREG)
       return;
 
-    // Lane means which subreg of %VGPRa_VGPRb_VGPRc_VGPRd is used.
+    // Lane means which subreg of %vgpra_vgprb_vgprc_vgprd is used.
     // Note that subregs are packed, i.e. Lane==0 is the first bit set
     // in OldDmask, so it can be any of X,Y,Z,W; Lane==1 is the second bit
     // set, etc.

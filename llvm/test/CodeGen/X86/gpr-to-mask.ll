@@ -167,8 +167,8 @@ exit:
 define void @test_shl1(i1 %cond, i8* %ptr1, i8* %ptr2, <8 x float> %fvec1, <8 x float> %fvec2, <8 x float>* %fptrvec) {
 ; CHECK-LABEL: test_shl1:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    # kill: %YMM1<def> %YMM1<kill> %ZMM1<def>
-; CHECK-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; CHECK-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
+; CHECK-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    je .LBB5_2
 ; CHECK-NEXT:  # BB#1: # %if
@@ -205,8 +205,8 @@ exit:
 define void @test_shr1(i1 %cond, i8* %ptr1, i8* %ptr2, <8 x float> %fvec1, <8 x float> %fvec2, <8 x float>* %fptrvec) {
 ; CHECK-LABEL: test_shr1:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    # kill: %YMM1<def> %YMM1<kill> %ZMM1<def>
-; CHECK-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; CHECK-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
+; CHECK-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    je .LBB6_2
 ; CHECK-NEXT:  # BB#1: # %if
@@ -244,8 +244,8 @@ exit:
 define void @test_shr2(i1 %cond, i8* %ptr1, i8* %ptr2, <8 x float> %fvec1, <8 x float> %fvec2, <8 x float>* %fptrvec) {
 ; CHECK-LABEL: test_shr2:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    # kill: %YMM1<def> %YMM1<kill> %ZMM1<def>
-; CHECK-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; CHECK-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
+; CHECK-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    je .LBB7_2
 ; CHECK-NEXT:  # BB#1: # %if
@@ -282,8 +282,8 @@ exit:
 define void @test_shl(i1 %cond, i8* %ptr1, i8* %ptr2, <8 x float> %fvec1, <8 x float> %fvec2, <8 x float>* %fptrvec) {
 ; CHECK-LABEL: test_shl:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    # kill: %YMM1<def> %YMM1<kill> %ZMM1<def>
-; CHECK-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; CHECK-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
+; CHECK-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    je .LBB8_2
 ; CHECK-NEXT:  # BB#1: # %if
@@ -320,8 +320,8 @@ exit:
 define void @test_add(i1 %cond, i8* %ptr1, i8* %ptr2, <8 x float> %fvec1, <8 x float> %fvec2, <8 x float>* %fptrvec) {
 ; CHECK-LABEL: test_add:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    # kill: %YMM1<def> %YMM1<kill> %ZMM1<def>
-; CHECK-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; CHECK-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
+; CHECK-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; CHECK-NEXT:    kmovb (%rsi), %k0
 ; CHECK-NEXT:    kmovb (%rdx), %k1
 ; CHECK-NEXT:    testb $1, %dil

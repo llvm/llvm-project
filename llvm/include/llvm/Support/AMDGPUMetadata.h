@@ -244,6 +244,10 @@ constexpr char MaxFlatWorkGroupSize[] = "MaxFlatWorkGroupSize";
 constexpr char IsDynamicCallStack[] = "IsDynamicCallStack";
 /// \brief Key for Kernel::CodeProps::Metadata::mIsXNACKEnabled.
 constexpr char IsXNACKEnabled[] = "IsXNACKEnabled";
+/// \brief Key for Kernel::CodeProps::Metadata::mNumSpilledSGPRs.
+constexpr char NumSpilledSGPRs[] = "NumSpilledSGPRs";
+/// \brief Key for Kernel::CodeProps::Metadata::mNumSpilledVGPRs.
+constexpr char NumSpilledVGPRs[] = "NumSpilledVGPRs";
 } // end namespace Key
 
 /// \brief In-memory representation of kernel code properties metadata.
@@ -275,6 +279,10 @@ struct Metadata final {
   /// \brief True if the generated machine code is capable of supporting XNACK.
   /// Optional.
   bool mIsXNACKEnabled = false;
+  /// \brief Number of SGPRs spilled by a wavefront. Optional.
+  uint16_t mNumSpilledSGPRs = 0;
+  /// \brief Number of VGPRs spilled by a workitem. Optional.
+  uint16_t mNumSpilledVGPRs = 0;
 
   /// \brief Default constructor.
   Metadata() = default;

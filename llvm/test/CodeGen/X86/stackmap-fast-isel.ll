@@ -157,7 +157,7 @@ define void @liveConstant() {
 ; CHECK-NEXT:   .short 0
 ; 1 location
 ; CHECK-NEXT:   .short	1
-; Loc 0: Direct RBP - ofs
+; Loc 0: Direct rbp - ofs
 ; CHECK-NEXT:   .byte	2
 ; CHECK-NEXT:   .byte	0
 ; CHECK-NEXT:   .short	8

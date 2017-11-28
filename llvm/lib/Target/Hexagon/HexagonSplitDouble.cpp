@@ -136,7 +136,7 @@ LLVM_DUMP_METHOD void HexagonSplitDoubleRegs::dump_partition(raw_ostream &os,
       const USet &Part, const TargetRegisterInfo &TRI) {
   dbgs() << '{';
   for (auto I : Part)
-    dbgs() << ' ' << PrintReg(I, &TRI);
+    dbgs() << ' ' << printReg(I, &TRI);
   dbgs() << " }";
 }
 #endif
@@ -244,7 +244,7 @@ void HexagonSplitDoubleRegs::partitionRegisters(UUSetMap &P2Rs) {
     if (FixedRegs[x])
       continue;
     unsigned R = TargetRegisterInfo::index2VirtReg(x);
-    DEBUG(dbgs() << PrintReg(R, TRI) << " ~~");
+    DEBUG(dbgs() << printReg(R, TRI) << " ~~");
     USet &Asc = AssocMap[R];
     for (auto U = MRI->use_nodbg_begin(R), Z = MRI->use_nodbg_end();
          U != Z; ++U) {
@@ -267,7 +267,7 @@ void HexagonSplitDoubleRegs::partitionRegisters(UUSetMap &P2Rs) {
         unsigned u = TargetRegisterInfo::virtReg2Index(T);
         if (FixedRegs[u])
           continue;
-        DEBUG(dbgs() << ' ' << PrintReg(T, TRI));
+        DEBUG(dbgs() << ' ' << printReg(T, TRI));
         Asc.insert(T);
         // Make it symmetric.
         AssocMap[T].insert(R);
@@ -1122,8 +1122,8 @@ bool HexagonSplitDoubleRegs::splitPartition(const USet &Part) {
 
     unsigned LoR = MRI->createVirtualRegister(IntRC);
     unsigned HiR = MRI->createVirtualRegister(IntRC);
-    DEBUG(dbgs() << "Created mapping: " << PrintReg(DR, TRI) << " -> "
-                 << PrintReg(HiR, TRI) << ':' << PrintReg(LoR, TRI) << '\n');
+    DEBUG(dbgs() << "Created mapping: " << printReg(DR, TRI) << " -> "
+                 << printReg(HiR, TRI) << ':' << printReg(LoR, TRI) << '\n');
     PairMap.insert(std::make_pair(DR, UUPair(LoR, HiR)));
   }
 

@@ -41,9 +41,9 @@ try.cont:
 ; CHECK: movl $___gxx_personality_sj0, -40(%ebp)
 ;     UFC.__lsda = $LSDA
 ; CHECK: movl $[[LSDA:GCC_except_table[0-9]+]], -36(%ebp)
-;     UFC.__jbuf[0] = $EBP
+;     UFC.__jbuf[0] = $ebp
 ; CHECK: movl %ebp, -32(%ebp)
-;     UFC.__jbuf[2] = $ESP
+;     UFC.__jbuf[2] = $esp
 ; CHECK: movl %esp, -24(%ebp)
 ;     UFC.__jbuf[1] = $EIP
 ; CHECK: movl $[[RESUME:LBB[0-9]+_[0-9]+]], -28(%ebp)
@@ -91,9 +91,9 @@ try.cont:
 ;     UFC.__lsda = $LSDA
 ; CHECK-X64: leaq [[LSDA:GCC_except_table[0-9]+]](%rip), %rax
 ; CHECK-X64: movq %rax, -272(%rbp)
-;     UFC.__jbuf[0] = $RBP
+;     UFC.__jbuf[0] = $rbp
 ; CHECK-X64: movq %rbp, -264(%rbp)
-;     UFC.__jbuf[2] = $RSP
+;     UFC.__jbuf[2] = $rsp
 ; CHECK-X64: movq %rsp, -248(%rbp)
 ;     UFC.__jbuf[1] = $RIP
 ; CHECK-X64: leaq .[[RESUME:LBB[0-9]+_[0-9]+]](%rip), %rax
