@@ -14,8 +14,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Driver.h"
-#include "Memory.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Memory.h"
 #include "lld/Common/Reproduce.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/Optional.h"
