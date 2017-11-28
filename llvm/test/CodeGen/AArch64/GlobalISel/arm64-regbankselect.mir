@@ -911,26 +911,20 @@ body:             |
 
 ...
 ---
-# This test tries to mix 16-bit types on fpr with 32-bit types on gpr.
-# The problem when doing that is that switching from fpr to gpr requires
-# more than just a plain COPY.
-# In this specific case, currently we map the ABI copy from h0 to fpr,
-# then, the fast mapping takes GPR for store and the size of the storage
-# gets bumped to 32-bit.
+# Make sure we properly detect fp types through copies.
+# In that example, the copy comes from an ABI lowering of a fp type.
 # CHECK-LABEL: name: passFp16ViaAllocas
 # CHECK: registers:
 # CHECK:  - { id: 0, class: fpr, preferred-register: '' }
 # CHECK:  - { id: 1, class: gpr, preferred-register: '' }
 # CHECK:  - { id: 2, class: gpr, preferred-register: '' }
-# CHECK:  - { id: 3, class: gpr, preferred-register: '' }
 #
 # CHECK:  %0:fpr(s16) = COPY %h0
 # CHECK-NEXT: %1:gpr(p0) = G_FRAME_INDEX %stack.0.p.addr
-# Currently the default mapping we provide for store does not
-# consider fpr for s16, unless they are produced by floating point
-# operation. Thus, we have to repair the assignment.
-# CHECK-NEXT: %3:gpr(s16) = COPY %0(s16)
-# CHECK-NEXT: G_STORE %3(s16), %1(p0) :: (store 2 into %ir.p.addr)
+# If we didn't look through the copy for %0, the default mapping
+# would have been on GPR and we would have to insert a copy to move
+# the value away from FPR (h0).
+# CHECK-NEXT: G_STORE %0(s16), %1(p0) :: (store 2 into %ir.p.addr)
 # CHECK-NEXT: %2:gpr(s16) = G_LOAD %1(p0) :: (load 2 from %ir.p.addr)
 # CHECK-NEXT: %h0 = COPY %2(s16)
 name:            passFp16ViaAllocas
