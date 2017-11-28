@@ -52,6 +52,13 @@ function(tablegen project ofn)
       list(APPEND LLVM_TABLEGEN_FLAGS "-instrument-coverage")
     endif()
   endif()
+  if (LLVM_ENABLE_GISEL_COV)
+    list(FIND ARGN "-gen-global-isel" idx)
+    if( NOT idx EQUAL -1 )
+      list(APPEND LLVM_TABLEGEN_FLAGS "-instrument-gisel-coverage")
+      list(APPEND LLVM_TABLEGEN_FLAGS "-gisel-coverage-file=${LLVM_GISEL_COV_PREFIX}all")
+    endif()
+  endif()
 
   # We need both _TABLEGEN_TARGET and _TABLEGEN_EXE in the  DEPENDS list
   # (both the target and the file) to have .inc files rebuilt on

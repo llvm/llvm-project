@@ -35,11 +35,11 @@ public:
   ARMInstructionSelector(const ARMBaseTargetMachine &TM, const ARMSubtarget &STI,
                          const ARMRegisterBankInfo &RBI);
 
-  bool select(MachineInstr &I) const override;
+  bool select(MachineInstr &I, CodeGenCoverage &CoverageInfo) const override;
   static const char *getName() { return DEBUG_TYPE; }
 
 private:
-  bool selectImpl(MachineInstr &I) const;
+  bool selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
 
   struct CmpConstants;
   struct InsertInfo;
@@ -601,7 +601,8 @@ bool ARMInstructionSelector::selectShift(unsigned ShiftOpc,
   return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
 }
 
-bool ARMInstructionSelector::select(MachineInstr &I) const {
+bool ARMInstructionSelector::select(MachineInstr &I,
+                                    CodeGenCoverage &CoverageInfo) const {
   assert(I.getParent() && "Instruction should be in a basic block!");
   assert(I.getParent()->getParent() && "Instruction should be in a function!");
 
@@ -616,7 +617,7 @@ bool ARMInstructionSelector::select(MachineInstr &I) const {
     return true;
   }
 
-  if (selectImpl(I))
+  if (selectImpl(I, CoverageInfo))
     return true;
 
   MachineInstrBuilder MIB{MF, I};
