@@ -185,8 +185,8 @@ define void @f1() {
 ; 686-O0-NEXT:    .cfi_def_cfa_offset 16
 ; 686-O0-NEXT:    pushl %esi
 ; 686-O0-NEXT:    .cfi_def_cfa_offset 20
-; 686-O0-NEXT:    subl $36, %esp
-; 686-O0-NEXT:    .cfi_def_cfa_offset 56
+; 686-O0-NEXT:    subl $24, %esp
+; 686-O0-NEXT:    .cfi_def_cfa_offset 44
 ; 686-O0-NEXT:    .cfi_offset %esi, -20
 ; 686-O0-NEXT:    .cfi_offset %edi, -16
 ; 686-O0-NEXT:    .cfi_offset %ebx, -12
@@ -194,44 +194,38 @@ define void @f1() {
 ; 686-O0-NEXT:    movl var_5, %eax
 ; 686-O0-NEXT:    movl %eax, %ecx
 ; 686-O0-NEXT:    sarl $31, %ecx
-; 686-O0-NEXT:    movl %eax, %edx
-; 686-O0-NEXT:    andl %ecx, %edx
+; 686-O0-NEXT:    xorl $208307499, %eax # imm = 0xC6A852B
+; 686-O0-NEXT:    xorl $-2, %ecx
+; 686-O0-NEXT:    orl %ecx, %eax
+; 686-O0-NEXT:    setne {{[0-9]+}}(%esp)
+; 686-O0-NEXT:    movl var_5, %ecx
+; 686-O0-NEXT:    movl %ecx, %edx
 ; 686-O0-NEXT:    subl $-1, %edx
 ; 686-O0-NEXT:    sete %bl
-; 686-O0-NEXT:    movl %eax, %esi
-; 686-O0-NEXT:    xorl $208307499, %esi # imm = 0xC6A852B
+; 686-O0-NEXT:    movzbl %bl, %esi
 ; 686-O0-NEXT:    movl %ecx, %edi
-; 686-O0-NEXT:    xorl $-2, %edi
-; 686-O0-NEXT:    orl %edi, %esi
-; 686-O0-NEXT:    setne {{[0-9]+}}(%esp)
-; 686-O0-NEXT:    movl %eax, %edi
-; 686-O0-NEXT:    subl $-1, %edi
-; 686-O0-NEXT:    sete %bh
-; 686-O0-NEXT:    movzbl %bh, %ebp
-; 686-O0-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
-; 686-O0-NEXT:    xorl %eax, %eax
-; 686-O0-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
-; 686-O0-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
-; 686-O0-NEXT:    addl $7093, %eax # imm = 0x1BB5
-; 686-O0-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
-; 686-O0-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
-; 686-O0-NEXT:    adcxl %eax, %ecx
-; 686-O0-NEXT:    movl {{[0-9]+}}(%esp), %eax # 4-byte Reload
-; 686-O0-NEXT:    subl %ebp, %eax
-; 686-O0-NEXT:    sbbl $0, %ecx
-; 686-O0-NEXT:    setl %bh
-; 686-O0-NEXT:    movzbl %bh, %ebp
-; 686-O0-NEXT:    movl %ebp, var_57
+; 686-O0-NEXT:    sarl $31, %edi
+; 686-O0-NEXT:    xorl %ebp, %ebp
+; 686-O0-NEXT:    addl $7093, %ecx # imm = 0x1BB5
+; 686-O0-NEXT:    adcxl %ebp, %edi
+; 686-O0-NEXT:    subl %esi, %ecx
+; 686-O0-NEXT:    sbbl $0, %edi
+; 686-O0-NEXT:    setl %bl
+; 686-O0-NEXT:    movzbl %bl, %esi
+; 686-O0-NEXT:    movl %esi, var_57
 ; 686-O0-NEXT:    movl $0, var_57+4
+; 686-O0-NEXT:    movl var_5, %esi
+; 686-O0-NEXT:    subl $-1, %esi
+; 686-O0-NEXT:    sete %bl
 ; 686-O0-NEXT:    movzbl %bl, %ebp
 ; 686-O0-NEXT:    movl %ebp, _ZN8struct_210member_2_0E
 ; 686-O0-NEXT:    movl $0, _ZN8struct_210member_2_0E+4
-; 686-O0-NEXT:    movl %edi, {{[0-9]+}}(%esp) # 4-byte Spill
 ; 686-O0-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
-; 686-O0-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
 ; 686-O0-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
+; 686-O0-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
+; 686-O0-NEXT:    movl %edi, {{[0-9]+}}(%esp) # 4-byte Spill
 ; 686-O0-NEXT:    movl %esi, (%esp) # 4-byte Spill
-; 686-O0-NEXT:    addl $36, %esp
+; 686-O0-NEXT:    addl $24, %esp
 ; 686-O0-NEXT:    popl %esi
 ; 686-O0-NEXT:    popl %edi
 ; 686-O0-NEXT:    popl %ebx
@@ -523,11 +517,12 @@ define void @f3() #0 {
 ; 686-O0-NEXT:    andl %edi, %eax
 ; 686-O0-NEXT:    movb %al, %dl
 ; 686-O0-NEXT:    movzbl %dl, %eax
-; 686-O0-NEXT:    movl %ecx, %esi
-; 686-O0-NEXT:    orl %eax, %esi
-; 686-O0-NEXT:    movl %esi, (%esp)
+; 686-O0-NEXT:    orl %eax, %ecx
+; 686-O0-NEXT:    movl %ecx, (%esp)
 ; 686-O0-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; 686-O0-NEXT:    movl %ecx, var_46
+; 686-O0-NEXT:    movl var_13, %eax
+; 686-O0-NEXT:    notl %eax
+; 686-O0-NEXT:    movl %eax, var_46
 ; 686-O0-NEXT:    leal -8(%ebp), %esp
 ; 686-O0-NEXT:    popl %esi
 ; 686-O0-NEXT:    popl %edi

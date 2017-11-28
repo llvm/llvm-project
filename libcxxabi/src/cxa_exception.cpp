@@ -137,6 +137,28 @@ static _LIBCXXABI_NORETURN void failed_throw(__cxa_exception* exception_header) 
     std::__terminate(exception_header->terminateHandler);
 }
 
+// Return the offset of the __cxa_exception header from the start of the
+// allocated buffer. If __cxa_exception's alignment is smaller than the maximum
+// useful alignment for the target machine, padding has to be inserted before
+// the header to ensure the thrown object that follows the header is
+// sufficiently aligned. This happens if _Unwind_exception isn't double-word
+// aligned (on Darwin, for example).
+static size_t get_cxa_exception_offset() {
+  struct S {
+  } __attribute__((aligned));
+
+  // Compute the maximum alignment for the target machine.
+  constexpr size_t alignment = std::alignment_of<S>::value;
+  constexpr size_t excp_size = sizeof(__cxa_exception);
+  constexpr size_t aligned_size =
+      (excp_size + alignment - 1) / alignment * alignment;
+  constexpr size_t offset = aligned_size - excp_size;
+  static_assert((offset == 0 ||
+                 std::alignment_of<_Unwind_Exception>::value < alignment),
+                "offset is non-zero only if _Unwind_Exception isn't aligned");
+  return offset;
+}
+
 extern "C" {
 
 //  Allocate a __cxa_exception object, and zero-fill it.
@@ -146,10 +168,16 @@ extern "C" {
 //  user's exception object.
 void *__cxa_allocate_exception(size_t thrown_size) throw() {
     size_t actual_size = cxa_exception_size_from_exception_thrown_size(thrown_size);
-    __cxa_exception *exception_header =
-        static_cast<__cxa_exception *>(__aligned_malloc_with_fallback(actual_size));
-    if (NULL == exception_header)
+
+    // Allocate extra space before the __cxa_exception header to ensure the
+    // start of the thrown object is sufficiently aligned.
+    size_t header_offset = get_cxa_exception_offset();
+    char *raw_buffer =
+        (char *)__aligned_malloc_with_fallback(header_offset + actual_size);
+    if (NULL == raw_buffer)
         std::terminate();
+    __cxa_exception *exception_header =
+        static_cast<__cxa_exception *>((void *)(raw_buffer + header_offset));
     std::memset(exception_header, 0, actual_size);
     return thrown_object_from_cxa_exception(exception_header);
 }
@@ -157,7 +185,11 @@ void *__cxa_allocate_exception(size_t thrown_size) throw() {
 
 //  Free a __cxa_exception object allocated with __cxa_allocate_exception.
 void __cxa_free_exception(void *thrown_object) throw() {
-    __aligned_free_with_fallback(cxa_exception_from_thrown_object(thrown_object));
+    // Compute the size of the padding before the header.
+    size_t header_offset = get_cxa_exception_offset();
+    char *raw_buffer =
+        ((char *)cxa_exception_from_thrown_object(thrown_object)) - header_offset;
+    __aligned_free_with_fallback((void *)raw_buffer);
 }
 
 

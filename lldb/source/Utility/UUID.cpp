@@ -74,14 +74,7 @@ std::string UUID::GetAsString(const char *separator) const {
 }
 
 void UUID::Dump(Stream *s) const {
-  const uint8_t *u = (const uint8_t *)GetBytes();
-  s->Printf("%2.2X%2.2X%2.2X%2.2X-%2.2X%2.2X-%2.2X%2.2X-%2.2X%2.2X-%2.2X%2.2X%"
-            "2.2X%2.2X%2.2X%2.2X",
-            u[0], u[1], u[2], u[3], u[4], u[5], u[6], u[7], u[8], u[9], u[10],
-            u[11], u[12], u[13], u[14], u[15]);
-  if (m_num_uuid_bytes == 20) {
-    s->Printf("-%2.2X%2.2X%2.2X%2.2X", u[16], u[17], u[18], u[19]);
-  }
+  s->PutCString(GetAsString().c_str());
 }
 
 bool UUID::SetBytes(const void *uuid_bytes, uint32_t num_uuid_bytes) {

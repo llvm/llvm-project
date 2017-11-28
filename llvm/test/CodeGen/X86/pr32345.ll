@@ -58,9 +58,18 @@ define void @foo() {
 ; 6860-NEXT:    movw %cx, %di
 ; 6860-NEXT:    xorl %edx, %edi
 ; 6860-NEXT:    movw %di, %cx
-; 6860-NEXT:    movzwl %cx, %edi
-; 6860-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; 6860-NEXT:    movzwl %cx, %edx
+; 6860-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; 6860-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; 6860-NEXT:    movw var_22, %cx
+; 6860-NEXT:    movzwl var_27, %edx
+; 6860-NEXT:    movw %dx, %si
+; 6860-NEXT:    xorw %si, %cx
+; 6860-NEXT:    # implicit-def: %EDI
+; 6860-NEXT:    movw %cx, %di
+; 6860-NEXT:    xorl %edx, %edi
+; 6860-NEXT:    movw %di, %cx
+; 6860-NEXT:    movzwl %cx, %edi
 ; 6860-NEXT:    addl $-16610, %edx # imm = 0xBF1E
 ; 6860-NEXT:    movb %dl, %bl
 ; 6860-NEXT:    xorl %edx, %edx

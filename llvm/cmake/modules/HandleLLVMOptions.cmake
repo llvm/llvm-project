@@ -151,6 +151,14 @@ if(NOT (${CMAKE_SYSTEM_NAME} MATCHES "Darwin" OR WIN32 OR CYGWIN OR
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,defs")
 endif()
 
+# Pass -Wl,-z,nodelete. This makes sure our shared libraries are not unloaded
+# by dlclose(). We need that since the CLI API relies on cross-references
+# between global objects which became horribly broken when one of the libraries
+# is unloaded.
+if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,nodelete")
+endif()
+
 
 function(append value)
   foreach(variable ${ARGN})
