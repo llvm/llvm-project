@@ -272,14 +272,18 @@ class RegisterCommandsTestCase(TestBase):
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
-        lldbutil.run_break_set_by_symbol(
-            self, "main", num_expected_locations=-1)
+        # Launch the process, stop at the entry point.
+        error = lldb.SBError()
+        process = target.Launch(
+                lldb.SBListener(),
+                None, None, # argv, envp
+                None, None, None, # stdin/out/err
+                self.get_process_working_directory(),
+                0, # launch flags
+                True, # stop at entry
+                error)
+        self.assertTrue(error.Success(), "Launch succeeds. Error is :" + str(error))
 
-        # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(
-            None, None, self.get_process_working_directory())
-
-        process = target.GetProcess()
         self.assertTrue(
             process.GetState() == lldb.eStateStopped,
             PROCESS_STOPPED)
