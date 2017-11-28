@@ -337,6 +337,11 @@ bool InstructionSelector::executeMatchTable(
                              << InsnID << "]->getOperand(" << OpIdx
                              << "), Value=" << Value << ")\n");
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
+
+      // isOperandImmEqual() will sign-extend to 64-bits, so should we.
+      LLT Ty = MRI.getType(State.MIs[InsnID]->getOperand(OpIdx).getReg());
+      Value = SignExtend64(Value, Ty.getSizeInBits());
+
       if (!isOperandImmEqual(State.MIs[InsnID]->getOperand(OpIdx), Value,
                              MRI)) {
         if (handleReject() == RejectAndGiveUp)
