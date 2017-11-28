@@ -3095,23 +3095,35 @@ void __kmpc_doacross_init(ident_t *loc, int gtid, int num_dims,
     __kmp_wait_yield_4((volatile kmp_uint32 *)&sh_buf->doacross_buf_idx, idx,
                        __kmp_eq_4, NULL);
   }
+#if KMP_32_BIT_ARCH
   // Check if we are the first thread. After the CAS the first thread gets 0,
   // others get 1 if initialization is in progress, allocated pointer otherwise.
+  // Treat pointer as volatile integer (value 0 or 1) until memory is allocated.
+  flags = (kmp_uint32 *)KMP_COMPARE_AND_STORE_RET32(
+      (volatile kmp_int32 *)&sh_buf->doacross_flags, NULL, 1);
+#else
   flags = (kmp_uint32 *)KMP_COMPARE_AND_STORE_RET64(
-      (kmp_int64 *)&sh_buf->doacross_flags, NULL, (kmp_int64)1);
+      (volatile kmp_int64 *)&sh_buf->doacross_flags, NULL, 1LL);
+#endif
   if (flags == NULL) {
     // we are the first thread, allocate the array of flags
-    kmp_int64 size =
-        trace_count / 8 + 8; // in bytes, use single bit per iteration
-    sh_buf->doacross_flags = (kmp_uint32 *)__kmp_thread_calloc(th, size, 1);
-  } else if ((kmp_int64)flags == 1) {
+    size_t size = trace_count / 8 + 8; // in bytes, use single bit per iteration
+    flags = (kmp_uint32 *)__kmp_thread_calloc(th, size, 1);
+    KMP_MB();
+    sh_buf->doacross_flags = flags;
+  } else if (flags == (kmp_uint32 *)1) {
+#if KMP_32_BIT_ARCH
     // initialization is still in progress, need to wait
-    while ((volatile kmp_int64)sh_buf->doacross_flags == 1) {
+    while (*(volatile kmp_int32 *)&sh_buf->doacross_flags == 1)
+#else
+    while (*(volatile kmp_int64 *)&sh_buf->doacross_flags == 1LL)
+#endif
       KMP_YIELD(TRUE);
-    }
+    KMP_MB();
+  } else {
+    KMP_MB();
   }
-  KMP_DEBUG_ASSERT((kmp_int64)sh_buf->doacross_flags >
-                   1); // check value of pointer
+  KMP_DEBUG_ASSERT(sh_buf->doacross_flags > (kmp_uint32 *)1); // check ptr value
   pr_buf->th_doacross_flags =
       sh_buf->doacross_flags; // save private copy in order to not
   // touch shared buffer on each iteration
@@ -3205,6 +3217,7 @@ void __kmpc_doacross_wait(ident_t *loc, int gtid, long long *vec) {
   while ((flag & pr_buf->th_doacross_flags[iter_number]) == 0) {
     KMP_YIELD(TRUE);
   }
+  KMP_MB();
   KA_TRACE(20,
            ("__kmpc_doacross_wait() exit: T#%d wait for iter %lld completed\n",
             gtid, (iter_number << 5) + shft));
@@ -3257,6 +3270,7 @@ void __kmpc_doacross_post(ident_t *loc, int gtid, long long *vec) {
   shft = iter_number % 32; // use 32-bit granularity
   iter_number >>= 5; // divided by 32
   flag = 1 << shft;
+  KMP_MB();
   if ((flag & pr_buf->th_doacross_flags[iter_number]) == 0)
     KMP_TEST_THEN_OR32(&pr_buf->th_doacross_flags[iter_number], flag);
   KA_TRACE(20, ("__kmpc_doacross_post() exit: T#%d iter %lld posted\n", gtid,
