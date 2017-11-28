@@ -4718,12 +4718,12 @@ CXString clang_getCursorDisplayName(CXCursor C) {
     // If the type was explicitly written, use that.
     if (TypeSourceInfo *TSInfo = ClassSpec->getTypeAsWritten())
       return cxstring::createDup(TSInfo->getType().getAsString(Policy));
-    
+
     SmallString<128> Str;
     llvm::raw_svector_ostream OS(Str);
     OS << *ClassSpec;
-    TemplateSpecializationType::PrintTemplateArgumentList(
-        OS, ClassSpec->getTemplateArgs().asArray(), Policy);
+    printTemplateArgumentList(OS, ClassSpec->getTemplateArgs().asArray(),
+                              Policy);
     return cxstring::createDup(OS.str());
   }
   

@@ -1293,6 +1293,13 @@ static llvm::Value *emitParallelOrTeamsOutlinedFunction(
     HasCancel = OPFD->hasCancel();
   else if (auto *OPFD = dyn_cast<OMPTargetParallelForDirective>(&D))
     HasCancel = OPFD->hasCancel();
+  else if (auto *OPFD = dyn_cast<OMPDistributeParallelForDirective>(&D))
+    HasCancel = OPFD->hasCancel();
+  else if (auto *OPFD = dyn_cast<OMPTeamsDistributeParallelForDirective>(&D))
+    HasCancel = OPFD->hasCancel();
+  else if (auto *OPFD =
+               dyn_cast<OMPTargetTeamsDistributeParallelForDirective>(&D))
+    HasCancel = OPFD->hasCancel();
   CGOpenMPOutlinedRegionInfo CGInfo(*CS, ThreadIDVar, CodeGen, InnermostKind,
                                     HasCancel, OutlinedHelperName);
   CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
@@ -4049,9 +4056,9 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
   return TaskPrivatesMap;
 }
 
-static int array_pod_sort_comparator(const PrivateDataTy *P1,
-                                     const PrivateDataTy *P2) {
-  return P1->first < P2->first ? 1 : (P2->first < P1->first ? -1 : 0);
+static bool stable_sort_comparator(const PrivateDataTy P1,
+                                   const PrivateDataTy P2) {
+  return P1.first > P2.first;
 }
 
 /// Emit initialization for private variables in task-based directives.
@@ -4279,8 +4286,7 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
                          /*PrivateElemInit=*/nullptr)));
     ++I;
   }
-  llvm::array_pod_sort(Privates.begin(), Privates.end(),
-                       array_pod_sort_comparator);
+  std::stable_sort(Privates.begin(), Privates.end(), stable_sort_comparator);
   auto KmpInt32Ty = C.getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/1);
   // Build type kmp_routine_entry_t (if not built yet).
   emitKmpRoutineEntryT(KmpInt32Ty);
