@@ -974,6 +974,9 @@ extern "C" void *__tsan_thread_start_func(void *arg) {
 TSAN_INTERCEPTOR(int, pthread_create,
     void *th, void *attr, void *(*callback)(void*), void * param) {
   SCOPED_INTERCEPTOR_RAW(pthread_create, th, attr, callback, param);
+
+  MaybeSpawnBackgroundThread();
+
   if (ctx->after_multithreaded_fork) {
     if (flags()->die_after_fork) {
       Report("ThreadSanitizer: starting new threads after multi-threaded "
