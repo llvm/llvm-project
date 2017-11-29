@@ -881,6 +881,11 @@ uptr FindAvailableMemoryRange(uptr shadow_size,
     mach_msg_type_number_t count = kRegionInfoSize;
     kr = mach_vm_region_recurse(mach_task_self(), &address, &vmsize, &depth,
                                 (vm_region_info_t)&vminfo, &count);
+    if (kr == KERN_INVALID_ADDRESS) {
+      // No more regions beyond "address", consider the gap at the end of VM.
+      address = GetMaxVirtualAddress() + 1;
+      vmsize = 0;
+    }
     if (free_begin != address) {
       // We found a free region [free_begin..address-1].
       uptr gap_start = RoundUpTo((uptr)free_begin + left_padding, alignment);
