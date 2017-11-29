@@ -214,4 +214,4 @@ extern void *wilma3(void) __attribute__((swift_error(nonzero_result))); // expec
 extern void *wilma4(void) __attribute__((swift_error(zero_result))); // expected-error {{'swift_error' attribute can only be applied to a function with an error parameter}}
 
 
-extern _Bool suzanne __attribute__((swift_error(none))); // expected-error {{'swift_error' attribute only applies to functions and methods}}
+extern _Bool suzanne __attribute__((swift_error(none))); // expected-error {{'swift_error' attribute only applies to functions and Objective-C methods}}
