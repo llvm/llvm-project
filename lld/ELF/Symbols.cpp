@@ -134,21 +134,6 @@ InputFile *Symbol::getFile() const {
   return File;
 }
 
-// Overwrites all attributes with Other's so that this symbol becomes
-// an alias to Other. This is useful for handling some options such as
-// --wrap.
-void Symbol::copyFrom(Symbol *Other) {
-  Symbol Sym = *this;
-  memcpy(this, Other, sizeof(SymbolUnion));
-
-  VersionId = Sym.VersionId;
-  IsUsedInRegularObj = Sym.IsUsedInRegularObj;
-  ExportDynamic = Sym.ExportDynamic;
-  CanInline = Sym.CanInline;
-  Traced = Sym.Traced;
-  InVersionScript = Sym.InVersionScript;
-}
-
 uint64_t Symbol::getVA(int64_t Addend) const {
   uint64_t OutVA = getSymVA(*this, Addend);
   return OutVA + Addend;

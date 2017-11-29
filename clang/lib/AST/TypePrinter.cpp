@@ -1541,10 +1541,9 @@ static const TemplateArgument &getArgument(const TemplateArgumentLoc &A) {
   return A.getArgument();
 }
 
-namespace {
 template<typename TA>
-void printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
-             bool SkipBrackets) {
+static void printTo(raw_ostream &OS, ArrayRef<TA> Args,
+                    const PrintingPolicy &Policy, bool SkipBrackets) {
   const char *Comma = Policy.MSVCFormatting ? "," : ", ";
   if (!SkipBrackets)
     OS << '<';
@@ -1587,7 +1586,6 @@ void printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
 
   if (!SkipBrackets)
     OS << '>';
-}
 }
 
 void clang::printTemplateArgumentList(raw_ostream &OS,

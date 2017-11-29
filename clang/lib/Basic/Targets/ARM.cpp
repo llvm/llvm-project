@@ -1000,7 +1000,6 @@ void MinGWARMTargetInfo::getTargetDefines(const LangOptions &Opts,
                                           MacroBuilder &Builder) const {
   WindowsARMTargetInfo::getTargetDefines(Opts, Builder);
   Builder.defineMacro("_ARM_");
-  Builder.defineMacro("__ARM_DWARF_EH__");
 }
 
 CygwinARMTargetInfo::CygwinARMTargetInfo(const llvm::Triple &Triple,

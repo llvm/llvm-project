@@ -1442,6 +1442,7 @@
 //
 // ARM-MSVC: #define _M_ARM_NT 1
 // ARM-MSVC: #define _WIN32 1
+// ARM-MSVC-NOT:#define __ARM_DWARF_EH__ 1
 
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=aarch64-windows-msvc < /dev/null | FileCheck -match-full-lines -check-prefix AARCH64-MSVC %s
 //
