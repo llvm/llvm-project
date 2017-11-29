@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa-amdgiz -mcpu=fiji -mattr=-flat-for-global -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,MESA %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa-amdgiz -mcpu=hawaii -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI,MESA %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa-amdgiz -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,VI,MESA %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa-amdgiz -mcpu=fiji -mattr=-flat-for-global -enable-ipra=0 -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,MESA %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa-amdgiz -mcpu=hawaii -enable-ipra=0 -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI,MESA %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa-amdgiz -mcpu=gfx900 -mattr=-flat-for-global -enable-ipra=0 -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,VI,MESA %s
 target datalayout = "A5"
 
 ; GCN-LABEL: {{^}}i32_fastcc_i32_i32:

@@ -303,10 +303,7 @@ static bool markTails(Function &F, bool &AllCallsAreTailCalls,
     if (Visited[CI->getParent()] != ESCAPED) {
       // If the escape point was part way through the block, calls after the
       // escape point wouldn't have been put into DeferredTails.
-      ORE->emit([&]() {
-        return OptimizationRemark(DEBUG_TYPE, "tailcall", CI)
-               << "marked as tail call candidate";
-      });
+      DEBUG(dbgs() << "Marked as tail call candidate: " << *CI << "\n");
       CI->setTailCall();
       Modified = true;
     } else {

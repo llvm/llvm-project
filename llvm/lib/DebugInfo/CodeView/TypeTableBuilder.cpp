@@ -31,9 +31,8 @@ using namespace llvm::codeview;
 namespace {
 
 struct HashedType {
-  uint64_t Hash;
-  const uint8_t *Data;
-  unsigned Size; // FIXME: Go to uint16_t?
+  hash_code Hash;
+  ArrayRef<uint8_t> Data;
   TypeIndex Index;
 };
 
@@ -67,9 +66,9 @@ template <> struct DenseMapInfo<HashedTypePtr> {
     HashedType *RHS = RHSP.Ptr;
     if (RHS == getEmptyKey().Ptr || RHS == getTombstoneKey().Ptr)
       return LHS == RHS;
-    if (LHS->Hash != RHS->Hash || LHS->Size != RHS->Size)
+    if (LHS->Hash != RHS->Hash)
       return false;
-    return ::memcmp(LHS->Data, RHS->Data, LHS->Size) == 0;
+    return LHS->Data == RHS->Data;
   }
 };
 
@@ -111,8 +110,7 @@ TypeIndex TypeHasher::getOrCreateRecord(ArrayRef<uint8_t> &Record,
   assert(Record.size() % 4 == 0 && "Record is not aligned to 4 bytes!");
 
   // Compute the hash up front so we can store it in the key.
-  HashedType TempHashedType = {hash_value(Record), Record.data(),
-                               unsigned(Record.size()), TI};
+  HashedType TempHashedType = {hash_value(Record), Record, TI};
   auto Result = HashedRecords.insert(HashedTypePtr(&TempHashedType));
   HashedType *&Hashed = Result.first->Ptr;
 
@@ -124,12 +122,11 @@ TypeIndex TypeHasher::getOrCreateRecord(ArrayRef<uint8_t> &Record,
 
     uint8_t *Stable = RecordStorage.Allocate<uint8_t>(Record.size());
     memcpy(Stable, Record.data(), Record.size());
-    Hashed->Data = Stable;
-    assert(Hashed->Size == Record.size());
+    Hashed->Data = makeArrayRef(Stable, Record.size());
   }
 
   // Update the caller's copy of Record to point a stable copy.
-  Record = ArrayRef<uint8_t>(Hashed->Data, Hashed->Size);
+  Record = Hashed->Data;
   return Hashed->Index;
 }
 
