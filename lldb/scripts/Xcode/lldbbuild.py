@@ -11,12 +11,24 @@ def enum(*sequential, **named):
 
 #### SETTINGS ####
 
+def building_with_asan_enabled():
+    """Return a True if the ASAN Swift build preset is being used."""
+    if 'ENABLE_ADDRESS_SANITIZER' in os.environ.keys() and os.environ["ENABLE_ADDRESS_SANITIZER"] == "YES":
+        return True
+    else:
+        return False
+
+def build_dir_asan_suffix():
+    if building_with_asan_enabled():
+        return "+asan"
+    else:
+        return ""
 
 def LLVM_BUILD_DIRS():
     return {
-        "Debug": "Ninja-RelWithDebInfoAssert",
-        "DebugClang": "Ninja-DebugAssert",
-        "Release": "Ninja-RelWithDebInfoAssert",
+        "Debug": "Ninja-RelWithDebInfoAssert" + build_dir_asan_suffix(),
+        "DebugClang": "Ninja-DebugAssert" + build_dir_asan_suffix(),
+        "Release": "Ninja-RelWithDebInfoAssert" + build_dir_asan_suffix(),
     }
 
 #### INTERFACE TO THE XCODEPROJ ####
