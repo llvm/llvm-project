@@ -24,6 +24,149 @@
 using namespace clang;
 using namespace clang::clangd;
 
+namespace {
+// Helper for mapping JSON objects onto our protocol structs. Intended use:
+// Optional<Result> parse(json::Expr E) {
+//   ObjectParser O(E);
+//   if (!O || !O.parse("mandatory_field", Result.MandatoryField))
+//     return None;
+//   O.parse("optional_field", Result.OptionalField);
+//   return Result;
+// }
+// FIXME: the static methods here should probably become the public parse()
+// extension point. Overloading free functions allows us to uniformly handle
+// enums, vectors, etc.
+class ObjectParser {
+public:
+  ObjectParser(const json::Expr &E) : O(E.asObject()) {}
+
+  // True if the expression is an object.
+  operator bool() { return O; }
+
+  template <typename T> bool parse(const char *Prop, T &Out) {
+    assert(*this && "Must check this is an object before calling parse()");
+    if (const json::Expr *E = O->get(Prop))
+      return parse(*E, Out);
+    return false;
+  }
+
+  // Optional requires special handling, because missing keys are OK.
+  template <typename T> bool parse(const char *Prop, llvm::Optional<T> &Out) {
+    assert(*this && "Must check this is an object before calling parse()");
+    if (const json::Expr *E = O->get(Prop))
+      return parse(*E, Out);
+    Out = None;
+    return true;
+  }
+
+private:
+  // Primitives.
+  static bool parse(const json::Expr &E, std::string &Out) {
+    if (auto S = E.asString()) {
+      Out = *S;
+      return true;
+    }
+    return false;
+  }
+
+  static bool parse(const json::Expr &E, int &Out) {
+    if (auto S = E.asInteger()) {
+      Out = *S;
+      return true;
+    }
+    return false;
+  }
+
+  static bool parse(const json::Expr &E, bool &Out) {
+    if (auto S = E.asBoolean()) {
+      Out = *S;
+      return true;
+    }
+    return false;
+  }
+
+  // Types with a parse() function.
+  template <typename T> static bool parse(const json::Expr &E, T &Out) {
+    if (auto Parsed = std::remove_reference<T>::type::parse(E)) {
+      Out = std::move(*Parsed);
+      return true;
+    }
+    return false;
+  }
+
+  // Nullable values as Optional<T>.
+  template <typename T>
+  static bool parse(const json::Expr &E, llvm::Optional<T> &Out) {
+    if (E.asNull()) {
+      Out = None;
+      return true;
+    }
+    T Result;
+    if (!parse(E, Result))
+      return false;
+    Out = std::move(Result);
+    return true;
+  }
+
+  // Array values with std::vector type.
+  template <typename T>
+  static bool parse(const json::Expr &E, std::vector<T> &Out) {
+    if (auto *A = E.asArray()) {
+      Out.clear();
+      Out.resize(A->size());
+      for (size_t I = 0; I < A->size(); ++I)
+        if (!parse((*A)[I], Out[I]))
+          return false;
+      return true;
+    }
+    return false;
+  }
+
+  // Object values with std::map<std::string, ?>
+  template <typename T>
+  static bool parse(const json::Expr &E, std::map<std::string, T> &Out) {
+    if (auto *O = E.asObject()) {
+      for (const auto &KV : *O)
+        if (!parse(KV.second, Out[StringRef(KV.first)]))
+          return false;
+      return true;
+    }
+    return false;
+  }
+
+  // Special cased enums, which can't have T::parse() functions.
+  // FIXME: make everything free functions so there's no special casing.
+  static bool parse(const json::Expr &E, TraceLevel &Out) {
+    if (auto S = E.asString()) {
+      if (*S == "off") {
+        Out = TraceLevel::Off;
+        return true;
+      } else if (*S == "messages") {
+        Out = TraceLevel::Messages;
+        return true;
+      } else if (*S == "verbose") {
+        Out = TraceLevel::Verbose;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  static bool parse(const json::Expr &E, FileChangeType &Out) {
+    if (auto T = E.asInteger()) {
+      if (*T < static_cast<int>(FileChangeType::Created) ||
+          *T > static_cast<int>(FileChangeType::Deleted))
+        return false;
+      Out = static_cast<FileChangeType>(*T);
+      return true;
+    }
+    return false;
+  }
+
+  const json::obj *O;
+};
+} // namespace
+
 URI URI::fromUri(llvm::StringRef uri) {
   URI Result;
   Result.uri = uri;
@@ -51,32 +194,29 @@ URI URI::fromFile(llvm::StringRef file) {
   return Result;
 }
 
+llvm::Optional<URI> URI::parse(const json::Expr &E) {
+  if (auto S = E.asString())
+    return fromUri(*S);
+  return None;
+}
+
 json::Expr URI::unparse(const URI &U) { return U.uri; }
 
 llvm::Optional<TextDocumentIdentifier>
 TextDocumentIdentifier::parse(const json::Expr &Params) {
-  const json::obj *O = Params.asObject();
-  if (!O)
+  ObjectParser O(Params);
+  TextDocumentIdentifier R;
+  if (!O || !O.parse("uri", R.uri))
     return None;
-
-  TextDocumentIdentifier Result;
-  if (auto U = O->getString("uri"))
-    Result.uri = URI::parse(*U);
-  // FIXME: parse 'version', but only for VersionedTextDocumentIdentifiers.
-  return Result;
+  return R;
 }
 
 llvm::Optional<Position> Position::parse(const json::Expr &Params) {
-  const json::obj *O = Params.asObject();
-  if (!O)
+  ObjectParser O(Params);
+  Position R;
+  if (!O || !O.parse("line", R.line) || !O.parse("character", R.character))
     return None;
-
-  Position Result;
-  if (auto L = O->getInteger("line"))
-    Result.line = *L;
-  if (auto C = O->getInteger("character"))
-    Result.character = *C;
-  return Result;
+  return R;
 }
 
 json::Expr Position::unparse(const Position &P) {
@@ -87,24 +227,11 @@ json::Expr Position::unparse(const Position &P) {
 }
 
 llvm::Optional<Range> Range::parse(const json::Expr &Params) {
-  const json::obj *O = Params.asObject();
-  if (!O)
+  ObjectParser O(Params);
+  Range R;
+  if (!O || !O.parse("start", R.start) || !O.parse("end", R.end))
     return None;
-
-  Range Result;
-  if (auto *S = O->get("start")) {
-    if (auto P = Position::parse(*S))
-      Result.start = std::move(*P);
-    else
-      return None;
-  }
-  if (auto *E = O->get("end")) {
-    if (auto P = Position::parse(*E))
-      Result.end = std::move(*P);
-    else
-      return None;
-  }
-  return Result;
+  return R;
 }
 
 json::Expr Range::unparse(const Range &P) {
@@ -123,53 +250,29 @@ json::Expr Location::unparse(const Location &P) {
 
 llvm::Optional<TextDocumentItem>
 TextDocumentItem::parse(const json::Expr &Params) {
-  const json::obj *O = Params.asObject();
-  if (!O)
+  ObjectParser O(Params);
+  TextDocumentItem R;
+  if (!O || !O.parse("uri", R.uri) || !O.parse("languageId", R.languageId) ||
+      !O.parse("version", R.version) || !O.parse("text", R.text))
     return None;
-
-  TextDocumentItem Result;
-  if (auto U = O->getString("uri"))
-    Result.uri = URI::parse(*U);
-  if (auto L = O->getString("languageId"))
-    Result.languageId = *L;
-  if (auto V = O->getInteger("version"))
-    Result.version = *V;
-  if (auto T = O->getString("text"))
-    Result.text = *T;
-  return Result;
+  return R;
 }
 
 llvm::Optional<Metadata> Metadata::parse(const json::Expr &Params) {
-  const json::obj *O = Params.asObject();
+  ObjectParser O(Params);
+  Metadata R;
   if (!O)
     return None;
-
-  Metadata Result;
-  if (auto *Flags = O->getArray("extraFlags"))
-    for (auto &F : *Flags) {
-      if (auto S = F.asString())
-        Result.extraFlags.push_back(*S);
-      else
-        return llvm::None;
-    }
-  return Result;
+  O.parse("extraFlags", R.extraFlags);
+  return R;
 }
 
 llvm::Optional<TextEdit> TextEdit::parse(const json::Expr &Params) {
-  const json::obj *O = Params.asObject();
-  if (!O)
+  ObjectParser O(Params);
+  TextEdit R;
+  if (!O || !O.parse("range", R.range) || !O.parse("newText", R.newText))
     return None;
-
-  TextEdit Result;
-  if (auto *R = O->get("range")) {
-    if (auto Parsed = Range::parse(*R))
-      Result.range = std::move(*Parsed);
-    else
-      return llvm::None;
-  }
-  if (auto T = O->getString("newText"))
-    Result.newText = *T;
-  return Result;
+  return R;
 }
 
 json::Expr TextEdit::unparse(const TextEdit &P) {
@@ -179,156 +282,85 @@ json::Expr TextEdit::unparse(const TextEdit &P) {
   };
 }
 
-namespace {
-TraceLevel getTraceLevel(llvm::StringRef TraceLevelStr) {
-  if (TraceLevelStr == "off")
-    return TraceLevel::Off;
-  else if (TraceLevelStr == "messages")
-    return TraceLevel::Messages;
-  else if (TraceLevelStr == "verbose")
-    return TraceLevel::Verbose;
-  return TraceLevel::Off;
-}
-} // namespace
-
 llvm::Optional<InitializeParams>
 InitializeParams::parse(const json::Expr &Params) {
-  const json::obj *O = Params.asObject();
+  ObjectParser O(Params);
+  InitializeParams R;
   if (!O)
     return None;
-
-  InitializeParams Result;
-  if (auto P = O->getInteger("processId"))
-    Result.processId = *P;
-  if (auto R = O->getString("rootPath"))
-    Result.rootPath = *R;
-  if (auto R = O->getString("rootUri"))
-    Result.rootUri = URI::parse(*R);
-  if (auto T = O->getString("trace"))
-    Result.trace = getTraceLevel(*T);
+  // We deliberately don't fail if we can't parse individual fields.
+  // Failing to handle a slightly malformed initialize would be a disaster.
+  O.parse("processId", R.processId);
+  O.parse("rootUri", R.rootUri);
+  O.parse("rootPath", R.rootPath);
+  O.parse("trace", R.trace);
   // initializationOptions, capabilities unused
-  return Result;
+  return R;
 }
 
 llvm::Optional<DidOpenTextDocumentParams>
 DidOpenTextDocumentParams::parse(const json::Expr &Params) {
-  const json::obj *O = Params.asObject();
-  if (!O)
+  ObjectParser O(Params);
+  DidOpenTextDocumentParams R;
+  if (!O || !O.parse("textDocument", R.textDocument) ||
+      !O.parse("metadata", R.metadata))
     return None;
-
-  DidOpenTextDocumentParams Result;
-  if (auto *D = O->get("textDocument")) {
-    if (auto Parsed = TextDocumentItem::parse(*D))
-      Result.textDocument = std::move(*Parsed);
-    else
-      return llvm::None;
-  }
-  if (auto *M = O->get("metadata")) {
-    if (auto Parsed = Metadata::parse(*M))
-      Result.metadata = std::move(*Parsed);
-    else
-      return llvm::None;
-  }
-  return Result;
+  return R;
 }
 
 llvm::Optional<DidCloseTextDocumentParams>
 DidCloseTextDocumentParams::parse(const json::Expr &Params) {
-  const json::obj *O = Params.asObject();
-  if (!O)
+  ObjectParser O(Params);
+  DidCloseTextDocumentParams R;
+  if (!O || !O.parse("textDocument", R.textDocument))
     return None;
-
-  DidCloseTextDocumentParams Result;
-  if (auto *D = O->get("textDocument")) {
-    if (auto Parsed = TextDocumentIdentifier::parse(*D))
-      Result.textDocument = std::move(*Parsed);
-    else
-      return llvm::None;
-  }
-  return Result;
+  return R;
 }
 
 llvm::Optional<DidChangeTextDocumentParams>
 DidChangeTextDocumentParams::parse(const json::Expr &Params) {
-  const json::obj *O = Params.asObject();
-  if (!O)
+  ObjectParser O(Params);
+  DidChangeTextDocumentParams R;
+  if (!O || !O.parse("textDocument", R.textDocument) ||
+      !O.parse("contentChanges", R.contentChanges))
     return None;
-
-  DidChangeTextDocumentParams Result;
-  if (auto *D = O->get("textDocument")) {
-    if (auto Parsed = TextDocumentIdentifier::parse(*D))
-      Result.textDocument = std::move(*Parsed);
-    else
-      return llvm::None;
-  }
-  if (auto *A = O->getArray("contentChanges"))
-    for (auto &E : *A) {
-      if (auto Parsed = TextDocumentContentChangeEvent::parse(E))
-        Result.contentChanges.push_back(std::move(*Parsed));
-      else
-        return llvm::None;
-    }
-  return Result;
+  return R;
 }
 
 llvm::Optional<FileEvent> FileEvent::parse(const json::Expr &Params) {
-  const json::obj *O = Params.asObject();
-  if (!O)
+  ObjectParser O(Params);
+  FileEvent R;
+  if (!O || !O.parse("uri", R.uri) || !O.parse("type", R.type))
     return None;
-
-  FileEvent Result;
-  if (auto U = O->getString("uri"))
-    Result.uri = URI::parse(*U);
-  if (auto T = O->getInteger("type")) {
-    if (*T < static_cast<int>(FileChangeType::Created) ||
-        *T > static_cast<int>(FileChangeType::Deleted))
-      return llvm::None;
-    Result.type = static_cast<FileChangeType>(*T);
-  }
-  return Result;
+  return R;
 }
 
 llvm::Optional<DidChangeWatchedFilesParams>
 DidChangeWatchedFilesParams::parse(const json::Expr &Params) {
-  const json::obj *O = Params.asObject();
-  if (!O)
+  ObjectParser O(Params);
+  DidChangeWatchedFilesParams R;
+  if (!O || !O.parse("changes", R.changes))
     return None;
-
-  DidChangeWatchedFilesParams Result;
-  if (auto *C = O->getArray("changes"))
-    for (auto &E : *C) {
-      if (auto Parsed = FileEvent::parse(E))
-        Result.changes.push_back(std::move(*Parsed));
-      else
-        return llvm::None;
-    }
-  return Result;
+  return R;
 }
 
 llvm::Optional<TextDocumentContentChangeEvent>
 TextDocumentContentChangeEvent::parse(const json::Expr &Params) {
-  const json::obj *O = Params.asObject();
-  if (!O)
+  ObjectParser O(Params);
+  TextDocumentContentChangeEvent R;
+  if (!O || !O.parse("text", R.text))
     return None;
-
-  TextDocumentContentChangeEvent Result;
-  if (auto T = O->getString("text"))
-    Result.text = *T;
-  return Result;
+  return R;
 }
 
 llvm::Optional<FormattingOptions>
 FormattingOptions::parse(const json::Expr &Params) {
-  const json::obj *O = Params.asObject();
-  if (!O)
+  ObjectParser O(Params);
+  FormattingOptions R;
+  if (!O || !O.parse("tabSize", R.tabSize) ||
+      !O.parse("insertSpaces", R.insertSpaces))
     return None;
-
-  FormattingOptions Result;
-  if (auto T = O->getInteger("tabSize"))
-    Result.tabSize = *T;
-  if (auto I = O->getBoolean("insertSpaces"))
-    Result.insertSpaces = *I;
-  return Result;
+  return R;
 }
 
 json::Expr FormattingOptions::unparse(const FormattingOptions &P) {
@@ -340,183 +372,69 @@ json::Expr FormattingOptions::unparse(const FormattingOptions &P) {
 
 llvm::Optional<DocumentRangeFormattingParams>
 DocumentRangeFormattingParams::parse(const json::Expr &Params) {
-  const json::obj *O = Params.asObject();
-  if (!O)
+  ObjectParser O(Params);
+  DocumentRangeFormattingParams R;
+  if (!O || !O.parse("textDocument", R.textDocument) ||
+      !O.parse("range", R.range) || !O.parse("options", R.options))
     return None;
-
-  DocumentRangeFormattingParams Result;
-  if (auto *D = O->get("textDocument")) {
-    if (auto Parsed = TextDocumentIdentifier::parse(*D))
-      Result.textDocument = std::move(*Parsed);
-    else
-      return llvm::None;
-  }
-  if (auto *R = O->get("range")) {
-    if (auto Parsed = Range::parse(*R))
-      Result.range = std::move(*Parsed);
-    else
-      return llvm::None;
-  }
-  if (auto *F = O->get("options")) {
-    if (auto Parsed = FormattingOptions::parse(*F))
-      Result.options = std::move(*Parsed);
-    else
-      return llvm::None;
-  }
-  return Result;
+  return R;
 }
 
 llvm::Optional<DocumentOnTypeFormattingParams>
 DocumentOnTypeFormattingParams::parse(const json::Expr &Params) {
-  const json::obj *O = Params.asObject();
-  if (!O)
+  ObjectParser O(Params);
+  DocumentOnTypeFormattingParams R;
+  if (!O || !O.parse("textDocument", R.textDocument) ||
+      !O.parse("position", R.position) || !O.parse("ch", R.ch) ||
+      !O.parse("options", R.options))
     return None;
-
-  DocumentOnTypeFormattingParams Result;
-  if (auto Ch = O->getString("ch"))
-    Result.ch = *Ch;
-  if (auto *D = O->get("textDocument")) {
-    if (auto Parsed = TextDocumentIdentifier::parse(*D))
-      Result.textDocument = std::move(*Parsed);
-    else
-      return llvm::None;
-  }
-  if (auto *P = O->get("position")) {
-    if (auto Parsed = Position::parse(*P))
-      Result.position = std::move(*Parsed);
-    else
-      return llvm::None;
-  }
-  if (auto *F = O->get("options")) {
-    if (auto Parsed = FormattingOptions::parse(*F))
-      Result.options = std::move(*Parsed);
-    else
-      return llvm::None;
-  }
-  return Result;
+  return R;
 }
 
 llvm::Optional<DocumentFormattingParams>
 DocumentFormattingParams::parse(const json::Expr &Params) {
-  const json::obj *O = Params.asObject();
-  if (!O)
+  ObjectParser O(Params);
+  DocumentFormattingParams R;
+  if (!O || !O.parse("textDocument", R.textDocument) ||
+      !O.parse("options", R.options))
     return None;
-
-  DocumentFormattingParams Result;
-  if (auto *D = O->get("textDocument")) {
-    if (auto Parsed = TextDocumentIdentifier::parse(*D))
-      Result.textDocument = std::move(*Parsed);
-    else
-      return llvm::None;
-  }
-  if (auto *F = O->get("options")) {
-    if (auto Parsed = FormattingOptions::parse(*F))
-      Result.options = std::move(*Parsed);
-    else
-      return llvm::None;
-  }
-  return Result;
+  return R;
 }
 
 llvm::Optional<Diagnostic> Diagnostic::parse(const json::Expr &Params) {
-  const json::obj *O = Params.asObject();
-  if (!O)
+  ObjectParser O(Params);
+  Diagnostic R;
+  if (!O || !O.parse("range", R.range) || !O.parse("message", R.message))
     return None;
-
-  Diagnostic Result;
-  if (auto *R = O->get("range")) {
-    if (auto Parsed = Range::parse(*R))
-      Result.range = std::move(*Parsed);
-    else
-      return llvm::None;
-  }
-  if (auto S = O->getInteger("severity"))
-    Result.severity = *S;
-  if (auto M = O->getString("message"))
-    Result.message = *M;
-  return Result;
+  O.parse("severity", R.severity);
+  return R;
 }
 
 llvm::Optional<CodeActionContext>
 CodeActionContext::parse(const json::Expr &Params) {
-  const json::obj *O = Params.asObject();
-  if (!O)
+  ObjectParser O(Params);
+  CodeActionContext R;
+  if (!O || !O.parse("diagnostics", R.diagnostics))
     return None;
-
-  CodeActionContext Result;
-  if (auto *D = O->getArray("diagnostics"))
-    for (auto &E : *D) {
-      if (auto Parsed = Diagnostic::parse(E))
-        Result.diagnostics.push_back(std::move(*Parsed));
-      else
-        return llvm::None;
-    }
-  return Result;
+  return R;
 }
 
 llvm::Optional<CodeActionParams>
 CodeActionParams::parse(const json::Expr &Params) {
-  const json::obj *O = Params.asObject();
-  if (!O)
+  ObjectParser O(Params);
+  CodeActionParams R;
+  if (!O || !O.parse("textDocument", R.textDocument) ||
+      !O.parse("range", R.range) || !O.parse("context", R.context))
     return None;
-
-  CodeActionParams Result;
-  if (auto *D = O->get("textDocument")) {
-    if (auto Parsed = TextDocumentIdentifier::parse(*D))
-      Result.textDocument = std::move(*Parsed);
-    else
-      return llvm::None;
-  }
-  if (auto *R = O->get("range")) {
-    if (auto Parsed = Range::parse(*R))
-      Result.range = std::move(*Parsed);
-    else
-      return llvm::None;
-  }
-  if (auto *R = O->get("context")) {
-    if (auto Parsed = CodeActionContext::parse(*R))
-      Result.context = std::move(*Parsed);
-    else
-      return llvm::None;
-  }
-  return Result;
-}
-
-llvm::Optional<std::map<std::string, std::vector<TextEdit>>>
-parseWorkspaceEditChange(const json::Expr &Params) {
-  const json::obj *O = Params.asObject();
-  if (!O)
-    return None;
-
-  std::map<std::string, std::vector<TextEdit>> Result;
-  for (const auto &KV : *O) {
-    auto &Values = Result[StringRef(KV.first)];
-    if (auto *Edits = KV.second.asArray())
-      for (auto &Edit : *Edits) {
-        if (auto Parsed = TextEdit::parse(Edit))
-          Values.push_back(std::move(*Parsed));
-        else
-          return llvm::None;
-      }
-    else
-      return llvm::None;
-  }
-  return Result;
+  return R;
 }
 
 llvm::Optional<WorkspaceEdit> WorkspaceEdit::parse(const json::Expr &Params) {
-  const json::obj *O = Params.asObject();
-  if (!O)
+  ObjectParser O(Params);
+  WorkspaceEdit R;
+  if (!O || !O.parse("changes", R.changes))
     return None;
-
-  WorkspaceEdit Result;
-  if (auto *C = O->get("changes")) {
-    if (auto Parsed = parseWorkspaceEditChange(*C))
-      Result.changes = std::move(*Parsed);
-    else
-      return llvm::None;
-  }
-  return Result;
+  return R;
 }
 
 const std::string ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND =
@@ -561,24 +479,12 @@ ApplyWorkspaceEditParams::unparse(const ApplyWorkspaceEditParams &Params) {
 
 llvm::Optional<TextDocumentPositionParams>
 TextDocumentPositionParams::parse(const json::Expr &Params) {
-  const json::obj *O = Params.asObject();
-  if (!O)
+  ObjectParser O(Params);
+  TextDocumentPositionParams R;
+  if (!O || !O.parse("textDocument", R.textDocument) ||
+      !O.parse("position", R.position))
     return None;
-
-  TextDocumentPositionParams Result;
-  if (auto *D = O->get("textDocument")) {
-    if (auto Parsed = TextDocumentIdentifier::parse(*D))
-      Result.textDocument = std::move(*Parsed);
-    else
-      return llvm::None;
-  }
-  if (auto *P = O->get("position")) {
-    if (auto Parsed = Position::parse(*P))
-      Result.position = std::move(*Parsed);
-    else
-      return llvm::None;
-  }
-  return Result;
+  return R;
 }
 
 json::Expr CompletionItem::unparse(const CompletionItem &CI) {
@@ -649,24 +555,10 @@ json::Expr SignatureHelp::unparse(const SignatureHelp &SH) {
 }
 
 llvm::Optional<RenameParams> RenameParams::parse(const json::Expr &Params) {
-  const json::obj *O = Params.asObject();
-  if (!O)
+  ObjectParser O(Params);
+  RenameParams R;
+  if (!O || !O.parse("textDocument", R.textDocument) ||
+      !O.parse("position", R.position) || !O.parse("newName", R.newName))
     return None;
-
-  RenameParams Result;
-  if (auto *D = O->get("textDocument")) {
-    if (auto Parsed = TextDocumentIdentifier::parse(*D))
-      Result.textDocument = std::move(*Parsed);
-    else
-      return llvm::None;
-  }
-  if (auto *P = O->get("position")) {
-    if (auto Parsed = Position::parse(*P))
-      Result.position = std::move(*Parsed);
-    else
-      return llvm::None;
-  }
-  if (auto N = O->getString("newName"))
-    Result.newName = *N;
-  return Result;
+  return R;
 }

@@ -1171,7 +1171,7 @@ body:             |
 
     G_BRCOND %1(s1), %bb.1
     ; CHECK: TSTri [[COND]], 1, 14, _, implicit-def %cpsr
-    ; CHECK: Bcc %bb.1, 0, %cpsr
+    ; CHECK: Bcc %bb.1, 1, %cpsr
     G_BR %bb.2
     ; CHECK: B %bb.2
 

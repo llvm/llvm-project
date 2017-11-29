@@ -1020,11 +1020,11 @@ static void mergePdbs() {
 
   auto &DestTpi = Builder.getTpiBuilder();
   auto &DestIpi = Builder.getIpiBuilder();
-  MergedTpi.ForEachRecord([&DestTpi](TypeIndex TI, ArrayRef<uint8_t> Data) {
-    DestTpi.addTypeRecord(Data, None);
+  MergedTpi.ForEachRecord([&DestTpi](TypeIndex TI, const CVType &Type) {
+    DestTpi.addTypeRecord(Type.RecordData, None);
   });
-  MergedIpi.ForEachRecord([&DestIpi](TypeIndex TI, ArrayRef<uint8_t> Data) {
-    DestIpi.addTypeRecord(Data, None);
+  MergedIpi.ForEachRecord([&DestIpi](TypeIndex TI, const CVType &Type) {
+    DestIpi.addTypeRecord(Type.RecordData, None);
   });
   Builder.getInfoBuilder().addFeature(PdbRaw_FeatureSig::VC140);
 

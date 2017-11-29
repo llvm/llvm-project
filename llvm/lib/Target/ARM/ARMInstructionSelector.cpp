@@ -855,7 +855,7 @@ bool ARMInstructionSelector::select(MachineInstr &I,
     // Branch conditionally.
     auto Branch = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(ARM::Bcc))
                       .add(I.getOperand(1))
-                      .add(predOps(ARMCC::EQ, ARM::CPSR));
+                      .add(predOps(ARMCC::NE, ARM::CPSR));
     if (!constrainSelectedInstRegOperands(*Branch, TII, TRI, RBI))
       return false;
     I.eraseFromParent();
