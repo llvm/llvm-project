@@ -603,7 +603,9 @@ if (CLANG_ENABLE_BOOTSTRAP)
     LLVM_BINUTILS_INCDIR
     CLANG_REPOSITORY_STRING
     CMAKE_MAKE_PROGRAM
-    CMAKE_OSX_ARCHITECTURES)
+    CMAKE_OSX_ARCHITECTURES
+    LLVM_ENABLE_PROJECTS
+    LLVM_ENABLE_RUNTIMES)
 
   # We don't need to depend on compiler-rt if we're building instrumented
   # because the next stage will use the same compiler used to build this stage.

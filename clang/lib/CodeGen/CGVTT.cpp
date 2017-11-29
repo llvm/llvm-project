@@ -100,7 +100,7 @@ CodeGenVTables::EmitVTTDefinition(llvm::GlobalVariable *VTT,
     VTT->setComdat(CGM.getModule().getOrInsertComdat(VTT->getName()));
 
   // Set the right visibility.
-  CGM.setGlobalVisibility(VTT, RD);
+  CGM.setGlobalVisibility(VTT, RD, ForDefinition);
 }
 
 llvm::GlobalVariable *CodeGenVTables::GetAddrOfVTT(const CXXRecordDecl *RD) {

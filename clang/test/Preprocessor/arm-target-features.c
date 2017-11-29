@@ -214,6 +214,7 @@
 // A5:#define __ARM_ARCH_7A__ 1
 // A5-NOT:#define __ARM_ARCH_EXT_IDIV__
 // A5:#define __ARM_ARCH_PROFILE 'A'
+// A5-NOT:#define __ARM_DWARF_EH__ 1
 // A5-NOT: #define __ARM_FEATURE_DIRECTED_ROUNDING
 // A5:#define __ARM_FEATURE_DSP 1
 // A5-NOT: #define __ARM_FEATURE_NUMERIC_MAXMIN
@@ -225,6 +226,7 @@
 // A7:#define __ARM_ARCH 7
 // A7:#define __ARM_ARCH_EXT_IDIV__ 1
 // A7:#define __ARM_ARCH_PROFILE 'A'
+// A7-NOT:#define __ARM_DWARF_EH__ 1
 // A7:#define __ARM_FEATURE_DSP 1
 // A7:#define __ARM_FP 0xE
 
