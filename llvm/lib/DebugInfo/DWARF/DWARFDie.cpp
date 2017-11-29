@@ -493,7 +493,7 @@ void DWARFDie::dump(raw_ostream &OS, unsigned Indent,
         }
 
         DWARFDie child = getFirstChild();
-        if (DumpOpts.RecurseDepth > 0 && child) {
+        if (DumpOpts.ShowChildren && DumpOpts.RecurseDepth > 0 && child) {
           DumpOpts.RecurseDepth--;
           while (child) {
             child.dump(OS, Indent+2, DumpOpts);
