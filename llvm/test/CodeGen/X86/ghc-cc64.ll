@@ -3,22 +3,22 @@
 ; Check the GHC call convention works (x86-64)
 
 @base  = external global i64 ; assigned to register: R13
-@sp    = external global i64 ; assigned to register: RBP
+@sp    = external global i64 ; assigned to register: rbp
 @hp    = external global i64 ; assigned to register: R12
-@r1    = external global i64 ; assigned to register: RBX
+@r1    = external global i64 ; assigned to register: rbx
 @r2    = external global i64 ; assigned to register: R14
-@r3    = external global i64 ; assigned to register: RSI
-@r4    = external global i64 ; assigned to register: RDI
+@r3    = external global i64 ; assigned to register: rsi
+@r4    = external global i64 ; assigned to register: rdi
 @r5    = external global i64 ; assigned to register: R8
 @r6    = external global i64 ; assigned to register: R9
 @splim = external global i64 ; assigned to register: R15
 
-@f1 = external global float  ; assigned to register: XMM1
-@f2 = external global float  ; assigned to register: XMM2
-@f3 = external global float  ; assigned to register: XMM3
-@f4 = external global float  ; assigned to register: XMM4
-@d1 = external global double ; assigned to register: XMM5
-@d2 = external global double ; assigned to register: XMM6
+@f1 = external global float  ; assigned to register: xmm1
+@f2 = external global float  ; assigned to register: xmm2
+@f3 = external global float  ; assigned to register: xmm3
+@f4 = external global float  ; assigned to register: xmm4
+@d1 = external global double ; assigned to register: xmm5
+@d2 = external global double ; assigned to register: xmm6
 
 define void @zap(i64 %a, i64 %b) nounwind {
 entry:

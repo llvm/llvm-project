@@ -16,7 +16,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 ; CHECK:        ReservedNumVGPRs:                  4
 ; GFX700:       ReservedFirstVGPR:                 8
 ; GFX800:       ReservedFirstVGPR:                 8
-; GFX900:       ReservedFirstVGPR:                 11
+; GFX900:       ReservedFirstVGPR:                 10
 ; CHECK:        PrivateSegmentBufferSGPR:          0
 ; CHECK:        WavefrontPrivateSegmentOffsetSGPR: 11
 define amdgpu_kernel void @test(i32 addrspace(1)* %A) #0 !dbg !7 !kernel_arg_addr_space !12 !kernel_arg_access_qual !13 !kernel_arg_type !14 !kernel_arg_base_type !14 !kernel_arg_type_qual !15 {

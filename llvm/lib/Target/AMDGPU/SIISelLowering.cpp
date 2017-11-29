@@ -2262,8 +2262,8 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 
       unsigned LocMemOffset = VA.getLocMemOffset();
       int32_t Offset = LocMemOffset;
-      SDValue PtrOff = DAG.getConstant(Offset, DL, MVT::i32);
-      PtrOff = DAG.getNode(ISD::ADD, DL, PtrVT, StackPtr, PtrOff);
+
+      SDValue PtrOff = DAG.getObjectPtrOffset(DL, StackPtr, Offset);
 
       if (IsTailCall) {
         ISD::ArgFlagsTy Flags = Outs[realArgIdx].Flags;
@@ -2273,8 +2273,8 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
         Offset = Offset + FPDiff;
         int FI = MFI.CreateFixedObject(OpSize, Offset, true);
 
-        DstAddr = DAG.getFrameIndex(FI, PtrVT);
-        DstAddr = DAG.getNode(ISD::ADD, DL, MVT::i32, DstAddr, StackPtr);
+        DstAddr = DAG.getObjectPtrOffset(DL, DAG.getFrameIndex(FI, PtrVT),
+                                         StackPtr);
         DstInfo = MachinePointerInfo::getFixedStack(MF, FI);
 
         // Make sure any stack arguments overlapping with where we're storing
@@ -3630,8 +3630,7 @@ SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
   // private_segment_aperture_base_hi.
   uint32_t StructOffset = (AS == AMDGPUASI.LOCAL_ADDRESS) ? 0x40 : 0x44;
 
-  SDValue Ptr = DAG.getNode(ISD::ADD, DL, MVT::i64, QueuePtr,
-                            DAG.getConstant(StructOffset, DL, MVT::i64));
+  SDValue Ptr = DAG.getObjectPtrOffset(DL, QueuePtr, StructOffset);
 
   // TODO: Use custom target PseudoSourceValue.
   // TODO: We should use the value from the IR intrinsic call, but it might not
@@ -6600,7 +6599,7 @@ void SITargetLowering::adjustWritemask(MachineSDNode *&Node,
         I->getMachineOpcode() != TargetOpcode::EXTRACT_SUBREG)
       return;
 
-    // Lane means which subreg of %VGPRa_VGPRb_VGPRc_VGPRd is used.
+    // Lane means which subreg of %vgpra_vgprb_vgprc_vgprd is used.
     // Note that subregs are packed, i.e. Lane==0 is the first bit set
     // in OldDmask, so it can be any of X,Y,Z,W; Lane==1 is the second bit
     // set, etc.

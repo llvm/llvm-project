@@ -77,9 +77,9 @@ define <4 x i64> @combine_v4i64_abs_abs(<4 x i64> %a) {
 ;
 ; AVX512F-LABEL: combine_v4i64_abs_abs:
 ; AVX512F:       # BB#0:
-; AVX512F-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; AVX512F-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; AVX512F-NEXT:    vpabsq %zmm0, %zmm0
-; AVX512F-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
+; AVX512F-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: combine_v4i64_abs_abs:

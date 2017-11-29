@@ -15,7 +15,7 @@ using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
-namespace misc {
+namespace performance {
 
 void NoexceptMoveConstructorCheck::registerMatchers(MatchFinder *Finder) {
   // Only register the matchers for C++11; the functionality currently does not
@@ -48,30 +48,30 @@ void NoexceptMoveConstructorCheck::check(
       return;
 
     switch (ProtoType->getNoexceptSpec(*Result.Context)) {
-      case FunctionProtoType::NR_NoNoexcept:
-        diag(Decl->getLocation(), "move %0s should be marked noexcept")
+    case FunctionProtoType::NR_NoNoexcept:
+      diag(Decl->getLocation(), "move %0s should be marked noexcept")
+          << MethodType;
+      // FIXME: Add a fixit.
+      break;
+    case FunctionProtoType::NR_Throw:
+      // Don't complain about nothrow(false), but complain on nothrow(expr)
+      // where expr evaluates to false.
+      if (const Expr *E = ProtoType->getNoexceptExpr()) {
+        if (isa<CXXBoolLiteralExpr>(E))
+          break;
+        diag(E->getExprLoc(),
+             "noexcept specifier on the move %0 evaluates to 'false'")
             << MethodType;
-        // FIXME: Add a fixit.
-        break;
-      case FunctionProtoType::NR_Throw:
-        // Don't complain about nothrow(false), but complain on nothrow(expr)
-        // where expr evaluates to false.
-        if (const Expr *E = ProtoType->getNoexceptExpr()) {
-          if (isa<CXXBoolLiteralExpr>(E))
-            break;
-          diag(E->getExprLoc(),
-               "noexcept specifier on the move %0 evaluates to 'false'")
-              << MethodType;
-        }
-        break;
-      case FunctionProtoType::NR_Nothrow:
-      case FunctionProtoType::NR_Dependent:
-      case FunctionProtoType::NR_BadNoexcept:
-        break;
+      }
+      break;
+    case FunctionProtoType::NR_Nothrow:
+    case FunctionProtoType::NR_Dependent:
+    case FunctionProtoType::NR_BadNoexcept:
+      break;
     }
   }
 }
 
-} // namespace misc
+} // namespace performance
 } // namespace tidy
 } // namespace clang

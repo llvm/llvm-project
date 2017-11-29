@@ -108,7 +108,6 @@ public:
   StringRef getName() const { return Name; }
   uint8_t getVisibility() const { return StOther & 0x3; }
   void parseSymbolVersion();
-  void copyFrom(Symbol *Other);
 
   bool isInGot() const { return GotIndex != -1U; }
   bool isInPlt() const { return PltIndex != -1U; }
@@ -134,8 +133,8 @@ protected:
          uint8_t Type)
       : Binding(Binding), SymbolKind(K), NeedsPltAddr(false),
         IsInGlobalMipsGot(false), Is32BitMipsGot(false), IsInIplt(false),
-        IsInIgot(false), IsPreemptible(false), Type(Type), StOther(StOther),
-        Name(Name) {}
+        IsInIgot(false), IsPreemptible(false), Used(!Config->GcSections),
+        Type(Type), StOther(StOther), Name(Name) {}
 
   const unsigned SymbolKind : 8;
 
@@ -156,6 +155,9 @@ public:
   unsigned IsInIgot : 1;
 
   unsigned IsPreemptible : 1;
+
+  // True if an undefined or shared symbol is used from a live section.
+  unsigned Used : 1;
 
   // The following fields have the same meaning as the ELF symbol attributes.
   uint8_t Type;    // symbol type

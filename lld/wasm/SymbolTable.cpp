@@ -10,9 +10,9 @@
 #include "SymbolTable.h"
 
 #include "Config.h"
-#include "Memory.h"
 #include "Strings.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Memory.h"
 
 #include <unordered_set>
 

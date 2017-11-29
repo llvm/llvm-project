@@ -218,7 +218,7 @@ entry:
 define i32 @test2(i32 %a) {
 ; X64-LABEL: test2:
 ; X64:       # BB#0: # %entry
-; X64-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; X64-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shll $5, %eax
 ; X64-NEXT:    leal (%rax,%rdi), %eax
@@ -239,7 +239,7 @@ entry:
 define i32 @test3(i32 %a) {
 ; X64-LABEL: test3:
 ; X64:       # BB#0: # %entry
-; X64-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; X64-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shll $5, %eax
 ; X64-NEXT:    leal (%rax,%rdi), %eax

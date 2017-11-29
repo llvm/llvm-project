@@ -153,7 +153,7 @@ define void @coldcc_tail_call_void_nullary() {
 ; CHECK-LABEL: call_constexpr:
 ; CHECK-NEXT: i32.const $push[[L0:[0-9]+]]=, 2{{$}}
 ; CHECK-NEXT: i32.const $push[[L1:[0-9]+]]=, 3{{$}}
-; CHECK-NEXT: call vararg_func@FUNCTION, $pop[[L0]], $pop[[L1]]{{$}}
+; CHECK-NEXT: call .Lbitcast@FUNCTION, $pop[[L0]], $pop[[L1]]{{$}}
 ; CHECK-NEXT: call other_void_nullary@FUNCTION{{$}}
 ; CHECK-NEXT: call void_nullary@FUNCTION{{$}}
 ; CHECK-NEXT: return{{$}}

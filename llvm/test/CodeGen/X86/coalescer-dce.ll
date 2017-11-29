@@ -16,7 +16,7 @@ target triple = "x86_64-apple-macosx10.7.0"
 ;         Considering merging %vreg7 with %vreg10
 ;                 RHS = %vreg7 = [208d,272d:0)[304L,480L:0)  0@208d
 ;                 LHS = %vreg10 = [16d,64L:2)[64L,160L:1)[192L,240L:1)[272d,304L:3)[304L,352d:1)[352d,400d:0)[400d,400S:4)  0@352d 1@64L-phidef 2@16d-phikill 3@272d-phikill 4@400d
-; Remat: %vreg10<def> = MOV64r0 %vreg10<imp-def>, %EFLAGS<imp-def,dead>, %vreg10<imp-def>; GR64:%vreg10
+; Remat: %vreg10<def> = MOV64r0 %vreg10<imp-def>, %eflags<imp-def,dead>, %vreg10<imp-def>; GR64:%vreg10
 ; Shrink: %vreg7 = [208d,272d:0)[304L,480L:0)  0@208d
 ;  live-in at 240L
 ;  live-in at 416L

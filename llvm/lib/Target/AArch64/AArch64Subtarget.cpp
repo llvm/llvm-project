@@ -154,7 +154,7 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, const std::string &CPU,
       InstrInfo(initializeSubtargetDependencies(FS, CPU)), TSInfo(),
       TLInfo(TM, *this) {
   CallLoweringInfo.reset(new AArch64CallLowering(*getTargetLowering()));
-  Legalizer.reset(new AArch64LegalizerInfo());
+  Legalizer.reset(new AArch64LegalizerInfo(*this));
 
   auto *RBI = new AArch64RegisterBankInfo(*getRegisterInfo());
 

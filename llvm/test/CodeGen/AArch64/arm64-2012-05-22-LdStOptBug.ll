@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=arm64-apple-ios -verify-machineinstrs | FileCheck %s
 
 ; LdStOpt bug created illegal instruction:
-;   %D1<def>, %D2<def> = LDPSi %X0, 1
+;   %d1<def>, %d2<def> = LDPSi %x0, 1
 ; rdar://11512047
 
 %0 = type opaque

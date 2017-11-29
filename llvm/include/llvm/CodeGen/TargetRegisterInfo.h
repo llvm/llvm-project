@@ -1140,7 +1140,7 @@ struct VirtReg2IndexFunctor {
 ///   %noreg          - NoRegister
 ///   %vreg5          - a virtual register.
 ///   %vreg5:sub_8bit - a virtual register with sub-register index (with TRI).
-///   %EAX            - a physical register
+///   %eax            - a physical register
 ///   %physreg17      - a physical register when no TRI instance given.
 ///
 /// Usage: OS << printReg(Reg, TRI, SubRegIdx) << '\n';
@@ -1151,8 +1151,8 @@ Printable printReg(unsigned Reg, const TargetRegisterInfo *TRI = nullptr,
 ///
 /// Register units are named after their root registers:
 ///
-///   AL      - Single root.
-///   FP0~ST7 - Dual roots.
+///   al      - Single root.
+///   fp0~st7 - Dual roots.
 ///
 /// Usage: OS << printRegUnit(Unit, TRI) << '\n';
 Printable printRegUnit(unsigned Unit, const TargetRegisterInfo *TRI);

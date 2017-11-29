@@ -104,8 +104,8 @@ bool ExpandPostRA::LowerSubregToReg(MachineInstr *MI) {
   if (DstSubReg == InsReg) {
     // No need to insert an identity copy instruction.
     // Watch out for case like this:
-    // %RAX<def> = SUBREG_TO_REG 0, %EAX<kill>, 3
-    // We must leave %RAX live.
+    // %rax<def> = SUBREG_TO_REG 0, %eax<kill>, 3
+    // We must leave %rax live.
     if (DstReg != InsReg) {
       MI->setDesc(TII->get(TargetOpcode::KILL));
       MI->RemoveOperand(3);     // SubIdx

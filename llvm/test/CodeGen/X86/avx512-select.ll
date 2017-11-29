@@ -155,7 +155,7 @@ define i8 @select05_mem(<8 x i1>* %a.0, <8 x i1>* %m) {
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    korw %k1, %k0, %k0
 ; X86-NEXT:    kmovw %k0, %eax
-; X86-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; X86-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: select05_mem:
@@ -166,7 +166,7 @@ define i8 @select05_mem(<8 x i1>* %a.0, <8 x i1>* %m) {
 ; X64-NEXT:    kmovw %eax, %k1
 ; X64-NEXT:    korw %k1, %k0, %k0
 ; X64-NEXT:    kmovw %k0, %eax
-; X64-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; X64-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; X64-NEXT:    retq
   %mask = load <8 x i1> , <8 x i1>* %m
   %a = load <8 x i1> , <8 x i1>* %a.0
@@ -205,7 +205,7 @@ define i8 @select06_mem(<8 x i1>* %a.0, <8 x i1>* %m) {
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    kandw %k1, %k0, %k0
 ; X86-NEXT:    kmovw %k0, %eax
-; X86-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; X86-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: select06_mem:
@@ -216,7 +216,7 @@ define i8 @select06_mem(<8 x i1>* %a.0, <8 x i1>* %m) {
 ; X64-NEXT:    kmovw %eax, %k1
 ; X64-NEXT:    kandw %k1, %k0, %k0
 ; X64-NEXT:    kmovw %k0, %eax
-; X64-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; X64-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; X64-NEXT:    retq
   %mask = load <8 x i1> , <8 x i1>* %m
   %a = load <8 x i1> , <8 x i1>* %a.0
@@ -237,7 +237,7 @@ define i8 @select07(i8 %a.0, i8 %b.0, i8 %m) {
 ; X86-NEXT:    kandw %k0, %k1, %k0
 ; X86-NEXT:    korw %k2, %k0, %k0
 ; X86-NEXT:    kmovw %k0, %eax
-; X86-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; X86-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: select07:
@@ -249,7 +249,7 @@ define i8 @select07(i8 %a.0, i8 %b.0, i8 %m) {
 ; X64-NEXT:    kandw %k0, %k1, %k0
 ; X64-NEXT:    korw %k2, %k0, %k0
 ; X64-NEXT:    kmovw %k0, %eax
-; X64-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; X64-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; X64-NEXT:    retq
   %mask = bitcast i8 %m to <8 x i1>
   %a = bitcast i8 %a.0 to <8 x i1>

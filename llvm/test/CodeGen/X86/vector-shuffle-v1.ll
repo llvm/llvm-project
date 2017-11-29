@@ -285,7 +285,7 @@ define i8 @shuf8i1_10_2_9_u_3_u_2_u(i8 %a) {
 ; AVX512F-NEXT:    vpsllq $63, %zmm2, %zmm0
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; AVX512F-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
@@ -299,7 +299,7 @@ define i8 @shuf8i1_10_2_9_u_3_u_2_u(i8 %a) {
 ; AVX512VL-NEXT:    vpsllq $63, %zmm2, %zmm0
 ; AVX512VL-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512VL-NEXT:    kmovw %k0, %eax
-; AVX512VL-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; AVX512VL-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
@@ -312,7 +312,7 @@ define i8 @shuf8i1_10_2_9_u_3_u_2_u(i8 %a) {
 ; VL_BW_DQ-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
 ; VL_BW_DQ-NEXT:    vpmovq2m %zmm2, %k0
 ; VL_BW_DQ-NEXT:    kmovd %k0, %eax
-; VL_BW_DQ-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; VL_BW_DQ-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; VL_BW_DQ-NEXT:    vzeroupper
 ; VL_BW_DQ-NEXT:    retq
   %b = bitcast i8 %a to <8 x i1>
@@ -330,7 +330,7 @@ define i8 @shuf8i1_0_1_4_5_u_u_u_u(i8 %a) {
 ; AVX512F-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; AVX512F-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
@@ -342,7 +342,7 @@ define i8 @shuf8i1_0_1_4_5_u_u_u_u(i8 %a) {
 ; AVX512VL-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; AVX512VL-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512VL-NEXT:    kmovw %k0, %eax
-; AVX512VL-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; AVX512VL-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
@@ -353,7 +353,7 @@ define i8 @shuf8i1_0_1_4_5_u_u_u_u(i8 %a) {
 ; VL_BW_DQ-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,4,5,0,1,0,1]
 ; VL_BW_DQ-NEXT:    vpmovq2m %zmm0, %k0
 ; VL_BW_DQ-NEXT:    kmovd %k0, %eax
-; VL_BW_DQ-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; VL_BW_DQ-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; VL_BW_DQ-NEXT:    vzeroupper
 ; VL_BW_DQ-NEXT:    retq
   %b = bitcast i8 %a to <8 x i1>
@@ -373,7 +373,7 @@ define i8 @shuf8i1_9_6_1_0_3_7_7_0(i8 %a) {
 ; AVX512F-NEXT:    vpsllq $63, %zmm2, %zmm0
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; AVX512F-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
@@ -387,7 +387,7 @@ define i8 @shuf8i1_9_6_1_0_3_7_7_0(i8 %a) {
 ; AVX512VL-NEXT:    vpsllq $63, %zmm2, %zmm0
 ; AVX512VL-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512VL-NEXT:    kmovw %k0, %eax
-; AVX512VL-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; AVX512VL-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
@@ -400,7 +400,7 @@ define i8 @shuf8i1_9_6_1_0_3_7_7_0(i8 %a) {
 ; VL_BW_DQ-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
 ; VL_BW_DQ-NEXT:    vpmovq2m %zmm2, %k0
 ; VL_BW_DQ-NEXT:    kmovd %k0, %eax
-; VL_BW_DQ-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; VL_BW_DQ-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; VL_BW_DQ-NEXT:    vzeroupper
 ; VL_BW_DQ-NEXT:    retq
   %b = bitcast i8 %a to <8 x i1>
@@ -420,7 +420,7 @@ define i8 @shuf8i1_9_6_1_10_3_7_7_0(i8 %a) {
 ; AVX512F-NEXT:    vpsllq $63, %zmm2, %zmm0
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; AVX512F-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
@@ -434,7 +434,7 @@ define i8 @shuf8i1_9_6_1_10_3_7_7_0(i8 %a) {
 ; AVX512VL-NEXT:    vpsllq $63, %zmm2, %zmm0
 ; AVX512VL-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512VL-NEXT:    kmovw %k0, %eax
-; AVX512VL-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; AVX512VL-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
@@ -447,7 +447,7 @@ define i8 @shuf8i1_9_6_1_10_3_7_7_0(i8 %a) {
 ; VL_BW_DQ-NEXT:    vpermt2q %zmm0, %zmm1, %zmm2
 ; VL_BW_DQ-NEXT:    vpmovq2m %zmm2, %k0
 ; VL_BW_DQ-NEXT:    kmovd %k0, %eax
-; VL_BW_DQ-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; VL_BW_DQ-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; VL_BW_DQ-NEXT:    vzeroupper
 ; VL_BW_DQ-NEXT:    retq
   %b = bitcast i8 %a to <8 x i1>
@@ -469,7 +469,7 @@ define i8 @shuf8i1__9_6_1_10_3_7_7_1(i8 %a) {
 ; AVX512F-NEXT:    vpsllq $63, %zmm2, %zmm0
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; AVX512F-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
@@ -485,7 +485,7 @@ define i8 @shuf8i1__9_6_1_10_3_7_7_1(i8 %a) {
 ; AVX512VL-NEXT:    vpsllq $63, %zmm2, %zmm0
 ; AVX512VL-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512VL-NEXT:    kmovw %k0, %eax
-; AVX512VL-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; AVX512VL-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
@@ -498,7 +498,7 @@ define i8 @shuf8i1__9_6_1_10_3_7_7_1(i8 %a) {
 ; VL_BW_DQ-NEXT:    vpermt2q %zmm0, %zmm1, %zmm2
 ; VL_BW_DQ-NEXT:    vpmovq2m %zmm2, %k0
 ; VL_BW_DQ-NEXT:    kmovd %k0, %eax
-; VL_BW_DQ-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; VL_BW_DQ-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; VL_BW_DQ-NEXT:    vzeroupper
 ; VL_BW_DQ-NEXT:    retq
   %b = bitcast i8 %a to <8 x i1>
@@ -520,7 +520,7 @@ define i8 @shuf8i1_9_6_1_10_3_7_7_0_all_ones(<8 x i1> %a) {
 ; AVX512F-NEXT:    vpsllq $63, %zmm2, %zmm0
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; AVX512F-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
@@ -536,7 +536,7 @@ define i8 @shuf8i1_9_6_1_10_3_7_7_0_all_ones(<8 x i1> %a) {
 ; AVX512VL-NEXT:    vpsllq $63, %zmm2, %zmm0
 ; AVX512VL-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512VL-NEXT:    kmovw %k0, %eax
-; AVX512VL-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; AVX512VL-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
@@ -550,7 +550,7 @@ define i8 @shuf8i1_9_6_1_10_3_7_7_0_all_ones(<8 x i1> %a) {
 ; VL_BW_DQ-NEXT:    vpermt2q %zmm0, %zmm1, %zmm2
 ; VL_BW_DQ-NEXT:    vpmovq2m %zmm2, %k0
 ; VL_BW_DQ-NEXT:    kmovd %k0, %eax
-; VL_BW_DQ-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; VL_BW_DQ-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; VL_BW_DQ-NEXT:    vzeroupper
 ; VL_BW_DQ-NEXT:    retq
   %c = shufflevector <8 x i1> <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1>, <8 x i1> %a, <8 x i32> <i32 9, i32 6, i32 1, i32 0, i32 3, i32 7, i32 7, i32 0>
@@ -568,7 +568,7 @@ define i16 @shuf16i1_0_0_0_0_0_0_0_0_0_0_0_0_0_0_0_0(i16 %a) {
 ; AVX512F-NEXT:    vpslld $31, %zmm0, %zmm0
 ; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; AVX512F-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
@@ -580,7 +580,7 @@ define i16 @shuf16i1_0_0_0_0_0_0_0_0_0_0_0_0_0_0_0_0(i16 %a) {
 ; AVX512VL-NEXT:    vpslld $31, %zmm0, %zmm0
 ; AVX512VL-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; AVX512VL-NEXT:    kmovw %k0, %eax
-; AVX512VL-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; AVX512VL-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
@@ -591,7 +591,7 @@ define i16 @shuf16i1_0_0_0_0_0_0_0_0_0_0_0_0_0_0_0_0(i16 %a) {
 ; VL_BW_DQ-NEXT:    vpbroadcastd %xmm0, %zmm0
 ; VL_BW_DQ-NEXT:    vpmovd2m %zmm0, %k0
 ; VL_BW_DQ-NEXT:    kmovd %k0, %eax
-; VL_BW_DQ-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; VL_BW_DQ-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; VL_BW_DQ-NEXT:    vzeroupper
 ; VL_BW_DQ-NEXT:    retq
   %b = bitcast i16 %a to <16 x i1>

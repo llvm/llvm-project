@@ -34,7 +34,7 @@ define <4 x i64> @shift_4_i64(<4 x i64> %a) {
 ; KNL-NEXT:    vpsrlq $1, %ymm0, %ymm0
 ; KNL-NEXT:    vpsllq $12, %ymm0, %ymm0
 ; KNL-NEXT:    vpsraq $12, %zmm0, %zmm0
-; KNL-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
+; KNL-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: shift_4_i64:
@@ -106,10 +106,10 @@ define <8 x i64> @variable_sra2(<8 x i64> %x, <8 x i64> %y) {
 define <4 x i64> @variable_sra3(<4 x i64> %x, <4 x i64> %y) {
 ; KNL-LABEL: variable_sra3:
 ; KNL:       # BB#0:
-; KNL-NEXT:    # kill: %YMM1<def> %YMM1<kill> %ZMM1<def>
-; KNL-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; KNL-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
+; KNL-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; KNL-NEXT:    vpsravq %zmm1, %zmm0, %zmm0
-; KNL-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
+; KNL-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: variable_sra3:
@@ -127,7 +127,7 @@ define <8 x i16> @variable_sra4(<8 x i16> %x, <8 x i16> %y) {
 ; KNL-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; KNL-NEXT:    vpsravd %ymm1, %ymm0, %ymm0
 ; KNL-NEXT:    vpmovdw %zmm0, %ymm0
-; KNL-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
+; KNL-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: variable_sra4:

@@ -14,7 +14,7 @@ entry:
 ; CHECK-DAG: movl 4(%esp), %eax
 ; CHECK: ## InlineAsm Start
 ; CHECK: ## InlineAsm End
-;       Everything is set up in EAX:EDX, return immediately.
+;       Everything is set up in eax:edx, return immediately.
 ; CHECK-NEXT: retl
 
 ; The tied operands are not necessarily in the same order as the defs.

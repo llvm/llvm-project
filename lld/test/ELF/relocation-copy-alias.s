@@ -4,6 +4,8 @@
 // RUN: ld.lld --hash-style=sysv -shared %t2.o -o %t.so
 // RUN: ld.lld --hash-style=sysv %t.o %t.so -o %t3
 // RUN: llvm-readobj --dyn-symbols -r --expand-relocs %t3 | FileCheck %s
+// RUN: ld.lld --hash-style=sysv --gc-sections %t.o %t.so -o %t3
+// RUN: llvm-readobj --dyn-symbols -r --expand-relocs %t3 | FileCheck %s
 
 .global _start
 _start:

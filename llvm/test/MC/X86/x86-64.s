@@ -417,7 +417,7 @@ enter $0x7ace,$0x7f
 
 // rdar://8456364
 // CHECK: movw	%cs, %ax
-mov %CS, %ax
+mov %cs, %ax
 
 // rdar://8456391
 fcmovb %st(1), %st(0)   // CHECK: fcmovb	%st(1), %st(0)
@@ -583,8 +583,8 @@ movmskpd	%xmm6, %eax
 fdivrp %st(0), %st(1) // CHECK: encoding: [0xde,0xf9]
 fdivrp %st(1), %st(0) // CHECK: encoding: [0xde,0xf9]
 
-fsubrp %ST(0), %ST(1) // CHECK: encoding: [0xde,0xe9]
-fsubrp %ST(1), %ST(0) // CHECK: encoding: [0xde,0xe9]
+fsubrp %st(0), %st(1) // CHECK: encoding: [0xde,0xe9]
+fsubrp %st(1), %st(0) // CHECK: encoding: [0xde,0xe9]
 
 // also PR8861
 fdivp %st(0), %st(1) // CHECK: encoding: [0xde,0xf1]

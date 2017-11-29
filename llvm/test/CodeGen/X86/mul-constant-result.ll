@@ -188,7 +188,7 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ;
 ; X64-HSW-LABEL: mult:
 ; X64-HSW:       # BB#0:
-; X64-HSW-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; X64-HSW-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; X64-HSW-NEXT:    cmpl $1, %esi
 ; X64-HSW-NEXT:    movl $1, %ecx
 ; X64-HSW-NEXT:    movl %esi, %eax
@@ -202,60 +202,60 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X64-HSW-NEXT:    jmpq *.LJTI0_0(,%rdi,8)
 ; X64-HSW-NEXT:  .LBB0_2:
 ; X64-HSW-NEXT:    addl %eax, %eax
-; X64-HSW-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
+; X64-HSW-NEXT:    # kill: %eax<def> %eax<kill> %rax<kill>
 ; X64-HSW-NEXT:    retq
 ; X64-HSW-NEXT:  .LBB0_36:
 ; X64-HSW-NEXT:    xorl %eax, %eax
 ; X64-HSW-NEXT:  .LBB0_37:
-; X64-HSW-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
+; X64-HSW-NEXT:    # kill: %eax<def> %eax<kill> %rax<kill>
 ; X64-HSW-NEXT:    retq
 ; X64-HSW-NEXT:  .LBB0_3:
 ; X64-HSW-NEXT:    leal (%rax,%rax,2), %eax
-; X64-HSW-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
+; X64-HSW-NEXT:    # kill: %eax<def> %eax<kill> %rax<kill>
 ; X64-HSW-NEXT:    retq
 ; X64-HSW-NEXT:  .LBB0_4:
 ; X64-HSW-NEXT:    shll $2, %eax
-; X64-HSW-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
+; X64-HSW-NEXT:    # kill: %eax<def> %eax<kill> %rax<kill>
 ; X64-HSW-NEXT:    retq
 ; X64-HSW-NEXT:  .LBB0_5:
 ; X64-HSW-NEXT:    leal (%rax,%rax,4), %eax
-; X64-HSW-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
+; X64-HSW-NEXT:    # kill: %eax<def> %eax<kill> %rax<kill>
 ; X64-HSW-NEXT:    retq
 ; X64-HSW-NEXT:  .LBB0_6:
 ; X64-HSW-NEXT:    addl %eax, %eax
 ; X64-HSW-NEXT:    leal (%rax,%rax,2), %eax
-; X64-HSW-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
+; X64-HSW-NEXT:    # kill: %eax<def> %eax<kill> %rax<kill>
 ; X64-HSW-NEXT:    retq
 ; X64-HSW-NEXT:  .LBB0_7:
 ; X64-HSW-NEXT:    leal (,%rax,8), %ecx
 ; X64-HSW-NEXT:    jmp .LBB0_8
 ; X64-HSW-NEXT:  .LBB0_9:
 ; X64-HSW-NEXT:    shll $3, %eax
-; X64-HSW-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
+; X64-HSW-NEXT:    # kill: %eax<def> %eax<kill> %rax<kill>
 ; X64-HSW-NEXT:    retq
 ; X64-HSW-NEXT:  .LBB0_10:
 ; X64-HSW-NEXT:    leal (%rax,%rax,8), %eax
-; X64-HSW-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
+; X64-HSW-NEXT:    # kill: %eax<def> %eax<kill> %rax<kill>
 ; X64-HSW-NEXT:    retq
 ; X64-HSW-NEXT:  .LBB0_11:
 ; X64-HSW-NEXT:    addl %eax, %eax
 ; X64-HSW-NEXT:    leal (%rax,%rax,4), %eax
-; X64-HSW-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
+; X64-HSW-NEXT:    # kill: %eax<def> %eax<kill> %rax<kill>
 ; X64-HSW-NEXT:    retq
 ; X64-HSW-NEXT:  .LBB0_12:
 ; X64-HSW-NEXT:    leal (%rax,%rax,4), %ecx
 ; X64-HSW-NEXT:    leal (%rax,%rcx,2), %eax
-; X64-HSW-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
+; X64-HSW-NEXT:    # kill: %eax<def> %eax<kill> %rax<kill>
 ; X64-HSW-NEXT:    retq
 ; X64-HSW-NEXT:  .LBB0_13:
 ; X64-HSW-NEXT:    shll $2, %eax
 ; X64-HSW-NEXT:    leal (%rax,%rax,2), %eax
-; X64-HSW-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
+; X64-HSW-NEXT:    # kill: %eax<def> %eax<kill> %rax<kill>
 ; X64-HSW-NEXT:    retq
 ; X64-HSW-NEXT:  .LBB0_14:
 ; X64-HSW-NEXT:    leal (%rax,%rax,2), %ecx
 ; X64-HSW-NEXT:    leal (%rax,%rcx,4), %eax
-; X64-HSW-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
+; X64-HSW-NEXT:    # kill: %eax<def> %eax<kill> %rax<kill>
 ; X64-HSW-NEXT:    retq
 ; X64-HSW-NEXT:  .LBB0_15:
 ; X64-HSW-NEXT:    leal (%rax,%rax,2), %ecx
@@ -263,11 +263,11 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X64-HSW-NEXT:  .LBB0_18:
 ; X64-HSW-NEXT:    leal (%rax,%rax,4), %eax
 ; X64-HSW-NEXT:    leal (%rax,%rax,2), %eax
-; X64-HSW-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
+; X64-HSW-NEXT:    # kill: %eax<def> %eax<kill> %rax<kill>
 ; X64-HSW-NEXT:    retq
 ; X64-HSW-NEXT:  .LBB0_19:
 ; X64-HSW-NEXT:    shll $4, %eax
-; X64-HSW-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
+; X64-HSW-NEXT:    # kill: %eax<def> %eax<kill> %rax<kill>
 ; X64-HSW-NEXT:    retq
 ; X64-HSW-NEXT:  .LBB0_20:
 ; X64-HSW-NEXT:    movl %eax, %ecx
@@ -276,7 +276,7 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X64-HSW-NEXT:  .LBB0_21:
 ; X64-HSW-NEXT:    addl %eax, %eax
 ; X64-HSW-NEXT:    leal (%rax,%rax,8), %eax
-; X64-HSW-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
+; X64-HSW-NEXT:    # kill: %eax<def> %eax<kill> %rax<kill>
 ; X64-HSW-NEXT:    retq
 ; X64-HSW-NEXT:  .LBB0_22:
 ; X64-HSW-NEXT:    leal (%rax,%rax,4), %ecx
@@ -285,12 +285,12 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X64-HSW-NEXT:  .LBB0_23:
 ; X64-HSW-NEXT:    shll $2, %eax
 ; X64-HSW-NEXT:    leal (%rax,%rax,4), %eax
-; X64-HSW-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
+; X64-HSW-NEXT:    # kill: %eax<def> %eax<kill> %rax<kill>
 ; X64-HSW-NEXT:    retq
 ; X64-HSW-NEXT:  .LBB0_24:
 ; X64-HSW-NEXT:    leal (%rax,%rax,4), %ecx
 ; X64-HSW-NEXT:    leal (%rax,%rcx,4), %eax
-; X64-HSW-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
+; X64-HSW-NEXT:    # kill: %eax<def> %eax<kill> %rax<kill>
 ; X64-HSW-NEXT:    retq
 ; X64-HSW-NEXT:  .LBB0_25:
 ; X64-HSW-NEXT:    leal (%rax,%rax,4), %ecx
@@ -304,12 +304,12 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X64-HSW-NEXT:  .LBB0_27:
 ; X64-HSW-NEXT:    shll $3, %eax
 ; X64-HSW-NEXT:    leal (%rax,%rax,2), %eax
-; X64-HSW-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
+; X64-HSW-NEXT:    # kill: %eax<def> %eax<kill> %rax<kill>
 ; X64-HSW-NEXT:    retq
 ; X64-HSW-NEXT:  .LBB0_28:
 ; X64-HSW-NEXT:    leal (%rax,%rax,4), %eax
 ; X64-HSW-NEXT:    leal (%rax,%rax,4), %eax
-; X64-HSW-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
+; X64-HSW-NEXT:    # kill: %eax<def> %eax<kill> %rax<kill>
 ; X64-HSW-NEXT:    retq
 ; X64-HSW-NEXT:  .LBB0_29:
 ; X64-HSW-NEXT:    leal (%rax,%rax,8), %ecx
@@ -318,7 +318,7 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X64-HSW-NEXT:  .LBB0_30:
 ; X64-HSW-NEXT:    leal (%rax,%rax,8), %eax
 ; X64-HSW-NEXT:    leal (%rax,%rax,2), %eax
-; X64-HSW-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
+; X64-HSW-NEXT:    # kill: %eax<def> %eax<kill> %rax<kill>
 ; X64-HSW-NEXT:    retq
 ; X64-HSW-NEXT:  .LBB0_31:
 ; X64-HSW-NEXT:    leal (%rax,%rax,8), %ecx
@@ -331,7 +331,7 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X64-HSW-NEXT:  .LBB0_17:
 ; X64-HSW-NEXT:    addl %eax, %ecx
 ; X64-HSW-NEXT:    movl %ecx, %eax
-; X64-HSW-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
+; X64-HSW-NEXT:    # kill: %eax<def> %eax<kill> %rax<kill>
 ; X64-HSW-NEXT:    retq
 ; X64-HSW-NEXT:  .LBB0_33:
 ; X64-HSW-NEXT:    movl %eax, %ecx
@@ -344,11 +344,11 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X64-HSW-NEXT:  .LBB0_8:
 ; X64-HSW-NEXT:    subl %eax, %ecx
 ; X64-HSW-NEXT:    movl %ecx, %eax
-; X64-HSW-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
+; X64-HSW-NEXT:    # kill: %eax<def> %eax<kill> %rax<kill>
 ; X64-HSW-NEXT:    retq
 ; X64-HSW-NEXT:  .LBB0_35:
 ; X64-HSW-NEXT:    shll $5, %eax
-; X64-HSW-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
+; X64-HSW-NEXT:    # kill: %eax<def> %eax<kill> %rax<kill>
 ; X64-HSW-NEXT:    retq
   %3 = icmp eq i32 %1, 0
   %4 = icmp sgt i32 %1, 1

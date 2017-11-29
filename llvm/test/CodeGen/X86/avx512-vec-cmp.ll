@@ -111,11 +111,11 @@ define <2 x double> @test8(<2 x double> %a, <2 x double> %b) {
 define <8 x i32> @test9(<8 x i32> %x, <8 x i32> %y) nounwind {
 ; KNL-LABEL: test9:
 ; KNL:       ## BB#0:
-; KNL-NEXT:    ## kill: %YMM1<def> %YMM1<kill> %ZMM1<def>
-; KNL-NEXT:    ## kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; KNL-NEXT:    ## kill: %ymm1<def> %ymm1<kill> %zmm1<def>
+; KNL-NEXT:    ## kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; KNL-NEXT:    vpcmpeqd %zmm1, %zmm0, %k1
 ; KNL-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
-; KNL-NEXT:    ## kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
+; KNL-NEXT:    ## kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test9:
@@ -131,11 +131,11 @@ define <8 x i32> @test9(<8 x i32> %x, <8 x i32> %y) nounwind {
 define <8 x float> @test10(<8 x float> %x, <8 x float> %y) nounwind {
 ; KNL-LABEL: test10:
 ; KNL:       ## BB#0:
-; KNL-NEXT:    ## kill: %YMM1<def> %YMM1<kill> %ZMM1<def>
-; KNL-NEXT:    ## kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; KNL-NEXT:    ## kill: %ymm1<def> %ymm1<kill> %zmm1<def>
+; KNL-NEXT:    ## kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; KNL-NEXT:    vcmpeqps %zmm1, %zmm0, %k1
 ; KNL-NEXT:    vblendmps %zmm0, %zmm1, %zmm0 {%k1}
-; KNL-NEXT:    ## kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
+; KNL-NEXT:    ## kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test10:
@@ -166,7 +166,7 @@ define i16 @test12(<16 x i64> %a, <16 x i64> %b) nounwind {
 ; KNL-NEXT:    vpcmpeqq %zmm3, %zmm1, %k1
 ; KNL-NEXT:    kunpckbw %k0, %k1, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
+; KNL-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
 ;
@@ -176,7 +176,7 @@ define i16 @test12(<16 x i64> %a, <16 x i64> %b) nounwind {
 ; SKX-NEXT:    vpcmpeqq %zmm3, %zmm1, %k1
 ; SKX-NEXT:    kunpckbw %k0, %k1, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
-; SKX-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
+; SKX-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %res = icmp eq <16 x i64> %a, %b
@@ -1007,12 +1007,12 @@ define <4 x float> @test34(<4 x float> %x, <4 x float> %x1, <4 x float>* %yp) no
 define <8 x float> @test35(<8 x float> %x, <8 x float> %x1, <8 x float>* %yp) nounwind {
 ; KNL-LABEL: test35:
 ; KNL:       ## BB#0:
-; KNL-NEXT:    ## kill: %YMM1<def> %YMM1<kill> %ZMM1<def>
-; KNL-NEXT:    ## kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; KNL-NEXT:    ## kill: %ymm1<def> %ymm1<kill> %zmm1<def>
+; KNL-NEXT:    ## kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; KNL-NEXT:    vmovups (%rdi), %ymm2
 ; KNL-NEXT:    vcmpltps %zmm2, %zmm0, %k1
 ; KNL-NEXT:    vblendmps %zmm0, %zmm1, %zmm0 {%k1}
-; KNL-NEXT:    ## kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
+; KNL-NEXT:    ## kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test35:
@@ -1121,12 +1121,12 @@ define <16  x float> @test40(<16  x float> %x, <16  x float> %x1, float* %ptr) n
 define <8  x float> @test41(<8  x float> %x, <8  x float> %x1, float* %ptr) nounwind {
 ; KNL-LABEL: test41:
 ; KNL:       ## BB#0:
-; KNL-NEXT:    ## kill: %YMM1<def> %YMM1<kill> %ZMM1<def>
-; KNL-NEXT:    ## kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; KNL-NEXT:    ## kill: %ymm1<def> %ymm1<kill> %zmm1<def>
+; KNL-NEXT:    ## kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; KNL-NEXT:    vbroadcastss (%rdi), %ymm2
 ; KNL-NEXT:    vcmpltps %zmm2, %zmm0, %k1
 ; KNL-NEXT:    vblendmps %zmm0, %zmm1, %zmm0 {%k1}
-; KNL-NEXT:    ## kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
+; KNL-NEXT:    ## kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test41:

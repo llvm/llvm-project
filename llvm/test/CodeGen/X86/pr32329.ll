@@ -78,7 +78,7 @@ define void @foo() local_unnamed_addr {
 ; X64-NEXT:    imull %esi, %ecx
 ; X64-NEXT:    addl $-1437483407, %ecx # imm = 0xAA51BE71
 ; X64-NEXT:    movl $9, %edx
-; X64-NEXT:    # kill: %CL<def> %CL<kill> %ECX<kill>
+; X64-NEXT:    # kill: %cl<def> %cl<kill> %ecx<kill>
 ; X64-NEXT:    shlq %cl, %rdx
 ; X64-NEXT:    movq %rdx, {{.*}}(%rip)
 ; X64-NEXT:    cmpl %eax, %esi

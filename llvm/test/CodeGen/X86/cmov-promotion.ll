@@ -12,7 +12,7 @@ define i16 @cmov_zpromotion_8_to_16(i1 %c) {
 ; CMOV-NEXT:    movb $-19, %al
 ; CMOV-NEXT:  .LBB0_2:
 ; CMOV-NEXT:    movzbl %al, %eax
-; CMOV-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; CMOV-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; CMOV-NEXT:    retq
 ;
 ; NO_CMOV-LABEL: cmov_zpromotion_8_to_16:
@@ -24,7 +24,7 @@ define i16 @cmov_zpromotion_8_to_16(i1 %c) {
 ; NO_CMOV-NEXT:    movb $-19, %al
 ; NO_CMOV-NEXT:  .LBB0_2:
 ; NO_CMOV-NEXT:    movzbl %al, %eax
-; NO_CMOV-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; NO_CMOV-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; NO_CMOV-NEXT:    retl
   %t0 = select i1 %c, i8 117, i8 -19
   %ret = zext i8 %t0 to i16
@@ -167,7 +167,7 @@ define i16 @cmov_spromotion_8_to_16(i1 %c) {
 ; CMOV-NEXT:    movb $-19, %al
 ; CMOV-NEXT:  .LBB6_2:
 ; CMOV-NEXT:    movsbl %al, %eax
-; CMOV-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; CMOV-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; CMOV-NEXT:    retq
 ;
 ; NO_CMOV-LABEL: cmov_spromotion_8_to_16:
@@ -179,7 +179,7 @@ define i16 @cmov_spromotion_8_to_16(i1 %c) {
 ; NO_CMOV-NEXT:    movb $-19, %al
 ; NO_CMOV-NEXT:  .LBB6_2:
 ; NO_CMOV-NEXT:    movsbl %al, %eax
-; NO_CMOV-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; NO_CMOV-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; NO_CMOV-NEXT:    retl
   %t0 = select i1 %c, i8 117, i8 -19
   %ret = sext i8 %t0 to i16

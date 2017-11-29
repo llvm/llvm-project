@@ -15,6 +15,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -93,9 +94,10 @@ Printable printReg(unsigned Reg, const TargetRegisterInfo *TRI,
       OS << "SS#" << TargetRegisterInfo::stackSlot2Index(Reg);
     else if (TargetRegisterInfo::isVirtualRegister(Reg))
       OS << "%vreg" << TargetRegisterInfo::virtReg2Index(Reg);
-    else if (TRI && Reg < TRI->getNumRegs())
-      OS << '%' << TRI->getName(Reg);
-    else
+    else if (TRI && Reg < TRI->getNumRegs()) {
+      OS << '%';
+      printLowerCase(TRI->getName(Reg), OS);
+    } else
       OS << "%physreg" << Reg;
     if (SubIdx) {
       if (TRI)

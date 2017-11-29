@@ -246,9 +246,9 @@ MachineSinking::AllUsesDominatedByBlock(unsigned Reg,
   // BB#1: derived from LLVM BB %bb4.preheader
   //   Predecessors according to CFG: BB#0
   //     ...
-  //     %reg16385<def> = DEC64_32r %reg16437, %EFLAGS<imp-def,dead>
+  //     %reg16385<def> = DEC64_32r %reg16437, %eflags<imp-def,dead>
   //     ...
-  //     JE_4 <BB#37>, %EFLAGS<imp-use>
+  //     JE_4 <BB#37>, %eflags<imp-use>
   //   Successors according to CFG: BB#37 BB#2
   //
   // BB#2: derived from LLVM BB %bb.nph

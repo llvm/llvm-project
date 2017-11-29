@@ -18,9 +18,7 @@
 #include "../cppcoreguidelines/SpecialMemberFunctionsCheck.h"
 #include "../google/DefaultArgumentsCheck.h"
 #include "../google/ExplicitConstructorCheck.h"
-#include "../misc/MoveConstantArgumentCheck.h"
 #include "../misc/NewDeleteOverloadsCheck.h"
-#include "../misc/NoexceptMoveConstructorCheck.h"
 #include "../misc/StaticAssertCheck.h"
 #include "../misc/UndelegatedConstructor.h"
 #include "../modernize/DeprecatedHeadersCheck.h"
@@ -31,6 +29,8 @@
 #include "../modernize/UseNoexceptCheck.h"
 #include "../modernize/UseNullptrCheck.h"
 #include "../modernize/UseOverrideCheck.h"
+#include "../performance/MoveConstArgCheck.h"
+#include "../performance/NoexceptMoveConstructorCheck.h"
 #include "../readability/BracesAroundStatementsCheck.h"
 #include "../readability/FunctionSizeCheck.h"
 #include "../readability/IdentifierNamingCheck.h"
@@ -63,11 +63,11 @@ public:
         "hicpp-invalid-access-moved");
     CheckFactories.registerCheck<cppcoreguidelines::ProTypeMemberInitCheck>(
         "hicpp-member-init");
-    CheckFactories.registerCheck<misc::MoveConstantArgumentCheck>(
+    CheckFactories.registerCheck<performance::MoveConstArgCheck>(
         "hicpp-move-const-arg");
     CheckFactories.registerCheck<misc::NewDeleteOverloadsCheck>(
         "hicpp-new-delete-operators");
-    CheckFactories.registerCheck<misc::NoexceptMoveConstructorCheck>(
+    CheckFactories.registerCheck<performance::NoexceptMoveConstructorCheck>(
         "hicpp-noexcept-move");
     CheckFactories
         .registerCheck<cppcoreguidelines::ProBoundsArrayToPointerDecayCheck>(

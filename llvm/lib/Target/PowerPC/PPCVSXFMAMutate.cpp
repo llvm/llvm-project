@@ -92,18 +92,18 @@ protected:
         //   ...
         //   %vreg5<def> = COPY %vreg9; VSLRC:%vreg5,%vreg9
         //   %vreg5<def,tied1> = XSMADDADP %vreg5<tied0>, %vreg17, %vreg16,
-        //                         %RM<imp-use>; VSLRC:%vreg5,%vreg17,%vreg16
+        //                         %rm<imp-use>; VSLRC:%vreg5,%vreg17,%vreg16
         //   ...
         //   %vreg9<def,tied1> = XSMADDADP %vreg9<tied0>, %vreg17, %vreg19,
-        //                         %RM<imp-use>; VSLRC:%vreg9,%vreg17,%vreg19
+        //                         %rm<imp-use>; VSLRC:%vreg9,%vreg17,%vreg19
         //   ...
         // Where we can eliminate the copy by changing from the A-type to the
         // M-type instruction. Specifically, for this example, this means:
         //   %vreg5<def,tied1> = XSMADDADP %vreg5<tied0>, %vreg17, %vreg16,
-        //                         %RM<imp-use>; VSLRC:%vreg5,%vreg17,%vreg16
+        //                         %rm<imp-use>; VSLRC:%vreg5,%vreg17,%vreg16
         // is replaced by:
         //   %vreg16<def,tied1> = XSMADDMDP %vreg16<tied0>, %vreg18, %vreg9,
-        //                         %RM<imp-use>; VSLRC:%vreg16,%vreg18,%vreg9
+        //                         %rm<imp-use>; VSLRC:%vreg16,%vreg18,%vreg9
         // and we remove: %vreg5<def> = COPY %vreg9; VSLRC:%vreg5,%vreg9
 
         SlotIndex FMAIdx = LIS->getInstructionIndex(MI);
@@ -150,7 +150,7 @@ protected:
         // walking the MIs we may as well test liveness here.
         //
         // FIXME: There is a case that occurs in practice, like this:
-        //   %vreg9<def> = COPY %F1; VSSRC:%vreg9
+        //   %vreg9<def> = COPY %f1; VSSRC:%vreg9
         //   ...
         //   %vreg6<def> = COPY %vreg9; VSSRC:%vreg6,%vreg9
         //   %vreg7<def> = COPY %vreg9; VSSRC:%vreg7,%vreg9

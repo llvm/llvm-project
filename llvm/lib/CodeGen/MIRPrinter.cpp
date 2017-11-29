@@ -1110,12 +1110,12 @@ void MIPrinter::print(const LLVMContext &Context, const TargetInstrInfo &TII,
   if (Op.getFlags() & MachineMemOperand::MOTargetFlag3)
     OS << '"' << getTargetMMOFlagName(TII, MachineMemOperand::MOTargetFlag3)
        << "\" ";
+
+  assert((Op.isLoad() || Op.isStore()) && "machine memory operand must be a load or store (or both)");
   if (Op.isLoad())
     OS << "load ";
-  else {
-    assert(Op.isStore() && "Non load machine operand must be a store");
+  if (Op.isStore())
     OS << "store ";
-  }
 
   printSyncScope(Context, Op.getSyncScopeID());
 
@@ -1126,10 +1126,12 @@ void MIPrinter::print(const LLVMContext &Context, const TargetInstrInfo &TII,
 
   OS << Op.getSize();
   if (const Value *Val = Op.getValue()) {
-    OS << (Op.isLoad() ? " from " : " into ");
+    OS << ((Op.isLoad() && Op.isStore()) ? " on "
+                                         : Op.isLoad() ? " from " : " into ");
     printIRValueReference(*Val);
   } else if (const PseudoSourceValue *PVal = Op.getPseudoValue()) {
-    OS << (Op.isLoad() ? " from " : " into ");
+    OS << ((Op.isLoad() && Op.isStore()) ? " on "
+                                         : Op.isLoad() ? " from " : " into ");
     assert(PVal && "Expected a pseudo source value");
     switch (PVal->kind()) {
     case PseudoSourceValue::Stack:
