@@ -55,3 +55,16 @@ for.body:                                         ; preds = %for.cond
   %inc = add nuw nsw i32 %i.0, 1
   br label %for.cond
 }
+
+define i32 @store_bitcasted_load(i1 %cond, float* dereferenceable(4) %addr1, float* dereferenceable(4) %addr2) {
+; CHECK-LABEL: @store_bitcasted_load(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], float* [[ADDR1:%.*]], float* [[ADDR2:%.*]]
+; CHECK-NEXT:    [[BC1:%.*]] = bitcast float* [[SEL]] to i32*
+; CHECK-NEXT:    [[LD:%.*]] = load i32, i32* [[BC1]], align 4
+; CHECK-NEXT:    ret i32 [[LD]]
+;
+  %sel = select i1 %cond, float* %addr1, float* %addr2
+  %bc1 = bitcast float* %sel to i32*
+  %ld = load i32, i32* %bc1
+  ret i32 %ld
+}

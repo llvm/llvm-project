@@ -226,19 +226,19 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
 
       // The two copies cancel out and the source of the first copy
       // hasn't been overridden, eliminate the second one. e.g.
-      //  %ECX<def> = COPY %EAX
-      //  ... nothing clobbered EAX.
-      //  %EAX<def> = COPY %ECX
+      //  %ecx<def> = COPY %eax
+      //  ... nothing clobbered eax.
+      //  %eax<def> = COPY %ecx
       // =>
-      //  %ECX<def> = COPY %EAX
+      //  %ecx<def> = COPY %eax
       //
       // or
       //
-      //  %ECX<def> = COPY %EAX
-      //  ... nothing clobbered EAX.
-      //  %ECX<def> = COPY %EAX
+      //  %ecx<def> = COPY %eax
+      //  ... nothing clobbered eax.
+      //  %ecx<def> = COPY %eax
       // =>
-      //  %ECX<def> = COPY %EAX
+      //  %ecx<def> = COPY %eax
       if (eraseIfRedundant(*MI, Def, Src) || eraseIfRedundant(*MI, Src, Def))
         continue;
 

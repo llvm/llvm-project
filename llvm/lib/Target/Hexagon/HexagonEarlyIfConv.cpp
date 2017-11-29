@@ -27,8 +27,8 @@
 //
 //         %vreg40<def> = L2_loadrub_io %vreg39<kill>, 1
 //         %vreg41<def> = S2_tstbit_i %vreg40<kill>, 0
-//         J2_jumpt %vreg41<kill>, <BB#5>, %PC<imp-def,dead>
-//         J2_jump <BB#4>, %PC<imp-def,dead>
+//         J2_jumpt %vreg41<kill>, <BB#5>, %pc<imp-def,dead>
+//         J2_jump <BB#4>, %pc<imp-def,dead>
 //     Successors according to CFG: BB#4(62) BB#5(62)
 //
 // BB#4: derived from LLVM BB %if.then
@@ -42,8 +42,8 @@
 //         %vreg12<def> = PHI %vreg6, <BB#3>, %vreg11, <BB#4>
 //         %vreg13<def> = A2_addp %vreg7, %vreg12
 //         %vreg42<def> = C2_cmpeqi %vreg9, 10
-//         J2_jumpf %vreg42<kill>, <BB#3>, %PC<imp-def,dead>
-//         J2_jump <BB#6>, %PC<imp-def,dead>
+//         J2_jumpf %vreg42<kill>, <BB#3>, %pc<imp-def,dead>
+//         J2_jump <BB#6>, %pc<imp-def,dead>
 //     Successors according to CFG: BB#6(4) BB#3(124)
 //
 // would become:
@@ -55,8 +55,8 @@
 //         %vreg46<def> = PS_pselect %vreg41, %vreg6, %vreg11
 //         %vreg13<def> = A2_addp %vreg7, %vreg46
 //         %vreg42<def> = C2_cmpeqi %vreg9, 10
-//         J2_jumpf %vreg42<kill>, <BB#3>, %PC<imp-def,dead>
-//         J2_jump <BB#6>, %PC<imp-def,dead>
+//         J2_jumpf %vreg42<kill>, <BB#3>, %pc<imp-def,dead>
+//         J2_jump <BB#6>, %pc<imp-def,dead>
 //     Successors according to CFG: BB#6 BB#3
 
 #include "Hexagon.h"

@@ -480,7 +480,7 @@ MipsInstrInfo::genInstrWithNewOpc(unsigned NewOpc,
   MIB = BuildMI(*I->getParent(), I, I->getDebugLoc(), get(NewOpc));
 
   // For MIPSR6 JI*C requires an immediate 0 as an operand, JIALC(64) an
-  // immediate 0 as an operand and requires the removal of it's %RA<imp-def>
+  // immediate 0 as an operand and requires the removal of it's %ra<imp-def>
   // implicit operand as copying the implicit operations of the instructio we're
   // looking at will give us the correct flags.
   if (NewOpc == Mips::JIC || NewOpc == Mips::JIALC || NewOpc == Mips::JIC64 ||

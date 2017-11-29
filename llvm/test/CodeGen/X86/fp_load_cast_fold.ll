@@ -20,7 +20,7 @@ define double @long(i64* %P) {
 
 ; CHECK: long
 ; CHECK: fild
-; CHECK-NOT: ESP
+; CHECK-NOT: esp
 ; CHECK-NOT: esp
 ; CHECK: {{$}}
 ; CHECK: ret

@@ -1925,7 +1925,7 @@ define <8 x i16> @psubus_8i64_max(<8 x i16> %x, <8 x i64> %y) nounwind {
 ; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
+; AVX2-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;

@@ -50,7 +50,7 @@ define i8 @test_bitreverse_i8(i8 %a) nounwind {
 ; XOP-NEXT:    vmovd %edi, %xmm0
 ; XOP-NEXT:    vpperm {{.*}}(%rip), %xmm0, %xmm0, %xmm0
 ; XOP-NEXT:    vpextrb $0, %xmm0, %eax
-; XOP-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; XOP-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; XOP-NEXT:    retq
   %b = call i8 @llvm.bitreverse.i8(i8 %a)
   ret i8 %b
@@ -59,7 +59,7 @@ define i8 @test_bitreverse_i8(i8 %a) nounwind {
 define i16 @test_bitreverse_i16(i16 %a) nounwind {
 ; SSE-LABEL: test_bitreverse_i16:
 ; SSE:       # BB#0:
-; SSE-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; SSE-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; SSE-NEXT:    rolw $8, %di
 ; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    andl $3855, %eax # imm = 0xF0F
@@ -77,12 +77,12 @@ define i16 @test_bitreverse_i16(i16 %a) nounwind {
 ; SSE-NEXT:    andl $43690, %eax # imm = 0xAAAA
 ; SSE-NEXT:    shrl %eax
 ; SSE-NEXT:    leal (%rax,%rcx,2), %eax
-; SSE-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; SSE-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_bitreverse_i16:
 ; AVX:       # BB#0:
-; AVX-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; AVX-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; AVX-NEXT:    rolw $8, %di
 ; AVX-NEXT:    movl %edi, %eax
 ; AVX-NEXT:    andl $3855, %eax # imm = 0xF0F
@@ -100,7 +100,7 @@ define i16 @test_bitreverse_i16(i16 %a) nounwind {
 ; AVX-NEXT:    andl $43690, %eax # imm = 0xAAAA
 ; AVX-NEXT:    shrl %eax
 ; AVX-NEXT:    leal (%rax,%rcx,2), %eax
-; AVX-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; AVX-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; AVX-NEXT:    retq
 ;
 ; XOP-LABEL: test_bitreverse_i16:
@@ -108,7 +108,7 @@ define i16 @test_bitreverse_i16(i16 %a) nounwind {
 ; XOP-NEXT:    vmovd %edi, %xmm0
 ; XOP-NEXT:    vpperm {{.*}}(%rip), %xmm0, %xmm0, %xmm0
 ; XOP-NEXT:    vmovd %xmm0, %eax
-; XOP-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; XOP-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; XOP-NEXT:    retq
   %b = call i16 @llvm.bitreverse.i16(i16 %a)
   ret i16 %b
@@ -117,7 +117,7 @@ define i16 @test_bitreverse_i16(i16 %a) nounwind {
 define i32 @test_bitreverse_i32(i32 %a) nounwind {
 ; SSE-LABEL: test_bitreverse_i32:
 ; SSE:       # BB#0:
-; SSE-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; SSE-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; SSE-NEXT:    bswapl %edi
 ; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
@@ -139,7 +139,7 @@ define i32 @test_bitreverse_i32(i32 %a) nounwind {
 ;
 ; AVX-LABEL: test_bitreverse_i32:
 ; AVX:       # BB#0:
-; AVX-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; AVX-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; AVX-NEXT:    bswapl %edi
 ; AVX-NEXT:    movl %edi, %eax
 ; AVX-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F

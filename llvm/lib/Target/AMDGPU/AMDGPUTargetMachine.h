@@ -115,6 +115,10 @@ public:
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 
   const SISubtarget *getSubtargetImpl(const Function &) const override;
+
+  bool useIPRA() const override {
+    return true;
+  }
 };
 
 } // end namespace llvm

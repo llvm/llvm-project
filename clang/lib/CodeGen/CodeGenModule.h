@@ -710,7 +710,8 @@ public:
   llvm::ConstantInt *getSize(CharUnits numChars);
 
   /// Set the visibility for the given LLVM GlobalValue.
-  void setGlobalVisibility(llvm::GlobalValue *GV, const NamedDecl *D) const;
+  void setGlobalVisibility(llvm::GlobalValue *GV, const NamedDecl *D,
+                           ForDefinition_t IsForDefinition) const;
 
   /// Set the TLS mode for the given LLVM GlobalValue for the thread-local
   /// variable declaration D.

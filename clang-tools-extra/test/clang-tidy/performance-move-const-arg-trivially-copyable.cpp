@@ -1,6 +1,6 @@
-// RUN: %check_clang_tidy %s misc-move-const-arg %t \
+// RUN: %check_clang_tidy %s performance-move-const-arg %t \
 // RUN: -config='{CheckOptions: \
-// RUN:  [{key: misc-move-const-arg.CheckTriviallyCopyableMove, value: 0}]}' \
+// RUN:  [{key: performance-move-const-arg.CheckTriviallyCopyableMove, value: 0}]}' \
 // RUN: -- -std=c++14
 
 namespace std {
@@ -39,7 +39,7 @@ void moveToConstReferencePositives() {
 
   // Basic case. It is here just to have a single "detected and fixed" case.
   callByConstRef(std::move(obj));
-  // CHECK-MESSAGES: :[[@LINE-1]]:18:  warning: passing result of std::move() as a const reference argument; no move will actually happen [misc-move-const-arg]
+  // CHECK-MESSAGES: :[[@LINE-1]]:18:  warning: passing result of std::move() as a const reference argument; no move will actually happen [performance-move-const-arg]
   // CHECK-FIXES: callByConstRef(obj);
 }
 

@@ -13,7 +13,7 @@ define i8 @test_zext_i1toi8(i32 %a) {
 ; X32:       # BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    andb $1, %al
-; X32-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; X32-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; X32-NEXT:    retl
   %val = trunc i32 %a to i1
   %r = zext i1 %val to i8
@@ -31,7 +31,7 @@ define i16 @test_zext_i1toi16(i32 %a) {
 ; X32:       # BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    andw $1, %ax
-; X32-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; X32-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; X32-NEXT:    retl
   %val = trunc i32 %a to i1
   %r = zext i1 %val to i16

@@ -50,8 +50,8 @@ declare void @printf(...) nounwind
 define void @commute(i32 %test_case, i32 %scale) nounwind ssp {
 ; CHECK-LABEL: commute:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
-; CHECK-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; CHECK-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
+; CHECK-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; CHECK-NEXT:    leal -1(%rdi), %eax
 ; CHECK-NEXT:    cmpl $2, %eax
 ; CHECK-NEXT:    ja .LBB1_4
@@ -64,7 +64,7 @@ define void @commute(i32 %test_case, i32 %scale) nounwind ssp {
 ; CHECK-NEXT:    imull %edi, %esi
 ; CHECK-NEXT:    leal (%rsi,%rsi,2), %esi
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<kill>
+; CHECK-NEXT:    # kill: %edi<def> %edi<kill> %rdi<kill>
 ; CHECK-NEXT:    callq printf
 ; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    .p2align 4, 0x90

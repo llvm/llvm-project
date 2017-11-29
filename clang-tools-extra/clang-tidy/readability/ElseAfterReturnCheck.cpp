@@ -21,7 +21,8 @@ namespace readability {
 void ElseAfterReturnCheck::registerMatchers(MatchFinder *Finder) {
   const auto ControlFlowInterruptorMatcher =
       stmt(anyOf(returnStmt().bind("return"), continueStmt().bind("continue"),
-                 breakStmt().bind("break"), cxxThrowExpr().bind("throw")));
+                 breakStmt().bind("break"),
+                 expr(ignoringImplicit(cxxThrowExpr().bind("throw")))));
   Finder->addMatcher(
       compoundStmt(forEach(
           ifStmt(hasThen(stmt(

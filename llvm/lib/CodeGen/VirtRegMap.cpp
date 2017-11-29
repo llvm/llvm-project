@@ -380,8 +380,8 @@ void VirtRegRewriter::handleIdentityCopy(MachineInstr &MI) const {
   ++NumIdCopies;
 
   // Copies like:
-  //    %R0 = COPY %R0<undef>
-  //    %AL = COPY %AL, %EAX<imp-def>
+  //    %r0 = COPY %r0<undef>
+  //    %al = COPY %al, %eax<imp-def>
   // give us additional liveness information: The target (super-)register
   // must not be valid before this point. Replace the COPY with a KILL
   // instruction to maintain this information.

@@ -394,6 +394,8 @@ def AtomItineraries : ProcessorItineraries<
   InstrItinData<IIC_FXSAVE,  [InstrStage<140, [Port0, Port1]>] >,
   InstrItinData<IIC_FXRSTOR,  [InstrStage<141, [Port0, Port1]>] >,
   InstrItinData<IIC_FXCH, [InstrStage<1, [Port0], 0>, InstrStage<1, [Port1]>] >,
+  InstrItinData<IIC_FSIGN,  [InstrStage<1, [Port1]>] >,
+  InstrItinData<IIC_FSQRT,  [InstrStage<71, [Port0, Port1]>] >,
 
   // System instructions
   InstrItinData<IIC_CPUID, [InstrStage<121, [Port0, Port1]>] >,

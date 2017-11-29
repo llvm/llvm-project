@@ -21,31 +21,31 @@
 /// EXEC to update the predicates.
 ///
 /// For example:
-/// %VCC = V_CMP_GT_F32 %VGPR1, %VGPR2
-/// %SGPR0 = SI_IF %VCC
-///   %VGPR0 = V_ADD_F32 %VGPR0, %VGPR0
-/// %SGPR0 = SI_ELSE %SGPR0
-///   %VGPR0 = V_SUB_F32 %VGPR0, %VGPR0
-/// SI_END_CF %SGPR0
+/// %vcc = V_CMP_GT_F32 %vgpr1, %vgpr2
+/// %sgpr0 = SI_IF %vcc
+///   %vgpr0 = V_ADD_F32 %vgpr0, %vgpr0
+/// %sgpr0 = SI_ELSE %sgpr0
+///   %vgpr0 = V_SUB_F32 %vgpr0, %vgpr0
+/// SI_END_CF %sgpr0
 ///
 /// becomes:
 ///
-/// %SGPR0 = S_AND_SAVEEXEC_B64 %VCC  // Save and update the exec mask
-/// %SGPR0 = S_XOR_B64 %SGPR0, %EXEC  // Clear live bits from saved exec mask
+/// %sgpr0 = S_AND_SAVEEXEC_B64 %vcc  // Save and update the exec mask
+/// %sgpr0 = S_XOR_B64 %sgpr0, %exec  // Clear live bits from saved exec mask
 /// S_CBRANCH_EXECZ label0            // This instruction is an optional
 ///                                   // optimization which allows us to
 ///                                   // branch if all the bits of
 ///                                   // EXEC are zero.
-/// %VGPR0 = V_ADD_F32 %VGPR0, %VGPR0 // Do the IF block of the branch
+/// %vgpr0 = V_ADD_F32 %vgpr0, %vgpr0 // Do the IF block of the branch
 ///
 /// label0:
-/// %SGPR0 = S_OR_SAVEEXEC_B64 %EXEC   // Restore the exec mask for the Then block
-/// %EXEC = S_XOR_B64 %SGPR0, %EXEC    // Clear live bits from saved exec mask
+/// %sgpr0 = S_OR_SAVEEXEC_B64 %exec   // Restore the exec mask for the Then block
+/// %exec = S_XOR_B64 %sgpr0, %exec    // Clear live bits from saved exec mask
 /// S_BRANCH_EXECZ label1              // Use our branch optimization
 ///                                    // instruction again.
-/// %VGPR0 = V_SUB_F32 %VGPR0, %VGPR   // Do the THEN block
+/// %vgpr0 = V_SUB_F32 %vgpr0, %vgpr   // Do the THEN block
 /// label1:
-/// %EXEC = S_OR_B64 %EXEC, %SGPR0     // Re-enable saved exec mask bits
+/// %exec = S_OR_B64 %exec, %sgpr0     // Re-enable saved exec mask bits
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"

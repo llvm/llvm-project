@@ -20,11 +20,11 @@
 /// register.
 ///
 /// X86 Example:
-/// %YMM0<def> = ...
-/// %XMM0<def> = ... (Kills %XMM0, all %XMM0s sub-registers, and %YMM0)
+/// %ymm0<def> = ...
+/// %xmm0<def> = ... (Kills %xmm0, all %xmm0s sub-registers, and %ymm0)
 ///
-/// %YMM0<def> = ...
-/// %XMM0<def> = ..., %YMM0<imp-use> (%YMM0 and all its sub-registers are alive)
+/// %ymm0<def> = ...
+/// %xmm0<def> = ..., %ymm0<imp-use> (%ymm0 and all its sub-registers are alive)
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CODEGEN_LIVEPHYSREGS_H

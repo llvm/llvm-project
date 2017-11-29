@@ -34,7 +34,6 @@ class Symbol;
 class InputSectionBase;
 class InputSection;
 class OutputSection;
-class OutputSectionFactory;
 class InputSectionBase;
 class SectionBase;
 

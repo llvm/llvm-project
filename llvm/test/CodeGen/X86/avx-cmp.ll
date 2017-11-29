@@ -197,7 +197,7 @@ define i32 @scalarcmpA() uwtable ssp {
 ; CHECK-NEXT:    vcmpeqsd %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovq %xmm0, %rax
 ; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
+; CHECK-NEXT:    # kill: %eax<def> %eax<kill> %rax<kill>
 ; CHECK-NEXT:    retq
   %cmp29 = fcmp oeq double undef, 0.000000e+00
   %res = zext i1 %cmp29 to i32

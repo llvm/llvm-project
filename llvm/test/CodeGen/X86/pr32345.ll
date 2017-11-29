@@ -10,7 +10,7 @@
 define void @foo() {
 ; X640-LABEL: foo:
 ; X640:       # BB#0: # %bb
-; X640-NEXT:    # implicit-def: %RAX
+; X640-NEXT:    # implicit-def: %rax
 ; X640-NEXT:    movzwl var_22, %ecx
 ; X640-NEXT:    movzwl var_27, %edx
 ; X640-NEXT:    xorl %edx, %ecx
@@ -27,8 +27,8 @@ define void @foo() {
 ; X640-NEXT:    movzwl var_27, %ecx
 ; X640-NEXT:    subl $16610, %ecx # imm = 0x40E2
 ; X640-NEXT:    movl %ecx, %ecx
-; X640-NEXT:    # kill: %RCX<def> %ECX<kill>
-; X640-NEXT:    # kill: %CL<def> %RCX<kill>
+; X640-NEXT:    # kill: %rcx<def> %ecx<kill>
+; X640-NEXT:    # kill: %cl<def> %rcx<kill>
 ; X640-NEXT:    sarq %cl, %rsi
 ; X640-NEXT:    movb %sil, %cl
 ; X640-NEXT:    movb %cl, (%rax)
@@ -49,12 +49,12 @@ define void @foo() {
 ; 6860-NEXT:    .cfi_offset %esi, -20
 ; 6860-NEXT:    .cfi_offset %edi, -16
 ; 6860-NEXT:    .cfi_offset %ebx, -12
-; 6860-NEXT:    # implicit-def: %EAX
+; 6860-NEXT:    # implicit-def: %eax
 ; 6860-NEXT:    movw var_22, %cx
 ; 6860-NEXT:    movzwl var_27, %edx
 ; 6860-NEXT:    movw %dx, %si
 ; 6860-NEXT:    xorw %si, %cx
-; 6860-NEXT:    # implicit-def: %EDI
+; 6860-NEXT:    # implicit-def: %edi
 ; 6860-NEXT:    movw %cx, %di
 ; 6860-NEXT:    xorl %edx, %edi
 ; 6860-NEXT:    movw %di, %cx
@@ -65,7 +65,7 @@ define void @foo() {
 ; 6860-NEXT:    movzwl var_27, %edx
 ; 6860-NEXT:    movw %dx, %si
 ; 6860-NEXT:    xorw %si, %cx
-; 6860-NEXT:    # implicit-def: %EDI
+; 6860-NEXT:    # implicit-def: %edi
 ; 6860-NEXT:    movw %cx, %di
 ; 6860-NEXT:    xorl %edx, %edi
 ; 6860-NEXT:    movw %di, %cx
@@ -104,7 +104,7 @@ define void @foo() {
 ; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    addl $-16610, %ecx # imm = 0xBF1E
-; X64-NEXT:    # kill: %CL<def> %CL<kill> %ECX<kill>
+; X64-NEXT:    # kill: %cl<def> %cl<kill> %ecx<kill>
 ; X64-NEXT:    shrq %cl, %rax
 ; X64-NEXT:    movb %al, (%rax)
 ; X64-NEXT:    retq

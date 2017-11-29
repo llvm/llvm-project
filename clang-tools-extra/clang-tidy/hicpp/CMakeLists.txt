@@ -17,6 +17,7 @@ add_clang_library(clangTidyHICPPModule
   clangTidyGoogleModule
   clangTidyMiscModule
   clangTidyModernizeModule
+  clangTidyPerformanceModule
   clangTidyReadabilityModule
   clangTidyUtils
   )

@@ -17,10 +17,10 @@
 #include "SymbolTable.h"
 #include "Config.h"
 #include "LinkerScript.h"
-#include "Memory.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Memory.h"
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/STLExtras.h"
 
@@ -192,8 +192,8 @@ void SymbolTable::applySymbolWrap() {
     }
 
     // Replace __real_sym with sym and sym with __wrap_sym.
-    W.Real->copyFrom(W.Sym);
-    W.Sym->copyFrom(W.Wrap);
+    memcpy(W.Real, W.Sym, sizeof(SymbolUnion));
+    memcpy(W.Sym, W.Wrap, sizeof(SymbolUnion));
 
     // We now have two copies of __wrap_sym. Drop one.
     W.Wrap->IsUsedInRegularObj = false;
@@ -305,7 +305,8 @@ Symbol *SymbolTable::addUndefined(StringRef Name, uint8_t Binding,
     S->Binding = Binding;
   if (Binding != STB_WEAK) {
     if (auto *SS = dyn_cast<SharedSymbol>(S))
-      SS->getFile<ELFT>()->IsNeeded = true;
+      if (!Config->GcSections)
+        SS->getFile<ELFT>()->IsNeeded = true;
   }
   if (auto *L = dyn_cast<Lazy>(S)) {
     // An undefined weak will not fetch archive members. See comment on Lazy in
@@ -500,7 +501,7 @@ void SymbolTable::addShared(StringRef Name, SharedFile<ELFT> *File,
                                 Alignment, Verdef);
     if (!WasInserted) {
       S->Binding = Binding;
-      if (!S->isWeak())
+      if (!S->isWeak() && !Config->GcSections)
         File->IsNeeded = true;
     }
   }

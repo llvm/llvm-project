@@ -30,7 +30,7 @@ define <2 x i32> @masked_gather_v2i32(<2 x i32*>* %ptr, <2 x i1> %masks, <2 x i3
 ; NOGATHER:       # BB#0: # %entry
 ; NOGATHER-NEXT:    vmovdqa (%rdi), %xmm3
 ; NOGATHER-NEXT:    vpextrb $0, %xmm0, %eax
-; NOGATHER-NEXT:    # implicit-def: %XMM2
+; NOGATHER-NEXT:    # implicit-def: %xmm2
 ; NOGATHER-NEXT:    testb $1, %al
 ; NOGATHER-NEXT:    je .LBB0_2
 ; NOGATHER-NEXT:  # BB#1: # %cond.load
@@ -80,7 +80,7 @@ define <4 x i32> @masked_gather_v2i32_concat(<2 x i32*>* %ptr, <2 x i1> %masks, 
 ; NOGATHER:       # BB#0: # %entry
 ; NOGATHER-NEXT:    vmovdqa (%rdi), %xmm3
 ; NOGATHER-NEXT:    vpextrb $0, %xmm0, %eax
-; NOGATHER-NEXT:    # implicit-def: %XMM2
+; NOGATHER-NEXT:    # implicit-def: %xmm2
 ; NOGATHER-NEXT:    testb $1, %al
 ; NOGATHER-NEXT:    je .LBB1_2
 ; NOGATHER-NEXT:  # BB#1: # %cond.load
@@ -131,7 +131,7 @@ define <2 x float> @masked_gather_v2float(<2 x float*>* %ptr, <2 x i1> %masks, <
 ; NOGATHER:       # BB#0: # %entry
 ; NOGATHER-NEXT:    vmovdqa (%rdi), %xmm3
 ; NOGATHER-NEXT:    vpextrb $0, %xmm0, %eax
-; NOGATHER-NEXT:    # implicit-def: %XMM2
+; NOGATHER-NEXT:    # implicit-def: %xmm2
 ; NOGATHER-NEXT:    testb $1, %al
 ; NOGATHER-NEXT:    je .LBB2_2
 ; NOGATHER-NEXT:  # BB#1: # %cond.load
@@ -178,7 +178,7 @@ define <4 x float> @masked_gather_v2float_concat(<2 x float*>* %ptr, <2 x i1> %m
 ; NOGATHER:       # BB#0: # %entry
 ; NOGATHER-NEXT:    vmovdqa (%rdi), %xmm3
 ; NOGATHER-NEXT:    vpextrb $0, %xmm0, %eax
-; NOGATHER-NEXT:    # implicit-def: %XMM2
+; NOGATHER-NEXT:    # implicit-def: %xmm2
 ; NOGATHER-NEXT:    testb $1, %al
 ; NOGATHER-NEXT:    je .LBB3_2
 ; NOGATHER-NEXT:  # BB#1: # %cond.load
@@ -223,7 +223,7 @@ define <4 x i32> @masked_gather_v4i32(<4 x i32*> %ptrs, <4 x i1> %masks, <4 x i3
 ; NOGATHER-LABEL: masked_gather_v4i32:
 ; NOGATHER:       # BB#0: # %entry
 ; NOGATHER-NEXT:    vpextrb $0, %xmm1, %eax
-; NOGATHER-NEXT:    # implicit-def: %XMM3
+; NOGATHER-NEXT:    # implicit-def: %xmm3
 ; NOGATHER-NEXT:    testb $1, %al
 ; NOGATHER-NEXT:    je .LBB4_2
 ; NOGATHER-NEXT:  # BB#1: # %cond.load
@@ -281,7 +281,7 @@ define <4 x float> @masked_gather_v4float(<4 x float*> %ptrs, <4 x i1> %masks, <
 ; NOGATHER-LABEL: masked_gather_v4float:
 ; NOGATHER:       # BB#0: # %entry
 ; NOGATHER-NEXT:    vpextrb $0, %xmm1, %eax
-; NOGATHER-NEXT:    # implicit-def: %XMM3
+; NOGATHER-NEXT:    # implicit-def: %xmm3
 ; NOGATHER-NEXT:    testb $1, %al
 ; NOGATHER-NEXT:    je .LBB5_2
 ; NOGATHER-NEXT:  # BB#1: # %cond.load
@@ -351,7 +351,7 @@ define <8 x i32> @masked_gather_v8i32(<8 x i32*>* %ptr, <8 x i1> %masks, <8 x i3
 ; NOGATHER-NEXT:    vmovdqa (%rdi), %ymm4
 ; NOGATHER-NEXT:    vmovdqa 32(%rdi), %ymm3
 ; NOGATHER-NEXT:    vpextrb $0, %xmm0, %eax
-; NOGATHER-NEXT:    # implicit-def: %YMM2
+; NOGATHER-NEXT:    # implicit-def: %ymm2
 ; NOGATHER-NEXT:    testb $1, %al
 ; NOGATHER-NEXT:    je .LBB6_2
 ; NOGATHER-NEXT:  # BB#1: # %cond.load
@@ -466,7 +466,7 @@ define <8 x float> @masked_gather_v8float(<8 x float*>* %ptr, <8 x i1> %masks, <
 ; NOGATHER-NEXT:    vmovdqa (%rdi), %ymm4
 ; NOGATHER-NEXT:    vmovdqa 32(%rdi), %ymm3
 ; NOGATHER-NEXT:    vpextrb $0, %xmm0, %eax
-; NOGATHER-NEXT:    # implicit-def: %YMM2
+; NOGATHER-NEXT:    # implicit-def: %ymm2
 ; NOGATHER-NEXT:    testb $1, %al
 ; NOGATHER-NEXT:    je .LBB7_2
 ; NOGATHER-NEXT:  # BB#1: # %cond.load
@@ -579,7 +579,7 @@ define <4 x i64> @masked_gather_v4i64(<4 x i64*>* %ptr, <4 x i1> %masks, <4 x i6
 ; NOGATHER:       # BB#0: # %entry
 ; NOGATHER-NEXT:    vmovdqa (%rdi), %ymm3
 ; NOGATHER-NEXT:    vpextrb $0, %xmm0, %eax
-; NOGATHER-NEXT:    # implicit-def: %YMM2
+; NOGATHER-NEXT:    # implicit-def: %ymm2
 ; NOGATHER-NEXT:    testb $1, %al
 ; NOGATHER-NEXT:    je .LBB8_2
 ; NOGATHER-NEXT:  # BB#1: # %cond.load
@@ -656,7 +656,7 @@ define <4 x double> @masked_gather_v4double(<4 x double*>* %ptr, <4 x i1> %masks
 ; NOGATHER:       # BB#0: # %entry
 ; NOGATHER-NEXT:    vmovdqa (%rdi), %ymm3
 ; NOGATHER-NEXT:    vpextrb $0, %xmm0, %eax
-; NOGATHER-NEXT:    # implicit-def: %YMM2
+; NOGATHER-NEXT:    # implicit-def: %ymm2
 ; NOGATHER-NEXT:    testb $1, %al
 ; NOGATHER-NEXT:    je .LBB9_2
 ; NOGATHER-NEXT:  # BB#1: # %cond.load
@@ -727,7 +727,7 @@ define <2 x i64> @masked_gather_v2i64(<2 x i64*>* %ptr, <2 x i1> %masks, <2 x i6
 ; NOGATHER:       # BB#0: # %entry
 ; NOGATHER-NEXT:    vmovdqa (%rdi), %xmm3
 ; NOGATHER-NEXT:    vpextrb $0, %xmm0, %eax
-; NOGATHER-NEXT:    # implicit-def: %XMM2
+; NOGATHER-NEXT:    # implicit-def: %xmm2
 ; NOGATHER-NEXT:    testb $1, %al
 ; NOGATHER-NEXT:    je .LBB10_2
 ; NOGATHER-NEXT:  # BB#1: # %cond.load
@@ -772,7 +772,7 @@ define <2 x double> @masked_gather_v2double(<2 x double*>* %ptr, <2 x i1> %masks
 ; NOGATHER:       # BB#0: # %entry
 ; NOGATHER-NEXT:    vmovdqa (%rdi), %xmm3
 ; NOGATHER-NEXT:    vpextrb $0, %xmm0, %eax
-; NOGATHER-NEXT:    # implicit-def: %XMM2
+; NOGATHER-NEXT:    # implicit-def: %xmm2
 ; NOGATHER-NEXT:    testb $1, %al
 ; NOGATHER-NEXT:    je .LBB11_2
 ; NOGATHER-NEXT:  # BB#1: # %cond.load

@@ -2909,8 +2909,10 @@ public:
 
     // Build a map between <original value, basic block where we saw it> to
     // value of base register.
+    // Bail out if there is no common type.
     FoldAddrToValueMapping Map;
-    initializeMap(Map);
+    if (!initializeMap(Map))
+      return false;
 
     Value *CommonValue = findCommon(Map);
     if (CommonValue)
@@ -2924,7 +2926,8 @@ private:
   /// If address is not an instruction than basic block is set to null.
   /// At the same time we find a common type for different field we will
   /// use to create new Phi/Select nodes. Keep it in CommonType field.
-  void initializeMap(FoldAddrToValueMapping &Map) {
+  /// Return false if there is no common type found.
+  bool initializeMap(FoldAddrToValueMapping &Map) {
     // Keep track of keys where the value is null. We will need to replace it
     // with constant null when we know the common type.
     SmallVector<ValueInBB, 2> NullValue;
@@ -2936,10 +2939,10 @@ private:
 
       Value *DV = AM.GetFieldAsValue(DifferentField, IntPtrTy);
       if (DV) {
-        if (CommonType)
-          assert(CommonType == DV->getType() && "Different types detected!");
-        else
-          CommonType = DV->getType();
+        auto *Type = DV->getType();
+        if (CommonType && CommonType != Type)
+          return false;
+        CommonType = Type;
         Map[{ AM.OriginalValue, BB }] = DV;
       } else {
         NullValue.push_back({ AM.OriginalValue, BB });
@@ -2948,6 +2951,7 @@ private:
     assert(CommonType && "At least one non-null value must be!");
     for (auto VIBB : NullValue)
       Map[VIBB] = Constant::getNullValue(CommonType);
+    return true;
   }
 
   /// \brief We have mapping between value A and basic block where value A

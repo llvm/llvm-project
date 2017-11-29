@@ -97,9 +97,7 @@ int foo(int n) {
   static long *plocal;
 
   // CHECK:       [[ADD:%.+]] = add nsw i32
-  // CHECK:       store i32 [[ADD]], i32* [[CAPTURE:%.+]],
-  // CHECK:       [[LD:%.+]] = load i32, i32* [[CAPTURE]],
-  // CHECK:       [[DEVICE:%.+]] = sext i32 [[LD]] to i64
+  // CHECK:       [[DEVICE:%.+]] = sext i32 [[ADD]] to i64
   // CHECK:       [[RET:%.+]] = call i32 @__tgt_target(i64 [[DEVICE]], i8* @{{[^,]+}}, i32 0, i8** null, i8** null, i[[SZ]]* null, i64* null)
   // CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
   // CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:[^,]+]], label %[[END:[^,]+]]
@@ -111,10 +109,8 @@ int foo(int n) {
   {
   }
 
-  // CHECK:       [[ADD:%.+]] = add nsw i32
-  // CHECK:       store i32 [[ADD]], i32* [[CAPTURE:%.+]],
-  // CHECK-DAG:   [[LD:%.+]] = load i32, i32* [[CAPTURE]],
-  // CHECK-DAG:   [[DEVICE:%.+]] = sext i32 [[LD]] to i64
+  // CHECK-DAG:   [[ADD:%.+]] = add nsw i32
+  // CHECK-DAG:   [[DEVICE:%.+]] = sext i32 [[ADD]] to i64
   // CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target(i64 [[DEVICE]], i8* @{{[^,]+}}, i32 2, i8** [[BPR:%[^,]+]], i8** [[PR:%[^,]+]], i[[SZ]]* getelementptr inbounds ([2 x i[[SZ]]], [2 x i[[SZ]]]* [[SIZET]], i32 0, i32 0), i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[MAPT]], i32 0, i32 0)
   // CHECK-DAG:   [[BPR]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[BP:%[^,]+]], i32 0, i32 0
   // CHECK-DAG:   [[PR]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[P:%[^,]+]], i32 0, i32 0

@@ -5,10 +5,10 @@
 ; Test the LiveIntervals::handleMove() function.
 ;
 ; Moving the DIV32r instruction exercises the regunit update code because
-; %EDX has a live range into the function and is used by the DIV32r.
+; %edx has a live range into the function and is used by the DIV32r.
 ;
 ; Here sinking a kill + dead def:
-; 144B -> 180B: DIV32r %vreg4, %EAX<imp-def>, %EDX<imp-def,dead>, %EFLAGS<imp-def,dead>, %EAX<imp-use,kill>, %EDX<imp-use>
+; 144B -> 180B: DIV32r %vreg4, %eax<imp-def>, %edx<imp-def,dead>, %EFLAGS<imp-def,dead>, %eax<imp-use,kill>, %edx<imp-use>
 ;       %vreg4: [48r,144r:0)  0@48r
 ;         -->   [48r,180r:0)  0@48r
 ;       DH:     [0B,16r:0)[128r,144r:2)[144r,144d:1)  0@0B-phi 1@144r 2@128r
@@ -25,7 +25,7 @@ entry:
 }
 
 ; Same as above, but moving a kill + live def:
-; 144B -> 180B: DIV32r %vreg4, %EAX<imp-def,dead>, %EDX<imp-def>, %EFLAGS<imp-def,dead>, %EAX<imp-use,kill>, %EDX<imp-use>
+; 144B -> 180B: DIV32r %vreg4, %eax<imp-def,dead>, %edx<imp-def>, %EFLAGS<imp-def,dead>, %eax<imp-use,kill>, %edx<imp-use>
 ;       %vreg4: [48r,144r:0)  0@48r
 ;         -->   [48r,180r:0)  0@48r
 ;       DH:     [0B,16r:0)[128r,144r:2)[144r,184r:1)  0@0B-phi 1@144r 2@128r
@@ -59,7 +59,7 @@ entry:
 }
 
 ; Move EFLAGS dead def across another def:
-; handleMove 208B -> 36B: %EDX<def> = MOV32r0 %EFLAGS<imp-def,dead>
+; handleMove 208B -> 36B: %edx<def> = MOV32r0 %EFLAGS<imp-def,dead>
 ;    EFLAGS:    [20r,20d:4)[160r,160d:3)[208r,208d:0)[224r,224d:1)[272r,272d:2)[304r,304d:5)  0@208r 1@224r 2@272r 3@160r 4@20r 5@304r
 ;         -->   [20r,20d:4)[36r,36d:0)[160r,160d:3)[224r,224d:1)[272r,272d:2)[304r,304d:5)  0@36r 1@224r 2@272r 3@160r 4@20r 5@304r
 ;

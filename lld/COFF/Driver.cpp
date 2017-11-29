@@ -10,13 +10,13 @@
 #include "Driver.h"
 #include "Config.h"
 #include "InputFiles.h"
-#include "Memory.h"
 #include "MinGW.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "Writer.h"
 #include "lld/Common/Driver.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Memory.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -49,10 +49,6 @@ namespace coff {
 
 Configuration *Config;
 LinkerDriver *Driver;
-
-BumpPtrAllocator BAlloc;
-StringSaver Saver{BAlloc};
-std::vector<SpecificAllocBase *> SpecificAllocBase::Instances;
 
 bool link(ArrayRef<const char *> Args, bool CanExitEarly, raw_ostream &Diag) {
   errorHandler().LogName = Args[0];

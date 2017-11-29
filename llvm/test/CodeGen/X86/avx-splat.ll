@@ -61,7 +61,7 @@ define <8 x float> @funcE() nounwind {
 ; CHECK:       # BB#0: # %for_exit499
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    # implicit-def: %YMM0
+; CHECK-NEXT:    # implicit-def: %ymm0
 ; CHECK-NEXT:    jne .LBB4_2
 ; CHECK-NEXT:  # BB#1: # %load.i1247
 ; CHECK-NEXT:    pushq %rbp

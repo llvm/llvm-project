@@ -306,8 +306,8 @@ bool SparcFrameLowering::isLeafProc(MachineFunction &MF) const
 
   return !(MFI.hasCalls()                  // has calls
            || MRI.isPhysRegUsed(SP::L0)    // Too many registers needed
-           || MRI.isPhysRegUsed(SP::O6)    // %SP is used
-           || hasFP(MF));                  // need %FP
+           || MRI.isPhysRegUsed(SP::O6)    // %sp is used
+           || hasFP(MF));                  // need %fp
 }
 
 void SparcFrameLowering::remapRegsForLeafProc(MachineFunction &MF) const {

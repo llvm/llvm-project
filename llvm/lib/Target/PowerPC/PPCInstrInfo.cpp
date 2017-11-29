@@ -2315,10 +2315,10 @@ PPCInstrInfo::isSignOrZeroExtended(const MachineInstr &MI, bool SignExt,
 
       // For a method return value, we check the ZExt/SExt flags in attribute.
       // We assume the following code sequence for method call.
-      //   ADJCALLSTACKDOWN 32, %R1<imp-def,dead>, %R1<imp-use>
+      //   ADJCALLSTACKDOWN 32, %r1<imp-def,dead>, %r1<imp-use>
       //   BL8_NOP <ga:@func>,...
-      //   ADJCALLSTACKUP 32, 0, %R1<imp-def,dead>, %R1<imp-use>
-      //   %vreg5<def> = COPY %X3; G8RC:%vreg5
+      //   ADJCALLSTACKUP 32, 0, %r1<imp-def,dead>, %r1<imp-use>
+      //   %vreg5<def> = COPY %x3; G8RC:%vreg5
       if (SrcReg == PPC::X3) {
         const MachineBasicBlock *MBB = MI.getParent();
         MachineBasicBlock::const_instr_iterator II =
@@ -2378,9 +2378,7 @@ PPCInstrInfo::isSignOrZeroExtended(const MachineInstr &MI, bool SignExt,
   }
 
   // If all incoming values are sign-/zero-extended,
-  // the output of AND, OR, ISEL or PHI is also sign-/zero-extended.
-  case PPC::AND:
-  case PPC::AND8:
+  // the output of OR, ISEL or PHI is also sign-/zero-extended.
   case PPC::OR:
   case PPC::OR8:
   case PPC::ISEL:
@@ -2409,6 +2407,36 @@ PPCInstrInfo::isSignOrZeroExtended(const MachineInstr &MI, bool SignExt,
         return false;
     }
     return true;
+  }
+
+  // If at least one of the incoming values of an AND is zero extended
+  // then the output is also zero-extended. If both of the incoming values
+  // are sign-extended then the output is also sign extended.
+  case PPC::AND:
+  case PPC::AND8: {
+    if (Depth >= MAX_DEPTH)
+       return false;
+
+    assert(MI.getOperand(1).isReg() && MI.getOperand(2).isReg());
+
+    unsigned SrcReg1 = MI.getOperand(1).getReg();
+    unsigned SrcReg2 = MI.getOperand(2).getReg();
+
+    if (!TargetRegisterInfo::isVirtualRegister(SrcReg1) ||
+        !TargetRegisterInfo::isVirtualRegister(SrcReg2))
+       return false;
+
+    const MachineInstr *MISrc1 = MRI->getVRegDef(SrcReg1);
+    const MachineInstr *MISrc2 = MRI->getVRegDef(SrcReg2);
+    if (!MISrc1 || !MISrc2)
+        return false;
+
+    if(SignExt)
+        return isSignOrZeroExtended(*MISrc1, SignExt, Depth+1) &&
+               isSignOrZeroExtended(*MISrc2, SignExt, Depth+1);
+    else
+        return isSignOrZeroExtended(*MISrc1, SignExt, Depth+1) ||
+               isSignOrZeroExtended(*MISrc2, SignExt, Depth+1);
   }
 
   default:

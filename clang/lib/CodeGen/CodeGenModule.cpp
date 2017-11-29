@@ -669,7 +669,8 @@ llvm::ConstantInt *CodeGenModule::getSize(CharUnits size) {
 }
 
 void CodeGenModule::setGlobalVisibility(llvm::GlobalValue *GV,
-                                        const NamedDecl *D) const {
+                                        const NamedDecl *D,
+                                        ForDefinition_t IsForDefinition) const {
   // Internal definitions always have default visibility.
   if (GV->hasLocalLinkage()) {
     GV->setVisibility(llvm::GlobalValue::DefaultVisibility);
@@ -678,7 +679,8 @@ void CodeGenModule::setGlobalVisibility(llvm::GlobalValue *GV,
 
   // Set visibility for definitions.
   LinkageInfo LV = D->getLinkageAndVisibility();
-  if (LV.isVisibilityExplicit() || !GV->hasAvailableExternallyLinkage())
+  if (LV.isVisibilityExplicit() ||
+      (IsForDefinition && !GV->hasAvailableExternallyLinkage()))
     GV->setVisibility(GetLLVMVisibility(LV.getVisibility()));
 }
 
@@ -1059,7 +1061,7 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
 void CodeGenModule::SetCommonAttributes(const Decl *D,
                                         llvm::GlobalValue *GV) {
   if (const auto *ND = dyn_cast_or_null<NamedDecl>(D))
-    setGlobalVisibility(GV, ND);
+    setGlobalVisibility(GV, ND, ForDefinition);
   else
     GV->setVisibility(llvm::GlobalValue::DefaultVisibility);
 
@@ -1115,8 +1117,8 @@ void CodeGenModule::SetInternalFunctionAttributes(const Decl *D,
   setNonAliasAttributes(D, F);
 }
 
-static void setLinkageAndVisibilityForGV(llvm::GlobalValue *GV,
-                                         const NamedDecl *ND) {
+static void setLinkageForGV(llvm::GlobalValue *GV,
+                            const NamedDecl *ND) {
   // Set linkage and visibility in case we never see a definition.
   LinkageInfo LV = ND->getLinkageAndVisibility();
   if (!isExternallyVisible(LV.getLinkage())) {
@@ -1132,10 +1134,6 @@ static void setLinkageAndVisibilityForGV(llvm::GlobalValue *GV,
       // separate linkage types for this.
       GV->setLinkage(llvm::GlobalValue::ExternalWeakLinkage);
     }
-
-    // Set visibility on a declaration only if it's explicit.
-    if (LV.isVisibilityExplicit())
-      GV->setVisibility(CodeGenModule::GetLLVMVisibility(LV.getVisibility()));
   }
 }
 
@@ -1204,7 +1202,8 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
   // Only a few attributes are set on declarations; these may later be
   // overridden by a definition.
 
-  setLinkageAndVisibilityForGV(F, FD);
+  setLinkageForGV(F, FD);
+  setGlobalVisibility(F, FD, NotForDefinition);
 
   if (FD->getAttr<PragmaClangTextSectionAttr>()) {
     F->addFnAttr("implicit-section-name");
@@ -2441,7 +2440,8 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName,
 
     GV->setAlignment(getContext().getDeclAlign(D).getQuantity());
 
-    setLinkageAndVisibilityForGV(GV, D);
+    setLinkageForGV(GV, D);
+    setGlobalVisibility(GV, D, NotForDefinition);
 
     if (D->getTLSKind()) {
       if (D->getTLSKind() == VarDecl::TLS_Dynamic)
@@ -3260,7 +3260,7 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
   setFunctionDLLStorageClass(GD, Fn);
 
   // FIXME: this is redundant with part of setFunctionDefinitionAttributes
-  setGlobalVisibility(Fn, D);
+  setGlobalVisibility(Fn, D, ForDefinition);
 
   MaybeHandleStaticInExternC(D, Fn);
 
@@ -3856,7 +3856,7 @@ ConstantAddress CodeGenModule::GetAddrOfGlobalTemporary(
       getModule(), Type, Constant, Linkage, InitialValue, Name.c_str(),
       /*InsertBefore=*/nullptr, llvm::GlobalVariable::NotThreadLocal, TargetAS);
   if (emitter) emitter->finalize(GV);
-  setGlobalVisibility(GV, VD);
+  setGlobalVisibility(GV, VD, ForDefinition);
   GV->setAlignment(Align.getQuantity());
   if (supportsCOMDAT() && GV->isWeakForLinker())
     GV->setComdat(TheModule.getOrInsertComdat(GV->getName()));

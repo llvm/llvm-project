@@ -30,7 +30,7 @@ define i16 @test2(i16 %x) nounwind {
 ; X32-NEXT:    andb $1, %al
 ; X32-NEXT:    negb %al
 ; X32-NEXT:    movsbl %al, %eax
-; X32-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
+; X32-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
 ; X32-NEXT:    retl
 ; X32-NEXT:    ## -- End function
 ;
@@ -39,7 +39,7 @@ define i16 @test2(i16 %x) nounwind {
 ; X64-NEXT:    andb $1, %dil
 ; X64-NEXT:    negb %dil
 ; X64-NEXT:    movsbl %dil, %eax
-; X64-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
+; X64-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
 ; X64-NEXT:    retq
 ; X64-NEXT:    ## -- End function
   %z = trunc i16 %x to i1
@@ -116,7 +116,7 @@ define i16 @test6(i16 %x) nounwind {
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    andb $1, %al
 ; X32-NEXT:    movzbl %al, %eax
-; X32-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
+; X32-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
 ; X32-NEXT:    retl
 ; X32-NEXT:    ## -- End function
 ;
@@ -124,7 +124,7 @@ define i16 @test6(i16 %x) nounwind {
 ; X64:       ## BB#0:
 ; X64-NEXT:    andb $1, %dil
 ; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
+; X64-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
 ; X64-NEXT:    retq
 ; X64-NEXT:    ## -- End function
   %z = trunc i16 %x to i1
@@ -176,14 +176,14 @@ define i16 @test9(i8 %x) nounwind {
 ; X32-LABEL: test9:
 ; X32:       ## BB#0:
 ; X32-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
+; X32-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
 ; X32-NEXT:    retl
 ; X32-NEXT:    ## -- End function
 ;
 ; X64-LABEL: test9:
 ; X64:       ## BB#0:
 ; X64-NEXT:    movsbl %dil, %eax
-; X64-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
+; X64-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
 ; X64-NEXT:    retq
 ; X64-NEXT:    ## -- End function
   %u = sext i8 %x to i16
@@ -228,14 +228,14 @@ define i16 @test12(i8 %x) nounwind {
 ; X32-LABEL: test12:
 ; X32:       ## BB#0:
 ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
+; X32-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
 ; X32-NEXT:    retl
 ; X32-NEXT:    ## -- End function
 ;
 ; X64-LABEL: test12:
 ; X64:       ## BB#0:
 ; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
+; X64-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
 ; X64-NEXT:    retq
 ; X64-NEXT:    ## -- End function
   %u = zext i8 %x to i16

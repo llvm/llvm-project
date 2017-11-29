@@ -18,9 +18,7 @@
 #include "MacroRepeatedSideEffectsCheck.h"
 #include "MisplacedConstCheck.h"
 #include "MisplacedWideningCastCheck.h"
-#include "MoveConstantArgumentCheck.h"
 #include "NewDeleteOverloadsCheck.h"
-#include "NoexceptMoveConstructorCheck.h"
 #include "NonCopyableObjects.h"
 #include "RedundantExpressionCheck.h"
 #include "SizeofContainerCheck.h"
@@ -67,12 +65,8 @@ public:
         "misc-macro-repeated-side-effects");
     CheckFactories.registerCheck<MisplacedWideningCastCheck>(
         "misc-misplaced-widening-cast");
-    CheckFactories.registerCheck<MoveConstantArgumentCheck>(
-        "misc-move-const-arg");
     CheckFactories.registerCheck<NewDeleteOverloadsCheck>(
         "misc-new-delete-overloads");
-    CheckFactories.registerCheck<NoexceptMoveConstructorCheck>(
-        "misc-noexcept-move-constructor");
     CheckFactories.registerCheck<NonCopyableObjectsCheck>(
         "misc-non-copyable-objects");
     CheckFactories.registerCheck<RedundantExpressionCheck>(

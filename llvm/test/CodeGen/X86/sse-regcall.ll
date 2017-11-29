@@ -75,7 +75,7 @@ define x86_regcallcc i1 @test_CallargReti1(i1 %a)  {
 ; LINUXOSX: movaps {{.*(%r(b|s)p).*}}, {{%xmm(1[2-5])}}  {{#+}} 16-byte Reload
 ; LINUXOSX: retq
 
-;test calling conventions - input parameters, callee saved XMMs
+;test calling conventions - input parameters, callee saved xmms
 define x86_regcallcc <16 x float> @testf32_inp(<16 x float> %a, <16 x float> %b, <16 x float> %c) nounwind {
   %x1 = fadd <16 x float> %a, %b
   %x2 = fmul <16 x float> %a, %b

@@ -624,13 +624,23 @@ void SelectionDAGLegalize::LegalizeStoreOps(SDNode *Node) {
       assert(!StVT.isVector() &&
              "Vector Stores are handled in LegalizeVectorOps");
 
+      SDValue Result;
+
       // TRUNCSTORE:i16 i32 -> STORE i16
-      assert(TLI.isTypeLegal(StVT) &&
-             "Do not know how to expand this store!");
-      Value = DAG.getNode(ISD::TRUNCATE, dl, StVT, Value);
-      SDValue Result =
-          DAG.getStore(Chain, dl, Value, Ptr, ST->getPointerInfo(),
-                       Alignment, MMOFlags, AAInfo);
+      if (TLI.isTypeLegal(StVT)) {
+        Value = DAG.getNode(ISD::TRUNCATE, dl, StVT, Value);
+        Result = DAG.getStore(Chain, dl, Value, Ptr, ST->getPointerInfo(),
+                              Alignment, MMOFlags, AAInfo);
+      } else {
+        // The in-memory type isn't legal. Truncate to the type it would promote
+        // to, and then do a truncstore.
+        Value = DAG.getNode(ISD::TRUNCATE, dl,
+                            TLI.getTypeToTransformTo(*DAG.getContext(), StVT),
+                            Value);
+        Result = DAG.getTruncStore(Chain, dl, Value, Ptr, ST->getPointerInfo(),
+                                   StVT, Alignment, MMOFlags, AAInfo);
+      }
+
       ReplaceNode(SDValue(Node, 0), Result);
       break;
     }

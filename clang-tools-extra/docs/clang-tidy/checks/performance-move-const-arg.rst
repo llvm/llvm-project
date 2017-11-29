@@ -1,7 +1,7 @@
-.. title:: clang-tidy - misc-move-const-arg
+.. title:: clang-tidy - performance-move-const-arg
 
-misc-move-const-arg
-===================
+performance-move-const-arg
+==========================
 
 The check warns
 

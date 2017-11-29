@@ -113,9 +113,9 @@ bool llvm::HexagonMCShuffle(MCContext &Context, bool Fatal,
 
   if (!HexagonMCInstrInfo::bundleSize(MCB)) {
     // There once was a bundle:
-    //    BUNDLE %D2<imp-def>, %R4<imp-def>, %R5<imp-def>, %D7<imp-def>, ...
-    //      * %D2<def> = IMPLICIT_DEF; flags:
-    //      * %D7<def> = IMPLICIT_DEF; flags:
+    //    BUNDLE %d2<imp-def>, %r4<imp-def>, %r5<imp-def>, %d7<imp-def>, ...
+    //      * %d2<def> = IMPLICIT_DEF; flags:
+    //      * %d7<def> = IMPLICIT_DEF; flags:
     // After the IMPLICIT_DEFs were removed by the asm printer, the bundle
     // became empty.
     DEBUG(dbgs() << "Skipping empty bundle");
@@ -137,9 +137,9 @@ llvm::HexagonMCShuffle(MCContext &Context, MCInstrInfo const &MCII,
 
   if (!HexagonMCInstrInfo::bundleSize(MCB)) {
     // There once was a bundle:
-    //    BUNDLE %D2<imp-def>, %R4<imp-def>, %R5<imp-def>, %D7<imp-def>, ...
-    //      * %D2<def> = IMPLICIT_DEF; flags:
-    //      * %D7<def> = IMPLICIT_DEF; flags:
+    //    BUNDLE %d2<imp-def>, %r4<imp-def>, %r5<imp-def>, %d7<imp-def>, ...
+    //      * %d2<def> = IMPLICIT_DEF; flags:
+    //      * %d7<def> = IMPLICIT_DEF; flags:
     // After the IMPLICIT_DEFs were removed by the asm printer, the bundle
     // became empty.
     DEBUG(dbgs() << "Skipping empty bundle");
