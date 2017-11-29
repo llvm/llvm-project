@@ -847,6 +847,7 @@ void ARMTargetELFStreamer::emitArchDefaultAttributes() {
     setAttributeItem(THUMB_ISA_use, AllowThumb32, false);
     break;
 
+  case ARM::ArchKind::ARMV7EM:
   case ARM::ArchKind::ARMV7M:
     setAttributeItem(CPU_arch_profile, MicroControllerProfile, false);
     setAttributeItem(THUMB_ISA_use, AllowThumb32, false);

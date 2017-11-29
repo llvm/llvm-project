@@ -358,17 +358,6 @@ protected:
     Builder.defineMacro("__ELF__");
     if (Opts.POSIXThreads)
       Builder.defineMacro("_REENTRANT");
-
-    switch (Triple.getArch()) {
-    default:
-      break;
-    case llvm::Triple::arm:
-    case llvm::Triple::armeb:
-    case llvm::Triple::thumb:
-    case llvm::Triple::thumbeb:
-      Builder.defineMacro("__ARM_DWARF_EH__");
-      break;
-    }
   }
 
 public:
