@@ -14,15 +14,11 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
-#include "llvm/DebugInfo/CodeView/RecordSerialization.h"
 #include "llvm/DebugInfo/CodeView/SimpleTypeSerializer.h"
+#include "llvm/DebugInfo/CodeView/TypeCollection.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
-#include "llvm/DebugInfo/CodeView/TypeRecordMapping.h"
-#include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/BinaryByteStream.h"
-#include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/Error.h"
 #include <cassert>
 #include <cstdint>
@@ -35,7 +31,7 @@ namespace codeview {
 class ContinuationRecordBuilder;
 class TypeHasher;
 
-class TypeTableBuilder {
+class TypeTableBuilder : public TypeCollection {
 
   BumpPtrAllocator &RecordStorage;
   SimpleTypeSerializer SimpleSerializer;
@@ -54,10 +50,17 @@ public:
   explicit TypeTableBuilder(BumpPtrAllocator &Storage, bool Hash = true);
   ~TypeTableBuilder();
 
+  // TypeTableCollection overrides
+  Optional<TypeIndex> getFirst() override;
+  Optional<TypeIndex> getNext(TypeIndex Prev) override;
+  CVType getType(TypeIndex Index) override;
+  StringRef getTypeName(TypeIndex Index) override;
+  bool contains(TypeIndex Index) override;
+  uint32_t size() override;
+  uint32_t capacity() override;
+
+  // public interface
   void reset();
-
-  bool empty() const { return SeenRecords.empty(); }
-
   TypeIndex nextTypeIndex() const;
 
   BumpPtrAllocator &getAllocator() { return RecordStorage; }
@@ -70,15 +73,6 @@ public:
   template <typename T> TypeIndex writeLeafType(T &Record) {
     ArrayRef<uint8_t> Data = SimpleSerializer.serialize(Record);
     return insertRecordBytes(Data);
-  }
-
-  template <typename TFunc> void ForEachRecord(TFunc Func) {
-    uint32_t Index = TypeIndex::FirstNonSimpleIndex;
-
-    for (auto Record : SeenRecords) {
-      Func(TypeIndex(Index), Record);
-      ++Index;
-    }
   }
 };
 
