@@ -322,8 +322,8 @@ void MipsThunk::addSymbols(ThunkSection &IS) {
 }
 
 InputSection *MipsThunk::getTargetInputSection() const {
-  auto *DR = dyn_cast<Defined>(&Destination);
-  return dyn_cast<InputSection>(DR->Section);
+  auto &DR = cast<Defined>(Destination);
+  return dyn_cast<InputSection>(DR.Section);
 }
 
 // Write microMIPS R2-R5 LA25 thunk code
@@ -347,8 +347,8 @@ void MicroMipsThunk::addSymbols(ThunkSection &IS) {
 }
 
 InputSection *MicroMipsThunk::getTargetInputSection() const {
-  auto *DR = dyn_cast<Defined>(&Destination);
-  return dyn_cast<InputSection>(DR->Section);
+  auto &DR = cast<Defined>(Destination);
+  return dyn_cast<InputSection>(DR.Section);
 }
 
 // Write microMIPS R6 LA25 thunk code
@@ -372,8 +372,8 @@ void MicroMipsR6Thunk::addSymbols(ThunkSection &IS) {
 }
 
 InputSection *MicroMipsR6Thunk::getTargetInputSection() const {
-  auto *DR = dyn_cast<Defined>(&Destination);
-  return dyn_cast<InputSection>(DR->Section);
+  auto &DR = cast<Defined>(Destination);
+  return dyn_cast<InputSection>(DR.Section);
 }
 
 Thunk::Thunk(Symbol &D) : Destination(D), Offset(0) {}
