@@ -471,6 +471,8 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
 
   switch (Sec.sh_type) {
   case SHT_ARM_ATTRIBUTES: {
+    if (Config->EMachine != EM_ARM)
+      break;
     ARMAttributeParser Attributes;
     ArrayRef<uint8_t> Contents = check(this->getObj().getSectionContents(&Sec));
     Attributes.Parse(Contents, /*isLittle*/Config->EKind == ELF32LEKind);

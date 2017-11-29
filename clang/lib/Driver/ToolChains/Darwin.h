@@ -247,8 +247,9 @@ public:
 
   bool UseDwarfDebugFlags() const override;
 
-  bool UseSjLjExceptions(const llvm::opt::ArgList &Args) const override {
-    return false;
+  llvm::ExceptionHandling
+  GetExceptionModel(const llvm::opt::ArgList &Args) const override {
+    return llvm::ExceptionHandling::None;
   }
 
   /// }
@@ -455,7 +456,8 @@ public:
 
   void CheckObjCARC() const override;
 
-  bool UseSjLjExceptions(const llvm::opt::ArgList &Args) const override;
+  llvm::ExceptionHandling GetExceptionModel(
+      const llvm::opt::ArgList &Args) const override;
 
   bool SupportsEmbeddedBitcode() const override;
 

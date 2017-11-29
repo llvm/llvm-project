@@ -1881,7 +1881,7 @@ bool MachO::IsUnwindTablesDefault(const ArgList &Args) const {
   // Unwind tables are not emitted if -fno-exceptions is supplied (except when
   // targeting x86_64).
   return getArch() == llvm::Triple::x86_64 ||
-         (!UseSjLjExceptions(Args) &&
+         (GetExceptionModel(Args) != llvm::ExceptionHandling::SjLj &&
           Args.hasFlag(options::OPT_fexceptions, options::OPT_fno_exceptions,
                        true));
 }
@@ -1892,15 +1892,18 @@ bool MachO::UseDwarfDebugFlags() const {
   return false;
 }
 
-bool Darwin::UseSjLjExceptions(const ArgList &Args) const {
+llvm::ExceptionHandling Darwin::GetExceptionModel(const ArgList &Args) const {
   // Darwin uses SjLj exceptions on ARM.
   if (getTriple().getArch() != llvm::Triple::arm &&
       getTriple().getArch() != llvm::Triple::thumb)
-    return false;
+    return llvm::ExceptionHandling::None;
 
   // Only watchOS uses the new DWARF/Compact unwinding method.
   llvm::Triple Triple(ComputeLLVMTriple(Args));
-  return !Triple.isWatchABI();
+  if(Triple.isWatchABI())
+    return llvm::ExceptionHandling::DwarfCFI;
+
+  return llvm::ExceptionHandling::SjLj;
 }
 
 bool Darwin::SupportsEmbeddedBitcode() const {

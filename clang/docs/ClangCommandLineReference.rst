@@ -1706,9 +1706,17 @@ Which overload candidates to show when overload resolution fails: best\|all; def
 
 Enable C++14 sized global deallocation functions
 
+.. option:: -fdwarf-exceptions
+
+Use DWARF style exceptions
+
 .. option:: -fsjlj-exceptions
 
 Use SjLj style exceptions
+
+.. option:: -fseh-exceptions
+
+Use SEH style exceptions
 
 .. option:: -fslp-vectorize, -fno-slp-vectorize, -ftree-slp-vectorize
 
