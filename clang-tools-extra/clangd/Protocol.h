@@ -51,7 +51,7 @@ struct URI {
   static URI fromUri(llvm::StringRef uri);
   static URI fromFile(llvm::StringRef file);
 
-  static URI parse(llvm::StringRef U) { return fromUri(U); }
+  static llvm::Optional<URI> parse(const json::Expr &U);
   static json::Expr unparse(const URI &U);
 
   friend bool operator==(const URI &LHS, const URI &RHS) {
