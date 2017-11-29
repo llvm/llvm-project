@@ -5,11 +5,11 @@
 ; of individual register def operands.
 
 ; ASM: main: # @main
-; ASM: #DEBUG_VALUE: main:argc <- %ECX
+; ASM: #DEBUG_VALUE: main:argc <- %ecx
 ; ASM: movl $1, x(%rip)
 ; ASM: callq clobber
 ; ASM-NEXT: [[argc_range_end:.Ltmp[0-9]+]]:
-; Previously LiveDebugValues would claim argc was still in ECX after the call.
+; Previously LiveDebugValues would claim argc was still in ecx after the call.
 ; ASM-NOT: #DEBUG_VALUE: main:argc
 
 ; argc is the first debug location.

@@ -2108,10 +2108,12 @@ void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
                       ProgramPoint::PostLValueKind);
     return;
   }
-  if (isa<FieldDecl>(D)) {
+  if (isa<FieldDecl>(D) || isa<IndirectFieldDecl>(D)) {
     // FIXME: Compute lvalue of field pointers-to-member.
     // Right now we just use a non-null void pointer, so that it gives proper
     // results in boolean contexts.
+    // FIXME: Maybe delegate this to the surrounding operator&.
+    // Note how this expression is lvalue, however pointer-to-member is NonLoc.
     SVal V = svalBuilder.conjureSymbolVal(Ex, LCtx, getContext().VoidPtrTy,
                                           currBldrCtx->blockCount());
     state = state->assume(V.castAs<DefinedOrUnknownSVal>(), true);

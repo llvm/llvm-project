@@ -96,8 +96,18 @@ bool hasHardwareCRC32ARMPosix() {
 bool hasHardwareCRC32ARMPosix() { return false; }
 # endif  // SANITIZER_POSIX
 
+// Bionic doesn't initialize its globals early enough. This causes issues when
+// trying to access them from a preinit_array (b/25751302) or from another
+// constructor called before the libc one (b/68046352). __progname is
+// initialized after the other globals, so we can check its value to know if
+// calling getauxval is safe.
+extern "C" SANITIZER_WEAK_ATTRIBUTE char *__progname;
+INLINE bool areBionicGlobalsInitialized() {
+  return !SANITIZER_ANDROID || (&__progname && __progname);
+}
+
 bool hasHardwareCRC32() {
-  if (&getauxval)
+  if (&getauxval && areBionicGlobalsInitialized())
     return !!(getauxval(AT_HWCAP) & HWCAP_CRC32);
   return hasHardwareCRC32ARMPosix();
 }

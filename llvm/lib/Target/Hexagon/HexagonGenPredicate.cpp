@@ -74,7 +74,7 @@ namespace {
   raw_ostream &operator<< (raw_ostream &OS, const PrintRegister &PR)
     LLVM_ATTRIBUTE_UNUSED;
   raw_ostream &operator<< (raw_ostream &OS, const PrintRegister &PR) {
-    return OS << PrintReg(PR.Reg.R, &PR.TRI, PR.Reg.S);
+    return OS << printReg(PR.Reg.R, &PR.TRI, PR.Reg.S);
   }
 
   class HexagonGenPredicate : public MachineFunctionPass {
@@ -223,12 +223,12 @@ void HexagonGenPredicate::collectPredicateGPR(MachineFunction &MF) {
 
 void HexagonGenPredicate::processPredicateGPR(const Register &Reg) {
   DEBUG(dbgs() << __func__ << ": "
-               << PrintReg(Reg.R, TRI, Reg.S) << "\n");
+               << printReg(Reg.R, TRI, Reg.S) << "\n");
   using use_iterator = MachineRegisterInfo::use_iterator;
 
   use_iterator I = MRI->use_begin(Reg.R), E = MRI->use_end();
   if (I == E) {
-    DEBUG(dbgs() << "Dead reg: " << PrintReg(Reg.R, TRI, Reg.S) << '\n');
+    DEBUG(dbgs() << "Dead reg: " << printReg(Reg.R, TRI, Reg.S) << '\n');
     MachineInstr *DefI = MRI->getVRegDef(Reg.R);
     DefI->eraseFromParent();
     return;

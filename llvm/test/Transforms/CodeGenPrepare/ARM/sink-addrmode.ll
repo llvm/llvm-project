@@ -366,3 +366,55 @@ entey:
   store i32 %value, i32* %select, align 4
   ret void
 }
+
+; Same for a select between a value and global variable
+; CHECK-LABEL: @test_select_trivial_ptr_gv
+; CHECK: select i1 %cmp, i32* %ptr, i32* @gv2
+define void @test_select_trivial_ptr_gv(i32* %ptr, i32 %value) {
+entry:
+  %cmp = icmp sgt i32 %value, 0
+  %select = select i1 %cmp, i32* %ptr, i32* @gv2
+  store i32 %value, i32* %select, align 4
+  ret void
+}
+
+; Same for a select between a global variable and null, though the test needs to
+; be a little more complicated to avoid dereferencing a potential null pointer
+; CHECK-LABEL: @test_select_trivial_gv_null
+; CHECK: select i1 %cmp.i, i32* @gv1, i32* null
+define void @test_select_trivial_gv_null(){
+entry:
+  %gv1_val = load i32, i32* @gv1, align 4
+  %cmp.i = icmp eq i32 %gv1_val, 0
+  %spec.select.i = select i1 %cmp.i, i32* @gv1, i32* null
+  br i1 %cmp.i, label %if.then, label %if.end
+
+if.then:
+  %val = load i32, i32* %spec.select.i, align 4
+  %inc = add nsw i32 %val, 1
+  store i32 %inc, i32* %spec.select.i, align 4
+  br label %if.end
+
+if.end:
+  ret void
+}
+
+; Same for a select between a value and null
+; CHECK-LABEL: @test_select_trivial_ptr_null
+; CHECK: select i1 %cmp.i, i32* %ptr, i32* null
+define void @test_select_trivial_ptr_null(i32* %ptr){
+entry:
+  %gv1_val = load i32, i32* %ptr, align 4
+  %cmp.i = icmp eq i32 %gv1_val, 0
+  %spec.select.i = select i1 %cmp.i, i32* %ptr, i32* null
+  br i1 %cmp.i, label %if.then, label %if.end
+
+if.then:
+  %val = load i32, i32* %spec.select.i, align 4
+  %inc = add nsw i32 %val, 1
+  store i32 %inc, i32* %spec.select.i, align 4
+  br label %if.end
+
+if.end:
+  ret void
+}

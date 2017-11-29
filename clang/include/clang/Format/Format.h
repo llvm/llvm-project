@@ -985,6 +985,40 @@ struct FormatStyle {
   /// For example: BOOST_FOREACH.
   std::vector<std::string> ForEachMacros;
 
+  /// \brief Styles for sorting multiple ``#include`` blocks.
+  enum IncludeBlocksStyle {
+    /// \brief Sort each ``#include`` block separately.
+    /// \code
+    ///    #include "b.h"               into      #include "b.h"
+    ///
+    ///    #include <lib/main.h>                  #include "a.h"
+    ///    #include "a.h"                         #include <lib/main.h>
+    /// \endcode
+    IBS_Preserve,
+    /// \brief Merge multiple ``#include`` blocks together and sort as one.
+    /// \code
+    ///    #include "b.h"               into      #include "a.h"
+    ///                                           #include "b.h"
+    ///    #include <lib/main.h>                  #include <lib/main.h>
+    ///    #include "a.h"
+    /// \endcode
+    IBS_Merge,
+    /// \brief Merge multiple ``#include`` blocks together and sort as one.
+    /// Then split into groups based on category priority. See
+    /// ``IncludeCategories``.
+    /// \code
+    ///    #include "b.h"               into      #include "a.h"
+    ///                                           #include "b.h"
+    ///    #include <lib/main.h>
+    ///    #include "a.h"                         #include <lib/main.h>
+    /// \endcode
+    IBS_Regroup,
+  };
+
+  /// \brief Dependent on the value, multiple ``#include`` blocks can be sorted
+  /// as one and divided based on category.
+  IncludeBlocksStyle IncludeBlocks;
+
   /// \brief See documentation of ``IncludeCategories``.
   struct IncludeCategory {
     /// \brief The regular expression that this category matches.
@@ -1609,6 +1643,7 @@ struct FormatStyle {
                R.ExperimentalAutoDetectBinPacking &&
            FixNamespaceComments == R.FixNamespaceComments &&
            ForEachMacros == R.ForEachMacros &&
+           IncludeBlocks == R.IncludeBlocks &&
            IncludeCategories == R.IncludeCategories &&
            IndentCaseLabels == R.IndentCaseLabels &&
            IndentPPDirectives == R.IndentPPDirectives &&

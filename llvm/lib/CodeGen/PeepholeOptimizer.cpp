@@ -1516,7 +1516,7 @@ bool PeepholeOptimizer::foldRedundantNAPhysCopy(
   unsigned DstReg = MI->getOperand(0).getReg();
   unsigned SrcReg = MI->getOperand(1).getReg();
   if (isNAPhysCopy(SrcReg) && TargetRegisterInfo::isVirtualRegister(DstReg)) {
-    // %vreg = COPY %PHYSREG
+    // %vreg = COPY %physreg
     // Avoid using a datastructure which can track multiple live non-allocatable
     // phys->virt copies since LLVM doesn't seem to do this.
     NAPhysToVirtMIs.insert({SrcReg, MI});
@@ -1526,7 +1526,7 @@ bool PeepholeOptimizer::foldRedundantNAPhysCopy(
   if (!(TargetRegisterInfo::isVirtualRegister(SrcReg) && isNAPhysCopy(DstReg)))
     return false;
 
-  // %PHYSREG = COPY %vreg
+  // %physreg = COPY %vreg
   auto PrevCopy = NAPhysToVirtMIs.find(DstReg);
   if (PrevCopy == NAPhysToVirtMIs.end()) {
     // We can't remove the copy: there was an intervening clobber of the
@@ -1696,8 +1696,8 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
     // Track when a non-allocatable physical register is copied to a virtual
     // register so that useless moves can be removed.
     //
-    // %PHYSREG is the map index; MI is the last valid `%vreg = COPY %PHYSREG`
-    // without any intervening re-definition of %PHYSREG.
+    // %physreg is the map index; MI is the last valid `%vreg = COPY %physreg`
+    // without any intervening re-definition of %physreg.
     DenseMap<unsigned, MachineInstr *> NAPhysToVirtMIs;
 
     // Set of virtual registers that are copied from.

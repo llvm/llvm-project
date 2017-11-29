@@ -134,6 +134,7 @@ defm : HWWriteResPair<WriteFSqrt,  HWPort0, 15>;
 defm : HWWriteResPair<WriteCvtF2I, HWPort1, 3>;
 defm : HWWriteResPair<WriteCvtI2F, HWPort1, 4>;
 defm : HWWriteResPair<WriteCvtF2F, HWPort1, 3>;
+defm : HWWriteResPair<WriteFMA,   HWPort01, 5>;
 defm : HWWriteResPair<WriteFShuffle,  HWPort5,  1>;
 defm : HWWriteResPair<WriteFBlend,  HWPort015,  1>;
 defm : HWWriteResPair<WriteFShuffle256,  HWPort5,  3>;

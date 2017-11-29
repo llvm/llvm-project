@@ -647,7 +647,7 @@ define i1 @beq_to_bx(i32* %y, i32 %head) {
 ; ENABLE: push {r4, lr}
 
 ; CHECK: tst r3, r4
-; ENABLE-NEXT: ldr [[POP:r[4567]]], [sp, #8]
+; ENABLE-NEXT: ldr [[POP:r[4567]]], [sp, #4]
 ; ENABLE-NEXT: mov lr, [[POP]]
 ; ENABLE-NEXT: pop {[[POP]]}
 ; ENABLE-NEXT: add sp, #4

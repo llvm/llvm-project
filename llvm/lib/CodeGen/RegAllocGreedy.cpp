@@ -762,7 +762,7 @@ unsigned RAGreedy::tryAssign(LiveInterval &VirtReg,
   // preferred register.
   if (unsigned Hint = MRI->getSimpleHint(VirtReg.reg))
     if (Order.isHint(Hint)) {
-      DEBUG(dbgs() << "missed hint " << PrintReg(Hint, TRI) << '\n');
+      DEBUG(dbgs() << "missed hint " << printReg(Hint, TRI) << '\n');
       EvictionCost MaxCost;
       MaxCost.setBrokenHints(1);
       if (canEvictInterference(VirtReg, Hint, true, MaxCost)) {
@@ -781,7 +781,7 @@ unsigned RAGreedy::tryAssign(LiveInterval &VirtReg,
   if (!Cost)
     return PhysReg;
 
-  DEBUG(dbgs() << PrintReg(PhysReg, TRI) << " is available at cost " << Cost
+  DEBUG(dbgs() << printReg(PhysReg, TRI) << " is available at cost " << Cost
                << '\n');
   unsigned CheapReg = tryEvict(VirtReg, Order, NewVRegs, Cost);
   return CheapReg ? CheapReg : PhysReg;
@@ -811,7 +811,7 @@ unsigned RAGreedy::canReassign(LiveInterval &VirtReg, unsigned PrevReg) {
   }
   if (PhysReg)
     DEBUG(dbgs() << "can reassign: " << VirtReg << " from "
-          << PrintReg(PrevReg, TRI) << " to " << PrintReg(PhysReg, TRI)
+          << printReg(PrevReg, TRI) << " to " << printReg(PhysReg, TRI)
           << '\n');
   return PhysReg;
 }
@@ -1031,7 +1031,7 @@ void RAGreedy::evictInterference(LiveInterval &VirtReg, unsigned PhysReg,
   if (!Cascade)
     Cascade = ExtraRegInfo[VirtReg.reg].Cascade = NextCascade++;
 
-  DEBUG(dbgs() << "evicting " << PrintReg(PhysReg, TRI)
+  DEBUG(dbgs() << "evicting " << printReg(PhysReg, TRI)
                << " interference: Cascade " << Cascade << '\n');
 
   // Collect all interfering virtregs first.
@@ -1123,8 +1123,8 @@ unsigned RAGreedy::tryEvict(LiveInterval &VirtReg,
     // The first use of a callee-saved register in a function has cost 1.
     // Don't start using a CSR when the CostPerUseLimit is low.
     if (CostPerUseLimit == 1 && isUnusedCalleeSavedReg(PhysReg)) {
-      DEBUG(dbgs() << PrintReg(PhysReg, TRI) << " would clobber CSR "
-            << PrintReg(RegClassInfo.getLastCalleeSavedAlias(PhysReg), TRI)
+      DEBUG(dbgs() << printReg(PhysReg, TRI) << " would clobber CSR "
+            << printReg(RegClassInfo.getLastCalleeSavedAlias(PhysReg), TRI)
             << '\n');
       continue;
     }
@@ -1789,10 +1789,10 @@ unsigned RAGreedy::calculateRegionSplitCost(LiveInterval &VirtReg,
     SpillPlacer->prepare(Cand.LiveBundles);
     BlockFrequency Cost;
     if (!addSplitConstraints(Cand.Intf, Cost)) {
-      DEBUG(dbgs() << PrintReg(PhysReg, TRI) << "\tno positive bundles\n");
+      DEBUG(dbgs() << printReg(PhysReg, TRI) << "\tno positive bundles\n");
       continue;
     }
-    DEBUG(dbgs() << PrintReg(PhysReg, TRI) << "\tstatic = ";
+    DEBUG(dbgs() << printReg(PhysReg, TRI) << "\tstatic = ";
                  MBFI->printBlockFreq(dbgs(), Cost));
     if (Cost >= BestCost) {
       DEBUG({
@@ -1800,7 +1800,7 @@ unsigned RAGreedy::calculateRegionSplitCost(LiveInterval &VirtReg,
           dbgs() << " worse than no bundles\n";
         else
           dbgs() << " worse than "
-                 << PrintReg(GlobalCand[BestCand].PhysReg, TRI) << '\n';
+                 << printReg(GlobalCand[BestCand].PhysReg, TRI) << '\n';
       });
       continue;
     }
@@ -1838,7 +1838,7 @@ unsigned RAGreedy::calculateRegionSplitCost(LiveInterval &VirtReg,
     // See splitCanCauseEvictionChain for detailed description of bad
     // eviction chain scenarios.
     DEBUG(dbgs() << "Best split candidate of vreg "
-                 << PrintReg(VirtReg.reg, TRI) << "  may ");
+                 << printReg(VirtReg.reg, TRI) << "  may ");
     if (!(*CanCauseEvictionChain))
       DEBUG(dbgs() << "not ");
     DEBUG(dbgs() << "cause bad eviction chain\n");
@@ -1864,7 +1864,7 @@ unsigned RAGreedy::doRegionSplit(LiveInterval &VirtReg, unsigned BestCand,
     if (unsigned B = Cand.getBundles(BundleCand, BestCand)) {
       UsedCands.push_back(BestCand);
       Cand.IntvIdx = SE->openIntv();
-      DEBUG(dbgs() << "Split for " << PrintReg(Cand.PhysReg, TRI) << " in "
+      DEBUG(dbgs() << "Split for " << printReg(Cand.PhysReg, TRI) << " in "
                    << B << " bundles, intv " << Cand.IntvIdx << ".\n");
       (void)B;
     }
@@ -2213,7 +2213,7 @@ unsigned RAGreedy::tryLocalSplit(LiveInterval &VirtReg, AllocationOrder &Order,
       const bool LiveBefore = SplitBefore != 0 || BI.LiveIn;
       const bool LiveAfter = SplitAfter != NumGaps || BI.LiveOut;
 
-      DEBUG(dbgs() << PrintReg(PhysReg, TRI) << ' '
+      DEBUG(dbgs() << printReg(PhysReg, TRI) << ' '
                    << Uses[SplitBefore] << '-' << Uses[SplitAfter]
                    << " i=" << MaxGap);
 
@@ -2314,7 +2314,7 @@ unsigned RAGreedy::tryLocalSplit(LiveInterval &VirtReg, AllocationOrder &Order,
     for (unsigned i = 0, e = IntvMap.size(); i != e; ++i)
       if (IntvMap[i] == 1) {
         setStage(LIS->getInterval(LREdit.get(i)), RS_Split2);
-        DEBUG(dbgs() << PrintReg(LREdit.get(i)));
+        DEBUG(dbgs() << printReg(LREdit.get(i)));
       }
     DEBUG(dbgs() << '\n');
   }
@@ -2503,7 +2503,7 @@ unsigned RAGreedy::tryLastChanceRecoloring(LiveInterval &VirtReg,
   Order.rewind();
   while (unsigned PhysReg = Order.next()) {
     DEBUG(dbgs() << "Try to assign: " << VirtReg << " to "
-                 << PrintReg(PhysReg, TRI) << '\n');
+                 << printReg(PhysReg, TRI) << '\n');
     RecoloringCandidates.clear();
     VirtRegToPhysReg.clear();
     CurrentNewVRegs.clear();
@@ -2563,7 +2563,7 @@ unsigned RAGreedy::tryLastChanceRecoloring(LiveInterval &VirtReg,
     }
 
     DEBUG(dbgs() << "Fail to assign: " << VirtReg << " to "
-                 << PrintReg(PhysReg, TRI) << '\n');
+                 << printReg(PhysReg, TRI) << '\n');
 
     // The recoloring attempt failed, undo the changes.
     FixedRegisters = SaveFixedRegisters;
@@ -2626,7 +2626,7 @@ bool RAGreedy::tryRecoloringCandidates(PQueue &RecoloringQueue,
       continue;
     }
     DEBUG(dbgs() << "Recoloring of " << *LI
-                 << " succeeded with: " << PrintReg(PhysReg, TRI) << '\n');
+                 << " succeeded with: " << printReg(PhysReg, TRI) << '\n');
 
     Matrix->assign(*LI, PhysReg);
     FixedRegisters.insert(LI->reg);
@@ -2793,8 +2793,8 @@ void RAGreedy::tryHintRecoloring(LiveInterval &VirtReg) {
   Visited.insert(Reg);
   RecoloringCandidates.push_back(Reg);
 
-  DEBUG(dbgs() << "Trying to reconcile hints for: " << PrintReg(Reg, TRI) << '('
-               << PrintReg(PhysReg, TRI) << ")\n");
+  DEBUG(dbgs() << "Trying to reconcile hints for: " << printReg(Reg, TRI) << '('
+               << printReg(PhysReg, TRI) << ")\n");
 
   do {
     Reg = RecoloringCandidates.pop_back_val();
@@ -2815,7 +2815,7 @@ void RAGreedy::tryHintRecoloring(LiveInterval &VirtReg) {
                                 Matrix->checkInterference(LI, PhysReg)))
       continue;
 
-    DEBUG(dbgs() << PrintReg(Reg, TRI) << '(' << PrintReg(CurrPhys, TRI)
+    DEBUG(dbgs() << printReg(Reg, TRI) << '(' << printReg(CurrPhys, TRI)
                  << ") is recolorable.\n");
 
     // Gather the hint info.

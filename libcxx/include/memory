@@ -387,6 +387,9 @@ template<class T, class... Args> unique_ptr<T> make_unique(Args&&... args);     
 template<class T>                unique_ptr<T> make_unique(size_t n);           // C++14
 template<class T, class... Args> unspecified   make_unique(Args&&...) = delete; // C++14, T == U[N]
 
+template<class E, class T, class Y, class D>
+    basic_ostream<E, T>& operator<< (basic_ostream<E, T>& os, unique_ptr<Y, D> const& p);
+
 template<class T>
 class shared_ptr
 {

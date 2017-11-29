@@ -726,12 +726,10 @@ void ClassTemplateSpecializationDecl::getNameForDiagnostic(
   auto *PS = dyn_cast<ClassTemplatePartialSpecializationDecl>(this);
   if (const ASTTemplateArgumentListInfo *ArgsAsWritten =
           PS ? PS->getTemplateArgsAsWritten() : nullptr) {
-    TemplateSpecializationType::PrintTemplateArgumentList(
-        OS, ArgsAsWritten->arguments(), Policy);
+    printTemplateArgumentList(OS, ArgsAsWritten->arguments(), Policy);
   } else {
     const TemplateArgumentList &TemplateArgs = getTemplateArgs();
-    TemplateSpecializationType::PrintTemplateArgumentList(
-        OS, TemplateArgs.asArray(), Policy);
+    printTemplateArgumentList(OS, TemplateArgs.asArray(), Policy);
   }
 }
 
@@ -1058,12 +1056,10 @@ void VarTemplateSpecializationDecl::getNameForDiagnostic(
   auto *PS = dyn_cast<VarTemplatePartialSpecializationDecl>(this);
   if (const ASTTemplateArgumentListInfo *ArgsAsWritten =
           PS ? PS->getTemplateArgsAsWritten() : nullptr) {
-    TemplateSpecializationType::PrintTemplateArgumentList(
-        OS, ArgsAsWritten->arguments(), Policy);
+    printTemplateArgumentList(OS, ArgsAsWritten->arguments(), Policy);
   } else {
     const TemplateArgumentList &TemplateArgs = getTemplateArgs();
-    TemplateSpecializationType::PrintTemplateArgumentList(
-        OS, TemplateArgs.asArray(), Policy);
+    printTemplateArgumentList(OS, TemplateArgs.asArray(), Policy);
   }
 }
 

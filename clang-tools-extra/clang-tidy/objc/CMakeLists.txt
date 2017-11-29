@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS support)
 
 add_clang_library(clangTidyObjCModule
+  AvoidSpinlockCheck.cpp
   ForbiddenSubclassingCheck.cpp
   ObjCTidyModule.cpp
   PropertyDeclarationCheck.cpp

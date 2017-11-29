@@ -11,12 +11,12 @@
 #include "InputFiles.h"
 #include "InputSection.h"
 #include "OutputSections.h"
-#include "Strings.h"
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Writer.h"
 
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Strings.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Path.h"
 #include <cstring>
@@ -132,23 +132,6 @@ InputFile *Symbol::getFile() const {
     return Sec ? cast<InputSectionBase>(Sec)->File : nullptr;
   }
   return File;
-}
-
-// Overwrites all attributes with Other's so that this symbol becomes
-// an alias to Other. This is useful for handling some options such as
-// --wrap.
-void Symbol::copyFrom(Symbol *Other) {
-  Symbol Sym = *this;
-  memcpy(this, Other, sizeof(SymbolUnion));
-
-  Binding = Sym.Binding;
-  VersionId = Sym.VersionId;
-  Visibility = Sym.Visibility;
-  IsUsedInRegularObj = Sym.IsUsedInRegularObj;
-  ExportDynamic = Sym.ExportDynamic;
-  CanInline = Sym.CanInline;
-  Traced = Sym.Traced;
-  InVersionScript = Sym.InVersionScript;
 }
 
 uint64_t Symbol::getVA(int64_t Addend) const {
@@ -315,7 +298,7 @@ void elf::printTraceSymbol(Symbol *Sym) {
 // Returns a symbol for an error message.
 std::string lld::toString(const Symbol &B) {
   if (Config->Demangle)
-    if (Optional<std::string> S = demangle(B.getName()))
+    if (Optional<std::string> S = demangleItanium(B.getName()))
       return *S;
   return B.getName();
 }

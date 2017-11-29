@@ -289,7 +289,7 @@ entry:
 
 ; GCN-LABEL: {{^}}store_flat_hi_v2i16_neg_offset:
 ; GCN: s_waitcnt
-; GCN: v_add_{{[_cou]*}}32_e32
+; GCN: v_add{{(_co)?}}_{{i|u}}32_e32
 ; VI: v_addc_u32_e32
 ; GFX9: v_addc_co_u32_e32
 
@@ -328,7 +328,7 @@ entry:
 
 ; GCN-LABEL: {{^}}store_flat_hi_v2i16_i8_neg_offset:
 ; GCN: s_waitcnt
-; GCN-DAG: v_add_{{[_cou]*}}32_e32
+; GCN-DAG: v_add{{(_co)?}}_{{i|u}}32_e32
 ; VI-DAG: v_addc_u32_e32
 ; GFX9-DAG: v_addc_co_u32_e32
 

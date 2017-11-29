@@ -10,15 +10,11 @@
 #ifndef liblldb_ThreadElfCore_h_
 #define liblldb_ThreadElfCore_h_
 
-// C Includes
-// C++ Includes
-#include <string>
-
-// Other libraries and framework includes
-// Project includes
+#include "Plugins/Process/elf-core/RegisterUtilities.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "llvm/ADT/DenseMap.h"
+#include <string>
 
 struct compat_timeval {
   alignas(8) uint64_t tv_sec;
@@ -130,9 +126,7 @@ static_assert(sizeof(ELFLinuxPrPsInfo) == 136,
 
 struct ThreadData {
   lldb_private::DataExtractor gpregset;
-  lldb_private::DataExtractor fpregset;
-  lldb_private::DataExtractor vregset;
-  llvm::DenseMap<uint32_t, lldb_private::DataExtractor> regsets;
+  std::vector<lldb_private::CoreNote> notes;
   lldb::tid_t tid;
   int signo = 0;
   int prstatus_sig = 0;
@@ -179,9 +173,7 @@ protected:
   int m_signo;
 
   lldb_private::DataExtractor m_gpregset_data;
-  lldb_private::DataExtractor m_fpregset_data;
-  lldb_private::DataExtractor m_vregset_data;
-  llvm::DenseMap<uint32_t, lldb_private::DataExtractor> m_regsets_data;
+  std::vector<lldb_private::CoreNote> m_notes;
 
   bool CalculateStopInfo() override;
 };

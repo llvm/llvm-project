@@ -100,7 +100,7 @@ private:
                     bool RemapSuccess) {
     TypeIndex DestIdx = Untranslated;
     if (RemapSuccess)
-      DestIdx = Dest.writeSerializedRecord(Record);
+      DestIdx = Dest.insertRecord(Record);
     addMapping(DestIdx);
     return Error::success();
   }

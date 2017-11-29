@@ -1,8 +1,12 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SI,FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI,FUNC %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SI,SICIVI,FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SICIVI,GFX89,FUNC %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9,GFX89,FUNC %s
 ; RUN: llc -march=r600 -mcpu=redwood -verify-machineinstrs < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}local_load_i16:
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 ; GCN: ds_read_u16 v{{[0-9]+}}
 
 ; EG: MOV {{[* ]*}}[[FROM:T[0-9]+\.[XYZW]]], KC0[2].Z
@@ -18,6 +22,9 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}local_load_v2i16:
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 ; GCN: ds_read_b32
 
 ; EG: MOV {{[* ]*}}[[FROM:T[0-9]+\.[XYZW]]], KC0[2].Z
@@ -33,6 +40,9 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}local_load_v3i16:
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 ; GCN: ds_read_b64
 ; GCN-DAG: ds_write_b32
 ; GCN-DAG: ds_write_b16
@@ -47,6 +57,9 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}local_load_v4i16:
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 ; GCN: ds_read_b64
 
 ; EG: LDS_READ_RET
@@ -59,6 +72,9 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}local_load_v8i16:
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 ; GCN: ds_read2_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset1:1{{$}}
 
 ; EG: LDS_READ_RET
@@ -73,6 +89,9 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}local_load_v16i16:
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 ; GCN-DAG: ds_read2_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset1:3{{$}}
 ; GCN-DAG: ds_read2_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset0:1 offset1:2{{$}}
 
@@ -94,6 +113,9 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}local_zextload_i16_to_i32:
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 ; GCN: ds_read_u16
 ; GCN: ds_write_b32
 
@@ -111,7 +133,10 @@ define amdgpu_kernel void @local_zextload_i16_to_i32(i32 addrspace(3)* %out, i16
 
 ; FUNC-LABEL: {{^}}local_sextload_i16_to_i32:
 ; GCN-NOT: s_wqm_b64
-; GCN: s_mov_b32 m0
+
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 ; GCN: ds_read_i16
 
 ; EG: MOV {{[* ]*}}[[FROM:T[0-9]+\.[XYZW]]], KC0[2].Z
@@ -129,6 +154,9 @@ define amdgpu_kernel void @local_sextload_i16_to_i32(i32 addrspace(3)* %out, i16
 }
 
 ; FUNC-LABEL: {{^}}local_zextload_v1i16_to_v1i32:
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 ; GCN: ds_read_u16
 
 ; EG: MOV {{[* ]*}}[[FROM:T[0-9]+\.[XYZW]]], KC0[2].Z
@@ -144,6 +172,9 @@ define amdgpu_kernel void @local_zextload_v1i16_to_v1i32(<1 x i32> addrspace(3)*
 }
 
 ; FUNC-LABEL: {{^}}local_sextload_v1i16_to_v1i32:
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 ; GCN: ds_read_i16
 
 ; EG: MOV {{[* ]*}}[[FROM:T[0-9]+\.[XYZW]]], KC0[2].Z
@@ -162,7 +193,9 @@ define amdgpu_kernel void @local_sextload_v1i16_to_v1i32(<1 x i32> addrspace(3)*
 
 ; FUNC-LABEL: {{^}}local_zextload_v2i16_to_v2i32:
 ; GCN-NOT: s_wqm_b64
-; GCN: s_mov_b32 m0
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 ; GCN: ds_read_b32
 
 ; EG: LDS_READ_RET
@@ -175,7 +208,9 @@ define amdgpu_kernel void @local_zextload_v2i16_to_v2i32(<2 x i32> addrspace(3)*
 
 ; FUNC-LABEL: {{^}}local_sextload_v2i16_to_v2i32:
 ; GCN-NOT: s_wqm_b64
-; GCN: s_mov_b32 m0
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 ; GCN: ds_read_b32
 
 ; EG: LDS_READ_RET
@@ -189,6 +224,9 @@ define amdgpu_kernel void @local_sextload_v2i16_to_v2i32(<2 x i32> addrspace(3)*
 }
 
 ; FUNC-LABEL: {{^}}local_local_zextload_v3i16_to_v3i32:
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 ; GCN: ds_read_b64
 ; GCN-DAG: ds_write_b32
 ; GCN-DAG: ds_write_b64
@@ -203,6 +241,9 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}local_local_sextload_v3i16_to_v3i32:
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 ; GCN: ds_read_b64
 ; GCN-DAG: ds_write_b32
 ; GCN-DAG: ds_write_b64
@@ -221,7 +262,9 @@ entry:
 
 ; FUNC-LABEL: {{^}}local_local_zextload_v4i16_to_v4i32:
 ; GCN-NOT: s_wqm_b64
-; GCN: s_mov_b32 m0
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 ; GCN: ds_read_b64
 
 ; EG: LDS_READ_RET
@@ -235,7 +278,9 @@ define amdgpu_kernel void @local_local_zextload_v4i16_to_v4i32(<4 x i32> addrspa
 
 ; FUNC-LABEL: {{^}}local_sextload_v4i16_to_v4i32:
 ; GCN-NOT: s_wqm_b64
-; GCN: s_mov_b32 m0
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 ; GCN: ds_read_b64
 
 ; EG: LDS_READ_RET
@@ -252,6 +297,9 @@ define amdgpu_kernel void @local_sextload_v4i16_to_v4i32(<4 x i32> addrspace(3)*
 }
 
 ; FUNC-LABEL: {{^}}local_zextload_v8i16_to_v8i32:
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 ; GCN: ds_read2_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset1:1{{$}}
 
 ; EG: LDS_READ_RET
@@ -266,6 +314,9 @@ define amdgpu_kernel void @local_zextload_v8i16_to_v8i32(<8 x i32> addrspace(3)*
 }
 
 ; FUNC-LABEL: {{^}}local_sextload_v8i16_to_v8i32:
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 ; GCN: ds_read2_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset1:1{{$}}
 
 ; EG: LDS_READ_RET
@@ -288,6 +339,9 @@ define amdgpu_kernel void @local_sextload_v8i16_to_v8i32(<8 x i32> addrspace(3)*
 }
 
 ; FUNC-LABEL: {{^}}local_zextload_v16i16_to_v16i32:
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 ; GCN-DAG: ds_read2_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset1:1{{$}}
 ; GCN-DAG: ds_read2_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset0:2 offset1:3{{$}}
 
@@ -312,6 +366,9 @@ define amdgpu_kernel void @local_zextload_v16i16_to_v16i32(<16 x i32> addrspace(
 }
 
 ; FUNC-LABEL: {{^}}local_sextload_v16i16_to_v16i32:
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 
 ; GCN-DAG: ds_read2_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset1:1{{$}}
 ; GCN-DAG: ds_read2_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset0:2 offset1:3{{$}}
@@ -348,6 +405,9 @@ define amdgpu_kernel void @local_sextload_v16i16_to_v16i32(<16 x i32> addrspace(
 }
 
 ; FUNC-LABEL: {{^}}local_zextload_v32i16_to_v32i32:
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 ; GCN-DAG: ds_read2_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset1:1{{$}}
 ; GCN-DAG: ds_read2_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset0:2 offset1:3
 ; GCN-DAG: ds_read2_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset0:4 offset1:5
@@ -377,6 +437,9 @@ define amdgpu_kernel void @local_zextload_v32i16_to_v32i32(<32 x i32> addrspace(
 }
 
 ; FUNC-LABEL: {{^}}local_sextload_v32i16_to_v32i32:
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 ; GCN-DAG: ds_read2_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset0:2 offset1:3{{$}}
 ; GCN-DAG: ds_read2_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset0:4 offset1:5
 ; GCN-DAG: ds_read2_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset1:1{{$}}
@@ -414,6 +477,9 @@ define amdgpu_kernel void @local_sextload_v32i16_to_v32i32(<32 x i32> addrspace(
 }
 
 ; FUNC-LABEL: {{^}}local_zextload_v64i16_to_v64i32:
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 ; GCN-DAG: ds_read2_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset0:14 offset1:15
 ; GCN-DAG: ds_read2_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset1:1{{$}}
 ; GCN-DAG: ds_read2_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset0:2 offset1:3
@@ -479,6 +545,8 @@ define amdgpu_kernel void @local_zextload_v64i16_to_v64i32(<64 x i32> addrspace(
 }
 
 ; FUNC-LABEL: {{^}}local_sextload_v64i16_to_v64i32:
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
 
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
@@ -520,6 +588,9 @@ define amdgpu_kernel void @local_sextload_v64i16_to_v64i32(<64 x i32> addrspace(
 }
 
 ; FUNC-LABEL: {{^}}local_zextload_i16_to_i64:
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 ; GCN-DAG: ds_read_u16 v[[LO:[0-9]+]],
 ; GCN-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0{{$}}
 
@@ -538,13 +609,16 @@ define amdgpu_kernel void @local_zextload_i16_to_i64(i64 addrspace(3)* %out, i16
 }
 
 ; FUNC-LABEL: {{^}}local_sextload_i16_to_i64:
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 ; FIXME: Need to optimize this sequence to avoid an extra shift.
 ;  t25: i32,ch = load<LD2[%in(addrspace=3)], anyext from i16> t12, t10, undef:i32
 ;          t28: i64 = any_extend t25
 ;        t30: i64 = sign_extend_inreg t28, ValueType:ch:i16
 ; SI: ds_read_i16 v[[LO:[0-9]+]],
-; VI: ds_read_u16 v[[ULO:[0-9]+]]
-; VI: v_bfe_i32 v[[LO:[0-9]+]], v[[ULO]], 0, 16
+; GFX89: ds_read_u16 v[[ULO:[0-9]+]]
+; GFX89: v_bfe_i32 v[[LO:[0-9]+]], v[[ULO]], 0, 16
 ; GCN-DAG: v_ashrrev_i32_e32 v[[HI:[0-9]+]], 31, v[[LO]]
 
 ; GCN: ds_write_b64 v{{[0-9]+}}, v{{\[}}[[LO]]:[[HI]]]
@@ -565,6 +639,9 @@ define amdgpu_kernel void @local_sextload_i16_to_i64(i64 addrspace(3)* %out, i16
 }
 
 ; FUNC-LABEL: {{^}}local_zextload_v1i16_to_v1i64:
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 
 ; EG: MOV {{[* ]*}}[[FROM:T[0-9]+\.[XYZW]]], KC0[2].Z
 ; EG: LDS_USHORT_READ_RET {{.*}} [[FROM]]
@@ -579,6 +656,9 @@ define amdgpu_kernel void @local_zextload_v1i16_to_v1i64(<1 x i64> addrspace(3)*
 }
 
 ; FUNC-LABEL: {{^}}local_sextload_v1i16_to_v1i64:
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 
 ; EG: MOV {{[* ]*}}[[FROM:T[0-9]+\.[XYZW]]], KC0[2].Z
 ; EG: LDS_USHORT_READ_RET {{.*}} [[FROM]]
@@ -596,6 +676,9 @@ define amdgpu_kernel void @local_sextload_v1i16_to_v1i64(<1 x i64> addrspace(3)*
 }
 
 ; FUNC-LABEL: {{^}}local_zextload_v2i16_to_v2i64:
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 
 ; EG: LDS_READ_RET
 define amdgpu_kernel void @local_zextload_v2i16_to_v2i64(<2 x i64> addrspace(3)* %out, <2 x i16> addrspace(3)* %in) #0 {
@@ -606,6 +689,9 @@ define amdgpu_kernel void @local_zextload_v2i16_to_v2i64(<2 x i64> addrspace(3)*
 }
 
 ; FUNC-LABEL: {{^}}local_sextload_v2i16_to_v2i64:
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 
 ; EG: LDS_READ_RET
 ; EG-DAG: BFE_INT
@@ -618,6 +704,9 @@ define amdgpu_kernel void @local_sextload_v2i16_to_v2i64(<2 x i64> addrspace(3)*
 }
 
 ; FUNC-LABEL: {{^}}local_zextload_v4i16_to_v4i64:
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
@@ -629,6 +718,9 @@ define amdgpu_kernel void @local_zextload_v4i16_to_v4i64(<4 x i64> addrspace(3)*
 }
 
 ; FUNC-LABEL: {{^}}local_sextload_v4i16_to_v4i64:
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
@@ -644,6 +736,9 @@ define amdgpu_kernel void @local_sextload_v4i16_to_v4i64(<4 x i64> addrspace(3)*
 }
 
 ; FUNC-LABEL: {{^}}local_zextload_v8i16_to_v8i64:
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
@@ -657,6 +752,9 @@ define amdgpu_kernel void @local_zextload_v8i16_to_v8i64(<8 x i64> addrspace(3)*
 }
 
 ; FUNC-LABEL: {{^}}local_sextload_v8i16_to_v8i64:
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
@@ -678,6 +776,9 @@ define amdgpu_kernel void @local_sextload_v8i16_to_v8i64(<8 x i64> addrspace(3)*
 }
 
 ; FUNC-LABEL: {{^}}local_zextload_v16i16_to_v16i64:
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
@@ -695,6 +796,9 @@ define amdgpu_kernel void @local_zextload_v16i16_to_v16i64(<16 x i64> addrspace(
 }
 
 ; FUNC-LABEL: {{^}}local_sextload_v16i16_to_v16i64:
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
@@ -728,6 +832,9 @@ define amdgpu_kernel void @local_sextload_v16i16_to_v16i64(<16 x i64> addrspace(
 }
 
 ; FUNC-LABEL: {{^}}local_zextload_v32i16_to_v32i64:
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET
@@ -753,6 +860,9 @@ define amdgpu_kernel void @local_zextload_v32i16_to_v32i64(<32 x i64> addrspace(
 }
 
 ; FUNC-LABEL: {{^}}local_sextload_v32i16_to_v32i64:
+; GFX9-NOT: m0
+; SICIVI: s_mov_b32 m0
+
 
 ; EG: LDS_READ_RET
 ; EG: LDS_READ_RET

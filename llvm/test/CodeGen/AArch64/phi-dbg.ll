@@ -30,7 +30,7 @@ define i32 @func(i32) #0 !dbg !8 {
 ; CHECK: ldr     w[[REG:[0-9]+]], [sp, #8]
 ; CHECK-NEXT: .Ltmp
   call void @llvm.dbg.value(metadata i32 %.0, i64 0, metadata !15, metadata !13), !dbg !16
-; CHECK-NEXT:  //DEBUG_VALUE: func:c <- %W[[REG]]
+; CHECK-NEXT:  //DEBUG_VALUE: func:c <- %w[[REG]]
   %5 = add nsw i32 %.0, %0, !dbg !22
   call void @llvm.dbg.value(metadata i32 %5, i64 0, metadata !15, metadata !13), !dbg !16
   ret i32 %5, !dbg !23

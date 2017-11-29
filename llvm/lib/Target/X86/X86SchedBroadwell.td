@@ -131,7 +131,7 @@ defm : BWWriteResPair<WriteFDiv,   BWPort0, 12>; // 10-14 cycles. // Floating po
 defm : BWWriteResPair<WriteFSqrt,  BWPort0, 15>; // Floating point square root.
 defm : BWWriteResPair<WriteFRcp,   BWPort0, 5>; // Floating point reciprocal estimate.
 defm : BWWriteResPair<WriteFRsqrt, BWPort0, 5>; // Floating point reciprocal square root estimate.
-// defm WriteFMA    : X86SchedWritePair; // Fused Multiply Add.
+defm : BWWriteResPair<WriteFMA,    BWPort01, 5>; // Fused Multiply Add.
 defm : BWWriteResPair<WriteFShuffle,  BWPort5,  1>; // Floating point vector shuffles.
 defm : BWWriteResPair<WriteFBlend,  BWPort015,  1>; // Floating point vector blends.
 def : WriteRes<WriteFVarBlend, [BWPort5]> { // Fp vector variable blends.	       

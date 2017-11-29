@@ -65,7 +65,7 @@ entry:
 ; ASM:         pushl   %esi
 ; ASM:         .cv_fpo_pushreg %esi
 ; ASM:         .cv_fpo_endprologue
-; ASM:         #DEBUG_VALUE: csr1:a <- %ESI
+; ASM:         #DEBUG_VALUE: csr1:a <- %esi
 ; ASM:         retl
 ; ASM:         .cv_fpo_endproc
 
@@ -122,8 +122,8 @@ entry:
 ; ASM:         pushl   %esi
 ; ASM:         .cv_fpo_pushreg %esi
 ; ASM:         .cv_fpo_endprologue
-; ASM:         #DEBUG_VALUE: csr2:a <- %ESI
-; ASM:         #DEBUG_VALUE: csr2:b <- %EDI
+; ASM:         #DEBUG_VALUE: csr2:a <- %esi
+; ASM:         #DEBUG_VALUE: csr2:b <- %edi
 ; ASM:         retl
 ; ASM:         .cv_fpo_endproc
 
@@ -192,9 +192,9 @@ entry:
 ; ASM:         pushl   %esi
 ; ASM:         .cv_fpo_pushreg %esi
 ; ASM:         .cv_fpo_endprologue
-; ASM:         #DEBUG_VALUE: csr3:a <- %ESI
-; ASM:         #DEBUG_VALUE: csr3:b <- %EDI
-; ASM:         #DEBUG_VALUE: csr3:c <- %EBX
+; ASM:         #DEBUG_VALUE: csr3:a <- %esi
+; ASM:         #DEBUG_VALUE: csr3:b <- %edi
+; ASM:         #DEBUG_VALUE: csr3:c <- %ebx
 ; ASM:         retl
 ; ASM:         .cv_fpo_endproc
 
@@ -279,10 +279,10 @@ entry:
 ; ASM:         pushl   %esi
 ; ASM:         .cv_fpo_pushreg %esi
 ; ASM:         .cv_fpo_endprologue
-; ASM:         #DEBUG_VALUE: csr4:a <- %ESI
-; ASM:         #DEBUG_VALUE: csr4:b <- %EDI
-; ASM:         #DEBUG_VALUE: csr4:c <- %EBX
-; ASM:         #DEBUG_VALUE: csr4:d <- %EBP
+; ASM:         #DEBUG_VALUE: csr4:a <- %esi
+; ASM:         #DEBUG_VALUE: csr4:b <- %edi
+; ASM:         #DEBUG_VALUE: csr4:c <- %ebx
+; ASM:         #DEBUG_VALUE: csr4:d <- %ebp
 ; ASM:         retl
 ; ASM:         .cv_fpo_endproc
 

@@ -8,7 +8,7 @@ define hidden i32 @f0() {
   %2 = tail call i32 @h0(i32 %1, i32 1, i32 2, i32 3)
   ret i32 %2
 ; CHECK-LABEL: f0
-; CHECK:      ldr     [[POP:r[4567]]], [sp
+; CHECK:      ldr     [[POP:r[4567]]], [sp, #4]
 ; CHECK-NEXT: mov     lr, [[POP]]
 ; CHECK-NEXT: pop     {{.*}}[[POP]]
 ; CHECK-NEXT: add     sp, #4
@@ -39,7 +39,7 @@ define hidden i32 @f2(i32, i32, i32, i32, i32) {
   %11 = phi i32 [ %9, %8 ], [ -1, %5 ]
   ret i32 %11
 ; CHECK-LABEL: f2
-; CHECK:      ldr     [[POP:r[4567]]], [sp
+; CHECK:      ldr     [[POP:r[4567]]], [sp, #12]
 ; CHECK-NEXT: mov     lr, [[POP]]
 ; CHECK-NEXT: pop     {{.*}}[[POP]]
 ; CHECK-NEXT: add     sp, #4

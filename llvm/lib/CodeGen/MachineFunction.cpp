@@ -510,9 +510,9 @@ void MachineFunction::print(raw_ostream &OS, const SlotIndexes *Indexes) const {
     OS << "Function Live Ins: ";
     for (MachineRegisterInfo::livein_iterator
          I = RegInfo->livein_begin(), E = RegInfo->livein_end(); I != E; ++I) {
-      OS << PrintReg(I->first, TRI);
+      OS << printReg(I->first, TRI);
       if (I->second)
-        OS << " in " << PrintReg(I->second, TRI);
+        OS << " in " << printReg(I->second, TRI);
       if (std::next(I) != E)
         OS << ", ";
     }

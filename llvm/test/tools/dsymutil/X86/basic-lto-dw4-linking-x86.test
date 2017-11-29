@@ -12,10 +12,10 @@ CHECK:    DW_AT_name ("basic1.c")
 CHECK:    DW_AT_stmt_list (0x00000000)
 CHECK:    DW_AT_comp_dir ("/Inputs")
 CHECK:    DW_AT_low_pc (0x0000000100000f40)
-CHECK:    DW_AT_high_pc (0x0000000b)
+CHECK:    DW_AT_high_pc (0x0000000100000f4b)
 CHECK:    DW_TAG_subprogram
 CHECK:      DW_AT_low_pc (0x0000000100000f40)
-CHECK:      DW_AT_high_pc (0x0000000b)
+CHECK:      DW_AT_high_pc (0x0000000100000f4b)
 CHECK:      DW_AT_frame_base (DW_OP_reg6 RBP)
 CHECK:      DW_AT_name ("main")
 CHECK:      DW_AT_decl_file ("/Inputs{{[/\\]}}basic1.c")
@@ -50,7 +50,7 @@ CHECK:    DW_AT_language (DW_LANG_C99)
 CHECK:    DW_AT_name ("basic2.c")
 CHECK:    DW_AT_stmt_list (0x00000044)
 CHECK:    DW_AT_low_pc (0x0000000100000f50)
-CHECK:    DW_AT_high_pc (0x00000037)
+CHECK:    DW_AT_high_pc (0x0000000100000f87)
 CHECK:    DW_TAG_base_type
 CHECK:      DW_AT_name ("int")
 CHECK:    DW_TAG_variable
@@ -66,7 +66,7 @@ CHECK:      DW_AT_type (cu + 0x002a
 CHECK:      DW_AT_inline (DW_INL_inlined)
 CHECK:    DW_TAG_subprogram
 CHECK:      DW_AT_low_pc (0x0000000100000f50)
-CHECK:      DW_AT_high_pc (0x00000037)
+CHECK:      DW_AT_high_pc (0x0000000100000f87)
 CHECK:      DW_AT_frame_base (DW_OP_reg6 RBP)
 CHECK:      DW_AT_name ("foo")
 CHECK:      DW_AT_decl_file ("/Inputs{{[/\\]}}basic2.c")
@@ -80,7 +80,7 @@ CHECK:        DW_AT_type (cu + 0x002a
 CHECK:      DW_TAG_inlined_subroutine
 CHECK:        DW_AT_abstract_origin (cu + 0x005b "inc")
 CHECK:        DW_AT_low_pc (0x0000000100000f61)
-CHECK:        DW_AT_high_pc (0x0000000f)
+CHECK:        DW_AT_high_pc (0x0000000100000f70)
 CHECK:      NULL
 CHECK:    NULL
 
@@ -91,7 +91,7 @@ CHECK:    DW_AT_producer ("clang version 3.7.0 ")
 CHECK:    DW_AT_name ("basic3.c")
 CHECK:    DW_AT_stmt_list (0x0000009a)
 CHECK:    DW_AT_low_pc (0x0000000100000f90)
-CHECK:    DW_AT_high_pc (0x00000024)
+CHECK:    DW_AT_high_pc (0x0000000100000fb4)
 CHECK:    DW_TAG_variable
 CHECK:      DW_AT_name ("val")
 CHECK:      DW_AT_decl_file ("/Inputs{{[/\\]}}basic3.c")
@@ -102,7 +102,7 @@ CHECK:      DW_AT_name ("inc")
 CHECK:      DW_AT_inline (DW_INL_inlined)
 CHECK:    DW_TAG_subprogram
 CHECK:      DW_AT_low_pc (0x0000000100000f90)
-CHECK:      DW_AT_high_pc (0x00000024)
+CHECK:      DW_AT_high_pc (0x0000000100000fb4)
 CHECK:      DW_AT_frame_base (DW_OP_reg6 RBP)
 CHECK:      DW_AT_name ("bar")
 CHECK:      DW_TAG_formal_parameter

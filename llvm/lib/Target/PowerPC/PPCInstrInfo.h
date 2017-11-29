@@ -297,6 +297,8 @@ public:
   const TargetRegisterClass *updatedRC(const TargetRegisterClass *RC) const;
   static int getRecordFormOpcode(unsigned Opcode);
 
+  bool isTOCSaveMI(const MachineInstr &MI) const;
+
   bool isSignOrZeroExtended(const MachineInstr &MI, bool SignExt,
                             const unsigned PhiDepth) const;
 

@@ -275,11 +275,11 @@ application.
   #include <iostream>
   #include <thread>
 
-  [[clang::xray_always_intrument]] void f() {
+  [[clang::xray_always_instrument]] void f() {
     std::cerr << '.';
   }
 
-  [[clang::xray_always_intrument]] void g() {
+  [[clang::xray_always_instrument]] void g() {
     for (int i = 0; i < 1 << 10; ++i) {
       std::cerr << '-';
     }

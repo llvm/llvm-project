@@ -11,9 +11,9 @@
 #include "Config.h"
 #include "Driver.h"
 #include "LTO.h"
-#include "Memory.h"
 #include "Symbols.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Memory.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -23,36 +23,6 @@ using namespace llvm;
 
 namespace lld {
 namespace coff {
-
-enum SymbolPreference {
-  SP_EXISTING = -1,
-  SP_CONFLICT = 0,
-  SP_NEW = 1,
-};
-
-/// Checks if an existing symbol S should be kept or replaced by a new symbol.
-/// Returns SP_EXISTING when S should be kept, SP_NEW when the new symbol
-/// should be kept, and SP_CONFLICT if no valid resolution exists.
-static SymbolPreference compareDefined(Symbol *S, bool WasInserted,
-                                       bool NewIsCOMDAT) {
-  // If the symbol wasn't previously known, the new symbol wins by default.
-  if (WasInserted || !isa<Defined>(S))
-    return SP_NEW;
-
-  // If the existing symbol is a DefinedRegular, both it and the new symbol
-  // must be comdats. In that case, we have no reason to prefer one symbol
-  // over the other, and we keep the existing one. If one of the symbols
-  // is not a comdat, we report a conflict.
-  if (auto *R = dyn_cast<DefinedRegular>(S)) {
-    if (NewIsCOMDAT && R->isCOMDAT())
-      return SP_EXISTING;
-    else
-      return SP_CONFLICT;
-  }
-
-  // Existing symbol is not a DefinedRegular; new symbol wins.
-  return SP_NEW;
-}
 
 SymbolTable *Symtab;
 
@@ -94,7 +64,7 @@ static void errorOrWarn(const Twine &S) {
 void SymbolTable::reportRemainingUndefines() {
   SmallPtrSet<Symbol *, 8> Undefs;
 
-  for (auto &I : Symtab) {
+  for (auto &I : SymMap) {
     Symbol *Sym = I.second;
     auto *Undef = dyn_cast<Undefined>(Sym);
     if (!Undef)
@@ -153,7 +123,7 @@ void SymbolTable::reportRemainingUndefines() {
 }
 
 std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name) {
-  Symbol *&Sym = Symtab[CachedHashStringRef(Name)];
+  Symbol *&Sym = SymMap[CachedHashStringRef(Name)];
   if (Sym)
     return {Sym, false};
   Sym = (Symbol *)make<SymbolUnion>();
@@ -200,8 +170,7 @@ void SymbolTable::addLazy(ArchiveFile *F, const Archive::Symbol Sym) {
 
 void SymbolTable::reportDuplicate(Symbol *Existing, InputFile *NewFile) {
   error("duplicate symbol: " + toString(*Existing) + " in " +
-        toString(Existing->getFile()) + " and in " +
-        (NewFile ? toString(NewFile) : "(internal)"));
+        toString(Existing->getFile()) + " and in " + toString(NewFile));
 }
 
 Symbol *SymbolTable::addAbsolute(StringRef N, COFFSymbolRef Sym) {
@@ -240,7 +209,7 @@ Symbol *SymbolTable::addSynthetic(StringRef N, Chunk *C) {
   return S;
 }
 
-Symbol *SymbolTable::addRegular(InputFile *F, StringRef N, bool IsCOMDAT,
+Symbol *SymbolTable::addRegular(InputFile *F, StringRef N,
                                 const coff_symbol_generic *Sym,
                                 SectionChunk *C) {
   Symbol *S;
@@ -248,20 +217,30 @@ Symbol *SymbolTable::addRegular(InputFile *F, StringRef N, bool IsCOMDAT,
   std::tie(S, WasInserted) = insert(N);
   if (!isa<BitcodeFile>(F))
     S->IsUsedInRegularObj = true;
-  SymbolPreference SP = compareDefined(S, WasInserted, IsCOMDAT);
-  if (SP == SP_CONFLICT) {
+  if (WasInserted || !isa<DefinedRegular>(S))
+    replaceSymbol<DefinedRegular>(S, F, N, /*IsCOMDAT*/ false,
+                                  /*IsExternal*/ true, Sym, C);
+  else
     reportDuplicate(S, F);
-  } else if (SP == SP_NEW) {
-    replaceSymbol<DefinedRegular>(S, F, N, IsCOMDAT, /*IsExternal*/ true, Sym,
-                                  C);
-  } else if (SP == SP_EXISTING && IsCOMDAT && C) {
-    C->markDiscarded();
-    // Discard associative chunks that we've parsed so far. No need to recurse
-    // because an associative section cannot have children.
-    for (SectionChunk *Child : C->children())
-      Child->markDiscarded();
-  }
   return S;
+}
+
+std::pair<Symbol *, bool>
+SymbolTable::addComdat(InputFile *F, StringRef N,
+                       const coff_symbol_generic *Sym) {
+  Symbol *S;
+  bool WasInserted;
+  std::tie(S, WasInserted) = insert(N);
+  if (!isa<BitcodeFile>(F))
+    S->IsUsedInRegularObj = true;
+  if (WasInserted || !isa<DefinedRegular>(S)) {
+    replaceSymbol<DefinedRegular>(S, F, N, /*IsCOMDAT*/ true,
+                                  /*IsExternal*/ true, Sym, nullptr);
+    return {S, true};
+  }
+  if (!cast<DefinedRegular>(S)->isCOMDAT())
+    reportDuplicate(S, F);
+  return {S, false};
 }
 
 Symbol *SymbolTable::addCommon(InputFile *F, StringRef N, uint64_t Size,
@@ -319,8 +298,8 @@ std::vector<Chunk *> SymbolTable::getChunks() {
 }
 
 Symbol *SymbolTable::find(StringRef Name) {
-  auto It = Symtab.find(CachedHashStringRef(Name));
-  if (It == Symtab.end())
+  auto It = SymMap.find(CachedHashStringRef(Name));
+  if (It == SymMap.end())
     return nullptr;
   return It->second;
 }
@@ -332,7 +311,7 @@ Symbol *SymbolTable::findUnderscore(StringRef Name) {
 }
 
 StringRef SymbolTable::findByPrefix(StringRef Prefix) {
-  for (auto Pair : Symtab) {
+  for (auto Pair : SymMap) {
     StringRef Name = Pair.first.val();
     if (Name.startswith(Prefix))
       return Name;

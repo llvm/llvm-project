@@ -8,7 +8,7 @@
 define <8 x float> @expand(<4 x float> %a) {
 ; SKX64-LABEL: expand:
 ; SKX64:       # BB#0:
-; SKX64-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
+; SKX64-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<def>
 ; SKX64-NEXT:    movb $5, %al
 ; SKX64-NEXT:    kmovd %eax, %k1
 ; SKX64-NEXT:    vexpandps %ymm0, %ymm0 {%k1} {z}
@@ -23,7 +23,7 @@ define <8 x float> @expand(<4 x float> %a) {
 ;
 ; SKX32-LABEL: expand:
 ; SKX32:       # BB#0:
-; SKX32-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
+; SKX32-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<def>
 ; SKX32-NEXT:    movb $5, %al
 ; SKX32-NEXT:    kmovd %eax, %k1
 ; SKX32-NEXT:    vexpandps %ymm0, %ymm0 {%k1} {z}
@@ -42,7 +42,7 @@ define <8 x float> @expand(<4 x float> %a) {
 define <8 x float> @expand1(<4 x float> %a ) {
 ; SKX64-LABEL: expand1:
 ; SKX64:       # BB#0:
-; SKX64-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
+; SKX64-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<def>
 ; SKX64-NEXT:    movb $-86, %al
 ; SKX64-NEXT:    kmovd %eax, %k1
 ; SKX64-NEXT:    vexpandps %ymm0, %ymm0 {%k1} {z}
@@ -50,7 +50,7 @@ define <8 x float> @expand1(<4 x float> %a ) {
 ;
 ; KNL64-LABEL: expand1:
 ; KNL64:       # BB#0:
-; KNL64-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
+; KNL64-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<def>
 ; KNL64-NEXT:    vmovaps {{.*#+}} ymm1 = <u,0,u,1,u,2,u,3>
 ; KNL64-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; KNL64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
@@ -59,7 +59,7 @@ define <8 x float> @expand1(<4 x float> %a ) {
 ;
 ; SKX32-LABEL: expand1:
 ; SKX32:       # BB#0:
-; SKX32-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
+; SKX32-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<def>
 ; SKX32-NEXT:    movb $-86, %al
 ; SKX32-NEXT:    kmovd %eax, %k1
 ; SKX32-NEXT:    vexpandps %ymm0, %ymm0 {%k1} {z}
@@ -67,7 +67,7 @@ define <8 x float> @expand1(<4 x float> %a ) {
 ;
 ; KNL32-LABEL: expand1:
 ; KNL32:       # BB#0:
-; KNL32-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
+; KNL32-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<def>
 ; KNL32-NEXT:    vmovaps {{.*#+}} ymm1 = <u,0,u,1,u,2,u,3>
 ; KNL32-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; KNL32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
@@ -81,7 +81,7 @@ define <8 x float> @expand1(<4 x float> %a ) {
 define <4 x double> @expand2(<2 x double> %a) {
 ; SKX64-LABEL: expand2:
 ; SKX64:       # BB#0:
-; SKX64-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
+; SKX64-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<def>
 ; SKX64-NEXT:    movb $9, %al
 ; SKX64-NEXT:    kmovd %eax, %k1
 ; SKX64-NEXT:    vexpandpd %ymm0, %ymm0 {%k1} {z}
@@ -89,7 +89,7 @@ define <4 x double> @expand2(<2 x double> %a) {
 ;
 ; KNL64-LABEL: expand2:
 ; KNL64:       # BB#0:
-; KNL64-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
+; KNL64-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<def>
 ; KNL64-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,2,1]
 ; KNL64-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; KNL64-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3]
@@ -97,7 +97,7 @@ define <4 x double> @expand2(<2 x double> %a) {
 ;
 ; SKX32-LABEL: expand2:
 ; SKX32:       # BB#0:
-; SKX32-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
+; SKX32-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<def>
 ; SKX32-NEXT:    movb $9, %al
 ; SKX32-NEXT:    kmovd %eax, %k1
 ; SKX32-NEXT:    vexpandpd %ymm0, %ymm0 {%k1} {z}
@@ -105,7 +105,7 @@ define <4 x double> @expand2(<2 x double> %a) {
 ;
 ; KNL32-LABEL: expand2:
 ; KNL32:       # BB#0:
-; KNL32-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
+; KNL32-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<def>
 ; KNL32-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,2,1]
 ; KNL32-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; KNL32-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3]
@@ -118,7 +118,7 @@ define <4 x double> @expand2(<2 x double> %a) {
 define <8 x i32> @expand3(<4 x i32> %a ) {
 ; SKX64-LABEL: expand3:
 ; SKX64:       # BB#0:
-; SKX64-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
+; SKX64-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<def>
 ; SKX64-NEXT:    movb $-127, %al
 ; SKX64-NEXT:    kmovd %eax, %k1
 ; SKX64-NEXT:    vpexpandd %ymm0, %ymm0 {%k1} {z}
@@ -133,7 +133,7 @@ define <8 x i32> @expand3(<4 x i32> %a ) {
 ;
 ; SKX32-LABEL: expand3:
 ; SKX32:       # BB#0:
-; SKX32-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
+; SKX32-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<def>
 ; SKX32-NEXT:    movb $-127, %al
 ; SKX32-NEXT:    kmovd %eax, %k1
 ; SKX32-NEXT:    vpexpandd %ymm0, %ymm0 {%k1} {z}
@@ -153,7 +153,7 @@ define <8 x i32> @expand3(<4 x i32> %a ) {
 define <4 x i64> @expand4(<2 x i64> %a ) {
 ; SKX64-LABEL: expand4:
 ; SKX64:       # BB#0:
-; SKX64-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
+; SKX64-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<def>
 ; SKX64-NEXT:    movb $9, %al
 ; SKX64-NEXT:    kmovd %eax, %k1
 ; SKX64-NEXT:    vpexpandq %ymm0, %ymm0 {%k1} {z}
@@ -161,7 +161,7 @@ define <4 x i64> @expand4(<2 x i64> %a ) {
 ;
 ; KNL64-LABEL: expand4:
 ; KNL64:       # BB#0:
-; KNL64-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
+; KNL64-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<def>
 ; KNL64-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,2,1]
 ; KNL64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; KNL64-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4,5],ymm0[6,7]
@@ -169,7 +169,7 @@ define <4 x i64> @expand4(<2 x i64> %a ) {
 ;
 ; SKX32-LABEL: expand4:
 ; SKX32:       # BB#0:
-; SKX32-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
+; SKX32-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<def>
 ; SKX32-NEXT:    movb $9, %al
 ; SKX32-NEXT:    kmovd %eax, %k1
 ; SKX32-NEXT:    vpexpandq %ymm0, %ymm0 {%k1} {z}
@@ -177,7 +177,7 @@ define <4 x i64> @expand4(<2 x i64> %a ) {
 ;
 ; KNL32-LABEL: expand4:
 ; KNL32:       # BB#0:
-; KNL32-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
+; KNL32-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<def>
 ; KNL32-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,2,1]
 ; KNL32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; KNL32-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4,5],ymm0[6,7]
@@ -251,7 +251,7 @@ define <8 x float> @expand6(<4 x float> %a ) {
 define <16 x float> @expand7(<8 x float> %a) {
 ; SKX64-LABEL: expand7:
 ; SKX64:       # BB#0:
-; SKX64-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; SKX64-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; SKX64-NEXT:    movw $1285, %ax # imm = 0x505
 ; SKX64-NEXT:    kmovd %eax, %k1
 ; SKX64-NEXT:    vexpandps %zmm0, %zmm0 {%k1} {z}
@@ -259,7 +259,7 @@ define <16 x float> @expand7(<8 x float> %a) {
 ;
 ; KNL64-LABEL: expand7:
 ; KNL64:       # BB#0:
-; KNL64-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; KNL64-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; KNL64-NEXT:    movw $1285, %ax # imm = 0x505
 ; KNL64-NEXT:    kmovw %eax, %k1
 ; KNL64-NEXT:    vexpandps %zmm0, %zmm0 {%k1} {z}
@@ -267,7 +267,7 @@ define <16 x float> @expand7(<8 x float> %a) {
 ;
 ; SKX32-LABEL: expand7:
 ; SKX32:       # BB#0:
-; SKX32-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; SKX32-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; SKX32-NEXT:    movw $1285, %ax # imm = 0x505
 ; SKX32-NEXT:    kmovd %eax, %k1
 ; SKX32-NEXT:    vexpandps %zmm0, %zmm0 {%k1} {z}
@@ -275,7 +275,7 @@ define <16 x float> @expand7(<8 x float> %a) {
 ;
 ; KNL32-LABEL: expand7:
 ; KNL32:       # BB#0:
-; KNL32-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; KNL32-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; KNL32-NEXT:    movw $1285, %ax # imm = 0x505
 ; KNL32-NEXT:    kmovw %eax, %k1
 ; KNL32-NEXT:    vexpandps %zmm0, %zmm0 {%k1} {z}
@@ -287,7 +287,7 @@ define <16 x float> @expand7(<8 x float> %a) {
 define <16 x float> @expand8(<8 x float> %a ) {
 ; SKX64-LABEL: expand8:
 ; SKX64:       # BB#0:
-; SKX64-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; SKX64-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; SKX64-NEXT:    movw $-21846, %ax # imm = 0xAAAA
 ; SKX64-NEXT:    kmovd %eax, %k1
 ; SKX64-NEXT:    vexpandps %zmm0, %zmm0 {%k1} {z}
@@ -295,7 +295,7 @@ define <16 x float> @expand8(<8 x float> %a ) {
 ;
 ; KNL64-LABEL: expand8:
 ; KNL64:       # BB#0:
-; KNL64-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; KNL64-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; KNL64-NEXT:    movw $-21846, %ax # imm = 0xAAAA
 ; KNL64-NEXT:    kmovw %eax, %k1
 ; KNL64-NEXT:    vexpandps %zmm0, %zmm0 {%k1} {z}
@@ -303,7 +303,7 @@ define <16 x float> @expand8(<8 x float> %a ) {
 ;
 ; SKX32-LABEL: expand8:
 ; SKX32:       # BB#0:
-; SKX32-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; SKX32-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; SKX32-NEXT:    movw $-21846, %ax # imm = 0xAAAA
 ; SKX32-NEXT:    kmovd %eax, %k1
 ; SKX32-NEXT:    vexpandps %zmm0, %zmm0 {%k1} {z}
@@ -311,7 +311,7 @@ define <16 x float> @expand8(<8 x float> %a ) {
 ;
 ; KNL32-LABEL: expand8:
 ; KNL32:       # BB#0:
-; KNL32-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; KNL32-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; KNL32-NEXT:    movw $-21846, %ax # imm = 0xAAAA
 ; KNL32-NEXT:    kmovw %eax, %k1
 ; KNL32-NEXT:    vexpandps %zmm0, %zmm0 {%k1} {z}
@@ -324,7 +324,7 @@ define <16 x float> @expand8(<8 x float> %a ) {
 define <8 x double> @expand9(<4 x double> %a) {
 ; SKX64-LABEL: expand9:
 ; SKX64:       # BB#0:
-; SKX64-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; SKX64-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; SKX64-NEXT:    movb $-127, %al
 ; SKX64-NEXT:    kmovd %eax, %k1
 ; SKX64-NEXT:    vexpandpd %zmm0, %zmm0 {%k1} {z}
@@ -332,7 +332,7 @@ define <8 x double> @expand9(<4 x double> %a) {
 ;
 ; KNL64-LABEL: expand9:
 ; KNL64:       # BB#0:
-; KNL64-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; KNL64-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; KNL64-NEXT:    movb $-127, %al
 ; KNL64-NEXT:    kmovw %eax, %k1
 ; KNL64-NEXT:    vexpandpd %zmm0, %zmm0 {%k1} {z}
@@ -340,7 +340,7 @@ define <8 x double> @expand9(<4 x double> %a) {
 ;
 ; SKX32-LABEL: expand9:
 ; SKX32:       # BB#0:
-; SKX32-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; SKX32-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; SKX32-NEXT:    movb $-127, %al
 ; SKX32-NEXT:    kmovd %eax, %k1
 ; SKX32-NEXT:    vexpandpd %zmm0, %zmm0 {%k1} {z}
@@ -348,7 +348,7 @@ define <8 x double> @expand9(<4 x double> %a) {
 ;
 ; KNL32-LABEL: expand9:
 ; KNL32:       # BB#0:
-; KNL32-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; KNL32-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; KNL32-NEXT:    movb $-127, %al
 ; KNL32-NEXT:    kmovw %eax, %k1
 ; KNL32-NEXT:    vexpandpd %zmm0, %zmm0 {%k1} {z}
@@ -360,7 +360,7 @@ define <8 x double> @expand9(<4 x double> %a) {
 define <16 x i32> @expand10(<8 x i32> %a ) {
 ; SKX64-LABEL: expand10:
 ; SKX64:       # BB#0:
-; SKX64-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; SKX64-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; SKX64-NEXT:    movw $-21846, %ax # imm = 0xAAAA
 ; SKX64-NEXT:    kmovd %eax, %k1
 ; SKX64-NEXT:    vpexpandd %zmm0, %zmm0 {%k1} {z}
@@ -368,7 +368,7 @@ define <16 x i32> @expand10(<8 x i32> %a ) {
 ;
 ; KNL64-LABEL: expand10:
 ; KNL64:       # BB#0:
-; KNL64-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; KNL64-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; KNL64-NEXT:    movw $-21846, %ax # imm = 0xAAAA
 ; KNL64-NEXT:    kmovw %eax, %k1
 ; KNL64-NEXT:    vpexpandd %zmm0, %zmm0 {%k1} {z}
@@ -376,7 +376,7 @@ define <16 x i32> @expand10(<8 x i32> %a ) {
 ;
 ; SKX32-LABEL: expand10:
 ; SKX32:       # BB#0:
-; SKX32-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; SKX32-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; SKX32-NEXT:    movw $-21846, %ax # imm = 0xAAAA
 ; SKX32-NEXT:    kmovd %eax, %k1
 ; SKX32-NEXT:    vpexpandd %zmm0, %zmm0 {%k1} {z}
@@ -384,7 +384,7 @@ define <16 x i32> @expand10(<8 x i32> %a ) {
 ;
 ; KNL32-LABEL: expand10:
 ; KNL32:       # BB#0:
-; KNL32-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; KNL32-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; KNL32-NEXT:    movw $-21846, %ax # imm = 0xAAAA
 ; KNL32-NEXT:    kmovw %eax, %k1
 ; KNL32-NEXT:    vpexpandd %zmm0, %zmm0 {%k1} {z}
@@ -396,7 +396,7 @@ define <16 x i32> @expand10(<8 x i32> %a ) {
 define <8 x i64> @expand11(<4 x i64> %a) {
 ; SKX64-LABEL: expand11:
 ; SKX64:       # BB#0:
-; SKX64-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; SKX64-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; SKX64-NEXT:    movb $-127, %al
 ; SKX64-NEXT:    kmovd %eax, %k1
 ; SKX64-NEXT:    vpexpandq %zmm0, %zmm0 {%k1} {z}
@@ -404,7 +404,7 @@ define <8 x i64> @expand11(<4 x i64> %a) {
 ;
 ; KNL64-LABEL: expand11:
 ; KNL64:       # BB#0:
-; KNL64-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; KNL64-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; KNL64-NEXT:    movb $-127, %al
 ; KNL64-NEXT:    kmovw %eax, %k1
 ; KNL64-NEXT:    vpexpandq %zmm0, %zmm0 {%k1} {z}
@@ -412,7 +412,7 @@ define <8 x i64> @expand11(<4 x i64> %a) {
 ;
 ; SKX32-LABEL: expand11:
 ; SKX32:       # BB#0:
-; SKX32-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; SKX32-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; SKX32-NEXT:    movb $-127, %al
 ; SKX32-NEXT:    kmovd %eax, %k1
 ; SKX32-NEXT:    vpexpandq %zmm0, %zmm0 {%k1} {z}
@@ -420,7 +420,7 @@ define <8 x i64> @expand11(<4 x i64> %a) {
 ;
 ; KNL32-LABEL: expand11:
 ; KNL32:       # BB#0:
-; KNL32-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; KNL32-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; KNL32-NEXT:    movb $-127, %al
 ; KNL32-NEXT:    kmovw %eax, %k1
 ; KNL32-NEXT:    vpexpandq %zmm0, %zmm0 {%k1} {z}
@@ -433,7 +433,7 @@ define <8 x i64> @expand11(<4 x i64> %a) {
 define <16 x float> @expand12(<8 x float> %a) {
 ; SKX64-LABEL: expand12:
 ; SKX64:       # BB#0:
-; SKX64-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; SKX64-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; SKX64-NEXT:    vmovaps {{.*#+}} zmm2 = [0,16,2,16,4,16,6,16,0,16,1,16,2,16,3,16]
 ; SKX64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; SKX64-NEXT:    vpermt2ps %zmm0, %zmm2, %zmm1
@@ -442,7 +442,7 @@ define <16 x float> @expand12(<8 x float> %a) {
 ;
 ; KNL64-LABEL: expand12:
 ; KNL64:       # BB#0:
-; KNL64-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; KNL64-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; KNL64-NEXT:    vmovaps {{.*#+}} zmm2 = [0,16,2,16,4,16,6,16,0,16,1,16,2,16,3,16]
 ; KNL64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; KNL64-NEXT:    vpermt2ps %zmm0, %zmm2, %zmm1
@@ -451,7 +451,7 @@ define <16 x float> @expand12(<8 x float> %a) {
 ;
 ; SKX32-LABEL: expand12:
 ; SKX32:       # BB#0:
-; SKX32-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; SKX32-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; SKX32-NEXT:    vmovaps {{.*#+}} zmm2 = [0,16,2,16,4,16,6,16,0,16,1,16,2,16,3,16]
 ; SKX32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; SKX32-NEXT:    vpermt2ps %zmm0, %zmm2, %zmm1
@@ -460,7 +460,7 @@ define <16 x float> @expand12(<8 x float> %a) {
 ;
 ; KNL32-LABEL: expand12:
 ; KNL32:       # BB#0:
-; KNL32-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; KNL32-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; KNL32-NEXT:    vmovaps {{.*#+}} zmm2 = [0,16,2,16,4,16,6,16,0,16,1,16,2,16,3,16]
 ; KNL32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; KNL32-NEXT:    vpermt2ps %zmm0, %zmm2, %zmm1
@@ -503,7 +503,7 @@ define <16 x float> @expand13(<8 x float> %a ) {
 define <8 x float> @expand14(<4 x float> %a) {
 ; SKX64-LABEL: expand14:
 ; SKX64:       # BB#0:
-; SKX64-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
+; SKX64-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<def>
 ; SKX64-NEXT:    movb $20, %al
 ; SKX64-NEXT:    kmovd %eax, %k1
 ; SKX64-NEXT:    vexpandps %ymm0, %ymm0 {%k1} {z}
@@ -520,7 +520,7 @@ define <8 x float> @expand14(<4 x float> %a) {
 ;
 ; SKX32-LABEL: expand14:
 ; SKX32:       # BB#0:
-; SKX32-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
+; SKX32-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<def>
 ; SKX32-NEXT:    movb $20, %al
 ; SKX32-NEXT:    kmovd %eax, %k1
 ; SKX32-NEXT:    vexpandps %ymm0, %ymm0 {%k1} {z}

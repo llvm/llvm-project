@@ -180,7 +180,7 @@ namespace {
   raw_ostream &operator<< (raw_ostream &OS, const PrintRegSet &P) {
     OS << '{';
     for (unsigned R = P.RS.find_first(); R; R = P.RS.find_next(R))
-      OS << ' ' << PrintReg(R, P.TRI);
+      OS << ' ' << printReg(R, P.TRI);
     OS << " }";
     return OS;
   }
@@ -419,7 +419,7 @@ namespace {
     for (OrderedRegisterList::const_iterator I = B; I != E; ++I) {
       if (I != B)
         OS << ", ";
-      OS << PrintReg(*I, P.TRI);
+      OS << printReg(*I, P.TRI);
     }
     OS << ')';
     return OS;
@@ -467,7 +467,7 @@ namespace {
 
   raw_ostream &operator<< (raw_ostream &OS, const PrintIFR &P) {
     unsigned SrcR = P.IFR.SrcR, InsR = P.IFR.InsR;
-    OS << '(' << PrintReg(SrcR, P.TRI) << ',' << PrintReg(InsR, P.TRI)
+    OS << '(' << printReg(SrcR, P.TRI) << ',' << printReg(InsR, P.TRI)
        << ",#" << P.IFR.Wdh << ",#" << P.IFR.Off << ')';
     return OS;
   }
@@ -568,7 +568,7 @@ void HexagonGenInsert::dump_map() const {
   using iterator = IFMapType::const_iterator;
 
   for (iterator I = IFMap.begin(), E = IFMap.end(); I != E; ++I) {
-    dbgs() << "  " << PrintReg(I->first, HRI) << ":\n";
+    dbgs() << "  " << printReg(I->first, HRI) << ":\n";
     const IFListType &LL = I->second;
     for (unsigned i = 0, n = LL.size(); i < n; ++i)
       dbgs() << "    " << PrintIFR(LL[i].first, HRI) << ", "
@@ -781,7 +781,7 @@ unsigned HexagonGenInsert::distance(MachineBasicBlock::const_iterator FromI,
 bool HexagonGenInsert::findRecordInsertForms(unsigned VR,
       OrderedRegisterList &AVs) {
   if (isDebug()) {
-    dbgs() << __func__ << ": " << PrintReg(VR, HRI)
+    dbgs() << __func__ << ": " << printReg(VR, HRI)
            << "  AVs: " << PrintORL(AVs, HRI) << "\n";
   }
   if (AVs.size() == 0)
@@ -846,12 +846,12 @@ bool HexagonGenInsert::findRecordInsertForms(unsigned VR,
   }
 
   if (isDebug()) {
-    dbgs() << "Prefixes matching register " << PrintReg(VR, HRI) << "\n";
+    dbgs() << "Prefixes matching register " << printReg(VR, HRI) << "\n";
     for (LRSMapType::iterator I = LM.begin(), E = LM.end(); I != E; ++I) {
       dbgs() << "  L=" << I->first << ':';
       const RSListType &LL = I->second;
       for (unsigned i = 0, n = LL.size(); i < n; ++i)
-        dbgs() << " (" << PrintReg(LL[i].first, HRI) << ",@"
+        dbgs() << " (" << printReg(LL[i].first, HRI) << ",@"
                << LL[i].second << ')';
       dbgs() << '\n';
     }
@@ -898,8 +898,8 @@ bool HexagonGenInsert::findRecordInsertForms(unsigned VR,
         if (!isValidInsertForm(VR, SrcR, InsR, L, S))
           continue;
         if (isDebug()) {
-          dbgs() << PrintReg(VR, HRI) << " = insert(" << PrintReg(SrcR, HRI)
-                 << ',' << PrintReg(InsR, HRI) << ",#" << L << ",#"
+          dbgs() << printReg(VR, HRI) << " = insert(" << printReg(SrcR, HRI)
+                 << ',' << printReg(InsR, HRI) << ",#" << L << ",#"
                  << S << ")\n";
         }
         IFRecordWithRegSet RR(IFRecord(SrcR, InsR, L, S), RegisterSet());
@@ -1524,7 +1524,7 @@ bool HexagonGenInsert::runOnMachineFunction(MachineFunction &MF) {
     for (RegisterOrdering::iterator I = CellOrd.begin(), E = CellOrd.end();
         I != E; ++I) {
       unsigned VR = I->first, Pos = I->second;
-      dbgs() << PrintReg(VR, HRI) << " -> " << Pos << "\n";
+      dbgs() << printReg(VR, HRI) << " -> " << Pos << "\n";
     }
   }
 

@@ -36,7 +36,7 @@ for symbolizer in ['ASAN_SYMBOLIZER_PATH', 'MSAN_SYMBOLIZER_PATH']:
         config.environment[symbolizer] = os.environ[symbolizer]
 
 def find_shlibpath_var():
-    if platform.system() in ['Linux', 'FreeBSD', 'NetBSD']:
+    if platform.system() in ['Linux', 'FreeBSD', 'NetBSD', 'SunOS']:
         yield 'LD_LIBRARY_PATH'
     elif platform.system() == 'Darwin':
         yield 'DYLD_LIBRARY_PATH'

@@ -11,8 +11,8 @@ declare i1024 @test_sret() #0
 ; CHECK: mov  x[[CALLERX8NUM:[0-9]+]], x8
 ; CHECK: mov  x8, sp
 ; CHECK-NEXT: bl _test_sret
-; CHECK-NEXT: ldr [[CALLERSRET1:x[0-9]+]], [sp]
-; CHECK: str [[CALLERSRET1:x[0-9]+]], [x[[CALLERX8NUM]]]
+; CHECK: ldr [[CALLERSRET1:q[0-9]+]], [sp]
+; CHECK: str [[CALLERSRET1:q[0-9]+]], [x[[CALLERX8NUM]]]
 ; CHECK: ret
 define i1024 @test_call_sret() #0 {
   %a = call i1024 @test_sret()
@@ -23,8 +23,8 @@ define i1024 @test_call_sret() #0 {
 ; CHECK: mov  x[[CALLERX8NUM:[0-9]+]], x8
 ; CHECK: mov  x8, sp
 ; CHECK-NEXT: bl _test_sret
-; CHECK-NEXT: ldr [[CALLERSRET1:x[0-9]+]], [sp]
-; CHECK: str [[CALLERSRET1:x[0-9]+]], [x[[CALLERX8NUM]]]
+; CHECK: ldr [[CALLERSRET1:q[0-9]+]], [sp]
+; CHECK: str [[CALLERSRET1:q[0-9]+]], [x[[CALLERX8NUM]]]
 ; CHECK: ret
 define i1024 @test_tailcall_sret() #0 {
   %a = tail call i1024 @test_sret()
@@ -35,8 +35,8 @@ define i1024 @test_tailcall_sret() #0 {
 ; CHECK: mov  x[[CALLERX8NUM:[0-9]+]], x8
 ; CHECK: mov  x8, sp
 ; CHECK-NEXT: blr x0
-; CHECK-NEXT: ldr [[CALLERSRET1:x[0-9]+]], [sp]
-; CHECK: str [[CALLERSRET1:x[0-9]+]], [x[[CALLERX8NUM]]]
+; CHECK: ldr [[CALLERSRET1:q[0-9]+]], [sp]
+; CHECK: str [[CALLERSRET1:q[0-9]+]], [x[[CALLERX8NUM]]]
 ; CHECK: ret
 define i1024 @test_indirect_tailcall_sret(i1024 ()* %f) #0 {
   %a = tail call i1024 %f()

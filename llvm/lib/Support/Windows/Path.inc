@@ -391,6 +391,53 @@ std::error_code is_local(int FD, bool &Result) {
   return is_local_internal(FinalPath, Result);
 }
 
+/// In order to handle temporary files we want the following properties
+///
+/// * The temporary file is deleted on crashes
+/// * We can use (read, rename, etc) the temporary file.
+/// * We can cancel the delete to keep the file.
+///
+/// Using FILE_DISPOSITION_INFO with DeleteFile=true will create a file that is
+/// deleted on close, but it has a few problems:
+///
+/// * The file cannot be used. An attempt to open or rename the file will fail.
+///   This makes the temporary file almost useless, as it cannot be part of
+///   any other CreateFileW call in the current or in another process.
+/// * It is not atomic. A crash just after CreateFileW or just after canceling
+///   the delete will leave the file on disk.
+///
+/// Using FILE_FLAG_DELETE_ON_CLOSE solves the first issues and the first part
+/// of the second one, but there is no way to cancel it in place. What works is
+/// to create a second handle to prevent the deletion, close the first one and
+/// then clear DeleteFile with SetFileInformationByHandle. This requires
+/// changing the handle and file descriptor the caller uses.
+static std::error_code cancelDeleteOnClose(int &FD) {
+  HANDLE Handle = reinterpret_cast<HANDLE>(_get_osfhandle(FD));
+  SmallVector<wchar_t, MAX_PATH> Name;
+  if (std::error_code EC = realPathFromHandle(Handle, Name))
+    return EC;
+  HANDLE NewHandle =
+      ::CreateFileW(Name.data(), GENERIC_READ | GENERIC_WRITE | DELETE,
+                    FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                    NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+  if (NewHandle == INVALID_HANDLE_VALUE)
+    return mapWindowsError(::GetLastError());
+  if (close(FD))
+    return mapWindowsError(::GetLastError());
+
+  FILE_DISPOSITION_INFO Disposition;
+  Disposition.DeleteFile = false;
+  if (!SetFileInformationByHandle(NewHandle, FileDispositionInfo, &Disposition,
+                                  sizeof(Disposition)))
+    return mapWindowsError(::GetLastError());
+  FD = ::_open_osfhandle(intptr_t(NewHandle), 0);
+  if (FD == -1) {
+    ::CloseHandle(NewHandle);
+    return mapWindowsError(ERROR_INVALID_HANDLE);
+  }
+  return std::error_code();
+}
+
 static std::error_code rename_internal(HANDLE FromHandle, const Twine &To,
                                        bool ReplaceIfExists) {
   SmallVector<wchar_t, 0> ToWide;
@@ -511,6 +558,11 @@ static std::error_code rename_handle(HANDLE FromHandle, const Twine &To) {
 
   // The most likely root cause.
   return errc::permission_denied;
+}
+
+static std::error_code rename_fd(int FromFD, const Twine &To) {
+  HANDLE FromHandle = reinterpret_cast<HANDLE>(_get_osfhandle(FromFD));
+  return rename_handle(FromHandle, To);
 }
 
 std::error_code rename(const Twine &From, const Twine &To) {
@@ -1029,13 +1081,18 @@ std::error_code openFileForWrite(const Twine &Name, int &ResultFD,
     CreationDisposition = CREATE_ALWAYS;
 
   DWORD Access = GENERIC_WRITE;
+  DWORD Attributes = FILE_ATTRIBUTE_NORMAL;
   if (Flags & F_RW)
     Access |= GENERIC_READ;
+  if (Flags & F_Delete) {
+    Access |= DELETE;
+    Attributes |= FILE_FLAG_DELETE_ON_CLOSE;
+  }
 
   HANDLE H =
-      ::CreateFileW(PathUTF16.begin(), Access,
+      ::CreateFileW(PathUTF16.data(), Access,
                     FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                    NULL, CreationDisposition, FILE_ATTRIBUTE_NORMAL, NULL);
+                    NULL, CreationDisposition, Attributes, NULL);
 
   if (H == INVALID_HANDLE_VALUE) {
     DWORD LastError = ::GetLastError();

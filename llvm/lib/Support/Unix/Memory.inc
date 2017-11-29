@@ -126,8 +126,12 @@ Memory::allocateMappedMemory(size_t NumBytes,
   Result.Address = Addr;
   Result.Size = NumPages*PageSize;
 
-  if (PFlags & MF_EXEC)
-    Memory::InvalidateInstructionCache(Result.Address, Result.Size);
+  // Rely on protectMappedMemory to invalidate instruction cache.
+  if (PFlags & MF_EXEC) {
+    EC = Memory::protectMappedMemory (Result, PFlags);
+    if (EC != std::error_code())
+      return MemoryBlock();
+  }
 
   return Result;
 }
@@ -156,15 +160,31 @@ Memory::protectMappedMemory(const MemoryBlock &M, unsigned Flags) {
     return std::error_code(EINVAL, std::generic_category());
 
   int Protect = getPosixProtectionFlags(Flags);
-
   uintptr_t Start = alignAddr((uint8_t *)M.Address - PageSize + 1, PageSize);
   uintptr_t End = alignAddr((uint8_t *)M.Address + M.Size, PageSize);
+
+  bool InvalidateCache = (Flags & MF_EXEC);
+
+#if defined(__arm__) || defined(__aarch64__)
+  // Certain ARM implementations treat icache clear instruction as a memory read,
+  // and CPU segfaults on trying to clear cache on !PROT_READ page.  Therefore we need
+  // to temporarily add PROT_READ for the sake of flushing the instruction caches.
+  if (InvalidateCache && !(Protect & PROT_READ)) {
+    int Result = ::mprotect((void *)Start, End - Start, Protect | PROT_READ);
+    if (Result != 0)
+      return std::error_code(errno, std::generic_category());
+
+    Memory::InvalidateInstructionCache(M.Address, M.Size);
+    InvalidateCache = false;
+  }
+#endif
+
   int Result = ::mprotect((void *)Start, End - Start, Protect);
 
   if (Result != 0)
     return std::error_code(errno, std::generic_category());
 
-  if (Flags & MF_EXEC)
+  if (InvalidateCache)
     Memory::InvalidateInstructionCache(M.Address, M.Size);
 
   return std::error_code();

@@ -281,7 +281,7 @@ bool SIOptimizeExecMasking::runOnMachineFunction(MachineFunction &MF) {
       if (J->modifiesRegister(CopyToExec, TRI)) {
         if (SaveExecInst) {
           DEBUG(dbgs() << "Multiple instructions modify "
-                << PrintReg(CopyToExec, TRI) << '\n');
+                << printReg(CopyToExec, TRI) << '\n');
           SaveExecInst = nullptr;
           break;
         }

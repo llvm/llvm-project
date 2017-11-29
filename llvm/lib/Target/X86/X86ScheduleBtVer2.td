@@ -192,6 +192,7 @@ defm : JWriteResIntPair<WriteJump,  JALU01, 1>;
 
 defm : JWriteResFpuPair<WriteFAdd,        JFPU0,  3>;
 defm : JWriteResFpuPair<WriteFMul,        JFPU1,  2>;
+defm : JWriteResFpuPair<WriteFMA,         JFPU1,  2>; // NOTE: Doesn't exist on Jaguar.
 defm : JWriteResFpuPair<WriteFRcp,        JFPU1,  2>;
 defm : JWriteResFpuPair<WriteFRsqrt,      JFPU1,  2>;
 defm : JWriteResFpuPair<WriteFShuffle,   JFPU01,  1>;
@@ -274,43 +275,49 @@ def : WriteRes<WriteMPSADLd, [JLAGU, JFPU0]> {
 // FIXME: approximate latencies + pipe dependencies
 ////////////////////////////////////////////////////////////////////////////////
 
-def : WriteRes<WritePCmpIStrM, [JFPU01]> {
-  let Latency = 7;
-  let ResourceCycles = [2];
+def : WriteRes<WritePCmpIStrM, [JFPU1,JFPU0]> {
+  let Latency = 8;
+  let ResourceCycles = [2, 2];
+  let NumMicroOps = 3;
 }
-def : WriteRes<WritePCmpIStrMLd, [JLAGU, JFPU01]> {
-  let Latency = 12;
-  let ResourceCycles = [1, 2];
+def : WriteRes<WritePCmpIStrMLd, [JLAGU, JFPU1, JFPU0]> {
+  let Latency = 13;
+  let ResourceCycles = [1, 2, 2];
+  let NumMicroOps = 3;
 }
 
 // Packed Compare Explicit Length Strings, Return Mask
-def : WriteRes<WritePCmpEStrM, [JFPU01]> {
-  let Latency = 13;
-  let ResourceCycles = [5];
+def : WriteRes<WritePCmpEStrM, [JFPU1, JLAGU, JFPU01,JFPU1, JFPU0]> {
+  let Latency = 14;
+  let ResourceCycles = [5, 5, 5, 5, 5];
+  let NumMicroOps = 9;
 }
-def : WriteRes<WritePCmpEStrMLd, [JLAGU, JFPU01]> {
-  let Latency = 18;
-  let ResourceCycles = [1, 5];
+def : WriteRes<WritePCmpEStrMLd, [JLAGU, JFPU1, JLAGU, JFPU01,JFPU1, JFPU0]> {
+  let Latency = 19;
+  let ResourceCycles = [1, 5, 5, 5, 5, 5];
+  let NumMicroOps = 9;
 }
 
 // Packed Compare Implicit Length Strings, Return Index
-def : WriteRes<WritePCmpIStrI, [JFPU01]> {
-  let Latency = 6;
-  let ResourceCycles = [2];
+def : WriteRes<WritePCmpIStrI, [JFPU1, JFPU0]> {
+  let Latency = 7;
+  let ResourceCycles = [2, 2];
 }
-def : WriteRes<WritePCmpIStrILd, [JLAGU, JFPU01]> {
-  let Latency = 11;
-  let ResourceCycles = [1, 2];
+def : WriteRes<WritePCmpIStrILd, [JLAGU, JFPU1, JFPU0]> {
+  let Latency = 12;
+  let ResourceCycles = [1, 2, 2];
 }
 
 // Packed Compare Explicit Length Strings, Return Index
-def : WriteRes<WritePCmpEStrI, [JFPU01]> {
-  let Latency = 13;
-  let ResourceCycles = [5];
+def : WriteRes<WritePCmpEStrI, [JFPU1, JLAGU, JFPU01,JFPU1, JFPU0]> {
+  let Latency = 14;
+  let ResourceCycles = [5, 5, 5, 5, 5];
+  let NumMicroOps = 9;
 }
-def : WriteRes<WritePCmpEStrILd, [JLAGU, JFPU01]> {
-  let Latency = 18;
-  let ResourceCycles = [1, 5];
+def : WriteRes<WritePCmpEStrILd, [JLAGU, JFPU1, JLAGU, JFPU01,JFPU1, JFPU0]> {
+  let Latency = 19;
+  let ResourceCycles = [1, 5, 5, 5, 5, 5];
+  let NumMicroOps = 9;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

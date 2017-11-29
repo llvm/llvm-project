@@ -860,8 +860,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SINT_TO_FP,         MVT::v4i32, Legal);
     setOperationAction(ISD::SINT_TO_FP,         MVT::v2i32, Custom);
 
-    setOperationAction(ISD::UINT_TO_FP,         MVT::v4i8,  Custom);
-    setOperationAction(ISD::UINT_TO_FP,         MVT::v4i16, Custom);
     setOperationAction(ISD::UINT_TO_FP,         MVT::v2i32, Custom);
 
     // Fast v2f32 UINT_TO_FP( v2i32 ) custom conversion.
@@ -1005,9 +1003,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SINT_TO_FP,         MVT::v8i16, Promote);
     setOperationAction(ISD::SINT_TO_FP,         MVT::v8i32, Legal);
     setOperationAction(ISD::FP_ROUND,           MVT::v4f32, Legal);
-
-    setOperationAction(ISD::UINT_TO_FP,         MVT::v8i8,  Custom);
-    setOperationAction(ISD::UINT_TO_FP,         MVT::v8i16, Custom);
 
     for (MVT VT : MVT::fp_vector_valuetypes())
       setLoadExtAction(ISD::EXTLOAD, VT, MVT::v4f32, Legal);
@@ -1178,22 +1173,20 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
 
     setOperationAction(ISD::FP_TO_SINT,         MVT::v16i32, Legal);
+    setOperationAction(ISD::FP_TO_SINT,         MVT::v16i16, Promote);
+    setOperationAction(ISD::FP_TO_SINT,         MVT::v16i8, Promote);
     setOperationAction(ISD::FP_TO_UINT,         MVT::v16i32, Legal);
-    setOperationAction(ISD::FP_TO_UINT,         MVT::v16i8, Legal);
-    setOperationAction(ISD::FP_TO_UINT,         MVT::v16i16, Legal);
+    setOperationAction(ISD::FP_TO_UINT,         MVT::v16i8, Promote);
+    setOperationAction(ISD::FP_TO_UINT,         MVT::v16i16, Promote);
     setOperationAction(ISD::FP_TO_UINT,         MVT::v8i32, Legal);
     setOperationAction(ISD::FP_TO_UINT,         MVT::v4i32, Legal);
     setOperationAction(ISD::FP_TO_UINT,         MVT::v2i32, Custom);
     setOperationAction(ISD::SINT_TO_FP,         MVT::v16i32, Legal);
-    setOperationAction(ISD::SINT_TO_FP,         MVT::v8i1,   Custom);
-    setOperationAction(ISD::SINT_TO_FP,         MVT::v16i1,  Custom);
     setOperationAction(ISD::SINT_TO_FP,         MVT::v16i8,  Promote);
     setOperationAction(ISD::SINT_TO_FP,         MVT::v16i16, Promote);
     setOperationAction(ISD::UINT_TO_FP,         MVT::v16i32, Legal);
     setOperationAction(ISD::UINT_TO_FP,         MVT::v8i32, Legal);
     setOperationAction(ISD::UINT_TO_FP,         MVT::v4i32, Legal);
-    setOperationAction(ISD::UINT_TO_FP,         MVT::v16i8, Custom);
-    setOperationAction(ISD::UINT_TO_FP,         MVT::v16i16, Custom);
     setOperationAction(ISD::SINT_TO_FP,         MVT::v16i1, Custom);
     setOperationAction(ISD::UINT_TO_FP,         MVT::v16i1, Custom);
     setOperationAction(ISD::SINT_TO_FP,         MVT::v8i1,  Custom);
@@ -1202,8 +1195,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::UINT_TO_FP,         MVT::v4i1,  Custom);
     setOperationAction(ISD::SINT_TO_FP,         MVT::v2i1,  Custom);
     setOperationAction(ISD::UINT_TO_FP,         MVT::v2i1,  Custom);
-    setOperationAction(ISD::FP_ROUND,           MVT::v8f32, Legal);
-    setOperationAction(ISD::FP_EXTEND,          MVT::v8f32, Legal);
 
     setTruncStoreAction(MVT::v8i64,   MVT::v8i8,   Legal);
     setTruncStoreAction(MVT::v8i64,   MVT::v8i16,  Legal);
@@ -1245,13 +1236,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       }
     }
     if (Subtarget.hasVLX()) {
-      setOperationAction(ISD::SINT_TO_FP,       MVT::v8i32, Legal);
-      setOperationAction(ISD::UINT_TO_FP,       MVT::v8i32, Legal);
-      setOperationAction(ISD::FP_TO_SINT,       MVT::v8i32, Legal);
-      setOperationAction(ISD::FP_TO_UINT,       MVT::v8i32, Legal);
-      setOperationAction(ISD::SINT_TO_FP,       MVT::v4i32, Legal);
-      setOperationAction(ISD::FP_TO_SINT,       MVT::v4i32, Legal);
-      setOperationAction(ISD::FP_TO_UINT,       MVT::v4i32, Legal);
       setOperationAction(ISD::ZERO_EXTEND,      MVT::v4i32, Custom);
       setOperationAction(ISD::ZERO_EXTEND,      MVT::v2i64, Custom);
       setOperationAction(ISD::SIGN_EXTEND,      MVT::v4i32, Custom);
@@ -1266,9 +1250,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::ANY_EXTEND,         MVT::v8i64, Custom);
     setOperationAction(ISD::SIGN_EXTEND,        MVT::v16i32, Custom);
     setOperationAction(ISD::SIGN_EXTEND,        MVT::v8i64, Custom);
+
     setOperationAction(ISD::SIGN_EXTEND,        MVT::v16i8, Custom);
+    setOperationAction(ISD::ZERO_EXTEND,        MVT::v16i8, Custom);
     setOperationAction(ISD::SIGN_EXTEND,        MVT::v8i16, Custom);
+    setOperationAction(ISD::ZERO_EXTEND,        MVT::v8i16, Custom);
     setOperationAction(ISD::SIGN_EXTEND,        MVT::v16i16, Custom);
+    setOperationAction(ISD::ZERO_EXTEND,        MVT::v16i16, Custom);
 
     for (auto VT : { MVT::v16f32, MVT::v8f64 }) {
       setOperationAction(ISD::FFLOOR,           VT, Legal);
@@ -1718,25 +1706,22 @@ EVT X86TargetLowering::getSetCCResultType(const DataLayout &DL,
   if (!VT.isVector())
     return MVT::i8;
 
+  if (VT.getSizeInBits() >= 512) {
+    EVT EltVT = VT.getVectorElementType();
+    const unsigned NumElts = VT.getVectorNumElements();
+    if (Subtarget.hasAVX512())
+      if (EltVT == MVT::i32 || EltVT == MVT::i64 ||
+          EltVT == MVT::f32 || EltVT == MVT::f64)
+        return EVT::getVectorVT(Context, MVT::i1, NumElts);
+    if (Subtarget.hasBWI())
+      if (EltVT == MVT::i8 || EltVT == MVT::i16)
+        return EVT::getVectorVT(Context, MVT::i1, NumElts);
+  }
+
   if (VT.isSimple()) {
     MVT VVT = VT.getSimpleVT();
     const unsigned NumElts = VVT.getVectorNumElements();
     MVT EltVT = VVT.getVectorElementType();
-    if (VVT.is512BitVector()) {
-      if (Subtarget.hasAVX512())
-        if (EltVT == MVT::i32 || EltVT == MVT::i64 ||
-            EltVT == MVT::f32 || EltVT == MVT::f64)
-          switch(NumElts) {
-          case  8: return MVT::v8i1;
-          case 16: return MVT::v16i1;
-        }
-      if (Subtarget.hasBWI())
-        if (EltVT == MVT::i8 || EltVT == MVT::i16)
-          switch(NumElts) {
-          case 32: return MVT::v32i1;
-          case 64: return MVT::v64i1;
-        }
-    }
 
     if (Subtarget.hasBWI() && Subtarget.hasVLX())
       return MVT::getVectorVT(MVT::i1, NumElts);
@@ -10159,7 +10144,7 @@ static SDValue lowerVectorShuffleAsElementInsertion(
         return SDValue();
 
       // Zero-extend directly to i32.
-      ExtVT = MVT::v4i32;
+      ExtVT = MVT::getVectorVT(MVT::i32, ExtVT.getSizeInBits() / 32);
       V2S = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, V2S);
     }
     V2 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, ExtVT, V2S);
@@ -15811,24 +15796,12 @@ SDValue X86TargetLowering::lowerUINT_TO_FP_vec(SDValue Op,
   switch (SrcVT.SimpleTy) {
   default:
     llvm_unreachable("Custom UINT_TO_FP is not supported!");
-  case MVT::v4i8:
-  case MVT::v4i16:
-  case MVT::v8i8:
-  case MVT::v8i16: {
-    MVT NVT = MVT::getVectorVT(MVT::i32, SrcVT.getVectorNumElements());
-    return DAG.getNode(ISD::SINT_TO_FP, dl, Op.getValueType(),
-                       DAG.getNode(ISD::ZERO_EXTEND, dl, NVT, N0));
-  }
   case MVT::v2i32:
     return lowerUINT_TO_FP_v2i32(Op, DAG, Subtarget, dl);
   case MVT::v4i32:
   case MVT::v8i32:
+    assert(!Subtarget.hasAVX512());
     return lowerUINT_TO_FP_vXi32(Op, DAG, Subtarget);
-  case MVT::v16i8:
-  case MVT::v16i16:
-    assert(Subtarget.hasAVX512());
-    return DAG.getNode(ISD::UINT_TO_FP, dl, Op.getValueType(),
-                       DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::v16i32, N0));
   }
 }
 
@@ -28343,7 +28316,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   // Which shuffle domains are permitted?
   // Permit domain crossing at higher combine depths.
   bool AllowFloatDomain = FloatDomain || (Depth > 3);
-  bool AllowIntDomain = (!FloatDomain || (Depth > 3)) &&
+  bool AllowIntDomain = (!FloatDomain || (Depth > 3)) && Subtarget.hasSSE2() &&
                         (!MaskVT.is256BitVector() || Subtarget.hasAVX2());
 
   // Determine zeroable mask elements.
@@ -36090,7 +36063,6 @@ static SDValue combineUIntToFP(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   EVT InVT = Op0.getValueType();
   EVT InSVT = InVT.getScalarType();
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   // UINT_TO_FP(vXi8) -> SINT_TO_FP(ZEXT(vXi8 to vXi32))
   // UINT_TO_FP(vXi16) -> SINT_TO_FP(ZEXT(vXi16 to vXi32))
@@ -36100,9 +36072,7 @@ static SDValue combineUIntToFP(SDNode *N, SelectionDAG &DAG,
                                  InVT.getVectorNumElements());
     SDValue P = DAG.getNode(ISD::ZERO_EXTEND, dl, DstVT, Op0);
 
-    if (TLI.isOperationLegal(ISD::UINT_TO_FP, DstVT))
-      return DAG.getNode(ISD::UINT_TO_FP, dl, VT, P);
-
+    // UINT_TO_FP isn't legal without AVX512 so use SINT_TO_FP.
     return DAG.getNode(ISD::SINT_TO_FP, dl, VT, P);
   }
 

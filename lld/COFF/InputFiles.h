@@ -127,9 +127,9 @@ public:
   // COFF-specific and x86-only.
   bool SEHCompat = false;
 
-  // The list of safe exception handlers listed in .sxdata section.
+  // The symbol table indexes of the safe exception handlers.
   // COFF-specific and x86-only.
-  std::set<Symbol *> SEHandlers;
+  ArrayRef<llvm::support::ulittle32_t> SXData;
 
   // Pointer to the PDB module descriptor builder. Various debug info records
   // will reference object files by "module index", which is here. Things like
@@ -140,13 +140,23 @@ public:
 private:
   void initializeChunks();
   void initializeSymbols();
-  void initializeSEH();
 
-  Symbol *createDefined(COFFSymbolRef Sym, const void *Aux, bool IsFirst);
+  SectionChunk *
+  readSection(uint32_t SectionNumber,
+              const llvm::object::coff_aux_section_definition *Def);
+
+  void readAssociativeDefinition(
+      COFFSymbolRef COFFSym,
+      const llvm::object::coff_aux_section_definition *Def);
+
+  llvm::Optional<Symbol *>
+  createDefined(COFFSymbolRef Sym,
+                std::vector<const llvm::object::coff_aux_section_definition *>
+                    &ComdatDefs);
+  Symbol *createRegular(COFFSymbolRef Sym);
   Symbol *createUndefined(COFFSymbolRef Sym);
 
   std::unique_ptr<COFFObjectFile> COFFObj;
-  const coff_section *SXData = nullptr;
 
   // List of all chunks defined by this file. This includes both section
   // chunks and non-section chunks for common symbols.

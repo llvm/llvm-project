@@ -5,8 +5,8 @@
 define i32 @foo(i32 %a, i32 %b) local_unnamed_addr #0 {
 ; X64-LABEL: foo:
 ; X64:       # BB#0: # %entry
-; X64-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
-; X64-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; X64-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
+; X64-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; X64-NEXT:    leal 4(%rdi,%rsi,2), %ecx
 ; X64-NEXT:    leal 4(%rdi,%rsi,4), %eax
 ; X64-NEXT:    imull %ecx, %eax
@@ -33,8 +33,8 @@ entry:
 define i32 @foo1(i32 %a, i32 %b) local_unnamed_addr #0 {
 ; X64-LABEL: foo1:
 ; X64:       # BB#0: # %entry
-; X64-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
-; X64-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; X64-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
+; X64-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; X64-NEXT:    leal 4(%rdi,%rsi,4), %ecx
 ; X64-NEXT:    leal 4(%rdi,%rsi,8), %eax
 ; X64-NEXT:    imull %ecx, %eax
@@ -61,8 +61,8 @@ entry:
 define i32 @foo1_mult_basic_blocks(i32 %a, i32 %b) local_unnamed_addr #0 {
 ; X64-LABEL: foo1_mult_basic_blocks:
 ; X64:       # BB#0: # %entry
-; X64-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
-; X64-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; X64-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
+; X64-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; X64-NEXT:    leal 4(%rdi,%rsi,4), %ecx
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpl $10, %ecx
@@ -113,8 +113,8 @@ exit:
 define i32 @foo1_mult_basic_blocks_illegal_scale(i32 %a, i32 %b) local_unnamed_addr #0 {
 ; X64-LABEL: foo1_mult_basic_blocks_illegal_scale:
 ; X64:       # BB#0: # %entry
-; X64-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
-; X64-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
+; X64-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
+; X64-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; X64-NEXT:    leal 4(%rdi,%rsi,2), %ecx
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpl $10, %ecx

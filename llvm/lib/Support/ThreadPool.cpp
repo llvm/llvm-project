@@ -47,8 +47,8 @@ ThreadPool::ThreadPool(unsigned ThreadCount)
           // in order for wait() to properly detect that even if the queue is
           // empty, there is still a task in flight.
           {
-            ++ActiveThreads;
             std::unique_lock<std::mutex> LockGuard(CompletionLock);
+            ++ActiveThreads;
           }
           Task = std::move(Tasks.front());
           Tasks.pop();

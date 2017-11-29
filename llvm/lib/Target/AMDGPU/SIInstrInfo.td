@@ -161,6 +161,9 @@ def SIpc_add_rel_offset : SDNode<"AMDGPUISD::PC_ADD_REL_OFFSET",
 defm atomic_inc_global : global_binary_atomic_op<SIatomic_inc>;
 defm atomic_dec_global : global_binary_atomic_op<SIatomic_dec>;
 
+def atomic_inc_local : local_binary_atomic_op<SIatomic_inc>;
+def atomic_dec_local : local_binary_atomic_op<SIatomic_dec>;
+
 //===----------------------------------------------------------------------===//
 // SDNodes PatFrags for loads/stores with a glue input.
 // This is for SDNodes and PatFrag for local loads and stores to

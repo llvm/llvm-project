@@ -247,13 +247,13 @@ void A57ChainingConstraint::addInterChainConstraint(PBQPRAGraph &G, unsigned Rd,
   // Do some Chain management
   if (Chains.count(Ra)) {
     if (Rd != Ra) {
-      DEBUG(dbgs() << "Moving acc chain from " << PrintReg(Ra, TRI) << " to "
-                   << PrintReg(Rd, TRI) << '\n';);
+      DEBUG(dbgs() << "Moving acc chain from " << printReg(Ra, TRI) << " to "
+                   << printReg(Rd, TRI) << '\n';);
       Chains.remove(Ra);
       Chains.insert(Rd);
     }
   } else {
-    DEBUG(dbgs() << "Creating new acc chain for " << PrintReg(Rd, TRI)
+    DEBUG(dbgs() << "Creating new acc chain for " << printReg(Rd, TRI)
                  << '\n';);
     Chains.insert(Rd);
   }
@@ -340,7 +340,7 @@ void A57ChainingConstraint::apply(PBQPRAGraph &G) {
       for (auto r : Chains) {
         SmallVector<unsigned, 8> toDel;
         if(regJustKilledBefore(LIs, r, MI)) {
-          DEBUG(dbgs() << "Killing chain " << PrintReg(r, TRI) << " at ";
+          DEBUG(dbgs() << "Killing chain " << printReg(r, TRI) << " at ";
                 MI.print(dbgs()););
           toDel.push_back(r);
         }

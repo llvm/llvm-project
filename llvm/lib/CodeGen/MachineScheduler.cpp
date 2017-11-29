@@ -1130,7 +1130,7 @@ void ScheduleDAGMILive::updatePressureDiffs(
         PDiff.addPressureChange(Reg, Decrement, &MRI);
         DEBUG(
           dbgs() << "  UpdateRegP: SU(" << SU.NodeNum << ") "
-                 << PrintReg(Reg, TRI) << ':' << PrintLaneMask(P.LaneMask)
+                 << printReg(Reg, TRI) << ':' << PrintLaneMask(P.LaneMask)
                  << ' ' << *SU.getInstr();
           dbgs() << "              to ";
           PDiff.dump(*TRI);
@@ -1138,7 +1138,7 @@ void ScheduleDAGMILive::updatePressureDiffs(
       }
     } else {
       assert(P.LaneMask.any());
-      DEBUG(dbgs() << "  LiveReg: " << PrintVRegOrUnit(Reg, TRI) << "\n");
+      DEBUG(dbgs() << "  LiveReg: " << printVRegOrUnit(Reg, TRI) << "\n");
       // This may be called before CurrentBottom has been initialized. However,
       // BotRPTracker must have a valid position. We want the value live into the
       // instruction or live out of the block, so ask for the previous

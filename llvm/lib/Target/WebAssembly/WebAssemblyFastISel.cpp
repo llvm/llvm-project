@@ -275,7 +275,10 @@ bool WebAssemblyFastISel::computeAddress(const Value *Obj, Address &Addr) {
           }
           if (S == 1 && Addr.isRegBase() && Addr.getReg() == 0) {
             // An unscaled add of a register. Set it as the new base.
-            Addr.setReg(getRegForValue(Op));
+            unsigned Reg = getRegForValue(Op);
+            if (Reg == 0)
+              return false;
+            Addr.setReg(Reg);
             break;
           }
           if (canFoldAddIntoGEP(U, Op)) {
@@ -359,7 +362,10 @@ bool WebAssemblyFastISel::computeAddress(const Value *Obj, Address &Addr) {
   if (Addr.isSet()) {
     return false;
   }
-  Addr.setReg(getRegForValue(Obj));
+  unsigned Reg = getRegForValue(Obj);
+  if (Reg == 0)
+    return false;
+  Addr.setReg(Reg);
   return Addr.getReg() != 0;
 }
 
@@ -418,7 +424,10 @@ unsigned WebAssemblyFastISel::getRegForI1Value(const Value *V, bool &Not) {
   }
 
   Not = false;
-  return maskI1Value(getRegForValue(V), V);
+  unsigned Reg = getRegForValue(V);
+  if (Reg == 0)
+    return 0;
+  return maskI1Value(Reg, V);
 }
 
 unsigned WebAssemblyFastISel::zeroExtendToI32(unsigned Reg, const Value *V,
@@ -535,13 +544,19 @@ unsigned WebAssemblyFastISel::signExtend(unsigned Reg, const Value *V,
 unsigned WebAssemblyFastISel::getRegForUnsignedValue(const Value *V) {
   MVT::SimpleValueType From = getSimpleType(V->getType());
   MVT::SimpleValueType To = getLegalType(From);
-  return zeroExtend(getRegForValue(V), V, From, To);
+  unsigned VReg = getRegForValue(V);
+  if (VReg == 0)
+    return 0;
+  return zeroExtend(VReg, V, From, To);
 }
 
 unsigned WebAssemblyFastISel::getRegForSignedValue(const Value *V) {
   MVT::SimpleValueType From = getSimpleType(V->getType());
   MVT::SimpleValueType To = getLegalType(From);
-  return signExtend(getRegForValue(V), V, From, To);
+  unsigned VReg = getRegForValue(V);
+  if (VReg == 0)
+    return 0;
+  return signExtend(VReg, V, From, To);
 }
 
 unsigned WebAssemblyFastISel::getRegForPromotedValue(const Value *V,
@@ -797,8 +812,12 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
 
   if (IsDirect)
     MIB.addGlobalAddress(Func);
-  else
-    MIB.addReg(getRegForValue(Call->getCalledValue()));
+  else {
+    unsigned Reg = getRegForValue(Call->getCalledValue());
+    if (Reg == 0)
+      return false;
+    MIB.addReg(Reg);
+  }
 
   for (unsigned ArgReg : Args)
     MIB.addReg(ArgReg);
@@ -888,7 +907,10 @@ bool WebAssemblyFastISel::selectZExt(const Instruction *I) {
   const Value *Op = ZExt->getOperand(0);
   MVT::SimpleValueType From = getSimpleType(Op->getType());
   MVT::SimpleValueType To = getLegalType(getSimpleType(ZExt->getType()));
-  unsigned Reg = zeroExtend(getRegForValue(Op), Op, From, To);
+  unsigned In = getRegForValue(Op);
+  if (In == 0)
+    return false;
+  unsigned Reg = zeroExtend(In, Op, From, To);
   if (Reg == 0)
     return false;
 
@@ -902,7 +924,10 @@ bool WebAssemblyFastISel::selectSExt(const Instruction *I) {
   const Value *Op = SExt->getOperand(0);
   MVT::SimpleValueType From = getSimpleType(Op->getType());
   MVT::SimpleValueType To = getLegalType(getSimpleType(SExt->getType()));
-  unsigned Reg = signExtend(getRegForValue(Op), Op, From, To);
+  unsigned In = getRegForValue(Op);
+  if (In == 0)
+    return false;
+  unsigned Reg = signExtend(In, Op, From, To);
   if (Reg == 0)
     return false;
 
@@ -1044,15 +1069,18 @@ bool WebAssemblyFastISel::selectBitCast(const Instruction *I) {
   if (!VT.isSimple() || !RetVT.isSimple())
     return false;
 
+  unsigned In = getRegForValue(I->getOperand(0));
+  if (In == 0)
+    return false;
+
   if (VT == RetVT) {
     // No-op bitcast.
-    updateValueMap(I, getRegForValue(I->getOperand(0)));
+    updateValueMap(I, In);
     return true;
   }
 
   unsigned Reg = fastEmit_ISD_BITCAST_r(VT.getSimpleVT(), RetVT.getSimpleVT(),
-                                        getRegForValue(I->getOperand(0)),
-                                        I->getOperand(0)->hasOneUse());
+                                        In, I->getOperand(0)->hasOneUse());
   if (!Reg)
     return false;
   MachineBasicBlock::iterator Iter = FuncInfo.InsertPt;

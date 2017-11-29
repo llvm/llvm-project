@@ -10,9 +10,9 @@
 #include "SymbolTable.h"
 
 #include "Config.h"
-#include "Memory.h"
 #include "Strings.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Memory.h"
 
 #include <unordered_set>
 
@@ -34,7 +34,7 @@ void SymbolTable::addFile(InputFile *File) {
 
 void SymbolTable::reportRemainingUndefines() {
   std::unordered_set<Symbol *> Undefs;
-  for (auto &I : Symtab) {
+  for (auto &I : SymMap) {
     Symbol *Sym = I.second;
     if (Sym->isUndefined() && !Sym->isWeak() &&
         Config->AllowUndefinedSymbols.count(Sym->getName()) == 0) {
@@ -56,14 +56,14 @@ void SymbolTable::reportRemainingUndefines() {
 }
 
 Symbol *SymbolTable::find(StringRef Name) {
-  auto It = Symtab.find(CachedHashStringRef(Name));
-  if (It == Symtab.end())
+  auto It = SymMap.find(CachedHashStringRef(Name));
+  if (It == SymMap.end())
     return nullptr;
   return It->second;
 }
 
 std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name) {
-  Symbol *&Sym = Symtab[CachedHashStringRef(Name)];
+  Symbol *&Sym = SymMap[CachedHashStringRef(Name)];
   if (Sym)
     return {Sym, false};
   Sym = make<Symbol>(Name, false);
@@ -73,7 +73,7 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name) {
 void SymbolTable::reportDuplicate(Symbol *Existing, InputFile *NewFile) {
   error("duplicate symbol: " + toString(*Existing) + "\n>>> defined in " +
         toString(Existing->getFile()) + "\n>>> defined in " +
-        (NewFile ? toString(NewFile) : "<internal>"));
+        toString(NewFile));
 }
 
 static void checkSymbolTypes(Symbol *Existing, InputFile *F,
@@ -86,13 +86,10 @@ static void checkSymbolTypes(Symbol *Existing, InputFile *F,
   if (Existing->isFunction() == NewIsFunction)
     return;
 
-  std::string Filename = "<builtin>";
-  if (Existing->getFile())
-    Filename = toString(Existing->getFile());
   error("symbol type mismatch: " + New->Name + "\n>>> defined as " +
-        (Existing->isFunction() ? "Function" : "Global") + " in " + Filename +
-        "\n>>> defined as " + (NewIsFunction ? "Function" : "Global") + " in " +
-        F->getName());
+        (Existing->isFunction() ? "Function" : "Global") + " in " +
+        toString(Existing->getFile()) + "\n>>> defined as " +
+        (NewIsFunction ? "Function" : "Global") + " in " + F->getName());
 }
 
 Symbol *SymbolTable::addDefinedGlobal(StringRef Name) {

@@ -55,7 +55,7 @@ define i8 @test4(i8 %x) nounwind readnone {
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    andl $127, %edi
 ; CHECK-NEXT:    popcntw %di, %ax
-; CHECK-NEXT:    # kill: %AL<def> %AL<kill> %AX<kill>
+; CHECK-NEXT:    # kill: %al<def> %al<kill> %ax<kill>
 ; CHECK-NEXT:    retq
   %x2 = and i8 %x, 127
   %count = tail call i8 @llvm.ctpop.i8(i8 %x2)

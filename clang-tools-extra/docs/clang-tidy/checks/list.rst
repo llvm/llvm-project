@@ -51,7 +51,7 @@ Clang-Tidy Checks
    cert-flp30-c
    cert-msc30-c (redirects to cert-msc50-cpp) <cert-msc30-c>
    cert-msc50-cpp
-   cert-oop11-cpp (redirects to misc-move-constructor-init) <cert-oop11-cpp>
+   cert-oop11-cpp (redirects to performance-move-constructor-init) <cert-oop11-cpp>
    cppcoreguidelines-c-copy-assignment-signature (redirects to misc-unconventional-assign-operator) <cppcoreguidelines-c-copy-assignment-signature>
    cppcoreguidelines-interfaces-global-init
    cppcoreguidelines-no-malloc
@@ -68,6 +68,7 @@ Clang-Tidy Checks
    cppcoreguidelines-pro-type-vararg
    cppcoreguidelines-slicing
    cppcoreguidelines-special-member-functions
+   fuchsia-default-arguments
    google-build-explicit-make-pair
    google-build-namespaces
    google-build-using-namespace
@@ -93,7 +94,7 @@ Clang-Tidy Checks
    hicpp-function-size (redirects to readability-function-size) <hicpp-function-size>
    hicpp-invalid-access-moved (redirects to bugprone-use-after-move) <hicpp-invalid-access-moved>
    hicpp-member-init (redirects to cppcoreguidelines-pro-type-member-init) <hicpp-member-init>
-   hicpp-move-const-arg (redirects to misc-move-const-arg) <hicpp-move-const-arg>
+   hicpp-move-const-arg (redirects to performance-move-const-arg) <hicpp-move-const-arg>
    hicpp-named-parameter (redirects to readability-named-parameter) <hicpp-named-parameter>
    hicpp-new-delete-operators (redirects to misc-new-delete-overloads) <hicpp-new-delete-operators>
    hicpp-no-array-decay (redirects to cppcoreguidelines-pro-bounds-array-to-pointer-decay) <hicpp-no-array-decay>
@@ -119,16 +120,12 @@ Clang-Tidy Checks
    misc-definitions-in-headers
    misc-forwarding-reference-overload
    misc-incorrect-roundings
-   misc-inefficient-algorithm
    misc-lambda-function-name
    misc-macro-parentheses
    misc-macro-repeated-side-effects
    misc-misplaced-const
    misc-misplaced-widening-cast
-   misc-move-const-arg
-   misc-move-constructor-init
    misc-new-delete-overloads
-   misc-noexcept-move-constructor
    misc-non-copyable-objects
    misc-redundant-expression
    misc-sizeof-container
@@ -176,13 +173,18 @@ Clang-Tidy Checks
    modernize-use-using
    mpi-buffer-deref
    mpi-type-mismatch
+   objc-avoid-spinlock
    objc-forbidden-subclassing
    objc-property-declaration
    performance-faster-string-find
    performance-for-range-copy
    performance-implicit-conversion-in-loop
+   performance-inefficient-algorithm
    performance-inefficient-string-concatenation
    performance-inefficient-vector-operation
+   performance-move-const-arg
+   performance-move-constructor-init
+   performance-noexcept-move-constructor
    performance-type-promotion-in-math-fn
    performance-unnecessary-copy-initialization
    performance-unnecessary-value-param

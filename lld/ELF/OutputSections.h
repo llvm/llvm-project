@@ -136,20 +136,6 @@ struct Out {
 
 namespace lld {
 namespace elf {
-// This class knows how to create an output section for a given
-// input section. Output section type is determined by various
-// factors, including input section's sh_flags, sh_type and
-// linker scripts.
-class OutputSectionFactory {
-public:
-  OutputSectionFactory();
-  ~OutputSectionFactory();
-
-  OutputSection *addInputSec(InputSectionBase *IS, StringRef OutsecName);
-
-private:
-  llvm::StringMap<OutputSection *> Map;
-};
 
 uint64_t getHeaderSize();
 void sortByOrder(llvm::MutableArrayRef<InputSection *> In,

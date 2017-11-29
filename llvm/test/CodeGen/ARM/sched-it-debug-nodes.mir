@@ -32,9 +32,9 @@
   ; debug value as KILL'ed, resulting in a DEBUG_VALUE node changing codegen!  (or
   ; hopefully, triggering an assert).
 
-  ; CHECK: BUNDLE %ITSTATE<imp-def,dead>
-  ; CHECK:  * DBG_VALUE %R1, %noreg, !"u"
-  ; CHECK-NOT:  * DBG_VALUE %R1<kill>, %noreg, !"u"
+  ; CHECK: BUNDLE %itstate<imp-def,dead>
+  ; CHECK:  * DBG_VALUE %r1, %noreg, !"u"
+  ; CHECK-NOT:  * DBG_VALUE %r1<kill>, %noreg, !"u"
 
   declare arm_aapcscc void @g(%struct.s*, i8*, i32) #1
 

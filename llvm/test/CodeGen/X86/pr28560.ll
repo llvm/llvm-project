@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=i686-pc-linux -print-after=postrapseudos < %s 2>&1 | FileCheck %s
 
-; CHECK: MOV8rr %{{[A-D]}}L, %E[[R:[A-D]]]X<imp-use,kill>, %E[[R]]X<imp-def>
+; CHECK: MOV8rr %{{[a-d]}}l, %e[[R:[a-d]]]x<imp-use,kill>, %e[[R]]x<imp-def>
 define i32 @foo(i32 %i, i32 %k, i8* %p) {
   %f = icmp ne i32 %i, %k
   %s = zext i1 %f to i8

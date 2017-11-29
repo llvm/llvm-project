@@ -29,7 +29,7 @@
 #include "lldb/Utility/Status.h"
 
 #include "Plugins/ObjectFile/ELF/ELFHeader.h"
-#include "Plugins/Process/elf-core/elf-core-enums.h"
+#include "Plugins/Process/elf-core/RegisterUtilities.h"
 
 struct ThreadData;
 

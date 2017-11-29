@@ -27,7 +27,7 @@ void ArgDescriptor::print(raw_ostream &OS,
   }
 
   if (isRegister())
-    OS << "Reg " << PrintReg(getRegister(), TRI) << '\n';
+    OS << "Reg " << printReg(getRegister(), TRI) << '\n';
   else
     OS << "Stack offset " << getStackOffset() << '\n';
 }

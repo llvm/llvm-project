@@ -21,16 +21,16 @@
 # CHECK:   DW_AT_name        ("foo.c")
 # CHECK:   DW_AT_stmt_list   (0x00000000)
 # CHECK:   DW_AT_low_pc      (0x0000000000000000)
-# CHECK:   DW_AT_high_pc     (0x00000016)
+# CHECK:   DW_AT_high_pc     (0x0000000000000016)
 
 # CHECK: DW_TAG_subprogram
 # CHECK:     DW_AT_low_pc    (0x0000000000000000)
-# CHECK:     DW_AT_high_pc   (0x00000016)
+# CHECK:     DW_AT_high_pc   (0x0000000000000016)
 # CHECK:     DW_AT_name      ("foo")
 
 # LEX: DW_TAG_lexical_block
 # LEX:       DW_AT_low_pc  (0x0000000000000004)
-# LEX:       DW_AT_high_pc (0x00000010)
+# LEX:       DW_AT_high_pc (0x0000000000000014)
 
 # A: Line info: file 'foo.c', line 3, column 9, start line 1
 # B: Line info: file 'foo.c', line 4, column 6, start line 1

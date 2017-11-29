@@ -302,7 +302,7 @@ void MachineBasicBlock::print(raw_ostream &OS, ModuleSlotTracker &MST,
     if (Indexes) OS << '\t';
     OS << "    Live Ins:";
     for (const auto &LI : LiveIns) {
-      OS << ' ' << PrintReg(LI.PhysReg, TRI);
+      OS << ' ' << printReg(LI.PhysReg, TRI);
       if (!LI.LaneMask.all())
         OS << ':' << PrintLaneMask(LI.LaneMask);
     }

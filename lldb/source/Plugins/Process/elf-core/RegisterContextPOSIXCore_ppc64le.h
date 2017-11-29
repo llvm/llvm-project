@@ -10,20 +10,17 @@
 #ifndef liblldb_RegisterContextCorePOSIX_ppc64le_h_
 #define liblldb_RegisterContextCorePOSIX_ppc64le_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "Plugins/Process/Utility/RegisterContextPOSIX_ppc64le.h"
+#include "Plugins/Process/elf-core/RegisterUtilities.h"
 #include "lldb/Utility/DataExtractor.h"
-#include "llvm/ADT/DenseMap.h"
 
 class RegisterContextCorePOSIX_ppc64le : public RegisterContextPOSIX_ppc64le {
 public:
   RegisterContextCorePOSIX_ppc64le(
       lldb_private::Thread &thread,
       lldb_private::RegisterInfoInterface *register_info,
-      const llvm::DenseMap<uint32_t, lldb_private::DataExtractor> &regsets);
+      const lldb_private::DataExtractor &gpregset,
+      llvm::ArrayRef<lldb_private::CoreNote> notes);
 
   bool ReadRegister(const lldb_private::RegisterInfo *reg_info,
                     lldb_private::RegisterValue &value) override;

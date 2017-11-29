@@ -126,7 +126,7 @@ void LivePhysRegs::print(raw_ostream &OS) const {
   }
 
   for (const_iterator I = begin(), E = end(); I != E; ++I)
-    OS << " " << PrintReg(*I, TRI);
+    OS << " " << printReg(*I, TRI);
   OS << "\n";
 }
 

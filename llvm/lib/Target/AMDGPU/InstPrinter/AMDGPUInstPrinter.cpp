@@ -72,9 +72,9 @@ void AMDGPUInstPrinter::printU16ImmDecOperand(const MCInst *MI, unsigned OpNo,
   O << formatDec(MI->getOperand(OpNo).getImm() & 0xffff);
 }
 
-void AMDGPUInstPrinter::printS16ImmDecOperand(const MCInst *MI, unsigned OpNo,
+void AMDGPUInstPrinter::printS13ImmDecOperand(const MCInst *MI, unsigned OpNo,
                                               raw_ostream &O) {
-  O << formatDec(static_cast<int16_t>(MI->getOperand(OpNo).getImm()));
+  O << formatDec(SignExtend32<13>(MI->getOperand(OpNo).getImm()));
 }
 
 void AMDGPUInstPrinter::printU32ImmOperand(const MCInst *MI, unsigned OpNo,
@@ -129,7 +129,7 @@ void AMDGPUInstPrinter::printOffsetS13(const MCInst *MI, unsigned OpNo,
   uint16_t Imm = MI->getOperand(OpNo).getImm();
   if (Imm != 0) {
     O << ((OpNo == 0)? "offset:" : " offset:");
-    printS16ImmDecOperand(MI, OpNo, O);
+    printS13ImmDecOperand(MI, OpNo, O);
   }
 }
 

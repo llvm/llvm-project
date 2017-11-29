@@ -482,7 +482,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   if (DPRCSSize > 0) {
     // Since vpush register list cannot have gaps, there may be multiple vpush
     // instructions in the prologue.
-    while (MBBI->getOpcode() == ARM::VSTMDDB_UPD) {
+    while (MBBI != MBB.end() && MBBI->getOpcode() == ARM::VSTMDDB_UPD) {
       DefCFAOffsetCandidates.addInst(MBBI, sizeOfSPAdjustment(*MBBI));
       LastPush = MBBI++;
     }
@@ -1797,7 +1797,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
       for (unsigned Reg : {ARM::R0, ARM::R1, ARM::R2, ARM::R3}) {
         if (!MF.getRegInfo().isLiveIn(Reg)) {
           --EntryRegDeficit;
-          DEBUG(dbgs() << PrintReg(Reg, TRI)
+          DEBUG(dbgs() << printReg(Reg, TRI)
                        << " is unused argument register, EntryRegDeficit = "
                        << EntryRegDeficit << "\n");
         }
@@ -1817,13 +1817,13 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
       for (unsigned Reg : {ARM::R4, ARM::R5, ARM::R6}) {
         if (SavedRegs.test(Reg)) {
           --RegDeficit;
-          DEBUG(dbgs() << PrintReg(Reg, TRI)
+          DEBUG(dbgs() << printReg(Reg, TRI)
                        << " is saved low register, RegDeficit = " << RegDeficit
                        << "\n");
         } else {
           AvailableRegs.push_back(Reg);
           DEBUG(dbgs()
-                << PrintReg(Reg, TRI)
+                << printReg(Reg, TRI)
                 << " is non-saved low register, adding to AvailableRegs\n");
         }
       }
@@ -1832,12 +1832,12 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
       if (!HasFP) {
         if (SavedRegs.test(ARM::R7)) {
           --RegDeficit;
-          DEBUG(dbgs() << "%R7 is saved low register, RegDeficit = "
+          DEBUG(dbgs() << "%r7 is saved low register, RegDeficit = "
                        << RegDeficit << "\n");
         } else {
           AvailableRegs.push_back(ARM::R7);
           DEBUG(dbgs()
-                << "%R7 is non-saved low register, adding to AvailableRegs\n");
+                << "%r7 is non-saved low register, adding to AvailableRegs\n");
         }
       }
 
@@ -1845,7 +1845,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
       for (unsigned Reg : {ARM::R8, ARM::R9, ARM::R10, ARM::R11}) {
         if (SavedRegs.test(Reg)) {
           ++RegDeficit;
-          DEBUG(dbgs() << PrintReg(Reg, TRI)
+          DEBUG(dbgs() << printReg(Reg, TRI)
                        << " is saved high register, RegDeficit = " << RegDeficit
                        << "\n");
         }
@@ -1859,11 +1859,11 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
             MF.getFrameInfo().isReturnAddressTaken())) {
         if (SavedRegs.test(ARM::LR)) {
           --RegDeficit;
-          DEBUG(dbgs() << "%LR is saved register, RegDeficit = " << RegDeficit
+          DEBUG(dbgs() << "%lr is saved register, RegDeficit = " << RegDeficit
                        << "\n");
         } else {
           AvailableRegs.push_back(ARM::LR);
-          DEBUG(dbgs() << "%LR is not saved, adding to AvailableRegs\n");
+          DEBUG(dbgs() << "%lr is not saved, adding to AvailableRegs\n");
         }
       }
 
@@ -1875,7 +1875,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
       DEBUG(dbgs() << "Final RegDeficit = " << RegDeficit << "\n");
       for (; RegDeficit > 0 && !AvailableRegs.empty(); --RegDeficit) {
         unsigned Reg = AvailableRegs.pop_back_val();
-        DEBUG(dbgs() << "Spilling " << PrintReg(Reg, TRI)
+        DEBUG(dbgs() << "Spilling " << printReg(Reg, TRI)
                      << " to make up reg deficit\n");
         SavedRegs.set(Reg);
         NumGPRSpills++;
@@ -1920,7 +1920,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
               (STI.isTargetWindows() && Reg == ARM::R11) ||
               isARMLowRegister(Reg) || Reg == ARM::LR) {
             SavedRegs.set(Reg);
-            DEBUG(dbgs() << "Spilling " << PrintReg(Reg, TRI)
+            DEBUG(dbgs() << "Spilling " << printReg(Reg, TRI)
                          << " to make up alignment\n");
             if (!MRI.isReserved(Reg) && !MRI.isPhysRegUsed(Reg))
               ExtraCSSpill = true;
@@ -1930,7 +1930,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
       } else if (!UnspilledCS2GPRs.empty() && !AFI->isThumb1OnlyFunction()) {
         unsigned Reg = UnspilledCS2GPRs.front();
         SavedRegs.set(Reg);
-        DEBUG(dbgs() << "Spilling " << PrintReg(Reg, TRI)
+        DEBUG(dbgs() << "Spilling " << printReg(Reg, TRI)
                      << " to make up alignment\n");
         if (!MRI.isReserved(Reg) && !MRI.isPhysRegUsed(Reg))
           ExtraCSSpill = true;

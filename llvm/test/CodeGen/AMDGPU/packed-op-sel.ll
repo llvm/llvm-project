@@ -233,7 +233,7 @@ bb:
 ; GCN: ds_read_b32 [[VEC0:v[0-9]+]]
 ; GCN: ds_read_b32 [[VEC1:v[0-9]+]]
 ; GCN: ds_read_u16 [[PACKED:v[0-9]+]]
-; GCN-NEXT: s_waitcnt
+; GCN: s_waitcnt
 ; GCN: ds_read_u16_d16_hi [[PACKED]]
 
 ; GCN: v_pk_fma_f16 v{{[0-9]+}}, [[VEC0]], [[VEC1]], [[PACKED]] neg_lo:[0,0,1] neg_hi:[0,0,1]{{$}}

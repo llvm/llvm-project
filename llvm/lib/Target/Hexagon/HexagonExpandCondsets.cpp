@@ -1137,8 +1137,8 @@ bool HexagonExpandCondsets::coalesceRegisters(RegisterRef R1, RegisterRef R2) {
 
   DEBUG(dbgs() << "compatible registers: ("
                << (Overlap ? "overlap" : "disjoint") << ")\n  "
-               << PrintReg(R1.Reg, TRI, R1.Sub) << "  " << L1 << "\n  "
-               << PrintReg(R2.Reg, TRI, R2.Sub) << "  " << L2 << "\n");
+               << printReg(R1.Reg, TRI, R1.Sub) << "  " << L1 << "\n  "
+               << printReg(R2.Reg, TRI, R2.Sub) << "  " << L2 << "\n");
   if (R1.Sub || R2.Sub)
     return false;
   if (Overlap)

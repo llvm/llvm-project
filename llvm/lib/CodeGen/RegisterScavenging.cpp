@@ -598,10 +598,10 @@ unsigned RegScavenger::scavengeRegisterBackwards(const TargetRegisterClass &RC,
     ScavengedInfo &Scavenged = spill(Reg, RC, SPAdj, SpillBefore, ReloadBefore);
     Scavenged.Restore = &*std::prev(SpillBefore);
     LiveUnits.removeReg(Reg);
-    DEBUG(dbgs() << "Scavenged register with spill: " << PrintReg(Reg, TRI)
+    DEBUG(dbgs() << "Scavenged register with spill: " << printReg(Reg, TRI)
           << " until " << *SpillBefore);
   } else {
-    DEBUG(dbgs() << "Scavenged free register: " << PrintReg(Reg, TRI) << '\n');
+    DEBUG(dbgs() << "Scavenged free register: " << printReg(Reg, TRI) << '\n');
   }
   return Reg;
 }

@@ -48,6 +48,9 @@ class WebAssemblyTargetLowering final : public TargetLowering {
                            const TargetLibraryInfo *LibInfo) const override;
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
   MVT getScalarShiftAmountTy(const DataLayout &DL, EVT) const override;
+  MachineBasicBlock *
+  EmitInstrWithCustomInserter(MachineInstr &MI,
+                              MachineBasicBlock *MBB) const override;
   const char *getTargetNodeName(unsigned Opcode) const override;
   std::pair<unsigned, const TargetRegisterClass *> getRegForInlineAsmConstraint(
       const TargetRegisterInfo *TRI, StringRef Constraint,

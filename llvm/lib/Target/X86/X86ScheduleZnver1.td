@@ -175,6 +175,7 @@ defm : ZnWriteResFpuPair<WriteCvtF2I,    ZnFPU3,  5>;
 defm : ZnWriteResFpuPair<WriteFDiv,      ZnFPU3, 15>;
 defm : ZnWriteResFpuPair<WriteFShuffle,  ZnFPU12, 1>;
 defm : ZnWriteResFpuPair<WriteFMul,      ZnFPU0,  5>;
+defm : ZnWriteResFpuPair<WriteFMA,       ZnFPU03, 5>;
 defm : ZnWriteResFpuPair<WriteFRcp,      ZnFPU01, 5>;
 defm : ZnWriteResFpuPair<WriteFRsqrt,    ZnFPU01, 5>;
 defm : ZnWriteResFpuPair<WriteFSqrt,     ZnFPU3, 20>;

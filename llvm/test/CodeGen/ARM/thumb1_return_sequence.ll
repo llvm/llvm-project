@@ -25,7 +25,7 @@ entry:
 ; --------
 ; Stack realignment means sp is restored from frame pointer
 ; CHECK-V4T:         mov sp
-; CHECK-V4T-NEXT:    ldr [[POP:r[4567]]], [sp, #{{.*}}]
+; CHECK-V4T-NEXT:    ldr [[POP:r[4567]]], [sp, #16]
 ; CHECK-V4T-NEXT:    mov lr, [[POP]]
 ; CHECK-V4T-NEXT:    pop {[[SAVED]]}
 ; CHECK-V4T-NEXT     add sp, sp, #4
@@ -57,14 +57,14 @@ entry:
 
 ; Epilogue
 ; --------
-; CHECK-V4T:         ldr [[POP:r[4567]]], [sp, #{{.*}}]
+; CHECK-V4T:         ldr [[POP:r[4567]]], [sp, #12]
 ; CHECK-V4T-NEXT:    mov lr, [[POP]]
 ; CHECK-V4T-NEXT:    pop {[[SAVED]]}
 ; CHECK-V4T-NEXT:    add sp, #16
 ; CHECK-V4T-NEXT:    bx  lr
 ; CHECK-V5T:         lsls r4
 ; CHECK-V5T-NEXT:    mov sp, r4
-; CHECK-V5T:         ldr [[POP:r[4567]]], [sp, #{{.*}}]
+; CHECK-V5T:         ldr [[POP:r[4567]]], [sp, #12]
 ; CHECK-V5T-NEXT:    mov lr, [[POP]]
 ; CHECK-V5T-NEXT:    pop {[[SAVED]]}
 ; CHECK-V5T-NEXT:    add sp, #16

@@ -187,7 +187,7 @@ void PassByValueCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   // If the parameter is trivial to copy, don't move it. Moving a trivivally
-  // copyable type will cause a problem with misc-move-const-arg
+  // copyable type will cause a problem with performance-move-const-arg
   if (ParamDecl->getType().getNonReferenceType().isTriviallyCopyableType(
           *Result.Context))
     return;

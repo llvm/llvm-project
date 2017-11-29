@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals -mattr=+nontrapping-fptoint | FileCheck %s
 
 ; Test that basic conversion operations assemble as expected.
 
@@ -38,7 +38,7 @@ define i64 @i64_extend_u_i32(i32 %x) {
 ; CHECK-LABEL: i32_trunc_s_f32:
 ; CHECK-NEXT: .param f32{{$}}
 ; CHECK-NEXT: .result i32{{$}}
-; CHECK-NEXT: i32.trunc_s/f32 $push[[NUM:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: i32.trunc_s:sat/f32 $push[[NUM:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i32 @i32_trunc_s_f32(float %x) {
   %a = fptosi float %x to i32
@@ -48,7 +48,7 @@ define i32 @i32_trunc_s_f32(float %x) {
 ; CHECK-LABEL: i32_trunc_u_f32:
 ; CHECK-NEXT: .param f32{{$}}
 ; CHECK-NEXT: .result i32{{$}}
-; CHECK-NEXT: i32.trunc_u/f32 $push[[NUM:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: i32.trunc_u:sat/f32 $push[[NUM:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i32 @i32_trunc_u_f32(float %x) {
   %a = fptoui float %x to i32
@@ -58,7 +58,7 @@ define i32 @i32_trunc_u_f32(float %x) {
 ; CHECK-LABEL: i32_trunc_s_f64:
 ; CHECK-NEXT: .param f64{{$}}
 ; CHECK-NEXT: .result i32{{$}}
-; CHECK-NEXT: i32.trunc_s/f64 $push[[NUM:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: i32.trunc_s:sat/f64 $push[[NUM:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i32 @i32_trunc_s_f64(double %x) {
   %a = fptosi double %x to i32
@@ -68,7 +68,7 @@ define i32 @i32_trunc_s_f64(double %x) {
 ; CHECK-LABEL: i32_trunc_u_f64:
 ; CHECK-NEXT: .param f64{{$}}
 ; CHECK-NEXT: .result i32{{$}}
-; CHECK-NEXT: i32.trunc_u/f64 $push[[NUM:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: i32.trunc_u:sat/f64 $push[[NUM:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i32 @i32_trunc_u_f64(double %x) {
   %a = fptoui double %x to i32
@@ -78,7 +78,7 @@ define i32 @i32_trunc_u_f64(double %x) {
 ; CHECK-LABEL: i64_trunc_s_f32:
 ; CHECK-NEXT: .param f32{{$}}
 ; CHECK-NEXT: .result i64{{$}}
-; CHECK-NEXT: i64.trunc_s/f32 $push[[NUM:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: i64.trunc_s:sat/f32 $push[[NUM:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i64 @i64_trunc_s_f32(float %x) {
   %a = fptosi float %x to i64
@@ -88,7 +88,7 @@ define i64 @i64_trunc_s_f32(float %x) {
 ; CHECK-LABEL: i64_trunc_u_f32:
 ; CHECK-NEXT: .param f32{{$}}
 ; CHECK-NEXT: .result i64{{$}}
-; CHECK-NEXT: i64.trunc_u/f32 $push[[NUM:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: i64.trunc_u:sat/f32 $push[[NUM:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i64 @i64_trunc_u_f32(float %x) {
   %a = fptoui float %x to i64
@@ -98,7 +98,7 @@ define i64 @i64_trunc_u_f32(float %x) {
 ; CHECK-LABEL: i64_trunc_s_f64:
 ; CHECK-NEXT: .param f64{{$}}
 ; CHECK-NEXT: .result i64{{$}}
-; CHECK-NEXT: i64.trunc_s/f64 $push[[NUM:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: i64.trunc_s:sat/f64 $push[[NUM:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i64 @i64_trunc_s_f64(double %x) {
   %a = fptosi double %x to i64
@@ -108,7 +108,7 @@ define i64 @i64_trunc_s_f64(double %x) {
 ; CHECK-LABEL: i64_trunc_u_f64:
 ; CHECK-NEXT: .param f64{{$}}
 ; CHECK-NEXT: .result i64{{$}}
-; CHECK-NEXT: i64.trunc_u/f64 $push[[NUM:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: i64.trunc_u:sat/f64 $push[[NUM:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i64 @i64_trunc_u_f64(double %x) {
   %a = fptoui double %x to i64

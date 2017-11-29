@@ -1,4 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs -mattr=+load-store-opt < %s | FileCheck -strict-whitespace -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs -mattr=+load-store-opt < %s | FileCheck -strict-whitespace -check-prefixes=GCN,CI %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -mattr=+load-store-opt < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX9 %s
 
 ; FIXME: We don't get cases where the address was an SGPR because we
 ; get a copy to the address register for each one.
@@ -6,12 +7,16 @@
 @lds = addrspace(3) global [512 x float] undef, align 4
 @lds.f64 = addrspace(3) global [512 x double] undef, align 8
 
-; SI-LABEL: @simple_read2_f32
-; SI: ds_read2_b32 v{{\[}}[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]{{\]}}, v{{[0-9]+}} offset1:8
-; SI: s_waitcnt lgkmcnt(0)
-; SI: v_add_f32_e32 [[RESULT:v[0-9]+]], v[[LO_VREG]], v[[HI_VREG]]
-; SI: buffer_store_dword [[RESULT]]
-; SI: s_endpgm
+; GCN-LABEL: {{^}}simple_read2_f32:
+; CI-DAG: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN: ds_read2_b32 v{{\[}}[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]{{\]}}, v{{[0-9]+}} offset1:8
+; GCN: s_waitcnt lgkmcnt(0)
+; GCN: v_add_f32_e32 [[RESULT:v[0-9]+]], v[[LO_VREG]], v[[HI_VREG]]
+; CI: buffer_store_dword [[RESULT]]
+; GFX9: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; GCN: s_endpgm
 define amdgpu_kernel void @simple_read2_f32(float addrspace(1)* %out) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %x.i
@@ -25,12 +30,16 @@ define amdgpu_kernel void @simple_read2_f32(float addrspace(1)* %out) #0 {
   ret void
 }
 
-; SI-LABEL: @simple_read2_f32_max_offset
-; SI: ds_read2_b32 v{{\[}}[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]{{\]}}, v{{[0-9]+}} offset1:255
-; SI: s_waitcnt lgkmcnt(0)
-; SI: v_add_f32_e32 [[RESULT:v[0-9]+]], v[[LO_VREG]], v[[HI_VREG]]
-; SI: buffer_store_dword [[RESULT]]
-; SI: s_endpgm
+; GCN-LABEL: {{^}}simple_read2_f32_max_offset:
+; CI-DAG: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN: ds_read2_b32 v{{\[}}[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]{{\]}}, v{{[0-9]+}} offset1:255
+; GCN: s_waitcnt lgkmcnt(0)
+; GCN: v_add_f32_e32 [[RESULT:v[0-9]+]], v[[LO_VREG]], v[[HI_VREG]]
+
+; CI: buffer_store_dword [[RESULT]]
+; GFX9: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @simple_read2_f32_max_offset(float addrspace(1)* %out) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %x.i
@@ -44,11 +53,14 @@ define amdgpu_kernel void @simple_read2_f32_max_offset(float addrspace(1)* %out)
   ret void
 }
 
-; SI-LABEL: @simple_read2_f32_too_far
-; SI-NOT ds_read2_b32
-; SI: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}}
-; SI: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:1028
-; SI: s_endpgm
+; GCN-LABEL: @simple_read2_f32_too_far
+; CI-DAG: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN-NOT ds_read2_b32
+; GCN: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}}
+; GCN: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:1028
+; GCN: s_endpgm
 define amdgpu_kernel void @simple_read2_f32_too_far(float addrspace(1)* %out) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %x.i
@@ -62,10 +74,13 @@ define amdgpu_kernel void @simple_read2_f32_too_far(float addrspace(1)* %out) #0
   ret void
 }
 
-; SI-LABEL: @simple_read2_f32_x2
-; SI: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[BASEADDR:v[0-9]+]] offset1:8
-; SI: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[BASEADDR]] offset0:11 offset1:27
-; SI: s_endpgm
+; GCN-LABEL: @simple_read2_f32_x2
+; CI-DAG: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[BASEADDR:v[0-9]+]] offset1:8
+; GCN: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[BASEADDR]] offset0:11 offset1:27
+; GCN: s_endpgm
 define amdgpu_kernel void @simple_read2_f32_x2(float addrspace(1)* %out) #0 {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %idx.0 = add nsw i32 %tid.x, 0
@@ -93,11 +108,14 @@ define amdgpu_kernel void @simple_read2_f32_x2(float addrspace(1)* %out) #0 {
 }
 
 ; Make sure there is an instruction between the two sets of reads.
-; SI-LABEL: @simple_read2_f32_x2_barrier
-; SI: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[BASEADDR:v[0-9]+]] offset1:8
-; SI: s_barrier
-; SI: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[BASEADDR]] offset0:11 offset1:27
-; SI: s_endpgm
+; GCN-LABEL: @simple_read2_f32_x2_barrier
+; CI-DAG: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[BASEADDR:v[0-9]+]] offset1:8
+; GCN: s_barrier
+; GCN: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[BASEADDR]] offset0:11 offset1:27
+; GCN: s_endpgm
 define amdgpu_kernel void @simple_read2_f32_x2_barrier(float addrspace(1)* %out) #0 {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %idx.0 = add nsw i32 %tid.x, 0
@@ -129,10 +147,13 @@ define amdgpu_kernel void @simple_read2_f32_x2_barrier(float addrspace(1)* %out)
 ; For some reason adding something to the base address for the first
 ; element results in only folding the inner pair.
 
-; SI-LABEL: @simple_read2_f32_x2_nonzero_base
-; SI: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[BASEADDR:v[0-9]+]] offset0:2 offset1:8
-; SI: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[BASEADDR]] offset0:11 offset1:27
-; SI: s_endpgm
+; GCN-LABEL: @simple_read2_f32_x2_nonzero_base
+; CI-DAG: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[BASEADDR:v[0-9]+]] offset0:2 offset1:8
+; GCN: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[BASEADDR]] offset0:11 offset1:27
+; GCN: s_endpgm
 define amdgpu_kernel void @simple_read2_f32_x2_nonzero_base(float addrspace(1)* %out) #0 {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %idx.0 = add nsw i32 %tid.x, 2
@@ -165,11 +186,14 @@ define amdgpu_kernel void @simple_read2_f32_x2_nonzero_base(float addrspace(1)* 
 ; Base pointers come from different subregister of same super
 ; register. We can't safely merge this.
 
-; SI-LABEL: @read2_ptr_is_subreg_arg_f32
-; SI-NOT: ds_read2_b32
-; SI: ds_read_b32
-; SI: ds_read_b32
-; SI: s_endpgm
+; GCN-LABEL: @read2_ptr_is_subreg_arg_f32
+; CI-DAG: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN-NOT: ds_read2_b32
+; GCN: ds_read_b32
+; GCN: ds_read_b32
+; GCN: s_endpgm
 define amdgpu_kernel void @read2_ptr_is_subreg_arg_f32(float addrspace(1)* %out, <2 x float addrspace(3)*> %lds.ptr) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %index.0 = insertelement <2 x i32> undef, i32 %x.i, i32 0
@@ -191,11 +215,14 @@ define amdgpu_kernel void @read2_ptr_is_subreg_arg_f32(float addrspace(1)* %out,
 ; sure we are really rejecting it because of the different
 ; subregisters.
 
-; SI-LABEL: @read2_ptr_is_subreg_arg_offset_f32
-; SI-NOT: ds_read2_b32
-; SI: ds_read_b32
-; SI: ds_read_b32
-; SI: s_endpgm
+; GCN-LABEL: @read2_ptr_is_subreg_arg_offset_f32
+; CI-DAG: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN-NOT: ds_read2_b32
+; GCN: ds_read_b32
+; GCN: ds_read_b32
+; GCN: s_endpgm
 define amdgpu_kernel void @read2_ptr_is_subreg_arg_offset_f32(float addrspace(1)* %out, <2 x float addrspace(3)*> %lds.ptr) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %index.0 = insertelement <2 x i32> undef, i32 %x.i, i32 0
@@ -216,9 +243,12 @@ define amdgpu_kernel void @read2_ptr_is_subreg_arg_offset_f32(float addrspace(1)
   ret void
 }
 
-; SI-LABEL: {{^}}read2_ptr_is_subreg_f32:
-; SI: ds_read2_b32 {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}} offset1:8{{$}}
-; SI: s_endpgm
+; GCN-LABEL: {{^}}read2_ptr_is_subreg_f32:
+; CI-DAG: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN: ds_read2_b32 {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}} offset1:8{{$}}
+; GCN: s_endpgm
 define amdgpu_kernel void @read2_ptr_is_subreg_f32(float addrspace(1)* %out) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %ptr.0 = insertelement <2 x [512 x float] addrspace(3)*> undef, [512 x float] addrspace(3)* @lds, i32 0
@@ -238,11 +268,14 @@ define amdgpu_kernel void @read2_ptr_is_subreg_f32(float addrspace(1)* %out) #0 
   ret void
 }
 
-; SI-LABEL: @simple_read2_f32_volatile_0
-; SI-NOT ds_read2_b32
-; SI: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}}
-; SI: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:32
-; SI: s_endpgm
+; GCN-LABEL: @simple_read2_f32_volatile_0
+; CI-DAG: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN-NOT ds_read2_b32
+; GCN: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}}
+; GCN: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:32
+; GCN: s_endpgm
 define amdgpu_kernel void @simple_read2_f32_volatile_0(float addrspace(1)* %out) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %x.i
@@ -256,11 +289,14 @@ define amdgpu_kernel void @simple_read2_f32_volatile_0(float addrspace(1)* %out)
   ret void
 }
 
-; SI-LABEL: @simple_read2_f32_volatile_1
-; SI-NOT ds_read2_b32
-; SI: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}}
-; SI: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:32
-; SI: s_endpgm
+; GCN-LABEL: @simple_read2_f32_volatile_1
+; CI-DAG: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN-NOT ds_read2_b32
+; GCN: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}}
+; GCN: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:32
+; GCN: s_endpgm
 define amdgpu_kernel void @simple_read2_f32_volatile_1(float addrspace(1)* %out) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %x.i
@@ -277,9 +313,12 @@ define amdgpu_kernel void @simple_read2_f32_volatile_1(float addrspace(1)* %out)
 ; Can't fold since not correctly aligned.
 ; XXX: This isn't really testing anything useful now. I think CI
 ; allows unaligned LDS accesses, which would be a problem here.
-; SI-LABEL: @unaligned_read2_f32
-; SI-NOT: ds_read2_b32
-; SI: s_endpgm
+; GCN-LABEL: @unaligned_read2_f32
+; CI-DAG: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN-NOT: ds_read2_b32
+; GCN: s_endpgm
 define amdgpu_kernel void @unaligned_read2_f32(float addrspace(1)* %out, float addrspace(3)* %lds) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds float, float addrspace(3)* %lds, i32 %x.i
@@ -293,9 +332,12 @@ define amdgpu_kernel void @unaligned_read2_f32(float addrspace(1)* %out, float a
   ret void
 }
 
-; SI-LABEL: @misaligned_2_simple_read2_f32
-; SI-NOT: ds_read2_b32
-; SI: s_endpgm
+; GCN-LABEL: @misaligned_2_simple_read2_f32
+; CI-DAG: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN-NOT: ds_read2_b32
+; GCN: s_endpgm
 define amdgpu_kernel void @misaligned_2_simple_read2_f32(float addrspace(1)* %out, float addrspace(3)* %lds) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds float, float addrspace(3)* %lds, i32 %x.i
@@ -309,12 +351,16 @@ define amdgpu_kernel void @misaligned_2_simple_read2_f32(float addrspace(1)* %ou
   ret void
 }
 
-; SI-LABEL: @simple_read2_f64
-; SI: v_lshlrev_b32_e32 [[VPTR:v[0-9]+]], 3, {{v[0-9]+}}
-; SI: ds_read2_b64 v{{\[}}[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]{{\]}}, [[VPTR]] offset1:8
-; SI: v_add_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], v{{\[}}[[LO_VREG]]:{{[0-9]+\]}}, v{{\[[0-9]+}}:[[HI_VREG]]{{\]}}
-; SI: buffer_store_dwordx2 [[RESULT]]
-; SI: s_endpgm
+; GCN-LABEL: @simple_read2_f64
+; CI-DAG: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN-DAG: v_lshlrev_b32_e32 [[VPTR:v[0-9]+]], 3, {{v[0-9]+}}
+; GCN: ds_read2_b64 v{{\[}}[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]{{\]}}, [[VPTR]] offset1:8
+; GCN: v_add_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], v{{\[}}[[LO_VREG]]:{{[0-9]+\]}}, v{{\[[0-9]+}}:[[HI_VREG]]{{\]}}
+
+; CI: buffer_store_dwordx2 [[RESULT]]
+; GFX9: global_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @simple_read2_f64(double addrspace(1)* %out) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x double], [512 x double] addrspace(3)* @lds.f64, i32 0, i32 %x.i
@@ -328,9 +374,12 @@ define amdgpu_kernel void @simple_read2_f64(double addrspace(1)* %out) #0 {
   ret void
 }
 
-; SI-LABEL: @simple_read2_f64_max_offset
-; SI: ds_read2_b64 {{v\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset1:255
-; SI: s_endpgm
+; GCN-LABEL: @simple_read2_f64_max_offset
+; CI-DAG: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN: ds_read2_b64 {{v\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset1:255
+; GCN: s_endpgm
 define amdgpu_kernel void @simple_read2_f64_max_offset(double addrspace(1)* %out) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x double], [512 x double] addrspace(3)* @lds.f64, i32 0, i32 %x.i
@@ -344,11 +393,14 @@ define amdgpu_kernel void @simple_read2_f64_max_offset(double addrspace(1)* %out
   ret void
 }
 
-; SI-LABEL: @simple_read2_f64_too_far
-; SI-NOT ds_read2_b64
-; SI: ds_read_b64 {{v\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}
-; SI: ds_read_b64 {{v\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset:2056
-; SI: s_endpgm
+; GCN-LABEL: @simple_read2_f64_too_far
+; CI-DAG: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN-NOT ds_read2_b64
+; GCN: ds_read_b64 {{v\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}
+; GCN: ds_read_b64 {{v\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset:2056
+; GCN: s_endpgm
 define amdgpu_kernel void @simple_read2_f64_too_far(double addrspace(1)* %out) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x double], [512 x double] addrspace(3)* @lds.f64, i32 0, i32 %x.i
@@ -363,10 +415,13 @@ define amdgpu_kernel void @simple_read2_f64_too_far(double addrspace(1)* %out) #
 }
 
 ; Alignment only 4
-; SI-LABEL: @misaligned_read2_f64
-; SI: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}} offset1:1
-; SI: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}} offset0:14 offset1:15
-; SI: s_endpgm
+; GCN-LABEL: @misaligned_read2_f64
+; CI-DAG: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}} offset1:1
+; GCN: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}} offset0:14 offset1:15
+; GCN: s_endpgm
 define amdgpu_kernel void @misaligned_read2_f64(double addrspace(1)* %out, double addrspace(3)* %lds) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds double, double addrspace(3)* %lds, i32 %x.i
@@ -382,9 +437,12 @@ define amdgpu_kernel void @misaligned_read2_f64(double addrspace(1)* %out, doubl
 
 @foo = addrspace(3) global [4 x i32] undef, align 4
 
-; SI-LABEL: @load_constant_adjacent_offsets
-; SI: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0{{$}}
-; SI: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[ZERO]] offset1:1
+; GCN-LABEL: @load_constant_adjacent_offsets
+; CI-DAG: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN-DAG: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0{{$}}
+; GCN: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[ZERO]] offset1:1
 define amdgpu_kernel void @load_constant_adjacent_offsets(i32 addrspace(1)* %out) {
   %val0 = load i32, i32 addrspace(3)* getelementptr inbounds ([4 x i32], [4 x i32] addrspace(3)* @foo, i32 0, i32 0), align 4
   %val1 = load i32, i32 addrspace(3)* getelementptr inbounds ([4 x i32], [4 x i32] addrspace(3)* @foo, i32 0, i32 1), align 4
@@ -393,9 +451,12 @@ define amdgpu_kernel void @load_constant_adjacent_offsets(i32 addrspace(1)* %out
   ret void
 }
 
-; SI-LABEL: @load_constant_disjoint_offsets
-; SI: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0{{$}}
-; SI: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[ZERO]] offset1:2
+; GCN-LABEL: @load_constant_disjoint_offsets
+; CI-DAG: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN-DAG: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0{{$}}
+; GCN: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[ZERO]] offset1:2
 define amdgpu_kernel void @load_constant_disjoint_offsets(i32 addrspace(1)* %out) {
   %val0 = load i32, i32 addrspace(3)* getelementptr inbounds ([4 x i32], [4 x i32] addrspace(3)* @foo, i32 0, i32 0), align 4
   %val1 = load i32, i32 addrspace(3)* getelementptr inbounds ([4 x i32], [4 x i32] addrspace(3)* @foo, i32 0, i32 2), align 4
@@ -406,10 +467,13 @@ define amdgpu_kernel void @load_constant_disjoint_offsets(i32 addrspace(1)* %out
 
 @bar = addrspace(3) global [4 x i64] undef, align 4
 
-; SI-LABEL: @load_misaligned64_constant_offsets
-; SI: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0{{$}}
-; SI: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[ZERO]] offset1:1
-; SI: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[ZERO]] offset0:2 offset1:3
+; GCN-LABEL: @load_misaligned64_constant_offsets
+; CI-DAG: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN-DAG: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0{{$}}
+; GCN: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[ZERO]] offset1:1
+; GCN: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[ZERO]] offset0:2 offset1:3
 define amdgpu_kernel void @load_misaligned64_constant_offsets(i64 addrspace(1)* %out) {
   %val0 = load i64, i64 addrspace(3)* getelementptr inbounds ([4 x i64], [4 x i64] addrspace(3)* @bar, i32 0, i32 0), align 4
   %val1 = load i64, i64 addrspace(3)* getelementptr inbounds ([4 x i64], [4 x i64] addrspace(3)* @bar, i32 0, i32 1), align 4
@@ -420,12 +484,15 @@ define amdgpu_kernel void @load_misaligned64_constant_offsets(i64 addrspace(1)* 
 
 @bar.large = addrspace(3) global [4096 x i64] undef, align 4
 
-; SI-LABEL: @load_misaligned64_constant_large_offsets
-; SI-DAG: v_mov_b32_e32 [[BASE0:v[0-9]+]], 0x7ff8{{$}}
-; SI-DAG: v_mov_b32_e32 [[BASE1:v[0-9]+]], 0x4000
-; SI-DAG: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[BASE0]] offset1:1
-; SI-DAG: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[BASE1]] offset1:1
-; SI: s_endpgm
+; GCN-LABEL: @load_misaligned64_constant_large_offsets
+; CI-DAG: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN-DAG: v_mov_b32_e32 [[BASE0:v[0-9]+]], 0x7ff8{{$}}
+; GCN-DAG: v_mov_b32_e32 [[BASE1:v[0-9]+]], 0x4000
+; GCN-DAG: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[BASE0]] offset1:1
+; GCN-DAG: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[BASE1]] offset1:1
+; GCN: s_endpgm
 define amdgpu_kernel void @load_misaligned64_constant_large_offsets(i64 addrspace(1)* %out) {
   %val0 = load i64, i64 addrspace(3)* getelementptr inbounds ([4096 x i64], [4096 x i64] addrspace(3)* @bar.large, i32 0, i32 2048), align 4
   %val1 = load i64, i64 addrspace(3)* getelementptr inbounds ([4096 x i64], [4096 x i64] addrspace(3)* @bar.large, i32 0, i32 4095), align 4
@@ -436,6 +503,10 @@ define amdgpu_kernel void @load_misaligned64_constant_large_offsets(i64 addrspac
 
 @sgemm.lA = internal unnamed_addr addrspace(3) global [264 x float] undef, align 4
 @sgemm.lB = internal unnamed_addr addrspace(3) global [776 x float] undef, align 4
+
+; GCN-LABEL: {{^}}sgemm_inner_loop_read2_sequence:
+; CI-DAG: s_mov_b32 m0
+; GFX9-NOT: m0
 
 define amdgpu_kernel void @sgemm_inner_loop_read2_sequence(float addrspace(1)* %C, i32 %lda, i32 %ldb) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workgroup.id.x() #1
@@ -481,20 +552,29 @@ define amdgpu_kernel void @sgemm_inner_loop_read2_sequence(float addrspace(1)* %
   ret void
 }
 
+; GCN-LABEL: {{^}}misaligned_read2_v2i32:
+; CI-DAG: s_mov_b32 m0
+; GFX9-NOT: m0
 define amdgpu_kernel void @misaligned_read2_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(3)* %in) #0 {
   %load = load <2 x i32>, <2 x i32> addrspace(3)* %in, align 4
   store <2 x i32> %load, <2 x i32> addrspace(1)* %out, align 8
   ret void
 }
 
+; GCN-LABEL: {{^}}misaligned_read2_i64:
+; CI-DAG: s_mov_b32 m0
+; GFX9-NOT: m0
 define amdgpu_kernel void @misaligned_read2_i64(i64 addrspace(1)* %out, i64 addrspace(3)* %in) #0 {
   %load = load i64, i64 addrspace(3)* %in, align 4
   store i64 %load, i64 addrspace(1)* %out, align 8
   ret void
 }
 
-; SI-LABEL: ds_read_diff_base_interleaving
-; SI-NOT: ds_read_b32
+; GCN-LABEL: ds_read_diff_base_interleaving
+; CI-DAG: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN-NOT: ds_read_b32
 define amdgpu_kernel void @ds_read_diff_base_interleaving(
   float addrspace(1)* nocapture %arg,
   [4 x [4 x float]] addrspace(3)* %arg1,
@@ -533,19 +613,10 @@ bb:
   ret void
 }
 
-; Function Attrs: nounwind readnone
 declare i32 @llvm.amdgcn.workgroup.id.x() #1
-
-; Function Attrs: nounwind readnone
 declare i32 @llvm.amdgcn.workgroup.id.y() #1
-
-; Function Attrs: nounwind readnone
 declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-; Function Attrs: nounwind readnone
 declare i32 @llvm.amdgcn.workitem.id.y() #1
-
-; Function Attrs: convergent nounwind
 declare void @llvm.amdgcn.s.barrier() #2
 
 attributes #0 = { nounwind }

@@ -22,10 +22,8 @@ define void @f1(fp128 *%x) {
 ; so this goes through memory.
 define void @f2(fp128 *%a, i128 *%b) {
 ; CHECK-LABEL: f2:
-; CHECK: lg
-; CHECK: lg
-; CHECK: stg
-; CHECK: stg
+; CHECK: vl
+; CHECK: vst
 ; CHECK: br %r14
   %val = load i128 , i128 *%b
   %res = bitcast i128 %val to fp128

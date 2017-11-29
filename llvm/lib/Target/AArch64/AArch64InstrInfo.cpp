@@ -2801,11 +2801,11 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
     LiveIntervals *LIS) const {
   // This is a bit of a hack. Consider this instruction:
   //
-  //   %vreg0<def> = COPY %SP; GPR64all:%vreg0
+  //   %vreg0<def> = COPY %sp; GPR64all:%vreg0
   //
   // We explicitly chose GPR64all for the virtual register so such a copy might
   // be eliminated by RegisterCoalescer. However, that may not be possible, and
-  // %vreg0 may even spill. We can't spill %SP, and since it is in the GPR64all
+  // %vreg0 may even spill. We can't spill %sp, and since it is in the GPR64all
   // register class, TargetInstrInfo::foldMemoryOperand() is going to try.
   //
   // To prevent that, we are going to constrain the %vreg0 register class here.
@@ -2830,12 +2830,12 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
   // Handle the case where a copy is being spilled or filled but the source
   // and destination register class don't match.  For example:
   //
-  //   %vreg0<def> = COPY %XZR; GPR64common:%vreg0
+  //   %vreg0<def> = COPY %xzr; GPR64common:%vreg0
   //
   // In this case we can still safely fold away the COPY and generate the
   // following spill code:
   //
-  //   STRXui %XZR, <fi#0>
+  //   STRXui %xzr, <fi#0>
   //
   // This also eliminates spilled cross register class COPYs (e.g. between x and
   // d regs) of the same size.  For example:
@@ -2886,12 +2886,12 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
 
     // Handle cases like spilling def of:
     //
-    //   %vreg0:sub_32<def,read-undef> = COPY %WZR; GPR64common:%vreg0
+    //   %vreg0:sub_32<def,read-undef> = COPY %wzr; GPR64common:%vreg0
     //
     // where the physical register source can be widened and stored to the full
     // virtual reg destination stack slot, in this case producing:
     //
-    //   STRXui %XZR, <fi#0>
+    //   STRXui %xzr, <fi#0>
     //
     if (IsSpill && DstMO.isUndef() &&
         TargetRegisterInfo::isPhysicalRegister(SrcReg)) {

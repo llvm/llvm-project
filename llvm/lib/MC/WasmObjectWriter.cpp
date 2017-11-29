@@ -1040,11 +1040,14 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
   for (const MCSymbol &S : Asm.symbols()) {
     const auto &WS = static_cast<const MCSymbolWasm &>(S);
 
-    if (WS.isTemporary())
-      continue;
-
+    // Register types for all functions, including those with private linkage
+    // (making them
+    // because wasm always needs a type signature.
     if (WS.isFunction())
       registerFunctionType(WS);
+
+    if (WS.isTemporary())
+      continue;
 
     // If the symbol is not defined in this translation unit, import it.
     if (!WS.isDefined(/*SetUsed=*/false)) {

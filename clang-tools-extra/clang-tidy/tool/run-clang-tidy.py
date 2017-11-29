@@ -222,7 +222,7 @@ def main():
     if args.checks:
       invocation.append('-checks=' + args.checks)
     invocation.append('-')
-    print(subprocess.check_output(invocation))
+    subprocess.check_call(invocation)
   except:
     print("Unable to run clang-tidy.", file=sys.stderr)
     sys.exit(1)

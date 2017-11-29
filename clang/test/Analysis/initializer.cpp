@@ -211,12 +211,16 @@ namespace CXX_initializer_lists {
 struct C {
   C(std::initializer_list<int *> list);
 };
-void foo() {
+void testPointerEscapeIntoLists() {
   C empty{}; // no-crash
 
   // Do not warn that 'x' leaks. It might have been deleted by
   // the destructor of 'c'.
   int *x = new int;
   C c{x}; // no-warning
+}
+
+void testPassListsWithExplicitConstructors() {
+  (void)(std::initializer_list<int>){12}; // no-crash
 }
 }

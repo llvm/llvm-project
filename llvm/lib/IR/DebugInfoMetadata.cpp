@@ -614,6 +614,29 @@ DILocalVariable *DILocalVariable::getImpl(LLVMContext &Context, Metadata *Scope,
   DEFINE_GETIMPL_STORE(DILocalVariable, (Line, Arg, Flags, AlignInBits), Ops);
 }
 
+Optional<uint64_t> DIVariable::getSizeInBits() const {
+  // This is used by the Verifier so be mindful of broken types.
+  const Metadata *RawType = getRawType();
+  while (RawType) {
+    // Try to get the size directly.
+    if (auto *T = dyn_cast<DIType>(RawType))
+      if (uint64_t Size = T->getSizeInBits())
+        return Size;
+
+    if (auto *DT = dyn_cast<DIDerivedType>(RawType)) {
+      // Look at the base type.
+      RawType = DT->getRawBaseType();
+      continue;
+    }
+
+    // Missing type or size.
+    break;
+  }
+
+  // Fail gracefully.
+  return None;
+}
+
 DIExpression *DIExpression::getImpl(LLVMContext &Context,
                                     ArrayRef<uint64_t> Elements,
                                     StorageType Storage, bool ShouldCreate) {

@@ -30,9 +30,11 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
     SIMD128,
   } SIMDLevel;
 
+  bool HasNontrappingFPToInt;
+
 public:
   explicit WebAssemblyTargetInfo(const llvm::Triple &T, const TargetOptions &)
-      : TargetInfo(T), SIMDLevel(NoSIMD) {
+      : TargetInfo(T), SIMDLevel(NoSIMD), HasNontrappingFPToInt(false) {
     NoAsmVariants = true;
     SuitableAlign = 128;
     LargeArrayMinWidth = 128;
@@ -55,8 +57,10 @@ private:
   initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
                  StringRef CPU,
                  const std::vector<std::string> &FeaturesVec) const override {
-    if (CPU == "bleeding-edge")
+    if (CPU == "bleeding-edge") {
       Features["simd128"] = true;
+      Features["nontrapping-fptoint"] = true;
+    }
     return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
   }
 

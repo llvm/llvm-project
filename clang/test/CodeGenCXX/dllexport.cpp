@@ -826,7 +826,7 @@ struct __declspec(dllexport) B {
 // M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01??_FB@pr26490@@QAEXXZ"
 }
 
-// dllexport trumps dllexport on an explicit instantiation.
+// dllexport trumps dllimport on an explicit instantiation.
 template <typename T> struct ExplicitInstantiationTwoAttributes { void f() {} };
 template struct __declspec(dllexport) __declspec(dllimport) ExplicitInstantiationTwoAttributes<int>;
 // M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01?f@?$ExplicitInstantiationTwoAttributes@H@@QAEXXZ"

@@ -526,7 +526,7 @@ bool DetectDeadLanes::runOnce(MachineFunction &MF) {
     for (unsigned RegIdx = 0; RegIdx < NumVirtRegs; ++RegIdx) {
       unsigned Reg = TargetRegisterInfo::index2VirtReg(RegIdx);
       const VRegInfo &Info = VRegInfos[RegIdx];
-      dbgs() << PrintReg(Reg, nullptr)
+      dbgs() << printReg(Reg, nullptr)
              << " Used: " << PrintLaneMask(Info.UsedLanes)
              << " Def: " << PrintLaneMask(Info.DefinedLanes) << '\n';
     }

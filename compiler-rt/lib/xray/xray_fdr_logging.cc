@@ -70,15 +70,9 @@ XRayLogFlushStatus fdrLoggingFlush() XRAY_NEVER_INSTRUMENT {
     return XRayLogFlushStatus::XRAY_LOG_NOT_FLUSHING;
   }
 
-  // We wait a number of microseconds to allow threads to see that we've
+  // We wait a number of milliseconds to allow threads to see that we've
   // finalised before attempting to flush the log.
-  struct timespec TS;
-  TS.tv_sec = flags()->xray_fdr_log_grace_period_us / 1000000;
-  TS.tv_nsec = (flags()->xray_fdr_log_grace_period_us % 1000000) * 1000;
-  struct timespec Rem;
-  while (clock_nanosleep(CLOCK_REALTIME, 0, &TS, &Rem) &&
-         (Rem.tv_sec != 0 || Rem.tv_nsec != 0))
-    TS = Rem;
+  __sanitizer::SleepForMillis(flags()->xray_fdr_log_grace_period_ms);
 
   // We write out the file in the following format:
   //
@@ -374,9 +368,7 @@ static auto UNUSED Unused = [] {
   using namespace __xray;
   if (flags()->xray_fdr_log) {
     XRayLogImpl Impl{
-        fdrLoggingInit,
-        fdrLoggingFinalize,
-        fdrLoggingHandleArg0,
+        fdrLoggingInit, fdrLoggingFinalize, fdrLoggingHandleArg0,
         fdrLoggingFlush,
     };
     __xray_set_log_impl(Impl);

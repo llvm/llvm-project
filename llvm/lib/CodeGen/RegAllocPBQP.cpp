@@ -668,7 +668,7 @@ void RegAllocPBQP::spillVReg(unsigned VReg,
 
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   (void)TRI;
-  DEBUG(dbgs() << "VREG " << PrintReg(VReg, &TRI) << " -> SPILLED (Cost: "
+  DEBUG(dbgs() << "VREG " << printReg(VReg, &TRI) << " -> SPILLED (Cost: "
                << LRE.getParent().weight << ", New vregs: ");
 
   // Copy any newly inserted live intervals into the list of regs to
@@ -677,7 +677,7 @@ void RegAllocPBQP::spillVReg(unsigned VReg,
        I != E; ++I) {
     const LiveInterval &LI = LIS.getInterval(*I);
     assert(!LI.empty() && "Empty spill range.");
-    DEBUG(dbgs() << PrintReg(LI.reg, &TRI) << " ");
+    DEBUG(dbgs() << printReg(LI.reg, &TRI) << " ");
     VRegsToAlloc.insert(LI.reg);
   }
 
@@ -707,7 +707,7 @@ bool RegAllocPBQP::mapPBQPToRegAlloc(const PBQPRAGraph &G,
 
     if (AllocOption != PBQP::RegAlloc::getSpillOptionIdx()) {
       unsigned PReg = G.getNodeMetadata(NId).getAllowedRegs()[AllocOption - 1];
-      DEBUG(dbgs() << "VREG " << PrintReg(VReg, &TRI) << " -> "
+      DEBUG(dbgs() << "VREG " << printReg(VReg, &TRI) << " -> "
             << TRI.getName(PReg) << "\n");
       assert(PReg != 0 && "Invalid preg selected.");
       VRM.assignVirt2Phys(VReg, PReg);
@@ -864,7 +864,7 @@ static Printable PrintNodeInfo(PBQP::RegAlloc::PBQPRAGraph::NodeId NId,
     const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
     unsigned VReg = G.getNodeMetadata(NId).getVReg();
     const char *RegClassName = TRI->getRegClassName(MRI.getRegClass(VReg));
-    OS << NId << " (" << RegClassName << ':' << PrintReg(VReg, TRI) << ')';
+    OS << NId << " (" << RegClassName << ':' << printReg(VReg, TRI) << ')';
   });
 }
 

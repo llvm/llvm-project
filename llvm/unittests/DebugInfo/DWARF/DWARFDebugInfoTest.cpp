@@ -1287,12 +1287,16 @@ TEST(DWARFDebugInfo, TestFindRecurse) {
     auto CUDie = CU.getUnitDIE();
     auto FuncSpecDie = CUDie.addChild(DW_TAG_subprogram);
     auto FuncAbsDie = CUDie.addChild(DW_TAG_subprogram);
+    // Put the linkage name in a second abstract origin DIE to ensure we
+    // recurse through more than just one DIE when looking for attributes.
+    auto FuncAbsDie2 = CUDie.addChild(DW_TAG_subprogram);
     auto FuncDie = CUDie.addChild(DW_TAG_subprogram);
     auto VarAbsDie = CUDie.addChild(DW_TAG_variable);
     auto VarDie = CUDie.addChild(DW_TAG_variable);
     FuncSpecDie.addAttribute(DW_AT_name, DW_FORM_strp, SpecDieName);
-    FuncAbsDie.addAttribute(DW_AT_linkage_name, DW_FORM_strp, SpecLinkageName);
+    FuncAbsDie2.addAttribute(DW_AT_linkage_name, DW_FORM_strp, SpecLinkageName);
     FuncAbsDie.addAttribute(DW_AT_specification, DW_FORM_ref4, FuncSpecDie);
+    FuncAbsDie.addAttribute(DW_AT_abstract_origin, DW_FORM_ref4, FuncAbsDie2);
     FuncDie.addAttribute(DW_AT_abstract_origin, DW_FORM_ref4, FuncAbsDie);
     VarAbsDie.addAttribute(DW_AT_name, DW_FORM_strp, AbsDieName);
     VarDie.addAttribute(DW_AT_abstract_origin, DW_FORM_ref4, VarAbsDie);
@@ -1314,7 +1318,8 @@ TEST(DWARFDebugInfo, TestFindRecurse) {
 
   auto FuncSpecDie = CUDie.getFirstChild();
   auto FuncAbsDie = FuncSpecDie.getSibling();
-  auto FuncDie = FuncAbsDie.getSibling();
+  auto FuncAbsDie2 = FuncAbsDie.getSibling();
+  auto FuncDie = FuncAbsDie2.getSibling();
   auto VarAbsDie = FuncDie.getSibling();
   auto VarDie = VarAbsDie.getSibling();
 

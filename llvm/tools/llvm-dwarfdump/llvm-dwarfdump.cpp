@@ -536,14 +536,17 @@ int main(int argc, char **argv) {
   }
 
   raw_ostream &OS = OutputFile ? OutputFile->os() : outs();
+  bool OffsetRequested = false;
 
   // Defaults to dumping all sections, unless brief mode is specified in which
   // case only the .debug_info section in dumped.
 #define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME)                \
   if (Dump##ENUM_NAME.IsRequested) {                                           \
     DumpType |= DIDT_##ENUM_NAME;                                              \
-    if (Dump##ENUM_NAME.HasValue)                                              \
+    if (Dump##ENUM_NAME.HasValue) {                                            \
       DumpOffsets[DIDT_ID_##ENUM_NAME] = Dump##ENUM_NAME.Val;                  \
+      OffsetRequested = true;                                                  \
+    }                                                                          \
   }
 #include "llvm/BinaryFormat/Dwarf.def"
 #undef HANDLE_DWARF_SECTION
@@ -557,6 +560,10 @@ int main(int argc, char **argv) {
     else
       DumpType = DIDT_DebugInfo;
   }
+
+  // Unless dumping a specific DIE, default to --show-children.
+  if (!ShowChildren && !Verify && !OffsetRequested && Name.empty() && Find.empty())
+    ShowChildren = true;
 
   // Defaults to a.out if no filenames specified.
   if (InputFilenames.size() == 0)

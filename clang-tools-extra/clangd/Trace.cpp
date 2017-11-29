@@ -14,7 +14,6 @@
 #include "llvm/Support/FormatProviders.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Threading.h"
-#include "llvm/Support/YAMLParser.h"
 #include <mutex>
 
 namespace clang {

@@ -107,3 +107,6 @@ REORDER-LABEL:   Mod 0001 | `{{.*}}pdb_comdat_main.obj`:
 REORDER:       c:\src\llvm-project\build\pdb_comdat_main.c
 REORDER-NOT:       c:\src\llvm-project\build\foo.h
 REORDER-LABEL:   Mod 0002 | `* Linker *`:
+
+Make sure that we don't crash on non-prevailing debug sections if -debug is not enabled.
+RUN: lld-link pdb_comdat_main.obj pdb_comdat_bar.obj -out:%t.exe -nodefaultlib -entry:main

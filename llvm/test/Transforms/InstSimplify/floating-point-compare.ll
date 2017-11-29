@@ -170,6 +170,8 @@ define i1 @one_with_self(double %arg) {
 ; without combinatorial explosion.
 
 declare float @llvm.fabs.f32(float)
+declare double @llvm.fabs.f64(double)
+declare <2 x double> @llvm.fabs.v2f64(<2 x double>)
 declare float @llvm.sqrt.f32(float)
 declare double @llvm.powi.f64(double,i32)
 declare float @llvm.exp.f32(float)
@@ -270,6 +272,50 @@ define i1 @orderedLessZeroMaxNum(float, float) {
   %b = call float @llvm.maxnum.f32(float %a, float %1)
   %uge = fcmp uge float %b, 0.000000e+00
   ret i1 %uge
+}
+
+define i1 @known_positive_olt_with_negative_constant(double %a) {
+; CHECK-LABEL: @known_positive_olt_with_negative_constant(
+; CHECK-NEXT:    [[CALL:%.*]] = call double @llvm.fabs.f64(double %a)
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt double [[CALL]], -1.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %call = call double @llvm.fabs.f64(double %a)
+  %cmp = fcmp olt double %call, -1.0
+  ret i1 %cmp
+}
+
+define <2 x i1> @known_positive_ole_with_negative_constant_splat_vec(<2 x double> %a) {
+; CHECK-LABEL: @known_positive_ole_with_negative_constant_splat_vec(
+; CHECK-NEXT:    [[CALL:%.*]] = call <2 x double> @llvm.fabs.v2f64(<2 x double> %a)
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ole <2 x double> [[CALL]], <double -2.000000e+00, double -2.000000e+00>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %call = call <2 x double> @llvm.fabs.v2f64(<2 x double> %a)
+  %cmp = fcmp ole <2 x double> %call, <double -2.0, double -2.0>
+  ret <2 x i1> %cmp
+}
+
+define i1 @known_positive_ugt_with_negative_constant(double %a) {
+; CHECK-LABEL: @known_positive_ugt_with_negative_constant(
+; CHECK-NEXT:    [[CALL:%.*]] = call double @llvm.fabs.f64(double %a)
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt double [[CALL]], -3.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %call = call double @llvm.fabs.f64(double %a)
+  %cmp = fcmp ugt double %call, -3.0
+  ret i1 %cmp
+}
+
+define <2 x i1> @known_positive_uge_with_negative_constant_splat_vec(<2 x double> %a) {
+; CHECK-LABEL: @known_positive_uge_with_negative_constant_splat_vec(
+; CHECK-NEXT:    [[CALL:%.*]] = call <2 x double> @llvm.fabs.v2f64(<2 x double> %a)
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge <2 x double> [[CALL]], <double -4.000000e+00, double -4.000000e+00>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %call = call <2 x double> @llvm.fabs.v2f64(<2 x double> %a)
+  %cmp = fcmp uge <2 x double> %call, <double -4.0, double -4.0>
+  ret <2 x i1> %cmp
 }
 
 define i1 @nonans1(double %in1, double %in2) {

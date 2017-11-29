@@ -136,6 +136,8 @@ private:
   bool CopyMPXtoXSTATE(uint32_t reg);
 
   bool IsMPX(uint32_t reg_index) const;
+
+  void UpdateXSTATEforWrite(uint32_t reg_index);
 };
 
 } // namespace process_linux

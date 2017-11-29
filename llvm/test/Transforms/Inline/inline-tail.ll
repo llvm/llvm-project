@@ -181,3 +181,18 @@ define i32 @test_mixedret_a(i1 zeroext %b) {
   %rv = musttail call i32 @test_mixedret_b(i1 zeroext %b)
   ret i32 %rv
 }
+
+declare i32 @donttailcall()
+
+define i32 @notail() {
+  %rv = notail call i32 @donttailcall()
+  ret i32 %rv
+}
+
+; CHECK: @test_notail
+; CHECK: notail call i32 @donttailcall
+; CHECK: ret
+define i32 @test_notail() {
+  %rv = tail call i32 @notail()
+  ret i32 %rv
+}

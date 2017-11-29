@@ -365,7 +365,7 @@ RegisterRef RegisterAggr::makeRegRef() const {
 void RegisterAggr::print(raw_ostream &OS) const {
   OS << '{';
   for (int U = Units.find_first(); U >= 0; U = Units.find_next(U))
-    OS << ' ' << PrintRegUnit(U, &PRI.getTRI());
+    OS << ' ' << printRegUnit(U, &PRI.getTRI());
   OS << " }";
 }
 

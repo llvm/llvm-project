@@ -273,7 +273,7 @@ unsigned A15SDOptimizer::optimizeSDPattern(MachineInstr *MI) {
               MRI->getRegClass(MI->getOperand(1).getReg());
             if (TRC->hasSuperClassEq(MRI->getRegClass(FullReg))) {
               DEBUG(dbgs() << "Subreg copy is compatible - returning ");
-              DEBUG(dbgs() << PrintReg(FullReg) << "\n");
+              DEBUG(dbgs() << printReg(FullReg) << "\n");
               eraseInstrWithNoUses(MI);
               return FullReg;
             }
@@ -644,7 +644,7 @@ bool A15SDOptimizer::runOnInstruction(MachineInstr *MI) {
 
           DEBUG(dbgs() << "Replacing operand "
                        << **I << " with "
-                       << PrintReg(NewReg) << "\n");
+                       << printReg(NewReg) << "\n");
           (*I)->substVirtReg(NewReg, 0, *TRI);
         }
       }

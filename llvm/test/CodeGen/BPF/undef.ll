@@ -14,12 +14,10 @@
 
 ; Function Attrs: nounwind uwtable
 define i32 @ebpf_filter(%struct.__sk_buff* nocapture readnone %ebpf_packet) #0 section "socket1" {
-; EL: r1 = 134678021
-; EB: r1 = 84281096
-; CHECK: *(u32 *)(r10 - 8) = r1
-; EL: r1 = 2569
-; EB: r1 = 2314
-; CHECK: *(u16 *)(r10 - 4) = r1
+
+; EL: r1 = 11033905661445 ll
+; EB: r1 = 361984551142686720 ll
+; CHECK: *(u64 *)(r10 - 8) = r1
 
 ; CHECK: r1 = 0
 ; CHECK: *(u16 *)(r10 + 24) = r1
@@ -35,7 +33,6 @@ define i32 @ebpf_filter(%struct.__sk_buff* nocapture readnone %ebpf_packet) #0 s
 ; CHECK: *(u16 *)(r10 + 4) = r1
 ; CHECK: *(u16 *)(r10 + 2) = r1
 ; CHECK: *(u16 *)(r10 + 0) = r1
-; CHECK: *(u16 *)(r10 - 2) = r1
 ; CHECK: *(u16 *)(r10 + 26) = r1
 
 ; CHECK: r2 = r10

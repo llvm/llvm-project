@@ -161,7 +161,7 @@ bool Parser::parseExpr(Expr &Out) {
   }
   case '[': {
     Out = json::ary{};
-    json::ary &A = *Out.array();
+    json::ary &A = *Out.asArray();
     eatWhitespace();
     if (peek() == ']') {
       ++P;
@@ -185,7 +185,7 @@ bool Parser::parseExpr(Expr &Out) {
   }
   case '{': {
     Out = json::obj{};
-    json::obj &O = *Out.object();
+    json::obj &O = *Out.asObject();
     eatWhitespace();
     if (peek() == '}') {
       ++P;
@@ -507,17 +507,17 @@ bool operator==(const Expr &L, const Expr &R) {
     return false;
   switch (L.kind()) {
   case Expr::Null:
-    return L.null() == R.null();
+    return *L.asNull() == *R.asNull();
   case Expr::Boolean:
-    return L.boolean() == R.boolean();
+    return *L.asBoolean() == *R.asBoolean();
   case Expr::Number:
-    return L.boolean() == R.boolean();
+    return *L.asNumber() == *R.asNumber();
   case Expr::String:
-    return L.string() == R.string();
+    return *L.asString() == *R.asString();
   case Expr::Array:
-    return *L.array() == *R.array();
+    return *L.asArray() == *R.asArray();
   case Expr::Object:
-    return *L.object() == *R.object();
+    return *L.asObject() == *R.asObject();
   }
   llvm_unreachable("Unknown expression kind");
 }

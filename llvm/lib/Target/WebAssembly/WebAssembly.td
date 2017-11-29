@@ -27,6 +27,10 @@ def FeatureSIMD128 : SubtargetFeature<"simd128", "HasSIMD128", "true",
                                       "Enable 128-bit SIMD">;
 def FeatureAtomics : SubtargetFeature<"atomics", "HasAtomics", "true",
                                       "Enable Atomics">;
+def FeatureNontrappingFPToInt :
+      SubtargetFeature<"nontrapping-fptoint",
+                       "HasNontrappingFPToInt", "true",
+                       "Enable non-trapping float-to-int conversion operators">;
 
 //===----------------------------------------------------------------------===//
 // Architectures.

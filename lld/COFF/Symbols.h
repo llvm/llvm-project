@@ -12,8 +12,8 @@
 
 #include "Chunks.h"
 #include "Config.h"
-#include "Memory.h"
 #include "lld/Common/LLVM.h"
+#include "lld/Common/Memory.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/COFF.h"
@@ -169,7 +169,6 @@ public:
   SectionChunk *getChunk() const { return *Data; }
   uint32_t getValue() const { return Sym->Value; }
 
-private:
   SectionChunk **Data;
 };
 

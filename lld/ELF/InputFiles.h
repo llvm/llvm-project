@@ -42,7 +42,7 @@ namespace elf {
 class InputFile;
 }
 
-// Returns "(internal)", "foo.a(bar.o)" or "baz.o".
+// Returns "<internal>", "foo.a(bar.o)" or "baz.o".
 std::string toString(const elf::InputFile *F);
 
 namespace elf {

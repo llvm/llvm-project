@@ -103,13 +103,13 @@ LBB1_3:	## bb
   
 Before regalloc, we have:
 
-        %reg1025<def> = IMUL32rri8 %reg1024, 45, %EFLAGS<imp-def>
+        %reg1025<def> = IMUL32rri8 %reg1024, 45, %eflags<imp-def>
         JMP mbb<bb2,0x203afb0>
     Successors according to CFG: 0x203afb0 (#3)
 
 bb1: 0x203af60, LLVM BB @0x1e02310, ID#2:
     Predecessors according to CFG: 0x203aec0 (#0)
-        %reg1026<def> = IMUL32rri8 %reg1024, 78, %EFLAGS<imp-def>
+        %reg1026<def> = IMUL32rri8 %reg1024, 78, %eflags<imp-def>
     Successors according to CFG: 0x203afb0 (#3)
 
 bb2: 0x203afb0, LLVM BB @0x1e02340, ID#3:

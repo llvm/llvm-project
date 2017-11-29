@@ -135,6 +135,14 @@ void WebAssembly::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
                      getDriver().SysRoot + "/include/c++/v1");
 }
 
+std::string WebAssembly::getThreadModel() const {
+  // The WebAssembly MVP does not yet support threads; for now, use the
+  // "single" threading model, which lowers atomics to non-atomic operations.
+  // When threading support is standardized and implemented in popular engines,
+  // this override should be removed.
+  return "single";
+}
+
 Tool *WebAssembly::buildLinker() const {
   return new tools::wasm::Linker(*this);
 }

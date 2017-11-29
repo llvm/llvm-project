@@ -36,40 +36,53 @@ class CGRecordLayout;
 enum class TBAAAccessKind : unsigned {
   Ordinary,
   MayAlias,
+  Incomplete,
 };
 
 // TBAAAccessInfo - Describes a memory access in terms of TBAA.
 struct TBAAAccessInfo {
   TBAAAccessInfo(TBAAAccessKind Kind, llvm::MDNode *BaseType,
-                 llvm::MDNode *AccessType, uint64_t Offset)
-    : Kind(Kind), BaseType(BaseType), AccessType(AccessType), Offset(Offset)
+                 llvm::MDNode *AccessType, uint64_t Offset, uint64_t Size)
+    : Kind(Kind), BaseType(BaseType), AccessType(AccessType),
+      Offset(Offset), Size(Size)
   {}
 
   TBAAAccessInfo(llvm::MDNode *BaseType, llvm::MDNode *AccessType,
-                 uint64_t Offset)
-    : TBAAAccessInfo(TBAAAccessKind::Ordinary, BaseType, AccessType, Offset)
+                 uint64_t Offset, uint64_t Size)
+    : TBAAAccessInfo(TBAAAccessKind::Ordinary, BaseType, AccessType,
+                     Offset, Size)
   {}
 
-  explicit TBAAAccessInfo(llvm::MDNode *AccessType)
-    : TBAAAccessInfo(/* BaseType= */ nullptr, AccessType, /* Offset= */ 0)
+  explicit TBAAAccessInfo(llvm::MDNode *AccessType, uint64_t Size)
+    : TBAAAccessInfo(/* BaseType= */ nullptr, AccessType, /* Offset= */ 0, Size)
   {}
 
   TBAAAccessInfo()
-    : TBAAAccessInfo(/* AccessType= */ nullptr)
+    : TBAAAccessInfo(/* AccessType= */ nullptr, /* Size= */ 0)
   {}
 
   static TBAAAccessInfo getMayAliasInfo() {
-    return TBAAAccessInfo(TBAAAccessKind::MayAlias, /* BaseType= */ nullptr,
-                          /* AccessType= */ nullptr, /* Offset= */ 0);
+    return TBAAAccessInfo(TBAAAccessKind::MayAlias,
+                          /* BaseType= */ nullptr, /* AccessType= */ nullptr,
+                          /* Offset= */ 0, /* Size= */ 0);
   }
 
   bool isMayAlias() const { return Kind == TBAAAccessKind::MayAlias; }
+
+  static TBAAAccessInfo getIncompleteInfo() {
+    return TBAAAccessInfo(TBAAAccessKind::Incomplete,
+                          /* BaseType= */ nullptr, /* AccessType= */ nullptr,
+                          /* Offset= */ 0, /* Size= */ 0);
+  }
+
+  bool isIncomplete() const { return Kind == TBAAAccessKind::Incomplete; }
 
   bool operator==(const TBAAAccessInfo &Other) const {
     return Kind == Other.Kind &&
            BaseType == Other.BaseType &&
            AccessType == Other.AccessType &&
-           Offset == Other.Offset;
+           Offset == Other.Offset &&
+           Size == Other.Size;
   }
 
   bool operator!=(const TBAAAccessInfo &Other) const {
@@ -95,12 +108,16 @@ struct TBAAAccessInfo {
   /// Offset - The byte offset of the final access within the base one. Must be
   /// zero if the base access type is not specified.
   uint64_t Offset;
+
+  /// Size - The size of access, in bytes.
+  uint64_t Size;
 };
 
 /// CodeGenTBAA - This class organizes the cross-module state that is used
 /// while lowering AST types to LLVM types.
 class CodeGenTBAA {
   ASTContext &Context;
+  llvm::Module &Module;
   const CodeGenOptions &CodeGenOpts;
   const LangOptions &Features;
   MangleContext &MContext;
@@ -138,10 +155,10 @@ class CodeGenTBAA {
                      SmallVectorImpl<llvm::MDBuilder::TBAAStructField> &Fields,
                      bool MayAlias);
 
-  /// A wrapper function to create a scalar type. For struct-path aware TBAA,
-  /// the scalar type has the same format as the struct type: name, offset,
-  /// pointer to another node in the type DAG.
-  llvm::MDNode *createTBAAScalarType(StringRef Name, llvm::MDNode *Parent);
+  /// createScalarTypeNode - A wrapper function to create a metadata node
+  /// describing a scalar type.
+  llvm::MDNode *createScalarTypeNode(StringRef Name, llvm::MDNode *Parent,
+                                     uint64_t Size);
 
   /// getTypeInfoHelper - An internal helper function to generate metadata used
   /// to describe accesses to objects of the given type.
@@ -152,10 +169,8 @@ class CodeGenTBAA {
   llvm::MDNode *getBaseTypeInfoHelper(const Type *Ty);
 
 public:
-  CodeGenTBAA(ASTContext &Ctx, llvm::LLVMContext &VMContext,
-              const CodeGenOptions &CGO,
-              const LangOptions &Features,
-              MangleContext &MContext);
+  CodeGenTBAA(ASTContext &Ctx, llvm::Module &M, const CodeGenOptions &CGO,
+              const LangOptions &Features, MangleContext &MContext);
   ~CodeGenTBAA();
 
   /// getTypeInfo - Get metadata used to describe accesses to objects of the
@@ -164,7 +179,7 @@ public:
 
   /// getVTablePtrAccessInfo - Get the TBAA information that describes an
   /// access to a virtual table pointer.
-  TBAAAccessInfo getVTablePtrAccessInfo();
+  TBAAAccessInfo getVTablePtrAccessInfo(llvm::Type *VTablePtrType);
 
   /// getTBAAStructInfo - Get the TBAAStruct MDNode to be used for a memcpy of
   /// the given type.
@@ -200,6 +215,7 @@ template<> struct DenseMapInfo<clang::CodeGen::TBAAAccessInfo> {
       static_cast<clang::CodeGen::TBAAAccessKind>(UnsignedKey),
       DenseMapInfo<MDNode *>::getEmptyKey(),
       DenseMapInfo<MDNode *>::getEmptyKey(),
+      DenseMapInfo<uint64_t>::getEmptyKey(),
       DenseMapInfo<uint64_t>::getEmptyKey());
   }
 
@@ -209,6 +225,7 @@ template<> struct DenseMapInfo<clang::CodeGen::TBAAAccessInfo> {
       static_cast<clang::CodeGen::TBAAAccessKind>(UnsignedKey),
       DenseMapInfo<MDNode *>::getTombstoneKey(),
       DenseMapInfo<MDNode *>::getTombstoneKey(),
+      DenseMapInfo<uint64_t>::getTombstoneKey(),
       DenseMapInfo<uint64_t>::getTombstoneKey());
   }
 
@@ -217,7 +234,8 @@ template<> struct DenseMapInfo<clang::CodeGen::TBAAAccessInfo> {
     return DenseMapInfo<unsigned>::getHashValue(KindValue) ^
            DenseMapInfo<MDNode *>::getHashValue(Val.BaseType) ^
            DenseMapInfo<MDNode *>::getHashValue(Val.AccessType) ^
-           DenseMapInfo<uint64_t>::getHashValue(Val.Offset);
+           DenseMapInfo<uint64_t>::getHashValue(Val.Offset) ^
+           DenseMapInfo<uint64_t>::getHashValue(Val.Size);
   }
 
   static bool isEqual(const clang::CodeGen::TBAAAccessInfo &LHS,

@@ -273,3 +273,21 @@
 #endif
 #pragma OPENCL EXTENSION cl_amd_media_ops2: enable
 
+#if (__OPENCL_C_VERSION__ >= 120)
+#ifndef cl_intel_subgroups
+#error "Missing cl_intel_subgroups define"
+#endif
+#else
+// expected-warning@+2{{unsupported OpenCL extension 'cl_intel_subgroups' - ignoring}}
+#endif
+#pragma OPENCL EXTENSION cl_intel_subgroups : enable
+
+#if (__OPENCL_C_VERSION__ >= 120)
+#ifndef cl_intel_subgroups_short
+#error "Missing cl_intel_subgroups_short define"
+#endif
+#else
+// expected-warning@+2{{unsupported OpenCL extension 'cl_intel_subgroups_short' - ignoring}}
+#endif
+#pragma OPENCL EXTENSION cl_intel_subgroups_short : enable
+

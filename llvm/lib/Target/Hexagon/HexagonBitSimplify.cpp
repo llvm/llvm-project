@@ -173,7 +173,7 @@ namespace {
   raw_ostream &operator<< (raw_ostream &OS, const PrintRegSet &P) {
     OS << '{';
     for (unsigned R = P.RS.find_first(); R; R = P.RS.find_next(R))
-      OS << ' ' << PrintReg(R, P.TRI);
+      OS << ' ' << printReg(R, P.TRI);
     OS << " }";
     return OS;
   }
@@ -2453,7 +2453,7 @@ bool BitSimplification::simplifyExtractLow(MachineInstr *MI,
     return false;
 
   DEBUG({
-    dbgs() << __func__ << " on reg: " << PrintReg(RD.Reg, &HRI, RD.Sub)
+    dbgs() << __func__ << " on reg: " << printReg(RD.Reg, &HRI, RD.Sub)
            << ", MI: " << *MI;
     dbgs() << "Cell: " << RC << '\n';
     dbgs() << "Expected bitfield size: " << Len << " bits, "
@@ -3004,9 +3004,9 @@ bool HexagonLoopRescheduling::processLoop(LoopCand &C) {
   DEBUG({
     dbgs() << "Phis: {";
     for (auto &I : Phis) {
-      dbgs() << ' ' << PrintReg(I.DefR, HRI) << "=phi("
-             << PrintReg(I.PR.Reg, HRI, I.PR.Sub) << ":b" << I.PB->getNumber()
-             << ',' << PrintReg(I.LR.Reg, HRI, I.LR.Sub) << ":b"
+      dbgs() << ' ' << printReg(I.DefR, HRI) << "=phi("
+             << printReg(I.PR.Reg, HRI, I.PR.Sub) << ":b" << I.PB->getNumber()
+             << ',' << printReg(I.LR.Reg, HRI, I.LR.Sub) << ":b"
              << I.LB->getNumber() << ')';
     }
     dbgs() << " }\n";
@@ -3126,8 +3126,8 @@ bool HexagonLoopRescheduling::processLoop(LoopCand &C) {
     for (unsigned i = 0, n = Groups.size(); i < n; ++i) {
       InstrGroup &G = Groups[i];
       dbgs() << "Group[" << i << "] inp: "
-             << PrintReg(G.Inp.Reg, HRI, G.Inp.Sub)
-             << "  out: " << PrintReg(G.Out.Reg, HRI, G.Out.Sub) << "\n";
+             << printReg(G.Inp.Reg, HRI, G.Inp.Sub)
+             << "  out: " << printReg(G.Out.Reg, HRI, G.Out.Sub) << "\n";
       for (unsigned j = 0, m = G.Ins.size(); j < m; ++j)
         dbgs() << "  " << *G.Ins[j];
     }

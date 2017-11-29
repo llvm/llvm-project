@@ -229,10 +229,9 @@ void ARM::addPltSymbols(InputSectionBase *ISD, uint64_t Off) const {
 
 bool ARM::needsThunk(RelExpr Expr, RelType Type, const InputFile *File,
                      uint64_t BranchAddr, const Symbol &S) const {
-  // If S is an undefined weak symbol in an executable we don't need a Thunk.
-  // In a DSO calls to undefined symbols, including weak ones get PLT entries
-  // which may need a thunk.
-  if (S.isUndefWeak() && !Config->Shared)
+  // If S is an undefined weak symbol and does not have a PLT entry then it
+  // will be resolved as a branch to the next instruction.
+  if (S.isUndefWeak() && !S.isInPlt())
     return false;
   // A state change from ARM to Thumb and vice versa must go through an
   // interworking thunk if the relocation type is not R_ARM_CALL or

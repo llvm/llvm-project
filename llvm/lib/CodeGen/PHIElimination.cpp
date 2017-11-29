@@ -270,7 +270,7 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
       IncomingReg = entry;
       reusedIncoming = true;
       ++NumReused;
-      DEBUG(dbgs() << "Reusing " << PrintReg(IncomingReg) << " for " << *MPhi);
+      DEBUG(dbgs() << "Reusing " << printReg(IncomingReg) << " for " << *MPhi);
     } else {
       const TargetRegisterClass *RC = MF.getRegInfo().getRegClass(DestReg);
       entry = IncomingReg = MF.getRegInfo().createVirtualRegister(RC);
@@ -593,7 +593,7 @@ bool PHIElimination::SplitPHIEdges(MachineFunction &MF,
       if (!ShouldSplit && !NoPhiElimLiveOutEarlyExit)
         continue;
       if (ShouldSplit) {
-        DEBUG(dbgs() << PrintReg(Reg) << " live-out before critical edge BB#"
+        DEBUG(dbgs() << printReg(Reg) << " live-out before critical edge BB#"
                      << PreMBB->getNumber() << " -> BB#" << MBB.getNumber()
                      << ": " << *BBI);
       }

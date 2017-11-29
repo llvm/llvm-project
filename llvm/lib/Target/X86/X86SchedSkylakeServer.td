@@ -132,7 +132,7 @@ defm : SKXWriteResPair<WriteFDiv,   SKXPort0, 12>; // 10-14 cycles. // Floating 
 defm : SKXWriteResPair<WriteFSqrt,  SKXPort0, 15>; // Floating point square root.
 defm : SKXWriteResPair<WriteFRcp,   SKXPort0, 5>; // Floating point reciprocal estimate.
 defm : SKXWriteResPair<WriteFRsqrt, SKXPort0, 5>; // Floating point reciprocal square root estimate.
-// defm WriteFMA    : X86SchedWritePair; // Fused Multiply Add.
+defm : SKXWriteResPair<WriteFMA,  SKXPort015, 4>; // Fused Multiply Add.
 defm : SKXWriteResPair<WriteFShuffle,  SKXPort5,  1>; // Floating point vector shuffles.
 defm : SKXWriteResPair<WriteFBlend,  SKXPort015,  1>; // Floating point vector blends.
 def : WriteRes<WriteFVarBlend, [SKXPort5]> { // Fp vector variable blends.	       

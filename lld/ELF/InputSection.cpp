@@ -12,13 +12,13 @@
 #include "EhFrame.h"
 #include "InputFiles.h"
 #include "LinkerScript.h"
-#include "Memory.h"
 #include "OutputSections.h"
 #include "Relocations.h"
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Thunks.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Memory.h"
 #include "llvm/Object/Decompressor.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
@@ -308,7 +308,7 @@ std::string InputSectionBase::getSrcMsg(const Symbol &Sym, uint64_t Offset) {
 std::string InputSectionBase::getObjMsg(uint64_t Off) {
   // Synthetic sections don't have input files.
   if (!File)
-    return ("(internal):(" + Name + "+0x" + utohexstr(Off) + ")").str();
+    return ("<internal>:(" + Name + "+0x" + utohexstr(Off) + ")").str();
   std::string Filename = File->getName();
 
   std::string Archive;

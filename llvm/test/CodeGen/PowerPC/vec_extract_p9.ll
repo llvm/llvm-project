@@ -152,16 +152,16 @@ entry:
 define zeroext i32 @test9(<4 x i32> %a) {
 ; CHECK-LE-LABEL: test9:
 ; CHECK-LE:       # BB#0: # %entry
-; CHECK-LE-NEXT:    li 3, 4
+; CHECK-LE-NEXT:    li 3, 12
 ; CHECK-LE-NEXT:    vextuwrx 3, 3, 2
 ; CHECK-LE-NEXT:    blr
 ; CHECK-BE-LABEL: test9:
 ; CHECK-BE:       # BB#0: # %entry
-; CHECK-BE-NEXT:    li 3, 4
+; CHECK-BE-NEXT:    li 3, 12
 ; CHECK-BE-NEXT:    vextuwlx 3, 3, 2
 ; CHECK-BE-NEXT:    blr
 
 entry:
-  %vecext = extractelement <4 x i32> %a, i32 1
+  %vecext = extractelement <4 x i32> %a, i32 3
   ret i32 %vecext
 }

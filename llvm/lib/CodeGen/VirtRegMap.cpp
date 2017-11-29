@@ -140,8 +140,8 @@ void VirtRegMap::print(raw_ostream &OS, const Module*) const {
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
     unsigned Reg = TargetRegisterInfo::index2VirtReg(i);
     if (Virt2PhysMap[Reg] != (unsigned)VirtRegMap::NO_PHYS_REG) {
-      OS << '[' << PrintReg(Reg, TRI) << " -> "
-         << PrintReg(Virt2PhysMap[Reg], TRI) << "] "
+      OS << '[' << printReg(Reg, TRI) << " -> "
+         << printReg(Virt2PhysMap[Reg], TRI) << "] "
          << TRI->getRegClassName(MRI->getRegClass(Reg)) << "\n";
     }
   }
@@ -149,7 +149,7 @@ void VirtRegMap::print(raw_ostream &OS, const Module*) const {
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
     unsigned Reg = TargetRegisterInfo::index2VirtReg(i);
     if (Virt2StackSlotMap[Reg] != VirtRegMap::NO_STACK_SLOT) {
-      OS << '[' << PrintReg(Reg, TRI) << " -> fi#" << Virt2StackSlotMap[Reg]
+      OS << '[' << printReg(Reg, TRI) << " -> fi#" << Virt2StackSlotMap[Reg]
          << "] " << TRI->getRegClassName(MRI->getRegClass(Reg)) << "\n";
     }
   }
@@ -380,8 +380,8 @@ void VirtRegRewriter::handleIdentityCopy(MachineInstr &MI) const {
   ++NumIdCopies;
 
   // Copies like:
-  //    %R0 = COPY %R0<undef>
-  //    %AL = COPY %AL, %EAX<imp-def>
+  //    %r0 = COPY %r0<undef>
+  //    %al = COPY %al, %eax<imp-def>
   // give us additional liveness information: The target (super-)register
   // must not be valid before this point. Replace the COPY with a KILL
   // instruction to maintain this information.
