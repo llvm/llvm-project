@@ -207,7 +207,10 @@ LowerFPToInt(
   unsigned Abs = Float64 ? WebAssembly::ABS_F64 : WebAssembly::ABS_F32;
   unsigned FConst = Float64 ? WebAssembly::CONST_F64 : WebAssembly::CONST_F32;
   unsigned LT = Float64 ? WebAssembly::LT_F64 : WebAssembly::LT_F32;
+  unsigned GE = Float64 ? WebAssembly::GE_F64 : WebAssembly::GE_F32;
   unsigned IConst = Int64 ? WebAssembly::CONST_I64 : WebAssembly::CONST_I32;
+  unsigned Eqz = WebAssembly::EQZ_I32;
+  unsigned And = WebAssembly::AND_I32;
   int64_t Limit = Int64 ? INT64_MIN : INT32_MIN;
   int64_t Substitute = IsUnsigned ? 0 : Limit;
   double CmpVal = IsUnsigned ? -(double)Limit * 2.0 : -(double)Limit;
@@ -236,14 +239,17 @@ LowerFPToInt(
   TrueMBB->addSuccessor(DoneMBB);
   FalseMBB->addSuccessor(DoneMBB);
 
-  unsigned Tmp0, Tmp1, Tmp2, Tmp3, Tmp4;
+  unsigned Tmp0, Tmp1, CmpReg, EqzReg, FalseReg, TrueReg;
   Tmp0 = MRI.createVirtualRegister(MRI.getRegClass(InReg));
   Tmp1 = MRI.createVirtualRegister(MRI.getRegClass(InReg));
-  Tmp2 = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
-  Tmp3 = MRI.createVirtualRegister(MRI.getRegClass(OutReg));
-  Tmp4 = MRI.createVirtualRegister(MRI.getRegClass(OutReg));
+  CmpReg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
+  EqzReg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
+  FalseReg = MRI.createVirtualRegister(MRI.getRegClass(OutReg));
+  TrueReg = MRI.createVirtualRegister(MRI.getRegClass(OutReg));
 
   MI.eraseFromParent();
+  // For signed numbers, we can do a single comparison to determine whether
+  // fabs(x) is within range.
   if (IsUnsigned) {
     Tmp0 = InReg;
   } else {
@@ -252,24 +258,44 @@ LowerFPToInt(
   }
   BuildMI(BB, DL, TII.get(FConst), Tmp1)
       .addFPImm(cast<ConstantFP>(ConstantFP::get(Ty, CmpVal)));
-  BuildMI(BB, DL, TII.get(LT), Tmp2)
+  BuildMI(BB, DL, TII.get(LT), CmpReg)
       .addReg(Tmp0)
       .addReg(Tmp1);
+
+  // For unsigned numbers, we have to do a separate comparison with zero.
+  if (IsUnsigned) {
+    Tmp1 = MRI.createVirtualRegister(MRI.getRegClass(InReg));
+    unsigned SecondCmpReg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
+    unsigned AndReg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
+    BuildMI(BB, DL, TII.get(FConst), Tmp1)
+        .addFPImm(cast<ConstantFP>(ConstantFP::get(Ty, 0.0)));
+    BuildMI(BB, DL, TII.get(GE), SecondCmpReg)
+        .addReg(Tmp0)
+        .addReg(Tmp1);
+    BuildMI(BB, DL, TII.get(And), AndReg)
+        .addReg(CmpReg)
+        .addReg(SecondCmpReg);
+    CmpReg = AndReg;
+  }
+
+  BuildMI(BB, DL, TII.get(Eqz), EqzReg)
+      .addReg(CmpReg);
+
+  // Create the CFG diamond to select between doing the conversion or using
+  // the substitute value.
   BuildMI(BB, DL, TII.get(WebAssembly::BR_IF))
       .addMBB(TrueMBB)
-      .addReg(Tmp2);
-
-  BuildMI(FalseMBB, DL, TII.get(IConst), Tmp3)
-      .addImm(Substitute);
+      .addReg(EqzReg);
+  BuildMI(FalseMBB, DL, TII.get(LoweredOpcode), FalseReg)
+      .addReg(InReg);
   BuildMI(FalseMBB, DL, TII.get(WebAssembly::BR))
       .addMBB(DoneMBB);
-  BuildMI(TrueMBB, DL, TII.get(LoweredOpcode), Tmp4)
-      .addReg(InReg);
-
+  BuildMI(TrueMBB, DL, TII.get(IConst), TrueReg)
+      .addImm(Substitute);
   BuildMI(*DoneMBB, DoneMBB->begin(), DL, TII.get(TargetOpcode::PHI), OutReg)
-      .addReg(Tmp3)
+      .addReg(FalseReg)
       .addMBB(FalseMBB)
-      .addReg(Tmp4)
+      .addReg(TrueReg)
       .addMBB(TrueMBB);
 
   return DoneMBB;

@@ -68,14 +68,17 @@ LLDDwarfObj<ELFT>::findAux(const InputSectionBase &Sec, uint64_t Pos,
   uint32_t SymIndex = Rel.getSymbol(Config->IsMips64EL);
   const typename ELFT::Sym &Sym = File->getELFSyms()[SymIndex];
   uint32_t SecIndex = File->getSectionIndex(Sym);
-  Symbol &B = File->getRelocTargetSym(Rel);
-  auto &DR = cast<Defined>(B);
-  uint64_t Val = DR.Value + getAddend<ELFT>(Rel);
+
+  // Broken debug info can point to a non-Defined symbol, just ignore it.
+  auto *DR = dyn_cast<Defined>(&File->getRelocTargetSym(Rel));
+  if (!DR)
+    return None;
+  uint64_t Val = DR->Value + getAddend<ELFT>(Rel);
 
   // FIXME: We should be consistent about always adding the file
   // offset or not.
-  if (DR.Section->Flags & ELF::SHF_ALLOC)
-    Val += cast<InputSection>(DR.Section)->getOffsetInFile();
+  if (DR->Section->Flags & ELF::SHF_ALLOC)
+    Val += cast<InputSection>(DR->Section)->getOffsetInFile();
 
   return RelocAddrEntry{SecIndex, Val};
 }

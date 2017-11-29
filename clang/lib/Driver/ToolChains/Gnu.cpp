@@ -51,9 +51,7 @@ static void normalizeCPUNamesForAssembler(const ArgList &Args,
     StringRef CPUArg(A->getValue());
     if (CPUArg.equals_lower("krait"))
       CmdArgs.push_back("-mcpu=cortex-a15");
-    else if(CPUArg.equals_lower("kryo") ||
-            CPUArg.equals_lower("falkor") ||
-            CPUArg.equals_lower("saphira"))
+    else if(CPUArg.equals_lower("kryo"))
       CmdArgs.push_back("-mcpu=cortex-a57");
     else
       Args.AddLastArg(CmdArgs, options::OPT_mcpu_EQ);

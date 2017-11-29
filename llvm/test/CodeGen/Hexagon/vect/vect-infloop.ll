@@ -1,6 +1,6 @@
 ; Extracted from test/CodeGen/Generic/vector-casts.ll: used to loop indefinitely.
 ; RUN: llc -march=hexagon < %s | FileCheck %s
-; CHECK: packhl
+; CHECK: combine
 
 define void @a(<2 x double>* %p, <2 x i8>* %q) {
         %t = load <2 x double>, <2 x double>* %p

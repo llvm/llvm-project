@@ -28,17 +28,18 @@ public:
       ++this->a.a;
   }
   S7 &operator=(S7 &s) {
+    int k;
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for simd private(a) private(this->a)
-    for (int k = 0; k < s.a.a; ++k)
+#pragma omp distribute parallel for simd private(a) private(this->a) linear(k)
+    for (k = 0; k < s.a.a; ++k)
       ++s.a.a;
     return *this;
   }
 };
 
 // CHECK: #pragma omp distribute parallel for simd private(this->a) private(this->a) private(T::a)
-// CHECK: #pragma omp distribute parallel for simd private(this->a) private(this->a)
+// CHECK: #pragma omp distribute parallel for simd private(this->a) private(this->a) linear(k)
 // CHECK: #pragma omp distribute parallel for simd private(this->a) private(this->a) private(this->S::a)
 
 class S8 : public S7<S> {
@@ -135,14 +136,15 @@ int main(int argc, char **argv) {
   // CHECK-NEXT: for (int j = 0; j < 10; ++j)
   // CHECK-NEXT: a++;
 
+  int i;
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for simd aligned(x:8) linear(h:2) safelen(8) simdlen(8)
-  for (int i = 0; i < 100; i++)
+#pragma omp distribute parallel for simd aligned(x:8) linear(i:2) safelen(8) simdlen(8)
+  for (i = 0; i < 100; i++)
     for (int j = 0; j < 200; j++)
       a += h + x[j];
-  // CHECK: #pragma omp distribute parallel for simd aligned(x: 8) linear(h: 2) safelen(8) simdlen(8)
-  // CHECK-NEXT: for (int i = 0; i < 100; i++)
+  // CHECK: #pragma omp distribute parallel for simd aligned(x: 8) linear(i: 2) safelen(8) simdlen(8)
+  // CHECK-NEXT: for (i = 0; i < 100; i++)
   // CHECK-NEXT: for (int j = 0; j < 200; j++)
   // CHECK-NEXT: a += h + x[j];
 

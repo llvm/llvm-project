@@ -464,7 +464,7 @@ def: Pat<(v4i8 (trunc V4I16:$Rs)),
 // S2_vtruneh
 
 def: Pat<(v2i16 (trunc V2I32:$Rs)),
-         (LoReg (S2_packhl (HiReg $Rs), (LoReg $Rs)))>;
+         (A2_combine_ll (HiReg $Rs), (LoReg $Rs))>;
 
 
 // --(4) Logical ---------------------------------------------------------
@@ -946,13 +946,10 @@ def SDTHexagonVCOMBINE: SDTypeProfile<1, 2, [SDTCisSameAs<1, 2>,
   SDTCisSubVecOfVec<1, 0>]>;
 def SDTHexagonVPACK: SDTypeProfile<1, 2, [SDTCisSameAs<1, 2>, SDTCisVec<1>]>;
 
-def HexagonPACKHL:   SDNode<"HexagonISD::PACKHL",   SDTHexagonI64I32I32>;
 def HexagonCOMBINE:  SDNode<"HexagonISD::COMBINE",  SDTHexagonI64I32I32>;
 def HexagonVCOMBINE: SDNode<"HexagonISD::VCOMBINE", SDTHexagonVCOMBINE>;
 def HexagonVPACKE:   SDNode<"HexagonISD::VPACKE",   SDTHexagonVPACK>;
 def HexagonVPACKO:   SDNode<"HexagonISD::VPACKO",   SDTHexagonVPACK>;
-
-def: OpR_RR_pat<S2_packhl, pf2<HexagonPACKHL>, i64, I32>;
 
 def: Pat<(HexagonCOMBINE I32:$Rs, I32:$Rt), (Combinew $Rs, $Rt)>;
 

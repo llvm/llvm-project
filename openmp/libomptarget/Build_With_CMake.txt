@@ -51,7 +51,7 @@ How to call cmake initially, then repeatedly
 =====================
 Instructions to Build
 =====================
- $ cd libomptarget_top_level/ [ directory with plugins/ , deviceRTLs/ , etc. ]
+ $ cd openmp_top_level/ [ directory with runtime/, libomptarget/, etc. ]
  $ mkdir build
  $ cd build
 
@@ -82,13 +82,13 @@ Specify the C++ compiler
 -DCMAKE_BUILD_TYPE=Release|Debug|RelWithDebInfo
 Build type can be Release, Debug, or RelWithDebInfo.
 
--DLIBOMPTARGET_ENABLE_WERROR=true|false
+-DOPENMP_ENABLE_WERROR=true|false
 Should consider warnings as errors.
 
--DLIBOMPTARGET_LLVM_LIT_EXECUTABLE=""
+-DOPENMP_LLVM_LIT_EXECUTABLE=""
 Full path to the llvm-lit tool. Required for testing in out-of-tree builds.
 
--DLIBOMPTARGET_FILECHECK_EXECUTABLE=""
+-DOPENMP_FILECHECK_EXECUTABLE=""
 Full path to the FileCheck tool. Required for testing in out-of-tree builds.
 
 -DLIBOMPTARGET_OPENMP_HEADER_FOLDER=""

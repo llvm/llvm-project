@@ -62,6 +62,9 @@ COMMON_FLAG(
 COMMON_FLAG(
     int, verbosity, 0,
     "Verbosity level (0 - silent, 1 - a bit of output, 2+ - more output).")
+COMMON_FLAG(bool, strip_env, 1,
+            "Whether to remove the sanitizer from DYLD_INSERT_LIBRARIES to "
+            "avoid passing it to children. Default is true.")
 COMMON_FLAG(bool, detect_leaks, !SANITIZER_MAC, "Enable memory leak detection.")
 COMMON_FLAG(
     bool, leak_check_at_exit, true,
