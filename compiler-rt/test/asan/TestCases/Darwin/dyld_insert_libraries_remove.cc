@@ -23,6 +23,11 @@
 // RUN:   %run ./a.out 2>&1 ) | FileCheck %s || exit 1
 
 // RUN: ( cd %T/dyld_insert_libraries_remove && \
+// RUN:   %env_asan_opts=strip_env=0 \
+// RUN:   DYLD_INSERT_LIBRARIES=%T/dyld_insert_libraries_remove/libclang_rt.asan_osx_dynamic.dylib:dummy-so.dylib \
+// RUN:   %run ./a.out 2>&1 ) | FileCheck %s --check-prefix=CHECK-KEEP || exit 1
+
+// RUN: ( cd %T/dyld_insert_libraries_remove && \
 // RUN:   DYLD_INSERT_LIBRARIES=%T/dyld_insert_libraries_remove/libclang_rt.asan_osx_dynamic.dylib:dummy-so.dylib \
 // RUN:   %run ./a.out 2>&1 ) | FileCheck %s || exit 1
 
@@ -34,6 +39,7 @@ int main() {
   const char kEnvName[] = "DYLD_INSERT_LIBRARIES";
   printf("%s=%s\n", kEnvName, getenv(kEnvName));
   // CHECK: {{DYLD_INSERT_LIBRARIES=dummy-so.dylib}}
+  // CHECK-KEEP: {{DYLD_INSERT_LIBRARIES=libclang_rt.asan_osx_dynamic.dylib:dummy-so.dylib}}
   return 0;
 }
 #else  // SHARED_LIB

@@ -736,6 +736,9 @@ void MaybeReexec() {
   if (!lib_is_in_env)
     return;
 
+  if (!common_flags()->strip_env)
+    return;
+
   // DYLD_INSERT_LIBRARIES is set and contains the runtime library. Let's remove
   // the dylib from the environment variable, because interceptors are installed
   // and we don't want our children to inherit the variable.
