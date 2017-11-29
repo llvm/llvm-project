@@ -1693,7 +1693,7 @@ def SwiftError : InheritableAttr {
   let Args = [EnumArgument<"Convention", "ConventionKind",
                ["none", "nonnull_error", "null_result", "zero_result", "nonzero_result"],
                ["None", "NonNullError", "NullResult", "ZeroResult", "NonZeroResult"]>];
-  let Subjects = SubjectList<[ObjCMethod, Function], ErrorDiag>;
+  let Subjects = SubjectList<[Function, ObjCMethod], ErrorDiag>;
   let Documentation = [SwiftErrorDocs];
 }
 
