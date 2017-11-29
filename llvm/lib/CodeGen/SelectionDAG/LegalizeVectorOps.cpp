@@ -554,7 +554,6 @@ SDValue VectorLegalizer::ExpandLoad(SDValue Op) {
     unsigned Offset = 0;
     unsigned RemainingBytes = SrcVT.getStoreSize();
     SmallVector<SDValue, 8> LoadVals;
-
     while (RemainingBytes > 0) {
       SDValue ScalarLoad;
       unsigned LoadBytes = WideBytes;
@@ -580,9 +579,8 @@ SDValue VectorLegalizer::ExpandLoad(SDValue Op) {
 
       RemainingBytes -= LoadBytes;
       Offset += LoadBytes;
-      BasePTR = DAG.getNode(ISD::ADD, dl, BasePTR.getValueType(), BasePTR,
-                            DAG.getConstant(LoadBytes, dl,
-                                            BasePTR.getValueType()));
+
+      BasePTR = DAG.getObjectPtrOffset(dl, BasePTR, LoadBytes);
 
       LoadVals.push_back(ScalarLoad.getValue(0));
       LoadChains.push_back(ScalarLoad.getValue(1));

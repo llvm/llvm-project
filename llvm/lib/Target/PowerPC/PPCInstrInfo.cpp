@@ -2378,9 +2378,7 @@ PPCInstrInfo::isSignOrZeroExtended(const MachineInstr &MI, bool SignExt,
   }
 
   // If all incoming values are sign-/zero-extended,
-  // the output of AND, OR, ISEL or PHI is also sign-/zero-extended.
-  case PPC::AND:
-  case PPC::AND8:
+  // the output of OR, ISEL or PHI is also sign-/zero-extended.
   case PPC::OR:
   case PPC::OR8:
   case PPC::ISEL:
@@ -2409,6 +2407,36 @@ PPCInstrInfo::isSignOrZeroExtended(const MachineInstr &MI, bool SignExt,
         return false;
     }
     return true;
+  }
+
+  // If at least one of the incoming values of an AND is zero extended
+  // then the output is also zero-extended. If both of the incoming values
+  // are sign-extended then the output is also sign extended.
+  case PPC::AND:
+  case PPC::AND8: {
+    if (Depth >= MAX_DEPTH)
+       return false;
+
+    assert(MI.getOperand(1).isReg() && MI.getOperand(2).isReg());
+
+    unsigned SrcReg1 = MI.getOperand(1).getReg();
+    unsigned SrcReg2 = MI.getOperand(2).getReg();
+
+    if (!TargetRegisterInfo::isVirtualRegister(SrcReg1) ||
+        !TargetRegisterInfo::isVirtualRegister(SrcReg2))
+       return false;
+
+    const MachineInstr *MISrc1 = MRI->getVRegDef(SrcReg1);
+    const MachineInstr *MISrc2 = MRI->getVRegDef(SrcReg2);
+    if (!MISrc1 || !MISrc2)
+        return false;
+
+    if(SignExt)
+        return isSignOrZeroExtended(*MISrc1, SignExt, Depth+1) &&
+               isSignOrZeroExtended(*MISrc2, SignExt, Depth+1);
+    else
+        return isSignOrZeroExtended(*MISrc1, SignExt, Depth+1) ||
+               isSignOrZeroExtended(*MISrc2, SignExt, Depth+1);
   }
 
   default:

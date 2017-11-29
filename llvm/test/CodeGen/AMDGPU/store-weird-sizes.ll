@@ -29,7 +29,7 @@ define amdgpu_kernel void @local_store_i48(i48 addrspace(3)* %ptr, i48 %arg) #0 
 }
 
 ; GCN-LABEL: {{^}}local_store_i65:
-; GCN-DAG: ds_write_b8 v{{[0-9]+}}, v0 offset:8
+; GCN-DAG: ds_write_b8 v{{[0-9]+}}, v{{[0-9]+}} offset:8
 ; GCN-DAG: ds_write_b64
 define amdgpu_kernel void @local_store_i65(i65 addrspace(3)* %ptr, i65 %arg) #0 {
   store i65 %arg, i65 addrspace(3)* %ptr, align 8

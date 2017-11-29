@@ -462,6 +462,12 @@ public:
     return getGeneration() >= GFX9;
   }
 
+  /// Return if most LDS instructions have an m0 use that require m0 to be
+  /// iniitalized.
+  bool ldsRequiresM0Init() const {
+    return getGeneration() < GFX9;
+  }
+
   bool hasAddNoCarry() const {
     return AddNoCarryInsts;
   }

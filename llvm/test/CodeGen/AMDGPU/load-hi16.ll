@@ -69,7 +69,6 @@ entry:
 ; FIXME: Remove m0 initialization
 ; GCN-LABEL: {{^}}load_local_hi_v2i16_zerolo_shift:
 ; GCN: s_waitcnt
-; GFX9-NEXT: s_mov_b32 m0, -1
 ; GFX9-NEXT: ds_read_u16 v0, v0
 ; GFX9-NEXT: s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT: v_lshlrev_b32_e32 v0, 16, v0
@@ -563,7 +562,6 @@ entry:
 ; FIXME: Is there a cost to using the extload over not?
 ; GCN-LABEL: {{^}}load_local_v2i16_split:
 ; GCN: s_waitcnt
-; GFX9-NEXT: s_mov_b32 m0, -1
 ; GFX9-NEXT: ds_read_u16 v1, v0
 ; GFX9-NEXT: s_waitcnt
 ; GFX9-NEXT: ds_read_u16_d16_hi v1, v0 offset:2
