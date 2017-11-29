@@ -718,8 +718,6 @@ static int CompareSCEVComplexity(
       return (int)LNumOps - (int)RNumOps;
 
     for (unsigned i = 0; i != LNumOps; ++i) {
-      if (i >= RNumOps)
-        return 1;
       int X = CompareSCEVComplexity(EqCacheSCEV, LI, LC->getOperand(i),
                                     RC->getOperand(i), DT, Depth + 1);
       if (X != 0)
