@@ -202,7 +202,7 @@ ModuleArch ModuleArchFromCpuType(cpu_type_t cputype, cpu_subtype_t cpusubtype) {
 }
 
 static const load_command *NextCommand(const load_command *lc) {
-  return (const load_command *)((char *)lc + lc->cmdsize);
+  return (const load_command *)((const char *)lc + lc->cmdsize);
 }
 
 static void FindUUID(const load_command *first_lc, u8 *uuid_output) {
@@ -246,12 +246,12 @@ bool MemoryMappingLayout::Next(MemoryMappedSegment *segment) {
       switch (current_magic_) {
 #ifdef MH_MAGIC_64
         case MH_MAGIC_64: {
-          current_load_cmd_addr_ = (char*)hdr + sizeof(mach_header_64);
+          current_load_cmd_addr_ = (const char*)hdr + sizeof(mach_header_64);
           break;
         }
 #endif
         case MH_MAGIC: {
-          current_load_cmd_addr_ = (char*)hdr + sizeof(mach_header);
+          current_load_cmd_addr_ = (const char*)hdr + sizeof(mach_header);
           break;
         }
         default: {

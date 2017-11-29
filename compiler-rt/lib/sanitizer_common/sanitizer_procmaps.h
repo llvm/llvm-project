@@ -92,7 +92,7 @@ class MemoryMappingLayout {
   ModuleArch current_arch_;
   u8 current_uuid_[kModuleUUIDSize];
   int current_load_cmd_count_;
-  char *current_load_cmd_addr_;
+  const char *current_load_cmd_addr_;
   bool current_instrumented_;
 # endif
 };
