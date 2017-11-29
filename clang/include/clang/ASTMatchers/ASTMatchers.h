@@ -5853,6 +5853,17 @@ AST_MATCHER_P(CXXNewExpr, hasArraySize, internal::Matcher<Expr>, InnerMatcher) {
     InnerMatcher.matches(*Node.getArraySize(), Finder, Builder);
 }
 
+/// \brief Matches a class declaration that is defined.
+///
+/// Example matches x (matcher = cxxRecordDecl(hasDefinition()))
+/// \code
+/// class x {};
+/// class y;
+/// \endcode
+AST_MATCHER(CXXRecordDecl, hasDefinition) {
+  return Node.hasDefinition();
+}
+
 } // namespace ast_matchers
 } // namespace clang
 

@@ -8,10 +8,4 @@
 // RUN: %clang -target arm-linux -mcpu=kryo -### -c %s -v -fno-integrated-as 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-A57 %s
 // RUN: %clang -target aarch64-linux -mcpu=kryo -### -c %s -v -fno-integrated-as 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-A57 %s
 
-// RUN: %clang -target arm-linux -mcpu=falkor -### -c %s -v -fno-integrated-as 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-A57 %s
-// RUN: %clang -target aarch64-linux -mcpu=falkor -### -c %s -v -fno-integrated-as 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-A57 %s
-
-// RUN: %clang -target arm-linux -mcpu=saphira -### -c %s -v -fno-integrated-as 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-A57 %s
-// RUN: %clang -target aarch64-linux -mcpu=saphira -### -c %s -v -fno-integrated-as 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-A57 %s
-
 // CHECK-CORTEX-A57: as{{(.exe)?}}" "{{.*}}-mcpu=cortex-a57

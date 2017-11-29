@@ -602,17 +602,15 @@ void Writer::calculateOffsets() {
     // Elem
     uint32_t SegmentCount = WasmFile->elements().size();
     if (SegmentCount) {
-      if (SegmentCount > 1) {
+      if (SegmentCount > 1)
         fatal(File->getName() + ": contains more than element segment");
-      } else {
-        const WasmElemSegment &Segment = WasmFile->elements()[0];
-        if (Segment.TableIndex != 0)
-          fatal(File->getName() + ": unsupported table index");
-        else if (Segment.Offset.Value.Int32 != 0)
-          fatal(File->getName() + ": unsupported segment offset");
-        else
-          NumElements += Segment.Functions.size();
-      }
+
+      const WasmElemSegment &Segment = WasmFile->elements()[0];
+      if (Segment.TableIndex != 0)
+        fatal(File->getName() + ": unsupported table index");
+      if (Segment.Offset.Value.Int32 != 0)
+        fatal(File->getName() + ": unsupported segment offset");
+      NumElements += Segment.Functions.size();
     }
   }
 }

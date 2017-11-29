@@ -561,89 +561,6 @@ void test_linear() {
 #pragma omp distribute simd linear(x, y, z)
   for (i = 0; i < 16; ++i)
     ;
-
-  int x, y;
-#pragma omp target
-#pragma omp teams
-// expected-error@+1 {{expected expression}}
-#pragma omp distribute simd linear(x :)
-  for (i = 0; i < 16; ++i)
-    ;
-#pragma omp target
-#pragma omp teams
-// expected-error@+1 {{expected expression}} expected-error@+1 {{expected ')'}} expected-note@+1 {{to match this '('}}
-#pragma omp distribute simd linear(x :, )
-  for (i = 0; i < 16; ++i)
-    ;
-#pragma omp target
-#pragma omp teams
-#pragma omp distribute simd linear(x : 1)
-  for (i = 0; i < 16; ++i)
-    ;
-#pragma omp target
-#pragma omp teams
-#pragma omp distribute simd linear(x : 2 * 2)
-  for (i = 0; i < 16; ++i)
-    ;
-#pragma omp target
-#pragma omp teams
-// expected-error@+1 {{expected ')'}} expected-note@+1 {{to match this '('}}
-#pragma omp distribute simd linear(x : 1, y)
-  for (i = 0; i < 16; ++i)
-    ;
-#pragma omp target
-#pragma omp teams
-// expected-error@+1 {{expected ')'}} expected-note@+1 {{to match this '('}}
-#pragma omp distribute simd linear(x : 1, y, z : 1)
-  for (i = 0; i < 16; ++i)
-    ;
-
-#pragma omp target
-#pragma omp teams
-// expected-note@+2 {{defined as linear}}
-// expected-error@+1 {{linear variable cannot be linear}}
-#pragma omp distribute simd linear(x) linear(x)
-  for (i = 0; i < 16; ++i)
-    ;
-
-#pragma omp target
-#pragma omp teams
-// expected-note@+2 {{defined as private}}
-// expected-error@+1 {{private variable cannot be linear}}
-#pragma omp distribute simd private(x) linear(x)
-  for (i = 0; i < 16; ++i)
-    ;
-
-#pragma omp target
-#pragma omp teams
-// expected-note@+2 {{defined as linear}}
-// expected-error@+1 {{linear variable cannot be private}}
-#pragma omp distribute simd linear(x) private(x)
-  for (i = 0; i < 16; ++i)
-    ;
-
-#pragma omp target
-#pragma omp teams
-// expected-warning@+1 {{zero linear step (x and other variables in clause should probably be const)}}
-#pragma omp distribute simd linear(x, y : 0)
-  for (i = 0; i < 16; ++i)
-    ;
-
-#pragma omp target
-#pragma omp teams
-// expected-note@+2 {{defined as linear}}
-// expected-error@+1 {{linear variable cannot be lastprivate}}
-#pragma omp distribute simd linear(x) lastprivate(x)
-  for (i = 0; i < 16; ++i)
-    ;
-
-#pragma omp target
-#pragma omp teams
-// expected-note@+2 {{defined as lastprivate}}
-// expected-error@+1 {{lastprivate variable cannot be linear}}
-#pragma omp distribute simd lastprivate(x) linear(x)
-  for (i = 0; i < 16; ++i)
-    ;
 }
 
 void test_aligned() {
@@ -1083,26 +1000,26 @@ void test_loop_messages() {
 }
 
 void linear_modifiers(int argc) {
-  int f;
+  int k;
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute simd linear(f)
-  for (int k = 0; k < argc; ++k) ++k;
+#pragma omp distribute simd linear(k)
+  for (k = 0; k < argc; ++k) ++k;
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute simd linear(val(f))
-  for (int k = 0; k < argc; ++k) ++k;
+#pragma omp distribute simd linear(val(k))
+  for (k = 0; k < argc; ++k) ++k;
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute simd linear(uval(f)) // expected-error {{expected 'val' modifier}}
-  for (int k = 0; k < argc; ++k) ++k;
+#pragma omp distribute simd linear(uval(k)) // expected-error {{expected 'val' modifier}}
+  for (k = 0; k < argc; ++k) ++k;
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute simd linear(ref(f)) // expected-error {{expected 'val' modifier}}
-  for (int k = 0; k < argc; ++k) ++k;
+#pragma omp distribute simd linear(ref(k)) // expected-error {{expected 'val' modifier}}
+  for (k = 0; k < argc; ++k) ++k;
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute simd linear(foo(f)) // expected-error {{expected 'val' modifier}}
-  for (int k = 0; k < argc; ++k) ++k;
+#pragma omp distribute simd linear(foo(k)) // expected-error {{expected 'val' modifier}}
+  for (k = 0; k < argc; ++k) ++k;
 }
 
