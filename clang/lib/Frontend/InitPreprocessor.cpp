@@ -677,8 +677,14 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__EXCEPTIONS");
   if (!LangOpts.MSVCCompat && LangOpts.RTTI)
     Builder.defineMacro("__GXX_RTTI");
+
   if (LangOpts.SjLjExceptions)
     Builder.defineMacro("__USING_SJLJ_EXCEPTIONS__");
+  else if (LangOpts.SEHExceptions)
+    Builder.defineMacro("__SEH__");
+  else if (LangOpts.DWARFExceptions &&
+          (TI.getTriple().isThumb() || TI.getTriple().isARM()))
+    Builder.defineMacro("__ARM_DWARF_EH__");
 
   if (LangOpts.Deprecated)
     Builder.defineMacro("__DEPRECATED");

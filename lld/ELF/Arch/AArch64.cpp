@@ -39,6 +39,9 @@ public:
   void writePltHeader(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
+  bool needsThunk(RelExpr Expr, RelType Type, const InputFile *File,
+                  uint64_t BranchAddr, const Symbol &S) const override;
+  bool inBranchRange(RelType Type, uint64_t Src, uint64_t Dst) const override;
   bool usesOnlyLowPageBits(RelType Type) const override;
   void relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const override;
   RelExpr adjustRelaxExpr(RelType Type, const uint8_t *Data,
@@ -66,6 +69,12 @@ AArch64::AArch64() {
   // It doesn't seem to be documented anywhere, but tls on aarch64 uses variant
   // 1 of the tls structures and the tcb size is 16.
   TcbSize = 16;
+  NeedsThunks = true;
+
+  // See comment in Arch/ARM.cpp for a more detailed explanation of
+  // ThunkSectionSpacing. For AArch64 the only branches we are permitted to
+  // Thunk have a range of +/- 128 MiB
+  ThunkSectionSpacing = (128 * 1024 * 1024) - 0x30000;
 }
 
 RelExpr AArch64::getRelExpr(RelType Type, const Symbol &S,
@@ -179,6 +188,31 @@ void AArch64::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
               getAArch64Page(GotPltEntryAddr) - getAArch64Page(PltEntryAddr));
   relocateOne(Buf + 4, R_AARCH64_LDST64_ABS_LO12_NC, GotPltEntryAddr);
   relocateOne(Buf + 8, R_AARCH64_ADD_ABS_LO12_NC, GotPltEntryAddr);
+}
+
+bool AArch64::needsThunk(RelExpr Expr, RelType Type, const InputFile *File,
+                         uint64_t BranchAddr, const Symbol &S) const {
+  // ELF for the ARM 64-bit architecture, section Call and Jump relocations
+  // only permits range extension thunks for R_AARCH64_CALL26 and
+  // R_AARCH64_JUMP26 relocation types.
+  if (Type != R_AARCH64_CALL26 && Type != R_AARCH64_JUMP26)
+    return false;
+  uint64_t Dst = (Expr == R_PLT_PC) ? S.getPltVA() : S.getVA();
+  return !inBranchRange(Type, BranchAddr, Dst);
+}
+
+bool AArch64::inBranchRange(RelType Type, uint64_t Src, uint64_t Dst) const {
+  if (Type != R_AARCH64_CALL26 && Type != R_AARCH64_JUMP26)
+    return true;
+  // The AArch64 call and unconditional branch instructions have a range of
+  // +/- 128 MiB.
+  uint64_t Range = 128 * 1024 * 1024;
+  if (Dst > Src) {
+    // Immediate of branch is signed.
+    Range -= 4;
+    return Dst - Src <= Range;
+  }
+  return Src - Dst <= Range;
 }
 
 static void write32AArch64Addr(uint8_t *L, uint64_t Imm) {

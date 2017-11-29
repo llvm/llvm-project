@@ -367,8 +367,11 @@ bool toolchains::MinGW::isPICDefaultForced() const {
   return getArch() == llvm::Triple::x86_64;
 }
 
-bool toolchains::MinGW::UseSEHExceptions() const {
-  return getArch() == llvm::Triple::x86_64;
+llvm::ExceptionHandling
+toolchains::MinGW::GetExceptionModel(const ArgList &Args) const {
+  if (getArch() == llvm::Triple::x86_64)
+    return llvm::ExceptionHandling::WinEH;
+  return llvm::ExceptionHandling::DwarfCFI;
 }
 
 void toolchains::MinGW::AddCudaIncludeArgs(const ArgList &DriverArgs,
