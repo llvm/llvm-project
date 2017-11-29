@@ -44,7 +44,7 @@
 # else
 #  define SANITIZER_IOS    0
 # endif
-# if TARGET_IPHONE_SIMULATOR
+# if TARGET_OS_SIMULATOR
 #  define SANITIZER_IOSSIM 1
 # else
 #  define SANITIZER_IOSSIM 0
