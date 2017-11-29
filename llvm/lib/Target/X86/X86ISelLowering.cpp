@@ -860,8 +860,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SINT_TO_FP,         MVT::v4i32, Legal);
     setOperationAction(ISD::SINT_TO_FP,         MVT::v2i32, Custom);
 
-    setOperationAction(ISD::UINT_TO_FP,         MVT::v4i8,  Custom);
-    setOperationAction(ISD::UINT_TO_FP,         MVT::v4i16, Custom);
     setOperationAction(ISD::UINT_TO_FP,         MVT::v2i32, Custom);
 
     // Fast v2f32 UINT_TO_FP( v2i32 ) custom conversion.
@@ -1005,9 +1003,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SINT_TO_FP,         MVT::v8i16, Promote);
     setOperationAction(ISD::SINT_TO_FP,         MVT::v8i32, Legal);
     setOperationAction(ISD::FP_ROUND,           MVT::v4f32, Legal);
-
-    setOperationAction(ISD::UINT_TO_FP,         MVT::v8i8,  Custom);
-    setOperationAction(ISD::UINT_TO_FP,         MVT::v8i16, Custom);
 
     for (MVT VT : MVT::fp_vector_valuetypes())
       setLoadExtAction(ISD::EXTLOAD, VT, MVT::v4f32, Legal);
@@ -1179,8 +1174,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     setOperationAction(ISD::FP_TO_SINT,         MVT::v16i32, Legal);
     setOperationAction(ISD::FP_TO_UINT,         MVT::v16i32, Legal);
-    setOperationAction(ISD::FP_TO_UINT,         MVT::v16i8, Legal);
-    setOperationAction(ISD::FP_TO_UINT,         MVT::v16i16, Legal);
+    setOperationAction(ISD::FP_TO_UINT,         MVT::v16i8, Promote);
+    setOperationAction(ISD::FP_TO_UINT,         MVT::v16i16, Promote);
     setOperationAction(ISD::FP_TO_UINT,         MVT::v8i32, Legal);
     setOperationAction(ISD::FP_TO_UINT,         MVT::v4i32, Legal);
     setOperationAction(ISD::FP_TO_UINT,         MVT::v2i32, Custom);
@@ -1190,8 +1185,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::UINT_TO_FP,         MVT::v16i32, Legal);
     setOperationAction(ISD::UINT_TO_FP,         MVT::v8i32, Legal);
     setOperationAction(ISD::UINT_TO_FP,         MVT::v4i32, Legal);
-    setOperationAction(ISD::UINT_TO_FP,         MVT::v16i8, Custom);
-    setOperationAction(ISD::UINT_TO_FP,         MVT::v16i16, Custom);
     setOperationAction(ISD::SINT_TO_FP,         MVT::v16i1, Custom);
     setOperationAction(ISD::UINT_TO_FP,         MVT::v16i1, Custom);
     setOperationAction(ISD::SINT_TO_FP,         MVT::v8i1,  Custom);
@@ -15801,24 +15794,12 @@ SDValue X86TargetLowering::lowerUINT_TO_FP_vec(SDValue Op,
   switch (SrcVT.SimpleTy) {
   default:
     llvm_unreachable("Custom UINT_TO_FP is not supported!");
-  case MVT::v4i8:
-  case MVT::v4i16:
-  case MVT::v8i8:
-  case MVT::v8i16: {
-    MVT NVT = MVT::getVectorVT(MVT::i32, SrcVT.getVectorNumElements());
-    return DAG.getNode(ISD::SINT_TO_FP, dl, Op.getValueType(),
-                       DAG.getNode(ISD::ZERO_EXTEND, dl, NVT, N0));
-  }
   case MVT::v2i32:
     return lowerUINT_TO_FP_v2i32(Op, DAG, Subtarget, dl);
   case MVT::v4i32:
   case MVT::v8i32:
+    assert(!Subtarget.hasAVX512());
     return lowerUINT_TO_FP_vXi32(Op, DAG, Subtarget);
-  case MVT::v16i8:
-  case MVT::v16i16:
-    assert(Subtarget.hasAVX512());
-    return DAG.getNode(ISD::UINT_TO_FP, dl, Op.getValueType(),
-                       DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::v16i32, N0));
   }
 }
 
@@ -36080,7 +36061,6 @@ static SDValue combineUIntToFP(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   EVT InVT = Op0.getValueType();
   EVT InSVT = InVT.getScalarType();
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   // UINT_TO_FP(vXi8) -> SINT_TO_FP(ZEXT(vXi8 to vXi32))
   // UINT_TO_FP(vXi16) -> SINT_TO_FP(ZEXT(vXi16 to vXi32))
@@ -36090,9 +36070,7 @@ static SDValue combineUIntToFP(SDNode *N, SelectionDAG &DAG,
                                  InVT.getVectorNumElements());
     SDValue P = DAG.getNode(ISD::ZERO_EXTEND, dl, DstVT, Op0);
 
-    if (TLI.isOperationLegal(ISD::UINT_TO_FP, DstVT))
-      return DAG.getNode(ISD::UINT_TO_FP, dl, VT, P);
-
+    // UINT_TO_FP isn't legal without AVX512 so use SINT_TO_FP.
     return DAG.getNode(ISD::SINT_TO_FP, dl, VT, P);
   }
 

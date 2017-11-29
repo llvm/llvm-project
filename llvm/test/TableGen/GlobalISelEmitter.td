@@ -832,7 +832,7 @@ def MOVfpimmz : I<(outs FPR32:$dst), (ins f32imm:$imm), [(set FPR32:$dst, fpimmz
 // CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 22*/ [[LABEL:[0-9]+]],
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_LOAD,
-// CHECK-NEXT:    GIM_CheckNonAtomic, /*MI*/0,
+// CHECK-NEXT:    GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(int64_t)AtomicOrdering::NotAtomic,
 // CHECK-NEXT:    // MIs[0] dst
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
 // CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::GPR32RegClassID,
@@ -861,7 +861,7 @@ def LOAD : I<(outs GPR32:$dst), (ins GPR32:$src1),
 // CHECK-NEXT:    // MIs[0] Operand 1
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/1, /*Type*/GILLT_s16,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/1, TargetOpcode::G_LOAD,
-// CHECK-NEXT:    GIM_CheckNonAtomic, /*MI*/1,
+// CHECK-NEXT:    GIM_CheckAtomicOrdering, /*MI*/1, /*Order*/(int64_t)AtomicOrdering::NotAtomic,
 // CHECK-NEXT:    // MIs[1] Operand 0
 // CHECK-NEXT:    GIM_CheckType, /*MI*/1, /*Op*/0, /*Type*/GILLT_s16,
 // CHECK-NEXT:    // MIs[1] src1

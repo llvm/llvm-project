@@ -628,34 +628,3 @@ else()
 endif()
 
 string(REPLACE " " ";" LLVM_BINDINGS_LIST "${LLVM_BINDINGS}")
-
-function(find_python_module module)
-  string(TOUPPER ${module} module_upper)
-  set(FOUND_VAR PY_${module_upper}_FOUND)
-
-  execute_process(COMMAND "${PYTHON_EXECUTABLE}" "-c" "import ${module}"
-    RESULT_VARIABLE status
-    ERROR_QUIET)
-
-  if(status)
-    set(${FOUND_VAR} 0 PARENT_SCOPE)
-    message(STATUS "Could NOT find Python module ${module}")
-  else()
-    set(${FOUND_VAR} 1 PARENT_SCOPE)
-    message(STATUS "Found Python module ${module}")
-  endif()
-endfunction()
-
-set (PYTHON_MODULES
-  pygments
-  yaml
-  )
-foreach(module ${PYTHON_MODULES})
-  find_python_module(${module})
-endforeach()
-
-if(PY_PYGMENTS_FOUND AND PY_YAML_FOUND)
-  set (LLVM_HAVE_OPT_VIEWER_MODULES 1)
-else()
-  set (LLVM_HAVE_OPT_VIEWER_MODULES 0)
-endif()

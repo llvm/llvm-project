@@ -35,7 +35,7 @@ namespace codeview {
 class ContinuationRecordBuilder;
 class TypeHasher;
 
-class TypeTableBuilder : public TypeVisitorCallbacks {
+class TypeTableBuilder {
 
   BumpPtrAllocator &RecordStorage;
   SimpleTypeSerializer SimpleSerializer;
@@ -52,7 +52,7 @@ class TypeTableBuilder : public TypeVisitorCallbacks {
 
 public:
   explicit TypeTableBuilder(BumpPtrAllocator &Storage, bool Hash = true);
-  ~TypeTableBuilder() override;
+  ~TypeTableBuilder();
 
   void reset();
 
