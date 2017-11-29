@@ -50,9 +50,13 @@
   #define _LIBUNWIND_EXPORT
   #define _LIBUNWIND_HIDDEN
 #else
-  // FIXME: these macros are not correct for COFF targets
-  #define _LIBUNWIND_EXPORT __attribute__((visibility("default")))
-  #define _LIBUNWIND_HIDDEN __attribute__((visibility("hidden")))
+  #if !defined(__ELF__) && !defined(__MACH__)
+    #define _LIBUNWIND_EXPORT __declspec(dllexport)
+    #define _LIBUNWIND_HIDDEN
+  #else
+    #define _LIBUNWIND_EXPORT __attribute__((visibility("default")))
+    #define _LIBUNWIND_HIDDEN __attribute__((visibility("hidden")))
+  #endif
 #endif
 
 #if (defined(__APPLE__) && defined(__arm__)) || defined(__USING_SJLJ_EXCEPTIONS__)

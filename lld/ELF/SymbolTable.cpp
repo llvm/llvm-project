@@ -192,8 +192,8 @@ void SymbolTable::applySymbolWrap() {
     }
 
     // Replace __real_sym with sym and sym with __wrap_sym.
-    W.Real->copyFrom(W.Sym);
-    W.Sym->copyFrom(W.Wrap);
+    memcpy(W.Real, W.Sym, sizeof(SymbolUnion));
+    memcpy(W.Sym, W.Wrap, sizeof(SymbolUnion));
 
     // We now have two copies of __wrap_sym. Drop one.
     W.Wrap->IsUsedInRegularObj = false;
