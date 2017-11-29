@@ -66,13 +66,7 @@ set(XRAY_COMMON_RUNTIME_OBJECT_LIBS
 
 if (APPLE)
   set(XRAY_LINK_LIBS ${SANITIZER_COMMON_LINK_LIBS})
-  set(XRAY_ASM_SOURCES xray_trampoline_x86_64.S)
-
-  if (${CMAKE_GENERATOR} STREQUAL "Xcode")
-    enable_language(ASM)
-  else()
-    set_source_files_properties(${XRAY_ASM_SOURCES} PROPERTIES LANGUAGE C)
-  endif()
+  add_asm_sources(XRAY_ASM_SOURCES xray_trampoline_x86_64.S)
 
   add_weak_symbols("sanitizer_common" WEAK_SYMBOL_LINK_FLAGS)
   add_weak_symbols("xray" WEAK_SYMBOL_LINK_FLAGS)
