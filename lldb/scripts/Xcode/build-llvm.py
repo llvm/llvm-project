@@ -134,11 +134,18 @@ def with_devices_preset_suffix():
     else:
         return ""
 
+def with_asan_preset_suffix():
+    """Return a suffix for the ASAN Swift build preset."""
+    if building_with_asan_enabled():
+        return "_asan"
+    else:
+        return ""
+
 def BUILD_SCRIPT_FLAGS():
     return {
-        "Debug": ["--preset=LLDB_Swift_ReleaseAssert" + with_devices_preset_suffix()],
-        "DebugClang": ["--preset=LLDB_Swift_DebugAssert" + with_devices_preset_suffix()],
-        "Release": ["--preset=LLDB_Swift_ReleaseAssert" + with_devices_preset_suffix()],
+        "Debug": ["--preset=LLDB_Swift_ReleaseAssert" + with_asan_preset_suffix() + with_devices_preset_suffix()],
+        "DebugClang": ["--preset=LLDB_Swift_DebugAssert" + with_asan_preset_suffix() + with_devices_preset_suffix()],
+        "Release": ["--preset=LLDB_Swift_ReleaseAssert" + with_asan_preset_suffix() + with_devices_preset_suffix()],
     }
 
 

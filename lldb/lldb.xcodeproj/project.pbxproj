@@ -1051,8 +1051,8 @@
 		AF33B4BF1C1FA441001B28D9 /* NetBSDSignals.h in Headers */ = {isa = PBXBuildFile; fileRef = AF33B4BD1C1FA441001B28D9 /* NetBSDSignals.h */; };
 		AF37E10A17C861F20061E18E /* ProcessRunLock.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF37E10917C861F20061E18E /* ProcessRunLock.cpp */; };
 		AF3A4AD21EA05C4700B5DEB4 /* PlatformRemoteDarwinDevice.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF41B78F1EA5D52C009E2985 /* PlatformRemoteDarwinDevice.cpp */; };
-		AF3B27AA1AFC1E1100524996 /* ConnectionFileDescriptorPosix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFDFDFD019E34D3400EAE509 /* ConnectionFileDescriptorPosix.cpp */; };
 		AF3A4AD31EA05C4700B5DEB4 /* PlatformRemoteDarwinDevice.h in Headers */ = {isa = PBXBuildFile; fileRef = AF3A4AD11EA05C4700B5DEB4 /* PlatformRemoteDarwinDevice.h */; };
+		AF3B27AA1AFC1E1100524996 /* ConnectionFileDescriptorPosix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFDFDFD019E34D3400EAE509 /* ConnectionFileDescriptorPosix.cpp */; };
 		AF45FDE518A1F3AC0007051C /* AppleGetThreadItemInfoHandler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF45FDE318A1F3AC0007051C /* AppleGetThreadItemInfoHandler.cpp */; };
 		AF46419D1BEC2D98002FC614 /* PlatformAppleSimulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF46419C1BEC2D98002FC614 /* PlatformAppleSimulator.cpp */; };
 		AF46AE6A19A708EC008BD829 /* AppleObjCClassDescriptorV2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF46AE6819A708EC008BD829 /* AppleObjCClassDescriptorV2.cpp */; };
@@ -3250,6 +3250,7 @@
 		AF33B4BC1C1FA441001B28D9 /* NetBSDSignals.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = NetBSDSignals.cpp; path = Utility/NetBSDSignals.cpp; sourceTree = "<group>"; };
 		AF33B4BD1C1FA441001B28D9 /* NetBSDSignals.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = NetBSDSignals.h; path = Utility/NetBSDSignals.h; sourceTree = "<group>"; };
 		AF37E10917C861F20061E18E /* ProcessRunLock.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ProcessRunLock.cpp; sourceTree = "<group>"; };
+		AF3A4AD11EA05C4700B5DEB4 /* PlatformRemoteDarwinDevice.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformRemoteDarwinDevice.h; sourceTree = "<group>"; };
 		AF3F54AE1B3BA59C00186E73 /* CrashReason.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CrashReason.cpp; sourceTree = "<group>"; };
 		AF3F54AF1B3BA59C00186E73 /* CrashReason.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CrashReason.h; sourceTree = "<group>"; };
 		AF3F54B21B3BA5D500186E73 /* POSIXStopInfo.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = POSIXStopInfo.cpp; sourceTree = "<group>"; };
@@ -3265,7 +3266,6 @@
 		AF3F54C01B3BA5D500186E73 /* RegisterContextPOSIXProcessMonitor_x86.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RegisterContextPOSIXProcessMonitor_x86.cpp; sourceTree = "<group>"; };
 		AF3F54C11B3BA5D500186E73 /* RegisterContextPOSIXProcessMonitor_x86.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RegisterContextPOSIXProcessMonitor_x86.h; sourceTree = "<group>"; };
 		AF41B78F1EA5D52C009E2985 /* PlatformRemoteDarwinDevice.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformRemoteDarwinDevice.cpp; sourceTree = "<group>"; };
-		AF3A4AD11EA05C4700B5DEB4 /* PlatformRemoteDarwinDevice.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformRemoteDarwinDevice.h; sourceTree = "<group>"; };
 		AF45E1FC1BF57C8D000563EB /* PythonTestSuite.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PythonTestSuite.cpp; sourceTree = "<group>"; };
 		AF45E1FD1BF57C8D000563EB /* PythonTestSuite.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PythonTestSuite.h; sourceTree = "<group>"; };
 		AF45FDE318A1F3AC0007051C /* AppleGetThreadItemInfoHandler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AppleGetThreadItemInfoHandler.cpp; sourceTree = "<group>"; };
@@ -7669,7 +7669,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "if [ \"${CONFIGURATION}\" != BuildAndIntegration ]\nthen\n  \"${SRCROOT}\"/scripts/check-ast-context.py --file \"${SRCROOT}\"/source/Symbol/SwiftASTContext.cpp --llvmbuild \"${LLDB_PATH_TO_LLVM_BUILD}\" --swiftbuild \"${LLVM_BUILD_DIR}/${SWIFT_BUILD_DIR_ARCH}\" --lldbbuild \"${BUILD_DIR}\" --llvmbarch \"${LLVM_BUILD_DIR_ARCH}\" --verbose true\nfi\n";
+			shellScript = "if [ \"${CONFIGURATION}\" != BuildAndIntegration -a -z \"$ENABLE_ADDRESS_SANITIZER\" ]\nthen\n  \"${SRCROOT}\"/scripts/check-ast-context.py --file \"${SRCROOT}\"/source/Symbol/SwiftASTContext.cpp --llvmbuild \"${LLDB_PATH_TO_LLVM_BUILD}\" --swiftbuild \"${LLVM_BUILD_DIR}/${SWIFT_BUILD_DIR_ARCH}\" --lldbbuild \"${BUILD_DIR}\" --llvmbarch \"${LLVM_BUILD_DIR_ARCH}\" --verbose true\nfi\n";
 		};
 		9A19ACE2116563A700E0D453 /* Finish swig wrapper classes (lldb) */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -8919,7 +8919,7 @@
 				PYTHON_FRAMEWORK_PATH = "$(SDKROOT)/System/Library/Frameworks/Python.framework";
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
-				SDKROOT = macosx.internal;
+				SDKROOT = macosx;
 				"SDKROOT[arch=i386]" = macosx;
 				"SDKROOT[arch=x86_64]" = macosx;
 				"SDKROOT[arch=x86_64h]" = macosx;
@@ -9050,7 +9050,7 @@
 				PYTHON_FRAMEWORK_PATH = "$(SDKROOT)/System/Library/Frameworks/Python.framework";
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
-				SDKROOT = macosx.internal;
+				SDKROOT = macosx;
 				"SDKROOT[arch=i386]" = macosx;
 				"SDKROOT[arch=x86_64]" = macosx;
 				"SDKROOT[arch=x86_64h]" = macosx;
@@ -9504,6 +9504,7 @@
 					Security,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"$(LLDB_GUI_LDFLAGS)",
 				);
 				PRODUCT_NAME = "lldb-server";
 				SDKROOT = macosx;
@@ -10779,7 +10780,7 @@
 				PYTHON_FRAMEWORK_PATH = "$(SDKROOT)/System/Library/Frameworks/Python.framework";
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
-				SDKROOT = macosx.internal;
+				SDKROOT = macosx;
 				"SDKROOT[arch=i386]" = macosx;
 				"SDKROOT[arch=x86_64]" = macosx;
 				"SDKROOT[arch=x86_64h]" = macosx;
@@ -11234,6 +11235,7 @@
 					Security,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"$(LLDB_GUI_LDFLAGS)",
 				);
 				PRODUCT_NAME = "lldb-server";
 				SDKROOT = macosx;
@@ -11321,6 +11323,7 @@
 					Security,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"$(LLDB_GUI_LDFLAGS)",
 				);
 				PRODUCT_NAME = "lldb-server";
 				SDKROOT = macosx;
@@ -11404,6 +11407,7 @@
 					Security,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"$(LLDB_GUI_LDFLAGS)",
 				);
 				PRODUCT_NAME = "lldb-server";
 				SDKROOT = macosx;
@@ -11803,7 +11807,7 @@
 				PYTHON_FRAMEWORK_PATH = "$(SDKROOT)/System/Library/Frameworks/Python.framework";
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
-				SDKROOT = macosx.internal;
+				SDKROOT = macosx;
 				"SDKROOT[arch=i386]" = macosx;
 				"SDKROOT[arch=x86_64]" = macosx;
 				"SDKROOT[arch=x86_64h]" = macosx;
@@ -12106,6 +12110,7 @@
 					Security,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"$(LLDB_GUI_LDFLAGS)",
 				);
 				PRODUCT_NAME = "lldb-server";
 				SDKROOT = macosx;
@@ -12519,7 +12524,7 @@
 				PYTHON_FRAMEWORK_PATH = "$(SDKROOT)/System/Library/Frameworks/Python.framework";
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
-				SDKROOT = macosx.internal;
+				SDKROOT = macosx;
 				"SDKROOT[arch=i386]" = macosx;
 				"SDKROOT[arch=x86_64]" = macosx;
 				"SDKROOT[arch=x86_64h]" = macosx;
@@ -12816,6 +12821,7 @@
 					Security,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"$(LLDB_GUI_LDFLAGS)",
 				);
 				PRODUCT_NAME = "lldb-server";
 				SDKROOT = macosx;
@@ -13463,7 +13469,7 @@
 				PYTHON_FRAMEWORK_PATH = "$(SDKROOT)/System/Library/Frameworks/Python.framework";
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
-				SDKROOT = macosx.internal;
+				SDKROOT = macosx;
 				"SDKROOT[arch=i386]" = macosx;
 				"SDKROOT[arch=x86_64]" = macosx;
 				"SDKROOT[arch=x86_64h]" = macosx;
@@ -13750,6 +13756,7 @@
 					Security,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"$(LLDB_GUI_LDFLAGS)",
 				);
 				PRODUCT_NAME = "lldb-server";
 				SDKROOT = macosx;
@@ -14060,7 +14067,7 @@
 				PYTHON_FRAMEWORK_PATH = "$(SDKROOT)/System/Library/Frameworks/Python.framework";
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
-				SDKROOT = macosx.internal;
+				SDKROOT = macosx;
 				"SDKROOT[arch=i386]" = macosx;
 				"SDKROOT[arch=x86_64]" = macosx;
 				"SDKROOT[arch=x86_64h]" = macosx;
@@ -14345,6 +14352,7 @@
 					Security,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"$(LLDB_GUI_LDFLAGS)",
 				);
 				PRODUCT_NAME = "lldb-server";
 				SDKROOT = macosx;
