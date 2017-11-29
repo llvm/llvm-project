@@ -26,7 +26,6 @@
 #ifdef LLDB_USE_BUILTIN_DEMANGLER
 // Provide a fast-path demangler implemented in FastDemangle.cpp until it can
 // replace the existing C++ demangler with a complete implementation
-#include "lldb/Utility/CxaDemangle.h"
 #include "lldb/Utility/FastDemangle.h"
 #include "llvm/Demangle/Demangle.h"
 #else
