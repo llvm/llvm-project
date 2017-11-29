@@ -250,6 +250,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(hasDeclContext);
   REGISTER_MATCHER(hasDeducedType);
   REGISTER_MATCHER(hasDefaultArgument);
+  REGISTER_MATCHER(hasDefinition);
   REGISTER_MATCHER(hasDescendant);
   REGISTER_MATCHER(hasDestinationType);
   REGISTER_MATCHER(hasDynamicExceptionSpec);

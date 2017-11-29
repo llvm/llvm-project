@@ -13,6 +13,7 @@
 #include "clang/Basic/Cuda.h"
 #include "clang/Config/config.h"
 #include "clang/Basic/VirtualFileSystem.h"
+#include "clang/Driver/Distro.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
@@ -75,6 +76,11 @@ CudaInstallationDetector::CudaInstallationDetector(
     CudaPathCandidates.push_back(D.SysRoot + "/usr/local/cuda");
     for (const char *Ver : Versions)
       CudaPathCandidates.push_back(D.SysRoot + "/usr/local/cuda-" + Ver);
+
+    if (Distro(D.getVFS()).IsDebian())
+      // Special case for Debian to have nvidia-cuda-toolkit work
+      // out of the box. More info on http://bugs.debian.org/882505
+      CudaPathCandidates.push_back(D.SysRoot + "/usr/lib/cuda");
   }
 
   for (const auto &CudaPath : CudaPathCandidates) {

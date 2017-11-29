@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
 #pragma omp target teams distribute parallel for } // expected-warning {{extra tokens at the end of '#pragma omp target teams distribute parallel for' are ignored}}
   for (int i = 0; i < argc; ++i)
     foo();
-#pragma omp target teams distribute parallel for
+#pragma omp target teams distribute parallel for linear(argc) // expected-error {{unexpected OpenMP clause 'linear' in directive '#pragma omp target teams distribute parallel for'}}
   for (int i = 0; i < argc; ++i)
     foo();
 // expected-warning@+1 {{extra tokens at the end of '#pragma omp target teams distribute parallel for' are ignored}}
