@@ -161,8 +161,8 @@ declare hidden void @undef_double(i32 %this, double %volume) unnamed_addr align 
 
 define hidden void @thunk_undef_double(i32 %this, double %volume) unnamed_addr align 2 {
 ; ALL-LABEL: thunk_undef_double:
-; O32: # implicit-def: %A2
-; O32: # implicit-def: %A3
+; O32: # implicit-def: %a2
+; O32: # implicit-def: %a3
 ; NOT-R6C:    jr   $[[TGT]]
 ; R6C:        jrc  $[[TGT]]
 

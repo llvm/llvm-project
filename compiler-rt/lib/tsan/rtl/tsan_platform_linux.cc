@@ -217,9 +217,9 @@ void InitializePlatformEarly() {
     Die();
   }
 #elif defined(__powerpc64__)
-  if (vmaSize != 44 && vmaSize != 46) {
+  if (vmaSize != 44 && vmaSize != 46 && vmaSize != 47) {
     Printf("FATAL: ThreadSanitizer: unsupported VMA range\n");
-    Printf("FATAL: Found %d - Supported 44 and 46\n", vmaSize);
+    Printf("FATAL: Found %d - Supported 44, 46, and 47\n", vmaSize);
     Die();
   }
 #endif

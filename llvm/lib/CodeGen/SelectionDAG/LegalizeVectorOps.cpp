@@ -497,10 +497,10 @@ SDValue VectorLegalizer::PromoteFP_TO_INT(SDValue Op, bool isSigned) {
          "Can't promote a vector with multiple results!");
   EVT VT = Op.getValueType();
 
-  EVT NewVT;
+  EVT NewVT = VT;
   unsigned NewOpc;
   while (true) {
-    NewVT = VT.widenIntegerVectorElementType(*DAG.getContext());
+    NewVT = NewVT.widenIntegerVectorElementType(*DAG.getContext());
     assert(NewVT.isSimple() && "Promoting to a non-simple vector type!");
     if (TLI.isOperationLegalOrCustom(ISD::FP_TO_SINT, NewVT)) {
       NewOpc = ISD::FP_TO_SINT;
@@ -554,7 +554,6 @@ SDValue VectorLegalizer::ExpandLoad(SDValue Op) {
     unsigned Offset = 0;
     unsigned RemainingBytes = SrcVT.getStoreSize();
     SmallVector<SDValue, 8> LoadVals;
-
     while (RemainingBytes > 0) {
       SDValue ScalarLoad;
       unsigned LoadBytes = WideBytes;
@@ -580,9 +579,8 @@ SDValue VectorLegalizer::ExpandLoad(SDValue Op) {
 
       RemainingBytes -= LoadBytes;
       Offset += LoadBytes;
-      BasePTR = DAG.getNode(ISD::ADD, dl, BasePTR.getValueType(), BasePTR,
-                            DAG.getConstant(LoadBytes, dl,
-                                            BasePTR.getValueType()));
+
+      BasePTR = DAG.getObjectPtrOffset(dl, BasePTR, LoadBytes);
 
       LoadVals.push_back(ScalarLoad.getValue(0));
       LoadChains.push_back(ScalarLoad.getValue(1));

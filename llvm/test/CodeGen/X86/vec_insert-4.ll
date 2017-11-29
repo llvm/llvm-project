@@ -26,7 +26,7 @@ define <8 x float> @f(<8 x float> %a, i32 %b) nounwind  {
 ; X64-NEXT:    movq %rsp, %rbp
 ; X64-NEXT:    andq $-32, %rsp
 ; X64-NEXT:    subq $64, %rsp
-; X64-NEXT:    ## kill: %EDI<def> %EDI<kill> %RDI<def>
+; X64-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
 ; X64-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
 ; X64-NEXT:    movaps %xmm0, (%rsp)
 ; X64-NEXT:    andl $7, %edi

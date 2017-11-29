@@ -355,7 +355,7 @@ define <4 x double> @test_mm256_broadcastsd_pd(<4 x double> %a0) {
 define <4 x i64> @test_mm256_broadcastsi128_si256(<2 x i64> %a0) {
 ; CHECK-LABEL: test_mm256_broadcastsi128_si256:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
+; CHECK-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<def>
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %res = shufflevector <2 x i64> %a0, <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
@@ -1447,7 +1447,7 @@ define <4 x float> @test_mm256_mask_i64gather_ps(<4 x float> %a0, float *%a1, <4
 define <4 x i64> @test0_mm256_inserti128_si256(<4 x i64> %a0, <2 x i64> %a1) nounwind {
 ; CHECK-LABEL: test0_mm256_inserti128_si256:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    # kill: %XMM1<def> %XMM1<kill> %YMM1<def>
+; CHECK-NEXT:    # kill: %xmm1<def> %xmm1<kill> %ymm1<def>
 ; CHECK-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ext = shufflevector <2 x i64> %a1, <2 x i64> %a1, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>

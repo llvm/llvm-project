@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MinGW.h"
+#include "SymbolTable.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/Path.h"
@@ -98,6 +99,15 @@ bool AutoExporter::shouldExport(Defined *Sym) const {
   if (!isa<DefinedRegular>(Sym) && !isa<DefinedCommon>(Sym))
     return false;
   if (ExcludeSymbols.count(Sym->getName()))
+    return false;
+
+  // Don't export anything that looks like an import symbol (which also can be
+  // a manually defined data symbol with such a name).
+  if (Sym->getName().startswith("__imp_"))
+    return false;
+
+  // If a corresponding __imp_ symbol exists and is defined, don't export it.
+  if (Symtab->find(("__imp_" + Sym->getName()).str()))
     return false;
 
   // Check that file is non-null before dereferencing it, symbols not

@@ -10,7 +10,7 @@ define i8 @PR30841(i64 %argc) {
 ; CHECK:       ## BB#0: ## %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    negl %eax
-; CHECK-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
+; CHECK-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
 ; CHECK-NEXT:    retl
 entry:
   %or = or i64 %argc, -4294967296

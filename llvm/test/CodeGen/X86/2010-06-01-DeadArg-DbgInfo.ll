@@ -11,7 +11,7 @@ target triple = "x86_64-apple-darwin10.2"
 ; Function Attrs: noinline nounwind optsize readnone ssp
 define i32 @_ZN3foo3bazEi(%struct.foo* nocapture %this, i32 %x) #0 align 2 !dbg !4 {
 entry: 
-  ; CHECK: DEBUG_VALUE: baz:this <- %RDI{{$}}
+  ; CHECK: DEBUG_VALUE: baz:this <- %rdi{{$}}
   tail call void @llvm.dbg.value(metadata %struct.foo* %this, i64 0, metadata !13, metadata !16), !dbg !17
   tail call void @llvm.dbg.value(metadata i32 %x, i64 0, metadata !18, metadata !16), !dbg !17
   %0 = mul nsw i32 %x, 7, !dbg !19

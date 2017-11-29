@@ -1,7 +1,7 @@
-.. title:: clang-tidy - misc-noexcept-move-constructor
+.. title:: clang-tidy - performance-noexcept-move-constructor
 
-misc-noexcept-move-constructor
-==============================
+performance-noexcept-move-constructor
+=====================================
 
 
 The check flags user-defined move constructors and assignment operators not

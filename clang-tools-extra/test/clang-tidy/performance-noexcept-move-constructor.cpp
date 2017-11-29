@@ -1,8 +1,8 @@
-// RUN: %check_clang_tidy %s misc-noexcept-move-constructor %t
+// RUN: %check_clang_tidy %s performance-noexcept-move-constructor %t
 
 class A {
   A(A &&);
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: move constructors should be marked noexcept [misc-noexcept-move-constructor]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: move constructors should be marked noexcept [performance-noexcept-move-constructor]
   A &operator=(A &&);
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: move assignment operators should
 };
@@ -10,7 +10,7 @@ class A {
 struct B {
   static constexpr bool kFalse = false;
   B(B &&) noexcept(kFalse);
-  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: noexcept specifier on the move constructor evaluates to 'false' [misc-noexcept-move-constructor]
+  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: noexcept specifier on the move constructor evaluates to 'false' [performance-noexcept-move-constructor]
 };
 
 class OK {};
@@ -21,10 +21,10 @@ void f() {
 }
 
 class OK1 {
- public:
+public:
   OK1();
   OK1(const OK1 &);
-  OK1(OK1&&) noexcept;
+  OK1(OK1 &&) noexcept;
   OK1 &operator=(OK1 &&) noexcept;
   void f();
   void g() noexcept;

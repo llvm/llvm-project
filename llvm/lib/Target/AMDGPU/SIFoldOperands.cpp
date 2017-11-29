@@ -971,9 +971,9 @@ bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
       // Prevent folding operands backwards in the function. For example,
       // the COPY opcode must not be replaced by 1 in this example:
       //
-      //    %vreg3<def> = COPY %VGPR0; VGPR_32:%vreg3
+      //    %vreg3<def> = COPY %vgpr0; VGPR_32:%vreg3
       //    ...
-      //    %VGPR0<def> = V_MOV_B32_e32 1, %EXEC<imp-use>
+      //    %vgpr0<def> = V_MOV_B32_e32 1, %exec<imp-use>
       MachineOperand &Dst = MI.getOperand(0);
       if (Dst.isReg() &&
           !TargetRegisterInfo::isVirtualRegister(Dst.getReg()))

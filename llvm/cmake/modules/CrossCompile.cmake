@@ -34,7 +34,6 @@ function(llvm_create_cross_target_internal target_name toolchain buildtype)
                                       ${LLVM_${target_name}_BUILD})
 
   if(NOT IS_DIRECTORY ${LLVM_${target_name}_BUILD})
-    
 
     message(STATUS "Configuring ${target_name} build...")
     execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory
@@ -44,15 +43,18 @@ function(llvm_create_cross_target_internal target_name toolchain buildtype)
     if (buildtype)
       set(build_type_flags "-DCMAKE_BUILD_TYPE=${buildtype}")
     endif()
-	if (LLVM_EXTERNAL_CLANG_SOURCE_DIR)
-	  # Propagate LLVM_EXTERNAL_CLANG_SOURCE_DIR so that clang-tblgen can be built
-	  set(external_clang_dir "-DLLVM_EXTERNAL_CLANG_SOURCE_DIR=${LLVM_EXTERNAL_CLANG_SOURCE_DIR}")
-	endif()
+    if (LLVM_USE_LINKER AND NOT CMAKE_CROSSCOMPILING)
+      set(linker_flag "-DLLVM_USE_LINKER=${LLVM_USE_LINKER}")
+    endif()
+    if (LLVM_EXTERNAL_CLANG_SOURCE_DIR)
+      # Propagate LLVM_EXTERNAL_CLANG_SOURCE_DIR so that clang-tblgen can be built
+      set(external_clang_dir "-DLLVM_EXTERNAL_CLANG_SOURCE_DIR=${LLVM_EXTERNAL_CLANG_SOURCE_DIR}")
+    endif()
     execute_process(COMMAND ${CMAKE_COMMAND} ${build_type_flags}
         -G "${CMAKE_GENERATOR}" -DLLVM_TARGETS_TO_BUILD=${LLVM_TARGETS_TO_BUILD}
         ${CROSS_TOOLCHAIN_FLAGS_${target_name}} ${CMAKE_SOURCE_DIR}
         -DLLVM_TARGET_IS_CROSSCOMPILE_HOST=TRUE
-        ${external_clang_dir}
+        ${external_clang_dir} ${linker_flag}
       WORKING_DIRECTORY ${LLVM_${target_name}_BUILD} )
   endif(NOT IS_DIRECTORY ${LLVM_${target_name}_BUILD})
 

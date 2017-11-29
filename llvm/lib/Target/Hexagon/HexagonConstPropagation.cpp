@@ -1974,7 +1974,7 @@ bool HexagonConstEvaluator::evaluate(const MachineInstr &MI,
     {
       const MachineOperand &VO = MI.getOperand(1);
       // The operand of CONST32 can be a blockaddress, e.g.
-      //   %vreg0<def> = CONST32 <blockaddress(@eat, %L)>
+      //   %vreg0<def> = CONST32 <blockaddress(@eat, %l)>
       // Do this check for all instructions for safety.
       if (!VO.isImm())
         return false;
@@ -3144,7 +3144,7 @@ bool HexagonConstEvaluator::rewriteHexBranch(MachineInstr &BrI,
       BrI.setDesc(JD);
       while (BrI.getNumOperands() > 0)
         BrI.RemoveOperand(0);
-      // This ensures that all implicit operands (e.g. %R31<imp-def>, etc)
+      // This ensures that all implicit operands (e.g. %r31<imp-def>, etc)
       // are present in the rewritten branch.
       for (auto &Op : NI->operands())
         BrI.addOperand(Op);

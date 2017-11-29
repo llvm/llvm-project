@@ -2,12 +2,12 @@
 
 ; This file check a bug in MachineCopyPropagation pass. The last COPY will be
 ; incorrectly removed if the machine instructions are as follows:
-;   %Q5_Q6<def> = COPY %Q2_Q3
-;   %D5<def> =
-;   %D3<def> =
-;   %D3<def> = COPY %D6
+;   %q5_q6<def> = COPY %q2_q3
+;   %d5<def> =
+;   %d3<def> =
+;   %d3<def> = COPY %d6
 ; This is caused by a bug in function SourceNoLongerAvailable(), which fails to
-; remove the relationship of D6 and "%Q5_Q6<def> = COPY %Q2_Q3".
+; remove the relationship of D6 and "%q5_q6<def> = COPY %q2_q3".
 
 @failed = internal unnamed_addr global i1 false
 

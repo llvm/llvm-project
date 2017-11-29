@@ -75,10 +75,10 @@ define <4 x i64> @var_shift_v4i64(<4 x i64> %a, <4 x i64> %b) nounwind {
 ;
 ; AVX512-LABEL: var_shift_v4i64:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    # kill: %YMM1<def> %YMM1<kill> %ZMM1<def>
-; AVX512-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; AVX512-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
+; AVX512-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; AVX512-NEXT:    vpsravq %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
+; AVX512-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
 ; AVX512-NEXT:    retq
 ;
 ; AVX512VL-LABEL: var_shift_v4i64:
@@ -309,10 +309,10 @@ define <16 x i16> @var_shift_v16i16(<16 x i16> %a, <16 x i16> %b) nounwind {
 ;
 ; AVX512BW-LABEL: var_shift_v16i16:
 ; AVX512BW:       # BB#0:
-; AVX512BW-NEXT:    # kill: %YMM1<def> %YMM1<kill> %ZMM1<def>
-; AVX512BW-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; AVX512BW-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
+; AVX512BW-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; AVX512BW-NEXT:    vpsravw %zmm1, %zmm0, %zmm0
-; AVX512BW-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
+; AVX512BW-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512DQVL-LABEL: var_shift_v16i16:
@@ -696,9 +696,9 @@ define <4 x i64> @splatvar_shift_v4i64(<4 x i64> %a, <4 x i64> %b) nounwind {
 ;
 ; AVX512-LABEL: splatvar_shift_v4i64:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; AVX512-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; AVX512-NEXT:    vpsraq %xmm1, %zmm0, %zmm0
-; AVX512-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
+; AVX512-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
 ; AVX512-NEXT:    retq
 ;
 ; AVX512VL-LABEL: splatvar_shift_v4i64:
@@ -1170,10 +1170,10 @@ define <4 x i64> @constant_shift_v4i64(<4 x i64> %a) nounwind {
 ;
 ; AVX512-LABEL: constant_shift_v4i64:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; AVX512-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; AVX512-NEXT:    vmovdqa {{.*#+}} ymm1 = [1,7,31,62]
 ; AVX512-NEXT:    vpsravq %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
+; AVX512-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
 ; AVX512-NEXT:    retq
 ;
 ; AVX512VL-LABEL: constant_shift_v4i64:
@@ -1360,10 +1360,10 @@ define <16 x i16> @constant_shift_v16i16(<16 x i16> %a) nounwind {
 ;
 ; AVX512BW-LABEL: constant_shift_v16i16:
 ; AVX512BW:       # BB#0:
-; AVX512BW-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; AVX512BW-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm1 = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
 ; AVX512BW-NEXT:    vpsravw %zmm1, %zmm0, %zmm0
-; AVX512BW-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
+; AVX512BW-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512DQVL-LABEL: constant_shift_v16i16:
@@ -1702,9 +1702,9 @@ define <4 x i64> @splatconstant_shift_v4i64(<4 x i64> %a) nounwind {
 ;
 ; AVX512-LABEL: splatconstant_shift_v4i64:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; AVX512-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; AVX512-NEXT:    vpsraq $7, %zmm0, %zmm0
-; AVX512-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
+; AVX512-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
 ; AVX512-NEXT:    retq
 ;
 ; AVX512VL-LABEL: splatconstant_shift_v4i64:

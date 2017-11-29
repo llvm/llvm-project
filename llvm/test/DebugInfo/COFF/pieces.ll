@@ -43,19 +43,19 @@
 ; ASM:         .p2align        4, 0x90
 ; ASM: .LBB0_3:                                # %for.body
 ; ASM: [[ox_start:\.Ltmp[0-9]+]]:
-; ASM:        #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 0 32] %EDI
+; ASM:        #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 0 32] %edi
 ; ASM:        .cv_loc 0 1 13 11               # t.c:13:11
 ; ASM:        movl    %edi, %ecx
 ; ASM:        callq   g
 ; ASM:        movl    %eax, %edi
 ; ASM: [[oy_start:\.Ltmp[0-9]+]]:
-; ASM:         #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 0 32] %EDI
-; ASM:         #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 32 32] %ESI
+; ASM:         #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 0 32] %edi
+; ASM:         #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 32 32] %esi
 ; ASM:         .cv_loc 0 1 14 11               # t.c:14:11
 ; ASM:         movl    %esi, %ecx
 ; ASM:         callq   g
 ; ASM:         movl    %eax, %esi
-; ASM:         #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 32 32] %ESI
+; ASM:         #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 32 32] %esi
 ; ASM:         cmpl    n(%rip), %eax
 ; ASM:         jl      .LBB0_3
 ; ASM: [[oy_end:\.Ltmp[0-9]+]]:
@@ -64,23 +64,23 @@
 
 
 ; ASM-LABEL: pad_right: # @pad_right
-; ASM:         #DEBUG_VALUE: pad_right:o <- [DW_OP_LLVM_fragment 32 32] %ECX
+; ASM:         #DEBUG_VALUE: pad_right:o <- [DW_OP_LLVM_fragment 32 32] %ecx
 ; ASM:         movl    %ecx, %eax
 ; ASM:         retq
 
 
 ; ASM-LABEL: pad_left: # @pad_left
-; ASM:         #DEBUG_VALUE: pad_left:o <- [DW_OP_LLVM_fragment 0 32] %ECX
+; ASM:         #DEBUG_VALUE: pad_left:o <- [DW_OP_LLVM_fragment 0 32] %ecx
 ; ASM:         .cv_loc 2 1 24 3                # t.c:24:3
 ; ASM:         movl    %ecx, %eax
 ; ASM:         retq
 
 
 ; ASM-LABEL: nested: # @nested
-; ASM:         #DEBUG_VALUE: nested:o <- [DW_OP_deref] [%RCX+0]
+; ASM:         #DEBUG_VALUE: nested:o <- [DW_OP_deref] [%rcx+0]
 ; ASM:         movl    12(%rcx), %eax
 ; ASM: [[p_start:\.Ltmp[0-9]+]]:
-; ASM:         #DEBUG_VALUE: nested:p <- [DW_OP_LLVM_fragment 32 32] %EAX
+; ASM:         #DEBUG_VALUE: nested:p <- [DW_OP_LLVM_fragment 32 32] %eax
 ; ASM:         retq
 
 ; ASM-LABEL: bitpiece_spill: # @bitpiece_spill
@@ -89,7 +89,7 @@
 ; ASM:         callq   g
 ; ASM:         movl    %eax, [[offset_o_x:[0-9]+]](%rsp)          # 4-byte Spill
 ; ASM: [[spill_o_x_start:\.Ltmp[0-9]+]]:
-; ASM:         #DEBUG_VALUE: bitpiece_spill:o <- [DW_OP_plus_uconst [[offset_o_x]], DW_OP_LLVM_fragment 32 32] [%RSP+0]
+; ASM:         #DEBUG_VALUE: bitpiece_spill:o <- [DW_OP_plus_uconst [[offset_o_x]], DW_OP_LLVM_fragment 32 32] [%rsp+0]
 ; ASM:         #APP
 ; ASM:         #NO_APP
 ; ASM:         movl    [[offset_o_x]](%rsp), %eax          # 4-byte Reload

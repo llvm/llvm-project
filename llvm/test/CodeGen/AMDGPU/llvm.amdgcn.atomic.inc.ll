@@ -13,7 +13,10 @@ declare i64 @llvm.amdgcn.atomic.inc.i64.p4i64(i64 addrspace(4)* nocapture, i64, 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 ; GCN-LABEL: {{^}}lds_atomic_inc_ret_i32:
-; GCN: v_mov_b32_e32 [[K:v[0-9]+]], 42
+; CIVI-DAG: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 42
 ; GCN: ds_inc_rtn_u32 v{{[0-9]+}}, v{{[0-9]+}}, [[K]]
 define amdgpu_kernel void @lds_atomic_inc_ret_i32(i32 addrspace(1)* %out, i32 addrspace(3)* %ptr) #0 {
   %result = call i32 @llvm.amdgcn.atomic.inc.i32.p3i32(i32 addrspace(3)* %ptr, i32 42, i32 0, i32 0, i1 false)
@@ -22,7 +25,10 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i32(i32 addrspace(1)* %out, i32 ad
 }
 
 ; GCN-LABEL: {{^}}lds_atomic_inc_ret_i32_offset:
-; GCN: v_mov_b32_e32 [[K:v[0-9]+]], 42
+; CIVI-DAG: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 42
 ; GCN: ds_inc_rtn_u32 v{{[0-9]+}}, v{{[0-9]+}}, [[K]] offset:16
 define amdgpu_kernel void @lds_atomic_inc_ret_i32_offset(i32 addrspace(1)* %out, i32 addrspace(3)* %ptr) #0 {
   %gep = getelementptr i32, i32 addrspace(3)* %ptr, i32 4
@@ -32,9 +38,12 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i32_offset(i32 addrspace(1)* %out,
 }
 
 ; GCN-LABEL: {{^}}lds_atomic_inc_noret_i32:
-; GCN: s_load_dword [[SPTR:s[0-9]+]],
-; GCN: v_mov_b32_e32 [[DATA:v[0-9]+]], 4
-; GCN: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[SPTR]]
+; CIVI-DAG: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN-DAG: s_load_dword [[SPTR:s[0-9]+]],
+; GCN-DAG: v_mov_b32_e32 [[DATA:v[0-9]+]], 4
+; GCN-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[SPTR]]
 ; GCN: ds_inc_u32 [[VPTR]], [[DATA]]
 define amdgpu_kernel void @lds_atomic_inc_noret_i32(i32 addrspace(3)* %ptr) nounwind {
   %result = call i32 @llvm.amdgcn.atomic.inc.i32.p3i32(i32 addrspace(3)* %ptr, i32 42, i32 0, i32 0, i1 false)
@@ -42,7 +51,10 @@ define amdgpu_kernel void @lds_atomic_inc_noret_i32(i32 addrspace(3)* %ptr) noun
 }
 
 ; GCN-LABEL: {{^}}lds_atomic_inc_noret_i32_offset:
-; GCN: v_mov_b32_e32 [[K:v[0-9]+]], 42
+; CIVI-DAG: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 42
 ; GCN: ds_inc_u32 v{{[0-9]+}}, [[K]] offset:16
 define amdgpu_kernel void @lds_atomic_inc_noret_i32_offset(i32 addrspace(3)* %ptr) nounwind {
   %gep = getelementptr i32, i32 addrspace(3)* %ptr, i32 4

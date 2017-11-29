@@ -310,9 +310,9 @@ define x86_regcallcc i32 @test_argv32i1(<32 x i1> %x0, <32 x i1> %x1, <32 x i1> 
 ; X32-NEXT:    vpmovm2b %k2, %zmm0
 ; X32-NEXT:    vpmovm2b %k1, %zmm1
 ; X32-NEXT:    vpmovm2b %k0, %zmm2
-; X32-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
-; X32-NEXT:    # kill: %YMM1<def> %YMM1<kill> %ZMM1<kill>
-; X32-NEXT:    # kill: %YMM2<def> %YMM2<kill> %ZMM2<kill>
+; X32-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
+; X32-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<kill>
+; X32-NEXT:    # kill: %ymm2<def> %ymm2<kill> %zmm2<kill>
 ; X32-NEXT:    calll _test_argv32i1helper
 ; X32-NEXT:    vmovups (%esp), %xmm4 # 16-byte Reload
 ; X32-NEXT:    vmovups {{[0-9]+}}(%esp), %xmm5 # 16-byte Reload
@@ -340,9 +340,9 @@ define x86_regcallcc i32 @test_argv32i1(<32 x i1> %x0, <32 x i1> %x1, <32 x i1> 
 ; WIN64-NEXT:    vpmovm2b %k2, %zmm0
 ; WIN64-NEXT:    vpmovm2b %k1, %zmm1
 ; WIN64-NEXT:    vpmovm2b %k0, %zmm2
-; WIN64-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
-; WIN64-NEXT:    # kill: %YMM1<def> %YMM1<kill> %ZMM1<kill>
-; WIN64-NEXT:    # kill: %YMM2<def> %YMM2<kill> %ZMM2<kill>
+; WIN64-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
+; WIN64-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<kill>
+; WIN64-NEXT:    # kill: %ymm2<def> %ymm2<kill> %zmm2<kill>
 ; WIN64-NEXT:    callq test_argv32i1helper
 ; WIN64-NEXT:    nop
 ; WIN64-NEXT:    addq $32, %rsp
@@ -384,9 +384,9 @@ define x86_regcallcc i32 @test_argv32i1(<32 x i1> %x0, <32 x i1> %x1, <32 x i1> 
 ; LINUXOSX64-NEXT:    vpmovm2b %k2, %zmm0
 ; LINUXOSX64-NEXT:    vpmovm2b %k1, %zmm1
 ; LINUXOSX64-NEXT:    vpmovm2b %k0, %zmm2
-; LINUXOSX64-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
-; LINUXOSX64-NEXT:    # kill: %YMM1<def> %YMM1<kill> %ZMM1<kill>
-; LINUXOSX64-NEXT:    # kill: %YMM2<def> %YMM2<kill> %ZMM2<kill>
+; LINUXOSX64-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
+; LINUXOSX64-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<kill>
+; LINUXOSX64-NEXT:    # kill: %ymm2<def> %ymm2<kill> %zmm2<kill>
 ; LINUXOSX64-NEXT:    callq test_argv32i1helper
 ; LINUXOSX64-NEXT:    vmovaps (%rsp), %xmm8 # 16-byte Reload
 ; LINUXOSX64-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm9 # 16-byte Reload
@@ -538,9 +538,9 @@ define x86_regcallcc i16 @test_argv16i1(<16 x i1> %x0, <16 x i1> %x1, <16 x i1> 
 ; X32-NEXT:    vpmovm2b %k2, %zmm0
 ; X32-NEXT:    vpmovm2b %k1, %zmm1
 ; X32-NEXT:    vpmovm2b %k0, %zmm2
-; X32-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
-; X32-NEXT:    # kill: %XMM1<def> %XMM1<kill> %ZMM1<kill>
-; X32-NEXT:    # kill: %XMM2<def> %XMM2<kill> %ZMM2<kill>
+; X32-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<kill>
+; X32-NEXT:    # kill: %xmm1<def> %xmm1<kill> %zmm1<kill>
+; X32-NEXT:    # kill: %xmm2<def> %xmm2<kill> %zmm2<kill>
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    calll _test_argv16i1helper
 ; X32-NEXT:    vmovups (%esp), %xmm4 # 16-byte Reload
@@ -568,9 +568,9 @@ define x86_regcallcc i16 @test_argv16i1(<16 x i1> %x0, <16 x i1> %x1, <16 x i1> 
 ; WIN64-NEXT:    vpmovm2b %k2, %zmm0
 ; WIN64-NEXT:    vpmovm2b %k1, %zmm1
 ; WIN64-NEXT:    vpmovm2b %k0, %zmm2
-; WIN64-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
-; WIN64-NEXT:    # kill: %XMM1<def> %XMM1<kill> %ZMM1<kill>
-; WIN64-NEXT:    # kill: %XMM2<def> %XMM2<kill> %ZMM2<kill>
+; WIN64-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<kill>
+; WIN64-NEXT:    # kill: %xmm1<def> %xmm1<kill> %zmm1<kill>
+; WIN64-NEXT:    # kill: %xmm2<def> %xmm2<kill> %zmm2<kill>
 ; WIN64-NEXT:    vzeroupper
 ; WIN64-NEXT:    callq test_argv16i1helper
 ; WIN64-NEXT:    nop
@@ -612,9 +612,9 @@ define x86_regcallcc i16 @test_argv16i1(<16 x i1> %x0, <16 x i1> %x1, <16 x i1> 
 ; LINUXOSX64-NEXT:    vpmovm2b %k2, %zmm0
 ; LINUXOSX64-NEXT:    vpmovm2b %k1, %zmm1
 ; LINUXOSX64-NEXT:    vpmovm2b %k0, %zmm2
-; LINUXOSX64-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
-; LINUXOSX64-NEXT:    # kill: %XMM1<def> %XMM1<kill> %ZMM1<kill>
-; LINUXOSX64-NEXT:    # kill: %XMM2<def> %XMM2<kill> %ZMM2<kill>
+; LINUXOSX64-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<kill>
+; LINUXOSX64-NEXT:    # kill: %xmm1<def> %xmm1<kill> %zmm1<kill>
+; LINUXOSX64-NEXT:    # kill: %xmm2<def> %xmm2<kill> %zmm2<kill>
 ; LINUXOSX64-NEXT:    vzeroupper
 ; LINUXOSX64-NEXT:    callq test_argv16i1helper
 ; LINUXOSX64-NEXT:    vmovaps (%rsp), %xmm8 # 16-byte Reload
@@ -705,9 +705,9 @@ define i16 @caller_retv16i1() #0 {
 ; X32-LABEL: caller_retv16i1:
 ; X32:       # BB#0: # %entry
 ; X32-NEXT:    calll _test_retv16i1
-; X32-NEXT:    # kill: %AX<def> %AX<kill> %EAX<def>
+; X32-NEXT:    # kill: %ax<def> %ax<kill> %eax<def>
 ; X32-NEXT:    incl %eax
-; X32-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; X32-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; X32-NEXT:    retl
 ;
 ; WIN64-LABEL: caller_retv16i1:
@@ -724,9 +724,9 @@ define i16 @caller_retv16i1() #0 {
 ; WIN64-NEXT:    .seh_savexmm 6, 0
 ; WIN64-NEXT:    .seh_endprologue
 ; WIN64-NEXT:    callq test_retv16i1
-; WIN64-NEXT:    # kill: %AX<def> %AX<kill> %EAX<def>
+; WIN64-NEXT:    # kill: %ax<def> %ax<kill> %eax<def>
 ; WIN64-NEXT:    incl %eax
-; WIN64-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; WIN64-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; WIN64-NEXT:    vmovaps (%rsp), %xmm6 # 16-byte Reload
 ; WIN64-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm7 # 16-byte Reload
 ; WIN64-NEXT:    addq $40, %rsp
@@ -742,9 +742,9 @@ define i16 @caller_retv16i1() #0 {
 ; LINUXOSX64-NEXT:    pushq %rax
 ; LINUXOSX64-NEXT:    .cfi_def_cfa_offset 16
 ; LINUXOSX64-NEXT:    callq test_retv16i1
-; LINUXOSX64-NEXT:    # kill: %AX<def> %AX<kill> %EAX<def>
+; LINUXOSX64-NEXT:    # kill: %ax<def> %ax<kill> %eax<def>
 ; LINUXOSX64-NEXT:    incl %eax
-; LINUXOSX64-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; LINUXOSX64-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; LINUXOSX64-NEXT:    popq %rcx
 ; LINUXOSX64-NEXT:    retq
 entry:
@@ -771,9 +771,9 @@ define x86_regcallcc i8 @test_argv8i1(<8 x i1> %x0, <8 x i1> %x1, <8 x i1> %x2) 
 ; X32-NEXT:    vpmovm2w %k2, %zmm0
 ; X32-NEXT:    vpmovm2w %k1, %zmm1
 ; X32-NEXT:    vpmovm2w %k0, %zmm2
-; X32-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
-; X32-NEXT:    # kill: %XMM1<def> %XMM1<kill> %ZMM1<kill>
-; X32-NEXT:    # kill: %XMM2<def> %XMM2<kill> %ZMM2<kill>
+; X32-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<kill>
+; X32-NEXT:    # kill: %xmm1<def> %xmm1<kill> %zmm1<kill>
+; X32-NEXT:    # kill: %xmm2<def> %xmm2<kill> %zmm2<kill>
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    calll _test_argv8i1helper
 ; X32-NEXT:    vmovups (%esp), %xmm4 # 16-byte Reload
@@ -801,9 +801,9 @@ define x86_regcallcc i8 @test_argv8i1(<8 x i1> %x0, <8 x i1> %x1, <8 x i1> %x2) 
 ; WIN64-NEXT:    vpmovm2w %k2, %zmm0
 ; WIN64-NEXT:    vpmovm2w %k1, %zmm1
 ; WIN64-NEXT:    vpmovm2w %k0, %zmm2
-; WIN64-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
-; WIN64-NEXT:    # kill: %XMM1<def> %XMM1<kill> %ZMM1<kill>
-; WIN64-NEXT:    # kill: %XMM2<def> %XMM2<kill> %ZMM2<kill>
+; WIN64-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<kill>
+; WIN64-NEXT:    # kill: %xmm1<def> %xmm1<kill> %zmm1<kill>
+; WIN64-NEXT:    # kill: %xmm2<def> %xmm2<kill> %zmm2<kill>
 ; WIN64-NEXT:    vzeroupper
 ; WIN64-NEXT:    callq test_argv8i1helper
 ; WIN64-NEXT:    nop
@@ -845,9 +845,9 @@ define x86_regcallcc i8 @test_argv8i1(<8 x i1> %x0, <8 x i1> %x1, <8 x i1> %x2) 
 ; LINUXOSX64-NEXT:    vpmovm2w %k2, %zmm0
 ; LINUXOSX64-NEXT:    vpmovm2w %k1, %zmm1
 ; LINUXOSX64-NEXT:    vpmovm2w %k0, %zmm2
-; LINUXOSX64-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
-; LINUXOSX64-NEXT:    # kill: %XMM1<def> %XMM1<kill> %ZMM1<kill>
-; LINUXOSX64-NEXT:    # kill: %XMM2<def> %XMM2<kill> %ZMM2<kill>
+; LINUXOSX64-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<kill>
+; LINUXOSX64-NEXT:    # kill: %xmm1<def> %xmm1<kill> %zmm1<kill>
+; LINUXOSX64-NEXT:    # kill: %xmm2<def> %xmm2<kill> %zmm2<kill>
 ; LINUXOSX64-NEXT:    vzeroupper
 ; LINUXOSX64-NEXT:    callq test_argv8i1helper
 ; LINUXOSX64-NEXT:    vmovaps (%rsp), %xmm8 # 16-byte Reload
@@ -938,10 +938,10 @@ define <8 x i1> @caller_retv8i1() #0 {
 ; X32-LABEL: caller_retv8i1:
 ; X32:       # BB#0: # %entry
 ; X32-NEXT:    calll _test_retv8i1
-; X32-NEXT:    # kill: %AL<def> %AL<kill> %EAX<def>
+; X32-NEXT:    # kill: %al<def> %al<kill> %eax<def>
 ; X32-NEXT:    kmovd %eax, %k0
 ; X32-NEXT:    vpmovm2w %k0, %zmm0
-; X32-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
+; X32-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<kill>
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
@@ -959,10 +959,10 @@ define <8 x i1> @caller_retv8i1() #0 {
 ; WIN64-NEXT:    .seh_savexmm 6, 0
 ; WIN64-NEXT:    .seh_endprologue
 ; WIN64-NEXT:    callq test_retv8i1
-; WIN64-NEXT:    # kill: %AL<def> %AL<kill> %EAX<def>
+; WIN64-NEXT:    # kill: %al<def> %al<kill> %eax<def>
 ; WIN64-NEXT:    kmovd %eax, %k0
 ; WIN64-NEXT:    vpmovm2w %k0, %zmm0
-; WIN64-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
+; WIN64-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<kill>
 ; WIN64-NEXT:    vmovaps (%rsp), %xmm6 # 16-byte Reload
 ; WIN64-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm7 # 16-byte Reload
 ; WIN64-NEXT:    addq $40, %rsp
@@ -979,10 +979,10 @@ define <8 x i1> @caller_retv8i1() #0 {
 ; LINUXOSX64-NEXT:    pushq %rax
 ; LINUXOSX64-NEXT:    .cfi_def_cfa_offset 16
 ; LINUXOSX64-NEXT:    callq test_retv8i1
-; LINUXOSX64-NEXT:    # kill: %AL<def> %AL<kill> %EAX<def>
+; LINUXOSX64-NEXT:    # kill: %al<def> %al<kill> %eax<def>
 ; LINUXOSX64-NEXT:    kmovd %eax, %k0
 ; LINUXOSX64-NEXT:    vpmovm2w %k0, %zmm0
-; LINUXOSX64-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
+; LINUXOSX64-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<kill>
 ; LINUXOSX64-NEXT:    popq %rax
 ; LINUXOSX64-NEXT:    vzeroupper
 ; LINUXOSX64-NEXT:    retq

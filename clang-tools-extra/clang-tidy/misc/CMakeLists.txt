@@ -11,9 +11,7 @@ add_clang_library(clangTidyMiscModule
   MacroRepeatedSideEffectsCheck.cpp
   MiscTidyModule.cpp
   MisplacedWideningCastCheck.cpp
-  MoveConstantArgumentCheck.cpp
   NewDeleteOverloadsCheck.cpp
-  NoexceptMoveConstructorCheck.cpp
   NonCopyableObjects.cpp
   RedundantExpressionCheck.cpp
   SizeofContainerCheck.cpp

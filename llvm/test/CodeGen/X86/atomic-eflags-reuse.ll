@@ -93,7 +93,7 @@ define i8 @test_add_1_setcc_slt(i64* %p) #0 {
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    lock xaddq %rax, (%rdi)
 ; CHECK-NEXT:    shrq $63, %rax
-; CHECK-NEXT:    # kill: %AL<def> %AL<kill> %RAX<kill>
+; CHECK-NEXT:    # kill: %al<def> %al<kill> %rax<kill>
 ; CHECK-NEXT:    retq
 entry:
   %tmp0 = atomicrmw add i64* %p, i64 1 seq_cst

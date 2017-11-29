@@ -698,11 +698,11 @@ void LiveIntervals::addKillFlags(const VirtRegMap *VRM) {
       // Check if any of the regunits are live beyond the end of RI. That could
       // happen when a physreg is defined as a copy of a virtreg:
       //
-      //   %EAX = COPY %vreg5
-      //   FOO %vreg5         <--- MI, cancel kill because %EAX is live.
-      //   BAR %EAX<kill>
+      //   %eax = COPY %vreg5
+      //   FOO %vreg5         <--- MI, cancel kill because %eax is live.
+      //   BAR %eax<kill>
       //
-      // There should be no kill flag on FOO when %vreg5 is rewritten as %EAX.
+      // There should be no kill flag on FOO when %vreg5 is rewritten as %eax.
       for (auto &RUP : RU) {
         const LiveRange &RURange = *RUP.first;
         LiveRange::const_iterator &I = RUP.second;

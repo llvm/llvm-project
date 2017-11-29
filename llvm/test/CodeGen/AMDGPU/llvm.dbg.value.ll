@@ -4,7 +4,7 @@
 ; CHECK: s_load_dwordx2 s[4:5]
 
 ; FIXME: Why is the SGPR4_SGPR5 reference being removed from DBG_VALUE?
-; CHECK: ; kill: %SGPR4_SGPR5<def> %SGPR4_SGPR5<kill>
+; CHECK: ; kill: %sgpr4_sgpr5<def> %sgpr4_sgpr5<kill>
 ; CHECK-NEXT: ;DEBUG_VALUE: test_debug_value:globalptr_arg <- undef
 
 ; CHECK: buffer_store_dword

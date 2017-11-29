@@ -555,10 +555,29 @@ TSAN_INTERCEPTOR(int, setjmp, void *env);
 TSAN_INTERCEPTOR(int, _setjmp, void *env);
 TSAN_INTERCEPTOR(int, sigsetjmp, void *env);
 #else  // SANITIZER_MAC
+
+#if SANITIZER_NETBSD
+#define setjmp_symname __setjmp14
+#define sigsetjmp_symname __sigsetjmp14
+#else
+#define setjmp_symname setjmp
+#define sigsetjmp_symname sigsetjmp
+#endif
+
+#define TSAN_INTERCEPTOR_SETJMP_(x) __interceptor_ ## x
+#define TSAN_INTERCEPTOR_SETJMP__(x) TSAN_INTERCEPTOR_SETJMP_(x)
+#define TSAN_INTERCEPTOR_SETJMP TSAN_INTERCEPTOR_SETJMP__(setjmp_symname)
+#define TSAN_INTERCEPTOR_SIGSETJMP TSAN_INTERCEPTOR_SETJMP__(sigsetjmp_symname)
+
+#define TSAN_STRING_SETJMP_(x) # x
+#define TSAN_STRING_SETJMP__(x) TSAN_STRING_SETJMP_(x)
+#define TSAN_STRING_SETJMP TSAN_STRING_SETJMP__(setjmp_symname)
+#define TSAN_STRING_SIGSETJMP TSAN_STRING_SETJMP__(sigsetjmp_symname)
+
 // Not called.  Merely to satisfy TSAN_INTERCEPT().
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
-int __interceptor_setjmp(void *env);
-extern "C" int __interceptor_setjmp(void *env) {
+int TSAN_INTERCEPTOR_SETJMP(void *env);
+extern "C" int TSAN_INTERCEPTOR_SETJMP(void *env) {
   CHECK(0);
   return 0;
 }
@@ -572,47 +591,71 @@ extern "C" int __interceptor__setjmp(void *env) {
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
-int __interceptor_sigsetjmp(void *env);
-extern "C" int __interceptor_sigsetjmp(void *env) {
+int TSAN_INTERCEPTOR_SIGSETJMP(void *env);
+extern "C" int TSAN_INTERCEPTOR_SIGSETJMP(void *env) {
   CHECK(0);
   return 0;
 }
 
+#if !SANITIEZER_NETBSD
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 int __interceptor___sigsetjmp(void *env);
 extern "C" int __interceptor___sigsetjmp(void *env) {
   CHECK(0);
   return 0;
 }
+#endif
 
-extern "C" int setjmp(void *env);
+extern "C" int setjmp_symname(void *env);
 extern "C" int _setjmp(void *env);
-extern "C" int sigsetjmp(void *env);
+extern "C" int sigsetjmp_symname(void *env);
+#if !SANITIEZER_NETBSD
 extern "C" int __sigsetjmp(void *env);
-DEFINE_REAL(int, setjmp, void *env)
+#endif
+DEFINE_REAL(int, setjmp_symname, void *env)
 DEFINE_REAL(int, _setjmp, void *env)
-DEFINE_REAL(int, sigsetjmp, void *env)
+DEFINE_REAL(int, sigsetjmp_symname, void *env)
+#if !SANITIEZER_NETBSD
 DEFINE_REAL(int, __sigsetjmp, void *env)
+#endif
 #endif  // SANITIZER_MAC
 
-TSAN_INTERCEPTOR(void, longjmp, uptr *env, int val) {
+#if SANITIZER_NETBSD
+#define longjmp_symname __longjmp14
+#define siglongjmp_symname __siglongjmp14
+#else
+#define longjmp_symname longjmp
+#define siglongjmp_symname siglongjmp
+#endif
+
+TSAN_INTERCEPTOR(void, longjmp_symname, uptr *env, int val) {
   // Note: if we call REAL(longjmp) in the context of ScopedInterceptor,
   // bad things will happen. We will jump over ScopedInterceptor dtor and can
   // leave thr->in_ignored_lib set.
   {
-    SCOPED_INTERCEPTOR_RAW(longjmp, env, val);
+    SCOPED_INTERCEPTOR_RAW(longjmp_symname, env, val);
   }
   LongJmp(cur_thread(), env);
-  REAL(longjmp)(env, val);
+  REAL(longjmp_symname)(env, val);
 }
 
-TSAN_INTERCEPTOR(void, siglongjmp, uptr *env, int val) {
+TSAN_INTERCEPTOR(void, siglongjmp_symname, uptr *env, int val) {
   {
-    SCOPED_INTERCEPTOR_RAW(siglongjmp, env, val);
+    SCOPED_INTERCEPTOR_RAW(siglongjmp_symname, env, val);
   }
   LongJmp(cur_thread(), env);
-  REAL(siglongjmp)(env, val);
+  REAL(siglongjmp_symname)(env, val);
 }
+
+#if SANITIZER_NETBSD
+TSAN_INTERCEPTOR(void, _longjmp, uptr *env, int val) {
+  {
+    SCOPED_INTERCEPTOR_RAW(_longjmp, env, val);
+  }
+  LongJmp(cur_thread(), env);
+  REAL(_longjmp)(env, val);
+}
+#endif
 
 #if !SANITIZER_MAC
 TSAN_INTERCEPTOR(void*, malloc, uptr size) {
@@ -2551,14 +2594,21 @@ void InitializeInterceptors() {
   // We can not use TSAN_INTERCEPT to get setjmp addr,
   // because it does &setjmp and setjmp is not present in some versions of libc.
   using __interception::GetRealFunctionAddress;
-  GetRealFunctionAddress("setjmp", (uptr*)&REAL(setjmp), 0, 0);
+  GetRealFunctionAddress(TSAN_STRING_SETJMP,
+                         (uptr*)&REAL(setjmp_symname), 0, 0);
   GetRealFunctionAddress("_setjmp", (uptr*)&REAL(_setjmp), 0, 0);
-  GetRealFunctionAddress("sigsetjmp", (uptr*)&REAL(sigsetjmp), 0, 0);
+  GetRealFunctionAddress(TSAN_STRING_SIGSETJMP,
+                         (uptr*)&REAL(sigsetjmp_symname), 0, 0);
+#if !SANITIZER_NETBSD
   GetRealFunctionAddress("__sigsetjmp", (uptr*)&REAL(__sigsetjmp), 0, 0);
 #endif
+#endif
 
-  TSAN_INTERCEPT(longjmp);
-  TSAN_INTERCEPT(siglongjmp);
+  TSAN_INTERCEPT(longjmp_symname);
+  TSAN_INTERCEPT(siglongjmp_symname);
+#if SANITIZER_NETBSD
+  TSAN_INTERCEPT(_longjmp);
+#endif
 
   TSAN_INTERCEPT(malloc);
   TSAN_INTERCEPT(__libc_memalign);

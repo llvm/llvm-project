@@ -1820,20 +1820,20 @@ bool RegisterCoalescer::joinReservedPhysReg(CoalescerPair &CP) {
   MachineInstr *CopyMI;
   if (CP.isFlipped()) {
     // Physreg is copied into vreg
-    //   %vregY = COPY %X
-    //   ...  //< no other def of %X here
+    //   %vregY = COPY %x
+    //   ...  //< no other def of %x here
     //   use %vregY
     // =>
     //   ...
-    //   use %X
+    //   use %x
     CopyMI = MRI->getVRegDef(SrcReg);
   } else {
     // VReg is copied into physreg:
     //   %vregX = def
-    //   ... //< no other def or use of %Y here
-    //   %Y = COPY %vregX
+    //   ... //< no other def or use of %y here
+    //   %y = COPY %vregX
     // =>
-    //   %Y = def
+    //   %y = def
     //   ...
     if (!MRI->hasOneNonDBGUse(SrcReg)) {
       DEBUG(dbgs() << "\t\tMultiple vreg uses!\n");

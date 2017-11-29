@@ -12,11 +12,11 @@
 #include "DLL.h"
 #include "InputFiles.h"
 #include "MapFile.h"
-#include "Memory.h"
 #include "PDB.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Memory.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -799,11 +799,10 @@ void Writer::createSEHTable(OutputSection *RData) {
   for (ObjFile *File : ObjFile::Instances) {
     if (!File->SEHCompat)
       return;
-    for (Symbol *B : File->SEHandlers) {
-      // Make sure the handler is still live.
-      if (B->isLive())
-        Handlers.insert(cast<Defined>(B));
-    }
+    for (uint32_t I : File->SXData)
+      if (Symbol *B = File->getSymbol(I))
+        if (B->isLive())
+          Handlers.insert(cast<Defined>(B));
   }
 
   if (Handlers.empty())

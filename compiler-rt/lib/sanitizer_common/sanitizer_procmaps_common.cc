@@ -70,53 +70,49 @@ void MemoryMappedSegment::AddAddressRanges(LoadedModule *module) {
 }
 
 MemoryMappingLayout::MemoryMappingLayout(bool cache_enabled) {
-  ReadProcMaps(&data_.proc_self_maps);
-  if (cache_enabled) {
-    if (data_.proc_self_maps.mmaped_size == 0) {
-      LoadFromCache();
-      CHECK_GT(data_.proc_self_maps.len, 0);
-    }
-  } else {
-    CHECK_GT(data_.proc_self_maps.mmaped_size, 0);
-  }
-  Reset();
   // FIXME: in the future we may want to cache the mappings on demand only.
   if (cache_enabled)
     CacheMemoryMappings();
+
+  // Read maps after the cache update to capture the maps/unmaps happening in
+  // the process of updating.
+  ReadProcMaps(&data_.proc_self_maps);
+  if (cache_enabled && data_.proc_self_maps.mmaped_size == 0)
+    LoadFromCache();
+  CHECK_GT(data_.proc_self_maps.mmaped_size, 0);
+  CHECK_GT(data_.proc_self_maps.len, 0);
+
+  Reset();
 }
 
 MemoryMappingLayout::~MemoryMappingLayout() {
   // Only unmap the buffer if it is different from the cached one. Otherwise
   // it will be unmapped when the cache is refreshed.
-  if (data_.proc_self_maps.data != cached_proc_self_maps.data) {
+  if (data_.proc_self_maps.data != cached_proc_self_maps.data)
     UnmapOrDie(data_.proc_self_maps.data, data_.proc_self_maps.mmaped_size);
-  }
 }
 
-void MemoryMappingLayout::Reset() { data_.current = data_.proc_self_maps.data; }
+void MemoryMappingLayout::Reset() {
+  data_.current = data_.proc_self_maps.data;
+}
 
 // static
 void MemoryMappingLayout::CacheMemoryMappings() {
-  SpinMutexLock l(&cache_lock);
+  ProcSelfMapsBuff new_proc_self_maps;
+  ReadProcMaps(&new_proc_self_maps);
   // Don't invalidate the cache if the mappings are unavailable.
-  ProcSelfMapsBuff old_proc_self_maps;
-  old_proc_self_maps = cached_proc_self_maps;
-  ReadProcMaps(&cached_proc_self_maps);
-  if (cached_proc_self_maps.mmaped_size == 0) {
-    cached_proc_self_maps = old_proc_self_maps;
-  } else {
-    if (old_proc_self_maps.mmaped_size) {
-      UnmapOrDie(old_proc_self_maps.data,
-                 old_proc_self_maps.mmaped_size);
-    }
-  }
+  if (new_proc_self_maps.mmaped_size == 0)
+    return;
+  SpinMutexLock l(&cache_lock);
+  if (cached_proc_self_maps.mmaped_size)
+    UnmapOrDie(cached_proc_self_maps.data, cached_proc_self_maps.mmaped_size);
+  cached_proc_self_maps = new_proc_self_maps;
 }
 
 void MemoryMappingLayout::LoadFromCache() {
   SpinMutexLock l(&cache_lock);
-  if (cached_proc_self_maps.data) {
+  if (cached_proc_self_maps.data)
     data_.proc_self_maps = cached_proc_self_maps;
-  }
 }
 
 void MemoryMappingLayout::DumpListOfModules(

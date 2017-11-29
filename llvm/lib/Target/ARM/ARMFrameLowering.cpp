@@ -1832,12 +1832,12 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
       if (!HasFP) {
         if (SavedRegs.test(ARM::R7)) {
           --RegDeficit;
-          DEBUG(dbgs() << "%R7 is saved low register, RegDeficit = "
+          DEBUG(dbgs() << "%r7 is saved low register, RegDeficit = "
                        << RegDeficit << "\n");
         } else {
           AvailableRegs.push_back(ARM::R7);
           DEBUG(dbgs()
-                << "%R7 is non-saved low register, adding to AvailableRegs\n");
+                << "%r7 is non-saved low register, adding to AvailableRegs\n");
         }
       }
 
@@ -1859,11 +1859,11 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
             MF.getFrameInfo().isReturnAddressTaken())) {
         if (SavedRegs.test(ARM::LR)) {
           --RegDeficit;
-          DEBUG(dbgs() << "%LR is saved register, RegDeficit = " << RegDeficit
+          DEBUG(dbgs() << "%lr is saved register, RegDeficit = " << RegDeficit
                        << "\n");
         } else {
           AvailableRegs.push_back(ARM::LR);
-          DEBUG(dbgs() << "%LR is not saved, adding to AvailableRegs\n");
+          DEBUG(dbgs() << "%lr is not saved, adding to AvailableRegs\n");
         }
       }
 

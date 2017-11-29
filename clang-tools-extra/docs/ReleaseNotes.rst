@@ -62,6 +62,12 @@ Improvements to clang-tidy
 
   Add new check to detect the use of OSSpinlock.
 
+- The 'misc-move-const-arg' check was renamed to `performance-move-const-arg
+  <http://clang.llvm.org/extra/clang-tidy/checks/performance-move-const-arg.html>`_
+
+- The 'misc-noexcept-move-constructor' check was renamed to `performance-noexcept-move-constructor
+  <http://clang.llvm.org/extra/clang-tidy/checks/performance-noexcept-move-constructor.html>`_
+
 - The 'misc-move-constructor-init' check was renamed to `performance-move-constructor-init
   <http://clang.llvm.org/extra/clang-tidy/checks/performance-move-constructor-init.html>`_
 
@@ -104,7 +110,12 @@ Improvements to clang-tidy
 - The 'misc-string-constructor' check was renamed to `bugprone-string-constructor
   <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-string-constructor.html>`_
 
-- New `google-objc-avoid-throwing-exception
+- New `fuchsia-default-arguments
+  <http://clang.llvm.org/extra/clang-tidy/checks/fuchsia-default-arguments.html>`_ check
+
+  Warns if a function or method is declared or called with default arguments.
+
+- New `google-avoid-throwing-objc-exception
   <http://clang.llvm.org/extra/clang-tidy/checks/google-objc-avoid-throwing-exception.html>`_ check
 
   Add new check to detect throwing exceptions in Objective-C code, which should be avoided.
