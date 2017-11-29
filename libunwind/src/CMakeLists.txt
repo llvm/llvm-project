@@ -143,5 +143,5 @@ if (NOT CMAKE_CONFIGURATION_TYPES AND LIBUNWIND_INSTALL_LIBRARY)
     DEPENDS unwind
     COMMAND "${CMAKE_COMMAND}"
             -DCMAKE_INSTALL_COMPONENT=unwind
-            -P "${LIBCXXABI_BINARY_DIR}/cmake_install.cmake")
+            -P "${LIBUNWIND_BINARY_DIR}/cmake_install.cmake")
 endif()
