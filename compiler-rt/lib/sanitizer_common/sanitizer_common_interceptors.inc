@@ -272,7 +272,7 @@ UNUSED static const FileMetadata *GetInterceptorMetadata(
   MetadataHashMap::Handle h(interceptor_metadata_map, (uptr)addr,
                             /* remove */ false,
                             /* create */ false);
-  if (h.exists()) {
+  if (addr && h.exists()) {
     CHECK(!h.created());
     CHECK(h->type == CommonInterceptorMetadata::CIMT_FILE);
     return &h->file;
