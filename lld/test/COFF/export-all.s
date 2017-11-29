@@ -7,8 +7,10 @@
 # RUN: llvm-readobj %t.lib | FileCheck -check-prefix=IMPLIB %s
 
 # CHECK-NOT: Name: DllMainCRTStartup
+# CHECK-NOT: Name: _imp__unexported
 # CHECK: Name: dataSym
 # CHECK: Name: foobar
+# CHECK-NOT: Name: unexported
 
 # IMPLIB: Symbol: __imp__dataSym
 # IMPLIB-NOT: Symbol: _dataSym
@@ -18,14 +20,20 @@
 .global _foobar
 .global _DllMainCRTStartup@12
 .global _dataSym
+.global _unexported
+.global __imp__unexported
 .text
 _DllMainCRTStartup@12:
   ret
 _foobar:
   ret
+_unexported:
+  ret
 .data
 _dataSym:
   .int 4
+__imp__unexported:
+  .int _unexported
 
 # Test specifying -export-all-symbols, on an object file that contains
 # dllexport directive for some of the symbols.

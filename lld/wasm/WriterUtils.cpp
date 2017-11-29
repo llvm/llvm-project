@@ -112,7 +112,6 @@ void wasm::writeInitExpr(raw_ostream &OS, const WasmInitExpr &InitExpr) {
     break;
   default:
     fatal("unknown opcode in init expr: " + Twine(InitExpr.Opcode));
-    break;
   }
   writeU8(OS, WASM_OPCODE_END, "opcode:end");
 }
@@ -147,7 +146,6 @@ void wasm::writeImport(raw_ostream &OS, const WasmImport &Import) {
     break;
   default:
     fatal("unsupported import type: " + Twine(Import.Kind));
-    break;
   }
 }
 
@@ -166,7 +164,6 @@ void wasm::writeExport(raw_ostream &OS, const WasmExport &Export) {
     break;
   default:
     fatal("unsupported export type: " + Twine(Export.Kind));
-    break;
   }
 }
 

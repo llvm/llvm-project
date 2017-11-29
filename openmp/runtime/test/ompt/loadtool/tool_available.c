@@ -4,7 +4,7 @@
 
 // Note: We should compile the tool without -fopenmp as other tools developer
 //       would do. Otherwise this test may pass for the wrong reasons on Darwin.
-// RUN: %clang %cflags -DTOOL -shared -fPIC %s -o %T/tool.so
+// RUN: %clang %flags -DTOOL -shared -fPIC %s -o %T/tool.so
 // 2. "introducing a dynamically-linked library that includes the tool’s definition of ompt_start_tool into the application’s address space"
 // 2.1 Link with tool during compilation
 // RUN: %libomp-compile -DCODE %T/tool.so && %libomp-run | FileCheck %s
