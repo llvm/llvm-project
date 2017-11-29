@@ -337,7 +337,8 @@ const TargetRegisterClass *AMDGPUDAGToDAGISel::getOperandRegClass(SDNode *N,
 }
 
 SDNode *AMDGPUDAGToDAGISel::glueCopyToM0(SDNode *N) const {
-  if (cast<MemSDNode>(N)->getAddressSpace() != AMDGPUASI.LOCAL_ADDRESS)
+  if (cast<MemSDNode>(N)->getAddressSpace() != AMDGPUASI.LOCAL_ADDRESS ||
+      !Subtarget->ldsRequiresM0Init())
     return N;
 
   const SITargetLowering& Lowering =

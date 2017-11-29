@@ -191,6 +191,9 @@
 ; ARMv7r
 ; RUN: llc < %s -mtriple=armv7r-none-linux-gnueabi -mcpu=cortex-r5 | FileCheck %s --check-prefix=NO-STRICT-ALIGN
 ; RUN: llc < %s -mtriple=armv7r-none-linux-gnueabi -mcpu=cortex-r5 -mattr=+strict-align | FileCheck %s --check-prefix=STRICT-ALIGN
+; ARMv7em
+; RUN: llc < %s -mtriple=thumbv7em-none-linux-gnueabi -mcpu=cortex-m4 | FileCheck %s --check-prefix=NO-STRICT-ALIGN
+; RUN: llc < %s -mtriple=thumbv7em-none-linux-gnueabi -mcpu=cortex-m4 -mattr=+strict-align | FileCheck %s --check-prefix=STRICT-ALIGN
 ; ARMv7m
 ; RUN: llc < %s -mtriple=thumbv7m-none-linux-gnueabi -mcpu=cortex-m3 | FileCheck %s --check-prefix=NO-STRICT-ALIGN
 ; RUN: llc < %s -mtriple=thumbv7m-none-linux-gnueabi -mcpu=cortex-m3 -mattr=+strict-align | FileCheck %s --check-prefix=STRICT-ALIGN

@@ -1,9 +1,13 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=FUNC %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=FUNC %s
-; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9,FUNC %s
+; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefixes=EG,FUNC %s
 
 ; FUNC-LABEL: {{^}}local_load_f64:
+; SICIV: s_mov_b32 m0
+; GFX9-NOT: m0
+
 ; GCN: ds_read_b64 [[VAL:v\[[0-9]+:[0-9]+\]]], v{{[0-9]+}}{{$}}
 ; GCN: ds_write_b64 v{{[0-9]+}}, [[VAL]]
 
@@ -16,6 +20,9 @@ define amdgpu_kernel void @local_load_f64(double addrspace(3)* %out, double addr
 }
 
 ; FUNC-LABEL: {{^}}local_load_v2f64:
+; SICIV: s_mov_b32 m0
+; GFX9-NOT: m0
+
 ; GCN: ds_read2_b64
 
 ; EG: LDS_READ_RET
@@ -30,6 +37,9 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}local_load_v3f64:
+; SICIV: s_mov_b32 m0
+; GFX9-NOT: m0
+
 ; GCN-DAG: ds_read2_b64
 ; GCN-DAG: ds_read_b64
 
@@ -47,6 +57,9 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}local_load_v4f64:
+; SICIV: s_mov_b32 m0
+; GFX9-NOT: m0
+
 ; GCN: ds_read2_b64
 ; GCN: ds_read2_b64
 
@@ -67,6 +80,9 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}local_load_v8f64:
+; SICIV: s_mov_b32 m0
+; GFX9-NOT: m0
+
 ; GCN: ds_read2_b64
 ; GCN: ds_read2_b64
 ; GCN: ds_read2_b64
@@ -96,6 +112,9 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}local_load_v16f64:
+; SICIV: s_mov_b32 m0
+; GFX9-NOT: m0
+
 ; GCN: ds_read2_b64
 ; GCN: ds_read2_b64
 ; GCN: ds_read2_b64

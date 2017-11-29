@@ -1116,8 +1116,7 @@ void DAGTypeLegalizer::SplitVecRes_LOAD(LoadSDNode *LD, SDValue &Lo,
                    LD->getPointerInfo(), LoMemVT, Alignment, MMOFlags, AAInfo);
 
   unsigned IncrementSize = LoMemVT.getSizeInBits()/8;
-  Ptr = DAG.getNode(ISD::ADD, dl, Ptr.getValueType(), Ptr,
-                    DAG.getConstant(IncrementSize, dl, Ptr.getValueType()));
+  Ptr = DAG.getObjectPtrOffset(dl, Ptr, IncrementSize);
   Hi = DAG.getLoad(ISD::UNINDEXED, ExtType, HiVT, dl, Ch, Ptr, Offset,
                    LD->getPointerInfo().getWithOffset(IncrementSize), HiMemVT,
                    Alignment, MMOFlags, AAInfo);
@@ -2001,8 +2000,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_STORE(StoreSDNode *N, unsigned OpNo) {
                       AAInfo);
 
   // Increment the pointer to the other half.
-  Ptr = DAG.getNode(ISD::ADD, DL, Ptr.getValueType(), Ptr,
-                    DAG.getConstant(IncrementSize, DL, Ptr.getValueType()));
+  Ptr = DAG.getObjectPtrOffset(DL, Ptr, IncrementSize);
 
   if (isTruncating)
     Hi = DAG.getTruncStore(Ch, DL, Hi, Ptr,
@@ -3806,8 +3804,7 @@ SDValue DAGTypeLegalizer::GenWidenVectorLoads(SmallVectorImpl<SDValue> &LdChain,
   while (LdWidth > 0) {
     unsigned Increment = NewVTWidth / 8;
     Offset += Increment;
-    BasePtr = DAG.getNode(ISD::ADD, dl, BasePtr.getValueType(), BasePtr,
-                          DAG.getConstant(Increment, dl, BasePtr.getValueType()));
+    BasePtr = DAG.getObjectPtrOffset(dl, BasePtr, Increment);
 
     SDValue L;
     if (LdWidth < NewVTWidth) {
@@ -3929,10 +3926,7 @@ DAGTypeLegalizer::GenWidenVectorExtLoads(SmallVectorImpl<SDValue> &LdChain,
   LdChain.push_back(Ops[0].getValue(1));
   unsigned i = 0, Offset = Increment;
   for (i=1; i < NumElts; ++i, Offset += Increment) {
-    SDValue NewBasePtr = DAG.getNode(ISD::ADD, dl, BasePtr.getValueType(),
-                                     BasePtr,
-                                     DAG.getConstant(Offset, dl,
-                                                     BasePtr.getValueType()));
+    SDValue NewBasePtr = DAG.getObjectPtrOffset(dl, BasePtr, Offset);
     Ops[i] = DAG.getExtLoad(ExtType, dl, EltVT, Chain, NewBasePtr,
                             LD->getPointerInfo().getWithOffset(Offset), LdEltVT,
                             Align, MMOFlags, AAInfo);
@@ -3987,9 +3981,8 @@ void DAGTypeLegalizer::GenWidenVectorStores(SmallVectorImpl<SDValue> &StChain,
         StWidth -= NewVTWidth;
         Offset += Increment;
         Idx += NumVTElts;
-        BasePtr = DAG.getNode(ISD::ADD, dl, BasePtr.getValueType(), BasePtr,
-                              DAG.getConstant(Increment, dl,
-                                              BasePtr.getValueType()));
+
+        BasePtr = DAG.getObjectPtrOffset(dl, BasePtr, Increment);
       } while (StWidth != 0 && StWidth >= NewVTWidth);
     } else {
       // Cast the vector to the scalar type we can store.
@@ -4008,9 +4001,7 @@ void DAGTypeLegalizer::GenWidenVectorStores(SmallVectorImpl<SDValue> &StChain,
             MinAlign(Align, Offset), MMOFlags, AAInfo));
         StWidth -= NewVTWidth;
         Offset += Increment;
-        BasePtr = DAG.getNode(ISD::ADD, dl, BasePtr.getValueType(), BasePtr,
-                              DAG.getConstant(Increment, dl,
-                                              BasePtr.getValueType()));
+        BasePtr = DAG.getObjectPtrOffset(dl, BasePtr, Increment);
       } while (StWidth != 0 && StWidth >= NewVTWidth);
       // Restore index back to be relative to the original widen element type.
       Idx = Idx * NewVTWidth / ValEltWidth;
@@ -4053,10 +4044,7 @@ DAGTypeLegalizer::GenWidenVectorTruncStores(SmallVectorImpl<SDValue> &StChain,
                                       MMOFlags, AAInfo));
   unsigned Offset = Increment;
   for (unsigned i=1; i < NumElts; ++i, Offset += Increment) {
-    SDValue NewBasePtr = DAG.getNode(ISD::ADD, dl, BasePtr.getValueType(),
-                                     BasePtr,
-                                     DAG.getConstant(Offset, dl,
-                                                     BasePtr.getValueType()));
+    SDValue NewBasePtr = DAG.getObjectPtrOffset(dl, BasePtr, Offset);
     SDValue EOp = DAG.getNode(
         ISD::EXTRACT_VECTOR_ELT, dl, ValEltVT, ValOp,
         DAG.getConstant(0, dl, TLI.getVectorIdxTy(DAG.getDataLayout())));
