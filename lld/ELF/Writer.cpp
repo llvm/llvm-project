@@ -508,8 +508,9 @@ template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
     if (isa<SyntheticSection>(IS) && !(IS->Flags & SHF_MERGE))
       continue;
 
-    auto *Sym = make<Defined>("", STB_LOCAL, /*StOther=*/0, STT_SECTION,
-                              /*Value=*/0, /*Size=*/0, IS);
+    auto *Sym =
+        make<Defined>(IS->File, "", STB_LOCAL, /*StOther=*/0, STT_SECTION,
+                      /*Value=*/0, /*Size=*/0, IS);
     InX::SymTab->addSymbol(Sym);
   }
 }

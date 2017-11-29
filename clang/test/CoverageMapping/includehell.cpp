@@ -37,18 +37,18 @@ int main() {
 // CHECK-MAIN-NEXT: File [[MAIN]], 16:35 -> 17:33 = #9
 // CHECK-MAIN-NEXT: Expansion,File [[MAIN]], 17:12 -> 17:33 = #9
 
-// CHECK-START:      File [[START1:[0-9]]], 1:1 -> 5:1 = #0
-// CHECK-START-NEXT: File [[START1]], 4:17 -> 4:22 = (#0 + #1)
-// CHECK-START-NEXT: File [[START1]], 4:24 -> 4:27 = #1
-// CHECK-START-NEXT: File [[START1]], 4:29 -> 5:1 = #1
-// CHECK-START:      File [[START2:[0-9]]], 1:1 -> 5:1 = #0
-// CHECK-START-NEXT: File [[START2]], 4:17 -> 4:22 = (#0 + #5)
-// CHECK-START-NEXT: File [[START2]], 4:24 -> 4:27 = #5
-// CHECK-START-NEXT: File [[START2]], 4:29 -> 5:1 = #5
-// CHECK-START:      File [[START3:[0-9]]], 1:1 -> 5:1 = #0
-// CHECK-START-NEXT: File [[START3]], 4:17 -> 4:22 = (#0 + #9)
-// CHECK-START-NEXT: File [[START3]], 4:24 -> 4:27 = #9
-// CHECK-START-NEXT: File [[START3]], 4:29 -> 5:1 = #9
+// CHECK-START: File [[START1:[0-9]]], 1:1 -> 5:1 = #0
+// CHECK-START: File [[START1]], 4:17 -> 4:22 = (#0 + #1)
+// CHECK-START: File [[START1]], 4:24 -> 4:27 = #1
+// CHECK-START: File [[START1]], 4:29 -> 5:1 = #1
+// CHECK-START: File [[START2:[0-9]]], 1:1 -> 5:1 = #0
+// CHECK-START: File [[START2]], 4:17 -> 4:22 = (#0 + #5)
+// CHECK-START: File [[START2]], 4:24 -> 4:27 = #5
+// CHECK-START: File [[START2]], 4:29 -> 5:1 = #5
+// CHECK-START: File [[START3:[0-9]]], 1:1 -> 5:1 = #0
+// CHECK-START: File [[START3]], 4:17 -> 4:22 = (#0 + #9)
+// CHECK-START: File [[START3]], 4:24 -> 4:27 = #9
+// CHECK-START: File [[START3]], 4:29 -> 5:1 = #9
 
 // CHECK-CODE:      File [[CODE1:[0-9]]], 1:1 -> 14:1 = #1
 // CHECK-CODE-NEXT: File [[CODE1]], 4:5 -> 4:11 = #1
@@ -65,15 +65,15 @@ int main() {
 // CHECK-CODE: File [[CODE2]], 9:11 -> 11:2 = #7
 // CHECK-CODE: File [[CODE2]], 11:8 -> 13:2 = (#5 - #7)
 
-// CHECK-END:      File [[END1:[0-9]]], 1:1 -> 3:2 = #1
-// CHECK-END-NEXT: File [[END1]], 1:1 -> 6:1 = #0
-// CHECK-END-NEXT: File [[END1]], 5:5 -> 5:9 = #0
+// CHECK-END: File [[END1:[0-9]]], 1:1 -> 3:2 = #1
+// CHECK-END: File [[END1]], 1:1 -> 6:1 = #0
+// CHECK-END: File [[END1]], 5:5 -> 5:9 = #0
 // CHECK-END: File [[END1]], 5:11 -> 5:16 = #4
-// CHECK-END:      File [[END2:[0-9]]], 1:1 -> 3:2 = #5
-// CHECK-END-NEXT: File [[END2]], 1:1 -> 6:1 = #0
-// CHECK-END-NEXT: File [[END2]], 5:5 -> 5:9 = #0
+// CHECK-END: File [[END2:[0-9]]], 1:1 -> 3:2 = #5
+// CHECK-END: File [[END2]], 1:1 -> 6:1 = #0
+// CHECK-END: File [[END2]], 5:5 -> 5:9 = #0
 // CHECK-END: File [[END2]], 5:11 -> 5:16 = #8
-// CHECK-END:      File [[END3:[0-9]]], 1:1 -> 3:2 = #9
-// CHECK-END-NEXT: File [[END3]], 1:1 -> 6:1 = #0
-// CHECK-END-NEXT: File [[END3]], 5:5 -> 5:9 = #0
+// CHECK-END: File [[END3:[0-9]]], 1:1 -> 3:2 = #9
+// CHECK-END: File [[END3]], 1:1 -> 6:1 = #0
+// CHECK-END: File [[END3]], 5:5 -> 5:9 = #0
 // CHECK-END: File [[END3]], 5:11 -> 5:16 = #10
