@@ -421,15 +421,14 @@ static void warnOrError(const Twine &Msg) {
 
 static void reportDuplicate(Symbol *Sym, InputFile *NewFile) {
   warnOrError("duplicate symbol: " + toString(*Sym) + "\n>>> defined in " +
-              toString(Sym->getFile()) + "\n>>> defined in " +
-              toString(NewFile));
+              toString(Sym->File) + "\n>>> defined in " + toString(NewFile));
 }
 
 template <class ELFT>
 static void reportDuplicate(Symbol *Sym, InputSectionBase *ErrSec,
                             typename ELFT::uint ErrOffset) {
-  Defined *D = dyn_cast<Defined>(Sym);
-  if (!D || !D->Section || !ErrSec) {
+  Defined *D = cast<Defined>(Sym);
+  if (!D->Section || !ErrSec) {
     reportDuplicate(Sym, ErrSec ? ErrSec->File : nullptr);
     return;
   }

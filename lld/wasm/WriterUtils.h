@@ -16,6 +16,17 @@
 
 using llvm::raw_ostream;
 
+// Needed for WasmSignatureDenseMapInfo
+inline bool operator==(const llvm::wasm::WasmSignature &LHS,
+                       const llvm::wasm::WasmSignature &RHS) {
+  return LHS.ReturnType == RHS.ReturnType && LHS.ParamTypes == RHS.ParamTypes;
+}
+
+inline bool operator!=(const llvm::wasm::WasmSignature &LHS,
+                       const llvm::wasm::WasmSignature &RHS) {
+  return !(LHS == RHS);
+}
+
 namespace lld {
 namespace wasm {
 
@@ -58,6 +69,10 @@ void writeExport(raw_ostream &OS, const llvm::wasm::WasmExport &Export);
 void writeReloc(raw_ostream &OS, const OutputRelocation &Reloc);
 
 } // namespace wasm
+
+std::string toString(const llvm::wasm::ValType Type);
+std::string toString(const llvm::wasm::WasmSignature &Sig);
+
 } // namespace lld
 
 #endif // LLD_WASM_WRITERUTILS_H

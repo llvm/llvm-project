@@ -158,6 +158,11 @@ Improvements to clang-tidy
   Finds uses of bitwise operations on signed integer types, which may lead to 
   undefined or implementation defined behaviour.
 
+- New `objc-avoid-nserror-init
+  <http://clang.llvm.org/extra/clang-tidy/checks/objc-avoid-nserror-init.html>`_ check
+
+  Add new check to detect the use of [NSError init].
+
 - New `objc-avoid-spinlock
   <http://clang.llvm.org/extra/clang-tidy/checks/objc-avoid-spinlock.html>`_ check
 
