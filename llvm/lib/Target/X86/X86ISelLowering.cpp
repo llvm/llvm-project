@@ -1127,6 +1127,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
 
     if (HasInt256) {
+      // Custom legalize 2x32 to get a little better code.
+      setOperationAction(ISD::MGATHER, MVT::v2f32, Custom);
+
       for (auto VT : { MVT::v4i32, MVT::v8i32, MVT::v2i64, MVT::v4i64,
                        MVT::v4f32, MVT::v8f32, MVT::v2f64, MVT::v4f64 })
         setOperationAction(ISD::MGATHER,  VT, Custom);
@@ -1358,11 +1361,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       for (auto VT : {MVT::v16i32, MVT::v8i64, MVT::v8i32, MVT::v4i64,
                       MVT::v4i32, MVT::v2i64})
         setOperationAction(ISD::CTPOP, VT, Legal);
-    }
-
-    // Custom legalize 2x32 to get a little better code.
-    if (Subtarget.hasVLX()) {
-      setOperationAction(ISD::MGATHER, MVT::v2f32, Custom);
     }
 
     // Custom lower several nodes.
@@ -6950,10 +6948,10 @@ static int getUnderlyingExtractedFromVec(SDValue &ExtractedFromVec,
 
   // For 256-bit vectors, LowerEXTRACT_VECTOR_ELT_SSE4 may have already
   // lowered this:
-  //   (extract_vector_elt (v8f32 %vreg1), Constant<6>)
+  //   (extract_vector_elt (v8f32 %1), Constant<6>)
   // to:
   //   (extract_vector_elt (vector_shuffle<2,u,u,u>
-  //                           (extract_subvector (v8f32 %vreg0), Constant<4>),
+  //                           (extract_subvector (v8f32 %0), Constant<4>),
   //                           undef)
   //                       Constant<0>)
   // In this case the vector is the extract_subvector expression and the index
@@ -24863,7 +24861,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
   }
   case ISD::MGATHER: {
     EVT VT = N->getValueType(0);
-    if (VT == MVT::v2f32 && Subtarget.hasVLX()) {
+    if (VT == MVT::v2f32 && (Subtarget.hasVLX() || !Subtarget.hasAVX512())) {
       auto *Gather = cast<MaskedGatherSDNode>(N);
       SDValue Index = Gather->getIndex();
       if (Index.getValueType() != MVT::v2i64)
@@ -24873,10 +24871,17 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue Src0 = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4f32,
                                  Gather->getValue(),
                                  DAG.getUNDEF(MVT::v2f32));
+      if (!Subtarget.hasVLX()) {
+        // We need to widen the mask, but the instruction will only use 2
+        // of its elements. So we can use undef.
+        Mask = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4i1, Mask,
+                           DAG.getUNDEF(MVT::v2i1));
+        Mask = DAG.getNode(ISD::SIGN_EXTEND, dl, MVT::v4i32, Mask);
+      }
       SDValue Ops[] = { Gather->getChain(), Src0, Mask, Gather->getBasePtr(),
                         Index };
       SDValue Res = DAG.getTargetMemSDNode<X86MaskedGatherSDNode>(
-        DAG.getVTList(MVT::v4f32, MVT::v2i1, MVT::Other), Ops, dl,
+        DAG.getVTList(MVT::v4f32, Mask.getValueType(), MVT::Other), Ops, dl,
         Gather->getMemoryVT(), Gather->getMemOperand());
       Results.push_back(Res);
       Results.push_back(Res.getValue(2));
@@ -35924,7 +35929,8 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
 }
 
 static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
-                                    TargetLowering::DAGCombinerInfo &DCI) {
+                                    TargetLowering::DAGCombinerInfo &DCI,
+                                    const X86Subtarget &Subtarget) {
   SDLoc DL(N);
 
   // Pre-shrink oversized index elements to avoid triggering scalarization.
@@ -35967,7 +35973,7 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
   // the masks is v*i1. So the mask will be truncated anyway.
   // The SIGN_EXTEND_INREG my be dropped.
   SDValue Mask = N->getOperand(2);
-  if (Mask.getOpcode() == ISD::SIGN_EXTEND_INREG) {
+  if (Subtarget.hasAVX512() && Mask.getOpcode() == ISD::SIGN_EXTEND_INREG) {
     SmallVector<SDValue, 5> NewOps(N->op_begin(), N->op_end());
     NewOps[2] = Mask.getOperand(0);
     DAG.UpdateNodeOperands(N, NewOps);
@@ -37079,7 +37085,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::FMADDSUB:
   case X86ISD::FMSUBADD:    return combineFMADDSUB(N, DAG, Subtarget);
   case ISD::MGATHER:
-  case ISD::MSCATTER:       return combineGatherScatter(N, DAG, DCI);
+  case ISD::MSCATTER:       return combineGatherScatter(N, DAG, DCI, Subtarget);
   case X86ISD::TESTM:       return combineTestM(N, DAG, Subtarget);
   case X86ISD::PCMPEQ:
   case X86ISD::PCMPGT:      return combineVectorCompare(N, DAG, Subtarget);

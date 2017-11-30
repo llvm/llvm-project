@@ -4,28 +4,28 @@ target triple = "x86_64-apple-macosx10.7.0"
 
 ; This test case has a sub-register join followed by a remat:
 ;
-; 256L    %vreg2<def> = COPY %vreg7:sub_32bit<kill>; GR32:%vreg2 GR64:%vreg7
-;         Considering merging %vreg2 with %vreg7:sub_32bit
+; 256L    %2<def> = COPY %7:sub_32bit<kill>; GR32:%2 GR64:%7
+;         Considering merging %2 with %7:sub_32bit
 ;         Cross-class to GR64.
-;                 RHS = %vreg2 = [256d,272d:0)  0@256d
-;                 LHS = %vreg7 = [208d,256d:0)[304L,480L:0)  0@208d
-;                 updated: 272L   %vreg0<def> = COPY %vreg7:sub_32bit<kill>; GR32:%vreg0 GR64:%vreg7
-;         Joined. Result = %vreg7 = [208d,272d:0)[304L,480L:0)  0@208d
+;                 RHS = %2 = [256d,272d:0)  0@256d
+;                 LHS = %7 = [208d,256d:0)[304L,480L:0)  0@208d
+;                 updated: 272L   %0<def> = COPY %7:sub_32bit<kill>; GR32:%0 GR64:%7
+;         Joined. Result = %7 = [208d,272d:0)[304L,480L:0)  0@208d
 ;
-; 272L    %vreg10:sub_32bit<def> = COPY %vreg7:sub_32bit<kill>, %vreg10<imp-def>; GR64:%vreg10,%vreg7
-;         Considering merging %vreg7 with %vreg10
-;                 RHS = %vreg7 = [208d,272d:0)[304L,480L:0)  0@208d
-;                 LHS = %vreg10 = [16d,64L:2)[64L,160L:1)[192L,240L:1)[272d,304L:3)[304L,352d:1)[352d,400d:0)[400d,400S:4)  0@352d 1@64L-phidef 2@16d-phikill 3@272d-phikill 4@400d
-; Remat: %vreg10<def> = MOV64r0 %vreg10<imp-def>, %eflags<imp-def,dead>, %vreg10<imp-def>; GR64:%vreg10
-; Shrink: %vreg7 = [208d,272d:0)[304L,480L:0)  0@208d
+; 272L    %10:sub_32bit<def> = COPY %7:sub_32bit<kill>, %10<imp-def>; GR64:%10,%7
+;         Considering merging %7 with %10
+;                 RHS = %7 = [208d,272d:0)[304L,480L:0)  0@208d
+;                 LHS = %10 = [16d,64L:2)[64L,160L:1)[192L,240L:1)[272d,304L:3)[304L,352d:1)[352d,400d:0)[400d,400S:4)  0@352d 1@64L-phidef 2@16d-phikill 3@272d-phikill 4@400d
+; Remat: %10<def> = MOV64r0 %10<imp-def>, %eflags<imp-def,dead>, %10<imp-def>; GR64:%10
+; Shrink: %7 = [208d,272d:0)[304L,480L:0)  0@208d
 ;  live-in at 240L
 ;  live-in at 416L
 ;  live-in at 320L
 ;  live-in at 304L
-; Shrunk: %vreg7 = [208d,256d:0)[304L,480L:0)  0@208d
+; Shrunk: %7 = [208d,256d:0)[304L,480L:0)  0@208d
 ;
 ; The COPY at 256L is rewritten as a partial def, and that would artificially
-; extend the live range of %vreg7 to end at 256d.  When the joined copy is
+; extend the live range of %7 to end at 256d.  When the joined copy is
 ; removed, -verify-coalescing complains about the dangling kill.
 ;
 ; <rdar://problem/9967101>

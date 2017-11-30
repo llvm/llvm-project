@@ -2,17 +2,17 @@
 ;
 ; Test RegistersDefinedFromSameValue. We have multiple copies of the same vreg:
 ; while.body85.i:
-;   vreg1 = copy vreg2
-;   vreg2 = add
+;   %1 = copy %2
+;   %2 = add
 ; critical edge from land.lhs.true.i -> if.end117.i:
-;   vreg27 = vreg2
+;   %27 = %2
 ; critical edge from land.lhs.true103.i -> if.end117.i:
-;   vreg27 = vreg2
+;   %27 = %2
 ; if.then108.i:
-;   vreg27 = vreg1
+;   %27 = %1
 ;
 ; Prior to fixing PR10920 401.bzip miscompile, the coalescer would
-; consider vreg1 and vreg27 to be copies of the same value. It would
+; consider %1 and %27 to be copies of the same value. It would
 ; then remove one of the critical edge copes, which cannot safely be removed.
 
 ; There are two obvious ways the register-allocator could go here, either

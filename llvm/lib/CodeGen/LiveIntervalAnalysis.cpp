@@ -698,11 +698,11 @@ void LiveIntervals::addKillFlags(const VirtRegMap *VRM) {
       // Check if any of the regunits are live beyond the end of RI. That could
       // happen when a physreg is defined as a copy of a virtreg:
       //
-      //   %eax = COPY %vreg5
-      //   FOO %vreg5         <--- MI, cancel kill because %eax is live.
+      //   %eax = COPY %5
+      //   FOO %5             <--- MI, cancel kill because %eax is live.
       //   BAR %eax<kill>
       //
-      // There should be no kill flag on FOO when %vreg5 is rewritten as %eax.
+      // There should be no kill flag on FOO when %5 is rewritten as %eax.
       for (auto &RUP : RU) {
         const LiveRange &RURange = *RUP.first;
         LiveRange::const_iterator &I = RUP.second;
@@ -719,13 +719,13 @@ void LiveIntervals::addKillFlags(const VirtRegMap *VRM) {
         // When reading a partial undefined value we must not add a kill flag.
         // The regalloc might have used the undef lane for something else.
         // Example:
-        //     %vreg1 = ...              ; R32: %vreg1
-        //     %vreg2:high16 = ...       ; R64: %vreg2
-        //        = read %vreg2<kill>    ; R64: %vreg2
-        //        = read %vreg1          ; R32: %vreg1
-        // The <kill> flag is correct for %vreg2, but the register allocator may
-        // assign R0L to %vreg1, and R0 to %vreg2 because the low 32bits of R0
-        // are actually never written by %vreg2. After assignment the <kill>
+        //     %1 = ...                  ; R32: %1
+        //     %2:high16 = ...           ; R64: %2
+        //        = read %2<kill>        ; R64: %2
+        //        = read %1              ; R32: %1
+        // The <kill> flag is correct for %2, but the register allocator may
+        // assign R0L to %1, and R0 to %2 because the low 32bits of R0
+        // are actually never written by %2. After assignment the <kill>
         // flag at the read instruction is invalid.
         LaneBitmask DefinedLanesMask;
         if (!SRs.empty()) {

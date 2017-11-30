@@ -473,9 +473,15 @@ bool polly::isHoistableLoad(LoadInst *LInst, Region &R, LoopInfo &LI,
       return false;
 
     bool DominatesAllPredecessors = true;
-    for (auto Pred : predecessors(R.getExit()))
-      if (R.contains(Pred) && !DT.dominates(&BB, Pred))
-        DominatesAllPredecessors = false;
+    if (R.isTopLevelRegion()) {
+      for (BasicBlock &I : *R.getEntry()->getParent())
+        if (isa<ReturnInst>(I.getTerminator()) && !DT.dominates(&BB, &I))
+          DominatesAllPredecessors = false;
+    } else {
+      for (auto Pred : predecessors(R.getExit()))
+        if (R.contains(Pred) && !DT.dominates(&BB, Pred))
+          DominatesAllPredecessors = false;
+    }
 
     if (!DominatesAllPredecessors)
       continue;

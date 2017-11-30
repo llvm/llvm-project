@@ -116,9 +116,9 @@ private:
   /// the same register.  In that case, the instruction may depend on those
   /// operands reading the same dont-care value.  For example:
   ///
-  ///   %vreg1<def> = XOR %vreg2<undef>, %vreg2<undef>
+  ///   %1<def> = XOR %2<undef>, %2<undef>
   ///
-  /// Any register can be used for %vreg2, and its value doesn't matter, but
+  /// Any register can be used for %2, and its value doesn't matter, but
   /// the two operands must be the same register.
   ///
   bool IsUndef : 1;

@@ -71,6 +71,9 @@ int shmdt(const void *);
 # include <sys/vfs.h>
 # include <mntent.h>
 # include <netinet/ether.h>
+# if defined(__linux__)
+#  include <sys/uio.h>
+# endif
 #else
 # include <signal.h>
 # include <netinet/in.h>

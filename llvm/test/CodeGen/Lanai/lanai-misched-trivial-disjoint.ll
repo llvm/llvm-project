@@ -36,7 +36,7 @@ entry:
 ; CHECK-LABEL: SU({{.*}}):   SW_RI{{.*}}, 4,
 ; CHECK:  # preds left       : 2
 ; CHECK:  # succs left       : 0
-; CHECK-LABEL: SU({{.*}}):   %vreg{{.*}}<def> = LDW_RI{{.*}}, 12,
+; CHECK-LABEL: SU({{.*}}):   %{{.*}}<def> = LDW_RI{{.*}}, 12,
 ; CHECK:  # preds left       : 1
 ; CHECK:  # succs left       : 4
 ; CHECK-LABEL: SU({{.*}}):   STH_RI{{.*}}, 10,

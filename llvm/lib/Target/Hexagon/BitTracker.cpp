@@ -18,16 +18,16 @@
 // A "ref" value is associated with a BitRef structure, which indicates
 // which virtual register, and which bit in that register is the origin
 // of the value. For example, given an instruction
-//   vreg2 = ASL vreg1, 1
-// assuming that nothing is known about bits of vreg1, bit 1 of vreg2
-// will be a "ref" to (vreg1, 0). If there is a subsequent instruction
-//   vreg3 = ASL vreg2, 2
-// then bit 3 of vreg3 will be a "ref" to (vreg1, 0) as well.
+//   %2 = ASL %1, 1
+// assuming that nothing is known about bits of %1, bit 1 of %2
+// will be a "ref" to (%1, 0). If there is a subsequent instruction
+//   %3 = ASL %2, 2
+// then bit 3 of %3 will be a "ref" to (%1, 0) as well.
 // The "bottom" case means that the bit's value cannot be determined,
 // and that this virtual register actually defines it. The "bottom" case
 // is discussed in detail in BitTracker.h. In fact, "bottom" is a "ref
-// to self", so for the vreg1 above, the bit 0 of it will be a "ref" to
-// (vreg1, 0), bit 1 will be a "ref" to (vreg1, 1), etc.
+// to self", so for the %1 above, the bit 0 of it will be a "ref" to
+// (%1, 0), bit 1 will be a "ref" to (%1, 1), etc.
 //
 // The tracker implements the Wegman-Zadeck algorithm, originally developed
 // for SSA-based constant propagation. Each register is represented as
@@ -75,7 +75,7 @@ using BT = BitTracker;
 
 namespace {
 
-  // Local trickery to pretty print a register (without the whole "%vreg"
+  // Local trickery to pretty print a register (without the whole "%number"
   // business).
   struct printv {
     printv(unsigned r) : R(r) {}

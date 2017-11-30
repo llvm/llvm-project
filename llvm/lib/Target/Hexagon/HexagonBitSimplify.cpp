@@ -895,7 +895,7 @@ bool HexagonBitSimplify::getUsedBits(unsigned Opc, unsigned OpN,
 }
 
 // Calculate the register class that matches Reg:Sub. For example, if
-// vreg1 is a double register, then vreg1:isub_hi would match the "int"
+// %1 is a double register, then %1:isub_hi would match the "int"
 // register class.
 const TargetRegisterClass *HexagonBitSimplify::getFinalVRegClass(
       const BitTracker::RegisterRef &RR, MachineRegisterInfo &MRI) {
@@ -1246,11 +1246,11 @@ bool RedundantInstrElimination::computeUsedBits(unsigned Reg, BitVector &Bits) {
 // holds the bits for the entire register. To keep track of that, the
 // argument Begin indicates where in Bits is the lowest-significant bit
 // of the register used in operand OpN. For example, in instruction:
-//   vreg1 = S2_lsr_i_r vreg2:isub_hi, 10
+//   %1 = S2_lsr_i_r %2:isub_hi, 10
 // the operand 1 is a 32-bit register, which happens to be a subregister
-// of the 64-bit register vreg2, and that subregister starts at position 32.
+// of the 64-bit register %2, and that subregister starts at position 32.
 // In this case Begin=32, since Bits[32] would be the lowest-significant bit
-// of vreg2:isub_hi.
+// of %2:isub_hi.
 bool RedundantInstrElimination::computeUsedBits(const MachineInstr &MI,
       unsigned OpN, BitVector &Bits, uint16_t Begin) {
   unsigned Opc = MI.getOpcode();
@@ -1356,11 +1356,11 @@ bool RedundantInstrElimination::processBlock(MachineBasicBlock &B,
       // This pass can create copies between registers that don't have the
       // exact same values. Updating the tracker has to involve updating
       // all dependent cells. Example:
-      //   vreg1 = inst vreg2     ; vreg1 != vreg2, but used bits are equal
+      //   %1  = inst %2     ; %1 != %2, but used bits are equal
       //
-      //   vreg3 = copy vreg2     ; <- inserted
-      //     ... = vreg3          ; <- replaced from vreg2
-      // Indirectly, we can create a "copy" between vreg1 and vreg2 even
+      //   %3  = copy %2     ; <- inserted
+      //   ... = %3          ; <- replaced from %2
+      // Indirectly, we can create a "copy" between %1 and %2 even
       // though their exact values do not match.
       BT.visit(*CopyI);
       Changed = true;
@@ -2313,10 +2313,10 @@ bool BitSimplification::genBitSplit(MachineInstr *MI,
 
 // Check for tstbit simplification opportunity, where the bit being checked
 // can be tracked back to another register. For example:
-//   vreg2 = S2_lsr_i_r  vreg1, 5
-//   vreg3 = S2_tstbit_i vreg2, 0
+//   %2 = S2_lsr_i_r  %1, 5
+//   %3 = S2_tstbit_i %2, 0
 // =>
-//   vreg3 = S2_tstbit_i vreg1, 5
+//   %3 = S2_tstbit_i %1, 5
 bool BitSimplification::simplifyTstbit(MachineInstr *MI,
       BitTracker::RegisterRef RD, const BitTracker::RegisterCell &RC) {
   unsigned Opc = MI->getOpcode();

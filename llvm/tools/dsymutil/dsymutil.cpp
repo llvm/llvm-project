@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "dsymutil.h"
+#include "CFBundle.h"
 #include "DebugMap.h"
 #include "MachOUtils.h"
 #include "llvm/ADT/SmallString.h"
@@ -113,7 +114,7 @@ static opt<bool> InputIsYAMLDebugMap(
     "y", desc("Treat the input file is a YAML debug map rather than a binary."),
     init(false), cat(DsymCategory));
 
-static bool createPlistFile(llvm::StringRef BundleRoot) {
+static bool createPlistFile(llvm::StringRef Bin, llvm::StringRef BundleRoot) {
   if (NoOutput)
     return true;
 
@@ -128,16 +129,15 @@ static bool createPlistFile(llvm::StringRef BundleRoot) {
     return false;
   }
 
-  // FIXME: Use CoreFoundation to get executable bundle info. Use
-  // dummy values for now.
-  std::string bundleVersionStr = "1", bundleShortVersionStr = "1.0",
-              bundleIDStr;
+  CFBundleInfo BI = getBundleInfo(Bin);
 
-  llvm::StringRef BundleID = *llvm::sys::path::rbegin(BundleRoot);
-  if (llvm::sys::path::extension(BundleRoot) == ".dSYM")
-    bundleIDStr = llvm::sys::path::stem(BundleID);
-  else
-    bundleIDStr = BundleID;
+  if (BI.IDStr.empty()) {
+    llvm::StringRef BundleID = *llvm::sys::path::rbegin(BundleRoot);
+    if (llvm::sys::path::extension(BundleRoot) == ".dSYM")
+      BI.IDStr = llvm::sys::path::stem(BundleID);
+    else
+      BI.IDStr = BundleID;
+  }
 
   // Print out information to the plist file.
   PL << "<?xml version=\"1.0\" encoding=\"UTF-8\"\?>\n"
@@ -148,17 +148,20 @@ static bool createPlistFile(llvm::StringRef BundleRoot) {
      << "\t\t<key>CFBundleDevelopmentRegion</key>\n"
      << "\t\t<string>English</string>\n"
      << "\t\t<key>CFBundleIdentifier</key>\n"
-     << "\t\t<string>com.apple.xcode.dsym." << bundleIDStr << "</string>\n"
+     << "\t\t<string>com.apple.xcode.dsym." << BI.IDStr << "</string>\n"
      << "\t\t<key>CFBundleInfoDictionaryVersion</key>\n"
      << "\t\t<string>6.0</string>\n"
      << "\t\t<key>CFBundlePackageType</key>\n"
      << "\t\t<string>dSYM</string>\n"
      << "\t\t<key>CFBundleSignature</key>\n"
-     << "\t\t<string>\?\?\?\?</string>\n"
-     << "\t\t<key>CFBundleShortVersionString</key>\n"
-     << "\t\t<string>" << bundleShortVersionStr << "</string>\n"
-     << "\t\t<key>CFBundleVersion</key>\n"
-     << "\t\t<string>" << bundleVersionStr << "</string>\n"
+     << "\t\t<string>\?\?\?\?</string>\n";
+
+  if (!BI.OmitShortVersion())
+    PL << "\t\t<key>CFBundleShortVersionString</key>\n"
+       << "\t\t<string>" << BI.ShortVersionStr << "</string>\n";
+
+  PL << "\t\t<key>CFBundleVersion</key>\n"
+     << "\t\t<string>" << BI.VersionStr << "</string>\n"
      << "\t</dict>\n"
      << "</plist>\n";
 
@@ -206,7 +209,7 @@ static std::string getOutputFileName(llvm::StringRef InputFile) {
   llvm::SmallString<128> BundleDir(OutputFileOpt);
   if (BundleDir.empty())
     BundleDir = DwarfFile + ".dSYM";
-  if (!createBundleDir(BundleDir) || !createPlistFile(BundleDir))
+  if (!createBundleDir(BundleDir) || !createPlistFile(DwarfFile, BundleDir))
     return "";
 
   llvm::sys::path::append(BundleDir, "Contents", "Resources", "DWARF",

@@ -61,7 +61,7 @@ for.end:                                          ; preds = %cond.end
 
 ; CHECK: insert_elem
 ; This test has a sub-register copy with a kill flag:
-;   %vreg6:ssub_3<def> = COPY %vreg6:ssub_2<kill>; QPR_VFP2:%vreg6
+;   %6:ssub_3<def> = COPY %6:ssub_2<kill>; QPR_VFP2:%6
 ; The rewriter must do something sensible with that, or the scavenger crashes.
 define void @insert_elem() nounwind {
 entry:

@@ -148,7 +148,7 @@ body:             |
 
 # Let's verify that the slot index ranges for the unused variables argc/argv,
 # connected to physical regs %edi and %rsi, does not overlap with the ranges
-# for %vreg2 and %vreg3. The register allocator is actually allocating the
+# for %2 and %3. The register allocator is actually allocating the
 # virtual registers # to %edi and %esi, so the ranges for argc/argv should
 # not cover the whole BB.
 #
@@ -157,7 +157,7 @@ body:             |
 # CHECKDBG-NEXT:         [0B;0e):0 BB#0-160B
 # CHECKDBG-NEXT: !"argv,5"        [0B;0e):0 Loc0=%rsi
 # CHECKDBG-NEXT:         [0B;0e):0 BB#0-160B
-# CHECKDBG-NEXT: !"a0,7"  [16r;64r):0 Loc0=%vreg2
+# CHECKDBG-NEXT: !"a0,7"  [16r;64r):0 Loc0=%2
 # CHECKDBG-NEXT:         [16r;64r):0 BB#0-160B
-# CHECKDBG-NEXT: !"a1,8"  [32r;80r):0 Loc0=%vreg3
+# CHECKDBG-NEXT: !"a1,8"  [32r;80r):0 Loc0=%3
 # CHECKDBG-NEXT:         [32r;80r):0 BB#0-160B

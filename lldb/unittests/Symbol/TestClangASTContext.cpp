@@ -382,8 +382,8 @@ TEST_F(TestClangASTContext, TemplateArguments) {
   infos.names.push_back("T");
   infos.args.push_back(TemplateArgument(m_ast->getASTContext()->IntTy));
   infos.names.push_back("I");
-  infos.args.push_back(TemplateArgument(*m_ast->getASTContext(),
-                                        llvm::APSInt(47),
+  llvm::APSInt arg(llvm::APInt(8, 47));
+  infos.args.push_back(TemplateArgument(*m_ast->getASTContext(), arg,
                                         m_ast->getASTContext()->IntTy));
 
   // template<typename T, int I> struct foo;
@@ -419,15 +419,16 @@ TEST_F(TestClangASTContext, TemplateArguments) {
               eTemplateArgumentKindType);
     EXPECT_EQ(m_ast->GetTypeTemplateArgument(t.GetOpaqueQualType(), 0),
               int_type);
-    auto p = m_ast->GetIntegralTemplateArgument(t.GetOpaqueQualType(), 0);
-    EXPECT_EQ(p.second, CompilerType());
+    EXPECT_EQ(llvm::None,
+              m_ast->GetIntegralTemplateArgument(t.GetOpaqueQualType(), 0));
 
     EXPECT_EQ(m_ast->GetTemplateArgumentKind(t.GetOpaqueQualType(), 1),
               eTemplateArgumentKindIntegral);
     EXPECT_EQ(m_ast->GetTypeTemplateArgument(t.GetOpaqueQualType(), 1),
               CompilerType());
-    p = m_ast->GetIntegralTemplateArgument(t.GetOpaqueQualType(), 1);
-    EXPECT_EQ(p.first, llvm::APSInt(47));
-    EXPECT_EQ(p.second, int_type);
+    auto result = m_ast->GetIntegralTemplateArgument(t.GetOpaqueQualType(), 1);
+    ASSERT_NE(llvm::None, result);
+    EXPECT_EQ(arg, result->value);
+    EXPECT_EQ(int_type, result->type);
   }
 }
