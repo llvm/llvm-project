@@ -579,7 +579,7 @@ USE(inlineFuncTmpl<ExplicitDecl_Imported>)
 // MSC-DAG: declare dllimport void @"\01??$inlineFuncTmpl@UExplicitInst_Imported@@@@YAXXZ"()
 // GNU-DAG: declare dllimport void @_Z8funcTmplI21ExplicitInst_ImportedEvv()
 // GNU-DAG: define weak_odr void @_Z14inlineFuncTmplI21ExplicitInst_ImportedEvv()
-// MO1-DAG: define available_externally dllimport void @"\01??$funcTmpl@UExplicitInst_Imported@@@@YAXXZ"()
+// MO1-DAG: declare dllimport void @"\01??$funcTmpl@UExplicitInst_Imported@@@@YAXXZ"()
 // MO1-DAG: define available_externally dllimport void @"\01??$inlineFuncTmpl@UExplicitInst_Imported@@@@YAXXZ"()
 // GO1-DAG: define available_externally dllimport void @_Z8funcTmplI21ExplicitInst_ImportedEvv()
 // GO1-DAG: define weak_odr void @_Z14inlineFuncTmplI21ExplicitInst_ImportedEvv()
@@ -609,6 +609,15 @@ USE(funcTmpl<ExplicitSpec_Imported>)
 template<> __declspec(dllimport) inline void funcTmpl<ExplicitSpec_InlineDef_Imported>() {}
 USE(funcTmpl<ExplicitSpec_InlineDef_Imported>)
 
+#ifdef MSABI
+namespace pr35435 {
+struct X;
+template <typename T> struct __declspec(dllimport) S {
+  void foo(T *t) { t->problem(); }
+};
+template void S<X>::foo(X*); // Cannot be instantiated because X is incomplete; dllimport means it's treated as an instantiation decl.
+}
+#endif
 
 
 //===----------------------------------------------------------------------===//

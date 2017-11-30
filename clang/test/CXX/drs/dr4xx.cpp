@@ -22,6 +22,9 @@ namespace dr401 { // dr401: yes
   class B {
   protected:
     typedef int type; // expected-note {{protected}}
+#if __cplusplus == 199711L
+    // expected-note@-2 {{protected}}
+#endif
   };
 
   class C {

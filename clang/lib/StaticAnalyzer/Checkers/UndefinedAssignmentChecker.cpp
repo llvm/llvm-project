@@ -60,6 +60,14 @@ void UndefinedAssignmentChecker::checkBind(SVal location, SVal val,
   const Expr *ex = nullptr;
 
   while (StoreE) {
+    if (const UnaryOperator *U = dyn_cast<UnaryOperator>(StoreE)) {
+      str = "The expression is an uninitialized value. "
+            "The computed value will also be garbage";
+
+      ex = U->getSubExpr();
+      break;
+    }
+
     if (const BinaryOperator *B = dyn_cast<BinaryOperator>(StoreE)) {
       if (B->isCompoundAssignmentOp()) {
         ProgramStateRef state = C.getState();

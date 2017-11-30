@@ -3723,9 +3723,6 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
   if (base.getTBAAInfo().isMayAlias() ||
           rec->hasAttr<MayAliasAttr>() || FieldType->isVectorType()) {
     FieldTBAAInfo = TBAAAccessInfo::getMayAliasInfo();
-  } else if (rec->isUnion()) {
-    // TODO: Support TBAA for unions.
-    FieldTBAAInfo = TBAAAccessInfo::getMayAliasInfo();
   } else {
     // If no base type been assigned for the base access, then try to generate
     // one for this base lvalue.
@@ -3736,16 +3733,26 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
                "Nonzero offset for an access with no base type!");
     }
 
-    // Adjust offset to be relative to the base type.
-    const ASTRecordLayout &Layout =
-        getContext().getASTRecordLayout(field->getParent());
-    unsigned CharWidth = getContext().getCharWidth();
-    if (FieldTBAAInfo.BaseType)
-      FieldTBAAInfo.Offset +=
-          Layout.getFieldOffset(field->getFieldIndex()) / CharWidth;
+    // All union members are encoded to be of the same special type.
+    if (FieldTBAAInfo.BaseType && rec->isUnion())
+      FieldTBAAInfo = TBAAAccessInfo::getUnionMemberInfo(FieldTBAAInfo.BaseType,
+                                                         FieldTBAAInfo.Offset,
+                                                         FieldTBAAInfo.Size);
 
-    // Update the final access type.
-    FieldTBAAInfo.AccessType = CGM.getTBAATypeInfo(FieldType);
+    // For now we describe accesses to direct and indirect union members as if
+    // they were at the offset of their outermost enclosing union.
+    if (!FieldTBAAInfo.isUnionMember()) {
+      // Adjust offset to be relative to the base type.
+      const ASTRecordLayout &Layout =
+          getContext().getASTRecordLayout(field->getParent());
+      unsigned CharWidth = getContext().getCharWidth();
+      if (FieldTBAAInfo.BaseType)
+        FieldTBAAInfo.Offset +=
+            Layout.getFieldOffset(field->getFieldIndex()) / CharWidth;
+
+      // Update the final access type.
+      FieldTBAAInfo.AccessType = CGM.getTBAATypeInfo(FieldType);
+    }
   }
 
   Address addr = base.getAddress();
