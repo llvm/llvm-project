@@ -26,6 +26,7 @@ class SaveJITObjectsTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @expectedFailureAll(oslist=["windows"])
+    @expectedFailureDarwin("rdar://35774408")
     def test_save_jit_objects(self):
         self.build()
         src_file = "main.c"
