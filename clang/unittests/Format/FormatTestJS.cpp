@@ -1152,6 +1152,11 @@ TEST_F(FormatTestJS, WrapRespectsAutomaticSemicolonInsertion) {
                "const y = 3\n",
                "const x = (   5 +    9)\n"
                "const y = 3\n");
+  // Ideally the foo() bit should be indented relative to the async function().
+  verifyFormat("async function\n"
+               "foo() {}",
+               getGoogleJSStyleWithColumns(10));
+  verifyFormat("await theReckoning;", getGoogleJSStyleWithColumns(10));
 }
 
 TEST_F(FormatTestJS, AutomaticSemicolonInsertionHeuristic) {

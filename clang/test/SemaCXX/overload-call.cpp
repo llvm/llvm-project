@@ -658,3 +658,11 @@ namespace StringLiteralToCharAmbiguity {
   // expected-note@-5 {{candidate function}}
 #endif
 }
+
+namespace ProduceNotesAfterSFINAEFailure {
+  struct A {
+    template<typename T, typename U = typename T::x> A(T); // expected-warning 0-1{{extension}}
+  };
+  void f(void*, A); // expected-note {{candidate function not viable}}
+  void g() { f(1, 2); } // expected-error {{no matching function}}
+}

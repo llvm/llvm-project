@@ -84,6 +84,9 @@ CODEGENOPT(InstrumentFunctionEntryBare , 1, 0) ///< Set when
 CODEGENOPT(XRayInstrumentFunctions , 1, 0) ///< Set when -fxray-instrument is
                                            ///< enabled.
 
+///< Set when -fxray-always-emit-customevents is enabled.
+CODEGENOPT(XRayAlwaysEmitCustomEvents , 1, 0)
+
 ///< Set the minimum number of instructions in a function to determine selective
 ///< XRay instrumentation.
 VALUE_CODEGENOPT(XRayInstructionThreshold , 32, 200)
