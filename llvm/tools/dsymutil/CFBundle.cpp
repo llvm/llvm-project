@@ -16,10 +16,12 @@
 #include <assert.h>
 #include <glob.h>
 #include <memory>
+#endif
 
 namespace llvm {
 namespace dsymutil {
 
+#ifdef __APPLE__
 /// Deleter that calls CFRelease rather than deleting the pointer.
 template <typename T> struct CFDeleter {
   void operator()(T *P) {
