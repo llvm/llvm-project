@@ -1229,6 +1229,16 @@ bool DynamicLoaderDarwinKernel::ParseKextSummaries(
         break;
       }
     }
+    // If this "kext" entry is actually an alias for the kernel --
+    // the kext was compiled into the kernel or something -- then
+    // we don't want to load the kernel's text section at a different
+    // address.  Ignore this kext entry.
+    if (kext_summaries[new_kext].GetUUID().IsValid() 
+        && m_kernel.GetUUID().IsValid() 
+        && kext_summaries[new_kext].GetUUID() == m_kernel.GetUUID()) {
+      to_be_added[new_kext] = false;
+      break;
+    }
     if (add_this_one) {
       number_of_new_kexts_being_added++;
     }
