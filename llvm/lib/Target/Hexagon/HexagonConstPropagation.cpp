@@ -1974,7 +1974,7 @@ bool HexagonConstEvaluator::evaluate(const MachineInstr &MI,
     {
       const MachineOperand &VO = MI.getOperand(1);
       // The operand of CONST32 can be a blockaddress, e.g.
-      //   %vreg0<def> = CONST32 <blockaddress(@eat, %l)>
+      //   %0<def> = CONST32 <blockaddress(@eat, %l)>
       // Do this check for all instructions for safety.
       if (!VO.isImm())
         return false;

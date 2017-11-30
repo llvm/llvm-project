@@ -5,11 +5,11 @@ target triple = "thumbv7-apple-ios"
 ; This test calls shrinkToUses with an early-clobber redefined live range during
 ; spilling.
 ;
-;   Shrink: %vreg47,1.158257e-02 = [384r,400e:0)[400e,420r:1)  0@384r 1@400e
+;   Shrink: %47,1.158257e-02 = [384r,400e:0)[400e,420r:1)  0@384r 1@400e
 ;
 ; The early-clobber instruction is an str:
 ;
-;   %vreg12<earlyclobber,def> = t2STR_PRE %vreg6, %vreg12, 32, pred:14, pred:%noreg
+;   %12<earlyclobber,def> = t2STR_PRE %6, %12, 32, pred:14, pred:%noreg
 ;
 ; This tests that shrinkToUses handles the EC redef correctly.
 

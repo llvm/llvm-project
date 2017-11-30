@@ -47,10 +47,10 @@ protected:
   /// and \p DefIdx.
   /// \p [out] InputRegs of the equivalent REG_SEQUENCE. Each element of
   /// the list is modeled as <Reg:SubReg, SubIdx>.
-  /// E.g., REG_SEQUENCE vreg1:sub1, sub0, vreg2, sub1 would produce
+  /// E.g., REG_SEQUENCE %1:sub1, sub0, %2, sub1 would produce
   /// two elements:
-  /// - vreg1:sub1, sub0
-  /// - vreg2<:0>, sub1
+  /// - %1:sub1, sub0
+  /// - %2<:0>, sub1
   ///
   /// \returns true if it is possible to build such an input sequence
   /// with the pair \p MI, \p DefIdx. False otherwise.
@@ -63,8 +63,8 @@ protected:
   /// Build the equivalent inputs of a EXTRACT_SUBREG for the given \p MI
   /// and \p DefIdx.
   /// \p [out] InputReg of the equivalent EXTRACT_SUBREG.
-  /// E.g., EXTRACT_SUBREG vreg1:sub1, sub0, sub1 would produce:
-  /// - vreg1:sub1, sub0
+  /// E.g., EXTRACT_SUBREG %1:sub1, sub0, sub1 would produce:
+  /// - %1:sub1, sub0
   ///
   /// \returns true if it is possible to build such an input sequence
   /// with the pair \p MI, \p DefIdx. False otherwise.
@@ -77,9 +77,9 @@ protected:
   /// and \p DefIdx.
   /// \p [out] BaseReg and \p [out] InsertedReg contain
   /// the equivalent inputs of INSERT_SUBREG.
-  /// E.g., INSERT_SUBREG vreg0:sub0, vreg1:sub1, sub3 would produce:
-  /// - BaseReg: vreg0:sub0
-  /// - InsertedReg: vreg1:sub1, sub3
+  /// E.g., INSERT_SUBREG %0:sub0, %1:sub1, sub3 would produce:
+  /// - BaseReg: %0:sub0
+  /// - InsertedReg: %1:sub1, sub3
   ///
   /// \returns true if it is possible to build such an input sequence
   /// with the pair \p MI, \p DefIdx. False otherwise.

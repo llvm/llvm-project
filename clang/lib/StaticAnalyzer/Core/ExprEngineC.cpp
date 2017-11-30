@@ -1043,7 +1043,14 @@ void ExprEngine::VisitIncrementDecrementOperator(const UnaryOperator* U,
 
     // Propagate unknown and undefined values.
     if (V2_untested.isUnknownOrUndef()) {
-      Bldr.generateNode(U, *I, state->BindExpr(U, LCtx, V2_untested));
+      state = state->BindExpr(U, LCtx, V2_untested);
+
+      // Perform the store, so that the uninitialized value detection happens.
+      Bldr.takeNodes(*I);
+      ExplodedNodeSet Dst3;
+      evalStore(Dst3, U, U, *I, state, loc, V2_untested);
+      Bldr.addNodes(Dst3);
+
       continue;
     }
     DefinedSVal V2 = V2_untested.castAs<DefinedSVal>();

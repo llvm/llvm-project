@@ -1,14 +1,13 @@
-; XFAIL: *
 ; The purpose of the test case is to ensure that a spill that happens during
 ; intermediate calculations for a comparison performed in a GPR spills the
 ; full register. Some i32 comparisons performed in GPRs use code that uses
 ; the full 64-bits of the register in intermediate stages. Spilling such a value
 ; as a 32-bit value is incorrect.
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -O2 \
-; RUN:   -ppc-asm-full-reg-names -mcpu=pwr8 < %s | FileCheck %s \
+; RUN:   -ppc-gpr-icmps=all -ppc-asm-full-reg-names -mcpu=pwr8 < %s | FileCheck %s \
 ; RUN:  --implicit-check-not cmpw --implicit-check-not cmpd --implicit-check-not cmpl
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -O2 \
-; RUN:   -ppc-asm-full-reg-names -mcpu=pwr8 < %s | FileCheck %s \
+; RUN:   -ppc-gpr-icmps=all -ppc-asm-full-reg-names -mcpu=pwr8 < %s | FileCheck %s \
 ; RUN:  --implicit-check-not cmpw --implicit-check-not cmpd --implicit-check-not cmpl
 @glob = common local_unnamed_addr global i64 0, align 8
 @.str = private unnamed_addr constant [12 x i8] c"Value = %d\0A\00", align 1

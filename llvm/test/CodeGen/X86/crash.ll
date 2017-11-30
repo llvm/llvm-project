@@ -481,10 +481,10 @@ declare void @fn3(...)
 
 ; Check coalescing of IMPLICIT_DEF instructions:
 ;
-; %vreg1 = IMPLICIT_DEF
-; %vreg2 = MOV32r0
+; %1 = IMPLICIT_DEF
+; %2 = MOV32r0
 ;
-; When coalescing %vreg1 and %vreg2, the IMPLICIT_DEF instruction should be
+; When coalescing %1 and %2, the IMPLICIT_DEF instruction should be
 ; erased along with its value number.
 ;
 define void @rdar12474033() nounwind ssp {

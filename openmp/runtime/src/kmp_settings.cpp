@@ -2084,6 +2084,11 @@ static void __kmp_parse_affinity_env(char const *name, char const *value,
       } else if (__kmp_match_str("core", buf, CCAST(const char **, &next))) {
         set_gran(affinity_gran_core, -1);
         buf = next;
+#if KMP_USE_HWLOC
+      } else if (__kmp_match_str("tile", buf, CCAST(const char **, &next))) {
+        set_gran(affinity_gran_tile, -1);
+        buf = next;
+#endif
       } else if (__kmp_match_str("package", buf, CCAST(const char **, &next))) {
         set_gran(affinity_gran_package, -1);
         buf = next;
@@ -2724,6 +2729,14 @@ static void __kmp_stg_parse_places(char const *name, char const *value,
     __kmp_affinity_gran = affinity_gran_core;
     __kmp_affinity_dups = FALSE;
     kind = "\"cores\"";
+#if KMP_USE_HWLOC
+  } else if (__kmp_match_str("tiles", scan, &next)) {
+    scan = next;
+    __kmp_affinity_type = affinity_compact;
+    __kmp_affinity_gran = affinity_gran_tile;
+    __kmp_affinity_dups = FALSE;
+    kind = "\"tiles\"";
+#endif
   } else if (__kmp_match_str("sockets", scan, &next)) {
     scan = next;
     __kmp_affinity_type = affinity_compact;
@@ -2821,6 +2834,14 @@ static void __kmp_stg_print_places(kmp_str_buf_t *buffer, char const *name,
       } else {
         __kmp_str_buf_print(buffer, "='cores'\n");
       }
+#if KMP_USE_HWLOC
+    } else if (__kmp_affinity_gran == affinity_gran_tile) {
+      if (num > 0) {
+        __kmp_str_buf_print(buffer, "='tiles(%d)' \n", num);
+      } else {
+        __kmp_str_buf_print(buffer, "='tiles'\n");
+      }
+#endif
     } else if (__kmp_affinity_gran == affinity_gran_package) {
       if (num > 0) {
         __kmp_str_buf_print(buffer, "='sockets(%d)'\n", num);
@@ -2874,6 +2895,11 @@ static void __kmp_stg_parse_topology_method(char const *name, char const *value,
   if (__kmp_str_match("all", 1, value)) {
     __kmp_affinity_top_method = affinity_top_method_all;
   }
+#if KMP_USE_HWLOC
+  else if (__kmp_str_match("hwloc", 1, value)) {
+    __kmp_affinity_top_method = affinity_top_method_hwloc;
+  }
+#endif
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
   else if (__kmp_str_match("x2apic id", 9, value) ||
            __kmp_str_match("x2apic_id", 9, value) ||
@@ -2934,13 +2960,7 @@ static void __kmp_stg_parse_topology_method(char const *name, char const *value,
 #endif /* KMP_GROUP_AFFINITY */
   else if (__kmp_str_match("flat", 1, value)) {
     __kmp_affinity_top_method = affinity_top_method_flat;
-  }
-#if KMP_USE_HWLOC
-  else if (__kmp_str_match("hwloc", 1, value)) {
-    __kmp_affinity_top_method = affinity_top_method_hwloc;
-  }
-#endif
-  else {
+  } else {
     KMP_WARNING(StgInvalidValue, name, value);
   }
 } // __kmp_stg_parse_topology_method
@@ -5222,6 +5242,9 @@ void __kmp_env_initialize(char const *string) {
               break;
             case affinity_gran_node:
               str = "node";
+              break;
+            case affinity_gran_tile:
+              str = "tile";
               break;
             default:
               KMP_DEBUG_ASSERT(0);

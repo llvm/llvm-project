@@ -228,9 +228,9 @@ namespace {
     /// flag.
     /// This can happen when undef uses were previously concealed by a copy
     /// which we coalesced. Example:
-    ///    %vreg0:sub0<def,read-undef> = ...
-    ///    %vreg1 = COPY %vreg0       <-- Coalescing COPY reveals undef
-    ///           = use %vreg1:sub1   <-- hidden undef use
+    ///    %0:sub0<def,read-undef> = ...
+    ///    %1 = COPY %0           <-- Coalescing COPY reveals undef
+    ///       = use %1:sub1       <-- hidden undef use
     void addUndefFlag(const LiveInterval &Int, SlotIndex UseIdx,
                       MachineOperand &MO, unsigned SubRegIdx);
 
@@ -1143,10 +1143,10 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   NewMI.setDebugLoc(DL);
 
   // In a situation like the following:
-  //     %vreg0:subreg = instr              ; DefMI, subreg = DstIdx
-  //     %vreg1        = copy %vreg0:subreg ; CopyMI, SrcIdx = 0
-  // instead of widening %vreg1 to the register class of %vreg0 simply do:
-  //     %vreg1 = instr
+  //     %0:subreg = instr              ; DefMI, subreg = DstIdx
+  //     %1        = copy %0:subreg ; CopyMI, SrcIdx = 0
+  // instead of widening %1 to the register class of %0 simply do:
+  //     %1 = instr
   const TargetRegisterClass *NewRC = CP.getNewRC();
   if (DstIdx != 0) {
     MachineOperand &DefMO = NewMI.getOperand(0);
@@ -1226,12 +1226,12 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     // This could happen if the rematerialization instruction is rematerializing
     // more than actually is used in the register.
     // An example would be:
-    // vreg1 = LOAD CONSTANTS 5, 8 ; Loading both 5 and 8 in different subregs
+    // %1 = LOAD CONSTANTS 5, 8 ; Loading both 5 and 8 in different subregs
     // ; Copying only part of the register here, but the rest is undef.
-    // vreg2:sub_16bit<def, read-undef> = COPY vreg1:sub_16bit
+    // %2:sub_16bit<def, read-undef> = COPY %1:sub_16bit
     // ==>
     // ; Materialize all the constants but only using one
-    // vreg2 = LOAD_CONSTANTS 5, 8
+    // %2 = LOAD_CONSTANTS 5, 8
     //
     // at this point for the part that wasn't defined before we could have
     // subranges missing the definition.
@@ -1254,11 +1254,11 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
 
     // Make sure that the subrange for resultant undef is removed
     // For example:
-    //   vreg1:sub1<def,read-undef> = LOAD CONSTANT 1
-    //   vreg2<def> = COPY vreg1
+    //   %1:sub1<def,read-undef> = LOAD CONSTANT 1
+    //   %2<def> = COPY %1
     // ==>
-    //   vreg2:sub1<def, read-undef> = LOAD CONSTANT 1
-    //     ; Correct but need to remove the subrange for vreg2:sub0
+    //   %2:sub1<def, read-undef> = LOAD CONSTANT 1
+    //     ; Correct but need to remove the subrange for %2:sub0
     //     ; as it is now undef
     if (NewIdx != 0 && DstInt.hasSubRanges()) {
       // The affected subregister segments can be removed.
@@ -1292,15 +1292,15 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     // Otherwise, variables that live through may miss some
     // interferences, thus creating invalid allocation.
     // E.g., i386 code:
-    // vreg1 = somedef ; vreg1 GR8
-    // vreg2 = remat ; vreg2 GR32
-    // CL = COPY vreg2.sub_8bit
-    // = somedef vreg1 ; vreg1 GR8
+    // %1 = somedef ; %1 GR8
+    // %2 = remat ; %2 GR32
+    // CL = COPY %2.sub_8bit
+    // = somedef %1 ; %1 GR8
     // =>
-    // vreg1 = somedef ; vreg1 GR8
+    // %1 = somedef ; %1 GR8
     // ECX<def, dead> = remat ; CL<imp-def>
-    // = somedef vreg1 ; vreg1 GR8
-    // vreg1 will see the inteferences with CL but not with CH since
+    // = somedef %1 ; %1 GR8
+    // %1 will see the inteferences with CL but not with CH since
     // no live-ranges would have been created for ECX.
     // Fix that!
     SlotIndex NewMIIdx = LIS->getInstructionIndex(NewMI);
@@ -1353,9 +1353,9 @@ bool RegisterCoalescer::eliminateUndefCopy(MachineInstr *CopyMI) {
   // ProcessImpicitDefs may leave some copies of <undef> values, it only removes
   // local variables. When we have a copy like:
   //
-  //   %vreg1 = COPY %vreg2<undef>
+  //   %1 = COPY %2<undef>
   //
-  // We delete the copy and remove the corresponding value number from %vreg1.
+  // We delete the copy and remove the corresponding value number from %1.
   // Any uses of that value number are marked as <undef>.
 
   // Note that we do not query CoalescerPair here but redo isMoveInstr as the
@@ -1820,18 +1820,18 @@ bool RegisterCoalescer::joinReservedPhysReg(CoalescerPair &CP) {
   MachineInstr *CopyMI;
   if (CP.isFlipped()) {
     // Physreg is copied into vreg
-    //   %vregY = COPY %x
+    //   %y = COPY %physreg_x
     //   ...  //< no other def of %x here
-    //   use %vregY
+    //   use %y
     // =>
     //   ...
     //   use %x
     CopyMI = MRI->getVRegDef(SrcReg);
   } else {
     // VReg is copied into physreg:
-    //   %vregX = def
+    //   %y = def
     //   ... //< no other def or use of %y here
-    //   %y = COPY %vregX
+    //   %y = COPY %physreg_x
     // =>
     //   %y = def
     //   ...

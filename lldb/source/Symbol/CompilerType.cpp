@@ -703,12 +703,11 @@ CompilerType CompilerType::GetTypeTemplateArgument(size_t idx) const {
   return CompilerType();
 }
 
-std::pair<llvm::APSInt, CompilerType>
-CompilerType::GetIntegralTemplateArgument(size_t idx) const
-{
+llvm::Optional<CompilerType::IntegralTemplateArgument>
+CompilerType::GetIntegralTemplateArgument(size_t idx) const {
   if (IsValid())
     return m_type_system->GetIntegralTemplateArgument(m_type, idx);
-  return {llvm::APSInt(0), CompilerType()};
+  return llvm::None;
 }
 
 CompilerType CompilerType::GetTypeForFormatters() const {

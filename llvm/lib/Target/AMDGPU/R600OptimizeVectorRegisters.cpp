@@ -12,16 +12,16 @@
 /// common data and/or have enough undef subreg using swizzle abilities.
 ///
 /// For instance let's consider the following pseudo code :
-/// vreg5<def> = REG_SEQ vreg1, sub0, vreg2, sub1, vreg3, sub2, undef, sub3
+/// %5<def> = REG_SEQ %1, sub0, %2, sub1, %3, sub2, undef, sub3
 /// ...
-/// vreg7<def> = REG_SEQ vreg1, sub0, vreg3, sub1, undef, sub2, vreg4, sub3
-/// (swizzable Inst) vreg7, SwizzleMask : sub0, sub1, sub2, sub3
+/// %7<def> = REG_SEQ %1, sub0, %3, sub1, undef, sub2, %4, sub3
+/// (swizzable Inst) %7, SwizzleMask : sub0, sub1, sub2, sub3
 ///
 /// is turned into :
-/// vreg5<def> = REG_SEQ vreg1, sub0, vreg2, sub1, vreg3, sub2, undef, sub3
+/// %5<def> = REG_SEQ %1, sub0, %2, sub1, %3, sub2, undef, sub3
 /// ...
-/// vreg7<def> = INSERT_SUBREG vreg4, sub3
-/// (swizzable Inst) vreg7, SwizzleMask : sub0, sub2, sub1, sub3
+/// %7<def> = INSERT_SUBREG %4, sub3
+/// (swizzable Inst) %7, SwizzleMask : sub0, sub2, sub1, sub3
 ///
 /// This allow regalloc to reduce register pressure for vector registers and
 /// to reduce MOV count.

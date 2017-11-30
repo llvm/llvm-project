@@ -128,7 +128,7 @@ int collectionIsNotEmptyNSArray(NSArray *A) {
   int count = [A count];
   if (count > 0) {
     int i;
-    int j;
+    int j = 0;
     for (NSString *a in A) {
       i = 1;
       j++;
@@ -141,7 +141,7 @@ int collectionIsNotEmptyNSArray(NSArray *A) {
 void onlySuppressExitAfterZeroIterations(NSMutableDictionary *D) {
   if (D.count > 0) {
     int *x;
-    int i;
+    int i = 0;
     for (NSString *key in D) {
       x = 0;
       i++;
@@ -155,7 +155,7 @@ void onlySuppressExitAfterZeroIterations(NSMutableDictionary *D) {
 void onlySuppressLoopExitAfterZeroIterations_WithContinue(NSMutableDictionary *D) {
   if (D.count > 0) {
     int *x;
-    int i;
+    int i = 0;
     for (NSString *key in D) {
       x = 0;
       i++;

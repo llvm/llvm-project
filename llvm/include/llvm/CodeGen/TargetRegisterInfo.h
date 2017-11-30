@@ -1138,8 +1138,8 @@ struct VirtReg2IndexFunctor {
 ///
 /// The format is:
 ///   %noreg          - NoRegister
-///   %vreg5          - a virtual register.
-///   %vreg5:sub_8bit - a virtual register with sub-register index (with TRI).
+///   %5              - a virtual register.
+///   %5:sub_8bit     - a virtual register with sub-register index (with TRI).
 ///   %eax            - a physical register
 ///   %physreg17      - a physical register when no TRI instance given.
 ///

@@ -434,9 +434,12 @@ bool ARMCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   auto &MBB = MIRBuilder.getMBB();
   auto DL = MF.getDataLayout();
 
-  for (auto &Arg : F.args())
+  for (auto &Arg : F.args()) {
     if (!isSupportedType(DL, TLI, Arg.getType()))
       return false;
+    if (Arg.hasByValOrInAllocaAttr())
+      return false;
+  }
 
   CCAssignFn *AssignFn =
       TLI.CCAssignFnForCall(F.getCallingConv(), F.isVarArg());
@@ -527,6 +530,9 @@ bool ARMCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       return false;
 
     if (!Arg.IsFixed)
+      return false;
+
+    if (Arg.Flags.isByVal())
       return false;
 
     SmallVector<unsigned, 8> Regs;
