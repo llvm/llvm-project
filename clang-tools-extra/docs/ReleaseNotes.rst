@@ -57,6 +57,11 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- New `objc-avoid-nserror-init
+  <http://clang.llvm.org/extra/clang-tidy/checks/objc-avoid-nserror-init.html>`_ check
+
+  Add new check to detect the use of [NSError init].
+
 - New module `fuchsia` for Fuchsia style checks.
 
 - New module `objc` for Objective-C style checks.
