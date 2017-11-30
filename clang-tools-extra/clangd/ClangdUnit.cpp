@@ -1151,7 +1151,7 @@ CppFile::CppFile(PathRef FileName, tooling::CompileCommand Command,
       RebuildInProgress(false), PCHs(std::move(PCHs)), Logger(Logger) {
   Logger.log("Opened file " + FileName + " with command [" +
              this->Command.Directory + "] " +
-             llvm::join(this->Command.CommandLine, " ") + "\n");
+             llvm::join(this->Command.CommandLine, " "));
 
   std::lock_guard<std::mutex> Lock(Mutex);
   LatestAvailablePreamble = nullptr;
