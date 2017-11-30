@@ -1480,38 +1480,25 @@ void LowerTypeTestsModule::buildBitSetsFromDisjointSet(
   for (auto &&MemSet : TypeMembers)
     GLB.addFragment(MemSet);
 
-  // Build the bitsets from this disjoint set.
-  if (Globals.empty() || isa<GlobalVariable>(Globals[0]->getGlobal())) {
-    // Build a vector of global variables with the computed layout.
-    std::vector<GlobalTypeMember *> OrderedGVs(Globals.size());
-    auto OGI = OrderedGVs.begin();
-    for (auto &&F : GLB.Fragments) {
-      for (auto &&Offset : F) {
-        auto GV = dyn_cast<GlobalVariable>(Globals[Offset]->getGlobal());
-        if (!GV)
-          report_fatal_error("Type identifier may not contain both global "
-                             "variables and functions");
-        *OGI++ = Globals[Offset];
-      }
+  // Build a vector of globals with the computed layout.
+  bool IsGlobalSet =
+      Globals.empty() || isa<GlobalVariable>(Globals[0]->getGlobal());
+  std::vector<GlobalTypeMember *> OrderedGTMs(Globals.size());
+  auto OGTMI = OrderedGTMs.begin();
+  for (auto &&F : GLB.Fragments) {
+    for (auto &&Offset : F) {
+      if (IsGlobalSet != isa<GlobalVariable>(Globals[Offset]->getGlobal()))
+        report_fatal_error("Type identifier may not contain both global "
+                           "variables and functions");
+      *OGTMI++ = Globals[Offset];
     }
-
-    buildBitSetsFromGlobalVariables(TypeIds, OrderedGVs);
-  } else {
-    // Build a vector of functions with the computed layout.
-    std::vector<GlobalTypeMember *> OrderedFns(Globals.size());
-    auto OFI = OrderedFns.begin();
-    for (auto &&F : GLB.Fragments) {
-      for (auto &&Offset : F) {
-        auto Fn = dyn_cast<Function>(Globals[Offset]->getGlobal());
-        if (!Fn)
-          report_fatal_error("Type identifier may not contain both global "
-                             "variables and functions");
-        *OFI++ = Globals[Offset];
-      }
-    }
-
-    buildBitSetsFromFunctions(TypeIds, OrderedFns);
   }
+
+  // Build the bitsets from this disjoint set.
+  if (IsGlobalSet)
+    buildBitSetsFromGlobalVariables(TypeIds, OrderedGTMs);
+  else
+    buildBitSetsFromFunctions(TypeIds, OrderedGTMs);
 }
 
 /// Lower all type tests in this module.

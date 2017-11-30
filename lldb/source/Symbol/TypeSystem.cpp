@@ -111,10 +111,10 @@ CompilerType TypeSystem::GetTypeTemplateArgument(opaque_compiler_type_t type,
   return CompilerType();
 }
 
-std::pair<llvm::APSInt, CompilerType>
+llvm::Optional<CompilerType::IntegralTemplateArgument>
 TypeSystem::GetIntegralTemplateArgument(opaque_compiler_type_t type,
-                            size_t idx) {
-  return {llvm::APSInt(0), CompilerType()};
+                                        size_t idx) {
+  return llvm::None;
 }
 
 LazyBool TypeSystem::ShouldPrintAsOneLiner(void *type, ValueObject *valobj) {

@@ -45,7 +45,7 @@ void while_loop() {
         break; // CHECK: [[@LINE]]|{{ +}}1|
                // CHECK: [[@LINE]]|{{ +}}0|
       while (++x < 5) {} // CHECK: [[@LINE]]|{{ +}}0|
-    } // CHECK: [[@LINE]]|{{ +}}1|
+    } // CHECK: [[@LINE]]|{{ +}}0|
 
     if (x == 0) // CHECK: [[@LINE]]|{{ +}}1|
       throw Error(); // CHECK: [[@LINE]]|{{ +}}0|
@@ -97,6 +97,8 @@ int main() {
 // MARKER-NEXT: Highlighted line 47, 14 -> 21
 // MARKER-NEXT: Highlighted line 47, 21 -> 23
 // MARKER-NEXT: Highlighted line 47, 23 -> 25
+// MARKER-NEXT: Highlighted line 47, 25 -> ?
+// MARKER-NEXT: Highlighted line 48, 1 -> 6
 // MARKER-NEXT: Highlighted line 51, 7 -> 20
 // MARKER-NEXT: Marker at 53:5 = 1
 // MARKER-NEXT: Highlighted line 55, 9 -> 14

@@ -257,6 +257,9 @@ libclang
 Static Analyzer
 ---------------
 
+- Static Analyzer can now properly detect and diagnose unary pre-/post-
+  increment/decrement on an uninitialized value.
+
 ...
 
 Undefined Behavior Sanitizer (UBSan)

@@ -1,4 +1,6 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=unix.Malloc,core,alpha.core.CallAndMessageUnInitRefArg -analyzer-output=text -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=unix.Malloc,core,alpha.core.CallAndMessageUnInitRefArg,debug.ExprInspection -analyzer-output=text -verify %s
+
+void clang_analyzer_warnIfReached();
 
 // Passing uninitialized const data to function
 #include "Inputs/system-header-simulator.h"
@@ -119,6 +121,32 @@ void f_12(void) {
   int t[10] = {0,1,2,3,4,5,6,7,8,9};
   doStuff_constStaticSizedArray(t);  // no-warning
 
+}
+
+// https://bugs.llvm.org/show_bug.cgi?id=35419
+void f11_0(void) {
+  int x; // expected-note {{'x' declared without an initial value}}
+  x++; // expected-warning {{The expression is an uninitialized value. The computed value will also be garbage}}
+       // expected-note@-1 {{The expression is an uninitialized value. The computed value will also be garbage}}
+  clang_analyzer_warnIfReached(); // no-warning
+}
+void f11_1(void) {
+  int x; // expected-note {{'x' declared without an initial value}}
+  ++x; // expected-warning {{The expression is an uninitialized value. The computed value will also be garbage}}
+       // expected-note@-1 {{The expression is an uninitialized value. The computed value will also be garbage}}
+  clang_analyzer_warnIfReached(); // no-warning
+}
+void f11_2(void) {
+  int x; // expected-note {{'x' declared without an initial value}}
+  x--; // expected-warning {{The expression is an uninitialized value. The computed value will also be garbage}}
+       // expected-note@-1 {{The expression is an uninitialized value. The computed value will also be garbage}}
+  clang_analyzer_warnIfReached(); // no-warning
+}
+void f11_3(void) {
+  int x; // expected-note {{'x' declared without an initial value}}
+  --x; // expected-warning {{The expression is an uninitialized value. The computed value will also be garbage}}
+       // expected-note@-1 {{The expression is an uninitialized value. The computed value will also be garbage}}
+  clang_analyzer_warnIfReached(); // no-warning
 }
 
 int f_malloc_1(void) {

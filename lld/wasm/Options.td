@@ -29,10 +29,14 @@ def no_threads: F<"no-threads">,
 def no_color_diagnostics: F<"no-color-diagnostics">,
   HelpText<"Do not use colors in diagnostics">;
 
+def no_check_signatures: F<"no-check-signatures">, HelpText<"Don't check function signatures">;
+
 def o: JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
 
 def threads: F<"threads">, HelpText<"Run the linker multi-threaded">;
+
+def check_signatures: F<"check-signatures">, HelpText<"Check function signatures">;
 
 def v: Flag<["-"], "v">, HelpText<"Display the version number">;
 

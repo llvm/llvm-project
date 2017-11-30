@@ -1578,6 +1578,17 @@ which lowers MCInst's into machine code bytes and relocations.  This is
 important if you want to support direct .o file emission, or would like to
 implement an assembler for your target.
 
+Emitting function stack size information
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A section containing metadata on function stack sizes will be emitted when
+``TargetLoweringObjectFile::StackSizesSection`` is not null, and
+``TargetOptions::EmitStackSizeSection`` is set (-stack-size-section). The
+section will contain an array of pairs of function symbol references (8 byte)
+and stack sizes (unsigned LEB128). The stack size values only include the space
+allocated in the function prologue. Functions with dynamic stack allocations are
+not included.
+
 VLIW Packetizer
 ---------------
 

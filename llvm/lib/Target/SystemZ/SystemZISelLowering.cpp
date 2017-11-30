@@ -1844,11 +1844,14 @@ static void adjustSubwordCmp(SelectionDAG &DAG, const SDLoc &DL,
                               ISD::SEXTLOAD :
                               ISD::ZEXTLOAD);
   if (C.Op0.getValueType() != MVT::i32 ||
-      Load->getExtensionType() != ExtType)
+      Load->getExtensionType() != ExtType) {
     C.Op0 = DAG.getExtLoad(ExtType, SDLoc(Load), MVT::i32, Load->getChain(),
                            Load->getBasePtr(), Load->getPointerInfo(),
                            Load->getMemoryVT(), Load->getAlignment(),
                            Load->getMemOperand()->getFlags());
+    // Update the chain uses.
+    DAG.ReplaceAllUsesOfValueWith(SDValue(Load, 1), C.Op0.getValue(1));
+  }
 
   // Make sure that the second operand is an i32 with the right value.
   if (C.Op1.getValueType() != MVT::i32 ||
@@ -2940,9 +2943,13 @@ SDValue SystemZTargetLowering::lowerBITCAST(SDValue Op,
   // but we need this case for bitcasts that are created during lowering
   // and which are then lowered themselves.
   if (auto *LoadN = dyn_cast<LoadSDNode>(In))
-    if (ISD::isNormalLoad(LoadN))
-      return DAG.getLoad(ResVT, DL, LoadN->getChain(), LoadN->getBasePtr(),
-                         LoadN->getMemOperand());
+    if (ISD::isNormalLoad(LoadN)) {
+      SDValue NewLoad = DAG.getLoad(ResVT, DL, LoadN->getChain(),
+                                    LoadN->getBasePtr(), LoadN->getMemOperand());
+      // Update the chain uses.
+      DAG.ReplaceAllUsesOfValueWith(SDValue(LoadN, 1), NewLoad.getValue(1));
+      return NewLoad;
+    }
 
   if (InVT == MVT::i32 && ResVT == MVT::f32) {
     SDValue In64;

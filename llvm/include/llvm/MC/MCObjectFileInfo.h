@@ -154,6 +154,9 @@ protected:
   /// It is initialized on demand so it can be overwritten (with uniquing).
   MCSection *EHFrameSection;
 
+  /// Section containing metadata on function stack sizes.
+  MCSection *StackSizesSection;
+
   // ELF specific sections.
   MCSection *DataRelROSection;
   MCSection *MergeableConst4Section;
@@ -286,6 +289,8 @@ public:
 
   MCSection *getStackMapSection() const { return StackMapSection; }
   MCSection *getFaultMapSection() const { return FaultMapSection; }
+
+  MCSection *getStackSizesSection() const { return StackSizesSection; }
 
   // ELF specific sections.
   MCSection *getDataRelROSection() const { return DataRelROSection; }

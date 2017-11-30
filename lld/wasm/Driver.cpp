@@ -153,9 +153,10 @@ static void addSyntheticGlobal(StringRef Name, int32_t Value) {
 
 // Inject a new undefined symbol into the link.  This will cause the link to
 // fail unless this symbol can be found.
-static void addSyntheticUndefinedFunction(StringRef Name) {
+static void addSyntheticUndefinedFunction(StringRef Name,
+                                          const WasmSignature *Type) {
   log("injecting undefined func: " + Name);
-  Symtab->addUndefinedFunction(Name);
+  Symtab->addUndefinedFunction(Name, Type);
 }
 
 static void printHelp(const char *Argv0) {
@@ -243,6 +244,8 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   }
 
   Config->AllowUndefined = Args.hasArg(OPT_allow_undefined);
+  Config->CheckSignatures =
+      Args.hasFlag(OPT_check_signatures, OPT_no_check_signatures, false);
   Config->EmitRelocs = Args.hasArg(OPT_emit_relocs);
   Config->Entry = Args.getLastArgValue(OPT_entry);
   Config->ImportMemory = Args.hasArg(OPT_import_memory);
@@ -278,7 +281,8 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (!Config->Relocatable) {
     if (Config->Entry.empty())
       Config->Entry = "_start";
-    addSyntheticUndefinedFunction(Config->Entry);
+    static WasmSignature Signature = { {}, WASM_TYPE_NORESULT };
+    addSyntheticUndefinedFunction(Config->Entry, &Signature);
 
     addSyntheticGlobal("__stack_pointer", 0);
   }
