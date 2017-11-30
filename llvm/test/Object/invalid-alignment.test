@@ -1,0 +1,21 @@
+# RUN: yaml2obj %s -o %t.o
+# RUN: not llvm-readobj -r %t.o 2>&1 | FileCheck %s
+
+# CHECK: Error reading file: unaligned data
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .foo
+    Type:            SHT_PROGBITS
+    Content:         42
+  - Name:            .rela.foo
+    Type:            SHT_RELA
+    Info:            .foo
+    Relocations:
+      - Offset:          0
+        Type:            R_X86_64_NONE

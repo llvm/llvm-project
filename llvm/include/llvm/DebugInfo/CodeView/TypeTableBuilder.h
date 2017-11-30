@@ -42,10 +42,6 @@ class TypeTableBuilder : public TypeCollection {
   /// Contains a list of all records indexed by TypeIndex.toArrayIndex().
   SmallVector<ArrayRef<uint8_t>, 2> SeenRecords;
 
-  /// Temporary storage that we use to copy a record's data while re-writing
-  /// its type indices.
-  SmallVector<uint8_t, 256> RemapStorage;
-
 public:
   explicit TypeTableBuilder(BumpPtrAllocator &Storage, bool Hash = true);
   ~TypeTableBuilder();
@@ -67,7 +63,6 @@ public:
 
   ArrayRef<ArrayRef<uint8_t>> records() const;
   TypeIndex insertRecordBytes(ArrayRef<uint8_t> &Record);
-  TypeIndex insertRecord(const RemappedType &Record);
   TypeIndex insertRecord(ContinuationRecordBuilder &Builder);
 
   template <typename T> TypeIndex writeLeafType(T &Record) {

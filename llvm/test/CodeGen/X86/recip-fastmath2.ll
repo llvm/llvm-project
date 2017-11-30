@@ -380,12 +380,12 @@ define float @f32_two_step_2(float %x) #2 {
 ;
 ; SKX-LABEL: f32_two_step_2:
 ; SKX:       # BB#0:
-; SKX-NEXT:    vrcpss %xmm0, %xmm0, %xmm1 # sched: [4:1.00]
-; SKX-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero sched: [5:0.50]
-; SKX-NEXT:    vmovaps %xmm1, %xmm3 # sched: [1:1.00]
-; SKX-NEXT:    vfnmadd213ss %xmm2, %xmm0, %xmm3 # sched: [4:0.33]
-; SKX-NEXT:    vfmadd132ss %xmm1, %xmm1, %xmm3 # sched: [4:0.33]
-; SKX-NEXT:    vfnmadd213ss %xmm2, %xmm3, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero sched: [5:0.50]
+; SKX-NEXT:    vrcpss %xmm0, %xmm0, %xmm2 # sched: [4:1.00]
+; SKX-NEXT:    vmovaps %xmm2, %xmm3 # sched: [1:1.00]
+; SKX-NEXT:    vfnmadd213ss %xmm1, %xmm0, %xmm3 # sched: [4:0.33]
+; SKX-NEXT:    vfmadd132ss %xmm2, %xmm2, %xmm3 # sched: [4:0.33]
+; SKX-NEXT:    vfnmadd213ss %xmm1, %xmm3, %xmm0 # sched: [4:0.33]
 ; SKX-NEXT:    vfmadd132ss %xmm3, %xmm3, %xmm0 # sched: [4:0.33]
 ; SKX-NEXT:    vmulss {{.*}}(%rip), %xmm0, %xmm0 # sched: [9:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]

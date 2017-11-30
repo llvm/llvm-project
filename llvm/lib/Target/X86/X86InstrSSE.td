@@ -3040,6 +3040,14 @@ def SSE_RSQRTSS : OpndItins<
 >;
 }
 
+def SSE_RSQRT_P : SizeItins<
+  SSE_RSQRTPS, SSE_RSQRTPS
+>;
+
+def SSE_RSQRT_S : SizeItins<
+  SSE_RSQRTSS, SSE_RSQRTSS
+>;
+
 let Sched = WriteFRcp in {
 def SSE_RCPP : OpndItins<
   IIC_SSE_RCPP_RR, IIC_SSE_RCPP_RM
@@ -3049,6 +3057,14 @@ def SSE_RCPS : OpndItins<
   IIC_SSE_RCPS_RR, IIC_SSE_RCPS_RM
 >;
 }
+
+def SSE_RCP_P : SizeItins<
+  SSE_RCPP, SSE_RCPP
+>;
+
+def SSE_RCP_S : SizeItins<
+  SSE_RCPS, SSE_RCPS
+>;
 
 /// sse_fp_unop_s - SSE1 unops in scalar form
 /// For the non-AVX defs, we need $src1 to be tied to $dst because
