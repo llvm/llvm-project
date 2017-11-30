@@ -97,12 +97,8 @@ void DWARFDebugInfo::ParseCompileUnitHeadersIfNeeded() {
   if (m_compile_units.empty()) {
     if (m_dwarf2Data != NULL) {
       lldb::offset_t offset = 0;
-      for (;;) {
-        DWARFCompileUnitSP cu_sp =
-            DWARFCompileUnit::Extract(m_dwarf2Data, &offset);
-        if (cu_sp.get() == NULL)
-          break;
-
+      DWARFCompileUnitSP cu_sp;
+      while ((cu_sp = DWARFCompileUnit::Extract(m_dwarf2Data, &offset))) {
         m_compile_units.push_back(cu_sp);
 
         offset = cu_sp->GetNextCompileUnitOffset();
