@@ -512,9 +512,17 @@ SDValue VectorLegalizer::PromoteFP_TO_INT(SDValue Op, bool isSigned) {
     }
   }
 
-  SDLoc loc(Op);
-  SDValue promoted  = DAG.getNode(NewOpc, SDLoc(Op), NewVT, Op.getOperand(0));
-  return DAG.getNode(ISD::TRUNCATE, SDLoc(Op), VT, promoted);
+  SDLoc dl(Op);
+  SDValue Promoted  = DAG.getNode(NewOpc, dl, NewVT, Op.getOperand(0));
+
+  // Assert that the converted value fits in the original type.  If it doesn't
+  // (eg: because the value being converted is too big), then the result of the
+  // original operation was undefined anyway, so the assert is still correct.
+  Promoted = DAG.getNode(Op->getOpcode() == ISD::FP_TO_UINT ? ISD::AssertZext
+                                                            : ISD::AssertSext,
+                         dl, NewVT, Promoted,
+                         DAG.getValueType(VT.getScalarType()));
+  return DAG.getNode(ISD::TRUNCATE, dl, VT, Promoted);
 }
 
 SDValue VectorLegalizer::ExpandLoad(SDValue Op) {

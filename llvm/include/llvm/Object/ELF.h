@@ -277,6 +277,9 @@ ELFFile<ELFT>::getSectionContentsAsArray(const Elf_Shdr *Sec) const {
       Offset + Size > Buf.size())
     return createError("invalid section offset");
 
+  if (Offset % alignof(T))
+    return createError("unaligned data");
+
   const T *Start = reinterpret_cast<const T *>(base() + Offset);
   return makeArrayRef(Start, Size / sizeof(T));
 }

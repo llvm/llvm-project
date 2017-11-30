@@ -205,31 +205,6 @@ TypeIndex TypeTableBuilder::insertRecordBytes(ArrayRef<uint8_t> &Record) {
   return NewTI;
 }
 
-TypeIndex TypeTableBuilder::insertRecord(const RemappedType &Record) {
-  TypeIndex TI;
-  ArrayRef<uint8_t> OriginalData = Record.OriginalRecord.RecordData;
-  if (Record.Mappings.empty()) {
-    // This record did not remap any type indices.  Just write it.
-    return insertRecordBytes(OriginalData);
-  }
-
-  // At least one type index was remapped.  Before we can hash it we have to
-  // copy the full record bytes, re-write each type index, then hash the copy.
-  // We do this in temporary storage since only the DenseMap can decide whether
-  // this record already exists, and if it does we don't want the memory to
-  // stick around.
-  RemapStorage.resize(OriginalData.size());
-  ::memcpy(&RemapStorage[0], OriginalData.data(), OriginalData.size());
-  uint8_t *ContentBegin = RemapStorage.data() + sizeof(RecordPrefix);
-  for (const auto &M : Record.Mappings) {
-    // First 4 bytes of every record are the record prefix, but the mapping
-    // offset is relative to the content which starts after.
-    *(TypeIndex *)(ContentBegin + M.first) = M.second;
-  }
-  auto RemapRef = makeArrayRef(RemapStorage);
-  return insertRecordBytes(RemapRef);
-}
-
 TypeIndex TypeTableBuilder::insertRecord(ContinuationRecordBuilder &Builder) {
   TypeIndex TI;
   auto Fragments = Builder.end(nextTypeIndex());
