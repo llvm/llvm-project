@@ -24,7 +24,7 @@
 
 // RUN: ( cd %T/dyld_insert_libraries_remove && \
 // RUN:   %env_asan_opts=strip_env=0 \
-// RUN:   DYLD_INSERT_LIBRARIES=%T/dyld_insert_libraries_remove/libclang_rt.asan_osx_dynamic.dylib:dummy-so.dylib \
+// RUN:   DYLD_INSERT_LIBRARIES=libclang_rt.asan_osx_dynamic.dylib:dummy-so.dylib \
 // RUN:   %run ./a.out 2>&1 ) | FileCheck %s --check-prefix=CHECK-KEEP || exit 1
 
 // RUN: ( cd %T/dyld_insert_libraries_remove && \
