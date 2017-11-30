@@ -154,6 +154,8 @@ def _SLASH_WX_ : CLFlag<"WX-">, HelpText<"Do not treat warnings as errors">,
 def _SLASH_w_flag : CLFlag<"w">, HelpText<"Disable all warnings">, Alias<w>;
 def _SLASH_wd4005 : CLFlag<"wd4005">, Alias<W_Joined>,
   AliasArgs<["no-macro-redefined"]>;
+def _SLASH_wd4018 : CLFlag<"wd4018">, Alias<W_Joined>,
+  AliasArgs<["no-sign-compare"]>;
 def _SLASH_wd4100 : CLFlag<"wd4100">, Alias<W_Joined>,
   AliasArgs<["no-unused-parameter"]>;
 def _SLASH_wd4910 : CLFlag<"wd4910">, Alias<W_Joined>,

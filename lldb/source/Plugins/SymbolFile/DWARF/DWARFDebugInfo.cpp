@@ -97,15 +97,10 @@ void DWARFDebugInfo::ParseCompileUnitHeadersIfNeeded() {
   if (m_compile_units.empty()) {
     if (m_dwarf2Data != NULL) {
       lldb::offset_t offset = 0;
-      const DWARFDataExtractor &debug_info_data =
-          m_dwarf2Data->get_debug_info_data();
-      while (debug_info_data.ValidOffset(offset)) {
-        DWARFCompileUnitSP cu_sp(new DWARFCompileUnit(m_dwarf2Data));
-        // Out of memory?
+      for (;;) {
+        DWARFCompileUnitSP cu_sp =
+            DWARFCompileUnit::Extract(m_dwarf2Data, &offset);
         if (cu_sp.get() == NULL)
-          break;
-
-        if (cu_sp->Extract(debug_info_data, &offset) == false)
           break;
 
         m_compile_units.push_back(cu_sp);
@@ -248,12 +243,10 @@ void DWARFDebugInfo::Parse(SymbolFileDWARF *dwarf2Data, Callback callback,
   if (dwarf2Data) {
     lldb::offset_t offset = 0;
     uint32_t depth = 0;
-    DWARFCompileUnitSP cu(new DWARFCompileUnit(dwarf2Data));
-    if (cu.get() == NULL)
-      return;
     DWARFDebugInfoEntry die;
 
-    while (cu->Extract(dwarf2Data->get_debug_info_data(), &offset)) {
+    DWARFCompileUnitSP cu;
+    while ((cu = DWARFCompileUnit::Extract(dwarf2Data, &offset))) {
       const dw_offset_t next_cu_offset = cu->GetNextCompileUnitOffset();
 
       depth = 0;
@@ -287,12 +280,6 @@ void DWARFDebugInfo::Parse(SymbolFileDWARF *dwarf2Data, Callback callback,
       // all parsing
       if (!dwarf2Data->get_debug_info_data().ValidOffset(offset))
         break;
-
-      // See if during the callback anyone retained a copy of the compile
-      // unit other than ourselves and if so, let whomever did own the object
-      // and create a new one for our own use!
-      if (!cu.unique())
-        cu.reset(new DWARFCompileUnit(dwarf2Data));
 
       // Make sure we start on a proper
       offset = next_cu_offset;

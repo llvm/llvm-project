@@ -414,6 +414,12 @@ public:
     return FlatForGlobal;
   }
 
+  /// \returns If MUBUF instructions always perform range checking, even for
+  /// buffer resources used for private memory access.
+  bool privateMemoryResourceIsRangeChecked() const {
+    return getGeneration() < AMDGPUSubtarget::GFX9;
+  }
+
   bool hasAutoWaitcntBeforeBarrier() const {
     return AutoWaitcntBeforeBarrier;
   }

@@ -75,6 +75,7 @@ static void demangle(llvm::raw_ostream &OS, const std::string &Mangled) {
   }
 
   OS << (Undecorated ? Undecorated : Mangled) << '\n';
+  OS.flush();
 
   free(Undecorated);
 }

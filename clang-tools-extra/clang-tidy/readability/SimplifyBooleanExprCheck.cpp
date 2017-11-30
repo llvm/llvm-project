@@ -62,10 +62,7 @@ const char SimplifyConditionalReturnDiagnostic[] =
 const CXXBoolLiteralExpr *getBoolLiteral(const MatchFinder::MatchResult &Result,
                                          StringRef Id) {
   const auto *Literal = Result.Nodes.getNodeAs<CXXBoolLiteralExpr>(Id);
-  return (Literal &&
-          Result.SourceManager->isMacroBodyExpansion(Literal->getLocStart()))
-             ? nullptr
-             : Literal;
+  return (Literal && Literal->getLocStart().isMacroID()) ? nullptr : Literal;
 }
 
 internal::Matcher<Stmt> returnsBool(bool Value, StringRef Id = "ignored") {

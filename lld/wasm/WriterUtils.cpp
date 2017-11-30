@@ -112,7 +112,6 @@ void wasm::writeInitExpr(raw_ostream &OS, const WasmInitExpr &InitExpr) {
     break;
   default:
     fatal("unknown opcode in init expr: " + Twine(InitExpr.Opcode));
-    break;
   }
   writeU8(OS, WASM_OPCODE_END, "opcode:end");
 }
@@ -147,7 +146,6 @@ void wasm::writeImport(raw_ostream &OS, const WasmImport &Import) {
     break;
   default:
     fatal("unsupported import type: " + Twine(Import.Kind));
-    break;
   }
 }
 
@@ -166,7 +164,6 @@ void wasm::writeExport(raw_ostream &OS, const WasmExport &Export) {
     break;
   default:
     fatal("unsupported export type: " + Twine(Export.Kind));
-    break;
   }
 }
 
@@ -187,3 +184,32 @@ void wasm::writeReloc(raw_ostream &OS, const OutputRelocation &Reloc) {
 }
 
 } // namespace lld
+
+std::string lld::toString(ValType Type) {
+  switch (Type) {
+  case ValType::I32:
+    return "I32";
+  case ValType::I64:
+    return "I64";
+  case ValType::F32:
+    return "F32";
+  case ValType::F64:
+    return "F64";
+  }
+  llvm_unreachable("Invalid wasm::ValType");
+}
+
+std::string lld::toString(const WasmSignature &Sig) {
+  SmallString<128> S("(");
+  for (uint32_t Type : Sig.ParamTypes) {
+    if (S.size() != 1)
+      S += ", ";
+    S += toString(static_cast<ValType>(Type));
+  }
+  S += ") -> ";
+  if (Sig.ReturnType == WASM_TYPE_NORESULT)
+    S += "void";
+  else
+    S += toString(static_cast<ValType>(Sig.ReturnType));
+  return S.str();
+}

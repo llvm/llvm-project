@@ -4179,18 +4179,18 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (Opt.matches(options::OPT_fdwarf_exceptions))
       CmdArgs.push_back("-fdwarf-exceptions");
   } else {
-    switch(getToolChain().GetExceptionModel(Args)) {
-      default:
-        break;
-      case llvm::ExceptionHandling::DwarfCFI:
-        CmdArgs.push_back("-fdwarf-exceptions");
-        break;
-      case llvm::ExceptionHandling::SjLj:
-        CmdArgs.push_back("-fsjlj-exceptions");
-        break;
-      case llvm::ExceptionHandling::WinEH:
-        CmdArgs.push_back("-fseh-exceptions");
-        break;
+    switch (getToolChain().GetExceptionModel(Args)) {
+    default:
+      break;
+    case llvm::ExceptionHandling::DwarfCFI:
+      CmdArgs.push_back("-fdwarf-exceptions");
+      break;
+    case llvm::ExceptionHandling::SjLj:
+      CmdArgs.push_back("-fsjlj-exceptions");
+      break;
+    case llvm::ExceptionHandling::WinEH:
+      CmdArgs.push_back("-fseh-exceptions");
+      break;
     }
   }
 

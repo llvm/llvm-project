@@ -9239,9 +9239,17 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
       return (Decl*) nullptr;
   }
 
-  Specialization->setTemplateSpecializationKind(TSK, D.getIdentifierLoc());
   if (Attr)
     ProcessDeclAttributeList(S, Specialization, Attr);
+
+  // In MSVC mode, dllimported explicit instantiation definitions are treated as
+  // instantiation declarations.
+  if (TSK == TSK_ExplicitInstantiationDefinition &&
+      Specialization->hasAttr<DLLImportAttr>() &&
+      Context.getTargetInfo().getCXXABI().isMicrosoft())
+    TSK = TSK_ExplicitInstantiationDeclaration;
+
+  Specialization->setTemplateSpecializationKind(TSK, D.getIdentifierLoc());
 
   if (Specialization->isDefined()) {
     // Let the ASTConsumer know that this function has been explicitly

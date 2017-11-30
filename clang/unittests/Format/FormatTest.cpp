@@ -7732,6 +7732,12 @@ TEST_F(FormatTest, BreaksStringLiterals) {
             format("#define A \"some text other\";", AlignLeft));
 }
 
+TEST_F(FormatTest, BreaksStringLiteralsAtColumnLimit) {
+  EXPECT_EQ("C a = \"some more \"\n"
+            "      \"text\";",
+            format("C a = \"some more text\";", getLLVMStyleWithColumns(18)));
+}
+
 TEST_F(FormatTest, FullyRemoveEmptyLines) {
   FormatStyle NoEmptyLines = getLLVMStyleWithColumns(80);
   NoEmptyLines.MaxEmptyLinesToKeep = 0;
@@ -9927,16 +9933,9 @@ TEST_F(FormatTest, OptimizeBreakPenaltyVsExcess) {
 
   Style.PenaltyExcessCharacter = 90;
   verifyFormat("int a; // the comment", Style);
-  EXPECT_EQ("int a; // the\n"
-            "       // comment aa",
+  EXPECT_EQ("int a; // the comment\n"
+            "       // aa",
             format("int a; // the comment aa", Style));
-  EXPECT_EQ("int a; // first line\n"
-            "       // second line\n"
-            "       // third line",
-            format("int a; // first line\n"
-                   "       // second line\n"
-                   "       // third line",
-                   Style));
   EXPECT_EQ("int a; /* first line\n"
             "        * second line\n"
             "        * third line\n"
@@ -9946,12 +9945,18 @@ TEST_F(FormatTest, OptimizeBreakPenaltyVsExcess) {
                    "        * third line\n"
                    "        */",
                    Style));
+  EXPECT_EQ("int a; // first line\n"
+            "       // second line\n"
+            "       // third line",
+            format("int a; // first line\n"
+                   "       // second line\n"
+                   "       // third line",
+                   Style));
   // FIXME: Investigate why this is not getting the same layout as the test
   // above.
   EXPECT_EQ("int a; /* first line\n"
-            "        * second\n"
-            "        * line third\n"
-            "        * line\n"
+            "        * second line\n"
+            "        * third line\n"
             "        */",
             format("int a; /* first line second line third line"
                    "\n*/",
@@ -9970,31 +9975,23 @@ TEST_F(FormatTest, OptimizeBreakPenaltyVsExcess) {
 
   // FIXME: Optimally, we'd keep bazfoo on the first line and reflow bar to the
   // next one.
-  EXPECT_EQ("// foo bar baz\n"
-            "// bazfoo bar foo\n"
-            "// bar\n",
+  EXPECT_EQ("// foo bar baz bazfoo\n"
+            "// bar foo bar\n",
             format("// foo bar baz      bazfoo bar\n"
                    "// foo            bar\n",
                    Style));
 
   EXPECT_EQ("// foo bar baz bazfoo\n"
-            "// foo bar baz\n"
-            "// bazfoo bar foo\n"
-            "// bar\n",
+            "// foo bar baz bazfoo\n"
+            "// bar foo bar\n",
             format("// foo bar baz      bazfoo\n"
                    "// foo bar baz      bazfoo bar\n"
                    "// foo bar\n",
                    Style));
 
-  // FIXME: Optimally, we'd keep 'bar' in the last line at the end of the line,
-  // as it does not actually protrude far enough to make breaking pay off.
-  // Unfortunately, due to how reflowing is currently implemented, we already
-  // check the column limit after the reflowing decision and extend the reflow
-  // range, so we will not take whitespace compression into account.
   EXPECT_EQ("// foo bar baz bazfoo\n"
-            "// foo bar baz\n"
-            "// bazfoo bar foo\n"
-            "// bar\n",
+            "// foo bar baz bazfoo\n"
+            "// bar foo bar\n",
             format("// foo bar baz      bazfoo\n"
                    "// foo bar baz      bazfoo bar\n"
                    "// foo           bar\n",
@@ -10595,10 +10592,12 @@ TEST_F(FormatTest, SplitsUTF8Strings) {
       "\"七 八 九 \"\n"
       "\"十\"",
       format("\"一 二 三 四 五六 七 八 九 十\"", getLLVMStyleWithColumns(11)));
-  EXPECT_EQ("\"一\t二 \"\n"
-            "\"\t三 \"\n"
-            "\"四 五\t六 \"\n"
-            "\"\t七 \"\n"
+  EXPECT_EQ("\"一\t\"\n"
+            "\"二 \t\"\n"
+            "\"三 四 \"\n"
+            "\"五\t\"\n"
+            "\"六 \t\"\n"
+            "\"七 \"\n"
             "\"八九十\tqq\"",
             format("\"一\t二 \t三 四 五\t六 \t七 八九十\tqq\"",
                    getLLVMStyleWithColumns(11)));

@@ -7612,6 +7612,17 @@ defm VMASKMOVPD : avx_movmask_rm<0x2D, 0x2F, "vmaskmovpd",
 //===----------------------------------------------------------------------===//
 // VPERMIL - Permute Single and Double Floating-Point Values
 //
+
+let Sched = WriteFShuffle in
+def AVX_VPERMILV : OpndItins<
+  IIC_SSE_SHUFP, IIC_SSE_SHUFP
+>;
+
+let Sched = WriteFShuffle in
+def AVX_VPERMIL : OpndItins<
+  IIC_SSE_SHUFP, IIC_SSE_SHUFP
+>;
+
 multiclass avx_permil<bits<8> opc_rm, bits<8> opc_rmi, string OpcodeStr,
                       RegisterClass RC, X86MemOperand x86memop_f,
                       X86MemOperand x86memop_i, PatFrag i_frag,

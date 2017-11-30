@@ -88,8 +88,15 @@ void __xray_init() XRAY_NEVER_INSTRUMENT {
 #endif
 }
 
-// Only add the preinit array initialization if the sanitizers can.
 #if !defined(XRAY_NO_PREINIT) && SANITIZER_CAN_USE_PREINIT_ARRAY
+// Only add the preinit array initialization if the sanitizers can.
 __attribute__((section(".preinit_array"),
                used)) void (*__local_xray_preinit)(void) = __xray_init;
+#else
+// If we cannot use the .preinit_array section, we should instead use dynamic
+// initialisation.
+static bool UNUSED __local_xray_dyninit = [] {
+  __xray_init();
+  return true;
+}();
 #endif

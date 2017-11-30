@@ -43,6 +43,7 @@ config.link_llvm_dylib = @LLVM_LINK_LLVM_DYLIB@
 config.llvm_libxml2_enabled = "@LLVM_LIBXML2_ENABLED@"
 config.llvm_host_triple = '@LLVM_HOST_TRIPLE@'
 config.host_arch = "@HOST_ARCH@"
+config.have_opt_viewer_modules = @LLVM_HAVE_OPT_VIEWER_MODULES@
 
 # Support substitution of the tools_dir with user parameters. This is
 # used when we can't determine the tool dir at configuration time.

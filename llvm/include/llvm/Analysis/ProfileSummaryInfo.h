@@ -110,6 +110,14 @@ public:
   bool isHotCallSite(const CallSite &CS, BlockFrequencyInfo *BFI);
   /// \brief Returns true if Callsite \p CS is considered cold.
   bool isColdCallSite(const CallSite &CS, BlockFrequencyInfo *BFI);
+  /// \brief Returns HotCountThreshold if set.
+  uint64_t getHotCountThreshold() {
+    return HotCountThreshold ? HotCountThreshold.getValue() : 0;
+  }
+  /// \brief Returns ColdCountThreshold if set.
+  uint64_t getColdCountThreshold() {
+    return ColdCountThreshold ? ColdCountThreshold.getValue() : 0;
+  }
 };
 
 /// An analysis pass based on legacy pass manager to deliver ProfileSummaryInfo.

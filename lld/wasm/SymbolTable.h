@@ -18,6 +18,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 using llvm::object::WasmSymbol;
+using llvm::wasm::WasmSignature;
 
 namespace lld {
 namespace wasm {
@@ -51,7 +52,7 @@ public:
   Symbol *addDefined(InputFile *F, const WasmSymbol *Sym,
                      const InputSegment *Segment = nullptr);
   Symbol *addUndefined(InputFile *F, const WasmSymbol *Sym);
-  Symbol *addUndefinedFunction(StringRef Name);
+  Symbol *addUndefinedFunction(StringRef Name, const WasmSignature *Type);
   Symbol *addDefinedGlobal(StringRef Name);
   void addLazy(ArchiveFile *F, const Archive::Symbol *Sym);
 

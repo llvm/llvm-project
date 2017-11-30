@@ -1268,7 +1268,7 @@ void __kmp_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
     serial_team->t.t_serialized = 1;
     serial_team->t.t_nproc = 1;
     serial_team->t.t_parent = this_thr->th.th_team;
-    serial_team->t.t_sched = this_thr->th.th_team->t.t_sched;
+    serial_team->t.t_sched.sched = this_thr->th.th_team->t.t_sched.sched;
     this_thr->th.th_team = serial_team;
     serial_team->t.t_master_tid = this_thr->th.th_info.ds.ds_tid;
 
@@ -2061,10 +2061,8 @@ int __kmp_fork_call(ident_t *loc, int gtid,
     }
 #endif /* OMP_40_ENABLED */
     kmp_r_sched_t new_sched = get__sched_2(parent_team, master_tid);
-    if (team->t.t_sched.r_sched_type != new_sched.r_sched_type ||
-        team->t.t_sched.chunk != new_sched.chunk)
-      team->t.t_sched =
-          new_sched; // set master's schedule as new run-time schedule
+    // set master's schedule as new run-time schedule
+    KMP_CHECK_UPDATE(team->t.t_sched.sched, new_sched.sched);
 
 #if OMP_40_ENABLED
     KMP_CHECK_UPDATE(team->t.t_cancel_request, cancel_noreq);
@@ -2966,18 +2964,17 @@ kmp_r_sched_t __kmp_get_schedule_global() {
   // KMP_SCHEDULE multiple times, and thus have different run-time schedules in
   // different roots (even in OMP 2.5)
   if (__kmp_sched == kmp_sch_static) {
-    r_sched.r_sched_type = __kmp_static; // replace STATIC with more detailed
-    // schedule (balanced or greedy)
+    // replace STATIC with more detailed schedule (balanced or greedy)
+    r_sched.r_sched_type = __kmp_static;
   } else if (__kmp_sched == kmp_sch_guided_chunked) {
-    r_sched.r_sched_type = __kmp_guided; // replace GUIDED with more detailed
-    // schedule (iterative or analytical)
-  } else {
-    r_sched.r_sched_type =
-        __kmp_sched; // (STATIC_CHUNKED), or (DYNAMIC_CHUNKED), or other
+    // replace GUIDED with more detailed schedule (iterative or analytical)
+    r_sched.r_sched_type = __kmp_guided;
+  } else { // (STATIC_CHUNKED), or (DYNAMIC_CHUNKED), or other
+    r_sched.r_sched_type = __kmp_sched;
   }
 
-  if (__kmp_chunk < KMP_DEFAULT_CHUNK) { // __kmp_chunk may be wrong here (if it
-    // was not ever set)
+  if (__kmp_chunk < KMP_DEFAULT_CHUNK) {
+    // __kmp_chunk may be wrong here (if it was not ever set)
     r_sched.chunk = KMP_DEFAULT_CHUNK;
   } else {
     r_sched.chunk = __kmp_chunk;
@@ -3193,8 +3190,7 @@ static void __kmp_initialize_root(kmp_root_t *root) {
   root_team->t.t_nproc = 1;
   root_team->t.t_serialized = 1;
   // TODO???: root_team->t.t_max_active_levels = __kmp_dflt_max_active_levels;
-  root_team->t.t_sched.r_sched_type = r_sched.r_sched_type;
-  root_team->t.t_sched.chunk = r_sched.chunk;
+  root_team->t.t_sched.sched = r_sched.sched;
   KA_TRACE(
       20,
       ("__kmp_initialize_root: init root team %d arrived: join=%u, plain=%u\n",
@@ -3233,8 +3229,7 @@ static void __kmp_initialize_root(kmp_root_t *root) {
   }
   hot_team->t.t_nproc = 1;
   // TODO???: hot_team->t.t_max_active_levels = __kmp_dflt_max_active_levels;
-  hot_team->t.t_sched.r_sched_type = r_sched.r_sched_type;
-  hot_team->t.t_sched.chunk = r_sched.chunk;
+  hot_team->t.t_sched.sched = r_sched.sched;
   hot_team->t.t_size_changed = 0;
 }
 
@@ -4473,7 +4468,7 @@ static void __kmp_initialize_team(kmp_team_t *team, int new_nproc,
   team->t.t_invoke = NULL; /* not needed */
 
   // TODO???: team->t.t_max_active_levels       = new_max_active_levels;
-  team->t.t_sched = new_icvs->sched;
+  team->t.t_sched.sched = new_icvs->sched.sched;
 
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
   team->t.t_fp_control_saved = FALSE; /* not needed */
@@ -4928,10 +4923,8 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
 
       // TODO???: team->t.t_max_active_levels = new_max_active_levels;
       kmp_r_sched_t new_sched = new_icvs->sched;
-      if (team->t.t_sched.r_sched_type != new_sched.r_sched_type ||
-          team->t.t_sched.chunk != new_sched.chunk)
-        team->t.t_sched =
-            new_sched; // set master's schedule as new run-time schedule
+      // set master's schedule as new run-time schedule
+      KMP_CHECK_UPDATE(team->t.t_sched.sched, new_sched.sched);
 
       __kmp_reinitialize_team(team, new_icvs,
                               root->r.r_uber_thread->th.th_ident);
@@ -5003,9 +4996,7 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
 #endif // KMP_NESTED_HOT_TEAMS
       team->t.t_nproc = new_nproc;
       // TODO???: team->t.t_max_active_levels = new_max_active_levels;
-      if (team->t.t_sched.r_sched_type != new_icvs->sched.r_sched_type ||
-          team->t.t_sched.chunk != new_icvs->sched.chunk)
-        team->t.t_sched = new_icvs->sched;
+      KMP_CHECK_UPDATE(team->t.t_sched.sched, new_icvs->sched.sched);
       __kmp_reinitialize_team(team, new_icvs,
                               root->r.r_uber_thread->th.th_ident);
 

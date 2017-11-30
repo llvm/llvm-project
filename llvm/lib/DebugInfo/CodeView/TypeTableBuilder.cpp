@@ -142,6 +142,43 @@ TypeTableBuilder::TypeTableBuilder(BumpPtrAllocator &Storage, bool Hash)
 
 TypeTableBuilder::~TypeTableBuilder() = default;
 
+Optional<TypeIndex> TypeTableBuilder::getFirst() {
+  if (empty())
+    return None;
+
+  return TypeIndex(TypeIndex::FirstNonSimpleIndex);
+}
+
+Optional<TypeIndex> TypeTableBuilder::getNext(TypeIndex Prev) {
+  if (++Prev == nextTypeIndex())
+    return None;
+  return Prev;
+}
+
+CVType TypeTableBuilder::getType(TypeIndex Index) {
+  CVType Type;
+  Type.RecordData = SeenRecords[Index.toArrayIndex()];
+  const RecordPrefix *P =
+      reinterpret_cast<const RecordPrefix *>(Type.RecordData.data());
+  Type.Type = static_cast<TypeLeafKind>(uint16_t(P->RecordKind));
+  return Type;
+}
+
+StringRef TypeTableBuilder::getTypeName(TypeIndex Index) {
+  llvm_unreachable("Method not implemented");
+}
+
+bool TypeTableBuilder::contains(TypeIndex Index) {
+  if (Index.isSimple() || Index.isNoneType())
+    return false;
+
+  return Index.toArrayIndex() < SeenRecords.size();
+}
+
+uint32_t TypeTableBuilder::size() { return SeenRecords.size(); }
+
+uint32_t TypeTableBuilder::capacity() { return SeenRecords.size(); }
+
 ArrayRef<ArrayRef<uint8_t>> TypeTableBuilder::records() const {
   return SeenRecords;
 }
@@ -166,31 +203,6 @@ TypeIndex TypeTableBuilder::insertRecordBytes(ArrayRef<uint8_t> &Record) {
   Record = ArrayRef<uint8_t>(Stable, Record.size());
   SeenRecords.push_back(Record);
   return NewTI;
-}
-
-TypeIndex TypeTableBuilder::insertRecord(const RemappedType &Record) {
-  TypeIndex TI;
-  ArrayRef<uint8_t> OriginalData = Record.OriginalRecord.RecordData;
-  if (Record.Mappings.empty()) {
-    // This record did not remap any type indices.  Just write it.
-    return insertRecordBytes(OriginalData);
-  }
-
-  // At least one type index was remapped.  Before we can hash it we have to
-  // copy the full record bytes, re-write each type index, then hash the copy.
-  // We do this in temporary storage since only the DenseMap can decide whether
-  // this record already exists, and if it does we don't want the memory to
-  // stick around.
-  RemapStorage.resize(OriginalData.size());
-  ::memcpy(&RemapStorage[0], OriginalData.data(), OriginalData.size());
-  uint8_t *ContentBegin = RemapStorage.data() + sizeof(RecordPrefix);
-  for (const auto &M : Record.Mappings) {
-    // First 4 bytes of every record are the record prefix, but the mapping
-    // offset is relative to the content which starts after.
-    *(TypeIndex *)(ContentBegin + M.first) = M.second;
-  }
-  auto RemapRef = makeArrayRef(RemapStorage);
-  return insertRecordBytes(RemapRef);
 }
 
 TypeIndex TypeTableBuilder::insertRecord(ContinuationRecordBuilder &Builder) {

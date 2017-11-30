@@ -1808,8 +1808,8 @@ void llvm::dumpCodeViewMergedTypes(ScopedPrinter &Writer,
                                    llvm::codeview::TypeTableBuilder &CVTypes) {
   // Flatten it first, then run our dumper on it.
   SmallString<0> TypeBuf;
-  CVTypes.ForEachRecord([&](TypeIndex TI, ArrayRef<uint8_t> Record) {
-    TypeBuf.append(Record.begin(), Record.end());
+  CVTypes.ForEachRecord([&](TypeIndex TI, const CVType &Record) {
+    TypeBuf.append(Record.RecordData.begin(), Record.RecordData.end());
   });
 
   TypeTableCollection TpiTypes(CVTypes.records());

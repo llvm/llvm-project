@@ -241,6 +241,9 @@ void LinkerDriver::parseDirectives(StringRef S) {
       if (Optional<StringRef> Path = findLib(Arg->getValue()))
         enqueuePath(*Path, false);
       break;
+    case OPT_entry:
+      Config->Entry = addUndefined(mangle(Arg->getValue()));
+      break;
     case OPT_export: {
       Export E = parseExport(Arg->getValue());
       if (Config->Machine == I386 && Config->MinGW) {
@@ -267,6 +270,10 @@ void LinkerDriver::parseDirectives(StringRef S) {
       break;
     case OPT_section:
       parseSection(Arg->getValue());
+      break;
+    case OPT_subsystem:
+      parseSubsystem(Arg->getValue(), &Config->Subsystem,
+                     &Config->MajorOSVersion, &Config->MinorOSVersion);
       break;
     case OPT_editandcontinue:
     case OPT_fastfail:
@@ -1076,18 +1083,20 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // Handle /entry and /dll
   if (auto *Arg = Args.getLastArg(OPT_entry)) {
     Config->Entry = addUndefined(mangle(Arg->getValue()));
-  } else if (Args.hasArg(OPT_dll) && !Config->NoEntry) {
-    StringRef S = (Config->Machine == I386) ? "__DllMainCRTStartup@12"
-                                            : "_DllMainCRTStartup";
-    Config->Entry = addUndefined(S);
-  } else if (!Config->NoEntry) {
-    // Windows specific -- If entry point name is not given, we need to
-    // infer that from user-defined entry name.
-    StringRef S = findDefaultEntry();
-    if (S.empty())
-      fatal("entry point must be defined");
-    Config->Entry = addUndefined(S);
-    log("Entry name inferred: " + S);
+  } else if (!Config->Entry && !Config->NoEntry) {
+    if (Args.hasArg(OPT_dll)) {
+      StringRef S = (Config->Machine == I386) ? "__DllMainCRTStartup@12"
+                                              : "_DllMainCRTStartup";
+      Config->Entry = addUndefined(S);
+    } else {
+      // Windows specific -- If entry point name is not given, we need to
+      // infer that from user-defined entry name.
+      StringRef S = findDefaultEntry();
+      if (S.empty())
+        fatal("entry point must be defined");
+      Config->Entry = addUndefined(S);
+      log("Entry name inferred: " + S);
+    }
   }
 
   // Handle /export
