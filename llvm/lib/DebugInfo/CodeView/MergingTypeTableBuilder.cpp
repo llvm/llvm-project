@@ -1,4 +1,4 @@
-//===- TypeSerialzier.cpp -------------------------------------------------===//
+//===- MergingTypeTableBuilder.cpp ----------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/CodeView/TypeTableBuilder.h"
+#include "llvm/DebugInfo/CodeView/MergingTypeTableBuilder.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -130,32 +130,31 @@ TypeIndex TypeHasher::getOrCreateRecord(ArrayRef<uint8_t> &Record,
   return Hashed->Index;
 }
 
-TypeIndex TypeTableBuilder::nextTypeIndex() const {
+TypeIndex MergingTypeTableBuilder::nextTypeIndex() const {
   return TypeIndex::fromArrayIndex(SeenRecords.size());
 }
 
-TypeTableBuilder::TypeTableBuilder(BumpPtrAllocator &Storage, bool Hash)
+MergingTypeTableBuilder::MergingTypeTableBuilder(BumpPtrAllocator &Storage)
     : RecordStorage(Storage) {
-  if (Hash)
-    Hasher = llvm::make_unique<TypeHasher>(Storage);
+  Hasher = llvm::make_unique<TypeHasher>(Storage);
 }
 
-TypeTableBuilder::~TypeTableBuilder() = default;
+MergingTypeTableBuilder::~MergingTypeTableBuilder() = default;
 
-Optional<TypeIndex> TypeTableBuilder::getFirst() {
+Optional<TypeIndex> MergingTypeTableBuilder::getFirst() {
   if (empty())
     return None;
 
   return TypeIndex(TypeIndex::FirstNonSimpleIndex);
 }
 
-Optional<TypeIndex> TypeTableBuilder::getNext(TypeIndex Prev) {
+Optional<TypeIndex> MergingTypeTableBuilder::getNext(TypeIndex Prev) {
   if (++Prev == nextTypeIndex())
     return None;
   return Prev;
 }
 
-CVType TypeTableBuilder::getType(TypeIndex Index) {
+CVType MergingTypeTableBuilder::getType(TypeIndex Index) {
   CVType Type;
   Type.RecordData = SeenRecords[Index.toArrayIndex()];
   const RecordPrefix *P =
@@ -164,48 +163,40 @@ CVType TypeTableBuilder::getType(TypeIndex Index) {
   return Type;
 }
 
-StringRef TypeTableBuilder::getTypeName(TypeIndex Index) {
+StringRef MergingTypeTableBuilder::getTypeName(TypeIndex Index) {
   llvm_unreachable("Method not implemented");
 }
 
-bool TypeTableBuilder::contains(TypeIndex Index) {
+bool MergingTypeTableBuilder::contains(TypeIndex Index) {
   if (Index.isSimple() || Index.isNoneType())
     return false;
 
   return Index.toArrayIndex() < SeenRecords.size();
 }
 
-uint32_t TypeTableBuilder::size() { return SeenRecords.size(); }
+uint32_t MergingTypeTableBuilder::size() { return SeenRecords.size(); }
 
-uint32_t TypeTableBuilder::capacity() { return SeenRecords.size(); }
+uint32_t MergingTypeTableBuilder::capacity() { return SeenRecords.size(); }
 
-ArrayRef<ArrayRef<uint8_t>> TypeTableBuilder::records() const {
+ArrayRef<ArrayRef<uint8_t>> MergingTypeTableBuilder::records() const {
   return SeenRecords;
 }
 
-void TypeTableBuilder::reset() {
-  if (Hasher)
-    Hasher->reset();
+void MergingTypeTableBuilder::reset() {
+  Hasher->reset();
   SeenRecords.clear();
 }
 
-TypeIndex TypeTableBuilder::insertRecordBytes(ArrayRef<uint8_t> &Record) {
-  if (Hasher) {
-    TypeIndex ActualTI = Hasher->getOrCreateRecord(Record, nextTypeIndex());
-    if (nextTypeIndex() == ActualTI)
-      SeenRecords.push_back(Record);
-    return ActualTI;
-  }
-
-  TypeIndex NewTI = nextTypeIndex();
-  uint8_t *Stable = RecordStorage.Allocate<uint8_t>(Record.size());
-  memcpy(Stable, Record.data(), Record.size());
-  Record = ArrayRef<uint8_t>(Stable, Record.size());
-  SeenRecords.push_back(Record);
-  return NewTI;
+TypeIndex
+MergingTypeTableBuilder::insertRecordBytes(ArrayRef<uint8_t> &Record) {
+  TypeIndex ActualTI = Hasher->getOrCreateRecord(Record, nextTypeIndex());
+  if (nextTypeIndex() == ActualTI)
+    SeenRecords.push_back(Record);
+  return ActualTI;
 }
 
-TypeIndex TypeTableBuilder::insertRecord(ContinuationRecordBuilder &Builder) {
+TypeIndex
+MergingTypeTableBuilder::insertRecord(ContinuationRecordBuilder &Builder) {
   TypeIndex TI;
   auto Fragments = Builder.end(nextTypeIndex());
   assert(!Fragments.empty());

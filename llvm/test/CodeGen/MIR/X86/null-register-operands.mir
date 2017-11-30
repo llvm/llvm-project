@@ -15,7 +15,7 @@
 name:            deref
 body: |
   bb.0.entry:
-    ; CHECK:      %eax = MOV32rm %rdi, 1, _, 0, _
+    ; CHECK:      %eax = MOV32rm %rdi, 1, %noreg, 0, %noreg
     ; CHECK-NEXT: RETQ %eax
     %eax = MOV32rm %rdi, 1, _, 0, %noreg
     RETQ %eax

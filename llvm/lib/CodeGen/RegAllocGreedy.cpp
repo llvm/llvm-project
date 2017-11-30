@@ -1396,30 +1396,30 @@ BlockFrequency RAGreedy::calcSpillCost() {
 /// Such sequences are created in 2 scenarios:
 ///
 /// Scenario #1:
-/// vreg0 is evicted from physreg0 by vreg1.
-/// Evictee vreg0 is intended for region splitting with split candidate
-/// physreg0 (the reg vreg0 was evicted from).
+/// %0 is evicted from physreg0 by %1.
+/// Evictee %0 is intended for region splitting with split candidate
+/// physreg0 (the reg %0 was evicted from).
 /// Region splitting creates a local interval because of interference with the
-/// evictor vreg1 (normally region spliitting creates 2 interval, the "by reg"
+/// evictor %1 (normally region spliitting creates 2 interval, the "by reg"
 /// and "by stack" intervals and local interval created when interference
 /// occurs).
-/// One of the split intervals ends up evicting vreg2 from physreg1.
-/// Evictee vreg2 is intended for region splitting with split candidate
+/// One of the split intervals ends up evicting %2 from physreg1.
+/// Evictee %2 is intended for region splitting with split candidate
 /// physreg1.
-/// One of the split intervals ends up evicting vreg3 from physreg2, etc.
+/// One of the split intervals ends up evicting %3 from physreg2, etc.
 ///
 /// Scenario #2
-/// vreg0 is evicted from physreg0 by vreg1.
-/// vreg2 is evicted from physreg2 by vreg3 etc.
-/// Evictee vreg0 is intended for region splitting with split candidate
+/// %0 is evicted from physreg0 by %1.
+/// %2 is evicted from physreg2 by %3 etc.
+/// Evictee %0 is intended for region splitting with split candidate
 /// physreg1.
 /// Region splitting creates a local interval because of interference with the
-/// evictor vreg1.
-/// One of the split intervals ends up evicting back original evictor vreg1
-/// from physreg0 (the reg vreg0 was evicted from).
-/// Another evictee vreg2 is intended for region splitting with split candidate
+/// evictor %1.
+/// One of the split intervals ends up evicting back original evictor %1
+/// from physreg0 (the reg %0 was evicted from).
+/// Another evictee %2 is intended for region splitting with split candidate
 /// physreg1.
-/// One of the split intervals ends up evicting vreg3 from physreg2, etc.
+/// One of the split intervals ends up evicting %3 from physreg2, etc.
 ///
 /// \param Evictee  The register considered to be split.
 /// \param Cand     The split candidate that determines the physical register

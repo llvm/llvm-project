@@ -2812,6 +2812,14 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
     return failedImport("Dst pattern child isn't a leaf node or an MBB" + llvm::to_string(*DstChild));
   }
 
+  // It could be a specific immediate in which case we should just check for
+  // that immediate.
+  if (const IntInit *ChildIntInit =
+          dyn_cast<IntInit>(DstChild->getLeafValue())) {
+    DstMIBuilder.addRenderer<ImmRenderer>(ChildIntInit->getValue());
+    return InsertPt;
+  }
+
   // Otherwise, we're looking for a bog-standard RegisterClass operand.
   if (auto *ChildDefInit = dyn_cast<DefInit>(DstChild->getLeafValue())) {
     auto *ChildRec = ChildDefInit->getDef();

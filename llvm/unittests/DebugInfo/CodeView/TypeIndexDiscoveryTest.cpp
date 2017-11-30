@@ -9,9 +9,9 @@
 
 #include "llvm/DebugInfo/CodeView/TypeIndexDiscovery.h"
 
+#include "llvm/DebugInfo/CodeView/AppendingTypeTableBuilder.h"
 #include "llvm/DebugInfo/CodeView/ContinuationRecordBuilder.h"
 #include "llvm/DebugInfo/CodeView/SymbolSerializer.h"
-#include "llvm/DebugInfo/CodeView/TypeTableBuilder.h"
 #include "llvm/Support/Allocator.h"
 
 #include "gmock/gmock.h"
@@ -26,7 +26,7 @@ public:
 
   void SetUp() override {
     Refs.clear();
-    TTB = make_unique<TypeTableBuilder>(Storage);
+    TTB = make_unique<AppendingTypeTableBuilder>(Storage);
     CRB = make_unique<ContinuationRecordBuilder>();
     Symbols.clear();
   }
@@ -76,8 +76,7 @@ protected:
     discoverTypeIndicesInSymbols();
   }
 
-
-  std::unique_ptr<TypeTableBuilder> TTB;
+  std::unique_ptr<AppendingTypeTableBuilder> TTB;
 
 private:
   uint32_t countRefs(uint32_t RecordIndex) const {

@@ -6827,10 +6827,12 @@ Both arguments must have identical types.
 Semantics:
 """"""""""
 
-This instruction returns the *remainder* of a division. The remainder
-has the same sign as the dividend. This instruction can also take any
-number of :ref:`fast-math flags <fastmath>`, which are optimization hints
-to enable otherwise unsafe floating point optimizations:
+Return the same value as a libm '``fmod``' function but without trapping or 
+setting ``errno``.
+
+The remainder has the same sign as the dividend. This instruction can also 
+take any number of :ref:`fast-math flags <fastmath>`, which are optimization
+hints to enable otherwise unsafe floating-point optimizations:
 
 Example:
 """"""""

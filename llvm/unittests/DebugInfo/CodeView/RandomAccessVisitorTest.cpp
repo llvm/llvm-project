@@ -8,11 +8,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/DebugInfo/CodeView/AppendingTypeTableBuilder.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeRecordMapping.h"
-#include "llvm/DebugInfo/CodeView/TypeTableBuilder.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
 #include "llvm/Support/Allocator.h"
@@ -94,7 +94,7 @@ public:
   static void SetUpTestCase() {
     GlobalState = llvm::make_unique<GlobalTestState>();
 
-    TypeTableBuilder Builder(GlobalState->Allocator);
+    AppendingTypeTableBuilder Builder(GlobalState->Allocator);
 
     uint32_t Offset = 0;
     for (int I = 0; I < 11; ++I) {
@@ -351,7 +351,7 @@ TEST_F(RandomAccessVisitorTest, InnerChunk) {
 }
 
 TEST_F(RandomAccessVisitorTest, CrossChunkName) {
-  TypeTableBuilder Builder(GlobalState->Allocator);
+  AppendingTypeTableBuilder Builder(GlobalState->Allocator);
 
   // TypeIndex 0
   ClassRecord Class(TypeRecordKind::Class);

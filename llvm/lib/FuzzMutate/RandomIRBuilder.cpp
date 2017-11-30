@@ -45,22 +45,25 @@ Value *RandomIRBuilder::newSource(BasicBlock &BB, ArrayRef<Instruction *> Insts,
   // Generate some constants to choose from.
   auto RS = makeSampler<Value *>(Rand);
   RS.sample(Pred.generate(Srcs, KnownTypes));
-  assert(!RS.isEmpty() && "Failed to generate sources");
 
   // If we can find a pointer to load from, use it half the time.
   Value *Ptr = findPointer(BB, Insts, Srcs, Pred);
-  if (Ptr)
-    RS.sample(Ptr, RS.totalWeight());
+  if (Ptr) {
+    // Create load from the chosen pointer
+    auto IP = BB.getFirstInsertionPt();
+    if (auto *I = dyn_cast<Instruction>(Ptr))
+      IP = ++I->getIterator();
+    auto *NewLoad = new LoadInst(Ptr, "L", &*IP);
 
-  Value *Result = RS.getSelection();
-  if (Result != Ptr)
-    return Result;
+    // Only sample this load if it really matches the descriptor
+    if (Pred.matches(Srcs, NewLoad))
+      RS.sample(NewLoad, RS.totalWeight());
+    else
+      NewLoad->eraseFromParent();
+  }
 
-  // If we choose the pointer, we need to create a load.
-  auto IP = BB.getFirstInsertionPt();
-  if (auto *I = dyn_cast<Instruction>(Ptr))
-    IP = ++I->getIterator();
-  return new LoadInst(Ptr, "L", &*IP);
+  assert(!RS.isEmpty() && "Failed to generate sources");
+  return RS.getSelection();
 }
 
 static bool isCompatibleReplacement(const Instruction *I, const Use &Operand,
@@ -73,12 +76,13 @@ static bool isCompatibleReplacement(const Instruction *I, const Use &Operand,
   case Instruction::ExtractValue:
     // TODO: We could potentially validate these, but for now just leave indices
     // alone.
-    if (Operand.getOperandNo() > 1)
+    if (Operand.getOperandNo() >= 1)
       return false;
     break;
   case Instruction::InsertValue:
   case Instruction::InsertElement:
-    if (Operand.getOperandNo() > 2)
+  case Instruction::ShuffleVector:
+    if (Operand.getOperandNo() >= 2)
       return false;
     break;
   default:

@@ -2,7 +2,7 @@
 # https://bugs.llvm.org/show_bug.cgi?id=33620
 
 ---
-# This would assert due to the empty live interval created for %vreg9
+# This would assert due to the empty live interval created for %9
 # on the last S_NOP with an undef subreg use.
 
 # CHECK-LABEL: name: expecting_non_empty_interval

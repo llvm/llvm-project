@@ -548,7 +548,7 @@ body:             |
 
     %flat_scr_lo = S_ADD_U32 %sgpr6, %sgpr9, implicit-def %scc
     %flat_scr_hi = S_ADDC_U32 %sgpr7, 0, implicit-def %scc, implicit %scc
-    DBG_VALUE _, 2, !5, !11, debug-location !12
+    DBG_VALUE %noreg, 2, !5, !11, debug-location !12
     %sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM killed %sgpr4_sgpr5, 0, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
     dead %sgpr6_sgpr7 = KILL %sgpr4_sgpr5
     %sgpr8 = S_MOV_B32 %sgpr5

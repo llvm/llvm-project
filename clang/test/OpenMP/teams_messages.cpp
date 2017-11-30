@@ -7,6 +7,9 @@ void foo() {
 
 int main(int argc, char **argv) {
   #pragma omp target
+  #pragma omp teams
+  f; // expected-error {{use of undeclared identifier 'f'}}
+  #pragma omp target
   #pragma omp teams { // expected-warning {{extra tokens at the end of '#pragma omp teams' are ignored}}
   foo();
   #pragma omp target

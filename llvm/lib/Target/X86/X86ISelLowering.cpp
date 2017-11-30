@@ -6948,10 +6948,10 @@ static int getUnderlyingExtractedFromVec(SDValue &ExtractedFromVec,
 
   // For 256-bit vectors, LowerEXTRACT_VECTOR_ELT_SSE4 may have already
   // lowered this:
-  //   (extract_vector_elt (v8f32 %vreg1), Constant<6>)
+  //   (extract_vector_elt (v8f32 %1), Constant<6>)
   // to:
   //   (extract_vector_elt (vector_shuffle<2,u,u,u>
-  //                           (extract_subvector (v8f32 %vreg0), Constant<4>),
+  //                           (extract_subvector (v8f32 %0), Constant<4>),
   //                           undef)
   //                       Constant<0>)
   // In this case the vector is the extract_subvector expression and the index

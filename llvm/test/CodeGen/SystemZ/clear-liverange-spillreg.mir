@@ -223,14 +223,14 @@ body:             |
   
   bb.11:
     %4 = COPY %60
-    %6 = SLLG %120, _, 1
+    %6 = SLLG %120, %noreg, 1
     %7 = LA %6, 64, %41
     %6 = AGR %6, %42, implicit-def dead %cc
-    %45 = SRLK %120.subreg_l32, _, 31
+    %45 = SRLK %120.subreg_l32, %noreg, 31
     %45 = AR %45, %120.subreg_l32, implicit-def dead %cc
     %45 = NIFMux %45, 536870910, implicit-def dead %cc
     %47 = SRK %120.subreg_l32, %45, implicit-def dead %cc
-    %47 = SLL %47, _, 3
+    %47 = SLL %47, %noreg, 3
     %81 = LGFR %47
   
   bb.12:
@@ -284,43 +284,43 @@ body:             |
     MVHI %0, 332, 2 :: (store 4)
     %60 = COPY %126
     %60 = AR %60, %4, implicit-def dead %cc
-    %18 = LHMux %6, 0, _ :: (load 2)
+    %18 = LHMux %6, 0, %noreg :: (load 2)
     CHIMux %38, 0, implicit-def %cc
     BRC 14, 6, %bb.19, implicit killed %cc
     J %bb.18
   
   bb.18:
-    %62 = SLLG %81, _, 1
+    %62 = SLLG %81, %noreg, 1
     %64 = LA %62, 0, %63
-    %65 = LG undef %66, 0, _ :: (load 8)
-    %67 = LGF undef %68, 0, _ :: (load 4)
+    %65 = LG undef %66, 0, %noreg :: (load 8)
+    %67 = LGF undef %68, 0, %noreg :: (load 4)
     MVC undef %69, 0, 2, %64, 0 :: (store 2), (load 2)
     %70 = COPY %81
     %70 = OILL64 %70, 3, implicit-def dead %cc
-    %71 = LA %70, 2, _
-    %72 = SLLG %71, _, 1
+    %71 = LA %70, 2, %noreg
+    %72 = SLLG %71, %noreg, 1
     %73 = LHMux %72, 0, %63 :: (load 2)
     %74 = LA %70, 2, %67
-    %75 = SLLG %74, _, 1
-    %76 = LG %65, 0, _ :: (load 8)
+    %75 = SLLG %74, %noreg, 1
+    %76 = LG %65, 0, %noreg :: (load 8)
     STHMux %73, %76, 0, %75 :: (store 2)
-    %77 = LG undef %78, 0, _ :: (load 8)
+    %77 = LG undef %78, 0, %noreg :: (load 8)
     %79 = LHRL @rec_mbY8x8 :: (load 2)
-    STHMux %79, %77, 0, _ :: (store 2)
+    STHMux %79, %77, 0, %noreg :: (store 2)
     %80 = LHMux %72, 0, %63 :: (load 2)
     STHMux %80, %77, 0, %75 :: (store 2)
     %81 = OILL64 %81, 7, implicit-def dead %cc
-    %82 = SLLG %81, _, 1
+    %82 = SLLG %81, %noreg, 1
     %83 = LHMux %82, 0, %63 :: (load 2)
-    STHMux %83, %77, 0, _ :: (store 2)
+    STHMux %83, %77, 0, %noreg :: (store 2)
     %84 = LA %62, 64, %63
     MVC undef %85, 0, 2, %84, 0 :: (store 2), (load 2)
-    %86 = SLLG %70, _, 1
+    %86 = SLLG %70, %noreg, 1
     %87 = LHMux %86, 64, %63 :: (load 2)
-    %88 = SLLG %67, _, 3
+    %88 = SLLG %67, %noreg, 3
     %89 = LG %65, 16, %88 :: (load 8)
     %90 = LA %70, 0, %67
-    %91 = SLLG %90, _, 1
+    %91 = SLLG %90, %noreg, 1
     STHMux %87, %89, 0, %91 :: (store 2)
     %92 = LA %72, 64, %63
     MVC undef %93, 0, 2, %92, 0 :: (store 2), (load 2)
@@ -332,8 +332,8 @@ body:             |
   bb.19:
     successors: %bb.20(0x04000000), %bb.11(0x7c000000)
   
-    %98 = LGH %7, 0, _ :: (load 2)
-    %99 = LGH undef %100, 0, _ :: (load 2)
+    %98 = LGH %7, 0, %noreg :: (load 2)
+    %99 = LGH undef %100, 0, %noreg :: (load 2)
     ADJCALLSTACKDOWN 0, 0
     %101 = LGFR %120.subreg_l32
     %102 = LGFR %18
@@ -347,7 +347,7 @@ body:             |
     ADJCALLSTACKDOWN 0, 0
     CallBRASL @reset_coding_state, undef %r2d, csr_systemz, implicit-def dead %r14d, implicit-def dead %cc
     ADJCALLSTACKUP 0, 0
-    %120 = LA %120, 1, _
+    %120 = LA %120, 1, %noreg
     CGHI %120, 4, implicit-def %cc
     BRC 14, 6, %bb.11, implicit killed %cc
     J %bb.20
@@ -410,7 +410,7 @@ body:             |
   bb.30:
     successors: %bb.33(0x00000001), %bb.31(0x7fffffff)
   
-    VST64 %130, undef %117, 0, _ :: (store 8)
+    VST64 %130, undef %117, 0, %noreg :: (store 8)
     CHIMux undef %118, 2, implicit-def %cc
     BRC 14, 8, %bb.33, implicit killed %cc
     J %bb.31
@@ -470,7 +470,7 @@ body:             |
   bb.44:
   
   bb.45:
-    %0 = LG undef %22, 0, _ :: (load 8)
+    %0 = LG undef %22, 0, %noreg :: (load 8)
     %38 = LHIMux 0
     STRL %38, @bi_pred_me :: (store 4)
     %120 = LGHI 0

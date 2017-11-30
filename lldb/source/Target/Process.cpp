@@ -1560,7 +1560,6 @@ uint32_t Process::AssignIndexIDToThread(uint64_t thread_id) {
 }
 
 StateType Process::GetState() {
-  // If any other threads access this we will need a mutex for it
   return m_public_state.GetValue();
 }
 

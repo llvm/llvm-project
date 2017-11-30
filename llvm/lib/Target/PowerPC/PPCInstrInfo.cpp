@@ -2318,7 +2318,7 @@ PPCInstrInfo::isSignOrZeroExtended(const MachineInstr &MI, bool SignExt,
       //   ADJCALLSTACKDOWN 32, %r1<imp-def,dead>, %r1<imp-use>
       //   BL8_NOP <ga:@func>,...
       //   ADJCALLSTACKUP 32, 0, %r1<imp-def,dead>, %r1<imp-use>
-      //   %vreg5<def> = COPY %x3; G8RC:%vreg5
+      //   %5<def> = COPY %x3; G8RC:%5
       if (SrcReg == PPC::X3) {
         const MachineBasicBlock *MBB = MI.getParent();
         MachineBasicBlock::const_instr_iterator II =

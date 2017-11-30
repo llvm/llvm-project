@@ -17,33 +17,33 @@
 //
 // Liveness tracking aside, the main functionality of this pass is divided
 // into two steps. The first step is to replace an instruction
-//   vreg0 = C2_mux vreg1, vreg2, vreg3
+//   %0 = C2_mux %1, %2, %3
 // with a pair of conditional transfers
-//   vreg0 = A2_tfrt vreg1, vreg2
-//   vreg0 = A2_tfrf vreg1, vreg3
+//   %0 = A2_tfrt %1, %2
+//   %0 = A2_tfrf %1, %3
 // It is the intention that the execution of this pass could be terminated
 // after this step, and the code generated would be functionally correct.
 //
-// If the uses of the source values vreg1 and vreg2 are kills, and their
+// If the uses of the source values %1 and %2 are kills, and their
 // definitions are predicable, then in the second step, the conditional
 // transfers will then be rewritten as predicated instructions. E.g.
-//   vreg0 = A2_or vreg1, vreg2
-//   vreg3 = A2_tfrt vreg99, vreg0<kill>
+//   %0 = A2_or %1, %2
+//   %3 = A2_tfrt %99, %0<kill>
 // will be rewritten as
-//   vreg3 = A2_port vreg99, vreg1, vreg2
+//   %3 = A2_port %99, %1, %2
 //
 // This replacement has two variants: "up" and "down". Consider this case:
-//   vreg0 = A2_or vreg1, vreg2
+//   %0 = A2_or %1, %2
 //   ... [intervening instructions] ...
-//   vreg3 = A2_tfrt vreg99, vreg0<kill>
+//   %3 = A2_tfrt %99, %0<kill>
 // variant "up":
-//   vreg3 = A2_port vreg99, vreg1, vreg2
-//   ... [intervening instructions, vreg0->vreg3] ...
+//   %3 = A2_port %99, %1, %2
+//   ... [intervening instructions, %0->vreg3] ...
 //   [deleted]
 // variant "down":
 //   [deleted]
 //   ... [intervening instructions] ...
-//   vreg3 = A2_port vreg99, vreg1, vreg2
+//   %3 = A2_port %99, %1, %2
 //
 // Both, one or none of these variants may be valid, and checks are made
 // to rule out inapplicable variants.
@@ -51,13 +51,13 @@
 // As an additional optimization, before either of the two steps above is
 // executed, the pass attempts to coalesce the target register with one of
 // the source registers, e.g. given an instruction
-//   vreg3 = C2_mux vreg0, vreg1, vreg2
-// vreg3 will be coalesced with either vreg1 or vreg2. If this succeeds,
+//   %3 = C2_mux %0, %1, %2
+// %3 will be coalesced with either %1 or %2. If this succeeds,
 // the instruction would then be (for example)
-//   vreg3 = C2_mux vreg0, vreg3, vreg2
+//   %3 = C2_mux %0, %3, %2
 // and, under certain circumstances, this could result in only one predicated
 // instruction:
-//   vreg3 = A2_tfrf vreg0, vreg2
+//   %3 = A2_tfrf %0, %2
 //
 
 // Splitting a definition of a register into two predicated transfers
@@ -65,18 +65,18 @@
 // will see both instructions as actual definitions, and will mark the
 // first one as dead. The definition is not actually dead, and this
 // situation will need to be fixed. For example:
-//   vreg1<def,dead> = A2_tfrt ...  ; marked as dead
-//   vreg1<def> = A2_tfrf ...
+//   %1<def,dead> = A2_tfrt ...  ; marked as dead
+//   %1<def> = A2_tfrf ...
 //
 // Since any of the individual predicated transfers may end up getting
 // removed (in case it is an identity copy), some pre-existing def may
 // be marked as dead after live interval recomputation:
-//   vreg1<def,dead> = ...          ; marked as dead
+//   %1<def,dead> = ...          ; marked as dead
 //   ...
-//   vreg1<def> = A2_tfrf ...       ; if A2_tfrt is removed
-// This case happens if vreg1 was used as a source in A2_tfrt, which means
+//   %1<def> = A2_tfrf ...       ; if A2_tfrt is removed
+// This case happens if %1 was used as a source in A2_tfrt, which means
 // that is it actually live at the A2_tfrf, and so the now dead definition
-// of vreg1 will need to be updated to non-dead at some point.
+// of %1 will need to be updated to non-dead at some point.
 //
 // This issue could be remedied by adding implicit uses to the predicated
 // transfers, but this will create a problem with subsequent predication,
@@ -760,8 +760,8 @@ MachineInstr *HexagonExpandCondsets::getReachingDefForPred(RegisterRef RD,
       if (RR.Reg != RD.Reg)
         continue;
       // If the "Reg" part agrees, there is still the subregister to check.
-      // If we are looking for vreg1:loreg, we can skip vreg1:hireg, but
-      // not vreg1 (w/o subregisters).
+      // If we are looking for %1:loreg, we can skip %1:hireg, but
+      // not %1 (w/o subregisters).
       if (RR.Sub == RD.Sub)
         return MI;
       if (RR.Sub == 0 || RD.Sub == 0)
@@ -1071,7 +1071,7 @@ bool HexagonExpandCondsets::predicateInBlock(MachineBasicBlock &B,
       bool Done = predicate(*I, (Opc == Hexagon::A2_tfrt), UpdRegs);
       if (!Done) {
         // If we didn't predicate I, we may need to remove it in case it is
-        // an "identity" copy, e.g.  vreg1 = A2_tfrt vreg2, vreg1.
+        // an "identity" copy, e.g.  %1 = A2_tfrt %2, %1.
         if (RegisterRef(I->getOperand(0)) == RegisterRef(I->getOperand(2))) {
           for (auto &Op : I->operands())
             if (Op.isReg())
@@ -1198,18 +1198,18 @@ bool HexagonExpandCondsets::coalesceSegments(
     MachineOperand &S1 = CI->getOperand(2), &S2 = CI->getOperand(3);
     bool Done = false;
     // Consider this case:
-    //   vreg1 = instr1 ...
-    //   vreg2 = instr2 ...
-    //   vreg0 = C2_mux ..., vreg1, vreg2
-    // If vreg0 was coalesced with vreg1, we could end up with the following
+    //   %1 = instr1 ...
+    //   %2 = instr2 ...
+    //   %0 = C2_mux ..., %1, %2
+    // If %0 was coalesced with %1, we could end up with the following
     // code:
-    //   vreg0 = instr1 ...
-    //   vreg2 = instr2 ...
-    //   vreg0 = A2_tfrf ..., vreg2
+    //   %0 = instr1 ...
+    //   %2 = instr2 ...
+    //   %0 = A2_tfrf ..., %2
     // which will later become:
-    //   vreg0 = instr1 ...
-    //   vreg0 = instr2_cNotPt ...
-    // i.e. there will be an unconditional definition (instr1) of vreg0
+    //   %0 = instr1 ...
+    //   %0 = instr2_cNotPt ...
+    // i.e. there will be an unconditional definition (instr1) of %0
     // followed by a conditional one. The output dependency was there before
     // and it unavoidable, but if instr1 is predicable, we will no longer be
     // able to predicate it here.

@@ -62,7 +62,7 @@ infloop1:                                         ; preds = %infloop1, %bb5
 
 
 ; RAFast would forget to add a super-register <imp-def> when rewriting:
-;  %vreg10:sub_32bit<def,read-undef> = COPY %R9D<kill>
+;  %10:sub_32bit<def,read-undef> = COPY %R9D<kill>
 ; This trips up the machine code verifier.
 define void @autogen_SD24657(i8*, i32*, i64*, i32, i64, i8) {
 BB:

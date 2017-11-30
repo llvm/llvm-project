@@ -6,23 +6,23 @@ body:             |
     successors: %bb.2, %bb.1
     liveins: %d0, %r0, %r1
 
-    t2CMPri killed %r1, 0, 14, _, implicit-def %cpsr
+    t2CMPri killed %r1, 0, 14, %noreg, implicit-def %cpsr
     t2Bcc %bb.2, 0, killed %cpsr
 
   bb.1:
     liveins: %d0, %r0
 
-    %d16 = VDUP32d killed %r0, 14, _
+    %d16 = VDUP32d killed %r0, 14, %noreg
     ; Verify that the neon instructions haven't been conditionalized:
     ; CHECK-LABEL: NeonVdupMul
     ; CHECK: vdup.32
     ; CHECK: vmul.i32
-    %d0 = VMULv2i32 killed %d16, killed %d0, 14, _
+    %d0 = VMULv2i32 killed %d16, killed %d0, 14, %noreg
 
   bb.2:
     liveins: %d0
 
-    tBX_RET 14, _, implicit %d0
+    tBX_RET 14, %noreg, implicit %d0
 
 ...
 ---
@@ -32,23 +32,23 @@ body:             |
     successors: %bb.1, %bb.2
     liveins: %r0, %r1
 
-    t2CMPri killed %r1, 0, 14, _, implicit-def %cpsr
+    t2CMPri killed %r1, 0, 14, %noreg, implicit-def %cpsr
     t2Bcc %bb.2, 1, killed %cpsr
 
   bb.1:
-    %d0 = VMOVv2i32 0, 14, _
-    tBX_RET 14, _, implicit %d0
+    %d0 = VMOVv2i32 0, 14, %noreg
+    tBX_RET 14, %noreg, implicit %d0
 
   bb.2:
     liveins: %r0
 
-    %d0 = VLDRD killed %r0, 0, 14, _
+    %d0 = VLDRD killed %r0, 0, 14, %noreg
     ; Verify that the neon instruction VMOVv2i32 hasn't been conditionalized,
     ; but the VLDR instruction that is available both in the VFP and Advanced
     ; SIMD extensions has.
     ; CHECK-LABEL: NeonVmovVfpLdr
     ; CHECK-DAG: vmov.i32 d0, #0x0
     ; CHECK-DAG: vldr{{ne|eq}} d0, [r0]
-    tBX_RET 14, _, implicit %d0
+    tBX_RET 14, %noreg, implicit %d0
 
 ...

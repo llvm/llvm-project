@@ -9,6 +9,9 @@ static int pvt;
 #pragma omp teams distribute parallel for // expected-error {{unexpected OpenMP directive '#pragma omp teams distribute parallel for'}}
 
 int main(int argc, char **argv) {
+  #pragma omp target
+  #pragma omp teams distribute parallel for
+  f; // expected-error {{use of undeclared identifier 'f'}}
 #pragma omp target
 #pragma omp teams distribute parallel for { // expected-warning {{extra tokens at the end of '#pragma omp teams distribute parallel for' are ignored}}
   for (int i = 0; i < argc; ++i)

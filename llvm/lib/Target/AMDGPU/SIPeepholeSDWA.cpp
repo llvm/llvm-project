@@ -10,12 +10,12 @@
 /// \file This pass tries to apply several peephole SDWA patterns.
 ///
 /// E.g. original:
-///   V_LSHRREV_B32_e32 %vreg0, 16, %vreg1
-///   V_ADD_I32_e32 %vreg2, %vreg0, %vreg3
-///   V_LSHLREV_B32_e32 %vreg4, 16, %vreg2
+///   V_LSHRREV_B32_e32 %0, 16, %1
+///   V_ADD_I32_e32 %2, %0, %3
+///   V_LSHLREV_B32_e32 %4, 16, %2
 ///
 /// Replace:
-///   V_ADD_I32_sdwa %vreg4, %vreg1, %vreg3
+///   V_ADD_I32_sdwa %4, %1, %3
 ///       dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ///
 //===----------------------------------------------------------------------===//
@@ -410,7 +410,7 @@ Optional<int64_t> SIPeepholeSDWA::foldToImm(const MachineOperand &Op) const {
   }
 
   // If this is not immediate then it can be copy of immediate value, e.g.:
-  // %vreg1<def> = S_MOV_B32 255;
+  // %1<def> = S_MOV_B32 255;
   if (Op.isReg()) {
     for (const MachineOperand &Def : MRI->def_operands(Op.getReg())) {
       if (!isSameReg(Op, Def))

@@ -41,10 +41,10 @@ entry:
 
 ; This test case extracts a sub_8bit_hi sub-register:
 ;
-;       %vreg2<def> = COPY %vreg1:sub_8bit_hi; GR8:%vreg2 GR64_ABCD:%vreg1
-;       TEST8ri %vreg2, 1, %eflags<imp-def>; GR8:%vreg2
+;       %2<def> = COPY %1:sub_8bit_hi; GR8:%2 GR64_ABCD:%1
+;       TEST8ri %2, 1, %eflags<imp-def>; GR8:%2
 ;
-; %vreg2 must be constrained to GR8_NOREX, or the COPY could become impossible.
+; %2 must be constrained to GR8_NOREX, or the COPY could become impossible.
 ;
 ; PR11088
 
