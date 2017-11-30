@@ -372,8 +372,8 @@ void MicroMipsR6Thunk::addSymbols(ThunkSection &IS) {
 }
 
 InputSection *MicroMipsR6Thunk::getTargetInputSection() const {
-  auto *DR = dyn_cast<Defined>(&Destination);
-  return dyn_cast<InputSection>(DR->Section);
+  auto &DR = cast<Defined>(Destination);
+  return dyn_cast<InputSection>(DR.Section);
 }
 
 Thunk::Thunk(Symbol &D) : Destination(D), Offset(0) {}
