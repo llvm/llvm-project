@@ -7919,6 +7919,8 @@ def err_type_tag_for_datatype_too_large : Error<
   "'type_tag_for_datatype' attribute requires the initializer to be "
   "an %select{integer|integral}0 constant expression "
   "that can be represented by a 64 bit integer">;
+def err_tag_index_out_of_range : Error<
+  "%select{type tag|argument}0 index %1 is greater than the number of arguments specified">;
 def warn_type_tag_for_datatype_wrong_kind : Warning<
   "this type tag was not designed to be used with this function">,
   InGroup<TypeSafety>;
@@ -8957,6 +8959,8 @@ def err_omp_reduction_with_nogroup : Error<
   "'reduction' clause cannot be used with 'nogroup' clause">;
 def err_omp_reduction_vla_unsupported : Error<
   "cannot generate code for reduction on %select{|array section, which requires a }0variable length array">;
+def err_omp_linear_distribute_var_non_loop_iteration : Error<
+  "only loop iteration variables are allowed in 'linear' clause in distribute directives">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {

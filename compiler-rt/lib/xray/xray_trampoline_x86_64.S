@@ -87,16 +87,16 @@
 
 //===----------------------------------------------------------------------===//
 
-	.globl ASM_TSAN_SYMBOL(__xray_FunctionEntry)
+	.globl ASM_SYMBOL(__xray_FunctionEntry)
 	.align 16, 0x90
 	ASM_TYPE_FUNCTION(__xray_FunctionEntry)
-ASM_TSAN_SYMBOL(__xray_FunctionEntry):
+ASM_SYMBOL(__xray_FunctionEntry):
 	CFI_STARTPROC
 	SAVE_REGISTERS
 
 	// This load has to be atomic, it's concurrent with __xray_patch().
 	// On x86/amd64, a simple (type-aligned) MOV instruction is enough.
-	movq	ASM_TSAN_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)(%rip), %rax
+	movq	ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)(%rip), %rax
 	testq	%rax, %rax
 	je	.Ltmp0
 
@@ -113,10 +113,10 @@ ASM_TSAN_SYMBOL(__xray_FunctionEntry):
 
 //===----------------------------------------------------------------------===//
 
-	.globl ASM_TSAN_SYMBOL(__xray_FunctionExit)
+	.globl ASM_SYMBOL(__xray_FunctionExit)
 	.align 16, 0x90
 	ASM_TYPE_FUNCTION(__xray_FunctionExit)
-ASM_TSAN_SYMBOL(__xray_FunctionExit):
+ASM_SYMBOL(__xray_FunctionExit):
 	CFI_STARTPROC
 	// Save the important registers first. Since we're assuming that this
 	// function is only jumped into, we only preserve the registers for
@@ -128,7 +128,7 @@ ASM_TSAN_SYMBOL(__xray_FunctionExit):
 	movupd	%xmm1, 16(%rsp)
 	movq	%rax, 8(%rsp)
 	movq	%rdx, 0(%rsp)
-	movq	ASM_TSAN_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)(%rip), %rax
+	movq	ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)(%rip), %rax
 	testq %rax,%rax
 	je	.Ltmp2
 
@@ -151,14 +151,14 @@ ASM_TSAN_SYMBOL(__xray_FunctionExit):
 
 //===----------------------------------------------------------------------===//
 
-	.globl ASM_TSAN_SYMBOL(__xray_FunctionTailExit)
+	.globl ASM_SYMBOL(__xray_FunctionTailExit)
 	.align 16, 0x90
 	ASM_TYPE_FUNCTION(__xray_FunctionTailExit)
-ASM_TSAN_SYMBOL(__xray_FunctionTailExit):
+ASM_SYMBOL(__xray_FunctionTailExit):
 	CFI_STARTPROC
 	SAVE_REGISTERS
 
-	movq	ASM_TSAN_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)(%rip), %rax
+	movq	ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)(%rip), %rax
 	testq %rax,%rax
 	je	.Ltmp4
 
@@ -175,20 +175,20 @@ ASM_TSAN_SYMBOL(__xray_FunctionTailExit):
 
 //===----------------------------------------------------------------------===//
 
-	.globl ASM_TSAN_SYMBOL(__xray_ArgLoggerEntry)
+	.globl ASM_SYMBOL(__xray_ArgLoggerEntry)
 	.align 16, 0x90
 	ASM_TYPE_FUNCTION(__xray_ArgLoggerEntry)
-ASM_TSAN_SYMBOL(__xray_ArgLoggerEntry):
+ASM_SYMBOL(__xray_ArgLoggerEntry):
 	CFI_STARTPROC
 	SAVE_REGISTERS
 
 	// Again, these function pointer loads must be atomic; MOV is fine.
-	movq	ASM_TSAN_SYMBOL(_ZN6__xray13XRayArgLoggerE)(%rip), %rax
+	movq	ASM_SYMBOL(_ZN6__xray13XRayArgLoggerE)(%rip), %rax
 	testq	%rax, %rax
 	jne	.Larg1entryLog
 
 	// If [arg1 logging handler] not set, defer to no-arg logging.
-	movq	ASM_TSAN_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)(%rip), %rax
+	movq	ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)(%rip), %rax
 	testq	%rax, %rax
 	je	.Larg1entryFail
 
@@ -212,17 +212,17 @@ ASM_TSAN_SYMBOL(__xray_ArgLoggerEntry):
 
 //===----------------------------------------------------------------------===//
 
-	.global ASM_TSAN_SYMBOL(__xray_CustomEvent)
+	.global ASM_SYMBOL(__xray_CustomEvent)
 	.align 16, 0x90
 	ASM_TYPE_FUNCTION(__xray_CustomEvent)
-ASM_TSAN_SYMBOL(__xray_CustomEvent):
+ASM_SYMBOL(__xray_CustomEvent):
 	CFI_STARTPROC
 	SAVE_REGISTERS
 
 	// We take two arguments to this trampoline, which should be in rdi	and rsi
 	// already. We also make sure that we stash %rax because we use that register
 	// to call the logging handler.
-	movq ASM_TSAN_SYMBOL(_ZN6__xray22XRayPatchedCustomEventE)(%rip), %rax
+	movq ASM_SYMBOL(_ZN6__xray22XRayPatchedCustomEventE)(%rip), %rax
 	testq %rax,%rax
 	je .LcustomEventCleanup
 

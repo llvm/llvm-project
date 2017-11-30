@@ -3849,6 +3849,13 @@ static void __kmp_aux_affinity_initialize(void) {
     }
   }
 
+  if (__kmp_affinity_gran == affinity_gran_tile &&
+      // check if user's request is valid
+      __kmp_affinity_dispatch->get_api_type() == KMPAffinity::NATIVE_OS) {
+    KMP_WARNING(AffTilesNoHWLOC, "KMP_AFFINITY");
+    __kmp_affinity_gran = affinity_gran_package;
+  }
+
   int depth = -1;
   kmp_i18n_id_t msg_id = kmp_i18n_null;
 
@@ -4113,6 +4120,11 @@ static void __kmp_aux_affinity_initialize(void) {
     __kmp_affinity_type = affinity_none;
     KMP_AFFINITY_DISABLE();
     return;
+  }
+
+  if (__kmp_affinity_gran == affinity_gran_tile && __kmp_tile_depth == 0) {
+    // tiles requested but not detected, warn user on this
+    KMP_WARNING(AffTilesNoTiles, "KMP_AFFINITY");
   }
 
   __kmp_apply_thread_places(&address2os, depth);

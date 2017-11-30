@@ -28,8 +28,9 @@ public:
       ++this->a.a;
   }
   S7 &operator=(S7 &s) {
-#pragma omp target teams distribute parallel for simd private(a) private(this->a)
-    for (int k = 0; k < s.a.a; ++k)
+    int k;
+#pragma omp target teams distribute parallel for simd private(a) private(this->a) linear(k)
+    for (k = 0; k < s.a.a; ++k)
       ++s.a.a;
 
     foo();
@@ -53,7 +54,7 @@ public:
   }
 };
 // CHECK: #pragma omp target teams distribute parallel for simd private(this->a) private(this->a) private(T::a)
-// CHECK: #pragma omp target teams distribute parallel for simd private(this->a) private(this->a)
+// CHECK: #pragma omp target teams distribute parallel for simd private(this->a) private(this->a) linear(k)
 // CHECK: #pragma omp target teams distribute parallel for simd default(none) private(b) firstprivate(argv) shared(d) reduction(+: c) reduction(max: e) num_teams(f) thread_limit(d)
 // CHECK: #pragma omp target teams distribute parallel for simd simdlen(slen1) safelen(slen2) aligned(arr: alen)
 
@@ -135,10 +136,10 @@ T tmain(T argc) {
 // CHECK: #pragma omp target teams distribute parallel for simd default(none) private(b) firstprivate(argc) shared(d) reduction(+: c) reduction(max: e) num_teams(f) thread_limit(d)
 // CHECK-NEXT: for (int k = 0; k < 10; ++k)
 // CHECK-NEXT: e += d + argc;
-#pragma omp target teams distribute parallel for simd simdlen(clen-1) linear(d)
+#pragma omp target teams distribute parallel for simd simdlen(clen-1)
   for (int k = 0; k < 10; ++k)
     e += d + argc;
-// CHECK: #pragma omp target teams distribute parallel for simd simdlen(clen - 1) linear(d)
+// CHECK: #pragma omp target teams distribute parallel for simd simdlen(clen - 1)
 // CHECK-NEXT: for (int k = 0; k < 10; ++k)
 // CHECK-NEXT: e += d + argc;
 #pragma omp target teams distribute parallel for simd safelen(clen-1) aligned(arr:alen)
@@ -186,10 +187,10 @@ int main (int argc, char **argv) {
 // CHECK: #pragma omp target teams distribute parallel for simd default(none) private(b) firstprivate(argc) shared(d) reduction(+: c) reduction(max: e) num_teams(f) thread_limit(d)
 // CHECK-NEXT: for (int k = 0; k < 10; ++k)
 // CHECK-NEXT: e += d + argc;
-#pragma omp target teams distribute parallel for simd simdlen(clen-1) linear(d)
+#pragma omp target teams distribute parallel for simd simdlen(clen-1)
   for (int k = 0; k < 10; ++k)
     e += d + argc;
-// CHECK: #pragma omp target teams distribute parallel for simd simdlen(clen - 1) linear(d)
+// CHECK: #pragma omp target teams distribute parallel for simd simdlen(clen - 1)
 // CHECK-NEXT: for (int k = 0; k < 10; ++k)
 // CHECK-NEXT: e += d + argc;
 #pragma omp target teams distribute parallel for simd safelen(clen-1) aligned(arr:N+6)

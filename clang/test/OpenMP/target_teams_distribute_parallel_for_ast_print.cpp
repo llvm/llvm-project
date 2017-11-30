@@ -116,10 +116,10 @@ T tmain(T argc) {
 // CHECK: #pragma omp target teams distribute parallel for default(none) private(b) firstprivate(argc) shared(d) reduction(+: c) reduction(max: e) num_teams(f) thread_limit(d)
 // CHECK-NEXT: for (int k = 0; k < 10; ++k)
 // CHECK-NEXT: e += d + argc;
-#pragma omp target teams distribute parallel for linear(d)
+#pragma omp target teams distribute parallel for
   for (int k = 0; k < 10; ++k)
     e += d + argc;
-// CHECK: #pragma omp target teams distribute parallel for linear(d)
+// CHECK: #pragma omp target teams distribute parallel for
 // CHECK-NEXT: for (int k = 0; k < 10; ++k)
 // CHECK-NEXT: e += d + argc;
   return T();
@@ -161,10 +161,10 @@ int main (int argc, char **argv) {
 // CHECK: #pragma omp target teams distribute parallel for default(none) private(b) firstprivate(argc) shared(d) reduction(+: c) reduction(max: e) num_teams(f) thread_limit(d)
 // CHECK-NEXT: for (int k = 0; k < 10; ++k)
 // CHECK-NEXT: e += d + argc;
-#pragma omp target teams distribute parallel for linear(d)
+#pragma omp target teams distribute parallel for
   for (int k = 0; k < 10; ++k)
     e += d + argc;
-// CHECK: #pragma omp target teams distribute parallel for linear(d)
+// CHECK: #pragma omp target teams distribute parallel for
 // CHECK-NEXT: for (int k = 0; k < 10; ++k)
 // CHECK-NEXT: e += d + argc;
   return (0);

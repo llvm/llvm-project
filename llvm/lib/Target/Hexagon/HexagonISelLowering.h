@@ -51,7 +51,6 @@ namespace HexagonISD {
       CP,          // Constant pool.
 
       COMBINE,
-      PACKHL,
       VSPLAT,
       VASL,
       VASR,
@@ -117,13 +116,17 @@ namespace HexagonISD {
 
     SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
     const char *getTargetNodeName(unsigned Opcode) const override;
+
+    SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerEXTRACT_VECTOR(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerEXTRACT_SUBVECTOR_HVX(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerINSERT_VECTOR(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerINSERT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerVECTOR_SHIFT(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
+
     SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerPREFETCH(SDValue Op, SelectionDAG &DAG) const;
@@ -269,11 +272,24 @@ namespace HexagonISD {
       return AtomicExpansionKind::LLSC;
     }
 
-  protected:
+  private:
+    MVT ty(SDValue Op) const {
+      return Op.getValueType().getSimpleVT();
+    }
+    MVT tyScalar(MVT Ty) const {
+      if (!Ty.isVector())
+        return Ty;
+      return MVT::getIntegerVT(Ty.getSizeInBits());
+    }
+
     SDValue buildVector32(ArrayRef<SDValue> Elem, const SDLoc &dl, MVT VecTy,
                           SelectionDAG &DAG) const;
     SDValue buildVector64(ArrayRef<SDValue> Elem, const SDLoc &dl, MVT VecTy,
                           SelectionDAG &DAG) const;
+    SDValue extractVector(SDValue VecV, SDValue IdxV, const SDLoc &dl,
+                          MVT ValTy, MVT ResTy, SelectionDAG &DAG) const;
+    SDValue insertVector(SDValue VecV, SDValue ValV, SDValue IdxV,
+                         const SDLoc &dl, MVT ValTy, SelectionDAG &DAG) const;
 
     std::pair<const TargetRegisterClass*, uint8_t>
     findRepresentativeClass(const TargetRegisterInfo *TRI, MVT VT)

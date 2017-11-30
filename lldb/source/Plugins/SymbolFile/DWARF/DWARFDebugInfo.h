@@ -61,8 +61,6 @@ public:
   DWARFDebugAranges &GetCompileUnitAranges();
 
 protected:
-  typedef std::shared_ptr<DWARFCompileUnit> DWARFCompileUnitSP;
-
   static bool OffsetLessThanCompileUnitOffset(dw_offset_t offset,
                                               const DWARFCompileUnitSP &cu_sp);
 

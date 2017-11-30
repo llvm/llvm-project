@@ -205,12 +205,9 @@ const EHPersonality &EHPersonality::get(CodeGenModule &CGM,
   if (T.isWindowsMSVCEnvironment() && !L.ObjC1) {
     if (L.SjLjExceptions)
       return EHPersonality::GNU_CPlusPlus_SJLJ;
-    if (L.SEHExceptions)
-      return EHPersonality::GNU_CPlusPlus_SEH;
     if (L.DWARFExceptions)
       return EHPersonality::GNU_CPlusPlus;
-    else
-      return EHPersonality::MSVC_CxxFrameHandler3;
+    return EHPersonality::MSVC_CxxFrameHandler3;
   }
 
   if (L.CPlusPlus && L.ObjC1)

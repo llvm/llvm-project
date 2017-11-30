@@ -1143,7 +1143,11 @@ SCEVExpander::getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
 
     for (auto &I : *L->getHeader()) {
       auto *PN = dyn_cast<PHINode>(&I);
-      if (!PN || !SE.isSCEVable(PN->getType()))
+      // Found first non-phi, the rest of instructions are also not Phis.
+      if (!PN)
+        break;
+
+      if (!SE.isSCEVable(PN->getType()))
         continue;
 
       const SCEVAddRecExpr *PhiSCEV = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(PN));

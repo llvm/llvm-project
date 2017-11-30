@@ -18,6 +18,8 @@ class NameToDIE;
 class SymbolFileDWARF;
 class SymbolFileDWARFDwo;
 
+typedef std::shared_ptr<DWARFCompileUnit> DWARFCompileUnitSP;
+
 class DWARFCompileUnit {
 public:
   enum Producer {
@@ -28,17 +30,15 @@ public:
     eProcucerOther
   };
 
-  DWARFCompileUnit(SymbolFileDWARF *dwarf2Data);
+  static DWARFCompileUnitSP Extract(SymbolFileDWARF *dwarf2Data,
+      lldb::offset_t *offset_ptr);
   ~DWARFCompileUnit();
 
-  bool Extract(const lldb_private::DWARFDataExtractor &debug_info,
-               lldb::offset_t *offset_ptr);
   size_t ExtractDIEsIfNeeded(bool cu_die_only);
   DWARFDIE LookupAddress(const dw_addr_t address);
   size_t AppendDIEsWithTag(const dw_tag_t tag,
                            DWARFDIECollection &matching_dies,
                            uint32_t depth = UINT32_MAX) const;
-  void Clear();
   bool Verify(lldb_private::Stream *s) const;
   void Dump(lldb_private::Stream *s) const;
   // Offset of the initial length field.
@@ -163,7 +163,7 @@ protected:
   SymbolFileDWARF *m_dwarf2Data;
   std::unique_ptr<SymbolFileDWARFDwo> m_dwo_symbol_file;
   const DWARFAbbreviationDeclarationSet *m_abbrevs;
-  void *m_user_data;
+  void *m_user_data = nullptr;
   DWARFDebugInfoEntry::collection
       m_die_array; // The compile unit debug information entry item
   std::unique_ptr<DWARFDebugAranges> m_func_aranges_ap; // A table similar to
@@ -172,24 +172,24 @@ protected:
                                                         // points to the exact
                                                         // DW_TAG_subprogram
                                                         // DIEs
-  dw_addr_t m_base_addr;
+  dw_addr_t m_base_addr = 0;
   // Offset of the initial length field.
   dw_offset_t m_offset;
   dw_offset_t m_length;
   uint16_t m_version;
   uint8_t m_addr_size;
-  Producer m_producer;
-  uint32_t m_producer_version_major;
-  uint32_t m_producer_version_minor;
-  uint32_t m_producer_version_update;
-  lldb::LanguageType m_language_type;
+  Producer m_producer = eProducerInvalid;
+  uint32_t m_producer_version_major = 0;
+  uint32_t m_producer_version_minor = 0;
+  uint32_t m_producer_version_update = 0;
+  lldb::LanguageType m_language_type = lldb::eLanguageTypeUnknown;
   bool m_is_dwarf64;
-  lldb_private::LazyBool m_is_optimized;
-  dw_addr_t m_addr_base;         // Value of DW_AT_addr_base
-  dw_addr_t m_ranges_base;       // Value of DW_AT_ranges_base
-  dw_offset_t m_base_obj_offset; // If this is a dwo compile unit this is the
-                                 // offset of the base compile unit in the main
-                                 // object file
+  lldb_private::LazyBool m_is_optimized = lldb_private::eLazyBoolCalculate;
+  dw_addr_t m_addr_base = 0;     // Value of DW_AT_addr_base
+  dw_addr_t m_ranges_base = 0;   // Value of DW_AT_ranges_base
+  // If this is a dwo compile unit this is the offset of the base compile unit
+  // in the main object file
+  dw_offset_t m_base_obj_offset = DW_INVALID_OFFSET;
 
   void ParseProducerInfo();
 
@@ -202,6 +202,8 @@ protected:
                NameToDIE &globals, NameToDIE &types, NameToDIE &namespaces);
 
 private:
+  DWARFCompileUnit(SymbolFileDWARF *dwarf2Data);
+
   const DWARFDebugInfoEntry *GetCompileUnitDIEPtrOnly() {
     ExtractDIEsIfNeeded(true);
     if (m_die_array.empty())

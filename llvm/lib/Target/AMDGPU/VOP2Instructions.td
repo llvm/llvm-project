@@ -128,15 +128,20 @@ class getVOP2Pat64 <SDPatternOperator node, VOPProfile P> : LetDummies {
 multiclass VOP2Inst <string opName,
                      VOPProfile P,
                      SDPatternOperator node = null_frag,
-                     string revOp = opName> {
+                     string revOp = opName,
+                     bit GFX9Renamed = 0> {
 
-  def _e32 : VOP2_Pseudo <opName, P>,
-             Commutable_REV<revOp#"_e32", !eq(revOp, opName)>;
+  let renamedInGFX9 = GFX9Renamed in {
 
-  def _e64 : VOP3_Pseudo <opName, P, getVOP2Pat64<node, P>.ret>,
-             Commutable_REV<revOp#"_e64", !eq(revOp, opName)>;
+    def _e32 : VOP2_Pseudo <opName, P>,
+               Commutable_REV<revOp#"_e32", !eq(revOp, opName)>;
 
-  def _sdwa  : VOP2_SDWA_Pseudo <opName, P>;
+    def _e64 : VOP3_Pseudo <opName, P, getVOP2Pat64<node, P>.ret>,
+               Commutable_REV<revOp#"_e64", !eq(revOp, opName)>;
+
+    def _sdwa  : VOP2_SDWA_Pseudo <opName, P>;
+
+  }
 }
 
 multiclass VOP2bInst <string opName,
@@ -381,9 +386,9 @@ defm V_SUBBREV_U32 : VOP2bInst <"v_subbrev_u32", VOP2b_I32_I1_I32_I32_I1, null_f
 
 
 let SubtargetPredicate = HasAddNoCarryInsts in {
-defm V_ADD_U32 : VOP2Inst <"v_add_u32", VOP_I32_I32_I32>;
-defm V_SUB_U32 : VOP2Inst <"v_sub_u32", VOP_I32_I32_I32>;
-defm V_SUBREV_U32 : VOP2Inst <"v_subrev_u32", VOP_I32_I32_I32, null_frag, "v_sub_u32">;
+defm V_ADD_U32 : VOP2Inst <"v_add_u32", VOP_I32_I32_I32, null_frag, "v_add_u32", 1>;
+defm V_SUB_U32 : VOP2Inst <"v_sub_u32", VOP_I32_I32_I32, null_frag, "v_sub_u32", 1>;
+defm V_SUBREV_U32 : VOP2Inst <"v_subrev_u32", VOP_I32_I32_I32, null_frag, "v_sub_u32", 1>;
 }
 
 } // End isCommutable = 1

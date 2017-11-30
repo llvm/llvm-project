@@ -272,6 +272,9 @@ LANGOPT(SanitizeAddressFieldPadding, 2, 0, "controls how aggressive is ASan "
                                            "aggressive, 2: more aggressive)")
 
 LANGOPT(XRayInstrument, 1, 0, "controls whether to do XRay instrumentation")
+LANGOPT(XRayAlwaysEmitCustomEvents, 1, 0,
+        "controls whether to always emit intrinsic calls to "
+        "__xray_customevent(...) builtin.")
 
 BENIGN_LANGOPT(AllowEditorPlaceholders, 1, 0,
                "allow editor placeholders in source")

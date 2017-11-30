@@ -18,6 +18,39 @@ define i32 @a(i1 zeroext %x, i1 zeroext %y) {
   ret i32 %add
 }
 
+define i32 @zextsub(i1 %x) {
+; CHECK-LABEL: @zextsub(
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 %x to i32
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 11, [[ZEXT]]
+; CHECK-NEXT:    ret i32 [[SUB]]
+;
+  %zext = zext i1 %x to i32
+  %sub = sub i32 11, %zext
+  ret i32 %sub
+}
+
+define <2 x i32> @zextsub_splat(<2 x i1> %x) {
+; CHECK-LABEL: @zextsub_splat(
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i1> %x to <2 x i32>
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <2 x i32> <i32 42, i32 42>, [[ZEXT]]
+; CHECK-NEXT:    ret <2 x i32> [[SUB]]
+;
+  %zext = zext <2 x i1> %x to <2 x i32>
+  %sub = sub <2 x i32> <i32 42, i32 42>, %zext
+  ret <2 x i32> %sub
+}
+
+define <2 x i32> @zextsub_vec(<2 x i1> %x) {
+; CHECK-LABEL: @zextsub_vec(
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i1> %x to <2 x i32>
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <2 x i32> <i32 11, i32 42>, [[ZEXT]]
+; CHECK-NEXT:    ret <2 x i32> [[SUB]]
+;
+  %zext = zext <2 x i1> %x to <2 x i32>
+  %sub = sub <2 x i32> <i32 11, i32 42>, %zext
+  ret <2 x i32> %sub
+}
+
 define i32 @PR30273_select(i1 %a, i1 %b) {
 ; CHECK-LABEL: @PR30273_select(
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 %a to i32

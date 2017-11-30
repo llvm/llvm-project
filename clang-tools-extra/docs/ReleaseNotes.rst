@@ -57,113 +57,9 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
-- New `objc-avoid-spinlock
-  <http://clang.llvm.org/extra/clang-tidy/checks/objc-avoid-spinlock.html>`_ check
-
-  Add new check to detect the use of OSSpinlock.
-
-- The 'misc-move-const-arg' check was renamed to `performance-move-const-arg
-  <http://clang.llvm.org/extra/clang-tidy/checks/performance-move-const-arg.html>`_
-
-- The 'misc-noexcept-move-constructor' check was renamed to `performance-noexcept-move-constructor
-  <http://clang.llvm.org/extra/clang-tidy/checks/performance-noexcept-move-constructor.html>`_
-
-- The 'misc-move-constructor-init' check was renamed to `performance-move-constructor-init
-  <http://clang.llvm.org/extra/clang-tidy/checks/performance-move-constructor-init.html>`_
-
-- The 'misc-inefficient-algorithm' check was renamed to `performance-inefficient-algorithm
-  <http://clang.llvm.org/extra/clang-tidy/checks/performance-inefficient-algorithm.html>`_
-
-- The 'misc-virtual-near-miss' check was renamed to `bugprone-virtual-near-miss
-  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-virtual-near-miss.html>`_
-
-- The 'misc-use-after-move' check was renamed to `bugprone-use-after-move
-  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-use-after-move.html>`_
-
-- The 'misc-multiple-statement-macro' check was renamed to `bugprone-multiple-statement-macro
-  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-multiple-statement-macro.html>`_
-
-- The 'misc-move-forwarding-reference' check was renamed to `bugprone-move-forwarding-reference
-  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-move-forwarding-reference.html>`_
-
-- The 'misc-inaccurate-erase' check was renamed to `bugprone-inaccurate-erase
-  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-inaccurate-erase.html>`_
-
-- The 'misc-forward-declaration-namespace' check was renamed to `bugprone-forward-declaration-namespace
-  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-forward-declaration-namespace.html>`_
-
-- The 'misc-fold-init-type' check was renamed to `bugprone-fold-init-type
-  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-fold-init-type.html>`_
-
-- The 'misc-bool-pointer-implicit-conversion' check was renamed to `bugprone-bool-pointer-implicit-conversion
-  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-bool-pointer-implicit-conversion.html>`_
-
-- The 'misc-assert-side-effect' check was renamed to `bugprone-assert-side-effect
-  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-assert-side-effect.html>`_
-
-- The 'misc-dangling-handle' check was renamed to `bugprone-dangling-handle
-  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-dangling-handle.html>`_
-
-- The 'misc-argument-comment' check was renamed to `bugprone-argument-comment
-  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-argument-comment.html>`_
-
-- The 'misc-string-constructor' check was renamed to `bugprone-string-constructor
-  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-string-constructor.html>`_
-
-- New `fuchsia-default-arguments
-  <http://clang.llvm.org/extra/clang-tidy/checks/fuchsia-default-arguments.html>`_ check
-
-  Warns if a function or method is declared or called with default arguments.
-
-- New `google-avoid-throwing-objc-exception
-  <http://clang.llvm.org/extra/clang-tidy/checks/google-objc-avoid-throwing-exception.html>`_ check
-
-  Add new check to detect throwing exceptions in Objective-C code, which should be avoided.
-
-- New `objc-property-declaration
-  <http://clang.llvm.org/extra/clang-tidy/checks/objc-property-declaration.html>`_ check
-
-  Add new check for Objective-C code to ensure property
-  names follow the naming convention of Apple's programming
-  guide.
-
-- New `google-objc-global-variable-declaration
-  <http://clang.llvm.org/extra/clang-tidy/checks/google-global-variable-declaration.html>`_ check
-
-  Add new check for Objective-C code to ensure global 
-  variables follow the naming convention of 'k[A-Z].*' (for constants) 
-  or 'g[A-Z].*' (for variables).
+- New module `fuchsia` for Fuchsia style checks.
 
 - New module `objc` for Objective-C style checks.
-
-- New `objc-forbidden-subclassing
-  <http://clang.llvm.org/extra/clang-tidy/checks/objc-forbidden-subclassing.html>`_ check
-
-  Ensures Objective-C classes do not subclass any classes which are
-  not intended to be subclassed. Includes a list of classes from Foundation
-  and UIKit which are documented as not supporting subclassing.
-
-- New `bugprone-misplaced-operator-in-strlen-in-alloc
-  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-misplaced-operator-in-strlen-in-alloc.html>`_ check
-
-  Finds cases where ``1`` is added to the string in the argument to
-  ``strlen()``, ``strnlen()``, ``strnlen_s()``, ``wcslen()``, ``wcsnlen()``, and
-  ``wcsnlen_s()`` instead of the result and the value is used as an argument to
-  a memory allocation function (``malloc()``, ``calloc()``, ``realloc()``,
-  ``alloca()``) or the ``new[]`` operator in `C++`.
-
-- Renamed checks to use correct term "implicit conversion" instead of "implicit
-  cast" and modified messages and option names accordingly:
-
-    * **performance-implicit-cast-in-loop** was renamed to
-      `performance-implicit-conversion-in-loop
-      <http://clang.llvm.org/extra/clang-tidy/checks/performance-implicit-conversion-in-loop.html>`_
-    * **readability-implicit-bool-cast** was renamed to
-      `readability-implicit-bool-conversion
-      <http://clang.llvm.org/extra/clang-tidy/checks/readability-implicit-bool-conversion.html>`_;
-      the check's options were renamed as follows:
-      ``AllowConditionalIntegerCasts`` -> ``AllowIntegerConditions``,
-      ``AllowConditionalPointerCasts`` -> ``AllowPointerConditions``.
 
 - New `android-cloexec-accept
   <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-accept.html>`_ check
@@ -181,10 +77,10 @@ Improvements to clang-tidy
 
   Detects usage of ``dup()``.
 
-- New `android-cloexec-inotify-init
-  <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-inotify-init.html>`_ check
+- New `android-cloexec-epoll-create
+  <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-epoll-create.html>`_ check
 
-  Detects usage of ``inotify_init()``.
+  Detects usage of ``epoll_create()``.
 
 - New `android-cloexec-epoll-create1
   <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-epoll-create1.html>`_ check
@@ -192,10 +88,16 @@ Improvements to clang-tidy
   Checks if the required file flag ``EPOLL_CLOEXEC`` is present in the argument of
   ``epoll_create1()``.
 
-- New `android-cloexec-epoll-create
-  <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-epoll-create.html>`_ check
+- New `android-cloexec-inotify-init
+  <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-inotify-init.html>`_ check
 
-  Detects usage of ``epoll_create()``.
+  Detects usage of ``inotify_init()``.
+
+- New `android-cloexec-inotify-init1
+  <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-inotify-init1.html>`_ check
+
+  Checks if the required file flag ``IN_CLOEXEC`` is present in the argument of
+  ``inotify_init1()``.
 
 - New `android-cloexec-memfd_create
   <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-memfd_create.html>`_ check
@@ -214,10 +116,35 @@ Improvements to clang-tidy
   Finds cases where integer division in a floating point context is likely to
   cause unintended loss of precision.
 
+- New `bugprone-misplaced-operator-in-strlen-in-alloc
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-misplaced-operator-in-strlen-in-alloc.html>`_ check
+
+  Finds cases where ``1`` is added to the string in the argument to
+  ``strlen()``, ``strnlen()``, ``strnlen_s()``, ``wcslen()``, ``wcsnlen()``, and
+  ``wcsnlen_s()`` instead of the result and the value is used as an argument to
+  a memory allocation function (``malloc()``, ``calloc()``, ``realloc()``,
+  ``alloca()``) or the ``new[]`` operator in `C++`.
+
 - New `cppcoreguidelines-owning-memory <http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-owning-memory.html>`_ check 
 
   This check implements the type-based semantic of ``gsl::owner<T*>``, but without
   flow analysis.
+
+- New `fuchsia-default-arguments
+  <http://clang.llvm.org/extra/clang-tidy/checks/fuchsia-default-arguments.html>`_ check
+
+  Warns if a function or method is declared or called with default arguments.
+
+- New `google-objc-avoid-throwing-exception
+  <http://clang.llvm.org/extra/clang-tidy/checks/google-objc-avoid-throwing-exception.html>`_ check
+
+  Add new check to detect throwing exceptions in Objective-C code, which should be avoided.
+
+- New `google-objc-global-variable-declaration
+  <http://clang.llvm.org/extra/clang-tidy/checks/google-global-variable-declaration.html>`_ check
+
+  Add new check for Objective-C code to ensure global variables follow the
+  naming convention of 'k[A-Z].*' (for constants) or 'g[A-Z].*' (for variables).
 
 - New `hicpp-exception-baseclass
   <http://clang.llvm.org/extra/clang-tidy/checks/hicpp-exception-baseclass.html>`_ check
@@ -231,17 +158,85 @@ Improvements to clang-tidy
   Finds uses of bitwise operations on signed integer types, which may lead to 
   undefined or implementation defined behaviour.
 
-- New `android-cloexec-inotify-init1
-  <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-inotify-init1.html>`_ check
+- New `objc-avoid-spinlock
+  <http://clang.llvm.org/extra/clang-tidy/checks/objc-avoid-spinlock.html>`_ check
 
-  Checks if the required file flag ``IN_CLOEXEC`` is present in the argument of
-  ``inotify_init1()``.
+  Finds usages of ``OSSpinlock``, which is deprecated due to potential livelock
+  problems.
+
+- New `objc-forbidden-subclassing
+  <http://clang.llvm.org/extra/clang-tidy/checks/objc-forbidden-subclassing.html>`_ check
+
+  Ensures Objective-C classes do not subclass any classes which are
+  not intended to be subclassed. Includes a list of classes from Foundation
+  and UIKit which are documented as not supporting subclassing.
+
+- New `objc-property-declaration
+  <http://clang.llvm.org/extra/clang-tidy/checks/objc-property-declaration.html>`_ check
+
+  Add new check for Objective-C code to ensure property names follow the naming
+  convention of Apple's programming guide.
 
 - New `readability-static-accessed-through-instance
   <http://clang.llvm.org/extra/clang-tidy/checks/readability-static-accessed-through-instance.html>`_ check
 
   Finds member expressions that access static members through instances and
   replaces them with uses of the appropriate qualified-id.
+
+- The 'misc-argument-comment' check was renamed to `bugprone-argument-comment
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-argument-comment.html>`_
+
+- The 'misc-assert-side-effect' check was renamed to `bugprone-assert-side-effect
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-assert-side-effect.html>`_
+
+- The 'misc-bool-pointer-implicit-conversion' check was renamed to `bugprone-bool-pointer-implicit-conversion
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-bool-pointer-implicit-conversion.html>`_
+
+- The 'misc-dangling-handle' check was renamed to `bugprone-dangling-handle
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-dangling-handle.html>`_
+
+- The 'misc-fold-init-type' check was renamed to `bugprone-fold-init-type
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-fold-init-type.html>`_
+
+- The 'misc-forward-declaration-namespace' check was renamed to `bugprone-forward-declaration-namespace
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-forward-declaration-namespace.html>`_
+
+- The 'misc-inaccurate-erase' check was renamed to `bugprone-inaccurate-erase
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-inaccurate-erase.html>`_
+
+- The 'misc-inefficient-algorithm' check was renamed to `performance-inefficient-algorithm
+  <http://clang.llvm.org/extra/clang-tidy/checks/performance-inefficient-algorithm.html>`_
+
+- The 'misc-move-const-arg' check was renamed to `performance-move-const-arg
+  <http://clang.llvm.org/extra/clang-tidy/checks/performance-move-const-arg.html>`_
+
+- The 'misc-move-constructor-init' check was renamed to `performance-move-constructor-init
+  <http://clang.llvm.org/extra/clang-tidy/checks/performance-move-constructor-init.html>`_
+
+- The 'misc-move-forwarding-reference' check was renamed to `bugprone-move-forwarding-reference
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-move-forwarding-reference.html>`_
+
+- The 'misc-multiple-statement-macro' check was renamed to `bugprone-multiple-statement-macro
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-multiple-statement-macro.html>`_
+
+- The 'misc-noexcept-move-constructor' check was renamed to `performance-noexcept-move-constructor
+  <http://clang.llvm.org/extra/clang-tidy/checks/performance-noexcept-move-constructor.html>`_
+
+- The 'misc-string-constructor' check was renamed to `bugprone-string-constructor
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-string-constructor.html>`_
+
+- The 'misc-use-after-move' check was renamed to `bugprone-use-after-move
+  <http://clang.llvm.org/extra/clang-tidy/checks/bugprone-use-after-move.html>`_
+
+- The 'performance-implicit-cast-in-loop' check was renamed to `performance-implicit-conversion-in-loop
+  <http://clang.llvm.org/extra/clang-tidy/checks/performance-implicit-conversion-in-loop.html>`_
+
+- The 'readability-implicit-bool-cast' check was renamed to `readability-implicit-bool-conversion
+  <http://clang.llvm.org/extra/clang-tidy/checks/readability-implicit-bool-conversion.html>`_
+
+    The check's options were renamed as follows:
+    - `AllowConditionalIntegerCasts` -> `AllowIntegerConditions`,
+    - `AllowConditionalPointerCasts` -> `AllowPointerConditions`.
 
 - Added `modernize-use-emplace.IgnoreImplicitConstructors
   <http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-emplace.html#cmdoption-arg-IgnoreImplicitConstructors>`_

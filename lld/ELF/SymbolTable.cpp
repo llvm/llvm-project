@@ -421,8 +421,7 @@ static void warnOrError(const Twine &Msg) {
 
 static void reportDuplicate(Symbol *Sym, InputFile *NewFile) {
   warnOrError("duplicate symbol: " + toString(*Sym) + "\n>>> defined in " +
-              toString(Sym->getFile()) + "\n>>> defined in " +
-              toString(NewFile));
+              toString(Sym->File) + "\n>>> defined in " + toString(NewFile));
 }
 
 template <class ELFT>

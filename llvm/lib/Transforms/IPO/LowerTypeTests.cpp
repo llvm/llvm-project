@@ -1706,7 +1706,7 @@ bool LowerTypeTestsModule::lower() {
         GlobalTypeMember::create(Alloc, &GO, IsDefinition, IsExported, Types);
     for (MDNode *Type : Types) {
       verifyTypeMDNode(&GO, Type);
-      auto &Info = TypeIdInfo[cast<MDNode>(Type)->getOperand(1)];
+      auto &Info = TypeIdInfo[Type->getOperand(1)];
       Info.Index = ++I;
       Info.RefGlobals.push_back(GTM);
     }

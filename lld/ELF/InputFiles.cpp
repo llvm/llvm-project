@@ -471,6 +471,8 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
 
   switch (Sec.sh_type) {
   case SHT_ARM_ATTRIBUTES: {
+    if (Config->EMachine != EM_ARM)
+      break;
     ARMAttributeParser Attributes;
     ArrayRef<uint8_t> Contents = check(this->getObj().getSectionContents(&Sec));
     Attributes.Parse(Contents, /*isLittle*/Config->EKind == ELF32LEKind);
@@ -633,9 +635,9 @@ template <class ELFT> Symbol *ObjFile<ELFT>::createSymbol(const Elf_Sym *Sym) {
 
     StringRefZ Name = this->StringTable.data() + Sym->st_name;
     if (Sym->st_shndx == SHN_UNDEF)
-      return make<Undefined>(Name, Binding, StOther, Type);
+      return make<Undefined>(this, Name, Binding, StOther, Type);
 
-    return make<Defined>(Name, Binding, StOther, Type, Value, Size, Sec);
+    return make<Defined>(this, Name, Binding, StOther, Type, Value, Size, Sec);
   }
 
   StringRef Name = check(Sym->getName(this->StringTable), toString(this));

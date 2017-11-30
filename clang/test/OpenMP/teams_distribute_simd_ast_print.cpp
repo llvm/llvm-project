@@ -29,9 +29,10 @@ public:
       ++this->a.a;
   }
   S7 &operator=(S7 &s) {
+    int k;
 #pragma omp target
-#pragma omp teams distribute simd private(a) private(this->a)
-    for (int k = 0; k < s.a.a; ++k)
+#pragma omp teams distribute simd private(a) private(this->a) linear(k)
+    for (k = 0; k < s.a.a; ++k)
       ++s.a.a;
     return *this;
   }
@@ -56,7 +57,7 @@ public:
 // CHECK: #pragma omp target
 // CHECK-NEXT: #pragma omp teams distribute simd private(this->a) private(this->a) private(T::a)
 // CHECK: #pragma omp target
-// CHECK-NEXT: #pragma omp teams distribute simd private(this->a) private(this->a)
+// CHECK-NEXT: #pragma omp teams distribute simd private(this->a) private(this->a) linear(k)
 // CHECK: #pragma omp target
 // CHECK-NEXT: #pragma omp teams distribute simd default(none) private(b) firstprivate(argv) shared(d) reduction(+: c) reduction(max: e) num_teams(f) thread_limit(d)
 // CHECK: #pragma omp target
@@ -155,11 +156,11 @@ T tmain(T argc) {
 // CHECK-NEXT: for (int k = 0; k < 10; ++k)
 // CHECK-NEXT: e += d + argc;
 #pragma omp target
-#pragma omp teams distribute simd simdlen(clen-1) linear(d)
+#pragma omp teams distribute simd simdlen(clen-1)
   for (int k = 0; k < 10; ++k)
     e += d + argc;
 // CHECK: #pragma omp target
-// CHECK-NEXT: #pragma omp teams distribute simd simdlen(clen - 1) linear(d)
+// CHECK-NEXT: #pragma omp teams distribute simd simdlen(clen - 1)
 // CHECK-NEXT: for (int k = 0; k < 10; ++k)
 // CHECK-NEXT: e += d + argc;
 #pragma omp target
@@ -218,11 +219,11 @@ int main (int argc, char **argv) {
 // CHECK-NEXT: for (int k = 0; k < 10; ++k)
 // CHECK-NEXT: e += d + argc;
 #pragma omp target
-#pragma omp teams distribute simd simdlen(clen-1) linear(d)
+#pragma omp teams distribute simd simdlen(clen-1)
   for (int k = 0; k < 10; ++k)
     e += d + argc;
 // CHECK: #pragma omp target
-// CHECK-NEXT: #pragma omp teams distribute simd simdlen(clen - 1) linear(d)
+// CHECK-NEXT: #pragma omp teams distribute simd simdlen(clen - 1)
 // CHECK-NEXT: for (int k = 0; k < 10; ++k)
 // CHECK-NEXT: e += d + argc;
 #pragma omp target

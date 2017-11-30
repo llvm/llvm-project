@@ -161,19 +161,16 @@ static ArrayRef<uint8_t> getDebugSection(ObjFile *File, StringRef SecName) {
 }
 
 static void addTypeInfo(pdb::TpiStreamBuilder &TpiBuilder,
-                        TypeTableBuilder &TypeTable) {
+                        TypeCollection &TypeTable) {
   // Start the TPI or IPI stream header.
   TpiBuilder.setVersionHeader(pdb::PdbTpiV80);
 
   // Flatten the in memory type table and hash each type.
-  TypeTable.ForEachRecord([&](TypeIndex TI, ArrayRef<uint8_t> Rec) {
-    assert(Rec.size() >= sizeof(RecordPrefix));
-    const RecordPrefix *P = reinterpret_cast<const RecordPrefix *>(Rec.data());
-    CVType Type(static_cast<TypeLeafKind>(unsigned(P->RecordKind)), Rec);
+  TypeTable.ForEachRecord([&](TypeIndex TI, const CVType &Type) {
     auto Hash = pdb::hashTypeRecord(Type);
     if (auto E = Hash.takeError())
       fatal("type hashing error");
-    TpiBuilder.addTypeRecord(Rec, *Hash);
+    TpiBuilder.addTypeRecord(Type.RecordData, *Hash);
   });
 }
 
@@ -308,7 +305,6 @@ static bool remapTypeIndex(TypeIndex &TI, ArrayRef<TypeIndex> TypeIndexMap) {
 static void remapTypesInSymbolRecord(ObjFile *File, SymbolKind SymKind,
                                      MutableArrayRef<uint8_t> Contents,
                                      const CVIndexMap &IndexMap,
-                                     const TypeTableBuilder &IDTable,
                                      ArrayRef<TiReference> TypeRefs) {
   for (const TiReference &Ref : TypeRefs) {
     unsigned ByteSize = Ref.Count * sizeof(TypeIndex);
@@ -343,7 +339,7 @@ static SymbolKind symbolKind(ArrayRef<uint8_t> RecordData) {
 
 /// MSVC translates S_PROC_ID_END to S_END, and S_[LG]PROC32_ID to S_[LG]PROC32
 static void translateIdSymbols(MutableArrayRef<uint8_t> &RecordData,
-                               const TypeTableBuilder &IDTable) {
+                               TypeCollection &IDTable) {
   RecordPrefix *Prefix = reinterpret_cast<RecordPrefix *>(RecordData.data());
 
   SymbolKind Kind = symbolKind(RecordData);
@@ -373,7 +369,7 @@ static void translateIdSymbols(MutableArrayRef<uint8_t> &RecordData,
     // Note that LF_FUNC_ID and LF_MEMFUNC_ID have the same record layout, and
     // in both cases we just need the second type index.
     if (!TI->isSimple() && !TI->isNoneType()) {
-      ArrayRef<uint8_t> FuncIdData = IDTable.records()[TI->toArrayIndex()];
+      CVType FuncIdData = IDTable.getType(*TI);
       SmallVector<TypeIndex, 2> Indices;
       discoverTypeIndices(FuncIdData, Indices);
       assert(Indices.size() == 2);
@@ -550,7 +546,7 @@ static void addGlobalSymbol(pdb::GSIStreamBuilder &Builder, ObjFile &File,
 static void mergeSymbolRecords(BumpPtrAllocator &Alloc, ObjFile *File,
                                pdb::GSIStreamBuilder &GsiBuilder,
                                const CVIndexMap &IndexMap,
-                               const TypeTableBuilder &IDTable,
+                               TypeCollection &IDTable,
                                BinaryStreamRef SymData) {
   // FIXME: Improve error recovery by warning and skipping records when
   // possible.
@@ -573,8 +569,7 @@ static void mergeSymbolRecords(BumpPtrAllocator &Alloc, ObjFile *File,
     // Re-map all the type index references.
     MutableArrayRef<uint8_t> Contents =
         NewData.drop_front(sizeof(RecordPrefix));
-    remapTypesInSymbolRecord(File, Sym.kind(), Contents, IndexMap, IDTable,
-                             TypeRefs);
+    remapTypesInSymbolRecord(File, Sym.kind(), Contents, IndexMap, TypeRefs);
 
     // An object file may have S_xxx_ID symbols, but these get converted to
     // "real" symbols in a PDB.

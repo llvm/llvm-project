@@ -93,7 +93,7 @@ static uint64_t getSymVA(const Symbol &Sym, int64_t &Addend) {
 
     if (D.isTls() && !Config->Relocatable) {
       if (!Out::TlsPhdr)
-        fatal(toString(D.getFile()) +
+        fatal(toString(D.File) +
               " has an STT_TLS symbol but doesn't have an SHF_TLS section");
       return VA - Out::TlsPhdr->p_vaddr;
     }
@@ -121,17 +121,6 @@ static uint64_t getSymVA(const Symbol &Sym, int64_t &Addend) {
 bool Symbol::isUndefWeak() const {
   // See comment on Lazy in Symbols.h for the details.
   return !isLocal() && isWeak() && (isUndefined() || isLazy());
-}
-
-InputFile *Symbol::getFile() const {
-  if (isLocal()) {
-    const SectionBase *Sec = cast<Defined>(this)->Section;
-    // Local absolute symbols actually have a file, but that is not currently
-    // used. We could support that by having a mostly redundant InputFile in
-    // Symbol, or having a special absolute section if needed.
-    return Sec ? cast<InputSectionBase>(Sec)->File : nullptr;
-  }
-  return File;
 }
 
 uint64_t Symbol::getVA(int64_t Addend) const {
@@ -226,7 +215,7 @@ void Symbol::parseSymbolVersion() {
   // but we may still want to override a versioned symbol from DSO,
   // so we do not report error in this case.
   if (Config->Shared)
-    error(toString(getFile()) + ": symbol " + S + " has undefined version " +
+    error(toString(File) + ": symbol " + S + " has undefined version " +
           Verstr);
 }
 
@@ -236,9 +225,7 @@ InputFile *Lazy::fetch() {
   return cast<LazyObject>(this)->fetch();
 }
 
-ArchiveFile *LazyArchive::getFile() {
-  return cast<ArchiveFile>(Symbol::getFile());
-}
+ArchiveFile *LazyArchive::getFile() { return cast<ArchiveFile>(File); }
 
 InputFile *LazyArchive::fetch() {
   std::pair<MemoryBufferRef, uint64_t> MBInfo = getFile()->getMember(&Sym);
@@ -250,9 +237,7 @@ InputFile *LazyArchive::fetch() {
   return createObjectFile(MBInfo.first, getFile()->getName(), MBInfo.second);
 }
 
-LazyObjFile *LazyObject::getFile() {
-  return cast<LazyObjFile>(Symbol::getFile());
-}
+LazyObjFile *LazyObject::getFile() { return cast<LazyObjFile>(File); }
 
 InputFile *LazyObject::fetch() { return getFile()->fetch(); }
 

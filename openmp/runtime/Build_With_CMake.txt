@@ -51,7 +51,7 @@ How to call cmake initially, then repeatedly
 =====================
 Instructions to Build
 =====================
- $ cd libomp_top_level/ [ directory with src/ , exports/ , tools/ , etc. ]
+ $ cd openmp_top_level/ [ directory with runtime/, etc. ]
  $ mkdir build
  $ cd build
 
@@ -174,7 +174,7 @@ Specifies install location of Hwloc. The configuration system will look for
 hwloc.h in ${LIBOMP_HWLOC_INSTALL_DIR}/include and the library in
 ${LIBOMP_HWLOC_INSTALL_DIR}/lib.
 
--DLIBOMP_LLVM_LIT_EXECUTABLE=/path/to/llvm-lit
+-DOPENMP_LLVM_LIT_EXECUTABLE=/path/to/llvm-lit
 Default: search in PATH
 Specifiy full path to llvm-lit executable for running tests.
 
