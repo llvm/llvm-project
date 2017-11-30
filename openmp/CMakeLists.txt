@@ -48,7 +48,7 @@ include(OpenMPTesting)
 
 set(OPENMP_TEST_FLAGS "" CACHE STRING
   "Extra compiler flags to send to the test compiler.")
-set(OPENMP_TEST_OPENMP_FLAGS "-fopenmp" CACHE STRING
+set(OPENMP_TEST_OPENMP_FLAGS ${OPENMP_TEST_COMPILER_OPENMP_FLAGS} CACHE STRING
   "OpenMP compiler flag to use for testing OpenMP runtime libraries.")
 
 
