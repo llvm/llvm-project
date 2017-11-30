@@ -25,13 +25,13 @@
   ; CHECK: ![[CS3]] = distinct !DILocation(line: 8, column: 3, scope: !{{[0-9]+}})
   ;
   ; CHECK:  bb.1.if.then:
-  ; CHECK:      DBG_VALUE debug-use %ebx, debug-use _, ![[I_VAR]], !DIExpression(), debug-location ![[I_LOC]]
-  ; CHECK-NOT:  DBG_VALUE debug-use %ebx, debug-use _, ![[A_VAR]], !DIExpression(), debug-location
-  ; CHECK:      DBG_VALUE debug-use %ebx, debug-use _, ![[A_VAR]], !DIExpression(), debug-location ![[INLCS2]]
+  ; CHECK:      DBG_VALUE debug-use %ebx, debug-use %noreg, ![[I_VAR]], !DIExpression(), debug-location ![[I_LOC]]
+  ; CHECK-NOT:  DBG_VALUE debug-use %ebx, debug-use %noreg, ![[A_VAR]], !DIExpression(), debug-location
+  ; CHECK:      DBG_VALUE debug-use %ebx, debug-use %noreg, ![[A_VAR]], !DIExpression(), debug-location ![[INLCS2]]
   ; CHECK: bb.2.if.end:
-  ; CHECK:     DBG_VALUE debug-use %ebx, debug-use _, ![[I_VAR]], !DIExpression(), debug-location ![[I_LOC]]
-  ; CHECK-NOT: DBG_VALUE debug-use %ebx, debug-use _, ![[A_VAR]], !DIExpression(), debug-location
-  ; CHECK:     DBG_VALUE debug-use %ebx, debug-use _, ![[A_VAR]], !DIExpression(), debug-location ![[INLCS3]]
+  ; CHECK:     DBG_VALUE debug-use %ebx, debug-use %noreg, ![[I_VAR]], !DIExpression(), debug-location ![[I_LOC]]
+  ; CHECK-NOT: DBG_VALUE debug-use %ebx, debug-use %noreg, ![[A_VAR]], !DIExpression(), debug-location
+  ; CHECK:     DBG_VALUE debug-use %ebx, debug-use %noreg, ![[A_VAR]], !DIExpression(), debug-location ![[INLCS3]]
   ;
   ; ModuleID = 'livedebugvalues-limit.ll'
   source_filename = "livedebugvalues-limit.c"

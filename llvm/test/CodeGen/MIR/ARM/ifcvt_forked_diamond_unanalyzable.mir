@@ -40,9 +40,9 @@ body:             |
 # CHECK:     Bcc %bb.2, 1, %cpsr
 
 # CHECK:   bb.1:
-# CHECK:     %sp = tADDspi %sp, 4, 14, _
-# CHECK:     BX_RET 14, _
+# CHECK:     %sp = tADDspi %sp, 4, 14, %noreg
+# CHECK:     BX_RET 14, %noreg
 
 # CHECK:   bb.2:
-# CHECK:     %sp = tADDspi %sp, 3, 14, _
-# CHECK:     BX_RET 14, _
+# CHECK:     %sp = tADDspi %sp, 3, 14, %noreg
+# CHECK:     BX_RET 14, %noreg

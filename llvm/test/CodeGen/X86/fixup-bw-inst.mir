@@ -53,7 +53,7 @@ body:             |
   bb.0:
     liveins: %rax
 
-    %ax = MOV16rm killed %rax, 1, _, 0, _
+    %ax = MOV16rm killed %rax, 1, %noreg, 0, %noreg
     ; CHECK: %eax = MOVZX32rm16 killed %rax
 
     RETQ %ax
@@ -138,8 +138,8 @@ body:             |
   bb.2.if.then:
     liveins: %rdi
 
-    %ax = MOV16rm killed %rdi, 1, _, 0, _, implicit-def %eax :: (load 2 from %ir.p)
-    ; CHECK: %eax = MOVZX32rm16 killed %rdi, 1, _, 0, _, implicit-def %eax :: (load 2 from %ir.p)
+    %ax = MOV16rm killed %rdi, 1, %noreg, 0, %noreg, implicit-def %eax :: (load 2 from %ir.p)
+    ; CHECK: %eax = MOVZX32rm16 killed %rdi, 1, %noreg, 0, %noreg, implicit-def %eax :: (load 2 from %ir.p)
     %ax = KILL %ax, implicit killed %eax
     RETQ %ax
 

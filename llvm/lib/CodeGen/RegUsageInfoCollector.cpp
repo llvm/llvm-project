@@ -141,7 +141,7 @@ bool RegUsageInfoCollector::runOnMachineFunction(MachineFunction &MF) {
 
   for (unsigned PReg = 1, PRegE = TRI->getNumRegs(); PReg < PRegE; ++PReg)
     if (MachineOperand::clobbersPhysReg(&(RegMask[0]), PReg))
-      DEBUG(dbgs() << TRI->getName(PReg) << " ");
+      DEBUG(dbgs() << printReg(PReg, TRI) << " ");
 
   DEBUG(dbgs() << " \n----------------------------------------\n");
 

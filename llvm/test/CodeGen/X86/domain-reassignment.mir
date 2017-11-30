@@ -165,7 +165,7 @@ body:             |
     %21 = IMPLICIT_DEF
     %20 = VMOVSSZrrk %19, killed %18, killed %21, %5
     %22 = COPY %20
-    VMOVSSZmr %4, 1, _, 0, _, killed %22 :: (store 4 into %ir.fptr)
+    VMOVSSZmr %4, 1, %noreg, 0, %noreg, killed %22 :: (store 4 into %ir.fptr)
     RET 0
 
 ...
@@ -261,7 +261,7 @@ body:             |
     %9 = INSERT_SUBREG %8, %18, 1
     %10 = COPY %9
     %11 = VMOVAPDZrrk %2, killed %10, %1
-    VMOVAPDZmr %0, 1, _, 0, _, killed %11 
+    VMOVAPDZmr %0, 1, %noreg, 0, %noreg, killed %11 
 
     ; CHECK: KTESTBrr %18, %18, implicit-def %eflags
     TEST8rr %18, %18, implicit-def %eflags
@@ -363,7 +363,7 @@ body:             |
     %9 = INSERT_SUBREG %8, %17, 3
     %10 = COPY %9
     %11 = VMOVAPSZrrk %2, killed %10, %1
-    VMOVAPSZmr %0, 1, _, 0, _, killed %11 
+    VMOVAPSZmr %0, 1, %noreg, 0, %noreg, killed %11 
 
     ; CHECK: KTESTWrr %17, %17, implicit-def %eflags
     TEST16rr %17, %17, implicit-def %eflags
@@ -432,7 +432,7 @@ body:             |
     %1 = COPY %zmm0
     %2 = COPY %zmm1
   
-    ; CHECK: %5:vk32 = KMOVDkm %0, 1, _, 0, _
+    ; CHECK: %5:vk32 = KMOVDkm %0, 1, %noreg, 0, %noreg
     ; CHECK: %6:vk32 = KSHIFTRDri %5, 2
     ; CHECK: %7:vk32 = KSHIFTLDri %6, 1
     ; CHECK: %8:vk32 = KNOTDrr %7
@@ -441,7 +441,7 @@ body:             |
     ; CHECK: %11:vk32 = KXORDrr %10, %6
     ; CHECK: %12:vk32 = KANDNDrr %11, %9
     ; CHECK: %13:vk32 = KADDDrr %12, %11
-    %5 = MOV32rm %0, 1, _, 0, _
+    %5 = MOV32rm %0, 1, %noreg, 0, %noreg
     %6 = SHR32ri %5, 2, implicit-def dead %eflags
     %7 = SHL32ri %6, 1, implicit-def dead %eflags
     %8 = NOT32r %7
@@ -454,7 +454,7 @@ body:             |
     ; CHECK: %3:vk32wm = COPY %13
     %3 = COPY %13
     %4 = VMOVDQU16Zrrk %2, killed %3, %1
-    VMOVDQA32Zmr %0, 1, _, 0, _, killed %4
+    VMOVDQA32Zmr %0, 1, %noreg, 0, %noreg, killed %4
 
     ; CHECK: KTESTDrr %13, %13, implicit-def %eflags
     TEST32rr %13, %13, implicit-def %eflags
@@ -523,7 +523,7 @@ body:             |
     %1 = COPY %zmm0
     %2 = COPY %zmm1
   
-    ; CHECK: %5:vk64 = KMOVQkm %0, 1, _, 0, _
+    ; CHECK: %5:vk64 = KMOVQkm %0, 1, %noreg, 0, %noreg
     ; CHECK: %6:vk64 = KSHIFTRQri %5, 2
     ; CHECK: %7:vk64 = KSHIFTLQri %6, 1
     ; CHECK: %8:vk64 = KNOTQrr %7
@@ -532,7 +532,7 @@ body:             |
     ; CHECK: %11:vk64 = KXORQrr %10, %6
     ; CHECK: %12:vk64 = KANDNQrr %11, %9
     ; CHECK: %13:vk64 = KADDQrr %12, %11
-    %5 = MOV64rm %0, 1, _, 0, _
+    %5 = MOV64rm %0, 1, %noreg, 0, %noreg
     %6 = SHR64ri %5, 2, implicit-def dead %eflags
     %7 = SHL64ri %6, 1, implicit-def dead %eflags
     %8 = NOT64r %7
@@ -545,7 +545,7 @@ body:             |
     ; CHECK: %3:vk64wm = COPY %13
     %3 = COPY %13
     %4 = VMOVDQU8Zrrk %2, killed %3, %1
-    VMOVDQA32Zmr %0, 1, _, 0, _, killed %4
+    VMOVDQA32Zmr %0, 1, %noreg, 0, %noreg, killed %4
 
     ; CHECK: KTESTQrr %13, %13, implicit-def %eflags
     TEST64rr %13, %13, implicit-def %eflags
@@ -607,16 +607,16 @@ body:             |
     %1 = COPY %zmm0
     %2 = COPY %zmm1
   
-    ; CHECK: %7:vk8 = KMOVBkm %0, 1, _, 0, _
+    ; CHECK: %7:vk8 = KMOVBkm %0, 1, %noreg, 0, %noreg
     ; CHECK: %5:vk16 = COPY %7
     ; CHECK: %6:vk16 = KNOTWrr %5
-    %5 = MOVZX16rm8 %0, 1, _, 0, _
+    %5 = MOVZX16rm8 %0, 1, %noreg, 0, %noreg
     %6 = NOT16r %5
 
     ; CHECK: %3:vk16wm = COPY %6
     %3 = COPY %6
     %4 = VMOVAPSZrrk %2, killed %3, %1
-    VMOVAPSZmr %0, 1, _, 0, _, killed %4
+    VMOVAPSZmr %0, 1, %noreg, 0, %noreg, killed %4
     RET 0
 
 ...
@@ -670,19 +670,19 @@ body:             |
     %1 = COPY %zmm0
     %2 = COPY %zmm1
   
-    ; CHECK: %8:vk8 = KMOVBkm %0, 1, _, 0, _
+    ; CHECK: %8:vk8 = KMOVBkm %0, 1, %noreg, 0, %noreg
     ; CHECK: %5:vk32 = COPY %8
-    ; CHECK: %9:vk16 = KMOVWkm %0, 1, _, 0, _
+    ; CHECK: %9:vk16 = KMOVWkm %0, 1, %noreg, 0, %noreg
     ; CHECK: %6:vk32 = COPY %9
     ; CHECK: %7:vk32 = KADDDrr %5, %6
-    %5 = MOVZX32rm8 %0, 1, _, 0, _
-    %6 = MOVZX32rm16 %0, 1, _, 0, _
+    %5 = MOVZX32rm8 %0, 1, %noreg, 0, %noreg
+    %6 = MOVZX32rm16 %0, 1, %noreg, 0, %noreg
     %7 = ADD32rr %5, %6, implicit-def dead %eflags
 
     ; CHECK: %3:vk64wm = COPY %7
     %3 = COPY %7
     %4 = VMOVDQU16Zrrk %2, killed %3, %1
-    VMOVDQA32Zmr %0, 1, _, 0, _, killed %4
+    VMOVDQA32Zmr %0, 1, %noreg, 0, %noreg, killed %4
     RET 0
 
 ...
@@ -736,19 +736,19 @@ body:             |
     %1 = COPY %zmm0
     %2 = COPY %zmm1
   
-    ; CHECK: %8:vk8 = KMOVBkm %0, 1, _, 0, _
+    ; CHECK: %8:vk8 = KMOVBkm %0, 1, %noreg, 0, %noreg
     ; CHECK: %5:vk64 = COPY %8
-    ; CHECK: %9:vk16 = KMOVWkm %0, 1, _, 0, _
+    ; CHECK: %9:vk16 = KMOVWkm %0, 1, %noreg, 0, %noreg
     ; CHECK: %6:vk64 = COPY %9
     ; CHECK: %7:vk64 = KADDQrr %5, %6
-    %5 = MOVZX64rm8 %0, 1, _, 0, _
-    %6 = MOVZX64rm16 %0, 1, _, 0, _
+    %5 = MOVZX64rm8 %0, 1, %noreg, 0, %noreg
+    %6 = MOVZX64rm16 %0, 1, %noreg, 0, %noreg
     %7 = ADD64rr %5, %6, implicit-def dead %eflags
 
     ; CHECK: %3:vk64wm = COPY %7
     %3 = COPY %7
     %4 = VMOVDQU8Zrrk %2, killed %3, %1
-    VMOVDQA32Zmr %0, 1, _, 0, _, killed %4
+    VMOVDQA32Zmr %0, 1, %noreg, 0, %noreg, killed %4
     RET 0
 
 ...

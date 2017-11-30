@@ -466,7 +466,7 @@ BreakAntiDependencies(const std::vector<SUnit> &SUnits,
     DEBUG(dbgs() << "Available regs:");
     for (unsigned Reg = 0; Reg < TRI->getNumRegs(); ++Reg) {
       if (KillIndices[Reg] == ~0u)
-        DEBUG(dbgs() << " " << TRI->getName(Reg));
+        DEBUG(dbgs() << " " << printReg(Reg, TRI));
     }
     DEBUG(dbgs() << '\n');
   }
@@ -646,9 +646,9 @@ BreakAntiDependencies(const std::vector<SUnit> &SUnits,
                                                      LastNewReg[AntiDepReg],
                                                      RC, ForbidRegs)) {
         DEBUG(dbgs() << "Breaking anti-dependence edge on "
-              << TRI->getName(AntiDepReg)
-              << " with " << RegRefs.count(AntiDepReg) << " references"
-              << " using " << TRI->getName(NewReg) << "!\n");
+                     << printReg(AntiDepReg, TRI) << " with "
+                     << RegRefs.count(AntiDepReg) << " references"
+                     << " using " << printReg(NewReg, TRI) << "!\n");
 
         // Update the references to the old register to refer to the new
         // register.

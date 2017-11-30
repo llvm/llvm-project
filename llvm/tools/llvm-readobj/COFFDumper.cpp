@@ -31,6 +31,7 @@
 #include "llvm/DebugInfo/CodeView/DebugStringTableSubsection.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
+#include "llvm/DebugInfo/CodeView/MergingTypeTableBuilder.h"
 #include "llvm/DebugInfo/CodeView/RecordSerialization.h"
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 #include "llvm/DebugInfo/CodeView/SymbolDumpDelegate.h"
@@ -40,7 +41,6 @@
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeStreamMerger.h"
-#include "llvm/DebugInfo/CodeView/TypeTableBuilder.h"
 #include "llvm/DebugInfo/CodeView/TypeTableCollection.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ObjectFile.h"
@@ -96,8 +96,9 @@ public:
   void printCOFFResources() override;
   void printCOFFLoadConfig() override;
   void printCodeViewDebugInfo() override;
-  void mergeCodeViewTypes(llvm::codeview::TypeTableBuilder &CVIDs,
-                          llvm::codeview::TypeTableBuilder &CVTypes) override;
+  void
+  mergeCodeViewTypes(llvm::codeview::MergingTypeTableBuilder &CVIDs,
+                     llvm::codeview::MergingTypeTableBuilder &CVTypes) override;
   void printStackMap() const override;
 private:
   void printSymbol(const SymbolRef &Sym);
@@ -1194,8 +1195,8 @@ void COFFDumper::printFileNameForOffset(StringRef Label, uint32_t FileOffset) {
   W.printHex(Label, getFileNameForFileOffset(FileOffset), FileOffset);
 }
 
-void COFFDumper::mergeCodeViewTypes(TypeTableBuilder &CVIDs,
-                                    TypeTableBuilder &CVTypes) {
+void COFFDumper::mergeCodeViewTypes(MergingTypeTableBuilder &CVIDs,
+                                    MergingTypeTableBuilder &CVTypes) {
   for (const SectionRef &S : Obj->sections()) {
     StringRef SectionName;
     error(S.getName(SectionName));
@@ -1803,9 +1804,9 @@ void COFFDumper::printStackMap() const {
                         StackMapV2Parser<support::big>(StackMapContentsArray));
 }
 
-void llvm::dumpCodeViewMergedTypes(ScopedPrinter &Writer,
-                                   llvm::codeview::TypeTableBuilder &IDTable,
-                                   llvm::codeview::TypeTableBuilder &CVTypes) {
+void llvm::dumpCodeViewMergedTypes(
+    ScopedPrinter &Writer, llvm::codeview::MergingTypeTableBuilder &IDTable,
+    llvm::codeview::MergingTypeTableBuilder &CVTypes) {
   // Flatten it first, then run our dumper on it.
   SmallString<0> TypeBuf;
   CVTypes.ForEachRecord([&](TypeIndex TI, const CVType &Record) {

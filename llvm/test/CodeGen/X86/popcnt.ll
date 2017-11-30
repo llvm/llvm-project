@@ -43,15 +43,15 @@ define i8 @cnt8(i8 %x) nounwind readnone {
 ; X32-POPCNT-LABEL: cnt8:
 ; X32-POPCNT:       # BB#0:
 ; X32-POPCNT-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X32-POPCNT-NEXT:    popcntw %ax, %ax
-; X32-POPCNT-NEXT:    # kill: %al<def> %al<kill> %ax<kill>
+; X32-POPCNT-NEXT:    popcntl %eax, %eax
+; X32-POPCNT-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; X32-POPCNT-NEXT:    retl
 ;
 ; X64-POPCNT-LABEL: cnt8:
 ; X64-POPCNT:       # BB#0:
 ; X64-POPCNT-NEXT:    movzbl %dil, %eax
-; X64-POPCNT-NEXT:    popcntw %ax, %ax
-; X64-POPCNT-NEXT:    # kill: %al<def> %al<kill> %ax<kill>
+; X64-POPCNT-NEXT:    popcntl %eax, %eax
+; X64-POPCNT-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; X64-POPCNT-NEXT:    retq
   %cnt = tail call i8 @llvm.ctpop.i8(i8 %x)
   ret i8 %cnt

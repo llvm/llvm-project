@@ -399,7 +399,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setTruncStoreAction(MVT::f80, MVT::f16, Expand);
 
   if (Subtarget.hasPOPCNT()) {
-    setOperationAction(ISD::CTPOP          , MVT::i8   , Promote);
+    setOperationPromotedToType(ISD::CTPOP, MVT::i8, MVT::i32);
   } else {
     setOperationAction(ISD::CTPOP          , MVT::i8   , Expand);
     setOperationAction(ISD::CTPOP          , MVT::i16  , Expand);

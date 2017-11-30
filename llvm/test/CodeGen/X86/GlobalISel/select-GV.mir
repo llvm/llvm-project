@@ -41,23 +41,23 @@ registers:
   - { id: 0, class: gpr, preferred-register: '' }
   - { id: 1, class: gpr, preferred-register: '' }
 # X64:                     %0:gr64 = IMPLICIT_DEF
-# X64-NEXT:                %1:gr64 = LEA64r _, 1, _, @g_int, _
-# X64-NEXT:                MOV64mr %0, 1, _, 0, _, %1 :: (store 8 into `i32** undef`)
+# X64-NEXT:                %1:gr64 = LEA64r %noreg, 1, %noreg, @g_int, %noreg
+# X64-NEXT:                MOV64mr %0, 1, %noreg, 0, %noreg, %1 :: (store 8 into `i32** undef`)
 # X64-NEXT:                RET 0
 #
 # X64_DARWIN_PIC:          %0:gr64 = IMPLICIT_DEF
-# X64_DARWIN_PIC-NEXT:     %1:gr64 = LEA64r %rip, 1, _, @g_int, _
-# X64_DARWIN_PIC-NEXT:     MOV64mr %0, 1, _, 0, _, %1 :: (store 8 into `i32** undef`)
+# X64_DARWIN_PIC-NEXT:     %1:gr64 = LEA64r %rip, 1, %noreg, @g_int, %noreg
+# X64_DARWIN_PIC-NEXT:     MOV64mr %0, 1, %noreg, 0, %noreg, %1 :: (store 8 into `i32** undef`)
 # X64_DARWIN_PIC-NEXT:     RET 0
 #
 # X32:                     %0:gr32 = IMPLICIT_DEF
-# X32-NEXT:                %1:gr32 = LEA32r _, 1, _, @g_int, _
-# X32-NEXT:                MOV32mr %0, 1, _, 0, _, %1 :: (store 8 into `i32** undef`)
+# X32-NEXT:                %1:gr32 = LEA32r %noreg, 1, %noreg, @g_int, %noreg
+# X32-NEXT:                MOV32mr %0, 1, %noreg, 0, %noreg, %1 :: (store 8 into `i32** undef`)
 # X32-NEXT:                RET 0
 #
 # X32ABI:                  %0:low32_addr_access = IMPLICIT_DEF
-# X32ABI-NEXT:             %1:gr32 = LEA64_32r _, 1, _, @g_int, _
-# X32ABI-NEXT:             MOV32mr %0, 1, _, 0, _, %1 :: (store 8 into `i32** undef`)
+# X32ABI-NEXT:             %1:gr32 = LEA64_32r %noreg, 1, %noreg, @g_int, %noreg
+# X32ABI-NEXT:             MOV32mr %0, 1, %noreg, 0, %noreg, %1 :: (store 8 into `i32** undef`)
 # X32ABI-NEXT:             RET 0
 body:             |
   bb.1.entry:
@@ -85,23 +85,23 @@ regBankSelected: true
 registers:
   - { id: 0, class: gpr, preferred-register: '' }
   - { id: 1, class: gpr, preferred-register: '' }
-# X64:                     %1:gr64 = LEA64r _, 1, _, @g_int, _
-# X64-NEXT:                %0:gr32 = MOV32rm %1, 1, _, 0, _ :: (load 4 from @g_int)
+# X64:                     %1:gr64 = LEA64r %noreg, 1, %noreg, @g_int, %noreg
+# X64-NEXT:                %0:gr32 = MOV32rm %1, 1, %noreg, 0, %noreg :: (load 4 from @g_int)
 # X64-NEXT:                %eax = COPY %0
 # X64-NEXT:                RET 0, implicit %eax
 #
-# X64_DARWIN_PIC:          %1:gr64 = LEA64r %rip, 1, _, @g_int, _
-# X64_DARWIN_PIC-NEXT:     %0:gr32 = MOV32rm %1, 1, _, 0, _ :: (load 4 from @g_int)
+# X64_DARWIN_PIC:          %1:gr64 = LEA64r %rip, 1, %noreg, @g_int, %noreg
+# X64_DARWIN_PIC-NEXT:     %0:gr32 = MOV32rm %1, 1, %noreg, 0, %noreg :: (load 4 from @g_int)
 # X64_DARWIN_PIC-NEXT:     %eax = COPY %0
 # X64_DARWIN_PIC-NEXT:     RET 0, implicit %eax
 #
-# X32:                     %1:gr32 = LEA32r _, 1, _, @g_int, _
-# X32-NEXT:                %0:gr32 = MOV32rm %1, 1, _, 0, _ :: (load 4 from @g_int)
+# X32:                     %1:gr32 = LEA32r %noreg, 1, %noreg, @g_int, %noreg
+# X32-NEXT:                %0:gr32 = MOV32rm %1, 1, %noreg, 0, %noreg :: (load 4 from @g_int)
 # X32-NEXT:                %eax = COPY %0
 # X32-NEXT:                RET 0, implicit %eax
 #
-# X32ABI:                  %1:gr32 = LEA64_32r _, 1, _, @g_int, _
-# X32ABI-NEXT:             %0:gr32 = MOV32rm %1, 1, _, 0, _ :: (load 4 from @g_int)
+# X32ABI:                  %1:gr32 = LEA64_32r %noreg, 1, %noreg, @g_int, %noreg
+# X32ABI-NEXT:             %0:gr32 = MOV32rm %1, 1, %noreg, 0, %noreg :: (load 4 from @g_int)
 # X32ABI-NEXT:             %eax = COPY %0
 # X32ABI-NEXT:             RET 0, implicit %eax
 body:             |

@@ -193,14 +193,14 @@ void StackMaps::print(raw_ostream &OS) {
       case Location::Register:
         OS << "Register ";
         if (TRI)
-          OS << TRI->getName(Loc.Reg);
+          OS << printReg(Loc.Reg, TRI);
         else
           OS << Loc.Reg;
         break;
       case Location::Direct:
         OS << "Direct ";
         if (TRI)
-          OS << TRI->getName(Loc.Reg);
+          OS << printReg(Loc.Reg, TRI);
         else
           OS << Loc.Reg;
         if (Loc.Offset)
@@ -209,7 +209,7 @@ void StackMaps::print(raw_ostream &OS) {
       case Location::Indirect:
         OS << "Indirect ";
         if (TRI)
-          OS << TRI->getName(Loc.Reg);
+          OS << printReg(Loc.Reg, TRI);
         else
           OS << Loc.Reg;
         OS << "+" << Loc.Offset;
@@ -233,7 +233,7 @@ void StackMaps::print(raw_ostream &OS) {
     for (const auto &LO : LiveOuts) {
       OS << WSMP << "\t\tLO " << Idx << ": ";
       if (TRI)
-        OS << TRI->getName(LO.Reg);
+        OS << printReg(LO.Reg, TRI);
       else
         OS << LO.Reg;
       OS << "\t[encoding: .short " << LO.DwarfRegNum << ", .byte 0, .byte "

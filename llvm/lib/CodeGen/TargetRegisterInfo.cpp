@@ -94,11 +94,14 @@ Printable printReg(unsigned Reg, const TargetRegisterInfo *TRI,
       OS << "SS#" << TargetRegisterInfo::stackSlot2Index(Reg);
     else if (TargetRegisterInfo::isVirtualRegister(Reg))
       OS << '%' << TargetRegisterInfo::virtReg2Index(Reg);
-    else if (TRI && Reg < TRI->getNumRegs()) {
+    else if (!TRI)
+      OS << '%' << "physreg" << Reg;
+    else if (Reg < TRI->getNumRegs()) {
       OS << '%';
       printLowerCase(TRI->getName(Reg), OS);
     } else
-      OS << "%physreg" << Reg;
+      llvm_unreachable("Register kind is unsupported.");
+
     if (SubIdx) {
       if (TRI)
         OS << ':' << TRI->getSubRegIndexName(SubIdx);

@@ -53,6 +53,7 @@ class HexagonSubtarget : public HexagonGenSubtargetInfo {
 public:
   Hexagon::ArchEnum HexagonArchVersion;
   Hexagon::ArchEnum HexagonHVXVersion = Hexagon::ArchEnum::V4;
+  CodeGenOpt::Level OptLevel;
   /// True if the target should use Back-Skip-Back scheduling. This is the
   /// default for V60.
   bool UseBSBScheduling;
@@ -176,6 +177,10 @@ public:
   void getSMSMutations(
       std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations)
       const override;
+
+  /// \brief Enable use of alias analysis during code generation (during MI
+  /// scheduling, DAGCombine, etc.).
+  bool useAA() const override;
 
   /// \brief Perform target specific adjustments to the latency of a schedule
   /// dependency.

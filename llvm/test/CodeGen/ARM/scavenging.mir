@@ -25,36 +25,36 @@ body: |
     %r7 = IMPLICIT_DEF
 
     %0 : tgpr = IMPLICIT_DEF
-    %0 = tADDhirr %0, %sp, 14, _
-    tSTRi %r0, %0, 0, 14, _
+    %0 = tADDhirr %0, %sp, 14, %noreg
+    tSTRi %r0, %0, 0, 14, %noreg
 
     %1 : tgpr = IMPLICIT_DEF
-    %1 = tADDhirr %1, %sp, 14, _
-    tSTRi %r1, %1, 0, 14, _
+    %1 = tADDhirr %1, %sp, 14, %noreg
+    tSTRi %r1, %1, 0, 14, %noreg
 
     %2 : tgpr = IMPLICIT_DEF
-    %2 = tADDhirr %2, %sp, 14, _
-    tSTRi %r2, %2, 0, 14, _
+    %2 = tADDhirr %2, %sp, 14, %noreg
+    tSTRi %r2, %2, 0, 14, %noreg
 
     %3 : tgpr = IMPLICIT_DEF
-    %3 = tADDhirr %3, %sp, 14, _
-    tSTRi %r3, %3, 0, 14, _
+    %3 = tADDhirr %3, %sp, 14, %noreg
+    tSTRi %r3, %3, 0, 14, %noreg
 
     %4 : tgpr = IMPLICIT_DEF
-    %4 = tADDhirr %4, %sp, 14, _
-    tSTRi %r4, %4, 0, 14, _
+    %4 = tADDhirr %4, %sp, 14, %noreg
+    tSTRi %r4, %4, 0, 14, %noreg
 
     %5 : tgpr = IMPLICIT_DEF
-    %5 = tADDhirr %5, %sp, 14, _
-    tSTRi %r5, %5, 0, 14, _
+    %5 = tADDhirr %5, %sp, 14, %noreg
+    tSTRi %r5, %5, 0, 14, %noreg
 
     %6 : tgpr = IMPLICIT_DEF
-    %6 = tADDhirr %6, %sp, 14, _
-    tSTRi %r6, %6, 0, 14, _
+    %6 = tADDhirr %6, %sp, 14, %noreg
+    tSTRi %r6, %6, 0, 14, %noreg
 
     %7 : tgpr = IMPLICIT_DEF
-    %7 = tADDhirr %7, %sp, 14, _
-    tSTRi %r7, %7, 0, 14, _
+    %7 = tADDhirr %7, %sp, 14, %noreg
+    tSTRi %r7, %7, 0, 14, %noreg
 
     KILL %r0
     KILL %r1

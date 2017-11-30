@@ -97,7 +97,7 @@ void PhysicalRegisterUsageInfo::print(raw_ostream &OS, const Module *M) const {
 
     for (unsigned PReg = 1, PRegE = TRI->getNumRegs(); PReg < PRegE; ++PReg) {
       if (MachineOperand::clobbersPhysReg(&(FPRMPair->second[0]), PReg))
-        OS << TRI->getName(PReg) << " ";
+        OS << printReg(PReg, TRI) << " ";
     }
     OS << "\n";
   }

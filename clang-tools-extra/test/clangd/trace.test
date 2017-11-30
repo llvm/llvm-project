@@ -11,7 +11,7 @@ Content-Length: 152
 #      CHECK: {"displayTimeUnit":"ns","traceEvents":[
 # Start opening the doc.
 #      CHECK: "name": "textDocument/didOpen"
-#      CHECK: "ph": "E"
+#      CHECK: "ph": "B"
 # Start building the preamble.
 #      CHECK: "name": "Preamble"
 #      CHECK: },

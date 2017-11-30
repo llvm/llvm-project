@@ -1103,7 +1103,7 @@ bool CallAnalyzer::visitCallSite(CallSite CS) {
       }
     }
 
-    if (F == CS.getInstruction()->getParent()->getParent()) {
+    if (F == CS.getInstruction()->getFunction()) {
       // This flag will fully abort the analysis, so don't bother with anything
       // else.
       IsRecursiveCall = true;
@@ -1559,14 +1559,14 @@ bool CallAnalyzer::analyzeCall(CallSite CS) {
   if (F.empty())
     return true;
 
-  Function *Caller = CS.getInstruction()->getParent()->getParent();
+  Function *Caller = CS.getInstruction()->getFunction();
   // Check if the caller function is recursive itself.
   for (User *U : Caller->users()) {
     CallSite Site(U);
     if (!Site)
       continue;
     Instruction *I = Site.getInstruction();
-    if (I->getParent()->getParent() == Caller) {
+    if (I->getFunction() == Caller) {
       IsCallerRecursive = true;
       break;
     }

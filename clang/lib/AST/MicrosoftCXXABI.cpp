@@ -76,8 +76,8 @@ class MicrosoftCXXABI : public CXXABI {
 public:
   MicrosoftCXXABI(ASTContext &Ctx) : Context(Ctx) { }
 
-  std::pair<uint64_t, unsigned>
-  getMemberPointerWidthAndAlign(const MemberPointerType *MPT) const override;
+  MemberPointerInfo
+  getMemberPointerInfo(const MemberPointerType *MPT) const override;
 
   CallingConv getDefaultMethodCallConv(bool isVariadic) const override {
     if (!isVariadic &&
@@ -227,7 +227,7 @@ getMSMemberPointerSlots(const MemberPointerType *MPT) {
   return std::make_pair(Ptrs, Ints);
 }
 
-std::pair<uint64_t, unsigned> MicrosoftCXXABI::getMemberPointerWidthAndAlign(
+CXXABI::MemberPointerInfo MicrosoftCXXABI::getMemberPointerInfo(
     const MemberPointerType *MPT) const {
   // The nominal struct is laid out with pointers followed by ints and aligned
   // to a pointer width if any are present and an int width otherwise.
@@ -237,22 +237,25 @@ std::pair<uint64_t, unsigned> MicrosoftCXXABI::getMemberPointerWidthAndAlign(
 
   unsigned Ptrs, Ints;
   std::tie(Ptrs, Ints) = getMSMemberPointerSlots(MPT);
-  uint64_t Width = Ptrs * PtrSize + Ints * IntSize;
-  unsigned Align;
+  MemberPointerInfo MPI;
+  MPI.HasPadding = false;
+  MPI.Width = Ptrs * PtrSize + Ints * IntSize;
 
   // When MSVC does x86_32 record layout, it aligns aggregate member pointers to
   // 8 bytes.  However, __alignof usually returns 4 for data memptrs and 8 for
   // function memptrs.
   if (Ptrs + Ints > 1 && Target.getTriple().isArch32Bit())
-    Align = 64;
+    MPI.Align = 64;
   else if (Ptrs)
-    Align = Target.getPointerAlign(0);
+    MPI.Align = Target.getPointerAlign(0);
   else
-    Align = Target.getIntAlign();
+    MPI.Align = Target.getIntAlign();
 
-  if (Target.getTriple().isArch64Bit())
-    Width = llvm::alignTo(Width, Align);
-  return std::make_pair(Width, Align);
+  if (Target.getTriple().isArch64Bit()) {
+    MPI.Width = llvm::alignTo(MPI.Width, MPI.Align);
+    MPI.HasPadding = MPI.Width != (Ptrs * PtrSize + Ints * IntSize);
+  }
+  return MPI;
 }
 
 CXXABI *clang::CreateMicrosoftCXXABI(ASTContext &Ctx) {

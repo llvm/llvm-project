@@ -868,6 +868,18 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     MI.eraseFromParent();
     return Legalized;
   }
+  case TargetOpcode::G_ATOMIC_CMPXCHG_WITH_SUCCESS: {
+    unsigned OldValRes = MI.getOperand(0).getReg();
+    unsigned SuccessRes = MI.getOperand(1).getReg();
+    unsigned Addr = MI.getOperand(2).getReg();
+    unsigned CmpVal = MI.getOperand(3).getReg();
+    unsigned NewVal = MI.getOperand(4).getReg();
+    MIRBuilder.buildAtomicCmpXchg(OldValRes, Addr, CmpVal, NewVal,
+                                  **MI.memoperands_begin());
+    MIRBuilder.buildICmp(CmpInst::ICMP_EQ, SuccessRes, OldValRes, CmpVal);
+    MI.eraseFromParent();
+    return Legalized;
+  }
   }
 }
 

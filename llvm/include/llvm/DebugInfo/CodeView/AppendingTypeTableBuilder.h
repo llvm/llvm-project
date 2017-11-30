@@ -1,4 +1,4 @@
-//===- TypeTableBuilder.h ----------------------------------------*- C++-*-===//
+//===- AppendingTypeTableBuilder.h -------------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,19 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_CODEVIEW_TYPETABLEBUILDER_H
-#define LLVM_DEBUGINFO_CODEVIEW_TYPETABLEBUILDER_H
+#ifndef LLVM_DEBUGINFO_CODEVIEW_APPENDINGTYPETABLEBUILDER_H
+#define LLVM_DEBUGINFO_CODEVIEW_APPENDINGTYPETABLEBUILDER_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/SimpleTypeSerializer.h"
 #include "llvm/DebugInfo/CodeView/TypeCollection.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
-#include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/Error.h"
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -29,22 +26,18 @@ namespace llvm {
 namespace codeview {
 
 class ContinuationRecordBuilder;
-class TypeHasher;
 
-class TypeTableBuilder : public TypeCollection {
+class AppendingTypeTableBuilder : public TypeCollection {
 
   BumpPtrAllocator &RecordStorage;
   SimpleTypeSerializer SimpleSerializer;
-
-  /// Private type record hashing implementation details are handled here.
-  std::unique_ptr<TypeHasher> Hasher;
 
   /// Contains a list of all records indexed by TypeIndex.toArrayIndex().
   SmallVector<ArrayRef<uint8_t>, 2> SeenRecords;
 
 public:
-  explicit TypeTableBuilder(BumpPtrAllocator &Storage, bool Hash = true);
-  ~TypeTableBuilder();
+  explicit AppendingTypeTableBuilder(BumpPtrAllocator &Storage);
+  ~AppendingTypeTableBuilder();
 
   // TypeTableCollection overrides
   Optional<TypeIndex> getFirst() override;

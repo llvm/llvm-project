@@ -1636,3 +1636,16 @@ define i32 @test_target_mem_intrinsic(i32* %addr) {
 }
 
 declare i64 @llvm.aarch64.ldxr.p0i32(i32*) nounwind
+
+%zerosize_type = type {}
+
+define %zerosize_type @test_empty_load_store(%zerosize_type *%ptr, %zerosize_type %in) noinline optnone {
+; CHECK-LABEL: name: test_empty_load_store
+; CHECK-NOT: G_STORE
+; CHECK-NOT: G_LOAD
+; CHECK: RET_ReallyLR
+entry:
+  store %zerosize_type undef, %zerosize_type* undef, align 4
+  %val = load %zerosize_type, %zerosize_type* %ptr, align 4
+  ret %zerosize_type %in
+}
