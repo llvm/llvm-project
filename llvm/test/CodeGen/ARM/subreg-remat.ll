@@ -4,10 +4,10 @@ target triple = "thumbv7-apple-ios"
 ;
 ; The vector %v2 is built like this:
 ;
-;   %vreg6:ssub_1<def> = ...
-;   %vreg6:ssub_0<def> = VLDRS <cp#0>, 0, pred:14, pred:%noreg; mem:LD4[ConstantPool] DPR_VFP2:%vreg6
+;   %6:ssub_1<def> = ...
+;   %6:ssub_0<def> = VLDRS <cp#0>, 0, pred:14, pred:%noreg; mem:LD4[ConstantPool] DPR_VFP2:%6
 ;
-; When %vreg6 spills, the VLDRS constant pool load cannot be rematerialized
+; When %6 spills, the VLDRS constant pool load cannot be rematerialized
 ; since it implicitly reads the ssub_1 sub-register.
 ;
 ; CHECK: f1
@@ -31,7 +31,7 @@ define void @f1(float %x, <2 x float>* %p) {
 ; because the bits are undef, we should rematerialize.  The vector is now built
 ; like this:
 ;
-;   %vreg2:ssub_0<def> = VLDRS <cp#0>, 0, pred:14, pred:%noreg, %vreg2<imp-def>; mem:LD4[ConstantPool]
+;   %2:ssub_0<def> = VLDRS <cp#0>, 0, pred:14, pred:%noreg, %2<imp-def>; mem:LD4[ConstantPool]
 ;
 ; The extra <imp-def> operand indicates that the instruction fully defines the
 ; virtual register.  It doesn't read the old value.

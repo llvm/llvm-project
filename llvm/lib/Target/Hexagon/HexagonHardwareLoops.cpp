@@ -1622,8 +1622,8 @@ bool HexagonHardwareLoops::fixupInductionVariable(MachineLoop *L) {
   RegisterInductionSet IndRegs;
 
   // Look for induction patterns:
-  //   vreg1 = PHI ..., [ latch, vreg2 ]
-  //   vreg2 = ADD vreg1, imm
+  //   %1 = PHI ..., [ latch, %2 ]
+  //   %2 = ADD %1, imm
   using instr_iterator = MachineBasicBlock::instr_iterator;
 
   for (instr_iterator I = Header->instr_begin(), E = Header->instr_end();
@@ -1720,7 +1720,7 @@ bool HexagonHardwareLoops::fixupInductionVariable(MachineLoop *L) {
     MachineOperand &MO = PredDef->getOperand(i);
     if (MO.isReg()) {
       // Skip all implicit references.  In one case there was:
-      //   %vreg140<def> = FCMPUGT32_rr %vreg138, %vreg139, %usr<imp-use>
+      //   %140<def> = FCMPUGT32_rr %138, %139, %usr<imp-use>
       if (MO.isImplicit())
         continue;
       if (MO.isUse()) {

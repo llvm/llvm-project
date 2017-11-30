@@ -1,10 +1,10 @@
 ; RUN: llc < %s -verify-machineinstrs -mtriple=i386-apple-darwin -mcpu=corei7 | FileCheck %s
 ; rdar://5571034
 
-; This requires physreg joining, %vreg13 is live everywhere:
-; 304L		%cl<def> = COPY %vreg13:sub_8bit; GR32_ABCD:%vreg13
-; 320L		%vreg15<def> = COPY %vreg19; GR32:%vreg15 GR32_NOSP:%vreg19
-; 336L		%vreg15<def> = SAR32rCL %vreg15, %eflags<imp-def,dead>, %cl<imp-use,kill>; GR32:%vreg15
+; This requires physreg joining, %13 is live everywhere:
+; 304L		%cl<def> = COPY %13:sub_8bit; GR32_ABCD:%13
+; 320L		%15<def> = COPY %19; GR32:%15 GR32_NOSP:%19
+; 336L		%15<def> = SAR32rCL %15, %eflags<imp-def,dead>, %cl<imp-use,kill>; GR32:%15
 
 define void @foo(i32* nocapture %quadrant, i32* nocapture %ptr, i32 %bbSize, i32 %bbStart, i32 %shifts) nounwind ssp {
 ; CHECK-LABEL: foo:

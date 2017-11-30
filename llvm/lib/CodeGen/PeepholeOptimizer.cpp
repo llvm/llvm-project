@@ -1453,10 +1453,10 @@ bool PeepholeOptimizer::foldImmediate(
 // only the first copy is considered.
 //
 // e.g.
-// %vreg1 = COPY %vreg0
-// %vreg2 = COPY %vreg0:sub1
+// %1 = COPY %0
+// %2 = COPY %0:sub1
 //
-// Should replace %vreg2 uses with %vreg1:sub1
+// Should replace %2 uses with %1:sub1
 bool PeepholeOptimizer::foldRedundantCopy(
     MachineInstr *MI, SmallSet<unsigned, 4> &CopySrcRegs,
     DenseMap<unsigned, MachineInstr *> &CopyMIs) {
@@ -1621,16 +1621,16 @@ bool PeepholeOptimizer::findTargetRecurrence(
 /// from the phi. For example, if there is a recurrence of
 ///
 /// LoopHeader:
-///   %vreg1 = phi(%vreg0, %vreg100)
+///   %1 = phi(%0, %100)
 /// LoopLatch:
-///   %vreg0<def, tied1> = ADD %vreg2<def, tied0>, %vreg1
+///   %0<def, tied1> = ADD %2<def, tied0>, %1
 ///
-/// , the fact that vreg0 and vreg2 are in the same tied operands set makes
+/// , the fact that %0 and %2 are in the same tied operands set makes
 /// the coalescing of copy instruction generated from the phi in
-/// LoopHeader(i.e. %vreg1 = COPY %vreg0) impossible, because %vreg1 and
-/// %vreg2 have overlapping live range. This introduces additional move
-/// instruction to the final assembly. However, if we commute %vreg2 and
-/// %vreg1 of ADD instruction, the redundant move instruction can be
+/// LoopHeader(i.e. %1 = COPY %0) impossible, because %1 and
+/// %2 have overlapping live range. This introduces additional move
+/// instruction to the final assembly. However, if we commute %2 and
+/// %1 of ADD instruction, the redundant move instruction can be
 /// avoided.
 bool PeepholeOptimizer::optimizeRecurrence(MachineInstr &PHI) {
   SmallSet<unsigned, 2> TargetRegs;

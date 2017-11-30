@@ -1,7 +1,7 @@
 ; RUN: llc < %s -O0 -verify-machineinstrs -mtriple=wasm32-unknown-unknown-wasm | FileCheck %s
 
 ; CHECK: BB#0
-; CHECK: #DEBUG_VALUE: usage:self <- %vreg4
+; CHECK: #DEBUG_VALUE: usage:self <- %4
 ; CHECK: BB#1
 ; CHECK: DW_TAG_variable
 source_filename = "test/CodeGen/WebAssembly/dbgvalue.ll"

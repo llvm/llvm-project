@@ -69,10 +69,12 @@ LLDDwarfObj<ELFT>::findAux(const InputSectionBase &Sec, uint64_t Pos,
   const typename ELFT::Sym &Sym = File->getELFSyms()[SymIndex];
   uint32_t SecIndex = File->getSectionIndex(Sym);
 
-  // Broken debug info can point to a non-Defined symbol, just ignore it.
+  // Broken debug info can point to a non-Defined symbol.
   auto *DR = dyn_cast<Defined>(&File->getRelocTargetSym(Rel));
-  if (!DR)
+  if (!DR) {
+    error("unsupported relocation target while parsing debug info");
     return None;
+  }
   uint64_t Val = DR->Value + getAddend<ELFT>(Rel);
 
   // FIXME: We should be consistent about always adding the file

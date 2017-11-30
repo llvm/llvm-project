@@ -17,12 +17,12 @@
 /// when subregisters are involved.
 ///
 /// Example:
-///    %vreg0 = some definition
-///    %vreg1 = IMPLICIT_DEF
-///    %vreg2 = REG_SEQUENCE %vreg0, sub0, %vreg1, sub1
-///    %vreg3 = EXTRACT_SUBREG %vreg2, sub1
-///           = use %vreg3
-/// The %vreg0 definition is dead and %vreg3 contains an undefined value.
+///    %0 = some definition
+///    %1 = IMPLICIT_DEF
+///    %2 = REG_SEQUENCE %0, sub0, %1, sub1
+///    %3 = EXTRACT_SUBREG %2, sub1
+///       = use %3
+/// The %0 definition is dead and %3 contains an undefined value.
 //
 //===----------------------------------------------------------------------===//
 

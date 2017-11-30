@@ -6,10 +6,10 @@
 ;
 ; CHECK: ********** MI Scheduling **********
 ; CHECK: shiftable
-; CHECK: SU(2):   %vreg2<def> = SUBXri %vreg1, 20, 0
+; CHECK: SU(2):   %2<def> = SUBXri %1, 20, 0
 ; CHECK:   Successors:
-; CHECK-NEXT:    SU(4): Data Latency=1 Reg=%vreg2
-; CHECK-NEXT:    SU(3): Data Latency=2 Reg=%vreg2
+; CHECK-NEXT:    SU(4): Data Latency=1 Reg=%2
+; CHECK-NEXT:    SU(3): Data Latency=2 Reg=%2
 ; CHECK: ********** INTERVALS **********
 define i64 @shiftable(i64 %A, i64 %B) {
         %tmp0 = sub i64 %B, 20

@@ -26,9 +26,9 @@ declare void @callee2(i8*, i8*, i8*, i8*, i8*,
 ; CHECK:  fi#-2: {{.*}} fixed, at location [SP+8]
 ; CHECK:  fi#-1: {{.*}} fixed, at location [SP]
 
-; CHECK:  [[VRA:%vreg.*]]<def> = LDRXui <fi#-1>
-; CHECK:  [[VRB:%vreg.*]]<def> = LDRXui <fi#-2>
-; CHECK:  STRXui %vreg{{.*}}, <fi#-4>
+; CHECK:  [[VRA:%.*]]<def> = LDRXui <fi#-1>
+; CHECK:  [[VRB:%.*]]<def> = LDRXui <fi#-2>
+; CHECK:  STRXui %{{.*}}, <fi#-4>
 ; CHECK:  STRXui [[VRB]], <fi#-3>
 
 ; Make sure that there is an dependence edge between fi#-2 and fi#-4.
@@ -40,5 +40,5 @@ declare void @callee2(i8*, i8*, i8*, i8*, i8*,
 ; CHECK:   SU([[DEPSTOREB:.*]]): Ord  Latency=0
 ; CHECK:   SU([[DEPSTOREA:.*]]): Ord  Latency=0
 
-; CHECK: SU([[DEPSTOREA]]):   STRXui %vreg{{.*}}, <fi#-4>
-; CHECK: SU([[DEPSTOREB]]):   STRXui %vreg{{.*}}, <fi#-3>
+; CHECK: SU([[DEPSTOREA]]):   STRXui %{{.*}}, <fi#-4>
+; CHECK: SU([[DEPSTOREB]]):   STRXui %{{.*}}, <fi#-3>

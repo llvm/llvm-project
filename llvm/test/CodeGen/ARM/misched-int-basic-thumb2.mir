@@ -37,62 +37,62 @@
   }
 #
 # CHECK:       ********** MI Scheduling **********
-# CHECK:       SU(2):   %vreg2<def> = t2MOVi32imm <ga:@g1>; rGPR:%vreg2
+# CHECK:       SU(2):   %2<def> = t2MOVi32imm <ga:@g1>; rGPR:%2
 # CHECK_A9:    Latency    : 2
 # CHECK_SWIFT: Latency    : 2
 # CHECK_R52:   Latency    : 2
 #
-# CHECK:       SU(3):   %vreg3<def> = t2LDRi12 %vreg2, 0, pred:14, pred:%noreg; mem:LD4[@g1](dereferenceable) rGPR:%vreg3,%vreg2
+# CHECK:       SU(3):   %3<def> = t2LDRi12 %2, 0, pred:14, pred:%noreg; mem:LD4[@g1](dereferenceable) rGPR:%3,%2
 # CHECK_A9:    Latency    : 1
 # CHECK_SWIFT: Latency    : 3
 # CHECK_R52:   Latency    : 4
 #
-# CHECK :      SU(6):   %vreg6<def> = t2ADDrr %vreg3, %vreg3, pred:14, pred:%noreg, opt:%noreg; rGPR:%vreg6,%vreg3,%vreg3
+# CHECK :      SU(6):   %6<def> = t2ADDrr %3, %3, pred:14, pred:%noreg, opt:%noreg; rGPR:%6,%3,%3
 # CHECK_A9:    Latency    : 1
 # CHECK_SWIFT: Latency    : 1
 # CHECK_R52:   Latency    : 3
 
-# CHECK:       SU(7):   %vreg7<def> = t2SDIV %vreg6, %vreg5, pred:14, pred:%noreg; rGPR:%vreg7,%vreg6,%vreg5
+# CHECK:       SU(7):   %7<def> = t2SDIV %6, %5, pred:14, pred:%noreg; rGPR:%7,%6,%5
 # CHECK_A9:    Latency    : 0
 # CHECK_SWIFT: Latency    : 14
 # CHECK_R52:   Latency    : 8
 
-# CHECK:       SU(8):   t2STRi12 %vreg7, %vreg2, 0, pred:14, pred:%noreg; mem:ST4[@g1] rGPR:%vreg7,%vreg2
+# CHECK:       SU(8):   t2STRi12 %7, %2, 0, pred:14, pred:%noreg; mem:ST4[@g1] rGPR:%7,%2
 # CHECK_A9:    Latency    : 1
 # CHECK_SWIFT: Latency    : 0
 # CHECK_R52:   Latency    : 4
 #
-# CHECK:       SU(9):   %vreg8<def> = t2SMULBB %vreg1, %vreg1, pred:14, pred:%noreg; rGPR:%vreg8,%vreg1,%vreg1
+# CHECK:       SU(9):   %8<def> = t2SMULBB %1, %1, pred:14, pred:%noreg; rGPR:%8,%1,%1
 # CHECK_A9:    Latency    : 2
 # CHECK_SWIFT: Latency    : 4
 # CHECK_R52:   Latency    : 4
 #
-# CHECK:       SU(10):   %vreg9<def> = t2SMLABB %vreg0, %vreg0, %vreg8, pred:14, pred:%noreg; rGPR:%vreg9,%vreg0,%vreg0,%vreg8
+# CHECK:       SU(10):   %9<def> = t2SMLABB %0, %0, %8, pred:14, pred:%noreg; rGPR:%9,%0,%0,%8
 # CHECK_A9:    Latency    : 2
 # CHECK_SWIFT: Latency    : 4
 # CHECK_R52:   Latency    : 4
 #
-# CHECK:       SU(11):   %vreg10<def> = t2UXTH %vreg9, 0, pred:14, pred:%noreg; rGPR:%vreg10,%vreg9
+# CHECK:       SU(11):   %10<def> = t2UXTH %9, 0, pred:14, pred:%noreg; rGPR:%10,%9
 # CHECK_A9:    Latency    : 1
 # CHECK_SWIFT: Latency    : 1
 # CHECK_R52:   Latency    : 3
 #
-# CHECK:       SU(12):   %vreg11<def> = t2MUL %vreg10, %vreg7, pred:14, pred:%noreg; rGPR:%vreg11,%vreg10,%vreg7
+# CHECK:       SU(12):   %11<def> = t2MUL %10, %7, pred:14, pred:%noreg; rGPR:%11,%10,%7
 # CHECK_A9:    Latency    : 2
 # CHECK_SWIFT: Latency    : 4
 # CHECK_R52:   Latency    : 4
 #
-# CHECK:       SU(13):   %vreg12<def> = t2MLA %vreg11, %vreg11, %vreg11, pred:14, pred:%noreg; rGPR:%vreg12,%vreg11,%vreg11,%vreg11
+# CHECK:       SU(13):   %12<def> = t2MLA %11, %11, %11, pred:14, pred:%noreg; rGPR:%12,%11,%11,%11
 # CHECK_A9:    Latency    : 2
 # CHECK_SWIFT: Latency    : 4
 # CHECK_R52:   Latency    : 4
 #
-# CHECK:       SU(14):   %vreg13<def>, %vreg14<def> = t2UMULL %vreg12, %vreg12, pred:14, pred:%noreg; rGPR:%vreg13,%vreg14,%vreg12,%vreg12
+# CHECK:       SU(14):   %13<def>, %14<def> = t2UMULL %12, %12, pred:14, pred:%noreg; rGPR:%13,%14,%12,%12
 # CHECK_A9:    Latency    : 3
 # CHECK_SWIFT: Latency    : 5
 # CHECK_R52:   Latency    : 4
 #
-# CHECK:       SU(18):   %vreg19<def,tied4>, %vreg20<def,tied5> = t2UMLAL %vreg12, %vreg12, %vreg19<tied0>, %vreg20<tied1>, pred:14, pred:%noreg; rGPR:%vreg19,%vreg20,%vreg12,%vreg12,%vreg20
+# CHECK:       SU(18):   %19<def,tied4>, %20<def,tied5> = t2UMLAL %12, %12, %19<tied0>, %20<tied1>, pred:14, pred:%noreg; rGPR:%19,%20,%12,%12,%20
 # CHECK_A9:    Latency    : 3
 # CHECK_SWIFT: Latency    : 7
 # CHECK_R52:   Latency    : 4

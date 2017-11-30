@@ -2,11 +2,11 @@
 # REQUIRES: asserts
 
 # CHECK: INTERVALS
-# CHECK: vreg0
+# CHECK: %0
 # CHECK-LABEL: Machine code for function test0:
 
 # CHECK: INTERVALS
-# CHECK: vreg0
+# CHECK: %0
 # CHECK-LABEL: Machine code for function test1:
 
 --- |

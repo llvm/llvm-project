@@ -7650,21 +7650,21 @@ ClangASTContext::GetTypeTemplateArgument(lldb::opaque_compiler_type_t type,
   return CompilerType(getASTContext(), template_arg.getAsType());
 }
 
-std::pair<llvm::APSInt, CompilerType>
+llvm::Optional<CompilerType::IntegralTemplateArgument>
 ClangASTContext::GetIntegralTemplateArgument(lldb::opaque_compiler_type_t type,
                                              size_t idx) {
   const clang::ClassTemplateSpecializationDecl *template_decl =
       GetAsTemplateSpecialization(type);
   if (! template_decl || idx >= template_decl->getTemplateArgs().size())
-    return {llvm::APSInt(0), CompilerType()};
+    return llvm::None;
 
   const clang::TemplateArgument &template_arg =
       template_decl->getTemplateArgs()[idx];
   if (template_arg.getKind() != clang::TemplateArgument::Integral)
-    return {llvm::APSInt(0), CompilerType()};
+    return llvm::None;
 
-  return {template_arg.getAsIntegral(),
-          CompilerType(getASTContext(), template_arg.getIntegralType())};
+  return {{template_arg.getAsIntegral(),
+           CompilerType(getASTContext(), template_arg.getIntegralType())}};
 }
 
 CompilerType ClangASTContext::GetTypeForFormatters(void *type) {

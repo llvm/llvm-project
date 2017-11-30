@@ -59,10 +59,8 @@ bool BitsetFrontEnd::Update() {
   size_t capping_size = target_sp->GetMaximumNumberOfChildrenToDisplay();
 
   size_t size = 0;
-  auto value_and_type =
-      m_backend.GetCompilerType().GetIntegralTemplateArgument(0);
-  if (value_and_type.second)
-    size = value_and_type.first.getLimitedValue(capping_size);
+  if (auto arg = m_backend.GetCompilerType().GetIntegralTemplateArgument(0))
+    size = arg->value.getLimitedValue(capping_size);
 
   m_elements.assign(size, ValueObjectSP());
 

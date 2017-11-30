@@ -787,7 +787,7 @@ public:
                           size_t idx) override;
   CompilerType GetTypeTemplateArgument(lldb::opaque_compiler_type_t type,
                                        size_t idx) override;
-  std::pair<llvm::APSInt, CompilerType>
+  llvm::Optional<CompilerType::IntegralTemplateArgument>
   GetIntegralTemplateArgument(lldb::opaque_compiler_type_t type,
                               size_t idx) override;
 

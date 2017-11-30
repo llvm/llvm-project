@@ -1347,13 +1347,13 @@ bool SIRegisterInfo::shouldRewriteCopySrc(
   // class.
   //
   // e.g. if we have something like
-  // vreg0 = ...
-  // vreg1 = ...
-  // vreg2 = REG_SEQUENCE vreg0, sub0, vreg1, sub1, vreg2, sub2
-  // vreg3 = COPY vreg2, sub0
+  // %0 = ...
+  // %1 = ...
+  // %2 = REG_SEQUENCE %0, sub0, %1, sub1, %2, sub2
+  // %3 = COPY %2, sub0
   //
   // We want to look through the COPY to find:
-  //  => vreg3 = COPY vreg0
+  //  => %3 = COPY %0
 
   // Plain copy.
   return getCommonSubClass(DefRC, SrcRC) != nullptr;

@@ -546,7 +546,7 @@ void BPFDAGToDAGISel::PreprocessTrunc(SDNode *Node,
   if (!RegN || !TargetRegisterInfo::isVirtualRegister(RegN->getReg()))
     return;
   unsigned AndOpReg = RegN->getReg();
-  DEBUG(dbgs() << "Examine %vreg" << TargetRegisterInfo::virtReg2Index(AndOpReg)
+  DEBUG(dbgs() << "Examine %" << TargetRegisterInfo::virtReg2Index(AndOpReg)
                << '\n');
 
   // Examine the PHI insns in the MachineBasicBlock to found out the
@@ -574,9 +574,9 @@ void BPFDAGToDAGISel::PreprocessTrunc(SDNode *Node,
       return;
   } else {
     // The PHI node looks like:
-    //   %vreg2<def> = PHI %vreg0, <BB#1>, %vreg1, <BB#3>
-    // Trace each incoming definition, e.g., (%vreg0, BB#1) and (%vreg1, BB#3)
-    // The AND operation can be removed if both %vreg0 in BB#1 and %vreg1 in
+    //   %2<def> = PHI %0, <BB#1>, %1, <BB#3>
+    // Trace each incoming definition, e.g., (%0, BB#1) and (%1, BB#3)
+    // The AND operation can be removed if both %0 in BB#1 and %1 in
     // BB#3 are defined with with a load matching the MaskN.
     DEBUG(dbgs() << "Check PHI Insn: "; MII->dump(); dbgs() << '\n');
     unsigned PrevReg = -1;
