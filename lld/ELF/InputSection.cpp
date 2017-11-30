@@ -808,12 +808,7 @@ template <class ELFT>
 EhInputSection::EhInputSection(ObjFile<ELFT> *F,
                                const typename ELFT::Shdr *Header,
                                StringRef Name)
-    : InputSectionBase(F, Header, Name, InputSectionBase::EHFrame) {
-  // Mark .eh_frame sections as live by default because there are
-  // usually no relocations that point to .eh_frames. Otherwise,
-  // the garbage collector would drop all .eh_frame sections.
-  this->Live = true;
-}
+    : InputSectionBase(F, Header, Name, InputSectionBase::EHFrame) {}
 
 SyntheticSection *EhInputSection::getParent() const {
   return cast_or_null<SyntheticSection>(Parent);

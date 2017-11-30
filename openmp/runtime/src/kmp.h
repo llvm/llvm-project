@@ -574,6 +574,8 @@ extern kmp_SetThreadGroupAffinity_t __kmp_SetThreadGroupAffinity;
 #if KMP_USE_HWLOC
 extern hwloc_topology_t __kmp_hwloc_topology;
 extern int __kmp_hwloc_error;
+extern int __kmp_numa_detected;
+extern int __kmp_tile_depth;
 #endif
 
 extern size_t __kmp_affin_mask_size;
@@ -702,6 +704,8 @@ enum affinity_gran {
   affinity_gran_fine = 0,
   affinity_gran_thread,
   affinity_gran_core,
+  affinity_gran_tile,
+  affinity_gran_numa,
   affinity_gran_package,
   affinity_gran_node,
 #if KMP_GROUP_AFFINITY

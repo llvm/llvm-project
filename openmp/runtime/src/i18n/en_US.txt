@@ -103,6 +103,7 @@ DisplayEnvBegin		     "OPENMP DISPLAY ENVIRONMENT BEGIN"
 DisplayEnvEnd		     "OPENMP DISPLAY ENVIRONMENT END"
 Device			     "[device]"
 Host			     "[host]"
+Tile                         "tile"
 
 
 
@@ -327,6 +328,9 @@ OBSOLETE                     "%1$s: overrides %3$s specified before"
                                  # %1, %2 -- name and value of the overriding variable, %3 -- name of overriden variable.
 AffTilesNoHWLOC              "%1$s: Tiles are only supported if KMP_TOPOLOGY_METHOD=hwloc, using granularity=package instead"
 AffTilesNoTiles              "%1$s: Tiles requested but were not detected on this HW, using granularity=package instead"
+TopologyExtraTile            "%1$s: %2$d packages x %3$d tiles/pkg x %4$d cores/tile x %5$d threads/core (%6$d total cores)"
+TopologyExtraNode            "%1$s: %2$d packages x %3$d nodes/pkg x %4$d cores/node x %5$d threads/core (%6$d total cores)"
+TopologyExtraNoTi            "%1$s: %2$d packages x %3$d nodes/pkg x %4$d tiles/node x %5$d cores/tile x %6$d threads/core (%7$d total cores)"
 OmptOutdatedWorkshare        "OMPT: Cannot determine workshare type; using the default (loop) instead. "
                              "This issue is fixed in an up-to-date compiler."
 
