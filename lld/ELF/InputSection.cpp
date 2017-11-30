@@ -214,10 +214,6 @@ void InputSectionBase::maybeUncompress() {
   this->Flags &= ~(uint64_t)SHF_COMPRESSED;
 }
 
-uint64_t SectionBase::getOffset(const Defined &Sym) const {
-  return getOffset(Sym.Value);
-}
-
 InputSection *InputSectionBase::getLinkOrderDep() const {
   if ((Flags & SHF_LINK_ORDER) && Link != 0) {
     InputSectionBase *L = File->getSections()[Link];
@@ -404,7 +400,12 @@ void InputSection::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
       // avoid having to parse and recreate .eh_frame, we just replace any
       // relocation in it pointing to discarded sections with R_*_NONE, which
       // hopefully creates a frame that is ignored at runtime.
-      SectionBase *Section = cast<Defined>(Sym).Section;
+      auto *D = dyn_cast<Defined>(&Sym);
+      if (!D) {
+        error("STT_SECTION symbol should be defined");
+        continue;
+      }
+      SectionBase *Section = D->Section;
       if (Section == &InputSection::Discarded) {
         P->setSymbolAndType(0, 0, false);
         continue;

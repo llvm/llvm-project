@@ -120,7 +120,7 @@ static uint64_t getSymVA(const Symbol &Sym, int64_t &Addend) {
 // Returns true if this is a weak undefined symbol.
 bool Symbol::isUndefWeak() const {
   // See comment on Lazy in Symbols.h for the details.
-  return !isLocal() && isWeak() && (isUndefined() || isLazy());
+  return isWeak() && (isUndefined() || isLazy());
 }
 
 uint64_t Symbol::getVA(int64_t Addend) const {

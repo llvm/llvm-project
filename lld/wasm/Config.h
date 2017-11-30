@@ -23,6 +23,7 @@ namespace wasm {
 
 struct Configuration {
   bool AllowUndefined;
+  bool CheckSignatures;
   bool Demangle;
   bool EmitRelocs;
   bool ImportMemory;

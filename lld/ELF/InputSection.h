@@ -73,8 +73,6 @@ public:
   // section.
   uint64_t getOffset(uint64_t Offset) const;
 
-  uint64_t getOffset(const Defined &Sym) const;
-
 protected:
   SectionBase(Kind SectionKind, StringRef Name, uint64_t Flags,
               uint64_t Entsize, uint64_t Alignment, uint32_t Type,

@@ -5,6 +5,7 @@
 # The debug info has a broken relocation. Check that we don't crash
 # and still report the undefined symbol.
 
+# CHECK: error: unsupported relocation target while parsing debug info
 # CHECK: error: undefined symbol: bar
 
 --- !ELF
@@ -20,6 +21,7 @@ Sections:
     Content:         '0000000000000000'
   - Name:            .rela.text
     Type:            SHT_RELA
+    AddressAlign:    8
     Link:            .symtab
     Info:            .text
     Relocations:
@@ -30,6 +32,7 @@ Sections:
     Type:            SHT_PROGBITS
     Content:         3300000002001C0000000101FB0E0D000101010100000001000001006162632E7300000000000009020000000000000000140208000101
   - Name:            .rela.debug_line
+    AddressAlign:    8
     Type:            SHT_RELA
     Link:            .symtab
     Info:            .debug_line
