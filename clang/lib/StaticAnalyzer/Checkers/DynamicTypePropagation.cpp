@@ -546,8 +546,6 @@ void DynamicTypePropagation::checkPostStmt(const CastExpr *CE,
   OrigObjectPtrType = OrigObjectPtrType->stripObjCKindOfTypeAndQuals(ASTCtxt);
   DestObjectPtrType = DestObjectPtrType->stripObjCKindOfTypeAndQuals(ASTCtxt);
 
-  // TODO: erase tracked information when there is a cast to unrelated type
-  //       and everything is unspecialized statically.
   if (OrigObjectPtrType->isUnspecialized() &&
       DestObjectPtrType->isUnspecialized())
     return;
@@ -556,28 +554,30 @@ void DynamicTypePropagation::checkPostStmt(const CastExpr *CE,
   if (!Sym)
     return;
 
-  // Check which assignments are legal.
-  bool OrigToDest =
-      ASTCtxt.canAssignObjCInterfaces(DestObjectPtrType, OrigObjectPtrType);
-  bool DestToOrig =
-      ASTCtxt.canAssignObjCInterfaces(OrigObjectPtrType, DestObjectPtrType);
   const ObjCObjectPointerType *const *TrackedType =
       State->get<MostSpecializedTypeArgsMap>(Sym);
 
-  // Downcasts and upcasts handled in an uniform way regardless of being
-  // explicit. Explicit casts however can happen between mismatched types.
-  if (isa<ExplicitCastExpr>(CE) && !OrigToDest && !DestToOrig) {
-    // Mismatched types. If the DestType specialized, store it. Forget the
-    // tracked type otherwise.
-    if (DestObjectPtrType->isSpecialized()) {
-      State = State->set<MostSpecializedTypeArgsMap>(Sym, DestObjectPtrType);
-      C.addTransition(State, AfterTypeProp);
-    } else if (TrackedType) {
+  if (isa<ExplicitCastExpr>(CE)) {
+    // Treat explicit casts as an indication from the programmer that the
+    // Objective-C type system is not rich enough to express the needed
+    // invariant. In such cases, forget any existing information inferred
+    // about the type arguments. We don't assume the casted-to specialized
+    // type here because the invariant the programmer specifies in the cast
+    // may only hold at this particular program point and not later ones.
+    // We don't want a suppressing cast to require a cascade of casts down the
+    // line.
+    if (TrackedType) {
       State = State->remove<MostSpecializedTypeArgsMap>(Sym);
       C.addTransition(State, AfterTypeProp);
     }
     return;
   }
+
+  // Check which assignments are legal.
+  bool OrigToDest =
+      ASTCtxt.canAssignObjCInterfaces(DestObjectPtrType, OrigObjectPtrType);
+  bool DestToOrig =
+      ASTCtxt.canAssignObjCInterfaces(OrigObjectPtrType, DestObjectPtrType);
 
   // The tracked type should be the sub or super class of the static destination
   // type. When an (implicit) upcast or a downcast happens according to static

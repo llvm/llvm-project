@@ -450,6 +450,51 @@ void f10(io_service_t media, DADiskRef d, CFStringRef s) {
   if (session) NSLog(@"ok");
 }
 
+
+// Handle CoreMedia API
+
+struct CMFoo;
+typedef struct CMFoo *CMFooRef;
+
+CMFooRef CMCreateFooRef();
+CMFooRef CMGetFooRef();
+
+typedef signed long SInt32;
+typedef SInt32  OSStatus;
+OSStatus CMCreateFooAndReturnViaOutParameter(CMFooRef * CF_RETURNS_RETAINED fooOut);
+
+void testLeakCoreMediaReferenceType() {
+  CMFooRef f = CMCreateFooRef(); // expected-warning{{leak}}
+}
+
+void testOverReleaseMediaReferenceType() {
+  CMFooRef f = CMGetFooRef();
+  CFRelease(f); // expected-warning{{Incorrect decrement of the reference count}}
+}
+
+void testOkToReleaseReturnsRetainedOutParameter() {
+  CMFooRef foo = 0;
+  OSStatus status = CMCreateFooAndReturnViaOutParameter(&foo);
+
+  if (status != 0)
+    return;
+
+  CFRelease(foo); // no-warning
+}
+
+void testLeakWithReturnsRetainedOutParameter() {
+  CMFooRef foo = 0;
+  OSStatus status = CMCreateFooAndReturnViaOutParameter(&foo);
+
+  if (status != 0)
+    return;
+
+  // FIXME: Ideally we would report a leak here since it is the caller's
+  // responsibility to release 'foo'. However, we don't currently have
+  // a mechanism in this checker to only require a release when a successful
+  // status is returned.
+}
+
 // Test retain/release checker with CFString and CFMutableArray.
 void f11() {
   // Create the array.

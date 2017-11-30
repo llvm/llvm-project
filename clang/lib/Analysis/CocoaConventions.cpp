@@ -47,12 +47,19 @@ bool cocoa::isRefType(QualType RetTy, StringRef Prefix,
   return Name.startswith(Prefix);
 }
 
+/// Returns true when the passed-in type is a CF-style reference-counted
+/// type from the DiskArbitration framework.
+static bool isDiskArbitrationAPIRefType(QualType T) {
+  return cocoa::isRefType(T, "DADisk") ||
+      cocoa::isRefType(T, "DADissenter") ||
+      cocoa::isRefType(T, "DASessionRef");
+}
+
 bool coreFoundation::isCFObjectRef(QualType T) {
   return cocoa::isRefType(T, "CF") || // Core Foundation.
          cocoa::isRefType(T, "CG") || // Core Graphics.
-         cocoa::isRefType(T, "DADisk") || // Disk Arbitration API.
-         cocoa::isRefType(T, "DADissenter") ||
-         cocoa::isRefType(T, "DASessionRef");
+         cocoa::isRefType(T, "CM") || // Core Media.
+         isDiskArbitrationAPIRefType(T);
 }
 
 
