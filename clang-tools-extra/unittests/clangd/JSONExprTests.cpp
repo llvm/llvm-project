@@ -229,6 +229,64 @@ TEST(JSONTest, Inspection) {
   }
 }
 
+// Sample struct with typical JSON-mapping rules.
+struct CustomStruct {
+  CustomStruct() : B(false) {}
+  CustomStruct(std::string S, llvm::Optional<int> I, bool B)
+      : S(S), I(I), B(B) {}
+  std::string S;
+  llvm::Optional<int> I;
+  bool B;
+};
+inline bool operator==(const CustomStruct &L, const CustomStruct &R) {
+  return L.S == R.S && L.I == R.I && L.B == R.B;
+}
+inline std::ostream &operator<<(std::ostream &OS, const CustomStruct &S) {
+  return OS << "(" << S.S << ", " << (S.I ? std::to_string(*S.I) : "None")
+            << ", " << S.B << ")";
+}
+bool fromJSON(const json::Expr &E, CustomStruct &R) {
+  ObjectMapper O(E);
+  if (!O || !O.map("str", R.S) || !O.map("int", R.I))
+    return false;
+  O.map("bool", R.B);
+  return true;
+}
+
+TEST(JSONTest, Deserialize) {
+  std::map<std::string, std::vector<CustomStruct>> R;
+  CustomStruct ExpectedStruct = {"foo", 42, true};
+  std::map<std::string, std::vector<CustomStruct>> Expected;
+  Expr J = obj{{"foo", ary{
+                           obj{
+                               {"str", "foo"},
+                               {"int", 42},
+                               {"bool", true},
+                               {"unknown", "ignored"},
+                           },
+                           obj{{"str", "bar"}},
+                           obj{
+                               {"str", "baz"},
+                               {"bool", "string"}, // OK, deserialize ignores.
+                           },
+                       }}};
+  Expected["foo"] = {
+      CustomStruct("foo", 42, true),
+      CustomStruct("bar", llvm::None, false),
+      CustomStruct("baz", llvm::None, false),
+  };
+  ASSERT_TRUE(fromJSON(J, R));
+  EXPECT_EQ(R, Expected);
+
+  CustomStruct V;
+  EXPECT_FALSE(fromJSON(nullptr, V)) << "Not an object " << V;
+  EXPECT_FALSE(fromJSON(obj{}, V)) << "Missing required field " << V;
+  EXPECT_FALSE(fromJSON(obj{{"str", 1}}, V)) << "Wrong type " << V;
+  // Optional<T> must parse as the correct type if present.
+  EXPECT_FALSE(fromJSON(obj{{"str", 1}, {"int", "string"}}, V))
+      << "Wrong type for Optional<T> " << V;
+}
+
 } // namespace
 } // namespace json
 } // namespace clangd
