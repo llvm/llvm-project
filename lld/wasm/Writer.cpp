@@ -35,11 +35,6 @@ static constexpr int kStackAlignment = 16;
 
 namespace {
 
-// Needed for WasmSignatureDenseMapInfo
-bool operator==(const WasmSignature &LHS, const WasmSignature &RHS) {
-  return LHS.ReturnType == RHS.ReturnType && LHS.ParamTypes == RHS.ParamTypes;
-}
-
 // Traits for using WasmSignature in a DenseMap.
 struct WasmSignatureDenseMapInfo {
   static WasmSignature getEmptyKey() {
@@ -72,6 +67,7 @@ public:
 private:
   void openFile();
 
+  uint32_t getTypeIndex(const WasmSignature &Sig);
   void assignSymbolIndexes();
   void calculateImports();
   void calculateOffsets();
@@ -158,8 +154,8 @@ void Writer::createImportSection() {
     Import.Module = "env";
     Import.Field = Sym->getName();
     Import.Kind = WASM_EXTERNAL_FUNCTION;
-    auto *Obj = cast<ObjFile>(Sym->getFile());
-    Import.SigIndex = Obj->relocateTypeIndex(Sym->getFunctionTypeIndex());
+    assert(TypeIndices.count(Sym->getFunctionType()) > 0);
+    Import.SigIndex = TypeIndices.lookup(Sym->getFunctionType());
     writeImport(OS, Import);
   }
 
@@ -179,9 +175,6 @@ void Writer::createImportSection() {
     Import.Field = Sym->getName();
     Import.Kind = WASM_EXTERNAL_GLOBAL;
     Import.Global.Mutable = false;
-    assert(isa<ObjFile>(Sym->getFile()));
-    // TODO(sbc): Set type of this import
-    // ObjFile* Obj = dyn_cast<ObjFile>(Sym->getFile());
     Import.Global.Type = WASM_TYPE_I32; // Sym->getGlobalType();
     writeImport(OS, Import);
   }
@@ -632,17 +625,18 @@ void Writer::calculateImports() {
   }
 }
 
+uint32_t Writer::getTypeIndex(const WasmSignature &Sig) {
+  auto Pair = TypeIndices.insert(std::make_pair(Sig, Types.size()));
+  if (Pair.second)
+    Types.push_back(&Sig);
+  return Pair.first->second;
+}
+
 void Writer::calculateTypes() {
   for (ObjFile *File : Symtab->ObjectFiles) {
     File->TypeMap.reserve(File->getWasmObj()->types().size());
-    for (const WasmSignature &Sig : File->getWasmObj()->types()) {
-      auto Pair = TypeIndices.insert(std::make_pair(Sig, Types.size()));
-      if (Pair.second)
-        Types.push_back(&Sig);
-
-      // Now we map the input files index to the index in the linked output
-      File->TypeMap.push_back(Pair.first->second);
-    }
+    for (const WasmSignature &Sig : File->getWasmObj()->types())
+      File->TypeMap.push_back(getTypeIndex(Sig));
   }
 }
 

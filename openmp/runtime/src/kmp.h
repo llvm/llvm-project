@@ -314,7 +314,7 @@ typedef enum kmp_sched {
  @ingroup WORK_SHARING
  * Describes the loop schedule to be used for a parallel for loop.
  */
-enum sched_type {
+enum sched_type : kmp_int32 {
   kmp_sch_lower = 32, /**< lower bound for unordered values */
   kmp_sch_static_chunked = 33,
   kmp_sch_static = 34, /**< static unspecialized */
@@ -433,9 +433,12 @@ enum sched_type {
 };
 
 /* Type to keep runtime schedule set via OMP_SCHEDULE or omp_set_schedule() */
-typedef struct kmp_r_sched {
-  enum sched_type r_sched_type;
-  int chunk;
+typedef union kmp_r_sched {
+  struct {
+    enum sched_type r_sched_type;
+    int chunk;
+  };
+  kmp_int64 sched;
 } kmp_r_sched_t;
 
 extern enum sched_type __kmp_sch_map[]; // map OMP 3.0 schedule types with our

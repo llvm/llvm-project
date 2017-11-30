@@ -355,9 +355,8 @@ public:
   GetTemplateArgumentKind(lldb::opaque_compiler_type_t type, size_t idx);
   virtual CompilerType GetTypeTemplateArgument(lldb::opaque_compiler_type_t type,
                                            size_t idx);
-  virtual std::pair<llvm::APSInt, CompilerType>
-  GetIntegralTemplateArgument(lldb::opaque_compiler_type_t type,
-                              size_t idx);
+  virtual llvm::Optional<CompilerType::IntegralTemplateArgument>
+  GetIntegralTemplateArgument(lldb::opaque_compiler_type_t type, size_t idx);
 
   //----------------------------------------------------------------------
   // Dumping types

@@ -426,7 +426,7 @@ lldb::SBType SBType::GetTemplateArgumentType(uint32_t idx) {
     case eTemplateArgumentKindIntegral:
       type = m_opaque_sp->GetCompilerType(false)
                  .GetIntegralTemplateArgument(idx)
-                 .second;
+                 ->type;
       break;
     default:
       break;

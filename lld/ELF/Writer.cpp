@@ -508,8 +508,9 @@ template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
     if (isa<SyntheticSection>(IS) && !(IS->Flags & SHF_MERGE))
       continue;
 
-    auto *Sym = make<Defined>("", STB_LOCAL, /*StOther=*/0, STT_SECTION,
-                              /*Value=*/0, /*Size=*/0, IS);
+    auto *Sym =
+        make<Defined>(IS->File, "", STB_LOCAL, /*StOther=*/0, STT_SECTION,
+                      /*Value=*/0, /*Size=*/0, IS);
     InX::SymTab->addSymbol(Sym);
   }
 }
@@ -1755,7 +1756,7 @@ template <class ELFT> void Writer<ELFT>::setPhdrs() {
 //
 // 1. the '-e' entry command-line option;
 // 2. the ENTRY(symbol) command in a linker control script;
-// 3. the value of the symbol start, if present;
+// 3. the value of the symbol _start, if present;
 // 4. the number represented by the entry symbol, if it is a number;
 // 5. the address of the first byte of the .text section, if present;
 // 6. the address 0.
