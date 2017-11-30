@@ -3,7 +3,7 @@
 int main() {                    // CHECK: File 0, [[@LINE]]:12 -> [[@LINE+21]]:2 = #0
   int j = 0;                    // CHECK-NEXT: File 0, [[@LINE+2]]:18 -> [[@LINE+2]]:24 = (#0 + #1)
                                 // CHECK-NEXT: File 0, [[@LINE+1]]:26 -> [[@LINE+1]]:29 = #1
-  for(int i = 0; i < 20; ++i) { // CHECK-NEXT: File 0, [[@LINE]]:31 -> [[@LINE+17]]:4 = #1
+  for(int i = 0; i < 20; ++i) { // CHECK: File 0, [[@LINE]]:31 -> [[@LINE+17]]:4 = #1
     if(i < 10) {                // CHECK: File 0, [[@LINE]]:16 -> [[@LINE+13]]:6 = #2
       if(i < 5) {               // CHECK: File 0, [[@LINE]]:17 -> [[@LINE+3]]:8 = #3
         continue;

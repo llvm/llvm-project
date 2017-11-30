@@ -2754,7 +2754,7 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
     // Type safety checking.
     if (FDecl) {
       for (const auto *I : FDecl->specific_attrs<ArgumentWithTypeTagAttr>())
-        CheckArgumentWithTypeTag(I, Args.data());
+        CheckArgumentWithTypeTag(I, Args, Loc);
     }
   }
 
@@ -12329,10 +12329,18 @@ static bool IsSameCharType(QualType T1, QualType T2) {
 }
 
 void Sema::CheckArgumentWithTypeTag(const ArgumentWithTypeTagAttr *Attr,
-                                    const Expr * const *ExprArgs) {
+                                    const ArrayRef<const Expr *> ExprArgs,
+                                    SourceLocation CallSiteLoc) {
   const IdentifierInfo *ArgumentKind = Attr->getArgumentKind();
   bool IsPointerAttr = Attr->getIsPointer();
 
+  // Retrieve the argument representing the 'type_tag'.
+  if (Attr->getTypeTagIdx() >= ExprArgs.size()) {
+    // Add 1 to display the user's specified value.
+    Diag(CallSiteLoc, diag::err_tag_index_out_of_range)
+        << 0 << Attr->getTypeTagIdx() + 1;
+    return;
+  }
   const Expr *TypeTagExpr = ExprArgs[Attr->getTypeTagIdx()];
   bool FoundWrongKind;
   TypeTagData TypeInfo;
@@ -12346,6 +12354,13 @@ void Sema::CheckArgumentWithTypeTag(const ArgumentWithTypeTagAttr *Attr,
     return;
   }
 
+  // Retrieve the argument representing the 'arg_idx'.
+  if (Attr->getArgumentIdx() >= ExprArgs.size()) {
+    // Add 1 to display the user's specified value.
+    Diag(CallSiteLoc, diag::err_tag_index_out_of_range)
+        << 1 << Attr->getArgumentIdx() + 1;
+    return;
+  }
   const Expr *ArgumentExpr = ExprArgs[Attr->getArgumentIdx()];
   if (IsPointerAttr) {
     // Skip implicit cast of pointer to `void *' (as a function argument).

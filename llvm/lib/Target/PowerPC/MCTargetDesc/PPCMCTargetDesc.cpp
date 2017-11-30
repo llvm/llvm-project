@@ -239,7 +239,7 @@ static MCInstPrinter *createPPCMCInstPrinter(const Triple &T,
                                              const MCAsmInfo &MAI,
                                              const MCInstrInfo &MII,
                                              const MCRegisterInfo &MRI) {
-  return new PPCInstPrinter(MAI, MII, MRI, T.isOSDarwin());
+  return new PPCInstPrinter(MAI, MII, MRI, T);
 }
 
 extern "C" void LLVMInitializePowerPCTargetMC() {

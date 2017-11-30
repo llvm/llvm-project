@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mattr=+max-private-element-size-16 < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=fiji -mattr=+max-private-element-size-16 < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=VI %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=+max-private-element-size-16 < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -march=amdgcn -mattr=+max-private-element-size-16 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SICIVI %s
+; RUN: llc -march=amdgcn -mcpu=fiji -mattr=+max-private-element-size-16 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SICIVI %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=+max-private-element-size-16 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
 
 ; Test addressing modes when the scratch base is not a frame index.
 
@@ -130,6 +130,25 @@ define amdgpu_kernel void @store_private_offset_i8_max_offset_plus1() #0 {
 ; GCN: buffer_store_byte v{{[0-9]+}}, [[OFFSET]], s[4:7], s2 offen offset:1{{$}}
 define amdgpu_kernel void @store_private_offset_i8_max_offset_plus2() #0 {
   store volatile i8 5, i8* inttoptr (i32 4097 to i8*)
+  ret void
+}
+
+; MUBUF used for stack access has bounds checking enabled before gfx9,
+; so a possibly negative base index can't be used for the vgpr offset.
+
+; GCN-LABEL: {{^}}store_private_unknown_bits_vaddr:
+; SICIVI: v_add_{{i|u}}32_e32 [[ADDR0:v[0-9]+]], vcc, 4
+; SICIVI: v_add_{{i|u}}32_e32 [[ADDR1:v[0-9]+]], vcc, 32, [[ADDR0]]
+; SICIVI: buffer_store_dword v{{[0-9]+}}, [[ADDR1]], s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen{{$}}
+
+; GFX9: v_add_co_u32_e32 [[ADDR:v[0-9]+]], vcc, 4,
+; GFX9: buffer_store_dword v{{[0-9]+}}, [[ADDR]], s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen offset:32
+define amdgpu_kernel void @store_private_unknown_bits_vaddr() #0 {
+  %alloca = alloca [16 x i32], align 4
+  %vaddr = load volatile i32, i32 addrspace(1)* undef
+  %vaddr.off = add i32 %vaddr, 8
+  %gep = getelementptr inbounds [16 x i32], [16 x i32]* %alloca, i32 0, i32 %vaddr.off
+  store volatile i32 9, i32* %gep
   ret void
 }
 

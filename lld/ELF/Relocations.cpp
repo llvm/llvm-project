@@ -73,7 +73,7 @@ template <class ELFT>
 static std::string getLocation(InputSectionBase &S, const Symbol &Sym,
                                uint64_t Off) {
   std::string Msg =
-      "\n>>> defined in " + toString(Sym.getFile()) + "\n>>> referenced by ";
+      "\n>>> defined in " + toString(Sym.File) + "\n>>> referenced by ";
   std::string Src = S.getSrcMsg<ELFT>(Sym, Off);
   if (!Src.empty())
     Msg += Src + "\n>>>               ";
@@ -641,7 +641,7 @@ static RelExpr adjustExpr(Symbol &Sym, RelExpr Expr, RelType Type,
   }
 
   errorOrWarn("symbol '" + toString(Sym) + "' defined in " +
-              toString(Sym.getFile()) + " has no type");
+              toString(Sym.File) + " has no type");
   return Expr;
 }
 

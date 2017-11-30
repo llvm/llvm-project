@@ -145,7 +145,7 @@ void BitcodeCompiler::add(BitcodeFile &F) {
     // flags an undefined in IR with a definition in ASM as prevailing.
     // Once IRObjectFile is fixed to report only one symbol this hack can
     // be removed.
-    R.Prevailing = !ObjSym.isUndefined() && Sym->getFile() == &F;
+    R.Prevailing = !ObjSym.isUndefined() && Sym->File == &F;
 
     // We ask LTO to preserve following global symbols:
     // 1) All symbols when doing relocatable link, so that them can be used

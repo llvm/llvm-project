@@ -22,10 +22,12 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
+#include "llvm/Analysis/DominanceFrontier.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -67,17 +69,67 @@ using namespace llvm;
 
 STATISTIC(NumPartialInlined,
           "Number of callsites functions partially inlined into.");
+STATISTIC(NumColdOutlinePartialInlined, "Number of times functions with "
+                                        "cold outlined regions were partially "
+                                        "inlined into its caller(s).");
+STATISTIC(NumColdRegionsFound,
+           "Number of cold single entry/exit regions found.");
+STATISTIC(NumColdRegionsOutlined,
+           "Number of cold single entry/exit regions outlined.");
 
 // Command line option to disable partial-inlining. The default is false:
 static cl::opt<bool>
     DisablePartialInlining("disable-partial-inlining", cl::init(false),
-                           cl::Hidden, cl::desc("Disable partial ininling"));
+                           cl::Hidden, cl::desc("Disable partial inlining"));
+// Command line option to disable multi-region partial-inlining. The default is
+// false:
+static cl::opt<bool> DisableMultiRegionPartialInline(
+    "disable-mr-partial-inlining", cl::init(false), cl::Hidden,
+    cl::desc("Disable multi-region partial inlining"));
+
+// Command line option to force outlining in regions with live exit variables.
+// The default is false:
+static cl::opt<bool>
+    ForceLiveExit("pi-force-live-exit-outline", cl::init(false), cl::Hidden,
+               cl::desc("Force outline regions with live exits"));
+
+// Command line option to enable marking outline functions with Cold Calling
+// Convention. The default is false:
+static cl::opt<bool>
+    MarkOutlinedColdCC("pi-mark-coldcc", cl::init(false), cl::Hidden,
+                       cl::desc("Mark outline function calls with ColdCC"));
+
+#ifndef NDEBUG
+// Command line option to debug partial-inlining. The default is none:
+static cl::opt<bool> TracePartialInlining("trace-partial-inlining",
+                                          cl::init(false), cl::Hidden,
+                                          cl::desc("Trace partial inlining."));
+#endif
 
 // This is an option used by testing:
 static cl::opt<bool> SkipCostAnalysis("skip-partial-inlining-cost-analysis",
                                       cl::init(false), cl::ZeroOrMore,
                                       cl::ReallyHidden,
                                       cl::desc("Skip Cost Analysis"));
+// Used to determine if a cold region is worth outlining based on
+// its inlining cost compared to the original function.  Default is set at 10%.
+// ie. if the cold region reduces the inlining cost of the original function by
+// at least 10%.
+static cl::opt<float> MinRegionSizeRatio(
+    "min-region-size-ratio", cl::init(0.1), cl::Hidden,
+    cl::desc("Minimum ratio comparing relative sizes of each "
+             "outline candidate and original function"));
+// Used to tune the minimum number of execution counts needed in the predecessor
+// block to the cold edge. ie. confidence interval.
+static cl::opt<unsigned>
+    MinBlockCounterExecution("min-block-execution", cl::init(100), cl::Hidden,
+                             cl::desc("Minimum block executions to consider "
+                                      "its BranchProbabilityInfo valid"));
+// Used to determine when an edge is considered cold. Default is set to 10%. ie.
+// if the branch probability is 10% or less, then it is deemed as 'cold'.
+static cl::opt<float> ColdBranchRatio(
+    "cold-branch-ratio", cl::init(0.1), cl::Hidden,
+    cl::desc("Minimum BranchProbability to consider a region cold."));
 
 static cl::opt<unsigned> MaxNumInlineBlocks(
     "max-num-inline-blocks", cl::init(5), cl::Hidden,
@@ -125,23 +177,58 @@ struct FunctionOutliningInfo {
   SmallVector<BasicBlock *, 4> ReturnBlockPreds;
 };
 
+struct FunctionOutliningMultiRegionInfo {
+  FunctionOutliningMultiRegionInfo()
+      : ORI() {}
+
+  // Container for outline regions
+  struct OutlineRegionInfo {
+    OutlineRegionInfo(SmallVector<BasicBlock *, 8> Region,
+                      BasicBlock *EntryBlock, BasicBlock *ExitBlock,
+                      BasicBlock *ReturnBlock)
+        : Region(Region), EntryBlock(EntryBlock), ExitBlock(ExitBlock),
+          ReturnBlock(ReturnBlock) {}
+    SmallVector<BasicBlock *, 8> Region;
+    BasicBlock *EntryBlock;
+    BasicBlock *ExitBlock;
+    BasicBlock *ReturnBlock;
+  };
+
+  SmallVector<OutlineRegionInfo, 4> ORI;
+};
+
 struct PartialInlinerImpl {
+
   PartialInlinerImpl(
       std::function<AssumptionCache &(Function &)> *GetAC,
       std::function<TargetTransformInfo &(Function &)> *GTTI,
       Optional<function_ref<BlockFrequencyInfo &(Function &)>> GBFI,
-      ProfileSummaryInfo *ProfSI)
-      : GetAssumptionCache(GetAC), GetTTI(GTTI), GetBFI(GBFI), PSI(ProfSI) {}
+      ProfileSummaryInfo *ProfSI,
+      std::function<OptimizationRemarkEmitter &(Function &)> *GORE)
+      : GetAssumptionCache(GetAC), GetTTI(GTTI), GetBFI(GBFI), PSI(ProfSI),
+        GetORE(GORE) {}
 
   bool run(Module &M);
-  Function *unswitchFunction(Function *F);
+  // Main part of the transformation that calls helper functions to find
+  // outlining candidates, clone & outline the function, and attempt to
+  // partially inline the resulting function. Returns true if
+  // inlining was successful, false otherwise.  Also returns the outline
+  // function (only if we partially inlined early returns) as there is a
+  // possibility to further "peel" early return statements that were left in the
+  // outline function due to code size.
+  std::pair<bool, Function *> unswitchFunction(Function *F);
 
   // This class speculatively clones the the function to be partial inlined.
   // At the end of partial inlining, the remaining callsites to the cloned
   // function that are not partially inlined will be fixed up to reference
   // the original function, and the cloned function will be erased.
   struct FunctionCloner {
-    FunctionCloner(Function *F, FunctionOutliningInfo *OI);
+    // Two constructors, one for single region outlining, the other for
+    // multi-region outlining.
+    FunctionCloner(Function *F, FunctionOutliningInfo *OI,
+                   OptimizationRemarkEmitter &ORE);
+    FunctionCloner(Function *F, FunctionOutliningMultiRegionInfo *OMRI,
+                   OptimizationRemarkEmitter &ORE);
     ~FunctionCloner();
 
     // Prepare for function outlining: making sure there is only
@@ -149,25 +236,34 @@ struct PartialInlinerImpl {
     // the return block.
     void NormalizeReturnBlock();
 
-    // Do function outlining.
+    // Do function outlining for cold regions.
+    bool doMultiRegionFunctionOutlining();
+    // Do function outlining for region after early return block(s).
     // NOTE: For vararg functions that do the vararg handling in the outlined
     //       function, we temporarily generate IR that does not properly
     //       forward varargs to the outlined function. Calling InlineFunction
     //       will update calls to the outlined functions to properly forward
     //       the varargs.
-    Function *doFunctionOutlining();
+    Function *doSingleRegionFunctionOutlining();
 
     Function *OrigFunc = nullptr;
     Function *ClonedFunc = nullptr;
-    Function *OutlinedFunc = nullptr;
-    BasicBlock *OutliningCallBB = nullptr;
+
+    typedef std::pair<Function *, BasicBlock *> FuncBodyCallerPair;
+    // Keep track of Outlined Functions and the basic block they're called from.
+    SmallVector<FuncBodyCallerPair, 4> OutlinedFunctions;
+
     // ClonedFunc is inlined in one of its callers after function
     // outlining.
     bool IsFunctionInlined = false;
     // The cost of the region to be outlined.
     int OutlinedRegionCost = 0;
+    // ClonedOI is specific to outlining non-early return blocks.
     std::unique_ptr<FunctionOutliningInfo> ClonedOI = nullptr;
+    // ClonedOMRI is specific to outlining cold regions.
+    std::unique_ptr<FunctionOutliningMultiRegionInfo> ClonedOMRI = nullptr;
     std::unique_ptr<BlockFrequencyInfo> ClonedFuncBFI = nullptr;
+    OptimizationRemarkEmitter &ORE;
   };
 
 private:
@@ -176,6 +272,7 @@ private:
   std::function<TargetTransformInfo &(Function &)> *GetTTI;
   Optional<function_ref<BlockFrequencyInfo &(Function &)>> GetBFI;
   ProfileSummaryInfo *PSI;
+  std::function<OptimizationRemarkEmitter &(Function &)> *GetORE;
 
   // Return the frequency of the OutlininingBB relative to F's entry point.
   // The result is no larger than 1 and is represented using BP.
@@ -186,8 +283,7 @@ private:
   // Return true if the callee of CS should be partially inlined with
   // profit.
   bool shouldPartialInline(CallSite CS, FunctionCloner &Cloner,
-                           BlockFrequency WeightedOutliningRcost,
-                           OptimizationRemarkEmitter &ORE);
+                           BlockFrequency WeightedOutliningRcost);
 
   // Try to inline DuplicateFunction (cloned from F with call to
   // the OutlinedFunction into its callers. Return true
@@ -241,6 +337,8 @@ private:
   static int computeBBInlineCost(BasicBlock *BB);
 
   std::unique_ptr<FunctionOutliningInfo> computeOutliningInfo(Function *F);
+  std::unique_ptr<FunctionOutliningMultiRegionInfo>
+  computeOutliningColdRegionsInfo(Function *F);
 };
 
 struct PartialInlinerLegacyPass : public ModulePass {
@@ -265,6 +363,7 @@ struct PartialInlinerLegacyPass : public ModulePass {
         &getAnalysis<TargetTransformInfoWrapperPass>();
     ProfileSummaryInfo *PSI =
         getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+    std::unique_ptr<OptimizationRemarkEmitter> UPORE;
 
     std::function<AssumptionCache &(Function &)> GetAssumptionCache =
         [&ACT](Function &F) -> AssumptionCache & {
@@ -276,11 +375,188 @@ struct PartialInlinerLegacyPass : public ModulePass {
       return TTIWP->getTTI(F);
     };
 
-    return PartialInlinerImpl(&GetAssumptionCache, &GetTTI, None, PSI).run(M);
+    std::function<OptimizationRemarkEmitter &(Function &)> GetORE =
+        [&UPORE](Function &F) -> OptimizationRemarkEmitter & {
+      UPORE.reset(new OptimizationRemarkEmitter(&F));
+      return *UPORE.get();
+    };
+
+    return PartialInlinerImpl(&GetAssumptionCache, &GetTTI, NoneType::None, PSI,
+                              &GetORE)
+        .run(M);
   }
 };
 
 } // end anonymous namespace
+
+std::unique_ptr<FunctionOutliningMultiRegionInfo>
+PartialInlinerImpl::computeOutliningColdRegionsInfo(Function *F) {
+  BasicBlock *EntryBlock = &F->front();
+
+  DominatorTree DT(*F);
+  DominanceFrontier DF;
+  DF.analyze(DT);
+  LoopInfo LI(DT);
+  BranchProbabilityInfo BPI(*F, LI);
+  std::unique_ptr<BlockFrequencyInfo> ScopedBFI;
+  BlockFrequencyInfo *BFI;
+  if (!GetBFI) {
+    ScopedBFI.reset(new BlockFrequencyInfo(*F, BPI, LI));
+    BFI = ScopedBFI.get();
+  } else
+    BFI = &(*GetBFI)(*F);
+
+  auto &ORE = (*GetORE)(*F);
+
+  // Return if we don't have profiling information.
+  if (!PSI->hasInstrumentationProfile())
+    return std::unique_ptr<FunctionOutliningMultiRegionInfo>();
+
+  std::unique_ptr<FunctionOutliningMultiRegionInfo> OutliningInfo =
+      llvm::make_unique<FunctionOutliningMultiRegionInfo>();
+
+  auto IsSingleEntry = [](SmallVectorImpl<BasicBlock *> &BlockList) {
+    BasicBlock *Dom = BlockList.front();
+    return BlockList.size() > 1 &&
+           std::distance(pred_begin(Dom), pred_end(Dom)) == 1;
+  };
+
+  auto IsSingleExit =
+      [&ORE](SmallVectorImpl<BasicBlock *> &BlockList) -> BasicBlock * {
+    BasicBlock *ExitBlock = nullptr;
+    for (auto *Block : BlockList) {
+      for (auto SI = succ_begin(Block); SI != succ_end(Block); ++SI) {
+        if (!is_contained(BlockList, *SI)) {
+          if (ExitBlock) {
+            ORE.emit([&]() {
+              return OptimizationRemarkMissed(DEBUG_TYPE, "MultiExitRegion",
+                                              &SI->front())
+                     << "Region dominated by "
+                     << ore::NV("Block", BlockList.front()->getName())
+                     << " has more than one region exit edge.";
+            });
+            return nullptr;
+          } else
+            ExitBlock = Block;
+        }
+      }
+    }
+    return ExitBlock;
+  };
+
+  auto BBProfileCount = [BFI](BasicBlock *BB) {
+    return BFI->getBlockProfileCount(BB)
+               ? BFI->getBlockProfileCount(BB).getValue()
+               : 0;
+  };
+
+  // Use the same computeBBInlineCost function to compute the cost savings of
+  // the outlining the candidate region.
+  int OverallFunctionCost = 0;
+  for (auto &BB : *F)
+    OverallFunctionCost += computeBBInlineCost(&BB);
+
+#ifndef NDEBUG
+  if (TracePartialInlining)
+    dbgs() << "OverallFunctionCost = " << OverallFunctionCost << "\n";
+#endif
+  int MinOutlineRegionCost =
+      static_cast<int>(OverallFunctionCost * MinRegionSizeRatio);
+  BranchProbability MinBranchProbability(
+      static_cast<int>(ColdBranchRatio * MinBlockCounterExecution),
+      MinBlockCounterExecution);
+  bool ColdCandidateFound = false;
+  BasicBlock *CurrEntry = EntryBlock;
+  std::vector<BasicBlock *> DFS;
+  DenseMap<BasicBlock *, bool> VisitedMap;
+  DFS.push_back(CurrEntry);
+  VisitedMap[CurrEntry] = true;
+  // Use Depth First Search on the basic blocks to find CFG edges that are
+  // considered cold.
+  // Cold regions considered must also have its inline cost compared to the
+  // overall inline cost of the original function.  The region is outlined only
+  // if it reduced the inline cost of the function by 'MinOutlineRegionCost' or
+  // more.
+  while (!DFS.empty()) {
+    auto *thisBB = DFS.back();
+    DFS.pop_back();
+    // Only consider regions with predecessor blocks that are considered
+    // not-cold (default: part of the top 99.99% of all block counters)
+    // AND greater than our minimum block execution count (default: 100).
+    if (PSI->isColdBB(thisBB, BFI) ||
+        BBProfileCount(thisBB) < MinBlockCounterExecution)
+      continue;
+    for (auto SI = succ_begin(thisBB); SI != succ_end(thisBB); ++SI) {
+      if (VisitedMap[*SI])
+        continue;
+      VisitedMap[*SI] = true;
+      DFS.push_back(*SI);
+      // If branch isn't cold, we skip to the next one.
+      BranchProbability SuccProb = BPI.getEdgeProbability(thisBB, *SI);
+      if (SuccProb > MinBranchProbability)
+        continue;
+#ifndef NDEBUG
+      if (TracePartialInlining) {
+        dbgs() << "Found cold edge: " << thisBB->getName() << "->"
+               << (*SI)->getName() << "\nBranch Probability = " << SuccProb
+               << "\n";
+      }
+#endif
+      SmallVector<BasicBlock *, 8> DominateVector;
+      DT.getDescendants(*SI, DominateVector);
+      // We can only outline single entry regions (for now).
+      if (!IsSingleEntry(DominateVector))
+        continue;
+      BasicBlock *ExitBlock = nullptr;
+      // We can only outline single exit regions (for now).
+      if (!(ExitBlock = IsSingleExit(DominateVector)))
+        continue;
+      int OutlineRegionCost = 0;
+      for (auto *BB : DominateVector)
+        OutlineRegionCost += computeBBInlineCost(BB);
+
+#ifndef NDEBUG
+      if (TracePartialInlining)
+        dbgs() << "OutlineRegionCost = " << OutlineRegionCost << "\n";
+#endif
+
+      if (OutlineRegionCost < MinOutlineRegionCost) {
+        ORE.emit([&]() {
+          return OptimizationRemarkAnalysis(DEBUG_TYPE, "TooCostly",
+                                            &SI->front())
+                 << ore::NV("Callee", F) << " inline cost-savings smaller than "
+                 << ore::NV("Cost", MinOutlineRegionCost);
+        });
+        continue;
+      }
+      // For now, ignore blocks that belong to a SISE region that is a
+      // candidate for outlining.  In the future, we may want to look
+      // at inner regions because the outer region may have live-exit
+      // variables.
+      for (auto *BB : DominateVector)
+        VisitedMap[BB] = true;
+      // ReturnBlock here means the block after the outline call
+      BasicBlock *ReturnBlock = ExitBlock->getSingleSuccessor();
+      // assert(ReturnBlock && "ReturnBlock is NULL somehow!");
+      FunctionOutliningMultiRegionInfo::OutlineRegionInfo RegInfo(
+          DominateVector, DominateVector.front(), ExitBlock, ReturnBlock);
+      RegInfo.Region = DominateVector;
+      OutliningInfo->ORI.push_back(RegInfo);
+#ifndef NDEBUG
+      if (TracePartialInlining) {
+        dbgs() << "Found Cold Candidate starting at block: "
+               << DominateVector.front()->getName() << "\n";
+      }
+#endif
+      ColdCandidateFound = true;
+      NumColdRegionsFound++;
+    }
+  }
+  if (ColdCandidateFound)
+    return OutliningInfo;
+  else
+    return std::unique_ptr<FunctionOutliningMultiRegionInfo>();
+}
 
 std::unique_ptr<FunctionOutliningInfo>
 PartialInlinerImpl::computeOutliningInfo(Function *F) {
@@ -453,14 +729,19 @@ static bool hasProfileData(Function *F, FunctionOutliningInfo *OI) {
 
 BranchProbability
 PartialInlinerImpl::getOutliningCallBBRelativeFreq(FunctionCloner &Cloner) {
+  BasicBlock *OutliningCallBB = Cloner.OutlinedFunctions.back().second;
   auto EntryFreq =
       Cloner.ClonedFuncBFI->getBlockFreq(&Cloner.ClonedFunc->getEntryBlock());
   auto OutliningCallFreq =
-      Cloner.ClonedFuncBFI->getBlockFreq(Cloner.OutliningCallBB);
-
-  auto OutlineRegionRelFreq =
-      BranchProbability::getBranchProbability(OutliningCallFreq.getFrequency(),
-                                              EntryFreq.getFrequency());
+      Cloner.ClonedFuncBFI->getBlockFreq(OutliningCallBB);
+  // FIXME Hackery needed because ClonedFuncBFI is based on the function BEFORE
+  // we outlined any regions, so we may encounter situations where the
+  // OutliningCallFreq is *slightly* bigger than the EntryFreq.
+  if (OutliningCallFreq.getFrequency() > EntryFreq.getFrequency()) {
+    OutliningCallFreq = EntryFreq;
+  }
+  auto OutlineRegionRelFreq = BranchProbability::getBranchProbability(
+      OutliningCallFreq.getFrequency(), EntryFreq.getFrequency());
 
   if (hasProfileData(Cloner.OrigFunc, Cloner.ClonedOI.get()))
     return OutlineRegionRelFreq;
@@ -487,8 +768,8 @@ PartialInlinerImpl::getOutliningCallBBRelativeFreq(FunctionCloner &Cloner) {
 }
 
 bool PartialInlinerImpl::shouldPartialInline(
-    CallSite CS, FunctionCloner &Cloner, BlockFrequency WeightedOutliningRcost,
-    OptimizationRemarkEmitter &ORE) {
+    CallSite CS, FunctionCloner &Cloner,
+    BlockFrequency WeightedOutliningRcost) {
   using namespace ore;
 
   if (SkipCostAnalysis)
@@ -500,6 +781,7 @@ bool PartialInlinerImpl::shouldPartialInline(
 
   Function *Caller = CS.getCaller();
   auto &CalleeTTI = (*GetTTI)(*Callee);
+  auto &ORE = (*GetORE)(*Caller);
   InlineCost IC = getInlineCost(CS, getInlineParams(), CalleeTTI,
                                 *GetAssumptionCache, GetBFI, PSI, &ORE);
 
@@ -616,22 +898,26 @@ int PartialInlinerImpl::computeBBInlineCost(BasicBlock *BB) {
 
 std::tuple<int, int>
 PartialInlinerImpl::computeOutliningCosts(FunctionCloner &Cloner) {
-  // Now compute the cost of the call sequence to the outlined function
-  // 'OutlinedFunction' in BB 'OutliningCallBB':
-  int OutliningFuncCallCost = computeBBInlineCost(Cloner.OutliningCallBB);
+  int OutliningFuncCallCost = 0, OutlinedFunctionCost = 0;
+  for (auto FuncBBPair : Cloner.OutlinedFunctions) {
+    Function *OutlinedFunc = FuncBBPair.first;
+    BasicBlock* OutliningCallBB = FuncBBPair.second;
+    // Now compute the cost of the call sequence to the outlined function
+    // 'OutlinedFunction' in BB 'OutliningCallBB':
+    OutliningFuncCallCost += computeBBInlineCost(OutliningCallBB);
 
-  // Now compute the cost of the extracted/outlined function itself:
-  int OutlinedFunctionCost = 0;
-  for (BasicBlock &BB : *Cloner.OutlinedFunc) {
-    OutlinedFunctionCost += computeBBInlineCost(&BB);
+    // Now compute the cost of the extracted/outlined function itself:
+    for (BasicBlock &BB : *OutlinedFunc)
+      OutlinedFunctionCost += computeBBInlineCost(&BB);
   }
-
   assert(OutlinedFunctionCost >= Cloner.OutlinedRegionCost &&
          "Outlined function cost should be no less than the outlined region");
+
   // The code extractor introduces a new root and exit stub blocks with
   // additional unconditional branches. Those branches will be eliminated
   // later with bb layout. The cost should be adjusted accordingly:
-  OutlinedFunctionCost -= 2 * InlineConstants::InstrCost;
+  OutlinedFunctionCost -=
+      2 * InlineConstants::InstrCost * Cloner.OutlinedFunctions.size();
 
   int OutliningRuntimeOverhead =
       OutliningFuncCallCost +
@@ -685,9 +971,9 @@ void PartialInlinerImpl::computeCallsiteToProfCountMap(
   }
 }
 
-PartialInlinerImpl::FunctionCloner::FunctionCloner(Function *F,
-                                                   FunctionOutliningInfo *OI)
-    : OrigFunc(F) {
+PartialInlinerImpl::FunctionCloner::FunctionCloner(
+    Function *F, FunctionOutliningInfo *OI, OptimizationRemarkEmitter &ORE)
+    : OrigFunc(F), ORE(ORE) {
   ClonedOI = llvm::make_unique<FunctionOutliningInfo>();
 
   // Clone the function, so that we can hack away on it.
@@ -702,6 +988,38 @@ PartialInlinerImpl::FunctionCloner::FunctionCloner(Function *F,
   for (BasicBlock *E : OI->ReturnBlockPreds) {
     BasicBlock *NewE = cast<BasicBlock>(VMap[E]);
     ClonedOI->ReturnBlockPreds.push_back(NewE);
+  }
+  // Go ahead and update all uses to the duplicate, so that we can just
+  // use the inliner functionality when we're done hacking.
+  F->replaceAllUsesWith(ClonedFunc);
+}
+
+PartialInlinerImpl::FunctionCloner::FunctionCloner(
+    Function *F, FunctionOutliningMultiRegionInfo *OI,
+    OptimizationRemarkEmitter &ORE)
+    : OrigFunc(F), ORE(ORE) {
+  ClonedOMRI = llvm::make_unique<FunctionOutliningMultiRegionInfo>();
+
+  // Clone the function, so that we can hack away on it.
+  ValueToValueMapTy VMap;
+  ClonedFunc = CloneFunction(F, VMap);
+
+  // Go through all Outline Candidate Regions and update all BasicBlock
+  // information.
+  for (FunctionOutliningMultiRegionInfo::OutlineRegionInfo RegionInfo :
+       OI->ORI) {
+    SmallVector<BasicBlock *, 8> Region;
+    for (BasicBlock *BB : RegionInfo.Region) {
+      Region.push_back(cast<BasicBlock>(VMap[BB]));
+    }
+    BasicBlock *NewEntryBlock = cast<BasicBlock>(VMap[RegionInfo.EntryBlock]);
+    BasicBlock *NewExitBlock = cast<BasicBlock>(VMap[RegionInfo.ExitBlock]);
+    BasicBlock *NewReturnBlock = nullptr;
+    if (RegionInfo.ReturnBlock)
+      NewReturnBlock = cast<BasicBlock>(VMap[RegionInfo.ReturnBlock]);
+    FunctionOutliningMultiRegionInfo::OutlineRegionInfo MappedRegionInfo(
+        Region, NewEntryBlock, NewExitBlock, NewReturnBlock);
+    ClonedOMRI->ORI.push_back(MappedRegionInfo);
   }
   // Go ahead and update all uses to the duplicate, so that we can just
   // use the inliner functionality when we're done hacking.
@@ -723,6 +1041,11 @@ void PartialInlinerImpl::FunctionCloner::NormalizeReturnBlock() {
     }
     return FirstPhi;
   };
+
+  // Shouldn't need to normalize PHIs if we're not outlining non-early return
+  // blocks.
+  if (!ClonedOI)
+    return;
 
   // Special hackery is needed with PHI nodes that have inputs from more than
   // one extracted block.  For simplicity, just split the PHIs into a two-level
@@ -774,16 +1097,90 @@ void PartialInlinerImpl::FunctionCloner::NormalizeReturnBlock() {
       DeadPhis.push_back(OldPhi);
     }
     ++I;
-    }
-    for (auto *DP : DeadPhis)
-      DP->eraseFromParent();
+  }
+  for (auto *DP : DeadPhis)
+    DP->eraseFromParent();
 
-    for (auto E : ClonedOI->ReturnBlockPreds) {
-      E->getTerminator()->replaceUsesOfWith(PreReturn, ClonedOI->ReturnBlock);
-    }
+  for (auto E : ClonedOI->ReturnBlockPreds) {
+    E->getTerminator()->replaceUsesOfWith(PreReturn, ClonedOI->ReturnBlock);
+  }
 }
 
-Function *PartialInlinerImpl::FunctionCloner::doFunctionOutlining() {
+bool PartialInlinerImpl::FunctionCloner::doMultiRegionFunctionOutlining() {
+
+  auto ComputeRegionCost = [](SmallVectorImpl<BasicBlock *> &Region) {
+    int Cost = 0;
+    for (BasicBlock* BB : Region)
+      Cost += computeBBInlineCost(BB);
+    return Cost;
+  };
+
+  assert(ClonedOMRI && "Expecting OutlineInfo for multi region outline");
+
+  if (ClonedOMRI->ORI.empty())
+    return false;
+
+  // The CodeExtractor needs a dominator tree.
+  DominatorTree DT;
+  DT.recalculate(*ClonedFunc);
+
+  // Manually calculate a BlockFrequencyInfo and BranchProbabilityInfo.
+  LoopInfo LI(DT);
+  BranchProbabilityInfo BPI(*ClonedFunc, LI);
+  ClonedFuncBFI.reset(new BlockFrequencyInfo(*ClonedFunc, BPI, LI));
+
+  SetVector<Value *> Inputs, Outputs, Sinks;
+  for (FunctionOutliningMultiRegionInfo::OutlineRegionInfo RegionInfo :
+       ClonedOMRI->ORI) {
+    int CurrentOutlinedRegionCost = ComputeRegionCost(RegionInfo.Region);
+
+    CodeExtractor CE(RegionInfo.Region, &DT, /*AggregateArgs*/ false,
+                     ClonedFuncBFI.get(), &BPI, /* AllowVarargs */ false);
+
+    CE.findInputsOutputs(Inputs, Outputs, Sinks);
+
+#ifndef NDEBUG
+    if (TracePartialInlining) {
+      dbgs() << "inputs: " << Inputs.size() << "\n";
+      dbgs() << "outputs: " << Outputs.size() << "\n";
+      for (Value *value : Inputs)
+        dbgs() << "value used in func: " << *value << "\n";
+      for (Value *output : Outputs)
+        dbgs() << "instr used in func: " << *output << "\n";
+    }
+#endif
+    // Do not extract regions that have live exit variables.
+    if (Outputs.size() > 0 && !ForceLiveExit)
+      continue;
+
+    Function *OutlinedFunc = CE.extractCodeRegion();
+
+    if (OutlinedFunc) {
+      CallSite OCS = PartialInlinerImpl::getOneCallSiteTo(OutlinedFunc);
+      BasicBlock *OutliningCallBB = OCS.getInstruction()->getParent();
+      assert(OutliningCallBB->getParent() == ClonedFunc);
+      OutlinedFunctions.push_back(std::make_pair(OutlinedFunc,OutliningCallBB));
+      NumColdRegionsOutlined++;
+      OutlinedRegionCost += CurrentOutlinedRegionCost;
+
+      if (MarkOutlinedColdCC) {
+        OutlinedFunc->setCallingConv(CallingConv::Cold);
+        OCS.setCallingConv(CallingConv::Cold);
+      }
+    } else
+      ORE.emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "ExtractFailed",
+                                        &RegionInfo.Region.front()->front())
+               << "Failed to extract region at block "
+               << ore::NV("Block", RegionInfo.Region.front());
+      });
+  }
+
+  return !OutlinedFunctions.empty();
+}
+
+Function *
+PartialInlinerImpl::FunctionCloner::doSingleRegionFunctionOutlining() {
   // Returns true if the block is to be partial inlined into the caller
   // (i.e. not to be extracted to the out of line function)
   auto ToBeInlined = [&, this](BasicBlock *BB) {
@@ -791,6 +1188,16 @@ Function *PartialInlinerImpl::FunctionCloner::doFunctionOutlining() {
            (std::find(ClonedOI->Entries.begin(), ClonedOI->Entries.end(), BB) !=
             ClonedOI->Entries.end());
   };
+
+  assert(ClonedOI && "Expecting OutlineInfo for single region outline");
+  // The CodeExtractor needs a dominator tree.
+  DominatorTree DT;
+  DT.recalculate(*ClonedFunc);
+
+  // Manually calculate a BlockFrequencyInfo and BranchProbabilityInfo.
+  LoopInfo LI(DT);
+  BranchProbabilityInfo BPI(*ClonedFunc, LI);
+  ClonedFuncBFI.reset(new BlockFrequencyInfo(*ClonedFunc, BPI, LI));
 
   // Gather up the blocks that we're going to extract.
   std::vector<BasicBlock *> ToExtract;
@@ -807,27 +1214,27 @@ Function *PartialInlinerImpl::FunctionCloner::doFunctionOutlining() {
       OutlinedRegionCost += computeBBInlineCost(&BB);
     }
 
-  // The CodeExtractor needs a dominator tree.
-  DominatorTree DT;
-  DT.recalculate(*ClonedFunc);
-
-  // Manually calculate a BlockFrequencyInfo and BranchProbabilityInfo.
-  LoopInfo LI(DT);
-  BranchProbabilityInfo BPI(*ClonedFunc, LI);
-  ClonedFuncBFI.reset(new BlockFrequencyInfo(*ClonedFunc, BPI, LI));
-
   // Extract the body of the if.
-  OutlinedFunc = CodeExtractor(ToExtract, &DT, /*AggregateArgs*/ false,
-                               ClonedFuncBFI.get(), &BPI,
-                               /* AllowVarargs */ true)
-                     .extractCodeRegion();
+  Function *OutlinedFunc =
+      CodeExtractor(ToExtract, &DT, /*AggregateArgs*/ false,
+                    ClonedFuncBFI.get(), &BPI,
+                    /* AllowVarargs */ true)
+          .extractCodeRegion();
 
   if (OutlinedFunc) {
-    OutliningCallBB = PartialInlinerImpl::getOneCallSiteTo(OutlinedFunc)
-        .getInstruction()
-        ->getParent();
+    BasicBlock *OutliningCallBB =
+        PartialInlinerImpl::getOneCallSiteTo(OutlinedFunc)
+            .getInstruction()
+            ->getParent();
     assert(OutliningCallBB->getParent() == ClonedFunc);
-  }
+    OutlinedFunctions.push_back(std::make_pair(OutlinedFunc, OutliningCallBB));
+  } else
+    ORE.emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "ExtractFailed",
+                                      &ToExtract.front()->front())
+             << "Failed to extract region at block "
+             << ore::NV("Block", ToExtract.front());
+    });
 
   return OutlinedFunc;
 }
@@ -838,65 +1245,121 @@ PartialInlinerImpl::FunctionCloner::~FunctionCloner() {
   ClonedFunc->replaceAllUsesWith(OrigFunc);
   ClonedFunc->eraseFromParent();
   if (!IsFunctionInlined) {
-    // Remove the function that is speculatively created if there is no
+    // Remove each function that was speculatively created if there is no
     // reference.
-    if (OutlinedFunc)
-      OutlinedFunc->eraseFromParent();
+    for (auto FuncBBPair : OutlinedFunctions) {
+      Function *Func = FuncBBPair.first;
+      Func->eraseFromParent();
+    }
   }
 }
 
-Function *PartialInlinerImpl::unswitchFunction(Function *F) {
+std::pair<bool, Function *> PartialInlinerImpl::unswitchFunction(Function *F) {
+
   if (F->hasAddressTaken())
-    return nullptr;
+    return {false, nullptr};
 
   // Let inliner handle it
   if (F->hasFnAttribute(Attribute::AlwaysInline))
-    return nullptr;
+    return {false, nullptr};
 
   if (F->hasFnAttribute(Attribute::NoInline))
-    return nullptr;
+    return {false, nullptr};
 
   if (PSI->isFunctionEntryCold(F))
-    return nullptr;
+    return {false, nullptr};
 
   if (F->user_begin() == F->user_end())
-    return nullptr;
+    return {false, nullptr};
 
+  auto &ORE = (*GetORE)(*F);
+
+  // Only try to outline cold regions if we have a profile summary, which
+  // implies we have profiling information.
+  if (PSI->hasProfileSummary() && F->getEntryCount().hasValue() &&
+      !DisableMultiRegionPartialInline) {
+    std::unique_ptr<FunctionOutliningMultiRegionInfo> OMRI =
+        computeOutliningColdRegionsInfo(F);
+    if (OMRI) {
+      FunctionCloner Cloner(F, OMRI.get(), ORE);
+
+#ifndef NDEBUG
+      if (TracePartialInlining) {
+        dbgs() << "HotCountThreshold = " << PSI->getHotCountThreshold() << "\n";
+        dbgs() << "ColdCountThreshold = " << PSI->getColdCountThreshold()
+               << "\n";
+      }
+#endif
+      bool DidOutline = Cloner.doMultiRegionFunctionOutlining();
+
+      if (DidOutline) {
+#ifndef NDEBUG
+        if (TracePartialInlining) {
+          dbgs() << ">>>>>> Outlined (Cloned) Function >>>>>>\n";
+          Cloner.ClonedFunc->print(dbgs());
+          dbgs() << "<<<<<< Outlined (Cloned) Function <<<<<<\n";
+        }
+#endif
+
+        if (tryPartialInline(Cloner))
+          return {true, nullptr};
+      }
+    }
+  }
+
+  // Fall-thru to regular partial inlining if we:
+  //    i) can't find any cold regions to outline, or
+  //   ii) can't inline the outlined function anywhere.
   std::unique_ptr<FunctionOutliningInfo> OI = computeOutliningInfo(F);
-
   if (!OI)
-    return nullptr;
+    return {false, nullptr};
 
-  FunctionCloner Cloner(F, OI.get());
+  FunctionCloner Cloner(F, OI.get(), ORE);
   Cloner.NormalizeReturnBlock();
-  Function *OutlinedFunction = Cloner.doFunctionOutlining();
+
+  Function *OutlinedFunction = Cloner.doSingleRegionFunctionOutlining();
+
+  if (!OutlinedFunction)
+    return {false, nullptr};
 
   bool AnyInline = tryPartialInline(Cloner);
 
   if (AnyInline)
-    return OutlinedFunction;
+    return {true, OutlinedFunction};
 
-  return nullptr;
+  return {false, nullptr};
 }
 
 bool PartialInlinerImpl::tryPartialInline(FunctionCloner &Cloner) {
-  int NonWeightedRcost;
-  int SizeCost;
-
-  if (Cloner.OutlinedFunc == nullptr)
+  if (Cloner.OutlinedFunctions.empty())
     return false;
 
+  int SizeCost = 0;
+  BlockFrequency WeightedRcost;
+  int NonWeightedRcost;
   std::tie(SizeCost, NonWeightedRcost) = computeOutliningCosts(Cloner);
 
-  auto RelativeToEntryFreq = getOutliningCallBBRelativeFreq(Cloner);
-  auto WeightedRcost = BlockFrequency(NonWeightedRcost) * RelativeToEntryFreq;
+  // Only calculate RelativeToEntryFreq when we are doing single region
+  // outlining.
+  BranchProbability RelativeToEntryFreq;
+  if (Cloner.ClonedOI) {
+    RelativeToEntryFreq = getOutliningCallBBRelativeFreq(Cloner);
+  } else
+    // RelativeToEntryFreq doesn't make sense when we have more than one
+    // outlined call because each call will have a different relative frequency
+    // to the entry block.  We can consider using the average, but the
+    // usefulness of that information is questionable. For now, assume we never
+    // execute the calls to outlined functions.
+    RelativeToEntryFreq = BranchProbability(0, 1);
 
-  // The call sequence to the outlined function is larger than the original
-  // outlined region size, it does not increase the chances of inlining
-  // the function with outlining (The inliner uses the size increase to
+  WeightedRcost = BlockFrequency(NonWeightedRcost) * RelativeToEntryFreq;
+
+  // The call sequence(s) to the outlined function(s) are larger than the sum of
+  // the original outlined region size(s), it does not increase the chances of
+  // inlining the function with outlining (The inliner uses the size increase to
   // model the cost of inlining a callee).
   if (!SkipCostAnalysis && Cloner.OutlinedRegionCost < SizeCost) {
-    OptimizationRemarkEmitter ORE(Cloner.OrigFunc);
+    auto &ORE = (*GetORE)(*Cloner.OrigFunc);
     DebugLoc DLoc;
     BasicBlock *Block;
     std::tie(DLoc, Block) = getOneDebugLoc(Cloner.ClonedFunc);
@@ -932,11 +1395,11 @@ bool PartialInlinerImpl::tryPartialInline(FunctionCloner &Cloner) {
     if (IsLimitReached())
       continue;
 
-    OptimizationRemarkEmitter ORE(CS.getCaller());
 
-    if (!shouldPartialInline(CS, Cloner, WeightedRcost, ORE))
+    if (!shouldPartialInline(CS, Cloner, WeightedRcost))
       continue;
 
+    auto &ORE = (*GetORE)(*CS.getCaller());
     // Construct remark before doing the inlining, as after successful inlining
     // the callsite is removed.
     OptimizationRemark OR(DEBUG_TYPE, "PartiallyInlined", CS.getInstruction());
@@ -944,7 +1407,11 @@ bool PartialInlinerImpl::tryPartialInline(FunctionCloner &Cloner) {
        << ore::NV("Caller", CS.getCaller());
 
     InlineFunctionInfo IFI(nullptr, GetAssumptionCache, PSI);
-    if (!InlineFunction(CS, IFI, nullptr, true, Cloner.OutlinedFunc))
+    // We can only forward varargs when we outlined a single region, else we
+    // bail on vararg functions.
+    if (!InlineFunction(CS, IFI, nullptr, true,
+                        (Cloner.ClonedOI ? Cloner.OutlinedFunctions.back().first
+                                         : nullptr)))
       continue;
 
     ORE.emit(OR);
@@ -958,13 +1425,23 @@ bool PartialInlinerImpl::tryPartialInline(FunctionCloner &Cloner) {
     AnyInline = true;
     NumPartialInlining++;
     // Update the stats
-    NumPartialInlined++;
+    if (Cloner.ClonedOI)
+      NumPartialInlined++;
+    else
+      NumColdOutlinePartialInlined++;
+
   }
 
   if (AnyInline) {
     Cloner.IsFunctionInlined = true;
     if (CalleeEntryCount)
       Cloner.OrigFunc->setEntryCount(CalleeEntryCountV);
+    auto &ORE = (*GetORE)(*Cloner.OrigFunc);
+    ORE.emit([&]() {
+      return OptimizationRemark(DEBUG_TYPE, "PartiallyInlined", Cloner.OrigFunc)
+             << "Partially inlined into at least one caller";
+    });
+
   }
 
   return AnyInline;
@@ -998,8 +1475,10 @@ bool PartialInlinerImpl::run(Module &M) {
     if (Recursive)
       continue;
 
-    if (Function *NewFunc = unswitchFunction(CurrFunc)) {
-      Worklist.push_back(NewFunc);
+    std::pair<bool, Function * > Result = unswitchFunction(CurrFunc);
+    if (Result.second)
+      Worklist.push_back(Result.second);
+    if (Result.first) {
       Changed = true;
     }
   }
@@ -1040,9 +1519,15 @@ PreservedAnalyses PartialInlinerPass::run(Module &M,
     return FAM.getResult<TargetIRAnalysis>(F);
   };
 
+  std::function<OptimizationRemarkEmitter &(Function &)> GetORE =
+      [&FAM](Function &F) -> OptimizationRemarkEmitter & {
+    return FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
+  };
+
   ProfileSummaryInfo *PSI = &AM.getResult<ProfileSummaryAnalysis>(M);
 
-  if (PartialInlinerImpl(&GetAssumptionCache, &GetTTI, {GetBFI}, PSI).run(M))
+  if (PartialInlinerImpl(&GetAssumptionCache, &GetTTI, {GetBFI}, PSI, &GetORE)
+          .run(M))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
 }

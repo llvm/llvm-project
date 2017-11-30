@@ -143,7 +143,7 @@ variable, where we list down the options and their defaults below.
 |                   |                 |               | instrumentation points |
 |                   |                 |               | before main.           |
 +-------------------+-----------------+---------------+------------------------+
-| xray_naive_log    | ``bool``        | ``true``      | Whether to install     |
+| xray_naive_log    | ``bool``        | ``false``     | Whether to install     |
 |                   |                 |               | the naive log          |
 |                   |                 |               | implementation.        |
 +-------------------+-----------------+---------------+------------------------+
@@ -258,8 +258,11 @@ supports the following subcommands:
 - ``account``: Performs basic function call accounting statistics with various
   options for sorting, and output formats (supports CSV, YAML, and
   console-friendly TEXT).
-- ``convert``: Converts an XRay log file from one format to another. Currently
-  only converts to YAML.
+- ``convert``: Converts an XRay log file from one format to another. We can
+  convert from binary XRay traces (both naive and FDR mode) to YAML,
+  `flame-graph <https://github.com/brendangregg/FlameGraph>`_ friendly text
+  formats, as well as `Chrome Trace Viewer (catapult)
+  <https://github.com/catapult-project/catapult>` formats.
 - ``graph``: Generates a DOT graph of the function call relationships between
   functions found in an XRay trace.
 - ``stack``: Reconstructs function call stacks from a timeline of function

@@ -79,9 +79,3 @@ widechar-2.c
 
 # Untriaged: Assertion failure in WasmObjectWriter::applyRelocations
 20071220-2.c wasm-o,O0
-
-# Untriaged: Assertion failure in WasmObjectWriter::getFunctionType
-20051012-1.c wasm-o,O0
-920501-1.c wasm-o,O0
-921208-2.c wasm-o,O0
-call-trap-1.c wasm-o,O0

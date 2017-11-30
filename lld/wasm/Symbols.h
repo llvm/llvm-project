@@ -16,6 +16,7 @@
 
 using llvm::object::Archive;
 using llvm::object::WasmSymbol;
+using llvm::wasm::WasmSignature;
 using llvm::wasm::WasmImport;
 using llvm::wasm::WasmExport;
 
@@ -40,7 +41,7 @@ public:
   };
 
   Symbol(StringRef Name, bool IsLocal)
-      : WrittenToSymtab(0), WrittenToNameSec(0), Name(Name), IsLocal(IsLocal) {}
+      : WrittenToSymtab(0), WrittenToNameSec(0), IsLocal(IsLocal), Name(Name) {}
 
   Kind getKind() const { return SymbolKind; }
 
@@ -66,7 +67,8 @@ public:
 
   uint32_t getGlobalIndex() const;
   uint32_t getFunctionIndex() const;
-  uint32_t getFunctionTypeIndex() const;
+
+  const WasmSignature &getFunctionType() const;
   uint32_t getOutputIndex() const;
 
   // Returns the virtual address of a defined global.
@@ -81,7 +83,8 @@ public:
   void setOutputIndex(uint32_t Index);
 
   void update(Kind K, InputFile *F = nullptr, const WasmSymbol *Sym = nullptr,
-              const InputSegment *Segment = nullptr);
+              const InputSegment *Segment = nullptr,
+              const WasmSignature *Sig = nullptr);
 
   void setArchiveSymbol(const Archive::Symbol &Sym) { ArchiveSymbol = Sym; }
   const Archive::Symbol &getArchiveSymbol() { return ArchiveSymbol; }
@@ -92,14 +95,16 @@ public:
   unsigned WrittenToNameSec : 1;
 
 protected:
+  unsigned IsLocal : 1;
+
   StringRef Name;
-  bool IsLocal;
   Archive::Symbol ArchiveSymbol = {nullptr, 0, 0};
   Kind SymbolKind = InvalidKind;
   InputFile *File = nullptr;
   const WasmSymbol *Sym = nullptr;
   const InputSegment *Segment = nullptr;
   llvm::Optional<uint32_t> OutputIndex;
+  const WasmSignature* FunctionType;
 };
 
 } // namespace wasm
