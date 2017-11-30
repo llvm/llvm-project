@@ -57,11 +57,6 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
-- New `objc-avoid-nserror-init
-  <http://clang.llvm.org/extra/clang-tidy/checks/objc-avoid-nserror-init.html>`_ check
-
-  Add new check to detect the use of [NSError init].
-
 - New module `fuchsia` for Fuchsia style checks.
 
 - New module `objc` for Objective-C style checks.
@@ -143,13 +138,13 @@ Improvements to clang-tidy
 - New `google-objc-avoid-throwing-exception
   <http://clang.llvm.org/extra/clang-tidy/checks/google-objc-avoid-throwing-exception.html>`_ check
 
-  Add new check to detect throwing exceptions in Objective-C code, which should be avoided.
+  Finds uses of throwing exceptions usages in Objective-C files.
 
 - New `google-objc-global-variable-declaration
   <http://clang.llvm.org/extra/clang-tidy/checks/google-global-variable-declaration.html>`_ check
 
-  Add new check for Objective-C code to ensure global variables follow the
-  naming convention of 'k[A-Z].*' (for constants) or 'g[A-Z].*' (for variables).
+  Finds global variable declarations in Objective-C files that do not follow the
+  pattern of variable names in Google's Objective-C Style Guide.
 
 - New `hicpp-exception-baseclass
   <http://clang.llvm.org/extra/clang-tidy/checks/hicpp-exception-baseclass.html>`_ check
@@ -166,7 +161,7 @@ Improvements to clang-tidy
 - New `objc-avoid-nserror-init
   <http://clang.llvm.org/extra/clang-tidy/checks/objc-avoid-nserror-init.html>`_ check
 
-  Add new check to detect the use of [NSError init].
+  Finds improper initialization of ``NSError`` objects.
 
 - New `objc-avoid-spinlock
   <http://clang.llvm.org/extra/clang-tidy/checks/objc-avoid-spinlock.html>`_ check
@@ -177,15 +172,14 @@ Improvements to clang-tidy
 - New `objc-forbidden-subclassing
   <http://clang.llvm.org/extra/clang-tidy/checks/objc-forbidden-subclassing.html>`_ check
 
-  Ensures Objective-C classes do not subclass any classes which are
-  not intended to be subclassed. Includes a list of classes from Foundation
-  and UIKit which are documented as not supporting subclassing.
+  Finds Objective-C classes which are subclasses of classes which are not
+  designed to be subclassed.
 
 - New `objc-property-declaration
   <http://clang.llvm.org/extra/clang-tidy/checks/objc-property-declaration.html>`_ check
 
-  Add new check for Objective-C code to ensure property names follow the naming
-  convention of Apple's programming guide.
+  Finds property declarations in Objective-C files that do not follow the
+  pattern of property names in Apple's programming guide.
 
 - New `readability-static-accessed-through-instance
   <http://clang.llvm.org/extra/clang-tidy/checks/readability-static-accessed-through-instance.html>`_ check
@@ -245,6 +239,7 @@ Improvements to clang-tidy
   <http://clang.llvm.org/extra/clang-tidy/checks/readability-implicit-bool-conversion.html>`_
 
     The check's options were renamed as follows:
+
     - `AllowConditionalIntegerCasts` -> `AllowIntegerConditions`,
     - `AllowConditionalPointerCasts` -> `AllowPointerConditions`.
 

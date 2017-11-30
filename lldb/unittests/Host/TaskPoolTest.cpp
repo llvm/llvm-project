@@ -2,6 +2,8 @@
 
 #include "lldb/Host/TaskPool.h"
 
+using namespace lldb_private;
+
 TEST(TaskPoolTest, AddTask) {
   auto fn = [](int x) { return x * x + 1; };
 

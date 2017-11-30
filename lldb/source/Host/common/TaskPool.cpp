@@ -14,6 +14,8 @@
 #include <queue>   // for queue
 #include <thread>  // for thread
 
+namespace lldb_private {
+
 namespace {
 class TaskPoolImpl {
 public:
@@ -46,13 +48,20 @@ void TaskPool::AddTaskImpl(std::function<void()> &&task_fn) {
 
 TaskPoolImpl::TaskPoolImpl() : m_thread_count(0) {}
 
+unsigned GetHardwareConcurrencyHint() {
+  // std::thread::hardware_concurrency may return 0
+  // if the value is not well defined or not computable.
+  static const unsigned g_hardware_concurrency = 
+    std::max(1u, std::thread::hardware_concurrency());
+  return g_hardware_concurrency;
+}
+
 void TaskPoolImpl::AddTask(std::function<void()> &&task_fn) {
-  static const uint32_t max_threads = std::thread::hardware_concurrency();
   const size_t min_stack_size = 8 * 1024 * 1024;
 
   std::unique_lock<std::mutex> lock(m_tasks_mutex);
   m_tasks.emplace(std::move(task_fn));
-  if (m_thread_count < max_threads) {
+  if (m_thread_count < GetHardwareConcurrencyHint()) {
     m_thread_count++;
     // Note that this detach call needs to happen with the m_tasks_mutex held.
     // This prevents the thread
@@ -77,7 +86,7 @@ void TaskPoolImpl::Worker(TaskPoolImpl *pool) {
       break;
     }
 
-    std::function<void()> f = pool->m_tasks.front();
+    std::function<void()> f = std::move(pool->m_tasks.front());
     pool->m_tasks.pop();
     lock.unlock();
 
@@ -87,10 +96,9 @@ void TaskPoolImpl::Worker(TaskPoolImpl *pool) {
 
 void TaskMapOverInt(size_t begin, size_t end,
                     const llvm::function_ref<void(size_t)> &func) {
+  const size_t num_workers = std::min<size_t>(end, GetHardwareConcurrencyHint());
   std::atomic<size_t> idx{begin};
-  size_t num_workers =
-      std::min<size_t>(end, std::thread::hardware_concurrency());
-
+  
   auto wrapper = [&idx, end, &func]() {
     while (true) {
       size_t i = idx.fetch_add(1);
@@ -107,3 +115,6 @@ void TaskMapOverInt(size_t begin, size_t end,
   for (size_t i = 0; i < num_workers; i++)
     futures[i].wait();
 }
+
+} // namespace lldb_private
+
