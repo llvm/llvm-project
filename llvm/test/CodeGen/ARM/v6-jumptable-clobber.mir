@@ -231,21 +231,21 @@ body:             |
     successors: %bb.2.d1(0x03c3c3c4), %bb.1(0x7c3c3c3c)
     liveins: %r0, %r1
   
-    %r2 = tLDRpci %const.0, 14, _
-    tSTRi killed %r2, killed %r1, 0, 14, _ :: (store 4 into %ir.addr)
+    %r2 = tLDRpci %const.0, 14, %noreg
+    tSTRi killed %r2, killed %r1, 0, 14, %noreg :: (store 4 into %ir.addr)
     dead %r1 = SPACE 980, undef %r0
-    %r0 = tUXTB killed %r0, 14, _
-    %r1, dead %cpsr = tSUBi3 killed %r0, 1, 14, _
-    tCMPi8 %r1, 25, 14, _, implicit-def %cpsr
+    %r0 = tUXTB killed %r0, 14, %noreg
+    %r1, dead %cpsr = tSUBi3 killed %r0, 1, 14, %noreg
+    tCMPi8 %r1, 25, 14, %noreg, implicit-def %cpsr
     tBcc %bb.2.d1, 8, killed %cpsr
   
   bb.1 (%ir-block.0):
     successors: %bb.3.d2(0x07c549d2), %bb.9.d8(0x07c549d2), %bb.4.d3(0x07c549d2), %bb.5.d4(0x07c549d2), %bb.6.d5(0x07c549d2), %bb.7.d6(0x07c549d2), %bb.8.d7(0x07c549d2), %bb.10.d9(0x07c549d2), %bb.11.d10(0x07c549d2), %bb.2.d1(0x03ab62db), %bb.12.d11(0x07c549d2), %bb.13.d12(0x07c549d2), %bb.14.d13(0x07c549d2), %bb.15.d14(0x07c549d2), %bb.16.d15(0x07c549d2), %bb.17.d16(0x07c549d2), %bb.18.d17(0x07c549d2)
     liveins: %r1
   
-    %r0, dead %cpsr = tLSLri killed %r1, 2, 14, _
-    %r1 = tLEApcrelJT %jump-table.0, 14, _
-    %r0 = tLDRr killed %r1, killed %r0, 14, _ :: (load 4 from jump-table)
+    %r0, dead %cpsr = tLSLri killed %r1, 2, 14, %noreg
+    %r1 = tLEApcrelJT %jump-table.0, 14, %noreg
+    %r0 = tLDRr killed %r1, killed %r0, 14, %noreg :: (load 4 from jump-table)
     tBR_JTr killed %r0, %jump-table.0
   
   bb.3.d2:
@@ -329,20 +329,20 @@ body:             |
     successors: %bb.2.d1(0x03c3c3c4), %bb.1(0x7c3c3c3c)
     liveins: %r0, %r1
   
-    %r2 = tLDRpci %const.0, 14, _
-    tSTRi killed %r2, killed %r1, 0, 14, _ :: (store 4 into %ir.addr)
-    %r0 = tUXTB killed %r0, 14, _
-    %r1, dead %cpsr = tSUBi3 killed %r0, 1, 14, _
-    tCMPi8 %r1, 25, 14, _, implicit-def %cpsr
+    %r2 = tLDRpci %const.0, 14, %noreg
+    tSTRi killed %r2, killed %r1, 0, 14, %noreg :: (store 4 into %ir.addr)
+    %r0 = tUXTB killed %r0, 14, %noreg
+    %r1, dead %cpsr = tSUBi3 killed %r0, 1, 14, %noreg
+    tCMPi8 %r1, 25, 14, %noreg, implicit-def %cpsr
     tBcc %bb.2.d1, 8, killed %cpsr
   
   bb.1 (%ir-block.0):
     successors: %bb.3.d2(0x07c549d2), %bb.9.d8(0x07c549d2), %bb.4.d3(0x07c549d2), %bb.5.d4(0x07c549d2), %bb.6.d5(0x07c549d2), %bb.7.d6(0x07c549d2), %bb.8.d7(0x07c549d2), %bb.10.d9(0x07c549d2), %bb.11.d10(0x07c549d2), %bb.2.d1(0x03ab62db), %bb.12.d11(0x07c549d2), %bb.13.d12(0x07c549d2), %bb.14.d13(0x07c549d2), %bb.15.d14(0x07c549d2), %bb.16.d15(0x07c549d2), %bb.17.d16(0x07c549d2), %bb.18.d17(0x07c549d2)
     liveins: %r1
   
-    %r0, dead %cpsr = tLSLri killed %r1, 2, 14, _
-    %r1 = tLEApcrelJT %jump-table.0, 14, _
-    %r0 = tLDRr killed %r1, killed %r0, 14, _ :: (load 4 from jump-table)
+    %r0, dead %cpsr = tLSLri killed %r1, 2, 14, %noreg
+    %r1 = tLEApcrelJT %jump-table.0, 14, %noreg
+    %r0 = tLDRr killed %r1, killed %r0, 14, %noreg :: (load 4 from jump-table)
     tBR_JTr killed %r0, %jump-table.0
   
   bb.3.d2:

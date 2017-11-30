@@ -1097,8 +1097,8 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
               TII->getRegClass(MCID, MONum, TRI, *MF)) {
           if (!DRC->contains(Reg)) {
             report("Illegal physical register for instruction", MO, MONum);
-            errs() << TRI->getName(Reg) << " is not a "
-                << TRI->getRegClassName(DRC) << " register.\n";
+            errs() << printReg(Reg, TRI) << " is not a "
+                   << TRI->getRegClassName(DRC) << " register.\n";
           }
         }
       }
@@ -1689,7 +1689,7 @@ void MachineVerifier::visitMachineFunctionAfter() {
       if (MInfo.regsKilled.count(*I)) {
         report("Virtual register killed in block, but needed live out.", &MBB);
         errs() << "Virtual register " << printReg(*I)
-            << " is used after the block.\n";
+               << " is used after the block.\n";
       }
   }
 
@@ -1722,13 +1722,13 @@ void MachineVerifier::verifyLiveVariables() {
         if (!VI.AliveBlocks.test(MBB.getNumber())) {
           report("LiveVariables: Block missing from AliveBlocks", &MBB);
           errs() << "Virtual register " << printReg(Reg)
-              << " must be live through the block.\n";
+                 << " must be live through the block.\n";
         }
       } else {
         if (VI.AliveBlocks.test(MBB.getNumber())) {
           report("LiveVariables: Block should not be in AliveBlocks", &MBB);
           errs() << "Virtual register " << printReg(Reg)
-              << " is not needed live through the block.\n";
+                 << " is not needed live through the block.\n";
         }
       }
     }

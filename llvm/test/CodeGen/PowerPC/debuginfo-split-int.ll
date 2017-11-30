@@ -27,9 +27,9 @@ target triple = "ppc32"
 ;
 ; High 32 bits in R3, low 32 bits in R4
 ; CHECK: %0:gprc = COPY %r3
-; CHECK: DBG_VALUE debug-use %0, debug-use _, [[DL]], !DIExpression(DW_OP_LLVM_fragment, 0, 32)
+; CHECK: DBG_VALUE debug-use %0, debug-use %noreg, [[DL]], !DIExpression(DW_OP_LLVM_fragment, 0, 32)
 ; CHECK: %1:gprc = COPY %r4
-; CHECK: DBG_VALUE debug-use %1, debug-use _, [[DL]], !DIExpression(DW_OP_LLVM_fragment, 32, 32)
+; CHECK: DBG_VALUE debug-use %1, debug-use %noreg, [[DL]], !DIExpression(DW_OP_LLVM_fragment, 32, 32)
 define void @bar() local_unnamed_addr #0 !dbg !6 {
   %1 = alloca i64, align 8
   %2 = tail call i64 @foo()

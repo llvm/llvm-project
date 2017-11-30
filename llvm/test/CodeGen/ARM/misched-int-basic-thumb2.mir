@@ -152,24 +152,24 @@ body:             |
     %1 = COPY %r1
     %0 = COPY %r0
     %2 = t2MOVi32imm @g1
-    %3 = t2LDRi12 %2, 0, 14, _ :: (dereferenceable load 4 from @g1)
+    %3 = t2LDRi12 %2, 0, 14, %noreg :: (dereferenceable load 4 from @g1)
     %4 = t2MOVi32imm @g2
-    %5 = t2LDRi12 %4, 0, 14, _ :: (dereferenceable load 4 from @g2)
-    %6 = t2ADDrr %3, %3, 14, _, _
-    %7 = t2SDIV %6, %5, 14, _
-    t2STRi12 %7, %2, 0, 14, _ :: (store 4 into @g1)
-    %8 = t2SMULBB %1, %1, 14, _
-    %9 = t2SMLABB %0, %0, %8, 14, _
-    %10 = t2UXTH %9, 0, 14, _
-    %11 = t2MUL %10, %7, 14, _
-    %12 = t2MLA %11, %11, %11, 14, _
-    %13, %14 = t2UMULL %12, %12, 14, _
-    %19, %16 = t2UMULL %13, %13, 14, _
-    %17 = t2MLA %13, %14, %16, 14, _
-    %20 = t2MLA %13, %14, %17, 14, _
-    %19, %20 = t2UMLAL %12, %12, %19, %20, 14, _
+    %5 = t2LDRi12 %4, 0, 14, %noreg :: (dereferenceable load 4 from @g2)
+    %6 = t2ADDrr %3, %3, 14, %noreg, %noreg
+    %7 = t2SDIV %6, %5, 14, %noreg
+    t2STRi12 %7, %2, 0, 14, %noreg :: (store 4 into @g1)
+    %8 = t2SMULBB %1, %1, 14, %noreg
+    %9 = t2SMLABB %0, %0, %8, 14, %noreg
+    %10 = t2UXTH %9, 0, 14, %noreg
+    %11 = t2MUL %10, %7, 14, %noreg
+    %12 = t2MLA %11, %11, %11, 14, %noreg
+    %13, %14 = t2UMULL %12, %12, 14, %noreg
+    %19, %16 = t2UMULL %13, %13, 14, %noreg
+    %17 = t2MLA %13, %14, %16, 14, %noreg
+    %20 = t2MLA %13, %14, %17, 14, %noreg
+    %19, %20 = t2UMLAL %12, %12, %19, %20, 14, %noreg
     %r0 = COPY %19
     %r1 = COPY %20
-    tBX_RET 14, _, implicit %r0, implicit %r1
+    tBX_RET 14, %noreg, implicit %r0, implicit %r1
 
 ...

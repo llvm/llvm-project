@@ -105,6 +105,8 @@ void InjectorIRStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   SmallVector<Instruction *, 32> Insts;
   for (auto I = BB.getFirstInsertionPt(), E = BB.end(); I != E; ++I)
     Insts.push_back(&*I);
+  if (Insts.size() < 1)
+    return;
 
   // Choose an insertion point for our new instruction.
   size_t IP = uniform<size_t>(IB.Rand, 0, Insts.size() - 1);
@@ -147,7 +149,9 @@ void InstDeleterIRStrategy::mutate(Function &F, RandomIRBuilder &IB) {
   for (Instruction &Inst : instructions(F))
     if (!Inst.isTerminator())
       RS.sample(&Inst, /*Weight=*/1);
-  assert(!RS.isEmpty() && "No instructions to delete");
+  if (RS.isEmpty())
+    return;
+
   // Delete the instruction.
   mutate(*RS.getSelection(), IB);
   // Clean up any dead code that's left over after removing the instruction.

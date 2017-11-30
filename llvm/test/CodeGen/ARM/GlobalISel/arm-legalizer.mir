@@ -74,7 +74,7 @@ body:             |
     ; G_SEXT with s8 is legal, so we should find it unchanged in the output
     ; CHECK: {{%[0-9]+}}:_(s32) = G_SEXT {{%[0-9]+}}
     %r0 = COPY %2(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_zext_s16
@@ -98,7 +98,7 @@ body:             |
     ; G_ZEXT with s16 is legal, so we should find it unchanged in the output
     ; CHECK: {{%[0-9]+}}:_(s32) = G_ZEXT {{%[0-9]+}}
     %r0 = COPY %2(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_add_s8
@@ -130,7 +130,7 @@ body:             |
     ; CHECK-NOT: {{%[0-9]+}}:_(s8) = G_ADD {{%[0-9]+, %[0-9]+}}
     %5(s32) = G_SEXT %4(s8)
     %r0 = COPY %5(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_add_s16
@@ -162,7 +162,7 @@ body:             |
     ; CHECK-NOT: {{%[0-9]+}}:_(s16) = G_ADD {{%[0-9]+, %[0-9]+}}
     %5(s32) = G_SEXT %4(s16)
     %r0 = COPY %5(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_add_s32
@@ -186,7 +186,7 @@ body:             |
     ; G_ADD with s32 is legal, so we should find it unchanged in the output
     ; CHECK: {{%[0-9]+}}:_(s32) = G_ADD {{%[0-9]+, %[0-9]+}}
     %r0 = COPY %2(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 
 ...
 ---
@@ -219,7 +219,7 @@ body:             |
     ; CHECK-NOT: {{%[0-9]+}}:_(s8) = G_SUB {{%[0-9]+, %[0-9]+}}
     %5(s32) = G_SEXT %4(s8)
     %r0 = COPY %5(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_sub_s16
@@ -251,7 +251,7 @@ body:             |
     ; CHECK-NOT: {{%[0-9]+}}:_(s16) = G_SUB {{%[0-9]+, %[0-9]+}}
     %5(s32) = G_SEXT %4(s16)
     %r0 = COPY %5(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_sub_s32
@@ -275,7 +275,7 @@ body:             |
     ; G_SUB with s32 is legal, so we should find it unchanged in the output
     ; CHECK: {{%[0-9]+}}:_(s32) = G_SUB {{%[0-9]+, %[0-9]+}}
     %r0 = COPY %2(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 
 ...
 ---
@@ -308,7 +308,7 @@ body:             |
     ; CHECK-NOT: {{%[0-9]+}}:_(s8) = G_MUL {{%[0-9]+, %[0-9]+}}
     %5(s32) = G_SEXT %4(s8)
     %r0 = COPY %5(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_mul_s16
@@ -340,7 +340,7 @@ body:             |
     ; CHECK-NOT: {{%[0-9]+}}:_(s16) = G_MUL {{%[0-9]+, %[0-9]+}}
     %5(s32) = G_SEXT %4(s16)
     %r0 = COPY %5(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_mul_s32
@@ -364,7 +364,7 @@ body:             |
     ; G_MUL with s32 is legal, so we should find it unchanged in the output
     ; CHECK: {{%[0-9]+}}:_(s32) = G_MUL {{%[0-9]+, %[0-9]+}}
     %r0 = COPY %2(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 
 ...
 ---
@@ -397,7 +397,7 @@ body:             |
     ; CHECK-NOT: {{%[0-9]+}}:_(s8) = G_AND {{%[0-9]+, %[0-9]+}}
     %5(s32) = G_SEXT %4(s8)
     %r0 = COPY %5(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_and_s16
@@ -429,7 +429,7 @@ body:             |
     ; CHECK-NOT: {{%[0-9]+}}:_(s16) = G_AND {{%[0-9]+, %[0-9]+}}
     %5(s32) = G_SEXT %4(s16)
     %r0 = COPY %5(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_and_s32
@@ -453,7 +453,7 @@ body:             |
     ; G_AND with s32 is legal, so we should find it unchanged in the output
     ; CHECK: {{%[0-9]+}}:_(s32) = G_AND {{%[0-9]+, %[0-9]+}}
     %r0 = COPY %2(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 
 ...
 ---
@@ -486,7 +486,7 @@ body:             |
     ; CHECK-NOT: {{%[0-9]+}}:_(s8) = G_OR {{%[0-9]+, %[0-9]+}}
     %5(s32) = G_SEXT %4(s8)
     %r0 = COPY %5(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_or_s16
@@ -518,7 +518,7 @@ body:             |
     ; CHECK-NOT: {{%[0-9]+}}:_(s16) = G_OR {{%[0-9]+, %[0-9]+}}
     %5(s32) = G_SEXT %4(s16)
     %r0 = COPY %5(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_or_s32
@@ -542,7 +542,7 @@ body:             |
     ; G_OR with s32 is legal, so we should find it unchanged in the output
     ; CHECK: {{%[0-9]+}}:_(s32) = G_OR {{%[0-9]+, %[0-9]+}}
     %r0 = COPY %2(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 
 ...
 ---
@@ -575,7 +575,7 @@ body:             |
     ; CHECK-NOT: {{%[0-9]+}}:_(s8) = G_XOR {{%[0-9]+, %[0-9]+}}
     %5(s32) = G_SEXT %4(s8)
     %r0 = COPY %5(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_xor_s16
@@ -607,7 +607,7 @@ body:             |
     ; CHECK-NOT: {{%[0-9]+}}:_(s16) = G_XOR {{%[0-9]+, %[0-9]+}}
     %5(s32) = G_SEXT %4(s16)
     %r0 = COPY %5(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_xor_s32
@@ -631,7 +631,7 @@ body:             |
     ; G_XOR with s32 is legal, so we should find it unchanged in the output
     ; CHECK: {{%[0-9]+}}:_(s32) = G_XOR {{%[0-9]+, %[0-9]+}}
     %r0 = COPY %2(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 
 ...
 ---
@@ -656,7 +656,7 @@ body:             |
     ; G_LSHR with s32 is legal, so we should find it unchanged in the output
     ; CHECK: {{%[0-9]+}}:_(s32) = G_LSHR {{%[0-9]+, %[0-9]+}}
     %r0 = COPY %2(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 
 ...
 ---
@@ -681,7 +681,7 @@ body:             |
     ; G_ASHR with s32 is legal, so we should find it unchanged in the output
     ; CHECK: {{%[0-9]+}}:_(s32) = G_ASHR {{%[0-9]+, %[0-9]+}}
     %r0 = COPY %2(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 
 ...
 ---
@@ -706,7 +706,7 @@ body:             |
     ; G_SHL with s32 is legal, so we should find it unchanged in the output
     ; CHECK: {{%[0-9]+}}:_(s32) = G_SHL {{%[0-9]+, %[0-9]+}}
     %r0 = COPY %2(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 
 ...
 ---
@@ -737,7 +737,7 @@ body:             |
     %0(p0) = G_FRAME_INDEX %fixed-stack.2
     %1(s32) = G_LOAD %0(p0) :: (load 4)
     %r0 = COPY %1(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_legal_loads_stores
@@ -785,7 +785,7 @@ body:             |
     G_STORE %5(s1), %0(p0) :: (store 1)
     %6(p0) = G_LOAD %0(p0) :: (load 4)
     G_STORE %6(p0), %0(p0) :: (store 4)
-    BX_RET 14, _
+    BX_RET 14, %noreg
 ...
 ---
 name:            test_gep
@@ -810,7 +810,7 @@ body:             |
     %2(p0) = G_GEP %0, %1(s32)
 
     %r0 = COPY %2(p0)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_constants
@@ -857,7 +857,7 @@ body:             |
     ; CHECK-NOT: G_CONSTANT i1
 
     %r0 = COPY %0(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_icmp_s8
@@ -888,7 +888,7 @@ body:             |
     ; CHECK-NOT: {{%[0-9]+}}:_(s1) = G_ICMP intpred(ne), {{%[0-9]+}}(s8), {{%[0-9]+}}
     %5(s32) = G_ZEXT %4(s1)
     %r0 = COPY %5(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_icmp_s16
@@ -919,7 +919,7 @@ body:             |
     ; CHECK-NOT: {{%[0-9]+}}:_(s1) = G_ICMP intpred(slt), {{%[0-9]+}}(s16), {{%[0-9]+}}
     %5(s32) = G_ZEXT %4(s1)
     %r0 = COPY %5(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_icmp_s32
@@ -945,7 +945,7 @@ body:             |
     ; CHECK: {{%[0-9]+}}:_(s1) = G_ICMP intpred(eq), {{%[0-9]+}}(s32), {{%[0-9]+}}
     %3(s32) = G_ZEXT %2(s1)
     %r0 = COPY %3(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_select_s32
@@ -971,7 +971,7 @@ body:             |
     ; G_SELECT with s32 is legal, so we should find it unchanged in the output
     ; CHECK: {{%[0-9]+}}:_(s32) = G_SELECT {{%[0-9]+}}(s1), {{%[0-9]+}}, {{%[0-9]+}}
     %r0 = COPY %3(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_select_ptr
@@ -997,7 +997,7 @@ body:             |
     ; G_SELECT with p0 is legal, so we should find it unchanged in the output
     ; CHECK: {{%[0-9]+}}:_(p0) = G_SELECT {{%[0-9]+}}(s1), {{%[0-9]+}}, {{%[0-9]+}}
     %r0 = COPY %3(p0)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_brcond
@@ -1026,11 +1026,11 @@ body:             |
 
   bb.1:
     %r0 = COPY %1(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 
   bb.2:
     %r0 = COPY %0(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 
 ...
 ---
@@ -1053,6 +1053,6 @@ body:             |
     ; G_GLOBAL_VALUE is legal, so we should find it unchanged in the output
     ; CHECK: {{%[0-9]+}}:_(p0) = G_GLOBAL_VALUE @a_global
     %r0 = COPY %1(p0)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 
 ...

@@ -118,7 +118,7 @@ body:             |
   bb.2.sw.bb:
     successors: %bb.3.init.check.i(0x00000800), %bb.6.return(0x7ffff800)
   
-    %al = ACQUIRE_MOV8rm %rip, 1, _, @static_local_guard, _ :: (volatile load acquire 1 from `i8* bitcast (i64* @static_local_guard to i8*)`, align 8)
+    %al = ACQUIRE_MOV8rm %rip, 1, %noreg, @static_local_guard, %noreg :: (volatile load acquire 1 from `i8* bitcast (i64* @static_local_guard to i8*)`, align 8)
     TEST8rr killed %al, %al, implicit-def %eflags
     JNE_1 %bb.6.return, implicit killed %eflags
     JMP_1 %bb.3.init.check.i

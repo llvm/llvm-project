@@ -192,23 +192,10 @@ template <> struct BlockScalarTraits<Module> {
 } // end namespace yaml
 } // end namespace llvm
 
-static void printRegMIR(unsigned Reg, raw_ostream &OS,
-                        const TargetRegisterInfo *TRI) {
-  // TODO: Print Stack Slots.
-  if (!Reg)
-    OS << '_';
-  else if (TargetRegisterInfo::isVirtualRegister(Reg))
-    OS << '%' << TargetRegisterInfo::virtReg2Index(Reg);
-  else if (Reg < TRI->getNumRegs())
-    OS << '%' << StringRef(TRI->getName(Reg)).lower();
-  else
-    llvm_unreachable("Can't print this kind of register yet");
-}
-
 static void printRegMIR(unsigned Reg, yaml::StringValue &Dest,
                         const TargetRegisterInfo *TRI) {
   raw_string_ostream OS(Dest.Value);
-  printRegMIR(Reg, OS, TRI);
+  OS << printReg(Reg, TRI);
 }
 
 void MIRPrinter::print(const MachineFunction &MF) {
@@ -262,7 +249,7 @@ static void printCustomRegMask(const uint32_t *RegMask, raw_ostream &OS,
     if (RegMask[I / 32] & (1u << (I % 32))) {
       if (IsRegInRegMaskFound)
         OS << ',';
-      printRegMIR(I, OS, TRI);
+      OS << printReg(I, TRI);
       IsRegInRegMaskFound = true;
     }
   }
@@ -648,7 +635,7 @@ void MIPrinter::print(const MachineBasicBlock &MBB) {
       if (!First)
         OS << ", ";
       First = false;
-      printRegMIR(LI.PhysReg, OS, &TRI);
+      OS << printReg(LI.PhysReg, &TRI);
       if (!LI.LaneMask.all())
         OS << ":0x" << PrintLaneMask(LI.LaneMask);
     }
@@ -949,7 +936,7 @@ void MIPrinter::print(const MachineInstr &MI, unsigned OpIdx,
       OS << "early-clobber ";
     if (Op.isDebug())
       OS << "debug-use ";
-    printRegMIR(Reg, OS, TRI);
+    OS << printReg(Reg, TRI);
     // Print the sub register.
     if (Op.getSubReg() != 0)
       OS << '.' << TRI->getSubRegIndexName(Op.getSubReg());
@@ -1041,7 +1028,7 @@ void MIPrinter::print(const MachineInstr &MI, unsigned OpIdx,
       if (RegMask[Reg / 32] & (1U << (Reg % 32))) {
         if (IsCommaNeeded)
           OS << ", ";
-        printRegMIR(Reg, OS, TRI);
+        OS << printReg(Reg, TRI);
         IsCommaNeeded = true;
       }
     }
@@ -1212,7 +1199,7 @@ static void printCFIRegister(unsigned DwarfReg, raw_ostream &OS,
     OS << "<badreg>";
     return;
   }
-  printRegMIR(Reg, OS, TRI);
+  OS << printReg(Reg, TRI);
 }
 
 void MIPrinter::print(const MCCFIInstruction &CFI,

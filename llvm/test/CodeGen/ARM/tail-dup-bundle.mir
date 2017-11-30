@@ -19,7 +19,7 @@ body: |
   bb.1:
     liveins: %r0
 
-    t2CMPri %r0, 32, 14, _, implicit-def %cpsr
+    t2CMPri %r0, 32, 14, %noreg, implicit-def %cpsr
     BUNDLE implicit-def dead %itstate, implicit-def %cpsr, implicit killed %r0, implicit killed %cpsr {
       t2IT 1, 24, implicit-def %itstate
       t2CMPri killed %r0, 9, 1, killed %cpsr, implicit-def %cpsr, implicit internal killed %itstate
@@ -28,9 +28,9 @@ body: |
 
   bb.2:
     %r0 = IMPLICIT_DEF
-    t2B %bb.1, 14, _
+    t2B %bb.1, 14, %noreg
 
   bb.3:
     %r0 = IMPLICIT_DEF
-    t2B %bb.1, 14, _
+    t2B %bb.1, 14, %noreg
 ...

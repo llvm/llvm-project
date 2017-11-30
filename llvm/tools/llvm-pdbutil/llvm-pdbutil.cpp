@@ -35,13 +35,14 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Config/config.h"
+#include "llvm/DebugInfo/CodeView/AppendingTypeTableBuilder.h"
 #include "llvm/DebugInfo/CodeView/DebugChecksumsSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugInlineeLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
+#include "llvm/DebugInfo/CodeView/MergingTypeTableBuilder.h"
 #include "llvm/DebugInfo/CodeView/StringsAndChecksums.h"
 #include "llvm/DebugInfo/CodeView/TypeStreamMerger.h"
-#include "llvm/DebugInfo/CodeView/TypeTableBuilder.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/PDB/GenericError.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
@@ -727,7 +728,7 @@ static void yamlToPdb(StringRef Path) {
   auto &TpiBuilder = Builder.getTpiBuilder();
   const auto &Tpi = YamlObj.TpiStream.getValueOr(DefaultTpiStream);
   TpiBuilder.setVersionHeader(Tpi.Version);
-  TypeTableBuilder TS(Allocator);
+  AppendingTypeTableBuilder TS(Allocator);
   for (const auto &R : Tpi.Records) {
     CVType Type = R.toCodeViewRecord(TS);
     TpiBuilder.addTypeRecord(Type.RecordData, None);
@@ -989,8 +990,8 @@ static void dumpPretty(StringRef Path) {
 
 static void mergePdbs() {
   BumpPtrAllocator Allocator;
-  TypeTableBuilder MergedTpi(Allocator);
-  TypeTableBuilder MergedIpi(Allocator);
+  MergingTypeTableBuilder MergedTpi(Allocator);
+  MergingTypeTableBuilder MergedIpi(Allocator);
 
   // Create a Tpi and Ipi type table with all types from all input files.
   for (const auto &Path : opts::merge::InputFilenames) {

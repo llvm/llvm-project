@@ -48,17 +48,17 @@ fixedStack:
 body:             |
   bb.0:
     liveins: %r0
-    tCMPi8 killed %r0, 0, 14, _, implicit-def %cpsr
+    tCMPi8 killed %r0, 0, 14, %noreg, implicit-def %cpsr
     tBcc %bb.2, 1, killed %cpsr
-    tB %bb.3, 14, _
+    tB %bb.3, 14, %noreg
 
   bb.1:
     dead %r0 = SPACE 256, undef %r0
 
   bb.2:
-    tPOP_RET 14, _, def %pc
+    tPOP_RET 14, %noreg, def %pc
 
   bb.3:
-    tPOP_RET 14, _, def %pc
+    tPOP_RET 14, %noreg, def %pc
 
 ...

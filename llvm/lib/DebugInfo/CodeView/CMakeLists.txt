@@ -1,4 +1,5 @@
 add_llvm_library(LLVMDebugInfoCodeView
+  AppendingTypeTableBuilder.cpp
   CodeViewError.cpp
   CodeViewRecordIO.cpp
   ContinuationRecordBuilder.cpp
@@ -20,6 +21,7 @@ add_llvm_library(LLVMDebugInfoCodeView
   Formatters.cpp
   LazyRandomTypeCollection.cpp
   Line.cpp
+  MergingTypeTableBuilder.cpp
   RecordName.cpp
   RecordSerialization.cpp
   SimpleTypeSerializer.cpp
@@ -31,7 +33,6 @@ add_llvm_library(LLVMDebugInfoCodeView
   TypeIndex.cpp
   TypeIndexDiscovery.cpp
   TypeRecordMapping.cpp
-  TypeTableBuilder.cpp
   TypeStreamMerger.cpp
   TypeTableCollection.cpp
 

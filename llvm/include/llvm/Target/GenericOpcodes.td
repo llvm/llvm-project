@@ -482,6 +482,16 @@ def G_STORE : Instruction {
   let mayStore = 1;
 }
 
+// Generic atomic cmpxchg with internal success check. Expects a
+// MachineMemOperand in addition to explicit operands.
+def G_ATOMIC_CMPXCHG_WITH_SUCCESS : Instruction {
+  let OutOperandList = (outs type0:$oldval, type1:$success);
+  let InOperandList = (ins type2:$addr, type0:$cmpval, type0:$newval);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+  let mayStore = 1;
+}
+
 // Generic atomic cmpxchg. Expects a MachineMemOperand in addition to explicit
 // operands.
 def G_ATOMIC_CMPXCHG : Instruction {

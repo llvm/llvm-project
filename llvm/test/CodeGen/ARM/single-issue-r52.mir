@@ -76,11 +76,11 @@ body:             |
     liveins: %r0
 
     %0 = COPY %r0
-    %1 = VLD4d8Pseudo %0, 8, 14, _ :: (load 32 from %ir.A, align 8)
-    %4 = VADDv8i8 %1.dsub_0, %1.dsub_1, 14, _
-    %5, %6 = VMOVRRD %4, 14, _
+    %1 = VLD4d8Pseudo %0, 8, 14, %noreg :: (load 32 from %ir.A, align 8)
+    %4 = VADDv8i8 %1.dsub_0, %1.dsub_1, 14, %noreg
+    %5, %6 = VMOVRRD %4, 14, %noreg
     %r0 = COPY %5
     %r1 = COPY %6
-    BX_RET 14, _, implicit %r0, implicit killed %r1
+    BX_RET 14, %noreg, implicit %r0, implicit killed %r1
 
 ...
