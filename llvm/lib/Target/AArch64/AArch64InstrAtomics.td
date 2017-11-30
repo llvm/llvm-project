@@ -30,18 +30,18 @@ def : Pat<(atomic_fence (imm), (imm)), (DMB (i32 0xb))>;
 
 // A atomic load operation that actually needs acquire semantics.
 class acquiring_load<PatFrag base>
-  : PatFrag<(ops node:$ptr), (base node:$ptr), [{
-  AtomicOrdering Ordering = cast<AtomicSDNode>(N)->getOrdering();
-  return isAcquireOrStronger(Ordering);
-}]>;
+  : PatFrag<(ops node:$ptr), (base node:$ptr)> {
+  let IsAtomic = 1;
+  let IsAtomicOrderingAcquireOrStronger = 1;
+}
 
 // An atomic load operation that does not need either acquire or release
 // semantics.
 class relaxed_load<PatFrag base>
-  : PatFrag<(ops node:$ptr), (base node:$ptr), [{
-  AtomicOrdering Ordering = cast<AtomicSDNode>(N)->getOrdering();
-  return !isAcquireOrStronger(Ordering);
-}]>;
+  : PatFrag<(ops node:$ptr), (base node:$ptr)> {
+  let IsAtomic = 1;
+  let IsAtomicOrderingAcquireOrStronger = 0;
+}
 
 // 8-bit loads
 def : Pat<(acquiring_load<atomic_load_8>  GPR64sp:$ptr), (LDARB GPR64sp:$ptr)>;
@@ -113,19 +113,17 @@ def : Pat<(relaxed_load<atomic_load_64>
 
 // A store operation that actually needs release semantics.
 class releasing_store<PatFrag base>
-  : PatFrag<(ops node:$ptr, node:$val), (base node:$ptr, node:$val), [{
-  AtomicOrdering Ordering = cast<AtomicSDNode>(N)->getOrdering();
-  assert(Ordering != AtomicOrdering::AcquireRelease &&
-         "unexpected store ordering");
-  return isReleaseOrStronger(Ordering);
-}]>;
+  : PatFrag<(ops node:$ptr, node:$val), (base node:$ptr, node:$val)> {
+  let IsAtomic = 1;
+  let IsAtomicOrderingReleaseOrStronger = 1;
+}
 
 // An atomic store operation that doesn't actually need to be atomic on AArch64.
 class relaxed_store<PatFrag base>
-  : PatFrag<(ops node:$ptr, node:$val), (base node:$ptr, node:$val), [{
-  AtomicOrdering Ordering = cast<AtomicSDNode>(N)->getOrdering();
-  return !isReleaseOrStronger(Ordering);
-}]>;
+  : PatFrag<(ops node:$ptr, node:$val), (base node:$ptr, node:$val)> {
+  let IsAtomic = 1;
+  let IsAtomicOrderingReleaseOrStronger = 0;
+}
 
 // 8-bit stores
 def : Pat<(releasing_store<atomic_store_8> GPR64sp:$ptr, GPR32:$val),
