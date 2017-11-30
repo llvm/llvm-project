@@ -92,7 +92,7 @@ static cl::opt<bool> EnableCheckBankConflict("hexagon-check-bank-conflict",
 
 HexagonSubtarget::HexagonSubtarget(const Triple &TT, StringRef CPU,
                                    StringRef FS, const TargetMachine &TM)
-    : HexagonGenSubtargetInfo(TT, CPU, FS),
+    : HexagonGenSubtargetInfo(TT, CPU, FS), OptLevel(TM.getOptLevel()),
       CPUString(Hexagon_MC::selectHexagonCPU(TT, CPU)),
       InstrInfo(initializeSubtargetDependencies(CPU, FS)),
       RegInfo(getHwMode()), TLInfo(TM, *this),
@@ -292,6 +292,14 @@ void HexagonSubtarget::BankConflictMutation::apply(ScheduleDAGInstrs *DAG) {
       S1.addPred(A, true);
     }
   }
+}
+
+/// \brief Enable use of alias analysis during code generation (during MI
+/// scheduling, DAGCombine, etc.).
+bool HexagonSubtarget::useAA() const {
+  if (OptLevel != CodeGenOpt::None)
+    return true;
+  return false;
 }
 
 /// \brief Perform target specific adjustments to the latency of a schedule

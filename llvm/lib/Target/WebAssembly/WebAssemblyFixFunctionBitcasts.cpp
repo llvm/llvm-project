@@ -162,6 +162,11 @@ bool FixFunctionBitcasts::runOnModule(Module &M) {
     if (!Ty)
       continue;
 
+    // Bitcasted vararg functions occur in Emscripten's implementation of
+    // EM_ASM, so suppress wrappers for them for now.
+    if (Ty->isVarArg() || F->isVarArg())
+      continue;
+
     auto Pair = Wrappers.insert(std::make_pair(std::make_pair(F, Ty), nullptr));
     if (Pair.second)
       Pair.first->second = CreateWrapper(F, Ty);

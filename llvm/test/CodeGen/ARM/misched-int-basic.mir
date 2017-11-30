@@ -111,18 +111,18 @@ body:             |
 
     %1 = COPY %r1
     %0 = COPY %r0
-    %2 = SMULBB %1, %1, 14, _
-    %3 = SMLABB %0, %0, %2, 14, _
-    %4 = UXTH %3, 0, 14, _
-    %5 = MUL %4, %4, 14, _, _
-    %6 = MLA %5, %5, %5, 14, _, _
-    %7, %8 = UMULL %6, %6, 14, _, _
-    %13, %10 = UMULL %7, %7, 14, _, _
-    %11 = MLA %7, %8, %10, 14, _, _
-    %14 = MLA %7, %8, %11, 14, _, _
-    %13, %14 = UMLAL %6, %6, %13, %14, 14, _, _
+    %2 = SMULBB %1, %1, 14, %noreg
+    %3 = SMLABB %0, %0, %2, 14, %noreg
+    %4 = UXTH %3, 0, 14, %noreg
+    %5 = MUL %4, %4, 14, %noreg, %noreg
+    %6 = MLA %5, %5, %5, 14, %noreg, %noreg
+    %7, %8 = UMULL %6, %6, 14, %noreg, %noreg
+    %13, %10 = UMULL %7, %7, 14, %noreg, %noreg
+    %11 = MLA %7, %8, %10, 14, %noreg, %noreg
+    %14 = MLA %7, %8, %11, 14, %noreg, %noreg
+    %13, %14 = UMLAL %6, %6, %13, %14, 14, %noreg, %noreg
     %r0 = COPY %13
     %r1 = COPY %14
-    BX_RET 14, _, implicit %r0, implicit %r1
+    BX_RET 14, %noreg, implicit %r0, implicit %r1
 
 ...

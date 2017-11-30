@@ -47,6 +47,6 @@ body:             |
 # CHECK:     bb.2:
 # CHECK-NOT:   successors: %bb
 # CHECK:       tBL 1, %cpsr, @__stack_chk_fail
-# CHECK:       %sp = tADDspi %sp, 2, 14, _
-# CHECK:       %sp = tADDspi %sp, 2, 14, _
+# CHECK:       %sp = tADDspi %sp, 2, 14, %noreg
+# CHECK:       %sp = tADDspi %sp, 2, 14, %noreg
 # CHECK:       tTAILJMPdND @bar, 14, %cpsr

@@ -7,7 +7,7 @@ entry:
   %0 = bitcast double %a to i64
   %extract.t84 = trunc i64 %0 to i32
   tail call void @llvm.dbg.value(metadata i32 %extract.t84, metadata !8, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32)), !dbg !12
-  ; CHECK: DBG_VALUE debug-use %r0, debug-use _, !6, !DIExpression(DW_OP_LLVM_fragment, 0, 32)
+  ; CHECK: DBG_VALUE debug-use %r0, debug-use %noreg, !6, !DIExpression(DW_OP_LLVM_fragment, 0, 32)
   %r.sroa.0.0.insert.ext35 = zext i32 %extract.t84 to i64
   ret i64 %r.sroa.0.0.insert.ext35
 }

@@ -150,9 +150,9 @@ body:             |
 # CHECKMIR: ![[ARGV:[0-9]+]] = !DILocalVariable(name: "argv", arg: 2
 # CHECKMIR: name:            main
 # CHECKMIR: body:
-# CHECKMIR: DBG_VALUE debug-use %edi, debug-use _, ![[ARGC]]
-# CHECKMIR-NOT: DBG_VALUE debug-use %{{.*}}, debug-use _, ![[ARGC]]
-# CHECKMIR: DBG_VALUE debug-use %rsi, debug-use _, ![[ARGV]]
-# CHECKMIR-NOT: DBG_VALUE debug-use %{{.*}}, debug-use _, ![[ARGC]]
-# CHECKMIR-NOT: DBG_VALUE debug-use %{{.*}}, debug-use _, ![[ARGV]]
+# CHECKMIR: DBG_VALUE debug-use %edi, debug-use %noreg, ![[ARGC]]
+# CHECKMIR-NOT: DBG_VALUE debug-use %{{.*}}, debug-use %noreg, ![[ARGC]]
+# CHECKMIR: DBG_VALUE debug-use %rsi, debug-use %noreg, ![[ARGV]]
+# CHECKMIR-NOT: DBG_VALUE debug-use %{{.*}}, debug-use %noreg, ![[ARGC]]
+# CHECKMIR-NOT: DBG_VALUE debug-use %{{.*}}, debug-use %noreg, ![[ARGV]]
 

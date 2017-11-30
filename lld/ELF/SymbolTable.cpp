@@ -427,8 +427,8 @@ static void reportDuplicate(Symbol *Sym, InputFile *NewFile) {
 template <class ELFT>
 static void reportDuplicate(Symbol *Sym, InputSectionBase *ErrSec,
                             typename ELFT::uint ErrOffset) {
-  Defined *D = dyn_cast<Defined>(Sym);
-  if (!D || !D->Section || !ErrSec) {
+  Defined *D = cast<Defined>(Sym);
+  if (!D->Section || !ErrSec) {
     reportDuplicate(Sym, ErrSec ? ErrSec->File : nullptr);
     return;
   }

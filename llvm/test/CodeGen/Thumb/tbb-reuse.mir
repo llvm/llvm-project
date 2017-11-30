@@ -108,44 +108,44 @@ body:             |
     successors: %bb.2.default(0x19999998), %bb.1.entry(0x66666668)
     liveins: %r0, %r7, %lr
   
-    frame-setup tPUSH 14, _, killed %r7, killed %lr, implicit-def %sp, implicit %sp
+    frame-setup tPUSH 14, %noreg, killed %r7, killed %lr, implicit-def %sp, implicit %sp
     frame-setup CFI_INSTRUCTION def_cfa_offset 8
     frame-setup CFI_INSTRUCTION offset %lr, -4
     frame-setup CFI_INSTRUCTION offset %r7, -8
-    %r1, dead %cpsr = tSUBi3 %r0, 1, 14, _
-    tCMPi8 %r1, 3, 14, _, implicit-def %cpsr
+    %r1, dead %cpsr = tSUBi3 %r0, 1, 14, %noreg
+    tCMPi8 %r1, 3, 14, %noreg, implicit-def %cpsr
     tBcc %bb.2.default, 8, killed %cpsr
   
   bb.1.entry:
     successors: %bb.3.lab1(0x20000000), %bb.4.lab2(0x20000000), %bb.5.lab3(0x20000000), %bb.6.lab4(0x20000000)
     liveins: %r0, %r1
   
-    %r1, dead %cpsr = tLSLri killed %r1, 2, 14, _
-    %r2 = tLEApcrelJT %jump-table.0, 14, _
-    %r2 = tLDRr killed %r1, killed %r2, 14, _ :: (load 4 from jump-table)
-    %r1, dead %cpsr = tLSLri %r2, 2, 14, _
+    %r1, dead %cpsr = tLSLri killed %r1, 2, 14, %noreg
+    %r2 = tLEApcrelJT %jump-table.0, 14, %noreg
+    %r2 = tLDRr killed %r1, killed %r2, 14, %noreg :: (load 4 from jump-table)
+    %r1, dead %cpsr = tLSLri %r2, 2, 14, %noreg
     tBR_JTr killed %r2, %jump-table.0
   
   bb.2.default:
-    tBL 14, _, @exit0, csr_aapcs, implicit-def dead %lr, implicit %sp, implicit-def %sp
-    tPOP_RET 14, _, def %r7, def %pc, implicit-def %sp, implicit %sp
+    tBL 14, %noreg, @exit0, csr_aapcs, implicit-def dead %lr, implicit %sp, implicit-def %sp
+    tPOP_RET 14, %noreg, def %r7, def %pc, implicit-def %sp, implicit %sp
   
   bb.3.lab1:
     liveins: %r0,%r1
   
-    tBL 14, _, @exit1, csr_aapcs, implicit-def dead %lr, implicit %sp, implicit %r0, implicit-def %sp
-    tPOP_RET 14, _, def %r7, def %pc, implicit-def %sp, implicit %sp
+    tBL 14, %noreg, @exit1, csr_aapcs, implicit-def dead %lr, implicit %sp, implicit %r0, implicit-def %sp
+    tPOP_RET 14, %noreg, def %r7, def %pc, implicit-def %sp, implicit %sp
   
   bb.4.lab2:
-    tBL 14, _, @exit2, csr_aapcs, implicit-def dead %lr, implicit %sp, implicit-def %sp
-    tPOP_RET 14, _, def %r7, def %pc, implicit-def %sp, implicit %sp
+    tBL 14, %noreg, @exit2, csr_aapcs, implicit-def dead %lr, implicit %sp, implicit-def %sp
+    tPOP_RET 14, %noreg, def %r7, def %pc, implicit-def %sp, implicit %sp
   
   bb.5.lab3:
-    tBL 14, _, @exit3, csr_aapcs, implicit-def dead %lr, implicit %sp, implicit-def %sp
-    tPOP_RET 14, _, def %r7, def %pc, implicit-def %sp, implicit %sp
+    tBL 14, %noreg, @exit3, csr_aapcs, implicit-def dead %lr, implicit %sp, implicit-def %sp
+    tPOP_RET 14, %noreg, def %r7, def %pc, implicit-def %sp, implicit %sp
   
   bb.6.lab4:
-    tBL 14, _, @exit4, csr_aapcs, implicit-def dead %lr, implicit %sp, implicit-def %sp
-    tPOP_RET 14, _, def %r7, def %pc, implicit-def %sp, implicit %sp
+    tBL 14, %noreg, @exit4, csr_aapcs, implicit-def dead %lr, implicit %sp, implicit-def %sp
+    tPOP_RET 14, %noreg, def %r7, def %pc, implicit-def %sp, implicit %sp
 
 ...

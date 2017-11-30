@@ -31,9 +31,9 @@
 # DBG_VALUE for variables "x", "y" and "z" are extended into BB#9 from its
 # predecessors BB#0, BB#2 and BB#8.
 # CHECK:      bb.9.for.end:
-# CHECK-DAG:  DBG_VALUE debug-use %edi, debug-use _, ![[X_VAR]], !DIExpression(), debug-location !{{[0-9]+}}
-# CHECK-DAG:  DBG_VALUE debug-use %esi, debug-use _, ![[Y_VAR]], !DIExpression(), debug-location !{{[0-9]+}}
-# CHECK-DAG:  DBG_VALUE debug-use %edx, debug-use _, ![[Z_VAR]], !DIExpression(), debug-location !{{[0-9]+}}
+# CHECK-DAG:  DBG_VALUE debug-use %edi, debug-use %noreg, ![[X_VAR]], !DIExpression(), debug-location !{{[0-9]+}}
+# CHECK-DAG:  DBG_VALUE debug-use %esi, debug-use %noreg, ![[Y_VAR]], !DIExpression(), debug-location !{{[0-9]+}}
+# CHECK-DAG:  DBG_VALUE debug-use %edx, debug-use %noreg, ![[Z_VAR]], !DIExpression(), debug-location !{{[0-9]+}}
 # CHECK:      RET
 
 --- |

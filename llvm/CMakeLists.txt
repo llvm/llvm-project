@@ -975,11 +975,8 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   set_target_properties(llvm-headers PROPERTIES FOLDER "Misc")
 
   if (NOT CMAKE_CONFIGURATION_TYPES)
-    add_custom_target(install-llvm-headers
-                      DEPENDS llvm-headers
-                      COMMAND "${CMAKE_COMMAND}"
-                              -DCMAKE_INSTALL_COMPONENT=llvm-headers
-                              -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+    add_llvm_install_targets(install-llvm-headers
+                             COMPONENT llvm-headers)
   endif()
 endif()
 

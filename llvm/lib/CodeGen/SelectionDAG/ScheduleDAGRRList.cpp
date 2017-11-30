@@ -1430,10 +1430,12 @@ SUnit *ScheduleDAGRRList::PickNodeToScheduleBottomUp() {
       SmallVector<unsigned, 4> LRegs;
       if (!DelayForLiveRegsBottomUp(CurSU, LRegs))
         break;
-      DEBUG(dbgs() << "    Interfering reg " <<
-            (LRegs[0] == TRI->getNumRegs() ? "CallResource"
-             : TRI->getName(LRegs[0]))
-             << " SU #" << CurSU->NodeNum << '\n');
+      DEBUG(dbgs() << "    Interfering reg ";
+            if (LRegs[0] == TRI->getNumRegs())
+              dbgs() << "CallResource";
+            else
+              dbgs() << printReg(LRegs[0], TRI);
+            dbgs() << " SU #" << CurSU->NodeNum << '\n');
       std::pair<LRegsMapT::iterator, bool> LRegsPair =
         LRegsMap.insert(std::make_pair(CurSU, LRegs));
       if (LRegsPair.second) {

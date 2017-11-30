@@ -546,8 +546,7 @@ void BPFDAGToDAGISel::PreprocessTrunc(SDNode *Node,
   if (!RegN || !TargetRegisterInfo::isVirtualRegister(RegN->getReg()))
     return;
   unsigned AndOpReg = RegN->getReg();
-  DEBUG(dbgs() << "Examine %" << TargetRegisterInfo::virtReg2Index(AndOpReg)
-               << '\n');
+  DEBUG(dbgs() << "Examine " << printReg(AndOpReg) << '\n');
 
   // Examine the PHI insns in the MachineBasicBlock to found out the
   // definitions of this virtual register. At this stage (DAG2DAG

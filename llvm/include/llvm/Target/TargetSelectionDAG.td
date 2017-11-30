@@ -689,6 +689,14 @@ class PatFrag<dag ops, dag frag, code pred = [{}],
   // cast<AtomicSDNode>(N)->getOrdering() == AtomicOrdering::SequentiallyConsistent
   bit IsAtomicOrderingSequentiallyConsistent = ?;
 
+  // isAcquireOrStronger(cast<AtomicSDNode>(N)->getOrdering())
+  // !isAcquireOrStronger(cast<AtomicSDNode>(N)->getOrdering())
+  bit IsAtomicOrderingAcquireOrStronger = ?;
+
+  // isReleaseOrStronger(cast<AtomicSDNode>(N)->getOrdering())
+  // !isReleaseOrStronger(cast<AtomicSDNode>(N)->getOrdering())
+  bit IsAtomicOrderingReleaseOrStronger = ?;
+
   // cast<LoadSDNode>(N)->getMemoryVT() == MVT::<VT>;
   // cast<StoreSDNode>(N)->getMemoryVT() == MVT::<VT>;
   ValueType MemoryVT = ?;

@@ -35,10 +35,10 @@ registers:
   - { id: 0, class: gpr }
   - { id: 1, class: vecr }
 # ALL:      %0:gr64 = COPY %rdi
-# SSE:      %1:vr128 = MOVUPSrm %0, 1, _, 0, _ :: (load 16 from %ir.p1, align 1)
-# AVX:      %1:vr128 = VMOVUPSrm %0, 1, _, 0, _ :: (load 16 from %ir.p1, align 1)
-# AVX512F:  %1:vr128x = VMOVUPSZ128rm_NOVLX %0, 1, _, 0, _ :: (load 16 from %ir.p1, align 1)
-# AVX512VL: %1:vr128x = VMOVUPSZ128rm %0, 1, _, 0, _ :: (load 16 from %ir.p1, align 1)
+# SSE:      %1:vr128 = MOVUPSrm %0, 1, %noreg, 0, %noreg :: (load 16 from %ir.p1, align 1)
+# AVX:      %1:vr128 = VMOVUPSrm %0, 1, %noreg, 0, %noreg :: (load 16 from %ir.p1, align 1)
+# AVX512F:  %1:vr128x = VMOVUPSZ128rm_NOVLX %0, 1, %noreg, 0, %noreg :: (load 16 from %ir.p1, align 1)
+# AVX512VL: %1:vr128x = VMOVUPSZ128rm %0, 1, %noreg, 0, %noreg :: (load 16 from %ir.p1, align 1)
 # ALL: %xmm0 = COPY %1
 body:             |
   bb.1 (%ir-block.0):
@@ -60,10 +60,10 @@ registers:
   - { id: 0, class: gpr }
   - { id: 1, class: vecr }
 # ALL:      %0:gr64 = COPY %rdi
-# SSE:      %1:vr128 = MOVAPSrm %0, 1, _, 0, _ :: (load 16 from %ir.p1)
-# AVX:      %1:vr128 = VMOVAPSrm %0, 1, _, 0, _ :: (load 16 from %ir.p1)
-# AVX512F:  %1:vr128x = VMOVAPSZ128rm_NOVLX %0, 1, _, 0, _ :: (load 16 from %ir.p1)
-# AVX512VL: %1:vr128x = VMOVAPSZ128rm %0, 1, _, 0, _ :: (load 16 from %ir.p1)
+# SSE:      %1:vr128 = MOVAPSrm %0, 1, %noreg, 0, %noreg :: (load 16 from %ir.p1)
+# AVX:      %1:vr128 = VMOVAPSrm %0, 1, %noreg, 0, %noreg :: (load 16 from %ir.p1)
+# AVX512F:  %1:vr128x = VMOVAPSZ128rm_NOVLX %0, 1, %noreg, 0, %noreg :: (load 16 from %ir.p1)
+# AVX512VL: %1:vr128x = VMOVAPSZ128rm %0, 1, %noreg, 0, %noreg :: (load 16 from %ir.p1)
 # ALL: %xmm0 = COPY %1
 body:             |
   bb.1 (%ir-block.0):
@@ -87,10 +87,10 @@ registers:
 # NO_AVX512F: %0:vr128 = COPY %xmm0
 # AVX512ALL:  %0:vr128x = COPY %xmm0
 # ALL:       %1:gr64 = COPY %rdi
-# SSE:       MOVAPSmr %1, 1, _, 0, _, %0 :: (store 16 into %ir.p1)
-# AVX:       VMOVAPSmr %1, 1, _, 0, _, %0 :: (store 16 into %ir.p1)
-# AVX512F:   VMOVAPSZ128mr_NOVLX %1, 1, _, 0, _, %0 :: (store 16 into %ir.p1)
-# AVX512VL:  VMOVAPSZ128mr %1, 1, _, 0, _, %0 :: (store 16 into %ir.p1)
+# SSE:       MOVAPSmr %1, 1, %noreg, 0, %noreg, %0 :: (store 16 into %ir.p1)
+# AVX:       VMOVAPSmr %1, 1, %noreg, 0, %noreg, %0 :: (store 16 into %ir.p1)
+# AVX512F:   VMOVAPSZ128mr_NOVLX %1, 1, %noreg, 0, %noreg, %0 :: (store 16 into %ir.p1)
+# AVX512VL:  VMOVAPSZ128mr %1, 1, %noreg, 0, %noreg, %0 :: (store 16 into %ir.p1)
 # ALL:       %rax = COPY %1
 body:             |
   bb.1 (%ir-block.0):
@@ -115,10 +115,10 @@ registers:
 # NO_AVX512F: %0:vr128 = COPY %xmm0
 # AVX512ALL:  %0:vr128x = COPY %xmm0
 # ALL:       %1:gr64 = COPY %rdi
-# SSE:       MOVUPSmr %1, 1, _, 0, _, %0 :: (store 16 into %ir.p1, align 1)
-# AVX:       VMOVUPSmr %1, 1, _, 0, _, %0 :: (store 16 into %ir.p1, align 1)
-# AVX512F:   VMOVUPSZ128mr_NOVLX %1, 1, _, 0, _, %0 :: (store 16 into %ir.p1, align 1)
-# AVX512VL:  VMOVUPSZ128mr %1, 1, _, 0, _, %0 :: (store 16 into %ir.p1, align 1)
+# SSE:       MOVUPSmr %1, 1, %noreg, 0, %noreg, %0 :: (store 16 into %ir.p1, align 1)
+# AVX:       VMOVUPSmr %1, 1, %noreg, 0, %noreg, %0 :: (store 16 into %ir.p1, align 1)
+# AVX512F:   VMOVUPSZ128mr_NOVLX %1, 1, %noreg, 0, %noreg, %0 :: (store 16 into %ir.p1, align 1)
+# AVX512VL:  VMOVUPSZ128mr %1, 1, %noreg, 0, %noreg, %0 :: (store 16 into %ir.p1, align 1)
 # ALL:       %rax = COPY %1
 body:             |
   bb.1 (%ir-block.0):

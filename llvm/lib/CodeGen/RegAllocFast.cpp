@@ -813,7 +813,7 @@ void RegAllocFast::handleThroughOperands(MachineInstr &MI,
 void RegAllocFast::dumpState() {
   for (unsigned Reg = 1, E = TRI->getNumRegs(); Reg != E; ++Reg) {
     if (PhysRegState[Reg] == regDisabled) continue;
-    dbgs() << " " << TRI->getName(Reg);
+    dbgs() << " " << printReg(Reg, TRI);
     switch(PhysRegState[Reg]) {
     case regFree:
       break;

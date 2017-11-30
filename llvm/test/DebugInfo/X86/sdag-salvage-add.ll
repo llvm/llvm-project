@@ -24,11 +24,11 @@
 ;
 ; CHECK:   ![[S4:.*]] = !DILocalVariable(name: "s4", 
 ; CHECK:   ![[MYVAR:.*]] = !DILocalVariable(name: "myVar", 
-; CHECK:      DBG_VALUE debug-use %rax, debug-use _, ![[MYVAR]],
+; CHECK:      DBG_VALUE debug-use %rax, debug-use %noreg, ![[MYVAR]],
 ; CHECK-SAME:           !DIExpression(DW_OP_plus_uconst, 4096, DW_OP_stack_value)
-; CHECK-NEXT: DBG_VALUE debug-use %rax, debug-use _, ![[S4]],
+; CHECK-NEXT: DBG_VALUE debug-use %rax, debug-use %noreg, ![[S4]],
 ; CHECK-SAME:           !DIExpression(DW_OP_plus_uconst, 4096, DW_OP_stack_value)
-; CHECK-NEXT: %rdi = MOV64rm killed %rax, 1, _, 4096, _,
+; CHECK-NEXT: %rdi = MOV64rm killed %rax, 1, %noreg, 4096, %noreg,
 
 source_filename = "test.c"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"

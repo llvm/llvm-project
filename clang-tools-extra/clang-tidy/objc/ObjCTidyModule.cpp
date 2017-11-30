@@ -10,6 +10,7 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
+#include "AvoidNSErrorInitCheck.h"
 #include "AvoidSpinlockCheck.h"
 #include "ForbiddenSubclassingCheck.h"
 #include "PropertyDeclarationCheck.h"
@@ -23,6 +24,8 @@ namespace objc {
 class ObjCModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<AvoidNSErrorInitCheck>(
+        "objc-avoid-nserror-init");
     CheckFactories.registerCheck<AvoidSpinlockCheck>(
         "objc-avoid-spinlock");
     CheckFactories.registerCheck<ForbiddenSubclassingCheck>(

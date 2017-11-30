@@ -245,6 +245,9 @@ public:
   }
 
   bool run(int64_t *NumPromoted) {
+    // Skip 'infinite' loops:
+    if (ExitBlocks.size() == 0)
+      return false;
     unsigned MaxProm = getMaxNumOfPromotionsInLoop(&L);
     if (MaxProm == 0)
       return false;
