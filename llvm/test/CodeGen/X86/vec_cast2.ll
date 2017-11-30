@@ -88,10 +88,7 @@ define <8 x i8> @foo3_8(<8 x float> %src) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vcvttps2dq %ymm0, %ymm0
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; CHECK-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
-; CHECK-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
-; CHECK-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
-; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retl
 ;

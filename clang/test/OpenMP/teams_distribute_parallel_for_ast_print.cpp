@@ -138,11 +138,11 @@ T tmain(T argc) {
 // CHECK-NEXT: for (int k = 0; k < 10; ++k)
 // CHECK-NEXT: e += d + argc;
 #pragma omp target
-#pragma omp teams distribute parallel for linear(d)
+#pragma omp teams distribute parallel for
   for (int k = 0; k < 10; ++k)
     e += d + argc;
 // CHECK: #pragma omp target
-// CHECK-NEXT: #pragma omp teams distribute parallel for linear(d)
+// CHECK-NEXT: #pragma omp teams distribute parallel for
 // CHECK-NEXT: for (int k = 0; k < 10; ++k)
 // CHECK-NEXT: e += d + argc;
   return T();
@@ -193,11 +193,11 @@ int main (int argc, char **argv) {
 // CHECK-NEXT: for (int k = 0; k < 10; ++k)
 // CHECK-NEXT: e += d + argc;
 #pragma omp target
-#pragma omp teams distribute parallel for linear(d)
+#pragma omp teams distribute parallel for
   for (int k = 0; k < 10; ++k)
     e += d + argc;
 // CHECK: #pragma omp target
-// CHECK-NEXT: #pragma omp teams distribute parallel for linear(d)
+// CHECK-NEXT: #pragma omp teams distribute parallel for
 // CHECK-NEXT: for (int k = 0; k < 10; ++k)
 // CHECK-NEXT: e += d + argc;
   return (0);

@@ -18285,7 +18285,7 @@ static SDValue LowerSIGN_EXTEND_AVX512(SDValue Op,
 
   if (VT.is512BitVector() && InVTElt != MVT::i1 &&
       (NumElts == 8 || NumElts == 16 || Subtarget.hasBWI())) {
-    if (In.getOpcode() == X86ISD::VSEXT || In.getOpcode() == X86ISD::VZEXT)
+    if (In.getOpcode() == X86ISD::VSEXT)
       return getExtendInVec(In.getOpcode(), dl, VT, In.getOperand(0), DAG);
     return getExtendInVec(X86ISD::VSEXT, dl, VT, In, DAG);
   }

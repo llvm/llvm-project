@@ -93,6 +93,17 @@ function(add_compiler_rt_component name)
   add_dependencies(compiler-rt ${name})
 endfunction()
 
+function(add_asm_sources output)
+  set(${output} ${ARGN} PARENT_SCOPE)
+  # Xcode will try to compile asm files as C ('clang -x c'), and that will fail.
+  if (${CMAKE_GENERATOR} STREQUAL "Xcode")
+    enable_language(ASM)
+  else()
+    # Pass ASM file directly to the C++ compiler.
+    set_source_files_properties(${ARGN} PROPERTIES LANGUAGE C)
+  endif()
+endfunction()
+
 macro(set_output_name output name arch)
   if(ANDROID AND ${arch} STREQUAL "i386")
     set(${output} "${name}-i686${COMPILER_RT_OS_SUFFIX}")

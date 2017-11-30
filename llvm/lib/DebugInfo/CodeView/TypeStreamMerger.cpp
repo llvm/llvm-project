@@ -83,6 +83,8 @@ private:
   bool remapTypeIndex(TypeIndex &Idx);
   bool remapItemIndex(TypeIndex &Idx);
 
+  ArrayRef<uint8_t> serializeRemapped(const RemappedType &Record);
+
   bool remapIndices(RemappedType &Record, ArrayRef<TiReference> Refs);
 
   bool remapIndex(TypeIndex &Idx, ArrayRef<TypeIndex> Map);
@@ -94,15 +96,6 @@ private:
 
   Error errorCorruptRecord() const {
     return llvm::make_error<CodeViewError>(cv_error_code::corrupt_record);
-  }
-
-  Error writeRecord(TypeTableBuilder &Dest, const RemappedType &Record,
-                    bool RemapSuccess) {
-    TypeIndex DestIdx = Untranslated;
-    if (RemapSuccess)
-      DestIdx = Dest.insertRecord(Record);
-    addMapping(DestIdx);
-    return Error::success();
   }
 
   Optional<Error> LastError;
@@ -123,9 +116,34 @@ private:
   /// Map from source type index to destination type index. Indexed by source
   /// type index minus 0x1000.
   SmallVectorImpl<TypeIndex> &IndexMap;
+
+  /// Temporary storage that we use to copy a record's data while re-writing
+  /// its type indices.
+  SmallVector<uint8_t, 256> RemapStorage;
 };
 
 } // end anonymous namespace
+
+ArrayRef<uint8_t>
+TypeStreamMerger::serializeRemapped(const RemappedType &Record) {
+  TypeIndex TI;
+  ArrayRef<uint8_t> OriginalData = Record.OriginalRecord.RecordData;
+  if (Record.Mappings.empty())
+    return OriginalData;
+
+  // At least one type index was remapped.  We copy the full record bytes,
+  // re-write each type index, then return that.
+  RemapStorage.resize(OriginalData.size());
+  ::memcpy(&RemapStorage[0], OriginalData.data(), OriginalData.size());
+  uint8_t *ContentBegin = RemapStorage.data() + sizeof(RecordPrefix);
+  for (const auto &M : Record.Mappings) {
+    // First 4 bytes of every record are the record prefix, but the mapping
+    // offset is relative to the content which starts after.
+    *(TypeIndex *)(ContentBegin + M.first) = M.second;
+  }
+  auto RemapRef = makeArrayRef(RemapStorage);
+  return RemapRef;
+}
 
 const TypeIndex TypeStreamMerger::Untranslated(SimpleTypeKind::NotTranslated);
 
@@ -268,14 +286,19 @@ Error TypeStreamMerger::remapAllTypes(const CVTypeArray &Types) {
 }
 
 Error TypeStreamMerger::remapType(const CVType &Type) {
+  TypeTableBuilder &Dest =
+      isIdRecord(Type.kind()) ? *DestIdStream : *DestTypeStream;
+
   RemappedType R(Type);
   SmallVector<TiReference, 32> Refs;
   discoverTypeIndices(Type.RecordData, Refs);
   bool MappedAllIndices = remapIndices(R, Refs);
-  TypeTableBuilder &Dest =
-      isIdRecord(Type.kind()) ? *DestIdStream : *DestTypeStream;
-  if (auto EC = writeRecord(Dest, R, MappedAllIndices))
-    return EC;
+  ArrayRef<uint8_t> Data = serializeRemapped(R);
+
+  TypeIndex DestIdx = Untranslated;
+  if (MappedAllIndices)
+    DestIdx = Dest.insertRecordBytes(Data);
+  addMapping(DestIdx);
 
   ++CurIndex;
   assert((IsSecondPass || IndexMap.size() == slotForIndex(CurIndex)) &&
