@@ -21,10 +21,10 @@
 
 #include <vector>
 
+using llvm::object::Archive;
 using llvm::object::WasmObjectFile;
 using llvm::object::WasmSection;
 using llvm::object::WasmSymbol;
-using llvm::object::Archive;
 using llvm::wasm::WasmImport;
 
 namespace lld {
