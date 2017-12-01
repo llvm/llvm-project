@@ -40,7 +40,7 @@ if(APPLE)
 endif()
 
 set(ALL_BUILTIN_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM32} ${ARM64}
-    ${MIPS32} ${MIPS64} ${WASM32} ${WASM64})
+    ${MIPS32} ${MIPS64} ${PPC64} ${WASM32} ${WASM64})
 
 include(CompilerRTUtils)
 include(CompilerRTDarwinUtils)
