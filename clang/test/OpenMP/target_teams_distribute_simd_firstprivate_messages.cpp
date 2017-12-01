@@ -124,7 +124,8 @@ int main(int argc, char **argv) {
 #pragma omp target teams distribute simd firstprivate(j)
   for (i = 0; i < argc; ++i) foo();
 
-#pragma omp target teams distribute simd lastprivate(argc), firstprivate(argc) // OK
+// expected-error@+1 {{lastprivate variable cannot be firstprivate}} expected-note@+1 {{defined as lastprivate}}
+#pragma omp target teams distribute simd lastprivate(argc), firstprivate(argc)
   for (i = 0; i < argc; ++i) foo();
 
 #pragma omp target teams distribute simd firstprivate(argc) map(argc) // expected-error {{firstprivate variable cannot be in a map clause in '#pragma omp target teams distribute simd' directive}} expected-note {{defined as firstprivate}}

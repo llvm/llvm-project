@@ -363,15 +363,6 @@ struct FPR {
   } xstate;
 };
 
-//---------------------------------------------------------------------------
-// ptrace PTRACE_GETREGSET, PTRACE_SETREGSET structure
-//---------------------------------------------------------------------------
-
-struct IOVEC {
-  void *iov_base; // pointer to XSAVE
-  size_t iov_len; // sizeof(XSAVE)
-};
-
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
 } // namespace lldb_private

@@ -15,6 +15,7 @@
 #include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
 #include "Plugins/Process/Utility/RegisterContext_mips.h"
 #include "Plugins/Process/Utility/lldb-mips-linux-register-enums.h"
+#include <sys/uio.h>
 
 #define MAX_NUM_WP 8
 
@@ -128,7 +129,7 @@ private:
 
   lldb::addr_t hw_addr_map[MAX_NUM_WP];
 
-  IOVEC_mips m_iovec;
+  struct iovec m_iovec;
 };
 
 } // namespace process_linux

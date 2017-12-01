@@ -8,7 +8,6 @@
   define void @test_combines_3() { ret void }
   define void @test_combines_4() { ret void }
   define void @test_combines_5() { ret void }
-  define void @test_combines_6() { ret void }
 ...
 
 ---
@@ -89,24 +88,4 @@ body: |
     %3:_(s32), %4:_(s32) = G_UNMERGE_VALUES %2
     %5:_(s32) = G_ADD %3, %4
     %w0 = COPY %5
-...
-
----
-name:            test_combines_6
-body: |
-  bb.0:
-    liveins: %w0
-
-    ; Check that we replace all the uses of a G_EXTRACT.
-    ; CHECK-LABEL: name: test_combines_6
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY %w0
-    ; CHECK: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[COPY]], [[COPY]]
-    ; CHECK: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[MUL]]
-    %0:_(s32) = COPY %w0
-
-    %1:_(s32) = G_MERGE_VALUES %0
-    %2:_(s32) = G_UNMERGE_VALUES %1
-    %3:_(s32) = G_MUL %2, %2
-    %4:_(s32) = G_ADD %2, %3
-    %w0 = COPY %4
 ...

@@ -1,7 +1,14 @@
 from __future__ import absolute_import
+import difflib
+import errno
+import functools
+import itertools
+import getopt
 import os, signal, subprocess, sys
 import re
+import stat
 import platform
+import shutil
 import tempfile
 import threading
 
@@ -302,6 +309,152 @@ def executeBuiltinEcho(cmd, shenv):
         return stdout.getvalue()
     return ""
 
+def executeBuiltinMkdir(cmd, cmd_shenv):
+    """executeBuiltinMkdir - Create new directories."""
+    args = expand_glob_expressions(cmd.args, cmd_shenv.cwd)[1:]
+    try:
+        opts, args = getopt.gnu_getopt(args, 'p')
+    except getopt.GetoptError as err:
+        raise InternalShellError(cmd, "Unsupported: 'mkdir':  %s" % str(err))
+
+    parent = False
+    for o, a in opts:
+        if o == "-p":
+            parent = True
+        else:
+            assert False, "unhandled option"
+
+    if len(args) == 0:
+        raise InternalShellError(cmd, "Error: 'mkdir' is missing an operand")
+
+    stderr = StringIO()
+    exitCode = 0
+    for dir in args:
+        if not os.path.isabs(dir):
+            dir = os.path.realpath(os.path.join(cmd_shenv.cwd, dir))
+        if parent:
+            lit.util.mkdir_p(dir)
+        else:
+            try:
+                os.mkdir(dir)
+            except OSError as err:
+                stderr.write("Error: 'mkdir' command failed, %s\n" % str(err))
+                exitCode = 1
+    return ShellCommandResult(cmd, "", stderr.getvalue(), exitCode, False)
+
+def executeBuiltinDiff(cmd, cmd_shenv):
+    """executeBuiltinDiff - Compare files line by line."""
+    args = expand_glob_expressions(cmd.args, cmd_shenv.cwd)[1:]
+    try:
+        opts, args = getopt.gnu_getopt(args, "wbu", ["strip-trailing-cr"])
+    except getopt.GetoptError as err:
+        raise InternalShellError(cmd, "Unsupported: 'diff':  %s" % str(err))
+
+    filelines, filepaths = ([] for i in range(2))
+    ignore_all_space = False
+    ignore_space_change = False
+    unified_diff = False
+    strip_trailing_cr = False
+    for o, a in opts:
+        if o == "-w":
+            ignore_all_space = True
+        elif o == "-b":
+            ignore_space_change = True
+        elif o == "-u":
+            unified_diff = True
+        elif o == "--strip-trailing-cr":
+            strip_trailing_cr = True
+        else:
+            assert False, "unhandled option"
+
+    if len(args) != 2:
+        raise InternalShellError(cmd, "Error:  missing or extra operand")
+
+    stderr = StringIO()
+    stdout = StringIO()
+    exitCode = 0
+    try:
+        for file in args:
+            if not os.path.isabs(file):
+                file = os.path.realpath(os.path.join(cmd_shenv.cwd, file))
+            filepaths.append(file)
+            with open(file, 'r') as f:
+                filelines.append(f.readlines())
+
+        def compose2(f, g):
+            return lambda x: f(g(x))
+
+        f = lambda x: x
+        if strip_trailing_cr:
+            f = compose2(lambda line: line.rstrip('\r'), f)
+        if ignore_all_space or ignore_space_change:
+            ignoreSpace = lambda line, separator: separator.join(line.split())
+            ignoreAllSpaceOrSpaceChange = functools.partial(ignoreSpace, separator='' if ignore_all_space else ' ')
+            f = compose2(ignoreAllSpaceOrSpaceChange, f)
+
+        for idx, lines in enumerate(filelines):
+            filelines[idx]= [f(line) for line in lines]
+
+        func = difflib.unified_diff if unified_diff else difflib.context_diff
+        for diff in func(filelines[0], filelines[1], filepaths[0], filepaths[1]):
+            stdout.write(diff)
+            exitCode = 1
+    except IOError as err:
+        stderr.write("Error: 'diff' command failed, %s\n" % str(err))
+        exitCode = 1
+
+    return ShellCommandResult(cmd, stdout.getvalue(), stderr.getvalue(), exitCode, False)
+
+def executeBuiltinRm(cmd, cmd_shenv):
+    """executeBuiltinRm - Removes (deletes) files or directories."""
+    args = expand_glob_expressions(cmd.args, cmd_shenv.cwd)[1:]
+    try:
+        opts, args = getopt.gnu_getopt(args, "frR", ["--recursive"])
+    except getopt.GetoptError as err:
+        raise InternalShellError(cmd, "Unsupported: 'rm':  %s" % str(err))
+
+    force = False
+    recursive = False
+    for o, a in opts:
+        if o == "-f":
+            force = True
+        elif o in ("-r", "-R", "--recursive"):
+            recursive = True
+        else:
+            assert False, "unhandled option"
+
+    if len(args) == 0:
+        raise InternalShellError(cmd, "Error: 'rm' is missing an operand")
+
+    def on_rm_error(func, path, exc_info):
+        # path contains the path of the file that couldn't be removed
+        # let's just assume that it's read-only and remove it.
+        os.chmod(path, stat.S_IMODE( os.stat(path).st_mode) | stat.S_IWRITE)
+        os.remove(path)
+
+    stderr = StringIO()
+    exitCode = 0
+    for path in args:
+        if not os.path.isabs(path):
+            path = os.path.realpath(os.path.join(cmd_shenv.cwd, path))
+        if force and not os.path.exists(path):
+            continue
+        try:
+            if os.path.isdir(path):
+                if not recursive:
+                    stderr.write("Error: %s is a directory\n" % path)
+                    exitCode = 1
+                shutil.rmtree(path, onerror = on_rm_error if force else None)
+            else:
+                if force and not os.access(path, os.W_OK):
+                    os.chmod(path,
+                             stat.S_IMODE(os.stat(path).st_mode) | stat.S_IWRITE)
+                os.remove(path)
+        except OSError as err:
+            stderr.write("Error: 'rm' command failed, %s" % str(err))
+            exitCode = 1
+    return ShellCommandResult(cmd, "", stderr.getvalue(), exitCode, False)
+
 def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
     """Return the standard fds for cmd after applying redirects
 
@@ -459,6 +612,30 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             raise ValueError("'export' supports only one argument")
         updateEnv(shenv, cmd.commands[0])
         return 0
+
+    if cmd.commands[0].args[0] == 'mkdir':
+        if len(cmd.commands) != 1:
+            raise InternalShellError(cmd.commands[0], "Unsupported: 'mkdir' "
+                                     "cannot be part of a pipeline")
+        cmdResult = executeBuiltinMkdir(cmd.commands[0], shenv)
+        results.append(cmdResult)
+        return cmdResult.exitCode
+
+    if cmd.commands[0].args[0] == 'diff':
+        if len(cmd.commands) != 1:
+            raise InternalShellError(cmd.commands[0], "Unsupported: 'diff' "
+                                     "cannot be part of a pipeline")
+        cmdResult = executeBuiltinDiff(cmd.commands[0], shenv)
+        results.append(cmdResult)
+        return cmdResult.exitCode
+
+    if cmd.commands[0].args[0] == 'rm':
+        if len(cmd.commands) != 1:
+            raise InternalShellError(cmd.commands[0], "Unsupported: 'rm' "
+                                     "cannot be part of a pipeline")
+        cmdResult = executeBuiltinRm(cmd.commands[0], shenv)
+        results.append(cmdResult)
+        return cmdResult.exitCode
 
     procs = []
     default_stdin = subprocess.PIPE

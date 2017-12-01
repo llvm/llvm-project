@@ -368,6 +368,23 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
     }
   }
 
+  // Merge/Unmerge
+  for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES})
+    for (int Sz : {8, 16, 32, 64, 128, 192, 256, 384, 512}) {
+      LLT ScalarTy = LLT::scalar(Sz);
+      setAction({Op, ScalarTy}, Legal);
+      setAction({Op, 1, ScalarTy}, Legal);
+      if (Sz < 32)
+        continue;
+      for (int EltSize = 8; EltSize <= 64; EltSize *= 2) {
+        if (EltSize >= Sz)
+          continue;
+        LLT VecTy = LLT::vector(Sz / EltSize, EltSize);
+        setAction({Op, VecTy}, Legal);
+        setAction({Op, 1, VecTy}, Legal);
+      }
+    }
+
   computeTables();
 }
 

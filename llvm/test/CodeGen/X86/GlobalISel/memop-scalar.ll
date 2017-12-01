@@ -181,7 +181,7 @@ define i32 @test_gep_folding_largeGepIndex(i32* %arr, i32 %val) {
 ; ALL-LABEL: test_gep_folding_largeGepIndex:
 ; ALL:       # BB#0:
 ; ALL-NEXT:    movabsq $228719476720, %rax # imm = 0x3540BE3FF0
-; ALL-NEXT:    leaq (%rdi,%rax), %rax
+; ALL-NEXT:    addq %rdi, %rax
 ; ALL-NEXT:    movl %esi, (%rax)
 ; ALL-NEXT:    movl (%rax), %eax
 ; ALL-NEXT:    retq

@@ -89,7 +89,7 @@ endif:
 }
 
 ; GCN-LABEL: {{^}}divergent_loop:
-; VGPR: workitem_private_segment_byte_size = 16{{$}}
+; VGPR: workitem_private_segment_byte_size = 12{{$}}
 
 ; GCN: {{^}}; BB#0:
 
@@ -123,10 +123,9 @@ endif:
 ; GCN: [[LOOP:BB[0-9]+_[0-9]+]]:
 ; GCN: buffer_load_dword v[[VAL_LOOP_RELOAD:[0-9]+]], off, s[0:3], s7 offset:4 ; 4-byte Folded Reload
 ; GCN: v_subrev_i32_e32 [[VAL_LOOP:v[0-9]+]], vcc, v{{[0-9]+}}, v[[VAL_LOOP_RELOAD]]
-; GCN: v_cmp_ne_u32_e32 vcc,
-; GCN: s_and_b64 vcc, exec, vcc
+; GCN: s_cmp_lg_u32 s{{[0-9]+}}, s{{[0-9]+}}
 ; GCN: buffer_store_dword [[VAL_LOOP]], off, s[0:3], s7 offset:[[VAL_SUB_OFFSET:[0-9]+]] ; 4-byte Folded Spill
-; GCN-NEXT: s_cbranch_vccnz [[LOOP]]
+; GCN-NEXT: s_cbranch_scc1 [[LOOP]]
 
 
 ; GCN: [[END]]:

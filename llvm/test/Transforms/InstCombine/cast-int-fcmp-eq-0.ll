@@ -198,14 +198,6 @@ define i1 @i32_cast_cmp_ole_int_0_sitofp(i32 %i) {
   ret i1 %cmp
 }
 
-; CHECK-LABEL: @i32_cast_cmp_olt_int_0_uitofp(
-; CHECK: ret i1 false
-define i1 @i32_cast_cmp_olt_int_0_uitofp(i32 %i) {
-  %f = uitofp i32 %i to float
-  %cmp = fcmp olt float %f, 0.0
-  ret i1 %cmp
-}
-
 ; CHECK-LABEL: @i32_cast_cmp_olt_int_0_sitofp(
 ; CHECK: icmp slt i32 %i, 0
 ; CHECK-NEXT: ret
@@ -339,16 +331,6 @@ define i1 @i32_cast_cmp_oeq_int_i32umax_sitofp(i32 %i) {
   ret i1 %cmp
 }
 
-; CHECK-LABEL: @i32_cast_cmp_oeq_int_i32imin_uitofp(
-; CHECK: uitofp
-; CHECK: fcmp oeq
-; CHECK-NEXT: ret
-define i1 @i32_cast_cmp_oeq_int_i32imin_uitofp(i32 %i) {
-  %f = uitofp i32 %i to float
-  %cmp = fcmp oeq float %f, 0xC1E0000000000000
-  ret i1 %cmp
-}
-
 ; CHECK-LABEL: @i32_cast_cmp_oeq_int_i32imin_sitofp(
 ; CHECK: sitofp
 ; CHECK: fcmp oeq
@@ -376,16 +358,6 @@ define i1 @i32_cast_cmp_oeq_int_i32imax_uitofp(i32 %i) {
 define i1 @i32_cast_cmp_oeq_int_i32imax_sitofp(i32 %i) {
   %f = sitofp i32 %i to float
   %cmp = fcmp oeq float %f, 0x41E0000000000000
-  ret i1 %cmp
-}
-
-; CHECK-LABEL: @i32_cast_cmp_oeq_int_negi32umax_uitofp(
-; CHECK: uitofp
-; CHECK: fcmp oeq
-; CHECK-NEXT: ret
-define i1 @i32_cast_cmp_oeq_int_negi32umax_uitofp(i32 %i) {
-  %f = uitofp i32 %i to float
-  %cmp = fcmp oeq float %f, 0xC1F0000000000000
   ret i1 %cmp
 }
 
