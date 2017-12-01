@@ -607,8 +607,8 @@ def G_EXTRACT : Instruction {
 // indexes. This will almost certainly be mapped to sub-register COPYs after
 // register banks have been selected.
 def G_UNMERGE_VALUES : Instruction {
-  let OutOperandList = (outs);
-  let InOperandList = (ins variable_ops);
+  let OutOperandList = (outs type0:$dst0, variable_ops);
+  let InOperandList = (ins type1:$src);
   let hasSideEffects = 0;
 }
 
@@ -619,10 +619,10 @@ def G_INSERT : Instruction {
   let hasSideEffects = 0;
 }
 
-/// Concatenante multiple registers of the same size into a wider register.
+/// Concatenate multiple registers of the same size into a wider register.
 def G_MERGE_VALUES : Instruction {
   let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins variable_ops);
+  let InOperandList = (ins type1:$src0, variable_ops);
   let hasSideEffects = 0;
 }
 

@@ -45,7 +45,10 @@ PrintFunctionPass::PrintFunctionPass(raw_ostream &OS, const std::string &Banner)
 PreservedAnalyses PrintFunctionPass::run(Function &F,
                                          FunctionAnalysisManager &) {
   if (isFunctionInPrintList(F.getName()))
-    OS << Banner << static_cast<Value &>(F);
+    if (forcePrintModuleIR())
+      OS << Banner << " (function: " << F.getName() << ")\n" << *F.getParent();
+    else
+      OS << Banner << static_cast<Value &>(F);
   return PreservedAnalyses::all();
 }
 

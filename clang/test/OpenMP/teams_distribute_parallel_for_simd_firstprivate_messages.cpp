@@ -144,8 +144,9 @@ int main(int argc, char **argv) {
 #pragma omp teams distribute parallel for simd firstprivate(j)
   for (i = 0; i < argc; ++i) foo();
 
+// expected-error@+2 {{lastprivate variable cannot be firstprivate}} expected-note@+2 {{defined as lastprivate}}
 #pragma omp target
-#pragma omp teams distribute parallel for simd lastprivate(argc), firstprivate(argc) // OK
+#pragma omp teams distribute parallel for simd lastprivate(argc), firstprivate(argc)
   for (i = 0; i < argc; ++i) foo();
 
   return 0;

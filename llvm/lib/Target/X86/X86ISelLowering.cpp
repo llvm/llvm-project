@@ -1129,6 +1129,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     if (HasInt256) {
       // Custom legalize 2x32 to get a little better code.
       setOperationAction(ISD::MGATHER, MVT::v2f32, Custom);
+      setOperationAction(ISD::MGATHER, MVT::v2i32, Custom);
 
       for (auto VT : { MVT::v4i32, MVT::v8i32, MVT::v2i64, MVT::v4i64,
                        MVT::v4f32, MVT::v8f32, MVT::v2f64, MVT::v4f64 })
@@ -24288,6 +24289,10 @@ static SDValue LowerMGATHER(SDValue Op, const X86Subtarget &Subtarget,
   unsigned NumElts = VT.getVectorNumElements();
   assert(VT.getScalarSizeInBits() >= 32 && "Unsupported gather op");
 
+  // If the index is v2i32, we're being called by type legalization.
+  if (IndexVT == MVT::v2i32)
+    return SDValue();
+
   if (Subtarget.hasAVX512() && !Subtarget.hasVLX() && !VT.is512BitVector() &&
       !Index.getSimpleValueType().is512BitVector()) {
     // AVX512F supports only 512-bit vectors. Or data or index should
@@ -24330,39 +24335,6 @@ static SDValue LowerMGATHER(SDValue Op, const X86Subtarget &Subtarget,
                                   NewGather.getValue(0),
                                   DAG.getIntPtrConstant(0, dl));
     SDValue RetOps[] = {Extract, NewGather.getValue(2)};
-    return DAG.getMergeValues(RetOps, dl);
-  }
-  if (N->getMemoryVT() == MVT::v2i32) {
-    // There is a special case when the return type is v2i32 is illegal and
-    // the type legaizer extended it to v2i64. Without this conversion we end up
-    // with VPGATHERQQ (reading q-words from the memory) instead of VPGATHERQD.
-    // In order to avoid this situation, we'll build an X86 specific Gather node
-    // with index v2i64 and value type v4i32.
-    assert(VT == MVT::v2i64 && Src0.getValueType() == MVT::v2i64 &&
-           "Unexpected type in masked gather");
-    Src0 = 
-        DAG.getVectorShuffle(MVT::v4i32, dl, DAG.getBitcast(MVT::v4i32, Src0),
-                             DAG.getUNDEF(MVT::v4i32), { 0, 2, -1, -1 });
-    // The mask should match the destination type. Extending mask with zeroes
-    // is not necessary since instruction itself reads only two values from
-    // memory.
-    SDVTList VTList; 
-    if (Subtarget.hasVLX()) {
-      Mask = ExtendToType(Mask, MVT::v4i1, DAG, false);
-      VTList = DAG.getVTList(MVT::v4i32, MVT::v2i1, MVT::Other);
-    } else {
-      Mask =
-          DAG.getVectorShuffle(MVT::v4i32, dl, DAG.getBitcast(MVT::v4i32, Mask),
-                               DAG.getUNDEF(MVT::v4i32), {0, 2, -1, -1});
-      VTList = DAG.getVTList(MVT::v4i32, MVT::v4i32, MVT::Other);
-    }
-    SDValue Ops[] = { N->getChain(), Src0, Mask, N->getBasePtr(), Index };
-    SDValue NewGather = DAG.getTargetMemSDNode<X86MaskedGatherSDNode>(
-      VTList, Ops, dl, N->getMemoryVT(), N->getMemOperand());
-
-    SDValue Sext = getExtendInVec(X86ISD::VSEXT, dl, MVT::v2i64,
-                                  NewGather.getValue(0), DAG);
-    SDValue RetOps[] = { Sext, NewGather.getValue(2) };
     return DAG.getMergeValues(RetOps, dl);
   }
 
@@ -24898,6 +24870,58 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
         Gather->getMemoryVT(), Gather->getMemOperand());
       Results.push_back(Res);
       Results.push_back(Res.getValue(2));
+      return;
+    }
+    if (VT == MVT::v2i32) {
+      auto *Gather = cast<MaskedGatherSDNode>(N);
+      SDValue Index = Gather->getIndex();
+      SDValue Mask = Gather->getMask();
+      assert(Mask.getValueType() == MVT::v2i1 && "Unexpected mask type");
+      SDValue Src0 = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4i32,
+                                 Gather->getValue(),
+                                 DAG.getUNDEF(MVT::v2i32));
+      // If the index is v2i64 we can use it directly.
+      if (Index.getValueType() == MVT::v2i64 &&
+          (Subtarget.hasVLX() || !Subtarget.hasAVX512())) {
+        if (!Subtarget.hasVLX()) {
+          // We need to widen the mask, but the instruction will only use 2
+          // of its elements. So we can use undef.
+          Mask = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4i1, Mask,
+                             DAG.getUNDEF(MVT::v2i1));
+          Mask = DAG.getNode(ISD::SIGN_EXTEND, dl, MVT::v4i32, Mask);
+        }
+        SDValue Ops[] = { Gather->getChain(), Src0, Mask, Gather->getBasePtr(),
+                          Index };
+        SDValue Res = DAG.getTargetMemSDNode<X86MaskedGatherSDNode>(
+          DAG.getVTList(MVT::v4i32, Mask.getValueType(), MVT::Other), Ops, dl,
+          Gather->getMemoryVT(), Gather->getMemOperand());
+        SDValue Chain = Res.getValue(2);
+        if (!ExperimentalVectorWideningLegalization)
+          Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v2i32, Res,
+                            DAG.getIntPtrConstant(0, dl));
+        Results.push_back(Res);
+        Results.push_back(Chain);
+        return;
+      }
+      EVT IndexVT = Index.getValueType();
+      EVT NewIndexVT = EVT::getVectorVT(*DAG.getContext(),
+                                        IndexVT.getScalarType(), 4);
+      // Otherwise we need to custom widen everything to avoid promotion.
+      Index = DAG.getNode(ISD::CONCAT_VECTORS, dl, NewIndexVT, Index,
+                          DAG.getUNDEF(IndexVT));
+      Mask = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4i1, Mask,
+                         DAG.getConstant(0, dl, MVT::v2i1));
+      SDValue Ops[] = { Gather->getChain(), Src0, Mask, Gather->getBasePtr(),
+                        Index };
+      SDValue Res = DAG.getMaskedGather(DAG.getVTList(MVT::v4i32, MVT::Other),
+                                        Gather->getMemoryVT(), dl, Ops,
+                                        Gather->getMemOperand());
+      SDValue Chain = Res.getValue(1);
+      if (!ExperimentalVectorWideningLegalization)
+        Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v2i32, Res,
+                          DAG.getIntPtrConstant(0, dl));
+      Results.push_back(Res);
+      Results.push_back(Chain);
       return;
     }
     break;

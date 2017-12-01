@@ -13,14 +13,14 @@
 ; X64-NEXT: .p2align
 ; X64: %loop
 ; no complex address modes
-; X64-NOT: (%{{[^)]+}},%{{[^)]+}},
+; X64-NOT: [1-9]+(%{{[^)]+}},%{{[^)]+}},
 ;
 ; X32: @simple
 ; no expensive address computation in the preheader
 ; X32-NOT: imul
 ; X32: %loop
 ; no complex address modes
-; X32-NOT: (%{{[^)]+}},%{{[^)]+}},
+; X32-NOT: [1-9]+(%{{[^)]+}},%{{[^)]+}},
 define i32 @simple(i32* %a, i32* %b, i32 %x) nounwind {
 entry:
   br label %loop
@@ -103,7 +103,7 @@ exit:
 ; X32-NOT: mov{{.*}}(%esp){{$}}
 ; X32: %for.body{{$}}
 ; no complex address modes
-; X32-NOT: (%{{[^)]+}},%{{[^)]+}},
+; X32-NOT: [1-9]+(%{{[^)]+}},%{{[^)]+}},
 ; no reloads
 ; X32-NOT: (%esp)
 define void @extrastride(i8* nocapture %main, i32 %main_stride, i32* nocapture %res, i32 %x, i32 %y, i32 %z) nounwind {

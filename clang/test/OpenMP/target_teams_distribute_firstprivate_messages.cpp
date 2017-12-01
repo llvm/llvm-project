@@ -125,7 +125,8 @@ int main(int argc, char **argv) {
 #pragma omp target teams distribute firstprivate(j)
   for (i = 0; i < argc; ++i) foo();
 
-#pragma omp target teams distribute lastprivate(argc), firstprivate(argc) // OK
+// expected-error@+1 {{lastprivate variable cannot be firstprivate}} expected-note@+1 {{defined as lastprivate}}
+#pragma omp target teams distribute lastprivate(argc), firstprivate(argc)
   for (i = 0; i < argc; ++i) foo();
 
   return 0;

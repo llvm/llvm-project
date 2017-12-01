@@ -388,7 +388,7 @@ define void @test_variadic_call_2(i8** %addr_ptr, double* %val_ptr) {
 ; X32-NEXT:    movl 4(%ecx), %ecx
 ; X32-NEXT:    movl %eax, (%esp)
 ; X32-NEXT:    movl $4, %eax
-; X32-NEXT:    leal (%esp,%eax), %eax
+; X32-NEXT:    addl %esp, %eax
 ; X32-NEXT:    movl %edx, 4(%esp)
 ; X32-NEXT:    movl %ecx, 4(%eax)
 ; X32-NEXT:    calll variadic_callee

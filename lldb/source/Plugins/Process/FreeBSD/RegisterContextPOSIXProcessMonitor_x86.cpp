@@ -58,6 +58,9 @@ RegisterContextPOSIXProcessMonitor_x86_64::
   // Store byte offset of fctrl (i.e. first register of FPR) wrt 'UserArea'
   const RegisterInfo *reg_info_fctrl = GetRegisterInfoByName("fctrl");
   m_fctrl_offset_in_userarea = reg_info_fctrl->byte_offset;
+
+  m_iovec.iov_base = &m_fpr.xstate.xsave;
+  m_iovec.iov_len = sizeof(m_fpr.xstate.xsave);
 }
 
 ProcessMonitor &RegisterContextPOSIXProcessMonitor_x86_64::GetMonitor() {

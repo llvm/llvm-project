@@ -31,7 +31,7 @@
 
 ; Check that we do not actually allocate arrays for %begin, %end, since they are
 ; invariant load hoisted.
-; HOST-IR: %p_dev_array_MemRef_A = call i8* @polly_allocateMemoryForDevice(i64 %35)
+; HOST-IR: %p_dev_array_MemRef_A = call i8* @polly_allocateMemoryForDevice
 ; HOST-IR-NOT: call i8* @polly_allocateMemoryForDevice
 
 ; Check that we send the invariant loaded scalars as parameters to the

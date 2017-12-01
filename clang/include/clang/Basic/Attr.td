@@ -77,17 +77,12 @@ class SubsetSubject<AttrSubject base, code check, string diag> : AttrSubject {
   string DiagSpelling = diag;
 }
 
-// This is the type of a variable which C++11 allows alignas(...) to appertain
-// to.
-def NormalVar : SubsetSubject<Var,
-                              [{S->getStorageClass() != VarDecl::Register &&
-                                S->getKind() != Decl::ImplicitParam &&
-                                S->getKind() != Decl::ParmVar &&
-                                S->getKind() != Decl::NonTypeTemplateParm}],
+def LocalVar : SubsetSubject<Var,
+                              [{S->hasLocalStorage() && !isa<ParmVarDecl>(S)}],
                               "local variables">;
 def NonParmVar : SubsetSubject<Var,
                                [{S->getKind() != Decl::ParmVar}],
-                               "variables and functions">;
+                               "variables">;
 def NonBitField : SubsetSubject<Field,
                                 [{!S->isBitField()}],
                                 "non-bit-field non-static data members">;
@@ -533,7 +528,6 @@ def Alias : Attr {
 def Aligned : InheritableAttr {
   let Spellings = [GCC<"aligned">, Declspec<"align">, Keyword<"alignas">,
                    Keyword<"_Alignas">];
-//  let Subjects = SubjectList<[NonBitField, NormalVar, Tag]>;
   let Args = [AlignedArgument<"Alignment", 1>];
   let Accessors = [Accessor<"isGNU", [GCC<"aligned">]>,
                    Accessor<"isC11", [Keyword<"_Alignas">]>,
@@ -768,7 +762,7 @@ def CFConsumed : InheritableParamAttr {
 def Cleanup : InheritableAttr {
   let Spellings = [GCC<"cleanup">];
   let Args = [FunctionArgument<"FunctionDecl">];
-  let Subjects = SubjectList<[Var]>;
+  let Subjects = SubjectList<[LocalVar]>;
   let Documentation = [Undocumented];
 }
 
