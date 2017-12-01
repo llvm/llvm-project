@@ -1,4 +1,4 @@
-//===------ CXXInheritance.cpp - C++ Inheritance ----------------*- C++ -*-===//
+//===- CXXInheritance.cpp - C++ Inheritance -------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,13 +10,27 @@
 // This file provides routines that help analyzing C++ inheritance hierarchies.
 //
 //===----------------------------------------------------------------------===//
+
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/AST/TemplateName.h"
+#include "clang/AST/Type.h"
+#include "clang/Basic/LLVM.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/Support/Casting.h"
 #include <algorithm>
+#include <utility>
+#include <cassert>
+#include <vector>
 
 using namespace clang;
 
@@ -26,7 +40,7 @@ void CXXBasePaths::ComputeDeclsFound() {
   assert(NumDeclsFound == 0 && !DeclsFound &&
          "Already computed the set of declarations");
 
-  llvm::SetVector<NamedDecl *, SmallVector<NamedDecl *, 8> > Decls;
+  llvm::SetVector<NamedDecl *, SmallVector<NamedDecl *, 8>> Decls;
   for (paths_iterator Path = begin(), PathEnd = end(); Path != PathEnd; ++Path)
     Decls.insert(Path->Decls.front());
 
@@ -419,8 +433,8 @@ bool CXXRecordDecl::FindTagMember(const CXXBaseSpecifier *Specifier,
 
 static bool findOrdinaryMember(RecordDecl *BaseRecord, CXXBasePath &Path,
                                DeclarationName Name) {
-  const unsigned IDNS = clang::Decl::IDNS_Ordinary | clang::Decl::IDNS_Tag |
-                        clang::Decl::IDNS_Member;
+  const unsigned IDNS = Decl::IDNS_Ordinary | Decl::IDNS_Tag |
+                        Decl::IDNS_Member;
   for (Path.Decls = BaseRecord->lookup(Name);
        !Path.Decls.empty();
        Path.Decls = Path.Decls.slice(1)) {
@@ -550,26 +564,27 @@ void OverridingMethods::replaceAll(UniqueVirtualMethod Overriding) {
   }
 }
 
-
 namespace {
-  class FinalOverriderCollector {
-    /// \brief The number of subobjects of a given class type that
-    /// occur within the class hierarchy.
-    llvm::DenseMap<const CXXRecordDecl *, unsigned> SubobjectCount;
 
-    /// \brief Overriders for each virtual base subobject.
-    llvm::DenseMap<const CXXRecordDecl *, CXXFinalOverriderMap *> VirtualOverriders;
+class FinalOverriderCollector {
+  /// \brief The number of subobjects of a given class type that
+  /// occur within the class hierarchy.
+  llvm::DenseMap<const CXXRecordDecl *, unsigned> SubobjectCount;
 
-    CXXFinalOverriderMap FinalOverriders;
+  /// \brief Overriders for each virtual base subobject.
+  llvm::DenseMap<const CXXRecordDecl *, CXXFinalOverriderMap *> VirtualOverriders;
 
-  public:
-    ~FinalOverriderCollector();
+  CXXFinalOverriderMap FinalOverriders;
 
-    void Collect(const CXXRecordDecl *RD, bool VirtualBase,
-                 const CXXRecordDecl *InVirtualSubobject,
-                 CXXFinalOverriderMap &Overriders);
-  };
-}
+public:
+  ~FinalOverriderCollector();
+
+  void Collect(const CXXRecordDecl *RD, bool VirtualBase,
+               const CXXRecordDecl *InVirtualSubobject,
+               CXXFinalOverriderMap &Overriders);
+};
+
+} // namespace
 
 void FinalOverriderCollector::Collect(const CXXRecordDecl *RD, 
                                       bool VirtualBase,
@@ -656,8 +671,8 @@ void FinalOverriderCollector::Collect(const CXXRecordDecl *RD,
     // overrider. To do so, we dig down to the original virtual
     // functions using data recursion and update all of the methods it
     // overrides.
-    typedef llvm::iterator_range<CXXMethodDecl::method_iterator>
-        OverriddenMethods;
+    using OverriddenMethods =
+        llvm::iterator_range<CXXMethodDecl::method_iterator>;
     SmallVector<OverriddenMethods, 4> Stack;
     Stack.push_back(llvm::make_range(CanonM->begin_overridden_methods(),
                                      CanonM->end_overridden_methods()));

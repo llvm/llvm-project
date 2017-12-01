@@ -1,15 +1,14 @@
-; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs -mattr=+load-store-opt < %s | FileCheck -strict-whitespace -check-prefixes=GCN,CI %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -mattr=+load-store-opt < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX9 %s
+; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs -mattr=+load-store-opt < %s | FileCheck -enable-var-scope -strict-whitespace -check-prefixes=GCN,CI %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -mattr=+load-store-opt,+flat-for-global < %s | FileCheck -enable-var-scope -strict-whitespace -check-prefixes=GCN,GFX9 %s
 
 @lds = addrspace(3) global [512 x float] undef, align 4
 @lds.f64 = addrspace(3) global [512 x double] undef, align 8
-
 
 ; GCN-LABEL: {{^}}simple_write2_one_val_f32:
 ; CI-DAG: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; GCN-DAG: {{buffer|global}}_load_dword [[VAL:v[0-9]+]]
+; GCN-DAG: {{buffer|flat|global}}_load_dword [[VAL:v[0-9]+]]
 ; GCN-DAG: v_lshlrev_b32_e32 [[VPTR:v[0-9]+]], 2, v{{[0-9]+}}
 ; GCN: ds_write2_b32 [[VPTR]], [[VAL]], [[VAL]] offset1:8
 ; GCN: s_endpgm
@@ -108,6 +107,7 @@ define amdgpu_kernel void @simple_write2_two_val_f32_volatile_1(float addrspace(
 
 ; GFX9: global_load_dwordx2 v{{\[}}[[VAL0:[0-9]+]]:{{[0-9]+\]}}
 ; GFX9: global_load_dwordx2 v{{\[[0-9]+}}:[[VAL1:[0-9]+]]{{\]}}
+
 ; GCN: ds_write2_b32 [[VPTR]], v[[VAL0]], v[[VAL1]] offset1:8
 ; GCN: s_endpgm
 define amdgpu_kernel void @simple_write2_two_val_subreg2_mixed_f32(float addrspace(1)* %C, <2 x float> addrspace(1)* %in) #0 {
@@ -502,5 +502,5 @@ declare i32 @llvm.amdgcn.workitem.id.x() #1
 declare i32 @llvm.amdgcn.workitem.id.y() #1
 
 attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+attributes #1 = { nounwind readnone speculatable }
 attributes #2 = { convergent nounwind }

@@ -21,7 +21,7 @@ namespace {
 // Helper for attaching ProtocolCallbacks methods to a JSONRPCDispatcher.
 // Invoke like: Registerer("foo", &ProtocolCallbacks::onFoo)
 // onFoo should be: void onFoo(Ctx &C, FooParams &Params)
-// FooParams should have a static factory method: parse(const json::Expr&).
+// FooParams should have a fromJSON function.
 struct HandlerRegisterer {
   template <typename Param>
   void operator()(StringRef Method,
@@ -31,13 +31,11 @@ struct HandlerRegisterer {
     auto *Callbacks = this->Callbacks;
     Dispatcher.registerHandler(
         Method, [=](RequestContext C, const json::Expr &RawParams) {
-          if (auto P = [&] {
-                trace::Span Tracer("Parse");
-                return std::decay<Param>::type::parse(RawParams);
-              }()) {
-            (Callbacks->*Handler)(std::move(C), *P);
+          typename std::remove_reference<Param>::type P;
+          if (fromJSON(RawParams, P)) {
+            (Callbacks->*Handler)(std::move(C), P);
           } else {
-            Out->log("Failed to decode " + Method + " request.\n");
+            Out->log("Failed to decode " + Method + " request.");
           }
         });
   }

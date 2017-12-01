@@ -969,10 +969,6 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   for (auto *Arg : Args.filtered(OPT_merge))
     parseMerge(Arg->getValue());
 
-  // Add default section merging rules after user rules. User rules take
-  // precedence, but we will emit a warning if there is a conflict.
-  parseMerge(".xdata=.rdata");
-
   // Handle /section
   for (auto *Arg : Args.filtered(OPT_section))
     parseSection(Arg->getValue());

@@ -9902,6 +9902,7 @@ static bool ActOnOMPReductionKindClause(
   case OO_GreaterGreaterEqual:
   case OO_EqualEqual:
   case OO_ExclaimEqual:
+  case OO_Spaceship:
   case OO_PlusPlus:
   case OO_MinusMinus:
   case OO_Comma:

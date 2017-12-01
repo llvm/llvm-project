@@ -31,6 +31,14 @@ def warn_cxx98_compat_less_colon_colon : Warning<
   "'<::' is treated as digraph '<:' (aka '[') followed by ':' in C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
 
+def warn_cxx17_compat_spaceship : Warning<
+  "'<=>' operator is incompatible with C++ standards before C++2a">,
+  InGroup<CXXPre2aCompat>, DefaultIgnore;
+def warn_cxx2a_compat_spaceship : Warning<
+  "'<=>' is a single token in C++2a; "
+  "add a space to avoid a change in behavior">,
+  InGroup<CXX2aCompat>;
+
 // Trigraphs.
 def trigraph_ignored : Warning<"trigraph ignored">, InGroup<Trigraphs>;
 def trigraph_ignored_block_comment : Warning<

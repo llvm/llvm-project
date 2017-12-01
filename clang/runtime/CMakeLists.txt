@@ -101,12 +101,9 @@ if(LLVM_BUILD_EXTERNAL_COMPILER_RT AND EXISTS ${COMPILER_RT_SRC_ROOT}/)
   install(CODE "execute_process\(COMMAND \${CMAKE_COMMAND} -DCMAKE_INSTALL_PREFIX=\${CMAKE_INSTALL_PREFIX} -P ${BINARY_DIR}/cmake_install.cmake \)"
     COMPONENT compiler-rt)
 
-  add_custom_target(install-compiler-rt
-                    DEPENDS compiler-rt
-                    COMMAND "${CMAKE_COMMAND}"
-                             -DCMAKE_INSTALL_COMPONENT=compiler-rt
-                             -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
-                    USES_TERMINAL)
+  add_llvm_install_targets(install-compiler-rt
+                           DEPENDS compiler-rt
+                           COMPONENT compiler-rt)
 
   # Add top-level targets that build specific compiler-rt runtimes.
   set(COMPILER_RT_RUNTIMES fuzzer asan builtins dfsan lsan msan profile tsan ubsan ubsan-minimal)

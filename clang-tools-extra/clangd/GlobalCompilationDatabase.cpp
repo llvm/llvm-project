@@ -100,8 +100,7 @@ DirectoryBasedGlobalCompilationDatabase::getCompilationDatabase(PathRef File) {
         tryLoadDatabaseFromPath(CompileCommandsDir.getValue());
     if (ReturnValue == nullptr)
       Logger.log("Failed to find compilation database for " + Twine(File) +
-                 "in overriden directory " + CompileCommandsDir.getValue() +
-                 "\n");
+                 "in overriden directory " + CompileCommandsDir.getValue());
     return ReturnValue;
   }
 
@@ -114,7 +113,7 @@ DirectoryBasedGlobalCompilationDatabase::getCompilationDatabase(PathRef File) {
     return CDB;
   }
 
-  Logger.log("Failed to find compilation database for " + Twine(File) + "\n");
+  Logger.log("Failed to find compilation database for " + Twine(File));
   return nullptr;
 }
 

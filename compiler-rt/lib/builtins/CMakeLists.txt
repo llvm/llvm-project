@@ -464,6 +464,20 @@ set(mips64_SOURCES ${GENERIC_TF_SOURCES}
 set(mips64el_SOURCES ${GENERIC_TF_SOURCES}
                      ${mips_SOURCES})
 
+set(powerpc64_SOURCES
+  ppc/divtc3.c
+  ppc/fixtfdi.c
+  ppc/fixunstfdi.c
+  ppc/floatditf.c
+  ppc/floatunditf.c
+  ppc/gcc_qadd.c
+  ppc/gcc_qdiv.c
+  ppc/gcc_qmul.c
+  ppc/gcc_qsub.c
+  ppc/multc3.c
+  ${GENERIC_SOURCES})
+set(powerpc64le_SOURCES ${powerpc64_SOURCES})
+
 set(wasm32_SOURCES
   ${GENERIC_TF_SOURCES}
   ${GENERIC_SOURCES})

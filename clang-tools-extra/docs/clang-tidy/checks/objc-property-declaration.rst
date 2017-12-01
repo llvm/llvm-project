@@ -40,4 +40,4 @@ Options
    Semicolon-separated list of acronyms that can be used as prefix
    of property names.
 
-   Defaults to ``ASCII;PDF;XML;HTML;URL;RTF;HTTP;TIFF;JPG;PNG;GIF;LZW;ROM;RGB;CMYK;MIDI;FTP``.
+   Defaults to `ASCII;PDF;XML;HTML;URL;RTF;HTTP;TIFF;JPG;PNG;GIF;LZW;ROM;RGB;CMYK;MIDI;FTP`.

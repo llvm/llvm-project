@@ -409,7 +409,7 @@ void Writer::createRelocSections() {
   }
 }
 
-// Create the custome "linking" section containing linker metadata.
+// Create the custom "linking" section containing linker metadata.
 // This is only created when relocatable output is requested.
 void Writer::createLinkingSection() {
   SyntheticSection *Section =
@@ -480,7 +480,7 @@ void Writer::writeSections() {
 }
 
 // Fix the memory layout of the output binary.  This assigns memory offsets
-// to each of the intput data sections as well as the explicit stack region.
+// to each of the input data sections as well as the explicit stack region.
 void Writer::layoutMemory() {
   uint32_t MemoryPtr = 0;
   if (!Config->Relocatable) {

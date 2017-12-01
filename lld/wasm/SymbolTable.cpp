@@ -166,14 +166,14 @@ Symbol *SymbolTable::addDefined(InputFile *F, const WasmSymbol *Sym,
     S->update(Kind, F, Sym, Segment, NewSig);
   } else if (!S->isDefined()) {
     // The existing symbol table entry is undefined. The new symbol replaces
-    // it, after checkign the type matches
+    // it, after checking the type matches
     DEBUG(dbgs() << "resolving existing undefined symbol: " << Sym->Name
                  << "\n");
     checkSymbolTypes(*S, *F, *Sym, NewSig);
     S->update(Kind, F, Sym, Segment, NewSig);
   } else if (Sym->isWeak()) {
     // the new symbol is weak we can ignore it
-    DEBUG(dbgs() << "existing symbol takes precensence\n");
+    DEBUG(dbgs() << "existing symbol takes precedence\n");
   } else if (S->isWeak()) {
     // the new symbol is not weak and the existing symbol is, so we replace
     // it
@@ -181,7 +181,7 @@ Symbol *SymbolTable::addDefined(InputFile *F, const WasmSymbol *Sym,
     checkSymbolTypes(*S, *F, *Sym, NewSig);
     S->update(Kind, F, Sym, Segment, NewSig);
   } else {
-    // niether symbol is week. They conflict.
+    // neither symbol is week. They conflict.
     reportDuplicate(S, F);
   }
   return S;

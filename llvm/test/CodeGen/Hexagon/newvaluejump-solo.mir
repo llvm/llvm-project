@@ -2,7 +2,7 @@
 
 # Check that there is no new-value jump:
 # CHECK-LABEL: name: fred
-# CHECK-NOT: if{{.*}}cmp
+# CHECK-NOT: jumpnv
 ---
 name: fred
 tracksRegLiveness: true

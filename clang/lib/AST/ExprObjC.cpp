@@ -1,4 +1,4 @@
-//===--- ExprObjC.cpp - (ObjC) Expression AST Node Implementation ---------===//
+//===- ExprObjC.cpp - (ObjC) Expression AST Node Implementation -----------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,8 +12,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ExprObjC.h"
-
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/SelectorLocationsKind.h"
+#include "clang/AST/Type.h"
+#include "clang/AST/TypeLoc.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
 
 using namespace clang;
 
@@ -45,7 +52,6 @@ ObjCArrayLiteral *ObjCArrayLiteral::Create(const ASTContext &C,
 
 ObjCArrayLiteral *ObjCArrayLiteral::CreateEmpty(const ASTContext &C,
                                                 unsigned NumElements) {
-
   void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(NumElements));
   return new (Mem) ObjCArrayLiteral(EmptyShell(), NumElements);
 }

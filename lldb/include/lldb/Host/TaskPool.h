@@ -18,6 +18,8 @@
 #include <mutex>       // for mutex, unique_lock, condition_variable
 #include <type_traits> // for forward, result_of, move
 
+namespace lldb_private {
+
 // Global TaskPool class for running tasks in parallel on a set of worker thread
 // created the first
 // time the task pool is used. The TaskPool provide no guarantee about the order
@@ -88,5 +90,9 @@ template <> struct TaskPool::RunTaskImpl<> {
 // should be large enough to avoid too much cache line contention.
 void TaskMapOverInt(size_t begin, size_t end,
                     const llvm::function_ref<void(size_t)> &func);
+
+unsigned GetHardwareConcurrencyHint();
+
+} // namespace lldb_private
 
 #endif // #ifndef utility_TaskPool_h_

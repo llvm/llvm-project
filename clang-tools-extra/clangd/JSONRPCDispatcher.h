@@ -34,8 +34,7 @@ public:
   /// Emit a JSONRPC message.
   void writeMessage(const json::Expr &Result);
 
-  /// Write to the logging stream.
-  /// No newline is implicitly added. (TODO: we should fix this!)
+  /// Write a line to the logging stream.
   void log(const Twine &Message) override;
 
   /// Mirror \p Message into InputMirror stream. Does nothing if InputMirror is

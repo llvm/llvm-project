@@ -516,6 +516,16 @@ public:
   /// Is this predicate the predefined sequentially consistent atomic predicate?
   bool isAtomicOrderingSequentiallyConsistent() const;
 
+  /// Is this predicate the predefined acquire-or-stronger atomic predicate?
+  bool isAtomicOrderingAcquireOrStronger() const;
+  /// Is this predicate the predefined weaker-than-acquire atomic predicate?
+  bool isAtomicOrderingWeakerThanAcquire() const;
+
+  /// Is this predicate the predefined release-or-stronger atomic predicate?
+  bool isAtomicOrderingReleaseOrStronger() const;
+  /// Is this predicate the predefined weaker-than-release atomic predicate?
+  bool isAtomicOrderingWeakerThanRelease() const;
+
   /// If non-null, indicates that this predicate is a predefined memory VT
   /// predicate for a load/store and returns the ValueType record for the memory VT.
   Record *getMemoryVT() const;

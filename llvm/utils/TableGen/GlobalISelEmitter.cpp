@@ -230,6 +230,14 @@ static std::string explainPredicates(const TreePatternNode *N) {
       Explanation += " acq_rel";
     if (P.isAtomicOrderingSequentiallyConsistent())
       Explanation += " seq_cst";
+    if (P.isAtomicOrderingAcquireOrStronger())
+      Explanation += " >=acquire";
+    if (P.isAtomicOrderingWeakerThanAcquire())
+      Explanation += " <acquire";
+    if (P.isAtomicOrderingReleaseOrStronger())
+      Explanation += " >=release";
+    if (P.isAtomicOrderingWeakerThanRelease())
+      Explanation += " <release";
   }
   return Explanation;
 }
@@ -285,7 +293,11 @@ static Error isTrivialOperatorNode(const TreePatternNode *N) {
          Predicate.isAtomicOrderingAcquire() ||
          Predicate.isAtomicOrderingRelease() ||
          Predicate.isAtomicOrderingAcquireRelease() ||
-         Predicate.isAtomicOrderingSequentiallyConsistent()))
+         Predicate.isAtomicOrderingSequentiallyConsistent() ||
+         Predicate.isAtomicOrderingAcquireOrStronger() ||
+         Predicate.isAtomicOrderingWeakerThanAcquire() ||
+         Predicate.isAtomicOrderingReleaseOrStronger() ||
+         Predicate.isAtomicOrderingWeakerThanRelease()))
       continue;
 
     HasUnsupportedPredicate = true;
@@ -1327,11 +1339,22 @@ public:
 /// Generates code to check that a memory instruction has a atomic ordering
 /// MachineMemoryOperand.
 class AtomicOrderingMMOPredicateMatcher : public InstructionPredicateMatcher {
+public:
+  enum AOComparator {
+    AO_Exactly,
+    AO_OrStronger,
+    AO_WeakerThan,
+  };
+
+protected:
   StringRef Order;
+  AOComparator Comparator;
 
 public:
-  AtomicOrderingMMOPredicateMatcher(StringRef Order)
-      : InstructionPredicateMatcher(IPM_AtomicOrderingMMO), Order(Order) {}
+  AtomicOrderingMMOPredicateMatcher(StringRef Order,
+                                    AOComparator Comparator = AO_Exactly)
+      : InstructionPredicateMatcher(IPM_AtomicOrderingMMO), Order(Order),
+        Comparator(Comparator) {}
 
   static bool classof(const InstructionPredicateMatcher *P) {
     return P->getKind() == IPM_AtomicOrderingMMO;
@@ -1339,9 +1362,15 @@ public:
 
   void emitPredicateOpcodes(MatchTable &Table, RuleMatcher &Rule,
                             unsigned InsnVarID) const override {
-    Table << MatchTable::Opcode("GIM_CheckAtomicOrdering")
-          << MatchTable::Comment("MI") << MatchTable::IntValue(InsnVarID)
-          << MatchTable::Comment("Order")
+    StringRef Opcode = "GIM_CheckAtomicOrdering";
+
+    if (Comparator == AO_OrStronger)
+      Opcode = "GIM_CheckAtomicOrderingOrStrongerThan";
+    if (Comparator == AO_WeakerThan)
+      Opcode = "GIM_CheckAtomicOrderingWeakerThan";
+
+    Table << MatchTable::Opcode(Opcode) << MatchTable::Comment("MI")
+          << MatchTable::IntValue(InsnVarID) << MatchTable::Comment("Order")
           << MatchTable::NamedValue(("(int64_t)AtomicOrdering::" + Order).str())
           << MatchTable::LineBreak;
   }
@@ -2552,6 +2581,28 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
       if (Predicate.isAtomicOrderingSequentiallyConsistent()) {
         InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
             "SequentiallyConsistent");
+        continue;
+      }
+
+      if (Predicate.isAtomicOrderingAcquireOrStronger()) {
+        InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
+            "Acquire", AtomicOrderingMMOPredicateMatcher::AO_OrStronger);
+        continue;
+      }
+      if (Predicate.isAtomicOrderingWeakerThanAcquire()) {
+        InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
+            "Acquire", AtomicOrderingMMOPredicateMatcher::AO_WeakerThan);
+        continue;
+      }
+
+      if (Predicate.isAtomicOrderingReleaseOrStronger()) {
+        InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
+            "Release", AtomicOrderingMMOPredicateMatcher::AO_OrStronger);
+        continue;
+      }
+      if (Predicate.isAtomicOrderingWeakerThanRelease()) {
+        InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
+            "Release", AtomicOrderingMMOPredicateMatcher::AO_WeakerThan);
         continue;
       }
     }
