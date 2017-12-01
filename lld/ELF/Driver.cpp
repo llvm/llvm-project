@@ -278,6 +278,9 @@ static void checkOptions(opt::InputArgList &Args) {
   if (!Config->Shared && !Config->AuxiliaryList.empty())
     error("-f may not be used without -shared");
 
+  if (!Config->Relocatable && !Config->DefineCommon)
+    error("-no-define-common not supported in non relocatable output");
+
   if (Config->Relocatable) {
     if (Config->Shared)
       error("-r and -shared may not be used together");

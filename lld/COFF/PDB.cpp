@@ -18,6 +18,7 @@
 #include "llvm/DebugInfo/CodeView/CVDebugRecord.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
+#include "llvm/DebugInfo/CodeView/MergingTypeTableBuilder.h"
 #include "llvm/DebugInfo/CodeView/RecordName.h"
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 #include "llvm/DebugInfo/CodeView/SymbolSerializer.h"
@@ -25,7 +26,6 @@
 #include "llvm/DebugInfo/CodeView/TypeDumpVisitor.h"
 #include "llvm/DebugInfo/CodeView/TypeIndexDiscovery.h"
 #include "llvm/DebugInfo/CodeView/TypeStreamMerger.h"
-#include "llvm/DebugInfo/CodeView/TypeTableBuilder.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
 #include "llvm/DebugInfo/PDB/GenericError.h"
@@ -118,10 +118,10 @@ private:
   pdb::PDBFileBuilder Builder;
 
   /// Type records that will go into the PDB TPI stream.
-  TypeTableBuilder TypeTable;
+  MergingTypeTableBuilder TypeTable;
 
   /// Item records that will go into the PDB IPI stream.
-  TypeTableBuilder IDTable;
+  MergingTypeTableBuilder IDTable;
 
   /// PDBs use a single global string table for filenames in the file checksum
   /// table.
