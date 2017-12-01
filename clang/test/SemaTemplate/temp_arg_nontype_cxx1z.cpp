@@ -238,6 +238,10 @@ namespace Auto {
     constexpr char s[] = "test";
     template<const auto* p> struct S { };
     S<s> p;
+
+    template<typename R, typename P, R F(P)> struct A {};
+    template<typename R, typename P, R F(P)> void x(A<R, P, F> a);
+    void g(int) { x(A<void, int, &g>()); }
   }
 
   namespace DecltypeAuto {

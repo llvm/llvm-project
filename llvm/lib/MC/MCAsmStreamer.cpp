@@ -1296,12 +1296,17 @@ void MCAsmStreamer::EmitCFIEndProcImpl(MCDwarfFrameInfo &Frame) {
 
 void MCAsmStreamer::EmitRegisterName(int64_t Register) {
   if (!MAI->useDwarfRegNumForCFI()) {
+    // User .cfi_* directives can use arbitrary DWARF register numbers, not
+    // just ones that map to LLVM register numbers and have known names.
+    // Fall back to using the original number directly if no name is known.
     const MCRegisterInfo *MRI = getContext().getRegisterInfo();
-    unsigned LLVMRegister = MRI->getLLVMRegNum(Register, true);
-    InstPrinter->printRegName(OS, LLVMRegister);
-  } else {
-    OS << Register;
+    int LLVMRegister = MRI->getLLVMRegNumFromEH(Register);
+    if (LLVMRegister != -1) {
+      InstPrinter->printRegName(OS, LLVMRegister);
+      return;
+    }
   }
+  OS << Register;
 }
 
 void MCAsmStreamer::EmitCFIDefCfa(int64_t Register, int64_t Offset) {

@@ -5841,21 +5841,21 @@ emitNumTeamsForTargetDirective(CGOpenMPRuntime &OMPRuntime,
 
   const CapturedStmt &CS = *cast<CapturedStmt>(D.getAssociatedStmt());
 
-  // FIXME: Accommodate other combined directives with teams when they become
-  // available.
-  if (auto *TeamsDir = dyn_cast_or_null<OMPTeamsDirective>(
+  if (auto *TeamsDir = dyn_cast_or_null<OMPExecutableDirective>(
           ignoreCompoundStmts(CS.getCapturedStmt()))) {
-    if (auto *NTE = TeamsDir->getSingleClause<OMPNumTeamsClause>()) {
-      CGOpenMPInnerExprInfo CGInfo(CGF, CS);
-      CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
-      llvm::Value *NumTeams = CGF.EmitScalarExpr(NTE->getNumTeams());
-      return Bld.CreateIntCast(NumTeams, CGF.Int32Ty,
-                               /*IsSigned=*/true);
-    }
+    if (isOpenMPTeamsDirective(TeamsDir->getDirectiveKind())) {
+      if (auto *NTE = TeamsDir->getSingleClause<OMPNumTeamsClause>()) {
+        CGOpenMPInnerExprInfo CGInfo(CGF, CS);
+        CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
+        llvm::Value *NumTeams = CGF.EmitScalarExpr(NTE->getNumTeams());
+        return Bld.CreateIntCast(NumTeams, CGF.Int32Ty,
+                                 /*IsSigned=*/true);
+      }
 
-    // If we have an enclosed teams directive but no num_teams clause we use
-    // the default value 0.
-    return Bld.getInt32(0);
+      // If we have an enclosed teams directive but no num_teams clause we use
+      // the default value 0.
+      return Bld.getInt32(0);
+    }
   }
 
   // No teams associated with the directive.
@@ -5944,21 +5944,21 @@ emitNumThreadsForTargetDirective(CGOpenMPRuntime &OMPRuntime,
 
   const CapturedStmt &CS = *cast<CapturedStmt>(D.getAssociatedStmt());
 
-  // FIXME: Accommodate other combined directives with teams when they become
-  // available.
-  if (auto *TeamsDir = dyn_cast_or_null<OMPTeamsDirective>(
+  if (auto *TeamsDir = dyn_cast_or_null<OMPExecutableDirective>(
           ignoreCompoundStmts(CS.getCapturedStmt()))) {
-    if (auto *TLE = TeamsDir->getSingleClause<OMPThreadLimitClause>()) {
-      CGOpenMPInnerExprInfo CGInfo(CGF, CS);
-      CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
-      llvm::Value *ThreadLimit = CGF.EmitScalarExpr(TLE->getThreadLimit());
-      return CGF.Builder.CreateIntCast(ThreadLimit, CGF.Int32Ty,
-                                       /*IsSigned=*/true);
-    }
+    if (isOpenMPTeamsDirective(TeamsDir->getDirectiveKind())) {
+      if (auto *TLE = TeamsDir->getSingleClause<OMPThreadLimitClause>()) {
+        CGOpenMPInnerExprInfo CGInfo(CGF, CS);
+        CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
+        llvm::Value *ThreadLimit = CGF.EmitScalarExpr(TLE->getThreadLimit());
+        return CGF.Builder.CreateIntCast(ThreadLimit, CGF.Int32Ty,
+                                         /*IsSigned=*/true);
+      }
 
-    // If we have an enclosed teams directive but no thread_limit clause we use
-    // the default value 0.
-    return CGF.Builder.getInt32(0);
+      // If we have an enclosed teams directive but no thread_limit clause we
+      // use the default value 0.
+      return CGF.Builder.getInt32(0);
+    }
   }
 
   // No teams associated with the directive.

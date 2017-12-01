@@ -18,21 +18,21 @@ struct SS{
   // CK1: define {{.*}}i32 @{{.+}}foo{{.+}}(
   int foo(void) {
 
-  // CK1: call i32 @__tgt_target(
+  // CK1: call i32 @__tgt_target_teams(
   // CK1: call void @[[OFFL1:.+]](
     #pragma omp target
     #pragma omp teams distribute parallel for
     for(int i = 0; i < X; i++) {
       a[i] = (T)0;
     }
-  // CK1: call i32 @__tgt_target(
+  // CK1: call i32 @__tgt_target_teams(
   // CK1: call void @[[OFFL2:.+]](
     #pragma omp target
     #pragma omp teams distribute parallel for schedule(static)
     for(int i = 0; i < X; i++) {
       a[i] = (T)0;
     }
-  // CK1: call i32 @__tgt_target(
+  // CK1: call i32 @__tgt_target_teams(
   // CK1: call void @[[OFFL3:.+]](
     #pragma omp target
     #pragma omp teams distribute parallel for schedule(static, X/2)
@@ -40,7 +40,7 @@ struct SS{
       a[i] = (T)0;
     }
 
-  // CK1: call i32 @__tgt_target(
+  // CK1: call i32 @__tgt_target_teams(
   // CK1: call void @[[OFFL4:.+]](
     #pragma omp target
     #pragma omp teams distribute parallel for schedule(dynamic)
@@ -48,7 +48,7 @@ struct SS{
       a[i] = (T)0;
     }
 
-  // CK1: call i32 @__tgt_target(
+  // CK1: call i32 @__tgt_target_teams(
   // CK1: call void @[[OFFL5:.+]](
     #pragma omp target
     #pragma omp teams distribute parallel for schedule(dynamic, X/2)
@@ -216,15 +216,15 @@ int main (int argc, char **argv) {
 }
 
 // CK2: define {{.*}}i32 @{{[^,]+}}(i{{.+}}{{.+}} %[[ARGC:.+]], {{.+}})
-// CK2: call i32 @__tgt_target(
+// CK2: call i32 @__tgt_target_teams(
 // CK2: call void @[[OFFL1:.+]]({{.+}})
-// CK2: call i32 @__tgt_target(
+// CK2: call i32 @__tgt_target_teams(
 // CK2: call void @[[OFFL2:.+]]({{.+}})
-// CK2: call i32 @__tgt_target(
+// CK2: call i32 @__tgt_target_teams(
 // CK2: call void @[[OFFL3:.+]]({{.+}})
-// CK2: call i32 @__tgt_target(
+// CK2: call i32 @__tgt_target_teams(
 // CK2: call void @[[OFFL4:.+]]({{.+}})
-// CK2: call i32 @__tgt_target(
+// CK2: call i32 @__tgt_target_teams(
 // CK2: call void @[[OFFL5:.+]]({{.+}})
 // CK2: {{%.+}} = call{{.*}} i32 @[[TMAIN:.+]]({{.+}})
 // CK2: ret
@@ -306,15 +306,15 @@ int main (int argc, char **argv) {
 // CK2: ret void
 
 // CK2: define {{.*}}i32 @[[TMAIN]]({{.+}})
-// CK2: call i32 @__tgt_target(
+// CK2: call i32 @__tgt_target_teams(
 // CK2: call void @[[OFFLT1:.+]]({{.+}})
-// CK2: call i32 @__tgt_target(
+// CK2: call i32 @__tgt_target_teams(
 // CK2: call void @[[OFFLT2:.+]]({{.+}})
-// CK2: call i32 @__tgt_target(
+// CK2: call i32 @__tgt_target_teams(
 // CK2: call void @[[OFFLT3:.+]]({{.+}})
-// CK2: call i32 @__tgt_target(
+// CK2: call i32 @__tgt_target_teams(
 // CK2: call void @[[OFFLT4:.+]]({{.+}})
-// CK2: call i32 @__tgt_target(
+// CK2: call i32 @__tgt_target_teams(
 // CK2: call void @[[OFFLT5:.+]]({{.+}})
 // CK2:  ret
 // CK2-NEXT: }
