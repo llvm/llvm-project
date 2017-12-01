@@ -1057,8 +1057,8 @@ void FrameEmitterImpl::EmitCFIInstruction(const MCCFIInstruction &Instr) {
     unsigned Reg1 = Instr.getRegister();
     unsigned Reg2 = Instr.getRegister2();
     if (!IsEH) {
-      Reg1 = MRI->getDwarfRegNum(MRI->getLLVMRegNum(Reg1, true), false);
-      Reg2 = MRI->getDwarfRegNum(MRI->getLLVMRegNum(Reg2, true), false);
+      Reg1 = MRI->getDwarfRegNumFromDwarfEHRegNum(Reg1);
+      Reg2 = MRI->getDwarfRegNumFromDwarfEHRegNum(Reg2);
     }
     Streamer.EmitIntValue(dwarf::DW_CFA_register, 1);
     Streamer.EmitULEB128IntValue(Reg1);
@@ -1094,7 +1094,7 @@ void FrameEmitterImpl::EmitCFIInstruction(const MCCFIInstruction &Instr) {
   case MCCFIInstruction::OpDefCfa: {
     unsigned Reg = Instr.getRegister();
     if (!IsEH)
-      Reg = MRI->getDwarfRegNum(MRI->getLLVMRegNum(Reg, true), false);
+      Reg = MRI->getDwarfRegNumFromDwarfEHRegNum(Reg);
     Streamer.EmitIntValue(dwarf::DW_CFA_def_cfa, 1);
     Streamer.EmitULEB128IntValue(Reg);
     CFAOffset = -Instr.getOffset();
@@ -1105,7 +1105,7 @@ void FrameEmitterImpl::EmitCFIInstruction(const MCCFIInstruction &Instr) {
   case MCCFIInstruction::OpDefCfaRegister: {
     unsigned Reg = Instr.getRegister();
     if (!IsEH)
-      Reg = MRI->getDwarfRegNum(MRI->getLLVMRegNum(Reg, true), false);
+      Reg = MRI->getDwarfRegNumFromDwarfEHRegNum(Reg);
     Streamer.EmitIntValue(dwarf::DW_CFA_def_cfa_register, 1);
     Streamer.EmitULEB128IntValue(Reg);
 
@@ -1118,7 +1118,7 @@ void FrameEmitterImpl::EmitCFIInstruction(const MCCFIInstruction &Instr) {
 
     unsigned Reg = Instr.getRegister();
     if (!IsEH)
-      Reg = MRI->getDwarfRegNum(MRI->getLLVMRegNum(Reg, true), false);
+      Reg = MRI->getDwarfRegNumFromDwarfEHRegNum(Reg);
 
     int Offset = Instr.getOffset();
     if (IsRelative)
@@ -1154,7 +1154,7 @@ void FrameEmitterImpl::EmitCFIInstruction(const MCCFIInstruction &Instr) {
   case MCCFIInstruction::OpRestore: {
     unsigned Reg = Instr.getRegister();
     if (!IsEH)
-      Reg = MRI->getDwarfRegNum(MRI->getLLVMRegNum(Reg, true), false);
+      Reg = MRI->getDwarfRegNumFromDwarfEHRegNum(Reg);
     Streamer.EmitIntValue(dwarf::DW_CFA_restore | Reg, 1);
     return;
   }

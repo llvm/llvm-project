@@ -581,6 +581,9 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   Options.PurgeAllocatorIntervalSec = Flags.purge_allocator_interval;
   Options.TraceMalloc = Flags.trace_malloc;
   Options.RssLimitMb = Flags.rss_limit_mb;
+  Options.MallocLimitMb = Flags.malloc_limit_mb;
+  if (!Options.MallocLimitMb)
+    Options.MallocLimitMb = Options.RssLimitMb;
   if (Flags.runs >= 0)
     Options.MaxNumberOfRuns = Flags.runs;
   if (!Inputs->empty() && !Flags.minimize_crash_internal_step)

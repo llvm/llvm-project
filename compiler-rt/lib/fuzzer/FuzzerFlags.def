@@ -130,6 +130,9 @@ FUZZER_FLAG_INT(trace_malloc, 0, "If >= 1 will print all mallocs/frees. "
     "If >= 2 will also print stack traces.")
 FUZZER_FLAG_INT(rss_limit_mb, 2048, "If non-zero, the fuzzer will exit upon"
     "reaching this limit of RSS memory usage.")
+FUZZER_FLAG_INT(malloc_limit_mb, 0, "If non-zero, the fuzzer will exit "
+    "if the target tries to allocate this number of Mb with one malloc call. "
+    "If zero (default) same limit as rss_limit_mb is applied.")
 FUZZER_FLAG_STRING(exit_on_src_pos, "Exit if a newly found PC originates"
     " from the given source location. Example: -exit_on_src_pos=foo.cc:123. "
     "Used primarily for testing libFuzzer itself.")
