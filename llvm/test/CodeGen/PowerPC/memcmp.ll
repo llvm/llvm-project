@@ -6,11 +6,12 @@ define signext i32 @memcmp8(i32* nocapture readonly %buffer1, i32* nocapture rea
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    ldbrx 3, 0, 3
 ; CHECK-NEXT:    ldbrx 4, 0, 4
-; CHECK-NEXT:    li 5, 0
-; CHECK-NEXT:    cmpld 3, 4
-; CHECK-NEXT:    li 3, 1
-; CHECK-NEXT:    isel 4, 3, 5, 1
-; CHECK-NEXT:    isel 3, 3, 5, 0
+; CHECK-NEXT:    subfc 5, 3, 4
+; CHECK-NEXT:    subfe 5, 4, 4
+; CHECK-NEXT:    subfc 4, 4, 3
+; CHECK-NEXT:    subfe 3, 3, 3
+; CHECK-NEXT:    neg 4, 5
+; CHECK-NEXT:    neg 3, 3
 ; CHECK-NEXT:    subf 3, 3, 4
 ; CHECK-NEXT:    extsw 3, 3
 ; CHECK-NEXT:    blr

@@ -27,6 +27,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/CodeGen/FastISel.h"
@@ -325,6 +326,8 @@ void SelectionDAGISel::getAnalysisUsage(AnalysisUsage &AU) const {
   if (OptLevel != CodeGenOpt::None)
     AU.addRequired<AAResultsWrapperPass>();
   AU.addRequired<GCModuleInfo>();
+  if (OptLevel != CodeGenOpt::None)
+    AU.addRequired<LoopInfoWrapperPass>();
   AU.addRequired<StackProtector>();
   AU.addPreserved<StackProtector>();
   AU.addPreserved<GCModuleInfo>();
@@ -1415,6 +1418,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
 
   // Iterate over all basic blocks in the function.
   for (const BasicBlock *LLVMBB : RPOT) {
+    CurDAG->IsDAGPartOfLoop = false;
     if (OptLevel != CodeGenOpt::None) {
       bool AllPredsVisited = true;
       for (const_pred_iterator PI = pred_begin(LLVMBB), PE = pred_end(LLVMBB);
@@ -1590,6 +1594,13 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
           TLI->getSSPStackGuardCheck(*Fn.getParent());
       SDB->SPDescriptor.initialize(LLVMBB, FuncInfo->MBBMap[LLVMBB],
                                    FunctionBasedInstrumentation);
+    }
+
+    if (OptLevel != CodeGenOpt::None) {
+      auto &LIWP = getAnalysis<LoopInfoWrapperPass>();
+      LoopInfo &LI = LIWP.getLoopInfo();
+      if (LI.getLoopFor(LLVMBB))
+        CurDAG->IsDAGPartOfLoop = true;
     }
 
     if (Begin != BI)

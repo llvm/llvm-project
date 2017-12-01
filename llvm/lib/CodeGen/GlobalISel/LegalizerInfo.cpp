@@ -167,17 +167,23 @@ LegalizerInfo::getAction(const InstrAspect &Aspect) const {
   assert(TablesInitialized && "backend forgot to call computeTables");
   // These *have* to be implemented for now, they're the fundamental basis of
   // how everything else is transformed.
-
-  // FIXME: the long-term plan calls for expansion in terms of load/store (if
-  // they're not legal).
-  if (Aspect.Opcode == TargetOpcode::G_MERGE_VALUES ||
-      Aspect.Opcode == TargetOpcode::G_UNMERGE_VALUES)
-    return std::make_pair(Legal, Aspect.Type);
-
   if (Aspect.Type.isScalar() || Aspect.Type.isPointer())
     return findScalarLegalAction(Aspect);
   assert(Aspect.Type.isVector());
   return findVectorLegalAction(Aspect);
+}
+
+/// Helper function to get LLT for the given type index.
+static LLT getTypeFromTypeIdx(const MachineInstr &MI,
+                              const MachineRegisterInfo &MRI, unsigned OpIdx,
+                              unsigned TypeIdx) {
+  assert(TypeIdx < MI.getNumOperands() && "Unexpected TypeIdx");
+  // G_UNMERGE_VALUES has variable number of operands, but there is only
+  // one source type and one destination type as all destinations must be the
+  // same type. So, get the last operand if TypeIdx == 1.
+  if (MI.getOpcode() == TargetOpcode::G_UNMERGE_VALUES && TypeIdx == 1)
+    return MRI.getType(MI.getOperand(MI.getNumOperands() - 1).getReg());
+  return MRI.getType(MI.getOperand(OpIdx).getReg());
 }
 
 std::tuple<LegalizerInfo::LegalizeAction, unsigned, LLT>
@@ -198,7 +204,7 @@ LegalizerInfo::getAction(const MachineInstr &MI,
 
     SeenTypes.set(TypeIdx);
 
-    LLT Ty = MRI.getType(MI.getOperand(i).getReg());
+    LLT Ty = getTypeFromTypeIdx(MI, MRI, i, TypeIdx);
     auto Action = getAction({MI.getOpcode(), TypeIdx, Ty});
     if (Action.first != Legal)
       return std::make_tuple(Action.first, TypeIdx, Action.second);

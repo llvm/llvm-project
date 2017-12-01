@@ -6,6 +6,7 @@ declare <2 x double> @llvm.x86.avx512.mask.vextractf64x2.512(<8 x double>, i32, 
 define <2 x double>@test_int_x86_avx512_mask_vextractf64x2_512(<8 x double> %x0, <2 x double> %x2, i8 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vextractf64x2_512:
 ; CHECK:       ## BB#0:
+; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; CHECK-NEXT:    kmovw %edi, %k0
 ; CHECK-NEXT:    kshiftlb $7, %k0, %k1
 ; CHECK-NEXT:    kshiftrb $7, %k1, %k1
@@ -15,7 +16,6 @@ define <2 x double>@test_int_x86_avx512_mask_vextractf64x2_512(<8 x double> %x0,
 ; CHECK-NEXT:    kmovw %k1, %ecx
 ; CHECK-NEXT:    vmovd %ecx, %xmm2
 ; CHECK-NEXT:    vpinsrb $8, %eax, %xmm2, %xmm2
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; CHECK-NEXT:    vpsllq $63, %xmm2, %xmm2
 ; CHECK-NEXT:    vpsraq $63, %zmm2, %zmm2
 ; CHECK-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm1
