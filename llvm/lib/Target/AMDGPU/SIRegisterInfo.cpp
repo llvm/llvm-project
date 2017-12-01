@@ -1071,8 +1071,6 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
             .addImm(Log2_32(ST.getWavefrontSize()))
             .addReg(DiffReg);
         } else {
-          unsigned CarryOut
-            = MRI.createVirtualRegister(&AMDGPU::SReg_64_XEXECRegClass);
           unsigned ScaledReg
             = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
 
@@ -1082,8 +1080,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
           // TODO: Fold if use instruction is another add of a constant.
           if (AMDGPU::isInlinableLiteral32(Offset, ST.hasInv2PiInlineImm())) {
-            BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_ADD_I32_e64), ResultReg)
-              .addReg(CarryOut, RegState::Define | RegState::Dead)
+            TII->getAddNoCarry(*MBB, MI, DL, ResultReg)
               .addImm(Offset)
               .addReg(ScaledReg, RegState::Kill);
           } else {
@@ -1092,13 +1089,10 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
             BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_MOV_B32), ConstOffsetReg)
               .addImm(Offset);
-            BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_ADD_I32_e64), ResultReg)
-              .addReg(CarryOut, RegState::Define | RegState::Dead)
+            TII->getAddNoCarry(*MBB, MI, DL, ResultReg)
               .addReg(ConstOffsetReg, RegState::Kill)
               .addReg(ScaledReg, RegState::Kill);
           }
-
-          MRI.setRegAllocationHint(CarryOut, 0, AMDGPU::VCC);
         }
 
         // Don't introduce an extra copy if we're just materializing in a mov.

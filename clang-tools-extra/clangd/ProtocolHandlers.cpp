@@ -35,7 +35,7 @@ struct HandlerRegisterer {
           if (fromJSON(RawParams, P)) {
             (Callbacks->*Handler)(std::move(C), P);
           } else {
-            Out->log("Failed to decode " + Method + " request.\n");
+            Out->log("Failed to decode " + Method + " request.");
           }
         });
   }

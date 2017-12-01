@@ -456,7 +456,8 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
     N = glueCopyToM0(N);
 
   switch (Opc) {
-  default: break;
+  default:
+    break;
   // We are selecting i64 ADD here instead of custom lower it during
   // DAG legalization, so we can fold some i64 ADDs used for address
   // calculation into the LOAD and STORE instructions.
@@ -703,6 +704,7 @@ bool AMDGPUDAGToDAGISel::SelectADDRIndirect(SDValue Addr, SDValue &Base,
   return true;
 }
 
+// FIXME: Should only handle addcarry/subcarry
 void AMDGPUDAGToDAGISel::SelectADD_SUB_I64(SDNode *N) {
   SDLoc DL(N);
   SDValue LHS = N->getOperand(0);
@@ -712,8 +714,7 @@ void AMDGPUDAGToDAGISel::SelectADD_SUB_I64(SDNode *N) {
   bool ConsumeCarry = (Opcode == ISD::ADDE || Opcode == ISD::SUBE);
   bool ProduceCarry =
       ConsumeCarry || Opcode == ISD::ADDC || Opcode == ISD::SUBC;
-  bool IsAdd =
-      (Opcode == ISD::ADD || Opcode == ISD::ADDC || Opcode == ISD::ADDE);
+  bool IsAdd = Opcode == ISD::ADD || Opcode == ISD::ADDC || Opcode == ISD::ADDE;
 
   SDValue Sub0 = CurDAG->getTargetConstant(AMDGPU::sub0, DL, MVT::i32);
   SDValue Sub1 = CurDAG->getTargetConstant(AMDGPU::sub1, DL, MVT::i32);
@@ -876,8 +877,12 @@ bool AMDGPUDAGToDAGISel::SelectDS1Addr1Offset(SDValue Addr, SDValue &Base,
                                       Zero, Addr.getOperand(1));
 
         if (isDSOffsetLegal(Sub, ByteOffset, 16)) {
+          // FIXME: Select to VOP3 version for with-carry.
+          unsigned SubOp = Subtarget->hasAddNoCarry() ?
+            AMDGPU::V_SUB_U32_e64 : AMDGPU::V_SUB_I32_e32;
+
           MachineSDNode *MachineSub
-            = CurDAG->getMachineNode(AMDGPU::V_SUB_I32_e32, DL, MVT::i32,
+            = CurDAG->getMachineNode(SubOp, DL, MVT::i32,
                                      Zero, Addr.getOperand(1));
 
           Base = SDValue(MachineSub, 0);
@@ -946,8 +951,11 @@ bool AMDGPUDAGToDAGISel::SelectDS64Bit4ByteAligned(SDValue Addr, SDValue &Base,
                                       Zero, Addr.getOperand(1));
 
         if (isDSOffsetLegal(Sub, DWordOffset1, 8)) {
+          unsigned SubOp = Subtarget->hasAddNoCarry() ?
+            AMDGPU::V_SUB_U32_e64 : AMDGPU::V_SUB_I32_e32;
+
           MachineSDNode *MachineSub
-            = CurDAG->getMachineNode(AMDGPU::V_SUB_I32_e32, DL, MVT::i32,
+            = CurDAG->getMachineNode(SubOp, DL, MVT::i32,
                                      Zero, Addr.getOperand(1));
 
           Base = SDValue(MachineSub, 0);

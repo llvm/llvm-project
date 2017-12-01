@@ -148,9 +148,6 @@ add_custom_target(libclang-headers)
 set_target_properties(libclang-headers PROPERTIES FOLDER "Misc")
 
 if (NOT CMAKE_CONFIGURATION_TYPES) # don't add this for IDE's.
-  add_custom_target(install-libclang-headers
-    DEPENDS
-    COMMAND "${CMAKE_COMMAND}"
-            -DCMAKE_INSTALL_COMPONENT=libclang-headers
-            -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+  add_llvm_install_targets(install-libclang-headers
+                           COMPONENT libclang-headers)
 endif()

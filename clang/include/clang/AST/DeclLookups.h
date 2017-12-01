@@ -1,4 +1,4 @@
-//===-- DeclLookups.h - Low-level interface to all names in a DC-*- C++ -*-===//
+//===- DeclLookups.h - Low-level interface to all names in a DC -*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,6 +18,9 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclContextInternals.h"
 #include "clang/AST/DeclarationName.h"
+#include "clang/AST/ExternalASTSource.h"
+#include <cstddef>
+#include <iterator>
 
 namespace clang {
 
@@ -25,14 +28,15 @@ namespace clang {
 /// of looking up every possible name.
 class DeclContext::all_lookups_iterator {
   StoredDeclsMap::iterator It, End;
-public:
-  typedef lookup_result             value_type;
-  typedef lookup_result             reference;
-  typedef lookup_result             pointer;
-  typedef std::forward_iterator_tag iterator_category;
-  typedef std::ptrdiff_t            difference_type;
 
-  all_lookups_iterator() {}
+public:
+  using value_type = lookup_result;
+  using reference = lookup_result;
+  using pointer = lookup_result;
+  using iterator_category = std::forward_iterator_tag;
+  using difference_type = std::ptrdiff_t;
+
+  all_lookups_iterator() = default;
   all_lookups_iterator(StoredDeclsMap::iterator It,
                        StoredDeclsMap::iterator End)
       : It(It), End(End) {}
@@ -63,6 +67,7 @@ public:
   friend bool operator==(all_lookups_iterator x, all_lookups_iterator y) {
     return x.It == y.It;
   }
+
   friend bool operator!=(all_lookups_iterator x, all_lookups_iterator y) {
     return x.It != y.It;
   }
@@ -110,6 +115,6 @@ DeclContext::all_lookups_iterator DeclContext::noload_lookups_end() const {
   return noload_lookups().end();
 }
 
-} // end namespace clang
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_AST_DECLLOOKUPS_H

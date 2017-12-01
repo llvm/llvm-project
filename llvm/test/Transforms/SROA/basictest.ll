@@ -1615,13 +1615,13 @@ define i16 @PR24463() {
 ; Ensure we can handle a very interesting case where there is an integer-based
 ; rewrite of the uses of the alloca, but where one of the integers in that is
 ; a sub-integer that requires extraction *and* extends past the end of the
-; alloca. In this case, we should extract the i8 and then zext it to i16.
+; alloca. SROA can split the alloca to avoid shift or trunc.
 ;
 ; CHECK-LABEL: @PR24463(
 ; CHECK-NOT: alloca
-; CHECK: %[[SHIFT:.*]] = lshr i16 0, 8
-; CHECK: %[[TRUNC:.*]] = trunc i16 %[[SHIFT]] to i8
-; CHECK: %[[ZEXT:.*]] = zext i8 %[[TRUNC]] to i16
+; CHECK-NOT: trunc
+; CHECK-NOT: lshr
+; CHECK: %[[ZEXT:.*]] = zext i8 {{.*}} to i16
 ; CHECK: ret i16 %[[ZEXT]]
 entry:
   %alloca = alloca [3 x i8]
@@ -1693,5 +1693,30 @@ bb1:
   %e.7.sroa.6.0.load81.i = load i32, i32* %e.7.sroa.6.i, align 1
   %0 = bitcast i32* %e.7.sroa.6.i to i8*
   call void @llvm.lifetime.end.p0i8(i64 2, i8* %0)
+  ret void
+}
+
+define void @test28(i64 %v) #0 {
+; SROA should split the first i64 store to avoid additional and/or instructions
+; when storing into i32 fields
+
+; CHECK-LABEL: @test28(
+; CHECK-NOT: alloca
+; CHECK-NOT: and
+; CHECK-NOT: or
+; CHECK:      %[[shift:.*]] = lshr i64 %v, 32
+; CHECK-NEXT: %{{.*}} = trunc i64 %[[shift]] to i32
+; CHECK-NEXT: ret void
+
+entry:
+  %t = alloca { i64, i32, i32 }
+
+  %b = getelementptr { i64, i32, i32 }, { i64, i32, i32 }* %t, i32 0, i32 1
+  %0 = bitcast i32* %b to i64*
+  store i64 %v, i64* %0
+
+  %1 = load i32, i32* %b
+  %c = getelementptr { i64, i32, i32 }, { i64, i32, i32 }* %t, i32 0, i32 2
+  store i32 %1, i32* %c
   ret void
 }

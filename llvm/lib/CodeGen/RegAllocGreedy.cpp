@@ -105,10 +105,11 @@ static cl::opt<unsigned> LastChanceRecoloringMaxInterference(
              " interference at a time"),
     cl::init(8));
 
-static cl::opt<bool>
-ExhaustiveSearch("exhaustive-register-search", cl::NotHidden,
-                 cl::desc("Exhaustive Search for registers bypassing the depth "
-                          "and interference cutoffs of last chance recoloring"));
+static cl::opt<bool> ExhaustiveSearch(
+    "exhaustive-register-search", cl::NotHidden,
+    cl::desc("Exhaustive Search for registers bypassing the depth "
+             "and interference cutoffs of last chance recoloring"),
+    cl::Hidden);
 
 static cl::opt<bool> EnableLocalReassignment(
     "enable-local-reassign", cl::Hidden,

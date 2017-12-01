@@ -41,7 +41,7 @@ void JSONOutput::writeMessage(const json::Expr &Message) {
 void JSONOutput::log(const Twine &Message) {
   trace::log(Message);
   std::lock_guard<std::mutex> Guard(StreamMutex);
-  Logs << Message;
+  Logs << Message << '\n';
   Logs.flush();
 }
 
@@ -55,7 +55,7 @@ void JSONOutput::mirrorInput(const Twine &Message) {
 
 void RequestContext::reply(json::Expr &&Result) {
   if (!ID) {
-    Out.log("Attempted to reply to a notification!\n");
+    Out.log("Attempted to reply to a notification!");
     return;
   }
   SPAN_ATTACH(tracer(), "Reply", Result);
@@ -68,7 +68,7 @@ void RequestContext::reply(json::Expr &&Result) {
 
 void RequestContext::replyError(ErrorCode code,
                                 const llvm::StringRef &Message) {
-  Out.log("Error " + Twine(static_cast<int>(code)) + ": " + Message + "\n");
+  Out.log("Error " + Twine(static_cast<int>(code)) + ": " + Message);
   SPAN_ATTACH(tracer(), "Error",
               (json::obj{{"code", static_cast<int>(code)},
                          {"message", Message.str()}}));
@@ -166,7 +166,7 @@ void clangd::runLanguageServerLoop(std::istream &In, JSONOutput &Out,
         if (ContentLength != 0) {
           Out.log("Warning: Duplicate Content-Length header received. "
                   "The previous value for this message (" +
-                  std::to_string(ContentLength) + ") was ignored.\n");
+                  std::to_string(ContentLength) + ") was ignored.");
         }
 
         llvm::getAsUnsignedInteger(LineRef.trim(), 0, ContentLength);
@@ -186,7 +186,7 @@ void clangd::runLanguageServerLoop(std::istream &In, JSONOutput &Out,
     if (ContentLength > 1 << 30) { // 1024M
       In.ignore(ContentLength);
       Out.log("Skipped overly large message of " + Twine(ContentLength) +
-              " bytes.\n");
+              " bytes.");
       continue;
     }
 
@@ -202,7 +202,7 @@ void clangd::runLanguageServerLoop(std::istream &In, JSONOutput &Out,
         if (!In) {
           Out.log("Input was aborted. Read only " +
                   std::to_string(In.gcount()) + " bytes of expected " +
-                  std::to_string(ContentLength) + ".\n");
+                  std::to_string(ContentLength) + ".");
           break;
         }
 
@@ -211,15 +211,15 @@ void clangd::runLanguageServerLoop(std::istream &In, JSONOutput &Out,
 
       if (auto Doc = json::parse(JSONRef)) {
         // Log the formatted message.
-        Out.log(llvm::formatv(Out.Pretty ? "<-- {0:2}\n" : "<-- {0}\n", *Doc));
+        Out.log(llvm::formatv(Out.Pretty ? "<-- {0:2}" : "<-- {0}", *Doc));
         // Finally, execute the action for this JSON message.
         if (!Dispatcher.call(*Doc, Out))
-          Out.log("JSON dispatch failed!\n");
+          Out.log("JSON dispatch failed!");
       } else {
         // Parse error. Log the raw message.
-        Out.log("<-- " + JSONRef + "\n");
+        Out.log("<-- " + JSONRef);
         Out.log(llvm::Twine("JSON parse error: ") +
-                llvm::toString(Doc.takeError()) + "\n");
+                llvm::toString(Doc.takeError()));
       }
 
       // If we're done, exit the loop.
@@ -227,7 +227,7 @@ void clangd::runLanguageServerLoop(std::istream &In, JSONOutput &Out,
         break;
     } else {
       Out.log("Warning: Missing Content-Length header, or message has zero "
-              "length.\n");
+              "length.");
     }
   }
 }

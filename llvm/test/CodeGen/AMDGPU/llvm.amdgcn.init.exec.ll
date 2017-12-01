@@ -51,7 +51,7 @@ main_body:
 ; GCN: s_bfm_b64 exec, s1, 0
 ; GCN: s_cmp_eq_u32 s1, 64
 ; GCN: s_cmov_b64 exec, -1
-; GCN: v_add_co_u32_e32 v0, vcc, s0, v0
+; GCN: v_add_u32_e32 v0, s0, v0
 define amdgpu_ps float @reuse_input(i32 inreg %count, i32 %a) {
 main_body:
   call void @llvm.amdgcn.init.exec.from.input(i32 %count, i32 19)
@@ -65,7 +65,7 @@ main_body:
 ; GCN: s_bfm_b64 exec, s1, 0
 ; GCN: s_cmp_eq_u32 s1, 64
 ; GCN: s_cmov_b64 exec, -1
-; GCN: v_add_co_u32_e32 v0, vcc, s0, v0
+; GCN: v_add_u32_e32 v0, s0, v0
 define amdgpu_ps float @reuse_input2(i32 inreg %count, i32 %a) {
 main_body:
   %s = add i32 %a, %count

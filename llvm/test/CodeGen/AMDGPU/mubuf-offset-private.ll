@@ -141,7 +141,7 @@ define amdgpu_kernel void @store_private_offset_i8_max_offset_plus2() #0 {
 ; SICIVI: v_add_{{i|u}}32_e32 [[ADDR1:v[0-9]+]], vcc, 32, [[ADDR0]]
 ; SICIVI: buffer_store_dword v{{[0-9]+}}, [[ADDR1]], s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen{{$}}
 
-; GFX9: v_add_co_u32_e32 [[ADDR:v[0-9]+]], vcc, 4,
+; GFX9: v_add_u32_e32 [[ADDR:v[0-9]+]], 4,
 ; GFX9: buffer_store_dword v{{[0-9]+}}, [[ADDR]], s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen offset:32
 define amdgpu_kernel void @store_private_unknown_bits_vaddr() #0 {
   %alloca = alloca [16 x i32], align 4
