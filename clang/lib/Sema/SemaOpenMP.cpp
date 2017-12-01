@@ -1506,7 +1506,7 @@ public:
   explicit VarOrFuncDeclFilterCCC(Sema &S) : SemaRef(S) {}
   bool ValidateCandidate(const TypoCorrection &Candidate) override {
     NamedDecl *ND = Candidate.getCorrectionDecl();
-    if (isa<VarDecl>(ND) || isa<FunctionDecl>(ND)) {
+    if (ND && (isa<VarDecl>(ND) || isa<FunctionDecl>(ND))) {
       return SemaRef.isDeclInScope(ND, SemaRef.getCurLexicalContext(),
                                    SemaRef.getCurScope());
     }
@@ -2674,7 +2674,6 @@ static bool checkNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
       NestingProhibited = ParentRegion != OMPD_target;
       OrphanSeen = ParentRegion == OMPD_unknown;
       Recommend = ShouldBeInTargetRegion;
-      Stack->setParentTeamsRegionLoc(Stack->getConstructLoc());
     }
     if (!NestingProhibited &&
         !isOpenMPTargetExecutionDirective(CurrentRegion) &&
@@ -6569,6 +6568,8 @@ StmtResult Sema::ActOnOpenMPTeamsDirective(ArrayRef<OMPClause *> Clauses,
 
   getCurFunction()->setHasBranchProtectedScope();
 
+  DSAStack->setParentTeamsRegionLoc(StartLoc);
+
   return OMPTeamsDirective::Create(Context, StartLoc, EndLoc, Clauses, AStmt);
 }
 
@@ -7071,6 +7072,9 @@ StmtResult Sema::ActOnOpenMPTeamsDistributeDirective(
          "omp teams distribute loop exprs were not built");
 
   getCurFunction()->setHasBranchProtectedScope();
+
+  DSAStack->setParentTeamsRegionLoc(StartLoc);
+
   return OMPTeamsDistributeDirective::Create(
       Context, StartLoc, EndLoc, NestedLoopCount, Clauses, AStmt, B);
 }
@@ -7119,6 +7123,9 @@ StmtResult Sema::ActOnOpenMPTeamsDistributeSimdDirective(
     return StmtError();
 
   getCurFunction()->setHasBranchProtectedScope();
+
+  DSAStack->setParentTeamsRegionLoc(StartLoc);
+
   return OMPTeamsDistributeSimdDirective::Create(
       Context, StartLoc, EndLoc, NestedLoopCount, Clauses, AStmt, B);
 }
@@ -7167,6 +7174,9 @@ StmtResult Sema::ActOnOpenMPTeamsDistributeParallelForSimdDirective(
     return StmtError();
 
   getCurFunction()->setHasBranchProtectedScope();
+
+  DSAStack->setParentTeamsRegionLoc(StartLoc);
+
   return OMPTeamsDistributeParallelForSimdDirective::Create(
       Context, StartLoc, EndLoc, NestedLoopCount, Clauses, AStmt, B);
 }
@@ -7213,6 +7223,9 @@ StmtResult Sema::ActOnOpenMPTeamsDistributeParallelForDirective(
          "omp for loop exprs were not built");
 
   getCurFunction()->setHasBranchProtectedScope();
+
+  DSAStack->setParentTeamsRegionLoc(StartLoc);
+
   return OMPTeamsDistributeParallelForDirective::Create(
       Context, StartLoc, EndLoc, NestedLoopCount, Clauses, AStmt, B,
       DSAStack->isCancelRegion());
@@ -9889,6 +9902,7 @@ static bool ActOnOMPReductionKindClause(
   case OO_GreaterGreaterEqual:
   case OO_EqualEqual:
   case OO_ExclaimEqual:
+  case OO_Spaceship:
   case OO_PlusPlus:
   case OO_MinusMinus:
   case OO_Comma:

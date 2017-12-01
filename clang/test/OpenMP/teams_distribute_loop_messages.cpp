@@ -689,6 +689,9 @@ void test_loop_eh() {
       void g() { throw 0; }
     };
   }
+  #pragma omp target
+  #pragma omp teams distribute
+  f; // expected-error {{use of undeclared identifier 'f'}}
 }
 
 void test_loop_firstprivate_lastprivate() {
