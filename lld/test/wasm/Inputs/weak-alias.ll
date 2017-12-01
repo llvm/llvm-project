@@ -5,7 +5,7 @@ entry:
 
 @bar = weak alias i32 (), i32 ()* @foo
 
-define hidden i32 @call_bar() #0 {
+define i32 @call_bar() #0 {
 entry:
   %call = call i32 @bar()
   ret i32 %call
