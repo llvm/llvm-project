@@ -75,7 +75,8 @@
 
 using namespace llvm;
 
-static cl::opt<bool> SimplifyMIR("simplify-mir",
+static cl::opt<bool> SimplifyMIR(
+    "simplify-mir", cl::Hidden,
     cl::desc("Leave out unnecessary information when printing MIR"));
 
 namespace {

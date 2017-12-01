@@ -63,7 +63,7 @@ define amdgpu_kernel void @simple_write2st64_two_val_f32_2_5(float addrspace(1)*
 ; GFX9-DAG: global_load_dword [[VAL1:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, off offset:4
 
 ; GCN-DAG: v_lshlrev_b32_e32 [[SHL:v[0-9]+]], 2, v{{[0-9]+}}
-; GCN: v_add{{(_co)?}}_{{i|u}}32_e32 [[VPTR:v[0-9]+]], vcc, s{{[0-9]+}}, [[SHL]]
+; GCN: v_add_{{i|u}}32_e32 [[VPTR:v[0-9]+]], {{(vcc, )?}}s{{[0-9]+}}, [[SHL]]
 ; GCN: ds_write2st64_b32 [[VPTR]], [[VAL0]], [[VAL1]] offset1:255
 ; GCN: s_endpgm
 define amdgpu_kernel void @simple_write2st64_two_val_max_offset_f32(float addrspace(1)* %C, float addrspace(1)* %in, float addrspace(3)* %lds) #0 {
@@ -91,7 +91,7 @@ define amdgpu_kernel void @simple_write2st64_two_val_max_offset_f32(float addrsp
 ; GFX9-DAG: global_load_dwordx2 [[VAL1:v\[[0-9]+:[0-9]+\]]], {{v\[[0-9]+:[0-9]+\]}}, off offset:8
 
 ; GCN-DAG: v_lshlrev_b32_e32 [[SHL:v[0-9]+]], 3, v{{[0-9]+}}
-; GCN: v_add_{{(co_)?}}{{i|u}}32_e32 [[VPTR:v[0-9]+]], vcc, s{{[0-9]+}}, [[SHL]]
+; GCN: v_add_{{i|u}}32_e32 [[VPTR:v[0-9]+]], {{(vcc, )?}}s{{[0-9]+}}, [[SHL]]
 ; GCN: ds_write2st64_b64 [[VPTR]], [[VAL0]], [[VAL1]] offset0:4 offset1:127
 ; GCN: s_endpgm
 define amdgpu_kernel void @simple_write2st64_two_val_max_offset_f64(double addrspace(1)* %C, double addrspace(1)* %in, double addrspace(3)* %lds) #0 {

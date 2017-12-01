@@ -2121,13 +2121,15 @@ TEST(MemorySanitizer, mbtowc) {
 }
 
 TEST(MemorySanitizer, mbrtowc) {
-  const char *x = "abc";
-  wchar_t wx;
-  mbstate_t mbs;
-  memset(&mbs, 0, sizeof(mbs));
-  int res = mbrtowc(&wx, x, 3, &mbs);
-  EXPECT_GT(res, 0);
-  EXPECT_NOT_POISONED(wx);
+  mbstate_t mbs = {};
+
+  wchar_t wc;
+  size_t res = mbrtowc(&wc, "\377", 1, &mbs);
+  EXPECT_EQ(res, -1ULL);
+
+  res = mbrtowc(&wc, "abc", 3, &mbs);
+  EXPECT_GT(res, 0ULL);
+  EXPECT_NOT_POISONED(wc);
 }
 
 TEST(MemorySanitizer, wcsftime) {

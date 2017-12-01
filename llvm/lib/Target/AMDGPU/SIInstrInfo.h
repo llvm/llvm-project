@@ -76,6 +76,9 @@ public:
 private:
   void swapOperands(MachineInstr &Inst) const;
 
+  bool moveScalarAddSub(SetVectorType &Worklist,
+                        MachineInstr &Inst) const;
+
   void lowerScalarAbs(SetVectorType &Worklist,
                       MachineInstr &Inst) const;
 
@@ -691,9 +694,7 @@ public:
   bool verifyInstruction(const MachineInstr &MI,
                          StringRef &ErrInfo) const override;
 
-  static unsigned getVALUOp(const MachineInstr &MI);
-
-  bool isSALUOpSupportedOnVALU(const MachineInstr &MI) const;
+  unsigned getVALUOp(const MachineInstr &MI) const;
 
   /// \brief Return the correct register class for \p OpNo.  For target-specific
   /// instructions, this will return the register class that has been defined

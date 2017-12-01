@@ -90,7 +90,8 @@ using namespace SymbolRewriter;
 
 static cl::list<std::string> RewriteMapFiles("rewrite-map-file",
                                              cl::desc("Symbol Rewrite Map"),
-                                             cl::value_desc("filename"));
+                                             cl::value_desc("filename"),
+                                             cl::Hidden);
 
 static void rewriteComdat(Module &M, GlobalObject *GO,
                           const std::string &Source,

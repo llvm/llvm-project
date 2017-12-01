@@ -8692,6 +8692,9 @@ void Sema::AddBuiltinOperatorCandidates(OverloadedOperatorKind Op,
     OpBuilder.addGenericBinaryArithmeticOverloads();
     break;
 
+  case OO_Spaceship:
+    llvm_unreachable("<=> expressions not supported yet");
+
   case OO_Percent:
   case OO_Caret:
   case OO_Pipe:

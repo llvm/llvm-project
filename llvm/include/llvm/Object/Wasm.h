@@ -81,6 +81,14 @@ public:
     return Flags & wasm::WASM_SYMBOL_BINDING_MASK;
   }
 
+  bool isHidden() const {
+    return getVisibility() == wasm::WASM_SYMBOL_VISIBILITY_HIDDEN;
+  }
+
+  unsigned getVisibility() const {
+    return Flags & wasm::WASM_SYMBOL_VISIBILITY_MASK;
+  }
+
   void print(raw_ostream &Out) const {
     Out << "Name=" << Name << ", Type=" << static_cast<int>(Type)
         << ", Flags=" << Flags << " ElemIndex=" << ElementIndex

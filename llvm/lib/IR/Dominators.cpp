@@ -33,9 +33,9 @@ bool llvm::VerifyDomInfo = true;
 #else
 bool llvm::VerifyDomInfo = false;
 #endif
-static cl::opt<bool,true>
-VerifyDomInfoX("verify-dom-info", cl::location(VerifyDomInfo),
-               cl::desc("Verify dominator info (time consuming)"));
+static cl::opt<bool, true>
+    VerifyDomInfoX("verify-dom-info", cl::location(VerifyDomInfo), cl::Hidden,
+                   cl::desc("Verify dominator info (time consuming)"));
 
 bool BasicBlockEdge::isSingleEdge() const {
   const TerminatorInst *TI = Start->getTerminator();

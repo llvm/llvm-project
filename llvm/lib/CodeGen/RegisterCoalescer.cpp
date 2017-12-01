@@ -70,10 +70,9 @@ STATISTIC(NumInflated , "Number of register classes inflated");
 STATISTIC(NumLaneConflicts, "Number of dead lane conflicts tested");
 STATISTIC(NumLaneResolves,  "Number of dead lane conflicts resolved");
 
-static cl::opt<bool>
-EnableJoining("join-liveintervals",
-              cl::desc("Coalesce copies (default=true)"),
-              cl::init(true));
+static cl::opt<bool> EnableJoining("join-liveintervals",
+                                   cl::desc("Coalesce copies (default=true)"),
+                                   cl::init(true), cl::Hidden);
 
 static cl::opt<bool> UseTerminalRule("terminal-rule",
                                      cl::desc("Apply the terminal rule"),

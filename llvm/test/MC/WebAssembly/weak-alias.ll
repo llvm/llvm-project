@@ -102,10 +102,14 @@ entry:
 ; CHECK-NEXT:     Name:            linking
 ; CHECK-NEXT:     DataSize:        12
 ; CHECK-NEXT:     SymbolInfo:      
+; CHECK-NEXT:       - Name:            call_alias
+; CHECK-NEXT:         Flags:           4
+; CHECK-NEXT:       - Name:            foo
+; CHECK-NEXT:         Flags:           4
 ; CHECK-NEXT:       - Name:            foo_alias
-; CHECK-NEXT:         Flags:           1
+; CHECK-NEXT:         Flags:           5
 ; CHECK-NEXT:       - Name:            bar_alias
-; CHECK-NEXT:         Flags:           1
+; CHECK-NEXT:         Flags:           5
 ; CHECK-NEXT:     SegmentInfo:    
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Name:            .data.bar
@@ -120,9 +124,9 @@ entry:
 ; CHECK-SYMS: SYMBOL TABLE:
 ; CHECK-SYMS-NEXT: 00000000 g     F name	call_alias
 ; CHECK-SYMS-NEXT: 00000001 g     F name	foo
-; CHECK-SYMS-NEXT: 00000000 g     F EXPORT	call_alias
-; CHECK-SYMS-NEXT: 00000001 g     F EXPORT	foo
+; CHECK-SYMS-NEXT: 00000000 g     F EXPORT	.hidden call_alias
+; CHECK-SYMS-NEXT: 00000001 g     F EXPORT	.hidden foo
 ; CHECK-SYMS-NEXT: 00000000 g       EXPORT	bar
 ; CHECK-SYMS-NEXT: 00000008 g       EXPORT	bar_alias_address
-; CHECK-SYMS-NEXT: 00000001 gw    F EXPORT	foo_alias
-; CHECK-SYMS-NEXT: 00000000 gw      EXPORT	bar_alias
+; CHECK-SYMS-NEXT: 00000001 gw    F EXPORT	.hidden foo_alias
+; CHECK-SYMS-NEXT: 00000000 gw      EXPORT	.hidden bar_alias
