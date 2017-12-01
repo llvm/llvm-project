@@ -48,7 +48,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CODE-NEXT: if (32 * b0 + t0 <= 48)
 ; CODE-NEXT:     Stmt_for_body17(0, 32 * b0 + t0);
 
-; IR: [[REGC:%.+]] =   bitcast i32* %23 to i8*
+; IR-LABEL: call void @polly_freeKernel
+; IR:       [[REGC:%.+]] =   bitcast i32* %{{[0-9]+}} to i8*
 ; IR-NEXT:  call void @polly_copyFromDeviceToHost(i8* %p_dev_array_MemRef_c, i8* [[REGC]], i64 196)
 
 ; KERNEL-IR: define ptx_kernel void @FUNC_kernel_dynprog_SCOP_0_KERNEL_0(i8 addrspace(1)* %MemRef_c, i32) #0 {

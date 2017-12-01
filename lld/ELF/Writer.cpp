@@ -1465,22 +1465,6 @@ static uint64_t computeFlags(uint64_t Flags) {
   return Flags;
 }
 
-// Prior to finalizeContents() an OutputSection containing SyntheticSections
-// may have 0 Size, but contain SyntheticSections that haven't had their size
-// calculated yet. We must use SyntheticSection->empty() for these sections.
-static bool isOutputSectionZeroSize(const OutputSection* Sec) {
-  if (Sec->Size > 0)
-    return false;
-  for (BaseCommand *BC : Sec->SectionCommands) {
-    if (auto *ISD = dyn_cast<InputSectionDescription>(BC))
-      for (InputSection *IS : ISD->Sections)
-        if (SyntheticSection *SS = dyn_cast<SyntheticSection>(IS))
-          if (!SS->empty())
-            return false;
-    }
-  return true;
-}
-
 // Decide which program headers to create and which sections to include in each
 // one.
 template <class ELFT> std::vector<PhdrEntry *> Writer<ELFT>::createPhdrs() {
@@ -1546,7 +1530,7 @@ template <class ELFT> std::vector<PhdrEntry *> Writer<ELFT>::createPhdrs() {
   bool InRelroPhdr = false;
   bool IsRelroFinished = false;
   for (OutputSection *Sec : OutputSections) {
-    if (!needsPtLoad(Sec) || isOutputSectionZeroSize(Sec))
+    if (!needsPtLoad(Sec))
       continue;
     if (isRelroSection(Sec)) {
       InRelroPhdr = true;

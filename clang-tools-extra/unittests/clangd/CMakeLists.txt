@@ -10,6 +10,7 @@ include_directories(
 
 add_extra_unittest(ClangdTests
   ClangdTests.cpp
+  FuzzyMatchTests.cpp
   JSONExprTests.cpp
   TraceTests.cpp
   )
