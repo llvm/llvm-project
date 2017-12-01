@@ -538,7 +538,7 @@ bool AArch64A57FPLoadBalancing::colorChain(Chain *G, Color C,
     DEBUG(dbgs() << "Scavenging (thus coloring) failed!\n");
     return false;
   }
-  DEBUG(dbgs() << " - Scavenged register: " << TRI->getName(Reg) << "\n");
+  DEBUG(dbgs() << " - Scavenged register: " << printReg(Reg, TRI) << "\n");
 
   std::map<unsigned, unsigned> Substs;
   for (MachineInstr &I : *G) {
@@ -611,8 +611,8 @@ void AArch64A57FPLoadBalancing::scanInstruction(
     // unit.
     unsigned DestReg = MI->getOperand(0).getReg();
 
-    DEBUG(dbgs() << "New chain started for register "
-          << TRI->getName(DestReg) << " at " << *MI);
+    DEBUG(dbgs() << "New chain started for register " << printReg(DestReg, TRI)
+                 << " at " << *MI);
 
     auto G = llvm::make_unique<Chain>(MI, Idx, getColor(DestReg));
     ActiveChains[DestReg] = G.get();
@@ -632,7 +632,7 @@ void AArch64A57FPLoadBalancing::scanInstruction(
 
     if (ActiveChains.find(AccumReg) != ActiveChains.end()) {
       DEBUG(dbgs() << "Chain found for accumulator register "
-            << TRI->getName(AccumReg) << " in MI " << *MI);
+                   << printReg(AccumReg, TRI) << " in MI " << *MI);
 
       // For simplicity we only chain together sequences of MULs/MLAs where the
       // accumulator register is killed on each instruction. This means we don't
@@ -657,7 +657,7 @@ void AArch64A57FPLoadBalancing::scanInstruction(
     }
 
     DEBUG(dbgs() << "Creating new chain for dest register "
-          << TRI->getName(DestReg) << "\n");
+                 << printReg(DestReg, TRI) << "\n");
     auto G = llvm::make_unique<Chain>(MI, Idx, getColor(DestReg));
     ActiveChains[DestReg] = G.get();
     AllChains.push_back(std::move(G));
@@ -685,8 +685,8 @@ maybeKillChain(MachineOperand &MO, unsigned Idx,
 
     // If this is a KILL of a current chain, record it.
     if (MO.isKill() && ActiveChains.find(MO.getReg()) != ActiveChains.end()) {
-      DEBUG(dbgs() << "Kill seen for chain " << TRI->getName(MO.getReg())
-            << "\n");
+      DEBUG(dbgs() << "Kill seen for chain " << printReg(MO.getReg(), TRI)
+                   << "\n");
       ActiveChains[MO.getReg()]->setKill(MI, Idx, /*Immutable=*/MO.isTied());
     }
     ActiveChains.erase(MO.getReg());
@@ -697,7 +697,7 @@ maybeKillChain(MachineOperand &MO, unsigned Idx,
          I != E;) {
       if (MO.clobbersPhysReg(I->first)) {
         DEBUG(dbgs() << "Kill (regmask) seen for chain "
-              << TRI->getName(I->first) << "\n");
+                     << printReg(I->first, TRI) << "\n");
         I->second->setKill(MI, Idx, /*Immutable=*/true);
         ActiveChains.erase(I++);
       } else

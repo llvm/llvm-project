@@ -33,7 +33,7 @@ body:             |
     ; CHECK-NEXT: %r1 = KILL %r1, implicit killed %r0_r1
     undef %0.gsub_0 = COPY %r0
     %0.gsub_1 = COPY %r1
-    tBX_RET 14, _, implicit %0
+    tBX_RET 14, %noreg, implicit %0
   
 
 ...
@@ -55,7 +55,7 @@ body:             |
     ; CHECK: %r0 = KILL %r0, implicit-def %r0_r1
     ; CHECK-NEXT: tBX_RET
     undef %0.gsub_0 = COPY %r0
-    tBX_RET 14, _, implicit %0
+    tBX_RET 14, %noreg, implicit %0
   
 
 ...
@@ -78,7 +78,7 @@ body:             |
     ; CHECK: %r0 = KILL %r0, implicit-def %r1, implicit-def %r0_r1
     ; CHECK-NEXT: tBX_RET
     undef %0.gsub_0 = COPY %r0, implicit-def %r1
-    tBX_RET 14, _, implicit %0
+    tBX_RET 14, %noreg, implicit %0
   
 
 ...

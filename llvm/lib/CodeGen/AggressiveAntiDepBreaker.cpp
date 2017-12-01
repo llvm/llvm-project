@@ -141,7 +141,7 @@ AggressiveAntiDepBreaker::AggressiveAntiDepBreaker(
 
   DEBUG(dbgs() << "AntiDep Critical-Path Registers:");
   DEBUG(for (unsigned r : CriticalPathSet.set_bits())
-          dbgs() << " " << TRI->getName(r));
+          dbgs() << " " << printReg(r, TRI));
   DEBUG(dbgs() << '\n');
 }
 
@@ -216,7 +216,7 @@ void AggressiveAntiDepBreaker::Observe(MachineInstr &MI, unsigned Count,
     // schedule region).
     if (State->IsLive(Reg)) {
       DEBUG(if (State->GetGroup(Reg) != 0)
-              dbgs() << " " << TRI->getName(Reg) << "=g" <<
+              dbgs() << " " << printReg(Reg, TRI) << "=g" <<
                 State->GetGroup(Reg) << "->g0(region live-out)");
       State->UnionGroups(Reg, 0);
     } else if ((DefIndices[Reg] < InsertPosIndex)
@@ -323,7 +323,7 @@ void AggressiveAntiDepBreaker::HandleLastUse(unsigned Reg, unsigned KillIdx,
     RegRefs.erase(Reg);
     State->LeaveGroup(Reg);
     DEBUG(if (header) {
-        dbgs() << header << TRI->getName(Reg); header = nullptr; });
+        dbgs() << header << printReg(Reg, TRI); header = nullptr; });
     DEBUG(dbgs() << "->g" << State->GetGroup(Reg) << tag);
     // Repeat for subregisters. Note that we only do this if the superregister
     // was not live because otherwise, regardless whether we have an explicit
@@ -337,8 +337,8 @@ void AggressiveAntiDepBreaker::HandleLastUse(unsigned Reg, unsigned KillIdx,
         RegRefs.erase(SubregReg);
         State->LeaveGroup(SubregReg);
         DEBUG(if (header) {
-            dbgs() << header << TRI->getName(Reg); header = nullptr; });
-        DEBUG(dbgs() << " " << TRI->getName(SubregReg) << "->g" <<
+            dbgs() << header << printReg(Reg, TRI); header = nullptr; });
+        DEBUG(dbgs() << " " << printReg(SubregReg, TRI) << "->g" <<
               State->GetGroup(SubregReg) << tag);
       }
     }
@@ -374,7 +374,7 @@ void AggressiveAntiDepBreaker::PrescanInstruction(
     unsigned Reg = MO.getReg();
     if (Reg == 0) continue;
 
-    DEBUG(dbgs() << " " << TRI->getName(Reg) << "=g" << State->GetGroup(Reg));
+    DEBUG(dbgs() << " " << printReg(Reg, TRI) << "=g" << State->GetGroup(Reg));
 
     // If MI's defs have a special allocation requirement, don't allow
     // any def registers to be changed. Also assume all registers
@@ -393,8 +393,8 @@ void AggressiveAntiDepBreaker::PrescanInstruction(
       unsigned AliasReg = *AI;
       if (State->IsLive(AliasReg)) {
         State->UnionGroups(Reg, AliasReg);
-        DEBUG(dbgs() << "->g" << State->GetGroup(Reg) << "(via " <<
-              TRI->getName(AliasReg) << ")");
+        DEBUG(dbgs() << "->g" << State->GetGroup(Reg) << "(via "
+                     << printReg(AliasReg, TRI) << ")");
       }
     }
 
@@ -469,8 +469,7 @@ void AggressiveAntiDepBreaker::ScanInstruction(MachineInstr &MI,
     unsigned Reg = MO.getReg();
     if (Reg == 0) continue;
 
-    DEBUG(dbgs() << " " << TRI->getName(Reg) << "=g" <<
-          State->GetGroup(Reg));
+    DEBUG(dbgs() << " " << printReg(Reg, TRI) << "=g" << State->GetGroup(Reg));
 
     // It wasn't previously live but now it is, this is a kill. Forget
     // the previous live-range information and start a new live-range
@@ -505,10 +504,10 @@ void AggressiveAntiDepBreaker::ScanInstruction(MachineInstr &MI,
       if (Reg == 0) continue;
 
       if (FirstReg != 0) {
-        DEBUG(dbgs() << "=" << TRI->getName(Reg));
+        DEBUG(dbgs() << "=" << printReg(Reg, TRI));
         State->UnionGroups(FirstReg, Reg);
       } else {
-        DEBUG(dbgs() << " " << TRI->getName(Reg));
+        DEBUG(dbgs() << " " << printReg(Reg, TRI));
         FirstReg = Reg;
       }
     }
@@ -574,7 +573,7 @@ bool AggressiveAntiDepBreaker::FindSuitableFreeRegisters(
 
     // If Reg has any references, then collect possible rename regs
     if (RegRefs.count(Reg) > 0) {
-      DEBUG(dbgs() << "\t\t" << TRI->getName(Reg) << ":");
+      DEBUG(dbgs() << "\t\t" << printReg(Reg, TRI) << ":");
 
       BitVector &BV = RenameRegisterMap[Reg];
       assert(BV.empty());
@@ -583,7 +582,7 @@ bool AggressiveAntiDepBreaker::FindSuitableFreeRegisters(
       DEBUG({
         dbgs() << " ::";
         for (unsigned r : BV.set_bits())
-          dbgs() << " " << TRI->getName(r);
+          dbgs() << " " << printReg(r, TRI);
         dbgs() << "\n";
       });
     }
@@ -608,8 +607,8 @@ bool AggressiveAntiDepBreaker::FindSuitableFreeRegisters(
     if (renamecnt++ % DebugDiv != DebugMod)
       return false;
 
-    dbgs() << "*** Performing rename " << TRI->getName(SuperReg) <<
-      " for debug ***\n";
+    dbgs() << "*** Performing rename " << printReg(SuperReg, TRI)
+           << " for debug ***\n";
   }
 #endif
 
@@ -646,7 +645,7 @@ bool AggressiveAntiDepBreaker::FindSuitableFreeRegisters(
     // Don't replace a register with itself.
     if (NewSuperReg == SuperReg) continue;
 
-    DEBUG(dbgs() << " [" << TRI->getName(NewSuperReg) << ':');
+    DEBUG(dbgs() << " [" << printReg(NewSuperReg, TRI) << ':');
     RenameMap.clear();
 
     // For each referenced group register (which must be a SuperReg or
@@ -663,7 +662,7 @@ bool AggressiveAntiDepBreaker::FindSuitableFreeRegisters(
           NewReg = TRI->getSubReg(NewSuperReg, NewSubRegIdx);
       }
 
-      DEBUG(dbgs() << " " << TRI->getName(NewReg));
+      DEBUG(dbgs() << " " << printReg(NewReg, TRI));
 
       // Check if Reg can be renamed to NewReg.
       if (!RenameRegisterMap[Reg].test(NewReg)) {
@@ -684,7 +683,7 @@ bool AggressiveAntiDepBreaker::FindSuitableFreeRegisters(
           unsigned AliasReg = *AI;
           if (State->IsLive(AliasReg) ||
               (KillIndices[Reg] > DefIndices[AliasReg])) {
-            DEBUG(dbgs() << "(alias " << TRI->getName(AliasReg) << " live)");
+            DEBUG(dbgs() << "(alias " << printReg(AliasReg, TRI) << " live)");
             found = true;
             break;
           }
@@ -793,7 +792,7 @@ unsigned AggressiveAntiDepBreaker::BreakAntiDependencies(
   DEBUG(dbgs() << "Available regs:");
   for (unsigned Reg = 0; Reg < TRI->getNumRegs(); ++Reg) {
     if (!State->IsLive(Reg))
-      DEBUG(dbgs() << " " << TRI->getName(Reg));
+      DEBUG(dbgs() << " " << printReg(Reg, TRI));
   }
   DEBUG(dbgs() << '\n');
 #endif
@@ -849,7 +848,7 @@ unsigned AggressiveAntiDepBreaker::BreakAntiDependencies(
             (Edge->getKind() != SDep::Output)) continue;
 
         unsigned AntiDepReg = Edge->getReg();
-        DEBUG(dbgs() << "\tAntidep reg: " << TRI->getName(AntiDepReg));
+        DEBUG(dbgs() << "\tAntidep reg: " << printReg(AntiDepReg, TRI));
         assert(AntiDepReg != 0 && "Anti-dependence on reg0?");
 
         if (!MRI.isAllocatable(AntiDepReg)) {
@@ -952,7 +951,7 @@ unsigned AggressiveAntiDepBreaker::BreakAntiDependencies(
         std::map<unsigned, unsigned> RenameMap;
         if (FindSuitableFreeRegisters(GroupIndex, RenameOrder, RenameMap)) {
           DEBUG(dbgs() << "\tBreaking anti-dependence edge on "
-                << TRI->getName(AntiDepReg) << ":");
+                       << printReg(AntiDepReg, TRI) << ":");
 
           // Handle each group register...
           for (std::map<unsigned, unsigned>::iterator
@@ -960,9 +959,9 @@ unsigned AggressiveAntiDepBreaker::BreakAntiDependencies(
             unsigned CurrReg = S->first;
             unsigned NewReg = S->second;
 
-            DEBUG(dbgs() << " " << TRI->getName(CurrReg) << "->" <<
-                  TRI->getName(NewReg) << "(" <<
-                  RegRefs.count(CurrReg) << " refs)");
+            DEBUG(dbgs() << " " << printReg(CurrReg, TRI) << "->"
+                         << printReg(NewReg, TRI) << "("
+                         << RegRefs.count(CurrReg) << " refs)");
 
             // Update the references to the old register CurrReg to
             // refer to the new register NewReg.

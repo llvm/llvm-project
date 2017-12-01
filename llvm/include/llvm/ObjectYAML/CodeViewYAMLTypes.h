@@ -27,7 +27,7 @@
 namespace llvm {
 
 namespace codeview {
-class TypeTableBuilder;
+class AppendingTypeTableBuilder;
 }
 
 namespace CodeViewYAML {
@@ -47,7 +47,7 @@ struct LeafRecord {
   std::shared_ptr<detail::LeafRecordBase> Leaf;
 
   codeview::CVType
-  toCodeViewRecord(codeview::TypeTableBuilder &Serializer) const;
+  toCodeViewRecord(codeview::AppendingTypeTableBuilder &Serializer) const;
   static Expected<LeafRecord> fromCodeViewRecord(codeview::CVType Type);
 };
 

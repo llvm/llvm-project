@@ -2,11 +2,12 @@
 # REQUIRES: system-linux
 
 # RUN: yaml2obj %s > %t
-# RUN: dd if=%t of=%t bs=1 count=0 seek=2200M
+# RUN: dd if=%t of=%t bs=1 count=0 seek=1M
 # RUN: rm -f %t.lib
 # RUN: cp %t %t2
-# RUN: llvm-ar cr %t.lib %t %t2 %p/Inputs/trivial-object-test.elf-x86-64
+# RUN: llvm-ar -sym64-threshold=19 cr %t.lib %t %t2 %p/Inputs/trivial-object-test.elf-x86-64
 # RUN: llvm-nm --print-armap %t.lib | FileCheck %s
+# RUN: grep SYM64 %t.lib
 
 # Delete temp files. They are too large.
 # RUN: rm -f %t %t2 %t.lib
@@ -28,9 +29,9 @@ Sections:
 # CHECK:      Archive map
 # CHECK-NEXT: main in trivial-object-test.elf-x86-64
 
-# CHECK:    archive-SYM64-write.test.tmp:
+# CHECK:    archive-GNU64-write.test.tmp:
 
-# CHECK:    archive-SYM64-write.test.tmp2:
+# CHECK:    archive-GNU64-write.test.tmp2:
 
 # CHECK:    trivial-object-test.elf-x86-64:
 # CHECK-NEXT:                     U SomeOtherFunction

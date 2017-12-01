@@ -3,8 +3,8 @@
 # CHECK-LABEL: name: f
 name:            f
 # Make sure the load into %r0 doesn't clobber the base register before the second load uses it.
-# CHECK: %r3 = LDRi12 %r0, 12, 14, _
-# CHECK-NEXT: %r0 = LDRi12 %r0, 8, 14, _
+# CHECK: %r3 = LDRi12 %r0, 12, 14, %noreg
+# CHECK-NEXT: %r0 = LDRi12 %r0, 8, 14, %noreg
 body:             |
   bb.0:
     liveins: %r0, %r3

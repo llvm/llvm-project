@@ -196,6 +196,7 @@ public:
                  SectionBase *DefinedIn, uint64_t Value, uint16_t Shndx,
                  uint64_t Sz);
   void addSymbolNames();
+  const SectionBase *getStrTab() const { return SymbolNames; }
   const Symbol *getSymbolByIndex(uint32_t Index) const;
   void removeSectionReferences(const SectionBase *Sec) override;
   void initialize(SectionTableRef SecTable) override;
@@ -368,6 +369,7 @@ public:
   Object(const object::ELFObjectFile<ELFT> &Obj);
   virtual ~Object() = default;
 
+  const SymbolTableSection *getSymTab() const { return SymbolTable; }
   const SectionBase *getSectionHeaderStrTab() const { return SectionNames; }
   void removeSections(std::function<bool(const SectionBase &)> ToRemove);
   virtual size_t totalSize() const = 0;

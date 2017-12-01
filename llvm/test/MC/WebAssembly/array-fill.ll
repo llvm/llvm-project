@@ -15,6 +15,9 @@ target triple = "wasm32-unknown-unknown-wasm"
 ; CHECK:        - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            linking
 ; CHECK-NEXT:     DataSize:        2
+; CHECK-NEXT:     SymbolInfo:      
+; CHECK-NEXT:       - Name:            gBd
+; CHECK-NEXT:         Flags:           4
 ; CHECK-NEXT:     SegmentInfo:    
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Name:            .data

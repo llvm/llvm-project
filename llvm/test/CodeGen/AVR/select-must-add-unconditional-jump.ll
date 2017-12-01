@@ -11,10 +11,10 @@
 ;
 ; BB#2: derived from LLVM BB %finish
 ;     Predecessors according to CFG: BB#0 BB#1
-;         %vreg0<def> = PHI %vreg3, <BB#0>, %vreg5, <BB#1>
-;         %vreg7<def> = LDIRdK 2
-;         %vreg8<def> = LDIRdK 1
-;         CPRdRr %vreg2, %vreg0, %SREG<imp-def>
+;         %0<def> = PHI %3, <BB#0>, %5, <BB#1>
+;         %7<def> = LDIRdK 2
+;         %8<def> = LDIRdK 1
+;         CPRdRr %2, %0, %SREG<imp-def>
 ;         BREQk <BB#6>, %SREG<imp-use>
 ;     Successors according to CFG: BB#5(?%) BB#6(?%)
 ;

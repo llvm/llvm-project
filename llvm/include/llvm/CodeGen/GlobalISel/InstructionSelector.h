@@ -115,6 +115,8 @@ enum {
   /// - InsnID - Instruction ID
   /// - Ordering - The AtomicOrdering value
   GIM_CheckAtomicOrdering,
+  GIM_CheckAtomicOrderingOrStrongerThan,
+  GIM_CheckAtomicOrderingWeakerThan,
 
   /// Check the type for the specified operand
   /// - InsnID - Instruction ID

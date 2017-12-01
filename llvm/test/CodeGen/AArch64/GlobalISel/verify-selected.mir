@@ -22,11 +22,11 @@ body: |
    %0 = COPY %x0
 
    ; CHECK: *** Bad machine code: Unexpected generic instruction in a Selected function ***
-   ; CHECK: instruction: %vreg1<def> = G_ADD
+   ; CHECK: instruction: %1<def> = G_ADD
    %1 = G_ADD %0, %0
 
    ; CHECK: *** Bad machine code: Generic virtual register invalid in a Selected function ***
-   ; CHECK: instruction: %vreg2<def>(s64) = COPY
-   ; CHECK: operand 0: %vreg2<def>
+   ; CHECK: instruction: %2<def>(s64) = COPY
+   ; CHECK: operand 0: %2<def>
    %2(s64) = COPY %x0
 ...

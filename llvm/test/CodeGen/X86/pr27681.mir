@@ -47,11 +47,11 @@ body:             |
     TEST32rr %edx, %edx, implicit-def %eflags
     %cl = SETNEr implicit %eflags
     ; This %bl def is antidependent on the above use of %ebx
-    %bl = MOV8rm %esp, 1, _, 3, _ ; :: (load 1 from %stack.0)
+    %bl = MOV8rm %esp, 1, %noreg, 3, _ ; :: (load 1 from %stack.0)
     %cl = OR8rr killed %cl, %bl, implicit-def dead %eflags
     %esi = MOVZX32rr8 killed %cl
     %esi = ADD32rr killed %esi, killed %edi, implicit-def dead %eflags
-    %ecx = MOV32rm %esp, 1, _, 24, _ ; :: (load 4 from %stack.2)
+    %ecx = MOV32rm %esp, 1, %noreg, 24, _ ; :: (load 4 from %stack.2)
     %edx = SAR32rCL killed %edx, implicit-def dead %eflags, implicit %cl
     TEST32rr killed %edx, %edx, implicit-def %eflags
     %cl = SETNEr implicit %eflags
@@ -66,7 +66,7 @@ body:             |
   bb.2:
     liveins: %cl, %eax, %ebp, %esi
 
-    OR32mr %esp, 1, _, 8, _, killed %eax, implicit-def %eflags ; :: (store 4 into %stack.1)
+    OR32mr %esp, 1, %noreg, 8, %noreg, killed %eax, implicit-def %eflags ; :: (store 4 into %stack.1)
     %dl = SETNEr implicit %eflags, implicit-def %edx
 
   bb.3:

@@ -8,8 +8,8 @@
 ; %edx has a live range into the function and is used by the DIV32r.
 ;
 ; Here sinking a kill + dead def:
-; 144B -> 180B: DIV32r %vreg4, %eax<imp-def>, %edx<imp-def,dead>, %EFLAGS<imp-def,dead>, %eax<imp-use,kill>, %edx<imp-use>
-;       %vreg4: [48r,144r:0)  0@48r
+; 144B -> 180B: DIV32r %4, %eax<imp-def>, %edx<imp-def,dead>, %EFLAGS<imp-def,dead>, %eax<imp-use,kill>, %edx<imp-use>
+;       %4: [48r,144r:0)  0@48r
 ;         -->   [48r,180r:0)  0@48r
 ;       DH:     [0B,16r:0)[128r,144r:2)[144r,144d:1)  0@0B-phi 1@144r 2@128r
 ;         -->   [0B,16r:0)[128r,180r:2)[180r,180d:1)  0@0B-phi 1@180r 2@128r
@@ -25,8 +25,8 @@ entry:
 }
 
 ; Same as above, but moving a kill + live def:
-; 144B -> 180B: DIV32r %vreg4, %eax<imp-def,dead>, %edx<imp-def>, %EFLAGS<imp-def,dead>, %eax<imp-use,kill>, %edx<imp-use>
-;       %vreg4: [48r,144r:0)  0@48r
+; 144B -> 180B: DIV32r %4, %eax<imp-def,dead>, %edx<imp-def>, %EFLAGS<imp-def,dead>, %eax<imp-use,kill>, %edx<imp-use>
+;       %4: [48r,144r:0)  0@48r
 ;         -->   [48r,180r:0)  0@48r
 ;       DH:     [0B,16r:0)[128r,144r:2)[144r,184r:1)  0@0B-phi 1@144r 2@128r
 ;         -->   [0B,16r:0)[128r,180r:2)[180r,184r:1)  0@0B-phi 1@180r 2@128r
@@ -41,13 +41,13 @@ entry:
   ret i32 %add
 }
 
-; Moving a use below the existing kill (%vreg5):
-; Moving a tied virtual register def (%vreg11):
+; Moving a use below the existing kill (%5):
+; Moving a tied virtual register def (%11):
 ;
-; 96B -> 120B: %vreg11<def,tied1> = SUB32rr %vreg11<tied0>, %vreg5
-;       %vreg11:        [80r,96r:1)[96r,144r:0)  0@96r 1@80r
+; 96B -> 120B: %11<def,tied1> = SUB32rr %11<tied0>, %5
+;       %11:        [80r,96r:1)[96r,144r:0)  0@96r 1@80r
 ;            -->        [80r,120r:1)[120r,144r:0)  0@120r 1@80r
-;       %vreg5:         [16r,112r:0)  0@16r
+;       %5:         [16r,112r:0)  0@16r
 ;            -->        [16r,120r:0)  0@16r
 ;
 define i32 @f3(i32 %a, i32 %b) nounwind uwtable readnone ssp {

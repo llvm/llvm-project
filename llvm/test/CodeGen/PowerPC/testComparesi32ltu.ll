@@ -1,9 +1,8 @@
-; XFAIL: *
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -O2 \
-; RUN:   -ppc-asm-full-reg-names -mcpu=pwr8 < %s | FileCheck %s \
+; RUN:   -ppc-gpr-icmps=all -ppc-asm-full-reg-names -mcpu=pwr8 < %s | FileCheck %s \
 ; RUN:  --implicit-check-not cmpw --implicit-check-not cmpd --implicit-check-not cmpl
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -O2 \
-; RUN:   -ppc-asm-full-reg-names -mcpu=pwr8 < %s | FileCheck %s \
+; RUN:   -ppc-gpr-icmps=all -ppc-asm-full-reg-names -mcpu=pwr8 < %s | FileCheck %s \
 ; RUN:  --implicit-check-not cmpw --implicit-check-not cmpd --implicit-check-not cmpl
 
 %struct.tree_common = type { i8, [3 x i8] }

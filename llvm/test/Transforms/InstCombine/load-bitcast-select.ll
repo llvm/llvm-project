@@ -68,3 +68,20 @@ define i32 @store_bitcasted_load(i1 %cond, float* dereferenceable(4) %addr1, flo
   %ld = load i32, i32* %bc1
   ret i32 %ld
 }
+
+define void @bitcasted_store(i1 %cond, float* %loadaddr1, float* %loadaddr2, float* %storeaddr) {
+; CHECK-LABEL: @bitcasted_store(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], float* [[LOADADDR1:%.*]], float* [[LOADADDR2:%.*]]
+; CHECK-NEXT:    [[INT_LOAD_ADDR:%.*]] = bitcast float* [[SEL]] to i32*
+; CHECK-NEXT:    [[LD:%.*]] = load i32, i32* [[INT_LOAD_ADDR]], align 4
+; CHECK-NEXT:    [[INT_STORE_ADDR:%.*]] = bitcast float* [[STOREADDR:%.*]] to i32*
+; CHECK-NEXT:    store i32 [[LD]], i32* [[INT_STORE_ADDR]], align 4
+; CHECK-NEXT:    ret void
+;
+  %sel = select i1 %cond, float* %loadaddr1, float* %loadaddr2
+  %int_load_addr = bitcast float* %sel to i32*
+  %ld = load i32, i32* %int_load_addr
+  %int_store_addr = bitcast float* %storeaddr to i32*
+  store i32 %ld, i32* %int_store_addr
+  ret void
+}

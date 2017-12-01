@@ -189,12 +189,9 @@ function(llvm_ExternalProject_Add name source_dir)
     install(CODE "execute_process\(COMMAND \${CMAKE_COMMAND} -DCMAKE_INSTALL_PREFIX=\${CMAKE_INSTALL_PREFIX} -P ${BINARY_DIR}/cmake_install.cmake \)"
       COMPONENT ${name})
 
-    add_custom_target(install-${name}
-                      DEPENDS ${name}
-                      COMMAND "${CMAKE_COMMAND}"
-                               -DCMAKE_INSTALL_COMPONENT=${name}
-                               -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
-                      USES_TERMINAL)
+    add_llvm_install_targets(install-${name}
+                             DEPENDS ${name}
+                             COMPONENT ${name})
   endif()
 
   # Add top-level targets

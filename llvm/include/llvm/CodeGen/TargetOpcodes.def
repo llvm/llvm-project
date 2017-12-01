@@ -265,6 +265,9 @@ HANDLE_TARGET_OPCODE(G_LOAD)
 /// Generic store.
 HANDLE_TARGET_OPCODE(G_STORE)
 
+/// Generic atomic cmpxchg with internal success check.
+HANDLE_TARGET_OPCODE(G_ATOMIC_CMPXCHG_WITH_SUCCESS)
+
 /// Generic atomic cmpxchg.
 HANDLE_TARGET_OPCODE(G_ATOMIC_CMPXCHG)
 

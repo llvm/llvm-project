@@ -159,10 +159,14 @@ def S_SUB_U64_PSEUDO : SPseudoInstSI <
   [(set SReg_64:$vdst, (sub i64:$src0, i64:$src1))]
 >;
 
-def S_ADDC_U64_PSEUDO : SPseudoInstSI <(outs SReg_64:$vdst, SReg_64:$sdst),
-                                       (ins SSrc_b64:$src0, SSrc_b64:$src1)>;
-def S_SUBC_U64_PSEUDO : SPseudoInstSI <(outs SReg_64:$vdst, SReg_64:$sdst),
-                                       (ins SSrc_b64:$src0, SSrc_b64:$src1)>;
+def S_ADD_U64_CO_PSEUDO : SPseudoInstSI <
+  (outs SReg_64:$vdst, VOPDstS64:$sdst), (ins SSrc_b64:$src0, SSrc_b64:$src1)
+>;
+
+def S_SUB_U64_CO_PSEUDO : SPseudoInstSI <
+  (outs SReg_64:$vdst, VOPDstS64:$sdst), (ins SSrc_b64:$src0, SSrc_b64:$src1)
+>;
+
 } // End usesCustomInserter = 1, Defs = [SCC]
 
 let usesCustomInserter = 1, SALU = 1 in {

@@ -9,10 +9,10 @@
 // Replace sequences of "narrow" stores to adjacent memory locations with
 // a fewer "wide" stores that have the same effect.
 // For example, replace:
-//   S4_storeirb_io  %vreg100, 0, 0   ; store-immediate-byte
-//   S4_storeirb_io  %vreg100, 1, 0   ; store-immediate-byte
+//   S4_storeirb_io  %100, 0, 0   ; store-immediate-byte
+//   S4_storeirb_io  %100, 1, 0   ; store-immediate-byte
 // with
-//   S4_storeirh_io  %vreg100, 0, 0   ; store-immediate-halfword
+//   S4_storeirh_io  %100, 0, 0   ; store-immediate-halfword
 // The above is the general idea.  The actual cases handled by the code
 // may be a bit more complex.
 // The purpose of this pass is to reduce the number of outstanding stores,

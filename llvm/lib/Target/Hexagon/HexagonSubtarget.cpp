@@ -92,7 +92,7 @@ static cl::opt<bool> EnableCheckBankConflict("hexagon-check-bank-conflict",
 
 HexagonSubtarget::HexagonSubtarget(const Triple &TT, StringRef CPU,
                                    StringRef FS, const TargetMachine &TM)
-    : HexagonGenSubtargetInfo(TT, CPU, FS),
+    : HexagonGenSubtargetInfo(TT, CPU, FS), OptLevel(TM.getOptLevel()),
       CPUString(Hexagon_MC::selectHexagonCPU(TT, CPU)),
       InstrInfo(initializeSubtargetDependencies(CPU, FS)),
       RegInfo(getHwMode()), TLInfo(TM, *this),
@@ -223,8 +223,8 @@ void HexagonSubtarget::CallMutation::apply(ScheduleDAGInstrs *DAG) {
     // both the return value and the argument for the next call being in %r0.
     // Example:
     //   1: <call1>
-    //   2: %vregX = COPY %r0
-    //   3: <use of %vregX>
+    //   2: %vreg = COPY %r0
+    //   3: <use of %vreg>
     //   4: %r0 = ...
     //   5: <call2>
     // The scheduler would often swap 3 and 4, so an additional register is
@@ -234,12 +234,12 @@ void HexagonSubtarget::CallMutation::apply(ScheduleDAGInstrs *DAG) {
       const MachineInstr *MI = DAG->SUnits[su].getInstr();
       if (MI->isCopy() && (MI->readsRegister(Hexagon::R0, &TRI) ||
                            MI->readsRegister(Hexagon::V0, &TRI)))  {
-        // %vregX = COPY %r0
+        // %vreg = COPY %r0
         VRegHoldingRet = MI->getOperand(0).getReg();
         RetRegister = MI->getOperand(1).getReg();
         LastUseOfRet = nullptr;
       } else if (VRegHoldingRet && MI->readsVirtualRegister(VRegHoldingRet))
-        // <use of %vregX>
+        // <use of %X>
         LastUseOfRet = &DAG->SUnits[su];
       else if (LastUseOfRet && MI->definesRegister(RetRegister, &TRI))
         // %r0 = ...
@@ -292,6 +292,14 @@ void HexagonSubtarget::BankConflictMutation::apply(ScheduleDAGInstrs *DAG) {
       S1.addPred(A, true);
     }
   }
+}
+
+/// \brief Enable use of alias analysis during code generation (during MI
+/// scheduling, DAGCombine, etc.).
+bool HexagonSubtarget::useAA() const {
+  if (OptLevel != CodeGenOpt::None)
+    return true;
+  return false;
 }
 
 /// \brief Perform target specific adjustments to the latency of a schedule
