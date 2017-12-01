@@ -35,7 +35,7 @@ entry:
 
 define zeroext i8 @test_ext_i8(i8 %x) {
 ; CHECK-LABEL: test_ext_i8:
-; CHECK: and r0, r0, #255
+; CHECK: uxtb r0, r0
 ; CHECK: bx lr
 
 entry:
