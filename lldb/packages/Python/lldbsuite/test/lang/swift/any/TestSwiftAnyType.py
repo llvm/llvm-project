@@ -25,7 +25,7 @@ class TestSwiftAnyType(lldbtest.TestBase):
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
-    @expectedFailureAll(oslist=["linux"], bugnumber="rdar://35671239")
+    @decorators.expectedFailureAll(oslist=["linux"], bugnumber="rdar://35671239")
     def test_any_type(self):
         """Test the Any type"""
         self.build()
