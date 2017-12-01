@@ -357,12 +357,16 @@ void DWARFContext::dump(
       // Verbose dumping is done during parsing and not on the intermediate
       // representation.
       OS << "debug_line[" << format("0x%8.8x", Offset) << "]\n";
+      unsigned OldOffset = Offset;
       if (DumpOpts.Verbose) {
         LineTable.parse(LineData, &Offset, U, &OS);
       } else {
         LineTable.parse(LineData, &Offset, U);
         LineTable.dump(OS);
       }
+      // Check for unparseable prologue, to avoid infinite loops.
+      if (OldOffset == Offset)
+        break;
     }
   }
 

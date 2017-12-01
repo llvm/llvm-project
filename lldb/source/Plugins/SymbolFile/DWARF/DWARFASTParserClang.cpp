@@ -786,7 +786,17 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
                   m_ast.ParseClassTemplateDecl(decl_ctx, accessibility,
                                                type_name_cstr, tag_decl_kind,
                                                template_param_infos);
-
+              if (!class_template_decl) {
+                if (log) {
+                  dwarf->GetObjectFile()->GetModule()->LogMessage(
+                    log, "SymbolFileDWARF(%p) - 0x%8.8x: %s type \"%s\" "
+                         "clang::ClassTemplateDecl failed to return a decl.",
+                    static_cast<void *>(this), die.GetOffset(),
+                    DW_TAG_value_to_name(tag), type_name_cstr);
+                }
+                return TypeSP();
+              }
+                
               clang::ClassTemplateSpecializationDecl
                   *class_specialization_decl =
                       m_ast.CreateClassTemplateSpecializationDecl(

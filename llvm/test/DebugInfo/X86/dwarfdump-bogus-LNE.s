@@ -150,3 +150,100 @@ LT2_end:
 
 # ERR:      Unexpected line op length at offset 0x0000005e
 # ERR-SAME: expected 0x02 found 0x01
+
+# The above parsing errors still let us move to the next unit.
+# If the prologue is bogus, we need to bail out because we can't
+# even find the next unit.
+
+# DWARF v4 line-table header #3.
+LT3_start:
+        .long   LT3_end-LT3_version   # Length of Unit (DWARF-32 format)
+LT3_version:
+        .short  4               # DWARF version number
+        .long   LT3_header_end-LT3_params   # Length of Prologue
+LT3_params:
+        .byte   1               # Minimum Instruction Length
+        .byte   1               # Maximum Operations per Instruction
+        .byte   1               # Default is_stmt
+        .byte   -5              # Line Base
+        .byte   14              # Line Range
+        .byte   13              # Opcode Base
+        .byte   0               # Standard Opcode Lengths
+        .byte   1
+        .byte   1
+        .byte   1
+        .byte   1
+        .byte   0
+        .byte   0
+        .byte   0
+        .byte   1
+        .byte   0
+        .byte   0
+        .byte   1
+        # No directories.
+        .byte   0
+        # No files.
+        .byte   0
+        # Extra junk at the end of the prologue, so the length isn't right.
+        .long   0
+LT3_header_end:
+        # Real opcode and operand.
+        .byte   0
+        .byte   9
+        .byte   2               # DW_LNE_set_address
+        .quad   .text
+        # Real opcode with incorrect length.
+        .byte   0
+        .byte   2               # Wrong length, should be 1.
+        .byte   1               # DW_LNE_end_sequence
+LT3_end:
+
+# We should have bailed out above, so never see this in the dump.
+# DWARF v4 line-table header #4.
+LT4_start:
+        .long   LT4_end-LT4_version   # Length of Unit (DWARF-32 format)
+LT4_version:
+        .short  4               # DWARF version number
+        .long   LT4_header_end-LT4_params   # Length of Prologue
+LT4_params:
+        .byte   1               # Minimum Instruction Length
+        .byte   1               # Maximum Operations per Instruction
+        .byte   1               # Default is_stmt
+        .byte   -5              # Line Base
+        .byte   14              # Line Range
+        .byte   13              # Opcode Base
+        .byte   0               # Standard Opcode Lengths
+        .byte   1
+        .byte   1
+        .byte   1
+        .byte   1
+        .byte   0
+        .byte   0
+        .byte   0
+        .byte   1
+        .byte   0
+        .byte   0
+        .byte   1
+        # No directories.
+        .byte   0
+        # No files.
+        .byte   0
+LT4_header_end:
+        # Real opcode and operand.
+        .byte   0
+        .byte   9
+        .byte   2               # DW_LNE_set_address
+        .quad   .text
+        # Real opcode with correct length.
+        .byte   0
+        .byte   1
+        .byte   1               # DW_LNE_end_sequence
+LT4_end:
+
+# Look for the dump of unit 3, and don't want unit 4.
+# CHECK:     Line table prologue:
+# CHECK-NOT: Line table prologue:
+
+# And look for the error message.
+# ERR:      warning: parsing line table prologue at 0x0000005f should have
+# ERR-SAME: ended at 0x00000081 but it ended at 0x0000007d

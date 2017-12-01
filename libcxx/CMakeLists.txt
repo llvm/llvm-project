@@ -684,6 +684,7 @@ if (LIBCXX_INCLUDE_TESTS)
 endif()
 
 if (LIBCXX_STANDALONE_BUILD AND EXISTS "${LLVM_MAIN_SRC_DIR}/utils/llvm-lit")
+  include(AddLLVM) # for get_llvm_lit_path
   # Make sure the llvm-lit script is generated into the bin directory, and do
   # it after adding all tests, since the generated script will only work
   # correctly discovered tests against test locations from the source tree that

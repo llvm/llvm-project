@@ -285,12 +285,15 @@ void test_firstprivate() {
     ;
 
   int x, y, z;
+// expected-error@+1 {{lastprivate variable cannot be firstprivate}} expected-note@+1 {{defined as lastprivate}}
 #pragma omp target teams distribute parallel for simd lastprivate(x) firstprivate(x)
   for (i = 0; i < 16; ++i)
     ;
+// expected-error@+1 2 {{lastprivate variable cannot be firstprivate}} expected-note@+1 2 {{defined as lastprivate}}
 #pragma omp target teams distribute parallel for simd lastprivate(x, y) firstprivate(x, y)
   for (i = 0; i < 16; ++i)
     ;
+// expected-error@+1 3 {{lastprivate variable cannot be firstprivate}} expected-note@+1 3 {{defined as lastprivate}}
 #pragma omp target teams distribute parallel for simd lastprivate(x, y, z) firstprivate(x, y, z)
   for (i = 0; i < 16; ++i)
     ;

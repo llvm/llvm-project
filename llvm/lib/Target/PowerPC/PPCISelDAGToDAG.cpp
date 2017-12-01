@@ -106,7 +106,7 @@ enum ICmpInGPRType { ICGPR_All, ICGPR_None, ICGPR_I32, ICGPR_I64,
   ICGPR_SextI32, ICGPR_ZextI64, ICGPR_SextI64 };
 
 static cl::opt<ICmpInGPRType> CmpInGPR(
-  "ppc-gpr-icmps", cl::Hidden, cl::init(ICGPR_None),
+  "ppc-gpr-icmps", cl::Hidden, cl::init(ICGPR_All),
   cl::desc("Specify the types of comparisons to emit GPR-only code for."),
   cl::values(clEnumValN(ICGPR_None, "none", "Do not modify integer comparisons."),
              clEnumValN(ICGPR_All, "all", "All possible int comparisons in GPRs."),

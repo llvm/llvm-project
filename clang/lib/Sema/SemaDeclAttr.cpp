@@ -3067,12 +3067,6 @@ static void handleTargetAttr(Sema &S, Decl *D, const AttributeList &Attr) {
 }
 
 static void handleCleanupAttr(Sema &S, Decl *D, const AttributeList &Attr) {
-  VarDecl *VD = cast<VarDecl>(D);
-  if (!VD->hasLocalStorage()) {
-    S.Diag(Attr.getLoc(), diag::warn_attribute_ignored) << Attr.getName();
-    return;
-  }
-
   Expr *E = Attr.getArgAsExpr(0);
   SourceLocation Loc = E->getExprLoc();
   FunctionDecl *FD = nullptr;
@@ -3115,7 +3109,7 @@ static void handleCleanupAttr(Sema &S, Decl *D, const AttributeList &Attr) {
 
   // We're currently more strict than GCC about what function types we accept.
   // If this ever proves to be a problem it should be easy to fix.
-  QualType Ty = S.Context.getPointerType(VD->getType());
+  QualType Ty = S.Context.getPointerType(cast<VarDecl>(D)->getType());
   QualType ParamTy = FD->getParamDecl(0)->getType();
   if (S.CheckAssignmentConstraints(FD->getParamDecl(0)->getLocation(),
                                    ParamTy, Ty) != Sema::Compatible) {
