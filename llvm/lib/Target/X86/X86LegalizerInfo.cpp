@@ -90,6 +90,7 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
   const LLT s8 = LLT::scalar(8);
   const LLT s16 = LLT::scalar(16);
   const LLT s32 = LLT::scalar(32);
+  const LLT s64 = LLT::scalar(64);
 
   for (auto Ty : {p0, s1, s8, s16, s32})
     setAction({G_IMPLICIT_DEF, Ty}, Legal);
@@ -140,6 +141,16 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
 
   for (auto Ty : {s8, s16, s32, p0})
     setAction({G_ICMP, 1, Ty}, Legal);
+
+  // Merge/Unmerge
+  for (const auto &Ty : {s16, s32, s64}) {
+    setAction({G_MERGE_VALUES, Ty}, Legal);
+    setAction({G_UNMERGE_VALUES, 1, Ty}, Legal);
+  }
+  for (const auto &Ty : {s8, s16, s32}) {
+    setAction({G_MERGE_VALUES, 1, Ty}, Legal);
+    setAction({G_UNMERGE_VALUES, Ty}, Legal);
+  }
 }
 
 void X86LegalizerInfo::setLegalizerInfo64bit() {
@@ -148,6 +159,7 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
     return;
 
   const LLT s64 = LLT::scalar(64);
+  const LLT s128 = LLT::scalar(128);
 
   setAction({G_IMPLICIT_DEF, s64}, Legal);
 
@@ -172,6 +184,12 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
 
   // Comparison
   setAction({G_ICMP, 1, s64}, Legal);
+
+  // Merge/Unmerge
+  setAction({G_MERGE_VALUES, s128}, Legal);
+  setAction({G_UNMERGE_VALUES, 1, s128}, Legal);
+  setAction({G_MERGE_VALUES, 1, s128}, Legal);
+  setAction({G_UNMERGE_VALUES, s128}, Legal);
 }
 
 void X86LegalizerInfo::setLegalizerInfoSSE1() {
@@ -179,6 +197,7 @@ void X86LegalizerInfo::setLegalizerInfoSSE1() {
     return;
 
   const LLT s32 = LLT::scalar(32);
+  const LLT s64 = LLT::scalar(64);
   const LLT v4s32 = LLT::vector(4, 32);
   const LLT v2s64 = LLT::vector(2, 64);
 
@@ -192,6 +211,14 @@ void X86LegalizerInfo::setLegalizerInfoSSE1() {
 
   // Constants
   setAction({TargetOpcode::G_FCONSTANT, s32}, Legal);
+
+  // Merge/Unmerge
+  for (const auto &Ty : {v4s32, v2s64}) {
+    setAction({G_MERGE_VALUES, Ty}, Legal);
+    setAction({G_UNMERGE_VALUES, 1, Ty}, Legal);
+  }
+  setAction({G_MERGE_VALUES, 1, s64}, Legal);
+  setAction({G_UNMERGE_VALUES, s64}, Legal);
 }
 
 void X86LegalizerInfo::setLegalizerInfoSSE2() {
@@ -204,6 +231,11 @@ void X86LegalizerInfo::setLegalizerInfoSSE2() {
   const LLT v8s16 = LLT::vector(8, 16);
   const LLT v4s32 = LLT::vector(4, 32);
   const LLT v2s64 = LLT::vector(2, 64);
+
+  const LLT v32s8 = LLT::vector(32, 8);
+  const LLT v16s16 = LLT::vector(16, 16);
+  const LLT v8s32 = LLT::vector(8, 32);
+  const LLT v4s64 = LLT::vector(4, 64);
 
   for (unsigned BinOp : {G_FADD, G_FSUB, G_FMUL, G_FDIV})
     for (auto Ty : {s64, v2s64})
@@ -220,6 +252,17 @@ void X86LegalizerInfo::setLegalizerInfoSSE2() {
 
   // Constants
   setAction({TargetOpcode::G_FCONSTANT, s64}, Legal);
+
+  // Merge/Unmerge
+  for (const auto &Ty :
+       {v16s8, v32s8, v8s16, v16s16, v4s32, v8s32, v2s64, v4s64}) {
+    setAction({G_MERGE_VALUES, Ty}, Legal);
+    setAction({G_UNMERGE_VALUES, 1, Ty}, Legal);
+  }
+  for (const auto &Ty : {v16s8, v8s16, v4s32, v2s64}) {
+    setAction({G_MERGE_VALUES, 1, Ty}, Legal);
+    setAction({G_UNMERGE_VALUES, Ty}, Legal);
+  }
 }
 
 void X86LegalizerInfo::setLegalizerInfoSSE41() {
@@ -241,9 +284,13 @@ void X86LegalizerInfo::setLegalizerInfoAVX() {
   const LLT v2s64 = LLT::vector(2, 64);
 
   const LLT v32s8 = LLT::vector(32, 8);
+  const LLT v64s8 = LLT::vector(64, 8);
   const LLT v16s16 = LLT::vector(16, 16);
+  const LLT v32s16 = LLT::vector(32, 16);
   const LLT v8s32 = LLT::vector(8, 32);
+  const LLT v16s32 = LLT::vector(16, 32);
   const LLT v4s64 = LLT::vector(4, 64);
+  const LLT v8s64 = LLT::vector(8, 64);
 
   for (unsigned MemOp : {G_LOAD, G_STORE})
     for (auto Ty : {v8s32, v4s64})
@@ -257,6 +304,17 @@ void X86LegalizerInfo::setLegalizerInfoAVX() {
     setAction({G_INSERT, 1, Ty}, Legal);
     setAction({G_EXTRACT, Ty}, Legal);
   }
+  // Merge/Unmerge
+  for (const auto &Ty :
+       {v32s8, v64s8, v16s16, v32s16, v8s32, v16s32, v4s64, v8s64}) {
+    setAction({G_MERGE_VALUES, Ty}, Legal);
+    setAction({G_UNMERGE_VALUES, 1, Ty}, Legal);
+  }
+  for (const auto &Ty :
+       {v16s8, v32s8, v8s16, v16s16, v4s32, v8s32, v2s64, v4s64}) {
+    setAction({G_MERGE_VALUES, 1, Ty}, Legal);
+    setAction({G_UNMERGE_VALUES, Ty}, Legal);
+  }
 }
 
 void X86LegalizerInfo::setLegalizerInfoAVX2() {
@@ -268,12 +326,27 @@ void X86LegalizerInfo::setLegalizerInfoAVX2() {
   const LLT v8s32 = LLT::vector(8, 32);
   const LLT v4s64 = LLT::vector(4, 64);
 
+  const LLT v64s8 = LLT::vector(64, 8);
+  const LLT v32s16 = LLT::vector(32, 16);
+  const LLT v16s32 = LLT::vector(16, 32);
+  const LLT v8s64 = LLT::vector(8, 64);
+
   for (unsigned BinOp : {G_ADD, G_SUB})
     for (auto Ty : {v32s8, v16s16, v8s32, v4s64})
       setAction({BinOp, Ty}, Legal);
 
   for (auto Ty : {v16s16, v8s32})
     setAction({G_MUL, Ty}, Legal);
+
+  // Merge/Unmerge
+  for (const auto &Ty : {v64s8, v32s16, v16s32, v8s64}) {
+    setAction({G_MERGE_VALUES, Ty}, Legal);
+    setAction({G_UNMERGE_VALUES, 1, Ty}, Legal);
+  }
+  for (const auto &Ty : {v32s8, v16s16, v8s32, v4s64}) {
+    setAction({G_MERGE_VALUES, 1, Ty}, Legal);
+    setAction({G_UNMERGE_VALUES, Ty}, Legal);
+  }
 }
 
 void X86LegalizerInfo::setLegalizerInfoAVX512() {
