@@ -533,7 +533,7 @@ void LinkerScript::addOrphanSections() {
     if (!S->Live || S->Parent)
       continue;
 
-    StringRef Name = getOutputSectionName(S->Name);
+    StringRef Name = getOutputSectionName(S);
 
     if (Config->OrphanHandling == OrphanHandlingPolicy::Error)
       error(toString(S) + " is being placed in '" + Name + "'");

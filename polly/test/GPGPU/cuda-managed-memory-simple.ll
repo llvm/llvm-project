@@ -35,22 +35,22 @@
 ; CHECK-NOT: polly_freeDeviceMemory
 ; CHECK-NOT: polly_allocateMemoryForDevice
 
-; CHECK:       %13 = call i8* @polly_initContextCUDA()
-; CHECK-NEXT:  %14 = bitcast i32* %A to i8*
-; CHECK-NEXT:  %15 = bitcast i32* %R to i8*
-; CHECK-NEXT:  %16 = getelementptr [2 x i8*], [2 x i8*]* %polly_launch_0_params, i64 0, i64 0
-; CHECK-NEXT:  store i8* %14, i8** %polly_launch_0_param_0
-; CHECK-NEXT:  %17 = bitcast i8** %polly_launch_0_param_0 to i8*
-; CHECK-NEXT:  store i8* %17, i8** %16
-; CHECK-NEXT:  %18 = getelementptr [2 x i8*], [2 x i8*]* %polly_launch_0_params, i64 0, i64 1
-; CHECK-NEXT:  store i8* %15, i8** %polly_launch_0_param_1
-; CHECK-NEXT:  %19 = bitcast i8** %polly_launch_0_param_1 to i8*
-; CHECK-NEXT:  store i8* %19, i8** %18
-; CHECK-NEXT:  %20 = call i8* @polly_getKernel(i8* getelementptr inbounds ([852 x i8], [852 x i8]* @FUNC_copy_SCOP_0_KERNEL_0, i32 0, i32 0), i8* getelementptr inbounds ([26 x i8], [26 x i8]* @FUNC_copy_SCOP_0_KERNEL_0_name, i32 0, i32 0))
-; CHECK-NEXT:  call void @polly_launchKernel(i8* %20, i32 2, i32 1, i32 32, i32 1, i32 1, i8* %polly_launch_0_params_i8ptr)
-; CHECK-NEXT:  call void @polly_freeKernel(i8* %20)
+; CHECK:       %[[REGCTX:[0-9]+]] = call i8* @polly_initContextCUDA()
+; CHECK-NEXT:  %[[REGCA:[0-9]+]] = bitcast i32* %A to i8*
+; CHECK-NEXT:  %[[REGCR:[0-9]+]] = bitcast i32* %R to i8*
+; CHECK-NEXT:  %[[REGGEP0:[0-9]+]] = getelementptr [2 x i8*], [2 x i8*]* %polly_launch_0_params, i64 0, i64 0
+; CHECK-NEXT:  store i8* %[[REGCA]], i8** %polly_launch_0_param_0
+; CHECK-NEXT:  %[[REGCP0:[0-9]+]] = bitcast i8** %polly_launch_0_param_0 to i8*
+; CHECK-NEXT:  store i8* %[[REGCP0]], i8** %[[REGGEP0]]
+; CHECK-NEXT:  %[[REGGEP1:[0-9]+]] = getelementptr [2 x i8*], [2 x i8*]* %polly_launch_0_params, i64 0, i64 1
+; CHECK-NEXT:  store i8* %[[REGCR]], i8** %polly_launch_0_param_1
+; CHECK-NEXT:  %[[REGCP1:[0-9]+]] = bitcast i8** %polly_launch_0_param_1 to i8*
+; CHECK-NEXT:  store i8* %[[REGCP1]], i8** %[[REGGEP1]]
+; CHECK-NEXT:  %[[REGKERNEL:[0-9]+]] = call i8* @polly_getKernel(i8* getelementptr inbounds ([852 x i8], [852 x i8]* @FUNC_copy_SCOP_0_KERNEL_0, i32 0, i32 0), i8* getelementptr inbounds ([26 x i8], [26 x i8]* @FUNC_copy_SCOP_0_KERNEL_0_name, i32 0, i32 0))
+; CHECK-NEXT:  call void @polly_launchKernel(i8* %[[REGKERNEL]], i32 2, i32 1, i32 32, i32 1, i32 1, i8* %polly_launch_0_params_i8ptr)
+; CHECK-NEXT:  call void @polly_freeKernel(i8* %[[REGKERNEL]])
 ; CHECK-NEXT:  call void @polly_synchronizeDevice()
-; CHECK-NEXT:  call void @polly_freeContext(i8* %13)
+; CHECK-NEXT:  call void @polly_freeContext(i8* %[[REGCTX]])
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
