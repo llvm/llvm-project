@@ -40,8 +40,8 @@ STATISTIC(NumNewQueued    , "Number of new live ranges queued");
 // Temporary verification option until we can put verification inside
 // MachineVerifier.
 static cl::opt<bool, true>
-VerifyRegAlloc("verify-regalloc", cl::location(RegAllocBase::VerifyEnabled),
-               cl::desc("Verify during register allocation"));
+    VerifyRegAlloc("verify-regalloc", cl::location(RegAllocBase::VerifyEnabled),
+                   cl::Hidden, cl::desc("Verify during register allocation"));
 
 const char RegAllocBase::TimerGroupName[] = "regalloc";
 const char RegAllocBase::TimerGroupDescription[] = "Register Allocation";

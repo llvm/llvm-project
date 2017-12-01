@@ -26,7 +26,7 @@ static bool VerifyMachineDomInfo = true;
 static bool VerifyMachineDomInfo = false;
 #endif
 static cl::opt<bool, true> VerifyMachineDomInfoX(
-    "verify-machine-dom-info", cl::location(VerifyMachineDomInfo),
+    "verify-machine-dom-info", cl::location(VerifyMachineDomInfo), cl::Hidden,
     cl::desc("Verify machine dominator info (time consuming)"));
 
 namespace llvm {

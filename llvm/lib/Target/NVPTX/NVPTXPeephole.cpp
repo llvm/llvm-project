@@ -22,11 +22,11 @@
 // This peephole pass optimizes these cases, for example
 //
 // It will transform the following pattern
-//    %vreg0<def> = LEA_ADDRi64 %VRFrame, 4
-//    %vreg1<def> = cvta_to_local_yes_64 %vreg0
+//    %0<def> = LEA_ADDRi64 %VRFrame, 4
+//    %1<def> = cvta_to_local_yes_64 %0
 //
 // into
-//    %vreg1<def> = LEA_ADDRi64 %VRFrameLocal, 4
+//    %1<def> = LEA_ADDRi64 %VRFrameLocal, 4
 //
 // %VRFrameLocal is the virtual register name of %SPL
 //

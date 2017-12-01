@@ -81,13 +81,13 @@ body:             |
     ; CHECK: [[VREGTRUNC:%[0-9]+]]:gpr = COPY [[VREG]]
 
     %2(s32) = G_ZEXT %1(s1)
-    ; CHECK: [[VREGEXT:%[0-9]+]]:gpr = ANDri [[VREGTRUNC]], 1, 14, _, _
+    ; CHECK: [[VREGEXT:%[0-9]+]]:gpr = ANDri [[VREGTRUNC]], 1, 14, %noreg, %noreg
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGEXT]]
 
-    BX_RET 14, _, implicit %r0
-    ; CHECK: BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_trunc_and_sext_s1
@@ -111,14 +111,14 @@ body:             |
     ; CHECK: [[VREGTRUNC:%[0-9]+]]:gpr = COPY [[VREG]]
 
     %2(s32) = G_SEXT %1(s1)
-    ; CHECK: [[VREGAND:%[0-9]+]]:gpr = ANDri [[VREGTRUNC]], 1, 14, _, _
-    ; CHECK: [[VREGEXT:%[0-9]+]]:gpr = RSBri [[VREGAND]], 0, 14, _, _
+    ; CHECK: [[VREGAND:%[0-9]+]]:gpr = ANDri [[VREGTRUNC]], 1, 14, %noreg, %noreg
+    ; CHECK: [[VREGEXT:%[0-9]+]]:gpr = RSBri [[VREGAND]], 0, 14, %noreg, %noreg
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGEXT]]
 
-    BX_RET 14, _, implicit %r0
-    ; CHECK: BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_trunc_and_sext_s8
@@ -142,13 +142,13 @@ body:             |
     ; CHECK: [[VREGTRUNC:%[0-9]+]]:gprnopc = COPY [[VREG]]
 
     %2(s32) = G_SEXT %1(s8)
-    ; CHECK: [[VREGEXT:%[0-9]+]]:gprnopc = SXTB [[VREGTRUNC]], 0, 14, _
+    ; CHECK: [[VREGEXT:%[0-9]+]]:gprnopc = SXTB [[VREGTRUNC]], 0, 14, %noreg
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGEXT]]
 
-    BX_RET 14, _, implicit %r0
-    ; CHECK: BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_trunc_and_zext_s16
@@ -172,13 +172,13 @@ body:             |
     ; CHECK: [[VREGTRUNC:%[0-9]+]]:gprnopc = COPY [[VREG]]
 
     %2(s32) = G_ZEXT %1(s16)
-    ; CHECK: [[VREGEXT:%[0-9]+]]:gprnopc = UXTH [[VREGTRUNC]], 0, 14, _
+    ; CHECK: [[VREGEXT:%[0-9]+]]:gprnopc = UXTH [[VREGTRUNC]], 0, 14, %noreg
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGEXT]]
 
-    BX_RET 14, _, implicit %r0
-    ; CHECK: BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_trunc_and_anyext_s8
@@ -207,8 +207,8 @@ body:             |
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGEXT]]
 
-    BX_RET 14, _, implicit %r0
-    ; CHECK: BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_trunc_and_anyext_s16
@@ -237,8 +237,8 @@ body:             |
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGEXT]]
 
-    BX_RET 14, _, implicit %r0
-    ; CHECK: BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_add_s32
@@ -262,13 +262,13 @@ body:             |
     ; CHECK: [[VREGY:%[0-9]+]]:gpr = COPY %r1
 
     %2(s32) = G_ADD %0, %1
-    ; CHECK: [[VREGSUM:%[0-9]+]]:gpr = ADDrr [[VREGX]], [[VREGY]], 14, _, _
+    ; CHECK: [[VREGSUM:%[0-9]+]]:gpr = ADDrr [[VREGX]], [[VREGY]], 14, %noreg, %noreg
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGSUM]]
 
-    BX_RET 14, _, implicit %r0
-    ; CHECK: BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_add_fold_imm_s32
@@ -290,13 +290,13 @@ body:             |
 
     %1(s32) = G_CONSTANT i32 255
     %2(s32) = G_ADD %0, %1
-    ; CHECK: [[VREGSUM:%[0-9]+]]:gpr = ADDri [[VREGX]], 255, 14, _, _
+    ; CHECK: [[VREGSUM:%[0-9]+]]:gpr = ADDri [[VREGX]], 255, 14, %noreg, %noreg
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGSUM]]
 
-    BX_RET 14, _, implicit %r0
-    ; CHECK: BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_add_no_fold_imm_s32
@@ -317,16 +317,16 @@ body:             |
     ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY %r0
 
     %1(s32) = G_CONSTANT i32 65535
-    ; CHECK: [[VREGY:%[0-9]+]]:gpr = MOVi16 65535, 14, _
+    ; CHECK: [[VREGY:%[0-9]+]]:gpr = MOVi16 65535, 14, %noreg
 
     %2(s32) = G_ADD %0, %1
-    ; CHECK: [[VREGSUM:%[0-9]+]]:gpr = ADDrr [[VREGX]], [[VREGY]], 14, _, _
+    ; CHECK: [[VREGSUM:%[0-9]+]]:gpr = ADDrr [[VREGX]], [[VREGY]], 14, %noreg, %noreg
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGSUM]]
 
-    BX_RET 14, _, implicit %r0
-    ; CHECK: BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_fadd_s32
@@ -350,13 +350,13 @@ body:             |
     ; CHECK: [[VREGY:%[0-9]+]]:spr = COPY %s1
 
     %2(s32) = G_FADD %0, %1
-    ; CHECK: [[VREGSUM:%[0-9]+]]:spr = VADDS [[VREGX]], [[VREGY]], 14, _
+    ; CHECK: [[VREGSUM:%[0-9]+]]:spr = VADDS [[VREGX]], [[VREGY]], 14, %noreg
 
     %s0 = COPY %2(s32)
     ; CHECK: %s0 = COPY [[VREGSUM]]
 
-    BX_RET 14, _, implicit %s0
-    ; CHECK: BX_RET 14, _, implicit %s0
+    BX_RET 14, %noreg, implicit %s0
+    ; CHECK: BX_RET 14, %noreg, implicit %s0
 ...
 ---
 name:            test_fadd_s64
@@ -380,13 +380,13 @@ body:             |
     ; CHECK: [[VREGY:%[0-9]+]]:dpr = COPY %d1
 
     %2(s64) = G_FADD %0, %1
-    ; CHECK: [[VREGSUM:%[0-9]+]]:dpr = VADDD [[VREGX]], [[VREGY]], 14, _
+    ; CHECK: [[VREGSUM:%[0-9]+]]:dpr = VADDD [[VREGX]], [[VREGY]], 14, %noreg
 
     %d0 = COPY %2(s64)
     ; CHECK: %d0 = COPY [[VREGSUM]]
 
-    BX_RET 14, _, implicit %d0
-    ; CHECK: BX_RET 14, _, implicit %d0
+    BX_RET 14, %noreg, implicit %d0
+    ; CHECK: BX_RET 14, %noreg, implicit %d0
 ...
 ---
 name:            test_fsub_s32
@@ -410,13 +410,13 @@ body:             |
     ; CHECK: [[VREGY:%[0-9]+]]:spr = COPY %s1
 
     %2(s32) = G_FSUB %0, %1
-    ; CHECK: [[VREGSUM:%[0-9]+]]:spr = VSUBS [[VREGX]], [[VREGY]], 14, _
+    ; CHECK: [[VREGSUM:%[0-9]+]]:spr = VSUBS [[VREGX]], [[VREGY]], 14, %noreg
 
     %s0 = COPY %2(s32)
     ; CHECK: %s0 = COPY [[VREGSUM]]
 
-    BX_RET 14, _, implicit %s0
-    ; CHECK: BX_RET 14, _, implicit %s0
+    BX_RET 14, %noreg, implicit %s0
+    ; CHECK: BX_RET 14, %noreg, implicit %s0
 ...
 ---
 name:            test_fsub_s64
@@ -440,13 +440,13 @@ body:             |
     ; CHECK: [[VREGY:%[0-9]+]]:dpr = COPY %d1
 
     %2(s64) = G_FSUB %0, %1
-    ; CHECK: [[VREGSUM:%[0-9]+]]:dpr = VSUBD [[VREGX]], [[VREGY]], 14, _
+    ; CHECK: [[VREGSUM:%[0-9]+]]:dpr = VSUBD [[VREGX]], [[VREGY]], 14, %noreg
 
     %d0 = COPY %2(s64)
     ; CHECK: %d0 = COPY [[VREGSUM]]
 
-    BX_RET 14, _, implicit %d0
-    ; CHECK: BX_RET 14, _, implicit %d0
+    BX_RET 14, %noreg, implicit %d0
+    ; CHECK: BX_RET 14, %noreg, implicit %d0
 ...
 ---
 name:            test_fmul_s32
@@ -470,13 +470,13 @@ body:             |
     ; CHECK: [[VREGY:%[0-9]+]]:spr = COPY %s1
 
     %2(s32) = G_FMUL %0, %1
-    ; CHECK: [[VREGSUM:%[0-9]+]]:spr = VMULS [[VREGX]], [[VREGY]], 14, _
+    ; CHECK: [[VREGSUM:%[0-9]+]]:spr = VMULS [[VREGX]], [[VREGY]], 14, %noreg
 
     %s0 = COPY %2(s32)
     ; CHECK: %s0 = COPY [[VREGSUM]]
 
-    BX_RET 14, _, implicit %s0
-    ; CHECK: BX_RET 14, _, implicit %s0
+    BX_RET 14, %noreg, implicit %s0
+    ; CHECK: BX_RET 14, %noreg, implicit %s0
 ...
 ---
 name:            test_fmul_s64
@@ -500,13 +500,13 @@ body:             |
     ; CHECK: [[VREGY:%[0-9]+]]:dpr = COPY %d1
 
     %2(s64) = G_FMUL %0, %1
-    ; CHECK: [[VREGSUM:%[0-9]+]]:dpr = VMULD [[VREGX]], [[VREGY]], 14, _
+    ; CHECK: [[VREGSUM:%[0-9]+]]:dpr = VMULD [[VREGX]], [[VREGY]], 14, %noreg
 
     %d0 = COPY %2(s64)
     ; CHECK: %d0 = COPY [[VREGSUM]]
 
-    BX_RET 14, _, implicit %d0
-    ; CHECK: BX_RET 14, _, implicit %d0
+    BX_RET 14, %noreg, implicit %d0
+    ; CHECK: BX_RET 14, %noreg, implicit %d0
 ...
 ---
 name:            test_fdiv_s32
@@ -530,13 +530,13 @@ body:             |
     ; CHECK: [[VREGY:%[0-9]+]]:spr = COPY %s1
 
     %2(s32) = G_FDIV %0, %1
-    ; CHECK: [[VREGSUM:%[0-9]+]]:spr = VDIVS [[VREGX]], [[VREGY]], 14, _
+    ; CHECK: [[VREGSUM:%[0-9]+]]:spr = VDIVS [[VREGX]], [[VREGY]], 14, %noreg
 
     %s0 = COPY %2(s32)
     ; CHECK: %s0 = COPY [[VREGSUM]]
 
-    BX_RET 14, _, implicit %s0
-    ; CHECK: BX_RET 14, _, implicit %s0
+    BX_RET 14, %noreg, implicit %s0
+    ; CHECK: BX_RET 14, %noreg, implicit %s0
 ...
 ---
 name:            test_fdiv_s64
@@ -560,13 +560,13 @@ body:             |
     ; CHECK: [[VREGY:%[0-9]+]]:dpr = COPY %d1
 
     %2(s64) = G_FDIV %0, %1
-    ; CHECK: [[VREGSUM:%[0-9]+]]:dpr = VDIVD [[VREGX]], [[VREGY]], 14, _
+    ; CHECK: [[VREGSUM:%[0-9]+]]:dpr = VDIVD [[VREGX]], [[VREGY]], 14, %noreg
 
     %d0 = COPY %2(s64)
     ; CHECK: %d0 = COPY [[VREGSUM]]
 
-    BX_RET 14, _, implicit %d0
-    ; CHECK: BX_RET 14, _, implicit %d0
+    BX_RET 14, %noreg, implicit %d0
+    ; CHECK: BX_RET 14, %noreg, implicit %d0
 ...
 ---
 name:            test_sub_s32
@@ -590,13 +590,13 @@ body:             |
     ; CHECK: [[VREGY:%[0-9]+]]:gpr = COPY %r1
 
     %2(s32) = G_SUB %0, %1
-    ; CHECK: [[VREGRES:%[0-9]+]]:gpr = SUBrr [[VREGX]], [[VREGY]], 14, _, _
+    ; CHECK: [[VREGRES:%[0-9]+]]:gpr = SUBrr [[VREGX]], [[VREGY]], 14, %noreg, %noreg
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGRES]]
 
-    BX_RET 14, _, implicit %r0
-    ; CHECK: BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_sub_imm_s32
@@ -618,13 +618,13 @@ body:             |
 
     %1(s32) = G_CONSTANT i32 17
     %2(s32) = G_SUB %0, %1
-    ; CHECK: [[VREGRES:%[0-9]+]]:gpr = SUBri [[VREGX]], 17, 14, _, _
+    ; CHECK: [[VREGRES:%[0-9]+]]:gpr = SUBri [[VREGX]], 17, 14, %noreg, %noreg
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGRES]]
 
-    BX_RET 14, _, implicit %r0
-    ; CHECK: BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_sub_rev_imm_s32
@@ -646,13 +646,13 @@ body:             |
 
     %1(s32) = G_CONSTANT i32 17
     %2(s32) = G_SUB %1, %0
-    ; CHECK: [[VREGRES:%[0-9]+]]:gpr = RSBri [[VREGX]], 17, 14, _, _
+    ; CHECK: [[VREGRES:%[0-9]+]]:gpr = RSBri [[VREGX]], 17, 14, %noreg, %noreg
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGRES]]
 
-    BX_RET 14, _, implicit %r0
-    ; CHECK: BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_mul_s32
@@ -676,13 +676,13 @@ body:             |
     ; CHECK: [[VREGY:%[0-9]+]]:gprnopc = COPY %r1
 
     %2(s32) = G_MUL %0, %1
-    ; CHECK: [[VREGRES:%[0-9]+]]:gprnopc = MUL [[VREGX]], [[VREGY]], 14, _, _
+    ; CHECK: [[VREGRES:%[0-9]+]]:gprnopc = MUL [[VREGX]], [[VREGY]], 14, %noreg, %noreg
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGRES]]
 
-    BX_RET 14, _, implicit %r0
-    ; CHECK: BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_mulv5_s32
@@ -706,13 +706,13 @@ body:             |
     ; CHECK: [[VREGY:%[0-9]+]]:gprnopc = COPY %r1
 
     %2(s32) = G_MUL %0, %1
-    ; CHECK: early-clobber [[VREGRES:%[0-9]+]]:gprnopc = MULv5 [[VREGX]], [[VREGY]], 14, _, _
+    ; CHECK: early-clobber [[VREGRES:%[0-9]+]]:gprnopc = MULv5 [[VREGX]], [[VREGY]], 14, %noreg, %noreg
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGRES]]
 
-    BX_RET 14, _, implicit %r0
-    ; CHECK: BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_sdiv_s32
@@ -736,13 +736,13 @@ body:             |
     ; CHECK: [[VREGY:%[0-9]+]]:gpr = COPY %r1
 
     %2(s32) = G_SDIV %0, %1
-    ; CHECK: [[VREGRES:%[0-9]+]]:gpr = SDIV [[VREGX]], [[VREGY]], 14, _
+    ; CHECK: [[VREGRES:%[0-9]+]]:gpr = SDIV [[VREGX]], [[VREGY]], 14, %noreg
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGRES]]
 
-    BX_RET 14, _, implicit %r0
-    ; CHECK: BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_udiv_s32
@@ -766,13 +766,13 @@ body:             |
     ; CHECK: [[VREGY:%[0-9]+]]:gpr = COPY %r1
 
     %2(s32) = G_UDIV %0, %1
-    ; CHECK: [[VREGRES:%[0-9]+]]:gpr = UDIV [[VREGX]], [[VREGY]], 14, _
+    ; CHECK: [[VREGRES:%[0-9]+]]:gpr = UDIV [[VREGX]], [[VREGY]], 14, %noreg
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGRES]]
 
-    BX_RET 14, _, implicit %r0
-    ; CHECK: BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_lshr_s32
@@ -796,13 +796,13 @@ body:             |
     ; CHECK: [[VREGY:%[0-9]+]]:gpr = COPY %r1
 
     %2(s32) = G_LSHR %0, %1
-    ; CHECK: [[VREGRES:%[0-9]+]]:gprnopc = MOVsr [[VREGX]], [[VREGY]], 3, 14, _, _
+    ; CHECK: [[VREGRES:%[0-9]+]]:gprnopc = MOVsr [[VREGX]], [[VREGY]], 3, 14, %noreg, %noreg
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGRES]]
 
-    BX_RET 14, _, implicit %r0
-    ; CHECK: BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_ashr_s32
@@ -826,13 +826,13 @@ body:             |
     ; CHECK: [[VREGY:%[0-9]+]]:gpr = COPY %r1
 
     %2(s32) = G_ASHR %0, %1
-    ; CHECK: [[VREGRES:%[0-9]+]]:gprnopc = MOVsr [[VREGX]], [[VREGY]], 1, 14, _, _
+    ; CHECK: [[VREGRES:%[0-9]+]]:gprnopc = MOVsr [[VREGX]], [[VREGY]], 1, 14, %noreg, %noreg
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGRES]]
 
-    BX_RET 14, _, implicit %r0
-    ; CHECK: BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_shl_s32
@@ -856,13 +856,13 @@ body:             |
     ; CHECK: [[VREGY:%[0-9]+]]:gpr = COPY %r1
 
     %2(s32) = G_SHL %0, %1
-    ; CHECK: [[VREGRES:%[0-9]+]]:gprnopc = MOVsr [[VREGX]], [[VREGY]], 2, 14, _, _
+    ; CHECK: [[VREGRES:%[0-9]+]]:gprnopc = MOVsr [[VREGX]], [[VREGY]], 2, 14, %noreg, %noreg
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGRES]]
 
-    BX_RET 14, _, implicit %r0
-    ; CHECK: BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_load_from_stack
@@ -888,19 +888,19 @@ body:             |
     liveins: %r0, %r1, %r2, %r3
 
     %0(p0) = G_FRAME_INDEX %fixed-stack.2
-    ; CHECK: [[FI32VREG:%[0-9]+]]:gpr = ADDri %fixed-stack.[[FI32]], 0, 14, _, _
+    ; CHECK: [[FI32VREG:%[0-9]+]]:gpr = ADDri %fixed-stack.[[FI32]], 0, 14, %noreg, %noreg
 
     %1(s32) = G_LOAD %0(p0) :: (load 4)
-    ; CHECK: [[LD32VREG:%[0-9]+]]:gpr = LDRi12 [[FI32VREG]], 0, 14, _
+    ; CHECK: [[LD32VREG:%[0-9]+]]:gpr = LDRi12 [[FI32VREG]], 0, 14, %noreg
 
     %r0 = COPY %1
     ; CHECK: %r0 = COPY [[LD32VREG]]
 
     %2(p0) = G_FRAME_INDEX %fixed-stack.0
-    ; CHECK: [[FI1VREG:%[0-9]+]]:gpr = ADDri %fixed-stack.[[FI1]], 0, 14, _, _
+    ; CHECK: [[FI1VREG:%[0-9]+]]:gpr = ADDri %fixed-stack.[[FI1]], 0, 14, %noreg, %noreg
 
     %3(s1) = G_LOAD %2(p0) :: (load 1)
-    ; CHECK: [[LD1VREG:%[0-9]+]]:gprnopc = LDRBi12 [[FI1VREG]], 0, 14, _
+    ; CHECK: [[LD1VREG:%[0-9]+]]:gprnopc = LDRBi12 [[FI1VREG]], 0, 14, %noreg
 
     %4(s32) = G_ANYEXT %3(s1)
     ; CHECK: [[RES:%[0-9]+]]:gpr = COPY [[LD1VREG]]
@@ -908,8 +908,8 @@ body:             |
     %r0 = COPY %4
     ; CHECK: %r0 = COPY [[RES]]
 
-    BX_RET 14, _
-    ; CHECK: BX_RET 14, _
+    BX_RET 14, %noreg
+    ; CHECK: BX_RET 14, %noreg
 ...
 ---
 name:            test_load_f32
@@ -929,13 +929,13 @@ body:             |
     ; CHECK: %[[P:[0-9]+]]:gpr = COPY %r0
 
     %1(s32) = G_LOAD %0(p0) :: (load 4)
-    ; CHECK: %[[V:[0-9]+]]:spr = VLDRS %[[P]], 0, 14, _
+    ; CHECK: %[[V:[0-9]+]]:spr = VLDRS %[[P]], 0, 14, %noreg
 
     %s0 = COPY %1
     ; CHECK: %s0 = COPY %[[V]]
 
-    BX_RET 14, _, implicit %s0
-    ; CHECK: BX_RET 14, _, implicit %s0
+    BX_RET 14, %noreg, implicit %s0
+    ; CHECK: BX_RET 14, %noreg, implicit %s0
 ...
 ---
 name:            test_load_f64
@@ -955,13 +955,13 @@ body:             |
     ; CHECK: %[[P:[0-9]+]]:gpr = COPY %r0
 
     %1(s64) = G_LOAD %0(p0) :: (load 8)
-    ; CHECK: %[[V:[0-9]+]]:dpr = VLDRD %[[P]], 0, 14, _
+    ; CHECK: %[[V:[0-9]+]]:dpr = VLDRD %[[P]], 0, 14, %noreg
 
     %d0 = COPY %1
     ; CHECK: %d0 = COPY %[[V]]
 
-    BX_RET 14, _, implicit %d0
-    ; CHECK: BX_RET 14, _, implicit %d0
+    BX_RET 14, %noreg, implicit %d0
+    ; CHECK: BX_RET 14, %noreg, implicit %d0
 ...
 ---
 name:            test_stores
@@ -995,21 +995,21 @@ body:             |
     %2(s16) = G_TRUNC %3(s32)
 
     G_STORE %1(s8), %0(p0) :: (store 1)
-    ; CHECK: STRBi12 %[[I8]], %[[P]], 0, 14, _
+    ; CHECK: STRBi12 %[[I8]], %[[P]], 0, 14, %noreg
 
     G_STORE %2(s16), %0(p0) :: (store 2)
-    ; CHECK: STRH %[[I16]], %[[P]], _, 0, 14, _
+    ; CHECK: STRH %[[I16]], %[[P]], %noreg, 0, 14, %noreg
 
     G_STORE %3(s32), %0(p0) :: (store 4)
-    ; CHECK: STRi12 %[[I32]], %[[P]], 0, 14, _
+    ; CHECK: STRi12 %[[I32]], %[[P]], 0, 14, %noreg
 
     G_STORE %4(s32), %0(p0) :: (store 4)
-    ; CHECK: VSTRS %[[F32]], %[[P]], 0, 14, _
+    ; CHECK: VSTRS %[[F32]], %[[P]], 0, 14, %noreg
 
     G_STORE %5(s64), %0(p0) :: (store 8)
-    ; CHECK: VSTRD %[[F64]], %[[P]], 0, 14, _
+    ; CHECK: VSTRD %[[F64]], %[[P]], 0, 14, %noreg
 
-    BX_RET 14, _
+    BX_RET 14, %noreg
 ...
 ---
 name:            test_gep
@@ -1033,10 +1033,10 @@ body:             |
     ; CHECK: %[[OFF:[0-9]+]]:gpr = COPY %r1
 
     %2(p0) = G_GEP %0, %1(s32)
-    ; CHECK: %[[GEP:[0-9]+]]:gpr = ADDrr %[[PTR]], %[[OFF]], 14, _, _
+    ; CHECK: %[[GEP:[0-9]+]]:gpr = ADDrr %[[PTR]], %[[OFF]], 14, %noreg, %noreg
 
     %r0 = COPY %2(p0)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_constant_imm
@@ -1050,10 +1050,10 @@ registers:
 body:             |
   bb.0:
     %0(s32) = G_CONSTANT 42
-    ; CHECK: %[[C:[0-9]+]]:gpr = MOVi 42, 14, _, _
+    ; CHECK: %[[C:[0-9]+]]:gpr = MOVi 42, 14, %noreg, %noreg
 
     %r0 = COPY %0(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_constant_cimm
@@ -1069,10 +1069,10 @@ body:             |
     ; Adding a type on G_CONSTANT changes its operand from an Imm into a CImm.
     ; We still want to see the same thing in the output though.
     %0(s32) = G_CONSTANT i32 42
-    ; CHECK: %[[C:[0-9]+]]:gpr = MOVi 42, 14, _, _
+    ; CHECK: %[[C:[0-9]+]]:gpr = MOVi 42, 14, %noreg, %noreg
 
     %r0 = COPY %0(s32)
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_select_s32
@@ -1100,14 +1100,14 @@ body:             |
     ; CHECK: [[VREGC:%[0-9]+]]:gpr = COPY [[VREGY]]
 
     %3(s32) = G_SELECT %2(s1),  %0, %1
-    ; CHECK: CMPri [[VREGC]], 0, 14, _, implicit-def %cpsr
+    ; CHECK: CMPri [[VREGC]], 0, 14, %noreg, implicit-def %cpsr
     ; CHECK: [[RES:%[0-9]+]]:gpr = MOVCCr [[VREGX]], [[VREGY]], 0, %cpsr
 
     %r0 = COPY %3(s32)
     ; CHECK: %r0 = COPY [[RES]]
 
-    BX_RET 14, _, implicit %r0
-    ; CHECK: BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_select_ptr
@@ -1139,14 +1139,14 @@ body:             |
     ; CHECK: [[VREGD:%[0-9]+]]:gpr = COPY [[VREGC]]
 
     %4(p0) = G_SELECT %3(s1),  %0, %1
-    ; CHECK: CMPri [[VREGD]], 0, 14, _, implicit-def %cpsr
+    ; CHECK: CMPri [[VREGD]], 0, 14, %noreg, implicit-def %cpsr
     ; CHECK: [[RES:%[0-9]+]]:gpr = MOVCCr [[VREGX]], [[VREGY]], 0, %cpsr
 
     %r0 = COPY %4(p0)
     ; CHECK: %r0 = COPY [[RES]]
 
-    BX_RET 14, _, implicit %r0
-    ; CHECK: BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_br
@@ -1170,7 +1170,7 @@ body:             |
     ; CHECK: [[COND:%[0-9]+]]:gpr = COPY [[COND32]]
 
     G_BRCOND %1(s1), %bb.1
-    ; CHECK: TSTri [[COND]], 1, 14, _, implicit-def %cpsr
+    ; CHECK: TSTri [[COND]], 1, 14, %noreg, implicit-def %cpsr
     ; CHECK: Bcc %bb.1, 1, %cpsr
     G_BR %bb.2
     ; CHECK: B %bb.2
@@ -1185,8 +1185,8 @@ body:             |
   bb.2:
   ; CHECK: bb.2
 
-    BX_RET 14, _
-    ; CHECK: BX_RET 14, _
+    BX_RET 14, %noreg
+    ; CHECK: BX_RET 14, %noreg
 ...
 ---
 name:            test_soft_fp_double
@@ -1223,6 +1223,6 @@ body:             |
     %r1 = COPY %4
     ; CHECK: %r1 = COPY [[OUT2]]
 
-    BX_RET 14, _, implicit %r0, implicit %r1
-    ; CHECK: BX_RET 14, _, implicit %r0, implicit %r1
+    BX_RET 14, %noreg, implicit %r0, implicit %r1
+    ; CHECK: BX_RET 14, %noreg, implicit %r0, implicit %r1
 ...

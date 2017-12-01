@@ -164,9 +164,9 @@ void IntrinsicLowering::AddPrototypes(Module &M) {
 /// LowerBSWAP - Emit the code to lower bswap of V before the specified
 /// instruction IP.
 static Value *LowerBSWAP(LLVMContext &Context, Value *V, Instruction *IP) {
-  assert(V->getType()->isIntegerTy() && "Can't bswap a non-integer type!");
+  assert(V->getType()->isIntOrIntVectorTy() && "Can't bswap a non-integer type!");
 
-  unsigned BitSize = V->getType()->getPrimitiveSizeInBits();
+  unsigned BitSize = V->getType()->getScalarSizeInBits();
 
   IRBuilder<> Builder(IP);
 
@@ -190,10 +190,10 @@ static Value *LowerBSWAP(LLVMContext &Context, Value *V, Instruction *IP) {
     Value *Tmp1 = Builder.CreateLShr(V,ConstantInt::get(V->getType(), 24),
                                      "bswap.1");
     Tmp3 = Builder.CreateAnd(Tmp3,
-                         ConstantInt::get(Type::getInt32Ty(Context), 0xFF0000),
+                         ConstantInt::get(V->getType(), 0xFF0000),
                              "bswap.and3");
     Tmp2 = Builder.CreateAnd(Tmp2,
-                           ConstantInt::get(Type::getInt32Ty(Context), 0xFF00),
+                           ConstantInt::get(V->getType(), 0xFF00),
                              "bswap.and2");
     Tmp4 = Builder.CreateOr(Tmp4, Tmp3, "bswap.or1");
     Tmp2 = Builder.CreateOr(Tmp2, Tmp1, "bswap.or2");
@@ -221,27 +221,27 @@ static Value *LowerBSWAP(LLVMContext &Context, Value *V, Instruction *IP) {
                                      ConstantInt::get(V->getType(), 56),
                                      "bswap.1");
     Tmp7 = Builder.CreateAnd(Tmp7,
-                             ConstantInt::get(Type::getInt64Ty(Context),
+                             ConstantInt::get(V->getType(),
                                               0xFF000000000000ULL),
                              "bswap.and7");
     Tmp6 = Builder.CreateAnd(Tmp6,
-                             ConstantInt::get(Type::getInt64Ty(Context),
+                             ConstantInt::get(V->getType(),
                                               0xFF0000000000ULL),
                              "bswap.and6");
     Tmp5 = Builder.CreateAnd(Tmp5,
-                        ConstantInt::get(Type::getInt64Ty(Context),
+                        ConstantInt::get(V->getType(),
                              0xFF00000000ULL),
                              "bswap.and5");
     Tmp4 = Builder.CreateAnd(Tmp4,
-                        ConstantInt::get(Type::getInt64Ty(Context),
+                        ConstantInt::get(V->getType(),
                              0xFF000000ULL),
                              "bswap.and4");
     Tmp3 = Builder.CreateAnd(Tmp3,
-                             ConstantInt::get(Type::getInt64Ty(Context),
+                             ConstantInt::get(V->getType(),
                              0xFF0000ULL),
                              "bswap.and3");
     Tmp2 = Builder.CreateAnd(Tmp2,
-                             ConstantInt::get(Type::getInt64Ty(Context),
+                             ConstantInt::get(V->getType(),
                              0xFF00ULL),
                              "bswap.and2");
     Tmp8 = Builder.CreateOr(Tmp8, Tmp7, "bswap.or1");

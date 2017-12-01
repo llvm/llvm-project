@@ -5,15 +5,15 @@
 ;
 ; CHECK: ********** MI Scheduling **********
 ; CHECK: misched_bug:BB#0 entry
-; CHECK: SU(2):   %vreg2<def> = LDRWui %vreg0, 1; mem:LD4[%ptr1_plus1] GPR32:%vreg2 GPR64common:%vreg0
+; CHECK: SU(2):   %2<def> = LDRWui %0, 1; mem:LD4[%ptr1_plus1] GPR32:%2 GPR64common:%0
 ; CHECK:   Successors:
-; CHECK-NEXT:    SU(5): Data Latency=4 Reg=%vreg2
+; CHECK-NEXT:    SU(5): Data Latency=4 Reg=%2
 ; CHECK-NEXT:    SU(4): Ord  Latency=0
-; CHECK: SU(3):   STRWui %wzr, %vreg0, 0; mem:ST4[%ptr1] GPR64common:%vreg0
+; CHECK: SU(3):   STRWui %wzr, %0, 0; mem:ST4[%ptr1] GPR64common:%0
 ; CHECK:   Successors:
 ; CHECK: SU(4): Ord  Latency=0
-; CHECK: SU(4):   STRWui %wzr, %vreg1, 0; mem:ST4[%ptr2] GPR64common:%vreg1
-; CHECK: SU(5):   %w0<def> = COPY %vreg2; GPR32:%vreg2
+; CHECK: SU(4):   STRWui %wzr, %1, 0; mem:ST4[%ptr2] GPR64common:%1
+; CHECK: SU(5):   %w0<def> = COPY %2; GPR32:%2
 ; CHECK: ** ScheduleDAGMI::schedule picking next node
 define i32 @misched_bug(i32* %ptr1, i32* %ptr2) {
 entry:

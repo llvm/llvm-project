@@ -47,7 +47,7 @@ bool llvm::VerifyLoopInfo = false;
 #endif
 static cl::opt<bool, true>
     VerifyLoopInfoX("verify-loop-info", cl::location(VerifyLoopInfo),
-                    cl::desc("Verify loop info (time consuming)"));
+                    cl::Hidden, cl::desc("Verify loop info (time consuming)"));
 
 //===----------------------------------------------------------------------===//
 // Loop implementation

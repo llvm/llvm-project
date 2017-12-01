@@ -29,6 +29,6 @@ body:             |
     %0.subreg_hl32 = COPY %0.subreg_l32
     %1 = COPY %0.subreg_l64
     %2 = LARL @g_167
-    STC %1.subreg_l32, %2, 8, _
+    STC %1.subreg_l32, %2, 8, %noreg
 
 ...

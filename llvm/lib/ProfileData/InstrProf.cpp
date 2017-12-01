@@ -56,7 +56,7 @@
 using namespace llvm;
 
 static cl::opt<bool> StaticFuncFullModulePrefix(
-    "static-func-full-module-prefix", cl::init(true),
+    "static-func-full-module-prefix", cl::init(true), cl::Hidden,
     cl::desc("Use full module build paths in the profile counter names for "
              "static functions."));
 
@@ -69,7 +69,7 @@ static cl::opt<bool> StaticFuncFullModulePrefix(
 // the source directory name not being stripped. A non-zero option value here
 // can potentially prevent some inter-module indirect-call-promotions.
 static cl::opt<unsigned> StaticFuncStripDirNamePrefix(
-    "static-func-strip-dirname-prefix", cl::init(0),
+    "static-func-strip-dirname-prefix", cl::init(0), cl::Hidden,
     cl::desc("Strip specified level of directory name from source path in "
              "the profile counter name for static functions."));
 

@@ -27,8 +27,8 @@ using namespace llvm::dwarf;
 
 cl::opt<bool>
     UseDbgAddr("use-dbg-addr",
-                llvm::cl::desc("Use llvm.dbg.addr for all local variables"),
-                cl::init(false));
+               llvm::cl::desc("Use llvm.dbg.addr for all local variables"),
+               cl::init(false), cl::Hidden);
 
 DIBuilder::DIBuilder(Module &m, bool AllowUnresolvedNodes)
   : M(m), VMContext(M.getContext()), CUNode(nullptr),

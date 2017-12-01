@@ -2801,14 +2801,14 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
     LiveIntervals *LIS) const {
   // This is a bit of a hack. Consider this instruction:
   //
-  //   %vreg0<def> = COPY %sp; GPR64all:%vreg0
+  //   %0<def> = COPY %sp; GPR64all:%0
   //
   // We explicitly chose GPR64all for the virtual register so such a copy might
   // be eliminated by RegisterCoalescer. However, that may not be possible, and
-  // %vreg0 may even spill. We can't spill %sp, and since it is in the GPR64all
+  // %0 may even spill. We can't spill %sp, and since it is in the GPR64all
   // register class, TargetInstrInfo::foldMemoryOperand() is going to try.
   //
-  // To prevent that, we are going to constrain the %vreg0 register class here.
+  // To prevent that, we are going to constrain the %0 register class here.
   //
   // <rdar://problem/11522048>
   //
@@ -2830,7 +2830,7 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
   // Handle the case where a copy is being spilled or filled but the source
   // and destination register class don't match.  For example:
   //
-  //   %vreg0<def> = COPY %xzr; GPR64common:%vreg0
+  //   %0<def> = COPY %xzr; GPR64common:%0
   //
   // In this case we can still safely fold away the COPY and generate the
   // following spill code:
@@ -2840,16 +2840,16 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
   // This also eliminates spilled cross register class COPYs (e.g. between x and
   // d regs) of the same size.  For example:
   //
-  //   %vreg0<def> = COPY %vreg1; GPR64:%vreg0, FPR64:%vreg1
+  //   %0<def> = COPY %1; GPR64:%0, FPR64:%1
   //
   // will be filled as
   //
-  //   LDRDui %vreg0, fi<#0>
+  //   LDRDui %0, fi<#0>
   //
   // instead of
   //
-  //   LDRXui %vregTemp, fi<#0>
-  //   %vreg0 = FMOV %vregTemp
+  //   LDRXui %Temp, fi<#0>
+  //   %0 = FMOV %Temp
   //
   if (MI.isCopy() && Ops.size() == 1 &&
       // Make sure we're only folding the explicit COPY defs/uses.
@@ -2886,7 +2886,7 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
 
     // Handle cases like spilling def of:
     //
-    //   %vreg0:sub_32<def,read-undef> = COPY %wzr; GPR64common:%vreg0
+    //   %0:sub_32<def,read-undef> = COPY %wzr; GPR64common:%0
     //
     // where the physical register source can be widened and stored to the full
     // virtual reg destination stack slot, in this case producing:
@@ -2934,12 +2934,12 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
 
     // Handle cases like filling use of:
     //
-    //   %vreg0:sub_32<def,read-undef> = COPY %vreg1; GPR64:%vreg0, GPR32:%vreg1
+    //   %0:sub_32<def,read-undef> = COPY %1; GPR64:%0, GPR32:%1
     //
     // where we can load the full virtual reg source stack slot, into the subreg
     // destination, in this case producing:
     //
-    //   LDRWui %vreg0:sub_32<def,read-undef>, <fi#0>
+    //   LDRWui %0:sub_32<def,read-undef>, <fi#0>
     //
     if (IsFill && SrcMO.getSubReg() == 0 && DstMO.isUndef()) {
       const TargetRegisterClass *FillRC;

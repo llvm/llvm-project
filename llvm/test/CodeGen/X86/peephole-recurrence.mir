@@ -215,7 +215,7 @@ body:             |
     ; CHECK: %11:gr32 = ADD32rr
     ; CHECK-SAME: %1,
     ; CHECK-SAME: %0,
-    MOV32mr %5, 1, _, 0, _, %0 :: (store 4 into %ir.p)
+    MOV32mr %5, 1, %noreg, 0, %noreg, %0 :: (store 4 into %ir.p)
     %3 = ADD32rr %2, killed %11, implicit-def dead %eflags
     ; CHECK: %3:gr32 = ADD32rr
     ; CHECK-SAME: %2,

@@ -8,7 +8,7 @@
 # CHECK:   bb.0:
 # CHECK:     %0:gr32 = MOV32r0 implicit-def %eflags
 # CHECK:     dead %1:gr32 = COPY %0
-# CHECK:     MOV32mr undef %rcx, 1, _, 0, _, killed %0 :: (volatile store 4)
+# CHECK:     MOV32mr undef %rcx, 1, %noreg, 0, %noreg, killed %0 :: (volatile store 4)
 # CHECK:     RETQ undef %eax
 name: func0
 body: |

@@ -964,6 +964,31 @@ void AsmPrinter::emitFrameAlloc(const MachineInstr &MI) {
                              MCConstantExpr::create(FrameOffset, OutContext));
 }
 
+void AsmPrinter::emitStackSizeSection(const MachineFunction &MF) {
+  if (!MF.getTarget().Options.EmitStackSizeSection)
+    return;
+
+  MCSection *StackSizeSection = getObjFileLowering().getStackSizesSection();
+  if (!StackSizeSection)
+    return;
+
+  const MachineFrameInfo &FrameInfo = MF.getFrameInfo();
+  // Don't emit functions with dynamic stack allocations.
+  if (FrameInfo.hasVarSizedObjects())
+    return;
+
+  OutStreamer->PushSection();
+  OutStreamer->SwitchSection(StackSizeSection);
+
+  const MCSymbol *FunctionSymbol = getSymbol(MF.getFunction());
+  uint64_t StackSize = FrameInfo.getStackSize();
+  OutStreamer->EmitValue(MCSymbolRefExpr::create(FunctionSymbol, OutContext),
+                         /* size = */ 8);
+  OutStreamer->EmitULEB128IntValue(StackSize);
+
+  OutStreamer->PopSection();
+}
+
 static bool needFuncLabelsForEHOrDebugInfo(const MachineFunction &MF,
                                            MachineModuleInfo *MMI) {
   if (!MF.getLandingPads().empty() || MF.hasEHFunclets() || MMI->hasDebugInfo())
@@ -1134,6 +1159,9 @@ void AsmPrinter::EmitFunctionBody() {
                        HI.TimerGroupDescription, TimePassesIsEnabled);
     HI.Handler->endFunction(MF);
   }
+
+  // Emit section containing stack size metadata.
+  emitStackSizeSection(*MF);
 
   if (isVerbose())
     OutStreamer->GetCommentOS() << "-- End function\n";

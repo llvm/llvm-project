@@ -1060,9 +1060,9 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       StrOpc = RPI.isPaired() ? AArch64::STPXi : AArch64::STRXui;
     else
       StrOpc = RPI.isPaired() ? AArch64::STPDi : AArch64::STRDui;
-    DEBUG(dbgs() << "CSR spill: (" << TRI->getName(Reg1);
+    DEBUG(dbgs() << "CSR spill: (" << printReg(Reg1, TRI);
           if (RPI.isPaired())
-            dbgs() << ", " << TRI->getName(Reg2);
+            dbgs() << ", " << printReg(Reg2, TRI);
           dbgs() << ") -> fi#(" << RPI.FrameIdx;
           if (RPI.isPaired())
             dbgs() << ", " << RPI.FrameIdx+1;
@@ -1123,9 +1123,9 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
       LdrOpc = RPI.isPaired() ? AArch64::LDPXi : AArch64::LDRXui;
     else
       LdrOpc = RPI.isPaired() ? AArch64::LDPDi : AArch64::LDRDui;
-    DEBUG(dbgs() << "CSR restore: (" << TRI->getName(Reg1);
+    DEBUG(dbgs() << "CSR restore: (" << printReg(Reg1, TRI);
           if (RPI.isPaired())
-            dbgs() << ", " << TRI->getName(Reg2);
+            dbgs() << ", " << printReg(Reg2, TRI);
           dbgs() << ") -> fi#(" << RPI.FrameIdx;
           if (RPI.isPaired())
             dbgs() << ", " << RPI.FrameIdx+1;
@@ -1234,7 +1234,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   if (BigStack) {
     if (!ExtraCSSpill && UnspilledCSGPR != AArch64::NoRegister) {
       DEBUG(dbgs() << "Spilling " << printReg(UnspilledCSGPR, RegInfo)
-            << " to get a scratch register.\n");
+                   << " to get a scratch register.\n");
       SavedRegs.set(UnspilledCSGPR);
       // MachO's compact unwind format relies on all registers being stored in
       // pairs, so if we need to spill one extra for BigStack, then we need to

@@ -569,6 +569,32 @@ function(llvm_add_library name)
   endif()
 endfunction()
 
+function(add_llvm_install_targets target)
+  cmake_parse_arguments(ARG "" "COMPONENT;PREFIX" "DEPENDS" ${ARGN})
+  if(ARG_COMPONENT)
+    set(component_option -DCMAKE_INSTALL_COMPONENT="${ARG_COMPONENT}")
+  endif()
+  if(ARG_PREFIX)
+    set(prefix_option -DCMAKE_INSTALL_PREFIX="${ARG_PREFIX}")
+  endif()
+
+  add_custom_target(${target}
+                    DEPENDS ${ARG_DEPENDS}
+                    COMMAND "${CMAKE_COMMAND}"
+                            ${component_option}
+                            ${prefix_option}
+                            -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+                    USES_TERMINAL)
+  add_custom_target(${target}-stripped
+                    DEPENDS ${ARG_DEPENDS}
+                    COMMAND "${CMAKE_COMMAND}"
+                            ${component_option}
+                            ${prefix_option}
+                            -DCMAKE_INSTALL_DO_STRIP=1
+                            -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+                    USES_TERMINAL)
+endfunction()
+
 macro(add_llvm_library name)
   cmake_parse_arguments(ARG
     "SHARED;BUILDTREE_ONLY"
@@ -619,11 +645,9 @@ macro(add_llvm_library name)
               COMPONENT ${name})
 
       if (NOT CMAKE_CONFIGURATION_TYPES)
-        add_custom_target(install-${name}
-                          DEPENDS ${name}
-                          COMMAND "${CMAKE_COMMAND}"
-                                  -DCMAKE_INSTALL_COMPONENT=${name}
-                                  -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+        add_llvm_install_targets(install-${name}
+                                 DEPENDS ${name}
+                                 COMPONENT ${name})
       endif()
     endif()
     set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS ${name})
@@ -849,11 +873,9 @@ macro(add_llvm_tool name)
               COMPONENT ${name})
 
       if (NOT CMAKE_CONFIGURATION_TYPES)
-        add_custom_target(install-${name}
-                          DEPENDS ${name}
-                          COMMAND "${CMAKE_COMMAND}"
-                                  -DCMAKE_INSTALL_COMPONENT=${name}
-                                  -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+        add_llvm_install_targets(install-${name}
+                                 DEPENDS ${name}
+                                 COMPONENT ${name})
       endif()
     endif()
   endif()
@@ -889,11 +911,9 @@ macro(add_llvm_utility name)
       RUNTIME DESTINATION ${LLVM_UTILS_INSTALL_DIR}
       COMPONENT ${name})
     if (NOT CMAKE_CONFIGURATION_TYPES)
-      add_custom_target(install-${name}
-                        DEPENDS ${name}
-                        COMMAND "${CMAKE_COMMAND}"
-                                -DCMAKE_INSTALL_COMPONENT=${name}
-                                -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+      add_llvm_install_targets(install-${name}
+                               DEPENDS ${name}
+                               COMPONENT ${name})
     endif()
   endif()
 endmacro(add_llvm_utility name)
@@ -1400,11 +1420,9 @@ function(llvm_install_library_symlink name dest type)
           COMPONENT ${component})
 
   if (NOT CMAKE_CONFIGURATION_TYPES AND NOT ARG_ALWAYS_GENERATE)
-    add_custom_target(install-${name}
-                      DEPENDS ${name} ${dest} install-${dest}
-                      COMMAND "${CMAKE_COMMAND}"
-                              -DCMAKE_INSTALL_COMPONENT=${name}
-                              -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+    add_llvm_install_targets(install-${name}
+                             DEPENDS ${name} ${dest} install-${dest}
+                             COMPONENT ${name})
   endif()
 endfunction()
 
@@ -1435,11 +1453,9 @@ function(llvm_install_symlink name dest)
           COMPONENT ${component})
 
   if (NOT CMAKE_CONFIGURATION_TYPES AND NOT ARG_ALWAYS_GENERATE)
-    add_custom_target(install-${name}
-                      DEPENDS ${name} ${dest} install-${dest}
-                      COMMAND "${CMAKE_COMMAND}"
-                              -DCMAKE_INSTALL_COMPONENT=${name}
-                              -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+    add_llvm_install_targets(install-${name}
+                             DEPENDS ${name} ${dest} install-${dest}
+                             COMPONENT ${name})
   endif()
 endfunction()
 

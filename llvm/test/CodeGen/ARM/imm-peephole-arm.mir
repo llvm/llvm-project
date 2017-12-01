@@ -42,18 +42,18 @@ body:             |
 
     %0 = COPY %r0
     %1 = MOVi32imm -25733
-    %2 = SUBrr %0, killed %1, 14, _, _
+    %2 = SUBrr %0, killed %1, 14, %noreg, %noreg
 
     %3 = MOVi32imm 25733
-    %4 = SUBrr %0, killed %3, 14, _, _
+    %4 = SUBrr %0, killed %3, 14, %noreg, %noreg
 
     %5 = MOVi32imm -25733
-    %6 = ADDrr %0, killed %5, 14, _, _
+    %6 = ADDrr %0, killed %5, 14, %noreg, %noreg
 
     %7 = MOVi32imm 25733
-    %8 = ADDrr killed %0, killed %7, 14, _, _
+    %8 = ADDrr killed %0, killed %7, 14, %noreg, %noreg
 
     %r0 = COPY killed %8
-    BX_RET 14, _, implicit %r0
+    BX_RET 14, %noreg, implicit %r0
 
 ...

@@ -351,8 +351,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
     setAction({G_VAARG, Ty}, Custom);
 
   if (ST.hasLSE()) {
-    for (auto Ty : {s8, s16, s32, s64})
+    for (auto Ty : {s8, s16, s32, s64}) {
+      setAction({G_ATOMIC_CMPXCHG_WITH_SUCCESS, Ty}, Lower);
       setAction({G_ATOMIC_CMPXCHG, Ty}, Legal);
+    }
     setAction({G_ATOMIC_CMPXCHG, 1, p0}, Legal);
 
     for (unsigned Op :
@@ -365,6 +367,23 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
       setAction({Op, 1, p0}, Legal);
     }
   }
+
+  // Merge/Unmerge
+  for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES})
+    for (int Sz : {8, 16, 32, 64, 128, 192, 256, 384, 512}) {
+      LLT ScalarTy = LLT::scalar(Sz);
+      setAction({Op, ScalarTy}, Legal);
+      setAction({Op, 1, ScalarTy}, Legal);
+      if (Sz < 32)
+        continue;
+      for (int EltSize = 8; EltSize <= 64; EltSize *= 2) {
+        if (EltSize >= Sz)
+          continue;
+        LLT VecTy = LLT::vector(Sz / EltSize, EltSize);
+        setAction({Op, VecTy}, Legal);
+        setAction({Op, 1, VecTy}, Legal);
+      }
+    }
 
   computeTables();
 }

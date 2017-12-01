@@ -142,7 +142,7 @@ using namespace llvm;
 // A handy option for disabling TBAA functionality. The same effect can also be
 // achieved by stripping the !tbaa tags from IR, but this option is sometimes
 // more convenient.
-static cl::opt<bool> EnableTBAA("enable-tbaa", cl::init(true));
+static cl::opt<bool> EnableTBAA("enable-tbaa", cl::init(true), cl::Hidden);
 
 namespace {
 

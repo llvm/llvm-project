@@ -25,7 +25,7 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:gpr32all = COPY %w0
     ; CHECK: %w0 = COPY [[COPY]]
     %0:gpr(s32) = COPY %w0
-    %1:gpr(s32) = G_MERGE_VALUES %0(s32)
-    %2:gpr(s32) = G_UNMERGE_VALUES %1(s32)
+    %1:gpr(s64) = G_MERGE_VALUES %0(s32), %0(s32)
+    %2:gpr(s32), %3:gpr(s32) = G_UNMERGE_VALUES %1(s64)
     %w0 = COPY %2(s32)
 ...

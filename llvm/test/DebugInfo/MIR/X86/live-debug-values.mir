@@ -35,7 +35,7 @@
 # CHECK: ![[N_VAR:[0-9]+]] = !DILocalVariable(name: "n",{{.*}})
 #
 # CHECK:      bb.5.if.end.7:
-# CHECK:        DBG_VALUE debug-use %ebx, debug-use _, ![[N_VAR]], !DIExpression(), debug-location !{{[0-9]+}}
+# CHECK:        DBG_VALUE debug-use %ebx, debug-use %noreg, ![[N_VAR]], !DIExpression(), debug-location !{{[0-9]+}}
 
 
 --- |

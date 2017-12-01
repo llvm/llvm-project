@@ -4,9 +4,9 @@
 
 ; CHECK-SSA-LABEL: Machine code for function t1
 
-; CHECK-SSA: [[QUOTREG:%vreg[0-9]+]]<def> = SDIVWr
+; CHECK-SSA: [[QUOTREG:%[0-9]+]]<def> = SDIVWr
 ; CHECK-SSA-NOT: [[QUOTREG]]<def> =
-; CHECK-SSA: {{%vreg[0-9]+}}<def> = MSUBWrrr [[QUOTREG]]
+; CHECK-SSA: {{%[0-9]+}}<def> = MSUBWrrr [[QUOTREG]]
 
 ; CHECK-SSA-LABEL: Machine code for function t2
 

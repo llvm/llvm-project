@@ -120,40 +120,40 @@ body:             |
   bb.0.entry:
     liveins: %r0, %r1, %r2, %r3, %lr, %r7
 
-    DBG_VALUE debug-use %r0, debug-use _, !18, !27, debug-location !28
-    DBG_VALUE debug-use %r1, debug-use _, !19, !27, debug-location !28
-    DBG_VALUE debug-use %r2, debug-use _, !20, !27, debug-location !28
-    DBG_VALUE debug-use %r3, debug-use _, !21, !27, debug-location !28
-    t2CMPri %r3, 4, 14, _, implicit-def %cpsr, debug-location !31
+    DBG_VALUE debug-use %r0, debug-use %noreg, !18, !27, debug-location !28
+    DBG_VALUE debug-use %r1, debug-use %noreg, !19, !27, debug-location !28
+    DBG_VALUE debug-use %r2, debug-use %noreg, !20, !27, debug-location !28
+    DBG_VALUE debug-use %r3, debug-use %noreg, !21, !27, debug-location !28
+    t2CMPri %r3, 4, 14, %noreg, implicit-def %cpsr, debug-location !31
     t2Bcc %bb.2.if.end, 2, killed %cpsr
 
   bb.1:
     liveins: %lr, %r7
 
-    DBG_VALUE debug-use %r1, debug-use _, !19, !27, debug-location !28
-    %r0 = t2MOVi -1, 14, _, _
-    DBG_VALUE debug-use %r1, debug-use _, !19, !27, debug-location !28
-    tBX_RET 14, _, implicit %r0, debug-location !34
+    DBG_VALUE debug-use %r1, debug-use %noreg, !19, !27, debug-location !28
+    %r0 = t2MOVi -1, 14, %noreg, %noreg
+    DBG_VALUE debug-use %r1, debug-use %noreg, !19, !27, debug-location !28
+    tBX_RET 14, %noreg, implicit %r0, debug-location !34
 
   bb.2.if.end:
     liveins: %r0, %r2, %r3, %r7, %lr
 
-    %sp = frame-setup t2STMDB_UPD %sp, 14, _, killed %r7, killed %lr
+    %sp = frame-setup t2STMDB_UPD %sp, 14, %noreg, killed %r7, killed %lr
     frame-setup CFI_INSTRUCTION def_cfa_offset 8
     frame-setup CFI_INSTRUCTION offset %lr, -4
     frame-setup CFI_INSTRUCTION offset %r7, -8
-    DBG_VALUE debug-use %r0, debug-use _, !18, !27, debug-location !28
-    DBG_VALUE debug-use %r1, debug-use _, !19, !27, debug-location !28
-    DBG_VALUE debug-use %r2, debug-use _, !20, !27, debug-location !28
-    DBG_VALUE debug-use %r3, debug-use _, !21, !27, debug-location !28
+    DBG_VALUE debug-use %r0, debug-use %noreg, !18, !27, debug-location !28
+    DBG_VALUE debug-use %r1, debug-use %noreg, !19, !27, debug-location !28
+    DBG_VALUE debug-use %r2, debug-use %noreg, !20, !27, debug-location !28
+    DBG_VALUE debug-use %r3, debug-use %noreg, !21, !27, debug-location !28
     %r1 = COPY killed %r2, debug-location !32
-    DBG_VALUE debug-use %r1, debug-use _, !19, !27, debug-location !28
+    DBG_VALUE debug-use %r1, debug-use %noreg, !19, !27, debug-location !28
     %r2 = COPY killed %r3, debug-location !32
-    tBL 14, _, @g, csr_aapcs, implicit-def dead %lr, implicit %sp, implicit %r0, implicit %r1, implicit %r2, implicit-def %sp, debug-location !32
-    %r0 = t2MOVi 0, 14, _, _
-    %sp = t2LDMIA_UPD %sp, 14, _, def %r7, def %lr
-    tBX_RET 14, _, implicit %r0, debug-location !34
+    tBL 14, %noreg, @g, csr_aapcs, implicit-def dead %lr, implicit %sp, implicit %r0, implicit %r1, implicit %r2, implicit-def %sp, debug-location !32
+    %r0 = t2MOVi 0, 14, %noreg, %noreg
+    %sp = t2LDMIA_UPD %sp, 14, %noreg, def %r7, def %lr
+    tBX_RET 14, %noreg, implicit %r0, debug-location !34
 # Verify that the DBG_VALUE is ignored.
-# CHECK: %sp = t2LDMIA_RET %sp, 14, _, def %r7, def %pc, implicit %r0
+# CHECK: %sp = t2LDMIA_RET %sp, 14, %noreg, def %r7, def %pc, implicit %r0
 
 ...

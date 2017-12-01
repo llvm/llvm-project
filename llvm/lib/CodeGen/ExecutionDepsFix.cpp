@@ -394,7 +394,7 @@ void ExecutionDepsFix::processDefs(MachineInstr *MI, bool breakDependency,
       continue;
     for (int rx : regIndices(MO.getReg())) {
       // This instruction explicitly defines rx.
-      DEBUG(dbgs() << TRI->getName(RC->getRegister(rx)) << ":\t" << CurInstr
+      DEBUG(dbgs() << printReg(RC->getRegister(rx), TRI) << ":\t" << CurInstr
                    << '\t' << *MI);
 
       if (breakDependency) {

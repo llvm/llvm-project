@@ -78,7 +78,7 @@ body: |
 
   bb.1.entry:
     successors: %bb.3.lbl1, %bb.4.lbl2, %bb.5.lbl3, %bb.6.lbl4
-    ; CHECK: %rcx = LEA64r %rip, 1, _, %jump-table.0, _
+    ; CHECK: %rcx = LEA64r %rip, 1, %noreg, %jump-table.0, %noreg
     %rcx = LEA64r %rip, 1, _, %jump-table.0, _
     %rax = MOVSX64rm32 %rcx, 4, %rax, 0, _
     %rax = ADD64rr %rax, %rcx, implicit-def %eflags
@@ -122,7 +122,7 @@ body: |
   bb.1.entry:
     successors: %bb.3.lbl1, %bb.4.lbl2, %bb.5.lbl3, %bb.6.lbl4
     ; Verify that the printer will use an id of 0 for this jump table:
-    ; CHECK: %rcx = LEA64r %rip, 1, _, %jump-table.0, _
+    ; CHECK: %rcx = LEA64r %rip, 1, %noreg, %jump-table.0, %noreg
     %rcx = LEA64r %rip, 1, _, %jump-table.1, _
     %rax = MOVSX64rm32 %rcx, 4, %rax, 0, _
     %rax = ADD64rr %rax, %rcx, implicit-def %eflags

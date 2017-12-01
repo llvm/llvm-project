@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs -mattr=+load-store-opt < %s | FileCheck -check-prefixes=GCN,CI %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -mattr=+load-store-opt < %s | FileCheck -check-prefixes=GCN,GFX9 %s
+; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs -mattr=+load-store-opt < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -mattr=+load-store-opt < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
 
 @lds = addrspace(3) global [512 x float] undef, align 4
 @lds.f64 = addrspace(3) global [512 x double] undef, align 8
@@ -78,7 +78,7 @@ define amdgpu_kernel void @simple_read2st64_f32_max_offset(float addrspace(1)* %
 ; GFX9-NOT: m0
 
 ; GCN-NOT: ds_read2st64_b32
-; GCN-DAG: v_add{{(_co)?}}_{{i|u}}32_e32 [[BIGADD:v[0-9]+]], vcc, 0x10000, {{v[0-9]+}}
+; GCN-DAG: v_add_{{i|u}}32_e32 [[BIGADD:v[0-9]+]], {{(vcc, )?}}0x10000, {{v[0-9]+}}
 ; GCN-DAG: ds_read_b32 {{v[0-9]+}}, {{v[0-9]+}} offset:256
 ; GCN-DAG: ds_read_b32 {{v[0-9]+}}, [[BIGADD]]{{$}}
 ; GCN: s_endpgm
@@ -234,7 +234,7 @@ define amdgpu_kernel void @simple_read2st64_f64_max_offset(double addrspace(1)* 
 
 ; GCN-NOT: ds_read2st64_b64
 ; GCN-DAG: ds_read_b64 {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}} offset:512
-; GCN-DAG: v_add_{{(co_)?}}{{i|u}}32_e32 [[BIGADD:v[0-9]+]], vcc, 0x10000, {{v[0-9]+}}
+; GCN-DAG: v_add_{{i|u}}32_e32 [[BIGADD:v[0-9]+]], {{(vcc, )?}}0x10000, {{v[0-9]+}}
 ; GCN: ds_read_b64 {{v\[[0-9]+:[0-9]+\]}}, [[BIGADD]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @simple_read2st64_f64_over_max_offset(double addrspace(1)* %out, double addrspace(3)* %lds) #0 {

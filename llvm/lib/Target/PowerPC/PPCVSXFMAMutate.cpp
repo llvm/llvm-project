@@ -90,21 +90,21 @@ protected:
         // This pass is run after register coalescing, and so we're looking for
         // a situation like this:
         //   ...
-        //   %vreg5<def> = COPY %vreg9; VSLRC:%vreg5,%vreg9
-        //   %vreg5<def,tied1> = XSMADDADP %vreg5<tied0>, %vreg17, %vreg16,
-        //                         %rm<imp-use>; VSLRC:%vreg5,%vreg17,%vreg16
+        //   %5<def> = COPY %9; VSLRC:%5,%9
+        //   %5<def,tied1> = XSMADDADP %5<tied0>, %17, %16,
+        //                         %rm<imp-use>; VSLRC:%5,%17,%16
         //   ...
-        //   %vreg9<def,tied1> = XSMADDADP %vreg9<tied0>, %vreg17, %vreg19,
-        //                         %rm<imp-use>; VSLRC:%vreg9,%vreg17,%vreg19
+        //   %9<def,tied1> = XSMADDADP %9<tied0>, %17, %19,
+        //                         %rm<imp-use>; VSLRC:%9,%17,%19
         //   ...
         // Where we can eliminate the copy by changing from the A-type to the
         // M-type instruction. Specifically, for this example, this means:
-        //   %vreg5<def,tied1> = XSMADDADP %vreg5<tied0>, %vreg17, %vreg16,
-        //                         %rm<imp-use>; VSLRC:%vreg5,%vreg17,%vreg16
+        //   %5<def,tied1> = XSMADDADP %5<tied0>, %17, %16,
+        //                         %rm<imp-use>; VSLRC:%5,%17,%16
         // is replaced by:
-        //   %vreg16<def,tied1> = XSMADDMDP %vreg16<tied0>, %vreg18, %vreg9,
-        //                         %rm<imp-use>; VSLRC:%vreg16,%vreg18,%vreg9
-        // and we remove: %vreg5<def> = COPY %vreg9; VSLRC:%vreg5,%vreg9
+        //   %16<def,tied1> = XSMADDMDP %16<tied0>, %18, %9,
+        //                         %rm<imp-use>; VSLRC:%16,%18,%9
+        // and we remove: %5<def> = COPY %9; VSLRC:%5,%9
 
         SlotIndex FMAIdx = LIS->getInstructionIndex(MI);
 
@@ -150,13 +150,13 @@ protected:
         // walking the MIs we may as well test liveness here.
         //
         // FIXME: There is a case that occurs in practice, like this:
-        //   %vreg9<def> = COPY %f1; VSSRC:%vreg9
+        //   %9<def> = COPY %f1; VSSRC:%9
         //   ...
-        //   %vreg6<def> = COPY %vreg9; VSSRC:%vreg6,%vreg9
-        //   %vreg7<def> = COPY %vreg9; VSSRC:%vreg7,%vreg9
-        //   %vreg9<def,tied1> = XSMADDASP %vreg9<tied0>, %vreg1, %vreg4; VSSRC:
-        //   %vreg6<def,tied1> = XSMADDASP %vreg6<tied0>, %vreg1, %vreg2; VSSRC:
-        //   %vreg7<def,tied1> = XSMADDASP %vreg7<tied0>, %vreg1, %vreg3; VSSRC:
+        //   %6<def> = COPY %9; VSSRC:%6,%9
+        //   %7<def> = COPY %9; VSSRC:%7,%9
+        //   %9<def,tied1> = XSMADDASP %9<tied0>, %1, %4; VSSRC:
+        //   %6<def,tied1> = XSMADDASP %6<tied0>, %1, %2; VSSRC:
+        //   %7<def,tied1> = XSMADDASP %7<tied0>, %1, %3; VSSRC:
         // which prevents an otherwise-profitable transformation.
         bool OtherUsers = false, KillsAddendSrc = false;
         for (auto J = std::prev(I), JE = MachineBasicBlock::iterator(AddendMI);
@@ -177,11 +177,11 @@ protected:
 
 
         // The transformation doesn't work well with things like:
-        //    %vreg5 = A-form-op %vreg5, %vreg11, %vreg5;
-        // unless vreg11 is also a kill, so skip when it is not,
+        //    %5 = A-form-op %5, %11, %5;
+        // unless %11 is also a kill, so skip when it is not,
         // and check operand 3 to see it is also a kill to handle the case:
-        //   %vreg5 = A-form-op %vreg5, %vreg5, %vreg11;
-        // where vreg5 and vreg11 are both kills. This case would be skipped
+        //   %5 = A-form-op %5, %5, %11;
+        // where %5 and %11 are both kills. This case would be skipped
         // otherwise.
         unsigned OldFMAReg = MI.getOperand(0).getReg();
 
