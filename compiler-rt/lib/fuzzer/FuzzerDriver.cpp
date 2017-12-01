@@ -566,8 +566,8 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   Options.MaxTotalTimeSec = Flags.max_total_time;
   Options.DoCrossOver = Flags.cross_over;
   Options.MutateDepth = Flags.mutate_depth;
+  Options.ReduceDepth = Flags.reduce_depth;
   Options.UseCounters = Flags.use_counters;
-  Options.UseIndirCalls = Flags.use_indir_calls;
   Options.UseMemmem = Flags.use_memmem;
   Options.UseCmp = Flags.use_cmp;
   Options.UseValueProfile = Flags.use_value_profile;
@@ -581,6 +581,9 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   Options.PurgeAllocatorIntervalSec = Flags.purge_allocator_interval;
   Options.TraceMalloc = Flags.trace_malloc;
   Options.RssLimitMb = Flags.rss_limit_mb;
+  Options.MallocLimitMb = Flags.malloc_limit_mb;
+  if (!Options.MallocLimitMb)
+    Options.MallocLimitMb = Options.RssLimitMb;
   if (Flags.runs >= 0)
     Options.MaxNumberOfRuns = Flags.runs;
   if (!Inputs->empty() && !Flags.minimize_crash_internal_step)

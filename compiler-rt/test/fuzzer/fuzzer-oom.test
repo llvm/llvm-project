@@ -8,7 +8,9 @@ CHECK: ERROR: libFuzzer: out-of-memory (used: {{.*}}; limit: 300Mb)
 CHECK: Test unit written to ./oom-
 SUMMARY: libFuzzer: out-of-memory
 
-RUN: not %t-OutOfMemorySingleLargeMallocTest -rss_limit_mb=300 2>&1 | FileCheck %s --check-prefix=SINGLE_LARGE_MALLOC
+RUN: not %t-OutOfMemorySingleLargeMallocTest -rss_limit_mb=300    2>&1 | FileCheck %s --check-prefix=SINGLE_LARGE_MALLOC
+RUN: not %t-OutOfMemorySingleLargeMallocTest -malloc_limit_mb=300 2>&1 | FileCheck %s --check-prefix=SINGLE_LARGE_MALLOC
+RUN: not %t-OutOfMemorySingleLargeMallocTest -rss_limit_mb=1000 -malloc_limit_mb=300 2>&1 | FileCheck %s --check-prefix=SINGLE_LARGE_MALLOC
 
 We used to check for "out-of-memory (malloc(53{{.*}}))", but that would fail
 sometimes, so now we accept any OOM message.

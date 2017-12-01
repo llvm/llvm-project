@@ -365,12 +365,6 @@ RegisterContextPOSIX_x86::RegisterContextPOSIX_x86(
     break;
   }
 
-  // Initialize m_iovec to point to the buffer and buffer size
-  // using the conventions of Berkeley style UIO structures, as required
-  // by PTRACE extensions.
-  m_iovec.iov_base = &m_fpr.xstate.xsave;
-  m_iovec.iov_len = sizeof(m_fpr.xstate.xsave);
-
   ::memset(&m_fpr, 0, sizeof(FPR));
 
   m_fpr_type = eNotValid;

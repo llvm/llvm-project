@@ -8,6 +8,7 @@ add_clang_library(clangDaemon
   ClangdUnit.cpp
   ClangdUnitStore.cpp
   DraftStore.cpp
+  FuzzyMatch.cpp
   GlobalCompilationDatabase.cpp
   JSONExpr.cpp
   JSONRPCDispatcher.cpp
