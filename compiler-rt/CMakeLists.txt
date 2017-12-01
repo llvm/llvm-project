@@ -1,9 +1,5 @@
 # CMake build for CompilerRT.
 #
-# This build assumes that CompilerRT is checked out into the
-# 'projects/compiler-rt' or 'runtimes/compiler-rt' inside of an LLVM tree.
-# Standalone build system for CompilerRT is not yet ready.
-#
 # An important constraint of the build is that it only produces libraries
 # based on the ability of the host toolchain to target various platforms.
 
