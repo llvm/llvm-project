@@ -36,7 +36,7 @@ namespace json {
 //   - booleans
 //   - null: nullptr
 //   - arrays: {"foo", 42.0, false}
-//   - serializable things: any T with a T::unparse(const T&) -> Expr
+//   - serializable things: types with toJSON(const T&)->Expr, found by ADL
 //
 // They can also be constructed from object/array helpers:
 //   - json::obj is a type like map<StringExpr, Expr>
@@ -64,6 +64,28 @@ namespace json {
 //     if (json::obj* Opts = O->getObject("options"))
 //       if (Optional<StringRef> Font = Opts->getString("font"))
 //         assert(Opts->at("font").kind() == Expr::String);
+//
+// === Converting expressions to objects ===
+//
+// The convention is to have a deserializer function findable via ADL:
+//     fromJSON(const json::Expr&, T&)->bool
+// Deserializers are provided for:
+//   - bool
+//   - int
+//   - double
+//   - std::string
+//   - vector<T>, where T is deserializable
+//   - map<string, T>, where T is deserializable
+//   - Optional<T>, where T is deserializable
+//
+// ObjectMapper can help writing fromJSON() functions for object types:
+//   bool fromJSON(const Expr &E, MyStruct &R) {
+//     ObjectMapper O(E);
+//     if (!O || !O.map("mandatory_field", R.MandatoryField))
+//       return false;
+//     O.map("optional_field", R.OptionalField);
+//     return true;
+//   }
 //
 // === Serialization ===
 //
@@ -127,12 +149,11 @@ public:
   Expr(T D) : Type(T_Number) {
     create<double>(D);
   }
-  // Types with a static T::unparse function returning an Expr.
-  // FIXME: should this be a free unparse() function found by ADL?
+  // Types with a toJSON(const T&)->Expr function, found by ADL.
   template <typename T,
             typename = typename std::enable_if<std::is_same<
-                Expr, decltype(T::unparse(*(const T *)nullptr))>::value>>
-  Expr(const T &V) : Expr(T::unparse(V)) {}
+                Expr, decltype(toJSON(*(const T *)nullptr))>::value>>
+  Expr(const T &V) : Expr(toJSON(V)) {}
 
   Expr &operator=(const Expr &M) {
     destroy();
@@ -431,6 +452,101 @@ inline Expr::ObjectExpr::ObjectExpr(std::initializer_list<KV> Properties) {
 // Give Expr::{Object,Array} more convenient names for literal use.
 using obj = Expr::ObjectExpr;
 using ary = Expr::ArrayExpr;
+
+// Standard deserializers.
+inline bool fromJSON(const json::Expr &E, std::string &Out) {
+  if (auto S = E.asString()) {
+    Out = *S;
+    return true;
+  }
+  return false;
+}
+inline bool fromJSON(const json::Expr &E, int &Out) {
+  if (auto S = E.asInteger()) {
+    Out = *S;
+    return true;
+  }
+  return false;
+}
+inline bool fromJSON(const json::Expr &E, double &Out) {
+  if (auto S = E.asNumber()) {
+    Out = *S;
+    return true;
+  }
+  return false;
+}
+inline bool fromJSON(const json::Expr &E, bool &Out) {
+  if (auto S = E.asBoolean()) {
+    Out = *S;
+    return true;
+  }
+  return false;
+}
+template <typename T>
+bool fromJSON(const json::Expr &E, llvm::Optional<T> &Out) {
+  if (E.asNull()) {
+    Out = llvm::None;
+    return true;
+  }
+  T Result;
+  if (!fromJSON(E, Result))
+    return false;
+  Out = std::move(Result);
+  return true;
+}
+template <typename T> bool fromJSON(const json::Expr &E, std::vector<T> &Out) {
+  if (auto *A = E.asArray()) {
+    Out.clear();
+    Out.resize(A->size());
+    for (size_t I = 0; I < A->size(); ++I)
+      if (!fromJSON((*A)[I], Out[I]))
+        return false;
+    return true;
+  }
+  return false;
+}
+template <typename T>
+bool fromJSON(const json::Expr &E, std::map<std::string, T> &Out) {
+  if (auto *O = E.asObject()) {
+    Out.clear();
+    for (const auto &KV : *O)
+      if (!fromJSON(KV.second, Out[llvm::StringRef(KV.first)]))
+        return false;
+    return true;
+  }
+  return false;
+}
+
+// Helper for mapping JSON objects onto protocol structs.
+// See file header for example.
+class ObjectMapper {
+public:
+  ObjectMapper(const json::Expr &E) : O(E.asObject()) {}
+
+  // True if the expression is an object.
+  // Must be checked before calling map().
+  operator bool() { return O; }
+
+  // Maps a property to a field, if it exists.
+  template <typename T> bool map(const char *Prop, T &Out) {
+    assert(*this && "Must check this is an object before calling map()");
+    if (const json::Expr *E = O->get(Prop))
+      return fromJSON(*E, Out);
+    return false;
+  }
+
+  // Optional requires special handling, because missing keys are OK.
+  template <typename T> bool map(const char *Prop, llvm::Optional<T> &Out) {
+    assert(*this && "Must check this is an object before calling map()");
+    if (const json::Expr *E = O->get(Prop))
+      return fromJSON(*E, Out);
+    Out = llvm::None;
+    return true;
+  }
+
+private:
+  const json::obj *O;
+};
 
 llvm::Expected<Expr> parse(llvm::StringRef JSON);
 

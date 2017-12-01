@@ -241,11 +241,15 @@ template <class ELFT> static void doGcSections() {
   // Preserve special sections and those which are specified in linker
   // script KEEP command.
   for (InputSectionBase *Sec : InputSections) {
-    // .eh_frame is always marked as live now, but also it can reference to
-    // sections that contain personality. We preserve all non-text sections
-    // referred by .eh_frame here.
-    if (auto *EH = dyn_cast_or_null<EhInputSection>(Sec))
+    // Mark .eh_frame sections as live because there are usually no relocations
+    // that point to .eh_frames. Otherwise, the garbage collector would drop
+    // all of them. We also want to preserve personality routines and LSDA
+    // referenced by .eh_frame sections, so we scan them for that here.
+    if (auto *EH = dyn_cast_or_null<EhInputSection>(Sec)) {
+      EH->Live = true;
       scanEhFrameSection<ELFT>(*EH, Enqueue);
+    }
+
     if (Sec->Flags & SHF_LINK_ORDER)
       continue;
     if (isReserved<ELFT>(Sec) || Script->shouldKeep(Sec))

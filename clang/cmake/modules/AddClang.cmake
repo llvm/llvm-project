@@ -104,11 +104,9 @@ macro(add_clang_library name)
         RUNTIME DESTINATION bin)
 
       if (${ARG_SHARED} AND NOT CMAKE_CONFIGURATION_TYPES)
-        add_custom_target(install-${name}
-                          DEPENDS ${name}
-                          COMMAND "${CMAKE_COMMAND}"
-                                  -DCMAKE_INSTALL_COMPONENT=${name}
-                                  -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+        add_llvm_install_targets(install-${name}
+                                 DEPENDS ${name}
+                                 COMPONENT ${name})
       endif()
     endif()
     set_property(GLOBAL APPEND PROPERTY CLANG_EXPORTS ${name})
@@ -147,11 +145,9 @@ macro(add_clang_tool name)
       COMPONENT ${name})
 
     if(NOT CMAKE_CONFIGURATION_TYPES)
-      add_custom_target(install-${name}
-        DEPENDS ${name}
-        COMMAND "${CMAKE_COMMAND}"
-        -DCMAKE_INSTALL_COMPONENT=${name}
-        -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+      add_llvm_install_targets(install-${name}
+                               DEPENDS ${name}
+                               COMPONENT ${name})
     endif()
     set_property(GLOBAL APPEND PROPERTY CLANG_EXPORTS ${name})
   endif()

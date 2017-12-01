@@ -61,6 +61,81 @@ else()
   set(OPENMP_FILECHECK_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/FileCheck)
 endif()
 
+# Macro to extract information about compiler from file. (no own scope)
+macro(extract_test_compiler_information lang file)
+  file(READ ${file} information)
+  list(GET information 0 path)
+  list(GET information 1 id)
+  list(GET information 2 version)
+  list(GET information 3 openmp_flags)
+
+  set(OPENMP_TEST_${lang}_COMPILER_PATH ${path})
+  set(OPENMP_TEST_${lang}_COMPILER_ID ${id})
+  set(OPENMP_TEST_${lang}_COMPILER_VERSION ${version})
+  set(OPENMP_TEST_${lang}_COMPILER_OPENMP_FLAGS ${openmp_flags})
+endmacro()
+
+# Function to set variables with information about the test compiler.
+function(set_test_compiler_information dir)
+  extract_test_compiler_information(C ${dir}/CCompilerInformation.txt)
+  extract_test_compiler_information(CXX ${dir}/CXXCompilerInformation.txt)
+  if (NOT("${OPENMP_TEST_C_COMPILER_ID}" STREQUAL "${OPENMP_TEST_CXX_COMPILER_ID}" AND
+          "${OPENMP_TEST_C_COMPILER_VERSION}" STREQUAL "${OPENMP_TEST_CXX_COMPILER_VERSION}"))
+    message(STATUS "Test compilers for C and C++ don't match.")
+    message(WARNING "The check targets will not be available!")
+    set(ENABLE_CHECK_TARGETS FALSE PARENT_SCOPE)
+  else()
+    set(OPENMP_TEST_COMPILER_ID "${OPENMP_TEST_C_COMPILER_ID}" PARENT_SCOPE)
+    set(OPENMP_TEST_COMPILER_VERSION "${OPENMP_TEST_C_COMPILER_VERSION}" PARENT_SCOPE)
+    set(OPENMP_TEST_COMPILER_OPENMP_FLAGS "${OPENMP_TEST_C_COMPILER_OPENMP_FLAGS}" PARENT_SCOPE)
+
+    # Determine major version.
+    string(REGEX MATCH "[0-9]+" major "${OPENMP_TEST_C_COMPILER_VERSION}")
+    set(OPENMP_TEST_COMPILER_VERSION_MAJOR "${major}" PARENT_SCOPE)
+  endif()
+endfunction()
+
+if (${OPENMP_STANDALONE_BUILD})
+  # Detect compiler that should be used for testing.
+  # We cannot use ExternalProject_Add() because its configuration runs when this
+  # project is built which is too late for detecting the compiler...
+  file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/DetectTestCompiler)
+  execute_process(
+    COMMAND ${CMAKE_COMMAND} ${CMAKE_CURRENT_LIST_DIR}/DetectTestCompiler
+      -DCMAKE_C_COMPILER=${OPENMP_TEST_C_COMPILER}
+      -DCMAKE_CXX_COMPILER=${OPENMP_TEST_CXX_COMPILER}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/DetectTestCompiler
+    OUTPUT_VARIABLE DETECT_COMPILER_OUT
+    ERROR_VARIABLE DETECT_COMPILER_ERR
+    RESULT_VARIABLE DETECT_COMPILER_RESULT)
+  if (DETECT_COMPILER_RESULT)
+    message(STATUS "Could not detect test compilers.")
+    message(WARNING "The check targets will not be available!")
+    set(ENABLE_CHECK_TARGETS FALSE)
+  else()
+    set_test_compiler_information(${CMAKE_CURRENT_BINARY_DIR}/DetectTestCompiler)
+  endif()
+else()
+  # Set the information that we know.
+  set(OPENMP_TEST_COMPILER_ID "Clang")
+  # Cannot use CLANG_VERSION because we are not guaranteed that this is already set.
+  set(OPENMP_TEST_COMPILER_VERSION "${LLVM_VERSION}")
+  set(OPENMP_TEST_COMPILER_VERSION_MAJOR "${LLVM_MAJOR_VERSION}")
+  set(OPENMP_TEST_COMPILER_OPENMP_FLAGS "-fopenmp")
+endif()
+
+# Function to set compiler features for use in lit.
+function(set_test_compiler_features)
+  if ("${OPENMP_TEST_COMPILER_ID}" STREQUAL "GNU")
+    set(comp "gcc")
+  else()
+    # Just use the lowercase of the compiler ID as fallback.
+    string(TOLOWER "${OPENMP_TEST_COMPILER_ID}" comp)
+  endif()
+  set(OPENMP_TEST_COMPILER_FEATURES "['${comp}', '${comp}-${OPENMP_TEST_COMPILER_VERSION_MAJOR}', '${comp}-${OPENMP_TEST_COMPILER_VERSION}']" PARENT_SCOPE)
+endfunction()
+set_test_compiler_features()
+
 # Function to add a testsuite for an OpenMP runtime library.
 function(add_openmp_testsuite target comment)
   if (NOT ENABLE_CHECK_TARGETS)

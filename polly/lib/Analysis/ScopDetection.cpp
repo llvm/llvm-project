@@ -1367,9 +1367,9 @@ Region *ScopDetection::expandRegion(Region &R) {
   DEBUG(dbgs() << "\tExpanding " << R.getNameStr() << "\n");
 
   while (ExpandedRegion) {
-    const auto &It = DetectionContextMap.insert(std::make_pair(
-        getBBPairForRegion(ExpandedRegion.get()),
-        DetectionContext(*ExpandedRegion, AA, false /*verifying*/)));
+    const auto &It = DetectionContextMap.insert(
+        std::make_pair(getBBPairForRegion(ExpandedRegion.get()),
+                       DetectionContext(*ExpandedRegion, AA, false /*verifying*/)));
     DetectionContext &Context = It.first->second;
     DEBUG(dbgs() << "\t\tTrying " << ExpandedRegion->getNameStr() << "\n");
     // Only expand when we did not collect errors.

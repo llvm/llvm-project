@@ -89,6 +89,7 @@ OVERLOADED_OPERATOR(EqualEqual           , "=="  , equalequal         , false, t
 OVERLOADED_OPERATOR(ExclaimEqual         , "!="  , exclaimequal       , false, true , false)
 OVERLOADED_OPERATOR(LessEqual            , "<="  , lessequal          , false, true , false)
 OVERLOADED_OPERATOR(GreaterEqual         , ">="  , greaterequal       , false, true , false)
+OVERLOADED_OPERATOR(Spaceship            , "<=>" , spaceship          , false, true , false)
 OVERLOADED_OPERATOR(AmpAmp               , "&&"  , ampamp             , false, true , false)
 OVERLOADED_OPERATOR(PipePipe             , "||"  , pipepipe           , false, true , false)
 OVERLOADED_OPERATOR(PlusPlus             , "++"  , plusplus           , true , true , false)
