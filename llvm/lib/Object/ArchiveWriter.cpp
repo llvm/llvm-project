@@ -35,6 +35,15 @@
 
 using namespace llvm;
 
+// The SYM64 format is used when an archive's member offsets are larger than
+// 32-bits can hold. The need for this shift in format is detected by
+// writeArchive. To test this we need to generate a file with a member that has
+// an offset larger than 32-bits but this demands a very slow test. To speed
+// the test up we use this flag to pretend like the cutoff happens before
+// 32-bits and instead happens at some much smaller value.
+static cl::opt<int> Sym64Threshold("sym64-threshold", cl::Hidden,
+                                   cl::init(32));
+
 NewArchiveMember::NewArchiveMember(MemoryBufferRef BufRef)
     : Buf(MemoryBuffer::getMemBuffer(BufRef, false)),
       MemberName(BufRef.getBufferIdentifier()) {}
@@ -484,7 +493,7 @@ Error llvm::writeArchive(StringRef ArcName,
     // If LastOffset isn't going to fit in a 32-bit varible we need to switch
     // to 64-bit. Note that the file can be larger than 4GB as long as the last
     // member starts before the 4GB offset.
-    if (LastOffset >> 32 != 0)
+    if (LastOffset >= (1ULL << Sym64Threshold))
       Kind = object::Archive::K_GNU64;
   }
 

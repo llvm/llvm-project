@@ -238,6 +238,8 @@ bool IRTranslator::translateCompare(const User &U,
 bool IRTranslator::translateRet(const User &U, MachineIRBuilder &MIRBuilder) {
   const ReturnInst &RI = cast<ReturnInst>(U);
   const Value *Ret = RI.getReturnValue();
+  if (Ret && DL->getTypeStoreSize(Ret->getType()) == 0)
+    Ret = nullptr;
   // The target may mess up with the insertion point, but
   // this is not important as a return is the last instruction
   // of the block anyway.
@@ -337,6 +339,9 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
                                : MachineMemOperand::MONone;
   Flags |= MachineMemOperand::MOLoad;
 
+  if (DL->getTypeStoreSize(LI.getType()) == 0)
+    return true;
+
   unsigned Res = getOrCreateVReg(LI);
   unsigned Addr = getOrCreateVReg(*LI.getPointerOperand());
 
@@ -354,6 +359,9 @@ bool IRTranslator::translateStore(const User &U, MachineIRBuilder &MIRBuilder) {
   auto Flags = SI.isVolatile() ? MachineMemOperand::MOVolatile
                                : MachineMemOperand::MONone;
   Flags |= MachineMemOperand::MOStore;
+
+  if (DL->getTypeStoreSize(SI.getValueOperand()->getType()) == 0)
+    return true;
 
   unsigned Val = getOrCreateVReg(*SI.getValueOperand());
   unsigned Addr = getOrCreateVReg(*SI.getPointerOperand());
@@ -1269,8 +1277,11 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
 
   // Lower the actual args into this basic block.
   SmallVector<unsigned, 8> VRegArgs;
-  for (const Argument &Arg: F.args())
+  for (const Argument &Arg: F.args()) {
+    if (DL->getTypeStoreSize(Arg.getType()) == 0)
+      continue; // Don't handle zero sized types.
     VRegArgs.push_back(getOrCreateVReg(Arg));
+  }
   if (!CLI->lowerFormalArguments(EntryBuilder, F, VRegArgs)) {
     OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
                                MF->getFunction()->getSubprogram(),

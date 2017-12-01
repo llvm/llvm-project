@@ -136,7 +136,7 @@ static Optional<std::string> findFile(StringRef Path1, const Twine &Path2) {
 
 // Inject a new wasm global into the output binary with the given value.
 // Wasm global are used in relocatable object files to model symbol imports
-// and exports.  In the final exectuable the only use of wasm globals is the
+// and exports.  In the final executable the only use of wasm globals is
 // for the exlicit stack pointer (__stack_pointer).
 static void addSyntheticGlobal(StringRef Name, int32_t Value) {
   log("injecting global: " + Name);
@@ -281,7 +281,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (!Config->Relocatable) {
     if (Config->Entry.empty())
       Config->Entry = "_start";
-    static WasmSignature Signature = { {}, WASM_TYPE_NORESULT };
+    static WasmSignature Signature = {{}, WASM_TYPE_NORESULT};
     addSyntheticUndefinedFunction(Config->Entry, &Signature);
 
     addSyntheticGlobal("__stack_pointer", 0);

@@ -16,9 +16,9 @@
 
 using llvm::object::Archive;
 using llvm::object::WasmSymbol;
-using llvm::wasm::WasmSignature;
-using llvm::wasm::WasmImport;
 using llvm::wasm::WasmExport;
+using llvm::wasm::WasmImport;
+using llvm::wasm::WasmSignature;
 
 namespace lld {
 namespace wasm {
@@ -104,7 +104,7 @@ protected:
   const WasmSymbol *Sym = nullptr;
   const InputSegment *Segment = nullptr;
   llvm::Optional<uint32_t> OutputIndex;
-  const WasmSignature* FunctionType;
+  const WasmSignature *FunctionType;
 };
 
 } // namespace wasm

@@ -98,9 +98,12 @@ bool MCWasmStreamer::EmitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
   case MCSA_WeakDefAutoPrivate:
   case MCSA_Invalid:
   case MCSA_IndirectSymbol:
-  case MCSA_Hidden:
   case MCSA_Protected:
     return false;
+
+  case MCSA_Hidden:
+    Symbol->setHidden(true);
+    break;
 
   case MCSA_Weak:
   case MCSA_WeakReference:

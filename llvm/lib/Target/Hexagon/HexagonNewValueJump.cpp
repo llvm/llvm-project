@@ -139,6 +139,9 @@ static bool canBeFeederToNewValueJump(const HexagonInstrInfo *QII,
   if (II->isImplicitDef())
     return false;
 
+  if (QII->isSolo(*II))
+    return false;
+
   // Make sure there there is no 'def' or 'use' of any of the uses of
   // feeder insn between it's definition, this MI and jump, jmpInst
   // skipping compare, cmpInst.

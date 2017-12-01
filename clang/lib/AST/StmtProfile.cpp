@@ -1384,6 +1384,10 @@ static Stmt::StmtClass DecodeOperatorCall(const CXXOperatorCallExpr *S,
   case OO_GreaterEqual:
     BinaryOp = BO_GE;
     return Stmt::BinaryOperatorClass;
+
+  case OO_Spaceship:
+    // FIXME: Update this once we support <=> expressions.
+    llvm_unreachable("<=> expressions not supported yet");
       
   case OO_AmpAmp:
     BinaryOp = BO_LAnd;

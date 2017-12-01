@@ -498,9 +498,12 @@ MachineBasicBlock::iterator  SILoadStoreOptimizer::mergeRead2Pair(
   if (CI.BaseOff) {
     BaseReg = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     BaseRegFlags = RegState::Kill;
-    BuildMI(*MBB, CI.Paired, DL, TII->get(AMDGPU::V_ADD_I32_e32), BaseReg)
-           .addImm(CI.BaseOff)
-           .addReg(AddrReg->getReg());
+
+    unsigned AddOpc = STM->hasAddNoCarry() ?
+      AMDGPU::V_ADD_U32_e32 : AMDGPU::V_ADD_I32_e32;
+    BuildMI(*MBB, CI.Paired, DL, TII->get(AddOpc), BaseReg)
+      .addImm(CI.BaseOff)
+      .addReg(AddrReg->getReg());
   }
 
   MachineInstrBuilder Read2 =
@@ -581,9 +584,12 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeWrite2Pair(
   if (CI.BaseOff) {
     BaseReg = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     BaseRegFlags = RegState::Kill;
-    BuildMI(*MBB, CI.Paired, DL, TII->get(AMDGPU::V_ADD_I32_e32), BaseReg)
-           .addImm(CI.BaseOff)
-           .addReg(Addr->getReg());
+
+    unsigned AddOpc = STM->hasAddNoCarry() ?
+      AMDGPU::V_ADD_U32_e32 : AMDGPU::V_ADD_I32_e32;
+    BuildMI(*MBB, CI.Paired, DL, TII->get(AddOpc), BaseReg)
+      .addImm(CI.BaseOff)
+      .addReg(Addr->getReg());
   }
 
   MachineInstrBuilder Write2 =

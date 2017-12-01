@@ -31,5 +31,5 @@ entry:
 ; CHECK-NEXT:       - Name:            weak_external_data
 ; CHECK-NEXT:         Flags:           1
 ; CHECK-NEXT:       - Name:            weak_function
-; CHECK-NEXT:         Flags:           1
+; CHECK-NEXT:         Flags:           5
 ; CHECK-NEXT: ...

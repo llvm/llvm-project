@@ -1,4 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -mattr=-promote-alloca -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -mattr=-promote-alloca -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-promote-alloca -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
 
 ; Test that non-entry function frame indices are expanded properly to
 ; give an index relative to the scratch wave offset register
@@ -7,8 +8,13 @@
 ; GCN-LABEL: {{^}}func_mov_fi_i32:
 ; GCN: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN: s_sub_u32 s6, s5, s4
-; GCN-NEXT: v_lshr_b32_e64 [[SCALED:v[0-9]+]], s6, 6
-; GCN-NEXT: v_add_i32_e64 v0, s[6:7], 4, [[SCALED]]
+
+; CI-NEXT: v_lshr_b32_e64 [[SCALED:v[0-9]+]], s6, 6
+; CI-NEXT: v_add_i32_e64 v0, s[6:7], 4, [[SCALED]]
+
+; GFX9-NEXT: v_lshrrev_b32_e64 [[SCALED:v[0-9]+]], 6, s6
+; GFX9-NEXT: v_add_u32_e32 v0, 4, [[SCALED]]
+
 ; GCN-NOT: v_mov
 ; GCN: ds_write_b32 v0, v0
 define void @func_mov_fi_i32() #0 {
@@ -23,9 +29,16 @@ define void @func_mov_fi_i32() #0 {
 ; GCN-LABEL: {{^}}func_add_constant_to_fi_i32:
 ; GCN: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN: s_sub_u32 s6, s5, s4
-; GCN-NEXT: v_lshr_b32_e64 [[SCALED:v[0-9]+]], s6, 6
-; GCN-NEXT: v_add_i32_e64 v0, s[6:7], 4, [[SCALED]]
-; GCN-NEXT: v_add_i32_e32 v0, vcc, 4, v0
+
+; CI-NEXT: v_lshr_b32_e64 [[SCALED:v[0-9]+]], s6, 6
+; CI-NEXT: v_add_i32_e64 v0, s[6:7], 4, [[SCALED]]
+; CI-NEXT: v_add_i32_e32 v0, vcc, 4, v0
+
+; GFX9-NEXT: v_lshrrev_b32_e64 [[SCALED:v[0-9]+]], 6, s6
+; GFX9-NEXT: v_add_u32_e32 v0, 4, [[SCALED]]
+; GFX9-NEXT: v_add_u32_e32 v0, 4, v0
+
+
 ; GCN-NOT: v_mov
 ; GCN: ds_write_b32 v0, v0
 define void @func_add_constant_to_fi_i32() #0 {
@@ -40,8 +53,13 @@ define void @func_add_constant_to_fi_i32() #0 {
 
 ; GCN-LABEL: {{^}}func_other_fi_user_i32:
 ; GCN: s_sub_u32 s6, s5, s4
-; GCN-NEXT: v_lshr_b32_e64 [[SCALED:v[0-9]+]], s6, 6
-; GCN-NEXT: v_add_i32_e64 v0, s[6:7], 4, [[SCALED]]
+
+; CI-NEXT: v_lshr_b32_e64 [[SCALED:v[0-9]+]], s6, 6
+; CI-NEXT: v_add_i32_e64 v0, s[6:7], 4, [[SCALED]]
+
+; GFX9-NEXT: v_lshrrev_b32_e64 [[SCALED:v[0-9]+]], 6, s6
+; GFX9-NEXT: v_add_u32_e32 v0, 4, [[SCALED]]
+
 ; GCN-NEXT: v_mul_lo_i32 v0, v0, 9
 ; GCN-NOT: v_mov
 ; GCN: ds_write_b32 v0, v0
@@ -73,9 +91,15 @@ define void @func_load_private_arg_i32_ptr(i32* %ptr) #0 {
 ; GCN: s_waitcnt
 ; GCN-NEXT: s_mov_b32 s5, s32
 ; GCN-NEXT: s_sub_u32 [[SUB_OFFSET:s[0-9]+]], s5, s4
-; GCN-NEXT: v_lshr_b32_e64 [[SHIFT:v[0-9]+]], [[SUB_OFFSET]], 6
-; GCN-NEXT: v_add_i32_e64 [[ADD:v[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, 4, [[SHIFT]]
-; GCN-NEXT: v_add_i32_e32 v0, vcc, 4, [[ADD]]
+
+; CI-NEXT: v_lshr_b32_e64 [[SHIFT:v[0-9]+]], [[SUB_OFFSET]], 6
+; CI-NEXT: v_add_i32_e64 [[ADD:v[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, 4, [[SHIFT]]
+; CI-NEXT: v_add_i32_e32 v0, vcc, 4, [[ADD]]
+
+; GFX9-NEXT: v_lshrrev_b32_e64 [[SHIFT:v[0-9]+]], 6, [[SUB_OFFSET]]
+; GFX9-NEXT: v_add_u32_e32 [[ADD:v[0-9]+]], 4, [[SHIFT]]
+; GFX9-NEXT: v_add_u32_e32 v0, 4, [[ADD]]
+
 ; GCN-NOT: v_mov
 ; GCN: ds_write_b32 v0, v0
 define void @void_func_byval_struct_i8_i32_ptr({ i8, i32 }* byval %arg0) #0 {
@@ -106,12 +130,21 @@ define void @void_func_byval_struct_i8_i32_ptr_value({ i8, i32 }* byval %arg0) #
 
 ; GCN-LABEL: {{^}}void_func_byval_struct_i8_i32_ptr_nonentry_block:
 ; GCN: s_sub_u32 [[SUB_OFFSET:s[0-9]+]], s5, s4
-; GCN: v_lshr_b32_e64 [[SHIFT:v[0-9]+]], [[SUB_OFFSET]], 6
-; GCN: v_add_i32_e64 [[ADD:v[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 4, [[SHIFT]]
+
+; CI: v_lshr_b32_e64 [[SHIFT:v[0-9]+]], [[SUB_OFFSET]], 6
+; CI: v_add_i32_e64 [[ADD:v[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 4, [[SHIFT]]
+
+; GFX9: v_lshrrev_b32_e64 [[SHIFT:v[0-9]+]], 6, [[SUB_OFFSET]]
+; GFX9: v_add_u32_e32 [[ADD:v[0-9]+]], 4, [[SHIFT]]
+
 ; GCN: s_and_saveexec_b64
 
-; GCN: v_add_i32_e32 v0, vcc, 4, [[ADD]]
-; GCN: buffer_load_dword v1, v0, s[0:3], s4 offen{{$}}
+; CI: v_add_i32_e32 v0, vcc, 4, [[ADD]]
+; CI: buffer_load_dword v1, v0, s[0:3], s4 offen{{$}}
+
+; GFX9: v_add_u32_e32 v0, 4, [[ADD]]
+; GFX9: buffer_load_dword v1, v{{[0-9]+}}, s[0:3], s4 offen offset:4{{$}}
+
 ; GCN: ds_write_b32
 define void @void_func_byval_struct_i8_i32_ptr_nonentry_block({ i8, i32 }* byval %arg0, i32 %arg2) #0 {
   %cmp = icmp eq i32 %arg2, 0
@@ -131,9 +164,14 @@ ret:
 ; Added offset can't be used with VOP3 add
 ; GCN-LABEL: {{^}}func_other_fi_user_non_inline_imm_offset_i32:
 ; GCN: s_sub_u32 s6, s5, s4
-; GCN-DAG: v_lshr_b32_e64 [[SCALED:v[0-9]+]], s6, 6
 ; GCN-DAG: s_movk_i32 s6, 0x204
-; GCN: v_add_i32_e64 v0, s[6:7], s6, [[SCALED]]
+
+; CI-DAG: v_lshr_b32_e64 [[SCALED:v[0-9]+]], s6, 6
+; CI: v_add_i32_e64 v0, s[6:7], s6, [[SCALED]]
+
+; GFX9-DAG: v_lshrrev_b32_e64 [[SCALED:v[0-9]+]], 6, s6
+; GFX9: v_add_u32_e32 v0, s6, [[SCALED]]
+
 ; GCN: v_mul_lo_i32 v0, v0, 9
 ; GCN: ds_write_b32 v0, v0
 define void @func_other_fi_user_non_inline_imm_offset_i32() #0 {
@@ -150,9 +188,14 @@ define void @func_other_fi_user_non_inline_imm_offset_i32() #0 {
 
 ; GCN-LABEL: {{^}}func_other_fi_user_non_inline_imm_offset_i32_vcc_live:
 ; GCN: s_sub_u32 [[DIFF:s[0-9]+]], s5, s4
-; GCN-DAG: v_lshr_b32_e64 [[SCALED:v[0-9]+]], [[DIFF]], 6
 ; GCN-DAG: s_movk_i32 [[OFFSET:s[0-9]+]], 0x204
-; GCN: v_add_i32_e64 v0, s{{\[[0-9]+:[0-9]+\]}}, [[OFFSET]], [[SCALED]]
+
+; CI-DAG: v_lshr_b32_e64 [[SCALED:v[0-9]+]], [[DIFF]], 6
+; CI: v_add_i32_e64 v0, s{{\[[0-9]+:[0-9]+\]}}, [[OFFSET]], [[SCALED]]
+
+; GFX9-DAG: v_lshrrev_b32_e64 [[SCALED:v[0-9]+]], 6, [[DIFF]]
+; GFX9: v_add_u32_e32 v0, [[OFFSET]], [[SCALED]]
+
 ; GCN: v_mul_lo_i32 v0, v0, 9
 ; GCN: ds_write_b32 v0, v0
 define void @func_other_fi_user_non_inline_imm_offset_i32_vcc_live() #0 {

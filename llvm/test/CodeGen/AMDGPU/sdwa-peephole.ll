@@ -7,7 +7,8 @@
 ; NOSDWA: v_add_u32_e32 v{{[0-9]+}}, vcc, v{{[0-9]+}}, v[[DST]]
 ; NOSDWA-NOT: v_add_{{(_co)?}}_u32_sdwa
 
-; SDWA: v_add{{(_co)?}}_u32_sdwa v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; VI: v_add_u32_sdwa v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX9: v_add_u32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 
 define amdgpu_kernel void @add_shr_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %a = load i32, i32 addrspace(1)* %in, align 4
@@ -22,8 +23,8 @@ define amdgpu_kernel void @add_shr_i32(i32 addrspace(1)* %out, i32 addrspace(1)*
 ; NOSDWA: v_subrev_u32_e32 v{{[0-9]+}}, vcc, v{{[0-9]+}}, v[[DST]]
 ; NOSDWA-NOT: v_subrev_{{(_co)?}}_u32_sdwa
 
-; SDWA: v_subrev{{(_co)?}}_u32_sdwa v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-
+; VI: v_subrev_u32_sdwa v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX9: v_sub_u32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 define amdgpu_kernel void @sub_shr_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %a = load i32, i32 addrspace(1)* %in, align 4
   %shr = lshr i32 %a, 16

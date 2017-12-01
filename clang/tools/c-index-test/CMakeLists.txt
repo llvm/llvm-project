@@ -56,10 +56,8 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     COMPONENT c-index-test)
 
   if (NOT CMAKE_CONFIGURATION_TYPES) # don't add this for IDE's.
-    add_custom_target(install-c-index-test
-      DEPENDS c-index-test
-      COMMAND "${CMAKE_COMMAND}"
-              -DCMAKE_INSTALL_COMPONENT=c-index-test
-              -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+    add_llvm_install_targets(install-c-index-test
+                             DEPENDS c-index-test
+                             COMPONENT c-index-test)
   endif()
 endif()

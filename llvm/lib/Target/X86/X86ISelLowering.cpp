@@ -399,7 +399,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setTruncStoreAction(MVT::f80, MVT::f16, Expand);
 
   if (Subtarget.hasPOPCNT()) {
-    setOperationAction(ISD::CTPOP          , MVT::i8   , Promote);
+    setOperationPromotedToType(ISD::CTPOP, MVT::i8, MVT::i32);
   } else {
     setOperationAction(ISD::CTPOP          , MVT::i8   , Expand);
     setOperationAction(ISD::CTPOP          , MVT::i16  , Expand);
@@ -1683,6 +1683,19 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 // This has so far only been implemented for 64-bit MachO.
 bool X86TargetLowering::useLoadStackGuardNode() const {
   return Subtarget.isTargetMachO() && Subtarget.is64Bit();
+}
+
+bool X86TargetLowering::useStackGuardXorFP() const {
+  // Currently only MSVC CRTs XOR the frame pointer into the stack guard value.
+  return Subtarget.getTargetTriple().isOSMSVCRT();
+}
+
+SDValue X86TargetLowering::emitStackGuardXorFP(SelectionDAG &DAG, SDValue Val,
+                                               const SDLoc &DL) const {
+  EVT PtrTy = getPointerTy(DAG.getDataLayout());
+  unsigned XorOp = Subtarget.is64Bit() ? X86::XOR64_FP : X86::XOR32_FP;
+  MachineSDNode *Node = DAG.getMachineNode(XorOp, DL, PtrTy, Val);
+  return SDValue(Node, 0);
 }
 
 TargetLoweringBase::LegalizeTypeAction
