@@ -378,7 +378,7 @@ Error WasmObjectFile::parseLinkingSection(const uint8_t *Ptr,
         Symbols[SymIndex].Flags = Flags;
         DEBUG(dbgs() << "Set symbol flags index:"
                      << SymIndex << " name:"
-                     << Symbols[SymIndex].Name << " expected:"
+                     << Symbols[SymIndex].Name << " exptected:"
                      << Symbol << " flags: " << Flags << "\n");
       }
       break;
@@ -766,8 +766,6 @@ uint32_t WasmObjectFile::getSymbolFlags(DataRefImpl Symb) const {
     Result |= SymbolRef::SF_Weak;
   if (!Sym.isLocal())
     Result |= SymbolRef::SF_Global;
-  if (Sym.isHidden())
-    Result |= SymbolRef::SF_Hidden;
 
   switch (Sym.Type) {
   case WasmSymbol::SymbolType::FUNCTION_IMPORT:

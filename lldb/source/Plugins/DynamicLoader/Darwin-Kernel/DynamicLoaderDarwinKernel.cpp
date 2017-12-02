@@ -1407,7 +1407,7 @@ bool DynamicLoaderDarwinKernel::ReadAllKextSummaries() {
 void DynamicLoaderDarwinKernel::KextImageInfo::PutToLog(Log *log) const {
   if (log == NULL)
     return;
-  const uint8_t *u = (uint8_t *)m_uuid.GetBytes();
+  const uint8_t *u = (const uint8_t *)m_uuid.GetBytes();
 
   if (m_load_address == LLDB_INVALID_ADDRESS) {
     if (u) {
