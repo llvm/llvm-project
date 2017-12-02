@@ -62,8 +62,8 @@ namespace clang {
 namespace clangd {
 using namespace llvm;
 
-const int FuzzyMatcher::MaxPat;
-const int FuzzyMatcher::MaxWord;
+constexpr int FuzzyMatcher::MaxPat;
+constexpr int FuzzyMatcher::MaxWord;
 
 static char lower(char C) { return C >= 'A' && C <= 'Z' ? C + ('a' - 'A') : C; }
 // A "negative infinity" score that won't overflow.
