@@ -1133,21 +1133,7 @@ let Constraints = "$src1 = $dst", AddedComplexity = 20 in {
 // SSE 1 & 2 - Conversion Instructions
 //===----------------------------------------------------------------------===//
 
-def SSE_CVT_PD : OpndItins<
-  IIC_SSE_CVT_PD_RR, IIC_SSE_CVT_PD_RM
->;
-
-let Sched = WriteCvtI2F in
-def SSE_CVT_PS : OpndItins<
-  IIC_SSE_CVT_PS_RR, IIC_SSE_CVT_PS_RM
->;
-
-let Sched = WriteCvtI2F in
-def SSE_CVT_Scalar : OpndItins<
-  IIC_SSE_CVT_Scalar_RR, IIC_SSE_CVT_Scalar_RM
->;
-
-let Sched = WriteCvtF2I in
+let Sched = WriteCvtF2I in {
 def SSE_CVT_SS2SI_32 : OpndItins<
   IIC_SSE_CVT_SS2SI32_RR, IIC_SSE_CVT_SS2SI32_RM
 >;
@@ -1157,10 +1143,62 @@ def SSE_CVT_SS2SI_64 : OpndItins<
   IIC_SSE_CVT_SS2SI64_RR, IIC_SSE_CVT_SS2SI64_RM
 >;
 
-let Sched = WriteCvtF2I in
 def SSE_CVT_SD2SI : OpndItins<
   IIC_SSE_CVT_SD2SI_RR, IIC_SSE_CVT_SD2SI_RM
 >;
+
+def SSE_CVT_PS2I : OpndItins<
+  IIC_SSE_CVT_PS_RR, IIC_SSE_CVT_PS_RM
+>;
+
+def SSE_CVT_PD2I : OpndItins<
+  IIC_SSE_CVT_PD_RR, IIC_SSE_CVT_PD_RM
+>;
+}
+
+let Sched = WriteCvtI2F in {
+def SSE_CVT_SI2SS : OpndItins<
+  IIC_SSE_CVT_Scalar_RR, IIC_SSE_CVT_Scalar_RM
+>;
+
+def SSE_CVT_SI2SD : OpndItins<
+  IIC_SSE_CVT_Scalar_RR, IIC_SSE_CVT_Scalar_RM
+>;
+
+def SSE_CVT_I2PS : OpndItins<
+  IIC_SSE_CVT_PS_RR, IIC_SSE_CVT_PS_RM
+>;
+
+def SSE_CVT_I2PD : OpndItins<
+  IIC_SSE_CVT_PD_RR, IIC_SSE_CVT_PD_RM
+>;
+}
+
+let Sched = WriteCvtF2F in {
+def SSE_CVT_SD2SS : OpndItins<
+  IIC_SSE_CVT_Scalar_RR, IIC_SSE_CVT_Scalar_RM
+>;
+
+def SSE_CVT_SS2SD : OpndItins<
+  IIC_SSE_CVT_Scalar_RR, IIC_SSE_CVT_Scalar_RM
+>;
+
+def SSE_CVT_PD2PS : OpndItins<
+  IIC_SSE_CVT_PD_RR, IIC_SSE_CVT_PD_RM
+>;
+
+def SSE_CVT_PS2PD : OpndItins<
+  IIC_SSE_CVT_PD_RR, IIC_SSE_CVT_PD_RM
+>;
+
+def SSE_CVT_PH2PS : OpndItins<
+  IIC_SSE_CVT_PS_RR, IIC_SSE_CVT_PS_RM
+>;
+
+def SSE_CVT_PS2PH : OpndItins<
+  IIC_SSE_CVT_PS_RR, IIC_SSE_CVT_PS_RM
+>;
+}
 
 // FIXME: We probably want to match the rm form only when optimizing for
 // size, to avoid false depenendecies (see sse_fp_unop_s for details)
@@ -1193,16 +1231,16 @@ let hasSideEffects = 0 in {
 // FIXME: We probably want to match the rm form only when optimizing for
 // size, to avoid false depenendecies (see sse_fp_unop_s for details)
 multiclass sse12_vcvt_avx<bits<8> opc, RegisterClass SrcRC, RegisterClass DstRC,
-                          X86MemOperand x86memop, string asm> {
+                          X86MemOperand x86memop, string asm, OpndItins itins> {
 let hasSideEffects = 0, Predicates = [UseAVX] in {
   def rr : SI<opc, MRMSrcReg, (outs DstRC:$dst), (ins DstRC:$src1, SrcRC:$src),
-              !strconcat(asm,"\t{$src, $src1, $dst|$dst, $src1, $src}"), []>,
-           Sched<[WriteCvtI2F]>;
+              !strconcat(asm,"\t{$src, $src1, $dst|$dst, $src1, $src}"), [],
+              itins.rr>, Sched<[itins.Sched]>;
   let mayLoad = 1 in
   def rm : SI<opc, MRMSrcMem, (outs DstRC:$dst),
               (ins DstRC:$src1, x86memop:$src),
               !strconcat(asm,"\t{$src, $src1, $dst|$dst, $src1, $src}"), []>,
-           Sched<[WriteCvtI2FLd, ReadAfterLd]>;
+           Sched<[itins.Sched.Folded, ReadAfterLd]>;
 } // hasSideEffects = 0
 }
 
@@ -1245,14 +1283,14 @@ def : InstAlias<"vcvttsd2si{q}\t{$src, $dst|$dst, $src}",
 // register, but the same isn't true when only using memory operands,
 // provide other assembly "l" and "q" forms to address this explicitly
 // where appropriate to do so.
-defm VCVTSI2SS   : sse12_vcvt_avx<0x2A, GR32, FR32, i32mem, "cvtsi2ss{l}">,
-                                  XS, VEX_4V, VEX_LIG;
-defm VCVTSI2SS64 : sse12_vcvt_avx<0x2A, GR64, FR32, i64mem, "cvtsi2ss{q}">,
-                                  XS, VEX_4V, VEX_W, VEX_LIG;
-defm VCVTSI2SD   : sse12_vcvt_avx<0x2A, GR32, FR64, i32mem, "cvtsi2sd{l}">,
-                                  XD, VEX_4V, VEX_LIG;
-defm VCVTSI2SD64 : sse12_vcvt_avx<0x2A, GR64, FR64, i64mem, "cvtsi2sd{q}">,
-                                  XD, VEX_4V, VEX_W, VEX_LIG;
+defm VCVTSI2SS   : sse12_vcvt_avx<0x2A, GR32, FR32, i32mem, "cvtsi2ss{l}",
+                                  SSE_CVT_SI2SS>, XS, VEX_4V, VEX_LIG;
+defm VCVTSI2SS64 : sse12_vcvt_avx<0x2A, GR64, FR32, i64mem, "cvtsi2ss{q}",
+                                  SSE_CVT_SI2SS>, XS, VEX_4V, VEX_W, VEX_LIG;
+defm VCVTSI2SD   : sse12_vcvt_avx<0x2A, GR32, FR64, i32mem, "cvtsi2sd{l}",
+                                  SSE_CVT_SI2SD>, XD, VEX_4V, VEX_LIG;
+defm VCVTSI2SD64 : sse12_vcvt_avx<0x2A, GR64, FR64, i64mem, "cvtsi2sd{q}",
+                                  SSE_CVT_SI2SD>, XD, VEX_4V, VEX_W, VEX_LIG;
 
 let Predicates = [UseAVX] in {
   def : InstAlias<"vcvtsi2ss\t{$src, $src1, $dst|$dst, $src1, $src}",
@@ -1293,16 +1331,16 @@ defm CVTTSD2SI64 : sse12_cvt_s<0x2C, FR64, GR64, fp_to_sint, f64mem, loadf64,
                       SSE_CVT_SD2SI>, XD, REX_W;
 defm CVTSI2SS  : sse12_cvt_s<0x2A, GR32, FR32, sint_to_fp, i32mem, loadi32,
                       "cvtsi2ss{l}\t{$src, $dst|$dst, $src}",
-                      SSE_CVT_Scalar>, XS;
+                      SSE_CVT_SI2SS>, XS;
 defm CVTSI2SS64 : sse12_cvt_s<0x2A, GR64, FR32, sint_to_fp, i64mem, loadi64,
                       "cvtsi2ss{q}\t{$src, $dst|$dst, $src}",
-                      SSE_CVT_Scalar>, XS, REX_W;
+                      SSE_CVT_SI2SS>, XS, REX_W;
 defm CVTSI2SD  : sse12_cvt_s<0x2A, GR32, FR64, sint_to_fp, i32mem, loadi32,
                       "cvtsi2sd{l}\t{$src, $dst|$dst, $src}",
-                      SSE_CVT_Scalar>, XD;
+                      SSE_CVT_SI2SD>, XD;
 defm CVTSI2SD64 : sse12_cvt_s<0x2A, GR64, FR64, sint_to_fp, i64mem, loadi64,
                       "cvtsi2sd{q}\t{$src, $dst|$dst, $src}",
-                      SSE_CVT_Scalar>, XD, REX_W;
+                      SSE_CVT_SI2SD>, XD, REX_W;
 
 def : InstAlias<"cvttss2si{l}\t{$src, $dst|$dst, $src}",
                 (CVTTSS2SIrr GR32:$dst, FR32:$src), 0>;
@@ -1381,32 +1419,32 @@ let isCodeGenOnly = 1 in {
   let Predicates = [UseAVX] in {
   defm Int_VCVTSI2SS : sse12_cvt_sint_3addr<0x2A, GR32, VR128,
             int_x86_sse_cvtsi2ss, i32mem, loadi32, "cvtsi2ss{l}",
-            SSE_CVT_Scalar, 0>, XS, VEX_4V;
+            SSE_CVT_SI2SS, 0>, XS, VEX_4V;
   defm Int_VCVTSI2SS64 : sse12_cvt_sint_3addr<0x2A, GR64, VR128,
             int_x86_sse_cvtsi642ss, i64mem, loadi64, "cvtsi2ss{q}",
-            SSE_CVT_Scalar, 0>, XS, VEX_4V,
+            SSE_CVT_SI2SS, 0>, XS, VEX_4V,
             VEX_W;
   defm Int_VCVTSI2SD : sse12_cvt_sint_3addr<0x2A, GR32, VR128,
             int_x86_sse2_cvtsi2sd, i32mem, loadi32, "cvtsi2sd{l}",
-            SSE_CVT_Scalar, 0>, XD, VEX_4V;
+            SSE_CVT_SI2SD, 0>, XD, VEX_4V;
   defm Int_VCVTSI2SD64 : sse12_cvt_sint_3addr<0x2A, GR64, VR128,
             int_x86_sse2_cvtsi642sd, i64mem, loadi64, "cvtsi2sd{q}",
-            SSE_CVT_Scalar, 0>, XD,
+            SSE_CVT_SI2SD, 0>, XD,
             VEX_4V, VEX_W;
   }
   let Constraints = "$src1 = $dst" in {
     defm Int_CVTSI2SS : sse12_cvt_sint_3addr<0x2A, GR32, VR128,
                           int_x86_sse_cvtsi2ss, i32mem, loadi32,
-                          "cvtsi2ss{l}", SSE_CVT_Scalar>, XS;
+                          "cvtsi2ss{l}", SSE_CVT_SI2SS>, XS;
     defm Int_CVTSI2SS64 : sse12_cvt_sint_3addr<0x2A, GR64, VR128,
                           int_x86_sse_cvtsi642ss, i64mem, loadi64,
-                          "cvtsi2ss{q}", SSE_CVT_Scalar>, XS, REX_W;
+                          "cvtsi2ss{q}", SSE_CVT_SI2SS>, XS, REX_W;
     defm Int_CVTSI2SD : sse12_cvt_sint_3addr<0x2A, GR32, VR128,
                           int_x86_sse2_cvtsi2sd, i32mem, loadi32,
-                          "cvtsi2sd{l}", SSE_CVT_Scalar>, XD;
+                          "cvtsi2sd{l}", SSE_CVT_SI2SD>, XD;
     defm Int_CVTSI2SD64 : sse12_cvt_sint_3addr<0x2A, GR64, VR128,
                           int_x86_sse2_cvtsi642sd, i64mem, loadi64,
-                          "cvtsi2sd{q}", SSE_CVT_Scalar>, XD, REX_W;
+                          "cvtsi2sd{q}", SSE_CVT_SI2SD>, XD, REX_W;
   }
 } // isCodeGenOnly = 1
 
@@ -1461,16 +1499,16 @@ defm CVTSS2SI64 : sse12_cvt_sint<0x2D, VR128, GR64, int_x86_sse_cvtss2si64,
 
 defm VCVTDQ2PS   : sse12_cvt_p<0x5B, VR128, i128mem, v4f32, v4i32, loadv2i64,
                                "vcvtdq2ps\t{$src, $dst|$dst, $src}",
-                               SSEPackedSingle, SSE_CVT_PS>,
+                               SSEPackedSingle, SSE_CVT_I2PS>,
                                PS, VEX, Requires<[HasAVX, NoVLX]>, VEX_WIG;
 defm VCVTDQ2PSY  : sse12_cvt_p<0x5B, VR256, i256mem, v8f32, v8i32, loadv4i64,
                                "vcvtdq2ps\t{$src, $dst|$dst, $src}",
-                               SSEPackedSingle, SSE_CVT_PS>,
+                               SSEPackedSingle, SSE_CVT_I2PS>,
                                PS, VEX, VEX_L, Requires<[HasAVX, NoVLX]>, VEX_WIG;
 
 defm CVTDQ2PS : sse12_cvt_p<0x5B, VR128, i128mem, v4f32, v4i32, memopv2i64,
                             "cvtdq2ps\t{$src, $dst|$dst, $src}",
-                            SSEPackedSingle, SSE_CVT_PS>,
+                            SSEPackedSingle, SSE_CVT_I2PS>,
                             PS, Requires<[UseSSE2]>;
 
 let Predicates = [UseAVX] in {

@@ -8,8 +8,10 @@ RUN: llvm-readobj -mips-plt-got %p/Inputs/got-tls.so.elf-mips64el | \
 RUN:   FileCheck %s -check-prefix GOT-TLS
 RUN: llvm-readobj -mips-plt-got %p/Inputs/got-empty.exe.mipsel | \
 RUN:   FileCheck %s -check-prefix GOT-EMPTY
+RUN: llvm-readobj -mips-plt-got %p/Inputs/got-static.exe.mips | \
+RUN:   FileCheck %s -check-prefix GOT-STATIC
 
-GOT-OBJ: Cannot find PLTGOT dynamic table tag.
+GOT-OBJ: Cannot find .got section
 
 GOT-EXE:      Primary GOT {
 GOT-EXE-NEXT:   Canonical gp value: 0x418880
@@ -329,3 +331,38 @@ GOT-EMPTY-NEXT:   Global entries [
 GOT-EMPTY-NEXT:   ]
 GOT-EMPTY-NEXT:   Number of TLS and multi-GOT entries: 2
 GOT-EMPTY-NEXT: }
+
+GOT-STATIC:      Static GOT {
+GOT-STATIC-NEXT:   Canonical gp value: 0x418100
+GOT-STATIC-NEXT:   Reserved entries [
+GOT-STATIC-NEXT:     Entry {
+GOT-STATIC-NEXT:       Address: 0x410110
+GOT-STATIC-NEXT:       Access: -32752
+GOT-STATIC-NEXT:       Initial: 0x0
+GOT-STATIC-NEXT:       Purpose: Lazy resolver
+GOT-STATIC-NEXT:     }
+GOT-STATIC-NEXT:     Entry {
+GOT-STATIC-NEXT:       Address: 0x410114
+GOT-STATIC-NEXT:       Access: -32748
+GOT-STATIC-NEXT:       Initial: 0x80000000
+GOT-STATIC-NEXT:       Purpose: Module pointer (GNU extension)
+GOT-STATIC-NEXT:     }
+GOT-STATIC-NEXT:   ]
+GOT-STATIC-NEXT:   Local entries [
+GOT-STATIC-NEXT:     Entry {
+GOT-STATIC-NEXT:       Address: 0x410118
+GOT-STATIC-NEXT:       Access: -32744
+GOT-STATIC-NEXT:       Initial: 0x400000
+GOT-STATIC-NEXT:     }
+GOT-STATIC-NEXT:     Entry {
+GOT-STATIC-NEXT:       Address: 0x41011C
+GOT-STATIC-NEXT:       Access: -32740
+GOT-STATIC-NEXT:       Initial: 0x400100
+GOT-STATIC-NEXT:     }
+GOT-STATIC-NEXT:     Entry {
+GOT-STATIC-NEXT:       Address: 0x410120
+GOT-STATIC-NEXT:       Access: -32736
+GOT-STATIC-NEXT:       Initial: 0x400104
+GOT-STATIC-NEXT:     }
+GOT-STATIC-NEXT:   ]
+GOT-STATIC-NEXT: }
