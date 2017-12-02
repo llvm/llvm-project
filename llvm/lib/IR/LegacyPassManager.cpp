@@ -82,6 +82,12 @@ static cl::opt<bool> PrintAfterAll("print-after-all",
                                    llvm::cl::desc("Print IR after each pass"),
                                    cl::init(false), cl::Hidden);
 
+static cl::opt<bool>
+    PrintModuleScope("print-module-scope",
+                     cl::desc("When printing IR for print-[before|after]{-all} "
+                              "always print a module IR"),
+                     cl::init(false));
+
 static cl::list<std::string>
     PrintFuncsList("filter-print-funcs", cl::value_desc("function names"),
                    cl::desc("Only print IR for functions whose name "
@@ -114,6 +120,8 @@ static bool ShouldPrintBeforePass(const PassInfo *PI) {
 static bool ShouldPrintAfterPass(const PassInfo *PI) {
   return PrintAfterAll || ShouldPrintBeforeOrAfterPass(PI, PrintAfter);
 }
+
+bool llvm::forcePrintModuleIR() { return PrintModuleScope; }
 
 bool llvm::isFunctionInPrintList(StringRef FunctionName) {
   static std::unordered_set<std::string> PrintFuncNames(PrintFuncsList.begin(),

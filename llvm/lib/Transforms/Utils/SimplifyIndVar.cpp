@@ -200,12 +200,22 @@ bool SimplifyIndvar::makeIVComparisonInvariant(ICmpInst *ICmp,
   // TODO: Support multiple entry loops?  (We currently bail out of these in
   // the IndVarSimplify pass)
   if (auto *BB = L->getLoopPredecessor()) {
-    Value *Incoming = PN->getIncomingValueForBlock(BB);
-    const SCEV *IncomingS = SE->getSCEV(Incoming);
-    CheapExpansions[IncomingS] = Incoming;
+    const int Idx = PN->getBasicBlockIndex(BB);
+    if (Idx >= 0) {
+      Value *Incoming = PN->getIncomingValue(Idx);
+      const SCEV *IncomingS = SE->getSCEV(Incoming);
+      CheapExpansions[IncomingS] = Incoming;
+    }
   }
   Value *NewLHS = CheapExpansions[InvariantLHS];
   Value *NewRHS = CheapExpansions[InvariantRHS];
+
+  if (!NewLHS)
+    if (auto *ConstLHS = dyn_cast<SCEVConstant>(InvariantLHS))
+      NewLHS = ConstLHS->getValue();
+  if (!NewRHS)
+    if (auto *ConstRHS = dyn_cast<SCEVConstant>(InvariantRHS))
+      NewRHS = ConstRHS->getValue();
 
   if (!NewLHS || !NewRHS)
     // We could not find an existing value to replace either LHS or RHS.

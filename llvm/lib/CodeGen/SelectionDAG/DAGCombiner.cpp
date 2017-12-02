@@ -8019,29 +8019,14 @@ SDValue DAGCombiner::ReduceLoadWidth(SDNode *N) {
       ExtVT = EVT::getIntegerVT(*DAG.getContext(),
                                 VT.getSizeInBits() - ShiftAmt);
   } else if (Opc == ISD::AND) {
-    bool HasAnyExt = N0.getOpcode() == ISD::ANY_EXTEND;
-    LoadSDNode *LN0 =
-      HasAnyExt ? cast<LoadSDNode>(N0.getOperand(0)) : cast<LoadSDNode>(N0);
-
-    if (LN0->getExtensionType() == ISD::SEXTLOAD ||
-        !LN0->isUnindexed() || !N0.hasOneUse() || !SDValue(LN0, 0).hasOneUse())
+    // An AND with a constant mask is the same as a truncate + zero-extend.
+    auto AndC = dyn_cast<ConstantSDNode>(N->getOperand(1));
+    if (!AndC || !AndC->getAPIntValue().isMask())
       return SDValue();
 
-    auto N1C = dyn_cast<ConstantSDNode>(N->getOperand(1));
-    if (!N1C)
-      return SDValue();
-
-    EVT LoadedVT;
-    bool NarrowLoad = false;
+    unsigned ActiveBits = AndC->getAPIntValue().countTrailingOnes();
     ExtType = ISD::ZEXTLOAD;
-    VT = HasAnyExt ? LN0->getValueType(0) : VT;
-    if (!isAndLoadExtLoad(N1C, LN0, VT, ExtVT, LoadedVT, NarrowLoad))
-      return SDValue();
-
-    if (!NarrowLoad)
-      return DAG.getExtLoad(ISD::ZEXTLOAD, SDLoc(LN0), VT,
-                            LN0->getChain(), LN0->getBasePtr(), ExtVT,
-                            LN0->getMemOperand());
+    ExtVT = EVT::getIntegerVT(*DAG.getContext(), ActiveBits);
   }
   if (LegalOperations && !TLI.isLoadExtLegal(ExtType, VT, ExtVT))
     return SDValue();
