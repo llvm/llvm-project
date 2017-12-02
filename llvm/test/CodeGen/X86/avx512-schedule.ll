@@ -4353,7 +4353,7 @@ define i16 @trunc_16i8_to_16i1(<16 x i8> %a) {
 define i16 @trunc_16i32_to_16i1(<16 x i32> %a) {
 ; GENERIC-LABEL: trunc_16i32_to_16i1:
 ; GENERIC:       # BB#0:
-; GENERIC-NEXT:    vpslld $31, %zmm0, %zmm0
+; GENERIC-NEXT:    vpslld $31, %zmm0, %zmm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vptestmd %zmm0, %zmm0, %k0 # sched: [1:1.00]
 ; GENERIC-NEXT:    kmovd %k0, %eax
 ; GENERIC-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
@@ -4547,7 +4547,7 @@ define void @extload_v8i64(<8 x i8>* %a, <8 x i64>* %res) {
 define <64 x i16> @test21(<64 x i16> %x , <64 x i1> %mask) nounwind readnone {
 ; GENERIC-LABEL: test21:
 ; GENERIC:       # BB#0:
-; GENERIC-NEXT:    vpsllw $7, %zmm2, %zmm2
+; GENERIC-NEXT:    vpsllw $7, %zmm2, %zmm2 # sched: [3:1.00]
 ; GENERIC-NEXT:    vpmovb2m %zmm2, %k1
 ; GENERIC-NEXT:    vmovdqu16 %zmm0, %zmm0 {%k1} {z}
 ; GENERIC-NEXT:    kshiftrq $32, %k1, %k1
@@ -7703,7 +7703,7 @@ define <32 x i16> @test_build_vec_v32i1(<32 x i16> %x) {
 define <64 x i8> @test_build_vec_v64i1(<64 x i8> %x) {
 ; GENERIC-LABEL: test_build_vec_v64i1:
 ; GENERIC:       # BB#0:
-; GENERIC-NEXT:    vpshufb {{.*#+}} zmm0 = zero,zero,zmm0[2],zero,zero,zero,zmm0[6],zero,zmm0[8],zero,zmm0[10],zero,zmm0[12],zero,zero,zmm0[15],zero,zero,zmm0[18],zero,zmm0[20],zero,zmm0[22],zero,zmm0[24],zero,zero,zmm0[27],zero,zero,zmm0[30],zero,zmm0[32],zero,zmm0[34],zero,zero,zero,zmm0[38],zero,zmm0[40],zero,zero,zmm0[43,44],zero,zmm0[46],zero,zmm0[48],zero,zmm0[50],zero,zero,zero,zmm0[54],zero,zmm0[56],zero,zero,zmm0[59,60],zero,zmm0[62],zero
+; GENERIC-NEXT:    vpshufb {{.*#+}} zmm0 = zero,zero,zmm0[2],zero,zero,zero,zmm0[6],zero,zmm0[8],zero,zmm0[10],zero,zmm0[12],zero,zero,zmm0[15],zero,zero,zmm0[18],zero,zmm0[20],zero,zmm0[22],zero,zmm0[24],zero,zero,zmm0[27],zero,zero,zmm0[30],zero,zmm0[32],zero,zmm0[34],zero,zero,zero,zmm0[38],zero,zmm0[40],zero,zero,zmm0[43,44],zero,zmm0[46],zero,zmm0[48],zero,zmm0[50],zero,zero,zero,zmm0[54],zero,zmm0[56],zero,zero,zmm0[59,60],zero,zmm0[62],zero sched: [5:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_build_vec_v64i1:
@@ -8035,7 +8035,7 @@ define void @store_32i1(<32 x i1>* %a, <32 x i1> %v) {
 define void @store_32i1_1(<32 x i1>* %a, <32 x i16> %v) {
 ; GENERIC-LABEL: store_32i1_1:
 ; GENERIC:       # BB#0:
-; GENERIC-NEXT:    vpsllw $15, %zmm0, %zmm0
+; GENERIC-NEXT:    vpsllw $15, %zmm0, %zmm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vpmovw2m %zmm0, %k0
 ; GENERIC-NEXT:    kmovd %k0, (%rdi)
 ; GENERIC-NEXT:    vzeroupper
@@ -8058,7 +8058,7 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ;
 ; GENERIC-LABEL: store_64i1:
 ; GENERIC:       # BB#0:
-; GENERIC-NEXT:    vpsllw $7, %zmm0, %zmm0
+; GENERIC-NEXT:    vpsllw $7, %zmm0, %zmm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vpmovb2m %zmm0, %k0
 ; GENERIC-NEXT:    kmovq %k0, (%rdi)
 ; GENERIC-NEXT:    vzeroupper

@@ -1098,19 +1098,31 @@ bool X86AsmParser::ParseRegister(unsigned &RegNo,
 
   EndLoc = Parser.getTok().getEndLoc();
 
-  // If this is "db[0-7]", match it as an alias
-  // for dr[0-7].
-  if (RegNo == 0 && Tok.getString().size() == 3 &&
-      Tok.getString().startswith("db")) {
-    switch (Tok.getString()[2]) {
-    case '0': RegNo = X86::DR0; break;
-    case '1': RegNo = X86::DR1; break;
-    case '2': RegNo = X86::DR2; break;
-    case '3': RegNo = X86::DR3; break;
-    case '4': RegNo = X86::DR4; break;
-    case '5': RegNo = X86::DR5; break;
-    case '6': RegNo = X86::DR6; break;
-    case '7': RegNo = X86::DR7; break;
+  // If this is "db[0-15]", match it as an alias
+  // for dr[0-15].
+  if (RegNo == 0 && Tok.getString().startswith("db")) {
+    if (Tok.getString().size() == 3) {
+      switch (Tok.getString()[2]) {
+      case '0': RegNo = X86::DR0; break;
+      case '1': RegNo = X86::DR1; break;
+      case '2': RegNo = X86::DR2; break;
+      case '3': RegNo = X86::DR3; break;
+      case '4': RegNo = X86::DR4; break;
+      case '5': RegNo = X86::DR5; break;
+      case '6': RegNo = X86::DR6; break;
+      case '7': RegNo = X86::DR7; break;
+      case '8': RegNo = X86::DR8; break;
+      case '9': RegNo = X86::DR9; break;
+      }
+    } else if (Tok.getString().size() == 4 && Tok.getString()[2] == '1') {
+      switch (Tok.getString()[3]) {
+      case '0': RegNo = X86::DR10; break;
+      case '1': RegNo = X86::DR11; break;
+      case '2': RegNo = X86::DR12; break;
+      case '3': RegNo = X86::DR13; break;
+      case '4': RegNo = X86::DR14; break;
+      case '5': RegNo = X86::DR15; break;
+      }
     }
 
     if (RegNo != 0) {

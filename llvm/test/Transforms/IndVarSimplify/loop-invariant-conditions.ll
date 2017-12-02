@@ -295,6 +295,36 @@ for.end:                                          ; preds = %if.end, %entry
   ret void
 }
 
+; check that we handle conditions with loop invariant operands which
+; *aren't* in the header - this is a very rare and fragile case where
+; we have a "loop" which is known to run exactly one iteration but
+; haven't yet simplified the uses of the IV
+define void @test10() {
+; CHECK-LABEL: @test10
+entry:
+  br label %loop
+
+loop:
+  %phi1 = phi i32 [ %phi2, %latch ], [ 0, %entry ]
+  %dec = add i32 %phi1, -1
+  br i1 false, label %left, label %right
+
+left:
+  br label %latch
+
+right:
+  br label %latch
+
+latch:
+  %phi2 = phi i32 [ %phi1, %left ], [ %dec, %right ]
+  ; CHECK: %cmp = icmp slt i32 -1, undef
+  %cmp = icmp slt i32 %phi2, undef
+  br i1 true, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 !1 = !{i64 -1, i64 100}
 
 

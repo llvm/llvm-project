@@ -101,6 +101,12 @@ static void printExpr(const MCExpr *Expr, const MCAsmInfo *MAI,
   int Offset = 0;
   const MCSymbolRefExpr *SRE;
 
+  if (const auto *CE = dyn_cast<MCConstantExpr>(Expr)) {
+    OS << "0x";
+    OS.write_hex(CE->getValue());
+    return;
+  }
+
   if (const auto *BE = dyn_cast<MCBinaryExpr>(Expr)) {
     SRE = dyn_cast<MCSymbolRefExpr>(BE->getLHS());
     const auto *CE = dyn_cast<MCConstantExpr>(BE->getRHS());

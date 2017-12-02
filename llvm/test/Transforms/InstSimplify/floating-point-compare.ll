@@ -169,8 +169,10 @@ define i1 @one_with_self(double %arg) {
 ; and between uge and olt, to give reasonble coverage
 ; without combinatorial explosion.
 
+declare half @llvm.fabs.f16(half)
 declare float @llvm.fabs.f32(float)
 declare double @llvm.fabs.f64(double)
+declare <2 x float> @llvm.fabs.v2f32(<2 x float>)
 declare <2 x double> @llvm.fabs.v2f64(<2 x double>)
 declare float @llvm.sqrt.f32(float)
 declare double @llvm.powi.f64(double,i32)
@@ -276,45 +278,55 @@ define i1 @orderedLessZeroMaxNum(float, float) {
 
 define i1 @known_positive_olt_with_negative_constant(double %a) {
 ; CHECK-LABEL: @known_positive_olt_with_negative_constant(
-; CHECK-NEXT:    [[CALL:%.*]] = call double @llvm.fabs.f64(double %a)
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt double [[CALL]], -1.000000e+00
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %call = call double @llvm.fabs.f64(double %a)
   %cmp = fcmp olt double %call, -1.0
   ret i1 %cmp
 }
 
-define <2 x i1> @known_positive_ole_with_negative_constant_splat_vec(<2 x double> %a) {
+define <2 x i1> @known_positive_ole_with_negative_constant_splat_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @known_positive_ole_with_negative_constant_splat_vec(
-; CHECK-NEXT:    [[CALL:%.*]] = call <2 x double> @llvm.fabs.v2f64(<2 x double> %a)
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ole <2 x double> [[CALL]], <double -2.000000e+00, double -2.000000e+00>
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
-  %call = call <2 x double> @llvm.fabs.v2f64(<2 x double> %a)
+  %call = uitofp <2 x i32> %a to <2 x double>
   %cmp = fcmp ole <2 x double> %call, <double -2.0, double -2.0>
   ret <2 x i1> %cmp
 }
 
-define i1 @known_positive_ugt_with_negative_constant(double %a) {
+define i1 @known_positive_ugt_with_negative_constant(i32 %a) {
 ; CHECK-LABEL: @known_positive_ugt_with_negative_constant(
-; CHECK-NEXT:    [[CALL:%.*]] = call double @llvm.fabs.f64(double %a)
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt double [[CALL]], -3.000000e+00
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
-  %call = call double @llvm.fabs.f64(double %a)
-  %cmp = fcmp ugt double %call, -3.0
+  %call = uitofp i32 %a to float
+  %cmp = fcmp ugt float %call, -3.0
   ret i1 %cmp
 }
 
-define <2 x i1> @known_positive_uge_with_negative_constant_splat_vec(<2 x double> %a) {
+define <2 x i1> @known_positive_uge_with_negative_constant_splat_vec(<2 x float> %a) {
 ; CHECK-LABEL: @known_positive_uge_with_negative_constant_splat_vec(
-; CHECK-NEXT:    [[CALL:%.*]] = call <2 x double> @llvm.fabs.v2f64(<2 x double> %a)
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge <2 x double> [[CALL]], <double -4.000000e+00, double -4.000000e+00>
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
-  %call = call <2 x double> @llvm.fabs.v2f64(<2 x double> %a)
-  %cmp = fcmp uge <2 x double> %call, <double -4.0, double -4.0>
+  %call = call <2 x float> @llvm.fabs.v2f32(<2 x float> %a)
+  %cmp = fcmp uge <2 x float> %call, <float -4.0, float -4.0>
+  ret <2 x i1> %cmp
+}
+
+define i1 @known_positive_oeq_with_negative_constant(half %a) {
+; CHECK-LABEL: @known_positive_oeq_with_negative_constant(
+; CHECK-NEXT:    ret i1 false
+;
+  %call = call half @llvm.fabs.f16(half %a)
+  %cmp = fcmp oeq half %call, -5.0
+  ret i1 %cmp
+}
+
+define <2 x i1> @known_positive_une_with_negative_constant_splat_vec(<2 x i32> %a) {
+; CHECK-LABEL: @known_positive_une_with_negative_constant_splat_vec(
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+;
+  %call = uitofp <2 x i32> %a to <2 x half>
+  %cmp = fcmp une <2 x half> %call, <half -6.0, half -6.0>
   ret <2 x i1> %cmp
 }
 

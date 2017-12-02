@@ -1180,14 +1180,10 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
                  << S.isExternal() << " isTemporary=" << S.isTemporary()
                  << " isFunction=" << WS.isFunction()
                  << " isWeak=" << WS.isWeak()
-                 << " isHidden=" << WS.isHidden()
                  << " isVariable=" << WS.isVariable() << "\n");
 
-    if (WS.isWeak() || WS.isHidden()) {
-      uint32_t Flags = (WS.isWeak() ? wasm::WASM_SYMBOL_BINDING_WEAK : 0) |
-          (WS.isHidden() ? wasm::WASM_SYMBOL_VISIBILITY_HIDDEN : 0);
-      SymbolFlags.emplace_back(WS.getName(), Flags);
-    }
+    if (WS.isWeak())
+      SymbolFlags.emplace_back(WS.getName(), wasm::WASM_SYMBOL_BINDING_WEAK);
 
     if (WS.isVariable())
       continue;

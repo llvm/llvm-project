@@ -1,6 +1,7 @@
 # atomic builtins are required for threading support.
 
 INCLUDE(CheckCXXSourceCompiles)
+INCLUDE(CheckLibraryExists)
 
 # Sometimes linking against libatomic is required for atomic ops, if
 # the platform doesn't support lock-free atomics.

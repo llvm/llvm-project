@@ -409,6 +409,9 @@ public:
 
   bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
 
+  // Disable currently because of invalid merge.
+  bool mergeStoresAfterLegalization() const override { return false; }
+
   bool canMergeStoresTo(unsigned AddressSpace, EVT MemVT,
                         const SelectionDAG &DAG) const override {
     // Do not merge to float value size (128 bytes) if no implicit

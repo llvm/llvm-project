@@ -731,6 +731,18 @@ PreservedAnalyses LoopPrinterPass::run(Function &F,
 }
 
 void llvm::printLoop(Loop &L, raw_ostream &OS, const std::string &Banner) {
+
+  if (forcePrintModuleIR()) {
+    // handling -print-module-scope
+    OS << Banner << " (loop: ";
+    L.getHeader()->printAsOperand(OS, false);
+    OS << ")\n";
+
+    // printing whole module
+    OS << *L.getHeader()->getModule();
+    return;
+  }
+
   OS << Banner;
 
   auto *PreHeader = L.getLoopPreheader();
