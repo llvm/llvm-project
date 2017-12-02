@@ -43,9 +43,13 @@ public:
 private:
   // We truncate the pattern and the word to bound the cost of matching.
   constexpr static int MaxPat = 63, MaxWord = 127;
-  enum CharRole : char; // For segmentation.
-  enum CharType : char; // For segmentation.
-  enum Action { Miss = 0, Match = 1 };
+  enum CharRole : unsigned char; // For segmentation.
+  enum CharType : unsigned char; // For segmentation.
+  // Action should be an enum, but this causes bitfield problems:
+  //   - for MSVC the enum type must be explicitly unsigned for correctness
+  //   - GCC 4.8 complains not all values fit if the type is unsigned
+  using Action = bool;
+  constexpr static Action Miss = false, Match = true;
 
   bool init(llvm::StringRef Word);
   void buildGraph();

@@ -1457,10 +1457,11 @@ define i32 @test_mul_by_28(i32 %x) {
 define i32 @test_mul_by_29(i32 %x) {
 ; X86-LABEL: test_mul_by_29:
 ; X86:       # BB#0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    leal (%eax,%eax,8), %ecx
-; X86-NEXT:    leal (%ecx,%ecx,2), %ecx
-; X86-NEXT:    leal (%ecx,%eax,2), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    leal (%ecx,%ecx,8), %eax
+; X86-NEXT:    leal (%eax,%eax,2), %eax
+; X86-NEXT:    addl %ecx, %eax
+; X86-NEXT:    addl %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-HSW-LABEL: test_mul_by_29:
@@ -1468,7 +1469,8 @@ define i32 @test_mul_by_29(i32 %x) {
 ; X64-HSW-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; X64-HSW-NEXT:    leal (%rdi,%rdi,8), %eax # sched: [1:0.50]
 ; X64-HSW-NEXT:    leal (%rax,%rax,2), %eax # sched: [1:0.50]
-; X64-HSW-NEXT:    leal (%rax,%rdi,2), %eax # sched: [1:0.50]
+; X64-HSW-NEXT:    addl %edi, %eax # sched: [1:0.25]
+; X64-HSW-NEXT:    addl %edi, %eax # sched: [1:0.25]
 ; X64-HSW-NEXT:    retq # sched: [2:1.00]
 ;
 ; X64-JAG-LABEL: test_mul_by_29:
@@ -1476,7 +1478,8 @@ define i32 @test_mul_by_29(i32 %x) {
 ; X64-JAG-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; X64-JAG-NEXT:    leal (%rdi,%rdi,8), %eax # sched: [1:0.50]
 ; X64-JAG-NEXT:    leal (%rax,%rax,2), %eax # sched: [1:0.50]
-; X64-JAG-NEXT:    leal (%rax,%rdi,2), %eax # sched: [1:0.50]
+; X64-JAG-NEXT:    addl %edi, %eax # sched: [1:0.50]
+; X64-JAG-NEXT:    addl %edi, %eax # sched: [1:0.50]
 ; X64-JAG-NEXT:    retq # sched: [4:1.00]
 ;
 ; X86-NOOPT-LABEL: test_mul_by_29:
