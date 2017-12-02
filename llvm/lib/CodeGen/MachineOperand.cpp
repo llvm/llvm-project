@@ -534,16 +534,7 @@ LLVM_DUMP_METHOD void MachineOperand::dump() const { dbgs() << *this << '\n'; }
 
 /// getAddrSpace - Return the LLVM IR address space number that this pointer
 /// points into.
-unsigned MachinePointerInfo::getAddrSpace() const {
-  if (V.isNull())
-    return 0;
-
-  if (V.is<const PseudoSourceValue *>())
-    return V.get<const PseudoSourceValue *>()->getAddressSpace();
-
-  return cast<PointerType>(V.get<const Value *>()->getType())
-      ->getAddressSpace();
-}
+unsigned MachinePointerInfo::getAddrSpace() const { return AddrSpace; }
 
 /// isDereferenceable - Return true if V is always dereferenceable for
 /// Offset + Size byte.
@@ -584,6 +575,10 @@ MachinePointerInfo MachinePointerInfo::getGOT(MachineFunction &MF) {
 MachinePointerInfo MachinePointerInfo::getStack(MachineFunction &MF,
                                                 int64_t Offset, uint8_t ID) {
   return MachinePointerInfo(MF.getPSVManager().getStack(), Offset, ID);
+}
+
+MachinePointerInfo MachinePointerInfo::getUnknownStack(MachineFunction &MF) {
+  return MachinePointerInfo(MF.getDataLayout().getAllocaAddrSpace());
 }
 
 MachineMemOperand::MachineMemOperand(MachinePointerInfo ptrinfo, Flags f,

@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=verde -mattr=+vgpr-spilling -verify-machineinstrs < %s | FileCheck --check-prefix=GCN --check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=gfx804 -mattr=-flat-for-global -mattr=+vgpr-spilling -verify-machineinstrs < %s | FileCheck --check-prefix=GCN --check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -mattr=+vgpr-spilling -verify-machineinstrs < %s | FileCheck --check-prefix=GCN --check-prefix=GFX9 %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=verde -mattr=+vgpr-spilling -verify-machineinstrs < %s | FileCheck --check-prefix=GCN --check-prefix=SI %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=gfx804 -mattr=-flat-for-global -mattr=+vgpr-spilling -verify-machineinstrs < %s | FileCheck --check-prefix=GCN --check-prefix=SI %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=gfx900 -mattr=-flat-for-global -mattr=+vgpr-spilling -verify-machineinstrs < %s | FileCheck --check-prefix=GCN --check-prefix=GFX9 %s
 
 ; This used to fail due to a v_add_i32 instruction with an illegal immediate
 ; operand that was created during Local Stack Slot Allocation. Test case derived
