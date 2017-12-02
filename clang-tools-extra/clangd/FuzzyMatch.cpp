@@ -115,7 +115,7 @@ Optional<float> FuzzyMatcher::match(StringRef Word) {
 // It's not obvious how to segment digits, we treat them as lowercase letters.
 // As we don't decode UTF-8, we treat bytes over 127 as lowercase too.
 // This means we require exact (case-sensitive) match.
-enum FuzzyMatcher::CharType : char {
+enum FuzzyMatcher::CharType : unsigned char {
   Empty = 0,       // Before-the-start and after-the-end (and control chars).
   Lower = 1,       // Lowercase letters, digits, and non-ASCII bytes.
   Upper = 2,       // Uppercase letters.
@@ -144,7 +144,7 @@ constexpr static uint8_t CharTypes[] = {
 // e.g. XMLHttpRequest_Async
 //      +--+---+------ +----
 //      ^Head   ^Tail ^Separator
-enum FuzzyMatcher::CharRole : char {
+enum FuzzyMatcher::CharRole : unsigned char {
   Unknown = 0,   // Stray control characters or impossible states.
   Tail = 1,      // Part of a word segment, but not the first character.
   Head = 2,      // The first character of a word segment.

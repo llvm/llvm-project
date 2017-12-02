@@ -19,7 +19,7 @@ entry:
 }
 
 ; CHECK-LABEL: Strh_zero_4
-; CHECK: str xzr
+; CHECK: stp wzr, wzr
 ; CHECK-STRICT-LABEL: Strh_zero_4
 ; CHECK-STRICT: strh wzr
 ; CHECK-STRICT: strh wzr
@@ -137,7 +137,7 @@ entry:
 }
 
 ; CHECK-LABEL: Sturh_zero_4
-; CHECK: stur xzr
+; CHECK: stp wzr, wzr
 ; CHECK-STRICT-LABEL: Sturh_zero_4
 ; CHECK-STRICT: sturh wzr
 ; CHECK-STRICT: sturh wzr
