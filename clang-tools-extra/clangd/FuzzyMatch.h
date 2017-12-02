@@ -43,9 +43,9 @@ public:
 private:
   // We truncate the pattern and the word to bound the cost of matching.
   constexpr static int MaxPat = 63, MaxWord = 127;
-  enum CharRole : char; // For segmentation.
-  enum CharType : char; // For segmentation.
-  enum Action { Miss = 0, Match = 1 };
+  enum CharRole : unsigned char; // For segmentation.
+  enum CharType : unsigned char; // For segmentation.
+  enum Action : unsigned char { Miss = 0, Match = 1 };
 
   bool init(llvm::StringRef Word);
   void buildGraph();
