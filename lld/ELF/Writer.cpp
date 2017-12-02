@@ -87,38 +87,42 @@ private:
 };
 } // anonymous namespace
 
-StringRef elf::getOutputSectionName(StringRef Name) {
+StringRef elf::getOutputSectionName(InputSectionBase *S) {
   // ".zdebug_" is a prefix for ZLIB-compressed sections.
   // Because we decompressed input sections, we want to remove 'z'.
-  if (Name.startswith(".zdebug_"))
-    return Saver.save("." + Name.substr(2));
+  if (S->Name.startswith(".zdebug_"))
+    return Saver.save("." + S->Name.substr(2));
 
   if (Config->Relocatable)
-    return Name;
+    return S->Name;
 
-  // This is for --emit-relocs. If .text.foo is emitted as .text, we want to
-  // emit .rela.text.foo as .rel.text for consistency (this is not technically
-  // required, but not doing it is odd). This code guarantees that.
-  if (Name.startswith(".rel."))
-    return Saver.save(".rel" + getOutputSectionName(Name.substr(4)));
-  if (Name.startswith(".rela."))
-    return Saver.save(".rela" + getOutputSectionName(Name.substr(5)));
+  // This is for --emit-relocs. If .text.foo is emitted as .text.bar, we want
+  // to emit .rela.text.foo as .rela.text.bar for consistency (this is not
+  // technically required, but not doing it is odd). This code guarantees that.
+  if ((S->Type == SHT_REL || S->Type == SHT_RELA) &&
+      !isa<SyntheticSection>(S)) {
+    OutputSection *Out =
+        cast<InputSection>(S)->getRelocatedSection()->getOutputSection();
+    if (S->Type == SHT_RELA)
+      return Saver.save(".rela" + Out->Name);
+    return Saver.save(".rel" + Out->Name);
+  }
 
   for (StringRef V :
        {".text.", ".rodata.", ".data.rel.ro.", ".data.", ".bss.rel.ro.",
         ".bss.", ".init_array.", ".fini_array.", ".ctors.", ".dtors.", ".tbss.",
         ".gcc_except_table.", ".tdata.", ".ARM.exidx.", ".ARM.extab."}) {
     StringRef Prefix = V.drop_back();
-    if (Name.startswith(V) || Name == Prefix)
+    if (S->Name.startswith(V) || S->Name == Prefix)
       return Prefix;
   }
 
   // CommonSection is identified as "COMMON" in linker scripts.
   // By default, it should go to .bss section.
-  if (Name == "COMMON")
+  if (S->Name == "COMMON")
     return ".bss";
 
-  return Name;
+  return S->Name;
 }
 
 static bool needsInterpSection() {
@@ -1461,22 +1465,6 @@ static uint64_t computeFlags(uint64_t Flags) {
   return Flags;
 }
 
-// Prior to finalizeContents() an OutputSection containing SyntheticSections
-// may have 0 Size, but contain SyntheticSections that haven't had their size
-// calculated yet. We must use SyntheticSection->empty() for these sections.
-static bool isOutputSectionZeroSize(const OutputSection* Sec) {
-  if (Sec->Size > 0)
-    return false;
-  for (BaseCommand *BC : Sec->SectionCommands) {
-    if (auto *ISD = dyn_cast<InputSectionDescription>(BC))
-      for (InputSection *IS : ISD->Sections)
-        if (SyntheticSection *SS = dyn_cast<SyntheticSection>(IS))
-          if (!SS->empty())
-            return false;
-    }
-  return true;
-}
-
 // Decide which program headers to create and which sections to include in each
 // one.
 template <class ELFT> std::vector<PhdrEntry *> Writer<ELFT>::createPhdrs() {
@@ -1542,7 +1530,7 @@ template <class ELFT> std::vector<PhdrEntry *> Writer<ELFT>::createPhdrs() {
   bool InRelroPhdr = false;
   bool IsRelroFinished = false;
   for (OutputSection *Sec : OutputSections) {
-    if (!needsPtLoad(Sec) || isOutputSectionZeroSize(Sec))
+    if (!needsPtLoad(Sec))
       continue;
     if (isRelroSection(Sec)) {
       InRelroPhdr = true;

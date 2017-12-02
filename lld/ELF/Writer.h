@@ -46,7 +46,7 @@ struct PhdrEntry {
   bool HasLMA = false;
 };
 
-llvm::StringRef getOutputSectionName(llvm::StringRef Name);
+llvm::StringRef getOutputSectionName(InputSectionBase *S);
 
 template <class ELFT> uint32_t calcMipsEFlags();
 

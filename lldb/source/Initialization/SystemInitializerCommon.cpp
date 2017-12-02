@@ -69,7 +69,9 @@ void SystemInitializerCommon::Initialize() {
   }
 #endif
 
+#if not defined(__APPLE__)
   llvm::EnablePrettyStackTrace();
+#endif
   Log::Initialize();
   HostInfo::Initialize();
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);

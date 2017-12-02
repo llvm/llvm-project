@@ -10,11 +10,15 @@
 #include "FormatUtil.h"
 #include "SystemInitializerTest.h"
 
+#include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Initialization/SystemLifetimeManager.h"
+#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/ClangASTImporter.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/StreamString.h"
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
@@ -30,6 +34,7 @@ using namespace llvm;
 namespace opts {
 cl::SubCommand ModuleSubcommand("module-sections",
                                 "Display LLDB Module Information");
+cl::SubCommand SymbolsSubcommand("symbols", "Dump symbols for an object file");
 
 namespace module {
 cl::opt<bool> SectionContents("contents",
@@ -38,9 +43,29 @@ cl::opt<bool> SectionContents("contents",
 cl::list<std::string> InputFilenames(cl::Positional, cl::desc("<input files>"),
                                      cl::OneOrMore, cl::sub(ModuleSubcommand));
 } // namespace module
+
+namespace symbols {
+cl::list<std::string> InputFilenames(cl::Positional, cl::desc("<input files>"),
+                                     cl::OneOrMore, cl::sub(SymbolsSubcommand));
+}
 } // namespace opts
 
 static llvm::ManagedStatic<SystemLifetimeManager> DebuggerLifetime;
+
+static void dumpSymbols(Debugger &Dbg) {
+  for (const auto &File : opts::symbols::InputFilenames) {
+    ModuleSpec Spec{FileSpec(File, false)};
+    Spec.GetSymbolFileSpec().SetFile(File, false);
+
+    auto ModulePtr = std::make_shared<lldb_private::Module>(Spec);
+
+    StreamString Stream;
+    ModulePtr->ParseAllDebugSymbols();
+    ModulePtr->Dump(&Stream);
+    llvm::outs() << Stream.GetData() << "\n";
+    llvm::outs().flush();
+  }
+}
 
 static void dumpModules(Debugger &Dbg) {
   LinePrinter Printer(4, llvm::outs());
@@ -49,7 +74,7 @@ static void dumpModules(Debugger &Dbg) {
     ModuleSpec Spec{FileSpec(File, false)};
     Spec.GetSymbolFileSpec().SetFile(File, false);
 
-    auto ModulePtr = std::make_shared<Module>(Spec);
+    auto ModulePtr = std::make_shared<lldb_private::Module>(Spec);
     SectionList *Sections = ModulePtr->GetSectionList();
     if (!Sections) {
       llvm::errs() << "Could not load sections for module " << File << "\n";
@@ -92,6 +117,8 @@ int main(int argc, const char *argv[]) {
 
   if (opts::ModuleSubcommand)
     dumpModules(*Dbg);
+  else if (opts::SymbolsSubcommand)
+    dumpSymbols(*Dbg);
 
   DebuggerLifetime->Terminate();
   return 0;

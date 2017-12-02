@@ -177,7 +177,7 @@ void PtraceDisplayBytes(int &req, void *data, size_t data_size) {
     break;
   }
   case PTRACE_SETREGSET: {
-    // Extract iov_base from data, which is a pointer to the struct IOVEC
+    // Extract iov_base from data, which is a pointer to the struct iovec
     DisplayBytes(buf, *(void **)data, data_size);
     LLDB_LOGV(log, "PTRACE_SETREGSET {0}", buf.GetData());
     break;
