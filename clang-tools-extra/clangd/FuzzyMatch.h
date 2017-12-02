@@ -45,7 +45,11 @@ private:
   constexpr static int MaxPat = 63, MaxWord = 127;
   enum CharRole : unsigned char; // For segmentation.
   enum CharType : unsigned char; // For segmentation.
-  enum Action : unsigned char { Miss = 0, Match = 1 };
+  // Action should be an enum, but this causes bitfield problems:
+  //   - for MSVC the enum type must be explicitly unsigned for correctness
+  //   - GCC 4.8 complains not all values fit if the type is unsigned
+  using Action = bool;
+  constexpr static Action Miss = false, Match = true;
 
   bool init(llvm::StringRef Word);
   void buildGraph();
