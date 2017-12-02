@@ -3797,7 +3797,7 @@ SDValue TargetLowering::getVectorElementPointer(SelectionDAG &DAG,
                                                 SDValue Index) const {
   SDLoc dl(Index);
   // Make sure the index type is big enough to compute in.
-  Index = DAG.getZExtOrTrunc(Index, dl, getPointerTy(DAG.getDataLayout()));
+  Index = DAG.getZExtOrTrunc(Index, dl, VecPtr.getValueType());
 
   EVT EltVT = VecVT.getVectorElementType();
 
