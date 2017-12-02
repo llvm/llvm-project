@@ -2,7 +2,7 @@
 
 class S {
   int a;
-  S() : a(0) {}
+  S() : a(0) {} // expected-note {{implicitly declared private here}}
 
 public:
   S(int v) : a(v) {}
@@ -607,7 +607,8 @@ void test_loop_eh() {
 
 void test_loop_firstprivate_lastprivate() {
   S s(4);
-#pragma omp target teams distribute lastprivate(s) firstprivate(s)
+// expected-error@+1 {{lastprivate variable cannot be firstprivate}} expected-note@+1 {{defined as lastprivate}}
+#pragma omp target teams distribute lastprivate(s) firstprivate(s) // expected-error {{calling a private constructor of class 'S'}}
   for (int i = 0; i < 16; ++i)
     ;
 }

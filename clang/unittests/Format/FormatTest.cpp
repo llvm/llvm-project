@@ -9934,8 +9934,8 @@ TEST_F(FormatTest, OptimizeBreakPenaltyVsExcess) {
   Style.PenaltyExcessCharacter = 90;
   verifyFormat("int a; // the comment", Style);
   EXPECT_EQ("int a; // the comment\n"
-            "       // aa",
-            format("int a; // the comment aa", Style));
+            "       // aaa",
+            format("int a; // the comment aaa", Style));
   EXPECT_EQ("int a; /* first line\n"
             "        * second line\n"
             "        * third line\n"
@@ -9963,14 +9963,14 @@ TEST_F(FormatTest, OptimizeBreakPenaltyVsExcess) {
                    Style));
 
   EXPECT_EQ("// foo bar baz bazfoo\n"
-            "// foo bar\n",
+            "// foo bar foo bar\n",
             format("// foo bar baz bazfoo\n"
-                   "// foo            bar\n",
+                   "// foo bar foo           bar\n",
                    Style));
   EXPECT_EQ("// foo bar baz bazfoo\n"
-            "// foo bar\n",
+            "// foo bar foo bar\n",
             format("// foo bar baz      bazfoo\n"
-                   "// foo            bar\n",
+                   "// foo            bar foo bar\n",
                    Style));
 
   // FIXME: Optimally, we'd keep bazfoo on the first line and reflow bar to the
@@ -9996,6 +9996,20 @@ TEST_F(FormatTest, OptimizeBreakPenaltyVsExcess) {
                    "// foo bar baz      bazfoo bar\n"
                    "// foo           bar\n",
                    Style));
+
+  // Make sure we do not keep protruding characters if strict mode reflow is
+  // cheaper than keeping protruding characters.
+  Style.ColumnLimit = 21;
+  EXPECT_EQ("// foo foo foo foo\n"
+            "// foo foo foo foo\n"
+            "// foo foo foo foo\n",
+            format("// foo foo foo foo foo foo foo foo foo foo foo foo\n",
+                           Style));
+
+  EXPECT_EQ("int a = /* long block\n"
+            "           comment */\n"
+            "    42;",
+            format("int a = /* long block comment */ 42;", Style));
 }
 
 #define EXPECT_ALL_STYLES_EQUAL(Styles)                                        \

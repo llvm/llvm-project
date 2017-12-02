@@ -105,9 +105,9 @@ void test_builtins(double d, float f, long double ld) {
   double exp_ = exp(d);
   long double expl_ = expl(ld);
   float expf_ = expf(f);
-// CHECK-NO: declare double @exp(double) [[NUW_RN]]
-// CHECK-NO: declare x86_fp80 @expl(x86_fp80) [[NUW_RN]]
-// CHECK-NO: declare float @expf(float) [[NUW_RN]]
+// CHECK-NO: declare double @llvm.exp.f64(double) [[NUW_RNI]]
+// CHECK-NO: declare x86_fp80 @llvm.exp.f80(x86_fp80) [[NUW_RNI]]
+// CHECK-NO: declare float @llvm.exp.f32(float) [[NUW_RNI]]
 // CHECK-YES-NOT: declare double @exp(double) [[NUW_RN]]
 // CHECK-YES-NOT: declare x86_fp80 @expl(x86_fp80) [[NUW_RN]]
 // CHECK-YES-NOT: declare float @expf(float) [[NUW_RN]]
@@ -115,9 +115,9 @@ void test_builtins(double d, float f, long double ld) {
   double log_ = log(d);
   long double logl_ = logl(ld);
   float logf_ = logf(f);
-// CHECK-NO: declare double @log(double) [[NUW_RN]]
-// CHECK-NO: declare x86_fp80 @logl(x86_fp80) [[NUW_RN]]
-// CHECK-NO: declare float @logf(float) [[NUW_RN]]
+// CHECK-NO: declare double @llvm.log.f64(double) [[NUW_RNI]]
+// CHECK-NO: declare x86_fp80 @llvm.log.f80(x86_fp80) [[NUW_RNI]]
+// CHECK-NO: declare float @llvm.log.f32(float) [[NUW_RNI]]
 // CHECK-YES-NOT: declare double @log(double) [[NUW_RN]]
 // CHECK-YES-NOT: declare x86_fp80 @logl(x86_fp80) [[NUW_RN]]
 // CHECK-YES-NOT: declare float @logf(float) [[NUW_RN]]

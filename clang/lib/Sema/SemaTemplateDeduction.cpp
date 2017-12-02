@@ -354,8 +354,9 @@ static Sema::TemplateDeductionResult DeduceNonTypeTemplateArgument(
     // expanded NTTP should be a pack expansion type?
     return Sema::TDK_Success;
 
-  // Get the type of the parameter for deduction.
-  QualType ParamType = NTTP->getType();
+  // Get the type of the parameter for deduction. If it's a (dependent) array
+  // or function type, we will not have decayed it yet, so do that now.
+  QualType ParamType = S.Context.getAdjustedParameterType(NTTP->getType());
   if (auto *Expansion = dyn_cast<PackExpansionType>(ParamType))
     ParamType = Expansion->getPattern();
 
