@@ -492,7 +492,8 @@ let isReMaterializable = 1, isAsCheapAsAMove = 1, canFoldAsLoad = 1,
 multiclass vinsert_for_size_split<int Opcode, X86VectorVTInfo From,
                                   X86VectorVTInfo To,
                                   SDPatternOperator vinsert_insert,
-                                  SDPatternOperator vinsert_for_mask> {
+                                  SDPatternOperator vinsert_for_mask,
+                                  OpndItins itins> {
   let hasSideEffects = 0, ExeDomain = To.ExeDomain in {
     defm rr : AVX512_maskable_split<Opcode, MRMSrcReg, To, (outs To.RC:$dst),
                    (ins To.RC:$src1, From.RC:$src2, u8imm:$src3),
@@ -503,8 +504,8 @@ multiclass vinsert_for_size_split<int Opcode, X86VectorVTInfo From,
                                          (iPTR imm)),
                    (vinsert_for_mask:$src3 (To.VT To.RC:$src1),
                                            (From.VT From.RC:$src2),
-                                           (iPTR imm))>, AVX512AIi8Base, EVEX_4V;
-
+                                           (iPTR imm)), itins.rr>,
+                   AVX512AIi8Base, EVEX_4V, Sched<[itins.Sched]>;
     let mayLoad = 1 in
     defm rm : AVX512_maskable_split<Opcode, MRMSrcMem, To, (outs To.RC:$dst),
                    (ins To.RC:$src1, From.MemOp:$src2, u8imm:$src3),
@@ -515,16 +516,18 @@ multiclass vinsert_for_size_split<int Opcode, X86VectorVTInfo From,
                                (iPTR imm)),
                    (vinsert_for_mask:$src3 (To.VT To.RC:$src1),
                                (From.VT (bitconvert (From.LdFrag addr:$src2))),
-                               (iPTR imm))>, AVX512AIi8Base, EVEX_4V,
-                   EVEX_CD8<From.EltSize, From.CD8TupleForm>;
+                               (iPTR imm)), itins.rm>, AVX512AIi8Base, EVEX_4V,
+                   EVEX_CD8<From.EltSize, From.CD8TupleForm>,
+                   Sched<[itins.Sched.Folded, ReadAfterLd]>;
   }
 }
 
 // Passes the same pattern operator for masked and unmasked ops.
 multiclass vinsert_for_size<int Opcode, X86VectorVTInfo From,
                             X86VectorVTInfo To,
-                            SDPatternOperator vinsert_insert> :
-  vinsert_for_size_split<Opcode, From, To, vinsert_insert, vinsert_insert>;
+                            SDPatternOperator vinsert_insert,
+                            OpndItins itins> :
+  vinsert_for_size_split<Opcode, From, To, vinsert_insert, vinsert_insert, itins>;
 
 multiclass vinsert_for_size_lowering<string InstrStr, X86VectorVTInfo From,
                        X86VectorVTInfo To, PatFrag vinsert_insert,
@@ -547,47 +550,61 @@ multiclass vinsert_for_size_lowering<string InstrStr, X86VectorVTInfo From,
 }
 
 multiclass vinsert_for_type<ValueType EltVT32, int Opcode128,
-                            ValueType EltVT64, int Opcode256> {
+                            ValueType EltVT64, int Opcode256,
+                            OpndItins itins> {
 
   let Predicates = [HasVLX] in
     defm NAME # "32x4Z256" : vinsert_for_size<Opcode128,
                                  X86VectorVTInfo< 4, EltVT32, VR128X>,
                                  X86VectorVTInfo< 8, EltVT32, VR256X>,
-                                 vinsert128_insert>, EVEX_V256;
+                                 vinsert128_insert, itins>, EVEX_V256;
 
   defm NAME # "32x4Z" : vinsert_for_size<Opcode128,
                                  X86VectorVTInfo< 4, EltVT32, VR128X>,
                                  X86VectorVTInfo<16, EltVT32, VR512>,
-                                 vinsert128_insert>, EVEX_V512;
+                                 vinsert128_insert, itins>, EVEX_V512;
 
   defm NAME # "64x4Z" : vinsert_for_size<Opcode256,
                                  X86VectorVTInfo< 4, EltVT64, VR256X>,
                                  X86VectorVTInfo< 8, EltVT64, VR512>,
-                                 vinsert256_insert>, VEX_W, EVEX_V512;
+                                 vinsert256_insert, itins>, VEX_W, EVEX_V512;
 
   // Even with DQI we'd like to only use these instructions for masking.
   let Predicates = [HasVLX, HasDQI] in
     defm NAME # "64x2Z256" : vinsert_for_size_split<Opcode128,
                                    X86VectorVTInfo< 2, EltVT64, VR128X>,
                                    X86VectorVTInfo< 4, EltVT64, VR256X>,
-                                   null_frag, vinsert128_insert>, VEX_W, EVEX_V256;
+                                   null_frag, vinsert128_insert, itins>,
+                                   VEX_W, EVEX_V256;
 
   // Even with DQI we'd like to only use these instructions for masking.
   let Predicates = [HasDQI] in {
     defm NAME # "64x2Z" : vinsert_for_size_split<Opcode128,
                                  X86VectorVTInfo< 2, EltVT64, VR128X>,
                                  X86VectorVTInfo< 8, EltVT64, VR512>,
-                                 null_frag, vinsert128_insert>, VEX_W, EVEX_V512;
+                                 null_frag, vinsert128_insert, itins>,
+                                 VEX_W, EVEX_V512;
 
     defm NAME # "32x8Z" : vinsert_for_size_split<Opcode256,
                                    X86VectorVTInfo< 8, EltVT32, VR256X>,
                                    X86VectorVTInfo<16, EltVT32, VR512>,
-                                   null_frag, vinsert256_insert>, EVEX_V512;
+                                   null_frag, vinsert256_insert, itins>,
+                                   EVEX_V512;
   }
 }
 
-defm VINSERTF : vinsert_for_type<f32, 0x18, f64, 0x1a>;
-defm VINSERTI : vinsert_for_type<i32, 0x38, i64, 0x3a>;
+// FIXME: Is there a better scheduler itinerary for VINSERTF/VINSERTI?
+let Sched = WriteFShuffle256 in
+def AVX512_VINSERTF : OpndItins<
+  IIC_SSE_SHUFP, IIC_SSE_SHUFP
+>;
+let Sched = WriteShuffle256 in
+def AVX512_VINSERTI : OpndItins<
+  IIC_SSE_PSHUF_RI, IIC_SSE_PSHUF_MI
+>;
+
+defm VINSERTF : vinsert_for_type<f32, 0x18, f64, 0x1a, AVX512_VINSERTF>;
+defm VINSERTI : vinsert_for_type<i32, 0x38, i64, 0x3a, AVX512_VINSERTI>;
 
 // Codegen pattern with the alternative types,
 // Even with AVX512DQ we'll still use these for unmasked operations.
@@ -779,7 +796,8 @@ def VINSERTPSZrm: AVX512AIi8<0x21, MRMSrcMem, (outs VR128X:$dst),
 multiclass vextract_for_size_split<int Opcode,
                                    X86VectorVTInfo From, X86VectorVTInfo To,
                                    SDPatternOperator vextract_extract,
-                                   SDPatternOperator vextract_for_mask> {
+                                   SDPatternOperator vextract_for_mask,
+                                   OpndItins itins> {
 
   let hasSideEffects = 0, ExeDomain = To.ExeDomain in {
     defm rr : AVX512_maskable_split<Opcode, MRMDestReg, To, (outs To.RC:$dst),
@@ -787,15 +805,17 @@ multiclass vextract_for_size_split<int Opcode,
                 "vextract" # To.EltTypeName # "x" # To.NumElts,
                 "$idx, $src1", "$src1, $idx",
                 (vextract_extract:$idx (From.VT From.RC:$src1), (iPTR imm)),
-                (vextract_for_mask:$idx (From.VT From.RC:$src1), (iPTR imm))>,
-              AVX512AIi8Base, EVEX;
+                (vextract_for_mask:$idx (From.VT From.RC:$src1), (iPTR imm)),
+                itins.rr>, AVX512AIi8Base, EVEX, Sched<[itins.Sched]>;
+
     def mr  : AVX512AIi8<Opcode, MRMDestMem, (outs),
                     (ins To.MemOp:$dst, From.RC:$src1, u8imm:$idx),
                     "vextract" # To.EltTypeName # "x" # To.NumElts #
                         "\t{$idx, $src1, $dst|$dst, $src1, $idx}",
                     [(store (To.VT (vextract_extract:$idx
                                     (From.VT From.RC:$src1), (iPTR imm))),
-                             addr:$dst)]>, EVEX;
+                             addr:$dst)], itins.rm>, EVEX,
+                    Sched<[itins.Sched.Folded, ReadAfterLd]>;
 
     let mayStore = 1, hasSideEffects = 0 in
     def mrk : AVX512AIi8<Opcode, MRMDestMem, (outs),
@@ -804,15 +824,17 @@ multiclass vextract_for_size_split<int Opcode,
                      "vextract" # To.EltTypeName # "x" # To.NumElts #
                           "\t{$idx, $src1, $dst {${mask}}|"
                           "$dst {${mask}}, $src1, $idx}",
-                    []>, EVEX_K, EVEX;
+                    [], itins.rm>, EVEX_K, EVEX,
+                    Sched<[itins.Sched.Folded, ReadAfterLd]>;
   }
 }
 
 // Passes the same pattern operator for masked and unmasked ops.
 multiclass vextract_for_size<int Opcode, X86VectorVTInfo From,
                              X86VectorVTInfo To,
-                             SDPatternOperator vextract_extract> :
-  vextract_for_size_split<Opcode, From, To, vextract_extract, vextract_extract>;
+                             SDPatternOperator vextract_extract,
+                             OpndItins itins> :
+  vextract_for_size_split<Opcode, From, To, vextract_extract, vextract_extract, itins>;
 
 // Codegen pattern for the alternative types
 multiclass vextract_for_size_lowering<string InstrStr, X86VectorVTInfo From,
@@ -831,24 +853,25 @@ multiclass vextract_for_size_lowering<string InstrStr, X86VectorVTInfo From,
 }
 
 multiclass vextract_for_type<ValueType EltVT32, int Opcode128,
-                             ValueType EltVT64, int Opcode256> {
+                             ValueType EltVT64, int Opcode256,
+                             OpndItins itins> {
   let Predicates = [HasAVX512] in {
     defm NAME # "32x4Z" : vextract_for_size<Opcode128,
                                    X86VectorVTInfo<16, EltVT32, VR512>,
                                    X86VectorVTInfo< 4, EltVT32, VR128X>,
-                                   vextract128_extract>,
+                                   vextract128_extract, itins>,
                                        EVEX_V512, EVEX_CD8<32, CD8VT4>;
     defm NAME # "64x4Z" : vextract_for_size<Opcode256,
                                    X86VectorVTInfo< 8, EltVT64, VR512>,
                                    X86VectorVTInfo< 4, EltVT64, VR256X>,
-                                   vextract256_extract>,
+                                   vextract256_extract, itins>,
                                        VEX_W, EVEX_V512, EVEX_CD8<64, CD8VT4>;
   }
   let Predicates = [HasVLX] in
     defm NAME # "32x4Z256" : vextract_for_size<Opcode128,
                                  X86VectorVTInfo< 8, EltVT32, VR256X>,
                                  X86VectorVTInfo< 4, EltVT32, VR128X>,
-                                 vextract128_extract>,
+                                 vextract128_extract, itins>,
                                      EVEX_V256, EVEX_CD8<32, CD8VT4>;
 
   // Even with DQI we'd like to only use these instructions for masking.
@@ -856,7 +879,7 @@ multiclass vextract_for_type<ValueType EltVT32, int Opcode128,
     defm NAME # "64x2Z256" : vextract_for_size_split<Opcode128,
                                  X86VectorVTInfo< 4, EltVT64, VR256X>,
                                  X86VectorVTInfo< 2, EltVT64, VR128X>,
-                                 null_frag, vextract128_extract>,
+                                 null_frag, vextract128_extract, itins>,
                                      VEX_W, EVEX_V256, EVEX_CD8<64, CD8VT2>;
 
   // Even with DQI we'd like to only use these instructions for masking.
@@ -864,18 +887,28 @@ multiclass vextract_for_type<ValueType EltVT32, int Opcode128,
     defm NAME # "64x2Z" : vextract_for_size_split<Opcode128,
                                  X86VectorVTInfo< 8, EltVT64, VR512>,
                                  X86VectorVTInfo< 2, EltVT64, VR128X>,
-                                 null_frag, vextract128_extract>,
+                                 null_frag, vextract128_extract, itins>,
                                      VEX_W, EVEX_V512, EVEX_CD8<64, CD8VT2>;
     defm NAME # "32x8Z" : vextract_for_size_split<Opcode256,
                                  X86VectorVTInfo<16, EltVT32, VR512>,
                                  X86VectorVTInfo< 8, EltVT32, VR256X>,
-                                 null_frag, vextract256_extract>,
+                                 null_frag, vextract256_extract, itins>,
                                      EVEX_V512, EVEX_CD8<32, CD8VT8>;
   }
 }
 
-defm VEXTRACTF : vextract_for_type<f32, 0x19, f64, 0x1b>;
-defm VEXTRACTI : vextract_for_type<i32, 0x39, i64, 0x3b>;
+// FIXME: Is there a better scheduler itinerary for VEXTRACTF/VEXTRACTI?
+let Sched = WriteFShuffle256 in
+def AVX512_VEXTRACTF : OpndItins<
+  IIC_SSE_SHUFP, IIC_SSE_SHUFP
+>;
+let Sched = WriteShuffle256 in
+def AVX512_VEXTRACTI : OpndItins<
+  IIC_SSE_PSHUF_RI, IIC_SSE_PSHUF_MI
+>;
+
+defm VEXTRACTF : vextract_for_type<f32, 0x19, f64, 0x1b, AVX512_VEXTRACTF>;
+defm VEXTRACTI : vextract_for_type<i32, 0x39, i64, 0x3b, AVX512_VEXTRACTI>;
 
 // extract_subvector codegen patterns with the alternative types.
 // Even with AVX512DQ we'll still use these for unmasked operations.

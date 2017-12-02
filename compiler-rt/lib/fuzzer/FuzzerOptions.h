@@ -24,10 +24,11 @@ struct FuzzingOptions {
   int ErrorExitCode = 77;
   int MaxTotalTimeSec = 0;
   int RssLimitMb = 0;
+  int MallocLimitMb = 0;
   bool DoCrossOver = true;
   int MutateDepth = 5;
+  bool ReduceDepth = false;
   bool UseCounters = false;
-  bool UseIndirCalls = true;
   bool UseMemmem = true;
   bool UseCmp = false;
   bool UseValueProfile = false;

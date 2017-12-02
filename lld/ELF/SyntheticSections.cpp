@@ -1745,7 +1745,7 @@ void GnuHashTableSection::writeHashTable(uint8_t *Buf) {
   // Group symbols by hash value.
   std::vector<std::vector<Entry>> Syms(NBuckets);
   for (const Entry &Ent : Symbols)
-    Syms[Ent.Hash % NBuckets].push_back(Ent);
+    Syms[Ent.BucketIdx].push_back(Ent);
 
   // Write hash buckets. Hash buckets contain indices in the following
   // hash value table.
@@ -1792,21 +1792,22 @@ void GnuHashTableSection::addSymbols(std::vector<SymbolTableEntry> &V) {
   if (Mid == V.end())
     return;
 
-  for (SymbolTableEntry &Ent : llvm::make_range(Mid, V.end())) {
-    Symbol *B = Ent.Sym;
-    Symbols.push_back({B, Ent.StrTabOffset, hashGnu(B->getName())});
-  }
-
   // We chose load factor 4 for the on-disk hash table. For each hash
   // collision, the dynamic linker will compare a uint32_t hash value.
   // Since the integer comparison is quite fast, we believe we can make
   // the load factor even larger. 4 is just a conservative choice.
-  NBuckets = std::max<size_t>(Symbols.size() / 4, 1);
+  NBuckets = std::max<size_t>((V.end() - Mid) / 4, 1);
 
-  std::stable_sort(Symbols.begin(), Symbols.end(),
-                   [&](const Entry &L, const Entry &R) {
-                     return L.Hash % NBuckets < R.Hash % NBuckets;
-                   });
+  for (SymbolTableEntry &Ent : llvm::make_range(Mid, V.end())) {
+    Symbol *B = Ent.Sym;
+    uint32_t Hash = hashGnu(B->getName());
+    uint32_t BucketIdx = Hash % NBuckets;
+    Symbols.push_back({B, Ent.StrTabOffset, Hash, BucketIdx});
+  }
+
+  std::stable_sort(
+      Symbols.begin(), Symbols.end(),
+      [](const Entry &L, const Entry &R) { return L.BucketIdx < R.BucketIdx; });
 
   V.erase(Mid, V.end());
   for (const Entry &Ent : Symbols)

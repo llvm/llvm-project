@@ -2764,6 +2764,14 @@ unsigned ObjectFileELF::ApplyRelocations(
       case R_386_32:
       case R_386_PC32:
       default:
+        // FIXME: This asserts with this input:
+        //
+        // foo.cpp
+        // int main(int argc, char **argv) { return 0; }
+        //
+        // clang++.exe --target=i686-unknown-linux-gnu -g -c foo.cpp -o foo.o
+        //
+        // and running this on the foo.o module.
         assert(false && "unexpected relocation type");
       }
     } else {

@@ -124,7 +124,7 @@ void FreeHook(const volatile void *ptr) {
 
 // Crash on a single malloc that exceeds the rss limit.
 void Fuzzer::HandleMalloc(size_t Size) {
-  if (!Options.RssLimitMb || (Size >> 20) < (size_t)Options.RssLimitMb)
+  if (!Options.MallocLimitMb || (Size >> 20) < (size_t)Options.MallocLimitMb)
     return;
   Printf("==%d== ERROR: libFuzzer: out-of-memory (malloc(%zd))\n", GetPid(),
          Size);
@@ -433,7 +433,7 @@ void Fuzzer::PrintPulseAndReportSlowInput(const uint8_t *Data, size_t Size) {
 }
 
 bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
-                    InputInfo *II) {
+                    InputInfo *II, bool *FoundUniqFeatures) {
   if (!Size)
     return false;
 
@@ -451,6 +451,8 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
                              II->UniqFeatureSet.end(), Feature))
         FoundUniqFeaturesOfII++;
   });
+  if (FoundUniqFeatures)
+    *FoundUniqFeatures = FoundUniqFeaturesOfII;
   PrintPulseAndReportSlowInput(Data, Size);
   size_t NumNewFeatures = Corpus.NumFeatureUpdates() - NumUpdatesBefore;
   if (NumNewFeatures) {
@@ -642,11 +644,17 @@ void Fuzzer::MutateAndTestOne() {
     Size = NewSize;
     II.NumExecutedMutations++;
 
-    bool NewCov = RunOne(CurrentUnitData, Size, /*MayDeleteFile=*/true, &II);
+    bool FoundUniqFeatures = false;
+    bool NewCov = RunOne(CurrentUnitData, Size, /*MayDeleteFile=*/true, &II,
+                         &FoundUniqFeatures);
     TryDetectingAMemoryLeak(CurrentUnitData, Size,
                             /*DuringInitialCorpusExecution*/ false);
-    if (NewCov)
+    if (NewCov) {
       ReportNewCoverage(&II, {CurrentUnitData, CurrentUnitData + Size});
+      break;  // We will mutate this input more in the next rounds.
+    }
+    if (Options.ReduceDepth && !FoundUniqFeatures)
+        break;
   }
 }
 
