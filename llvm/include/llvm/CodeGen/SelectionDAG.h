@@ -300,9 +300,6 @@ public:
   /// type legalization.
   bool NewNodesMustHaveLegalTypes = false;
 
-  /// Set to true for DAG of BasicBlock contained inside a loop.
-  bool IsDAGPartOfLoop = false;
-
 private:
   /// DAGUpdateListener is a friend so it can manipulate the listener stack.
   friend struct DAGUpdateListener;

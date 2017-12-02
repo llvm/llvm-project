@@ -558,10 +558,11 @@ define i16 @test_mul_by_28(i16 %x) {
 define i16 @test_mul_by_29(i16 %x) {
 ; X86-LABEL: test_mul_by_29:
 ; X86:       # BB#0:
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    leal (%eax,%eax,8), %ecx
-; X86-NEXT:    leal (%ecx,%ecx,2), %ecx
-; X86-NEXT:    leal (%ecx,%eax,2), %eax
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    leal (%ecx,%ecx,8), %eax
+; X86-NEXT:    leal (%eax,%eax,2), %eax
+; X86-NEXT:    addl %ecx, %eax
+; X86-NEXT:    addl %ecx, %eax
 ; X86-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; X86-NEXT:    retl
 ;
@@ -570,7 +571,8 @@ define i16 @test_mul_by_29(i16 %x) {
 ; X64-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; X64-NEXT:    leal (%rdi,%rdi,8), %eax
 ; X64-NEXT:    leal (%rax,%rax,2), %eax
-; X64-NEXT:    leal (%rax,%rdi,2), %eax
+; X64-NEXT:    addl %edi, %eax
+; X64-NEXT:    addl %edi, %eax
 ; X64-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
 ; X64-NEXT:    retq
   %mul = mul nsw i16 %x, 29

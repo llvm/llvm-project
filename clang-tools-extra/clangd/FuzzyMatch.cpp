@@ -58,11 +58,12 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/Format.h"
 
+namespace clang {
+namespace clangd {
 using namespace llvm;
-using namespace clang::clangd;
 
-const int FuzzyMatcher::MaxPat;
-const int FuzzyMatcher::MaxWord;
+constexpr int FuzzyMatcher::MaxPat;
+constexpr int FuzzyMatcher::MaxWord;
 
 static char lower(char C) { return C >= 'A' && C <= 'Z' ? C + ('a' - 'A') : C; }
 // A "negative infinity" score that won't overflow.
@@ -371,3 +372,6 @@ llvm::SmallString<256> FuzzyMatcher::dumpLast(llvm::raw_ostream &OS) const {
 
   return Result;
 }
+
+} // namespace clangd
+} // namespace clang

@@ -102,15 +102,9 @@ inline int __declspec(dllexport) inlineStaticLocalsFunc() {
 
 // Declarations are not exported.
 
-// dllexport implies a definition.
-// MSC-NOT: @"\01??$VarTmplDef@UExplicitInst_Exported@@@@3HA"
-// GNU-NOT: @_Z10VarTmplDefI21ExplicitInst_ExportedE
-template<typename T> __declspec(dllexport) int VarTmplDef;
-INSTVAR(VarTmplDef<ExplicitInst_Exported>)
-
 // MSC-DAG: @"\01??$VarTmplImplicitDef@UImplicitInst_Exported@@@@3HA" = external global
 // GNU-DAG: @_Z18VarTmplImplicitDefI21ImplicitInst_ExportedE          = external global
-template<typename T> __declspec(dllexport) int VarTmplImplicitDef;
+template<typename T> __declspec(dllexport) extern int VarTmplImplicitDef;
 USEVAR(VarTmplImplicitDef<ImplicitInst_Exported>)
 
 // Export definition.

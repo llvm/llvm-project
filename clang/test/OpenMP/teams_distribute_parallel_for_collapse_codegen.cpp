@@ -18,13 +18,13 @@ struct SS{
   // CK1: define {{.*}}i32 @{{.+}}foo{{.+}}(
   int foo(void) {
 
-    // CK1: call i32 @__tgt_target(
+    // CK1: call i32 @__tgt_target_teams(
     // CK1: call void @[[OFFL1:.+]](
     #pragma omp target
     #pragma omp teams distribute parallel for collapse(2)
     for(int i = 0; i < X; i++) {
       for(int j = 0; j < Y; j++) {
-	a[i][j] = (T)0;
+        a[i][j] = (T)0;
       }
     }
     // CK1: define internal void @[[OFFL1]](
@@ -93,7 +93,7 @@ int main (int argc, char **argv) {
 }
 
 // CK2: define {{.*}}i32 @{{[^,]+}}(i{{.+}}{{.+}} %[[ARGC:.+]], {{.+}})
-// CK2: call i32 @__tgt_target(
+// CK2: call i32 @__tgt_target_teams(
 // CK2: call void @[[OFFL1:.+]]({{.+}})
 // CK2: {{%.+}} = call{{.*}} i32 @[[TMAIN:.+]]({{.+}})
 // CK2: ret
@@ -117,7 +117,7 @@ int main (int argc, char **argv) {
 
 
 // CK2: define {{.*}}i32 @[[TMAIN]]({{.+}})
-// CK2: call i32 @__tgt_target(
+// CK2: call i32 @__tgt_target_teams(
 // CK2: call void @[[OFFLT1:.+]]({{.+}})
 // CK2:  ret
 // CK2-NEXT: }

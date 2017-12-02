@@ -12621,10 +12621,9 @@ bool DAGCombiner::MergeStoresOfConstantsOrVecElts(
                       ElementSizeBits),
                   SDLoc(CFP), IntMemVT);
             else if (auto *C = dyn_cast<ConstantSDNode>(Val))
-              Val = DAG.getConstant(C->getAPIntValue()
-                                        .zextOrTrunc(Val.getValueSizeInBits())
-                                        .zextOrTrunc(ElementSizeBits),
-                                    SDLoc(C), IntMemVT);
+              Val = DAG.getConstant(
+                  C->getAPIntValue().zextOrTrunc(ElementSizeBits),
+                  SDLoc(C), IntMemVT);
           }
           // Make sure correctly size type is the correct type.
           Val = DAG.getBitcast(MemVT, Val);
@@ -12687,14 +12686,9 @@ bool DAGCombiner::MergeStoresOfConstantsOrVecElts(
       SDValue Val = St->getValue();
       StoreInt <<= ElementSizeBits;
       if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Val)) {
-        StoreInt |= C->getAPIntValue()
-                        .zextOrTrunc(ElementSizeBits)
-                        .zextOrTrunc(SizeInBits);
+        StoreInt |= C->getAPIntValue().zextOrTrunc(SizeInBits);
       } else if (ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Val)) {
-        StoreInt |= C->getValueAPF()
-                        .bitcastToAPInt()
-                        .zextOrTrunc(ElementSizeBits)
-                        .zextOrTrunc(SizeInBits);
+        StoreInt |= C->getValueAPF().bitcastToAPInt().zextOrTrunc(SizeInBits);
       } else {
         llvm_unreachable("Invalid constant element type");
       }

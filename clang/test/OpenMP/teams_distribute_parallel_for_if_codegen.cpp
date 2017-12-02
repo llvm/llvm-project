@@ -17,9 +17,9 @@ int Arg;
 // CHECK-LABEL: define {{.*}}void @{{.+}}gtid_test
 void gtid_test() {
 #pragma omp target
-// CHECK: call i{{[0-9]+}} @__tgt_target(
+// CHECK: call i{{[0-9]+}} @__tgt_target_teams(
 // CHECK: call void [[OFFLOADING_FUN_0:@.+]](
-// CHECK: call i{{[0-9]+}} @__tgt_target(
+// CHECK: call i{{[0-9]+}} @__tgt_target_teams(
 // CHECK: call void [[OFFLOADING_FUN_1:@.+]](
 #pragma omp teams distribute parallel for
   for(int i = 0 ; i < 100; i++) {}
@@ -77,11 +77,11 @@ int tmain(T Arg) {
 
 // CHECK-LABEL: define {{.*}}i{{[0-9]+}} @main()
 int main() {
-// CHECK: call i{{[0-9]+}} @__tgt_target(
+// CHECK: call i{{[0-9]+}} @__tgt_target_teams(
 // CHECK: call void [[OFFLOADING_FUN_0:@.+]](
-// CHECK: call i{{[0-9]+}} @__tgt_target(
+// CHECK: call i{{[0-9]+}} @__tgt_target_teams(
 // CHECK: call void [[OFFLOADING_FUN_1:@.+]](
-// CHECK: call i{{[0-9]+}} @__tgt_target(
+// CHECK: call i{{[0-9]+}} @__tgt_target_teams(
 // CHECK: call void [[OFFLOADING_FUN_2:@.+]](
 // CHECK: = call {{.*}}i{{.+}} @{{.+}}tmain
 #pragma omp target

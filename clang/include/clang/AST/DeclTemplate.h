@@ -2540,6 +2540,12 @@ class VarTemplateSpecializationDecl : public VarDecl,
   /// Really a value of type TemplateSpecializationKind.
   unsigned SpecializationKind : 3;
 
+  /// \brief Whether this declaration is a complete definition of the
+  /// variable template specialization. We can't otherwise tell apart
+  /// an instantiated declaration from an instantiated definition with
+  /// no initializer.
+  unsigned IsCompleteDefinition : 1;
+
 protected:
   VarTemplateSpecializationDecl(Kind DK, ASTContext &Context, DeclContext *DC,
                                 SourceLocation StartLoc, SourceLocation IdLoc,
@@ -2553,6 +2559,7 @@ protected:
 public:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
+  friend class VarDecl;
 
   static VarTemplateSpecializationDecl *
   Create(ASTContext &Context, DeclContext *DC, SourceLocation StartLoc,
@@ -2615,6 +2622,8 @@ public:
     assert(Loc.isValid() && "point of instantiation must be valid!");
     PointOfInstantiation = Loc;
   }
+
+  void setCompleteDefinition() { IsCompleteDefinition = true; }
 
   /// \brief If this variable template specialization is an instantiation of
   /// a template (rather than an explicit specialization), return the

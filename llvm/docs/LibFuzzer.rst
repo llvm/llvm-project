@@ -246,6 +246,10 @@ The most important command line options are:
   the process is treated as a failure case.
   The limit is checked in a separate thread every second.
   If running w/o ASAN/MSAN, you may use 'ulimit -v' instead.
+``-malloc_limit_mb``
+  If non-zero, the fuzzer will exit if the target tries to allocate this
+  number of Mb with one malloc call.
+  If zero (default) same limit as rss_limit_mb is applied.
 ``-timeout_exitcode``
   Exit code (default 77) used if libFuzzer reports a timeout.
 ``-error_exitcode``

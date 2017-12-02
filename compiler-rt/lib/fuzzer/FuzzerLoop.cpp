@@ -124,7 +124,7 @@ void FreeHook(const volatile void *ptr) {
 
 // Crash on a single malloc that exceeds the rss limit.
 void Fuzzer::HandleMalloc(size_t Size) {
-  if (!Options.RssLimitMb || (Size >> 20) < (size_t)Options.RssLimitMb)
+  if (!Options.MallocLimitMb || (Size >> 20) < (size_t)Options.MallocLimitMb)
     return;
   Printf("==%d== ERROR: libFuzzer: out-of-memory (malloc(%zd))\n", GetPid(),
          Size);
