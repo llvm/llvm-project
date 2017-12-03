@@ -583,5 +583,46 @@ TEST(ImportExpr, ImportCXXPseudoDestructorExpr) {
                      callExpr(has(cxxPseudoDestructorExpr()))))))));
 }
 
+TEST(ImportDecl, ImportUsingDecl) {
+  MatchVerifier<Decl> Verifier;
+  EXPECT_TRUE(
+        testImport(
+          "namespace foo { int bar; }"
+          "int declToImport(){ using foo::bar; }",
+          Lang_CXX, "", Lang_CXX, Verifier,
+          functionDecl(
+            has(
+              compoundStmt(
+                has(
+                  declStmt(
+                    has(
+                      usingDecl()))))))));
+}
+
+/// \brief Matches shadow declarations introduced into a scope by a
+///        (resolved) using declaration.
+///
+/// Given
+/// \code
+///   namespace n { int f; }
+///   namespace declToImport { using n::f; }
+/// \endcode
+/// usingShadowDecl()
+///   matches \code f \endcode
+const internal::VariadicDynCastAllOfMatcher<Decl,
+                                            UsingShadowDecl> usingShadowDecl;
+
+TEST(ImportDecl, ImportUsingShadowDecl) {
+  MatchVerifier<Decl> Verifier;
+  EXPECT_TRUE(
+        testImport(
+          "namespace foo { int bar; }"
+          "namespace declToImport { using foo::bar; }",
+          Lang_CXX, "", Lang_CXX, Verifier,
+          namespaceDecl(
+            has(
+              usingShadowDecl()))));
+}
+
 } // end namespace ast_matchers
 } // end namespace clang
