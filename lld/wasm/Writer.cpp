@@ -259,22 +259,26 @@ void Writer::createTableSection() {
 void Writer::createExportSection() {
   // Memory is and main function are exported for executables.
   bool ExportMemory = !Config->Relocatable && !Config->ImportMemory;
-  bool ExportMain = !Config->Relocatable;
-  bool ExportOther = true; // Config->Relocatable;
+  bool ExportOther = true; // ??? TODO Config->Relocatable;
+  bool ExportHidden = Config->Relocatable;
+  Symbol *EntrySym = Symtab->find(Config->Entry);
+  bool ExportEntry = !Config->Relocatable && EntrySym && EntrySym->isDefined();
 
   uint32_t NumExports = 0;
 
   if (ExportMemory)
     ++NumExports;
 
-  if (ExportMain && !ExportOther)
+  if (ExportEntry)
     ++NumExports;
 
   if (ExportOther) {
     for (ObjFile *File : Symtab->ObjectFiles) {
       for (Symbol *Sym : File->getSymbols()) {
         if (!Sym->isFunction() || Sym->isLocal() || Sym->isUndefined() ||
-            Sym->WrittenToSymtab)
+            (Sym->isHidden() && !ExportHidden) || Sym->WrittenToSymtab)
+          continue;
+        if (Sym == EntrySym)
           continue;
         Sym->WrittenToSymtab = true;
         ++NumExports;
@@ -298,27 +302,21 @@ void Writer::createExportSection() {
     writeExport(OS, MemoryExport);
   }
 
-  if (ExportMain) {
-    Symbol *Sym = Symtab->find(Config->Entry);
-    if (Sym->isDefined()) {
-      if (!Sym->isFunction())
-        fatal("entry point is not a function: " + Sym->getName());
-
-      if (!ExportOther) {
-        WasmExport MainExport;
-        MainExport.Name = Config->Entry;
-        MainExport.Kind = WASM_EXTERNAL_FUNCTION;
-        MainExport.Index = Sym->getOutputIndex();
-        writeExport(OS, MainExport);
-      }
-    }
+  if (ExportEntry) {
+    WasmExport EntryExport;
+    EntryExport.Name = Config->Entry;
+    EntryExport.Kind = WASM_EXTERNAL_FUNCTION;
+    EntryExport.Index = EntrySym->getOutputIndex();
+    writeExport(OS, EntryExport);
   }
 
   if (ExportOther) {
     for (ObjFile *File : Symtab->ObjectFiles) {
       for (Symbol *Sym : File->getSymbols()) {
-        if (!Sym->isFunction() || Sym->isLocal() | Sym->isUndefined() ||
-            !Sym->WrittenToSymtab)
+        if (!Sym->isFunction() || Sym->isLocal() || Sym->isUndefined() ||
+            (Sym->isHidden() && !ExportHidden) || !Sym->WrittenToSymtab)
+          continue;
+        if (Sym == EntrySym)
           continue;
         Sym->WrittenToSymtab = false;
         log("Export: " + Sym->getName());
@@ -332,9 +330,6 @@ void Writer::createExportSection() {
         writeExport(OS, Export);
       }
     }
-
-    // TODO(sbc): Export local symbols too, Even though they are not part
-    // of the symbol table?
   }
 }
 

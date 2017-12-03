@@ -58,6 +58,7 @@ public:
   bool isGlobal() const { return !isFunction(); }
   bool isLocal() const { return IsLocal; }
   bool isWeak() const;
+  bool isHidden() const;
 
   // Returns the symbol name.
   StringRef getName() const { return Name; }

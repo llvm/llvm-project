@@ -7,7 +7,7 @@
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown-wasm"
 
-define hidden void @entry() local_unnamed_addr #0 {
+define void @entry() local_unnamed_addr #0 {
 entry:
   ret void
 }

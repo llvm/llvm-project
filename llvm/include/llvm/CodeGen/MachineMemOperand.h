@@ -47,17 +47,27 @@ struct MachinePointerInfo {
 
   uint8_t StackID;
 
-  explicit MachinePointerInfo(const Value *v = nullptr, int64_t offset = 0,
-                              uint8_t ID = 0)
-    : V(v), Offset(offset), StackID(ID) {}
+  unsigned AddrSpace;
 
-  explicit MachinePointerInfo(const PseudoSourceValue *v,
-                              int64_t offset = 0,
+  explicit MachinePointerInfo(const Value *v, int64_t offset = 0,
                               uint8_t ID = 0)
-    : V(v), Offset(offset), StackID(ID) {}
+      : V(v), Offset(offset), StackID(ID) {
+    AddrSpace = v ? v->getType()->getPointerAddressSpace() : 0;
+  }
+
+  explicit MachinePointerInfo(const PseudoSourceValue *v, int64_t offset = 0,
+                              uint8_t ID = 0)
+      : V(v), Offset(offset), StackID(ID) {
+    AddrSpace = v ? v->getAddressSpace() : 0;
+  }
+
+  explicit MachinePointerInfo(unsigned AddressSpace = 0)
+      : V((const Value *)nullptr), Offset(0), StackID(0),
+        AddrSpace(AddressSpace) {}
 
   MachinePointerInfo getWithOffset(int64_t O) const {
-    if (V.isNull()) return MachinePointerInfo();
+    if (V.isNull())
+      return MachinePointerInfo(AddrSpace);
     if (V.is<const Value*>())
       return MachinePointerInfo(V.get<const Value*>(), Offset+O, StackID);
     return MachinePointerInfo(V.get<const PseudoSourceValue*>(), Offset+O,
@@ -89,6 +99,9 @@ struct MachinePointerInfo {
   /// Stack pointer relative access.
   static MachinePointerInfo getStack(MachineFunction &MF, int64_t Offset,
                                      uint8_t ID = 0);
+
+  /// Stack memory without other information.
+  static MachinePointerInfo getUnknownStack(MachineFunction &MF);
 };
 
 

@@ -11,16 +11,16 @@
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown-wasm"
 
-@indirect_func = hidden local_unnamed_addr global i32 ()* @foo, align 4
+@indirect_func = local_unnamed_addr global i32 ()* @foo, align 4
 
 ; Function Attrs: norecurse nounwind readnone
-define hidden i32 @foo() #0 {
+define i32 @foo() #0 {
 entry:
   ret i32 1
 }
 
 ; Function Attrs: nounwind
-define hidden void @_start() local_unnamed_addr #1 {
+define void @_start() local_unnamed_addr #1 {
 entry:
   %0 = load i32 ()*, i32 ()** @indirect_func, align 4
   %call = tail call i32 %0() #2
@@ -63,6 +63,9 @@ entry:
 ; CHECK-NEXT:       - Name:            memory
 ; CHECK-NEXT:         Kind:            MEMORY
 ; CHECK-NEXT:         Index:           0
+; CHECK-NEXT:       - Name:            _start
+; CHECK-NEXT:         Kind:            FUNCTION
+; CHECK-NEXT:         Index:           3
 ; CHECK-NEXT:       - Name:            bar
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           0
@@ -72,9 +75,6 @@ entry:
 ; CHECK-NEXT:       - Name:            foo
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           2
-; CHECK-NEXT:       - Name:            _start
-; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Index:           3
 ; CHECK:        - Type:            ELEM
 ; CHECK-NEXT:     Segments:        
 ; CHECK-NEXT:       - Offset:          
