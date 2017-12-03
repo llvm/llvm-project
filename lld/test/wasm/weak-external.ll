@@ -9,16 +9,16 @@
 
 declare extern_weak i32 @foo()
 
-define hidden i8* @get_address_of_foo() #0 {
+define i8* @get_address_of_foo() #0 {
 entry:
   ret i8* bitcast (i32 ()* @foo to i8*)
 }
 
-define hidden i32* @get_address_of_global_var() #0 {
+define i32* @get_address_of_global_var() #0 {
   ret i32* @global_var
 }
 
-define hidden i32 @_start() #0 {
+define i32 @_start() #0 {
 entry:
     %0 = load i32, i32* @global_var, align 4
     ret i32 %0
@@ -57,15 +57,15 @@ entry:
 ; CHECK-NEXT:       - Name:            memory
 ; CHECK-NEXT:         Kind:            MEMORY
 ; CHECK-NEXT:         Index:           0
+; CHECK-NEXT:       - Name:            _start
+; CHECK-NEXT:         Kind:            FUNCTION
+; CHECK-NEXT:         Index:           2
 ; CHECK-NEXT:       - Name:            get_address_of_foo
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           0
 ; CHECK-NEXT:       - Name:            get_address_of_global_var
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           1
-; CHECK-NEXT:       - Name:            _start
-; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Index:           2
 ; CHECK-NEXT:   - Type:            ELEM
 ; CHECK-NEXT:     Segments:        
 ; CHECK-NEXT:       - Offset:          
