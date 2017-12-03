@@ -47,6 +47,7 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("--strip-all");
 
   Args.AddAllArgs(CmdArgs, options::OPT_L);
+  Args.AddAllArgs(CmdArgs, options::OPT_u);
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles))

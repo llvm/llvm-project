@@ -34,10 +34,9 @@ class CGRecordLayout;
 
 // TBAAAccessKind - A kind of TBAA memory access descriptor.
 enum class TBAAAccessKind : unsigned {
-  Ordinary,     // An ordinary memory access.
-  MayAlias,     // An access that may alias with any other accesses.
-  Incomplete,   // Used to designate pointee values of incomplete types.
-  UnionMember,  // An access to a direct or indirect union member.
+  Ordinary,
+  MayAlias,
+  Incomplete,
 };
 
 // TBAAAccessInfo - Describes a memory access in terms of TBAA.
@@ -77,14 +76,6 @@ struct TBAAAccessInfo {
   }
 
   bool isIncomplete() const { return Kind == TBAAAccessKind::Incomplete; }
-
-  static TBAAAccessInfo getUnionMemberInfo(llvm::MDNode *BaseType,
-                                           uint64_t Offset, uint64_t Size) {
-    return TBAAAccessInfo(TBAAAccessKind::UnionMember, BaseType,
-                          /* AccessType= */ nullptr, Offset, Size);
-  }
-
-  bool isUnionMember() const { return Kind == TBAAAccessKind::UnionMember; }
 
   bool operator==(const TBAAAccessInfo &Other) const {
     return Kind == Other.Kind &&
@@ -156,10 +147,6 @@ class CodeGenTBAA {
   /// getChar - This is the mdnode for "char", which is special, and any types
   /// considered to be equivalent to it.
   llvm::MDNode *getChar();
-
-  /// getUnionMemberType - Get metadata that represents the type of union
-  /// members.
-  llvm::MDNode *getUnionMemberType(uint64_t Size);
 
   /// CollectFields - Collect information about the fields of a type for
   /// !tbaa.struct metadata formation. Return false for an unsupported type.

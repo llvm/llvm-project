@@ -6,12 +6,21 @@
 // Test attributes and builtin codegen of math library calls.
 
 void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
+  f = fmod(f,f);     f = fmodf(f,f);    f = fmodl(f,f);
+
+// NO__ERRNO: frem double
+// NO__ERRNO: frem float
+// NO__ERRNO: frem x86_fp80
+// HAS_ERRNO: declare double @fmod(double, double) [[NOT_READNONE:#[0-9]+]]
+// HAS_ERRNO: declare float @fmodf(float, float) [[NOT_READNONE]]
+// HAS_ERRNO: declare x86_fp80 @fmodl(x86_fp80, x86_fp80) [[NOT_READNONE]]
+
   atan2(f,f);    atan2f(f,f) ;  atan2l(f, f);
 
 // NO__ERRNO: declare double @atan2(double, double) [[READNONE:#[0-9]+]]
 // NO__ERRNO: declare float @atan2f(float, float) [[READNONE]]
 // NO__ERRNO: declare x86_fp80 @atan2l(x86_fp80, x86_fp80) [[READNONE]]
-// HAS_ERRNO: declare double @atan2(double, double) [[NOT_READNONE:#[0-9]+]]
+// HAS_ERRNO: declare double @atan2(double, double) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @atan2f(float, float) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @atan2l(x86_fp80, x86_fp80) [[NOT_READNONE]]
 
@@ -32,15 +41,6 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare double @llvm.fabs.f64(double) [[READNONE_INTRINSIC]]
 // HAS_ERRNO: declare float @llvm.fabs.f32(float) [[READNONE_INTRINSIC]]
 // HAS_ERRNO: declare x86_fp80 @llvm.fabs.f80(x86_fp80) [[READNONE_INTRINSIC]]
-
-  fmod(f,f);     fmodf(f,f);    fmodl(f,f);
-
-// NO__ERRNO: declare double @fmod(double, double) [[READNONE]]
-// NO__ERRNO: declare float @fmodf(float, float) [[READNONE]]
-// NO__ERRNO: declare x86_fp80 @fmodl(x86_fp80, x86_fp80) [[READNONE]]
-// HAS_ERRNO: declare double @fmod(double, double) [[NOT_READNONE]]
-// HAS_ERRNO: declare float @fmodf(float, float) [[NOT_READNONE]]
-// HAS_ERRNO: declare x86_fp80 @fmodl(x86_fp80, x86_fp80) [[NOT_READNONE]]
 
   frexp(f,i);    frexpf(f,i);   frexpl(f,i);
 
