@@ -74,10 +74,6 @@ llvm::MDNode *CodeGenTBAA::getChar() {
   return Char;
 }
 
-llvm::MDNode *CodeGenTBAA::getUnionMemberType(uint64_t Size) {
-  return createScalarTypeNode("union member", getChar(), Size);
-}
-
 static bool TypeHasMayAlias(QualType QTy) {
   // Tagged types have declarations, and therefore may have attributes.
   if (const TagType *TTy = dyn_cast<TagType>(QTy))
@@ -105,8 +101,9 @@ static bool isValidBaseType(QualType QTy) {
       return false;
     if (RD->hasFlexibleArrayMember())
       return false;
-    // For now, we do not allow interface classes to be base access types.
-    if (RD->isStruct() || RD->isClass() || RD->isUnion())
+    // RD can be struct, union, class, interface or enum.
+    // For now, we only handle struct and class.
+    if (RD->isStruct() || RD->isClass())
       return true;
   }
   return false;
@@ -280,27 +277,18 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
     const RecordDecl *RD = TTy->getDecl()->getDefinition();
     const ASTRecordLayout &Layout = Context.getASTRecordLayout(RD);
     SmallVector<llvm::MDBuilder::TBAAStructField, 4> Fields;
-    if (RD->isUnion()) {
-      // Unions are represented as structures with a single member that has a
-      // special type and occupies the whole object.
-      uint64_t Size = Context.getTypeSizeInChars(Ty).getQuantity();
-      llvm::MDNode *TypeNode = getUnionMemberType(Size);
-      Fields.push_back(llvm::MDBuilder::TBAAStructField(/* Offset= */ 0, Size,
-                                                        TypeNode));
-    } else {
-      for (FieldDecl *Field : RD->fields()) {
-        QualType FieldQTy = Field->getType();
-        llvm::MDNode *TypeNode = isValidBaseType(FieldQTy) ?
-            getBaseTypeInfo(FieldQTy) : getTypeInfo(FieldQTy);
-        if (!TypeNode)
-          return nullptr;
+    for (FieldDecl *Field : RD->fields()) {
+      QualType FieldQTy = Field->getType();
+      llvm::MDNode *TypeNode = isValidBaseType(FieldQTy) ?
+          getBaseTypeInfo(FieldQTy) : getTypeInfo(FieldQTy);
+      if (!TypeNode)
+        return BaseTypeMetadataCache[Ty] = nullptr;
 
-        uint64_t BitOffset = Layout.getFieldOffset(Field->getFieldIndex());
-        uint64_t Offset = Context.toCharUnitsFromBits(BitOffset).getQuantity();
-        uint64_t Size = Context.getTypeSizeInChars(FieldQTy).getQuantity();
-        Fields.push_back(llvm::MDBuilder::TBAAStructField(Offset, Size,
-                                                          TypeNode));
-      }
+      uint64_t BitOffset = Layout.getFieldOffset(Field->getFieldIndex());
+      uint64_t Offset = Context.toCharUnitsFromBits(BitOffset).getQuantity();
+      uint64_t Size = Context.getTypeSizeInChars(FieldQTy).getQuantity();
+      Fields.push_back(llvm::MDBuilder::TBAAStructField(Offset, Size,
+                                                        TypeNode));
     }
 
     SmallString<256> OutName;
@@ -345,8 +333,6 @@ llvm::MDNode *CodeGenTBAA::getAccessTagInfo(TBAAAccessInfo Info) {
 
   if (Info.isMayAlias())
     Info = TBAAAccessInfo(getChar(), Info.Size);
-  else if (Info.isUnionMember())
-    Info.AccessType = getUnionMemberType(Info.Size);
 
   if (!Info.AccessType)
     return nullptr;

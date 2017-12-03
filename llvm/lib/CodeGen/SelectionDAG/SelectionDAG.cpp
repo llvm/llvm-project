@@ -2463,27 +2463,30 @@ void SelectionDAG::computeKnownBits(SDValue Op, KnownBits &Known,
   case ISD::SHL:
     if (const APInt *ShAmt = getValidShiftAmountConstant(Op)) {
       computeKnownBits(Op.getOperand(0), Known, DemandedElts, Depth + 1);
-      Known.Zero <<= *ShAmt;
-      Known.One <<= *ShAmt;
+      unsigned Shift = ShAmt->getZExtValue();
+      Known.Zero <<= Shift;
+      Known.One <<= Shift;
       // Low bits are known zero.
-      Known.Zero.setLowBits(ShAmt->getZExtValue());
+      Known.Zero.setLowBits(Shift);
     }
     break;
   case ISD::SRL:
     if (const APInt *ShAmt = getValidShiftAmountConstant(Op)) {
       computeKnownBits(Op.getOperand(0), Known, DemandedElts, Depth + 1);
-      Known.Zero.lshrInPlace(*ShAmt);
-      Known.One.lshrInPlace(*ShAmt);
+      unsigned Shift = ShAmt->getZExtValue();
+      Known.Zero.lshrInPlace(Shift);
+      Known.One.lshrInPlace(Shift);
       // High bits are known zero.
-      Known.Zero.setHighBits(ShAmt->getZExtValue());
+      Known.Zero.setHighBits(Shift);
     }
     break;
   case ISD::SRA:
     if (const APInt *ShAmt = getValidShiftAmountConstant(Op)) {
       computeKnownBits(Op.getOperand(0), Known, DemandedElts, Depth + 1);
+      unsigned Shift = ShAmt->getZExtValue();
       // Sign extend known zero/one bit (else is unknown).
-      Known.Zero.ashrInPlace(*ShAmt);
-      Known.One.ashrInPlace(*ShAmt);
+      Known.Zero.ashrInPlace(Shift);
+      Known.One.ashrInPlace(Shift);
     }
     break;
   case ISD::SIGN_EXTEND_INREG: {
