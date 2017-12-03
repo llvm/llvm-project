@@ -2463,27 +2463,30 @@ void SelectionDAG::computeKnownBits(SDValue Op, KnownBits &Known,
   case ISD::SHL:
     if (const APInt *ShAmt = getValidShiftAmountConstant(Op)) {
       computeKnownBits(Op.getOperand(0), Known, DemandedElts, Depth + 1);
-      Known.Zero <<= *ShAmt;
-      Known.One <<= *ShAmt;
+      unsigned Shift = ShAmt->getZExtValue();
+      Known.Zero <<= Shift;
+      Known.One <<= Shift;
       // Low bits are known zero.
-      Known.Zero.setLowBits(ShAmt->getZExtValue());
+      Known.Zero.setLowBits(Shift);
     }
     break;
   case ISD::SRL:
     if (const APInt *ShAmt = getValidShiftAmountConstant(Op)) {
       computeKnownBits(Op.getOperand(0), Known, DemandedElts, Depth + 1);
-      Known.Zero.lshrInPlace(*ShAmt);
-      Known.One.lshrInPlace(*ShAmt);
+      unsigned Shift = ShAmt->getZExtValue();
+      Known.Zero.lshrInPlace(Shift);
+      Known.One.lshrInPlace(Shift);
       // High bits are known zero.
-      Known.Zero.setHighBits(ShAmt->getZExtValue());
+      Known.Zero.setHighBits(Shift);
     }
     break;
   case ISD::SRA:
     if (const APInt *ShAmt = getValidShiftAmountConstant(Op)) {
       computeKnownBits(Op.getOperand(0), Known, DemandedElts, Depth + 1);
+      unsigned Shift = ShAmt->getZExtValue();
       // Sign extend known zero/one bit (else is unknown).
-      Known.Zero.ashrInPlace(*ShAmt);
-      Known.One.ashrInPlace(*ShAmt);
+      Known.Zero.ashrInPlace(Shift);
+      Known.One.ashrInPlace(Shift);
     }
     break;
   case ISD::SIGN_EXTEND_INREG: {
@@ -5821,7 +5824,8 @@ SDValue SelectionDAG::getMemIntrinsicNode(unsigned Opcode, const SDLoc &dl,
 /// MachinePointerInfo record from it.  This is particularly useful because the
 /// code generator has many cases where it doesn't bother passing in a
 /// MachinePointerInfo to getLoad or getStore when it has "FI+Cst".
-static MachinePointerInfo InferPointerInfo(SelectionDAG &DAG, SDValue Ptr,
+static MachinePointerInfo InferPointerInfo(const MachinePointerInfo &Info,
+                                           SelectionDAG &DAG, SDValue Ptr,
                                            int64_t Offset = 0) {
   // If this is FI+Offset, we can model it.
   if (const FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(Ptr))
@@ -5832,7 +5836,7 @@ static MachinePointerInfo InferPointerInfo(SelectionDAG &DAG, SDValue Ptr,
   if (Ptr.getOpcode() != ISD::ADD ||
       !isa<ConstantSDNode>(Ptr.getOperand(1)) ||
       !isa<FrameIndexSDNode>(Ptr.getOperand(0)))
-    return MachinePointerInfo();
+    return Info;
 
   int FI = cast<FrameIndexSDNode>(Ptr.getOperand(0))->getIndex();
   return MachinePointerInfo::getFixedStack(
@@ -5844,14 +5848,15 @@ static MachinePointerInfo InferPointerInfo(SelectionDAG &DAG, SDValue Ptr,
 /// MachinePointerInfo record from it.  This is particularly useful because the
 /// code generator has many cases where it doesn't bother passing in a
 /// MachinePointerInfo to getLoad or getStore when it has "FI+Cst".
-static MachinePointerInfo InferPointerInfo(SelectionDAG &DAG, SDValue Ptr,
+static MachinePointerInfo InferPointerInfo(const MachinePointerInfo &Info,
+                                           SelectionDAG &DAG, SDValue Ptr,
                                            SDValue OffsetOp) {
   // If the 'Offset' value isn't a constant, we can't handle this.
   if (ConstantSDNode *OffsetNode = dyn_cast<ConstantSDNode>(OffsetOp))
-    return InferPointerInfo(DAG, Ptr, OffsetNode->getSExtValue());
+    return InferPointerInfo(Info, DAG, Ptr, OffsetNode->getSExtValue());
   if (OffsetOp.isUndef())
-    return InferPointerInfo(DAG, Ptr);
-  return MachinePointerInfo();
+    return InferPointerInfo(Info, DAG, Ptr);
+  return Info;
 }
 
 SDValue SelectionDAG::getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType,
@@ -5871,7 +5876,7 @@ SDValue SelectionDAG::getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType,
   // If we don't have a PtrInfo, infer the trivial frame index case to simplify
   // clients.
   if (PtrInfo.V.isNull())
-    PtrInfo = InferPointerInfo(*this, Ptr, Offset);
+    PtrInfo = InferPointerInfo(PtrInfo, *this, Ptr, Offset);
 
   MachineFunction &MF = getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
@@ -5990,7 +5995,7 @@ SDValue SelectionDAG::getStore(SDValue Chain, const SDLoc &dl, SDValue Val,
   assert((MMOFlags & MachineMemOperand::MOLoad) == 0);
 
   if (PtrInfo.V.isNull())
-    PtrInfo = InferPointerInfo(*this, Ptr);
+    PtrInfo = InferPointerInfo(PtrInfo, *this, Ptr);
 
   MachineFunction &MF = getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
@@ -6040,7 +6045,7 @@ SDValue SelectionDAG::getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val,
   assert((MMOFlags & MachineMemOperand::MOLoad) == 0);
 
   if (PtrInfo.V.isNull())
-    PtrInfo = InferPointerInfo(*this, Ptr);
+    PtrInfo = InferPointerInfo(PtrInfo, *this, Ptr);
 
   MachineFunction &MF = getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(

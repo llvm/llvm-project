@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=hawaii -verify-machineinstrs < %s | FileCheck  -enable-var-scope -check-prefixes=GCN,CI %s
-; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX89 %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX89,GFX9 %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=hawaii -verify-machineinstrs < %s | FileCheck  -enable-var-scope -check-prefixes=GCN,CI %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX89 %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX89,GFX9 %s
 
 ; GCN-LABEL: {{^}}i1_func_void:
 ; GCN: buffer_load_ubyte v0, off
@@ -376,13 +376,13 @@ define {i8, i32} @struct_i8_i32_func_void() #0 {
 ; GCN: buffer_load_dword [[VAL1:v[0-9]+]]
 ; GCN: buffer_store_byte [[VAL0]], v0, s[0:3], s4 offen{{$}}
 ; GCN: buffer_store_dword [[VAL1]], v0, s[0:3], s4 offen offset:4{{$}}
-define void @void_func_sret_struct_i8_i32({ i8, i32 }* sret %arg0) #0 {
+define void @void_func_sret_struct_i8_i32({ i8, i32 } addrspace(5)* sret %arg0) #0 {
   %val0 = load volatile i8, i8 addrspace(1)* undef
   %val1 = load volatile i32, i32 addrspace(1)* undef
-  %gep0 = getelementptr inbounds { i8, i32 }, { i8, i32 }* %arg0, i32 0, i32 0
-  %gep1 = getelementptr inbounds { i8, i32 }, { i8, i32 }* %arg0, i32 0, i32 1
-  store i8 %val0, i8* %gep0
-  store i32 %val1, i32* %gep1
+  %gep0 = getelementptr inbounds { i8, i32 }, { i8, i32 } addrspace(5)* %arg0, i32 0, i32 0
+  %gep1 = getelementptr inbounds { i8, i32 }, { i8, i32 } addrspace(5)* %arg0, i32 0, i32 1
+  store i8 %val0, i8 addrspace(5)* %gep0
+  store i32 %val1, i32 addrspace(5)* %gep1
   ret void
 }
 
