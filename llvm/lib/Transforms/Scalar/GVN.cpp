@@ -2224,13 +2224,13 @@ bool GVN::performScalarPRE(Instruction *CurInst) {
   unsigned NumWithout = 0;
   BasicBlock *PREPred = nullptr;
   BasicBlock *CurrentBlock = CurInst->getParent();
-  BasicBlock *DetachPred = nullptr, *ReattachPred = nullptr;
-  Value *DetachV = nullptr, *ReattachV = nullptr;
 
   // Update the RPO numbers for this function.
   if (InvalidBlockRPONumbers)
     assignBlockRPONumber(*CurrentBlock->getParent());
 
+  SmallVector<std::pair<Value *, ReattachInst *>, 8> Reattaches;
+  SmallVector<std::pair<Value *, DetachInst *>, 8> Detaches;
   SmallVector<std::pair<Value *, BasicBlock *>, 8> predMap;
   for (BasicBlock *P : predecessors(CurrentBlock)) {
     // We're not interested in PRE where blocks with predecessors that are
@@ -2254,36 +2254,30 @@ bool GVN::performScalarPRE(Instruction *CurInst) {
       break;
     }
 
-    // Ignore reattach predecessors for determining whether to perform
-    // PRE.  These predecessors have the same available values as
-    // their corresponding detach predecessors.
-    if (isa<ReattachInst>(P->getTerminator()))
-      ReattachPred = P;
-
     uint32_t TValNo = VN.phiTranslate(P, CurrentBlock, ValNo, *this);
     Value *predV = findLeader(P, TValNo);
-
-    if (isa<DetachInst>(P->getTerminator())) {
-      assert(nullptr == DetachPred && "Multiple detach predecessors found!");
-      DetachPred = P;
-    }
-
     if (!predV) {
       if (!isa<ReattachInst>(P->getTerminator())) {
         predMap.push_back(std::make_pair(static_cast<Value *>(nullptr), P));
         PREPred = P;
         ++NumWithout;
       }
+      // Record any detach and reattach predecessors.
+      if (DetachInst *DI = dyn_cast<DetachInst>(P->getTerminator()))
+        Detaches.push_back(std::make_pair(static_cast<Value *>(nullptr), DI));
+      if (ReattachInst *RI = dyn_cast<ReattachInst>(P->getTerminator()))
+        Reattaches.push_back(std::make_pair(static_cast<Value *>(nullptr), RI));
     } else if (predV == CurInst) {
       /* CurInst dominates this predecessor. */
       NumWithout = 2;
       break;
     } else {
       predMap.push_back(std::make_pair(predV, P));
-      if (isa<DetachInst>(P->getTerminator()))
-        DetachV = predV;
-      if (isa<ReattachInst>(P->getTerminator()))
-        ReattachV = predV;
+      // Record any detach and reattach predecessors.
+      if (DetachInst *DI = dyn_cast<DetachInst>(P->getTerminator()))
+        Detaches.push_back(std::make_pair(predV, DI));
+      if (ReattachInst *RI = dyn_cast<ReattachInst>(P->getTerminator()))
+        Reattaches.push_back(std::make_pair(predV, RI));
       ++NumWith;
     }
   }
@@ -2293,14 +2287,22 @@ bool GVN::performScalarPRE(Instruction *CurInst) {
   if (NumWithout > 1 || NumWith == 0)
     return false;
 
-  // If the reattach predecessor has a value that does not match the
-  // detach predecessor's value, assume that this is not a redundant
-  // instruction.
-  if (ReattachV && ReattachV != DetachV)
-    return false;
-
-  assert((!ReattachPred || DetachPred) &&
-         "Reattach predecessor found with no detach predecessor");
+  for (auto RV : Reattaches) {
+    ReattachInst *RI = RV.second;
+    bool DetachFound = false;
+    for (auto DV : Detaches) {
+      DetachInst *DI = DV.second;
+      // Get the detach edge from DI.
+      BasicBlockEdge DetachEdge(DI->getParent(), DI->getDetached());
+      if (DT->dominates(DetachEdge, RI->getParent())) {
+        DetachFound = true;
+        if (RV.first && (RV.first != DV.first))
+          return false;
+      }
+    }
+    assert(DetachFound &&
+           "Reattach predecessor found with no detach predecessor");
+  }
 
   // We may have a case where all predecessors have the instruction,
   // and we just need to insert a phi node. Otherwise, perform
@@ -2342,9 +2344,22 @@ bool GVN::performScalarPRE(Instruction *CurInst) {
       LLVM_DEBUG(verifyRemoved(PREInstr));
       PREInstr->deleteValue();
       return false;
-    } else if (DetachPred == PREPred && ReattachPred) {
-      assert(nullptr == DetachV && "Detach predecessor already had a value");
-      predMap.push_back(std::make_pair(PREInstr, ReattachPred));
+    } else if (isa<DetachInst>(PREPred->getTerminator())) {
+      for (auto RV : Reattaches) {
+        ReattachInst *RI = RV.second;
+        for (auto DV : Detaches) {
+          DetachInst *DI = DV.second;
+          // Get the detach edge from DI.
+          BasicBlockEdge DetachEdge(DI->getParent(), DI->getDetached());
+          if (DT->dominates(DetachEdge, RI->getParent())) {
+            if (DI->getParent() == PREPred) {
+              assert(nullptr == DV.first &&
+                     "Detach predecessor already had a value.");
+              predMap.push_back(std::make_pair(PREInstr, RI->getParent()));
+            }
+          }
+        }
+      }
     }
   }
 
