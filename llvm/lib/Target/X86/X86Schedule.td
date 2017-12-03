@@ -385,8 +385,6 @@ def IIC_SSE_CVT_PD_RR : InstrItinClass;
 def IIC_SSE_CVT_PD_RM : InstrItinClass;
 def IIC_SSE_CVT_PS_RR : InstrItinClass;
 def IIC_SSE_CVT_PS_RM : InstrItinClass;
-def IIC_SSE_CVT_PI2PS_RR : InstrItinClass;
-def IIC_SSE_CVT_PI2PS_RM : InstrItinClass;
 def IIC_SSE_CVT_Scalar_RR : InstrItinClass;
 def IIC_SSE_CVT_Scalar_RM : InstrItinClass;
 def IIC_SSE_CVT_SS2SI32_RM : InstrItinClass;
