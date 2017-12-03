@@ -117,7 +117,7 @@ def STB_FAR : PseudoInstARC<(outs), (ins GPR32:$dst, MEMrlimm:$addr),
 // multiclass.  These classes do not contain Selection DAG patterns.
 //===----------------------------------------------------------------------===//
 
-// Generic 3 operand binary instructions (i.e., add, r0, r1, r2).
+// Generic 3 operand binary instructions (i.e., add r0, r1, r2).
 multiclass ArcBinaryInst<bits<5> major, bits<6> mincode,
                        string opasm> {
   // 3 register variant.
@@ -140,7 +140,7 @@ multiclass ArcBinaryInst<bits<5> major, bits<6> mincode,
   // 2 matched-register with signed 12-bit immediate variant (add r0, r0, -1).
   def _rrs12 : F32_DOP_RS12<major, mincode, 0,
                             (outs GPR32:$B),
-                            (ins GPR32:$in, immS12:$S12),
+                            (ins GPR32:$in, immS<12>:$S12),
                             !strconcat(opasm, "\t$B, $in, $S12"),
                             []>
   { let Constraints = "$B = $in"; }
@@ -194,6 +194,9 @@ multiclass MultiPat<SDPatternOperator InFrag,
 // Definitions for 3 operand binary instructions.
 defm ADD : ArcBinaryGEN4Inst<0b000000, "add">;
 defm SUB : ArcBinaryGEN4Inst<0b000010, "sub">;
+defm SUB1 : ArcBinaryGEN4Inst<0b010111, "sub1">;
+defm SUB2 : ArcBinaryGEN4Inst<0b011000, "sub2">;
+defm SUB3 : ArcBinaryGEN4Inst<0b011001, "sub3">;
 defm OR  : ArcBinaryGEN4Inst<0b000101, "or">;
 defm AND : ArcBinaryGEN4Inst<0b000100, "and">;
 defm XOR : ArcBinaryGEN4Inst<0b000111, "xor">;
@@ -206,6 +209,7 @@ defm ROR : ArcBinaryEXT5Inst<0b000011, "ror">;
 defm MPY  : ArcBinaryGEN4Inst<0b011010, "mpy">;
 defm MPYM : ArcBinaryGEN4Inst<0b011011, "mpym">;
 defm MPYMU : ArcBinaryGEN4Inst<0b011100, "mpymu">;
+defm SETEQ : ArcBinaryGEN4Inst<0b111000, "seteq">;
 
 // Patterns for 3 operand binary instructions.
 defm : MultiPat<add, ADD_rrr, ADD_rru6, ADD_rrlimm>;
@@ -222,7 +226,6 @@ defm : MultiPat<rotr, ROR_rrr, ROR_rru6, ROR_rrlimm>;
 defm : MultiPat<mul, MPY_rrr, MPY_rru6, MPY_rrlimm>;
 defm : MultiPat<mulhs, MPYM_rrr, MPYM_rru6, MPYM_rrlimm>;
 defm : MultiPat<mulhu, MPYMU_rrr, MPYMU_rru6, MPYMU_rrlimm>;
-
 
 // ---------------------------------------------------------------------------
 // Unary Instruction definitions.
@@ -248,9 +251,9 @@ defm : MultiPat<cmp, CMP_rr, CMP_ru6, CMP_rlimm>;
 // ---------------------------------------------------------------------------
 let isReMaterializable = 1, isAsCheapAsAMove = 1, isMoveImm = 1 in {
 def MOV_rs12 : F32_DOP_RS12<0b00100, 0b001010, 0,
-                 (outs GPR32:$B), (ins immS12:$S12),
+                 (outs GPR32:$B), (ins immS<12>:$S12),
                  "mov\t$B, $S12",
-                 [(set GPR32:$B, immS12:$S12)]>;
+                 [(set GPR32:$B, immS<12>:$S12)]>;
 }
 
 def MOV_rr : F32_DOP_RR<0b00100, 0b001010, 0,
@@ -288,95 +291,462 @@ def : Pat<(ARCGAWrapper tjumptable:$addr),
 // ---------------------------------------------------------------------------
 
 // Branch instructions
-let isBranch = 1, isTerminator = 1, isBarrier = 1 in {
-// Unconditional branch.
-def BR : F32_BR0_UCOND_FAR<(outs), (ins btargetS25:$S25),
-                  "b\t$S25", [(br bb:$S25)]>;
+let isBranch = 1, isTerminator = 1 in {
 
-let Uses=[STATUS32] in {
-// Conditional branch.
-def Bcc : F32_BR0_COND<(outs), (ins btargetS21:$S21, ccond:$cc),
-                    "b$cc\t$S21", []>;
-}
+  // Unconditional branch.
+  let isBarrier = 1 in
+  def BR : F32_BR0_UCOND_FAR<(outs), (ins btargetS25:$S25),
+                             "b\t$S25", [(br bb:$S25)]>;
 
-// Compare and branch (limited range).
-def BRcc_rr  : F32_BR1_BCC<(outs),
-                           (ins btargetS9:$S9, GPR32:$B, GPR32:$C, brccond:$cc),
-                           "br$cc\t$B, $C, $S9", 0, []>;
-def BRcc_ru6 : F32_BR1_BCC<(outs),
-                           (ins btargetS9:$S9, GPR32:$B, immU6:$C, brccond:$cc),
-                           "br$cc\t$B, $C, $S9", 1, []>;
+  let Uses=[STATUS32] in
+  // Conditional branch.
+  def Bcc : F32_BR0_COND<(outs), (ins btargetS21:$S21, ccond:$cc),
+                         "b$cc\t$S21", []>;
 
-// Pseudo compare and branch.
-// After register allocation, this can expand into either a limited range
-// Compare and branch (BRcc), or into CMP + Bcc.
-// At worst, this expands into 2 4-byte instructions.
-def BRcc_rr_p : PseudoInstARC<(outs),
-                              (ins btarget:$T, GPR32:$B, GPR32:$C, ccond:$cc),
-                              "pbr$cc\t$B, $C, $T", 
-                              [(ARCbrcc bb:$T, i32:$B, i32:$C, imm32:$cc)]>
-                              { let Size = 8; }
+  // Compare and branch (limited range).
+  def BRcc_rr  : F32_BR1_BCC<(outs),
+                             (ins btargetS9:$S9, GPR32:$B, GPR32:$C, brccond:$cc),
+                             "br$cc\t$B, $C, $S9", 0, []>;
+  def BRcc_ru6 : F32_BR1_BCC<(outs),
+                             (ins btargetS9:$S9, GPR32:$B, immU6:$C, brccond:$cc),
+                             "br$cc\t$B, $C, $S9", 1, []>;
 
-def BRcc_ru6_p : PseudoInstARC<(outs),
-                               (ins btarget:$T, GPR32:$B, i32imm:$C, ccond:$cc),
-                               "pbr$cc\t$B, $C, $T",
-                               [(ARCbrcc bb:$T, i32:$B, immU6:$C, imm32:$cc)]>
-                               { let Size = 8; }
-}
+  // Pseudo compare and branch.
+  // After register allocation, this can expand into either a limited range
+  // Compare and branch (BRcc), or into CMP + Bcc.
+  // At worst, this expands into 2 4-byte instructions.
+  def BRcc_rr_p : PseudoInstARC<(outs),
+                                (ins btarget:$T, GPR32:$B, GPR32:$C, ccond:$cc),
+                                "pbr$cc\t$B, $C, $T", 
+                                [(ARCbrcc bb:$T, i32:$B, i32:$C, imm32:$cc)]>
+                                { let Size = 8; }
+
+  def BRcc_ru6_p : PseudoInstARC<(outs),
+                                 (ins btarget:$T, GPR32:$B, i32imm:$C, ccond:$cc),
+                                 "pbr$cc\t$B, $C, $T",
+                                 [(ARCbrcc bb:$T, i32:$B, immU6:$C, imm32:$cc)]>
+                                 { let Size = 8; }
+} // let isBranch, isTerminator
 
 // Indirect, unconditional Jump.
-let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
+let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in
 def J :  F32_DOP_RR<0b00100, 0b100000, 0,
                (outs), (ins GPR32:$C),
                "j\t[$C]", [(brind i32:$C)]>;
-}
 
 // Call instructions.
-let isCall = 1, Defs = [BLINK], Uses = [SP] in {
-// Direct unconditional call.
-def BL : F32_BR1_BL_UCOND_FAR<(outs), (ins calltargetS25:$S25),
-                    "bl\t$S25", [(ARCBranchLink tglobaladdr:$S25)]>;
+let isCall = 1, isBarrier = 1, Defs = [BLINK], Uses = [SP] in {
+  // Direct unconditional call.
+  def BL : F32_BR1_BL_UCOND_FAR<(outs), (ins calltargetS25:$S25),
+                      "bl\t$S25", [(ARCBranchLink tglobaladdr:$S25)]>;
 
-// Indirect unconditional call.
-let isIndirectBranch = 1, Defs = [BLINK], Uses = [SP] in {
-def JL : F32_DOP_RR<0b00100, 0b100010, 0, (outs), (ins GPR32:$C),
-                   "jl\t[$C]", [(ARCJumpLink i32:$C)]>;
-}
-}
+  // Indirect unconditional call.
+  let isIndirectBranch = 1 in
+  def JL : F32_DOP_RR<0b00100, 0b100010, 0, (outs), (ins GPR32:$C),
+                     "jl\t[$C]", [(ARCJumpLink i32:$C)]>;
+} // let isCall, isBarrier, Defs, Uses
 
 // Pattern to generate BL instruction.
 def : Pat<(ARCBranchLink texternalsym:$dst), (BL texternalsym:$dst)>;
 
 // Return from call.
-let isReturn = 1, isTerminator = 1, isBarrier = 1  in {
+let isReturn = 1, isTerminator = 1, isBarrier = 1  in
 // This is a specialized 2-byte instruction that doesn't generalize
 // to any larger 2-byte class, so go ahead and define it here.
 def J_S_BLINK : InstARC<2, (outs), (ins), "j_s\t[%blink]", [(ret)]> {
   let Inst{15-0} = 0b0111111011100000;
 }
-}
 
 //----------------------------------------------------------------------------
-// Load/Store instructions.
+// Compact stack-based operations.
 //----------------------------------------------------------------------------
 
 // 2-byte push/pop blink instructions commonly used for prolog/epilog
 // generation.  These 2 instructions are actually specialized 2-byte
 // format instructions that aren't generalized to a larger 2-byte
 // class, so we might as well have them here.
-let Uses = [BLINK], Defs = [SP] in {
-def PUSH_S_BLINK : InstARC<2, (outs), (ins),
-                             "push_s\t%blink", []> {
-  let Inst{15-0} = 0b1100000011110001;
-}
+let Uses = [BLINK], Defs = [SP] in
+def PUSH_S_BLINK : F16_SP_OPS_buconst<0b111, "push_s">;
+
+let Defs = [BLINK, SP] in
+def POP_S_BLINK : F16_SP_OPS_buconst<0b110, "pop_s">;
+
+def PUSH_S_r : F16_SP_OPS_uconst<0b110,
+  (outs), (ins GPR32Reduced:$b3), "push_s">;
+def POP_S_r : F16_SP_OPS_uconst<0b111,
+  (outs GPR32Reduced:$b3), (ins), "pop_s">;
+
+def SP_SUB_SP_S : F16_SP_OPS_bconst<0b001, "sub_s">;
+def SP_ADD_SP_S : F16_SP_OPS_bconst<0b000, "add_s">;
+def SP_ADD_S : F16_SP_OPS_u7_aligned<0b100,
+                (outs GPR32Reduced:$b3), (ins immU<7>:$u7),
+                "add_s\t$b3, %sp, $u7">;
+
+def SP_LD_S : F16_SP_LD<0b000, "ld_s">;
+def SP_LDB_S : F16_SP_LD<0b001, "ldb_s">;
+def SP_ST_S : F16_SP_ST<0b010, "st_s">;
+def SP_STB_S : F16_SP_ST<0b011, "stb_s">;
+
+def LEAVE_S : F16_SP_OPS<0b110,
+  (outs), (ins immU<7>:$u7), "leave_s\t$u7"> {
+
+  bits<7> u7;
+  
+  let fieldB = u7{6-4};
+  let fieldU{4-1} = u7{3-0};
+  let fieldU{0} = 0b0;
 }
 
-let Defs = [BLINK, SP] in {
-def POP_S_BLINK : InstARC<2, (outs), (ins),
-                             "pop_s\t%blink", []> {
-  let Inst{15-0} = 0b1100000011010001;
+def ENTER_S : F16_SP_OPS<0b111,
+  (outs), (ins immU<6>:$u6), "enter_s\t$u6"> {
+
+  bits<6> u6;
+  
+  let fieldB{2} = 0;
+  let fieldB{1-0} = u6{5-4};
+  let fieldU{4-1} = u6{3-0};
+  let fieldU{0} = 0b0;
 }
+
+//----------------------------------------------------------------------------
+// Compact Move/Load instructions.
+//----------------------------------------------------------------------------
+class COMPACT_MOV_S :
+  F16_COMPACT<0b0, (outs GPR32:$g), (ins GPR32:$h),
+          "mov_s\t$g, $h"> {  
+  let DecoderMethod = "DecodeMoveHRegInstruction";
 }
+
+def COMPACT_MOV_S_limm : COMPACT_MOV_S {
+  bits<32> LImm;  
+  let Inst{47-16} = LImm;
+
+  bits<5> LImmReg = 0b11110;  
+  let Inst{7-5} = LImmReg{2-0};
+  let Inst{1-0} = LImmReg{4-3};
+
+  let Size = 6;  
+}
+
+def COMPACT_MOV_S_hreg : COMPACT_MOV_S;
+
+def COMPACT_LD_S :
+  F16_COMPACT<0b1, (outs GPR32:$r), (ins GPR32:$h, immU<5>:$u5),
+          "ld_s\t$r, [$h, $u5]"> {
+  bits<5> u5;
+  bits<2> r;
+
+  let Inst{10} = u5{4};
+  let Inst{9-8} = r;
+  let Inst{4-3} = u5{3-2};
+  let u5{1-0} = 0b00;
+}
+
+//----------------------------------------------------------------------------
+// Compact Load/Add/Sub.
+//----------------------------------------------------------------------------
+def LD_S_AS_rrr : F16_LD_SUB<0b0, "ld_s.as\t$a, [$b, $c]">;
+def SUB_S_rrr : F16_LD_SUB<0b1, "sub_s\t$a, $b, $c">;
+def ADD_S_rru6 : F16_ADD;
+
+//----------------------------------------------------------------------------
+// Compact Load/Store.
+//----------------------------------------------------------------------------
+def LD_S_s11 : F16_LD_ST_s11<0b0, "ld_s\t%r1, [%gp, $s11]">;
+def ST_S_s11 : F16_LD_ST_s11<0b1, "st_s\t%r0, [%gp, $s11]">;
+def LDI_S_u7 : F16_LDI_u7;
+
+//----------------------------------------------------------------------------
+// Indexed Jump or Execute.
+//----------------------------------------------------------------------------
+def JLI_S : F16_JLI_EI<0, "jli_s">;
+def EI_S : F16_JLI_EI<1, "ei_s">;
+
+//----------------------------------------------------------------------------
+// Load/Add Register-Register.
+//----------------------------------------------------------------------------
+def LD_S_rrr : F16_LD_ADD_RR<0b00, "ld_s\t$a, [$b, $c]">;
+def LDB_S_rrr : F16_LD_ADD_RR<0b01, "ldb_s\t$a, [$b, $c]">;
+def LDH_S_rrr : F16_LD_ADD_RR<0b10, "ldh_s\t$a, [$b, $c]">;
+def ADD_S_rrr : F16_LD_ADD_RR<0b11, "add_s\t$a, $b, $c">;
+
+//----------------------------------------------------------------------------
+// Load/Add GP-Relative.
+//----------------------------------------------------------------------------
+def GP_LD_S : F16_GP_LD_ADD<0b00, (ins immS<11>:$s),
+  "ld_s\t%r0, [%gp, $s]"> {
+
+  bits<11> s;
+  let Inst{8-0} = s{10-2};
+  let s{1-0} = 0b00;
+}
+
+def GP_LDB_S : F16_GP_LD_ADD<0b01, (ins immS<9>:$s),
+  "ldb_s\t%r0, [%gp, $s]"> {
+
+  bits<9> s;
+  let Inst{8-0} = s{8-0};
+}
+
+def GP_LDH_S : F16_GP_LD_ADD<0b10, (ins immS<10>:$s),
+  "ldh_s\t%r0, [%gp, $s]"> {
+
+  bits<10> s;
+  let Inst{8-0} = s{9-1};
+  let s{0} = 0b0;
+}
+
+def GP_ADD_S : F16_GP_LD_ADD<0b11, (ins immS<11>:$s),
+  "add_s\t%r0, %gp, $s"> {
+
+  bits<11> s;
+  let Inst{8-0} = s{10-2};
+  let s{1-0} = 0b00;
+}
+
+//----------------------------------------------------------------------------
+// Load PCL-Relative.
+//----------------------------------------------------------------------------
+def PCL_LD : InstARC<2, (outs GPR32:$b), (ins immU<10>:$u10),
+ "ld_s\t$b, [%pcl, $u10]", []> {
+ 
+  bits<3> b; 
+  bits<10> u10; 
+
+  let Inst{15-11} = 0b11010;
+  let Inst{10-8} = b;
+  let Inst{7-0} = u10{9-2};
+  let u10{1-0} = 0b00;
+}
+
+let isBranch = 1 in {
+  //----------------------------------------------------------------------------
+  // Branch on Compare Register with Zero.
+  //----------------------------------------------------------------------------
+  def BREQ_S : F16_BCC_REG<0b0, "breq_s">;
+  def BRNE_S : F16_BCC_REG<0b1, "brne_s">;
+
+  //----------------------------------------------------------------------------
+  // Branch Conditionally.
+  //----------------------------------------------------------------------------
+  let isBarrier = 1 in
+  def B_S : F16_BCC_s10<0b00, "b_s">;
+
+  def BEQ_S : F16_BCC_s10<0b01, "beq_s">;
+  def BNE_S : F16_BCC_s10<0b10, "bne_s">;
+  def BGT_S : F16_BCC_s7<0b000, "bgt_s">;
+  def BGE_S : F16_BCC_s7<0b001, "bge_s">;
+  def BLT_S : F16_BCC_s7<0b010, "blt_s">;
+  def BLE_S : F16_BCC_s7<0b011, "ble_s">;
+  def BHI_S : F16_BCC_s7<0b100, "bhi_s">;
+  def BHS_S : F16_BCC_s7<0b101, "bhs_s">;
+  def BLO_S : F16_BCC_s7<0b110, "blo_s">;
+  def BLS_S : F16_BCC_s7<0b111, "bls_s">;
+} // let isBranch
+
+def BL_S :
+  InstARC<2, (outs), (ins btargetS13:$s13), "bl_s\t$s13", []> {
+
+  let Inst{15-11} = 0b11111;
+  
+  bits<13> s13;
+  let Inst{10-0} = s13{12-2};
+  let s13{1-0} = 0b00;
+  
+  let isCall = 1;
+  let isBarrier = 1;
+}
+
+//----------------------------------------------------------------------------
+// Add/Sub/Shift Register-Immediate.
+//----------------------------------------------------------------------------
+def ADD_S_ru3 : F16_ADD_IMM<0b00,"add_s">;
+def SUB_S_ru3 : F16_ADD_IMM<0b01,"sub_s">;
+def ASL_S_ru3 : F16_ADD_IMM<0b10,"asl_s">;
+def ASR_S_ru3 : F16_ADD_IMM<0b11,"asr_s">;
+
+//----------------------------------------------------------------------------
+// Shift/Subtract/Bit Immediate.
+//----------------------------------------------------------------------------
+def ASL_S_ru5 : F16_SH_SUB_BIT_DST<0b000,"asl_s">;
+def LSR_S_ru5 : F16_SH_SUB_BIT_DST<0b001,"lsr_s">;
+def ASR_S_ru5 : F16_SH_SUB_BIT_DST<0b010,"asr_s">;
+def SUB_S_ru5 : F16_SH_SUB_BIT_DST<0b011,"sub_s">;
+def BSET_S_ru5 : F16_SH_SUB_BIT_DST<0b100,"bset_s">;
+def BCLR_S_ru5 : F16_SH_SUB_BIT_DST<0b101,"bclr_s">;
+def BMSK_S_ru5 : F16_SH_SUB_BIT_DST<0b110,"bmsk_s">;
+def BTST_S_ru5 : F16_SH_SUB_BIT<0b111, "btst_s\t$b, $u5">;
+
+//----------------------------------------------------------------------------
+// Dual Register Operations.
+//----------------------------------------------------------------------------
+def ADD_S_rlimm :
+  F16_OP_HREG_LIMM<0b000, (outs GPR32:$b_s3), (ins i32imm:$LImm),
+          !strconcat("add_s", "\t$b_s3, $b_s3, $LImm")>;
+
+def ADD_S_rr :
+  F16_OP_HREG<0b000, (outs GPR32:$b_s3), (ins GPR32:$h),
+          !strconcat("add_s", "\t$b_s3, $b_s3, $h")>;
+
+def ADD_S_rs3 :
+  F16_OP_HREG<0b001, (outs GPR32:$h), (ins immC<3>:$b_s3),
+          !strconcat("add_s", "\t$h, $h, $b_s3")>;
+
+def ADD_S_limms3 :
+  F16_OP_HREG_LIMM<0b001, (outs), (ins immC<3>:$b_s3, i32imm:$LImm),
+          !strconcat("add_s", "\t0, $LImm, $b_s3")>;
+
+def MOV_S_NE_rlimm :
+  F16_OP_HREG_LIMM<0b111, (outs GPR32:$b_s3), (ins i32imm:$LImm),
+          !strconcat("mov_s.ne", "\t$b_s3, $LImm")>;
+
+def MOV_S_NE_rr :
+  F16_OP_HREG<0b111,(outs GPR32:$b_s3), (ins GPR32:$h),
+          !strconcat("mov_s.ne", "\t$b_s3, $h")>;
+
+def MOV_S_rs3 :
+  F16_OP_HREG<0b011, (outs GPR32:$h), (ins immC<3>:$b_s3),
+          !strconcat("mov_s", "\t$h, $b_s3")>;
+
+def MOV_S_s3 :
+  F16_OP_HREG30<0b011, (outs), (ins immC<3>:$b_s3),
+          !strconcat("mov_s", "\t0, $b_s3")>;
+
+def CMP_S_rlimm :
+  F16_OP_HREG_LIMM<0b100, (outs GPR32:$b_s3), (ins i32imm:$LImm),
+          !strconcat("cmp_s", "\t$b_s3, $LImm")>;
+
+def CMP_S_rr :
+  F16_OP_HREG<0b100, (outs GPR32:$b_s3), (ins GPR32:$h),
+          !strconcat("cmp_s", "\t$b_s3, $h")>;
+
+def CMP_S_rs3 :
+  F16_OP_HREG<0b101, (outs GPR32:$h), (ins immC<3>:$b_s3),
+          !strconcat("cmp_s", "\t$h, $b_s3")>;
+
+def CMP_S_limms3 :
+  F16_OP_HREG_LIMM<0b101, (outs), (ins immC<3>:$b_s3, i32imm:$LImm),
+          !strconcat("cmp_s", "\t$LImm, $b_s3")>;
+
+//----------------------------------------------------------------------------
+// Compact MOV/ADD/CMP Immediate instructions.
+//----------------------------------------------------------------------------
+def MOV_S_u8 :
+  F16_OP_IMM<0b11011, (outs GPR32:$b), (ins immU<8>:$u8),
+          !strconcat("mov_s", "\t$b, $u8")> {
+  bits<8> u8;
+  let Inst{7-0} = u8;
+}
+
+def ADD_S_u7 :
+  F16_OP_U7<0b0, !strconcat("add_s", "\t$b, $b, $u7")>;
+
+def CMP_S_u7 :
+  F16_OP_U7<0b1, !strconcat("cmp_s", "\t$b, $u7")>;
+
+//----------------------------------------------------------------------------
+// Compact Load/Store instructions with offset.
+//----------------------------------------------------------------------------
+def LD_S_OFF :
+  F16_LD_ST_WORD_OFF<0x10, (outs GPR32:$c), (ins GPR32:$b, immU<7>:$off),
+  "ld_s">;
+
+def LDB_S_OFF :
+  F16_LD_ST_BYTE_OFF<0x11, (outs GPR32:$c), (ins GPR32:$b, immU<5>:$off),
+  "ldb_s">;
+
+class F16_LDH_OFF<bits<5> opc, string asmstr> :
+  F16_LD_ST_HALF_OFF<opc, (outs GPR32:$c), (ins GPR32:$b, immU<6>:$off),
+  asmstr>;
+
+def LDH_S_OFF : F16_LDH_OFF<0x12, "ldh_s">;
+def LDH_S_X_OFF : F16_LDH_OFF<0x13, "ldh_s.x">;
+
+def ST_S_OFF :
+  F16_LD_ST_WORD_OFF<0x14, (outs), (ins GPR32:$c, GPR32:$b, immU<7>:$off),
+  "st_s">;
+
+def STB_S_OFF :
+  F16_LD_ST_BYTE_OFF<0x15, (outs), (ins GPR32:$c, GPR32:$b, immU<5>:$off),
+  "stb_s">;
+
+def STH_S_OFF :
+  F16_LD_ST_HALF_OFF<0x16, (outs), (ins GPR32:$c, GPR32:$b, immU<6>:$off),
+  "sth_s">;
+
+//----------------------------------------------------------------------------
+// General compact instructions.
+//----------------------------------------------------------------------------
+def GEN_SUB_S : F16_GEN_DOP<0x02, "sub_s">;
+def GEN_AND_S : F16_GEN_DOP<0x04, "and_s">;
+def GEN_OR_S : F16_GEN_DOP<0x05, "or_s">;
+def GEN_BIC_S : F16_GEN_DOP<0x06, "bic_s">;
+def GEN_XOR_S : F16_GEN_DOP<0x07, "xor_s">;
+def GEN_MPYW_S : F16_GEN_DOP<0x09, "mpyw_s">;
+def GEN_MPYUW_S : F16_GEN_DOP<0x0a, "mpyuw_s">;
+def GEN_TST_S : F16_GEN_DOP_NODST<0x0b, "tst_s">;
+def GEN_MPY_S : F16_GEN_DOP<0x0c, "mpy_s">;
+def GEN_SEXB_S : F16_GEN_DOP_SINGLESRC<0x0d, "sexb_s">;
+def GEN_SEXH_S : F16_GEN_DOP_SINGLESRC<0x0e, "sexh_s">;
+def GEN_EXTB_S : F16_GEN_DOP_SINGLESRC<0x0f, "extb_s">;
+def GEN_EXTH_S : F16_GEN_DOP_SINGLESRC<0x10, "exth_s">;
+def GEN_ABS_S : F16_GEN_DOP_SINGLESRC<0x11, "abs_s">;
+def GEN_NOT_S : F16_GEN_DOP_SINGLESRC<0x12, "not_s">;
+def GEN_NEG_S : F16_GEN_DOP_SINGLESRC<0x13, "neg_s">;
+def GEN_ADD1_S : F16_GEN_DOP<0x14, "add1_s">;
+def GEN_ADD2_S : F16_GEN_DOP<0x15, "add2_s">;
+def GEN_ADD3_S : F16_GEN_DOP<0x16, "add3_s">;
+def GEN_ASL_S : F16_GEN_DOP<0x18, "asl_s">;
+def GEN_LSR_S : F16_GEN_DOP<0x19, "lsr_s">;
+def GEN_ASR_S : F16_GEN_DOP<0x1a, "asr_s">;
+def GEN_AS1L_S : F16_GEN_DOP_SINGLESRC<0x1b, "asl_s">;
+def GEN_AS1R_S : F16_GEN_DOP_SINGLESRC<0x1c, "asr_s">;
+def GEN_LS1R_S : F16_GEN_DOP_SINGLESRC<0x1d, "lsr_s">;
+def GEN_TRAP_S : F16_GEN_DOP_BASE<0x1e, (outs), (ins immU6:$u6),
+  "trap_s\t$u6"> {
+
+  bits<6> u6;
+  let b = u6{5-3};
+  let c = u6{2-0};
+}
+
+def GEN_BRK_S : F16_GEN_DOP_BASE<0x1f, (outs), (ins),
+  "brk_s"> {
+
+  let b = 0b111;
+  let c = 0b111;
+}
+
+let isBarrier = 1 in {
+  let isBranch = 1 in {
+    def GEN_J_S : F16_GEN_SOP<0x0, "j_s\t[$b]">;
+    def GEN_J_S_D : F16_GEN_SOP<0x1, "j_s.d\t[$b]">;
+  } // let isBranch
+
+  let isCall = 1 in {
+    def GEN_JL_S : F16_GEN_SOP<0x2, "jl_s\t[$b]">;
+    def GEN_JL_S_D : F16_GEN_SOP<0x3, "jl_s.d\t[$b]">;
+  } // let isCall
+} // let isBarrier
+
+def GEN_SUB_S_NE : F16_GEN_SOP<0x6, "sub_s.ne\t$b, $b, $b">;
+
+def GEN_NOP_S : F16_GEN_ZOP<0x0, "nop_s">;
+def GEN_UNIMP_S : F16_GEN_ZOP<0x1, "unimp_s">;
+def GEN_SWI_S : F16_GEN_ZOP<0x2, "swi_s">;
+
+let isReturn = 1, isTerminator = 1 in {
+  def GEN_JEQ_S : F16_GEN_ZOP<0x4, "jeq_s\t[%blink]">;
+  def GEN_JNE_S : F16_GEN_ZOP<0x5, "jne_s\t[%blink]">;
+  let isBarrier = 1 in {
+    //def GEN_J_S_BLINK : F16_GEN_ZOP<0x6, "j_s\t[%blink]">;
+    def GEN_J_S_D_BLINK : F16_GEN_ZOP<0x7, "j_s.d\t[%blink]">;
+  } // let isBarrier
+} // let isReturn, isTerminator
+
+//----------------------------------------------------------------------------
+// Load/Store instructions.
+//----------------------------------------------------------------------------
 
 // Load instruction variants:
 // Control bits: x, aa, di, zz
@@ -412,7 +782,7 @@ multiclass ArcLdInst<bits<2> zz, string asmop> {
 
   def _AB_rs9 : F32_LD_RS9<0, 0b10, 0, zz,
                       (outs GPR32:$addrout, GPR32:$A),
-                      (ins GPR32:$B, immS9:$S9),
+                      (ins GPR32:$B, immS<9>:$S9),
                       !strconcat(asmop, ".ab\t$A, [$B,$S9]"), []>
     { let Constraints = "$addrout = $B"; }
   }
@@ -472,7 +842,7 @@ multiclass ArcStInst<bits<2> zz, string asmop> {
                          !strconcat(asmop, "\t$C, [$addr]"), []>;
 
   def _AW_rs9 : F32_ST_RS9<0b01, 0, zz, (outs GPR32:$addrout),
-                      (ins GPR32:$C, GPR32:$B, immS9:$S9),
+                      (ins GPR32:$C, GPR32:$B, immS<9>:$S9),
                       !strconcat(asmop, ".aw\t$C, [$B,$S9]"), []>
     { let Constraints = "$addrout = $B"; }
   }
