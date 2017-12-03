@@ -578,11 +578,15 @@ BPFTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         .addReg(LHS)
         .addReg(MI.getOperand(2).getReg())
         .addMBB(Copy1MBB);
-  else
+  else {
+    int64_t imm32 = MI.getOperand(2).getImm();
+    // sanity check before we build J*_ri instruction.
+    assert (isInt<32>(imm32));
     BuildMI(BB, DL, TII.get(NewCC))
         .addReg(LHS)
-        .addImm(MI.getOperand(2).getImm())
+        .addImm(imm32)
         .addMBB(Copy1MBB);
+  }
 
   // Copy0MBB:
   //  %FalseValue = ...
