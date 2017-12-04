@@ -9,6 +9,7 @@
 // FuzzerDriver and flag parsing.
 //===----------------------------------------------------------------------===//
 
+#include "FuzzerCommand.h"
 #include "FuzzerCorpus.h"
 #include "FuzzerIO.h"
 #include "FuzzerInterface.h"
@@ -206,16 +207,20 @@ static void PulseThread() {
   }
 }
 
-static void WorkerThread(const std::string &Cmd, std::atomic<unsigned> *Counter,
+static void WorkerThread(const Command &BaseCmd, std::atomic<unsigned> *Counter,
                          unsigned NumJobs, std::atomic<bool> *HasErrors) {
   while (true) {
     unsigned C = (*Counter)++;
     if (C >= NumJobs) break;
     std::string Log = "fuzz-" + std::to_string(C) + ".log";
-    std::string ToRun = Cmd + " > " + Log + " 2>&1\n";
-    if (Flags.verbosity)
-      Printf("%s", ToRun.c_str());
-    int ExitCode = ExecuteCommand(ToRun);
+    Command Cmd(BaseCmd);
+    Cmd.setOutputFile(Log);
+    Cmd.combineOutAndErr();
+    if (Flags.verbosity) {
+      std::string CommandLine = Cmd.toString();
+      Printf("%s", CommandLine.c_str());
+    }
+    int ExitCode = ExecuteCommand(Cmd);
     if (ExitCode != 0)
       *HasErrors = true;
     std::lock_guard<std::mutex> Lock(Mu);
@@ -240,12 +245,14 @@ static int RunInMultipleProcesses(const Vector<std::string> &Args,
                                   unsigned NumWorkers, unsigned NumJobs) {
   std::atomic<unsigned> Counter(0);
   std::atomic<bool> HasErrors(false);
-  std::string Cmd = CloneArgsWithoutX(Args, "jobs", "workers");
+  Command Cmd(Args);
+  Cmd.removeFlag("jobs");
+  Cmd.removeFlag("workers");
   Vector<std::thread> V;
   std::thread Pulse(PulseThread);
   Pulse.detach();
   for (unsigned i = 0; i < NumWorkers; i++)
-    V.push_back(std::thread(WorkerThread, Cmd, &Counter, NumJobs, &HasErrors));
+    V.push_back(std::thread(WorkerThread, std::ref(Cmd), &Counter, NumJobs, &HasErrors));
   for (auto &T : V)
     T.join();
   return HasErrors ? 1 : 0;
@@ -303,20 +310,19 @@ int CleanseCrashInput(const Vector<std::string> &Args,
   }
   std::string InputFilePath = Inputs->at(0);
   std::string OutputFilePath = Flags.exact_artifact_path;
-  std::string BaseCmd =
-      CloneArgsWithoutX(Args, "cleanse_crash", "cleanse_crash");
+  Command Cmd(Args);
+  Cmd.removeFlag("cleanse_crash");
 
-  auto InputPos = BaseCmd.find(" " + InputFilePath + " ");
-  assert(InputPos != std::string::npos);
-  BaseCmd.erase(InputPos, InputFilePath.size() + 1);
+  assert(Cmd.hasArgument(InputFilePath));
+  Cmd.removeArgument(InputFilePath);
 
   auto LogFilePath = DirPlusFile(
       TmpDir(), "libFuzzerTemp." + std::to_string(GetPid()) + ".txt");
   auto TmpFilePath = DirPlusFile(
       TmpDir(), "libFuzzerTemp." + std::to_string(GetPid()) + ".repro");
-  auto LogFileRedirect = " > " + LogFilePath + " 2>&1 ";
-
-  auto Cmd = BaseCmd + " " + TmpFilePath + LogFileRedirect;
+  Cmd.addArgument(TmpFilePath);
+  Cmd.setOutputFile(LogFilePath);
+  Cmd.combineOutAndErr();
 
   std::string CurrentFilePath = InputFilePath;
   auto U = FileToVector(CurrentFilePath);
@@ -361,22 +367,22 @@ int MinimizeCrashInput(const Vector<std::string> &Args,
     exit(1);
   }
   std::string InputFilePath = Inputs->at(0);
-  auto BaseCmd = SplitBefore(
-      "-ignore_remaining_args=1",
-      CloneArgsWithoutX(Args, "minimize_crash", "exact_artifact_path"));
-  auto InputPos = BaseCmd.first.find(" " + InputFilePath + " ");
-  assert(InputPos != std::string::npos);
-  BaseCmd.first.erase(InputPos, InputFilePath.size() + 1);
+  Command BaseCmd(Args);
+  BaseCmd.removeFlag("minimize_crash");
+  BaseCmd.removeFlag("exact_artifact_path");
+  assert(BaseCmd.hasArgument(InputFilePath));
+  BaseCmd.removeArgument(InputFilePath);
   if (Flags.runs <= 0 && Flags.max_total_time == 0) {
     Printf("INFO: you need to specify -runs=N or "
            "-max_total_time=N with -minimize_crash=1\n"
            "INFO: defaulting to -max_total_time=600\n");
-    BaseCmd.first += " -max_total_time=600";
+    BaseCmd.addFlag("max_total_time", "600");
   }
 
   auto LogFilePath = DirPlusFile(
       TmpDir(), "libFuzzerTemp." + std::to_string(GetPid()) + ".txt");
-  auto LogFileRedirect = " > " + LogFilePath + " 2>&1 ";
+  BaseCmd.setOutputFile(LogFilePath);
+  BaseCmd.combineOutAndErr();
 
   std::string CurrentFilePath = InputFilePath;
   while (true) {
@@ -384,10 +390,11 @@ int MinimizeCrashInput(const Vector<std::string> &Args,
     Printf("CRASH_MIN: minimizing crash input: '%s' (%zd bytes)\n",
            CurrentFilePath.c_str(), U.size());
 
-    auto Cmd = BaseCmd.first + " " + CurrentFilePath + LogFileRedirect + " " +
-               BaseCmd.second;
+    Command Cmd(BaseCmd);
+    Cmd.addArgument(CurrentFilePath);
 
-    Printf("CRASH_MIN: executing: %s\n", Cmd.c_str());
+    std::string CommandLine = Cmd.toString();
+    Printf("CRASH_MIN: executing: %s\n", CommandLine.c_str());
     int ExitCode = ExecuteCommand(Cmd);
     if (ExitCode == 0) {
       Printf("ERROR: the input %s did not crash\n", CurrentFilePath.c_str());
@@ -404,9 +411,10 @@ int MinimizeCrashInput(const Vector<std::string> &Args,
         Flags.exact_artifact_path
             ? Flags.exact_artifact_path
             : Options.ArtifactPrefix + "minimized-from-" + Hash(U);
-    Cmd += " -minimize_crash_internal_step=1 -exact_artifact_path=" +
-        ArtifactPath;
-    Printf("CRASH_MIN: executing: %s\n", Cmd.c_str());
+    Cmd.addFlag("minimize_crash_internal_step", "1");
+    Cmd.addFlag("exact_artifact_path", ArtifactPath);
+    CommandLine = Cmd.toString();
+    Printf("CRASH_MIN: executing: %s\n", CommandLine.c_str());
     ExitCode = ExecuteCommand(Cmd);
     CopyFileToErr(LogFilePath);
     if (ExitCode == 0) {

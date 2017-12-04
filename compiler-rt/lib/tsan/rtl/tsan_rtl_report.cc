@@ -393,7 +393,7 @@ void RestoreStack(int tid, const u64 epoch, VarSizeStackTrace *stk,
   const u64 ebegin = RoundDown(eend, kTracePartSize);
   DPrintf("#%d: RestoreStack epoch=%zu ebegin=%zu eend=%zu partidx=%d\n",
           tid, (uptr)epoch, (uptr)ebegin, (uptr)eend, partidx);
-  Vector<uptr> stack(MBlockReportStack);
+  Vector<uptr> stack;
   stack.Resize(hdr->stack0.size + 64);
   for (uptr i = 0; i < hdr->stack0.size; i++) {
     stack[i] = hdr->stack0.trace[i];
@@ -659,7 +659,7 @@ void ReportRace(ThreadState *thr) {
     return;
 
   // MutexSet is too large to live on stack.
-  Vector<u64> mset_buffer(MBlockScopedBuf);
+  Vector<u64> mset_buffer;
   mset_buffer.Resize(sizeof(MutexSet) / sizeof(u64) + 1);
   MutexSet *mset2 = new(&mset_buffer[0]) MutexSet();
 

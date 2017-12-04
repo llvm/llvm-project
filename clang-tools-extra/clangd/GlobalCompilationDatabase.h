@@ -27,16 +27,19 @@ namespace clangd {
 
 class Logger;
 
-/// Returns a default compile command to use for \p File.
-tooling::CompileCommand getDefaultCompileCommand(PathRef File);
-
 /// Provides compilation arguments used for parsing C and C++ files.
 class GlobalCompilationDatabase {
 public:
   virtual ~GlobalCompilationDatabase() = default;
 
-  virtual std::vector<tooling::CompileCommand>
-  getCompileCommands(PathRef File) = 0;
+  /// If there are any known-good commands for building this file, returns one.
+  virtual llvm::Optional<tooling::CompileCommand>
+  getCompileCommand(PathRef File) const = 0;
+
+  /// Makes a guess at how to build a file.
+  /// The default implementation just runs clang on the file.
+  /// Clangd should treat the results as unreliable.
+  virtual tooling::CompileCommand getFallbackCommand(PathRef File) const;
 
   /// FIXME(ibiryukov): add facilities to track changes to compilation flags of
   /// existing targets.
@@ -50,19 +53,26 @@ public:
   DirectoryBasedGlobalCompilationDatabase(
       clangd::Logger &Logger, llvm::Optional<Path> CompileCommandsDir);
 
-  std::vector<tooling::CompileCommand>
-  getCompileCommands(PathRef File) override;
+  /// Scans File's parents looking for compilation databases.
+  /// Any extra flags will be added.
+  llvm::Optional<tooling::CompileCommand>
+  getCompileCommand(PathRef File) const override;
 
+  /// Uses the default fallback command, adding any extra flags.
+  tooling::CompileCommand getFallbackCommand(PathRef File) const override;
+
+  /// Sets the extra flags that should be added to a file.
   void setExtraFlagsForFile(PathRef File, std::vector<std::string> ExtraFlags);
 
 private:
-  tooling::CompilationDatabase *getCompilationDatabase(PathRef File);
-  tooling::CompilationDatabase *tryLoadDatabaseFromPath(PathRef File);
+  tooling::CompilationDatabase *getCompilationDatabase(PathRef File) const;
+  tooling::CompilationDatabase *tryLoadDatabaseFromPath(PathRef File) const;
+  void addExtraFlags(PathRef File, tooling::CompileCommand &C) const;
 
-  std::mutex Mutex;
+  mutable std::mutex Mutex;
   /// Caches compilation databases loaded from directories(keys are
   /// directories).
-  llvm::StringMap<std::unique_ptr<clang::tooling::CompilationDatabase>>
+  mutable llvm::StringMap<std::unique_ptr<clang::tooling::CompilationDatabase>>
       CompilationDatabases;
 
   /// Stores extra flags per file.
