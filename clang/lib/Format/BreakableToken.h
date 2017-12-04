@@ -405,6 +405,10 @@ private:
   // If true, make sure that the opening '/**' and the closing '*/' ends on a
   // line of itself. Styles like jsdoc require this for multiline comments.
   bool DelimitersOnNewline;
+
+  // Length of the sequence of tokens after this string literal that cannot
+  // contain line breaks.
+  unsigned UnbreakableTailLength;
 };
 
 class BreakableLineCommentSection : public BreakableComment {

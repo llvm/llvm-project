@@ -1327,6 +1327,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
 
     // NonVLX sub-targets extend 128/256 vectors to use the 512 version.
+    for (auto VT : { MVT::v2i64, MVT::v4i64 }) {
+      setOperationAction(ISD::SMAX, VT, Legal);
+      setOperationAction(ISD::UMAX, VT, Legal);
+      setOperationAction(ISD::SMIN, VT, Legal);
+      setOperationAction(ISD::UMIN, VT, Legal);
+    }
+
+    // NonVLX sub-targets extend 128/256 vectors to use the 512 version.
     for (auto VT : {MVT::v4i32, MVT::v8i32, MVT::v16i32, MVT::v2i64, MVT::v4i64,
                     MVT::v8i64}) {
       setOperationAction(ISD::ROTL,             VT, Custom);
@@ -1532,13 +1540,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::CONCAT_VECTORS,     MVT::v4i1, Custom);
     setOperationAction(ISD::INSERT_SUBVECTOR,   MVT::v8i1, Custom);
     setOperationAction(ISD::INSERT_SUBVECTOR,   MVT::v4i1, Custom);
-
-    for (auto VT : { MVT::v2i64, MVT::v4i64 }) {
-      setOperationAction(ISD::SMAX, VT, Legal);
-      setOperationAction(ISD::UMAX, VT, Legal);
-      setOperationAction(ISD::SMIN, VT, Legal);
-      setOperationAction(ISD::UMIN, VT, Legal);
-    }
   }
 
   // We want to custom lower some of our intrinsics.
@@ -17696,7 +17697,8 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
   // Special case: Use min/max operations for SETULE/SETUGE
   MVT VET = VT.getVectorElementType();
   bool HasMinMax =
-      (Subtarget.hasSSE41() && (VET >= MVT::i8 && VET <= MVT::i32)) ||
+      (Subtarget.hasAVX512() && VET == MVT::i64) ||
+      (Subtarget.hasSSE41() && (VET == MVT::i16 || VET == MVT::i32)) ||
       (Subtarget.hasSSE2() && (VET == MVT::i8));
   bool MinMax = false;
   if (HasMinMax) {

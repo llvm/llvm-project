@@ -212,21 +212,17 @@ public:
       ExtraClangFlags.push_back("-ffreestanding");
   }
 
-  std::vector<tooling::CompileCommand>
-  getCompileCommands(PathRef File) override {
+  llvm::Optional<tooling::CompileCommand>
+  getCompileCommand(PathRef File) const override {
     if (ExtraClangFlags.empty())
-      return {};
+      return llvm::None;
 
-    std::vector<std::string> CommandLine;
-    CommandLine.reserve(3 + ExtraClangFlags.size());
-    CommandLine.insert(CommandLine.end(), {"clang", "-fsyntax-only"});
-    CommandLine.insert(CommandLine.end(), ExtraClangFlags.begin(),
-                       ExtraClangFlags.end());
-    CommandLine.push_back(File.str());
-
+    auto CommandLine = ExtraClangFlags;
+    CommandLine.insert(CommandLine.begin(), "clang");
+    CommandLine.insert(CommandLine.end(), File.str());
     return {tooling::CompileCommand(llvm::sys::path::parent_path(File),
                                     llvm::sys::path::filename(File),
-                                    CommandLine, "")};
+                                    std::move(CommandLine), "")};
   }
 
   std::vector<std::string> ExtraClangFlags;

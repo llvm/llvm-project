@@ -1269,7 +1269,7 @@ void SIInsertWaitcnts::mergeInputScoreBrackets(MachineBasicBlock &Block) {
         BlockWaitcntBracketsMap[pred].get();
     bool Visited = BlockVisitedSet.find(pred) != BlockVisitedSet.end();
     if (!Visited || PredScoreBrackets->getWaitAtBeginning()) {
-      break;
+      continue;
     }
     for (enum InstCounterType T = VM_CNT; T < NUM_INST_CNTS;
          T = (enum InstCounterType)(T + 1)) {
@@ -1308,7 +1308,7 @@ void SIInsertWaitcnts::mergeInputScoreBrackets(MachineBasicBlock &Block) {
         BlockWaitcntBracketsMap[Pred].get();
     bool Visited = BlockVisitedSet.find(Pred) != BlockVisitedSet.end();
     if (!Visited || PredScoreBrackets->getWaitAtBeginning()) {
-      break;
+      continue;
     }
 
     int GDSSpan = PredScoreBrackets->getEventUB(GDS_GPR_LOCK) -
@@ -1355,7 +1355,7 @@ void SIInsertWaitcnts::mergeInputScoreBrackets(MachineBasicBlock &Block) {
   // Set the register scoreboard.
   for (MachineBasicBlock *Pred : Block.predecessors()) {
     if (BlockVisitedSet.find(Pred) == BlockVisitedSet.end()) {
-      break;
+      continue;
     }
 
     BlockWaitcntBrackets *PredScoreBrackets =
@@ -1469,7 +1469,7 @@ void SIInsertWaitcnts::mergeInputScoreBrackets(MachineBasicBlock &Block) {
   // the delayed nature of these operations.
   for (MachineBasicBlock *Pred : Block.predecessors()) {
     if (BlockVisitedSet.find(Pred) == BlockVisitedSet.end()) {
-      break;
+      continue;
     }
 
     BlockWaitcntBrackets *PredScoreBrackets =
