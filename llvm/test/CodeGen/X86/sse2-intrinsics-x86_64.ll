@@ -5,21 +5,21 @@
 
 define i64 @test_x86_sse2_cvtsd2si64(<2 x double> %a0) {
 ; CHECK-LABEL: test_x86_sse2_cvtsd2si64:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vcvtsd2si %xmm0, %rax
 ; CHECK-NEXT:    retq
 ; SSE-LABEL: test_x86_sse2_cvtsd2si64:
-; SSE:       ## BB#0:
+; SSE:       ## %bb.0:
 ; SSE-NEXT:    cvtsd2si %xmm0, %rax ## encoding: [0xf2,0x48,0x0f,0x2d,0xc0]
 ; SSE-NEXT:    retq ## encoding: [0xc3]
 ;
 ; AVX2-LABEL: test_x86_sse2_cvtsd2si64:
-; AVX2:       ## BB#0:
+; AVX2:       ## %bb.0:
 ; AVX2-NEXT:    vcvtsd2si %xmm0, %rax ## encoding: [0xc4,0xe1,0xfb,0x2d,0xc0]
 ; AVX2-NEXT:    retq ## encoding: [0xc3]
 ;
 ; SKX-LABEL: test_x86_sse2_cvtsd2si64:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vcvtsd2si %xmm0, %rax ## EVEX TO VEX Compression encoding: [0xc4,0xe1,0xfb,0x2d,0xc0]
 ; SKX-NEXT:    retq ## encoding: [0xc3]
   %res = call i64 @llvm.x86.sse2.cvtsd2si64(<2 x double> %a0) ; <i64> [#uses=1]
@@ -30,21 +30,21 @@ declare i64 @llvm.x86.sse2.cvtsd2si64(<2 x double>) nounwind readnone
 
 define <2 x double> @test_x86_sse2_cvtsi642sd(<2 x double> %a0, i64 %a1) {
 ; CHECK-LABEL: test_x86_sse2_cvtsi642sd:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vcvtsi2sdq %rdi, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 ; SSE-LABEL: test_x86_sse2_cvtsi642sd:
-; SSE:       ## BB#0:
+; SSE:       ## %bb.0:
 ; SSE-NEXT:    cvtsi2sdq %rdi, %xmm0 ## encoding: [0xf2,0x48,0x0f,0x2a,0xc7]
 ; SSE-NEXT:    retq ## encoding: [0xc3]
 ;
 ; AVX2-LABEL: test_x86_sse2_cvtsi642sd:
-; AVX2:       ## BB#0:
+; AVX2:       ## %bb.0:
 ; AVX2-NEXT:    vcvtsi2sdq %rdi, %xmm0, %xmm0 ## encoding: [0xc4,0xe1,0xfb,0x2a,0xc7]
 ; AVX2-NEXT:    retq ## encoding: [0xc3]
 ;
 ; SKX-LABEL: test_x86_sse2_cvtsi642sd:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vcvtsi2sdq %rdi, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe1,0xfb,0x2a,0xc7]
 ; SKX-NEXT:    retq ## encoding: [0xc3]
   %res = call <2 x double> @llvm.x86.sse2.cvtsi642sd(<2 x double> %a0, i64 %a1) ; <<2 x double>> [#uses=1]
@@ -55,21 +55,21 @@ declare <2 x double> @llvm.x86.sse2.cvtsi642sd(<2 x double>, i64) nounwind readn
 
 define i64 @test_x86_sse2_cvttsd2si64(<2 x double> %a0) {
 ; CHECK-LABEL: test_x86_sse2_cvttsd2si64:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vcvttsd2si %xmm0, %rax
 ; CHECK-NEXT:    retq
 ; SSE-LABEL: test_x86_sse2_cvttsd2si64:
-; SSE:       ## BB#0:
+; SSE:       ## %bb.0:
 ; SSE-NEXT:    cvttsd2si %xmm0, %rax ## encoding: [0xf2,0x48,0x0f,0x2c,0xc0]
 ; SSE-NEXT:    retq ## encoding: [0xc3]
 ;
 ; AVX2-LABEL: test_x86_sse2_cvttsd2si64:
-; AVX2:       ## BB#0:
+; AVX2:       ## %bb.0:
 ; AVX2-NEXT:    vcvttsd2si %xmm0, %rax ## encoding: [0xc4,0xe1,0xfb,0x2c,0xc0]
 ; AVX2-NEXT:    retq ## encoding: [0xc3]
 ;
 ; SKX-LABEL: test_x86_sse2_cvttsd2si64:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vcvttsd2si %xmm0, %rax ## EVEX TO VEX Compression encoding: [0xc4,0xe1,0xfb,0x2c,0xc0]
 ; SKX-NEXT:    retq ## encoding: [0xc3]
   %res = call i64 @llvm.x86.sse2.cvttsd2si64(<2 x double> %a0) ; <i64> [#uses=1]

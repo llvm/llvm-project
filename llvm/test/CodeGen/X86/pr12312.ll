@@ -4,10 +4,10 @@
 
 define i32 @veccond128(<4 x i32> %input) {
 ; SSE41-LABEL: veccond128:
-; SSE41:       # BB#0: # %entry
+; SSE41:       # %bb.0: # %entry
 ; SSE41-NEXT:    ptest %xmm0, %xmm0
 ; SSE41-NEXT:    je .LBB0_2
-; SSE41-NEXT:  # BB#1: # %if-true-block
+; SSE41-NEXT:  # %bb.1: # %if-true-block
 ; SSE41-NEXT:    xorl %eax, %eax
 ; SSE41-NEXT:    retq
 ; SSE41-NEXT:  .LBB0_2: # %endif-block
@@ -15,10 +15,10 @@ define i32 @veccond128(<4 x i32> %input) {
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: veccond128:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vptest %xmm0, %xmm0
 ; AVX-NEXT:    je .LBB0_2
-; AVX-NEXT:  # BB#1: # %if-true-block
+; AVX-NEXT:  # %bb.1: # %if-true-block
 ; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    retq
 ; AVX-NEXT:  .LBB0_2: # %endif-block
@@ -36,11 +36,11 @@ endif-block:
 
 define i32 @veccond256(<8 x i32> %input) {
 ; SSE41-LABEL: veccond256:
-; SSE41:       # BB#0: # %entry
+; SSE41:       # %bb.0: # %entry
 ; SSE41-NEXT:    por %xmm1, %xmm0
 ; SSE41-NEXT:    ptest %xmm0, %xmm0
 ; SSE41-NEXT:    je .LBB1_2
-; SSE41-NEXT:  # BB#1: # %if-true-block
+; SSE41-NEXT:  # %bb.1: # %if-true-block
 ; SSE41-NEXT:    xorl %eax, %eax
 ; SSE41-NEXT:    retq
 ; SSE41-NEXT:  .LBB1_2: # %endif-block
@@ -48,10 +48,10 @@ define i32 @veccond256(<8 x i32> %input) {
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: veccond256:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vptest %ymm0, %ymm0
 ; AVX-NEXT:    je .LBB1_2
-; AVX-NEXT:  # BB#1: # %if-true-block
+; AVX-NEXT:  # %bb.1: # %if-true-block
 ; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
@@ -71,13 +71,13 @@ endif-block:
 
 define i32 @veccond512(<16 x i32> %input) {
 ; SSE41-LABEL: veccond512:
-; SSE41:       # BB#0: # %entry
+; SSE41:       # %bb.0: # %entry
 ; SSE41-NEXT:    por %xmm3, %xmm1
 ; SSE41-NEXT:    por %xmm2, %xmm1
 ; SSE41-NEXT:    por %xmm0, %xmm1
 ; SSE41-NEXT:    ptest %xmm1, %xmm1
 ; SSE41-NEXT:    je .LBB2_2
-; SSE41-NEXT:  # BB#1: # %if-true-block
+; SSE41-NEXT:  # %bb.1: # %if-true-block
 ; SSE41-NEXT:    xorl %eax, %eax
 ; SSE41-NEXT:    retq
 ; SSE41-NEXT:  .LBB2_2: # %endif-block
@@ -85,11 +85,11 @@ define i32 @veccond512(<16 x i32> %input) {
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: veccond512:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    vptest %ymm0, %ymm0
 ; AVX-NEXT:    je .LBB2_2
-; AVX-NEXT:  # BB#1: # %if-true-block
+; AVX-NEXT:  # %bb.1: # %if-true-block
 ; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
@@ -109,14 +109,14 @@ endif-block:
 
 define i32 @vectest128(<4 x i32> %input) {
 ; SSE41-LABEL: vectest128:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    xorl %eax, %eax
 ; SSE41-NEXT:    ptest %xmm0, %xmm0
 ; SSE41-NEXT:    setne %al
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: vectest128:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vptest %xmm0, %xmm0
 ; AVX-NEXT:    setne %al
@@ -129,7 +129,7 @@ define i32 @vectest128(<4 x i32> %input) {
 
 define i32 @vectest256(<8 x i32> %input) {
 ; SSE41-LABEL: vectest256:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    por %xmm1, %xmm0
 ; SSE41-NEXT:    xorl %eax, %eax
 ; SSE41-NEXT:    ptest %xmm0, %xmm0
@@ -137,7 +137,7 @@ define i32 @vectest256(<8 x i32> %input) {
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: vectest256:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vptest %ymm0, %ymm0
 ; AVX-NEXT:    setne %al
@@ -151,7 +151,7 @@ define i32 @vectest256(<8 x i32> %input) {
 
 define i32 @vectest512(<16 x i32> %input) {
 ; SSE41-LABEL: vectest512:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    por %xmm3, %xmm1
 ; SSE41-NEXT:    por %xmm2, %xmm1
 ; SSE41-NEXT:    por %xmm0, %xmm1
@@ -161,7 +161,7 @@ define i32 @vectest512(<16 x i32> %input) {
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: vectest512:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vptest %ymm0, %ymm0
@@ -176,14 +176,14 @@ define i32 @vectest512(<16 x i32> %input) {
 
 define i32 @vecsel128(<4 x i32> %input, i32 %a, i32 %b) {
 ; SSE41-LABEL: vecsel128:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    ptest %xmm0, %xmm0
 ; SSE41-NEXT:    cmovel %esi, %edi
 ; SSE41-NEXT:    movl %edi, %eax
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: vecsel128:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vptest %xmm0, %xmm0
 ; AVX-NEXT:    cmovel %esi, %edi
 ; AVX-NEXT:    movl %edi, %eax
@@ -196,7 +196,7 @@ define i32 @vecsel128(<4 x i32> %input, i32 %a, i32 %b) {
 
 define i32 @vecsel256(<8 x i32> %input, i32 %a, i32 %b) {
 ; SSE41-LABEL: vecsel256:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    por %xmm1, %xmm0
 ; SSE41-NEXT:    ptest %xmm0, %xmm0
 ; SSE41-NEXT:    cmovel %esi, %edi
@@ -204,7 +204,7 @@ define i32 @vecsel256(<8 x i32> %input, i32 %a, i32 %b) {
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: vecsel256:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vptest %ymm0, %ymm0
 ; AVX-NEXT:    cmovel %esi, %edi
 ; AVX-NEXT:    movl %edi, %eax
@@ -218,7 +218,7 @@ define i32 @vecsel256(<8 x i32> %input, i32 %a, i32 %b) {
 
 define i32 @vecsel512(<16 x i32> %input, i32 %a, i32 %b) {
 ; SSE41-LABEL: vecsel512:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    por %xmm3, %xmm1
 ; SSE41-NEXT:    por %xmm2, %xmm1
 ; SSE41-NEXT:    por %xmm0, %xmm1
@@ -228,7 +228,7 @@ define i32 @vecsel512(<16 x i32> %input, i32 %a, i32 %b) {
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: vecsel512:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    vptest %ymm0, %ymm0
 ; AVX-NEXT:    cmovel %esi, %edi

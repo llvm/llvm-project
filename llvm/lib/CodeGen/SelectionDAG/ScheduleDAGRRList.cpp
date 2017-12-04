@@ -346,9 +346,8 @@ static void GetCostForDef(const ScheduleDAGSDNodes::RegDefIter &RegDefPos,
 
 /// Schedule - Schedule the DAG using list scheduling.
 void ScheduleDAGRRList::Schedule() {
-  DEBUG(dbgs()
-        << "********** List Scheduling BB#" << BB->getNumber()
-        << " '" << BB->getName() << "' **********\n");
+  DEBUG(dbgs() << "********** List Scheduling " << printMBBReference(*BB)
+               << " '" << BB->getName() << "' **********\n");
 
   CurCycle = 0;
   IssueCount = 0;

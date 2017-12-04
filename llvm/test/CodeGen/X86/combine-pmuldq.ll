@@ -5,7 +5,7 @@
 ; TODO - shuffle+sext are superfluous
 define <2 x i64> @combine_shuffle_sext_pmuldq(<4 x i32> %a0, <4 x i32> %a1) {
 ; SSE-LABEL: combine_shuffle_sext_pmuldq:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; SSE-NEXT:    pmovsxdq %xmm0, %xmm2
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
@@ -14,7 +14,7 @@ define <2 x i64> @combine_shuffle_sext_pmuldq(<4 x i32> %a0, <4 x i32> %a1) {
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_shuffle_sext_pmuldq:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; AVX-NEXT:    vpmovsxdq %xmm0, %xmm0
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
@@ -32,7 +32,7 @@ define <2 x i64> @combine_shuffle_sext_pmuldq(<4 x i32> %a0, <4 x i32> %a1) {
 ; TODO - shuffle+zext are superfluous
 define <2 x i64> @combine_shuffle_zext_pmuludq(<4 x i32> %a0, <4 x i32> %a1) {
 ; SSE-LABEL: combine_shuffle_zext_pmuludq:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; SSE-NEXT:    pmovzxdq {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
@@ -41,7 +41,7 @@ define <2 x i64> @combine_shuffle_zext_pmuludq(<4 x i32> %a0, <4 x i32> %a1) {
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_shuffle_zext_pmuludq:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; AVX-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
@@ -59,7 +59,7 @@ define <2 x i64> @combine_shuffle_zext_pmuludq(<4 x i32> %a0, <4 x i32> %a1) {
 ; TODO - blends are superfluous
 define <2 x i64> @combine_shuffle_zero_pmuludq(<4 x i32> %a0, <4 x i32> %a1) {
 ; SSE-LABEL: combine_shuffle_zero_pmuludq:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    pxor %xmm2, %xmm2
 ; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
 ; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
@@ -67,7 +67,7 @@ define <2 x i64> @combine_shuffle_zero_pmuludq(<4 x i32> %a0, <4 x i32> %a1) {
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_shuffle_zero_pmuludq:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
 ; AVX-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
@@ -84,7 +84,7 @@ define <2 x i64> @combine_shuffle_zero_pmuludq(<4 x i32> %a0, <4 x i32> %a1) {
 ; TODO - blends are superfluous
 define <4 x i64> @combine_shuffle_zero_pmuludq_256(<8 x i32> %a0, <8 x i32> %a1) {
 ; SSE-LABEL: combine_shuffle_zero_pmuludq_256:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    pxor %xmm4, %xmm4
 ; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm4[2,3],xmm1[4,5],xmm4[6,7]
 ; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm4[2,3],xmm0[4,5],xmm4[6,7]
@@ -95,7 +95,7 @@ define <4 x i64> @combine_shuffle_zero_pmuludq_256(<8 x i32> %a0, <8 x i32> %a1)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_shuffle_zero_pmuludq_256:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm2[1],ymm0[2],ymm2[3],ymm0[4],ymm2[5],ymm0[6],ymm2[7]
 ; AVX-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0],ymm2[1],ymm1[2],ymm2[3],ymm1[4],ymm2[5],ymm1[6],ymm2[7]

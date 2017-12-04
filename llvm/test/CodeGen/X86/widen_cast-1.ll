@@ -8,7 +8,7 @@
 
 define void @convert(<2 x i32>* %dst, <4 x i16>* %src) nounwind {
 ; CHECK-LABEL: convert:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    movl $0, (%esp)
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [1,1,1,1]
@@ -33,7 +33,7 @@ define void @convert(<2 x i32>* %dst, <4 x i16>* %src) nounwind {
 ; CHECK-NEXT:    retl
 ;
 ; ATOM-LABEL: convert:
-; ATOM:       # BB#0: # %entry
+; ATOM:       # %bb.0: # %entry
 ; ATOM-NEXT:    pushl %eax
 ; ATOM-NEXT:    movdqa {{.*#+}} xmm0 = [1,1,1,1]
 ; ATOM-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]

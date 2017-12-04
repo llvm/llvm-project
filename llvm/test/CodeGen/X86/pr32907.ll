@@ -6,7 +6,7 @@
 
 define <2 x i64> @PR32907(<2 x i64> %astype.i, <2 x i64> %astype6.i) {
 ; SSE2-LABEL: PR32907:
-; SSE2:       # BB#0: # %entry
+; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    psubq %xmm1, %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    psrad $31, %xmm1
@@ -20,7 +20,7 @@ define <2 x i64> @PR32907(<2 x i64> %astype.i, <2 x i64> %astype6.i) {
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: PR32907:
-; SSE42:       # BB#0: # %entry
+; SSE42:       # %bb.0: # %entry
 ; SSE42-NEXT:    psubq %xmm1, %xmm0
 ; SSE42-NEXT:    pxor %xmm1, %xmm1
 ; SSE42-NEXT:    pcmpgtq %xmm0, %xmm1
@@ -29,7 +29,7 @@ define <2 x i64> @PR32907(<2 x i64> %astype.i, <2 x i64> %astype6.i) {
 ; SSE42-NEXT:    retq
 ;
 ; AVX2-LABEL: PR32907:
-; AVX2:       # BB#0: # %entry
+; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vpsubq %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm1
@@ -38,7 +38,7 @@ define <2 x i64> @PR32907(<2 x i64> %astype.i, <2 x i64> %astype6.i) {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: PR32907:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vpsubq %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vpsraq $63, %zmm0, %zmm1
 ; AVX512-NEXT:    vpxor %xmm1, %xmm0, %xmm0

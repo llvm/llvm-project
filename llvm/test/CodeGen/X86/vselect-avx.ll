@@ -17,7 +17,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 define void @test(<4 x i16>* %a, <4 x i16>* %b) {
 ; AVX-LABEL: test:
-; AVX:       ## BB#0: ## %body
+; AVX:       ## %bb.0: ## %body
 ; AVX-NEXT:    movq {{.*}}(%rip), %rax
 ; AVX-NEXT:    movq %rax, (%rdi)
 ; AVX-NEXT:    movq {{.*}}(%rip), %rax
@@ -39,7 +39,7 @@ body:
 
 define void @test2(double** %call1559, i64 %indvars.iv4198, <4 x i1> %tmp1895) {
 ; AVX1-LABEL: test2:
-; AVX1:       ## BB#0: ## %bb
+; AVX1:       ## %bb.0: ## %bb
 ; AVX1-NEXT:    vpslld $31, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmovsxdq %xmm0, %xmm1
@@ -54,7 +54,7 @@ define void @test2(double** %call1559, i64 %indvars.iv4198, <4 x i1> %tmp1895) {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test2:
-; AVX2:       ## BB#0: ## %bb
+; AVX2:       ## %bb.0: ## %bb
 ; AVX2-NEXT:    vpslld $31, %xmm0, %xmm0
 ; AVX2-NEXT:    vpmovsxdq %xmm0, %ymm0
 ; AVX2-NEXT:    movq (%rdi,%rsi,8), %rax
@@ -84,7 +84,7 @@ bb:
 
 define void @test3(<4 x i32> %induction30, <4 x i16>* %tmp16, <4 x i16>* %tmp17,  <4 x i16> %tmp3, <4 x i16> %tmp12) {
 ; AVX1-LABEL: test3:
-; AVX1:       ## BB#0:
+; AVX1:       ## %bb.0:
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [1431655766,1431655766,1431655766,1431655766]
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm4 = xmm3[1,1,3,3]
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm5 = xmm0[1,1,3,3]
@@ -106,7 +106,7 @@ define void @test3(<4 x i32> %induction30, <4 x i16>* %tmp16, <4 x i16>* %tmp17,
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test3:
-; AVX2:       ## BB#0:
+; AVX2:       ## %bb.0:
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [1431655766,1431655766,1431655766,1431655766]
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm4 = xmm3[1,1,3,3]
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm5 = xmm0[1,1,3,3]
@@ -142,7 +142,7 @@ define void @test3(<4 x i32> %induction30, <4 x i16>* %tmp16, <4 x i16>* %tmp17,
 
 define <32 x i8> @PR22706(<32 x i1> %x) {
 ; AVX1-LABEL: PR22706:
-; AVX1:       ## BB#0:
+; AVX1:       ## %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX1-NEXT:    vpsllw $7, %xmm1, %xmm1
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
@@ -159,7 +159,7 @@ define <32 x i8> @PR22706(<32 x i1> %x) {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: PR22706:
-; AVX2:       ## BB#0:
+; AVX2:       ## %bb.0:
 ; AVX2-NEXT:    vpsllw $7, %ymm0, %ymm0
 ; AVX2-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1

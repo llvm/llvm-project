@@ -16,7 +16,7 @@ _proc:
 _f:                                     ## @f
 Ltmp0:
 	.cfi_startproc
-## BB#0:                                ## %entry
+## %bb.0:                               ## %entry
 	movl	$42, %eax
 	ret
 Ltmp1:

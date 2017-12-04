@@ -5,7 +5,7 @@
 ; It's not necessary to zero-extend the arg because it is specified 'zeroext'. 
 define void @bar1(i1 zeroext %v1) nounwind ssp {
 ; X32-LABEL: bar1:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    pushl %eax
 ; X32-NEXT:    calll foo1
@@ -13,7 +13,7 @@ define void @bar1(i1 zeroext %v1) nounwind ssp {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: bar1:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    jmp foo1 # TAILCALL
   %conv = zext i1 %v1 to i32
@@ -24,7 +24,7 @@ define void @bar1(i1 zeroext %v1) nounwind ssp {
 ; Check that on x86-64 the arguments are simply forwarded.
 define void @bar2(i8 zeroext %v1) nounwind ssp {
 ; X32-LABEL: bar2:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    pushl %eax
 ; X32-NEXT:    calll foo1
@@ -32,7 +32,7 @@ define void @bar2(i8 zeroext %v1) nounwind ssp {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: bar2:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    jmp foo1 # TAILCALL
   %conv = zext i8 %v1 to i32
@@ -43,12 +43,12 @@ define void @bar2(i8 zeroext %v1) nounwind ssp {
 ; Check that i1 return values are not zero-extended.
 define zeroext i1 @bar3() nounwind ssp {
 ; X32-LABEL: bar3:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    calll foo2
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: bar3:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq foo2
 ; X64-NEXT:    popq %rcx

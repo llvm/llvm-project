@@ -93,7 +93,7 @@ define signext i32 @main(i32 signext, i8** nocapture readonly) local_unnamed_add
   br i1 %60, label %61, label %13
 
 ; <label>:61:                                     ; preds = %13
-; CHECK-LABEL: BB#6:
+; CHECK-LABEL: %bb.6:
 ; CHECK: stgrl   %r1, g_56
 ; CHECK: llhrl   %r1, g_56+6
 ; CHECK: stgrl   %r2, g_56

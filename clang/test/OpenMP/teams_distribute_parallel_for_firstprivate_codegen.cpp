@@ -132,6 +132,7 @@ int main() {
     // LAMBDA: alloca i32,
     // LAMBDA: alloca i32,
     // LAMBDA: alloca i32,
+    // LAMBDA: alloca i32,
     // LAMBDA: [[G_PRIV:%.+]] = alloca i{{[0-9]+}},
     // LAMBDA: [[G1_PRIV:%.+]] = alloca i{{[0-9]+}},
     // LAMBDA: [[G1_TMP_PRIV:%.+]] = alloca i{{[0-9]+}}*,

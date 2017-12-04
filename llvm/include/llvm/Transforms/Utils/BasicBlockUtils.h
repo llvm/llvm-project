@@ -283,6 +283,26 @@ void SplitBlockAndInsertIfThenElse(Value *Cond, Instruction *SplitBefore,
 Value *GetIfCondition(BasicBlock *BB, BasicBlock *&IfTrue,
                       BasicBlock *&IfFalse);
 
+// Split critical edges where the source of the edge is an indirectbr
+// instruction. This isn't always possible, but we can handle some easy cases.
+// This is useful because MI is unable to split such critical edges,
+// which means it will not be able to sink instructions along those edges.
+// This is especially painful for indirect branches with many successors, where
+// we end up having to prepare all outgoing values in the origin block.
+//
+// Our normal algorithm for splitting critical edges requires us to update
+// the outgoing edges of the edge origin block, but for an indirectbr this
+// is hard, since it would require finding and updating the block addresses
+// the indirect branch uses. But if a block only has a single indirectbr
+// predecessor, with the others being regular branches, we can do it in a
+// different way.
+// Say we have A -> D, B -> D, I -> D where only I -> D is an indirectbr.
+// We can split D into D0 and D1, where D0 contains only the PHIs from D,
+// and D1 is the D block body. We can then duplicate D0 as D0A and D0B, and
+// create the following structure:
+// A -> D0A, B -> D0A, I -> D0B, D0A -> D1, D0B -> D1
+bool SplitIndirectBrCriticalEdges(Function &F);
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_BASICBLOCKUTILS_H

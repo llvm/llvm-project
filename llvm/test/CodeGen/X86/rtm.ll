@@ -9,18 +9,18 @@ declare void @f1()
 
 define i32 @test_xbegin() nounwind uwtable {
 ; X86-LABEL: test_xbegin:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    xbegin .LBB0_2
-; X86-NEXT:  # BB#1: # %entry
+; X86-NEXT:  # %bb.1: # %entry
 ; X86-NEXT:    movl $-1, %eax
 ; X86:       .LBB0_2: # %entry
 ; X86-NEXT:  # XABORT DEF
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_xbegin:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    xbegin .LBB0_2
-; X64-NEXT:  # BB#1: # %entry
+; X64-NEXT:  # %bb.1: # %entry
 ; X64-NEXT:    movl $-1, %eax
 ; X64:       .LBB0_2: # %entry
 ; X64-NEXT:  # XABORT DEF
@@ -32,12 +32,12 @@ entry:
 
 define void @test_xend() nounwind uwtable {
 ; X86-LABEL: test_xend:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    xend
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_xend:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    xend
 ; X64-NEXT:    retq
 entry:
@@ -47,12 +47,12 @@ entry:
 
 define void @test_xabort() nounwind uwtable {
 ; X86-LABEL: test_xabort:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    xabort $2
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_xabort:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    xabort $2
 ; X64-NEXT:    retq
 entry:
@@ -62,13 +62,13 @@ entry:
 
 define void @f2(i32 %x) nounwind uwtable {
 ; X86-LABEL: f2:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    xabort $1
 ; X86-NEXT:    calll f1
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: f2:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    movl %edi, {{[0-9]+}}(%rsp)

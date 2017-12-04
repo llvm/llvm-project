@@ -110,7 +110,7 @@ stack:
 constants:       
 body:             |
   bb.0.entry:
-    successors: %bb.1.if(0x40000000), %bb.2.else(0x40000000)
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
     liveins: %edi, %rsi, %xmm0, %xmm1, %xmm2, %xmm3, %xmm4, %xmm5
   
     %10 = COPY %xmm5
@@ -123,11 +123,11 @@ body:             |
     %3 = COPY %edi
     %11 = COPY %3.sub_8bit
     TEST8ri killed %11, 1, implicit-def %eflags
-    JE_1 %bb.2.else, implicit %eflags
-    JMP_1 %bb.1.if
+    JE_1 %bb.2, implicit %eflags
+    JMP_1 %bb.1
   
   bb.1.if:
-    successors: %bb.3.exit(0x80000000)
+    successors: %bb.3(0x80000000)
   
     %14 = VCMPSSZrr %7, %8, 0
 
@@ -137,10 +137,10 @@ body:             |
     
     %15 = COPY %14
     %0 = COPY %15.sub_8bit
-    JMP_1 %bb.3.exit
+    JMP_1 %bb.3
   
   bb.2.else:
-    successors: %bb.3.exit(0x80000000)
+    successors: %bb.3(0x80000000)
     %12 = VCMPSSZrr %9, %10, 0
 
     ; check that cross domain copies are replaced with same domain copies.
@@ -153,11 +153,11 @@ body:             |
   bb.3.exit:
 
     ; check PHI, IMPLICIT_DEF, and INSERT_SUBREG replacers.
-    ; CHECK: %2:vk8 = PHI %1, %bb.2.else, %0, %bb.1.if
+    ; CHECK: %2:vk8 = PHI %1, %bb.2, %0, %bb.1
     ; CHECK: %16:vk32 = COPY %2
     ; CHECK: %18:vk1wm = COPY %16
   
-    %2 = PHI %1, %bb.2.else, %0, %bb.1.if
+    %2 = PHI %1, %bb.2, %0, %bb.1
     %17 = IMPLICIT_DEF
     %16 = INSERT_SUBREG %17, %2, 1
     %18 = COPY %16

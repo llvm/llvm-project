@@ -8,7 +8,7 @@
 define i32 @main4k() nounwind {
 entry:
 ; WIN_X64-LABEL:main4k:
-; WIN_X64: # BB#0:
+; WIN_X64: # %bb.0:
 ; WIN_X64:      movl    $4096, %eax
 ; WIN_X64:      movq    %rcx, 8(%rsp)
 ; WIN_X64:	movq	%rdx, 16(%rsp)
@@ -19,7 +19,7 @@ entry:
 ; WIN_X64:	movq	%gs:16, %rcx
 ; WIN_X64:	cmpq	%rcx, %rdx
 ; WIN_X64:	jae	.LBB0_3
-; WIN_X64:# BB#1:
+; WIN_X64:# %bb.1:
 ; WIN_X64:	andq	$-4096, %rdx
 ; WIN_X64:.LBB0_2:
 ; WIN_X64:	leaq	-4096(%rcx), %rcx

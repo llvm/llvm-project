@@ -3,7 +3,7 @@
 
 define void @t0(<2 x i64>* %dst, <2 x i64> %src1, <2 x i64> %src2) nounwind readonly {
 ; CHECK-LABEL: t0:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pxor %xmm2, %xmm2
 ; CHECK-NEXT:    pcmpeqq %xmm2, %xmm0
 ; CHECK-NEXT:    pcmpeqq %xmm2, %xmm1
@@ -22,7 +22,7 @@ define void @t0(<2 x i64>* %dst, <2 x i64> %src1, <2 x i64> %src2) nounwind read
 
 define void @t2(<3 x i64>* %dst, <3 x i64> %src1, <3 x i64> %src2) nounwind readonly {
 ; CHECK-LABEL: t2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %r9, %xmm1
 ; CHECK-NEXT:    movq %r8, %xmm0
 ; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]

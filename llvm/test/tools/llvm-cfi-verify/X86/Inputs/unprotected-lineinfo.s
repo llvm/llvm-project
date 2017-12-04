@@ -22,7 +22,7 @@ _Z1av:                                  # @_Z1av
   .file 1 "tiny.cc"
   .loc  1 1 0                   # tiny.cc:1:0
   .cfi_startproc
-# BB#0:
+# %bb.0:
   pushq %rbp
   .cfi_def_cfa_offset 16
   .cfi_offset %rbp, -16
@@ -44,7 +44,7 @@ _Z1bv:                                  # @_Z1bv
 .Lfunc_begin1:
   .loc  1 2 0                   # tiny.cc:2:0
   .cfi_startproc
-# BB#0:
+# %bb.0:
   pushq %rbp
   .cfi_def_cfa_offset 16
   .cfi_offset %rbp, -16
@@ -66,7 +66,7 @@ main:                                   # @main
 .Lfunc_begin2:
   .loc  1 4 0                   # tiny.cc:4:0
   .cfi_startproc
-# BB#0:
+# %bb.0:
   pushq %rbp
   .cfi_def_cfa_offset 16
   .cfi_offset %rbp, -16
@@ -81,7 +81,7 @@ main:                                   # @main
   cmpl  $1, -8(%rbp)
   .loc  1 6 7 is_stmt 0         # tiny.cc:6:7
   jne .LBB2_2
-# BB#1:
+# %bb.1:
   .loc  1 0 7                   # tiny.cc:0:7
   movabsq $_Z1av, %rax
   .loc  1 7 9 is_stmt 1         # tiny.cc:7:9

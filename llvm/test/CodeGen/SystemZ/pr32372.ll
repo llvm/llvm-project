@@ -3,7 +3,7 @@
 
 define void @pr32372(i8*) {
 ; CHECK-LABEL: pr32372:
-; CHECK:       # BB#0: # %BB
+; CHECK:       # %bb.0: # %BB
 ; CHECK-NEXT:    llc %r1, 0(%r2)
 ; CHECK-NEXT:    mvhhi 0(%r1), -3825
 ; CHECK-NEXT:    llill %r0, 0

@@ -29,7 +29,7 @@ main:                                   # @main
 	.set	noreorder
 	.set	nomacro
 	.set	noat
-# BB#0:                                 # %entry
+# %bb.0:                                # %entry
 	daddiu	$sp, $sp, -16
 	sd	$ra, 8($sp)             # 8-byte Folded Spill
 	sd	$gp, 0($sp)             # 8-byte Folded Spill

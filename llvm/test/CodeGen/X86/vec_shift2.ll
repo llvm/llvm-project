@@ -4,14 +4,14 @@
 
 define <2 x i64> @t1(<2 x i64> %b1, <2 x i64> %c) nounwind  {
 ; X32-LABEL: t1:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl $14, %eax
 ; X32-NEXT:    movd %eax, %xmm1
 ; X32-NEXT:    psrlw %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t1:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl $14, %eax
 ; X64-NEXT:    movd %eax, %xmm1
 ; X64-NEXT:    psrlw %xmm1, %xmm0
@@ -24,14 +24,14 @@ define <2 x i64> @t1(<2 x i64> %b1, <2 x i64> %c) nounwind  {
 
 define <4 x i32> @t2(<2 x i64> %b1, <2 x i64> %c) nounwind  {
 ; X32-LABEL: t2:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl $14, %eax
 ; X32-NEXT:    movd %eax, %xmm1
 ; X32-NEXT:    pslld %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t2:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl $14, %eax
 ; X64-NEXT:    movd %eax, %xmm1
 ; X64-NEXT:    pslld %xmm1, %xmm0

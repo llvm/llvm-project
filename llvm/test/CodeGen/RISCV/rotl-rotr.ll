@@ -7,7 +7,7 @@
 
 define i32 @rotl(i32 %x, i32 %y) {
 ; RV32I-LABEL: rotl:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi a2, zero, 32
 ; RV32I-NEXT:    sub a2, a2, a1
 ; RV32I-NEXT:    sll a1, a0, a1
@@ -23,7 +23,7 @@ define i32 @rotl(i32 %x, i32 %y) {
 
 define i32 @rotr(i32 %x, i32 %y) {
 ; RV32I-LABEL: rotr:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi a2, zero, 32
 ; RV32I-NEXT:    sub a2, a2, a1
 ; RV32I-NEXT:    srl a1, a0, a1

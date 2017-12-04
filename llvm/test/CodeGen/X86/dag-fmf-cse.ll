@@ -8,7 +8,7 @@
 
 define float @fmf_should_not_break_cse(float %a, float %b) {
 ; CHECK-LABEL: fmf_should_not_break_cse:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmulss %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vaddss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retq

@@ -4,7 +4,7 @@
 
 define void @jt(i32 %in, i32* %out) {
 ; RV32I-LABEL: jt:
-; RV32I:       # BB#0: # %entry
+; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    addi a2, zero, 2
 ; RV32I-NEXT:    blt a2, a0, .LBB0_3
 ; RV32I-NEXT:    jal zero, .LBB0_1

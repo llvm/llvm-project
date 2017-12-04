@@ -4,16 +4,16 @@
 
 define i32 @PR15705(i32 %x, i32 %a, i32 %b, i32 %c) #0 {
 ; X86-LABEL: PR15705:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    cmpl %ecx, %edx
 ; X86-NEXT:    je .LBB0_4
-; X86-NEXT:  # BB#1: # %if.end
+; X86-NEXT:  # %bb.1: # %if.end
 ; X86-NEXT:    cmpl %eax, %edx
 ; X86-NEXT:    jne .LBB0_3
-; X86-NEXT:  # BB#2:
+; X86-NEXT:  # %bb.2:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:  .LBB0_3: # %if.end
 ; X86-NEXT:    movl %ecx, %eax
@@ -21,10 +21,10 @@ define i32 @PR15705(i32 %x, i32 %a, i32 %b, i32 %c) #0 {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: PR15705:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    cmpl %esi, %edi
 ; X64-NEXT:    je .LBB0_2
-; X64-NEXT:  # BB#1: # %if.end
+; X64-NEXT:  # %bb.1: # %if.end
 ; X64-NEXT:    cmpl %edx, %edi
 ; X64-NEXT:    cmovel %ecx, %esi
 ; X64-NEXT:    movl %esi, %edx

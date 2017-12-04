@@ -28,7 +28,7 @@
 ; CHECK:         movl    $32, %ecx
 ; CHECK:         testl   {{.*}}
 ; CHECK:         jne     .LBB0_3
-; CHECK: # BB#2:                                 # %if.then
+; CHECK: # %bb.2:                                 # %if.then
 ; CHECK:         callq   if_then
 ; CHECK:         movl    %eax, %ecx
 ; CHECK: .LBB0_3:                                # %if.end

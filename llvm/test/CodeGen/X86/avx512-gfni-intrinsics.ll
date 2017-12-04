@@ -4,7 +4,7 @@
 declare <16 x i8> @llvm.x86.vgf2p8affineinvqb.128(<16 x i8>, <16 x i8>, i8)
 define <16 x i8> @test_vgf2p8affineinvqb_128(<16 x i8> %src1, <16 x i8> %src2, <16 x i8> %passthru, i16 %mask) {
 ; CHECK-LABEL: test_vgf2p8affineinvqb_128:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1 ## encoding: [0xc5,0xfb,0x92,0xcf]
 ; CHECK-NEXT:    vgf2p8affineinvqb $3, %xmm1, %xmm0, %xmm3 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0xf9,0xcf,0xd9,0x03]
 ; CHECK-NEXT:    vgf2p8affineinvqb $3, %xmm1, %xmm0, %xmm4 {%k1} {z} ## encoding: [0x62,0xf3,0xfd,0x89,0xcf,0xe1,0x03]
@@ -24,7 +24,7 @@ define <16 x i8> @test_vgf2p8affineinvqb_128(<16 x i8> %src1, <16 x i8> %src2, <
 declare <32 x i8> @llvm.x86.vgf2p8affineinvqb.256(<32 x i8>, <32 x i8>, i8)
 define <32 x i8> @test_vgf2p8affineinvqb_256(<32 x i8> %src1, <32 x i8> %src2, <32 x i8> %passthru, i32 %mask) {
 ; CHECK-LABEL: test_vgf2p8affineinvqb_256:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1 ## encoding: [0xc5,0xfb,0x92,0xcf]
 ; CHECK-NEXT:    vgf2p8affineinvqb $3, %ymm1, %ymm0, %ymm3 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0xfd,0xcf,0xd9,0x03]
 ; CHECK-NEXT:    vgf2p8affineinvqb $3, %ymm1, %ymm0, %ymm4 {%k1} {z} ## encoding: [0x62,0xf3,0xfd,0xa9,0xcf,0xe1,0x03]
@@ -44,7 +44,7 @@ define <32 x i8> @test_vgf2p8affineinvqb_256(<32 x i8> %src1, <32 x i8> %src2, <
 declare <64 x i8> @llvm.x86.vgf2p8affineinvqb.512(<64 x i8>, <64 x i8>, i8)
 define <64 x i8> @test_vgf2p8affineinvqb_512(<64 x i8> %src1, <64 x i8> %src2, <64 x i8> %passthru, i64 %mask) {
 ; CHECK-LABEL: test_vgf2p8affineinvqb_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovq %rdi, %k1 ## encoding: [0xc4,0xe1,0xfb,0x92,0xcf]
 ; CHECK-NEXT:    vgf2p8affineinvqb $3, %zmm1, %zmm0, %zmm3 ## encoding: [0x62,0xf3,0xfd,0x48,0xcf,0xd9,0x03]
 ; CHECK-NEXT:    vgf2p8affineinvqb $3, %zmm1, %zmm0, %zmm4 {%k1} {z} ## encoding: [0x62,0xf3,0xfd,0xc9,0xcf,0xe1,0x03]
@@ -64,7 +64,7 @@ define <64 x i8> @test_vgf2p8affineinvqb_512(<64 x i8> %src1, <64 x i8> %src2, <
 declare <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8>, <16 x i8>, i8)
 define <16 x i8> @test_vgf2p8affineqb_128(<16 x i8> %src1, <16 x i8> %src2, <16 x i8> %passthru, i16 %mask) {
 ; CHECK-LABEL: test_vgf2p8affineqb_128:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1 ## encoding: [0xc5,0xfb,0x92,0xcf]
 ; CHECK-NEXT:    vgf2p8affineqb $3, %xmm1, %xmm0, %xmm3 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0xf9,0xce,0xd9,0x03]
 ; CHECK-NEXT:    vgf2p8affineqb $3, %xmm1, %xmm0, %xmm4 {%k1} {z} ## encoding: [0x62,0xf3,0xfd,0x89,0xce,0xe1,0x03]
@@ -84,7 +84,7 @@ define <16 x i8> @test_vgf2p8affineqb_128(<16 x i8> %src1, <16 x i8> %src2, <16 
 declare <32 x i8> @llvm.x86.vgf2p8affineqb.256(<32 x i8>, <32 x i8>, i8)
 define <32 x i8> @test_vgf2p8affineqb_256(<32 x i8> %src1, <32 x i8> %src2, <32 x i8> %passthru, i32 %mask) {
 ; CHECK-LABEL: test_vgf2p8affineqb_256:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1 ## encoding: [0xc5,0xfb,0x92,0xcf]
 ; CHECK-NEXT:    vgf2p8affineqb $3, %ymm1, %ymm0, %ymm3 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0xfd,0xce,0xd9,0x03]
 ; CHECK-NEXT:    vgf2p8affineqb $3, %ymm1, %ymm0, %ymm4 {%k1} {z} ## encoding: [0x62,0xf3,0xfd,0xa9,0xce,0xe1,0x03]
@@ -104,7 +104,7 @@ define <32 x i8> @test_vgf2p8affineqb_256(<32 x i8> %src1, <32 x i8> %src2, <32 
 declare <64 x i8> @llvm.x86.vgf2p8affineqb.512(<64 x i8>, <64 x i8>, i8)
 define <64 x i8> @test_vgf2p8affineqb_512(<64 x i8> %src1, <64 x i8> %src2, <64 x i8> %passthru, i64 %mask) {
 ; CHECK-LABEL: test_vgf2p8affineqb_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovq %rdi, %k1 ## encoding: [0xc4,0xe1,0xfb,0x92,0xcf]
 ; CHECK-NEXT:    vgf2p8affineqb $3, %zmm1, %zmm0, %zmm3 ## encoding: [0x62,0xf3,0xfd,0x48,0xce,0xd9,0x03]
 ; CHECK-NEXT:    vgf2p8affineqb $3, %zmm1, %zmm0, %zmm4 {%k1} {z} ## encoding: [0x62,0xf3,0xfd,0xc9,0xce,0xe1,0x03]
@@ -124,7 +124,7 @@ define <64 x i8> @test_vgf2p8affineqb_512(<64 x i8> %src1, <64 x i8> %src2, <64 
 declare <16 x i8> @llvm.x86.vgf2p8mulb.128(<16 x i8>, <16 x i8>)
 define <16 x i8> @test_vgf2p8mulb_128(<16 x i8> %src1, <16 x i8> %src2, <16 x i8> %passthru, i16 %mask) {
 ; CHECK-LABEL: test_vgf2p8mulb_128:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1 ## encoding: [0xc5,0xfb,0x92,0xcf]
 ; CHECK-NEXT:    vgf2p8mulb %xmm1, %xmm0, %xmm3 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0xcf,0xd9]
 ; CHECK-NEXT:    vgf2p8mulb %xmm1, %xmm0, %xmm4 {%k1} {z} ## encoding: [0x62,0xf2,0x7d,0x89,0xcf,0xe1]
@@ -144,7 +144,7 @@ define <16 x i8> @test_vgf2p8mulb_128(<16 x i8> %src1, <16 x i8> %src2, <16 x i8
 declare <32 x i8> @llvm.x86.vgf2p8mulb.256(<32 x i8>, <32 x i8>)
 define <32 x i8> @test_vgf2p8mulb_256(<32 x i8> %src1, <32 x i8> %src2, <32 x i8> %passthru, i32 %mask) {
 ; CHECK-LABEL: test_vgf2p8mulb_256:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1 ## encoding: [0xc5,0xfb,0x92,0xcf]
 ; CHECK-NEXT:    vgf2p8mulb %ymm1, %ymm0, %ymm3 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0xcf,0xd9]
 ; CHECK-NEXT:    vgf2p8mulb %ymm1, %ymm0, %ymm4 {%k1} {z} ## encoding: [0x62,0xf2,0x7d,0xa9,0xcf,0xe1]
@@ -164,7 +164,7 @@ define <32 x i8> @test_vgf2p8mulb_256(<32 x i8> %src1, <32 x i8> %src2, <32 x i8
 declare <64 x i8> @llvm.x86.vgf2p8mulb.512(<64 x i8>, <64 x i8>)
 define <64 x i8> @test_vgf2p8mulb_512(<64 x i8> %src1, <64 x i8> %src2, <64 x i8> %passthru, i64 %mask) {
 ; CHECK-LABEL: test_vgf2p8mulb_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovq %rdi, %k1 ## encoding: [0xc4,0xe1,0xfb,0x92,0xcf]
 ; CHECK-NEXT:    vgf2p8mulb %zmm1, %zmm0, %zmm3 ## encoding: [0x62,0xf2,0x7d,0x48,0xcf,0xd9]
 ; CHECK-NEXT:    vgf2p8mulb %zmm1, %zmm0, %zmm4 {%k1} {z} ## encoding: [0x62,0xf2,0x7d,0xc9,0xcf,0xe1]

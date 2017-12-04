@@ -8,17 +8,17 @@
 
 define i32 @f1() {
 ; X86-LABEL: f1:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl %gs:i@NTPOFF, %eax
 ; X86-NEXT:    retl
 ;
 ; X32-LABEL: f1:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl %fs:i@TPOFF, %eax
 ; X32-NEXT:    retq
 ;
 ; X64-LABEL: f1:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movl %fs:i@TPOFF, %eax
 ; X64-NEXT:    retq
 entry:
@@ -28,19 +28,19 @@ entry:
 
 define i32* @f2() {
 ; X86-LABEL: f2:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl %gs:0, %eax
 ; X86-NEXT:    leal i@NTPOFF(%eax), %eax
 ; X86-NEXT:    retl
 ;
 ; X32-LABEL: f2:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl %fs:0, %eax
 ; X32-NEXT:    leal i@TPOFF(%rax), %eax
 ; X32-NEXT:    retq
 ;
 ; X64-LABEL: f2:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq %fs:0, %rax
 ; X64-NEXT:    leaq i@TPOFF(%rax), %rax
 ; X64-NEXT:    retq
@@ -50,7 +50,7 @@ entry:
 
 define i32 @f3() {
 ; X86-LABEL: f3:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    calll .L2$pb
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:  .L2$pb:
@@ -63,13 +63,13 @@ define i32 @f3() {
 ; X86-NEXT:    retl
 ;
 ; X32-LABEL: f3:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl i2@{{.*}}(%rip), %eax
 ; X32-NEXT:    movl %fs:(%eax), %eax
 ; X32-NEXT:    retq
 ;
 ; X64-LABEL: f3:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq i2@{{.*}}(%rip), %rax
 ; X64-NEXT:    movl %fs:(%rax), %eax
 ; X64-NEXT:    retq
@@ -80,7 +80,7 @@ entry:
 
 define i32* @f4() {
 ; X86-LABEL: f4:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    calll .L3$pb
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:  .L3$pb:
@@ -93,13 +93,13 @@ define i32* @f4() {
 ; X86-NEXT:    retl
 ;
 ; X32-LABEL: f4:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl %fs:0, %eax
 ; X32-NEXT:    addl i2@{{.*}}(%rip), %eax
 ; X32-NEXT:    retq
 ;
 ; X64-LABEL: f4:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq %fs:0, %rax
 ; X64-NEXT:    addq i2@{{.*}}(%rip), %rax
 ; X64-NEXT:    retq

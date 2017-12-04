@@ -11,7 +11,7 @@
 # then created code, where the first predicated instruction has incorrect
 # implicit use of r0:
 #
-# BB#0:
+# %bb.0:
 #     Live Ins: %R0
 #         %R1<def> = A2_sxth %R0<kill>               ; hoisted, kills r0
 #         A2_nop %P0<imp-def>

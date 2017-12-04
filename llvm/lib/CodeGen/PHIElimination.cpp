@@ -593,9 +593,9 @@ bool PHIElimination::SplitPHIEdges(MachineFunction &MF,
       if (!ShouldSplit && !NoPhiElimLiveOutEarlyExit)
         continue;
       if (ShouldSplit) {
-        DEBUG(dbgs() << printReg(Reg) << " live-out before critical edge BB#"
-                     << PreMBB->getNumber() << " -> BB#" << MBB.getNumber()
-                     << ": " << *BBI);
+        DEBUG(dbgs() << printReg(Reg) << " live-out before critical edge "
+                     << printMBBReference(*PreMBB) << " -> "
+                     << printMBBReference(MBB) << ": " << *BBI);
       }
 
       // If Reg is not live-in to MBB, it means it must be live-in to some

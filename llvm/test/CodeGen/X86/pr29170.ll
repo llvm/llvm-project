@@ -8,11 +8,11 @@ target triple = "i386-unknown-linux-gnu"
 
 define i32 @main() {
 ; CHECK-LABEL: main:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB0_3
-; CHECK-NEXT:  # BB#1: # %go
+; CHECK-NEXT:  # %bb.1: # %go
 ; CHECK-NEXT:    movl $-1, %ecx
 ; CHECK-NEXT:    movsbl b, %edx
 ; CHECK-NEXT:    notl %ecx
@@ -20,7 +20,7 @@ define i32 @main() {
 ; CHECK-NEXT:    cmpl $-1, %edx
 ; CHECK-NEXT:    sbbl %ecx, %eax
 ; CHECK-NEXT:    jge .LBB0_3
-; CHECK-NEXT:  # BB#2: # %if.then
+; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  .LBB0_3: # %if.else

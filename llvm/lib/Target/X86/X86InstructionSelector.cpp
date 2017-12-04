@@ -484,11 +484,6 @@ bool X86InstructionSelector::selectLoadStoreOp(MachineInstr &I,
   const RegisterBank &RB = *RBI.getRegBank(DefReg, MRI, TRI);
 
   auto &MemOp = **I.memoperands_begin();
-  if (MemOp.getOrdering() != AtomicOrdering::NotAtomic) {
-    DEBUG(dbgs() << "Atomic load/store not supported yet\n");
-    return false;
-  }
-
   unsigned NewOpc = getLoadStoreOp(Ty, RB, Opc, MemOp.getAlignment());
   if (NewOpc == Opc)
     return false;

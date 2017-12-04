@@ -3885,9 +3885,6 @@ AArch64TargetLowering::LowerELFGlobalTLSAddress(SDValue Op,
 
   TLSModel::Model Model = getTargetMachine().getTLSModel(GA->getGlobal());
 
-  if (DAG.getTarget().Options.EmulatedTLS)
-    return LowerToTLSEmulatedModel(GA, DAG);
-
   if (!EnableAArch64ELFLocalDynamicTLSGeneration) {
     if (Model == TLSModel::LocalDynamic)
       Model = TLSModel::GeneralDynamic;
@@ -3973,6 +3970,10 @@ AArch64TargetLowering::LowerELFGlobalTLSAddress(SDValue Op,
 
 SDValue AArch64TargetLowering::LowerGlobalTLSAddress(SDValue Op,
                                                      SelectionDAG &DAG) const {
+  const GlobalAddressSDNode *GA = cast<GlobalAddressSDNode>(Op);
+  if (DAG.getTarget().Options.EmulatedTLS)
+    return LowerToTLSEmulatedModel(GA, DAG);
+
   if (Subtarget->isTargetDarwin())
     return LowerDarwinGlobalTLSAddress(Op, DAG);
   if (Subtarget->isTargetELF())

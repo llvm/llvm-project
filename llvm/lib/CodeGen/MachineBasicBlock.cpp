@@ -70,6 +70,10 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const MachineBasicBlock &MBB) {
   return OS;
 }
 
+Printable llvm::printMBBReference(const MachineBasicBlock &MBB) {
+  return Printable([&MBB](raw_ostream &OS) { return MBB.printAsOperand(OS); });
+}
+
 /// When an MBB is added to an MF, we need to update the parent pointer of the
 /// MBB, the MBB numbering, and any instructions in the MBB to be on the right
 /// operand list for registers.
@@ -281,7 +285,7 @@ void MachineBasicBlock::print(raw_ostream &OS, ModuleSlotTracker &MST,
   if (Indexes)
     OS << Indexes->getMBBStartIdx(this) << '\t';
 
-  OS << "BB#" << getNumber() << ": ";
+  OS << printMBBReference(*this) << ": ";
 
   const char *Comma = "";
   if (const BasicBlock *LBB = getBasicBlock()) {
@@ -313,7 +317,7 @@ void MachineBasicBlock::print(raw_ostream &OS, ModuleSlotTracker &MST,
     if (Indexes) OS << '\t';
     OS << "    Predecessors according to CFG:";
     for (const_pred_iterator PI = pred_begin(), E = pred_end(); PI != E; ++PI)
-      OS << " BB#" << (*PI)->getNumber();
+      OS << " " << printMBBReference(*(*PI));
     OS << '\n';
   }
 
@@ -334,7 +338,7 @@ void MachineBasicBlock::print(raw_ostream &OS, ModuleSlotTracker &MST,
     if (Indexes) OS << '\t';
     OS << "    Successors according to CFG:";
     for (const_succ_iterator SI = succ_begin(), E = succ_end(); SI != E; ++SI) {
-      OS << " BB#" << (*SI)->getNumber();
+      OS << " " << printMBBReference(*(*SI));
       if (!Probs.empty())
         OS << '(' << *getProbabilityIterator(SI) << ')';
     }
@@ -350,7 +354,7 @@ void MachineBasicBlock::print(raw_ostream &OS, ModuleSlotTracker &MST,
 
 void MachineBasicBlock::printAsOperand(raw_ostream &OS,
                                        bool /*PrintType*/) const {
-  OS << "BB#" << getNumber();
+  OS << "%bb." << getNumber();
 }
 
 void MachineBasicBlock::removeLiveIn(MCPhysReg Reg, LaneBitmask LaneMask) {
@@ -767,10 +771,9 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ,
 
   MachineBasicBlock *NMBB = MF->CreateMachineBasicBlock();
   MF->insert(std::next(MachineFunction::iterator(this)), NMBB);
-  DEBUG(dbgs() << "Splitting critical edge:"
-        " BB#" << getNumber()
-        << " -- BB#" << NMBB->getNumber()
-        << " -- BB#" << Succ->getNumber() << '\n');
+  DEBUG(dbgs() << "Splitting critical edge: " << printMBBReference(*this)
+               << " -- " << printMBBReference(*NMBB) << " -- "
+               << printMBBReference(*Succ) << '\n');
 
   LiveIntervals *LIS = P.getAnalysisIfAvailable<LiveIntervals>();
   SlotIndexes *Indexes = P.getAnalysisIfAvailable<SlotIndexes>();
@@ -1023,8 +1026,8 @@ bool MachineBasicBlock::canSplitCriticalEdge(
   // case that we can't handle. Since this never happens in properly optimized
   // code, just skip those edges.
   if (TBB && TBB == FBB) {
-    DEBUG(dbgs() << "Won't split critical edge after degenerate BB#"
-                 << getNumber() << '\n');
+    DEBUG(dbgs() << "Won't split critical edge after degenerate "
+                 << printMBBReference(*this) << '\n');
     return false;
   }
   return true;

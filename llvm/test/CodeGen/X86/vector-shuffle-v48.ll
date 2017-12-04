@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=x86_64-pc-linux  -mattr=+avx2 < %s | FileCheck %s
 define <32 x i8> @foo(<48 x i8>* %x0, <16 x i32> %x1, <16 x i32> %x2) {
 ; CHECK-LABEL: foo:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqu 32(%rdi), %xmm0
 ; CHECK-NEXT:    vmovdqu (%rdi), %ymm1
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm2 = ymm1[2,3,0,1]

@@ -6,7 +6,7 @@
 
 define void @crash(i64 %x0, i64 %y0, %destTy* nocapture %dest) nounwind {
 ; X86-LABEL: crash:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %dl
@@ -17,7 +17,7 @@ define void @crash(i64 %x0, i64 %y0, %destTy* nocapture %dest) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: crash:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    andl $3, %esi
 ; X64-NEXT:    movb %sil, (%rdx)
 ; X64-NEXT:    andl $3, %edi

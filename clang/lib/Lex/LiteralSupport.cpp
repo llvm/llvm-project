@@ -855,7 +855,7 @@ void NumericLiteralParser::ParseNumberStartingWithZero(SourceLocation TokLoc) {
         PP.Diag(TokLoc, PP.getLangOpts().CPlusPlus
                             ? diag::ext_hex_literal_invalid
                             : diag::ext_hex_constant_invalid);
-      else if (PP.getLangOpts().CPlusPlus1z)
+      else if (PP.getLangOpts().CPlusPlus17)
         PP.Diag(TokLoc, diag::warn_cxx17_hex_literal);
     } else if (saw_period) {
       PP.Diag(PP.AdvanceToTokenCharacter(TokLoc, s - ThisTokBegin),

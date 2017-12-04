@@ -8,10 +8,10 @@
 ; save 1,2,3 ... as one big integer.
 define void @merge_const_store(i32 %count, %struct.A* nocapture %p) nounwind uwtable noinline ssp {
 ; CHECK-LABEL: merge_const_store:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    jle .LBB0_3
-; CHECK-NEXT:  # BB#1: # %.lr.ph.preheader
+; CHECK-NEXT:  # %bb.1: # %.lr.ph.preheader
 ; CHECK-NEXT:    movabsq $578437695752307201, %rax # imm = 0x807060504030201
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_2: # %.lr.ph
@@ -54,7 +54,7 @@ define void @merge_const_store(i32 %count, %struct.A* nocapture %p) nounwind uwt
 ; No vectors because we use noimplicitfloat
 define void @merge_const_store_no_vec(i32 %count, %struct.B* nocapture %p) noimplicitfloat{
 ; CHECK-LABEL: merge_const_store_no_vec:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    jle .LBB1_2
 ; CHECK-NEXT:    .p2align 4, 0x90
@@ -101,10 +101,10 @@ define void @merge_const_store_no_vec(i32 %count, %struct.B* nocapture %p) noimp
 ; Move the constants using a single vector store.
 define void @merge_const_store_vec(i32 %count, %struct.B* nocapture %p) nounwind uwtable noinline ssp {
 ; CHECK-LABEL: merge_const_store_vec:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    jle .LBB2_3
-; CHECK-NEXT:  # BB#1: # %.lr.ph.preheader
+; CHECK-NEXT:  # %bb.1: # %.lr.ph.preheader
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB2_2: # %.lr.ph
@@ -148,7 +148,7 @@ define void @merge_const_store_vec(i32 %count, %struct.B* nocapture %p) nounwind
 ; Move the first 4 constants as a single vector. Move the rest as scalars.
 define void @merge_nonconst_store(i32 %count, i8 %zz, %struct.A* nocapture %p) nounwind uwtable noinline ssp {
 ; CHECK-LABEL: merge_nonconst_store:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    jle .LBB3_2
 ; CHECK-NEXT:    .p2align 4, 0x90
@@ -194,7 +194,7 @@ define void @merge_nonconst_store(i32 %count, i8 %zz, %struct.A* nocapture %p) n
 
 define void @merge_loads_i16(i32 %count, %struct.A* noalias nocapture %q, %struct.A* noalias nocapture %p) nounwind uwtable noinline ssp {
 ; BWON-LABEL: merge_loads_i16:
-; BWON:       # BB#0:
+; BWON:       # %bb.0:
 ; BWON-NEXT:    testl %edi, %edi
 ; BWON-NEXT:    jle .LBB4_2
 ; BWON-NEXT:    .p2align 4, 0x90
@@ -208,7 +208,7 @@ define void @merge_loads_i16(i32 %count, %struct.A* noalias nocapture %q, %struc
 ; BWON-NEXT:    retq
 ;
 ; BWOFF-LABEL: merge_loads_i16:
-; BWOFF:       # BB#0:
+; BWOFF:       # %bb.0:
 ; BWOFF-NEXT:    testl %edi, %edi
 ; BWOFF-NEXT:    jle .LBB4_2
 ; BWOFF-NEXT:    .p2align 4, 0x90
@@ -249,7 +249,7 @@ define void @merge_loads_i16(i32 %count, %struct.A* noalias nocapture %q, %struc
 ; The loads and the stores are interleaved. Can't merge them.
 define void @no_merge_loads(i32 %count, %struct.A* noalias nocapture %q, %struct.A* noalias nocapture %p) nounwind uwtable noinline ssp {
 ; BWON-LABEL: no_merge_loads:
-; BWON:       # BB#0:
+; BWON:       # %bb.0:
 ; BWON-NEXT:    testl %edi, %edi
 ; BWON-NEXT:    jle .LBB5_2
 ; BWON-NEXT:    .p2align 4, 0x90
@@ -266,7 +266,7 @@ define void @no_merge_loads(i32 %count, %struct.A* noalias nocapture %q, %struct
 ; BWON-NEXT:    retq
 ;
 ; BWOFF-LABEL: no_merge_loads:
-; BWOFF:       # BB#0:
+; BWOFF:       # %bb.0:
 ; BWOFF-NEXT:    testl %edi, %edi
 ; BWOFF-NEXT:    jle .LBB5_2
 ; BWOFF-NEXT:    .p2align 4, 0x90
@@ -309,7 +309,7 @@ a4:                                       ; preds = %4, %.lr.ph
 
 define void @merge_loads_integer(i32 %count, %struct.B* noalias nocapture %q, %struct.B* noalias nocapture %p) nounwind uwtable noinline ssp {
 ; CHECK-LABEL: merge_loads_integer:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    jle .LBB6_2
 ; CHECK-NEXT:    .p2align 4, 0x90
@@ -349,7 +349,7 @@ define void @merge_loads_integer(i32 %count, %struct.B* noalias nocapture %q, %s
 
 define void @merge_loads_vector(i32 %count, %struct.B* noalias nocapture %q, %struct.B* noalias nocapture %p) nounwind uwtable noinline ssp {
 ; CHECK-LABEL: merge_loads_vector:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    jle .LBB7_2
 ; CHECK-NEXT:    .p2align 4, 0x90
@@ -399,7 +399,7 @@ block4:                                       ; preds = %4, %.lr.ph
 ; On x86, even unaligned copies can be merged to vector ops.
 define void @merge_loads_no_align(i32 %count, %struct.B* noalias nocapture %q, %struct.B* noalias nocapture %p) nounwind uwtable noinline ssp {
 ; CHECK-LABEL: merge_loads_no_align:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    jle .LBB8_2
 ; CHECK-NEXT:    .p2align 4, 0x90
@@ -450,7 +450,7 @@ block4:                                       ; preds = %4, %.lr.ph
 ; word (16 bit) instead of a byte copy.
 define void @MergeLoadStoreBaseIndexOffset(i64* %a, i8* %b, i8* %c, i32 %n) {
 ; BWON-LABEL: MergeLoadStoreBaseIndexOffset:
-; BWON:       # BB#0:
+; BWON:       # %bb.0:
 ; BWON-NEXT:    movl %ecx, %r8d
 ; BWON-NEXT:    xorl %ecx, %ecx
 ; BWON-NEXT:    .p2align 4, 0x90
@@ -461,11 +461,11 @@ define void @MergeLoadStoreBaseIndexOffset(i64* %a, i8* %b, i8* %c, i32 %n) {
 ; BWON-NEXT:    incq %rcx
 ; BWON-NEXT:    cmpl %ecx, %r8d
 ; BWON-NEXT:    jne .LBB9_1
-; BWON-NEXT:  # BB#2:
+; BWON-NEXT:  # %bb.2:
 ; BWON-NEXT:    retq
 ;
 ; BWOFF-LABEL: MergeLoadStoreBaseIndexOffset:
-; BWOFF:       # BB#0:
+; BWOFF:       # %bb.0:
 ; BWOFF-NEXT:    movl %ecx, %r8d
 ; BWOFF-NEXT:    xorl %ecx, %ecx
 ; BWOFF-NEXT:    .p2align 4, 0x90
@@ -476,7 +476,7 @@ define void @MergeLoadStoreBaseIndexOffset(i64* %a, i8* %b, i8* %c, i32 %n) {
 ; BWOFF-NEXT:    incq %rcx
 ; BWOFF-NEXT:    cmpl %ecx, %r8d
 ; BWOFF-NEXT:    jne .LBB9_1
-; BWOFF-NEXT:  # BB#2:
+; BWOFF-NEXT:  # %bb.2:
 ; BWOFF-NEXT:    retq
   br label %1
 
@@ -507,7 +507,7 @@ define void @MergeLoadStoreBaseIndexOffset(i64* %a, i8* %b, i8* %c, i32 %n) {
 ; word (16 bit) instead of a byte copy for complicated address calculation.
 define void @MergeLoadStoreBaseIndexOffsetComplicated(i8* %a, i8* %b, i8* %c, i64 %n) {
 ; BWON-LABEL: MergeLoadStoreBaseIndexOffsetComplicated:
-; BWON:       # BB#0:
+; BWON:       # %bb.0:
 ; BWON-NEXT:    xorl %r8d, %r8d
 ; BWON-NEXT:    .p2align 4, 0x90
 ; BWON-NEXT:  .LBB10_1: # =>This Inner Loop Header: Depth=1
@@ -518,11 +518,11 @@ define void @MergeLoadStoreBaseIndexOffsetComplicated(i8* %a, i8* %b, i8* %c, i6
 ; BWON-NEXT:    addq $2, %r8
 ; BWON-NEXT:    cmpq %rcx, %r8
 ; BWON-NEXT:    jl .LBB10_1
-; BWON-NEXT:  # BB#2:
+; BWON-NEXT:  # %bb.2:
 ; BWON-NEXT:    retq
 ;
 ; BWOFF-LABEL: MergeLoadStoreBaseIndexOffsetComplicated:
-; BWOFF:       # BB#0:
+; BWOFF:       # %bb.0:
 ; BWOFF-NEXT:    xorl %r8d, %r8d
 ; BWOFF-NEXT:    .p2align 4, 0x90
 ; BWOFF-NEXT:  .LBB10_1: # =>This Inner Loop Header: Depth=1
@@ -533,7 +533,7 @@ define void @MergeLoadStoreBaseIndexOffsetComplicated(i8* %a, i8* %b, i8* %c, i6
 ; BWOFF-NEXT:    addq $2, %r8
 ; BWOFF-NEXT:    cmpq %rcx, %r8
 ; BWOFF-NEXT:    jl .LBB10_1
-; BWOFF-NEXT:  # BB#2:
+; BWOFF-NEXT:  # %bb.2:
 ; BWOFF-NEXT:    retq
   br label %1
 
@@ -566,7 +566,7 @@ define void @MergeLoadStoreBaseIndexOffsetComplicated(i8* %a, i8* %b, i8* %c, i6
 ; extensions.
 define void @MergeLoadStoreBaseIndexOffsetSext(i8* %a, i8* %b, i8* %c, i32 %n) {
 ; BWON-LABEL: MergeLoadStoreBaseIndexOffsetSext:
-; BWON:       # BB#0:
+; BWON:       # %bb.0:
 ; BWON-NEXT:    movl %ecx, %r8d
 ; BWON-NEXT:    xorl %ecx, %ecx
 ; BWON-NEXT:    .p2align 4, 0x90
@@ -577,11 +577,11 @@ define void @MergeLoadStoreBaseIndexOffsetSext(i8* %a, i8* %b, i8* %c, i32 %n) {
 ; BWON-NEXT:    incq %rcx
 ; BWON-NEXT:    cmpl %ecx, %r8d
 ; BWON-NEXT:    jne .LBB11_1
-; BWON-NEXT:  # BB#2:
+; BWON-NEXT:  # %bb.2:
 ; BWON-NEXT:    retq
 ;
 ; BWOFF-LABEL: MergeLoadStoreBaseIndexOffsetSext:
-; BWOFF:       # BB#0:
+; BWOFF:       # %bb.0:
 ; BWOFF-NEXT:    movl %ecx, %r8d
 ; BWOFF-NEXT:    xorl %ecx, %ecx
 ; BWOFF-NEXT:    .p2align 4, 0x90
@@ -592,7 +592,7 @@ define void @MergeLoadStoreBaseIndexOffsetSext(i8* %a, i8* %b, i8* %c, i32 %n) {
 ; BWOFF-NEXT:    incq %rcx
 ; BWOFF-NEXT:    cmpl %ecx, %r8d
 ; BWOFF-NEXT:    jne .LBB11_1
-; BWOFF-NEXT:  # BB#2:
+; BWOFF-NEXT:  # %bb.2:
 ; BWOFF-NEXT:    retq
   br label %1
 
@@ -624,7 +624,7 @@ define void @MergeLoadStoreBaseIndexOffsetSext(i8* %a, i8* %b, i8* %c, i32 %n) {
 ; computations;
 define void @loadStoreBaseIndexOffsetSextNoSex(i8* %a, i8* %b, i8* %c, i32 %n) {
 ; BWON-LABEL: loadStoreBaseIndexOffsetSextNoSex:
-; BWON:       # BB#0:
+; BWON:       # %bb.0:
 ; BWON-NEXT:    movl %ecx, %r8d
 ; BWON-NEXT:    xorl %ecx, %ecx
 ; BWON-NEXT:    .p2align 4, 0x90
@@ -639,11 +639,11 @@ define void @loadStoreBaseIndexOffsetSextNoSex(i8* %a, i8* %b, i8* %c, i32 %n) {
 ; BWON-NEXT:    incq %rcx
 ; BWON-NEXT:    cmpl %ecx, %r8d
 ; BWON-NEXT:    jne .LBB12_1
-; BWON-NEXT:  # BB#2:
+; BWON-NEXT:  # %bb.2:
 ; BWON-NEXT:    retq
 ;
 ; BWOFF-LABEL: loadStoreBaseIndexOffsetSextNoSex:
-; BWOFF:       # BB#0:
+; BWOFF:       # %bb.0:
 ; BWOFF-NEXT:    movl %ecx, %r8d
 ; BWOFF-NEXT:    xorl %ecx, %ecx
 ; BWOFF-NEXT:    .p2align 4, 0x90
@@ -658,7 +658,7 @@ define void @loadStoreBaseIndexOffsetSextNoSex(i8* %a, i8* %b, i8* %c, i32 %n) {
 ; BWOFF-NEXT:    incq %rcx
 ; BWOFF-NEXT:    cmpl %ecx, %r8d
 ; BWOFF-NEXT:    jne .LBB12_1
-; BWOFF-NEXT:  # BB#2:
+; BWOFF-NEXT:  # %bb.2:
 ; BWOFF-NEXT:    retq
   br label %1
 
@@ -690,7 +690,7 @@ define void @loadStoreBaseIndexOffsetSextNoSex(i8* %a, i8* %b, i8* %c, i32 %n) {
 ; PR21711 ( http://llvm.org/bugs/show_bug.cgi?id=21711 )
 define void @merge_vec_element_store(<8 x float> %v, float* %ptr) {
 ; CHECK-LABEL: merge_vec_element_store:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %ymm0, (%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -725,7 +725,7 @@ define void @merge_vec_element_store(<8 x float> %v, float* %ptr) {
 ; These should be merged into 32-byte stores.
 define void @merge_vec_extract_stores(<8 x float> %v1, <8 x float> %v2, <4 x float>* %ptr) {
 ; CHECK-LABEL: merge_vec_extract_stores:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %ymm0, 48(%rdi)
 ; CHECK-NEXT:    vmovups %ymm1, 80(%rdi)
 ; CHECK-NEXT:    vzeroupper
@@ -749,7 +749,7 @@ define void @merge_vec_extract_stores(<8 x float> %v1, <8 x float> %v2, <4 x flo
 ; Merging vector stores when sourced from vector loads.
 define void @merge_vec_stores_from_loads(<4 x float>* %v, <4 x float>* %ptr) {
 ; CHECK-LABEL: merge_vec_stores_from_loads:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups (%rdi), %ymm0
 ; CHECK-NEXT:    vmovups %ymm0, (%rsi)
 ; CHECK-NEXT:    vzeroupper
@@ -769,7 +769,7 @@ define void @merge_vec_stores_from_loads(<4 x float>* %v, <4 x float>* %ptr) {
 ; Merging vector stores when sourced from a constant vector is not currently handled.
 define void @merge_vec_stores_of_constants(<4 x i32>* %ptr) {
 ; CHECK-LABEL: merge_vec_stores_of_constants:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovaps %xmm0, 48(%rdi)
 ; CHECK-NEXT:    vmovaps %xmm0, 64(%rdi)
@@ -786,7 +786,7 @@ define void @merge_vec_stores_of_constants(<4 x i32>* %ptr) {
 ; This should now be merged.
 define void @merge_vec_element_and_scalar_load([6 x i64]* %array) {
 ; CHECK-LABEL: merge_vec_element_and_scalar_load:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups (%rdi), %xmm0
 ; CHECK-NEXT:    vmovups %xmm0, 32(%rdi)
 ; CHECK-NEXT:    retq
@@ -809,7 +809,7 @@ define void @merge_vec_element_and_scalar_load([6 x i64]* %array) {
 ; Don't let a non-consecutive store thwart merging of the last two.
 define void @almost_consecutive_stores(i8* %p) {
 ; CHECK-LABEL: almost_consecutive_stores:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movb $0, (%rdi)
 ; CHECK-NEXT:    movb $1, 42(%rdi)
 ; CHECK-NEXT:    movw $770, 2(%rdi) # imm = 0x302
@@ -827,7 +827,7 @@ define void @almost_consecutive_stores(i8* %p) {
 ; We should be able to merge these.
 define void @merge_bitcast(<4 x i32> %v, float* %ptr) {
 ; CHECK-LABEL: merge_bitcast:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
   %fv = bitcast <4 x i32> %v to <4 x float>

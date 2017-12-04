@@ -1344,6 +1344,8 @@ bool MIParser::parseMBBReference(MachineBasicBlock *&MBB) {
     return error(Twine("use of undefined machine basic block #") +
                  Twine(Number));
   MBB = MBBInfo->second;
+  // TODO: Only parse the name if it's a MachineBasicBlockLabel. Deprecate once
+  // we drop the <irname> from the bb.<id>.<irname> format.
   if (!Token.stringValue().empty() && Token.stringValue() != MBB->getName())
     return error(Twine("the name of machine basic block #") + Twine(Number) +
                  " isn't '" + Token.stringValue() + "'");

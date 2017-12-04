@@ -2152,10 +2152,10 @@ static void handleUsedAttr(Sema &S, Decl *D, const AttributeList &Attr) {
 }
 
 static void handleUnusedAttr(Sema &S, Decl *D, const AttributeList &Attr) {
-  bool IsCXX1zAttr = Attr.isCXX11Attribute() && !Attr.getScopeName();
+  bool IsCXX17Attr = Attr.isCXX11Attribute() && !Attr.getScopeName();
 
-  if (IsCXX1zAttr && isa<VarDecl>(D)) {
-    // The C++1z spelling of this attribute cannot be applied to a static data
+  if (IsCXX17Attr && isa<VarDecl>(D)) {
+    // The C++17 spelling of this attribute cannot be applied to a static data
     // member per [dcl.attr.unused]p2.
     if (cast<VarDecl>(D)->isStaticDataMember()) {
       S.Diag(Attr.getLoc(), diag::warn_attribute_wrong_decl_type)
@@ -2164,9 +2164,9 @@ static void handleUnusedAttr(Sema &S, Decl *D, const AttributeList &Attr) {
     }
   }
 
-  // If this is spelled as the standard C++1z attribute, but not in C++1z, warn
+  // If this is spelled as the standard C++17 attribute, but not in C++17, warn
   // about using it as an extension.
-  if (!S.getLangOpts().CPlusPlus1z && IsCXX1zAttr)
+  if (!S.getLangOpts().CPlusPlus17 && IsCXX17Attr)
     S.Diag(Attr.getLoc(), diag::ext_cxx17_attr) << Attr.getName();
 
   D->addAttr(::new (S.Context) UnusedAttr(
@@ -2861,9 +2861,9 @@ static void handleWarnUnusedResult(Sema &S, Decl *D, const AttributeList &Attr) 
       return;
     }
   
-  // If this is spelled as the standard C++1z attribute, but not in C++1z, warn
+  // If this is spelled as the standard C++17 attribute, but not in C++17, warn
   // about using it as an extension.
-  if (!S.getLangOpts().CPlusPlus1z && Attr.isCXX11Attribute() &&
+  if (!S.getLangOpts().CPlusPlus17 && Attr.isCXX11Attribute() &&
       !Attr.getScopeName())
     S.Diag(Attr.getLoc(), diag::ext_cxx17_attr) << Attr.getName();
 

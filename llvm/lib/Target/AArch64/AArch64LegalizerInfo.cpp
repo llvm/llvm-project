@@ -231,6 +231,14 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
     setAction({MemOp, 1, p0}, Legal);
   }
 
+  for (unsigned MemOp : {G_ATOMIC_LOAD, G_ATOMIC_STORE}) {
+    for (auto Ty : {s8, s16, s32, s64, p0})
+      setAction({MemOp, Ty}, Legal);
+
+    // And everything's fine in addrspace 0.
+    setAction({MemOp, 1, p0}, Legal);
+  }
+
   // Constants
   for (auto Ty : {s32, s64}) {
     setAction({TargetOpcode::G_CONSTANT, Ty}, Legal);

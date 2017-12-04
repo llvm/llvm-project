@@ -25,7 +25,7 @@ end:
 }
 
 ; CHECK-LABEL: {{^}}else_execfix_leave_wqm:
-; CHECK: ; BB#0:
+; CHECK: ; %bb.0:
 ; CHECK-NEXT: s_mov_b64 [[INIT_EXEC:s\[[0-9]+:[0-9]+\]]], exec
 ; CHECK: ; %Flow
 ; CHECK-NEXT: s_or_saveexec_b64 [[DST:s\[[0-9]+:[0-9]+\]]],

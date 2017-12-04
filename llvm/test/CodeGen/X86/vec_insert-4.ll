@@ -4,7 +4,7 @@
 
 define <8 x float> @f(<8 x float> %a, i32 %b) nounwind  {
 ; X32-LABEL: f:
-; X32:       ## BB#0: ## %entry
+; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    pushl %ebp
 ; X32-NEXT:    movl %esp, %ebp
 ; X32-NEXT:    andl $-32, %esp
@@ -21,7 +21,7 @@ define <8 x float> @f(<8 x float> %a, i32 %b) nounwind  {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: f:
-; X64:       ## BB#0: ## %entry
+; X64:       ## %bb.0: ## %entry
 ; X64-NEXT:    pushq %rbp
 ; X64-NEXT:    movq %rsp, %rbp
 ; X64-NEXT:    andq $-32, %rsp

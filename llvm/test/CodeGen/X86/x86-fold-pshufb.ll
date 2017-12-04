@@ -7,7 +7,7 @@
 
 define <2 x i64> @fold_pshufb() {
 ; CHECK-LABEL: fold_pshufb:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [0,0,0,0,1,0,0,0,2,0,0,0,3,0,0,0]
 ; CHECK-NEXT:    retq
 entry:
@@ -23,7 +23,7 @@ entry:
 
 define <2 x i64> @pr24562() {
 ; CHECK-LABEL: pr24562:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 entry:

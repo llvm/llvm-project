@@ -6,12 +6,12 @@
 
 define i64 @Test_get_quotient(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: Test_get_quotient:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    orq %rsi, %rax
 ; CHECK-NEXT:    shrq $32, %rax
 ; CHECK-NEXT:    je .LBB0_1
-; CHECK-NEXT:  # BB#2:
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    cqto
 ; CHECK-NEXT:    idivq %rsi
@@ -28,12 +28,12 @@ define i64 @Test_get_quotient(i64 %a, i64 %b) nounwind {
 
 define i64 @Test_get_remainder(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: Test_get_remainder:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    orq %rsi, %rax
 ; CHECK-NEXT:    shrq $32, %rax
 ; CHECK-NEXT:    je .LBB1_1
-; CHECK-NEXT:  # BB#2:
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    cqto
 ; CHECK-NEXT:    idivq %rsi
@@ -52,12 +52,12 @@ define i64 @Test_get_remainder(i64 %a, i64 %b) nounwind {
 
 define i64 @Test_get_quotient_and_remainder(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: Test_get_quotient_and_remainder:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    orq %rsi, %rax
 ; CHECK-NEXT:    shrq $32, %rax
 ; CHECK-NEXT:    je .LBB2_1
-; CHECK-NEXT:  # BB#2:
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    cqto
 ; CHECK-NEXT:    idivq %rsi

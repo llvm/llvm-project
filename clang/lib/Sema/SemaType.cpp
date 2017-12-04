@@ -2844,8 +2844,8 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
     case Declarator::TemplateParamContext:
       if (isa<DeducedTemplateSpecializationType>(Deduced))
         Error = 19; // Template parameter
-      else if (!SemaRef.getLangOpts().CPlusPlus1z)
-        Error = 8; // Template parameter (until C++1z)
+      else if (!SemaRef.getLangOpts().CPlusPlus17)
+        Error = 8; // Template parameter (until C++17)
       break;
     case Declarator::BlockLiteralContext:
       Error = 9; // Block literal
@@ -4463,7 +4463,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
       // Exception specs are not allowed in typedefs. Complain, but add it
       // anyway.
-      if (IsTypedefName && FTI.getExceptionSpecType() && !LangOpts.CPlusPlus1z)
+      if (IsTypedefName && FTI.getExceptionSpecType() && !LangOpts.CPlusPlus17)
         S.Diag(FTI.getExceptionSpecLocBeg(),
                diag::err_exception_spec_in_typedef)
             << (D.getContext() == Declarator::AliasDeclContext ||

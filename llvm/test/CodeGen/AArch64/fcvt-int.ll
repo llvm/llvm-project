@@ -152,7 +152,7 @@ define double @test_bitcasti64todouble(i64 %in) {
 
 define double @bitcast_fabs(double %x) {
 ; CHECK-LABEL: bitcast_fabs:
-; CHECK:       ; BB#0:
+; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    fabs d0, d0
 ; CHECK-NEXT:    ret
 ;
@@ -164,7 +164,7 @@ define double @bitcast_fabs(double %x) {
 
 define float @bitcast_fneg(float %x) {
 ; CHECK-LABEL: bitcast_fneg:
-; CHECK:       ; BB#0:
+; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    fneg s0, s0
 ; CHECK-NEXT:    ret
 ;

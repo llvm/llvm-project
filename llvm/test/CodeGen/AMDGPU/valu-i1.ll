@@ -192,7 +192,7 @@ exit:
 
 ; Load loop limit from buffer
 ; Branch to exit if uniformly not taken
-; SI: ; BB#0:
+; SI: ; %bb.0:
 ; SI: buffer_load_dword [[VBOUND:v[0-9]+]]
 ; SI: v_cmp_lt_i32_e32 vcc
 ; SI: s_and_saveexec_b64 [[OUTER_CMP_SREG:s\[[0-9]+:[0-9]+\]]], vcc

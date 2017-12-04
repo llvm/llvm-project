@@ -6,7 +6,7 @@
 
 define i64 @load_i64(i64 *%a) nounwind {
 ; RV32I-LABEL: load_i64:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lw a2, 0(a0)
 ; RV32I-NEXT:    lw a1, 4(a0)
 ; RV32I-NEXT:    addi a0, a2, 0
@@ -21,7 +21,7 @@ define i64 @load_i64(i64 *%a) nounwind {
 ; generate two addi
 define i64 @load_i64_global() nounwind {
 ; RV32I-LABEL: load_i64_global:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a0, %hi(val64)
 ; RV32I-NEXT:    addi a0, a0, %lo(val64)
 ; RV32I-NEXT:    lw a0, 0(a0)

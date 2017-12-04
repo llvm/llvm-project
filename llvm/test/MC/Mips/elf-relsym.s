@@ -40,7 +40,7 @@ foo1:                                   # @foo1
 	.set	noreorder
 	.set	nomacro
 	.set	noat
-# BB#0:                                 # %entry
+# %bb.0:                                # %entry
 	lui	$2, %hi(_gp_disp)
 	addiu	$2, $2, %lo(_gp_disp)
 	addu	$1, $2, $25

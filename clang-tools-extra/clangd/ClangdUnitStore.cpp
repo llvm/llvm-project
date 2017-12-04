@@ -58,16 +58,14 @@ CppFileCollection::recreateFileIfCompileCommandChanged(
 tooling::CompileCommand
 CppFileCollection::getCompileCommand(GlobalCompilationDatabase &CDB,
                                      PathRef File, PathRef ResourceDir) {
-  std::vector<tooling::CompileCommand> Commands = CDB.getCompileCommands(File);
-  if (Commands.empty())
-    // Add a fake command line if we know nothing.
-    Commands.push_back(getDefaultCompileCommand(File));
+  llvm::Optional<tooling::CompileCommand> C = CDB.getCompileCommand(File);
+  if (!C) // FIXME: Suppress diagnostics? Let the user know?
+    C = CDB.getFallbackCommand(File);
 
   // Inject the resource dir.
   // FIXME: Don't overwrite it if it's already there.
-  Commands.front().CommandLine.push_back("-resource-dir=" +
-                                         std::string(ResourceDir));
-  return std::move(Commands.front());
+  C->CommandLine.push_back("-resource-dir=" + ResourceDir.str());
+  return std::move(*C);
 }
 
 bool CppFileCollection::compileCommandsAreEqual(

@@ -17,7 +17,7 @@ declare signext i32 @memcmp(i8* nocapture, i8* nocapture, i64) local_unnamed_add
 ; Check 4 bytes - requires 1 load for each param.
 define signext i32 @zeroEqualityTest02(i8* %x, i8* %y) {
 ; CHECK-LABEL: zeroEqualityTest02:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lwz 3, 0(3)
 ; CHECK-NEXT:    lwz 4, 0(4)
 ; CHECK-NEXT:    xor 3, 3, 4
@@ -34,12 +34,12 @@ define signext i32 @zeroEqualityTest02(i8* %x, i8* %y) {
 ; Check 16 bytes - requires 2 loads for each param (or use vectors?).
 define signext i32 @zeroEqualityTest01(i8* %x, i8* %y) {
 ; CHECK-LABEL: zeroEqualityTest01:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld 5, 0(3)
 ; CHECK-NEXT:    ld 6, 0(4)
 ; CHECK-NEXT:    cmpld 5, 6
 ; CHECK-NEXT:    bne 0, .LBB1_2
-; CHECK-NEXT:  # BB#1: # %loadbb1
+; CHECK-NEXT:  # %bb.1: # %loadbb1
 ; CHECK-NEXT:    ld 3, 8(3)
 ; CHECK-NEXT:    ld 4, 8(4)
 ; CHECK-NEXT:    cmpld 3, 4
@@ -59,17 +59,17 @@ define signext i32 @zeroEqualityTest01(i8* %x, i8* %y) {
 ; Check 7 bytes - requires 3 loads for each param.
 define signext i32 @zeroEqualityTest03(i8* %x, i8* %y) {
 ; CHECK-LABEL: zeroEqualityTest03:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lwz 5, 0(3)
 ; CHECK-NEXT:    lwz 6, 0(4)
 ; CHECK-NEXT:    cmplw 5, 6
 ; CHECK-NEXT:    bne 0, .LBB2_3
-; CHECK-NEXT:  # BB#1: # %loadbb1
+; CHECK-NEXT:  # %bb.1: # %loadbb1
 ; CHECK-NEXT:    lhz 5, 4(3)
 ; CHECK-NEXT:    lhz 6, 4(4)
 ; CHECK-NEXT:    cmplw 5, 6
 ; CHECK-NEXT:    bne 0, .LBB2_3
-; CHECK-NEXT:  # BB#2: # %loadbb2
+; CHECK-NEXT:  # %bb.2: # %loadbb2
 ; CHECK-NEXT:    lbz 3, 6(3)
 ; CHECK-NEXT:    lbz 4, 6(4)
 ; CHECK-NEXT:    cmplw 3, 4
@@ -89,7 +89,7 @@ define signext i32 @zeroEqualityTest03(i8* %x, i8* %y) {
 ; Validate with > 0
 define signext i32 @zeroEqualityTest04() {
 ; CHECK-LABEL: zeroEqualityTest04:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addis 3, 2, .LzeroEqualityTest02.buffer1@toc@ha
 ; CHECK-NEXT:    addis 4, 2, .LzeroEqualityTest02.buffer2@toc@ha
 ; CHECK-NEXT:    addi 6, 3, .LzeroEqualityTest02.buffer1@toc@l
@@ -98,7 +98,7 @@ define signext i32 @zeroEqualityTest04() {
 ; CHECK-NEXT:    ldbrx 4, 0, 5
 ; CHECK-NEXT:    cmpld 3, 4
 ; CHECK-NEXT:    bne 0, .LBB3_2
-; CHECK-NEXT:  # BB#1: # %loadbb1
+; CHECK-NEXT:  # %bb.1: # %loadbb1
 ; CHECK-NEXT:    li 4, 8
 ; CHECK-NEXT:    ldbrx 3, 6, 4
 ; CHECK-NEXT:    ldbrx 4, 5, 4
@@ -125,7 +125,7 @@ define signext i32 @zeroEqualityTest04() {
 ; Validate with < 0
 define signext i32 @zeroEqualityTest05() {
 ; CHECK-LABEL: zeroEqualityTest05:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addis 3, 2, .LzeroEqualityTest03.buffer1@toc@ha
 ; CHECK-NEXT:    addis 4, 2, .LzeroEqualityTest03.buffer2@toc@ha
 ; CHECK-NEXT:    addi 6, 3, .LzeroEqualityTest03.buffer1@toc@l
@@ -134,7 +134,7 @@ define signext i32 @zeroEqualityTest05() {
 ; CHECK-NEXT:    ldbrx 4, 0, 5
 ; CHECK-NEXT:    cmpld 3, 4
 ; CHECK-NEXT:    bne 0, .LBB4_2
-; CHECK-NEXT:  # BB#1: # %loadbb1
+; CHECK-NEXT:  # %bb.1: # %loadbb1
 ; CHECK-NEXT:    li 4, 8
 ; CHECK-NEXT:    ldbrx 3, 6, 4
 ; CHECK-NEXT:    ldbrx 4, 5, 4
@@ -160,7 +160,7 @@ define signext i32 @zeroEqualityTest05() {
 ; Validate with memcmp()?:
 define signext i32 @equalityFoldTwoConstants() {
 ; CHECK-LABEL: equalityFoldTwoConstants:
-; CHECK:       # BB#0: # %endblock
+; CHECK:       # %bb.0: # %endblock
 ; CHECK-NEXT:    li 3, 1
 ; CHECK-NEXT:    blr
   %call = tail call signext i32 @memcmp(i8* bitcast ([15 x i32]* @zeroEqualityTest04.buffer1 to i8*), i8* bitcast ([15 x i32]* @zeroEqualityTest04.buffer2 to i8*), i64 16)
@@ -171,13 +171,13 @@ define signext i32 @equalityFoldTwoConstants() {
 
 define signext i32 @equalityFoldOneConstant(i8* %X) {
 ; CHECK-LABEL: equalityFoldOneConstant:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li 5, 1
 ; CHECK-NEXT:    ld 4, 0(3)
 ; CHECK-NEXT:    sldi 5, 5, 32
 ; CHECK-NEXT:    cmpld 4, 5
 ; CHECK-NEXT:    bne 0, .LBB6_2
-; CHECK-NEXT:  # BB#1: # %loadbb1
+; CHECK-NEXT:  # %bb.1: # %loadbb1
 ; CHECK-NEXT:    li 4, 3
 ; CHECK-NEXT:    ld 3, 8(3)
 ; CHECK-NEXT:    sldi 4, 4, 32
@@ -199,7 +199,7 @@ define signext i32 @equalityFoldOneConstant(i8* %X) {
 
 define i1 @length2_eq_nobuiltin_attr(i8* %X, i8* %Y) {
 ; CHECK-LABEL: length2_eq_nobuiltin_attr:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr 0
 ; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -32(1)

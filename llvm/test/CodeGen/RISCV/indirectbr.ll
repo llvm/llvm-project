@@ -4,7 +4,7 @@
 
 define i32 @indirectbr(i8* %target) nounwind {
 ; RV32I-LABEL: indirectbr:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sw ra, 0(s0)
 ; RV32I-NEXT:    jalr zero, a0, 0
 ; RV32I-NEXT:  .LBB0_1: # %ret
@@ -20,7 +20,7 @@ ret:
 
 define i32 @indirectbr_with_offset(i8* %a) nounwind {
 ; RV32I-LABEL: indirectbr_with_offset:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sw ra, 0(s0)
 ; RV32I-NEXT:    jalr zero, a0, 1380
 ; RV32I-NEXT:  .LBB1_1: # %ret

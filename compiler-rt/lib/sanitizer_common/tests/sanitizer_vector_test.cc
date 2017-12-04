@@ -1,4 +1,4 @@
-//===-- tsan_vector_test.cc -----------------------------------------------===//
+//===-- sanitizer_vector_test.cc ------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,17 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file is a part of ThreadSanitizer (TSan), a race detector.
+// This file is a part of *Sanitizer runtime.
 //
 //===----------------------------------------------------------------------===//
-#include "tsan_vector.h"
-#include "tsan_rtl.h"
+#include "sanitizer_common/sanitizer_vector.h"
 #include "gtest/gtest.h"
 
-namespace __tsan {
+namespace __sanitizer {
 
 TEST(Vector, Basic) {
-  Vector<int> v(MBlockScopedBuf);
+  Vector<int> v;
   EXPECT_EQ(v.Size(), (uptr)0);
   v.PushBack(42);
   EXPECT_EQ(v.Size(), (uptr)1);
@@ -29,7 +28,7 @@ TEST(Vector, Basic) {
 }
 
 TEST(Vector, Stride) {
-  Vector<int> v(MBlockScopedBuf);
+  Vector<int> v;
   for (int i = 0; i < 1000; i++) {
     v.PushBack(i);
     EXPECT_EQ(v.Size(), (uptr)(i + 1));
@@ -40,4 +39,4 @@ TEST(Vector, Stride) {
   }
 }
 
-}  // namespace __tsan
+}  // namespace __sanitizer

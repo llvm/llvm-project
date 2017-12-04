@@ -113,7 +113,7 @@ declare void @llvm.va_end(i8*)
 
 define void @test_va_end() nounwind {
 ; CHECK-LABEL: test_va_end:
-; CHECK-NEXT: BB#0
+; CHECK-NEXT: %bb.0
 
   %addr = bitcast %va_list* @var to i8*
   call void @llvm.va_end(i8* %addr)

@@ -9,7 +9,7 @@
 
 define i64 @test__andn_u64(i64 %a0, i64 %a1) {
 ; X64-LABEL: test__andn_u64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorq $-1, %rdi
 ; X64-NEXT:    andq %rsi, %rdi
 ; X64-NEXT:    movq %rdi, %rax
@@ -21,7 +21,7 @@ define i64 @test__andn_u64(i64 %a0, i64 %a1) {
 
 define i64 @test__bextr_u64(i64 %a0, i64 %a1) {
 ; X64-LABEL: test__bextr_u64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    bextrq %rsi, %rdi, %rax
 ; X64-NEXT:    retq
   %res = call i64 @llvm.x86.bmi.bextr.64(i64 %a0, i64 %a1)
@@ -30,7 +30,7 @@ define i64 @test__bextr_u64(i64 %a0, i64 %a1) {
 
 define i64 @test__blsi_u64(i64 %a0) {
 ; X64-LABEL: test__blsi_u64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    subq %rdi, %rax
 ; X64-NEXT:    andq %rdi, %rax
@@ -42,7 +42,7 @@ define i64 @test__blsi_u64(i64 %a0) {
 
 define i64 @test__blsmsk_u64(i64 %a0) {
 ; X64-LABEL: test__blsmsk_u64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    subq $1, %rax
 ; X64-NEXT:    xorq %rdi, %rax
@@ -54,7 +54,7 @@ define i64 @test__blsmsk_u64(i64 %a0) {
 
 define i64 @test__blsr_u64(i64 %a0) {
 ; X64-LABEL: test__blsr_u64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    subq $1, %rax
 ; X64-NEXT:    andq %rdi, %rax
@@ -66,7 +66,7 @@ define i64 @test__blsr_u64(i64 %a0) {
 
 define i64 @test__tzcnt_u64(i64 %a0) {
 ; X64-LABEL: test__tzcnt_u64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl $64, %ecx
 ; X64-NEXT:    tzcntq %rdi, %rax
 ; X64-NEXT:    cmovbq %rcx, %rax
@@ -83,7 +83,7 @@ define i64 @test__tzcnt_u64(i64 %a0) {
 
 define i64 @test_andn_u64(i64 %a0, i64 %a1) {
 ; X64-LABEL: test_andn_u64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorq $-1, %rdi
 ; X64-NEXT:    andq %rsi, %rdi
 ; X64-NEXT:    movq %rdi, %rax
@@ -95,7 +95,7 @@ define i64 @test_andn_u64(i64 %a0, i64 %a1) {
 
 define i64 @test_bextr_u64(i64 %a0, i32 %a1, i32 %a2) {
 ; X64-LABEL: test_bextr_u64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    andl $255, %esi
 ; X64-NEXT:    andl $255, %edx
 ; X64-NEXT:    shll $8, %edx
@@ -114,7 +114,7 @@ define i64 @test_bextr_u64(i64 %a0, i32 %a1, i32 %a2) {
 
 define i64 @test_blsi_u64(i64 %a0) {
 ; X64-LABEL: test_blsi_u64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    subq %rdi, %rax
 ; X64-NEXT:    andq %rdi, %rax
@@ -126,7 +126,7 @@ define i64 @test_blsi_u64(i64 %a0) {
 
 define i64 @test_blsmsk_u64(i64 %a0) {
 ; X64-LABEL: test_blsmsk_u64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    subq $1, %rax
 ; X64-NEXT:    xorq %rdi, %rax
@@ -138,7 +138,7 @@ define i64 @test_blsmsk_u64(i64 %a0) {
 
 define i64 @test_blsr_u64(i64 %a0) {
 ; X64-LABEL: test_blsr_u64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    subq $1, %rax
 ; X64-NEXT:    andq %rdi, %rax
@@ -150,7 +150,7 @@ define i64 @test_blsr_u64(i64 %a0) {
 
 define i64 @test_tzcnt_u64(i64 %a0) {
 ; X64-LABEL: test_tzcnt_u64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl $64, %ecx
 ; X64-NEXT:    tzcntq %rdi, %rax
 ; X64-NEXT:    cmovbq %rcx, %rax

@@ -99,8 +99,8 @@ TokenConcatenation::TokenConcatenation(Preprocessor &pp) : PP(pp) {
     TokenInfo[tok::utf32_char_constant ] |= aci_custom;
   }
 
-  // These tokens have custom code in C++1z mode.
-  if (PP.getLangOpts().CPlusPlus1z)
+  // These tokens have custom code in C++17 mode.
+  if (PP.getLangOpts().CPlusPlus17)
     TokenInfo[tok::utf8_char_constant] |= aci_custom;
 
   // These tokens have custom code in C++2a mode.

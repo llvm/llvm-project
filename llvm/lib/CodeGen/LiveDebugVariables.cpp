@@ -1174,7 +1174,7 @@ void UserValue::emitDebugValues(VirtRegMap *VRM, LiveIntervals &LIS,
     MachineFunction::iterator MBB = LIS.getMBBFromIndex(Start)->getIterator();
     SlotIndex MBBEnd = LIS.getMBBEndIdx(&*MBB);
 
-    DEBUG(dbgs() << " BB#" << MBB->getNumber() << '-' << MBBEnd);
+    DEBUG(dbgs() << ' ' << printMBBReference(*MBB) << '-' << MBBEnd);
     insertDebugValue(&*MBB, Start, Stop, Loc, Spilled, LIS, TII, TRI);
     // This interval may span multiple basic blocks.
     // Insert a DBG_VALUE into each one.
@@ -1184,7 +1184,7 @@ void UserValue::emitDebugValues(VirtRegMap *VRM, LiveIntervals &LIS,
       if (++MBB == MFEnd)
         break;
       MBBEnd = LIS.getMBBEndIdx(&*MBB);
-      DEBUG(dbgs() << " BB#" << MBB->getNumber() << '-' << MBBEnd);
+      DEBUG(dbgs() << ' ' << printMBBReference(*MBB) << '-' << MBBEnd);
       insertDebugValue(&*MBB, Start, Stop, Loc, Spilled, LIS, TII, TRI);
     }
     DEBUG(dbgs() << '\n');

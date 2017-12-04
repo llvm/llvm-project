@@ -4,12 +4,12 @@
 
 define <4 x float> @test1(float %a) nounwind {
 ; X86-LABEL: test1:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test1:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorps %xmm1, %xmm1
 ; X64-NEXT:    movss {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
 ; X64-NEXT:    movaps %xmm1, %xmm0
@@ -23,12 +23,12 @@ define <4 x float> @test1(float %a) nounwind {
 
 define <2 x i64> @test(i32 %a) nounwind {
 ; X86-LABEL: test:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movd %edi, %xmm0
 ; X64-NEXT:    retq
   %tmp = insertelement <4 x i32> zeroinitializer, i32 %a, i32 0

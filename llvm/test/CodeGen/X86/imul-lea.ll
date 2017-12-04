@@ -5,7 +5,7 @@ declare i32 @foo()
 
 define i32 @test() {
 ; CHECK-LABEL: test:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    calll foo
 ; CHECK-NEXT:    leal (%eax,%eax,8), %eax
 ; CHECK-NEXT:    retl

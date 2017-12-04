@@ -2282,6 +2282,13 @@ ARMTargetLowering::IsEligibleForTailCallOptimization(SDValue Callee,
 
   assert(Subtarget->supportsTailCall());
 
+  // Tail calls to function pointers cannot be optimized for Thumb1 if the args
+  // to the call take up r0-r3. The reason is that there are no legal registers
+  // left to hold the pointer to the function to be called.
+  if (Subtarget->isThumb1Only() && Outs.size() >= 4 &&
+      !isa<GlobalAddressSDNode>(Callee.getNode()))
+      return false;
+
   // Look for obvious safe cases to perform tail call optimization that do not
   // require ABI changes. This is what gcc calls sibcall.
 
@@ -2956,6 +2963,10 @@ ARMTargetLowering::LowerToTLSExecModels(GlobalAddressSDNode *GA,
 
 SDValue
 ARMTargetLowering::LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const {
+  GlobalAddressSDNode *GA = cast<GlobalAddressSDNode>(Op);
+  if (DAG.getTarget().Options.EmulatedTLS)
+    return LowerToTLSEmulatedModel(GA, DAG);
+
   if (Subtarget->isTargetDarwin())
     return LowerGlobalTLSAddressDarwin(Op, DAG);
 
@@ -2964,10 +2975,6 @@ ARMTargetLowering::LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const {
 
   // TODO: implement the "local dynamic" model
   assert(Subtarget->isTargetELF() && "Only ELF implemented here");
-  GlobalAddressSDNode *GA = cast<GlobalAddressSDNode>(Op);
-  if (DAG.getTarget().Options.EmulatedTLS)
-    return LowerToTLSEmulatedModel(GA, DAG);
-
   TLSModel::Model model = getTargetMachine().getTLSModel(GA->getGlobal());
 
   switch (model) {

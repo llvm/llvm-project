@@ -10,12 +10,12 @@
 
 define <4 x float> @test_add_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: test_add_ss:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    addss %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_add_ss:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = extractelement <4 x float> %b, i32 0
@@ -27,12 +27,12 @@ define <4 x float> @test_add_ss(<4 x float> %a, <4 x float> %b) {
 
 define <4 x float> @test_sub_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: test_sub_ss:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    subss %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_sub_ss:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vsubss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = extractelement <4 x float> %b, i32 0
@@ -44,12 +44,12 @@ define <4 x float> @test_sub_ss(<4 x float> %a, <4 x float> %b) {
 
 define <4 x float> @test_mul_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: test_mul_ss:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    mulss %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_mul_ss:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vmulss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = extractelement <4 x float> %b, i32 0
@@ -61,12 +61,12 @@ define <4 x float> @test_mul_ss(<4 x float> %a, <4 x float> %b) {
 
 define <4 x float> @test_div_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: test_div_ss:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    divss %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_div_ss:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vdivss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = extractelement <4 x float> %b, i32 0
@@ -78,25 +78,25 @@ define <4 x float> @test_div_ss(<4 x float> %a, <4 x float> %b) {
 
 define <4 x float> @test_sqrt_ss(<4 x float> %a) {
 ; SSE2-LABEL: test_sqrt_ss:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    sqrtss %xmm0, %xmm1
 ; SSE2-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test_sqrt_ss:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    sqrtss %xmm0, %xmm1
 ; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: test_sqrt_ss:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vsqrtss %xmm0, %xmm0, %xmm1
 ; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; AVX1-NEXT:    retq
 ;
 ; AVX512-LABEL: test_sqrt_ss:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vsqrtss %xmm0, %xmm0, %xmm1
 ; AVX512-NEXT:    vmovss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; AVX512-NEXT:    retq
@@ -109,12 +109,12 @@ declare float @llvm.sqrt.f32(float)
 
 define <2 x double> @test_add_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE-LABEL: test_add_sd:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    addsd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_add_sd:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = extractelement <2 x double> %b, i32 0
@@ -126,12 +126,12 @@ define <2 x double> @test_add_sd(<2 x double> %a, <2 x double> %b) {
 
 define <2 x double> @test_sub_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE-LABEL: test_sub_sd:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    subsd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_sub_sd:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vsubsd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = extractelement <2 x double> %b, i32 0
@@ -143,12 +143,12 @@ define <2 x double> @test_sub_sd(<2 x double> %a, <2 x double> %b) {
 
 define <2 x double> @test_mul_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE-LABEL: test_mul_sd:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    mulsd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_mul_sd:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vmulsd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = extractelement <2 x double> %b, i32 0
@@ -160,12 +160,12 @@ define <2 x double> @test_mul_sd(<2 x double> %a, <2 x double> %b) {
 
 define <2 x double> @test_div_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE-LABEL: test_div_sd:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    divsd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_div_sd:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vdivsd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = extractelement <2 x double> %b, i32 0
@@ -177,25 +177,25 @@ define <2 x double> @test_div_sd(<2 x double> %a, <2 x double> %b) {
 
 define <2 x double> @test_sqrt_sd(<2 x double> %a) {
 ; SSE2-LABEL: test_sqrt_sd:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    sqrtsd %xmm0, %xmm1
 ; SSE2-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test_sqrt_sd:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    sqrtsd %xmm0, %xmm1
 ; SSE41-NEXT:    blendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: test_sqrt_sd:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm1
 ; AVX1-NEXT:    vblendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; AVX1-NEXT:    retq
 ;
 ; AVX512-LABEL: test_sqrt_sd:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm1
 ; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; AVX512-NEXT:    retq
@@ -208,13 +208,13 @@ declare double @llvm.sqrt.f64(double)
 
 define <4 x float> @test2_add_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: test2_add_ss:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    addss %xmm0, %xmm1
 ; SSE-NEXT:    movaps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test2_add_ss:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = extractelement <4 x float> %a, i32 0
@@ -226,13 +226,13 @@ define <4 x float> @test2_add_ss(<4 x float> %a, <4 x float> %b) {
 
 define <4 x float> @test2_sub_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: test2_sub_ss:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    subss %xmm0, %xmm1
 ; SSE-NEXT:    movaps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test2_sub_ss:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vsubss %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = extractelement <4 x float> %a, i32 0
@@ -244,13 +244,13 @@ define <4 x float> @test2_sub_ss(<4 x float> %a, <4 x float> %b) {
 
 define <4 x float> @test2_mul_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: test2_mul_ss:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    mulss %xmm0, %xmm1
 ; SSE-NEXT:    movaps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test2_mul_ss:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vmulss %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = extractelement <4 x float> %a, i32 0
@@ -262,13 +262,13 @@ define <4 x float> @test2_mul_ss(<4 x float> %a, <4 x float> %b) {
 
 define <4 x float> @test2_div_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: test2_div_ss:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    divss %xmm0, %xmm1
 ; SSE-NEXT:    movaps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test2_div_ss:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vdivss %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = extractelement <4 x float> %a, i32 0
@@ -280,13 +280,13 @@ define <4 x float> @test2_div_ss(<4 x float> %a, <4 x float> %b) {
 
 define <2 x double> @test2_add_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE-LABEL: test2_add_sd:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    addsd %xmm0, %xmm1
 ; SSE-NEXT:    movapd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test2_add_sd:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = extractelement <2 x double> %a, i32 0
@@ -298,13 +298,13 @@ define <2 x double> @test2_add_sd(<2 x double> %a, <2 x double> %b) {
 
 define <2 x double> @test2_sub_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE-LABEL: test2_sub_sd:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    subsd %xmm0, %xmm1
 ; SSE-NEXT:    movapd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test2_sub_sd:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vsubsd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = extractelement <2 x double> %a, i32 0
@@ -316,13 +316,13 @@ define <2 x double> @test2_sub_sd(<2 x double> %a, <2 x double> %b) {
 
 define <2 x double> @test2_mul_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE-LABEL: test2_mul_sd:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    mulsd %xmm0, %xmm1
 ; SSE-NEXT:    movapd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test2_mul_sd:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vmulsd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = extractelement <2 x double> %a, i32 0
@@ -334,13 +334,13 @@ define <2 x double> @test2_mul_sd(<2 x double> %a, <2 x double> %b) {
 
 define <2 x double> @test2_div_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE-LABEL: test2_div_sd:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    divsd %xmm0, %xmm1
 ; SSE-NEXT:    movapd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test2_div_sd:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = extractelement <2 x double> %a, i32 0
@@ -352,13 +352,13 @@ define <2 x double> @test2_div_sd(<2 x double> %a, <2 x double> %b) {
 
 define <4 x float> @test_multiple_add_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: test_multiple_add_ss:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    addss %xmm0, %xmm1
 ; SSE-NEXT:    addss %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_multiple_add_ss:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm1
 ; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -372,14 +372,14 @@ define <4 x float> @test_multiple_add_ss(<4 x float> %a, <4 x float> %b) {
 
 define <4 x float> @test_multiple_sub_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: test_multiple_sub_ss:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps %xmm0, %xmm2
 ; SSE-NEXT:    subss %xmm1, %xmm2
 ; SSE-NEXT:    subss %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_multiple_sub_ss:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vsubss %xmm1, %xmm0, %xmm1
 ; AVX-NEXT:    vsubss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -393,13 +393,13 @@ define <4 x float> @test_multiple_sub_ss(<4 x float> %a, <4 x float> %b) {
 
 define <4 x float> @test_multiple_mul_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: test_multiple_mul_ss:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    mulss %xmm0, %xmm1
 ; SSE-NEXT:    mulss %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_multiple_mul_ss:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vmulss %xmm1, %xmm0, %xmm1
 ; AVX-NEXT:    vmulss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -413,14 +413,14 @@ define <4 x float> @test_multiple_mul_ss(<4 x float> %a, <4 x float> %b) {
 
 define <4 x float> @test_multiple_div_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: test_multiple_div_ss:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps %xmm0, %xmm2
 ; SSE-NEXT:    divss %xmm1, %xmm2
 ; SSE-NEXT:    divss %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_multiple_div_ss:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vdivss %xmm1, %xmm0, %xmm1
 ; AVX-NEXT:    vdivss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -437,12 +437,12 @@ define <4 x float> @test_multiple_div_ss(<4 x float> %a, <4 x float> %b) {
 
 define <4 x float> @blend_add_ss(<4 x float> %a, float %b) {
 ; SSE-LABEL: blend_add_ss:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    addss %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: blend_add_ss:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 
@@ -455,12 +455,12 @@ define <4 x float> @blend_add_ss(<4 x float> %a, float %b) {
 
 define <4 x float> @blend_sub_ss(<4 x float> %a, float %b) {
 ; SSE-LABEL: blend_sub_ss:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    subss %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: blend_sub_ss:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vsubss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 
@@ -473,12 +473,12 @@ define <4 x float> @blend_sub_ss(<4 x float> %a, float %b) {
 
 define <4 x float> @blend_mul_ss(<4 x float> %a, float %b) {
 ; SSE-LABEL: blend_mul_ss:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    mulss %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: blend_mul_ss:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vmulss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 
@@ -491,12 +491,12 @@ define <4 x float> @blend_mul_ss(<4 x float> %a, float %b) {
 
 define <4 x float> @blend_div_ss(<4 x float> %a, float %b) {
 ; SSE-LABEL: blend_div_ss:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    divss %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: blend_div_ss:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vdivss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 
@@ -509,12 +509,12 @@ define <4 x float> @blend_div_ss(<4 x float> %a, float %b) {
 
 define <2 x double> @blend_add_sd(<2 x double> %a, double %b) {
 ; SSE-LABEL: blend_add_sd:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    addsd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: blend_add_sd:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 
@@ -527,12 +527,12 @@ define <2 x double> @blend_add_sd(<2 x double> %a, double %b) {
 
 define <2 x double> @blend_sub_sd(<2 x double> %a, double %b) {
 ; SSE-LABEL: blend_sub_sd:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    subsd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: blend_sub_sd:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vsubsd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 
@@ -545,12 +545,12 @@ define <2 x double> @blend_sub_sd(<2 x double> %a, double %b) {
 
 define <2 x double> @blend_mul_sd(<2 x double> %a, double %b) {
 ; SSE-LABEL: blend_mul_sd:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    mulsd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: blend_mul_sd:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vmulsd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 
@@ -563,12 +563,12 @@ define <2 x double> @blend_mul_sd(<2 x double> %a, double %b) {
 
 define <2 x double> @blend_div_sd(<2 x double> %a, double %b) {
 ; SSE-LABEL: blend_div_sd:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    divsd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: blend_div_sd:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vdivsd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 
@@ -584,12 +584,12 @@ define <2 x double> @blend_div_sd(<2 x double> %a, double %b) {
 
 define <4 x float> @insert_test_add_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: insert_test_add_ss:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    addss %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_test_add_ss:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = fadd <4 x float> %a, %b
@@ -599,12 +599,12 @@ define <4 x float> @insert_test_add_ss(<4 x float> %a, <4 x float> %b) {
 
 define <4 x float> @insert_test_sub_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: insert_test_sub_ss:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    subss %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_test_sub_ss:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vsubss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = fsub <4 x float> %a, %b
@@ -614,12 +614,12 @@ define <4 x float> @insert_test_sub_ss(<4 x float> %a, <4 x float> %b) {
 
 define <4 x float> @insert_test_mul_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: insert_test_mul_ss:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    mulss %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_test_mul_ss:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vmulss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = fmul <4 x float> %a, %b
@@ -629,12 +629,12 @@ define <4 x float> @insert_test_mul_ss(<4 x float> %a, <4 x float> %b) {
 
 define <4 x float> @insert_test_div_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: insert_test_div_ss:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    divss %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_test_div_ss:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vdivss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = fdiv <4 x float> %a, %b
@@ -644,12 +644,12 @@ define <4 x float> @insert_test_div_ss(<4 x float> %a, <4 x float> %b) {
 
 define <2 x double> @insert_test_add_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE-LABEL: insert_test_add_sd:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    addsd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_test_add_sd:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = fadd <2 x double> %a, %b
@@ -659,12 +659,12 @@ define <2 x double> @insert_test_add_sd(<2 x double> %a, <2 x double> %b) {
 
 define <2 x double> @insert_test_sub_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE-LABEL: insert_test_sub_sd:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    subsd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_test_sub_sd:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vsubsd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = fsub <2 x double> %a, %b
@@ -674,12 +674,12 @@ define <2 x double> @insert_test_sub_sd(<2 x double> %a, <2 x double> %b) {
 
 define <2 x double> @insert_test_mul_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE-LABEL: insert_test_mul_sd:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    mulsd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_test_mul_sd:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vmulsd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = fmul <2 x double> %a, %b
@@ -689,12 +689,12 @@ define <2 x double> @insert_test_mul_sd(<2 x double> %a, <2 x double> %b) {
 
 define <2 x double> @insert_test_div_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE-LABEL: insert_test_div_sd:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    divsd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_test_div_sd:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vdivsd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = fdiv <2 x double> %a, %b
@@ -704,13 +704,13 @@ define <2 x double> @insert_test_div_sd(<2 x double> %a, <2 x double> %b) {
 
 define <4 x float> @insert_test2_add_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: insert_test2_add_ss:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    addss %xmm0, %xmm1
 ; SSE-NEXT:    movaps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_test2_add_ss:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = fadd <4 x float> %b, %a
@@ -720,13 +720,13 @@ define <4 x float> @insert_test2_add_ss(<4 x float> %a, <4 x float> %b) {
 
 define <4 x float> @insert_test2_sub_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: insert_test2_sub_ss:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    subss %xmm0, %xmm1
 ; SSE-NEXT:    movaps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_test2_sub_ss:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vsubss %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = fsub <4 x float> %b, %a
@@ -736,13 +736,13 @@ define <4 x float> @insert_test2_sub_ss(<4 x float> %a, <4 x float> %b) {
 
 define <4 x float> @insert_test2_mul_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: insert_test2_mul_ss:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    mulss %xmm0, %xmm1
 ; SSE-NEXT:    movaps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_test2_mul_ss:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vmulss %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = fmul <4 x float> %b, %a
@@ -752,13 +752,13 @@ define <4 x float> @insert_test2_mul_ss(<4 x float> %a, <4 x float> %b) {
 
 define <4 x float> @insert_test2_div_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: insert_test2_div_ss:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    divss %xmm0, %xmm1
 ; SSE-NEXT:    movaps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_test2_div_ss:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vdivss %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = fdiv <4 x float> %b, %a
@@ -768,13 +768,13 @@ define <4 x float> @insert_test2_div_ss(<4 x float> %a, <4 x float> %b) {
 
 define <2 x double> @insert_test2_add_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE-LABEL: insert_test2_add_sd:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    addsd %xmm0, %xmm1
 ; SSE-NEXT:    movapd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_test2_add_sd:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = fadd <2 x double> %b, %a
@@ -784,13 +784,13 @@ define <2 x double> @insert_test2_add_sd(<2 x double> %a, <2 x double> %b) {
 
 define <2 x double> @insert_test2_sub_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE-LABEL: insert_test2_sub_sd:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    subsd %xmm0, %xmm1
 ; SSE-NEXT:    movapd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_test2_sub_sd:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vsubsd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = fsub <2 x double> %b, %a
@@ -800,13 +800,13 @@ define <2 x double> @insert_test2_sub_sd(<2 x double> %a, <2 x double> %b) {
 
 define <2 x double> @insert_test2_mul_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE-LABEL: insert_test2_mul_sd:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    mulsd %xmm0, %xmm1
 ; SSE-NEXT:    movapd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_test2_mul_sd:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vmulsd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = fmul <2 x double> %b, %a
@@ -816,13 +816,13 @@ define <2 x double> @insert_test2_mul_sd(<2 x double> %a, <2 x double> %b) {
 
 define <2 x double> @insert_test2_div_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE-LABEL: insert_test2_div_sd:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    divsd %xmm0, %xmm1
 ; SSE-NEXT:    movapd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_test2_div_sd:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = fdiv <2 x double> %b, %a
@@ -832,12 +832,12 @@ define <2 x double> @insert_test2_div_sd(<2 x double> %a, <2 x double> %b) {
 
 define <4 x float> @insert_test3_add_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: insert_test3_add_ss:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    addss %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_test3_add_ss:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = fadd <4 x float> %a, %b
@@ -847,12 +847,12 @@ define <4 x float> @insert_test3_add_ss(<4 x float> %a, <4 x float> %b) {
 
 define <4 x float> @insert_test3_sub_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: insert_test3_sub_ss:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    subss %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_test3_sub_ss:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vsubss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = fsub <4 x float> %a, %b
@@ -862,12 +862,12 @@ define <4 x float> @insert_test3_sub_ss(<4 x float> %a, <4 x float> %b) {
 
 define <4 x float> @insert_test3_mul_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: insert_test3_mul_ss:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    mulss %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_test3_mul_ss:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vmulss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = fmul <4 x float> %a, %b
@@ -877,12 +877,12 @@ define <4 x float> @insert_test3_mul_ss(<4 x float> %a, <4 x float> %b) {
 
 define <4 x float> @insert_test3_div_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: insert_test3_div_ss:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    divss %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_test3_div_ss:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vdivss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = fdiv <4 x float> %a, %b
@@ -892,12 +892,12 @@ define <4 x float> @insert_test3_div_ss(<4 x float> %a, <4 x float> %b) {
 
 define <2 x double> @insert_test3_add_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE-LABEL: insert_test3_add_sd:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    addsd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_test3_add_sd:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = fadd <2 x double> %a, %b
@@ -907,12 +907,12 @@ define <2 x double> @insert_test3_add_sd(<2 x double> %a, <2 x double> %b) {
 
 define <2 x double> @insert_test3_sub_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE-LABEL: insert_test3_sub_sd:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    subsd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_test3_sub_sd:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vsubsd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = fsub <2 x double> %a, %b
@@ -922,12 +922,12 @@ define <2 x double> @insert_test3_sub_sd(<2 x double> %a, <2 x double> %b) {
 
 define <2 x double> @insert_test3_mul_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE-LABEL: insert_test3_mul_sd:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    mulsd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_test3_mul_sd:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vmulsd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = fmul <2 x double> %a, %b
@@ -937,12 +937,12 @@ define <2 x double> @insert_test3_mul_sd(<2 x double> %a, <2 x double> %b) {
 
 define <2 x double> @insert_test3_div_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE-LABEL: insert_test3_div_sd:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    divsd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_test3_div_sd:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vdivsd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = fdiv <2 x double> %a, %b
@@ -952,13 +952,13 @@ define <2 x double> @insert_test3_div_sd(<2 x double> %a, <2 x double> %b) {
 
 define <4 x float> @insert_test4_add_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: insert_test4_add_ss:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    addss %xmm0, %xmm1
 ; SSE-NEXT:    movaps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_test4_add_ss:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = fadd <4 x float> %b, %a
@@ -968,13 +968,13 @@ define <4 x float> @insert_test4_add_ss(<4 x float> %a, <4 x float> %b) {
 
 define <4 x float> @insert_test4_sub_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: insert_test4_sub_ss:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    subss %xmm0, %xmm1
 ; SSE-NEXT:    movaps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_test4_sub_ss:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vsubss %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = fsub <4 x float> %b, %a
@@ -984,13 +984,13 @@ define <4 x float> @insert_test4_sub_ss(<4 x float> %a, <4 x float> %b) {
 
 define <4 x float> @insert_test4_mul_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: insert_test4_mul_ss:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    mulss %xmm0, %xmm1
 ; SSE-NEXT:    movaps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_test4_mul_ss:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vmulss %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = fmul <4 x float> %b, %a
@@ -1000,13 +1000,13 @@ define <4 x float> @insert_test4_mul_ss(<4 x float> %a, <4 x float> %b) {
 
 define <4 x float> @insert_test4_div_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: insert_test4_div_ss:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    divss %xmm0, %xmm1
 ; SSE-NEXT:    movaps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_test4_div_ss:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vdivss %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = fdiv <4 x float> %b, %a
@@ -1016,13 +1016,13 @@ define <4 x float> @insert_test4_div_ss(<4 x float> %a, <4 x float> %b) {
 
 define <2 x double> @insert_test4_add_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE-LABEL: insert_test4_add_sd:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    addsd %xmm0, %xmm1
 ; SSE-NEXT:    movapd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_test4_add_sd:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = fadd <2 x double> %b, %a
@@ -1032,13 +1032,13 @@ define <2 x double> @insert_test4_add_sd(<2 x double> %a, <2 x double> %b) {
 
 define <2 x double> @insert_test4_sub_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE-LABEL: insert_test4_sub_sd:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    subsd %xmm0, %xmm1
 ; SSE-NEXT:    movapd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_test4_sub_sd:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vsubsd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = fsub <2 x double> %b, %a
@@ -1048,13 +1048,13 @@ define <2 x double> @insert_test4_sub_sd(<2 x double> %a, <2 x double> %b) {
 
 define <2 x double> @insert_test4_mul_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE-LABEL: insert_test4_mul_sd:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    mulsd %xmm0, %xmm1
 ; SSE-NEXT:    movapd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_test4_mul_sd:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vmulsd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = fmul <2 x double> %b, %a
@@ -1064,13 +1064,13 @@ define <2 x double> @insert_test4_mul_sd(<2 x double> %a, <2 x double> %b) {
 
 define <2 x double> @insert_test4_div_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE-LABEL: insert_test4_div_sd:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    divsd %xmm0, %xmm1
 ; SSE-NEXT:    movapd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_test4_div_sd:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = fdiv <2 x double> %b, %a
@@ -1080,10 +1080,10 @@ define <2 x double> @insert_test4_div_sd(<2 x double> %a, <2 x double> %b) {
 
 define <4 x float> @add_ss_mask(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
 ; SSE2-LABEL: add_ss_mask:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    testb $1, %dil
 ; SSE2-NEXT:    jne .LBB62_1
-; SSE2-NEXT:  # BB#2:
+; SSE2-NEXT:  # %bb.2:
 ; SSE2-NEXT:    movaps %xmm2, %xmm1
 ; SSE2-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; SSE2-NEXT:    retq
@@ -1093,10 +1093,10 @@ define <4 x float> @add_ss_mask(<4 x float> %a, <4 x float> %b, <4 x float> %c, 
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: add_ss_mask:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    testb $1, %dil
 ; SSE41-NEXT:    jne .LBB62_1
-; SSE41-NEXT:  # BB#2:
+; SSE41-NEXT:  # %bb.2:
 ; SSE41-NEXT:    movaps %xmm2, %xmm1
 ; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; SSE41-NEXT:    retq
@@ -1106,17 +1106,17 @@ define <4 x float> @add_ss_mask(<4 x float> %a, <4 x float> %b, <4 x float> %c, 
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: add_ss_mask:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    testb $1, %dil
 ; AVX1-NEXT:    je .LBB62_2
-; AVX1-NEXT:  # BB#1:
+; AVX1-NEXT:  # %bb.1:
 ; AVX1-NEXT:    vaddss %xmm1, %xmm0, %xmm2
 ; AVX1-NEXT:  .LBB62_2:
 ; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm2[0],xmm0[1,2,3]
 ; AVX1-NEXT:    retq
 ;
 ; AVX512-LABEL: add_ss_mask:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vaddss %xmm1, %xmm0, %xmm1
 ; AVX512-NEXT:    kmovw %edi, %k1
 ; AVX512-NEXT:    vmovss %xmm1, %xmm0, %xmm2 {%k1}
@@ -1135,10 +1135,10 @@ define <4 x float> @add_ss_mask(<4 x float> %a, <4 x float> %b, <4 x float> %c, 
 
 define <2 x double> @add_sd_mask(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
 ; SSE2-LABEL: add_sd_mask:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    testb $1, %dil
 ; SSE2-NEXT:    jne .LBB63_1
-; SSE2-NEXT:  # BB#2:
+; SSE2-NEXT:  # %bb.2:
 ; SSE2-NEXT:    movapd %xmm2, %xmm1
 ; SSE2-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; SSE2-NEXT:    retq
@@ -1148,10 +1148,10 @@ define <2 x double> @add_sd_mask(<2 x double> %a, <2 x double> %b, <2 x double> 
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: add_sd_mask:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    testb $1, %dil
 ; SSE41-NEXT:    jne .LBB63_1
-; SSE41-NEXT:  # BB#2:
+; SSE41-NEXT:  # %bb.2:
 ; SSE41-NEXT:    movapd %xmm2, %xmm1
 ; SSE41-NEXT:    blendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; SSE41-NEXT:    retq
@@ -1161,17 +1161,17 @@ define <2 x double> @add_sd_mask(<2 x double> %a, <2 x double> %b, <2 x double> 
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: add_sd_mask:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    testb $1, %dil
 ; AVX1-NEXT:    je .LBB63_2
-; AVX1-NEXT:  # BB#1:
+; AVX1-NEXT:  # %bb.1:
 ; AVX1-NEXT:    vaddsd %xmm1, %xmm0, %xmm2
 ; AVX1-NEXT:  .LBB63_2:
 ; AVX1-NEXT:    vblendpd {{.*#+}} xmm0 = xmm2[0],xmm0[1]
 ; AVX1-NEXT:    retq
 ;
 ; AVX512-LABEL: add_sd_mask:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vaddsd %xmm1, %xmm0, %xmm1
 ; AVX512-NEXT:    kmovw %edi, %k1
 ; AVX512-NEXT:    vmovsd %xmm1, %xmm0, %xmm2 {%k1}

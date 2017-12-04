@@ -3255,6 +3255,12 @@ unsigned clang_CXIndex_getGlobalOptions(CXIndex CIdx) {
   return 0;
 }
 
+void clang_CXIndex_setInvocationEmissionPathOption(CXIndex CIdx,
+                                                   const char *Path) {
+  if (CIdx)
+    static_cast<CIndexer *>(CIdx)->setInvocationEmissionPath(Path ? Path : "");
+}
+
 void clang_toggleCrashRecovery(unsigned isEnabled) {
   if (isEnabled)
     llvm::CrashRecoveryContext::Enable();
@@ -3431,6 +3437,11 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
   // faster, trading for a slower (first) reparse.
   unsigned PrecompilePreambleAfterNParses =
       !PrecompilePreamble ? 0 : 2 - CreatePreambleOnFirstParse;
+
+  // FIXME: Record the hash of the unsaved files.
+  LibclangInvocationReporter InvocationReporter(
+      *CXXIdx, LibclangInvocationReporter::OperationKind::ParseOperation,
+      options, llvm::makeArrayRef(*Args));
   std::unique_ptr<ASTUnit> Unit(ASTUnit::LoadFromCommandLine(
       Args->data(), Args->data() + Args->size(),
       CXXIdx->getPCHContainerOperations(), Diags,

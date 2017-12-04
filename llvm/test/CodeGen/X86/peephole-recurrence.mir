@@ -89,44 +89,44 @@ liveins:
   - { reg: '%edi', virtual-reg: '%4' }
 body:             |
   bb.0.bb0:
-    successors: %bb.1.bb1(0x80000000)
+    successors: %bb.1(0x80000000)
     liveins: %edi
 
     %4 = COPY %edi
     %5 = MOV32r0 implicit-def dead %eflags
 
   bb.1.bb1:
-    successors: %bb.3.bb4(0x30000000), %bb.2.bb3(0x50000000)
+    successors: %bb.3(0x30000000), %bb.2(0x50000000)
 
-    ; CHECK: %0:gr32 = PHI %5, %bb.0.bb0, %3, %bb.5.bb7
-    %0 = PHI %5, %bb.0.bb0, %3, %bb.5.bb7
+    ; CHECK: %0:gr32 = PHI %5, %bb.0, %3, %bb.5
+    %0 = PHI %5, %bb.0, %3, %bb.5
     %6 = MOV32ri 1
     TEST32rr %4, %4, implicit-def %eflags
-    JE_1 %bb.3.bb4, implicit %eflags
-    JMP_1 %bb.2.bb3
+    JE_1 %bb.3, implicit %eflags
+    JMP_1 %bb.2
 
   bb.2.bb3:
-    successors: %bb.3.bb4(0x80000000)
+    successors: %bb.3(0x80000000)
 
     %7 = MOV32ri 2
 
   bb.3.bb4:
-    successors: %bb.5.bb7(0x30000000), %bb.4.bb6(0x50000000)
+    successors: %bb.5(0x30000000), %bb.4(0x50000000)
 
-    %1 = PHI %6, %bb.1.bb1, %7, %bb.2.bb3
+    %1 = PHI %6, %bb.1, %7, %bb.2
     TEST32rr %1, %1, implicit-def %eflags
-    JE_1 %bb.5.bb7, implicit %eflags
-    JMP_1 %bb.4.bb6
+    JE_1 %bb.5, implicit %eflags
+    JMP_1 %bb.4
 
   bb.4.bb6:
-    successors: %bb.5.bb7(0x80000000)
+    successors: %bb.5(0x80000000)
 
     %9 = MOV32ri 2
 
   bb.5.bb7:
-    successors: %bb.1.bb1(0x7c000000), %bb.6.bb8(0x04000000)
+    successors: %bb.1(0x7c000000), %bb.6(0x04000000)
 
-    %2 = PHI %6, %bb.3.bb4, %9, %bb.4.bb6
+    %2 = PHI %6, %bb.3, %9, %bb.4
     %10 = ADD32rr %1, %0, implicit-def dead %eflags
     ; CHECK: %10:gr32 = ADD32rr
     ; CHECK-SAME: %0,
@@ -136,8 +136,8 @@ body:             |
     ; CHECK-SAME: %10,
     ; CHECK-SAME: %2,
     %11 = SUB32ri8 %3, 10, implicit-def %eflags
-    JL_1 %bb.1.bb1, implicit %eflags
-    JMP_1 %bb.6.bb8
+    JL_1 %bb.1, implicit %eflags
+    JMP_1 %bb.6
 
   bb.6.bb8:
     %12 = MOV32r0 implicit-def dead %eflags
@@ -172,7 +172,7 @@ liveins:
   - { reg: '%rsi', virtual-reg: '%5' }
 body:             |
   bb.0.bb0:
-    successors: %bb.1.bb1(0x80000000)
+    successors: %bb.1(0x80000000)
     liveins: %edi, %rsi
 
     %5 = COPY %rsi
@@ -180,37 +180,37 @@ body:             |
     %6 = MOV32r0 implicit-def dead %eflags
 
   bb.1.bb1:
-    successors: %bb.3.bb4(0x30000000), %bb.2.bb3(0x50000000)
+    successors: %bb.3(0x30000000), %bb.2(0x50000000)
 
-    %0 = PHI %6, %bb.0.bb0, %3, %bb.5.bb7
-    ; CHECK: %0:gr32 = PHI %6, %bb.0.bb0, %3, %bb.5.bb7
+    %0 = PHI %6, %bb.0, %3, %bb.5
+    ; CHECK: %0:gr32 = PHI %6, %bb.0, %3, %bb.5
     %7 = MOV32ri 1
     TEST32rr %4, %4, implicit-def %eflags
-    JE_1 %bb.3.bb4, implicit %eflags
-    JMP_1 %bb.2.bb3
+    JE_1 %bb.3, implicit %eflags
+    JMP_1 %bb.2
 
   bb.2.bb3:
-    successors: %bb.3.bb4(0x80000000)
+    successors: %bb.3(0x80000000)
 
     %8 = MOV32ri 2
 
   bb.3.bb4:
-    successors: %bb.5.bb7(0x30000000), %bb.4.bb6(0x50000000)
+    successors: %bb.5(0x30000000), %bb.4(0x50000000)
 
-    %1 = PHI %7, %bb.1.bb1, %8, %bb.2.bb3
+    %1 = PHI %7, %bb.1, %8, %bb.2
     TEST32rr %1, %1, implicit-def %eflags
-    JE_1 %bb.5.bb7, implicit %eflags
-    JMP_1 %bb.4.bb6
+    JE_1 %bb.5, implicit %eflags
+    JMP_1 %bb.4
 
   bb.4.bb6:
-    successors: %bb.5.bb7(0x80000000)
+    successors: %bb.5(0x80000000)
 
     %10 = MOV32ri 2
 
   bb.5.bb7:
-    successors: %bb.1.bb1(0x7c000000), %bb.6.bb8(0x04000000)
+    successors: %bb.1(0x7c000000), %bb.6(0x04000000)
 
-    %2 = PHI %7, %bb.3.bb4, %10, %bb.4.bb6
+    %2 = PHI %7, %bb.3, %10, %bb.4
     %11 = ADD32rr %1, %0, implicit-def dead %eflags
     ; CHECK: %11:gr32 = ADD32rr
     ; CHECK-SAME: %1,
@@ -221,8 +221,8 @@ body:             |
     ; CHECK-SAME: %2,
     ; CHECK-SAME: %11,
     %12 = SUB32ri8 %3, 10, implicit-def %eflags
-    JL_1 %bb.1.bb1, implicit %eflags
-    JMP_1 %bb.6.bb8
+    JL_1 %bb.1, implicit %eflags
+    JMP_1 %bb.6
 
   bb.6.bb8:
     %13 = MOV32r0 implicit-def dead %eflags

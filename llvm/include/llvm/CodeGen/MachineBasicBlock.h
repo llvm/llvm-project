@@ -25,6 +25,7 @@
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/BranchProbability.h"
+#include "llvm/Support/Printable.h"
 #include <cassert>
 #include <cstdint>
 #include <functional>
@@ -770,6 +771,14 @@ private:
 };
 
 raw_ostream& operator<<(raw_ostream &OS, const MachineBasicBlock &MBB);
+
+/// Prints a machine basic block reference.
+///
+/// The format is:
+///   %bb.5           - a machine basic block with MBB.getNumber() == 5.
+///
+/// Usage: OS << printMBBReference(MBB) << '\n';
+Printable printMBBReference(const MachineBasicBlock &MBB);
 
 // This is useful when building IndexedMaps keyed on basic block pointers.
 struct MBB2NumberFunctor {

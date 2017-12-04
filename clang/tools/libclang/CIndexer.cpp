@@ -14,8 +14,10 @@
 #include "CIndexer.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Version.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/MutexGuard.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include <cstdio>
@@ -75,4 +77,57 @@ const std::string &CIndexer::getClangResourcesPath() {
   // Cache our result.
   ResourcesPath = LibClangPath.str();
   return ResourcesPath;
+}
+
+StringRef CIndexer::getClangToolchainPath() {
+  if (!ToolchainPath.empty())
+    return ToolchainPath;
+  StringRef ResourcePath = getClangResourcesPath();
+  ToolchainPath = llvm::sys::path::parent_path(
+      llvm::sys::path::parent_path(llvm::sys::path::parent_path(ResourcePath)));
+  return ToolchainPath;
+}
+
+LibclangInvocationReporter::LibclangInvocationReporter(
+    CIndexer &Idx, OperationKind Op, unsigned ParseOptions,
+    llvm::ArrayRef<const char *> Args) {
+  StringRef Path = Idx.getInvocationEmissionPath();
+  if (Path.empty())
+    return;
+
+  // Create a temporary file for the invocation log.
+  SmallString<256> TempPath;
+  TempPath = Path;
+  llvm::sys::path::append(TempPath, "libclang-%%%%%%%%%%%%");
+  int FD;
+  if (llvm::sys::fs::createUniqueFile(TempPath, FD, TempPath))
+    return;
+  File = std::string(TempPath.begin(), TempPath.end());
+  llvm::raw_fd_ostream OS(FD, /*ShouldClose=*/true);
+
+  // Write out the information about the invocation to it.
+  auto WriteStringKey = [&OS](StringRef Key, StringRef Value) {
+    OS << R"(")" << Key << R"(":")";
+    OS << Value << '"';
+  };
+  OS << '{';
+  WriteStringKey("toolchain", Idx.getClangToolchainPath());
+  OS << ',';
+  WriteStringKey("libclang.operation",
+                 Op == OperationKind::ParseOperation ? "parse" : "complete");
+  OS << ',';
+  OS << R"("libclang.opts":)" << ParseOptions;
+  OS << ',';
+  OS << R"("args":[)";
+  for (const auto &I : llvm::enumerate(Args)) {
+    if (I.index())
+      OS << ',';
+    OS << '"' << I.value() << '"';
+  }
+  OS << "]}";
+}
+
+LibclangInvocationReporter::~LibclangInvocationReporter() {
+  if (!File.empty())
+    llvm::sys::fs::remove(File);
 }

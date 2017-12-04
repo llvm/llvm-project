@@ -281,7 +281,7 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
                              IdentifierInfo **CorrectedII) {
   // FIXME: Consider allowing this outside C++1z mode as an extension.
   bool AllowDeducedTemplate = IsClassTemplateDeductionContext &&
-                              getLangOpts().CPlusPlus1z && !IsCtorOrDtorName &&
+                              getLangOpts().CPlusPlus17 && !IsCtorOrDtorName &&
                               !isClassName && !HasTrailingDot;
 
   // Determine where we will perform name lookup.
@@ -4199,7 +4199,7 @@ Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS, DeclSpec &DS,
 
   if (DS.isInlineSpecified())
     Diag(DS.getInlineSpecLoc(), diag::err_inline_non_function)
-        << getLangOpts().CPlusPlus1z;
+        << getLangOpts().CPlusPlus17;
 
   if (DS.isConstexprSpecified()) {
     // C++0x [dcl.constexpr]p1: constexpr can only be applied to declarations
@@ -5690,7 +5690,7 @@ Sema::ActOnTypedefDeclarator(Scope* S, Declarator& D, DeclContext* DC,
 
   if (D.getDeclSpec().isInlineSpecified())
     Diag(D.getDeclSpec().getInlineSpecLoc(), diag::err_inline_non_function)
-        << getLangOpts().CPlusPlus1z;
+        << getLangOpts().CPlusPlus17;
   if (D.getDeclSpec().isConstexprSpecified())
     Diag(D.getDeclSpec().getConstexprSpecLoc(), diag::err_invalid_constexpr)
       << 1;
@@ -6362,7 +6362,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     // Suppress the warning in system macros, it's used in macros in some
     // popular C system headers, such as in glibc's htonl() macro.
     Diag(D.getDeclSpec().getStorageClassSpecLoc(),
-         getLangOpts().CPlusPlus1z ? diag::ext_register_storage_class
+         getLangOpts().CPlusPlus17 ? diag::ext_register_storage_class
                                    : diag::warn_deprecated_register)
       << FixItHint::CreateRemoval(D.getDeclSpec().getStorageClassSpecLoc());
   }
@@ -6550,7 +6550,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
       // C++1z [dcl.spec.constexpr]p1:
       //   A static data member declared with the constexpr specifier is
       //   implicitly an inline variable.
-      if (NewVD->isStaticDataMember() && getLangOpts().CPlusPlus1z)
+      if (NewVD->isStaticDataMember() && getLangOpts().CPlusPlus17)
         NewVD->setImplicitlyInline();
     }
 
@@ -6606,7 +6606,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
         << FixItHint::CreateRemoval(D.getDeclSpec().getInlineSpecLoc());
     } else {
       Diag(D.getDeclSpec().getInlineSpecLoc(),
-           getLangOpts().CPlusPlus1z ? diag::warn_cxx14_compat_inline_variable
+           getLangOpts().CPlusPlus17 ? diag::warn_cxx14_compat_inline_variable
                                      : diag::ext_inline_variable);
       NewVD->setInlineSpecified();
     }
@@ -9601,7 +9601,7 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
     // return type. (Exception specifications on the function itself are OK in
     // most cases, and exception specifications are not permitted in most other
     // contexts where they could make it into a mangling.)
-    if (!getLangOpts().CPlusPlus1z && !NewFD->getPrimaryTemplate()) {
+    if (!getLangOpts().CPlusPlus17 && !NewFD->getPrimaryTemplate()) {
       auto HasNoexcept = [&](QualType T) -> bool {
         // Strip off declarator chunks that could be between us and a function
         // type. We don't need to look far, exception specifications are very
@@ -10811,7 +10811,7 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
       if (Var->isStaticDataMember()) {
         // C++1z removes the relevant rule; the in-class declaration is always
         // a definition there.
-        if (!getLangOpts().CPlusPlus1z) {
+        if (!getLangOpts().CPlusPlus17) {
           Diag(Var->getLocation(),
                diag::err_constexpr_static_mem_var_requires_init)
             << Var->getDeclName();
@@ -11729,7 +11729,7 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D) {
     // In C++17, it is not allowed, but we tolerate it as an extension.
     if (getLangOpts().CPlusPlus11) {
       Diag(DS.getStorageClassSpecLoc(),
-           getLangOpts().CPlusPlus1z ? diag::ext_register_storage_class
+           getLangOpts().CPlusPlus17 ? diag::ext_register_storage_class
                                      : diag::warn_deprecated_register)
         << FixItHint::CreateRemoval(DS.getStorageClassSpecLoc());
     }
@@ -11747,7 +11747,7 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D) {
       << DeclSpec::getSpecifierName(TSCS);
   if (DS.isInlineSpecified())
     Diag(DS.getInlineSpecLoc(), diag::err_inline_non_function)
-        << getLangOpts().CPlusPlus1z;
+        << getLangOpts().CPlusPlus17;
   if (DS.isConstexprSpecified())
     Diag(DS.getConstexprSpecLoc(), diag::err_invalid_constexpr)
       << 0;
@@ -14491,7 +14491,7 @@ FieldDecl *Sema::HandleField(Scope *S, RecordDecl *Record,
 
   if (D.getDeclSpec().isInlineSpecified())
     Diag(D.getDeclSpec().getInlineSpecLoc(), diag::err_inline_non_function)
-        << getLangOpts().CPlusPlus1z;
+        << getLangOpts().CPlusPlus17;
   if (DeclSpec::TSCS TSCS = D.getDeclSpec().getThreadStorageClassSpec())
     Diag(D.getDeclSpec().getThreadStorageClassSpecLoc(),
          diag::err_invalid_thread)

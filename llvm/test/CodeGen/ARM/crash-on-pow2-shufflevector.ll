@@ -6,7 +6,7 @@
 
 define i32 @foo(%struct.desc* %descs, i32 %num, i32 %cw) local_unnamed_addr #0 {
 ; CHECK-LABEL: foo:
-; CHECK:       @ BB#0: @ %entry
+; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    mov r1, #32
 ; CHECK-NEXT:    vld1.32 {d16, d17}, [r0], r1
 ; CHECK-NEXT:    vld1.32 {d18, d19}, [r0]

@@ -3,7 +3,7 @@
 
 define i64 @atomicSub(i64* %a, i64 %b) nounwind {
 ; CHECK-LABEL: atomicSub:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %ebp
 ; CHECK-NEXT:    pushl %ebx
 ; CHECK-NEXT:    pushl %edi
@@ -22,7 +22,7 @@ define i64 @atomicSub(i64* %a, i64 %b) nounwind {
 ; CHECK-NEXT:    sbbl %esi, %ecx
 ; CHECK-NEXT:    lock cmpxchg8b (%ebp)
 ; CHECK-NEXT:    jne .LBB0_1
-; CHECK-NEXT:  # BB#2: # %atomicrmw.end
+; CHECK-NEXT:  # %bb.2: # %atomicrmw.end
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    popl %ebx

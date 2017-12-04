@@ -4,7 +4,7 @@
 
 define <16 x float> @test1(<16 x float> %x, <16 x float> %y) nounwind {
 ; CHECK-LABEL: test1:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vcmpleps %zmm1, %zmm0, %k1
 ; CHECK-NEXT:    vblendmps %zmm0, %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
@@ -15,7 +15,7 @@ define <16 x float> @test1(<16 x float> %x, <16 x float> %y) nounwind {
 
 define <8 x double> @test2(<8 x double> %x, <8 x double> %y) nounwind {
 ; CHECK-LABEL: test2:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vcmplepd %zmm1, %zmm0, %k1
 ; CHECK-NEXT:    vblendmpd %zmm0, %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
@@ -26,7 +26,7 @@ define <8 x double> @test2(<8 x double> %x, <8 x double> %y) nounwind {
 
 define <16 x i32> @test3(<16 x i32> %x, <16 x i32> %x1, <16 x i32>* %yp) nounwind {
 ; CHECK-LABEL: test3:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpcmpeqd (%rdi), %zmm0, %k1
 ; CHECK-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
@@ -38,7 +38,7 @@ define <16 x i32> @test3(<16 x i32> %x, <16 x i32> %x1, <16 x i32>* %yp) nounwin
 
 define <16 x i32> @test4_unsigned(<16 x i32> %x, <16 x i32> %y, <16 x i32> %x1) nounwind {
 ; CHECK-LABEL: test4_unsigned:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpcmpnltud %zmm1, %zmm0, %k1
 ; CHECK-NEXT:    vpblendmd %zmm2, %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
@@ -49,7 +49,7 @@ define <16 x i32> @test4_unsigned(<16 x i32> %x, <16 x i32> %y, <16 x i32> %x1) 
 
 define <8 x i64> @test5(<8 x i64> %x, <8 x i64> %y) nounwind {
 ; CHECK-LABEL: test5:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpcmpeqq %zmm1, %zmm0, %k1
 ; CHECK-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
@@ -60,7 +60,7 @@ define <8 x i64> @test5(<8 x i64> %x, <8 x i64> %y) nounwind {
 
 define <8 x i64> @test6_unsigned(<8 x i64> %x, <8 x i64> %y, <8 x i64> %x1) nounwind {
 ; CHECK-LABEL: test6_unsigned:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpcmpnleuq %zmm1, %zmm0, %k1
 ; CHECK-NEXT:    vpblendmq %zmm2, %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
@@ -71,14 +71,14 @@ define <8 x i64> @test6_unsigned(<8 x i64> %x, <8 x i64> %y, <8 x i64> %x1) noun
 
 define <4 x float> @test7(<4 x float> %a, <4 x float> %b) {
 ; KNL-LABEL: test7:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; KNL-NEXT:    vcmpltps %xmm2, %xmm0, %xmm2
 ; KNL-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test7:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    vcmpltps %xmm2, %xmm0, %k1
 ; SKX-NEXT:    vblendmps %xmm0, %xmm1, %xmm0 {%k1}
@@ -91,14 +91,14 @@ define <4 x float> @test7(<4 x float> %a, <4 x float> %b) {
 
 define <2 x double> @test8(<2 x double> %a, <2 x double> %b) {
 ; KNL-LABEL: test8:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; KNL-NEXT:    vcmpltpd %xmm2, %xmm0, %xmm2
 ; KNL-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test8:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    vcmpltpd %xmm2, %xmm0, %k1
 ; SKX-NEXT:    vblendmpd %xmm0, %xmm1, %xmm0 {%k1}
@@ -110,7 +110,7 @@ define <2 x double> @test8(<2 x double> %a, <2 x double> %b) {
 
 define <8 x i32> @test9(<8 x i32> %x, <8 x i32> %y) nounwind {
 ; KNL-LABEL: test9:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    ## kill: %ymm1<def> %ymm1<kill> %zmm1<def>
 ; KNL-NEXT:    ## kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; KNL-NEXT:    vpcmpeqd %zmm1, %zmm0, %k1
@@ -119,7 +119,7 @@ define <8 x i32> @test9(<8 x i32> %x, <8 x i32> %y) nounwind {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test9:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpcmpeqd %ymm1, %ymm0, %k1
 ; SKX-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
 ; SKX-NEXT:    retq
@@ -130,7 +130,7 @@ define <8 x i32> @test9(<8 x i32> %x, <8 x i32> %y) nounwind {
 
 define <8 x float> @test10(<8 x float> %x, <8 x float> %y) nounwind {
 ; KNL-LABEL: test10:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    ## kill: %ymm1<def> %ymm1<kill> %zmm1<def>
 ; KNL-NEXT:    ## kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; KNL-NEXT:    vcmpeqps %zmm1, %zmm0, %k1
@@ -139,7 +139,7 @@ define <8 x float> @test10(<8 x float> %x, <8 x float> %y) nounwind {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test10:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vcmpeqps %ymm1, %ymm0, %k1
 ; SKX-NEXT:    vblendmps %ymm0, %ymm1, %ymm0 {%k1}
 ; SKX-NEXT:    retq
@@ -151,7 +151,7 @@ define <8 x float> @test10(<8 x float> %x, <8 x float> %y) nounwind {
 
 define <8 x i32> @test11_unsigned(<8 x i32> %x, <8 x i32> %y) nounwind {
 ; CHECK-LABEL: test11_unsigned:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpmaxud %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %mask = icmp ugt <8 x i32> %x, %y
@@ -161,7 +161,7 @@ define <8 x i32> @test11_unsigned(<8 x i32> %x, <8 x i32> %y) nounwind {
 
 define i16 @test12(<16 x i64> %a, <16 x i64> %b) nounwind {
 ; KNL-LABEL: test12:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpcmpeqq %zmm2, %zmm0, %k0
 ; KNL-NEXT:    vpcmpeqq %zmm3, %zmm1, %k1
 ; KNL-NEXT:    kunpckbw %k0, %k1, %k0
@@ -171,7 +171,7 @@ define i16 @test12(<16 x i64> %a, <16 x i64> %b) nounwind {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test12:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpcmpeqq %zmm2, %zmm0, %k0
 ; SKX-NEXT:    vpcmpeqq %zmm3, %zmm1, %k1
 ; SKX-NEXT:    kunpckbw %k0, %k1, %k0
@@ -186,7 +186,7 @@ define i16 @test12(<16 x i64> %a, <16 x i64> %b) nounwind {
 
 define i32 @test12_v32i32(<32 x i32> %a, <32 x i32> %b) nounwind {
 ; KNL-LABEL: test12_v32i32:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    pushq %rbp
 ; KNL-NEXT:    movq %rsp, %rbp
 ; KNL-NEXT:    andq $-32, %rsp
@@ -334,7 +334,7 @@ define i32 @test12_v32i32(<32 x i32> %a, <32 x i32> %b) nounwind {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test12_v32i32:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpcmpeqd %zmm2, %zmm0, %k0
 ; SKX-NEXT:    vpcmpeqd %zmm3, %zmm1, %k1
 ; SKX-NEXT:    kunpckwd %k0, %k1, %k0
@@ -348,7 +348,7 @@ define i32 @test12_v32i32(<32 x i32> %a, <32 x i32> %b) nounwind {
 
 define i64 @test12_v64i16(<64 x i16> %a, <64 x i16> %b) nounwind {
 ; KNL-LABEL: test12_v64i16:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    pushq %rbp
 ; KNL-NEXT:    movq %rsp, %rbp
 ; KNL-NEXT:    andq $-32, %rsp
@@ -647,7 +647,7 @@ define i64 @test12_v64i16(<64 x i16> %a, <64 x i16> %b) nounwind {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test12_v64i16:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpcmpeqw %zmm2, %zmm0, %k0
 ; SKX-NEXT:    vpcmpeqw %zmm3, %zmm1, %k1
 ; SKX-NEXT:    kunpckdq %k0, %k1, %k0
@@ -661,7 +661,7 @@ define i64 @test12_v64i16(<64 x i16> %a, <64 x i16> %b) nounwind {
 
 define <16 x i32> @test13(<16 x float>%a, <16 x float>%b)
 ; CHECK-LABEL: test13:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vcmpeqps %zmm1, %zmm0, %k1
 ; CHECK-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
@@ -673,7 +673,7 @@ define <16 x i32> @test13(<16 x float>%a, <16 x float>%b)
 
 define <16 x i32> @test14(<16 x i32>%a, <16 x i32>%b) {
 ; CHECK-LABEL: test14:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpsubd %zmm1, %zmm0, %zmm2
 ; CHECK-NEXT:    vpcmpgtd %zmm0, %zmm2, %k1
 ; CHECK-NEXT:    vpsubd %zmm1, %zmm0, %zmm0 {%k1} {z}
@@ -688,7 +688,7 @@ define <16 x i32> @test14(<16 x i32>%a, <16 x i32>%b) {
 
 define <8 x i64> @test15(<8 x i64>%a, <8 x i64>%b) {
 ; CHECK-LABEL: test15:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpsubq %zmm1, %zmm0, %zmm2
 ; CHECK-NEXT:    vpcmpgtq %zmm0, %zmm2, %k1
 ; CHECK-NEXT:    vpsubq %zmm1, %zmm0, %zmm0 {%k1} {z}
@@ -703,7 +703,7 @@ define <8 x i64> @test15(<8 x i64>%a, <8 x i64>%b) {
 
 define <16 x i32> @test16(<16 x i32> %x, <16 x i32> %y, <16 x i32> %x1) nounwind {
 ; CHECK-LABEL: test16:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpcmpled %zmm0, %zmm1, %k1
 ; CHECK-NEXT:    vpblendmd %zmm2, %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
@@ -714,7 +714,7 @@ define <16 x i32> @test16(<16 x i32> %x, <16 x i32> %y, <16 x i32> %x1) nounwind
 
 define <16 x i32> @test17(<16 x i32> %x, <16 x i32> %x1, <16 x i32>* %y.ptr) nounwind {
 ; CHECK-LABEL: test17:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpcmpgtd (%rdi), %zmm0, %k1
 ; CHECK-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
@@ -726,7 +726,7 @@ define <16 x i32> @test17(<16 x i32> %x, <16 x i32> %x1, <16 x i32>* %y.ptr) nou
 
 define <16 x i32> @test18(<16 x i32> %x, <16 x i32> %x1, <16 x i32>* %y.ptr) nounwind {
 ; CHECK-LABEL: test18:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpcmpled (%rdi), %zmm0, %k1
 ; CHECK-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
@@ -738,7 +738,7 @@ define <16 x i32> @test18(<16 x i32> %x, <16 x i32> %x1, <16 x i32>* %y.ptr) nou
 
 define <16 x i32> @test19(<16 x i32> %x, <16 x i32> %x1, <16 x i32>* %y.ptr) nounwind {
 ; CHECK-LABEL: test19:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpcmpleud (%rdi), %zmm0, %k1
 ; CHECK-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
@@ -750,7 +750,7 @@ define <16 x i32> @test19(<16 x i32> %x, <16 x i32> %x1, <16 x i32>* %y.ptr) nou
 
 define <16 x i32> @test20(<16 x i32> %x, <16 x i32> %y, <16 x i32> %x1, <16 x i32> %y1) nounwind {
 ; CHECK-LABEL: test20:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpcmpeqd %zmm1, %zmm0, %k1
 ; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 {%k1}
 ; CHECK-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
@@ -764,7 +764,7 @@ define <16 x i32> @test20(<16 x i32> %x, <16 x i32> %y, <16 x i32> %x1, <16 x i3
 
 define <8 x i64> @test21(<8 x i64> %x, <8 x i64> %y, <8 x i64> %x1, <8 x i64> %y1) nounwind {
 ; CHECK-LABEL: test21:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpcmpleq %zmm1, %zmm0, %k1
 ; CHECK-NEXT:    vpcmpleq %zmm2, %zmm3, %k1 {%k1}
 ; CHECK-NEXT:    vpblendmq %zmm0, %zmm2, %zmm0 {%k1}
@@ -778,7 +778,7 @@ define <8 x i64> @test21(<8 x i64> %x, <8 x i64> %y, <8 x i64> %x1, <8 x i64> %y
 
 define <8 x i64> @test22(<8 x i64> %x, <8 x i64>* %y.ptr, <8 x i64> %x1, <8 x i64> %y1) nounwind {
 ; CHECK-LABEL: test22:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpcmpgtq %zmm2, %zmm1, %k1
 ; CHECK-NEXT:    vpcmpgtq (%rdi), %zmm0, %k1 {%k1}
 ; CHECK-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
@@ -793,7 +793,7 @@ define <8 x i64> @test22(<8 x i64> %x, <8 x i64>* %y.ptr, <8 x i64> %x1, <8 x i6
 
 define <16 x i32> @test23(<16 x i32> %x, <16 x i32>* %y.ptr, <16 x i32> %x1, <16 x i32> %y1) nounwind {
 ; CHECK-LABEL: test23:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpcmpled %zmm1, %zmm2, %k1
 ; CHECK-NEXT:    vpcmpleud (%rdi), %zmm0, %k1 {%k1}
 ; CHECK-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
@@ -808,7 +808,7 @@ define <16 x i32> @test23(<16 x i32> %x, <16 x i32>* %y.ptr, <16 x i32> %x1, <16
 
 define <8 x i64> @test24(<8 x i64> %x, <8 x i64> %x1, i64* %yb.ptr) nounwind {
 ; CHECK-LABEL: test24:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpcmpeqq (%rdi){1to8}, %zmm0, %k1
 ; CHECK-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
@@ -822,7 +822,7 @@ define <8 x i64> @test24(<8 x i64> %x, <8 x i64> %x1, i64* %yb.ptr) nounwind {
 
 define <16 x i32> @test25(<16 x i32> %x, i32* %yb.ptr, <16 x i32> %x1) nounwind {
 ; CHECK-LABEL: test25:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpcmpled (%rdi){1to16}, %zmm0, %k1
 ; CHECK-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
@@ -836,7 +836,7 @@ define <16 x i32> @test25(<16 x i32> %x, i32* %yb.ptr, <16 x i32> %x1) nounwind 
 
 define <16 x i32> @test26(<16 x i32> %x, i32* %yb.ptr, <16 x i32> %x1, <16 x i32> %y1) nounwind {
 ; CHECK-LABEL: test26:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpcmpled %zmm1, %zmm2, %k1
 ; CHECK-NEXT:    vpcmpgtd (%rdi){1to16}, %zmm0, %k1 {%k1}
 ; CHECK-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
@@ -853,7 +853,7 @@ define <16 x i32> @test26(<16 x i32> %x, i32* %yb.ptr, <16 x i32> %x1, <16 x i32
 
 define <8 x i64> @test27(<8 x i64> %x, i64* %yb.ptr, <8 x i64> %x1, <8 x i64> %y1) nounwind {
 ; CHECK-LABEL: test27:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpcmpleq %zmm1, %zmm2, %k1
 ; CHECK-NEXT:    vpcmpleq (%rdi){1to8}, %zmm0, %k1 {%k1}
 ; CHECK-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
@@ -870,7 +870,7 @@ define <8 x i64> @test27(<8 x i64> %x, i64* %yb.ptr, <8 x i64> %x1, <8 x i64> %y
 
 define <8 x i32>@test28(<8 x i64> %x, <8 x i64> %y, <8 x i64> %x1, <8 x i64> %y1) {
 ; KNL-LABEL: test28:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpcmpgtq %zmm1, %zmm0, %k0
 ; KNL-NEXT:    vpcmpgtq %zmm3, %zmm2, %k1
 ; KNL-NEXT:    kxnorw %k1, %k0, %k1
@@ -879,7 +879,7 @@ define <8 x i32>@test28(<8 x i64> %x, <8 x i64> %y, <8 x i64> %x1, <8 x i64> %y1
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test28:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpcmpgtq %zmm1, %zmm0, %k0
 ; SKX-NEXT:    vpcmpgtq %zmm3, %zmm2, %k1
 ; SKX-NEXT:    kxnorb %k1, %k0, %k0
@@ -894,7 +894,7 @@ define <8 x i32>@test28(<8 x i64> %x, <8 x i64> %y, <8 x i64> %x1, <8 x i64> %y1
 
 define <16 x i8>@test29(<16 x i32> %x, <16 x i32> %y, <16 x i32> %x1, <16 x i32> %y1) {
 ; KNL-LABEL: test29:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0
 ; KNL-NEXT:    vpcmpgtd %zmm3, %zmm2, %k1
 ; KNL-NEXT:    kxorw %k1, %k0, %k1
@@ -904,7 +904,7 @@ define <16 x i8>@test29(<16 x i32> %x, <16 x i32> %y, <16 x i32> %x1, <16 x i32>
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test29:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0
 ; SKX-NEXT:    vpcmpgtd %zmm3, %zmm2, %k1
 ; SKX-NEXT:    kxorw %k1, %k0, %k0
@@ -920,13 +920,13 @@ define <16 x i8>@test29(<16 x i32> %x, <16 x i32> %y, <16 x i32> %x1, <16 x i32>
 
 define <4 x double> @test30(<4 x double> %x, <4 x double> %y) nounwind {
 ; KNL-LABEL: test30:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    vcmpeqpd %ymm1, %ymm0, %ymm2
 ; KNL-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test30:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vcmpeqpd %ymm1, %ymm0, %k1
 ; SKX-NEXT:    vblendmpd %ymm0, %ymm1, %ymm0 {%k1}
 ; SKX-NEXT:    retq
@@ -938,13 +938,13 @@ define <4 x double> @test30(<4 x double> %x, <4 x double> %y) nounwind {
 
 define <2 x double> @test31(<2 x double> %x, <2 x double> %x1, <2 x double>* %yp) nounwind {
 ; KNL-LABEL: test31:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    vcmpltpd (%rdi), %xmm0, %xmm2
 ; KNL-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test31:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vcmpltpd (%rdi), %xmm0, %k1
 ; SKX-NEXT:    vblendmpd %xmm0, %xmm1, %xmm0 {%k1}
 ; SKX-NEXT:    retq
@@ -957,13 +957,13 @@ define <2 x double> @test31(<2 x double> %x, <2 x double> %x1, <2 x double>* %yp
 
 define <4 x double> @test32(<4 x double> %x, <4 x double> %x1, <4 x double>* %yp) nounwind {
 ; KNL-LABEL: test32:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    vcmpltpd (%rdi), %ymm0, %ymm2
 ; KNL-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test32:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vcmpltpd (%rdi), %ymm0, %k1
 ; SKX-NEXT:    vblendmpd %ymm0, %ymm1, %ymm0 {%k1}
 ; SKX-NEXT:    retq
@@ -976,7 +976,7 @@ define <4 x double> @test32(<4 x double> %x, <4 x double> %x1, <4 x double>* %yp
 
 define <8 x double> @test33(<8 x double> %x, <8 x double> %x1, <8 x double>* %yp) nounwind {
 ; CHECK-LABEL: test33:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vcmpltpd (%rdi), %zmm0, %k1
 ; CHECK-NEXT:    vblendmpd %zmm0, %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
@@ -988,13 +988,13 @@ define <8 x double> @test33(<8 x double> %x, <8 x double> %x1, <8 x double>* %yp
 
 define <4 x float> @test34(<4 x float> %x, <4 x float> %x1, <4 x float>* %yp) nounwind {
 ; KNL-LABEL: test34:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    vcmpltps (%rdi), %xmm0, %xmm2
 ; KNL-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test34:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vcmpltps (%rdi), %xmm0, %k1
 ; SKX-NEXT:    vblendmps %xmm0, %xmm1, %xmm0 {%k1}
 ; SKX-NEXT:    retq
@@ -1006,7 +1006,7 @@ define <4 x float> @test34(<4 x float> %x, <4 x float> %x1, <4 x float>* %yp) no
 
 define <8 x float> @test35(<8 x float> %x, <8 x float> %x1, <8 x float>* %yp) nounwind {
 ; KNL-LABEL: test35:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    ## kill: %ymm1<def> %ymm1<kill> %zmm1<def>
 ; KNL-NEXT:    ## kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; KNL-NEXT:    vmovups (%rdi), %ymm2
@@ -1016,7 +1016,7 @@ define <8 x float> @test35(<8 x float> %x, <8 x float> %x1, <8 x float>* %yp) no
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test35:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vcmpltps (%rdi), %ymm0, %k1
 ; SKX-NEXT:    vblendmps %ymm0, %ymm1, %ymm0 {%k1}
 ; SKX-NEXT:    retq
@@ -1029,7 +1029,7 @@ define <8 x float> @test35(<8 x float> %x, <8 x float> %x1, <8 x float>* %yp) no
 
 define <16 x float> @test36(<16 x float> %x, <16 x float> %x1, <16 x float>* %yp) nounwind {
 ; CHECK-LABEL: test36:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vcmpltps (%rdi), %zmm0, %k1
 ; CHECK-NEXT:    vblendmps %zmm0, %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
@@ -1041,7 +1041,7 @@ define <16 x float> @test36(<16 x float> %x, <16 x float> %x1, <16 x float>* %yp
 
 define <8 x double> @test37(<8 x double> %x, <8 x double> %x1, double* %ptr) nounwind {
 ; CHECK-LABEL: test37:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vcmpltpd (%rdi){1to8}, %zmm0, %k1
 ; CHECK-NEXT:    vblendmpd %zmm0, %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
@@ -1057,14 +1057,14 @@ define <8 x double> @test37(<8 x double> %x, <8 x double> %x1, double* %ptr) nou
 
 define <4 x double> @test38(<4 x double> %x, <4 x double> %x1, double* %ptr) nounwind {
 ; KNL-LABEL: test38:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    vbroadcastsd (%rdi), %ymm2
 ; KNL-NEXT:    vcmpltpd %ymm2, %ymm0, %ymm2
 ; KNL-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test38:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vcmpltpd (%rdi){1to4}, %ymm0, %k1
 ; SKX-NEXT:    vblendmpd %ymm0, %ymm1, %ymm0 {%k1}
 ; SKX-NEXT:    retq
@@ -1080,14 +1080,14 @@ define <4 x double> @test38(<4 x double> %x, <4 x double> %x1, double* %ptr) nou
 
 define <2 x double> @test39(<2 x double> %x, <2 x double> %x1, double* %ptr) nounwind {
 ; KNL-LABEL: test39:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    vmovddup {{.*#+}} xmm2 = mem[0,0]
 ; KNL-NEXT:    vcmpltpd %xmm2, %xmm0, %xmm2
 ; KNL-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test39:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vcmpltpd (%rdi){1to2}, %xmm0, %k1
 ; SKX-NEXT:    vblendmpd %xmm0, %xmm1, %xmm0 {%k1}
 ; SKX-NEXT:    retq
@@ -1104,7 +1104,7 @@ define <2 x double> @test39(<2 x double> %x, <2 x double> %x1, double* %ptr) nou
 
 define <16  x float> @test40(<16  x float> %x, <16  x float> %x1, float* %ptr) nounwind {
 ; CHECK-LABEL: test40:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vcmpltps (%rdi){1to16}, %zmm0, %k1
 ; CHECK-NEXT:    vblendmps %zmm0, %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
@@ -1120,7 +1120,7 @@ define <16  x float> @test40(<16  x float> %x, <16  x float> %x1, float* %ptr) n
 
 define <8  x float> @test41(<8  x float> %x, <8  x float> %x1, float* %ptr) nounwind {
 ; KNL-LABEL: test41:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    ## kill: %ymm1<def> %ymm1<kill> %zmm1<def>
 ; KNL-NEXT:    ## kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; KNL-NEXT:    vbroadcastss (%rdi), %ymm2
@@ -1130,7 +1130,7 @@ define <8  x float> @test41(<8  x float> %x, <8  x float> %x1, float* %ptr) noun
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test41:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vcmpltps (%rdi){1to8}, %ymm0, %k1
 ; SKX-NEXT:    vblendmps %ymm0, %ymm1, %ymm0 {%k1}
 ; SKX-NEXT:    retq
@@ -1146,14 +1146,14 @@ define <8  x float> @test41(<8  x float> %x, <8  x float> %x1, float* %ptr) noun
 
 define <4  x float> @test42(<4  x float> %x, <4  x float> %x1, float* %ptr) nounwind {
 ; KNL-LABEL: test42:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    vbroadcastss (%rdi), %xmm2
 ; KNL-NEXT:    vcmpltps %xmm2, %xmm0, %xmm2
 ; KNL-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test42:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vcmpltps (%rdi){1to4}, %xmm0, %k1
 ; SKX-NEXT:    vblendmps %xmm0, %xmm1, %xmm0 {%k1}
 ; SKX-NEXT:    retq
@@ -1169,7 +1169,7 @@ define <4  x float> @test42(<4  x float> %x, <4  x float> %x1, float* %ptr) noun
 
 define <8 x double> @test43(<8 x double> %x, <8 x double> %x1, double* %ptr,<8 x i1> %mask_in) nounwind {
 ; KNL-LABEL: test43:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpmovsxwq %xmm2, %zmm2
 ; KNL-NEXT:    vpsllq $63, %zmm2, %zmm2
 ; KNL-NEXT:    vptestmq %zmm2, %zmm2, %k1
@@ -1178,7 +1178,7 @@ define <8 x double> @test43(<8 x double> %x, <8 x double> %x1, double* %ptr,<8 x
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test43:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpsllw $15, %xmm2, %xmm2
 ; SKX-NEXT:    vpmovw2m %xmm2, %k1
 ; SKX-NEXT:    vcmpltpd (%rdi){1to8}, %zmm0, %k1 {%k1}
@@ -1197,7 +1197,7 @@ define <8 x double> @test43(<8 x double> %x, <8 x double> %x1, double* %ptr,<8 x
 
 define <4 x i32> @test44(<4 x i16> %x, <4 x i16> %y) #0 {
 ; KNL-LABEL: test44:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; KNL-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3],xmm1[4],xmm2[5],xmm1[6],xmm2[7]
 ; KNL-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3],xmm0[4],xmm2[5],xmm0[6],xmm2[7]
@@ -1205,7 +1205,7 @@ define <4 x i32> @test44(<4 x i16> %x, <4 x i16> %y) #0 {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test44:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3],xmm1[4],xmm2[5],xmm1[6],xmm2[7]
 ; SKX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3],xmm0[4],xmm2[5],xmm0[6],xmm2[7]
@@ -1219,7 +1219,7 @@ define <4 x i32> @test44(<4 x i16> %x, <4 x i16> %y) #0 {
 
 define <2 x i64> @test45(<2 x i16> %x, <2 x i16> %y) #0 {
 ; KNL-LABEL: test45:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; KNL-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3],xmm1[4],xmm2[5,6,7]
 ; KNL-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3],xmm0[4],xmm2[5,6,7]
@@ -1228,7 +1228,7 @@ define <2 x i64> @test45(<2 x i16> %x, <2 x i16> %y) #0 {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test45:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3],xmm1[4],xmm2[5,6,7]
 ; SKX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3],xmm0[4],xmm2[5,6,7]
@@ -1242,14 +1242,14 @@ define <2 x i64> @test45(<2 x i16> %x, <2 x i16> %y) #0 {
 
 define <2 x i64> @test46(<2 x float> %x, <2 x float> %y) #0 {
 ; KNL-LABEL: test46:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    vcmpeqps %xmm1, %xmm0, %xmm0
 ; KNL-NEXT:    vpmovsxdq %xmm0, %xmm0
 ; KNL-NEXT:    vpsrlq $63, %xmm0, %xmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test46:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vcmpeqps %xmm1, %xmm0, %k1
 ; SKX-NEXT:    vmovdqa64 {{.*}}(%rip), %xmm0 {%k1} {z}
 ; SKX-NEXT:    retq

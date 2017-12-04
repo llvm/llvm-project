@@ -277,7 +277,7 @@ bool InstructionSelector::executeMatchTable(
           return false;
 
       for (const auto &MMO : State.MIs[InsnID]->memoperands())
-        if (!isStrongerThan(Ordering, MMO->getOrdering()))
+        if (isAtLeastOrStrongerThan(MMO->getOrdering(), Ordering))
           if (handleReject() == RejectAndGiveUp)
             return false;
       break;

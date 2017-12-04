@@ -17,7 +17,7 @@
 ; Function Attrs: norecurse nounwind uwtable
 define void @_Z1av() local_unnamed_addr #0 {
 ; CHECK-LABEL: _Z1av:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl struct_obj_3+{{.*}}(%rip), %eax
 ; CHECK-NEXT:    movsbl {{.*}}(%rip), %ecx
 ; CHECK-NEXT:    movzbl {{.*}}(%rip), %edx

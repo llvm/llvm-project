@@ -4,7 +4,7 @@
 declare i32 @llvm.bitreverse.i32(i32)
 define i32 @testBitReverseIntrinsicI32(i32 %arg) {
 ; CHECK-LABEL: testBitReverseIntrinsicI32:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lis 4, -21846
 ; CHECK-NEXT:    lis 5, 21845
 ; CHECK-NEXT:    slwi 6, 3, 1
@@ -44,7 +44,7 @@ define i32 @testBitReverseIntrinsicI32(i32 %arg) {
 declare i64 @llvm.bitreverse.i64(i64)
 define i64 @testBitReverseIntrinsicI64(i64 %arg) {
 ; CHECK-LABEL: testBitReverseIntrinsicI64:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lis 4, -21846
 ; CHECK-NEXT:    lis 5, 21845
 ; CHECK-NEXT:    lis 6, -13108

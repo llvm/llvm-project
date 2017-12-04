@@ -5,7 +5,7 @@
 
 define i8* @nest_receiver(i8* nest %arg) nounwind {
 ; CHECK-LABEL: nest_receiver:
-; CHECK: @ BB#0:
+; CHECK: @ %bb.0:
 ; CHECK-NEXT: mov r0, r12
 ; CHECK-NEXT: mov pc, lr
         ret i8* %arg

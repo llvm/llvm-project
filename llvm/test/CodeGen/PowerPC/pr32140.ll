@@ -9,7 +9,7 @@
 
 define void @bswapStorei64Toi32() {
 ; CHECK-LABEL: bswapStorei64Toi32:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK:         lwa 3, 0(3)
 ; CHECK-NEXT:    rldicl 3, 3, 32, 32
 ; CHECK-NEXT:    stwbrx 3, 0, 4
@@ -25,7 +25,7 @@ entry:
 
 define void @bswapStorei32Toi16() {
 ; CHECK-LABEL: bswapStorei32Toi16:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK:         lha 3, 0(3)
 ; CHECK-NEXT:    srwi 3, 3, 16
 ; CHECK-NEXT:    sthbrx 3, 0, 4
@@ -41,7 +41,7 @@ entry:
 
 define void @bswapStorei64Toi16() {
 ; CHECK-LABEL: bswapStorei64Toi16:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK:         lha 3, 0(3)
 ; CHECK-NEXT:    rldicl 3, 3, 16, 48
 ; CHECK-NEXT:    sthbrx 3, 0, 4

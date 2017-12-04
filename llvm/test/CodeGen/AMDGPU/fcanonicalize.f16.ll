@@ -207,7 +207,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan3_value_f16(half addrspace
 }
 
 ; GCN-LABEL: {{^}}v_test_canonicalize_var_v2f16:
-; VI-DAG: v_max_f16_sdwa [[REG0:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-DAG: v_max_f16_sdwa [[REG0:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; VI-DAG: v_max_f16_e32 [[REG1:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
 ; VI-NOT: v_and_b32
 
@@ -246,7 +246,7 @@ define amdgpu_kernel void @v_test_canonicalize_fabs_var_v2f16(<2 x half> addrspa
 
 ; GCN-LABEL: {{^}}v_test_canonicalize_fneg_fabs_var_v2f16:
 ; VI-DAG: v_or_b32_e32 v{{[0-9]+}}, 0x80008000, v{{[0-9]+}}
-; VI-DAG: v_max_f16_sdwa [[REG0:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-DAG: v_max_f16_sdwa [[REG0:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; VI-DAG: v_max_f16_e32 [[REG1:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}
 ; VI: v_or_b32
 
@@ -266,8 +266,7 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_v2f16(<2 x half> ad
 
 ; GCN-LABEL: {{^}}v_test_canonicalize_fneg_var_v2f16:
 ; VI:     v_xor_b32_e32 [[FNEG:v[0-9]+]], 0x80008000, v{{[0-9]+}}
-; VI:     v_lshrrev_b32_e32 [[FNEGHI:v[0-9]+]], 16, [[FNEG]]
-; VI-DAG: v_max_f16_sdwa [[REG1:v[0-9]+]], [[FNEG]], [[FNEGHI]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-DAG: v_max_f16_sdwa [[REG1:v[0-9]+]], [[FNEG]], [[FNEG]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; VI-DAG: v_max_f16_e32 [[REG0:v[0-9]+]], [[FNEG]], [[FNEG]]
 ; VI-NOT: 0xffff
 

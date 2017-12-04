@@ -9,7 +9,7 @@
 
 define <2 x i64> @var_shuffle_v2i64(<2 x i64> %v, <2 x i64> %indices) nounwind {
 ; SSSE3-LABEL: var_shuffle_v2i64:
-; SSSE3:       # BB#0:
+; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    movq %xmm1, %rax
 ; SSSE3-NEXT:    andl $1, %eax
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
@@ -22,7 +22,7 @@ define <2 x i64> @var_shuffle_v2i64(<2 x i64> %v, <2 x i64> %indices) nounwind {
 ; SSSE3-NEXT:    retq
 ;
 ; AVX-LABEL: var_shuffle_v2i64:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovq %xmm1, %rax
 ; AVX-NEXT:    andl $1, %eax
 ; AVX-NEXT:    vpextrq $1, %xmm1, %rcx
@@ -43,7 +43,7 @@ define <2 x i64> @var_shuffle_v2i64(<2 x i64> %v, <2 x i64> %indices) nounwind {
 
 define <4 x i32> @var_shuffle_v4i32(<4 x i32> %v, <4 x i32> %indices) nounwind {
 ; SSSE3-LABEL: var_shuffle_v4i32:
-; SSSE3:       # BB#0:
+; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,0,1]
 ; SSSE3-NEXT:    movq %xmm2, %rax
 ; SSSE3-NEXT:    movq %rax, %rcx
@@ -66,7 +66,7 @@ define <4 x i32> @var_shuffle_v4i32(<4 x i32> %v, <4 x i32> %indices) nounwind {
 ; SSSE3-NEXT:    retq
 ;
 ; AVX-LABEL: var_shuffle_v4i32:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpextrq $1, %xmm1, %rax
 ; AVX-NEXT:    movq %rax, %rcx
 ; AVX-NEXT:    sarq $32, %rcx
@@ -100,7 +100,7 @@ define <4 x i32> @var_shuffle_v4i32(<4 x i32> %v, <4 x i32> %indices) nounwind {
 
 define <8 x i16> @var_shuffle_v8i16(<8 x i16> %v, <8 x i16> %indices) nounwind {
 ; SSSE3-LABEL: var_shuffle_v8i16:
-; SSSE3:       # BB#0:
+; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    movd %xmm1, %r8d
 ; SSSE3-NEXT:    pextrw $1, %xmm1, %r9d
 ; SSSE3-NEXT:    pextrw $2, %xmm1, %r10d
@@ -144,7 +144,7 @@ define <8 x i16> @var_shuffle_v8i16(<8 x i16> %v, <8 x i16> %indices) nounwind {
 ; SSSE3-NEXT:    retq
 ;
 ; AVXNOVLBW-LABEL: var_shuffle_v8i16:
-; AVXNOVLBW:       # BB#0:
+; AVXNOVLBW:       # %bb.0:
 ; AVXNOVLBW-NEXT:    vmovd %xmm1, %eax
 ; AVXNOVLBW-NEXT:    vpextrw $1, %xmm1, %r10d
 ; AVXNOVLBW-NEXT:    vpextrw $2, %xmm1, %ecx
@@ -174,7 +174,7 @@ define <8 x i16> @var_shuffle_v8i16(<8 x i16> %v, <8 x i16> %indices) nounwind {
 ; AVXNOVLBW-NEXT:    retq
 ;
 ; AVX512VLBW-LABEL: var_shuffle_v8i16:
-; AVX512VLBW:       # BB#0:
+; AVX512VLBW:       # %bb.0:
 ; AVX512VLBW-NEXT:    vpermw %xmm0, %xmm1, %xmm0
 ; AVX512VLBW-NEXT:    retq
   %index0 = extractelement <8 x i16> %indices, i32 0
@@ -206,13 +206,13 @@ define <8 x i16> @var_shuffle_v8i16(<8 x i16> %v, <8 x i16> %indices) nounwind {
 
 define <16 x i8> @var_shuffle_v16i8(<16 x i8> %v, <16 x i8> %indices) nounwind {
 ; SSSE3-LABEL: var_shuffle_v16i8:
-; SSSE3:       # BB#0:
+; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    pshufb %xmm0, %xmm1
 ; SSSE3-NEXT:    movdqa %xmm1, %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; AVX-LABEL: var_shuffle_v16i8:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpshufb %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %index0 = extractelement <16 x i8> %indices, i32 0
@@ -268,7 +268,7 @@ define <16 x i8> @var_shuffle_v16i8(<16 x i8> %v, <16 x i8> %indices) nounwind {
 
 define <2 x double> @var_shuffle_v2f64(<2 x double> %v, <2 x i64> %indices) nounwind {
 ; SSSE3-LABEL: var_shuffle_v2f64:
-; SSSE3:       # BB#0:
+; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    movq %xmm1, %rax
 ; SSSE3-NEXT:    andl $1, %eax
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
@@ -280,7 +280,7 @@ define <2 x double> @var_shuffle_v2f64(<2 x double> %v, <2 x i64> %indices) noun
 ; SSSE3-NEXT:    retq
 ;
 ; AVX-LABEL: var_shuffle_v2f64:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovq %xmm1, %rax
 ; AVX-NEXT:    andl $1, %eax
 ; AVX-NEXT:    vpextrq $1, %xmm1, %rcx
@@ -300,7 +300,7 @@ define <2 x double> @var_shuffle_v2f64(<2 x double> %v, <2 x i64> %indices) noun
 
 define <4 x float> @var_shuffle_v4f32(<4 x float> %v, <4 x i32> %indices) nounwind {
 ; SSSE3-LABEL: var_shuffle_v4f32:
-; SSSE3:       # BB#0:
+; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,0,1]
 ; SSSE3-NEXT:    movq %xmm2, %rax
 ; SSSE3-NEXT:    movq %rax, %rcx
@@ -323,7 +323,7 @@ define <4 x float> @var_shuffle_v4f32(<4 x float> %v, <4 x i32> %indices) nounwi
 ; SSSE3-NEXT:    retq
 ;
 ; AVX-LABEL: var_shuffle_v4f32:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpextrq $1, %xmm1, %rax
 ; AVX-NEXT:    movq %rax, %rcx
 ; AVX-NEXT:    sarq $32, %rcx

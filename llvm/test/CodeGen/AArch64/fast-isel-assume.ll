@@ -3,7 +3,7 @@
 ; Check that we ignore the assume intrinsic.
 
 ; CHECK-LABEL: test:
-; CHECK: // BB#0:
+; CHECK: // %bb.0:
 ; CHECK-NEXT: ret
 define void @test(i32 %a) {
   %tmp0 = icmp slt i32 %a, 0

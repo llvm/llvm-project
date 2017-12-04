@@ -38,7 +38,7 @@ Lfunc_begin0:
 	.file	1 "brief.c"
 	.loc	1 1 0                   ## brief.c:1:0
 	.cfi_startproc
-## BB#0:                                ## %entry
+## %bb.0:                               ## %entry
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16

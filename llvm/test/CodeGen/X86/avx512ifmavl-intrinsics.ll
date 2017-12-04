@@ -5,7 +5,7 @@ declare <2 x i64> @llvm.x86.avx512.mask.vpmadd52h.uq.128(<2 x i64>, <2 x i64>, <
 
 define <2 x i64>@test_int_x86_avx512_mask_vpmadd52h_uq_128(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %x2, i8 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpmadd52h_uq_128:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vmovdqa %xmm0, %xmm3
 ; CHECK-NEXT:    vpmadd52huq %xmm2, %xmm1, %xmm3
@@ -33,7 +33,7 @@ declare <4 x i64> @llvm.x86.avx512.mask.vpmadd52h.uq.256(<4 x i64>, <4 x i64>, <
 
 define <4 x i64>@test_int_x86_avx512_mask_vpmadd52h_uq_256(<4 x i64> %x0, <4 x i64> %x1, <4 x i64> %x2, i8 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpmadd52h_uq_256:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vmovdqa %ymm0, %ymm3
 ; CHECK-NEXT:    vpmadd52huq %ymm2, %ymm1, %ymm3
@@ -61,7 +61,7 @@ declare <2 x i64> @llvm.x86.avx512.maskz.vpmadd52h.uq.128(<2 x i64>, <2 x i64>, 
 
 define <2 x i64>@test_int_x86_avx512_maskz_vpmadd52h_uq_128(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %x2, i8 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_maskz_vpmadd52h_uq_128:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vmovdqa %xmm0, %xmm3
 ; CHECK-NEXT:    vpmadd52huq %xmm2, %xmm1, %xmm3
@@ -89,7 +89,7 @@ declare <4 x i64> @llvm.x86.avx512.maskz.vpmadd52h.uq.256(<4 x i64>, <4 x i64>, 
 
 define <4 x i64>@test_int_x86_avx512_maskz_vpmadd52h_uq_256(<4 x i64> %x0, <4 x i64> %x1, <4 x i64> %x2, i8 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_maskz_vpmadd52h_uq_256:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vmovdqa %ymm0, %ymm3
 ; CHECK-NEXT:    vpmadd52huq %ymm2, %ymm1, %ymm3
@@ -117,7 +117,7 @@ declare <2 x i64> @llvm.x86.avx512.mask.vpmadd52l.uq.128(<2 x i64>, <2 x i64>, <
 
 define <2 x i64>@test_int_x86_avx512_mask_vpmadd52l_uq_128(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %x2, i8 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpmadd52l_uq_128:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vmovdqa %xmm0, %xmm3
 ; CHECK-NEXT:    vpmadd52luq %xmm2, %xmm1, %xmm3
@@ -145,7 +145,7 @@ declare <4 x i64> @llvm.x86.avx512.mask.vpmadd52l.uq.256(<4 x i64>, <4 x i64>, <
 
 define <4 x i64>@test_int_x86_avx512_mask_vpmadd52l_uq_256(<4 x i64> %x0, <4 x i64> %x1, <4 x i64> %x2, i8 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpmadd52l_uq_256:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vmovdqa %ymm0, %ymm3
 ; CHECK-NEXT:    vpmadd52luq %ymm2, %ymm1, %ymm3
@@ -173,7 +173,7 @@ declare <2 x i64> @llvm.x86.avx512.maskz.vpmadd52l.uq.128(<2 x i64>, <2 x i64>, 
 
 define <2 x i64>@test_int_x86_avx512_maskz_vpmadd52l_uq_128(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %x2, i8 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_maskz_vpmadd52l_uq_128:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vmovdqa %xmm0, %xmm3
 ; CHECK-NEXT:    vpmadd52luq %xmm2, %xmm1, %xmm3
@@ -201,7 +201,7 @@ declare <4 x i64> @llvm.x86.avx512.maskz.vpmadd52l.uq.256(<4 x i64>, <4 x i64>, 
 
 define <4 x i64>@test_int_x86_avx512_maskz_vpmadd52l_uq_256(<4 x i64> %x0, <4 x i64> %x1, <4 x i64> %x2, i8 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_maskz_vpmadd52l_uq_256:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vmovdqa %ymm0, %ymm3
 ; CHECK-NEXT:    vpmadd52luq %ymm2, %ymm1, %ymm3

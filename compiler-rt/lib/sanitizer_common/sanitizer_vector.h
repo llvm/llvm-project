@@ -1,4 +1,4 @@
-//===-- tsan_vector.h -------------------------------------------*- C++ -*-===//
+//===-- sanitizer_vector.h -------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,38 +7,37 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file is a part of ThreadSanitizer (TSan), a race detector.
+// This file is shared between sanitizers run-time libraries.
 //
 //===----------------------------------------------------------------------===//
 
 // Low-fat STL-like vector container.
 
-#ifndef TSAN_VECTOR_H
-#define TSAN_VECTOR_H
+#ifndef SANITIZER_VECTOR_H
+#define SANITIZER_VECTOR_H
 
-#include "tsan_defs.h"
-#include "tsan_mman.h"
+#include "sanitizer_common/sanitizer_allocator_internal.h"
+#include "sanitizer_common/sanitizer_libc.h"
 
-namespace __tsan {
+namespace __sanitizer {
 
 template<typename T>
 class Vector {
  public:
-  explicit Vector(MBlockType typ)
-      : typ_(typ)
-      , begin_()
+  explicit Vector()
+      : begin_()
       , end_()
       , last_() {
   }
 
   ~Vector() {
     if (begin_)
-      internal_free(begin_);
+      InternalFree(begin_);
   }
 
   void Reset() {
     if (begin_)
-      internal_free(begin_);
+      InternalFree(begin_);
     begin_ = 0;
     end_ = 0;
     last_ = 0;
@@ -91,7 +90,6 @@ class Vector {
   }
 
  private:
-  const MBlockType typ_;
   T *begin_;
   T *end_;
   T *last_;
@@ -109,10 +107,10 @@ class Vector {
       cap = 16;
     if (cap < size)
       cap = size;
-    T *p = (T*)internal_alloc(typ_, cap * sizeof(T));
+    T *p = (T*)InternalAlloc(cap * sizeof(T));
     if (cap0) {
       internal_memcpy(p, begin_, cap0 * sizeof(T));
-      internal_free(begin_);
+      InternalFree(begin_);
     }
     begin_ = p;
     end_ = begin_ + size;
@@ -122,6 +120,6 @@ class Vector {
   Vector(const Vector&);
   void operator=(const Vector&);
 };
-}  // namespace __tsan
+}  // namespace __sanitizer
 
-#endif  // #ifndef TSAN_VECTOR_H
+#endif  // #ifndef SANITIZER_VECTOR_H

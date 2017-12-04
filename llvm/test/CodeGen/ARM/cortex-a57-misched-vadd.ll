@@ -1,7 +1,7 @@
 ; REQUIRES: asserts
 ; RUN: llc < %s -mtriple=armv8r-eabi -mcpu=cortex-a57 -misched-postra -enable-misched -verify-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s
 
-; CHECK-LABEL:  addv_i32:BB#0
+; CHECK-LABEL:  addv_i32:%bb.0
 ; CHECK:        SU(8): {{.*}} VADDv4i32
 ; CHECK-NEXT:   # preds left
 ; CHECK-NEXT:   # succs left
@@ -13,7 +13,7 @@ define <4 x i32> @addv_i32(<4 x i32>, <4 x i32>) {
   ret <4 x i32> %3
 }
 
-; CHECK-LABEL:  addv_f32:BB#0
+; CHECK-LABEL:  addv_f32:%bb.0
 ; CHECK:        SU(8): {{.*}} VADDfq
 ; CHECK-NEXT:   # preds left
 ; CHECK-NEXT:   # succs left

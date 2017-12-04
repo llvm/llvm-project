@@ -10,7 +10,7 @@
 __cxx_global_var_init:                  # @__cxx_global_var_init
         .cfi_startproc
 .Lfunc_begin0:
-# BB#0:                                 # %entry
+# %bb.0:                                # %entry
         pushq   %rbp
 .Ltmp2:
         .cfi_def_cfa_offset 16

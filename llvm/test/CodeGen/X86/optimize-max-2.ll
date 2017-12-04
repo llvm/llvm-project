@@ -8,7 +8,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 define void @foo(double* nocapture %p, i64 %x, i64 %y) nounwind {
 ; CHECK-LABEL: foo:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testq %rdx, %rdx
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    cmovneq %rdx, %rax
@@ -23,7 +23,7 @@ define void @foo(double* nocapture %p, i64 %x, i64 %y) nounwind {
 ; CHECK-NEXT:    addq $8, %rdi
 ; CHECK-NEXT:    decq %rax
 ; CHECK-NEXT:    jne .LBB0_1
-; CHECK-NEXT:  # BB#2: # %return
+; CHECK-NEXT:  # %bb.2: # %return
 ; CHECK-NEXT:    retq
 entry:
 	%tmp = icmp eq i64 %y, 0		; <i1> [#uses=1]

@@ -5,7 +5,7 @@
 
 define void @test1(<2 x double>* %r, <2 x double>* %A, double %B) nounwind  {
 ; CHECK-LABEL: test1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movapd (%ecx), %xmm0

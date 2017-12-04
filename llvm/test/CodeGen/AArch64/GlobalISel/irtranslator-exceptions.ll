@@ -9,7 +9,7 @@ declare i32 @llvm.eh.typeid.for(i8*)
 ; CHECK-LABEL: name: bar
 ; CHECK: body:
 ; CHECK-NEXT:   bb.1 (%ir-block.0):
-; CHECK:     successors: %[[GOOD:bb.[0-9]+.continue]]{{.*}}%[[BAD:bb.[0-9]+.broken]]
+; CHECK:     successors: %[[GOOD:bb.[0-9]+]]{{.*}}%[[BAD:bb.[0-9]+]]
 ; CHECK:     EH_LABEL
 ; CHECK:     %w0 = COPY
 ; CHECK:     BL @foo, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %w0, implicit-def %w0
@@ -17,7 +17,7 @@ declare i32 @llvm.eh.typeid.for(i8*)
 ; CHECK:     EH_LABEL
 ; CHECK:     G_BR %[[GOOD]]
 
-; CHECK:   [[BAD]] (landing-pad):
+; CHECK:   [[BAD]].{{[a-z]+}} (landing-pad):
 ; CHECK:     EH_LABEL
 ; CHECK:     [[UNDEF:%[0-9]+]]:_(s128) = G_IMPLICIT_DEF
 ; CHECK:     [[PTR:%[0-9]+]]:_(p0) = COPY %x0
@@ -30,7 +30,7 @@ declare i32 @llvm.eh.typeid.for(i8*)
 ; CHECK:     %x0 = COPY [[PTR_RET]]
 ; CHECK:     %w1 = COPY [[SEL_RET]]
 
-; CHECK:   [[GOOD]]:
+; CHECK:   [[GOOD]].{{[a-z]+}}:
 ; CHECK:     [[SEL:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
 ; CHECK:     {{%[0-9]+}}:_(s128) = G_INSERT {{%[0-9]+}}, [[SEL]](s32), 64
 

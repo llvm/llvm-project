@@ -200,7 +200,7 @@ void ExecutionDepsFix::enterBasicBlock(MachineBasicBlock *MBB) {
         LiveRegs[rx].Def = -1;
       }
     }
-    DEBUG(dbgs() << "BB#" << MBB->getNumber() << ": entry\n");
+    DEBUG(dbgs() << printMBBReference(*MBB) << ": entry\n");
     return;
   }
 
@@ -246,7 +246,7 @@ void ExecutionDepsFix::enterBasicBlock(MachineBasicBlock *MBB) {
     }
   }
   DEBUG(
-      dbgs() << "BB#" << MBB->getNumber()
+      dbgs() << printMBBReference(*MBB)
              << (!isBlockDone(MBB) ? ": incomplete\n" : ": all preds known\n"));
 }
 

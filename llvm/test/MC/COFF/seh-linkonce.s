@@ -11,7 +11,7 @@
 weak_func:                              # @weak_func
 .Ltmp0:
 .seh_proc weak_func
-# BB#0:                                 # %entry
+# %bb.0:                                # %entry
         pushq   %rbp
 .Ltmp1:
         .seh_pushreg 5

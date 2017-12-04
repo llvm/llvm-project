@@ -111,24 +111,24 @@ LANGSTANDARD_ALIAS_DEPR(gnucxx14, "gnu++1y")
 
 LANGSTANDARD(cxx17, "c++17",
              CXX, "ISO C++ 2017 with amendments",
-             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus1z |
+             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus17 |
              Digraphs | HexFloat)
 LANGSTANDARD_ALIAS_DEPR(cxx17, "c++1z")
 
 LANGSTANDARD(gnucxx17, "gnu++17",
              CXX, "ISO C++ 2017 with amendments and GNU extensions",
-             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus1z |
+             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus17 |
              Digraphs | HexFloat | GNUMode)
 LANGSTANDARD_ALIAS_DEPR(gnucxx17, "gnu++1z")
 
 LANGSTANDARD(cxx2a, "c++2a",
              CXX, "Working draft for ISO C++ 2020",
-             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus1z |
+             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus17 |
              CPlusPlus2a | Digraphs | HexFloat)
 
 LANGSTANDARD(gnucxx2a, "gnu++2a",
              CXX, "Working draft for ISO C++ 2020 with GNU extensions",
-             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus1z |
+             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus17 |
              CPlusPlus2a | Digraphs | HexFloat | GNUMode)
 
 // OpenCL

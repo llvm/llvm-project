@@ -9,7 +9,7 @@ entry:
   ret i32 0
 }
 
-; CHECK: @ BB#0: @ %entry
+; CHECK: @ %bb.0: @ %entry
 ; CHECK-NEXT: dmb ish
 ; CHECK-NEXT: dmb ish
 ; CHECK-NEXT: dmb ish

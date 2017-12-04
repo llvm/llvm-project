@@ -6,7 +6,7 @@
 
 define i8 @PR32316(i8 %t1, i32 %t5, i8 %t8)  {
 ; CHECK-LABEL: PR32316:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %dil, %dil
 ; CHECK-NEXT:    sete %al

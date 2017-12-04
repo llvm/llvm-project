@@ -6,14 +6,14 @@
 
 define i32 @test_lshr_and(i32 %x) {
 ; X32-LABEL: test_lshr_and:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    andl $12, %eax
 ; X32-NEXT:    movl array(%eax), %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_lshr_and:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; X64-NEXT:    shrl $2, %edi
 ; X64-NEXT:    andl $3, %edi
@@ -28,7 +28,7 @@ define i32 @test_lshr_and(i32 %x) {
 
 define i32* @test_exact1(i32 %a, i32 %b, i32* %x)  {
 ; X32-LABEL: test_exact1:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    subl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    sarl %eax
@@ -36,7 +36,7 @@ define i32* @test_exact1(i32 %a, i32 %b, i32* %x)  {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_exact1:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    subl %edi, %esi
 ; X64-NEXT:    sarl $3, %esi
 ; X64-NEXT:    movslq %esi, %rax
@@ -50,7 +50,7 @@ define i32* @test_exact1(i32 %a, i32 %b, i32* %x)  {
 
 define i32* @test_exact2(i32 %a, i32 %b, i32* %x)  {
 ; X32-LABEL: test_exact2:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    subl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    sarl %eax
@@ -58,7 +58,7 @@ define i32* @test_exact2(i32 %a, i32 %b, i32* %x)  {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_exact2:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    subl %edi, %esi
 ; X64-NEXT:    sarl $3, %esi
 ; X64-NEXT:    movslq %esi, %rax
@@ -72,14 +72,14 @@ define i32* @test_exact2(i32 %a, i32 %b, i32* %x)  {
 
 define i32* @test_exact3(i32 %a, i32 %b, i32* %x)  {
 ; X32-LABEL: test_exact3:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    subl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_exact3:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    subl %edi, %esi
 ; X64-NEXT:    sarl $2, %esi
 ; X64-NEXT:    movslq %esi, %rax
@@ -93,7 +93,7 @@ define i32* @test_exact3(i32 %a, i32 %b, i32* %x)  {
 
 define i32* @test_exact4(i32 %a, i32 %b, i32* %x)  {
 ; X32-LABEL: test_exact4:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    subl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    shrl %eax
@@ -101,7 +101,7 @@ define i32* @test_exact4(i32 %a, i32 %b, i32* %x)  {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_exact4:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; X64-NEXT:    subl %edi, %esi
 ; X64-NEXT:    shrl $3, %esi
@@ -115,7 +115,7 @@ define i32* @test_exact4(i32 %a, i32 %b, i32* %x)  {
 
 define i32* @test_exact5(i32 %a, i32 %b, i32* %x)  {
 ; X32-LABEL: test_exact5:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    subl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    shrl %eax
@@ -123,7 +123,7 @@ define i32* @test_exact5(i32 %a, i32 %b, i32* %x)  {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_exact5:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; X64-NEXT:    subl %edi, %esi
 ; X64-NEXT:    shrl $3, %esi
@@ -137,14 +137,14 @@ define i32* @test_exact5(i32 %a, i32 %b, i32* %x)  {
 
 define i32* @test_exact6(i32 %a, i32 %b, i32* %x)  {
 ; X32-LABEL: test_exact6:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    subl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_exact6:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; X64-NEXT:    subl %edi, %esi
 ; X64-NEXT:    leaq (%rsi,%rdx), %rax

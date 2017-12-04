@@ -1275,7 +1275,7 @@ static StringRef getFallthroughAttrSpelling(Preprocessor &PP,
     tok::r_square, tok::r_square
   };
 
-  bool PreferClangAttr = !PP.getLangOpts().CPlusPlus1z;
+  bool PreferClangAttr = !PP.getLangOpts().CPlusPlus17;
 
   StringRef MacroName;
   if (PreferClangAttr)

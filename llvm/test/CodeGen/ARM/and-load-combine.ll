@@ -6,7 +6,7 @@
 
 define arm_aapcscc zeroext i1 @cmp_xor8_short_short(i16* nocapture readonly %a,
 ; ARM-LABEL: cmp_xor8_short_short:
-; ARM:       @ BB#0: @ %entry
+; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldrh r0, [r0]
 ; ARM-NEXT:    ldrh r1, [r1]
 ; ARM-NEXT:    eor r1, r1, r0
@@ -16,7 +16,7 @@ define arm_aapcscc zeroext i1 @cmp_xor8_short_short(i16* nocapture readonly %a,
 ; ARM-NEXT:    bx lr
 ;
 ; ARMEB-LABEL: cmp_xor8_short_short:
-; ARMEB:       @ BB#0: @ %entry
+; ARMEB:       @ %bb.0: @ %entry
 ; ARMEB-NEXT:    ldrh r0, [r0]
 ; ARMEB-NEXT:    ldrh r1, [r1]
 ; ARMEB-NEXT:    eor r1, r1, r0
@@ -26,7 +26,7 @@ define arm_aapcscc zeroext i1 @cmp_xor8_short_short(i16* nocapture readonly %a,
 ; ARMEB-NEXT:    bx lr
 ;
 ; THUMB1-LABEL: cmp_xor8_short_short:
-; THUMB1:       @ BB#0: @ %entry
+; THUMB1:       @ %bb.0: @ %entry
 ; THUMB1-NEXT:    ldrh r0, [r0]
 ; THUMB1-NEXT:    ldrh r2, [r1]
 ; THUMB1-NEXT:    eors r2, r0
@@ -34,13 +34,13 @@ define arm_aapcscc zeroext i1 @cmp_xor8_short_short(i16* nocapture readonly %a,
 ; THUMB1-NEXT:    movs r1, #0
 ; THUMB1-NEXT:    lsls r2, r2, #24
 ; THUMB1-NEXT:    beq .LBB0_2
-; THUMB1-NEXT:  @ BB#1: @ %entry
+; THUMB1-NEXT:  @ %bb.1: @ %entry
 ; THUMB1-NEXT:    mov r0, r1
 ; THUMB1-NEXT:  .LBB0_2: @ %entry
 ; THUMB1-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: cmp_xor8_short_short:
-; THUMB2:       @ BB#0: @ %entry
+; THUMB2:       @ %bb.0: @ %entry
 ; THUMB2-NEXT:    ldrh r0, [r0]
 ; THUMB2-NEXT:    ldrh r1, [r1]
 ; THUMB2-NEXT:    eors r0, r1
@@ -61,7 +61,7 @@ entry:
 
 define arm_aapcscc zeroext i1 @cmp_xor8_short_int(i16* nocapture readonly %a,
 ; ARM-LABEL: cmp_xor8_short_int:
-; ARM:       @ BB#0: @ %entry
+; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldrh r0, [r0]
 ; ARM-NEXT:    ldr r1, [r1]
 ; ARM-NEXT:    eor r1, r1, r0
@@ -71,7 +71,7 @@ define arm_aapcscc zeroext i1 @cmp_xor8_short_int(i16* nocapture readonly %a,
 ; ARM-NEXT:    bx lr
 ;
 ; ARMEB-LABEL: cmp_xor8_short_int:
-; ARMEB:       @ BB#0: @ %entry
+; ARMEB:       @ %bb.0: @ %entry
 ; ARMEB-NEXT:    ldrh r0, [r0]
 ; ARMEB-NEXT:    ldr r1, [r1]
 ; ARMEB-NEXT:    eor r1, r1, r0
@@ -81,7 +81,7 @@ define arm_aapcscc zeroext i1 @cmp_xor8_short_int(i16* nocapture readonly %a,
 ; ARMEB-NEXT:    bx lr
 ;
 ; THUMB1-LABEL: cmp_xor8_short_int:
-; THUMB1:       @ BB#0: @ %entry
+; THUMB1:       @ %bb.0: @ %entry
 ; THUMB1-NEXT:    ldrh r0, [r0]
 ; THUMB1-NEXT:    ldr r2, [r1]
 ; THUMB1-NEXT:    eors r2, r0
@@ -89,13 +89,13 @@ define arm_aapcscc zeroext i1 @cmp_xor8_short_int(i16* nocapture readonly %a,
 ; THUMB1-NEXT:    movs r1, #0
 ; THUMB1-NEXT:    lsls r2, r2, #24
 ; THUMB1-NEXT:    beq .LBB1_2
-; THUMB1-NEXT:  @ BB#1: @ %entry
+; THUMB1-NEXT:  @ %bb.1: @ %entry
 ; THUMB1-NEXT:    mov r0, r1
 ; THUMB1-NEXT:  .LBB1_2: @ %entry
 ; THUMB1-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: cmp_xor8_short_int:
-; THUMB2:       @ BB#0: @ %entry
+; THUMB2:       @ %bb.0: @ %entry
 ; THUMB2-NEXT:    ldrh r0, [r0]
 ; THUMB2-NEXT:    ldr r1, [r1]
 ; THUMB2-NEXT:    eors r0, r1
@@ -117,7 +117,7 @@ entry:
 
 define arm_aapcscc zeroext i1 @cmp_xor8_int_int(i32* nocapture readonly %a,
 ; ARM-LABEL: cmp_xor8_int_int:
-; ARM:       @ BB#0: @ %entry
+; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldr r0, [r0]
 ; ARM-NEXT:    ldr r1, [r1]
 ; ARM-NEXT:    eor r1, r1, r0
@@ -127,7 +127,7 @@ define arm_aapcscc zeroext i1 @cmp_xor8_int_int(i32* nocapture readonly %a,
 ; ARM-NEXT:    bx lr
 ;
 ; ARMEB-LABEL: cmp_xor8_int_int:
-; ARMEB:       @ BB#0: @ %entry
+; ARMEB:       @ %bb.0: @ %entry
 ; ARMEB-NEXT:    ldr r0, [r0]
 ; ARMEB-NEXT:    ldr r1, [r1]
 ; ARMEB-NEXT:    eor r1, r1, r0
@@ -137,7 +137,7 @@ define arm_aapcscc zeroext i1 @cmp_xor8_int_int(i32* nocapture readonly %a,
 ; ARMEB-NEXT:    bx lr
 ;
 ; THUMB1-LABEL: cmp_xor8_int_int:
-; THUMB1:       @ BB#0: @ %entry
+; THUMB1:       @ %bb.0: @ %entry
 ; THUMB1-NEXT:    ldr r0, [r0]
 ; THUMB1-NEXT:    ldr r2, [r1]
 ; THUMB1-NEXT:    eors r2, r0
@@ -145,13 +145,13 @@ define arm_aapcscc zeroext i1 @cmp_xor8_int_int(i32* nocapture readonly %a,
 ; THUMB1-NEXT:    movs r1, #0
 ; THUMB1-NEXT:    lsls r2, r2, #24
 ; THUMB1-NEXT:    beq .LBB2_2
-; THUMB1-NEXT:  @ BB#1: @ %entry
+; THUMB1-NEXT:  @ %bb.1: @ %entry
 ; THUMB1-NEXT:    mov r0, r1
 ; THUMB1-NEXT:  .LBB2_2: @ %entry
 ; THUMB1-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: cmp_xor8_int_int:
-; THUMB2:       @ BB#0: @ %entry
+; THUMB2:       @ %bb.0: @ %entry
 ; THUMB2-NEXT:    ldr r0, [r0]
 ; THUMB2-NEXT:    ldr r1, [r1]
 ; THUMB2-NEXT:    eors r0, r1
@@ -172,7 +172,7 @@ entry:
 
 define arm_aapcscc zeroext i1 @cmp_xor16(i32* nocapture readonly %a,
 ; ARM-LABEL: cmp_xor16:
-; ARM:       @ BB#0: @ %entry
+; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldr r0, [r0]
 ; ARM-NEXT:    movw r2, #65535
 ; ARM-NEXT:    ldr r1, [r1]
@@ -183,7 +183,7 @@ define arm_aapcscc zeroext i1 @cmp_xor16(i32* nocapture readonly %a,
 ; ARM-NEXT:    bx lr
 ;
 ; ARMEB-LABEL: cmp_xor16:
-; ARMEB:       @ BB#0: @ %entry
+; ARMEB:       @ %bb.0: @ %entry
 ; ARMEB-NEXT:    ldr r0, [r0]
 ; ARMEB-NEXT:    movw r2, #65535
 ; ARMEB-NEXT:    ldr r1, [r1]
@@ -194,7 +194,7 @@ define arm_aapcscc zeroext i1 @cmp_xor16(i32* nocapture readonly %a,
 ; ARMEB-NEXT:    bx lr
 ;
 ; THUMB1-LABEL: cmp_xor16:
-; THUMB1:       @ BB#0: @ %entry
+; THUMB1:       @ %bb.0: @ %entry
 ; THUMB1-NEXT:    ldr r0, [r0]
 ; THUMB1-NEXT:    ldr r2, [r1]
 ; THUMB1-NEXT:    eors r2, r0
@@ -202,13 +202,13 @@ define arm_aapcscc zeroext i1 @cmp_xor16(i32* nocapture readonly %a,
 ; THUMB1-NEXT:    movs r1, #0
 ; THUMB1-NEXT:    lsls r2, r2, #16
 ; THUMB1-NEXT:    beq .LBB3_2
-; THUMB1-NEXT:  @ BB#1: @ %entry
+; THUMB1-NEXT:  @ %bb.1: @ %entry
 ; THUMB1-NEXT:    mov r0, r1
 ; THUMB1-NEXT:  .LBB3_2: @ %entry
 ; THUMB1-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: cmp_xor16:
-; THUMB2:       @ BB#0: @ %entry
+; THUMB2:       @ %bb.0: @ %entry
 ; THUMB2-NEXT:    ldr r0, [r0]
 ; THUMB2-NEXT:    ldr r1, [r1]
 ; THUMB2-NEXT:    eors r0, r1
@@ -229,7 +229,7 @@ entry:
 
 define arm_aapcscc zeroext i1 @cmp_or8_short_short(i16* nocapture readonly %a,
 ; ARM-LABEL: cmp_or8_short_short:
-; ARM:       @ BB#0: @ %entry
+; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldrh r0, [r0]
 ; ARM-NEXT:    ldrh r1, [r1]
 ; ARM-NEXT:    orr r1, r1, r0
@@ -239,7 +239,7 @@ define arm_aapcscc zeroext i1 @cmp_or8_short_short(i16* nocapture readonly %a,
 ; ARM-NEXT:    bx lr
 ;
 ; ARMEB-LABEL: cmp_or8_short_short:
-; ARMEB:       @ BB#0: @ %entry
+; ARMEB:       @ %bb.0: @ %entry
 ; ARMEB-NEXT:    ldrh r0, [r0]
 ; ARMEB-NEXT:    ldrh r1, [r1]
 ; ARMEB-NEXT:    orr r1, r1, r0
@@ -249,7 +249,7 @@ define arm_aapcscc zeroext i1 @cmp_or8_short_short(i16* nocapture readonly %a,
 ; ARMEB-NEXT:    bx lr
 ;
 ; THUMB1-LABEL: cmp_or8_short_short:
-; THUMB1:       @ BB#0: @ %entry
+; THUMB1:       @ %bb.0: @ %entry
 ; THUMB1-NEXT:    ldrh r0, [r0]
 ; THUMB1-NEXT:    ldrh r2, [r1]
 ; THUMB1-NEXT:    orrs r2, r0
@@ -257,13 +257,13 @@ define arm_aapcscc zeroext i1 @cmp_or8_short_short(i16* nocapture readonly %a,
 ; THUMB1-NEXT:    movs r1, #0
 ; THUMB1-NEXT:    lsls r2, r2, #24
 ; THUMB1-NEXT:    beq .LBB4_2
-; THUMB1-NEXT:  @ BB#1: @ %entry
+; THUMB1-NEXT:  @ %bb.1: @ %entry
 ; THUMB1-NEXT:    mov r0, r1
 ; THUMB1-NEXT:  .LBB4_2: @ %entry
 ; THUMB1-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: cmp_or8_short_short:
-; THUMB2:       @ BB#0: @ %entry
+; THUMB2:       @ %bb.0: @ %entry
 ; THUMB2-NEXT:    ldrh r0, [r0]
 ; THUMB2-NEXT:    ldrh r1, [r1]
 ; THUMB2-NEXT:    orrs r0, r1
@@ -284,7 +284,7 @@ entry:
 
 define arm_aapcscc zeroext i1 @cmp_or8_short_int(i16* nocapture readonly %a,
 ; ARM-LABEL: cmp_or8_short_int:
-; ARM:       @ BB#0: @ %entry
+; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldrh r0, [r0]
 ; ARM-NEXT:    ldr r1, [r1]
 ; ARM-NEXT:    orr r1, r1, r0
@@ -294,7 +294,7 @@ define arm_aapcscc zeroext i1 @cmp_or8_short_int(i16* nocapture readonly %a,
 ; ARM-NEXT:    bx lr
 ;
 ; ARMEB-LABEL: cmp_or8_short_int:
-; ARMEB:       @ BB#0: @ %entry
+; ARMEB:       @ %bb.0: @ %entry
 ; ARMEB-NEXT:    ldrh r0, [r0]
 ; ARMEB-NEXT:    ldr r1, [r1]
 ; ARMEB-NEXT:    orr r1, r1, r0
@@ -304,7 +304,7 @@ define arm_aapcscc zeroext i1 @cmp_or8_short_int(i16* nocapture readonly %a,
 ; ARMEB-NEXT:    bx lr
 ;
 ; THUMB1-LABEL: cmp_or8_short_int:
-; THUMB1:       @ BB#0: @ %entry
+; THUMB1:       @ %bb.0: @ %entry
 ; THUMB1-NEXT:    ldrh r0, [r0]
 ; THUMB1-NEXT:    ldr r2, [r1]
 ; THUMB1-NEXT:    orrs r2, r0
@@ -312,13 +312,13 @@ define arm_aapcscc zeroext i1 @cmp_or8_short_int(i16* nocapture readonly %a,
 ; THUMB1-NEXT:    movs r1, #0
 ; THUMB1-NEXT:    lsls r2, r2, #24
 ; THUMB1-NEXT:    beq .LBB5_2
-; THUMB1-NEXT:  @ BB#1: @ %entry
+; THUMB1-NEXT:  @ %bb.1: @ %entry
 ; THUMB1-NEXT:    mov r0, r1
 ; THUMB1-NEXT:  .LBB5_2: @ %entry
 ; THUMB1-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: cmp_or8_short_int:
-; THUMB2:       @ BB#0: @ %entry
+; THUMB2:       @ %bb.0: @ %entry
 ; THUMB2-NEXT:    ldrh r0, [r0]
 ; THUMB2-NEXT:    ldr r1, [r1]
 ; THUMB2-NEXT:    orrs r0, r1
@@ -340,7 +340,7 @@ entry:
 
 define arm_aapcscc zeroext i1 @cmp_or8_int_int(i32* nocapture readonly %a,
 ; ARM-LABEL: cmp_or8_int_int:
-; ARM:       @ BB#0: @ %entry
+; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldr r0, [r0]
 ; ARM-NEXT:    ldr r1, [r1]
 ; ARM-NEXT:    orr r1, r1, r0
@@ -350,7 +350,7 @@ define arm_aapcscc zeroext i1 @cmp_or8_int_int(i32* nocapture readonly %a,
 ; ARM-NEXT:    bx lr
 ;
 ; ARMEB-LABEL: cmp_or8_int_int:
-; ARMEB:       @ BB#0: @ %entry
+; ARMEB:       @ %bb.0: @ %entry
 ; ARMEB-NEXT:    ldr r0, [r0]
 ; ARMEB-NEXT:    ldr r1, [r1]
 ; ARMEB-NEXT:    orr r1, r1, r0
@@ -360,7 +360,7 @@ define arm_aapcscc zeroext i1 @cmp_or8_int_int(i32* nocapture readonly %a,
 ; ARMEB-NEXT:    bx lr
 ;
 ; THUMB1-LABEL: cmp_or8_int_int:
-; THUMB1:       @ BB#0: @ %entry
+; THUMB1:       @ %bb.0: @ %entry
 ; THUMB1-NEXT:    ldr r0, [r0]
 ; THUMB1-NEXT:    ldr r2, [r1]
 ; THUMB1-NEXT:    orrs r2, r0
@@ -368,13 +368,13 @@ define arm_aapcscc zeroext i1 @cmp_or8_int_int(i32* nocapture readonly %a,
 ; THUMB1-NEXT:    movs r1, #0
 ; THUMB1-NEXT:    lsls r2, r2, #24
 ; THUMB1-NEXT:    beq .LBB6_2
-; THUMB1-NEXT:  @ BB#1: @ %entry
+; THUMB1-NEXT:  @ %bb.1: @ %entry
 ; THUMB1-NEXT:    mov r0, r1
 ; THUMB1-NEXT:  .LBB6_2: @ %entry
 ; THUMB1-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: cmp_or8_int_int:
-; THUMB2:       @ BB#0: @ %entry
+; THUMB2:       @ %bb.0: @ %entry
 ; THUMB2-NEXT:    ldr r0, [r0]
 ; THUMB2-NEXT:    ldr r1, [r1]
 ; THUMB2-NEXT:    orrs r0, r1
@@ -395,7 +395,7 @@ entry:
 
 define arm_aapcscc zeroext i1 @cmp_or16(i32* nocapture readonly %a,
 ; ARM-LABEL: cmp_or16:
-; ARM:       @ BB#0: @ %entry
+; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldr r0, [r0]
 ; ARM-NEXT:    movw r2, #65535
 ; ARM-NEXT:    ldr r1, [r1]
@@ -406,7 +406,7 @@ define arm_aapcscc zeroext i1 @cmp_or16(i32* nocapture readonly %a,
 ; ARM-NEXT:    bx lr
 ;
 ; ARMEB-LABEL: cmp_or16:
-; ARMEB:       @ BB#0: @ %entry
+; ARMEB:       @ %bb.0: @ %entry
 ; ARMEB-NEXT:    ldr r0, [r0]
 ; ARMEB-NEXT:    movw r2, #65535
 ; ARMEB-NEXT:    ldr r1, [r1]
@@ -417,7 +417,7 @@ define arm_aapcscc zeroext i1 @cmp_or16(i32* nocapture readonly %a,
 ; ARMEB-NEXT:    bx lr
 ;
 ; THUMB1-LABEL: cmp_or16:
-; THUMB1:       @ BB#0: @ %entry
+; THUMB1:       @ %bb.0: @ %entry
 ; THUMB1-NEXT:    ldr r0, [r0]
 ; THUMB1-NEXT:    ldr r2, [r1]
 ; THUMB1-NEXT:    orrs r2, r0
@@ -425,13 +425,13 @@ define arm_aapcscc zeroext i1 @cmp_or16(i32* nocapture readonly %a,
 ; THUMB1-NEXT:    movs r1, #0
 ; THUMB1-NEXT:    lsls r2, r2, #16
 ; THUMB1-NEXT:    beq .LBB7_2
-; THUMB1-NEXT:  @ BB#1: @ %entry
+; THUMB1-NEXT:  @ %bb.1: @ %entry
 ; THUMB1-NEXT:    mov r0, r1
 ; THUMB1-NEXT:  .LBB7_2: @ %entry
 ; THUMB1-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: cmp_or16:
-; THUMB2:       @ BB#0: @ %entry
+; THUMB2:       @ %bb.0: @ %entry
 ; THUMB2-NEXT:    ldr r0, [r0]
 ; THUMB2-NEXT:    ldr r1, [r1]
 ; THUMB2-NEXT:    orrs r0, r1
@@ -452,7 +452,7 @@ entry:
 
 define arm_aapcscc zeroext i1 @cmp_and8_short_short(i16* nocapture readonly %a,
 ; ARM-LABEL: cmp_and8_short_short:
-; ARM:       @ BB#0: @ %entry
+; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldrh r1, [r1]
 ; ARM-NEXT:    ldrh r0, [r0]
 ; ARM-NEXT:    and r1, r0, r1
@@ -462,7 +462,7 @@ define arm_aapcscc zeroext i1 @cmp_and8_short_short(i16* nocapture readonly %a,
 ; ARM-NEXT:    bx lr
 ;
 ; ARMEB-LABEL: cmp_and8_short_short:
-; ARMEB:       @ BB#0: @ %entry
+; ARMEB:       @ %bb.0: @ %entry
 ; ARMEB-NEXT:    ldrh r1, [r1]
 ; ARMEB-NEXT:    ldrh r0, [r0]
 ; ARMEB-NEXT:    and r1, r0, r1
@@ -472,7 +472,7 @@ define arm_aapcscc zeroext i1 @cmp_and8_short_short(i16* nocapture readonly %a,
 ; ARMEB-NEXT:    bx lr
 ;
 ; THUMB1-LABEL: cmp_and8_short_short:
-; THUMB1:       @ BB#0: @ %entry
+; THUMB1:       @ %bb.0: @ %entry
 ; THUMB1-NEXT:    ldrh r1, [r1]
 ; THUMB1-NEXT:    ldrh r2, [r0]
 ; THUMB1-NEXT:    ands r2, r1
@@ -480,13 +480,13 @@ define arm_aapcscc zeroext i1 @cmp_and8_short_short(i16* nocapture readonly %a,
 ; THUMB1-NEXT:    movs r1, #0
 ; THUMB1-NEXT:    lsls r2, r2, #24
 ; THUMB1-NEXT:    beq .LBB8_2
-; THUMB1-NEXT:  @ BB#1: @ %entry
+; THUMB1-NEXT:  @ %bb.1: @ %entry
 ; THUMB1-NEXT:    mov r0, r1
 ; THUMB1-NEXT:  .LBB8_2: @ %entry
 ; THUMB1-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: cmp_and8_short_short:
-; THUMB2:       @ BB#0: @ %entry
+; THUMB2:       @ %bb.0: @ %entry
 ; THUMB2-NEXT:    ldrh r1, [r1]
 ; THUMB2-NEXT:    ldrh r0, [r0]
 ; THUMB2-NEXT:    ands r0, r1
@@ -507,7 +507,7 @@ entry:
 
 define arm_aapcscc zeroext i1 @cmp_and8_short_int(i16* nocapture readonly %a,
 ; ARM-LABEL: cmp_and8_short_int:
-; ARM:       @ BB#0: @ %entry
+; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldrh r0, [r0]
 ; ARM-NEXT:    ldr r1, [r1]
 ; ARM-NEXT:    and r1, r1, r0
@@ -517,7 +517,7 @@ define arm_aapcscc zeroext i1 @cmp_and8_short_int(i16* nocapture readonly %a,
 ; ARM-NEXT:    bx lr
 ;
 ; ARMEB-LABEL: cmp_and8_short_int:
-; ARMEB:       @ BB#0: @ %entry
+; ARMEB:       @ %bb.0: @ %entry
 ; ARMEB-NEXT:    ldrh r0, [r0]
 ; ARMEB-NEXT:    ldr r1, [r1]
 ; ARMEB-NEXT:    and r1, r1, r0
@@ -527,7 +527,7 @@ define arm_aapcscc zeroext i1 @cmp_and8_short_int(i16* nocapture readonly %a,
 ; ARMEB-NEXT:    bx lr
 ;
 ; THUMB1-LABEL: cmp_and8_short_int:
-; THUMB1:       @ BB#0: @ %entry
+; THUMB1:       @ %bb.0: @ %entry
 ; THUMB1-NEXT:    ldrh r0, [r0]
 ; THUMB1-NEXT:    ldr r2, [r1]
 ; THUMB1-NEXT:    ands r2, r0
@@ -535,13 +535,13 @@ define arm_aapcscc zeroext i1 @cmp_and8_short_int(i16* nocapture readonly %a,
 ; THUMB1-NEXT:    movs r1, #0
 ; THUMB1-NEXT:    lsls r2, r2, #24
 ; THUMB1-NEXT:    beq .LBB9_2
-; THUMB1-NEXT:  @ BB#1: @ %entry
+; THUMB1-NEXT:  @ %bb.1: @ %entry
 ; THUMB1-NEXT:    mov r0, r1
 ; THUMB1-NEXT:  .LBB9_2: @ %entry
 ; THUMB1-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: cmp_and8_short_int:
-; THUMB2:       @ BB#0: @ %entry
+; THUMB2:       @ %bb.0: @ %entry
 ; THUMB2-NEXT:    ldrh r0, [r0]
 ; THUMB2-NEXT:    ldr r1, [r1]
 ; THUMB2-NEXT:    ands r0, r1
@@ -563,7 +563,7 @@ entry:
 
 define arm_aapcscc zeroext i1 @cmp_and8_int_int(i32* nocapture readonly %a,
 ; ARM-LABEL: cmp_and8_int_int:
-; ARM:       @ BB#0: @ %entry
+; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldr r1, [r1]
 ; ARM-NEXT:    ldr r0, [r0]
 ; ARM-NEXT:    and r1, r0, r1
@@ -573,7 +573,7 @@ define arm_aapcscc zeroext i1 @cmp_and8_int_int(i32* nocapture readonly %a,
 ; ARM-NEXT:    bx lr
 ;
 ; ARMEB-LABEL: cmp_and8_int_int:
-; ARMEB:       @ BB#0: @ %entry
+; ARMEB:       @ %bb.0: @ %entry
 ; ARMEB-NEXT:    ldr r1, [r1]
 ; ARMEB-NEXT:    ldr r0, [r0]
 ; ARMEB-NEXT:    and r1, r0, r1
@@ -583,7 +583,7 @@ define arm_aapcscc zeroext i1 @cmp_and8_int_int(i32* nocapture readonly %a,
 ; ARMEB-NEXT:    bx lr
 ;
 ; THUMB1-LABEL: cmp_and8_int_int:
-; THUMB1:       @ BB#0: @ %entry
+; THUMB1:       @ %bb.0: @ %entry
 ; THUMB1-NEXT:    ldr r1, [r1]
 ; THUMB1-NEXT:    ldr r2, [r0]
 ; THUMB1-NEXT:    ands r2, r1
@@ -591,13 +591,13 @@ define arm_aapcscc zeroext i1 @cmp_and8_int_int(i32* nocapture readonly %a,
 ; THUMB1-NEXT:    movs r1, #0
 ; THUMB1-NEXT:    lsls r2, r2, #24
 ; THUMB1-NEXT:    beq .LBB10_2
-; THUMB1-NEXT:  @ BB#1: @ %entry
+; THUMB1-NEXT:  @ %bb.1: @ %entry
 ; THUMB1-NEXT:    mov r0, r1
 ; THUMB1-NEXT:  .LBB10_2: @ %entry
 ; THUMB1-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: cmp_and8_int_int:
-; THUMB2:       @ BB#0: @ %entry
+; THUMB2:       @ %bb.0: @ %entry
 ; THUMB2-NEXT:    ldr r1, [r1]
 ; THUMB2-NEXT:    ldr r0, [r0]
 ; THUMB2-NEXT:    ands r0, r1
@@ -618,7 +618,7 @@ entry:
 
 define arm_aapcscc zeroext i1 @cmp_and16(i32* nocapture readonly %a,
 ; ARM-LABEL: cmp_and16:
-; ARM:       @ BB#0: @ %entry
+; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldr r1, [r1]
 ; ARM-NEXT:    movw r2, #65535
 ; ARM-NEXT:    ldr r0, [r0]
@@ -629,7 +629,7 @@ define arm_aapcscc zeroext i1 @cmp_and16(i32* nocapture readonly %a,
 ; ARM-NEXT:    bx lr
 ;
 ; ARMEB-LABEL: cmp_and16:
-; ARMEB:       @ BB#0: @ %entry
+; ARMEB:       @ %bb.0: @ %entry
 ; ARMEB-NEXT:    ldr r1, [r1]
 ; ARMEB-NEXT:    movw r2, #65535
 ; ARMEB-NEXT:    ldr r0, [r0]
@@ -640,7 +640,7 @@ define arm_aapcscc zeroext i1 @cmp_and16(i32* nocapture readonly %a,
 ; ARMEB-NEXT:    bx lr
 ;
 ; THUMB1-LABEL: cmp_and16:
-; THUMB1:       @ BB#0: @ %entry
+; THUMB1:       @ %bb.0: @ %entry
 ; THUMB1-NEXT:    ldr r1, [r1]
 ; THUMB1-NEXT:    ldr r2, [r0]
 ; THUMB1-NEXT:    ands r2, r1
@@ -648,13 +648,13 @@ define arm_aapcscc zeroext i1 @cmp_and16(i32* nocapture readonly %a,
 ; THUMB1-NEXT:    movs r1, #0
 ; THUMB1-NEXT:    lsls r2, r2, #16
 ; THUMB1-NEXT:    beq .LBB11_2
-; THUMB1-NEXT:  @ BB#1: @ %entry
+; THUMB1-NEXT:  @ %bb.1: @ %entry
 ; THUMB1-NEXT:    mov r0, r1
 ; THUMB1-NEXT:  .LBB11_2: @ %entry
 ; THUMB1-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: cmp_and16:
-; THUMB2:       @ BB#0: @ %entry
+; THUMB2:       @ %bb.0: @ %entry
 ; THUMB2-NEXT:    ldr r1, [r1]
 ; THUMB2-NEXT:    ldr r0, [r0]
 ; THUMB2-NEXT:    ands r0, r1
@@ -675,7 +675,7 @@ entry:
 
 define arm_aapcscc i32 @add_and16(i32* nocapture readonly %a, i32 %y, i32 %z) {
 ; ARM-LABEL: add_and16:
-; ARM:       @ BB#0: @ %entry
+; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldr r0, [r0]
 ; ARM-NEXT:    add r1, r1, r2
 ; ARM-NEXT:    orr r0, r0, r1
@@ -683,7 +683,7 @@ define arm_aapcscc i32 @add_and16(i32* nocapture readonly %a, i32 %y, i32 %z) {
 ; ARM-NEXT:    bx lr
 ;
 ; ARMEB-LABEL: add_and16:
-; ARMEB:       @ BB#0: @ %entry
+; ARMEB:       @ %bb.0: @ %entry
 ; ARMEB-NEXT:    ldr r0, [r0]
 ; ARMEB-NEXT:    add r1, r1, r2
 ; ARMEB-NEXT:    orr r0, r0, r1
@@ -691,7 +691,7 @@ define arm_aapcscc i32 @add_and16(i32* nocapture readonly %a, i32 %y, i32 %z) {
 ; ARMEB-NEXT:    bx lr
 ;
 ; THUMB1-LABEL: add_and16:
-; THUMB1:       @ BB#0: @ %entry
+; THUMB1:       @ %bb.0: @ %entry
 ; THUMB1-NEXT:    adds r1, r1, r2
 ; THUMB1-NEXT:    ldr r0, [r0]
 ; THUMB1-NEXT:    orrs r0, r1
@@ -699,7 +699,7 @@ define arm_aapcscc i32 @add_and16(i32* nocapture readonly %a, i32 %y, i32 %z) {
 ; THUMB1-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: add_and16:
-; THUMB2:       @ BB#0: @ %entry
+; THUMB2:       @ %bb.0: @ %entry
 ; THUMB2-NEXT:    ldr r0, [r0]
 ; THUMB2-NEXT:    add r1, r2
 ; THUMB2-NEXT:    orrs r0, r1
@@ -715,7 +715,7 @@ entry:
 
 define arm_aapcscc i32 @test1(i32* %a, i32* %b, i32 %x, i32 %y) {
 ; ARM-LABEL: test1:
-; ARM:       @ BB#0: @ %entry
+; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    mul r2, r2, r3
 ; ARM-NEXT:    ldr r1, [r1]
 ; ARM-NEXT:    ldr r0, [r0]
@@ -725,7 +725,7 @@ define arm_aapcscc i32 @test1(i32* %a, i32* %b, i32 %x, i32 %y) {
 ; ARM-NEXT:    bx lr
 ;
 ; ARMEB-LABEL: test1:
-; ARMEB:       @ BB#0: @ %entry
+; ARMEB:       @ %bb.0: @ %entry
 ; ARMEB-NEXT:    mul r2, r2, r3
 ; ARMEB-NEXT:    ldr r1, [r1]
 ; ARMEB-NEXT:    ldr r0, [r0]
@@ -735,7 +735,7 @@ define arm_aapcscc i32 @test1(i32* %a, i32* %b, i32 %x, i32 %y) {
 ; ARMEB-NEXT:    bx lr
 ;
 ; THUMB1-LABEL: test1:
-; THUMB1:       @ BB#0: @ %entry
+; THUMB1:       @ %bb.0: @ %entry
 ; THUMB1-NEXT:    muls r2, r3, r2
 ; THUMB1-NEXT:    ldr r1, [r1]
 ; THUMB1-NEXT:    ldr r0, [r0]
@@ -745,7 +745,7 @@ define arm_aapcscc i32 @test1(i32* %a, i32* %b, i32 %x, i32 %y) {
 ; THUMB1-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: test1:
-; THUMB2:       @ BB#0: @ %entry
+; THUMB2:       @ %bb.0: @ %entry
 ; THUMB2-NEXT:    muls r2, r3, r2
 ; THUMB2-NEXT:    ldr r1, [r1]
 ; THUMB2-NEXT:    ldr r0, [r0]
@@ -765,7 +765,7 @@ entry:
 
 define arm_aapcscc i32 @test2(i32* %a, i32* %b, i32 %x, i32 %y) {
 ; ARM-LABEL: test2:
-; ARM:       @ BB#0: @ %entry
+; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldr r1, [r1]
 ; ARM-NEXT:    ldr r0, [r0]
 ; ARM-NEXT:    mul r1, r2, r1
@@ -775,7 +775,7 @@ define arm_aapcscc i32 @test2(i32* %a, i32* %b, i32 %x, i32 %y) {
 ; ARM-NEXT:    bx lr
 ;
 ; ARMEB-LABEL: test2:
-; ARMEB:       @ BB#0: @ %entry
+; ARMEB:       @ %bb.0: @ %entry
 ; ARMEB-NEXT:    ldr r1, [r1]
 ; ARMEB-NEXT:    ldr r0, [r0]
 ; ARMEB-NEXT:    mul r1, r2, r1
@@ -785,7 +785,7 @@ define arm_aapcscc i32 @test2(i32* %a, i32* %b, i32 %x, i32 %y) {
 ; ARMEB-NEXT:    bx lr
 ;
 ; THUMB1-LABEL: test2:
-; THUMB1:       @ BB#0: @ %entry
+; THUMB1:       @ %bb.0: @ %entry
 ; THUMB1-NEXT:    ldr r1, [r1]
 ; THUMB1-NEXT:    muls r1, r2, r1
 ; THUMB1-NEXT:    ldr r0, [r0]
@@ -795,7 +795,7 @@ define arm_aapcscc i32 @test2(i32* %a, i32* %b, i32 %x, i32 %y) {
 ; THUMB1-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: test2:
-; THUMB2:       @ BB#0: @ %entry
+; THUMB2:       @ %bb.0: @ %entry
 ; THUMB2-NEXT:    ldr r1, [r1]
 ; THUMB2-NEXT:    ldr r0, [r0]
 ; THUMB2-NEXT:    muls r1, r2, r1
@@ -815,7 +815,7 @@ entry:
 
 define arm_aapcscc i32 @test3(i32* %a, i32* %b, i32 %x, i16* %y) {
 ; ARM-LABEL: test3:
-; ARM:       @ BB#0: @ %entry
+; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldr r0, [r0]
 ; ARM-NEXT:    mul r1, r2, r0
 ; ARM-NEXT:    ldrh r2, [r3]
@@ -825,7 +825,7 @@ define arm_aapcscc i32 @test3(i32* %a, i32* %b, i32 %x, i16* %y) {
 ; ARM-NEXT:    bx lr
 ;
 ; ARMEB-LABEL: test3:
-; ARMEB:       @ BB#0: @ %entry
+; ARMEB:       @ %bb.0: @ %entry
 ; ARMEB-NEXT:    ldr r0, [r0]
 ; ARMEB-NEXT:    mul r1, r2, r0
 ; ARMEB-NEXT:    ldrh r2, [r3]
@@ -835,7 +835,7 @@ define arm_aapcscc i32 @test3(i32* %a, i32* %b, i32 %x, i16* %y) {
 ; ARMEB-NEXT:    bx lr
 ;
 ; THUMB1-LABEL: test3:
-; THUMB1:       @ BB#0: @ %entry
+; THUMB1:       @ %bb.0: @ %entry
 ; THUMB1-NEXT:    ldr r0, [r0]
 ; THUMB1-NEXT:    muls r2, r0, r2
 ; THUMB1-NEXT:    ldrh r1, [r3]
@@ -845,7 +845,7 @@ define arm_aapcscc i32 @test3(i32* %a, i32* %b, i32 %x, i16* %y) {
 ; THUMB1-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: test3:
-; THUMB2:       @ BB#0: @ %entry
+; THUMB2:       @ %bb.0: @ %entry
 ; THUMB2-NEXT:    ldr r0, [r0]
 ; THUMB2-NEXT:    mul r1, r2, r0
 ; THUMB2-NEXT:    ldrh r2, [r3]
@@ -866,7 +866,7 @@ entry:
 
 define arm_aapcscc i32 @test4(i32* %a, i32* %b, i32 %x, i32 %y) {
 ; ARM-LABEL: test4:
-; ARM:       @ BB#0: @ %entry
+; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    mul r2, r2, r3
 ; ARM-NEXT:    ldr r1, [r1]
 ; ARM-NEXT:    ldr r0, [r0]
@@ -876,7 +876,7 @@ define arm_aapcscc i32 @test4(i32* %a, i32* %b, i32 %x, i32 %y) {
 ; ARM-NEXT:    bx lr
 ;
 ; ARMEB-LABEL: test4:
-; ARMEB:       @ BB#0: @ %entry
+; ARMEB:       @ %bb.0: @ %entry
 ; ARMEB-NEXT:    mul r2, r2, r3
 ; ARMEB-NEXT:    ldr r1, [r1]
 ; ARMEB-NEXT:    ldr r0, [r0]
@@ -886,7 +886,7 @@ define arm_aapcscc i32 @test4(i32* %a, i32* %b, i32 %x, i32 %y) {
 ; ARMEB-NEXT:    bx lr
 ;
 ; THUMB1-LABEL: test4:
-; THUMB1:       @ BB#0: @ %entry
+; THUMB1:       @ %bb.0: @ %entry
 ; THUMB1-NEXT:    muls r2, r3, r2
 ; THUMB1-NEXT:    ldr r1, [r1]
 ; THUMB1-NEXT:    ldr r0, [r0]
@@ -896,7 +896,7 @@ define arm_aapcscc i32 @test4(i32* %a, i32* %b, i32 %x, i32 %y) {
 ; THUMB1-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: test4:
-; THUMB2:       @ BB#0: @ %entry
+; THUMB2:       @ %bb.0: @ %entry
 ; THUMB2-NEXT:    muls r2, r3, r2
 ; THUMB2-NEXT:    ldr r1, [r1]
 ; THUMB2-NEXT:    ldr r0, [r0]
@@ -909,6 +909,57 @@ entry:
   %1 = load i32, i32* %b, align 4
   %mul = mul i32 %x, %y
   %xor = xor i32 %0, %1
+  %or = or i32 %xor, %mul
+  %and = and i32 %or, 65535
+  ret i32 %and
+}
+
+define arm_aapcscc i32 @test5(i32* %a, i32* %b, i32 %x, i16 zeroext %y) {
+; ARM-LABEL: test5:
+; ARM:       @ %bb.0: @ %entry
+; ARM-NEXT:    ldr r1, [r1]
+; ARM-NEXT:    ldr r0, [r0]
+; ARM-NEXT:    mul r1, r2, r1
+; ARM-NEXT:    eor r0, r0, r3
+; ARM-NEXT:    orr r0, r0, r1
+; ARM-NEXT:    uxth r0, r0
+; ARM-NEXT:    bx lr
+;
+; ARMEB-LABEL: test5:
+; ARMEB:       @ %bb.0: @ %entry
+; ARMEB-NEXT:    ldr r1, [r1]
+; ARMEB-NEXT:    ldr r0, [r0]
+; ARMEB-NEXT:    mul r1, r2, r1
+; ARMEB-NEXT:    eor r0, r0, r3
+; ARMEB-NEXT:    orr r0, r0, r1
+; ARMEB-NEXT:    uxth r0, r0
+; ARMEB-NEXT:    bx lr
+;
+; THUMB1-LABEL: test5:
+; THUMB1:       @ %bb.0: @ %entry
+; THUMB1-NEXT:    ldr r1, [r1]
+; THUMB1-NEXT:    muls r1, r2, r1
+; THUMB1-NEXT:    ldr r0, [r0]
+; THUMB1-NEXT:    eors r0, r3
+; THUMB1-NEXT:    orrs r0, r1
+; THUMB1-NEXT:    uxth r0, r0
+; THUMB1-NEXT:    bx lr
+;
+; THUMB2-LABEL: test5:
+; THUMB2:       @ %bb.0: @ %entry
+; THUMB2-NEXT:    ldr r1, [r1]
+; THUMB2-NEXT:    ldr r0, [r0]
+; THUMB2-NEXT:    muls r1, r2, r1
+; THUMB2-NEXT:    eors r0, r3
+; THUMB2-NEXT:    orrs r0, r1
+; THUMB2-NEXT:    uxth r0, r0
+; THUMB2-NEXT:    bx lr
+entry:
+  %0 = load i32, i32* %a, align 4
+  %1 = load i32, i32* %b, align 4
+  %mul = mul i32 %x, %1
+  %ext = zext i16 %y to i32
+  %xor = xor i32 %0, %ext
   %or = or i32 %xor, %mul
   %and = and i32 %or, 65535
   ret i32 %and

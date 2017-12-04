@@ -8,9 +8,9 @@
 
 define <2 x i32> @icmp_v2i32(<2 x i32> %a) {
 ; CHECK-LABEL: icmp_v2i32:
-; CHECK:      ; BB#0:
+; CHECK:      ; %bb.0:
 ; CHECK-NEXT:  cmeq.2s [[CMP:v[0-9]+]], v0, #0
-; CHECK-NEXT: ; BB#1:
+; CHECK-NEXT: ; %bb.1:
 ; CHECK-NEXT:  movi.2s [[MASK:v[0-9]+]], #1
 ; CHECK-NEXT:  and.8b v0, [[CMP]], [[MASK]]
 ; CHECK-NEXT:  ret
@@ -23,9 +23,9 @@ bb2:
 
 define <2 x i32> @icmp_constfold_v2i32(<2 x i32> %a) {
 ; CHECK-LABEL: icmp_constfold_v2i32:
-; CHECK:      ; BB#0:
+; CHECK:      ; %bb.0:
 ; CHECK-NEXT:  movi d[[CMP:[0-9]+]], #0xffffffffffffffff
-; CHECK-NEXT: ; BB#1:
+; CHECK-NEXT: ; %bb.1:
 ; CHECK-NEXT:  movi.2s [[MASK:v[0-9]+]], #1
 ; CHECK-NEXT:  and.8b v0, v[[CMP]], [[MASK]]
 ; CHECK-NEXT:  ret
@@ -38,10 +38,10 @@ bb2:
 
 define <4 x i32> @icmp_v4i32(<4 x i32> %a) {
 ; CHECK-LABEL: icmp_v4i32:
-; CHECK:      ; BB#0:
+; CHECK:      ; %bb.0:
 ; CHECK-NEXT:  cmeq.4s [[CMP:v[0-9]+]], v0, #0
 ; CHECK-NEXT:  xtn.4h [[CMPV4I16:v[0-9]+]], [[CMP]]
-; CHECK-NEXT: ; BB#1:
+; CHECK-NEXT: ; %bb.1:
 ; CHECK-NEXT:  movi.4h [[MASK:v[0-9]+]], #1
 ; CHECK-NEXT:  and.8b [[ZEXT:v[0-9]+]], [[CMPV4I16]], [[MASK]]
 ; CHECK-NEXT:  ushll.4s v0, [[ZEXT]], #0
@@ -55,9 +55,9 @@ bb2:
 
 define <4 x i32> @icmp_constfold_v4i32(<4 x i32> %a) {
 ; CHECK-LABEL: icmp_constfold_v4i32:
-; CHECK:      ; BB#0:
+; CHECK:      ; %bb.0:
 ; CHECK-NEXT:  movi d[[CMP:[0-9]+]], #0xffffffffffffffff
-; CHECK-NEXT: ; BB#1:
+; CHECK-NEXT: ; %bb.1:
 ; CHECK-NEXT:  movi.4h [[MASK:v[0-9]+]], #1
 ; CHECK-NEXT:  and.8b [[ZEXT:v[0-9]+]], v[[CMP]], [[MASK]]
 ; CHECK-NEXT:  ushll.4s v0, [[ZEXT]], #0
@@ -71,9 +71,9 @@ bb2:
 
 define <16 x i8> @icmp_v16i8(<16 x i8> %a) {
 ; CHECK-LABEL: icmp_v16i8:
-; CHECK:      ; BB#0:
+; CHECK:      ; %bb.0:
 ; CHECK-NEXT:  cmeq.16b [[CMP:v[0-9]+]], v0, #0
-; CHECK-NEXT: ; BB#1:
+; CHECK-NEXT: ; %bb.1:
 ; CHECK-NEXT:  movi.16b [[MASK:v[0-9]+]], #1
 ; CHECK-NEXT:  and.16b v0, [[CMP]], [[MASK]]
 ; CHECK-NEXT:  ret
@@ -86,9 +86,9 @@ bb2:
 
 define <16 x i8> @icmp_constfold_v16i8(<16 x i8> %a) {
 ; CHECK-LABEL: icmp_constfold_v16i8:
-; CHECK:      ; BB#0:
+; CHECK:      ; %bb.0:
 ; CHECK-NEXT:  movi.2d [[CMP:v[0-9]+]], #0xffffffffffffffff
-; CHECK-NEXT: ; BB#1:
+; CHECK-NEXT: ; %bb.1:
 ; CHECK-NEXT:  movi.16b [[MASK:v[0-9]+]], #1
 ; CHECK-NEXT:  and.16b v0, [[CMP]], [[MASK]]
 ; CHECK-NEXT:  ret

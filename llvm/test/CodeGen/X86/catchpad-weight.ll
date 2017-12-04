@@ -2,7 +2,7 @@
 
 ; Check if the edge weight to the catchpad is calculated correctly.
 
-; CHECK: Successors according to CFG: BB#2(0x7ffff100 / 0x80000000 = 100.00%) BB#1(0x00000800 / 0x80000000 = 0.00%) BB#3(0x00000400 / 0x80000000 = 0.00%) BB#4(0x00000200 / 0x80000000 = 0.00%) BB#5(0x00000100 / 0x80000000 = 0.00%)
+; CHECK: Successors according to CFG: %bb.2(0x7ffff100 / 0x80000000 = 100.00%) %bb.1(0x00000800 / 0x80000000 = 0.00%) %bb.3(0x00000400 / 0x80000000 = 0.00%) %bb.4(0x00000200 / 0x80000000 = 0.00%) %bb.5(0x00000100 / 0x80000000 = 0.00%)
 
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64--windows-msvc18.0.0"

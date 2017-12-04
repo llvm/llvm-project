@@ -5,7 +5,7 @@
 
 define i1 @foo(i64 %a) {
 ; X86-LABEL: foo:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    fucompp
@@ -16,14 +16,14 @@ define i1 @foo(i64 %a) {
 ; X86-NEXT:    retl
 ;
 ; X86-SSE-LABEL: foo:
-; X86-SSE:       # BB#0:
+; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
 ; X86-SSE-NEXT:    setp %al
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-LABEL: foo:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %xmm0
 ; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
 ; X64-NEXT:    ucomiss %xmm1, %xmm0

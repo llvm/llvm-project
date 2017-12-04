@@ -3,7 +3,7 @@
 
 define i32 @bzhi32(i32 %x, i32 %y)   {
 ; CHECK-LABEL: bzhi32:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    bzhil %esi, %edi, %eax
 ; CHECK-NEXT:    retq
   %tmp = tail call i32 @llvm.x86.bmi.bzhi.32(i32 %x, i32 %y)
@@ -12,7 +12,7 @@ define i32 @bzhi32(i32 %x, i32 %y)   {
 
 define i32 @bzhi32_load(i32* %x, i32 %y)   {
 ; CHECK-LABEL: bzhi32_load:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    bzhil %esi, (%rdi), %eax
 ; CHECK-NEXT:    retq
   %x1 = load i32, i32* %x
@@ -24,7 +24,7 @@ declare i32 @llvm.x86.bmi.bzhi.32(i32, i32)
 
 define i64 @bzhi64(i64 %x, i64 %y)   {
 ; CHECK-LABEL: bzhi64:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    bzhiq %rsi, %rdi, %rax
 ; CHECK-NEXT:    retq
   %tmp = tail call i64 @llvm.x86.bmi.bzhi.64(i64 %x, i64 %y)
@@ -35,7 +35,7 @@ declare i64 @llvm.x86.bmi.bzhi.64(i64, i64)
 
 define i32 @pdep32(i32 %x, i32 %y)   {
 ; CHECK-LABEL: pdep32:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pdepl %esi, %edi, %eax
 ; CHECK-NEXT:    retq
   %tmp = tail call i32 @llvm.x86.bmi.pdep.32(i32 %x, i32 %y)
@@ -44,7 +44,7 @@ define i32 @pdep32(i32 %x, i32 %y)   {
 
 define i32 @pdep32_load(i32 %x, i32* %y)   {
 ; CHECK-LABEL: pdep32_load:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pdepl (%rsi), %edi, %eax
 ; CHECK-NEXT:    retq
   %y1 = load i32, i32* %y
@@ -56,7 +56,7 @@ declare i32 @llvm.x86.bmi.pdep.32(i32, i32)
 
 define i64 @pdep64(i64 %x, i64 %y)   {
 ; CHECK-LABEL: pdep64:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pdepq %rsi, %rdi, %rax
 ; CHECK-NEXT:    retq
   %tmp = tail call i64 @llvm.x86.bmi.pdep.64(i64 %x, i64 %y)
@@ -67,7 +67,7 @@ declare i64 @llvm.x86.bmi.pdep.64(i64, i64)
 
 define i32 @pext32(i32 %x, i32 %y)   {
 ; CHECK-LABEL: pext32:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pextl %esi, %edi, %eax
 ; CHECK-NEXT:    retq
   %tmp = tail call i32 @llvm.x86.bmi.pext.32(i32 %x, i32 %y)
@@ -76,7 +76,7 @@ define i32 @pext32(i32 %x, i32 %y)   {
 
 define i32 @pext32_load(i32 %x, i32* %y)   {
 ; CHECK-LABEL: pext32_load:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pextl (%rsi), %edi, %eax
 ; CHECK-NEXT:    retq
   %y1 = load i32, i32* %y
@@ -88,7 +88,7 @@ declare i32 @llvm.x86.bmi.pext.32(i32, i32)
 
 define i64 @pext64(i64 %x, i64 %y)   {
 ; CHECK-LABEL: pext64:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pextq %rsi, %rdi, %rax
 ; CHECK-NEXT:    retq
   %tmp = tail call i64 @llvm.x86.bmi.pext.64(i64 %x, i64 %y)

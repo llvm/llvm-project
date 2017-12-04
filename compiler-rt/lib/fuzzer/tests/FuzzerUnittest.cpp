@@ -766,6 +766,166 @@ TEST(Fuzzer, ForEachNonZeroByte) {
   EXPECT_EQ(Res, Expected);
 }
 
+// FuzzerCommand unit tests. The arguments in the two helper methods below must
+// match.
+static void makeCommandArgs(Vector<std::string> *ArgsToAdd) {
+  assert(ArgsToAdd);
+  ArgsToAdd->clear();
+  ArgsToAdd->push_back("foo");
+  ArgsToAdd->push_back("-bar=baz");
+  ArgsToAdd->push_back("qux");
+  ArgsToAdd->push_back(Command::ignoreRemainingArgs());
+  ArgsToAdd->push_back("quux");
+  ArgsToAdd->push_back("-grault=garply");
+}
+
+static std::string makeCmdLine(const char *separator, const char *suffix) {
+  std::string CmdLine("foo -bar=baz qux ");
+  if (strlen(separator) != 0) {
+    CmdLine += separator;
+    CmdLine += " ";
+  }
+  CmdLine += Command::ignoreRemainingArgs();
+  CmdLine += " quux -grault=garply";
+  if (strlen(suffix) != 0) {
+    CmdLine += " ";
+    CmdLine += suffix;
+  }
+  return CmdLine;
+}
+
+TEST(FuzzerCommand, Create) {
+  std::string CmdLine;
+
+  // Default constructor
+  Command DefaultCmd;
+
+  CmdLine = DefaultCmd.toString();
+  EXPECT_EQ(CmdLine, "");
+
+  // Explicit constructor
+  Vector<std::string> ArgsToAdd;
+  makeCommandArgs(&ArgsToAdd);
+  Command InitializedCmd(ArgsToAdd);
+
+  CmdLine = InitializedCmd.toString();
+  EXPECT_EQ(CmdLine, makeCmdLine("", ""));
+
+  // Compare each argument
+  auto InitializedArgs = InitializedCmd.getArguments();
+  auto i = ArgsToAdd.begin();
+  auto j = InitializedArgs.begin();
+  while (i != ArgsToAdd.end() && j != InitializedArgs.end()) {
+    EXPECT_EQ(*i++, *j++);
+  }
+  EXPECT_EQ(i, ArgsToAdd.end());
+  EXPECT_EQ(j, InitializedArgs.end());
+
+  // Copy constructor
+  Command CopiedCmd(InitializedCmd);
+
+  CmdLine = CopiedCmd.toString();
+  EXPECT_EQ(CmdLine, makeCmdLine("", ""));
+
+  // Assignment operator
+  Command AssignedCmd;
+  AssignedCmd = CopiedCmd;
+
+  CmdLine = AssignedCmd.toString();
+  EXPECT_EQ(CmdLine, makeCmdLine("", ""));
+}
+
+TEST(FuzzerCommand, ModifyArguments) {
+  Vector<std::string> ArgsToAdd;
+  makeCommandArgs(&ArgsToAdd);
+  Command Cmd;
+  std::string CmdLine;
+
+  Cmd.addArguments(ArgsToAdd);
+  CmdLine = Cmd.toString();
+  EXPECT_EQ(CmdLine, makeCmdLine("", ""));
+
+  Cmd.addArgument("waldo");
+  EXPECT_TRUE(Cmd.hasArgument("waldo"));
+
+  CmdLine = Cmd.toString();
+  EXPECT_EQ(CmdLine, makeCmdLine("waldo", ""));
+
+  Cmd.removeArgument("waldo");
+  EXPECT_FALSE(Cmd.hasArgument("waldo"));
+
+  CmdLine = Cmd.toString();
+  EXPECT_EQ(CmdLine, makeCmdLine("", ""));
+}
+
+TEST(FuzzerCommand, ModifyFlags) {
+  Vector<std::string> ArgsToAdd;
+  makeCommandArgs(&ArgsToAdd);
+  Command Cmd(ArgsToAdd);
+  std::string Value, CmdLine;
+  ASSERT_FALSE(Cmd.hasFlag("fred"));
+
+  Value = Cmd.getFlagValue("fred");
+  EXPECT_EQ(Value, "");
+
+  CmdLine = Cmd.toString();
+  EXPECT_EQ(CmdLine, makeCmdLine("", ""));
+
+  Cmd.addFlag("fred", "plugh");
+  EXPECT_TRUE(Cmd.hasFlag("fred"));
+
+  Value = Cmd.getFlagValue("fred");
+  EXPECT_EQ(Value, "plugh");
+
+  CmdLine = Cmd.toString();
+  EXPECT_EQ(CmdLine, makeCmdLine("-fred=plugh", ""));
+
+  Cmd.removeFlag("fred");
+  EXPECT_FALSE(Cmd.hasFlag("fred"));
+
+  Value = Cmd.getFlagValue("fred");
+  EXPECT_EQ(Value, "");
+
+  CmdLine = Cmd.toString();
+  EXPECT_EQ(CmdLine, makeCmdLine("", ""));
+}
+
+TEST(FuzzerCommand, SetOutput) {
+  Vector<std::string> ArgsToAdd;
+  makeCommandArgs(&ArgsToAdd);
+  Command Cmd(ArgsToAdd);
+  std::string CmdLine;
+  ASSERT_FALSE(Cmd.hasOutputFile());
+  ASSERT_FALSE(Cmd.isOutAndErrCombined());
+
+  Cmd.combineOutAndErr(true);
+  EXPECT_TRUE(Cmd.isOutAndErrCombined());
+
+  CmdLine = Cmd.toString();
+  EXPECT_EQ(CmdLine, makeCmdLine("", "2>&1"));
+
+  Cmd.combineOutAndErr(false);
+  EXPECT_FALSE(Cmd.isOutAndErrCombined());
+
+  Cmd.setOutputFile("xyzzy");
+  EXPECT_TRUE(Cmd.hasOutputFile());
+
+  CmdLine = Cmd.toString();
+  EXPECT_EQ(CmdLine, makeCmdLine("", ">xyzzy"));
+
+  Cmd.setOutputFile("thud");
+  EXPECT_TRUE(Cmd.hasOutputFile());
+
+  CmdLine = Cmd.toString();
+  EXPECT_EQ(CmdLine, makeCmdLine("", ">thud"));
+
+  Cmd.combineOutAndErr();
+  EXPECT_TRUE(Cmd.isOutAndErrCombined());
+
+  CmdLine = Cmd.toString();
+  EXPECT_EQ(CmdLine, makeCmdLine("", "2>&1 >thud"));
+}
+
 int main(int argc, char **argv) {
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();

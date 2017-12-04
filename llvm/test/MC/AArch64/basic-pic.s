@@ -8,7 +8,7 @@
 	.type	get_globalvar,@function
 get_globalvar:                          // @get_globalvar
 	.cfi_startproc
-// BB#0:
+// %bb.0:
 	adrp	x0, :got:var
 	ldr	x0, [x0, #:got_lo12:var]
 	ldr	 w0, [x0]
@@ -24,7 +24,7 @@ get_globalvar:                          // @get_globalvar
 	.type	get_globalvaraddr,@function
 get_globalvaraddr:                      // @get_globalvaraddr
 	.cfi_startproc
-// BB#0:
+// %bb.0:
 	adrp	x0, :got:var
 	ldr	x0, [x0, #:got_lo12:var]
 	ret
@@ -38,7 +38,7 @@ get_globalvaraddr:                      // @get_globalvaraddr
 	.type	get_hiddenvar,@function
 get_hiddenvar:                          // @get_hiddenvar
 	.cfi_startproc
-// BB#0:
+// %bb.0:
 	adrp	x0, hiddenvar
 	ldr	w0, [x0, #:lo12:hiddenvar]
 	ret
@@ -52,7 +52,7 @@ get_hiddenvar:                          // @get_hiddenvar
 	.type	get_hiddenvaraddr,@function
 get_hiddenvaraddr:                      // @get_hiddenvaraddr
 	.cfi_startproc
-// BB#0:
+// %bb.0:
 	adrp	x0, hiddenvar
 	add	x0, x0, #:lo12:hiddenvar
 	ret
@@ -66,7 +66,7 @@ get_hiddenvaraddr:                      // @get_hiddenvaraddr
 	.type	get_func,@function
 get_func:                               // @get_func
 	.cfi_startproc
-// BB#0:
+// %bb.0:
 	adrp	x0, :got:get_func
 	ldr	x0, [x0, #:got_lo12:get_func]
 	ret

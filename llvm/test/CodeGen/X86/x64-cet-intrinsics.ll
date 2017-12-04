@@ -3,7 +3,7 @@
 
 define void @test_incsspd(i32 %a) local_unnamed_addr {
 ; CHECK-LABEL: test_incsspd:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    incsspd %edi
 ; CHECK-NEXT:    retq
 entry:
@@ -15,7 +15,7 @@ declare void @llvm.x86.incsspd(i32)
 
 define void @test_incsspq(i32 %a) local_unnamed_addr {
 ; CHECK-LABEL: test_incsspq:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movslq %edi, %rax
 ; CHECK-NEXT:    incsspq %rax
 ; CHECK-NEXT:    retq
@@ -29,7 +29,7 @@ declare void @llvm.x86.incsspq(i64)
 
 define i32 @test_rdsspd(i32 %a) {
 ; CHECK-LABEL: test_rdsspd:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    rdsspd %edi
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
@@ -42,7 +42,7 @@ declare i32 @llvm.x86.rdsspd(i32)
 
 define i64 @test_rdsspq(i64 %a) {
 ; CHECK-LABEL: test_rdsspq:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    rdsspq %rdi
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    retq
@@ -55,7 +55,7 @@ declare i64 @llvm.x86.rdsspq(i64)
 
 define void @test_saveprevssp() {
 ; CHECK-LABEL: test_saveprevssp:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    saveprevssp
 ; CHECK-NEXT:    retq
 entry:
@@ -67,7 +67,7 @@ declare void @llvm.x86.saveprevssp()
 
 define void @test_rstorssp(i8* %__p) {
 ; CHECK-LABEL: test_rstorssp:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    rstorssp (%rdi)
 ; CHECK-NEXT:    retq
 entry:
@@ -79,7 +79,7 @@ declare void @llvm.x86.rstorssp(i8*)
 
 define void @test_wrssd(i32 %a, i8* %__p) {
 ; CHECK-LABEL: test_wrssd:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    wrssd %edi, (%rsi)
 ; CHECK-NEXT:    retq
 entry:
@@ -91,7 +91,7 @@ declare void @llvm.x86.wrssd(i32, i8*)
 
 define void @test_wrssq(i64 %a, i8* %__p) {
 ; CHECK-LABEL: test_wrssq:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    wrssq %rdi, (%rsi)
 ; CHECK-NEXT:    retq
 entry:
@@ -103,7 +103,7 @@ declare void @llvm.x86.wrssq(i64, i8*)
 
 define void @test_wrussd(i32 %a, i8* %__p) {
 ; CHECK-LABEL: test_wrussd:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    wrussd %edi, (%rsi)
 ; CHECK-NEXT:    retq
 entry:
@@ -115,7 +115,7 @@ declare void @llvm.x86.wrussd(i32, i8*)
 
 define void @test_wrussq(i64 %a, i8* %__p) {
 ; CHECK-LABEL: test_wrussq:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    wrussq %rdi, (%rsi)
 ; CHECK-NEXT:    retq
 entry:
@@ -127,7 +127,7 @@ declare void @llvm.x86.wrussq(i64, i8*)
 
 define void @test_setssbsy() {
 ; CHECK-LABEL: test_setssbsy:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    setssbsy
 ; CHECK-NEXT:    retq
 entry:
@@ -139,7 +139,7 @@ declare void @llvm.x86.setssbsy()
 
 define void @test_clrssbsy(i8* %__p) {
 ; CHECK-LABEL: test_clrssbsy:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    clrssbsy (%rdi)
 ; CHECK-NEXT:    retq
 entry:
