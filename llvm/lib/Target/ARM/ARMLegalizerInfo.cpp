@@ -177,6 +177,15 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
     for (auto Ty : {s32, s64})
       setAction({Op, Ty}, Libcall);
 
+  // Merge/Unmerge
+  for (const auto &Ty : {s32, s64}) {
+    setAction({G_MERGE_VALUES, Ty}, Legal);
+    setAction({G_UNMERGE_VALUES, 1, Ty}, Legal);
+  }
+  for (const auto &Ty : {s16, s32}) {
+    setAction({G_MERGE_VALUES, 1, Ty}, Legal);
+    setAction({G_UNMERGE_VALUES, Ty}, Legal);
+  }
   computeTables();
 }
 
