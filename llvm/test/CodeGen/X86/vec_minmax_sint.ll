@@ -58,11 +58,26 @@ define <2 x i64> @max_gt_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; SSE42-NEXT:    movapd %xmm1, %xmm0
 ; SSE42-NEXT:    retq
 ;
-; AVX-LABEL: max_gt_v2i64:
-; AVX:       # BB#0:
-; AVX-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm2
-; AVX-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: max_gt_v2i64:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm2
+; AVX1-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: max_gt_v2i64:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm2
+; AVX2-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: max_gt_v2i64:
+; AVX512:       # BB#0:
+; AVX512-NEXT:    # kill: %xmm1<def> %xmm1<kill> %zmm1<def>
+; AVX512-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<def>
+; AVX512-NEXT:    vpmaxsq %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<kill>
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   %1 = icmp sgt <2 x i64> %a, %b
   %2 = select <2 x i1> %1, <2 x i64> %a, <2 x i64> %b
   ret <2 x i64> %2
@@ -168,8 +183,10 @@ define <4 x i64> @max_gt_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ;
 ; AVX512-LABEL: max_gt_v4i64:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm2
-; AVX512-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0
+; AVX512-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
+; AVX512-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; AVX512-NEXT:    vpmaxsq %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
 ; AVX512-NEXT:    retq
   %1 = icmp sgt <4 x i64> %a, %b
   %2 = select <4 x i1> %1, <4 x i64> %a, <4 x i64> %b
@@ -444,13 +461,30 @@ define <2 x i64> @max_ge_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; SSE42-NEXT:    movapd %xmm1, %xmm0
 ; SSE42-NEXT:    retq
 ;
-; AVX-LABEL: max_ge_v2i64:
-; AVX:       # BB#0:
-; AVX-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm2
-; AVX-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
-; AVX-NEXT:    vpxor %xmm3, %xmm2, %xmm2
-; AVX-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: max_ge_v2i64:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm2
+; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    vpxor %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: max_ge_v2i64:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm2
+; AVX2-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
+; AVX2-NEXT:    vpxor %xmm3, %xmm2, %xmm2
+; AVX2-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: max_ge_v2i64:
+; AVX512:       # BB#0:
+; AVX512-NEXT:    # kill: %xmm1<def> %xmm1<kill> %zmm1<def>
+; AVX512-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<def>
+; AVX512-NEXT:    vpmaxsq %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<kill>
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   %1 = icmp sge <2 x i64> %a, %b
   %2 = select <2 x i1> %1, <2 x i64> %a, <2 x i64> %b
   ret <2 x i64> %2
@@ -574,10 +608,10 @@ define <4 x i64> @max_ge_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ;
 ; AVX512-LABEL: max_ge_v4i64:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm2
-; AVX512-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
-; AVX512-NEXT:    vpxor %ymm3, %ymm2, %ymm2
-; AVX512-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0
+; AVX512-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
+; AVX512-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; AVX512-NEXT:    vpmaxsq %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
 ; AVX512-NEXT:    retq
   %1 = icmp sge <4 x i64> %a, %b
   %2 = select <4 x i1> %1, <4 x i64> %a, <4 x i64> %b
@@ -857,11 +891,26 @@ define <2 x i64> @min_lt_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; SSE42-NEXT:    movapd %xmm1, %xmm0
 ; SSE42-NEXT:    retq
 ;
-; AVX-LABEL: min_lt_v2i64:
-; AVX:       # BB#0:
-; AVX-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm2
-; AVX-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: min_lt_v2i64:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm2
+; AVX1-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: min_lt_v2i64:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm2
+; AVX2-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: min_lt_v2i64:
+; AVX512:       # BB#0:
+; AVX512-NEXT:    # kill: %xmm1<def> %xmm1<kill> %zmm1<def>
+; AVX512-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<def>
+; AVX512-NEXT:    vpminsq %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<kill>
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   %1 = icmp slt <2 x i64> %a, %b
   %2 = select <2 x i1> %1, <2 x i64> %a, <2 x i64> %b
   ret <2 x i64> %2
@@ -968,8 +1017,10 @@ define <4 x i64> @min_lt_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ;
 ; AVX512-LABEL: min_lt_v4i64:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm2
-; AVX512-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0
+; AVX512-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
+; AVX512-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; AVX512-NEXT:    vpminsq %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
 ; AVX512-NEXT:    retq
   %1 = icmp slt <4 x i64> %a, %b
   %2 = select <4 x i1> %1, <4 x i64> %a, <4 x i64> %b
@@ -1237,13 +1288,30 @@ define <2 x i64> @min_le_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; SSE42-NEXT:    movapd %xmm1, %xmm0
 ; SSE42-NEXT:    retq
 ;
-; AVX-LABEL: min_le_v2i64:
-; AVX:       # BB#0:
-; AVX-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm2
-; AVX-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
-; AVX-NEXT:    vpxor %xmm3, %xmm2, %xmm2
-; AVX-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: min_le_v2i64:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm2
+; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    vpxor %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: min_le_v2i64:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm2
+; AVX2-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
+; AVX2-NEXT:    vpxor %xmm3, %xmm2, %xmm2
+; AVX2-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: min_le_v2i64:
+; AVX512:       # BB#0:
+; AVX512-NEXT:    # kill: %xmm1<def> %xmm1<kill> %zmm1<def>
+; AVX512-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<def>
+; AVX512-NEXT:    vpminsq %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<kill>
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   %1 = icmp sle <2 x i64> %a, %b
   %2 = select <2 x i1> %1, <2 x i64> %a, <2 x i64> %b
   ret <2 x i64> %2
@@ -1366,10 +1434,10 @@ define <4 x i64> @min_le_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ;
 ; AVX512-LABEL: min_le_v4i64:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm2
-; AVX512-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
-; AVX512-NEXT:    vpxor %ymm3, %ymm2, %ymm2
-; AVX512-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0
+; AVX512-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
+; AVX512-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; AVX512-NEXT:    vpminsq %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
 ; AVX512-NEXT:    retq
   %1 = icmp sle <4 x i64> %a, %b
   %2 = select <4 x i1> %1, <4 x i64> %a, <4 x i64> %b

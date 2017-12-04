@@ -211,7 +211,7 @@ void ThreadFinalize(ThreadState *thr) {
   if (!flags()->report_thread_leaks)
     return;
   ThreadRegistryLock l(ctx->thread_registry);
-  Vector<ThreadLeak> leaks(MBlockScopedBuf);
+  Vector<ThreadLeak> leaks;
   ctx->thread_registry->RunCallbackForEachThreadLocked(
       MaybeReportThreadLeak, &leaks);
   for (uptr i = 0; i < leaks.Size(); i++) {
