@@ -257,13 +257,13 @@ define <4 x i32> @combine_vec_lshr_trunc_lshr_zero1(<4 x i64> %x) {
 ; SSE-NEXT:    psrlq $49, %xmm2
 ; SSE-NEXT:    psrlq $48, %xmm0
 ; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm2[4,5,6,7]
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
-; SSE-NEXT:    movaps %xmm0, %xmm1
+; SSE-NEXT:    packusdw %xmm1, %xmm0
+; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    psrld $27, %xmm1
-; SSE-NEXT:    movaps %xmm0, %xmm2
+; SSE-NEXT:    movdqa %xmm0, %xmm2
 ; SSE-NEXT:    psrld $25, %xmm2
 ; SSE-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm1[4,5,6,7]
-; SSE-NEXT:    movaps %xmm0, %xmm1
+; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    psrld $26, %xmm1
 ; SSE-NEXT:    psrld $24, %xmm0
 ; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
@@ -273,8 +273,8 @@ define <4 x i32> @combine_vec_lshr_trunc_lshr_zero1(<4 x i64> %x) {
 ; AVX-LABEL: combine_vec_lshr_trunc_lshr_zero1:
 ; AVX:       # BB#0:
 ; AVX-NEXT:    vpsrlvq {{.*}}(%rip), %ymm0, %ymm0
-; AVX-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,2,2,3,4,6,6,7]
-; AVX-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpsrlvd {{.*}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
