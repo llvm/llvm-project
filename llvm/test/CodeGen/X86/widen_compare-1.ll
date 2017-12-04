@@ -6,12 +6,12 @@
 
 define <2 x i16> @compare_v2i64_to_v2i16(<2 x i16>* %src) nounwind {
 ; X86-LABEL: compare_v2i64_to_v2i16:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    pcmpeqd %xmm0, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: compare_v2i64_to_v2i16:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    pcmpeqd %xmm0, %xmm0
 ; X64-NEXT:    retq
   %val = load <2 x i16>, <2 x i16>* %src, align 4

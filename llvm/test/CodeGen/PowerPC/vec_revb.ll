@@ -3,7 +3,7 @@
 
 define <8 x i16> @testXXBRH(<8 x i16> %a) {
 ; CHECK-LABEL: testXXBRH:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxbrh 34, 34
 ; CHECK-NEXT:    blr
 
@@ -16,7 +16,7 @@ entry:
 
 define <4 x i32> @testXXBRW(<4 x i32> %a) {
 ; CHECK-LABEL: testXXBRW:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxbrw 34, 34
 ; CHECK-NEXT:    blr
 
@@ -29,7 +29,7 @@ entry:
 
 define <2 x double> @testXXBRD(<2 x double> %a) {
 ; CHECK-LABEL: testXXBRD:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxbrd 34, 34
 ; CHECK-NEXT:    blr
 
@@ -42,7 +42,7 @@ entry:
 
 define <1 x i128> @testXXBRQ(<1 x i128> %a) {
 ; CHECK-LABEL: testXXBRQ:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxbrq 34, 34
 ; CHECK-NEXT:    blr
 

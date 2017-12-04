@@ -138,15 +138,15 @@ bool MSP430BSel::expandBranches(OffsetVector &BlockOffsets) {
         continue;
       }
 
-      DEBUG(dbgs() << "  Found a branch that needs expanding, BB#"
-                   << DestBB->getNumber() << ", Distance " << BranchDistance
-                   << "\n");
+      DEBUG(dbgs() << "  Found a branch that needs expanding, "
+                   << printMBBReference(*DestBB) << ", Distance "
+                   << BranchDistance << "\n");
 
       // If JCC is not the last instruction we need to split the MBB.
       if (MI->getOpcode() == MSP430::JCC && std::next(MI) != EE) {
 
-        DEBUG(dbgs() << "  Found a basic block that needs to be split, BB#"
-                     << MBB->getNumber() << "\n");
+        DEBUG(dbgs() << "  Found a basic block that needs to be split, "
+                     << printMBBReference(*MBB) << "\n");
 
         // Create a new basic block.
         MachineBasicBlock *NewBB =

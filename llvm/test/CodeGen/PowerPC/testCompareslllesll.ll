@@ -10,7 +10,7 @@
 ; Function Attrs: norecurse nounwind readnone
 define i64 @test_lllesll(i64 %a, i64 %b)  {
 ; CHECK-LABEL: test_lllesll:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sradi r5, r4, 63
 ; CHECK-NEXT:    rldicl r6, r3, 1, 63
 ; CHECK-NEXT:    subfc r12, r3, r4
@@ -25,7 +25,7 @@ entry:
 ; Function Attrs: norecurse nounwind readnone
 define i64 @test_lllesll_sext(i64 %a, i64 %b)  {
 ; CHECK-LABEL: test_lllesll_sext:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sradi r5, r4, 63
 ; CHECK-NEXT:    rldicl r6, r3, 1, 63
 ; CHECK-NEXT:    subfc r12, r3, r4
@@ -41,7 +41,7 @@ entry:
 ; Function Attrs: norecurse nounwind readnone
 define i64 @test_lllesll_z(i64 %a)  {
 ; CHECK-LABEL: test_lllesll_z:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi r4, r3, -1
 ; CHECK-NEXT:    or r3, r4, r3
 ; CHECK-NEXT:    rldicl r3, r3, 1, 63
@@ -55,7 +55,7 @@ entry:
 ; Function Attrs: norecurse nounwind readnone
 define i64 @test_lllesll_sext_z(i64 %a)  {
 ; CHECK-LABEL: test_lllesll_sext_z:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi r4, r3, -1
 ; CHECK-NEXT:    or r3, r4, r3
 ; CHECK-NEXT:    sradi r3, r3, 63
@@ -69,7 +69,7 @@ entry:
 ; Function Attrs: norecurse nounwind
 define void @test_lllesll_store(i64 %a, i64 %b) {
 ; CHECK-LABEL: test_lllesll_store:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK:    sradi r6, r4, 63
 ; CHECK:    subfc r4, r3, r4
 ; CHECK:    rldicl r3, r3, 1, 63
@@ -86,7 +86,7 @@ entry:
 ; Function Attrs: norecurse nounwind
 define void @test_lllesll_sext_store(i64 %a, i64 %b) {
 ; CHECK-LABEL: test_lllesll_sext_store:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK:    sradi r6, r4, 63
 ; CHECK-DAG:    rldicl r3, r3, 1, 63
 ; CHECK-DAG:    subfc r4, r3, r4
@@ -104,7 +104,7 @@ entry:
 ; Function Attrs: norecurse nounwind
 define void @test_lllesll_z_store(i64 %a) {
 ; CHECK-LABEL: test_lllesll_z_store:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
 ; CHECK-NEXT:    addi r5, r3, -1
 ; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
@@ -122,7 +122,7 @@ entry:
 ; Function Attrs: norecurse nounwind
 define void @test_lllesll_sext_z_store(i64 %a) {
 ; CHECK-LABEL: test_lllesll_sext_z_store:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
 ; CHECK-NEXT:    addi r5, r3, -1
 ; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)

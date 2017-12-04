@@ -7,7 +7,7 @@
 
 define void @pr32275(<4 x i8> %B15) {
 ; CHECK-LABEL: pr32275:
-; CHECK:       # BB#0: # %BB
+; CHECK:       # %bb.0: # %BB
 ; CHECK-NEXT:    vrepif %v0, 1
 ; CHECK-NEXT:  .LBB0_1: # %CF34
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -22,7 +22,7 @@ define void @pr32275(<4 x i8> %B15) {
 ; CHECK-NEXT:    vlgvf %r0, %v1, 3
 ; CHECK-NEXT:    tmll %r0, 1
 ; CHECK-NEXT:    jne .LBB0_1
-; CHECK-NEXT:  # BB#2: # %CF36
+; CHECK-NEXT:  # %bb.2: # %CF36
 ; CHECK-NEXT:    br %r14
 BB:
   br label %CF34

@@ -4,14 +4,14 @@
 
 define <4 x double> @test_broadcast_2f64_4f64(<2 x double> *%p) nounwind {
 ; X32-LABEL: test_broadcast_2f64_4f64:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X32-NEXT:    vaddpd {{\.LCPI.*}}, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_broadcast_2f64_4f64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X64-NEXT:    vaddpd {{.*}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    retq
@@ -23,14 +23,14 @@ define <4 x double> @test_broadcast_2f64_4f64(<2 x double> *%p) nounwind {
 
 define <4 x i64> @test_broadcast_2i64_4i64(<2 x i64> *%p) nounwind {
 ; X32-LABEL: test_broadcast_2i64_4i64:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X32-NEXT:    vpaddq {{\.LCPI.*}}, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_broadcast_2i64_4i64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X64-NEXT:    vpaddq {{.*}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    retq
@@ -42,14 +42,14 @@ define <4 x i64> @test_broadcast_2i64_4i64(<2 x i64> *%p) nounwind {
 
 define <8 x float> @test_broadcast_4f32_8f32(<4 x float> *%p) nounwind {
 ; X32-LABEL: test_broadcast_4f32_8f32:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X32-NEXT:    vaddps {{\.LCPI.*}}, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_broadcast_4f32_8f32:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X64-NEXT:    vaddps {{.*}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    retq
@@ -61,14 +61,14 @@ define <8 x float> @test_broadcast_4f32_8f32(<4 x float> *%p) nounwind {
 
 define <8 x i32> @test_broadcast_4i32_8i32(<4 x i32> *%p) nounwind {
 ; X32-LABEL: test_broadcast_4i32_8i32:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X32-NEXT:    vpaddd {{\.LCPI.*}}, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_broadcast_4i32_8i32:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X64-NEXT:    vpaddd {{.*}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    retq
@@ -80,14 +80,14 @@ define <8 x i32> @test_broadcast_4i32_8i32(<4 x i32> *%p) nounwind {
 
 define <16 x i16> @test_broadcast_8i16_16i16(<8 x i16> *%p) nounwind {
 ; X32-LABEL: test_broadcast_8i16_16i16:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X32-NEXT:    vpaddw {{\.LCPI.*}}, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_broadcast_8i16_16i16:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X64-NEXT:    vpaddw {{.*}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    retq
@@ -99,14 +99,14 @@ define <16 x i16> @test_broadcast_8i16_16i16(<8 x i16> *%p) nounwind {
 
 define <32 x i8> @test_broadcast_16i8_32i8(<16 x i8> *%p) nounwind {
 ; X32-LABEL: test_broadcast_16i8_32i8:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X32-NEXT:    vpaddb {{\.LCPI.*}}, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_broadcast_16i8_32i8:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X64-NEXT:    vpaddb {{.*}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    retq
@@ -118,7 +118,7 @@ define <32 x i8> @test_broadcast_16i8_32i8(<16 x i8> *%p) nounwind {
 
 define <4 x double> @test_broadcast_2f64_4f64_reuse(<2 x double>* %p0, <2 x double>* %p1) {
 ; X32-LABEL: test_broadcast_2f64_4f64_reuse:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    vmovapd (%ecx), %xmm1
@@ -128,7 +128,7 @@ define <4 x double> @test_broadcast_2f64_4f64_reuse(<2 x double>* %p0, <2 x doub
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_broadcast_2f64_4f64_reuse:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vmovapd (%rdi), %xmm1
 ; X64-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm0
 ; X64-NEXT:    vaddpd {{.*}}(%rip), %ymm0, %ymm0
@@ -143,7 +143,7 @@ define <4 x double> @test_broadcast_2f64_4f64_reuse(<2 x double>* %p0, <2 x doub
 
 define <4 x i64> @test_broadcast_2i64_4i64_reuse(<2 x i64>* %p0, <2 x i64>* %p1) {
 ; X32-LABEL: test_broadcast_2i64_4i64_reuse:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    vmovdqa (%ecx), %xmm1
@@ -153,7 +153,7 @@ define <4 x i64> @test_broadcast_2i64_4i64_reuse(<2 x i64>* %p0, <2 x i64>* %p1)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_broadcast_2i64_4i64_reuse:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vmovdqa (%rdi), %xmm1
 ; X64-NEXT:    vinserti128 $1, %xmm1, %ymm1, %ymm0
 ; X64-NEXT:    vpaddq {{.*}}(%rip), %ymm0, %ymm0
@@ -168,7 +168,7 @@ define <4 x i64> @test_broadcast_2i64_4i64_reuse(<2 x i64>* %p0, <2 x i64>* %p1)
 
 define <8 x float> @test_broadcast_4f32_8f32_reuse(<4 x float>* %p0, <4 x float>* %p1) {
 ; X32-LABEL: test_broadcast_4f32_8f32_reuse:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    vmovaps (%ecx), %xmm1
@@ -178,7 +178,7 @@ define <8 x float> @test_broadcast_4f32_8f32_reuse(<4 x float>* %p0, <4 x float>
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_broadcast_4f32_8f32_reuse:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vmovaps (%rdi), %xmm1
 ; X64-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm0
 ; X64-NEXT:    vaddps {{.*}}(%rip), %ymm0, %ymm0
@@ -193,7 +193,7 @@ define <8 x float> @test_broadcast_4f32_8f32_reuse(<4 x float>* %p0, <4 x float>
 
 define <8 x i32> @test_broadcast_4i32_8i32_reuse(<4 x i32>* %p0, <4 x i32>* %p1) {
 ; X32-LABEL: test_broadcast_4i32_8i32_reuse:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    vmovdqa (%ecx), %xmm1
@@ -203,7 +203,7 @@ define <8 x i32> @test_broadcast_4i32_8i32_reuse(<4 x i32>* %p0, <4 x i32>* %p1)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_broadcast_4i32_8i32_reuse:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vmovdqa (%rdi), %xmm1
 ; X64-NEXT:    vinserti128 $1, %xmm1, %ymm1, %ymm0
 ; X64-NEXT:    vpaddd {{.*}}(%rip), %ymm0, %ymm0
@@ -218,7 +218,7 @@ define <8 x i32> @test_broadcast_4i32_8i32_reuse(<4 x i32>* %p0, <4 x i32>* %p1)
 
 define <16 x i16> @test_broadcast_8i16_16i16_reuse(<8 x i16> *%p0, <8 x i16> *%p1) nounwind {
 ; X32-LABEL: test_broadcast_8i16_16i16_reuse:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    vmovdqa (%ecx), %xmm1
@@ -228,7 +228,7 @@ define <16 x i16> @test_broadcast_8i16_16i16_reuse(<8 x i16> *%p0, <8 x i16> *%p
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_broadcast_8i16_16i16_reuse:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vmovdqa (%rdi), %xmm1
 ; X64-NEXT:    vinserti128 $1, %xmm1, %ymm1, %ymm0
 ; X64-NEXT:    vpaddw {{.*}}(%rip), %ymm0, %ymm0
@@ -243,7 +243,7 @@ define <16 x i16> @test_broadcast_8i16_16i16_reuse(<8 x i16> *%p0, <8 x i16> *%p
 
 define <32 x i8> @test_broadcast_16i8_32i8_reuse(<16 x i8> *%p0, <16 x i8> *%p1) nounwind {
 ; X32-LABEL: test_broadcast_16i8_32i8_reuse:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    vmovdqa (%ecx), %xmm1
@@ -253,7 +253,7 @@ define <32 x i8> @test_broadcast_16i8_32i8_reuse(<16 x i8> *%p0, <16 x i8> *%p1)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_broadcast_16i8_32i8_reuse:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vmovdqa (%rdi), %xmm1
 ; X64-NEXT:    vinserti128 $1, %xmm1, %ymm1, %ymm0
 ; X64-NEXT:    vpaddb {{.*}}(%rip), %ymm0, %ymm0
@@ -268,7 +268,7 @@ define <32 x i8> @test_broadcast_16i8_32i8_reuse(<16 x i8> *%p0, <16 x i8> *%p1)
 
 define <8 x i32> @PR29088(<4 x i32>* %p0, <8 x float>* %p1) {
 ; X32-LABEL: PR29088:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    vmovaps (%ecx), %xmm0
@@ -278,7 +278,7 @@ define <8 x i32> @PR29088(<4 x i32>* %p0, <8 x float>* %p1) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: PR29088:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vmovaps (%rdi), %xmm0
 ; X64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vmovaps %ymm1, (%rsi)

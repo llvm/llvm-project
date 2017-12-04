@@ -6,12 +6,12 @@
 
 define <8 x double> @test_buildvector_v8f64(double %a0, double %a1, double %a2, double %a3, double %a4, double %a5, double %a6, double %a7) {
 ; AVX-32-LABEL: test_buildvector_v8f64:
-; AVX-32:       # BB#0:
+; AVX-32:       # %bb.0:
 ; AVX-32-NEXT:    vmovups {{[0-9]+}}(%esp), %zmm0
 ; AVX-32-NEXT:    retl
 ;
 ; AVX-64-LABEL: test_buildvector_v8f64:
-; AVX-64:       # BB#0:
+; AVX-64:       # %bb.0:
 ; AVX-64-NEXT:    vmovlhps {{.*#+}} xmm6 = xmm6[0],xmm7[0]
 ; AVX-64-NEXT:    vmovlhps {{.*#+}} xmm4 = xmm4[0],xmm5[0]
 ; AVX-64-NEXT:    vinsertf128 $1, %xmm6, %ymm4, %ymm4
@@ -33,12 +33,12 @@ define <8 x double> @test_buildvector_v8f64(double %a0, double %a1, double %a2, 
 
 define <16 x float> @test_buildvector_v16f32(float %a0, float %a1, float %a2, float %a3, float %a4, float %a5, float %a6, float %a7, float %a8, float %a9, float %a10, float %a11, float %a12, float %a13, float %a14, float %a15) {
 ; AVX-32-LABEL: test_buildvector_v16f32:
-; AVX-32:       # BB#0:
+; AVX-32:       # %bb.0:
 ; AVX-32-NEXT:    vmovups {{[0-9]+}}(%esp), %zmm0
 ; AVX-32-NEXT:    retl
 ;
 ; AVX-64-LABEL: test_buildvector_v16f32:
-; AVX-64:       # BB#0:
+; AVX-64:       # %bb.0:
 ; AVX-64-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[2,3]
 ; AVX-64-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1],xmm6[0],xmm4[3]
 ; AVX-64-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1,2],xmm7[0]
@@ -78,12 +78,12 @@ define <16 x float> @test_buildvector_v16f32(float %a0, float %a1, float %a2, fl
 
 define <8 x i64> @test_buildvector_v8i64(i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7) {
 ; AVX-32-LABEL: test_buildvector_v8i64:
-; AVX-32:       # BB#0:
+; AVX-32:       # %bb.0:
 ; AVX-32-NEXT:    vmovups {{[0-9]+}}(%esp), %zmm0
 ; AVX-32-NEXT:    retl
 ;
 ; AVX-64-LABEL: test_buildvector_v8i64:
-; AVX-64:       # BB#0:
+; AVX-64:       # %bb.0:
 ; AVX-64-NEXT:    vmovq %rcx, %xmm0
 ; AVX-64-NEXT:    vmovq %rdx, %xmm1
 ; AVX-64-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
@@ -110,12 +110,12 @@ define <8 x i64> @test_buildvector_v8i64(i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64
 
 define <16 x i32> @test_buildvector_v16i32(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6, i32 %a7, i32 %a8, i32 %a9, i32 %a10, i32 %a11, i32 %a12, i32 %a13, i32 %a14, i32 %a15) {
 ; AVX-32-LABEL: test_buildvector_v16i32:
-; AVX-32:       # BB#0:
+; AVX-32:       # %bb.0:
 ; AVX-32-NEXT:    vmovups {{[0-9]+}}(%esp), %zmm0
 ; AVX-32-NEXT:    retl
 ;
 ; AVX-64-LABEL: test_buildvector_v16i32:
-; AVX-64:       # BB#0:
+; AVX-64:       # %bb.0:
 ; AVX-64-NEXT:    vmovd %edi, %xmm0
 ; AVX-64-NEXT:    vpinsrd $1, %esi, %xmm0, %xmm0
 ; AVX-64-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
@@ -157,7 +157,7 @@ define <16 x i32> @test_buildvector_v16i32(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i
 
 define <32 x i16> @test_buildvector_v32i16(i16 %a0, i16 %a1, i16 %a2, i16 %a3, i16 %a4, i16 %a5, i16 %a6, i16 %a7, i16 %a8, i16 %a9, i16 %a10, i16 %a11, i16 %a12, i16 %a13, i16 %a14, i16 %a15, i16 %a16, i16 %a17, i16 %a18, i16 %a19, i16 %a20, i16 %a21, i16 %a22, i16 %a23, i16 %a24, i16 %a25, i16 %a26, i16 %a27, i16 %a28, i16 %a29, i16 %a30, i16 %a31) {
 ; AVX512F-32-LABEL: test_buildvector_v32i16:
-; AVX512F-32:       # BB#0:
+; AVX512F-32:       # %bb.0:
 ; AVX512F-32-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX512F-32-NEXT:    vpinsrw $1, {{[0-9]+}}(%esp), %xmm0, %xmm0
 ; AVX512F-32-NEXT:    vpinsrw $2, {{[0-9]+}}(%esp), %xmm0, %xmm0
@@ -195,7 +195,7 @@ define <32 x i16> @test_buildvector_v32i16(i16 %a0, i16 %a1, i16 %a2, i16 %a3, i
 ; AVX512F-32-NEXT:    retl
 ;
 ; AVX512F-64-LABEL: test_buildvector_v32i16:
-; AVX512F-64:       # BB#0:
+; AVX512F-64:       # %bb.0:
 ; AVX512F-64-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX512F-64-NEXT:    vpinsrw $1, {{[0-9]+}}(%rsp), %xmm0, %xmm0
 ; AVX512F-64-NEXT:    vpinsrw $2, {{[0-9]+}}(%rsp), %xmm0, %xmm0
@@ -233,7 +233,7 @@ define <32 x i16> @test_buildvector_v32i16(i16 %a0, i16 %a1, i16 %a2, i16 %a3, i
 ; AVX512F-64-NEXT:    retq
 ;
 ; AVX512BW-32-LABEL: test_buildvector_v32i16:
-; AVX512BW-32:       # BB#0:
+; AVX512BW-32:       # %bb.0:
 ; AVX512BW-32-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX512BW-32-NEXT:    vpinsrw $1, {{[0-9]+}}(%esp), %xmm0, %xmm0
 ; AVX512BW-32-NEXT:    vpinsrw $2, {{[0-9]+}}(%esp), %xmm0, %xmm0
@@ -272,7 +272,7 @@ define <32 x i16> @test_buildvector_v32i16(i16 %a0, i16 %a1, i16 %a2, i16 %a3, i
 ; AVX512BW-32-NEXT:    retl
 ;
 ; AVX512BW-64-LABEL: test_buildvector_v32i16:
-; AVX512BW-64:       # BB#0:
+; AVX512BW-64:       # %bb.0:
 ; AVX512BW-64-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX512BW-64-NEXT:    vpinsrw $1, {{[0-9]+}}(%rsp), %xmm0, %xmm0
 ; AVX512BW-64-NEXT:    vpinsrw $2, {{[0-9]+}}(%rsp), %xmm0, %xmm0
@@ -346,7 +346,7 @@ define <32 x i16> @test_buildvector_v32i16(i16 %a0, i16 %a1, i16 %a2, i16 %a3, i
 
 define <64 x i8> @test_buildvector_v64i8(i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i8 %a5, i8 %a6, i8 %a7, i8 %a8, i8 %a9, i8 %a10, i8 %a11, i8 %a12, i8 %a13, i8 %a14, i8 %a15, i8 %a16, i8 %a17, i8 %a18, i8 %a19, i8 %a20, i8 %a21, i8 %a22, i8 %a23, i8 %a24, i8 %a25, i8 %a26, i8 %a27, i8 %a28, i8 %a29, i8 %a30, i8 %a31, i8 %a32, i8 %a33, i8 %a34, i8 %a35, i8 %a36, i8 %a37, i8 %a38, i8 %a39, i8 %a40, i8 %a41, i8 %a42, i8 %a43, i8 %a44, i8 %a45, i8 %a46, i8 %a47, i8 %a48, i8 %a49, i8 %a50, i8 %a51, i8 %a52, i8 %a53, i8 %a54, i8 %a55, i8 %a56, i8 %a57, i8 %a58, i8 %a59, i8 %a60, i8 %a61, i8 %a62, i8 %a63) {
 ; AVX512F-32-LABEL: test_buildvector_v64i8:
-; AVX512F-32:       # BB#0:
+; AVX512F-32:       # %bb.0:
 ; AVX512F-32-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX512F-32-NEXT:    vpinsrb $1, {{[0-9]+}}(%esp), %xmm0, %xmm0
 ; AVX512F-32-NEXT:    vpinsrb $2, {{[0-9]+}}(%esp), %xmm0, %xmm0
@@ -416,7 +416,7 @@ define <64 x i8> @test_buildvector_v64i8(i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4,
 ; AVX512F-32-NEXT:    retl
 ;
 ; AVX512F-64-LABEL: test_buildvector_v64i8:
-; AVX512F-64:       # BB#0:
+; AVX512F-64:       # %bb.0:
 ; AVX512F-64-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX512F-64-NEXT:    vpinsrb $1, {{[0-9]+}}(%rsp), %xmm0, %xmm0
 ; AVX512F-64-NEXT:    vpinsrb $2, {{[0-9]+}}(%rsp), %xmm0, %xmm0
@@ -486,7 +486,7 @@ define <64 x i8> @test_buildvector_v64i8(i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4,
 ; AVX512F-64-NEXT:    retq
 ;
 ; AVX512BW-32-LABEL: test_buildvector_v64i8:
-; AVX512BW-32:       # BB#0:
+; AVX512BW-32:       # %bb.0:
 ; AVX512BW-32-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX512BW-32-NEXT:    vpinsrb $1, {{[0-9]+}}(%esp), %xmm0, %xmm0
 ; AVX512BW-32-NEXT:    vpinsrb $2, {{[0-9]+}}(%esp), %xmm0, %xmm0
@@ -557,7 +557,7 @@ define <64 x i8> @test_buildvector_v64i8(i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4,
 ; AVX512BW-32-NEXT:    retl
 ;
 ; AVX512BW-64-LABEL: test_buildvector_v64i8:
-; AVX512BW-64:       # BB#0:
+; AVX512BW-64:       # %bb.0:
 ; AVX512BW-64-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX512BW-64-NEXT:    vpinsrb $1, {{[0-9]+}}(%rsp), %xmm0, %xmm0
 ; AVX512BW-64-NEXT:    vpinsrb $2, {{[0-9]+}}(%rsp), %xmm0, %xmm0

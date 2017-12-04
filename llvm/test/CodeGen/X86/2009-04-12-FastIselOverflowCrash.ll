@@ -11,7 +11,7 @@ declare %0 @llvm.sadd.with.overflow.i32(i32, i32) nounwind
 define fastcc i32 @test() nounwind {
 entry:
 ; CHECK-LABEL: test:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    addl $0, %eax
 ; CHECK-NEXT:    seto %cl

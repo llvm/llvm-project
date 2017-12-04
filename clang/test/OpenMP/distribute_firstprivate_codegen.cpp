@@ -222,6 +222,7 @@ int main() {
 // CHECK: {{.*}} = alloca i{{[0-9]+}},
 // CHECK: {{.*}} = alloca i{{[0-9]+}},
 // CHECK: {{.*}} = alloca i{{[0-9]+}},
+// CHECK: {{.*}} = alloca i{{[0-9]+}},
 
 // CHECK-DAG: [[T_VAR_PRIV:%.+]] = alloca i{{[0-9]+}},
 // CHECK-DAG: [[VEC_PRIV:%.+]] = alloca [2 x i{{[0-9]+}}],
@@ -313,6 +314,7 @@ int main() {
 // CHECK: [[TMP:%.+]] = alloca [[S_INT_TY]]*,
 
 // discard omp loop variables
+// CHECK: {{.*}} = alloca i{{[0-9]+}},
 // CHECK: {{.*}} = alloca i{{[0-9]+}},
 // CHECK: {{.*}} = alloca i{{[0-9]+}},
 // CHECK: {{.*}} = alloca i{{[0-9]+}},

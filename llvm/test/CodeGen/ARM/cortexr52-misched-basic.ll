@@ -7,7 +7,7 @@
 ; as div takes more cycles to compute than eor.
 ;
 ; CHECK:       ********** MI Scheduling **********
-; CHECK:      foo:BB#0 entry
+; CHECK:      foo:%bb.0 entry
 ; CHECK:      EORrr
 ; GENERIC:    Latency    : 1
 ; R52_SCHED:  Latency    : 3
@@ -17,7 +17,7 @@
 ; CHECK:      SDIV
 ; GENERIC:    Latency    : 0
 ; R52_SCHED:  Latency    : 8
-; CHECK:      ** Final schedule for BB#0 ***
+; CHECK:      ** Final schedule for %bb.0 ***
 ; GENERIC:    EORrr
 ; GENERIC:    SDIV
 ; R52_SCHED:  SDIV

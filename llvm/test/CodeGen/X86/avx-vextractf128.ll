@@ -3,7 +3,7 @@
 
 define <8 x float> @A(<8 x float> %a) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: A:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; CHECK-NEXT:    retq
 entry:
@@ -13,7 +13,7 @@ entry:
 
 define <4 x double> @B(<4 x double> %a) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: B:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; CHECK-NEXT:    retq
 entry:
@@ -23,7 +23,7 @@ entry:
 
 define void @t0(float* nocapture %addr, <8 x float> %a) nounwind uwtable ssp {
 ; CHECK-LABEL: t0:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, (%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -36,7 +36,7 @@ entry:
 
 define void @t2(double* nocapture %addr, <4 x double> %a) nounwind uwtable ssp {
 ; CHECK-LABEL: t2:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, (%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -49,7 +49,7 @@ entry:
 
 define void @t4(<2 x i64>* nocapture %addr, <4 x i64> %a) nounwind uwtable ssp {
 ; CHECK-LABEL: t4:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, (%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -63,7 +63,7 @@ entry:
 
 define void @t5(float* nocapture %addr, <8 x float> %a) nounwind uwtable ssp {
 ; CHECK-LABEL: t5:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vmovaps %xmm0, (%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -76,7 +76,7 @@ entry:
 
 define void @t6(double* nocapture %addr, <4 x double> %a) nounwind uwtable ssp {
 ; CHECK-LABEL: t6:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vmovaps %xmm0, (%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -89,7 +89,7 @@ entry:
 
 define void @t7(<2 x i64>* nocapture %addr, <4 x i64> %a) nounwind uwtable ssp {
 ; CHECK-LABEL: t7:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vmovaps %xmm0, (%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -103,7 +103,7 @@ entry:
 
 define void @t8(<2 x i64>* nocapture %addr, <4 x i64> %a) nounwind uwtable ssp {
 ; CHECK-LABEL: t8:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vmovups %xmm0, (%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -118,7 +118,7 @@ entry:
 ; PR15462
 define void @t9(i64* %p) {
 ; CHECK-LABEL: t9:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovups %ymm0, (%rdi)
 ; CHECK-NEXT:    vzeroupper

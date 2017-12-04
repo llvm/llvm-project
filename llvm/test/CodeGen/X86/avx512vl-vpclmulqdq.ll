@@ -3,7 +3,7 @@
 
 define <2 x i64> @test_x86_pclmulqdq(<2 x i64> %a0, <2 x i64> %a1) {
 ; AVX512VL_VPCLMULQDQ-LABEL: test_x86_pclmulqdq:
-; AVX512VL_VPCLMULQDQ:       # BB#0:
+; AVX512VL_VPCLMULQDQ:       # %bb.0:
 ; AVX512VL_VPCLMULQDQ-NEXT:    vpclmulqdq $1, %xmm1, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x44,0xc1,0x01]
 ; AVX512VL_VPCLMULQDQ-NEXT:    retq # encoding: [0xc3]
   %res = call <2 x i64> @llvm.x86.pclmulqdq(<2 x i64> %a0, <2 x i64> %a1, i8 1)
@@ -13,7 +13,7 @@ declare <2 x i64> @llvm.x86.pclmulqdq(<2 x i64>, <2 x i64>, i8) nounwind readnon
 
 define <4 x i64> @test_x86_pclmulqdq_256(<4 x i64> %a0, <4 x i64> %a1) {
 ; AVX512VL_VPCLMULQDQ-LABEL: test_x86_pclmulqdq_256:
-; AVX512VL_VPCLMULQDQ:       # BB#0:
+; AVX512VL_VPCLMULQDQ:       # %bb.0:
 ; AVX512VL_VPCLMULQDQ-NEXT:    vpclmulqdq $16, %ymm1, %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0x7d,0x44,0xc1,0x10]
 ; AVX512VL_VPCLMULQDQ-NEXT:    retq # encoding: [0xc3]
   %res = call <4 x i64> @llvm.x86.pclmulqdq.256(<4 x i64> %a0, <4 x i64> %a1, i8 16)

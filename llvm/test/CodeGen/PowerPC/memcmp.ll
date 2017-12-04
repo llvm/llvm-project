@@ -3,7 +3,7 @@
 
 define signext i32 @memcmp8(i32* nocapture readonly %buffer1, i32* nocapture readonly %buffer2) {
 ; CHECK-LABEL: memcmp8:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ldbrx 3, 0, 3
 ; CHECK-NEXT:    ldbrx 4, 0, 4
 ; CHECK-NEXT:    subfc 5, 3, 4
@@ -23,7 +23,7 @@ define signext i32 @memcmp8(i32* nocapture readonly %buffer1, i32* nocapture rea
 
 define signext i32 @memcmp4(i32* nocapture readonly %buffer1, i32* nocapture readonly %buffer2) {
 ; CHECK-LABEL: memcmp4:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lwbrx 3, 0, 3
 ; CHECK-NEXT:    lwbrx 4, 0, 4
 ; CHECK-NEXT:    sub 5, 4, 3
@@ -41,7 +41,7 @@ define signext i32 @memcmp4(i32* nocapture readonly %buffer1, i32* nocapture rea
 
 define signext i32 @memcmp2(i32* nocapture readonly %buffer1, i32* nocapture readonly %buffer2) {
 ; CHECK-LABEL: memcmp2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lhbrx 3, 0, 3
 ; CHECK-NEXT:    lhbrx 4, 0, 4
 ; CHECK-NEXT:    subf 3, 4, 3
@@ -55,7 +55,7 @@ define signext i32 @memcmp2(i32* nocapture readonly %buffer1, i32* nocapture rea
 
 define signext i32 @memcmp1(i32* nocapture readonly %buffer1, i32* nocapture readonly %buffer2) {
 ; CHECK-LABEL: memcmp1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lbz 3, 0(3)
 ; CHECK-NEXT:    lbz 4, 0(4)
 ; CHECK-NEXT:    subf 3, 4, 3

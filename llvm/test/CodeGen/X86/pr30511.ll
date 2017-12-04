@@ -6,7 +6,7 @@ target triple = "x86_64-pc-linux-gnu"
 
 define i64 @PR30511(<2 x double> %a) {
 ; CHECK-LABEL: PR30511:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addpd {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; CHECK-NEXT:    cvtdq2pd %xmm0, %xmm0

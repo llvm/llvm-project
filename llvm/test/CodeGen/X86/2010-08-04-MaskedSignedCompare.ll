@@ -8,14 +8,14 @@
 
 define i32 @main() nounwind {
 ; CHECK-LABEL: main:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpq {{.*}}(%rip), %rax
 ; CHECK-NEXT:    sbbl %eax, %eax
 ; CHECK-NEXT:    andl $150, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jle .LBB0_1
-; CHECK-NEXT:  # BB#2: # %if.then
+; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    movl $1, {{.*}}(%rip)
 ; CHECK-NEXT:    movl $1, %esi
 ; CHECK-NEXT:    jmp .LBB0_3

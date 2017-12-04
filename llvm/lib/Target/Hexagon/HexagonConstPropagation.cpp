@@ -617,7 +617,7 @@ void MachineConstPropagator::CellMap::print(raw_ostream &os,
 void MachineConstPropagator::visitPHI(const MachineInstr &PN) {
   const MachineBasicBlock *MB = PN.getParent();
   unsigned MBN = MB->getNumber();
-  DEBUG(dbgs() << "Visiting FI(BB#" << MBN << "): " << PN);
+  DEBUG(dbgs() << "Visiting FI(" << printMBBReference(*MB) << "): " << PN);
 
   const MachineOperand &MD = PN.getOperand(0);
   Register DefR(MD);
@@ -642,8 +642,8 @@ Bottomize:
     const MachineBasicBlock *PB = PN.getOperand(i+1).getMBB();
     unsigned PBN = PB->getNumber();
     if (!EdgeExec.count(CFGEdge(PBN, MBN))) {
-      DEBUG(dbgs() << "  edge BB#" << PBN << "->BB#" << MBN
-                   << " not executable\n");
+      DEBUG(dbgs() << "  edge " << printMBBReference(*PB) << "->"
+                   << printMBBReference(*MB) << " not executable\n");
       continue;
     }
     const MachineOperand &SO = PN.getOperand(i);
@@ -658,9 +658,8 @@ Bottomize:
 
     LatticeCell SrcC;
     bool Eval = MCE.evaluate(UseR, Cells.get(UseR.Reg), SrcC);
-    DEBUG(dbgs() << "  edge from BB#" << PBN << ": "
-                 << printReg(UseR.Reg, &MCE.TRI, UseR.SubReg)
-                 << SrcC << '\n');
+    DEBUG(dbgs() << "  edge from " << printMBBReference(*PB) << ": "
+                 << printReg(UseR.Reg, &MCE.TRI, UseR.SubReg) << SrcC << '\n');
     Changed |= Eval ? DefC.meet(SrcC)
                     : DefC.setBottom();
     Cells.update(DefR.Reg, DefC);
@@ -672,7 +671,7 @@ Bottomize:
 }
 
 void MachineConstPropagator::visitNonBranch(const MachineInstr &MI) {
-  DEBUG(dbgs() << "Visiting MI(BB#" << MI.getParent()->getNumber()
+  DEBUG(dbgs() << "Visiting MI(" << printMBBReference(*MI.getParent())
                << "): " << MI);
   CellMap Outputs;
   bool Eval = MCE.evaluate(MI, Cells, Outputs);
@@ -729,8 +728,8 @@ void MachineConstPropagator::visitBranchesFrom(const MachineInstr &BrI) {
   while (It != End) {
     const MachineInstr &MI = *It;
     InstrExec.insert(&MI);
-    DEBUG(dbgs() << "Visiting " << (EvalOk ? "BR" : "br") << "(BB#"
-                 << MBN << "): " << MI);
+    DEBUG(dbgs() << "Visiting " << (EvalOk ? "BR" : "br") << "("
+                 << printMBBReference(B) << "): " << MI);
     // Do not evaluate subsequent branches if the evaluation of any of the
     // previous branches failed. Keep iterating over the branches only
     // to mark them as executable.
@@ -772,7 +771,8 @@ void MachineConstPropagator::visitBranchesFrom(const MachineInstr &BrI) {
 
   for (const MachineBasicBlock *TB : Targets) {
     unsigned TBN = TB->getNumber();
-    DEBUG(dbgs() << "  pushing edge BB#" << MBN << " -> BB#" << TBN << "\n");
+    DEBUG(dbgs() << "  pushing edge " << printMBBReference(B) << " -> "
+                 << printMBBReference(*TB) << "\n");
     FlowQ.push(CFGEdge(MBN, TBN));
   }
 }
@@ -870,8 +870,10 @@ void MachineConstPropagator::propagate(MachineFunction &MF) {
     CFGEdge Edge = FlowQ.front();
     FlowQ.pop();
 
-    DEBUG(dbgs() << "Picked edge BB#" << Edge.first << "->BB#"
-                 << Edge.second << '\n');
+    DEBUG(dbgs() << "Picked edge "
+                 << printMBBReference(*MF.getBlockNumbered(Edge.first)) << "->"
+                 << printMBBReference(*MF.getBlockNumbered(Edge.second))
+                 << '\n');
     if (Edge.first != EntryNum)
       if (EdgeExec.count(Edge))
         continue;
@@ -934,7 +936,8 @@ void MachineConstPropagator::propagate(MachineFunction &MF) {
       for (const MachineBasicBlock *SB : B.successors()) {
         unsigned SN = SB->getNumber();
         if (!EdgeExec.count(CFGEdge(BN, SN)))
-          dbgs() << "  BB#" << BN << " -> BB#" << SN << '\n';
+          dbgs() << "  " << printMBBReference(B) << " -> "
+                 << printMBBReference(*SB) << '\n';
       }
     }
   });
@@ -3126,7 +3129,7 @@ bool HexagonConstEvaluator::rewriteHexBranch(MachineInstr &BrI,
   if (BrI.getOpcode() == Hexagon::J2_jump)
     return false;
 
-  DEBUG(dbgs() << "Rewrite(BB#" << B.getNumber() << "):" << BrI);
+  DEBUG(dbgs() << "Rewrite(" << printMBBReference(B) << "):" << BrI);
   bool Rewritten = false;
   if (NumTargets > 0) {
     assert(!FallsThru && "This should have been checked before");

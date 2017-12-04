@@ -38,7 +38,7 @@
 ; ASM:         movl    %esi, %ecx
 ; ASM:         testl   %eax, %eax
 ; ASM:         jne     .LBB0_5
-; ASM: # BB#2:                                 # %if.end
+; ASM: # %bb.2:                                 # %if.end
 ; ASM:         #DEBUG_VALUE: p <- %esi
 ; ASM:         callq   use
 ; ASM:         jmp     .LBB0_4

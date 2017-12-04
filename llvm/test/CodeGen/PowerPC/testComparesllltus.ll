@@ -10,7 +10,7 @@
 ; Function Attrs: norecurse nounwind readnone
 define i64 @test_llltus(i16 zeroext %a, i16 zeroext %b) {
 ; CHECK-LABEL: test_llltus:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sub [[REG:r[0-9]+]], r3, r4
 ; CHECK-NEXT:    rldicl r3, [[REG]], 1, 63
 ; CHECK-NEXT:    blr
@@ -23,7 +23,7 @@ entry:
 ; Function Attrs: norecurse nounwind readnone
 define i64 @test_llltus_sext(i16 zeroext %a, i16 zeroext %b) {
 ; CHECK-LABEL: test_llltus_sext:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sub [[REG:r[0-9]+]], r3, r4
 ; CHECK-NEXT:    sradi r3, [[REG]], 63
 ; CHECK-NEXT:    blr
@@ -48,7 +48,7 @@ entry:
 ; Function Attrs: norecurse nounwind
 define void @test_llltus_sext_store(i16 zeroext %a, i16 zeroext %b) {
 ; CHECK-LABEL: test_llltus_sext_store:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK:         sub [[REG:r[0-9]+]], r3, r4
 ; CHECK:         sradi {{r[0-9]+}}, [[REG]], 63
 entry:

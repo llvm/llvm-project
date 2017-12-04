@@ -352,11 +352,6 @@ Optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
   Value *Dividend = SlowDivOrRem->getOperand(0);
   Value *Divisor = SlowDivOrRem->getOperand(1);
 
-  if (isa<ConstantInt>(Divisor)) {
-    // Keep division by a constant for DAGCombiner.
-    return None;
-  }
-
   VisitedSetTy SetL;
   ValueRange DividendRange = getValueRange(Dividend, SetL);
   if (DividendRange == VALRNG_LIKELY_LONG)
@@ -372,7 +367,9 @@ Optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
 
   if (DividendShort && DivisorShort) {
     // If both operands are known to be short then just replace the long
-    // division with a short one in-place.
+    // division with a short one in-place.  Since we're not introducing control
+    // flow in this case, narrowing the division is always a win, even if the
+    // divisor is a constant (and will later get replaced by a multiplication).
 
     IRBuilder<> Builder(SlowDivOrRem);
     Value *TruncDividend = Builder.CreateTrunc(Dividend, BypassType);
@@ -382,7 +379,16 @@ Optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
     Value *ExtDiv = Builder.CreateZExt(TruncDiv, getSlowType());
     Value *ExtRem = Builder.CreateZExt(TruncRem, getSlowType());
     return QuotRemPair(ExtDiv, ExtRem);
-  } else if (DividendShort && !isSignedOp()) {
+  }
+
+  if (isa<ConstantInt>(Divisor)) {
+    // If the divisor is not a constant, DAGCombiner will convert it to a
+    // multiplication by a magic constant.  It isn't clear if it is worth
+    // introducing control flow to get a narrower multiply.
+    return None;
+  }
+
+  if (DividendShort && !isSignedOp()) {
     // If the division is unsigned and Dividend is known to be short, then
     // either
     // 1) Divisor is less or equal to Dividend, and the result can be computed

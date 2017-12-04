@@ -40,10 +40,10 @@ define [1 x double] @constant() {
   ret [1 x double] [double 1.0]
 }
 
-  ; The key problem here is that we may fail to create an MBB referenced by a
-  ; PHI. If so, we cannot complete the G_PHI and mustn't try or bad things
-  ; happen.
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: cannot select: G_STORE %6, %2; mem:ST4[%addr] GPR:%6,%2 (in function: pending_phis)
+; The key problem here is that we may fail to create an MBB referenced by a
+; PHI. If so, we cannot complete the G_PHI and mustn't try or bad things
+; happen.
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to translate constant: [1 x double] (in function: pending_phis)
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for pending_phis
 ; FALLBACK-WITH-REPORT-OUT-LABEL: pending_phis:
 define i32 @pending_phis(i1 %tst, i32 %val, i32* %addr) {
@@ -54,7 +54,7 @@ end:
   ret i32 %res
 
 true:
-  store atomic i32 42, i32* %addr seq_cst, align 4
+  %t = extractvalue [1 x double] [double 1.0], 0
   br label %end
 
 false:
@@ -88,16 +88,6 @@ define void @odd_vector(<7 x i32>* %addr) {
 ; FALLBACK-WITH-REPORT-LABEL: sequence_sizes:
 define i128 @sequence_sizes([8 x i8] %in) {
   ret i128 undef
-}
-
-; Just to make sure we don't accidentally emit a normal load/store.
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: cannot select: %2<def>(s64) = G_LOAD %0; mem:LD8[%addr] GPR:%2,%0 (in function: atomic_ops)
-; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for atomic_ops
-; FALLBACK-WITH-REPORT-LABEL: atomic_ops:
-define i64 @atomic_ops(i64* %addr) {
-  store atomic i64 0, i64* %addr unordered, align 8
-  %res = load atomic i64, i64* %addr seq_cst, align 8
-  ret i64 %res
 }
 
 ; Make sure we don't mess up metadata arguments.

@@ -18,7 +18,7 @@ __real400921f9f01b866e:
 F:                                      # @F
 .Ltmp0:
 .seh_proc F
-# BB#0:                                 # %entry
+# %bb.0:                                # %entry
 .Ltmp1:
 	.seh_endprologue
 # rtdyld-check: decode_operand(inst1, 4) = __real400921f9f01b866e - next_pc(inst1)

@@ -4,12 +4,12 @@
 
 define i64 @test_add_i64(i64 %arg1, i64 %arg2) {
 ; X64-LABEL: test_add_i64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    leaq (%rsi,%rdi), %rax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_add_i64:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebp
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    .cfi_offset %ebp, -8
@@ -27,14 +27,14 @@ define i64 @test_add_i64(i64 %arg1, i64 %arg2) {
 
 define i32 @test_add_i32(i32 %arg1, i32 %arg2) {
 ; X64-LABEL: test_add_i32:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; X64-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; X64-NEXT:    leal (%rsi,%rdi), %eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_add_i32:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    retl
@@ -44,7 +44,7 @@ define i32 @test_add_i32(i32 %arg1, i32 %arg2) {
 
 define i16 @test_add_i16(i16 %arg1, i16 %arg2) {
 ; X64-LABEL: test_add_i16:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; X64-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; X64-NEXT:    leal (%rsi,%rdi), %eax
@@ -52,7 +52,7 @@ define i16 @test_add_i16(i16 %arg1, i16 %arg2) {
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_add_i16:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    addw {{[0-9]+}}(%esp), %ax
 ; X32-NEXT:    retl
@@ -62,13 +62,13 @@ define i16 @test_add_i16(i16 %arg1, i16 %arg2) {
 
 define i8 @test_add_i8(i8 %arg1, i8 %arg2) {
 ; X64-LABEL: test_add_i8:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    addb %dil, %sil
 ; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_add_i8:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    addb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    retl
@@ -78,7 +78,7 @@ define i8 @test_add_i8(i8 %arg1, i8 %arg2) {
 
 define i32 @test_add_i1(i32 %arg1, i32 %arg2) {
 ; X64-LABEL: test_add_i1:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    cmpl %esi, %edi
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    addb %al, %al
@@ -87,7 +87,7 @@ define i32 @test_add_i1(i32 %arg1, i32 %arg2) {
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_add_i1:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    cmpl %eax, {{[0-9]+}}(%esp)
 ; X32-NEXT:    sete %al

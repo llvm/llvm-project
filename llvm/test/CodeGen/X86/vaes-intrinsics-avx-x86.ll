@@ -4,7 +4,7 @@
 ; {vaes, avx}
 define <4 x i64> @test_x86_aesni_aesenc_256(<4 x i64> %a0, <4 x i64> %a1) {
 ; VAES_AVX-LABEL: test_x86_aesni_aesenc_256:
-; VAES_AVX:       # BB#0:
+; VAES_AVX:       # %bb.0:
 ; VAES_AVX-NEXT:    vaesenc %ymm1, %ymm0, %ymm0 # encoding: [0xc4,0xe2,0x7d,0xdc,0xc1]
 ; VAES_AVX-NEXT:    retl # encoding: [0xc3]
   %res = call <4 x i64> @llvm.x86.aesni.aesenc.256(<4 x i64> %a0, <4 x i64> %a1)

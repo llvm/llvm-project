@@ -6,7 +6,7 @@
 
 define void @shift5a(<4 x i32> %val, <4 x i32>* %dst, i32* %pamt) nounwind {
 ; X32-LABEL: shift5a:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
@@ -15,7 +15,7 @@ define void @shift5a(<4 x i32> %val, <4 x i32>* %dst, i32* %pamt) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: shift5a:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X64-NEXT:    pslld %xmm1, %xmm0
 ; X64-NEXT:    movdqa %xmm0, (%rdi)
@@ -32,7 +32,7 @@ entry:
 
 define void @shift5b(<4 x i32> %val, <4 x i32>* %dst, i32* %pamt) nounwind {
 ; X32-LABEL: shift5b:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
@@ -41,7 +41,7 @@ define void @shift5b(<4 x i32> %val, <4 x i32>* %dst, i32* %pamt) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: shift5b:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X64-NEXT:    psrad %xmm1, %xmm0
 ; X64-NEXT:    movdqa %xmm0, (%rdi)
@@ -58,7 +58,7 @@ entry:
 
 define void @shift5c(<4 x i32> %val, <4 x i32>* %dst, i32 %amt) nounwind {
 ; X32-LABEL: shift5c:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X32-NEXT:    pslld %xmm1, %xmm0
@@ -66,7 +66,7 @@ define void @shift5c(<4 x i32> %val, <4 x i32>* %dst, i32 %amt) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: shift5c:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movd %esi, %xmm1
 ; X64-NEXT:    pslld %xmm1, %xmm0
 ; X64-NEXT:    movdqa %xmm0, (%rdi)
@@ -82,7 +82,7 @@ entry:
 
 define void @shift5d(<4 x i32> %val, <4 x i32>* %dst, i32 %amt) nounwind {
 ; X32-LABEL: shift5d:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X32-NEXT:    psrad %xmm1, %xmm0
@@ -90,7 +90,7 @@ define void @shift5d(<4 x i32> %val, <4 x i32>* %dst, i32 %amt) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: shift5d:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movd %esi, %xmm1
 ; X64-NEXT:    psrad %xmm1, %xmm0
 ; X64-NEXT:    movdqa %xmm0, (%rdi)

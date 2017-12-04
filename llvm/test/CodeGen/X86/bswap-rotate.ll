@@ -7,13 +7,13 @@
 
 define i16 @combine_bswap_rotate(i16 %a0) {
 ; X86-LABEL: combine_bswap_rotate:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    rolw $9, %ax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: combine_bswap_rotate:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    rolw $9, %di
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    retq

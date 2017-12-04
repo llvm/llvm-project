@@ -7,7 +7,7 @@ declare {i32, i32} @llvm.x86.rdrand.32()
 
 define i32 @_rdrand16_step(i16* %random_val) {
 ; X86-LABEL: _rdrand16_step:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    rdrandw %ax
 ; X86-NEXT:    movzwl %ax, %edx
@@ -17,7 +17,7 @@ define i32 @_rdrand16_step(i16* %random_val) {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: _rdrand16_step:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    rdrandw %ax
 ; X64-NEXT:    movzwl %ax, %ecx
 ; X64-NEXT:    movl $1, %eax
@@ -33,7 +33,7 @@ define i32 @_rdrand16_step(i16* %random_val) {
 
 define i32 @_rdrand32_step(i32* %random_val) {
 ; X86-LABEL: _rdrand32_step:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    rdrandl %edx
 ; X86-NEXT:    movl $1, %eax
@@ -42,7 +42,7 @@ define i32 @_rdrand32_step(i32* %random_val) {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: _rdrand32_step:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    rdrandl %ecx
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    cmovael %ecx, %eax
@@ -58,14 +58,14 @@ define i32 @_rdrand32_step(i32* %random_val) {
 ; Check that MachineCSE doesn't eliminate duplicate rdrand instructions.
 define i32 @CSE() nounwind {
 ; X86-LABEL: CSE:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    rdrandl %ecx
 ; X86-NEXT:    rdrandl %eax
 ; X86-NEXT:    addl %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: CSE:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    rdrandl %ecx
 ; X64-NEXT:    rdrandl %eax
 ; X64-NEXT:    addl %ecx, %eax
@@ -81,11 +81,11 @@ define i32 @CSE() nounwind {
 ; Check that MachineLICM doesn't hoist rdrand instructions.
 define void @loop(i32* %p, i32 %n) nounwind {
 ; X86-LABEL: loop:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    testl %eax, %eax
 ; X86-NEXT:    je .LBB3_3
-; X86-NEXT:  # BB#1: # %while.body.preheader
+; X86-NEXT:  # %bb.1: # %while.body.preheader
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    .p2align 4, 0x90
 ; X86-NEXT:  .LBB3_2: # %while.body
@@ -99,7 +99,7 @@ define void @loop(i32* %p, i32 %n) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: loop:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    testl %esi, %esi
 ; X64-NEXT:    je .LBB3_2
 ; X64-NEXT:    .p2align 4, 0x90

@@ -5,7 +5,7 @@
 
 define void @validate() {
 ; AVX-LABEL: validate:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 entry:
   %0 = bitcast i8 addrspace(1)* undef to <96 x i8> addrspace(1)*
   %wide.vec = load <96 x i8>, <96 x i8> addrspace(1)* %0, align 1

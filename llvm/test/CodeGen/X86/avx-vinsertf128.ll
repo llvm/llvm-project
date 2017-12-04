@@ -3,7 +3,7 @@
 
 define <8 x float> @A(<8 x float> %a) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: A:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %shuffle = shufflevector <8 x float> %a, <8 x float> undef, <8 x i32> <i32 8, i32 8, i32 8, i32 8, i32 0, i32 1, i32 2, i32 3>
@@ -12,7 +12,7 @@ define <8 x float> @A(<8 x float> %a) nounwind uwtable readnone ssp {
 
 define <4 x double> @B(<4 x double> %a) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: B:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %shuffle = shufflevector <4 x double> %a, <4 x double> undef, <4 x i32> <i32 4, i32 4, i32 0, i32 1>
@@ -24,7 +24,7 @@ declare <2 x double> @llvm.x86.sse2.min.sd(<2 x double>, <2 x double>) nounwind 
 
 define void @insert_crash() nounwind {
 ; CHECK-LABEL: insert_crash:
-; CHECK:       # BB#0: # %allocas
+; CHECK:       # %bb.0: # %allocas
 ; CHECK-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vminpd %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vminsd %xmm0, %xmm0, %xmm0
@@ -49,7 +49,7 @@ allocas:
 
 define <4 x i32> @DAGCombineA(<4 x i32> %v1) nounwind readonly {
 ; CHECK-LABEL: DAGCombineA:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    retq
   %t1 = shufflevector <4 x i32> %v1, <4 x i32> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %t2 = shufflevector <8 x i32> %t1, <8 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -58,7 +58,7 @@ define <4 x i32> @DAGCombineA(<4 x i32> %v1) nounwind readonly {
 
 define <8 x i32> @DAGCombineB(<8 x i32> %v1, <8 x i32> %v2) nounwind readonly {
 ; CHECK-LABEL: DAGCombineB:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; CHECK-NEXT:    vpaddd %xmm3, %xmm2, %xmm2
@@ -74,7 +74,7 @@ define <8 x i32> @DAGCombineB(<8 x i32> %v1, <8 x i32> %v2) nounwind readonly {
 
 define <4 x double> @insert_undef_pd(<4 x double> %a0, <2 x double> %a1) {
 ; CHECK-LABEL: insert_undef_pd:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: %xmm1<def> %xmm1<kill> %ymm1<def>
 ; CHECK-NEXT:    vmovaps %ymm1, %ymm0
 ; CHECK-NEXT:    retq
@@ -85,7 +85,7 @@ declare <4 x double> @llvm.x86.avx.vinsertf128.pd.256(<4 x double>, <2 x double>
 
 define <8 x float> @insert_undef_ps(<8 x float> %a0, <4 x float> %a1) {
 ; CHECK-LABEL: insert_undef_ps:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: %xmm1<def> %xmm1<kill> %ymm1<def>
 ; CHECK-NEXT:    vmovaps %ymm1, %ymm0
 ; CHECK-NEXT:    retq
@@ -96,7 +96,7 @@ declare <8 x float> @llvm.x86.avx.vinsertf128.ps.256(<8 x float>, <4 x float>, i
 
 define <8 x i32> @insert_undef_si(<8 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-LABEL: insert_undef_si:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: %xmm1<def> %xmm1<kill> %ymm1<def>
 ; CHECK-NEXT:    vmovaps %ymm1, %ymm0
 ; CHECK-NEXT:    retq
@@ -108,7 +108,7 @@ declare <8 x i32> @llvm.x86.avx.vinsertf128.si.256(<8 x i32>, <4 x i32>, i8) nou
 ; rdar://10643481
 define <8 x float> @vinsertf128_combine(float* nocapture %f) nounwind uwtable readonly ssp {
 ; CHECK-LABEL: vinsertf128_combine:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vinsertf128 $1, 16(%rdi), %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %add.ptr = getelementptr inbounds float, float* %f, i64 4
@@ -121,7 +121,7 @@ define <8 x float> @vinsertf128_combine(float* nocapture %f) nounwind uwtable re
 ; rdar://11076953
 define <8 x float> @vinsertf128_ucombine(float* nocapture %f) nounwind uwtable readonly ssp {
 ; CHECK-LABEL: vinsertf128_ucombine:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vinsertf128 $1, 16(%rdi), %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %add.ptr = getelementptr inbounds float, float* %f, i64 4

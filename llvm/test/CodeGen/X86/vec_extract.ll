@@ -4,7 +4,7 @@
 
 define void @test1(<4 x float>* %F, float* %f) nounwind {
 ; X32-LABEL: test1:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movaps (%ecx), %xmm0
@@ -13,7 +13,7 @@ define void @test1(<4 x float>* %F, float* %f) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test1:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movaps (%rdi), %xmm0
 ; X64-NEXT:    addps %xmm0, %xmm0
 ; X64-NEXT:    movss %xmm0, (%rsi)
@@ -28,7 +28,7 @@ entry:
 
 define float @test2(<4 x float>* %F, float* %f) nounwind {
 ; X32-LABEL: test2:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    pushl %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movaps (%eax), %xmm0
@@ -40,7 +40,7 @@ define float @test2(<4 x float>* %F, float* %f) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test2:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movaps (%rdi), %xmm0
 ; X64-NEXT:    addps %xmm0, %xmm0
 ; X64-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
@@ -54,7 +54,7 @@ entry:
 
 define void @test3(float* %R, <4 x float>* %P1) nounwind {
 ; X32-LABEL: test3:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -62,7 +62,7 @@ define void @test3(float* %R, <4 x float>* %P1) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test3:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    movss %xmm0, (%rdi)
 ; X64-NEXT:    retq
@@ -75,7 +75,7 @@ entry:
 
 define double @test4(double %A) nounwind {
 ; X32-LABEL: test4:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    subl $12, %esp
 ; X32-NEXT:    calll foo
 ; X32-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
@@ -86,7 +86,7 @@ define double @test4(double %A) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test4:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
 ; X64-NEXT:    callq foo

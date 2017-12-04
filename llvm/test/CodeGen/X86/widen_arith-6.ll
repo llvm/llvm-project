@@ -5,7 +5,7 @@
 
 define void @update(<3 x float>* %dst, <3 x float>* %src, i32 %n) nounwind {
 ; CHECK-LABEL: update:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %ebp
 ; CHECK-NEXT:    movl %esp, %ebp
 ; CHECK-NEXT:    andl $-16, %esp
@@ -35,7 +35,7 @@ define void @update(<3 x float>* %dst, <3 x float>* %src, i32 %n) nounwind {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    cmpl 16(%ebp), %eax
 ; CHECK-NEXT:    jl .LBB0_2
-; CHECK-NEXT:  # BB#3: # %afterfor
+; CHECK-NEXT:  # %bb.3: # %afterfor
 ; CHECK-NEXT:    movl %ebp, %esp
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    retl

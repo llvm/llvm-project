@@ -3,7 +3,7 @@
 
 define <2 x i32> @vcvt_f32tos32(<2 x float>* %A) nounwind {
 ; CHECK-LABEL: vcvt_f32tos32:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vcvt.s32.f32 d16, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -15,7 +15,7 @@ define <2 x i32> @vcvt_f32tos32(<2 x float>* %A) nounwind {
 
 define <2 x i32> @vcvt_f32tou32(<2 x float>* %A) nounwind {
 ; CHECK-LABEL: vcvt_f32tou32:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vcvt.u32.f32 d16, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -27,7 +27,7 @@ define <2 x i32> @vcvt_f32tou32(<2 x float>* %A) nounwind {
 
 define <2 x float> @vcvt_s32tof32(<2 x i32>* %A) nounwind {
 ; CHECK-LABEL: vcvt_s32tof32:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vcvt.f32.s32 d16, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -39,7 +39,7 @@ define <2 x float> @vcvt_s32tof32(<2 x i32>* %A) nounwind {
 
 define <2 x float> @vcvt_u32tof32(<2 x i32>* %A) nounwind {
 ; CHECK-LABEL: vcvt_u32tof32:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vcvt.f32.u32 d16, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -51,7 +51,7 @@ define <2 x float> @vcvt_u32tof32(<2 x i32>* %A) nounwind {
 
 define <4 x i32> @vcvtQ_f32tos32(<4 x float>* %A) nounwind {
 ; CHECK-LABEL: vcvtQ_f32tos32:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vcvt.s32.f32 q8, q8
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -64,7 +64,7 @@ define <4 x i32> @vcvtQ_f32tos32(<4 x float>* %A) nounwind {
 
 define <4 x i32> @vcvtQ_f32tou32(<4 x float>* %A) nounwind {
 ; CHECK-LABEL: vcvtQ_f32tou32:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vcvt.u32.f32 q8, q8
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -77,7 +77,7 @@ define <4 x i32> @vcvtQ_f32tou32(<4 x float>* %A) nounwind {
 
 define <4 x float> @vcvtQ_s32tof32(<4 x i32>* %A) nounwind {
 ; CHECK-LABEL: vcvtQ_s32tof32:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vcvt.f32.s32 q8, q8
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -90,7 +90,7 @@ define <4 x float> @vcvtQ_s32tof32(<4 x i32>* %A) nounwind {
 
 define <4 x float> @vcvtQ_u32tof32(<4 x i32>* %A) nounwind {
 ; CHECK-LABEL: vcvtQ_u32tof32:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vcvt.f32.u32 q8, q8
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -103,7 +103,7 @@ define <4 x float> @vcvtQ_u32tof32(<4 x i32>* %A) nounwind {
 
 define <2 x i32> @vcvt_n_f32tos32(<2 x float>* %A) nounwind {
 ; CHECK-LABEL: vcvt_n_f32tos32:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vcvt.s32.f32 d16, d16, #1
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -115,7 +115,7 @@ define <2 x i32> @vcvt_n_f32tos32(<2 x float>* %A) nounwind {
 
 define <2 x i32> @vcvt_n_f32tou32(<2 x float>* %A) nounwind {
 ; CHECK-LABEL: vcvt_n_f32tou32:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vcvt.u32.f32 d16, d16, #1
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -127,7 +127,7 @@ define <2 x i32> @vcvt_n_f32tou32(<2 x float>* %A) nounwind {
 
 define <2 x float> @vcvt_n_s32tof32(<2 x i32>* %A) nounwind {
 ; CHECK-LABEL: vcvt_n_s32tof32:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vcvt.f32.s32 d16, d16, #1
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -139,7 +139,7 @@ define <2 x float> @vcvt_n_s32tof32(<2 x i32>* %A) nounwind {
 
 define <2 x float> @vcvt_n_u32tof32(<2 x i32>* %A) nounwind {
 ; CHECK-LABEL: vcvt_n_u32tof32:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vcvt.f32.u32 d16, d16, #1
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -156,7 +156,7 @@ declare <2 x float> @llvm.arm.neon.vcvtfxu2fp.v2f32.v2i32(<2 x i32>, i32) nounwi
 
 define <4 x i32> @vcvtQ_n_f32tos32(<4 x float>* %A) nounwind {
 ; CHECK-LABEL: vcvtQ_n_f32tos32:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vcvt.s32.f32 q8, q8, #1
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -169,7 +169,7 @@ define <4 x i32> @vcvtQ_n_f32tos32(<4 x float>* %A) nounwind {
 
 define <4 x i32> @vcvtQ_n_f32tou32(<4 x float>* %A) nounwind {
 ; CHECK-LABEL: vcvtQ_n_f32tou32:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vcvt.u32.f32 q8, q8, #1
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -182,7 +182,7 @@ define <4 x i32> @vcvtQ_n_f32tou32(<4 x float>* %A) nounwind {
 
 define <4 x float> @vcvtQ_n_s32tof32(<4 x i32>* %A) nounwind {
 ; CHECK-LABEL: vcvtQ_n_s32tof32:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vcvt.f32.s32 q8, q8, #1
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -195,7 +195,7 @@ define <4 x float> @vcvtQ_n_s32tof32(<4 x i32>* %A) nounwind {
 
 define <4 x float> @vcvtQ_n_u32tof32(<4 x i32>* %A) nounwind {
 ; CHECK-LABEL: vcvtQ_n_u32tof32:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vcvt.f32.u32 q8, q8, #1
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -213,7 +213,7 @@ declare <4 x float> @llvm.arm.neon.vcvtfxu2fp.v4f32.v4i32(<4 x i32>, i32) nounwi
 
 define <4 x float> @vcvt_f16tof32(<4 x i16>* %A) nounwind {
 ; CHECK-LABEL: vcvt_f16tof32:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vcvt.f32.f16 q8, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -226,7 +226,7 @@ define <4 x float> @vcvt_f16tof32(<4 x i16>* %A) nounwind {
 
 define <4 x i16> @vcvt_f32tof16(<4 x float>* %A) nounwind {
 ; CHECK-LABEL: vcvt_f32tof16:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vcvt.f16.f32 d16, q8
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -242,7 +242,7 @@ declare <4 x i16> @llvm.arm.neon.vcvtfp2hf(<4 x float>) nounwind readnone
 
 define <4 x i16> @fix_float_to_i16(<4 x float> %in) {
 ; CHECK-LABEL: fix_float_to_i16:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov d17, r2, r3
 ; CHECK-NEXT:    vmov d16, r0, r1
 ; CHECK-NEXT:    vcvt.u32.f32 q8, q8, #1
@@ -257,7 +257,7 @@ define <4 x i16> @fix_float_to_i16(<4 x float> %in) {
 
 define <2 x i64> @fix_float_to_i64(<2 x float> %in) {
 ; CHECK-LABEL: fix_float_to_i64:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .save {r4, lr}
 ; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    .vsave {d8, d9}
@@ -287,7 +287,7 @@ define <2 x i64> @fix_float_to_i64(<2 x float> %in) {
 
 define <4 x i16> @fix_double_to_i16(<4 x double> %in) {
 ; CHECK-LABEL: fix_double_to_i16:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov d18, r0, r1
 ; CHECK-NEXT:    mov r12, sp
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r12]
@@ -319,7 +319,7 @@ define <4 x i16> @fix_double_to_i16(<4 x double> %in) {
 
 define <2 x i64> @fix_double_to_i64(<2 x double> %in) {
 ; CHECK-LABEL: fix_double_to_i64:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .save {r4, lr}
 ; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    .vsave {d8, d9}
@@ -352,7 +352,7 @@ define <2 x i64> @fix_double_to_i64(<2 x double> %in) {
 
 define i32 @multi_sint(double %c, i32* nocapture %p, i32* nocapture %q) {
 ; CHECK-LABEL: multi_sint:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov d16, r0, r1
 ; CHECK-NEXT:    vcvt.s32.f64 s0, d16
 ; CHECK-NEXT:    vstr s0, [r2]
@@ -369,7 +369,7 @@ define i32 @multi_sint(double %c, i32* nocapture %p, i32* nocapture %q) {
 
 define i32 @multi_uint(double %c, i32* nocapture %p, i32* nocapture %q) {
 ; CHECK-LABEL: multi_uint:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov d16, r0, r1
 ; CHECK-NEXT:    vcvt.u32.f64 s0, d16
 ; CHECK-NEXT:    vstr s0, [r2]
@@ -386,7 +386,7 @@ define i32 @multi_uint(double %c, i32* nocapture %p, i32* nocapture %q) {
 
 define void @double_to_sint_store(double %c, i32* nocapture %p) {
 ; CHECK-LABEL: double_to_sint_store:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov d16, r0, r1
 ; CHECK-NEXT:    vcvt.s32.f64 s0, d16
 ; CHECK-NEXT:    vstr s0, [r2]
@@ -398,7 +398,7 @@ define void @double_to_sint_store(double %c, i32* nocapture %p) {
 
 define void @double_to_uint_store(double %c, i32* nocapture %p) {
 ; CHECK-LABEL: double_to_uint_store:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov d16, r0, r1
 ; CHECK-NEXT:    vcvt.u32.f64 s0, d16
 ; CHECK-NEXT:    vstr s0, [r2]
@@ -410,7 +410,7 @@ define void @double_to_uint_store(double %c, i32* nocapture %p) {
 
 define void @float_to_sint_store(float %c, i32* nocapture %p) {
 ; CHECK-LABEL: float_to_sint_store:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvt.s32.f32 s0, s0
 ; CHECK-NEXT:    vstr s0, [r1]
@@ -422,7 +422,7 @@ define void @float_to_sint_store(float %c, i32* nocapture %p) {
 
 define void @float_to_uint_store(float %c, i32* nocapture %p) {
 ; CHECK-LABEL: float_to_uint_store:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vcvt.u32.f32 s0, s0
 ; CHECK-NEXT:    vstr s0, [r1]

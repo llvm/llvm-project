@@ -3,7 +3,7 @@
 
 define i1 @and_cmp1(i32 %x, i32 %y) {
 ; CHECK-LABEL: and_cmp1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andc 3, 4, 3
 ; CHECK-NEXT:    cntlzw 3, 3
 ; CHECK-NEXT:    rlwinm 3, 3, 27, 31, 31
@@ -15,7 +15,7 @@ define i1 @and_cmp1(i32 %x, i32 %y) {
 
 define i1 @and_cmp_const(i32 %x) {
 ; CHECK-LABEL: and_cmp_const:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li 4, 43
 ; CHECK-NEXT:    andc 3, 4, 3
 ; CHECK-NEXT:    cntlzw 3, 3
@@ -28,7 +28,7 @@ define i1 @and_cmp_const(i32 %x) {
 
 define i1 @foo(i32 %i) {
 ; CHECK-LABEL: foo:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lis 4, 4660
 ; CHECK-NEXT:    ori 4, 4, 22136
 ; CHECK-NEXT:    andc 3, 4, 3
@@ -42,7 +42,7 @@ define i1 @foo(i32 %i) {
 
 define <4 x i32> @hidden_not_v4i32(<4 x i32> %x) {
 ; CHECK-LABEL: hidden_not_v4i32:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vspltisw 3, 6
 ; CHECK-NEXT:    xxlandc 34, 35, 34
 ; CHECK-NEXT:    blr

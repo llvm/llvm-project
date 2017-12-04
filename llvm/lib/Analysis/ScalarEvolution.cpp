@@ -6414,11 +6414,9 @@ ScalarEvolution::getBackedgeTakenInfo(const Loop *L) {
     SmallVector<Instruction *, 16> Worklist;
     PushLoopPHIs(L, Worklist);
 
-    SmallPtrSet<Instruction *, 8> Visited;
+    SmallPtrSet<Instruction *, 8> Discovered;
     while (!Worklist.empty()) {
       Instruction *I = Worklist.pop_back_val();
-      if (!Visited.insert(I).second)
-        continue;
 
       ValueExprMapType::iterator It =
         ValueExprMap.find_as(static_cast<Value *>(I));
@@ -6433,13 +6431,37 @@ ScalarEvolution::getBackedgeTakenInfo(const Loop *L) {
         // own when it gets to that point.
         if (!isa<PHINode>(I) || !isa<SCEVUnknown>(Old)) {
           eraseValueFromMap(It->first);
-          forgetMemoizedResults(Old, false);
+          forgetMemoizedResults(Old);
         }
         if (PHINode *PN = dyn_cast<PHINode>(I))
           ConstantEvolutionLoopExitValue.erase(PN);
       }
 
-      PushDefUseChildren(I, Worklist);
+      // Since we don't need to invalidate anything for correctness and we're
+      // only invalidating to make SCEV's results more precise, we get to stop
+      // early to avoid invalidating too much.  This is especially important in
+      // cases like:
+      //
+      //   %v = f(pn0, pn1) // pn0 and pn1 used through some other phi node
+      // loop0:
+      //   %pn0 = phi
+      //   ...
+      // loop1:
+      //   %pn1 = phi
+      //   ...
+      //
+      // where both loop0 and loop1's backedge taken count uses the SCEV
+      // expression for %v.  If we don't have the early stop below then in cases
+      // like the above, getBackedgeTakenInfo(loop1) will clear out the trip
+      // count for loop0 and getBackedgeTakenInfo(loop0) will clear out the trip
+      // count for loop1, effectively nullifying SCEV's trip count cache.
+      for (auto *U : I->users())
+        if (auto *I = dyn_cast<Instruction>(U)) {
+          auto *LoopForUser = LI.getLoopFor(I->getParent());
+          if (LoopForUser && L->contains(LoopForUser) &&
+              Discovered.insert(I).second)
+            Worklist.push_back(I);
+        }
     }
   }
 
@@ -6508,12 +6530,6 @@ void ScalarEvolution::forgetLoop(const Loop *L) {
       }
 
       PushDefUseChildren(I, Worklist);
-    }
-
-    for (auto I = ExitLimits.begin(); I != ExitLimits.end(); ++I) {
-      auto &Query = I->first;
-      if (Query.L == CurrL)
-        ExitLimits.erase(I);
     }
 
     LoopPropertiesCache.erase(CurrL);
@@ -6777,18 +6793,6 @@ ScalarEvolution::computeBackedgeTakenCount(const Loop *L,
 
 ScalarEvolution::ExitLimit
 ScalarEvolution::computeExitLimit(const Loop *L, BasicBlock *ExitingBlock,
-                                  bool AllowPredicates) {
-  ExitLimitQuery Query(L, ExitingBlock, AllowPredicates);
-  auto MaybeEL = ExitLimits.find(Query);
-  if (MaybeEL != ExitLimits.end())
-    return MaybeEL->second;
-  ExitLimit EL = computeExitLimitImpl(L, ExitingBlock, AllowPredicates);
-  ExitLimits.insert({Query, EL});
-  return EL;
-}
-
-ScalarEvolution::ExitLimit
-ScalarEvolution::computeExitLimitImpl(const Loop *L, BasicBlock *ExitingBlock,
                                       bool AllowPredicates) {
   // Okay, we've chosen an exiting block.  See what condition causes us to exit
   // at this block and remember the exit block and whether all other targets
@@ -10682,7 +10686,6 @@ ScalarEvolution::ScalarEvolution(ScalarEvolution &&Arg)
       BackedgeTakenCounts(std::move(Arg.BackedgeTakenCounts)),
       PredicatedBackedgeTakenCounts(
           std::move(Arg.PredicatedBackedgeTakenCounts)),
-      ExitLimits(std::move(Arg.ExitLimits)),
       ConstantEvolutionLoopExitValue(
           std::move(Arg.ConstantEvolutionLoopExitValue)),
       ValuesAtScopes(std::move(Arg.ValuesAtScopes)),
@@ -11097,7 +11100,7 @@ bool ScalarEvolution::ExitLimit::hasOperand(const SCEV *S) const {
 }
 
 void
-ScalarEvolution::forgetMemoizedResults(const SCEV *S, bool EraseExitLimit) {
+ScalarEvolution::forgetMemoizedResults(const SCEV *S) {
   ValuesAtScopes.erase(S);
   LoopDispositions.erase(S);
   BlockDispositions.erase(S);
@@ -11130,13 +11133,6 @@ ScalarEvolution::forgetMemoizedResults(const SCEV *S, bool EraseExitLimit) {
 
   RemoveSCEVFromBackedgeMap(BackedgeTakenCounts);
   RemoveSCEVFromBackedgeMap(PredicatedBackedgeTakenCounts);
-
-  // TODO: There is a suspicion that we only need to do it when there is a
-  // SCEVUnknown somewhere inside S. Need to check this.
-  if (EraseExitLimit)
-    for (auto I = ExitLimits.begin(), E = ExitLimits.end(); I != E; ++I)
-      if (I->second.hasOperand(S))
-        ExitLimits.erase(I);
 }
 
 void ScalarEvolution::addToLoopUseLists(const SCEV *S) {

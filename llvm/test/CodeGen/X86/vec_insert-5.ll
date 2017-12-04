@@ -6,7 +6,7 @@
 
 define void  @t1(i32 %a, x86_mmx* %P) nounwind {
 ; X32-LABEL: t1:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    shll $12, %ecx
@@ -16,7 +16,7 @@ define void  @t1(i32 %a, x86_mmx* %P) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t1:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; X64-NEXT:    shll $12, %edi
 ; X64-NEXT:    movq %rdi, %xmm0
@@ -34,7 +34,7 @@ define void  @t1(i32 %a, x86_mmx* %P) nounwind {
 
 define <4 x float> @t2(<4 x float>* %P) nounwind {
 ; X32-LABEL: t2:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movaps (%eax), %xmm1
 ; X32-NEXT:    xorps %xmm0, %xmm0
@@ -43,7 +43,7 @@ define <4 x float> @t2(<4 x float>* %P) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t2:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movaps (%rdi), %xmm1
 ; X64-NEXT:    xorps %xmm0, %xmm0
 ; X64-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[2,0]
@@ -56,14 +56,14 @@ define <4 x float> @t2(<4 x float>* %P) nounwind {
 
 define <4 x float> @t3(<4 x float>* %P) nounwind {
 ; X32-LABEL: t3:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    xorps %xmm0, %xmm0
 ; X32-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t3:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorps %xmm0, %xmm0
 ; X64-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; X64-NEXT:    retq
@@ -74,7 +74,7 @@ define <4 x float> @t3(<4 x float>* %P) nounwind {
 
 define <4 x float> @t4(<4 x float>* %P) nounwind {
 ; X32-LABEL: t4:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movaps (%eax), %xmm0
 ; X32-NEXT:    xorps %xmm1, %xmm1
@@ -83,7 +83,7 @@ define <4 x float> @t4(<4 x float>* %P) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t4:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movaps (%rdi), %xmm0
 ; X64-NEXT:    xorps %xmm1, %xmm1
 ; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,0],xmm1[1,0]
@@ -96,12 +96,12 @@ define <4 x float> @t4(<4 x float>* %P) nounwind {
 
 define <16 x i8> @t5(<16 x i8> %x) nounwind {
 ; X32-LABEL: t5:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    psrlw $8, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t5:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    psrlw $8, %xmm0
 ; X64-NEXT:    retq
   %s = shufflevector <16 x i8> %x, <16 x i8> zeroinitializer, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 17>
@@ -110,12 +110,12 @@ define <16 x i8> @t5(<16 x i8> %x) nounwind {
 
 define <16 x i8> @t6(<16 x i8> %x) nounwind {
 ; X32-LABEL: t6:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    psrlw $8, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t6:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    psrlw $8, %xmm0
 ; X64-NEXT:    retq
   %s = shufflevector <16 x i8> %x, <16 x i8> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -124,12 +124,12 @@ define <16 x i8> @t6(<16 x i8> %x) nounwind {
 
 define <16 x i8> @t7(<16 x i8> %x) nounwind {
 ; X32-LABEL: t7:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t7:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2]
 ; X64-NEXT:    retq
   %s = shufflevector <16 x i8> %x, <16 x i8> undef, <16 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 1, i32 2>
@@ -138,12 +138,12 @@ define <16 x i8> @t7(<16 x i8> %x) nounwind {
 
 define <16 x i8> @t8(<16 x i8> %x) nounwind {
 ; X32-LABEL: t8:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],zero
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t8:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],zero
 ; X64-NEXT:    retq
   %s = shufflevector <16 x i8> %x, <16 x i8> zeroinitializer, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 8, i32 9, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 17>
@@ -152,12 +152,12 @@ define <16 x i8> @t8(<16 x i8> %x) nounwind {
 
 define <16 x i8> @t9(<16 x i8> %x) nounwind {
 ; X32-LABEL: t9:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],zero
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t9:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],zero
 ; X64-NEXT:    retq
   %s = shufflevector <16 x i8> %x, <16 x i8> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 7, i32 8, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 14, i32 undef, i32 undef>

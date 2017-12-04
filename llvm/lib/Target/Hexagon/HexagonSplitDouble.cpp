@@ -536,7 +536,7 @@ void HexagonSplitDoubleRegs::collectIndRegsForLoop(const MachineLoop *L,
   Rs.insert(CmpR2);
 
   DEBUG({
-    dbgs() << "For loop at BB#" << HB->getNumber() << " ind regs: ";
+    dbgs() << "For loop at " << printMBBReference(*HB) << " ind regs: ";
     dump_partition(dbgs(), Rs, *TRI);
     dbgs() << '\n';
   });

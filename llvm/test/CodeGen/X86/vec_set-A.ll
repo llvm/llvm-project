@@ -4,13 +4,13 @@
 
 define <2 x i64> @test1() nounwind {
 ; X86-LABEL: test1:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movl $1, %eax
 ; X86-NEXT:    movd %eax, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test1:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    movq %rax, %xmm0
 ; X64-NEXT:    retq

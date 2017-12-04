@@ -4,55 +4,55 @@
 
 define i32 @foo(i32 %a, i32 *%b) {
 ; RV32I-LABEL: foo:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lw a2, 0(a1)
 ; RV32I-NEXT:    beq a0, a2, .LBB0_2
-; RV32I-NEXT:  # BB#1:
+; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    addi a0, a2, 0
 ; RV32I-NEXT:  .LBB0_2:
 ; RV32I-NEXT:    lw a2, 0(a1)
 ; RV32I-NEXT:    bne a0, a2, .LBB0_4
-; RV32I-NEXT:  # BB#3:
+; RV32I-NEXT:  # %bb.3:
 ; RV32I-NEXT:    addi a0, a2, 0
 ; RV32I-NEXT:  .LBB0_4:
 ; RV32I-NEXT:    lw a2, 0(a1)
 ; RV32I-NEXT:    bltu a2, a0, .LBB0_6
-; RV32I-NEXT:  # BB#5:
+; RV32I-NEXT:  # %bb.5:
 ; RV32I-NEXT:    addi a0, a2, 0
 ; RV32I-NEXT:  .LBB0_6:
 ; RV32I-NEXT:    lw a2, 0(a1)
 ; RV32I-NEXT:    bgeu a0, a2, .LBB0_8
-; RV32I-NEXT:  # BB#7:
+; RV32I-NEXT:  # %bb.7:
 ; RV32I-NEXT:    addi a0, a2, 0
 ; RV32I-NEXT:  .LBB0_8:
 ; RV32I-NEXT:    lw a2, 0(a1)
 ; RV32I-NEXT:    bltu a0, a2, .LBB0_10
-; RV32I-NEXT:  # BB#9:
+; RV32I-NEXT:  # %bb.9:
 ; RV32I-NEXT:    addi a0, a2, 0
 ; RV32I-NEXT:  .LBB0_10:
 ; RV32I-NEXT:    lw a2, 0(a1)
 ; RV32I-NEXT:    bgeu a2, a0, .LBB0_12
-; RV32I-NEXT:  # BB#11:
+; RV32I-NEXT:  # %bb.11:
 ; RV32I-NEXT:    addi a0, a2, 0
 ; RV32I-NEXT:  .LBB0_12:
 ; RV32I-NEXT:    lw a2, 0(a1)
 ; RV32I-NEXT:    blt a2, a0, .LBB0_14
-; RV32I-NEXT:  # BB#13:
+; RV32I-NEXT:  # %bb.13:
 ; RV32I-NEXT:    addi a0, a2, 0
 ; RV32I-NEXT:  .LBB0_14:
 ; RV32I-NEXT:    lw a2, 0(a1)
 ; RV32I-NEXT:    bge a0, a2, .LBB0_16
-; RV32I-NEXT:  # BB#15:
+; RV32I-NEXT:  # %bb.15:
 ; RV32I-NEXT:    addi a0, a2, 0
 ; RV32I-NEXT:  .LBB0_16:
 ; RV32I-NEXT:    lw a2, 0(a1)
 ; RV32I-NEXT:    blt a0, a2, .LBB0_18
-; RV32I-NEXT:  # BB#17:
+; RV32I-NEXT:  # %bb.17:
 ; RV32I-NEXT:    addi a0, a2, 0
 ; RV32I-NEXT:  .LBB0_18:
 ; RV32I-NEXT:    lw a1, 0(a1)
 ; RV32I-NEXT:    bge a1, a0, .LBB0_20
-; RV32I-NEXT:  # BB#19:
+; RV32I-NEXT:  # %bb.19:
 ; RV32I-NEXT:    addi a0, a1, 0
 ; RV32I-NEXT:  .LBB0_20:
 ; RV32I-NEXT:    jalr zero, ra, 0

@@ -3,7 +3,7 @@
 
 define <8 x i32> @cmp00(<8 x float> %a, <8 x float> %b) nounwind {
 ; CHECK-LABEL: cmp00:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcmpltps %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %bincmp = fcmp olt <8 x float> %a, %b
@@ -13,7 +13,7 @@ define <8 x i32> @cmp00(<8 x float> %a, <8 x float> %b) nounwind {
 
 define <4 x i64> @cmp01(<4 x double> %a, <4 x double> %b) nounwind {
 ; CHECK-LABEL: cmp01:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcmpltpd %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %bincmp = fcmp olt <4 x double> %a, %b
@@ -25,12 +25,12 @@ declare void @scale() nounwind
 
 define void @render() nounwind {
 ; CHECK-LABEL: render:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB2_6
-; CHECK-NEXT:  # BB#1: # %for.cond5.preheader
+; CHECK-NEXT:  # %bb.1: # %for.cond5.preheader
 ; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:    jmp .LBB2_2
 ; CHECK-NEXT:    .p2align 4, 0x90
@@ -41,11 +41,11 @@ define void @render() nounwind {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    testb %bl, %bl
 ; CHECK-NEXT:    jne .LBB2_2
-; CHECK-NEXT:  # BB#3: # %for.cond5
+; CHECK-NEXT:  # %bb.3: # %for.cond5
 ; CHECK-NEXT:    # in Loop: Header=BB2_2 Depth=1
 ; CHECK-NEXT:    testb %bl, %bl
 ; CHECK-NEXT:    je .LBB2_2
-; CHECK-NEXT:  # BB#4: # %for.body33
+; CHECK-NEXT:  # %bb.4: # %for.body33
 ; CHECK-NEXT:    # in Loop: Header=BB2_2 Depth=1
 ; CHECK-NEXT:    vucomisd {{\.LCPI.*}}, %xmm0
 ; CHECK-NEXT:    jne .LBB2_5
@@ -78,7 +78,7 @@ for.end52:
 
 define <8 x i32> @int256_cmp(<8 x i32> %i, <8 x i32> %j) nounwind {
 ; CHECK-LABEL: int256_cmp:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm3
 ; CHECK-NEXT:    vpcmpgtd %xmm2, %xmm3, %xmm2
@@ -92,7 +92,7 @@ define <8 x i32> @int256_cmp(<8 x i32> %i, <8 x i32> %j) nounwind {
 
 define <4 x i64> @v4i64_cmp(<4 x i64> %i, <4 x i64> %j) nounwind {
 ; CHECK-LABEL: v4i64_cmp:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm3
 ; CHECK-NEXT:    vpcmpgtq %xmm2, %xmm3, %xmm2
@@ -106,7 +106,7 @@ define <4 x i64> @v4i64_cmp(<4 x i64> %i, <4 x i64> %j) nounwind {
 
 define <16 x i16> @v16i16_cmp(<16 x i16> %i, <16 x i16> %j) nounwind {
 ; CHECK-LABEL: v16i16_cmp:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm3
 ; CHECK-NEXT:    vpcmpgtw %xmm2, %xmm3, %xmm2
@@ -120,7 +120,7 @@ define <16 x i16> @v16i16_cmp(<16 x i16> %i, <16 x i16> %j) nounwind {
 
 define <32 x i8> @v32i8_cmp(<32 x i8> %i, <32 x i8> %j) nounwind {
 ; CHECK-LABEL: v32i8_cmp:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm3
 ; CHECK-NEXT:    vpcmpgtb %xmm2, %xmm3, %xmm2
@@ -134,7 +134,7 @@ define <32 x i8> @v32i8_cmp(<32 x i8> %i, <32 x i8> %j) nounwind {
 
 define <8 x i32> @int256_cmpeq(<8 x i32> %i, <8 x i32> %j) nounwind {
 ; CHECK-LABEL: int256_cmpeq:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm3, %xmm2
@@ -148,7 +148,7 @@ define <8 x i32> @int256_cmpeq(<8 x i32> %i, <8 x i32> %j) nounwind {
 
 define <4 x i64> @v4i64_cmpeq(<4 x i64> %i, <4 x i64> %j) nounwind {
 ; CHECK-LABEL: v4i64_cmpeq:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; CHECK-NEXT:    vpcmpeqq %xmm2, %xmm3, %xmm2
@@ -162,7 +162,7 @@ define <4 x i64> @v4i64_cmpeq(<4 x i64> %i, <4 x i64> %j) nounwind {
 
 define <16 x i16> @v16i16_cmpeq(<16 x i16> %i, <16 x i16> %j) nounwind {
 ; CHECK-LABEL: v16i16_cmpeq:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; CHECK-NEXT:    vpcmpeqw %xmm2, %xmm3, %xmm2
@@ -176,7 +176,7 @@ define <16 x i16> @v16i16_cmpeq(<16 x i16> %i, <16 x i16> %j) nounwind {
 
 define <32 x i8> @v32i8_cmpeq(<32 x i8> %i, <32 x i8> %j) nounwind {
 ; CHECK-LABEL: v32i8_cmpeq:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; CHECK-NEXT:    vpcmpeqb %xmm2, %xmm3, %xmm2
@@ -192,7 +192,7 @@ define <32 x i8> @v32i8_cmpeq(<32 x i8> %i, <32 x i8> %j) nounwind {
 
 define i32 @scalarcmpA() uwtable ssp {
 ; CHECK-LABEL: scalarcmpA:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vcmpeqsd %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovq %xmm0, %rax
@@ -206,7 +206,7 @@ define i32 @scalarcmpA() uwtable ssp {
 
 define i32 @scalarcmpB() uwtable ssp {
 ; CHECK-LABEL: scalarcmpB:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vcmpeqss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovd %xmm0, %eax

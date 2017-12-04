@@ -6,7 +6,7 @@
 
 define i8 @cnt8(i8 %x) nounwind readnone {
 ; X32-LABEL: cnt8:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X32-NEXT:    movl %ecx, %eax
 ; X32-NEXT:    shrb %al
@@ -24,7 +24,7 @@ define i8 @cnt8(i8 %x) nounwind readnone {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: cnt8:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shrb %al
 ; X64-NEXT:    andb $85, %al
@@ -41,14 +41,14 @@ define i8 @cnt8(i8 %x) nounwind readnone {
 ; X64-NEXT:    retq
 ;
 ; X32-POPCNT-LABEL: cnt8:
-; X32-POPCNT:       # BB#0:
+; X32-POPCNT:       # %bb.0:
 ; X32-POPCNT-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X32-POPCNT-NEXT:    popcntl %eax, %eax
 ; X32-POPCNT-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; X32-POPCNT-NEXT:    retl
 ;
 ; X64-POPCNT-LABEL: cnt8:
-; X64-POPCNT:       # BB#0:
+; X64-POPCNT:       # %bb.0:
 ; X64-POPCNT-NEXT:    movzbl %dil, %eax
 ; X64-POPCNT-NEXT:    popcntl %eax, %eax
 ; X64-POPCNT-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
@@ -59,7 +59,7 @@ define i8 @cnt8(i8 %x) nounwind readnone {
 
 define i16 @cnt16(i16 %x) nounwind readnone {
 ; X32-LABEL: cnt16:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrl %ecx
@@ -83,7 +83,7 @@ define i16 @cnt16(i16 %x) nounwind readnone {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: cnt16:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shrl %eax
 ; X64-NEXT:    andl $21845, %eax # imm = 0x5555
@@ -106,12 +106,12 @@ define i16 @cnt16(i16 %x) nounwind readnone {
 ; X64-NEXT:    retq
 ;
 ; X32-POPCNT-LABEL: cnt16:
-; X32-POPCNT:       # BB#0:
+; X32-POPCNT:       # %bb.0:
 ; X32-POPCNT-NEXT:    popcntw {{[0-9]+}}(%esp), %ax
 ; X32-POPCNT-NEXT:    retl
 ;
 ; X64-POPCNT-LABEL: cnt16:
-; X64-POPCNT:       # BB#0:
+; X64-POPCNT:       # %bb.0:
 ; X64-POPCNT-NEXT:    popcntw %di, %ax
 ; X64-POPCNT-NEXT:    retq
   %cnt = tail call i16 @llvm.ctpop.i16(i16 %x)
@@ -120,7 +120,7 @@ define i16 @cnt16(i16 %x) nounwind readnone {
 
 define i32 @cnt32(i32 %x) nounwind readnone {
 ; X32-LABEL: cnt32:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrl %ecx
@@ -140,7 +140,7 @@ define i32 @cnt32(i32 %x) nounwind readnone {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: cnt32:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shrl %eax
 ; X64-NEXT:    andl $1431655765, %eax # imm = 0x55555555
@@ -159,12 +159,12 @@ define i32 @cnt32(i32 %x) nounwind readnone {
 ; X64-NEXT:    retq
 ;
 ; X32-POPCNT-LABEL: cnt32:
-; X32-POPCNT:       # BB#0:
+; X32-POPCNT:       # %bb.0:
 ; X32-POPCNT-NEXT:    popcntl {{[0-9]+}}(%esp), %eax
 ; X32-POPCNT-NEXT:    retl
 ;
 ; X64-POPCNT-LABEL: cnt32:
-; X64-POPCNT:       # BB#0:
+; X64-POPCNT:       # %bb.0:
 ; X64-POPCNT-NEXT:    popcntl %edi, %eax
 ; X64-POPCNT-NEXT:    retq
   %cnt = tail call i32 @llvm.ctpop.i32(i32 %x)
@@ -173,7 +173,7 @@ define i32 @cnt32(i32 %x) nounwind readnone {
 
 define i64 @cnt64(i64 %x) nounwind readnone {
 ; X32-LABEL: cnt64:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl %ecx, %edx
@@ -211,7 +211,7 @@ define i64 @cnt64(i64 %x) nounwind readnone {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: cnt64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    shrq %rax
 ; X64-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
@@ -234,7 +234,7 @@ define i64 @cnt64(i64 %x) nounwind readnone {
 ; X64-NEXT:    retq
 ;
 ; X32-POPCNT-LABEL: cnt64:
-; X32-POPCNT:       # BB#0:
+; X32-POPCNT:       # %bb.0:
 ; X32-POPCNT-NEXT:    popcntl {{[0-9]+}}(%esp), %ecx
 ; X32-POPCNT-NEXT:    popcntl {{[0-9]+}}(%esp), %eax
 ; X32-POPCNT-NEXT:    addl %ecx, %eax
@@ -242,7 +242,7 @@ define i64 @cnt64(i64 %x) nounwind readnone {
 ; X32-POPCNT-NEXT:    retl
 ;
 ; X64-POPCNT-LABEL: cnt64:
-; X64-POPCNT:       # BB#0:
+; X64-POPCNT:       # %bb.0:
 ; X64-POPCNT-NEXT:    popcntq %rdi, %rax
 ; X64-POPCNT-NEXT:    retq
   %cnt = tail call i64 @llvm.ctpop.i64(i64 %x)

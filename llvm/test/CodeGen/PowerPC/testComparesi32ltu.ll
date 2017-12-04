@@ -11,7 +11,7 @@ declare signext i32 @fn2(...) local_unnamed_addr #1
 ; Function Attrs: nounwind
 define i32 @testCompare1(%struct.tree_common* nocapture readonly %arg1) {
 ; CHECK-LABEL: testCompare1:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK:         lbz r3, 0(r3)
 ; CHECK-DAG:     clrlwi r3, r3, 31
 ; CHECK-DAG:     clrldi r3, r3, 32
@@ -35,7 +35,7 @@ entry:
 ; Function Attrs: norecurse nounwind readnone
 define signext i32 @testCompare2(i32 zeroext %a, i32 zeroext %b) {
 ; CHECK-LABEL: testCompare2:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-DAG:     rlwinm r3, r3, 0, 31, 31
 ; CHECK-DAG:     rlwinm r4, r4, 0, 31, 31
 ; CHECK-DAG:     clrldi r3, r3, 32

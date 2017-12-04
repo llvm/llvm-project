@@ -4,7 +4,7 @@
 
 define i32 @main() nounwind {
 ; X86-LABEL: main:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    movl $1, (%esp)
 ; X86-NEXT:    movl $1, %eax
@@ -12,7 +12,7 @@ define i32 @main() nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: main:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movl $1, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq

@@ -188,16 +188,17 @@ bool FixupBWInstPass::runOnMachineFunction(MachineFunction &MF) {
 /// necessary (e.g. due to register coalescing with a "truncate" copy).
 /// So, it handles pattern like this:
 ///
-///   BB#2: derived from LLVM BB %if.then
+///   %bb.2: derived from LLVM BB %if.then
 ///   Live Ins: %rdi
-///   Predecessors according to CFG: BB#0
-///   %ax<def> = MOV16rm %rdi<kill>, 1, %noreg, 0, %noreg, %eax<imp-def>; mem:LD2[%p]
+///   Predecessors according to CFG: %bb.0
+///   %ax<def> = MOV16rm %rdi<kill>, 1, %noreg, 0, %noreg, %eax<imp-def>;
+///   mem:LD2[%p]
 ///                                             No %eax<imp-use>
-///   Successors according to CFG: BB#3(?%)
+///   Successors according to CFG: %bb.3(?%)
 ///
-///   BB#3: derived from LLVM BB %if.end
+///   %bb.3: derived from LLVM BB %if.end
 ///   Live Ins: %eax                            Only %ax is actually live
-///   Predecessors according to CFG: BB#2 BB#1
+///   Predecessors according to CFG: %bb.2 %bb.1
 ///   %ax<def> = KILL %ax, %eax<imp-use,kill>
 ///   RET 0, %ax
 static bool isLive(const MachineInstr &MI,

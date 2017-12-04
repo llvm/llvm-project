@@ -4,7 +4,7 @@
 
 define void @PR34855(<2 x i32> *%p0, <2 x i32> *%p1, <2 x i32> *%p2) {
 ; X86-LABEL: PR34855:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
@@ -12,7 +12,7 @@ define void @PR34855(<2 x i32> *%p0, <2 x i32> *%p1, <2 x i32> *%p2) {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: PR34855:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movslq 4(%rdi), %rax
 ; X64-NEXT:    movq %rax, %xmm0
 ; X64-NEXT:    movslq (%rdi), %rax

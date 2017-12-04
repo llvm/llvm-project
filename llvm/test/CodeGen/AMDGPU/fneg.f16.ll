@@ -116,8 +116,7 @@ define amdgpu_kernel void @fneg_free_v2f16(<2 x half> addrspace(1)* %out, i32 %i
 ; CI: v_mul_f32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; CI: v_cvt_f16_f32
 
-; VI: v_lshrrev_b32_e32 v{{[0-9]+}}, 16,
-; VI: v_mul_f16_sdwa v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI: v_mul_f16_sdwa v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; VI: v_mul_f16_e64 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}
 
 ; GFX9: v_pk_mul_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} neg_lo:[1,0] neg_hi:[1,0]{{$}}

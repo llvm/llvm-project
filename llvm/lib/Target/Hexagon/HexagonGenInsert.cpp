@@ -915,7 +915,7 @@ bool HexagonGenInsert::findRecordInsertForms(unsigned VR,
 void HexagonGenInsert::collectInBlock(MachineBasicBlock *B,
       OrderedRegisterList &AVs) {
   if (isDebug())
-    dbgs() << "visiting block BB#" << B->getNumber() << "\n";
+    dbgs() << "visiting block " << printMBBReference(*B) << "\n";
 
   // First, check if this block is reachable at all. If not, the bit tracker
   // will not have any information about registers in it.

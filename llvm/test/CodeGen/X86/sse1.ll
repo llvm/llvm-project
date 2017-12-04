@@ -14,7 +14,7 @@
 ; rdar://8368414
 define <2 x float> @test4(<2 x float> %A, <2 x float> %B) nounwind {
 ; X32-LABEL: test4:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movaps %xmm0, %xmm2
 ; X32-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1,2,3]
 ; X32-NEXT:    addss %xmm1, %xmm0
@@ -24,7 +24,7 @@ define <2 x float> @test4(<2 x float> %A, <2 x float> %B) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test4:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movaps %xmm0, %xmm2
 ; X64-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1,2,3]
 ; X64-NEXT:    addss %xmm1, %xmm0
@@ -52,11 +52,11 @@ entry:
 
 define <4 x float> @vselect(<4 x float>*%p, <4 x i32> %q) {
 ; X32-LABEL: vselect:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; X32-NEXT:    xorps %xmm0, %xmm0
 ; X32-NEXT:    je .LBB1_1
-; X32-NEXT:  # BB#2: # %entry
+; X32-NEXT:  # %bb.2: # %entry
 ; X32-NEXT:    xorps %xmm1, %xmm1
 ; X32-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; X32-NEXT:    jne .LBB1_5
@@ -91,11 +91,11 @@ define <4 x float> @vselect(<4 x float>*%p, <4 x i32> %q) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: vselect:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    testl %edx, %edx
 ; X64-NEXT:    xorps %xmm0, %xmm0
 ; X64-NEXT:    je .LBB1_1
-; X64-NEXT:  # BB#2: # %entry
+; X64-NEXT:  # %bb.2: # %entry
 ; X64-NEXT:    xorps %xmm1, %xmm1
 ; X64-NEXT:    testl %ecx, %ecx
 ; X64-NEXT:    jne .LBB1_5
@@ -138,12 +138,12 @@ entry:
 
 define <4 x float> @PR28044(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: PR28044:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    cmpeqps %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: PR28044:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    cmpeqps %xmm1, %xmm0
 ; X64-NEXT:    retq
   %cmp = fcmp oeq <4 x float> %a0, %a1
@@ -157,7 +157,7 @@ define <4 x float> @PR28044(<4 x float> %a0, <4 x float> %a1) nounwind {
 
 define <4 x i32> @PR30512(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X32-LABEL: PR30512:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    pushl %edi
 ; X32-NEXT:    pushl %esi
@@ -203,7 +203,7 @@ define <4 x i32> @PR30512(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X32-NEXT:    retl $4
 ;
 ; X64-LABEL: PR30512:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpl {{[0-9]+}}(%rsp), %r8d
 ; X64-NEXT:    sete %al
@@ -251,12 +251,12 @@ define <4 x i32> @PR30512(<4 x i32> %x, <4 x i32> %y) nounwind {
 
 define <2 x float> @PR31672() #0 {
 ; X32-LABEL: PR31672:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    sqrtps {{\.LCPI.*}}, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: PR31672:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    sqrtps {{.*}}(%rip), %xmm0
 ; X64-NEXT:    retq
   %t0 = call fast <2 x float> @llvm.sqrt.v2f32(<2 x float> <float 42.0, float 3.0>)

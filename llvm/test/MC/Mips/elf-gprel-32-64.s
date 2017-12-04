@@ -34,7 +34,7 @@ test:                                   # @test
 	.set	noreorder
 	.set	nomacro
 	.set	noat
-# BB#0:                                 # %entry
+# %bb.0:                                # %entry
 	lui	$1, %hi(%neg(%gp_rel(test)))
 	daddu	$2, $1, $25
 	sltiu	$1, $4, 4

@@ -55,7 +55,7 @@ unreachable:
 ; GCN: s_cmp_lg_u32
 ; GCN: s_cbranch_scc0 [[UNREACHABLE:BB[0-9]+_[0-9]+]]
 
-; GCN-NEXT: BB#{{[0-9]+}}: ; %ret
+; GCN-NEXT: %bb.{{[0-9]+}}: ; %ret
 ; GCN-NEXT: s_endpgm
 
 ; GCN: [[UNREACHABLE]]:

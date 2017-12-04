@@ -7,7 +7,7 @@
 
 define <2 x i1> @bitcast_i2_2i1(i2 zeroext %a0) {
 ; SSE2-SSSE3-LABEL: bitcast_i2_2i1:
-; SSE2-SSSE3:       # BB#0:
+; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; SSE2-SSSE3-NEXT:    movq %rdi, %xmm0
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,1,0,1]
@@ -20,7 +20,7 @@ define <2 x i1> @bitcast_i2_2i1(i2 zeroext %a0) {
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX1-LABEL: bitcast_i2_2i1:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; AVX1-NEXT:    vmovq %rdi, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
@@ -31,7 +31,7 @@ define <2 x i1> @bitcast_i2_2i1(i2 zeroext %a0) {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: bitcast_i2_2i1:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; AVX2-NEXT:    vmovq %rdi, %xmm0
 ; AVX2-NEXT:    vpbroadcastq %xmm0, %xmm0
@@ -42,7 +42,7 @@ define <2 x i1> @bitcast_i2_2i1(i2 zeroext %a0) {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: bitcast_i2_2i1:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
 ; AVX512-NEXT:    kmovd %eax, %k1
@@ -56,7 +56,7 @@ define <2 x i1> @bitcast_i2_2i1(i2 zeroext %a0) {
 
 define <4 x i1> @bitcast_i4_4i1(i4 zeroext %a0) {
 ; SSE2-SSSE3-LABEL: bitcast_i4_4i1:
-; SSE2-SSSE3:       # BB#0:
+; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    movd %edi, %xmm0
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [1,2,4,8]
@@ -66,7 +66,7 @@ define <4 x i1> @bitcast_i4_4i1(i4 zeroext %a0) {
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX1-LABEL: bitcast_i4_4i1:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovd %edi, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2,4,8]
@@ -76,7 +76,7 @@ define <4 x i1> @bitcast_i4_4i1(i4 zeroext %a0) {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: bitcast_i4_4i1:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm0
 ; AVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
 ; AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2,4,8]
@@ -86,7 +86,7 @@ define <4 x i1> @bitcast_i4_4i1(i4 zeroext %a0) {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: bitcast_i4_4i1:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
 ; AVX512-NEXT:    kmovd %eax, %k1
@@ -101,7 +101,7 @@ define <4 x i1> @bitcast_i4_4i1(i4 zeroext %a0) {
 
 define <8 x i1> @bitcast_i8_8i1(i8 zeroext %a0) {
 ; SSE2-SSSE3-LABEL: bitcast_i8_8i1:
-; SSE2-SSSE3:       # BB#0:
+; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    movd %edi, %xmm0
 ; SSE2-SSSE3-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
@@ -112,7 +112,7 @@ define <8 x i1> @bitcast_i8_8i1(i8 zeroext %a0) {
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX1-LABEL: bitcast_i8_8i1:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovd %edi, %xmm0
 ; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
@@ -123,7 +123,7 @@ define <8 x i1> @bitcast_i8_8i1(i8 zeroext %a0) {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: bitcast_i8_8i1:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm0
 ; AVX2-NEXT:    vpbroadcastw %xmm0, %xmm0
 ; AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2,4,8,16,32,64,128]
@@ -133,7 +133,7 @@ define <8 x i1> @bitcast_i8_8i1(i8 zeroext %a0) {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: bitcast_i8_8i1:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovd %edi, %k0
 ; AVX512-NEXT:    vpmovm2w %k0, %xmm0
 ; AVX512-NEXT:    retq
@@ -143,7 +143,7 @@ define <8 x i1> @bitcast_i8_8i1(i8 zeroext %a0) {
 
 define <16 x i1> @bitcast_i16_16i1(i16 zeroext %a0) {
 ; SSE2-LABEL: bitcast_i16_16i1:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movd %edi, %xmm0
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,1,1,4,5,6,7]
@@ -156,7 +156,7 @@ define <16 x i1> @bitcast_i16_16i1(i16 zeroext %a0) {
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: bitcast_i16_16i1:
-; SSSE3:       # BB#0:
+; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    movd %edi, %xmm0
 ; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1]
 ; SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
@@ -167,7 +167,7 @@ define <16 x i1> @bitcast_i16_16i1(i16 zeroext %a0) {
 ; SSSE3-NEXT:    retq
 ;
 ; AVX1-LABEL: bitcast_i16_16i1:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovd %edi, %xmm0
 ; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1]
 ; AVX1-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
@@ -178,7 +178,7 @@ define <16 x i1> @bitcast_i16_16i1(i16 zeroext %a0) {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: bitcast_i16_16i1:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1]
 ; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [9241421688590303745,9241421688590303745]
@@ -189,7 +189,7 @@ define <16 x i1> @bitcast_i16_16i1(i16 zeroext %a0) {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: bitcast_i16_16i1:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovd %edi, %k0
 ; AVX512-NEXT:    vpmovm2b %k0, %xmm0
 ; AVX512-NEXT:    retq
@@ -199,13 +199,13 @@ define <16 x i1> @bitcast_i16_16i1(i16 zeroext %a0) {
 
 define <32 x i1> @bitcast_i32_32i1(i32 %a0) {
 ; SSE2-SSSE3-LABEL: bitcast_i32_32i1:
-; SSE2-SSSE3:       # BB#0:
+; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    movl %esi, (%rdi)
 ; SSE2-SSSE3-NEXT:    movq %rdi, %rax
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX1-LABEL: bitcast_i32_32i1:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovd %edi, %xmm0
 ; AVX1-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; AVX1-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm0[0,0,1,1,4,5,6,7]
@@ -230,7 +230,7 @@ define <32 x i1> @bitcast_i32_32i1(i32 %a0) {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: bitcast_i32_32i1:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm0
 ; AVX2-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; AVX2-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm0[0,0,1,1,4,5,6,7]
@@ -246,7 +246,7 @@ define <32 x i1> @bitcast_i32_32i1(i32 %a0) {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: bitcast_i32_32i1:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovd %edi, %k0
 ; AVX512-NEXT:    vpmovm2b %k0, %ymm0
 ; AVX512-NEXT:    retq
@@ -256,19 +256,19 @@ define <32 x i1> @bitcast_i32_32i1(i32 %a0) {
 
 define <64 x i1> @bitcast_i64_64i1(i64 %a0) {
 ; SSE2-SSSE3-LABEL: bitcast_i64_64i1:
-; SSE2-SSSE3:       # BB#0:
+; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    movq %rsi, (%rdi)
 ; SSE2-SSSE3-NEXT:    movq %rdi, %rax
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX12-LABEL: bitcast_i64_64i1:
-; AVX12:       # BB#0:
+; AVX12:       # %bb.0:
 ; AVX12-NEXT:    movq %rsi, (%rdi)
 ; AVX12-NEXT:    movq %rdi, %rax
 ; AVX12-NEXT:    retq
 ;
 ; AVX512-LABEL: bitcast_i64_64i1:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovq %rdi, %k0
 ; AVX512-NEXT:    vpmovm2b %k0, %zmm0
 ; AVX512-NEXT:    retq

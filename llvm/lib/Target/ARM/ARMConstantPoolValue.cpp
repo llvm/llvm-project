@@ -292,6 +292,6 @@ void ARMConstantPoolMBB::addSelectionDAGCSEId(FoldingSetNodeID &ID) {
 }
 
 void ARMConstantPoolMBB::print(raw_ostream &O) const {
-  O << "BB#" << MBB->getNumber();
+  O << printMBBReference(*MBB);
   ARMConstantPoolValue::print(O);
 }

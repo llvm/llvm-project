@@ -27,7 +27,7 @@ Y:
 	.globl	_foobar
 	.align	16, 0x90
 _foobar:                                # @foobar
-# BB#0:
+# %bb.0:
 	ret
 
 	.data

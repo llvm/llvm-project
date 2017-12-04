@@ -8,7 +8,7 @@
 
 define void @foo() {
 ; X86-O0-LABEL: foo:
-; X86-O0:       # BB#0: # %entry
+; X86-O0:       # %bb.0: # %entry
 ; X86-O0-NEXT:    xorl %eax, %eax
 ; X86-O0-NEXT:    movl %eax, %ecx
 ; X86-O0-NEXT:    xorl %eax, %eax
@@ -36,7 +36,7 @@ define void @foo() {
 ; X86-O0-NEXT:    retq
 ;
 ; X64-LABEL: foo:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movzbl {{.*}}(%rip), %eax
 ; X64-NEXT:    testb %al, %al
 ; X64-NEXT:    setne -{{[0-9]+}}(%rsp)
@@ -50,7 +50,7 @@ define void @foo() {
 ; X64-NEXT:    retq
 ;
 ; 686-O0-LABEL: foo:
-; 686-O0:       # BB#0: # %entry
+; 686-O0:       # %bb.0: # %entry
 ; 686-O0-NEXT:    subl $8, %esp
 ; 686-O0-NEXT:    .cfi_def_cfa_offset 12
 ; 686-O0-NEXT:    movb c, %al
@@ -74,7 +74,7 @@ define void @foo() {
 ; 686-O0-NEXT:    retl
 ;
 ; 686-LABEL: foo:
-; 686:       # BB#0: # %entry
+; 686:       # %bb.0: # %entry
 ; 686-NEXT:    subl $8, %esp
 ; 686-NEXT:    .cfi_def_cfa_offset 12
 ; 686-NEXT:    movzbl c, %eax
@@ -120,7 +120,7 @@ entry:
 
 define void @f1() {
 ; X86-O0-LABEL: f1:
-; X86-O0:       # BB#0: # %entry
+; X86-O0:       # %bb.0: # %entry
 ; X86-O0-NEXT:    movabsq $8381627093, %rax # imm = 0x1F3957AD5
 ; X86-O0-NEXT:    movslq var_5, %rcx
 ; X86-O0-NEXT:    addq %rax, %rcx
@@ -156,7 +156,7 @@ define void @f1() {
 ; X86-O0-NEXT:    retq
 ;
 ; X64-LABEL: f1:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movslq {{.*}}(%rip), %rax
 ; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    cmpq $-1, %rax
@@ -176,7 +176,7 @@ define void @f1() {
 ; X64-NEXT:    retq
 ;
 ; 686-O0-LABEL: f1:
-; 686-O0:       # BB#0: # %entry
+; 686-O0:       # %bb.0: # %entry
 ; 686-O0-NEXT:    pushl %ebp
 ; 686-O0-NEXT:    .cfi_def_cfa_offset 8
 ; 686-O0-NEXT:    pushl %ebx
@@ -233,7 +233,7 @@ define void @f1() {
 ; 686-O0-NEXT:    retl
 ;
 ; 686-LABEL: f1:
-; 686:       # BB#0: # %entry
+; 686:       # %bb.0: # %entry
 ; 686-NEXT:    pushl %edi
 ; 686-NEXT:    .cfi_def_cfa_offset 8
 ; 686-NEXT:    pushl %esi
@@ -307,7 +307,7 @@ entry:
 
 define void @f2() {
 ; X86-O0-LABEL: f2:
-; X86-O0:       # BB#0: # %entry
+; X86-O0:       # %bb.0: # %entry
 ; X86-O0-NEXT:    # implicit-def: %rax
 ; X86-O0-NEXT:    movzbl var_7, %ecx
 ; X86-O0-NEXT:    cmpb $0, var_7
@@ -335,7 +335,7 @@ define void @f2() {
 ; X86-O0-NEXT:    retq
 ;
 ; X64-LABEL: f2:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movzbl {{.*}}(%rip), %eax
 ; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    testl %eax, %eax
@@ -352,7 +352,7 @@ define void @f2() {
 ; X64-NEXT:    retq
 ;
 ; 686-O0-LABEL: f2:
-; 686-O0:       # BB#0: # %entry
+; 686-O0:       # %bb.0: # %entry
 ; 686-O0-NEXT:    pushl %edi
 ; 686-O0-NEXT:    .cfi_def_cfa_offset 8
 ; 686-O0-NEXT:    pushl %esi
@@ -391,7 +391,7 @@ define void @f2() {
 ; 686-O0-NEXT:    retl
 ;
 ; 686-LABEL: f2:
-; 686:       # BB#0: # %entry
+; 686:       # %bb.0: # %entry
 ; 686-NEXT:    subl $2, %esp
 ; 686-NEXT:    .cfi_def_cfa_offset 6
 ; 686-NEXT:    movzbl var_7, %eax
@@ -441,7 +441,7 @@ entry:
 
 define void @f3() #0 {
 ; X86-O0-LABEL: f3:
-; X86-O0:       # BB#0: # %entry
+; X86-O0:       # %bb.0: # %entry
 ; X86-O0-NEXT:    movl var_13, %eax
 ; X86-O0-NEXT:    xorl $-1, %eax
 ; X86-O0-NEXT:    movl %eax, %eax
@@ -477,7 +477,7 @@ define void @f3() #0 {
 ; X86-O0-NEXT:    retq
 ;
 ; X64-LABEL: f3:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movl {{.*}}(%rip), %eax
 ; X64-NEXT:    movl $4294967295, %ecx # imm = 0xFFFFFFFF
 ; X64-NEXT:    xorq %rax, %rcx
@@ -493,7 +493,7 @@ define void @f3() #0 {
 ; X64-NEXT:    retq
 ;
 ; 686-O0-LABEL: f3:
-; 686-O0:       # BB#0: # %entry
+; 686-O0:       # %bb.0: # %entry
 ; 686-O0-NEXT:    pushl %ebp
 ; 686-O0-NEXT:    .cfi_def_cfa_offset 8
 ; 686-O0-NEXT:    .cfi_offset %ebp, -8
@@ -530,7 +530,7 @@ define void @f3() #0 {
 ; 686-O0-NEXT:    retl
 ;
 ; 686-LABEL: f3:
-; 686:       # BB#0: # %entry
+; 686:       # %bb.0: # %entry
 ; 686-NEXT:    pushl %ebp
 ; 686-NEXT:    .cfi_def_cfa_offset 8
 ; 686-NEXT:    .cfi_offset %ebp, -8

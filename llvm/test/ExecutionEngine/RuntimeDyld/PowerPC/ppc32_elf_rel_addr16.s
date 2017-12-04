@@ -7,7 +7,7 @@
 	.type	lookup,@function
 lookup:                                 # @lookup
 .Lfunc_begin0:
-# BB#0:
+# %bb.0:
 	stw 31, -4(1)
 	stwu 1, -16(1)
 insn_hi:

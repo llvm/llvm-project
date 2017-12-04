@@ -18,14 +18,14 @@
 
 define <4 x float> @v4f32(<4 x float> %a, <4 x float> %b) nounwind {
 ; SSE2-LABEL: v4f32:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    andps [[SIGNMASK1]](%rip), %xmm1
 ; SSE2-NEXT:    andps [[MAGMASK1]](%rip), %xmm0
 ; SSE2-NEXT:    orps %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: v4f32:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vandps [[SIGNMASK1]](%rip), %xmm1, %xmm1
 ; AVX-NEXT:    vandps [[MAGMASK1]](%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vorps %xmm1, %xmm0, %xmm0
@@ -69,7 +69,7 @@ define <4 x float> @v4f32(<4 x float> %a, <4 x float> %b) nounwind {
 
 define <8 x float> @v8f32(<8 x float> %a, <8 x float> %b) nounwind {
 ; SSE2-LABEL: v8f32:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps [[SIGNMASK2]](%rip), %xmm4
 ; SSE2-NEXT:    andps %xmm4, %xmm2
 ; SSE2-NEXT:    movaps [[MAGMASK2]](%rip), %xmm5
@@ -81,7 +81,7 @@ define <8 x float> @v8f32(<8 x float> %a, <8 x float> %b) nounwind {
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: v8f32:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vandps [[SIGNMASK2]](%rip), %ymm1, %ymm1
 ; AVX-NEXT:    vandps [[MAGMASK2]](%rip), %ymm0, %ymm0
 ; AVX-NEXT:    vorps %ymm1, %ymm0, %ymm0
@@ -101,14 +101,14 @@ define <8 x float> @v8f32(<8 x float> %a, <8 x float> %b) nounwind {
 
 define <2 x double> @v2f64(<2 x double> %a, <2 x double> %b) nounwind {
 ; SSE2-LABEL: v2f64:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    andps [[SIGNMASK3]](%rip), %xmm1
 ; SSE2-NEXT:    andps [[MAGMASK3]](%rip), %xmm0
 ; SSE2-NEXT:    orps %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: v2f64:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vandps [[SIGNMASK3]](%rip), %xmm1, %xmm1
 ; AVX-NEXT:    vandps [[MAGMASK3]](%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vorps %xmm1, %xmm0, %xmm0
@@ -140,7 +140,7 @@ define <2 x double> @v2f64(<2 x double> %a, <2 x double> %b) nounwind {
 
 define <4 x double> @v4f64(<4 x double> %a, <4 x double> %b) nounwind {
 ; SSE2-LABEL: v4f64:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps [[SIGNMASK4]](%rip), %xmm4
 ; SSE2-NEXT:    andps %xmm4, %xmm2
 ; SSE2-NEXT:    movaps [[MAGMASK4]](%rip), %xmm5
@@ -152,7 +152,7 @@ define <4 x double> @v4f64(<4 x double> %a, <4 x double> %b) nounwind {
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: v4f64:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vandps [[SIGNMASK4]](%rip), %ymm1, %ymm1
 ; AVX-NEXT:    vandps [[MAGMASK4]](%rip), %ymm0, %ymm0
 ; AVX-NEXT:    vorps %ymm1, %ymm0, %ymm0

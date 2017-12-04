@@ -246,13 +246,25 @@ blocks are referenced using the following syntax:
 
 .. code-block:: text
 
-    %bb.<id>[.<name>]
+    %bb.<id>
 
-Examples:
+Example:
 
 .. code-block:: llvm
 
     %bb.0
+
+The following syntax is also supported, but the former syntax is preferred for
+block references:
+
+.. code-block:: text
+
+    %bb.<id>[.<name>]
+
+Example:
+
+.. code-block:: llvm
+
     %bb.1.then
 
 Successors

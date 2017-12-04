@@ -1,4 +1,5 @@
 // RUN: %clang_builtins %s %librt -lm -o %t && %run %t
+// REQUIRES: x86-target-arch
 // UNSUPPORTED: powerpc64
 //===-- divxc3_test.c - Test __divxc3 -------------------------------------===//
 //

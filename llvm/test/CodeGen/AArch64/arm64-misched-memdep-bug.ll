@@ -4,7 +4,7 @@
 ; Test for bug in misched memory dependency calculation.
 ;
 ; CHECK: ********** MI Scheduling **********
-; CHECK: misched_bug:BB#0 entry
+; CHECK: misched_bug:%bb.0 entry
 ; CHECK: SU(2):   %2<def> = LDRWui %0, 1; mem:LD4[%ptr1_plus1] GPR32:%2 GPR64common:%0
 ; CHECK:   Successors:
 ; CHECK-NEXT:    SU(5): Data Latency=4 Reg=%2

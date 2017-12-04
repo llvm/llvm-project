@@ -344,7 +344,7 @@ static Sema::TemplateDeductionResult DeduceNonTypeTemplateArgument(
   }
 
   Deduced[NTTP->getIndex()] = Result;
-  if (!S.getLangOpts().CPlusPlus1z)
+  if (!S.getLangOpts().CPlusPlus17)
     return Sema::TDK_Success;
 
   if (NTTP->isExpandedParameterPack())
@@ -2934,7 +2934,7 @@ Sema::SubstituteExplicitTemplateArguments(
     // so substitution into the type must also substitute into the exception
     // specification.
     SmallVector<QualType, 4> ExceptionStorage;
-    if (getLangOpts().CPlusPlus1z &&
+    if (getLangOpts().CPlusPlus17 &&
         SubstExceptionSpec(
             Function->getLocation(), EPI.ExceptionSpec, ExceptionStorage,
             MultiLevelTemplateArgumentList(*ExplicitArgumentList)))
@@ -3908,7 +3908,7 @@ Sema::TemplateDeductionResult Sema::DeduceTemplateArguments(
   // so we can check that the exception specification matches.
   auto *SpecializationFPT =
       Specialization->getType()->castAs<FunctionProtoType>();
-  if (getLangOpts().CPlusPlus1z &&
+  if (getLangOpts().CPlusPlus17 &&
       isUnresolvedExceptionSpec(SpecializationFPT->getExceptionSpecType()) &&
       !ResolveExceptionSpec(Info.getLocation(), SpecializationFPT))
     return TDK_MiscellaneousDeductionFailure;
@@ -5152,9 +5152,9 @@ MarkUsedTemplateParameters(ASTContext &Ctx,
   if (NTTP->getDepth() == Depth)
     Used[NTTP->getIndex()] = true;
 
-  // In C++1z mode, additional arguments may be deduced from the type of a
+  // In C++17 mode, additional arguments may be deduced from the type of a
   // non-type argument.
-  if (Ctx.getLangOpts().CPlusPlus1z)
+  if (Ctx.getLangOpts().CPlusPlus17)
     MarkUsedTemplateParameters(Ctx, NTTP->getType(), OnlyDeduced, Depth, Used);
 }
 

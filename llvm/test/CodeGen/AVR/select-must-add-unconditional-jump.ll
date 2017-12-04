@@ -9,18 +9,18 @@
 ;
 ; This issue manifests in a CFG that looks something like this:
 ;
-; BB#2: derived from LLVM BB %finish
-;     Predecessors according to CFG: BB#0 BB#1
-;         %0<def> = PHI %3, <BB#0>, %5, <BB#1>
+; %bb.2: derived from LLVM BB %finish
+;     Predecessors according to CFG: %bb.0 %bb.1
+;         %0<def> = PHI %3, <%bb.0>, %5, <%bb.1>
 ;         %7<def> = LDIRdK 2
 ;         %8<def> = LDIRdK 1
 ;         CPRdRr %2, %0, %SREG<imp-def>
-;         BREQk <BB#6>, %SREG<imp-use>
-;     Successors according to CFG: BB#5(?%) BB#6(?%)
+;         BREQk <%bb.6>, %SREG<imp-use>
+;     Successors according to CFG: %bb.5(?%) %bb.6(?%)
 ;
-; The code assumes it the fallthrough block after this is BB#5, but
-; it's actually BB#3! To be proper, there should be an unconditional
-; jump tying this block to BB#5.
+; The code assumes it the fallthrough block after this is %bb.5, but
+; it's actually %bb.3! To be proper, there should be an unconditional
+; jump tying this block to %bb.5.
 
 define i8 @select_must_add_unconditional_jump(i8 %arg0, i8 %arg1) unnamed_addr {
 entry-block:
@@ -49,10 +49,10 @@ dead:
 ; basic block containing `select` needs to contain explicit jumps to
 ; both successors.
 
-; CHECK: BB#2: derived from LLVM BB %finish
-; CHECK: BREQk <[[BRANCHED:BB#[0-9]+]]>
-; CHECK: RJMPk <[[DIRECT:BB#[0-9]+]]>
+; CHECK: %bb.2: derived from LLVM BB %finish
+; CHECK: BREQk <[[BRANCHED:%bb.[0-9]+]]>
+; CHECK: RJMPk <[[DIRECT:%bb.[0-9]+]]>
 ; CHECK: Successors according to CFG
 ; CHECK-SAME-DAG: {{.*}}[[BRANCHED]]
 ; CHECK-SAME-DAG: {{.*}}[[DIRECT]]
-; CHECK: BB#3: derived from LLVM BB
+; CHECK: %bb.3: derived from LLVM BB

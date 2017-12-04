@@ -3,7 +3,7 @@
 
 define <4 x float> @a(<4 x float>* %y) nounwind {
 ; CHECK-LABEL: a:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movups (%rdi), %xmm0
 ; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,2,1,0]
 ; CHECK-NEXT:    retq
@@ -21,7 +21,7 @@ define <4 x float> @a(<4 x float>* %y) nounwind {
 
 define <4 x float> @b(<4 x float>* %y, <4 x float> %z) nounwind {
 ; CHECK-LABEL: b:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movups (%rdi), %xmm1
 ; CHECK-NEXT:    unpckhps {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; CHECK-NEXT:    retq
@@ -39,7 +39,7 @@ define <4 x float> @b(<4 x float>* %y, <4 x float> %z) nounwind {
 
 define <2 x double> @c(<2 x double>* %y) nounwind {
 ; CHECK-LABEL: c:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movupd (%rdi), %xmm0
 ; CHECK-NEXT:    shufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; CHECK-NEXT:    retq
@@ -53,7 +53,7 @@ define <2 x double> @c(<2 x double>* %y) nounwind {
 
 define <2 x double> @d(<2 x double>* %y, <2 x double> %z) nounwind {
 ; CHECK-LABEL: d:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movups (%rdi), %xmm1
 ; CHECK-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
 ; CHECK-NEXT:    retq

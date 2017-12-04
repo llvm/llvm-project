@@ -6,7 +6,7 @@
 
 define zeroext i1 @test1(i32 %X)  nounwind {
 ; CHECK-LABEL: test1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; CHECK-NEXT:    andb $1, %al
 ; CHECK-NEXT:    retl
@@ -16,12 +16,12 @@ define zeroext i1 @test1(i32 %X)  nounwind {
 
 define i1 @test2(i32 %val, i32 %mask) nounwind {
 ; CHECK-LABEL: test2:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    btl %ecx, %eax
 ; CHECK-NEXT:    jae .LBB1_2
-; CHECK-NEXT:  # BB#1: # %ret_true
+; CHECK-NEXT:  # %bb.1: # %ret_true
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  .LBB1_2: # %ret_false
@@ -40,11 +40,11 @@ ret_false:
 
 define i32 @test3(i8* %ptr) nounwind {
 ; CHECK-LABEL: test3:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    testb $1, (%eax)
 ; CHECK-NEXT:    je .LBB2_2
-; CHECK-NEXT:  # BB#1: # %cond_true
+; CHECK-NEXT:  # %bb.1: # %cond_true
 ; CHECK-NEXT:    movl $21, %eax
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  .LBB2_2: # %cond_false
@@ -61,10 +61,10 @@ cond_false:
 
 define i32 @test4(i8* %ptr) nounwind {
 ; CHECK-LABEL: test4:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    je .LBB3_2
-; CHECK-NEXT:  # BB#1: # %cond_true
+; CHECK-NEXT:  # %bb.1: # %cond_true
 ; CHECK-NEXT:    movl $21, %eax
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  .LBB3_2: # %cond_false
@@ -80,7 +80,7 @@ cond_false:
 
 define i32 @test5(double %d) nounwind {
 ; CHECK-LABEL: test5:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fnstcw (%esp)
@@ -92,7 +92,7 @@ define i32 @test5(double %d) nounwind {
 ; CHECK-NEXT:    fldcw (%esp)
 ; CHECK-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    je .LBB4_2
-; CHECK-NEXT:  # BB#1: # %cond_true
+; CHECK-NEXT:  # %bb.1: # %cond_true
 ; CHECK-NEXT:    movl $21, %eax
 ; CHECK-NEXT:    popl %ecx
 ; CHECK-NEXT:    retl

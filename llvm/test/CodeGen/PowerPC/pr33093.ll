@@ -4,7 +4,7 @@
 
 define zeroext i32 @ReverseBits(i32 zeroext %n) {
 ; CHECK-LABEL: ReverseBits:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lis 4, -21846
 ; CHECK-NEXT:    lis 5, 21845
 ; CHECK-NEXT:    slwi 6, 3, 1
@@ -68,7 +68,7 @@ entry:
 
 define i64 @ReverseBits64(i64 %n) {
 ; CHECK-LABEL: ReverseBits64:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lis 4, -21846
 ; CHECK-NEXT:    lis 5, 21845
 ; CHECK-NEXT:    lis 6, -13108

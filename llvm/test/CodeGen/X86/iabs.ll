@@ -11,7 +11,7 @@
 ; rdar://10695237
 define i8 @test_i8(i8 %a) nounwind {
 ; X86-LABEL: test_i8:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    sarb $7, %cl
@@ -20,7 +20,7 @@ define i8 @test_i8(i8 %a) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_i8:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    sarb $7, %al
 ; X64-NEXT:    addb %al, %dil
@@ -35,7 +35,7 @@ define i8 @test_i8(i8 %a) nounwind {
 
 define i16 @test_i16(i16 %a) nounwind {
 ; X86-NO-CMOV-LABEL: test_i16:
-; X86-NO-CMOV:       # BB#0:
+; X86-NO-CMOV:       # %bb.0:
 ; X86-NO-CMOV-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NO-CMOV-NEXT:    movl %eax, %ecx
 ; X86-NO-CMOV-NEXT:    sarw $15, %cx
@@ -45,7 +45,7 @@ define i16 @test_i16(i16 %a) nounwind {
 ; X86-NO-CMOV-NEXT:    retl
 ;
 ; X86-CMOV-LABEL: test_i16:
-; X86-CMOV:       # BB#0:
+; X86-CMOV:       # %bb.0:
 ; X86-CMOV-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; X86-CMOV-NEXT:    movl %ecx, %eax
 ; X86-CMOV-NEXT:    negw %ax
@@ -53,7 +53,7 @@ define i16 @test_i16(i16 %a) nounwind {
 ; X86-CMOV-NEXT:    retl
 ;
 ; X64-LABEL: test_i16:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    negw %ax
 ; X64-NEXT:    cmovlw %di, %ax
@@ -66,7 +66,7 @@ define i16 @test_i16(i16 %a) nounwind {
 
 define i32 @test_i32(i32 %a) nounwind {
 ; X86-NO-CMOV-LABEL: test_i32:
-; X86-NO-CMOV:       # BB#0:
+; X86-NO-CMOV:       # %bb.0:
 ; X86-NO-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NO-CMOV-NEXT:    movl %eax, %ecx
 ; X86-NO-CMOV-NEXT:    sarl $31, %ecx
@@ -75,7 +75,7 @@ define i32 @test_i32(i32 %a) nounwind {
 ; X86-NO-CMOV-NEXT:    retl
 ;
 ; X86-CMOV-LABEL: test_i32:
-; X86-CMOV:       # BB#0:
+; X86-CMOV:       # %bb.0:
 ; X86-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-CMOV-NEXT:    movl %ecx, %eax
 ; X86-CMOV-NEXT:    negl %eax
@@ -83,7 +83,7 @@ define i32 @test_i32(i32 %a) nounwind {
 ; X86-CMOV-NEXT:    retl
 ;
 ; X64-LABEL: test_i32:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    negl %eax
 ; X64-NEXT:    cmovll %edi, %eax
@@ -96,7 +96,7 @@ define i32 @test_i32(i32 %a) nounwind {
 
 define i64 @test_i64(i64 %a) nounwind {
 ; X86-LABEL: test_i64:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl %edx, %ecx
 ; X86-NEXT:    sarl $31, %ecx
@@ -108,7 +108,7 @@ define i64 @test_i64(i64 %a) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_i64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    negq %rax
 ; X64-NEXT:    cmovlq %rdi, %rax

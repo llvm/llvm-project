@@ -6,7 +6,7 @@
 
 define <8 x i64> @test_mm512_mask_set1_epi8(<8 x i64> %__O, i64 %__M, i8 signext %__A)  {
 ; X32-LABEL: test_mm512_mask_set1_epi8:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    .cfi_offset %ebx, -8
@@ -720,7 +720,7 @@ define <8 x i64> @test_mm512_mask_set1_epi8(<8 x i64> %__O, i64 %__M, i8 signext
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_mask_set1_epi8:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovq %rdi, %k1
 ; X64-NEXT:    vpbroadcastb %esi, %zmm0 {%k1}
 ; X64-NEXT:    retq
@@ -736,7 +736,7 @@ define <8 x i64> @test_mm512_mask_set1_epi8(<8 x i64> %__O, i64 %__M, i8 signext
 
 define <8 x i64> @test_mm512_maskz_set1_epi8(i64 %__M, i8 signext %__A)  {
 ; X32-LABEL: test_mm512_maskz_set1_epi8:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    .cfi_offset %ebx, -8
@@ -1447,7 +1447,7 @@ define <8 x i64> @test_mm512_maskz_set1_epi8(i64 %__M, i8 signext %__A)  {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_maskz_set1_epi8:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovq %rdi, %k1
 ; X64-NEXT:    vpbroadcastb %esi, %zmm0 {%k1} {z}
 ; X64-NEXT:    retq
@@ -1462,14 +1462,14 @@ define <8 x i64> @test_mm512_maskz_set1_epi8(i64 %__M, i8 signext %__A)  {
 
 define <8 x i64> @test_mm512_mask_set1_epi16(<8 x i64> %__O, i32 %__M, i16 signext %__A)  {
 ; X32-LABEL: test_mm512_mask_set1_epi16:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
 ; X32-NEXT:    vpbroadcastw %eax, %zmm0 {%k1}
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_mask_set1_epi16:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1
 ; X64-NEXT:    vpbroadcastw %esi, %zmm0 {%k1}
 ; X64-NEXT:    retq
@@ -1485,14 +1485,14 @@ define <8 x i64> @test_mm512_mask_set1_epi16(<8 x i64> %__O, i32 %__M, i16 signe
 
 define <8 x i64> @test_mm512_maskz_set1_epi16(i32 %__M, i16 signext %__A)  {
 ; X32-LABEL: test_mm512_maskz_set1_epi16:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
 ; X32-NEXT:    vpbroadcastw %eax, %zmm0 {%k1} {z}
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_maskz_set1_epi16:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1
 ; X64-NEXT:    vpbroadcastw %esi, %zmm0 {%k1} {z}
 ; X64-NEXT:    retq
@@ -1507,12 +1507,12 @@ define <8 x i64> @test_mm512_maskz_set1_epi16(i32 %__M, i16 signext %__A)  {
 
 define <8 x i64> @test_mm512_broadcastb_epi8(<2 x i64> %a0) {
 ; X32-LABEL: test_mm512_broadcastb_epi8:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    vpbroadcastb %xmm0, %zmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_broadcastb_epi8:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpbroadcastb %xmm0, %zmm0
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
@@ -1523,14 +1523,14 @@ define <8 x i64> @test_mm512_broadcastb_epi8(<2 x i64> %a0) {
 
 define <8 x i64> @test_mm512_mask_broadcastb_epi8(<8 x i64> %a0, i64* %a1, <2 x i64> %a2) {
 ; X32-LABEL: test_mm512_mask_broadcastb_epi8:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    kmovq (%eax), %k1
 ; X32-NEXT:    vpbroadcastb %xmm1, %zmm0 {%k1}
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_mask_broadcastb_epi8:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    kmovq (%rdi), %k1
 ; X64-NEXT:    vpbroadcastb %xmm1, %zmm0 {%k1}
 ; X64-NEXT:    retq
@@ -1546,14 +1546,14 @@ define <8 x i64> @test_mm512_mask_broadcastb_epi8(<8 x i64> %a0, i64* %a1, <2 x 
 
 define <8 x i64> @test_mm512_maskz_broadcastb_epi8(i64* %a0, <2 x i64> %a1) {
 ; X32-LABEL: test_mm512_maskz_broadcastb_epi8:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    kmovq (%eax), %k1
 ; X32-NEXT:    vpbroadcastb %xmm0, %zmm0 {%k1} {z}
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_maskz_broadcastb_epi8:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    kmovq (%rdi), %k1
 ; X64-NEXT:    vpbroadcastb %xmm0, %zmm0 {%k1} {z}
 ; X64-NEXT:    retq
@@ -1568,12 +1568,12 @@ define <8 x i64> @test_mm512_maskz_broadcastb_epi8(i64* %a0, <2 x i64> %a1) {
 
 define <8 x i64> @test_mm512_broadcastw_epi16(<2 x i64> %a0) {
 ; X32-LABEL: test_mm512_broadcastw_epi16:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    vpbroadcastw %xmm0, %zmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_broadcastw_epi16:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpbroadcastw %xmm0, %zmm0
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <8 x i16>
@@ -1584,13 +1584,13 @@ define <8 x i64> @test_mm512_broadcastw_epi16(<2 x i64> %a0) {
 
 define <8 x i64> @test_mm512_mask_broadcastw_epi16(<8 x i64> %a0, i32 %a1, <2 x i64> %a2) {
 ; X32-LABEL: test_mm512_mask_broadcastw_epi16:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
 ; X32-NEXT:    vpbroadcastw %xmm1, %zmm0 {%k1}
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_mask_broadcastw_epi16:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    kmovd %edi, %k1
 ; X64-NEXT:    vpbroadcastw %xmm1, %zmm0 {%k1}
 ; X64-NEXT:    retq
@@ -1605,13 +1605,13 @@ define <8 x i64> @test_mm512_mask_broadcastw_epi16(<8 x i64> %a0, i32 %a1, <2 x 
 
 define <8 x i64> @test_mm512_maskz_broadcastw_epi16(i32 %a0, <2 x i64> %a1) {
 ; X32-LABEL: test_mm512_maskz_broadcastw_epi16:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
 ; X32-NEXT:    vpbroadcastw %xmm0, %zmm0 {%k1} {z}
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_maskz_broadcastw_epi16:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    kmovd %edi, %k1
 ; X64-NEXT:    vpbroadcastw %xmm0, %zmm0 {%k1} {z}
 ; X64-NEXT:    retq
@@ -1625,12 +1625,12 @@ define <8 x i64> @test_mm512_maskz_broadcastw_epi16(i32 %a0, <2 x i64> %a1) {
 
 define <8 x i64> @test_mm512_bslli_epi128(<8 x i64> %a0) {
 ; X32-LABEL: test_mm512_bslli_epi128:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    vpsrldq {{.*#+}} zmm0 = zmm0[11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[27,28,29,30,31],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[43,44,45,46,47],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[59,60,61,62,63],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_bslli_epi128:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpsrldq {{.*#+}} zmm0 = zmm0[11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[27,28,29,30,31],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[43,44,45,46,47],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[59,60,61,62,63],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; X64-NEXT:    retq
   %arg0 = bitcast <8 x i64> %a0 to <64 x i8>
@@ -1641,12 +1641,12 @@ define <8 x i64> @test_mm512_bslli_epi128(<8 x i64> %a0) {
 
 define <8 x i64> @test_mm512_bsrli_epi128(<8 x i64> %a0) {
 ; X32-LABEL: test_mm512_bsrli_epi128:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    vpsrldq {{.*#+}} zmm0 = zmm0[5,6,7,8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zmm0[21,22,23,24,25,26,27,28,29,30,31],zero,zero,zero,zero,zero,zmm0[37,38,39,40,41,42,43,44,45,46,47],zero,zero,zero,zero,zero,zmm0[53,54,55,56,57,58,59,60,61,62,63],zero,zero,zero,zero,zero
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_bsrli_epi128:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpsrldq {{.*#+}} zmm0 = zmm0[5,6,7,8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zmm0[21,22,23,24,25,26,27,28,29,30,31],zero,zero,zero,zero,zero,zmm0[37,38,39,40,41,42,43,44,45,46,47],zero,zero,zero,zero,zero,zmm0[53,54,55,56,57,58,59,60,61,62,63],zero,zero,zero,zero,zero
 ; X64-NEXT:    retq
   %arg0 = bitcast <8 x i64> %a0 to <64 x i8>
@@ -1657,12 +1657,12 @@ define <8 x i64> @test_mm512_bsrli_epi128(<8 x i64> %a0) {
 
 define <8 x i64> @test_mm512_unpackhi_epi8(<8 x i64> %a0, <8 x i64> %a1) {
 ; X32-LABEL: test_mm512_unpackhi_epi8:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    vpunpckhbw {{.*#+}} zmm0 = zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[12],zmm1[12],zmm0[13],zmm1[13],zmm0[14],zmm1[14],zmm0[15],zmm1[15],zmm0[24],zmm1[24],zmm0[25],zmm1[25],zmm0[26],zmm1[26],zmm0[27],zmm1[27],zmm0[28],zmm1[28],zmm0[29],zmm1[29],zmm0[30],zmm1[30],zmm0[31],zmm1[31],zmm0[40],zmm1[40],zmm0[41],zmm1[41],zmm0[42],zmm1[42],zmm0[43],zmm1[43],zmm0[44],zmm1[44],zmm0[45],zmm1[45],zmm0[46],zmm1[46],zmm0[47],zmm1[47],zmm0[56],zmm1[56],zmm0[57],zmm1[57],zmm0[58],zmm1[58],zmm0[59],zmm1[59],zmm0[60],zmm1[60],zmm0[61],zmm1[61],zmm0[62],zmm1[62],zmm0[63],zmm1[63]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_unpackhi_epi8:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpunpckhbw {{.*#+}} zmm0 = zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[12],zmm1[12],zmm0[13],zmm1[13],zmm0[14],zmm1[14],zmm0[15],zmm1[15],zmm0[24],zmm1[24],zmm0[25],zmm1[25],zmm0[26],zmm1[26],zmm0[27],zmm1[27],zmm0[28],zmm1[28],zmm0[29],zmm1[29],zmm0[30],zmm1[30],zmm0[31],zmm1[31],zmm0[40],zmm1[40],zmm0[41],zmm1[41],zmm0[42],zmm1[42],zmm0[43],zmm1[43],zmm0[44],zmm1[44],zmm0[45],zmm1[45],zmm0[46],zmm1[46],zmm0[47],zmm1[47],zmm0[56],zmm1[56],zmm0[57],zmm1[57],zmm0[58],zmm1[58],zmm0[59],zmm1[59],zmm0[60],zmm1[60],zmm0[61],zmm1[61],zmm0[62],zmm1[62],zmm0[63],zmm1[63]
 ; X64-NEXT:    retq
   %arg0 = bitcast <8 x i64> %a0 to <64 x i8>
@@ -1675,14 +1675,14 @@ define <8 x i64> @test_mm512_unpackhi_epi8(<8 x i64> %a0, <8 x i64> %a1) {
 ; TODO - improve support for i64 -> mmask64 on 32-bit targets
 define <8 x i64> @test_mm512_mask_unpackhi_epi8(<8 x i64> %a0, i64* %a1, <8 x i64> %a2, <8 x i64> %a3) {
 ; X32-LABEL: test_mm512_mask_unpackhi_epi8:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    kmovq (%eax), %k1
 ; X32-NEXT:    vpunpckhbw {{.*#+}} zmm0 {%k1} = zmm1[8],zmm2[8],zmm1[9],zmm2[9],zmm1[10],zmm2[10],zmm1[11],zmm2[11],zmm1[12],zmm2[12],zmm1[13],zmm2[13],zmm1[14],zmm2[14],zmm1[15],zmm2[15],zmm1[24],zmm2[24],zmm1[25],zmm2[25],zmm1[26],zmm2[26],zmm1[27],zmm2[27],zmm1[28],zmm2[28],zmm1[29],zmm2[29],zmm1[30],zmm2[30],zmm1[31],zmm2[31],zmm1[40],zmm2[40],zmm1[41],zmm2[41],zmm1[42],zmm2[42],zmm1[43],zmm2[43],zmm1[44],zmm2[44],zmm1[45],zmm2[45],zmm1[46],zmm2[46],zmm1[47],zmm2[47],zmm1[56],zmm2[56],zmm1[57],zmm2[57],zmm1[58],zmm2[58],zmm1[59],zmm2[59],zmm1[60],zmm2[60],zmm1[61],zmm2[61],zmm1[62],zmm2[62],zmm1[63],zmm2[63]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_mask_unpackhi_epi8:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    kmovq (%rdi), %k1
 ; X64-NEXT:    vpunpckhbw {{.*#+}} zmm0 {%k1} = zmm1[8],zmm2[8],zmm1[9],zmm2[9],zmm1[10],zmm2[10],zmm1[11],zmm2[11],zmm1[12],zmm2[12],zmm1[13],zmm2[13],zmm1[14],zmm2[14],zmm1[15],zmm2[15],zmm1[24],zmm2[24],zmm1[25],zmm2[25],zmm1[26],zmm2[26],zmm1[27],zmm2[27],zmm1[28],zmm2[28],zmm1[29],zmm2[29],zmm1[30],zmm2[30],zmm1[31],zmm2[31],zmm1[40],zmm2[40],zmm1[41],zmm2[41],zmm1[42],zmm2[42],zmm1[43],zmm2[43],zmm1[44],zmm2[44],zmm1[45],zmm2[45],zmm1[46],zmm2[46],zmm1[47],zmm2[47],zmm1[56],zmm2[56],zmm1[57],zmm2[57],zmm1[58],zmm2[58],zmm1[59],zmm2[59],zmm1[60],zmm2[60],zmm1[61],zmm2[61],zmm1[62],zmm2[62],zmm1[63],zmm2[63]
 ; X64-NEXT:    retq
@@ -1699,14 +1699,14 @@ define <8 x i64> @test_mm512_mask_unpackhi_epi8(<8 x i64> %a0, i64* %a1, <8 x i6
 
 define <8 x i64> @test_mm512_maskz_unpackhi_epi8(i64* %a0, <8 x i64> %a1, <8 x i64> %a2) {
 ; X32-LABEL: test_mm512_maskz_unpackhi_epi8:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    kmovq (%eax), %k1
 ; X32-NEXT:    vpunpckhbw {{.*#+}} zmm0 {%k1} {z} = zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[12],zmm1[12],zmm0[13],zmm1[13],zmm0[14],zmm1[14],zmm0[15],zmm1[15],zmm0[24],zmm1[24],zmm0[25],zmm1[25],zmm0[26],zmm1[26],zmm0[27],zmm1[27],zmm0[28],zmm1[28],zmm0[29],zmm1[29],zmm0[30],zmm1[30],zmm0[31],zmm1[31],zmm0[40],zmm1[40],zmm0[41],zmm1[41],zmm0[42],zmm1[42],zmm0[43],zmm1[43],zmm0[44],zmm1[44],zmm0[45],zmm1[45],zmm0[46],zmm1[46],zmm0[47],zmm1[47],zmm0[56],zmm1[56],zmm0[57],zmm1[57],zmm0[58],zmm1[58],zmm0[59],zmm1[59],zmm0[60],zmm1[60],zmm0[61],zmm1[61],zmm0[62],zmm1[62],zmm0[63],zmm1[63]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_maskz_unpackhi_epi8:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    kmovq (%rdi), %k1
 ; X64-NEXT:    vpunpckhbw {{.*#+}} zmm0 {%k1} {z} = zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[12],zmm1[12],zmm0[13],zmm1[13],zmm0[14],zmm1[14],zmm0[15],zmm1[15],zmm0[24],zmm1[24],zmm0[25],zmm1[25],zmm0[26],zmm1[26],zmm0[27],zmm1[27],zmm0[28],zmm1[28],zmm0[29],zmm1[29],zmm0[30],zmm1[30],zmm0[31],zmm1[31],zmm0[40],zmm1[40],zmm0[41],zmm1[41],zmm0[42],zmm1[42],zmm0[43],zmm1[43],zmm0[44],zmm1[44],zmm0[45],zmm1[45],zmm0[46],zmm1[46],zmm0[47],zmm1[47],zmm0[56],zmm1[56],zmm0[57],zmm1[57],zmm0[58],zmm1[58],zmm0[59],zmm1[59],zmm0[60],zmm1[60],zmm0[61],zmm1[61],zmm0[62],zmm1[62],zmm0[63],zmm1[63]
 ; X64-NEXT:    retq
@@ -1722,12 +1722,12 @@ define <8 x i64> @test_mm512_maskz_unpackhi_epi8(i64* %a0, <8 x i64> %a1, <8 x i
 
 define <8 x i64> @test_mm512_unpackhi_epi16(<8 x i64> %a0, <8 x i64> %a1) {
 ; X32-LABEL: test_mm512_unpackhi_epi16:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    vpunpckhwd {{.*#+}} zmm0 = zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[12],zmm1[12],zmm0[13],zmm1[13],zmm0[14],zmm1[14],zmm0[15],zmm1[15],zmm0[20],zmm1[20],zmm0[21],zmm1[21],zmm0[22],zmm1[22],zmm0[23],zmm1[23],zmm0[28],zmm1[28],zmm0[29],zmm1[29],zmm0[30],zmm1[30],zmm0[31],zmm1[31]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_unpackhi_epi16:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpunpckhwd {{.*#+}} zmm0 = zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[12],zmm1[12],zmm0[13],zmm1[13],zmm0[14],zmm1[14],zmm0[15],zmm1[15],zmm0[20],zmm1[20],zmm0[21],zmm1[21],zmm0[22],zmm1[22],zmm0[23],zmm1[23],zmm0[28],zmm1[28],zmm0[29],zmm1[29],zmm0[30],zmm1[30],zmm0[31],zmm1[31]
 ; X64-NEXT:    retq
   %arg0 = bitcast <8 x i64> %a0 to <32 x i16>
@@ -1739,13 +1739,13 @@ define <8 x i64> @test_mm512_unpackhi_epi16(<8 x i64> %a0, <8 x i64> %a1) {
 
 define <8 x i64> @test_mm512_mask_unpackhi_epi16(<8 x i64> %a0, i32 %a1, <8 x i64> %a2, <8 x i64> %a3) {
 ; X32-LABEL: test_mm512_mask_unpackhi_epi16:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
 ; X32-NEXT:    vpunpckhwd {{.*#+}} zmm0 {%k1} = zmm1[4],zmm2[4],zmm1[5],zmm2[5],zmm1[6],zmm2[6],zmm1[7],zmm2[7],zmm1[12],zmm2[12],zmm1[13],zmm2[13],zmm1[14],zmm2[14],zmm1[15],zmm2[15],zmm1[20],zmm2[20],zmm1[21],zmm2[21],zmm1[22],zmm2[22],zmm1[23],zmm2[23],zmm1[28],zmm2[28],zmm1[29],zmm2[29],zmm1[30],zmm2[30],zmm1[31],zmm2[31]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_mask_unpackhi_epi16:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    kmovd %edi, %k1
 ; X64-NEXT:    vpunpckhwd {{.*#+}} zmm0 {%k1} = zmm1[4],zmm2[4],zmm1[5],zmm2[5],zmm1[6],zmm2[6],zmm1[7],zmm2[7],zmm1[12],zmm2[12],zmm1[13],zmm2[13],zmm1[14],zmm2[14],zmm1[15],zmm2[15],zmm1[20],zmm2[20],zmm1[21],zmm2[21],zmm1[22],zmm2[22],zmm1[23],zmm2[23],zmm1[28],zmm2[28],zmm1[29],zmm2[29],zmm1[30],zmm2[30],zmm1[31],zmm2[31]
 ; X64-NEXT:    retq
@@ -1761,13 +1761,13 @@ define <8 x i64> @test_mm512_mask_unpackhi_epi16(<8 x i64> %a0, i32 %a1, <8 x i6
 
 define <8 x i64> @test_mm512_maskz_unpackhi_epi16(i32 %a0, <8 x i64> %a1, <8 x i64> %a2) {
 ; X32-LABEL: test_mm512_maskz_unpackhi_epi16:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
 ; X32-NEXT:    vpunpckhwd {{.*#+}} zmm0 {%k1} {z} = zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[12],zmm1[12],zmm0[13],zmm1[13],zmm0[14],zmm1[14],zmm0[15],zmm1[15],zmm0[20],zmm1[20],zmm0[21],zmm1[21],zmm0[22],zmm1[22],zmm0[23],zmm1[23],zmm0[28],zmm1[28],zmm0[29],zmm1[29],zmm0[30],zmm1[30],zmm0[31],zmm1[31]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_maskz_unpackhi_epi16:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    kmovd %edi, %k1
 ; X64-NEXT:    vpunpckhwd {{.*#+}} zmm0 {%k1} {z} = zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[12],zmm1[12],zmm0[13],zmm1[13],zmm0[14],zmm1[14],zmm0[15],zmm1[15],zmm0[20],zmm1[20],zmm0[21],zmm1[21],zmm0[22],zmm1[22],zmm0[23],zmm1[23],zmm0[28],zmm1[28],zmm0[29],zmm1[29],zmm0[30],zmm1[30],zmm0[31],zmm1[31]
 ; X64-NEXT:    retq
@@ -1782,12 +1782,12 @@ define <8 x i64> @test_mm512_maskz_unpackhi_epi16(i32 %a0, <8 x i64> %a1, <8 x i
 
 define <8 x i64> @test_mm512_unpacklo_epi8(<8 x i64> %a0, <8 x i64> %a1) {
 ; X32-LABEL: test_mm512_unpacklo_epi8:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    vpunpcklbw {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[16],zmm1[16],zmm0[17],zmm1[17],zmm0[18],zmm1[18],zmm0[19],zmm1[19],zmm0[20],zmm1[20],zmm0[21],zmm1[21],zmm0[22],zmm1[22],zmm0[23],zmm1[23],zmm0[32],zmm1[32],zmm0[33],zmm1[33],zmm0[34],zmm1[34],zmm0[35],zmm1[35],zmm0[36],zmm1[36],zmm0[37],zmm1[37],zmm0[38],zmm1[38],zmm0[39],zmm1[39],zmm0[48],zmm1[48],zmm0[49],zmm1[49],zmm0[50],zmm1[50],zmm0[51],zmm1[51],zmm0[52],zmm1[52],zmm0[53],zmm1[53],zmm0[54],zmm1[54],zmm0[55],zmm1[55]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_unpacklo_epi8:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpunpcklbw {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[16],zmm1[16],zmm0[17],zmm1[17],zmm0[18],zmm1[18],zmm0[19],zmm1[19],zmm0[20],zmm1[20],zmm0[21],zmm1[21],zmm0[22],zmm1[22],zmm0[23],zmm1[23],zmm0[32],zmm1[32],zmm0[33],zmm1[33],zmm0[34],zmm1[34],zmm0[35],zmm1[35],zmm0[36],zmm1[36],zmm0[37],zmm1[37],zmm0[38],zmm1[38],zmm0[39],zmm1[39],zmm0[48],zmm1[48],zmm0[49],zmm1[49],zmm0[50],zmm1[50],zmm0[51],zmm1[51],zmm0[52],zmm1[52],zmm0[53],zmm1[53],zmm0[54],zmm1[54],zmm0[55],zmm1[55]
 ; X64-NEXT:    retq
   %arg0 = bitcast <8 x i64> %a0 to <64 x i8>
@@ -1799,14 +1799,14 @@ define <8 x i64> @test_mm512_unpacklo_epi8(<8 x i64> %a0, <8 x i64> %a1) {
 
 define <8 x i64> @test_mm512_mask_unpacklo_epi8(<8 x i64> %a0, i64* %a1, <8 x i64> %a2, <8 x i64> %a3) {
 ; X32-LABEL: test_mm512_mask_unpacklo_epi8:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    kmovq (%eax), %k1
 ; X32-NEXT:    vpunpcklbw {{.*#+}} zmm0 {%k1} = zmm1[0],zmm2[0],zmm1[1],zmm2[1],zmm1[2],zmm2[2],zmm1[3],zmm2[3],zmm1[4],zmm2[4],zmm1[5],zmm2[5],zmm1[6],zmm2[6],zmm1[7],zmm2[7],zmm1[16],zmm2[16],zmm1[17],zmm2[17],zmm1[18],zmm2[18],zmm1[19],zmm2[19],zmm1[20],zmm2[20],zmm1[21],zmm2[21],zmm1[22],zmm2[22],zmm1[23],zmm2[23],zmm1[32],zmm2[32],zmm1[33],zmm2[33],zmm1[34],zmm2[34],zmm1[35],zmm2[35],zmm1[36],zmm2[36],zmm1[37],zmm2[37],zmm1[38],zmm2[38],zmm1[39],zmm2[39],zmm1[48],zmm2[48],zmm1[49],zmm2[49],zmm1[50],zmm2[50],zmm1[51],zmm2[51],zmm1[52],zmm2[52],zmm1[53],zmm2[53],zmm1[54],zmm2[54],zmm1[55],zmm2[55]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_mask_unpacklo_epi8:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    kmovq (%rdi), %k1
 ; X64-NEXT:    vpunpcklbw {{.*#+}} zmm0 {%k1} = zmm1[0],zmm2[0],zmm1[1],zmm2[1],zmm1[2],zmm2[2],zmm1[3],zmm2[3],zmm1[4],zmm2[4],zmm1[5],zmm2[5],zmm1[6],zmm2[6],zmm1[7],zmm2[7],zmm1[16],zmm2[16],zmm1[17],zmm2[17],zmm1[18],zmm2[18],zmm1[19],zmm2[19],zmm1[20],zmm2[20],zmm1[21],zmm2[21],zmm1[22],zmm2[22],zmm1[23],zmm2[23],zmm1[32],zmm2[32],zmm1[33],zmm2[33],zmm1[34],zmm2[34],zmm1[35],zmm2[35],zmm1[36],zmm2[36],zmm1[37],zmm2[37],zmm1[38],zmm2[38],zmm1[39],zmm2[39],zmm1[48],zmm2[48],zmm1[49],zmm2[49],zmm1[50],zmm2[50],zmm1[51],zmm2[51],zmm1[52],zmm2[52],zmm1[53],zmm2[53],zmm1[54],zmm2[54],zmm1[55],zmm2[55]
 ; X64-NEXT:    retq
@@ -1823,14 +1823,14 @@ define <8 x i64> @test_mm512_mask_unpacklo_epi8(<8 x i64> %a0, i64* %a1, <8 x i6
 
 define <8 x i64> @test_mm512_maskz_unpacklo_epi8(i64* %a0, <8 x i64> %a1, <8 x i64> %a2) {
 ; X32-LABEL: test_mm512_maskz_unpacklo_epi8:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    kmovq (%eax), %k1
 ; X32-NEXT:    vpunpcklbw {{.*#+}} zmm0 {%k1} {z} = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[16],zmm1[16],zmm0[17],zmm1[17],zmm0[18],zmm1[18],zmm0[19],zmm1[19],zmm0[20],zmm1[20],zmm0[21],zmm1[21],zmm0[22],zmm1[22],zmm0[23],zmm1[23],zmm0[32],zmm1[32],zmm0[33],zmm1[33],zmm0[34],zmm1[34],zmm0[35],zmm1[35],zmm0[36],zmm1[36],zmm0[37],zmm1[37],zmm0[38],zmm1[38],zmm0[39],zmm1[39],zmm0[48],zmm1[48],zmm0[49],zmm1[49],zmm0[50],zmm1[50],zmm0[51],zmm1[51],zmm0[52],zmm1[52],zmm0[53],zmm1[53],zmm0[54],zmm1[54],zmm0[55],zmm1[55]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_maskz_unpacklo_epi8:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    kmovq (%rdi), %k1
 ; X64-NEXT:    vpunpcklbw {{.*#+}} zmm0 {%k1} {z} = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[16],zmm1[16],zmm0[17],zmm1[17],zmm0[18],zmm1[18],zmm0[19],zmm1[19],zmm0[20],zmm1[20],zmm0[21],zmm1[21],zmm0[22],zmm1[22],zmm0[23],zmm1[23],zmm0[32],zmm1[32],zmm0[33],zmm1[33],zmm0[34],zmm1[34],zmm0[35],zmm1[35],zmm0[36],zmm1[36],zmm0[37],zmm1[37],zmm0[38],zmm1[38],zmm0[39],zmm1[39],zmm0[48],zmm1[48],zmm0[49],zmm1[49],zmm0[50],zmm1[50],zmm0[51],zmm1[51],zmm0[52],zmm1[52],zmm0[53],zmm1[53],zmm0[54],zmm1[54],zmm0[55],zmm1[55]
 ; X64-NEXT:    retq
@@ -1846,12 +1846,12 @@ define <8 x i64> @test_mm512_maskz_unpacklo_epi8(i64* %a0, <8 x i64> %a1, <8 x i
 
 define <8 x i64> @test_mm512_unpacklo_epi16(<8 x i64> %a0, <8 x i64> %a1) {
 ; X32-LABEL: test_mm512_unpacklo_epi16:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    vpunpcklwd {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[16],zmm1[16],zmm0[17],zmm1[17],zmm0[18],zmm1[18],zmm0[19],zmm1[19],zmm0[24],zmm1[24],zmm0[25],zmm1[25],zmm0[26],zmm1[26],zmm0[27],zmm1[27]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_unpacklo_epi16:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpunpcklwd {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[16],zmm1[16],zmm0[17],zmm1[17],zmm0[18],zmm1[18],zmm0[19],zmm1[19],zmm0[24],zmm1[24],zmm0[25],zmm1[25],zmm0[26],zmm1[26],zmm0[27],zmm1[27]
 ; X64-NEXT:    retq
   %arg0 = bitcast <8 x i64> %a0 to <32 x i16>
@@ -1863,13 +1863,13 @@ define <8 x i64> @test_mm512_unpacklo_epi16(<8 x i64> %a0, <8 x i64> %a1) {
 
 define <8 x i64> @test_mm512_mask_unpacklo_epi16(<8 x i64> %a0, i32 %a1, <8 x i64> %a2, <8 x i64> %a3) {
 ; X32-LABEL: test_mm512_mask_unpacklo_epi16:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
 ; X32-NEXT:    vpunpcklwd {{.*#+}} zmm0 {%k1} = zmm1[0],zmm2[0],zmm1[1],zmm2[1],zmm1[2],zmm2[2],zmm1[3],zmm2[3],zmm1[8],zmm2[8],zmm1[9],zmm2[9],zmm1[10],zmm2[10],zmm1[11],zmm2[11],zmm1[16],zmm2[16],zmm1[17],zmm2[17],zmm1[18],zmm2[18],zmm1[19],zmm2[19],zmm1[24],zmm2[24],zmm1[25],zmm2[25],zmm1[26],zmm2[26],zmm1[27],zmm2[27]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_mask_unpacklo_epi16:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    kmovd %edi, %k1
 ; X64-NEXT:    vpunpcklwd {{.*#+}} zmm0 {%k1} = zmm1[0],zmm2[0],zmm1[1],zmm2[1],zmm1[2],zmm2[2],zmm1[3],zmm2[3],zmm1[8],zmm2[8],zmm1[9],zmm2[9],zmm1[10],zmm2[10],zmm1[11],zmm2[11],zmm1[16],zmm2[16],zmm1[17],zmm2[17],zmm1[18],zmm2[18],zmm1[19],zmm2[19],zmm1[24],zmm2[24],zmm1[25],zmm2[25],zmm1[26],zmm2[26],zmm1[27],zmm2[27]
 ; X64-NEXT:    retq
@@ -1885,13 +1885,13 @@ define <8 x i64> @test_mm512_mask_unpacklo_epi16(<8 x i64> %a0, i32 %a1, <8 x i6
 
 define <8 x i64> @test_mm512_maskz_unpacklo_epi16(i32 %a0, <8 x i64> %a1, <8 x i64> %a2) {
 ; X32-LABEL: test_mm512_maskz_unpacklo_epi16:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
 ; X32-NEXT:    vpunpcklwd {{.*#+}} zmm0 {%k1} {z} = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[16],zmm1[16],zmm0[17],zmm1[17],zmm0[18],zmm1[18],zmm0[19],zmm1[19],zmm0[24],zmm1[24],zmm0[25],zmm1[25],zmm0[26],zmm1[26],zmm0[27],zmm1[27]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_maskz_unpacklo_epi16:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    kmovd %edi, %k1
 ; X64-NEXT:    vpunpcklwd {{.*#+}} zmm0 {%k1} {z} = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[16],zmm1[16],zmm0[17],zmm1[17],zmm0[18],zmm1[18],zmm0[19],zmm1[19],zmm0[24],zmm1[24],zmm0[25],zmm1[25],zmm0[26],zmm1[26],zmm0[27],zmm1[27]
 ; X64-NEXT:    retq
@@ -1906,7 +1906,7 @@ define <8 x i64> @test_mm512_maskz_unpacklo_epi16(i32 %a0, <8 x i64> %a1, <8 x i
 
 define i64 @test_mm512_test_epi8_mask(<8 x i64> %__A, <8 x i64> %__B) {
 ; X32-LABEL: test_mm512_test_epi8_mask:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    pushl %ebp
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    .cfi_offset %ebp, -8
@@ -1924,7 +1924,7 @@ define i64 @test_mm512_test_epi8_mask(<8 x i64> %__A, <8 x i64> %__B) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_test_epi8_mask:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    vptestmb %zmm0, %zmm1, %k0
 ; X64-NEXT:    kmovq %k0, %rax
 ; X64-NEXT:    vzeroupper
@@ -1939,7 +1939,7 @@ entry:
 
 define i64 @test_mm512_mask_test_epi8_mask(i64 %__U, <8 x i64> %__A, <8 x i64> %__B) {
 ; X32-LABEL: test_mm512_mask_test_epi8_mask:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    pushl %ebp
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    .cfi_offset %ebp, -8
@@ -2665,7 +2665,7 @@ define i64 @test_mm512_mask_test_epi8_mask(i64 %__U, <8 x i64> %__A, <8 x i64> %
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_mask_test_epi8_mask:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovq %rdi, %k1
 ; X64-NEXT:    vptestmb %zmm0, %zmm1, %k0 {%k1}
 ; X64-NEXT:    kmovq %k0, %rax
@@ -2683,14 +2683,14 @@ entry:
 
 define i32 @test_mm512_test_epi16_mask(<8 x i64> %__A, <8 x i64> %__B) {
 ; X32-LABEL: test_mm512_test_epi16_mask:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    vptestmw %zmm0, %zmm1, %k0
 ; X32-NEXT:    kmovd %k0, %eax
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_test_epi16_mask:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    vptestmw %zmm0, %zmm1, %k0
 ; X64-NEXT:    kmovd %k0, %eax
 ; X64-NEXT:    vzeroupper
@@ -2705,7 +2705,7 @@ entry:
 
 define i32 @test_mm512_mask_test_epi16_mask(i32 %__U, <8 x i64> %__A, <8 x i64> %__B) {
 ; X32-LABEL: test_mm512_mask_test_epi16_mask:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
 ; X32-NEXT:    vptestmw %zmm0, %zmm1, %k0 {%k1}
 ; X32-NEXT:    kmovd %k0, %eax
@@ -2713,7 +2713,7 @@ define i32 @test_mm512_mask_test_epi16_mask(i32 %__U, <8 x i64> %__A, <8 x i64> 
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_mask_test_epi16_mask:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1
 ; X64-NEXT:    vptestmw %zmm0, %zmm1, %k0 {%k1}
 ; X64-NEXT:    kmovd %k0, %eax
@@ -2731,7 +2731,7 @@ entry:
 
 define i64 @test_mm512_testn_epi8_mask(<8 x i64> %__A, <8 x i64> %__B) {
 ; X32-LABEL: test_mm512_testn_epi8_mask:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    pushl %ebp
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    .cfi_offset %ebp, -8
@@ -2749,7 +2749,7 @@ define i64 @test_mm512_testn_epi8_mask(<8 x i64> %__A, <8 x i64> %__B) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_testn_epi8_mask:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    vptestnmb %zmm0, %zmm1, %k0
 ; X64-NEXT:    kmovq %k0, %rax
 ; X64-NEXT:    vzeroupper
@@ -2764,7 +2764,7 @@ entry:
 
 define i64 @test_mm512_mask_testn_epi8_mask(i64 %__U, <8 x i64> %__A, <8 x i64> %__B) {
 ; X32-LABEL: test_mm512_mask_testn_epi8_mask:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    pushl %ebp
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    .cfi_offset %ebp, -8
@@ -3490,7 +3490,7 @@ define i64 @test_mm512_mask_testn_epi8_mask(i64 %__U, <8 x i64> %__A, <8 x i64> 
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_mask_testn_epi8_mask:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovq %rdi, %k1
 ; X64-NEXT:    vptestnmb %zmm0, %zmm1, %k0 {%k1}
 ; X64-NEXT:    kmovq %k0, %rax
@@ -3508,14 +3508,14 @@ entry:
 
 define i32 @test_mm512_testn_epi16_mask(<8 x i64> %__A, <8 x i64> %__B) {
 ; X32-LABEL: test_mm512_testn_epi16_mask:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    vptestnmw %zmm0, %zmm1, %k0
 ; X32-NEXT:    kmovd %k0, %eax
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_testn_epi16_mask:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    vptestnmw %zmm0, %zmm1, %k0
 ; X64-NEXT:    kmovd %k0, %eax
 ; X64-NEXT:    vzeroupper
@@ -3530,7 +3530,7 @@ entry:
 
 define i32 @test_mm512_mask_testn_epi16_mask(i32 %__U, <8 x i64> %__A, <8 x i64> %__B) {
 ; X32-LABEL: test_mm512_mask_testn_epi16_mask:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
 ; X32-NEXT:    vptestnmw %zmm0, %zmm1, %k0 {%k1}
 ; X32-NEXT:    kmovd %k0, %eax
@@ -3538,7 +3538,7 @@ define i32 @test_mm512_mask_testn_epi16_mask(i32 %__U, <8 x i64> %__A, <8 x i64>
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_mask_testn_epi16_mask:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1
 ; X64-NEXT:    vptestnmw %zmm0, %zmm1, %k0 {%k1}
 ; X64-NEXT:    kmovd %k0, %eax

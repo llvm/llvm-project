@@ -5,7 +5,7 @@
 
 define <1 x half> @ir_fadd_v1f16(<1 x half> %arg0, <1 x half> %arg1) nounwind {
 ; X86-LABEL: ir_fadd_v1f16:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    subl $28, %esp
 ; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    movss %xmm0, (%esp)
@@ -31,7 +31,7 @@ define <1 x half> @ir_fadd_v1f16(<1 x half> %arg0, <1 x half> %arg1) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: ir_fadd_v1f16:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    movss %xmm0, {{[0-9]+}}(%rsp) # 4-byte Spill
 ; X64-NEXT:    movaps %xmm1, %xmm0
@@ -49,7 +49,7 @@ define <1 x half> @ir_fadd_v1f16(<1 x half> %arg0, <1 x half> %arg1) nounwind {
 ; X64-NEXT:    retq
 ;
 ; F16C-LABEL: ir_fadd_v1f16:
-; F16C:       # BB#0:
+; F16C:       # %bb.0:
 ; F16C-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
 ; F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
@@ -62,7 +62,7 @@ define <1 x half> @ir_fadd_v1f16(<1 x half> %arg0, <1 x half> %arg1) nounwind {
 
 define <2 x half> @ir_fadd_v2f16(<2 x half> %arg0, <2 x half> %arg1) nounwind {
 ; X86-LABEL: ir_fadd_v2f16:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    subl $64, %esp
 ; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    movss %xmm0, (%esp)
@@ -110,7 +110,7 @@ define <2 x half> @ir_fadd_v2f16(<2 x half> %arg0, <2 x half> %arg1) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: ir_fadd_v2f16:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    subq $24, %rsp
 ; X64-NEXT:    movss %xmm2, {{[0-9]+}}(%rsp) # 4-byte Spill
 ; X64-NEXT:    movss %xmm1, {{[0-9]+}}(%rsp) # 4-byte Spill
@@ -145,7 +145,7 @@ define <2 x half> @ir_fadd_v2f16(<2 x half> %arg0, <2 x half> %arg1) nounwind {
 ; X64-NEXT:    retq
 ;
 ; F16C-LABEL: ir_fadd_v2f16:
-; F16C:       # BB#0:
+; F16C:       # %bb.0:
 ; F16C-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
 ; F16C-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; F16C-NEXT:    vcvtps2ph $4, %xmm1, %xmm1

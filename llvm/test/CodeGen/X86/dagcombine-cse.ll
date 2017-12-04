@@ -4,7 +4,7 @@
 
 define i32 @t(i8* %ref_frame_ptr, i32 %ref_frame_stride, i32 %idxX, i32 %idxY) nounwind  {
 ; X32-LABEL: t:
-; X32:       ## BB#0: ## %entry
+; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    imull {{[0-9]+}}(%esp), %ecx
@@ -18,7 +18,7 @@ define i32 @t(i8* %ref_frame_ptr, i32 %ref_frame_stride, i32 %idxX, i32 %idxY) n
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t:
-; X64:       ## BB#0: ## %entry
+; X64:       ## %bb.0: ## %entry
 ; X64-NEXT:    ## kill: %edx<def> %edx<kill> %rdx<def>
 ; X64-NEXT:    ## kill: %esi<def> %esi<kill> %rsi<def>
 ; X64-NEXT:    imull %ecx, %esi

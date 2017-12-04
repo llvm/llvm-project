@@ -6,7 +6,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define float @pr26522(float %pat) #0 {
 ; CHECK-LABEL: pr26522:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   ret float %pat

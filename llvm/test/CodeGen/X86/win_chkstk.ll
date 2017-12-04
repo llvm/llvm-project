@@ -30,19 +30,19 @@ entry:
 ; allocation.
 define i32 @main128() nounwind {
 entry:
-; WIN_X32:       # BB#0:
+; WIN_X32:       # %bb.0:
 ; WIN_X32-NOT:   calll __chkstk
 ; WIN_X32:       ret
 
-; WIN_X64:       # BB#0:
+; WIN_X64:       # %bb.0:
 ; WIN_X64-NOT:   callq __chkstk
 ; WIN_X64:       ret
 
-; MINGW_X64:     # BB#0:
+; MINGW_X64:     # %bb.0:
 ; MINGW_X64-NOT: callq ___chkstk_ms
 ; MINGW_X64:     ret
 
-; LINUX:         # BB#0:
+; LINUX:         # %bb.0:
 ; LINUX-NOT:     call __chkstk
 ; LINUX:         ret
   %array128 = alloca [128 x i8], align 16         ; <[128 x i8]*> [#uses=0]

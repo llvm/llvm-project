@@ -12,9 +12,9 @@
 // 1. For BBs that are targets of CBZ/CBNZ instructions, we know the value of
 //    the CBZ/CBNZ source register is zero on the taken/not-taken path. For
 //    instance, the copy instruction in the code below can be removed because
-//    the CBZW jumps to BB#2 when w0 is zero.
+//    the CBZW jumps to %bb.2 when w0 is zero.
 //
-//  BB#1:
+//  %bb.1:
 //    cbz w0, .LBB0_2
 //  .LBB0_2:
 //    mov w0, wzr  ; <-- redundant
@@ -22,11 +22,11 @@
 // 2. If the flag setting instruction defines a register other than WZR/XZR, we
 //    can remove a zero copy in some cases.
 //
-//  BB#0:
+//  %bb.0:
 //    subs w0, w1, w2
 //    str w0, [x1]
 //    b.ne .LBB0_2
-//  BB#1:
+//  %bb.1:
 //    mov w0, wzr  ; <-- redundant
 //    str w0, [x2]
 //  .LBB0_2
@@ -35,7 +35,7 @@
 //    constant (i.e., ADDS[W|X]ri, SUBS[W|X]ri), we can remove a mov immediate
 //    in some cases.
 //
-//  BB#0:
+//  %bb.0:
 //    subs xzr, x0, #1
 //    b.eq .LBB0_1
 //  .LBB0_1:

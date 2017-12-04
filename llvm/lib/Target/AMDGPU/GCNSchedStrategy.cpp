@@ -531,9 +531,8 @@ void GCNScheduleDAGMILive::finalizeSchedule() {
       }
 
       DEBUG(dbgs() << "********** MI Scheduling **********\n");
-      DEBUG(dbgs() << MF.getName()
-            << ":BB#" << MBB->getNumber() << " " << MBB->getName()
-            << "\n  From: " << *begin() << "    To: ";
+      DEBUG(dbgs() << MF.getName() << ":" << printMBBReference(*MBB) << " "
+                   << MBB->getName() << "\n  From: " << *begin() << "    To: ";
             if (RegionEnd != MBB->end()) dbgs() << *RegionEnd;
             else dbgs() << "End";
             dbgs() << " RegionInstrs: " << NumRegionInstrs << '\n');

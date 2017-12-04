@@ -4,7 +4,7 @@
 ; This test crashed during type legalization of SETCC result type.
 define <3 x i8 > @foo(<3 x i8>%x, <3 x i8>%a, <3 x i8>%b) {
 ; CHECK-LABEL: foo:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovd %edi, %xmm0
 ; CHECK-NEXT:    vpinsrd $1, %esi, %xmm0, %xmm0
 ; CHECK-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0

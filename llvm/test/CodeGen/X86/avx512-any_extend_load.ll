@@ -5,14 +5,14 @@
 
 define void @any_extend_load_v8i64(<8 x i8> * %ptr) {
 ; KNL-LABEL: any_extend_load_v8i64:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovzxbq {{.*#+}} zmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero,mem[2],zero,zero,zero,zero,zero,zero,zero,mem[3],zero,zero,zero,zero,zero,zero,zero,mem[4],zero,zero,zero,zero,zero,zero,zero,mem[5],zero,zero,zero,zero,zero,zero,zero,mem[6],zero,zero,zero,zero,zero,zero,zero,mem[7],zero,zero,zero,zero,zero,zero,zero
 ; KNL-NEXT:    vpaddq {{.*}}(%rip){1to8}, %zmm0, %zmm0
 ; KNL-NEXT:    vpmovqb %zmm0, (%rdi)
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: any_extend_load_v8i64:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpmovzxbq {{.*#+}} zmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero,mem[2],zero,zero,zero,zero,zero,zero,zero,mem[3],zero,zero,zero,zero,zero,zero,zero,mem[4],zero,zero,zero,zero,zero,zero,zero,mem[5],zero,zero,zero,zero,zero,zero,zero,mem[6],zero,zero,zero,zero,zero,zero,zero,mem[7],zero,zero,zero,zero,zero,zero,zero
 ; SKX-NEXT:    vpaddq {{.*}}(%rip){1to8}, %zmm0, %zmm0
 ; SKX-NEXT:    vpmovqb %zmm0, (%rdi)
@@ -29,7 +29,7 @@ define void @any_extend_load_v8i64(<8 x i8> * %ptr) {
 
 define void @any_extend_load_v8i32(<8 x i8> * %ptr) {
 ; KNL-LABEL: any_extend_load_v8i32:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovzxbw {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
 ; KNL-NEXT:    vpaddw {{.*}}(%rip), %xmm0, %xmm0
 ; KNL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
@@ -37,7 +37,7 @@ define void @any_extend_load_v8i32(<8 x i8> * %ptr) {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: any_extend_load_v8i32:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpmovzxbd {{.*#+}} ymm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero
 ; SKX-NEXT:    vpaddd {{.*}}(%rip){1to8}, %ymm0, %ymm0
 ; SKX-NEXT:    vpmovdb %ymm0, (%rdi)
@@ -54,7 +54,7 @@ define void @any_extend_load_v8i32(<8 x i8> * %ptr) {
 
 define void @any_extend_load_v8i16(<8 x i8> * %ptr) {
 ; KNL-LABEL: any_extend_load_v8i16:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovzxbw {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
 ; KNL-NEXT:    vpaddb {{.*}}(%rip), %xmm0, %xmm0
 ; KNL-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
@@ -62,7 +62,7 @@ define void @any_extend_load_v8i16(<8 x i8> * %ptr) {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: any_extend_load_v8i16:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpmovzxbw {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
 ; SKX-NEXT:    vpaddw {{.*}}(%rip), %xmm0, %xmm0
 ; SKX-NEXT:    vpmovwb %xmm0, (%rdi)

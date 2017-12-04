@@ -8,14 +8,14 @@
 
 define double @test1(double %A) {
 ; CHECK-LABEL: test1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1,1,3]
 ; CHECK-NEXT:    paddd {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-WIDE-LABEL: test1:
-; CHECK-WIDE:       # BB#0:
+; CHECK-WIDE:       # %bb.0:
 ; CHECK-WIDE-NEXT:    paddd {{.*}}(%rip), %xmm0
 ; CHECK-WIDE-NEXT:    retq
   %1 = bitcast double %A to <2 x i32>
@@ -26,12 +26,12 @@ define double @test1(double %A) {
 
 define double @test2(double %A, double %B) {
 ; CHECK-LABEL: test2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    paddd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-WIDE-LABEL: test2:
-; CHECK-WIDE:       # BB#0:
+; CHECK-WIDE:       # %bb.0:
 ; CHECK-WIDE-NEXT:    paddd %xmm1, %xmm0
 ; CHECK-WIDE-NEXT:    retq
   %1 = bitcast double %A to <2 x i32>
@@ -43,14 +43,14 @@ define double @test2(double %A, double %B) {
 
 define i64 @test3(i64 %A) {
 ; CHECK-LABEL: test3:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %xmm0
 ; CHECK-NEXT:    addps {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    movq %xmm0, %rax
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-WIDE-LABEL: test3:
-; CHECK-WIDE:       # BB#0:
+; CHECK-WIDE:       # %bb.0:
 ; CHECK-WIDE-NEXT:    movq %rdi, %xmm0
 ; CHECK-WIDE-NEXT:    addps {{.*}}(%rip), %xmm0
 ; CHECK-WIDE-NEXT:    movq %xmm0, %rax
@@ -66,7 +66,7 @@ define i64 @test3(i64 %A) {
 
 define i64 @test4(i64 %A) {
 ; CHECK-LABEL: test4:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
 ; CHECK-NEXT:    paddd {{.*}}(%rip), %xmm0
@@ -75,7 +75,7 @@ define i64 @test4(i64 %A) {
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-WIDE-LABEL: test4:
-; CHECK-WIDE:       # BB#0:
+; CHECK-WIDE:       # %bb.0:
 ; CHECK-WIDE-NEXT:    movq %rdi, %xmm0
 ; CHECK-WIDE-NEXT:    paddd {{.*}}(%rip), %xmm0
 ; CHECK-WIDE-NEXT:    movq %xmm0, %rax
@@ -88,12 +88,12 @@ define i64 @test4(i64 %A) {
 
 define double @test5(double %A) {
 ; CHECK-LABEL: test5:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addps {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-WIDE-LABEL: test5:
-; CHECK-WIDE:       # BB#0:
+; CHECK-WIDE:       # %bb.0:
 ; CHECK-WIDE-NEXT:    addps {{.*}}(%rip), %xmm0
 ; CHECK-WIDE-NEXT:    retq
   %1 = bitcast double %A to <2 x float>
@@ -107,14 +107,14 @@ define double @test5(double %A) {
 
 define double @test6(double %A) {
 ; CHECK-LABEL: test6:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
 ; CHECK-NEXT:    paddw {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-WIDE-LABEL: test6:
-; CHECK-WIDE:       # BB#0:
+; CHECK-WIDE:       # %bb.0:
 ; CHECK-WIDE-NEXT:    paddw {{.*}}(%rip), %xmm0
 ; CHECK-WIDE-NEXT:    retq
   %1 = bitcast double %A to <4 x i16>
@@ -125,12 +125,12 @@ define double @test6(double %A) {
 
 define double @test7(double %A, double %B) {
 ; CHECK-LABEL: test7:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    paddw %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-WIDE-LABEL: test7:
-; CHECK-WIDE:       # BB#0:
+; CHECK-WIDE:       # %bb.0:
 ; CHECK-WIDE-NEXT:    paddw %xmm1, %xmm0
 ; CHECK-WIDE-NEXT:    retq
   %1 = bitcast double %A to <4 x i16>
@@ -146,14 +146,14 @@ define double @test7(double %A, double %B) {
 
 define double @test8(double %A) {
 ; CHECK-LABEL: test8:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; CHECK-NEXT:    paddb {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-WIDE-LABEL: test8:
-; CHECK-WIDE:       # BB#0:
+; CHECK-WIDE:       # %bb.0:
 ; CHECK-WIDE-NEXT:    paddb {{.*}}(%rip), %xmm0
 ; CHECK-WIDE-NEXT:    retq
   %1 = bitcast double %A to <8 x i8>
@@ -164,12 +164,12 @@ define double @test8(double %A) {
 
 define double @test9(double %A, double %B) {
 ; CHECK-LABEL: test9:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    paddb %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-WIDE-LABEL: test9:
-; CHECK-WIDE:       # BB#0:
+; CHECK-WIDE:       # %bb.0:
 ; CHECK-WIDE-NEXT:    paddb %xmm1, %xmm0
 ; CHECK-WIDE-NEXT:    retq
   %1 = bitcast double %A to <8 x i8>

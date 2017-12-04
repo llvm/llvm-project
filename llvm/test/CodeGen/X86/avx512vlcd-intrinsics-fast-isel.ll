@@ -3,7 +3,7 @@
 
 define <2 x i64> @test_mm_broadcastmb_epi64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test_mm_broadcastmb_epi64:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %k0
 ; CHECK-NEXT:    vpbroadcastmb2q %k0, %xmm0
 ; CHECK-NEXT:    retq
@@ -21,7 +21,7 @@ entry:
 
 define <4 x i64> @test_mm256_broadcastmb_epi64(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK-LABEL: test_mm256_broadcastmb_epi64:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm0, %k0
 ; CHECK-NEXT:    vpbroadcastmb2q %k0, %ymm0
 ; CHECK-NEXT:    retq
@@ -37,7 +37,7 @@ entry:
 
 define <2 x i64> @test_mm_broadcastmw_epi32(<8 x i64> %a, <8 x i64> %b) {
 ; CHECK-LABEL: test_mm_broadcastmw_epi32:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
 ; CHECK-NEXT:    vpbroadcastmw2d %k0, %xmm0
 ; CHECK-NEXT:    vzeroupper
@@ -56,7 +56,7 @@ entry:
 
 define <4 x i64> @test_mm256_broadcastmw_epi32(<8 x i64> %a, <8 x i64> %b) {
 ; CHECK-LABEL: test_mm256_broadcastmw_epi32:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
 ; CHECK-NEXT:    vpbroadcastmw2d %k0, %ymm0
 ; CHECK-NEXT:    retq

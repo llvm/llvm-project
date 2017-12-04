@@ -4,12 +4,12 @@
 
 define <8 x i16> @blend_packusdw(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2, <4 x i32> %a3) {
 ; SSE41-LABEL: blend_packusdw:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    packusdw %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: blend_packusdw:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpackusdw %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %p0 = call <8 x i16> @llvm.x86.sse41.packusdw(<4 x i32> %a0, <4 x i32> %a1)
@@ -20,12 +20,12 @@ define <8 x i16> @blend_packusdw(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2, <4
 
 define <16 x i8> @blend_packuswb(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> %a2, <8 x i16> %a3) {
 ; SSE41-LABEL: blend_packuswb:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    packuswb %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: blend_packuswb:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %p0 = call <16 x i8> @llvm.x86.sse2.packuswb.128(<8 x i16> %a0, <8 x i16> %a1)
@@ -36,14 +36,14 @@ define <16 x i8> @blend_packuswb(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> %a2, <8
 
 define <8 x i16> @blend_packusdw_packuswb(<4 x i32> %a0, <4 x i32> %a1, <8 x i16> %a2, <8 x i16> %a3) {
 ; SSE41-LABEL: blend_packusdw_packuswb:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    packusdw %xmm1, %xmm0
 ; SSE41-NEXT:    packuswb %xmm3, %xmm2
 ; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: blend_packusdw_packuswb:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpackuswb %xmm3, %xmm2, %xmm1
 ; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]

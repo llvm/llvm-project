@@ -4,7 +4,7 @@
 
 define i64 @foo(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: foo:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    leal (%rdi,%rsi), %eax
 ; CHECK-NEXT:    retq
   %c = add i64 %a, %b

@@ -6,12 +6,12 @@
 
 define void @test() {
 ; X32-LABEL: test:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    mfence
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    mfence
 ; X64-NEXT:    retq
   fence seq_cst
@@ -20,14 +20,14 @@ define void @test() {
 
 define i32 @fence(i32* %ptr) {
 ; X32-LABEL: fence:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    mfence
 ; X32-NEXT:    movl (%eax), %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: fence:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    mfence
 ; X64-NEXT:    movl (%rdi), %eax
 ; X64-NEXT:    retq

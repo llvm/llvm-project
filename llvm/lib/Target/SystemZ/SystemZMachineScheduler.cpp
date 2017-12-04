@@ -74,7 +74,7 @@ advanceTo(MachineBasicBlock::iterator NextBegin) {
 void SystemZPostRASchedStrategy::enterMBB(MachineBasicBlock *NextMBB) {
   assert ((SchedStates.find(NextMBB) == SchedStates.end()) &&
           "Entering MBB twice?");
-  DEBUG (dbgs() << "+++ Entering MBB#" << NextMBB->getNumber());
+  DEBUG(dbgs() << "+++ Entering " << printMBBReference(*NextMBB));
 
   MBB = NextMBB;
   /// Create a HazardRec for MBB, save it in SchedStates and set HazardRec to
@@ -93,8 +93,8 @@ void SystemZPostRASchedStrategy::enterMBB(MachineBasicBlock *NextMBB) {
       SchedStates.find(SinglePredMBB) == SchedStates.end())
     return;
 
-  DEBUG (dbgs() << "+++ Continued scheduling from MBB#"
-         << SinglePredMBB->getNumber() << "\n";);
+  DEBUG(dbgs() << "+++ Continued scheduling from "
+               << printMBBReference(*SinglePredMBB) << "\n";);
 
   HazardRec->copyState(SchedStates[SinglePredMBB]);
 
@@ -113,7 +113,7 @@ void SystemZPostRASchedStrategy::enterMBB(MachineBasicBlock *NextMBB) {
 }
 
 void SystemZPostRASchedStrategy::leaveMBB() {
-  DEBUG (dbgs() << "+++ Leaving MBB#" << MBB->getNumber() << "\n";);
+  DEBUG(dbgs() << "+++ Leaving " << printMBBReference(*MBB) << "\n";);
 
   // Advance to first terminator. The successor block will handle terminators
   // dependent on CFG layout (T/NT branch etc).

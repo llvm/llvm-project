@@ -77,7 +77,7 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(unsigned Context,
   ParsedAttributesWithRange attrs(AttrFactory);
   SourceLocation attrLoc;
   if (getLangOpts().CPlusPlus11 && isCXX11AttributeSpecifier()) {
-    Diag(Tok.getLocation(), getLangOpts().CPlusPlus1z
+    Diag(Tok.getLocation(), getLangOpts().CPlusPlus17
                                 ? diag::warn_cxx14_compat_ns_enum_attribute
                                 : diag::ext_ns_enum_attribute)
       << 0 /*namespace*/;
@@ -142,7 +142,7 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(unsigned Context,
     // Normal namespace definition, not a nested-namespace-definition.
   } else if (InlineLoc.isValid()) {
     Diag(InlineLoc, diag::err_inline_nested_namespace_definition);
-  } else if (getLangOpts().CPlusPlus1z) {
+  } else if (getLangOpts().CPlusPlus17) {
     Diag(ExtraNamespaceLoc[0],
          diag::warn_cxx14_compat_nested_namespace_definition);
   } else {
@@ -605,7 +605,7 @@ bool Parser::ParseUsingDeclarator(unsigned Context, UsingDeclarator &D) {
   }
 
   if (TryConsumeToken(tok::ellipsis, D.EllipsisLoc))
-    Diag(Tok.getLocation(), getLangOpts().CPlusPlus1z ?
+    Diag(Tok.getLocation(), getLangOpts().CPlusPlus17 ?
          diag::warn_cxx17_compat_using_declaration_pack :
          diag::ext_using_declaration_pack);
 
@@ -723,7 +723,7 @@ Parser::ParseUsingDeclaration(unsigned Context,
   }
 
   if (DeclsInGroup.size() > 1)
-    Diag(Tok.getLocation(), getLangOpts().CPlusPlus1z ?
+    Diag(Tok.getLocation(), getLangOpts().CPlusPlus17 ?
          diag::warn_cxx17_compat_multi_using_declaration :
          diag::ext_multi_using_declaration);
 
@@ -851,10 +851,10 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd){
 
   ExprResult AssertMessage;
   if (Tok.is(tok::r_paren)) {
-    Diag(Tok, getLangOpts().CPlusPlus1z
+    Diag(Tok, getLangOpts().CPlusPlus17
                   ? diag::warn_cxx14_compat_static_assert_no_message
                   : diag::ext_static_assert_no_message)
-      << (getLangOpts().CPlusPlus1z
+      << (getLangOpts().CPlusPlus17
               ? FixItHint()
               : FixItHint::CreateInsertion(Tok.getLocation(), ", \"\""));
   } else {
@@ -3625,7 +3625,7 @@ static void diagnoseDynamicExceptionSpecification(
   if (P.getLangOpts().CPlusPlus11) {
     const char *Replacement = IsNoexcept ? "noexcept" : "noexcept(false)";
     P.Diag(Range.getBegin(),
-           P.getLangOpts().CPlusPlus1z && !IsNoexcept
+           P.getLangOpts().CPlusPlus17 && !IsNoexcept
                ? diag::ext_dynamic_exception_spec
                : diag::warn_exception_spec_deprecated)
         << Range;
@@ -3956,7 +3956,7 @@ void Parser::ParseCXX11AttributeSpecifier(ParsedAttributes &attrs,
   SourceLocation CommonScopeLoc;
   IdentifierInfo *CommonScopeName = nullptr;
   if (Tok.is(tok::kw_using)) {
-    Diag(Tok.getLocation(), getLangOpts().CPlusPlus1z
+    Diag(Tok.getLocation(), getLangOpts().CPlusPlus17
                                 ? diag::warn_cxx14_compat_using_attribute_ns
                                 : diag::ext_using_attribute_ns);
     ConsumeToken();

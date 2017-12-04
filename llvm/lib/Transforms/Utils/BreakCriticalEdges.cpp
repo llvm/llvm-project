@@ -16,6 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/BreakCriticalEdges.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -28,6 +29,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "break-crit-edges"
@@ -289,4 +292,140 @@ llvm::SplitCriticalEdge(TerminatorInst *TI, unsigned SuccNum,
   }
 
   return NewBB;
+}
+
+// Return the unique indirectbr predecessor of a block. This may return null
+// even if such a predecessor exists, if it's not useful for splitting.
+// If a predecessor is found, OtherPreds will contain all other (non-indirectbr)
+// predecessors of BB.
+static BasicBlock *
+findIBRPredecessor(BasicBlock *BB, SmallVectorImpl<BasicBlock *> &OtherPreds) {
+  // If the block doesn't have any PHIs, we don't care about it, since there's
+  // no point in splitting it.
+  PHINode *PN = dyn_cast<PHINode>(BB->begin());
+  if (!PN)
+    return nullptr;
+
+  // Verify we have exactly one IBR predecessor.
+  // Conservatively bail out if one of the other predecessors is not a "regular"
+  // terminator (that is, not a switch or a br).
+  BasicBlock *IBB = nullptr;
+  for (unsigned Pred = 0, E = PN->getNumIncomingValues(); Pred != E; ++Pred) {
+    BasicBlock *PredBB = PN->getIncomingBlock(Pred);
+    TerminatorInst *PredTerm = PredBB->getTerminator();
+    switch (PredTerm->getOpcode()) {
+    case Instruction::IndirectBr:
+      if (IBB)
+        return nullptr;
+      IBB = PredBB;
+      break;
+    case Instruction::Br:
+    case Instruction::Switch:
+      OtherPreds.push_back(PredBB);
+      continue;
+    default:
+      return nullptr;
+    }
+  }
+
+  return IBB;
+}
+
+bool llvm::SplitIndirectBrCriticalEdges(Function &F) {
+  // Check whether the function has any indirectbrs, and collect which blocks
+  // they may jump to. Since most functions don't have indirect branches,
+  // this lowers the common case's overhead to O(Blocks) instead of O(Edges).
+  SmallSetVector<BasicBlock *, 16> Targets;
+  for (auto &BB : F) {
+    auto *IBI = dyn_cast<IndirectBrInst>(BB.getTerminator());
+    if (!IBI)
+      continue;
+
+    for (unsigned Succ = 0, E = IBI->getNumSuccessors(); Succ != E; ++Succ)
+      Targets.insert(IBI->getSuccessor(Succ));
+  }
+
+  if (Targets.empty())
+    return false;
+
+  bool Changed = false;
+  for (BasicBlock *Target : Targets) {
+    SmallVector<BasicBlock *, 16> OtherPreds;
+    BasicBlock *IBRPred = findIBRPredecessor(Target, OtherPreds);
+    // If we did not found an indirectbr, or the indirectbr is the only
+    // incoming edge, this isn't the kind of edge we're looking for.
+    if (!IBRPred || OtherPreds.empty())
+      continue;
+
+    // Don't even think about ehpads/landingpads.
+    Instruction *FirstNonPHI = Target->getFirstNonPHI();
+    if (FirstNonPHI->isEHPad() || Target->isLandingPad())
+      continue;
+
+    BasicBlock *BodyBlock = Target->splitBasicBlock(FirstNonPHI, ".split");
+    // It's possible Target was its own successor through an indirectbr.
+    // In this case, the indirectbr now comes from BodyBlock.
+    if (IBRPred == Target)
+      IBRPred = BodyBlock;
+
+    // At this point Target only has PHIs, and BodyBlock has the rest of the
+    // block's body. Create a copy of Target that will be used by the "direct"
+    // preds.
+    ValueToValueMapTy VMap;
+    BasicBlock *DirectSucc = CloneBasicBlock(Target, VMap, ".clone", &F);
+
+    for (BasicBlock *Pred : OtherPreds) {
+      // If the target is a loop to itself, then the terminator of the split
+      // block needs to be updated.
+      if (Pred == Target)
+        BodyBlock->getTerminator()->replaceUsesOfWith(Target, DirectSucc);
+      else
+        Pred->getTerminator()->replaceUsesOfWith(Target, DirectSucc);
+    }
+
+    // Ok, now fix up the PHIs. We know the two blocks only have PHIs, and that
+    // they are clones, so the number of PHIs are the same.
+    // (a) Remove the edge coming from IBRPred from the "Direct" PHI
+    // (b) Leave that as the only edge in the "Indirect" PHI.
+    // (c) Merge the two in the body block.
+    BasicBlock::iterator Indirect = Target->begin(),
+                         End = Target->getFirstNonPHI()->getIterator();
+    BasicBlock::iterator Direct = DirectSucc->begin();
+    BasicBlock::iterator MergeInsert = BodyBlock->getFirstInsertionPt();
+
+    assert(&*End == Target->getTerminator() &&
+           "Block was expected to only contain PHIs");
+
+    while (Indirect != End) {
+      PHINode *DirPHI = cast<PHINode>(Direct);
+      PHINode *IndPHI = cast<PHINode>(Indirect);
+
+      // Now, clean up - the direct block shouldn't get the indirect value,
+      // and vice versa.
+      DirPHI->removeIncomingValue(IBRPred);
+      Direct++;
+
+      // Advance the pointer here, to avoid invalidation issues when the old
+      // PHI is erased.
+      Indirect++;
+
+      PHINode *NewIndPHI = PHINode::Create(IndPHI->getType(), 1, "ind", IndPHI);
+      NewIndPHI->addIncoming(IndPHI->getIncomingValueForBlock(IBRPred),
+                             IBRPred);
+
+      // Create a PHI in the body block, to merge the direct and indirect
+      // predecessors.
+      PHINode *MergePHI =
+          PHINode::Create(IndPHI->getType(), 2, "merge", &*MergeInsert);
+      MergePHI->addIncoming(NewIndPHI, Target);
+      MergePHI->addIncoming(DirPHI, DirectSucc);
+
+      IndPHI->replaceAllUsesWith(MergePHI);
+      IndPHI->eraseFromParent();
+    }
+
+    Changed = true;
+  }
+
+  return Changed;
 }

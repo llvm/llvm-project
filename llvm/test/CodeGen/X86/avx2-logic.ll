@@ -4,14 +4,14 @@
 
 define <4 x i64> @vpandn(<4 x i64> %a, <4 x i64> %b) nounwind uwtable readnone ssp {
 ; X32-LABEL: vpandn:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
 ; X32-NEXT:    vpsubq %ymm1, %ymm0, %ymm1
 ; X32-NEXT:    vpandn %ymm0, %ymm1, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: vpandn:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
 ; X64-NEXT:    vpsubq %ymm1, %ymm0, %ymm1
 ; X64-NEXT:    vpandn %ymm0, %ymm1, %ymm0
@@ -26,14 +26,14 @@ entry:
 
 define <4 x i64> @vpand(<4 x i64> %a, <4 x i64> %b) nounwind uwtable readnone ssp {
 ; X32-LABEL: vpand:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
 ; X32-NEXT:    vpsubq %ymm2, %ymm0, %ymm0
 ; X32-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: vpand:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
 ; X64-NEXT:    vpsubq %ymm2, %ymm0, %ymm0
 ; X64-NEXT:    vpand %ymm1, %ymm0, %ymm0
@@ -47,14 +47,14 @@ entry:
 
 define <4 x i64> @vpor(<4 x i64> %a, <4 x i64> %b) nounwind uwtable readnone ssp {
 ; X32-LABEL: vpor:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
 ; X32-NEXT:    vpsubq %ymm2, %ymm0, %ymm0
 ; X32-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: vpor:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
 ; X64-NEXT:    vpsubq %ymm2, %ymm0, %ymm0
 ; X64-NEXT:    vpor %ymm1, %ymm0, %ymm0
@@ -68,14 +68,14 @@ entry:
 
 define <4 x i64> @vpxor(<4 x i64> %a, <4 x i64> %b) nounwind uwtable readnone ssp {
 ; X32-LABEL: vpxor:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
 ; X32-NEXT:    vpsubq %ymm2, %ymm0, %ymm0
 ; X32-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: vpxor:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
 ; X64-NEXT:    vpsubq %ymm2, %ymm0, %ymm0
 ; X64-NEXT:    vpxor %ymm1, %ymm0, %ymm0
@@ -89,14 +89,14 @@ entry:
 
 define <32 x i8> @vpblendvb(<32 x i1> %cond, <32 x i8> %x, <32 x i8> %y) {
 ; X32-LABEL: vpblendvb:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    vpsllw $7, %ymm0, %ymm0
 ; X32-NEXT:    vpand {{\.LCPI.*}}, %ymm0, %ymm0
 ; X32-NEXT:    vpblendvb %ymm0, %ymm1, %ymm2, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: vpblendvb:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpsllw $7, %ymm0, %ymm0
 ; X64-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    vpblendvb %ymm0, %ymm1, %ymm2, %ymm0
@@ -107,12 +107,12 @@ define <32 x i8> @vpblendvb(<32 x i1> %cond, <32 x i8> %x, <32 x i8> %y) {
 
 define <8 x i32> @allOnes() nounwind {
 ; X32-LABEL: allOnes:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: allOnes:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
 ; X64-NEXT:    retq
         ret <8 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
@@ -120,12 +120,12 @@ define <8 x i32> @allOnes() nounwind {
 
 define <16 x i16> @allOnes2() nounwind {
 ; X32-LABEL: allOnes2:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: allOnes2:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
 ; X64-NEXT:    retq
         ret <16 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>

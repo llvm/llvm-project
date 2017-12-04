@@ -4,14 +4,14 @@
 
 define <4 x float> @test(float %a, float %b, float %c) nounwind {
 ; X86-LABEL: test:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,0],xmm1[0,1]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; X64-NEXT:    xorps %xmm2, %xmm2
 ; X64-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]

@@ -3,7 +3,7 @@
 
 define <16 x i32> @test() {
 ; CHECK-LABEL: test:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 entry:

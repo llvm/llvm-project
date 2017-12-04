@@ -22,7 +22,7 @@
 ///    %2 <vgpr> = VECTOR_INST
 ///    %3 <vsrc> = COPY %2 <vgpr>
 ///  BB2:
-///    %4 <vsrc> = PHI %1 <vsrc>, <BB#0>, %3 <vrsc>, <BB#1>
+///    %4 <vsrc> = PHI %1 <vsrc>, <%bb.0>, %3 <vrsc>, <%bb.1>
 ///    %5 <vgpr> = VECTOR_INST %4 <vsrc>
 ///
 ///
@@ -37,7 +37,7 @@
 ///   %2 <vgpr> = VECTOR_INST
 ///   %3 <vsrc> = COPY %2 <vgpr>
 /// BB2:
-///   %4 <sgpr> = PHI %0 <sgpr>, <BB#0>, %3 <vsrc>, <BB#1>
+///   %4 <sgpr> = PHI %0 <sgpr>, <%bb.0>, %3 <vsrc>, <%bb.1>
 ///   %5 <vgpr> = VECTOR_INST %4 <sgpr>
 ///
 /// Now that the result of the PHI instruction is an SGPR, the register
@@ -52,7 +52,7 @@
 ///   %2 <vgpr> = VECTOR_INST
 ///   %3 <sgpr> = COPY %2 <vgpr>
 /// BB2:
-///   %4 <sgpr> = PHI %0 <sgpr>, <BB#0>, %3 <sgpr>, <BB#1>
+///   %4 <sgpr> = PHI %0 <sgpr>, <%bb.0>, %3 <sgpr>, <%bb.1>
 ///   %5 <vgpr> = VECTOR_INST %4 <sgpr>
 ///
 /// Now this code contains an illegal copy from a VGPR to an SGPR.
@@ -515,8 +515,9 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
 
         if (MDT.dominates(MI1, MI2)) {
           if (!intereferes(MI2, MI1)) {
-            DEBUG(dbgs() << "Erasing from BB#" << MI2->getParent()->getNumber()
-                         << " " << *MI2);
+            DEBUG(dbgs() << "Erasing from "
+                         << printMBBReference(*MI2->getParent()) << " "
+                         << *MI2);
             MI2->eraseFromParent();
             Defs.erase(I2++);
             Changed = true;
@@ -524,8 +525,9 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
           }
         } else if (MDT.dominates(MI2, MI1)) {
           if (!intereferes(MI1, MI2)) {
-            DEBUG(dbgs() << "Erasing from BB#" << MI1->getParent()->getNumber()
-                         << " " << *MI1);
+            DEBUG(dbgs() << "Erasing from "
+                         << printMBBReference(*MI1->getParent()) << " "
+                         << *MI1);
             MI1->eraseFromParent();
             Defs.erase(I1++);
             Changed = true;
@@ -541,10 +543,11 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
 
           MachineBasicBlock::iterator I = MBB->getFirstNonPHI();
           if (!intereferes(MI1, I) && !intereferes(MI2, I)) {
-            DEBUG(dbgs() << "Erasing from BB#" << MI1->getParent()->getNumber()
-                         << " " << *MI1 << "and moving from BB#"
-                         << MI2->getParent()->getNumber() << " to BB#"
-                         << I->getParent()->getNumber() << " " << *MI2);
+            DEBUG(dbgs() << "Erasing from "
+                         << printMBBReference(*MI1->getParent()) << " " << *MI1
+                         << "and moving from "
+                         << printMBBReference(*MI2->getParent()) << " to "
+                         << printMBBReference(*I->getParent()) << " " << *MI2);
             I->getParent()->splice(I, MI2->getParent(), MI2);
             MI1->eraseFromParent();
             Defs.erase(I1++);

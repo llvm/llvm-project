@@ -24,7 +24,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() #1
 ; GCN-NEXT: s_cbranch_scc1 [[BB3:BB[0-9]+_[0-9]+]]
 
 
-; GCN-NEXT: ; BB#1: ; %bb2
+; GCN-NEXT: ; %bb.1: ; %bb2
 ; GCN-NEXT: ;;#ASMSTART
 ; GCN-NEXT: v_nop_e64
 ; GCN-NEXT: v_nop_e64
@@ -275,7 +275,7 @@ bb4:
 }
 
 ; GCN-LABEL: {{^}}uniform_unconditional_min_long_backward_branch:
-; GCN-NEXT: ; BB#0: ; %entry
+; GCN-NEXT: ; %bb.0: ; %entry
 
 ; GCN-NEXT: [[LOOP:BB[0-9]_[0-9]+]]: ; %loop
 ; GCN-NEXT: ; =>This Inner Loop Header: Depth=1
@@ -311,7 +311,7 @@ loop:
 ; branch from %bb0 to %bb2
 
 ; GCN-LABEL: {{^}}expand_requires_expand:
-; GCN-NEXT: ; BB#0: ; %bb0
+; GCN-NEXT: ; %bb.0: ; %bb0
 ; GCN: s_load_dword
 ; GCN: s_cmp_lt_i32 s{{[0-9]+}}, 0{{$}}
 ; GCN-NEXT: s_cbranch_scc0 [[BB1:BB[0-9]+_[0-9]+]]
@@ -398,7 +398,7 @@ bb3:
 ; GCN: s_cmp_lg_u32
 ; GCN: s_cbranch_scc1 [[ENDIF]]
 
-; GCN-NEXT: ; BB#2: ; %if_uniform
+; GCN-NEXT: ; %bb.2: ; %if_uniform
 ; GCN: buffer_store_dword
 
 ; GCN-NEXT: [[ENDIF]]: ; %endif

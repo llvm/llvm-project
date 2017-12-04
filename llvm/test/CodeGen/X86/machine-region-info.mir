@@ -53,12 +53,12 @@ body:             |
 ...
 
 # CHECK: Region tree:
-# CHECK-NEXT: [0] BB#0 => <Function Return>
-# CHECK-NEXT:   [1] BB#0 => BB#11
-# CHECK-NEXT:     [2] BB#7 => BB#9
-# CHECK-NEXT:     [2] BB#9 => BB#11
-# CHECK-NEXT:     [2] BB#1 => BB#11
-# CHECK-NEXT:       [3] BB#2 => BB#5
-# CHECK-NEXT:         [4] BB#3 => BB#5
-# CHECK-NEXT:       [3] BB#5 => BB#11
+# CHECK-NEXT: [0] %bb.0 => <Function Return>
+# CHECK-NEXT:   [1] %bb.0 => %bb.11
+# CHECK-NEXT:     [2] %bb.7 => %bb.9
+# CHECK-NEXT:     [2] %bb.9 => %bb.11
+# CHECK-NEXT:     [2] %bb.1 => %bb.11
+# CHECK-NEXT:       [3] %bb.2 => %bb.5
+# CHECK-NEXT:         [4] %bb.3 => %bb.5
+# CHECK-NEXT:       [3] %bb.5 => %bb.11
 # CHECK-NEXT: End region tree

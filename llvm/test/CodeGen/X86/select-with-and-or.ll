@@ -3,7 +3,7 @@
 
 define <4 x i32> @test1(<4 x float> %a, <4 x float> %b, <4 x i32> %c) {
 ; CHECK-LABEL: test1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcmpnleps %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    vandps %xmm2, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
@@ -14,7 +14,7 @@ define <4 x i32> @test1(<4 x float> %a, <4 x float> %b, <4 x i32> %c) {
 
 define <4 x i32> @test2(<4 x float> %a, <4 x float> %b, <4 x i32> %c) {
 ; CHECK-LABEL: test2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcmpnleps %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    vorps %xmm2, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
@@ -25,7 +25,7 @@ define <4 x i32> @test2(<4 x float> %a, <4 x float> %b, <4 x i32> %c) {
 
 define <4 x i32> @test3(<4 x float> %a, <4 x float> %b, <4 x i32> %c) {
 ; CHECK-LABEL: test3:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcmpleps %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    vandps %xmm2, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
@@ -36,7 +36,7 @@ define <4 x i32> @test3(<4 x float> %a, <4 x float> %b, <4 x i32> %c) {
 
 define <4 x i32> @test4(<4 x float> %a, <4 x float> %b, <4 x i32> %c) {
 ; CHECK-LABEL: test4:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcmpleps %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    vorps %xmm2, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
@@ -47,7 +47,7 @@ define <4 x i32> @test4(<4 x float> %a, <4 x float> %b, <4 x i32> %c) {
 
 define <4 x i32> @test5(<4 x float> %a, <4 x float> %b, <4 x i32> %c) {
 ; CHECK-LABEL: test5:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcmpnleps %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %f = fcmp ult <4 x float> %a, %b
@@ -57,7 +57,7 @@ define <4 x i32> @test5(<4 x float> %a, <4 x float> %b, <4 x i32> %c) {
 
 define <4 x i32> @test6(<4 x float> %a, <4 x float> %b, <4 x i32> %c) {
 ; CHECK-LABEL: test6:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcmpleps %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %not.f = fcmp oge <4 x float> %a, %b
@@ -67,7 +67,7 @@ define <4 x i32> @test6(<4 x float> %a, <4 x float> %b, <4 x i32> %c) {
 
 define <4 x i32> @test7(<4 x float> %a, <4 x float> %b, <4 x i32>* %p) {
 ; CHECK-LABEL: test7:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcmpnleps %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    vandps (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
@@ -81,7 +81,7 @@ define <4 x i32> @test7(<4 x float> %a, <4 x float> %b, <4 x i32>* %p) {
 
 define <2 x double> @test1f(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: test1f:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcmpltpd %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    vandpd %xmm2, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
@@ -92,7 +92,7 @@ define <2 x double> @test1f(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 
 define <2 x double> @test2f(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: test2f:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcmplepd %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    vorpd %xmm2, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
@@ -103,7 +103,7 @@ define <2 x double> @test2f(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 
 define <2 x double> @test3f(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: test3f:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcmpnltpd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vandpd %xmm2, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
@@ -114,7 +114,7 @@ define <2 x double> @test3f(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 
 define <2 x double> @test4f(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: test4f:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcmpnlepd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vorpd %xmm2, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
@@ -125,7 +125,7 @@ define <2 x double> @test4f(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 
 define <2 x double> @test5f(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: test5f:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcmpnlepd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %f = fcmp ugt <2 x double> %a, %b
@@ -135,7 +135,7 @@ define <2 x double> @test5f(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 
 define <2 x double> @test6f(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: test6f:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcmpltpd %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %f = fcmp ule <2 x double> %a, %b
@@ -145,7 +145,7 @@ define <2 x double> @test6f(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 
 define <2 x double> @test7f(<2 x double> %a, <2 x double> %b, <2 x double>* %p) {
 ; CHECK-LABEL: test7f:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcmpeqpd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vandpd (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq

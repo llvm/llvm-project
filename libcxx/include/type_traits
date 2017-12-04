@@ -4652,6 +4652,11 @@ long long __convert_to_integral(long long __val) { return __val; }
 inline _LIBCPP_INLINE_VISIBILITY
 unsigned long long __convert_to_integral(unsigned long long __val) {return __val; }
 
+template<typename _Fp>
+inline _LIBCPP_INLINE_VISIBILITY
+typename enable_if<is_floating_point<_Fp>::value, long long>::type
+ __convert_to_integral(_Fp __val) { return __val; }
+
 #ifndef _LIBCPP_HAS_NO_INT128
 inline _LIBCPP_INLINE_VISIBILITY
 __int128_t __convert_to_integral(__int128_t __val) { return __val; }

@@ -2822,7 +2822,7 @@ static bool isSameEntity(NamedDecl *X, NamedDecl *Y) {
       // FIXME: Do we need to check for C++14 deduced return types here too?
       auto *XFPT = FuncX->getType()->getAs<FunctionProtoType>();
       auto *YFPT = FuncY->getType()->getAs<FunctionProtoType>();
-      if (C.getLangOpts().CPlusPlus1z && XFPT && YFPT &&
+      if (C.getLangOpts().CPlusPlus17 && XFPT && YFPT &&
           (isUnresolvedExceptionSpec(XFPT->getExceptionSpecType()) ||
            isUnresolvedExceptionSpec(YFPT->getExceptionSpecType())) &&
           C.hasSameFunctionTypeIgnoringExceptionSpec(FuncX->getType(),

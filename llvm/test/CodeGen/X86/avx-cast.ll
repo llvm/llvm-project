@@ -8,7 +8,7 @@
 
 define <8 x float> @castA(<4 x float> %m) nounwind uwtable readnone ssp {
 ; AVX-LABEL: castA:
-; AVX:       ## BB#0:
+; AVX:       ## %bb.0:
 ; AVX-NEXT:    ## kill: %xmm0<def> %xmm0<kill> %ymm0<def>
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
@@ -19,7 +19,7 @@ define <8 x float> @castA(<4 x float> %m) nounwind uwtable readnone ssp {
 
 define <4 x double> @castB(<2 x double> %m) nounwind uwtable readnone ssp {
 ; AVX-LABEL: castB:
-; AVX:       ## BB#0:
+; AVX:       ## %bb.0:
 ; AVX-NEXT:    ## kill: %xmm0<def> %xmm0<kill> %ymm0<def>
 ; AVX-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3]
@@ -32,14 +32,14 @@ define <4 x double> @castB(<2 x double> %m) nounwind uwtable readnone ssp {
 
 define <4 x i64> @castC(<2 x i64> %m) nounwind uwtable readnone ssp {
 ; AVX1-LABEL: castC:
-; AVX1:       ## BB#0:
+; AVX1:       ## %bb.0:
 ; AVX1-NEXT:    ## kill: %xmm0<def> %xmm0<kill> %ymm0<def>
 ; AVX1-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: castC:
-; AVX2:       ## BB#0:
+; AVX2:       ## %bb.0:
 ; AVX2-NEXT:    ## kill: %xmm0<def> %xmm0<kill> %ymm0<def>
 ; AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
@@ -53,7 +53,7 @@ define <4 x i64> @castC(<2 x i64> %m) nounwind uwtable readnone ssp {
 
 define <4 x float> @castD(<8 x float> %m) nounwind uwtable readnone ssp {
 ; AVX-LABEL: castD:
-; AVX:       ## BB#0:
+; AVX:       ## %bb.0:
 ; AVX-NEXT:    ## kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
@@ -63,7 +63,7 @@ define <4 x float> @castD(<8 x float> %m) nounwind uwtable readnone ssp {
 
 define <2 x i64> @castE(<4 x i64> %m) nounwind uwtable readnone ssp {
 ; AVX-LABEL: castE:
-; AVX:       ## BB#0:
+; AVX:       ## %bb.0:
 ; AVX-NEXT:    ## kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
@@ -73,7 +73,7 @@ define <2 x i64> @castE(<4 x i64> %m) nounwind uwtable readnone ssp {
 
 define <2 x double> @castF(<4 x double> %m) nounwind uwtable readnone ssp {
 ; AVX-LABEL: castF:
-; AVX:       ## BB#0:
+; AVX:       ## %bb.0:
 ; AVX-NEXT:    ## kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq

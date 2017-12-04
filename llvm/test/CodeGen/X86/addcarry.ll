@@ -3,7 +3,7 @@
 
 define void @a(i64* nocapture %s, i64* nocapture %t, i64 %a, i64 %b, i64 %c) nounwind {
 ; CHECK-LABEL: a:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addq %rcx, %rdx
 ; CHECK-NEXT:    adcq $0, %r8
 ; CHECK-NEXT:    movq %r8, (%rdi)
@@ -26,7 +26,7 @@ entry:
 
 define void @b(i32* nocapture %r, i64 %a, i64 %b, i32 %c) nounwind {
 ; CHECK-LABEL: b:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addq %rdx, %rsi
 ; CHECK-NEXT:    adcl $0, %ecx
 ; CHECK-NEXT:    movl %ecx, (%rdi)
@@ -45,7 +45,7 @@ entry:
 
 define void @c(i16* nocapture %r, i64 %a, i64 %b, i16 %c) nounwind {
 ; CHECK-LABEL: c:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addq %rdx, %rsi
 ; CHECK-NEXT:    adcw $0, %cx
 ; CHECK-NEXT:    movw %cx, (%rdi)
@@ -64,7 +64,7 @@ entry:
 
 define void @d(i8* nocapture %r, i64 %a, i64 %b, i8 %c) nounwind {
 ; CHECK-LABEL: d:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addq %rdx, %rsi
 ; CHECK-NEXT:    adcb $0, %cl
 ; CHECK-NEXT:    movb %cl, (%rdi)
@@ -83,7 +83,7 @@ entry:
 
 define i8 @e(i32* nocapture %a, i32 %b) nounwind {
 ; CHECK-LABEL: e:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; CHECK-NEXT:    movl (%rdi), %ecx
 ; CHECK-NEXT:    leal (%rsi,%rcx), %edx
@@ -109,7 +109,7 @@ define i8 @e(i32* nocapture %a, i32 %b) nounwind {
 
 define %scalar @pr31719(%scalar* nocapture readonly %this, %scalar %arg.b) {
 ; CHECK-LABEL: pr31719:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addq (%rsi), %rdx
 ; CHECK-NEXT:    adcq 8(%rsi), %rcx
 ; CHECK-NEXT:    adcq 16(%rsi), %r8
@@ -168,7 +168,7 @@ entry:
 
 define void @muladd(%accumulator* nocapture %this, i64 %arg.a, i64 %arg.b) {
 ; CHECK-LABEL: muladd:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rdx, %rax
 ; CHECK-NEXT:    mulq %rsi
 ; CHECK-NEXT:    addq %rax, (%rdi)
@@ -205,7 +205,7 @@ entry:
 
 define i64 @shiftadd(i64 %a, i64 %b, i64 %c, i64 %d) {
 ; CHECK-LABEL: shiftadd:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addq %rsi, %rdi
 ; CHECK-NEXT:    adcq %rcx, %rdx
 ; CHECK-NEXT:    movq %rdx, %rax
@@ -225,7 +225,7 @@ entry:
 
 define %S @readd(%S* nocapture readonly %this, %S %arg.b) {
 ; CHECK-LABEL: readd:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addq (%rsi), %rdx
 ; CHECK-NEXT:    movq 8(%rsi), %r10
 ; CHECK-NEXT:    adcq $0, %r10

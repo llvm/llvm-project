@@ -6,7 +6,7 @@
 ; CHECK-NOFMA-LABEL: fmafunc
 define <16 x float> @fmafunc(<16 x float> %a, <16 x float> %b, <16 x float> %c) {
 ; CHECK-LABEL: fmafunc:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushl %ebp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    .cfi_offset %ebp, -8
@@ -21,7 +21,7 @@ define <16 x float> @fmafunc(<16 x float> %a, <16 x float> %b, <16 x float> %c) 
 ; CHECK-NEXT:    retl
 ;
 ; CHECK-NOFMA-LABEL: fmafunc:
-; CHECK-NOFMA:       ## BB#0:
+; CHECK-NOFMA:       ## %bb.0:
 ; CHECK-NOFMA-NEXT:    pushl %ebp
 ; CHECK-NOFMA-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NOFMA-NEXT:    .cfi_offset %ebp, -8

@@ -947,7 +947,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
        PrevCaptureLoc = C->Loc, ++C) {
     if (C->Kind == LCK_This || C->Kind == LCK_StarThis) {
       if (C->Kind == LCK_StarThis) 
-        Diag(C->Loc, !getLangOpts().CPlusPlus1z
+        Diag(C->Loc, !getLangOpts().CPlusPlus17
                              ? diag::ext_star_this_lambda_capture_cxx17
                              : diag::warn_cxx14_compat_star_this_lambda_capture);
 
@@ -1288,7 +1288,7 @@ static void addFunctionPointerConversion(Sema &S,
                                 ConvTy, 
                                 ConvTSI,
                                 /*isInline=*/true, /*isExplicit=*/false,
-                                /*isConstexpr=*/S.getLangOpts().CPlusPlus1z, 
+                                /*isConstexpr=*/S.getLangOpts().CPlusPlus17, 
                                 CallOperator->getBody()->getLocEnd());
   Conversion->setAccess(AS_public);
   Conversion->setImplicit(true);
@@ -1608,7 +1608,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
   // If the lambda expression's call operator is not explicitly marked constexpr
   // and we are not in a dependent context, analyze the call operator to infer
   // its constexpr-ness, suppressing diagnostics while doing so.
-  if (getLangOpts().CPlusPlus1z && !CallOperator->isInvalidDecl() &&
+  if (getLangOpts().CPlusPlus17 && !CallOperator->isInvalidDecl() &&
       !CallOperator->isConstexpr() &&
       !isa<CoroutineBodyStmt>(CallOperator->getBody()) &&
       !Class->getDeclContext()->isDependentContext()) {

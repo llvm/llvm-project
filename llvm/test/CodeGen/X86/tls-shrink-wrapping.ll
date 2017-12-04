@@ -37,7 +37,7 @@ if.end:                                           ; preds = %if.then, %entry
 
 ; CHECK: g:                                      # @g
 ; CHECK-NEXT:         .cfi_startproc
-; CHECK-NEXT: # BB#0:                                 # %entry
+; CHECK-NEXT: # %bb.0:                                 # %entry
 ; CHECK-NEXT:         pushq   %rbp
 ; CHECK-NEXT:         .cfi_def_cfa_offset 16
 ; CHECK-NEXT:         .cfi_offset %rbp, -16

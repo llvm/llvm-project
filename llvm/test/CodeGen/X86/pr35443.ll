@@ -7,7 +7,7 @@
 ; Function Attrs: norecurse nounwind uwtable
 define void @main() {
 ; CHECK-LABEL: main:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movzbl ac+{{.*}}(%rip), %eax
 ; CHECK-NEXT:    vmovd %eax, %xmm0
 ; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1

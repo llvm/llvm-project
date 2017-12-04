@@ -51,7 +51,7 @@ entry:
 ; CHECK-LABEL: foo3:
 ; CHECK:          js
 ; CHECK-NOT: js
-; CHECK-LABEL: # BB#1:
+; CHECK-LABEL: # %bb.1:
 ; CHECK-DAG:      movapd  %xmm2, %xmm1
 ; CHECK-DAG:      movapd  %xmm2, %xmm0
 ; CHECK-LABEL:.LBB2_2:
@@ -81,7 +81,7 @@ entry:
 ; CHECK-LABEL: foo4:
 ; CHECK:          js
 ; CHECK-NOT: js
-; CHECK-LABEL: # BB#1:
+; CHECK-LABEL: # %bb.1:
 ; CHECK-DAG:      movapd  %xmm2, %xmm1
 ; CHECK-DAG:      movapd  %xmm2, %xmm0
 ; CHECK-LABEL:.LBB3_2:

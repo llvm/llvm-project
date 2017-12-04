@@ -3,7 +3,7 @@
 
 define zeroext i1 @all_bits_clear(i32 %P, i32 %Q)  {
 ; CHECK-LABEL: all_bits_clear:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    or 3, 3, 4
 ; CHECK-NEXT:    cntlzw 3, 3
 ; CHECK-NEXT:    srwi 3, 3, 5
@@ -16,7 +16,7 @@ define zeroext i1 @all_bits_clear(i32 %P, i32 %Q)  {
 
 define zeroext i1 @all_sign_bits_clear(i32 %P, i32 %Q)  {
 ; CHECK-LABEL: all_sign_bits_clear:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    or 3, 3, 4
 ; CHECK-NEXT:    nor 3, 3, 3
 ; CHECK-NEXT:    srwi 3, 3, 31
@@ -29,7 +29,7 @@ define zeroext i1 @all_sign_bits_clear(i32 %P, i32 %Q)  {
 
 define zeroext i1 @all_bits_set(i32 %P, i32 %Q)  {
 ; CHECK-LABEL: all_bits_set:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li 5, -1
 ; CHECK-NEXT:    and 3, 3, 4
 ; CHECK-NEXT:    xor 3, 3, 5
@@ -44,7 +44,7 @@ define zeroext i1 @all_bits_set(i32 %P, i32 %Q)  {
 
 define zeroext i1 @all_sign_bits_set(i32 %P, i32 %Q)  {
 ; CHECK-LABEL: all_sign_bits_set:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    and 3, 3, 4
 ; CHECK-NEXT:    srwi 3, 3, 31
 ; CHECK-NEXT:    blr
@@ -56,7 +56,7 @@ define zeroext i1 @all_sign_bits_set(i32 %P, i32 %Q)  {
 
 define zeroext i1 @any_bits_set(i32 %P, i32 %Q)  {
 ; CHECK-LABEL: any_bits_set:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    or 3, 3, 4
 ; CHECK-NEXT:    cntlzw 3, 3
 ; CHECK-NEXT:    srwi 3, 3, 5
@@ -70,7 +70,7 @@ define zeroext i1 @any_bits_set(i32 %P, i32 %Q)  {
 
 define zeroext i1 @any_sign_bits_set(i32 %P, i32 %Q)  {
 ; CHECK-LABEL: any_sign_bits_set:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    or 3, 3, 4
 ; CHECK-NEXT:    srwi 3, 3, 31
 ; CHECK-NEXT:    blr
@@ -82,7 +82,7 @@ define zeroext i1 @any_sign_bits_set(i32 %P, i32 %Q)  {
 
 define zeroext i1 @any_bits_clear(i32 %P, i32 %Q)  {
 ; CHECK-LABEL: any_bits_clear:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li 5, -1
 ; CHECK-NEXT:    and 3, 3, 4
 ; CHECK-NEXT:    xor 3, 3, 5
@@ -98,7 +98,7 @@ define zeroext i1 @any_bits_clear(i32 %P, i32 %Q)  {
 
 define zeroext i1 @any_sign_bits_clear(i32 %P, i32 %Q)  {
 ; CHECK-LABEL: any_sign_bits_clear:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    and 3, 3, 4
 ; CHECK-NEXT:    nor 3, 3, 3
 ; CHECK-NEXT:    srwi 3, 3, 31
@@ -112,10 +112,10 @@ define zeroext i1 @any_sign_bits_clear(i32 %P, i32 %Q)  {
 ; PR3351 - (P == 0) & (Q == 0) -> (P|Q) == 0
 define i32 @all_bits_clear_branch(i32* %P, i32* %Q)  {
 ; CHECK-LABEL: all_bits_clear_branch:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    or. 3, 3, 4
 ; CHECK-NEXT:    bne 0, .LBB8_2
-; CHECK-NEXT:  # BB#1: # %bb1
+; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    li 3, 4
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB8_2: # %return
@@ -136,11 +136,11 @@ return:
 
 define i32 @all_sign_bits_clear_branch(i32 %P, i32 %Q)  {
 ; CHECK-LABEL: all_sign_bits_clear_branch:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    or 3, 3, 4
 ; CHECK-NEXT:    cmpwi 0, 3, 0
 ; CHECK-NEXT:    blt 0, .LBB9_2
-; CHECK-NEXT:  # BB#1: # %bb1
+; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    li 3, 4
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB9_2: # %return
@@ -161,11 +161,11 @@ return:
 
 define i32 @all_bits_set_branch(i32 %P, i32 %Q)  {
 ; CHECK-LABEL: all_bits_set_branch:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    and 3, 3, 4
 ; CHECK-NEXT:    cmpwi 0, 3, -1
 ; CHECK-NEXT:    bne 0, .LBB10_2
-; CHECK-NEXT:  # BB#1: # %bb1
+; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    li 3, 4
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB10_2: # %return
@@ -186,11 +186,11 @@ return:
 
 define i32 @all_sign_bits_set_branch(i32 %P, i32 %Q)  {
 ; CHECK-LABEL: all_sign_bits_set_branch:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    and 3, 3, 4
 ; CHECK-NEXT:    cmpwi 0, 3, -1
 ; CHECK-NEXT:    bgt 0, .LBB11_2
-; CHECK-NEXT:  # BB#1: # %bb1
+; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    li 3, 4
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB11_2: # %return
@@ -212,10 +212,10 @@ return:
 ; PR3351 - (P != 0) | (Q != 0) -> (P|Q) != 0
 define i32 @any_bits_set_branch(i32* %P, i32* %Q)  {
 ; CHECK-LABEL: any_bits_set_branch:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    or. 3, 3, 4
 ; CHECK-NEXT:    beq 0, .LBB12_2
-; CHECK-NEXT:  # BB#1: # %bb1
+; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    li 3, 4
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB12_2: # %return
@@ -236,11 +236,11 @@ return:
 
 define i32 @any_sign_bits_set_branch(i32 %P, i32 %Q)  {
 ; CHECK-LABEL: any_sign_bits_set_branch:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    or 3, 3, 4
 ; CHECK-NEXT:    cmpwi 0, 3, -1
 ; CHECK-NEXT:    bgt 0, .LBB13_2
-; CHECK-NEXT:  # BB#1: # %bb1
+; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    li 3, 4
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB13_2: # %return
@@ -261,11 +261,11 @@ return:
 
 define i32 @any_bits_clear_branch(i32 %P, i32 %Q)  {
 ; CHECK-LABEL: any_bits_clear_branch:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    and 3, 3, 4
 ; CHECK-NEXT:    cmpwi 0, 3, -1
 ; CHECK-NEXT:    beq 0, .LBB14_2
-; CHECK-NEXT:  # BB#1: # %bb1
+; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    li 3, 4
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB14_2: # %return
@@ -286,11 +286,11 @@ return:
 
 define i32 @any_sign_bits_clear_branch(i32 %P, i32 %Q)  {
 ; CHECK-LABEL: any_sign_bits_clear_branch:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    and 3, 3, 4
 ; CHECK-NEXT:    cmpwi 0, 3, 0
 ; CHECK-NEXT:    blt 0, .LBB15_2
-; CHECK-NEXT:  # BB#1: # %bb1
+; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    li 3, 4
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB15_2: # %return
@@ -311,7 +311,7 @@ return:
 
 define <4 x i1> @all_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) {
 ; CHECK-LABEL: all_bits_clear_vec:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xxlxor 36, 36, 36
 ; CHECK-NEXT:    xxlor 34, 34, 35
 ; CHECK-NEXT:    vcmpequw 2, 2, 4
@@ -324,7 +324,7 @@ define <4 x i1> @all_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) {
 
 define <4 x i1> @all_sign_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) {
 ; CHECK-LABEL: all_sign_bits_clear_vec:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vspltisb 4, -1
 ; CHECK-NEXT:    xxlor 34, 34, 35
 ; CHECK-NEXT:    vcmpgtsw 2, 2, 4
@@ -337,7 +337,7 @@ define <4 x i1> @all_sign_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) {
 
 define <4 x i1> @all_bits_set_vec(<4 x i32> %P, <4 x i32> %Q) {
 ; CHECK-LABEL: all_bits_set_vec:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vspltisb 4, -1
 ; CHECK-NEXT:    xxland 34, 34, 35
 ; CHECK-NEXT:    vcmpequw 2, 2, 4
@@ -350,7 +350,7 @@ define <4 x i1> @all_bits_set_vec(<4 x i32> %P, <4 x i32> %Q) {
 
 define <4 x i1> @all_sign_bits_set_vec(<4 x i32> %P, <4 x i32> %Q) {
 ; CHECK-LABEL: all_sign_bits_set_vec:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xxlxor 36, 36, 36
 ; CHECK-NEXT:    xxland 34, 34, 35
 ; CHECK-NEXT:    vcmpgtsw 2, 4, 2
@@ -363,7 +363,7 @@ define <4 x i1> @all_sign_bits_set_vec(<4 x i32> %P, <4 x i32> %Q) {
 
 define <4 x i1> @any_bits_set_vec(<4 x i32> %P, <4 x i32> %Q) {
 ; CHECK-LABEL: any_bits_set_vec:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xxlxor 36, 36, 36
 ; CHECK-NEXT:    xxlor 34, 34, 35
 ; CHECK-NEXT:    vcmpequw 2, 2, 4
@@ -377,7 +377,7 @@ define <4 x i1> @any_bits_set_vec(<4 x i32> %P, <4 x i32> %Q) {
 
 define <4 x i1> @any_sign_bits_set_vec(<4 x i32> %P, <4 x i32> %Q) {
 ; CHECK-LABEL: any_sign_bits_set_vec:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xxlxor 36, 36, 36
 ; CHECK-NEXT:    xxlor 34, 34, 35
 ; CHECK-NEXT:    vcmpgtsw 2, 4, 2
@@ -390,7 +390,7 @@ define <4 x i1> @any_sign_bits_set_vec(<4 x i32> %P, <4 x i32> %Q) {
 
 define <4 x i1> @any_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) {
 ; CHECK-LABEL: any_bits_clear_vec:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vspltisb 4, -1
 ; CHECK-NEXT:    xxland 34, 34, 35
 ; CHECK-NEXT:    vcmpequw 2, 2, 4
@@ -404,7 +404,7 @@ define <4 x i1> @any_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) {
 
 define <4 x i1> @any_sign_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) {
 ; CHECK-LABEL: any_sign_bits_clear_vec:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vspltisb 4, -1
 ; CHECK-NEXT:    xxland 34, 34, 35
 ; CHECK-NEXT:    vcmpgtsw 2, 2, 4
@@ -417,7 +417,7 @@ define <4 x i1> @any_sign_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) {
 
 define zeroext i1 @ne_neg1_and_ne_zero(i64 %x) {
 ; CHECK-LABEL: ne_neg1_and_ne_zero:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li 4, 1
 ; CHECK-NEXT:    addi 3, 3, 1
 ; CHECK-NEXT:    subfc 3, 3, 4
@@ -434,7 +434,7 @@ define zeroext i1 @ne_neg1_and_ne_zero(i64 %x) {
 
 define zeroext i1 @and_eq(i16 zeroext  %a, i16 zeroext %b, i16 zeroext %c, i16 zeroext %d) {
 ; CHECK-LABEL: and_eq:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xor 5, 5, 6
 ; CHECK-NEXT:    xor 3, 3, 4
 ; CHECK-NEXT:    or 3, 3, 5
@@ -449,7 +449,7 @@ define zeroext i1 @and_eq(i16 zeroext  %a, i16 zeroext %b, i16 zeroext %c, i16 z
 
 define zeroext i1 @or_ne(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: or_ne:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xor 5, 5, 6
 ; CHECK-NEXT:    xor 3, 3, 4
 ; CHECK-NEXT:    or 3, 3, 5
@@ -467,7 +467,7 @@ define zeroext i1 @or_ne(i32 %a, i32 %b, i32 %c, i32 %d) {
 
 define <4 x i1> @and_eq_vec(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d) {
 ; CHECK-LABEL: and_eq_vec:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcmpequw 2, 2, 3
 ; CHECK-NEXT:    vcmpequw 19, 4, 5
 ; CHECK-NEXT:    xxland 34, 34, 51

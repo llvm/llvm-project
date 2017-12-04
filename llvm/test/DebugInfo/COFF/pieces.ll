@@ -37,7 +37,7 @@
 ; ASM-LABEL: loop_csr: # @loop_csr
 ; ASM:        #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 0 32] 0
 ; ASM:        #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 32 32] 0
-; ASM: # BB#2:                                 # %for.body.preheader
+; ASM: # %bb.2:                                 # %for.body.preheader
 ; ASM:         xorl    %edi, %edi
 ; ASM:         xorl    %esi, %esi
 ; ASM:         .p2align        4, 0x90

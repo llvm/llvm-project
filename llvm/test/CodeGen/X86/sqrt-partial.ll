@@ -10,11 +10,11 @@
 
 define float @f(float %val) nounwind {
 ; CHECK-LABEL: f:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
 ; CHECK-NEXT:    ucomiss %xmm1, %xmm0
 ; CHECK-NEXT:    jb .LBB0_2
-; CHECK-NEXT:  # BB#1: # %.split
+; CHECK-NEXT:  # %bb.1: # %.split
 ; CHECK-NEXT:    sqrtss %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB0_2: # %call.sqrt
@@ -25,11 +25,11 @@ define float @f(float %val) nounwind {
 
 define double @d(double %val) nounwind {
 ; CHECK-LABEL: d:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
 ; CHECK-NEXT:    ucomisd %xmm1, %xmm0
 ; CHECK-NEXT:    jb .LBB1_2
-; CHECK-NEXT:  # BB#1: # %.split
+; CHECK-NEXT:  # %bb.1: # %.split
 ; CHECK-NEXT:    sqrtsd %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB1_2: # %call.sqrt

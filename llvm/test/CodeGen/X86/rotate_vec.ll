@@ -3,7 +3,7 @@
 
 define <4 x i32> @rot_v4i32_splat(<4 x i32> %x) {
 ; CHECK-LABEL: rot_v4i32_splat:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vprotd $31, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %1 = lshr <4 x i32> %x, <i32 1, i32 1, i32 1, i32 1>
@@ -14,7 +14,7 @@ define <4 x i32> @rot_v4i32_splat(<4 x i32> %x) {
 
 define <4 x i32> @rot_v4i32_non_splat(<4 x i32> %x) {
 ; CHECK-LABEL: rot_v4i32_non_splat:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vprotd {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %1 = lshr <4 x i32> %x, <i32 1, i32 2, i32 3, i32 4>
@@ -25,7 +25,7 @@ define <4 x i32> @rot_v4i32_non_splat(<4 x i32> %x) {
 
 define <4 x i32> @rot_v4i32_splat_2masks(<4 x i32> %x) {
 ; CHECK-LABEL: rot_v4i32_splat_2masks:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vprotd $31, %xmm0, %xmm0
 ; CHECK-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
@@ -40,7 +40,7 @@ define <4 x i32> @rot_v4i32_splat_2masks(<4 x i32> %x) {
 
 define <4 x i32> @rot_v4i32_non_splat_2masks(<4 x i32> %x) {
 ; CHECK-LABEL: rot_v4i32_non_splat_2masks:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vprotd {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq

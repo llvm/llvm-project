@@ -13,7 +13,7 @@
 	.globl	_foo
 	.align	16, 0x90
 _foo:                                   # @foo
-# BB#0:                                 # %entry
+# %bb.0:                                # %entry
 	ret
 
 	.data

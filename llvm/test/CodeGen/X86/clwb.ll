@@ -3,7 +3,7 @@
 
 define void @clwb(i8* %p) nounwind {
 ; CHECK-LABEL: clwb:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    clwb (%eax)
 ; CHECK-NEXT:    retl

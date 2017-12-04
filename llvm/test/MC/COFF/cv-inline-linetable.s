@@ -19,7 +19,7 @@ Lfunc_begin0:
 	.cv_inline_site_id 1 within 0 inlined_at 1 15 3
 	.cv_inline_site_id 2 within 1 inlined_at 1 10 3
 	.cv_loc	0 1 13 0 is_stmt 0      # t.cpp:13:0
-# BB#0:                                 # %entry
+# %bb.0:                                # %entry
 	pushl	%eax
 	.cv_loc	0 1 14 5                # t.cpp:14:5
 	addl	$6, "?x@@3HC"

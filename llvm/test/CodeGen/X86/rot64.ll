@@ -5,7 +5,7 @@
 
 define i64 @foo(i64 %x, i64 %y, i64 %z) nounwind readnone {
 ; ALL-LABEL: foo:
-; ALL:       # BB#0: # %entry
+; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    movl %edx, %ecx
 ; ALL-NEXT:    rolq %cl, %rdi
 ; ALL-NEXT:    movq %rdi, %rax
@@ -20,7 +20,7 @@ entry:
 
 define i64 @bar(i64 %x, i64 %y, i64 %z) nounwind readnone {
 ; ALL-LABEL: bar:
-; ALL:       # BB#0: # %entry
+; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    movl %edx, %ecx
 ; ALL-NEXT:    shldq %cl, %rdi, %rsi
 ; ALL-NEXT:    movq %rsi, %rax
@@ -35,7 +35,7 @@ entry:
 
 define i64 @un(i64 %x, i64 %y, i64 %z) nounwind readnone {
 ; ALL-LABEL: un:
-; ALL:       # BB#0: # %entry
+; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    movl %edx, %ecx
 ; ALL-NEXT:    rorq %cl, %rdi
 ; ALL-NEXT:    movq %rdi, %rax
@@ -50,7 +50,7 @@ entry:
 
 define i64 @bu(i64 %x, i64 %y, i64 %z) nounwind readnone {
 ; ALL-LABEL: bu:
-; ALL:       # BB#0: # %entry
+; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    movl %edx, %ecx
 ; ALL-NEXT:    shrdq %cl, %rdi, %rsi
 ; ALL-NEXT:    movq %rsi, %rax
@@ -65,19 +65,19 @@ entry:
 
 define i64 @xfoo(i64 %x, i64 %y, i64 %z) nounwind readnone {
 ; X64-LABEL: xfoo:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    rolq $7, %rdi
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    retq
 ;
 ; SHLD-LABEL: xfoo:
-; SHLD:       # BB#0: # %entry
+; SHLD:       # %bb.0: # %entry
 ; SHLD-NEXT:    shldq $7, %rdi, %rdi
 ; SHLD-NEXT:    movq %rdi, %rax
 ; SHLD-NEXT:    retq
 ;
 ; BMI2-LABEL: xfoo:
-; BMI2:       # BB#0: # %entry
+; BMI2:       # %bb.0: # %entry
 ; BMI2-NEXT:    rorxq $57, %rdi, %rax
 ; BMI2-NEXT:    retq
 entry:
@@ -89,19 +89,19 @@ entry:
 
 define i64 @xfoop(i64* %p) nounwind readnone {
 ; X64-LABEL: xfoop:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq (%rdi), %rax
 ; X64-NEXT:    rolq $7, %rax
 ; X64-NEXT:    retq
 ;
 ; SHLD-LABEL: xfoop:
-; SHLD:       # BB#0: # %entry
+; SHLD:       # %bb.0: # %entry
 ; SHLD-NEXT:    movq (%rdi), %rax
 ; SHLD-NEXT:    shldq $7, %rax, %rax
 ; SHLD-NEXT:    retq
 ;
 ; BMI2-LABEL: xfoop:
-; BMI2:       # BB#0: # %entry
+; BMI2:       # %bb.0: # %entry
 ; BMI2-NEXT:    rorxq $57, (%rdi), %rax
 ; BMI2-NEXT:    retq
 entry:
@@ -114,7 +114,7 @@ entry:
 
 define i64 @xbar(i64 %x, i64 %y, i64 %z) nounwind readnone {
 ; ALL-LABEL: xbar:
-; ALL:       # BB#0: # %entry
+; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    shrdq $57, %rsi, %rdi
 ; ALL-NEXT:    movq %rdi, %rax
 ; ALL-NEXT:    retq
@@ -127,19 +127,19 @@ entry:
 
 define i64 @xun(i64 %x, i64 %y, i64 %z) nounwind readnone {
 ; X64-LABEL: xun:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    rolq $57, %rdi
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    retq
 ;
 ; SHLD-LABEL: xun:
-; SHLD:       # BB#0: # %entry
+; SHLD:       # %bb.0: # %entry
 ; SHLD-NEXT:    shldq $57, %rdi, %rdi
 ; SHLD-NEXT:    movq %rdi, %rax
 ; SHLD-NEXT:    retq
 ;
 ; BMI2-LABEL: xun:
-; BMI2:       # BB#0: # %entry
+; BMI2:       # %bb.0: # %entry
 ; BMI2-NEXT:    rorxq $7, %rdi, %rax
 ; BMI2-NEXT:    retq
 entry:
@@ -151,19 +151,19 @@ entry:
 
 define i64 @xunp(i64* %p) nounwind readnone {
 ; X64-LABEL: xunp:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq (%rdi), %rax
 ; X64-NEXT:    rolq $57, %rax
 ; X64-NEXT:    retq
 ;
 ; SHLD-LABEL: xunp:
-; SHLD:       # BB#0: # %entry
+; SHLD:       # %bb.0: # %entry
 ; SHLD-NEXT:    movq (%rdi), %rax
 ; SHLD-NEXT:    shldq $57, %rax, %rax
 ; SHLD-NEXT:    retq
 ;
 ; BMI2-LABEL: xunp:
-; BMI2:       # BB#0: # %entry
+; BMI2:       # %bb.0: # %entry
 ; BMI2-NEXT:    rorxq $7, (%rdi), %rax
 ; BMI2-NEXT:    retq
 entry:
@@ -176,7 +176,7 @@ entry:
 
 define i64 @xbu(i64 %x, i64 %y, i64 %z) nounwind readnone {
 ; ALL-LABEL: xbu:
-; ALL:       # BB#0: # %entry
+; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    shldq $57, %rsi, %rdi
 ; ALL-NEXT:    movq %rdi, %rax
 ; ALL-NEXT:    retq

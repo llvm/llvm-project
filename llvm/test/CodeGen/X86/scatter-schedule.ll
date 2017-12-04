@@ -8,7 +8,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @test(i64 %x272, <16 x i32*> %x335, <16 x i32> %x270) {
 ; CHECK-LABEL: test:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kxnorw %k0, %k0, %k1
 ; CHECK-NEXT:    kxnorw %k0, %k0, %k2
 ; CHECK-NEXT:    vpscatterqd %ymm2, (,%zmm0) {%k2}

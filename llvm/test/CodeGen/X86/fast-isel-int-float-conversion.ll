@@ -7,17 +7,17 @@
 
 define double @int_to_double_rr(i32 %a) {
 ; SSE2-LABEL: int_to_double_rr:
-; SSE2:       # BB#0: # %entry
+; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    cvtsi2sdl %edi, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: int_to_double_rr:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vcvtsi2sdl %edi, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; SSE2_X86-LABEL: int_to_double_rr:
-; SSE2_X86:       # BB#0: # %entry
+; SSE2_X86:       # %bb.0: # %entry
 ; SSE2_X86-NEXT:    pushl %ebp
 ; SSE2_X86-NEXT:    .cfi_def_cfa_offset 8
 ; SSE2_X86-NEXT:    .cfi_offset %ebp, -8
@@ -34,7 +34,7 @@ define double @int_to_double_rr(i32 %a) {
 ; SSE2_X86-NEXT:    retl
 ;
 ; AVX_X86-LABEL: int_to_double_rr:
-; AVX_X86:       # BB#0: # %entry
+; AVX_X86:       # %bb.0: # %entry
 ; AVX_X86-NEXT:    pushl %ebp
 ; AVX_X86-NEXT:    .cfi_def_cfa_offset 8
 ; AVX_X86-NEXT:    .cfi_offset %ebp, -8
@@ -55,18 +55,18 @@ entry:
 
 define double @int_to_double_rm(i32* %a) {
 ; SSE2-LABEL: int_to_double_rm:
-; SSE2:       # BB#0: # %entry
+; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movl (%rdi), %eax
 ; SSE2-NEXT:    cvtsi2sdl %eax, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: int_to_double_rm:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vcvtsi2sdl (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; SSE2_X86-LABEL: int_to_double_rm:
-; SSE2_X86:       # BB#0: # %entry
+; SSE2_X86:       # %bb.0: # %entry
 ; SSE2_X86-NEXT:    pushl %ebp
 ; SSE2_X86-NEXT:    .cfi_def_cfa_offset 8
 ; SSE2_X86-NEXT:    .cfi_offset %ebp, -8
@@ -83,7 +83,7 @@ define double @int_to_double_rm(i32* %a) {
 ; SSE2_X86-NEXT:    retl
 ;
 ; AVX_X86-LABEL: int_to_double_rm:
-; AVX_X86:       # BB#0: # %entry
+; AVX_X86:       # %bb.0: # %entry
 ; AVX_X86-NEXT:    pushl %ebp
 ; AVX_X86-NEXT:    .cfi_def_cfa_offset 8
 ; AVX_X86-NEXT:    .cfi_offset %ebp, -8
@@ -106,17 +106,17 @@ entry:
 
 define double @int_to_double_rm_optsize(i32* %a) optsize {
 ; SSE2-LABEL: int_to_double_rm_optsize:
-; SSE2:       # BB#0: # %entry
+; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    cvtsi2sdl (%rdi), %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: int_to_double_rm_optsize:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vcvtsi2sdl (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; SSE2_X86-LABEL: int_to_double_rm_optsize:
-; SSE2_X86:       # BB#0: # %entry
+; SSE2_X86:       # %bb.0: # %entry
 ; SSE2_X86-NEXT:    pushl %ebp
 ; SSE2_X86-NEXT:    .cfi_def_cfa_offset 8
 ; SSE2_X86-NEXT:    .cfi_offset %ebp, -8
@@ -133,7 +133,7 @@ define double @int_to_double_rm_optsize(i32* %a) optsize {
 ; SSE2_X86-NEXT:    retl
 ;
 ; AVX_X86-LABEL: int_to_double_rm_optsize:
-; AVX_X86:       # BB#0: # %entry
+; AVX_X86:       # %bb.0: # %entry
 ; AVX_X86-NEXT:    pushl %ebp
 ; AVX_X86-NEXT:    .cfi_def_cfa_offset 8
 ; AVX_X86-NEXT:    .cfi_offset %ebp, -8
@@ -156,17 +156,17 @@ entry:
 
 define float @int_to_float_rr(i32 %a) {
 ; SSE2-LABEL: int_to_float_rr:
-; SSE2:       # BB#0: # %entry
+; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    cvtsi2ssl %edi, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: int_to_float_rr:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vcvtsi2ssl %edi, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; SSE2_X86-LABEL: int_to_float_rr:
-; SSE2_X86:       # BB#0: # %entry
+; SSE2_X86:       # %bb.0: # %entry
 ; SSE2_X86-NEXT:    pushl %eax
 ; SSE2_X86-NEXT:    .cfi_def_cfa_offset 8
 ; SSE2_X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -177,7 +177,7 @@ define float @int_to_float_rr(i32 %a) {
 ; SSE2_X86-NEXT:    retl
 ;
 ; AVX_X86-LABEL: int_to_float_rr:
-; AVX_X86:       # BB#0: # %entry
+; AVX_X86:       # %bb.0: # %entry
 ; AVX_X86-NEXT:    pushl %eax
 ; AVX_X86-NEXT:    .cfi_def_cfa_offset 8
 ; AVX_X86-NEXT:    vcvtsi2ssl {{[0-9]+}}(%esp), %xmm0, %xmm0
@@ -192,18 +192,18 @@ entry:
 
 define float @int_to_float_rm(i32* %a) {
 ; SSE2-LABEL: int_to_float_rm:
-; SSE2:       # BB#0: # %entry
+; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movl (%rdi), %eax
 ; SSE2-NEXT:    cvtsi2ssl %eax, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: int_to_float_rm:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vcvtsi2ssl (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; SSE2_X86-LABEL: int_to_float_rm:
-; SSE2_X86:       # BB#0: # %entry
+; SSE2_X86:       # %bb.0: # %entry
 ; SSE2_X86-NEXT:    pushl %eax
 ; SSE2_X86-NEXT:    .cfi_def_cfa_offset 8
 ; SSE2_X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -214,7 +214,7 @@ define float @int_to_float_rm(i32* %a) {
 ; SSE2_X86-NEXT:    retl
 ;
 ; AVX_X86-LABEL: int_to_float_rm:
-; AVX_X86:       # BB#0: # %entry
+; AVX_X86:       # %bb.0: # %entry
 ; AVX_X86-NEXT:    pushl %eax
 ; AVX_X86-NEXT:    .cfi_def_cfa_offset 8
 ; AVX_X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -231,17 +231,17 @@ entry:
 
 define float @int_to_float_rm_optsize(i32* %a) optsize {
 ; SSE2-LABEL: int_to_float_rm_optsize:
-; SSE2:       # BB#0: # %entry
+; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    cvtsi2ssl (%rdi), %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: int_to_float_rm_optsize:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vcvtsi2ssl (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; SSE2_X86-LABEL: int_to_float_rm_optsize:
-; SSE2_X86:       # BB#0: # %entry
+; SSE2_X86:       # %bb.0: # %entry
 ; SSE2_X86-NEXT:    pushl %eax
 ; SSE2_X86-NEXT:    .cfi_def_cfa_offset 8
 ; SSE2_X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -252,7 +252,7 @@ define float @int_to_float_rm_optsize(i32* %a) optsize {
 ; SSE2_X86-NEXT:    retl
 ;
 ; AVX_X86-LABEL: int_to_float_rm_optsize:
-; AVX_X86:       # BB#0: # %entry
+; AVX_X86:       # %bb.0: # %entry
 ; AVX_X86-NEXT:    pushl %eax
 ; AVX_X86-NEXT:    .cfi_def_cfa_offset 8
 ; AVX_X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
