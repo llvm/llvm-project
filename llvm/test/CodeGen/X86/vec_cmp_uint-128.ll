@@ -270,20 +270,39 @@ define <2 x i64> @ge_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; SSE42-NEXT:    pxor %xmm2, %xmm0
 ; SSE42-NEXT:    retq
 ;
-; AVX-LABEL: ge_v2i64:
-; AVX:       # BB#0:
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
-; AVX-NEXT:    vpxor %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpxor %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: ge_v2i64:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpxor %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: ge_v2i64:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpxor %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
 ;
 ; XOP-LABEL: ge_v2i64:
 ; XOP:       # BB#0:
 ; XOP-NEXT:    vpcomgeuq %xmm1, %xmm0, %xmm0
 ; XOP-NEXT:    retq
+;
+; AVX512-LABEL: ge_v2i64:
+; AVX512:       # BB#0:
+; AVX512-NEXT:    # kill: %xmm1<def> %xmm1<kill> %zmm1<def>
+; AVX512-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<def>
+; AVX512-NEXT:    vpmaxuq %zmm1, %zmm0, %zmm1
+; AVX512-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   %1 = icmp uge <2 x i64> %a, %b
   %2 = sext <2 x i1> %1 to <2 x i64>
   ret <2 x i64> %2
@@ -587,20 +606,39 @@ define <2 x i64> @le_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; SSE42-NEXT:    pxor %xmm1, %xmm0
 ; SSE42-NEXT:    retq
 ;
-; AVX-LABEL: le_v2i64:
-; AVX:       # BB#0:
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
-; AVX-NEXT:    vpxor %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vpxor %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: le_v2i64:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; AVX1-NEXT:    vpxor %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: le_v2i64:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; AVX2-NEXT:    vpxor %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
 ;
 ; XOP-LABEL: le_v2i64:
 ; XOP:       # BB#0:
 ; XOP-NEXT:    vpcomleuq %xmm1, %xmm0, %xmm0
 ; XOP-NEXT:    retq
+;
+; AVX512-LABEL: le_v2i64:
+; AVX512:       # BB#0:
+; AVX512-NEXT:    # kill: %xmm1<def> %xmm1<kill> %zmm1<def>
+; AVX512-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<def>
+; AVX512-NEXT:    vpminuq %zmm1, %zmm0, %zmm1
+; AVX512-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   %1 = icmp ule <2 x i64> %a, %b
   %2 = sext <2 x i1> %1 to <2 x i64>
   ret <2 x i64> %2
