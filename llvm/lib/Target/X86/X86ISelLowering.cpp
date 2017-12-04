@@ -15820,12 +15820,6 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   SDLoc dl(Op);
   auto PtrVT = getPointerTy(DAG.getDataLayout());
 
-  // Since UINT_TO_FP is legal (it's marked custom), dag combiner won't
-  // optimize it to a SINT_TO_FP when the sign bit is known zero. Perform
-  // the optimization here.
-  if (DAG.SignBitIsZero(N0))
-    return DAG.getNode(ISD::SINT_TO_FP, dl, Op.getValueType(), N0);
-
   if (Op.getSimpleValueType().isVector())
     return lowerUINT_TO_FP_vec(Op, DAG);
 

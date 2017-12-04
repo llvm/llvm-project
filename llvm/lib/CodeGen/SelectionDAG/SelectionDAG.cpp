@@ -2478,6 +2478,25 @@ void SelectionDAG::computeKnownBits(SDValue Op, KnownBits &Known,
       Known.One.lshrInPlace(Shift);
       // High bits are known zero.
       Known.Zero.setHighBits(Shift);
+    } else if (auto *BV = dyn_cast<BuildVectorSDNode>(Op.getOperand(1))) {
+      // If the shift amount is a vector of constants see if we can bound
+      // the number of upper zero bits.
+      unsigned ShiftAmountMin = BitWidth;
+      for (unsigned i = 0; i != BV->getNumOperands(); ++i) {
+        if (auto *C = dyn_cast<ConstantSDNode>(BV->getOperand(i))) {
+          const APInt &ShAmt = C->getAPIntValue();
+          if (ShAmt.ult(BitWidth)) {
+            ShiftAmountMin = std::min<unsigned>(ShiftAmountMin,
+                                                ShAmt.getZExtValue());
+            continue;
+          }
+        }
+        // Don't know anything.
+        ShiftAmountMin = 0;
+        break;
+      }
+
+      Known.Zero.setHighBits(ShiftAmountMin);
     }
     break;
   case ISD::SRA:
