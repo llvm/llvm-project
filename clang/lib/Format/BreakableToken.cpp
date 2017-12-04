@@ -316,7 +316,8 @@ BreakableBlockComment::BreakableBlockComment(
     unsigned OriginalStartColumn, bool FirstInLine, bool InPPDirective,
     encoding::Encoding Encoding, const FormatStyle &Style)
     : BreakableComment(Token, StartColumn, InPPDirective, Encoding, Style),
-      DelimitersOnNewline(false) {
+      DelimitersOnNewline(false),
+      UnbreakableTailLength(Token.UnbreakableTailLength) {
   assert(Tok.is(TT_BlockComment) &&
          "block comment section must start with a block comment");
 
@@ -497,7 +498,8 @@ unsigned BreakableBlockComment::getRangeLength(unsigned LineIndex,
 unsigned BreakableBlockComment::getRemainingLength(unsigned LineIndex,
                                                    unsigned Offset,
                                                    unsigned StartColumn) const {
-  return getRangeLength(LineIndex, Offset, StringRef::npos, StartColumn);
+  return UnbreakableTailLength +
+         getRangeLength(LineIndex, Offset, StringRef::npos, StartColumn);
 }
 
 unsigned BreakableBlockComment::getContentStartColumn(unsigned LineIndex,

@@ -1864,10 +1864,17 @@ SVal RegionStoreManager::getBindingForVar(RegionBindingsConstRef B,
     return svalBuilder.getRegionValueSymbolVal(R);
 
   // Is 'VD' declared constant?  If so, retrieve the constant value.
-  if (VD->getType().isConstQualified())
-    if (const Expr *Init = VD->getInit())
+  if (VD->getType().isConstQualified()) {
+    if (const Expr *Init = VD->getInit()) {
       if (Optional<SVal> V = svalBuilder.getConstantVal(Init))
         return *V;
+
+      // If the variable is const qualified and has an initializer but
+      // we couldn't evaluate initializer to a value, treat the value as
+      // unknown.
+      return UnknownVal();
+    }
+  }
 
   // This must come after the check for constants because closure-captured
   // constant variables may appear in UnknownSpaceRegion.
