@@ -143,7 +143,7 @@ void BranchRelaxation::verify() {
 LLVM_DUMP_METHOD void BranchRelaxation::dumpBBs() {
   for (auto &MBB : *MF) {
     const BasicBlockInfo &BBI = BlockInfo[MBB.getNumber()];
-    dbgs() << format("BB#%u\toffset=%08x\t", MBB.getNumber(), BBI.Offset)
+    dbgs() << format("%bb.%u\toffset=%08x\t", MBB.getNumber(), BBI.Offset)
            << format("size=%#x\n", BBI.Size);
   }
 }
@@ -287,13 +287,10 @@ bool BranchRelaxation::isBlockInRange(
   if (TII->isBranchOffsetInRange(MI.getOpcode(), DestOffset - BrOffset))
     return true;
 
-  DEBUG(
-    dbgs() << "Out of range branch to destination BB#" << DestBB.getNumber()
-           << " from BB#" << MI.getParent()->getNumber()
-           << " to " << DestOffset
-           << " offset " << DestOffset - BrOffset
-           << '\t' << MI
-  );
+  DEBUG(dbgs() << "Out of range branch to destination "
+               << printMBBReference(DestBB) << " from "
+               << printMBBReference(*MI.getParent()) << " to " << DestOffset
+               << " offset " << DestOffset - BrOffset << '\t' << MI);
 
   return false;
 }
@@ -366,9 +363,9 @@ bool BranchRelaxation::fixupConditionalBranch(MachineInstr &MI) {
   // just created), so we can invert the condition.
   MachineBasicBlock &NextBB = *std::next(MachineFunction::iterator(MBB));
 
-  DEBUG(dbgs() << "  Insert B to BB#" << TBB->getNumber()
-               << ", invert condition and change dest. to BB#"
-               << NextBB.getNumber() << '\n');
+  DEBUG(dbgs() << "  Insert B to " << printMBBReference(*TBB)
+               << ", invert condition and change dest. to "
+               << printMBBReference(NextBB) << '\n');
 
   unsigned &MBBSize = BlockInfo[MBB->getNumber()].Size;
 

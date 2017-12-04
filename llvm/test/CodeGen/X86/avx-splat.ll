@@ -3,7 +3,7 @@
 
 define <32 x i8> @funcA(<32 x i8> %a) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: funcA:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
@@ -14,7 +14,7 @@ entry:
 
 define <16 x i16> @funcB(<16 x i16> %a) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: funcB:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,5,5,5]
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
@@ -26,7 +26,7 @@ entry:
 
 define <4 x i64> @funcC(i64 %q) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: funcC:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmovq %rdi, %xmm0
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
@@ -41,7 +41,7 @@ entry:
 
 define <4 x double> @funcD(double %q) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: funcD:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
@@ -58,12 +58,12 @@ entry:
 ;
 define <8 x float> @funcE() nounwind {
 ; CHECK-LABEL: funcE:
-; CHECK:       # BB#0: # %for_exit499
+; CHECK:       # %bb.0: # %for_exit499
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    # implicit-def: %ymm0
 ; CHECK-NEXT:    jne .LBB4_2
-; CHECK-NEXT:  # BB#1: # %load.i1247
+; CHECK-NEXT:  # %bb.1: # %load.i1247
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    andq $-32, %rsp
@@ -99,7 +99,7 @@ __load_and_broadcast_32.exit1249:                 ; preds = %load.i1247, %for_ex
 
 define <8 x float> @funcF(i32 %val) nounwind {
 ; CHECK-LABEL: funcF:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovd %edi, %xmm0
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,0]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
@@ -112,7 +112,7 @@ define <8 x float> @funcF(i32 %val) nounwind {
 
 define <8 x float> @funcG(<8 x float> %a) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: funcG:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
@@ -123,7 +123,7 @@ entry:
 
 define <8 x float> @funcH(<8 x float> %a) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: funcH:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[1,1,1,1,5,5,5,5]
 ; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,2,3]
 ; CHECK-NEXT:    retq
@@ -134,7 +134,7 @@ entry:
 
 define <2 x double> @splat_load_2f64_11(<2 x double>* %ptr) {
 ; CHECK-LABEL: splat_load_2f64_11:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; CHECK-NEXT:    retq
   %x = load <2 x double>, <2 x double>* %ptr
@@ -144,7 +144,7 @@ define <2 x double> @splat_load_2f64_11(<2 x double>* %ptr) {
 
 define <4 x double> @splat_load_4f64_2222(<4 x double>* %ptr) {
 ; CHECK-LABEL: splat_load_4f64_2222:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vbroadcastsd 16(%rdi), %ymm0
 ; CHECK-NEXT:    retq
   %x = load <4 x double>, <4 x double>* %ptr
@@ -154,7 +154,7 @@ define <4 x double> @splat_load_4f64_2222(<4 x double>* %ptr) {
 
 define <4 x float> @splat_load_4f32_0000(<4 x float>* %ptr) {
 ; CHECK-LABEL: splat_load_4f32_0000:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vbroadcastss (%rdi), %xmm0
 ; CHECK-NEXT:    retq
   %x = load <4 x float>, <4 x float>* %ptr
@@ -164,7 +164,7 @@ define <4 x float> @splat_load_4f32_0000(<4 x float>* %ptr) {
 
 define <8 x float> @splat_load_8f32_77777777(<8 x float>* %ptr) {
 ; CHECK-LABEL: splat_load_8f32_77777777:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vbroadcastss 28(%rdi), %ymm0
 ; CHECK-NEXT:    retq
   %x = load <8 x float>, <8 x float>* %ptr

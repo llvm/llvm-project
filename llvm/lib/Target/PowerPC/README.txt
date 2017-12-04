@@ -256,7 +256,7 @@ _clamp0g:
         cmpwi cr0, r3, 0
         li r2, 0
         blt cr0, LBB1_2
-; BB#1:                                                     ; %entry
+; %bb.1:                                                    ; %entry
         mr r2, r3
 LBB1_2:                                                     ; %entry
         mr r3, r2

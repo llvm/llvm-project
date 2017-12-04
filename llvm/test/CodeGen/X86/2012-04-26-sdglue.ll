@@ -6,7 +6,7 @@
 
 define void @func() nounwind ssp {
 ; CHECK-LABEL: func:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vmovups 0, %xmm0
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vblendps {{.*#+}} ymm2 = ymm0[0,1,2,3],ymm1[4,5,6,7]

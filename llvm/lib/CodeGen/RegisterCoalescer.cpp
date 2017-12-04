@@ -991,8 +991,8 @@ bool RegisterCoalescer::removePartialRedundancy(const CoalescerPair &CP,
 
   // Now ok to move copy.
   if (CopyLeftBB) {
-    DEBUG(dbgs() << "\tremovePartialRedundancy: Move the copy to BB#"
-                 << CopyLeftBB->getNumber() << '\t' << CopyMI);
+    DEBUG(dbgs() << "\tremovePartialRedundancy: Move the copy to "
+                 << printMBBReference(*CopyLeftBB) << '\t' << CopyMI);
 
     // Insert new copy to CopyLeftBB.
     auto InsPos = CopyLeftBB->getFirstTerminator();
@@ -1010,8 +1010,8 @@ bool RegisterCoalescer::removePartialRedundancy(const CoalescerPair &CP,
     // the deleted list.
     ErasedInstrs.erase(NewCopyMI);
   } else {
-    DEBUG(dbgs() << "\tremovePartialRedundancy: Remove the copy from BB#"
-                 << MBB.getNumber() << '\t' << CopyMI);
+    DEBUG(dbgs() << "\tremovePartialRedundancy: Remove the copy from "
+                 << printMBBReference(MBB) << '\t' << CopyMI);
   }
 
   // Remove CopyMI.
@@ -2376,7 +2376,7 @@ JoinVals::analyzeValue(unsigned ValNo, JoinVals &Other) {
   if (OtherV.ErasableImplicitDef && DefMI &&
       DefMI->getParent() != Indexes->getMBBFromIndex(V.OtherVNI->def)) {
     DEBUG(dbgs() << "IMPLICIT_DEF defined at " << V.OtherVNI->def
-                 << " extends into BB#" << DefMI->getParent()->getNumber()
+                 << " extends into " << printMBBReference(*DefMI->getParent())
                  << ", keeping it.\n");
     OtherV.ErasableImplicitDef = false;
   }

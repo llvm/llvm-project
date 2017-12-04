@@ -708,7 +708,7 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
     return nullptr;
   }
 
-  Diag(Decomp.getLSquareLoc(), getLangOpts().CPlusPlus1z
+  Diag(Decomp.getLSquareLoc(), getLangOpts().CPlusPlus17
                                    ? diag::warn_cxx14_compat_decomp_decl
                                    : diag::ext_decomp_decl)
       << Decomp.getSourceRange();
@@ -15018,7 +15018,7 @@ MSPropertyDecl *Sema::HandleMSProperty(Scope *S, RecordDecl *Record,
 
   if (D.getDeclSpec().isInlineSpecified())
     Diag(D.getDeclSpec().getInlineSpecLoc(), diag::err_inline_non_function)
-        << getLangOpts().CPlusPlus1z;
+        << getLangOpts().CPlusPlus17;
   if (DeclSpec::TSCS TSCS = D.getDeclSpec().getThreadStorageClassSpec())
     Diag(D.getDeclSpec().getThreadStorageClassSpecLoc(),
          diag::err_invalid_thread)

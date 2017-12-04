@@ -3,7 +3,7 @@
 
 define <8 x i64> @test_mm512_broadcastmb_epi64(<8 x i64> %a, <8 x i64> %b) {
 ; CHECK-LABEL: test_mm512_broadcastmb_epi64:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vpcmpeqq %zmm1, %zmm0, %k0
 ; CHECK-NEXT:    vpbroadcastmb2q %k0, %zmm0
 ; CHECK-NEXT:    retq
@@ -18,7 +18,7 @@ entry:
 
 define <8 x i64> @test_mm512_broadcastmw_epi32(<8 x i64> %a, <8 x i64> %b) {
 ; CHECK-LABEL: test_mm512_broadcastmw_epi32:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
 ; CHECK-NEXT:    vpbroadcastmw2d %k0, %zmm0
 ; CHECK-NEXT:    retq

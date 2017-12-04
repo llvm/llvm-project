@@ -16,7 +16,7 @@
 
 define void @foo() local_unnamed_addr {
 ; X86-LABEL: foo:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %ebx
@@ -63,7 +63,7 @@ define void @foo() local_unnamed_addr {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: foo:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movl {{.*}}(%rip), %eax
 ; X64-NEXT:    movsbl {{.*}}(%rip), %r9d
 ; X64-NEXT:    movzwl {{.*}}(%rip), %r8d

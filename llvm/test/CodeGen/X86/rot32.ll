@@ -5,7 +5,7 @@
 
 define i32 @foo(i32 %x, i32 %y, i32 %z) nounwind readnone {
 ; ALL-LABEL: foo:
-; ALL:       # BB#0: # %entry
+; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; ALL-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; ALL-NEXT:    roll %cl, %eax
@@ -20,7 +20,7 @@ entry:
 
 define i32 @bar(i32 %x, i32 %y, i32 %z) nounwind readnone {
 ; ALL-LABEL: bar:
-; ALL:       # BB#0: # %entry
+; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; ALL-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; ALL-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -36,7 +36,7 @@ entry:
 
 define i32 @un(i32 %x, i32 %y, i32 %z) nounwind readnone {
 ; ALL-LABEL: un:
-; ALL:       # BB#0: # %entry
+; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; ALL-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; ALL-NEXT:    rorl %cl, %eax
@@ -51,7 +51,7 @@ entry:
 
 define i32 @bu(i32 %x, i32 %y, i32 %z) nounwind readnone {
 ; ALL-LABEL: bu:
-; ALL:       # BB#0: # %entry
+; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; ALL-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; ALL-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -67,19 +67,19 @@ entry:
 
 define i32 @xfoo(i32 %x, i32 %y, i32 %z) nounwind readnone {
 ; X86-LABEL: xfoo:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    roll $7, %eax
 ; X86-NEXT:    retl
 ;
 ; SHLD-LABEL: xfoo:
-; SHLD:       # BB#0: # %entry
+; SHLD:       # %bb.0: # %entry
 ; SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SHLD-NEXT:    shldl $7, %eax, %eax
 ; SHLD-NEXT:    retl
 ;
 ; BMI2-LABEL: xfoo:
-; BMI2:       # BB#0: # %entry
+; BMI2:       # %bb.0: # %entry
 ; BMI2-NEXT:    rorxl $25, {{[0-9]+}}(%esp), %eax
 ; BMI2-NEXT:    retl
 entry:
@@ -91,21 +91,21 @@ entry:
 
 define i32 @xfoop(i32* %p) nounwind readnone {
 ; X86-LABEL: xfoop:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    roll $7, %eax
 ; X86-NEXT:    retl
 ;
 ; SHLD-LABEL: xfoop:
-; SHLD:       # BB#0: # %entry
+; SHLD:       # %bb.0: # %entry
 ; SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SHLD-NEXT:    movl (%eax), %eax
 ; SHLD-NEXT:    shldl $7, %eax, %eax
 ; SHLD-NEXT:    retl
 ;
 ; BMI2-LABEL: xfoop:
-; BMI2:       # BB#0: # %entry
+; BMI2:       # %bb.0: # %entry
 ; BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; BMI2-NEXT:    rorxl $25, (%eax), %eax
 ; BMI2-NEXT:    retl
@@ -119,7 +119,7 @@ entry:
 
 define i32 @xbar(i32 %x, i32 %y, i32 %z) nounwind readnone {
 ; ALL-LABEL: xbar:
-; ALL:       # BB#0: # %entry
+; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; ALL-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; ALL-NEXT:    shldl $7, %ecx, %eax
@@ -133,19 +133,19 @@ entry:
 
 define i32 @xun(i32 %x, i32 %y, i32 %z) nounwind readnone {
 ; X86-LABEL: xun:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    roll $25, %eax
 ; X86-NEXT:    retl
 ;
 ; SHLD-LABEL: xun:
-; SHLD:       # BB#0: # %entry
+; SHLD:       # %bb.0: # %entry
 ; SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SHLD-NEXT:    shldl $25, %eax, %eax
 ; SHLD-NEXT:    retl
 ;
 ; BMI2-LABEL: xun:
-; BMI2:       # BB#0: # %entry
+; BMI2:       # %bb.0: # %entry
 ; BMI2-NEXT:    rorxl $7, {{[0-9]+}}(%esp), %eax
 ; BMI2-NEXT:    retl
 entry:
@@ -157,21 +157,21 @@ entry:
 
 define i32 @xunp(i32* %p) nounwind readnone {
 ; X86-LABEL: xunp:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    roll $25, %eax
 ; X86-NEXT:    retl
 ;
 ; SHLD-LABEL: xunp:
-; SHLD:       # BB#0: # %entry
+; SHLD:       # %bb.0: # %entry
 ; SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SHLD-NEXT:    movl (%eax), %eax
 ; SHLD-NEXT:    shldl $25, %eax, %eax
 ; SHLD-NEXT:    retl
 ;
 ; BMI2-LABEL: xunp:
-; BMI2:       # BB#0: # %entry
+; BMI2:       # %bb.0: # %entry
 ; BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; BMI2-NEXT:    rorxl $7, (%eax), %eax
 ; BMI2-NEXT:    retl
@@ -187,7 +187,7 @@ entry:
 
 define i32 @xbu(i32 %x, i32 %y, i32 %z) nounwind readnone {
 ; ALL-LABEL: xbu:
-; ALL:       # BB#0: # %entry
+; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; ALL-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; ALL-NEXT:    shldl $25, %ecx, %eax

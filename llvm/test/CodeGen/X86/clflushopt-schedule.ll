@@ -7,27 +7,27 @@
 
 define void @clflushopt(i8* %p) nounwind {
 ; GENERIC-LABEL: clflushopt:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    clflushopt (%rdi) # sched: [5:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; GLM-LABEL: clflushopt:
-; GLM:       # BB#0:
+; GLM:       # %bb.0:
 ; GLM-NEXT:    clflushopt (%rdi) # sched: [3:1.00]
 ; GLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SKYLAKE-LABEL: clflushopt:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    clflushopt (%rdi) # sched: [2:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: clflushopt:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    clflushopt (%rdi) # sched: [2:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: clflushopt:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    clflushopt (%rdi) # sched: [8:0.50]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void @llvm.x86.clflushopt(i8* %p)

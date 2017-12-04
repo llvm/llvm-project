@@ -4,7 +4,7 @@
 
 define <8 x i16> @zext_8x8mem_to_8x16(<8 x i8> *%i , <8 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: zext_8x8mem_to_8x16:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovzxbw {{.*#+}} xmm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
 ; KNL-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; KNL-NEXT:    vpsraw $15, %xmm0, %xmm0
@@ -12,7 +12,7 @@ define <8 x i16> @zext_8x8mem_to_8x16(<8 x i8> *%i , <8 x i1> %mask) nounwind re
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_8x8mem_to_8x16:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; SKX-NEXT:    vpmovw2m %xmm0, %k1
 ; SKX-NEXT:    vpmovzxbw {{.*#+}} xmm0 {%k1} {z} = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
@@ -25,7 +25,7 @@ define <8 x i16> @zext_8x8mem_to_8x16(<8 x i8> *%i , <8 x i1> %mask) nounwind re
 
 define <8 x i16> @sext_8x8mem_to_8x16(<8 x i8> *%i , <8 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: sext_8x8mem_to_8x16:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovsxbw (%rdi), %xmm1
 ; KNL-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; KNL-NEXT:    vpsraw $15, %xmm0, %xmm0
@@ -33,7 +33,7 @@ define <8 x i16> @sext_8x8mem_to_8x16(<8 x i8> *%i , <8 x i1> %mask) nounwind re
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_8x8mem_to_8x16:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; SKX-NEXT:    vpmovw2m %xmm0, %k1
 ; SKX-NEXT:    vpmovsxbw (%rdi), %xmm0 {%k1} {z}
@@ -47,7 +47,7 @@ define <8 x i16> @sext_8x8mem_to_8x16(<8 x i8> *%i , <8 x i1> %mask) nounwind re
 
 define <16 x i16> @zext_16x8mem_to_16x16(<16 x i8> *%i , <16 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: zext_16x8mem_to_16x16:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
 ; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
 ; KNL-NEXT:    vpsllw $15, %ymm0, %ymm0
@@ -56,7 +56,7 @@ define <16 x i16> @zext_16x8mem_to_16x16(<16 x i8> *%i , <16 x i1> %mask) nounwi
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_16x8mem_to_16x16:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllw $7, %xmm0, %xmm0
 ; SKX-NEXT:    vpmovb2m %xmm0, %k1
 ; SKX-NEXT:    vpmovzxbw {{.*#+}} ymm0 {%k1} {z} = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
@@ -69,7 +69,7 @@ define <16 x i16> @zext_16x8mem_to_16x16(<16 x i8> *%i , <16 x i1> %mask) nounwi
 
 define <16 x i16> @sext_16x8mem_to_16x16(<16 x i8> *%i , <16 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: sext_16x8mem_to_16x16:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovsxbw (%rdi), %ymm1
 ; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
 ; KNL-NEXT:    vpsllw $15, %ymm0, %ymm0
@@ -78,7 +78,7 @@ define <16 x i16> @sext_16x8mem_to_16x16(<16 x i8> *%i , <16 x i1> %mask) nounwi
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_16x8mem_to_16x16:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllw $7, %xmm0, %xmm0
 ; SKX-NEXT:    vpmovb2m %xmm0, %k1
 ; SKX-NEXT:    vpmovsxbw (%rdi), %ymm0 {%k1} {z}
@@ -91,7 +91,7 @@ define <16 x i16> @sext_16x8mem_to_16x16(<16 x i8> *%i , <16 x i1> %mask) nounwi
 
 define <16 x i16> @zext_16x8_to_16x16(<16 x i8> %a ) nounwind readnone {
 ; ALL-LABEL: zext_16x8_to_16x16:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
 ; ALL-NEXT:    retq
   %x   = zext <16 x i8> %a to <16 x i16>
@@ -100,7 +100,7 @@ define <16 x i16> @zext_16x8_to_16x16(<16 x i8> %a ) nounwind readnone {
 
 define <16 x i16> @zext_16x8_to_16x16_mask(<16 x i8> %a ,<16 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: zext_16x8_to_16x16_mask:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
 ; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
 ; KNL-NEXT:    vpsllw $15, %ymm1, %ymm1
@@ -109,7 +109,7 @@ define <16 x i16> @zext_16x8_to_16x16_mask(<16 x i8> %a ,<16 x i1> %mask) nounwi
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_16x8_to_16x16_mask:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllw $7, %xmm1, %xmm1
 ; SKX-NEXT:    vpmovb2m %xmm1, %k1
 ; SKX-NEXT:    vpmovzxbw {{.*#+}} ymm0 {%k1} {z} = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
@@ -121,7 +121,7 @@ define <16 x i16> @zext_16x8_to_16x16_mask(<16 x i8> %a ,<16 x i1> %mask) nounwi
 
 define <16 x i16> @sext_16x8_to_16x16(<16 x i8> %a ) nounwind readnone {
 ; ALL-LABEL: sext_16x8_to_16x16:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpmovsxbw %xmm0, %ymm0
 ; ALL-NEXT:    retq
   %x   = sext <16 x i8> %a to <16 x i16>
@@ -130,7 +130,7 @@ define <16 x i16> @sext_16x8_to_16x16(<16 x i8> %a ) nounwind readnone {
 
 define <16 x i16> @sext_16x8_to_16x16_mask(<16 x i8> %a ,<16 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: sext_16x8_to_16x16_mask:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
 ; KNL-NEXT:    vpmovsxbw %xmm0, %ymm0
 ; KNL-NEXT:    vpsllw $15, %ymm1, %ymm1
@@ -139,7 +139,7 @@ define <16 x i16> @sext_16x8_to_16x16_mask(<16 x i8> %a ,<16 x i1> %mask) nounwi
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_16x8_to_16x16_mask:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllw $7, %xmm1, %xmm1
 ; SKX-NEXT:    vpmovb2m %xmm1, %k1
 ; SKX-NEXT:    vpmovsxbw %xmm0, %ymm0 {%k1} {z}
@@ -151,7 +151,7 @@ define <16 x i16> @sext_16x8_to_16x16_mask(<16 x i8> %a ,<16 x i1> %mask) nounwi
 
 define <32 x i16> @zext_32x8mem_to_32x16(<32 x i8> *%i , <32 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: zext_32x8mem_to_32x16:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
 ; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
 ; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm3 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
@@ -167,7 +167,7 @@ define <32 x i16> @zext_32x8mem_to_32x16(<32 x i8> *%i , <32 x i1> %mask) nounwi
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_32x8mem_to_32x16:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllw $7, %ymm0, %ymm0
 ; SKX-NEXT:    vpmovb2m %ymm0, %k1
 ; SKX-NEXT:    vpmovzxbw {{.*#+}} zmm0 {%k1} {z} = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero,mem[16],zero,mem[17],zero,mem[18],zero,mem[19],zero,mem[20],zero,mem[21],zero,mem[22],zero,mem[23],zero,mem[24],zero,mem[25],zero,mem[26],zero,mem[27],zero,mem[28],zero,mem[29],zero,mem[30],zero,mem[31],zero
@@ -180,7 +180,7 @@ define <32 x i16> @zext_32x8mem_to_32x16(<32 x i8> *%i , <32 x i1> %mask) nounwi
 
 define <32 x i16> @sext_32x8mem_to_32x16(<32 x i8> *%i , <32 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: sext_32x8mem_to_32x16:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovsxbw 16(%rdi), %ymm1
 ; KNL-NEXT:    vpmovsxbw (%rdi), %ymm2
 ; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm3 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
@@ -196,7 +196,7 @@ define <32 x i16> @sext_32x8mem_to_32x16(<32 x i8> *%i , <32 x i1> %mask) nounwi
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_32x8mem_to_32x16:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllw $7, %ymm0, %ymm0
 ; SKX-NEXT:    vpmovb2m %ymm0, %k1
 ; SKX-NEXT:    vpmovsxbw (%rdi), %zmm0 {%k1} {z}
@@ -209,7 +209,7 @@ define <32 x i16> @sext_32x8mem_to_32x16(<32 x i8> *%i , <32 x i1> %mask) nounwi
 
 define <32 x i16> @zext_32x8_to_32x16(<32 x i8> %a ) nounwind readnone {
 ; KNL-LABEL: zext_32x8_to_32x16:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm2 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
 ; KNL-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
@@ -217,7 +217,7 @@ define <32 x i16> @zext_32x8_to_32x16(<32 x i8> %a ) nounwind readnone {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_32x8_to_32x16:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpmovzxbw {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero,ymm0[16],zero,ymm0[17],zero,ymm0[18],zero,ymm0[19],zero,ymm0[20],zero,ymm0[21],zero,ymm0[22],zero,ymm0[23],zero,ymm0[24],zero,ymm0[25],zero,ymm0[26],zero,ymm0[27],zero,ymm0[28],zero,ymm0[29],zero,ymm0[30],zero,ymm0[31],zero
 ; SKX-NEXT:    retq
   %x   = zext <32 x i8> %a to <32 x i16>
@@ -226,7 +226,7 @@ define <32 x i16> @zext_32x8_to_32x16(<32 x i8> %a ) nounwind readnone {
 
 define <32 x i16> @zext_32x8_to_32x16_mask(<32 x i8> %a ,<32 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: zext_32x8_to_32x16_mask:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vextracti128 $1, %ymm0, %xmm2
 ; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero,xmm2[8],zero,xmm2[9],zero,xmm2[10],zero,xmm2[11],zero,xmm2[12],zero,xmm2[13],zero,xmm2[14],zero,xmm2[15],zero
 ; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
@@ -242,7 +242,7 @@ define <32 x i16> @zext_32x8_to_32x16_mask(<32 x i8> %a ,<32 x i1> %mask) nounwi
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_32x8_to_32x16_mask:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllw $7, %ymm1, %ymm1
 ; SKX-NEXT:    vpmovb2m %ymm1, %k1
 ; SKX-NEXT:    vpmovzxbw {{.*#+}} zmm0 {%k1} {z} = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero,ymm0[16],zero,ymm0[17],zero,ymm0[18],zero,ymm0[19],zero,ymm0[20],zero,ymm0[21],zero,ymm0[22],zero,ymm0[23],zero,ymm0[24],zero,ymm0[25],zero,ymm0[26],zero,ymm0[27],zero,ymm0[28],zero,ymm0[29],zero,ymm0[30],zero,ymm0[31],zero
@@ -254,7 +254,7 @@ define <32 x i16> @zext_32x8_to_32x16_mask(<32 x i8> %a ,<32 x i1> %mask) nounwi
 
 define <32 x i16> @sext_32x8_to_32x16(<32 x i8> %a ) nounwind readnone {
 ; KNL-LABEL: sext_32x8_to_32x16:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovsxbw %xmm0, %ymm2
 ; KNL-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; KNL-NEXT:    vpmovsxbw %xmm0, %ymm1
@@ -262,7 +262,7 @@ define <32 x i16> @sext_32x8_to_32x16(<32 x i8> %a ) nounwind readnone {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_32x8_to_32x16:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpmovsxbw %ymm0, %zmm0
 ; SKX-NEXT:    retq
   %x   = sext <32 x i8> %a to <32 x i16>
@@ -271,7 +271,7 @@ define <32 x i16> @sext_32x8_to_32x16(<32 x i8> %a ) nounwind readnone {
 
 define <32 x i16> @sext_32x8_to_32x16_mask(<32 x i8> %a ,<32 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: sext_32x8_to_32x16_mask:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vextracti128 $1, %ymm0, %xmm2
 ; KNL-NEXT:    vpmovsxbw %xmm2, %ymm2
 ; KNL-NEXT:    vpmovsxbw %xmm0, %ymm0
@@ -287,7 +287,7 @@ define <32 x i16> @sext_32x8_to_32x16_mask(<32 x i8> %a ,<32 x i1> %mask) nounwi
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_32x8_to_32x16_mask:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllw $7, %ymm1, %ymm1
 ; SKX-NEXT:    vpmovb2m %ymm1, %k1
 ; SKX-NEXT:    vpmovsxbw %ymm0, %zmm0 {%k1} {z}
@@ -299,7 +299,7 @@ define <32 x i16> @sext_32x8_to_32x16_mask(<32 x i8> %a ,<32 x i1> %mask) nounwi
 
 define <4 x i32> @zext_4x8mem_to_4x32(<4 x i8> *%i , <4 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: zext_4x8mem_to_4x32:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpslld $31, %xmm0, %xmm0
 ; KNL-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; KNL-NEXT:    vpmovzxbd {{.*#+}} xmm1 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
@@ -307,7 +307,7 @@ define <4 x i32> @zext_4x8mem_to_4x32(<4 x i8> *%i , <4 x i1> %mask) nounwind re
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_4x8mem_to_4x32:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpslld $31, %xmm0, %xmm0
 ; SKX-NEXT:    vptestmd %xmm0, %xmm0, %k1
 ; SKX-NEXT:    vpmovzxbd {{.*#+}} xmm0 {%k1} {z} = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
@@ -320,7 +320,7 @@ define <4 x i32> @zext_4x8mem_to_4x32(<4 x i8> *%i , <4 x i1> %mask) nounwind re
 
 define <4 x i32> @sext_4x8mem_to_4x32(<4 x i8> *%i , <4 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: sext_4x8mem_to_4x32:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpslld $31, %xmm0, %xmm0
 ; KNL-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; KNL-NEXT:    vpmovsxbd (%rdi), %xmm1
@@ -328,7 +328,7 @@ define <4 x i32> @sext_4x8mem_to_4x32(<4 x i8> *%i , <4 x i1> %mask) nounwind re
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_4x8mem_to_4x32:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpslld $31, %xmm0, %xmm0
 ; SKX-NEXT:    vptestmd %xmm0, %xmm0, %k1
 ; SKX-NEXT:    vpmovsxbd (%rdi), %xmm0 {%k1} {z}
@@ -341,7 +341,7 @@ define <4 x i32> @sext_4x8mem_to_4x32(<4 x i8> *%i , <4 x i1> %mask) nounwind re
 
 define <8 x i32> @zext_8x8mem_to_8x32(<8 x i8> *%i , <8 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: zext_8x8mem_to_8x32:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; KNL-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k1
@@ -352,7 +352,7 @@ define <8 x i32> @zext_8x8mem_to_8x32(<8 x i8> *%i , <8 x i1> %mask) nounwind re
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_8x8mem_to_8x32:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; SKX-NEXT:    vpmovw2m %xmm0, %k1
 ; SKX-NEXT:    vpmovzxbd {{.*#+}} ymm0 {%k1} {z} = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero
@@ -365,7 +365,7 @@ define <8 x i32> @zext_8x8mem_to_8x32(<8 x i8> *%i , <8 x i1> %mask) nounwind re
 
 define <8 x i32> @sext_8x8mem_to_8x32(<8 x i8> *%i , <8 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: sext_8x8mem_to_8x32:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; KNL-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k1
@@ -376,7 +376,7 @@ define <8 x i32> @sext_8x8mem_to_8x32(<8 x i8> *%i , <8 x i1> %mask) nounwind re
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_8x8mem_to_8x32:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; SKX-NEXT:    vpmovw2m %xmm0, %k1
 ; SKX-NEXT:    vpmovsxbd (%rdi), %ymm0 {%k1} {z}
@@ -389,7 +389,7 @@ define <8 x i32> @sext_8x8mem_to_8x32(<8 x i8> *%i , <8 x i1> %mask) nounwind re
 
 define <16 x i32> @zext_16x8mem_to_16x32(<16 x i8> *%i , <16 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: zext_16x8mem_to_16x32:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; KNL-NEXT:    vpslld $31, %zmm0, %zmm0
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k1
@@ -397,7 +397,7 @@ define <16 x i32> @zext_16x8mem_to_16x32(<16 x i8> *%i , <16 x i1> %mask) nounwi
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_16x8mem_to_16x32:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllw $7, %xmm0, %xmm0
 ; SKX-NEXT:    vpmovb2m %xmm0, %k1
 ; SKX-NEXT:    vpmovzxbd {{.*#+}} zmm0 {%k1} {z} = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero,mem[8],zero,zero,zero,mem[9],zero,zero,zero,mem[10],zero,zero,zero,mem[11],zero,zero,zero,mem[12],zero,zero,zero,mem[13],zero,zero,zero,mem[14],zero,zero,zero,mem[15],zero,zero,zero
@@ -410,7 +410,7 @@ define <16 x i32> @zext_16x8mem_to_16x32(<16 x i8> *%i , <16 x i1> %mask) nounwi
 
 define <16 x i32> @sext_16x8mem_to_16x32(<16 x i8> *%i , <16 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: sext_16x8mem_to_16x32:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; KNL-NEXT:    vpslld $31, %zmm0, %zmm0
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k1
@@ -418,7 +418,7 @@ define <16 x i32> @sext_16x8mem_to_16x32(<16 x i8> *%i , <16 x i1> %mask) nounwi
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_16x8mem_to_16x32:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllw $7, %xmm0, %xmm0
 ; SKX-NEXT:    vpmovb2m %xmm0, %k1
 ; SKX-NEXT:    vpmovsxbd (%rdi), %zmm0 {%k1} {z}
@@ -431,7 +431,7 @@ define <16 x i32> @sext_16x8mem_to_16x32(<16 x i8> *%i , <16 x i1> %mask) nounwi
 
 define <16 x i32> @zext_16x8_to_16x32_mask(<16 x i8> %a , <16 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: zext_16x8_to_16x32_mask:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovsxbd %xmm1, %zmm1
 ; KNL-NEXT:    vpslld $31, %zmm1, %zmm1
 ; KNL-NEXT:    vptestmd %zmm1, %zmm1, %k1
@@ -439,7 +439,7 @@ define <16 x i32> @zext_16x8_to_16x32_mask(<16 x i8> %a , <16 x i1> %mask) nounw
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_16x8_to_16x32_mask:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllw $7, %xmm1, %xmm1
 ; SKX-NEXT:    vpmovb2m %xmm1, %k1
 ; SKX-NEXT:    vpmovzxbd {{.*#+}} zmm0 {%k1} {z} = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
@@ -451,7 +451,7 @@ define <16 x i32> @zext_16x8_to_16x32_mask(<16 x i8> %a , <16 x i1> %mask) nounw
 
 define <16 x i32> @sext_16x8_to_16x32_mask(<16 x i8> %a , <16 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: sext_16x8_to_16x32_mask:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovsxbd %xmm1, %zmm1
 ; KNL-NEXT:    vpslld $31, %zmm1, %zmm1
 ; KNL-NEXT:    vptestmd %zmm1, %zmm1, %k1
@@ -459,7 +459,7 @@ define <16 x i32> @sext_16x8_to_16x32_mask(<16 x i8> %a , <16 x i1> %mask) nounw
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_16x8_to_16x32_mask:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllw $7, %xmm1, %xmm1
 ; SKX-NEXT:    vpmovb2m %xmm1, %k1
 ; SKX-NEXT:    vpmovsxbd %xmm0, %zmm0 {%k1} {z}
@@ -471,7 +471,7 @@ define <16 x i32> @sext_16x8_to_16x32_mask(<16 x i8> %a , <16 x i1> %mask) nounw
 
 define <16 x i32> @zext_16x8_to_16x32(<16 x i8> %i) nounwind readnone {
 ; ALL-LABEL: zext_16x8_to_16x32:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
 ; ALL-NEXT:    retq
   %x = zext <16 x i8> %i to <16 x i32>
@@ -480,7 +480,7 @@ define <16 x i32> @zext_16x8_to_16x32(<16 x i8> %i) nounwind readnone {
 
 define <16 x i32> @sext_16x8_to_16x32(<16 x i8> %i) nounwind readnone {
 ; ALL-LABEL: sext_16x8_to_16x32:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; ALL-NEXT:    retq
   %x = sext <16 x i8> %i to <16 x i32>
@@ -489,7 +489,7 @@ define <16 x i32> @sext_16x8_to_16x32(<16 x i8> %i) nounwind readnone {
 
 define <2 x i64> @zext_2x8mem_to_2x64(<2 x i8> *%i , <2 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: zext_2x8mem_to_2x64:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpsllq $63, %xmm0, %xmm0
 ; KNL-NEXT:    vpsraq $63, %zmm0, %zmm0
 ; KNL-NEXT:    vpmovzxbq {{.*#+}} xmm1 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
@@ -497,7 +497,7 @@ define <2 x i64> @zext_2x8mem_to_2x64(<2 x i8> *%i , <2 x i1> %mask) nounwind re
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_2x8mem_to_2x64:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllq $63, %xmm0, %xmm0
 ; SKX-NEXT:    vptestmq %xmm0, %xmm0, %k1
 ; SKX-NEXT:    vpmovzxbq {{.*#+}} xmm0 {%k1} {z} = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
@@ -509,7 +509,7 @@ define <2 x i64> @zext_2x8mem_to_2x64(<2 x i8> *%i , <2 x i1> %mask) nounwind re
 }
 define <2 x i64> @sext_2x8mem_to_2x64mask(<2 x i8> *%i , <2 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: sext_2x8mem_to_2x64mask:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpsllq $63, %xmm0, %xmm0
 ; KNL-NEXT:    vpsraq $63, %zmm0, %zmm0
 ; KNL-NEXT:    vpmovsxbq (%rdi), %xmm1
@@ -517,7 +517,7 @@ define <2 x i64> @sext_2x8mem_to_2x64mask(<2 x i8> *%i , <2 x i1> %mask) nounwin
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_2x8mem_to_2x64mask:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllq $63, %xmm0, %xmm0
 ; SKX-NEXT:    vptestmq %xmm0, %xmm0, %k1
 ; SKX-NEXT:    vpmovsxbq (%rdi), %xmm0 {%k1} {z}
@@ -529,7 +529,7 @@ define <2 x i64> @sext_2x8mem_to_2x64mask(<2 x i8> *%i , <2 x i1> %mask) nounwin
 }
 define <2 x i64> @sext_2x8mem_to_2x64(<2 x i8> *%i) nounwind readnone {
 ; ALL-LABEL: sext_2x8mem_to_2x64:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpmovsxbq (%rdi), %xmm0
 ; ALL-NEXT:    retq
   %a   = load <2 x i8>,<2 x i8> *%i,align 1
@@ -539,7 +539,7 @@ define <2 x i64> @sext_2x8mem_to_2x64(<2 x i8> *%i) nounwind readnone {
 
 define <4 x i64> @zext_4x8mem_to_4x64(<4 x i8> *%i , <4 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: zext_4x8mem_to_4x64:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpslld $31, %xmm0, %xmm0
 ; KNL-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; KNL-NEXT:    vpmovzxdq {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
@@ -548,7 +548,7 @@ define <4 x i64> @zext_4x8mem_to_4x64(<4 x i8> *%i , <4 x i1> %mask) nounwind re
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_4x8mem_to_4x64:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpslld $31, %xmm0, %xmm0
 ; SKX-NEXT:    vptestmd %xmm0, %xmm0, %k1
 ; SKX-NEXT:    vpmovzxbq {{.*#+}} ymm0 {%k1} {z} = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero,mem[2],zero,zero,zero,zero,zero,zero,zero,mem[3],zero,zero,zero,zero,zero,zero,zero
@@ -561,7 +561,7 @@ define <4 x i64> @zext_4x8mem_to_4x64(<4 x i8> *%i , <4 x i1> %mask) nounwind re
 
 define <4 x i64> @sext_4x8mem_to_4x64mask(<4 x i8> *%i , <4 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: sext_4x8mem_to_4x64mask:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpslld $31, %xmm0, %xmm0
 ; KNL-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; KNL-NEXT:    vpmovsxdq %xmm0, %ymm0
@@ -570,7 +570,7 @@ define <4 x i64> @sext_4x8mem_to_4x64mask(<4 x i8> *%i , <4 x i1> %mask) nounwin
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_4x8mem_to_4x64mask:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpslld $31, %xmm0, %xmm0
 ; SKX-NEXT:    vptestmd %xmm0, %xmm0, %k1
 ; SKX-NEXT:    vpmovsxbq (%rdi), %ymm0 {%k1} {z}
@@ -583,7 +583,7 @@ define <4 x i64> @sext_4x8mem_to_4x64mask(<4 x i8> *%i , <4 x i1> %mask) nounwin
 
 define <4 x i64> @sext_4x8mem_to_4x64(<4 x i8> *%i) nounwind readnone {
 ; ALL-LABEL: sext_4x8mem_to_4x64:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpmovsxbq (%rdi), %ymm0
 ; ALL-NEXT:    retq
   %a   = load <4 x i8>,<4 x i8> *%i,align 1
@@ -593,7 +593,7 @@ define <4 x i64> @sext_4x8mem_to_4x64(<4 x i8> *%i) nounwind readnone {
 
 define <8 x i64> @zext_8x8mem_to_8x64(<8 x i8> *%i , <8 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: zext_8x8mem_to_8x64:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; KNL-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k1
@@ -601,7 +601,7 @@ define <8 x i64> @zext_8x8mem_to_8x64(<8 x i8> *%i , <8 x i1> %mask) nounwind re
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_8x8mem_to_8x64:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; SKX-NEXT:    vpmovw2m %xmm0, %k1
 ; SKX-NEXT:    vpmovzxbq {{.*#+}} zmm0 {%k1} {z} = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero,mem[2],zero,zero,zero,zero,zero,zero,zero,mem[3],zero,zero,zero,zero,zero,zero,zero,mem[4],zero,zero,zero,zero,zero,zero,zero,mem[5],zero,zero,zero,zero,zero,zero,zero,mem[6],zero,zero,zero,zero,zero,zero,zero,mem[7],zero,zero,zero,zero,zero,zero,zero
@@ -614,7 +614,7 @@ define <8 x i64> @zext_8x8mem_to_8x64(<8 x i8> *%i , <8 x i1> %mask) nounwind re
 
 define <8 x i64> @sext_8x8mem_to_8x64mask(<8 x i8> *%i , <8 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: sext_8x8mem_to_8x64mask:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; KNL-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k1
@@ -622,7 +622,7 @@ define <8 x i64> @sext_8x8mem_to_8x64mask(<8 x i8> *%i , <8 x i1> %mask) nounwin
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_8x8mem_to_8x64mask:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; SKX-NEXT:    vpmovw2m %xmm0, %k1
 ; SKX-NEXT:    vpmovsxbq (%rdi), %zmm0 {%k1} {z}
@@ -635,7 +635,7 @@ define <8 x i64> @sext_8x8mem_to_8x64mask(<8 x i8> *%i , <8 x i1> %mask) nounwin
 
 define <8 x i64> @sext_8x8mem_to_8x64(<8 x i8> *%i) nounwind readnone {
 ; ALL-LABEL: sext_8x8mem_to_8x64:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpmovsxbq (%rdi), %zmm0
 ; ALL-NEXT:    retq
   %a   = load <8 x i8>,<8 x i8> *%i,align 1
@@ -645,7 +645,7 @@ define <8 x i64> @sext_8x8mem_to_8x64(<8 x i8> *%i) nounwind readnone {
 
 define <4 x i32> @zext_4x16mem_to_4x32(<4 x i16> *%i , <4 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: zext_4x16mem_to_4x32:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpslld $31, %xmm0, %xmm0
 ; KNL-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; KNL-NEXT:    vpmovzxwd {{.*#+}} xmm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
@@ -653,7 +653,7 @@ define <4 x i32> @zext_4x16mem_to_4x32(<4 x i16> *%i , <4 x i1> %mask) nounwind 
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_4x16mem_to_4x32:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpslld $31, %xmm0, %xmm0
 ; SKX-NEXT:    vptestmd %xmm0, %xmm0, %k1
 ; SKX-NEXT:    vpmovzxwd {{.*#+}} xmm0 {%k1} {z} = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
@@ -666,7 +666,7 @@ define <4 x i32> @zext_4x16mem_to_4x32(<4 x i16> *%i , <4 x i1> %mask) nounwind 
 
 define <4 x i32> @sext_4x16mem_to_4x32mask(<4 x i16> *%i , <4 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: sext_4x16mem_to_4x32mask:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpslld $31, %xmm0, %xmm0
 ; KNL-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; KNL-NEXT:    vpmovsxwd (%rdi), %xmm1
@@ -674,7 +674,7 @@ define <4 x i32> @sext_4x16mem_to_4x32mask(<4 x i16> *%i , <4 x i1> %mask) nounw
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_4x16mem_to_4x32mask:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpslld $31, %xmm0, %xmm0
 ; SKX-NEXT:    vptestmd %xmm0, %xmm0, %k1
 ; SKX-NEXT:    vpmovsxwd (%rdi), %xmm0 {%k1} {z}
@@ -687,7 +687,7 @@ define <4 x i32> @sext_4x16mem_to_4x32mask(<4 x i16> *%i , <4 x i1> %mask) nounw
 
 define <4 x i32> @sext_4x16mem_to_4x32(<4 x i16> *%i) nounwind readnone {
 ; ALL-LABEL: sext_4x16mem_to_4x32:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpmovsxwd (%rdi), %xmm0
 ; ALL-NEXT:    retq
   %a   = load <4 x i16>,<4 x i16> *%i,align 1
@@ -698,7 +698,7 @@ define <4 x i32> @sext_4x16mem_to_4x32(<4 x i16> *%i) nounwind readnone {
 
 define <8 x i32> @zext_8x16mem_to_8x32(<8 x i16> *%i , <8 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: zext_8x16mem_to_8x32:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; KNL-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k1
@@ -709,7 +709,7 @@ define <8 x i32> @zext_8x16mem_to_8x32(<8 x i16> *%i , <8 x i1> %mask) nounwind 
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_8x16mem_to_8x32:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; SKX-NEXT:    vpmovw2m %xmm0, %k1
 ; SKX-NEXT:    vpmovzxwd {{.*#+}} ymm0 {%k1} {z} = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
@@ -722,7 +722,7 @@ define <8 x i32> @zext_8x16mem_to_8x32(<8 x i16> *%i , <8 x i1> %mask) nounwind 
 
 define <8 x i32> @sext_8x16mem_to_8x32mask(<8 x i16> *%i , <8 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: sext_8x16mem_to_8x32mask:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; KNL-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k1
@@ -733,7 +733,7 @@ define <8 x i32> @sext_8x16mem_to_8x32mask(<8 x i16> *%i , <8 x i1> %mask) nounw
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_8x16mem_to_8x32mask:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; SKX-NEXT:    vpmovw2m %xmm0, %k1
 ; SKX-NEXT:    vpmovsxwd (%rdi), %ymm0 {%k1} {z}
@@ -746,7 +746,7 @@ define <8 x i32> @sext_8x16mem_to_8x32mask(<8 x i16> *%i , <8 x i1> %mask) nounw
 
 define <8 x i32> @sext_8x16mem_to_8x32(<8 x i16> *%i) nounwind readnone {
 ; ALL-LABEL: sext_8x16mem_to_8x32:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpmovsxwd (%rdi), %ymm0
 ; ALL-NEXT:    retq
   %a   = load <8 x i16>,<8 x i16> *%i,align 1
@@ -756,7 +756,7 @@ define <8 x i32> @sext_8x16mem_to_8x32(<8 x i16> *%i) nounwind readnone {
 
 define <8 x i32> @zext_8x16_to_8x32mask(<8 x i16> %a , <8 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: zext_8x16_to_8x32mask:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovsxwq %xmm1, %zmm1
 ; KNL-NEXT:    vpsllq $63, %zmm1, %zmm1
 ; KNL-NEXT:    vptestmq %zmm1, %zmm1, %k1
@@ -767,7 +767,7 @@ define <8 x i32> @zext_8x16_to_8x32mask(<8 x i16> %a , <8 x i1> %mask) nounwind 
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_8x16_to_8x32mask:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllw $15, %xmm1, %xmm1
 ; SKX-NEXT:    vpmovw2m %xmm1, %k1
 ; SKX-NEXT:    vpmovzxwd {{.*#+}} ymm0 {%k1} {z} = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
@@ -779,7 +779,7 @@ define <8 x i32> @zext_8x16_to_8x32mask(<8 x i16> %a , <8 x i1> %mask) nounwind 
 
 define <8 x i32> @zext_8x16_to_8x32(<8 x i16> %a ) nounwind readnone {
 ; ALL-LABEL: zext_8x16_to_8x32:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; ALL-NEXT:    retq
   %x   = zext <8 x i16> %a to <8 x i32>
@@ -788,7 +788,7 @@ define <8 x i32> @zext_8x16_to_8x32(<8 x i16> %a ) nounwind readnone {
 
 define <16 x i32> @zext_16x16mem_to_16x32(<16 x i16> *%i , <16 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: zext_16x16mem_to_16x32:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; KNL-NEXT:    vpslld $31, %zmm0, %zmm0
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k1
@@ -796,7 +796,7 @@ define <16 x i32> @zext_16x16mem_to_16x32(<16 x i16> *%i , <16 x i1> %mask) noun
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_16x16mem_to_16x32:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllw $7, %xmm0, %xmm0
 ; SKX-NEXT:    vpmovb2m %xmm0, %k1
 ; SKX-NEXT:    vpmovzxwd {{.*#+}} zmm0 {%k1} {z} = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
@@ -809,7 +809,7 @@ define <16 x i32> @zext_16x16mem_to_16x32(<16 x i16> *%i , <16 x i1> %mask) noun
 
 define <16 x i32> @sext_16x16mem_to_16x32mask(<16 x i16> *%i , <16 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: sext_16x16mem_to_16x32mask:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; KNL-NEXT:    vpslld $31, %zmm0, %zmm0
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k1
@@ -817,7 +817,7 @@ define <16 x i32> @sext_16x16mem_to_16x32mask(<16 x i16> *%i , <16 x i1> %mask) 
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_16x16mem_to_16x32mask:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllw $7, %xmm0, %xmm0
 ; SKX-NEXT:    vpmovb2m %xmm0, %k1
 ; SKX-NEXT:    vpmovsxwd (%rdi), %zmm0 {%k1} {z}
@@ -830,7 +830,7 @@ define <16 x i32> @sext_16x16mem_to_16x32mask(<16 x i16> *%i , <16 x i1> %mask) 
 
 define <16 x i32> @sext_16x16mem_to_16x32(<16 x i16> *%i) nounwind readnone {
 ; ALL-LABEL: sext_16x16mem_to_16x32:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpmovsxwd (%rdi), %zmm0
 ; ALL-NEXT:    retq
   %a   = load <16 x i16>,<16 x i16> *%i,align 1
@@ -839,7 +839,7 @@ define <16 x i32> @sext_16x16mem_to_16x32(<16 x i16> *%i) nounwind readnone {
 }
 define <16 x i32> @zext_16x16_to_16x32mask(<16 x i16> %a , <16 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: zext_16x16_to_16x32mask:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovsxbd %xmm1, %zmm1
 ; KNL-NEXT:    vpslld $31, %zmm1, %zmm1
 ; KNL-NEXT:    vptestmd %zmm1, %zmm1, %k1
@@ -847,7 +847,7 @@ define <16 x i32> @zext_16x16_to_16x32mask(<16 x i16> %a , <16 x i1> %mask) noun
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_16x16_to_16x32mask:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllw $7, %xmm1, %xmm1
 ; SKX-NEXT:    vpmovb2m %xmm1, %k1
 ; SKX-NEXT:    vpmovzxwd {{.*#+}} zmm0 {%k1} {z} = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
@@ -859,7 +859,7 @@ define <16 x i32> @zext_16x16_to_16x32mask(<16 x i16> %a , <16 x i1> %mask) noun
 
 define <16 x i32> @zext_16x16_to_16x32(<16 x i16> %a ) nounwind readnone {
 ; ALL-LABEL: zext_16x16_to_16x32:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; ALL-NEXT:    retq
   %x   = zext <16 x i16> %a to <16 x i32>
@@ -868,7 +868,7 @@ define <16 x i32> @zext_16x16_to_16x32(<16 x i16> %a ) nounwind readnone {
 
 define <2 x i64> @zext_2x16mem_to_2x64(<2 x i16> *%i , <2 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: zext_2x16mem_to_2x64:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpsllq $63, %xmm0, %xmm0
 ; KNL-NEXT:    vpsraq $63, %zmm0, %zmm0
 ; KNL-NEXT:    vpmovzxwq {{.*#+}} xmm1 = mem[0],zero,zero,zero,mem[1],zero,zero,zero
@@ -876,7 +876,7 @@ define <2 x i64> @zext_2x16mem_to_2x64(<2 x i16> *%i , <2 x i1> %mask) nounwind 
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_2x16mem_to_2x64:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllq $63, %xmm0, %xmm0
 ; SKX-NEXT:    vptestmq %xmm0, %xmm0, %k1
 ; SKX-NEXT:    vpmovzxwq {{.*#+}} xmm0 {%k1} {z} = mem[0],zero,zero,zero,mem[1],zero,zero,zero
@@ -889,7 +889,7 @@ define <2 x i64> @zext_2x16mem_to_2x64(<2 x i16> *%i , <2 x i1> %mask) nounwind 
 
 define <2 x i64> @sext_2x16mem_to_2x64mask(<2 x i16> *%i , <2 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: sext_2x16mem_to_2x64mask:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpsllq $63, %xmm0, %xmm0
 ; KNL-NEXT:    vpsraq $63, %zmm0, %zmm0
 ; KNL-NEXT:    vpmovsxwq (%rdi), %xmm1
@@ -897,7 +897,7 @@ define <2 x i64> @sext_2x16mem_to_2x64mask(<2 x i16> *%i , <2 x i1> %mask) nounw
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_2x16mem_to_2x64mask:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllq $63, %xmm0, %xmm0
 ; SKX-NEXT:    vptestmq %xmm0, %xmm0, %k1
 ; SKX-NEXT:    vpmovsxwq (%rdi), %xmm0 {%k1} {z}
@@ -910,7 +910,7 @@ define <2 x i64> @sext_2x16mem_to_2x64mask(<2 x i16> *%i , <2 x i1> %mask) nounw
 
 define <2 x i64> @sext_2x16mem_to_2x64(<2 x i16> *%i) nounwind readnone {
 ; ALL-LABEL: sext_2x16mem_to_2x64:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpmovsxwq (%rdi), %xmm0
 ; ALL-NEXT:    retq
   %a   = load <2 x i16>,<2 x i16> *%i,align 1
@@ -920,7 +920,7 @@ define <2 x i64> @sext_2x16mem_to_2x64(<2 x i16> *%i) nounwind readnone {
 
 define <4 x i64> @zext_4x16mem_to_4x64(<4 x i16> *%i , <4 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: zext_4x16mem_to_4x64:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpslld $31, %xmm0, %xmm0
 ; KNL-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; KNL-NEXT:    vpmovzxdq {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
@@ -929,7 +929,7 @@ define <4 x i64> @zext_4x16mem_to_4x64(<4 x i16> *%i , <4 x i1> %mask) nounwind 
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_4x16mem_to_4x64:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpslld $31, %xmm0, %xmm0
 ; SKX-NEXT:    vptestmd %xmm0, %xmm0, %k1
 ; SKX-NEXT:    vpmovzxwq {{.*#+}} ymm0 {%k1} {z} = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
@@ -942,7 +942,7 @@ define <4 x i64> @zext_4x16mem_to_4x64(<4 x i16> *%i , <4 x i1> %mask) nounwind 
 
 define <4 x i64> @sext_4x16mem_to_4x64mask(<4 x i16> *%i , <4 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: sext_4x16mem_to_4x64mask:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpslld $31, %xmm0, %xmm0
 ; KNL-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; KNL-NEXT:    vpmovsxdq %xmm0, %ymm0
@@ -951,7 +951,7 @@ define <4 x i64> @sext_4x16mem_to_4x64mask(<4 x i16> *%i , <4 x i1> %mask) nounw
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_4x16mem_to_4x64mask:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpslld $31, %xmm0, %xmm0
 ; SKX-NEXT:    vptestmd %xmm0, %xmm0, %k1
 ; SKX-NEXT:    vpmovsxwq (%rdi), %ymm0 {%k1} {z}
@@ -964,7 +964,7 @@ define <4 x i64> @sext_4x16mem_to_4x64mask(<4 x i16> *%i , <4 x i1> %mask) nounw
 
 define <4 x i64> @sext_4x16mem_to_4x64(<4 x i16> *%i) nounwind readnone {
 ; ALL-LABEL: sext_4x16mem_to_4x64:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpmovsxwq (%rdi), %ymm0
 ; ALL-NEXT:    retq
   %a   = load <4 x i16>,<4 x i16> *%i,align 1
@@ -974,7 +974,7 @@ define <4 x i64> @sext_4x16mem_to_4x64(<4 x i16> *%i) nounwind readnone {
 
 define <8 x i64> @zext_8x16mem_to_8x64(<8 x i16> *%i , <8 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: zext_8x16mem_to_8x64:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; KNL-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k1
@@ -982,7 +982,7 @@ define <8 x i64> @zext_8x16mem_to_8x64(<8 x i16> *%i , <8 x i1> %mask) nounwind 
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_8x16mem_to_8x64:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; SKX-NEXT:    vpmovw2m %xmm0, %k1
 ; SKX-NEXT:    vpmovzxwq {{.*#+}} zmm0 {%k1} {z} = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero
@@ -995,7 +995,7 @@ define <8 x i64> @zext_8x16mem_to_8x64(<8 x i16> *%i , <8 x i1> %mask) nounwind 
 
 define <8 x i64> @sext_8x16mem_to_8x64mask(<8 x i16> *%i , <8 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: sext_8x16mem_to_8x64mask:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; KNL-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k1
@@ -1003,7 +1003,7 @@ define <8 x i64> @sext_8x16mem_to_8x64mask(<8 x i16> *%i , <8 x i1> %mask) nounw
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_8x16mem_to_8x64mask:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; SKX-NEXT:    vpmovw2m %xmm0, %k1
 ; SKX-NEXT:    vpmovsxwq (%rdi), %zmm0 {%k1} {z}
@@ -1016,7 +1016,7 @@ define <8 x i64> @sext_8x16mem_to_8x64mask(<8 x i16> *%i , <8 x i1> %mask) nounw
 
 define <8 x i64> @sext_8x16mem_to_8x64(<8 x i16> *%i) nounwind readnone {
 ; ALL-LABEL: sext_8x16mem_to_8x64:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpmovsxwq (%rdi), %zmm0
 ; ALL-NEXT:    retq
   %a   = load <8 x i16>,<8 x i16> *%i,align 1
@@ -1026,7 +1026,7 @@ define <8 x i64> @sext_8x16mem_to_8x64(<8 x i16> *%i) nounwind readnone {
 
 define <8 x i64> @zext_8x16_to_8x64mask(<8 x i16> %a , <8 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: zext_8x16_to_8x64mask:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovsxwq %xmm1, %zmm1
 ; KNL-NEXT:    vpsllq $63, %zmm1, %zmm1
 ; KNL-NEXT:    vptestmq %zmm1, %zmm1, %k1
@@ -1034,7 +1034,7 @@ define <8 x i64> @zext_8x16_to_8x64mask(<8 x i16> %a , <8 x i1> %mask) nounwind 
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_8x16_to_8x64mask:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllw $15, %xmm1, %xmm1
 ; SKX-NEXT:    vpmovw2m %xmm1, %k1
 ; SKX-NEXT:    vpmovzxwq {{.*#+}} zmm0 {%k1} {z} = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
@@ -1046,7 +1046,7 @@ define <8 x i64> @zext_8x16_to_8x64mask(<8 x i16> %a , <8 x i1> %mask) nounwind 
 
 define <8 x i64> @zext_8x16_to_8x64(<8 x i16> %a) nounwind readnone {
 ; ALL-LABEL: zext_8x16_to_8x64:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpmovzxwq {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
 ; ALL-NEXT:    retq
   %ret   = zext <8 x i16> %a to <8 x i64>
@@ -1055,7 +1055,7 @@ define <8 x i64> @zext_8x16_to_8x64(<8 x i16> %a) nounwind readnone {
 
 define <2 x i64> @zext_2x32mem_to_2x64(<2 x i32> *%i , <2 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: zext_2x32mem_to_2x64:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpsllq $63, %xmm0, %xmm0
 ; KNL-NEXT:    vpsraq $63, %zmm0, %zmm0
 ; KNL-NEXT:    vpmovzxdq {{.*#+}} xmm1 = mem[0],zero,mem[1],zero
@@ -1063,7 +1063,7 @@ define <2 x i64> @zext_2x32mem_to_2x64(<2 x i32> *%i , <2 x i1> %mask) nounwind 
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_2x32mem_to_2x64:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllq $63, %xmm0, %xmm0
 ; SKX-NEXT:    vptestmq %xmm0, %xmm0, %k1
 ; SKX-NEXT:    vpmovzxdq {{.*#+}} xmm0 {%k1} {z} = mem[0],zero,mem[1],zero
@@ -1076,7 +1076,7 @@ define <2 x i64> @zext_2x32mem_to_2x64(<2 x i32> *%i , <2 x i1> %mask) nounwind 
 
 define <2 x i64> @sext_2x32mem_to_2x64mask(<2 x i32> *%i , <2 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: sext_2x32mem_to_2x64mask:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpsllq $63, %xmm0, %xmm0
 ; KNL-NEXT:    vpsraq $63, %zmm0, %zmm0
 ; KNL-NEXT:    vpmovsxdq (%rdi), %xmm1
@@ -1084,7 +1084,7 @@ define <2 x i64> @sext_2x32mem_to_2x64mask(<2 x i32> *%i , <2 x i1> %mask) nounw
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_2x32mem_to_2x64mask:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllq $63, %xmm0, %xmm0
 ; SKX-NEXT:    vptestmq %xmm0, %xmm0, %k1
 ; SKX-NEXT:    vpmovsxdq (%rdi), %xmm0 {%k1} {z}
@@ -1097,7 +1097,7 @@ define <2 x i64> @sext_2x32mem_to_2x64mask(<2 x i32> *%i , <2 x i1> %mask) nounw
 
 define <2 x i64> @sext_2x32mem_to_2x64(<2 x i32> *%i) nounwind readnone {
 ; ALL-LABEL: sext_2x32mem_to_2x64:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpmovsxdq (%rdi), %xmm0
 ; ALL-NEXT:    retq
   %a   = load <2 x i32>,<2 x i32> *%i,align 1
@@ -1107,7 +1107,7 @@ define <2 x i64> @sext_2x32mem_to_2x64(<2 x i32> *%i) nounwind readnone {
 
 define <4 x i64> @zext_4x32mem_to_4x64(<4 x i32> *%i , <4 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: zext_4x32mem_to_4x64:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpslld $31, %xmm0, %xmm0
 ; KNL-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; KNL-NEXT:    vpmovzxdq {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
@@ -1116,7 +1116,7 @@ define <4 x i64> @zext_4x32mem_to_4x64(<4 x i32> *%i , <4 x i1> %mask) nounwind 
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_4x32mem_to_4x64:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpslld $31, %xmm0, %xmm0
 ; SKX-NEXT:    vptestmd %xmm0, %xmm0, %k1
 ; SKX-NEXT:    vpmovzxdq {{.*#+}} ymm0 {%k1} {z} = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
@@ -1129,7 +1129,7 @@ define <4 x i64> @zext_4x32mem_to_4x64(<4 x i32> *%i , <4 x i1> %mask) nounwind 
 
 define <4 x i64> @sext_4x32mem_to_4x64mask(<4 x i32> *%i , <4 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: sext_4x32mem_to_4x64mask:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpslld $31, %xmm0, %xmm0
 ; KNL-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; KNL-NEXT:    vpmovsxdq %xmm0, %ymm0
@@ -1138,7 +1138,7 @@ define <4 x i64> @sext_4x32mem_to_4x64mask(<4 x i32> *%i , <4 x i1> %mask) nounw
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_4x32mem_to_4x64mask:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpslld $31, %xmm0, %xmm0
 ; SKX-NEXT:    vptestmd %xmm0, %xmm0, %k1
 ; SKX-NEXT:    vpmovsxdq (%rdi), %ymm0 {%k1} {z}
@@ -1151,7 +1151,7 @@ define <4 x i64> @sext_4x32mem_to_4x64mask(<4 x i32> *%i , <4 x i1> %mask) nounw
 
 define <4 x i64> @sext_4x32mem_to_4x64(<4 x i32> *%i) nounwind readnone {
 ; ALL-LABEL: sext_4x32mem_to_4x64:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpmovsxdq (%rdi), %ymm0
 ; ALL-NEXT:    retq
   %a   = load <4 x i32>,<4 x i32> *%i,align 1
@@ -1161,7 +1161,7 @@ define <4 x i64> @sext_4x32mem_to_4x64(<4 x i32> *%i) nounwind readnone {
 
 define <4 x i64> @sext_4x32_to_4x64(<4 x i32> %a) nounwind readnone {
 ; ALL-LABEL: sext_4x32_to_4x64:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpmovsxdq %xmm0, %ymm0
 ; ALL-NEXT:    retq
   %x   = sext <4 x i32> %a to <4 x i64>
@@ -1170,7 +1170,7 @@ define <4 x i64> @sext_4x32_to_4x64(<4 x i32> %a) nounwind readnone {
 
 define <4 x i64> @zext_4x32_to_4x64mask(<4 x i32> %a , <4 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: zext_4x32_to_4x64mask:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpslld $31, %xmm1, %xmm1
 ; KNL-NEXT:    vpsrad $31, %xmm1, %xmm1
 ; KNL-NEXT:    vpmovzxdq {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
@@ -1179,7 +1179,7 @@ define <4 x i64> @zext_4x32_to_4x64mask(<4 x i32> %a , <4 x i1> %mask) nounwind 
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_4x32_to_4x64mask:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpslld $31, %xmm1, %xmm1
 ; SKX-NEXT:    vptestmd %xmm1, %xmm1, %k1
 ; SKX-NEXT:    vpmovzxdq {{.*#+}} ymm0 {%k1} {z} = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
@@ -1191,7 +1191,7 @@ define <4 x i64> @zext_4x32_to_4x64mask(<4 x i32> %a , <4 x i1> %mask) nounwind 
 
 define <8 x i64> @zext_8x32mem_to_8x64(<8 x i32> *%i , <8 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: zext_8x32mem_to_8x64:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; KNL-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k1
@@ -1199,7 +1199,7 @@ define <8 x i64> @zext_8x32mem_to_8x64(<8 x i32> *%i , <8 x i1> %mask) nounwind 
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_8x32mem_to_8x64:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; SKX-NEXT:    vpmovw2m %xmm0, %k1
 ; SKX-NEXT:    vpmovzxdq {{.*#+}} zmm0 {%k1} {z} = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
@@ -1212,7 +1212,7 @@ define <8 x i64> @zext_8x32mem_to_8x64(<8 x i32> *%i , <8 x i1> %mask) nounwind 
 
 define <8 x i64> @sext_8x32mem_to_8x64mask(<8 x i32> *%i , <8 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: sext_8x32mem_to_8x64mask:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; KNL-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k1
@@ -1220,7 +1220,7 @@ define <8 x i64> @sext_8x32mem_to_8x64mask(<8 x i32> *%i , <8 x i1> %mask) nounw
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_8x32mem_to_8x64mask:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; SKX-NEXT:    vpmovw2m %xmm0, %k1
 ; SKX-NEXT:    vpmovsxdq (%rdi), %zmm0 {%k1} {z}
@@ -1233,7 +1233,7 @@ define <8 x i64> @sext_8x32mem_to_8x64mask(<8 x i32> *%i , <8 x i1> %mask) nounw
 
 define <8 x i64> @sext_8x32mem_to_8x64(<8 x i32> *%i) nounwind readnone {
 ; ALL-LABEL: sext_8x32mem_to_8x64:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpmovsxdq (%rdi), %zmm0
 ; ALL-NEXT:    retq
   %a   = load <8 x i32>,<8 x i32> *%i,align 1
@@ -1243,7 +1243,7 @@ define <8 x i64> @sext_8x32mem_to_8x64(<8 x i32> *%i) nounwind readnone {
 
 define <8 x i64> @sext_8x32_to_8x64(<8 x i32> %a) nounwind readnone {
 ; ALL-LABEL: sext_8x32_to_8x64:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpmovsxdq %ymm0, %zmm0
 ; ALL-NEXT:    retq
   %x   = sext <8 x i32> %a to <8 x i64>
@@ -1252,7 +1252,7 @@ define <8 x i64> @sext_8x32_to_8x64(<8 x i32> %a) nounwind readnone {
 
 define <8 x i64> @zext_8x32_to_8x64mask(<8 x i32> %a , <8 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: zext_8x32_to_8x64mask:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovsxwq %xmm1, %zmm1
 ; KNL-NEXT:    vpsllq $63, %zmm1, %zmm1
 ; KNL-NEXT:    vptestmq %zmm1, %zmm1, %k1
@@ -1260,7 +1260,7 @@ define <8 x i64> @zext_8x32_to_8x64mask(<8 x i32> %a , <8 x i1> %mask) nounwind 
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_8x32_to_8x64mask:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllw $15, %xmm1, %xmm1
 ; SKX-NEXT:    vpmovw2m %xmm1, %k1
 ; SKX-NEXT:    vpmovzxdq {{.*#+}} zmm0 {%k1} {z} = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
@@ -1271,7 +1271,7 @@ define <8 x i64> @zext_8x32_to_8x64mask(<8 x i32> %a , <8 x i1> %mask) nounwind 
 }
 define <8 x float> @fptrunc_test(<8 x double> %a) nounwind readnone {
 ; ALL-LABEL: fptrunc_test:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vcvtpd2ps %zmm0, %ymm0
 ; ALL-NEXT:    retq
   %b = fptrunc <8 x double> %a to <8 x float>
@@ -1280,7 +1280,7 @@ define <8 x float> @fptrunc_test(<8 x double> %a) nounwind readnone {
 
 define <8 x double> @fpext_test(<8 x float> %a) nounwind readnone {
 ; ALL-LABEL: fpext_test:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vcvtps2pd %ymm0, %zmm0
 ; ALL-NEXT:    retq
   %b = fpext <8 x float> %a to <8 x double>
@@ -1289,13 +1289,13 @@ define <8 x double> @fpext_test(<8 x float> %a) nounwind readnone {
 
 define   <16 x i32> @zext_16i1_to_16xi32(i16 %b) {
 ; KNL-LABEL: zext_16i1_to_16xi32:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    kmovw %edi, %k1
 ; KNL-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0 {%k1} {z}
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_16i1_to_16xi32:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0 {%k1} {z}
 ; SKX-NEXT:    retq
@@ -1306,13 +1306,13 @@ define   <16 x i32> @zext_16i1_to_16xi32(i16 %b) {
 
 define   <8 x i64> @zext_8i1_to_8xi64(i8 %b) {
 ; KNL-LABEL: zext_8i1_to_8xi64:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    kmovw %edi, %k1
 ; KNL-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0 {%k1} {z}
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_8i1_to_8xi64:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0 {%k1} {z}
 ; SKX-NEXT:    retq
@@ -1323,7 +1323,7 @@ define   <8 x i64> @zext_8i1_to_8xi64(i8 %b) {
 
 define i16 @trunc_16i8_to_16i1(<16 x i8> %a) {
 ; KNL-LABEL: trunc_16i8_to_16i1:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; KNL-NEXT:    vpslld $31, %zmm0, %zmm0
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -1332,7 +1332,7 @@ define i16 @trunc_16i8_to_16i1(<16 x i8> %a) {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: trunc_16i8_to_16i1:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllw $7, %xmm0, %xmm0
 ; SKX-NEXT:    vpmovb2m %xmm0, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
@@ -1345,7 +1345,7 @@ define i16 @trunc_16i8_to_16i1(<16 x i8> %a) {
 
 define i16 @trunc_16i32_to_16i1(<16 x i32> %a) {
 ; KNL-LABEL: trunc_16i32_to_16i1:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpslld $31, %zmm0, %zmm0
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
@@ -1353,7 +1353,7 @@ define i16 @trunc_16i32_to_16i1(<16 x i32> %a) {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: trunc_16i32_to_16i1:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; SKX-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
@@ -1367,14 +1367,14 @@ define i16 @trunc_16i32_to_16i1(<16 x i32> %a) {
 
 define <4 x i32> @trunc_4i32_to_4i1(<4 x i32> %a, <4 x i32> %b) {
 ; KNL-LABEL: trunc_4i32_to_4i1:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; KNL-NEXT:    vpslld $31, %xmm0, %xmm0
 ; KNL-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: trunc_4i32_to_4i1:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpslld $31, %xmm0, %xmm0
 ; SKX-NEXT:    vptestmd %xmm0, %xmm0, %k1
 ; SKX-NEXT:    vpslld $31, %xmm1, %xmm0
@@ -1391,7 +1391,7 @@ define <4 x i32> @trunc_4i32_to_4i1(<4 x i32> %a, <4 x i32> %b) {
 
 define i8 @trunc_8i16_to_8i1(<8 x i16> %a) {
 ; KNL-LABEL: trunc_8i16_to_8i1:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; KNL-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k0
@@ -1400,7 +1400,7 @@ define i8 @trunc_8i16_to_8i1(<8 x i16> %a) {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: trunc_8i16_to_8i1:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; SKX-NEXT:    vpmovw2m %xmm0, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
@@ -1413,14 +1413,14 @@ define i8 @trunc_8i16_to_8i1(<8 x i16> %a) {
 
 define <8 x i32> @sext_8i1_8i32(<8 x i32> %a1, <8 x i32> %a2) nounwind {
 ; KNL-LABEL: sext_8i1_8i32:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpcmpgtd %ymm0, %ymm1, %ymm0
 ; KNL-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
 ; KNL-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_8i1_8i32:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpcmpled %ymm0, %ymm1, %k0
 ; SKX-NEXT:    vpmovm2d %k0, %ymm0
 ; SKX-NEXT:    retq
@@ -1433,7 +1433,7 @@ define <8 x i32> @sext_8i1_8i32(<8 x i32> %a1, <8 x i32> %a2) nounwind {
 
 define i16 @trunc_i32_to_i1(i32 %a) {
 ; KNL-LABEL: trunc_i32_to_i1:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    movw $-4, %ax
 ; KNL-NEXT:    kmovw %eax, %k0
 ; KNL-NEXT:    kshiftrw $1, %k0, %k0
@@ -1446,7 +1446,7 @@ define i16 @trunc_i32_to_i1(i32 %a) {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: trunc_i32_to_i1:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    movw $-4, %ax
 ; SKX-NEXT:    kmovd %eax, %k0
 ; SKX-NEXT:    kshiftrw $1, %k0, %k0
@@ -1465,14 +1465,14 @@ define i16 @trunc_i32_to_i1(i32 %a) {
 
 define <8 x i16> @sext_8i1_8i16(<8 x i32> %a1, <8 x i32> %a2) nounwind {
 ; KNL-LABEL: sext_8i1_8i16:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpcmpgtd %ymm0, %ymm1, %ymm0
 ; KNL-NEXT:    vpmovdw %zmm0, %ymm0
 ; KNL-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_8i1_8i16:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpcmpgtd %ymm0, %ymm1, %k0
 ; SKX-NEXT:    vpmovm2w %k0, %xmm0
 ; SKX-NEXT:    vzeroupper
@@ -1484,13 +1484,13 @@ define <8 x i16> @sext_8i1_8i16(<8 x i32> %a1, <8 x i32> %a2) nounwind {
 
 define <16 x i32> @sext_16i1_16i32(<16 x i32> %a1, <16 x i32> %a2) nounwind {
 ; KNL-LABEL: sext_16i1_16i32:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpcmpgtd %zmm0, %zmm1, %k1
 ; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_16i1_16i32:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpcmpgtd %zmm0, %zmm1, %k0
 ; SKX-NEXT:    vpmovm2d %k0, %zmm0
 ; SKX-NEXT:    retq
@@ -1501,13 +1501,13 @@ define <16 x i32> @sext_16i1_16i32(<16 x i32> %a1, <16 x i32> %a2) nounwind {
 
 define <8 x i64> @sext_8i1_8i64(<8 x i32> %a1, <8 x i32> %a2) nounwind {
 ; KNL-LABEL: sext_8i1_8i64:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpcmpgtd %ymm0, %ymm1, %ymm0
 ; KNL-NEXT:    vpmovsxdq %ymm0, %zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_8i1_8i64:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpcmpgtd %ymm0, %ymm1, %k0
 ; SKX-NEXT:    vpmovm2q %k0, %zmm0
 ; SKX-NEXT:    retq
@@ -1518,13 +1518,13 @@ define <8 x i64> @sext_8i1_8i64(<8 x i32> %a1, <8 x i32> %a2) nounwind {
 
 define void @extload_v8i64(<8 x i8>* %a, <8 x i64>* %res) {
 ; KNL-LABEL: extload_v8i64:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovsxbq (%rdi), %zmm0
 ; KNL-NEXT:    vmovdqa64 %zmm0, (%rsi)
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: extload_v8i64:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpmovsxbq (%rdi), %zmm0
 ; SKX-NEXT:    vmovdqa64 %zmm0, (%rsi)
 ; SKX-NEXT:    vzeroupper
@@ -1537,7 +1537,7 @@ define void @extload_v8i64(<8 x i8>* %a, <8 x i64>* %res) {
 
 define <64 x i16> @test21(<64 x i16> %x , <64 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: test21:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm7 = xmm7[0],zero,xmm7[1],zero,xmm7[2],zero,xmm7[3],zero,xmm7[4],zero,xmm7[5],zero,xmm7[6],zero,xmm7[7],zero,xmm7[8],zero,xmm7[9],zero,xmm7[10],zero,xmm7[11],zero,xmm7[12],zero,xmm7[13],zero,xmm7[14],zero,xmm7[15],zero
 ; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm6 = xmm6[0],zero,xmm6[1],zero,xmm6[2],zero,xmm6[3],zero,xmm6[4],zero,xmm6[5],zero,xmm6[6],zero,xmm6[7],zero,xmm6[8],zero,xmm6[9],zero,xmm6[10],zero,xmm6[11],zero,xmm6[12],zero,xmm6[13],zero,xmm6[14],zero,xmm6[15],zero
 ; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm5 = xmm5[0],zero,xmm5[1],zero,xmm5[2],zero,xmm5[3],zero,xmm5[4],zero,xmm5[5],zero,xmm5[6],zero,xmm5[7],zero,xmm5[8],zero,xmm5[9],zero,xmm5[10],zero,xmm5[11],zero,xmm5[12],zero,xmm5[13],zero,xmm5[14],zero,xmm5[15],zero
@@ -1557,7 +1557,7 @@ define <64 x i16> @test21(<64 x i16> %x , <64 x i1> %mask) nounwind readnone {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test21:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllw $7, %zmm2, %zmm2
 ; SKX-NEXT:    vpmovb2m %zmm2, %k1
 ; SKX-NEXT:    vmovdqu16 %zmm0, %zmm0 {%k1} {z}
@@ -1570,7 +1570,7 @@ define <64 x i16> @test21(<64 x i16> %x , <64 x i1> %mask) nounwind readnone {
 
 define <16 x i16> @shuffle_zext_16x8_to_16x16(<16 x i8> %a) nounwind readnone {
 ; ALL-LABEL: shuffle_zext_16x8_to_16x16:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
 ; ALL-NEXT:    retq
   %1 = shufflevector <16 x i8> %a, <16 x i8> zeroinitializer, <32 x i32> <i32 0, i32 16, i32 1, i32 16, i32 2, i32 16, i32 3, i32 16, i32 4, i32 16, i32 5, i32 16, i32 6, i32 16, i32 7, i32 16, i32 8, i32 16, i32 9, i32 16, i32 10, i32 16, i32 11, i32 16, i32 12, i32 16, i32 13, i32 16, i32 14, i32 16, i32 15, i32 16>
@@ -1580,7 +1580,7 @@ define <16 x i16> @shuffle_zext_16x8_to_16x16(<16 x i8> %a) nounwind readnone {
 
 define <16 x i16> @shuffle_zext_16x8_to_16x16_mask(<16 x i8> %a, <16 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: shuffle_zext_16x8_to_16x16_mask:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
 ; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
 ; KNL-NEXT:    vpsllw $15, %ymm1, %ymm1
@@ -1589,7 +1589,7 @@ define <16 x i16> @shuffle_zext_16x8_to_16x16_mask(<16 x i8> %a, <16 x i1> %mask
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: shuffle_zext_16x8_to_16x16_mask:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllw $7, %xmm1, %xmm1
 ; SKX-NEXT:    vpmovb2m %xmm1, %k1
 ; SKX-NEXT:    vpmovzxbw {{.*#+}} ymm0 {%k1} {z} = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
@@ -1602,7 +1602,7 @@ define <16 x i16> @shuffle_zext_16x8_to_16x16_mask(<16 x i8> %a, <16 x i1> %mask
 
 define <16 x i16> @zext_32x8_to_16x16(<32 x i8> %a) {
 ; ALL-LABEL: zext_32x8_to_16x16:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
 ; ALL-NEXT:    retq
   %1 = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 0, i32 32, i32 1, i32 32, i32 2, i32 32, i32 3, i32 32, i32 4, i32 32, i32 5, i32 32, i32 6, i32 32, i32 7, i32 32, i32 8, i32 32, i32 9, i32 32, i32 10, i32 32, i32 11, i32 32, i32 12, i32 32, i32 13, i32 32, i32 14, i32 32, i32 15, i32 32>
@@ -1612,7 +1612,7 @@ define <16 x i16> @zext_32x8_to_16x16(<32 x i8> %a) {
 
 define <8 x i32> @zext_32x8_to_8x32(<32 x i8> %a) {
 ; ALL-LABEL: zext_32x8_to_8x32:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
 ; ALL-NEXT:    retq
   %1 = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 0, i32 32, i32 32, i32 32, i32 1, i32 32, i32 32, i32 32, i32 2, i32 32, i32 32, i32 32, i32 3, i32 32, i32 32, i32 32, i32 4, i32 32, i32 32, i32 32, i32 5, i32 32, i32 32, i32 32, i32 6, i32 32, i32 32, i32 32, i32 7, i32 32, i32 32, i32 32>
@@ -1622,7 +1622,7 @@ define <8 x i32> @zext_32x8_to_8x32(<32 x i8> %a) {
 
 define <4 x i64> @zext_32x8_to_4x64(<32 x i8> %a) {
 ; ALL-LABEL: zext_32x8_to_4x64:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpmovzxbq {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero,xmm0[2],zero,zero,zero,zero,zero,zero,zero,xmm0[3],zero,zero,zero,zero,zero,zero,zero
 ; ALL-NEXT:    retq
   %1 = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 0, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 1, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 2, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 3, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32>
@@ -1632,7 +1632,7 @@ define <4 x i64> @zext_32x8_to_4x64(<32 x i8> %a) {
 
 define <8 x i32> @zext_16x16_to_8x32(<16 x i16> %a) {
 ; ALL-LABEL: zext_16x16_to_8x32:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; ALL-NEXT:    retq
   %1 = shufflevector <16 x i16> %a, <16 x i16> zeroinitializer, <16 x i32> <i32 0, i32 16, i32 1, i32 16, i32 2, i32 16, i32 3, i32 16, i32 4, i32 16, i32 5, i32 16, i32 6, i32 16, i32 7, i32 16>
@@ -1642,7 +1642,7 @@ define <8 x i32> @zext_16x16_to_8x32(<16 x i16> %a) {
 
 define <4 x i64> @zext_16x16_to_4x64(<16 x i16> %a) {
 ; ALL-LABEL: zext_16x16_to_4x64:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpmovzxwq {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; ALL-NEXT:    retq
   %1 = shufflevector <16 x i16> %a, <16 x i16> zeroinitializer, <16 x i32> <i32 0, i32 16, i32 16, i32 16, i32 1, i32 16, i32 16, i32 16, i32 2, i32 16, i32 16, i32 16, i32 3, i32 16, i32 16, i32 16>
@@ -1652,7 +1652,7 @@ define <4 x i64> @zext_16x16_to_4x64(<16 x i16> %a) {
 
 define <4 x i64> @zext_8x32_to_4x64(<8 x i32> %a) {
 ; ALL-LABEL: zext_8x32_to_4x64:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpmovzxdq {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; ALL-NEXT:    retq
   %1 = shufflevector <8 x i32> %a, <8 x i32> zeroinitializer, <8 x i32> <i32 0, i32 8, i32 1, i32 8, i32 2, i32 8, i32 3, i32 8>
@@ -1662,7 +1662,7 @@ define <4 x i64> @zext_8x32_to_4x64(<8 x i32> %a) {
 
 define <64 x i8> @zext_64xi1_to_64xi8(<64 x i8> %x, <64 x i8> %y) #0 {
 ; KNL-LABEL: zext_64xi1_to_64xi8:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpcmpeqb %ymm2, %ymm0, %ymm0
 ; KNL-NEXT:    vmovdqa {{.*#+}} ymm2 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; KNL-NEXT:    vpand %ymm2, %ymm0, %ymm0
@@ -1671,7 +1671,7 @@ define <64 x i8> @zext_64xi1_to_64xi8(<64 x i8> %x, <64 x i8> %y) #0 {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_64xi1_to_64xi8:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpcmpeqb %zmm1, %zmm0, %k1
 ; SKX-NEXT:    vmovdqu8 {{.*}}(%rip), %zmm0 {%k1} {z}
 ; SKX-NEXT:    retq
@@ -1682,7 +1682,7 @@ define <64 x i8> @zext_64xi1_to_64xi8(<64 x i8> %x, <64 x i8> %y) #0 {
 
 define <32 x i16> @zext_32xi1_to_32xi16(<32 x i16> %x, <32 x i16> %y) #0 {
 ; KNL-LABEL: zext_32xi1_to_32xi16:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpcmpeqw %ymm2, %ymm0, %ymm0
 ; KNL-NEXT:    vpsrlw $15, %ymm0, %ymm0
 ; KNL-NEXT:    vpcmpeqw %ymm3, %ymm1, %ymm1
@@ -1690,7 +1690,7 @@ define <32 x i16> @zext_32xi1_to_32xi16(<32 x i16> %x, <32 x i16> %y) #0 {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_32xi1_to_32xi16:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpcmpeqw %zmm1, %zmm0, %k1
 ; SKX-NEXT:    vmovdqu16 {{.*}}(%rip), %zmm0 {%k1} {z}
 ; SKX-NEXT:    retq
@@ -1701,13 +1701,13 @@ define <32 x i16> @zext_32xi1_to_32xi16(<32 x i16> %x, <32 x i16> %y) #0 {
 
 define <16 x i16> @zext_16xi1_to_16xi16(<16 x i16> %x, <16 x i16> %y) #0 {
 ; KNL-LABEL: zext_16xi1_to_16xi16:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
 ; KNL-NEXT:    vpsrlw $15, %ymm0, %ymm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_16xi1_to_16xi16:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpcmpeqw %ymm1, %ymm0, %k1
 ; SKX-NEXT:    vmovdqu16 {{.*}}(%rip), %ymm0 {%k1} {z}
 ; SKX-NEXT:    retq
@@ -1719,7 +1719,7 @@ define <16 x i16> @zext_16xi1_to_16xi16(<16 x i16> %x, <16 x i16> %y) #0 {
 
 define <32 x i8> @zext_32xi1_to_32xi8(<32 x i16> %x, <32 x i16> %y) #0 {
 ; KNL-LABEL: zext_32xi1_to_32xi8:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vpcmpeqw %ymm2, %ymm0, %ymm0
 ; KNL-NEXT:    vpmovsxwd %ymm0, %zmm0
 ; KNL-NEXT:    vpmovdb %zmm0, %xmm0
@@ -1731,7 +1731,7 @@ define <32 x i8> @zext_32xi1_to_32xi8(<32 x i16> %x, <32 x i16> %y) #0 {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_32xi1_to_32xi8:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpcmpeqw %zmm1, %zmm0, %k1
 ; SKX-NEXT:    vmovdqu8 {{.*}}(%rip), %ymm0 {%k1} {z}
 ; SKX-NEXT:    retq
@@ -1742,7 +1742,7 @@ define <32 x i8> @zext_32xi1_to_32xi8(<32 x i16> %x, <32 x i16> %y) #0 {
 
 define <4 x i32> @zext_4xi1_to_4x32(<4 x i8> %x, <4 x i8> %y) #0 {
 ; KNL-LABEL: zext_4xi1_to_4x32:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vmovdqa {{.*#+}} xmm2 = [255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0]
 ; KNL-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; KNL-NEXT:    vpand %xmm2, %xmm0, %xmm0
@@ -1751,7 +1751,7 @@ define <4 x i32> @zext_4xi1_to_4x32(<4 x i8> %x, <4 x i8> %y) #0 {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_4xi1_to_4x32:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovdqa {{.*#+}} xmm2 = [255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0]
 ; SKX-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; SKX-NEXT:    vpand %xmm2, %xmm0, %xmm0
@@ -1765,7 +1765,7 @@ define <4 x i32> @zext_4xi1_to_4x32(<4 x i8> %x, <4 x i8> %y) #0 {
 
 define <2 x i64> @zext_2xi1_to_2xi64(<2 x i8> %x, <2 x i8> %y) #0 {
 ; KNL-LABEL: zext_2xi1_to_2xi64:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    vmovdqa {{.*#+}} xmm2 = [255,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0]
 ; KNL-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; KNL-NEXT:    vpand %xmm2, %xmm0, %xmm0
@@ -1774,7 +1774,7 @@ define <2 x i64> @zext_2xi1_to_2xi64(<2 x i8> %x, <2 x i8> %y) #0 {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: zext_2xi1_to_2xi64:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovdqa {{.*#+}} xmm2 = [255,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0]
 ; SKX-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; SKX-NEXT:    vpand %xmm2, %xmm0, %xmm0

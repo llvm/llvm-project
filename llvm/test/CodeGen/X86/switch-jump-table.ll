@@ -9,7 +9,7 @@ define void @foo(i32 %x, i32* %to) {
 ; CHECK: movl 4(%esp), [[REG:%e[a-z]{2}]]
 ; CHECK: cmpl $3, [[REG]]
 ; CHECK: ja .LBB0_6
-; CHECK-NEXT: # BB#1:
+; CHECK-NEXT: # %bb.1:
 ; CHECK-NEXT: jmpl *.LJTI0_0(,[[REG]],4)
 ; CHECK: movl $4
 ; CHECK: retl
@@ -55,8 +55,8 @@ default:
 
 define void @bar(i32 %x, i32* %to) {
 ; CHECK-JT-PROB-LABEL: bar:
-; CHECK-JT-PROB: Successors according to CFG: BB#6({{[0-9a-fx/= ]+}}14.29%) BB#8({{[0-9a-fx/= ]+}}85.71%)
-; CHECK-JT-PROB: Successors according to CFG: BB#1({{[0-9a-fx/= ]+}}16.67%) BB#2({{[0-9a-fx/= ]+}}16.67%) BB#3({{[0-9a-fx/= ]+}}16.67%) BB#4({{[0-9a-fx/= ]+}}16.67%) BB#5({{[0-9a-fx/= ]+}}33.33%)
+; CHECK-JT-PROB: Successors according to CFG: %bb.6({{[0-9a-fx/= ]+}}14.29%) %bb.8({{[0-9a-fx/= ]+}}85.71%)
+; CHECK-JT-PROB: Successors according to CFG: %bb.1({{[0-9a-fx/= ]+}}16.67%) %bb.2({{[0-9a-fx/= ]+}}16.67%) %bb.3({{[0-9a-fx/= ]+}}16.67%) %bb.4({{[0-9a-fx/= ]+}}16.67%) %bb.5({{[0-9a-fx/= ]+}}33.33%)
 
 entry:
   switch i32 %x, label %default [

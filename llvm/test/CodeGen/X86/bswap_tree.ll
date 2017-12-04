@@ -12,14 +12,14 @@
 ; => (rotl (bswap x), 16)
 define i32 @test1(i32 %x) nounwind {
 ; CHECK-LABEL: test1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    bswapl %eax
 ; CHECK-NEXT:    roll $16, %eax
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: test1:
-; CHECK64:       # BB#0:
+; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    bswapl %edi
 ; CHECK64-NEXT:    roll $16, %edi
 ; CHECK64-NEXT:    movl %edi, %eax
@@ -45,14 +45,14 @@ define i32 @test1(i32 %x) nounwind {
 ; ((x >> 8) & 0x00ff0000)
 define i32 @test2(i32 %x) nounwind {
 ; CHECK-LABEL: test2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    bswapl %eax
 ; CHECK-NEXT:    roll $16, %eax
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: test2:
-; CHECK64:       # BB#0:
+; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    bswapl %edi
 ; CHECK64-NEXT:    roll $16, %edi
 ; CHECK64-NEXT:    movl %edi, %eax

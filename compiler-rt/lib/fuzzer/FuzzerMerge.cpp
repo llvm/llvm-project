@@ -9,6 +9,7 @@
 // Merging corpora.
 //===----------------------------------------------------------------------===//
 
+#include "FuzzerCommand.h"
 #include "FuzzerMerge.h"
 #include "FuzzerIO.h"
 #include "FuzzerInternal.h"
@@ -232,7 +233,7 @@ void Fuzzer::CrashResistantMergeInternalStep(const std::string &CFPath) {
     std::ostringstream StartedLine;
     // Write the pre-run marker.
     OF << "STARTED " << std::dec << i << " " << U.size() << "\n";
-    OF.flush();  // Flush is important since ExecuteCommand may crash.
+    OF.flush();  // Flush is important since Command::Execute may crash.
     // Run.
     TPC.ResetMaps();
     ExecuteCallback(U.data(), U.size());
@@ -332,15 +333,16 @@ void Fuzzer::CrashResistantMerge(const Vector<std::string> &Args,
 
   // Execute the inner process until it passes.
   // Every inner process should execute at least one input.
-  auto BaseCmd = SplitBefore("-ignore_remaining_args=1",
-                             CloneArgsWithoutX(Args, "merge"));
+  Command BaseCmd(Args);
+  BaseCmd.removeFlag("merge");
   bool Success = false;
   for (size_t Attempt = 1; Attempt <= NumAttempts; Attempt++) {
     MaybeExitGracefully();
     Printf("MERGE-OUTER: attempt %zd\n", Attempt);
-    auto ExitCode =
-        ExecuteCommand(BaseCmd.first + " -merge_control_file=" + CFPath +
-                       " -merge_inner=1 " + BaseCmd.second);
+    Command Cmd(BaseCmd);
+    Cmd.addFlag("merge_control_file", CFPath);
+    Cmd.addFlag("merge_inner", "1");
+    auto ExitCode = ExecuteCommand(Cmd);
     if (!ExitCode) {
       Printf("MERGE-OUTER: succesfull in %zd attempt(s)\n", Attempt);
       Success = true;

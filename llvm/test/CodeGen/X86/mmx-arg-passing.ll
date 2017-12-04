@@ -12,13 +12,13 @@
 
 define void @t1(x86_mmx %v1) nounwind  {
 ; X86-32-LABEL: t1:
-; X86-32:       ## BB#0:
+; X86-32:       ## %bb.0:
 ; X86-32-NEXT:    movl L_u1$non_lazy_ptr, %eax
 ; X86-32-NEXT:    movq %mm0, (%eax)
 ; X86-32-NEXT:    retl
 ;
 ; X86-64-LABEL: t1:
-; X86-64:       ## BB#0:
+; X86-64:       ## %bb.0:
 ; X86-64-NEXT:    movdq2q %xmm0, %mm0
 ; X86-64-NEXT:    movq _u1@{{.*}}(%rip), %rax
 ; X86-64-NEXT:    movq %mm0, (%rax)
@@ -31,7 +31,7 @@ define void @t1(x86_mmx %v1) nounwind  {
 
 define void @t2(<1 x i64> %v1) nounwind  {
 ; X86-32-LABEL: t2:
-; X86-32:       ## BB#0:
+; X86-32:       ## %bb.0:
 ; X86-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-32-NEXT:    movl L_u2$non_lazy_ptr, %edx
@@ -40,7 +40,7 @@ define void @t2(<1 x i64> %v1) nounwind  {
 ; X86-32-NEXT:    retl
 ;
 ; X86-64-LABEL: t2:
-; X86-64:       ## BB#0:
+; X86-64:       ## %bb.0:
 ; X86-64-NEXT:    movq _u2@{{.*}}(%rip), %rax
 ; X86-64-NEXT:    movq %rdi, (%rax)
 ; X86-64-NEXT:    retq

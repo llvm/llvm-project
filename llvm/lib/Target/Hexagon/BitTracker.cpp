@@ -767,7 +767,7 @@ bool BT::MachineEvaluator::evaluate(const MachineInstr &MI,
 void BT::visitPHI(const MachineInstr &PI) {
   int ThisN = PI.getParent()->getNumber();
   if (Trace)
-    dbgs() << "Visit FI(BB#" << ThisN << "): " << PI;
+    dbgs() << "Visit FI(" << printMBBReference(*PI.getParent()) << "): " << PI;
 
   const MachineOperand &MD = PI.getOperand(0);
   assert(MD.getSubReg() == 0 && "Unexpected sub-register in definition");
@@ -784,7 +784,8 @@ void BT::visitPHI(const MachineInstr &PI) {
     const MachineBasicBlock *PB = PI.getOperand(i + 1).getMBB();
     int PredN = PB->getNumber();
     if (Trace)
-      dbgs() << "  edge BB#" << PredN << "->BB#" << ThisN;
+      dbgs() << "  edge " << printMBBReference(*PB) << "->"
+             << printMBBReference(*PI.getParent());
     if (!EdgeExec.count(CFGEdge(PredN, ThisN))) {
       if (Trace)
         dbgs() << " not executable\n";
@@ -809,10 +810,8 @@ void BT::visitPHI(const MachineInstr &PI) {
 }
 
 void BT::visitNonBranch(const MachineInstr &MI) {
-  if (Trace) {
-    int ThisN = MI.getParent()->getNumber();
-    dbgs() << "Visit MI(BB#" << ThisN << "): " << MI;
-  }
+  if (Trace)
+    dbgs() << "Visit MI(" << printMBBReference(*MI.getParent()) << "): " << MI;
   if (MI.isDebugValue())
     return;
   assert(!MI.isBranch() && "Unexpected branch instruction");
@@ -897,7 +896,7 @@ void BT::visitBranchesFrom(const MachineInstr &BI) {
     BTs.clear();
     const MachineInstr &MI = *It;
     if (Trace)
-      dbgs() << "Visit BR(BB#" << ThisN << "): " << MI;
+      dbgs() << "Visit BR(" << printMBBReference(B) << "): " << MI;
     assert(MI.isBranch() && "Expecting branch instruction");
     InstrExec.insert(&MI);
     bool Eval = ME.evaluate(MI, Map, BTs, FallsThrough);
@@ -913,7 +912,7 @@ void BT::visitBranchesFrom(const MachineInstr &BI) {
       if (Trace) {
         dbgs() << "  adding targets:";
         for (unsigned i = 0, n = BTs.size(); i < n; ++i)
-          dbgs() << " BB#" << BTs[i]->getNumber();
+          dbgs() << " " << printMBBReference(*BTs[i]);
         if (FallsThrough)
           dbgs() << "\n  falls through\n";
         else

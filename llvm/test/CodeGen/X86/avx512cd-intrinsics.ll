@@ -5,7 +5,7 @@ declare <16 x i32> @llvm.x86.avx512.mask.conflict.d.512(<16 x i32>, <16 x i32>, 
 
 define <8 x i64> @test_conflict_q(<8 x i64> %a) {
 ; CHECK-LABEL: test_conflict_q:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpconflictq %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %res = call <8 x i64> @llvm.x86.avx512.mask.conflict.q.512(<8 x i64> %a, <8 x i64> zeroinitializer, i8 -1)
@@ -16,7 +16,7 @@ declare <8 x i64> @llvm.x86.avx512.mask.conflict.q.512(<8 x i64>, <8 x i64>, i8)
 
 define <16 x i32> @test_maskz_conflict_d(<16 x i32> %a, i16 %mask) {
 ; CHECK-LABEL: test_maskz_conflict_d:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vpconflictd %zmm0, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
@@ -26,7 +26,7 @@ define <16 x i32> @test_maskz_conflict_d(<16 x i32> %a, i16 %mask) {
 
 define <8 x i64> @test_mask_conflict_q(<8 x i64> %a, <8 x i64> %b, i8 %mask) {
 ; CHECK-LABEL: test_mask_conflict_q:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vpconflictq %zmm0, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
@@ -37,7 +37,7 @@ define <8 x i64> @test_mask_conflict_q(<8 x i64> %a, <8 x i64> %b, i8 %mask) {
 
 define <16 x i32> @test_lzcnt_d(<16 x i32> %a) {
 ; CHECK-LABEL: test_lzcnt_d:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vplzcntd %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %1 = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %a, i1 false)
@@ -47,7 +47,7 @@ declare <16 x i32> @llvm.ctlz.v16i32(<16 x i32>, i1) #0
 
 define <8 x i64> @test_lzcnt_q(<8 x i64> %a) {
 ; CHECK-LABEL: test_lzcnt_q:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vplzcntq %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %1 = call <8 x i64> @llvm.ctlz.v8i64(<8 x i64> %a, i1 false)
@@ -57,7 +57,7 @@ declare <8 x i64> @llvm.ctlz.v8i64(<8 x i64>, i1) #0
 
 define <16 x i32> @test_mask_lzcnt_d(<16 x i32> %a, <16 x i32> %b, i16 %mask) {
 ; CHECK-LABEL: test_mask_lzcnt_d:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vplzcntd %zmm0, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
@@ -70,7 +70,7 @@ define <16 x i32> @test_mask_lzcnt_d(<16 x i32> %a, <16 x i32> %b, i16 %mask) {
 
 define <8 x i64> @test_mask_lzcnt_q(<8 x i64> %a, <8 x i64> %b, i8 %mask) {
 ; CHECK-LABEL: test_mask_lzcnt_q:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vplzcntq %zmm0, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0

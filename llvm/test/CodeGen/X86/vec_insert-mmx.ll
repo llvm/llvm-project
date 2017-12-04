@@ -5,7 +5,7 @@
 ; This is not an MMX operation; promoted to xmm.
 define x86_mmx @t0(i32 %A) nounwind {
 ; X32-LABEL: t0:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    subl $12, %esp
 ; X32-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X32-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,0,1,1]
@@ -15,7 +15,7 @@ define x86_mmx @t0(i32 %A) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t0:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
 ; X64-NEXT:    movq %rdi, %xmm0
 ; X64-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6,7]
@@ -28,12 +28,12 @@ define x86_mmx @t0(i32 %A) nounwind {
 
 define <8 x i8> @t1(i8 zeroext %x) nounwind {
 ; X32-LABEL: t1:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t1:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    movd %edi, %xmm0
 ; X64-NEXT:    retq
   %r = insertelement <8 x i8> undef, i8 %x, i32 0
@@ -43,12 +43,12 @@ define <8 x i8> @t1(i8 zeroext %x) nounwind {
 ; PR2574
 define <2 x float> @t2(<2 x float> %a0) {
 ; X32-LABEL: t2:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    xorps %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t2:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    xorps %xmm0, %xmm0
 ; X64-NEXT:    retq
   %v1 = insertelement <2 x float> %a0, float 0.000000e+00, i32 0
@@ -62,7 +62,7 @@ define <2 x float> @t2(<2 x float> %a0) {
 ; PR2562
 define void @t3() {
 ; X32-LABEL: t3:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    movl L_g0$non_lazy_ptr, %eax
 ; X32-NEXT:    movl L_g1$non_lazy_ptr, %ecx
 ; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -77,7 +77,7 @@ define void @t3() {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t3:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    movq _g0@{{.*}}(%rip), %rax
 ; X64-NEXT:    movq _g1@{{.*}}(%rip), %rcx
 ; X64-NEXT:    pmovzxwd {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero

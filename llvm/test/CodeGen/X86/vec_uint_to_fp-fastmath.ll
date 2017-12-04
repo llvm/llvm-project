@@ -28,7 +28,7 @@
 
 define <4 x float> @test_uitofp_v4i32_to_v4f32(<4 x i32> %arg) {
 ; SSE2-LABEL: test_uitofp_v4i32_to_v4f32:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps {{.*#+}} xmm1 = [65535,65535,65535,65535]
 ; SSE2-NEXT:    andps %xmm0, %xmm1
 ; SSE2-NEXT:    cvtdq2ps %xmm1, %xmm1
@@ -39,7 +39,7 @@ define <4 x float> @test_uitofp_v4i32_to_v4f32(<4 x i32> %arg) {
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test_uitofp_v4i32_to_v4f32:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pxor %xmm1, %xmm1
 ; SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
 ; SSE41-NEXT:    cvtdq2ps %xmm1, %xmm1
@@ -50,7 +50,7 @@ define <4 x float> @test_uitofp_v4i32_to_v4f32(<4 x i32> %arg) {
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: test_uitofp_v4i32_to_v4f32:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
 ; AVX-NEXT:    vcvtdq2ps %xmm1, %xmm1
@@ -61,7 +61,7 @@ define <4 x float> @test_uitofp_v4i32_to_v4f32(<4 x i32> %arg) {
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: test_uitofp_v4i32_to_v4f32:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; AVX2-NEXT:    vcvtdq2ps %xmm1, %xmm1
 ; AVX2-NEXT:    vbroadcastss [[FPMASKCSTADDR]](%rip), %xmm2
@@ -73,7 +73,7 @@ define <4 x float> @test_uitofp_v4i32_to_v4f32(<4 x i32> %arg) {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: test_uitofp_v4i32_to_v4f32:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    # kill
 ; AVX512F-NEXT:    vcvtudq2ps %zmm0, %zmm0
 ; AVX512F-NEXT:    # kill
@@ -81,7 +81,7 @@ define <4 x float> @test_uitofp_v4i32_to_v4f32(<4 x i32> %arg) {
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: test_uitofp_v4i32_to_v4f32:
-; AVX512VL:       # BB#0:
+; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vcvtudq2ps %xmm0, %xmm0
 ; AVX512VL-NEXT:    retq
   %tmp = uitofp <4 x i32> %arg to <4 x float>
@@ -105,7 +105,7 @@ define <4 x float> @test_uitofp_v4i32_to_v4f32(<4 x i32> %arg) {
 
 define <8 x float> @test_uitofp_v8i32_to_v8f32(<8 x i32> %arg) {
 ; SSE2-LABEL: test_uitofp_v8i32_to_v8f32:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm2
 ; SSE2-NEXT:    psrld $16, %xmm2
 ; SSE2-NEXT:    cvtdq2ps %xmm2, %xmm2
@@ -125,7 +125,7 @@ define <8 x float> @test_uitofp_v8i32_to_v8f32(<8 x i32> %arg) {
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test_uitofp_v8i32_to_v8f32:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm2
 ; SSE41-NEXT:    psrld $16, %xmm2
 ; SSE41-NEXT:    cvtdq2ps %xmm2, %xmm2
@@ -145,7 +145,7 @@ define <8 x float> @test_uitofp_v8i32_to_v8f32(<8 x i32> %arg) {
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: test_uitofp_v8i32_to_v8f32:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; AVX-NEXT:    vpsrld $16, %xmm2, %xmm2
@@ -158,7 +158,7 @@ define <8 x float> @test_uitofp_v8i32_to_v8f32(<8 x i32> %arg) {
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: test_uitofp_v8i32_to_v8f32:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsrld $16, %ymm0, %ymm1
 ; AVX2-NEXT:    vcvtdq2ps %ymm1, %ymm1
 ; AVX2-NEXT:    vbroadcastss [[FPMASKCSTADDR_v8]](%rip), %ymm2
@@ -170,14 +170,14 @@ define <8 x float> @test_uitofp_v8i32_to_v8f32(<8 x i32> %arg) {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: test_uitofp_v8i32_to_v8f32:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    # kill
 ; AVX512F-NEXT:    vcvtudq2ps %zmm0, %zmm0
 ; AVX512F-NEXT:    # kill
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: test_uitofp_v8i32_to_v8f32:
-; AVX512VL:       # BB#0:
+; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vcvtudq2ps %ymm0, %ymm0
 ; AVX512VL-NEXT:    retq
   %tmp = uitofp <8 x i32> %arg to <8 x float>

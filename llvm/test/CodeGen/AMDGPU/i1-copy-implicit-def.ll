@@ -3,7 +3,7 @@
 
 ; SILowerI1Copies was not handling IMPLICIT_DEF
 ; SI-LABEL: {{^}}br_implicit_def:
-; SI: BB#0:
+; SI: %bb.0:
 ; SI-NEXT: s_cbranch_scc1
 define amdgpu_kernel void @br_implicit_def(i32 addrspace(1)* %out, i32 %arg) #0 {
 bb:

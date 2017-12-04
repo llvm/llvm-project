@@ -1,7 +1,7 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}test_kill_depth_0_imm_pos:
-; CHECK-NEXT: ; BB#0:
+; CHECK-NEXT: ; %bb.0:
 ; CHECK-NEXT: s_endpgm
 define amdgpu_ps void @test_kill_depth_0_imm_pos() #0 {
   call void @llvm.AMDGPU.kill(float 0.0)
@@ -9,9 +9,9 @@ define amdgpu_ps void @test_kill_depth_0_imm_pos() #0 {
 }
 
 ; CHECK-LABEL: {{^}}test_kill_depth_0_imm_neg:
-; CHECK-NEXT: ; BB#0:
+; CHECK-NEXT: ; %bb.0:
 ; CHECK-NEXT: s_mov_b64 exec, 0
-; CHECK-NEXT: ; BB#1:
+; CHECK-NEXT: ; %bb.1:
 ; CHECK-NEXT: s_endpgm
 define amdgpu_ps void @test_kill_depth_0_imm_neg() #0 {
   call void @llvm.AMDGPU.kill(float -0.0)
@@ -20,11 +20,11 @@ define amdgpu_ps void @test_kill_depth_0_imm_neg() #0 {
 
 ; FIXME: Ideally only one would be emitted
 ; CHECK-LABEL: {{^}}test_kill_depth_0_imm_neg_x2:
-; CHECK-NEXT: ; BB#0:
+; CHECK-NEXT: ; %bb.0:
 ; CHECK-NEXT: s_mov_b64 exec, 0
-; CHECK-NEXT: ; BB#1:
+; CHECK-NEXT: ; %bb.1:
 ; CHECK-NEXT: s_mov_b64 exec, 0
-; CHECK-NEXT: ; BB#2:
+; CHECK-NEXT: ; %bb.2:
 ; CHECK-NEXT: s_endpgm
 define amdgpu_ps void @test_kill_depth_0_imm_neg_x2() #0 {
   call void @llvm.AMDGPU.kill(float -0.0)
@@ -33,9 +33,9 @@ define amdgpu_ps void @test_kill_depth_0_imm_neg_x2() #0 {
 }
 
 ; CHECK-LABEL: {{^}}test_kill_depth_var:
-; CHECK-NEXT: ; BB#0:
+; CHECK-NEXT: ; %bb.0:
 ; CHECK-NEXT: v_cmpx_le_f32_e32 vcc, 0, v0
-; CHECK-NEXT: ; BB#1:
+; CHECK-NEXT: ; %bb.1:
 ; CHECK-NEXT: s_endpgm
 define amdgpu_ps void @test_kill_depth_var(float %x) #0 {
   call void @llvm.AMDGPU.kill(float %x)
@@ -44,11 +44,11 @@ define amdgpu_ps void @test_kill_depth_var(float %x) #0 {
 
 ; FIXME: Ideally only one would be emitted
 ; CHECK-LABEL: {{^}}test_kill_depth_var_x2_same:
-; CHECK-NEXT: ; BB#0:
+; CHECK-NEXT: ; %bb.0:
 ; CHECK-NEXT: v_cmpx_le_f32_e32 vcc, 0, v0
-; CHECK-NEXT: ; BB#1:
+; CHECK-NEXT: ; %bb.1:
 ; CHECK-NEXT: v_cmpx_le_f32_e32 vcc, 0, v0
-; CHECK-NEXT: ; BB#2:
+; CHECK-NEXT: ; %bb.2:
 ; CHECK-NEXT: s_endpgm
 define amdgpu_ps void @test_kill_depth_var_x2_same(float %x) #0 {
   call void @llvm.AMDGPU.kill(float %x)
@@ -57,11 +57,11 @@ define amdgpu_ps void @test_kill_depth_var_x2_same(float %x) #0 {
 }
 
 ; CHECK-LABEL: {{^}}test_kill_depth_var_x2:
-; CHECK-NEXT: ; BB#0:
+; CHECK-NEXT: ; %bb.0:
 ; CHECK-NEXT: v_cmpx_le_f32_e32 vcc, 0, v0
-; CHECK-NEXT: ; BB#1:
+; CHECK-NEXT: ; %bb.1:
 ; CHECK-NEXT: v_cmpx_le_f32_e32 vcc, 0, v1
-; CHECK-NEXT: ; BB#2:
+; CHECK-NEXT: ; %bb.2:
 ; CHECK-NEXT: s_endpgm
 define amdgpu_ps void @test_kill_depth_var_x2(float %x, float %y) #0 {
   call void @llvm.AMDGPU.kill(float %x)
@@ -70,12 +70,12 @@ define amdgpu_ps void @test_kill_depth_var_x2(float %x, float %y) #0 {
 }
 
 ; CHECK-LABEL: {{^}}test_kill_depth_var_x2_instructions:
-; CHECK-NEXT: ; BB#0:
+; CHECK-NEXT: ; %bb.0:
 ; CHECK-NEXT: v_cmpx_le_f32_e32 vcc, 0, v0
-; CHECK-NEXT: ; BB#1:
+; CHECK-NEXT: ; %bb.1:
 ; CHECK: v_mov_b32_e64 v7, -1
 ; CHECK: v_cmpx_le_f32_e32 vcc, 0, v7
-; CHECK-NEXT: ; BB#2:
+; CHECK-NEXT: ; %bb.2:
 ; CHECK-NEXT: s_endpgm
 define amdgpu_ps void @test_kill_depth_var_x2_instructions(float %x) #0 {
   call void @llvm.AMDGPU.kill(float %x)
@@ -90,7 +90,7 @@ define amdgpu_ps void @test_kill_depth_var_x2_instructions(float %x) #0 {
 ; CHECK: s_cmp_lg_u32 s{{[0-9]+}}, 0
 ; CHECK: s_cbranch_scc1 [[RETURN_BB:BB[0-9]+_[0-9]+]]
 
-; CHECK-NEXT: ; BB#1:
+; CHECK-NEXT: ; %bb.1:
 ; CHECK: v_mov_b32_e64 v7, -1
 ; CHECK: v_nop_e64
 ; CHECK: v_nop_e64
@@ -105,7 +105,7 @@ define amdgpu_ps void @test_kill_depth_var_x2_instructions(float %x) #0 {
 
 ; CHECK: v_cmpx_le_f32_e32 vcc, 0, v7
 ; CHECK-NEXT: s_cbranch_execnz [[SPLIT_BB:BB[0-9]+_[0-9]+]]
-; CHECK-NEXT: ; BB#2:
+; CHECK-NEXT: ; %bb.2:
 ; CHECK-NEXT: exp null off, off, off, off done vm
 ; CHECK-NEXT: s_endpgm
 
@@ -141,7 +141,7 @@ exit:
 ; CHECK-NEXT: v_mov_b32_e32 v{{[0-9]+}}, 0
 ; CHECK-NEXT: s_cbranch_scc1 [[RETURN_BB:BB[0-9]+_[0-9]+]]
 
-; CHECK-NEXT: ; BB#1: ; %bb
+; CHECK-NEXT: ; %bb.1: ; %bb
 ; CHECK: v_mov_b32_e64 v7, -1
 ; CHECK: v_nop_e64
 ; CHECK: v_nop_e64
@@ -157,7 +157,7 @@ exit:
 ; CHECK: v_cmpx_le_f32_e32 vcc, 0, v7
 ; CHECK-NEXT: s_cbranch_execnz [[SPLIT_BB:BB[0-9]+_[0-9]+]]
 
-; CHECK-NEXT: ; BB#2:
+; CHECK-NEXT: ; %bb.2:
 ; CHECK-NEXT: exp null off, off, off, off done vm
 ; CHECK-NEXT: s_endpgm
 
@@ -215,7 +215,7 @@ exit:
 ; CHECK: v_nop_e64
 ; CHECK: v_cmpx_le_f32_e32 vcc, 0, v7
 
-; CHECK-NEXT: ; BB#3:
+; CHECK-NEXT: ; %bb.3:
 ; CHECK: buffer_load_dword [[LOAD:v[0-9]+]]
 ; CHECK: v_cmp_eq_u32_e32 vcc, 0, [[LOAD]]
 ; CHECK-NEXT: s_and_b64 vcc, exec, vcc
@@ -309,7 +309,7 @@ end:
 
 ; CHECK: [[SKIPKILL]]:
 ; CHECK: v_cmp_nge_f32_e32 vcc
-; CHECK-NEXT: BB#3: ; %bb5
+; CHECK-NEXT: %bb.3: ; %bb5
 ; CHECK-NEXT: .Lfunc_end{{[0-9]+}}
 define amdgpu_ps void @no_skip_no_successors(float inreg %arg, float inreg %arg1) #0 {
 bb:
@@ -335,7 +335,7 @@ bb7:                                              ; preds = %bb4
 }
 
 ; CHECK-LABEL: {{^}}if_after_kill_block:
-; CHECK: ; BB#0:
+; CHECK: ; %bb.0:
 ; CHECK: s_and_saveexec_b64
 ; CHECK: s_xor_b64
 ; CHECK-NEXT: mask branch [[BB4:BB[0-9]+_[0-9]+]]

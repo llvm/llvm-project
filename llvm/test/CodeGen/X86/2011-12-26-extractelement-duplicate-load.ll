@@ -9,12 +9,12 @@
 
 define <4 x i32> @test(<4 x i32>* %p) {
 ; CHECK-LABEL: test:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movaps (%rdi), %xmm0
 ; CHECK-NEXT:    extractps $2, %xmm0, %eax
 ; CHECK-NEXT:    cmpl $3, %eax
 ; CHECK-NEXT:    je .LBB0_2
-; CHECK-NEXT:  # BB#1:
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    retq

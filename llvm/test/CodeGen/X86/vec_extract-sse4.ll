@@ -4,7 +4,7 @@
 
 define void @t1(float* %R, <4 x float>* %P1) nounwind {
 ; X32-LABEL: t1:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -12,7 +12,7 @@ define void @t1(float* %R, <4 x float>* %P1) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t1:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    movss %xmm0, (%rdi)
 ; X64-NEXT:    retq
@@ -24,7 +24,7 @@ define void @t1(float* %R, <4 x float>* %P1) nounwind {
 
 define float @t2(<4 x float>* %P1) nounwind {
 ; X32-LABEL: t2:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movddup {{.*#+}} xmm0 = mem[0,0]
@@ -34,7 +34,7 @@ define float @t2(<4 x float>* %P1) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t2:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movddup {{.*#+}} xmm0 = mem[0,0]
 ; X64-NEXT:    retq
   %X = load <4 x float>, <4 x float>* %P1
@@ -44,7 +44,7 @@ define float @t2(<4 x float>* %P1) nounwind {
 
 define void @t3(i32* %R, <4 x i32>* %P1) nounwind {
 ; X32-LABEL: t3:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl 12(%ecx), %ecx
@@ -52,7 +52,7 @@ define void @t3(i32* %R, <4 x i32>* %P1) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t3:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl 12(%rsi), %eax
 ; X64-NEXT:    movl %eax, (%rdi)
 ; X64-NEXT:    retq
@@ -64,13 +64,13 @@ define void @t3(i32* %R, <4 x i32>* %P1) nounwind {
 
 define i32 @t4(<4 x i32>* %P1) nounwind {
 ; X32-LABEL: t4:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl 12(%eax), %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t4:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl 12(%rdi), %eax
 ; X64-NEXT:    retq
   %X = load <4 x i32>, <4 x i32>* %P1

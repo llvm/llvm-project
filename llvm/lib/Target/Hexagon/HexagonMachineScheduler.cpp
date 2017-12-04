@@ -186,12 +186,10 @@ bool VLIWResourceModel::reserveResources(SUnit *SU) {
 /// after setting up the current scheduling region. [RegionBegin, RegionEnd)
 /// only includes instructions that have DAG nodes, not scheduling boundaries.
 void VLIWMachineScheduler::schedule() {
-  DEBUG(dbgs()
-        << "********** MI Converging Scheduling VLIW BB#" << BB->getNumber()
-        << " " << BB->getName()
-        << " in_func " << BB->getParent()->getFunction()->getName()
-        << " at loop depth "  << MLI->getLoopDepth(BB)
-        << " \n");
+  DEBUG(dbgs() << "********** MI Converging Scheduling VLIW "
+               << printMBBReference(*BB) << " " << BB->getName() << " in_func "
+               << BB->getParent()->getFunction()->getName() << " at loop depth "
+               << MLI->getLoopDepth(BB) << " \n");
 
   buildDAGWithRegPressure();
 
@@ -237,8 +235,8 @@ void VLIWMachineScheduler::schedule() {
   placeDebugValues();
 
   DEBUG({
-    unsigned BBNum = begin()->getParent()->getNumber();
-    dbgs() << "*** Final schedule for BB#" << BBNum << " ***\n";
+    dbgs() << "*** Final schedule for "
+           << printMBBReference(*begin()->getParent()) << " ***\n";
     dumpSchedule();
     dbgs() << '\n';
   });

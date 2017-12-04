@@ -3,7 +3,7 @@
 
 define <16 x float> @test_rsqrt28_ps(<16 x float> %a0) {
 ; CHECK-LABEL: test_rsqrt28_ps:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vrsqrt28ps {sae}, %zmm0, %zmm0 # encoding: [0x62,0xf2,0x7d,0x18,0xcc,0xc0]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %res = call <16 x float> @llvm.x86.avx512.rsqrt28.ps(<16 x float> %a0, <16 x float> zeroinitializer, i16 -1, i32 8)
@@ -12,7 +12,7 @@ define <16 x float> @test_rsqrt28_ps(<16 x float> %a0) {
 
 define <16 x float> @test1_rsqrt28_ps(<16 x float> %a0, <16 x float> %a1) {
 ; CHECK-LABEL: test1_rsqrt28_ps:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movw $6, %ax # encoding: [0x66,0xb8,0x06,0x00]
 ; CHECK-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
 ; CHECK-NEXT:    vrsqrt28ps {sae}, %zmm0, %zmm1 {%k1} # encoding: [0x62,0xf2,0x7d,0x19,0xcc,0xc8]
@@ -24,7 +24,7 @@ define <16 x float> @test1_rsqrt28_ps(<16 x float> %a0, <16 x float> %a1) {
 
 define <16 x float> @test2_rsqrt28_ps(<16 x float> %a0) {
 ; CHECK-LABEL: test2_rsqrt28_ps:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movw $6, %ax # encoding: [0x66,0xb8,0x06,0x00]
 ; CHECK-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
 ; CHECK-NEXT:    vrsqrt28ps %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf2,0x7d,0xc9,0xcc,0xc0]
@@ -35,7 +35,7 @@ define <16 x float> @test2_rsqrt28_ps(<16 x float> %a0) {
 
 define <16 x float> @test3_rsqrt28_ps(<16 x float> %a0) {
 ; CHECK-LABEL: test3_rsqrt28_ps:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movw $6, %ax # encoding: [0x66,0xb8,0x06,0x00]
 ; CHECK-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
 ; CHECK-NEXT:    vrsqrt28ps %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf2,0x7d,0xc9,0xcc,0xc0]
@@ -46,7 +46,7 @@ define <16 x float> @test3_rsqrt28_ps(<16 x float> %a0) {
 
 define <16 x float> @test4_rsqrt28_ps(<16 x float> %a0) {
 ; CHECK-LABEL: test4_rsqrt28_ps:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movw $6, %ax # encoding: [0x66,0xb8,0x06,0x00]
 ; CHECK-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
 ; CHECK-NEXT:    vrsqrt28ps {sae}, %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf2,0x7d,0x99,0xcc,0xc0]
@@ -60,7 +60,7 @@ declare <16 x float> @llvm.x86.avx512.rsqrt28.ps(<16 x float>, <16 x float>, i16
 
 define <16 x float> @test_rcp28_ps_512(<16 x float> %a0) {
 ; CHECK-LABEL: test_rcp28_ps_512:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vrcp28ps {sae}, %zmm0, %zmm0 # encoding: [0x62,0xf2,0x7d,0x18,0xca,0xc0]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %res = call <16 x float> @llvm.x86.avx512.rcp28.ps(<16 x float> %a0, <16 x float> zeroinitializer, i16 -1, i32 8)
@@ -70,7 +70,7 @@ declare <16 x float> @llvm.x86.avx512.rcp28.ps(<16 x float>, <16 x float>, i16, 
 
 define <8 x double> @test_rcp28_pd_512(<8 x double> %a0) {
 ; CHECK-LABEL: test_rcp28_pd_512:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vrcp28pd {sae}, %zmm0, %zmm0 # encoding: [0x62,0xf2,0xfd,0x18,0xca,0xc0]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %res = call <8 x double> @llvm.x86.avx512.rcp28.pd(<8 x double> %a0, <8 x double> zeroinitializer, i8 -1, i32 8)
@@ -80,7 +80,7 @@ declare <8 x double> @llvm.x86.avx512.rcp28.pd(<8 x double>, <8 x double>, i8, i
 
 define <16 x float> @test_exp2_ps_512(<16 x float> %a0) {
 ; CHECK-LABEL: test_exp2_ps_512:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vexp2ps {sae}, %zmm0, %zmm0 # encoding: [0x62,0xf2,0x7d,0x18,0xc8,0xc0]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %res = call <16 x float> @llvm.x86.avx512.exp2.ps(<16 x float> %a0, <16 x float> zeroinitializer, i16 -1, i32 8)
@@ -90,7 +90,7 @@ declare <16 x float> @llvm.x86.avx512.exp2.ps(<16 x float>, <16 x float>, i16, i
 
 define <8 x double> @test_exp2_pd_512(<8 x double> %a0) {
 ; CHECK-LABEL: test_exp2_pd_512:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vexp2pd {sae}, %zmm0, %zmm0 # encoding: [0x62,0xf2,0xfd,0x18,0xc8,0xc0]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %res = call <8 x double> @llvm.x86.avx512.exp2.pd(<8 x double> %a0, <8 x double> zeroinitializer, i8 -1, i32 8)
@@ -100,7 +100,7 @@ declare <8 x double> @llvm.x86.avx512.exp2.pd(<8 x double>, <8 x double>, i8, i3
 
 define <4 x float> @test_rsqrt28_ss(<4 x float> %a0) {
 ; CHECK-LABEL: test_rsqrt28_ss:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vrsqrt28ss {sae}, %xmm0, %xmm0, %xmm0 # encoding: [0x62,0xf2,0x7d,0x18,0xcd,0xc0]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %res = call <4 x float> @llvm.x86.avx512.rsqrt28.ss(<4 x float> %a0, <4 x float> %a0, <4 x float> zeroinitializer, i8 -1, i32 8) ; <<4 x float>> [#uses=1]
@@ -110,7 +110,7 @@ declare <4 x float> @llvm.x86.avx512.rsqrt28.ss(<4 x float>, <4 x float>, <4 x f
 
 define <4 x float> @test_rcp28_ss(<4 x float> %a0) {
 ; CHECK-LABEL: test_rcp28_ss:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vrcp28ss {sae}, %xmm0, %xmm0, %xmm0 # encoding: [0x62,0xf2,0x7d,0x18,0xcb,0xc0]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %res = call <4 x float> @llvm.x86.avx512.rcp28.ss(<4 x float> %a0, <4 x float> %a0, <4 x float> zeroinitializer, i8 -1, i32 8) ; <<4 x float>> [#uses=1]
@@ -120,7 +120,7 @@ declare <4 x float> @llvm.x86.avx512.rcp28.ss(<4 x float>, <4 x float>, <4 x flo
 
 define <4 x float> @test_rcp28_ss_load(<4 x float> %a0, <4 x float>* %a1ptr) {
 ; CHECK-LABEL: test_rcp28_ss_load:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vrcp28ss (%rdi), %xmm0, %xmm0 # encoding: [0x62,0xf2,0x7d,0x08,0xcb,0x07]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %a1 = load <4 x float>, <4 x float>* %a1ptr
@@ -130,7 +130,7 @@ define <4 x float> @test_rcp28_ss_load(<4 x float> %a0, <4 x float>* %a1ptr) {
 
 define <4 x float> @test_rsqrt28_ss_load(<4 x float> %a0, <4 x float>* %a1ptr) {
 ; CHECK-LABEL: test_rsqrt28_ss_load:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vrsqrt28ss (%rdi), %xmm0, %xmm0 # encoding: [0x62,0xf2,0x7d,0x08,0xcd,0x07]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %a1 = load <4 x float>, <4 x float>* %a1ptr
@@ -140,7 +140,7 @@ define <4 x float> @test_rsqrt28_ss_load(<4 x float> %a0, <4 x float>* %a1ptr) {
 
 define <4 x float> @test_rsqrt28_ss_maskz(<4 x float> %a0, i8 %mask) {
 ; CHECK-LABEL: test_rsqrt28_ss_maskz:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vrsqrt28ss {sae}, %xmm0, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0x7d,0x99,0xcd,0xc0]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
@@ -150,7 +150,7 @@ define <4 x float> @test_rsqrt28_ss_maskz(<4 x float> %a0, i8 %mask) {
 
 define <4 x float> @test_rsqrt28_ss_mask(<4 x float> %a0, <4 x float> %b0, <4 x float> %c0, i8 %mask) {
 ; CHECK-LABEL: test_rsqrt28_ss_mask:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vrsqrt28ss {sae}, %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf2,0x7d,0x19,0xcd,0xd1]
 ; CHECK-NEXT:    vmovaps %xmm2, %xmm0 # encoding: [0xc5,0xf8,0x28,0xc2]
@@ -161,7 +161,7 @@ define <4 x float> @test_rsqrt28_ss_mask(<4 x float> %a0, <4 x float> %b0, <4 x 
 
 define <2 x double> @test_rcp28_sd_mask_load(<2 x double> %a0, <2 x double>* %a1ptr, <2 x double> %a2, i8 %mask) {
 ; CHECK-LABEL: test_rcp28_sd_mask_load:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
 ; CHECK-NEXT:    vrcp28sd %xmm0, %xmm0, %xmm1 {%k1} # encoding: [0x62,0xf2,0xfd,0x09,0xcb,0xc8]
 ; CHECK-NEXT:    vmovapd %xmm1, %xmm0 # encoding: [0xc5,0xf9,0x28,0xc1]
@@ -174,7 +174,7 @@ declare <2 x double> @llvm.x86.avx512.rcp28.sd(<2 x double>, <2 x double>, <2 x 
 
 define <2 x double> @test_rsqrt28_sd_maskz_load(<2 x double> %a0, <2 x double>* %a1ptr, i8 %mask) {
 ; CHECK-LABEL: test_rsqrt28_sd_maskz_load:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
 ; CHECK-NEXT:    vrsqrt28sd %xmm0, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0x89,0xcd,0xc0]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
@@ -185,7 +185,7 @@ define <2 x double> @test_rsqrt28_sd_maskz_load(<2 x double> %a0, <2 x double>* 
 
 define <2 x double> @test_rsqrt28_sd_maskz(<2 x double> %a0, i8 %mask) {
 ; CHECK-LABEL: test_rsqrt28_sd_maskz:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vrsqrt28sd {sae}, %xmm0, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0x99,0xcd,0xc0]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
@@ -195,7 +195,7 @@ define <2 x double> @test_rsqrt28_sd_maskz(<2 x double> %a0, i8 %mask) {
 
 define <2 x double> @test_rsqrt28_sd_mask(<2 x double> %a0, <2 x double> %b0, <2 x double> %c0, i8 %mask) {
 ; CHECK-LABEL: test_rsqrt28_sd_mask:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vrsqrt28sd {sae}, %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf2,0xfd,0x19,0xcd,0xd1]
 ; CHECK-NEXT:    vmovapd %xmm2, %xmm0 # encoding: [0xc5,0xf9,0x28,0xc2]
@@ -208,7 +208,7 @@ declare <2 x double> @llvm.x86.avx512.rsqrt28.sd(<2 x double>, <2 x double>, <2 
 
 define <2 x double> @test_rsqrt28_sd_maskz_mem(<2 x double> %a0, double* %ptr, i8 %mask) {
 ; CHECK-LABEL: test_rsqrt28_sd_maskz_mem:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
 ; CHECK-NEXT:    vrsqrt28sd (%rdi), %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0x89,0xcd,0x07]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
@@ -220,7 +220,7 @@ define <2 x double> @test_rsqrt28_sd_maskz_mem(<2 x double> %a0, double* %ptr, i
 
 define <2 x double> @test_rsqrt28_sd_maskz_mem_offset(<2 x double> %a0, double* %ptr, i8 %mask) {
 ; CHECK-LABEL: test_rsqrt28_sd_maskz_mem_offset:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
 ; CHECK-NEXT:    vrsqrt28sd 144(%rdi), %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0x89,0xcd,0x47,0x12]
 ; CHECK-NEXT:    retq # encoding: [0xc3]

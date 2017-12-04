@@ -3,7 +3,7 @@
 
 define void @bad_cast() {
 ; CHECK-LABEL: bad_cast:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovaps %xmm0, (%eax)
 ; CHECK-NEXT:    movl $0, (%eax)
@@ -16,7 +16,7 @@ define void @bad_cast() {
 
 define void @bad_insert(i32 %t) {
 ; CHECK-LABEL: bad_insert:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vmovaps %ymm0, (%eax)
 ; CHECK-NEXT:    vzeroupper

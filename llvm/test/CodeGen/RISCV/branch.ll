@@ -4,7 +4,7 @@
 
 define void @foo(i32 %a, i32 *%b, i1 %c) {
 ; RV32I-LABEL: foo:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lw a3, 0(a1)
 ; RV32I-NEXT:    beq a3, a0, .LBB0_12
 ; RV32I-NEXT:    jal zero, .LBB0_1

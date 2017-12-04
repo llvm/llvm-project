@@ -63,8 +63,8 @@ static void printRegion(raw_ostream &OS,
                         unsigned MaxInstNum =
                           std::numeric_limits<unsigned>::max()) {
   auto BB = Begin->getParent();
-  OS << BB->getParent()->getName() << ":BB#" << BB->getNumber()
-     << ' ' << BB->getName() << ":\n";
+  OS << BB->getParent()->getName() << ":" << printMBBReference(*BB) << ' '
+     << BB->getName() << ":\n";
   auto I = Begin;
   MaxInstNum = std::max(MaxInstNum, 1u);
   for (; I != End && MaxInstNum; ++I, --MaxInstNum) {

@@ -6,7 +6,7 @@
 
 define i32 @foo (i64* %so) nounwind uwtable ssp {
 ; CHECK-LABEL: foo:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl $0, 28(%eax)
 ; CHECK-NEXT:    movl $0, 24(%eax)

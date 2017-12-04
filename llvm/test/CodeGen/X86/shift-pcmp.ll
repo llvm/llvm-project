@@ -4,13 +4,13 @@
 
 define <8 x i16> @foo(<8 x i16> %a, <8 x i16> %b) {
 ; SSE-LABEL: foo:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    pcmpeqw %xmm1, %xmm0
 ; SSE-NEXT:    pand {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: foo:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -23,13 +23,13 @@ define <8 x i16> @foo(<8 x i16> %a, <8 x i16> %b) {
 ; Don't fail with an assert due to an undef in the buildvector
 define <8 x i16> @bar(<8 x i16> %a, <8 x i16> %b) {
 ; SSE-LABEL: bar:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    pcmpeqw %xmm1, %xmm0
 ; SSE-NEXT:    pand {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: bar:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq

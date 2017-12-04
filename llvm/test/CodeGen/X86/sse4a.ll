@@ -6,12 +6,12 @@
 
 define <2 x i64> @test_extrqi(<2 x i64> %x) nounwind uwtable ssp {
 ; X32-LABEL: test_extrqi:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    extrq $2, $3, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_extrqi:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    extrq $2, $3, %xmm0
 ; X64-NEXT:    retq
   %1 = tail call <2 x i64> @llvm.x86.sse4a.extrqi(<2 x i64> %x, i8 3, i8 2)
@@ -20,27 +20,27 @@ define <2 x i64> @test_extrqi(<2 x i64> %x) nounwind uwtable ssp {
 
 define <2 x i64> @test_extrqi_domain(<2 x i64> *%p) nounwind uwtable ssp {
 ; X32-SSE-LABEL: test_extrqi_domain:
-; X32-SSE:       # BB#0:
+; X32-SSE:       # %bb.0:
 ; X32-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-SSE-NEXT:    movdqa (%eax), %xmm0
 ; X32-SSE-NEXT:    extrq $2, $3, %xmm0
 ; X32-SSE-NEXT:    retl
 ;
 ; X32-AVX-LABEL: test_extrqi_domain:
-; X32-AVX:       # BB#0:
+; X32-AVX:       # %bb.0:
 ; X32-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-AVX-NEXT:    vmovdqa (%eax), %xmm0
 ; X32-AVX-NEXT:    extrq $2, $3, %xmm0
 ; X32-AVX-NEXT:    retl
 ;
 ; X64-SSE-LABEL: test_extrqi_domain:
-; X64-SSE:       # BB#0:
+; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    movdqa (%rdi), %xmm0
 ; X64-SSE-NEXT:    extrq $2, $3, %xmm0
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_extrqi_domain:
-; X64-AVX:       # BB#0:
+; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    vmovdqa (%rdi), %xmm0
 ; X64-AVX-NEXT:    extrq $2, $3, %xmm0
 ; X64-AVX-NEXT:    retq
@@ -53,12 +53,12 @@ declare <2 x i64> @llvm.x86.sse4a.extrqi(<2 x i64>, i8, i8) nounwind
 
 define <2 x i64> @test_extrq(<2 x i64> %x, <2 x i64> %y) nounwind uwtable ssp {
 ; X32-LABEL: test_extrq:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    extrq %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_extrq:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    extrq %xmm1, %xmm0
 ; X64-NEXT:    retq
   %1 = bitcast <2 x i64> %y to <16 x i8>
@@ -68,7 +68,7 @@ define <2 x i64> @test_extrq(<2 x i64> %x, <2 x i64> %y) nounwind uwtable ssp {
 
 define <2 x i64> @test_extrq_domain(<2 x i64> *%p, <2 x i64> %y) nounwind uwtable ssp {
 ; X32-SSE-LABEL: test_extrq_domain:
-; X32-SSE:       # BB#0:
+; X32-SSE:       # %bb.0:
 ; X32-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-SSE-NEXT:    movdqa (%eax), %xmm1
 ; X32-SSE-NEXT:    extrq %xmm0, %xmm1
@@ -76,7 +76,7 @@ define <2 x i64> @test_extrq_domain(<2 x i64> *%p, <2 x i64> %y) nounwind uwtabl
 ; X32-SSE-NEXT:    retl
 ;
 ; X32-AVX-LABEL: test_extrq_domain:
-; X32-AVX:       # BB#0:
+; X32-AVX:       # %bb.0:
 ; X32-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-AVX-NEXT:    vmovdqa (%eax), %xmm1
 ; X32-AVX-NEXT:    extrq %xmm0, %xmm1
@@ -84,14 +84,14 @@ define <2 x i64> @test_extrq_domain(<2 x i64> *%p, <2 x i64> %y) nounwind uwtabl
 ; X32-AVX-NEXT:    retl
 ;
 ; X64-SSE-LABEL: test_extrq_domain:
-; X64-SSE:       # BB#0:
+; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    movdqa (%rdi), %xmm1
 ; X64-SSE-NEXT:    extrq %xmm0, %xmm1
 ; X64-SSE-NEXT:    movdqa %xmm1, %xmm0
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_extrq_domain:
-; X64-AVX:       # BB#0:
+; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    vmovdqa (%rdi), %xmm1
 ; X64-AVX-NEXT:    extrq %xmm0, %xmm1
 ; X64-AVX-NEXT:    vmovdqa %xmm1, %xmm0
@@ -106,12 +106,12 @@ declare <2 x i64> @llvm.x86.sse4a.extrq(<2 x i64>, <16 x i8>) nounwind
 
 define <2 x i64> @test_insertqi(<2 x i64> %x, <2 x i64> %y) nounwind uwtable ssp {
 ; X32-LABEL: test_insertqi:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    insertq $6, $5, %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_insertqi:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    insertq $6, $5, %xmm1, %xmm0
 ; X64-NEXT:    retq
   %1 = tail call <2 x i64> @llvm.x86.sse4a.insertqi(<2 x i64> %x, <2 x i64> %y, i8 5, i8 6)
@@ -120,7 +120,7 @@ define <2 x i64> @test_insertqi(<2 x i64> %x, <2 x i64> %y) nounwind uwtable ssp
 
 define <2 x i64> @test_insertqi_domain(<2 x i64> *%p, <2 x i64> %y) nounwind uwtable ssp {
 ; X32-SSE-LABEL: test_insertqi_domain:
-; X32-SSE:       # BB#0:
+; X32-SSE:       # %bb.0:
 ; X32-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-SSE-NEXT:    movdqa (%eax), %xmm1
 ; X32-SSE-NEXT:    insertq $6, $5, %xmm0, %xmm1
@@ -128,7 +128,7 @@ define <2 x i64> @test_insertqi_domain(<2 x i64> *%p, <2 x i64> %y) nounwind uwt
 ; X32-SSE-NEXT:    retl
 ;
 ; X32-AVX-LABEL: test_insertqi_domain:
-; X32-AVX:       # BB#0:
+; X32-AVX:       # %bb.0:
 ; X32-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-AVX-NEXT:    vmovdqa (%eax), %xmm1
 ; X32-AVX-NEXT:    insertq $6, $5, %xmm0, %xmm1
@@ -136,14 +136,14 @@ define <2 x i64> @test_insertqi_domain(<2 x i64> *%p, <2 x i64> %y) nounwind uwt
 ; X32-AVX-NEXT:    retl
 ;
 ; X64-SSE-LABEL: test_insertqi_domain:
-; X64-SSE:       # BB#0:
+; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    movdqa (%rdi), %xmm1
 ; X64-SSE-NEXT:    insertq $6, $5, %xmm0, %xmm1
 ; X64-SSE-NEXT:    movdqa %xmm1, %xmm0
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_insertqi_domain:
-; X64-AVX:       # BB#0:
+; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    vmovdqa (%rdi), %xmm1
 ; X64-AVX-NEXT:    insertq $6, $5, %xmm0, %xmm1
 ; X64-AVX-NEXT:    vmovdqa %xmm1, %xmm0
@@ -157,12 +157,12 @@ declare <2 x i64> @llvm.x86.sse4a.insertqi(<2 x i64>, <2 x i64>, i8, i8) nounwin
 
 define <2 x i64> @test_insertq(<2 x i64> %x, <2 x i64> %y) nounwind uwtable ssp {
 ; X32-LABEL: test_insertq:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    insertq %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_insertq:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    insertq %xmm1, %xmm0
 ; X64-NEXT:    retq
   %1 = tail call <2 x i64> @llvm.x86.sse4a.insertq(<2 x i64> %x, <2 x i64> %y) nounwind
@@ -171,7 +171,7 @@ define <2 x i64> @test_insertq(<2 x i64> %x, <2 x i64> %y) nounwind uwtable ssp 
 
 define <2 x i64> @test_insertq_domain(<2 x i64> *%p, <2 x i64> %y) nounwind uwtable ssp {
 ; X32-SSE-LABEL: test_insertq_domain:
-; X32-SSE:       # BB#0:
+; X32-SSE:       # %bb.0:
 ; X32-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-SSE-NEXT:    movdqa (%eax), %xmm1
 ; X32-SSE-NEXT:    insertq %xmm0, %xmm1
@@ -179,7 +179,7 @@ define <2 x i64> @test_insertq_domain(<2 x i64> *%p, <2 x i64> %y) nounwind uwta
 ; X32-SSE-NEXT:    retl
 ;
 ; X32-AVX-LABEL: test_insertq_domain:
-; X32-AVX:       # BB#0:
+; X32-AVX:       # %bb.0:
 ; X32-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-AVX-NEXT:    vmovdqa (%eax), %xmm1
 ; X32-AVX-NEXT:    insertq %xmm0, %xmm1
@@ -187,14 +187,14 @@ define <2 x i64> @test_insertq_domain(<2 x i64> *%p, <2 x i64> %y) nounwind uwta
 ; X32-AVX-NEXT:    retl
 ;
 ; X64-SSE-LABEL: test_insertq_domain:
-; X64-SSE:       # BB#0:
+; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    movdqa (%rdi), %xmm1
 ; X64-SSE-NEXT:    insertq %xmm0, %xmm1
 ; X64-SSE-NEXT:    movdqa %xmm1, %xmm0
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_insertq_domain:
-; X64-AVX:       # BB#0:
+; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    vmovdqa (%rdi), %xmm1
 ; X64-AVX-NEXT:    insertq %xmm0, %xmm1
 ; X64-AVX-NEXT:    vmovdqa %xmm1, %xmm0

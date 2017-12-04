@@ -18,7 +18,7 @@ define void @test_Bcc_fallthrough_taken(i32 %in) nounwind {
 ; CHECK: cmp {{%[goli][0-9]+}}, 42
 ; CHECK: bne [[FALSE:.LBB[0-9]+_[0-9]+]]
 ; CHECK-NEXT: nop
-; CHECK-NEXT: ! BB#
+; CHECK-NEXT: ! %bb.
 ; CHECK-NEXT: call test_true
 
 ; CHECK: [[FALSE]]:
@@ -42,7 +42,7 @@ define void @test_Bcc_fallthrough_nottaken(i32 %in) nounwind {
 
 ; CHECK: be [[TRUE:.LBB[0-9]+_[0-9]+]]
 ; CHECK-NEXT: nop
-; CHECK-NEXT: ! BB#
+; CHECK-NEXT: ! %bb.
 ; CHECK-NEXT: call test_false
 
 ; CHECK: [[TRUE]]:

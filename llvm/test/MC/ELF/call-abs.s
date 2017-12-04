@@ -4,7 +4,7 @@
 	.globl	f
 	.type	f,@function
 f:                                      # @f
-# BB#0:                                 # %entry
+# %bb.0:                                # %entry
 	subl	$4, %esp
 	calll	42
 	incl	%eax

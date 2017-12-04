@@ -13,7 +13,7 @@
 
 define i16 @test_ctpop_i16(i16 zeroext %a0, i16 *%a1) {
 ; GENERIC-LABEL: test_ctpop_i16:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    popcntw (%rsi), %cx # sched: [9:1.00]
 ; GENERIC-NEXT:    popcntw %di, %ax # sched: [3:1.00]
 ; GENERIC-NEXT:    orl %ecx, %eax # sched: [1:0.33]
@@ -21,7 +21,7 @@ define i16 @test_ctpop_i16(i16 zeroext %a0, i16 *%a1) {
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SLM-LABEL: test_ctpop_i16:
-; SLM:       # BB#0:
+; SLM:       # %bb.0:
 ; SLM-NEXT:    popcntw (%rsi), %cx # sched: [6:1.00]
 ; SLM-NEXT:    popcntw %di, %ax # sched: [3:1.00]
 ; SLM-NEXT:    orl %ecx, %eax # sched: [1:0.50]
@@ -29,7 +29,7 @@ define i16 @test_ctpop_i16(i16 zeroext %a0, i16 *%a1) {
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_ctpop_i16:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    popcntw (%rsi), %cx # sched: [9:1.00]
 ; SANDY-NEXT:    popcntw %di, %ax # sched: [3:1.00]
 ; SANDY-NEXT:    orl %ecx, %eax # sched: [1:0.33]
@@ -37,7 +37,7 @@ define i16 @test_ctpop_i16(i16 zeroext %a0, i16 *%a1) {
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_ctpop_i16:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    popcntw (%rsi), %cx # sched: [3:1.00]
 ; HASWELL-NEXT:    popcntw %di, %ax # sched: [3:1.00]
 ; HASWELL-NEXT:    orl %ecx, %eax # sched: [1:0.25]
@@ -45,7 +45,7 @@ define i16 @test_ctpop_i16(i16 zeroext %a0, i16 *%a1) {
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_ctpop_i16:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    popcntw (%rsi), %cx # sched: [8:1.00]
 ; BROADWELL-NEXT:    popcntw %di, %ax # sched: [3:1.00]
 ; BROADWELL-NEXT:    orl %ecx, %eax # sched: [1:0.25]
@@ -53,7 +53,7 @@ define i16 @test_ctpop_i16(i16 zeroext %a0, i16 *%a1) {
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_ctpop_i16:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    popcntw (%rsi), %cx # sched: [8:1.00]
 ; SKYLAKE-NEXT:    popcntw %di, %ax # sched: [3:1.00]
 ; SKYLAKE-NEXT:    orl %ecx, %eax # sched: [1:0.25]
@@ -61,7 +61,7 @@ define i16 @test_ctpop_i16(i16 zeroext %a0, i16 *%a1) {
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_ctpop_i16:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    popcntw (%rsi), %cx # sched: [8:1.00]
 ; BTVER2-NEXT:    popcntw %di, %ax # sched: [3:1.00]
 ; BTVER2-NEXT:    orl %ecx, %eax # sched: [1:0.50]
@@ -69,7 +69,7 @@ define i16 @test_ctpop_i16(i16 zeroext %a0, i16 *%a1) {
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_ctpop_i16:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    popcntw (%rsi), %cx # sched: [10:1.00]
 ; ZNVER1-NEXT:    popcntw %di, %ax # sched: [3:1.00]
 ; ZNVER1-NEXT:    orl %ecx, %eax # sched: [1:0.25]
@@ -85,56 +85,56 @@ declare i16 @llvm.ctpop.i16(i16)
 
 define i32 @test_ctpop_i32(i32 %a0, i32 *%a1) {
 ; GENERIC-LABEL: test_ctpop_i32:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    popcntl (%rsi), %ecx # sched: [9:1.00]
 ; GENERIC-NEXT:    popcntl %edi, %eax # sched: [3:1.00]
 ; GENERIC-NEXT:    orl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SLM-LABEL: test_ctpop_i32:
-; SLM:       # BB#0:
+; SLM:       # %bb.0:
 ; SLM-NEXT:    popcntl (%rsi), %ecx # sched: [6:1.00]
 ; SLM-NEXT:    popcntl %edi, %eax # sched: [3:1.00]
 ; SLM-NEXT:    orl %ecx, %eax # sched: [1:0.50]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_ctpop_i32:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    popcntl (%rsi), %ecx # sched: [9:1.00]
 ; SANDY-NEXT:    popcntl %edi, %eax # sched: [3:1.00]
 ; SANDY-NEXT:    orl %ecx, %eax # sched: [1:0.33]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_ctpop_i32:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    popcntl (%rsi), %ecx # sched: [3:1.00]
 ; HASWELL-NEXT:    popcntl %edi, %eax # sched: [3:1.00]
 ; HASWELL-NEXT:    orl %ecx, %eax # sched: [1:0.25]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_ctpop_i32:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    popcntl (%rsi), %ecx # sched: [8:1.00]
 ; BROADWELL-NEXT:    popcntl %edi, %eax # sched: [3:1.00]
 ; BROADWELL-NEXT:    orl %ecx, %eax # sched: [1:0.25]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_ctpop_i32:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    popcntl (%rsi), %ecx # sched: [8:1.00]
 ; SKYLAKE-NEXT:    popcntl %edi, %eax # sched: [3:1.00]
 ; SKYLAKE-NEXT:    orl %ecx, %eax # sched: [1:0.25]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_ctpop_i32:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    popcntl (%rsi), %ecx # sched: [8:1.00]
 ; BTVER2-NEXT:    popcntl %edi, %eax # sched: [3:1.00]
 ; BTVER2-NEXT:    orl %ecx, %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_ctpop_i32:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    popcntl (%rsi), %ecx # sched: [10:1.00]
 ; ZNVER1-NEXT:    popcntl %edi, %eax # sched: [3:1.00]
 ; ZNVER1-NEXT:    orl %ecx, %eax # sched: [1:0.25]
@@ -149,56 +149,56 @@ declare i32 @llvm.ctpop.i32(i32)
 
 define i64 @test_ctpop_i64(i64 %a0, i64 *%a1) {
 ; GENERIC-LABEL: test_ctpop_i64:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    popcntq (%rsi), %rcx # sched: [9:1.00]
 ; GENERIC-NEXT:    popcntq %rdi, %rax # sched: [3:1.00]
 ; GENERIC-NEXT:    orq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SLM-LABEL: test_ctpop_i64:
-; SLM:       # BB#0:
+; SLM:       # %bb.0:
 ; SLM-NEXT:    popcntq (%rsi), %rcx # sched: [6:1.00]
 ; SLM-NEXT:    popcntq %rdi, %rax # sched: [3:1.00]
 ; SLM-NEXT:    orq %rcx, %rax # sched: [1:0.50]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_ctpop_i64:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    popcntq (%rsi), %rcx # sched: [9:1.00]
 ; SANDY-NEXT:    popcntq %rdi, %rax # sched: [3:1.00]
 ; SANDY-NEXT:    orq %rcx, %rax # sched: [1:0.33]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_ctpop_i64:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    popcntq (%rsi), %rcx # sched: [3:1.00]
 ; HASWELL-NEXT:    popcntq %rdi, %rax # sched: [3:1.00]
 ; HASWELL-NEXT:    orq %rcx, %rax # sched: [1:0.25]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_ctpop_i64:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    popcntq (%rsi), %rcx # sched: [8:1.00]
 ; BROADWELL-NEXT:    popcntq %rdi, %rax # sched: [3:1.00]
 ; BROADWELL-NEXT:    orq %rcx, %rax # sched: [1:0.25]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_ctpop_i64:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    popcntq (%rsi), %rcx # sched: [8:1.00]
 ; SKYLAKE-NEXT:    popcntq %rdi, %rax # sched: [3:1.00]
 ; SKYLAKE-NEXT:    orq %rcx, %rax # sched: [1:0.25]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_ctpop_i64:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    popcntq (%rsi), %rcx # sched: [8:1.00]
 ; BTVER2-NEXT:    popcntq %rdi, %rax # sched: [3:1.00]
 ; BTVER2-NEXT:    orq %rcx, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_ctpop_i64:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    popcntq (%rsi), %rcx # sched: [10:1.00]
 ; ZNVER1-NEXT:    popcntq %rdi, %rax # sched: [3:1.00]
 ; ZNVER1-NEXT:    orq %rcx, %rax # sched: [1:0.25]

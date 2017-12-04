@@ -3,7 +3,7 @@
 
 define void @int32_float_pair(i32 %tmp1, float %tmp2, i64* %ref.tmp) {
 ; CHECK-LABEL: int32_float_pair:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, (%rsi)
 ; CHECK-NEXT:    movss %xmm0, 4(%rsi)
 ; CHECK-NEXT:    retq
@@ -18,7 +18,7 @@ define void @int32_float_pair(i32 %tmp1, float %tmp2, i64* %ref.tmp) {
 
 define void @float_int32_pair(float %tmp1, i32 %tmp2, i64* %ref.tmp) {
 ; CHECK-LABEL: float_int32_pair:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movss %xmm0, (%rsi)
 ; CHECK-NEXT:    movl %edi, 4(%rsi)
 ; CHECK-NEXT:    retq
@@ -33,7 +33,7 @@ define void @float_int32_pair(float %tmp1, i32 %tmp2, i64* %ref.tmp) {
 
 define void @int16_float_pair(i16 signext %tmp1, float %tmp2, i64* %ref.tmp) {
 ; CHECK-LABEL: int16_float_pair:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzwl %di, %eax
 ; CHECK-NEXT:    movl %eax, (%rsi)
 ; CHECK-NEXT:    movss %xmm0, 4(%rsi)
@@ -49,7 +49,7 @@ define void @int16_float_pair(i16 signext %tmp1, float %tmp2, i64* %ref.tmp) {
 
 define void @int8_float_pair(i8 signext %tmp1, float %tmp2, i64* %ref.tmp) {
 ; CHECK-LABEL: int8_float_pair:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzbl %dil, %eax
 ; CHECK-NEXT:    movl %eax, (%rsi)
 ; CHECK-NEXT:    movss %xmm0, 4(%rsi)
@@ -65,7 +65,7 @@ define void @int8_float_pair(i8 signext %tmp1, float %tmp2, i64* %ref.tmp) {
 
 define void @int32_int32_pair(i32 %tmp1, i32 %tmp2, i64* %ref.tmp) {
 ; CHECK-LABEL: int32_int32_pair:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, (%rdx)
 ; CHECK-NEXT:    movl %esi, 4(%rdx)
 ; CHECK-NEXT:    retq
@@ -79,7 +79,7 @@ define void @int32_int32_pair(i32 %tmp1, i32 %tmp2, i64* %ref.tmp) {
 
 define void @int16_int16_pair(i16 signext %tmp1, i16 signext %tmp2, i32* %ref.tmp) {
 ; CHECK-LABEL: int16_int16_pair:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movw %di, (%rdx)
 ; CHECK-NEXT:    movw %si, 2(%rdx)
 ; CHECK-NEXT:    retq
@@ -93,7 +93,7 @@ define void @int16_int16_pair(i16 signext %tmp1, i16 signext %tmp2, i32* %ref.tm
 
 define void @int8_int8_pair(i8 signext %tmp1, i8 signext %tmp2, i16* %ref.tmp) {
 ; CHECK-LABEL: int8_int8_pair:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movb %dil, (%rdx)
 ; CHECK-NEXT:    movb %sil, 1(%rdx)
 ; CHECK-NEXT:    retq
@@ -107,7 +107,7 @@ define void @int8_int8_pair(i8 signext %tmp1, i8 signext %tmp2, i16* %ref.tmp) {
 
 define void @int31_int31_pair(i31 %tmp1, i31 %tmp2, i64* %ref.tmp) {
 ; CHECK-LABEL: int31_int31_pair:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andl $2147483647, %edi # imm = 0x7FFFFFFF
 ; CHECK-NEXT:    movl %edi, (%rdx)
 ; CHECK-NEXT:    andl $2147483647, %esi # imm = 0x7FFFFFFF
@@ -123,7 +123,7 @@ define void @int31_int31_pair(i31 %tmp1, i31 %tmp2, i64* %ref.tmp) {
 
 define void @int31_int17_pair(i31 %tmp1, i17 %tmp2, i64* %ref.tmp) {
 ; CHECK-LABEL: int31_int17_pair:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andl $2147483647, %edi # imm = 0x7FFFFFFF
 ; CHECK-NEXT:    movl %edi, (%rdx)
 ; CHECK-NEXT:    andl $131071, %esi # imm = 0x1FFFF
@@ -139,7 +139,7 @@ define void @int31_int17_pair(i31 %tmp1, i17 %tmp2, i64* %ref.tmp) {
 
 define void @int7_int3_pair(i7 signext %tmp1, i3 signext %tmp2, i16* %ref.tmp) {
 ; CHECK-LABEL: int7_int3_pair:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andb $127, %dil
 ; CHECK-NEXT:    movb %dil, (%rdx)
 ; CHECK-NEXT:    andb $7, %sil
@@ -155,7 +155,7 @@ define void @int7_int3_pair(i7 signext %tmp1, i3 signext %tmp2, i16* %ref.tmp) {
 
 define void @int24_int24_pair(i24 signext %tmp1, i24 signext %tmp2, i48* %ref.tmp) {
 ; CHECK-LABEL: int24_int24_pair:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movw %di, (%rdx)
 ; CHECK-NEXT:    shrl $16, %edi
 ; CHECK-NEXT:    movb %dil, 2(%rdx)
@@ -175,7 +175,7 @@ define void @int24_int24_pair(i24 signext %tmp1, i24 signext %tmp2, i48* %ref.tm
 
 define void @int12_int12_pair(i12 signext %tmp1, i12 signext %tmp2, i24* %ref.tmp) {
 ; CHECK-LABEL: int12_int12_pair:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    shll $12, %eax
 ; CHECK-NEXT:    andl $4095, %edi # imm = 0xFFF
@@ -196,7 +196,7 @@ define void @int12_int12_pair(i12 signext %tmp1, i12 signext %tmp2, i24* %ref.tm
 
 define void @int7_int7_pair(i7 signext %tmp1, i7 signext %tmp2, i14* %ref.tmp) {
 ; CHECK-LABEL: int7_int7_pair:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    shll $7, %esi
 ; CHECK-NEXT:    andl $127, %edi
 ; CHECK-NEXT:    orl %esi, %edi
@@ -215,7 +215,7 @@ define void @int7_int7_pair(i7 signext %tmp1, i7 signext %tmp2, i14* %ref.tmp) {
 
 define void @int1_int1_pair(i1 signext %tmp1, i1 signext %tmp2, i2* %ref.tmp) {
 ; CHECK-LABEL: int1_int1_pair:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addb %sil, %sil
 ; CHECK-NEXT:    andb $1, %dil
 ; CHECK-NEXT:    orb %sil, %dil
@@ -232,7 +232,7 @@ define void @int1_int1_pair(i1 signext %tmp1, i1 signext %tmp2, i2* %ref.tmp) {
 
 define void @mbb_int32_float_pair(i32 %tmp1, float %tmp2, i64* %ref.tmp) {
 ; CHECK-LABEL: mbb_int32_float_pair:
-; CHECK:       # BB#0: # %next
+; CHECK:       # %bb.0: # %next
 ; CHECK-NEXT:    movl %edi, (%rsi)
 ; CHECK-NEXT:    movss %xmm0, 4(%rsi)
 ; CHECK-NEXT:    retq
@@ -250,12 +250,12 @@ next:
 
 define void @mbb_int32_float_multi_stores(i32 %tmp1, float %tmp2, i64* %ref.tmp, i64* %ref.tmp1, i1 %cmp) {
 ; CHECK-LABEL: mbb_int32_float_multi_stores:
-; CHECK:       # BB#0: # %bb1
+; CHECK:       # %bb.0: # %bb1
 ; CHECK-NEXT:    movl %edi, (%rsi)
 ; CHECK-NEXT:    movss %xmm0, 4(%rsi)
 ; CHECK-NEXT:    testb $1, %cl
 ; CHECK-NEXT:    je .LBB15_2
-; CHECK-NEXT:  # BB#1: # %bb2
+; CHECK-NEXT:  # %bb.1: # %bb2
 ; CHECK-NEXT:    movl %edi, (%rdx)
 ; CHECK-NEXT:    movss %xmm0, 4(%rdx)
 ; CHECK-NEXT:  .LBB15_2: # %exitbb

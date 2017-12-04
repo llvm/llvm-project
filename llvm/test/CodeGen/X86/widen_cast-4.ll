@@ -6,7 +6,7 @@
 
 define void @update(i64* %dst_i, i64* %src_i, i32 %n) nounwind {
 ; NARROW-LABEL: update:
-; NARROW:       # BB#0: # %entry
+; NARROW:       # %bb.0: # %entry
 ; NARROW-NEXT:    subl $12, %esp
 ; NARROW-NEXT:    movl $0, (%esp)
 ; NARROW-NEXT:    pcmpeqd %xmm0, %xmm0
@@ -35,12 +35,12 @@ define void @update(i64* %dst_i, i64* %src_i, i32 %n) nounwind {
 ; NARROW-NEXT:    movl (%esp), %eax
 ; NARROW-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; NARROW-NEXT:    jl .LBB0_2
-; NARROW-NEXT:  # BB#3: # %afterfor
+; NARROW-NEXT:  # %bb.3: # %afterfor
 ; NARROW-NEXT:    addl $12, %esp
 ; NARROW-NEXT:    retl
 ;
 ; WIDE-LABEL: update:
-; WIDE:       # BB#0: # %entry
+; WIDE:       # %bb.0: # %entry
 ; WIDE-NEXT:    subl $12, %esp
 ; WIDE-NEXT:    movl $0, (%esp)
 ; WIDE-NEXT:    pcmpeqd %xmm0, %xmm0
@@ -72,7 +72,7 @@ define void @update(i64* %dst_i, i64* %src_i, i32 %n) nounwind {
 ; WIDE-NEXT:    movl (%esp), %eax
 ; WIDE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; WIDE-NEXT:    jl .LBB0_2
-; WIDE-NEXT:  # BB#3: # %afterfor
+; WIDE-NEXT:  # %bb.3: # %afterfor
 ; WIDE-NEXT:    addl $12, %esp
 ; WIDE-NEXT:    retl
 entry:

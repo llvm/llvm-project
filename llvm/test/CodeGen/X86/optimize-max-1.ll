@@ -8,7 +8,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 define void @fs(double* nocapture %p, i64 %n) nounwind {
 ; CHECK-LABEL: fs:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_1: # %bb
@@ -17,7 +17,7 @@ define void @fs(double* nocapture %p, i64 %n) nounwind {
 ; CHECK-NEXT:    incq %rax
 ; CHECK-NEXT:    cmpq %rsi, %rax
 ; CHECK-NEXT:    jl .LBB0_1
-; CHECK-NEXT:  # BB#2: # %return
+; CHECK-NEXT:  # %bb.2: # %return
 ; CHECK-NEXT:    retq
 entry:
 	%tmp = icmp slt i64 %n, 1		; <i1> [#uses=1]
@@ -38,7 +38,7 @@ return:		; preds = %bb
 
 define void @bs(double* nocapture %p, i64 %n) nounwind {
 ; CHECK-LABEL: bs:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB1_1: # %bb
@@ -47,7 +47,7 @@ define void @bs(double* nocapture %p, i64 %n) nounwind {
 ; CHECK-NEXT:    incq %rax
 ; CHECK-NEXT:    cmpq %rsi, %rax
 ; CHECK-NEXT:    jl .LBB1_1
-; CHECK-NEXT:  # BB#2: # %return
+; CHECK-NEXT:  # %bb.2: # %return
 ; CHECK-NEXT:    retq
 entry:
 	%tmp = icmp sge i64 %n, 1		; <i1> [#uses=1]
@@ -68,7 +68,7 @@ return:		; preds = %bb
 
 define void @fu(double* nocapture %p, i64 %n) nounwind {
 ; CHECK-LABEL: fu:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB2_1: # %bb
@@ -77,7 +77,7 @@ define void @fu(double* nocapture %p, i64 %n) nounwind {
 ; CHECK-NEXT:    incq %rax
 ; CHECK-NEXT:    cmpq %rsi, %rax
 ; CHECK-NEXT:    jb .LBB2_1
-; CHECK-NEXT:  # BB#2: # %return
+; CHECK-NEXT:  # %bb.2: # %return
 ; CHECK-NEXT:    retq
 entry:
 	%tmp = icmp eq i64 %n, 0		; <i1> [#uses=1]
@@ -98,7 +98,7 @@ return:		; preds = %bb
 
 define void @bu(double* nocapture %p, i64 %n) nounwind {
 ; CHECK-LABEL: bu:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB3_1: # %bb
@@ -107,7 +107,7 @@ define void @bu(double* nocapture %p, i64 %n) nounwind {
 ; CHECK-NEXT:    incq %rax
 ; CHECK-NEXT:    cmpq %rsi, %rax
 ; CHECK-NEXT:    jb .LBB3_1
-; CHECK-NEXT:  # BB#2: # %return
+; CHECK-NEXT:  # %bb.2: # %return
 ; CHECK-NEXT:    retq
 entry:
 	%tmp = icmp ne i64 %n, 0		; <i1> [#uses=1]

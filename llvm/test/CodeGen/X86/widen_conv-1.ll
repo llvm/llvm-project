@@ -6,7 +6,7 @@
 
 define void @convert_v2i64_to_v2i32(<2 x i32>* %dst.addr, <2 x i64> %src) nounwind {
 ; X86-LABEL: convert_v2i64_to_v2i32:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    paddd {{\.LCPI.*}}, %xmm0
 ; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
@@ -14,7 +14,7 @@ define void @convert_v2i64_to_v2i32(<2 x i32>* %dst.addr, <2 x i64> %src) nounwi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: convert_v2i64_to_v2i32:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    paddd {{.*}}(%rip), %xmm0
 ; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; X64-NEXT:    movq %xmm0, (%rdi)
@@ -30,7 +30,7 @@ entry:
 
 define void @convert_v3i32_to_v3i8(<3 x i8>* %dst.addr, <3 x i32>* %src.addr) nounwind {
 ; X86-LABEL: convert_v3i32_to_v3i8:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -44,7 +44,7 @@ define void @convert_v3i32_to_v3i8(<3 x i8>* %dst.addr, <3 x i32>* %src.addr) no
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: convert_v3i32_to_v3i8:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movdqa (%rsi), %xmm0
 ; X64-NEXT:    pcmpeqd %xmm1, %xmm1
 ; X64-NEXT:    psubd %xmm1, %xmm0
@@ -64,7 +64,7 @@ entry:
 
 define void @convert_v5i16_to_v5i8(<5 x i8>* %dst.addr, <5 x i16>* %src.addr) nounwind {
 ; X86-LABEL: convert_v5i16_to_v5i8:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
@@ -82,7 +82,7 @@ define void @convert_v5i16_to_v5i8(<5 x i8>* %dst.addr, <5 x i16>* %src.addr) no
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: convert_v5i16_to_v5i8:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movdqa (%rsi), %xmm0
 ; X64-NEXT:    pcmpeqd %xmm1, %xmm1
 ; X64-NEXT:    psubw %xmm1, %xmm0

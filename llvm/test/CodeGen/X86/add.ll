@@ -10,18 +10,18 @@ declare {i32, i1} @llvm.uadd.with.overflow.i32(i32, i32)
 ; instruction is a sub instead of an add.
 define i32 @test1(i32 inreg %a) nounwind {
 ; X32-LABEL: test1:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    subl $-128, %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LINUX-LABEL: test1:
-; X64-LINUX:       # BB#0: # %entry
+; X64-LINUX:       # %bb.0: # %entry
 ; X64-LINUX-NEXT:    subl $-128, %edi
 ; X64-LINUX-NEXT:    movl %edi, %eax
 ; X64-LINUX-NEXT:    retq
 ;
 ; X64-WIN32-LABEL: test1:
-; X64-WIN32:       # BB#0: # %entry
+; X64-WIN32:       # %bb.0: # %entry
 ; X64-WIN32-NEXT:    subl $-128, %ecx
 ; X64-WIN32-NEXT:    movl %ecx, %eax
 ; X64-WIN32-NEXT:    retq
@@ -31,19 +31,19 @@ entry:
 }
 define i64 @test2(i64 inreg %a) nounwind {
 ; X32-LABEL: test2:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    addl $-2147483648, %eax # imm = 0x80000000
 ; X32-NEXT:    adcl $0, %edx
 ; X32-NEXT:    retl
 ;
 ; X64-LINUX-LABEL: test2:
-; X64-LINUX:       # BB#0: # %entry
+; X64-LINUX:       # %bb.0: # %entry
 ; X64-LINUX-NEXT:    subq $-2147483648, %rdi # imm = 0x80000000
 ; X64-LINUX-NEXT:    movq %rdi, %rax
 ; X64-LINUX-NEXT:    retq
 ;
 ; X64-WIN32-LABEL: test2:
-; X64-WIN32:       # BB#0: # %entry
+; X64-WIN32:       # %bb.0: # %entry
 ; X64-WIN32-NEXT:    subq $-2147483648, %rcx # imm = 0x80000000
 ; X64-WIN32-NEXT:    movq %rcx, %rax
 ; X64-WIN32-NEXT:    retq
@@ -53,19 +53,19 @@ entry:
 }
 define i64 @test3(i64 inreg %a) nounwind {
 ; X32-LABEL: test3:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    addl $128, %eax
 ; X32-NEXT:    adcl $0, %edx
 ; X32-NEXT:    retl
 ;
 ; X64-LINUX-LABEL: test3:
-; X64-LINUX:       # BB#0: # %entry
+; X64-LINUX:       # %bb.0: # %entry
 ; X64-LINUX-NEXT:    subq $-128, %rdi
 ; X64-LINUX-NEXT:    movq %rdi, %rax
 ; X64-LINUX-NEXT:    retq
 ;
 ; X64-WIN32-LABEL: test3:
-; X64-WIN32:       # BB#0: # %entry
+; X64-WIN32:       # %bb.0: # %entry
 ; X64-WIN32-NEXT:    subq $-128, %rcx
 ; X64-WIN32-NEXT:    movq %rcx, %rax
 ; X64-WIN32-NEXT:    retq
@@ -76,11 +76,11 @@ entry:
 
 define i1 @test4(i32 %v1, i32 %v2, i32* %X) nounwind {
 ; X32-LABEL: test4:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    jo .LBB3_2
-; X32-NEXT:  # BB#1: # %normal
+; X32-NEXT:  # %bb.1: # %normal
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl $0, (%eax)
 ; X32-NEXT:  .LBB3_2: # %overflow
@@ -88,20 +88,20 @@ define i1 @test4(i32 %v1, i32 %v2, i32* %X) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LINUX-LABEL: test4:
-; X64-LINUX:       # BB#0: # %entry
+; X64-LINUX:       # %bb.0: # %entry
 ; X64-LINUX-NEXT:    addl %esi, %edi
 ; X64-LINUX-NEXT:    jo .LBB3_2
-; X64-LINUX-NEXT:  # BB#1: # %normal
+; X64-LINUX-NEXT:  # %bb.1: # %normal
 ; X64-LINUX-NEXT:    movl $0, (%rdx)
 ; X64-LINUX-NEXT:  .LBB3_2: # %overflow
 ; X64-LINUX-NEXT:    xorl %eax, %eax
 ; X64-LINUX-NEXT:    retq
 ;
 ; X64-WIN32-LABEL: test4:
-; X64-WIN32:       # BB#0: # %entry
+; X64-WIN32:       # %bb.0: # %entry
 ; X64-WIN32-NEXT:    addl %edx, %ecx
 ; X64-WIN32-NEXT:    jo .LBB3_2
-; X64-WIN32-NEXT:  # BB#1: # %normal
+; X64-WIN32-NEXT:  # %bb.1: # %normal
 ; X64-WIN32-NEXT:    movl $0, (%r8)
 ; X64-WIN32-NEXT:  .LBB3_2: # %overflow
 ; X64-WIN32-NEXT:    xorl %eax, %eax
@@ -122,11 +122,11 @@ overflow:
 
 define i1 @test5(i32 %v1, i32 %v2, i32* %X) nounwind {
 ; X32-LABEL: test5:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    jb .LBB4_2
-; X32-NEXT:  # BB#1: # %normal
+; X32-NEXT:  # %bb.1: # %normal
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl $0, (%eax)
 ; X32-NEXT:  .LBB4_2: # %carry
@@ -134,20 +134,20 @@ define i1 @test5(i32 %v1, i32 %v2, i32* %X) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LINUX-LABEL: test5:
-; X64-LINUX:       # BB#0: # %entry
+; X64-LINUX:       # %bb.0: # %entry
 ; X64-LINUX-NEXT:    addl %esi, %edi
 ; X64-LINUX-NEXT:    jb .LBB4_2
-; X64-LINUX-NEXT:  # BB#1: # %normal
+; X64-LINUX-NEXT:  # %bb.1: # %normal
 ; X64-LINUX-NEXT:    movl $0, (%rdx)
 ; X64-LINUX-NEXT:  .LBB4_2: # %carry
 ; X64-LINUX-NEXT:    xorl %eax, %eax
 ; X64-LINUX-NEXT:    retq
 ;
 ; X64-WIN32-LABEL: test5:
-; X64-WIN32:       # BB#0: # %entry
+; X64-WIN32:       # %bb.0: # %entry
 ; X64-WIN32-NEXT:    addl %edx, %ecx
 ; X64-WIN32-NEXT:    jb .LBB4_2
-; X64-WIN32-NEXT:  # BB#1: # %normal
+; X64-WIN32-NEXT:  # %bb.1: # %normal
 ; X64-WIN32-NEXT:    movl $0, (%r8)
 ; X64-WIN32-NEXT:  .LBB4_2: # %carry
 ; X64-WIN32-NEXT:    xorl %eax, %eax
@@ -168,21 +168,21 @@ carry:
 
 define i64 @test6(i64 %A, i32 %B) nounwind {
 ; X32-LABEL: test6:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    addl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    retl
 ;
 ; X64-LINUX-LABEL: test6:
-; X64-LINUX:       # BB#0: # %entry
+; X64-LINUX:       # %bb.0: # %entry
 ; X64-LINUX-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; X64-LINUX-NEXT:    shlq $32, %rsi
 ; X64-LINUX-NEXT:    leaq (%rsi,%rdi), %rax
 ; X64-LINUX-NEXT:    retq
 ;
 ; X64-WIN32-LABEL: test6:
-; X64-WIN32:       # BB#0: # %entry
+; X64-WIN32:       # %bb.0: # %entry
 ; X64-WIN32-NEXT:    # kill: %edx<def> %edx<kill> %rdx<def>
 ; X64-WIN32-NEXT:    shlq $32, %rdx
 ; X64-WIN32-NEXT:    leaq (%rdx,%rcx), %rax
@@ -196,21 +196,21 @@ entry:
 
 define {i32, i1} @test7(i32 %v1, i32 %v2) nounwind {
 ; X32-LABEL: test7:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    setb %dl
 ; X32-NEXT:    retl
 ;
 ; X64-LINUX-LABEL: test7:
-; X64-LINUX:       # BB#0: # %entry
+; X64-LINUX:       # %bb.0: # %entry
 ; X64-LINUX-NEXT:    addl %esi, %edi
 ; X64-LINUX-NEXT:    setb %dl
 ; X64-LINUX-NEXT:    movl %edi, %eax
 ; X64-LINUX-NEXT:    retq
 ;
 ; X64-WIN32-LABEL: test7:
-; X64-WIN32:       # BB#0: # %entry
+; X64-WIN32:       # %bb.0: # %entry
 ; X64-WIN32-NEXT:    addl %edx, %ecx
 ; X64-WIN32-NEXT:    setb %dl
 ; X64-WIN32-NEXT:    movl %ecx, %eax
@@ -223,7 +223,7 @@ entry:
 ; PR5443
 define {i64, i1} @test8(i64 %left, i64 %right) nounwind {
 ; X32-LABEL: test8:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    addl {{[0-9]+}}(%esp), %eax
@@ -232,14 +232,14 @@ define {i64, i1} @test8(i64 %left, i64 %right) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LINUX-LABEL: test8:
-; X64-LINUX:       # BB#0: # %entry
+; X64-LINUX:       # %bb.0: # %entry
 ; X64-LINUX-NEXT:    addq %rsi, %rdi
 ; X64-LINUX-NEXT:    setb %dl
 ; X64-LINUX-NEXT:    movq %rdi, %rax
 ; X64-LINUX-NEXT:    retq
 ;
 ; X64-WIN32-LABEL: test8:
-; X64-WIN32:       # BB#0: # %entry
+; X64-WIN32:       # %bb.0: # %entry
 ; X64-WIN32-NEXT:    addq %rdx, %rcx
 ; X64-WIN32-NEXT:    setb %dl
 ; X64-WIN32-NEXT:    movq %rcx, %rax
@@ -258,7 +258,7 @@ entry:
 
 define i32 @test9(i32 %x, i32 %y) nounwind readnone {
 ; X32-LABEL: test9:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    xorl %ecx, %ecx
 ; X32-NEXT:    cmpl $10, {{[0-9]+}}(%esp)
@@ -267,7 +267,7 @@ define i32 @test9(i32 %x, i32 %y) nounwind readnone {
 ; X32-NEXT:    retl
 ;
 ; X64-LINUX-LABEL: test9:
-; X64-LINUX:       # BB#0: # %entry
+; X64-LINUX:       # %bb.0: # %entry
 ; X64-LINUX-NEXT:    xorl %eax, %eax
 ; X64-LINUX-NEXT:    cmpl $10, %edi
 ; X64-LINUX-NEXT:    sete %al
@@ -276,7 +276,7 @@ define i32 @test9(i32 %x, i32 %y) nounwind readnone {
 ; X64-LINUX-NEXT:    retq
 ;
 ; X64-WIN32-LABEL: test9:
-; X64-WIN32:       # BB#0: # %entry
+; X64-WIN32:       # %bb.0: # %entry
 ; X64-WIN32-NEXT:    xorl %eax, %eax
 ; X64-WIN32-NEXT:    cmpl $10, %ecx
 ; X64-WIN32-NEXT:    sete %al
@@ -292,20 +292,20 @@ entry:
 
 define i1 @test10(i32 %x) nounwind {
 ; X32-LABEL: test10:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    incl %eax
 ; X32-NEXT:    seto %al
 ; X32-NEXT:    retl
 ;
 ; X64-LINUX-LABEL: test10:
-; X64-LINUX:       # BB#0: # %entry
+; X64-LINUX:       # %bb.0: # %entry
 ; X64-LINUX-NEXT:    incl %edi
 ; X64-LINUX-NEXT:    seto %al
 ; X64-LINUX-NEXT:    retq
 ;
 ; X64-WIN32-LABEL: test10:
-; X64-WIN32:       # BB#0: # %entry
+; X64-WIN32:       # %bb.0: # %entry
 ; X64-WIN32-NEXT:    incl %ecx
 ; X64-WIN32-NEXT:    seto %al
 ; X64-WIN32-NEXT:    retq
@@ -317,17 +317,17 @@ entry:
 
 define void @test11(i32* inreg %a) nounwind {
 ; X32-LABEL: test11:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    subl $-128, (%eax)
 ; X32-NEXT:    retl
 ;
 ; X64-LINUX-LABEL: test11:
-; X64-LINUX:       # BB#0: # %entry
+; X64-LINUX:       # %bb.0: # %entry
 ; X64-LINUX-NEXT:    subl $-128, (%rdi)
 ; X64-LINUX-NEXT:    retq
 ;
 ; X64-WIN32-LABEL: test11:
-; X64-WIN32:       # BB#0: # %entry
+; X64-WIN32:       # %bb.0: # %entry
 ; X64-WIN32-NEXT:    subl $-128, (%rcx)
 ; X64-WIN32-NEXT:    retq
 entry:
@@ -339,18 +339,18 @@ entry:
 
 define void @test12(i64* inreg %a) nounwind {
 ; X32-LABEL: test12:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    addl $-2147483648, (%eax) # imm = 0x80000000
 ; X32-NEXT:    adcl $0, 4(%eax)
 ; X32-NEXT:    retl
 ;
 ; X64-LINUX-LABEL: test12:
-; X64-LINUX:       # BB#0: # %entry
+; X64-LINUX:       # %bb.0: # %entry
 ; X64-LINUX-NEXT:    subq $-2147483648, (%rdi) # imm = 0x80000000
 ; X64-LINUX-NEXT:    retq
 ;
 ; X64-WIN32-LABEL: test12:
-; X64-WIN32:       # BB#0: # %entry
+; X64-WIN32:       # %bb.0: # %entry
 ; X64-WIN32-NEXT:    subq $-2147483648, (%rcx) # imm = 0x80000000
 ; X64-WIN32-NEXT:    retq
 entry:
@@ -362,18 +362,18 @@ entry:
 
 define void @test13(i64* inreg %a) nounwind {
 ; X32-LABEL: test13:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    addl $128, (%eax)
 ; X32-NEXT:    adcl $0, 4(%eax)
 ; X32-NEXT:    retl
 ;
 ; X64-LINUX-LABEL: test13:
-; X64-LINUX:       # BB#0: # %entry
+; X64-LINUX:       # %bb.0: # %entry
 ; X64-LINUX-NEXT:    subq $-128, (%rdi)
 ; X64-LINUX-NEXT:    retq
 ;
 ; X64-WIN32-LABEL: test13:
-; X64-WIN32:       # BB#0: # %entry
+; X64-WIN32:       # %bb.0: # %entry
 ; X64-WIN32-NEXT:    subq $-128, (%rcx)
 ; X64-WIN32-NEXT:    retq
 entry:

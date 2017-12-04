@@ -8,7 +8,7 @@ target triple = "x86_64-apple-macosx10.9.0"
 define i32 @sum(i32 %count, ...) nounwind optsize ssp uwtable {
 ; CHECK:      testb   %al, %al
 ; CHECK-NEXT: je
-; CHECK-NEXT: ## BB#{{[0-9]+}}:
+; CHECK-NEXT: ## %bb.{{[0-9]+}}:
 ; CHECK-NEXT: vmovaps %xmm0, 48(%rsp)
 ; CHECK-NEXT: vmovaps %xmm1, 64(%rsp)
 ; CHECK-NEXT: vmovaps %xmm2, 80(%rsp)

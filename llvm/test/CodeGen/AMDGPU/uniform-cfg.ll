@@ -401,7 +401,7 @@ exit:
 ; GCN: s_cmp_lt_i32 [[COND]], 1
 ; GCN: s_cbranch_scc1 BB[[FNNUM:[0-9]+]]_3
 
-; GCN: BB#1:
+; GCN: %bb.1:
 ; GCN-NOT: cmp
 ; GCN: buffer_load_dword
 ; GCN: buffer_store_dword

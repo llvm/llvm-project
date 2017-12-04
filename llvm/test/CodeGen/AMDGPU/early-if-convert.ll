@@ -382,7 +382,7 @@ done:
 }
 
 ; GCN-LABEL: {{^}}ifcvt_undef_scc:
-; GCN: {{^}}; BB#0:
+; GCN: {{^}}; %bb.0:
 ; GCN-NEXT: s_load_dwordx2
 ; GCN-NEXT: s_cselect_b32 s{{[0-9]+}}, 1, 0
 define amdgpu_kernel void @ifcvt_undef_scc(i32 %cond, i32 addrspace(1)* %out) {

@@ -3,7 +3,7 @@
 
 define <8 x i16> @commute_fold_pblendw(<8 x i16> %a, <8 x i16>* %b) #0 {
 ; CHECK-LABEL: commute_fold_pblendw:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0],mem[1,2,3],xmm0[4],mem[5,6,7]
 ; CHECK-NEXT:    retq
   %1 = load <8 x i16>, <8 x i16>* %b
@@ -14,7 +14,7 @@ declare <8 x i16> @llvm.x86.sse41.pblendw(<8 x i16>, <8 x i16>, i8) nounwind rea
 
 define <4 x float> @commute_fold_blendps(<4 x float> %a, <4 x float>* %b) #0 {
 ; CHECK-LABEL: commute_fold_blendps:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],mem[1],xmm0[2],mem[3]
 ; CHECK-NEXT:    retq
   %1 = load <4 x float>, <4 x float>* %b
@@ -25,7 +25,7 @@ declare <4 x float> @llvm.x86.sse41.blendps(<4 x float>, <4 x float>, i8) nounwi
 
 define <2 x double> @commute_fold_blendpd(<2 x double> %a, <2 x double>* %b) #0 {
 ; CHECK-LABEL: commute_fold_blendpd:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    blendpd {{.*#+}} xmm0 = xmm0[0],mem[1]
 ; CHECK-NEXT:    retq
   %1 = load <2 x double>, <2 x double>* %b

@@ -7,7 +7,7 @@ declare double @sin(double %f)
 
 define double @strict(double %e) nounwind {
 ; CHECK-LABEL: strict:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vsubsd %xmm0, %xmm1, %xmm0
@@ -27,7 +27,7 @@ define double @strict(double %e) nounwind {
 
 define double @fast(double %e) nounwind {
 ; CHECK-LABEL: fast:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    jmp sin # TAILCALL
   %f = fsub fast double 0.0, %e
   %g = call double @sin(double %f) readonly
@@ -39,7 +39,7 @@ define double @fast(double %e) nounwind {
 
 define double @nsz(double %e) nounwind {
 ; CHECK-LABEL: nsz:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    jmp sin # TAILCALL
   %f = fsub nsz double 0.0, %e
   %g = call double @sin(double %f) readonly
@@ -51,7 +51,7 @@ define double @nsz(double %e) nounwind {
 
 define double @semi_strict1(double %e) nounwind {
 ; CHECK-LABEL: semi_strict1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vsubsd %xmm0, %xmm1, %xmm0
@@ -69,7 +69,7 @@ define double @semi_strict1(double %e) nounwind {
 
 define double @semi_strict2(double %e) nounwind {
 ; CHECK-LABEL: semi_strict2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq sin
 ; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
@@ -87,7 +87,7 @@ define double @semi_strict2(double %e) nounwind {
 
 define double @fn_attr(double %e) nounwind #0 {
 ; CHECK-LABEL: fn_attr:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    jmp sin # TAILCALL
   %f = fsub double 0.0, %e
   %g = call double @sin(double %f) readonly

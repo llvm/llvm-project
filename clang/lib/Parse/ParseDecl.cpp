@@ -3228,7 +3228,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
 
       // Likewise, if this is a context where the identifier could be a template
       // name, check whether this is a deduction guide declaration.
-      if (getLangOpts().CPlusPlus1z &&
+      if (getLangOpts().CPlusPlus17 &&
           (DSContext == DSC_class || DSContext == DSC_top_level) &&
           Actions.isDeductionGuideName(getCurScope(), *Tok.getIdentifierInfo(),
                                        Tok.getLocation()) &&
@@ -4420,7 +4420,7 @@ void Parser::ParseEnumBody(SourceLocation StartLoc, Decl *EnumDecl) {
     ProhibitAttributes(attrs); // GNU-style attributes are prohibited.
     if (standardAttributesAllowed() && isCXX11AttributeSpecifier()) {
       if (getLangOpts().CPlusPlus)
-        Diag(Tok.getLocation(), getLangOpts().CPlusPlus1z
+        Diag(Tok.getLocation(), getLangOpts().CPlusPlus17
                                     ? diag::warn_cxx14_compat_ns_enum_attribute
                                     : diag::ext_ns_enum_attribute)
             << 1 /*enumerator*/;

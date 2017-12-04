@@ -12,7 +12,7 @@
 
 define void @redundant_stores_merging() {
 ; CHECK-LABEL: redundant_stores_merging:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movabsq $528280977409, %rax # imm = 0x7B00000001
 ; CHECK-NEXT:    movq %rax, e+{{.*}}(%rip)
 ; CHECK-NEXT:    movl $456, e+{{.*}}(%rip) # imm = 0x1C8
@@ -26,7 +26,7 @@ define void @redundant_stores_merging() {
 ;; This variant tests PR25154.
 define void @redundant_stores_merging_reverse() {
 ; CHECK-LABEL: redundant_stores_merging_reverse:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movabsq $528280977409, %rax # imm = 0x7B00000001
 ; CHECK-NEXT:    movq %rax, e+{{.*}}(%rip)
 ; CHECK-NEXT:    movl $456, e+{{.*}}(%rip) # imm = 0x1C8
@@ -46,7 +46,7 @@ define void @redundant_stores_merging_reverse() {
 
 define void @overlapping_stores_merging() {
 ; CHECK-LABEL: overlapping_stores_merging:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl $1, {{.*}}(%rip)
 ; CHECK-NEXT:    movw $2, b+{{.*}}(%rip)
 ; CHECK-NEXT:    retq
@@ -58,7 +58,7 @@ define void @overlapping_stores_merging() {
 
 define void @extract_vector_store_16_consecutive_bytes(<2 x i64> %v, i8* %ptr) #0 {
 ; CHECK-LABEL: extract_vector_store_16_consecutive_bytes:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
   %bc = bitcast <2 x i64> %v to <16 x i8>
@@ -117,7 +117,7 @@ define void @extract_vector_store_16_consecutive_bytes(<2 x i64> %v, i8* %ptr) #
 
 define void @extract_vector_store_32_consecutive_bytes(<4 x i64> %v, i8* %ptr) #0 {
 ; CHECK-LABEL: extract_vector_store_32_consecutive_bytes:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %ymm0, (%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq

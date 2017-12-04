@@ -7,7 +7,7 @@
 
 define x86_mmx @mmx_movzl(x86_mmx %x) nounwind {
 ; X32-LABEL: mmx_movzl:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    subl $20, %esp
 ; X32-NEXT:    movq %mm0, {{[0-9]+}}(%esp)
 ; X32-NEXT:    pmovzxdq {{.*#+}} xmm0 = mem[0],zero,mem[1],zero
@@ -21,7 +21,7 @@ define x86_mmx @mmx_movzl(x86_mmx %x) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: mmx_movzl:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    movdq2q %xmm0, %mm0
 ; X64-NEXT:    movq %mm0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    pmovzxdq {{.*#+}} xmm1 = mem[0],zero,mem[1],zero

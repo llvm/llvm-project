@@ -19,7 +19,7 @@
   .type _Z1av,@function
 _Z1av:                                  # @_Z1av
   .cfi_startproc
-# BB#0:
+# %bb.0:
   pushq %rbp
   .cfi_def_cfa_offset 16
   .cfi_offset %rbp, -16
@@ -36,7 +36,7 @@ _Z1av:                                  # @_Z1av
   .type _Z1bv,@function
 _Z1bv:                                  # @_Z1bv
   .cfi_startproc
-# BB#0:
+# %bb.0:
   pushq %rbp
   .cfi_def_cfa_offset 16
   .cfi_offset %rbp, -16
@@ -53,7 +53,7 @@ _Z1bv:                                  # @_Z1bv
   .type main,@function
 main:                                   # @main
   .cfi_startproc
-# BB#0:
+# %bb.0:
   pushq %rbp
   .cfi_def_cfa_offset 16
   .cfi_offset %rbp, -16
@@ -65,7 +65,7 @@ main:                                   # @main
   movq  %rsi, -16(%rbp)
   cmpl  $1, -8(%rbp)
   jne .LBB2_2
-# BB#1:
+# %bb.1:
   movabsq $_Z1av, %rax
   movq  %rax, -24(%rbp)
   jmp .LBB2_3

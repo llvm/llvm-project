@@ -7,12 +7,12 @@
 
 define <2 x double> @mul_addsub_pd128(<2 x double> %A, <2 x double> %B,  <2 x double> %C) #0 {
 ; FMA3-LABEL: mul_addsub_pd128:
-; FMA3:       # BB#0: # %entry
+; FMA3:       # %bb.0: # %entry
 ; FMA3-NEXT:    vfmaddsub213pd %xmm2, %xmm1, %xmm0
 ; FMA3-NEXT:    retq
 ;
 ; FMA4-LABEL: mul_addsub_pd128:
-; FMA4:       # BB#0: # %entry
+; FMA4:       # %bb.0: # %entry
 ; FMA4-NEXT:    vfmaddsubpd %xmm2, %xmm1, %xmm0, %xmm0
 ; FMA4-NEXT:    retq
 entry:
@@ -25,12 +25,12 @@ entry:
 
 define <4 x float> @mul_addsub_ps128(<4 x float> %A, <4 x float> %B, <4 x float> %C) #0 {
 ; FMA3-LABEL: mul_addsub_ps128:
-; FMA3:       # BB#0: # %entry
+; FMA3:       # %bb.0: # %entry
 ; FMA3-NEXT:    vfmaddsub213ps %xmm2, %xmm1, %xmm0
 ; FMA3-NEXT:    retq
 ;
 ; FMA4-LABEL: mul_addsub_ps128:
-; FMA4:       # BB#0: # %entry
+; FMA4:       # %bb.0: # %entry
 ; FMA4-NEXT:    vfmaddsubps %xmm2, %xmm1, %xmm0, %xmm0
 ; FMA4-NEXT:    retq
 entry:
@@ -43,12 +43,12 @@ entry:
 
 define <4 x double> @mul_addsub_pd256(<4 x double> %A, <4 x double> %B, <4 x double> %C) #0 {
 ; FMA3-LABEL: mul_addsub_pd256:
-; FMA3:       # BB#0: # %entry
+; FMA3:       # %bb.0: # %entry
 ; FMA3-NEXT:    vfmaddsub213pd %ymm2, %ymm1, %ymm0
 ; FMA3-NEXT:    retq
 ;
 ; FMA4-LABEL: mul_addsub_pd256:
-; FMA4:       # BB#0: # %entry
+; FMA4:       # %bb.0: # %entry
 ; FMA4-NEXT:    vfmaddsubpd %ymm2, %ymm1, %ymm0, %ymm0
 ; FMA4-NEXT:    retq
 entry:
@@ -61,12 +61,12 @@ entry:
 
 define <8 x float> @mul_addsub_ps256(<8 x float> %A, <8 x float> %B, <8 x float> %C) #0 {
 ; FMA3-LABEL: mul_addsub_ps256:
-; FMA3:       # BB#0: # %entry
+; FMA3:       # %bb.0: # %entry
 ; FMA3-NEXT:    vfmaddsub213ps %ymm2, %ymm1, %ymm0
 ; FMA3-NEXT:    retq
 ;
 ; FMA4-LABEL: mul_addsub_ps256:
-; FMA4:       # BB#0: # %entry
+; FMA4:       # %bb.0: # %entry
 ; FMA4-NEXT:    vfmaddsubps %ymm2, %ymm1, %ymm0, %ymm0
 ; FMA4-NEXT:    retq
 entry:
@@ -79,18 +79,18 @@ entry:
 
 define <8 x double> @mul_addsub_pd512(<8 x double> %A, <8 x double> %B, <8 x double> %C) #0 {
 ; FMA3_256-LABEL: mul_addsub_pd512:
-; FMA3_256:       # BB#0: # %entry
+; FMA3_256:       # %bb.0: # %entry
 ; FMA3_256-NEXT:    vfmaddsub213pd %ymm4, %ymm2, %ymm0
 ; FMA3_256-NEXT:    vfmaddsub213pd %ymm5, %ymm3, %ymm1
 ; FMA3_256-NEXT:    retq
 ;
 ; FMA3_512-LABEL: mul_addsub_pd512:
-; FMA3_512:       # BB#0: # %entry
+; FMA3_512:       # %bb.0: # %entry
 ; FMA3_512-NEXT:    vfmaddsub213pd %zmm2, %zmm1, %zmm0
 ; FMA3_512-NEXT:    retq
 ;
 ; FMA4-LABEL: mul_addsub_pd512:
-; FMA4:       # BB#0: # %entry
+; FMA4:       # %bb.0: # %entry
 ; FMA4-NEXT:    vfmaddsubpd %ymm4, %ymm2, %ymm0, %ymm0
 ; FMA4-NEXT:    vfmaddsubpd %ymm5, %ymm3, %ymm1, %ymm1
 ; FMA4-NEXT:    retq
@@ -104,18 +104,18 @@ entry:
 
 define <16 x float> @mul_addsub_ps512(<16 x float> %A, <16 x float> %B, <16 x float> %C) #0 {
 ; FMA3_256-LABEL: mul_addsub_ps512:
-; FMA3_256:       # BB#0: # %entry
+; FMA3_256:       # %bb.0: # %entry
 ; FMA3_256-NEXT:    vfmaddsub213ps %ymm4, %ymm2, %ymm0
 ; FMA3_256-NEXT:    vfmaddsub213ps %ymm5, %ymm3, %ymm1
 ; FMA3_256-NEXT:    retq
 ;
 ; FMA3_512-LABEL: mul_addsub_ps512:
-; FMA3_512:       # BB#0: # %entry
+; FMA3_512:       # %bb.0: # %entry
 ; FMA3_512-NEXT:    vfmaddsub213ps %zmm2, %zmm1, %zmm0
 ; FMA3_512-NEXT:    retq
 ;
 ; FMA4-LABEL: mul_addsub_ps512:
-; FMA4:       # BB#0: # %entry
+; FMA4:       # %bb.0: # %entry
 ; FMA4-NEXT:    vfmaddsubps %ymm4, %ymm2, %ymm0, %ymm0
 ; FMA4-NEXT:    vfmaddsubps %ymm5, %ymm3, %ymm1, %ymm1
 ; FMA4-NEXT:    retq

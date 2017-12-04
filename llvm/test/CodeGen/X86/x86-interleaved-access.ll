@@ -5,7 +5,7 @@
 
 define <4 x double> @load_factorf64_4(<16 x double>* %ptr) {
 ; AVX1-LABEL: load_factorf64_4:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovupd (%rdi), %ymm0
 ; AVX1-NEXT:    vmovupd 32(%rdi), %ymm1
 ; AVX1-NEXT:    vmovupd 64(%rdi), %ymm2
@@ -22,7 +22,7 @@ define <4 x double> @load_factorf64_4(<16 x double>* %ptr) {
 ; AVX1-NEXT:    retq
 ;
 ; AVX-LABEL: load_factorf64_4:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovupd (%rdi), %ymm0
 ; AVX-NEXT:    vmovupd 32(%rdi), %ymm1
 ; AVX-NEXT:    vmovupd 64(%rdi), %ymm2
@@ -50,7 +50,7 @@ define <4 x double> @load_factorf64_4(<16 x double>* %ptr) {
 
 define <4 x double> @load_factorf64_2(<16 x double>* %ptr) {
 ; AVX1-LABEL: load_factorf64_2:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovupd (%rdi), %ymm0
 ; AVX1-NEXT:    vmovupd 32(%rdi), %ymm1
 ; AVX1-NEXT:    vmovupd 64(%rdi), %ymm2
@@ -65,7 +65,7 @@ define <4 x double> @load_factorf64_2(<16 x double>* %ptr) {
 ; AVX1-NEXT:    retq
 ;
 ; AVX-LABEL: load_factorf64_2:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovupd (%rdi), %ymm0
 ; AVX-NEXT:    vmovupd 32(%rdi), %ymm1
 ; AVX-NEXT:    vmovupd 64(%rdi), %ymm2
@@ -87,7 +87,7 @@ define <4 x double> @load_factorf64_2(<16 x double>* %ptr) {
 
 define <4 x double> @load_factorf64_1(<16 x double>* %ptr) {
 ; AVX1-LABEL: load_factorf64_1:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovupd (%rdi), %ymm0
 ; AVX1-NEXT:    vmovupd 32(%rdi), %ymm1
 ; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[0,1],mem[0,1]
@@ -97,7 +97,7 @@ define <4 x double> @load_factorf64_1(<16 x double>* %ptr) {
 ; AVX1-NEXT:    retq
 ;
 ; AVX-LABEL: load_factorf64_1:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovupd (%rdi), %ymm0
 ; AVX-NEXT:    vmovupd 32(%rdi), %ymm1
 ; AVX-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[0,1],mem[0,1]
@@ -114,7 +114,7 @@ define <4 x double> @load_factorf64_1(<16 x double>* %ptr) {
 
 define <4 x i64> @load_factori64_4(<16 x i64>* %ptr) {
 ; AVX1-LABEL: load_factori64_4:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovups (%rdi), %ymm0
 ; AVX1-NEXT:    vmovups 32(%rdi), %ymm1
 ; AVX1-NEXT:    vmovups 64(%rdi), %ymm2
@@ -141,7 +141,7 @@ define <4 x i64> @load_factori64_4(<16 x i64>* %ptr) {
 ; AVX1-NEXT:    retq
 ;
 ; AVX-LABEL: load_factori64_4:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovdqu (%rdi), %ymm0
 ; AVX-NEXT:    vmovdqu 32(%rdi), %ymm1
 ; AVX-NEXT:    vmovdqu 64(%rdi), %ymm2
@@ -171,7 +171,7 @@ define <4 x i64> @load_factori64_4(<16 x i64>* %ptr) {
 
 define void @store_factorf64_4(<16 x double>* %ptr, <4 x double> %v0, <4 x double> %v1, <4 x double> %v2, <4 x double> %v3) {
 ; AVX1-LABEL: store_factorf64_4:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm4
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm5
 ; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm2[2,3]
@@ -188,7 +188,7 @@ define void @store_factorf64_4(<16 x double>* %ptr, <4 x double> %v0, <4 x doubl
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: store_factorf64_4:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm4
 ; AVX2-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm5
 ; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm2[2,3]
@@ -205,7 +205,7 @@ define void @store_factorf64_4(<16 x double>* %ptr, <4 x double> %v0, <4 x doubl
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: store_factorf64_4:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm4
 ; AVX512-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm5
 ; AVX512-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm2[2,3]
@@ -229,7 +229,7 @@ define void @store_factorf64_4(<16 x double>* %ptr, <4 x double> %v0, <4 x doubl
 
 define void @store_factori64_4(<16 x i64>* %ptr, <4 x i64> %v0, <4 x i64> %v1, <4 x i64> %v2, <4 x i64> %v3) {
 ; AVX1-LABEL: store_factori64_4:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm4
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm5
 ; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm2[2,3]
@@ -246,7 +246,7 @@ define void @store_factori64_4(<16 x i64>* %ptr, <4 x i64> %v0, <4 x i64> %v1, <
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: store_factori64_4:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm4
 ; AVX2-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm5
 ; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm2[2,3]
@@ -263,7 +263,7 @@ define void @store_factori64_4(<16 x i64>* %ptr, <4 x i64> %v0, <4 x i64> %v1, <
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: store_factori64_4:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm4
 ; AVX512-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm5
 ; AVX512-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm2[2,3]
@@ -288,7 +288,7 @@ define void @store_factori64_4(<16 x i64>* %ptr, <4 x i64> %v0, <4 x i64> %v1, <
 
 define void @interleaved_store_vf32_i8_stride4(<32 x i8> %x1, <32 x i8> %x2, <32 x i8> %x3, <32 x i8> %x4, <128 x i8>* %p) {
 ; AVX1-LABEL: interleaved_store_vf32_i8_stride4:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpunpcklbw {{.*#+}} xmm4 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm5
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm6
@@ -325,7 +325,7 @@ define void @interleaved_store_vf32_i8_stride4(<32 x i8> %x1, <32 x i8> %x2, <32
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: interleaved_store_vf32_i8_stride4:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpunpcklbw {{.*#+}} ymm4 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[4],ymm1[4],ymm0[5],ymm1[5],ymm0[6],ymm1[6],ymm0[7],ymm1[7],ymm0[16],ymm1[16],ymm0[17],ymm1[17],ymm0[18],ymm1[18],ymm0[19],ymm1[19],ymm0[20],ymm1[20],ymm0[21],ymm1[21],ymm0[22],ymm1[22],ymm0[23],ymm1[23]
 ; AVX2-NEXT:    vpunpckhbw {{.*#+}} ymm0 = ymm0[8],ymm1[8],ymm0[9],ymm1[9],ymm0[10],ymm1[10],ymm0[11],ymm1[11],ymm0[12],ymm1[12],ymm0[13],ymm1[13],ymm0[14],ymm1[14],ymm0[15],ymm1[15],ymm0[24],ymm1[24],ymm0[25],ymm1[25],ymm0[26],ymm1[26],ymm0[27],ymm1[27],ymm0[28],ymm1[28],ymm0[29],ymm1[29],ymm0[30],ymm1[30],ymm0[31],ymm1[31]
 ; AVX2-NEXT:    vpunpcklbw {{.*#+}} ymm1 = ymm2[0],ymm3[0],ymm2[1],ymm3[1],ymm2[2],ymm3[2],ymm2[3],ymm3[3],ymm2[4],ymm3[4],ymm2[5],ymm3[5],ymm2[6],ymm3[6],ymm2[7],ymm3[7],ymm2[16],ymm3[16],ymm2[17],ymm3[17],ymm2[18],ymm3[18],ymm2[19],ymm3[19],ymm2[20],ymm3[20],ymm2[21],ymm3[21],ymm2[22],ymm3[22],ymm2[23],ymm3[23]
@@ -346,7 +346,7 @@ define void @interleaved_store_vf32_i8_stride4(<32 x i8> %x1, <32 x i8> %x2, <32
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: interleaved_store_vf32_i8_stride4:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpunpcklbw {{.*#+}} ymm4 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[4],ymm1[4],ymm0[5],ymm1[5],ymm0[6],ymm1[6],ymm0[7],ymm1[7],ymm0[16],ymm1[16],ymm0[17],ymm1[17],ymm0[18],ymm1[18],ymm0[19],ymm1[19],ymm0[20],ymm1[20],ymm0[21],ymm1[21],ymm0[22],ymm1[22],ymm0[23],ymm1[23]
 ; AVX512-NEXT:    vpunpckhbw {{.*#+}} ymm0 = ymm0[8],ymm1[8],ymm0[9],ymm1[9],ymm0[10],ymm1[10],ymm0[11],ymm1[11],ymm0[12],ymm1[12],ymm0[13],ymm1[13],ymm0[14],ymm1[14],ymm0[15],ymm1[15],ymm0[24],ymm1[24],ymm0[25],ymm1[25],ymm0[26],ymm1[26],ymm0[27],ymm1[27],ymm0[28],ymm1[28],ymm0[29],ymm1[29],ymm0[30],ymm1[30],ymm0[31],ymm1[31]
 ; AVX512-NEXT:    vpunpcklbw {{.*#+}} ymm1 = ymm2[0],ymm3[0],ymm2[1],ymm3[1],ymm2[2],ymm3[2],ymm2[3],ymm3[3],ymm2[4],ymm3[4],ymm2[5],ymm3[5],ymm2[6],ymm3[6],ymm2[7],ymm3[7],ymm2[16],ymm3[16],ymm2[17],ymm3[17],ymm2[18],ymm3[18],ymm2[19],ymm3[19],ymm2[20],ymm3[20],ymm2[21],ymm3[21],ymm2[22],ymm3[22],ymm2[23],ymm3[23]
@@ -374,7 +374,7 @@ ret void
 
 define void @interleaved_store_vf16_i8_stride4(<16 x i8> %x1, <16 x i8> %x2, <16 x i8> %x3, <16 x i8> %x4, <64 x i8>* %p) {
 ; AVX1-LABEL: interleaved_store_vf16_i8_stride4:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpunpcklbw {{.*#+}} xmm4 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
 ; AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm0 = xmm0[8],xmm1[8],xmm0[9],xmm1[9],xmm0[10],xmm1[10],xmm0[11],xmm1[11],xmm0[12],xmm1[12],xmm0[13],xmm1[13],xmm0[14],xmm1[14],xmm0[15],xmm1[15]
 ; AVX1-NEXT:    vpunpcklbw {{.*#+}} xmm1 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3],xmm2[4],xmm3[4],xmm2[5],xmm3[5],xmm2[6],xmm3[6],xmm2[7],xmm3[7]
@@ -391,7 +391,7 @@ define void @interleaved_store_vf16_i8_stride4(<16 x i8> %x1, <16 x i8> %x2, <16
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: interleaved_store_vf16_i8_stride4:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpunpcklbw {{.*#+}} xmm4 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
 ; AVX2-NEXT:    vpunpckhbw {{.*#+}} xmm0 = xmm0[8],xmm1[8],xmm0[9],xmm1[9],xmm0[10],xmm1[10],xmm0[11],xmm1[11],xmm0[12],xmm1[12],xmm0[13],xmm1[13],xmm0[14],xmm1[14],xmm0[15],xmm1[15]
 ; AVX2-NEXT:    vpunpcklbw {{.*#+}} xmm1 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3],xmm2[4],xmm3[4],xmm2[5],xmm3[5],xmm2[6],xmm3[6],xmm2[7],xmm3[7]
@@ -408,7 +408,7 @@ define void @interleaved_store_vf16_i8_stride4(<16 x i8> %x1, <16 x i8> %x2, <16
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: interleaved_store_vf16_i8_stride4:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpunpcklbw {{.*#+}} xmm4 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
 ; AVX512-NEXT:    vpunpckhbw {{.*#+}} xmm0 = xmm0[8],xmm1[8],xmm0[9],xmm1[9],xmm0[10],xmm1[10],xmm0[11],xmm1[11],xmm0[12],xmm1[12],xmm0[13],xmm1[13],xmm0[14],xmm1[14],xmm0[15],xmm1[15]
 ; AVX512-NEXT:    vpunpcklbw {{.*#+}} xmm1 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3],xmm2[4],xmm3[4],xmm2[5],xmm3[5],xmm2[6],xmm3[6],xmm2[7],xmm3[7]
@@ -432,7 +432,7 @@ ret void
 
 define <8 x i8> @interleaved_load_vf8_i8_stride4(<32 x i8>* %ptr) {
 ; AVX1-LABEL: interleaved_load_vf8_i8_stride4:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovdqu (%rdi), %ymm0
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
@@ -460,7 +460,7 @@ define <8 x i8> @interleaved_load_vf8_i8_stride4(<32 x i8>* %ptr) {
 ; AVX1-NEXT:    retq
 ;
 ; AVX-LABEL: interleaved_load_vf8_i8_stride4:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovdqu (%rdi), %ymm0
 ; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
 ; AVX-NEXT:    vextracti128 $1, %ymm0, %xmm2
@@ -500,7 +500,7 @@ define <8 x i8> @interleaved_load_vf8_i8_stride4(<32 x i8>* %ptr) {
 
 define <16 x i1> @interleaved_load_vf16_i8_stride4(<64 x i8>* %ptr) {
 ; AVX1-LABEL: interleaved_load_vf16_i8_stride4:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX1-NEXT:    vmovdqa 32(%rdi), %ymm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
@@ -551,7 +551,7 @@ define <16 x i1> @interleaved_load_vf16_i8_stride4(<64 x i8>* %ptr) {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: interleaved_load_vf16_i8_stride4:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX2-NEXT:    vmovdqa 32(%rdi), %ymm1
 ; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = <u,u,u,u,0,4,8,12,u,u,u,u,u,u,u,u>
@@ -602,7 +602,7 @@ define <16 x i1> @interleaved_load_vf16_i8_stride4(<64 x i8>* %ptr) {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: interleaved_load_vf16_i8_stride4:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovdqa64 (%rdi), %zmm0
 ; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; AVX512-NEXT:    vextracti128 $1, %ymm1, %xmm2
@@ -669,7 +669,7 @@ define <16 x i1> @interleaved_load_vf16_i8_stride4(<64 x i8>* %ptr) {
 
 define <32 x i1> @interleaved_load_vf32_i8_stride4(<128 x i8>* %ptr) {
 ; AVX1-LABEL: interleaved_load_vf32_i8_stride4:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovdqa (%rdi), %ymm10
 ; AVX1-NEXT:    vmovdqa 32(%rdi), %ymm13
 ; AVX1-NEXT:    vmovdqa 64(%rdi), %ymm2
@@ -769,7 +769,7 @@ define <32 x i1> @interleaved_load_vf32_i8_stride4(<128 x i8>* %ptr) {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: interleaved_load_vf32_i8_stride4:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovdqa (%rdi), %ymm11
 ; AVX2-NEXT:    vmovdqa 32(%rdi), %ymm1
 ; AVX2-NEXT:    vmovdqa 64(%rdi), %ymm7
@@ -867,7 +867,7 @@ define <32 x i1> @interleaved_load_vf32_i8_stride4(<128 x i8>* %ptr) {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: interleaved_load_vf32_i8_stride4:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovdqa64 (%rdi), %zmm0
 ; AVX512-NEXT:    vmovdqa64 64(%rdi), %zmm7
 ; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
@@ -984,7 +984,7 @@ define <32 x i1> @interleaved_load_vf32_i8_stride4(<128 x i8>* %ptr) {
 
 define void @interleaved_store_vf8_i8_stride4(<8 x i8> %x1, <8 x i8> %x2, <8 x i8> %x3, <8 x i8> %x4, <32 x i8>* %p) {
 ; AVX1-LABEL: interleaved_store_vf8_i8_stride4:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
 ; AVX1-NEXT:    vpshufb %xmm4, %xmm1, %xmm1
 ; AVX1-NEXT:    vpshufb %xmm4, %xmm0, %xmm0
@@ -1000,7 +1000,7 @@ define void @interleaved_store_vf8_i8_stride4(<8 x i8> %x1, <8 x i8> %x2, <8 x i
 ; AVX1-NEXT:    retq
 ;
 ; AVX-LABEL: interleaved_store_vf8_i8_stride4:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovdqa {{.*#+}} xmm4 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
 ; AVX-NEXT:    vpshufb %xmm4, %xmm1, %xmm1
 ; AVX-NEXT:    vpshufb %xmm4, %xmm0, %xmm0
@@ -1023,7 +1023,7 @@ ret void
 
 define <32 x i8> @interleaved_load_vf32_i8_stride3(<96 x i8>* %ptr){
 ; AVX1-LABEL: interleaved_load_vf32_i8_stride3:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm1
 ; AVX1-NEXT:    vmovdqa 32(%rdi), %xmm2
@@ -1068,7 +1068,7 @@ define <32 x i8> @interleaved_load_vf32_i8_stride3(<96 x i8>* %ptr){
 ; AVX1-NEXT:    retq
 ;
 ; AVX-LABEL: interleaved_load_vf32_i8_stride3:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX-NEXT:    vmovdqa 16(%rdi), %xmm1
 ; AVX-NEXT:    vmovdqa 32(%rdi), %xmm2
@@ -1101,7 +1101,7 @@ define <32 x i8> @interleaved_load_vf32_i8_stride3(<96 x i8>* %ptr){
 
 define <16 x i8> @interleaved_load_vf16_i8_stride3(<48 x i8>* %ptr){
 ; AVX1-LABEL: interleaved_load_vf16_i8_stride3:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm1
 ; AVX1-NEXT:    vmovdqa 32(%rdi), %xmm2
@@ -1123,7 +1123,7 @@ define <16 x i8> @interleaved_load_vf16_i8_stride3(<48 x i8>* %ptr){
 ; AVX1-NEXT:    retq
 ;
 ; AVX-LABEL: interleaved_load_vf16_i8_stride3:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX-NEXT:    vmovdqa 16(%rdi), %xmm1
 ; AVX-NEXT:    vmovdqa 32(%rdi), %xmm2
@@ -1154,7 +1154,7 @@ define <16 x i8> @interleaved_load_vf16_i8_stride3(<48 x i8>* %ptr){
 
 define <8 x i8> @interleaved_load_vf8_i8_stride3(<24 x i8>* %ptr){
 ; AVX1-LABEL: interleaved_load_vf8_i8_stride3:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX1-NEXT:    vpshufb {{.*#+}} xmm2 = zero,xmm1[u],zero,xmm1[u],zero,xmm1[u],zero,xmm1[u],zero,xmm1[u],zero,xmm1[u,2,u,5,u]
@@ -1172,7 +1172,7 @@ define <8 x i8> @interleaved_load_vf8_i8_stride3(<24 x i8>* %ptr){
 ; AVX1-NEXT:    retq
 ;
 ; AVX-LABEL: interleaved_load_vf8_i8_stride3:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX-NEXT:    vpshufb {{.*#+}} xmm2 = zero,xmm1[u],zero,xmm1[u],zero,xmm1[u],zero,xmm1[u],zero,xmm1[u],zero,xmm1[u,2,u,5,u]
@@ -1199,7 +1199,7 @@ define <8 x i8> @interleaved_load_vf8_i8_stride3(<24 x i8>* %ptr){
 
 define void @interleaved_store_vf8_i8_stride3(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c, <24 x i8>* %p) {
 ; AVX1-LABEL: interleaved_store_vf8_i8_stride3:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
 ; AVX1-NEXT:    vpshufb %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vpshufb %xmm3, %xmm0, %xmm0
@@ -1216,7 +1216,7 @@ define void @interleaved_store_vf8_i8_stride3(<8 x i8> %a, <8 x i8> %b, <8 x i8>
 ; AVX1-NEXT:    retq
 ;
 ; AVX-LABEL: interleaved_store_vf8_i8_stride3:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovdqa {{.*#+}} xmm3 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
 ; AVX-NEXT:    vpshufb %xmm3, %xmm1, %xmm1
 ; AVX-NEXT:    vpshufb %xmm3, %xmm0, %xmm0
@@ -1240,7 +1240,7 @@ ret void
 
 define void @interleaved_store_vf16_i8_stride3(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c, <48 x i8>* %p) {
 ; AVX1-LABEL: interleaved_store_vf16_i8_stride3:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpalignr {{.*#+}} xmm0 = xmm0[6,7,8,9,10,11,12,13,14,15,0,1,2,3,4,5]
 ; AVX1-NEXT:    vpalignr {{.*#+}} xmm1 = xmm1[11,12,13,14,15,0,1,2,3,4,5,6,7,8,9,10]
 ; AVX1-NEXT:    vpalignr {{.*#+}} xmm3 = xmm0[5,6,7,8,9,10,11,12,13,14,15],xmm2[0,1,2,3,4]
@@ -1264,7 +1264,7 @@ define void @interleaved_store_vf16_i8_stride3(<16 x i8> %a, <16 x i8> %b, <16 x
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: interleaved_store_vf16_i8_stride3:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpalignr {{.*#+}} xmm0 = xmm0[6,7,8,9,10,11,12,13,14,15,0,1,2,3,4,5]
 ; AVX2-NEXT:    vpalignr {{.*#+}} xmm1 = xmm1[11,12,13,14,15,0,1,2,3,4,5,6,7,8,9,10]
 ; AVX2-NEXT:    vpalignr {{.*#+}} xmm3 = xmm0[5,6,7,8,9,10,11,12,13,14,15],xmm2[0,1,2,3,4]
@@ -1288,7 +1288,7 @@ define void @interleaved_store_vf16_i8_stride3(<16 x i8> %a, <16 x i8> %b, <16 x
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: interleaved_store_vf16_i8_stride3:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpalignr {{.*#+}} xmm0 = xmm0[6,7,8,9,10,11,12,13,14,15,0,1,2,3,4,5]
 ; AVX512-NEXT:    vpalignr {{.*#+}} xmm1 = xmm1[11,12,13,14,15,0,1,2,3,4,5,6,7,8,9,10]
 ; AVX512-NEXT:    vpalignr {{.*#+}} xmm3 = xmm0[5,6,7,8,9,10,11,12,13,14,15],xmm2[0,1,2,3,4]
@@ -1320,7 +1320,7 @@ ret void
 
 define void @interleaved_store_vf32_i8_stride3(<32 x i8> %a, <32 x i8> %b, <32 x i8> %c, <96 x i8>* %p) {
 ; AVX1-LABEL: interleaved_store_vf32_i8_stride3:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; AVX1-NEXT:    vpalignr {{.*#+}} xmm3 = xmm3[6,7,8,9,10,11,12,13,14,15,0,1,2,3,4,5]
 ; AVX1-NEXT:    vpalignr {{.*#+}} xmm0 = xmm0[6,7,8,9,10,11,12,13,14,15,0,1,2,3,4,5]
@@ -1357,7 +1357,7 @@ define void @interleaved_store_vf32_i8_stride3(<32 x i8> %a, <32 x i8> %b, <32 x
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: interleaved_store_vf32_i8_stride3:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpalignr {{.*#+}} ymm0 = ymm0[6,7,8,9,10,11,12,13,14,15,0,1,2,3,4,5,22,23,24,25,26,27,28,29,30,31,16,17,18,19,20,21]
 ; AVX2-NEXT:    vpalignr {{.*#+}} ymm1 = ymm1[11,12,13,14,15,0,1,2,3,4,5,6,7,8,9,10,27,28,29,30,31,16,17,18,19,20,21,22,23,24,25,26]
 ; AVX2-NEXT:    vpalignr {{.*#+}} ymm3 = ymm0[5,6,7,8,9,10,11,12,13,14,15],ymm2[0,1,2,3,4],ymm0[21,22,23,24,25,26,27,28,29,30,31],ymm2[16,17,18,19,20]
@@ -1380,7 +1380,7 @@ define void @interleaved_store_vf32_i8_stride3(<32 x i8> %a, <32 x i8> %b, <32 x
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: interleaved_store_vf32_i8_stride3:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpalignr {{.*#+}} ymm0 = ymm0[6,7,8,9,10,11,12,13,14,15,0,1,2,3,4,5,22,23,24,25,26,27,28,29,30,31,16,17,18,19,20,21]
 ; AVX512-NEXT:    vpalignr {{.*#+}} ymm1 = ymm1[11,12,13,14,15,0,1,2,3,4,5,6,7,8,9,10,27,28,29,30,31,16,17,18,19,20,21,22,23,24,25,26]
 ; AVX512-NEXT:    vpalignr {{.*#+}} ymm3 = ymm0[5,6,7,8,9,10,11,12,13,14,15],ymm2[0,1,2,3,4],ymm0[21,22,23,24,25,26,27,28,29,30,31],ymm2[16,17,18,19,20]
@@ -1410,7 +1410,7 @@ ret void
 
 define void @interleaved_store_vf64_i8_stride3(<64 x i8> %a, <64 x i8> %b, <64 x i8> %c, <192 x i8>* %p) {
 ; AVX1-LABEL: interleaved_store_vf64_i8_stride3:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm6
 ; AVX1-NEXT:    vpalignr {{.*#+}} xmm8 = xmm6[6,7,8,9,10,11,12,13,14,15,0,1,2,3,4,5]
 ; AVX1-NEXT:    vpalignr {{.*#+}} xmm9 = xmm1[6,7,8,9,10,11,12,13,14,15,0,1,2,3,4,5]
@@ -1478,7 +1478,7 @@ define void @interleaved_store_vf64_i8_stride3(<64 x i8> %a, <64 x i8> %b, <64 x
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: interleaved_store_vf64_i8_stride3:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpalignr {{.*#+}} ymm1 = ymm1[6,7,8,9,10,11,12,13,14,15,0,1,2,3,4,5,22,23,24,25,26,27,28,29,30,31,16,17,18,19,20,21]
 ; AVX2-NEXT:    vpalignr {{.*#+}} ymm0 = ymm0[6,7,8,9,10,11,12,13,14,15,0,1,2,3,4,5,22,23,24,25,26,27,28,29,30,31,16,17,18,19,20,21]
 ; AVX2-NEXT:    vpalignr {{.*#+}} ymm3 = ymm3[11,12,13,14,15,0,1,2,3,4,5,6,7,8,9,10,27,28,29,30,31,16,17,18,19,20,21,22,23,24,25,26]
@@ -1518,7 +1518,7 @@ define void @interleaved_store_vf64_i8_stride3(<64 x i8> %a, <64 x i8> %b, <64 x
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: interleaved_store_vf64_i8_stride3:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpalignr {{.*#+}} zmm0 = zmm0[6,7,8,9,10,11,12,13,14,15,0,1,2,3,4,5,22,23,24,25,26,27,28,29,30,31,16,17,18,19,20,21,38,39,40,41,42,43,44,45,46,47,32,33,34,35,36,37,54,55,56,57,58,59,60,61,62,63,48,49,50,51,52,53]
 ; AVX512-NEXT:    vpalignr {{.*#+}} zmm1 = zmm1[11,12,13,14,15,0,1,2,3,4,5,6,7,8,9,10,27,28,29,30,31,16,17,18,19,20,21,22,23,24,25,26,43,44,45,46,47,32,33,34,35,36,37,38,39,40,41,42,59,60,61,62,63,48,49,50,51,52,53,54,55,56,57,58]
 ; AVX512-NEXT:    vpalignr {{.*#+}} zmm3 = zmm0[5,6,7,8,9,10,11,12,13,14,15],zmm2[0,1,2,3,4],zmm0[21,22,23,24,25,26,27,28,29,30,31],zmm2[16,17,18,19,20],zmm0[37,38,39,40,41,42,43,44,45,46,47],zmm2[32,33,34,35,36],zmm0[53,54,55,56,57,58,59,60,61,62,63],zmm2[48,49,50,51,52]
@@ -1560,7 +1560,7 @@ ret void
 
 define <64 x i8> @interleaved_load_vf64_i8_stride3(<192 x i8>* %ptr){
 ; AVX1-LABEL: interleaved_load_vf64_i8_stride3:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovdqu (%rdi), %xmm11
 ; AVX1-NEXT:    vmovdqu 16(%rdi), %xmm10
 ; AVX1-NEXT:    vmovdqu 32(%rdi), %xmm8
@@ -1643,7 +1643,7 @@ define <64 x i8> @interleaved_load_vf64_i8_stride3(<192 x i8>* %ptr){
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: interleaved_load_vf64_i8_stride3:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovdqu (%rdi), %xmm0
 ; AVX2-NEXT:    vmovdqu 16(%rdi), %xmm1
 ; AVX2-NEXT:    vmovdqu 32(%rdi), %xmm2
@@ -1686,7 +1686,7 @@ define <64 x i8> @interleaved_load_vf64_i8_stride3(<192 x i8>* %ptr){
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: interleaved_load_vf64_i8_stride3:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovdqu (%rdi), %xmm0
 ; AVX512-NEXT:    vmovdqu 16(%rdi), %xmm1
 ; AVX512-NEXT:    vmovdqu 32(%rdi), %xmm2
@@ -1736,7 +1736,7 @@ ret <64 x i8> %add2
 
 define void @interleaved_store_vf64_i8_stride4(<64 x i8> %a, <64 x i8> %b, <64 x i8> %c,<64 x i8> %d, <256 x i8>* %p) {
 ; AVX1-LABEL: interleaved_store_vf64_i8_stride4:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    subq $24, %rsp
 ; AVX1-NEXT:    .cfi_def_cfa_offset 32
 ; AVX1-NEXT:    vpunpcklbw {{.*#+}} xmm8 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3],xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
@@ -1820,7 +1820,7 @@ define void @interleaved_store_vf64_i8_stride4(<64 x i8> %a, <64 x i8> %b, <64 x
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: interleaved_store_vf64_i8_stride4:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpunpcklbw {{.*#+}} ymm8 = ymm0[0],ymm2[0],ymm0[1],ymm2[1],ymm0[2],ymm2[2],ymm0[3],ymm2[3],ymm0[4],ymm2[4],ymm0[5],ymm2[5],ymm0[6],ymm2[6],ymm0[7],ymm2[7],ymm0[16],ymm2[16],ymm0[17],ymm2[17],ymm0[18],ymm2[18],ymm0[19],ymm2[19],ymm0[20],ymm2[20],ymm0[21],ymm2[21],ymm0[22],ymm2[22],ymm0[23],ymm2[23]
 ; AVX2-NEXT:    vpunpcklbw {{.*#+}} ymm9 = ymm1[0],ymm3[0],ymm1[1],ymm3[1],ymm1[2],ymm3[2],ymm1[3],ymm3[3],ymm1[4],ymm3[4],ymm1[5],ymm3[5],ymm1[6],ymm3[6],ymm1[7],ymm3[7],ymm1[16],ymm3[16],ymm1[17],ymm3[17],ymm1[18],ymm3[18],ymm1[19],ymm3[19],ymm1[20],ymm3[20],ymm1[21],ymm3[21],ymm1[22],ymm3[22],ymm1[23],ymm3[23]
 ; AVX2-NEXT:    vpunpckhbw {{.*#+}} ymm0 = ymm0[8],ymm2[8],ymm0[9],ymm2[9],ymm0[10],ymm2[10],ymm0[11],ymm2[11],ymm0[12],ymm2[12],ymm0[13],ymm2[13],ymm0[14],ymm2[14],ymm0[15],ymm2[15],ymm0[24],ymm2[24],ymm0[25],ymm2[25],ymm0[26],ymm2[26],ymm0[27],ymm2[27],ymm0[28],ymm2[28],ymm0[29],ymm2[29],ymm0[30],ymm2[30],ymm0[31],ymm2[31]
@@ -1857,7 +1857,7 @@ define void @interleaved_store_vf64_i8_stride4(<64 x i8> %a, <64 x i8> %b, <64 x
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: interleaved_store_vf64_i8_stride4:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpunpcklbw {{.*#+}} zmm4 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[16],zmm1[16],zmm0[17],zmm1[17],zmm0[18],zmm1[18],zmm0[19],zmm1[19],zmm0[20],zmm1[20],zmm0[21],zmm1[21],zmm0[22],zmm1[22],zmm0[23],zmm1[23],zmm0[32],zmm1[32],zmm0[33],zmm1[33],zmm0[34],zmm1[34],zmm0[35],zmm1[35],zmm0[36],zmm1[36],zmm0[37],zmm1[37],zmm0[38],zmm1[38],zmm0[39],zmm1[39],zmm0[48],zmm1[48],zmm0[49],zmm1[49],zmm0[50],zmm1[50],zmm0[51],zmm1[51],zmm0[52],zmm1[52],zmm0[53],zmm1[53],zmm0[54],zmm1[54],zmm0[55],zmm1[55]
 ; AVX512-NEXT:    vpunpckhbw {{.*#+}} zmm0 = zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[12],zmm1[12],zmm0[13],zmm1[13],zmm0[14],zmm1[14],zmm0[15],zmm1[15],zmm0[24],zmm1[24],zmm0[25],zmm1[25],zmm0[26],zmm1[26],zmm0[27],zmm1[27],zmm0[28],zmm1[28],zmm0[29],zmm1[29],zmm0[30],zmm1[30],zmm0[31],zmm1[31],zmm0[40],zmm1[40],zmm0[41],zmm1[41],zmm0[42],zmm1[42],zmm0[43],zmm1[43],zmm0[44],zmm1[44],zmm0[45],zmm1[45],zmm0[46],zmm1[46],zmm0[47],zmm1[47],zmm0[56],zmm1[56],zmm0[57],zmm1[57],zmm0[58],zmm1[58],zmm0[59],zmm1[59],zmm0[60],zmm1[60],zmm0[61],zmm1[61],zmm0[62],zmm1[62],zmm0[63],zmm1[63]
 ; AVX512-NEXT:    vpunpcklbw {{.*#+}} zmm1 = zmm2[0],zmm3[0],zmm2[1],zmm3[1],zmm2[2],zmm3[2],zmm2[3],zmm3[3],zmm2[4],zmm3[4],zmm2[5],zmm3[5],zmm2[6],zmm3[6],zmm2[7],zmm3[7],zmm2[16],zmm3[16],zmm2[17],zmm3[17],zmm2[18],zmm3[18],zmm2[19],zmm3[19],zmm2[20],zmm3[20],zmm2[21],zmm3[21],zmm2[22],zmm3[22],zmm2[23],zmm3[23],zmm2[32],zmm3[32],zmm2[33],zmm3[33],zmm2[34],zmm3[34],zmm2[35],zmm3[35],zmm2[36],zmm3[36],zmm2[37],zmm3[37],zmm2[38],zmm3[38],zmm2[39],zmm3[39],zmm2[48],zmm3[48],zmm2[49],zmm3[49],zmm2[50],zmm3[50],zmm2[51],zmm3[51],zmm2[52],zmm3[52],zmm2[53],zmm3[53],zmm2[54],zmm3[54],zmm2[55],zmm3[55]

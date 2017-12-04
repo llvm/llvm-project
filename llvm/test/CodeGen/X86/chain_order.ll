@@ -4,7 +4,7 @@
 ; A test from pifft (after SLP-vectorization) that fails when we drop the chain on newly merged loads.
 define void @cftx020(double* nocapture %a) {
 ; CHECK-LABEL: cftx020:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
 ; CHECK-NEXT:    vmovhpd {{.*#+}} xmm0 = xmm0[0],mem[0]

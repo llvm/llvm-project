@@ -5,7 +5,7 @@
 ; fold sextinreg(zext) -> sext
 define <4 x i64> @sextinreg_zext_v16i8_4i64(<16 x i8> %a0) {
 ; SSE-LABEL: sextinreg_zext_v16i8_4i64:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    pmovsxbq %xmm0, %xmm2
 ; SSE-NEXT:    psrld $16, %xmm0
 ; SSE-NEXT:    pmovsxbq %xmm0, %xmm1
@@ -13,7 +13,7 @@ define <4 x i64> @sextinreg_zext_v16i8_4i64(<16 x i8> %a0) {
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: sextinreg_zext_v16i8_4i64:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpmovsxbq %xmm0, %ymm0
 ; AVX-NEXT:    retq
   %1 = shufflevector <16 x i8> %a0, <16 x i8> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -26,7 +26,7 @@ define <4 x i64> @sextinreg_zext_v16i8_4i64(<16 x i8> %a0) {
 ; fold sextinreg(zext(sext)) -> sext
 define <4 x i64> @sextinreg_zext_sext_v16i8_4i64(<16 x i8> %a0) {
 ; SSE-LABEL: sextinreg_zext_sext_v16i8_4i64:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    pmovsxbq %xmm0, %xmm2
 ; SSE-NEXT:    psrld $16, %xmm0
 ; SSE-NEXT:    pmovsxbq %xmm0, %xmm1
@@ -34,7 +34,7 @@ define <4 x i64> @sextinreg_zext_sext_v16i8_4i64(<16 x i8> %a0) {
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: sextinreg_zext_sext_v16i8_4i64:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpmovsxbq %xmm0, %ymm0
 ; AVX-NEXT:    retq
   %1 = shufflevector <16 x i8> %a0, <16 x i8> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>

@@ -546,7 +546,7 @@ namespace llvm {
         raw_string_ostream OSS(OutStr);
 
         if (isSimple()) {
-          OSS << "BB#" << Node->getNumber();
+          OSS << printMBBReference(*Node);
           if (const BasicBlock *BB = Node->getBasicBlock())
             OSS << ": " << BB->getName();
         } else
@@ -908,7 +908,7 @@ void MachineJumpTableInfo::print(raw_ostream &OS) const {
   for (unsigned i = 0, e = JumpTables.size(); i != e; ++i) {
     OS << "  jt#" << i << ": ";
     for (unsigned j = 0, f = JumpTables[i].MBBs.size(); j != f; ++j)
-      OS << " BB#" << JumpTables[i].MBBs[j]->getNumber();
+      OS << ' ' << printMBBReference(*JumpTables[i].MBBs[j]);
   }
 
   OS << '\n';

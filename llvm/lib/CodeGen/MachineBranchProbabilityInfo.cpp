@@ -84,7 +84,7 @@ raw_ostream &MachineBranchProbabilityInfo::printEdgeProbability(
     const MachineBasicBlock *Dst) const {
 
   const BranchProbability Prob = getEdgeProbability(Src, Dst);
-  OS << "edge MBB#" << Src->getNumber() << " -> MBB#" << Dst->getNumber()
+  OS << "edge " << printMBBReference(*Src) << " -> " << printMBBReference(*Dst)
      << " probability is " << Prob
      << (isEdgeHot(Src, Dst) ? " [HOT edge]\n" : "\n");
 

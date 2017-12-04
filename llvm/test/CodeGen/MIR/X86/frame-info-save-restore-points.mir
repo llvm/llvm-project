@@ -30,33 +30,33 @@ liveins:
   - { reg: '%edi' }
   - { reg: '%esi' }
 # CHECK: frameInfo:
-# CHECK:      savePoint: '%bb.2.true'
-# CHECK-NEXT: restorePoint: '%bb.2.true'
+# CHECK:      savePoint: '%bb.2'
+# CHECK-NEXT: restorePoint: '%bb.2'
 # CHECK: stack
 frameInfo:
   maxAlignment:  4
   hasCalls:      true
-  savePoint:     '%bb.2.true'
-  restorePoint:  '%bb.2.true'
+  savePoint:     '%bb.2'
+  restorePoint:  '%bb.2'
 stack:
   - { id: 0, name: tmp, offset: 0, size: 4, alignment: 4 }
 body: |
   bb.0:
-    successors: %bb.2.true, %bb.1
+    successors: %bb.2, %bb.1
     liveins: %edi, %esi
 
     %eax = COPY %edi
     CMP32rr %eax, killed %esi, implicit-def %eflags
-    JL_1 %bb.2.true, implicit killed %eflags
+    JL_1 %bb.2, implicit killed %eflags
 
   bb.1:
-    successors: %bb.3.false
+    successors: %bb.3
     liveins: %eax
 
-    JMP_1 %bb.3.false
+    JMP_1 %bb.3
 
   bb.2.true:
-    successors: %bb.3.false
+    successors: %bb.3
     liveins: %eax
 
     MOV32mr %stack.0.tmp, 1, _, 0, _, killed %eax

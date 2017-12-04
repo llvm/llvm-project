@@ -4,7 +4,7 @@
 
 define <16 x i8> @PR27973() {
 ; CHECK-LABEL: PR27973:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq $0, 8(%rdi)
 ; CHECK-NEXT:    movq $0, (%rdi)
 ; CHECK-NEXT:    movq %rdi, %rax

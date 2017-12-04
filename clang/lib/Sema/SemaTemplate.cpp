@@ -5923,7 +5923,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
   SourceLocation StartLoc = Arg->getLocStart();
 
   // If the parameter type somehow involves auto, deduce the type now.
-  if (getLangOpts().CPlusPlus1z && ParamType->isUndeducedType()) {
+  if (getLangOpts().CPlusPlus17 && ParamType->isUndeducedType()) {
     // During template argument deduction, we allow 'decltype(auto)' to
     // match an arbitrary dependent argument.
     // FIXME: The language rules don't say what happens in this case.
@@ -6007,8 +6007,8 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
   EnterExpressionEvaluationContext ConstantEvaluated(
       *this, Sema::ExpressionEvaluationContext::ConstantEvaluated);
 
-  if (getLangOpts().CPlusPlus1z) {
-    // C++1z [temp.arg.nontype]p1:
+  if (getLangOpts().CPlusPlus17) {
+    // C++17 [temp.arg.nontype]p1:
     //   A template-argument for a non-type template parameter shall be
     //   a converted constant expression of the type of the template-parameter.
     APValue Value;
@@ -9621,7 +9621,7 @@ Sema::CheckTypenameType(ElaboratedTypeKeyword Keyword,
     //   A type-specifier of the form
     //     typename[opt] nested-name-specifier[opt] template-name
     //   is a placeholder for a deduced class type [...].
-    if (getLangOpts().CPlusPlus1z) {
+    if (getLangOpts().CPlusPlus17) {
       if (auto *TD = getAsTypeTemplateDecl(Result.getFoundDecl())) {
         return Context.getElaboratedType(
             Keyword, QualifierLoc.getNestedNameSpecifier(),

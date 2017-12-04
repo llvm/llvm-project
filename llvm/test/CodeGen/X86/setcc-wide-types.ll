@@ -6,7 +6,7 @@
 
 define i32 @ne_i128(<2 x i64> %x, <2 x i64> %y) {
 ; SSE2-LABEL: ne_i128:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpeqb %xmm1, %xmm0
 ; SSE2-NEXT:    pmovmskb %xmm0, %ecx
 ; SSE2-NEXT:    xorl %eax, %eax
@@ -15,7 +15,7 @@ define i32 @ne_i128(<2 x i64> %x, <2 x i64> %y) {
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: ne_i128:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpmovmskb %xmm0, %ecx
 ; AVX2-NEXT:    xorl %eax, %eax
@@ -31,7 +31,7 @@ define i32 @ne_i128(<2 x i64> %x, <2 x i64> %y) {
 
 define i32 @eq_i128(<2 x i64> %x, <2 x i64> %y) {
 ; SSE2-LABEL: eq_i128:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpeqb %xmm1, %xmm0
 ; SSE2-NEXT:    pmovmskb %xmm0, %ecx
 ; SSE2-NEXT:    xorl %eax, %eax
@@ -40,7 +40,7 @@ define i32 @eq_i128(<2 x i64> %x, <2 x i64> %y) {
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: eq_i128:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpmovmskb %xmm0, %ecx
 ; AVX2-NEXT:    xorl %eax, %eax
@@ -56,7 +56,7 @@ define i32 @eq_i128(<2 x i64> %x, <2 x i64> %y) {
 
 define i32 @ne_i256(<4 x i64> %x, <4 x i64> %y) {
 ; SSE2-LABEL: ne_i256:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[2,3,0,1]
 ; SSE2-NEXT:    movq %xmm4, %rax
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[2,3,0,1]
@@ -81,7 +81,7 @@ define i32 @ne_i256(<4 x i64> %x, <4 x i64> %y) {
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: ne_i256:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpmovmskb %ymm0, %ecx
 ; AVX2-NEXT:    xorl %eax, %eax
@@ -98,7 +98,7 @@ define i32 @ne_i256(<4 x i64> %x, <4 x i64> %y) {
 
 define i32 @eq_i256(<4 x i64> %x, <4 x i64> %y) {
 ; SSE2-LABEL: eq_i256:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[2,3,0,1]
 ; SSE2-NEXT:    movq %xmm4, %rax
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[2,3,0,1]
@@ -123,7 +123,7 @@ define i32 @eq_i256(<4 x i64> %x, <4 x i64> %y) {
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: eq_i256:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpmovmskb %ymm0, %ecx
 ; AVX2-NEXT:    xorl %eax, %eax

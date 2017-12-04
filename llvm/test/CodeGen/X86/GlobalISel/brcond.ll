@@ -4,12 +4,12 @@
 
 define i32 @test_1(i32 %a, i32 %b, i32 %tValue, i32 %fValue) {
 ; X64-LABEL: test_1:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    cmpl %esi, %edi
 ; X64-NEXT:    setl %al
 ; X64-NEXT:    testb $1, %al
 ; X64-NEXT:    je .LBB0_2
-; X64-NEXT:  # BB#1: # %if.then
+; X64-NEXT:  # %bb.1: # %if.then
 ; X64-NEXT:    movl %edx, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    retq
@@ -19,7 +19,7 @@ define i32 @test_1(i32 %a, i32 %b, i32 %tValue, i32 %fValue) {
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_1:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    pushl %eax
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -27,7 +27,7 @@ define i32 @test_1(i32 %a, i32 %b, i32 %tValue, i32 %fValue) {
 ; X32-NEXT:    setl %al
 ; X32-NEXT:    testb $1, %al
 ; X32-NEXT:    je .LBB0_2
-; X32-NEXT:  # BB#1: # %if.then
+; X32-NEXT:  # %bb.1: # %if.then
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    jmp .LBB0_3
 ; X32-NEXT:  .LBB0_2: # %if.else
@@ -57,10 +57,10 @@ return:
 
 define i32 @test_2(i32 %a) {
 ; X64-LABEL: test_2:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    testb $1, %dil
 ; X64-NEXT:    je .LBB1_2
-; X64-NEXT:  # BB#1: # %if.then
+; X64-NEXT:  # %bb.1: # %if.then
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB1_2: # %if.else
@@ -68,11 +68,11 @@ define i32 @test_2(i32 %a) {
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_2:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    testb $1, %al
 ; X32-NEXT:    je .LBB1_2
-; X32-NEXT:  # BB#1: # %if.then
+; X32-NEXT:  # %bb.1: # %if.then
 ; X32-NEXT:    xorl %eax, %eax
 ; X32-NEXT:    retl
 ; X32-NEXT:  .LBB1_2: # %if.else

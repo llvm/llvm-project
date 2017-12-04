@@ -4,12 +4,12 @@
 
 define <2 x double> @v2f2d_ext_vec(<2 x float> %v1) nounwind {
 ; SSE-LABEL: v2f2d_ext_vec:
-; SSE:       # BB#0: # %entry
+; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    cvtps2pd %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: v2f2d_ext_vec:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vcvtps2pd %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
@@ -19,7 +19,7 @@ entry:
 
 define <3 x double> @v3f2d_ext_vec(<3 x float> %v1) nounwind {
 ; SSE-LABEL: v3f2d_ext_vec:
-; SSE:       # BB#0: # %entry
+; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    cvtps2pd %xmm0, %xmm2
 ; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; SSE-NEXT:    cvtps2pd %xmm0, %xmm0
@@ -31,7 +31,7 @@ define <3 x double> @v3f2d_ext_vec(<3 x float> %v1) nounwind {
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: v3f2d_ext_vec:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vcvtps2pd %xmm0, %ymm0
 ; AVX-NEXT:    retq
 entry:
@@ -41,7 +41,7 @@ entry:
 
 define <4 x double> @v4f2d_ext_vec(<4 x float> %v1) nounwind {
 ; SSE-LABEL: v4f2d_ext_vec:
-; SSE:       # BB#0: # %entry
+; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    cvtps2pd %xmm0, %xmm2
 ; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; SSE-NEXT:    cvtps2pd %xmm0, %xmm1
@@ -49,7 +49,7 @@ define <4 x double> @v4f2d_ext_vec(<4 x float> %v1) nounwind {
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: v4f2d_ext_vec:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vcvtps2pd %xmm0, %ymm0
 ; AVX-NEXT:    retq
 entry:
@@ -59,7 +59,7 @@ entry:
 
 define <8 x double> @v8f2d_ext_vec(<8 x float> %v1) nounwind {
 ; SSE-LABEL: v8f2d_ext_vec:
-; SSE:       # BB#0: # %entry
+; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    cvtps2pd %xmm0, %xmm5
 ; SSE-NEXT:    cvtps2pd %xmm1, %xmm2
 ; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
@@ -71,7 +71,7 @@ define <8 x double> @v8f2d_ext_vec(<8 x float> %v1) nounwind {
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: v8f2d_ext_vec:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vcvtps2pd %xmm0, %ymm2
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX-NEXT:    vcvtps2pd %xmm0, %ymm1
@@ -84,14 +84,14 @@ entry:
 
 define void @test_vector_creation() nounwind {
 ; SSE-LABEL: test_vector_creation:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    xorpd %xmm0, %xmm0
 ; SSE-NEXT:    movhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; SSE-NEXT:    movapd %xmm0, (%rax)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_vector_creation:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vmovhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0

@@ -4,7 +4,7 @@
 
 define zeroext i16 @test1(i16 zeroext %x) nounwind {
 ; X32-LABEL: test1:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    imull $63551, %eax, %eax # imm = 0xF83F
 ; X32-NEXT:    shrl $21, %eax
@@ -12,7 +12,7 @@ define zeroext i16 @test1(i16 zeroext %x) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test1:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    imull $63551, %edi, %eax # imm = 0xF83F
 ; X64-NEXT:    shrl $21, %eax
 ; X64-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
@@ -24,7 +24,7 @@ entry:
 
 define zeroext i16 @test2(i8 signext %x, i16 zeroext %c) nounwind readnone ssp noredzone {
 ; X32-LABEL: test2:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    imull $43691, %eax, %eax # imm = 0xAAAB
 ; X32-NEXT:    shrl $17, %eax
@@ -32,7 +32,7 @@ define zeroext i16 @test2(i8 signext %x, i16 zeroext %c) nounwind readnone ssp n
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test2:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    imull $43691, %esi, %eax # imm = 0xAAAB
 ; X64-NEXT:    shrl $17, %eax
 ; X64-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
@@ -45,7 +45,7 @@ entry:
 
 define zeroext i8 @test3(i8 zeroext %x, i8 zeroext %c) nounwind readnone ssp noredzone {
 ; X32-LABEL: test3:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    imull $171, %eax, %eax
 ; X32-NEXT:    shrl $9, %eax
@@ -54,7 +54,7 @@ define zeroext i8 @test3(i8 zeroext %x, i8 zeroext %c) nounwind readnone ssp nor
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test3:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    imull $171, %esi, %eax
 ; X64-NEXT:    shrl $9, %eax
 ; X64-NEXT:    movzwl %ax, %eax
@@ -67,7 +67,7 @@ entry:
 
 define signext i16 @test4(i16 signext %x) nounwind {
 ; X32-LABEL: test4:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movswl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    imull $1986, %eax, %eax # imm = 0x7C2
 ; X32-NEXT:    movl %eax, %ecx
@@ -78,7 +78,7 @@ define signext i16 @test4(i16 signext %x) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test4:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    imull $1986, %edi, %eax # imm = 0x7C2
 ; X64-NEXT:    movl %eax, %ecx
 ; X64-NEXT:    shrl $31, %ecx
@@ -93,7 +93,7 @@ entry:
 
 define i32 @test5(i32 %A) nounwind {
 ; X32-LABEL: test5:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl $365384439, %eax # imm = 0x15C752F7
 ; X32-NEXT:    mull {{[0-9]+}}(%esp)
 ; X32-NEXT:    shrl $27, %edx
@@ -101,7 +101,7 @@ define i32 @test5(i32 %A) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test5:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    imulq $365384439, %rax, %rax # imm = 0x15C752F7
 ; X64-NEXT:    shrq $59, %rax
@@ -113,7 +113,7 @@ define i32 @test5(i32 %A) nounwind {
 
 define signext i16 @test6(i16 signext %x) nounwind {
 ; X32-LABEL: test6:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movswl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    imull $26215, %eax, %eax # imm = 0x6667
 ; X32-NEXT:    movl %eax, %ecx
@@ -124,7 +124,7 @@ define signext i16 @test6(i16 signext %x) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test6:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    imull $26215, %edi, %eax # imm = 0x6667
 ; X64-NEXT:    movl %eax, %ecx
 ; X64-NEXT:    shrl $31, %ecx
@@ -139,7 +139,7 @@ entry:
 
 define i32 @test7(i32 %x) nounwind {
 ; X32-LABEL: test7:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    shrl $2, %eax
 ; X32-NEXT:    movl $613566757, %ecx # imm = 0x24924925
@@ -148,7 +148,7 @@ define i32 @test7(i32 %x) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test7:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; X64-NEXT:    shrl $2, %edi
 ; X64-NEXT:    imulq $613566757, %rdi, %rax # imm = 0x24924925
@@ -162,7 +162,7 @@ define i32 @test7(i32 %x) nounwind {
 ; PR13326
 define i8 @test8(i8 %x) nounwind {
 ; X32-LABEL: test8:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    shrb %al
 ; X32-NEXT:    movzbl %al, %eax
@@ -173,7 +173,7 @@ define i8 @test8(i8 %x) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test8:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    shrb %dil
 ; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    imull $211, %eax, %eax
@@ -187,7 +187,7 @@ define i8 @test8(i8 %x) nounwind {
 
 define i8 @test9(i8 %x) nounwind {
 ; X32-LABEL: test9:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    shrb $2, %al
 ; X32-NEXT:    movzbl %al, %eax
@@ -198,7 +198,7 @@ define i8 @test9(i8 %x) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test9:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    shrb $2, %dil
 ; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    imull $71, %eax, %eax
@@ -212,7 +212,7 @@ define i8 @test9(i8 %x) nounwind {
 
 define i32 @testsize1(i32 %x) minsize nounwind {
 ; X32-LABEL: testsize1:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    pushl $32
 ; X32-NEXT:    popl %ecx
@@ -221,7 +221,7 @@ define i32 @testsize1(i32 %x) minsize nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: testsize1:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq $32
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    movl %edi, %eax
@@ -235,7 +235,7 @@ entry:
 
 define i32 @testsize2(i32 %x) minsize nounwind {
 ; X32-LABEL: testsize2:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    pushl $33
 ; X32-NEXT:    popl %ecx
@@ -244,7 +244,7 @@ define i32 @testsize2(i32 %x) minsize nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: testsize2:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq $33
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    movl %edi, %eax
@@ -258,13 +258,13 @@ entry:
 
 define i32 @testsize3(i32 %x) minsize nounwind {
 ; X32-LABEL: testsize3:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    shrl $5, %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: testsize3:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    shrl $5, %edi
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    retq
@@ -275,7 +275,7 @@ entry:
 
 define i32 @testsize4(i32 %x) minsize nounwind {
 ; X32-LABEL: testsize4:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    pushl $33
 ; X32-NEXT:    popl %ecx
@@ -284,7 +284,7 @@ define i32 @testsize4(i32 %x) minsize nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: testsize4:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq $33
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    xorl %edx, %edx
@@ -298,7 +298,7 @@ entry:
 
 define i64 @PR23590(i64 %x) nounwind {
 ; X32-LABEL: PR23590:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    subl $12, %esp
 ; X32-NEXT:    pushl $0
 ; X32-NEXT:    pushl $12345 # imm = 0x3039
@@ -315,7 +315,7 @@ define i64 @PR23590(i64 %x) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: PR23590:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq %rdi, %rcx
 ; X64-NEXT:    movabsq $6120523590596543007, %rdx # imm = 0x54F077C718E7C21F
 ; X64-NEXT:    movq %rcx, %rax

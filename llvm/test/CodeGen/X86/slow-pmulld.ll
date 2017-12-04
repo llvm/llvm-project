@@ -9,7 +9,7 @@
 
 define <4 x i32> @foo(<4 x i8> %A) {
 ; CHECK32-LABEL: foo:
-; CHECK32:       # BB#0:
+; CHECK32:       # %bb.0:
 ; CHECK32-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0],zero,xmm0[4],zero,xmm0[8],zero,xmm0[12],zero,xmm0[u,u,u,u,u,u,u,u]
 ; CHECK32-NEXT:    movdqa {{.*#+}} xmm1 = <18778,18778,18778,18778,u,u,u,u>
 ; CHECK32-NEXT:    movdqa %xmm0, %xmm2
@@ -19,7 +19,7 @@ define <4 x i32> @foo(<4 x i8> %A) {
 ; CHECK32-NEXT:    retl
 ;
 ; CHECK64-LABEL: foo:
-; CHECK64:       # BB#0:
+; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0],zero,xmm0[4],zero,xmm0[8],zero,xmm0[12],zero,xmm0[u,u,u,u,u,u,u,u]
 ; CHECK64-NEXT:    movdqa {{.*#+}} xmm1 = <18778,18778,18778,18778,u,u,u,u>
 ; CHECK64-NEXT:    movdqa %xmm0, %xmm2
@@ -29,13 +29,13 @@ define <4 x i32> @foo(<4 x i8> %A) {
 ; CHECK64-NEXT:    retq
 ;
 ; SSE4-32-LABEL: foo:
-; SSE4-32:       # BB#0:
+; SSE4-32:       # %bb.0:
 ; SSE4-32-NEXT:    pand {{\.LCPI.*}}, %xmm0
 ; SSE4-32-NEXT:    pmulld {{\.LCPI.*}}, %xmm0
 ; SSE4-32-NEXT:    retl
 ;
 ; SSE4-64-LABEL: foo:
-; SSE4-64:       # BB#0:
+; SSE4-64:       # %bb.0:
 ; SSE4-64-NEXT:    pand {{.*}}(%rip), %xmm0
 ; SSE4-64-NEXT:    pmulld {{.*}}(%rip), %xmm0
 ; SSE4-64-NEXT:    retq
@@ -46,25 +46,25 @@ define <4 x i32> @foo(<4 x i8> %A) {
 
 define <4 x i32> @foo_os(<4 x i8> %A) minsize {
 ; CHECK32-LABEL: foo_os:
-; CHECK32:       # BB#0:
+; CHECK32:       # %bb.0:
 ; CHECK32-NEXT:    pand {{\.LCPI.*}}, %xmm0
 ; CHECK32-NEXT:    pmulld {{\.LCPI.*}}, %xmm0
 ; CHECK32-NEXT:    retl
 ;
 ; CHECK64-LABEL: foo_os:
-; CHECK64:       # BB#0:
+; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    pand {{.*}}(%rip), %xmm0
 ; CHECK64-NEXT:    pmulld {{.*}}(%rip), %xmm0
 ; CHECK64-NEXT:    retq
 ;
 ; SSE4-32-LABEL: foo_os:
-; SSE4-32:       # BB#0:
+; SSE4-32:       # %bb.0:
 ; SSE4-32-NEXT:    pand {{\.LCPI.*}}, %xmm0
 ; SSE4-32-NEXT:    pmulld {{\.LCPI.*}}, %xmm0
 ; SSE4-32-NEXT:    retl
 ;
 ; SSE4-64-LABEL: foo_os:
-; SSE4-64:       # BB#0:
+; SSE4-64:       # %bb.0:
 ; SSE4-64-NEXT:    pand {{.*}}(%rip), %xmm0
 ; SSE4-64-NEXT:    pmulld {{.*}}(%rip), %xmm0
 ; SSE4-64-NEXT:    retq

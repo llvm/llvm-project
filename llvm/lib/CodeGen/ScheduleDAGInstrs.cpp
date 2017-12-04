@@ -1043,7 +1043,7 @@ static void toggleKills(const MachineRegisterInfo &MRI, LivePhysRegs &LiveRegs,
 }
 
 void ScheduleDAGInstrs::fixupKills(MachineBasicBlock &MBB) {
-  DEBUG(dbgs() << "Fixup kills for BB#" << MBB.getNumber() << '\n');
+  DEBUG(dbgs() << "Fixup kills for " << printMBBReference(MBB) << '\n');
 
   LiveRegs.init(*TRI);
   LiveRegs.addLiveOuts(MBB);

@@ -10,13 +10,15 @@
 //===----------------------------------------------------------------------===//
 #include "FuzzerDefs.h"
 #if LIBFUZZER_LINUX || LIBFUZZER_NETBSD
+#include "FuzzerCommand.h"
 
 #include <stdlib.h>
 
 namespace fuzzer {
 
-int ExecuteCommand(const std::string &Command) {
-  return system(Command.c_str());
+int ExecuteCommand(const Command &Cmd) {
+  std::string CmdLine = Cmd.toString();
+  return system(CmdLine.c_str());
 }
 
 } // namespace fuzzer

@@ -10919,7 +10919,7 @@ static QualType CheckIncrementDecrementOperand(Sema &S, Expr *Op,
       return QualType();
     }
     // Increment of bool sets it to true, but is deprecated.
-    S.Diag(OpLoc, S.getLangOpts().CPlusPlus1z ? diag::ext_increment_bool
+    S.Diag(OpLoc, S.getLangOpts().CPlusPlus17 ? diag::ext_increment_bool
                                               : diag::warn_increment_bool)
       << Op->getSourceRange();
   } else if (S.getLangOpts().CPlusPlus && ResType->isEnumeralType()) {
@@ -13735,7 +13735,7 @@ void Sema::PopExpressionEvaluationContext() {
       // are part of function-signatures.  Be mindful that P0315 (Lambdas in
       // unevaluated contexts) might lift some of these restrictions in a 
       // future version.
-      if (!Rec.isConstantEvaluated() || !getLangOpts().CPlusPlus1z)
+      if (!Rec.isConstantEvaluated() || !getLangOpts().CPlusPlus17)
         for (const auto *L : Rec.Lambdas)
           Diag(L->getLocStart(), D);
     } else {

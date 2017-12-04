@@ -57,7 +57,7 @@ ret.bb:                                          ; preds = %else, %main_body
 ; GCN-LABEL: {{^}}uniform_br_nontrivial_ret_divergent_br_nontrivial_unreachable:
 ; GCN: s_cbranch_vccnz [[RET_BB:BB[0-9]+_[0-9]+]]
 
-; GCN: ; BB#{{[0-9]+}}: ; %else
+; GCN: ; %bb.{{[0-9]+}}: ; %else
 ; GCN: s_and_saveexec_b64 [[SAVE_EXEC:s\[[0-9]+:[0-9]+\]]], vcc
 ; GCN-NEXT: ; mask branch [[FLOW1:BB[0-9]+_[0-9]+]]
 

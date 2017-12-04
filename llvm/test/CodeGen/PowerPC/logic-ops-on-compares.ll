@@ -43,11 +43,11 @@ return:                                           ; preds = %if.end, %if.then
 
 define void @neg_truncate_i32_eq(i32 *%ptr) {
 ; CHECK-LABEL: neg_truncate_i32_eq:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lwz r3, 0(r3)
 ; CHECK-NEXT:    rldicl. r3, r3, 0, 63
 ; CHECK-NEXT:    bclr 12, eq, 0
-; CHECK-NEXT:  # BB#1: # %if.end29.thread136
+; CHECK-NEXT:  # %bb.1: # %if.end29.thread136
 entry:
   %0 = load i32, i32* %ptr, align 4
   %rem17127 = and i32 %0, 1
@@ -101,11 +101,11 @@ return:                                           ; preds = %if.end, %if.then
 
 define void @neg_truncate_i64_eq(i64 *%ptr) {
 ; CHECK-LABEL: neg_truncate_i64_eq:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld r3, 0(r3)
 ; CHECK-NEXT:    rldicl. r3, r3, 0, 63
 ; CHECK-NEXT:    bclr 12, eq, 0
-; CHECK-NEXT:  # BB#1: # %if.end29.thread136
+; CHECK-NEXT:  # %bb.1: # %if.end29.thread136
 entry:
   %0 = load i64, i64* %ptr, align 4
   %rem17127 = and i64 %0, 1
@@ -161,11 +161,11 @@ return:                                           ; preds = %if.end, %if.then
 
 define void @neg_truncate_i64_ne(i64 *%ptr) {
 ; CHECK-LABEL: neg_truncate_i64_ne:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld r3, 0(r3)
 ; CHECK-NEXT:    andi. r3, r3, 1
 ; CHECK-NEXT:    bclr 12, gt, 0
-; CHECK-NEXT:  # BB#1: # %if.end29.thread136
+; CHECK-NEXT:  # %bb.1: # %if.end29.thread136
 entry:
   %0 = load i64, i64* %ptr, align 4
   %rem17127 = and i64 %0, 1

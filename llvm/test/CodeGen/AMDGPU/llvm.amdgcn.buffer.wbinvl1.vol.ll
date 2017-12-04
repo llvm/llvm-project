@@ -4,7 +4,7 @@
 declare void @llvm.amdgcn.buffer.wbinvl1.vol() #0
 
 ; GCN-LABEL: {{^}}test_buffer_wbinvl1_vol:
-; GCN-NEXT: ; BB#0:
+; GCN-NEXT: ; %bb.0:
 ; CI-NEXT: buffer_wbinvl1_vol ; encoding: [0x00,0x00,0xc0,0xe1,0x00,0x00,0x00,0x00]
 ; VI-NEXT: buffer_wbinvl1_vol ; encoding: [0x00,0x00,0xfc,0xe0,0x00,0x00,0x00,0x00]
 ; GCN: s_endpgm

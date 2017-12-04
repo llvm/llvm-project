@@ -9,7 +9,7 @@ target datalayout = "e-m:o-p:32:32-f64:32:64-f80:128-n8:16:32-S128"
 
 define void @test_extractelement_legalization_storereuse(<4 x i32> %a, i32* nocapture %x, i32* nocapture readonly %y, i32 %i) #0 {
 ; CHECK-LABEL: test_extractelement_legalization_storereuse:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    pushl %ebx
 ; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl %esi

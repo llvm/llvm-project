@@ -814,7 +814,7 @@ void Liveness::computeLiveIns() {
       for (auto I = B.livein_begin(), E = B.livein_end(); I != E; ++I)
         LV.push_back(RegisterRef(I->PhysReg, I->LaneMask));
       std::sort(LV.begin(), LV.end());
-      dbgs() << "BB#" << B.getNumber() << "\t rec = {";
+      dbgs() << printMBBReference(B) << "\t rec = {";
       for (auto I : LV)
         dbgs() << ' ' << Print<RegisterRef>(I, DFG);
       dbgs() << " }\n";
@@ -963,7 +963,7 @@ void Liveness::traverse(MachineBasicBlock *B, RefMap &LiveIn) {
   }
 
   if (Trace) {
-    dbgs() << "\n-- BB#" << B->getNumber() << ": " << __func__
+    dbgs() << "\n-- " << printMBBReference(*B) << ": " << __func__
            << " after recursion into: {";
     for (auto I : *N)
       dbgs() << ' ' << I->getBlock()->getNumber();

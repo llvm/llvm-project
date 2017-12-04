@@ -6,7 +6,7 @@
 
 define void @test_blockaddress() nounwind {
 ; RV32I-LABEL: test_blockaddress:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sw ra, 0(s0)
 ; RV32I-NEXT:    lui a0, %hi(addr)
 ; RV32I-NEXT:    addi a0, a0, %lo(addr)

@@ -4,7 +4,7 @@
 
 define <8 x i32> @test(<8 x float> %a, <8 x float> %b) {
 ; X86-LABEL: test:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    vaddps %ymm1, %ymm0, %ymm2
 ; X86-NEXT:    vmulps %ymm0, %ymm1, %ymm1
 ; X86-NEXT:    vsubps %ymm2, %ymm1, %ymm3
@@ -15,7 +15,7 @@ define <8 x i32> @test(<8 x float> %a, <8 x float> %b) {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vaddps %ymm1, %ymm0, %ymm2
 ; X64-NEXT:    vmulps %ymm0, %ymm1, %ymm1
 ; X64-NEXT:    vsubps %ymm2, %ymm1, %ymm3

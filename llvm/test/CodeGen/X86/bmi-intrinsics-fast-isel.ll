@@ -10,12 +10,12 @@
 
 define i16 @test__tzcnt_u16(i16 %a0) {
 ; X32-LABEL: test__tzcnt_u16:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movzwl %ax, %ecx
 ; X32-NEXT:    cmpl $0, %ecx
 ; X32-NEXT:    jne .LBB0_1
-; X32-NEXT:  # BB#2:
+; X32-NEXT:  # %bb.2:
 ; X32-NEXT:    movw $16, %ax
 ; X32-NEXT:    retl
 ; X32-NEXT:  .LBB0_1:
@@ -23,7 +23,7 @@ define i16 @test__tzcnt_u16(i16 %a0) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test__tzcnt_u16:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movw $16, %cx
 ; X64-NEXT:    movzwl %di, %edx
 ; X64-NEXT:    tzcntw %dx, %ax
@@ -39,14 +39,14 @@ define i16 @test__tzcnt_u16(i16 %a0) {
 
 define i32 @test__andn_u32(i32 %a0, i32 %a1) {
 ; X32-LABEL: test__andn_u32:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    xorl $-1, %eax
 ; X32-NEXT:    andl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test__andn_u32:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorl $-1, %edi
 ; X64-NEXT:    andl %esi, %edi
 ; X64-NEXT:    movl %edi, %eax
@@ -58,13 +58,13 @@ define i32 @test__andn_u32(i32 %a0, i32 %a1) {
 
 define i32 @test__bextr_u32(i32 %a0, i32 %a1) {
 ; X32-LABEL: test__bextr_u32:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    bextrl %eax, {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test__bextr_u32:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    bextrl %esi, %edi, %eax
 ; X64-NEXT:    retq
   %res = call i32 @llvm.x86.bmi.bextr.32(i32 %a0, i32 %a1)
@@ -73,7 +73,7 @@ define i32 @test__bextr_u32(i32 %a0, i32 %a1) {
 
 define i32 @test__blsi_u32(i32 %a0) {
 ; X32-LABEL: test__blsi_u32:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    xorl %eax, %eax
 ; X32-NEXT:    subl %ecx, %eax
@@ -81,7 +81,7 @@ define i32 @test__blsi_u32(i32 %a0) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test__blsi_u32:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    subl %edi, %eax
 ; X64-NEXT:    andl %edi, %eax
@@ -93,7 +93,7 @@ define i32 @test__blsi_u32(i32 %a0) {
 
 define i32 @test__blsmsk_u32(i32 %a0) {
 ; X32-LABEL: test__blsmsk_u32:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl %ecx, %eax
 ; X32-NEXT:    subl $1, %eax
@@ -101,7 +101,7 @@ define i32 @test__blsmsk_u32(i32 %a0) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test__blsmsk_u32:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    subl $1, %eax
 ; X64-NEXT:    xorl %edi, %eax
@@ -113,7 +113,7 @@ define i32 @test__blsmsk_u32(i32 %a0) {
 
 define i32 @test__blsr_u32(i32 %a0) {
 ; X32-LABEL: test__blsr_u32:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl %ecx, %eax
 ; X32-NEXT:    subl $1, %eax
@@ -121,7 +121,7 @@ define i32 @test__blsr_u32(i32 %a0) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test__blsr_u32:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    subl $1, %eax
 ; X64-NEXT:    andl %edi, %eax
@@ -133,11 +133,11 @@ define i32 @test__blsr_u32(i32 %a0) {
 
 define i32 @test__tzcnt_u32(i32 %a0) {
 ; X32-LABEL: test__tzcnt_u32:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    cmpl $0, %eax
 ; X32-NEXT:    jne .LBB6_1
-; X32-NEXT:  # BB#2:
+; X32-NEXT:  # %bb.2:
 ; X32-NEXT:    movl $32, %eax
 ; X32-NEXT:    retl
 ; X32-NEXT:  .LBB6_1:
@@ -145,7 +145,7 @@ define i32 @test__tzcnt_u32(i32 %a0) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test__tzcnt_u32:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl $32, %ecx
 ; X64-NEXT:    tzcntl %edi, %eax
 ; X64-NEXT:    cmovbl %ecx, %eax
@@ -162,12 +162,12 @@ define i32 @test__tzcnt_u32(i32 %a0) {
 
 define i16 @test_tzcnt_u16(i16 %a0) {
 ; X32-LABEL: test_tzcnt_u16:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movzwl %ax, %ecx
 ; X32-NEXT:    cmpl $0, %ecx
 ; X32-NEXT:    jne .LBB7_1
-; X32-NEXT:  # BB#2:
+; X32-NEXT:  # %bb.2:
 ; X32-NEXT:    movw $16, %ax
 ; X32-NEXT:    retl
 ; X32-NEXT:  .LBB7_1:
@@ -175,7 +175,7 @@ define i16 @test_tzcnt_u16(i16 %a0) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_tzcnt_u16:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movw $16, %cx
 ; X64-NEXT:    movzwl %di, %edx
 ; X64-NEXT:    tzcntw %dx, %ax
@@ -191,14 +191,14 @@ define i16 @test_tzcnt_u16(i16 %a0) {
 
 define i32 @test_andn_u32(i32 %a0, i32 %a1) {
 ; X32-LABEL: test_andn_u32:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    xorl $-1, %eax
 ; X32-NEXT:    andl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_andn_u32:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorl $-1, %edi
 ; X64-NEXT:    andl %esi, %edi
 ; X64-NEXT:    movl %edi, %eax
@@ -210,7 +210,7 @@ define i32 @test_andn_u32(i32 %a0, i32 %a1) {
 
 define i32 @test_bextr_u32(i32 %a0, i32 %a1, i32 %a2) {
 ; X32-LABEL: test_bextr_u32:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    andl $255, %ecx
@@ -221,7 +221,7 @@ define i32 @test_bextr_u32(i32 %a0, i32 %a1, i32 %a2) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_bextr_u32:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    andl $255, %esi
 ; X64-NEXT:    andl $255, %edx
 ; X64-NEXT:    shll $8, %edx
@@ -238,7 +238,7 @@ define i32 @test_bextr_u32(i32 %a0, i32 %a1, i32 %a2) {
 
 define i32 @test_blsi_u32(i32 %a0) {
 ; X32-LABEL: test_blsi_u32:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    xorl %eax, %eax
 ; X32-NEXT:    subl %ecx, %eax
@@ -246,7 +246,7 @@ define i32 @test_blsi_u32(i32 %a0) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_blsi_u32:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    subl %edi, %eax
 ; X64-NEXT:    andl %edi, %eax
@@ -258,7 +258,7 @@ define i32 @test_blsi_u32(i32 %a0) {
 
 define i32 @test_blsmsk_u32(i32 %a0) {
 ; X32-LABEL: test_blsmsk_u32:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl %ecx, %eax
 ; X32-NEXT:    subl $1, %eax
@@ -266,7 +266,7 @@ define i32 @test_blsmsk_u32(i32 %a0) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_blsmsk_u32:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    subl $1, %eax
 ; X64-NEXT:    xorl %edi, %eax
@@ -278,7 +278,7 @@ define i32 @test_blsmsk_u32(i32 %a0) {
 
 define i32 @test_blsr_u32(i32 %a0) {
 ; X32-LABEL: test_blsr_u32:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl %ecx, %eax
 ; X32-NEXT:    subl $1, %eax
@@ -286,7 +286,7 @@ define i32 @test_blsr_u32(i32 %a0) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_blsr_u32:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    subl $1, %eax
 ; X64-NEXT:    andl %edi, %eax
@@ -298,11 +298,11 @@ define i32 @test_blsr_u32(i32 %a0) {
 
 define i32 @test_tzcnt_u32(i32 %a0) {
 ; X32-LABEL: test_tzcnt_u32:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    cmpl $0, %eax
 ; X32-NEXT:    jne .LBB13_1
-; X32-NEXT:  # BB#2:
+; X32-NEXT:  # %bb.2:
 ; X32-NEXT:    movl $32, %eax
 ; X32-NEXT:    retl
 ; X32-NEXT:  .LBB13_1:
@@ -310,7 +310,7 @@ define i32 @test_tzcnt_u32(i32 %a0) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_tzcnt_u32:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl $32, %ecx
 ; X64-NEXT:    tzcntl %edi, %eax
 ; X64-NEXT:    cmovbl %ecx, %eax

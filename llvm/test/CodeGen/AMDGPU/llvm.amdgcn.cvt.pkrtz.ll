@@ -25,7 +25,7 @@ define amdgpu_kernel void @s_cvt_pkrtz_samereg_v2f16_f32(<2 x half> addrspace(1)
 
 ; FIXME: Folds to 0 on gfx9
 ; GCN-LABEL: {{^}}s_cvt_pkrtz_undef_undef:
-; GCN-NEXT: ; BB#0
+; GCN-NEXT: ; %bb.0
 ; SI-NEXT: s_endpgm
 ; VI-NEXT: s_endpgm
 ; GFX9: v_mov_b32_e32 v{{[0-9]+}}, 0{{$}}

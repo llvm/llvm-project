@@ -16,7 +16,7 @@
 ; 5 }
 
 ; X86-LABEL: _f:
-; X86:      # BB
+; X86:      # %bb.
 ; X86:      .cv_file 1 "D:\\test.c" "F310AB26998CA831CBDF169E4EECACFA" 1
 ; X86:      .cv_loc 0 1 4 2 is_stmt 0 # test.c:4:2
 ; X86:      calll   _g
@@ -131,7 +131,7 @@
 ; X64-NEXT: .L{{.*}}:{{$}}
 ; X64:      .cv_file 1 "D:\\test.c" "F310AB26998CA831CBDF169E4EECACFA" 1
 ; X64:      .cv_loc 0 1 3 0 is_stmt 0 # test.c:3:0
-; X64:      # BB
+; X64:      # %bb.
 ; X64:      subq    $40, %rsp
 ; X64:      .cv_loc 0 1 4 2 # test.c:4:2
 ; X64-NEXT: callq   g

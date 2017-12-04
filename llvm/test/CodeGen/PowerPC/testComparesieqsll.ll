@@ -12,7 +12,7 @@
 ; Function Attrs: norecurse nounwind readnone
 define signext i32 @test_ieqsll(i64 %a, i64 %b) {
 ; CHECK-LABEL: test_ieqsll:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xor r3, r3, r4
 ; CHECK-NEXT:    cntlzd r3, r3
 ; CHECK-NEXT:    rldicl r3, r3, 58, 63
@@ -26,7 +26,7 @@ entry:
 ; Function Attrs: norecurse nounwind readnone
 define signext i32 @test_ieqsll_sext(i64 %a, i64 %b) {
 ; CHECK-LABEL: test_ieqsll_sext:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xor r3, r3, r4
 ; CHECK-NEXT:    addic r3, r3, -1
 ; CHECK-NEXT:    subfe r3, r3, r3
@@ -40,7 +40,7 @@ entry:
 ; Function Attrs: norecurse nounwind readnone
 define signext i32 @test_ieqsll_z(i64 %a) {
 ; CHECK-LABEL: test_ieqsll_z:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cntlzd r3, r3
 ; CHECK-NEXT:    rldicl r3, r3, 58, 63
 ; CHECK-NEXT:    blr
@@ -53,7 +53,7 @@ entry:
 ; Function Attrs: norecurse nounwind readnone
 define signext i32 @test_ieqsll_sext_z(i64 %a) {
 ; CHECK-LABEL: test_ieqsll_sext_z:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addic r3, r3, -1
 ; CHECK-NEXT:    subfe r3, r3, r3
 ; CHECK-NEXT:    blr
@@ -66,7 +66,7 @@ entry:
 ; Function Attrs: norecurse nounwind
 define void @test_ieqsll_store(i64 %a, i64 %b) {
 ; CHECK-LABEL: test_ieqsll_store:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r5, r2, .LC0@toc@ha
 ; CHECK-NEXT:    xor r3, r3, r4
 ; CHECK-NEXT:    ld r12, .LC0@toc@l(r5)
@@ -84,7 +84,7 @@ entry:
 ; Function Attrs: norecurse nounwind
 define void @test_ieqsll_sext_store(i64 %a, i64 %b) {
 ; CHECK-LABEL: test_ieqsll_sext_store:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r5, r2, .LC0@toc@ha
 ; CHECK-NEXT:    xor r3, r3, r4
 ; CHECK-NEXT:    ld r12, .LC0@toc@l(r5)
@@ -102,7 +102,7 @@ entry:
 ; Function Attrs: norecurse nounwind
 define void @test_ieqsll_z_store(i64 %a) {
 ; CHECK-LABEL: test_ieqsll_z_store:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
 ; CHECK-NEXT:    cntlzd r3, r3
 ; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
@@ -119,7 +119,7 @@ entry:
 ; Function Attrs: norecurse nounwind
 define void @test_ieqsll_sext_z_store(i64 %a) {
 ; CHECK-LABEL: test_ieqsll_sext_z_store:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
 ; CHECK-NEXT:    addic r3, r3, -1
 ; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)

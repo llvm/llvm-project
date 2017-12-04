@@ -5,7 +5,7 @@
 
 define void @pull_bitcast(<4 x i8>* %pA, <4 x i8>* %pB) {
 ; CHECK-LABEL: pull_bitcast:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl (%rsi), %eax
 ; CHECK-NEXT:    xorl %eax, (%rdi)
 ; CHECK-NEXT:    retq
@@ -18,7 +18,7 @@ define void @pull_bitcast(<4 x i8>* %pA, <4 x i8>* %pB) {
 
 define <4 x i32> @multi_use_swizzle(<4 x i32>* %pA, <4 x i32>* %pB) {
 ; CHECK-LABEL: multi_use_swizzle:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps (%rdi), %xmm0
 ; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1],mem[1,2]
 ; CHECK-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[1,3,2,2]
@@ -36,7 +36,7 @@ define <4 x i32> @multi_use_swizzle(<4 x i32>* %pA, <4 x i32>* %pB) {
 
 define <4 x i8> @pull_bitcast2(<4 x i8>* %pA, <4 x i8>* %pB, <4 x i8>* %pC) {
 ; CHECK-LABEL: pull_bitcast2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl (%rdi), %eax
 ; CHECK-NEXT:    movl %eax, (%rdx)
 ; CHECK-NEXT:    xorl (%rsi), %eax
@@ -53,7 +53,7 @@ define <4 x i8> @pull_bitcast2(<4 x i8>* %pA, <4 x i8>* %pB, <4 x i8>* %pC) {
 
 define <4 x i32> @reverse_1(<4 x i32>* %pA, <4 x i32>* %pB) {
 ; CHECK-LABEL: reverse_1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps (%rdi), %xmm0
 ; CHECK-NEXT:    retq
   %A = load <4 x i32>, <4 x i32>* %pA
@@ -65,7 +65,7 @@ define <4 x i32> @reverse_1(<4 x i32>* %pA, <4 x i32>* %pB) {
 
 define <4 x i32> @no_reverse_shuff(<4 x i32>* %pA, <4 x i32>* %pB) {
 ; CHECK-LABEL: no_reverse_shuff:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = mem[2,3,2,3]
 ; CHECK-NEXT:    retq
   %A = load <4 x i32>, <4 x i32>* %pA

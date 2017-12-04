@@ -3,7 +3,7 @@
 
 define i32 @mask_negated_zext_bool1(i1 %x) {
 ; CHECK-LABEL: mask_negated_zext_bool1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
@@ -15,7 +15,7 @@ define i32 @mask_negated_zext_bool1(i1 %x) {
 
 define i32 @mask_negated_zext_bool2(i1 zeroext %x) {
 ; CHECK-LABEL: mask_negated_zext_bool2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %ext = zext i1 %x to i32
@@ -26,7 +26,7 @@ define i32 @mask_negated_zext_bool2(i1 zeroext %x) {
 
 define <4 x i32> @mask_negated_zext_bool_vec(<4 x i1> %x) {
 ; CHECK-LABEL: mask_negated_zext_bool_vec:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andps {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %ext = zext <4 x i1> %x to <4 x i32>
@@ -37,7 +37,7 @@ define <4 x i32> @mask_negated_zext_bool_vec(<4 x i1> %x) {
 
 define i32 @mask_negated_sext_bool1(i1 %x) {
 ; CHECK-LABEL: mask_negated_sext_bool1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
@@ -49,7 +49,7 @@ define i32 @mask_negated_sext_bool1(i1 %x) {
 
 define i32 @mask_negated_sext_bool2(i1 zeroext %x) {
 ; CHECK-LABEL: mask_negated_sext_bool2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %ext = sext i1 %x to i32
@@ -60,7 +60,7 @@ define i32 @mask_negated_sext_bool2(i1 zeroext %x) {
 
 define <4 x i32> @mask_negated_sext_bool_vec(<4 x i1> %x) {
 ; CHECK-LABEL: mask_negated_sext_bool_vec:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andps {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %ext = sext <4 x i1> %x to <4 x i32>

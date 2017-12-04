@@ -84,6 +84,7 @@ Design Documents
    PTHInternals
    PCHInternals
    ItaniumMangleAbiTags
+   HardwareAssistedAddressSanitizerDesign.rst
 
 
 Indices and tables

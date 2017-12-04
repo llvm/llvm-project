@@ -3,7 +3,7 @@
 
 define zeroext i1 @all_bits_clear(i32 %P, i32 %Q) nounwind {
 ; CHECK-LABEL: all_bits_clear:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    orl %esi, %edi
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
@@ -15,7 +15,7 @@ define zeroext i1 @all_bits_clear(i32 %P, i32 %Q) nounwind {
 
 define zeroext i1 @all_sign_bits_clear(i32 %P, i32 %Q) nounwind {
 ; CHECK-LABEL: all_sign_bits_clear:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    orl %esi, %edi
 ; CHECK-NEXT:    setns %al
 ; CHECK-NEXT:    retq
@@ -27,7 +27,7 @@ define zeroext i1 @all_sign_bits_clear(i32 %P, i32 %Q) nounwind {
 
 define zeroext i1 @all_bits_set(i32 %P, i32 %Q) nounwind {
 ; CHECK-LABEL: all_bits_set:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andl %esi, %edi
 ; CHECK-NEXT:    cmpl $-1, %edi
 ; CHECK-NEXT:    sete %al
@@ -40,7 +40,7 @@ define zeroext i1 @all_bits_set(i32 %P, i32 %Q) nounwind {
 
 define zeroext i1 @all_sign_bits_set(i32 %P, i32 %Q) nounwind {
 ; CHECK-LABEL: all_sign_bits_set:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andl %esi, %edi
 ; CHECK-NEXT:    shrl $31, %edi
 ; CHECK-NEXT:    movl %edi, %eax
@@ -53,7 +53,7 @@ define zeroext i1 @all_sign_bits_set(i32 %P, i32 %Q) nounwind {
 
 define zeroext i1 @any_bits_set(i32 %P, i32 %Q) nounwind {
 ; CHECK-LABEL: any_bits_set:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    orl %esi, %edi
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
@@ -65,7 +65,7 @@ define zeroext i1 @any_bits_set(i32 %P, i32 %Q) nounwind {
 
 define zeroext i1 @any_sign_bits_set(i32 %P, i32 %Q) nounwind {
 ; CHECK-LABEL: any_sign_bits_set:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    orl %esi, %edi
 ; CHECK-NEXT:    shrl $31, %edi
 ; CHECK-NEXT:    movl %edi, %eax
@@ -78,7 +78,7 @@ define zeroext i1 @any_sign_bits_set(i32 %P, i32 %Q) nounwind {
 
 define zeroext i1 @any_bits_clear(i32 %P, i32 %Q) nounwind {
 ; CHECK-LABEL: any_bits_clear:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andl %esi, %edi
 ; CHECK-NEXT:    cmpl $-1, %edi
 ; CHECK-NEXT:    setne %al
@@ -91,7 +91,7 @@ define zeroext i1 @any_bits_clear(i32 %P, i32 %Q) nounwind {
 
 define zeroext i1 @any_sign_bits_clear(i32 %P, i32 %Q) nounwind {
 ; CHECK-LABEL: any_sign_bits_clear:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testl %esi, %edi
 ; CHECK-NEXT:    setns %al
 ; CHECK-NEXT:    retq
@@ -104,10 +104,10 @@ define zeroext i1 @any_sign_bits_clear(i32 %P, i32 %Q) nounwind {
 ; PR3351 - (P == 0) & (Q == 0) -> (P|Q) == 0
 define i32 @all_bits_clear_branch(i32* %P, i32* %Q) nounwind {
 ; CHECK-LABEL: all_bits_clear_branch:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    orq %rsi, %rdi
 ; CHECK-NEXT:    jne .LBB8_2
-; CHECK-NEXT:  # BB#1: # %bb1
+; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    movl $4, %eax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB8_2: # %return
@@ -128,13 +128,13 @@ return:
 
 define i32 @all_sign_bits_clear_branch(i32 %P, i32 %Q) nounwind {
 ; CHECK-LABEL: all_sign_bits_clear_branch:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    js .LBB9_3
-; CHECK-NEXT:  # BB#1: # %entry
+; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    testl %esi, %esi
 ; CHECK-NEXT:    js .LBB9_3
-; CHECK-NEXT:  # BB#2: # %bb1
+; CHECK-NEXT:  # %bb.2: # %bb1
 ; CHECK-NEXT:    movl $4, %eax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB9_3: # %return
@@ -155,13 +155,13 @@ return:
 
 define i32 @all_bits_set_branch(i32 %P, i32 %Q) nounwind {
 ; CHECK-LABEL: all_bits_set_branch:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpl $-1, %edi
 ; CHECK-NEXT:    jne .LBB10_3
-; CHECK-NEXT:  # BB#1: # %entry
+; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    cmpl $-1, %esi
 ; CHECK-NEXT:    jne .LBB10_3
-; CHECK-NEXT:  # BB#2: # %bb1
+; CHECK-NEXT:  # %bb.2: # %bb1
 ; CHECK-NEXT:    movl $4, %eax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB10_3: # %return
@@ -182,13 +182,13 @@ return:
 
 define i32 @all_sign_bits_set_branch(i32 %P, i32 %Q) nounwind {
 ; CHECK-LABEL: all_sign_bits_set_branch:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    jns .LBB11_3
-; CHECK-NEXT:  # BB#1: # %entry
+; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    testl %esi, %esi
 ; CHECK-NEXT:    jns .LBB11_3
-; CHECK-NEXT:  # BB#2: # %bb1
+; CHECK-NEXT:  # %bb.2: # %bb1
 ; CHECK-NEXT:    movl $4, %eax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB11_3: # %return
@@ -210,10 +210,10 @@ return:
 ; PR3351 - (P != 0) | (Q != 0) -> (P|Q) != 0
 define i32 @any_bits_set_branch(i32* %P, i32* %Q) nounwind {
 ; CHECK-LABEL: any_bits_set_branch:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    orq %rsi, %rdi
 ; CHECK-NEXT:    je .LBB12_2
-; CHECK-NEXT:  # BB#1: # %bb1
+; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    movl $4, %eax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB12_2: # %return
@@ -234,13 +234,13 @@ return:
 
 define i32 @any_sign_bits_set_branch(i32 %P, i32 %Q) nounwind {
 ; CHECK-LABEL: any_sign_bits_set_branch:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    js .LBB13_2
-; CHECK-NEXT:  # BB#1: # %entry
+; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    testl %esi, %esi
 ; CHECK-NEXT:    js .LBB13_2
-; CHECK-NEXT:  # BB#3: # %return
+; CHECK-NEXT:  # %bb.3: # %return
 ; CHECK-NEXT:    movl $192, %eax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB13_2: # %bb1
@@ -261,13 +261,13 @@ return:
 
 define i32 @any_bits_clear_branch(i32 %P, i32 %Q) nounwind {
 ; CHECK-LABEL: any_bits_clear_branch:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpl $-1, %edi
 ; CHECK-NEXT:    jne .LBB14_2
-; CHECK-NEXT:  # BB#1: # %entry
+; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    cmpl $-1, %esi
 ; CHECK-NEXT:    jne .LBB14_2
-; CHECK-NEXT:  # BB#3: # %return
+; CHECK-NEXT:  # %bb.3: # %return
 ; CHECK-NEXT:    movl $192, %eax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB14_2: # %bb1
@@ -288,13 +288,13 @@ return:
 
 define i32 @any_sign_bits_clear_branch(i32 %P, i32 %Q) nounwind {
 ; CHECK-LABEL: any_sign_bits_clear_branch:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    jns .LBB15_2
-; CHECK-NEXT:  # BB#1: # %entry
+; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    testl %esi, %esi
 ; CHECK-NEXT:    jns .LBB15_2
-; CHECK-NEXT:  # BB#3: # %return
+; CHECK-NEXT:  # %bb.3: # %return
 ; CHECK-NEXT:    movl $192, %eax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB15_2: # %bb1
@@ -315,7 +315,7 @@ return:
 
 define <4 x i1> @all_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) nounwind {
 ; CHECK-LABEL: all_bits_clear_vec:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    por %xmm1, %xmm0
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    pcmpeqd %xmm1, %xmm0
@@ -328,7 +328,7 @@ define <4 x i1> @all_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) nounwind {
 
 define <4 x i1> @all_sign_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) nounwind {
 ; CHECK-LABEL: all_sign_bits_clear_vec:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    por %xmm1, %xmm0
 ; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
 ; CHECK-NEXT:    pcmpgtd %xmm1, %xmm0
@@ -341,7 +341,7 @@ define <4 x i1> @all_sign_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) nounwind {
 
 define <4 x i1> @all_bits_set_vec(<4 x i32> %P, <4 x i32> %Q) nounwind {
 ; CHECK-LABEL: all_bits_set_vec:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pand %xmm1, %xmm0
 ; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
 ; CHECK-NEXT:    pcmpeqd %xmm1, %xmm0
@@ -354,7 +354,7 @@ define <4 x i1> @all_bits_set_vec(<4 x i32> %P, <4 x i32> %Q) nounwind {
 
 define <4 x i1> @all_sign_bits_set_vec(<4 x i32> %P, <4 x i32> %Q) nounwind {
 ; CHECK-LABEL: all_sign_bits_set_vec:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pand %xmm1, %xmm0
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    pcmpgtd %xmm0, %xmm1
@@ -368,7 +368,7 @@ define <4 x i1> @all_sign_bits_set_vec(<4 x i32> %P, <4 x i32> %Q) nounwind {
 
 define <4 x i1> @any_bits_set_vec(<4 x i32> %P, <4 x i32> %Q) nounwind {
 ; CHECK-LABEL: any_bits_set_vec:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    por %xmm1, %xmm0
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    pcmpeqd %xmm1, %xmm0
@@ -383,7 +383,7 @@ define <4 x i1> @any_bits_set_vec(<4 x i32> %P, <4 x i32> %Q) nounwind {
 
 define <4 x i1> @any_sign_bits_set_vec(<4 x i32> %P, <4 x i32> %Q) nounwind {
 ; CHECK-LABEL: any_sign_bits_set_vec:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    por %xmm1, %xmm0
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    pcmpgtd %xmm0, %xmm1
@@ -397,7 +397,7 @@ define <4 x i1> @any_sign_bits_set_vec(<4 x i32> %P, <4 x i32> %Q) nounwind {
 
 define <4 x i1> @any_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) nounwind {
 ; CHECK-LABEL: any_bits_clear_vec:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pand %xmm1, %xmm0
 ; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
 ; CHECK-NEXT:    pcmpeqd %xmm1, %xmm0
@@ -411,7 +411,7 @@ define <4 x i1> @any_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) nounwind {
 
 define <4 x i1> @any_sign_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) nounwind {
 ; CHECK-LABEL: any_sign_bits_clear_vec:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pand %xmm1, %xmm0
 ; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
 ; CHECK-NEXT:    pcmpgtd %xmm1, %xmm0
@@ -424,7 +424,7 @@ define <4 x i1> @any_sign_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) nounwind {
 
 define zeroext i1 @ne_neg1_and_ne_zero(i64 %x) nounwind {
 ; CHECK-LABEL: ne_neg1_and_ne_zero:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    incq %rdi
 ; CHECK-NEXT:    cmpq $1, %rdi
 ; CHECK-NEXT:    seta %al
@@ -439,7 +439,7 @@ define zeroext i1 @ne_neg1_and_ne_zero(i64 %x) nounwind {
 
 define zeroext i1 @and_eq(i8 %a, i8 %b, i8 %c, i8 %d) nounwind {
 ; CHECK-LABEL: and_eq:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %esi, %edi
 ; CHECK-NEXT:    xorl %ecx, %edx
 ; CHECK-NEXT:    orb %dl, %dil
@@ -453,7 +453,7 @@ define zeroext i1 @and_eq(i8 %a, i8 %b, i8 %c, i8 %d) nounwind {
 
 define zeroext i1 @or_ne(i8 %a, i8 %b, i8 %c, i8 %d) nounwind {
 ; CHECK-LABEL: or_ne:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %esi, %edi
 ; CHECK-NEXT:    xorl %ecx, %edx
 ; CHECK-NEXT:    orb %dl, %dil
@@ -469,7 +469,7 @@ define zeroext i1 @or_ne(i8 %a, i8 %b, i8 %c, i8 %d) nounwind {
 
 define <4 x i1> @and_eq_vec(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d) nounwind {
 ; CHECK-LABEL: and_eq_vec:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-NEXT:    pcmpeqd %xmm3, %xmm2
 ; CHECK-NEXT:    pand %xmm2, %xmm0

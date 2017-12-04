@@ -10,7 +10,7 @@
 
 define <8 x i32> @sext(<8 x float> %a, <8 x float> %b, <8 x i16> %c, <8 x i16> %d) {
 ; SSE2-LABEL: sext:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    cmpltps %xmm3, %xmm1
 ; SSE2-NEXT:    cmpltps %xmm2, %xmm0
 ; SSE2-NEXT:    packssdw %xmm1, %xmm0
@@ -25,7 +25,7 @@ define <8 x i32> @sext(<8 x float> %a, <8 x float> %b, <8 x i16> %c, <8 x i16> %
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: sext:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    cmpltps %xmm3, %xmm1
 ; SSE41-NEXT:    cmpltps %xmm2, %xmm0
 ; SSE41-NEXT:    packssdw %xmm1, %xmm0
@@ -36,7 +36,7 @@ define <8 x i32> @sext(<8 x float> %a, <8 x float> %b, <8 x i16> %c, <8 x i16> %
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: sext:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vcmpltps %ymm1, %ymm0, %ymm0
 ; AVX1-NEXT:    vpmovsxwd %xmm2, %xmm1
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[2,3,0,1]
@@ -50,7 +50,7 @@ define <8 x i32> @sext(<8 x float> %a, <8 x float> %b, <8 x i16> %c, <8 x i16> %
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: sext:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vcmpltps %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpmovsxwd %xmm2, %ymm1
 ; AVX2-NEXT:    vpmovsxwd %xmm3, %ymm2
@@ -64,7 +64,7 @@ define <8 x i32> @sext(<8 x float> %a, <8 x float> %b, <8 x i16> %c, <8 x i16> %
 
 define <8 x i32> @zext(<8 x float> %a, <8 x float> %b, <8 x i16> %c, <8 x i16> %d) {
 ; SSE2-LABEL: zext:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps %xmm0, %xmm6
 ; SSE2-NEXT:    cmpltps %xmm3, %xmm1
 ; SSE2-NEXT:    cmpltps %xmm2, %xmm6
@@ -80,7 +80,7 @@ define <8 x i32> @zext(<8 x float> %a, <8 x float> %b, <8 x i16> %c, <8 x i16> %
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: zext:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    cmpltps %xmm3, %xmm1
 ; SSE41-NEXT:    cmpltps %xmm2, %xmm0
 ; SSE41-NEXT:    packssdw %xmm1, %xmm0
@@ -91,7 +91,7 @@ define <8 x i32> @zext(<8 x float> %a, <8 x float> %b, <8 x i16> %c, <8 x i16> %
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: zext:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vcmpltps %ymm1, %ymm0, %ymm0
 ; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm1 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[2,3,0,1]
@@ -105,7 +105,7 @@ define <8 x i32> @zext(<8 x float> %a, <8 x float> %b, <8 x i16> %c, <8 x i16> %
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: zext:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vcmpltps %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm1 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero
 ; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm2 = xmm3[0],zero,xmm3[1],zero,xmm3[2],zero,xmm3[3],zero,xmm3[4],zero,xmm3[5],zero,xmm3[6],zero,xmm3[7],zero
@@ -119,7 +119,7 @@ define <8 x i32> @zext(<8 x float> %a, <8 x float> %b, <8 x i16> %c, <8 x i16> %
 
 define <4 x double> @fpext(<4 x double> %a, <4 x double> %b, <4 x float> %c, <4 x float> %d) {
 ; SSE2-LABEL: fpext:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    cmpltpd %xmm3, %xmm1
 ; SSE2-NEXT:    cmpltpd %xmm2, %xmm0
 ; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
@@ -133,7 +133,7 @@ define <4 x double> @fpext(<4 x double> %a, <4 x double> %b, <4 x float> %c, <4 
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: fpext:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    cmpltpd %xmm3, %xmm1
 ; SSE41-NEXT:    cmpltpd %xmm2, %xmm0
 ; SSE41-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
@@ -144,7 +144,7 @@ define <4 x double> @fpext(<4 x double> %a, <4 x double> %b, <4 x float> %c, <4 
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: fpext:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vcmpltpd %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    vcvtps2pd %xmm2, %ymm1
 ; AVX-NEXT:    vcvtps2pd %xmm3, %ymm2
@@ -158,7 +158,7 @@ define <4 x double> @fpext(<4 x double> %a, <4 x double> %b, <4 x float> %c, <4 
 
 define <8 x i16> @trunc(<8 x i16> %a, <8 x i16> %b, <8 x i32> %c, <8 x i32> %d) {
 ; SSE2-LABEL: trunc:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpeqw %xmm1, %xmm0
 ; SSE2-NEXT:    pslld $16, %xmm5
 ; SSE2-NEXT:    psrad $16, %xmm5
@@ -176,7 +176,7 @@ define <8 x i16> @trunc(<8 x i16> %a, <8 x i16> %b, <8 x i32> %c, <8 x i32> %d) 
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: trunc:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pcmpeqw %xmm1, %xmm0
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
 ; SSE41-NEXT:    pshufb %xmm1, %xmm3
@@ -190,7 +190,7 @@ define <8 x i16> @trunc(<8 x i16> %a, <8 x i16> %b, <8 x i32> %c, <8 x i32> %d) 
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: trunc:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm1
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
@@ -206,7 +206,7 @@ define <8 x i16> @trunc(<8 x i16> %a, <8 x i16> %b, <8 x i32> %c, <8 x i32> %d) 
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: trunc:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovdqa {{.*#+}} ymm1 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
 ; AVX2-NEXT:    vpshufb %ymm1, %ymm2, %ymm2
@@ -224,7 +224,7 @@ define <8 x i16> @trunc(<8 x i16> %a, <8 x i16> %b, <8 x i32> %c, <8 x i32> %d) 
 
 define <4 x float> @fptrunc(<4 x float> %a, <4 x float> %b, <4 x double> %c, <4 x double> %d) {
 ; SSE2-LABEL: fptrunc:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    cmpltps %xmm1, %xmm0
 ; SSE2-NEXT:    cvtpd2ps %xmm5, %xmm1
 ; SSE2-NEXT:    cvtpd2ps %xmm4, %xmm4
@@ -238,7 +238,7 @@ define <4 x float> @fptrunc(<4 x float> %a, <4 x float> %b, <4 x double> %c, <4 
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: fptrunc:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    cmpltps %xmm1, %xmm0
 ; SSE41-NEXT:    cvtpd2ps %xmm3, %xmm1
 ; SSE41-NEXT:    cvtpd2ps %xmm2, %xmm2
@@ -251,7 +251,7 @@ define <4 x float> @fptrunc(<4 x float> %a, <4 x float> %b, <4 x double> %c, <4 
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: fptrunc:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vcmpltps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vcvtpd2ps %ymm2, %xmm1
 ; AVX-NEXT:    vcvtpd2ps %ymm3, %xmm2
@@ -276,7 +276,7 @@ define <4 x float> @fptrunc(<4 x float> %a, <4 x float> %b, <4 x double> %c, <4 
 
 define void @example25() nounwind {
 ; SSE2-LABEL: example25:
-; SSE2:       # BB#0: # %vector.ph
+; SSE2:       # %bb.0: # %vector.ph
 ; SSE2-NEXT:    movq $-4096, %rax # imm = 0xF000
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm0 = [1,1,1,1]
 ; SSE2-NEXT:    .p2align 4, 0x90
@@ -302,11 +302,11 @@ define void @example25() nounwind {
 ; SSE2-NEXT:    movdqa %xmm1, dj+4096(%rax)
 ; SSE2-NEXT:    addq $32, %rax
 ; SSE2-NEXT:    jne .LBB5_1
-; SSE2-NEXT:  # BB#2: # %for.end
+; SSE2-NEXT:  # %bb.2: # %for.end
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: example25:
-; SSE41:       # BB#0: # %vector.ph
+; SSE41:       # %bb.0: # %vector.ph
 ; SSE41-NEXT:    movq $-4096, %rax # imm = 0xF000
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [1,1,1,1]
 ; SSE41-NEXT:    .p2align 4, 0x90
@@ -331,11 +331,11 @@ define void @example25() nounwind {
 ; SSE41-NEXT:    movdqa %xmm1, dj+4096(%rax)
 ; SSE41-NEXT:    addq $32, %rax
 ; SSE41-NEXT:    jne .LBB5_1
-; SSE41-NEXT:  # BB#2: # %for.end
+; SSE41-NEXT:  # %bb.2: # %for.end
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: example25:
-; AVX1:       # BB#0: # %vector.ph
+; AVX1:       # %bb.0: # %vector.ph
 ; AVX1-NEXT:    movq $-4096, %rax # imm = 0xF000
 ; AVX1-NEXT:    vmovaps {{.*#+}} ymm0 = [1,1,1,1,1,1,1,1]
 ; AVX1-NEXT:    .p2align 4, 0x90
@@ -350,12 +350,12 @@ define void @example25() nounwind {
 ; AVX1-NEXT:    vmovups %ymm1, dj+4096(%rax)
 ; AVX1-NEXT:    addq $32, %rax
 ; AVX1-NEXT:    jne .LBB5_1
-; AVX1-NEXT:  # BB#2: # %for.end
+; AVX1-NEXT:  # %bb.2: # %for.end
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: example25:
-; AVX2:       # BB#0: # %vector.ph
+; AVX2:       # %bb.0: # %vector.ph
 ; AVX2-NEXT:    movq $-4096, %rax # imm = 0xF000
 ; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm0 = [1,1,1,1,1,1,1,1]
 ; AVX2-NEXT:    .p2align 4, 0x90
@@ -370,7 +370,7 @@ define void @example25() nounwind {
 ; AVX2-NEXT:    vmovups %ymm1, dj+4096(%rax)
 ; AVX2-NEXT:    addq $32, %rax
 ; AVX2-NEXT:    jne .LBB5_1
-; AVX2-NEXT:  # BB#2: # %for.end
+; AVX2-NEXT:  # %bb.2: # %for.end
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 vector.ph:
@@ -407,7 +407,7 @@ for.end:
 
 define void @example24(i16 signext %x, i16 signext %y) nounwind {
 ; SSE2-LABEL: example24:
-; SSE2:       # BB#0: # %vector.ph
+; SSE2:       # %bb.0: # %vector.ph
 ; SSE2-NEXT:    movd %edi, %xmm0
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
@@ -435,11 +435,11 @@ define void @example24(i16 signext %x, i16 signext %y) nounwind {
 ; SSE2-NEXT:    movdqa %xmm3, dj+4096(%rax)
 ; SSE2-NEXT:    addq $32, %rax
 ; SSE2-NEXT:    jne .LBB6_1
-; SSE2-NEXT:  # BB#2: # %for.end
+; SSE2-NEXT:  # %bb.2: # %for.end
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: example24:
-; SSE41:       # BB#0: # %vector.ph
+; SSE41:       # %bb.0: # %vector.ph
 ; SSE41-NEXT:    movd %edi, %xmm0
 ; SSE41-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,0,1,1]
@@ -464,11 +464,11 @@ define void @example24(i16 signext %x, i16 signext %y) nounwind {
 ; SSE41-NEXT:    movdqa %xmm0, dj+4112(%rax)
 ; SSE41-NEXT:    addq $32, %rax
 ; SSE41-NEXT:    jne .LBB6_1
-; SSE41-NEXT:  # BB#2: # %for.end
+; SSE41-NEXT:  # %bb.2: # %for.end
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: example24:
-; AVX1:       # BB#0: # %vector.ph
+; AVX1:       # %bb.0: # %vector.ph
 ; AVX1-NEXT:    vmovd %edi, %xmm0
 ; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
@@ -493,12 +493,12 @@ define void @example24(i16 signext %x, i16 signext %y) nounwind {
 ; AVX1-NEXT:    vmovups %ymm2, dj+4096(%rax)
 ; AVX1-NEXT:    addq $32, %rax
 ; AVX1-NEXT:    jne .LBB6_1
-; AVX1-NEXT:  # BB#2: # %for.end
+; AVX1-NEXT:  # %bb.2: # %for.end
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: example24:
-; AVX2:       # BB#0: # %vector.ph
+; AVX2:       # %bb.0: # %vector.ph
 ; AVX2-NEXT:    vmovd %edi, %xmm0
 ; AVX2-NEXT:    vpbroadcastw %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %esi, %xmm1
@@ -515,7 +515,7 @@ define void @example24(i16 signext %x, i16 signext %y) nounwind {
 ; AVX2-NEXT:    vmovups %ymm2, dj+4096(%rax)
 ; AVX2-NEXT:    addq $32, %rax
 ; AVX2-NEXT:    jne .LBB6_1
-; AVX2-NEXT:  # BB#2: # %for.end
+; AVX2-NEXT:  # %bb.2: # %for.end
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 vector.ph:

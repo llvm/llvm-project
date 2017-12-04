@@ -9,7 +9,7 @@
 
 define void @fptoui16(%f32vec_t %a, %i16vec_t *%p) {
 ; CHECK-LABEL: fptoui16:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvttps2dq %ymm0, %ymm0
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; CHECK-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
@@ -23,7 +23,7 @@ define void @fptoui16(%f32vec_t %a, %i16vec_t *%p) {
 
 define void @fptosi16(%f32vec_t %a, %i16vec_t *%p) {
 ; CHECK-LABEL: fptosi16:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvttps2dq %ymm0, %ymm0
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; CHECK-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
@@ -37,7 +37,7 @@ define void @fptosi16(%f32vec_t %a, %i16vec_t *%p) {
 
 define void @fptoui8(%f32vec_t %a, %i8vec_t *%p) {
 ; CHECK-LABEL: fptoui8:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvttps2dq %ymm0, %ymm0
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; CHECK-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
@@ -52,7 +52,7 @@ define void @fptoui8(%f32vec_t %a, %i8vec_t *%p) {
 
 define void @fptosi8(%f32vec_t %a, %i8vec_t *%p) {
 ; CHECK-LABEL: fptosi8:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvttps2dq %ymm0, %ymm0
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; CHECK-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0

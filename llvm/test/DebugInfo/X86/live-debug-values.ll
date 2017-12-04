@@ -27,8 +27,8 @@
 ; This case will also produce multiple locations but only the debug range
 ; extension is tested here.
 
-; DBG_VALUE for variable "n" is extended into BB#5 from its predecessors BB#3
-; and BB#4.
+; DBG_VALUE for variable "n" is extended into %bb.5 from its predecessors %bb.3
+; and %bb.4.
 ; CHECK:       .LBB0_5:
 ; CHECK-NEXT:  #DEBUG_VALUE: main:n <- %ebx
 ;   Other register values have been clobbered.

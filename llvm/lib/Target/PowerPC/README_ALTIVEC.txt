@@ -233,7 +233,7 @@ declare <16 x i8> @llvm.ppc.altivec.crypto.vpmsumb(<16 x i8>, <16 x i8>) #1
 
 
 Produces the following code with -mtriple=powerpc64-unknown-linux-gnu:
-# BB#0:                                 # %entry
+# %bb.0:                                # %entry
     addis 3, 2, .LCPI0_0@toc@ha
     addis 4, 2, .LCPI0_1@toc@ha
     addi 3, 3, .LCPI0_0@toc@l

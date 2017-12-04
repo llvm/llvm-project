@@ -8,10 +8,10 @@ declare void @g()
 
 define void @neg_cmp(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: neg_cmp:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addl %esi, %edi
 ; CHECK-NEXT:    jne .LBB0_1
-; CHECK-NEXT:  # BB#2: # %if.then
+; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    jmp g # TAILCALL
 ; CHECK-NEXT:  .LBB0_1: # %if.end
 ; CHECK-NEXT:    retq
@@ -29,10 +29,10 @@ if.end:
 
 define void @neg_cmp_commuted(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: neg_cmp_commuted:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addl %esi, %edi
 ; CHECK-NEXT:    jne .LBB1_1
-; CHECK-NEXT:  # BB#2: # %if.then
+; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    jmp g # TAILCALL
 ; CHECK-NEXT:  .LBB1_1: # %if.end
 ; CHECK-NEXT:    retq

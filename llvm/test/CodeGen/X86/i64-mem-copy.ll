@@ -7,13 +7,13 @@
 
 define void @foo(i64* %x, i64* %y) {
 ; X64-LABEL: foo:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq (%rsi), %rax
 ; X64-NEXT:    movq %rax, (%rdi)
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: foo:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
@@ -29,13 +29,13 @@ define void @foo(i64* %x, i64* %y) {
 
 define void @store_i64_from_vector(<8 x i16> %x, <8 x i16> %y, i64* %i) {
 ; X64-LABEL: store_i64_from_vector:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    paddw %xmm1, %xmm0
 ; X64-NEXT:    movq %xmm0, (%rdi)
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: store_i64_from_vector:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    paddw %xmm1, %xmm0
 ; X32-NEXT:    movq %xmm0, (%eax)
@@ -49,7 +49,7 @@ define void @store_i64_from_vector(<8 x i16> %x, <8 x i16> %y, i64* %i) {
 
 define void @store_i64_from_vector256(<16 x i16> %x, <16 x i16> %y, i64* %i) {
 ; X32AVX-LABEL: store_i64_from_vector256:
-; X32AVX:       # BB#0:
+; X32AVX:       # %bb.0:
 ; X32AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32AVX-NEXT:    vpaddw %ymm1, %ymm0, %ymm0
 ; X32AVX-NEXT:    vextracti128 $1, %ymm0, %xmm0

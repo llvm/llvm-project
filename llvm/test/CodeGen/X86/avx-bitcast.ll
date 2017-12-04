@@ -2,7 +2,7 @@
 
 define i64 @bitcasti64tof64() {
 ; CHECK-LABEL: bitcasti64tof64:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK:         vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    vmovq %xmm0, %rax
 ; CHECK-NEXT:    retq
