@@ -48,6 +48,7 @@ int main()
     test(S("12345678901234567890"), 'a', S("12345678901234567890a"));
     }
 #endif
+#if 0
     {
 // https://bugs.llvm.org/show_bug.cgi?id=31454
     std::basic_string<veryLarge> s;
@@ -56,4 +57,5 @@ int main()
     s.push_back(vl);
     s.push_back(vl);
     }
+#endif
 }
