@@ -104,6 +104,11 @@ AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T) {
 AArch64MCAsmInfoCOFF::AArch64MCAsmInfoCOFF() {
   PrivateGlobalPrefix = ".L";
   PrivateLabelPrefix = ".L";
+
+  Data16bitsDirective = "\t.hword\t";
+  Data32bitsDirective = "\t.word\t";
+  Data64bitsDirective = "\t.xword\t";
+
   AlignmentIsInBytes = false;
   SupportsDebugInformation = true;
   CodePointerSize = 8;
