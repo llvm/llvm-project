@@ -17,6 +17,12 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
+struct veryLarge
+{
+  long long a;
+  char b;
+};
+
 template <class S>
 void
 test(S s, typename S::value_type c, S expected)
@@ -42,4 +48,12 @@ int main()
     test(S("12345678901234567890"), 'a', S("12345678901234567890a"));
     }
 #endif
+    {
+// https://bugs.llvm.org/show_bug.cgi?id=31454
+    std::basic_string<veryLarge> s;
+    veryLarge vl;
+    s.push_back(vl);
+    s.push_back(vl);
+    s.push_back(vl);
+    }
 }
