@@ -90,6 +90,9 @@ class AsanThread {
   };
   bool GetStackFrameAccessByAddr(uptr addr, StackFrameAccess *access);
 
+  // Returns a pointer to the start of the stack variable's shadow memory.
+  uptr GetStackVariableShadowStart(uptr addr);
+
   bool AddrIsInStack(uptr addr);
 
   void DeleteFakeStack(int tid) {

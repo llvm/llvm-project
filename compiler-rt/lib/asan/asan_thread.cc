@@ -317,7 +317,7 @@ bool AsanThread::GetStackFrameAccessByAddr(uptr addr,
     access->frame_descr = (const char *)((uptr*)bottom)[1];
     return true;
   }
-  uptr aligned_addr = addr & ~(SANITIZER_WORDSIZE/8 - 1);  // align addr.
+  uptr aligned_addr = RoundDownTo(addr, SANITIZER_WORDSIZE / 8);  // align addr.
   uptr mem_ptr = RoundDownTo(aligned_addr, SHADOW_GRANULARITY);
   u8 *shadow_ptr = (u8*)MemToShadow(aligned_addr);
   u8 *shadow_bottom = (u8*)MemToShadow(bottom);
@@ -344,6 +344,29 @@ bool AsanThread::GetStackFrameAccessByAddr(uptr addr,
   access->frame_pc = ptr[2];
   access->frame_descr = (const char*)ptr[1];
   return true;
+}
+
+uptr AsanThread::GetStackVariableShadowStart(uptr addr) {
+  uptr bottom = 0;
+  if (AddrIsInStack(addr)) {
+    bottom = stack_bottom();
+  } else if (has_fake_stack()) {
+    bottom = fake_stack()->AddrIsInFakeStack(addr);
+    CHECK(bottom);
+  } else
+    return 0;
+
+  uptr aligned_addr = RoundDownTo(addr, SANITIZER_WORDSIZE / 8);  // align addr.
+  u8 *shadow_ptr = (u8*)MemToShadow(aligned_addr);
+  u8 *shadow_bottom = (u8*)MemToShadow(bottom);
+
+  while (shadow_ptr >= shadow_bottom &&
+         (*shadow_ptr != kAsanStackLeftRedzoneMagic &&
+          *shadow_ptr != kAsanStackMidRedzoneMagic &&
+          *shadow_ptr != kAsanStackRightRedzoneMagic))
+    shadow_ptr--;
+
+  return (uptr)shadow_ptr + 1;
 }
 
 bool AsanThread::AddrIsInStack(uptr addr) {
