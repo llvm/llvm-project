@@ -3080,6 +3080,15 @@ TEST_F(FormatTestComments, PythonStyleComments) {
                    getTextProtoStyleWithColumns(20)));
 }
 
+TEST_F(FormatTestComments, BreaksBeforeTrailingUnbreakableSequence) {
+  // The end of /* trail */ is exactly at 80 columns, but the unbreakable
+  // trailing sequence ); after it exceeds the column limit. Make sure we
+  // correctly break the line in that case.
+  verifyFormat("int a =\n"
+               "    foo(/* trail */);",
+               getLLVMStyleWithColumns(23));
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang
