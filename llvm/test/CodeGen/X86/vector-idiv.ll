@@ -6,12 +6,12 @@
 
 define <2 x i16> @test_urem_unary_v2i16() nounwind {
 ; SSE-LABEL: test_urem_unary_v2i16:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    xorps %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_urem_unary_v2i16:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %I8 = insertelement <2 x i16> zeroinitializer, i16 -1, i32 0
@@ -22,7 +22,7 @@ define <2 x i16> @test_urem_unary_v2i16() nounwind {
 
 define <4 x i32> @PR20355(<4 x i32> %a) nounwind {
 ; SSE2-LABEL: PR20355:
-; SSE2:       # BB#0: # %entry
+; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [1431655766,1431655766,1431655766,1431655766]
 ; SSE2-NEXT:    movdqa %xmm1, %xmm2
 ; SSE2-NEXT:    psrad $31, %xmm2
@@ -45,7 +45,7 @@ define <4 x i32> @PR20355(<4 x i32> %a) nounwind {
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: PR20355:
-; SSE41:       # BB#0: # %entry
+; SSE41:       # %bb.0: # %entry
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [1431655766,1431655766,1431655766,1431655766]
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
@@ -59,7 +59,7 @@ define <4 x i32> @PR20355(<4 x i32> %a) nounwind {
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: PR20355:
-; AVX1:       # BB#0: # %entry
+; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [1431655766,1431655766,1431655766,1431655766]
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
@@ -72,7 +72,7 @@ define <4 x i32> @PR20355(<4 x i32> %a) nounwind {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: PR20355:
-; AVX2:       # BB#0: # %entry
+; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1431655766,1431655766,1431655766,1431655766]
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]

@@ -5,7 +5,7 @@ declare <16 x i32> @llvm.x86.avx512.maskz.vpdpbusd.512(<16 x i32>, <16 x i32>, <
 
 define <16 x i32>@test_int_x86_avx512_mask_vpdpbusd_512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32>* %x2p, <16 x i32> %x4, i16 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpdpbusd_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %esi, %k1
 ; CHECK-NEXT:    vmovaps %zmm0, %zmm3
 ; CHECK-NEXT:    vpdpbusd (%rdi), %zmm1, %zmm3 {%k1}
@@ -29,7 +29,7 @@ declare <16 x i32> @llvm.x86.avx512.maskz.vpdpbusds.512(<16 x i32>, <16 x i32>, 
 
 define <16 x i32>@test_int_x86_avx512_mask_vpdpbusds_512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32>* %x2p, <16 x i32> %x4, i16 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpdpbusds_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %esi, %k1
 ; CHECK-NEXT:    vmovaps %zmm0, %zmm3
 ; CHECK-NEXT:    vpdpbusds (%rdi), %zmm1, %zmm3 {%k1}
@@ -53,7 +53,7 @@ declare <16 x i32> @llvm.x86.avx512.maskz.vpdpwssd.512(<16 x i32>, <16 x i32>, <
 
 define <16 x i32>@test_int_x86_avx512_mask_vpdpwssd_512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32>* %x2p, <16 x i32> %x4, i16 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpdpwssd_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %esi, %k1
 ; CHECK-NEXT:    vmovaps %zmm0, %zmm3
 ; CHECK-NEXT:    vpdpwssd (%rdi), %zmm1, %zmm3 {%k1}
@@ -77,7 +77,7 @@ declare <16 x i32> @llvm.x86.avx512.maskz.vpdpwssds.512(<16 x i32>, <16 x i32>, 
 
 define <16 x i32>@test_int_x86_avx512_mask_vpdpwssds_512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32>* %x2p, <16 x i32> %x4, i16 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpdpwssds_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %esi, %k1
 ; CHECK-NEXT:    vmovaps %zmm0, %zmm3
 ; CHECK-NEXT:    vpdpwssds (%rdi), %zmm1, %zmm3 {%k1}

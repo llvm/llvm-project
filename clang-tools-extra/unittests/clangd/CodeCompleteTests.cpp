@@ -75,7 +75,6 @@ TEST_F(ClangdCompletionTest, CheckContentsOverride) {
 
   ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
                       /*StorePreamblesInMemory=*/true,
-                      clangd::CodeCompleteOptions(),
                       EmptyLogger::getInstance());
 
   auto FooCpp = getVirtualTestFilePath("foo.cpp");
@@ -88,6 +87,9 @@ int b =   ;
 int cbc;
 int b =   ;
 )cpp";
+
+  // Use default options.
+  CodeCompleteOptions CCOpts;
   // Complete after '=' sign. We need to be careful to keep the SourceContents'
   // size the same.
   // We complete on the 3rd line (2nd in zero-based numbering), because raw
@@ -103,7 +105,7 @@ int b =   ;
 
   {
     auto CodeCompletionResults1 =
-        Server.codeComplete(FooCpp, CompletePos, None).get().Value;
+        Server.codeComplete(FooCpp, CompletePos, CCOpts, None).get().Value;
     EXPECT_TRUE(ContainsItem(CodeCompletionResults1, "aba"));
     EXPECT_FALSE(ContainsItem(CodeCompletionResults1, "cbc"));
   }
@@ -111,7 +113,7 @@ int b =   ;
   {
     auto CodeCompletionResultsOverriden =
         Server
-            .codeComplete(FooCpp, CompletePos,
+            .codeComplete(FooCpp, CompletePos, CCOpts,
                           StringRef(OverridenSourceContents))
             .get()
             .Value;
@@ -121,7 +123,7 @@ int b =   ;
 
   {
     auto CodeCompletionResults2 =
-        Server.codeComplete(FooCpp, CompletePos, None).get().Value;
+        Server.codeComplete(FooCpp, CompletePos, CCOpts, None).get().Value;
     EXPECT_TRUE(ContainsItem(CodeCompletionResults2, "aba"));
     EXPECT_FALSE(ContainsItem(CodeCompletionResults2, "cbc"));
   }
@@ -132,10 +134,8 @@ TEST_F(ClangdCompletionTest, Limit) {
   MockCompilationDatabase CDB;
   CDB.ExtraClangFlags.push_back("-xc++");
   IgnoreDiagnostics DiagConsumer;
-  clangd::CodeCompleteOptions Opts;
-  Opts.Limit = 2;
   ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
-                      /*StorePreamblesInMemory=*/true, Opts,
+                      /*StorePreamblesInMemory=*/true,
                       EmptyLogger::getInstance());
 
   auto FooCpp = getVirtualTestFilePath("foo.cpp");
@@ -152,9 +152,12 @@ int main() { ClassWithMembers().{complete} }
                                              "complete");
   Server.addDocument(FooCpp, Completion.Text);
 
+  clangd::CodeCompleteOptions Opts;
+  Opts.Limit = 2;
+
   /// For after-dot completion we must always get consistent results.
   auto Results = Server
-                     .codeComplete(FooCpp, Completion.MarkerPos,
+                     .codeComplete(FooCpp, Completion.MarkerPos, Opts,
                                    StringRef(Completion.Text))
                      .get()
                      .Value;
@@ -171,9 +174,8 @@ TEST_F(ClangdCompletionTest, Filter) {
   MockCompilationDatabase CDB;
   CDB.ExtraClangFlags.push_back("-xc++");
   IgnoreDiagnostics DiagConsumer;
-  clangd::CodeCompleteOptions Opts;
   ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
-                      /*StorePreamblesInMemory=*/true, Opts,
+                      /*StorePreamblesInMemory=*/true,
                       EmptyLogger::getInstance());
 
   auto FooCpp = getVirtualTestFilePath("foo.cpp");
@@ -194,7 +196,8 @@ TEST_F(ClangdCompletionTest, Filter) {
         "complete");
     Server.addDocument(FooCpp, Completion.Text);
     return Server
-        .codeComplete(FooCpp, Completion.MarkerPos, StringRef(Completion.Text))
+        .codeComplete(FooCpp, Completion.MarkerPos,
+                      clangd::CodeCompleteOptions(), StringRef(Completion.Text))
         .get()
         .Value;
   };
@@ -288,7 +291,7 @@ int test() {
 
   auto TestWithOpts = [&](clangd::CodeCompleteOptions Opts) {
     ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
-                        /*StorePreamblesInMemory=*/true, Opts,
+                        /*StorePreamblesInMemory=*/true,
                         EmptyLogger::getInstance());
     // No need to sync reparses here as there are no asserts on diagnostics (or
     // other async operations).
@@ -301,7 +304,7 @@ int test() {
     /// For after-dot completion we must always get consistent results.
     {
       auto Results = Server
-                         .codeComplete(FooCpp, MemberCompletion.MarkerPos,
+                         .codeComplete(FooCpp, MemberCompletion.MarkerPos, Opts,
                                        StringRef(MemberCompletion.Text))
                          .get()
                          .Value;
@@ -337,7 +340,7 @@ int test() {
     // Global completion differs based on the Opts that were passed.
     {
       auto Results = Server
-                         .codeComplete(FooCpp, GlobalCompletion.MarkerPos,
+                         .codeComplete(FooCpp, GlobalCompletion.MarkerPos, Opts,
                                        StringRef(GlobalCompletion.Text))
                          .get()
                          .Value;

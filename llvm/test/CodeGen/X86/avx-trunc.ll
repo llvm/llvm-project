@@ -3,7 +3,7 @@
 
 define <4 x i32> @trunc_64_32(<4 x i64> %A) nounwind uwtable readnone ssp{
 ; CHECK-LABEL: trunc_64_32:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
 ; CHECK-NEXT:    vzeroupper
@@ -14,7 +14,7 @@ define <4 x i32> @trunc_64_32(<4 x i64> %A) nounwind uwtable readnone ssp{
 
 define <8 x i16> @trunc_32_16(<8 x i32> %A) nounwind uwtable readnone ssp{
 ; CHECK-LABEL: trunc_32_16:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; CHECK-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
 ; CHECK-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
@@ -28,7 +28,7 @@ define <8 x i16> @trunc_32_16(<8 x i32> %A) nounwind uwtable readnone ssp{
 
 define <16 x i8> @trunc_16_8(<16 x i16> %A) nounwind uwtable readnone ssp{
 ; CHECK-LABEL: trunc_16_8:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; CHECK-NEXT:    vmovdqa {{.*#+}} xmm2 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
 ; CHECK-NEXT:    vpshufb %xmm2, %xmm1, %xmm1

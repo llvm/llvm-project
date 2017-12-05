@@ -9,7 +9,7 @@
 ;; (that are modified by the function) should be preserved (%rdx and %xmm1).
 define x86_64_sysvcc i32 @bar(i32 %a0, i32 %a1, float %b0) #0 {
 ; CHECK-LABEL: bar:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rdx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp) # 16-byte Spill

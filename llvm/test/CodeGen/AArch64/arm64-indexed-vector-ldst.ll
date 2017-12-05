@@ -6176,7 +6176,7 @@ define <2 x double> @test_v2f64_post_reg_ld1lane(double* %bar, double** %ptr, i6
 ; Check for dependencies between the vector and the scalar load.
 define <4 x float> @test_v4f32_post_reg_ld1lane_dep_vec_on_load(float* %bar, float** %ptr, i64 %inc, <4 x float>* %dep_ptr_1, <4 x float>* %dep_ptr_2, <4 x float> %vec) {
 ; CHECK-LABEL: test_v4f32_post_reg_ld1lane_dep_vec_on_load:
-; CHECK: BB#0:
+; CHECK: %bb.0:
 ; CHECK-NEXT: ldr s[[LD:[0-9]+]], [x0]
 ; CHECK-NEXT: str q0, [x3]
 ; CHECK-NEXT: ldr q0, [x4]

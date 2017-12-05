@@ -4,7 +4,7 @@
 
 define <2 x double> @foo2(<2 x double> %v, <2 x double> *%p) nounwind {
 ; AVX2-LABEL: foo2:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,1]
 ; AVX2-NEXT:    vmovapd %xmm0, (%rdi)
 ; AVX2-NEXT:    retq
@@ -16,7 +16,7 @@ define <2 x double> @foo2(<2 x double> %v, <2 x double> *%p) nounwind {
 
 define <4 x double> @foo4(<4 x double> %v, <4 x double> *%p) nounwind {
 ; AVX2-LABEL: foo4:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[2,2,2,2]
 ; AVX2-NEXT:    vmovaps %ymm0, (%rdi)
 ; AVX2-NEXT:    retq
@@ -28,7 +28,7 @@ define <4 x double> @foo4(<4 x double> %v, <4 x double> *%p) nounwind {
 
 define <8 x float> @foo8(<8 x float> %v, <8 x float> *%p) nounwind {
 ; AVX2-LABEL: foo8:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovshdup {{.*#+}} ymm0 = ymm0[1,1,3,3,5,5,7,7]
 ; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[2,2,2,2]
 ; AVX2-NEXT:    vmovaps %ymm0, (%rdi)
@@ -41,7 +41,7 @@ define <8 x float> @foo8(<8 x float> %v, <8 x float> *%p) nounwind {
 
 define <4 x i32> @undef_splatmask(<4 x i32> %v) nounwind {
 ; AVX2-LABEL: undef_splatmask:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,2,3,3]
 ; AVX2-NEXT:    retq
   %res = shufflevector <4 x i32> %v, <4 x i32> undef, <4 x i32> <i32 2, i32 undef, i32 2, i32 undef>
@@ -51,7 +51,7 @@ define <4 x i32> @undef_splatmask(<4 x i32> %v) nounwind {
 
 define <4 x i32> @undef_splatmask2(<4 x i32> %v) nounwind {
 ; AVX2-LABEL: undef_splatmask2:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,2,3,3]
 ; AVX2-NEXT:    retq
   %res = shufflevector <4 x i32> %v, <4 x i32> undef, <4 x i32> <i32 2, i32 1, i32 2, i32 undef>
@@ -61,7 +61,7 @@ define <4 x i32> @undef_splatmask2(<4 x i32> %v) nounwind {
 
 define <4 x i32> @undef_splatmask3(<4 x i32> %v) nounwind {
 ; AVX2-LABEL: undef_splatmask3:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,2,3,3]
 ; AVX2-NEXT:    retq
   %res = shufflevector <4 x i32> %v, <4 x i32> undef, <4 x i32> <i32 2, i32 undef, i32 2, i32 undef>
@@ -71,7 +71,7 @@ define <4 x i32> @undef_splatmask3(<4 x i32> %v) nounwind {
 
 define <4 x i32> @undef_splatmask4(<4 x i32> %v, <4 x i32>* %p) nounwind {
 ; AVX2-LABEL: undef_splatmask4:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,2,3,3]
 ; AVX2-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; AVX2-NEXT:    vmovaps %xmm0, (%rdi)
@@ -85,7 +85,7 @@ define <4 x i32> @undef_splatmask4(<4 x i32> %v, <4 x i32>* %p) nounwind {
 
 define <4 x i32> @undef_splatmask5(<4 x i32> %v, <4 x i32>* %p) nounwind {
 ; AVX2-LABEL: undef_splatmask5:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpbroadcastd %xmm0, %xmm1
 ; AVX2-NEXT:    vpbroadcastq %xmm0, %xmm0
 ; AVX2-NEXT:    vmovdqa %xmm0, (%rdi)

@@ -3,7 +3,7 @@
 
 define void @multiple_stores_on_chain(i16 * %A) {
 ; CHECK-LABEL: multiple_stores_on_chain:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movabsq $844433520132096, %rax # imm = 0x3000200010000
 ; CHECK-NEXT:    movq %rax, (%rdi)
 ; CHECK-NEXT:    movabsq $1970350607106052, %rax # imm = 0x7000600050004

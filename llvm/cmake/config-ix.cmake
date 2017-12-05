@@ -130,11 +130,17 @@ endif()
 # Don't look for these libraries if we're using MSan, since uninstrumented third
 # party code may call MSan interceptors like strlen, leading to false positives.
 if(NOT LLVM_USE_SANITIZER MATCHES "Memory.*")
-  find_library(ZLIB_LIBRARY_PATH NAMES z zlib)
-  if (LLVM_ENABLE_ZLIB AND ZLIB_LIBRARY_PATH)
-    check_library_exists(${ZLIB_LIBRARY_PATH} compress2 "" HAVE_LIBZ)
-  else()
-    set(HAVE_LIBZ 0)
+  set(HAVE_LIBZ 0)
+  if(LLVM_ENABLE_ZLIB)
+    foreach(library z zlib_static zlib)
+      string(TOUPPER ${library} library_suffix)
+      check_library_exists(${library} compress2 "" HAVE_LIBZ_${library_suffix})
+      if(HAVE_LIBZ_${library_suffix})
+        set(HAVE_LIBZ 1)
+        set(ZLIB_LIBRARIES "${library}")
+        break()
+      endif()
+    endforeach()
   endif()
 
   # Don't look for these libraries on Windows.

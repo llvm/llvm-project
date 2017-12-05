@@ -7,7 +7,7 @@
 
 define i64 @lshr64(i64 %a, i64 %b) nounwind {
 ; RV32I-LABEL: lshr64:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sw ra, 12(s0)
 ; RV32I-NEXT:    lui a3, %hi(__lshrdi3)
 ; RV32I-NEXT:    addi a3, a3, %lo(__lshrdi3)
@@ -20,7 +20,7 @@ define i64 @lshr64(i64 %a, i64 %b) nounwind {
 
 define i64 @ashr64(i64 %a, i64 %b) nounwind {
 ; RV32I-LABEL: ashr64:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sw ra, 12(s0)
 ; RV32I-NEXT:    lui a3, %hi(__ashrdi3)
 ; RV32I-NEXT:    addi a3, a3, %lo(__ashrdi3)
@@ -33,7 +33,7 @@ define i64 @ashr64(i64 %a, i64 %b) nounwind {
 
 define i64 @shl64(i64 %a, i64 %b) nounwind {
 ; RV32I-LABEL: shl64:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sw ra, 12(s0)
 ; RV32I-NEXT:    lui a3, %hi(__ashldi3)
 ; RV32I-NEXT:    addi a3, a3, %lo(__ashldi3)

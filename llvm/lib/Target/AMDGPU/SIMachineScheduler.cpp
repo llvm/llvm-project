@@ -2050,9 +2050,9 @@ void SIScheduleDAGMI::schedule()
   placeDebugValues();
 
   DEBUG({
-      unsigned BBNum = begin()->getParent()->getNumber();
-      dbgs() << "*** Final schedule for BB#" << BBNum << " ***\n";
-      dumpSchedule();
-      dbgs() << '\n';
-    });
+    dbgs() << "*** Final schedule for "
+           << printMBBReference(*begin()->getParent()) << " ***\n";
+    dumpSchedule();
+    dbgs() << '\n';
+  });
 }

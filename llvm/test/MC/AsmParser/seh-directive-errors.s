@@ -68,7 +68,7 @@ g:
         .p2align        4, 0x90
 h:                                      # @h
 .seh_proc h
-# BB#0:                                 # %entry
+# %bb.0:                                # %entry
         subq    $72, %rsp
         .seh_stackalloc 72
         movaps  %xmm7, 48(%rsp)         # 16-byte Spill

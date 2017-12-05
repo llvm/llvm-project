@@ -6,7 +6,7 @@
 
 define <2 x i256> @test_sext1() {
 ; X32-LABEL: test_sext1:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl $-1, 60(%eax)
 ; X32-NEXT:    movl $-1, 56(%eax)
@@ -27,7 +27,7 @@ define <2 x i256> @test_sext1() {
 ; X32-NEXT:    retl $4
 ;
 ; X64-LABEL: test_sext1:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorps %xmm0, %xmm0
 ; X64-NEXT:    movaps %xmm0, 16(%rdi)
 ; X64-NEXT:    movaps %xmm0, (%rdi)
@@ -44,7 +44,7 @@ define <2 x i256> @test_sext1() {
 
 define <2 x i256> @test_sext2() {
 ; X32-LABEL: test_sext2:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl $-1, 60(%eax)
 ; X32-NEXT:    movl $-1, 56(%eax)
@@ -65,7 +65,7 @@ define <2 x i256> @test_sext2() {
 ; X32-NEXT:    retl $4
 ;
 ; X64-LABEL: test_sext2:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorps %xmm0, %xmm0
 ; X64-NEXT:    movaps %xmm0, 16(%rdi)
 ; X64-NEXT:    movaps %xmm0, (%rdi)
@@ -82,7 +82,7 @@ define <2 x i256> @test_sext2() {
 
 define <2 x i256> @test_zext1() {
 ; X32-LABEL: test_zext1:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl $0, 60(%eax)
 ; X32-NEXT:    movl $0, 56(%eax)
@@ -103,7 +103,7 @@ define <2 x i256> @test_zext1() {
 ; X32-NEXT:    retl $4
 ;
 ; X64-LABEL: test_zext1:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorps %xmm0, %xmm0
 ; X64-NEXT:    movaps %xmm0, 48(%rdi)
 ; X64-NEXT:    movaps %xmm0, 16(%rdi)
@@ -119,7 +119,7 @@ define <2 x i256> @test_zext1() {
 
 define <2 x i256> @test_zext2() {
 ; X32-LABEL: test_zext2:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl $0, 60(%eax)
 ; X32-NEXT:    movl $0, 56(%eax)
@@ -140,7 +140,7 @@ define <2 x i256> @test_zext2() {
 ; X32-NEXT:    retl $4
 ;
 ; X64-LABEL: test_zext2:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorps %xmm0, %xmm0
 ; X64-NEXT:    movaps %xmm0, 48(%rdi)
 ; X64-NEXT:    movaps %xmm0, 16(%rdi)

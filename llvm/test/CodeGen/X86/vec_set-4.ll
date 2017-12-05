@@ -4,13 +4,13 @@
 
 define <2 x i64> @test(i16 %a) nounwind {
 ; X86-LABEL: test:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    pxor %xmm0, %xmm0
 ; X86-NEXT:    pinsrw $3, {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    pxor %xmm0, %xmm0
 ; X64-NEXT:    pinsrw $3, %edi, %xmm0
 ; X64-NEXT:    retq
@@ -25,14 +25,14 @@ define <2 x i64> @test(i16 %a) nounwind {
 
 define <2 x i64> @test2(i8 %a) nounwind {
 ; X86-LABEL: test2:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    pxor %xmm0, %xmm0
 ; X86-NEXT:    pinsrw $5, %eax, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test2:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    pxor %xmm0, %xmm0
 ; X64-NEXT:    pinsrw $5, %eax, %xmm0

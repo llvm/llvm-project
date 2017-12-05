@@ -6,7 +6,7 @@
 
 define i32 @_Z10test_shortPsS_i(i16* nocapture readonly, i16* nocapture readonly, i32) local_unnamed_addr #0 {
 ; SSE2-LABEL: _Z10test_shortPsS_i:
-; SSE2:       # BB#0: # %entry
+; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movl %edx, %eax
 ; SSE2-NEXT:    pxor %xmm0, %xmm0
 ; SSE2-NEXT:    xorl %ecx, %ecx
@@ -21,7 +21,7 @@ define i32 @_Z10test_shortPsS_i(i16* nocapture readonly, i16* nocapture readonly
 ; SSE2-NEXT:    addq $8, %rcx
 ; SSE2-NEXT:    cmpq %rcx, %rax
 ; SSE2-NEXT:    jne .LBB0_1
-; SSE2-NEXT:  # BB#2: # %middle.block
+; SSE2-NEXT:  # %bb.2: # %middle.block
 ; SSE2-NEXT:    paddd %xmm0, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,0,1]
 ; SSE2-NEXT:    paddd %xmm1, %xmm0
@@ -31,7 +31,7 @@ define i32 @_Z10test_shortPsS_i(i16* nocapture readonly, i16* nocapture readonly
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: _Z10test_shortPsS_i:
-; AVX2:       # BB#0: # %entry
+; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    movl %edx, %eax
 ; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    xorl %ecx, %ecx
@@ -44,7 +44,7 @@ define i32 @_Z10test_shortPsS_i(i16* nocapture readonly, i16* nocapture readonly
 ; AVX2-NEXT:    addq $8, %rcx
 ; AVX2-NEXT:    cmpq %rcx, %rax
 ; AVX2-NEXT:    jne .LBB0_1
-; AVX2-NEXT:  # BB#2: # %middle.block
+; AVX2-NEXT:  # %bb.2: # %middle.block
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
@@ -55,7 +55,7 @@ define i32 @_Z10test_shortPsS_i(i16* nocapture readonly, i16* nocapture readonly
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: _Z10test_shortPsS_i:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    movl %edx, %eax
 ; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    xorl %ecx, %ecx
@@ -68,7 +68,7 @@ define i32 @_Z10test_shortPsS_i(i16* nocapture readonly, i16* nocapture readonly
 ; AVX512-NEXT:    addq $8, %rcx
 ; AVX512-NEXT:    cmpq %rcx, %rax
 ; AVX512-NEXT:    jne .LBB0_1
-; AVX512-NEXT:  # BB#2: # %middle.block
+; AVX512-NEXT:  # %bb.2: # %middle.block
 ; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX512-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
@@ -111,7 +111,7 @@ middle.block:
 
 define i32 @test_unsigned_short(i16* nocapture readonly, i16* nocapture readonly, i32) local_unnamed_addr #0 {
 ; SSE2-LABEL: test_unsigned_short:
-; SSE2:       # BB#0: # %entry
+; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movl %edx, %eax
 ; SSE2-NEXT:    pxor %xmm0, %xmm0
 ; SSE2-NEXT:    xorl %ecx, %ecx
@@ -132,7 +132,7 @@ define i32 @test_unsigned_short(i16* nocapture readonly, i16* nocapture readonly
 ; SSE2-NEXT:    addq $8, %rcx
 ; SSE2-NEXT:    cmpq %rcx, %rax
 ; SSE2-NEXT:    jne .LBB1_1
-; SSE2-NEXT:  # BB#2: # %middle.block
+; SSE2-NEXT:  # %bb.2: # %middle.block
 ; SSE2-NEXT:    paddd %xmm1, %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; SSE2-NEXT:    paddd %xmm0, %xmm1
@@ -142,7 +142,7 @@ define i32 @test_unsigned_short(i16* nocapture readonly, i16* nocapture readonly
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: test_unsigned_short:
-; AVX2:       # BB#0: # %entry
+; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    movl %edx, %eax
 ; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    xorl %ecx, %ecx
@@ -156,7 +156,7 @@ define i32 @test_unsigned_short(i16* nocapture readonly, i16* nocapture readonly
 ; AVX2-NEXT:    addq $8, %rcx
 ; AVX2-NEXT:    cmpq %rcx, %rax
 ; AVX2-NEXT:    jne .LBB1_1
-; AVX2-NEXT:  # BB#2: # %middle.block
+; AVX2-NEXT:  # %bb.2: # %middle.block
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
@@ -167,7 +167,7 @@ define i32 @test_unsigned_short(i16* nocapture readonly, i16* nocapture readonly
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_unsigned_short:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    movl %edx, %eax
 ; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    xorl %ecx, %ecx
@@ -181,7 +181,7 @@ define i32 @test_unsigned_short(i16* nocapture readonly, i16* nocapture readonly
 ; AVX512-NEXT:    addq $8, %rcx
 ; AVX512-NEXT:    cmpq %rcx, %rax
 ; AVX512-NEXT:    jne .LBB1_1
-; AVX512-NEXT:  # BB#2: # %middle.block
+; AVX512-NEXT:  # %bb.2: # %middle.block
 ; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX512-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
@@ -224,7 +224,7 @@ middle.block:
 
 define i32 @_Z9test_charPcS_i(i8* nocapture readonly, i8* nocapture readonly, i32) local_unnamed_addr #0 {
 ; SSE2-LABEL: _Z9test_charPcS_i:
-; SSE2:       # BB#0: # %entry
+; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movl %edx, %eax
 ; SSE2-NEXT:    pxor %xmm0, %xmm0
 ; SSE2-NEXT:    xorl %ecx, %ecx
@@ -263,7 +263,7 @@ define i32 @_Z9test_charPcS_i(i8* nocapture readonly, i8* nocapture readonly, i3
 ; SSE2-NEXT:    addq $16, %rcx
 ; SSE2-NEXT:    cmpq %rcx, %rax
 ; SSE2-NEXT:    jne .LBB2_1
-; SSE2-NEXT:  # BB#2: # %middle.block
+; SSE2-NEXT:  # %bb.2: # %middle.block
 ; SSE2-NEXT:    paddd %xmm3, %xmm0
 ; SSE2-NEXT:    paddd %xmm2, %xmm1
 ; SSE2-NEXT:    paddd %xmm0, %xmm1
@@ -275,7 +275,7 @@ define i32 @_Z9test_charPcS_i(i8* nocapture readonly, i8* nocapture readonly, i3
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: _Z9test_charPcS_i:
-; AVX2:       # BB#0: # %entry
+; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    movl %edx, %eax
 ; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    xorl %ecx, %ecx
@@ -290,7 +290,7 @@ define i32 @_Z9test_charPcS_i(i8* nocapture readonly, i8* nocapture readonly, i3
 ; AVX2-NEXT:    addq $16, %rcx
 ; AVX2-NEXT:    cmpq %rcx, %rax
 ; AVX2-NEXT:    jne .LBB2_1
-; AVX2-NEXT:  # BB#2: # %middle.block
+; AVX2-NEXT:  # %bb.2: # %middle.block
 ; AVX2-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
@@ -302,7 +302,7 @@ define i32 @_Z9test_charPcS_i(i8* nocapture readonly, i8* nocapture readonly, i3
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: _Z9test_charPcS_i:
-; AVX512:       # BB#0: # %entry
+; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    movl %edx, %eax
 ; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    xorl %ecx, %ecx
@@ -316,7 +316,7 @@ define i32 @_Z9test_charPcS_i(i8* nocapture readonly, i8* nocapture readonly, i3
 ; AVX512-NEXT:    addq $16, %rcx
 ; AVX512-NEXT:    cmpq %rcx, %rax
 ; AVX512-NEXT:    jne .LBB2_1
-; AVX512-NEXT:  # BB#2: # %middle.block
+; AVX512-NEXT:  # %bb.2: # %middle.block
 ; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1

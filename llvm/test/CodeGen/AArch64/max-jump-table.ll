@@ -77,10 +77,10 @@ entry:
   ]
 ; CHECK-LABEL: function jt2:
 ; CHECK-NEXT: Jump Tables:
-; CHECK0-NEXT: jt#0:  BB#1 BB#2 BB#3 BB#4 BB#7 BB#7 BB#7 BB#7 BB#7 BB#7 BB#7 BB#7 BB#7 BB#5 BB#6{{$}}
-; CHECK4-NEXT: jt#0:  BB#1 BB#2 BB#3 BB#4{{$}}
-; CHECK8-NEXT: jt#0:  BB#1 BB#2 BB#3 BB#4{{$}}
-; CHECKM1-NEXT: jt#0:  BB#1 BB#2 BB#3 BB#4{{$}}
+; CHECK0-NEXT: jt#0:  %bb.1 %bb.2 %bb.3 %bb.4 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.5 %bb.6{{$}}
+; CHECK4-NEXT: jt#0:  %bb.1 %bb.2 %bb.3 %bb.4{{$}}
+; CHECK8-NEXT: jt#0:  %bb.1 %bb.2 %bb.3 %bb.4{{$}}
+; CHECKM1-NEXT: jt#0:  %bb.1 %bb.2 %bb.3 %bb.4{{$}}
 ; CHEC-NEXT: Function Live Ins:
 
 bb1: tail call void @ext(i32 1) br label %return

@@ -508,12 +508,12 @@ block1:
 ; CHECK:	ldr
 ; CHECK-NEXT:	nop
 ; CHECK-NEXT:	.Ltmp
-; CHECK-NEXT: 	BB
+; CHECK-NEXT: 	%bb.
 ; CHECK-NEXT: 	madd
 ; CHECK-NOWORKAROUND-LABEL:	fall_through
 ; CHECK-NOWORKAROUND: 	ldr
 ; CHECK-NOWORKAROUND-NEXT:	.Ltmp
-; CHECK-NOWORKAROUND-NEXT:	BB
+; CHECK-NOWORKAROUND-NEXT:	%bb.
 ; CHECK-NOWORKAROUND-NEXT:	madd
 
 ; No checks for this, just check it doesn't crash

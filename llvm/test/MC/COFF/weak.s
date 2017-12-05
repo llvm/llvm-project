@@ -12,12 +12,12 @@
     .globl  _main
     .align  16, 0x90
 _main:                                  # @main
-# BB#0:                                 # %entry
+# %bb.0:                                # %entry
     subl    $4, %esp
     movl    $_test_weak, %eax
     testl   %eax, %eax
     je      LBB0_2
-# BB#1:                                 # %if.then
+# %bb.1:                                # %if.then
     call    _test_weak
     movl    $1, %eax
     addl    $4, %esp

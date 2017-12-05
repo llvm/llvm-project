@@ -3,7 +3,7 @@
 
 define void @f_f(<16 x double>* %ptr) {
 ; CHECK-LABEL: f_f:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovdqa %xmm0, (%rax)
   store <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <16 x i8>* undef

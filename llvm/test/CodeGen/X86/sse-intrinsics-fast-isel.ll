@@ -6,12 +6,12 @@
 
 define <4 x float> @test_mm_add_ps(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_add_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    addps %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_add_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    addps %xmm1, %xmm0
 ; X64-NEXT:    retq
   %res = fadd <4 x float> %a0, %a1
@@ -20,12 +20,12 @@ define <4 x float> @test_mm_add_ps(<4 x float> %a0, <4 x float> %a1) nounwind {
 
 define <4 x float> @test_mm_add_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_add_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    addss %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_add_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    addss %xmm1, %xmm0
 ; X64-NEXT:    retq
   %ext0 = extractelement <4 x float> %a0, i32 0
@@ -37,12 +37,12 @@ define <4 x float> @test_mm_add_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 
 define <4 x float> @test_mm_and_ps(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_and_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    andps %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_and_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    andps %xmm1, %xmm0
 ; X64-NEXT:    retq
   %arg0 = bitcast <4 x float> %a0 to <4 x i32>
@@ -54,12 +54,12 @@ define <4 x float> @test_mm_and_ps(<4 x float> %a0, <4 x float> %a1) nounwind {
 
 define <4 x float> @test_mm_andnot_ps(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_andnot_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    andnps %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_andnot_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    andnps %xmm1, %xmm0
 ; X64-NEXT:    retq
   %arg0 = bitcast <4 x float> %a0 to <4 x i32>
@@ -72,12 +72,12 @@ define <4 x float> @test_mm_andnot_ps(<4 x float> %a0, <4 x float> %a1) nounwind
 
 define <4 x float> @test_mm_cmpeq_ps(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_cmpeq_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    cmpeqps %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmpeq_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    cmpeqps %xmm1, %xmm0
 ; X64-NEXT:    retq
   %cmp = fcmp oeq <4 x float> %a0, %a1
@@ -88,12 +88,12 @@ define <4 x float> @test_mm_cmpeq_ps(<4 x float> %a0, <4 x float> %a1) nounwind 
 
 define <4 x float> @test_mm_cmpeq_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_cmpeq_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    cmpeqss %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmpeq_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    cmpeqss %xmm1, %xmm0
 ; X64-NEXT:    retq
   %res = call <4 x float> @llvm.x86.sse.cmp.ss(<4 x float> %a0, <4 x float> %a1, i8 0)
@@ -103,13 +103,13 @@ declare <4 x float> @llvm.x86.sse.cmp.ss(<4 x float>, <4 x float>, i8) nounwind 
 
 define <4 x float> @test_mm_cmpge_ps(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_cmpge_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    cmpleps %xmm0, %xmm1
 ; X32-NEXT:    movaps %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmpge_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    cmpleps %xmm0, %xmm1
 ; X64-NEXT:    movaps %xmm1, %xmm0
 ; X64-NEXT:    retq
@@ -121,13 +121,13 @@ define <4 x float> @test_mm_cmpge_ps(<4 x float> %a0, <4 x float> %a1) nounwind 
 
 define <4 x float> @test_mm_cmpge_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_cmpge_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    cmpless %xmm0, %xmm1
 ; X32-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmpge_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    cmpless %xmm0, %xmm1
 ; X64-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; X64-NEXT:    retq
@@ -138,13 +138,13 @@ define <4 x float> @test_mm_cmpge_ss(<4 x float> %a0, <4 x float> %a1) nounwind 
 
 define <4 x float> @test_mm_cmpgt_ps(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_cmpgt_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    cmpltps %xmm0, %xmm1
 ; X32-NEXT:    movaps %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmpgt_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    cmpltps %xmm0, %xmm1
 ; X64-NEXT:    movaps %xmm1, %xmm0
 ; X64-NEXT:    retq
@@ -156,13 +156,13 @@ define <4 x float> @test_mm_cmpgt_ps(<4 x float> %a0, <4 x float> %a1) nounwind 
 
 define <4 x float> @test_mm_cmpgt_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_cmpgt_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    cmpltss %xmm0, %xmm1
 ; X32-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmpgt_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    cmpltss %xmm0, %xmm1
 ; X64-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; X64-NEXT:    retq
@@ -173,12 +173,12 @@ define <4 x float> @test_mm_cmpgt_ss(<4 x float> %a0, <4 x float> %a1) nounwind 
 
 define <4 x float> @test_mm_cmple_ps(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_cmple_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    cmpleps %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmple_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    cmpleps %xmm1, %xmm0
 ; X64-NEXT:    retq
   %cmp = fcmp ole <4 x float> %a0, %a1
@@ -189,12 +189,12 @@ define <4 x float> @test_mm_cmple_ps(<4 x float> %a0, <4 x float> %a1) nounwind 
 
 define <4 x float> @test_mm_cmple_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_cmple_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    cmpless %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmple_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    cmpless %xmm1, %xmm0
 ; X64-NEXT:    retq
   %res = call <4 x float> @llvm.x86.sse.cmp.ss(<4 x float> %a0, <4 x float> %a1, i8 2)
@@ -203,12 +203,12 @@ define <4 x float> @test_mm_cmple_ss(<4 x float> %a0, <4 x float> %a1) nounwind 
 
 define <4 x float> @test_mm_cmplt_ps(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_cmplt_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    cmpltps %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmplt_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    cmpltps %xmm1, %xmm0
 ; X64-NEXT:    retq
   %cmp = fcmp olt <4 x float> %a0, %a1
@@ -219,12 +219,12 @@ define <4 x float> @test_mm_cmplt_ps(<4 x float> %a0, <4 x float> %a1) nounwind 
 
 define <4 x float> @test_mm_cmplt_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_cmplt_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    cmpltss %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmplt_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    cmpltss %xmm1, %xmm0
 ; X64-NEXT:    retq
   %res = call <4 x float> @llvm.x86.sse.cmp.ss(<4 x float> %a0, <4 x float> %a1, i8 1)
@@ -233,12 +233,12 @@ define <4 x float> @test_mm_cmplt_ss(<4 x float> %a0, <4 x float> %a1) nounwind 
 
 define <4 x float> @test_mm_cmpneq_ps(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_cmpneq_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    cmpneqps %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmpneq_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    cmpneqps %xmm1, %xmm0
 ; X64-NEXT:    retq
   %cmp = fcmp une <4 x float> %a0, %a1
@@ -249,12 +249,12 @@ define <4 x float> @test_mm_cmpneq_ps(<4 x float> %a0, <4 x float> %a1) nounwind
 
 define <4 x float> @test_mm_cmpneq_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_cmpneq_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    cmpneqss %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmpneq_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    cmpneqss %xmm1, %xmm0
 ; X64-NEXT:    retq
   %res = call <4 x float> @llvm.x86.sse.cmp.ss(<4 x float> %a0, <4 x float> %a1, i8 4)
@@ -263,13 +263,13 @@ define <4 x float> @test_mm_cmpneq_ss(<4 x float> %a0, <4 x float> %a1) nounwind
 
 define <4 x float> @test_mm_cmpnge_ps(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_cmpnge_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    cmpnleps %xmm0, %xmm1
 ; X32-NEXT:    movaps %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmpnge_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    cmpnleps %xmm0, %xmm1
 ; X64-NEXT:    movaps %xmm1, %xmm0
 ; X64-NEXT:    retq
@@ -281,13 +281,13 @@ define <4 x float> @test_mm_cmpnge_ps(<4 x float> %a0, <4 x float> %a1) nounwind
 
 define <4 x float> @test_mm_cmpnge_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_cmpnge_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    cmpnless %xmm0, %xmm1
 ; X32-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmpnge_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    cmpnless %xmm0, %xmm1
 ; X64-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; X64-NEXT:    retq
@@ -298,13 +298,13 @@ define <4 x float> @test_mm_cmpnge_ss(<4 x float> %a0, <4 x float> %a1) nounwind
 
 define <4 x float> @test_mm_cmpngt_ps(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_cmpngt_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    cmpnltps %xmm0, %xmm1
 ; X32-NEXT:    movaps %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmpngt_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    cmpnltps %xmm0, %xmm1
 ; X64-NEXT:    movaps %xmm1, %xmm0
 ; X64-NEXT:    retq
@@ -316,13 +316,13 @@ define <4 x float> @test_mm_cmpngt_ps(<4 x float> %a0, <4 x float> %a1) nounwind
 
 define <4 x float> @test_mm_cmpngt_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_cmpngt_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    cmpnltss %xmm0, %xmm1
 ; X32-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmpngt_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    cmpnltss %xmm0, %xmm1
 ; X64-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; X64-NEXT:    retq
@@ -333,12 +333,12 @@ define <4 x float> @test_mm_cmpngt_ss(<4 x float> %a0, <4 x float> %a1) nounwind
 
 define <4 x float> @test_mm_cmpnle_ps(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_cmpnle_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    cmpnleps %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmpnle_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    cmpnleps %xmm1, %xmm0
 ; X64-NEXT:    retq
   %cmp = fcmp ugt <4 x float> %a0, %a1
@@ -349,12 +349,12 @@ define <4 x float> @test_mm_cmpnle_ps(<4 x float> %a0, <4 x float> %a1) nounwind
 
 define <4 x float> @test_mm_cmpnle_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_cmpnle_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    cmpnless %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmpnle_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    cmpnless %xmm1, %xmm0
 ; X64-NEXT:    retq
   %res = call <4 x float> @llvm.x86.sse.cmp.ss(<4 x float> %a0, <4 x float> %a1, i8 6)
@@ -363,12 +363,12 @@ define <4 x float> @test_mm_cmpnle_ss(<4 x float> %a0, <4 x float> %a1) nounwind
 
 define <4 x float> @test_mm_cmpnlt_ps(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_cmpnlt_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    cmpnltps %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmpnlt_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    cmpnltps %xmm1, %xmm0
 ; X64-NEXT:    retq
   %cmp = fcmp uge <4 x float> %a0, %a1
@@ -379,12 +379,12 @@ define <4 x float> @test_mm_cmpnlt_ps(<4 x float> %a0, <4 x float> %a1) nounwind
 
 define <4 x float> @test_mm_cmpnlt_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_cmpnlt_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    cmpnltss %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmpnlt_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    cmpnltss %xmm1, %xmm0
 ; X64-NEXT:    retq
   %res = call <4 x float> @llvm.x86.sse.cmp.ss(<4 x float> %a0, <4 x float> %a1, i8 5)
@@ -393,12 +393,12 @@ define <4 x float> @test_mm_cmpnlt_ss(<4 x float> %a0, <4 x float> %a1) nounwind
 
 define <4 x float> @test_mm_cmpord_ps(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_cmpord_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    cmpordps %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmpord_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    cmpordps %xmm1, %xmm0
 ; X64-NEXT:    retq
   %cmp = fcmp ord <4 x float> %a0, %a1
@@ -409,12 +409,12 @@ define <4 x float> @test_mm_cmpord_ps(<4 x float> %a0, <4 x float> %a1) nounwind
 
 define <4 x float> @test_mm_cmpord_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_cmpord_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    cmpordss %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmpord_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    cmpordss %xmm1, %xmm0
 ; X64-NEXT:    retq
   %res = call <4 x float> @llvm.x86.sse.cmp.ss(<4 x float> %a0, <4 x float> %a1, i8 7)
@@ -423,12 +423,12 @@ define <4 x float> @test_mm_cmpord_ss(<4 x float> %a0, <4 x float> %a1) nounwind
 
 define <4 x float> @test_mm_cmpunord_ps(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_cmpunord_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    cmpunordps %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmpunord_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    cmpunordps %xmm1, %xmm0
 ; X64-NEXT:    retq
   %cmp = fcmp uno <4 x float> %a0, %a1
@@ -439,12 +439,12 @@ define <4 x float> @test_mm_cmpunord_ps(<4 x float> %a0, <4 x float> %a1) nounwi
 
 define <4 x float> @test_mm_cmpunord_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_cmpunord_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    cmpunordss %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmpunord_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    cmpunordss %xmm1, %xmm0
 ; X64-NEXT:    retq
   %res = call <4 x float> @llvm.x86.sse.cmp.ss(<4 x float> %a0, <4 x float> %a1, i8 3)
@@ -453,7 +453,7 @@ define <4 x float> @test_mm_cmpunord_ss(<4 x float> %a0, <4 x float> %a1) nounwi
 
 define i32 @test_mm_comieq_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_comieq_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    comiss %xmm1, %xmm0
 ; X32-NEXT:    setnp %al
 ; X32-NEXT:    sete %cl
@@ -462,7 +462,7 @@ define i32 @test_mm_comieq_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_comieq_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    comiss %xmm1, %xmm0
 ; X64-NEXT:    setnp %al
 ; X64-NEXT:    sete %cl
@@ -476,14 +476,14 @@ declare i32 @llvm.x86.sse.comieq.ss(<4 x float>, <4 x float>) nounwind readnone
 
 define i32 @test_mm_comige_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_comige_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    xorl %eax, %eax
 ; X32-NEXT:    comiss %xmm1, %xmm0
 ; X32-NEXT:    setae %al
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_comige_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    comiss %xmm1, %xmm0
 ; X64-NEXT:    setae %al
@@ -495,14 +495,14 @@ declare i32 @llvm.x86.sse.comige.ss(<4 x float>, <4 x float>) nounwind readnone
 
 define i32 @test_mm_comigt_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_comigt_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    xorl %eax, %eax
 ; X32-NEXT:    comiss %xmm1, %xmm0
 ; X32-NEXT:    seta %al
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_comigt_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    comiss %xmm1, %xmm0
 ; X64-NEXT:    seta %al
@@ -514,14 +514,14 @@ declare i32 @llvm.x86.sse.comigt.ss(<4 x float>, <4 x float>) nounwind readnone
 
 define i32 @test_mm_comile_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_comile_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    xorl %eax, %eax
 ; X32-NEXT:    comiss %xmm0, %xmm1
 ; X32-NEXT:    setae %al
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_comile_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    comiss %xmm0, %xmm1
 ; X64-NEXT:    setae %al
@@ -533,14 +533,14 @@ declare i32 @llvm.x86.sse.comile.ss(<4 x float>, <4 x float>) nounwind readnone
 
 define i32 @test_mm_comilt_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_comilt_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    xorl %eax, %eax
 ; X32-NEXT:    comiss %xmm0, %xmm1
 ; X32-NEXT:    seta %al
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_comilt_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    comiss %xmm0, %xmm1
 ; X64-NEXT:    seta %al
@@ -552,7 +552,7 @@ declare i32 @llvm.x86.sse.comilt.ss(<4 x float>, <4 x float>) nounwind readnone
 
 define i32 @test_mm_comineq_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_comineq_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    comiss %xmm1, %xmm0
 ; X32-NEXT:    setp %al
 ; X32-NEXT:    setne %cl
@@ -561,7 +561,7 @@ define i32 @test_mm_comineq_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_comineq_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    comiss %xmm1, %xmm0
 ; X64-NEXT:    setp %al
 ; X64-NEXT:    setne %cl
@@ -575,12 +575,12 @@ declare i32 @llvm.x86.sse.comineq.ss(<4 x float>, <4 x float>) nounwind readnone
 
 define i32 @test_mm_cvt_ss2si(<4 x float> %a0) nounwind {
 ; X32-LABEL: test_mm_cvt_ss2si:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    cvtss2si %xmm0, %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cvt_ss2si:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    cvtss2si %xmm0, %eax
 ; X64-NEXT:    retq
   %res = call i32 @llvm.x86.sse.cvtss2si(<4 x float> %a0)
@@ -590,12 +590,12 @@ declare i32 @llvm.x86.sse.cvtss2si(<4 x float>) nounwind readnone
 
 define <4 x float> @test_mm_cvtsi32_ss(<4 x float> %a0, i32 %a1) nounwind {
 ; X32-LABEL: test_mm_cvtsi32_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    cvtsi2ssl {{[0-9]+}}(%esp), %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cvtsi32_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    cvtsi2ssl %edi, %xmm0
 ; X64-NEXT:    retq
   %res = call <4 x float> @llvm.x86.sse.cvtsi2ss(<4 x float> %a0, i32 %a1)
@@ -605,7 +605,7 @@ declare <4 x float> @llvm.x86.sse.cvtsi2ss(<4 x float>, i32) nounwind readnone
 
 define float @test_mm_cvtss_f32(<4 x float> %a0) nounwind {
 ; X32-LABEL: test_mm_cvtss_f32:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %eax
 ; X32-NEXT:    movss %xmm0, (%esp)
 ; X32-NEXT:    flds (%esp)
@@ -613,7 +613,7 @@ define float @test_mm_cvtss_f32(<4 x float> %a0) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cvtss_f32:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    retq
   %res = extractelement <4 x float> %a0, i32 0
   ret float %res
@@ -621,12 +621,12 @@ define float @test_mm_cvtss_f32(<4 x float> %a0) nounwind {
 
 define i32 @test_mm_cvtss_si32(<4 x float> %a0) nounwind {
 ; X32-LABEL: test_mm_cvtss_si32:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    cvtss2si %xmm0, %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cvtss_si32:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    cvtss2si %xmm0, %eax
 ; X64-NEXT:    retq
   %res = call i32 @llvm.x86.sse.cvtss2si(<4 x float> %a0)
@@ -635,12 +635,12 @@ define i32 @test_mm_cvtss_si32(<4 x float> %a0) nounwind {
 
 define i32 @test_mm_cvttss_si(<4 x float> %a0) nounwind {
 ; X32-LABEL: test_mm_cvttss_si:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    cvttss2si %xmm0, %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cvttss_si:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    cvttss2si %xmm0, %eax
 ; X64-NEXT:    retq
   %res = call i32 @llvm.x86.sse.cvttss2si(<4 x float> %a0)
@@ -650,12 +650,12 @@ declare i32 @llvm.x86.sse.cvttss2si(<4 x float>) nounwind readnone
 
 define i32 @test_mm_cvttss_si32(<4 x float> %a0) nounwind {
 ; X32-LABEL: test_mm_cvttss_si32:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    cvttss2si %xmm0, %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cvttss_si32:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    cvttss2si %xmm0, %eax
 ; X64-NEXT:    retq
   %res = call i32 @llvm.x86.sse.cvttss2si(<4 x float> %a0)
@@ -664,12 +664,12 @@ define i32 @test_mm_cvttss_si32(<4 x float> %a0) nounwind {
 
 define <4 x float> @test_mm_div_ps(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_div_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    divps %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_div_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    divps %xmm1, %xmm0
 ; X64-NEXT:    retq
   %res = fdiv <4 x float> %a0, %a1
@@ -678,12 +678,12 @@ define <4 x float> @test_mm_div_ps(<4 x float> %a0, <4 x float> %a1) nounwind {
 
 define <4 x float> @test_mm_div_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_div_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    divss %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_div_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    divss %xmm1, %xmm0
 ; X64-NEXT:    retq
   %ext0 = extractelement <4 x float> %a0, i32 0
@@ -695,7 +695,7 @@ define <4 x float> @test_mm_div_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 
 define i32 @test_MM_GET_EXCEPTION_MASK() nounwind {
 ; X32-LABEL: test_MM_GET_EXCEPTION_MASK:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %eax
 ; X32-NEXT:    movl %esp, %eax
 ; X32-NEXT:    stmxcsr (%eax)
@@ -705,7 +705,7 @@ define i32 @test_MM_GET_EXCEPTION_MASK() nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_MM_GET_EXCEPTION_MASK:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:    stmxcsr (%rax)
 ; X64-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
@@ -722,7 +722,7 @@ declare void @llvm.x86.sse.stmxcsr(i8*) nounwind readnone
 
 define i32 @test_MM_GET_EXCEPTION_STATE() nounwind {
 ; X32-LABEL: test_MM_GET_EXCEPTION_STATE:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %eax
 ; X32-NEXT:    movl %esp, %eax
 ; X32-NEXT:    stmxcsr (%eax)
@@ -732,7 +732,7 @@ define i32 @test_MM_GET_EXCEPTION_STATE() nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_MM_GET_EXCEPTION_STATE:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:    stmxcsr (%rax)
 ; X64-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
@@ -748,7 +748,7 @@ define i32 @test_MM_GET_EXCEPTION_STATE() nounwind {
 
 define i32 @test_MM_GET_FLUSH_ZERO_MODE() nounwind {
 ; X32-LABEL: test_MM_GET_FLUSH_ZERO_MODE:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %eax
 ; X32-NEXT:    movl %esp, %eax
 ; X32-NEXT:    stmxcsr (%eax)
@@ -758,7 +758,7 @@ define i32 @test_MM_GET_FLUSH_ZERO_MODE() nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_MM_GET_FLUSH_ZERO_MODE:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:    stmxcsr (%rax)
 ; X64-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
@@ -774,7 +774,7 @@ define i32 @test_MM_GET_FLUSH_ZERO_MODE() nounwind {
 
 define i32 @test_MM_GET_ROUNDING_MODE() nounwind {
 ; X32-LABEL: test_MM_GET_ROUNDING_MODE:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %eax
 ; X32-NEXT:    movl %esp, %eax
 ; X32-NEXT:    stmxcsr (%eax)
@@ -784,7 +784,7 @@ define i32 @test_MM_GET_ROUNDING_MODE() nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_MM_GET_ROUNDING_MODE:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:    stmxcsr (%rax)
 ; X64-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
@@ -800,7 +800,7 @@ define i32 @test_MM_GET_ROUNDING_MODE() nounwind {
 
 define i32 @test_mm_getcsr() nounwind {
 ; X32-LABEL: test_mm_getcsr:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %eax
 ; X32-NEXT:    movl %esp, %eax
 ; X32-NEXT:    stmxcsr (%eax)
@@ -809,7 +809,7 @@ define i32 @test_mm_getcsr() nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_getcsr:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:    stmxcsr (%rax)
 ; X64-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
@@ -823,13 +823,13 @@ define i32 @test_mm_getcsr() nounwind {
 
 define <4 x float> @test_mm_load_ps(float* %a0) nounwind {
 ; X32-LABEL: test_mm_load_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movaps (%eax), %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_load_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movaps (%rdi), %xmm0
 ; X64-NEXT:    retq
   %arg0 = bitcast float* %a0 to <4 x float>*
@@ -839,14 +839,14 @@ define <4 x float> @test_mm_load_ps(float* %a0) nounwind {
 
 define <4 x float> @test_mm_load_ps1(float* %a0) nounwind {
 ; X32-LABEL: test_mm_load_ps1:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_load_ps1:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; X64-NEXT:    retq
@@ -860,13 +860,13 @@ define <4 x float> @test_mm_load_ps1(float* %a0) nounwind {
 
 define <4 x float> @test_mm_load_ss(float* %a0) nounwind {
 ; X32-LABEL: test_mm_load_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_load_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    retq
   %ld = load float, float* %a0, align 1
@@ -879,14 +879,14 @@ define <4 x float> @test_mm_load_ss(float* %a0) nounwind {
 
 define <4 x float> @test_mm_load1_ps(float* %a0) nounwind {
 ; X32-LABEL: test_mm_load1_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_load1_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; X64-NEXT:    retq
@@ -900,7 +900,7 @@ define <4 x float> @test_mm_load1_ps(float* %a0) nounwind {
 
 define <4 x float> @test_mm_loadh_pi(<4 x float> %a0, x86_mmx* %a1) {
 ; X32-LABEL: test_mm_loadh_pi:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X32-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
@@ -909,7 +909,7 @@ define <4 x float> @test_mm_loadh_pi(<4 x float> %a0, x86_mmx* %a1) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_loadh_pi:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq (%rdi), %rax
 ; X64-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    shrq $32, %rax
@@ -930,7 +930,7 @@ define <4 x float> @test_mm_loadh_pi(<4 x float> %a0, x86_mmx* %a1) {
 
 define <4 x float> @test_mm_loadl_pi(<4 x float> %a0, x86_mmx* %a1) {
 ; X32-LABEL: test_mm_loadl_pi:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X32-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
@@ -940,7 +940,7 @@ define <4 x float> @test_mm_loadl_pi(<4 x float> %a0, x86_mmx* %a1) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_loadl_pi:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq (%rdi), %rax
 ; X64-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    shrq $32, %rax
@@ -962,14 +962,14 @@ define <4 x float> @test_mm_loadl_pi(<4 x float> %a0, x86_mmx* %a1) {
 
 define <4 x float> @test_mm_loadr_ps(float* %a0) nounwind {
 ; X32-LABEL: test_mm_loadr_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movaps (%eax), %xmm0
 ; X32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,2,1,0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_loadr_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movaps (%rdi), %xmm0
 ; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,2,1,0]
 ; X64-NEXT:    retq
@@ -981,13 +981,13 @@ define <4 x float> @test_mm_loadr_ps(float* %a0) nounwind {
 
 define <4 x float> @test_mm_loadu_ps(float* %a0) nounwind {
 ; X32-LABEL: test_mm_loadu_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movups (%eax), %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_loadu_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movups (%rdi), %xmm0
 ; X64-NEXT:    retq
   %arg0 = bitcast float* %a0 to <4 x float>*
@@ -997,12 +997,12 @@ define <4 x float> @test_mm_loadu_ps(float* %a0) nounwind {
 
 define <4 x float> @test_mm_max_ps(<4 x float> %a0, <4 x float> %a1) {
 ; X32-LABEL: test_mm_max_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    maxps %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_max_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    maxps %xmm1, %xmm0
 ; X64-NEXT:    retq
   %res = call <4 x float> @llvm.x86.sse.max.ps(<4 x float> %a0, <4 x float> %a1)
@@ -1012,12 +1012,12 @@ declare <4 x float> @llvm.x86.sse.max.ps(<4 x float>, <4 x float>) nounwind read
 
 define <4 x float> @test_mm_max_ss(<4 x float> %a0, <4 x float> %a1) {
 ; X32-LABEL: test_mm_max_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    maxss %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_max_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    maxss %xmm1, %xmm0
 ; X64-NEXT:    retq
   %res = call <4 x float> @llvm.x86.sse.max.ss(<4 x float> %a0, <4 x float> %a1)
@@ -1027,12 +1027,12 @@ declare <4 x float> @llvm.x86.sse.max.ss(<4 x float>, <4 x float>) nounwind read
 
 define <4 x float> @test_mm_min_ps(<4 x float> %a0, <4 x float> %a1) {
 ; X32-LABEL: test_mm_min_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    minps %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_min_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    minps %xmm1, %xmm0
 ; X64-NEXT:    retq
   %res = call <4 x float> @llvm.x86.sse.min.ps(<4 x float> %a0, <4 x float> %a1)
@@ -1042,12 +1042,12 @@ declare <4 x float> @llvm.x86.sse.min.ps(<4 x float>, <4 x float>) nounwind read
 
 define <4 x float> @test_mm_min_ss(<4 x float> %a0, <4 x float> %a1) {
 ; X32-LABEL: test_mm_min_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    minss %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_min_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    minss %xmm1, %xmm0
 ; X64-NEXT:    retq
   %res = call <4 x float> @llvm.x86.sse.min.ss(<4 x float> %a0, <4 x float> %a1)
@@ -1057,12 +1057,12 @@ declare <4 x float> @llvm.x86.sse.min.ss(<4 x float>, <4 x float>) nounwind read
 
 define <4 x float> @test_mm_move_ss(<4 x float> %a0, <4 x float> %a1) {
 ; X32-LABEL: test_mm_move_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_move_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; X64-NEXT:    retq
   %res = shufflevector <4 x float> %a0, <4 x float> %a1, <4 x i32> <i32 4, i32 1, i32 2, i32 3>
@@ -1071,12 +1071,12 @@ define <4 x float> @test_mm_move_ss(<4 x float> %a0, <4 x float> %a1) {
 
 define <4 x float> @test_mm_movehl_ps(<4 x float> %a0, <4 x float> %a1) {
 ; X32-LABEL: test_mm_movehl_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movhlps {{.*#+}} xmm0 = xmm1[1],xmm0[1]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_movehl_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movhlps {{.*#+}} xmm0 = xmm1[1],xmm0[1]
 ; X64-NEXT:    retq
   %res = shufflevector <4 x float> %a0, <4 x float> %a1, <4 x i32> <i32 6, i32 7, i32 2, i32 3>
@@ -1085,12 +1085,12 @@ define <4 x float> @test_mm_movehl_ps(<4 x float> %a0, <4 x float> %a1) {
 
 define <4 x float> @test_mm_movelh_ps(<4 x float> %a0, <4 x float> %a1) {
 ; X32-LABEL: test_mm_movelh_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_movelh_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; X64-NEXT:    retq
   %res = shufflevector <4 x float> %a0, <4 x float> %a1, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
@@ -1099,12 +1099,12 @@ define <4 x float> @test_mm_movelh_ps(<4 x float> %a0, <4 x float> %a1) {
 
 define i32 @test_mm_movemask_ps(<4 x float> %a0) nounwind {
 ; X32-LABEL: test_mm_movemask_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movmskps %xmm0, %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_movemask_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movmskps %xmm0, %eax
 ; X64-NEXT:    retq
   %res = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %a0)
@@ -1114,12 +1114,12 @@ declare i32 @llvm.x86.sse.movmsk.ps(<4 x float>) nounwind readnone
 
 define <4 x float> @test_mm_mul_ps(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_mul_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    mulps %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_mul_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    mulps %xmm1, %xmm0
 ; X64-NEXT:    retq
   %res = fmul <4 x float> %a0, %a1
@@ -1128,12 +1128,12 @@ define <4 x float> @test_mm_mul_ps(<4 x float> %a0, <4 x float> %a1) nounwind {
 
 define <4 x float> @test_mm_mul_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_mul_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    mulss %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_mul_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    mulss %xmm1, %xmm0
 ; X64-NEXT:    retq
   %ext0 = extractelement <4 x float> %a0, i32 0
@@ -1145,12 +1145,12 @@ define <4 x float> @test_mm_mul_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 
 define <4 x float> @test_mm_or_ps(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_or_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    orps %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_or_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    orps %xmm1, %xmm0
 ; X64-NEXT:    retq
   %arg0 = bitcast <4 x float> %a0 to <4 x i32>
@@ -1162,13 +1162,13 @@ define <4 x float> @test_mm_or_ps(<4 x float> %a0, <4 x float> %a1) nounwind {
 
 define void @test_mm_prefetch(i8* %a0) {
 ; X32-LABEL: test_mm_prefetch:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    prefetchnta (%eax)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_prefetch:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    prefetchnta (%rdi)
 ; X64-NEXT:    retq
   call void @llvm.prefetch(i8* %a0, i32 0, i32 0, i32 1)
@@ -1178,12 +1178,12 @@ declare void @llvm.prefetch(i8* nocapture, i32, i32, i32) nounwind readnone
 
 define <4 x float> @test_mm_rcp_ps(<4 x float> %a0) {
 ; X32-LABEL: test_mm_rcp_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    rcpps %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_rcp_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    rcpps %xmm0, %xmm0
 ; X64-NEXT:    retq
   %res = call <4 x float> @llvm.x86.sse.rcp.ps(<4 x float> %a0)
@@ -1193,12 +1193,12 @@ declare <4 x float> @llvm.x86.sse.rcp.ps(<4 x float>) nounwind readnone
 
 define <4 x float> @test_mm_rcp_ss(<4 x float> %a0) {
 ; X32-LABEL: test_mm_rcp_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    rcpss %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_rcp_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    rcpss %xmm0, %xmm0
 ; X64-NEXT:    retq
   %rcp = call <4 x float> @llvm.x86.sse.rcp.ss(<4 x float> %a0)
@@ -1216,12 +1216,12 @@ declare <4 x float> @llvm.x86.sse.rcp.ss(<4 x float>) nounwind readnone
 
 define <4 x float> @test_mm_rsqrt_ps(<4 x float> %a0) {
 ; X32-LABEL: test_mm_rsqrt_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    rsqrtps %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_rsqrt_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    rsqrtps %xmm0, %xmm0
 ; X64-NEXT:    retq
   %res = call <4 x float> @llvm.x86.sse.rsqrt.ps(<4 x float> %a0)
@@ -1231,12 +1231,12 @@ declare <4 x float> @llvm.x86.sse.rsqrt.ps(<4 x float>) nounwind readnone
 
 define <4 x float> @test_mm_rsqrt_ss(<4 x float> %a0) {
 ; X32-LABEL: test_mm_rsqrt_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    rsqrtss %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_rsqrt_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    rsqrtss %xmm0, %xmm0
 ; X64-NEXT:    retq
   %rsqrt = call <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float> %a0)
@@ -1254,7 +1254,7 @@ declare <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float>) nounwind readnone
 
 define void @test_MM_SET_EXCEPTION_MASK(i32 %a0) nounwind {
 ; X32-LABEL: test_MM_SET_EXCEPTION_MASK:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl %esp, %ecx
@@ -1268,7 +1268,7 @@ define void @test_MM_SET_EXCEPTION_MASK(i32 %a0) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_MM_SET_EXCEPTION_MASK:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:    stmxcsr (%rax)
 ; X64-NEXT:    movl -{{[0-9]+}}(%rsp), %ecx
@@ -1291,7 +1291,7 @@ declare void @llvm.x86.sse.ldmxcsr(i8*) nounwind readnone
 
 define void @test_MM_SET_EXCEPTION_STATE(i32 %a0) nounwind {
 ; X32-LABEL: test_MM_SET_EXCEPTION_STATE:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl %esp, %ecx
@@ -1305,7 +1305,7 @@ define void @test_MM_SET_EXCEPTION_STATE(i32 %a0) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_MM_SET_EXCEPTION_STATE:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:    stmxcsr (%rax)
 ; X64-NEXT:    movl -{{[0-9]+}}(%rsp), %ecx
@@ -1327,7 +1327,7 @@ define void @test_MM_SET_EXCEPTION_STATE(i32 %a0) nounwind {
 
 define void @test_MM_SET_FLUSH_ZERO_MODE(i32 %a0) nounwind {
 ; X32-LABEL: test_MM_SET_FLUSH_ZERO_MODE:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl %esp, %ecx
@@ -1341,7 +1341,7 @@ define void @test_MM_SET_FLUSH_ZERO_MODE(i32 %a0) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_MM_SET_FLUSH_ZERO_MODE:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:    stmxcsr (%rax)
 ; X64-NEXT:    movl -{{[0-9]+}}(%rsp), %ecx
@@ -1363,7 +1363,7 @@ define void @test_MM_SET_FLUSH_ZERO_MODE(i32 %a0) nounwind {
 
 define <4 x float> @test_mm_set_ps(float %a0, float %a1, float %a2, float %a3) nounwind {
 ; X32-LABEL: test_mm_set_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X32-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X32-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
@@ -1374,7 +1374,7 @@ define <4 x float> @test_mm_set_ps(float %a0, float %a1, float %a2, float %a3) n
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_set_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; X64-NEXT:    unpcklps {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
 ; X64-NEXT:    movlhps {{.*#+}} xmm3 = xmm3[0],xmm1[0]
@@ -1389,13 +1389,13 @@ define <4 x float> @test_mm_set_ps(float %a0, float %a1, float %a2, float %a3) n
 
 define <4 x float> @test_mm_set_ps1(float %a0) nounwind {
 ; X32-LABEL: test_mm_set_ps1:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_set_ps1:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; X64-NEXT:    retq
   %res0  = insertelement <4 x float> undef, float %a0, i32 0
@@ -1407,7 +1407,7 @@ define <4 x float> @test_mm_set_ps1(float %a0) nounwind {
 
 define void @test_MM_SET_ROUNDING_MODE(i32 %a0) nounwind {
 ; X32-LABEL: test_MM_SET_ROUNDING_MODE:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl %esp, %ecx
@@ -1421,7 +1421,7 @@ define void @test_MM_SET_ROUNDING_MODE(i32 %a0) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_MM_SET_ROUNDING_MODE:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:    stmxcsr (%rax)
 ; X64-NEXT:    movl -{{[0-9]+}}(%rsp), %ecx
@@ -1443,14 +1443,14 @@ define void @test_MM_SET_ROUNDING_MODE(i32 %a0) nounwind {
 
 define <4 x float> @test_mm_set_ss(float %a0) nounwind {
 ; X32-LABEL: test_mm_set_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X32-NEXT:    xorps %xmm0, %xmm0
 ; X32-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_set_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorps %xmm1, %xmm1
 ; X64-NEXT:    movss {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
 ; X64-NEXT:    movaps %xmm1, %xmm0
@@ -1464,13 +1464,13 @@ define <4 x float> @test_mm_set_ss(float %a0) nounwind {
 
 define <4 x float> @test_mm_set1_ps(float %a0) nounwind {
 ; X32-LABEL: test_mm_set1_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_set1_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; X64-NEXT:    retq
   %res0  = insertelement <4 x float> undef, float %a0, i32 0
@@ -1482,13 +1482,13 @@ define <4 x float> @test_mm_set1_ps(float %a0) nounwind {
 
 define void @test_mm_setcsr(i32 %a0) nounwind {
 ; X32-LABEL: test_mm_setcsr:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    ldmxcsr (%eax)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_setcsr:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:    movl %edi, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    ldmxcsr (%rax)
@@ -1502,7 +1502,7 @@ define void @test_mm_setcsr(i32 %a0) nounwind {
 
 define <4 x float> @test_mm_setr_ps(float %a0, float %a1, float %a2, float %a3) nounwind {
 ; X32-LABEL: test_mm_setr_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X32-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; X32-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
@@ -1513,7 +1513,7 @@ define <4 x float> @test_mm_setr_ps(float %a0, float %a1, float %a2, float %a3) 
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_setr_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
 ; X64-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X64-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm2[0]
@@ -1527,12 +1527,12 @@ define <4 x float> @test_mm_setr_ps(float %a0, float %a1, float %a2, float %a3) 
 
 define <4 x float> @test_mm_setzero_ps() {
 ; X32-LABEL: test_mm_setzero_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    xorps %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_setzero_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorps %xmm0, %xmm0
 ; X64-NEXT:    retq
   ret <4 x float> zeroinitializer
@@ -1540,12 +1540,12 @@ define <4 x float> @test_mm_setzero_ps() {
 
 define void @test_mm_sfence() nounwind {
 ; X32-LABEL: test_mm_sfence:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    sfence
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_sfence:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    sfence
 ; X64-NEXT:    retq
   call void @llvm.x86.sse.sfence()
@@ -1555,12 +1555,12 @@ declare void @llvm.x86.sse.sfence() nounwind readnone
 
 define <4 x float> @test_mm_shuffle_ps(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_shuffle_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0],xmm1[0,0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_shuffle_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0],xmm1[0,0]
 ; X64-NEXT:    retq
   %res = shufflevector <4 x float> %a0, <4 x float> %a1, <4 x i32> <i32 0, i32 0, i32 4, i32 4>
@@ -1569,12 +1569,12 @@ define <4 x float> @test_mm_shuffle_ps(<4 x float> %a0, <4 x float> %a1) nounwin
 
 define <4 x float> @test_mm_sqrt_ps(<4 x float> %a0) {
 ; X32-LABEL: test_mm_sqrt_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    sqrtps %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_sqrt_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    sqrtps %xmm0, %xmm0
 ; X64-NEXT:    retq
   %res = call <4 x float> @llvm.x86.sse.sqrt.ps(<4 x float> %a0)
@@ -1584,12 +1584,12 @@ declare <4 x float> @llvm.x86.sse.sqrt.ps(<4 x float>) nounwind readnone
 
 define <4 x float> @test_mm_sqrt_ss(<4 x float> %a0) {
 ; X32-LABEL: test_mm_sqrt_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    sqrtss %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_sqrt_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    sqrtss %xmm0, %xmm0
 ; X64-NEXT:    retq
   %sqrt = call <4 x float> @llvm.x86.sse.sqrt.ss(<4 x float> %a0)
@@ -1607,13 +1607,13 @@ declare <4 x float> @llvm.x86.sse.sqrt.ss(<4 x float>) nounwind readnone
 
 define void @test_mm_store_ps(float *%a0, <4 x float> %a1) {
 ; X32-LABEL: test_mm_store_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movaps %xmm0, (%eax)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_store_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movaps %xmm0, (%rdi)
 ; X64-NEXT:    retq
   %arg0 = bitcast float* %a0 to <4 x float>*
@@ -1623,14 +1623,14 @@ define void @test_mm_store_ps(float *%a0, <4 x float> %a1) {
 
 define void @test_mm_store_ps1(float *%a0, <4 x float> %a1) {
 ; X32-LABEL: test_mm_store_ps1:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; X32-NEXT:    movaps %xmm0, (%eax)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_store_ps1:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; X64-NEXT:    movaps %xmm0, (%rdi)
 ; X64-NEXT:    retq
@@ -1642,13 +1642,13 @@ define void @test_mm_store_ps1(float *%a0, <4 x float> %a1) {
 
 define void @test_mm_store_ss(float *%a0, <4 x float> %a1) {
 ; X32-LABEL: test_mm_store_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movss %xmm0, (%eax)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_store_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movss %xmm0, (%rdi)
 ; X64-NEXT:    retq
   %ext = extractelement <4 x float> %a1, i32 0
@@ -1658,14 +1658,14 @@ define void @test_mm_store_ss(float *%a0, <4 x float> %a1) {
 
 define void @test_mm_store1_ps(float *%a0, <4 x float> %a1) {
 ; X32-LABEL: test_mm_store1_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; X32-NEXT:    movaps %xmm0, (%eax)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_store1_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; X64-NEXT:    movaps %xmm0, (%rdi)
 ; X64-NEXT:    retq
@@ -1677,7 +1677,7 @@ define void @test_mm_store1_ps(float *%a0, <4 x float> %a1) {
 
 define void @test_mm_storeh_ps(x86_mmx *%a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_storeh_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebp
 ; X32-NEXT:    movl %esp, %ebp
 ; X32-NEXT:    andl $-16, %esp
@@ -1693,7 +1693,7 @@ define void @test_mm_storeh_ps(x86_mmx *%a0, <4 x float> %a1) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_storeh_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:    movq %rax, (%rdi)
@@ -1707,7 +1707,7 @@ define void @test_mm_storeh_ps(x86_mmx *%a0, <4 x float> %a1) nounwind {
 
 define void @test_mm_storel_ps(x86_mmx *%a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_storel_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebp
 ; X32-NEXT:    movl %esp, %ebp
 ; X32-NEXT:    andl $-16, %esp
@@ -1723,7 +1723,7 @@ define void @test_mm_storel_ps(x86_mmx *%a0, <4 x float> %a1) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_storel_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:    movq %rax, (%rdi)
@@ -1737,14 +1737,14 @@ define void @test_mm_storel_ps(x86_mmx *%a0, <4 x float> %a1) nounwind {
 
 define void @test_mm_storer_ps(float *%a0, <4 x float> %a1) {
 ; X32-LABEL: test_mm_storer_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,2,1,0]
 ; X32-NEXT:    movaps %xmm0, (%eax)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_storer_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,2,1,0]
 ; X64-NEXT:    movaps %xmm0, (%rdi)
 ; X64-NEXT:    retq
@@ -1756,13 +1756,13 @@ define void @test_mm_storer_ps(float *%a0, <4 x float> %a1) {
 
 define void @test_mm_storeu_ps(float *%a0, <4 x float> %a1) {
 ; X32-LABEL: test_mm_storeu_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movups %xmm0, (%eax)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_storeu_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movups %xmm0, (%rdi)
 ; X64-NEXT:    retq
   %arg0 = bitcast float* %a0 to <4 x float>*
@@ -1772,13 +1772,13 @@ define void @test_mm_storeu_ps(float *%a0, <4 x float> %a1) {
 
 define void @test_mm_stream_ps(float *%a0, <4 x float> %a1) {
 ; X32-LABEL: test_mm_stream_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movntps %xmm0, (%eax)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_stream_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movntps %xmm0, (%rdi)
 ; X64-NEXT:    retq
   %arg0 = bitcast float* %a0 to <4 x float>*
@@ -1788,12 +1788,12 @@ define void @test_mm_stream_ps(float *%a0, <4 x float> %a1) {
 
 define <4 x float> @test_mm_sub_ps(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_sub_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    subps %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_sub_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    subps %xmm1, %xmm0
 ; X64-NEXT:    retq
   %res = fsub <4 x float> %a0, %a1
@@ -1802,12 +1802,12 @@ define <4 x float> @test_mm_sub_ps(<4 x float> %a0, <4 x float> %a1) nounwind {
 
 define <4 x float> @test_mm_sub_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_sub_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    subss %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_sub_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    subss %xmm1, %xmm0
 ; X64-NEXT:    retq
   %ext0 = extractelement <4 x float> %a0, i32 0
@@ -1819,7 +1819,7 @@ define <4 x float> @test_mm_sub_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 
 define void @test_MM_TRANSPOSE4_PS(<4 x float>* %a0, <4 x float>* %a1, <4 x float>* %a2, <4 x float>* %a3) nounwind {
 ; X32-LABEL: test_MM_TRANSPOSE4_PS:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -1849,7 +1849,7 @@ define void @test_MM_TRANSPOSE4_PS(<4 x float>* %a0, <4 x float>* %a1, <4 x floa
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_MM_TRANSPOSE4_PS:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movaps (%rdi), %xmm0
 ; X64-NEXT:    movaps (%rsi), %xmm1
 ; X64-NEXT:    movaps (%rdx), %xmm2
@@ -1892,7 +1892,7 @@ define void @test_MM_TRANSPOSE4_PS(<4 x float>* %a0, <4 x float>* %a1, <4 x floa
 
 define i32 @test_mm_ucomieq_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_ucomieq_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    ucomiss %xmm1, %xmm0
 ; X32-NEXT:    setnp %al
 ; X32-NEXT:    sete %cl
@@ -1901,7 +1901,7 @@ define i32 @test_mm_ucomieq_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_ucomieq_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    ucomiss %xmm1, %xmm0
 ; X64-NEXT:    setnp %al
 ; X64-NEXT:    sete %cl
@@ -1915,14 +1915,14 @@ declare i32 @llvm.x86.sse.ucomieq.ss(<4 x float>, <4 x float>) nounwind readnone
 
 define i32 @test_mm_ucomige_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_ucomige_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    xorl %eax, %eax
 ; X32-NEXT:    ucomiss %xmm1, %xmm0
 ; X32-NEXT:    setae %al
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_ucomige_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    ucomiss %xmm1, %xmm0
 ; X64-NEXT:    setae %al
@@ -1934,14 +1934,14 @@ declare i32 @llvm.x86.sse.ucomige.ss(<4 x float>, <4 x float>) nounwind readnone
 
 define i32 @test_mm_ucomigt_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_ucomigt_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    xorl %eax, %eax
 ; X32-NEXT:    ucomiss %xmm1, %xmm0
 ; X32-NEXT:    seta %al
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_ucomigt_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    ucomiss %xmm1, %xmm0
 ; X64-NEXT:    seta %al
@@ -1953,14 +1953,14 @@ declare i32 @llvm.x86.sse.ucomigt.ss(<4 x float>, <4 x float>) nounwind readnone
 
 define i32 @test_mm_ucomile_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_ucomile_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    xorl %eax, %eax
 ; X32-NEXT:    ucomiss %xmm0, %xmm1
 ; X32-NEXT:    setae %al
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_ucomile_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    ucomiss %xmm0, %xmm1
 ; X64-NEXT:    setae %al
@@ -1972,14 +1972,14 @@ declare i32 @llvm.x86.sse.ucomile.ss(<4 x float>, <4 x float>) nounwind readnone
 
 define i32 @test_mm_ucomilt_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_ucomilt_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    xorl %eax, %eax
 ; X32-NEXT:    ucomiss %xmm0, %xmm1
 ; X32-NEXT:    seta %al
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_ucomilt_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    ucomiss %xmm0, %xmm1
 ; X64-NEXT:    seta %al
@@ -1991,7 +1991,7 @@ declare i32 @llvm.x86.sse.ucomilt.ss(<4 x float>, <4 x float>) nounwind readnone
 
 define i32 @test_mm_ucomineq_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_ucomineq_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    ucomiss %xmm1, %xmm0
 ; X32-NEXT:    setp %al
 ; X32-NEXT:    setne %cl
@@ -2000,7 +2000,7 @@ define i32 @test_mm_ucomineq_ss(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_ucomineq_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    ucomiss %xmm1, %xmm0
 ; X64-NEXT:    setp %al
 ; X64-NEXT:    setne %cl
@@ -2014,23 +2014,23 @@ declare i32 @llvm.x86.sse.ucomineq.ss(<4 x float>, <4 x float>) nounwind readnon
 
 define <4 x float> @test_mm_undefined_ps() {
 ; X32-LABEL: test_mm_undefined_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_undefined_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    retq
   ret <4 x float> undef
 }
 
 define <4 x float> @test_mm_unpackhi_ps(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_unpackhi_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    unpckhps {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_unpackhi_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    unpckhps {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; X64-NEXT:    retq
   %res = shufflevector <4 x float> %a0, <4 x float> %a1, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
@@ -2039,12 +2039,12 @@ define <4 x float> @test_mm_unpackhi_ps(<4 x float> %a0, <4 x float> %a1) nounwi
 
 define <4 x float> @test_mm_unpacklo_ps(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_unpacklo_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_unpacklo_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X64-NEXT:    retq
   %res = shufflevector <4 x float> %a0, <4 x float> %a1, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
@@ -2053,12 +2053,12 @@ define <4 x float> @test_mm_unpacklo_ps(<4 x float> %a0, <4 x float> %a1) nounwi
 
 define <4 x float> @test_mm_xor_ps(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; X32-LABEL: test_mm_xor_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    xorps %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_xor_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorps %xmm1, %xmm0
 ; X64-NEXT:    retq
   %arg0 = bitcast <4 x float> %a0 to <4 x i32>

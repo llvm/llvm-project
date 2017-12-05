@@ -111,7 +111,7 @@
 //
 //   DFG dump:[
 //   f1: Function foo
-//   b2: === BB#0 === preds(0), succs(0):
+//   b2: === %bb.0 === preds(0), succs(0):
 //   p3: phi [d4<r0>(,d12,u9):]
 //   p5: phi [d6<r1>(,,u10):]
 //   s7: add [d8<r2>(,,u13):, u9<r0>(d4):, u10<r1>(d6):]

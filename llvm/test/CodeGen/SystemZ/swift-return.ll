@@ -39,9 +39,8 @@ declare swiftcc { i16, i8 } @gen(i32)
 ; in memroy. The caller provides space for the return value and passes
 ; the address in %r2. The first input argument will be in %r3.
 ; CHECK-LABEL: test2:
-; CHECK: lr %[[REG1:r[0-9]+]], %r2
+; CHECK: lr %r3, %r2
 ; CHECK-DAG: la %r2, 160(%r15)
-; CHECK-DAG: lr %r3, %[[REG1]]
 ; CHECK: brasl %r14, gen2
 ; CHECK: l %r2, 160(%r15)
 ; CHECK: a %r2, 164(%r15)

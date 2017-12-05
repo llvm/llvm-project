@@ -5,10 +5,10 @@ declare void @bar()
 
 define void @test1(i32* nocapture %X) nounwind minsize {
 ; CHECK-LABEL: test1:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpb $47, (%rdi)
 ; CHECK-NEXT:    je bar # TAILCALL
-; CHECK-NEXT:  # BB#1: # %if.end
+; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    retq
 entry:
   %tmp1 = load i32, i32* %X, align 4
@@ -26,10 +26,10 @@ if.end:
 
 define void @test2(i32 %X) nounwind minsize {
 ; CHECK-LABEL: test2:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpb $47, %dil
 ; CHECK-NEXT:    je bar # TAILCALL
-; CHECK-NEXT:  # BB#1: # %if.end
+; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    retq
 entry:
   %and = and i32 %X, 255
@@ -46,10 +46,10 @@ if.end:
 
 define void @test3(i32 %X) nounwind minsize {
 ; CHECK-LABEL: test3:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpb $-1, %dil
 ; CHECK-NEXT:    je bar # TAILCALL
-; CHECK-NEXT:  # BB#1: # %if.end
+; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    retq
 entry:
   %and = and i32 %X, 255
@@ -67,11 +67,11 @@ if.end:
 ; PR16083
 define i1 @test4(i64 %a, i32 %b) {
 ; CHECK-LABEL: test4:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    testl %esi, %esi
 ; CHECK-NEXT:    je .LBB3_1
-; CHECK-NEXT:  # BB#2: # %lor.end
+; CHECK-NEXT:  # %bb.2: # %lor.end
 ; CHECK-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB3_1: # %lor.rhs
@@ -97,14 +97,14 @@ lor.end:                                          ; preds = %lor.rhs, %entry
 ; PR16551
 define void @test5(i32 %X) nounwind minsize {
 ; CHECK-LABEL: test5:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movzbl x+{{.*}}(%rip), %eax
 ; CHECK-NEXT:    shll $16, %eax
 ; CHECK-NEXT:    movzwl x+{{.*}}(%rip), %ecx
 ; CHECK-NEXT:    orl %eax, %ecx
 ; CHECK-NEXT:    cmpl $1, %ecx
 ; CHECK-NEXT:    jne bar # TAILCALL
-; CHECK-NEXT:  # BB#1: # %if.end
+; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    retq
 entry:
   %bf.load = load i56, i56* bitcast ({ i8, i8, i8, i8, i8, i8, i8, i8 }* @x to i56*), align 4
@@ -123,11 +123,11 @@ if.end:
 
 define void @test2_1(i32 %X) nounwind minsize {
 ; CHECK-LABEL: test2_1:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movzbl %dil, %eax
 ; CHECK-NEXT:    cmpl $256, %eax # imm = 0x100
 ; CHECK-NEXT:    je bar # TAILCALL
-; CHECK-NEXT:  # BB#1: # %if.end
+; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    retq
 entry:
   %and = and i32 %X, 255
@@ -144,10 +144,10 @@ if.end:
 
 define void @test_sext_i8_icmp_1(i8 %x) nounwind minsize {
 ; CHECK-LABEL: test_sext_i8_icmp_1:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpb $1, %dil
 ; CHECK-NEXT:    je bar # TAILCALL
-; CHECK-NEXT:  # BB#1: # %if.end
+; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    retq
 entry:
   %sext = sext i8 %x to i32
@@ -164,10 +164,10 @@ if.end:
 
 define void @test_sext_i8_icmp_47(i8 %x) nounwind minsize {
 ; CHECK-LABEL: test_sext_i8_icmp_47:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpb $47, %dil
 ; CHECK-NEXT:    je bar # TAILCALL
-; CHECK-NEXT:  # BB#1: # %if.end
+; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    retq
 entry:
   %sext = sext i8 %x to i32
@@ -184,10 +184,10 @@ if.end:
 
 define void @test_sext_i8_icmp_127(i8 %x) nounwind minsize {
 ; CHECK-LABEL: test_sext_i8_icmp_127:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpb $127, %dil
 ; CHECK-NEXT:    je bar # TAILCALL
-; CHECK-NEXT:  # BB#1: # %if.end
+; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    retq
 entry:
   %sext = sext i8 %x to i32
@@ -204,10 +204,10 @@ if.end:
 
 define void @test_sext_i8_icmp_neg1(i8 %x) nounwind minsize {
 ; CHECK-LABEL: test_sext_i8_icmp_neg1:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpb $-1, %dil
 ; CHECK-NEXT:    je bar # TAILCALL
-; CHECK-NEXT:  # BB#1: # %if.end
+; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    retq
 entry:
   %sext = sext i8 %x to i32
@@ -224,10 +224,10 @@ if.end:
 
 define void @test_sext_i8_icmp_neg2(i8 %x) nounwind minsize {
 ; CHECK-LABEL: test_sext_i8_icmp_neg2:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpb $-2, %dil
 ; CHECK-NEXT:    je bar # TAILCALL
-; CHECK-NEXT:  # BB#1: # %if.end
+; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    retq
 entry:
   %sext = sext i8 %x to i32
@@ -244,10 +244,10 @@ if.end:
 
 define void @test_sext_i8_icmp_neg127(i8 %x) nounwind minsize {
 ; CHECK-LABEL: test_sext_i8_icmp_neg127:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpb $-127, %dil
 ; CHECK-NEXT:    je bar # TAILCALL
-; CHECK-NEXT:  # BB#1: # %if.end
+; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    retq
 entry:
   %sext = sext i8 %x to i32
@@ -264,10 +264,10 @@ if.end:
 
 define void @test_sext_i8_icmp_neg128(i8 %x) nounwind minsize {
 ; CHECK-LABEL: test_sext_i8_icmp_neg128:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpb $-128, %dil
 ; CHECK-NEXT:    je bar # TAILCALL
-; CHECK-NEXT:  # BB#1: # %if.end
+; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    retq
 entry:
   %sext = sext i8 %x to i32
@@ -284,11 +284,11 @@ if.end:
 
 define void @test_sext_i8_icmp_255(i8 %x) nounwind minsize {
 ; CHECK-LABEL: test_sext_i8_icmp_255:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je bar # TAILCALL
-; CHECK-NEXT:  # BB#1: # %if.end
+; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    retq
 entry:
   %sext = sext i8 %x to i32

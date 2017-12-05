@@ -369,7 +369,7 @@ MachineInstr *SSACCmpConv::findConvertibleCompare(MachineBasicBlock *MBB) {
       return nullptr;
     }
   }
-  DEBUG(dbgs() << "Flags not defined in BB#" << MBB->getNumber() << '\n');
+  DEBUG(dbgs() << "Flags not defined in " << printMBBReference(*MBB) << '\n');
   return nullptr;
 }
 
@@ -383,7 +383,7 @@ bool SSACCmpConv::canSpeculateInstrs(MachineBasicBlock *MBB,
   // Reject any live-in physregs. It's probably NZCV/EFLAGS, and very hard to
   // get right.
   if (!MBB->livein_empty()) {
-    DEBUG(dbgs() << "BB#" << MBB->getNumber() << " has live-ins.\n");
+    DEBUG(dbgs() << printMBBReference(*MBB) << " has live-ins.\n");
     return false;
   }
 
@@ -396,7 +396,7 @@ bool SSACCmpConv::canSpeculateInstrs(MachineBasicBlock *MBB,
       continue;
 
     if (++InstrCount > BlockInstrLimit && !Stress) {
-      DEBUG(dbgs() << "BB#" << MBB->getNumber() << " has more than "
+      DEBUG(dbgs() << printMBBReference(*MBB) << " has more than "
                    << BlockInstrLimit << " instructions.\n");
       return false;
     }
@@ -458,8 +458,9 @@ bool SSACCmpConv::canConvert(MachineBasicBlock *MBB) {
     return false;
 
   // The CFG topology checks out.
-  DEBUG(dbgs() << "\nTriangle: BB#" << Head->getNumber() << " -> BB#"
-               << CmpBB->getNumber() << " -> BB#" << Tail->getNumber() << '\n');
+  DEBUG(dbgs() << "\nTriangle: " << printMBBReference(*Head) << " -> "
+               << printMBBReference(*CmpBB) << " -> "
+               << printMBBReference(*Tail) << '\n');
   ++NumConsidered;
 
   // Tail is allowed to have many predecessors, but we can't handle PHIs yet.
@@ -562,8 +563,9 @@ bool SSACCmpConv::canConvert(MachineBasicBlock *MBB) {
 }
 
 void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
-  DEBUG(dbgs() << "Merging BB#" << CmpBB->getNumber() << " into BB#"
-               << Head->getNumber() << ":\n" << *CmpBB);
+  DEBUG(dbgs() << "Merging " << printMBBReference(*CmpBB) << " into "
+               << printMBBReference(*Head) << ":\n"
+               << *CmpBB);
 
   // All CmpBB instructions are moved into Head, and CmpBB is deleted.
   // Update the CFG first.

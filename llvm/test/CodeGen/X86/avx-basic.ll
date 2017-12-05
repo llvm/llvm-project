@@ -7,7 +7,7 @@
 
 define void @zero128() nounwind ssp {
 ; CHECK-LABEL: zero128:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    movq _z@{{.*}}(%rip), %rax
 ; CHECK-NEXT:    vmovaps %xmm0, (%rax)
@@ -18,7 +18,7 @@ define void @zero128() nounwind ssp {
 
 define void @zero256() nounwind ssp {
 ; CHECK-LABEL: zero256:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movq _x@{{.*}}(%rip), %rax
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovaps %ymm0, (%rax)
@@ -33,7 +33,7 @@ define void @zero256() nounwind ssp {
 
 define void @ones([0 x float]* nocapture %RET, [0 x float]* nocapture %aFOO) nounwind {
 ; CHECK-LABEL: ones:
-; CHECK:       ## BB#0: ## %allocas
+; CHECK:       ## %bb.0: ## %allocas
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
 ; CHECK-NEXT:    vmovaps %ymm0, (%rdi)
@@ -50,7 +50,7 @@ float>* %ptr2vec615, align 32
 
 define void @ones2([0 x i32]* nocapture %RET, [0 x i32]* nocapture %aFOO) nounwind {
 ; CHECK-LABEL: ones2:
-; CHECK:       ## BB#0: ## %allocas
+; CHECK:       ## %bb.0: ## %allocas
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
 ; CHECK-NEXT:    vmovaps %ymm0, (%rdi)
@@ -65,7 +65,7 @@ allocas:
 ;;; Just make sure this doesn't crash
 define <4 x i64> @ISelCrash(<4 x i64> %a) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: ISelCrash:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; CHECK-NEXT:    retq
   %shuffle = shufflevector <4 x i64> %a, <4 x i64> undef, <4 x i32> <i32 2, i32 3, i32 4, i32 4>
@@ -75,7 +75,7 @@ define <4 x i64> @ISelCrash(<4 x i64> %a) nounwind uwtable readnone ssp {
 ;;; Don't crash on movd
 define <8 x i32> @VMOVZQI2PQI([0 x float]* nocapture %aFOO) nounwind {
 ; CHECK-LABEL: VMOVZQI2PQI:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,1,1]
 ; CHECK-NEXT:    retq
@@ -92,7 +92,7 @@ define <8 x i32> @VMOVZQI2PQI([0 x float]* nocapture %aFOO) nounwind {
 ; rdar://10566486
 define <16 x float> @fneg(<16 x float> %a) nounwind {
 ; CHECK-LABEL: fneg:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vmovaps {{.*#+}} ymm2 = [-0.000000e+00,-0.000000e+00,-0.000000e+00,-0.000000e+00,-0.000000e+00,-0.000000e+00,-0.000000e+00,-0.000000e+00]
 ; CHECK-NEXT:    vxorps %ymm2, %ymm0, %ymm0
 ; CHECK-NEXT:    vxorps %ymm2, %ymm1, %ymm1
@@ -104,7 +104,7 @@ define <16 x float> @fneg(<16 x float> %a) nounwind {
 ;;; Don't crash on build vector
 define <16 x i16> @build_vec_16x16(i16 %a) nounwind readonly {
 ; CHECK-LABEL: build_vec_16x16:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movzwl %di, %eax
 ; CHECK-NEXT:    vmovd %eax, %xmm0
 ; CHECK-NEXT:    retq
@@ -116,7 +116,7 @@ define <16 x i16> @build_vec_16x16(i16 %a) nounwind readonly {
 ;;; an incorrect mnemonic of "movd" was printed for this instruction.
 define i64 @VMOVPQIto64rr(<2 x i64> %a) {
 ; CHECK-LABEL: VMOVPQIto64rr:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vmovq %xmm0, %rax
 ; CHECK-NEXT:    retq
   %vecext.i = extractelement <2 x i64> %a, i32 0
@@ -126,7 +126,7 @@ define i64 @VMOVPQIto64rr(<2 x i64> %a) {
 ; PR22685
 define <8 x float> @mov00_8f32(float* %ptr) {
 ; CHECK-LABEL: mov00_8f32:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    retq
   %val = load float, float* %ptr

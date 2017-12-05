@@ -157,7 +157,6 @@ public:
   void print(const MachineBasicBlock &MBB);
 
   void print(const MachineInstr &MI);
-  void printMBBReference(const MachineBasicBlock &MBB);
   void printIRBlockReference(const BasicBlock &BB);
   void printIRValueReference(const Value &V);
   void printStackObjectReference(int FrameIndex);
@@ -338,13 +337,11 @@ void MIRPrinter::convert(ModuleSlotTracker &MST,
   YamlMFI.HasMustTailInVarArgFunc = MFI.hasMustTailInVarArgFunc();
   if (MFI.getSavePoint()) {
     raw_string_ostream StrOS(YamlMFI.SavePoint.Value);
-    MIPrinter(StrOS, MST, RegisterMaskIds, StackObjectOperandMapping)
-        .printMBBReference(*MFI.getSavePoint());
+    StrOS << printMBBReference(*MFI.getSavePoint());
   }
   if (MFI.getRestorePoint()) {
     raw_string_ostream StrOS(YamlMFI.RestorePoint.Value);
-    MIPrinter(StrOS, MST, RegisterMaskIds, StackObjectOperandMapping)
-        .printMBBReference(*MFI.getRestorePoint());
+    StrOS << printMBBReference(*MFI.getRestorePoint());
   }
 }
 
@@ -493,8 +490,7 @@ void MIRPrinter::convert(ModuleSlotTracker &MST,
     Entry.ID = ID++;
     for (const auto *MBB : Table.MBBs) {
       raw_string_ostream StrOS(Str);
-      MIPrinter(StrOS, MST, RegisterMaskIds, StackObjectOperandMapping)
-          .printMBBReference(*MBB);
+      StrOS << printMBBReference(*MBB);
       Entry.Blocks.push_back(StrOS.str());
       Str.clear();
     }
@@ -616,7 +612,7 @@ void MIPrinter::print(const MachineBasicBlock &MBB) {
     for (auto I = MBB.succ_begin(), E = MBB.succ_end(); I != E; ++I) {
       if (I != MBB.succ_begin())
         OS << ", ";
-      printMBBReference(**I);
+      OS << printMBBReference(**I);
       if (!SimplifyMIR || !canPredictProbs)
         OS << '('
            << format("0x%08" PRIx32, MBB.getSuccProbability(I).getNumerator())
@@ -761,14 +757,6 @@ void MIPrinter::print(const MachineInstr &MI) {
       print(Context, *TII, *Op);
       NeedComma = true;
     }
-  }
-}
-
-void MIPrinter::printMBBReference(const MachineBasicBlock &MBB) {
-  OS << "%bb." << MBB.getNumber();
-  if (const auto *BB = MBB.getBasicBlock()) {
-    if (BB->hasName())
-      OS << '.' << BB->getName();
   }
 }
 
@@ -967,7 +955,7 @@ void MIPrinter::print(const MachineInstr &MI, unsigned OpIdx,
     Op.getFPImm()->printAsOperand(OS, /*PrintType=*/true, MST);
     break;
   case MachineOperand::MO_MachineBasicBlock:
-    printMBBReference(*Op.getMBB());
+    OS << printMBBReference(*Op.getMBB());
     break;
   case MachineOperand::MO_FrameIndex:
     printStackObjectReference(Op.getIndex());

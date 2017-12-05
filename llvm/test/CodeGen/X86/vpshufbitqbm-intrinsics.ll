@@ -4,7 +4,7 @@
 declare i16 @llvm.x86.avx512.mask.vpshufbitqmb.128(<16 x i8> %a, <16 x i8> %b, i16 %mask)
 define i16 @test_vpshufbitqmb_128(<16 x i8> %a, <16 x i8> %b, i16 %mask) {
 ; CHECK-LABEL: test_vpshufbitqmb_128:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    vpshufbitqmb %xmm1, %xmm0, %k0 {%k1}
 ; CHECK-NEXT:    kmovd %k0, %eax
@@ -17,7 +17,7 @@ define i16 @test_vpshufbitqmb_128(<16 x i8> %a, <16 x i8> %b, i16 %mask) {
 declare i32 @llvm.x86.avx512.mask.vpshufbitqmb.256(<32 x i8> %a, <32 x i8> %b, i32 %mask)
 define i32 @test_vpshufbitqmb_256(<32 x i8> %a, <32 x i8> %b, i32 %mask) {
 ; CHECK-LABEL: test_vpshufbitqmb_256:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    vpshufbitqmb %ymm1, %ymm0, %k0 {%k1}
 ; CHECK-NEXT:    kmovd %k0, %eax
@@ -30,7 +30,7 @@ define i32 @test_vpshufbitqmb_256(<32 x i8> %a, <32 x i8> %b, i32 %mask) {
 declare i64 @llvm.x86.avx512.mask.vpshufbitqmb.512(<64 x i8> %a, <64 x i8> %b, i64 %mask)
 define i64 @test_vpshufbitqmb_512(<64 x i8> %a, <64 x i8> %b, i64 %mask) {
 ; CHECK-LABEL: test_vpshufbitqmb_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovq %rdi, %k1
 ; CHECK-NEXT:    vpshufbitqmb %zmm1, %zmm0, %k0 {%k1}
 ; CHECK-NEXT:    kmovq %k0, %rax

@@ -9,12 +9,12 @@ declare <4 x i32> @llvm.x86.sse41.pmaxsd(<4 x i32>, <4 x i32>)
 
 define <4 x i32> @PR27924_cmpeq(<4 x i32> %a, <4 x i32> %b) {
 ; SSE-LABEL: PR27924_cmpeq:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: PR27924_cmpeq:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %cmp = icmp sgt <4 x i32> %a, %b
@@ -27,12 +27,12 @@ define <4 x i32> @PR27924_cmpeq(<4 x i32> %a, <4 x i32> %b) {
 
 define <4 x i32> @PR27924_cmpgt(<4 x i32> %a, <4 x i32> %b) {
 ; SSE-LABEL: PR27924_cmpgt:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    xorps %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: PR27924_cmpgt:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %cmp = icmp sgt <4 x i32> %a, %b

@@ -20,20 +20,20 @@ name:            uncondbr
 alignment:       4
 legalized:       true
 regBankSelected: true
-# CHECK:     JMP_1 %bb.2.bb2
-# CHECK:     JMP_1 %bb.1.end
+# CHECK:     JMP_1 %bb.2
+# CHECK:     JMP_1 %bb.1
 body:             |
   bb.1.entry:
-    successors: %bb.3.bb2(0x80000000)
+    successors: %bb.3(0x80000000)
 
-    G_BR %bb.3.bb2
+    G_BR %bb.3
 
   bb.2.end:
     RET 0
 
   bb.3.bb2:
-    successors: %bb.2.end(0x80000000)
+    successors: %bb.2(0x80000000)
 
-    G_BR %bb.2.end
+    G_BR %bb.2
 
 ...

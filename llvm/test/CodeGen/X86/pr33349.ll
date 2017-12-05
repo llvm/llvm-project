@@ -7,7 +7,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
  define void @test(<4 x i1> %m, <4 x x86_fp80> %v, <4 x x86_fp80>*%p) local_unnamed_addr {
 ; KNL-LABEL: test:
-; KNL:       # BB#0: # %bb
+; KNL:       # %bb.0: # %bb
 ; KNL-NEXT:    vpextrb $0, %xmm0, %eax
 ; KNL-NEXT:    testb $1, %al
 ; KNL-NEXT:    fld1
@@ -37,7 +37,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test:
-; SKX:       # BB#0: # %bb
+; SKX:       # %bb.0: # %bb
 ; SKX-NEXT:    vpslld $31, %xmm0, %xmm0
 ; SKX-NEXT:    vptestmd %xmm0, %xmm0, %k0
 ; SKX-NEXT:    kshiftrw $2, %k0, %k1

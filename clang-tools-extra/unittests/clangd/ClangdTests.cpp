@@ -124,7 +124,6 @@ protected:
     MockCompilationDatabase CDB;
     ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
                         /*StorePreamblesInMemory=*/true,
-                        clangd::CodeCompleteOptions(),
                         EmptyLogger::getInstance());
     for (const auto &FileWithContents : ExtraFiles)
       FS.Files[getVirtualTestFilePath(FileWithContents.first)] =
@@ -189,7 +188,6 @@ TEST_F(ClangdVFSTest, Reparse) {
   MockCompilationDatabase CDB;
   ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
                       /*StorePreamblesInMemory=*/true,
-                      clangd::CodeCompleteOptions(),
                       EmptyLogger::getInstance());
 
   const auto SourceContents = R"cpp(
@@ -236,7 +234,6 @@ TEST_F(ClangdVFSTest, ReparseOnHeaderChange) {
 
   ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
                       /*StorePreamblesInMemory=*/true,
-                      clangd::CodeCompleteOptions(),
                       EmptyLogger::getInstance());
 
   const auto SourceContents = R"cpp(
@@ -286,7 +283,6 @@ TEST_F(ClangdVFSTest, CheckVersions) {
   ClangdServer Server(CDB, DiagConsumer, FS,
                       /*AsyncThreadsCount=*/0,
                       /*StorePreamblesInMemory=*/true,
-                      clangd::CodeCompleteOptions(),
                       EmptyLogger::getInstance());
 
   auto FooCpp = getVirtualTestFilePath("foo.cpp");
@@ -294,17 +290,22 @@ TEST_F(ClangdVFSTest, CheckVersions) {
   FS.Files[FooCpp] = SourceContents;
   FS.ExpectedFile = FooCpp;
 
+  // Use default completion options.
+  clangd::CodeCompleteOptions CCOpts;
+
   // No need to sync reparses, because requests are processed on the calling
   // thread.
   FS.Tag = "123";
   Server.addDocument(FooCpp, SourceContents);
-  EXPECT_EQ(Server.codeComplete(FooCpp, Position{0, 0}).get().Tag, FS.Tag);
+  EXPECT_EQ(Server.codeComplete(FooCpp, Position{0, 0}, CCOpts).get().Tag,
+            FS.Tag);
   EXPECT_EQ(DiagConsumer.lastVFSTag(), FS.Tag);
 
   FS.Tag = "321";
   Server.addDocument(FooCpp, SourceContents);
   EXPECT_EQ(DiagConsumer.lastVFSTag(), FS.Tag);
-  EXPECT_EQ(Server.codeComplete(FooCpp, Position{0, 0}).get().Tag, FS.Tag);
+  EXPECT_EQ(Server.codeComplete(FooCpp, Position{0, 0}, CCOpts).get().Tag,
+            FS.Tag);
 }
 
 // Only enable this test on Unix
@@ -322,7 +323,6 @@ TEST_F(ClangdVFSTest, SearchLibDir) {
   ClangdServer Server(CDB, DiagConsumer, FS,
                       /*AsyncThreadsCount=*/0,
                       /*StorePreamblesInMemory=*/true,
-                      clangd::CodeCompleteOptions(),
                       EmptyLogger::getInstance());
 
   // Just a random gcc version string
@@ -373,7 +373,6 @@ TEST_F(ClangdVFSTest, ForceReparseCompileCommand) {
   ClangdServer Server(CDB, DiagConsumer, FS,
                       /*AsyncThreadsCount=*/0,
                       /*StorePreamblesInMemory=*/true,
-                      clangd::CodeCompleteOptions(),
                       EmptyLogger::getInstance());
   // No need to sync reparses, because reparses are performed on the calling
   // thread to true.
@@ -515,7 +514,6 @@ int d;
     MockCompilationDatabase CDB;
     ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
                         /*StorePreamblesInMemory=*/true,
-                        clangd::CodeCompleteOptions(),
                         EmptyLogger::getInstance());
 
     // Prepare some random distributions for the test.
@@ -609,7 +607,10 @@ int d;
       // requests as opposed to AddDocument/RemoveDocument, which are implicitly
       // cancelled by any subsequent AddDocument/RemoveDocument request to the
       // same file.
-      Server.codeComplete(FilePaths[FileIndex], Pos).wait();
+      Server
+          .codeComplete(FilePaths[FileIndex], Pos,
+                        clangd::CodeCompleteOptions())
+          .wait();
     };
 
     auto FindDefinitionsRequest = [&]() {
@@ -676,7 +677,6 @@ TEST_F(ClangdVFSTest, CheckSourceHeaderSwitch) {
 
   ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
                       /*StorePreamblesInMemory=*/true,
-                      clangd::CodeCompleteOptions(),
                       EmptyLogger::getInstance());
 
   auto SourceContents = R"cpp(
@@ -803,7 +803,6 @@ int d;
 
   MockCompilationDatabase CDB;
   ClangdServer Server(CDB, DiagConsumer, FS, 4, /*StorePreamblesInMemory=*/true,
-                      clangd::CodeCompleteOptions(),
                       EmptyLogger::getInstance());
   Server.addDocument(FooCpp, SourceContentsWithErrors);
   StartSecondReparse.wait();

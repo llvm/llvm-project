@@ -6,7 +6,7 @@
 
 define i64 @atomic_max_i64() nounwind {
 ; LINUX-LABEL: atomic_max_i64:
-; LINUX:       # BB#0: # %entry
+; LINUX:       # %bb.0: # %entry
 ; LINUX-NEXT:    pushl %ebx
 ; LINUX-NEXT:    pushl %esi
 ; LINUX-NEXT:    movl sc64+4, %edx
@@ -24,13 +24,13 @@ define i64 @atomic_max_i64() nounwind {
 ; LINUX-NEXT:    cmovll %eax, %ebx
 ; LINUX-NEXT:    lock cmpxchg8b sc64
 ; LINUX-NEXT:    jne .LBB0_1
-; LINUX-NEXT:  # BB#2: # %atomicrmw.end
+; LINUX-NEXT:  # %bb.2: # %atomicrmw.end
 ; LINUX-NEXT:    popl %esi
 ; LINUX-NEXT:    popl %ebx
 ; LINUX-NEXT:    retl
 ;
 ; PIC-LABEL: atomic_max_i64:
-; PIC:       ## BB#0: ## %entry
+; PIC:       ## %bb.0: ## %entry
 ; PIC-NEXT:    pushl %ebx
 ; PIC-NEXT:    pushl %edi
 ; PIC-NEXT:    pushl %esi
@@ -53,7 +53,7 @@ define i64 @atomic_max_i64() nounwind {
 ; PIC-NEXT:    cmovll %eax, %ebx
 ; PIC-NEXT:    lock cmpxchg8b (%esi)
 ; PIC-NEXT:    jne LBB0_1
-; PIC-NEXT:  ## BB#2: ## %atomicrmw.end
+; PIC-NEXT:  ## %bb.2: ## %atomicrmw.end
 ; PIC-NEXT:    popl %esi
 ; PIC-NEXT:    popl %edi
 ; PIC-NEXT:    popl %ebx
@@ -66,7 +66,7 @@ entry:
 
 define i64 @atomic_min_i64() nounwind {
 ; LINUX-LABEL: atomic_min_i64:
-; LINUX:       # BB#0: # %entry
+; LINUX:       # %bb.0: # %entry
 ; LINUX-NEXT:    pushl %ebx
 ; LINUX-NEXT:    movl sc64+4, %edx
 ; LINUX-NEXT:    movl sc64, %eax
@@ -82,12 +82,12 @@ define i64 @atomic_min_i64() nounwind {
 ; LINUX-NEXT:    cmovll %eax, %ebx
 ; LINUX-NEXT:    lock cmpxchg8b sc64
 ; LINUX-NEXT:    jne .LBB1_1
-; LINUX-NEXT:  # BB#2: # %atomicrmw.end
+; LINUX-NEXT:  # %bb.2: # %atomicrmw.end
 ; LINUX-NEXT:    popl %ebx
 ; LINUX-NEXT:    retl
 ;
 ; PIC-LABEL: atomic_min_i64:
-; PIC:       ## BB#0: ## %entry
+; PIC:       ## %bb.0: ## %entry
 ; PIC-NEXT:    pushl %ebx
 ; PIC-NEXT:    pushl %esi
 ; PIC-NEXT:    calll L1$pb
@@ -108,7 +108,7 @@ define i64 @atomic_min_i64() nounwind {
 ; PIC-NEXT:    cmovll %eax, %ebx
 ; PIC-NEXT:    lock cmpxchg8b (%esi)
 ; PIC-NEXT:    jne LBB1_1
-; PIC-NEXT:  ## BB#2: ## %atomicrmw.end
+; PIC-NEXT:  ## %bb.2: ## %atomicrmw.end
 ; PIC-NEXT:    popl %esi
 ; PIC-NEXT:    popl %ebx
 ; PIC-NEXT:    retl
@@ -120,7 +120,7 @@ entry:
 
 define i64 @atomic_umax_i64() nounwind {
 ; LINUX-LABEL: atomic_umax_i64:
-; LINUX:       # BB#0: # %entry
+; LINUX:       # %bb.0: # %entry
 ; LINUX-NEXT:    pushl %ebx
 ; LINUX-NEXT:    pushl %esi
 ; LINUX-NEXT:    movl sc64+4, %edx
@@ -138,13 +138,13 @@ define i64 @atomic_umax_i64() nounwind {
 ; LINUX-NEXT:    cmovbl %eax, %ebx
 ; LINUX-NEXT:    lock cmpxchg8b sc64
 ; LINUX-NEXT:    jne .LBB2_1
-; LINUX-NEXT:  # BB#2: # %atomicrmw.end
+; LINUX-NEXT:  # %bb.2: # %atomicrmw.end
 ; LINUX-NEXT:    popl %esi
 ; LINUX-NEXT:    popl %ebx
 ; LINUX-NEXT:    retl
 ;
 ; PIC-LABEL: atomic_umax_i64:
-; PIC:       ## BB#0: ## %entry
+; PIC:       ## %bb.0: ## %entry
 ; PIC-NEXT:    pushl %ebx
 ; PIC-NEXT:    pushl %edi
 ; PIC-NEXT:    pushl %esi
@@ -167,7 +167,7 @@ define i64 @atomic_umax_i64() nounwind {
 ; PIC-NEXT:    cmovbl %eax, %ebx
 ; PIC-NEXT:    lock cmpxchg8b (%esi)
 ; PIC-NEXT:    jne LBB2_1
-; PIC-NEXT:  ## BB#2: ## %atomicrmw.end
+; PIC-NEXT:  ## %bb.2: ## %atomicrmw.end
 ; PIC-NEXT:    popl %esi
 ; PIC-NEXT:    popl %edi
 ; PIC-NEXT:    popl %ebx
@@ -180,7 +180,7 @@ entry:
 
 define i64 @atomic_umin_i64() nounwind {
 ; LINUX-LABEL: atomic_umin_i64:
-; LINUX:       # BB#0: # %entry
+; LINUX:       # %bb.0: # %entry
 ; LINUX-NEXT:    pushl %ebx
 ; LINUX-NEXT:    movl sc64+4, %edx
 ; LINUX-NEXT:    movl sc64, %eax
@@ -196,12 +196,12 @@ define i64 @atomic_umin_i64() nounwind {
 ; LINUX-NEXT:    cmovbl %eax, %ebx
 ; LINUX-NEXT:    lock cmpxchg8b sc64
 ; LINUX-NEXT:    jne .LBB3_1
-; LINUX-NEXT:  # BB#2: # %atomicrmw.end
+; LINUX-NEXT:  # %bb.2: # %atomicrmw.end
 ; LINUX-NEXT:    popl %ebx
 ; LINUX-NEXT:    retl
 ;
 ; PIC-LABEL: atomic_umin_i64:
-; PIC:       ## BB#0: ## %entry
+; PIC:       ## %bb.0: ## %entry
 ; PIC-NEXT:    pushl %ebx
 ; PIC-NEXT:    pushl %esi
 ; PIC-NEXT:    calll L3$pb
@@ -222,7 +222,7 @@ define i64 @atomic_umin_i64() nounwind {
 ; PIC-NEXT:    cmovbl %eax, %ebx
 ; PIC-NEXT:    lock cmpxchg8b (%esi)
 ; PIC-NEXT:    jne LBB3_1
-; PIC-NEXT:  ## BB#2: ## %atomicrmw.end
+; PIC-NEXT:  ## %bb.2: ## %atomicrmw.end
 ; PIC-NEXT:    popl %esi
 ; PIC-NEXT:    popl %ebx
 ; PIC-NEXT:    retl
@@ -236,7 +236,7 @@ entry:
 
 define void @tf_bug(i8* %ptr) nounwind {
 ; LINUX-LABEL: tf_bug:
-; LINUX:       # BB#0: # %entry
+; LINUX:       # %bb.0: # %entry
 ; LINUX-NEXT:    pushl %ebx
 ; LINUX-NEXT:    pushl %esi
 ; LINUX-NEXT:    movl {{[0-9]+}}(%esp), %esi
@@ -251,7 +251,7 @@ define void @tf_bug(i8* %ptr) nounwind {
 ; LINUX-NEXT:    adcl $0, %ecx
 ; LINUX-NEXT:    lock cmpxchg8b id
 ; LINUX-NEXT:    jne .LBB4_1
-; LINUX-NEXT:  # BB#2: # %atomicrmw.end
+; LINUX-NEXT:  # %bb.2: # %atomicrmw.end
 ; LINUX-NEXT:    addl $1, %eax
 ; LINUX-NEXT:    adcl $0, %edx
 ; LINUX-NEXT:    movl %eax, (%esi)
@@ -261,7 +261,7 @@ define void @tf_bug(i8* %ptr) nounwind {
 ; LINUX-NEXT:    retl
 ;
 ; PIC-LABEL: tf_bug:
-; PIC:       ## BB#0: ## %entry
+; PIC:       ## %bb.0: ## %entry
 ; PIC-NEXT:    pushl %ebx
 ; PIC-NEXT:    pushl %edi
 ; PIC-NEXT:    pushl %esi
@@ -280,7 +280,7 @@ define void @tf_bug(i8* %ptr) nounwind {
 ; PIC-NEXT:    adcl $0, %ecx
 ; PIC-NEXT:    lock cmpxchg8b _id-L4$pb(%edi)
 ; PIC-NEXT:    jne LBB4_1
-; PIC-NEXT:  ## BB#2: ## %atomicrmw.end
+; PIC-NEXT:  ## %bb.2: ## %atomicrmw.end
 ; PIC-NEXT:    addl $1, %eax
 ; PIC-NEXT:    adcl $0, %edx
 ; PIC-NEXT:    movl %eax, (%esi)

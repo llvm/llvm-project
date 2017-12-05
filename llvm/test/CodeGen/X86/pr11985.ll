@@ -8,7 +8,7 @@
 
 define float @foo(i8* nocapture %buf, float %a, float %b) nounwind uwtable {
 ; PRESCOTT-LABEL: foo:
-; PRESCOTT:       # BB#0: # %entry
+; PRESCOTT:       # %bb.0: # %entry
 ; PRESCOTT-NEXT:    movq   .Ltmp0+14(%rip), %rax
 ; PRESCOTT-NEXT:    movq   %rax, 14(%rdi)
 ; PRESCOTT-NEXT:    movq   .Ltmp0+8(%rip), %rax
@@ -17,7 +17,7 @@ define float @foo(i8* nocapture %buf, float %a, float %b) nounwind uwtable {
 ; PRESCOTT-NEXT:    movq   %rax, (%rdi)
 ;
 ; NEHALEM-LABEL: foo:
-; NEHALEM:       # BB#0: # %entry
+; NEHALEM:       # %bb.0: # %entry
 ; NEHALEM-NEXT:    movq .Ltmp0+14(%rip), %rax
 ; NEHALEM-NEXT:    movq %rax, 14(%rdi)
 ; NEHALEM-NEXT:    movups .Ltmp0(%rip), %xmm2

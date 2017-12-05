@@ -1011,7 +1011,7 @@ bool HexagonHardwareLoops::isInvalidLoopOperation(const MachineInstr *MI,
 bool HexagonHardwareLoops::containsInvalidInstruction(MachineLoop *L,
     bool IsInnerHWLoop) const {
   const std::vector<MachineBasicBlock *> &Blocks = L->getBlocks();
-  DEBUG(dbgs() << "\nhw_loop head, BB#" << Blocks[0]->getNumber(););
+  DEBUG(dbgs() << "\nhw_loop head, " << printMBBReference(*Blocks[0]));
   for (unsigned i = 0, e = Blocks.size(); i != e; ++i) {
     MachineBasicBlock *MBB = Blocks[i];
     for (MachineBasicBlock::iterator
@@ -1367,7 +1367,7 @@ bool HexagonHardwareLoops::isLoopFeeder(MachineLoop *L, MachineBasicBlock *A,
                                         LoopFeederMap &LoopFeederPhi) const {
   if (LoopFeederPhi.find(MO->getReg()) == LoopFeederPhi.end()) {
     const std::vector<MachineBasicBlock *> &Blocks = L->getBlocks();
-    DEBUG(dbgs() << "\nhw_loop head, BB#" << Blocks[0]->getNumber(););
+    DEBUG(dbgs() << "\nhw_loop head, " << printMBBReference(*Blocks[0]));
     // Ignore all BBs that form Loop.
     for (unsigned i = 0, e = Blocks.size(); i != e; ++i) {
       MachineBasicBlock *MBB = Blocks[i];

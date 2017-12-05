@@ -3,7 +3,7 @@
 
 define i32* @test1(i32* %P, i32 %X) {
 ; CHECK-LABEL: test1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    andl $-4, %eax
 ; CHECK-NEXT:    addl {{[0-9]+}}(%esp), %eax
@@ -16,7 +16,7 @@ define i32* @test1(i32* %P, i32 %X) {
 
 define i32* @test2(i32* %P, i32 %X) {
 ; CHECK-LABEL: test2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    shll $4, %eax
 ; CHECK-NEXT:    addl {{[0-9]+}}(%esp), %eax
@@ -29,7 +29,7 @@ define i32* @test2(i32* %P, i32 %X) {
 
 define i32* @test3(i32* %P, i32 %X) {
 ; CHECK-LABEL: test3:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    andl $-4, %eax
 ; CHECK-NEXT:    addl {{[0-9]+}}(%esp), %eax
@@ -41,7 +41,7 @@ define i32* @test3(i32* %P, i32 %X) {
 
 define fastcc i32 @test4(i32* %d) {
 ; CHECK-LABEL: test4:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzbl 3(%ecx), %eax
 ; CHECK-NEXT:    retl
   %tmp4 = load i32, i32* %d
@@ -54,7 +54,7 @@ define fastcc i32 @test4(i32* %d) {
 
 define i64 @test5(i16 %i, i32* %arr) {
 ; CHECK-LABEL: test5:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    shrl $11, %eax

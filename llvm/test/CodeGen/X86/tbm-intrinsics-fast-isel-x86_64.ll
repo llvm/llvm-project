@@ -5,7 +5,7 @@
 
 define i64 @test__bextri_u64(i64 %a0) {
 ; X64-LABEL: test__bextri_u64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    bextr $1, %rdi, %rax
 ; X64-NEXT:    retq
   %1 = call i64 @llvm.x86.tbm.bextri.u64(i64 %a0, i64 1)
@@ -14,7 +14,7 @@ define i64 @test__bextri_u64(i64 %a0) {
 
 define i64 @test__blcfill_u64(i64 %a0) {
 ; X64-LABEL: test__blcfill_u64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    leaq 1(%rdi), %rax
 ; X64-NEXT:    andq %rdi, %rax
 ; X64-NEXT:    retq
@@ -25,7 +25,7 @@ define i64 @test__blcfill_u64(i64 %a0) {
 
 define i64 @test__blci_u64(i64 %a0) {
 ; X64-LABEL: test__blci_u64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    leaq 1(%rdi), %rax
 ; X64-NEXT:    xorq $-1, %rax
 ; X64-NEXT:    orq %rdi, %rax
@@ -38,7 +38,7 @@ define i64 @test__blci_u64(i64 %a0) {
 
 define i64 @test__blcic_u64(i64 %a0) {
 ; X64-LABEL: test__blcic_u64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    xorq $-1, %rax
 ; X64-NEXT:    addq $1, %rdi
@@ -53,7 +53,7 @@ define i64 @test__blcic_u64(i64 %a0) {
 
 define i64 @test__blcmsk_u64(i64 %a0) {
 ; X64-LABEL: test__blcmsk_u64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    leaq 1(%rdi), %rax
 ; X64-NEXT:    xorq %rdi, %rax
 ; X64-NEXT:    retq
@@ -64,7 +64,7 @@ define i64 @test__blcmsk_u64(i64 %a0) {
 
 define i64 @test__blcs_u64(i64 %a0) {
 ; X64-LABEL: test__blcs_u64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    leaq 1(%rdi), %rax
 ; X64-NEXT:    orq %rdi, %rax
 ; X64-NEXT:    retq
@@ -75,7 +75,7 @@ define i64 @test__blcs_u64(i64 %a0) {
 
 define i64 @test__blsfill_u64(i64 %a0) {
 ; X64-LABEL: test__blsfill_u64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    subq $1, %rax
 ; X64-NEXT:    orq %rdi, %rax
@@ -87,7 +87,7 @@ define i64 @test__blsfill_u64(i64 %a0) {
 
 define i64 @test__blsic_u64(i64 %a0) {
 ; X64-LABEL: test__blsic_u64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    xorq $-1, %rax
 ; X64-NEXT:    subq $1, %rdi
@@ -102,7 +102,7 @@ define i64 @test__blsic_u64(i64 %a0) {
 
 define i64 @test__t1mskc_u64(i64 %a0) {
 ; X64-LABEL: test__t1mskc_u64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    xorq $-1, %rax
 ; X64-NEXT:    addq $1, %rdi
@@ -117,7 +117,7 @@ define i64 @test__t1mskc_u64(i64 %a0) {
 
 define i64 @test__tzmsk_u64(i64 %a0) {
 ; X64-LABEL: test__tzmsk_u64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    xorq $-1, %rax
 ; X64-NEXT:    subq $1, %rdi

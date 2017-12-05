@@ -3,7 +3,7 @@
 
 define i32 @shl48sar47(i64 %a) #0 {
 ; CHECK-LABEL: shl48sar47:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movswq %di, %rax
 ; CHECK-NEXT:    addl %eax, %eax
 ; CHECK-NEXT:    # kill: %eax<def> %eax<kill> %rax<kill>
@@ -16,7 +16,7 @@ define i32 @shl48sar47(i64 %a) #0 {
 
 define i32 @shl48sar49(i64 %a) #0 {
 ; CHECK-LABEL: shl48sar49:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movswq %di, %rax
 ; CHECK-NEXT:    shrq %rax
 ; CHECK-NEXT:    # kill: %eax<def> %eax<kill> %rax<kill>
@@ -29,7 +29,7 @@ define i32 @shl48sar49(i64 %a) #0 {
 
 define i32 @shl56sar55(i64 %a) #0 {
 ; CHECK-LABEL: shl56sar55:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movsbq %dil, %rax
 ; CHECK-NEXT:    addl %eax, %eax
 ; CHECK-NEXT:    # kill: %eax<def> %eax<kill> %rax<kill>
@@ -42,7 +42,7 @@ define i32 @shl56sar55(i64 %a) #0 {
 
 define i32 @shl56sar57(i64 %a) #0 {
 ; CHECK-LABEL: shl56sar57:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movsbq %dil, %rax
 ; CHECK-NEXT:    shrq %rax
 ; CHECK-NEXT:    # kill: %eax<def> %eax<kill> %rax<kill>
@@ -55,7 +55,7 @@ define i32 @shl56sar57(i64 %a) #0 {
 
 define i8 @all_sign_bit_ashr(i8 %x) {
 ; CHECK-LABEL: all_sign_bit_ashr:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andb $1, %dil
 ; CHECK-NEXT:    negb %dil
 ; CHECK-NEXT:    movl %edi, %eax
@@ -68,7 +68,7 @@ define i8 @all_sign_bit_ashr(i8 %x) {
 
 define <4 x i32> @all_sign_bit_ashr_vec(<4 x i32> %x) {
 ; CHECK-LABEL: all_sign_bit_ashr_vec:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    psubd %xmm0, %xmm1

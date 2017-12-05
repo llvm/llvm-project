@@ -4,7 +4,7 @@
 
 define <2 x i256> @test_shl(<2 x i256> %In) {
 ; X32-LABEL: test_shl:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl $0, 60(%eax)
 ; X32-NEXT:    movl $0, 56(%eax)
@@ -25,7 +25,7 @@ define <2 x i256> @test_shl(<2 x i256> %In) {
 ; X32-NEXT:    retl $4
 ;
 ; X64-LABEL: test_shl:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorps %xmm0, %xmm0
 ; X64-NEXT:    movaps %xmm0, 48(%rdi)
 ; X64-NEXT:    movaps %xmm0, 32(%rdi)
@@ -40,7 +40,7 @@ define <2 x i256> @test_shl(<2 x i256> %In) {
 
 define <2 x i256> @test_srl(<2 x i256> %In) {
 ; X32-LABEL: test_srl:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl $0, 60(%eax)
 ; X32-NEXT:    movl $0, 56(%eax)
@@ -61,7 +61,7 @@ define <2 x i256> @test_srl(<2 x i256> %In) {
 ; X32-NEXT:    retl $4
 ;
 ; X64-LABEL: test_srl:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorps %xmm0, %xmm0
 ; X64-NEXT:    movaps %xmm0, 48(%rdi)
 ; X64-NEXT:    movaps %xmm0, 32(%rdi)
@@ -76,7 +76,7 @@ define <2 x i256> @test_srl(<2 x i256> %In) {
 
 define <2 x i256> @test_sra(<2 x i256> %In) {
 ; X32-LABEL: test_sra:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl %ecx, 60(%eax)
@@ -107,7 +107,7 @@ define <2 x i256> @test_sra(<2 x i256> %In) {
 ; X32-NEXT:    retl $4
 ;
 ; X64-LABEL: test_sra:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rdx

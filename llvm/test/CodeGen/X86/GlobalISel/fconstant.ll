@@ -7,7 +7,7 @@
 
 define void @test_float(float* %a , float %b) {
 ; CHECK_SMALL64-LABEL: test_float:
-; CHECK_SMALL64:       # BB#0: # %entry
+; CHECK_SMALL64:       # %bb.0: # %entry
 ; CHECK_SMALL64-NEXT:    movss .LCPI0_0(%rip), %xmm1 # xmm1 = mem[0],zero,zero,zero
 ; CHECK_SMALL64-NEXT:    addss %xmm0, %xmm1
 ; CHECK_SMALL64-NEXT:    movd %xmm1, %eax
@@ -15,7 +15,7 @@ define void @test_float(float* %a , float %b) {
 ; CHECK_SMALL64-NEXT:    retq
 ;
 ; CHECK_LARGE64-LABEL: test_float:
-; CHECK_LARGE64:       # BB#0: # %entry
+; CHECK_LARGE64:       # %bb.0: # %entry
 ; CHECK_LARGE64-NEXT:    movabsq $.LCPI0_0, %rax
 ; CHECK_LARGE64-NEXT:    addss (%rax), %xmm0
 ; CHECK_LARGE64-NEXT:    movd %xmm0, %eax
@@ -23,7 +23,7 @@ define void @test_float(float* %a , float %b) {
 ; CHECK_LARGE64-NEXT:    retq
 ;
 ; CHECK32-LABEL: test_float:
-; CHECK32:       # BB#0: # %entry
+; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl 4(%esp), %eax
 ; CHECK32-NEXT:    movl 8(%esp), %ecx
 ; CHECK32-NEXT:    movss .LCPI0_0, %xmm0 # xmm0 = mem[0],zero,zero,zero

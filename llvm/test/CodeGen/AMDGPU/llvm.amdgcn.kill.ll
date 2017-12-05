@@ -31,8 +31,8 @@ define amdgpu_ps void @vcc_implicit_def(float %arg13, float %arg14) {
 }
 
 ; SI-LABEL: {{^}}true:
-; SI-NEXT: BB#
-; SI-NEXT: BB#
+; SI-NEXT: %bb.
+; SI-NEXT: %bb.
 ; SI-NEXT: s_endpgm
 define amdgpu_gs void @true() {
   call void @llvm.amdgcn.kill(i1 true)

@@ -6,7 +6,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 define void @test(i256* %a, i256* %b, i256* %out) #0 {
 ; X32-LABEL: test:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    pushl %ebp
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    pushl %ebx
@@ -356,7 +356,7 @@ define void @test(i256* %a, i256* %b, i256* %out) #0 {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %r15
 ; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    pushq %r14

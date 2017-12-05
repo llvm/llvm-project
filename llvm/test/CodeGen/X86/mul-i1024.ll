@@ -4,7 +4,7 @@
 
 define void @test_1024(i1024* %a, i1024* %b, i1024* %out) nounwind {
 ; X32-LABEL: test_1024:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebp
 ; X32-NEXT:    movl %esp, %ebp
 ; X32-NEXT:    pushl %ebx
@@ -6726,7 +6726,7 @@ define void @test_1024(i1024* %a, i1024* %b, i1024* %out) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_1024:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rbp
 ; X64-NEXT:    pushq %r15
 ; X64-NEXT:    pushq %r14

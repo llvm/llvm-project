@@ -31,7 +31,7 @@
 ; GCN: s_and_b64 vcc, exec, vcc
 ; GCN-NEXT: s_cbranch_vccnz [[FLOW:BB[0-9]+_[0-9]+]]
 
-; GCN: ; BB#2: ; %bb4
+; GCN: ; %bb.2: ; %bb4
 ; GCN: buffer_load_dword
 ; GCN: v_cmp_ge_i32_e32 vcc,
 ; GCN: s_or_b64 [[MASK]], vcc, [[INITMASK]]
@@ -41,7 +41,7 @@
 ; GCN: s_andn2_b64 exec, exec, [[MASK]]
 ; GCN-NEXT: s_cbranch_execnz [[LOOP_ENTRY]]
 
-; GCN: ; BB#4: ; %bb9
+; GCN: ; %bb.4: ; %bb9
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @break_loop(i32 %arg) #0 {
 bb:

@@ -3,7 +3,7 @@
 
 define <16 x i32> @test2(<16 x i32> %x) {
 ; CHECK-LABEL: test2:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
 ; CHECK-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
@@ -13,7 +13,7 @@ define <16 x i32> @test2(<16 x i32> %x) {
 
 define <16 x float> @test3(<4 x float> %a) {
 ; CHECK-LABEL: test3:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    ## kill: %xmm0<def> %xmm0<kill> %zmm0<def>
 ; CHECK-NEXT:    vmovaps {{.*#+}} zmm2 = [0,1,2,3,4,18,16,7,8,9,10,11,12,13,14,15]
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1

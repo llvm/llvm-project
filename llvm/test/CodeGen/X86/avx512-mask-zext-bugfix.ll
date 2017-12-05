@@ -16,7 +16,7 @@ declare i32 @check_mask16(i16 zeroext %res_mask, i16 zeroext %exp_mask, i8* %fna
 ; Function Attrs: nounwind uwtable
 define void @test_xmm(i32 %shift, i32 %mulp, <2 x i64> %a,i8* %arraydecay,i8* %fname){
 ; CHECK-LABEL: test_xmm:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    subq $56, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    movl $2, %esi

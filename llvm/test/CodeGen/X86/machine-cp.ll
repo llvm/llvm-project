@@ -5,7 +5,7 @@
 ; rdar://10640363
 define i32 @t1(i32 %a, i32 %b) nounwind  {
 ; CHECK-LABEL: t1:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movl %esi, %edx
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    testl %edx, %edx
@@ -19,7 +19,7 @@ define i32 @t1(i32 %a, i32 %b) nounwind  {
 ; CHECK-NEXT:    testl %edx, %edx
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    jne LBB0_2
-; CHECK-NEXT:  ## BB#3: ## %while.end
+; CHECK-NEXT:  ## %bb.3: ## %while.end
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  LBB0_1:
@@ -44,7 +44,7 @@ while.end:                                        ; preds = %while.body, %entry
 ; rdar://10428165
 define <8 x i16> @t2(<8 x i16> %T0, <8 x i16> %T1) nounwind readnone {
 ; CHECK-LABEL: t2:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
 ; CHECK-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,1,1,2,4,5,6,7]
 ; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -56,7 +56,7 @@ entry:
 
 define i32 @t3(i64 %a, i64 %b) nounwind  {
 ; CHECK-LABEL: t3:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movq %rsi, %rdx
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    testq %rdx, %rdx
@@ -70,7 +70,7 @@ define i32 @t3(i64 %a, i64 %b) nounwind  {
 ; CHECK-NEXT:    testq %rdx, %rdx
 ; CHECK-NEXT:    movq %rcx, %rax
 ; CHECK-NEXT:    jne LBB2_2
-; CHECK-NEXT:  ## BB#3: ## %while.end
+; CHECK-NEXT:  ## %bb.3: ## %while.end
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  LBB2_1:
@@ -98,7 +98,7 @@ while.end:                                        ; preds = %while.body, %entry
 ; ... = op2 dst <-- this is used here.
 define <16 x float> @foo(<16 x float> %x) {
 ; CHECK-LABEL: foo:
-; CHECK:       ## BB#0: ## %bb
+; CHECK:       ## %bb.0: ## %bb
 ; CHECK-NEXT:    movaps %xmm3, %xmm8
 ; CHECK-NEXT:    xorps %xmm3, %xmm3
 ; CHECK-NEXT:    pxor %xmm6, %xmm6

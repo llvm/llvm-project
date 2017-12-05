@@ -7,7 +7,7 @@ declare <2 x i64> @llvm.ctpop.v2i64(<2 x i64>)
 
 define <2 x i64> @footz(<2 x i64> %a) nounwind {
 ; CHECK-LABEL: footz:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    pxor %xmm2, %xmm2
 ; CHECK-NEXT:    psubq %xmm0, %xmm2
@@ -36,7 +36,7 @@ define <2 x i64> @footz(<2 x i64> %a) nounwind {
 }
 define <2 x i64> @foolz(<2 x i64> %a) nounwind {
 ; CHECK-LABEL: foolz:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movdqa %xmm0, %xmm1
 ; CHECK-NEXT:    psrlq $1, %xmm1
 ; CHECK-NEXT:    por %xmm0, %xmm1
@@ -81,7 +81,7 @@ define <2 x i64> @foolz(<2 x i64> %a) nounwind {
 
 define <2 x i64> @foopop(<2 x i64> %a) nounwind {
 ; CHECK-LABEL: foopop:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movdqa %xmm0, %xmm1
 ; CHECK-NEXT:    psrlq $1, %xmm1
 ; CHECK-NEXT:    pand {{.*}}(%rip), %xmm1
@@ -110,7 +110,7 @@ declare <2 x i32> @llvm.ctpop.v2i32(<2 x i32>)
 
 define <2 x i32> @promtz(<2 x i32> %a) nounwind {
 ; CHECK-LABEL: promtz:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    por {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    pxor %xmm2, %xmm2
@@ -140,7 +140,7 @@ define <2 x i32> @promtz(<2 x i32> %a) nounwind {
 }
 define <2 x i32> @promlz(<2 x i32> %a) nounwind {
 ; CHECK-LABEL: promlz:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    movdqa %xmm0, %xmm2
@@ -187,7 +187,7 @@ define <2 x i32> @promlz(<2 x i32> %a) nounwind {
 
 define <2 x i32> @prompop(<2 x i32> %a) nounwind {
 ; CHECK-LABEL: prompop:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    pxor %xmm2, %xmm2
 ; CHECK-NEXT:    movdqa %xmm0, %xmm1

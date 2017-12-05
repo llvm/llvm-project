@@ -6,7 +6,7 @@
 
 define i32 @t1() nounwind ssp {
 ; CHECK-LABEL: t1:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl $0, _t1.global
 ; CHECK-NEXT:    setne %al

@@ -64,7 +64,7 @@
 define void @store_zeros(i8* %a) {
 ; SLOW-NOT: not a recognized processor
 ; SLOW-LABEL: store_zeros:
-; SLOW:       # BB#0:
+; SLOW:       # %bb.0:
 ; SLOW-NEXT:    movl
 ; SLOW-NEXT:    movl
 ; SLOW-NEXT:    movl
@@ -85,7 +85,7 @@ define void @store_zeros(i8* %a) {
 ;
 ; FAST-NOT: not a recognized processor
 ; FAST-LABEL: store_zeros:
-; FAST:       # BB#0:
+; FAST:       # %bb.0:
 ; FAST-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; FAST-NOT:     movl
   call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 64, i32 1, i1 false)

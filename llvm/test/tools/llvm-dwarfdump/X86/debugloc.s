@@ -28,7 +28,7 @@ foo:                                    # @foo
 	.file	1 "test.c"
 	.loc	1 1 0                   # test.c:1:0
 	.cfi_startproc
-# BB#0:
+# %bb.0:
 	#DEBUG_VALUE: foo:i <- %RDI
 	.loc	1 2 3 prologue_end      # test.c:2:3
 	movq	%rdi, %rax
@@ -47,7 +47,7 @@ bar:                                    # @bar
 .Lfunc_begin1:
 	.loc	1 5 0                   # test.c:5:0
 	.cfi_startproc
-# BB#0:
+# %bb.0:
 	#DEBUG_VALUE: bar:i <- %RDI
 	.loc	1 6 3 prologue_end      # test.c:6:3
 	movq	%rdi, %rax

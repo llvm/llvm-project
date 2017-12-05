@@ -4,22 +4,22 @@
 
 define <16 x i32> @select00(i32 %a, <16 x i32> %b) nounwind {
 ; X86-LABEL: select00:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    cmpl $255, {{[0-9]+}}(%esp)
 ; X86-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X86-NEXT:    je .LBB0_2
-; X86-NEXT:  # BB#1:
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    vmovdqa64 %zmm0, %zmm1
 ; X86-NEXT:  .LBB0_2:
 ; X86-NEXT:    vpxorq %zmm1, %zmm0, %zmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: select00:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    cmpl $255, %edi
 ; X64-NEXT:    je .LBB0_2
-; X64-NEXT:  # BB#1:
+; X64-NEXT:  # %bb.1:
 ; X64-NEXT:    vmovdqa64 %zmm0, %zmm1
 ; X64-NEXT:  .LBB0_2:
 ; X64-NEXT:    vpxorq %zmm1, %zmm0, %zmm0
@@ -32,22 +32,22 @@ define <16 x i32> @select00(i32 %a, <16 x i32> %b) nounwind {
 
 define <8 x i64> @select01(i32 %a, <8 x i64> %b) nounwind {
 ; X86-LABEL: select01:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    cmpl $255, {{[0-9]+}}(%esp)
 ; X86-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X86-NEXT:    je .LBB1_2
-; X86-NEXT:  # BB#1:
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    vmovdqa64 %zmm0, %zmm1
 ; X86-NEXT:  .LBB1_2:
 ; X86-NEXT:    vpxorq %zmm1, %zmm0, %zmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: select01:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    cmpl $255, %edi
 ; X64-NEXT:    je .LBB1_2
-; X64-NEXT:  # BB#1:
+; X64-NEXT:  # %bb.1:
 ; X64-NEXT:    vmovdqa64 %zmm0, %zmm1
 ; X64-NEXT:  .LBB1_2:
 ; X64-NEXT:    vpxorq %zmm1, %zmm0, %zmm0
@@ -60,7 +60,7 @@ define <8 x i64> @select01(i32 %a, <8 x i64> %b) nounwind {
 
 define float @select02(float %a, float %b, float %c, float %eps) {
 ; X86-LABEL: select02:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    vucomiss {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
@@ -70,7 +70,7 @@ define float @select02(float %a, float %b, float %c, float %eps) {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: select02:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vcmpless %xmm0, %xmm3, %k1
 ; X64-NEXT:    vmovss %xmm2, %xmm0, %xmm1 {%k1}
 ; X64-NEXT:    vmovaps %xmm1, %xmm0
@@ -82,7 +82,7 @@ define float @select02(float %a, float %b, float %c, float %eps) {
 
 define double @select03(double %a, double %b, double %c, double %eps) {
 ; X86-LABEL: select03:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    vucomisd {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
@@ -92,7 +92,7 @@ define double @select03(double %a, double %b, double %c, double %eps) {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: select03:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vcmplesd %xmm0, %xmm3, %k1
 ; X64-NEXT:    vmovsd %xmm2, %xmm0, %xmm1 {%k1}
 ; X64-NEXT:    vmovapd %xmm1, %xmm0
@@ -104,7 +104,7 @@ define double @select03(double %a, double %b, double %c, double %eps) {
 
 define <16 x double> @select04(<16 x double> %a, <16 x double> %b) {
 ; X86-LABEL: select04:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    .cfi_offset %ebp, -8
@@ -118,7 +118,7 @@ define <16 x double> @select04(<16 x double> %a, <16 x double> %b) {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: select04:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vmovaps %zmm3, %zmm1
 ; X64-NEXT:    retq
   %sel = select <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <16 x double> %a, <16 x double> %b
@@ -127,13 +127,13 @@ define <16 x double> @select04(<16 x double> %a, <16 x double> %b) {
 
 define i8 @select05(i8 %a.0, i8 %m) {
 ; X86-LABEL: select05:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    orb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: select05:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    orl %esi, %edi
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    retq
@@ -146,7 +146,7 @@ define i8 @select05(i8 %a.0, i8 %m) {
 
 define i8 @select05_mem(<8 x i1>* %a.0, <8 x i1>* %m) {
 ; X86-LABEL: select05_mem:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movzbl (%ecx), %ecx
@@ -159,7 +159,7 @@ define i8 @select05_mem(<8 x i1>* %a.0, <8 x i1>* %m) {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: select05_mem:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movzbl (%rsi), %eax
 ; X64-NEXT:    kmovw %eax, %k0
 ; X64-NEXT:    movzbl (%rdi), %eax
@@ -177,13 +177,13 @@ define i8 @select05_mem(<8 x i1>* %a.0, <8 x i1>* %m) {
 
 define i8 @select06(i8 %a.0, i8 %m) {
 ; X86-LABEL: select06:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    andb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: select06:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    andl %esi, %edi
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    retq
@@ -196,7 +196,7 @@ define i8 @select06(i8 %a.0, i8 %m) {
 
 define i8 @select06_mem(<8 x i1>* %a.0, <8 x i1>* %m) {
 ; X86-LABEL: select06_mem:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movzbl (%ecx), %ecx
@@ -209,7 +209,7 @@ define i8 @select06_mem(<8 x i1>* %a.0, <8 x i1>* %m) {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: select06_mem:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movzbl (%rsi), %eax
 ; X64-NEXT:    kmovw %eax, %k0
 ; X64-NEXT:    movzbl (%rdi), %eax
@@ -226,7 +226,7 @@ define i8 @select06_mem(<8 x i1>* %a.0, <8 x i1>* %m) {
 }
 define i8 @select07(i8 %a.0, i8 %b.0, i8 %m) {
 ; X86-LABEL: select07:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k0
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
@@ -241,7 +241,7 @@ define i8 @select07(i8 %a.0, i8 %b.0, i8 %m) {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: select07:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %edx, %k0
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    kmovw %esi, %k2
@@ -261,13 +261,13 @@ define i8 @select07(i8 %a.0, i8 %b.0, i8 %m) {
 
 define i64 @pr30249() {
 ; X86-LABEL: pr30249:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movl $2, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: pr30249:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl $2, %eax
 ; X64-NEXT:    retq
   %v = select i1 undef , i64 1, i64 2
@@ -276,7 +276,7 @@ define i64 @pr30249() {
 
 define double @pr30561_f64(double %b, double %a, i1 %c) {
 ; X86-LABEL: pr30561_f64:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
@@ -285,7 +285,7 @@ define double @pr30561_f64(double %b, double %a, i1 %c) {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: pr30561_f64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    vmovsd %xmm1, %xmm0, %xmm0 {%k1}
 ; X64-NEXT:    retq
@@ -295,7 +295,7 @@ define double @pr30561_f64(double %b, double %a, i1 %c) {
 
 define float @pr30561_f32(float %b, float %a, i1 %c) {
 ; X86-LABEL: pr30561_f32:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
@@ -304,7 +304,7 @@ define float @pr30561_f32(float %b, float %a, i1 %c) {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: pr30561_f32:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    vmovss %xmm1, %xmm0, %xmm0 {%k1}
 ; X64-NEXT:    retq
@@ -314,7 +314,7 @@ define float @pr30561_f32(float %b, float %a, i1 %c) {
 
 define <16 x i16> @pr31515(<16 x i1> %a, <16 x i1> %b, <16 x i16> %c) nounwind {
 ; X86-LABEL: pr31515:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    vpmovsxbd %xmm1, %zmm1
 ; X86-NEXT:    vpslld $31, %zmm1, %zmm1
 ; X86-NEXT:    vpmovsxbd %xmm0, %zmm0
@@ -327,7 +327,7 @@ define <16 x i16> @pr31515(<16 x i1> %a, <16 x i1> %b, <16 x i16> %c) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: pr31515:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vpmovsxbd %xmm1, %zmm1
 ; X64-NEXT:    vpslld $31, %zmm1, %zmm1
 ; X64-NEXT:    vpmovsxbd %xmm0, %zmm0

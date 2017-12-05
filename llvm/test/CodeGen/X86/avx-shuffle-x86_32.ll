@@ -4,7 +4,7 @@
 ; Avoid unnecessary vinsertf128
 define <4 x i64> @test1(<4 x i64> %a) nounwind {
 ; CHECK-LABEL: test1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; CHECK-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
 ; CHECK-NEXT:    retl
@@ -14,7 +14,7 @@ define <4 x i64> @test1(<4 x i64> %a) nounwind {
 
 define <8 x i16> @test2(<4 x i16>* %v) nounwind {
 ; CHECK-LABEL: test2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    retl

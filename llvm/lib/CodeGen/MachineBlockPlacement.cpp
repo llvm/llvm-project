@@ -546,7 +546,7 @@ INITIALIZE_PASS_END(MachineBlockPlacement, DEBUG_TYPE,
 static std::string getBlockName(const MachineBasicBlock *BB) {
   std::string Result;
   raw_string_ostream OS(Result);
-  OS << "BB#" << BB->getNumber();
+  OS << printMBBReference(*BB);
   OS << " ('" << BB->getName() << "')";
   OS.flush();
   return Result;

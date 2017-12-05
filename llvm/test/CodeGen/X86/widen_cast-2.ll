@@ -4,7 +4,7 @@
 
 define void @convert(<7 x i32>* %dst, <14 x i16>* %src) nounwind {
 ; CHECK-LABEL: convert:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    movl $0, (%esp)
 ; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0

@@ -989,7 +989,10 @@ class MULADD_IEEE_Common <bits<5> inst> : R600_3OP <
 class FMA_Common <bits<5> inst> : R600_3OP <
   inst, "FMA",
   [(set f32:$dst, (fma f32:$src0, f32:$src1, f32:$src2))], VecALU
->;
+>
+{
+  let OtherPredicates = [FMA];
+}
 
 class CNDE_Common <bits<5> inst> : R600_3OP <
   inst, "CNDE",

@@ -5,23 +5,23 @@
 
 define i32 @t(i32 %a, i32 %b) nounwind ssp {
 ; X32-LABEL: t:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    xorb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    testb $64, %al
 ; X32-NEXT:    je .LBB0_1
-; X32-NEXT:  # BB#2: # %bb1
+; X32-NEXT:  # %bb.2: # %bb1
 ; X32-NEXT:    jmp bar # TAILCALL
 ; X32-NEXT:  .LBB0_1: # %bb
 ; X32-NEXT:    jmp foo # TAILCALL
 ;
 ; X64-LABEL: t:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    xorl %esi, %edi
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    btl $14, %edi
 ; X64-NEXT:    jae .LBB0_1
-; X64-NEXT:  # BB#2: # %bb1
+; X64-NEXT:  # %bb.2: # %bb1
 ; X64-NEXT:    jmp bar # TAILCALL
 ; X64-NEXT:  .LBB0_1: # %bb
 ; X64-NEXT:    jmp foo # TAILCALL
@@ -48,27 +48,27 @@ declare i32 @bar(...)
 
 define i32 @t2(i32 %x, i32 %y) nounwind ssp {
 ; X32-LABEL: t2:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; X32-NEXT:    sete %al
 ; X32-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; X32-NEXT:    sete %cl
 ; X32-NEXT:    cmpb %al, %cl
 ; X32-NEXT:    je .LBB1_1
-; X32-NEXT:  # BB#2: # %bb
+; X32-NEXT:  # %bb.2: # %bb
 ; X32-NEXT:    jmp foo # TAILCALL
 ; X32-NEXT:  .LBB1_1: # %return
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t2:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    testl %edi, %edi
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    testl %esi, %esi
 ; X64-NEXT:    sete %cl
 ; X64-NEXT:    cmpb %al, %cl
 ; X64-NEXT:    je .LBB1_1
-; X64-NEXT:  # BB#2: # %bb
+; X64-NEXT:  # %bb.2: # %bb
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    jmp foo # TAILCALL
 ; X64-NEXT:  .LBB1_1: # %return

@@ -95,7 +95,7 @@ function(llvm_ExternalProject_Add name source_dir)
   foreach(prefix ${ARG_PASSTHROUGH_PREFIXES})
     foreach(variableName ${variableNames})
       if(variableName MATCHES "^${prefix}")
-        string(REPLACE ";" "," value "${${variableName}}")
+        string(REPLACE ";" "|" value "${${variableName}}")
         list(APPEND PASSTHROUGH_VARIABLES
           -D${variableName}=${value})
       endif()
@@ -160,7 +160,7 @@ function(llvm_ExternalProject_Add name source_dir)
     USES_TERMINAL_CONFIGURE 1
     USES_TERMINAL_BUILD 1
     USES_TERMINAL_INSTALL 1
-    LIST_SEPARATOR ,
+    LIST_SEPARATOR |
     )
 
   if(ARG_USE_TOOLCHAIN)

@@ -6,7 +6,7 @@
 
 define i32 @test_mm_cmpestra(<2 x i64> %a0, i32 %a1, <2 x i64> %a2, i32 %a3) nounwind {
 ; X32-LABEL: test_mm_cmpestra:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -18,7 +18,7 @@ define i32 @test_mm_cmpestra(<2 x i64> %a0, i32 %a1, <2 x i64> %a2, i32 %a3) nou
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmpestra:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorl %r8d, %r8d
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    movl %esi, %edx
@@ -35,7 +35,7 @@ declare i32 @llvm.x86.sse42.pcmpestria128(<16 x i8>, i32, <16 x i8>, i32, i8) no
 
 define i32 @test_mm_cmpestrc(<2 x i64> %a0, i32 %a1, <2 x i64> %a2, i32 %a3) nounwind {
 ; X32-LABEL: test_mm_cmpestrc:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -47,7 +47,7 @@ define i32 @test_mm_cmpestrc(<2 x i64> %a0, i32 %a1, <2 x i64> %a2, i32 %a3) nou
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmpestrc:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorl %r8d, %r8d
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    movl %esi, %edx
@@ -64,7 +64,7 @@ declare i32 @llvm.x86.sse42.pcmpestric128(<16 x i8>, i32, <16 x i8>, i32, i8) no
 
 define i32 @test_mm_cmpestri(<2 x i64> %a0, i32 %a1, <2 x i64> %a2, i32 %a3) {
 ; X32-LABEL: test_mm_cmpestri:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    pcmpestri $7, %xmm1, %xmm0
@@ -72,7 +72,7 @@ define i32 @test_mm_cmpestri(<2 x i64> %a0, i32 %a1, <2 x i64> %a2, i32 %a3) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmpestri:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    movl %esi, %edx
 ; X64-NEXT:    pcmpestri $7, %xmm1, %xmm0
@@ -87,14 +87,14 @@ declare i32 @llvm.x86.sse42.pcmpestri128(<16 x i8>, i32, <16 x i8>, i32, i8) nou
 
 define <2 x i64> @test_mm_cmpestrm(<2 x i64> %a0, i32 %a1, <2 x i64> %a2, i32 %a3) {
 ; X32-LABEL: test_mm_cmpestrm:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    pcmpestrm $7, %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmpestrm:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    movl %esi, %edx
 ; X64-NEXT:    pcmpestrm $7, %xmm1, %xmm0
@@ -109,7 +109,7 @@ declare <16 x i8> @llvm.x86.sse42.pcmpestrm128(<16 x i8>, i32, <16 x i8>, i32, i
 
 define i32 @test_mm_cmpestro(<2 x i64> %a0, i32 %a1, <2 x i64> %a2, i32 %a3) nounwind {
 ; X32-LABEL: test_mm_cmpestro:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -121,7 +121,7 @@ define i32 @test_mm_cmpestro(<2 x i64> %a0, i32 %a1, <2 x i64> %a2, i32 %a3) nou
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmpestro:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorl %r8d, %r8d
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    movl %esi, %edx
@@ -138,7 +138,7 @@ declare i32 @llvm.x86.sse42.pcmpestrio128(<16 x i8>, i32, <16 x i8>, i32, i8) no
 
 define i32 @test_mm_cmpestrs(<2 x i64> %a0, i32 %a1, <2 x i64> %a2, i32 %a3) nounwind {
 ; X32-LABEL: test_mm_cmpestrs:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -150,7 +150,7 @@ define i32 @test_mm_cmpestrs(<2 x i64> %a0, i32 %a1, <2 x i64> %a2, i32 %a3) nou
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmpestrs:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorl %r8d, %r8d
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    movl %esi, %edx
@@ -167,7 +167,7 @@ declare i32 @llvm.x86.sse42.pcmpestris128(<16 x i8>, i32, <16 x i8>, i32, i8) no
 
 define i32 @test_mm_cmpestrz(<2 x i64> %a0, i32 %a1, <2 x i64> %a2, i32 %a3) nounwind {
 ; X32-LABEL: test_mm_cmpestrz:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -179,7 +179,7 @@ define i32 @test_mm_cmpestrz(<2 x i64> %a0, i32 %a1, <2 x i64> %a2, i32 %a3) nou
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmpestrz:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorl %r8d, %r8d
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    movl %esi, %edx
@@ -196,12 +196,12 @@ declare i32 @llvm.x86.sse42.pcmpestriz128(<16 x i8>, i32, <16 x i8>, i32, i8) no
 
 define <2 x i64> @test_mm_cmpgt_epi64(<2 x i64> %a0, <2 x i64> %a1) {
 ; X32-LABEL: test_mm_cmpgt_epi64:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pcmpgtq %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmpgt_epi64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    pcmpgtq %xmm1, %xmm0
 ; X64-NEXT:    retq
   %cmp = icmp sgt <2 x i64> %a0, %a1
@@ -211,14 +211,14 @@ define <2 x i64> @test_mm_cmpgt_epi64(<2 x i64> %a0, <2 x i64> %a1) {
 
 define i32 @test_mm_cmpistra(<2 x i64> %a0, <2 x i64> %a1) {
 ; X32-LABEL: test_mm_cmpistra:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    xorl %eax, %eax
 ; X32-NEXT:    pcmpistri $7, %xmm1, %xmm0
 ; X32-NEXT:    seta %al
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmpistra:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    pcmpistri $7, %xmm1, %xmm0
 ; X64-NEXT:    seta %al
@@ -232,14 +232,14 @@ declare i32 @llvm.x86.sse42.pcmpistria128(<16 x i8>, <16 x i8>, i8) nounwind rea
 
 define i32 @test_mm_cmpistrc(<2 x i64> %a0, <2 x i64> %a1) {
 ; X32-LABEL: test_mm_cmpistrc:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    xorl %eax, %eax
 ; X32-NEXT:    pcmpistri $7, %xmm1, %xmm0
 ; X32-NEXT:    setb %al
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmpistrc:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    pcmpistri $7, %xmm1, %xmm0
 ; X64-NEXT:    setb %al
@@ -253,13 +253,13 @@ declare i32 @llvm.x86.sse42.pcmpistric128(<16 x i8>, <16 x i8>, i8) nounwind rea
 
 define i32 @test_mm_cmpistri(<2 x i64> %a0, <2 x i64> %a1) {
 ; X32-LABEL: test_mm_cmpistri:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pcmpistri $7, %xmm1, %xmm0
 ; X32-NEXT:    movl %ecx, %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmpistri:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    pcmpistri $7, %xmm1, %xmm0
 ; X64-NEXT:    movl %ecx, %eax
 ; X64-NEXT:    retq
@@ -272,12 +272,12 @@ declare i32 @llvm.x86.sse42.pcmpistri128(<16 x i8>, <16 x i8>, i8) nounwind read
 
 define <2 x i64> @test_mm_cmpistrm(<2 x i64> %a0, <2 x i64> %a1) {
 ; X32-LABEL: test_mm_cmpistrm:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pcmpistrm $7, %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmpistrm:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    pcmpistrm $7, %xmm1, %xmm0
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
@@ -290,14 +290,14 @@ declare <16 x i8> @llvm.x86.sse42.pcmpistrm128(<16 x i8>, <16 x i8>, i8) nounwin
 
 define i32 @test_mm_cmpistro(<2 x i64> %a0, <2 x i64> %a1) {
 ; X32-LABEL: test_mm_cmpistro:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    xorl %eax, %eax
 ; X32-NEXT:    pcmpistri $7, %xmm1, %xmm0
 ; X32-NEXT:    seto %al
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmpistro:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    pcmpistri $7, %xmm1, %xmm0
 ; X64-NEXT:    seto %al
@@ -311,14 +311,14 @@ declare i32 @llvm.x86.sse42.pcmpistrio128(<16 x i8>, <16 x i8>, i8) nounwind rea
 
 define i32 @test_mm_cmpistrs(<2 x i64> %a0, <2 x i64> %a1) {
 ; X32-LABEL: test_mm_cmpistrs:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    xorl %eax, %eax
 ; X32-NEXT:    pcmpistri $7, %xmm1, %xmm0
 ; X32-NEXT:    sets %al
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmpistrs:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    pcmpistri $7, %xmm1, %xmm0
 ; X64-NEXT:    sets %al
@@ -332,14 +332,14 @@ declare i32 @llvm.x86.sse42.pcmpistris128(<16 x i8>, <16 x i8>, i8) nounwind rea
 
 define i32 @test_mm_cmpistrz(<2 x i64> %a0, <2 x i64> %a1) {
 ; X32-LABEL: test_mm_cmpistrz:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    xorl %eax, %eax
 ; X32-NEXT:    pcmpistri $7, %xmm1, %xmm0
 ; X32-NEXT:    sete %al
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cmpistrz:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    pcmpistri $7, %xmm1, %xmm0
 ; X64-NEXT:    sete %al
@@ -353,14 +353,14 @@ declare i32 @llvm.x86.sse42.pcmpistriz128(<16 x i8>, <16 x i8>, i8) nounwind rea
 
 define i32 @test_mm_crc32_u8(i32 %a0, i8 %a1) {
 ; X32-LABEL: test_mm_crc32_u8:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    crc32b %cl, %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_crc32_u8:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    crc32b %sil, %edi
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    retq
@@ -371,14 +371,14 @@ declare i32 @llvm.x86.sse42.crc32.32.8(i32, i8) nounwind readnone
 
 define i32 @test_mm_crc32_u16(i32 %a0, i16 %a1) {
 ; X32-LABEL: test_mm_crc32_u16:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    crc32w %cx, %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_crc32_u16:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    crc32w %si, %edi
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    retq
@@ -389,13 +389,13 @@ declare i32 @llvm.x86.sse42.crc32.32.16(i32, i16) nounwind readnone
 
 define i32 @test_mm_crc32_u32(i32 %a0, i32 %a1) {
 ; X32-LABEL: test_mm_crc32_u32:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    crc32l {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_crc32_u32:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    crc32l %esi, %edi
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    retq

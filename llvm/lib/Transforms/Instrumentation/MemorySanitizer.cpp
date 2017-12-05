@@ -2772,6 +2772,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         setOrigin(&I, getCleanOrigin());
         return;
       }
+      // FIXME: NextInsn is likely in a basic block that has not been visited yet.
+      // Anything inserted there will be instrumented by MSan later!
       NextInsn = NormalDest->getFirstInsertionPt();
       assert(NextInsn != NormalDest->end() &&
              "Could not find insertion point for retval shadow load");

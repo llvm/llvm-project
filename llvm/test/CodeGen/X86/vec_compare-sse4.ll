@@ -5,7 +5,7 @@
 
 define <2 x i64> @test1(<2 x i64> %A, <2 x i64> %B) nounwind {
 ; SSE2-LABEL: test1:
-; SSE2:       ## BB#0:
+; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,0,2147483648,0]
 ; SSE2-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-NEXT:    pxor %xmm2, %xmm0
@@ -20,7 +20,7 @@ define <2 x i64> @test1(<2 x i64> %A, <2 x i64> %B) nounwind {
 ; SSE2-NEXT:    retl
 ;
 ; SSE41-LABEL: test1:
-; SSE41:       ## BB#0:
+; SSE41:       ## %bb.0:
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,0,2147483648,0]
 ; SSE41-NEXT:    pxor %xmm2, %xmm1
 ; SSE41-NEXT:    pxor %xmm2, %xmm0
@@ -35,7 +35,7 @@ define <2 x i64> @test1(<2 x i64> %A, <2 x i64> %B) nounwind {
 ; SSE41-NEXT:    retl
 ;
 ; SSE42-LABEL: test1:
-; SSE42:       ## BB#0:
+; SSE42:       ## %bb.0:
 ; SSE42-NEXT:    pcmpgtq %xmm1, %xmm0
 ; SSE42-NEXT:    retl
   %C = icmp sgt <2 x i64> %A, %B
@@ -45,19 +45,19 @@ define <2 x i64> @test1(<2 x i64> %A, <2 x i64> %B) nounwind {
 
 define <2 x i64> @test2(<2 x i64> %A, <2 x i64> %B) nounwind {
 ; SSE2-LABEL: test2:
-; SSE2:       ## BB#0:
+; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,0,3,2]
 ; SSE2-NEXT:    pand %xmm1, %xmm0
 ; SSE2-NEXT:    retl
 ;
 ; SSE41-LABEL: test2:
-; SSE41:       ## BB#0:
+; SSE41:       ## %bb.0:
 ; SSE41-NEXT:    pcmpeqq %xmm1, %xmm0
 ; SSE41-NEXT:    retl
 ;
 ; SSE42-LABEL: test2:
-; SSE42:       ## BB#0:
+; SSE42:       ## %bb.0:
 ; SSE42-NEXT:    pcmpeqq %xmm1, %xmm0
 ; SSE42-NEXT:    retl
   %C = icmp eq <2 x i64> %A, %B

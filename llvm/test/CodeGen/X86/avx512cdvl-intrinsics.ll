@@ -3,7 +3,7 @@
 
 define <4 x i32> @test_int_x86_avx512_mask_vplzcnt_d_128(<4 x i32> %x0, <4 x i32> %x1, i8 %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vplzcnt_d_128:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vplzcntd %xmm0, %xmm2
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vplzcntd %xmm0, %xmm1 {%k1}
@@ -28,7 +28,7 @@ declare <4 x i32> @llvm.ctlz.v4i32(<4 x i32>, i1) #0
 
 define <8 x i32> @test_int_x86_avx512_mask_vplzcnt_d_256(<8 x i32> %x0, <8 x i32> %x1, i8 %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vplzcnt_d_256:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vplzcntd %ymm0, %ymm2
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vplzcntd %ymm0, %ymm1 {%k1}
@@ -45,7 +45,7 @@ declare <8 x i32> @llvm.ctlz.v8i32(<8 x i32>, i1) #0
 
 define <2 x i64> @test_int_x86_avx512_mask_vplzcnt_q_128(<2 x i64> %x0, <2 x i64> %x1, i8 %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vplzcnt_q_128:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vplzcntq %xmm0, %xmm2
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vplzcntq %xmm0, %xmm1 {%k1}
@@ -63,7 +63,7 @@ declare <2 x i64> @llvm.ctlz.v2i64(<2 x i64>, i1) #0
 
 define <4 x i64> @test_int_x86_avx512_mask_vplzcnt_q_256(<4 x i64> %x0, <4 x i64> %x1, i8 %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vplzcnt_q_256:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vplzcntq %ymm0, %ymm2
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vplzcntq %ymm0, %ymm1 {%k1}
@@ -83,7 +83,7 @@ declare <4 x i32> @llvm.x86.avx512.mask.conflict.d.128(<4 x i32>, <4 x i32>, i8)
 
 define <4 x i32>@test_int_x86_avx512_mask_vpconflict_d_128(<4 x i32> %x0, <4 x i32> %x1, i8 %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpconflict_d_128:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vpconflictd %xmm0, %xmm2 {%k1} {z}
 ; CHECK-NEXT:    vpconflictd %xmm0, %xmm1 {%k1}
@@ -103,7 +103,7 @@ declare <8 x i32> @llvm.x86.avx512.mask.conflict.d.256(<8 x i32>, <8 x i32>, i8)
 
 define <8 x i32>@test_int_x86_avx512_mask_vpconflict_d_256(<8 x i32> %x0, <8 x i32> %x1, i8 %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpconflict_d_256:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vpconflictd %ymm0, %ymm1 {%k1}
 ; CHECK-NEXT:    vpconflictd %ymm0, %ymm0
@@ -119,7 +119,7 @@ declare <2 x i64> @llvm.x86.avx512.mask.conflict.q.128(<2 x i64>, <2 x i64>, i8)
 
 define <2 x i64>@test_int_x86_avx512_mask_vpconflict_q_128(<2 x i64> %x0, <2 x i64> %x1, i8 %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpconflict_q_128:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vpconflictq %xmm0, %xmm1 {%k1}
 ; CHECK-NEXT:    vpconflictq %xmm0, %xmm0
@@ -135,7 +135,7 @@ declare <4 x i64> @llvm.x86.avx512.mask.conflict.q.256(<4 x i64>, <4 x i64>, i8)
 
 define <4 x i64>@test_int_x86_avx512_mask_vpconflict_q_256(<4 x i64> %x0, <4 x i64> %x1, i8 %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpconflict_q_256:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vpconflictq %ymm0, %ymm1 {%k1}
 ; CHECK-NEXT:    vpconflictq %ymm0, %ymm0

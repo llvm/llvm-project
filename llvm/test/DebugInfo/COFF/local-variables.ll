@@ -26,14 +26,14 @@
 ; ASM:         .cv_file        1 "D:\\src\\llvm\\build\\t.cpp"
 ; ASM:         .cv_loc 0 1 7 0 is_stmt 0       # t.cpp:7:0
 ; ASM: .seh_proc f
-; ASM: # BB#0:                                 # %entry
+; ASM: # %bb.0:                                 # %entry
 ; ASM:         subq    $56, %rsp
 ; ASM:         movl    %ecx, 52(%rsp)
 ; ASM: [[prologue_end:\.Ltmp.*]]:
 ; ASM:         .cv_loc 0 1 8 7                 # t.cpp:8:7
 ; ASM:         testl   %ecx, %ecx
 ; ASM:         je      .LBB0_2
-; ASM: # BB#1:                                 # %if.then
+; ASM: # %bb.1:                                 # %if.then
 ; ASM: [[if_start:\.Ltmp.*]]:
 ; ASM:         .cv_loc 0 1 9 9                 # t.cpp:9:9
 ; ASM:         movl    $42, 40(%rsp)

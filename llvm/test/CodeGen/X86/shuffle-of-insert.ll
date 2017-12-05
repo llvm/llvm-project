@@ -5,20 +5,20 @@
 
 define <4 x i32> @ins_elt_0(i32 %x, <4 x i32> %v1, <4 x i32> %v2) {
 ; SSE2-LABEL: ins_elt_0:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movd %edi, %xmm0
 ; SSE2-NEXT:    movss {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
 ; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: ins_elt_0:
-; SSE4:       # BB#0:
+; SSE4:       # %bb.0:
 ; SSE4-NEXT:    pinsrd $0, %edi, %xmm0
 ; SSE4-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3,4,5,6,7]
 ; SSE4-NEXT:    retq
 ;
 ; AVX-LABEL: ins_elt_0:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpinsrd $0, %edi, %xmm0, %xmm0
 ; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3,4,5,6,7]
 ; AVX-NEXT:    retq
@@ -29,7 +29,7 @@ define <4 x i32> @ins_elt_0(i32 %x, <4 x i32> %v1, <4 x i32> %v2) {
 
 define <4 x i32> @ins_elt_1(i32 %x, <4 x i32> %v1, <4 x i32> %v2) {
 ; SSE2-LABEL: ins_elt_1:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movd %edi, %xmm2
 ; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,0],xmm0[0,0]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm1[0,0]
@@ -38,13 +38,13 @@ define <4 x i32> @ins_elt_1(i32 %x, <4 x i32> %v1, <4 x i32> %v2) {
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: ins_elt_1:
-; SSE4:       # BB#0:
+; SSE4:       # %bb.0:
 ; SSE4-NEXT:    pinsrd $1, %edi, %xmm0
 ; SSE4-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3],xmm1[4,5,6,7]
 ; SSE4-NEXT:    retq
 ;
 ; AVX-LABEL: ins_elt_1:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpinsrd $1, %edi, %xmm0, %xmm0
 ; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3],xmm1[4,5,6,7]
 ; AVX-NEXT:    retq
@@ -57,7 +57,7 @@ define <4 x i32> @ins_elt_1(i32 %x, <4 x i32> %v1, <4 x i32> %v2) {
 
 define <4 x i32> @ins_elt_2_commute(i32 %x, <4 x i32> %v1, <4 x i32> %v2) {
 ; SSE2-LABEL: ins_elt_2_commute:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movd %edi, %xmm2
 ; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,0],xmm0[3,0]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0,2]
@@ -67,13 +67,13 @@ define <4 x i32> @ins_elt_2_commute(i32 %x, <4 x i32> %v1, <4 x i32> %v2) {
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: ins_elt_2_commute:
-; SSE4:       # BB#0:
+; SSE4:       # %bb.0:
 ; SSE4-NEXT:    pinsrd $2, %edi, %xmm0
 ; SSE4-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1,2,3],xmm0[4,5],xmm1[6,7]
 ; SSE4-NEXT:    retq
 ;
 ; AVX-LABEL: ins_elt_2_commute:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpinsrd $2, %edi, %xmm0, %xmm0
 ; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1,2,3],xmm0[4,5],xmm1[6,7]
 ; AVX-NEXT:    retq
@@ -84,7 +84,7 @@ define <4 x i32> @ins_elt_2_commute(i32 %x, <4 x i32> %v1, <4 x i32> %v2) {
 
 define <4 x i32> @ins_elt_3_commute(i32 %x, <4 x i32> %v1, <4 x i32> %v2) {
 ; SSE2-LABEL: ins_elt_3_commute:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movd %edi, %xmm2
 ; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,0],xmm0[2,0]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,0]
@@ -94,13 +94,13 @@ define <4 x i32> @ins_elt_3_commute(i32 %x, <4 x i32> %v1, <4 x i32> %v2) {
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: ins_elt_3_commute:
-; SSE4:       # BB#0:
+; SSE4:       # %bb.0:
 ; SSE4-NEXT:    pinsrd $3, %edi, %xmm0
 ; SSE4-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1,2,3,4,5],xmm0[6,7]
 ; SSE4-NEXT:    retq
 ;
 ; AVX-LABEL: ins_elt_3_commute:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpinsrd $3, %edi, %xmm0, %xmm0
 ; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1,2,3,4,5],xmm0[6,7]
 ; AVX-NEXT:    retq
@@ -113,7 +113,7 @@ define <4 x i32> @ins_elt_3_commute(i32 %x, <4 x i32> %v1, <4 x i32> %v2) {
 
 define <4 x i32> @ins_elt_0_to_2(i32 %x, <4 x i32> %v1, <4 x i32> %v2) {
 ; SSE2-LABEL: ins_elt_0_to_2:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movd %edi, %xmm0
 ; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0],xmm1[3,0]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm0[0,2]
@@ -121,14 +121,14 @@ define <4 x i32> @ins_elt_0_to_2(i32 %x, <4 x i32> %v1, <4 x i32> %v2) {
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: ins_elt_0_to_2:
-; SSE4:       # BB#0:
+; SSE4:       # %bb.0:
 ; SSE4-NEXT:    pinsrd $0, %edi, %xmm0
 ; SSE4-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; SSE4-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1,2,3],xmm0[4,5],xmm1[6,7]
 ; SSE4-NEXT:    retq
 ;
 ; AVX-LABEL: ins_elt_0_to_2:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpinsrd $0, %edi, %xmm0, %xmm0
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1,2,3],xmm0[4,5],xmm1[6,7]
@@ -140,21 +140,21 @@ define <4 x i32> @ins_elt_0_to_2(i32 %x, <4 x i32> %v1, <4 x i32> %v2) {
 
 define <4 x i32> @ins_elt_1_to_0(i32 %x, <4 x i32> %v1, <4 x i32> %v2) {
 ; SSE2-LABEL: ins_elt_1_to_0:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movd %edi, %xmm0
 ; SSE2-NEXT:    movss {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
 ; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: ins_elt_1_to_0:
-; SSE4:       # BB#0:
+; SSE4:       # %bb.0:
 ; SSE4-NEXT:    pinsrd $1, %edi, %xmm0
 ; SSE4-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
 ; SSE4-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3,4,5,6,7]
 ; SSE4-NEXT:    retq
 ;
 ; AVX-LABEL: ins_elt_1_to_0:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpinsrd $1, %edi, %xmm0, %xmm0
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
 ; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3,4,5,6,7]
@@ -166,7 +166,7 @@ define <4 x i32> @ins_elt_1_to_0(i32 %x, <4 x i32> %v1, <4 x i32> %v2) {
 
 define <4 x i32> @ins_elt_2_to_3(i32 %x, <4 x i32> %v1, <4 x i32> %v2) {
 ; SSE2-LABEL: ins_elt_2_to_3:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movd %edi, %xmm2
 ; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,0],xmm0[3,0]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0,2]
@@ -176,14 +176,14 @@ define <4 x i32> @ins_elt_2_to_3(i32 %x, <4 x i32> %v1, <4 x i32> %v2) {
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: ins_elt_2_to_3:
-; SSE4:       # BB#0:
+; SSE4:       # %bb.0:
 ; SSE4-NEXT:    pinsrd $2, %edi, %xmm0
 ; SSE4-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,2,2]
 ; SSE4-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1,2,3,4,5],xmm0[6,7]
 ; SSE4-NEXT:    retq
 ;
 ; AVX-LABEL: ins_elt_2_to_3:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpinsrd $2, %edi, %xmm0, %xmm0
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,2,2]
 ; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1,2,3,4,5],xmm0[6,7]
@@ -195,7 +195,7 @@ define <4 x i32> @ins_elt_2_to_3(i32 %x, <4 x i32> %v1, <4 x i32> %v2) {
 
 define <4 x i32> @ins_elt_3_to_1(i32 %x, <4 x i32> %v1, <4 x i32> %v2) {
 ; SSE2-LABEL: ins_elt_3_to_1:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movd %edi, %xmm2
 ; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,0],xmm0[2,0]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,0]
@@ -204,14 +204,14 @@ define <4 x i32> @ins_elt_3_to_1(i32 %x, <4 x i32> %v1, <4 x i32> %v2) {
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: ins_elt_3_to_1:
-; SSE4:       # BB#0:
+; SSE4:       # %bb.0:
 ; SSE4-NEXT:    pinsrd $3, %edi, %xmm0
 ; SSE4-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
 ; SSE4-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3],xmm1[4,5,6,7]
 ; SSE4-NEXT:    retq
 ;
 ; AVX-LABEL: ins_elt_3_to_1:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpinsrd $3, %edi, %xmm0, %xmm0
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
 ; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3],xmm1[4,5,6,7]

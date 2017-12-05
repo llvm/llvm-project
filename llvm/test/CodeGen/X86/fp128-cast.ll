@@ -363,7 +363,7 @@ cleanup:                                          ; preds = %entry, %if.then
 
 define i1 @PR34866(i128 %x) {
 ; X64-LABEL: PR34866:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movaps {{.*}}(%rip), %xmm0
 ; X64-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    xorq -{{[0-9]+}}(%rsp), %rsi
@@ -373,13 +373,13 @@ define i1 @PR34866(i128 %x) {
 ; X64-NEXT:    retq
 ;
 ; X64_NO_MMX-LABEL: PR34866:
-; X64_NO_MMX:       # BB#0:
+; X64_NO_MMX:       # %bb.0:
 ; X64_NO_MMX-NEXT:    orq %rsi, %rdi
 ; X64_NO_MMX-NEXT:    sete %al
 ; X64_NO_MMX-NEXT:    retq
 ;
 ; X32-LABEL: PR34866:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    orl {{[0-9]+}}(%esp), %ecx
@@ -394,7 +394,7 @@ define i1 @PR34866(i128 %x) {
 
 define i1 @PR34866_commute(i128 %x) {
 ; X64-LABEL: PR34866_commute:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movaps {{.*}}(%rip), %xmm0
 ; X64-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    xorq -{{[0-9]+}}(%rsp), %rsi
@@ -404,13 +404,13 @@ define i1 @PR34866_commute(i128 %x) {
 ; X64-NEXT:    retq
 ;
 ; X64_NO_MMX-LABEL: PR34866_commute:
-; X64_NO_MMX:       # BB#0:
+; X64_NO_MMX:       # %bb.0:
 ; X64_NO_MMX-NEXT:    orq %rsi, %rdi
 ; X64_NO_MMX-NEXT:    sete %al
 ; X64_NO_MMX-NEXT:    retq
 ;
 ; X32-LABEL: PR34866_commute:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    orl {{[0-9]+}}(%esp), %ecx

@@ -1,8 +1,8 @@
 ; RUN: llc < %s -O0 -verify-machineinstrs -mtriple=wasm32-unknown-unknown-wasm | FileCheck %s
 
-; CHECK: BB#0
+; CHECK: %bb.0
 ; CHECK: #DEBUG_VALUE: usage:self <- %4
-; CHECK: BB#1
+; CHECK: %bb.1
 ; CHECK: DW_TAG_variable
 source_filename = "test/CodeGen/WebAssembly/dbgvalue.ll"
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"

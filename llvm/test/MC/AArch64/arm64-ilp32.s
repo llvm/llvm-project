@@ -8,7 +8,7 @@
 	.align	2
 	.type	foo,@function
 foo:                                    // @foo
-// BB#0:                                // %entry
+// %bb.0:                               // %entry
 	sub	sp, sp, #16             // =16
 // CHECK-ILP32: 0000000000000004 R_AARCH64_P32_ADR_PREL_PG_HI21 sizes
 // CHECK-ILP32: 0000000000000008 R_AARCH64_P32_ADD_ABS_LO12_NC sizes

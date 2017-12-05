@@ -6,10 +6,10 @@
 
 define zeroext i1 @search(i32 %needle, i32* nocapture readonly %haystack, i32 %count) {
 ; CHECK-LABEL: search:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    testl %edx, %edx
 ; CHECK-NEXT:    jle LBB0_1
-; CHECK-NEXT:  ## BB#4: ## %for.body.preheader
+; CHECK-NEXT:  ## %bb.4: ## %for.body.preheader
 ; CHECK-NEXT:    movslq %edx, %rax
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    .p2align 4, 0x90
@@ -17,13 +17,13 @@ define zeroext i1 @search(i32 %needle, i32* nocapture readonly %haystack, i32 %c
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    cmpl %edi, (%rsi,%rcx,4)
 ; CHECK-NEXT:    je LBB0_6
-; CHECK-NEXT:  ## BB#2: ## %for.cond
+; CHECK-NEXT:  ## %bb.2: ## %for.cond
 ; CHECK-NEXT:    ## in Loop: Header=BB0_5 Depth=1
 ; CHECK-NEXT:    incq %rcx
 ; CHECK-NEXT:    cmpq %rax, %rcx
 ; CHECK-NEXT:    jl LBB0_5
-;            ### FIXME: BB#3 and LBB0_1 should be merged
-; CHECK-NEXT:  ## BB#3:
+;            ### FIXME: %bb.3 and LBB0_1 should be merged
+; CHECK-NEXT:  ## %bb.3:
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
 ; CHECK-NEXT:    retq

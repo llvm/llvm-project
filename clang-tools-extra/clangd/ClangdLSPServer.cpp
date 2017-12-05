@@ -194,14 +194,15 @@ void ClangdLSPServer::onCodeAction(Ctx C, CodeActionParams &Params) {
 }
 
 void ClangdLSPServer::onCompletion(Ctx C, TextDocumentPositionParams &Params) {
-  auto List = Server
-                  .codeComplete(
-                      Params.textDocument.uri.file,
-                      Position{Params.position.line, Params.position.character})
-                  .get() // FIXME(ibiryukov): This could be made async if we
-                         // had an API that would allow to attach callbacks to
-                         // futures returned by ClangdServer.
-                  .Value;
+  auto List =
+      Server
+          .codeComplete(
+              Params.textDocument.uri.file,
+              Position{Params.position.line, Params.position.character}, CCOpts)
+          .get() // FIXME(ibiryukov): This could be made async if we
+                 // had an API that would allow to attach callbacks to
+                 // futures returned by ClangdServer.
+          .Value;
   C.reply(List);
 }
 
@@ -240,9 +241,9 @@ ClangdLSPServer::ClangdLSPServer(JSONOutput &Out, unsigned AsyncThreadsCount,
                                  llvm::Optional<StringRef> ResourceDir,
                                  llvm::Optional<Path> CompileCommandsDir)
     : Out(Out), CDB(/*Logger=*/Out, std::move(CompileCommandsDir)),
-      Server(CDB, /*DiagConsumer=*/*this, FSProvider, AsyncThreadsCount,
-             StorePreamblesInMemory, CCOpts,
-             /*Logger=*/Out, ResourceDir) {}
+      CCOpts(CCOpts), Server(CDB, /*DiagConsumer=*/*this, FSProvider,
+                             AsyncThreadsCount, StorePreamblesInMemory,
+                             /*Logger=*/Out, ResourceDir) {}
 
 bool ClangdLSPServer::run(std::istream &In) {
   assert(!IsDone && "Run was called before");

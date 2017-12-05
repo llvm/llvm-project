@@ -11,49 +11,49 @@
 
 define <4 x double> @test_addpd(<4 x double> %a0, <4 x double> %a1, <4 x double> *%a2) {
 ; GENERIC-LABEL: test_addpd:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vaddpd (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_addpd:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    vaddpd (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_addpd:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    vaddpd (%rdi), %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_addpd:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    vaddpd (%rdi), %ymm0, %ymm0 # sched: [9:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_addpd:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    vaddpd (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_addpd:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    vaddpd (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_addpd:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    vaddpd (%rdi), %ymm0, %ymm0 # sched: [8:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_addpd:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    vaddpd (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -65,49 +65,49 @@ define <4 x double> @test_addpd(<4 x double> %a0, <4 x double> %a1, <4 x double>
 
 define <8 x float> @test_addps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a2) {
 ; GENERIC-LABEL: test_addps:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vaddps (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_addps:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    vaddps (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_addps:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    vaddps (%rdi), %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_addps:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    vaddps (%rdi), %ymm0, %ymm0 # sched: [9:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_addps:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    vaddps (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_addps:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    vaddps (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_addps:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    vaddps (%rdi), %ymm0, %ymm0 # sched: [8:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_addps:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    vaddps (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -119,49 +119,49 @@ define <8 x float> @test_addps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a
 
 define <4 x double> @test_addsubpd(<4 x double> %a0, <4 x double> %a1, <4 x double> *%a2) {
 ; GENERIC-LABEL: test_addsubpd:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vaddsubpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vaddsubpd (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_addsubpd:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vaddsubpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    vaddsubpd (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_addsubpd:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vaddsubpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    vaddsubpd (%rdi), %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_addsubpd:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vaddsubpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    vaddsubpd (%rdi), %ymm0, %ymm0 # sched: [9:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_addsubpd:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vaddsubpd %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    vaddsubpd (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_addsubpd:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vaddsubpd %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    vaddsubpd (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_addsubpd:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vaddsubpd %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    vaddsubpd (%rdi), %ymm0, %ymm0 # sched: [8:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_addsubpd:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vaddsubpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    vaddsubpd (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -174,49 +174,49 @@ declare <4 x double> @llvm.x86.avx.addsub.pd.256(<4 x double>, <4 x double>) nou
 
 define <8 x float> @test_addsubps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a2) {
 ; GENERIC-LABEL: test_addsubps:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vaddsubps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vaddsubps (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_addsubps:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vaddsubps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    vaddsubps (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_addsubps:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vaddsubps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    vaddsubps (%rdi), %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_addsubps:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vaddsubps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    vaddsubps (%rdi), %ymm0, %ymm0 # sched: [9:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_addsubps:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vaddsubps %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    vaddsubps (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_addsubps:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vaddsubps %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    vaddsubps (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_addsubps:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vaddsubps %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    vaddsubps (%rdi), %ymm0, %ymm0 # sched: [8:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_addsubps:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vaddsubps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    vaddsubps (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -229,56 +229,56 @@ declare <8 x float> @llvm.x86.avx.addsub.ps.256(<8 x float>, <8 x float>) nounwi
 
 define <4 x double> @test_andnotpd(<4 x double> %a0, <4 x double> %a1, <4 x double> *%a2) {
 ; GENERIC-LABEL: test_andnotpd:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vandnpd %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vandnpd (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_andnotpd:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vandnpd %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; SANDY-NEXT:    vandnpd (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; SANDY-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_andnotpd:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vandnpd %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    vandnpd (%rdi), %ymm0, %ymm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_andnotpd:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vandnpd %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; BROADWELL-NEXT:    vandnpd (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
 ; BROADWELL-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_andnotpd:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vandnpd %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
 ; SKYLAKE-NEXT:    vandnpd (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; SKYLAKE-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_andnotpd:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vandnpd %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
 ; SKX-NEXT:    vandnpd (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; SKX-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_andnotpd:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vandnpd %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    vandnpd (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
 ; BTVER2-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_andnotpd:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vandnpd %ymm1, %ymm0, %ymm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    vandnpd (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; ZNVER1-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
@@ -298,56 +298,56 @@ define <4 x double> @test_andnotpd(<4 x double> %a0, <4 x double> %a1, <4 x doub
 
 define <8 x float> @test_andnotps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a2) {
 ; GENERIC-LABEL: test_andnotps:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vandnps %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vandnps (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_andnotps:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vandnps %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; SANDY-NEXT:    vandnps (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; SANDY-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_andnotps:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vandnps %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    vandnps (%rdi), %ymm0, %ymm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_andnotps:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vandnps %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; BROADWELL-NEXT:    vandnps (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
 ; BROADWELL-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_andnotps:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vandnps %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
 ; SKYLAKE-NEXT:    vandnps (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; SKYLAKE-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_andnotps:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vandnps %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
 ; SKX-NEXT:    vandnps (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; SKX-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_andnotps:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vandnps %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    vandnps (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
 ; BTVER2-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_andnotps:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vandnps %ymm1, %ymm0, %ymm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    vandnps (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; ZNVER1-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
@@ -367,56 +367,56 @@ define <8 x float> @test_andnotps(<8 x float> %a0, <8 x float> %a1, <8 x float> 
 
 define <4 x double> @test_andpd(<4 x double> %a0, <4 x double> %a1, <4 x double> *%a2) {
 ; GENERIC-LABEL: test_andpd:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vandpd %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vandpd (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_andpd:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vandpd %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; SANDY-NEXT:    vandpd (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; SANDY-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_andpd:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vandpd %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    vandpd (%rdi), %ymm0, %ymm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_andpd:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vandpd %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; BROADWELL-NEXT:    vandpd (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
 ; BROADWELL-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_andpd:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vandpd %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
 ; SKYLAKE-NEXT:    vandpd (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; SKYLAKE-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_andpd:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vandpd %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
 ; SKX-NEXT:    vandpd (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; SKX-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_andpd:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vandpd %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    vandpd (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
 ; BTVER2-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_andpd:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vandpd %ymm1, %ymm0, %ymm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    vandpd (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; ZNVER1-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
@@ -434,56 +434,56 @@ define <4 x double> @test_andpd(<4 x double> %a0, <4 x double> %a1, <4 x double>
 
 define <8 x float> @test_andps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a2) {
 ; GENERIC-LABEL: test_andps:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vandps %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vandps (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_andps:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vandps %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; SANDY-NEXT:    vandps (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; SANDY-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_andps:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vandps %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    vandps (%rdi), %ymm0, %ymm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_andps:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vandps %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; BROADWELL-NEXT:    vandps (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
 ; BROADWELL-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_andps:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vandps %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
 ; SKYLAKE-NEXT:    vandps (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; SKYLAKE-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_andps:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vandps %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
 ; SKX-NEXT:    vandps (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; SKX-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_andps:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vandps %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    vandps (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
 ; BTVER2-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_andps:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vandps %ymm1, %ymm0, %ymm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    vandps (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; ZNVER1-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
@@ -501,56 +501,56 @@ define <8 x float> @test_andps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a
 
 define <4 x double> @test_blendpd(<4 x double> %a0, <4 x double> %a1, <4 x double> *%a2) {
 ; GENERIC-LABEL: test_blendpd:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3] sched: [1:0.50]
 ; GENERIC-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],mem[1,2],ymm0[3] sched: [8:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_blendpd:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3] sched: [1:0.50]
 ; SANDY-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],mem[1,2],ymm0[3] sched: [8:0.50]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_blendpd:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3] sched: [1:0.33]
 ; HASWELL-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],mem[1,2],ymm0[3] sched: [1:0.50]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_blendpd:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3] sched: [1:0.33]
 ; BROADWELL-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],mem[1,2],ymm0[3] sched: [7:0.50]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_blendpd:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3] sched: [1:0.33]
 ; SKYLAKE-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],mem[1,2],ymm0[3] sched: [8:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_blendpd:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3] sched: [1:0.33]
 ; SKX-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],mem[1,2],ymm0[3] sched: [8:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_blendpd:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3] sched: [1:0.50]
 ; BTVER2-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],mem[1,2],ymm0[3] sched: [6:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_blendpd:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3] sched: [1:0.50]
 ; ZNVER1-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],mem[1,2],ymm0[3] sched: [8:0.50]
@@ -564,49 +564,49 @@ define <4 x double> @test_blendpd(<4 x double> %a0, <4 x double> %a1, <4 x doubl
 
 define <8 x float> @test_blendps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a2) {
 ; GENERIC-LABEL: test_blendps:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3,4,5,6,7] sched: [1:0.50]
 ; GENERIC-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],mem[2],ymm0[3],mem[4,5,6],ymm0[7] sched: [8:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_blendps:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3,4,5,6,7] sched: [1:0.50]
 ; SANDY-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],mem[2],ymm0[3],mem[4,5,6],ymm0[7] sched: [8:0.50]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_blendps:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3,4,5,6,7] sched: [1:0.33]
 ; HASWELL-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],mem[2],ymm0[3],mem[4,5,6],ymm0[7] sched: [1:0.50]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_blendps:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3,4,5,6,7] sched: [1:0.33]
 ; BROADWELL-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],mem[2],ymm0[3],mem[4,5,6],ymm0[7] sched: [7:0.50]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_blendps:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3,4,5,6,7] sched: [1:0.33]
 ; SKYLAKE-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],mem[2],ymm0[3],mem[4,5,6],ymm0[7] sched: [8:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_blendps:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3,4,5,6,7] sched: [1:0.33]
 ; SKX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],mem[2],ymm0[3],mem[4,5,6],ymm0[7] sched: [8:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_blendps:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3,4,5,6,7] sched: [1:0.50]
 ; BTVER2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],mem[2],ymm0[3],mem[4,5,6],ymm0[7] sched: [6:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_blendps:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3,4,5,6,7] sched: [1:0.50]
 ; ZNVER1-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],mem[2],ymm0[3],mem[4,5,6],ymm0[7] sched: [8:0.50]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -618,49 +618,49 @@ define <8 x float> @test_blendps(<8 x float> %a0, <8 x float> %a1, <8 x float> *
 
 define <4 x double> @test_blendvpd(<4 x double> %a0, <4 x double> %a1, <4 x double> %a2, <4 x double> *%a3) {
 ; GENERIC-LABEL: test_blendvpd:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vblendvpd %ymm2, %ymm1, %ymm0, %ymm0 # sched: [2:1.00]
 ; GENERIC-NEXT:    vblendvpd %ymm2, (%rdi), %ymm0, %ymm0 # sched: [9:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_blendvpd:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vblendvpd %ymm2, %ymm1, %ymm0, %ymm0 # sched: [2:1.00]
 ; SANDY-NEXT:    vblendvpd %ymm2, (%rdi), %ymm0, %ymm0 # sched: [9:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_blendvpd:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vblendvpd %ymm2, %ymm1, %ymm0, %ymm0 # sched: [2:2.00]
 ; HASWELL-NEXT:    vblendvpd %ymm2, (%rdi), %ymm0, %ymm0 # sched: [2:2.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_blendvpd:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vblendvpd %ymm2, %ymm1, %ymm0, %ymm0 # sched: [2:2.00]
 ; BROADWELL-NEXT:    vblendvpd %ymm2, (%rdi), %ymm0, %ymm0 # sched: [8:2.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_blendvpd:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vblendvpd %ymm2, %ymm1, %ymm0, %ymm0 # sched: [2:0.67]
 ; SKYLAKE-NEXT:    vblendvpd %ymm2, (%rdi), %ymm0, %ymm0 # sched: [9:0.67]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_blendvpd:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vblendvpd %ymm2, %ymm1, %ymm0, %ymm0 # sched: [2:0.67]
 ; SKX-NEXT:    vblendvpd %ymm2, (%rdi), %ymm0, %ymm0 # sched: [9:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_blendvpd:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vblendvpd %ymm2, %ymm1, %ymm0, %ymm0 # sched: [3:3.00]
 ; BTVER2-NEXT:    vblendvpd %ymm2, (%rdi), %ymm0, %ymm0 # sched: [8:3.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_blendvpd:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vblendvpd %ymm2, %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
 ; ZNVER1-NEXT:    vblendvpd %ymm2, (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -673,49 +673,49 @@ declare <4 x double> @llvm.x86.avx.blendv.pd.256(<4 x double>, <4 x double>, <4 
 
 define <8 x float> @test_blendvps(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2, <8 x float> *%a3) {
 ; GENERIC-LABEL: test_blendvps:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vblendvps %ymm2, %ymm1, %ymm0, %ymm0 # sched: [2:1.00]
 ; GENERIC-NEXT:    vblendvps %ymm2, (%rdi), %ymm0, %ymm0 # sched: [9:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_blendvps:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vblendvps %ymm2, %ymm1, %ymm0, %ymm0 # sched: [2:1.00]
 ; SANDY-NEXT:    vblendvps %ymm2, (%rdi), %ymm0, %ymm0 # sched: [9:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_blendvps:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vblendvps %ymm2, %ymm1, %ymm0, %ymm0 # sched: [2:2.00]
 ; HASWELL-NEXT:    vblendvps %ymm2, (%rdi), %ymm0, %ymm0 # sched: [2:2.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_blendvps:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vblendvps %ymm2, %ymm1, %ymm0, %ymm0 # sched: [2:2.00]
 ; BROADWELL-NEXT:    vblendvps %ymm2, (%rdi), %ymm0, %ymm0 # sched: [8:2.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_blendvps:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vblendvps %ymm2, %ymm1, %ymm0, %ymm0 # sched: [2:0.67]
 ; SKYLAKE-NEXT:    vblendvps %ymm2, (%rdi), %ymm0, %ymm0 # sched: [9:0.67]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_blendvps:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vblendvps %ymm2, %ymm1, %ymm0, %ymm0 # sched: [2:0.67]
 ; SKX-NEXT:    vblendvps %ymm2, (%rdi), %ymm0, %ymm0 # sched: [9:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_blendvps:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vblendvps %ymm2, %ymm1, %ymm0, %ymm0 # sched: [3:3.00]
 ; BTVER2-NEXT:    vblendvps %ymm2, (%rdi), %ymm0, %ymm0 # sched: [8:3.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_blendvps:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vblendvps %ymm2, %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
 ; ZNVER1-NEXT:    vblendvps %ymm2, (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -728,42 +728,42 @@ declare <8 x float> @llvm.x86.avx.blendv.ps.256(<8 x float>, <8 x float>, <8 x f
 
 define <8 x float> @test_broadcastf128(<4 x float> *%a0) {
 ; GENERIC-LABEL: test_broadcastf128:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1] sched: [7:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_broadcastf128:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1] sched: [7:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_broadcastf128:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1] sched: [1:0.50]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_broadcastf128:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1] sched: [6:0.50]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_broadcastf128:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1] sched: [7:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_broadcastf128:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1] sched: [7:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_broadcastf128:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1] sched: [6:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_broadcastf128:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1] sched: [8:0.50]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load <4 x float>, <4 x float> *%a0, align 32
@@ -773,42 +773,42 @@ define <8 x float> @test_broadcastf128(<4 x float> *%a0) {
 
 define <4 x double> @test_broadcastsd_ymm(double *%a0) {
 ; GENERIC-LABEL: test_broadcastsd_ymm:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vbroadcastsd (%rdi), %ymm0 # sched: [7:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_broadcastsd_ymm:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vbroadcastsd (%rdi), %ymm0 # sched: [7:0.50]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_broadcastsd_ymm:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vbroadcastsd (%rdi), %ymm0 # sched: [1:0.50]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_broadcastsd_ymm:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vbroadcastsd (%rdi), %ymm0 # sched: [6:0.50]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_broadcastsd_ymm:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vbroadcastsd (%rdi), %ymm0 # sched: [7:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_broadcastsd_ymm:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vbroadcastsd (%rdi), %ymm0 # sched: [7:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_broadcastsd_ymm:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vbroadcastsd (%rdi), %ymm0 # sched: [6:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_broadcastsd_ymm:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vbroadcastsd (%rdi), %ymm0 # sched: [8:0.50]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load double, double *%a0, align 8
@@ -819,42 +819,42 @@ define <4 x double> @test_broadcastsd_ymm(double *%a0) {
 
 define <4 x float> @test_broadcastss(float *%a0) {
 ; GENERIC-LABEL: test_broadcastss:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vbroadcastss (%rdi), %xmm0 # sched: [6:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_broadcastss:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vbroadcastss (%rdi), %xmm0 # sched: [6:0.50]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_broadcastss:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vbroadcastss (%rdi), %xmm0 # sched: [1:0.50]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_broadcastss:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vbroadcastss (%rdi), %xmm0 # sched: [5:0.50]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_broadcastss:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vbroadcastss (%rdi), %xmm0 # sched: [6:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_broadcastss:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vbroadcastss (%rdi), %xmm0 # sched: [6:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_broadcastss:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vbroadcastss (%rdi), %xmm0 # sched: [5:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_broadcastss:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vbroadcastss (%rdi), %xmm0 # sched: [8:0.50]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load float, float *%a0, align 4
@@ -865,42 +865,42 @@ define <4 x float> @test_broadcastss(float *%a0) {
 
 define <8 x float> @test_broadcastss_ymm(float *%a0) {
 ; GENERIC-LABEL: test_broadcastss_ymm:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vbroadcastss (%rdi), %ymm0 # sched: [7:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_broadcastss_ymm:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vbroadcastss (%rdi), %ymm0 # sched: [7:0.50]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_broadcastss_ymm:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vbroadcastss (%rdi), %ymm0 # sched: [1:0.50]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_broadcastss_ymm:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vbroadcastss (%rdi), %ymm0 # sched: [6:0.50]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_broadcastss_ymm:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vbroadcastss (%rdi), %ymm0 # sched: [7:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_broadcastss_ymm:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vbroadcastss (%rdi), %ymm0 # sched: [7:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_broadcastss_ymm:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vbroadcastss (%rdi), %ymm0 # sched: [6:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_broadcastss_ymm:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vbroadcastss (%rdi), %ymm0 # sched: [8:0.50]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load float, float *%a0, align 4
@@ -911,42 +911,42 @@ define <8 x float> @test_broadcastss_ymm(float *%a0) {
 
 define <4 x double> @test_cmppd(<4 x double> %a0, <4 x double> %a1, <4 x double> *%a2) {
 ; GENERIC-LABEL: test_cmppd:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vcmpeqpd %ymm1, %ymm0, %ymm1 # sched: [3:1.00]
 ; GENERIC-NEXT:    vcmpeqpd (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; GENERIC-NEXT:    vorpd %ymm0, %ymm1, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_cmppd:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vcmpeqpd %ymm1, %ymm0, %ymm1 # sched: [3:1.00]
 ; SANDY-NEXT:    vcmpeqpd (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; SANDY-NEXT:    vorpd %ymm0, %ymm1, %ymm0 # sched: [1:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_cmppd:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vcmpeqpd %ymm1, %ymm0, %ymm1 # sched: [3:1.00]
 ; HASWELL-NEXT:    vcmpeqpd (%rdi), %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    vorpd %ymm0, %ymm1, %ymm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_cmppd:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vcmpeqpd %ymm1, %ymm0, %ymm1 # sched: [3:1.00]
 ; BROADWELL-NEXT:    vcmpeqpd (%rdi), %ymm0, %ymm0 # sched: [9:1.00]
 ; BROADWELL-NEXT:    vorpd %ymm0, %ymm1, %ymm0 # sched: [1:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_cmppd:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vcmpeqpd %ymm1, %ymm0, %ymm1 # sched: [4:0.33]
 ; SKYLAKE-NEXT:    vcmpeqpd (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKYLAKE-NEXT:    vorpd %ymm0, %ymm1, %ymm0 # sched: [1:0.33]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_cmppd:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vcmpeqpd %ymm1, %ymm0, %k0 # sched: [3:1.00]
 ; SKX-NEXT:    vcmpeqpd (%rdi), %ymm0, %k1 # sched: [10:1.00]
 ; SKX-NEXT:    vpmovm2q %k0, %ymm0
@@ -955,14 +955,14 @@ define <4 x double> @test_cmppd(<4 x double> %a0, <4 x double> %a1, <4 x double>
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_cmppd:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vcmpeqpd %ymm1, %ymm0, %ymm1 # sched: [2:2.00]
 ; BTVER2-NEXT:    vcmpeqpd (%rdi), %ymm0, %ymm0 # sched: [7:2.00]
 ; BTVER2-NEXT:    vorpd %ymm0, %ymm1, %ymm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_cmppd:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vcmpeqpd %ymm1, %ymm0, %ymm1 # sched: [3:1.00]
 ; ZNVER1-NEXT:    vcmpeqpd (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; ZNVER1-NEXT:    vorpd %ymm0, %ymm1, %ymm0 # sched: [1:0.25]
@@ -979,42 +979,42 @@ define <4 x double> @test_cmppd(<4 x double> %a0, <4 x double> %a1, <4 x double>
 
 define <8 x float> @test_cmpps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a2) {
 ; GENERIC-LABEL: test_cmpps:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vcmpeqps %ymm1, %ymm0, %ymm1 # sched: [3:1.00]
 ; GENERIC-NEXT:    vcmpeqps (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; GENERIC-NEXT:    vorps %ymm0, %ymm1, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_cmpps:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vcmpeqps %ymm1, %ymm0, %ymm1 # sched: [3:1.00]
 ; SANDY-NEXT:    vcmpeqps (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; SANDY-NEXT:    vorps %ymm0, %ymm1, %ymm0 # sched: [1:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_cmpps:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vcmpeqps %ymm1, %ymm0, %ymm1 # sched: [3:1.00]
 ; HASWELL-NEXT:    vcmpeqps (%rdi), %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    vorps %ymm0, %ymm1, %ymm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_cmpps:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vcmpeqps %ymm1, %ymm0, %ymm1 # sched: [3:1.00]
 ; BROADWELL-NEXT:    vcmpeqps (%rdi), %ymm0, %ymm0 # sched: [9:1.00]
 ; BROADWELL-NEXT:    vorps %ymm0, %ymm1, %ymm0 # sched: [1:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_cmpps:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vcmpeqps %ymm1, %ymm0, %ymm1 # sched: [4:0.33]
 ; SKYLAKE-NEXT:    vcmpeqps (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKYLAKE-NEXT:    vorps %ymm0, %ymm1, %ymm0 # sched: [1:0.33]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_cmpps:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vcmpeqps %ymm1, %ymm0, %k0 # sched: [3:1.00]
 ; SKX-NEXT:    vcmpeqps (%rdi), %ymm0, %k1 # sched: [10:1.00]
 ; SKX-NEXT:    vpmovm2d %k0, %ymm0
@@ -1023,14 +1023,14 @@ define <8 x float> @test_cmpps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_cmpps:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vcmpeqps %ymm1, %ymm0, %ymm1 # sched: [2:2.00]
 ; BTVER2-NEXT:    vcmpeqps (%rdi), %ymm0, %ymm0 # sched: [7:2.00]
 ; BTVER2-NEXT:    vorps %ymm0, %ymm1, %ymm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_cmpps:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vcmpeqps %ymm1, %ymm0, %ymm1 # sched: [3:1.00]
 ; ZNVER1-NEXT:    vcmpeqps (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; ZNVER1-NEXT:    vorps %ymm0, %ymm1, %ymm0 # sched: [1:0.25]
@@ -1047,56 +1047,56 @@ define <8 x float> @test_cmpps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a
 
 define <4 x double> @test_cvtdq2pd(<4 x i32> %a0, <4 x i32> *%a1) {
 ; GENERIC-LABEL: test_cvtdq2pd:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vcvtdq2pd %xmm0, %ymm0 # sched: [4:1.00]
 ; GENERIC-NEXT:    vcvtdq2pd (%rdi), %ymm1 # sched: [10:1.00]
 ; GENERIC-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_cvtdq2pd:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vcvtdq2pd %xmm0, %ymm0 # sched: [4:1.00]
 ; SANDY-NEXT:    vcvtdq2pd (%rdi), %ymm1 # sched: [10:1.00]
 ; SANDY-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_cvtdq2pd:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vcvtdq2pd %xmm0, %ymm0 # sched: [6:1.00]
 ; HASWELL-NEXT:    vcvtdq2pd (%rdi), %ymm1 # sched: [6:1.00]
 ; HASWELL-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_cvtdq2pd:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vcvtdq2pd %xmm0, %ymm0 # sched: [6:1.00]
 ; BROADWELL-NEXT:    vcvtdq2pd (%rdi), %ymm1 # sched: [11:1.00]
 ; BROADWELL-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_cvtdq2pd:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vcvtdq2pd %xmm0, %ymm0 # sched: [7:1.00]
 ; SKYLAKE-NEXT:    vcvtdq2pd (%rdi), %ymm1 # sched: [13:1.00]
 ; SKYLAKE-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_cvtdq2pd:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vcvtdq2pd %xmm0, %ymm0 # sched: [7:1.00]
 ; SKX-NEXT:    vcvtdq2pd (%rdi), %ymm1 # sched: [13:1.00]
 ; SKX-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_cvtdq2pd:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vcvtdq2pd (%rdi), %ymm1 # sched: [8:2.00]
 ; BTVER2-NEXT:    vcvtdq2pd %xmm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_cvtdq2pd:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vcvtdq2pd (%rdi), %ymm1 # sched: [12:1.00]
 ; ZNVER1-NEXT:    vcvtdq2pd %xmm0, %ymm0 # sched: [5:1.00]
 ; ZNVER1-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
@@ -1110,14 +1110,14 @@ define <4 x double> @test_cvtdq2pd(<4 x i32> %a0, <4 x i32> *%a1) {
 
 define <8 x float> @test_cvtdq2ps(<8 x i32> %a0, <8 x i32> *%a1) {
 ; GENERIC-LABEL: test_cvtdq2ps:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vcvtdq2ps %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vcvtdq2ps (%rdi), %ymm1 # sched: [10:1.00]
 ; GENERIC-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_cvtdq2ps:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vcvtdq2ps %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    vmovaps (%rdi), %xmm1 # sched: [6:0.50]
 ; SANDY-NEXT:    vinsertf128 $1, 16(%rdi), %ymm1, %ymm1 # sched: [7:0.50]
@@ -1126,42 +1126,42 @@ define <8 x float> @test_cvtdq2ps(<8 x i32> %a0, <8 x i32> *%a1) {
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_cvtdq2ps:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vcvtdq2ps %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    vcvtdq2ps (%rdi), %ymm1 # sched: [3:1.00]
 ; HASWELL-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_cvtdq2ps:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vcvtdq2ps %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    vcvtdq2ps (%rdi), %ymm1 # sched: [9:1.00]
 ; BROADWELL-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_cvtdq2ps:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vcvtdq2ps %ymm0, %ymm0 # sched: [4:0.33]
 ; SKYLAKE-NEXT:    vcvtdq2ps (%rdi), %ymm1 # sched: [11:0.50]
 ; SKYLAKE-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_cvtdq2ps:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vcvtdq2ps %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    vcvtdq2ps (%rdi), %ymm1 # sched: [11:0.50]
 ; SKX-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_cvtdq2ps:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vcvtdq2ps (%rdi), %ymm1 # sched: [8:2.00]
 ; BTVER2-NEXT:    vcvtdq2ps %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_cvtdq2ps:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vcvtdq2ps (%rdi), %ymm1 # sched: [12:1.00]
 ; ZNVER1-NEXT:    vcvtdq2ps %ymm0, %ymm0 # sched: [5:1.00]
 ; ZNVER1-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
@@ -1175,56 +1175,56 @@ define <8 x float> @test_cvtdq2ps(<8 x i32> %a0, <8 x i32> *%a1) {
 
 define <8 x i32> @test_cvtpd2dq(<4 x double> %a0, <4 x double> *%a1) {
 ; GENERIC-LABEL: test_cvtpd2dq:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vcvtpd2dq %ymm0, %xmm0 # sched: [4:1.00]
 ; GENERIC-NEXT:    vcvtpd2dqy (%rdi), %xmm1 # sched: [11:1.00]
 ; GENERIC-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_cvtpd2dq:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vcvtpd2dq %ymm0, %xmm0 # sched: [4:1.00]
 ; SANDY-NEXT:    vcvtpd2dqy (%rdi), %xmm1 # sched: [11:1.00]
 ; SANDY-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_cvtpd2dq:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vcvtpd2dq %ymm0, %xmm0 # sched: [6:1.00]
 ; HASWELL-NEXT:    vcvtpd2dqy (%rdi), %xmm1 # sched: [7:1.00]
 ; HASWELL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_cvtpd2dq:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vcvtpd2dq %ymm0, %xmm0 # sched: [6:1.00]
 ; BROADWELL-NEXT:    vcvtpd2dqy (%rdi), %xmm1 # sched: [8:1.00]
 ; BROADWELL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_cvtpd2dq:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vcvtpd2dq %ymm0, %xmm0 # sched: [7:1.00]
 ; SKYLAKE-NEXT:    vcvtpd2dqy (%rdi), %xmm1 # sched: [8:1.00]
 ; SKYLAKE-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_cvtpd2dq:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vcvtpd2dq %ymm0, %xmm0 # sched: [7:1.00]
 ; SKX-NEXT:    vcvtpd2dqy (%rdi), %xmm1 # sched: [8:1.00]
 ; SKX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_cvtpd2dq:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vcvtpd2dqy (%rdi), %xmm1 # sched: [11:2.00]
 ; BTVER2-NEXT:    vcvtpd2dq %ymm0, %xmm0 # sched: [6:2.00]
 ; BTVER2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_cvtpd2dq:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vcvtpd2dqy (%rdi), %xmm1 # sched: [12:1.00]
 ; ZNVER1-NEXT:    vcvtpd2dq %ymm0, %xmm0 # sched: [5:1.00]
 ; ZNVER1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # sched: [2:0.67]
@@ -1239,56 +1239,56 @@ declare <4 x i32> @llvm.x86.avx.cvt.pd2dq.256(<4 x double>) nounwind readnone
 
 define <8 x i32> @test_cvttpd2dq(<4 x double> %a0, <4 x double> *%a1) {
 ; GENERIC-LABEL: test_cvttpd2dq:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vcvttpd2dq %ymm0, %xmm0 # sched: [4:1.00]
 ; GENERIC-NEXT:    vcvttpd2dqy (%rdi), %xmm1 # sched: [11:1.00]
 ; GENERIC-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_cvttpd2dq:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vcvttpd2dq %ymm0, %xmm0 # sched: [4:1.00]
 ; SANDY-NEXT:    vcvttpd2dqy (%rdi), %xmm1 # sched: [11:1.00]
 ; SANDY-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_cvttpd2dq:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vcvttpd2dq %ymm0, %xmm0 # sched: [6:1.00]
 ; HASWELL-NEXT:    vcvttpd2dqy (%rdi), %xmm1 # sched: [7:1.00]
 ; HASWELL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_cvttpd2dq:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vcvttpd2dq %ymm0, %xmm0 # sched: [6:1.00]
 ; BROADWELL-NEXT:    vcvttpd2dqy (%rdi), %xmm1 # sched: [8:1.00]
 ; BROADWELL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_cvttpd2dq:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vcvttpd2dq %ymm0, %xmm0 # sched: [7:1.00]
 ; SKYLAKE-NEXT:    vcvttpd2dqy (%rdi), %xmm1 # sched: [8:1.00]
 ; SKYLAKE-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_cvttpd2dq:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vcvttpd2dq %ymm0, %xmm0 # sched: [7:1.00]
 ; SKX-NEXT:    vcvttpd2dqy (%rdi), %xmm1 # sched: [8:1.00]
 ; SKX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_cvttpd2dq:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vcvttpd2dqy (%rdi), %xmm1 # sched: [11:2.00]
 ; BTVER2-NEXT:    vcvttpd2dq %ymm0, %xmm0 # sched: [6:2.00]
 ; BTVER2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_cvttpd2dq:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vcvttpd2dqy (%rdi), %xmm1 # sched: [12:1.00]
 ; ZNVER1-NEXT:    vcvttpd2dq %ymm0, %xmm0 # sched: [5:1.00]
 ; ZNVER1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # sched: [2:0.67]
@@ -1302,56 +1302,56 @@ define <8 x i32> @test_cvttpd2dq(<4 x double> %a0, <4 x double> *%a1) {
 
 define <8 x float> @test_cvtpd2ps(<4 x double> %a0, <4 x double> *%a1) {
 ; GENERIC-LABEL: test_cvtpd2ps:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vcvtpd2ps %ymm0, %xmm0 # sched: [4:1.00]
 ; GENERIC-NEXT:    vcvtpd2psy (%rdi), %xmm1 # sched: [11:1.00]
 ; GENERIC-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_cvtpd2ps:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vcvtpd2ps %ymm0, %xmm0 # sched: [4:1.00]
 ; SANDY-NEXT:    vcvtpd2psy (%rdi), %xmm1 # sched: [11:1.00]
 ; SANDY-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_cvtpd2ps:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vcvtpd2ps %ymm0, %xmm0 # sched: [6:1.00]
 ; HASWELL-NEXT:    vcvtpd2psy (%rdi), %xmm1 # sched: [7:1.00]
 ; HASWELL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_cvtpd2ps:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vcvtpd2ps %ymm0, %xmm0 # sched: [6:1.00]
 ; BROADWELL-NEXT:    vcvtpd2psy (%rdi), %xmm1 # sched: [8:1.00]
 ; BROADWELL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_cvtpd2ps:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vcvtpd2ps %ymm0, %xmm0 # sched: [7:1.00]
 ; SKYLAKE-NEXT:    vcvtpd2psy (%rdi), %xmm1 # sched: [8:1.00]
 ; SKYLAKE-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_cvtpd2ps:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vcvtpd2ps %ymm0, %xmm0 # sched: [7:1.00]
 ; SKX-NEXT:    vcvtpd2psy (%rdi), %xmm1 # sched: [8:1.00]
 ; SKX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_cvtpd2ps:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vcvtpd2psy (%rdi), %xmm1 # sched: [11:2.00]
 ; BTVER2-NEXT:    vcvtpd2ps %ymm0, %xmm0 # sched: [6:2.00]
 ; BTVER2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_cvtpd2ps:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vcvtpd2psy (%rdi), %xmm1 # sched: [11:1.00]
 ; ZNVER1-NEXT:    vcvtpd2ps %ymm0, %xmm0 # sched: [5:1.00]
 ; ZNVER1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # sched: [2:0.67]
@@ -1365,56 +1365,56 @@ define <8 x float> @test_cvtpd2ps(<4 x double> %a0, <4 x double> *%a1) {
 
 define <8 x i32> @test_cvtps2dq(<8 x float> %a0, <8 x float> *%a1) {
 ; GENERIC-LABEL: test_cvtps2dq:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vcvtps2dq %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vcvtps2dq (%rdi), %ymm1 # sched: [10:1.00]
 ; GENERIC-NEXT:    vorpd %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_cvtps2dq:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vcvtps2dq %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    vcvtps2dq (%rdi), %ymm1 # sched: [10:1.00]
 ; SANDY-NEXT:    vorpd %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_cvtps2dq:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vcvtps2dq %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    vcvtps2dq (%rdi), %ymm1 # sched: [3:1.00]
 ; HASWELL-NEXT:    vorpd %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_cvtps2dq:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vcvtps2dq %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    vcvtps2dq (%rdi), %ymm1 # sched: [9:1.00]
 ; BROADWELL-NEXT:    vorpd %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_cvtps2dq:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vcvtps2dq %ymm0, %ymm0 # sched: [4:0.33]
 ; SKYLAKE-NEXT:    vcvtps2dq (%rdi), %ymm1 # sched: [11:0.50]
 ; SKYLAKE-NEXT:    vorpd %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_cvtps2dq:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vcvtps2dq %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    vcvtps2dq (%rdi), %ymm1 # sched: [11:0.50]
 ; SKX-NEXT:    vorpd %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_cvtps2dq:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vcvtps2dq (%rdi), %ymm1 # sched: [8:2.00]
 ; BTVER2-NEXT:    vcvtps2dq %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    vorpd %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_cvtps2dq:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vcvtps2dq (%rdi), %ymm1 # sched: [12:1.00]
 ; ZNVER1-NEXT:    vcvtps2dq %ymm0, %ymm0 # sched: [5:1.00]
 ; ZNVER1-NEXT:    vorpd %ymm1, %ymm0, %ymm0 # sched: [1:0.25]
@@ -1429,56 +1429,56 @@ declare <8 x i32> @llvm.x86.avx.cvt.ps2dq.256(<8 x float>) nounwind readnone
 
 define <8 x i32> @test_cvttps2dq(<8 x float> %a0, <8 x float> *%a1) {
 ; GENERIC-LABEL: test_cvttps2dq:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vcvttps2dq %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vcvttps2dq (%rdi), %ymm1 # sched: [10:1.00]
 ; GENERIC-NEXT:    vorps %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_cvttps2dq:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vcvttps2dq %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    vcvttps2dq (%rdi), %ymm1 # sched: [10:1.00]
 ; SANDY-NEXT:    vorps %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_cvttps2dq:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vcvttps2dq %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    vcvttps2dq (%rdi), %ymm1 # sched: [3:1.00]
 ; HASWELL-NEXT:    vorps %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_cvttps2dq:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vcvttps2dq %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    vcvttps2dq (%rdi), %ymm1 # sched: [9:1.00]
 ; BROADWELL-NEXT:    vorps %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_cvttps2dq:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vcvttps2dq %ymm0, %ymm0 # sched: [4:0.33]
 ; SKYLAKE-NEXT:    vcvttps2dq (%rdi), %ymm1 # sched: [11:0.50]
 ; SKYLAKE-NEXT:    vorps %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_cvttps2dq:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vcvttps2dq %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    vcvttps2dq (%rdi), %ymm1 # sched: [11:0.50]
 ; SKX-NEXT:    vorps %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_cvttps2dq:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vcvttps2dq (%rdi), %ymm1 # sched: [8:2.00]
 ; BTVER2-NEXT:    vcvttps2dq %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    vorps %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_cvttps2dq:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vcvttps2dq (%rdi), %ymm1 # sched: [12:1.00]
 ; ZNVER1-NEXT:    vcvttps2dq %ymm0, %ymm0 # sched: [5:1.00]
 ; ZNVER1-NEXT:    vorps %ymm1, %ymm0, %ymm0 # sched: [1:0.25]
@@ -1492,49 +1492,49 @@ define <8 x i32> @test_cvttps2dq(<8 x float> %a0, <8 x float> *%a1) {
 
 define <4 x double> @test_divpd(<4 x double> %a0, <4 x double> %a1, <4 x double> *%a2) {
 ; GENERIC-LABEL: test_divpd:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vdivpd %ymm1, %ymm0, %ymm0 # sched: [45:2.00]
 ; GENERIC-NEXT:    vdivpd (%rdi), %ymm0, %ymm0 # sched: [52:2.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_divpd:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vdivpd %ymm1, %ymm0, %ymm0 # sched: [45:2.00]
 ; SANDY-NEXT:    vdivpd (%rdi), %ymm0, %ymm0 # sched: [52:2.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_divpd:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vdivpd %ymm1, %ymm0, %ymm0 # sched: [35:2.00]
 ; HASWELL-NEXT:    vdivpd (%rdi), %ymm0, %ymm0 # sched: [35:2.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_divpd:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vdivpd %ymm1, %ymm0, %ymm0 # sched: [23:2.00]
 ; BROADWELL-NEXT:    vdivpd (%rdi), %ymm0, %ymm0 # sched: [29:2.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_divpd:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vdivpd %ymm1, %ymm0, %ymm0 # sched: [14:1.00]
 ; SKYLAKE-NEXT:    vdivpd (%rdi), %ymm0, %ymm0 # sched: [21:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_divpd:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vdivpd %ymm1, %ymm0, %ymm0 # sched: [14:1.00]
 ; SKX-NEXT:    vdivpd (%rdi), %ymm0, %ymm0 # sched: [21:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_divpd:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vdivpd %ymm1, %ymm0, %ymm0 # sched: [38:38.00]
 ; BTVER2-NEXT:    vdivpd (%rdi), %ymm0, %ymm0 # sched: [43:38.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_divpd:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vdivpd %ymm1, %ymm0, %ymm0 # sched: [15:15.00]
 ; ZNVER1-NEXT:    vdivpd (%rdi), %ymm0, %ymm0 # sched: [22:22.00]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -1546,49 +1546,49 @@ define <4 x double> @test_divpd(<4 x double> %a0, <4 x double> %a1, <4 x double>
 
 define <8 x float> @test_divps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a2) {
 ; GENERIC-LABEL: test_divps:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vdivps %ymm1, %ymm0, %ymm0 # sched: [29:2.00]
 ; GENERIC-NEXT:    vdivps (%rdi), %ymm0, %ymm0 # sched: [36:2.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_divps:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vdivps %ymm1, %ymm0, %ymm0 # sched: [29:2.00]
 ; SANDY-NEXT:    vdivps (%rdi), %ymm0, %ymm0 # sched: [36:2.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_divps:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vdivps %ymm1, %ymm0, %ymm0 # sched: [21:2.00]
 ; HASWELL-NEXT:    vdivps (%rdi), %ymm0, %ymm0 # sched: [21:2.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_divps:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vdivps %ymm1, %ymm0, %ymm0 # sched: [17:2.00]
 ; BROADWELL-NEXT:    vdivps (%rdi), %ymm0, %ymm0 # sched: [23:2.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_divps:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vdivps %ymm1, %ymm0, %ymm0 # sched: [11:1.00]
 ; SKYLAKE-NEXT:    vdivps (%rdi), %ymm0, %ymm0 # sched: [18:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_divps:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vdivps %ymm1, %ymm0, %ymm0 # sched: [11:1.00]
 ; SKX-NEXT:    vdivps (%rdi), %ymm0, %ymm0 # sched: [18:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_divps:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vdivps %ymm1, %ymm0, %ymm0 # sched: [38:38.00]
 ; BTVER2-NEXT:    vdivps (%rdi), %ymm0, %ymm0 # sched: [43:38.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_divps:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vdivps %ymm1, %ymm0, %ymm0 # sched: [12:12.00]
 ; ZNVER1-NEXT:    vdivps (%rdi), %ymm0, %ymm0 # sched: [19:19.00]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -1600,49 +1600,49 @@ define <8 x float> @test_divps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a
 
 define <8 x float> @test_dpps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a2) {
 ; GENERIC-LABEL: test_dpps:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vdpps $7, %ymm1, %ymm0, %ymm0 # sched: [12:2.00]
 ; GENERIC-NEXT:    vdpps $7, (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_dpps:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vdpps $7, %ymm1, %ymm0, %ymm0 # sched: [12:2.00]
 ; SANDY-NEXT:    vdpps $7, (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_dpps:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vdpps $7, %ymm1, %ymm0, %ymm0 # sched: [14:2.00]
 ; HASWELL-NEXT:    vdpps $7, (%rdi), %ymm0, %ymm0 # sched: [14:2.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_dpps:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vdpps $7, %ymm1, %ymm0, %ymm0 # sched: [14:2.00]
 ; BROADWELL-NEXT:    vdpps $7, (%rdi), %ymm0, %ymm0 # sched: [20:2.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_dpps:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vdpps $7, %ymm1, %ymm0, %ymm0 # sched: [13:1.33]
 ; SKYLAKE-NEXT:    vdpps $7, (%rdi), %ymm0, %ymm0 # sched: [20:1.33]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_dpps:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vdpps $7, %ymm1, %ymm0, %ymm0 # sched: [13:1.33]
 ; SKX-NEXT:    vdpps $7, (%rdi), %ymm0, %ymm0 # sched: [20:1.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_dpps:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vdpps $7, %ymm1, %ymm0, %ymm0 # sched: [12:6.00]
 ; BTVER2-NEXT:    vdpps $7, (%rdi), %ymm0, %ymm0 # sched: [17:6.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_dpps:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vdpps $7, %ymm1, %ymm0, %ymm0 # sched: [100:?]
 ; ZNVER1-NEXT:    vdpps $7, (%rdi), %ymm0, %ymm0 # sched: [100:?]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -1655,55 +1655,55 @@ declare <8 x float> @llvm.x86.avx.dp.ps.256(<8 x float>, <8 x float>, i8) nounwi
 
 define <4 x float> @test_extractf128(<8 x float> %a0, <8 x float> %a1, <4 x float> *%a2) {
 ; GENERIC-LABEL: test_extractf128:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vextractf128 $1, %ymm0, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vextractf128 $1, %ymm1, (%rdi) # sched: [5:1.00]
 ; GENERIC-NEXT:    vzeroupper
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_extractf128:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vextractf128 $1, %ymm0, %xmm0 # sched: [1:1.00]
 ; SANDY-NEXT:    vextractf128 $1, %ymm1, (%rdi) # sched: [5:1.00]
 ; SANDY-NEXT:    vzeroupper
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_extractf128:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vextractf128 $1, %ymm0, %xmm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    vextractf128 $1, %ymm1, (%rdi) # sched: [1:1.00]
 ; HASWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_extractf128:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vextractf128 $1, %ymm0, %xmm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    vextractf128 $1, %ymm1, (%rdi) # sched: [1:1.00]
 ; BROADWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_extractf128:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vextractf128 $1, %ymm0, %xmm0 # sched: [3:1.00]
 ; SKYLAKE-NEXT:    vextractf128 $1, %ymm1, (%rdi) # sched: [1:1.00]
 ; SKYLAKE-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_extractf128:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vextractf128 $1, %ymm0, %xmm0 # sched: [3:1.00]
 ; SKX-NEXT:    vextractf128 $1, %ymm1, (%rdi) # sched: [1:1.00]
 ; SKX-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_extractf128:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vextractf128 $1, %ymm0, %xmm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    vextractf128 $1, %ymm1, (%rdi) # sched: [1:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_extractf128:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vextractf128 $1, %ymm0, %xmm0 # sched: [1:0.33]
 ; ZNVER1-NEXT:    vextractf128 $1, %ymm1, (%rdi) # sched: [8:0.50]
 ; ZNVER1-NEXT:    vzeroupper # sched: [100:?]
@@ -1716,49 +1716,49 @@ define <4 x float> @test_extractf128(<8 x float> %a0, <8 x float> %a1, <4 x floa
 
 define <4 x double> @test_haddpd(<4 x double> %a0, <4 x double> %a1, <4 x double> *%a2) {
 ; GENERIC-LABEL: test_haddpd:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vhaddpd %ymm1, %ymm0, %ymm0 # sched: [5:2.00]
 ; GENERIC-NEXT:    vhaddpd (%rdi), %ymm0, %ymm0 # sched: [12:2.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_haddpd:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vhaddpd %ymm1, %ymm0, %ymm0 # sched: [5:2.00]
 ; SANDY-NEXT:    vhaddpd (%rdi), %ymm0, %ymm0 # sched: [12:2.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_haddpd:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vhaddpd %ymm1, %ymm0, %ymm0 # sched: [5:2.00]
 ; HASWELL-NEXT:    vhaddpd (%rdi), %ymm0, %ymm0 # sched: [5:2.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_haddpd:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vhaddpd %ymm1, %ymm0, %ymm0 # sched: [5:2.00]
 ; BROADWELL-NEXT:    vhaddpd (%rdi), %ymm0, %ymm0 # sched: [11:2.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_haddpd:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vhaddpd %ymm1, %ymm0, %ymm0 # sched: [6:2.00]
 ; SKYLAKE-NEXT:    vhaddpd (%rdi), %ymm0, %ymm0 # sched: [13:2.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_haddpd:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vhaddpd %ymm1, %ymm0, %ymm0 # sched: [6:2.00]
 ; SKX-NEXT:    vhaddpd (%rdi), %ymm0, %ymm0 # sched: [13:2.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_haddpd:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vhaddpd %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    vhaddpd (%rdi), %ymm0, %ymm0 # sched: [8:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_haddpd:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vhaddpd %ymm1, %ymm0, %ymm0 # sched: [100:?]
 ; ZNVER1-NEXT:    vhaddpd (%rdi), %ymm0, %ymm0 # sched: [100:?]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -1771,49 +1771,49 @@ declare <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double>, <4 x double>) nounw
 
 define <8 x float> @test_haddps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a2) {
 ; GENERIC-LABEL: test_haddps:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vhaddps %ymm1, %ymm0, %ymm0 # sched: [5:2.00]
 ; GENERIC-NEXT:    vhaddps (%rdi), %ymm0, %ymm0 # sched: [12:2.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_haddps:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vhaddps %ymm1, %ymm0, %ymm0 # sched: [5:2.00]
 ; SANDY-NEXT:    vhaddps (%rdi), %ymm0, %ymm0 # sched: [12:2.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_haddps:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vhaddps %ymm1, %ymm0, %ymm0 # sched: [5:2.00]
 ; HASWELL-NEXT:    vhaddps (%rdi), %ymm0, %ymm0 # sched: [5:2.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_haddps:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vhaddps %ymm1, %ymm0, %ymm0 # sched: [5:2.00]
 ; BROADWELL-NEXT:    vhaddps (%rdi), %ymm0, %ymm0 # sched: [11:2.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_haddps:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vhaddps %ymm1, %ymm0, %ymm0 # sched: [6:2.00]
 ; SKYLAKE-NEXT:    vhaddps (%rdi), %ymm0, %ymm0 # sched: [13:2.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_haddps:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vhaddps %ymm1, %ymm0, %ymm0 # sched: [6:2.00]
 ; SKX-NEXT:    vhaddps (%rdi), %ymm0, %ymm0 # sched: [13:2.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_haddps:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vhaddps %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    vhaddps (%rdi), %ymm0, %ymm0 # sched: [8:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_haddps:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vhaddps %ymm1, %ymm0, %ymm0 # sched: [100:?]
 ; ZNVER1-NEXT:    vhaddps (%rdi), %ymm0, %ymm0 # sched: [100:?]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -1826,49 +1826,49 @@ declare <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float>, <8 x float>) nounwind
 
 define <4 x double> @test_hsubpd(<4 x double> %a0, <4 x double> %a1, <4 x double> *%a2) {
 ; GENERIC-LABEL: test_hsubpd:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vhsubpd %ymm1, %ymm0, %ymm0 # sched: [5:2.00]
 ; GENERIC-NEXT:    vhsubpd (%rdi), %ymm0, %ymm0 # sched: [12:2.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_hsubpd:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vhsubpd %ymm1, %ymm0, %ymm0 # sched: [5:2.00]
 ; SANDY-NEXT:    vhsubpd (%rdi), %ymm0, %ymm0 # sched: [12:2.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_hsubpd:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vhsubpd %ymm1, %ymm0, %ymm0 # sched: [5:2.00]
 ; HASWELL-NEXT:    vhsubpd (%rdi), %ymm0, %ymm0 # sched: [5:2.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_hsubpd:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vhsubpd %ymm1, %ymm0, %ymm0 # sched: [5:2.00]
 ; BROADWELL-NEXT:    vhsubpd (%rdi), %ymm0, %ymm0 # sched: [11:2.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_hsubpd:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vhsubpd %ymm1, %ymm0, %ymm0 # sched: [6:2.00]
 ; SKYLAKE-NEXT:    vhsubpd (%rdi), %ymm0, %ymm0 # sched: [13:2.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_hsubpd:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vhsubpd %ymm1, %ymm0, %ymm0 # sched: [6:2.00]
 ; SKX-NEXT:    vhsubpd (%rdi), %ymm0, %ymm0 # sched: [13:2.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_hsubpd:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vhsubpd %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    vhsubpd (%rdi), %ymm0, %ymm0 # sched: [8:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_hsubpd:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vhsubpd %ymm1, %ymm0, %ymm0 # sched: [100:?]
 ; ZNVER1-NEXT:    vhsubpd (%rdi), %ymm0, %ymm0 # sched: [100:?]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -1881,49 +1881,49 @@ declare <4 x double> @llvm.x86.avx.hsub.pd.256(<4 x double>, <4 x double>) nounw
 
 define <8 x float> @test_hsubps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a2) {
 ; GENERIC-LABEL: test_hsubps:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vhsubps %ymm1, %ymm0, %ymm0 # sched: [5:2.00]
 ; GENERIC-NEXT:    vhsubps (%rdi), %ymm0, %ymm0 # sched: [12:2.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_hsubps:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vhsubps %ymm1, %ymm0, %ymm0 # sched: [5:2.00]
 ; SANDY-NEXT:    vhsubps (%rdi), %ymm0, %ymm0 # sched: [12:2.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_hsubps:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vhsubps %ymm1, %ymm0, %ymm0 # sched: [5:2.00]
 ; HASWELL-NEXT:    vhsubps (%rdi), %ymm0, %ymm0 # sched: [5:2.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_hsubps:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vhsubps %ymm1, %ymm0, %ymm0 # sched: [5:2.00]
 ; BROADWELL-NEXT:    vhsubps (%rdi), %ymm0, %ymm0 # sched: [11:2.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_hsubps:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vhsubps %ymm1, %ymm0, %ymm0 # sched: [6:2.00]
 ; SKYLAKE-NEXT:    vhsubps (%rdi), %ymm0, %ymm0 # sched: [13:2.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_hsubps:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vhsubps %ymm1, %ymm0, %ymm0 # sched: [6:2.00]
 ; SKX-NEXT:    vhsubps (%rdi), %ymm0, %ymm0 # sched: [13:2.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_hsubps:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vhsubps %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    vhsubps (%rdi), %ymm0, %ymm0 # sched: [8:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_hsubps:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vhsubps %ymm1, %ymm0, %ymm0 # sched: [100:?]
 ; ZNVER1-NEXT:    vhsubps (%rdi), %ymm0, %ymm0 # sched: [100:?]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -1936,56 +1936,56 @@ declare <8 x float> @llvm.x86.avx.hsub.ps.256(<8 x float>, <8 x float>) nounwind
 
 define <8 x float> @test_insertf128(<8 x float> %a0, <4 x float> %a1, <4 x float> *%a2) {
 ; GENERIC-LABEL: test_insertf128:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1 # sched: [1:1.00]
 ; GENERIC-NEXT:    vinsertf128 $1, (%rdi), %ymm0, %ymm0 # sched: [7:0.50]
 ; GENERIC-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_insertf128:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1 # sched: [1:1.00]
 ; SANDY-NEXT:    vinsertf128 $1, (%rdi), %ymm0, %ymm0 # sched: [7:0.50]
 ; SANDY-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_insertf128:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1 # sched: [3:1.00]
 ; HASWELL-NEXT:    vinsertf128 $1, (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
 ; HASWELL-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_insertf128:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1 # sched: [3:1.00]
 ; BROADWELL-NEXT:    vinsertf128 $1, (%rdi), %ymm0, %ymm0 # sched: [6:0.50]
 ; BROADWELL-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_insertf128:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1 # sched: [3:1.00]
 ; SKYLAKE-NEXT:    vinsertf128 $1, (%rdi), %ymm0, %ymm0 # sched: [7:0.50]
 ; SKYLAKE-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_insertf128:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1 # sched: [3:1.00]
 ; SKX-NEXT:    vinsertf128 $1, (%rdi), %ymm0, %ymm0 # sched: [7:0.50]
 ; SKX-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_insertf128:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1 # sched: [1:0.50]
 ; BTVER2-NEXT:    vinsertf128 $1, (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
 ; BTVER2-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_insertf128:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1 # sched: [2:0.67]
 ; ZNVER1-NEXT:    vinsertf128 $1, (%rdi), %ymm0, %ymm0 # sched: [9:0.67]
 ; ZNVER1-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
@@ -2001,42 +2001,42 @@ define <8 x float> @test_insertf128(<8 x float> %a0, <4 x float> %a1, <4 x float
 
 define <32 x i8> @test_lddqu(i8* %a0) {
 ; GENERIC-LABEL: test_lddqu:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vlddqu (%rdi), %ymm0 # sched: [6:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_lddqu:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vlddqu (%rdi), %ymm0 # sched: [6:0.50]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_lddqu:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vlddqu (%rdi), %ymm0 # sched: [1:0.50]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_lddqu:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vlddqu (%rdi), %ymm0 # sched: [6:0.50]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_lddqu:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vlddqu (%rdi), %ymm0 # sched: [7:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_lddqu:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vlddqu (%rdi), %ymm0 # sched: [7:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_lddqu:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vlddqu (%rdi), %ymm0 # sched: [5:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_lddqu:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vlddqu (%rdi), %ymm0 # sched: [8:0.50]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <32 x i8> @llvm.x86.avx.ldu.dq.256(i8* %a0)
@@ -2046,56 +2046,56 @@ declare <32 x i8> @llvm.x86.avx.ldu.dq.256(i8*) nounwind readonly
 
 define <2 x double> @test_maskmovpd(i8* %a0, <2 x i64> %a1, <2 x double> %a2) {
 ; GENERIC-LABEL: test_maskmovpd:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vmaskmovpd (%rdi), %xmm0, %xmm2 # sched: [8:1.00]
 ; GENERIC-NEXT:    vmaskmovpd %xmm1, %xmm0, (%rdi) # sched: [5:1.00]
 ; GENERIC-NEXT:    vmovapd %xmm2, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_maskmovpd:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vmaskmovpd (%rdi), %xmm0, %xmm2 # sched: [8:1.00]
 ; SANDY-NEXT:    vmaskmovpd %xmm1, %xmm0, (%rdi) # sched: [5:1.00]
 ; SANDY-NEXT:    vmovapd %xmm2, %xmm0 # sched: [1:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_maskmovpd:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vmaskmovpd (%rdi), %xmm0, %xmm2 # sched: [2:2.00]
 ; HASWELL-NEXT:    vmaskmovpd %xmm1, %xmm0, (%rdi) # sched: [4:1.00]
 ; HASWELL-NEXT:    vmovapd %xmm2, %xmm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_maskmovpd:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vmaskmovpd (%rdi), %xmm0, %xmm2 # sched: [7:2.00]
 ; BROADWELL-NEXT:    vmaskmovpd %xmm1, %xmm0, (%rdi) # sched: [5:1.00]
 ; BROADWELL-NEXT:    vmovapd %xmm2, %xmm0 # sched: [1:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_maskmovpd:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vmaskmovpd (%rdi), %xmm0, %xmm2 # sched: [7:0.50]
 ; SKYLAKE-NEXT:    vmaskmovpd %xmm1, %xmm0, (%rdi) # sched: [2:1.00]
 ; SKYLAKE-NEXT:    vmovapd %xmm2, %xmm0 # sched: [1:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_maskmovpd:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vmaskmovpd (%rdi), %xmm0, %xmm2 # sched: [7:0.50]
 ; SKX-NEXT:    vmaskmovpd %xmm1, %xmm0, (%rdi) # sched: [2:1.00]
 ; SKX-NEXT:    vmovapd %xmm2, %xmm0 # sched: [1:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_maskmovpd:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vmaskmovpd (%rdi), %xmm0, %xmm2 # sched: [6:1.00]
 ; BTVER2-NEXT:    vmaskmovpd %xmm1, %xmm0, (%rdi) # sched: [6:2.00]
 ; BTVER2-NEXT:    vmovapd %xmm2, %xmm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_maskmovpd:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vmaskmovpd (%rdi), %xmm0, %xmm2 # sched: [8:0.50]
 ; ZNVER1-NEXT:    vmaskmovpd %xmm1, %xmm0, (%rdi) # sched: [4:0.50]
 ; ZNVER1-NEXT:    vmovapd %xmm2, %xmm0 # sched: [1:0.50]
@@ -2109,56 +2109,56 @@ declare void @llvm.x86.avx.maskstore.pd(i8*, <2 x i64>, <2 x double>) nounwind
 
 define <4 x double> @test_maskmovpd_ymm(i8* %a0, <4 x i64> %a1, <4 x double> %a2) {
 ; GENERIC-LABEL: test_maskmovpd_ymm:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vmaskmovpd (%rdi), %ymm0, %ymm2 # sched: [9:1.00]
 ; GENERIC-NEXT:    vmaskmovpd %ymm1, %ymm0, (%rdi) # sched: [5:1.00]
 ; GENERIC-NEXT:    vmovapd %ymm2, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_maskmovpd_ymm:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vmaskmovpd (%rdi), %ymm0, %ymm2 # sched: [9:1.00]
 ; SANDY-NEXT:    vmaskmovpd %ymm1, %ymm0, (%rdi) # sched: [5:1.00]
 ; SANDY-NEXT:    vmovapd %ymm2, %ymm0 # sched: [1:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_maskmovpd_ymm:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vmaskmovpd (%rdi), %ymm0, %ymm2 # sched: [2:2.00]
 ; HASWELL-NEXT:    vmaskmovpd %ymm1, %ymm0, (%rdi) # sched: [4:1.00]
 ; HASWELL-NEXT:    vmovapd %ymm2, %ymm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_maskmovpd_ymm:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vmaskmovpd (%rdi), %ymm0, %ymm2 # sched: [8:2.00]
 ; BROADWELL-NEXT:    vmaskmovpd %ymm1, %ymm0, (%rdi) # sched: [5:1.00]
 ; BROADWELL-NEXT:    vmovapd %ymm2, %ymm0 # sched: [1:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_maskmovpd_ymm:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vmaskmovpd (%rdi), %ymm0, %ymm2 # sched: [8:0.50]
 ; SKYLAKE-NEXT:    vmaskmovpd %ymm1, %ymm0, (%rdi) # sched: [2:1.00]
 ; SKYLAKE-NEXT:    vmovapd %ymm2, %ymm0 # sched: [1:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_maskmovpd_ymm:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vmaskmovpd (%rdi), %ymm0, %ymm2 # sched: [8:0.50]
 ; SKX-NEXT:    vmaskmovpd %ymm1, %ymm0, (%rdi) # sched: [2:1.00]
 ; SKX-NEXT:    vmovapd %ymm2, %ymm0 # sched: [1:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_maskmovpd_ymm:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vmaskmovpd (%rdi), %ymm0, %ymm2 # sched: [6:2.00]
 ; BTVER2-NEXT:    vmaskmovpd %ymm1, %ymm0, (%rdi) # sched: [6:2.00]
 ; BTVER2-NEXT:    vmovapd %ymm2, %ymm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_maskmovpd_ymm:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vmaskmovpd (%rdi), %ymm0, %ymm2 # sched: [8:1.00]
 ; ZNVER1-NEXT:    vmaskmovpd %ymm1, %ymm0, (%rdi) # sched: [5:1.00]
 ; ZNVER1-NEXT:    vmovapd %ymm2, %ymm0 # sched: [1:0.50]
@@ -2172,56 +2172,56 @@ declare void @llvm.x86.avx.maskstore.pd.256(i8*, <4 x i64>, <4 x double>) nounwi
 
 define <4 x float> @test_maskmovps(i8* %a0, <4 x i32> %a1, <4 x float> %a2) {
 ; GENERIC-LABEL: test_maskmovps:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vmaskmovps (%rdi), %xmm0, %xmm2 # sched: [8:1.00]
 ; GENERIC-NEXT:    vmaskmovps %xmm1, %xmm0, (%rdi) # sched: [5:1.00]
 ; GENERIC-NEXT:    vmovaps %xmm2, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_maskmovps:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vmaskmovps (%rdi), %xmm0, %xmm2 # sched: [8:1.00]
 ; SANDY-NEXT:    vmaskmovps %xmm1, %xmm0, (%rdi) # sched: [5:1.00]
 ; SANDY-NEXT:    vmovaps %xmm2, %xmm0 # sched: [1:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_maskmovps:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vmaskmovps (%rdi), %xmm0, %xmm2 # sched: [2:2.00]
 ; HASWELL-NEXT:    vmaskmovps %xmm1, %xmm0, (%rdi) # sched: [4:1.00]
 ; HASWELL-NEXT:    vmovaps %xmm2, %xmm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_maskmovps:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vmaskmovps (%rdi), %xmm0, %xmm2 # sched: [7:2.00]
 ; BROADWELL-NEXT:    vmaskmovps %xmm1, %xmm0, (%rdi) # sched: [5:1.00]
 ; BROADWELL-NEXT:    vmovaps %xmm2, %xmm0 # sched: [1:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_maskmovps:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vmaskmovps (%rdi), %xmm0, %xmm2 # sched: [7:0.50]
 ; SKYLAKE-NEXT:    vmaskmovps %xmm1, %xmm0, (%rdi) # sched: [2:1.00]
 ; SKYLAKE-NEXT:    vmovaps %xmm2, %xmm0 # sched: [1:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_maskmovps:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vmaskmovps (%rdi), %xmm0, %xmm2 # sched: [7:0.50]
 ; SKX-NEXT:    vmaskmovps %xmm1, %xmm0, (%rdi) # sched: [2:1.00]
 ; SKX-NEXT:    vmovaps %xmm2, %xmm0 # sched: [1:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_maskmovps:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vmaskmovps (%rdi), %xmm0, %xmm2 # sched: [6:1.00]
 ; BTVER2-NEXT:    vmaskmovps %xmm1, %xmm0, (%rdi) # sched: [6:2.00]
 ; BTVER2-NEXT:    vmovaps %xmm2, %xmm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_maskmovps:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vmaskmovps (%rdi), %xmm0, %xmm2 # sched: [8:0.50]
 ; ZNVER1-NEXT:    vmaskmovps %xmm1, %xmm0, (%rdi) # sched: [4:0.50]
 ; ZNVER1-NEXT:    vmovaps %xmm2, %xmm0 # sched: [1:0.50]
@@ -2235,56 +2235,56 @@ declare void @llvm.x86.avx.maskstore.ps(i8*, <4 x i32>, <4 x float>) nounwind
 
 define <8 x float> @test_maskmovps_ymm(i8* %a0, <8 x i32> %a1, <8 x float> %a2) {
 ; GENERIC-LABEL: test_maskmovps_ymm:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vmaskmovps (%rdi), %ymm0, %ymm2 # sched: [9:1.00]
 ; GENERIC-NEXT:    vmaskmovps %ymm1, %ymm0, (%rdi) # sched: [5:1.00]
 ; GENERIC-NEXT:    vmovaps %ymm2, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_maskmovps_ymm:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vmaskmovps (%rdi), %ymm0, %ymm2 # sched: [9:1.00]
 ; SANDY-NEXT:    vmaskmovps %ymm1, %ymm0, (%rdi) # sched: [5:1.00]
 ; SANDY-NEXT:    vmovaps %ymm2, %ymm0 # sched: [1:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_maskmovps_ymm:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vmaskmovps (%rdi), %ymm0, %ymm2 # sched: [2:2.00]
 ; HASWELL-NEXT:    vmaskmovps %ymm1, %ymm0, (%rdi) # sched: [4:1.00]
 ; HASWELL-NEXT:    vmovaps %ymm2, %ymm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_maskmovps_ymm:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vmaskmovps (%rdi), %ymm0, %ymm2 # sched: [8:2.00]
 ; BROADWELL-NEXT:    vmaskmovps %ymm1, %ymm0, (%rdi) # sched: [5:1.00]
 ; BROADWELL-NEXT:    vmovaps %ymm2, %ymm0 # sched: [1:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_maskmovps_ymm:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vmaskmovps (%rdi), %ymm0, %ymm2 # sched: [8:0.50]
 ; SKYLAKE-NEXT:    vmaskmovps %ymm1, %ymm0, (%rdi) # sched: [2:1.00]
 ; SKYLAKE-NEXT:    vmovaps %ymm2, %ymm0 # sched: [1:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_maskmovps_ymm:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vmaskmovps (%rdi), %ymm0, %ymm2 # sched: [8:0.50]
 ; SKX-NEXT:    vmaskmovps %ymm1, %ymm0, (%rdi) # sched: [2:1.00]
 ; SKX-NEXT:    vmovaps %ymm2, %ymm0 # sched: [1:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_maskmovps_ymm:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vmaskmovps (%rdi), %ymm0, %ymm2 # sched: [6:2.00]
 ; BTVER2-NEXT:    vmaskmovps %ymm1, %ymm0, (%rdi) # sched: [6:2.00]
 ; BTVER2-NEXT:    vmovaps %ymm2, %ymm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_maskmovps_ymm:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vmaskmovps (%rdi), %ymm0, %ymm2 # sched: [8:1.00]
 ; ZNVER1-NEXT:    vmaskmovps %ymm1, %ymm0, (%rdi) # sched: [5:1.00]
 ; ZNVER1-NEXT:    vmovaps %ymm2, %ymm0 # sched: [1:0.50]
@@ -2298,49 +2298,49 @@ declare void @llvm.x86.avx.maskstore.ps.256(i8*, <8 x i32>, <8 x float>) nounwin
 
 define <4 x double> @test_maxpd(<4 x double> %a0, <4 x double> %a1, <4 x double> *%a2) {
 ; GENERIC-LABEL: test_maxpd:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vmaxpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vmaxpd (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_maxpd:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vmaxpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    vmaxpd (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_maxpd:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vmaxpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    vmaxpd (%rdi), %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_maxpd:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vmaxpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    vmaxpd (%rdi), %ymm0, %ymm0 # sched: [9:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_maxpd:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vmaxpd %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKYLAKE-NEXT:    vmaxpd (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_maxpd:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vmaxpd %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    vmaxpd (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_maxpd:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vmaxpd %ymm1, %ymm0, %ymm0 # sched: [2:2.00]
 ; BTVER2-NEXT:    vmaxpd (%rdi), %ymm0, %ymm0 # sched: [7:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_maxpd:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vmaxpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    vmaxpd (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -2353,49 +2353,49 @@ declare <4 x double> @llvm.x86.avx.max.pd.256(<4 x double>, <4 x double>) nounwi
 
 define <8 x float> @test_maxps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a2) {
 ; GENERIC-LABEL: test_maxps:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vmaxps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vmaxps (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_maxps:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vmaxps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    vmaxps (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_maxps:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vmaxps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    vmaxps (%rdi), %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_maxps:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vmaxps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    vmaxps (%rdi), %ymm0, %ymm0 # sched: [9:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_maxps:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vmaxps %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKYLAKE-NEXT:    vmaxps (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_maxps:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vmaxps %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    vmaxps (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_maxps:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vmaxps %ymm1, %ymm0, %ymm0 # sched: [2:2.00]
 ; BTVER2-NEXT:    vmaxps (%rdi), %ymm0, %ymm0 # sched: [7:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_maxps:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vmaxps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    vmaxps (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -2408,49 +2408,49 @@ declare <8 x float> @llvm.x86.avx.max.ps.256(<8 x float>, <8 x float>) nounwind 
 
 define <4 x double> @test_minpd(<4 x double> %a0, <4 x double> %a1, <4 x double> *%a2) {
 ; GENERIC-LABEL: test_minpd:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vminpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vminpd (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_minpd:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vminpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    vminpd (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_minpd:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vminpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    vminpd (%rdi), %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_minpd:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vminpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    vminpd (%rdi), %ymm0, %ymm0 # sched: [9:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_minpd:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vminpd %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKYLAKE-NEXT:    vminpd (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_minpd:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vminpd %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    vminpd (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_minpd:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vminpd %ymm1, %ymm0, %ymm0 # sched: [2:2.00]
 ; BTVER2-NEXT:    vminpd (%rdi), %ymm0, %ymm0 # sched: [7:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_minpd:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vminpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    vminpd (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -2463,49 +2463,49 @@ declare <4 x double> @llvm.x86.avx.min.pd.256(<4 x double>, <4 x double>) nounwi
 
 define <8 x float> @test_minps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a2) {
 ; GENERIC-LABEL: test_minps:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vminps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vminps (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_minps:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vminps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    vminps (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_minps:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vminps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    vminps (%rdi), %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_minps:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vminps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    vminps (%rdi), %ymm0, %ymm0 # sched: [9:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_minps:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vminps %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKYLAKE-NEXT:    vminps (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_minps:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vminps %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    vminps (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_minps:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vminps %ymm1, %ymm0, %ymm0 # sched: [2:2.00]
 ; BTVER2-NEXT:    vminps (%rdi), %ymm0, %ymm0 # sched: [7:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_minps:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vminps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    vminps (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -2518,56 +2518,56 @@ declare <8 x float> @llvm.x86.avx.min.ps.256(<8 x float>, <8 x float>) nounwind 
 
 define <4 x double> @test_movapd(<4 x double> *%a0, <4 x double> *%a1) {
 ; GENERIC-LABEL: test_movapd:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vmovapd (%rdi), %ymm0 # sched: [7:0.50]
 ; GENERIC-NEXT:    vaddpd %ymm0, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vmovapd %ymm0, (%rsi) # sched: [5:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_movapd:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vmovapd (%rdi), %ymm0 # sched: [7:0.50]
 ; SANDY-NEXT:    vaddpd %ymm0, %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    vmovapd %ymm0, (%rsi) # sched: [5:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_movapd:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vmovapd (%rdi), %ymm0 # sched: [1:0.50]
 ; HASWELL-NEXT:    vaddpd %ymm0, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    vmovapd %ymm0, (%rsi) # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_movapd:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vmovapd (%rdi), %ymm0 # sched: [6:0.50]
 ; BROADWELL-NEXT:    vaddpd %ymm0, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    vmovapd %ymm0, (%rsi) # sched: [1:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_movapd:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vmovapd (%rdi), %ymm0 # sched: [7:0.50]
 ; SKYLAKE-NEXT:    vaddpd %ymm0, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    vmovapd %ymm0, (%rsi) # sched: [1:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_movapd:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovapd (%rdi), %ymm0 # sched: [7:0.50]
 ; SKX-NEXT:    vaddpd %ymm0, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    vmovapd %ymm0, (%rsi) # sched: [1:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_movapd:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vmovapd (%rdi), %ymm0 # sched: [5:1.00]
 ; BTVER2-NEXT:    vaddpd %ymm0, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    vmovapd %ymm0, (%rsi) # sched: [1:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_movapd:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vmovapd (%rdi), %ymm0 # sched: [8:0.50]
 ; ZNVER1-NEXT:    vaddpd %ymm0, %ymm0, %ymm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    vmovapd %ymm0, (%rsi) # sched: [1:0.50]
@@ -2580,56 +2580,56 @@ define <4 x double> @test_movapd(<4 x double> *%a0, <4 x double> *%a1) {
 
 define <8 x float> @test_movaps(<8 x float> *%a0, <8 x float> *%a1) {
 ; GENERIC-LABEL: test_movaps:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vmovaps (%rdi), %ymm0 # sched: [7:0.50]
 ; GENERIC-NEXT:    vaddps %ymm0, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vmovaps %ymm0, (%rsi) # sched: [5:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_movaps:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vmovaps (%rdi), %ymm0 # sched: [7:0.50]
 ; SANDY-NEXT:    vaddps %ymm0, %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    vmovaps %ymm0, (%rsi) # sched: [5:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_movaps:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vmovaps (%rdi), %ymm0 # sched: [1:0.50]
 ; HASWELL-NEXT:    vaddps %ymm0, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    vmovaps %ymm0, (%rsi) # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_movaps:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vmovaps (%rdi), %ymm0 # sched: [6:0.50]
 ; BROADWELL-NEXT:    vaddps %ymm0, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    vmovaps %ymm0, (%rsi) # sched: [1:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_movaps:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vmovaps (%rdi), %ymm0 # sched: [7:0.50]
 ; SKYLAKE-NEXT:    vaddps %ymm0, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    vmovaps %ymm0, (%rsi) # sched: [1:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_movaps:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovaps (%rdi), %ymm0 # sched: [7:0.50]
 ; SKX-NEXT:    vaddps %ymm0, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    vmovaps %ymm0, (%rsi) # sched: [1:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_movaps:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vmovaps (%rdi), %ymm0 # sched: [5:1.00]
 ; BTVER2-NEXT:    vaddps %ymm0, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    vmovaps %ymm0, (%rsi) # sched: [1:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_movaps:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vmovaps (%rdi), %ymm0 # sched: [8:0.50]
 ; ZNVER1-NEXT:    vaddps %ymm0, %ymm0, %ymm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    vmovaps %ymm0, (%rsi) # sched: [1:0.50]
@@ -2642,56 +2642,56 @@ define <8 x float> @test_movaps(<8 x float> *%a0, <8 x float> *%a1) {
 
 define <4 x double> @test_movddup(<4 x double> %a0, <4 x double> *%a1) {
 ; GENERIC-LABEL: test_movddup:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vmovddup {{.*#+}} ymm0 = ymm0[0,0,2,2] sched: [1:1.00]
 ; GENERIC-NEXT:    vmovddup {{.*#+}} ymm1 = mem[0,0,2,2] sched: [7:0.50]
 ; GENERIC-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_movddup:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vmovddup {{.*#+}} ymm0 = ymm0[0,0,2,2] sched: [1:1.00]
 ; SANDY-NEXT:    vmovddup {{.*#+}} ymm1 = mem[0,0,2,2] sched: [7:0.50]
 ; SANDY-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_movddup:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vmovddup {{.*#+}} ymm0 = ymm0[0,0,2,2] sched: [1:1.00]
 ; HASWELL-NEXT:    vmovddup {{.*#+}} ymm1 = mem[0,0,2,2] sched: [1:0.50]
 ; HASWELL-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_movddup:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vmovddup {{.*#+}} ymm0 = ymm0[0,0,2,2] sched: [1:1.00]
 ; BROADWELL-NEXT:    vmovddup {{.*#+}} ymm1 = mem[0,0,2,2] sched: [6:0.50]
 ; BROADWELL-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_movddup:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vmovddup {{.*#+}} ymm0 = ymm0[0,0,2,2] sched: [1:1.00]
 ; SKYLAKE-NEXT:    vmovddup {{.*#+}} ymm1 = mem[0,0,2,2] sched: [7:0.50]
 ; SKYLAKE-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_movddup:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovddup {{.*#+}} ymm0 = ymm0[0,0,2,2] sched: [1:1.00]
 ; SKX-NEXT:    vmovddup {{.*#+}} ymm1 = mem[0,0,2,2] sched: [7:0.50]
 ; SKX-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_movddup:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vmovddup {{.*#+}} ymm1 = mem[0,0,2,2] sched: [5:1.00]
 ; BTVER2-NEXT:    vmovddup {{.*#+}} ymm0 = ymm0[0,0,2,2] sched: [1:0.50]
 ; BTVER2-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_movddup:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vmovddup {{.*#+}} ymm1 = mem[0,0,2,2] sched: [8:0.50]
 ; ZNVER1-NEXT:    vmovddup {{.*#+}} ymm0 = ymm0[0,0,2,2] sched: [1:0.50]
 ; ZNVER1-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
@@ -2705,48 +2705,48 @@ define <4 x double> @test_movddup(<4 x double> %a0, <4 x double> *%a1) {
 
 define i32 @test_movmskpd(<4 x double> %a0) {
 ; GENERIC-LABEL: test_movmskpd:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vmovmskpd %ymm0, %eax # sched: [2:1.00]
 ; GENERIC-NEXT:    vzeroupper
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_movmskpd:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vmovmskpd %ymm0, %eax # sched: [2:1.00]
 ; SANDY-NEXT:    vzeroupper
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_movmskpd:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vmovmskpd %ymm0, %eax # sched: [3:1.00]
 ; HASWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_movmskpd:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vmovmskpd %ymm0, %eax # sched: [3:1.00]
 ; BROADWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_movmskpd:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vmovmskpd %ymm0, %eax # sched: [2:1.00]
 ; SKYLAKE-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_movmskpd:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovmskpd %ymm0, %eax # sched: [2:1.00]
 ; SKX-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_movmskpd:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vmovmskpd %ymm0, %eax # sched: [3:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_movmskpd:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vmovmskpd %ymm0, %eax # sched: [1:1.00]
 ; ZNVER1-NEXT:    vzeroupper # sched: [100:?]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -2757,48 +2757,48 @@ declare i32 @llvm.x86.avx.movmsk.pd.256(<4 x double>) nounwind readnone
 
 define i32 @test_movmskps(<8 x float> %a0) {
 ; GENERIC-LABEL: test_movmskps:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vmovmskps %ymm0, %eax # sched: [2:1.00]
 ; GENERIC-NEXT:    vzeroupper
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_movmskps:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vmovmskps %ymm0, %eax # sched: [2:1.00]
 ; SANDY-NEXT:    vzeroupper
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_movmskps:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vmovmskps %ymm0, %eax # sched: [3:1.00]
 ; HASWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_movmskps:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vmovmskps %ymm0, %eax # sched: [3:1.00]
 ; BROADWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_movmskps:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vmovmskps %ymm0, %eax # sched: [2:1.00]
 ; SKYLAKE-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_movmskps:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovmskps %ymm0, %eax # sched: [2:1.00]
 ; SKX-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_movmskps:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vmovmskps %ymm0, %eax # sched: [3:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_movmskps:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vmovmskps %ymm0, %eax # sched: [1:1.00]
 ; ZNVER1-NEXT:    vzeroupper # sched: [100:?]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -2809,7 +2809,7 @@ declare i32 @llvm.x86.avx.movmsk.ps.256(<8 x float>) nounwind readnone
 
 define void @test_movntdq(<4 x i64> %a0, <4 x i64> *%a1) {
 ; GENERIC-LABEL: test_movntdq:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    vmovntdq %ymm0, (%rdi) # sched: [5:1.00]
 ; GENERIC-NEXT:    #NO_APP
@@ -2817,7 +2817,7 @@ define void @test_movntdq(<4 x i64> %a0, <4 x i64> *%a1) {
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_movntdq:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:    vmovntdq %ymm0, (%rdi) # sched: [5:1.00]
 ; SANDY-NEXT:    #NO_APP
@@ -2825,7 +2825,7 @@ define void @test_movntdq(<4 x i64> %a0, <4 x i64> *%a1) {
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_movntdq:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    vmovntdq %ymm0, (%rdi) # sched: [1:1.00]
 ; HASWELL-NEXT:    #NO_APP
@@ -2833,7 +2833,7 @@ define void @test_movntdq(<4 x i64> %a0, <4 x i64> *%a1) {
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_movntdq:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
 ; BROADWELL-NEXT:    vmovntdq %ymm0, (%rdi) # sched: [1:1.00]
 ; BROADWELL-NEXT:    #NO_APP
@@ -2841,7 +2841,7 @@ define void @test_movntdq(<4 x i64> %a0, <4 x i64> *%a1) {
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_movntdq:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
 ; SKYLAKE-NEXT:    vmovntdq %ymm0, (%rdi) # sched: [1:1.00]
 ; SKYLAKE-NEXT:    #NO_APP
@@ -2849,7 +2849,7 @@ define void @test_movntdq(<4 x i64> %a0, <4 x i64> *%a1) {
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_movntdq:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
 ; SKX-NEXT:    vmovntdq %ymm0, (%rdi) # sched: [1:1.00]
 ; SKX-NEXT:    #NO_APP
@@ -2857,14 +2857,14 @@ define void @test_movntdq(<4 x i64> %a0, <4 x i64> *%a1) {
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_movntdq:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    vmovntdq %ymm0, (%rdi) # sched: [3:2.00]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_movntdq:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
 ; ZNVER1-NEXT:    vmovntdq %ymm0, (%rdi) # sched: [1:0.50]
 ; ZNVER1-NEXT:    #NO_APP
@@ -2876,49 +2876,49 @@ define void @test_movntdq(<4 x i64> %a0, <4 x i64> *%a1) {
 
 define <4 x double> @test_movntpd(<4 x double> %a0, <4 x double> *%a1) {
 ; GENERIC-LABEL: test_movntpd:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vaddpd %ymm0, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vmovntpd %ymm0, (%rdi) # sched: [5:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_movntpd:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vaddpd %ymm0, %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    vmovntpd %ymm0, (%rdi) # sched: [5:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_movntpd:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vaddpd %ymm0, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    vmovntpd %ymm0, (%rdi) # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_movntpd:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vaddpd %ymm0, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    vmovntpd %ymm0, (%rdi) # sched: [1:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_movntpd:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vaddpd %ymm0, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    vmovntpd %ymm0, (%rdi) # sched: [1:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_movntpd:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vaddpd %ymm0, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    vmovntpd %ymm0, (%rdi) # sched: [1:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_movntpd:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vaddpd %ymm0, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    vmovntpd %ymm0, (%rdi) # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_movntpd:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vaddpd %ymm0, %ymm0, %ymm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    vmovntpd %ymm0, (%rdi) # sched: [1:0.50]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -2929,49 +2929,49 @@ define <4 x double> @test_movntpd(<4 x double> %a0, <4 x double> *%a1) {
 
 define <8 x float> @test_movntps(<8 x float> %a0, <8 x float> *%a1) {
 ; GENERIC-LABEL: test_movntps:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vaddps %ymm0, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vmovntps %ymm0, (%rdi) # sched: [5:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_movntps:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vaddps %ymm0, %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    vmovntps %ymm0, (%rdi) # sched: [5:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_movntps:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vaddps %ymm0, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    vmovntps %ymm0, (%rdi) # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_movntps:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vaddps %ymm0, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    vmovntps %ymm0, (%rdi) # sched: [1:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_movntps:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vaddps %ymm0, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    vmovntps %ymm0, (%rdi) # sched: [1:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_movntps:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vaddps %ymm0, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    vmovntps %ymm0, (%rdi) # sched: [1:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_movntps:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vaddps %ymm0, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    vmovntps %ymm0, (%rdi) # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_movntps:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vaddps %ymm0, %ymm0, %ymm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    vmovntps %ymm0, (%rdi) # sched: [1:0.50]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -2982,56 +2982,56 @@ define <8 x float> @test_movntps(<8 x float> %a0, <8 x float> *%a1) {
 
 define <8 x float> @test_movshdup(<8 x float> %a0, <8 x float> *%a1) {
 ; GENERIC-LABEL: test_movshdup:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vmovshdup {{.*#+}} ymm0 = ymm0[1,1,3,3,5,5,7,7] sched: [1:1.00]
 ; GENERIC-NEXT:    vmovshdup {{.*#+}} ymm1 = mem[1,1,3,3,5,5,7,7] sched: [7:0.50]
 ; GENERIC-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_movshdup:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vmovshdup {{.*#+}} ymm0 = ymm0[1,1,3,3,5,5,7,7] sched: [1:1.00]
 ; SANDY-NEXT:    vmovshdup {{.*#+}} ymm1 = mem[1,1,3,3,5,5,7,7] sched: [7:0.50]
 ; SANDY-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_movshdup:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vmovshdup {{.*#+}} ymm0 = ymm0[1,1,3,3,5,5,7,7] sched: [1:1.00]
 ; HASWELL-NEXT:    vmovshdup {{.*#+}} ymm1 = mem[1,1,3,3,5,5,7,7] sched: [1:0.50]
 ; HASWELL-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_movshdup:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vmovshdup {{.*#+}} ymm0 = ymm0[1,1,3,3,5,5,7,7] sched: [1:1.00]
 ; BROADWELL-NEXT:    vmovshdup {{.*#+}} ymm1 = mem[1,1,3,3,5,5,7,7] sched: [6:0.50]
 ; BROADWELL-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_movshdup:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vmovshdup {{.*#+}} ymm0 = ymm0[1,1,3,3,5,5,7,7] sched: [1:1.00]
 ; SKYLAKE-NEXT:    vmovshdup {{.*#+}} ymm1 = mem[1,1,3,3,5,5,7,7] sched: [7:0.50]
 ; SKYLAKE-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_movshdup:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovshdup {{.*#+}} ymm0 = ymm0[1,1,3,3,5,5,7,7] sched: [1:1.00]
 ; SKX-NEXT:    vmovshdup {{.*#+}} ymm1 = mem[1,1,3,3,5,5,7,7] sched: [7:0.50]
 ; SKX-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_movshdup:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vmovshdup {{.*#+}} ymm1 = mem[1,1,3,3,5,5,7,7] sched: [5:1.00]
 ; BTVER2-NEXT:    vmovshdup {{.*#+}} ymm0 = ymm0[1,1,3,3,5,5,7,7] sched: [1:0.50]
 ; BTVER2-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_movshdup:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vmovshdup {{.*#+}} ymm1 = mem[1,1,3,3,5,5,7,7] sched: [8:0.50]
 ; ZNVER1-NEXT:    vmovshdup {{.*#+}} ymm0 = ymm0[1,1,3,3,5,5,7,7] sched: [1:0.50]
 ; ZNVER1-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
@@ -3045,56 +3045,56 @@ define <8 x float> @test_movshdup(<8 x float> %a0, <8 x float> *%a1) {
 
 define <8 x float> @test_movsldup(<8 x float> %a0, <8 x float> *%a1) {
 ; GENERIC-LABEL: test_movsldup:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vmovsldup {{.*#+}} ymm0 = ymm0[0,0,2,2,4,4,6,6] sched: [1:1.00]
 ; GENERIC-NEXT:    vmovsldup {{.*#+}} ymm1 = mem[0,0,2,2,4,4,6,6] sched: [7:0.50]
 ; GENERIC-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_movsldup:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vmovsldup {{.*#+}} ymm0 = ymm0[0,0,2,2,4,4,6,6] sched: [1:1.00]
 ; SANDY-NEXT:    vmovsldup {{.*#+}} ymm1 = mem[0,0,2,2,4,4,6,6] sched: [7:0.50]
 ; SANDY-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_movsldup:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vmovsldup {{.*#+}} ymm0 = ymm0[0,0,2,2,4,4,6,6] sched: [1:1.00]
 ; HASWELL-NEXT:    vmovsldup {{.*#+}} ymm1 = mem[0,0,2,2,4,4,6,6] sched: [1:0.50]
 ; HASWELL-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_movsldup:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vmovsldup {{.*#+}} ymm0 = ymm0[0,0,2,2,4,4,6,6] sched: [1:1.00]
 ; BROADWELL-NEXT:    vmovsldup {{.*#+}} ymm1 = mem[0,0,2,2,4,4,6,6] sched: [6:0.50]
 ; BROADWELL-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_movsldup:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vmovsldup {{.*#+}} ymm0 = ymm0[0,0,2,2,4,4,6,6] sched: [1:1.00]
 ; SKYLAKE-NEXT:    vmovsldup {{.*#+}} ymm1 = mem[0,0,2,2,4,4,6,6] sched: [7:0.50]
 ; SKYLAKE-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_movsldup:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovsldup {{.*#+}} ymm0 = ymm0[0,0,2,2,4,4,6,6] sched: [1:1.00]
 ; SKX-NEXT:    vmovsldup {{.*#+}} ymm1 = mem[0,0,2,2,4,4,6,6] sched: [7:0.50]
 ; SKX-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_movsldup:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vmovsldup {{.*#+}} ymm1 = mem[0,0,2,2,4,4,6,6] sched: [5:1.00]
 ; BTVER2-NEXT:    vmovsldup {{.*#+}} ymm0 = ymm0[0,0,2,2,4,4,6,6] sched: [1:0.50]
 ; BTVER2-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_movsldup:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vmovsldup {{.*#+}} ymm1 = mem[0,0,2,2,4,4,6,6] sched: [8:0.50]
 ; ZNVER1-NEXT:    vmovsldup {{.*#+}} ymm0 = ymm0[0,0,2,2,4,4,6,6] sched: [1:0.50]
 ; ZNVER1-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
@@ -3108,14 +3108,14 @@ define <8 x float> @test_movsldup(<8 x float> %a0, <8 x float> *%a1) {
 
 define <4 x double> @test_movupd(<4 x double> *%a0, <4 x double> *%a1) {
 ; GENERIC-LABEL: test_movupd:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vmovupd (%rdi), %ymm0 # sched: [7:0.50]
 ; GENERIC-NEXT:    vaddpd %ymm0, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vmovupd %ymm0, (%rsi) # sched: [5:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_movupd:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vmovups (%rdi), %xmm0 # sched: [6:0.50]
 ; SANDY-NEXT:    vinsertf128 $1, 16(%rdi), %ymm0, %ymm0 # sched: [7:0.50]
 ; SANDY-NEXT:    vaddpd %ymm0, %ymm0, %ymm0 # sched: [3:1.00]
@@ -3124,42 +3124,42 @@ define <4 x double> @test_movupd(<4 x double> *%a0, <4 x double> *%a1) {
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_movupd:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vmovupd (%rdi), %ymm0 # sched: [1:0.50]
 ; HASWELL-NEXT:    vaddpd %ymm0, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    vmovupd %ymm0, (%rsi) # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_movupd:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vmovupd (%rdi), %ymm0 # sched: [6:0.50]
 ; BROADWELL-NEXT:    vaddpd %ymm0, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    vmovupd %ymm0, (%rsi) # sched: [1:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_movupd:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vmovupd (%rdi), %ymm0 # sched: [7:0.50]
 ; SKYLAKE-NEXT:    vaddpd %ymm0, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    vmovupd %ymm0, (%rsi) # sched: [1:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_movupd:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovupd (%rdi), %ymm0 # sched: [7:0.50]
 ; SKX-NEXT:    vaddpd %ymm0, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    vmovupd %ymm0, (%rsi) # sched: [1:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_movupd:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vmovupd (%rdi), %ymm0 # sched: [5:1.00]
 ; BTVER2-NEXT:    vaddpd %ymm0, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    vmovupd %ymm0, (%rsi) # sched: [1:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_movupd:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vmovupd (%rdi), %ymm0 # sched: [8:0.50]
 ; ZNVER1-NEXT:    vaddpd %ymm0, %ymm0, %ymm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    vmovupd %ymm0, (%rsi) # sched: [1:0.50]
@@ -3172,14 +3172,14 @@ define <4 x double> @test_movupd(<4 x double> *%a0, <4 x double> *%a1) {
 
 define <8 x float> @test_movups(<8 x float> *%a0, <8 x float> *%a1) {
 ; GENERIC-LABEL: test_movups:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vmovups (%rdi), %ymm0 # sched: [7:0.50]
 ; GENERIC-NEXT:    vaddps %ymm0, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vmovups %ymm0, (%rsi) # sched: [5:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_movups:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vmovups (%rdi), %xmm0 # sched: [6:0.50]
 ; SANDY-NEXT:    vinsertf128 $1, 16(%rdi), %ymm0, %ymm0 # sched: [7:0.50]
 ; SANDY-NEXT:    vaddps %ymm0, %ymm0, %ymm0 # sched: [3:1.00]
@@ -3188,42 +3188,42 @@ define <8 x float> @test_movups(<8 x float> *%a0, <8 x float> *%a1) {
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_movups:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vmovups (%rdi), %ymm0 # sched: [1:0.50]
 ; HASWELL-NEXT:    vaddps %ymm0, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    vmovups %ymm0, (%rsi) # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_movups:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vmovups (%rdi), %ymm0 # sched: [6:0.50]
 ; BROADWELL-NEXT:    vaddps %ymm0, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    vmovups %ymm0, (%rsi) # sched: [1:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_movups:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vmovups (%rdi), %ymm0 # sched: [7:0.50]
 ; SKYLAKE-NEXT:    vaddps %ymm0, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    vmovups %ymm0, (%rsi) # sched: [1:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_movups:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovups (%rdi), %ymm0 # sched: [7:0.50]
 ; SKX-NEXT:    vaddps %ymm0, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    vmovups %ymm0, (%rsi) # sched: [1:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_movups:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vmovups (%rdi), %ymm0 # sched: [5:1.00]
 ; BTVER2-NEXT:    vaddps %ymm0, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    vmovups %ymm0, (%rsi) # sched: [1:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_movups:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vmovups (%rdi), %ymm0 # sched: [8:0.50]
 ; ZNVER1-NEXT:    vaddps %ymm0, %ymm0, %ymm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    vmovups %ymm0, (%rsi) # sched: [1:0.50]
@@ -3236,49 +3236,49 @@ define <8 x float> @test_movups(<8 x float> *%a0, <8 x float> *%a1) {
 
 define <4 x double> @test_mulpd(<4 x double> %a0, <4 x double> %a1, <4 x double> *%a2) {
 ; GENERIC-LABEL: test_mulpd:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vmulpd %ymm1, %ymm0, %ymm0 # sched: [5:1.00]
 ; GENERIC-NEXT:    vmulpd (%rdi), %ymm0, %ymm0 # sched: [12:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_mulpd:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vmulpd %ymm1, %ymm0, %ymm0 # sched: [5:1.00]
 ; SANDY-NEXT:    vmulpd (%rdi), %ymm0, %ymm0 # sched: [12:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_mulpd:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vmulpd %ymm1, %ymm0, %ymm0 # sched: [5:0.50]
 ; HASWELL-NEXT:    vmulpd (%rdi), %ymm0, %ymm0 # sched: [5:0.50]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_mulpd:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vmulpd %ymm1, %ymm0, %ymm0 # sched: [3:0.50]
 ; BROADWELL-NEXT:    vmulpd (%rdi), %ymm0, %ymm0 # sched: [9:0.50]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_mulpd:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vmulpd %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    vmulpd (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_mulpd:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vmulpd %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    vmulpd (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_mulpd:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vmulpd %ymm1, %ymm0, %ymm0 # sched: [4:4.00]
 ; BTVER2-NEXT:    vmulpd (%rdi), %ymm0, %ymm0 # sched: [9:4.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_mulpd:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vmulpd %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; ZNVER1-NEXT:    vmulpd (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -3290,49 +3290,49 @@ define <4 x double> @test_mulpd(<4 x double> %a0, <4 x double> %a1, <4 x double>
 
 define <8 x float> @test_mulps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a2) {
 ; GENERIC-LABEL: test_mulps:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vmulps %ymm1, %ymm0, %ymm0 # sched: [5:1.00]
 ; GENERIC-NEXT:    vmulps (%rdi), %ymm0, %ymm0 # sched: [12:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_mulps:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vmulps %ymm1, %ymm0, %ymm0 # sched: [5:1.00]
 ; SANDY-NEXT:    vmulps (%rdi), %ymm0, %ymm0 # sched: [12:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_mulps:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vmulps %ymm1, %ymm0, %ymm0 # sched: [5:0.50]
 ; HASWELL-NEXT:    vmulps (%rdi), %ymm0, %ymm0 # sched: [5:0.50]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_mulps:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vmulps %ymm1, %ymm0, %ymm0 # sched: [3:0.50]
 ; BROADWELL-NEXT:    vmulps (%rdi), %ymm0, %ymm0 # sched: [9:0.50]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_mulps:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vmulps %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    vmulps (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_mulps:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vmulps %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    vmulps (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_mulps:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vmulps %ymm1, %ymm0, %ymm0 # sched: [2:2.00]
 ; BTVER2-NEXT:    vmulps (%rdi), %ymm0, %ymm0 # sched: [7:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_mulps:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vmulps %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; ZNVER1-NEXT:    vmulps (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -3344,56 +3344,56 @@ define <8 x float> @test_mulps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a
 
 define <4 x double> @orpd(<4 x double> %a0, <4 x double> %a1, <4 x double> *%a2) {
 ; GENERIC-LABEL: orpd:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vorpd %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vorpd (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: orpd:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vorpd %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; SANDY-NEXT:    vorpd (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; SANDY-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: orpd:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vorpd %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    vorpd (%rdi), %ymm0, %ymm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: orpd:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vorpd %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; BROADWELL-NEXT:    vorpd (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
 ; BROADWELL-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: orpd:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vorpd %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
 ; SKYLAKE-NEXT:    vorpd (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; SKYLAKE-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: orpd:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vorpd %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
 ; SKX-NEXT:    vorpd (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; SKX-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: orpd:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vorpd %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    vorpd (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
 ; BTVER2-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: orpd:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vorpd %ymm1, %ymm0, %ymm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    vorpd (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; ZNVER1-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
@@ -3411,56 +3411,56 @@ define <4 x double> @orpd(<4 x double> %a0, <4 x double> %a1, <4 x double> *%a2)
 
 define <8 x float> @test_orps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a2) {
 ; GENERIC-LABEL: test_orps:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vorps %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vorps (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_orps:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vorps %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; SANDY-NEXT:    vorps (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; SANDY-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_orps:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vorps %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    vorps (%rdi), %ymm0, %ymm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_orps:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vorps %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; BROADWELL-NEXT:    vorps (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
 ; BROADWELL-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_orps:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vorps %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
 ; SKYLAKE-NEXT:    vorps (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; SKYLAKE-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_orps:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vorps %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
 ; SKX-NEXT:    vorps (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; SKX-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_orps:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vorps %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    vorps (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
 ; BTVER2-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_orps:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vorps %ymm1, %ymm0, %ymm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    vorps (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; ZNVER1-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
@@ -3478,56 +3478,56 @@ define <8 x float> @test_orps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a2
 
 define <4 x double> @test_perm2f128(<4 x double> %a0, <4 x double> %a1, <4 x double> *%a2) {
 ; GENERIC-LABEL: test_perm2f128:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[2,3],ymm1[0,1] sched: [1:1.00]
 ; GENERIC-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [8:1.00]
 ; GENERIC-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_perm2f128:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[2,3],ymm1[0,1] sched: [1:1.00]
 ; SANDY-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [8:1.00]
 ; SANDY-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_perm2f128:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
 ; HASWELL-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [3:1.00]
 ; HASWELL-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_perm2f128:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
 ; BROADWELL-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [9:1.00]
 ; BROADWELL-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_perm2f128:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
 ; SKYLAKE-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [10:1.00]
 ; SKYLAKE-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_perm2f128:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
 ; SKX-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [10:1.00]
 ; SKX-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_perm2f128:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[2,3],ymm1[0,1] sched: [1:0.50]
 ; BTVER2-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [6:1.00]
 ; BTVER2-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_perm2f128:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[2,3],ymm1[0,1] sched: [100:?]
 ; ZNVER1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [100:?]
 ; ZNVER1-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
@@ -3541,56 +3541,56 @@ define <4 x double> @test_perm2f128(<4 x double> %a0, <4 x double> %a1, <4 x dou
 
 define <2 x double> @test_permilpd(<2 x double> %a0, <2 x double> *%a1) {
 ; GENERIC-LABEL: test_permilpd:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0] sched: [1:1.00]
 ; GENERIC-NEXT:    vpermilpd {{.*#+}} xmm1 = mem[1,0] sched: [7:1.00]
 ; GENERIC-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_permilpd:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0] sched: [1:1.00]
 ; SANDY-NEXT:    vpermilpd {{.*#+}} xmm1 = mem[1,0] sched: [7:1.00]
 ; SANDY-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_permilpd:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0] sched: [1:1.00]
 ; HASWELL-NEXT:    vpermilpd {{.*#+}} xmm1 = mem[1,0] sched: [1:1.00]
 ; HASWELL-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_permilpd:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0] sched: [1:1.00]
 ; BROADWELL-NEXT:    vpermilpd {{.*#+}} xmm1 = mem[1,0] sched: [6:1.00]
 ; BROADWELL-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_permilpd:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0] sched: [1:1.00]
 ; SKYLAKE-NEXT:    vpermilpd {{.*#+}} xmm1 = mem[1,0] sched: [7:1.00]
 ; SKYLAKE-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_permilpd:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0] sched: [1:1.00]
 ; SKX-NEXT:    vpermilpd {{.*#+}} xmm1 = mem[1,0] sched: [7:1.00]
 ; SKX-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_permilpd:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vpermilpd {{.*#+}} xmm1 = mem[1,0] sched: [6:1.00]
 ; BTVER2-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0] sched: [1:0.50]
 ; BTVER2-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_permilpd:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vpermilpd {{.*#+}} xmm1 = mem[1,0] sched: [8:0.50]
 ; ZNVER1-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0] sched: [1:0.50]
 ; ZNVER1-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
@@ -3604,56 +3604,56 @@ define <2 x double> @test_permilpd(<2 x double> %a0, <2 x double> *%a1) {
 
 define <4 x double> @test_permilpd_ymm(<4 x double> %a0, <4 x double> *%a1) {
 ; GENERIC-LABEL: test_permilpd_ymm:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,2,3] sched: [1:1.00]
 ; GENERIC-NEXT:    vpermilpd {{.*#+}} ymm1 = mem[1,0,2,3] sched: [8:1.00]
 ; GENERIC-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_permilpd_ymm:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,2,3] sched: [1:1.00]
 ; SANDY-NEXT:    vpermilpd {{.*#+}} ymm1 = mem[1,0,2,3] sched: [8:1.00]
 ; SANDY-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_permilpd_ymm:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,2,3] sched: [1:1.00]
 ; HASWELL-NEXT:    vpermilpd {{.*#+}} ymm1 = mem[1,0,2,3] sched: [1:1.00]
 ; HASWELL-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_permilpd_ymm:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,2,3] sched: [1:1.00]
 ; BROADWELL-NEXT:    vpermilpd {{.*#+}} ymm1 = mem[1,0,2,3] sched: [7:1.00]
 ; BROADWELL-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_permilpd_ymm:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,2,3] sched: [1:1.00]
 ; SKYLAKE-NEXT:    vpermilpd {{.*#+}} ymm1 = mem[1,0,2,3] sched: [8:1.00]
 ; SKYLAKE-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_permilpd_ymm:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,2,3] sched: [1:1.00]
 ; SKX-NEXT:    vpermilpd {{.*#+}} ymm1 = mem[1,0,2,3] sched: [8:1.00]
 ; SKX-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_permilpd_ymm:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vpermilpd {{.*#+}} ymm1 = mem[1,0,2,3] sched: [6:1.00]
 ; BTVER2-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,2,3] sched: [1:0.50]
 ; BTVER2-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_permilpd_ymm:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vpermilpd {{.*#+}} ymm1 = mem[1,0,2,3] sched: [8:0.50]
 ; ZNVER1-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,2,3] sched: [1:0.50]
 ; ZNVER1-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
@@ -3667,56 +3667,56 @@ define <4 x double> @test_permilpd_ymm(<4 x double> %a0, <4 x double> *%a1) {
 
 define <4 x float> @test_permilps(<4 x float> %a0, <4 x float> *%a1) {
 ; GENERIC-LABEL: test_permilps:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,2,1,0] sched: [1:1.00]
 ; GENERIC-NEXT:    vpermilps {{.*#+}} xmm1 = mem[3,2,1,0] sched: [7:1.00]
 ; GENERIC-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_permilps:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,2,1,0] sched: [1:1.00]
 ; SANDY-NEXT:    vpermilps {{.*#+}} xmm1 = mem[3,2,1,0] sched: [7:1.00]
 ; SANDY-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_permilps:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,2,1,0] sched: [1:1.00]
 ; HASWELL-NEXT:    vpermilps {{.*#+}} xmm1 = mem[3,2,1,0] sched: [1:1.00]
 ; HASWELL-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_permilps:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,2,1,0] sched: [1:1.00]
 ; BROADWELL-NEXT:    vpermilps {{.*#+}} xmm1 = mem[3,2,1,0] sched: [6:1.00]
 ; BROADWELL-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_permilps:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,2,1,0] sched: [1:1.00]
 ; SKYLAKE-NEXT:    vpermilps {{.*#+}} xmm1 = mem[3,2,1,0] sched: [7:1.00]
 ; SKYLAKE-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_permilps:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,2,1,0] sched: [1:1.00]
 ; SKX-NEXT:    vpermilps {{.*#+}} xmm1 = mem[3,2,1,0] sched: [7:1.00]
 ; SKX-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_permilps:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vpermilps {{.*#+}} xmm1 = mem[3,2,1,0] sched: [6:1.00]
 ; BTVER2-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,2,1,0] sched: [1:0.50]
 ; BTVER2-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_permilps:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vpermilps {{.*#+}} xmm1 = mem[3,2,1,0] sched: [8:0.50]
 ; ZNVER1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,2,1,0] sched: [1:0.50]
 ; ZNVER1-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
@@ -3730,56 +3730,56 @@ define <4 x float> @test_permilps(<4 x float> %a0, <4 x float> *%a1) {
 
 define <8 x float> @test_permilps_ymm(<8 x float> %a0, <8 x float> *%a1) {
 ; GENERIC-LABEL: test_permilps_ymm:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4] sched: [1:1.00]
 ; GENERIC-NEXT:    vpermilps {{.*#+}} ymm1 = mem[3,2,1,0,7,6,5,4] sched: [8:1.00]
 ; GENERIC-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_permilps_ymm:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4] sched: [1:1.00]
 ; SANDY-NEXT:    vpermilps {{.*#+}} ymm1 = mem[3,2,1,0,7,6,5,4] sched: [8:1.00]
 ; SANDY-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_permilps_ymm:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4] sched: [1:1.00]
 ; HASWELL-NEXT:    vpermilps {{.*#+}} ymm1 = mem[3,2,1,0,7,6,5,4] sched: [1:1.00]
 ; HASWELL-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_permilps_ymm:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4] sched: [1:1.00]
 ; BROADWELL-NEXT:    vpermilps {{.*#+}} ymm1 = mem[3,2,1,0,7,6,5,4] sched: [7:1.00]
 ; BROADWELL-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_permilps_ymm:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4] sched: [1:1.00]
 ; SKYLAKE-NEXT:    vpermilps {{.*#+}} ymm1 = mem[3,2,1,0,7,6,5,4] sched: [8:1.00]
 ; SKYLAKE-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_permilps_ymm:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4] sched: [1:1.00]
 ; SKX-NEXT:    vpermilps {{.*#+}} ymm1 = mem[3,2,1,0,7,6,5,4] sched: [8:1.00]
 ; SKX-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_permilps_ymm:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vpermilps {{.*#+}} ymm1 = mem[3,2,1,0,7,6,5,4] sched: [6:1.00]
 ; BTVER2-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4] sched: [1:0.50]
 ; BTVER2-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_permilps_ymm:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vpermilps {{.*#+}} ymm1 = mem[3,2,1,0,7,6,5,4] sched: [8:0.50]
 ; ZNVER1-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4] sched: [1:0.50]
 ; ZNVER1-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
@@ -3793,49 +3793,49 @@ define <8 x float> @test_permilps_ymm(<8 x float> %a0, <8 x float> *%a1) {
 
 define <2 x double> @test_permilvarpd(<2 x double> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ; GENERIC-LABEL: test_permilvarpd:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpermilpd %xmm1, %xmm0, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vpermilpd (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_permilvarpd:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vpermilpd %xmm1, %xmm0, %xmm0 # sched: [1:1.00]
 ; SANDY-NEXT:    vpermilpd (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_permilvarpd:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpermilpd %xmm1, %xmm0, %xmm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    vpermilpd (%rdi), %xmm0, %xmm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_permilvarpd:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vpermilpd %xmm1, %xmm0, %xmm0 # sched: [1:1.00]
 ; BROADWELL-NEXT:    vpermilpd (%rdi), %xmm0, %xmm0 # sched: [6:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_permilvarpd:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vpermilpd %xmm1, %xmm0, %xmm0 # sched: [1:1.00]
 ; SKYLAKE-NEXT:    vpermilpd (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_permilvarpd:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpermilpd %xmm1, %xmm0, %xmm0 # sched: [1:1.00]
 ; SKX-NEXT:    vpermilpd (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_permilvarpd:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vpermilpd %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    vpermilpd (%rdi), %xmm0, %xmm0 # sched: [6:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_permilvarpd:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vpermilpd %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
 ; ZNVER1-NEXT:    vpermilpd (%rdi), %xmm0, %xmm0 # sched: [8:0.50]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -3848,49 +3848,49 @@ declare <2 x double> @llvm.x86.avx.vpermilvar.pd(<2 x double>, <2 x i64>) nounwi
 
 define <4 x double> @test_permilvarpd_ymm(<4 x double> %a0, <4 x i64> %a1, <4 x i64> *%a2) {
 ; GENERIC-LABEL: test_permilvarpd_ymm:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpermilpd %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vpermilpd (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_permilvarpd_ymm:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vpermilpd %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; SANDY-NEXT:    vpermilpd (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_permilvarpd_ymm:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpermilpd %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    vpermilpd (%rdi), %ymm0, %ymm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_permilvarpd_ymm:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vpermilpd %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; BROADWELL-NEXT:    vpermilpd (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_permilvarpd_ymm:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vpermilpd %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; SKYLAKE-NEXT:    vpermilpd (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_permilvarpd_ymm:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpermilpd %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; SKX-NEXT:    vpermilpd (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_permilvarpd_ymm:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vpermilpd %ymm1, %ymm0, %ymm0 # sched: [3:3.00]
 ; BTVER2-NEXT:    vpermilpd (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_permilvarpd_ymm:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vpermilpd %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
 ; ZNVER1-NEXT:    vpermilpd (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -3903,49 +3903,49 @@ declare <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double>, <4 x i64>) no
 
 define <4 x float> @test_permilvarps(<4 x float> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ; GENERIC-LABEL: test_permilvarps:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpermilps %xmm1, %xmm0, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vpermilps (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_permilvarps:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vpermilps %xmm1, %xmm0, %xmm0 # sched: [1:1.00]
 ; SANDY-NEXT:    vpermilps (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_permilvarps:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpermilps %xmm1, %xmm0, %xmm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    vpermilps (%rdi), %xmm0, %xmm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_permilvarps:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vpermilps %xmm1, %xmm0, %xmm0 # sched: [1:1.00]
 ; BROADWELL-NEXT:    vpermilps (%rdi), %xmm0, %xmm0 # sched: [6:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_permilvarps:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vpermilps %xmm1, %xmm0, %xmm0 # sched: [1:1.00]
 ; SKYLAKE-NEXT:    vpermilps (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_permilvarps:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpermilps %xmm1, %xmm0, %xmm0 # sched: [1:1.00]
 ; SKX-NEXT:    vpermilps (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_permilvarps:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vpermilps %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    vpermilps (%rdi), %xmm0, %xmm0 # sched: [6:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_permilvarps:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vpermilps %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
 ; ZNVER1-NEXT:    vpermilps (%rdi), %xmm0, %xmm0 # sched: [8:0.50]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -3958,49 +3958,49 @@ declare <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float>, <4 x i32>) nounwind
 
 define <8 x float> @test_permilvarps_ymm(<8 x float> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; GENERIC-LABEL: test_permilvarps_ymm:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpermilps %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vpermilps (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_permilvarps_ymm:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vpermilps %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; SANDY-NEXT:    vpermilps (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_permilvarps_ymm:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpermilps %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    vpermilps (%rdi), %ymm0, %ymm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_permilvarps_ymm:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vpermilps %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; BROADWELL-NEXT:    vpermilps (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_permilvarps_ymm:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vpermilps %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; SKYLAKE-NEXT:    vpermilps (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_permilvarps_ymm:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpermilps %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; SKX-NEXT:    vpermilps (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_permilvarps_ymm:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vpermilps %ymm1, %ymm0, %ymm0 # sched: [3:3.00]
 ; BTVER2-NEXT:    vpermilps (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_permilvarps_ymm:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vpermilps %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
 ; ZNVER1-NEXT:    vpermilps (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -4013,56 +4013,56 @@ declare <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float>, <8 x i32>) noun
 
 define <8 x float> @test_rcpps(<8 x float> %a0, <8 x float> *%a1) {
 ; GENERIC-LABEL: test_rcpps:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vrcpps (%rdi), %ymm1 # sched: [14:2.00]
 ; GENERIC-NEXT:    vrcpps %ymm0, %ymm0 # sched: [7:2.00]
 ; GENERIC-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_rcpps:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vrcpps (%rdi), %ymm1 # sched: [14:2.00]
 ; SANDY-NEXT:    vrcpps %ymm0, %ymm0 # sched: [7:2.00]
 ; SANDY-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_rcpps:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vrcpps (%rdi), %ymm1 # sched: [11:2.00]
 ; HASWELL-NEXT:    vrcpps %ymm0, %ymm0 # sched: [11:2.00]
 ; HASWELL-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_rcpps:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vrcpps (%rdi), %ymm1 # sched: [17:2.00]
 ; BROADWELL-NEXT:    vrcpps %ymm0, %ymm0 # sched: [11:2.00]
 ; BROADWELL-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_rcpps:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vrcpps %ymm0, %ymm0 # sched: [4:1.00]
 ; SKYLAKE-NEXT:    vrcpps (%rdi), %ymm1 # sched: [11:1.00]
 ; SKYLAKE-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_rcpps:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vrcpps %ymm0, %ymm0 # sched: [4:1.00]
 ; SKX-NEXT:    vrcpps (%rdi), %ymm1 # sched: [11:1.00]
 ; SKX-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_rcpps:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vrcpps (%rdi), %ymm1 # sched: [7:2.00]
 ; BTVER2-NEXT:    vrcpps %ymm0, %ymm0 # sched: [2:2.00]
 ; BTVER2-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_rcpps:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vrcpps (%rdi), %ymm1 # sched: [12:0.50]
 ; ZNVER1-NEXT:    vrcpps %ymm0, %ymm0 # sched: [5:0.50]
 ; ZNVER1-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
@@ -4077,56 +4077,56 @@ declare <8 x float> @llvm.x86.avx.rcp.ps.256(<8 x float>) nounwind readnone
 
 define <4 x double> @test_roundpd(<4 x double> %a0, <4 x double> *%a1) {
 ; GENERIC-LABEL: test_roundpd:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vroundpd $7, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vroundpd $7, (%rdi), %ymm1 # sched: [10:1.00]
 ; GENERIC-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_roundpd:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vroundpd $7, %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    vroundpd $7, (%rdi), %ymm1 # sched: [10:1.00]
 ; SANDY-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_roundpd:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vroundpd $7, %ymm0, %ymm0 # sched: [5:1.25]
 ; HASWELL-NEXT:    vroundpd $7, (%rdi), %ymm1 # sched: [6:2.00]
 ; HASWELL-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_roundpd:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vroundpd $7, %ymm0, %ymm0 # sched: [6:0.50]
 ; BROADWELL-NEXT:    vroundpd $7, (%rdi), %ymm1 # sched: [12:2.00]
 ; BROADWELL-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_roundpd:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vroundpd $7, %ymm0, %ymm0 # sched: [8:0.67]
 ; SKYLAKE-NEXT:    vroundpd $7, (%rdi), %ymm1 # sched: [15:0.67]
 ; SKYLAKE-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_roundpd:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vrndscalepd $7, %ymm0, %ymm0 # sched: [8:0.67]
 ; SKX-NEXT:    vrndscalepd $7, (%rdi), %ymm1 # sched: [15:0.67]
 ; SKX-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_roundpd:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vroundpd $7, (%rdi), %ymm1 # sched: [8:2.00]
 ; BTVER2-NEXT:    vroundpd $7, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_roundpd:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vroundpd $7, (%rdi), %ymm1 # sched: [11:1.00]
 ; ZNVER1-NEXT:    vroundpd $7, %ymm0, %ymm0 # sched: [4:1.00]
 ; ZNVER1-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
@@ -4141,56 +4141,56 @@ declare <4 x double> @llvm.x86.avx.round.pd.256(<4 x double>, i32) nounwind read
 
 define <8 x float> @test_roundps(<8 x float> %a0, <8 x float> *%a1) {
 ; GENERIC-LABEL: test_roundps:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vroundps $7, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vroundps $7, (%rdi), %ymm1 # sched: [10:1.00]
 ; GENERIC-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_roundps:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vroundps $7, %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    vroundps $7, (%rdi), %ymm1 # sched: [10:1.00]
 ; SANDY-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_roundps:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vroundps $7, %ymm0, %ymm0 # sched: [5:1.25]
 ; HASWELL-NEXT:    vroundps $7, (%rdi), %ymm1 # sched: [6:2.00]
 ; HASWELL-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_roundps:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vroundps $7, %ymm0, %ymm0 # sched: [6:0.50]
 ; BROADWELL-NEXT:    vroundps $7, (%rdi), %ymm1 # sched: [12:2.00]
 ; BROADWELL-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_roundps:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vroundps $7, %ymm0, %ymm0 # sched: [8:0.67]
 ; SKYLAKE-NEXT:    vroundps $7, (%rdi), %ymm1 # sched: [15:0.67]
 ; SKYLAKE-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_roundps:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vrndscaleps $7, %ymm0, %ymm0 # sched: [8:0.67]
 ; SKX-NEXT:    vrndscaleps $7, (%rdi), %ymm1 # sched: [15:0.67]
 ; SKX-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_roundps:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vroundps $7, (%rdi), %ymm1 # sched: [8:2.00]
 ; BTVER2-NEXT:    vroundps $7, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_roundps:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vroundps $7, (%rdi), %ymm1 # sched: [11:1.00]
 ; ZNVER1-NEXT:    vroundps $7, %ymm0, %ymm0 # sched: [4:1.00]
 ; ZNVER1-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
@@ -4205,56 +4205,56 @@ declare <8 x float> @llvm.x86.avx.round.ps.256(<8 x float>, i32) nounwind readno
 
 define <8 x float> @test_rsqrtps(<8 x float> %a0, <8 x float> *%a1) {
 ; GENERIC-LABEL: test_rsqrtps:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vrsqrtps (%rdi), %ymm1 # sched: [14:2.00]
 ; GENERIC-NEXT:    vrsqrtps %ymm0, %ymm0 # sched: [7:2.00]
 ; GENERIC-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_rsqrtps:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vrsqrtps (%rdi), %ymm1 # sched: [14:2.00]
 ; SANDY-NEXT:    vrsqrtps %ymm0, %ymm0 # sched: [7:2.00]
 ; SANDY-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_rsqrtps:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vrsqrtps (%rdi), %ymm1 # sched: [11:2.00]
 ; HASWELL-NEXT:    vrsqrtps %ymm0, %ymm0 # sched: [11:2.00]
 ; HASWELL-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_rsqrtps:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vrsqrtps (%rdi), %ymm1 # sched: [17:2.00]
 ; BROADWELL-NEXT:    vrsqrtps %ymm0, %ymm0 # sched: [11:2.00]
 ; BROADWELL-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_rsqrtps:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vrsqrtps %ymm0, %ymm0 # sched: [4:1.00]
 ; SKYLAKE-NEXT:    vrsqrtps (%rdi), %ymm1 # sched: [11:1.00]
 ; SKYLAKE-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_rsqrtps:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vrsqrtps %ymm0, %ymm0 # sched: [4:1.00]
 ; SKX-NEXT:    vrsqrtps (%rdi), %ymm1 # sched: [11:1.00]
 ; SKX-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_rsqrtps:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vrsqrtps (%rdi), %ymm1 # sched: [7:2.00]
 ; BTVER2-NEXT:    vrsqrtps %ymm0, %ymm0 # sched: [2:2.00]
 ; BTVER2-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_rsqrtps:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vrsqrtps (%rdi), %ymm1 # sched: [12:0.50]
 ; ZNVER1-NEXT:    vrsqrtps %ymm0, %ymm0 # sched: [5:0.50]
 ; ZNVER1-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
@@ -4269,56 +4269,56 @@ declare <8 x float> @llvm.x86.avx.rsqrt.ps.256(<8 x float>) nounwind readnone
 
 define <4 x double> @test_shufpd(<4 x double> %a0, <4 x double> %a1, <4 x double> *%a2) {
 ; GENERIC-LABEL: test_shufpd:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1],ymm1[0],ymm0[2],ymm1[3] sched: [1:1.00]
 ; GENERIC-NEXT:    vshufpd {{.*#+}} ymm1 = ymm1[1],mem[0],ymm1[2],mem[3] sched: [8:1.00]
 ; GENERIC-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_shufpd:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1],ymm1[0],ymm0[2],ymm1[3] sched: [1:1.00]
 ; SANDY-NEXT:    vshufpd {{.*#+}} ymm1 = ymm1[1],mem[0],ymm1[2],mem[3] sched: [8:1.00]
 ; SANDY-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_shufpd:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1],ymm1[0],ymm0[2],ymm1[3] sched: [1:1.00]
 ; HASWELL-NEXT:    vshufpd {{.*#+}} ymm1 = ymm1[1],mem[0],ymm1[2],mem[3] sched: [1:1.00]
 ; HASWELL-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_shufpd:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1],ymm1[0],ymm0[2],ymm1[3] sched: [1:1.00]
 ; BROADWELL-NEXT:    vshufpd {{.*#+}} ymm1 = ymm1[1],mem[0],ymm1[2],mem[3] sched: [7:1.00]
 ; BROADWELL-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_shufpd:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1],ymm1[0],ymm0[2],ymm1[3] sched: [1:1.00]
 ; SKYLAKE-NEXT:    vshufpd {{.*#+}} ymm1 = ymm1[1],mem[0],ymm1[2],mem[3] sched: [8:1.00]
 ; SKYLAKE-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_shufpd:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1],ymm1[0],ymm0[2],ymm1[3] sched: [1:1.00]
 ; SKX-NEXT:    vshufpd {{.*#+}} ymm1 = ymm1[1],mem[0],ymm1[2],mem[3] sched: [8:1.00]
 ; SKX-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_shufpd:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1],ymm1[0],ymm0[2],ymm1[3] sched: [1:0.50]
 ; BTVER2-NEXT:    vshufpd {{.*#+}} ymm1 = ymm1[1],mem[0],ymm1[2],mem[3] sched: [6:1.00]
 ; BTVER2-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_shufpd:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1],ymm1[0],ymm0[2],ymm1[3] sched: [1:0.50]
 ; ZNVER1-NEXT:    vshufpd {{.*#+}} ymm1 = ymm1[1],mem[0],ymm1[2],mem[3] sched: [8:0.50]
 ; ZNVER1-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
@@ -4332,49 +4332,49 @@ define <4 x double> @test_shufpd(<4 x double> %a0, <4 x double> %a1, <4 x double
 
 define <8 x float> @test_shufps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a2) nounwind {
 ; GENERIC-LABEL: test_shufps:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,0],ymm1[0,0],ymm0[4,4],ymm1[4,4] sched: [1:1.00]
 ; GENERIC-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,3],mem[0,0],ymm0[4,7],mem[4,4] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_shufps:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,0],ymm1[0,0],ymm0[4,4],ymm1[4,4] sched: [1:1.00]
 ; SANDY-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,3],mem[0,0],ymm0[4,7],mem[4,4] sched: [8:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_shufps:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,0],ymm1[0,0],ymm0[4,4],ymm1[4,4] sched: [1:1.00]
 ; HASWELL-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,3],mem[0,0],ymm0[4,7],mem[4,4] sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_shufps:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,0],ymm1[0,0],ymm0[4,4],ymm1[4,4] sched: [1:1.00]
 ; BROADWELL-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,3],mem[0,0],ymm0[4,7],mem[4,4] sched: [7:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_shufps:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,0],ymm1[0,0],ymm0[4,4],ymm1[4,4] sched: [1:1.00]
 ; SKYLAKE-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,3],mem[0,0],ymm0[4,7],mem[4,4] sched: [8:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_shufps:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,0],ymm1[0,0],ymm0[4,4],ymm1[4,4] sched: [1:1.00]
 ; SKX-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,3],mem[0,0],ymm0[4,7],mem[4,4] sched: [8:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_shufps:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,0],ymm1[0,0],ymm0[4,4],ymm1[4,4] sched: [1:0.50]
 ; BTVER2-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,3],mem[0,0],ymm0[4,7],mem[4,4] sched: [6:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_shufps:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,0],ymm1[0,0],ymm0[4,4],ymm1[4,4] sched: [1:0.50]
 ; ZNVER1-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,3],mem[0,0],ymm0[4,7],mem[4,4] sched: [8:0.50]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -4386,56 +4386,56 @@ define <8 x float> @test_shufps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%
 
 define <4 x double> @test_sqrtpd(<4 x double> %a0, <4 x double> *%a1) {
 ; GENERIC-LABEL: test_sqrtpd:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vsqrtpd (%rdi), %ymm1 # sched: [52:2.00]
 ; GENERIC-NEXT:    vsqrtpd %ymm0, %ymm0 # sched: [45:2.00]
 ; GENERIC-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_sqrtpd:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vsqrtpd (%rdi), %ymm1 # sched: [52:2.00]
 ; SANDY-NEXT:    vsqrtpd %ymm0, %ymm0 # sched: [45:2.00]
 ; SANDY-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_sqrtpd:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vsqrtpd (%rdi), %ymm1 # sched: [35:2.00]
 ; HASWELL-NEXT:    vsqrtpd %ymm0, %ymm0 # sched: [35:2.00]
 ; HASWELL-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_sqrtpd:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vsqrtpd (%rdi), %ymm1 # sched: [40:2.00]
 ; BROADWELL-NEXT:    vsqrtpd %ymm0, %ymm0 # sched: [34:2.00]
 ; BROADWELL-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_sqrtpd:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vsqrtpd %ymm0, %ymm0 # sched: [18:1.00]
 ; SKYLAKE-NEXT:    vsqrtpd (%rdi), %ymm1 # sched: [25:1.00]
 ; SKYLAKE-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_sqrtpd:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vsqrtpd %ymm0, %ymm0 # sched: [18:1.00]
 ; SKX-NEXT:    vsqrtpd (%rdi), %ymm1 # sched: [25:1.00]
 ; SKX-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_sqrtpd:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vsqrtpd (%rdi), %ymm1 # sched: [59:54.00]
 ; BTVER2-NEXT:    vsqrtpd %ymm0, %ymm0 # sched: [54:54.00]
 ; BTVER2-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_sqrtpd:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vsqrtpd (%rdi), %ymm1 # sched: [47:47.00]
 ; ZNVER1-NEXT:    vsqrtpd %ymm0, %ymm0 # sched: [40:40.00]
 ; ZNVER1-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
@@ -4450,56 +4450,56 @@ declare <4 x double> @llvm.x86.avx.sqrt.pd.256(<4 x double>) nounwind readnone
 
 define <8 x float> @test_sqrtps(<8 x float> %a0, <8 x float> *%a1) {
 ; GENERIC-LABEL: test_sqrtps:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vsqrtps (%rdi), %ymm1 # sched: [36:2.00]
 ; GENERIC-NEXT:    vsqrtps %ymm0, %ymm0 # sched: [29:2.00]
 ; GENERIC-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_sqrtps:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vsqrtps (%rdi), %ymm1 # sched: [36:2.00]
 ; SANDY-NEXT:    vsqrtps %ymm0, %ymm0 # sched: [29:2.00]
 ; SANDY-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_sqrtps:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vsqrtps (%rdi), %ymm1 # sched: [21:2.00]
 ; HASWELL-NEXT:    vsqrtps %ymm0, %ymm0 # sched: [21:2.00]
 ; HASWELL-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_sqrtps:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vsqrtps (%rdi), %ymm1 # sched: [27:2.00]
 ; BROADWELL-NEXT:    vsqrtps %ymm0, %ymm0 # sched: [21:2.00]
 ; BROADWELL-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_sqrtps:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vsqrtps %ymm0, %ymm0 # sched: [12:1.00]
 ; SKYLAKE-NEXT:    vsqrtps (%rdi), %ymm1 # sched: [19:1.00]
 ; SKYLAKE-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_sqrtps:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vsqrtps %ymm0, %ymm0 # sched: [12:1.00]
 ; SKX-NEXT:    vsqrtps (%rdi), %ymm1 # sched: [19:1.00]
 ; SKX-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_sqrtps:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vsqrtps (%rdi), %ymm1 # sched: [47:42.00]
 ; BTVER2-NEXT:    vsqrtps %ymm0, %ymm0 # sched: [42:42.00]
 ; BTVER2-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_sqrtps:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vsqrtps (%rdi), %ymm1 # sched: [35:35.00]
 ; ZNVER1-NEXT:    vsqrtps %ymm0, %ymm0 # sched: [28:28.00]
 ; ZNVER1-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
@@ -4514,49 +4514,49 @@ declare <8 x float> @llvm.x86.avx.sqrt.ps.256(<8 x float>) nounwind readnone
 
 define <4 x double> @test_subpd(<4 x double> %a0, <4 x double> %a1, <4 x double> *%a2) {
 ; GENERIC-LABEL: test_subpd:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vsubpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vsubpd (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_subpd:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vsubpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    vsubpd (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_subpd:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vsubpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    vsubpd (%rdi), %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_subpd:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vsubpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    vsubpd (%rdi), %ymm0, %ymm0 # sched: [9:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_subpd:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vsubpd %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    vsubpd (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_subpd:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vsubpd %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    vsubpd (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_subpd:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vsubpd %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    vsubpd (%rdi), %ymm0, %ymm0 # sched: [8:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_subpd:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vsubpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    vsubpd (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -4568,49 +4568,49 @@ define <4 x double> @test_subpd(<4 x double> %a0, <4 x double> %a1, <4 x double>
 
 define <8 x float> @test_subps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a2) {
 ; GENERIC-LABEL: test_subps:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vsubps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vsubps (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_subps:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vsubps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    vsubps (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_subps:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vsubps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    vsubps (%rdi), %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_subps:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vsubps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    vsubps (%rdi), %ymm0, %ymm0 # sched: [9:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_subps:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vsubps %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    vsubps (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_subps:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vsubps %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    vsubps (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_subps:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vsubps %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    vsubps (%rdi), %ymm0, %ymm0 # sched: [8:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_subps:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vsubps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    vsubps (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -4622,7 +4622,7 @@ define <8 x float> @test_subps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a
 
 define i32 @test_testpd(<2 x double> %a0, <2 x double> %a1, <2 x double> *%a2) {
 ; GENERIC-LABEL: test_testpd:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    xorl %eax, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    vtestpd %xmm1, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    setb %al # sched: [1:0.50]
@@ -4631,7 +4631,7 @@ define i32 @test_testpd(<2 x double> %a0, <2 x double> %a1, <2 x double> *%a2) {
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_testpd:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    xorl %eax, %eax # sched: [1:0.33]
 ; SANDY-NEXT:    vtestpd %xmm1, %xmm0 # sched: [1:1.00]
 ; SANDY-NEXT:    setb %al # sched: [1:0.50]
@@ -4640,7 +4640,7 @@ define i32 @test_testpd(<2 x double> %a0, <2 x double> %a1, <2 x double> *%a2) {
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_testpd:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    xorl %eax, %eax # sched: [1:0.25]
 ; HASWELL-NEXT:    vtestpd %xmm1, %xmm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    setb %al # sched: [1:0.50]
@@ -4649,7 +4649,7 @@ define i32 @test_testpd(<2 x double> %a0, <2 x double> %a1, <2 x double> *%a2) {
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_testpd:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    xorl %eax, %eax # sched: [1:0.25]
 ; BROADWELL-NEXT:    vtestpd %xmm1, %xmm0 # sched: [1:1.00]
 ; BROADWELL-NEXT:    setb %al # sched: [1:0.50]
@@ -4658,7 +4658,7 @@ define i32 @test_testpd(<2 x double> %a0, <2 x double> %a1, <2 x double> *%a2) {
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_testpd:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    xorl %eax, %eax # sched: [1:0.25]
 ; SKYLAKE-NEXT:    vtestpd %xmm1, %xmm0 # sched: [2:1.00]
 ; SKYLAKE-NEXT:    setb %al # sched: [1:0.50]
@@ -4667,7 +4667,7 @@ define i32 @test_testpd(<2 x double> %a0, <2 x double> %a1, <2 x double> *%a2) {
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_testpd:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    xorl %eax, %eax # sched: [1:0.25]
 ; SKX-NEXT:    vtestpd %xmm1, %xmm0 # sched: [2:1.00]
 ; SKX-NEXT:    setb %al # sched: [1:0.50]
@@ -4676,7 +4676,7 @@ define i32 @test_testpd(<2 x double> %a0, <2 x double> %a1, <2 x double> *%a2) {
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_testpd:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    xorl %eax, %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    vtestpd %xmm1, %xmm0 # sched: [3:1.00]
 ; BTVER2-NEXT:    setb %al # sched: [1:0.50]
@@ -4685,7 +4685,7 @@ define i32 @test_testpd(<2 x double> %a0, <2 x double> %a1, <2 x double> *%a2) {
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_testpd:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    xorl %eax, %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    vtestpd %xmm1, %xmm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    setb %al # sched: [1:0.25]
@@ -4702,7 +4702,7 @@ declare i32 @llvm.x86.avx.vtestc.pd(<2 x double>, <2 x double>) nounwind readnon
 
 define i32 @test_testpd_ymm(<4 x double> %a0, <4 x double> %a1, <4 x double> *%a2) {
 ; GENERIC-LABEL: test_testpd_ymm:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    xorl %eax, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    vtestpd %ymm1, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    setb %al # sched: [1:0.50]
@@ -4712,7 +4712,7 @@ define i32 @test_testpd_ymm(<4 x double> %a0, <4 x double> %a1, <4 x double> *%a
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_testpd_ymm:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    xorl %eax, %eax # sched: [1:0.33]
 ; SANDY-NEXT:    vtestpd %ymm1, %ymm0 # sched: [1:1.00]
 ; SANDY-NEXT:    setb %al # sched: [1:0.50]
@@ -4722,7 +4722,7 @@ define i32 @test_testpd_ymm(<4 x double> %a0, <4 x double> %a1, <4 x double> *%a
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_testpd_ymm:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    xorl %eax, %eax # sched: [1:0.25]
 ; HASWELL-NEXT:    vtestpd %ymm1, %ymm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    setb %al # sched: [1:0.50]
@@ -4732,7 +4732,7 @@ define i32 @test_testpd_ymm(<4 x double> %a0, <4 x double> %a1, <4 x double> *%a
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_testpd_ymm:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    xorl %eax, %eax # sched: [1:0.25]
 ; BROADWELL-NEXT:    vtestpd %ymm1, %ymm0 # sched: [1:1.00]
 ; BROADWELL-NEXT:    setb %al # sched: [1:0.50]
@@ -4742,7 +4742,7 @@ define i32 @test_testpd_ymm(<4 x double> %a0, <4 x double> %a1, <4 x double> *%a
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_testpd_ymm:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    xorl %eax, %eax # sched: [1:0.25]
 ; SKYLAKE-NEXT:    vtestpd %ymm1, %ymm0 # sched: [2:1.00]
 ; SKYLAKE-NEXT:    setb %al # sched: [1:0.50]
@@ -4752,7 +4752,7 @@ define i32 @test_testpd_ymm(<4 x double> %a0, <4 x double> %a1, <4 x double> *%a
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_testpd_ymm:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    xorl %eax, %eax # sched: [1:0.25]
 ; SKX-NEXT:    vtestpd %ymm1, %ymm0 # sched: [2:1.00]
 ; SKX-NEXT:    setb %al # sched: [1:0.50]
@@ -4762,7 +4762,7 @@ define i32 @test_testpd_ymm(<4 x double> %a0, <4 x double> %a1, <4 x double> *%a
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_testpd_ymm:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    xorl %eax, %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    vtestpd %ymm1, %ymm0 # sched: [4:2.00]
 ; BTVER2-NEXT:    setb %al # sched: [1:0.50]
@@ -4771,7 +4771,7 @@ define i32 @test_testpd_ymm(<4 x double> %a0, <4 x double> %a1, <4 x double> *%a
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_testpd_ymm:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    xorl %eax, %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    vtestpd %ymm1, %ymm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    setb %al # sched: [1:0.25]
@@ -4789,7 +4789,7 @@ declare i32 @llvm.x86.avx.vtestc.pd.256(<4 x double>, <4 x double>) nounwind rea
 
 define i32 @test_testps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a2) {
 ; GENERIC-LABEL: test_testps:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    xorl %eax, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    vtestps %xmm1, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    setb %al # sched: [1:0.50]
@@ -4798,7 +4798,7 @@ define i32 @test_testps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a2) {
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_testps:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    xorl %eax, %eax # sched: [1:0.33]
 ; SANDY-NEXT:    vtestps %xmm1, %xmm0 # sched: [1:1.00]
 ; SANDY-NEXT:    setb %al # sched: [1:0.50]
@@ -4807,7 +4807,7 @@ define i32 @test_testps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a2) {
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_testps:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    xorl %eax, %eax # sched: [1:0.25]
 ; HASWELL-NEXT:    vtestps %xmm1, %xmm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    setb %al # sched: [1:0.50]
@@ -4816,7 +4816,7 @@ define i32 @test_testps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a2) {
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_testps:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    xorl %eax, %eax # sched: [1:0.25]
 ; BROADWELL-NEXT:    vtestps %xmm1, %xmm0 # sched: [1:1.00]
 ; BROADWELL-NEXT:    setb %al # sched: [1:0.50]
@@ -4825,7 +4825,7 @@ define i32 @test_testps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a2) {
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_testps:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    xorl %eax, %eax # sched: [1:0.25]
 ; SKYLAKE-NEXT:    vtestps %xmm1, %xmm0 # sched: [2:1.00]
 ; SKYLAKE-NEXT:    setb %al # sched: [1:0.50]
@@ -4834,7 +4834,7 @@ define i32 @test_testps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a2) {
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_testps:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    xorl %eax, %eax # sched: [1:0.25]
 ; SKX-NEXT:    vtestps %xmm1, %xmm0 # sched: [2:1.00]
 ; SKX-NEXT:    setb %al # sched: [1:0.50]
@@ -4843,7 +4843,7 @@ define i32 @test_testps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a2) {
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_testps:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    xorl %eax, %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    vtestps %xmm1, %xmm0 # sched: [3:1.00]
 ; BTVER2-NEXT:    setb %al # sched: [1:0.50]
@@ -4852,7 +4852,7 @@ define i32 @test_testps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a2) {
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_testps:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    xorl %eax, %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    vtestps %xmm1, %xmm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    setb %al # sched: [1:0.25]
@@ -4869,7 +4869,7 @@ declare i32 @llvm.x86.avx.vtestc.ps(<4 x float>, <4 x float>) nounwind readnone
 
 define i32 @test_testps_ymm(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a2) {
 ; GENERIC-LABEL: test_testps_ymm:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    xorl %eax, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    vtestps %ymm1, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    setb %al # sched: [1:0.50]
@@ -4879,7 +4879,7 @@ define i32 @test_testps_ymm(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a2) 
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_testps_ymm:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    xorl %eax, %eax # sched: [1:0.33]
 ; SANDY-NEXT:    vtestps %ymm1, %ymm0 # sched: [1:1.00]
 ; SANDY-NEXT:    setb %al # sched: [1:0.50]
@@ -4889,7 +4889,7 @@ define i32 @test_testps_ymm(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a2) 
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_testps_ymm:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    xorl %eax, %eax # sched: [1:0.25]
 ; HASWELL-NEXT:    vtestps %ymm1, %ymm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    setb %al # sched: [1:0.50]
@@ -4899,7 +4899,7 @@ define i32 @test_testps_ymm(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a2) 
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_testps_ymm:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    xorl %eax, %eax # sched: [1:0.25]
 ; BROADWELL-NEXT:    vtestps %ymm1, %ymm0 # sched: [1:1.00]
 ; BROADWELL-NEXT:    setb %al # sched: [1:0.50]
@@ -4909,7 +4909,7 @@ define i32 @test_testps_ymm(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a2) 
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_testps_ymm:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    xorl %eax, %eax # sched: [1:0.25]
 ; SKYLAKE-NEXT:    vtestps %ymm1, %ymm0 # sched: [2:1.00]
 ; SKYLAKE-NEXT:    setb %al # sched: [1:0.50]
@@ -4919,7 +4919,7 @@ define i32 @test_testps_ymm(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a2) 
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_testps_ymm:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    xorl %eax, %eax # sched: [1:0.25]
 ; SKX-NEXT:    vtestps %ymm1, %ymm0 # sched: [2:1.00]
 ; SKX-NEXT:    setb %al # sched: [1:0.50]
@@ -4929,7 +4929,7 @@ define i32 @test_testps_ymm(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a2) 
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_testps_ymm:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    xorl %eax, %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    vtestps %ymm1, %ymm0 # sched: [4:2.00]
 ; BTVER2-NEXT:    setb %al # sched: [1:0.50]
@@ -4938,7 +4938,7 @@ define i32 @test_testps_ymm(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a2) 
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_testps_ymm:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    xorl %eax, %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    vtestps %ymm1, %ymm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    setb %al # sched: [1:0.25]
@@ -4956,56 +4956,56 @@ declare i32 @llvm.x86.avx.vtestc.ps.256(<8 x float>, <8 x float>) nounwind readn
 
 define <4 x double> @test_unpckhpd(<4 x double> %a0, <4 x double> %a1, <4 x double> *%a2) {
 ; GENERIC-LABEL: test_unpckhpd:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3] sched: [1:1.00]
 ; GENERIC-NEXT:    vunpckhpd {{.*#+}} ymm1 = ymm1[1],mem[1],ymm1[3],mem[3] sched: [8:1.00]
 ; GENERIC-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_unpckhpd:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3] sched: [1:1.00]
 ; SANDY-NEXT:    vunpckhpd {{.*#+}} ymm1 = ymm1[1],mem[1],ymm1[3],mem[3] sched: [8:1.00]
 ; SANDY-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_unpckhpd:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3] sched: [1:1.00]
 ; HASWELL-NEXT:    vunpckhpd {{.*#+}} ymm1 = ymm1[1],mem[1],ymm1[3],mem[3] sched: [1:1.00]
 ; HASWELL-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_unpckhpd:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3] sched: [1:1.00]
 ; BROADWELL-NEXT:    vunpckhpd {{.*#+}} ymm1 = ymm1[1],mem[1],ymm1[3],mem[3] sched: [7:1.00]
 ; BROADWELL-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_unpckhpd:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3] sched: [1:1.00]
 ; SKYLAKE-NEXT:    vunpckhpd {{.*#+}} ymm1 = ymm1[1],mem[1],ymm1[3],mem[3] sched: [8:1.00]
 ; SKYLAKE-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_unpckhpd:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3] sched: [1:1.00]
 ; SKX-NEXT:    vunpckhpd {{.*#+}} ymm1 = ymm1[1],mem[1],ymm1[3],mem[3] sched: [8:1.00]
 ; SKX-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_unpckhpd:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3] sched: [1:0.50]
 ; BTVER2-NEXT:    vunpckhpd {{.*#+}} ymm1 = ymm1[1],mem[1],ymm1[3],mem[3] sched: [6:1.00]
 ; BTVER2-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_unpckhpd:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3] sched: [1:0.50]
 ; ZNVER1-NEXT:    vunpckhpd {{.*#+}} ymm1 = ymm1[1],mem[1],ymm1[3],mem[3] sched: [8:0.50]
 ; ZNVER1-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
@@ -5019,49 +5019,49 @@ define <4 x double> @test_unpckhpd(<4 x double> %a0, <4 x double> %a1, <4 x doub
 
 define <8 x float> @test_unpckhps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a2) nounwind {
 ; GENERIC-LABEL: test_unpckhps:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vunpckhps {{.*#+}} ymm0 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7] sched: [1:1.00]
 ; GENERIC-NEXT:    vunpckhps {{.*#+}} ymm0 = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_unpckhps:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vunpckhps {{.*#+}} ymm0 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7] sched: [1:1.00]
 ; SANDY-NEXT:    vunpckhps {{.*#+}} ymm0 = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7] sched: [8:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_unpckhps:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vunpckhps {{.*#+}} ymm0 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7] sched: [1:1.00]
 ; HASWELL-NEXT:    vunpckhps {{.*#+}} ymm0 = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7] sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_unpckhps:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vunpckhps {{.*#+}} ymm0 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7] sched: [1:1.00]
 ; BROADWELL-NEXT:    vunpckhps {{.*#+}} ymm0 = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7] sched: [7:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_unpckhps:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vunpckhps {{.*#+}} ymm0 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7] sched: [1:1.00]
 ; SKYLAKE-NEXT:    vunpckhps {{.*#+}} ymm0 = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7] sched: [8:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_unpckhps:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vunpckhps {{.*#+}} ymm0 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7] sched: [1:1.00]
 ; SKX-NEXT:    vunpckhps {{.*#+}} ymm0 = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7] sched: [8:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_unpckhps:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vunpckhps {{.*#+}} ymm0 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7] sched: [1:0.50]
 ; BTVER2-NEXT:    vunpckhps {{.*#+}} ymm0 = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7] sched: [6:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_unpckhps:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vunpckhps {{.*#+}} ymm0 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7] sched: [1:0.50]
 ; ZNVER1-NEXT:    vunpckhps {{.*#+}} ymm0 = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7] sched: [8:0.50]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -5073,56 +5073,56 @@ define <8 x float> @test_unpckhps(<8 x float> %a0, <8 x float> %a1, <8 x float> 
 
 define <4 x double> @test_unpcklpd(<4 x double> %a0, <4 x double> %a1, <4 x double> *%a2) {
 ; GENERIC-LABEL: test_unpcklpd:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2] sched: [1:1.00]
 ; GENERIC-NEXT:    vunpcklpd {{.*#+}} ymm1 = ymm1[0],mem[0],ymm1[2],mem[2] sched: [8:1.00]
 ; GENERIC-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_unpcklpd:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2] sched: [1:1.00]
 ; SANDY-NEXT:    vunpcklpd {{.*#+}} ymm1 = ymm1[0],mem[0],ymm1[2],mem[2] sched: [8:1.00]
 ; SANDY-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_unpcklpd:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2] sched: [1:1.00]
 ; HASWELL-NEXT:    vunpcklpd {{.*#+}} ymm1 = ymm1[0],mem[0],ymm1[2],mem[2] sched: [1:1.00]
 ; HASWELL-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_unpcklpd:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2] sched: [1:1.00]
 ; BROADWELL-NEXT:    vunpcklpd {{.*#+}} ymm1 = ymm1[0],mem[0],ymm1[2],mem[2] sched: [7:1.00]
 ; BROADWELL-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_unpcklpd:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2] sched: [1:1.00]
 ; SKYLAKE-NEXT:    vunpcklpd {{.*#+}} ymm1 = ymm1[0],mem[0],ymm1[2],mem[2] sched: [8:1.00]
 ; SKYLAKE-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_unpcklpd:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2] sched: [1:1.00]
 ; SKX-NEXT:    vunpcklpd {{.*#+}} ymm1 = ymm1[0],mem[0],ymm1[2],mem[2] sched: [8:1.00]
 ; SKX-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_unpcklpd:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2] sched: [1:0.50]
 ; BTVER2-NEXT:    vunpcklpd {{.*#+}} ymm1 = ymm1[0],mem[0],ymm1[2],mem[2] sched: [6:1.00]
 ; BTVER2-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_unpcklpd:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2] sched: [1:0.50]
 ; ZNVER1-NEXT:    vunpcklpd {{.*#+}} ymm1 = ymm1[0],mem[0],ymm1[2],mem[2] sched: [8:0.50]
 ; ZNVER1-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
@@ -5136,49 +5136,49 @@ define <4 x double> @test_unpcklpd(<4 x double> %a0, <4 x double> %a1, <4 x doub
 
 define <8 x float> @test_unpcklps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a2) nounwind {
 ; GENERIC-LABEL: test_unpcklps:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5] sched: [1:1.00]
 ; GENERIC-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_unpcklps:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5] sched: [1:1.00]
 ; SANDY-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5] sched: [8:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_unpcklps:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5] sched: [1:1.00]
 ; HASWELL-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5] sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_unpcklps:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5] sched: [1:1.00]
 ; BROADWELL-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5] sched: [7:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_unpcklps:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5] sched: [1:1.00]
 ; SKYLAKE-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5] sched: [8:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_unpcklps:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5] sched: [1:1.00]
 ; SKX-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5] sched: [8:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_unpcklps:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5] sched: [1:0.50]
 ; BTVER2-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5] sched: [6:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_unpcklps:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5] sched: [1:0.50]
 ; ZNVER1-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5] sched: [8:0.50]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -5190,56 +5190,56 @@ define <8 x float> @test_unpcklps(<8 x float> %a0, <8 x float> %a1, <8 x float> 
 
 define <4 x double> @test_xorpd(<4 x double> %a0, <4 x double> %a1, <4 x double> *%a2) {
 ; GENERIC-LABEL: test_xorpd:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vxorpd %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vxorpd (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_xorpd:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vxorpd %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; SANDY-NEXT:    vxorpd (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; SANDY-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_xorpd:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vxorpd %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    vxorpd (%rdi), %ymm0, %ymm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_xorpd:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vxorpd %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; BROADWELL-NEXT:    vxorpd (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
 ; BROADWELL-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_xorpd:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vxorpd %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
 ; SKYLAKE-NEXT:    vxorpd (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; SKYLAKE-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_xorpd:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vxorpd %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
 ; SKX-NEXT:    vxorpd (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; SKX-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_xorpd:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vxorpd %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    vxorpd (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
 ; BTVER2-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_xorpd:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vxorpd %ymm1, %ymm0, %ymm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    vxorpd (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; ZNVER1-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
@@ -5257,56 +5257,56 @@ define <4 x double> @test_xorpd(<4 x double> %a0, <4 x double> %a1, <4 x double>
 
 define <8 x float> @test_xorps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a2) {
 ; GENERIC-LABEL: test_xorps:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vxorps %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vxorps (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_xorps:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vxorps %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; SANDY-NEXT:    vxorps (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; SANDY-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_xorps:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vxorps %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    vxorps (%rdi), %ymm0, %ymm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_xorps:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vxorps %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
 ; BROADWELL-NEXT:    vxorps (%rdi), %ymm0, %ymm0 # sched: [7:1.00]
 ; BROADWELL-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_xorps:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vxorps %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
 ; SKYLAKE-NEXT:    vxorps (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; SKYLAKE-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_xorps:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vxorps %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
 ; SKX-NEXT:    vxorps (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; SKX-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [4:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_xorps:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vxorps %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    vxorps (%rdi), %ymm0, %ymm0 # sched: [6:1.00]
 ; BTVER2-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_xorps:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vxorps %ymm1, %ymm0, %ymm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    vxorps (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; ZNVER1-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
@@ -5324,42 +5324,42 @@ define <8 x float> @test_xorps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a
 
 define void @test_zeroall() {
 ; GENERIC-LABEL: test_zeroall:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vzeroall
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_zeroall:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vzeroall
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_zeroall:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vzeroall # sched: [16:16.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_zeroall:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vzeroall # sched: [16:16.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_zeroall:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vzeroall # sched: [16:4.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_zeroall:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vzeroall # sched: [16:4.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_zeroall:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vzeroall # sched: [90:?]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_zeroall:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vzeroall # sched: [100:?]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   call void @llvm.x86.avx.vzeroall()
@@ -5369,42 +5369,42 @@ declare void @llvm.x86.avx.vzeroall() nounwind
 
 define void @test_zeroupper() {
 ; GENERIC-LABEL: test_zeroupper:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vzeroupper
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_zeroupper:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vzeroupper
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_zeroupper:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_zeroupper:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_zeroupper:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_zeroupper:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_zeroupper:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vzeroupper # sched: [46:?]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_zeroupper:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vzeroupper # sched: [100:?]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   call void @llvm.x86.avx.vzeroupper()

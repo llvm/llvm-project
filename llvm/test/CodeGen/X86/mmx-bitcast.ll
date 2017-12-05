@@ -3,7 +3,7 @@
 
 define i64 @t0(x86_mmx* %p) {
 ; CHECK-LABEL: t0:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movq (%rdi), %mm0
 ; CHECK-NEXT:    paddq %mm0, %mm0
 ; CHECK-NEXT:    movd %mm0, %rax
@@ -16,7 +16,7 @@ define i64 @t0(x86_mmx* %p) {
 
 define i64 @t1(x86_mmx* %p) {
 ; CHECK-LABEL: t1:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movq (%rdi), %mm0
 ; CHECK-NEXT:    paddd %mm0, %mm0
 ; CHECK-NEXT:    movd %mm0, %rax
@@ -29,7 +29,7 @@ define i64 @t1(x86_mmx* %p) {
 
 define i64 @t2(x86_mmx* %p) {
 ; CHECK-LABEL: t2:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movq (%rdi), %mm0
 ; CHECK-NEXT:    paddw %mm0, %mm0
 ; CHECK-NEXT:    movd %mm0, %rax
@@ -42,7 +42,7 @@ define i64 @t2(x86_mmx* %p) {
 
 define i64 @t3(x86_mmx* %p) {
 ; CHECK-LABEL: t3:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movq (%rdi), %mm0
 ; CHECK-NEXT:    paddb %mm0, %mm0
 ; CHECK-NEXT:    movd %mm0, %rax
@@ -57,7 +57,7 @@ define i64 @t3(x86_mmx* %p) {
 
 define void @t4(<1 x i64> %A, <1 x i64> %B) {
 ; CHECK-LABEL: t4:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movd %rdi, %mm0
 ; CHECK-NEXT:    movd %rsi, %mm1
 ; CHECK-NEXT:    paddusw %mm0, %mm1
@@ -76,7 +76,7 @@ entry:
 
 define i64 @t5(i32 %a, i32 %b) nounwind readnone {
 ; CHECK-LABEL: t5:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movd %esi, %xmm0
 ; CHECK-NEXT:    movd %edi, %xmm1
 ; CHECK-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
@@ -92,7 +92,7 @@ declare x86_mmx @llvm.x86.mmx.pslli.q(x86_mmx, i32)
 
 define <1 x i64> @t6(i64 %t) {
 ; CHECK-LABEL: t6:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movd %rdi, %mm0
 ; CHECK-NEXT:    psllq $48, %mm0
 ; CHECK-NEXT:    movd %mm0, %rax

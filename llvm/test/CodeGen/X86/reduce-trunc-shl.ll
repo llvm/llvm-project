@@ -4,7 +4,7 @@
 
 define void @trunc_shl_7_v4i32_v4i64(<4 x i32> addrspace(1)* %out, <4 x i64> addrspace(1)* %in) {
 ; SSE2-LABEL: trunc_shl_7_v4i32_v4i64:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps (%rsi), %xmm0
 ; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],mem[0,2]
 ; SSE2-NEXT:    pslld $7, %xmm0
@@ -12,7 +12,7 @@ define void @trunc_shl_7_v4i32_v4i64(<4 x i32> addrspace(1)* %out, <4 x i64> add
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: trunc_shl_7_v4i32_v4i64:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpshufd {{.*#+}} ymm0 = mem[0,2,2,3,4,6,6,7]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-NEXT:    vpslld $7, %xmm0, %xmm0
@@ -28,7 +28,7 @@ define void @trunc_shl_7_v4i32_v4i64(<4 x i32> addrspace(1)* %out, <4 x i64> add
 
 define <8 x i16> @trunc_shl_v8i16_v8i32(<8 x i32> %a) {
 ; SSE2-LABEL: trunc_shl_v8i16_v8i32:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pslld $17, %xmm0
 ; SSE2-NEXT:    pslld $17, %xmm1
 ; SSE2-NEXT:    pslld $16, %xmm1
@@ -39,7 +39,7 @@ define <8 x i16> @trunc_shl_v8i16_v8i32(<8 x i32> %a) {
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: trunc_shl_v8i16_v8i32:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpslld $17, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
@@ -53,14 +53,14 @@ define <8 x i16> @trunc_shl_v8i16_v8i32(<8 x i32> %a) {
 
 define void @trunc_shl_31_i32_i64(i32* %out, i64* %in) {
 ; SSE2-LABEL: trunc_shl_31_i32_i64:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movl (%rsi), %eax
 ; SSE2-NEXT:    shll $31, %eax
 ; SSE2-NEXT:    movl %eax, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: trunc_shl_31_i32_i64:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    movl (%rsi), %eax
 ; AVX2-NEXT:    shll $31, %eax
 ; AVX2-NEXT:    movl %eax, (%rdi)
@@ -74,12 +74,12 @@ define void @trunc_shl_31_i32_i64(i32* %out, i64* %in) {
 
 define void @trunc_shl_32_i32_i64(i32* %out, i64* %in) {
 ; SSE2-LABEL: trunc_shl_32_i32_i64:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movl $0, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: trunc_shl_32_i32_i64:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    movl $0, (%rdi)
 ; AVX2-NEXT:    retq
   %val = load i64, i64* %in
@@ -91,14 +91,14 @@ define void @trunc_shl_32_i32_i64(i32* %out, i64* %in) {
 
 define void @trunc_shl_15_i16_i64(i16* %out, i64* %in) {
 ; SSE2-LABEL: trunc_shl_15_i16_i64:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movzwl (%rsi), %eax
 ; SSE2-NEXT:    shlw $15, %ax
 ; SSE2-NEXT:    movw %ax, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: trunc_shl_15_i16_i64:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    movzwl (%rsi), %eax
 ; AVX2-NEXT:    shlw $15, %ax
 ; AVX2-NEXT:    movw %ax, (%rdi)
@@ -112,12 +112,12 @@ define void @trunc_shl_15_i16_i64(i16* %out, i64* %in) {
 
 define void @trunc_shl_16_i16_i64(i16* %out, i64* %in) {
 ; SSE2-LABEL: trunc_shl_16_i16_i64:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movw $0, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: trunc_shl_16_i16_i64:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    movw $0, (%rdi)
 ; AVX2-NEXT:    retq
   %val = load i64, i64* %in
@@ -129,14 +129,14 @@ define void @trunc_shl_16_i16_i64(i16* %out, i64* %in) {
 
 define void @trunc_shl_7_i8_i64(i8* %out, i64* %in) {
 ; SSE2-LABEL: trunc_shl_7_i8_i64:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movb (%rsi), %al
 ; SSE2-NEXT:    shlb $7, %al
 ; SSE2-NEXT:    movb %al, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: trunc_shl_7_i8_i64:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    movb (%rsi), %al
 ; AVX2-NEXT:    shlb $7, %al
 ; AVX2-NEXT:    movb %al, (%rdi)
@@ -150,12 +150,12 @@ define void @trunc_shl_7_i8_i64(i8* %out, i64* %in) {
 
 define void @trunc_shl_8_i8_i64(i8* %out, i64* %in) {
 ; SSE2-LABEL: trunc_shl_8_i8_i64:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movb $0, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: trunc_shl_8_i8_i64:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    movb $0, (%rdi)
 ; AVX2-NEXT:    retq
   %val = load i64, i64* %in

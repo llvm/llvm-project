@@ -26,7 +26,7 @@
 ; ASM: _main:                                  # @main
 ; ASM: Lfunc_begin0:
 ; ASM:         .cv_func_id 0
-; ASM: # BB#0:                                 # %entry
+; ASM: # %bb.0:                                 # %entry
 ; ASM:         .cv_file        1 "D:\\src\\llvm\\build\\t.cpp"
 ; ASM:         .cv_loc 0 1 9 5 is_stmt 0       # t.cpp:9:5
 ; ASM:         incl    "?x@@3HC"

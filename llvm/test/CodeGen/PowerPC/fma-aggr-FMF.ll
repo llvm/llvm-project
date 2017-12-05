@@ -3,7 +3,7 @@
 
 define float @can_fma_with_fewer_uses(float %f1, float %f2, float %f3, float %f4) {
 ; CHECK-LABEL: can_fma_with_fewer_uses:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xsmulsp 0, 1, 2
 ; CHECK-NEXT:    fmr 1, 0
 ; CHECK-NEXT:    xsmaddasp 1, 3, 4
@@ -21,7 +21,7 @@ define float @can_fma_with_fewer_uses(float %f1, float %f2, float %f3, float %f4
 ; around beside the fma.
 define float @no_fma_with_fewer_uses(float %f1, float %f2, float %f3, float %f4) {
 ; CHECK-LABEL: no_fma_with_fewer_uses:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xsmulsp 0, 3, 4
 ; CHECK-NEXT:    xsmulsp 13, 1, 2
 ; CHECK-NEXT:    xsmaddasp 0, 1, 2

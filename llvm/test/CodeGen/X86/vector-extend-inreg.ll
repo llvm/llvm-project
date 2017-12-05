@@ -6,7 +6,7 @@
 
 define i64 @extract_any_extend_vector_inreg_v16i64(<16 x i64> %a0, i32 %a1) nounwind {
 ; X32-SSE-LABEL: extract_any_extend_vector_inreg_v16i64:
-; X32-SSE:       # BB#0:
+; X32-SSE:       # %bb.0:
 ; X32-SSE-NEXT:    pushl %ebp
 ; X32-SSE-NEXT:    movl %esp, %ebp
 ; X32-SSE-NEXT:    andl $-128, %esp
@@ -42,7 +42,7 @@ define i64 @extract_any_extend_vector_inreg_v16i64(<16 x i64> %a0, i32 %a1) noun
 ; X32-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: extract_any_extend_vector_inreg_v16i64:
-; X64-SSE:       # BB#0:
+; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    pushq %rbp
 ; X64-SSE-NEXT:    movq %rsp, %rbp
 ; X64-SSE-NEXT:    andq $-128, %rsp
@@ -65,7 +65,7 @@ define i64 @extract_any_extend_vector_inreg_v16i64(<16 x i64> %a0, i32 %a1) noun
 ; X64-SSE-NEXT:    retq
 ;
 ; X32-AVX-LABEL: extract_any_extend_vector_inreg_v16i64:
-; X32-AVX:       # BB#0:
+; X32-AVX:       # %bb.0:
 ; X32-AVX-NEXT:    pushl %ebp
 ; X32-AVX-NEXT:    movl %esp, %ebp
 ; X32-AVX-NEXT:    andl $-128, %esp
@@ -94,7 +94,7 @@ define i64 @extract_any_extend_vector_inreg_v16i64(<16 x i64> %a0, i32 %a1) noun
 ; X32-AVX-NEXT:    retl
 ;
 ; X64-AVX-LABEL: extract_any_extend_vector_inreg_v16i64:
-; X64-AVX:       # BB#0:
+; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    pushq %rbp
 ; X64-AVX-NEXT:    movq %rsp, %rbp
 ; X64-AVX-NEXT:    andq $-128, %rsp

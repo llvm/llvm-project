@@ -207,7 +207,7 @@ MachineInstr *AArch64ConditionOptimizer::findSuitableCompare(
       return nullptr;
     }
   }
-  DEBUG(dbgs() << "Flags not defined in BB#" << MBB->getNumber() << '\n');
+  DEBUG(dbgs() << "Flags not defined in " << printMBBReference(*MBB) << '\n');
   return nullptr;
 }
 

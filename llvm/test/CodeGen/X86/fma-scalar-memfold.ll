@@ -16,7 +16,7 @@ declare <2 x double> @llvm.x86.fma.vfnmsub.sd(<2 x double>, <2 x double>, <2 x d
 
 define void @fmadd_aab_ss(float* %a, float* %b) {
 ; CHECK-LABEL: fmadd_aab_ss:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vfmadd213ss (%rsi), %xmm0, %xmm0
 ; CHECK-NEXT:    vmovss %xmm0, (%rdi)
@@ -42,7 +42,7 @@ define void @fmadd_aab_ss(float* %a, float* %b) {
 
 define void @fmadd_aba_ss(float* %a, float* %b) {
 ; CHECK-LABEL: fmadd_aba_ss:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vfmadd132ss (%rsi), %xmm0, %xmm0
 ; CHECK-NEXT:    vmovss %xmm0, (%rdi)
@@ -68,7 +68,7 @@ define void @fmadd_aba_ss(float* %a, float* %b) {
 
 define void @fmsub_aab_ss(float* %a, float* %b) {
 ; CHECK-LABEL: fmsub_aab_ss:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vfmsub213ss (%rsi), %xmm0, %xmm0
 ; CHECK-NEXT:    vmovss %xmm0, (%rdi)
@@ -94,7 +94,7 @@ define void @fmsub_aab_ss(float* %a, float* %b) {
 
 define void @fmsub_aba_ss(float* %a, float* %b) {
 ; CHECK-LABEL: fmsub_aba_ss:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vfmsub132ss (%rsi), %xmm0, %xmm0
 ; CHECK-NEXT:    vmovss %xmm0, (%rdi)
@@ -120,7 +120,7 @@ define void @fmsub_aba_ss(float* %a, float* %b) {
 
 define void @fnmadd_aab_ss(float* %a, float* %b) {
 ; CHECK-LABEL: fnmadd_aab_ss:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vfnmadd213ss (%rsi), %xmm0, %xmm0
 ; CHECK-NEXT:    vmovss %xmm0, (%rdi)
@@ -146,7 +146,7 @@ define void @fnmadd_aab_ss(float* %a, float* %b) {
 
 define void @fnmadd_aba_ss(float* %a, float* %b) {
 ; CHECK-LABEL: fnmadd_aba_ss:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vfnmadd132ss (%rsi), %xmm0, %xmm0
 ; CHECK-NEXT:    vmovss %xmm0, (%rdi)
@@ -172,7 +172,7 @@ define void @fnmadd_aba_ss(float* %a, float* %b) {
 
 define void @fnmsub_aab_ss(float* %a, float* %b) {
 ; CHECK-LABEL: fnmsub_aab_ss:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vfnmsub213ss (%rsi), %xmm0, %xmm0
 ; CHECK-NEXT:    vmovss %xmm0, (%rdi)
@@ -198,7 +198,7 @@ define void @fnmsub_aab_ss(float* %a, float* %b) {
 
 define void @fnmsub_aba_ss(float* %a, float* %b) {
 ; CHECK-LABEL: fnmsub_aba_ss:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vfnmsub132ss (%rsi), %xmm0, %xmm0
 ; CHECK-NEXT:    vmovss %xmm0, (%rdi)
@@ -224,7 +224,7 @@ define void @fnmsub_aba_ss(float* %a, float* %b) {
 
 define void @fmadd_aab_sd(double* %a, double* %b) {
 ; CHECK-LABEL: fmadd_aab_sd:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    vfmadd213sd (%rsi), %xmm0, %xmm0
 ; CHECK-NEXT:    vmovlpd %xmm0, (%rdi)
@@ -246,7 +246,7 @@ define void @fmadd_aab_sd(double* %a, double* %b) {
 
 define void @fmadd_aba_sd(double* %a, double* %b) {
 ; CHECK-LABEL: fmadd_aba_sd:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    vfmadd132sd (%rsi), %xmm0, %xmm0
 ; CHECK-NEXT:    vmovlpd %xmm0, (%rdi)
@@ -268,7 +268,7 @@ define void @fmadd_aba_sd(double* %a, double* %b) {
 
 define void @fmsub_aab_sd(double* %a, double* %b) {
 ; CHECK-LABEL: fmsub_aab_sd:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    vfmsub213sd (%rsi), %xmm0, %xmm0
 ; CHECK-NEXT:    vmovlpd %xmm0, (%rdi)
@@ -290,7 +290,7 @@ define void @fmsub_aab_sd(double* %a, double* %b) {
 
 define void @fmsub_aba_sd(double* %a, double* %b) {
 ; CHECK-LABEL: fmsub_aba_sd:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    vfmsub132sd (%rsi), %xmm0, %xmm0
 ; CHECK-NEXT:    vmovlpd %xmm0, (%rdi)
@@ -312,7 +312,7 @@ define void @fmsub_aba_sd(double* %a, double* %b) {
 
 define void @fnmadd_aab_sd(double* %a, double* %b) {
 ; CHECK-LABEL: fnmadd_aab_sd:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    vfnmadd213sd (%rsi), %xmm0, %xmm0
 ; CHECK-NEXT:    vmovlpd %xmm0, (%rdi)
@@ -334,7 +334,7 @@ define void @fnmadd_aab_sd(double* %a, double* %b) {
 
 define void @fnmadd_aba_sd(double* %a, double* %b) {
 ; CHECK-LABEL: fnmadd_aba_sd:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    vfnmadd132sd (%rsi), %xmm0, %xmm0
 ; CHECK-NEXT:    vmovlpd %xmm0, (%rdi)
@@ -356,7 +356,7 @@ define void @fnmadd_aba_sd(double* %a, double* %b) {
 
 define void @fnmsub_aab_sd(double* %a, double* %b) {
 ; CHECK-LABEL: fnmsub_aab_sd:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    vfnmsub213sd (%rsi), %xmm0, %xmm0
 ; CHECK-NEXT:    vmovlpd %xmm0, (%rdi)
@@ -378,7 +378,7 @@ define void @fnmsub_aab_sd(double* %a, double* %b) {
 
 define void @fnmsub_aba_sd(double* %a, double* %b) {
 ; CHECK-LABEL: fnmsub_aba_sd:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    vfnmsub132sd (%rsi), %xmm0, %xmm0
 ; CHECK-NEXT:    vmovlpd %xmm0, (%rdi)

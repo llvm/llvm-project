@@ -8,7 +8,7 @@
 
 define void @e() {
 ; X86-LABEL: e:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl b, %eax
 ; X86-NEXT:    .p2align 4, 0x90
 ; X86-NEXT:  .LBB0_1: # %for.cond
@@ -20,7 +20,7 @@ define void @e() {
 ; X86-NEXT:    jmp .LBB0_1
 ;
 ; X64-LABEL: e:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq {{.*}}(%rip), %rax
 ; X64-NEXT:    movl $a, %esi
 ; X64-NEXT:    .p2align 4, 0x90

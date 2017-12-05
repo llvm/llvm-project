@@ -225,9 +225,11 @@ class LLVMConfig(object):
         if re.match(r'^x86_64.*-apple', triple):
             version_regex = re.search(r'version ([0-9]+)\.([0-9]+).([0-9]+)', version_string)
             major_version_number = int(version_regex.group(1))
-            minor_version_number = int(version_regex.group(3))
+            minor_version_number = int(version_regex.group(2))
+            patch_version_number = int(version_regex.group(3))
             if 'Apple LLVM' in version_string:
-                return major_version_number >= 9 and minor_version_number > 0
+                # Apple LLVM doesn't yet support LSan
+                return False
             else:
                 return major_version_number >= 5
 

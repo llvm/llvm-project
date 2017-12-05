@@ -11,7 +11,7 @@
 ; Function Attrs: norecurse nounwind readnone
 define i64 @test_llequc(i8 zeroext %a, i8 zeroext %b) {
 ; CHECK-LABEL: test_llequc:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xor r3, r3, r4
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    srwi r3, r3, 5
@@ -25,7 +25,7 @@ entry:
 ; Function Attrs: norecurse nounwind readnone
 define i64 @test_llequc_sext(i8 zeroext %a, i8 zeroext %b) {
 ; CHECK-LABEL: test_llequc_sext:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xor r3, r3, r4
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    srwi r3, r3, 5
@@ -40,7 +40,7 @@ entry:
 ; Function Attrs: norecurse nounwind readnone
 define i64 @test_llequc_z(i8 zeroext %a) {
 ; CHECK-LABEL: test_llequc_z:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    srwi r3, r3, 5
 ; CHECK-NEXT:    blr
@@ -53,7 +53,7 @@ entry:
 ; Function Attrs: norecurse nounwind readnone
 define i64 @test_llequc_sext_z(i8 zeroext %a) {
 ; CHECK-LABEL: test_llequc_sext_z:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    srwi r3, r3, 5
 ; CHECK-NEXT:    neg r3, r3
@@ -67,7 +67,7 @@ entry:
 ; Function Attrs: norecurse nounwind
 define void @test_llequc_store(i8 zeroext %a, i8 zeroext %b) {
 ; CHECK-LABEL: test_llequc_store:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r5, r2, .LC0@toc@ha
 ; CHECK-NEXT:    xor r3, r3, r4
 ; CHECK-NEXT:    ld r12, .LC0@toc@l(r5)
@@ -85,7 +85,7 @@ entry:
 ; Function Attrs: norecurse nounwind
 define void @test_llequc_sext_store(i8 zeroext %a, i8 zeroext %b) {
 ; CHECK-LABEL: test_llequc_sext_store:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xor r3, r3, r4
 ; CHECK-NEXT:    addis r5, r2, .LC0@toc@ha
 ; CHECK-NEXT:    cntlzw r3, r3
@@ -104,7 +104,7 @@ entry:
 ; Function Attrs: norecurse nounwind
 define void @test_llequc_z_store(i8 zeroext %a) {
 ; CHECK-LABEL: test_llequc_z_store:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
@@ -121,7 +121,7 @@ entry:
 ; Function Attrs: norecurse nounwind
 define void @test_llequc_sext_z_store(i8 zeroext %a) {
 ; CHECK-LABEL: test_llequc_sext_z_store:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)

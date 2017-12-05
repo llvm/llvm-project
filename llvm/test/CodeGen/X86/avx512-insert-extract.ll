@@ -5,7 +5,7 @@
 
 define <16 x float> @test1(<16 x float> %x, float* %br, float %y) nounwind {
 ; CHECK-LABEL: test1:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm2 = xmm0[0],mem[0],xmm0[2,3]
 ; CHECK-NEXT:    vinsertf32x4 $0, %xmm2, %zmm0, %zmm2
 ; CHECK-NEXT:    vextractf32x4 $3, %zmm0, %xmm0
@@ -20,7 +20,7 @@ define <16 x float> @test1(<16 x float> %x, float* %br, float %y) nounwind {
 
 define <8 x double> @test2(<8 x double> %x, double* %br, double %y) nounwind {
 ; CHECK-LABEL: test2:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vmovhpd {{.*#+}} xmm2 = xmm0[0],mem[0]
 ; CHECK-NEXT:    vinsertf32x4 $0, %xmm2, %zmm0, %zmm2
 ; CHECK-NEXT:    vextractf32x4 $3, %zmm0, %xmm0
@@ -35,7 +35,7 @@ define <8 x double> @test2(<8 x double> %x, double* %br, double %y) nounwind {
 
 define <16 x float> @test3(<16 x float> %x) nounwind {
 ; CHECK-LABEL: test3:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm1 = xmm0[0],xmm1[0],xmm0[2,3]
 ; CHECK-NEXT:    vinsertf32x4 $0, %xmm1, %zmm0, %zmm0
@@ -47,7 +47,7 @@ define <16 x float> @test3(<16 x float> %x) nounwind {
 
 define <8 x i64> @test4(<8 x i64> %x) nounwind {
 ; CHECK-LABEL: test4:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vextracti32x4 $2, %zmm0, %xmm1
 ; CHECK-NEXT:    vmovq %xmm1, %rax
 ; CHECK-NEXT:    vpinsrq $1, %rax, %xmm0, %xmm1
@@ -60,7 +60,7 @@ define <8 x i64> @test4(<8 x i64> %x) nounwind {
 
 define i32 @test5(<4 x float> %x) nounwind {
 ; CHECK-LABEL: test5:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vextractps $3, %xmm0, %eax
 ; CHECK-NEXT:    retq
   %ef = extractelement <4 x float> %x, i32 3
@@ -70,7 +70,7 @@ define i32 @test5(<4 x float> %x) nounwind {
 
 define void @test6(<4 x float> %x, float* %out) nounwind {
 ; CHECK-LABEL: test6:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vextractps $3, %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
   %ef = extractelement <4 x float> %x, i32 3
@@ -80,7 +80,7 @@ define void @test6(<4 x float> %x, float* %out) nounwind {
 
 define float @test7(<16 x float> %x, i32 %ind) nounwind {
 ; CHECK-LABEL: test7:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    andq $-64, %rsp
@@ -99,7 +99,7 @@ define float @test7(<16 x float> %x, i32 %ind) nounwind {
 
 define double @test8(<8 x double> %x, i32 %ind) nounwind {
 ; CHECK-LABEL: test8:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    andq $-64, %rsp
@@ -118,7 +118,7 @@ define double @test8(<8 x double> %x, i32 %ind) nounwind {
 
 define float @test9(<8 x float> %x, i32 %ind) nounwind {
 ; CHECK-LABEL: test9:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    andq $-32, %rsp
@@ -137,7 +137,7 @@ define float @test9(<8 x float> %x, i32 %ind) nounwind {
 
 define i32 @test10(<16 x i32> %x, i32 %ind) nounwind {
 ; CHECK-LABEL: test10:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    andq $-64, %rsp
@@ -156,14 +156,14 @@ define i32 @test10(<16 x i32> %x, i32 %ind) nounwind {
 
 define <16 x i32> @test11(<16 x i32>%a, <16 x i32>%b) {
 ; KNL-LABEL: test11:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpcmpltud %zmm1, %zmm0, %k0
 ; KNL-NEXT:    kshiftlw $11, %k0, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    testb $1, %al
 ; KNL-NEXT:    je LBB10_2
-; KNL-NEXT:  ## BB#1: ## %A
+; KNL-NEXT:  ## %bb.1: ## %A
 ; KNL-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; KNL-NEXT:    retq
 ; KNL-NEXT:  LBB10_2: ## %B
@@ -171,14 +171,14 @@ define <16 x i32> @test11(<16 x i32>%a, <16 x i32>%b) {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test11:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpcmpltud %zmm1, %zmm0, %k0
 ; SKX-NEXT:    kshiftlw $11, %k0, %k0
 ; SKX-NEXT:    kshiftrw $15, %k0, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
 ; SKX-NEXT:    testb $1, %al
 ; SKX-NEXT:    je LBB10_2
-; SKX-NEXT:  ## BB#1: ## %A
+; SKX-NEXT:  ## %bb.1: ## %A
 ; SKX-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; SKX-NEXT:    retq
 ; SKX-NEXT:  LBB10_2: ## %B
@@ -196,7 +196,7 @@ define <16 x i32> @test11(<16 x i32>%a, <16 x i32>%b) {
 
 define i64 @test12(<16 x i64>%a, <16 x i64>%b, i64 %a1, i64 %b1) {
 ; KNL-LABEL: test12:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpcmpgtq %zmm0, %zmm2, %k0
 ; KNL-NEXT:    kshiftlw $15, %k0, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
@@ -208,7 +208,7 @@ define i64 @test12(<16 x i64>%a, <16 x i64>%b, i64 %a1, i64 %b1) {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test12:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpcmpgtq %zmm0, %zmm2, %k0
 ; SKX-NEXT:    kshiftlb $7, %k0, %k0
 ; SKX-NEXT:    kshiftrb $7, %k0, %k0
@@ -226,7 +226,7 @@ define i64 @test12(<16 x i64>%a, <16 x i64>%b, i64 %a1, i64 %b1) {
 
 define i16 @test13(i32 %a, i32 %b) {
 ; KNL-LABEL: test13:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    cmpl %esi, %edi
 ; KNL-NEXT:    setb %al
 ; KNL-NEXT:    movw $-4, %cx
@@ -241,7 +241,7 @@ define i16 @test13(i32 %a, i32 %b) {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test13:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    cmpl %esi, %edi
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    movw $-4, %cx
@@ -262,7 +262,7 @@ define i16 @test13(i32 %a, i32 %b) {
 
 define i64 @test14(<8 x i64>%a, <8 x i64>%b, i64 %a1, i64 %b1) {
 ; KNL-LABEL: test14:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpcmpgtq %zmm0, %zmm1, %k0
 ; KNL-NEXT:    kshiftlw $11, %k0, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
@@ -274,7 +274,7 @@ define i64 @test14(<8 x i64>%a, <8 x i64>%b, i64 %a1, i64 %b1) {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test14:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpcmpgtq %zmm0, %zmm1, %k0
 ; SKX-NEXT:    kshiftlb $3, %k0, %k0
 ; SKX-NEXT:    kshiftrb $7, %k0, %k0
@@ -292,7 +292,7 @@ define i64 @test14(<8 x i64>%a, <8 x i64>%b, i64 %a1, i64 %b1) {
 
 define i16 @test15(i1 *%addr) {
 ; CHECK-LABEL: test15:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movb (%rdi), %al
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testb %al, %al
@@ -307,7 +307,7 @@ define i16 @test15(i1 *%addr) {
 
 define i16 @test16(i1 *%addr, i16 %a) {
 ; KNL-LABEL: test16:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    movb (%rdi), %al
 ; KNL-NEXT:    kmovw %esi, %k1
 ; KNL-NEXT:    kmovw %eax, %k2
@@ -323,7 +323,7 @@ define i16 @test16(i1 *%addr, i16 %a) {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test16:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    kmovb (%rdi), %k0
 ; SKX-NEXT:    kmovd %esi, %k1
 ; SKX-NEXT:    vpmovm2d %k0, %zmm0
@@ -344,7 +344,7 @@ define i16 @test16(i1 *%addr, i16 %a) {
 
 define i8 @test17(i1 *%addr, i8 %a) {
 ; KNL-LABEL: test17:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    movb (%rdi), %al
 ; KNL-NEXT:    kmovw %esi, %k1
 ; KNL-NEXT:    kmovw %eax, %k2
@@ -360,7 +360,7 @@ define i8 @test17(i1 *%addr, i8 %a) {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test17:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    kmovb (%rdi), %k0
 ; SKX-NEXT:    kmovd %esi, %k1
 ; SKX-NEXT:    vpmovm2q %k0, %zmm0
@@ -381,7 +381,7 @@ define i8 @test17(i1 *%addr, i8 %a) {
 
 define i64 @extract_v8i64(<8 x i64> %x, i64* %dst) {
 ; CHECK-LABEL: extract_v8i64:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpextrq $1, %xmm0, %rax
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; CHECK-NEXT:    vpextrq $1, %xmm0, (%rdi)
@@ -395,7 +395,7 @@ define i64 @extract_v8i64(<8 x i64> %x, i64* %dst) {
 
 define i64 @extract_v4i64(<4 x i64> %x, i64* %dst) {
 ; CHECK-LABEL: extract_v4i64:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpextrq $1, %xmm0, %rax
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; CHECK-NEXT:    vpextrq $1, %xmm0, (%rdi)
@@ -409,7 +409,7 @@ define i64 @extract_v4i64(<4 x i64> %x, i64* %dst) {
 
 define i64 @extract_v2i64(<2 x i64> %x, i64* %dst) {
 ; CHECK-LABEL: extract_v2i64:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vmovq %xmm0, %rax
 ; CHECK-NEXT:    vpextrq $1, %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
@@ -421,7 +421,7 @@ define i64 @extract_v2i64(<2 x i64> %x, i64* %dst) {
 
 define i32 @extract_v16i32(<16 x i32> %x, i32* %dst) {
 ; CHECK-LABEL: extract_v16i32:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vextractps $1, %xmm0, %eax
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; CHECK-NEXT:    vextractps $1, %xmm0, (%rdi)
@@ -435,7 +435,7 @@ define i32 @extract_v16i32(<16 x i32> %x, i32* %dst) {
 
 define i32 @extract_v8i32(<8 x i32> %x, i32* %dst) {
 ; CHECK-LABEL: extract_v8i32:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vextractps $1, %xmm0, %eax
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; CHECK-NEXT:    vextractps $1, %xmm0, (%rdi)
@@ -449,7 +449,7 @@ define i32 @extract_v8i32(<8 x i32> %x, i32* %dst) {
 
 define i32 @extract_v4i32(<4 x i32> %x, i32* %dst) {
 ; CHECK-LABEL: extract_v4i32:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vextractps $1, %xmm0, %eax
 ; CHECK-NEXT:    vextractps $3, %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
@@ -461,7 +461,7 @@ define i32 @extract_v4i32(<4 x i32> %x, i32* %dst) {
 
 define i16 @extract_v32i16(<32 x i16> %x, i16* %dst) {
 ; CHECK-LABEL: extract_v32i16:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpextrw $1, %xmm0, %eax
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; CHECK-NEXT:    vpextrw $1, %xmm0, (%rdi)
@@ -476,7 +476,7 @@ define i16 @extract_v32i16(<32 x i16> %x, i16* %dst) {
 
 define i16 @extract_v16i16(<16 x i16> %x, i16* %dst) {
 ; CHECK-LABEL: extract_v16i16:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpextrw $1, %xmm0, %eax
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; CHECK-NEXT:    vpextrw $1, %xmm0, (%rdi)
@@ -491,7 +491,7 @@ define i16 @extract_v16i16(<16 x i16> %x, i16* %dst) {
 
 define i16 @extract_v8i16(<8 x i16> %x, i16* %dst) {
 ; CHECK-LABEL: extract_v8i16:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpextrw $1, %xmm0, %eax
 ; CHECK-NEXT:    vpextrw $3, %xmm0, (%rdi)
 ; CHECK-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
@@ -504,7 +504,7 @@ define i16 @extract_v8i16(<8 x i16> %x, i16* %dst) {
 
 define i8 @extract_v64i8(<64 x i8> %x, i8* %dst) {
 ; CHECK-LABEL: extract_v64i8:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpextrb $1, %xmm0, %eax
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; CHECK-NEXT:    vpextrb $1, %xmm0, (%rdi)
@@ -519,7 +519,7 @@ define i8 @extract_v64i8(<64 x i8> %x, i8* %dst) {
 
 define i8 @extract_v32i8(<32 x i8> %x, i8* %dst) {
 ; CHECK-LABEL: extract_v32i8:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpextrb $1, %xmm0, %eax
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; CHECK-NEXT:    vpextrb $1, %xmm0, (%rdi)
@@ -534,7 +534,7 @@ define i8 @extract_v32i8(<32 x i8> %x, i8* %dst) {
 
 define i8 @extract_v16i8(<16 x i8> %x, i8* %dst) {
 ; CHECK-LABEL: extract_v16i8:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpextrb $1, %xmm0, %eax
 ; CHECK-NEXT:    vpextrb $3, %xmm0, (%rdi)
 ; CHECK-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
@@ -547,7 +547,7 @@ define i8 @extract_v16i8(<16 x i8> %x, i8* %dst) {
 
 define <8 x i64> @insert_v8i64(<8 x i64> %x, i64 %y , i64* %ptr) {
 ; CHECK-LABEL: insert_v8i64:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpinsrq $1, (%rsi), %xmm0, %xmm1
 ; CHECK-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm1
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm0
@@ -562,7 +562,7 @@ define <8 x i64> @insert_v8i64(<8 x i64> %x, i64 %y , i64* %ptr) {
 
 define <4 x i64> @insert_v4i64(<4 x i64> %x, i64 %y , i64* %ptr) {
 ; CHECK-LABEL: insert_v4i64:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpinsrq $1, (%rsi), %xmm0, %xmm1
 ; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm0
@@ -577,7 +577,7 @@ define <4 x i64> @insert_v4i64(<4 x i64> %x, i64 %y , i64* %ptr) {
 
 define <2 x i64> @insert_v2i64(<2 x i64> %x, i64 %y , i64* %ptr) {
 ; CHECK-LABEL: insert_v2i64:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpinsrq $0, %rdi, %xmm0, %xmm0
 ; CHECK-NEXT:    vpinsrq $1, (%rsi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
@@ -589,7 +589,7 @@ define <2 x i64> @insert_v2i64(<2 x i64> %x, i64 %y , i64* %ptr) {
 
 define <16 x i32> @insert_v16i32(<16 x i32> %x, i32 %y, i32* %ptr) {
 ; CHECK-LABEL: insert_v16i32:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpinsrd $1, (%rsi), %xmm0, %xmm1
 ; CHECK-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm1
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm0
@@ -604,7 +604,7 @@ define <16 x i32> @insert_v16i32(<16 x i32> %x, i32 %y, i32* %ptr) {
 
 define <8 x i32> @insert_v8i32(<8 x i32> %x, i32 %y, i32* %ptr) {
 ; CHECK-LABEL: insert_v8i32:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpinsrd $1, (%rsi), %xmm0, %xmm1
 ; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm0
@@ -619,7 +619,7 @@ define <8 x i32> @insert_v8i32(<8 x i32> %x, i32 %y, i32* %ptr) {
 
 define <4 x i32> @insert_v4i32(<4 x i32> %x, i32 %y, i32* %ptr) {
 ; CHECK-LABEL: insert_v4i32:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpinsrd $1, (%rsi), %xmm0, %xmm0
 ; CHECK-NEXT:    vpinsrd $3, %edi, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
@@ -631,7 +631,7 @@ define <4 x i32> @insert_v4i32(<4 x i32> %x, i32 %y, i32* %ptr) {
 
 define <32 x i16> @insert_v32i16(<32 x i16> %x, i16 %y, i16* %ptr) {
 ; KNL-LABEL: insert_v32i16:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpinsrw $1, (%rsi), %xmm0, %xmm2
 ; KNL-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm0[4,5,6,7]
 ; KNL-NEXT:    vextracti128 $1, %ymm0, %xmm0
@@ -640,7 +640,7 @@ define <32 x i16> @insert_v32i16(<32 x i16> %x, i16 %y, i16* %ptr) {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: insert_v32i16:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpinsrw $1, (%rsi), %xmm0, %xmm1
 ; SKX-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm1
 ; SKX-NEXT:    vextracti128 $1, %ymm0, %xmm0
@@ -655,7 +655,7 @@ define <32 x i16> @insert_v32i16(<32 x i16> %x, i16 %y, i16* %ptr) {
 
 define <16 x i16> @insert_v16i16(<16 x i16> %x, i16 %y, i16* %ptr) {
 ; CHECK-LABEL: insert_v16i16:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpinsrw $1, (%rsi), %xmm0, %xmm1
 ; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm0
@@ -670,7 +670,7 @@ define <16 x i16> @insert_v16i16(<16 x i16> %x, i16 %y, i16* %ptr) {
 
 define <8 x i16> @insert_v8i16(<8 x i16> %x, i16 %y, i16* %ptr) {
 ; CHECK-LABEL: insert_v8i16:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpinsrw $1, (%rsi), %xmm0, %xmm0
 ; CHECK-NEXT:    vpinsrw $5, %edi, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
@@ -682,7 +682,7 @@ define <8 x i16> @insert_v8i16(<8 x i16> %x, i16 %y, i16* %ptr) {
 
 define <64 x i8> @insert_v64i8(<64 x i8> %x, i8 %y, i8* %ptr) {
 ; KNL-LABEL: insert_v64i8:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpinsrb $1, (%rsi), %xmm0, %xmm2
 ; KNL-NEXT:    vpblendd {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4,5,6,7]
 ; KNL-NEXT:    vextracti128 $1, %ymm1, %xmm2
@@ -691,7 +691,7 @@ define <64 x i8> @insert_v64i8(<64 x i8> %x, i8 %y, i8* %ptr) {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: insert_v64i8:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpinsrb $1, (%rsi), %xmm0, %xmm1
 ; SKX-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm1
 ; SKX-NEXT:    vextracti32x4 $3, %zmm0, %xmm0
@@ -706,7 +706,7 @@ define <64 x i8> @insert_v64i8(<64 x i8> %x, i8 %y, i8* %ptr) {
 
 define <32 x i8> @insert_v32i8(<32 x i8> %x, i8 %y, i8* %ptr) {
 ; CHECK-LABEL: insert_v32i8:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpinsrb $1, (%rsi), %xmm0, %xmm1
 ; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm0
@@ -721,7 +721,7 @@ define <32 x i8> @insert_v32i8(<32 x i8> %x, i8 %y, i8* %ptr) {
 
 define <16 x i8> @insert_v16i8(<16 x i8> %x, i8 %y, i8* %ptr) {
 ; CHECK-LABEL: insert_v16i8:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpinsrb $3, (%rsi), %xmm0, %xmm0
 ; CHECK-NEXT:    vpinsrb $10, %edi, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
@@ -733,7 +733,7 @@ define <16 x i8> @insert_v16i8(<16 x i8> %x, i8 %y, i8* %ptr) {
 
 define <8 x i64> @test_insert_128_v8i64(<8 x i64> %x, i64 %y) {
 ; CHECK-LABEL: test_insert_128_v8i64:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpinsrq $1, %rdi, %xmm0, %xmm1
 ; CHECK-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
@@ -743,7 +743,7 @@ define <8 x i64> @test_insert_128_v8i64(<8 x i64> %x, i64 %y) {
 
 define <16 x i32> @test_insert_128_v16i32(<16 x i32> %x, i32 %y) {
 ; CHECK-LABEL: test_insert_128_v16i32:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpinsrd $1, %edi, %xmm0, %xmm1
 ; CHECK-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
@@ -753,7 +753,7 @@ define <16 x i32> @test_insert_128_v16i32(<16 x i32> %x, i32 %y) {
 
 define <8 x double> @test_insert_128_v8f64(<8 x double> %x, double %y) {
 ; CHECK-LABEL: test_insert_128_v8f64:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm0[0],xmm1[0]
 ; CHECK-NEXT:    vinsertf32x4 $0, %xmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
@@ -763,7 +763,7 @@ define <8 x double> @test_insert_128_v8f64(<8 x double> %x, double %y) {
 
 define <16 x float> @test_insert_128_v16f32(<16 x float> %x, float %y) {
 ; CHECK-LABEL: test_insert_128_v16f32:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm1 = xmm0[0],xmm1[0],xmm0[2,3]
 ; CHECK-NEXT:    vinsertf32x4 $0, %xmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
@@ -773,7 +773,7 @@ define <16 x float> @test_insert_128_v16f32(<16 x float> %x, float %y) {
 
 define <16 x i16> @test_insert_128_v16i16(<16 x i16> %x, i16 %y) {
 ; CHECK-LABEL: test_insert_128_v16i16:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; CHECK-NEXT:    vpinsrw $2, %edi, %xmm1, %xmm1
 ; CHECK-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
@@ -784,7 +784,7 @@ define <16 x i16> @test_insert_128_v16i16(<16 x i16> %x, i16 %y) {
 
 define <32 x i8> @test_insert_128_v32i8(<32 x i8> %x, i8 %y) {
 ; CHECK-LABEL: test_insert_128_v32i8:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; CHECK-NEXT:    vpinsrb $4, %edi, %xmm1, %xmm1
 ; CHECK-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
@@ -795,7 +795,7 @@ define <32 x i8> @test_insert_128_v32i8(<32 x i8> %x, i8 %y) {
 
 define i32 @test_insertelement_v32i1(i32 %a, i32 %b, <32 x i32> %x , <32 x i32> %y) {
 ; KNL-LABEL: test_insertelement_v32i1:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    pushq %rbp
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
 ; KNL-NEXT:    .cfi_offset %rbp, -16
@@ -956,7 +956,7 @@ define i32 @test_insertelement_v32i1(i32 %a, i32 %b, <32 x i32> %x , <32 x i32> 
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_insertelement_v32i1:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    cmpl %esi, %edi
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    vpcmpltud %zmm2, %zmm0, %k0
@@ -980,7 +980,7 @@ define i32 @test_insertelement_v32i1(i32 %a, i32 %b, <32 x i32> %x , <32 x i32> 
 
 define i8 @test_iinsertelement_v4i1(i32 %a, i32 %b, <4 x i32> %x , <4 x i32> %y) {
 ; KNL-LABEL: test_iinsertelement_v4i1:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    cmpl %esi, %edi
 ; KNL-NEXT:    setb %al
 ; KNL-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
@@ -1018,7 +1018,7 @@ define i8 @test_iinsertelement_v4i1(i32 %a, i32 %b, <4 x i32> %x , <4 x i32> %y)
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_iinsertelement_v4i1:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    cmpl %esi, %edi
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    vpcmpltud %xmm1, %xmm0, %k0
@@ -1041,7 +1041,7 @@ define i8 @test_iinsertelement_v4i1(i32 %a, i32 %b, <4 x i32> %x , <4 x i32> %y)
 
 define i8 @test_iinsertelement_v2i1(i32 %a, i32 %b, <2 x i64> %x , <2 x i64> %y) {
 ; KNL-LABEL: test_iinsertelement_v2i1:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    cmpl %esi, %edi
 ; KNL-NEXT:    setb %al
 ; KNL-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
@@ -1063,7 +1063,7 @@ define i8 @test_iinsertelement_v2i1(i32 %a, i32 %b, <2 x i64> %x , <2 x i64> %y)
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_iinsertelement_v2i1:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    cmpl %esi, %edi
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    vpcmpltuq %xmm1, %xmm0, %k0
@@ -1085,7 +1085,7 @@ define i8 @test_iinsertelement_v2i1(i32 %a, i32 %b, <2 x i64> %x , <2 x i64> %y)
 
 define zeroext i8 @test_extractelement_v2i1(<2 x i64> %a, <2 x i64> %b) {
 ; KNL-LABEL: test_extractelement_v2i1:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
 ; KNL-NEXT:    vpxor %xmm2, %xmm1, %xmm1
 ; KNL-NEXT:    vpxor %xmm2, %xmm0, %xmm0
@@ -1098,7 +1098,7 @@ define zeroext i8 @test_extractelement_v2i1(<2 x i64> %a, <2 x i64> %b) {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_extractelement_v2i1:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpcmpnleuq %xmm1, %xmm0, %k0
 ; SKX-NEXT:    kshiftlw $15, %k0, %k0
 ; SKX-NEXT:    kshiftrw $15, %k0, %k0
@@ -1116,7 +1116,7 @@ define zeroext i8 @test_extractelement_v2i1(<2 x i64> %a, <2 x i64> %b) {
 
 define zeroext i8 @extractelement_v2i1_alt(<2 x i64> %a, <2 x i64> %b) {
 ; KNL-LABEL: extractelement_v2i1_alt:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
 ; KNL-NEXT:    vpxor %xmm2, %xmm1, %xmm1
 ; KNL-NEXT:    vpxor %xmm2, %xmm0, %xmm0
@@ -1129,7 +1129,7 @@ define zeroext i8 @extractelement_v2i1_alt(<2 x i64> %a, <2 x i64> %b) {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: extractelement_v2i1_alt:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpcmpnleuq %xmm1, %xmm0, %k0
 ; SKX-NEXT:    kshiftlw $15, %k0, %k0
 ; SKX-NEXT:    kshiftrw $15, %k0, %k0
@@ -1148,7 +1148,7 @@ define zeroext i8 @extractelement_v2i1_alt(<2 x i64> %a, <2 x i64> %b) {
 
 define zeroext i8 @test_extractelement_v4i1(<4 x i32> %a, <4 x i32> %b) {
 ; KNL-LABEL: test_extractelement_v4i1:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
 ; KNL-NEXT:    vpxor %xmm2, %xmm1, %xmm1
 ; KNL-NEXT:    vpxor %xmm2, %xmm0, %xmm0
@@ -1158,7 +1158,7 @@ define zeroext i8 @test_extractelement_v4i1(<4 x i32> %a, <4 x i32> %b) {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_extractelement_v4i1:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpcmpnleud %xmm1, %xmm0, %k0
 ; SKX-NEXT:    kshiftlw $12, %k0, %k0
 ; SKX-NEXT:    kshiftrw $15, %k0, %k0
@@ -1173,7 +1173,7 @@ define zeroext i8 @test_extractelement_v4i1(<4 x i32> %a, <4 x i32> %b) {
 
 define zeroext i8 @test_extractelement_v32i1(<32 x i8> %a, <32 x i8> %b) {
 ; KNL-LABEL: test_extractelement_v32i1:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    vmovdqa {{.*#+}} ymm2 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
 ; KNL-NEXT:    vpxor %ymm2, %ymm1, %ymm1
 ; KNL-NEXT:    vpxor %ymm2, %ymm0, %ymm0
@@ -1184,7 +1184,7 @@ define zeroext i8 @test_extractelement_v32i1(<32 x i8> %a, <32 x i8> %b) {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_extractelement_v32i1:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpcmpnleub %ymm1, %ymm0, %k0
 ; SKX-NEXT:    kshiftld $29, %k0, %k0
 ; SKX-NEXT:    kshiftrd $31, %k0, %k0
@@ -1200,7 +1200,7 @@ define zeroext i8 @test_extractelement_v32i1(<32 x i8> %a, <32 x i8> %b) {
 
 define zeroext i8 @test_extractelement_v64i1(<64 x i8> %a, <64 x i8> %b) {
 ; KNL-LABEL: test_extractelement_v64i1:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    vmovdqa {{.*#+}} ymm0 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
 ; KNL-NEXT:    vpxor %ymm0, %ymm3, %ymm2
 ; KNL-NEXT:    vpxor %ymm0, %ymm1, %ymm0
@@ -1215,7 +1215,7 @@ define zeroext i8 @test_extractelement_v64i1(<64 x i8> %a, <64 x i8> %b) {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_extractelement_v64i1:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpcmpnleub %zmm1, %zmm0, %k0
 ; SKX-NEXT:    kshiftrq $63, %k0, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
@@ -1233,7 +1233,7 @@ define zeroext i8 @test_extractelement_v64i1(<64 x i8> %a, <64 x i8> %b) {
 
 define zeroext i8 @extractelement_v64i1_alt(<64 x i8> %a, <64 x i8> %b) {
 ; KNL-LABEL: extractelement_v64i1_alt:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    vmovdqa {{.*#+}} ymm0 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
 ; KNL-NEXT:    vpxor %ymm0, %ymm3, %ymm2
 ; KNL-NEXT:    vpxor %ymm0, %ymm1, %ymm0
@@ -1248,7 +1248,7 @@ define zeroext i8 @extractelement_v64i1_alt(<64 x i8> %a, <64 x i8> %b) {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: extractelement_v64i1_alt:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpcmpnleub %zmm1, %zmm0, %k0
 ; SKX-NEXT:    kshiftrq $63, %k0, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
@@ -1267,7 +1267,7 @@ define zeroext i8 @extractelement_v64i1_alt(<64 x i8> %a, <64 x i8> %b) {
 
 define i64 @test_extractelement_variable_v2i64(<2 x i64> %t1, i32 %index) {
 ; CHECK-LABEL: test_extractelement_variable_v2i64:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
 ; CHECK-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    andl $1, %edi
@@ -1279,7 +1279,7 @@ define i64 @test_extractelement_variable_v2i64(<2 x i64> %t1, i32 %index) {
 
 define i64 @test_extractelement_variable_v4i64(<4 x i64> %t1, i32 %index) {
 ; CHECK-LABEL: test_extractelement_variable_v4i64:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
@@ -1301,7 +1301,7 @@ define i64 @test_extractelement_variable_v4i64(<4 x i64> %t1, i32 %index) {
 
 define i64 @test_extractelement_variable_v8i64(<8 x i64> %t1, i32 %index) {
 ; CHECK-LABEL: test_extractelement_variable_v8i64:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
@@ -1323,7 +1323,7 @@ define i64 @test_extractelement_variable_v8i64(<8 x i64> %t1, i32 %index) {
 
 define double @test_extractelement_variable_v2f64(<2 x double> %t1, i32 %index) {
 ; CHECK-LABEL: test_extractelement_variable_v2f64:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
 ; CHECK-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    andl $1, %edi
@@ -1335,7 +1335,7 @@ define double @test_extractelement_variable_v2f64(<2 x double> %t1, i32 %index) 
 
 define double @test_extractelement_variable_v4f64(<4 x double> %t1, i32 %index) {
 ; CHECK-LABEL: test_extractelement_variable_v4f64:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
@@ -1357,7 +1357,7 @@ define double @test_extractelement_variable_v4f64(<4 x double> %t1, i32 %index) 
 
 define double @test_extractelement_variable_v8f64(<8 x double> %t1, i32 %index) {
 ; CHECK-LABEL: test_extractelement_variable_v8f64:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
@@ -1379,7 +1379,7 @@ define double @test_extractelement_variable_v8f64(<8 x double> %t1, i32 %index) 
 
 define i32 @test_extractelement_variable_v4i32(<4 x i32> %t1, i32 %index) {
 ; CHECK-LABEL: test_extractelement_variable_v4i32:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
 ; CHECK-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    andl $3, %edi
@@ -1391,7 +1391,7 @@ define i32 @test_extractelement_variable_v4i32(<4 x i32> %t1, i32 %index) {
 
 define i32 @test_extractelement_variable_v8i32(<8 x i32> %t1, i32 %index) {
 ; CHECK-LABEL: test_extractelement_variable_v8i32:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
@@ -1413,7 +1413,7 @@ define i32 @test_extractelement_variable_v8i32(<8 x i32> %t1, i32 %index) {
 
 define i32 @test_extractelement_variable_v16i32(<16 x i32> %t1, i32 %index) {
 ; CHECK-LABEL: test_extractelement_variable_v16i32:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
@@ -1435,7 +1435,7 @@ define i32 @test_extractelement_variable_v16i32(<16 x i32> %t1, i32 %index) {
 
 define float @test_extractelement_variable_v4f32(<4 x float> %t1, i32 %index) {
 ; CHECK-LABEL: test_extractelement_variable_v4f32:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
 ; CHECK-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    andl $3, %edi
@@ -1447,7 +1447,7 @@ define float @test_extractelement_variable_v4f32(<4 x float> %t1, i32 %index) {
 
 define float @test_extractelement_variable_v8f32(<8 x float> %t1, i32 %index) {
 ; CHECK-LABEL: test_extractelement_variable_v8f32:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
@@ -1469,7 +1469,7 @@ define float @test_extractelement_variable_v8f32(<8 x float> %t1, i32 %index) {
 
 define float @test_extractelement_variable_v16f32(<16 x float> %t1, i32 %index) {
 ; CHECK-LABEL: test_extractelement_variable_v16f32:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
@@ -1491,7 +1491,7 @@ define float @test_extractelement_variable_v16f32(<16 x float> %t1, i32 %index) 
 
 define i16 @test_extractelement_variable_v8i16(<8 x i16> %t1, i32 %index) {
 ; CHECK-LABEL: test_extractelement_variable_v8i16:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
 ; CHECK-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    andl $7, %edi
@@ -1503,7 +1503,7 @@ define i16 @test_extractelement_variable_v8i16(<8 x i16> %t1, i32 %index) {
 
 define i16 @test_extractelement_variable_v16i16(<16 x i16> %t1, i32 %index) {
 ; CHECK-LABEL: test_extractelement_variable_v16i16:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
@@ -1525,7 +1525,7 @@ define i16 @test_extractelement_variable_v16i16(<16 x i16> %t1, i32 %index) {
 
 define i16 @test_extractelement_variable_v32i16(<32 x i16> %t1, i32 %index) {
 ; KNL-LABEL: test_extractelement_variable_v32i16:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    pushq %rbp
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
 ; KNL-NEXT:    .cfi_offset %rbp, -16
@@ -1544,7 +1544,7 @@ define i16 @test_extractelement_variable_v32i16(<32 x i16> %t1, i32 %index) {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_extractelement_variable_v32i16:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    pushq %rbp
 ; SKX-NEXT:    .cfi_def_cfa_offset 16
 ; SKX-NEXT:    .cfi_offset %rbp, -16
@@ -1566,7 +1566,7 @@ define i16 @test_extractelement_variable_v32i16(<32 x i16> %t1, i32 %index) {
 
 define i8 @test_extractelement_variable_v16i8(<16 x i8> %t1, i32 %index) {
 ; CHECK-LABEL: test_extractelement_variable_v16i8:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
 ; CHECK-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    andl $15, %edi
@@ -1579,7 +1579,7 @@ define i8 @test_extractelement_variable_v16i8(<16 x i8> %t1, i32 %index) {
 
 define i8 @test_extractelement_variable_v32i8(<32 x i8> %t1, i32 %index) {
 ; CHECK-LABEL: test_extractelement_variable_v32i8:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
@@ -1603,7 +1603,7 @@ define i8 @test_extractelement_variable_v32i8(<32 x i8> %t1, i32 %index) {
 
 define i8 @test_extractelement_variable_v64i8(<64 x i8> %t1, i32 %index) {
 ; KNL-LABEL: test_extractelement_variable_v64i8:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    pushq %rbp
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
 ; KNL-NEXT:    .cfi_offset %rbp, -16
@@ -1623,7 +1623,7 @@ define i8 @test_extractelement_variable_v64i8(<64 x i8> %t1, i32 %index) {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_extractelement_variable_v64i8:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    pushq %rbp
 ; SKX-NEXT:    .cfi_def_cfa_offset 16
 ; SKX-NEXT:    .cfi_offset %rbp, -16
@@ -1647,7 +1647,7 @@ define i8 @test_extractelement_variable_v64i8(<64 x i8> %t1, i32 %index) {
 
 define i8 @test_extractelement_variable_v64i8_indexi8(<64 x i8> %t1, i8 %index) {
 ; KNL-LABEL: test_extractelement_variable_v64i8_indexi8:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    pushq %rbp
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
 ; KNL-NEXT:    .cfi_offset %rbp, -16
@@ -1668,7 +1668,7 @@ define i8 @test_extractelement_variable_v64i8_indexi8(<64 x i8> %t1, i8 %index) 
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_extractelement_variable_v64i8_indexi8:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    pushq %rbp
 ; SKX-NEXT:    .cfi_def_cfa_offset 16
 ; SKX-NEXT:    .cfi_offset %rbp, -16
@@ -1694,7 +1694,7 @@ define i8 @test_extractelement_variable_v64i8_indexi8(<64 x i8> %t1, i8 %index) 
 
 define zeroext i8 @test_extractelement_varible_v2i1(<2 x i64> %a, <2 x i64> %b, i32 %index) {
 ; KNL-LABEL: test_extractelement_varible_v2i1:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
 ; KNL-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
 ; KNL-NEXT:    vpxor %xmm2, %xmm1, %xmm1
@@ -1707,7 +1707,7 @@ define zeroext i8 @test_extractelement_varible_v2i1(<2 x i64> %a, <2 x i64> %b, 
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_extractelement_varible_v2i1:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
 ; SKX-NEXT:    vpcmpnleuq %xmm1, %xmm0, %k0
 ; SKX-NEXT:    vpmovm2q %k0, %xmm0
@@ -1724,7 +1724,7 @@ define zeroext i8 @test_extractelement_varible_v2i1(<2 x i64> %a, <2 x i64> %b, 
 
 define zeroext i8 @test_extractelement_varible_v4i1(<4 x i32> %a, <4 x i32> %b, i32 %index) {
 ; KNL-LABEL: test_extractelement_varible_v4i1:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
 ; KNL-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
 ; KNL-NEXT:    vpxor %xmm2, %xmm1, %xmm1
@@ -1737,7 +1737,7 @@ define zeroext i8 @test_extractelement_varible_v4i1(<4 x i32> %a, <4 x i32> %b, 
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_extractelement_varible_v4i1:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
 ; SKX-NEXT:    vpcmpnleud %xmm1, %xmm0, %k0
 ; SKX-NEXT:    vpmovm2d %k0, %xmm0
@@ -1754,7 +1754,7 @@ define zeroext i8 @test_extractelement_varible_v4i1(<4 x i32> %a, <4 x i32> %b, 
 
 define zeroext i8 @test_extractelement_varible_v8i1(<8 x i32> %a, <8 x i32> %b, i32 %index) {
 ; KNL-LABEL: test_extractelement_varible_v8i1:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    pushq %rbp
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
 ; KNL-NEXT:    .cfi_offset %rbp, -16
@@ -1777,7 +1777,7 @@ define zeroext i8 @test_extractelement_varible_v8i1(<8 x i32> %a, <8 x i32> %b, 
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_extractelement_varible_v8i1:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    pushq %rbp
 ; SKX-NEXT:    .cfi_def_cfa_offset 16
 ; SKX-NEXT:    .cfi_offset %rbp, -16
@@ -1804,7 +1804,7 @@ define zeroext i8 @test_extractelement_varible_v8i1(<8 x i32> %a, <8 x i32> %b, 
 
 define zeroext i8 @test_extractelement_varible_v16i1(<16 x i32> %a, <16 x i32> %b, i32 %index) {
 ; KNL-LABEL: test_extractelement_varible_v16i1:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    pushq %rbp
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
 ; KNL-NEXT:    .cfi_offset %rbp, -16
@@ -1825,7 +1825,7 @@ define zeroext i8 @test_extractelement_varible_v16i1(<16 x i32> %a, <16 x i32> %
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_extractelement_varible_v16i1:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    pushq %rbp
 ; SKX-NEXT:    .cfi_def_cfa_offset 16
 ; SKX-NEXT:    .cfi_offset %rbp, -16
@@ -1852,7 +1852,7 @@ define zeroext i8 @test_extractelement_varible_v16i1(<16 x i32> %a, <16 x i32> %
 
 define zeroext i8 @test_extractelement_varible_v32i1(<32 x i8> %a, <32 x i8> %b, i32 %index) {
 ; KNL-LABEL: test_extractelement_varible_v32i1:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    pushq %rbp
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
 ; KNL-NEXT:    .cfi_offset %rbp, -16
@@ -1876,7 +1876,7 @@ define zeroext i8 @test_extractelement_varible_v32i1(<32 x i8> %a, <32 x i8> %b,
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_extractelement_varible_v32i1:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    pushq %rbp
 ; SKX-NEXT:    .cfi_def_cfa_offset 16
 ; SKX-NEXT:    .cfi_offset %rbp, -16
@@ -1903,7 +1903,7 @@ define zeroext i8 @test_extractelement_varible_v32i1(<32 x i8> %a, <32 x i8> %b,
 
 define <8 x i64> @insert_double_zero(<2 x i64> %a) nounwind {
 ; CHECK-LABEL: insert_double_zero:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vinsertf32x4 $2, %xmm0, %zmm1, %zmm0
 ; CHECK-NEXT:    retq

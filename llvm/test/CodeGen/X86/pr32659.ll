@@ -23,7 +23,7 @@ declare i32 @putchar(i32) nounwind
 
 define void @fn2() nounwind optsize {
 ; CHECK-LABEL: fn2:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %ebx
 ; CHECK-NEXT:    subl $8, %esp
 ; CHECK-NEXT:    movl $48, (%esp)

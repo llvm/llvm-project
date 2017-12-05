@@ -98,7 +98,7 @@ static cl::opt<unsigned> MISchedCutoff("misched-cutoff", cl::Hidden,
 static cl::opt<std::string> SchedOnlyFunc("misched-only-func", cl::Hidden,
   cl::desc("Only schedule this function"));
 static cl::opt<unsigned> SchedOnlyBlock("misched-only-block", cl::Hidden,
-  cl::desc("Only schedule this MBB#"));
+                                        cl::desc("Only schedule this MBB#"));
 #else
 static bool ViewMISchedDAGs = false;
 #endif // NDEBUG
@@ -548,15 +548,14 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
         continue;
       }
       DEBUG(dbgs() << "********** MI Scheduling **********\n");
-      DEBUG(dbgs() << MF->getName()
-            << ":BB#" << MBB->getNumber() << " " << MBB->getName()
-            << "\n  From: " << *I << "    To: ";
+      DEBUG(dbgs() << MF->getName() << ":" << printMBBReference(*MBB) << " "
+                   << MBB->getName() << "\n  From: " << *I << "    To: ";
             if (RegionEnd != MBB->end()) dbgs() << *RegionEnd;
             else dbgs() << "End";
             dbgs() << " RegionInstrs: " << NumRegionInstrs << '\n');
       if (DumpCriticalPathLength) {
         errs() << MF->getName();
-        errs() << ":BB# " << MBB->getNumber();
+        errs() << ":%bb. " << MBB->getNumber();
         errs() << " " << MBB->getName() << " \n";
       }
 
@@ -823,11 +822,11 @@ void ScheduleDAGMI::schedule() {
   placeDebugValues();
 
   DEBUG({
-      unsigned BBNum = begin()->getParent()->getNumber();
-      dbgs() << "*** Final schedule for BB#" << BBNum << " ***\n";
-      dumpSchedule();
-      dbgs() << '\n';
-    });
+    dbgs() << "*** Final schedule for "
+           << printMBBReference(*begin()->getParent()) << " ***\n";
+    dumpSchedule();
+    dbgs() << '\n';
+  });
 }
 
 /// Apply each ScheduleDAGMutation step in order.
@@ -1261,11 +1260,11 @@ void ScheduleDAGMILive::schedule() {
   placeDebugValues();
 
   DEBUG({
-      unsigned BBNum = begin()->getParent()->getNumber();
-      dbgs() << "*** Final schedule for BB#" << BBNum << " ***\n";
-      dumpSchedule();
-      dbgs() << '\n';
-    });
+    dbgs() << "*** Final schedule for "
+           << printMBBReference(*begin()->getParent()) << " ***\n";
+    dumpSchedule();
+    dbgs() << '\n';
+  });
 }
 
 /// Build the DAG and setup three register pressure trackers.

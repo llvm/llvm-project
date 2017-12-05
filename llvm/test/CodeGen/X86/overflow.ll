@@ -4,7 +4,7 @@
 
 define i128 @mulhioverflow(i64 %a, i64 %b, i64 %c) nounwind {
 ; X32-LABEL: mulhioverflow:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebp
 ; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    pushl %edi
@@ -64,7 +64,7 @@ define i128 @mulhioverflow(i64 %a, i64 %b, i64 %c) nounwind {
 ; X32-NEXT:    retl $4
 ;
 ; X64-LABEL: mulhioverflow:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdx, %rcx
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    mulq %rsi

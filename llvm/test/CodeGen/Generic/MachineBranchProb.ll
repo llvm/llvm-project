@@ -21,14 +21,14 @@ entry:
     i64 5, label %sw.bb1
     i64 15, label %sw.bb
   ], !prof !0
-; CHECK: BB#0: derived from LLVM BB %entry
-; CHECK: Successors according to CFG: BB#1({{[0-9a-fx/= ]+}}92.17%) BB#4({{[0-9a-fx/= ]+}}7.83%)
-; CHECK: BB#4: derived from LLVM BB %entry
-; CHECK: Successors according to CFG: BB#2({{[0-9a-fx/= ]+}}75.29%) BB#5({{[0-9a-fx/= ]+}}24.71%)
-; CHECK: BB#5: derived from LLVM BB %entry
-; CHECK: Successors according to CFG: BB#1({{[0-9a-fx/= ]+}}47.62%) BB#6({{[0-9a-fx/= ]+}}52.38%)
-; CHECK: BB#6: derived from LLVM BB %entry
-; CHECK: Successors according to CFG: BB#1({{[0-9a-fx/= ]+}}36.36%) BB#3({{[0-9a-fx/= ]+}}63.64%)
+; CHECK: %bb.0: derived from LLVM BB %entry
+; CHECK: Successors according to CFG: %bb.1({{[0-9a-fx/= ]+}}92.17%) %bb.4({{[0-9a-fx/= ]+}}7.83%)
+; CHECK: %bb.4: derived from LLVM BB %entry
+; CHECK: Successors according to CFG: %bb.2({{[0-9a-fx/= ]+}}75.29%) %bb.5({{[0-9a-fx/= ]+}}24.71%)
+; CHECK: %bb.5: derived from LLVM BB %entry
+; CHECK: Successors according to CFG: %bb.1({{[0-9a-fx/= ]+}}47.62%) %bb.6({{[0-9a-fx/= ]+}}52.38%)
+; CHECK: %bb.6: derived from LLVM BB %entry
+; CHECK: Successors according to CFG: %bb.1({{[0-9a-fx/= ]+}}36.36%) %bb.3({{[0-9a-fx/= ]+}}63.64%)
 
 sw.bb:
 ; this call will prevent simplifyCFG from optimizing the block away in ARM/AArch64.
@@ -70,9 +70,9 @@ return: ret void
 ; right with weight 20.
 ;
 ; CHECK-LABEL: Machine code for function left_leaning_weight_balanced_tree:
-; CHECK: BB#0: derived from LLVM BB %entry
+; CHECK: %bb.0: derived from LLVM BB %entry
 ; CHECK-NOT: Successors
-; CHECK: Successors according to CFG: BB#8({{[0-9a-fx/= ]+}}39.71%) BB#9({{[0-9a-fx/= ]+}}60.29%)
+; CHECK: Successors according to CFG: %bb.8({{[0-9a-fx/= ]+}}39.71%) %bb.9({{[0-9a-fx/= ]+}}60.29%)
 }
 
 !1 = !{!"branch_weights",

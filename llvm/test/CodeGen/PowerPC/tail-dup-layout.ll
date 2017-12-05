@@ -278,7 +278,7 @@ exit:
 ;CHECK: addi
 ;CHECK: .[[CHECKLABEL:[._0-9A-Za-z]+]]: # %for.check
 ;CHECK: lwz [[TAGREG:[0-9]+]], 0([[TAGPTRREG]])
-;CHECK: # %test1
+;CHECK: # %bb.{{[0-9]+}}: # %test1
 ;CHECK: andi. {{[0-9]+}}, [[TAGREG]], 1
 ;CHECK-NEXT: bc 12, 1, .[[OPT1LABEL:[._0-9A-Za-z]+]]
 ;CHECK-NEXT: # %test2
@@ -366,12 +366,12 @@ exit:
 ; code is independent of the outlining code, which works by choosing the
 ; "unavoidable" blocks.
 ; CHECK-LABEL: avoidable_test:
-; CHECK: # %entry
+; CHECK: # %bb.{{[0-9]+}}: # %entry
 ; CHECK: andi.
-; CHECK: # %test2
+; CHECK: # %bb.{{[0-9]+}}: # %test2
 ; Make sure then2 falls through from test2
 ; CHECK-NOT: # %{{[-_a-zA-Z0-9]+}}
-; CHECK: # %then2
+; CHECK: # %bb.{{[0-9]+}}: # %then2
 ; CHECK: rlwinm. {{[0-9]+}}, {{[0-9]+}}, 0, 29, 29
 ; CHECK: # %else1
 ; CHECK: bl a
@@ -420,8 +420,8 @@ end1:
 ; The f;g->h;i trellis should be resolved as f->i;g->h.
 ; The h;i->j;ret trellis contains a triangle edge, and should be resolved as
 ; h->j->ret
-; CHECK: # %entry
-; CHECK: # %c10
+; CHECK: # %bb.{{[0-9]+}}: # %entry
+; CHECK: # %bb.{{[0-9]+}}: # %c10
 ; CHECK: # %e9
 ; CHECK: # %g10
 ; CHECK: # %h10
@@ -504,8 +504,8 @@ ret:
 ; checking, it's profitable to duplicate G into F. The weights here are not
 ; really important. They are there to help make the test stable.
 ; CHECK-LABEL: trellis_then_dup_test
-; CHECK: # %entry
-; CHECK: # %b
+; CHECK: # %bb.{{[0-9]+}}: # %entry
+; CHECK: # %bb.{{[0-9]+}}: # %b
 ; CHECK: # %d
 ; CHECK: # %g
 ; CHECK: # %ret1
@@ -568,8 +568,8 @@ ret:
 ; Verify that we did not mis-identify triangle trellises if it is not
 ; really a triangle.
 ; CHECK-LABEL: trellis_no_triangle
-; CHECK: # %entry
-; CHECK: # %b
+; CHECK: # %bb.{{[0-9]+}}: # %entry
+; CHECK: # %bb.{{[0-9]+}}: # %b
 ; CHECK: # %d
 ; CHECK: # %ret
 ; CHECK: # %c

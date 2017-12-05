@@ -49,6 +49,7 @@ def NoFP16Denormals : Predicate<"!Subtarget->hasFP16Denormals()">;
 def NoFP32Denormals : Predicate<"!Subtarget->hasFP32Denormals()">;
 def NoFP64Denormals : Predicate<"!Subtarget->hasFP64Denormals()">;
 def UnsafeFPMath : Predicate<"TM.Options.UnsafeFPMath">;
+def FMA : Predicate<"Subtarget->hasFMA()">;
 
 def InstFlag : OperandWithDefaultOps <i32, (ops (i32 0))>;
 def ADDRIndirect : ComplexPattern<iPTR, 2, "SelectADDRIndirect", [], []>;

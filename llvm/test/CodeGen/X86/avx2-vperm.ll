@@ -4,13 +4,13 @@
 
 define <8 x i32> @perm_cl_int_8x32(<8 x i32> %A) nounwind readnone {
 ; X32-LABEL: perm_cl_int_8x32:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    vmovaps {{.*#+}} ymm1 = [0,7,2,1,2,7,6,0]
 ; X32-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: perm_cl_int_8x32:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    vmovaps {{.*#+}} ymm1 = [0,7,2,1,2,7,6,0]
 ; X64-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; X64-NEXT:    retq
@@ -22,13 +22,13 @@ entry:
 
 define <8 x float> @perm_cl_fp_8x32(<8 x float> %A) nounwind readnone {
 ; X32-LABEL: perm_cl_fp_8x32:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    vmovaps {{.*#+}} ymm1 = <u,7,2,u,4,u,1,6>
 ; X32-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: perm_cl_fp_8x32:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    vmovaps {{.*#+}} ymm1 = <u,7,2,u,4,u,1,6>
 ; X64-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; X64-NEXT:    retq
@@ -39,12 +39,12 @@ entry:
 
 define <4 x i64> @perm_cl_int_4x64(<4 x i64> %A) nounwind readnone {
 ; X32-LABEL: perm_cl_int_4x64:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,3,2,1]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: perm_cl_int_4x64:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,3,2,1]
 ; X64-NEXT:    retq
 entry:
@@ -54,12 +54,12 @@ entry:
 
 define <4 x double> @perm_cl_fp_4x64(<4 x double> %A) nounwind readnone {
 ; X32-LABEL: perm_cl_fp_4x64:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,3,2,1]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: perm_cl_fp_4x64:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,3,2,1]
 ; X64-NEXT:    retq
 entry:

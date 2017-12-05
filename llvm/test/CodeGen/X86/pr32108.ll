@@ -3,7 +3,7 @@
 
 define void @pr32108() {
 ; CHECK-LABEL: pr32108:
-; CHECK:       # BB#0: # %CF257
+; CHECK:       # %bb.0: # %CF257
 ; CHECK-NEXT:    movb $0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_1: # %CF244

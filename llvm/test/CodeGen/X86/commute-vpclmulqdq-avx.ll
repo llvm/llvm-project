@@ -6,7 +6,7 @@ declare <4 x i64> @llvm.x86.pclmulqdq.256(<4 x i64>, <4 x i64>, i8) nounwind rea
 
 define <4 x i64> @commute_v1(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-LABEL: commute_v1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpclmulqdq $0, %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vxorps %ymm0, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
@@ -18,7 +18,7 @@ define <4 x i64> @commute_v1(<4 x i64> %a0, <4 x i64> %a1) {
 
 define <4 x i64> @commute_v2(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-LABEL: commute_v2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpclmulqdq $16, %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vxorps %ymm0, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
@@ -30,7 +30,7 @@ define <4 x i64> @commute_v2(<4 x i64> %a0, <4 x i64> %a1) {
 
 define <4 x i64> @commute_v3(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-LABEL: commute_v3:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpclmulqdq $17, %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vxorps %ymm0, %ymm0, %ymm0
 ; CHECK-NEXT:    retq

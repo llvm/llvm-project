@@ -64,7 +64,7 @@
 
 define signext i32 @test(i32 (i32)* nocapture %FP) local_unnamed_addr #0 {
 ; CHECK-LABEL: test:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis 6, 2, .LC0@toc@ha
 ; CHECK-NEXT:    addis 4, 2, .LC1@toc@ha
 ; CHECK-NEXT:    ld 5, .LC1@toc@l(4)

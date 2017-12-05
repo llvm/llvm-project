@@ -4,7 +4,7 @@
 
 define i64 @foo(i64 %t, i64 %u) nounwind {
 ; X32-LABEL: foo:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
@@ -18,7 +18,7 @@ define i64 @foo(i64 %t, i64 %u) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: foo:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    imulq %rsi, %rdi
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    retq

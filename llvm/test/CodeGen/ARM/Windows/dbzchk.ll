@@ -32,13 +32,13 @@ return:
   ret i32 %2
 }
 
-; CHECK-DIV-DAG: BB#0
-; CHECK-DIV-DAG: Successors according to CFG: BB#1({{.*}}) BB#2
-; CHECK-DIV-DAG: BB#1
-; CHECK-DIV-DAG: Successors according to CFG: BB#3
-; CHECK-DIV-DAG: BB#2
-; CHECK-DIV-DAG: Successors according to CFG: BB#3
-; CHECK-DIV-DAG: BB#3
+; CHECK-DIV-DAG: %bb.0
+; CHECK-DIV-DAG: Successors according to CFG: %bb.1({{.*}}) %bb.2
+; CHECK-DIV-DAG: %bb.1
+; CHECK-DIV-DAG: Successors according to CFG: %bb.3
+; CHECK-DIV-DAG: %bb.2
+; CHECK-DIV-DAG: Successors according to CFG: %bb.3
+; CHECK-DIV-DAG: %bb.3
 
 ; RUN: llc -mtriple thumbv7--windows-itanium -print-machineinstrs=expand-isel-pseudos -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s -check-prefix CHECK-MOD
 
@@ -66,13 +66,13 @@ return:
   ret i32 %retval.0
 }
 
-; CHECK-MOD-DAG: BB#0
-; CHECK-MOD-DAG: Successors according to CFG: BB#2({{.*}}) BB#1
-; CHECK-MOD-DAG: BB#1
-; CHECK-MOD-DAG: Successors according to CFG: BB#3
-; CHECK-MOD-DAG: BB#3
-; CHECK-MOD-DAG: Successors according to CFG: BB#2
-; CHECK-MOD-DAG: BB#2
+; CHECK-MOD-DAG: %bb.0
+; CHECK-MOD-DAG: Successors according to CFG: %bb.2({{.*}}) %bb.1
+; CHECK-MOD-DAG: %bb.1
+; CHECK-MOD-DAG: Successors according to CFG: %bb.3
+; CHECK-MOD-DAG: %bb.3
+; CHECK-MOD-DAG: Successors according to CFG: %bb.2
+; CHECK-MOD-DAG: %bb.2
 
 ; RUN: llc -mtriple thumbv7--windows-itanium -print-machineinstrs=expand-isel-pseudos -verify-machineinstrs -filetype asm -o /dev/null %s 2>&1 | FileCheck %s -check-prefix CHECK-CFG
 ; RUN: llc -mtriple thumbv7--windows-itanium -verify-machineinstrs -filetype asm -o - %s | FileCheck %s -check-prefix CHECK-CFG-ASM
@@ -111,23 +111,23 @@ if.end:
 
 attributes #0 = { optsize }
 
-; CHECK-CFG-DAG: BB#0
-; CHECK-CFG-DAG: t2Bcc <BB#2>
-; CHECK-CFG-DAG: t2B <BB#1>
+; CHECK-CFG-DAG: %bb.0
+; CHECK-CFG-DAG: t2Bcc %bb.2
+; CHECK-CFG-DAG: t2B %bb.1
 
-; CHECK-CFG-DAG: BB#1
-; CHECK-CFG-DAG: t2B <BB#3>
+; CHECK-CFG-DAG: %bb.1
+; CHECK-CFG-DAG: t2B %bb.3
 
-; CHECK-CFG-DAG: BB#2
+; CHECK-CFG-DAG: %bb.2
 ; CHECK-CFG-DAG: tCMPi8 %{{[0-9]}}, 0
-; CHECK-CFG-DAG: t2Bcc <BB#5>
+; CHECK-CFG-DAG: t2Bcc %bb.5
 
-; CHECK-CFG-DAG: BB#4
+; CHECK-CFG-DAG: %bb.4
 
-; CHECK-CFG-DAG: BB#3
+; CHECK-CFG-DAG: %bb.3
 ; CHECK-CFG-DAG: tBX_RET
 
-; CHECK-CFG-DAG: BB#5
+; CHECK-CFG-DAG: %bb.5
 ; CHECK-CFG-DAG: t__brkdiv0
 
 ; CHECK-CFG-ASM-LABEL: h:

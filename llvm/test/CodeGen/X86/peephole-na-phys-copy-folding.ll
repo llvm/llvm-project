@@ -16,14 +16,14 @@ declare i32 @bar(i64)
 
 define i1 @plus_one() nounwind {
 ; CHECK32-LABEL: plus_one:
-; CHECK32:       # BB#0: # %entry
+; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movb M, %al
 ; CHECK32-NEXT:    incl L
 ; CHECK32-NEXT:    jne .LBB0_2
-; CHECK32-NEXT:  # BB#1: # %entry
+; CHECK32-NEXT:  # %bb.1: # %entry
 ; CHECK32-NEXT:    andb $8, %al
 ; CHECK32-NEXT:    je .LBB0_2
-; CHECK32-NEXT:  # BB#3: # %exit2
+; CHECK32-NEXT:  # %bb.3: # %exit2
 ; CHECK32-NEXT:    xorl %eax, %eax
 ; CHECK32-NEXT:    retl
 ; CHECK32-NEXT:  .LBB0_2: # %exit
@@ -31,14 +31,14 @@ define i1 @plus_one() nounwind {
 ; CHECK32-NEXT:    retl
 ;
 ; CHECK64-LABEL: plus_one:
-; CHECK64:       # BB#0: # %entry
+; CHECK64:       # %bb.0: # %entry
 ; CHECK64-NEXT:    movb {{.*}}(%rip), %al
 ; CHECK64-NEXT:    incl {{.*}}(%rip)
 ; CHECK64-NEXT:    jne .LBB0_2
-; CHECK64-NEXT:  # BB#1: # %entry
+; CHECK64-NEXT:  # %bb.1: # %entry
 ; CHECK64-NEXT:    andb $8, %al
 ; CHECK64-NEXT:    je .LBB0_2
-; CHECK64-NEXT:  # BB#3: # %exit2
+; CHECK64-NEXT:  # %bb.3: # %exit2
 ; CHECK64-NEXT:    xorl %eax, %eax
 ; CHECK64-NEXT:    retq
 ; CHECK64-NEXT:  .LBB0_2: # %exit
@@ -64,14 +64,14 @@ exit2:
 
 define i1 @plus_forty_two() nounwind {
 ; CHECK32-LABEL: plus_forty_two:
-; CHECK32:       # BB#0: # %entry
+; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movb M, %al
 ; CHECK32-NEXT:    addl $42, L
 ; CHECK32-NEXT:    jne .LBB1_2
-; CHECK32-NEXT:  # BB#1: # %entry
+; CHECK32-NEXT:  # %bb.1: # %entry
 ; CHECK32-NEXT:    andb $8, %al
 ; CHECK32-NEXT:    je .LBB1_2
-; CHECK32-NEXT:  # BB#3: # %exit2
+; CHECK32-NEXT:  # %bb.3: # %exit2
 ; CHECK32-NEXT:    xorl %eax, %eax
 ; CHECK32-NEXT:    retl
 ; CHECK32-NEXT:  .LBB1_2: # %exit
@@ -79,14 +79,14 @@ define i1 @plus_forty_two() nounwind {
 ; CHECK32-NEXT:    retl
 ;
 ; CHECK64-LABEL: plus_forty_two:
-; CHECK64:       # BB#0: # %entry
+; CHECK64:       # %bb.0: # %entry
 ; CHECK64-NEXT:    movb {{.*}}(%rip), %al
 ; CHECK64-NEXT:    addl $42, {{.*}}(%rip)
 ; CHECK64-NEXT:    jne .LBB1_2
-; CHECK64-NEXT:  # BB#1: # %entry
+; CHECK64-NEXT:  # %bb.1: # %entry
 ; CHECK64-NEXT:    andb $8, %al
 ; CHECK64-NEXT:    je .LBB1_2
-; CHECK64-NEXT:  # BB#3: # %exit2
+; CHECK64-NEXT:  # %bb.3: # %exit2
 ; CHECK64-NEXT:    xorl %eax, %eax
 ; CHECK64-NEXT:    retq
 ; CHECK64-NEXT:  .LBB1_2: # %exit
@@ -112,14 +112,14 @@ exit2:
 
 define i1 @minus_one() nounwind {
 ; CHECK32-LABEL: minus_one:
-; CHECK32:       # BB#0: # %entry
+; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movb M, %al
 ; CHECK32-NEXT:    decl L
 ; CHECK32-NEXT:    jne .LBB2_2
-; CHECK32-NEXT:  # BB#1: # %entry
+; CHECK32-NEXT:  # %bb.1: # %entry
 ; CHECK32-NEXT:    andb $8, %al
 ; CHECK32-NEXT:    je .LBB2_2
-; CHECK32-NEXT:  # BB#3: # %exit2
+; CHECK32-NEXT:  # %bb.3: # %exit2
 ; CHECK32-NEXT:    xorl %eax, %eax
 ; CHECK32-NEXT:    retl
 ; CHECK32-NEXT:  .LBB2_2: # %exit
@@ -127,14 +127,14 @@ define i1 @minus_one() nounwind {
 ; CHECK32-NEXT:    retl
 ;
 ; CHECK64-LABEL: minus_one:
-; CHECK64:       # BB#0: # %entry
+; CHECK64:       # %bb.0: # %entry
 ; CHECK64-NEXT:    movb {{.*}}(%rip), %al
 ; CHECK64-NEXT:    decl {{.*}}(%rip)
 ; CHECK64-NEXT:    jne .LBB2_2
-; CHECK64-NEXT:  # BB#1: # %entry
+; CHECK64-NEXT:  # %bb.1: # %entry
 ; CHECK64-NEXT:    andb $8, %al
 ; CHECK64-NEXT:    je .LBB2_2
-; CHECK64-NEXT:  # BB#3: # %exit2
+; CHECK64-NEXT:  # %bb.3: # %exit2
 ; CHECK64-NEXT:    xorl %eax, %eax
 ; CHECK64-NEXT:    retq
 ; CHECK64-NEXT:  .LBB2_2: # %exit
@@ -160,14 +160,14 @@ exit2:
 
 define i1 @minus_forty_two() nounwind {
 ; CHECK32-LABEL: minus_forty_two:
-; CHECK32:       # BB#0: # %entry
+; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movb M, %al
 ; CHECK32-NEXT:    addl $-42, L
 ; CHECK32-NEXT:    jne .LBB3_2
-; CHECK32-NEXT:  # BB#1: # %entry
+; CHECK32-NEXT:  # %bb.1: # %entry
 ; CHECK32-NEXT:    andb $8, %al
 ; CHECK32-NEXT:    je .LBB3_2
-; CHECK32-NEXT:  # BB#3: # %exit2
+; CHECK32-NEXT:  # %bb.3: # %exit2
 ; CHECK32-NEXT:    xorl %eax, %eax
 ; CHECK32-NEXT:    retl
 ; CHECK32-NEXT:  .LBB3_2: # %exit
@@ -175,14 +175,14 @@ define i1 @minus_forty_two() nounwind {
 ; CHECK32-NEXT:    retl
 ;
 ; CHECK64-LABEL: minus_forty_two:
-; CHECK64:       # BB#0: # %entry
+; CHECK64:       # %bb.0: # %entry
 ; CHECK64-NEXT:    movb {{.*}}(%rip), %al
 ; CHECK64-NEXT:    addl $-42, {{.*}}(%rip)
 ; CHECK64-NEXT:    jne .LBB3_2
-; CHECK64-NEXT:  # BB#1: # %entry
+; CHECK64-NEXT:  # %bb.1: # %entry
 ; CHECK64-NEXT:    andb $8, %al
 ; CHECK64-NEXT:    je .LBB3_2
-; CHECK64-NEXT:  # BB#3: # %exit2
+; CHECK64-NEXT:  # %bb.3: # %exit2
 ; CHECK64-NEXT:    xorl %eax, %eax
 ; CHECK64-NEXT:    retq
 ; CHECK64-NEXT:  .LBB3_2: # %exit
@@ -208,7 +208,7 @@ exit2:
 
 define i64 @test_intervening_call(i64* %foo, i64 %bar, i64 %baz) nounwind {
 ; CHECK32-LABEL: test_intervening_call:
-; CHECK32:       # BB#0: # %entry
+; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    pushl %ebp
 ; CHECK32-NEXT:    movl %esp, %ebp
 ; CHECK32-NEXT:    pushl %ebx
@@ -233,7 +233,7 @@ define i64 @test_intervening_call(i64* %foo, i64 %bar, i64 %baz) nounwind {
 ; CHECK32-NEXT:    addb $127, %al
 ; CHECK32-NEXT:    sahf
 ; CHECK32-NEXT:    jne .LBB4_3
-; CHECK32-NEXT:  # BB#1: # %t
+; CHECK32-NEXT:  # %bb.1: # %t
 ; CHECK32-NEXT:    movl $42, %eax
 ; CHECK32-NEXT:    jmp .LBB4_2
 ; CHECK32-NEXT:  .LBB4_3: # %f
@@ -246,7 +246,7 @@ define i64 @test_intervening_call(i64* %foo, i64 %bar, i64 %baz) nounwind {
 ; CHECK32-NEXT:    retl
 ;
 ; CHECK64-LABEL: test_intervening_call:
-; CHECK64:       # BB#0: # %entry
+; CHECK64:       # %bb.0: # %entry
 ; CHECK64-NEXT:    pushq %rbp
 ; CHECK64-NEXT:    movq %rsp, %rbp
 ; CHECK64-NEXT:    pushq %rbx
@@ -264,7 +264,7 @@ define i64 @test_intervening_call(i64* %foo, i64 %bar, i64 %baz) nounwind {
 ; CHECK64-NEXT:    addb $127, %al
 ; CHECK64-NEXT:    sahf
 ; CHECK64-NEXT:    jne .LBB4_3
-; CHECK64-NEXT:  # BB#1: # %t
+; CHECK64-NEXT:  # %bb.1: # %t
 ; CHECK64-NEXT:    movl $42, %eax
 ; CHECK64-NEXT:    jmp .LBB4_2
 ; CHECK64-NEXT:  .LBB4_3: # %f
@@ -291,7 +291,7 @@ f:
 
 define i64 @test_two_live_flags(i64* %foo0, i64 %bar0, i64 %baz0, i64* %foo1, i64 %bar1, i64 %baz1) nounwind {
 ; CHECK32-LABEL: test_two_live_flags:
-; CHECK32:       # BB#0: # %entry
+; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    pushl %ebp
 ; CHECK32-NEXT:    movl %esp, %ebp
 ; CHECK32-NEXT:    pushl %ebx
@@ -320,10 +320,10 @@ define i64 @test_two_live_flags(i64* %foo0, i64 %bar0, i64 %baz0, i64* %foo1, i6
 ; CHECK32-NEXT:    sahf
 ; CHECK32-NEXT:    popl %eax
 ; CHECK32-NEXT:    jne .LBB5_4
-; CHECK32-NEXT:  # BB#1: # %entry
+; CHECK32-NEXT:  # %bb.1: # %entry
 ; CHECK32-NEXT:    testb %al, %al
 ; CHECK32-NEXT:    je .LBB5_4
-; CHECK32-NEXT:  # BB#2: # %t
+; CHECK32-NEXT:  # %bb.2: # %t
 ; CHECK32-NEXT:    movl $42, %eax
 ; CHECK32-NEXT:    jmp .LBB5_3
 ; CHECK32-NEXT:  .LBB5_4: # %f
@@ -337,7 +337,7 @@ define i64 @test_two_live_flags(i64* %foo0, i64 %bar0, i64 %baz0, i64* %foo1, i6
 ; CHECK32-NEXT:    retl
 ;
 ; CHECK64-LABEL: test_two_live_flags:
-; CHECK64:       # BB#0: # %entry
+; CHECK64:       # %bb.0: # %entry
 ; CHECK64-NEXT:    pushq %rbp
 ; CHECK64-NEXT:    movq %rsp, %rbp
 ; CHECK64-NEXT:    movq %rsi, %rax
@@ -354,10 +354,10 @@ define i64 @test_two_live_flags(i64* %foo0, i64 %bar0, i64 %baz0, i64* %foo1, i6
 ; CHECK64-NEXT:    sahf
 ; CHECK64-NEXT:    popq %rax
 ; CHECK64-NEXT:    jne .LBB5_3
-; CHECK64-NEXT:  # BB#1: # %entry
+; CHECK64-NEXT:  # %bb.1: # %entry
 ; CHECK64-NEXT:    testb %al, %al
 ; CHECK64-NEXT:    je .LBB5_3
-; CHECK64-NEXT:  # BB#2: # %t
+; CHECK64-NEXT:  # %bb.2: # %t
 ; CHECK64-NEXT:    movl $42, %eax
 ; CHECK64-NEXT:    popq %rbp
 ; CHECK64-NEXT:    retq
@@ -382,7 +382,7 @@ f:
 
 define i1 @asm_clobbering_flags(i32* %mem) nounwind {
 ; CHECK32-LABEL: asm_clobbering_flags:
-; CHECK32:       # BB#0: # %entry
+; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK32-NEXT:    movl (%ecx), %edx
 ; CHECK32-NEXT:    testl %edx, %edx
@@ -394,7 +394,7 @@ define i1 @asm_clobbering_flags(i32* %mem) nounwind {
 ; CHECK32-NEXT:    retl
 ;
 ; CHECK64-LABEL: asm_clobbering_flags:
-; CHECK64:       # BB#0: # %entry
+; CHECK64:       # %bb.0: # %entry
 ; CHECK64-NEXT:    movl (%rdi), %ecx
 ; CHECK64-NEXT:    testl %ecx, %ecx
 ; CHECK64-NEXT:    setg %al

@@ -5,7 +5,7 @@
 ; VFMADD
 define < 4 x float > @test_x86_fma4_vfmadd_ss_load(< 4 x float > %a0, < 4 x float > %a1, float* %a2) {
 ; CHECK-LABEL: test_x86_fma4_vfmadd_ss_load:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmaddss (%rdi), %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %x = load float , float *%a2
@@ -15,7 +15,7 @@ define < 4 x float > @test_x86_fma4_vfmadd_ss_load(< 4 x float > %a0, < 4 x floa
 }
 define < 4 x float > @test_x86_fma4_vfmadd_ss_load2(< 4 x float > %a0, float* %a1, < 4 x float > %a2) {
 ; CHECK-LABEL: test_x86_fma4_vfmadd_ss_load2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmaddss %xmm1, (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %x = load float , float *%a1
@@ -28,7 +28,7 @@ declare < 4 x float > @llvm.x86.fma4.vfmadd.ss(< 4 x float >, < 4 x float >, < 4
 
 define < 2 x double > @test_x86_fma4_vfmadd_sd_load(< 2 x double > %a0, < 2 x double > %a1, double* %a2) {
 ; CHECK-LABEL: test_x86_fma4_vfmadd_sd_load:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmaddsd (%rdi), %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %x = load double , double *%a2
@@ -38,7 +38,7 @@ define < 2 x double > @test_x86_fma4_vfmadd_sd_load(< 2 x double > %a0, < 2 x do
 }
 define < 2 x double > @test_x86_fma4_vfmadd_sd_load2(< 2 x double > %a0, double* %a1, < 2 x double > %a2) {
 ; CHECK-LABEL: test_x86_fma4_vfmadd_sd_load2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmaddsd %xmm1, (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %x = load double , double *%a1
@@ -49,7 +49,7 @@ define < 2 x double > @test_x86_fma4_vfmadd_sd_load2(< 2 x double > %a0, double*
 declare < 2 x double > @llvm.x86.fma4.vfmadd.sd(< 2 x double >, < 2 x double >, < 2 x double >) nounwind readnone
 define < 4 x float > @test_x86_fma_vfmadd_ps_load(< 4 x float > %a0, < 4 x float > %a1, < 4 x float >* %a2) {
 ; CHECK-LABEL: test_x86_fma_vfmadd_ps_load:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmaddps (%rdi), %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %x = load <4 x float>, <4 x float>* %a2
@@ -58,7 +58,7 @@ define < 4 x float > @test_x86_fma_vfmadd_ps_load(< 4 x float > %a0, < 4 x float
 }
 define < 4 x float > @test_x86_fma_vfmadd_ps_load2(< 4 x float > %a0, < 4 x float >* %a1, < 4 x float > %a2) {
 ; CHECK-LABEL: test_x86_fma_vfmadd_ps_load2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmaddps %xmm1, (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %x = load <4 x float>, <4 x float>* %a1
@@ -70,7 +70,7 @@ declare < 4 x float > @llvm.x86.fma.vfmadd.ps(< 4 x float >, < 4 x float >, < 4 
 ; To test execution dependency
 define < 4 x float > @test_x86_fma_vfmadd_ps_load3(< 4 x float >* %a0, < 4 x float >* %a1, < 4 x float > %a2) {
 ; CHECK-LABEL: test_x86_fma_vfmadd_ps_load3:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps (%rdi), %xmm1
 ; CHECK-NEXT:    vfmaddps %xmm0, (%rsi), %xmm1, %xmm0
 ; CHECK-NEXT:    retq
@@ -82,7 +82,7 @@ define < 4 x float > @test_x86_fma_vfmadd_ps_load3(< 4 x float >* %a0, < 4 x flo
 
 define < 2 x double > @test_x86_fma_vfmadd_pd_load(< 2 x double > %a0, < 2 x double > %a1, < 2 x double >* %a2) {
 ; CHECK-LABEL: test_x86_fma_vfmadd_pd_load:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmaddpd (%rdi), %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %x = load <2 x double>, <2 x double>* %a2
@@ -91,7 +91,7 @@ define < 2 x double > @test_x86_fma_vfmadd_pd_load(< 2 x double > %a0, < 2 x dou
 }
 define < 2 x double > @test_x86_fma_vfmadd_pd_load2(< 2 x double > %a0, < 2 x double >* %a1, < 2 x double > %a2) {
 ; CHECK-LABEL: test_x86_fma_vfmadd_pd_load2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmaddpd %xmm1, (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %x = load <2 x double>, <2 x double>* %a1
@@ -103,7 +103,7 @@ declare < 2 x double > @llvm.x86.fma.vfmadd.pd(< 2 x double >, < 2 x double >, <
 ; To test execution dependency
 define < 2 x double > @test_x86_fma_vfmadd_pd_load3(< 2 x double >* %a0, < 2 x double >* %a1, < 2 x double > %a2) {
 ; CHECK-LABEL: test_x86_fma_vfmadd_pd_load3:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovapd (%rdi), %xmm1
 ; CHECK-NEXT:    vfmaddpd %xmm0, (%rsi), %xmm1, %xmm0
 ; CHECK-NEXT:    retq

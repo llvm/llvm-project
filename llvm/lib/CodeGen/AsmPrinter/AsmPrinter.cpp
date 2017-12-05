@@ -2710,7 +2710,8 @@ void AsmPrinter::EmitBasicBlockStart(const MachineBasicBlock &MBB) const {
       (isBlockOnlyReachableByFallthrough(&MBB) && !MBB.isEHFuncletEntry())) {
     if (isVerbose()) {
       // NOTE: Want this comment at start of line, don't emit with AddComment.
-      OutStreamer->emitRawComment(" BB#" + Twine(MBB.getNumber()) + ":", false);
+      OutStreamer->emitRawComment(" %bb." + Twine(MBB.getNumber()) + ":",
+                                  false);
     }
   } else {
     OutStreamer->EmitLabel(MBB.getSymbol());

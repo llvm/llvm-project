@@ -323,7 +323,7 @@ void LiveIntervals::computeLiveInRegUnits() {
 
     // Create phi-defs at Begin for all live-in registers.
     SlotIndex Begin = Indexes->getMBBStartIdx(&MBB);
-    DEBUG(dbgs() << Begin << "\tBB#" << MBB.getNumber());
+    DEBUG(dbgs() << Begin << "\t" << printMBBReference(MBB));
     for (const auto &LI : MBB.liveins()) {
       for (MCRegUnitIterator Units(LI.PhysReg, TRI); Units.isValid(); ++Units) {
         unsigned Unit = *Units;

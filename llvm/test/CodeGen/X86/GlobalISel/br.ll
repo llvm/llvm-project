@@ -3,7 +3,7 @@
 
 define void @uncondbr() {
 ; CHECK-LABEL: uncondbr:
-; CHECK:       # BB#1: # %entry
+; CHECK:       # %bb.1: # %entry
 ; CHECK-NEXT:    jmp .LBB0_3
 ; CHECK-NEXT:  .LBB0_2: # %end
 ; CHECK-NEXT:    retq

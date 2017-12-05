@@ -12,63 +12,63 @@
 
 define i32 @crc32_32_8(i32 %a0, i8 %a1, i8 *%a2) {
 ; GENERIC-LABEL: crc32_32_8:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    crc32b %sil, %edi # sched: [3:1.00]
 ; GENERIC-NEXT:    crc32b (%rdx), %edi # sched: [8:1.00]
 ; GENERIC-NEXT:    movl %edi, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SLM-LABEL: crc32_32_8:
-; SLM:       # BB#0:
+; SLM:       # %bb.0:
 ; SLM-NEXT:    crc32b %sil, %edi # sched: [3:1.00]
 ; SLM-NEXT:    crc32b (%rdx), %edi # sched: [6:1.00]
 ; SLM-NEXT:    movl %edi, %eax # sched: [1:0.50]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: crc32_32_8:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    crc32b %sil, %edi # sched: [3:1.00]
 ; SANDY-NEXT:    crc32b (%rdx), %edi # sched: [8:1.00]
 ; SANDY-NEXT:    movl %edi, %eax # sched: [1:0.33]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: crc32_32_8:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    crc32b %sil, %edi # sched: [3:1.00]
 ; HASWELL-NEXT:    crc32b (%rdx), %edi # sched: [7:1.00]
 ; HASWELL-NEXT:    movl %edi, %eax # sched: [1:0.25]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: crc32_32_8:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    crc32b %sil, %edi # sched: [3:1.00]
 ; BROADWELL-NEXT:    crc32b (%rdx), %edi # sched: [8:1.00]
 ; BROADWELL-NEXT:    movl %edi, %eax # sched: [1:0.25]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: crc32_32_8:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    crc32b %sil, %edi # sched: [3:1.00]
 ; SKYLAKE-NEXT:    crc32b (%rdx), %edi # sched: [8:1.00]
 ; SKYLAKE-NEXT:    movl %edi, %eax # sched: [1:0.25]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: crc32_32_8:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    crc32b %sil, %edi # sched: [3:1.00]
 ; SKX-NEXT:    crc32b (%rdx), %edi # sched: [8:1.00]
 ; SKX-NEXT:    movl %edi, %eax # sched: [1:0.25]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: crc32_32_8:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    crc32b %sil, %edi # sched: [3:1.00]
 ; BTVER2-NEXT:    crc32b (%rdx), %edi # sched: [8:1.00]
 ; BTVER2-NEXT:    movl %edi, %eax # sched: [1:0.17]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: crc32_32_8:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    crc32b %sil, %edi # sched: [3:1.00]
 ; ZNVER1-NEXT:    crc32b (%rdx), %edi # sched: [10:1.00]
 ; ZNVER1-NEXT:    movl %edi, %eax # sched: [1:0.25]
@@ -82,63 +82,63 @@ declare i32 @llvm.x86.sse42.crc32.32.8(i32, i8) nounwind
 
 define i32 @crc32_32_16(i32 %a0, i16 %a1, i16 *%a2) {
 ; GENERIC-LABEL: crc32_32_16:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    crc32w %si, %edi # sched: [3:1.00]
 ; GENERIC-NEXT:    crc32w (%rdx), %edi # sched: [7:1.00]
 ; GENERIC-NEXT:    movl %edi, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SLM-LABEL: crc32_32_16:
-; SLM:       # BB#0:
+; SLM:       # %bb.0:
 ; SLM-NEXT:    crc32w %si, %edi # sched: [3:1.00]
 ; SLM-NEXT:    crc32w (%rdx), %edi # sched: [6:1.00]
 ; SLM-NEXT:    movl %edi, %eax # sched: [1:0.50]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: crc32_32_16:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    crc32w %si, %edi # sched: [3:1.00]
 ; SANDY-NEXT:    crc32w (%rdx), %edi # sched: [7:1.00]
 ; SANDY-NEXT:    movl %edi, %eax # sched: [1:0.33]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: crc32_32_16:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    crc32w %si, %edi # sched: [3:1.00]
 ; HASWELL-NEXT:    crc32w (%rdx), %edi # sched: [7:1.00]
 ; HASWELL-NEXT:    movl %edi, %eax # sched: [1:0.25]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: crc32_32_16:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    crc32w %si, %edi # sched: [3:1.00]
 ; BROADWELL-NEXT:    crc32w (%rdx), %edi # sched: [8:1.00]
 ; BROADWELL-NEXT:    movl %edi, %eax # sched: [1:0.25]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: crc32_32_16:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    crc32w %si, %edi # sched: [3:1.00]
 ; SKYLAKE-NEXT:    crc32w (%rdx), %edi # sched: [8:1.00]
 ; SKYLAKE-NEXT:    movl %edi, %eax # sched: [1:0.25]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: crc32_32_16:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    crc32w %si, %edi # sched: [3:1.00]
 ; SKX-NEXT:    crc32w (%rdx), %edi # sched: [8:1.00]
 ; SKX-NEXT:    movl %edi, %eax # sched: [1:0.25]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: crc32_32_16:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    crc32w %si, %edi # sched: [3:1.00]
 ; BTVER2-NEXT:    crc32w (%rdx), %edi # sched: [8:1.00]
 ; BTVER2-NEXT:    movl %edi, %eax # sched: [1:0.17]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: crc32_32_16:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    crc32w %si, %edi # sched: [3:1.00]
 ; ZNVER1-NEXT:    crc32w (%rdx), %edi # sched: [10:1.00]
 ; ZNVER1-NEXT:    movl %edi, %eax # sched: [1:0.25]
@@ -152,63 +152,63 @@ declare i32 @llvm.x86.sse42.crc32.32.16(i32, i16) nounwind
 
 define i32 @crc32_32_32(i32 %a0, i32 %a1, i32 *%a2) {
 ; GENERIC-LABEL: crc32_32_32:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    crc32l %esi, %edi # sched: [3:1.00]
 ; GENERIC-NEXT:    crc32l (%rdx), %edi # sched: [7:1.00]
 ; GENERIC-NEXT:    movl %edi, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SLM-LABEL: crc32_32_32:
-; SLM:       # BB#0:
+; SLM:       # %bb.0:
 ; SLM-NEXT:    crc32l %esi, %edi # sched: [3:1.00]
 ; SLM-NEXT:    crc32l (%rdx), %edi # sched: [6:1.00]
 ; SLM-NEXT:    movl %edi, %eax # sched: [1:0.50]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: crc32_32_32:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    crc32l %esi, %edi # sched: [3:1.00]
 ; SANDY-NEXT:    crc32l (%rdx), %edi # sched: [7:1.00]
 ; SANDY-NEXT:    movl %edi, %eax # sched: [1:0.33]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: crc32_32_32:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    crc32l %esi, %edi # sched: [3:1.00]
 ; HASWELL-NEXT:    crc32l (%rdx), %edi # sched: [7:1.00]
 ; HASWELL-NEXT:    movl %edi, %eax # sched: [1:0.25]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: crc32_32_32:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    crc32l %esi, %edi # sched: [3:1.00]
 ; BROADWELL-NEXT:    crc32l (%rdx), %edi # sched: [8:1.00]
 ; BROADWELL-NEXT:    movl %edi, %eax # sched: [1:0.25]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: crc32_32_32:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    crc32l %esi, %edi # sched: [3:1.00]
 ; SKYLAKE-NEXT:    crc32l (%rdx), %edi # sched: [8:1.00]
 ; SKYLAKE-NEXT:    movl %edi, %eax # sched: [1:0.25]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: crc32_32_32:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    crc32l %esi, %edi # sched: [3:1.00]
 ; SKX-NEXT:    crc32l (%rdx), %edi # sched: [8:1.00]
 ; SKX-NEXT:    movl %edi, %eax # sched: [1:0.25]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: crc32_32_32:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    crc32l %esi, %edi # sched: [3:1.00]
 ; BTVER2-NEXT:    crc32l (%rdx), %edi # sched: [8:1.00]
 ; BTVER2-NEXT:    movl %edi, %eax # sched: [1:0.17]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: crc32_32_32:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    crc32l %esi, %edi # sched: [3:1.00]
 ; ZNVER1-NEXT:    crc32l (%rdx), %edi # sched: [10:1.00]
 ; ZNVER1-NEXT:    movl %edi, %eax # sched: [1:0.25]
@@ -222,63 +222,63 @@ declare i32 @llvm.x86.sse42.crc32.32.32(i32, i32) nounwind
 
 define i64 @crc32_64_8(i64 %a0, i8 %a1, i8 *%a2) nounwind {
 ; GENERIC-LABEL: crc32_64_8:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    crc32b %sil, %edi # sched: [3:1.00]
 ; GENERIC-NEXT:    crc32b (%rdx), %edi # sched: [8:1.00]
 ; GENERIC-NEXT:    movq %rdi, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SLM-LABEL: crc32_64_8:
-; SLM:       # BB#0:
+; SLM:       # %bb.0:
 ; SLM-NEXT:    crc32b %sil, %edi # sched: [3:1.00]
 ; SLM-NEXT:    crc32b (%rdx), %edi # sched: [6:1.00]
 ; SLM-NEXT:    movq %rdi, %rax # sched: [1:0.50]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: crc32_64_8:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    crc32b %sil, %edi # sched: [3:1.00]
 ; SANDY-NEXT:    crc32b (%rdx), %edi # sched: [8:1.00]
 ; SANDY-NEXT:    movq %rdi, %rax # sched: [1:0.33]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: crc32_64_8:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    crc32b %sil, %edi # sched: [3:1.00]
 ; HASWELL-NEXT:    crc32b (%rdx), %edi # sched: [7:1.00]
 ; HASWELL-NEXT:    movq %rdi, %rax # sched: [1:0.25]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: crc32_64_8:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    crc32b %sil, %edi # sched: [3:1.00]
 ; BROADWELL-NEXT:    crc32b (%rdx), %edi # sched: [8:1.00]
 ; BROADWELL-NEXT:    movq %rdi, %rax # sched: [1:0.25]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: crc32_64_8:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    crc32b %sil, %edi # sched: [3:1.00]
 ; SKYLAKE-NEXT:    crc32b (%rdx), %edi # sched: [8:1.00]
 ; SKYLAKE-NEXT:    movq %rdi, %rax # sched: [1:0.25]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: crc32_64_8:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    crc32b %sil, %edi # sched: [3:1.00]
 ; SKX-NEXT:    crc32b (%rdx), %edi # sched: [8:1.00]
 ; SKX-NEXT:    movq %rdi, %rax # sched: [1:0.25]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: crc32_64_8:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    crc32b %sil, %edi # sched: [3:1.00]
 ; BTVER2-NEXT:    crc32b (%rdx), %edi # sched: [8:1.00]
 ; BTVER2-NEXT:    movq %rdi, %rax # sched: [1:0.17]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: crc32_64_8:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    crc32b %sil, %edi # sched: [3:1.00]
 ; ZNVER1-NEXT:    crc32b (%rdx), %edi # sched: [10:1.00]
 ; ZNVER1-NEXT:    movq %rdi, %rax # sched: [1:0.25]
@@ -292,63 +292,63 @@ declare i64 @llvm.x86.sse42.crc32.64.8(i64, i8) nounwind
 
 define i64 @crc32_64_64(i64 %a0, i64 %a1, i64 *%a2) {
 ; GENERIC-LABEL: crc32_64_64:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    crc32q %rsi, %rdi # sched: [3:1.00]
 ; GENERIC-NEXT:    crc32q (%rdx), %rdi # sched: [8:1.00]
 ; GENERIC-NEXT:    movq %rdi, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SLM-LABEL: crc32_64_64:
-; SLM:       # BB#0:
+; SLM:       # %bb.0:
 ; SLM-NEXT:    crc32q %rsi, %rdi # sched: [3:1.00]
 ; SLM-NEXT:    crc32q (%rdx), %rdi # sched: [6:1.00]
 ; SLM-NEXT:    movq %rdi, %rax # sched: [1:0.50]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: crc32_64_64:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    crc32q %rsi, %rdi # sched: [3:1.00]
 ; SANDY-NEXT:    crc32q (%rdx), %rdi # sched: [8:1.00]
 ; SANDY-NEXT:    movq %rdi, %rax # sched: [1:0.33]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: crc32_64_64:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    crc32q %rsi, %rdi # sched: [3:1.00]
 ; HASWELL-NEXT:    crc32q (%rdx), %rdi # sched: [7:1.00]
 ; HASWELL-NEXT:    movq %rdi, %rax # sched: [1:0.25]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: crc32_64_64:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    crc32q %rsi, %rdi # sched: [3:1.00]
 ; BROADWELL-NEXT:    crc32q (%rdx), %rdi # sched: [8:1.00]
 ; BROADWELL-NEXT:    movq %rdi, %rax # sched: [1:0.25]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: crc32_64_64:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    crc32q %rsi, %rdi # sched: [3:1.00]
 ; SKYLAKE-NEXT:    crc32q (%rdx), %rdi # sched: [8:1.00]
 ; SKYLAKE-NEXT:    movq %rdi, %rax # sched: [1:0.25]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: crc32_64_64:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    crc32q %rsi, %rdi # sched: [3:1.00]
 ; SKX-NEXT:    crc32q (%rdx), %rdi # sched: [8:1.00]
 ; SKX-NEXT:    movq %rdi, %rax # sched: [1:0.25]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: crc32_64_64:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    crc32q %rsi, %rdi # sched: [3:1.00]
 ; BTVER2-NEXT:    crc32q (%rdx), %rdi # sched: [8:1.00]
 ; BTVER2-NEXT:    movq %rdi, %rax # sched: [1:0.17]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: crc32_64_64:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    crc32q %rsi, %rdi # sched: [3:1.00]
 ; ZNVER1-NEXT:    crc32q (%rdx), %rdi # sched: [10:1.00]
 ; ZNVER1-NEXT:    movq %rdi, %rax # sched: [1:0.25]
@@ -362,7 +362,7 @@ declare i64 @llvm.x86.sse42.crc32.64.64(i64, i64) nounwind
 
 define i32 @test_pcmpestri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; GENERIC-LABEL: test_pcmpestri:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    movl $7, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    movl $7, %edx # sched: [1:0.33]
 ; GENERIC-NEXT:    pcmpestri $7, %xmm1, %xmm0 # sched: [4:2.67]
@@ -375,7 +375,7 @@ define i32 @test_pcmpestri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SLM-LABEL: test_pcmpestri:
-; SLM:       # BB#0:
+; SLM:       # %bb.0:
 ; SLM-NEXT:    movl $7, %eax # sched: [1:0.50]
 ; SLM-NEXT:    movl $7, %edx # sched: [1:0.50]
 ; SLM-NEXT:    pcmpestri $7, %xmm1, %xmm0 # sched: [21:21.00]
@@ -388,7 +388,7 @@ define i32 @test_pcmpestri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_pcmpestri:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    movl $7, %eax # sched: [1:0.33]
 ; SANDY-NEXT:    movl $7, %edx # sched: [1:0.33]
 ; SANDY-NEXT:    vpcmpestri $7, %xmm1, %xmm0 # sched: [4:2.67]
@@ -401,7 +401,7 @@ define i32 @test_pcmpestri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pcmpestri:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    movl $7, %eax # sched: [1:0.25]
 ; HASWELL-NEXT:    movl $7, %edx # sched: [1:0.25]
 ; HASWELL-NEXT:    vpcmpestri $7, %xmm1, %xmm0 # sched: [18:4.00]
@@ -414,7 +414,7 @@ define i32 @test_pcmpestri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_pcmpestri:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    movl $7, %eax # sched: [1:0.25]
 ; BROADWELL-NEXT:    movl $7, %edx # sched: [1:0.25]
 ; BROADWELL-NEXT:    vpcmpestri $7, %xmm1, %xmm0 # sched: [18:4.00]
@@ -427,7 +427,7 @@ define i32 @test_pcmpestri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_pcmpestri:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    movl $7, %eax # sched: [1:0.25]
 ; SKYLAKE-NEXT:    movl $7, %edx # sched: [1:0.25]
 ; SKYLAKE-NEXT:    vpcmpestri $7, %xmm1, %xmm0 # sched: [18:4.00]
@@ -440,7 +440,7 @@ define i32 @test_pcmpestri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pcmpestri:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    movl $7, %eax # sched: [1:0.25]
 ; SKX-NEXT:    movl $7, %edx # sched: [1:0.25]
 ; SKX-NEXT:    vpcmpestri $7, %xmm1, %xmm0 # sched: [18:4.00]
@@ -453,7 +453,7 @@ define i32 @test_pcmpestri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_pcmpestri:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movl $7, %eax # sched: [1:0.17]
 ; BTVER2-NEXT:    movl $7, %edx # sched: [1:0.17]
 ; BTVER2-NEXT:    vpcmpestri $7, %xmm1, %xmm0 # sched: [14:10.00]
@@ -466,7 +466,7 @@ define i32 @test_pcmpestri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pcmpestri:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    movl $7, %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    movl $7, %edx # sched: [1:0.25]
 ; ZNVER1-NEXT:    vpcmpestri $7, %xmm1, %xmm0 # sched: [100:?]
@@ -487,7 +487,7 @@ declare i32 @llvm.x86.sse42.pcmpestri128(<16 x i8>, i32, <16 x i8>, i32, i8) nou
 
 define <16 x i8> @test_pcmpestrm(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; GENERIC-LABEL: test_pcmpestrm:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    movl $7, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    movl $7, %edx # sched: [1:0.33]
 ; GENERIC-NEXT:    pcmpestrm $7, %xmm1, %xmm0 # sched: [11:2.67]
@@ -497,7 +497,7 @@ define <16 x i8> @test_pcmpestrm(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SLM-LABEL: test_pcmpestrm:
-; SLM:       # BB#0:
+; SLM:       # %bb.0:
 ; SLM-NEXT:    movl $7, %eax # sched: [1:0.50]
 ; SLM-NEXT:    movl $7, %edx # sched: [1:0.50]
 ; SLM-NEXT:    pcmpestrm $7, %xmm1, %xmm0 # sched: [17:17.00]
@@ -507,7 +507,7 @@ define <16 x i8> @test_pcmpestrm(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_pcmpestrm:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    movl $7, %eax # sched: [1:0.33]
 ; SANDY-NEXT:    movl $7, %edx # sched: [1:0.33]
 ; SANDY-NEXT:    vpcmpestrm $7, %xmm1, %xmm0 # sched: [11:2.67]
@@ -517,7 +517,7 @@ define <16 x i8> @test_pcmpestrm(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pcmpestrm:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    movl $7, %eax # sched: [1:0.25]
 ; HASWELL-NEXT:    movl $7, %edx # sched: [1:0.25]
 ; HASWELL-NEXT:    vpcmpestrm $7, %xmm1, %xmm0 # sched: [19:4.00]
@@ -527,7 +527,7 @@ define <16 x i8> @test_pcmpestrm(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_pcmpestrm:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    movl $7, %eax # sched: [1:0.25]
 ; BROADWELL-NEXT:    movl $7, %edx # sched: [1:0.25]
 ; BROADWELL-NEXT:    vpcmpestrm $7, %xmm1, %xmm0 # sched: [19:4.00]
@@ -537,7 +537,7 @@ define <16 x i8> @test_pcmpestrm(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_pcmpestrm:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    movl $7, %eax # sched: [1:0.25]
 ; SKYLAKE-NEXT:    movl $7, %edx # sched: [1:0.25]
 ; SKYLAKE-NEXT:    vpcmpestrm $7, %xmm1, %xmm0 # sched: [19:4.00]
@@ -547,7 +547,7 @@ define <16 x i8> @test_pcmpestrm(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pcmpestrm:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    movl $7, %eax # sched: [1:0.25]
 ; SKX-NEXT:    movl $7, %edx # sched: [1:0.25]
 ; SKX-NEXT:    vpcmpestrm $7, %xmm1, %xmm0 # sched: [19:4.00]
@@ -557,7 +557,7 @@ define <16 x i8> @test_pcmpestrm(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_pcmpestrm:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movl $7, %eax # sched: [1:0.17]
 ; BTVER2-NEXT:    movl $7, %edx # sched: [1:0.17]
 ; BTVER2-NEXT:    vpcmpestrm $7, %xmm1, %xmm0 # sched: [14:10.00]
@@ -567,7 +567,7 @@ define <16 x i8> @test_pcmpestrm(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pcmpestrm:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    movl $7, %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    movl $7, %edx # sched: [1:0.25]
 ; ZNVER1-NEXT:    vpcmpestrm $7, %xmm1, %xmm0 # sched: [100:?]
@@ -584,7 +584,7 @@ declare <16 x i8> @llvm.x86.sse42.pcmpestrm128(<16 x i8>, i32, <16 x i8>, i32, i
 
 define i32 @test_pcmpistri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; GENERIC-LABEL: test_pcmpistri:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    pcmpistri $7, %xmm1, %xmm0 # sched: [11:3.00]
 ; GENERIC-NEXT:    movl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    pcmpistri $7, (%rdi), %xmm0 # sched: [17:3.00]
@@ -593,7 +593,7 @@ define i32 @test_pcmpistri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SLM-LABEL: test_pcmpistri:
-; SLM:       # BB#0:
+; SLM:       # %bb.0:
 ; SLM-NEXT:    pcmpistri $7, %xmm1, %xmm0 # sched: [17:17.00]
 ; SLM-NEXT:    movl %ecx, %eax # sched: [1:0.50]
 ; SLM-NEXT:    pcmpistri $7, (%rdi), %xmm0 # sched: [17:17.00]
@@ -602,7 +602,7 @@ define i32 @test_pcmpistri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_pcmpistri:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vpcmpistri $7, %xmm1, %xmm0 # sched: [11:3.00]
 ; SANDY-NEXT:    movl %ecx, %eax # sched: [1:0.33]
 ; SANDY-NEXT:    vpcmpistri $7, (%rdi), %xmm0 # sched: [17:3.00]
@@ -611,7 +611,7 @@ define i32 @test_pcmpistri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pcmpistri:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpcmpistri $7, %xmm1, %xmm0 # sched: [11:3.00]
 ; HASWELL-NEXT:    movl %ecx, %eax # sched: [1:0.25]
 ; HASWELL-NEXT:    vpcmpistri $7, (%rdi), %xmm0 # sched: [11:3.00]
@@ -620,7 +620,7 @@ define i32 @test_pcmpistri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_pcmpistri:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vpcmpistri $7, %xmm1, %xmm0 # sched: [11:3.00]
 ; BROADWELL-NEXT:    movl %ecx, %eax # sched: [1:0.25]
 ; BROADWELL-NEXT:    vpcmpistri $7, (%rdi), %xmm0 # sched: [16:3.00]
@@ -629,7 +629,7 @@ define i32 @test_pcmpistri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_pcmpistri:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vpcmpistri $7, %xmm1, %xmm0 # sched: [10:3.00]
 ; SKYLAKE-NEXT:    movl %ecx, %eax # sched: [1:0.25]
 ; SKYLAKE-NEXT:    vpcmpistri $7, (%rdi), %xmm0 # sched: [16:3.00]
@@ -638,7 +638,7 @@ define i32 @test_pcmpistri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pcmpistri:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpcmpistri $7, %xmm1, %xmm0 # sched: [10:3.00]
 ; SKX-NEXT:    movl %ecx, %eax # sched: [1:0.25]
 ; SKX-NEXT:    vpcmpistri $7, (%rdi), %xmm0 # sched: [16:3.00]
@@ -647,7 +647,7 @@ define i32 @test_pcmpistri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_pcmpistri:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vpcmpistri $7, %xmm1, %xmm0 # sched: [7:2.00]
 ; BTVER2-NEXT:    movl %ecx, %eax # sched: [1:0.17]
 ; BTVER2-NEXT:    vpcmpistri $7, (%rdi), %xmm0 # sched: [12:2.00]
@@ -656,7 +656,7 @@ define i32 @test_pcmpistri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pcmpistri:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vpcmpistri $7, %xmm1, %xmm0 # sched: [100:?]
 ; ZNVER1-NEXT:    movl %ecx, %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    vpcmpistri $7, (%rdi), %xmm0 # sched: [100:?]
@@ -673,55 +673,55 @@ declare i32 @llvm.x86.sse42.pcmpistri128(<16 x i8>, <16 x i8>, i8) nounwind read
 
 define <16 x i8> @test_pcmpistrm(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; GENERIC-LABEL: test_pcmpistrm:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    pcmpistrm $7, %xmm1, %xmm0 # sched: [11:3.00]
 ; GENERIC-NEXT:    pcmpistrm $7, (%rdi), %xmm0 # sched: [17:3.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SLM-LABEL: test_pcmpistrm:
-; SLM:       # BB#0:
+; SLM:       # %bb.0:
 ; SLM-NEXT:    pcmpistrm $7, %xmm1, %xmm0 # sched: [13:13.00]
 ; SLM-NEXT:    pcmpistrm $7, (%rdi), %xmm0 # sched: [13:13.00]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_pcmpistrm:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vpcmpistrm $7, %xmm1, %xmm0 # sched: [11:3.00]
 ; SANDY-NEXT:    vpcmpistrm $7, (%rdi), %xmm0 # sched: [17:3.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pcmpistrm:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpcmpistrm $7, %xmm1, %xmm0 # sched: [11:3.00]
 ; HASWELL-NEXT:    vpcmpistrm $7, (%rdi), %xmm0 # sched: [11:3.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_pcmpistrm:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vpcmpistrm $7, %xmm1, %xmm0 # sched: [11:3.00]
 ; BROADWELL-NEXT:    vpcmpistrm $7, (%rdi), %xmm0 # sched: [16:3.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_pcmpistrm:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vpcmpistrm $7, %xmm1, %xmm0 # sched: [10:3.00]
 ; SKYLAKE-NEXT:    vpcmpistrm $7, (%rdi), %xmm0 # sched: [16:3.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pcmpistrm:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpcmpistrm $7, %xmm1, %xmm0 # sched: [10:3.00]
 ; SKX-NEXT:    vpcmpistrm $7, (%rdi), %xmm0 # sched: [16:3.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_pcmpistrm:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vpcmpistrm $7, %xmm1, %xmm0 # sched: [8:2.00]
 ; BTVER2-NEXT:    vpcmpistrm $7, (%rdi), %xmm0 # sched: [13:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pcmpistrm:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vpcmpistrm $7, %xmm1, %xmm0 # sched: [100:?]
 ; ZNVER1-NEXT:    vpcmpistrm $7, (%rdi), %xmm0 # sched: [100:?]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -734,43 +734,43 @@ declare <16 x i8> @llvm.x86.sse42.pcmpistrm128(<16 x i8>, <16 x i8>, i8) nounwin
 
 define <2 x i64> @test_pcmpgtq(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ; GENERIC-LABEL: test_pcmpgtq:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    pcmpgtq %xmm1, %xmm0 # sched: [5:1.00]
 ; GENERIC-NEXT:    pcmpgtq (%rdi), %xmm0 # sched: [11:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SLM-LABEL: test_pcmpgtq:
-; SLM:       # BB#0:
+; SLM:       # %bb.0:
 ; SLM-NEXT:    pcmpgtq %xmm1, %xmm0 # sched: [1:0.50]
 ; SLM-NEXT:    pcmpgtq (%rdi), %xmm0 # sched: [4:1.00]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_pcmpgtq:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0 # sched: [5:1.00]
 ; SANDY-NEXT:    vpcmpgtq (%rdi), %xmm0, %xmm0 # sched: [11:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pcmpgtq:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0 # sched: [5:1.00]
 ; HASWELL-NEXT:    vpcmpgtq (%rdi), %xmm0, %xmm0 # sched: [5:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_pcmpgtq:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0 # sched: [5:1.00]
 ; BROADWELL-NEXT:    vpcmpgtq (%rdi), %xmm0, %xmm0 # sched: [10:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_pcmpgtq:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; SKYLAKE-NEXT:    vpcmpgtq (%rdi), %xmm0, %xmm0 # sched: [9:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pcmpgtq:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpcmpgtq %xmm1, %xmm0, %k0 # sched: [3:1.00]
 ; SKX-NEXT:    vpmovm2q %k0, %xmm0
 ; SKX-NEXT:    vpcmpgtq (%rdi), %xmm0, %k0 # sched: [9:1.00]
@@ -778,13 +778,13 @@ define <2 x i64> @test_pcmpgtq(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_pcmpgtq:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    vpcmpgtq (%rdi), %xmm0, %xmm0 # sched: [6:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pcmpgtq:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
 ; ZNVER1-NEXT:    vpcmpgtq (%rdi), %xmm0, %xmm0 # sched: [8:0.50]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -798,55 +798,55 @@ define <2 x i64> @test_pcmpgtq(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 
 define <2 x i64> @test_pclmulqdq(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ; GENERIC-LABEL: test_pclmulqdq:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    pclmulqdq $0, %xmm1, %xmm0 # sched: [14:6.00]
 ; GENERIC-NEXT:    pclmulqdq $0, (%rdi), %xmm0 # sched: [14:5.67]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SLM-LABEL: test_pclmulqdq:
-; SLM:       # BB#0:
+; SLM:       # %bb.0:
 ; SLM-NEXT:    pclmulqdq $0, %xmm1, %xmm0 # sched: [10:10.00]
 ; SLM-NEXT:    pclmulqdq $0, (%rdi), %xmm0 # sched: [10:10.00]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_pclmulqdq:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vpclmulqdq $0, %xmm1, %xmm0, %xmm0 # sched: [14:6.00]
 ; SANDY-NEXT:    vpclmulqdq $0, (%rdi), %xmm0, %xmm0 # sched: [14:5.67]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pclmulqdq:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpclmulqdq $0, %xmm1, %xmm0, %xmm0 # sched: [11:2.00]
 ; HASWELL-NEXT:    vpclmulqdq $0, (%rdi), %xmm0, %xmm0 # sched: [11:2.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_pclmulqdq:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vpclmulqdq $0, %xmm1, %xmm0, %xmm0 # sched: [5:1.00]
 ; BROADWELL-NEXT:    vpclmulqdq $0, (%rdi), %xmm0, %xmm0 # sched: [10:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_pclmulqdq:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vpclmulqdq $0, %xmm1, %xmm0, %xmm0 # sched: [6:1.00]
 ; SKYLAKE-NEXT:    vpclmulqdq $0, (%rdi), %xmm0, %xmm0 # sched: [12:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pclmulqdq:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    vpclmulqdq $0, %xmm1, %xmm0, %xmm0 # sched: [6:1.00]
 ; SKX-NEXT:    vpclmulqdq $0, (%rdi), %xmm0, %xmm0 # sched: [12:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_pclmulqdq:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vpclmulqdq $0, %xmm1, %xmm0, %xmm0 # sched: [2:1.00]
 ; BTVER2-NEXT:    vpclmulqdq $0, (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pclmulqdq:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vpclmulqdq $0, %xmm1, %xmm0, %xmm0 # sched: [100:?]
 ; ZNVER1-NEXT:    vpclmulqdq $0, (%rdi), %xmm0, %xmm0 # sched: [100:?]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]

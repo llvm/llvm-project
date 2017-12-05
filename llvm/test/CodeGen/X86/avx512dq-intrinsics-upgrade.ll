@@ -5,7 +5,7 @@ declare <2 x double> @llvm.x86.avx512.mask.vextractf64x2.512(<8 x double>, i32, 
 
 define <2 x double>@test_int_x86_avx512_mask_vextractf64x2_512(<8 x double> %x0, <2 x double> %x2, i8 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vextractf64x2_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; CHECK-NEXT:    kmovw %edi, %k0
 ; CHECK-NEXT:    kshiftlb $7, %k0, %k1
@@ -35,7 +35,7 @@ declare <8 x float> @llvm.x86.avx512.mask.vextractf32x8.512(<16 x float>, i32, <
 
 define <8 x float>@test_int_x86_avx512_mask_vextractf32x8(<16 x float> %x0, <8 x float> %x2, i8 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vextractf32x8:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vextractf64x4 $1, %zmm0, %ymm2
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vextractf32x8 $1, %zmm0, %ymm1 {%k1}
@@ -55,7 +55,7 @@ declare <16 x float> @llvm.x86.avx512.mask.insertf32x8.512(<16 x float>, <8 x fl
 
 define <16 x float>@test_int_x86_avx512_mask_insertf32x8_512(<16 x float> %x0, <8 x float> %x1, <16 x float> %x3, i16 %x4) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_insertf32x8_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm3
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vinsertf32x8 $1, %ymm1, %zmm0, %zmm2 {%k1}
@@ -75,7 +75,7 @@ declare <8 x double> @llvm.x86.avx512.mask.insertf64x2.512(<8 x double>, <2 x do
 
 define <8 x double>@test_int_x86_avx512_mask_insertf64x2_512(<8 x double> %x0, <2 x double> %x1,<8 x double> %x3, i8 %x4) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_insertf64x2_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vinsertf32x4 $1, %xmm1, %zmm0, %zmm3
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vinsertf64x2 $1, %xmm1, %zmm0, %zmm2 {%k1}
@@ -95,7 +95,7 @@ declare <16 x i32> @llvm.x86.avx512.mask.inserti32x8.512(<16 x i32>, <8 x i32>, 
 
 define <16 x i32>@test_int_x86_avx512_mask_inserti32x8_512(<16 x i32> %x0, <8 x i32> %x1, <16 x i32> %x3, i16 %x4) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_inserti32x8_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm3
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vinserti32x8 $1, %ymm1, %zmm0, %zmm2 {%k1}
@@ -115,7 +115,7 @@ declare <8 x i64> @llvm.x86.avx512.mask.inserti64x2.512(<8 x i64>, <2 x i64>, i3
 
 define <8 x i64>@test_int_x86_avx512_mask_inserti64x2_512(<8 x i64> %x0, <2 x i64> %x1, <8 x i64> %x3, i8 %x4) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_inserti64x2_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vinserti32x4 $1, %xmm1, %zmm0, %zmm3
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vinserti64x2 $1, %xmm1, %zmm0, %zmm2 {%k1}
@@ -136,7 +136,7 @@ declare <16 x i32> @llvm.x86.avx512.cvtmask2d.512(i16)
 
 define <16 x i32>@test_int_x86_avx512_cvtmask2d_512(i16 %x0) {
 ; CHECK-LABEL: test_int_x86_avx512_cvtmask2d_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %edi, %k0
 ; CHECK-NEXT:    vpmovm2d %k0, %zmm0
 ; CHECK-NEXT:    retq
@@ -148,7 +148,7 @@ declare <8 x i64> @llvm.x86.avx512.cvtmask2q.512(i8)
 
 define <8 x i64>@test_int_x86_avx512_cvtmask2q_512(i8 %x0) {
 ; CHECK-LABEL: test_int_x86_avx512_cvtmask2q_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %edi, %k0
 ; CHECK-NEXT:    vpmovm2q %k0, %zmm0
 ; CHECK-NEXT:    retq
@@ -160,7 +160,7 @@ declare <16 x float> @llvm.x86.avx512.mask.broadcastf32x8.512(<8 x float>, <16 x
 
 define <16 x float>@test_int_x86_avx512_mask_broadcastf32x8_512(<8 x float> %x0, <16 x float> %x2, i16 %mask) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_broadcastf32x8_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    ## kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; CHECK-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm2
 ; CHECK-NEXT:    kmovw %edi, %k1
@@ -180,7 +180,7 @@ define <16 x float>@test_int_x86_avx512_mask_broadcastf32x8_512(<8 x float> %x0,
 
 define <16 x float>@test_int_x86_avx512_mask_broadcastf32x8_512_load(<8 x float>* %x0ptr, <16 x float> %x2, i16 %mask) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_broadcastf32x8_512_load:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %esi, %k1
 ; CHECK-NEXT:    vbroadcastf32x8 {{.*#+}} zmm0 {%k1} = mem[0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7]
 ; CHECK-NEXT:    retq
@@ -194,7 +194,7 @@ declare <8 x double> @llvm.x86.avx512.mask.broadcastf64x2.512(<2 x double>, <8 x
 
 define <8 x double>@test_int_x86_avx512_mask_broadcastf64x2_512(<2 x double> %x0, <8 x double> %x2, i8 %mask) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_broadcastf64x2_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    ## kill: %xmm0<def> %xmm0<kill> %ymm0<def>
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; CHECK-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm2
@@ -215,7 +215,7 @@ define <8 x double>@test_int_x86_avx512_mask_broadcastf64x2_512(<2 x double> %x0
 
 define <8 x double>@test_int_x86_avx512_mask_broadcastf64x2_512_load(<2 x double>* %x0ptr, <8 x double> %x2, i8 %mask) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_broadcastf64x2_512_load:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %esi, %k1
 ; CHECK-NEXT:    vbroadcastf64x2 {{.*#+}} zmm0 {%k1} = mem[0,1,0,1,0,1,0,1]
 ; CHECK-NEXT:    retq
@@ -229,7 +229,7 @@ declare <16 x i32> @llvm.x86.avx512.mask.broadcasti32x8.512(<8 x i32>, <16 x i32
 
 define <16 x i32>@test_int_x86_avx512_mask_broadcasti32x8_512(<8 x i32> %x0, <16 x i32> %x2, i16 %mask) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_broadcasti32x8_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    ## kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; CHECK-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm2
 ; CHECK-NEXT:    kmovw %edi, %k1
@@ -249,7 +249,7 @@ define <16 x i32>@test_int_x86_avx512_mask_broadcasti32x8_512(<8 x i32> %x0, <16
 
 define <16 x i32>@test_int_x86_avx512_mask_broadcasti32x8_512_load(<8 x i32>* %x0ptr, <16 x i32> %x2, i16 %mask) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_broadcasti32x8_512_load:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %esi, %k1
 ; CHECK-NEXT:    vbroadcasti32x8 {{.*#+}} zmm0 {%k1} = mem[0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7]
 ; CHECK-NEXT:    retq
@@ -263,7 +263,7 @@ declare <8 x i64> @llvm.x86.avx512.mask.broadcasti64x2.512(<2 x i64>, <8 x i64>,
 
 define <8 x i64>@test_int_x86_avx512_mask_broadcasti64x2_512(<2 x i64> %x0, <8 x i64> %x2, i8 %mask) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_broadcasti64x2_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    ## kill: %xmm0<def> %xmm0<kill> %ymm0<def>
 ; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
 ; CHECK-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm2
@@ -284,7 +284,7 @@ define <8 x i64>@test_int_x86_avx512_mask_broadcasti64x2_512(<2 x i64> %x0, <8 x
 
 define <8 x i64>@test_int_x86_avx512_mask_broadcasti64x2_512_load(<2 x i64>* %x0ptr, <8 x i64> %x2, i8 %mask) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_broadcasti64x2_512_load:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %esi, %k1
 ; CHECK-NEXT:    vbroadcasti64x2 {{.*#+}} zmm0 {%k1} = mem[0,1,0,1,0,1,0,1]
 ; CHECK-NEXT:    retq
@@ -298,7 +298,7 @@ declare <16 x float> @llvm.x86.avx512.mask.broadcastf32x2.512(<4 x float>, <16 x
 
 define <16 x float>@test_int_x86_avx512_mask_broadcastf32x2_512(<4 x float> %x0, <16 x float> %x2, i16 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_broadcastf32x2_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    ## kill: %xmm0<def> %xmm0<kill> %ymm0<def>
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; CHECK-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm2
@@ -320,7 +320,7 @@ declare <16 x i32> @llvm.x86.avx512.mask.broadcasti32x2.512(<4 x i32>, <16 x i32
 
 define <16 x i32>@test_int_x86_avx512_mask_broadcasti32x2_512(<4 x i32> %x0, <16 x i32> %x2, i16 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_broadcasti32x2_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    ## kill: %xmm0<def> %xmm0<kill> %ymm0<def>
 ; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
 ; CHECK-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm2

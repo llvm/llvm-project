@@ -1046,7 +1046,7 @@ define i8 @test_atomic_cmpxchg_i8(i8 zeroext %wanted, i8 zeroext %new) nounwind 
 ; CHECK-ARM-NEXT:   cmp r[[OLD]], r0
 ; CHECK-THUMB-NEXT: cmp r[[OLD]], r[[WANTED]]
 ; CHECK-NEXT: bne .LBB{{[0-9]+}}_4
-; CHECK-NEXT: BB#2:
+; CHECK-NEXT: %bb.2:
   ; As above, r1 is a reasonable guess.
 ; CHECK: strexb [[STATUS:r[0-9]+]], r1, [r[[ADDR]]]
 ; CHECK-NEXT: cmp [[STATUS]], #0
@@ -1080,7 +1080,7 @@ define i16 @test_atomic_cmpxchg_i16(i16 zeroext %wanted, i16 zeroext %new) nounw
 ; CHECK-ARM-NEXT:   cmp r[[OLD]], r0
 ; CHECK-THUMB-NEXT: cmp r[[OLD]], r[[WANTED]]
 ; CHECK-NEXT: bne .LBB{{[0-9]+}}_4
-; CHECK-NEXT: BB#2:
+; CHECK-NEXT: %bb.2:
   ; As above, r1 is a reasonable guess.
 ; CHECK: stlexh [[STATUS:r[0-9]+]], r1, [r[[ADDR]]]
 ; CHECK-NEXT: cmp [[STATUS]], #0
@@ -1113,7 +1113,7 @@ define void @test_atomic_cmpxchg_i32(i32 %wanted, i32 %new) nounwind {
   ;  function there.
 ; CHECK-NEXT: cmp r[[OLD]], r0
 ; CHECK-NEXT: bne .LBB{{[0-9]+}}_4
-; CHECK-NEXT: BB#2:
+; CHECK-NEXT: %bb.2:
   ; As above, r1 is a reasonable guess.
 ; CHECK: stlex [[STATUS:r[0-9]+]], r1, [r[[ADDR]]]
 ; CHECK-NEXT: cmp [[STATUS]], #0
@@ -1152,7 +1152,7 @@ define void @test_atomic_cmpxchg_i64(i64 %wanted, i64 %new) nounwind {
 ; CHECK-ARM-BE: orrs{{(\.w)?}} {{r[0-9]+}}, [[MISMATCH_HI]], [[MISMATCH_LO]]
 ; CHECK-THUMB-BE: orrs{{(\.w)?}} {{(r[0-9]+, )?}}[[MISMATCH_LO]], [[MISMATCH_HI]]
 ; CHECK-NEXT: bne .LBB{{[0-9]+}}_4
-; CHECK-NEXT: BB#2:
+; CHECK-NEXT: %bb.2:
   ; As above, r2, r3 is a reasonable guess.
 ; CHECK: strexd [[STATUS:r[0-9]+]], r2, r3, [r[[ADDR]]]
 ; CHECK-NEXT: cmp [[STATUS]], #0

@@ -8,14 +8,14 @@
 
 define <4 x i32> @test1(<4 x i1> %cond, <4 x i32> %x) {
 ; SSE-LABEL: test1:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    pslld $31, %xmm0
 ; SSE-NEXT:    psrad $31, %xmm0
 ; SSE-NEXT:    pandn %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test1:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpslld $31, %xmm0, %xmm0
 ; AVX-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; AVX-NEXT:    vpandn %xmm1, %xmm0, %xmm0
@@ -26,13 +26,13 @@ define <4 x i32> @test1(<4 x i1> %cond, <4 x i32> %x) {
 
 define <4 x i32> @test2(<4 x float> %a, <4 x float> %b, <4 x i32> %x) {
 ; SSE-LABEL: test2:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    cmpneqps %xmm1, %xmm0
 ; SSE-NEXT:    andps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test2:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vcmpneqps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vandps %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -43,13 +43,13 @@ define <4 x i32> @test2(<4 x float> %a, <4 x float> %b, <4 x i32> %x) {
 
 define float @fsel(float %a, float %b, float %x) {
 ; SSE-LABEL: fsel:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    cmpeqss %xmm1, %xmm0
 ; SSE-NEXT:    andnps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: fsel:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vandnps %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    retq

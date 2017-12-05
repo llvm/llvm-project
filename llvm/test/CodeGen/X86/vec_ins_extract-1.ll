@@ -7,7 +7,7 @@
 
 define i32 @t0(i32 inreg %t7, <4 x i32> inreg %t8) nounwind {
 ; X32-LABEL: t0:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebp
 ; X32-NEXT:    movl %esp, %ebp
 ; X32-NEXT:    andl $-16, %esp
@@ -21,7 +21,7 @@ define i32 @t0(i32 inreg %t7, <4 x i32> inreg %t8) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t0:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; X64-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    andl $3, %edi
@@ -35,7 +35,7 @@ define i32 @t0(i32 inreg %t7, <4 x i32> inreg %t8) nounwind {
 
 define i32 @t1(i32 inreg %t7, <4 x i32> inreg %t8) nounwind {
 ; X32-LABEL: t1:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebp
 ; X32-NEXT:    movl %esp, %ebp
 ; X32-NEXT:    andl $-16, %esp
@@ -50,7 +50,7 @@ define i32 @t1(i32 inreg %t7, <4 x i32> inreg %t8) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t1:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; X64-NEXT:    movl $76, %eax
 ; X64-NEXT:    pinsrd $0, %eax, %xmm0
@@ -65,7 +65,7 @@ define i32 @t1(i32 inreg %t7, <4 x i32> inreg %t8) nounwind {
 
 define <4 x i32> @t2(i32 inreg %t7, <4 x i32> inreg %t8) nounwind {
 ; X32-LABEL: t2:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebp
 ; X32-NEXT:    movl %esp, %ebp
 ; X32-NEXT:    andl $-16, %esp
@@ -78,7 +78,7 @@ define <4 x i32> @t2(i32 inreg %t7, <4 x i32> inreg %t8) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t2:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; X64-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    andl $3, %edi
@@ -91,7 +91,7 @@ define <4 x i32> @t2(i32 inreg %t7, <4 x i32> inreg %t8) nounwind {
 
 define <4 x i32> @t3(i32 inreg %t7, <4 x i32> inreg %t8) nounwind {
 ; X32-LABEL: t3:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebp
 ; X32-NEXT:    movl %esp, %ebp
 ; X32-NEXT:    andl $-16, %esp
@@ -105,7 +105,7 @@ define <4 x i32> @t3(i32 inreg %t7, <4 x i32> inreg %t8) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t3:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; X64-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    andl $3, %edi
