@@ -38,8 +38,8 @@
 #                                                       ^-- %lo(0x17ff0)
 
 # CHECK:      Contents of section .rodata:
-# CHECK-NEXT:  100d4 00020004
-#                    ^-- loc
+# CHECK-NEXT:  {{[0-9a-f]+}} 00020004
+#                            ^-- loc
 
 # CHECK: 00020004      .text   00000000 loc
 # CHECK: 00037ff0      .got    00000000 .hidden _gp

@@ -426,7 +426,7 @@ static std::string createResponseFile(const opt::InputArgList &Args,
     case OPT_manifestuac:
       break;
     default:
-      OS << toString(Arg) << "\n";
+      OS << toString(*Arg) << "\n";
     }
   }
 
@@ -674,7 +674,7 @@ void LinkerDriver::invokeMSVC(opt::InputArgList &Args) {
       break;
     case OPT_opt:
       if (!StringRef(Arg->getValue()).startswith("lld"))
-        Rsp += toString(Arg) + " ";
+        Rsp += toString(*Arg) + " ";
       break;
     case OPT_INPUT: {
       if (Optional<StringRef> Path = doFindFile(Arg->getValue())) {
@@ -686,7 +686,7 @@ void LinkerDriver::invokeMSVC(opt::InputArgList &Args) {
       break;
     }
     default:
-      Rsp += toString(Arg) + "\n";
+      Rsp += toString(*Arg) + "\n";
     }
   }
 
