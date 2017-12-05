@@ -134,8 +134,11 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
         }
 
         while (I != E) {
-          if (I->isDebugValue())
+          if (I->isDebugValue()) {
+            I = std::next(I);
             continue;
+          }
+
           if (I->mayStore() || I->isBarrier() || I->isCall() ||
               I->hasUnmodeledSideEffects() || I->hasOrderedMemoryRef())
             break;

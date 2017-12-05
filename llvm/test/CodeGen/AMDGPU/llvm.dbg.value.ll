@@ -1,22 +1,37 @@
-; RUN: llc -O0 -march=amdgcn -mtriple=amdgcn-unknown-amdhsa -verify-machineinstrs -mattr=-flat-for-global < %s | FileCheck %s
+; RUN: llc -O0 -march=amdgcn -mtriple=amdgcn-unknown-amdhsa -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NOOPT %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-unknown-amdhsa -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,OPT %s
 
-; CHECK-LABEL: {{^}}test_debug_value:
-; CHECK: s_load_dwordx2 s[4:5]
+; GCN-LABEL: {{^}}test_debug_value:
+; NOOPT: s_load_dwordx2 s[4:5]
 
 ; FIXME: Why is the SGPR4_SGPR5 reference being removed from DBG_VALUE?
-; CHECK: ; kill: %sgpr4_sgpr5<def> %sgpr4_sgpr5<kill>
-; CHECK-NEXT: ;DEBUG_VALUE: test_debug_value:globalptr_arg <- undef
+; NOOPT: ; kill: %sgpr8_sgpr9<def> %sgpr4_sgpr5<kill>
+; NOOPT-NEXT: ;DEBUG_VALUE: test_debug_value:globalptr_arg <- undef
 
-; CHECK: buffer_store_dword
-; CHECK: s_endpgm
+; GCN: flat_store_dword
+; GCN: s_endpgm
 define amdgpu_kernel void @test_debug_value(i32 addrspace(1)* nocapture %globalptr_arg) #0 !dbg !4 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32 addrspace(1)* %globalptr_arg, i64 0, metadata !10, metadata !13), !dbg !14
+  tail call void @llvm.dbg.value(metadata i32 addrspace(1)* %globalptr_arg, metadata !10, metadata !13), !dbg !14
   store i32 123, i32 addrspace(1)* %globalptr_arg, align 4
   ret void
 }
 
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+; Check for infinite loop in some cases with dbg_value in
+; SIOptimizeExecMaskingPreRA (somehow related to undef argument).
+
+; GCN-LABEL: {{^}}only_undef_dbg_value:
+; NOOPT: ;DEBUG_VALUE: test_debug_value:globalptr_arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef] undef
+; NOOPT-NEXT: s_endpgm
+
+; OPT: s_endpgm
+define amdgpu_kernel void @only_undef_dbg_value() #1 {
+bb:
+  call void @llvm.dbg.value(metadata <4 x float> undef, metadata !10, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)) #2, !dbg !14
+  ret void
+}
+
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 attributes #0 = { nounwind  }
 attributes #1 = { nounwind readnone }

@@ -30,7 +30,12 @@ typedef struct {
 
 static ident_t dummy_loc = {0, 2, 0, 0, ";dummyFile;dummyFunc;0;0;;"};
 
-typedef int32_t kmp_critical_name[8];
+typedef union {
+  // The global will be used as pointer, so we need to make sure that the
+  // compiler correctly aligns the global...
+  void *ptr;
+  int32_t data[8];
+} kmp_critical_name;
 kmp_critical_name crit;
 
 int32_t __kmpc_global_thread_num(ident_t *);

@@ -44,8 +44,8 @@ define void @f4(i32 %len) "backchain" {
 ; CHECK: aghi %r15, -160
 ; CHECK: stg %r1, 0(%r15)
 ; CHECK: lgr %r11, %r15
-; CHECK: lg [[BC:%r[0-9]+]], 0(%r15)
-; CHECK: lgr [[NEWSP:%r[0-9]+]], %r15
+; CHECK-DAG: lg [[BC:%r[0-9]+]], 0(%r15)
+; CHECK-DAG: lgr [[NEWSP:%r[0-9]+]], %r15
 ; CHECK: lgr %r15, [[NEWSP]]
 ; CHECK: stg [[BC]], 0([[NEWSP]])
   %ign = alloca i8, i32 %len

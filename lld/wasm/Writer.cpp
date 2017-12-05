@@ -149,7 +149,7 @@ void Writer::createImportSection() {
 
   writeUleb128(OS, NumImports, "import count");
 
-  for (Symbol *Sym : FunctionImports) {
+  for (const Symbol *Sym : FunctionImports) {
     WasmImport Import;
     Import.Module = "env";
     Import.Field = Sym->getName();
@@ -169,7 +169,7 @@ void Writer::createImportSection() {
     writeImport(OS, Import);
   }
 
-  for (Symbol *Sym : GlobalImports) {
+  for (const Symbol *Sym : GlobalImports) {
     WasmImport Import;
     Import.Module = "env";
     Import.Field = Sym->getName();
@@ -221,8 +221,12 @@ void Writer::createGlobalSection() {
   raw_ostream &OS = Section->getStream();
 
   writeUleb128(OS, NumGlobals, "global count");
-  for (auto &Pair : Config->SyntheticGlobals) {
-    WasmGlobal &Global = Pair.second;
+  for (const Symbol *Sym : Config->SyntheticGlobals) {
+    WasmGlobal Global;
+    Global.Type = WASM_TYPE_I32;
+    Global.Mutable = Sym == Config->StackPointerSymbol;
+    Global.InitExpr.Opcode = WASM_OPCODE_I32_CONST;
+    Global.InitExpr.Value.Int32 = Sym->getVirtualAddress();
     writeGlobal(OS, Global);
   }
 
@@ -507,7 +511,7 @@ void Writer::layoutMemory() {
     debugPrint("mem: stack size  = %d\n", Config->ZStackSize);
     debugPrint("mem: stack base  = %d\n", MemoryPtr);
     MemoryPtr += Config->ZStackSize;
-    Config->SyntheticGlobals[0].second.InitExpr.Value.Int32 = MemoryPtr;
+    Config->StackPointerSymbol->setVirtualAddress(MemoryPtr);
     debugPrint("mem: stack top   = %d\n", MemoryPtr);
   }
 

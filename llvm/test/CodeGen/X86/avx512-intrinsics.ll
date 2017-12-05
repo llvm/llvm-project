@@ -96,21 +96,6 @@ define i16 @test_kor(i16 %a0, i16 %a1) {
   ret i16 %t2
 }
 
-declare i16 @llvm.x86.avx512.kunpck.bw(i16, i16) nounwind readnone
-
-define i16 @unpckbw_test(i16 %a0, i16 %a1) {
-; CHECK-LABEL: unpckbw_test:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kmovw %edi, %k0
-; CHECK-NEXT:    kmovw %esi, %k1
-; CHECK-NEXT:    kunpckbw %k1, %k0, %k0
-; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
-; CHECK-NEXT:    retq
-  %res = call i16 @llvm.x86.avx512.kunpck.bw(i16 %a0, i16 %a1)
-  ret i16 %res
-}
-
 declare i16 @llvm.x86.avx512.kxnor.w(i16, i16) nounwind readnone
 ; TODO: the two kxnor instructions here a no op and should be elimintaed,
 ; probably by FoldConstantArithmetic in SelectionDAG.

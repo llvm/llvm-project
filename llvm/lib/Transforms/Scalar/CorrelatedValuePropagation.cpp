@@ -329,13 +329,15 @@ static bool processSwitch(SwitchInst *SI, LazyValueInfo *LVI) {
 // See if we can prove that the given overflow intrinsic will not overflow.
 static bool willNotOverflow(IntrinsicInst *II, LazyValueInfo *LVI) {
   using OBO = OverflowingBinaryOperator;
-  auto NoWrapOnAddition = [&] (Value *LHS, Value *RHS, unsigned NoWrapKind) {
+  auto NoWrap = [&] (Instruction::BinaryOps BinOp, unsigned NoWrapKind) {
+    Value *RHS = II->getOperand(1);
     ConstantRange RRange = LVI->getConstantRange(RHS, II->getParent(), II);
     ConstantRange NWRegion = ConstantRange::makeGuaranteedNoWrapRegion(
-        BinaryOperator::Add, RRange, NoWrapKind);
+        BinOp, RRange, NoWrapKind);
     // As an optimization, do not compute LRange if we do not need it.
     if (NWRegion.isEmptySet())
       return false;
+    Value *LHS = II->getOperand(0);
     ConstantRange LRange = LVI->getConstantRange(LHS, II->getParent(), II);
     return NWRegion.contains(LRange);
   };
@@ -343,11 +345,13 @@ static bool willNotOverflow(IntrinsicInst *II, LazyValueInfo *LVI) {
   default:
     break;
   case Intrinsic::uadd_with_overflow:
-    return NoWrapOnAddition(II->getOperand(0), II->getOperand(1),
-                            OBO::NoUnsignedWrap);
+    return NoWrap(Instruction::Add, OBO::NoUnsignedWrap);
   case Intrinsic::sadd_with_overflow:
-    return NoWrapOnAddition(II->getOperand(0), II->getOperand(1),
-                            OBO::NoSignedWrap);
+    return NoWrap(Instruction::Add, OBO::NoSignedWrap);
+  case Intrinsic::usub_with_overflow:
+    return NoWrap(Instruction::Sub, OBO::NoUnsignedWrap);
+  case Intrinsic::ssub_with_overflow:
+    return NoWrap(Instruction::Sub, OBO::NoSignedWrap);
   }
   return false;
 }
@@ -356,10 +360,15 @@ static void processOverflowIntrinsic(IntrinsicInst *II) {
   Value *NewOp = nullptr;
   switch (II->getIntrinsicID()) {
   default:
-    llvm_unreachable("Illegal instruction.");
+    llvm_unreachable("Unexpected instruction.");
   case Intrinsic::uadd_with_overflow:
   case Intrinsic::sadd_with_overflow:
     NewOp = BinaryOperator::CreateAdd(II->getOperand(0), II->getOperand(1),
+                                      II->getName(), II);
+    break;
+  case Intrinsic::usub_with_overflow:
+  case Intrinsic::ssub_with_overflow:
+    NewOp = BinaryOperator::CreateSub(II->getOperand(0), II->getOperand(1),
                                       II->getName(), II);
     break;
   }
@@ -376,7 +385,7 @@ static bool processCallSite(CallSite CS, LazyValueInfo *LVI) {
   SmallVector<unsigned, 4> ArgNos;
   unsigned ArgNo = 0;
 
-  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(CS.getInstruction())) {
+  if (auto *II = dyn_cast<IntrinsicInst>(CS.getInstruction())) {
     if (willNotOverflow(II, LVI)) {
       processOverflowIntrinsic(II);
       return true;
@@ -556,7 +565,7 @@ static bool runImpl(Function &F, LazyValueInfo *LVI, const SimplifyQuery &SQ) {
   // blocks before querying later blocks (which require us to analyze early
   // blocks).  Eagerly simplifying shallow blocks means there is strictly less
   // work to do for deep blocks.  This also means we don't visit unreachable
-  // blocks. 
+  // blocks.
   for (BasicBlock *BB : depth_first(&F.getEntryBlock())) {
     bool BBChanged = false;
     for (BasicBlock::iterator BI = BB->begin(), BE = BB->end(); BI != BE;) {
