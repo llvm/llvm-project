@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fmodules -std=c++14 -emit-llvm %s -o - -triple %itanium_abi_triple | FileCheck %s
+// RUN: %clang_cc1 -fmodules -std=c++14 -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s
 
 #pragma clang module build A
 module A {}
