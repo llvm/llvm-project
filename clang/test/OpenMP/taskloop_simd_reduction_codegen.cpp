@@ -51,6 +51,7 @@ sum = 0.0;
 // CHECK:    [[AGG_CAPTURED:%.*]] = alloca [[STRUCT_ANON:%.*]],
 // CHECK:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%ident_t*
 // CHECK:    [[DOTRD_INPUT_:%.*]] = alloca [4 x %struct.kmp_task_red_input_t],
+// CHECK:    alloca i32,
 // CHECK:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32,
 // CHECK:    [[DOTCAPTURE_EXPR_9:%.*]] = alloca i32,
 // CHECK:    store i32 0, i32* [[RETVAL]],

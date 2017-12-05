@@ -1,4 +1,4 @@
-//===--- Preprocess.cpp - C Language Family Preprocessor Implementation ---===//
+//===- Preprocess.cpp - C Language Family Preprocessor Implementation -----===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -28,22 +28,33 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/FileSystemStatCache.h"
+#include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/LangOptions.h"
+#include "clang/Basic/Module.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/CodeCompletionHandler.h"
 #include "clang/Lex/ExternalPreprocessorSource.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/LexDiagnostic.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/Lex/LiteralSupport.h"
 #include "clang/Lex/MacroArgs.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/ModuleLoader.h"
+#include "clang/Lex/PTHLexer.h"
 #include "clang/Lex/PTHManager.h"
 #include "clang/Lex/Pragma.h"
 #include "clang/Lex/PreprocessingRecord.h"
+#include "clang/Lex/PreprocessorLexer.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Lex/ScratchBuffer.h"
+#include "clang/Lex/Token.h"
+#include "clang/Lex/TokenLexer.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -65,8 +76,7 @@ using namespace clang;
 
 LLVM_INSTANTIATE_REGISTRY(PragmaHandlerRegistry)
 
-//===----------------------------------------------------------------------===//
-ExternalPreprocessorSource::~ExternalPreprocessorSource() { }
+ExternalPreprocessorSource::~ExternalPreprocessorSource() = default;
 
 Preprocessor::Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
                            DiagnosticsEngine &diags, LangOptions &opts,
@@ -74,33 +84,15 @@ Preprocessor::Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
                            HeaderSearch &Headers, ModuleLoader &TheModuleLoader,
                            IdentifierInfoLookup *IILookup, bool OwnsHeaders,
                            TranslationUnitKind TUKind)
-    : PPOpts(std::move(PPOpts)), Diags(&diags), LangOpts(opts), Target(nullptr),
-      AuxTarget(nullptr), FileMgr(Headers.getFileMgr()), SourceMgr(SM),
+    : PPOpts(std::move(PPOpts)), Diags(&diags), LangOpts(opts),
+      FileMgr(Headers.getFileMgr()), SourceMgr(SM),
       PCMCache(PCMCache), ScratchBuf(new ScratchBuffer(SourceMgr)),
       HeaderInfo(Headers), TheModuleLoader(TheModuleLoader),
       ExternalSource(nullptr), Identifiers(opts, IILookup),
-      PragmaHandlers(new PragmaNamespace(StringRef())),
-      IncrementalProcessing(false), TUKind(TUKind), CodeComplete(nullptr),
-      CodeCompletionFile(nullptr), CodeCompletionOffset(0),
-      LastTokenWasAt(false), ModuleImportExpectsIdentifier(false),
-      CodeCompletionReached(false), CodeCompletionII(nullptr),
-      MainFileDir(nullptr), SkipMainFilePreamble(0, true), CurPPLexer(nullptr),
-      CurDirLookup(nullptr), CurLexerKind(CLK_Lexer),
-      CurLexerSubmodule(nullptr), Callbacks(nullptr),
-      CurSubmoduleState(&NullSubmoduleState), MacroArgCache(nullptr),
-      Record(nullptr), MIChainHead(nullptr) {
+      PragmaHandlers(new PragmaNamespace(StringRef())), TUKind(TUKind),
+      SkipMainFilePreamble(0, true),
+      CurSubmoduleState(&NullSubmoduleState) {
   OwnsHeaderSearch = OwnsHeaders;
-  
-  CounterValue = 0; // __COUNTER__ starts at 0.
-  
-  // Clear stats.
-  NumDirectives = NumDefined = NumUndefined = NumPragma = 0;
-  NumIf = NumElse = NumEndif = 0;
-  NumEnteredSourceFiles = 0;
-  NumMacroExpanded = NumFnMacroExpanded = NumBuiltinMacroExpanded = 0;
-  NumFastMacroExpanded = NumTokenPaste = NumFastTokenPaste = 0;
-  MaxIncludeStackDepth = 0;
-  NumSkipped = 0;
   
   // Default to discarding comments.
   KeepComments = false;
@@ -116,8 +108,6 @@ Preprocessor::Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
   PragmasEnabled = true;
   ParsingIfOrElifDirective = false;
   PreprocessedOutput = false;
-
-  CachedLexPos = 0;
 
   // We haven't read anything from the external source.
   ReadMacrosFromExternalSource = false;
@@ -599,7 +589,7 @@ IdentifierInfo *Preprocessor::LookUpIdentifierInfo(Token &Identifier) const {
   Identifier.setIdentifierInfo(II);
   if (getLangOpts().MSVCCompat && II->isCPlusPlusOperatorKeyword() &&
       getSourceManager().isInSystemHeader(Identifier.getLocation()))
-    Identifier.setKind(clang::tok::identifier);
+    Identifier.setKind(tok::identifier);
   else
     Identifier.setKind(II->getTokenID());
 
@@ -941,8 +931,8 @@ void Preprocessor::addCommentHandler(CommentHandler *Handler) {
 }
 
 void Preprocessor::removeCommentHandler(CommentHandler *Handler) {
-  std::vector<CommentHandler *>::iterator Pos
-  = std::find(CommentHandlers.begin(), CommentHandlers.end(), Handler);
+  std::vector<CommentHandler *>::iterator Pos =
+      std::find(CommentHandlers.begin(), CommentHandlers.end(), Handler);
   assert(Pos != CommentHandlers.end() && "Comment handler not registered");
   CommentHandlers.erase(Pos);
 }
@@ -961,11 +951,11 @@ bool Preprocessor::HandleComment(Token &result, SourceRange Comment) {
   return true;
 }
 
-ModuleLoader::~ModuleLoader() { }
+ModuleLoader::~ModuleLoader() = default;
 
-CommentHandler::~CommentHandler() { }
+CommentHandler::~CommentHandler() = default;
 
-CodeCompletionHandler::~CodeCompletionHandler() { }
+CodeCompletionHandler::~CodeCompletionHandler() = default;
 
 void Preprocessor::createPreprocessingRecord() {
   if (Record)

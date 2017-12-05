@@ -267,3 +267,7 @@
 // CHECK-ARM64-MINGW: #define _WIN32 1
 // CHECK-ARM64-MINGW: #define _WIN64 1
 // CHECK-ARM64-MINGW: #define __aarch64__ 1
+
+// RUN: %clang_cc1 %s -E -dM -o - -x cl -triple spir-unknown-unknown \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-SPIR
+// CHECK-SPIR: #define __IMAGE_SUPPORT__ 1

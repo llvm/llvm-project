@@ -170,7 +170,7 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
     C.Deallocate(data().getBases());
 
   if (NumBases) {
-    if (!C.getLangOpts().CPlusPlus1z) {
+    if (!C.getLangOpts().CPlusPlus17) {
       // C++ [dcl.init.aggr]p1:
       //   An aggregate is [...] a class with [...] no base classes [...].
       data().Aggregate = false;

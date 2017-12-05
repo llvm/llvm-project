@@ -3631,7 +3631,7 @@ ResolveConstructorOverload(Sema &S, SourceLocation DeclLoc,
   //
   // Note: SecondStepOfCopyInit is only ever true in this case when
   // evaluating whether to produce a C++98 compatibility warning.
-  if (S.getLangOpts().CPlusPlus1z && Args.size() == 1 &&
+  if (S.getLangOpts().CPlusPlus17 && Args.size() == 1 &&
       !SecondStepOfCopyInit) {
     Expr *Initializer = Args[0];
     auto *SourceRD = Initializer->getType()->getAsCXXRecordDecl();
@@ -3701,7 +3701,7 @@ static void TryConstructorInitialization(Sema &S,
     return;
   }
 
-  // C++1z [dcl.init]p17:
+  // C++17 [dcl.init]p17:
   //     - If the initializer expression is a prvalue and the cv-unqualified
   //       version of the source type is the same class as the class of the
   //       destination, the initializer expression is used to initialize the
@@ -3710,7 +3710,7 @@ static void TryConstructorInitialization(Sema &S,
   // class or delegating to another constructor from a mem-initializer.
   // ObjC++: Lambda captured by the block in the lambda to block conversion
   // should avoid copy elision.
-  if (S.getLangOpts().CPlusPlus1z &&
+  if (S.getLangOpts().CPlusPlus17 &&
       Entity.getKind() != InitializedEntity::EK_Base &&
       Entity.getKind() != InitializedEntity::EK_Delegating &&
       Entity.getKind() !=
@@ -4078,7 +4078,7 @@ static void TryListInitialization(Sema &S,
     //     value T(v); if a narrowing conversion is required to convert v to
     //     the underlying type of T, the program is ill-formed.
     auto *ET = DestType->getAs<EnumType>();
-    if (S.getLangOpts().CPlusPlus1z &&
+    if (S.getLangOpts().CPlusPlus17 &&
         Kind.getKind() == InitializationKind::IK_DirectList &&
         ET && ET->getDecl()->isFixed() &&
         !S.Context.hasSameUnqualifiedType(E->getType(), DestType) &&
@@ -4511,7 +4511,7 @@ static void TryReferenceInitializationCore(Sema &S,
         RefRelationship == Sema::Ref_Related)) &&
       ((InitCategory.isXValue() && !isNonReferenceableGLValue(Initializer)) ||
        (InitCategory.isPRValue() &&
-        (S.getLangOpts().CPlusPlus1z || T2->isRecordType() ||
+        (S.getLangOpts().CPlusPlus17 || T2->isRecordType() ||
          T2->isArrayType())))) {
     ExprValueKind ValueKind = InitCategory.isXValue() ? VK_XValue : VK_RValue;
     if (InitCategory.isPRValue() && T2->isRecordType()) {
@@ -4887,7 +4887,7 @@ static void TryUserDefinedConversion(Sema &S,
     //     copy-initialization.
     // Note that this just performs a simple object copy from the temporary.
     //
-    // C++1z:
+    // C++17:
     //   - if the function is a constructor, the call is a prvalue of the
     //     cv-unqualified version of the destination type whose return object
     //     is initialized by the constructor. The call is used to
@@ -4896,7 +4896,7 @@ static void TryUserDefinedConversion(Sema &S,
     // Therefore we need to do nothing further.
     //
     // FIXME: Mark this copy as extraneous.
-    if (!S.getLangOpts().CPlusPlus1z)
+    if (!S.getLangOpts().CPlusPlus17)
       Sequence.AddFinalCopy(DestType);
     else if (DestType.hasQualifiers())
       Sequence.AddQualificationConversionStep(DestType, VK_RValue);
@@ -4912,13 +4912,13 @@ static void TryUserDefinedConversion(Sema &S,
     //   The call is used to direct-initialize [...] the object that is the
     //   destination of the copy-initialization.
     //
-    // In C++1z, this does not call a constructor if we enter /17.6.1:
+    // In C++17, this does not call a constructor if we enter /17.6.1:
     //   - If the initializer expression is a prvalue and the cv-unqualified
     //     version of the source type is the same as the class of the
     //     destination [... do not make an extra copy]
     //
     // FIXME: Mark this copy as extraneous.
-    if (!S.getLangOpts().CPlusPlus1z ||
+    if (!S.getLangOpts().CPlusPlus17 ||
         Function->getReturnType()->isReferenceType() ||
         !S.Context.hasSameUnqualifiedType(ConvType, DestType))
       Sequence.AddFinalCopy(DestType);

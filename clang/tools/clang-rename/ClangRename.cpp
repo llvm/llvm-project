@@ -138,7 +138,7 @@ int main(int argc, const char **argv) {
   // Check if NewNames is a valid identifier in C++17.
   LangOptions Options;
   Options.CPlusPlus = true;
-  Options.CPlusPlus1z = true;
+  Options.CPlusPlus17 = true;
   IdentifierTable Table(Options);
   for (const auto &NewName : NewNames) {
     auto NewNameTokKind = Table.get(NewName).getTokenID();
