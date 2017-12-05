@@ -404,6 +404,7 @@ INTERCEPTORS_STRTO_BASE(long, strtol, char)                  // NOLINT
 INTERCEPTORS_STRTO_BASE(long long, strtoll, char)            // NOLINT
 INTERCEPTORS_STRTO_BASE(unsigned long, strtoul, char)        // NOLINT
 INTERCEPTORS_STRTO_BASE(unsigned long long, strtoull, char)  // NOLINT
+INTERCEPTORS_STRTO_BASE(u64, strtouq, char)                  // NOLINT
 
 INTERCEPTORS_STRTO(double, wcstod, wchar_t)                     // NOLINT
 INTERCEPTORS_STRTO(float, wcstof, wchar_t)                      // NOLINT
@@ -1533,6 +1534,7 @@ void InitializeInterceptors() {
   INTERCEPT_STRTO(strtoul);
   INTERCEPT_STRTO(strtoll);
   INTERCEPT_STRTO(strtoull);
+  INTERCEPT_STRTO(strtouq);
   INTERCEPT_STRTO(wcstod);
   INTERCEPT_STRTO(wcstof);
   INTERCEPT_STRTO(wcstold);
