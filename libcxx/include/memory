@@ -4265,6 +4265,7 @@ template<class ..._Args>
 shared_ptr<_Tp>
 shared_ptr<_Tp>::make_shared(_Args&& ...__args)
 {
+    static_assert( is_constructible<_Tp, _Args...>::value, "Can't construct object in make_shared" );
     typedef __shared_ptr_emplace<_Tp, allocator<_Tp> > _CntrlBlk;
     typedef allocator<_CntrlBlk> _A2;
     typedef __allocator_destructor<_A2> _D2;
@@ -4283,6 +4284,7 @@ template<class _Alloc, class ..._Args>
 shared_ptr<_Tp>
 shared_ptr<_Tp>::allocate_shared(const _Alloc& __a, _Args&& ...__args)
 {
+    static_assert( is_constructible<_Tp, _Args...>::value, "Can't construct object in allocate_shared" );
     typedef __shared_ptr_emplace<_Tp, _Alloc> _CntrlBlk;
     typedef typename __allocator_traits_rebind<_Alloc, _CntrlBlk>::type _A2;
     typedef __allocator_destructor<_A2> _D2;
@@ -4303,6 +4305,7 @@ template<class _Tp>
 shared_ptr<_Tp>
 shared_ptr<_Tp>::make_shared()
 {
+    static_assert((is_constructible<_Tp>::value), "Can't construct object in make_shared" );
     typedef __shared_ptr_emplace<_Tp, allocator<_Tp> > _CntrlBlk;
     typedef allocator<_CntrlBlk> _Alloc2;
     typedef __allocator_destructor<_Alloc2> _D2;
@@ -4321,6 +4324,7 @@ template<class _A0>
 shared_ptr<_Tp>
 shared_ptr<_Tp>::make_shared(_A0& __a0)
 {
+    static_assert((is_constructible<_Tp, _A0>::value), "Can't construct object in make_shared" );
     typedef __shared_ptr_emplace<_Tp, allocator<_Tp> > _CntrlBlk;
     typedef allocator<_CntrlBlk> _Alloc2;
     typedef __allocator_destructor<_Alloc2> _D2;
@@ -4339,6 +4343,7 @@ template<class _A0, class _A1>
 shared_ptr<_Tp>
 shared_ptr<_Tp>::make_shared(_A0& __a0, _A1& __a1)
 {
+    static_assert((is_constructible<_Tp, _A0, _A1>::value), "Can't construct object in make_shared" );
     typedef __shared_ptr_emplace<_Tp, allocator<_Tp> > _CntrlBlk;
     typedef allocator<_CntrlBlk> _Alloc2;
     typedef __allocator_destructor<_Alloc2> _D2;
@@ -4357,6 +4362,7 @@ template<class _A0, class _A1, class _A2>
 shared_ptr<_Tp>
 shared_ptr<_Tp>::make_shared(_A0& __a0, _A1& __a1, _A2& __a2)
 {
+    static_assert((is_constructible<_Tp, _A0, _A1, _A2>::value), "Can't construct object in make_shared" );
     typedef __shared_ptr_emplace<_Tp, allocator<_Tp> > _CntrlBlk;
     typedef allocator<_CntrlBlk> _Alloc2;
     typedef __allocator_destructor<_Alloc2> _D2;
@@ -4375,6 +4381,7 @@ template<class _Alloc>
 shared_ptr<_Tp>
 shared_ptr<_Tp>::allocate_shared(const _Alloc& __a)
 {
+    static_assert((is_constructible<_Tp>::value), "Can't construct object in allocate_shared" );
     typedef __shared_ptr_emplace<_Tp, _Alloc> _CntrlBlk;
     typedef typename __allocator_traits_rebind<_Alloc, _CntrlBlk>::type _Alloc2;
     typedef __allocator_destructor<_Alloc2> _D2;
@@ -4394,6 +4401,7 @@ template<class _Alloc, class _A0>
 shared_ptr<_Tp>
 shared_ptr<_Tp>::allocate_shared(const _Alloc& __a, _A0& __a0)
 {
+    static_assert((is_constructible<_Tp, _A0>::value), "Can't construct object in allocate_shared" );
     typedef __shared_ptr_emplace<_Tp, _Alloc> _CntrlBlk;
     typedef typename __allocator_traits_rebind<_Alloc, _CntrlBlk>::type _Alloc2;
     typedef __allocator_destructor<_Alloc2> _D2;
@@ -4413,6 +4421,7 @@ template<class _Alloc, class _A0, class _A1>
 shared_ptr<_Tp>
 shared_ptr<_Tp>::allocate_shared(const _Alloc& __a, _A0& __a0, _A1& __a1)
 {
+    static_assert((is_constructible<_Tp, _A0, _A1>::value), "Can't construct object in allocate_shared" );
     typedef __shared_ptr_emplace<_Tp, _Alloc> _CntrlBlk;
     typedef typename __allocator_traits_rebind<_Alloc, _CntrlBlk>::type _Alloc2;
     typedef __allocator_destructor<_Alloc2> _D2;
@@ -4432,6 +4441,7 @@ template<class _Alloc, class _A0, class _A1, class _A2>
 shared_ptr<_Tp>
 shared_ptr<_Tp>::allocate_shared(const _Alloc& __a, _A0& __a0, _A1& __a1, _A2& __a2)
 {
+    static_assert((is_constructible<_Tp, _A0, _A1, _A2>::value), "Can't construct object in allocate_shared" );
     typedef __shared_ptr_emplace<_Tp, _Alloc> _CntrlBlk;
     typedef typename __allocator_traits_rebind<_Alloc, _CntrlBlk>::type _Alloc2;
     typedef __allocator_destructor<_Alloc2> _D2;

@@ -96,7 +96,8 @@ private:
   // before ClangdServer.
   DirectoryBasedGlobalCompilationDatabase CDB;
   RealFileSystemProvider FSProvider;
-
+  /// Options used for code completion
+  clangd::CodeCompleteOptions CCOpts;
   // Server must be the last member of the class to allow its destructor to exit
   // the worker thread that may otherwise run an async callback on partially
   // destructed instance of ClangdLSPServer.

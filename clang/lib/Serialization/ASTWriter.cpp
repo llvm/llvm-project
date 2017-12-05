@@ -5135,9 +5135,13 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
       case UPD_CXX_ADDED_FUNCTION_DEFINITION:
         break;
 
-      case UPD_CXX_INSTANTIATED_STATIC_DATA_MEMBER: {
-        const VarDecl *VD = cast<VarDecl>(D);
+      case UPD_CXX_POINT_OF_INSTANTIATION:
+        // FIXME: Do we need to also save the template specialization kind here?
         Record.AddSourceLocation(Update.getLoc());
+        break;
+
+      case UPD_CXX_ADDED_VAR_DEFINITION: {
+        const VarDecl *VD = cast<VarDecl>(D);
         Record.push_back(VD->isInline());
         Record.push_back(VD->isInlineSpecified());
         if (VD->getInit()) {
@@ -6256,6 +6260,15 @@ void ASTWriter::CompletedImplicitDefinition(const FunctionDecl *D) {
   DeclUpdates[D].push_back(DeclUpdate(UPD_CXX_ADDED_FUNCTION_DEFINITION));
 }
 
+void ASTWriter::VariableDefinitionInstantiated(const VarDecl *D) {
+  if (Chain && Chain->isProcessingUpdateRecords()) return;
+  assert(!WritingAST && "Already writing the AST!");
+  if (!D->isFromASTFile())
+    return;
+
+  DeclUpdates[D].push_back(DeclUpdate(UPD_CXX_ADDED_VAR_DEFINITION));
+}
+
 void ASTWriter::FunctionDefinitionInstantiated(const FunctionDecl *D) {
   if (Chain && Chain->isProcessingUpdateRecords()) return;
   assert(!WritingAST && "Already writing the AST!");
@@ -6265,7 +6278,7 @@ void ASTWriter::FunctionDefinitionInstantiated(const FunctionDecl *D) {
   DeclUpdates[D].push_back(DeclUpdate(UPD_CXX_ADDED_FUNCTION_DEFINITION));
 }
 
-void ASTWriter::StaticDataMemberInstantiated(const VarDecl *D) {
+void ASTWriter::InstantiationRequested(const ValueDecl *D) {
   if (Chain && Chain->isProcessingUpdateRecords()) return;
   assert(!WritingAST && "Already writing the AST!");
   if (!D->isFromASTFile())
@@ -6273,9 +6286,12 @@ void ASTWriter::StaticDataMemberInstantiated(const VarDecl *D) {
 
   // Since the actual instantiation is delayed, this really means that we need
   // to update the instantiation location.
-  DeclUpdates[D].push_back(
-      DeclUpdate(UPD_CXX_INSTANTIATED_STATIC_DATA_MEMBER,
-       D->getMemberSpecializationInfo()->getPointOfInstantiation()));
+  SourceLocation POI;
+  if (auto *VD = dyn_cast<VarDecl>(D))
+    POI = VD->getPointOfInstantiation();
+  else
+    POI = cast<FunctionDecl>(D)->getPointOfInstantiation();
+  DeclUpdates[D].push_back(DeclUpdate(UPD_CXX_POINT_OF_INSTANTIATION, POI));
 }
 
 void ASTWriter::DefaultArgumentInstantiated(const ParmVarDecl *D) {

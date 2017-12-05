@@ -874,8 +874,8 @@ define <8 x i32>@test28(<8 x i64> %x, <8 x i64> %y, <8 x i64> %x1, <8 x i64> %y1
 ; KNL-NEXT:    vpcmpgtq %zmm1, %zmm0, %k0
 ; KNL-NEXT:    vpcmpgtq %zmm3, %zmm2, %k1
 ; KNL-NEXT:    kxnorw %k1, %k0, %k1
-; KNL-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    vpmovqd %zmm0, %ymm0
+; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; KNL-NEXT:    ## kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test28:

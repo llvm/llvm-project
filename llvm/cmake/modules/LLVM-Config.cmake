@@ -99,9 +99,9 @@ function(explicit_llvm_config executable)
 
   llvm_map_components_to_libnames(LIBRARIES ${link_components})
   get_target_property(t ${executable} TYPE)
-  if("x${t}" STREQUAL "xSTATIC_LIBRARY")
+  if(t STREQUAL "STATIC_LIBRARY")
     target_link_libraries(${executable} INTERFACE ${LIBRARIES})
-  elseif("x${t}" STREQUAL "xSHARED_LIBRARY" OR "x${t}" STREQUAL "xMODULE_LIBRARY")
+  elseif(t STREQUAL "SHARED_LIBRARY" OR t STREQUAL "MODULE_LIBRARY")
     target_link_libraries(${executable} PRIVATE ${LIBRARIES})
   else()
     # Use plain form for legacy user.

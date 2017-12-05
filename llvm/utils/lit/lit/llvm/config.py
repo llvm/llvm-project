@@ -228,7 +228,8 @@ class LLVMConfig(object):
             minor_version_number = int(version_regex.group(2))
             patch_version_number = int(version_regex.group(3))
             if 'Apple LLVM' in version_string:
-                return major_version_number >= 9 and (minor_version_number > 0 or patch_version_number > 0)
+                # Apple LLVM doesn't yet support LSan
+                return False
             else:
                 return major_version_number >= 5
 

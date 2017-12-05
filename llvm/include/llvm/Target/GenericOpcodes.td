@@ -484,28 +484,6 @@ def G_STORE : GenericInstruction {
   let mayStore = 1;
 }
 
-// Generic atomic load. Expects a MachineMemOperand in addition to explicit
-// operands. Technically, we could have handled this as a G_LOAD, however we
-// decided to keep it separate on the basis that atomic loads tend to have
-// very different handling to non-atomic loads.
-def G_ATOMIC_LOAD : GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins ptype1:$addr);
-  let hasSideEffects = 0;
-  let mayLoad = 1;
-}
-
-// Generic atomic store. Expects a MachineMemOperand in addition to explicit
-// operands. Technically, we could have handled this as a G_STORE, however we
-// decided to keep it separate on the basis that atomic stores tend to have
-// very different handling to non-atomic stores.
-def G_ATOMIC_STORE : GenericInstruction {
-  let OutOperandList = (outs);
-  let InOperandList = (ins type0:$src, ptype1:$addr);
-  let hasSideEffects = 0;
-  let mayStore = 1;
-}
-
 // Generic atomic cmpxchg with internal success check. Expects a
 // MachineMemOperand in addition to explicit operands.
 def G_ATOMIC_CMPXCHG_WITH_SUCCESS : GenericInstruction {

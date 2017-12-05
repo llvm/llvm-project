@@ -2919,21 +2919,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_MLOAD(MaskedLoadSDNode *N) {
   if (getTypeAction(MaskVT) == TargetLowering::TypeWidenVector)
     Mask = GetWidenedVector(Mask);
   else {
-    EVT BoolVT = getSetCCResultType(WidenVT);
-
-    // We can't use ModifyToType() because we should fill the mask with
-    // zeroes
-    unsigned WidenNumElts = BoolVT.getVectorNumElements();
-    unsigned MaskNumElts = MaskVT.getVectorNumElements();
-
-    unsigned NumConcat = WidenNumElts / MaskNumElts;
-    SmallVector<SDValue, 16> Ops(NumConcat);
-    SDValue ZeroVal = DAG.getConstant(0, dl, MaskVT);
-    Ops[0] = Mask;
-    for (unsigned i = 1; i != NumConcat; ++i)
-      Ops[i] = ZeroVal;
-
-    Mask = DAG.getNode(ISD::CONCAT_VECTORS, dl, BoolVT, Ops);
+    Mask = WidenTargetBoolean(Mask, WidenVT, true);
   }
 
   SDValue Res = DAG.getMaskedLoad(WidenVT, dl, N->getChain(), N->getBasePtr(),
@@ -3571,20 +3557,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_MSTORE(SDNode *N, unsigned OpNo) {
     Mask = GetWidenedVector(Mask);
   else {
     // The mask should be widened as well.
-    EVT BoolVT = getSetCCResultType(WideVal.getValueType());
-    // We can't use ModifyToType() because we should fill the mask with
-    // zeroes.
-    unsigned WidenNumElts = BoolVT.getVectorNumElements();
-    unsigned MaskNumElts = MaskVT.getVectorNumElements();
-
-    unsigned NumConcat = WidenNumElts / MaskNumElts;
-    SmallVector<SDValue, 16> Ops(NumConcat);
-    SDValue ZeroVal = DAG.getConstant(0, dl, MaskVT);
-    Ops[0] = Mask;
-    for (unsigned i = 1; i != NumConcat; ++i)
-      Ops[i] = ZeroVal;
-
-    Mask = DAG.getNode(ISD::CONCAT_VECTORS, dl, BoolVT, Ops);
+    Mask = WidenTargetBoolean(Mask, WideVal.getValueType(), true);
   }
   assert(Mask.getValueType().getVectorNumElements() ==
          WideVal.getValueType().getVectorNumElements() &&

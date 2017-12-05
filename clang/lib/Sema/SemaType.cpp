@@ -7268,32 +7268,28 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
 void Sema::completeExprArrayBound(Expr *E) {
   if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParens())) {
     if (VarDecl *Var = dyn_cast<VarDecl>(DRE->getDecl())) {
-      if (isTemplateInstantiation(Var->getTemplateSpecializationKind())) {
+      if (isTemplateInstantiation(Var->getTemplateSpecializationKind()) &&
+          !Var->getDefinition()) {
         SourceLocation PointOfInstantiation = E->getExprLoc();
-
-        if (MemberSpecializationInfo *MSInfo =
-                Var->getMemberSpecializationInfo()) {
-          // If we don't already have a point of instantiation, this is it.
-          if (MSInfo->getPointOfInstantiation().isInvalid()) {
-            MSInfo->setPointOfInstantiation(PointOfInstantiation);
-
-            // This is a modification of an existing AST node. Notify
-            // listeners.
-            if (ASTMutationListener *L = getASTMutationListener())
-              L->StaticDataMemberInstantiated(Var);
-          }
-        } else {
-          VarTemplateSpecializationDecl *VarSpec =
-              cast<VarTemplateSpecializationDecl>(Var);
-          if (VarSpec->getPointOfInstantiation().isInvalid())
-            VarSpec->setPointOfInstantiation(PointOfInstantiation);
-        }
-
         InstantiateVariableDefinition(PointOfInstantiation, Var);
+        auto *Def = Var->getDefinition();
+
+        // If we don't already have a point of instantiation, and we managed to
+        // instantiate a definition, this is the point of instantiation.
+        // Otherwise, we don't request an end-of-TU instantiation, so this is
+        // not a point of instantiation.
+        // FIXME: Is this really the right behavior?
+        if (Var->getPointOfInstantiation().isInvalid() && Def) {
+          assert(Var->getTemplateSpecializationKind() ==
+                     TSK_ImplicitInstantiation &&
+                 "explicit instantiation with no point of instantiation");
+          Var->setTemplateSpecializationKind(
+              Var->getTemplateSpecializationKind(), PointOfInstantiation);
+        }
 
         // Update the type to the newly instantiated definition's type both
         // here and within the expression.
-        if (VarDecl *Def = Var->getDefinition()) {
+        if (Def) {
           DRE->setDecl(Def);
           QualType T = Def->getType();
           DRE->setType(T);
