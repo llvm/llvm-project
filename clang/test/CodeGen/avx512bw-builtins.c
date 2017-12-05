@@ -1626,16 +1626,26 @@ __m512i test_mm512_maskz_set1_epi8(__mmask64 __M, char __A) {
   return _mm512_maskz_set1_epi8(__M, __A); 
 }
 
-__mmask64 test_mm512_kunpackd(__mmask64 __A, __mmask64 __B) {
+__mmask64 test_mm512_kunpackd(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: @test_mm512_kunpackd
-  // CHECK: @llvm.x86.avx512.kunpck.dq
-  return _mm512_kunpackd(__A, __B); 
+  // CHECK: bitcast <64 x i1> %{{.*}} to i64
+  // CHECK: bitcast <64 x i1> %{{.*}} to i64
+  // CHECK: and i64 %{{.*}}, 4294967295
+  // CHECK: shl i64 %{{.*}}, 32
+  // CHECK: or i64 %{{.*}}, %{{.*}}
+  // CHECK: bitcast i64 %{{.*}} to <64 x i1>
+  return _mm512_mask_cmpneq_epu8_mask(_mm512_kunpackd(_mm512_cmpneq_epu8_mask(__B, __A),_mm512_cmpneq_epu8_mask(__C, __D)), __E, __F); 
 }
 
-__mmask32 test_mm512_kunpackw(__mmask32 __A, __mmask32 __B) {
+__mmask32 test_mm512_kunpackw(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: @test_mm512_kunpackw
-  // CHECK: @llvm.x86.avx512.kunpck.wd
-  return _mm512_kunpackw(__A, __B); 
+  // CHECK: bitcast <32 x i1> %{{.*}} to i32
+  // CHECK: bitcast <32 x i1> %{{.*}} to i32
+  // CHECK: and i32 %{{.*}}, 65535
+  // CHECK: shl i32 %{{.*}}, 16
+  // CHECK: or i32 %{{.*}}, %{{.*}}
+  // CHECK: bitcast i32 %{{.*}} to <32 x i1>
+  return _mm512_mask_cmpneq_epu16_mask(_mm512_kunpackw(_mm512_cmpneq_epu16_mask(__B, __A),_mm512_cmpneq_epu16_mask(__C, __D)), __E, __F); 
 }
 
 __m512i test_mm512_mask_loadu_epi16(__m512i __W, __mmask32 __U, void const *__P) {

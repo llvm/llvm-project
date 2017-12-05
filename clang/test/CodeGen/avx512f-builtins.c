@@ -6241,10 +6241,17 @@ int test_mm512_kortestz(__mmask16 __A, __mmask16 __B) {
   return _mm512_kortestz(__A, __B); 
 }
 
-__mmask16 test_mm512_kunpackb(__mmask16 __A, __mmask16 __B) {
+__mmask16 test_mm512_kunpackb(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: @test_mm512_kunpackb
-  // CHECK: @llvm.x86.avx512.kunpck.bw
-  return _mm512_kunpackb(__A, __B); 
+  // CHECK: bitcast <16 x i1> %{{.*}} to i16
+  // CHECK: bitcast <16 x i1> %{{.*}} to i16
+  // CHECK: and i32 %{{.*}}, 255
+  // CHECK: shl i32 %{{.*}}, 8
+  // CHECK: or i32 %{{.*}}, %{{.*}}
+  // CHECK: bitcast i16 %{{.*}} to <16 x i1>
+  return _mm512_mask_cmpneq_epu32_mask(_mm512_kunpackb(_mm512_cmpneq_epu32_mask(__A, __B),
+                                                       _mm512_cmpneq_epu32_mask(__C, __D)),
+                                                       __E, __F);
 }
 
 __mmask16 test_mm512_kxnor(__mmask16 __A, __mmask16 __B) {
