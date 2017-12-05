@@ -615,16 +615,18 @@ define <8 x i1> @test_cmp_v8f64(<8 x double> %a0, <8 x double> %a1) nounwind {
 ; AVX512F-LABEL: test_cmp_v8f64:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vcmpltpd %zmm0, %zmm1, %k1
-; AVX512F-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; AVX512F-NEXT:    vpmovqw %zmm0, %xmm0
+; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vpmovdw %zmm0, %ymm0
+; AVX512F-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: test_cmp_v8f64:
 ; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    vcmpltpd %zmm0, %zmm1, %k0
-; AVX512DQ-NEXT:    vpmovm2q %k0, %zmm0
-; AVX512DQ-NEXT:    vpmovqw %zmm0, %xmm0
+; AVX512DQ-NEXT:    vpmovm2d %k0, %zmm0
+; AVX512DQ-NEXT:    vpmovdw %zmm0, %ymm0
+; AVX512DQ-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
 ;
@@ -792,16 +794,18 @@ define <8 x i1> @test_cmp_v8i64(<8 x i64> %a0, <8 x i64> %a1) nounwind {
 ; AVX512F-LABEL: test_cmp_v8i64:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpcmpgtq %zmm1, %zmm0, %k1
-; AVX512F-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; AVX512F-NEXT:    vpmovqw %zmm0, %xmm0
+; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vpmovdw %zmm0, %ymm0
+; AVX512F-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: test_cmp_v8i64:
 ; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    vpcmpgtq %zmm1, %zmm0, %k0
-; AVX512DQ-NEXT:    vpmovm2q %k0, %zmm0
-; AVX512DQ-NEXT:    vpmovqw %zmm0, %xmm0
+; AVX512DQ-NEXT:    vpmovm2d %k0, %zmm0
+; AVX512DQ-NEXT:    vpmovdw %zmm0, %ymm0
+; AVX512DQ-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
 ;

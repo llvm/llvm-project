@@ -252,8 +252,8 @@ define <8 x i16> @avg_v8i16_mask(<8 x i16> %a, <8 x i16> %b, <8 x i16> %src, i8 
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpavgw %xmm1, %xmm0, %xmm0
 ; AVX512F-NEXT:    kmovw %edi, %k1
-; AVX512F-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
-; AVX512F-NEXT:    vpmovqw %zmm1, %xmm1
+; AVX512F-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; AVX512F-NEXT:    vpmovdw %zmm1, %ymm1
 ; AVX512F-NEXT:    vpblendvb %xmm1, %xmm0, %xmm2, %xmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -280,8 +280,8 @@ define <8 x i16> @avg_v8i16_maskz(<8 x i16> %a, <8 x i16> %b, i8 %mask) nounwind
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpavgw %xmm1, %xmm0, %xmm0
 ; AVX512F-NEXT:    kmovw %edi, %k1
-; AVX512F-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
-; AVX512F-NEXT:    vpmovqw %zmm1, %xmm1
+; AVX512F-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; AVX512F-NEXT:    vpmovdw %zmm1, %ymm1
 ; AVX512F-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq

@@ -2378,9 +2378,8 @@ private:
   CodeGenRegBank CGRegs;
 
   /// Keep track of the equivalence between SDNodes and Instruction by mapping
-  /// SDNodes to the GINodeEquiv mapping. We map to the GINodeEquiv in case we
-  /// need to check for attributes on the relation such as (the now removed)
-  /// CheckMMOIsNonAtomic.
+  /// SDNodes to the GINodeEquiv mapping. We need to map to the GINodeEquiv to
+  /// check for attributes on the relation such as CheckMMOIsNonAtomic.
   /// This is defined using 'GINodeEquiv' in the target description.
   DenseMap<Record *, Record *> NodeEquivs;
 
@@ -2399,8 +2398,6 @@ private:
   Record *findNodeEquiv(Record *N) const;
 
   Error importRulePredicates(RuleMatcher &M, ArrayRef<Predicate> Predicates);
-  Error importInstructionPredicates(InstructionMatcher &InsnMatcher,
-                                    const TreePatternNode *Src) const;
   Expected<InstructionMatcher &> createAndImportSelDAGMatcher(
       RuleMatcher &Rule, InstructionMatcher &InsnMatcher,
       const TreePatternNode *Src, unsigned &TempOpIdx) const;
@@ -2486,8 +2483,45 @@ GlobalISelEmitter::importRulePredicates(RuleMatcher &M,
   return Error::success();
 }
 
-Error GlobalISelEmitter::importInstructionPredicates(
-    InstructionMatcher &InsnMatcher, const TreePatternNode *Src) const {
+Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
+    RuleMatcher &Rule, InstructionMatcher &InsnMatcher,
+    const TreePatternNode *Src, unsigned &TempOpIdx) const {
+  Record *SrcGIEquivOrNull = nullptr;
+  const CodeGenInstruction *SrcGIOrNull = nullptr;
+
+  // Start with the defined operands (i.e., the results of the root operator).
+  if (Src->getExtTypes().size() > 1)
+    return failedImport("Src pattern has multiple results");
+
+  if (Src->isLeaf()) {
+    Init *SrcInit = Src->getLeafValue();
+    if (isa<IntInit>(SrcInit)) {
+      InsnMatcher.addPredicate<InstructionOpcodeMatcher>(
+          &Target.getInstruction(RK.getDef("G_CONSTANT")));
+    } else
+      return failedImport(
+          "Unable to deduce gMIR opcode to handle Src (which is a leaf)");
+  } else {
+    SrcGIEquivOrNull = findNodeEquiv(Src->getOperator());
+    if (!SrcGIEquivOrNull)
+      return failedImport("Pattern operator lacks an equivalent Instruction" +
+                          explainOperator(Src->getOperator()));
+    SrcGIOrNull = &Target.getInstruction(SrcGIEquivOrNull->getValueAsDef("I"));
+
+    // The operators look good: match the opcode
+    InsnMatcher.addPredicate<InstructionOpcodeMatcher>(SrcGIOrNull);
+  }
+
+  unsigned OpIdx = 0;
+  for (const TypeSetByHwMode &VTy : Src->getExtTypes()) {
+    // Results don't have a name unless they are the root node. The caller will
+    // set the name if appropriate.
+    OperandMatcher &OM = InsnMatcher.addOperand(OpIdx++, "", TempOpIdx);
+    if (auto Error = OM.addTypeCheckPredicate(VTy, false /* OperandIsAPointer */))
+      return failedImport(toString(std::move(Error)) +
+                          " for result of Src pattern operator");
+  }
+
   for (const auto &Predicate : Src->getPredicateFns()) {
     if (Predicate.isAlwaysTrue())
       continue;
@@ -2576,50 +2610,9 @@ Error GlobalISelEmitter::importInstructionPredicates(
     return failedImport("Src pattern child has predicate (" +
                         explainPredicates(Src) + ")");
   }
+  if (SrcGIEquivOrNull && SrcGIEquivOrNull->getValueAsBit("CheckMMOIsNonAtomic"))
+    InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>("NotAtomic");
 
-  return Error::success();
-}
-
-Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
-    RuleMatcher &Rule, InstructionMatcher &InsnMatcher,
-    const TreePatternNode *Src, unsigned &TempOpIdx) const {
-  Record *SrcGIEquivOrNull = nullptr;
-  const CodeGenInstruction *SrcGIOrNull = nullptr;
-
-  // Start with the defined operands (i.e., the results of the root operator).
-  if (Src->getExtTypes().size() > 1)
-    return failedImport("Src pattern has multiple results");
-
-  if (Src->isLeaf()) {
-    Init *SrcInit = Src->getLeafValue();
-    if (isa<IntInit>(SrcInit)) {
-      InsnMatcher.addPredicate<InstructionOpcodeMatcher>(
-          &Target.getInstruction(RK.getDef("G_CONSTANT")));
-    } else
-      return failedImport(
-          "Unable to deduce gMIR opcode to handle Src (which is a leaf)");
-  } else {
-    SrcGIEquivOrNull = findNodeEquiv(Src->getOperator());
-    if (!SrcGIEquivOrNull)
-      return failedImport("Pattern operator lacks an equivalent Instruction" +
-                          explainOperator(Src->getOperator()));
-    SrcGIOrNull = &Target.getInstruction(SrcGIEquivOrNull->getValueAsDef("I"));
-
-    // The operators look good: match the opcode
-    InsnMatcher.addPredicate<InstructionOpcodeMatcher>(SrcGIOrNull);
-  }
-
-  unsigned OpIdx = 0;
-  for (const TypeSetByHwMode &VTy : Src->getExtTypes()) {
-    // Results don't have a name unless they are the root node. The caller will
-    // set the name if appropriate.
-    OperandMatcher &OM = InsnMatcher.addOperand(OpIdx++, "", TempOpIdx);
-    if (auto Error = OM.addTypeCheckPredicate(VTy, false /* OperandIsAPointer */))
-      return failedImport(toString(std::move(Error)) +
-                          " for result of Src pattern operator");
-  }
-
-  
   if (Src->isLeaf()) {
     Init *SrcInit = Src->getLeafValue();
     if (IntInit *SrcIntInit = dyn_cast<IntInit>(SrcInit)) {
@@ -2638,8 +2631,6 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
       // here since we don't support ImmLeaf predicates yet. However, we still
       // need to note the hidden operand to get GIM_CheckNumOperands correct.
       InsnMatcher.addOperand(OpIdx++, "", TempOpIdx);
-      if (auto Error = importInstructionPredicates(InsnMatcher, Src))
-        return std::move(Error);
       return InsnMatcher;
     }
 
@@ -2674,8 +2665,6 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
     }
   }
 
-  if (auto Error = importInstructionPredicates(InsnMatcher, Src))
-    return std::move(Error);
   return InsnMatcher;
 }
 
@@ -3707,40 +3696,6 @@ TreePatternNode *GlobalISelEmitter::fixupPatternNode(TreePatternNode *N) {
         N->setPredicateFns(Predicates);
         N->setType(0, getValueType(MemVT));
         return Ext;
-      }
-    }
-
-    if (N->getOperator()->getName() == "atomic_load") {
-      // If it's a atomic-load we need to adapt the pattern slightly. We need
-      // to split the node into (anyext (atomic_load ...)), and then apply the
-      // <<atomic_load_TY>> predicate by updating the result type of the load.
-      //
-      // For example:
-      //   (atomic_load:[i32] [iPTR])<<atomic_load_i16>>
-      // must be transformed into:
-      //   (anyext:[i32] (atomic_load:[i16] [iPTR]))
-
-      std::vector<TreePredicateFn> Predicates;
-      Record *MemVT = nullptr;
-      for (const auto &P : N->getPredicateFns()) {
-        if (P.isAtomic() && P.getMemoryVT()) {
-          MemVT = P.getMemoryVT();
-          continue;
-        }
-        Predicates.push_back(P);
-      }
-
-      if (MemVT) {
-        TypeSetByHwMode ValueTy = getValueType(MemVT);
-        if (ValueTy != N->getType(0)) {
-          TreePatternNode *Ext =
-              new TreePatternNode(RK.getDef("anyext"), {N}, 1);
-          Ext->setType(0, N->getType(0));
-          N->clearPredicateFns();
-          N->setPredicateFns(Predicates);
-          N->setType(0, ValueTy);
-          return Ext;
-        }
       }
     }
   }
