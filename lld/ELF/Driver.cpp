@@ -493,7 +493,7 @@ static StripPolicy getStrip(opt::InputArgList &Args) {
   return StripPolicy::Debug;
 }
 
-static uint64_t parseSectionAddress(StringRef S, opt::Arg *Arg) {
+static uint64_t parseSectionAddress(StringRef S, const opt::Arg &Arg) {
   uint64_t VA = 0;
   if (S.startswith("0x"))
     S = S.drop_front(2);
@@ -508,15 +508,15 @@ static StringMap<uint64_t> getSectionStartMap(opt::InputArgList &Args) {
     StringRef Name;
     StringRef Addr;
     std::tie(Name, Addr) = StringRef(Arg->getValue()).split('=');
-    Ret[Name] = parseSectionAddress(Addr, Arg);
+    Ret[Name] = parseSectionAddress(Addr, *Arg);
   }
 
   if (auto *Arg = Args.getLastArg(OPT_Ttext))
-    Ret[".text"] = parseSectionAddress(Arg->getValue(), Arg);
+    Ret[".text"] = parseSectionAddress(Arg->getValue(), *Arg);
   if (auto *Arg = Args.getLastArg(OPT_Tdata))
-    Ret[".data"] = parseSectionAddress(Arg->getValue(), Arg);
+    Ret[".data"] = parseSectionAddress(Arg->getValue(), *Arg);
   if (auto *Arg = Args.getLastArg(OPT_Tbss))
-    Ret[".bss"] = parseSectionAddress(Arg->getValue(), Arg);
+    Ret[".bss"] = parseSectionAddress(Arg->getValue(), *Arg);
   return Ret;
 }
 
