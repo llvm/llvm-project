@@ -99,6 +99,8 @@ public:
 
   bool GetWarningsOptimization() const;
 
+  bool GetStopOnExec() const;
+
 protected:
   static void OptionValueChangedCallback(void *baton,
                                          OptionValue *option_value);
