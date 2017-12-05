@@ -1678,7 +1678,7 @@ bool Lexer::LexNumericConstant(Token &Result, const char *CurPtr) {
     if (!LangOpts.C99) {
       if (!isHexaLiteral(BufferPtr, LangOpts))
         IsHexFloat = false;
-      else if (!getLangOpts().CPlusPlus1z &&
+      else if (!getLangOpts().CPlusPlus17 &&
                std::find(BufferPtr, CurPtr, '_') != CurPtr)
         IsHexFloat = false;
     }
@@ -3207,7 +3207,7 @@ LexNextToken:
                                ConsumeChar(ConsumeChar(CurPtr, SizeTmp, Result),
                                            SizeTmp2, Result),
                                tok::utf8_string_literal);
-        if (Char2 == '\'' && LangOpts.CPlusPlus1z)
+        if (Char2 == '\'' && LangOpts.CPlusPlus17)
           return LexCharConstant(
               Result, ConsumeChar(ConsumeChar(CurPtr, SizeTmp, Result),
                                   SizeTmp2, Result),

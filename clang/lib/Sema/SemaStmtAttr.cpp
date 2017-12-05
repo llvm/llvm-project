@@ -43,9 +43,9 @@ static Attr *handleFallThroughAttr(Sema &S, Stmt *St, const AttributeList &A,
     return nullptr;
   }
 
-  // If this is spelled as the standard C++1z attribute, but not in C++1z, warn
+  // If this is spelled as the standard C++17 attribute, but not in C++17, warn
   // about using it as an extension.
-  if (!S.getLangOpts().CPlusPlus1z && A.isCXX11Attribute() &&
+  if (!S.getLangOpts().CPlusPlus17 && A.isCXX11Attribute() &&
       !A.getScopeName())
     S.Diag(A.getLoc(), diag::ext_cxx17_attr) << A.getName();
 

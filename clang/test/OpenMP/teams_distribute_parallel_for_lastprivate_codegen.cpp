@@ -71,6 +71,7 @@ int main() {
       // LAMBDA: {{.+}} = alloca i{{[0-9]+}},
       // LAMBDA: {{.+}} = alloca i{{[0-9]+}},
       // LAMBDA: {{.+}} = alloca i{{[0-9]+}},
+      // LAMBDA: {{.+}} = alloca i{{[0-9]+}},
       // LAMBDA: [[OMP_IS_LAST:%.+]] = alloca i{{[0-9]+}},
       // LAMBDA: [[G_PRIVATE:%.+]] = alloca double,
       // LAMBDA: [[G1_PRIVATE:%.+]] = alloca double,
@@ -121,6 +122,7 @@ int main() {
       // LAMBDA: [[SVAR_PRIVATE_ADDR:%.+]] = alloca i{{[0-9]+}}*,
       // LAMBDA: [[SFVAR_PRIVATE_ADDR:%.+]] = alloca float*,
       // loop variables
+      // LAMBDA: {{.+}} = alloca i{{[0-9]+}},
       // LAMBDA: {{.+}} = alloca i{{[0-9]+}},
       // LAMBDA: {{.+}} = alloca i{{[0-9]+}},
       // LAMBDA: {{.+}} = alloca i{{[0-9]+}},
@@ -248,6 +250,7 @@ int main() {
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
+// CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: [[OMP_IS_LAST:%.+]] = alloca i{{[0-9]+}},
 // CHECK: [[T_VAR_PRIV:%.+]] = alloca i{{[0-9]+}},
 // CHECK: [[VEC_PRIV:%.+]] = alloca [2 x i{{[0-9]+}}],
@@ -322,6 +325,7 @@ int main() {
 // CHECK: [[VAR_ADDR:%.+]] = alloca [[S_FLOAT_TY]]*,
 // CHECK: [[SVAR_ADDR:%.+]] = alloca i{{[0-9]+}}*,
 // skip loop variables
+// CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
@@ -425,6 +429,7 @@ int main() {
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
+// CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: [[OMP_IS_LAST1:%.+]] = alloca i{{[0-9]+}},
 // CHECK: [[T_VAR_PRIV1:%.+]] = alloca i{{[0-9]+}},
 // CHECK: [[VEC_PRIV1:%.+]] = alloca [2 x i{{[0-9]+}}],
@@ -497,6 +502,7 @@ int main() {
 // CHECK: [[S_ARR_ADDR1:%.+]] = alloca [2 x [[S_INT_TY]]]*,
 // CHECK: [[VAR_ADDR1:%.+]] = alloca [[S_INT_TY]]*,
 // skip loop variables
+// CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},

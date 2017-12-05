@@ -16,6 +16,16 @@
 // CHECK-DAG: [[J:@.+]] = global i8 2,
 // CHECK-DAG: [[K:@.+]] = global i8 3,
 
+// CHECK-LABEL: loop_with_counter_collapse
+void loop_with_counter_collapse() {
+  // CHECK: call void @__kmpc_for_static_init_8(%ident_t* @
+  // CHECK: call void @__kmpc_for_static_fini(%ident_t* @
+  #pragma omp for collapse(2)
+  for (int i = 0; i < 4; i++) {
+    for (int j = i; j < 4; j++) {
+    }
+  }
+}
 // CHECK-LABEL: define {{.*void}} @{{.*}}without_schedule_clause{{.*}}(float* {{.+}}, float* {{.+}}, float* {{.+}}, float* {{.+}})
 void without_schedule_clause(float *a, float *b, float *c, float *d) {
 // CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num([[IDENT_T_TY]]* [[DEFAULT_LOC:[@%].+]])
@@ -330,8 +340,8 @@ void runtime(float *a, float *b, float *c, float *d) {
 // CHECK-LABEL: test_precond
 void test_precond() {
   // CHECK: [[A_ADDR:%.+]] = alloca i8,
-  // CHECK: [[CAP:%.+]] = alloca i8,
   // CHECK: [[I_ADDR:%.+]] = alloca i8,
+  // CHECK: [[CAP:%.+]] = alloca i8,
   char a = 0;
   // CHECK: store i8 0,
   // CHECK: store i32

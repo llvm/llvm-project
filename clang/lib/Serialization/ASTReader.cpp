@@ -1220,6 +1220,7 @@ bool ASTReader::ParseLineTable(ModuleFile &F,
 
   // Parse the file names
   std::map<int, int> FileIDs;
+  FileIDs[-1] = -1; // For unspecified filenames.
   for (unsigned I = 0; Record[Idx]; ++I) {
     // Extract the file name
     auto Filename = ReadPath(F, Record, Idx);

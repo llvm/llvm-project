@@ -2733,7 +2733,7 @@ ExprResult Parser::ParseFoldExpression(ExprResult LHS,
     }
   }
 
-  Diag(EllipsisLoc, getLangOpts().CPlusPlus1z
+  Diag(EllipsisLoc, getLangOpts().CPlusPlus17
                         ? diag::warn_cxx14_compat_fold_expression
                         : diag::ext_fold_expression);
 

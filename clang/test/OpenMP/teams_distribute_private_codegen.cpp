@@ -91,6 +91,7 @@ int main() {
     // LAMBDA: alloca i32,
     // LAMBDA: alloca i32,
     // LAMBDA: alloca i32,
+    // LAMBDA: alloca i32,
     // LAMBDA: [[G_PRIV:%.+]] = alloca i{{[0-9]+}},
     // LAMBDA: [[G1_PRIV:%.+]] = alloca i{{[0-9]+}}
     // LAMBDA: [[TMP:%.+]] = alloca i{{[0-9]+}}*,
@@ -159,12 +160,12 @@ int main() {
 // CHECK: {{.+}} = alloca i32,
 // CHECK: {{.+}} = alloca i32,
 // CHECK: {{.+}} = alloca i32,
+// CHECK: {{.+}} = alloca i32,
 // CHECK-DAG: [[T_VAR_PRIV:%.+]] = alloca i{{[0-9]+}},
 // CHECK-DAG: [[VEC_PRIV:%.+]] = alloca [2 x i{{[0-9]+}}],
 // CHECK-DAG: [[S_ARR_PRIV:%.+]] = alloca [2 x [[S_FLOAT_TY]]],
 // CHECK-DAG: [[VAR_PRIV:%.+]] = alloca [[S_FLOAT_TY]],
 // CHECK-DAG: [[SIVAR_PRIV:%.+]] = alloca i{{[0-9]+}},
-// CHECK: alloca i32,
 
 // private(s_arr)
 // CHECK-DAG: [[S_ARR_PRIV_BGN:%.+]] = getelementptr{{.*}} [2 x [[S_FLOAT_TY]]], [2 x [[S_FLOAT_TY]]]* [[S_ARR_PRIV]],
@@ -203,12 +204,12 @@ int main() {
 // CHECK: alloca i{{[0-9]+}},
 // CHECK: alloca i{{[0-9]+}},
 // CHECK: alloca i{{[0-9]+}},
+// CHECK: alloca i{{[0-9]+}},
 // CHECK: [[T_VAR_PRIV:%.+]] = alloca i{{[0-9]+}},
 // CHECK: [[VEC_PRIV:%.+]] = alloca [2 x i{{[0-9]+}}],
 // CHECK: [[S_ARR_PRIV:%.+]] = alloca [2 x [[S_INT_TY]]],
 // CHECK: [[VAR_PRIV:%.+]] = alloca [[S_INT_TY]],
 // CHECK: [[TMP:%.+]] = alloca [[S_INT_TY]]*,
-// CHECK: alloca i32,
 
 // private(s_arr)
 // CHECK-DAG: [[S_ARR_PRIV_BGN:%.+]] = getelementptr{{.*}} [2 x [[S_INT_TY]]], [2 x [[S_INT_TY]]]* [[S_ARR_PRIV]],

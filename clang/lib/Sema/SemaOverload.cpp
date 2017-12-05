@@ -10699,7 +10699,7 @@ static bool completeFunctionType(Sema &S, FunctionDecl *FD, SourceLocation Loc,
     return true;
 
   auto *FPT = FD->getType()->castAs<FunctionProtoType>();
-  if (S.getLangOpts().CPlusPlus1z &&
+  if (S.getLangOpts().CPlusPlus17 &&
       isUnresolvedExceptionSpec(FPT->getExceptionSpecType()) &&
       !S.ResolveExceptionSpec(Loc, FPT))
     return true;

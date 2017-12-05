@@ -2489,7 +2489,7 @@ Sema::BuildCXXForRangeStmt(SourceLocation ForLoc, SourceLocation CoawaitLoc,
     // C++1z removes this restriction.
     QualType BeginType = BeginVar->getType(), EndType = EndVar->getType();
     if (!Context.hasSameType(BeginType, EndType)) {
-      Diag(RangeLoc, getLangOpts().CPlusPlus1z
+      Diag(RangeLoc, getLangOpts().CPlusPlus17
                          ? diag::warn_for_range_begin_end_types_differ
                          : diag::ext_for_range_begin_end_types_differ)
           << BeginType << EndType;

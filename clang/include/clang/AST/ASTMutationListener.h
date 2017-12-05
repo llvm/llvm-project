@@ -36,6 +36,7 @@ namespace clang {
   class QualType;
   class RecordDecl;
   class TagDecl;
+  class ValueDecl;
   class VarDecl;
   class VarTemplateDecl;
   class VarTemplateSpecializationDecl;
@@ -87,8 +88,13 @@ public:
   /// \brief An implicit member got a definition.
   virtual void CompletedImplicitDefinition(const FunctionDecl *D) {}
 
-  /// \brief A static data member was implicitly instantiated.
-  virtual void StaticDataMemberInstantiated(const VarDecl *D) {}
+  /// \brief The instantiation of a templated function or variable was
+  /// requested. In particular, the point of instantiation and template
+  /// specialization kind of \p D may have changed.
+  virtual void InstantiationRequested(const ValueDecl *D) {}
+
+  /// \brief A templated variable's definition was implicitly instantiated.
+  virtual void VariableDefinitionInstantiated(const VarDecl *D) {}
 
   /// \brief A function template's definition was instantiated.
   virtual void FunctionDefinitionInstantiated(const FunctionDecl *D) {}

@@ -383,7 +383,7 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     // C++17 [cpp.predefined]p1:
     //   The name __cplusplus is defined to the value 201703L when compiling a
     //   C++ translation unit.
-    else if (LangOpts.CPlusPlus1z)
+    else if (LangOpts.CPlusPlus17)
       Builder.defineMacro("__cplusplus", "201703L");
     // C++1y [cpp.predefined]p1:
     //   The name __cplusplus is defined to the value 201402L when compiling a
@@ -483,12 +483,12 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_user_defined_literals", "200809");
     Builder.defineMacro("__cpp_lambdas", "200907");
     Builder.defineMacro("__cpp_constexpr",
-                        LangOpts.CPlusPlus1z ? "201603" : 
+                        LangOpts.CPlusPlus17 ? "201603" : 
                         LangOpts.CPlusPlus14 ? "201304" : "200704");
     Builder.defineMacro("__cpp_range_based_for",
-                        LangOpts.CPlusPlus1z ? "201603" : "200907");
+                        LangOpts.CPlusPlus17 ? "201603" : "200907");
     Builder.defineMacro("__cpp_static_assert",
-                        LangOpts.CPlusPlus1z ? "201411" : "200410");
+                        LangOpts.CPlusPlus17 ? "201411" : "200410");
     Builder.defineMacro("__cpp_decltype", "200707");
     Builder.defineMacro("__cpp_attributes", "200809");
     Builder.defineMacro("__cpp_rvalue_references", "200610");
@@ -518,7 +518,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_sized_deallocation", "201309");
 
   // C++17 features.
-  if (LangOpts.CPlusPlus1z) {
+  if (LangOpts.CPlusPlus17) {
     Builder.defineMacro("__cpp_hex_float", "201603");
     Builder.defineMacro("__cpp_inline_variables", "201606");
     Builder.defineMacro("__cpp_noexcept_function_type", "201510");
@@ -751,6 +751,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   DefineTypeSize("__LONG_MAX__", TargetInfo::SignedLong, TI, Builder);
   DefineTypeSize("__LONG_LONG_MAX__", TargetInfo::SignedLongLong, TI, Builder);
   DefineTypeSize("__WCHAR_MAX__", TI.getWCharType(), TI, Builder);
+  DefineTypeSize("__WINT_MAX__", TI.getWIntType(), TI, Builder);
   DefineTypeSize("__INTMAX_MAX__", TI.getIntMaxType(), TI, Builder);
   DefineTypeSize("__SIZE_MAX__", TI.getSizeType(), TI, Builder);
 
@@ -814,6 +815,10 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   DefineFloatMacros(Builder, "FLT", &TI.getFloatFormat(), "F");
   DefineFloatMacros(Builder, "DBL", &TI.getDoubleFormat(), "");
   DefineFloatMacros(Builder, "LDBL", &TI.getLongDoubleFormat(), "L");
+  if (TI.hasFloat128Type())
+    // FIXME: Switch away from the non-standard "Q" when we can
+    DefineFloatMacros(Builder, "FLT128", &TI.getFloat128Format(), "Q");
+
 
   // Define a __POINTER_WIDTH__ macro for stdint.h.
   Builder.defineMacro("__POINTER_WIDTH__",
@@ -1034,6 +1039,10 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
         LangOpts.OpenCLVersion)) \
       Builder.defineMacro(#Ext);
 #include "clang/Basic/OpenCLExtensions.def"
+
+    auto Arch = TI.getTriple().getArch();
+    if (Arch == llvm::Triple::spir || Arch == llvm::Triple::spir64)
+      Builder.defineMacro("__IMAGE_SUPPORT__");
   }
 
   if (TI.hasInt128Type() && LangOpts.CPlusPlus && LangOpts.GNUMode) {

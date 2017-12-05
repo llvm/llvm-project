@@ -806,6 +806,7 @@ int main() {
 // CHECK: alloca i{{[0-9]+}},
 // CHECK: alloca i{{[0-9]+}},
 // CHECK: alloca i{{[0-9]+}},
+// CHECK: alloca i{{[0-9]+}},
 // CHECK: [[T_VAR_PRIV:%.+]] = alloca i{{[0-9]+}},
 // CHECK: [[VAR_PRIV:%.+]] = alloca [[S_INT_TY]],
 // CHECK: [[VAR1_PRIV:%.+]] = alloca [[S_INT_TY]],
