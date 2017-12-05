@@ -92,7 +92,7 @@ function(add_lldb_executable name)
   list(APPEND LLVM_LINK_COMPONENTS ${ARG_LINK_COMPONENTS})
   add_llvm_executable(${name} ${ARG_UNPARSED_ARGUMENTS})
 
-  target_link_libraries(${name} ${ARG_LINK_LIBS})
+  target_link_libraries(${name} PRIVATE ${ARG_LINK_LIBS})
   set_target_properties(${name} PROPERTIES
     FOLDER "lldb executables")
 

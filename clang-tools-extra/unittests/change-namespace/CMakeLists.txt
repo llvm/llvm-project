@@ -16,6 +16,7 @@ add_extra_unittest(ChangeNamespaceTests
   )
 
 target_link_libraries(ChangeNamespaceTests
+  PRIVATE
   clangAST
   clangASTMatchers
   clangBasic
