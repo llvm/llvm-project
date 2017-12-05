@@ -143,7 +143,7 @@ llvm::Optional<MemoryBufferRef> readFile(StringRef Path);
 
 } // namespace wasm
 
-std::string toString(wasm::InputFile *File);
+std::string toString(const wasm::InputFile *File);
 
 } // namespace lld
 

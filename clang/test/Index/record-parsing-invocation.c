@@ -17,7 +17,7 @@
 // Make sure we record the unsaved file hash.
 // RUN: rm -rf %t
 // RUN: mkdir %t
-// RUN: not env CINDEXTEST_INVOCATION_EMISSION_PATH=%t c-index-test -test-load-source all "-remap-file=%s,%S/Inputs/record-parsing-invocation-remap.c" %s
+// RUN: env CINDEXTEST_INVOCATION_EMISSION_PATH=%t not c-index-test -test-load-source all "-remap-file=%s,%S/Inputs/record-parsing-invocation-remap.c" %s
 // RUN: cat %t/libclang-* | FileCheck --check-prefix=CHECK-UNSAVED %s
 
 #ifndef AVOID_CRASH

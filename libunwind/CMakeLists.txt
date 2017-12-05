@@ -211,6 +211,10 @@ add_target_flags_if(LIBUNWIND_GCC_TOOLCHAIN
 add_target_flags_if(LIBUNWIND_SYSROOT
           "--sysroot=${LIBUNWIND_SYSROOT}")
 
+if (LIBUNWIND_TARGET_TRIPLE)
+  set(TARGET_TRIPLE "${LIBUNWIND_TARGET_TRIPLE}")
+endif()
+
 # Configure compiler.
 include(config-ix)
 

@@ -7,6 +7,7 @@ add_lld_tool(lld
   )
 
 target_link_libraries(lld
+  PRIVATE
   lldCOFF
   lldDriver
   lldELF

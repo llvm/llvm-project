@@ -24,5 +24,6 @@ set(CLANG_IMPORT_TEST_LIB_DEPS
   )
 
 target_link_libraries(clang-import-test
+  PRIVATE
   ${CLANG_IMPORT_TEST_LIB_DEPS}
   )

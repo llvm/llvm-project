@@ -25,7 +25,6 @@ namespace __scudo {
 
 struct ALIGNED(64) ScudoTSD {
   AllocatorCache Cache;
-  ScudoPrng Prng;
   uptr QuarantineCachePlaceHolder[4];
 
   void init(bool Shared);

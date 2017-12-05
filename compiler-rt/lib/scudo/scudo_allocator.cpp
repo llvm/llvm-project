@@ -30,7 +30,7 @@
 namespace __scudo {
 
 // Global static cookie, initialized at start-up.
-static uptr Cookie;
+static u32 Cookie;
 
 // We default to software CRC32 if the alternatives are not supported, either
 // at compilation or at runtime.
@@ -66,7 +66,7 @@ struct ScudoChunk : UnpackedHeader {
   // We can't use the offset member of the chunk itself, as we would double
   // fetch it without any warranty that it wouldn't have been tampered. To
   // prevent this, we work with a local copy of the header.
-  void *getAllocBeg(UnpackedHeader *Header) {
+  void *getBackendPtr(UnpackedHeader *Header) {
     return reinterpret_cast<void *>(
         reinterpret_cast<uptr>(this) - (Header->Offset << MinAlignmentLog));
   }
@@ -74,9 +74,9 @@ struct ScudoChunk : UnpackedHeader {
   // Returns the usable size for a chunk, meaning the amount of bytes from the
   // beginning of the user data to the end of the backend allocated chunk.
   uptr getUsableSize(UnpackedHeader *Header) {
-    uptr Size =
-        getBackendAllocator().getActuallyAllocatedSize(getAllocBeg(Header),
-                                                       Header->FromPrimary);
+    const uptr Size =
+        getBackendAllocator().getActuallyAllocatedSize(getBackendPtr(Header),
+                                                       Header->ClassId);
     if (Size == 0)
       return 0;
     return Size - AlignedChunkHeaderSize - (Header->Offset << MinAlignmentLog);
@@ -88,8 +88,7 @@ struct ScudoChunk : UnpackedHeader {
     ZeroChecksumHeader.Checksum = 0;
     uptr HeaderHolder[sizeof(UnpackedHeader) / sizeof(uptr)];
     memcpy(&HeaderHolder, &ZeroChecksumHeader, sizeof(HeaderHolder));
-    u32 Crc = computeCRC32(static_cast<u32>(Cookie),
-                           reinterpret_cast<uptr>(this), HeaderHolder,
+    u32 Crc = computeCRC32(Cookie, reinterpret_cast<uptr>(this), HeaderHolder,
                            ARRAY_SIZE(HeaderHolder));
     return static_cast<u16>(Crc);
   }
@@ -176,9 +175,9 @@ struct QuarantineCallback {
                      Chunk);
     }
     Chunk->eraseHeader();
-    void *Ptr = Chunk->getAllocBeg(&Header);
-    if (Header.FromPrimary)
-      getBackendAllocator().deallocatePrimary(Cache_, Ptr);
+    void *Ptr = Chunk->getBackendPtr(&Header);
+    if (Header.ClassId)
+      getBackendAllocator().deallocatePrimary(Cache_, Ptr, Header.ClassId);
     else
       getBackendAllocator().deallocateSecondary(Ptr);
   }
@@ -186,16 +185,17 @@ struct QuarantineCallback {
   // Internal quarantine allocation and deallocation functions. We first check
   // that the batches are indeed serviced by the Primary.
   // TODO(kostyak): figure out the best way to protect the batches.
-  COMPILER_CHECK(sizeof(QuarantineBatch) < SizeClassMap::kMaxSize);
   void *Allocate(uptr Size) {
-    return getBackendAllocator().allocatePrimary(Cache_, Size);
+    return getBackendAllocator().allocatePrimary(Cache_, BatchClassId);
   }
 
   void Deallocate(void *Ptr) {
-    getBackendAllocator().deallocatePrimary(Cache_, Ptr);
+    getBackendAllocator().deallocatePrimary(Cache_, Ptr, BatchClassId);
   }
 
   AllocatorCache *Cache_;
+  COMPILER_CHECK(sizeof(QuarantineBatch) < SizeClassMap::kMaxSize);
+  const uptr BatchClassId = SizeClassMap::ClassID(sizeof(QuarantineBatch));
 };
 
 typedef Quarantine<QuarantineCallback, ScudoChunk> ScudoQuarantine;
@@ -217,9 +217,6 @@ struct ScudoAllocator {
   ScudoBackendAllocator BackendAllocator;
   ScudoQuarantine AllocatorQuarantine;
 
-  StaticSpinMutex GlobalPrngMutex;
-  ScudoPrng GlobalPrng;
-
   u32 QuarantineChunksUpToSize;
 
   bool DeallocationTypeMismatch;
@@ -235,10 +232,7 @@ struct ScudoAllocator {
   explicit ScudoAllocator(LinkerInitialized)
     : AllocatorQuarantine(LINKER_INITIALIZED) {}
 
-  void init() {
-    SanitizerToolName = "Scudo";
-    initFlags();
-
+  void performSanityChecks() {
     // Verify that the header offset field can hold the maximum offset. In the
     // case of the Secondary allocator, it takes care of alignment and the
     // offset will always be 0. In the case of the Primary, the worst case
@@ -248,9 +242,9 @@ struct ScudoAllocator {
     // result, the maximum offset will be at most the maximum alignment for the
     // last size class minus the header size, in multiples of MinAlignment.
     UnpackedHeader Header = {};
-    uptr MaxPrimaryAlignment =
+    const uptr MaxPrimaryAlignment =
         1 << MostSignificantSetBitIndex(SizeClassMap::kMaxSize - MinAlignment);
-    uptr MaxOffset =
+    const uptr MaxOffset =
         (MaxPrimaryAlignment - AlignedChunkHeaderSize) >> MinAlignmentLog;
     Header.Offset = MaxOffset;
     if (Header.Offset != MaxOffset) {
@@ -262,12 +256,25 @@ struct ScudoAllocator {
     // case scenario happens in the Primary. It will depend on the second to
     // last and last class sizes, as well as the dynamic base for the Primary.
     // The following is an over-approximation that works for our needs.
-    uptr MaxSizeOrUnusedBytes = SizeClassMap::kMaxSize - 1;
+    const uptr MaxSizeOrUnusedBytes = SizeClassMap::kMaxSize - 1;
     Header.SizeOrUnusedBytes = MaxSizeOrUnusedBytes;
     if (Header.SizeOrUnusedBytes != MaxSizeOrUnusedBytes) {
       dieWithMessage("ERROR: the maximum possible unused bytes doesn't fit in "
                      "the header\n");
     }
+
+    const uptr LargestClassId = SizeClassMap::kLargestClassID;
+    Header.ClassId = LargestClassId;
+    if (Header.ClassId != LargestClassId) {
+      dieWithMessage("ERROR: the largest class ID doesn't fit in the header\n");
+    }
+  }
+
+  void init() {
+    SanitizerToolName = "Scudo";
+    initFlags();
+
+    performSanityChecks();
 
     // Check if hardware CRC32 is supported in the binary and by the platform,
     // if so, opt for the CRC32 hardware version of the checksum.
@@ -286,8 +293,11 @@ struct ScudoAllocator {
     DeleteSizeMismatch = getFlags()->DeleteSizeMismatch;
     ZeroContents = getFlags()->ZeroContents;
 
-    GlobalPrng.init();
-    Cookie = GlobalPrng.getU64();
+    if (UNLIKELY(!GetRandom(reinterpret_cast<void *>(&Cookie), sizeof(Cookie),
+                            /*blocking=*/false))) {
+      Cookie = static_cast<u32>((NanoTime() >> 12) ^
+                                (reinterpret_cast<uptr>(this) >> 4));
+    }
 
     CheckRssLimit = HardRssLimitMb || SoftRssLimitMb;
     if (CheckRssLimit)
@@ -365,23 +375,21 @@ struct ScudoAllocator {
     // Primary and Secondary backed allocations have a different treatment. We
     // deal with alignment requirements of Primary serviced allocations here,
     // but the Secondary will take care of its own alignment needs.
-    bool FromPrimary = PrimaryAllocator::CanAllocate(AlignedSize, MinAlignment);
+    const bool FromPrimary =
+        PrimaryAllocator::CanAllocate(AlignedSize, MinAlignment);
 
     void *Ptr;
-    u8 Salt;
+    u8 ClassId;
     uptr AllocSize;
     if (FromPrimary) {
       AllocSize = AlignedSize;
+      ClassId = SizeClassMap::ClassID(AllocSize);
       ScudoTSD *TSD = getTSDAndLock();
-      Salt = TSD->Prng.getU8();
-      Ptr = BackendAllocator.allocatePrimary(&TSD->Cache, AllocSize);
+      Ptr = BackendAllocator.allocatePrimary(&TSD->Cache, ClassId);
       TSD->unlock();
     } else {
-      {
-        SpinMutexLock l(&GlobalPrngMutex);
-        Salt = GlobalPrng.getU8();
-      }
       AllocSize = NeededSize;
+      ClassId = 0;
       Ptr = BackendAllocator.allocateSecondary(AllocSize, Alignment);
     }
     if (UNLIKELY(!Ptr))
@@ -389,26 +397,25 @@ struct ScudoAllocator {
 
     // If requested, we will zero out the entire contents of the returned chunk.
     if ((ForceZeroContents || ZeroContents) && FromPrimary)
-      memset(Ptr, 0, BackendAllocator.getActuallyAllocatedSize(
-          Ptr, /*FromPrimary=*/true));
+      memset(Ptr, 0, BackendAllocator.getActuallyAllocatedSize(Ptr, ClassId));
 
     UnpackedHeader Header = {};
-    uptr AllocBeg = reinterpret_cast<uptr>(Ptr);
-    uptr UserBeg = AllocBeg + AlignedChunkHeaderSize;
+    uptr BackendPtr = reinterpret_cast<uptr>(Ptr);
+    uptr UserBeg = BackendPtr + AlignedChunkHeaderSize;
     if (UNLIKELY(!IsAligned(UserBeg, Alignment))) {
       // Since the Secondary takes care of alignment, a non-aligned pointer
       // means it is from the Primary. It is also the only case where the offset
       // field of the header would be non-zero.
       CHECK(FromPrimary);
       UserBeg = RoundUpTo(UserBeg, Alignment);
-      uptr Offset = UserBeg - AlignedChunkHeaderSize - AllocBeg;
+      uptr Offset = UserBeg - AlignedChunkHeaderSize - BackendPtr;
       Header.Offset = Offset >> MinAlignmentLog;
     }
-    CHECK_LE(UserBeg + Size, AllocBeg + AllocSize);
+    CHECK_LE(UserBeg + Size, BackendPtr + AllocSize);
+    Header.ClassId = ClassId;
     Header.State = ChunkAllocated;
     Header.AllocType = Type;
     if (FromPrimary) {
-      Header.FromPrimary = 1;
       Header.SizeOrUnusedBytes = Size;
     } else {
       // The secondary fits the allocations to a page, so the amount of unused
@@ -419,7 +426,6 @@ struct ScudoAllocator {
       if (TrailingBytes)
         Header.SizeOrUnusedBytes = PageSize - TrailingBytes;
     }
-    Header.Salt = Salt;
     getScudoChunk(UserBeg)->storeHeader(&Header);
     void *UserPtr = reinterpret_cast<void *>(UserBeg);
     // if (&__sanitizer_malloc_hook) __sanitizer_malloc_hook(UserPtr, Size);
@@ -435,10 +441,11 @@ struct ScudoAllocator {
         (Size > QuarantineChunksUpToSize);
     if (BypassQuarantine) {
       Chunk->eraseHeader();
-      void *Ptr = Chunk->getAllocBeg(Header);
-      if (Header->FromPrimary) {
+      void *Ptr = Chunk->getBackendPtr(Header);
+      if (Header->ClassId) {
         ScudoTSD *TSD = getTSDAndLock();
-        getBackendAllocator().deallocatePrimary(&TSD->Cache, Ptr);
+        getBackendAllocator().deallocatePrimary(&TSD->Cache, Ptr,
+                                                Header->ClassId);
         TSD->unlock();
       } else {
         getBackendAllocator().deallocateSecondary(Ptr);
@@ -496,7 +503,7 @@ struct ScudoAllocator {
         }
       }
     }
-    uptr Size = Header.FromPrimary ? Header.SizeOrUnusedBytes :
+    uptr Size = Header.ClassId ? Header.SizeOrUnusedBytes :
         Chunk->getUsableSize(&Header) - Header.SizeOrUnusedBytes;
     if (DeleteSizeMismatch) {
       if (DeleteSize && DeleteSize != Size) {
@@ -536,7 +543,7 @@ struct ScudoAllocator {
         (UsableSize - NewSize) < (SizeClassMap::kMaxSize / 2)) {
       UnpackedHeader NewHeader = OldHeader;
       NewHeader.SizeOrUnusedBytes =
-                OldHeader.FromPrimary ? NewSize : UsableSize - NewSize;
+          OldHeader.ClassId ? NewSize : UsableSize - NewSize;
       Chunk->compareExchangeHeader(&NewHeader, &OldHeader);
       return OldPtr;
     }
@@ -544,7 +551,7 @@ struct ScudoAllocator {
     // old one.
     void *NewPtr = allocate(NewSize, MinAlignment, FromMalloc);
     if (NewPtr) {
-      uptr OldSize = OldHeader.FromPrimary ? OldHeader.SizeOrUnusedBytes :
+      uptr OldSize = OldHeader.ClassId ? OldHeader.SizeOrUnusedBytes :
           UsableSize - OldHeader.SizeOrUnusedBytes;
       memcpy(NewPtr, OldPtr, Min(NewSize, UsableSize));
       quarantineOrDeallocateChunk(Chunk, &OldHeader, OldSize);
@@ -608,7 +615,6 @@ void initScudo() {
 void ScudoTSD::init(bool Shared) {
   UnlockRequired = Shared;
   getBackendAllocator().initCache(&Cache);
-  Prng.init();
   memset(QuarantineCachePlaceHolder, 0, sizeof(QuarantineCachePlaceHolder));
 }
 

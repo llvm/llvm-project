@@ -262,7 +262,7 @@ static bool instructionClobbersQuery(MemoryDef *MD,
 
   if (UseCS) {
     ModRefInfo I = AA.getModRefInfo(DefInst, UseCS);
-    return I != MRI_NoModRef;
+    return isModOrRefSet(I);
   }
 
   if (auto *DefLoad = dyn_cast<LoadInst>(DefInst)) {
@@ -278,7 +278,7 @@ static bool instructionClobbersQuery(MemoryDef *MD,
     }
   }
 
-  return AA.getModRefInfo(DefInst, UseLoc) & MRI_Mod;
+  return isModSet(AA.getModRefInfo(DefInst, UseLoc));
 }
 
 static bool instructionClobbersQuery(MemoryDef *MD, const MemoryUseOrDef *MU,
@@ -1526,8 +1526,8 @@ MemoryUseOrDef *MemorySSA::createNewAccess(Instruction *I) {
   // Separate memory aliasing and ordering into two different chains so that we
   // can precisely represent both "what memory will this read/write/is clobbered
   // by" and "what instructions can I move this past".
-  bool Def = bool(ModRef & MRI_Mod) || isOrdered(I);
-  bool Use = bool(ModRef & MRI_Ref);
+  bool Def = isModSet(ModRef) || isOrdered(I);
+  bool Use = isRefSet(ModRef);
 
   // It's possible for an instruction to not modify memory at all. During
   // construction, we ignore them.

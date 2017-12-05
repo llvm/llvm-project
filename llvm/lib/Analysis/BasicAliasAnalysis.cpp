@@ -809,12 +809,12 @@ ModRefInfo BasicAAResult::getModRefInfo(ImmutableCallSite CS,
       // Operand aliases 'Object', but call doesn't modify it. Strengthen
       // initial assumption and keep looking in case if there are more aliases.
       if (CS.onlyReadsMemory(OperandNo)) {
-        Result = static_cast<ModRefInfo>(Result | MRI_Ref);
+        Result = setRef(Result);
         continue;
       }
       // Operand aliases 'Object' but call only writes into it.
       if (CS.doesNotReadMemory(OperandNo)) {
-        Result = static_cast<ModRefInfo>(Result | MRI_Mod);
+        Result = setMod(Result);
         continue;
       }
       // This operand aliases 'Object' and call reads and writes into it.
@@ -832,7 +832,7 @@ ModRefInfo BasicAAResult::getModRefInfo(ImmutableCallSite CS,
   // routines do not read values visible in the IR.  TODO: Consider special
   // casing realloc and strdup routines which access only their arguments as
   // well.  Or alternatively, replace all of this with inaccessiblememonly once
-  // that's implemented fully. 
+  // that's implemented fully.
   auto *Inst = CS.getInstruction();
   if (isMallocOrCallocLikeFn(Inst, &TLI)) {
     // Be conservative if the accessed pointer may alias the allocation -
@@ -860,9 +860,9 @@ ModRefInfo BasicAAResult::getModRefInfo(ImmutableCallSite CS,
     // It's also possible for Loc to alias both src and dest, or neither.
     ModRefInfo rv = MRI_NoModRef;
     if (SrcAA != NoAlias)
-      rv = static_cast<ModRefInfo>(rv | MRI_Ref);
+      rv = setRef(rv);
     if (DestAA != NoAlias)
-      rv = static_cast<ModRefInfo>(rv | MRI_Mod);
+      rv = setMod(rv);
     return rv;
   }
 
@@ -933,10 +933,12 @@ ModRefInfo BasicAAResult::getModRefInfo(ImmutableCallSite CS1,
   // possibilities for guard intrinsics.
 
   if (isIntrinsicCall(CS1, Intrinsic::experimental_guard))
-    return getModRefBehavior(CS2) & MRI_Mod ? MRI_Ref : MRI_NoModRef;
+    return isModSet(ModRefInfo(getModRefBehavior(CS2))) ? MRI_Ref
+                                                        : MRI_NoModRef;
 
   if (isIntrinsicCall(CS2, Intrinsic::experimental_guard))
-    return getModRefBehavior(CS1) & MRI_Mod ? MRI_Mod : MRI_NoModRef;
+    return isModSet(ModRefInfo(getModRefBehavior(CS1))) ? MRI_Mod
+                                                        : MRI_NoModRef;
 
   // The AAResultBase base class has some smarts, lets use them.
   return AAResultBase::getModRefInfo(CS1, CS2);

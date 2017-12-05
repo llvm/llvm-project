@@ -18,4 +18,4 @@ add_llvm_unittest(DebugInfoDWARFTests
   ${DebugInfoSources}
   )
 
-target_link_libraries(DebugInfoDWARFTests LLVMTestingSupport)
+target_link_libraries(DebugInfoDWARFTests PRIVATE LLVMTestingSupport)

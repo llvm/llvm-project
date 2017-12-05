@@ -12,6 +12,7 @@ set(CLANG_FORMAT_LIB_DEPS
   )
 
 target_link_libraries(clang-format
+  PRIVATE
   ${CLANG_FORMAT_LIB_DEPS}
   )
 

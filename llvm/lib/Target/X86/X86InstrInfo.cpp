@@ -7762,6 +7762,18 @@ static void expandLoadStackGuard(MachineInstrBuilder &MIB,
   MIB.addReg(Reg, RegState::Kill).addImm(1).addReg(0).addImm(0).addReg(0);
 }
 
+static bool expandXorFP(MachineInstrBuilder &MIB, const TargetInstrInfo &TII) {
+  MachineBasicBlock &MBB = *MIB->getParent();
+  MachineFunction &MF = *MBB.getParent();
+  const X86Subtarget &Subtarget = MF.getSubtarget<X86Subtarget>();
+  const X86RegisterInfo *TRI = Subtarget.getRegisterInfo();
+  unsigned XorOp =
+      MIB->getOpcode() == X86::XOR64_FP ? X86::XOR64rr : X86::XOR32rr;
+  MIB->setDesc(TII.get(XorOp));
+  MIB.addReg(TRI->getFrameRegister(MF), RegState::Undef);
+  return true;
+}
+
 // This is used to handle spills for 128/256-bit registers when we have AVX512,
 // but not VLX. If it uses an extended register we need to use an instruction
 // that loads the lower 128/256-bit, but is available with only AVX512F.
@@ -7956,6 +7968,9 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case TargetOpcode::LOAD_STACK_GUARD:
     expandLoadStackGuard(MIB, *this);
     return true;
+  case X86::XOR64_FP:
+  case X86::XOR32_FP:
+    return expandXorFP(MIB, *this);
   }
   return false;
 }

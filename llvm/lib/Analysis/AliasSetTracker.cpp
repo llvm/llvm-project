@@ -211,8 +211,8 @@ bool AliasSet::aliasesPointer(const Value *Ptr, uint64_t Size,
   if (!UnknownInsts.empty()) {
     for (unsigned i = 0, e = UnknownInsts.size(); i != e; ++i)
       if (auto *Inst = getUnknownInst(i))
-        if (AA.getModRefInfo(Inst, MemoryLocation(Ptr, Size, AAInfo)) !=
-            MRI_NoModRef)
+        if (isModOrRefSet(
+                AA.getModRefInfo(Inst, MemoryLocation(Ptr, Size, AAInfo))))
           return true;
   }
 
@@ -231,15 +231,15 @@ bool AliasSet::aliasesUnknownInst(const Instruction *Inst,
   for (unsigned i = 0, e = UnknownInsts.size(); i != e; ++i) {
     if (auto *UnknownInst = getUnknownInst(i)) {
       ImmutableCallSite C1(UnknownInst), C2(Inst);
-      if (!C1 || !C2 || AA.getModRefInfo(C1, C2) != MRI_NoModRef ||
-          AA.getModRefInfo(C2, C1) != MRI_NoModRef)
+      if (!C1 || !C2 || isModOrRefSet(AA.getModRefInfo(C1, C2)) ||
+          isModOrRefSet(AA.getModRefInfo(C2, C1)))
         return true;
     }
   }
 
   for (iterator I = begin(), E = end(); I != E; ++I)
-    if (AA.getModRefInfo(Inst, MemoryLocation(I.getPointer(), I.getSize(),
-                                              I.getAAInfo())) != MRI_NoModRef)
+    if (isModOrRefSet(AA.getModRefInfo(
+            Inst, MemoryLocation(I.getPointer(), I.getSize(), I.getAAInfo()))))
       return true;
 
   return false;
@@ -572,12 +572,11 @@ AliasSet &AliasSetTracker::mergeAllAliasSets() {
   AliasAnyAS->AliasAny = true;
 
   for (auto Cur : ASVector) {
-    
     // If Cur was already forwarding, just forward to the new AS instead.
     AliasSet *FwdTo = Cur->Forward;
     if (FwdTo) {
       Cur->Forward = AliasAnyAS;
-      AliasAnyAS->addRef();      
+      AliasAnyAS->addRef();
       FwdTo->dropRef(*this);
       continue;
     }

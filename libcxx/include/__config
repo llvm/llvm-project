@@ -1265,6 +1265,13 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 # endif
 #endif // defined(_LIBCPP_HAS_NO_PRAGMA_PUSH_POP_MACRO)
 
+#if defined(_LIBCPP_ABI_MICROSOFT) && !defined(_LIBCPP_BUILDING_LIBRARY)
+# if defined(_DLL)
+#   pragma(lib, "c++.lib")
+# else
+#   pragma(lib, "libc++.lib")
+# endif
+#endif // defined(_LIBCPP_ABI_MICROSOFT) && !defined(_LIBCPP_BUILDING_LIBRARY)
 
 #endif // __cplusplus
 

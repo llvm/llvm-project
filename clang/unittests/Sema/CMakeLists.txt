@@ -7,6 +7,7 @@ add_clang_unittest(SemaTests
   )
 
 target_link_libraries(SemaTests
+  PRIVATE
   clangAST
   clangBasic
   clangFrontend

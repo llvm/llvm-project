@@ -166,7 +166,7 @@ std::string elf::createResponseFile(const opt::InputArgList &Args) {
          << "\n";
       break;
     default:
-      OS << toString(Arg) << "\n";
+      OS << toString(*Arg) << "\n";
     }
   }
   return Data.str();
