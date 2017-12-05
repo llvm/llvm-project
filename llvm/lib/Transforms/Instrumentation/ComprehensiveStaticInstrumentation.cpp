@@ -90,8 +90,18 @@ private:
 
 char ComprehensiveStaticInstrumentation::ID = 0;
 
-INITIALIZE_PASS(ComprehensiveStaticInstrumentation, "csi",
-                "ComprehensiveStaticInstrumentation pass", false, false)
+INITIALIZE_PASS_BEGIN(ComprehensiveStaticInstrumentation, "csi",
+                      "ComprehensiveStaticInstrumentation pass",
+                      false, false)
+INITIALIZE_PASS_DEPENDENCY(CallGraphWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_END(ComprehensiveStaticInstrumentation, "csi",
+                    "ComprehensiveStaticInstrumentation pass",
+                    false, false)
+
+// INITIALIZE_PASS(ComprehensiveStaticInstrumentation, "csi",
+//                 "ComprehensiveStaticInstrumentation pass", false, false)
 
 ModulePass *llvm::createComprehensiveStaticInstrumentationPass(
     const CSIOptions &Options) {
