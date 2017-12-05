@@ -63,8 +63,9 @@ define <8 x i1> @test3(<8 x i1>%a, <8 x i1>%b) {
 ; KNL-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; KNL-NEXT:    vptestmq %zmm1, %zmm1, %k1 {%k1}
-; KNL-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    vpmovqw %zmm0, %xmm0
+; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; KNL-NEXT:    vpmovdw %zmm0, %ymm0
+; KNL-NEXT:    ## kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test3:
@@ -85,8 +86,9 @@ define <8 x i1> @test3(<8 x i1>%a, <8 x i1>%b) {
 ; KNL_X32-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; KNL_X32-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; KNL_X32-NEXT:    vptestmq %zmm1, %zmm1, %k1 {%k1}
-; KNL_X32-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; KNL_X32-NEXT:    vpmovqw %zmm0, %xmm0
+; KNL_X32-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; KNL_X32-NEXT:    vpmovdw %zmm0, %ymm0
+; KNL_X32-NEXT:    ## kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
 ; KNL_X32-NEXT:    retl
   %c = and <8 x i1>%a, %b
   ret <8 x i1> %c
@@ -271,8 +273,9 @@ define <8 x i1> @test7a(<8 x i32>%a, <8 x i32>%b) {
 ; KNL-NEXT:    movb $85, %al
 ; KNL-NEXT:    kmovw %eax, %k1
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k1 {%k1}
-; KNL-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    vpmovqw %zmm0, %xmm0
+; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; KNL-NEXT:    vpmovdw %zmm0, %ymm0
+; KNL-NEXT:    ## kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
 ; KNL-NEXT:    popq %rax
 ; KNL-NEXT:    retq
 ;
@@ -306,8 +309,9 @@ define <8 x i1> @test7a(<8 x i32>%a, <8 x i32>%b) {
 ; KNL_X32-NEXT:    movb $85, %al
 ; KNL_X32-NEXT:    kmovw %eax, %k1
 ; KNL_X32-NEXT:    vptestmq %zmm0, %zmm0, %k1 {%k1}
-; KNL_X32-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; KNL_X32-NEXT:    vpmovqw %zmm0, %xmm0
+; KNL_X32-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; KNL_X32-NEXT:    vpmovdw %zmm0, %ymm0
+; KNL_X32-NEXT:    ## kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
 ; KNL_X32-NEXT:    addl $12, %esp
 ; KNL_X32-NEXT:    retl
   %cmpRes = icmp sgt <8 x i32>%a, %b

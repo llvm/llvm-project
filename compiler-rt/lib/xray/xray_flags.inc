@@ -18,10 +18,12 @@ XRAY_FLAG(bool, patch_premain, false,
           "Whether to patch instrumentation points before main.")
 XRAY_FLAG(const char *, xray_logfile_base, "xray-log.",
           "Filename base for the xray logfile.")
+XRAY_FLAG(const char *, xray_mode, "", "Mode to install by default.")
+
 
 // Basic (Naive) Mode logging options.
 XRAY_FLAG(bool, xray_naive_log, false,
-          "Whether to install the naive log implementation.")
+          "DEPRECATED: Use xray_mode=xray-basic instead.")
 XRAY_FLAG(int, xray_naive_log_func_duration_threshold_us, 5,
           "Naive logging will try to skip functions that execute for fewer "
           "microseconds than this threshold.")
@@ -33,7 +35,7 @@ XRAY_FLAG(int, xray_naive_log_thread_buffer_size, 1024,
 
 // FDR (Flight Data Recorder) Mode logging options.
 XRAY_FLAG(bool, xray_fdr_log, false,
-          "Whether to install the flight data recorder logging implementation.")
+          "DEPRECATED: Use xray_mode=xray-fdr instead.")
 XRAY_FLAG(int, xray_fdr_log_func_duration_threshold_us, 5,
           "FDR logging will try to skip functions that execute for fewer "
           "microseconds than this threshold.")

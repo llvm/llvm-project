@@ -163,7 +163,6 @@ getOptionalParameters(const CodeCompletionString &CCS,
   return Result;
 }
 
-
 /// A scored code completion result.
 /// It may be promoted to a CompletionItem if it's among the top-ranked results.
 struct CompletionCandidate {
@@ -349,9 +348,8 @@ class PlainTextCompletionItemsCollector final
     : public CompletionItemsCollector {
 
 public:
-  PlainTextCompletionItemsCollector(
-      const CodeCompleteOptions &CodeCompleteOpts,
-      CompletionList &Items)
+  PlainTextCompletionItemsCollector(const CodeCompleteOptions &CodeCompleteOpts,
+                                    CompletionList &Items)
       : CompletionItemsCollector(CodeCompleteOpts, Items) {}
 
 private:
@@ -386,9 +384,8 @@ private:
 class SnippetCompletionItemsCollector final : public CompletionItemsCollector {
 
 public:
-  SnippetCompletionItemsCollector(
-      const CodeCompleteOptions &CodeCompleteOpts,
-      CompletionList &Items)
+  SnippetCompletionItemsCollector(const CodeCompleteOptions &CodeCompleteOpts,
+                                  CompletionList &Items)
       : CompletionItemsCollector(CodeCompleteOpts, Items) {}
 
 private:

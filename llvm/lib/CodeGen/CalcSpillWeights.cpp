@@ -70,13 +70,24 @@ static unsigned copyHint(const MachineInstr *mi, unsigned reg,
     return sub == hsub ? hreg : 0;
 
   const TargetRegisterClass *rc = mri.getRegClass(reg);
+  if (!tri.enableMultipleCopyHints()) {
+    // Only allow physreg hints in rc.
+    if (sub == 0)
+      return rc->contains(hreg) ? hreg : 0;
 
-  // Only allow physreg hints in rc.
-  if (sub == 0)
-    return rc->contains(hreg) ? hreg : 0;
+    // reg:sub should match the physreg hreg.
+    return tri.getMatchingSuperReg(hreg, sub, rc);
+  }
 
-  // reg:sub should match the physreg hreg.
-  return tri.getMatchingSuperReg(hreg, sub, rc);
+  unsigned CopiedPReg = (hsub ? tri.getSubReg(hreg, hsub) : hreg);
+  if (rc->contains(CopiedPReg))
+    return CopiedPReg;
+
+  // Check if reg:sub matches so that a super register could be hinted.
+  if (sub)
+    return tri.getMatchingSuperReg(CopiedPReg, sub, rc);
+
+  return 0;
 }
 
 // Check if all values in LI are rematerializable
@@ -157,12 +168,7 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &li, SlotIndex *start,
   unsigned numInstr = 0; // Number of instructions using li
   SmallPtrSet<MachineInstr*, 8> visited;
 
-  // Find the best physreg hint and the best virtreg hint.
-  float bestPhys = 0, bestVirt = 0;
-  unsigned hintPhys = 0, hintVirt = 0;
-
-  // Don't recompute a target specific hint.
-  bool noHint = mri.getRegAllocationHint(li.reg).first != 0;
+  std::pair<unsigned, unsigned> TargetHint = mri.getRegAllocationHint(li.reg);
 
   // Don't recompute spill weight for an unspillable register.
   bool Spillable = li.isSpillable();
@@ -188,6 +194,36 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &li, SlotIndex *start,
     numInstr += 2;
   }
 
+  // CopyHint is a sortable hint derived from a COPY instruction.
+  struct CopyHint {
+    unsigned Reg;
+    float Weight;
+    bool IsPhys;
+    unsigned HintOrder;
+    CopyHint(unsigned R, float W, bool P, unsigned HR) :
+      Reg(R), Weight(W), IsPhys(P), HintOrder(HR) {}
+    bool operator<(const CopyHint &rhs) const {
+      // Always prefer any physreg hint.
+      if (IsPhys != rhs.IsPhys)
+        return (IsPhys && !rhs.IsPhys);
+      if (Weight != rhs.Weight)
+        return (Weight > rhs.Weight);
+
+      // This is just a temporary way to achive NFC for targets that don't
+      // enable multiple copy hints. HintOrder should be removed when all
+      // targets return true in enableMultipleCopyHints().
+      return (HintOrder < rhs.HintOrder);
+
+#if 0 // Should replace the HintOrder check, see above.
+      // (just for the purpose of maintaining the set)
+      return Reg < rhs.Reg;
+#endif
+    }
+  };
+  std::set<CopyHint> CopyHints;
+
+  // Temporary: see comment for HintOrder above.
+  unsigned CopyHintOrder = 0;
   for (MachineRegisterInfo::reg_instr_iterator
        I = mri.reg_instr_begin(li.reg), E = mri.reg_instr_end();
        I != E; ) {
@@ -227,7 +263,8 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &li, SlotIndex *start,
     }
 
     // Get allocation hints from copies.
-    if (noHint || !mi->isCopy())
+    if (!mi->isCopy() ||
+        (TargetHint.first != 0 && !tri.enableMultipleCopyHints()))
       continue;
     unsigned hint = copyHint(mi, li.reg, tri, mri);
     if (!hint)
@@ -237,28 +274,30 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &li, SlotIndex *start,
     //
     // FIXME: we probably shouldn't use floats at all.
     volatile float hweight = Hint[hint] += weight;
-    if (TargetRegisterInfo::isPhysicalRegister(hint)) {
-      if (hweight > bestPhys && mri.isAllocatable(hint)) {
-        bestPhys = hweight;
-        hintPhys = hint;
-      }
-    } else {
-      if (hweight > bestVirt) {
-        bestVirt = hweight;
-        hintVirt = hint;
-      }
-    }
+    if (TargetRegisterInfo::isVirtualRegister(hint) || mri.isAllocatable(hint))
+      CopyHints.insert(CopyHint(hint, hweight, tri.isPhysicalRegister(hint),
+                     (tri.enableMultipleCopyHints() ? hint : CopyHintOrder++)));
   }
 
   Hint.clear();
 
-  // Always prefer the physreg hint.
-  if (updateLI) {
-    if (unsigned hint = hintPhys ? hintPhys : hintVirt) {
-      mri.setRegAllocationHint(li.reg, 0, hint);
-      // Weakly boost the spill weight of hinted registers.
-      totalWeight *= 1.01F;
+  // Pass all the sorted copy hints to mri.
+  if (updateLI && CopyHints.size()) {
+    // Remove a generic hint if previously added by target.
+    if (TargetHint.first == 0 && TargetHint.second)
+      mri.clearSimpleHint(li.reg);
+
+    for (auto &Hint : CopyHints) {
+      if (TargetHint.first != 0 && Hint.Reg == TargetHint.second)
+        // Don't add again the target-type hint.
+        continue;
+      mri.addRegAllocationHint(li.reg, Hint.Reg);
+      if (!tri.enableMultipleCopyHints())
+        break;
     }
+
+    // Weakly boost the spill weight of hinted registers.
+    totalWeight *= 1.01F;
   }
 
   // If the live interval was already unspillable, leave it that way.

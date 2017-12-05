@@ -1468,11 +1468,9 @@ define <16 x double> @sbto16f64(<16 x double> %a) {
 ; NOVLDQ-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; NOVLDQ-NEXT:    vcmpltpd %zmm1, %zmm2, %k1
 ; NOVLDQ-NEXT:    vcmpltpd %zmm0, %zmm2, %k2
-; NOVLDQ-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k2} {z}
-; NOVLDQ-NEXT:    vpmovqd %zmm0, %ymm0
+; NOVLDQ-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k2} {z}
 ; NOVLDQ-NEXT:    vcvtdq2pd %ymm0, %zmm0
-; NOVLDQ-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
-; NOVLDQ-NEXT:    vpmovqd %zmm1, %ymm1
+; NOVLDQ-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
 ; NOVLDQ-NEXT:    vcvtdq2pd %ymm1, %zmm1
 ; NOVLDQ-NEXT:    retq
 ;
@@ -1519,8 +1517,7 @@ define <8 x double> @sbto8f64(<8 x double> %a) {
 ; NOVLDQ:       # %bb.0:
 ; NOVLDQ-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; NOVLDQ-NEXT:    vcmpltpd %zmm0, %zmm1, %k1
-; NOVLDQ-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; NOVLDQ-NEXT:    vpmovqd %zmm0, %ymm0
+; NOVLDQ-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; NOVLDQ-NEXT:    vcvtdq2pd %ymm0, %zmm0
 ; NOVLDQ-NEXT:    retq
 ;
@@ -1559,8 +1556,7 @@ define <8 x float> @sbto8f32(<8 x float> %a) {
 ; NOVLDQ-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; NOVLDQ-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; NOVLDQ-NEXT:    vcmpltps %zmm0, %zmm1, %k1
-; NOVLDQ-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; NOVLDQ-NEXT:    vpmovqd %zmm0, %ymm0
+; NOVLDQ-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; NOVLDQ-NEXT:    vcvtdq2ps %ymm0, %ymm0
 ; NOVLDQ-NEXT:    retq
 ;

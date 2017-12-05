@@ -362,16 +362,25 @@ XRayLogInitStatus fdrLoggingInit(std::size_t BufferSize, std::size_t BufferMax,
   return XRayLogInitStatus::XRAY_LOG_INITIALIZED;
 }
 
+bool fdrLogDynamicInitializer() XRAY_NEVER_INSTRUMENT {
+  using namespace __xray;
+  XRayLogImpl Impl{
+      fdrLoggingInit,
+      fdrLoggingFinalize,
+      fdrLoggingHandleArg0,
+      fdrLoggingFlush,
+  };
+  auto RegistrationResult = __xray_log_register_mode("xray-fdr", Impl);
+  if (RegistrationResult != XRayLogRegisterStatus::XRAY_REGISTRATION_OK &&
+      __sanitizer::Verbosity())
+    Report("Cannot register XRay FDR mode to 'xray-fdr'; error = %d\n",
+           RegistrationResult);
+  if (flags()->xray_fdr_log ||
+      !__sanitizer::internal_strcmp(flags()->xray_mode, "xray-fdr"))
+    __xray_set_log_impl(Impl);
+  return true;
+}
+
 } // namespace __xray
 
-static auto UNUSED Unused = [] {
-  using namespace __xray;
-  if (flags()->xray_fdr_log) {
-    XRayLogImpl Impl{
-        fdrLoggingInit, fdrLoggingFinalize, fdrLoggingHandleArg0,
-        fdrLoggingFlush,
-    };
-    __xray_set_log_impl(Impl);
-  }
-  return true;
-}();
+static auto UNUSED Unused = __xray::fdrLogDynamicInitializer();

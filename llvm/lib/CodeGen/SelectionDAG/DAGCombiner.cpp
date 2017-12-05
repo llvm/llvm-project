@@ -500,6 +500,11 @@ namespace {
     bool isAndLoadExtLoad(ConstantSDNode *AndC, LoadSDNode *LoadN,
                           EVT LoadResultTy, EVT &ExtVT);
 
+    /// Helper function to calculate whether the given Load can have its
+    /// width reduced to ExtVT.
+    bool isLegalNarrowLoad(LoadSDNode *LoadN, ISD::LoadExtType ExtType,
+                           EVT &ExtVT, unsigned ShAmt = 0);
+
     /// Helper function for MergeConsecutiveStores which merges the
     /// component store chains.
     SDValue getMergeStoreChains(SmallVectorImpl<MemOpLink> &StoreNodes,
@@ -3721,6 +3726,56 @@ bool DAGCombiner::isAndLoadExtLoad(ConstantSDNode *AndC, LoadSDNode *LoadN,
     return false;
 
   if (!TLI.shouldReduceLoadWidth(LoadN, ISD::ZEXTLOAD, ExtVT))
+    return false;
+
+  return true;
+}
+
+bool DAGCombiner::isLegalNarrowLoad(LoadSDNode *LoadN, ISD::LoadExtType ExtType,
+                                    EVT &ExtVT, unsigned ShAmt) {
+  // Don't transform one with multiple uses, this would require adding a new
+  // load.
+  if (!SDValue(LoadN, 0).hasOneUse())
+    return false;
+
+  if (LegalOperations &&
+      !TLI.isLoadExtLegal(ExtType, LoadN->getValueType(0), ExtVT))
+    return false;
+
+  // Do not generate loads of non-round integer types since these can
+  // be expensive (and would be wrong if the type is not byte sized).
+  if (!ExtVT.isRound())
+    return false;
+
+  // Don't change the width of a volatile load.
+  if (LoadN->isVolatile())
+    return false;
+
+  // Verify that we are actually reducing a load width here.
+  if (LoadN->getMemoryVT().getSizeInBits() < ExtVT.getSizeInBits())
+    return false;
+
+  // For the transform to be legal, the load must produce only two values
+  // (the value loaded and the chain).  Don't transform a pre-increment
+  // load, for example, which produces an extra value.  Otherwise the
+  // transformation is not equivalent, and the downstream logic to replace
+  // uses gets things wrong.
+  if (LoadN->getNumValues() > 2)
+    return false;
+
+  // If the load that we're shrinking is an extload and we're not just
+  // discarding the extension we can't simply shrink the load. Bail.
+  // TODO: It would be possible to merge the extensions in some cases.
+  if (LoadN->getExtensionType() != ISD::NON_EXTLOAD &&
+      LoadN->getMemoryVT().getSizeInBits() < ExtVT.getSizeInBits() + ShAmt)
+    return false;
+
+  if (!TLI.shouldReduceLoadWidth(LoadN, ExtType, ExtVT))
+    return false;
+
+  // It's not possible to generate a constant of extended or untyped type.
+  EVT PtrType = LoadN->getOperand(1).getValueType();
+  if (PtrType == MVT::Untyped || PtrType.isExtended())
     return false;
 
   return true;
@@ -8030,20 +8085,12 @@ SDValue DAGCombiner::ReduceLoadWidth(SDNode *N) {
     ExtType = ISD::ZEXTLOAD;
     ExtVT = EVT::getIntegerVT(*DAG.getContext(), ActiveBits);
   }
-  if (LegalOperations && !TLI.isLoadExtLegal(ExtType, VT, ExtVT))
-    return SDValue();
-
-  unsigned EVTBits = ExtVT.getSizeInBits();
-
-  // Do not generate loads of non-round integer types since these can
-  // be expensive (and would be wrong if the type is not byte sized).
-  if (!ExtVT.isRound())
-    return SDValue();
 
   unsigned ShAmt = 0;
   if (N0.getOpcode() == ISD::SRL && N0.hasOneUse()) {
     if (ConstantSDNode *N01 = dyn_cast<ConstantSDNode>(N0.getOperand(1))) {
       ShAmt = N01->getZExtValue();
+      unsigned EVTBits = ExtVT.getSizeInBits();
       // Is the shift amount a multiple of size of VT?
       if ((ShAmt & (EVTBits-1)) == 0) {
         N0 = N0.getOperand(0);
@@ -8080,42 +8127,12 @@ SDValue DAGCombiner::ReduceLoadWidth(SDNode *N) {
     }
   }
 
-  // If we haven't found a load, we can't narrow it.  Don't transform one with
-  // multiple uses, this would require adding a new load.
-  if (!isa<LoadSDNode>(N0) || !N0.hasOneUse())
+  // If we haven't found a load, we can't narrow it.
+  if (!isa<LoadSDNode>(N0))
     return SDValue();
 
-  // Don't change the width of a volatile load.
   LoadSDNode *LN0 = cast<LoadSDNode>(N0);
-  if (LN0->isVolatile())
-    return SDValue();
-
-  // Verify that we are actually reducing a load width here.
-  if (LN0->getMemoryVT().getSizeInBits() < EVTBits)
-    return SDValue();
-
-  // For the transform to be legal, the load must produce only two values
-  // (the value loaded and the chain).  Don't transform a pre-increment
-  // load, for example, which produces an extra value.  Otherwise the
-  // transformation is not equivalent, and the downstream logic to replace
-  // uses gets things wrong.
-  if (LN0->getNumValues() > 2)
-    return SDValue();
-
-  // If the load that we're shrinking is an extload and we're not just
-  // discarding the extension we can't simply shrink the load. Bail.
-  // TODO: It would be possible to merge the extensions in some cases.
-  if (LN0->getExtensionType() != ISD::NON_EXTLOAD &&
-      LN0->getMemoryVT().getSizeInBits() < ExtVT.getSizeInBits() + ShAmt)
-    return SDValue();
-
-  if (!TLI.shouldReduceLoadWidth(LN0, ExtType, ExtVT))
-    return SDValue();
-
-  EVT PtrType = N0.getOperand(1).getValueType();
-
-  if (PtrType == MVT::Untyped || PtrType.isExtended())
-    // It's not possible to generate a constant of extended or untyped type.
+  if (!isLegalNarrowLoad(LN0, ExtType, ExtVT, ShAmt))
     return SDValue();
 
   // For big endian targets, we need to adjust the offset to the pointer to
@@ -8126,6 +8143,7 @@ SDValue DAGCombiner::ReduceLoadWidth(SDNode *N) {
     ShAmt = LVTStoreBits - EVTStoreBits - ShAmt;
   }
 
+  EVT PtrType = N0.getOperand(1).getValueType();
   uint64_t PtrOff = ShAmt / 8;
   unsigned NewAlign = MinAlign(LN0->getAlignment(), PtrOff);
   SDLoc DL(LN0);

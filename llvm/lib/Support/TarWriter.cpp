@@ -173,6 +173,10 @@ void TarWriter::append(StringRef Path, StringRef Data) {
   // Write Path and Data.
   std::string Fullpath = BaseDir + "/" + sys::path::convert_to_slash(Path);
 
+  // We do not want to include the same file more than once.
+  if (!Files.insert(Fullpath).second)
+    return;
+
   StringRef Prefix;
   StringRef Name;
   if (splitUstar(Fullpath, Prefix, Name)) {

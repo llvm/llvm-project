@@ -248,6 +248,19 @@ clang-format
 * Option -verbose added to the command line.
   Shows the list of processed files.
 
+* Option *IncludeBlocks* added to merge and regroup multiple ``#include`` blocks during sorting.
+
+  +-------------------------+-------------------------+-------------------------+
+  | Before (Preserve)       | Merge                   | Regroup                 |
+  +=========================+=========================+=========================+
+  |  .. code-block:: c++    | .. code-block:: c++     | .. code-block:: c++     |
+  |                         |                         |                         |
+  |   #include "b.h"        |   #include "a.h"        |   #include "a.h"        |
+  |                         |   #include "b.h"        |   #include "b.h"        |
+  |   #include "a.b"        |   #include <lib/main.h> |                         |
+  |   #include <lib/main.h> |                         |   #include <lib/main.h> |
+  +-------------------------+-------------------------+-------------------------+
+
 libclang
 --------
 

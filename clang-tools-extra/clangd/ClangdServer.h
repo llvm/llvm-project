@@ -211,7 +211,6 @@ public:
                DiagnosticsConsumer &DiagConsumer,
                FileSystemProvider &FSProvider, unsigned AsyncThreadsCount,
                bool StorePreamblesInMemory,
-               const clangd::CodeCompleteOptions &CodeCompleteOpts,
                clangd::Logger &Logger,
                llvm::Optional<StringRef> ResourceDir = llvm::None);
 
@@ -255,6 +254,7 @@ public:
   /// while returned future is not yet ready.
   std::future<Tagged<CompletionList>>
   codeComplete(PathRef File, Position Pos,
+               const clangd::CodeCompleteOptions &Opts,
                llvm::Optional<StringRef> OverridenContents = llvm::None,
                IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS = nullptr);
 
@@ -262,6 +262,7 @@ public:
   /// when codeComplete results become available.
   void codeComplete(UniqueFunction<void(Tagged<CompletionList>)> Callback,
                     PathRef File, Position Pos,
+                    const clangd::CodeCompleteOptions &Opts,
                     llvm::Optional<StringRef> OverridenContents = llvm::None,
                     IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS = nullptr);
 
@@ -328,7 +329,6 @@ private:
   llvm::Optional<std::string> RootPath;
   std::shared_ptr<PCHContainerOperations> PCHs;
   bool StorePreamblesInMemory;
-  clangd::CodeCompleteOptions CodeCompleteOpts;
   /// Used to serialize diagnostic callbacks.
   /// FIXME(ibiryukov): get rid of an extra map and put all version counters
   /// into CppFile.

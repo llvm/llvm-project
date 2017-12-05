@@ -9636,3 +9636,4 @@ static const char *get_dyld_bind_info_symbolname(uint64_t ReferenceValue,
   auto name = info->bindtable->lookup(ReferenceValue);
   return !name.empty() ? name.data() : nullptr;
 }
+
