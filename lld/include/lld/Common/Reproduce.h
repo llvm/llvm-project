@@ -33,7 +33,7 @@ std::string quote(StringRef S);
 std::string rewritePath(StringRef S);
 
 // Returns the string form of the given argument.
-std::string toString(llvm::opt::Arg *Arg);
+std::string toString(const llvm::opt::Arg &Arg);
 }
 
 #endif

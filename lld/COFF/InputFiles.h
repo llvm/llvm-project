@@ -58,7 +58,7 @@ public:
   virtual ~InputFile() {}
 
   // Returns the filename.
-  StringRef getName() { return MB.getBufferIdentifier(); }
+  StringRef getName() const { return MB.getBufferIdentifier(); }
 
   // Reads a file (the constructor doesn't do that).
   virtual void parse() = 0;
@@ -229,7 +229,7 @@ private:
 };
 } // namespace coff
 
-std::string toString(coff::InputFile *File);
+std::string toString(const coff::InputFile *File);
 } // namespace lld
 
 #endif

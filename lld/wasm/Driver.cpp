@@ -257,6 +257,8 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Config->Sysroot = Args.getLastArgValue(OPT_sysroot);
   errorHandler().Verbose = Args.hasArg(OPT_verbose);
   ThreadsEnabled = Args.hasFlag(OPT_threads, OPT_no_threads, true);
+  if (Config->Relocatable)
+    Config->EmitRelocs = true;
 
   Config->InitialMemory = args::getInteger(Args, OPT_initial_memory, 0);
   Config->GlobalBase = args::getInteger(Args, OPT_global_base, 1024);

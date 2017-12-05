@@ -128,6 +128,16 @@ enum XRayLogFlushStatus {
   XRAY_LOG_FLUSHED = 2,
 };
 
+/// This enum indicates the installation state of a logging implementation, when
+/// associating a mode to a particular logging implementation through
+/// `__xray_log_register_impl(...)` or through `__xray_log_select_mode(...`.
+enum XRayLogRegisterStatus {
+  XRAY_REGISTRATION_OK = 0,
+  XRAY_DUPLICATE_MODE = 1,
+  XRAY_MODE_NOT_FOUND = 2,
+  XRAY_INCOMPLETE_IMPL = 3,
+};
+
 /// A valid XRay logging implementation MUST provide all of the function
 /// pointers in XRayLogImpl when being installed through `__xray_set_log_impl`.
 /// To be precise, ALL the functions pointers MUST NOT be nullptr.
@@ -188,6 +198,34 @@ struct XRayLogImpl {
 /// It is logging implementation defined what happens when this function is
 /// called while in any other states.
 void __xray_set_log_impl(XRayLogImpl Impl);
+
+/// This function registers a logging implementation against a "mode"
+/// identifier. This allows multiple modes to be registered, and chosen at
+/// runtime using the same mode identifier through
+/// `__xray_log_select_mode(...)`.
+///
+/// We treat the Mode identifier as a null-terminated byte string, as the
+/// identifier used when retrieving the log impl.
+///
+/// Returns:
+///   - XRAY_REGISTRATION_OK on success.
+///   - XRAY_DUPLICATE_MODE when an implementation is already associated with
+///     the provided Mode; does not update the already-registered
+///     implementation.
+XRayLogRegisterStatus __xray_log_register_mode(const char *Mode,
+                                               XRayLogImpl Impl);
+
+/// This function selects the implementation associated with Mode that has been
+/// registered through __xray_log_register_mode(...) and installs that
+/// implementation (as if through calling __xray_set_log_impl(...)). The same
+/// caveats apply to __xray_log_select_mode(...) as with
+/// __xray_log_set_log_impl(...).
+///
+/// Returns:
+///   - XRAY_REGISTRATION_OK on success.
+///   - XRAY_MODE_NOT_FOUND if there is no implementation associated with Mode;
+///     does not update the currently installed implementation.
+XRayLogRegisterStatus __xray_log_select_mode(const char *Mode);
 
 /// This function removes the currently installed implementation. It will also
 /// uninstall any handlers that have been previously installed. It does NOT

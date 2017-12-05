@@ -111,8 +111,8 @@ protected:
 } // namespace wasm
 
 // Returns a symbol name for an error message.
-std::string toString(wasm::Symbol &Sym);
-std::string toString(wasm::Symbol::Kind &Kind);
+std::string toString(const wasm::Symbol &Sym);
+std::string toString(wasm::Symbol::Kind Kind);
 
 } // namespace lld
 

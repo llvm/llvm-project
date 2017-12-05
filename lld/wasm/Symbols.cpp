@@ -76,11 +76,11 @@ bool Symbol::isWeak() const { return Sym && Sym->isWeak(); }
 
 bool Symbol::isHidden() const { return Sym && Sym->isHidden(); }
 
-std::string lld::toString(wasm::Symbol &Sym) {
+std::string lld::toString(const wasm::Symbol &Sym) {
   return wasm::displayName(Sym.getName());
 }
 
-std::string lld::toString(wasm::Symbol::Kind &Kind) {
+std::string lld::toString(wasm::Symbol::Kind Kind) {
   switch (Kind) {
   case wasm::Symbol::DefinedFunctionKind:
     return "DefinedFunction";

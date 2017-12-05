@@ -226,7 +226,7 @@ void Writer::createGlobalSection() {
     writeGlobal(OS, Global);
   }
 
-  if (Config->Relocatable || Config->EmitRelocs) {
+  if (Config->EmitRelocs) {
     for (ObjFile *File : Symtab->ObjectFiles) {
       uint32_t GlobalIndex = File->NumGlobalImports();
       for (const WasmGlobal &Global : File->getWasmObj()->globals()) {
@@ -539,7 +539,7 @@ void Writer::createSections() {
   createDataSection();
 
   // Custom sections
-  if (Config->EmitRelocs || Config->Relocatable)
+  if (Config->EmitRelocs)
     createRelocSections();
   createLinkingSection();
   if (!Config->StripDebug && !Config->StripAll)
@@ -565,7 +565,7 @@ void Writer::calculateOffsets() {
     NumFunctions += WasmFile->functions().size();
 
     // Global Index
-    if (Config->Relocatable || Config->EmitRelocs) {
+    if (Config->EmitRelocs) {
       File->GlobalIndexOffset =
           GlobalImports.size() - File->NumGlobalImports() + NumGlobals;
       NumGlobals += WasmFile->globals().size();
