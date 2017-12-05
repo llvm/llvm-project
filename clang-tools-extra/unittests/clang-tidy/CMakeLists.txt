@@ -19,6 +19,7 @@ add_extra_unittest(ClangTidyTests
   ReadabilityModuleTest.cpp)
 
 target_link_libraries(ClangTidyTests
+  PRIVATE
   clangAST
   clangASTMatchers
   clangBasic
