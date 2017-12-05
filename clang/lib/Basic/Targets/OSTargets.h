@@ -711,11 +711,6 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyOSTargetInfo
       Builder.defineMacro("_GNU_SOURCE");
   }
 
-  // As an optimization, group static init code together in a section.
-  const char *getStaticInitSectionSpecifier() const final {
-    return ".text.__startup";
-  }
-
 public:
   explicit WebAssemblyOSTargetInfo(const llvm::Triple &Triple,
                                    const TargetOptions &Opts)
