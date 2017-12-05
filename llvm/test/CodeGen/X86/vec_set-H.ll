@@ -3,7 +3,7 @@
 
 define <2 x i64> @doload64(i16 signext  %x) nounwind  {
 ; CHECK-LABEL: doload64:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]

@@ -5,7 +5,7 @@
 ; widening shuffle v3float and then a add
 define void @shuf(<3 x float>* %dst.addr, <3 x float> %src1,<3 x float> %src2) nounwind {
 ; X86-LABEL: shuf:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    addps %xmm1, %xmm0
 ; X86-NEXT:    extractps $2, %xmm0, 8(%eax)
@@ -14,7 +14,7 @@ define void @shuf(<3 x float>* %dst.addr, <3 x float> %src1,<3 x float> %src2) n
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: shuf:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    addps %xmm1, %xmm0
 ; X64-NEXT:    extractps $2, %xmm0, 8(%rdi)
 ; X64-NEXT:    movlps %xmm0, (%rdi)
@@ -30,7 +30,7 @@ entry:
 ; widening shuffle v3float with a different mask and then a add
 define void @shuf2(<3 x float>* %dst.addr, <3 x float> %src1,<3 x float> %src2) nounwind {
 ; X86-LABEL: shuf2:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3]
 ; X86-NEXT:    addps %xmm1, %xmm0
@@ -40,7 +40,7 @@ define void @shuf2(<3 x float>* %dst.addr, <3 x float> %src1,<3 x float> %src2) 
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: shuf2:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3]
 ; X64-NEXT:    addps %xmm1, %xmm0
 ; X64-NEXT:    extractps $2, %xmm0, 8(%rdi)
@@ -58,14 +58,14 @@ entry:
 ; opA with opB, the DAG will produce new operations with opA.
 define void @shuf3(<4 x float> %tmp10, <4 x float> %vecinit15, <4 x float>* %dst) nounwind {
 ; X86-LABEL: shuf3:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0,0,0]
 ; X86-NEXT:    movaps %xmm1, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: shuf3:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0,0,0]
 ; X64-NEXT:    movaps %xmm1, (%rdi)
 ; X64-NEXT:    retq
@@ -88,7 +88,7 @@ entry:
 ; PR10421: make sure we correctly handle extreme widening with CONCAT_VECTORS
 define <8 x i8> @shuf4(<4 x i8> %a, <4 x i8> %b) nounwind readnone {
 ; X86-LABEL: shuf4:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movdqa {{.*#+}} xmm2 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
 ; X86-NEXT:    pshufb %xmm2, %xmm1
 ; X86-NEXT:    pshufb %xmm2, %xmm0
@@ -96,7 +96,7 @@ define <8 x i8> @shuf4(<4 x i8> %a, <4 x i8> %b) nounwind readnone {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: shuf4:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movdqa {{.*#+}} xmm2 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
 ; X64-NEXT:    pshufb %xmm2, %xmm1
 ; X64-NEXT:    pshufb %xmm2, %xmm0
@@ -109,14 +109,14 @@ define <8 x i8> @shuf4(<4 x i8> %a, <4 x i8> %b) nounwind readnone {
 ; PR11389: another CONCAT_VECTORS case
 define void @shuf5(<8 x i8>* %p) nounwind {
 ; X86-LABEL: shuf5:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    movsd %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: shuf5:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq {{.*}}(%rip), %rax
 ; X64-NEXT:    movq %rax, (%rdi)
 ; X64-NEXT:    retq

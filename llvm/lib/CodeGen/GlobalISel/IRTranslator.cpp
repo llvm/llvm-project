@@ -345,6 +345,16 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
   unsigned Res = getOrCreateVReg(LI);
   unsigned Addr = getOrCreateVReg(*LI.getPointerOperand());
 
+  if (LI.getOrdering() != AtomicOrdering::NotAtomic) {
+    MIRBuilder.buildAtomicLoad(
+        Res, Addr,
+        *MF->getMachineMemOperand(MachinePointerInfo(LI.getPointerOperand()),
+                                  Flags, DL->getTypeStoreSize(LI.getType()),
+                                  getMemOpAlignment(LI), AAMDNodes(), nullptr,
+                                  LI.getSyncScopeID(), LI.getOrdering()));
+    return true;
+  }
+
   MIRBuilder.buildLoad(
       Res, Addr,
       *MF->getMachineMemOperand(MachinePointerInfo(LI.getPointerOperand()),
@@ -365,6 +375,17 @@ bool IRTranslator::translateStore(const User &U, MachineIRBuilder &MIRBuilder) {
 
   unsigned Val = getOrCreateVReg(*SI.getValueOperand());
   unsigned Addr = getOrCreateVReg(*SI.getPointerOperand());
+
+  if (SI.getOrdering() != AtomicOrdering::NotAtomic) {
+    MIRBuilder.buildAtomicStore(
+        Val, Addr,
+        *MF->getMachineMemOperand(
+            MachinePointerInfo(SI.getPointerOperand()), Flags,
+            DL->getTypeStoreSize(SI.getValueOperand()->getType()),
+            getMemOpAlignment(SI), AAMDNodes(), nullptr, SI.getSyncScopeID(),
+            SI.getOrdering()));
+    return true;
+  }
 
   MIRBuilder.buildStore(
       Val, Addr,

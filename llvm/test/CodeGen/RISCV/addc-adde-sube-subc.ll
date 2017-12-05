@@ -6,7 +6,7 @@
 
 define i64 @addc_adde(i64 %a, i64 %b) {
 ; RV32I-LABEL: addc_adde:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    add a1, a1, a3
 ; RV32I-NEXT:    add a2, a0, a2
 ; RV32I-NEXT:    sltu a0, a2, a0
@@ -19,7 +19,7 @@ define i64 @addc_adde(i64 %a, i64 %b) {
 
 define i64 @subc_sube(i64 %a, i64 %b) {
 ; RV32I-LABEL: subc_sube:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sub a1, a1, a3
 ; RV32I-NEXT:    sltu a3, a0, a2
 ; RV32I-NEXT:    sub a1, a1, a3

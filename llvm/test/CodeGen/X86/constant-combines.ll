@@ -14,7 +14,7 @@ define void @PR22524({ float, float }* %arg) {
 ; being useful.
 ;
 ; CHECK-LABEL: PR22524:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    xorps %xmm1, %xmm1

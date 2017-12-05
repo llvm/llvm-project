@@ -4,7 +4,7 @@
 
 define i64 @t1(i64 %a) nounwind readnone {
 ; CHECK-LABEL: t1:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    leaq (%rdi,%rdi,8), %rax
 ; CHECK-NEXT:    leaq (%rax,%rax,8), %rax
 ; CHECK-NEXT:    retq
@@ -15,7 +15,7 @@ entry:
 
 define i64 @t2(i64 %a) nounwind readnone {
 ; CHECK-LABEL: t2:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    shlq $3, %rdi
 ; CHECK-NEXT:    leaq (%rdi,%rdi,4), %rax
 ; CHECK-NEXT:    retq

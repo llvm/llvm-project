@@ -5,7 +5,7 @@ declare fastcc <38 x double> @test()
 
 define void @pr34653() {
 ; CHECK-LABEL: pr34653:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset %rbp, -16

@@ -3,7 +3,7 @@
 
 define i1 @saddo_not_i32(i32 %v1, i32 %v2) {
 ; CHECK-LABEL: saddo_not_i32:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    addl %esi, %edi
 ; CHECK-NEXT:    setno %al
 ; CHECK-NEXT:    retq
@@ -16,7 +16,7 @@ entry:
 
 define i1 @saddo_not_i64(i64 %v1, i64 %v2) {
 ; CHECK-LABEL: saddo_not_i64:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    addq %rsi, %rdi
 ; CHECK-NEXT:    setno %al
 ; CHECK-NEXT:    retq
@@ -29,7 +29,7 @@ entry:
 
 define i1 @uaddo_not_i32(i32 %v1, i32 %v2) {
 ; CHECK-LABEL: uaddo_not_i32:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    addl %esi, %edi
 ; CHECK-NEXT:    setae %al
 ; CHECK-NEXT:    retq
@@ -42,7 +42,7 @@ entry:
 
 define i1 @uaddo_not_i64(i64 %v1, i64 %v2) {
 ; CHECK-LABEL: uaddo_not_i64:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    addq %rsi, %rdi
 ; CHECK-NEXT:    setae %al
 ; CHECK-NEXT:    retq
@@ -55,7 +55,7 @@ entry:
 
 define i1 @ssubo_not_i32(i32 %v1, i32 %v2) {
 ; CHECK-LABEL: ssubo_not_i32:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    cmpl %esi, %edi
 ; CHECK-NEXT:    setno %al
 ; CHECK-NEXT:    retq
@@ -68,7 +68,7 @@ entry:
 
 define i1 @ssub_not_i64(i64 %v1, i64 %v2) {
 ; CHECK-LABEL: ssub_not_i64:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    cmpq %rsi, %rdi
 ; CHECK-NEXT:    setno %al
 ; CHECK-NEXT:    retq
@@ -81,7 +81,7 @@ entry:
 
 define i1 @usubo_not_i32(i32 %v1, i32 %v2) {
 ; CHECK-LABEL: usubo_not_i32:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    cmpl %esi, %edi
 ; CHECK-NEXT:    setae %al
 ; CHECK-NEXT:    retq
@@ -94,7 +94,7 @@ entry:
 
 define i1 @usubo_not_i64(i64 %v1, i64 %v2) {
 ; CHECK-LABEL: usubo_not_i64:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    cmpq %rsi, %rdi
 ; CHECK-NEXT:    setae %al
 ; CHECK-NEXT:    retq
@@ -107,7 +107,7 @@ entry:
 
 define i1 @smulo_not_i32(i32 %v1, i32 %v2) {
 ; CHECK-LABEL: smulo_not_i32:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    imull %esi, %edi
 ; CHECK-NEXT:    setno %al
 ; CHECK-NEXT:    retq
@@ -120,7 +120,7 @@ entry:
 
 define i1 @smulo_not_i64(i64 %v1, i64 %v2) {
 ; CHECK-LABEL: smulo_not_i64:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    imulq %rsi, %rdi
 ; CHECK-NEXT:    setno %al
 ; CHECK-NEXT:    retq
@@ -133,7 +133,7 @@ entry:
 
 define i1 @umulo_not_i32(i32 %v1, i32 %v2) {
 ; CHECK-LABEL: umulo_not_i32:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    mull %esi
 ; CHECK-NEXT:    setno %al
@@ -147,7 +147,7 @@ entry:
 
 define i1 @umulo_not_i64(i64 %v1, i64 %v2) {
 ; CHECK-LABEL: umulo_not_i64:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    mulq %rsi
 ; CHECK-NEXT:    setno %al

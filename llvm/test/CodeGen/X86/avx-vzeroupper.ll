@@ -15,7 +15,7 @@ declare <4 x float> @llvm.x86.avx.vextractf128.ps.256(<8 x float>, i8) nounwind 
 
 define <4 x float> @test00(<4 x float> %a, <4 x float> %b) nounwind {
 ; ALL-LABEL: test00:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    pushq %rax
 ; ALL-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; ALL-NEXT:    callq do_sse
@@ -30,7 +30,7 @@ define <4 x float> @test00(<4 x float> %a, <4 x float> %b) nounwind {
 
 define <8 x float> @test01(<4 x float> %a, <4 x float> %b, <8 x float> %c) nounwind {
 ; VZ-LABEL: test01:
-; VZ:       # BB#0:
+; VZ:       # %bb.0:
 ; VZ-NEXT:    subq $56, %rsp
 ; VZ-NEXT:    vmovups %ymm2, (%rsp) # 32-byte Spill
 ; VZ-NEXT:    vmovaps {{.*}}(%rip), %xmm0
@@ -44,7 +44,7 @@ define <8 x float> @test01(<4 x float> %a, <4 x float> %b, <8 x float> %c) nounw
 ; VZ-NEXT:    retq
 ;
 ; FAST-YMM-ZMM-LABEL: test01:
-; FAST-YMM-ZMM:       # BB#0:
+; FAST-YMM-ZMM:       # %bb.0:
 ; FAST-YMM-ZMM-NEXT:    subq $56, %rsp
 ; FAST-YMM-ZMM-NEXT:    vmovups %ymm2, (%rsp) # 32-byte Spill
 ; FAST-YMM-ZMM-NEXT:    vmovaps {{.*}}(%rip), %xmm0
@@ -57,7 +57,7 @@ define <8 x float> @test01(<4 x float> %a, <4 x float> %b, <8 x float> %c) nounw
 ; FAST-YMM-ZMM-NEXT:    retq
 ;
 ; BTVER2-LABEL: test01:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    subq $56, %rsp
 ; BTVER2-NEXT:    vmovaps {{.*}}(%rip), %xmm0
 ; BTVER2-NEXT:    vmovups %ymm2, (%rsp) # 32-byte Spill
@@ -80,14 +80,14 @@ define <8 x float> @test01(<4 x float> %a, <4 x float> %b, <8 x float> %c) nounw
 
 define <4 x float> @test02(<8 x float> %a, <8 x float> %b) nounwind {
 ; VZ-LABEL: test02:
-; VZ:       # BB#0:
+; VZ:       # %bb.0:
 ; VZ-NEXT:    vaddps %ymm1, %ymm0, %ymm0
 ; VZ-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
 ; VZ-NEXT:    vzeroupper
 ; VZ-NEXT:    jmp do_sse # TAILCALL
 ;
 ; NO-VZ-LABEL: test02:
-; NO-VZ:       # BB#0:
+; NO-VZ:       # %bb.0:
 ; NO-VZ-NEXT:    vaddps %ymm1, %ymm0, %ymm0
 ; NO-VZ-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
 ; NO-VZ-NEXT:    jmp do_sse # TAILCALL
@@ -102,7 +102,7 @@ define <4 x float> @test02(<8 x float> %a, <8 x float> %b) nounwind {
 
 define <4 x float> @test03(<4 x float> %a, <4 x float> %b) nounwind {
 ; VZ-LABEL: test03:
-; VZ:       # BB#0: # %entry
+; VZ:       # %bb.0: # %entry
 ; VZ-NEXT:    pushq %rbx
 ; VZ-NEXT:    subq $16, %rsp
 ; VZ-NEXT:    vaddps %xmm1, %xmm0, %xmm0
@@ -113,7 +113,7 @@ define <4 x float> @test03(<4 x float> %a, <4 x float> %b) nounwind {
 ; VZ-NEXT:    callq foo
 ; VZ-NEXT:    testl %eax, %eax
 ; VZ-NEXT:    jne .LBB3_1
-; VZ-NEXT:  # BB#2: # %for.body.preheader
+; VZ-NEXT:  # %bb.2: # %for.body.preheader
 ; VZ-NEXT:    movl $4, %ebx
 ; VZ-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; VZ-NEXT:    .p2align 4, 0x90
@@ -127,13 +127,13 @@ define <4 x float> @test03(<4 x float> %a, <4 x float> %b) nounwind {
 ; VZ-NEXT:    callq do_sse
 ; VZ-NEXT:    decl %ebx
 ; VZ-NEXT:    jne .LBB3_3
-; VZ-NEXT:  # BB#4: # %for.end
+; VZ-NEXT:  # %bb.4: # %for.end
 ; VZ-NEXT:    addq $16, %rsp
 ; VZ-NEXT:    popq %rbx
 ; VZ-NEXT:    retq
 ;
 ; FAST-YMM-ZMM-LABEL: test03:
-; FAST-YMM-ZMM:       # BB#0: # %entry
+; FAST-YMM-ZMM:       # %bb.0: # %entry
 ; FAST-YMM-ZMM-NEXT:    pushq %rbx
 ; FAST-YMM-ZMM-NEXT:    subq $16, %rsp
 ; FAST-YMM-ZMM-NEXT:    vaddps %xmm1, %xmm0, %xmm0
@@ -144,7 +144,7 @@ define <4 x float> @test03(<4 x float> %a, <4 x float> %b) nounwind {
 ; FAST-YMM-ZMM-NEXT:    callq foo
 ; FAST-YMM-ZMM-NEXT:    testl %eax, %eax
 ; FAST-YMM-ZMM-NEXT:    jne .LBB3_1
-; FAST-YMM-ZMM-NEXT:  # BB#2: # %for.body.preheader
+; FAST-YMM-ZMM-NEXT:  # %bb.2: # %for.body.preheader
 ; FAST-YMM-ZMM-NEXT:    movl $4, %ebx
 ; FAST-YMM-ZMM-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; FAST-YMM-ZMM-NEXT:    .p2align 4, 0x90
@@ -157,13 +157,13 @@ define <4 x float> @test03(<4 x float> %a, <4 x float> %b) nounwind {
 ; FAST-YMM-ZMM-NEXT:    callq do_sse
 ; FAST-YMM-ZMM-NEXT:    decl %ebx
 ; FAST-YMM-ZMM-NEXT:    jne .LBB3_3
-; FAST-YMM-ZMM-NEXT:  # BB#4: # %for.end
+; FAST-YMM-ZMM-NEXT:  # %bb.4: # %for.end
 ; FAST-YMM-ZMM-NEXT:    addq $16, %rsp
 ; FAST-YMM-ZMM-NEXT:    popq %rbx
 ; FAST-YMM-ZMM-NEXT:    retq
 ;
 ; BTVER2-LABEL: test03:
-; BTVER2:       # BB#0: # %entry
+; BTVER2:       # %bb.0: # %entry
 ; BTVER2-NEXT:    pushq %rbx
 ; BTVER2-NEXT:    subq $16, %rsp
 ; BTVER2-NEXT:    vaddps %xmm1, %xmm0, %xmm0
@@ -174,7 +174,7 @@ define <4 x float> @test03(<4 x float> %a, <4 x float> %b) nounwind {
 ; BTVER2-NEXT:    callq foo
 ; BTVER2-NEXT:    testl %eax, %eax
 ; BTVER2-NEXT:    jne .LBB3_1
-; BTVER2-NEXT:  # BB#2: # %for.body.preheader
+; BTVER2-NEXT:  # %bb.2: # %for.body.preheader
 ; BTVER2-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; BTVER2-NEXT:    movl $4, %ebx
 ; BTVER2-NEXT:    .p2align 4, 0x90
@@ -187,7 +187,7 @@ define <4 x float> @test03(<4 x float> %a, <4 x float> %b) nounwind {
 ; BTVER2-NEXT:    callq do_sse
 ; BTVER2-NEXT:    decl %ebx
 ; BTVER2-NEXT:    jne .LBB3_3
-; BTVER2-NEXT:  # BB#4: # %for.end
+; BTVER2-NEXT:  # %bb.4: # %for.end
 ; BTVER2-NEXT:    addq $16, %rsp
 ; BTVER2-NEXT:    popq %rbx
 ; BTVER2-NEXT:    retq
@@ -220,7 +220,7 @@ for.end:
 
 define <4 x float> @test04(<4 x float> %a, <4 x float> %b) nounwind {
 ; VZ-LABEL: test04:
-; VZ:       # BB#0:
+; VZ:       # %bb.0:
 ; VZ-NEXT:    pushq %rax
 ; VZ-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<def>
 ; VZ-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -231,7 +231,7 @@ define <4 x float> @test04(<4 x float> %a, <4 x float> %b) nounwind {
 ; VZ-NEXT:    retq
 ;
 ; NO-VZ-LABEL: test04:
-; NO-VZ:       # BB#0:
+; NO-VZ:       # %bb.0:
 ; NO-VZ-NEXT:    pushq %rax
 ; NO-VZ-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<def>
 ; NO-VZ-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0

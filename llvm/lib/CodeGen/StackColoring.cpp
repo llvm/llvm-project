@@ -739,7 +739,7 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
         } else {
           for (auto Slot : slots) {
             DEBUG(dbgs() << "Found a use of slot #" << Slot);
-            DEBUG(dbgs() << " at BB#" << MBB->getNumber() << " index ");
+            DEBUG(dbgs() << " at " << printMBBReference(*MBB) << " index ");
             DEBUG(Indexes->getInstructionIndex(MI).print(dbgs()));
             const AllocaInst *Allocation = MFI->getObjectAllocation(Slot);
             if (Allocation) {

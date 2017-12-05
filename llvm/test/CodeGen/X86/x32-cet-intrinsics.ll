@@ -3,7 +3,7 @@
 
 define void @test_incsspd(i32 %a) local_unnamed_addr {
 ; CHECK-LABEL: test_incsspd:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    incsspd %eax
 ; CHECK-NEXT:    retl
@@ -16,7 +16,7 @@ declare void @llvm.x86.incsspd(i32)
 
 define i32 @test_rdsspd(i32 %a) {
 ; CHECK-LABEL: test_rdsspd:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    rdsspd %eax
 ; CHECK-NEXT:    retl
@@ -29,7 +29,7 @@ declare i32 @llvm.x86.rdsspd(i32)
 
 define void @test_saveprevssp() {
 ; CHECK-LABEL: test_saveprevssp:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    saveprevssp
 ; CHECK-NEXT:    retl
 entry:
@@ -41,7 +41,7 @@ declare void @llvm.x86.saveprevssp()
 
 define void @test_rstorssp(i8* %__p) {
 ; CHECK-LABEL: test_rstorssp:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    rstorssp (%eax)
 ; CHECK-NEXT:    retl
@@ -54,7 +54,7 @@ declare void @llvm.x86.rstorssp(i8*)
 
 define void @test_wrssd(i32 %a, i8* %__p) {
 ; CHECK-LABEL: test_wrssd:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    wrssd %eax, (%ecx)
@@ -68,7 +68,7 @@ declare void @llvm.x86.wrssd(i32, i8*)
 
 define void @test_wrussd(i32 %a, i8* %__p) {
 ; CHECK-LABEL: test_wrussd:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    wrussd %eax, (%ecx)
@@ -82,7 +82,7 @@ declare void @llvm.x86.wrussd(i32, i8*)
 
 define void @test_setssbsy() {
 ; CHECK-LABEL: test_setssbsy:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    setssbsy
 ; CHECK-NEXT:    retl
 entry:
@@ -94,7 +94,7 @@ declare void @llvm.x86.setssbsy()
 
 define void @test_clrssbsy(i8* %__p) {
 ; CHECK-LABEL: test_clrssbsy:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    clrssbsy (%eax)
 ; CHECK-NEXT:    retl

@@ -17,7 +17,7 @@ define fp128 @TestSelect(fp128 %a, fp128 %b) {
 ; CHECK-NEXT   callq __subtf3
 ; CHECK-NEXT   testl %ebx, %ebx
 ; CHECK-NEXT   jg .LBB0_2
-; CHECK-NEXT # BB#1:
+; CHECK-NEXT # %bb.1:
 ; CHECK-NEXT   movaps .LCPI0_0(%rip), %xmm0
 ; CHECK-NEXT .LBB0_2:
 ; CHECK-NEXT   addq $32, %rsp

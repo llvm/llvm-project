@@ -3,7 +3,7 @@
 
 define <2 x i48> @PR35272(<2 x i64> %a0, <2 x i48> %a1, <2 x i48> %a2) {
 ; CHECK-LABEL: PR35272:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vpcmpeqq %xmm3, %xmm0, %k1
 ; CHECK-NEXT:    vpblendmq %xmm1, %xmm2, %xmm0 {%k1}

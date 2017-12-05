@@ -9,7 +9,7 @@
 
 define fastcc i8* @t(i32 %base) nounwind {
 ; CHECK-LABEL: t:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    shlq $9, %rax
@@ -17,7 +17,7 @@ define fastcc i8* @t(i32 %base) nounwind {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB0_2
-; CHECK-NEXT:  # BB#1: # %bb1
+; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    callq bar
 ; CHECK-NEXT:  .LBB0_2: # %bb2
 ; CHECK-NEXT:    callq foo
@@ -49,17 +49,17 @@ declare void @printf(...) nounwind
 
 define void @commute(i32 %test_case, i32 %scale) nounwind ssp {
 ; CHECK-LABEL: commute:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; CHECK-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; CHECK-NEXT:    leal -1(%rdi), %eax
 ; CHECK-NEXT:    cmpl $2, %eax
 ; CHECK-NEXT:    ja .LBB1_4
-; CHECK-NEXT:  # BB#1: # %sw.bb
+; CHECK-NEXT:  # %bb.1: # %sw.bb
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB1_4
-; CHECK-NEXT:  # BB#2: # %if.end34
+; CHECK-NEXT:  # %bb.2: # %if.end34
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    imull %edi, %esi
 ; CHECK-NEXT:    leal (%rsi,%rsi,2), %esi
@@ -107,11 +107,11 @@ sw.bb307:
 ; rdar://10660865
 define i32 @cross_mbb_phys_cse(i32 %a, i32 %b) nounwind ssp {
 ; CHECK-LABEL: cross_mbb_phys_cse:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    cmpl %esi, %edi
 ; CHECK-NEXT:    ja .LBB2_2
-; CHECK-NEXT:  # BB#1: # %if.end
+; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    sbbl %eax, %eax
 ; CHECK-NEXT:  .LBB2_2: # %return
 ; CHECK-NEXT:    retq
@@ -132,17 +132,17 @@ return:
 ; rdar://11393714
 define i8* @bsd_memchr(i8* %s, i32 %a, i32 %c, i64 %n) nounwind ssp {
 ; CHECK-LABEL: bsd_memchr:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testq %rcx, %rcx
 ; CHECK-NEXT:    je .LBB3_4
-; CHECK-NEXT:  # BB#1: # %preheader
+; CHECK-NEXT:  # %bb.1: # %preheader
 ; CHECK-NEXT:    movzbl %dl, %eax
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB3_2: # %do.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    cmpl %eax, %esi
 ; CHECK-NEXT:    je .LBB3_5
-; CHECK-NEXT:  # BB#3: # %do.cond
+; CHECK-NEXT:  # %bb.3: # %do.cond
 ; CHECK-NEXT:    # in Loop: Header=BB3_2 Depth=1
 ; CHECK-NEXT:    incq %rdi
 ; CHECK-NEXT:    decq %rcx
@@ -184,13 +184,13 @@ declare i1 @t2_func()
 
 define i32 @t2() nounwind {
 ; CHECK-LABEL: t2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    movl $42, {{.*}}(%rip)
 ; CHECK-NEXT:    callq t2_func
 ; CHECK-NEXT:    testb $1, %al
 ; CHECK-NEXT:    je .LBB4_2
-; CHECK-NEXT:  # BB#1: # %a
+; CHECK-NEXT:  # %bb.1: # %a
 ; CHECK-NEXT:    movl {{.*}}(%rip), %eax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq

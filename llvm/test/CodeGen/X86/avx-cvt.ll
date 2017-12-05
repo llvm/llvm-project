@@ -3,7 +3,7 @@
 
 define <8 x float> @sitofp00(<8 x i32> %a) nounwind {
 ; CHECK-LABEL: sitofp00:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtdq2ps %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %b = sitofp <8 x i32> %a to <8 x float>
@@ -12,7 +12,7 @@ define <8 x float> @sitofp00(<8 x i32> %a) nounwind {
 
 define <8 x i32> @fptosi00(<8 x float> %a) nounwind {
 ; CHECK-LABEL: fptosi00:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvttps2dq %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %b = fptosi <8 x float> %a to <8 x i32>
@@ -21,7 +21,7 @@ define <8 x i32> @fptosi00(<8 x float> %a) nounwind {
 
 define <4 x double> @sitofp01(<4 x i32> %a) {
 ; CHECK-LABEL: sitofp01:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtdq2pd %xmm0, %ymm0
 ; CHECK-NEXT:    retq
   %b = sitofp <4 x i32> %a to <4 x double>
@@ -30,7 +30,7 @@ define <4 x double> @sitofp01(<4 x i32> %a) {
 
 define <8 x float> @sitofp02(<8 x i16> %a) {
 ; CHECK-LABEL: sitofp02:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovsxwd %xmm0, %xmm1
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
 ; CHECK-NEXT:    vpmovsxwd %xmm0, %xmm0
@@ -43,7 +43,7 @@ define <8 x float> @sitofp02(<8 x i16> %a) {
 
 define <4 x i32> @fptosi01(<4 x double> %a) {
 ; CHECK-LABEL: fptosi01:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvttpd2dq %ymm0, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -53,7 +53,7 @@ define <4 x i32> @fptosi01(<4 x double> %a) {
 
 define <8 x float> @fptrunc00(<8 x double> %b) nounwind {
 ; CHECK-LABEL: fptrunc00:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtpd2ps %ymm0, %xmm0
 ; CHECK-NEXT:    vcvtpd2ps %ymm1, %xmm1
 ; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -64,7 +64,7 @@ define <8 x float> @fptrunc00(<8 x double> %b) nounwind {
 
 define <4 x float> @fptrunc01(<2 x double> %a0, <4 x float> %a1) nounwind {
 ; CHECK-LABEL: fptrunc01:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtsd2ss %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %ext = extractelement <2 x double> %a0, i32 0
@@ -75,7 +75,7 @@ define <4 x float> @fptrunc01(<2 x double> %a0, <4 x float> %a1) nounwind {
 
 define <4 x double> @fpext00(<4 x float> %b) nounwind {
 ; CHECK-LABEL: fpext00:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtps2pd %xmm0, %ymm0
 ; CHECK-NEXT:    retq
   %a = fpext <4 x float> %b to <4 x double>
@@ -84,7 +84,7 @@ define <4 x double> @fpext00(<4 x float> %b) nounwind {
 
 define <2 x double> @fpext01(<2 x double> %a0, <4 x float> %a1) nounwind {
 ; CHECK-LABEL: fpext01:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtss2sd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %ext = extractelement <4 x float> %a1, i32 0
@@ -95,7 +95,7 @@ define <2 x double> @fpext01(<2 x double> %a0, <4 x float> %a1) nounwind {
 
 define double @funcA(i64* nocapture %e) nounwind uwtable readonly ssp {
 ; CHECK-LABEL: funcA:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtsi2sdq (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %tmp1 = load i64, i64* %e, align 8
@@ -105,7 +105,7 @@ define double @funcA(i64* nocapture %e) nounwind uwtable readonly ssp {
 
 define double @funcB(i32* nocapture %e) nounwind uwtable readonly ssp {
 ; CHECK-LABEL: funcB:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtsi2sdl (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %tmp1 = load i32, i32* %e, align 4
@@ -115,7 +115,7 @@ define double @funcB(i32* nocapture %e) nounwind uwtable readonly ssp {
 
 define float @funcC(i32* nocapture %e) nounwind uwtable readonly ssp {
 ; CHECK-LABEL: funcC:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtsi2ssl (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %tmp1 = load i32, i32* %e, align 4
@@ -125,7 +125,7 @@ define float @funcC(i32* nocapture %e) nounwind uwtable readonly ssp {
 
 define float @funcD(i64* nocapture %e) nounwind uwtable readonly ssp {
 ; CHECK-LABEL: funcD:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtsi2ssq (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %tmp1 = load i64, i64* %e, align 8
@@ -135,7 +135,7 @@ define float @funcD(i64* nocapture %e) nounwind uwtable readonly ssp {
 
 define void @fpext() nounwind uwtable {
 ; CHECK-LABEL: fpext:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovsd %xmm0, -{{[0-9]+}}(%rsp)
@@ -150,7 +150,7 @@ define void @fpext() nounwind uwtable {
 
 define double @nearbyint_f64(double %a) {
 ; CHECK-LABEL: nearbyint_f64:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vroundsd $12, %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %res = call double @llvm.nearbyint.f64(double %a)
@@ -160,7 +160,7 @@ declare double @llvm.nearbyint.f64(double %p)
 
 define float @floor_f32(float %a) {
 ; CHECK-LABEL: floor_f32:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %res = call float @llvm.floor.f32(float %a)

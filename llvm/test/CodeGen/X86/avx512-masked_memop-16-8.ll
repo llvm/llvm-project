@@ -5,7 +5,7 @@
 
 define <16 x i8> @test_mask_load_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x i8> %val) {
 ; CHECK-LABEL: test_mask_load_16xi8:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpsllw $7, %xmm0, %xmm0
 ; CHECK-NEXT:    vpmovb2m %xmm0, %k1
 ; CHECK-NEXT:    vmovdqu8 (%rdi), %xmm0 {%k1} {z}
@@ -17,7 +17,7 @@ declare <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>*, i32, <16 x i1>, <1
 
 define <32 x i8> @test_mask_load_32xi8(<32 x i1> %mask, <32 x i8>* %addr, <32 x i8> %val) {
 ; CHECK-LABEL: test_mask_load_32xi8:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpsllw $7, %ymm0, %ymm0
 ; CHECK-NEXT:    vpmovb2m %ymm0, %k1
 ; CHECK-NEXT:    vpblendmb (%rdi), %ymm1, %ymm0 {%k1}
@@ -29,7 +29,7 @@ declare <32 x i8> @llvm.masked.load.v32i8.p0v32i8(<32 x i8>*, i32, <32 x i1>, <3
 
 define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> %val) {
 ; CHECK-LABEL: test_mask_load_64xi8:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpsllw $7, %zmm0, %zmm0
 ; CHECK-NEXT:    vpmovb2m %zmm0, %k1
 ; CHECK-NEXT:    vpblendmb (%rdi), %zmm1, %zmm0 {%k1}
@@ -41,7 +41,7 @@ declare <64 x i8> @llvm.masked.load.v64i8.p0v64i8(<64 x i8>*, i32, <64 x i1>, <6
 
 define <8 x i16> @test_mask_load_8xi16(<8 x i1> %mask, <8 x i16>* %addr, <8 x i16> %val) {
 ; CHECK-LABEL: test_mask_load_8xi16:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; CHECK-NEXT:    vpmovw2m %xmm0, %k1
 ; CHECK-NEXT:    vmovdqu16 (%rdi), %xmm0 {%k1} {z}
@@ -53,7 +53,7 @@ declare <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>*, i32, <8 x i1>, <8 
 
 define <16 x i16> @test_mask_load_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16 x i16> %val) {
 ; CHECK-LABEL: test_mask_load_16xi16:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpsllw $7, %xmm0, %xmm0
 ; CHECK-NEXT:    vpmovb2m %xmm0, %k1
 ; CHECK-NEXT:    vmovdqu16 (%rdi), %ymm0 {%k1} {z}
@@ -65,7 +65,7 @@ declare <16 x i16> @llvm.masked.load.v16i16.p0v16i16(<16 x i16>*, i32, <16 x i1>
 
 define <32 x i16> @test_mask_load_32xi16(<32 x i1> %mask, <32 x i16>* %addr, <32 x i16> %val) {
 ; CHECK-LABEL: test_mask_load_32xi16:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpsllw $7, %ymm0, %ymm0
 ; CHECK-NEXT:    vpmovb2m %ymm0, %k1
 ; CHECK-NEXT:    vpblendmw (%rdi), %zmm1, %zmm0 {%k1}
@@ -77,7 +77,7 @@ declare <32 x i16> @llvm.masked.load.v32i16.p0v32i16(<32 x i16>*, i32, <32 x i1>
 
 define void @test_mask_store_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x i8> %val) {
 ; CHECK-LABEL: test_mask_store_16xi8:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpsllw $7, %xmm0, %xmm0
 ; CHECK-NEXT:    vpmovb2m %xmm0, %k1
 ; CHECK-NEXT:    vmovdqu8 %xmm1, (%rdi) {%k1}
@@ -89,7 +89,7 @@ declare void @llvm.masked.store.v16i8.p0v16i8(<16 x i8>, <16 x i8>*, i32, <16 x 
 
 define void @test_mask_store_32xi8(<32 x i1> %mask, <32 x i8>* %addr, <32 x i8> %val) {
 ; CHECK-LABEL: test_mask_store_32xi8:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpsllw $7, %ymm0, %ymm0
 ; CHECK-NEXT:    vpmovb2m %ymm0, %k1
 ; CHECK-NEXT:    vmovdqu8 %ymm1, (%rdi) {%k1}
@@ -102,7 +102,7 @@ declare void @llvm.masked.store.v32i8.p0v32i8(<32 x i8>, <32 x i8>*, i32, <32 x 
 
 define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> %val) {
 ; CHECK-LABEL: test_mask_store_64xi8:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpsllw $7, %zmm0, %zmm0
 ; CHECK-NEXT:    vpmovb2m %zmm0, %k1
 ; CHECK-NEXT:    vmovdqu8 %zmm1, (%rdi) {%k1}
@@ -115,7 +115,7 @@ declare void @llvm.masked.store.v64i8.p0v64i8(<64 x i8>, <64 x i8>*, i32, <64 x 
 
 define void @test_mask_store_8xi16(<8 x i1> %mask, <8 x i16>* %addr, <8 x i16> %val) {
 ; CHECK-LABEL: test_mask_store_8xi16:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; CHECK-NEXT:    vpmovw2m %xmm0, %k1
 ; CHECK-NEXT:    vmovdqu16 %xmm1, (%rdi) {%k1}
@@ -127,7 +127,7 @@ declare void @llvm.masked.store.v8i16.p0v8i16(<8 x i16>, <8 x i16>*, i32, <8 x i
 
 define void @test_mask_store_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16 x i16> %val) {
 ; CHECK-LABEL: test_mask_store_16xi16:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpsllw $7, %xmm0, %xmm0
 ; CHECK-NEXT:    vpmovb2m %xmm0, %k1
 ; CHECK-NEXT:    vmovdqu16 %ymm1, (%rdi) {%k1}
@@ -140,7 +140,7 @@ declare void @llvm.masked.store.v16i16.p0v16i16(<16 x i16>, <16 x i16>*, i32, <1
 
 define void @test_mask_store_32xi16(<32 x i1> %mask, <32 x i16>* %addr, <32 x i16> %val) {
 ; CHECK-LABEL: test_mask_store_32xi16:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpsllw $7, %ymm0, %ymm0
 ; CHECK-NEXT:    vpmovb2m %ymm0, %k1
 ; CHECK-NEXT:    vmovdqu16 %zmm1, (%rdi) {%k1}

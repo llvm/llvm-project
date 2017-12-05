@@ -654,7 +654,7 @@ bool HexagonExpandCondsets::split(MachineInstr &MI,
       return false;
     TfrCounter++;
   }
-  DEBUG(dbgs() << "\nsplitting BB#" << MI.getParent()->getNumber() << ": "
+  DEBUG(dbgs() << "\nsplitting " << printMBBReference(*MI.getParent()) << ": "
                << MI);
   MachineOperand &MD = MI.getOperand(0);  // Definition
   MachineOperand &MP = MI.getOperand(1);  // Predicate register

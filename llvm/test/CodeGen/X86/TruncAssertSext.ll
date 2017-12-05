@@ -6,7 +6,7 @@
 
 define i64 @main(i64 %a) {
 ; CHECK-LABEL: main:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    orq $-2, %rdi
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq

@@ -9,7 +9,7 @@ declare <2 x i16> @llvm.bitreverse.v2i16(<2 x i16>) readnone
 
 define <2 x i16> @test_bitreverse_v2i16(<2 x i16> %a) nounwind {
 ; X86-LABEL: test_bitreverse_v2i16:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    rolw $8, %ax
@@ -51,7 +51,7 @@ define <2 x i16> @test_bitreverse_v2i16(<2 x i16> %a) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_bitreverse_v2i16:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    pxor %xmm1, %xmm1
 ; X64-NEXT:    movdqa %xmm0, %xmm2
 ; X64-NEXT:    punpckhbw {{.*#+}} xmm2 = xmm2[8],xmm1[8],xmm2[9],xmm1[9],xmm2[10],xmm1[10],xmm2[11],xmm1[11],xmm2[12],xmm1[12],xmm2[13],xmm1[13],xmm2[14],xmm1[14],xmm2[15],xmm1[15]
@@ -98,7 +98,7 @@ declare i64 @llvm.bitreverse.i64(i64) readnone
 
 define i64 @test_bitreverse_i64(i64 %a) nounwind {
 ; X86-LABEL: test_bitreverse_i64:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    bswapl %eax
@@ -138,7 +138,7 @@ define i64 @test_bitreverse_i64(i64 %a) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_bitreverse_i64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    bswapq %rdi
 ; X64-NEXT:    movabsq $1085102592571150095, %rax # imm = 0xF0F0F0F0F0F0F0F
 ; X64-NEXT:    andq %rdi, %rax
@@ -168,7 +168,7 @@ declare i32 @llvm.bitreverse.i32(i32) readnone
 
 define i32 @test_bitreverse_i32(i32 %a) nounwind {
 ; X86-LABEL: test_bitreverse_i32:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    bswapl %eax
 ; X86-NEXT:    movl %eax, %ecx
@@ -190,7 +190,7 @@ define i32 @test_bitreverse_i32(i32 %a) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_bitreverse_i32:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; X64-NEXT:    bswapl %edi
 ; X64-NEXT:    movl %edi, %eax
@@ -218,7 +218,7 @@ declare i24 @llvm.bitreverse.i24(i24) readnone
 
 define i24 @test_bitreverse_i24(i24 %a) nounwind {
 ; X86-LABEL: test_bitreverse_i24:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    bswapl %eax
 ; X86-NEXT:    movl %eax, %ecx
@@ -241,7 +241,7 @@ define i24 @test_bitreverse_i24(i24 %a) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_bitreverse_i24:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; X64-NEXT:    bswapl %edi
 ; X64-NEXT:    movl %edi, %eax
@@ -270,7 +270,7 @@ declare i16 @llvm.bitreverse.i16(i16) readnone
 
 define i16 @test_bitreverse_i16(i16 %a) nounwind {
 ; X86-LABEL: test_bitreverse_i16:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    rolw $8, %ax
 ; X86-NEXT:    movl %eax, %ecx
@@ -293,7 +293,7 @@ define i16 @test_bitreverse_i16(i16 %a) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_bitreverse_i16:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; X64-NEXT:    rolw $8, %di
 ; X64-NEXT:    movl %edi, %eax
@@ -322,7 +322,7 @@ declare i8 @llvm.bitreverse.i8(i8) readnone
 
 define i8 @test_bitreverse_i8(i8 %a) {
 ; X86-LABEL: test_bitreverse_i8:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    rolb $4, %al
 ; X86-NEXT:    movl %eax, %ecx
@@ -340,7 +340,7 @@ define i8 @test_bitreverse_i8(i8 %a) {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_bitreverse_i8:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    rolb $4, %dil
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    andb $51, %al
@@ -364,7 +364,7 @@ declare i4 @llvm.bitreverse.i4(i4) readnone
 
 define i4 @test_bitreverse_i4(i4 %a) {
 ; X86-LABEL: test_bitreverse_i4:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    rolb $4, %al
 ; X86-NEXT:    movl %eax, %ecx
@@ -383,7 +383,7 @@ define i4 @test_bitreverse_i4(i4 %a) {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_bitreverse_i4:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    rolb $4, %dil
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    andb $51, %al
@@ -408,13 +408,13 @@ define i4 @test_bitreverse_i4(i4 %a) {
 
 define <2 x i16> @fold_v2i16() {
 ; X86-LABEL: fold_v2i16:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movw $-4096, %ax # imm = 0xF000
 ; X86-NEXT:    movw $240, %dx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fold_v2i16:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movaps {{.*#+}} xmm0 = [61440,240]
 ; X64-NEXT:    retq
   %b = call <2 x i16> @llvm.bitreverse.v2i16(<2 x i16> <i16 15, i16 3840>)
@@ -423,12 +423,12 @@ define <2 x i16> @fold_v2i16() {
 
 define i24 @fold_i24() {
 ; X86-LABEL: fold_i24:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movl $2048, %eax # imm = 0x800
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fold_i24:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl $2048, %eax # imm = 0x800
 ; X64-NEXT:    retq
   %b = call i24 @llvm.bitreverse.i24(i24 4096)
@@ -437,12 +437,12 @@ define i24 @fold_i24() {
 
 define i8 @fold_i8() {
 ; X86-LABEL: fold_i8:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movb $-16, %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fold_i8:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movb $-16, %al
 ; X64-NEXT:    retq
   %b = call i8 @llvm.bitreverse.i8(i8 15)
@@ -451,12 +451,12 @@ define i8 @fold_i8() {
 
 define i4 @fold_i4() {
 ; X86-LABEL: fold_i4:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movb $1, %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fold_i4:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movb $1, %al
 ; X64-NEXT:    retq
   %b = call i4 @llvm.bitreverse.i4(i4 8)
@@ -467,12 +467,12 @@ define i4 @fold_i4() {
 
 define i8 @identity_i8(i8 %a) {
 ; X86-LABEL: identity_i8:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: identity_i8:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    retq
   %b = call i8 @llvm.bitreverse.i8(i8 %a)
@@ -482,13 +482,13 @@ define i8 @identity_i8(i8 %a) {
 
 define <2 x i16> @identity_v2i16(<2 x i16> %a) {
 ; X86-LABEL: identity_v2i16:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: identity_v2i16:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    retq
   %b = call <2 x i16> @llvm.bitreverse.v2i16(<2 x i16> %a)
   %c = call <2 x i16> @llvm.bitreverse.v2i16(<2 x i16> %b)
@@ -499,11 +499,11 @@ define <2 x i16> @identity_v2i16(<2 x i16> %a) {
 
 define i8 @undef_i8() {
 ; X86-LABEL: undef_i8:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: undef_i8:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    retq
   %b = call i8 @llvm.bitreverse.i8(i8 undef)
   ret i8 %b
@@ -511,11 +511,11 @@ define i8 @undef_i8() {
 
 define <2 x i16> @undef_v2i16() {
 ; X86-LABEL: undef_v2i16:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: undef_v2i16:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    retq
   %b = call <2 x i16> @llvm.bitreverse.v2i16(<2 x i16> undef)
   ret <2 x i16> %b

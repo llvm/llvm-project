@@ -3,7 +3,7 @@
 ; RUN:	| FileCheck %s
 
 ; CHECK: Machine code for function test0:
-; CHECK: Successors according to CFG: BB#1({{[0-9a-fx/= ]+}}3.12%) BB#2({{[0-9a-fx/= ]+}}96.88%)
+; CHECK: Successors according to CFG: %bb.1({{[0-9a-fx/= ]+}}3.12%) %bb.2({{[0-9a-fx/= ]+}}96.88%)
 
 define void @test0(i32 %a, i32 %b, i32* %c, i32* %d) {
 entry:
@@ -30,7 +30,7 @@ B4:
 !0 = !{!"branch_weights", i32 4, i32 124}
 
 ; CHECK: Machine code for function test1:
-; CHECK: Successors according to CFG: BB#2(0x7c000000 / 0x80000000 = 96.88%) BB#1(0x04000000 / 0x80000000 = 3.12%)
+; CHECK: Successors according to CFG: %bb.2(0x7c000000 / 0x80000000 = 96.88%) %bb.1(0x04000000 / 0x80000000 = 3.12%)
 
 @g0 = common global i32 0, align 4
 

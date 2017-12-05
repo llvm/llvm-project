@@ -142,27 +142,27 @@ return:                                           ; preds = %bb2, %bb, %entry
 
 define i32 @test_tst_assessment(i32 %a, i32 %b) {
 ; ARM-LABEL: test_tst_assessment:
-; ARM:       @ BB#0:
+; ARM:       @ %bb.0:
 ; ARM-NEXT:    and r0, r0, #1
 ; ARM-NEXT:    tst r1, #1
 ; ARM-NEXT:    subne r0, r0, #1
 ; ARM-NEXT:    mov pc, lr
 ;
 ; THUMB-LABEL: test_tst_assessment:
-; THUMB:       @ BB#0:
+; THUMB:       @ %bb.0:
 ; THUMB-NEXT:    movs r2, r0
 ; THUMB-NEXT:    movs r0, #1
 ; THUMB-NEXT:    ands r0, r2
 ; THUMB-NEXT:    subs r2, r0, #1
 ; THUMB-NEXT:    lsls r1, r1, #31
 ; THUMB-NEXT:    beq .LBB2_2
-; THUMB-NEXT:  @ BB#1:
+; THUMB-NEXT:  @ %bb.1:
 ; THUMB-NEXT:    movs r0, r2
 ; THUMB-NEXT:  .LBB2_2:
 ; THUMB-NEXT:    bx lr
 ;
 ; T2-LABEL: test_tst_assessment:
-; T2:       @ BB#0:
+; T2:       @ %bb.0:
 ; T2-NEXT:    lsls r1, r1, #31
 ; T2-NEXT:    and r0, r0, #1
 ; T2-NEXT:    it ne
@@ -170,7 +170,7 @@ define i32 @test_tst_assessment(i32 %a, i32 %b) {
 ; T2-NEXT:    bx lr
 ;
 ; V8-LABEL: test_tst_assessment:
-; V8:       @ BB#0:
+; V8:       @ %bb.0:
 ; V8-NEXT:    and r0, r0, #1
 ; V8-NEXT:    lsls r1, r1, #31
 ; V8-NEXT:    it ne

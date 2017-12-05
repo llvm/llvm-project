@@ -966,7 +966,7 @@ LLVM_DUMP_METHOD void PPCVSXSwapRemoval::dumpSwapVector() {
 
     dbgs() << format("%6d", ID);
     dbgs() << format("%6d", EC->getLeaderValue(ID));
-    dbgs() << format(" BB#%3d", MI->getParent()->getNumber());
+    dbgs() << format(" %bb.%3d", MI->getParent()->getNumber());
     dbgs() << format("  %14s  ", TII->getName(MI->getOpcode()).str().c_str());
 
     if (SwapVector[EntryIdx].IsLoad)

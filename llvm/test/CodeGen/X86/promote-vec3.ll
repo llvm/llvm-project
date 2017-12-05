@@ -7,7 +7,7 @@
 
 define <3 x i16> @zext_i8(<3 x i8>) {
 ; SSE3-LABEL: zext_i8:
-; SSE3:       # BB#0:
+; SSE3:       # %bb.0:
 ; SSE3-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; SSE3-NEXT:    movd %eax, %xmm0
 ; SSE3-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
@@ -25,7 +25,7 @@ define <3 x i16> @zext_i8(<3 x i8>) {
 ; SSE3-NEXT:    retl
 ;
 ; SSE41-LABEL: zext_i8:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pxor %xmm0, %xmm0
 ; SSE41-NEXT:    pinsrb $0, {{[0-9]+}}(%esp), %xmm0
 ; SSE41-NEXT:    pinsrb $4, {{[0-9]+}}(%esp), %xmm0
@@ -39,7 +39,7 @@ define <3 x i16> @zext_i8(<3 x i8>) {
 ; SSE41-NEXT:    retl
 ;
 ; AVX-32-LABEL: zext_i8:
-; AVX-32:       # BB#0:
+; AVX-32:       # %bb.0:
 ; AVX-32-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX-32-NEXT:    vpinsrb $0, {{[0-9]+}}(%esp), %xmm0, %xmm0
 ; AVX-32-NEXT:    vpinsrb $4, {{[0-9]+}}(%esp), %xmm0, %xmm0
@@ -53,7 +53,7 @@ define <3 x i16> @zext_i8(<3 x i8>) {
 ; AVX-32-NEXT:    retl
 ;
 ; AVX-64-LABEL: zext_i8:
-; AVX-64:       # BB#0:
+; AVX-64:       # %bb.0:
 ; AVX-64-NEXT:    vmovd %edi, %xmm0
 ; AVX-64-NEXT:    vpinsrd $1, %esi, %xmm0, %xmm0
 ; AVX-64-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
@@ -71,7 +71,7 @@ define <3 x i16> @zext_i8(<3 x i8>) {
 
 define <3 x i16> @sext_i8(<3 x i8>) {
 ; SSE3-LABEL: sext_i8:
-; SSE3:       # BB#0:
+; SSE3:       # %bb.0:
 ; SSE3-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; SSE3-NEXT:    movd %eax, %xmm0
 ; SSE3-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
@@ -91,7 +91,7 @@ define <3 x i16> @sext_i8(<3 x i8>) {
 ; SSE3-NEXT:    retl
 ;
 ; SSE41-LABEL: sext_i8:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE41-NEXT:    pinsrb $4, {{[0-9]+}}(%esp), %xmm0
 ; SSE41-NEXT:    pinsrb $8, {{[0-9]+}}(%esp), %xmm0
@@ -106,7 +106,7 @@ define <3 x i16> @sext_i8(<3 x i8>) {
 ; SSE41-NEXT:    retl
 ;
 ; AVX-32-LABEL: sext_i8:
-; AVX-32:       # BB#0:
+; AVX-32:       # %bb.0:
 ; AVX-32-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-32-NEXT:    vpinsrb $4, {{[0-9]+}}(%esp), %xmm0, %xmm0
 ; AVX-32-NEXT:    vpinsrb $8, {{[0-9]+}}(%esp), %xmm0, %xmm0
@@ -121,7 +121,7 @@ define <3 x i16> @sext_i8(<3 x i8>) {
 ; AVX-32-NEXT:    retl
 ;
 ; AVX-64-LABEL: sext_i8:
-; AVX-64:       # BB#0:
+; AVX-64:       # %bb.0:
 ; AVX-64-NEXT:    vmovd %edi, %xmm0
 ; AVX-64-NEXT:    vpinsrd $1, %esi, %xmm0, %xmm0
 ; AVX-64-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0

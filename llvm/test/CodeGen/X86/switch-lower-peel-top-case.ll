@@ -15,12 +15,12 @@ entry:
 ; CHECK:    %{{[0-9]+}}:gr32 = SUB32ri %[[VAL]], 18568, implicit-def %eflags
 ; CHECK:    JE_1 %[[PEELED_CASE_LABEL]], implicit %eflags
 ; CHECK:    JMP_1 %[[PEELED_SWITCH_LABEL]]
-; CHECK:  [[PEELED_SWITCH_LABEL]]:
+; CHECK:  [[PEELED_SWITCH_LABEL]].{{[a-zA-Z0-9.]+}}:
 ; CHECK:    successors: %[[BB1_LABEL:.*]](0x0206d3a0), %[[BB2_LABEL:.*]](0x7df92c60)
 ; CHECK:    %{{[0-9]+}}:gr32 = SUB32ri %[[VAL]], 18311, implicit-def %eflags
 ; CHECK:    JG_1 %[[BB2_LABEL]], implicit %eflags
 ; CHECK:    JMP_1 %[[BB1_LABEL]]
-; CHECK:  [[BB1_LABEL]]:
+; CHECK:  [[BB1_LABEL]].{{[a-zA-Z0-9.]+}}:
 ; CHECK:    successors: %[[CASE2_LABEL:.*]](0x35e50d5b), %[[BB3_LABEL:.*]](0x4a1af2a5)
 ; CHECK:    %{{[0-9]+}}:gr32 = SUB32ri %[[VAL]], -8826, implicit-def %eflags
 ; CHECK:    JE_1 %[[CASE2_LABEL]], implicit %eflags
@@ -30,12 +30,12 @@ entry:
 ; CHECK:    %{{[0-9]+}}:gr32 = SUB32ri %[[VAL]], 129, implicit-def %eflags
 ; CHECK:    JE_1 %[[CASE5_LABEL]], implicit %eflags
 ; CHECK:    JMP_1 %[[BB4_LABEL]]
-; CHECK:  [[BB4_LABEL:.*]]:
+; CHECK:  [[BB4_LABEL:.*]].{{[a-zA-Z0-9.]+}}:
 ; CHECK:    successors: %[[CASE1_LABEL:.*]](0x66666666), %[[DEFAULT_BB_LABEL:.*]](0x1999999a)
 ; CHECK:    %{{[0-9]+}}:gr32 = SUB32ri8 %[[VAL]], 8, implicit-def %eflags
 ; CHECK:    JE_1 %[[CASE1_LABEL]], implicit %eflags
 ; CHECK:    JMP_1 %[[DEFAULT_BB_LABEL]]
-; CHECK:  [[BB2_LABEL]]:
+; CHECK:  [[BB2_LABEL]].{{[a-zA-Z0-9.]+}}:
 ; CHECK:    successors: %[[CASE3_LABEL:.*]](0x7fe44107), %[[DEFAULT_BB_LABEL]](0x001bbef9)
 ; CHECK:    %{{[0-9]+}}:gr32 = SUB32ri %[[VAL]], 18312, implicit-def %eflags
 ; CHECK:    JE_1 %[[CASE3_LABEL]], implicit %eflags
@@ -78,32 +78,32 @@ entry:
 ; CHECK:   %{{[0-9]+}}:gr32 = SUB32ri8 %{{[0-9]+}}, 2, implicit-def %eflags
 ; CHECK:   JB_1 %[[PEELED_CASE_LABEL]], implicit %eflags
 ; CHECK:   JMP_1 %[[PEELED_SWITCH_LABEL]]
-; CHECK: [[PEELED_SWITCH_LABEL]]:
+; CHECK: [[PEELED_SWITCH_LABEL]].{{[a-zA-Z0-9.]+}}:
 ; CHECK:    successors: %[[BB1_LABEL:.*]](0x0088888a), %[[BB2_LABEL:.*]](0x7f777776)
 ; CHECK:    %{{[0-9]+}}:gr32 = SUB32ri8 %[[VAL]], 4, implicit-def %eflags
 ; CHECK:    JG_1 %[[BB2_LABEL]], implicit %eflags
 ; CHECK:    JMP_1 %[[BB1_LABEL]]
-; CHECK:  [[BB1_LABEL]]:
+; CHECK:  [[BB1_LABEL]].{{[a-zA-Z0-9.]+}}:
 ; CHECK:    successors: %[[CASE4_LABEL:.*]](0x7f775a4f), %[[BB3_LABEL:.*]](0x0088a5b1)
 ; CHECK:    %{{[0-9]+}}:gr32 = SUB32ri8 %[[VAL]], 1, implicit-def %eflags
 ; CHECK:    JE_1 %[[CASE4_LABEL]], implicit %eflags
 ; CHECK:    JMP_1 %[[BB3_LABEL]]
-; CHECK:  [[BB3_LABEL]]:
+; CHECK:  [[BB3_LABEL]].{{[a-zA-Z0-9.]+}}:
 ; CHECK:    successors: %[[CASE1_LABEL:.*]](0x66666666), %[[DEFAULT_BB_LABEL:.*]](0x1999999a)
 ; CHECK:    %{{[0-9]+}}:gr32 = SUB32ri8 %[[VAL]], -40, implicit-def %eflags
 ; CHECK:    JE_1 %[[CASE1_LABEL]], implicit %eflags
 ; CHECK:    JMP_1 %[[DEFAULT_BB_LABEL]]
-; CHECK:  [[BB2_LABEL]]:
+; CHECK:  [[BB2_LABEL]].{{[a-zA-Z0-9.]+}}:
 ; CHECK:    successors: %[[CASE5_LABEL:.*]](0x00000000), %[[BB4_LABEL:.*]](0x80000000)
 ; CHECK:    %{{[0-9]+}}:gr32 = SUB32ri8 %[[VAL]], 5, implicit-def %eflags
 ; CHECK:    JE_1 %[[CASE5_LABEL]], implicit %eflags
 ; CHECK:    JMP_1 %[[BB4_LABEL]]
-; CHECK:  [[BB4_LABEL]]:
+; CHECK:  [[BB4_LABEL]].{{[a-zA-Z0-9.]+}}:
 ; CHECK:    successors: %[[CASE6_LABEL:.*]](0x00000000), %[[BB5_LABEL:.*]](0x80000000)
 ; CHECK:    %{{[0-9]+}}:gr32 = SUB32ri8 %[[VAL]], 7, implicit-def %eflags
 ; CHECK:    JE_1 %[[CASE6_LABEL]], implicit %eflags
 ; CHECK:    JMP_1 %[[BB5_LABEL]]
-; CHECK:  [[BB5_LABEL]]:
+; CHECK:  [[BB5_LABEL]].{{[a-zA-Z0-9.]+}}:
 ; CHECK:    successors: %[[CASE7_LABEL:.*]](0x00000000), %[[DEFAULT_BB_LABEL]](0x80000000)
 ; CHECK:    %{{[0-9]+}}:gr32 = SUB32ri8 %[[VAL]], 49, implicit-def %eflags
 ; CHECK:    JE_1 %[[CASE7_LABEL]], implicit %eflags

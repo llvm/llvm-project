@@ -23,7 +23,7 @@
 
 
 ; X86-LABEL: _x:
-; X86:      # BB
+; X86:      # %bb.
 ; X86:      .cv_file 1 "D:\\source.c"
 ; X86:      .cv_loc 0 1 4 42 is_stmt 0 # source.c:4:42
 ; X86:      calll   _z
@@ -32,7 +32,7 @@
 ; X86:      [[END_OF_X:.?Lfunc_end.*]]:
 ;
 ; X86-LABEL: _y:
-; X86:      # BB
+; X86:      # %bb.
 ; X86:      .cv_loc 1 1 8 52 # source.c:8:52
 ; X86:      calll   _z
 ; X86:      .cv_loc 1 1 9 53 # source.c:9:53
@@ -40,7 +40,7 @@
 ; X86:      [[END_OF_Y:.?Lfunc_end.*]]:
 ;
 ; X86-LABEL: _f:
-; X86:      # BB
+; X86:      # %bb.
 ; X86:      .cv_loc 2 1 12 62 # source.c:12:62
 ; X86:      calll   _x
 ; X86:      .cv_loc 2 1 13 63 # source.c:13:63
@@ -287,7 +287,7 @@
 ; X64-NEXT: .L{{.*}}:
 ; X64:      .cv_file 1 "D:\\source.c"
 ; X64:      .cv_loc 0 1 3 0 is_stmt 0 # source.c:3:0
-; X64:      # BB
+; X64:      # %bb.
 ; X64:      subq    $40, %rsp
 ; X64:      .cv_loc 0 1 4 42 # source.c:4:42
 ; X64-NEXT: callq   z
@@ -299,7 +299,7 @@
 ; X64-LABEL: y:
 ; X64-NEXT: .L{{.*}}:
 ; X64:      .cv_loc 1 1 7 0 # source.c:7:0
-; X64:      # BB
+; X64:      # %bb.
 ; X64:      subq    $40, %rsp
 ; X64:      .cv_loc 1 1 8 52 # source.c:8:52
 ; X64-NEXT: callq   z
@@ -311,7 +311,7 @@
 ; X64-LABEL: f:
 ; X64-NEXT: .L{{.*}}:
 ; X64:      .cv_loc 2 1 11 0 # source.c:11:0
-; X64:      # BB
+; X64:      # %bb.
 ; X64:      subq    $40, %rsp
 ; X64:      .cv_loc 2 1 12 62 # source.c:12:62
 ; X64-NEXT: callq   x

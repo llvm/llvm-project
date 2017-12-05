@@ -10,7 +10,7 @@
 
 define <7 x i64> @load7_aligned(<7 x i64>* %x) {
 ; X86-SSE-LABEL: load7_aligned:
-; X86-SSE:       # BB#0:
+; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE-NEXT:    movaps (%ecx), %xmm0
@@ -26,7 +26,7 @@ define <7 x i64> @load7_aligned(<7 x i64>* %x) {
 ; X86-SSE-NEXT:    retl $4
 ;
 ; X86-AVX-LABEL: load7_aligned:
-; X86-AVX:       # BB#0:
+; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-AVX-NEXT:    vmovaps (%ecx), %ymm0
@@ -40,7 +40,7 @@ define <7 x i64> @load7_aligned(<7 x i64>* %x) {
 ; X86-AVX-NEXT:    retl $4
 ;
 ; X64-SSE-LABEL: load7_aligned:
-; X64-SSE:       # BB#0:
+; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    movaps (%rsi), %xmm0
 ; X64-SSE-NEXT:    movaps 16(%rsi), %xmm1
 ; X64-SSE-NEXT:    movaps 32(%rsi), %xmm2
@@ -53,7 +53,7 @@ define <7 x i64> @load7_aligned(<7 x i64>* %x) {
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: load7_aligned:
-; X64-AVX:       # BB#0:
+; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    vmovaps (%rsi), %ymm0
 ; X64-AVX-NEXT:    vmovaps 32(%rsi), %ymm1
 ; X64-AVX-NEXT:    vmovaps %ymm0, (%rdi)
@@ -69,7 +69,7 @@ define <7 x i64> @load7_aligned(<7 x i64>* %x) {
 
 define <7 x i64> @load7_unaligned(<7 x i64>* %x) {
 ; X86-SSE-LABEL: load7_unaligned:
-; X86-SSE:       # BB#0:
+; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE-NEXT:    movups (%ecx), %xmm0
@@ -85,7 +85,7 @@ define <7 x i64> @load7_unaligned(<7 x i64>* %x) {
 ; X86-SSE-NEXT:    retl $4
 ;
 ; X86-AVX-LABEL: load7_unaligned:
-; X86-AVX:       # BB#0:
+; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-AVX-NEXT:    vmovups (%ecx), %ymm0
@@ -100,7 +100,7 @@ define <7 x i64> @load7_unaligned(<7 x i64>* %x) {
 ; X86-AVX-NEXT:    retl $4
 ;
 ; X64-SSE-LABEL: load7_unaligned:
-; X64-SSE:       # BB#0:
+; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    movups (%rsi), %xmm0
 ; X64-SSE-NEXT:    movups 16(%rsi), %xmm1
 ; X64-SSE-NEXT:    movups 32(%rsi), %xmm2
@@ -113,7 +113,7 @@ define <7 x i64> @load7_unaligned(<7 x i64>* %x) {
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: load7_unaligned:
-; X64-AVX:       # BB#0:
+; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    vmovups (%rsi), %ymm0
 ; X64-AVX-NEXT:    vmovups 32(%rsi), %xmm1
 ; X64-AVX-NEXT:    movq 48(%rsi), %rax

@@ -13,13 +13,13 @@
 
 define i32 @test_lea_offset(i32) {
 ; GENERIC-LABEL: test_lea_offset:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; GENERIC-NEXT:    leal -24(%rdi), %eax # sched: [1:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_lea_offset:
-; ATOM:       # BB#0:
+; ATOM:       # %bb.0:
 ; ATOM-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; ATOM-NEXT:    leal -24(%rdi), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    nop # sched: [1:0.50]
@@ -31,43 +31,43 @@ define i32 @test_lea_offset(i32) {
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_lea_offset:
-; SLM:       # BB#0:
+; SLM:       # %bb.0:
 ; SLM-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; SLM-NEXT:    leal -24(%rdi), %eax # sched: [1:1.00]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_lea_offset:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; SANDY-NEXT:    leal -24(%rdi), %eax # sched: [1:0.50]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_lea_offset:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; HASWELL-NEXT:    leal -24(%rdi), %eax # sched: [1:0.50]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_lea_offset:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; BROADWELL-NEXT:    leal -24(%rdi), %eax # sched: [1:0.50]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_lea_offset:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; SKYLAKE-NEXT:    leal -24(%rdi), %eax # sched: [1:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_lea_offset:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; BTVER2-NEXT:    leal -24(%rdi), %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_lea_offset:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; ZNVER1-NEXT:    leal -24(%rdi), %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -77,13 +77,13 @@ define i32 @test_lea_offset(i32) {
 
 define i32 @test_lea_offset_big(i32) {
 ; GENERIC-LABEL: test_lea_offset_big:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; GENERIC-NEXT:    leal 1024(%rdi), %eax # sched: [1:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_lea_offset_big:
-; ATOM:       # BB#0:
+; ATOM:       # %bb.0:
 ; ATOM-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; ATOM-NEXT:    leal 1024(%rdi), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    nop # sched: [1:0.50]
@@ -95,43 +95,43 @@ define i32 @test_lea_offset_big(i32) {
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_lea_offset_big:
-; SLM:       # BB#0:
+; SLM:       # %bb.0:
 ; SLM-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; SLM-NEXT:    leal 1024(%rdi), %eax # sched: [1:1.00]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_lea_offset_big:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; SANDY-NEXT:    leal 1024(%rdi), %eax # sched: [1:0.50]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_lea_offset_big:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; HASWELL-NEXT:    leal 1024(%rdi), %eax # sched: [1:0.50]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_lea_offset_big:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; BROADWELL-NEXT:    leal 1024(%rdi), %eax # sched: [1:0.50]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_lea_offset_big:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; SKYLAKE-NEXT:    leal 1024(%rdi), %eax # sched: [1:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_lea_offset_big:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; BTVER2-NEXT:    leal 1024(%rdi), %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_lea_offset_big:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; ZNVER1-NEXT:    leal 1024(%rdi), %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -142,14 +142,14 @@ define i32 @test_lea_offset_big(i32) {
 ; Function Attrs: norecurse nounwind readnone uwtable
 define i32 @test_lea_add(i32, i32) {
 ; GENERIC-LABEL: test_lea_add:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; GENERIC-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; GENERIC-NEXT:    leal (%rdi,%rsi), %eax # sched: [1:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_lea_add:
-; ATOM:       # BB#0:
+; ATOM:       # %bb.0:
 ; ATOM-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; ATOM-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; ATOM-NEXT:    leal (%rdi,%rsi), %eax # sched: [1:1.00]
@@ -162,49 +162,49 @@ define i32 @test_lea_add(i32, i32) {
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_lea_add:
-; SLM:       # BB#0:
+; SLM:       # %bb.0:
 ; SLM-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; SLM-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; SLM-NEXT:    leal (%rdi,%rsi), %eax # sched: [1:1.00]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_lea_add:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; SANDY-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; SANDY-NEXT:    leal (%rdi,%rsi), %eax # sched: [1:0.50]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_lea_add:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; HASWELL-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; HASWELL-NEXT:    leal (%rdi,%rsi), %eax # sched: [1:0.50]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_lea_add:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; BROADWELL-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; BROADWELL-NEXT:    leal (%rdi,%rsi), %eax # sched: [1:0.50]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_lea_add:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; SKYLAKE-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; SKYLAKE-NEXT:    leal (%rdi,%rsi), %eax # sched: [1:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_lea_add:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; BTVER2-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; BTVER2-NEXT:    leal (%rdi,%rsi), %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_lea_add:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; ZNVER1-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; ZNVER1-NEXT:    leal (%rdi,%rsi), %eax # sched: [1:0.25]
@@ -215,7 +215,7 @@ define i32 @test_lea_add(i32, i32) {
 
 define i32 @test_lea_add_offset(i32, i32) {
 ; GENERIC-LABEL: test_lea_add_offset:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; GENERIC-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; GENERIC-NEXT:    leal (%rdi,%rsi), %eax # sched: [1:0.50]
@@ -223,7 +223,7 @@ define i32 @test_lea_add_offset(i32, i32) {
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_lea_add_offset:
-; ATOM:       # BB#0:
+; ATOM:       # %bb.0:
 ; ATOM-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; ATOM-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; ATOM-NEXT:    leal 16(%rdi,%rsi), %eax # sched: [1:1.00]
@@ -236,14 +236,14 @@ define i32 @test_lea_add_offset(i32, i32) {
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_lea_add_offset:
-; SLM:       # BB#0:
+; SLM:       # %bb.0:
 ; SLM-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; SLM-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; SLM-NEXT:    leal 16(%rdi,%rsi), %eax # sched: [1:1.00]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_lea_add_offset:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; SANDY-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; SANDY-NEXT:    leal (%rdi,%rsi), %eax # sched: [1:0.50]
@@ -251,7 +251,7 @@ define i32 @test_lea_add_offset(i32, i32) {
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_lea_add_offset:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; HASWELL-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; HASWELL-NEXT:    leal (%rdi,%rsi), %eax # sched: [1:0.50]
@@ -259,7 +259,7 @@ define i32 @test_lea_add_offset(i32, i32) {
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_lea_add_offset:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; BROADWELL-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; BROADWELL-NEXT:    leal (%rdi,%rsi), %eax # sched: [1:0.50]
@@ -267,7 +267,7 @@ define i32 @test_lea_add_offset(i32, i32) {
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_lea_add_offset:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; SKYLAKE-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; SKYLAKE-NEXT:    leal (%rdi,%rsi), %eax # sched: [1:0.50]
@@ -275,14 +275,14 @@ define i32 @test_lea_add_offset(i32, i32) {
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_lea_add_offset:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; BTVER2-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; BTVER2-NEXT:    leal 16(%rdi,%rsi), %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_lea_add_offset:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; ZNVER1-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; ZNVER1-NEXT:    leal 16(%rdi,%rsi), %eax # sched: [1:0.25]
@@ -294,7 +294,7 @@ define i32 @test_lea_add_offset(i32, i32) {
 
 define i32 @test_lea_add_offset_big(i32, i32) {
 ; GENERIC-LABEL: test_lea_add_offset_big:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; GENERIC-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; GENERIC-NEXT:    leal (%rdi,%rsi), %eax # sched: [1:0.50]
@@ -303,7 +303,7 @@ define i32 @test_lea_add_offset_big(i32, i32) {
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_lea_add_offset_big:
-; ATOM:       # BB#0:
+; ATOM:       # %bb.0:
 ; ATOM-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; ATOM-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; ATOM-NEXT:    leal -4096(%rdi,%rsi), %eax # sched: [1:1.00]
@@ -316,14 +316,14 @@ define i32 @test_lea_add_offset_big(i32, i32) {
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_lea_add_offset_big:
-; SLM:       # BB#0:
+; SLM:       # %bb.0:
 ; SLM-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; SLM-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; SLM-NEXT:    leal -4096(%rdi,%rsi), %eax # sched: [1:1.00]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_lea_add_offset_big:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; SANDY-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; SANDY-NEXT:    leal (%rdi,%rsi), %eax # sched: [1:0.50]
@@ -332,7 +332,7 @@ define i32 @test_lea_add_offset_big(i32, i32) {
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_lea_add_offset_big:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; HASWELL-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; HASWELL-NEXT:    leal (%rdi,%rsi), %eax # sched: [1:0.50]
@@ -341,7 +341,7 @@ define i32 @test_lea_add_offset_big(i32, i32) {
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_lea_add_offset_big:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; BROADWELL-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; BROADWELL-NEXT:    leal (%rdi,%rsi), %eax # sched: [1:0.50]
@@ -350,7 +350,7 @@ define i32 @test_lea_add_offset_big(i32, i32) {
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_lea_add_offset_big:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; SKYLAKE-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; SKYLAKE-NEXT:    leal (%rdi,%rsi), %eax # sched: [1:0.50]
@@ -359,14 +359,14 @@ define i32 @test_lea_add_offset_big(i32, i32) {
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_lea_add_offset_big:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; BTVER2-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; BTVER2-NEXT:    leal -4096(%rdi,%rsi), %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_lea_add_offset_big:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; ZNVER1-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; ZNVER1-NEXT:    leal -4096(%rdi,%rsi), %eax # sched: [1:0.25]
@@ -378,13 +378,13 @@ define i32 @test_lea_add_offset_big(i32, i32) {
 
 define i32 @test_lea_mul(i32) {
 ; GENERIC-LABEL: test_lea_mul:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; GENERIC-NEXT:    leal (%rdi,%rdi,2), %eax # sched: [1:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_lea_mul:
-; ATOM:       # BB#0:
+; ATOM:       # %bb.0:
 ; ATOM-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; ATOM-NEXT:    leal (%rdi,%rdi,2), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    nop # sched: [1:0.50]
@@ -396,43 +396,43 @@ define i32 @test_lea_mul(i32) {
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_lea_mul:
-; SLM:       # BB#0:
+; SLM:       # %bb.0:
 ; SLM-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; SLM-NEXT:    leal (%rdi,%rdi,2), %eax # sched: [1:1.00]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_lea_mul:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; SANDY-NEXT:    leal (%rdi,%rdi,2), %eax # sched: [1:0.50]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_lea_mul:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; HASWELL-NEXT:    leal (%rdi,%rdi,2), %eax # sched: [1:0.50]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_lea_mul:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; BROADWELL-NEXT:    leal (%rdi,%rdi,2), %eax # sched: [1:0.50]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_lea_mul:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; SKYLAKE-NEXT:    leal (%rdi,%rdi,2), %eax # sched: [1:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_lea_mul:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; BTVER2-NEXT:    leal (%rdi,%rdi,2), %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_lea_mul:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; ZNVER1-NEXT:    leal (%rdi,%rdi,2), %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -442,14 +442,14 @@ define i32 @test_lea_mul(i32) {
 
 define i32 @test_lea_mul_offset(i32) {
 ; GENERIC-LABEL: test_lea_mul_offset:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; GENERIC-NEXT:    leal (%rdi,%rdi,2), %eax # sched: [1:0.50]
 ; GENERIC-NEXT:    addl $-32, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_lea_mul_offset:
-; ATOM:       # BB#0:
+; ATOM:       # %bb.0:
 ; ATOM-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; ATOM-NEXT:    leal -32(%rdi,%rdi,2), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    nop # sched: [1:0.50]
@@ -461,47 +461,47 @@ define i32 @test_lea_mul_offset(i32) {
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_lea_mul_offset:
-; SLM:       # BB#0:
+; SLM:       # %bb.0:
 ; SLM-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; SLM-NEXT:    leal -32(%rdi,%rdi,2), %eax # sched: [1:1.00]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_lea_mul_offset:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; SANDY-NEXT:    leal (%rdi,%rdi,2), %eax # sched: [1:0.50]
 ; SANDY-NEXT:    addl $-32, %eax # sched: [1:0.33]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_lea_mul_offset:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; HASWELL-NEXT:    leal (%rdi,%rdi,2), %eax # sched: [1:0.50]
 ; HASWELL-NEXT:    addl $-32, %eax # sched: [1:0.25]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_lea_mul_offset:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; BROADWELL-NEXT:    leal (%rdi,%rdi,2), %eax # sched: [1:0.50]
 ; BROADWELL-NEXT:    addl $-32, %eax # sched: [1:0.25]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_lea_mul_offset:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; SKYLAKE-NEXT:    leal (%rdi,%rdi,2), %eax # sched: [1:0.50]
 ; SKYLAKE-NEXT:    addl $-32, %eax # sched: [1:0.25]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_lea_mul_offset:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; BTVER2-NEXT:    leal -32(%rdi,%rdi,2), %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_lea_mul_offset:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; ZNVER1-NEXT:    leal -32(%rdi,%rdi,2), %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -512,7 +512,7 @@ define i32 @test_lea_mul_offset(i32) {
 
 define i32 @test_lea_mul_offset_big(i32) {
 ; GENERIC-LABEL: test_lea_mul_offset_big:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; GENERIC-NEXT:    leal (%rdi,%rdi,8), %eax # sched: [1:0.50]
 ; GENERIC-NEXT:    addl $10000, %eax # imm = 0x2710
@@ -520,7 +520,7 @@ define i32 @test_lea_mul_offset_big(i32) {
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_lea_mul_offset_big:
-; ATOM:       # BB#0:
+; ATOM:       # %bb.0:
 ; ATOM-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; ATOM-NEXT:    leal 10000(%rdi,%rdi,8), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    nop # sched: [1:0.50]
@@ -532,13 +532,13 @@ define i32 @test_lea_mul_offset_big(i32) {
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_lea_mul_offset_big:
-; SLM:       # BB#0:
+; SLM:       # %bb.0:
 ; SLM-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; SLM-NEXT:    leal 10000(%rdi,%rdi,8), %eax # sched: [1:1.00]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_lea_mul_offset_big:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; SANDY-NEXT:    leal (%rdi,%rdi,8), %eax # sched: [1:0.50]
 ; SANDY-NEXT:    addl $10000, %eax # imm = 0x2710
@@ -546,7 +546,7 @@ define i32 @test_lea_mul_offset_big(i32) {
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_lea_mul_offset_big:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; HASWELL-NEXT:    leal (%rdi,%rdi,8), %eax # sched: [1:0.50]
 ; HASWELL-NEXT:    addl $10000, %eax # imm = 0x2710
@@ -554,7 +554,7 @@ define i32 @test_lea_mul_offset_big(i32) {
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_lea_mul_offset_big:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; BROADWELL-NEXT:    leal (%rdi,%rdi,8), %eax # sched: [1:0.50]
 ; BROADWELL-NEXT:    addl $10000, %eax # imm = 0x2710
@@ -562,7 +562,7 @@ define i32 @test_lea_mul_offset_big(i32) {
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_lea_mul_offset_big:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; SKYLAKE-NEXT:    leal (%rdi,%rdi,8), %eax # sched: [1:0.50]
 ; SKYLAKE-NEXT:    addl $10000, %eax # imm = 0x2710
@@ -570,13 +570,13 @@ define i32 @test_lea_mul_offset_big(i32) {
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_lea_mul_offset_big:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; BTVER2-NEXT:    leal 10000(%rdi,%rdi,8), %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_lea_mul_offset_big:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; ZNVER1-NEXT:    leal 10000(%rdi,%rdi,8), %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -587,14 +587,14 @@ define i32 @test_lea_mul_offset_big(i32) {
 
 define i32 @test_lea_add_scale(i32, i32) {
 ; GENERIC-LABEL: test_lea_add_scale:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; GENERIC-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; GENERIC-NEXT:    leal (%rdi,%rsi,2), %eax # sched: [1:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_lea_add_scale:
-; ATOM:       # BB#0:
+; ATOM:       # %bb.0:
 ; ATOM-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; ATOM-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; ATOM-NEXT:    leal (%rdi,%rsi,2), %eax # sched: [1:1.00]
@@ -607,49 +607,49 @@ define i32 @test_lea_add_scale(i32, i32) {
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_lea_add_scale:
-; SLM:       # BB#0:
+; SLM:       # %bb.0:
 ; SLM-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; SLM-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; SLM-NEXT:    leal (%rdi,%rsi,2), %eax # sched: [1:1.00]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_lea_add_scale:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; SANDY-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; SANDY-NEXT:    leal (%rdi,%rsi,2), %eax # sched: [1:0.50]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_lea_add_scale:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; HASWELL-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; HASWELL-NEXT:    leal (%rdi,%rsi,2), %eax # sched: [1:0.50]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_lea_add_scale:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; BROADWELL-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; BROADWELL-NEXT:    leal (%rdi,%rsi,2), %eax # sched: [1:0.50]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_lea_add_scale:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; SKYLAKE-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; SKYLAKE-NEXT:    leal (%rdi,%rsi,2), %eax # sched: [1:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_lea_add_scale:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; BTVER2-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; BTVER2-NEXT:    leal (%rdi,%rsi,2), %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_lea_add_scale:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; ZNVER1-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; ZNVER1-NEXT:    leal (%rdi,%rsi,2), %eax # sched: [1:0.25]
@@ -661,7 +661,7 @@ define i32 @test_lea_add_scale(i32, i32) {
 
 define i32 @test_lea_add_scale_offset(i32, i32) {
 ; GENERIC-LABEL: test_lea_add_scale_offset:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; GENERIC-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; GENERIC-NEXT:    leal (%rdi,%rsi,4), %eax # sched: [1:0.50]
@@ -669,7 +669,7 @@ define i32 @test_lea_add_scale_offset(i32, i32) {
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_lea_add_scale_offset:
-; ATOM:       # BB#0:
+; ATOM:       # %bb.0:
 ; ATOM-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; ATOM-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; ATOM-NEXT:    leal 96(%rdi,%rsi,4), %eax # sched: [1:1.00]
@@ -682,14 +682,14 @@ define i32 @test_lea_add_scale_offset(i32, i32) {
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_lea_add_scale_offset:
-; SLM:       # BB#0:
+; SLM:       # %bb.0:
 ; SLM-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; SLM-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; SLM-NEXT:    leal 96(%rdi,%rsi,4), %eax # sched: [1:1.00]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_lea_add_scale_offset:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; SANDY-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; SANDY-NEXT:    leal (%rdi,%rsi,4), %eax # sched: [1:0.50]
@@ -697,7 +697,7 @@ define i32 @test_lea_add_scale_offset(i32, i32) {
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_lea_add_scale_offset:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; HASWELL-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; HASWELL-NEXT:    leal (%rdi,%rsi,4), %eax # sched: [1:0.50]
@@ -705,7 +705,7 @@ define i32 @test_lea_add_scale_offset(i32, i32) {
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_lea_add_scale_offset:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; BROADWELL-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; BROADWELL-NEXT:    leal (%rdi,%rsi,4), %eax # sched: [1:0.50]
@@ -713,7 +713,7 @@ define i32 @test_lea_add_scale_offset(i32, i32) {
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_lea_add_scale_offset:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; SKYLAKE-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; SKYLAKE-NEXT:    leal (%rdi,%rsi,4), %eax # sched: [1:0.50]
@@ -721,14 +721,14 @@ define i32 @test_lea_add_scale_offset(i32, i32) {
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_lea_add_scale_offset:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; BTVER2-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; BTVER2-NEXT:    leal 96(%rdi,%rsi,4), %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_lea_add_scale_offset:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; ZNVER1-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; ZNVER1-NEXT:    leal 96(%rdi,%rsi,4), %eax # sched: [1:0.25]
@@ -741,7 +741,7 @@ define i32 @test_lea_add_scale_offset(i32, i32) {
 
 define i32 @test_lea_add_scale_offset_big(i32, i32) {
 ; GENERIC-LABEL: test_lea_add_scale_offset_big:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; GENERIC-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; GENERIC-NEXT:    leal (%rdi,%rsi,8), %eax # sched: [1:0.50]
@@ -750,7 +750,7 @@ define i32 @test_lea_add_scale_offset_big(i32, i32) {
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_lea_add_scale_offset_big:
-; ATOM:       # BB#0:
+; ATOM:       # %bb.0:
 ; ATOM-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; ATOM-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; ATOM-NEXT:    leal -1200(%rdi,%rsi,8), %eax # sched: [1:1.00]
@@ -763,14 +763,14 @@ define i32 @test_lea_add_scale_offset_big(i32, i32) {
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_lea_add_scale_offset_big:
-; SLM:       # BB#0:
+; SLM:       # %bb.0:
 ; SLM-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; SLM-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; SLM-NEXT:    leal -1200(%rdi,%rsi,8), %eax # sched: [1:1.00]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_lea_add_scale_offset_big:
-; SANDY:       # BB#0:
+; SANDY:       # %bb.0:
 ; SANDY-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; SANDY-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; SANDY-NEXT:    leal (%rdi,%rsi,8), %eax # sched: [1:0.50]
@@ -779,7 +779,7 @@ define i32 @test_lea_add_scale_offset_big(i32, i32) {
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_lea_add_scale_offset_big:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; HASWELL-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; HASWELL-NEXT:    leal (%rdi,%rsi,8), %eax # sched: [1:0.50]
@@ -788,7 +788,7 @@ define i32 @test_lea_add_scale_offset_big(i32, i32) {
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_lea_add_scale_offset_big:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; BROADWELL-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; BROADWELL-NEXT:    leal (%rdi,%rsi,8), %eax # sched: [1:0.50]
@@ -797,7 +797,7 @@ define i32 @test_lea_add_scale_offset_big(i32, i32) {
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_lea_add_scale_offset_big:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; SKYLAKE-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; SKYLAKE-NEXT:    leal (%rdi,%rsi,8), %eax # sched: [1:0.50]
@@ -806,14 +806,14 @@ define i32 @test_lea_add_scale_offset_big(i32, i32) {
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_lea_add_scale_offset_big:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; BTVER2-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; BTVER2-NEXT:    leal -1200(%rdi,%rsi,8), %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_lea_add_scale_offset_big:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; ZNVER1-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; ZNVER1-NEXT:    leal -1200(%rdi,%rsi,8), %eax # sched: [1:0.25]

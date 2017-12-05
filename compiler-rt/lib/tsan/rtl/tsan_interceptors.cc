@@ -200,7 +200,7 @@ struct InterceptorContext {
   Vector<struct AtExitCtx *> AtExitStack;
 
   InterceptorContext()
-      : libignore(LINKER_INITIALIZED), AtExitStack(MBlockAtExit) {
+      : libignore(LINKER_INITIALIZED), AtExitStack() {
   }
 };
 

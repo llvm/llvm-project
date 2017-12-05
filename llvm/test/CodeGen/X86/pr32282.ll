@@ -11,7 +11,7 @@
 
 define void @foo() {
 ; X86-LABEL: foo:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    movl d, %eax
@@ -46,7 +46,7 @@ define void @foo() {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: foo:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq {{.*}}(%rip), %rax
 ; X64-NEXT:    movabsq $3013716102212485120, %rcx # imm = 0x29D2DED3DE400000
 ; X64-NEXT:    andnq %rcx, %rax, %rcx
@@ -55,7 +55,7 @@ define void @foo() {
 ; X64-NEXT:    movabsq $4393751543808, %rax # imm = 0x3FF00000000
 ; X64-NEXT:    testq %rax, %rcx
 ; X64-NEXT:    je .LBB0_1
-; X64-NEXT:  # BB#2:
+; X64-NEXT:  # %bb.2:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    idivq %rcx

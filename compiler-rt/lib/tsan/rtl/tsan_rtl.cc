@@ -102,8 +102,8 @@ Context::Context()
   , thread_registry(new(thread_registry_placeholder) ThreadRegistry(
       CreateThreadContext, kMaxTid, kThreadQuarantineSize, kMaxTidReuse))
   , racy_mtx(MutexTypeRacy, StatMtxRacy)
-  , racy_stacks(MBlockRacyStacks)
-  , racy_addresses(MBlockRacyAddresses)
+  , racy_stacks()
+  , racy_addresses()
   , fired_suppressions_mtx(MutexTypeFired, StatMtxFired)
   , fired_suppressions(8)
   , clock_alloc("clock allocator") {
@@ -121,7 +121,7 @@ ThreadState::ThreadState(Context *ctx, int tid, int unique_id, u64 epoch,
   // , ignore_interceptors()
   , clock(tid, reuse_count)
 #if !SANITIZER_GO
-  , jmp_bufs(MBlockJmpBuf)
+  , jmp_bufs()
 #endif
   , tid(tid)
   , unique_id(unique_id)

@@ -4,7 +4,7 @@
 
 define <4 x i32> @zext_v4i8_to_v4i32(<4 x i8>* %ptr) {
 ; X86-LABEL: zext_v4i8_to_v4i32:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    pxor %xmm1, %xmm1
@@ -13,7 +13,7 @@ define <4 x i32> @zext_v4i8_to_v4i32(<4 x i8>* %ptr) {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: zext_v4i8_to_v4i32:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    pxor %xmm1, %xmm1
 ; X64-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]

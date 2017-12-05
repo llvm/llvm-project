@@ -2363,12 +2363,13 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr,
 
     // Emit the needed file names.
     llvm::DenseMap<int, int> FilenameMap;
+    FilenameMap[-1] = -1; // For unspecified filenames.
     for (const auto &L : LineTable) {
       if (L.first.ID < 0)
         continue;
       for (auto &LE : L.second) {
         if (FilenameMap.insert(std::make_pair(LE.FilenameID,
-                                              FilenameMap.size())).second)
+                                              FilenameMap.size() - 1)).second)
           AddPath(LineTable.getFilename(LE.FilenameID), Record);
       }
     }

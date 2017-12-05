@@ -1272,9 +1272,6 @@ private:
   /// function as they are computed.
   DenseMap<const Loop *, BackedgeTakenInfo> PredicatedBackedgeTakenCounts;
 
-  // Cache the calculated exit limits for the loops.
-  DenseMap<ExitLimitQuery, ExitLimit> ExitLimits;
-
   /// This map contains entries for all of the PHI instructions that we
   /// attempt to compute constant evolutions for.  This allows us to avoid
   /// potentially expensive recomputation of these properties.  An instruction
@@ -1425,9 +1422,6 @@ private:
   /// return an exact answer.
   ExitLimit computeExitLimit(const Loop *L, BasicBlock *ExitingBlock,
                              bool AllowPredicates = false);
-
-  ExitLimit computeExitLimitImpl(const Loop *L, BasicBlock *ExitingBlock,
-                                 bool AllowPredicates = false);
 
   /// Compute the number of times the backedge of the specified loop will
   /// execute if its exit condition were a conditional branch of ExitCond,
@@ -1668,9 +1662,8 @@ private:
   /// to be a constant.
   Optional<APInt> computeConstantDifference(const SCEV *LHS, const SCEV *RHS);
 
-  /// Drop memoized information computed for S. Only erase Exit Limits info if
-  /// we expect that the operation we have made is going to change it.
-  void forgetMemoizedResults(const SCEV *S, bool EraseExitLimit = true);
+  /// Drop memoized information computed for S.
+  void forgetMemoizedResults(const SCEV *S);
 
   /// Return an existing SCEV for V if there is one, otherwise return nullptr.
   const SCEV *getExistingSCEV(Value *V);

@@ -4,7 +4,7 @@
 
 define void @test_512(i512* %a, i512* %b, i512* %out) nounwind {
 ; X32-LABEL: test_512:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebp
 ; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    pushl %edi
@@ -1530,7 +1530,7 @@ define void @test_512(i512* %a, i512* %b, i512* %out) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_512:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rbp
 ; X64-NEXT:    pushq %r15
 ; X64-NEXT:    pushq %r14

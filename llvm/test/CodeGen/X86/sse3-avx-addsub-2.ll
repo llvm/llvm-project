@@ -7,12 +7,12 @@
 
 define <4 x float> @test1(<4 x float> %A, <4 x float> %B) {
 ; SSE-LABEL: test1:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test1:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsubps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = extractelement <4 x float> %A, i32 0
@@ -36,12 +36,12 @@ define <4 x float> @test1(<4 x float> %A, <4 x float> %B) {
 
 define <4 x float> @test2(<4 x float> %A, <4 x float> %B) {
 ; SSE-LABEL: test2:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test2:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsubps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = extractelement <4 x float> %A, i32 2
@@ -57,12 +57,12 @@ define <4 x float> @test2(<4 x float> %A, <4 x float> %B) {
 
 define <4 x float> @test3(<4 x float> %A, <4 x float> %B) {
 ; SSE-LABEL: test3:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test3:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsubps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = extractelement <4 x float> %A, i32 0
@@ -78,12 +78,12 @@ define <4 x float> @test3(<4 x float> %A, <4 x float> %B) {
 
 define <4 x float> @test4(<4 x float> %A, <4 x float> %B) {
 ; SSE-LABEL: test4:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test4:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsubps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = extractelement <4 x float> %A, i32 2
@@ -99,12 +99,12 @@ define <4 x float> @test4(<4 x float> %A, <4 x float> %B) {
 
 define <4 x float> @test5(<4 x float> %A, <4 x float> %B) {
 ; SSE-LABEL: test5:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test5:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsubps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = extractelement <4 x float> %A, i32 0
@@ -120,12 +120,12 @@ define <4 x float> @test5(<4 x float> %A, <4 x float> %B) {
 
 define <4 x float> @test6(<4 x float> %A, <4 x float> %B) {
 ; SSE-LABEL: test6:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test6:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsubps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = extractelement <4 x float> %A, i32 0
@@ -149,13 +149,13 @@ define <4 x float> @test6(<4 x float> %A, <4 x float> %B) {
 
 define <4 x double> @test7(<4 x double> %A, <4 x double> %B) {
 ; SSE-LABEL: test7:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubpd %xmm2, %xmm0
 ; SSE-NEXT:    addsubpd %xmm3, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test7:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsubpd %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
   %1 = extractelement <4 x double> %A, i32 0
@@ -179,12 +179,12 @@ define <4 x double> @test7(<4 x double> %A, <4 x double> %B) {
 
 define <2 x double> @test8(<2 x double> %A, <2 x double> %B) {
 ; SSE-LABEL: test8:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubpd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test8:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsubpd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = extractelement <2 x double> %A, i32 0
@@ -200,13 +200,13 @@ define <2 x double> @test8(<2 x double> %A, <2 x double> %B) {
 
 define <8 x float> @test9(<8 x float> %A, <8 x float> %B) {
 ; SSE-LABEL: test9:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubps %xmm2, %xmm0
 ; SSE-NEXT:    addsubps %xmm3, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test9:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsubps %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
   %1 = extractelement <8 x float> %A, i32 0
@@ -249,12 +249,12 @@ define <8 x float> @test9(<8 x float> %A, <8 x float> %B) {
 
 define <4 x float> @test10(<4 x float> %A, <4 x float> %B) {
 ; SSE-LABEL: test10:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    subss %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test10:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vsubss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = extractelement <4 x float> %A, i32 0
@@ -266,7 +266,7 @@ define <4 x float> @test10(<4 x float> %A, <4 x float> %B) {
 
 define <4 x float> @test11(<4 x float> %A, <4 x float> %B) {
 ; SSE-LABEL: test11:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; SSE-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
 ; SSE-NEXT:    subss %xmm1, %xmm0
@@ -274,7 +274,7 @@ define <4 x float> @test11(<4 x float> %A, <4 x float> %B) {
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test11:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm1[1,0]
 ; AVX-NEXT:    vsubss %xmm1, %xmm0, %xmm0
@@ -289,7 +289,7 @@ define <4 x float> @test11(<4 x float> %A, <4 x float> %B) {
 
 define <4 x float> @test12(<4 x float> %A, <4 x float> %B) {
 ; SSE-LABEL: test12:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    movshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; SSE-NEXT:    movshdup {{.*#+}} xmm1 = xmm1[1,1,3,3]
 ; SSE-NEXT:    addss %xmm0, %xmm1
@@ -297,7 +297,7 @@ define <4 x float> @test12(<4 x float> %A, <4 x float> %B) {
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test12:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; AVX-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm1[1,1,3,3]
 ; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
@@ -312,7 +312,7 @@ define <4 x float> @test12(<4 x float> %A, <4 x float> %B) {
 
 define <4 x float> @test13(<4 x float> %A, <4 x float> %B) {
 ; SSE-LABEL: test13:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
 ; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,1,2,3]
 ; SSE-NEXT:    addss %xmm0, %xmm1
@@ -321,7 +321,7 @@ define <4 x float> @test13(<4 x float> %A, <4 x float> %B) {
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test13:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
 ; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,1,2,3]
 ; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
@@ -336,7 +336,7 @@ define <4 x float> @test13(<4 x float> %A, <4 x float> %B) {
 
 define <4 x float> @test14(<4 x float> %A, <4 x float> %B) {
 ; SSE-LABEL: test14:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps %xmm0, %xmm2
 ; SSE-NEXT:    subss %xmm1, %xmm2
 ; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
@@ -347,7 +347,7 @@ define <4 x float> @test14(<4 x float> %A, <4 x float> %B) {
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test14:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vsubss %xmm1, %xmm0, %xmm2
 ; AVX-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm1[1,0]
@@ -367,7 +367,7 @@ define <4 x float> @test14(<4 x float> %A, <4 x float> %B) {
 
 define <4 x float> @test15(<4 x float> %A, <4 x float> %B) {
 ; SSE-LABEL: test15:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    movshdup {{.*#+}} xmm3 = xmm0[1,1,3,3]
 ; SSE-NEXT:    movshdup {{.*#+}} xmm2 = xmm1[1,1,3,3]
 ; SSE-NEXT:    addss %xmm3, %xmm2
@@ -379,7 +379,7 @@ define <4 x float> @test15(<4 x float> %A, <4 x float> %B) {
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test15:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
 ; AVX-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm1[1,1,3,3]
 ; AVX-NEXT:    vaddss %xmm3, %xmm2, %xmm2
@@ -402,7 +402,7 @@ define <4 x float> @test15(<4 x float> %A, <4 x float> %B) {
 
 define <4 x float> @test16(<4 x float> %A, <4 x float> %B) {
 ; SSE-LABEL: test16:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps %xmm0, %xmm2
 ; SSE-NEXT:    subss %xmm0, %xmm2
 ; SSE-NEXT:    movaps %xmm0, %xmm3
@@ -422,7 +422,7 @@ define <4 x float> @test16(<4 x float> %A, <4 x float> %B) {
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test16:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vsubss %xmm0, %xmm0, %xmm2
 ; AVX-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm0[1,0]
 ; AVX-NEXT:    vpermilpd {{.*#+}} xmm4 = xmm1[1,0]
@@ -457,12 +457,12 @@ define <4 x float> @test16(<4 x float> %A, <4 x float> %B) {
 
 define <2 x float> @test_v2f32(<2 x float> %v0, <2 x float> %v1) {
 ; SSE-LABEL: test_v2f32:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_v2f32:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsubps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %v2 = extractelement <2 x float> %v0, i32 0

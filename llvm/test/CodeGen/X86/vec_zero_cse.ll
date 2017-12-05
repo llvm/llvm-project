@@ -12,7 +12,7 @@
 
 define void @test1() {
 ; X32-LABEL: test1:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl $0, M1+4
 ; X32-NEXT:    movl $0, M1
 ; X32-NEXT:    xorps %xmm0, %xmm0
@@ -20,7 +20,7 @@ define void @test1() {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test1:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq $0, {{.*}}(%rip)
 ; X64-NEXT:    movq $0, {{.*}}(%rip)
 ; X64-NEXT:    retq
@@ -31,7 +31,7 @@ define void @test1() {
 
 define void @test2() {
 ; X32-LABEL: test2:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl $-1, M1+4
 ; X32-NEXT:    movl $-1, M1
 ; X32-NEXT:    pcmpeqd %xmm0, %xmm0
@@ -39,7 +39,7 @@ define void @test2() {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test2:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq $-1, {{.*}}(%rip)
 ; X64-NEXT:    movq {{.*}}(%rip), %rax
 ; X64-NEXT:    movq %rax, {{.*}}(%rip)
@@ -51,14 +51,14 @@ define void @test2() {
 
 define void @test3() {
 ; X32-LABEL: test3:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    xorps %xmm0, %xmm0
 ; X32-NEXT:    movaps %xmm0, S1
 ; X32-NEXT:    movaps %xmm0, S2
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test3:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorps %xmm0, %xmm0
 ; X64-NEXT:    movaps %xmm0, {{.*}}(%rip)
 ; X64-NEXT:    movaps %xmm0, {{.*}}(%rip)
@@ -70,14 +70,14 @@ define void @test3() {
 
 define void @test4() {
 ; X32-LABEL: test4:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pcmpeqd %xmm0, %xmm0
 ; X32-NEXT:    movdqa %xmm0, S1
 ; X32-NEXT:    movdqa %xmm0, S2
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test4:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    pcmpeqd %xmm0, %xmm0
 ; X64-NEXT:    movdqa %xmm0, {{.*}}(%rip)
 ; X64-NEXT:    movdqa %xmm0, {{.*}}(%rip)

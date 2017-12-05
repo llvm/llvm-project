@@ -3,7 +3,7 @@
 
 define i32 @foo(<2 x i64> %c, i32 %a, i32 %b) {
 ; CHECK-LABEL: foo:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ptest %xmm0, %xmm0
 ; CHECK-NEXT:    cmovnel %esi, %edi
 ; CHECK-NEXT:    movl %edi, %eax
@@ -16,10 +16,10 @@ define i32 @foo(<2 x i64> %c, i32 %a, i32 %b) {
 
 define i32 @bar(<2 x i64> %c) {
 ; CHECK-LABEL: bar:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ptest %xmm0, %xmm0
 ; CHECK-NEXT:    jne .LBB1_2
-; CHECK-NEXT:  # BB#1: # %if-true-block
+; CHECK-NEXT:  # %bb.1: # %if-true-block
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB1_2: # %endif-block
@@ -37,7 +37,7 @@ endif-block:
 
 define i32 @bax(<2 x i64> %c) {
 ; CHECK-LABEL: bax:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    ptest %xmm0, %xmm0
 ; CHECK-NEXT:    sete %al
@@ -50,7 +50,7 @@ define i32 @bax(<2 x i64> %c) {
 
 define i16 @rnd16(i16 %arg) nounwind {
 ; CHECK-LABEL: rnd16:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    rdrandw %cx
 ; CHECK-NEXT:    cmovbw %di, %ax
@@ -68,7 +68,7 @@ define i16 @rnd16(i16 %arg) nounwind {
 
 define i32 @rnd32(i32 %arg) nounwind {
 ; CHECK-LABEL: rnd32:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    rdrandl %ecx
 ; CHECK-NEXT:    cmovbl %edi, %eax
@@ -85,7 +85,7 @@ define i32 @rnd32(i32 %arg) nounwind {
 
 define i64 @rnd64(i64 %arg) nounwind {
 ; CHECK-LABEL: rnd64:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    rdrandq %rcx
 ; CHECK-NEXT:    cmovbq %rdi, %rax
@@ -102,7 +102,7 @@ define i64 @rnd64(i64 %arg) nounwind {
 
 define i16 @seed16(i16 %arg) nounwind {
 ; CHECK-LABEL: seed16:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    rdseedw %cx
 ; CHECK-NEXT:    cmovbw %di, %ax
@@ -120,7 +120,7 @@ define i16 @seed16(i16 %arg) nounwind {
 
 define i32 @seed32(i32 %arg) nounwind {
 ; CHECK-LABEL: seed32:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    rdseedl %ecx
 ; CHECK-NEXT:    cmovbl %edi, %eax
@@ -137,7 +137,7 @@ define i32 @seed32(i32 %arg) nounwind {
 
 define i64 @seed64(i64 %arg) nounwind {
 ; CHECK-LABEL: seed64:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    rdseedq %rcx
 ; CHECK-NEXT:    cmovbq %rdi, %rax

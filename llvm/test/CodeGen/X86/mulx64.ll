@@ -4,7 +4,7 @@
 
 define i128 @f1(i64 %a, i64 %b) {
 ; CHECK-LABEL: f1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rdx
 ; CHECK-NEXT:    mulxq %rsi, %rax, %rdx
 ; CHECK-NEXT:    retq
@@ -16,7 +16,7 @@ define i128 @f1(i64 %a, i64 %b) {
 
 define i128 @f2(i64 %a, i64* %p) {
 ; CHECK-LABEL: f2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rdx
 ; CHECK-NEXT:    mulxq (%rsi), %rax, %rdx
 ; CHECK-NEXT:    retq

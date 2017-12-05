@@ -96,6 +96,7 @@ int main() {
     // LAMBDA: alloca i32,
     // LAMBDA: alloca i32,
     // LAMBDA: alloca i32,
+    // LAMBDA: alloca i32,
     // LAMBDA: [[SIVAR_PRIV:%.+]] = alloca i{{.+}},
     // LAMBDA: [[RED_LIST:%.+]] = alloca [1 x {{.+}}],
     // LAMBDA: store{{.+}} [[SIVAR_ARG]], {{.+}} [[SIVAR_ADDR]],
@@ -219,6 +220,7 @@ int main() {
 // CHECK: alloca i32,
 // CHECK: alloca i32,
 // CHECK: alloca i32,
+// CHECK: alloca i32,
 // CHECK: [[SIVAR_PRIV:%.+]] = alloca i{{.+}},
 // CHECK: [[RED_LIST:%.+]] = alloca [1 x {{.+}}],
 // CHECK: store{{.+}} [[SIVAR_ARG]], {{.+}} [[SIVAR_ADDR]],
@@ -305,6 +307,7 @@ int main() {
 // CHECK: alloca i{{[0-9]+}},
 // CHECK: [[TVAR_ADDR:%.+]] = alloca i{{.+}}*,
 // skip loop vars
+// CHECK: alloca i32,
 // CHECK: alloca i32,
 // CHECK: alloca i32,
 // CHECK: alloca i32,

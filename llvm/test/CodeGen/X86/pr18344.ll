@@ -6,7 +6,7 @@
 
 define void @FFT(%v4_varying_complex* noalias nocapture %destination, float* noalias %re, <4 x i32>* noalias nocapture %ptr_cast_for_load) nounwind {
 ; X86-LABEL: FFT:
-; X86:       # BB#0: # %begin
+; X86:       # %bb.0: # %begin
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
@@ -33,7 +33,7 @@ define void @FFT(%v4_varying_complex* noalias nocapture %destination, float* noa
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: FFT:
-; X64:       # BB#0: # %begin
+; X64:       # %bb.0: # %begin
 ; X64-NEXT:    movdqu (%rdx), %xmm0
 ; X64-NEXT:    pslld $4, %xmm0
 ; X64-NEXT:    movq %xmm0, %rax

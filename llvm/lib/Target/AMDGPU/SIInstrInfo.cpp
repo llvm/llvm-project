@@ -2687,6 +2687,28 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
         }
       }
     }
+
+    const MachineOperand *DstUnused = getNamedOperand(MI, AMDGPU::OpName::dst_unused);
+    if (DstUnused && DstUnused->isImm() &&
+        DstUnused->getImm() == AMDGPU::SDWA::UNUSED_PRESERVE) {
+      const MachineOperand &Dst = MI.getOperand(DstIdx);
+      if (!Dst.isReg() || !Dst.isTied()) {
+        ErrInfo = "Dst register should have tied register";
+        return false;
+      }
+
+      const MachineOperand &TiedMO =
+          MI.getOperand(MI.findTiedOperandIdx(DstIdx));
+      if (!TiedMO.isReg() || !TiedMO.isImplicit() || !TiedMO.isUse()) {
+        ErrInfo =
+            "Dst register should be tied to implicit use of preserved register";
+        return false;
+      } else if (TargetRegisterInfo::isPhysicalRegister(TiedMO.getReg()) &&
+                 Dst.getReg() != TiedMO.getReg()) {
+        ErrInfo = "Dst register should use same physical register as preserved";
+        return false;
+      }
+    }
   }
 
   // Verify VOP*

@@ -10,7 +10,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: nounwind readnone uwtable
 define zeroext i16 @cmp_kor_seq_16(<16 x float> %a, <16 x float> %b, <16 x float> %c, <16 x float> %d, <16 x float> %x) local_unnamed_addr #0 {
 ; CHECK-LABEL: cmp_kor_seq_16:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vcmpgeps %zmm4, %zmm0, %k0
 ; CHECK-NEXT:    vcmpgeps %zmm4, %zmm1, %k1
 ; CHECK-NEXT:    korw %k1, %k0, %k0

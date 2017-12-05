@@ -13,6 +13,7 @@
 #define LLVM_FUZZER_UTIL_H
 
 #include "FuzzerDefs.h"
+#include "FuzzerCommand.h"
 
 namespace fuzzer {
 
@@ -50,7 +51,7 @@ unsigned long GetPid();
 
 size_t GetPeakRSSMb();
 
-int ExecuteCommand(const std::string &Command);
+int ExecuteCommand(const Command &Cmd);
 
 FILE *OpenProcessPipe(const char *Command, const char *Mode);
 

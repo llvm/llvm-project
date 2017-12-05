@@ -9,14 +9,14 @@
 
 define i32 @f32_bzhi(i32 %x, i32 %y) local_unnamed_addr {
 ; CHECK-LABEL: f32_bzhi:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movslq %esi, %rax
 ; CHECK-NEXT:    andl fill_table32(,%rax,4), %edi
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    ret{{[l|q]}}
 ;
 ; CHECK32-LABEL: f32_bzhi:
-; CHECK32:       # BB#0: # %entry
+; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK32-NEXT:    movl fill_table32(,%eax,4), %eax
 ; CHECK32-NEXT:    andl {{[0-9]+}}(%esp), %eax
@@ -31,14 +31,14 @@ entry:
 
 define i32 @f32_bzhi_partial(i32 %x, i32 %y) local_unnamed_addr {
 ; CHECK-LABEL: f32_bzhi_partial:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movslq %esi, %rax
 ; CHECK-NEXT:    andl fill_table32_partial(,%rax,4), %edi
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    ret{{[l|q]}}
 ;
 ; CHECK32-LABEL: f32_bzhi_partial:
-; CHECK32:       # BB#0: # %entry
+; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK32-NEXT:    movl fill_table32_partial(,%eax,4), %eax
 ; CHECK32-NEXT:    andl {{[0-9]+}}(%esp), %eax
@@ -53,13 +53,13 @@ entry:
 
 define i64 @f64_bzhi(i64 %x, i64 %y) local_unnamed_addr {
 ; CHECK-LABEL: f64_bzhi:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andq fill_table64(,%rsi,8), %rdi
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    ret{{[l|q]}}
 ;
 ; CHECK32-LABEL: f64_bzhi:
-; CHECK32:       # BB#0: # %entry
+; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK32-NEXT:    movl fill_table64+4(,%eax,8), %edx
 ; CHECK32-NEXT:    movl fill_table64(,%eax,8), %eax
@@ -75,13 +75,13 @@ entry:
 
 define i64 @f64_bzhi_partial(i64 %x, i64 %y) local_unnamed_addr {
 ; CHECK-LABEL: f64_bzhi_partial:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andq fill_table64_partial(,%rsi,8), %rdi
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    ret{{[l|q]}}
 ;
 ; CHECK32-LABEL: f64_bzhi_partial:
-; CHECK32:       # BB#0: # %entry
+; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK32-NEXT:    movl fill_table64_partial+4(,%eax,8), %edx
 ; CHECK32-NEXT:    movl fill_table64_partial(,%eax,8), %eax

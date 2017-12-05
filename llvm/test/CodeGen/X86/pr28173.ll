@@ -7,7 +7,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define i64 @foo64(i1 zeroext %i) #0 {
 ; CHECK-LABEL: foo64:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzbl %dil, %eax
 ; CHECK-NEXT:    orq $-2, %rax
 ; CHECK-NEXT:    retq
@@ -24,7 +24,7 @@ end:
 
 define i16 @foo16(i1 zeroext %i) #0 {
 ; CHECK-LABEL: foo16:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzbl %dil, %eax
 ; CHECK-NEXT:    orl $65534, %eax # imm = 0xFFFE
 ; CHECK-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
@@ -42,7 +42,7 @@ end:
 
 define i16 @foo16_1(i1 zeroext %i, i32 %j) #0 {
 ; CHECK-LABEL: foo16_1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzbl %dil, %eax
 ; CHECK-NEXT:    orl $2, %eax
 ; CHECK-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
@@ -60,7 +60,7 @@ end:
 
 define i32 @foo32(i1 zeroext %i) #0 {
 ; CHECK-LABEL: foo32:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzbl %dil, %eax
 ; CHECK-NEXT:    orl $-2, %eax
 ; CHECK-NEXT:    retq
@@ -77,7 +77,7 @@ end:
 
 define i8 @foo8(i1 zeroext %i) #0 {
 ; CHECK-LABEL: foo8:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    orb $-2, %dil
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq

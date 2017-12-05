@@ -18,6 +18,7 @@
 #include "clang-c/Index.h"
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Mutex.h"
 #include <utility>
 
 namespace llvm {
@@ -39,6 +40,10 @@ class CIndexer {
 
   std::string ResourcesPath;
   std::shared_ptr<PCHContainerOperations> PCHContainerOps;
+
+  std::string ToolchainPath;
+
+  std::string InvocationEmissionPath;
 
 public:
   CIndexer(std::shared_ptr<PCHContainerOperations> PCHContainerOps =
@@ -71,6 +76,29 @@ public:
 
   /// \brief Get the path of the clang resource files.
   const std::string &getClangResourcesPath();
+
+  StringRef getClangToolchainPath();
+
+  void setInvocationEmissionPath(StringRef Str) {
+    InvocationEmissionPath = Str;
+  }
+
+  StringRef getInvocationEmissionPath() const { return InvocationEmissionPath; }
+};
+
+/// Logs information about a particular libclang operation like parsing to
+/// a new file in the invocation emission path.
+class LibclangInvocationReporter {
+public:
+  enum class OperationKind { ParseOperation, CompletionOperation };
+
+  LibclangInvocationReporter(CIndexer &Idx, OperationKind Op,
+                             unsigned ParseOptions,
+                             llvm::ArrayRef<const char *> Args);
+  ~LibclangInvocationReporter();
+
+private:
+  std::string File;
 };
 
   /// \brief Return the current size to request for "safety".

@@ -10,7 +10,7 @@
 ; The module ctor has no debug info.  All we have to do is don't crash.
 ; X86: _asan.module_ctor:
 ; X86-NEXT: L{{.*}}:
-; X86:      # BB
+; X86:      # %bb.
 ; X86-NEXT: calll   ___asan_init_v3
 ; X86-NEXT: retl
 

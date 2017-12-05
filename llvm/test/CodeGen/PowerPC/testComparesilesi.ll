@@ -9,7 +9,7 @@
 
 define signext i32 @test_ilesi(i32 signext %a, i32 signext %b) {
 ; CHECK-LABEL: test_ilesi:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sub r3, r4, r3
 ; CHECK-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-NEXT:    xori r3, r3, 1
@@ -22,7 +22,7 @@ entry:
 
 define signext i32 @test_ilesi_sext(i32 signext %a, i32 signext %b) {
 ; CHECK-LABEL: test_ilesi_sext:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sub r3, r4, r3
 ; CHECK-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-NEXT:    addi r3, r3, -1
@@ -35,7 +35,7 @@ entry:
 
 define void @test_ilesi_store(i32 signext %a, i32 signext %b) {
 ; CHECK-LABEL: test_ilesi_store:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r5, r2, .LC0@toc@ha
 ; CHECK-NEXT:    sub r3, r4, r3
 ; CHECK-NEXT:    ld r12, .LC0@toc@l(r5)
@@ -52,7 +52,7 @@ entry:
 
 define void @test_ilesi_sext_store(i32 signext %a, i32 signext %b) {
 ; CHECK-LABEL: test_ilesi_sext_store:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r5, r2, .LC0@toc@ha
 ; CHECK-NEXT:    sub r3, r4, r3
 ; CHECK-NEXT:    ld r12, .LC0@toc@l(r5)

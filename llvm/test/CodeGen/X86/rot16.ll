@@ -4,14 +4,14 @@
 
 define i16 @foo(i16 %x, i16 %y, i16 %z) nounwind {
 ; X32-LABEL: foo:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    rolw %cl, %ax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: foo:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl %edx, %ecx
 ; X64-NEXT:    shldw %cl, %di, %di
 ; X64-NEXT:    movl %edi, %eax
@@ -25,7 +25,7 @@ define i16 @foo(i16 %x, i16 %y, i16 %z) nounwind {
 
 define i16 @bar(i16 %x, i16 %y, i16 %z) nounwind {
 ; X32-LABEL: bar:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
@@ -33,7 +33,7 @@ define i16 @bar(i16 %x, i16 %y, i16 %z) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: bar:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl %edx, %ecx
 ; X64-NEXT:    shldw %cl, %di, %si
 ; X64-NEXT:    movl %esi, %eax
@@ -47,14 +47,14 @@ define i16 @bar(i16 %x, i16 %y, i16 %z) nounwind {
 
 define i16 @un(i16 %x, i16 %y, i16 %z) nounwind {
 ; X32-LABEL: un:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    rorw %cl, %ax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: un:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl %edx, %ecx
 ; X64-NEXT:    shrdw %cl, %di, %di
 ; X64-NEXT:    movl %edi, %eax
@@ -68,7 +68,7 @@ define i16 @un(i16 %x, i16 %y, i16 %z) nounwind {
 
 define i16 @bu(i16 %x, i16 %y, i16 %z) nounwind {
 ; X32-LABEL: bu:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
@@ -76,7 +76,7 @@ define i16 @bu(i16 %x, i16 %y, i16 %z) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: bu:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl %edx, %ecx
 ; X64-NEXT:    shrdw %cl, %di, %si
 ; X64-NEXT:    movl %esi, %eax
@@ -90,13 +90,13 @@ define i16 @bu(i16 %x, i16 %y, i16 %z) nounwind {
 
 define i16 @xfoo(i16 %x, i16 %y, i16 %z) nounwind {
 ; X32-LABEL: xfoo:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    rolw $5, %ax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: xfoo:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    rolw $5, %di
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    retq
@@ -108,14 +108,14 @@ define i16 @xfoo(i16 %x, i16 %y, i16 %z) nounwind {
 
 define i16 @xbar(i16 %x, i16 %y, i16 %z) nounwind {
 ; X32-LABEL: xbar:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    shldw $5, %cx, %ax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: xbar:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    shldw $5, %di, %si
 ; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    retq
@@ -127,13 +127,13 @@ define i16 @xbar(i16 %x, i16 %y, i16 %z) nounwind {
 
 define i16 @xun(i16 %x, i16 %y, i16 %z) nounwind {
 ; X32-LABEL: xun:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    rolw $11, %ax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: xun:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    rolw $11, %di
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    retq
@@ -145,14 +145,14 @@ define i16 @xun(i16 %x, i16 %y, i16 %z) nounwind {
 
 define i16 @xbu(i16 %x, i16 %y, i16 %z) nounwind {
 ; X32-LABEL: xbu:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    shldw $11, %cx, %ax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: xbu:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    shldw $11, %si, %di
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    retq

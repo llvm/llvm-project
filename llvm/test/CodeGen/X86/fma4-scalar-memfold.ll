@@ -8,7 +8,7 @@ declare <2 x double> @llvm.x86.fma4.vfmadd.sd(<2 x double>, <2 x double>, <2 x d
 
 define void @fmadd_aab_ss(float* %a, float* %b) {
 ; CHECK-LABEL: fmadd_aab_ss:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vfmaddss (%rsi), %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovss %xmm0, (%rdi)
@@ -34,7 +34,7 @@ define void @fmadd_aab_ss(float* %a, float* %b) {
 
 define void @fmadd_aba_ss(float* %a, float* %b) {
 ; CHECK-LABEL: fmadd_aba_ss:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vfmaddss %xmm0, (%rsi), %xmm0, %xmm0
 ; CHECK-NEXT:    vmovss %xmm0, (%rdi)
@@ -60,7 +60,7 @@ define void @fmadd_aba_ss(float* %a, float* %b) {
 
 define void @fmadd_aab_sd(double* %a, double* %b) {
 ; CHECK-LABEL: fmadd_aab_sd:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    vfmaddsd (%rsi), %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovlpd %xmm0, (%rdi)
@@ -82,7 +82,7 @@ define void @fmadd_aab_sd(double* %a, double* %b) {
 
 define void @fmadd_aba_sd(double* %a, double* %b) {
 ; CHECK-LABEL: fmadd_aba_sd:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    vfmaddsd %xmm0, (%rsi), %xmm0, %xmm0
 ; CHECK-NEXT:    vmovlpd %xmm0, (%rdi)

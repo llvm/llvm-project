@@ -3,7 +3,7 @@
 
 define void @pr34605(i8* nocapture %s, i32 %p) {
 ; CHECK-LABEL: pr34605:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    vpbroadcastd {{[0-9]+}}(%esp), %zmm0
 ; CHECK-NEXT:    vpcmpeqd {{\.LCPI.*}}, %zmm0, %k0

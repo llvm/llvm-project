@@ -4,7 +4,7 @@
 
 define   <16 x i32> @_inreg16xi32(i32 %a) {
 ; ALL-LABEL: _inreg16xi32:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpbroadcastd %edi, %zmm0
 ; ALL-NEXT:    retq
   %b = insertelement <16 x i32> undef, i32 %a, i32 0
@@ -14,7 +14,7 @@ define   <16 x i32> @_inreg16xi32(i32 %a) {
 
 define   <8 x i64> @_inreg8xi64(i64 %a) {
 ; ALL-LABEL: _inreg8xi64:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpbroadcastq %rdi, %zmm0
 ; ALL-NEXT:    retq
   %b = insertelement <8 x i64> undef, i64 %a, i32 0
@@ -24,7 +24,7 @@ define   <8 x i64> @_inreg8xi64(i64 %a) {
 
 define   <16 x float> @_ss16xfloat_v4(<4 x float> %a) {
 ; ALL-LABEL: _ss16xfloat_v4:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vbroadcastss %xmm0, %zmm0
 ; ALL-NEXT:    retq
   %b = shufflevector <4 x float> %a, <4 x float> undef, <16 x i32> zeroinitializer
@@ -33,7 +33,7 @@ define   <16 x float> @_ss16xfloat_v4(<4 x float> %a) {
 
 define   <16 x float> @_inreg16xfloat(float %a) {
 ; ALL-LABEL: _inreg16xfloat:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vbroadcastss %xmm0, %zmm0
 ; ALL-NEXT:    retq
   %b = insertelement <16 x float> undef, float %a, i32 0
@@ -43,7 +43,7 @@ define   <16 x float> @_inreg16xfloat(float %a) {
 
 define   <16 x float> @_ss16xfloat_mask(float %a, <16 x float> %i, <16 x i32> %mask1) {
 ; ALL-LABEL: _ss16xfloat_mask:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; ALL-NEXT:    vpcmpneqd %zmm3, %zmm2, %k1
 ; ALL-NEXT:    vbroadcastss %xmm0, %zmm1 {%k1}
@@ -58,7 +58,7 @@ define   <16 x float> @_ss16xfloat_mask(float %a, <16 x float> %i, <16 x i32> %m
 
 define   <16 x float> @_ss16xfloat_maskz(float %a, <16 x i32> %mask1) {
 ; ALL-LABEL: _ss16xfloat_maskz:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; ALL-NEXT:    vpcmpneqd %zmm2, %zmm1, %k1
 ; ALL-NEXT:    vbroadcastss %xmm0, %zmm0 {%k1} {z}
@@ -72,7 +72,7 @@ define   <16 x float> @_ss16xfloat_maskz(float %a, <16 x i32> %mask1) {
 
 define   <16 x float> @_ss16xfloat_load(float* %a.ptr) {
 ; ALL-LABEL: _ss16xfloat_load:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vbroadcastss (%rdi), %zmm0
 ; ALL-NEXT:    retq
   %a = load float, float* %a.ptr
@@ -83,7 +83,7 @@ define   <16 x float> @_ss16xfloat_load(float* %a.ptr) {
 
 define   <16 x float> @_ss16xfloat_mask_load(float* %a.ptr, <16 x float> %i, <16 x i32> %mask1) {
 ; ALL-LABEL: _ss16xfloat_mask_load:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; ALL-NEXT:    vpcmpneqd %zmm2, %zmm1, %k1
 ; ALL-NEXT:    vbroadcastss (%rdi), %zmm0 {%k1}
@@ -98,7 +98,7 @@ define   <16 x float> @_ss16xfloat_mask_load(float* %a.ptr, <16 x float> %i, <16
 
 define   <16 x float> @_ss16xfloat_maskz_load(float* %a.ptr, <16 x i32> %mask1) {
 ; ALL-LABEL: _ss16xfloat_maskz_load:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; ALL-NEXT:    vpcmpneqd %zmm1, %zmm0, %k1
 ; ALL-NEXT:    vbroadcastss (%rdi), %zmm0 {%k1} {z}
@@ -113,7 +113,7 @@ define   <16 x float> @_ss16xfloat_maskz_load(float* %a.ptr, <16 x i32> %mask1) 
 
 define   <8 x double> @_inreg8xdouble(double %a) {
 ; ALL-LABEL: _inreg8xdouble:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vbroadcastsd %xmm0, %zmm0
 ; ALL-NEXT:    retq
   %b = insertelement <8 x double> undef, double %a, i32 0
@@ -123,7 +123,7 @@ define   <8 x double> @_inreg8xdouble(double %a) {
 
 define   <8 x double> @_sd8xdouble_mask(double %a, <8 x double> %i, <8 x i32> %mask1) {
 ; ALL-LABEL: _sd8xdouble_mask:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    # kill: %ymm2<def> %ymm2<kill> %zmm2<def>
 ; ALL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; ALL-NEXT:    vpcmpneqd %zmm3, %zmm2, %k1
@@ -139,7 +139,7 @@ define   <8 x double> @_sd8xdouble_mask(double %a, <8 x double> %i, <8 x i32> %m
 
 define   <8 x double> @_sd8xdouble_maskz(double %a, <8 x i32> %mask1) {
 ; ALL-LABEL: _sd8xdouble_maskz:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
 ; ALL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; ALL-NEXT:    vpcmpneqd %zmm2, %zmm1, %k1
@@ -154,7 +154,7 @@ define   <8 x double> @_sd8xdouble_maskz(double %a, <8 x i32> %mask1) {
 
 define   <8 x double> @_sd8xdouble_load(double* %a.ptr) {
 ; ALL-LABEL: _sd8xdouble_load:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vbroadcastsd (%rdi), %zmm0
 ; ALL-NEXT:    retq
   %a = load double, double* %a.ptr
@@ -165,7 +165,7 @@ define   <8 x double> @_sd8xdouble_load(double* %a.ptr) {
 
 define   <8 x double> @_sd8xdouble_mask_load(double* %a.ptr, <8 x double> %i, <8 x i32> %mask1) {
 ; ALL-LABEL: _sd8xdouble_mask_load:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
 ; ALL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; ALL-NEXT:    vpcmpneqd %zmm2, %zmm1, %k1
@@ -181,7 +181,7 @@ define   <8 x double> @_sd8xdouble_mask_load(double* %a.ptr, <8 x double> %i, <8
 
 define   <8 x double> @_sd8xdouble_maskz_load(double* %a.ptr, <8 x i32> %mask1) {
 ; ALL-LABEL: _sd8xdouble_maskz_load:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; ALL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; ALL-NEXT:    vpcmpneqd %zmm1, %zmm0, %k1
@@ -197,7 +197,7 @@ define   <8 x double> @_sd8xdouble_maskz_load(double* %a.ptr, <8 x i32> %mask1) 
 
 define   <16 x i32> @_xmm16xi32(<16 x i32> %a) {
 ; ALL-LABEL: _xmm16xi32:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vbroadcastss %xmm0, %zmm0
 ; ALL-NEXT:    retq
   %b = shufflevector <16 x i32> %a, <16 x i32> undef, <16 x i32> zeroinitializer
@@ -206,7 +206,7 @@ define   <16 x i32> @_xmm16xi32(<16 x i32> %a) {
 
 define   <16 x float> @_xmm16xfloat(<16 x float> %a) {
 ; ALL-LABEL: _xmm16xfloat:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vbroadcastss %xmm0, %zmm0
 ; ALL-NEXT:    retq
   %b = shufflevector <16 x float> %a, <16 x float> undef, <16 x i32> zeroinitializer
@@ -215,7 +215,7 @@ define   <16 x float> @_xmm16xfloat(<16 x float> %a) {
 
 define <16 x i32> @test_vbroadcast() {
 ; ALL-LABEL: test_vbroadcast:
-; ALL:       # BB#0: # %entry
+; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; ALL-NEXT:    vcmpunordps %zmm0, %zmm0, %k1
 ; ALL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
@@ -234,7 +234,7 @@ entry:
 ; IR generated will produce broadcasts at the end.
 define <8 x double> @test_set1_pd(double %d) #2 {
 ; ALL-LABEL: test_set1_pd:
-; ALL:       # BB#0: # %entry
+; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    vbroadcastsd %xmm0, %zmm0
 ; ALL-NEXT:    retq
 entry:
@@ -251,7 +251,7 @@ entry:
 
 define <8 x i64> @test_set1_epi64(i64 %d) #2 {
 ; ALL-LABEL: test_set1_epi64:
-; ALL:       # BB#0: # %entry
+; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    vpbroadcastq %rdi, %zmm0
 ; ALL-NEXT:    retq
 entry:
@@ -268,7 +268,7 @@ entry:
 
 define <16 x float> @test_set1_ps(float %f) #2 {
 ; ALL-LABEL: test_set1_ps:
-; ALL:       # BB#0: # %entry
+; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    vbroadcastss %xmm0, %zmm0
 ; ALL-NEXT:    retq
 entry:
@@ -293,7 +293,7 @@ entry:
 
 define <16 x i32> @test_set1_epi32(i32 %f) #2 {
 ; ALL-LABEL: test_set1_epi32:
-; ALL:       # BB#0: # %entry
+; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    vpbroadcastd %edi, %zmm0
 ; ALL-NEXT:    retq
 entry:
@@ -320,7 +320,7 @@ entry:
 ; Verify that the IR generated will produce the broadcast at the end.
 define <8 x double> @test_mm512_broadcastsd_pd(<2 x double> %a) {
 ; ALL-LABEL: test_mm512_broadcastsd_pd:
-; ALL:       # BB#0: # %entry
+; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    vbroadcastsd %xmm0, %zmm0
 ; ALL-NEXT:    retq
 entry:
@@ -338,7 +338,7 @@ entry:
 
 define <16 x float> @test1(<8 x float>%a)  {
 ; ALL-LABEL: test1:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vbroadcastss %xmm0, %zmm0
 ; ALL-NEXT:    retq
   %res = shufflevector <8 x float> %a, <8 x float> undef, <16 x i32> zeroinitializer
@@ -347,7 +347,7 @@ define <16 x float> @test1(<8 x float>%a)  {
 
 define <8 x double> @test2(<4 x double>%a)  {
 ; ALL-LABEL: test2:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vbroadcastsd %xmm0, %zmm0
 ; ALL-NEXT:    retq
   %res = shufflevector <4 x double> %a, <4 x double> undef, <8 x i32> zeroinitializer
@@ -356,13 +356,13 @@ define <8 x double> @test2(<4 x double>%a)  {
 
 define <64 x i8> @_invec32xi8(<32 x i8>%a)  {
 ; AVX512F-LABEL: _invec32xi8:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpbroadcastb %xmm0, %ymm0
 ; AVX512F-NEXT:    vmovdqa %ymm0, %ymm1
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: _invec32xi8:
-; AVX512BW:       # BB#0:
+; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpbroadcastb %xmm0, %zmm0
 ; AVX512BW-NEXT:    retq
   %res = shufflevector <32 x i8> %a, <32 x i8> undef, <64 x i32> zeroinitializer
@@ -371,13 +371,13 @@ define <64 x i8> @_invec32xi8(<32 x i8>%a)  {
 
 define <32 x i16> @_invec16xi16(<16 x i16>%a)  {
 ; AVX512F-LABEL: _invec16xi16:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpbroadcastw %xmm0, %ymm0
 ; AVX512F-NEXT:    vmovdqa %ymm0, %ymm1
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: _invec16xi16:
-; AVX512BW:       # BB#0:
+; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpbroadcastw %xmm0, %zmm0
 ; AVX512BW-NEXT:    retq
   %res = shufflevector <16 x i16> %a, <16 x i16> undef, <32 x i32> zeroinitializer
@@ -386,7 +386,7 @@ define <32 x i16> @_invec16xi16(<16 x i16>%a)  {
 
 define <16 x i32> @_invec8xi32(<8 x i32>%a)  {
 ; ALL-LABEL: _invec8xi32:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vbroadcastss %xmm0, %zmm0
 ; ALL-NEXT:    retq
   %res = shufflevector <8 x i32> %a, <8 x i32> undef, <16 x i32> zeroinitializer
@@ -395,7 +395,7 @@ define <16 x i32> @_invec8xi32(<8 x i32>%a)  {
 
 define <8 x i64> @_invec4xi64(<4 x i64>%a)  {
 ; ALL-LABEL: _invec4xi64:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vbroadcastsd %xmm0, %zmm0
 ; ALL-NEXT:    retq
   %res = shufflevector <4 x i64> %a, <4 x i64> undef, <8 x i32> zeroinitializer
@@ -405,7 +405,7 @@ define <8 x i64> @_invec4xi64(<4 x i64>%a)  {
 declare void @func_f32(float)
 define <16 x float> @broadcast_ss_spill(float %x) {
 ; ALL-LABEL: broadcast_ss_spill:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    subq $24, %rsp
 ; ALL-NEXT:    .cfi_def_cfa_offset 32
 ; ALL-NEXT:    vaddss %xmm0, %xmm0, %xmm0
@@ -424,7 +424,7 @@ define <16 x float> @broadcast_ss_spill(float %x) {
 declare void @func_f64(double)
 define <8 x double> @broadcast_sd_spill(double %x) {
 ; ALL-LABEL: broadcast_sd_spill:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    subq $24, %rsp
 ; ALL-NEXT:    .cfi_def_cfa_offset 32
 ; ALL-NEXT:    vaddsd %xmm0, %xmm0, %xmm0

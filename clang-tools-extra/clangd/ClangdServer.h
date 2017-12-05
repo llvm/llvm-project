@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringRef.h"
 
 #include "ClangdUnit.h"
+#include "CodeComplete.h"
 #include "Function.h"
 #include "Protocol.h"
 

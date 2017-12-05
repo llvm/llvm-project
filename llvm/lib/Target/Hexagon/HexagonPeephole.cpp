@@ -20,18 +20,17 @@
 //     ...
 //     %16<def> = NOT_p %15<kill>
 //     ...
-//     JMP_c %16<kill>, <BB#1>, %pc<imp-def,dead>
+//     JMP_c %16<kill>, <%bb.1>, %pc<imp-def,dead>
 //
 //     Into
 //     %15<def> = CMPGTrr %6, %2;
 //     ...
-//     JMP_cNot %15<kill>, <BB#1>, %pc<imp-def,dead>;
+//     JMP_cNot %15<kill>, <%bb.1>, %pc<imp-def,dead>;
 //
 // Note: The peephole pass makes the instrucstions like
 // %170<def> = SXTW %166 or %16<def> = NOT_p %15<kill>
 // redundant and relies on some form of dead removal instructions, like
 // DCE or DIE to actually eliminate them.
-
 
 //===----------------------------------------------------------------------===//
 

@@ -4,14 +4,14 @@
 
 define i256 @foo(<8 x i32> %a) {
 ; FAST-LABEL: foo:
-; FAST:       # BB#0:
+; FAST:       # %bb.0:
 ; FAST-NEXT:    vmovups %ymm0, (%rdi)
 ; FAST-NEXT:    movq %rdi, %rax
 ; FAST-NEXT:    vzeroupper
 ; FAST-NEXT:    retq
 ;
 ; SLOW-LABEL: foo:
-; SLOW:       # BB#0:
+; SLOW:       # %bb.0:
 ; SLOW-NEXT:    vextractf128 $1, %ymm0, 16(%rdi)
 ; SLOW-NEXT:    vmovups %xmm0, (%rdi)
 ; SLOW-NEXT:    movq %rdi, %rax

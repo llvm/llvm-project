@@ -34,7 +34,7 @@
 ; GCN-NEXT: s_andn2_b64 exec, exec, [[OR_BREAK]]
 ; GCN-NEXT: s_cbranch_execnz [[INNER_LOOP]]
 
-; GCN: ; BB#{{[0-9]+}}: ; %Flow1{{$}}
+; GCN: ; %bb.{{[0-9]+}}: ; %Flow1{{$}}
 ; GCN-NEXT: ; in Loop: Header=[[OUTER_LOOP]] Depth=1
 
 ; Ensure copy is eliminated

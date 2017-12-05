@@ -3,7 +3,7 @@
 
 define <32 x i16> @test_expand_load_w_512(i8* %addr, <32 x i16> %data, i32 %mask) {
 ; CHECK-LABEL: test_expand_load_w_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vpexpandw (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
@@ -14,7 +14,7 @@ declare <32 x i16> @llvm.x86.avx512.mask.expand.load.w.512(i8* %addr, <32 x i16>
 
 define void @test_compress_store_w_512(i8* %addr, <32 x i16> %data, i32 %mask) {
 ; CHECK-LABEL: test_compress_store_w_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vpcompressw %zmm0, (%rdi) {%k1}
 ; CHECK-NEXT:    retq
@@ -25,7 +25,7 @@ declare void @llvm.x86.avx512.mask.compress.store.w.512(i8* %addr, <32 x i16> %d
 
 define <64 x i8> @test_expand_load_b_512(i8* %addr, <64 x i8> %data, i64 %mask) {
 ; CHECK-LABEL: test_expand_load_b_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovq %rsi, %k1
 ; CHECK-NEXT:    vpexpandb (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
@@ -36,7 +36,7 @@ declare <64 x i8> @llvm.x86.avx512.mask.expand.load.b.512(i8* %addr, <64 x i8> %
 
 define void @test_compress_store_b_512(i8* %addr, <64 x i8> %data, i64 %mask) {
 ; CHECK-LABEL: test_compress_store_b_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovq %rsi, %k1
 ; CHECK-NEXT:    vpcompressb %zmm0, (%rdi) {%k1}
 ; CHECK-NEXT:    retq
@@ -47,7 +47,7 @@ declare void @llvm.x86.avx512.mask.compress.store.b.512(i8* %addr, <64 x i8> %da
 
 define <32 x i16> @test_compress_w_512(<32 x i16> %data, <32 x i16> %src, i32 %mask) {
 ; CHECK-LABEL: test_compress_w_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    vpcompressw %zmm0, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
@@ -59,7 +59,7 @@ declare <32 x i16> @llvm.x86.avx512.mask.compress.w.512(<32 x i16>, <32 x i16>, 
 
 define <64 x i8> @test_compress_b_512(<64 x i8> %data, <64 x i8> %src, i64 %mask) {
 ; CHECK-LABEL: test_compress_b_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovq %rdi, %k1
 ; CHECK-NEXT:    vpcompressb %zmm0, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
@@ -71,7 +71,7 @@ declare <64 x i8> @llvm.x86.avx512.mask.compress.b.512(<64 x i8>, <64 x i8>, i64
 
 define <32 x i16> @test_expand_w_512(i8* %addr, <32 x i16> %data, i32 %mask) {
 ; CHECK-LABEL: test_expand_w_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vpexpandw %zmm0, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
@@ -82,7 +82,7 @@ declare <32 x i16> @llvm.x86.avx512.mask.expand.w.512(<32 x i16>, <32 x i16>, i3
 
 define <64 x i8> @test_expand_b_512(i8* %addr, <64 x i8> %data, i64 %mask) {
 ; CHECK-LABEL: test_expand_b_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovq %rsi, %k1
 ; CHECK-NEXT:    vpexpandb %zmm0, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
@@ -93,7 +93,7 @@ declare <64 x i8> @llvm.x86.avx512.mask.expand.b.512(<64 x i8>, <64 x i8>, i64)
 
 define <16 x i32>@test_int_x86_avx512_mask_vpshld_d_512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x3, i16 %x4) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpshld_d_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    vpshldd $22, %zmm1, %zmm0, %zmm2 {%k1}
 ; CHECK-NEXT:    vpshldd $22, %zmm1, %zmm0, %zmm0
@@ -108,7 +108,7 @@ declare <16 x i32> @llvm.x86.avx512.mask.vpshld.d.512(<16 x i32>, <16 x i32>, i3
 
 define <8 x i64>@test_int_x86_avx512_mask_vpshld_q_512(<8 x i64> %x0, <8 x i64> %x1, <8 x i64> %x3, i8 %x4) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpshld_q_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    vpshldq $22, %zmm1, %zmm0, %zmm2 {%k1}
 ; CHECK-NEXT:    vpshldq $22, %zmm1, %zmm0, %zmm0
@@ -123,7 +123,7 @@ declare <8 x i64> @llvm.x86.avx512.mask.vpshld.q.512(<8 x i64>, <8 x i64>, i32, 
 
 define <32 x i16>@test_int_x86_avx512_mask_vpshld_w_512(<32 x i16> %x0, <32 x i16> %x1, <32 x i16> %x3, i32 %x4) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpshld_w_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    vpshldw $22, %zmm1, %zmm0, %zmm2 {%k1}
 ; CHECK-NEXT:    vpshldw $22, %zmm1, %zmm0, %zmm0
@@ -138,7 +138,7 @@ declare <32 x i16> @llvm.x86.avx512.mask.vpshld.w.512(<32 x i16>, <32 x i16>, i3
 
 define <16 x i32>@test_int_x86_avx512_mask_vpshrd_d_512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x3, i16 %x4) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpshrd_d_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    vpshrdd $22, %zmm1, %zmm0, %zmm2 {%k1}
 ; CHECK-NEXT:    vpshrdd $22, %zmm1, %zmm0, %zmm0
@@ -153,7 +153,7 @@ declare <16 x i32> @llvm.x86.avx512.mask.vpshrd.d.512(<16 x i32>, <16 x i32>, i3
 
 define <8 x i64>@test_int_x86_avx512_mask_vpshrd_q_512(<8 x i64> %x0, <8 x i64> %x1, <8 x i64> %x3, i8 %x4) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpshrd_q_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    vpshrdq $22, %zmm1, %zmm0, %zmm2 {%k1}
 ; CHECK-NEXT:    vpshrdq $22, %zmm1, %zmm0, %zmm0
@@ -168,7 +168,7 @@ declare <8 x i64> @llvm.x86.avx512.mask.vpshrd.q.512(<8 x i64>, <8 x i64>, i32, 
 
 define <32 x i16>@test_int_x86_avx512_mask_vpshrd_w_512(<32 x i16> %x0, <32 x i16> %x1, <32 x i16> %x3, i32 %x4) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpshrd_w_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    vpshrdw $22, %zmm1, %zmm0, %zmm2 {%k1}
 ; CHECK-NEXT:    vpshrdw $22, %zmm1, %zmm0, %zmm0
@@ -186,7 +186,7 @@ declare <16 x i32> @llvm.x86.avx512.maskz.vpshrdv.d.512(<16 x i32>, <16 x i32>, 
 
 define <16 x i32>@test_int_x86_avx512_mask_vpshrdv_d_512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32>* %x2p, <16 x i32> %x4, i16 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpshrdv_d_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vmovdqa64 %zmm0, %zmm3
 ; CHECK-NEXT:    vpshrdvd (%rdi), %zmm1, %zmm3 {%k1}
@@ -210,7 +210,7 @@ declare <8 x i64> @llvm.x86.avx512.maskz.vpshrdv.q.512(<8 x i64>, <8 x i64>, <8 
 
 define <8 x i64>@test_int_x86_avx512_mask_vpshrdv_q_512(<8 x i64> %x0, <8 x i64> %x1, <8 x i64>* %x2p, <8 x i64> %x4, i8 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpshrdv_q_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vmovdqa64 %zmm0, %zmm3
 ; CHECK-NEXT:    vpshrdvq (%rdi), %zmm1, %zmm3 {%k1}
@@ -234,7 +234,7 @@ declare <32 x i16> @llvm.x86.avx512.maskz.vpshrdv.w.512(<32 x i16>, <32 x i16>, 
 
 define <32 x i16>@test_int_x86_avx512_mask_vpshrdv_w_512(<32 x i16> %x0, <32 x i16> %x1, <32 x i16>* %x2p, <32 x i16> %x4, i32 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpshrdv_w_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vmovdqa64 %zmm0, %zmm3
 ; CHECK-NEXT:    vpshrdvw (%rdi), %zmm1, %zmm3 {%k1}
@@ -258,7 +258,7 @@ declare <16 x i32> @llvm.x86.avx512.maskz.vpshldv.d.512(<16 x i32>, <16 x i32>, 
 
 define <16 x i32>@test_int_x86_avx512_mask_vpshldv_d_512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32>* %x2p, <16 x i32> %x4, i16 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpshldv_d_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vmovdqa64 %zmm0, %zmm3
 ; CHECK-NEXT:    vpshldvd (%rdi), %zmm1, %zmm3 {%k1}
@@ -282,7 +282,7 @@ declare <8 x i64> @llvm.x86.avx512.maskz.vpshldv.q.512(<8 x i64>, <8 x i64>, <8 
 
 define <8 x i64>@test_int_x86_avx512_mask_vpshldv_q_512(<8 x i64> %x0, <8 x i64> %x1, <8 x i64>* %x2p, <8 x i64> %x4, i8 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpshldv_q_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vmovdqa64 %zmm0, %zmm3
 ; CHECK-NEXT:    vpshldvq (%rdi), %zmm1, %zmm3 {%k1}
@@ -306,7 +306,7 @@ declare <32 x i16> @llvm.x86.avx512.maskz.vpshldv.w.512(<32 x i16>, <32 x i16>, 
 
 define <32 x i16>@test_int_x86_avx512_mask_vpshldv_w_512(<32 x i16> %x0, <32 x i16> %x1, <32 x i16>* %x2p, <32 x i16> %x4, i32 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpshldv_w_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vmovdqa64 %zmm0, %zmm3
 ; CHECK-NEXT:    vpshldvw (%rdi), %zmm1, %zmm3 {%k1}

@@ -3,10 +3,10 @@
 
 define i1 @test_i1(i1* %b) {
 ; CHECK-LABEL: test_i1:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testb $1, (%rdi)
 ; CHECK-NEXT:    je .LBB0_2
-; CHECK-NEXT:  # BB#1: # %in
+; CHECK-NEXT:  # %bb.1: # %in
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB0_2: # %out

@@ -7,7 +7,7 @@ declare extern_weak fastcc void @callee_weak()
 
 define fastcc void @caller_to0_from0() nounwind {
 ; CHECK-LABEL: caller_to0_from0:
-; CHECK-NEXT: // BB
+; CHECK-NEXT: // %bb.
 
   tail call fastcc void @callee_stack0()
   ret void

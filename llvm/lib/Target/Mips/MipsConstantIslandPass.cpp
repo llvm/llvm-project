@@ -430,7 +430,7 @@ bool MipsConstantIslands::isOffsetInRange
 LLVM_DUMP_METHOD void MipsConstantIslands::dumpBBs() {
   for (unsigned J = 0, E = BBInfo.size(); J !=E; ++J) {
     const BasicBlockInfo &BBI = BBInfo[J];
-    dbgs() << format("%08x BB#%u\t", BBI.Offset, J)
+    dbgs() << format("%08x %bb.%u\t", BBI.Offset, J)
            << format(" size=%#x\n", BBInfo[J].Size);
   }
 }
@@ -991,11 +991,11 @@ bool MipsConstantIslands::isCPEntryInRange
       const BasicBlockInfo &BBI = BBInfo[Block];
       dbgs() << "User of CPE#" << CPEMI->getOperand(0).getImm()
              << " max delta=" << MaxDisp
-             << format(" insn address=%#x", UserOffset)
-             << " in BB#" << Block << ": "
+             << format(" insn address=%#x", UserOffset) << " in "
+             << printMBBReference(*MI->getParent()) << ": "
              << format("%#x-%x\t", BBI.Offset, BBI.postOffset()) << *MI
              << format("CPE address=%#x offset=%+d: ", CPEOffset,
-                       int(CPEOffset-UserOffset));
+                       int(CPEOffset - UserOffset));
     });
   }
 
@@ -1197,7 +1197,7 @@ bool MipsConstantIslands::findAvailableWater(CPUser &U, unsigned UserOffset,
       // This is the least amount of required padding seen so far.
       BestGrowth = Growth;
       WaterIter = IP;
-      DEBUG(dbgs() << "Found water after BB#" << WaterBB->getNumber()
+      DEBUG(dbgs() << "Found water after " << printMBBReference(*WaterBB)
                    << " Growth=" << Growth << '\n');
 
       // Keep looking unless it is perfect.
@@ -1236,8 +1236,8 @@ void MipsConstantIslands::createNewWater(unsigned CPUserIndex,
     unsigned CPEOffset = UserBBI.postOffset(CPELogAlign) + Delta;
 
     if (isOffsetInRange(UserOffset, CPEOffset, U)) {
-      DEBUG(dbgs() << "Split at end of BB#" << UserMBB->getNumber()
-            << format(", expected CPE offset %#x\n", CPEOffset));
+      DEBUG(dbgs() << "Split at end of " << printMBBReference(*UserMBB)
+                   << format(", expected CPE offset %#x\n", CPEOffset));
       NewMBB = &*++UserMBB->getIterator();
       // Add an unconditional branch from UserMBB to fallthrough block.  Record
       // it for branch lengthening; this new branch will not get out of range,
@@ -1470,11 +1470,11 @@ bool MipsConstantIslands::isBBInRange
   unsigned BrOffset   = getOffsetOf(MI) + PCAdj;
   unsigned DestOffset = BBInfo[DestBB->getNumber()].Offset;
 
-  DEBUG(dbgs() << "Branch of destination BB#" << DestBB->getNumber()
-               << " from BB#" << MI->getParent()->getNumber()
-               << " max delta=" << MaxDisp
-               << " from " << getOffsetOf(MI) << " to " << DestOffset
-               << " offset " << int(DestOffset-BrOffset) << "\t" << *MI);
+  DEBUG(dbgs() << "Branch of destination " << printMBBReference(*DestBB)
+               << " from " << printMBBReference(*MI->getParent())
+               << " max delta=" << MaxDisp << " from " << getOffsetOf(MI)
+               << " to " << DestOffset << " offset "
+               << int(DestOffset - BrOffset) << "\t" << *MI);
 
   if (BrOffset <= DestOffset) {
     // Branch before the Dest.
@@ -1615,9 +1615,9 @@ MipsConstantIslands::fixupConditionalBr(ImmBranch &Br) {
   }
   MachineBasicBlock *NextBB = &*++MBB->getIterator();
 
-  DEBUG(dbgs() << "  Insert B to BB#" << DestBB->getNumber()
-               << " also invert condition and change dest. to BB#"
-               << NextBB->getNumber() << "\n");
+  DEBUG(dbgs() << "  Insert B to " << printMBBReference(*DestBB)
+               << " also invert condition and change dest. to "
+               << printMBBReference(*NextBB) << "\n");
 
   // Insert a new conditional branch and a new unconditional branch.
   // Also update the ImmBranch as well as adding a new entry for the new branch.

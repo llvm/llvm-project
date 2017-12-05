@@ -7,7 +7,7 @@
 
 define i32 @icmp_eq(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: icmp_eq:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    xor a0, a0, a1
 ; RV32I-NEXT:    sltiu a0, a0, 1
 ; RV32I-NEXT:    jalr zero, ra, 0
@@ -18,7 +18,7 @@ define i32 @icmp_eq(i32 %a, i32 %b) nounwind {
 
 define i32 @icmp_ne(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: icmp_ne:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    xor a0, a0, a1
 ; RV32I-NEXT:    sltu a0, zero, a0
 ; RV32I-NEXT:    jalr zero, ra, 0
@@ -29,7 +29,7 @@ define i32 @icmp_ne(i32 %a, i32 %b) nounwind {
 
 define i32 @icmp_ugt(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: icmp_ugt:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sltu a0, a1, a0
 ; RV32I-NEXT:    jalr zero, ra, 0
   %1 = icmp ugt i32 %a, %b
@@ -39,7 +39,7 @@ define i32 @icmp_ugt(i32 %a, i32 %b) nounwind {
 
 define i32 @icmp_uge(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: icmp_uge:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sltu a0, a0, a1
 ; RV32I-NEXT:    xori a0, a0, 1
 ; RV32I-NEXT:    jalr zero, ra, 0
@@ -50,7 +50,7 @@ define i32 @icmp_uge(i32 %a, i32 %b) nounwind {
 
 define i32 @icmp_ult(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: icmp_ult:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sltu a0, a0, a1
 ; RV32I-NEXT:    jalr zero, ra, 0
   %1 = icmp ult i32 %a, %b
@@ -60,7 +60,7 @@ define i32 @icmp_ult(i32 %a, i32 %b) nounwind {
 
 define i32 @icmp_ule(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: icmp_ule:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sltu a0, a1, a0
 ; RV32I-NEXT:    xori a0, a0, 1
 ; RV32I-NEXT:    jalr zero, ra, 0
@@ -71,7 +71,7 @@ define i32 @icmp_ule(i32 %a, i32 %b) nounwind {
 
 define i32 @icmp_sgt(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: icmp_sgt:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slt a0, a1, a0
 ; RV32I-NEXT:    jalr zero, ra, 0
   %1 = icmp sgt i32 %a, %b
@@ -81,7 +81,7 @@ define i32 @icmp_sgt(i32 %a, i32 %b) nounwind {
 
 define i32 @icmp_sge(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: icmp_sge:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slt a0, a0, a1
 ; RV32I-NEXT:    xori a0, a0, 1
 ; RV32I-NEXT:    jalr zero, ra, 0
@@ -92,7 +92,7 @@ define i32 @icmp_sge(i32 %a, i32 %b) nounwind {
 
 define i32 @icmp_slt(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: icmp_slt:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slt a0, a0, a1
 ; RV32I-NEXT:    jalr zero, ra, 0
   %1 = icmp slt i32 %a, %b
@@ -102,7 +102,7 @@ define i32 @icmp_slt(i32 %a, i32 %b) nounwind {
 
 define i32 @icmp_sle(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: icmp_sle:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slt a0, a1, a0
 ; RV32I-NEXT:    xori a0, a0, 1
 ; RV32I-NEXT:    jalr zero, ra, 0

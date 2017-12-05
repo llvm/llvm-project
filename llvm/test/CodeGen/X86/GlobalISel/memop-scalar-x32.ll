@@ -6,7 +6,7 @@
 
 define i1 @test_load_i1(i1 * %p1) {
 ; ALL-LABEL: test_load_i1:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    movl 4(%esp), %eax
 ; ALL-NEXT:    movb (%eax), %al
 ; ALL-NEXT:    retl
@@ -16,7 +16,7 @@ define i1 @test_load_i1(i1 * %p1) {
 
 define i8 @test_load_i8(i8 * %p1) {
 ; ALL-LABEL: test_load_i8:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    movl 4(%esp), %eax
 ; ALL-NEXT:    movb (%eax), %al
 ; ALL-NEXT:    retl
@@ -26,7 +26,7 @@ define i8 @test_load_i8(i8 * %p1) {
 
 define i16 @test_load_i16(i16 * %p1) {
 ; ALL-LABEL: test_load_i16:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    movl 4(%esp), %eax
 ; ALL-NEXT:    movzwl (%eax), %eax
 ; ALL-NEXT:    retl
@@ -36,7 +36,7 @@ define i16 @test_load_i16(i16 * %p1) {
 
 define i32 @test_load_i32(i32 * %p1) {
 ; ALL-LABEL: test_load_i32:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    movl 4(%esp), %eax
 ; ALL-NEXT:    movl (%eax), %eax
 ; ALL-NEXT:    retl
@@ -46,7 +46,7 @@ define i32 @test_load_i32(i32 * %p1) {
 
 define i1 * @test_store_i1(i1 %val, i1 * %p1) {
 ; ALL-LABEL: test_store_i1:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    movb 4(%esp), %cl
 ; ALL-NEXT:    movl 8(%esp), %eax
 ; ALL-NEXT:    andb $1, %cl
@@ -58,7 +58,7 @@ define i1 * @test_store_i1(i1 %val, i1 * %p1) {
 
 define i8 * @test_store_i8(i8 %val, i8 * %p1) {
 ; ALL-LABEL: test_store_i8:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    movb 4(%esp), %cl
 ; ALL-NEXT:    movl 8(%esp), %eax
 ; ALL-NEXT:    movb %cl, (%eax)
@@ -69,7 +69,7 @@ define i8 * @test_store_i8(i8 %val, i8 * %p1) {
 
 define i16 * @test_store_i16(i16 %val, i16 * %p1) {
 ; ALL-LABEL: test_store_i16:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    movzwl 4(%esp), %ecx
 ; ALL-NEXT:    movl 8(%esp), %eax
 ; ALL-NEXT:    movw %cx, (%eax)
@@ -80,7 +80,7 @@ define i16 * @test_store_i16(i16 %val, i16 * %p1) {
 
 define i32 * @test_store_i32(i32 %val, i32 * %p1) {
 ; ALL-LABEL: test_store_i32:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    movl 4(%esp), %ecx
 ; ALL-NEXT:    movl 8(%esp), %eax
 ; ALL-NEXT:    movl %ecx, (%eax)
@@ -91,7 +91,7 @@ define i32 * @test_store_i32(i32 %val, i32 * %p1) {
 
 define i32* @test_load_ptr(i32** %ptr1) {
 ; ALL-LABEL: test_load_ptr:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    movl 4(%esp), %eax
 ; ALL-NEXT:    movl (%eax), %eax
 ; ALL-NEXT:    retl
@@ -101,7 +101,7 @@ define i32* @test_load_ptr(i32** %ptr1) {
 
 define void @test_store_ptr(i32** %ptr1, i32* %a) {
 ; ALL-LABEL: test_store_ptr:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    movl 4(%esp), %eax
 ; ALL-NEXT:    movl 8(%esp), %ecx
 ; ALL-NEXT:    movl %ecx, (%eax)

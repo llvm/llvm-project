@@ -3,7 +3,7 @@
 
 define <4 x i32> @t(i32 %x, i32 %y) nounwind  {
 ; CHECK-LABEL: t:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    retl
   %tmp1 = insertelement <4 x i32> zeroinitializer, i32 %x, i32 0

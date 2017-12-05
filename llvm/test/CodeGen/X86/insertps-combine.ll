@@ -5,12 +5,12 @@
 
 define <4 x float> @shuffle_v4f32_0z27(<4 x float> %x, <4 x float> %a) {
 ; SSE-LABEL: shuffle_v4f32_0z27:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],zero,xmm0[2],xmm1[2]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: shuffle_v4f32_0z27:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],zero,xmm0[2],xmm1[2]
 ; AVX-NEXT:    retq
   %vecext = extractelement <4 x float> %x, i32 0
@@ -23,12 +23,12 @@ define <4 x float> @shuffle_v4f32_0z27(<4 x float> %x, <4 x float> %a) {
 
 define <4 x float> @shuffle_v4f32_0zz4(<4 x float> %xyzw, <4 x float> %abcd) {
 ; SSE-LABEL: shuffle_v4f32_0zz4:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],zero,zero,xmm1[0]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: shuffle_v4f32_0zz4:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],zero,zero,xmm1[0]
 ; AVX-NEXT:    retq
   %vecext = extractelement <4 x float> %xyzw, i32 0
@@ -41,12 +41,12 @@ define <4 x float> @shuffle_v4f32_0zz4(<4 x float> %xyzw, <4 x float> %abcd) {
 
 define <4 x float> @shuffle_v4f32_0z24(<4 x float> %xyzw, <4 x float> %abcd) {
 ; SSE-LABEL: shuffle_v4f32_0z24:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],zero,xmm0[2],xmm1[0]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: shuffle_v4f32_0z24:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],zero,xmm0[2],xmm1[0]
 ; AVX-NEXT:    retq
   %vecext = extractelement <4 x float> %xyzw, i32 0
@@ -59,12 +59,12 @@ define <4 x float> @shuffle_v4f32_0z24(<4 x float> %xyzw, <4 x float> %abcd) {
 
 define <4 x float> @shuffle_v4f32_0zz0(float %a) {
 ; SSE-LABEL: shuffle_v4f32_0zz0:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],zero,zero,xmm0[0]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: shuffle_v4f32_0zz0:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],zero,zero,xmm0[0]
 ; AVX-NEXT:    retq
   %vecinit = insertelement <4 x float> undef, float %a, i32 0
@@ -76,12 +76,12 @@ define <4 x float> @shuffle_v4f32_0zz0(float %a) {
 
 define <4 x float> @shuffle_v4f32_0z6z(<4 x float> %A, <4 x float> %B) {
 ; SSE-LABEL: shuffle_v4f32_0z6z:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],zero,xmm1[2],zero
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: shuffle_v4f32_0z6z:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],zero,xmm1[2],zero
 ; AVX-NEXT:    retq
   %vecext = extractelement <4 x float> %A, i32 0
@@ -95,13 +95,13 @@ define <4 x float> @shuffle_v4f32_0z6z(<4 x float> %A, <4 x float> %B) {
 
 define <4 x float> @shuffle_v4f32_z06z(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: shuffle_v4f32_z06z:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    insertps {{.*#+}} xmm1 = zero,xmm0[0],xmm1[2],zero
 ; SSE-NEXT:    movaps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: shuffle_v4f32_z06z:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = zero,xmm0[0],xmm1[2],zero
 ; AVX-NEXT:    retq
   %shuffle = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 undef, i32 0, i32 6, i32 undef>
@@ -111,12 +111,12 @@ define <4 x float> @shuffle_v4f32_z06z(<4 x float> %a, <4 x float> %b) {
 
 define <4 x float> @shuffle_v4f32_05zz(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: shuffle_v4f32_05zz:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm1[1],zero,zero
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: shuffle_v4f32_05zz:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[1],zero,zero
 ; AVX-NEXT:    retq
   %shuffle = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 0, i32 5, i32 undef, i32 undef>
@@ -126,12 +126,12 @@ define <4 x float> @shuffle_v4f32_05zz(<4 x float> %a, <4 x float> %b) {
 
 define <4 x float> @insertps_undef_input0(<4 x float> %a0, <4 x float> %a1) {
 ; SSE-LABEL: insertps_undef_input0:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    insertps {{.*#+}} xmm0 = zero,xmm1[0],zero,zero
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insertps_undef_input0:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = zero,xmm1[0],zero,zero
 ; AVX-NEXT:    retq
   %res0 = fadd <4 x float> %a0, <float 1.0, float 1.0, float 1.0, float 1.0>
@@ -142,13 +142,13 @@ define <4 x float> @insertps_undef_input0(<4 x float> %a0, <4 x float> %a1) {
 
 define <4 x float> @insertps_undef_input1(<4 x float> %a0, <4 x float> %a1) {
 ; SSE-LABEL: insertps_undef_input1:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    xorps %xmm1, %xmm1
 ; SSE-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[3]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insertps_undef_input1:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[3]
 ; AVX-NEXT:    retq
@@ -160,7 +160,7 @@ define <4 x float> @insertps_undef_input1(<4 x float> %a0, <4 x float> %a1) {
 
 define <4 x float> @insertps_zero_from_v2f64(<4 x float> %a0, <2 x double>* %a1) nounwind {
 ; SSE-LABEL: insertps_zero_from_v2f64:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    movapd (%rdi), %xmm1
 ; SSE-NEXT:    addpd {{.*}}(%rip), %xmm1
 ; SSE-NEXT:    insertps {{.*#+}} xmm0 = zero,xmm0[2,2,3]
@@ -168,7 +168,7 @@ define <4 x float> @insertps_zero_from_v2f64(<4 x float> %a0, <2 x double>* %a1)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insertps_zero_from_v2f64:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovapd (%rdi), %xmm1
 ; AVX-NEXT:    vaddpd {{.*}}(%rip), %xmm1, %xmm1
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = zero,xmm0[2,2,3]
@@ -184,7 +184,7 @@ define <4 x float> @insertps_zero_from_v2f64(<4 x float> %a0, <2 x double>* %a1)
 
 define <4 x float> @insertps_zero_from_v2i64(<4 x float> %a0, <2 x i64>* %a1) nounwind {
 ; SSE-LABEL: insertps_zero_from_v2i64:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rdi), %xmm1
 ; SSE-NEXT:    paddq {{.*}}(%rip), %xmm1
 ; SSE-NEXT:    insertps {{.*#+}} xmm0 = zero,xmm0[2,2,3]
@@ -192,7 +192,7 @@ define <4 x float> @insertps_zero_from_v2i64(<4 x float> %a0, <2 x i64>* %a1) no
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insertps_zero_from_v2i64:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovdqa (%rdi), %xmm1
 ; AVX-NEXT:    vpaddq {{.*}}(%rip), %xmm1, %xmm1
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = zero,xmm0[2,2,3]
@@ -208,7 +208,7 @@ define <4 x float> @insertps_zero_from_v2i64(<4 x float> %a0, <2 x i64>* %a1) no
 
 define <4 x float> @insertps_zero_from_v8i16(<4 x float> %a0, <8 x i16>* %a1) nounwind {
 ; SSE-LABEL: insertps_zero_from_v8i16:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rdi), %xmm1
 ; SSE-NEXT:    paddw {{.*}}(%rip), %xmm1
 ; SSE-NEXT:    insertps {{.*#+}} xmm0 = zero,xmm0[2,2,3]
@@ -216,7 +216,7 @@ define <4 x float> @insertps_zero_from_v8i16(<4 x float> %a0, <8 x i16>* %a1) no
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insertps_zero_from_v8i16:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovdqa (%rdi), %xmm1
 ; AVX-NEXT:    vpaddw {{.*}}(%rip), %xmm1, %xmm1
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = zero,xmm0[2,2,3]
@@ -232,12 +232,12 @@ define <4 x float> @insertps_zero_from_v8i16(<4 x float> %a0, <8 x i16>* %a1) no
 
 define <4 x float> @consecutive_load_insertps_04zz(float* %p) {
 ; SSE-LABEL: consecutive_load_insertps_04zz:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: consecutive_load_insertps_04zz:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    retq
   %p0 = getelementptr inbounds float, float* %p, i64 1
@@ -252,12 +252,12 @@ define <4 x float> @consecutive_load_insertps_04zz(float* %p) {
 
 define float @extract_zero_insertps_z0z7(<4 x float> %a0, <4 x float> %a1) {
 ; SSE-LABEL: extract_zero_insertps_z0z7:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    xorps %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: extract_zero_insertps_z0z7:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %res = call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %a0, <4 x float> %a1, i8 21)
@@ -267,12 +267,12 @@ define float @extract_zero_insertps_z0z7(<4 x float> %a0, <4 x float> %a1) {
 
 define float @extract_lane_insertps_5123(<4 x float> %a0, <4 x float> *%p1) {
 ; SSE-LABEL: extract_lane_insertps_5123:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: extract_lane_insertps_5123:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    retq
   %a1 = load <4 x float>, <4 x float> *%p1

@@ -11,7 +11,7 @@
 
 define void @signum32a(<4 x float>*) {
 ; AVX-LABEL: signum32a:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovaps (%rdi), %xmm0
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vcmpltps %xmm1, %xmm0, %xmm2
@@ -34,7 +34,7 @@ entry:
 
 define void @signum64a(<2 x double>*) {
 ; AVX-LABEL: signum64a:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovapd (%rdi), %xmm0
 ; AVX-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vcmpltpd %xmm1, %xmm0, %xmm2
@@ -63,7 +63,7 @@ entry:
 
 define void @signum32b(<8 x float>*) {
 ; AVX1-LABEL: signum32b:
-; AVX1:       # BB#0: # %entry
+; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vmovaps (%rdi), %ymm0
 ; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vcmpltps %ymm1, %ymm0, %ymm2
@@ -76,7 +76,7 @@ define void @signum32b(<8 x float>*) {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: signum32b:
-; AVX2:       # BB#0: # %entry
+; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vmovaps (%rdi), %ymm0
 ; AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vcmpltps %ymm1, %ymm0, %ymm2
@@ -89,7 +89,7 @@ define void @signum32b(<8 x float>*) {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: signum32b:
-; AVX512F:       # BB#0: # %entry
+; AVX512F:       # %bb.0: # %entry
 ; AVX512F-NEXT:    vmovaps (%rdi), %ymm0
 ; AVX512F-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX512F-NEXT:    vcmpltps %zmm1, %zmm0, %k1
@@ -117,7 +117,7 @@ entry:
 
 define void @signum64b(<4 x double>*) {
 ; AVX1-LABEL: signum64b:
-; AVX1:       # BB#0: # %entry
+; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vmovapd (%rdi), %ymm0
 ; AVX1-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vcmpltpd %ymm1, %ymm0, %ymm2
@@ -134,7 +134,7 @@ define void @signum64b(<4 x double>*) {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: signum64b:
-; AVX2:       # BB#0: # %entry
+; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vmovapd (%rdi), %ymm0
 ; AVX2-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vcmpltpd %ymm1, %ymm0, %ymm2
@@ -151,7 +151,7 @@ define void @signum64b(<4 x double>*) {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: signum64b:
-; AVX512F:       # BB#0: # %entry
+; AVX512F:       # %bb.0: # %entry
 ; AVX512F-NEXT:    vmovapd (%rdi), %ymm0
 ; AVX512F-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX512F-NEXT:    vcmpltpd %ymm1, %ymm0, %ymm2
@@ -181,7 +181,7 @@ entry:
 
 define void @signum32c(<8 x float>*) {
 ; AVX-LABEL: signum32c:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovaps (%rdi), %ymm0
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vcmpltps %ymm1, %ymm0, %ymm2
@@ -207,7 +207,7 @@ entry:
 
 define void @signum64c(<4 x double>*) {
 ; AVX1-LABEL: signum64c:
-; AVX1:       # BB#0: # %entry
+; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vmovapd (%rdi), %ymm0
 ; AVX1-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vcmpltpd %ymm1, %ymm0, %ymm2
@@ -223,7 +223,7 @@ define void @signum64c(<4 x double>*) {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: signum64c:
-; AVX2:       # BB#0: # %entry
+; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vmovapd (%rdi), %ymm0
 ; AVX2-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vcmpltpd %ymm1, %ymm0, %ymm2
@@ -237,7 +237,7 @@ define void @signum64c(<4 x double>*) {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: signum64c:
-; AVX512F:       # BB#0: # %entry
+; AVX512F:       # %bb.0: # %entry
 ; AVX512F-NEXT:    vmovapd (%rdi), %ymm0
 ; AVX512F-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX512F-NEXT:    vcmpltpd %ymm1, %ymm0, %ymm2

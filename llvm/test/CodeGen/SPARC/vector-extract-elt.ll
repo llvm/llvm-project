@@ -5,7 +5,7 @@
 ; look-thru for extractelement then we we know that the add will yield a
 ; non-negative result.
 define i1 @test1(<4 x i16>* %in) {
-; CHECK-LABEL: ! BB#0:
+; CHECK-LABEL: ! %bb.0:
 ; CHECK-NEXT:        retl
 ; CHECK-NEXT:        sethi 0, %o0
   %vec2 = load <4 x i16>, <4 x i16>* %in, align 1

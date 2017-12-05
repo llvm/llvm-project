@@ -48,27 +48,32 @@ AMDGPUSubtarget::initializeSubtargetDependencies(const Triple &TT,
   // for SI has the unhelpful behavior that it unsets everything else if you
   // disable it.
 
-  SmallString<256> FullFS("+promote-alloca,+fp64-fp16-denormals,+dx10-clamp,+load-store-opt,");
+  SmallString<256> FullFS("+promote-alloca,+dx10-clamp,+load-store-opt,");
+
   if (isAmdHsaOS()) // Turn on FlatForGlobal for HSA.
     FullFS += "+flat-address-space,+flat-for-global,+unaligned-buffer-access,+trap-handler,";
+
+  // FIXME: I don't think think Evergreen has any useful support for
+  // denormals, but should be checked. Should we issue a warning somewhere
+  // if someone tries to enable these?
+  if (getGeneration() >= AMDGPUSubtarget::SOUTHERN_ISLANDS) {
+    FullFS += "+fp64-fp16-denormals,";
+  } else {
+    FullFS += "-fp32-denormals,";
+  }
 
   FullFS += FS;
 
   ParseSubtargetFeatures(GPU, FullFS);
+
+  // We don't support FP64 for EG/NI atm.
+  assert(!hasFP64() || (getGeneration() >= AMDGPUSubtarget::SOUTHERN_ISLANDS));
 
   // Unless +-flat-for-global is specified, turn on FlatForGlobal for all OS-es
   // on VI and newer hardware to avoid assertion failures due to missing ADDR64
   // variants of MUBUF instructions.
   if (!hasAddr64() && !FS.contains("flat-for-global")) {
     FlatForGlobal = true;
-  }
-
-  // FIXME: I don't think think Evergreen has any useful support for
-  // denormals, but should be checked. Should we issue a warning somewhere
-  // if someone tries to enable these?
-  if (getGeneration() <= AMDGPUSubtarget::NORTHERN_ISLANDS) {
-    FP64FP16Denormals = false;
-    FP32Denormals = false;
   }
 
   // Set defaults if needed.

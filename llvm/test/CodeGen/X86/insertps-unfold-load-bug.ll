@@ -6,7 +6,7 @@
 
 define <4 x float> @insertps_unfold(<4 x float>* %v0, <4 x float>* %v1) {
 ; X32-LABEL: insertps_unfold:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
@@ -16,7 +16,7 @@ define <4 x float> @insertps_unfold(<4 x float>* %v0, <4 x float>* %v1) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: insertps_unfold:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X64-NEXT:    movaps (%rdi), %xmm0
 ; X64-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]

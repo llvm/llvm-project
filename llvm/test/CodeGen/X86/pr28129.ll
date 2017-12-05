@@ -4,14 +4,14 @@
 
 define <4 x double> @cmp4f64_domain(<4 x double> %a) {
 ; X86-LABEL: cmp4f64_domain:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X86-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
 ; X86-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: cmp4f64_domain:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
 ; X64-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
@@ -25,14 +25,14 @@ define <4 x double> @cmp4f64_domain(<4 x double> %a) {
 
 define <4 x double> @cmp4f64_domain_optsize(<4 x double> %a) optsize {
 ; X86-LABEL: cmp4f64_domain_optsize:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X86-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
 ; X86-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: cmp4f64_domain_optsize:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
 ; X64-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
@@ -46,14 +46,14 @@ define <4 x double> @cmp4f64_domain_optsize(<4 x double> %a) optsize {
 
 define <8 x float> @cmp8f32_domain(<8 x float> %a) {
 ; X86-LABEL: cmp8f32_domain:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X86-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
 ; X86-NEXT:    vaddps %ymm1, %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: cmp8f32_domain:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
 ; X64-NEXT:    vaddps %ymm1, %ymm0, %ymm0
@@ -67,14 +67,14 @@ define <8 x float> @cmp8f32_domain(<8 x float> %a) {
 
 define <8 x float> @cmp8f32_domain_optsize(<8 x float> %a) optsize {
 ; X86-LABEL: cmp8f32_domain_optsize:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X86-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
 ; X86-NEXT:    vaddps %ymm1, %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: cmp8f32_domain_optsize:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
 ; X64-NEXT:    vaddps %ymm1, %ymm0, %ymm0

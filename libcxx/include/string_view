@@ -143,6 +143,13 @@ namespace std {
       constexpr size_type find_last_not_of(const charT* s, size_type pos, size_type n) const;
       constexpr size_type find_last_not_of(const charT* s, size_type pos = npos) const;
 
+      constexpr bool starts_with(basic_string_view s) const noexcept; // C++2a
+      constexpr bool starts_with(charT c) const noexcept;             // C++2a
+      constexpr bool starts_with(const charT* s) const;               // C++2a
+      constexpr bool ends_with(basic_string_view s) const noexcept;   // C++2a
+      constexpr bool ends_with(charT c) const noexcept;               // C++2a
+      constexpr bool ends_with(const charT* s) const;                 // C++2a
+
      private:
       const_pointer data_;  // exposition only
       size_type     size_;  // exposition only
@@ -564,6 +571,32 @@ public:
         return __str_find_last_not_of<value_type, size_type, traits_type, npos>
             (data(), size(), __s, __pos, traits_type::length(__s));
     }
+
+#if _LIBCPP_STD_VER > 17
+    _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
+    bool starts_with(basic_string_view __s) const _NOEXCEPT
+    { return size() >= __s.size() && compare(0, __s.size(), __s) == 0; }
+
+    _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
+    bool starts_with(value_type __c) const _NOEXCEPT
+    { return !empty() && _Traits::eq(front(), __c); }
+
+    _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
+    bool starts_with(const value_type* __s) const _NOEXCEPT
+    { return starts_with(basic_string_view(__s)); }
+
+    _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
+    bool ends_with(basic_string_view __s) const _NOEXCEPT
+    { return size() >= __s.size() && compare(size() - __s.size(), npos, __s) == 0; }
+
+    _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
+    bool ends_with(value_type __c) const _NOEXCEPT
+    { return !empty() && _Traits::eq(back(), __c); }
+
+    _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
+    bool ends_with(const value_type* __s) const _NOEXCEPT
+    { return ends_with(basic_string_view(__s)); }
+#endif
 
 private:
     const   value_type* __data;

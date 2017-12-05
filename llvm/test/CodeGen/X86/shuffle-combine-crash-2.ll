@@ -4,13 +4,13 @@
 
 define <4 x i64> @fold_movsd_zero() {
 ; X86-LABEL: fold_movsd_zero:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    xorps %xmm0, %xmm0
 ; X86-NEXT:    xorps %xmm1, %xmm1
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fold_movsd_zero:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorps %xmm0, %xmm0
 ; X64-NEXT:    xorps %xmm1, %xmm1
 ; X64-NEXT:    retq

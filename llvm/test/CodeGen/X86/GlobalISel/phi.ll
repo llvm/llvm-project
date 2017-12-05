@@ -3,13 +3,13 @@
 
 define i8 @test_i8(i32 %a, i8 %f, i8 %t) {
 ; ALL-LABEL: test_i8:
-; ALL:       # BB#0: # %entry
+; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    xorl %eax, %eax
 ; ALL-NEXT:    cmpl %eax, %edi
 ; ALL-NEXT:    setg %al
 ; ALL-NEXT:    testb $1, %al
 ; ALL-NEXT:    jne .LBB0_2
-; ALL-NEXT:  # BB#1: # %cond.false
+; ALL-NEXT:  # %bb.1: # %cond.false
 ; ALL-NEXT:    movl %edx, %esi
 ; ALL-NEXT:  .LBB0_2: # %cond.end
 ; ALL-NEXT:    movl %esi, %eax
@@ -31,13 +31,13 @@ cond.end:                                         ; preds = %cond.false, %cond.t
 
 define i16 @test_i16(i32 %a, i16 %f, i16 %t) {
 ; ALL-LABEL: test_i16:
-; ALL:       # BB#0: # %entry
+; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    xorl %eax, %eax
 ; ALL-NEXT:    cmpl %eax, %edi
 ; ALL-NEXT:    setg %al
 ; ALL-NEXT:    testb $1, %al
 ; ALL-NEXT:    jne .LBB1_2
-; ALL-NEXT:  # BB#1: # %cond.false
+; ALL-NEXT:  # %bb.1: # %cond.false
 ; ALL-NEXT:    movl %edx, %esi
 ; ALL-NEXT:  .LBB1_2: # %cond.end
 ; ALL-NEXT:    movl %esi, %eax
@@ -59,13 +59,13 @@ cond.end:                                         ; preds = %cond.false, %cond.t
 
 define i32 @test_i32(i32 %a, i32 %f, i32 %t) {
 ; ALL-LABEL: test_i32:
-; ALL:       # BB#0: # %entry
+; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    xorl %eax, %eax
 ; ALL-NEXT:    cmpl %eax, %edi
 ; ALL-NEXT:    setg %al
 ; ALL-NEXT:    testb $1, %al
 ; ALL-NEXT:    jne .LBB2_2
-; ALL-NEXT:  # BB#1: # %cond.false
+; ALL-NEXT:  # %bb.1: # %cond.false
 ; ALL-NEXT:    movl %edx, %esi
 ; ALL-NEXT:  .LBB2_2: # %cond.end
 ; ALL-NEXT:    movl %esi, %eax
@@ -87,13 +87,13 @@ cond.end:                                         ; preds = %cond.false, %cond.t
 
 define i64 @test_i64(i32 %a, i64 %f, i64 %t) {
 ; ALL-LABEL: test_i64:
-; ALL:       # BB#0: # %entry
+; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    xorl %eax, %eax
 ; ALL-NEXT:    cmpl %eax, %edi
 ; ALL-NEXT:    setg %al
 ; ALL-NEXT:    testb $1, %al
 ; ALL-NEXT:    jne .LBB3_2
-; ALL-NEXT:  # BB#1: # %cond.false
+; ALL-NEXT:  # %bb.1: # %cond.false
 ; ALL-NEXT:    movq %rdx, %rsi
 ; ALL-NEXT:  .LBB3_2: # %cond.end
 ; ALL-NEXT:    movq %rsi, %rax
@@ -115,13 +115,13 @@ cond.end:                                         ; preds = %cond.false, %cond.t
 
 define float @test_float(i32 %a, float %f, float %t) {
 ; ALL-LABEL: test_float:
-; ALL:       # BB#0: # %entry
+; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    xorl %eax, %eax
 ; ALL-NEXT:    cmpl %eax, %edi
 ; ALL-NEXT:    setg %al
 ; ALL-NEXT:    testb $1, %al
 ; ALL-NEXT:    jne .LBB4_2
-; ALL-NEXT:  # BB#1: # %cond.false
+; ALL-NEXT:  # %bb.1: # %cond.false
 ; ALL-NEXT:    movaps %xmm1, %xmm0
 ; ALL-NEXT:  .LBB4_2: # %cond.end
 ; ALL-NEXT:    retq
@@ -142,13 +142,13 @@ cond.end:                                         ; preds = %cond.false, %cond.t
 
 define double @test_double(i32 %a, double %f, double %t) {
 ; ALL-LABEL: test_double:
-; ALL:       # BB#0: # %entry
+; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    xorl %eax, %eax
 ; ALL-NEXT:    cmpl %eax, %edi
 ; ALL-NEXT:    setg %al
 ; ALL-NEXT:    testb $1, %al
 ; ALL-NEXT:    jne .LBB5_2
-; ALL-NEXT:  # BB#1: # %cond.false
+; ALL-NEXT:  # %bb.1: # %cond.false
 ; ALL-NEXT:    movaps %xmm1, %xmm0
 ; ALL-NEXT:  .LBB5_2: # %cond.end
 ; ALL-NEXT:    retq

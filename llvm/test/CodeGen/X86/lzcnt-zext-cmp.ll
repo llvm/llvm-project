@@ -9,7 +9,7 @@
 ; Test one 32-bit input, output is 32-bit, no transformations expected.
 define i32 @test_zext_cmp0(i32 %a) {
 ; ALL-LABEL: test_zext_cmp0:
-; ALL:       # BB#0: # %entry
+; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    xorl %eax, %eax
 ; ALL-NEXT:    testl %edi, %edi
 ; ALL-NEXT:    sete %al
@@ -23,7 +23,7 @@ entry:
 ; Test two 32-bit inputs, output is 32-bit.
 define i32 @test_zext_cmp1(i32 %a, i32 %b) {
 ; FASTLZCNT-LABEL: test_zext_cmp1:
-; FASTLZCNT:       # BB#0:
+; FASTLZCNT:       # %bb.0:
 ; FASTLZCNT-NEXT:    lzcntl %edi, %ecx
 ; FASTLZCNT-NEXT:    lzcntl %esi, %eax
 ; FASTLZCNT-NEXT:    orl %ecx, %eax
@@ -31,7 +31,7 @@ define i32 @test_zext_cmp1(i32 %a, i32 %b) {
 ; FASTLZCNT-NEXT:    retq
 ;
 ; NOFASTLZCNT-LABEL: test_zext_cmp1:
-; NOFASTLZCNT:       # BB#0:
+; NOFASTLZCNT:       # %bb.0:
 ; NOFASTLZCNT-NEXT:    testl %edi, %edi
 ; NOFASTLZCNT-NEXT:    sete %al
 ; NOFASTLZCNT-NEXT:    testl %esi, %esi
@@ -49,7 +49,7 @@ define i32 @test_zext_cmp1(i32 %a, i32 %b) {
 ; Test two 64-bit inputs, output is 64-bit.
 define i64 @test_zext_cmp2(i64 %a, i64 %b) {
 ; FASTLZCNT-LABEL: test_zext_cmp2:
-; FASTLZCNT:       # BB#0:
+; FASTLZCNT:       # %bb.0:
 ; FASTLZCNT-NEXT:    lzcntq %rdi, %rcx
 ; FASTLZCNT-NEXT:    lzcntq %rsi, %rax
 ; FASTLZCNT-NEXT:    orl %ecx, %eax
@@ -57,7 +57,7 @@ define i64 @test_zext_cmp2(i64 %a, i64 %b) {
 ; FASTLZCNT-NEXT:    retq
 ;
 ; NOFASTLZCNT-LABEL: test_zext_cmp2:
-; NOFASTLZCNT:       # BB#0:
+; NOFASTLZCNT:       # %bb.0:
 ; NOFASTLZCNT-NEXT:    testq %rdi, %rdi
 ; NOFASTLZCNT-NEXT:    sete %al
 ; NOFASTLZCNT-NEXT:    testq %rsi, %rsi
@@ -77,7 +77,7 @@ define i64 @test_zext_cmp2(i64 %a, i64 %b) {
 ; upper 16-bits, adding one more instruction.
 define i16 @test_zext_cmp3(i16 %a, i16 %b) {
 ; ALL-LABEL: test_zext_cmp3:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    testw %di, %di
 ; ALL-NEXT:    sete %al
 ; ALL-NEXT:    testw %si, %si
@@ -96,7 +96,7 @@ define i16 @test_zext_cmp3(i16 %a, i16 %b) {
 ; Test two 32-bit inputs, output is 64-bit.
 define i64 @test_zext_cmp4(i32 %a, i32 %b) {
 ; FASTLZCNT-LABEL: test_zext_cmp4:
-; FASTLZCNT:       # BB#0: # %entry
+; FASTLZCNT:       # %bb.0: # %entry
 ; FASTLZCNT-NEXT:    lzcntl %edi, %ecx
 ; FASTLZCNT-NEXT:    lzcntl %esi, %eax
 ; FASTLZCNT-NEXT:    orl %ecx, %eax
@@ -104,7 +104,7 @@ define i64 @test_zext_cmp4(i32 %a, i32 %b) {
 ; FASTLZCNT-NEXT:    retq
 ;
 ; NOFASTLZCNT-LABEL: test_zext_cmp4:
-; NOFASTLZCNT:       # BB#0: # %entry
+; NOFASTLZCNT:       # %bb.0: # %entry
 ; NOFASTLZCNT-NEXT:    testl %edi, %edi
 ; NOFASTLZCNT-NEXT:    sete %al
 ; NOFASTLZCNT-NEXT:    testl %esi, %esi
@@ -123,7 +123,7 @@ entry:
 ; Test two 64-bit inputs, output is 32-bit.
 define i32 @test_zext_cmp5(i64 %a, i64 %b) {
 ; FASTLZCNT-LABEL: test_zext_cmp5:
-; FASTLZCNT:       # BB#0: # %entry
+; FASTLZCNT:       # %bb.0: # %entry
 ; FASTLZCNT-NEXT:    lzcntq %rdi, %rcx
 ; FASTLZCNT-NEXT:    lzcntq %rsi, %rax
 ; FASTLZCNT-NEXT:    orl %ecx, %eax
@@ -132,7 +132,7 @@ define i32 @test_zext_cmp5(i64 %a, i64 %b) {
 ; FASTLZCNT-NEXT:    retq
 ;
 ; NOFASTLZCNT-LABEL: test_zext_cmp5:
-; NOFASTLZCNT:       # BB#0: # %entry
+; NOFASTLZCNT:       # %bb.0: # %entry
 ; NOFASTLZCNT-NEXT:    testq %rdi, %rdi
 ; NOFASTLZCNT-NEXT:    sete %al
 ; NOFASTLZCNT-NEXT:    testq %rsi, %rsi
@@ -151,7 +151,7 @@ entry:
 ; Test three 32-bit inputs, output is 32-bit.
 define i32 @test_zext_cmp6(i32 %a, i32 %b, i32 %c) {
 ; FASTLZCNT-LABEL: test_zext_cmp6:
-; FASTLZCNT:       # BB#0: # %entry
+; FASTLZCNT:       # %bb.0: # %entry
 ; FASTLZCNT-NEXT:    lzcntl %edi, %eax
 ; FASTLZCNT-NEXT:    lzcntl %esi, %ecx
 ; FASTLZCNT-NEXT:    orl %eax, %ecx
@@ -161,7 +161,7 @@ define i32 @test_zext_cmp6(i32 %a, i32 %b, i32 %c) {
 ; FASTLZCNT-NEXT:    retq
 ;
 ; NOFASTLZCNT-LABEL: test_zext_cmp6:
-; NOFASTLZCNT:       # BB#0: # %entry
+; NOFASTLZCNT:       # %bb.0: # %entry
 ; NOFASTLZCNT-NEXT:    testl %edi, %edi
 ; NOFASTLZCNT-NEXT:    sete %al
 ; NOFASTLZCNT-NEXT:    testl %esi, %esi
@@ -186,7 +186,7 @@ entry:
 ; %.cmp2 inputs' order is inverted.
 define i32 @test_zext_cmp7(i32 %a, i32 %b, i32 %c) {
 ; FASTLZCNT-LABEL: test_zext_cmp7:
-; FASTLZCNT:       # BB#0: # %entry
+; FASTLZCNT:       # %bb.0: # %entry
 ; FASTLZCNT-NEXT:    lzcntl %edi, %eax
 ; FASTLZCNT-NEXT:    lzcntl %esi, %ecx
 ; FASTLZCNT-NEXT:    orl %eax, %ecx
@@ -196,7 +196,7 @@ define i32 @test_zext_cmp7(i32 %a, i32 %b, i32 %c) {
 ; FASTLZCNT-NEXT:    retq
 ;
 ; NOFASTLZCNT-LABEL: test_zext_cmp7:
-; NOFASTLZCNT:       # BB#0: # %entry
+; NOFASTLZCNT:       # %bb.0: # %entry
 ; NOFASTLZCNT-NEXT:    testl %edi, %edi
 ; NOFASTLZCNT-NEXT:    sete %al
 ; NOFASTLZCNT-NEXT:    testl %esi, %esi
@@ -220,7 +220,7 @@ entry:
 ; Test four 32-bit inputs, output is 32-bit.
 define i32 @test_zext_cmp8(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; FASTLZCNT-LABEL: test_zext_cmp8:
-; FASTLZCNT:       # BB#0: # %entry
+; FASTLZCNT:       # %bb.0: # %entry
 ; FASTLZCNT-NEXT:    lzcntl %edi, %eax
 ; FASTLZCNT-NEXT:    lzcntl %esi, %esi
 ; FASTLZCNT-NEXT:    lzcntl %edx, %edx
@@ -232,7 +232,7 @@ define i32 @test_zext_cmp8(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; FASTLZCNT-NEXT:    retq
 ;
 ; NOFASTLZCNT-LABEL: test_zext_cmp8:
-; NOFASTLZCNT:       # BB#0: # %entry
+; NOFASTLZCNT:       # %bb.0: # %entry
 ; NOFASTLZCNT-NEXT:    testl %edi, %edi
 ; NOFASTLZCNT-NEXT:    sete %dil
 ; NOFASTLZCNT-NEXT:    testl %esi, %esi
@@ -261,7 +261,7 @@ entry:
 ; Test one 32-bit input, one 64-bit input, output is 32-bit.
 define i32 @test_zext_cmp9(i32 %a, i64 %b) {
 ; FASTLZCNT-LABEL: test_zext_cmp9:
-; FASTLZCNT:       # BB#0: # %entry
+; FASTLZCNT:       # %bb.0: # %entry
 ; FASTLZCNT-NEXT:    lzcntq %rsi, %rax
 ; FASTLZCNT-NEXT:    lzcntl %edi, %ecx
 ; FASTLZCNT-NEXT:    shrl $5, %ecx
@@ -271,7 +271,7 @@ define i32 @test_zext_cmp9(i32 %a, i64 %b) {
 ; FASTLZCNT-NEXT:    retq
 ;
 ; NOFASTLZCNT-LABEL: test_zext_cmp9:
-; NOFASTLZCNT:       # BB#0: # %entry
+; NOFASTLZCNT:       # %bb.0: # %entry
 ; NOFASTLZCNT-NEXT:    testl %edi, %edi
 ; NOFASTLZCNT-NEXT:    sete %al
 ; NOFASTLZCNT-NEXT:    testq %rsi, %rsi
@@ -290,7 +290,7 @@ entry:
 ; Test 2 128-bit inputs, output is 32-bit, no transformations expected.
 define i32 @test_zext_cmp10(i64 %a.coerce0, i64 %a.coerce1, i64 %b.coerce0, i64 %b.coerce1) {
 ; ALL-LABEL: test_zext_cmp10:
-; ALL:       # BB#0: # %entry
+; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    orq %rsi, %rdi
 ; ALL-NEXT:    sete %al
 ; ALL-NEXT:    orq %rcx, %rdx
@@ -318,7 +318,7 @@ entry:
 define i32 @test_zext_cmp11(double %a, double %b) "no-nans-fp-math"="true" {
 ;
 ; ALL-LABEL: test_zext_cmp11:
-; ALL:       # BB#0: # %entry
+; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; ALL-NEXT:    vucomisd %xmm2, %xmm0
 ; ALL-NEXT:    sete %al

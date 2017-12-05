@@ -6,7 +6,7 @@
 
 define void @PR15298(<4 x float>* nocapture %source, <8 x float>* nocapture %dest) nounwind noinline {
 ; SSE-32-LABEL: PR15298:
-; SSE-32:       # BB#0: # %L.entry
+; SSE-32:       # %bb.0: # %L.entry
 ; SSE-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; SSE-32-NEXT:    movaps 304(%ecx), %xmm0
@@ -18,7 +18,7 @@ define void @PR15298(<4 x float>* nocapture %source, <8 x float>* nocapture %des
 ; SSE-32-NEXT:    retl
 ;
 ; SSE-64-LABEL: PR15298:
-; SSE-64:       # BB#0: # %L.entry
+; SSE-64:       # %bb.0: # %L.entry
 ; SSE-64-NEXT:    movaps 304(%rdi), %xmm0
 ; SSE-64-NEXT:    xorps %xmm1, %xmm1
 ; SSE-64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0],xmm1[0,1]
@@ -28,7 +28,7 @@ define void @PR15298(<4 x float>* nocapture %source, <8 x float>* nocapture %des
 ; SSE-64-NEXT:    retq
 ;
 ; AVX-32-LABEL: PR15298:
-; AVX-32:       # BB#0: # %L.entry
+; AVX-32:       # %bb.0: # %L.entry
 ; AVX-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; AVX-32-NEXT:    vbroadcastss 304(%ecx), %xmm0
@@ -39,7 +39,7 @@ define void @PR15298(<4 x float>* nocapture %source, <8 x float>* nocapture %des
 ; AVX-32-NEXT:    retl
 ;
 ; AVX-64-LABEL: PR15298:
-; AVX-64:       # BB#0: # %L.entry
+; AVX-64:       # %bb.0: # %L.entry
 ; AVX-64-NEXT:    vbroadcastss 304(%rdi), %xmm0
 ; AVX-64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX-64-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1,2],ymm1[3,4,5,6,7]

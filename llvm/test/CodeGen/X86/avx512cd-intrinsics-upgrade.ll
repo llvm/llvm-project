@@ -3,7 +3,7 @@
 
 define <16 x i32> @test_lzcnt_d(<16 x i32> %a) {
 ; CHECK-LABEL: test_lzcnt_d:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vplzcntd %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %res = call <16 x i32> @llvm.x86.avx512.mask.lzcnt.d.512(<16 x i32> %a, <16 x i32> zeroinitializer, i16 -1)
@@ -14,7 +14,7 @@ declare <16 x i32> @llvm.x86.avx512.mask.lzcnt.d.512(<16 x i32>, <16 x i32>, i16
 
 define <8 x i64> @test_lzcnt_q(<8 x i64> %a) {
 ; CHECK-LABEL: test_lzcnt_q:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vplzcntq %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %res = call <8 x i64> @llvm.x86.avx512.mask.lzcnt.q.512(<8 x i64> %a, <8 x i64> zeroinitializer, i8 -1)
@@ -26,7 +26,7 @@ declare <8 x i64> @llvm.x86.avx512.mask.lzcnt.q.512(<8 x i64>, <8 x i64>, i8) no
 
 define <16 x i32> @test_mask_lzcnt_d(<16 x i32> %a, <16 x i32> %b, i16 %mask) {
 ; CHECK-LABEL: test_mask_lzcnt_d:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vplzcntd %zmm0, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
@@ -37,7 +37,7 @@ define <16 x i32> @test_mask_lzcnt_d(<16 x i32> %a, <16 x i32> %b, i16 %mask) {
 
 define <8 x i64> @test_mask_lzcnt_q(<8 x i64> %a, <8 x i64> %b, i8 %mask) {
 ; CHECK-LABEL: test_mask_lzcnt_q:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vplzcntq %zmm0, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
@@ -48,7 +48,7 @@ define <8 x i64> @test_mask_lzcnt_q(<8 x i64> %a, <8 x i64> %b, i8 %mask) {
 
 define <16 x i32> @test_x86_vbroadcastmw_512(i16 %a0) {
 ; CHECK-LABEL: test_x86_vbroadcastmw_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movzwl %di, %eax
 ; CHECK-NEXT:    vpbroadcastd %eax, %zmm0
 ; CHECK-NEXT:    retq
@@ -59,7 +59,7 @@ declare <16 x i32> @llvm.x86.avx512.broadcastmw.512(i16)
 
 define <8 x i64> @test_x86_broadcastmb_512(i8 %a0) {
 ; CHECK-LABEL: test_x86_broadcastmb_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movzbl %dil, %eax
 ; CHECK-NEXT:    vpbroadcastq %rax, %zmm0
 ; CHECK-NEXT:    retq

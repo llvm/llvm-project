@@ -14,7 +14,7 @@ declare <16 x i32> @llvm.x86.avx512.maskz.vpermt2var.d.512(<16 x i32>, <16 x i32
 
 define <16 x i32> @test_splat_rol_v16i32(<16 x i32> %x0, <16 x i32> %x1, i16 %x2) {
 ; KNL-LABEL: test_splat_rol_v16i32:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    kmovw %edi, %k1
 ; KNL-NEXT:    vprold $5, %zmm0, %zmm1 {%k1}
 ; KNL-NEXT:    vprold $5, %zmm0, %zmm2 {%k1} {z}
@@ -24,7 +24,7 @@ define <16 x i32> @test_splat_rol_v16i32(<16 x i32> %x0, <16 x i32> %x1, i16 %x2
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_splat_rol_v16i32:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vprold $5, %zmm0, %zmm1 {%k1}
 ; SKX-NEXT:    vprold $5, %zmm0, %zmm2 {%k1} {z}
@@ -42,7 +42,7 @@ define <16 x i32> @test_splat_rol_v16i32(<16 x i32> %x0, <16 x i32> %x1, i16 %x2
 
 define <8 x i64>@test_splat_rol_v8i64(<8 x i64> %x0, <8 x i64> %x1, i8 %x2) {
 ; KNL-LABEL: test_splat_rol_v8i64:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    kmovw %edi, %k1
 ; KNL-NEXT:    vprolq $5, %zmm0, %zmm1 {%k1}
 ; KNL-NEXT:    vprolq $5, %zmm0, %zmm2 {%k1} {z}
@@ -52,7 +52,7 @@ define <8 x i64>@test_splat_rol_v8i64(<8 x i64> %x0, <8 x i64> %x1, i8 %x2) {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_splat_rol_v8i64:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vprolq $5, %zmm0, %zmm1 {%k1}
 ; SKX-NEXT:    vprolq $5, %zmm0, %zmm2 {%k1} {z}
@@ -70,7 +70,7 @@ define <8 x i64>@test_splat_rol_v8i64(<8 x i64> %x0, <8 x i64> %x1, i8 %x2) {
 
 define <16 x i32> @test_splat_ror_v16i32(<16 x i32> %x0, <16 x i32> %x1, i16 %x2) {
 ; KNL-LABEL: test_splat_ror_v16i32:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    kmovw %edi, %k1
 ; KNL-NEXT:    vprord $5, %zmm0, %zmm1 {%k1}
 ; KNL-NEXT:    vprord $5, %zmm0, %zmm2 {%k1} {z}
@@ -80,7 +80,7 @@ define <16 x i32> @test_splat_ror_v16i32(<16 x i32> %x0, <16 x i32> %x1, i16 %x2
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_splat_ror_v16i32:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vprord $5, %zmm0, %zmm1 {%k1}
 ; SKX-NEXT:    vprord $5, %zmm0, %zmm2 {%k1} {z}
@@ -98,7 +98,7 @@ define <16 x i32> @test_splat_ror_v16i32(<16 x i32> %x0, <16 x i32> %x1, i16 %x2
 
 define <8 x i64>@test_splat_ror_v8i64(<8 x i64> %x0, <8 x i64> %x1, i8 %x2) {
 ; KNL-LABEL: test_splat_ror_v8i64:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    kmovw %edi, %k1
 ; KNL-NEXT:    vprorq $5, %zmm0, %zmm1 {%k1}
 ; KNL-NEXT:    vprorq $5, %zmm0, %zmm2 {%k1} {z}
@@ -108,7 +108,7 @@ define <8 x i64>@test_splat_ror_v8i64(<8 x i64> %x0, <8 x i64> %x1, i8 %x2) {
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_splat_ror_v8i64:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vprorq $5, %zmm0, %zmm1 {%k1}
 ; SKX-NEXT:    vprorq $5, %zmm0, %zmm2 {%k1} {z}
@@ -128,7 +128,7 @@ define <8 x i64>@test_splat_ror_v8i64(<8 x i64> %x0, <8 x i64> %x1, i8 %x2) {
 
 define <16 x i32> @test_splat_bounds_rol_v16i32(<16 x i32> %x0, <16 x i32> %x1, i16 %x2) {
 ; KNL-LABEL: test_splat_bounds_rol_v16i32:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    kmovw %edi, %k1
 ; KNL-NEXT:    vprold $1, %zmm0, %zmm1 {%k1}
 ; KNL-NEXT:    vprold $31, %zmm0, %zmm2 {%k1} {z}
@@ -138,7 +138,7 @@ define <16 x i32> @test_splat_bounds_rol_v16i32(<16 x i32> %x0, <16 x i32> %x1, 
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_splat_bounds_rol_v16i32:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vprold $1, %zmm0, %zmm1 {%k1}
 ; SKX-NEXT:    vprold $31, %zmm0, %zmm2 {%k1} {z}
@@ -156,7 +156,7 @@ define <16 x i32> @test_splat_bounds_rol_v16i32(<16 x i32> %x0, <16 x i32> %x1, 
 
 define <8 x i64>@test_splat_bounds_rol_v8i64(<8 x i64> %x0, <8 x i64> %x1, i8 %x2) {
 ; KNL-LABEL: test_splat_bounds_rol_v8i64:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    kmovw %edi, %k1
 ; KNL-NEXT:    vprolq $62, %zmm0, %zmm1 {%k1}
 ; KNL-NEXT:    vprolq $1, %zmm0, %zmm2 {%k1} {z}
@@ -166,7 +166,7 @@ define <8 x i64>@test_splat_bounds_rol_v8i64(<8 x i64> %x0, <8 x i64> %x1, i8 %x
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_splat_bounds_rol_v8i64:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vprolq $62, %zmm0, %zmm1 {%k1}
 ; SKX-NEXT:    vprolq $1, %zmm0, %zmm2 {%k1} {z}
@@ -184,7 +184,7 @@ define <8 x i64>@test_splat_bounds_rol_v8i64(<8 x i64> %x0, <8 x i64> %x1, i8 %x
 
 define <16 x i32> @test_splat_bounds_ror_v16i32(<16 x i32> %x0, <16 x i32> %x1, i16 %x2) {
 ; KNL-LABEL: test_splat_bounds_ror_v16i32:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    kmovw %edi, %k1
 ; KNL-NEXT:    vprord $1, %zmm0, %zmm1 {%k1}
 ; KNL-NEXT:    vprord $31, %zmm0, %zmm2 {%k1} {z}
@@ -194,7 +194,7 @@ define <16 x i32> @test_splat_bounds_ror_v16i32(<16 x i32> %x0, <16 x i32> %x1, 
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_splat_bounds_ror_v16i32:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vprord $1, %zmm0, %zmm1 {%k1}
 ; SKX-NEXT:    vprord $31, %zmm0, %zmm2 {%k1} {z}
@@ -212,7 +212,7 @@ define <16 x i32> @test_splat_bounds_ror_v16i32(<16 x i32> %x0, <16 x i32> %x1, 
 
 define <8 x i64>@test_splat_bounds_ror_v8i64(<8 x i64> %x0, <8 x i64> %x1, i8 %x2) {
 ; KNL-LABEL: test_splat_bounds_ror_v8i64:
-; KNL:       # BB#0:
+; KNL:       # %bb.0:
 ; KNL-NEXT:    kmovw %edi, %k1
 ; KNL-NEXT:    vprorq $62, %zmm0, %zmm1 {%k1}
 ; KNL-NEXT:    vprorq $1, %zmm0, %zmm2 {%k1} {z}
@@ -222,7 +222,7 @@ define <8 x i64>@test_splat_bounds_ror_v8i64(<8 x i64> %x0, <8 x i64> %x1, i8 %x
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_splat_bounds_ror_v8i64:
-; SKX:       # BB#0:
+; SKX:       # %bb.0:
 ; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vprorq $62, %zmm0, %zmm1 {%k1}
 ; SKX-NEXT:    vprorq $1, %zmm0, %zmm2 {%k1} {z}
@@ -244,7 +244,7 @@ define <8 x i64>@test_splat_bounds_ror_v8i64(<8 x i64> %x0, <8 x i64> %x1, i8 %x
 
 define <8 x i64> @test_fold_rol_v8i64() {
 ; CHECK-LABEL: test_fold_rol_v8i64:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps {{.*#+}} zmm0 = [1,2,4,9223372036854775808,2,4611686018427387904,9223372036854775808,9223372036854775808]
 ; CHECK-NEXT:    retq
   %res = call <8 x i64> @llvm.x86.avx512.mask.prolv.q.512(<8 x i64> <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1>, <8 x i64> <i64 0, i64 1, i64 2, i64 63, i64 65, i64 65534, i64 65535, i64 -1>, <8 x i64> zeroinitializer, i8 -1)
@@ -253,7 +253,7 @@ define <8 x i64> @test_fold_rol_v8i64() {
 
 define <16 x i32> @test_fold_rol_v16i32(<16 x i32> %x0, <16 x i32> %x1) {
 ; CHECK-LABEL: test_fold_rol_v16i32:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpbroadcastd {{.*#+}} zmm0 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; CHECK-NEXT:    vprolvd {{.*}}(%rip), %zmm0, %zmm0
 ; CHECK-NEXT:    retq
@@ -264,7 +264,7 @@ define <16 x i32> @test_fold_rol_v16i32(<16 x i32> %x0, <16 x i32> %x1) {
 
 define <8 x i64> @test_fold_ror_v8i64() {
 ; CHECK-LABEL: test_fold_ror_v8i64:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpbroadcastq {{.*#+}} zmm0 = [1,1,1,1,1,1,1,1]
 ; CHECK-NEXT:    vprorvq {{.*}}(%rip), %zmm0, %zmm0
 ; CHECK-NEXT:    retq
@@ -275,7 +275,7 @@ define <8 x i64> @test_fold_ror_v8i64() {
 
 define <16 x i32> @test_fold_ror_v16i32(<16 x i32> %x0, <16 x i32> %x1) {
 ; CHECK-LABEL: test_fold_ror_v16i32:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpbroadcastd {{.*#+}} zmm0 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; CHECK-NEXT:    vprorvd {{.*}}(%rip), %zmm0, %zmm0
 ; CHECK-NEXT:    retq

@@ -4,7 +4,7 @@
 
 define <4 x i64> @autogen_SD88863() {
 ; X32-LABEL: autogen_SD88863:
-; X32:       # BB#0: # %BB
+; X32:       # %bb.0: # %BB
 ; X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,3,0,1]
 ; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X32-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
@@ -15,11 +15,11 @@ define <4 x i64> @autogen_SD88863() {
 ; X32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X32-NEXT:    testb %al, %al
 ; X32-NEXT:    jne .LBB0_1
-; X32-NEXT:  # BB#2: # %CF240
+; X32-NEXT:  # %bb.2: # %CF240
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: autogen_SD88863:
-; X64:       # BB#0: # %BB
+; X64:       # %bb.0: # %BB
 ; X64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,3,0,1]
 ; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X64-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
@@ -30,7 +30,7 @@ define <4 x i64> @autogen_SD88863() {
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-NEXT:    testb %al, %al
 ; X64-NEXT:    jne .LBB0_1
-; X64-NEXT:  # BB#2: # %CF240
+; X64-NEXT:  # %bb.2: # %CF240
 ; X64-NEXT:    retq
 BB:
   %I26 = insertelement <4 x i64> undef, i64 undef, i32 2

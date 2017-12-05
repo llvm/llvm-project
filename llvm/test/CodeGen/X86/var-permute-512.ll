@@ -5,7 +5,7 @@
 
 define <8 x i64> @var_shuffle_v8i64(<8 x i64> %v, <8 x i64> %indices) nounwind {
 ; AVX512-LABEL: var_shuffle_v8i64:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpermpd %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %index0 = extractelement <8 x i64> %indices, i32 0
@@ -37,7 +37,7 @@ define <8 x i64> @var_shuffle_v8i64(<8 x i64> %v, <8 x i64> %indices) nounwind {
 
 define <16 x i32> @var_shuffle_v16i32(<16 x i32> %v, <16 x i32> %indices) nounwind {
 ; AVX512-LABEL: var_shuffle_v16i32:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpermps %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %index0 = extractelement <16 x i32> %indices, i32 0
@@ -93,7 +93,7 @@ define <16 x i32> @var_shuffle_v16i32(<16 x i32> %v, <16 x i32> %indices) nounwi
 
 define <32 x i16> @var_shuffle_v32i16(<32 x i16> %v, <32 x i16> %indices) nounwind {
 ; NOBW-LABEL: var_shuffle_v32i16:
-; NOBW:       # BB#0:
+; NOBW:       # %bb.0:
 ; NOBW-NEXT:    pushq %rbp
 ; NOBW-NEXT:    movq %rsp, %rbp
 ; NOBW-NEXT:    andq $-64, %rsp
@@ -271,7 +271,7 @@ define <32 x i16> @var_shuffle_v32i16(<32 x i16> %v, <32 x i16> %indices) nounwi
 ; NOBW-NEXT:    retq
 ;
 ; AVX512BW-LABEL: var_shuffle_v32i16:
-; AVX512BW:       # BB#0:
+; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpermw %zmm0, %zmm1, %zmm0
 ; AVX512BW-NEXT:    retq
   %index0 = extractelement <32 x i16> %indices, i32 0
@@ -375,7 +375,7 @@ define <32 x i16> @var_shuffle_v32i16(<32 x i16> %v, <32 x i16> %indices) nounwi
 
 define <64 x i8> @var_shuffle_v64i8(<64 x i8> %v, <64 x i8> %indices) nounwind {
 ; NOBW-LABEL: var_shuffle_v64i8:
-; NOBW:       # BB#0:
+; NOBW:       # %bb.0:
 ; NOBW-NEXT:    pushq %rbp
 ; NOBW-NEXT:    movq %rsp, %rbp
 ; NOBW-NEXT:    andq $-64, %rsp
@@ -777,7 +777,7 @@ define <64 x i8> @var_shuffle_v64i8(<64 x i8> %v, <64 x i8> %indices) nounwind {
 ; NOBW-NEXT:    retq
 ;
 ; VBMI-LABEL: var_shuffle_v64i8:
-; VBMI:       # BB#0:
+; VBMI:       # %bb.0:
 ; VBMI-NEXT:    vpermb %zmm0, %zmm1, %zmm0
 ; VBMI-NEXT:    retq
   %index0 = extractelement <64 x i8> %indices, i32 0
@@ -977,7 +977,7 @@ define <64 x i8> @var_shuffle_v64i8(<64 x i8> %v, <64 x i8> %indices) nounwind {
 
 define <8 x double> @var_shuffle_v8f64(<8 x double> %v, <8 x i64> %indices) nounwind {
 ; AVX512-LABEL: var_shuffle_v8f64:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpermpd %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %index0 = extractelement <8 x i64> %indices, i32 0
@@ -1009,7 +1009,7 @@ define <8 x double> @var_shuffle_v8f64(<8 x double> %v, <8 x i64> %indices) noun
 
 define <16 x float> @var_shuffle_v16f32(<16 x float> %v, <16 x i32> %indices) nounwind {
 ; AVX512-LABEL: var_shuffle_v16f32:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpermps %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %index0 = extractelement <16 x i32> %indices, i32 0

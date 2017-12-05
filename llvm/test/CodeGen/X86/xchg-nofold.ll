@@ -8,13 +8,13 @@
 ; CHECK-LABEL: _Z3fooRSt6atomicIbEb
 define zeroext i1 @_Z3fooRSt6atomicIbEb(%"struct.std::atomic"* nocapture dereferenceable(1) %a, i1 returned zeroext %b) nounwind {
 ; CHECK-LABEL: _Z3fooRSt6atomicIbEb:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    shrq $3, %rax
 ; CHECK-NEXT:    movb 2147450880(%rax), %al
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je .LBB0_3
-; CHECK-NEXT:  # BB#1:
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    movl %edi, %ecx
 ; CHECK-NEXT:    andl $7, %ecx
 ; CHECK-NEXT:    cmpb %al, %cl

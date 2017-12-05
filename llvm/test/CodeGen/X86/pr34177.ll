@@ -7,7 +7,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @test() local_unnamed_addr {
 ; CHECK-LABEL: test:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa {{.*#+}} xmm0 = [2,3]
 ; CHECK-NEXT:    vpextrq $1, %xmm0, %rax
 ; CHECK-NEXT:    vmovq %xmm0, %rcx

@@ -11,7 +11,7 @@
 ; Function Attrs: norecurse nounwind readnone
 define i64 @test_llltsll(i64 %a, i64 %b) {
 ; CHECK-LABEL: test_llltsll:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sradi [[REG1:r[0-9]+]], r3, 63
 ; CHECK-NEXT:    rldicl [[REG2:r[0-9]+]], r4, 1, 63
 ; CHECK-NEXT:    subfc [[REG3:r[0-9]+]], r4, r3
@@ -27,7 +27,7 @@ entry:
 ; Function Attrs: norecurse nounwind readnone
 define i64 @test_llltsll_sext(i64 %a, i64 %b) {
 ; CHECK-LABEL: test_llltsll_sext:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sradi [[REG1:r[0-9]+]], r3, 63
 ; CHECK-NEXT:    rldicl [[REG2:r[0-9]+]], r4, 1, 63
 ; CHECK-NEXT:    subfc [[REG3:r[0-9]+]], r4, r3
@@ -44,7 +44,7 @@ entry:
 ; Function Attrs: norecurse nounwind readnone
 define i64 @test_llltsll_sext_z(i64 %a) {
 ; CHECK-LABEL: test_llltsll_sext_z:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sradi r3, r3, 63
 ; CHECK-NEXT:    blr
 entry:
@@ -56,7 +56,7 @@ entry:
 ; Function Attrs: norecurse nounwind
 define void @test_llltsll_store(i64 %a, i64 %b) {
 ; CHECK-LABEL: test_llltsll_store:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK:         sradi [[REG1:r[0-9]+]], r3, 63
 ; CHECK:         rldicl [[REG2:r[0-9]+]], r4, 1, 63
 ; CHECK-DIAG:    subfc [[REG3:r[0-9]+]], r4, r3
@@ -73,7 +73,7 @@ entry:
 ; Function Attrs: norecurse nounwind
 define void @test_llltsll_sext_store(i64 %a, i64 %b) {
 ; CHECK-LABEL: test_llltsll_sext_store:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK:         sradi [[REG1:r[0-9]+]], r3, 63
 ; CHECK:         rldicl [[REG2:r[0-9]+]], r4, 1, 63
 ; CHECK-DIAG:    subfc [[REG3:r[0-9]+]], r4, r3

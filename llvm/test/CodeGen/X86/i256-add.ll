@@ -4,7 +4,7 @@
 
 define void @add(i256* %p, i256* %q) nounwind {
 ; X32-LABEL: add:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebp
 ; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    pushl %edi
@@ -50,7 +50,7 @@ define void @add(i256* %p, i256* %q) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: add:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq 16(%rdi), %rax
 ; X64-NEXT:    movq (%rdi), %rcx
 ; X64-NEXT:    movq 8(%rdi), %rdx
@@ -71,7 +71,7 @@ define void @add(i256* %p, i256* %q) nounwind {
 }
 define void @sub(i256* %p, i256* %q) nounwind {
 ; X32-LABEL: sub:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebp
 ; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    pushl %edi
@@ -114,7 +114,7 @@ define void @sub(i256* %p, i256* %q) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: sub:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq 16(%rdi), %rax
 ; X64-NEXT:    movq (%rdi), %rcx
 ; X64-NEXT:    movq 8(%rdi), %rdx

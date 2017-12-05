@@ -45,7 +45,7 @@ main:                                   # @main
 	.cfi_startproc
 .Lfunc_begin0:
 	.loc	2 18 0                  # :18:0
-# BB#0:                                 # %entry
+# %bb.0:                                # %entry
 	stmg	%r12, %r15, 96(%r15)
 .Ltmp2:
 	.cfi_offset %r12, -64

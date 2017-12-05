@@ -6,7 +6,7 @@ declare i32 @external_function(i32)
 
 define i32 @test_call_external(i32 %a) nounwind {
 ; RV32I-LABEL: test_call_external:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sw ra, 12(s0)
 ; RV32I-NEXT:    lui a1, %hi(external_function)
 ; RV32I-NEXT:    addi a1, a1, %lo(external_function)
@@ -19,7 +19,7 @@ define i32 @test_call_external(i32 %a) nounwind {
 
 define i32 @defined_function(i32 %a) nounwind {
 ; RV32I-LABEL: defined_function:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi a0, a0, 1
 ; RV32I-NEXT:    jalr zero, ra, 0
   %1 = add i32 %a, 1
@@ -28,7 +28,7 @@ define i32 @defined_function(i32 %a) nounwind {
 
 define i32 @test_call_defined(i32 %a) nounwind {
 ; RV32I-LABEL: test_call_defined:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sw ra, 12(s0)
 ; RV32I-NEXT:    lui a1, %hi(defined_function)
 ; RV32I-NEXT:    addi a1, a1, %lo(defined_function)
@@ -41,7 +41,7 @@ define i32 @test_call_defined(i32 %a) nounwind {
 
 define i32 @test_call_indirect(i32 (i32)* %a, i32 %b) nounwind {
 ; RV32I-LABEL: test_call_indirect:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sw ra, 12(s0)
 ; RV32I-NEXT:    addi a2, a0, 0
 ; RV32I-NEXT:    addi a0, a1, 0
@@ -57,7 +57,7 @@ define i32 @test_call_indirect(i32 (i32)* %a, i32 %b) nounwind {
 
 define fastcc i32 @fastcc_function(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: fastcc_function:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    jalr zero, ra, 0
  %1 = add i32 %a, %b
@@ -66,7 +66,7 @@ define fastcc i32 @fastcc_function(i32 %a, i32 %b) nounwind {
 
 define i32 @test_call_fastcc(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: test_call_fastcc:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sw ra, 12(s0)
 ; RV32I-NEXT:    sw s1, 8(s0)
 ; RV32I-NEXT:    addi s1, a0, 0

@@ -74,6 +74,7 @@ int main() {
       // LAMBDA: {{.+}} = alloca i{{[0-9]+}},
       // LAMBDA: {{.+}} = alloca i{{[0-9]+}},
       // LAMBDA: {{.+}} = alloca i{{[0-9]+}},
+      // LAMBDA: {{.+}} = alloca i{{[0-9]+}},
       // LAMBDA: [[OMP_IS_LAST:%.+]] = alloca i{{[0-9]+}},
       // LAMBDA: [[G_PRIVATE:%.+]] = alloca double,
       // LAMBDA: [[G1_PRIVATE:%.+]] = alloca double,
@@ -101,6 +102,15 @@ int main() {
       // LAMBDA-64: call{{.+}} @__kmpc_fork_call({{.+}}, {{.+}}, {{.+}}[[OMP_PARFOR_OUTLINED:@.+]] to void ({{.+}})*), {{.+}}, {{.+}}, {{.+}} [[G_PRIVATE]], {{.+}} [[G1_PAR]], {{.+}} [[SVAR_PRIVATE]], {{.+}} [[SFVAR_PRIVATE]])
       // LAMBDA-32: call{{.+}} @__kmpc_fork_call({{.+}}, {{.+}}, {{.+}}[[OMP_PARFOR_OUTLINED:@.+]] to void ({{.+}})*), {{.+}}, {{.+}}, {{.+}} [[G_PRIVATE]], {{.+}} [[G1_PAR]], {{.+}} [[SVAR_PRIVATE]], {{.+}} [[SFVAR_PRIVATE]])
       // LAMBDA: call {{.*}}void @__kmpc_for_static_fini(
+
+      // linear counter
+      // LAMBDA: [[OMP_IS_LAST_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[OMP_IS_LAST]],
+      // LAMBDA: [[IS_LAST_IT:%.+]] = icmp ne i{{[0-9]+}} [[OMP_IS_LAST_VAL]], 0
+      // LAMBDA: br i1 [[IS_LAST_IT]], label %[[OMP_COUNTER_BLOCK:.+]], label %[[OMP_COUNTER_DONE:.+]]
+      // LAMBDA: [[OMP_COUNTER_BLOCK]]:
+      // LAMBDA: store i{{[0-9]+}} 2, i{{[0-9]+}}* %
+      // LAMBDA: br label %[[OMP_COUNTER_DONE]]
+      // LAMBDA: [[OMP_COUNTER_DONE]]:
 
       // lastprivate
       // LAMBDA: [[OMP_IS_LAST_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[OMP_IS_LAST]],
@@ -137,6 +147,7 @@ int main() {
       // LAMBDA: [[SFVAR_PRIVATE_ADDR:%.+]] = alloca float*,
 
       // loop variables
+      // LAMBDA: {{.+}} = alloca i{{[0-9]+}},
       // LAMBDA: {{.+}} = alloca i{{[0-9]+}},
       // LAMBDA: {{.+}} = alloca i{{[0-9]+}},
       // LAMBDA: {{.+}} = alloca i{{[0-9]+}},
@@ -274,6 +285,7 @@ int main() {
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
+// CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: [[OMP_IS_LAST:%.+]] = alloca i{{[0-9]+}},
 // CHECK: [[T_VAR_PRIV:%.+]] = alloca i{{[0-9]+}},
 // CHECK: [[VEC_PRIV:%.+]] = alloca [2 x i{{[0-9]+}}],
@@ -368,6 +380,7 @@ int main() {
 // CHECK: [[VAR_ADDR:%.+]] = alloca [[S_FLOAT_TY]]*,
 // CHECK: [[SVAR_ADDR:%.+]] = alloca i{{[0-9]+}}*,
 // skip loop variables
+// CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
@@ -487,6 +500,7 @@ int main() {
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
+// CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: [[OMP_IS_LAST:%.+]] = alloca i{{[0-9]+}},
 // CHECK: [[T_VAR_PRIV:%.+]] = alloca i{{[0-9]+}},
 // CHECK: [[VEC_PRIV:%.+]] = alloca [2 x i{{[0-9]+}}],
@@ -563,6 +577,7 @@ int main() {
 // CHECK: [[S_ARR_ADDR:%.+]] = alloca [2 x [[S_INT_TY]]]*,
 // CHECK: [[VAR_ADDR:%.+]] = alloca [[S_INT_TY]]*,
 // skip loop variables
+// CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},
 // CHECK: {{.+}} = alloca i{{[0-9]+}},

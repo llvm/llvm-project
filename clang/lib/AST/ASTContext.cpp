@@ -2613,7 +2613,7 @@ static QualType getFunctionTypeWithExceptionSpec(
 bool ASTContext::hasSameFunctionTypeIgnoringExceptionSpec(QualType T,
                                                           QualType U) {
   return hasSameType(T, U) ||
-         (getLangOpts().CPlusPlus1z &&
+         (getLangOpts().CPlusPlus17 &&
           hasSameType(getFunctionTypeWithExceptionSpec(*this, T, EST_None),
                       getFunctionTypeWithExceptionSpec(*this, U, EST_None)));
 }
@@ -3477,7 +3477,7 @@ QualType ASTContext::getFunctionTypeInternal(
     Unique = true;
   }
 
-  bool NoexceptInType = getLangOpts().CPlusPlus1z;
+  bool NoexceptInType = getLangOpts().CPlusPlus17;
   bool IsCanonicalExceptionSpec =
       isCanonicalExceptionSpecification(EPI.ExceptionSpec, NoexceptInType);
 

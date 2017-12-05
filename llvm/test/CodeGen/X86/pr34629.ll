@@ -10,7 +10,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: norecurse nounwind uwtable
 define void @c() local_unnamed_addr #0 {
 ; CHECK-LABEL: c:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq {{.*}}(%rip), %rax
 ; CHECK-NEXT:    leaq (%rax,%rax,4), %rcx
 ; CHECK-NEXT:    negq %rcx
@@ -18,7 +18,7 @@ define void @c() local_unnamed_addr #0 {
 ; CHECK-NEXT:    leaq (%rax,%rax,4), %rax
 ; CHECK-NEXT:    testq %rax, %rcx
 ; CHECK-NEXT:    je .LBB0_2
-; CHECK-NEXT:  # BB#1: # %if.then
+; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    movb $0, {{.*}}(%rip)
 ; CHECK-NEXT:  .LBB0_2: # %if.end
 ; CHECK-NEXT:    retq

@@ -8,7 +8,7 @@ declare <8 x i64> @llvm.x86.pclmulqdq.512(<8 x i64>, <8 x i64>, i8) nounwind rea
 
 define <2 x i64> @commute_xmm_v1(<2 x i64> %a0, <2 x i64> %a1) {
 ; CHECK-LABEL: commute_xmm_v1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpclmulqdq $0, %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
@@ -20,7 +20,7 @@ define <2 x i64> @commute_xmm_v1(<2 x i64> %a0, <2 x i64> %a1) {
 
 define <2 x i64> @commute_xmm_v2(<2 x i64> %a0, <2 x i64> %a1) {
 ; CHECK-LABEL: commute_xmm_v2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpclmulqdq $16, %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
@@ -32,7 +32,7 @@ define <2 x i64> @commute_xmm_v2(<2 x i64> %a0, <2 x i64> %a1) {
 
 define <2 x i64> @commute_xmm_v3(<2 x i64> %a0, <2 x i64> %a1) {
 ; CHECK-LABEL: commute_xmm_v3:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpclmulqdq $17, %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
@@ -44,7 +44,7 @@ define <2 x i64> @commute_xmm_v3(<2 x i64> %a0, <2 x i64> %a1) {
 
 define <4 x i64> @commute_ymm_v1(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-LABEL: commute_ymm_v1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpclmulqdq $0, %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vpxor %ymm0, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
@@ -56,7 +56,7 @@ define <4 x i64> @commute_ymm_v1(<4 x i64> %a0, <4 x i64> %a1) {
 
 define <4 x i64> @commute_ymm_v2(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-LABEL: commute_ymm_v2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpclmulqdq $16, %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vpxor %ymm0, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
@@ -68,7 +68,7 @@ define <4 x i64> @commute_ymm_v2(<4 x i64> %a0, <4 x i64> %a1) {
 
 define <4 x i64> @commute_ymm_v3(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-LABEL: commute_ymm_v3:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpclmulqdq $17, %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vpxor %ymm0, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
@@ -80,7 +80,7 @@ define <4 x i64> @commute_ymm_v3(<4 x i64> %a0, <4 x i64> %a1) {
 
 define <8 x i64> @commute_zmm_v1(<8 x i64> %a0, <8 x i64> %a1) {
 ; CHECK-LABEL: commute_zmm_v1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpclmulqdq $0, %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    vpxorq %zmm0, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
@@ -92,7 +92,7 @@ define <8 x i64> @commute_zmm_v1(<8 x i64> %a0, <8 x i64> %a1) {
 
 define <8 x i64> @commute_zmm_v2(<8 x i64> %a0, <8 x i64> %a1) {
 ; CHECK-LABEL: commute_zmm_v2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpclmulqdq $16, %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    vpxorq %zmm0, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
@@ -104,7 +104,7 @@ define <8 x i64> @commute_zmm_v2(<8 x i64> %a0, <8 x i64> %a1) {
 
 define <8 x i64> @commute_zmm_v3(<8 x i64> %a0, <8 x i64> %a1) {
 ; CHECK-LABEL: commute_zmm_v3:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpclmulqdq $17, %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    vpxorq %zmm0, %zmm0, %zmm0
 ; CHECK-NEXT:    retq

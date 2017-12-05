@@ -8,7 +8,7 @@
 
 define i8 @v8i16(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c, <8 x i16> %d) {
 ; SSE2-SSSE3-LABEL: v8i16:
-; SSE2-SSSE3:       # BB#0:
+; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    pcmpgtw %xmm1, %xmm0
 ; SSE2-SSSE3-NEXT:    pcmpgtw %xmm3, %xmm2
 ; SSE2-SSSE3-NEXT:    pand %xmm0, %xmm2
@@ -18,7 +18,7 @@ define i8 @v8i16(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c, <8 x i16> %d) {
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX12-LABEL: v8i16:
-; AVX12:       # BB#0:
+; AVX12:       # %bb.0:
 ; AVX12-NEXT:    vpcmpgtw %xmm1, %xmm0, %xmm0
 ; AVX12-NEXT:    vpcmpgtw %xmm3, %xmm2, %xmm1
 ; AVX12-NEXT:    vpand %xmm1, %xmm0, %xmm0
@@ -28,7 +28,7 @@ define i8 @v8i16(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c, <8 x i16> %d) {
 ; AVX12-NEXT:    retq
 ;
 ; AVX512F-LABEL: v8i16:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpcmpgtw %xmm1, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; AVX512F-NEXT:    vpsllq $63, %zmm0, %zmm0
@@ -43,7 +43,7 @@ define i8 @v8i16(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c, <8 x i16> %d) {
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: v8i16:
-; AVX512BW:       # BB#0:
+; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpcmpgtw %xmm1, %xmm0, %k1
 ; AVX512BW-NEXT:    vpcmpgtw %xmm3, %xmm2, %k0 {%k1}
 ; AVX512BW-NEXT:    kmovd %k0, %eax
@@ -58,7 +58,7 @@ define i8 @v8i16(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c, <8 x i16> %d) {
 
 define i4 @v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d) {
 ; SSE2-SSSE3-LABEL: v4i32:
-; SSE2-SSSE3:       # BB#0:
+; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm1, %xmm0
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm3, %xmm2
 ; SSE2-SSSE3-NEXT:    pand %xmm0, %xmm2
@@ -67,7 +67,7 @@ define i4 @v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d) {
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX12-LABEL: v4i32:
-; AVX12:       # BB#0:
+; AVX12:       # %bb.0:
 ; AVX12-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
 ; AVX12-NEXT:    vpcmpgtd %xmm3, %xmm2, %xmm1
 ; AVX12-NEXT:    vpand %xmm1, %xmm0, %xmm0
@@ -76,7 +76,7 @@ define i4 @v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d) {
 ; AVX12-NEXT:    retq
 ;
 ; AVX512F-LABEL: v4i32:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpcmpgtd %xmm1, %xmm0, %k1
 ; AVX512F-NEXT:    vpcmpgtd %xmm3, %xmm2, %k0 {%k1}
 ; AVX512F-NEXT:    kmovw %k0, %eax
@@ -85,7 +85,7 @@ define i4 @v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d) {
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: v4i32:
-; AVX512BW:       # BB#0:
+; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpcmpgtd %xmm1, %xmm0, %k1
 ; AVX512BW-NEXT:    vpcmpgtd %xmm3, %xmm2, %k0 {%k1}
 ; AVX512BW-NEXT:    kmovd %k0, %eax
@@ -101,7 +101,7 @@ define i4 @v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d) {
 
 define i4 @v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c, <4 x float> %d) {
 ; SSE2-SSSE3-LABEL: v4f32:
-; SSE2-SSSE3:       # BB#0:
+; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    cmpltps %xmm0, %xmm1
 ; SSE2-SSSE3-NEXT:    cmpltps %xmm2, %xmm3
 ; SSE2-SSSE3-NEXT:    andps %xmm1, %xmm3
@@ -110,7 +110,7 @@ define i4 @v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c, <4 x float> %d)
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX12-LABEL: v4f32:
-; AVX12:       # BB#0:
+; AVX12:       # %bb.0:
 ; AVX12-NEXT:    vcmpltps %xmm0, %xmm1, %xmm0
 ; AVX12-NEXT:    vcmpltps %xmm2, %xmm3, %xmm1
 ; AVX12-NEXT:    vandps %xmm1, %xmm0, %xmm0
@@ -119,7 +119,7 @@ define i4 @v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c, <4 x float> %d)
 ; AVX12-NEXT:    retq
 ;
 ; AVX512F-LABEL: v4f32:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vcmpltps %xmm0, %xmm1, %k1
 ; AVX512F-NEXT:    vcmpltps %xmm2, %xmm3, %k0 {%k1}
 ; AVX512F-NEXT:    kmovw %k0, %eax
@@ -128,7 +128,7 @@ define i4 @v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c, <4 x float> %d)
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: v4f32:
-; AVX512BW:       # BB#0:
+; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vcmpltps %xmm0, %xmm1, %k1
 ; AVX512BW-NEXT:    vcmpltps %xmm2, %xmm3, %k0 {%k1}
 ; AVX512BW-NEXT:    kmovd %k0, %eax
@@ -144,7 +144,7 @@ define i4 @v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c, <4 x float> %d)
 
 define i16 @v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c, <16 x i8> %d) {
 ; SSE2-SSSE3-LABEL: v16i8:
-; SSE2-SSSE3:       # BB#0:
+; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    pcmpgtb %xmm1, %xmm0
 ; SSE2-SSSE3-NEXT:    pcmpgtb %xmm3, %xmm2
 ; SSE2-SSSE3-NEXT:    pand %xmm0, %xmm2
@@ -153,7 +153,7 @@ define i16 @v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c, <16 x i8> %d) {
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX12-LABEL: v16i8:
-; AVX12:       # BB#0:
+; AVX12:       # %bb.0:
 ; AVX12-NEXT:    vpcmpgtb %xmm1, %xmm0, %xmm0
 ; AVX12-NEXT:    vpcmpgtb %xmm3, %xmm2, %xmm1
 ; AVX12-NEXT:    vpand %xmm1, %xmm0, %xmm0
@@ -162,7 +162,7 @@ define i16 @v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c, <16 x i8> %d) {
 ; AVX12-NEXT:    retq
 ;
 ; AVX512F-LABEL: v16i8:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpcmpgtb %xmm1, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; AVX512F-NEXT:    vpslld $31, %zmm0, %zmm0
@@ -177,7 +177,7 @@ define i16 @v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c, <16 x i8> %d) {
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: v16i8:
-; AVX512BW:       # BB#0:
+; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpcmpgtb %xmm1, %xmm0, %k1
 ; AVX512BW-NEXT:    vpcmpgtb %xmm3, %xmm2, %k0 {%k1}
 ; AVX512BW-NEXT:    kmovd %k0, %eax
@@ -192,7 +192,7 @@ define i16 @v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c, <16 x i8> %d) {
 
 define i2 @v2i8(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d) {
 ; SSE2-SSSE3-LABEL: v2i8:
-; SSE2-SSSE3:       # BB#0:
+; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    psllq $56, %xmm2
 ; SSE2-SSSE3-NEXT:    movdqa %xmm2, %xmm4
 ; SSE2-SSSE3-NEXT:    psrad $31, %xmm4
@@ -248,7 +248,7 @@ define i2 @v2i8(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d) {
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX1-LABEL: v2i8:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpsllq $56, %xmm3, %xmm3
 ; AVX1-NEXT:    vpsrad $31, %xmm3, %xmm4
 ; AVX1-NEXT:    vpsrad $24, %xmm3, %xmm3
@@ -277,7 +277,7 @@ define i2 @v2i8(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d) {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: v2i8:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsllq $56, %xmm3, %xmm3
 ; AVX2-NEXT:    vpsrad $31, %xmm3, %xmm4
 ; AVX2-NEXT:    vpsrad $24, %xmm3, %xmm3
@@ -306,7 +306,7 @@ define i2 @v2i8(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d) {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: v2i8:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpsllq $56, %xmm3, %xmm3
 ; AVX512F-NEXT:    vpsraq $56, %xmm3, %xmm3
 ; AVX512F-NEXT:    vpsllq $56, %xmm2, %xmm2
@@ -323,7 +323,7 @@ define i2 @v2i8(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d) {
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: v2i8:
-; AVX512BW:       # BB#0:
+; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpsllq $56, %xmm3, %xmm3
 ; AVX512BW-NEXT:    vpsraq $56, %xmm3, %xmm3
 ; AVX512BW-NEXT:    vpsllq $56, %xmm2, %xmm2
@@ -347,7 +347,7 @@ define i2 @v2i8(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d) {
 
 define i2 @v2i16(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c, <2 x i16> %d) {
 ; SSE2-SSSE3-LABEL: v2i16:
-; SSE2-SSSE3:       # BB#0:
+; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    psllq $48, %xmm2
 ; SSE2-SSSE3-NEXT:    movdqa %xmm2, %xmm4
 ; SSE2-SSSE3-NEXT:    psrad $31, %xmm4
@@ -403,7 +403,7 @@ define i2 @v2i16(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c, <2 x i16> %d) {
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX1-LABEL: v2i16:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpsllq $48, %xmm3, %xmm3
 ; AVX1-NEXT:    vpsrad $31, %xmm3, %xmm4
 ; AVX1-NEXT:    vpsrad $16, %xmm3, %xmm3
@@ -432,7 +432,7 @@ define i2 @v2i16(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c, <2 x i16> %d) {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: v2i16:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsllq $48, %xmm3, %xmm3
 ; AVX2-NEXT:    vpsrad $31, %xmm3, %xmm4
 ; AVX2-NEXT:    vpsrad $16, %xmm3, %xmm3
@@ -461,7 +461,7 @@ define i2 @v2i16(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c, <2 x i16> %d) {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: v2i16:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpsllq $48, %xmm3, %xmm3
 ; AVX512F-NEXT:    vpsraq $48, %xmm3, %xmm3
 ; AVX512F-NEXT:    vpsllq $48, %xmm2, %xmm2
@@ -478,7 +478,7 @@ define i2 @v2i16(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c, <2 x i16> %d) {
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: v2i16:
-; AVX512BW:       # BB#0:
+; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpsllq $48, %xmm3, %xmm3
 ; AVX512BW-NEXT:    vpsraq $48, %xmm3, %xmm3
 ; AVX512BW-NEXT:    vpsllq $48, %xmm2, %xmm2
@@ -502,7 +502,7 @@ define i2 @v2i16(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c, <2 x i16> %d) {
 
 define i2 @v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x i32> %d) {
 ; SSE2-SSSE3-LABEL: v2i32:
-; SSE2-SSSE3:       # BB#0:
+; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    psllq $32, %xmm2
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm4 = xmm2[1,3,2,3]
 ; SSE2-SSSE3-NEXT:    psrad $31, %xmm2
@@ -550,7 +550,7 @@ define i2 @v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x i32> %d) {
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX1-LABEL: v2i32:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpsllq $32, %xmm3, %xmm3
 ; AVX1-NEXT:    vpsrad $31, %xmm3, %xmm4
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]
@@ -575,7 +575,7 @@ define i2 @v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x i32> %d) {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: v2i32:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsllq $32, %xmm3, %xmm3
 ; AVX2-NEXT:    vpsrad $31, %xmm3, %xmm4
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]
@@ -600,7 +600,7 @@ define i2 @v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x i32> %d) {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: v2i32:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpsllq $32, %xmm3, %xmm3
 ; AVX512F-NEXT:    vpsraq $32, %xmm3, %xmm3
 ; AVX512F-NEXT:    vpsllq $32, %xmm2, %xmm2
@@ -617,7 +617,7 @@ define i2 @v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x i32> %d) {
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: v2i32:
-; AVX512BW:       # BB#0:
+; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpsllq $32, %xmm3, %xmm3
 ; AVX512BW-NEXT:    vpsraq $32, %xmm3, %xmm3
 ; AVX512BW-NEXT:    vpsllq $32, %xmm2, %xmm2
@@ -641,7 +641,7 @@ define i2 @v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x i32> %d) {
 
 define i2 @v2i64(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c, <2 x i64> %d) {
 ; SSE2-SSSE3-LABEL: v2i64:
-; SSE2-SSSE3:       # BB#0:
+; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm4 = [2147483648,0,2147483648,0]
 ; SSE2-SSSE3-NEXT:    pxor %xmm4, %xmm1
 ; SSE2-SSSE3-NEXT:    pxor %xmm4, %xmm0
@@ -669,7 +669,7 @@ define i2 @v2i64(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c, <2 x i64> %d) {
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX12-LABEL: v2i64:
-; AVX12:       # BB#0:
+; AVX12:       # %bb.0:
 ; AVX12-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
 ; AVX12-NEXT:    vpcmpgtq %xmm3, %xmm2, %xmm1
 ; AVX12-NEXT:    vpand %xmm1, %xmm0, %xmm0
@@ -678,7 +678,7 @@ define i2 @v2i64(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c, <2 x i64> %d) {
 ; AVX12-NEXT:    retq
 ;
 ; AVX512F-LABEL: v2i64:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpcmpgtq %xmm1, %xmm0, %k1
 ; AVX512F-NEXT:    vpcmpgtq %xmm3, %xmm2, %k0 {%k1}
 ; AVX512F-NEXT:    kmovw %k0, %eax
@@ -687,7 +687,7 @@ define i2 @v2i64(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c, <2 x i64> %d) {
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: v2i64:
-; AVX512BW:       # BB#0:
+; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpcmpgtq %xmm1, %xmm0, %k1
 ; AVX512BW-NEXT:    vpcmpgtq %xmm3, %xmm2, %k0 {%k1}
 ; AVX512BW-NEXT:    kmovd %k0, %eax
@@ -703,7 +703,7 @@ define i2 @v2i64(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c, <2 x i64> %d) {
 
 define i2 @v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c, <2 x double> %d) {
 ; SSE2-SSSE3-LABEL: v2f64:
-; SSE2-SSSE3:       # BB#0:
+; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    cmpltpd %xmm0, %xmm1
 ; SSE2-SSSE3-NEXT:    cmpltpd %xmm2, %xmm3
 ; SSE2-SSSE3-NEXT:    andpd %xmm1, %xmm3
@@ -712,7 +712,7 @@ define i2 @v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c, <2 x double>
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX12-LABEL: v2f64:
-; AVX12:       # BB#0:
+; AVX12:       # %bb.0:
 ; AVX12-NEXT:    vcmpltpd %xmm0, %xmm1, %xmm0
 ; AVX12-NEXT:    vcmpltpd %xmm2, %xmm3, %xmm1
 ; AVX12-NEXT:    vandpd %xmm1, %xmm0, %xmm0
@@ -721,7 +721,7 @@ define i2 @v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c, <2 x double>
 ; AVX12-NEXT:    retq
 ;
 ; AVX512F-LABEL: v2f64:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vcmpltpd %xmm0, %xmm1, %k1
 ; AVX512F-NEXT:    vcmpltpd %xmm2, %xmm3, %k0 {%k1}
 ; AVX512F-NEXT:    kmovw %k0, %eax
@@ -730,7 +730,7 @@ define i2 @v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c, <2 x double>
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: v2f64:
-; AVX512BW:       # BB#0:
+; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vcmpltpd %xmm0, %xmm1, %k1
 ; AVX512BW-NEXT:    vcmpltpd %xmm2, %xmm3, %k0 {%k1}
 ; AVX512BW-NEXT:    kmovd %k0, %eax
@@ -746,7 +746,7 @@ define i2 @v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c, <2 x double>
 
 define i4 @v4i8(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c, <4 x i8> %d) {
 ; SSE2-SSSE3-LABEL: v4i8:
-; SSE2-SSSE3:       # BB#0:
+; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    pslld $24, %xmm3
 ; SSE2-SSSE3-NEXT:    psrad $24, %xmm3
 ; SSE2-SSSE3-NEXT:    pslld $24, %xmm2
@@ -763,7 +763,7 @@ define i4 @v4i8(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c, <4 x i8> %d) {
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX12-LABEL: v4i8:
-; AVX12:       # BB#0:
+; AVX12:       # %bb.0:
 ; AVX12-NEXT:    vpslld $24, %xmm3, %xmm3
 ; AVX12-NEXT:    vpsrad $24, %xmm3, %xmm3
 ; AVX12-NEXT:    vpslld $24, %xmm2, %xmm2
@@ -780,7 +780,7 @@ define i4 @v4i8(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c, <4 x i8> %d) {
 ; AVX12-NEXT:    retq
 ;
 ; AVX512F-LABEL: v4i8:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpslld $24, %xmm3, %xmm3
 ; AVX512F-NEXT:    vpsrad $24, %xmm3, %xmm3
 ; AVX512F-NEXT:    vpslld $24, %xmm2, %xmm2
@@ -797,7 +797,7 @@ define i4 @v4i8(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c, <4 x i8> %d) {
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: v4i8:
-; AVX512BW:       # BB#0:
+; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpslld $24, %xmm3, %xmm3
 ; AVX512BW-NEXT:    vpsrad $24, %xmm3, %xmm3
 ; AVX512BW-NEXT:    vpslld $24, %xmm2, %xmm2
@@ -821,7 +821,7 @@ define i4 @v4i8(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c, <4 x i8> %d) {
 
 define i4 @v4i16(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c, <4 x i16> %d) {
 ; SSE2-SSSE3-LABEL: v4i16:
-; SSE2-SSSE3:       # BB#0:
+; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    pslld $16, %xmm3
 ; SSE2-SSSE3-NEXT:    psrad $16, %xmm3
 ; SSE2-SSSE3-NEXT:    pslld $16, %xmm2
@@ -838,7 +838,7 @@ define i4 @v4i16(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c, <4 x i16> %d) {
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX12-LABEL: v4i16:
-; AVX12:       # BB#0:
+; AVX12:       # %bb.0:
 ; AVX12-NEXT:    vpslld $16, %xmm3, %xmm3
 ; AVX12-NEXT:    vpsrad $16, %xmm3, %xmm3
 ; AVX12-NEXT:    vpslld $16, %xmm2, %xmm2
@@ -855,7 +855,7 @@ define i4 @v4i16(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c, <4 x i16> %d) {
 ; AVX12-NEXT:    retq
 ;
 ; AVX512F-LABEL: v4i16:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpslld $16, %xmm3, %xmm3
 ; AVX512F-NEXT:    vpsrad $16, %xmm3, %xmm3
 ; AVX512F-NEXT:    vpslld $16, %xmm2, %xmm2
@@ -872,7 +872,7 @@ define i4 @v4i16(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c, <4 x i16> %d) {
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: v4i16:
-; AVX512BW:       # BB#0:
+; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpslld $16, %xmm3, %xmm3
 ; AVX512BW-NEXT:    vpsrad $16, %xmm3, %xmm3
 ; AVX512BW-NEXT:    vpslld $16, %xmm2, %xmm2
@@ -896,7 +896,7 @@ define i4 @v4i16(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c, <4 x i16> %d) {
 
 define i8 @v8i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c, <8 x i8> %d) {
 ; SSE2-SSSE3-LABEL: v8i8:
-; SSE2-SSSE3:       # BB#0:
+; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    psllw $8, %xmm3
 ; SSE2-SSSE3-NEXT:    psraw $8, %xmm3
 ; SSE2-SSSE3-NEXT:    psllw $8, %xmm2
@@ -914,7 +914,7 @@ define i8 @v8i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c, <8 x i8> %d) {
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; AVX12-LABEL: v8i8:
-; AVX12:       # BB#0:
+; AVX12:       # %bb.0:
 ; AVX12-NEXT:    vpsllw $8, %xmm3, %xmm3
 ; AVX12-NEXT:    vpsraw $8, %xmm3, %xmm3
 ; AVX12-NEXT:    vpsllw $8, %xmm2, %xmm2
@@ -932,7 +932,7 @@ define i8 @v8i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c, <8 x i8> %d) {
 ; AVX12-NEXT:    retq
 ;
 ; AVX512F-LABEL: v8i8:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpsllw $8, %xmm3, %xmm3
 ; AVX512F-NEXT:    vpsraw $8, %xmm3, %xmm3
 ; AVX512F-NEXT:    vpsllw $8, %xmm2, %xmm2
@@ -955,7 +955,7 @@ define i8 @v8i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c, <8 x i8> %d) {
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: v8i8:
-; AVX512BW:       # BB#0:
+; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpsllw $8, %xmm3, %xmm3
 ; AVX512BW-NEXT:    vpsraw $8, %xmm3, %xmm3
 ; AVX512BW-NEXT:    vpsllw $8, %xmm2, %xmm2

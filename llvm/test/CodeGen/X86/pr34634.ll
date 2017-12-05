@@ -10,7 +10,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: norecurse nounwind uwtable
 define void @fn1() local_unnamed_addr #0 {
 ; CHECK-LABEL: fn1:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movslq {{.*}}(%rip), %rax
 ; CHECK-NEXT:    leaq (%rax,%rax,4), %rcx
 ; CHECK-NEXT:    leaq (,%rax,4), %rdx
@@ -33,7 +33,7 @@ entry:
 ; Function Attrs: norecurse nounwind uwtable
 define i32 @main() local_unnamed_addr #0 {
 ; CHECK-LABEL: main:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movslq {{.*}}(%rip), %rax
 ; CHECK-NEXT:    leaq (%rax,%rax,4), %rcx
 ; CHECK-NEXT:    leaq (,%rax,4), %rdx

@@ -6,10 +6,10 @@ declare void @foo64(i64)
 
 define void @neg(i32 %x) nounwind {
 ; CHECK-LABEL: neg:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    negl %edi
 ; CHECK-NEXT:    je .LBB0_1
-; CHECK-NEXT:  # BB#2: # %bb
+; CHECK-NEXT:  # %bb.2: # %bb
 ; CHECK-NEXT:    jmp foo # TAILCALL
 ; CHECK-NEXT:  .LBB0_1: # %return
 ; CHECK-NEXT:    retq
@@ -27,10 +27,10 @@ return:
 
 define void @sar(i32 %x) nounwind {
 ; CHECK-LABEL: sar:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sarl %edi
 ; CHECK-NEXT:    je .LBB1_1
-; CHECK-NEXT:  # BB#2: # %bb
+; CHECK-NEXT:  # %bb.2: # %bb
 ; CHECK-NEXT:    jmp foo # TAILCALL
 ; CHECK-NEXT:  .LBB1_1: # %return
 ; CHECK-NEXT:    retq
@@ -48,10 +48,10 @@ return:
 
 define void @shr(i32 %x) nounwind {
 ; CHECK-LABEL: shr:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    shrl %edi
 ; CHECK-NEXT:    je .LBB2_1
-; CHECK-NEXT:  # BB#2: # %bb
+; CHECK-NEXT:  # %bb.2: # %bb
 ; CHECK-NEXT:    jmp foo # TAILCALL
 ; CHECK-NEXT:  .LBB2_1: # %return
 ; CHECK-NEXT:    retq
@@ -69,10 +69,10 @@ return:
 
 define void @shri(i32 %x) nounwind {
 ; CHECK-LABEL: shri:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    shrl $3, %edi
 ; CHECK-NEXT:    je .LBB3_1
-; CHECK-NEXT:  # BB#2: # %bb
+; CHECK-NEXT:  # %bb.2: # %bb
 ; CHECK-NEXT:    jmp foo # TAILCALL
 ; CHECK-NEXT:  .LBB3_1: # %return
 ; CHECK-NEXT:    retq
@@ -90,10 +90,10 @@ return:
 
 define void @shl(i32 %x) nounwind {
 ; CHECK-LABEL: shl:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addl %edi, %edi
 ; CHECK-NEXT:    je .LBB4_1
-; CHECK-NEXT:  # BB#2: # %bb
+; CHECK-NEXT:  # %bb.2: # %bb
 ; CHECK-NEXT:    jmp foo # TAILCALL
 ; CHECK-NEXT:  .LBB4_1: # %return
 ; CHECK-NEXT:    retq
@@ -111,10 +111,10 @@ return:
 
 define void @shli(i32 %x) nounwind {
 ; CHECK-LABEL: shli:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    shll $4, %edi
 ; CHECK-NEXT:    je .LBB5_1
-; CHECK-NEXT:  # BB#2: # %bb
+; CHECK-NEXT:  # %bb.2: # %bb
 ; CHECK-NEXT:    jmp foo # TAILCALL
 ; CHECK-NEXT:  .LBB5_1: # %return
 ; CHECK-NEXT:    retq
@@ -132,7 +132,7 @@ return:
 
 define zeroext i1 @adc(i128 %x) nounwind {
 ; CHECK-LABEL: adc:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movabsq $-9223372036854775808, %rax # imm = 0x8000000000000000
 ; CHECK-NEXT:    addq %rdi, %rax
 ; CHECK-NEXT:    adcq $0, %rsi
@@ -145,7 +145,7 @@ define zeroext i1 @adc(i128 %x) nounwind {
 
 define zeroext i1 @sbb(i128 %x, i128 %y) nounwind {
 ; CHECK-LABEL: sbb:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpq %rdx, %rdi
 ; CHECK-NEXT:    sbbq %rcx, %rsi
 ; CHECK-NEXT:    setns %al
@@ -157,10 +157,10 @@ define zeroext i1 @sbb(i128 %x, i128 %y) nounwind {
 
 define void @andn(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: andn:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andnl %esi, %edi, %edi
 ; CHECK-NEXT:    je .LBB8_1
-; CHECK-NEXT:  # BB#2: # %bb
+; CHECK-NEXT:  # %bb.2: # %bb
 ; CHECK-NEXT:    jmp foo # TAILCALL
 ; CHECK-NEXT:  .LBB8_1: # %return
 ; CHECK-NEXT:    retq
@@ -180,10 +180,10 @@ return:
 declare i32 @llvm.x86.bmi.bextr.32(i32, i32) nounwind readnone
 define void @bextr(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: bextr:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    bextrl %esi, %edi, %edi
 ; CHECK-NEXT:    je .LBB9_1
-; CHECK-NEXT:  # BB#2: # %bb
+; CHECK-NEXT:  # %bb.2: # %bb
 ; CHECK-NEXT:    jmp foo # TAILCALL
 ; CHECK-NEXT:  .LBB9_1: # %return
 ; CHECK-NEXT:    retq
@@ -202,10 +202,10 @@ return:
 declare i32 @llvm.ctpop.i32(i32) nounwind readnone
 define void @popcnt(i32 %x) nounwind {
 ; CHECK-LABEL: popcnt:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    popcntl %edi, %edi
 ; CHECK-NEXT:    je .LBB10_1
-; CHECK-NEXT:  # BB#2: # %bb
+; CHECK-NEXT:  # %bb.2: # %bb
 ; CHECK-NEXT:    jmp foo # TAILCALL
 ; CHECK-NEXT:  .LBB10_1: # %return
 ; CHECK-NEXT:    retq
@@ -222,7 +222,7 @@ return:
 declare i64 @llvm.cttz.i64(i64, i1)
 define i64 @testCTZ(i64 %v) nounwind {
 ; CHECK-LABEL: testCTZ:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    tzcntq %rdi, %rcx
 ; CHECK-NEXT:    movl $255, %eax
 ; CHECK-NEXT:    cmovaeq %rcx, %rax
@@ -236,11 +236,11 @@ define i64 @testCTZ(i64 %v) nounwind {
 declare i32 @llvm.cttz.i32(i32, i1)
 define void @testCTZ2(i32 %v) nounwind {
 ; CHECK-LABEL: testCTZ2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    tzcntl %edi, %ebx
 ; CHECK-NEXT:    jb .LBB12_2
-; CHECK-NEXT:  # BB#1: # %bb
+; CHECK-NEXT:  # %bb.1: # %bb
 ; CHECK-NEXT:    movl %ebx, %edi
 ; CHECK-NEXT:    callq foo
 ; CHECK-NEXT:  .LBB12_2: # %return
@@ -262,11 +262,11 @@ return:
 
 define void @testCTZ3(i32 %v) nounwind {
 ; CHECK-LABEL: testCTZ3:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    tzcntl %edi, %ebx
 ; CHECK-NEXT:    jae .LBB13_2
-; CHECK-NEXT:  # BB#1: # %bb
+; CHECK-NEXT:  # %bb.1: # %bb
 ; CHECK-NEXT:    movl %ebx, %edi
 ; CHECK-NEXT:    callq foo
 ; CHECK-NEXT:  .LBB13_2: # %return
@@ -289,7 +289,7 @@ return:
 declare i64 @llvm.ctlz.i64(i64, i1)
 define i64 @testCLZ(i64 %v) nounwind {
 ; CHECK-LABEL: testCLZ:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lzcntq %rdi, %rcx
 ; CHECK-NEXT:    movl $255, %eax
 ; CHECK-NEXT:    cmovaeq %rcx, %rax
@@ -303,7 +303,7 @@ define i64 @testCLZ(i64 %v) nounwind {
 declare i64 @llvm.ctpop.i64(i64)
 define i64 @testPOPCNT(i64 %v) nounwind {
 ; CHECK-LABEL: testPOPCNT:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    popcntq %rdi, %rcx
 ; CHECK-NEXT:    movl $255, %eax
 ; CHECK-NEXT:    cmovneq %rcx, %rax

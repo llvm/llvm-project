@@ -6,12 +6,12 @@
 
 define <8 x float> @test1(<8 x float> %a, <8 x float> %b, <8 x float> %c)  {
 ; X32-LABEL: test1:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    vfmsub213ps %ymm2, %ymm1, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test1:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    vfmsub213ps %ymm2, %ymm1, %ymm0
 ; X64-NEXT:    retq
 entry:
@@ -24,12 +24,12 @@ declare <8 x float> @llvm.x86.fma.vfmadd.ps.256(<8 x float>, <8 x float>, <8 x f
 
 define <4 x float> @test2(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; X32-LABEL: test2:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    vfnmsub213ps %xmm2, %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test2:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    vfnmsub213ps %xmm2, %xmm1, %xmm0
 ; X64-NEXT:    retq
 entry:
@@ -42,14 +42,14 @@ declare <4 x float> @llvm.x86.fma.vfmadd.ps(<4 x float> %a, <4 x float> %b, <4 x
 
 define <4 x float> @test3(<4 x float> %a, <4 x float> %b, <4 x float> %c)  {
 ; X32-LABEL: test3:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    vfnmadd213ss %xmm2, %xmm1, %xmm0
 ; X32-NEXT:    vbroadcastss {{\.LCPI.*}}, %xmm1
 ; X32-NEXT:    vxorps %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test3:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    vfnmadd213ss %xmm2, %xmm1, %xmm0
 ; X64-NEXT:    vbroadcastss {{.*}}(%rip), %xmm1
 ; X64-NEXT:    vxorps %xmm1, %xmm0, %xmm0
@@ -64,12 +64,12 @@ declare <4 x float> @llvm.x86.fma.vfnmadd.ss(<4 x float> %a, <4 x float> %b, <4 
 
 define <8 x float> @test4(<8 x float> %a, <8 x float> %b, <8 x float> %c) {
 ; X32-LABEL: test4:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    vfnmadd213ps %ymm2, %ymm1, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test4:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    vfnmadd213ps %ymm2, %ymm1, %ymm0
 ; X64-NEXT:    retq
 entry:
@@ -80,14 +80,14 @@ entry:
 
 define <8 x float> @test5(<8 x float> %a, <8 x float> %b, <8 x float> %c) {
 ; X32-LABEL: test5:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    vbroadcastss {{\.LCPI.*}}, %ymm3
 ; X32-NEXT:    vxorps %ymm3, %ymm2, %ymm2
 ; X32-NEXT:    vfmsub213ps %ymm2, %ymm1, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test5:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    vbroadcastss {{.*}}(%rip), %ymm3
 ; X64-NEXT:    vxorps %ymm3, %ymm2, %ymm2
 ; X64-NEXT:    vfmsub213ps %ymm2, %ymm1, %ymm0
@@ -103,12 +103,12 @@ declare <8 x float> @llvm.x86.fma.vfmsub.ps.256(<8 x float>, <8 x float>, <8 x f
 
 define <2 x double> @test6(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 ; X32-LABEL: test6:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    vfnmsub213pd %xmm2, %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test6:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    vfnmsub213pd %xmm2, %xmm1, %xmm0
 ; X64-NEXT:    retq
 entry:

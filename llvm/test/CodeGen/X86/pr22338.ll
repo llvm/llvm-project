@@ -4,7 +4,7 @@
 
 define i32 @fn() {
 ; X86-LABEL: fn:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    cmpl $1, %eax
 ; X86-NEXT:    setne %al
@@ -17,11 +17,11 @@ define i32 @fn() {
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    testl %eax, %eax
 ; X86-NEXT:    je .LBB0_1
-; X86-NEXT:  # BB#2: # %bb2
+; X86-NEXT:  # %bb.2: # %bb2
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fn:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpl $1, %eax
 ; X64-NEXT:    setne %al
@@ -34,7 +34,7 @@ define i32 @fn() {
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-NEXT:    testl %eax, %eax
 ; X64-NEXT:    je .LBB0_1
-; X64-NEXT:  # BB#2: # %bb2
+; X64-NEXT:  # %bb.2: # %bb2
 ; X64-NEXT:    retq
 entry:
   %cmp1 = icmp ne i32 undef, 1

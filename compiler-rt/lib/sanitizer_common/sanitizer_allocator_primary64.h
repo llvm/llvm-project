@@ -661,16 +661,31 @@ class SizeClassAllocator64 {
     return true;
   }
 
+  // Check whether this size class is exhausted.
+  bool IsRegionExhausted(RegionInfo *region, uptr class_id,
+                         uptr additional_map_size) {
+    if (LIKELY(region->mapped_user + region->mapped_meta +
+               additional_map_size <= kRegionSize - kFreeArraySize))
+      return false;
+    if (!region->exhausted) {
+      region->exhausted = true;
+      Printf("%s: Out of memory. ", SanitizerToolName);
+      Printf("The process has exhausted %zuMB for size class %zu.\n",
+             kRegionSize >> 20, ClassIdToSize(class_id));
+    }
+    return true;
+  }
+
   NOINLINE bool PopulateFreeArray(AllocatorStats *stat, uptr class_id,
                                   RegionInfo *region, uptr requested_count) {
     // region->mutex is held.
-    const uptr size = ClassIdToSize(class_id);
-    const uptr new_space_beg = region->allocated_user;
-    const uptr new_space_end = new_space_beg + requested_count * size;
     const uptr region_beg = GetRegionBeginBySizeClass(class_id);
+    const uptr size = ClassIdToSize(class_id);
 
+    const uptr total_user_bytes =
+        region->allocated_user + requested_count * size;
     // Map more space for chunks, if necessary.
-    if (new_space_end > region->mapped_user) {
+    if (LIKELY(total_user_bytes > region->mapped_user)) {
       if (UNLIKELY(region->mapped_user == 0)) {
         if (!kUsingConstantSpaceBeg && kRandomShuffleChunks)
           // The random state is initialized from ASLR.
@@ -685,42 +700,35 @@ class SizeClassAllocator64 {
           region->rtoi.last_release_at_ns = NanoTime();
       }
       // Do the mmap for the user memory.
-      uptr map_size = kUserMapSize;
-      while (new_space_end > region->mapped_user + map_size)
-        map_size += kUserMapSize;
-      CHECK_GE(region->mapped_user + map_size, new_space_end);
+      const uptr user_map_size =
+          RoundUpTo(total_user_bytes - region->mapped_user, kUserMapSize);
+      if (UNLIKELY(IsRegionExhausted(region, class_id, user_map_size)))
+        return false;
       if (UNLIKELY(!MapWithCallback(region_beg + region->mapped_user,
-                                    map_size)))
+                                    user_map_size)))
         return false;
-      stat->Add(AllocatorStatMapped, map_size);
-      region->mapped_user += map_size;
+      stat->Add(AllocatorStatMapped, user_map_size);
+      region->mapped_user += user_map_size;
     }
-    const uptr new_chunks_count = (region->mapped_user - new_space_beg) / size;
+    const uptr new_chunks_count =
+        (region->mapped_user - region->allocated_user) / size;
 
-    // Calculate the required space for metadata.
-    const uptr requested_allocated_meta =
-        region->allocated_meta + new_chunks_count * kMetadataSize;
-    uptr requested_mapped_meta = region->mapped_meta;
-    while (requested_allocated_meta > requested_mapped_meta)
-      requested_mapped_meta += kMetaMapSize;
-    // Check whether this size class is exhausted.
-    if (region->mapped_user + requested_mapped_meta >
-        kRegionSize - kFreeArraySize) {
-      if (!region->exhausted) {
-        region->exhausted = true;
-        Printf("%s: Out of memory. ", SanitizerToolName);
-        Printf("The process has exhausted %zuMB for size class %zu.\n",
-               kRegionSize >> 20, size);
+    if (kMetadataSize) {
+      // Calculate the required space for metadata.
+      const uptr total_meta_bytes =
+          region->allocated_meta + new_chunks_count * kMetadataSize;
+      const uptr meta_map_size = (total_meta_bytes > region->mapped_meta) ?
+          RoundUpTo(total_meta_bytes - region->mapped_meta, kMetaMapSize) : 0;
+      // Map more space for metadata, if necessary.
+      if (meta_map_size) {
+        if (UNLIKELY(IsRegionExhausted(region, class_id, meta_map_size)))
+          return false;
+        if (UNLIKELY(!MapWithCallback(
+            GetMetadataEnd(region_beg) - region->mapped_meta - meta_map_size,
+            meta_map_size)))
+          return false;
+        region->mapped_meta += meta_map_size;
       }
-      return false;
-    }
-    // Map more space for metadata, if necessary.
-    if (requested_mapped_meta > region->mapped_meta) {
-      if (UNLIKELY(!MapWithCallback(
-              GetMetadataEnd(region_beg) - requested_mapped_meta,
-              requested_mapped_meta - region->mapped_meta)))
-        return false;
-      region->mapped_meta = requested_mapped_meta;
     }
 
     // If necessary, allocate more space for the free array and populate it with
@@ -729,7 +737,7 @@ class SizeClassAllocator64 {
     if (UNLIKELY(!EnsureFreeArraySpace(region, region_beg, total_freed_chunks)))
       return false;
     CompactPtrT *free_array = GetFreeArray(region_beg);
-    for (uptr i = 0, chunk = new_space_beg; i < new_chunks_count;
+    for (uptr i = 0, chunk = region->allocated_user; i < new_chunks_count;
          i++, chunk += size)
       free_array[total_freed_chunks - 1 - i] = PointerToCompactPtr(0, chunk);
     if (kRandomShuffleChunks)
@@ -741,7 +749,7 @@ class SizeClassAllocator64 {
     region->num_freed_chunks += new_chunks_count;
     region->allocated_user += new_chunks_count * size;
     CHECK_LE(region->allocated_user, region->mapped_user);
-    region->allocated_meta = requested_allocated_meta;
+    region->allocated_meta += new_chunks_count * kMetadataSize;
     CHECK_LE(region->allocated_meta, region->mapped_meta);
     region->exhausted = false;
 

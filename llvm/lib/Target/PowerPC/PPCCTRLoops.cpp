@@ -690,12 +690,11 @@ check_block:
     }
 
     if (I != BI && clobbersCTR(*I)) {
-      DEBUG(dbgs() << "BB#" << MBB->getNumber() << " (" <<
-                      MBB->getFullName() << ") instruction " << *I <<
-                      " clobbers CTR, invalidating " << "BB#" <<
-                      BI->getParent()->getNumber() << " (" <<
-                      BI->getParent()->getFullName() << ") instruction " <<
-                      *BI << "\n");
+      DEBUG(dbgs() << printMBBReference(*MBB) << " (" << MBB->getFullName()
+                   << ") instruction " << *I << " clobbers CTR, invalidating "
+                   << printMBBReference(*BI->getParent()) << " ("
+                   << BI->getParent()->getFullName() << ") instruction " << *BI
+                   << "\n");
       return false;
     }
 
@@ -709,10 +708,10 @@ check_block:
   if (CheckPreds) {
 queue_preds:
     if (MachineFunction::iterator(MBB) == MBB->getParent()->begin()) {
-      DEBUG(dbgs() << "Unable to find a MTCTR instruction for BB#" <<
-                      BI->getParent()->getNumber() << " (" <<
-                      BI->getParent()->getFullName() << ") instruction " <<
-                      *BI << "\n");
+      DEBUG(dbgs() << "Unable to find a MTCTR instruction for "
+                   << printMBBReference(*BI->getParent()) << " ("
+                   << BI->getParent()->getFullName() << ") instruction " << *BI
+                   << "\n");
       return false;
     }
 

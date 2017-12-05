@@ -15,7 +15,7 @@ target triple = "i686-apple-darwin9.4.0"
 
 define void @foo(%struct.anon* byval %p) nounwind {
 ; CHECK-LABEL: foo:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    subl $28, %esp
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
@@ -51,7 +51,7 @@ declare i32 @printf(...)
 
 define double @PR22371(double %x) {
 ; CHECK-LABEL: PR22371:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero

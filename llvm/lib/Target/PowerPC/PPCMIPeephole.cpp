@@ -686,7 +686,7 @@ bool PPCMIPeephole::simplifyCode(void) {
           DEBUG(LiMI->dump());
 
           // There could be repeated registers in the PHI, e.g: %1<def> =
-          // PHI %6, <BB#2>, %8, <BB#3>, %8, <BB#6>; So if we've
+          // PHI %6, <%bb.2>, %8, <%bb.3>, %8, <%bb.6>; So if we've
           // already replaced the def instruction, skip.
           if (LiMI->getOpcode() == PPC::ADDI || LiMI->getOpcode() == PPC::ADDI8)
             continue;
@@ -1209,8 +1209,9 @@ bool PPCMIPeephole::eliminateRedundantCompare(void) {
     DEBUG(BI1->dump());
     DEBUG(BI2->dump());
     if (IsPartiallyRedundant) {
-      DEBUG(dbgs() << "The following compare is moved into BB#" <<
-            MBBtoMoveCmp->getNumber() << " to handle partial redundancy.\n");
+      DEBUG(dbgs() << "The following compare is moved into "
+                   << printMBBReference(*MBBtoMoveCmp)
+                   << " to handle partial redundancy.\n");
       DEBUG(CMPI2->dump());
     }
 

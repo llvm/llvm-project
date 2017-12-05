@@ -8,7 +8,7 @@
 
 define void @convert_v7i16_v7f32(<7 x float>* %dst.addr, <7 x i16> %src) nounwind {
 ; X86-SSE2-LABEL: convert_v7i16_v7f32:
-; X86-SSE2:       # BB#0: # %entry
+; X86-SSE2:       # %bb.0: # %entry
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    pxor %xmm1, %xmm1
 ; X86-SSE2-NEXT:    movdqa %xmm0, %xmm2
@@ -26,7 +26,7 @@ define void @convert_v7i16_v7f32(<7 x float>* %dst.addr, <7 x i16> %src) nounwin
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-SSE42-LABEL: convert_v7i16_v7f32:
-; X86-SSE42:       # BB#0: # %entry
+; X86-SSE42:       # %bb.0: # %entry
 ; X86-SSE42-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE42-NEXT:    pxor %xmm1, %xmm1
 ; X86-SSE42-NEXT:    pmovzxwd {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
@@ -40,7 +40,7 @@ define void @convert_v7i16_v7f32(<7 x float>* %dst.addr, <7 x i16> %src) nounwin
 ; X86-SSE42-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: convert_v7i16_v7f32:
-; X64-SSE2:       # BB#0: # %entry
+; X64-SSE2:       # %bb.0: # %entry
 ; X64-SSE2-NEXT:    pxor %xmm1, %xmm1
 ; X64-SSE2-NEXT:    movdqa %xmm0, %xmm2
 ; X64-SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
@@ -54,7 +54,7 @@ define void @convert_v7i16_v7f32(<7 x float>* %dst.addr, <7 x i16> %src) nounwin
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-SSE42-LABEL: convert_v7i16_v7f32:
-; X64-SSE42:       # BB#0: # %entry
+; X64-SSE42:       # %bb.0: # %entry
 ; X64-SSE42-NEXT:    pxor %xmm1, %xmm1
 ; X64-SSE42-NEXT:    pmovzxwd {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; X64-SSE42-NEXT:    punpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
@@ -74,7 +74,7 @@ entry:
 
 define void @convert_v3i8_to_v3f32(<3 x float>* %dst.addr, <3 x i8>* %src.addr) nounwind {
 ; X86-SSE2-LABEL: convert_v3i8_to_v3f32:
-; X86-SSE2:       # BB#0: # %entry
+; X86-SSE2:       # %bb.0: # %entry
 ; X86-SSE2-NEXT:    pushl %ebp
 ; X86-SSE2-NEXT:    movl %esp, %ebp
 ; X86-SSE2-NEXT:    pushl %esi
@@ -110,7 +110,7 @@ define void @convert_v3i8_to_v3f32(<3 x float>* %dst.addr, <3 x i8>* %src.addr) 
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-SSE42-LABEL: convert_v3i8_to_v3f32:
-; X86-SSE42:       # BB#0: # %entry
+; X86-SSE42:       # %bb.0: # %entry
 ; X86-SSE42-NEXT:    pushl %eax
 ; X86-SSE42-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE42-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -128,7 +128,7 @@ define void @convert_v3i8_to_v3f32(<3 x float>* %dst.addr, <3 x i8>* %src.addr) 
 ; X86-SSE42-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: convert_v3i8_to_v3f32:
-; X64-SSE2:       # BB#0: # %entry
+; X64-SSE2:       # %bb.0: # %entry
 ; X64-SSE2-NEXT:    movzwl (%rsi), %eax
 ; X64-SSE2-NEXT:    movq %rax, %xmm0
 ; X64-SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
@@ -151,7 +151,7 @@ define void @convert_v3i8_to_v3f32(<3 x float>* %dst.addr, <3 x i8>* %src.addr) 
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-SSE42-LABEL: convert_v3i8_to_v3f32:
-; X64-SSE42:       # BB#0: # %entry
+; X64-SSE42:       # %bb.0: # %entry
 ; X64-SSE42-NEXT:    movzbl 2(%rsi), %eax
 ; X64-SSE42-NEXT:    movzwl (%rsi), %ecx
 ; X64-SSE42-NEXT:    movq %rcx, %xmm0

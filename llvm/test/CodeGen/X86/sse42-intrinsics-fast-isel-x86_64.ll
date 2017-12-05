@@ -5,7 +5,7 @@
 
 define i64 @test_mm_crc64_u8(i64 %a0, i8 %a1) nounwind{
 ; X64-LABEL: test_mm_crc64_u8:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    crc32b %sil, %edi
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    retq
@@ -16,7 +16,7 @@ declare i64 @llvm.x86.sse42.crc32.64.8(i64, i8) nounwind readnone
 
 define i64 @test_mm_crc64_u64(i64 %a0, i64 %a1) nounwind{
 ; X64-LABEL: test_mm_crc64_u64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    crc32q %rsi, %rdi
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    retq

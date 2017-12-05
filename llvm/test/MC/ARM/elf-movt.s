@@ -10,7 +10,7 @@
 	.align	2
 	.type	barf,%function
 barf:                                   @ @barf
-@ BB#0:                                 @ %entry
+@ %bb.0:                                @ %entry
 	movw	r0, :lower16:GOT-(.LPC0_2+8)
 	movt	r0, :upper16:GOT-(.LPC0_2+8)
 .LPC0_2:

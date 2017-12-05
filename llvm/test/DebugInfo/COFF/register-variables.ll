@@ -23,7 +23,7 @@
 
 ; ASM: f:                                      # @f
 ; ASM: .Lfunc_begin0:
-; ASM: # BB#0:                                 # %entry
+; ASM: # %bb.0:                                 # %entry
 ; ASM:         pushq   %rsi
 ; ASM:         subq    $32, %rsp
 ; ASM:         #DEBUG_VALUE: f:p <- %ecx
@@ -38,7 +38,7 @@
 ; ASM:         testl   %esi, %esi
 ; ASM:         je      .LBB0_2
 ; ASM: [[after_je:\.Ltmp.*]]:
-; ASM: # BB#1:                                 # %if.then
+; ASM: # %bb.1:                                 # %if.then
 ; ASM-DAG:     #DEBUG_VALUE: inlineinc:a <- %eax
 ; ASM-DAG:     #DEBUG_VALUE: a <- %eax
 ; ASM-DAG:     #DEBUG_VALUE: f:p <- %esi

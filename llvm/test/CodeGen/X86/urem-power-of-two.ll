@@ -6,14 +6,14 @@
 
 define i64 @const_pow_2(i64 %x) {
 ; X86-LABEL: const_pow_2:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    andl $31, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: const_pow_2:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    andl $31, %edi
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    retq
@@ -25,7 +25,7 @@ define i64 @const_pow_2(i64 %x) {
 
 define i25 @shift_left_pow_2(i25 %x, i25 %y) {
 ; X86-LABEL: shift_left_pow_2:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    movl $1, %eax
 ; X86-NEXT:    shll %cl, %eax
@@ -34,7 +34,7 @@ define i25 @shift_left_pow_2(i25 %x, i25 %y) {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: shift_left_pow_2:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    movl %esi, %ecx
 ; X64-NEXT:    shll %cl, %eax
@@ -50,7 +50,7 @@ define i25 @shift_left_pow_2(i25 %x, i25 %y) {
 
 define i16 @shift_right_pow_2(i16 %x, i16 %y) {
 ; X86-LABEL: shift_right_pow_2:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    movl $32768, %eax # imm = 0x8000
 ; X86-NEXT:    shrl %cl, %eax
@@ -60,7 +60,7 @@ define i16 @shift_right_pow_2(i16 %x, i16 %y) {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: shift_right_pow_2:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl $32768, %eax # imm = 0x8000
 ; X64-NEXT:    movl %esi, %ecx
 ; X64-NEXT:    shrl %cl, %eax
@@ -77,7 +77,7 @@ define i16 @shift_right_pow_2(i16 %x, i16 %y) {
 
 define i8 @and_pow_2(i8 %x, i8 %y) {
 ; X86-LABEL: and_pow_2:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    andb $4, %cl
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
@@ -88,7 +88,7 @@ define i8 @and_pow_2(i8 %x, i8 %y) {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: and_pow_2:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    andb $4, %sil
 ; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    # kill: %eax<def> %eax<kill> %ax<def>
@@ -105,12 +105,12 @@ define i8 @and_pow_2(i8 %x, i8 %y) {
 
 define <4 x i32> @vec_const_uniform_pow_2(<4 x i32> %x) {
 ; X86-LABEL: vec_const_uniform_pow_2:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    andps {{\.LCPI.*}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: vec_const_uniform_pow_2:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    andps {{.*}}(%rip), %xmm0
 ; X64-NEXT:    retq
   %urem = urem <4 x i32> %x, <i32 16, i32 16, i32 16, i32 16>
@@ -119,12 +119,12 @@ define <4 x i32> @vec_const_uniform_pow_2(<4 x i32> %x) {
 
 define <4 x i32> @vec_const_nonuniform_pow_2(<4 x i32> %x) {
 ; X86-LABEL: vec_const_nonuniform_pow_2:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    andps {{\.LCPI.*}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: vec_const_nonuniform_pow_2:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    andps {{.*}}(%rip), %xmm0
 ; X64-NEXT:    retq
   %urem = urem <4 x i32> %x, <i32 2, i32 4, i32 8, i32 16>

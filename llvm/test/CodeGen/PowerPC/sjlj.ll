@@ -77,7 +77,7 @@ return:                                           ; preds = %if.end, %if.then
 ; CHECK: bcl 20, 31, .LBB1_3
 ; CHECK: li 3, 1
 ; CHECK: #EH_SjLj_Setup	.LBB1_3
-; CHECK: # BB#1:
+; CHECK: # %bb.1:
 
 ; CHECK: .LBB1_3:
 ; CHECK: mflr [[REGL:[0-9]+]]

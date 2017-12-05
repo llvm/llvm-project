@@ -4,7 +4,7 @@
 ; rdar://6504833
 define float @test1(i32 %x) nounwind readnone {
 ; CHECK-LABEL: test1:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
@@ -24,7 +24,7 @@ entry:
 ; PR10802
 define float @test2(<4 x i32> %x) nounwind readnone ssp {
 ; CHECK-LABEL: test2:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
 ; CHECK-NEXT:    movss {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]

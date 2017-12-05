@@ -185,7 +185,7 @@ bool SSAIfConv::canSpeculateInstrs(MachineBasicBlock *MBB) {
   // Reject any live-in physregs. It's probably CPSR/EFLAGS, and very hard to
   // get right.
   if (!MBB->livein_empty()) {
-    DEBUG(dbgs() << "BB#" << MBB->getNumber() << " has live-ins.\n");
+    DEBUG(dbgs() << printMBBReference(*MBB) << " has live-ins.\n");
     return false;
   }
 
@@ -199,7 +199,7 @@ bool SSAIfConv::canSpeculateInstrs(MachineBasicBlock *MBB) {
       continue;
 
     if (++InstrCount > BlockInstrLimit && !Stress) {
-      DEBUG(dbgs() << "BB#" << MBB->getNumber() << " has more than "
+      DEBUG(dbgs() << printMBBReference(*MBB) << " has more than "
                    << BlockInstrLimit << " instructions.\n");
       return false;
     }
@@ -246,7 +246,7 @@ bool SSAIfConv::canSpeculateInstrs(MachineBasicBlock *MBB) {
       if (!DefMI || DefMI->getParent() != Head)
         continue;
       if (InsertAfter.insert(DefMI).second)
-        DEBUG(dbgs() << "BB#" << MBB->getNumber() << " depends on " << *DefMI);
+        DEBUG(dbgs() << printMBBReference(*MBB) << " depends on " << *DefMI);
       if (DefMI->isTerminator()) {
         DEBUG(dbgs() << "Can't insert instructions below terminator.\n");
         return false;
@@ -361,10 +361,10 @@ bool SSAIfConv::canConvertIf(MachineBasicBlock *MBB) {
     if (Succ1->pred_size() != 1 || Succ1->succ_size() != 1 ||
         Succ1->succ_begin()[0] != Tail)
       return false;
-    DEBUG(dbgs() << "\nDiamond: BB#" << Head->getNumber()
-                 << " -> BB#" << Succ0->getNumber()
-                 << "/BB#" << Succ1->getNumber()
-                 << " -> BB#" << Tail->getNumber() << '\n');
+    DEBUG(dbgs() << "\nDiamond: " << printMBBReference(*Head) << " -> "
+                 << printMBBReference(*Succ0) << "/"
+                 << printMBBReference(*Succ1) << " -> "
+                 << printMBBReference(*Tail) << '\n');
 
     // Live-in physregs are tricky to get right when speculating code.
     if (!Tail->livein_empty()) {
@@ -372,9 +372,9 @@ bool SSAIfConv::canConvertIf(MachineBasicBlock *MBB) {
       return false;
     }
   } else {
-    DEBUG(dbgs() << "\nTriangle: BB#" << Head->getNumber()
-                 << " -> BB#" << Succ0->getNumber()
-                 << " -> BB#" << Tail->getNumber() << '\n');
+    DEBUG(dbgs() << "\nTriangle: " << printMBBReference(*Head) << " -> "
+                 << printMBBReference(*Succ0) << " -> "
+                 << printMBBReference(*Tail) << '\n');
   }
 
   // This is a triangle or a diamond.
@@ -563,8 +563,8 @@ void SSAIfConv::convertIf(SmallVectorImpl<MachineBasicBlock*> &RemovedBlocks) {
   assert(Head->succ_empty() && "Additional head successors?");
   if (!ExtraPreds && Head->isLayoutSuccessor(Tail)) {
     // Splice Tail onto the end of Head.
-    DEBUG(dbgs() << "Joining tail BB#" << Tail->getNumber()
-                 << " into head BB#" << Head->getNumber() << '\n');
+    DEBUG(dbgs() << "Joining tail " << printMBBReference(*Tail) << " into head "
+                 << printMBBReference(*Head) << '\n');
     Head->splice(Head->end(), Tail,
                      Tail->begin(), Tail->end());
     Head->transferSuccessorsAndUpdatePHIs(Tail);

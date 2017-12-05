@@ -35,6 +35,8 @@ struct SS{
     // discard loop variables not needed here
     // CK1: = alloca i32,
     // CK1: = alloca i32,
+    // CK1: = alloca i32,
+    // CK1: = alloca i32,
     // CK1: [[OMP_UB:%.+]] = alloca i32,
     // CK1: store i32 56087, i32* [[OMP_UB]],
     // CK1: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, i32 92, {{.+}}, {{.+}}, i32* [[OMP_UB]],

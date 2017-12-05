@@ -7,7 +7,7 @@
 
 define i32 @t1(i64 %a) {
 ; CHECK-LABEL: t1:
-; CHECK:       // BB#0:
+; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsr x8, x0, #63
 ; CHECK-NEXT:    eor w0, w8, #0x1
 ; CHECK-NEXT:    ret

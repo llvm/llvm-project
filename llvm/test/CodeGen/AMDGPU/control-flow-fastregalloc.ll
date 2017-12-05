@@ -13,7 +13,7 @@
 ; VGPR: workitem_private_segment_byte_size = 12{{$}}
 
 
-; GCN: {{^}}; BB#0:
+; GCN: {{^}}; %bb.0:
 ; GCN: s_mov_b32 m0, -1
 ; GCN: ds_read_b32 [[LOAD0:v[0-9]+]]
 
@@ -91,7 +91,7 @@ endif:
 ; GCN-LABEL: {{^}}divergent_loop:
 ; VGPR: workitem_private_segment_byte_size = 12{{$}}
 
-; GCN: {{^}}; BB#0:
+; GCN: {{^}}; %bb.0:
 
 ; GCN: s_mov_b32 m0, -1
 ; GCN: ds_read_b32 [[LOAD0:v[0-9]+]]
@@ -167,7 +167,7 @@ end:
 }
 
 ; GCN-LABEL: {{^}}divergent_if_else_endif:
-; GCN: {{^}}; BB#0:
+; GCN: {{^}}; %bb.0:
 
 ; GCN: s_mov_b32 m0, -1
 ; GCN: ds_read_b32 [[LOAD0:v[0-9]+]]

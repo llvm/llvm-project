@@ -2282,6 +2282,13 @@ ARMTargetLowering::IsEligibleForTailCallOptimization(SDValue Callee,
 
   assert(Subtarget->supportsTailCall());
 
+  // Tail calls to function pointers cannot be optimized for Thumb1 if the args
+  // to the call take up r0-r3. The reason is that there are no legal registers
+  // left to hold the pointer to the function to be called.
+  if (Subtarget->isThumb1Only() && Outs.size() >= 4 &&
+      !isa<GlobalAddressSDNode>(Callee.getNode()))
+      return false;
+
   // Look for obvious safe cases to perform tail call optimization that do not
   // require ABI changes. This is what gcc calls sibcall.
 

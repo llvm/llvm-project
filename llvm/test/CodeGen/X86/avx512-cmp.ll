@@ -4,7 +4,7 @@
 
 define double @test1(double %a, double %b) nounwind {
 ; ALL-LABEL: test1:
-; ALL:       ## BB#0:
+; ALL:       ## %bb.0:
 ; ALL-NEXT:    vucomisd %xmm1, %xmm0
 ; ALL-NEXT:    jne LBB0_1
 ; ALL-NEXT:    jnp LBB0_2
@@ -28,10 +28,10 @@ l2:
 
 define float @test2(float %a, float %b) nounwind {
 ; ALL-LABEL: test2:
-; ALL:       ## BB#0:
+; ALL:       ## %bb.0:
 ; ALL-NEXT:    vucomiss %xmm0, %xmm1
 ; ALL-NEXT:    jbe LBB1_2
-; ALL-NEXT:  ## BB#1: ## %l1
+; ALL-NEXT:  ## %bb.1: ## %l1
 ; ALL-NEXT:    vsubss %xmm1, %xmm0, %xmm0
 ; ALL-NEXT:    retq
 ; ALL-NEXT:  LBB1_2: ## %l2
@@ -51,14 +51,14 @@ l2:
 
 define i32 @test3(float %a, float %b) {
 ; KNL-LABEL: test3:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    vcmpeqss %xmm1, %xmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    movzbl %al, %eax
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test3:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    vcmpeqss %xmm1, %xmm0, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
 ; SKX-NEXT:    movzbl %al, %eax
@@ -71,12 +71,12 @@ define i32 @test3(float %a, float %b) {
 
 define float @test5(float %p) #0 {
 ; ALL-LABEL: test5:
-; ALL:       ## BB#0: ## %entry
+; ALL:       ## %bb.0: ## %entry
 ; ALL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; ALL-NEXT:    vucomiss %xmm1, %xmm0
 ; ALL-NEXT:    jne LBB3_1
 ; ALL-NEXT:    jp LBB3_1
-; ALL-NEXT:  ## BB#2: ## %return
+; ALL-NEXT:  ## %bb.2: ## %return
 ; ALL-NEXT:    retq
 ; ALL-NEXT:  LBB3_1: ## %if.end
 ; ALL-NEXT:    seta %al
@@ -100,7 +100,7 @@ return:                                           ; preds = %if.end, %entry
 
 define i32 @test6(i32 %a, i32 %b) {
 ; ALL-LABEL: test6:
-; ALL:       ## BB#0:
+; ALL:       ## %bb.0:
 ; ALL-NEXT:    xorl %eax, %eax
 ; ALL-NEXT:    cmpl %esi, %edi
 ; ALL-NEXT:    sete %al
@@ -112,7 +112,7 @@ define i32 @test6(i32 %a, i32 %b) {
 
 define i32 @test7(double %x, double %y) #2 {
 ; ALL-LABEL: test7:
-; ALL:       ## BB#0: ## %entry
+; ALL:       ## %bb.0: ## %entry
 ; ALL-NEXT:    xorl %eax, %eax
 ; ALL-NEXT:    vucomisd %xmm1, %xmm0
 ; ALL-NEXT:    setne %al
@@ -125,7 +125,7 @@ entry:
 
 define i32 @test8(i32 %a1, i32 %a2, i32 %a3) {
 ; ALL-LABEL: test8:
-; ALL:       ## BB#0:
+; ALL:       ## %bb.0:
 ; ALL-NEXT:    notl %edi
 ; ALL-NEXT:    xorl $-2147483648, %esi ## imm = 0x80000000
 ; ALL-NEXT:    testl %edx, %edx
@@ -145,10 +145,10 @@ define i32 @test8(i32 %a1, i32 %a2, i32 %a3) {
 
 define i32 @test9(i64 %a) {
 ; ALL-LABEL: test9:
-; ALL:       ## BB#0:
+; ALL:       ## %bb.0:
 ; ALL-NEXT:    testb $1, %dil
 ; ALL-NEXT:    jne LBB7_2
-; ALL-NEXT:  ## BB#1: ## %A
+; ALL-NEXT:  ## %bb.1: ## %A
 ; ALL-NEXT:    movl $6, %eax
 ; ALL-NEXT:    retq
 ; ALL-NEXT:  LBB7_2: ## %B
@@ -165,7 +165,7 @@ B:
 
 define i32 @test10(i64 %b, i64 %c, i1 %d) {
 ; ALL-LABEL: test10:
-; ALL:       ## BB#0:
+; ALL:       ## %bb.0:
 ; ALL-NEXT:    movl %edx, %eax
 ; ALL-NEXT:    andb $1, %al
 ; ALL-NEXT:    cmpq %rsi, %rdi
@@ -174,7 +174,7 @@ define i32 @test10(i64 %b, i64 %c, i1 %d) {
 ; ALL-NEXT:    andb $1, %cl
 ; ALL-NEXT:    cmpb %cl, %al
 ; ALL-NEXT:    je LBB8_1
-; ALL-NEXT:  ## BB#2: ## %if.end.i
+; ALL-NEXT:  ## %bb.2: ## %if.end.i
 ; ALL-NEXT:    movl $6, %eax
 ; ALL-NEXT:    retq
 ; ALL-NEXT:  LBB8_1: ## %if.then.i

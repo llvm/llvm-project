@@ -9,7 +9,7 @@
 ; store i1 true, i1* %g_717.sink.i, align 4
 ; %.b = load i1, i1* @g_2, align 4
 
-; CHECK: # BB#6: # %crc32_gentab.exit
+; CHECK: # %bb.6: # %crc32_gentab.exit
 ; CHECK:        larl    %r2, g_2
 ; CHECK-NEXT:   llc     %r3, 0(%r2)
 ; CHECK-NOT:    %r2

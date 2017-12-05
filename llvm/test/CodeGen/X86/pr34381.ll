@@ -10,7 +10,7 @@
 ; Function Attrs: noinline nounwind optnone uwtable
 define void @_Z3foov() {
 ; CHECK-LABEL: _Z3foov:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movsbl {{.*}}(%rip), %eax
 ; CHECK-NEXT:    negl %eax
 ; CHECK-NEXT:    cmpl %eax, {{.*}}(%rip)

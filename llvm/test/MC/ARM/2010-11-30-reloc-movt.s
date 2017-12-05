@@ -17,7 +17,7 @@
 	.align	2
 	.type	barf,%function
 barf:                                   @ @barf
-@ BB#0:                                 @ %entry
+@ %bb.0:                                @ %entry
 	push	{r11, lr}
 	movw	r0, :lower16:a
 	movt	r0, :upper16:a

@@ -211,6 +211,11 @@ R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SRL_PARTS, MVT::i32, Custom);
   setOperationAction(ISD::SRA_PARTS, MVT::i32, Custom);
 
+  if (!Subtarget->hasFMA()) {
+    setOperationAction(ISD::FMA, MVT::f32, Expand);
+    setOperationAction(ISD::FMA, MVT::f64, Expand);
+  }
+
   setOperationAction(ISD::GlobalAddress, MVT::i32, Custom);
 
   const MVT ScalarIntVTs[] = { MVT::i32, MVT::i64 };

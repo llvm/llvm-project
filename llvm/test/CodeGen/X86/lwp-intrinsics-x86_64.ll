@@ -7,7 +7,7 @@
 
 define i8 @test_lwpins64_rri(i64 %a0, i32 %a1) nounwind {
 ; X64-LABEL: test_lwpins64_rri:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    lwpins $-1985229329, %esi, %rdi # imm = 0x89ABCDEF
 ; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
@@ -17,7 +17,7 @@ define i8 @test_lwpins64_rri(i64 %a0, i32 %a1) nounwind {
 
 define i8 @test_lwpins64_rmi(i64 %a0, i32 *%p1) nounwind {
 ; X64-LABEL: test_lwpins64_rmi:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    lwpins $1985229328, (%rsi), %rdi # imm = 0x76543210
 ; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
@@ -28,7 +28,7 @@ define i8 @test_lwpins64_rmi(i64 %a0, i32 *%p1) nounwind {
 
 define void @test_lwpval64_rri(i64 %a0, i32 %a1) nounwind {
 ; X64-LABEL: test_lwpval64_rri:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    lwpval $-19088744, %esi, %rdi # imm = 0xFEDCBA98
 ; X64-NEXT:    retq
   tail call void @llvm.x86.lwpval64(i64 %a0, i32 %a1, i32 4275878552)
@@ -37,7 +37,7 @@ define void @test_lwpval64_rri(i64 %a0, i32 %a1) nounwind {
 
 define void @test_lwpval64_rmi(i64 %a0, i32 *%p1) nounwind {
 ; X64-LABEL: test_lwpval64_rmi:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    lwpval $305419896, (%rsi), %rdi # imm = 0x12345678
 ; X64-NEXT:    retq
   %a1 = load i32, i32 *%p1

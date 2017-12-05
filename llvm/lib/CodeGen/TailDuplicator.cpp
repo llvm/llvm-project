@@ -111,9 +111,10 @@ static void VerifyPHIs(MachineFunction &MF, bool CheckExtra) {
           }
         }
         if (!Found) {
-          dbgs() << "Malformed PHI in BB#" << MBB->getNumber() << ": " << *MI;
-          dbgs() << "  missing input from predecessor BB#"
-                 << PredBB->getNumber() << '\n';
+          dbgs() << "Malformed PHI in " << printMBBReference(*MBB) << ": "
+                 << *MI;
+          dbgs() << "  missing input from predecessor "
+                 << printMBBReference(*PredBB) << '\n';
           llvm_unreachable(nullptr);
         }
       }
@@ -121,15 +122,16 @@ static void VerifyPHIs(MachineFunction &MF, bool CheckExtra) {
       for (unsigned i = 1, e = MI->getNumOperands(); i != e; i += 2) {
         MachineBasicBlock *PHIBB = MI->getOperand(i + 1).getMBB();
         if (CheckExtra && !Preds.count(PHIBB)) {
-          dbgs() << "Warning: malformed PHI in BB#" << MBB->getNumber() << ": "
-                 << *MI;
-          dbgs() << "  extra input from predecessor BB#" << PHIBB->getNumber()
-                 << '\n';
+          dbgs() << "Warning: malformed PHI in " << printMBBReference(*MBB)
+                 << ": " << *MI;
+          dbgs() << "  extra input from predecessor "
+                 << printMBBReference(*PHIBB) << '\n';
           llvm_unreachable(nullptr);
         }
         if (PHIBB->getNumber() < 0) {
-          dbgs() << "Malformed PHI in BB#" << MBB->getNumber() << ": " << *MI;
-          dbgs() << "  non-existing BB#" << PHIBB->getNumber() << '\n';
+          dbgs() << "Malformed PHI in " << printMBBReference(*MBB) << ": "
+                 << *MI;
+          dbgs() << "  non-existing " << printMBBReference(*PHIBB) << '\n';
           llvm_unreachable(nullptr);
         }
       }
@@ -783,7 +785,8 @@ bool TailDuplicator::tailDuplicate(bool IsSimple, MachineBasicBlock *TailBB,
                                    MachineBasicBlock *ForcedLayoutPred,
                                    SmallVectorImpl<MachineBasicBlock *> &TDBBs,
                                    SmallVectorImpl<MachineInstr *> &Copies) {
-  DEBUG(dbgs() << "\n*** Tail-duplicating BB#" << TailBB->getNumber() << '\n');
+  DEBUG(dbgs() << "\n*** Tail-duplicating " << printMBBReference(*TailBB)
+               << '\n');
 
   DenseSet<unsigned> UsedByPhi;
   getRegsUsedByPHIs(*TailBB, &UsedByPhi);
