@@ -50,9 +50,9 @@ public:
   /// not exist. If Opcode is not a pseudo instruction, this is identity.
   int pseudoToMCOpcode(int Opcode) const;
 
-  /// \brief Given a MIMG \p Opcode that writes all 4 channels, return the
-  /// equivalent opcode that writes \p Channels Channels.
-  int getMaskedMIMGOp(uint16_t Opcode, unsigned Channels) const;
+  /// \brief Given a MIMG \p MI that writes any number of channels, return the
+  /// equivalent opcode that writes \p NewChannels Channels.
+  int getMaskedMIMGOp(unsigned Opc, unsigned NewChannels) const;
 };
 } // End llvm namespace
 

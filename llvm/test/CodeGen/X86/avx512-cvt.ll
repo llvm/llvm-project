@@ -1862,14 +1862,12 @@ define <16 x double> @ubto16f64(<16 x i32> %a) {
 ; NOVL:       # %bb.0:
 ; NOVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; NOVL-NEXT:    vpcmpgtd %zmm0, %zmm1, %k1
-; NOVL-NEXT:    movq {{.*}}(%rip), %rax
-; NOVL-NEXT:    vpbroadcastq %rax, %zmm0 {%k1} {z}
-; NOVL-NEXT:    vpmovqd %zmm0, %ymm0
-; NOVL-NEXT:    vcvtudq2pd %ymm0, %zmm0
+; NOVL-NEXT:    movl {{.*}}(%rip), %eax
+; NOVL-NEXT:    vpbroadcastd %eax, %zmm0 {%k1} {z}
+; NOVL-NEXT:    vcvtdq2pd %ymm0, %zmm0
 ; NOVL-NEXT:    kshiftrw $8, %k1, %k1
-; NOVL-NEXT:    vpbroadcastq %rax, %zmm1 {%k1} {z}
-; NOVL-NEXT:    vpmovqd %zmm1, %ymm1
-; NOVL-NEXT:    vcvtudq2pd %ymm1, %zmm1
+; NOVL-NEXT:    vpbroadcastd %eax, %zmm1 {%k1} {z}
+; NOVL-NEXT:    vcvtdq2pd %ymm1, %zmm1
 ; NOVL-NEXT:    retq
 ;
 ; VL-LABEL: ubto16f64:
@@ -1894,10 +1892,8 @@ define <8 x float> @ubto8f32(<8 x i32> %a) {
 ; NOVL-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; NOVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; NOVL-NEXT:    vpcmpgtd %zmm0, %zmm1, %k1
-; NOVL-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0 {%k1} {z}
-; NOVL-NEXT:    vpmovqd %zmm0, %ymm0
-; NOVL-NEXT:    vcvtudq2ps %zmm0, %zmm0
-; NOVL-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
+; NOVL-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0 {%k1} {z}
+; NOVL-NEXT:    vcvtdq2ps %ymm0, %ymm0
 ; NOVL-NEXT:    retq
 ;
 ; VL-LABEL: ubto8f32:
@@ -1918,9 +1914,8 @@ define <8 x double> @ubto8f64(<8 x i32> %a) {
 ; NOVL-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; NOVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; NOVL-NEXT:    vpcmpgtd %zmm0, %zmm1, %k1
-; NOVL-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0 {%k1} {z}
-; NOVL-NEXT:    vpmovqd %zmm0, %ymm0
-; NOVL-NEXT:    vcvtudq2pd %ymm0, %zmm0
+; NOVL-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0 {%k1} {z}
+; NOVL-NEXT:    vcvtdq2pd %ymm0, %zmm0
 ; NOVL-NEXT:    retq
 ;
 ; VL-LABEL: ubto8f64:

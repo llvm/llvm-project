@@ -2613,7 +2613,7 @@ Sema::InstantiateClassMembers(SourceLocation PointOfInstantiation,
             continue;
           
           Var->setTemplateSpecializationKind(TSK, PointOfInstantiation);
-          InstantiateStaticDataMemberDefinition(PointOfInstantiation, Var);
+          InstantiateVariableDefinition(PointOfInstantiation, Var);
         } else {
           Var->setTemplateSpecializationKind(TSK, PointOfInstantiation);
         }

@@ -1823,7 +1823,31 @@ def getBasicFromSDWAOp : InstrMapping {
   let ValueCols = [["Default"]];
 }
 
-def getMaskedMIMGOp : InstrMapping {
+def getMaskedMIMGOp1 : InstrMapping {
+  let FilterClass = "MIMG_Mask";
+  let RowFields = ["Op"];
+  let ColFields = ["Channels"];
+  let KeyCol = ["1"];
+  let ValueCols = [["2"], ["3"], ["4"] ];
+}
+
+def getMaskedMIMGOp2 : InstrMapping {
+  let FilterClass = "MIMG_Mask";
+  let RowFields = ["Op"];
+  let ColFields = ["Channels"];
+  let KeyCol = ["2"];
+  let ValueCols = [["1"], ["3"], ["4"] ];
+}
+
+def getMaskedMIMGOp3 : InstrMapping {
+  let FilterClass = "MIMG_Mask";
+  let RowFields = ["Op"];
+  let ColFields = ["Channels"];
+  let KeyCol = ["3"];
+  let ValueCols = [["1"], ["2"], ["4"] ];
+}
+
+def getMaskedMIMGOp4 : InstrMapping {
   let FilterClass = "MIMG_Mask";
   let RowFields = ["Op"];
   let ColFields = ["Channels"];

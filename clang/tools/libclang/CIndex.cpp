@@ -3438,10 +3438,9 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
   unsigned PrecompilePreambleAfterNParses =
       !PrecompilePreamble ? 0 : 2 - CreatePreambleOnFirstParse;
 
-  // FIXME: Record the hash of the unsaved files.
   LibclangInvocationReporter InvocationReporter(
       *CXXIdx, LibclangInvocationReporter::OperationKind::ParseOperation,
-      options, llvm::makeArrayRef(*Args));
+      options, llvm::makeArrayRef(*Args), unsaved_files);
   std::unique_ptr<ASTUnit> Unit(ASTUnit::LoadFromCommandLine(
       Args->data(), Args->data() + Args->size(),
       CXXIdx->getPCHContainerOperations(), Diags,

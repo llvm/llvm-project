@@ -82,7 +82,7 @@ class SITargetLowering final : public AMDGPUTargetLowering {
   SDValue lowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerTRAP(SDValue Op, SelectionDAG &DAG) const;
 
-  void adjustWritemask(MachineSDNode *&N, SelectionDAG &DAG) const;
+  SDNode *adjustWritemask(MachineSDNode *&N, SelectionDAG &DAG) const;
 
   SDValue performUCharToFloatCombine(SDNode *N,
                                      DAGCombinerInfo &DCI) const;
