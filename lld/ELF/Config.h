@@ -119,6 +119,7 @@ struct Configuration {
   bool EmitRelocs;
   bool EnableNewDtags;
   bool ExportDynamic;
+  bool FixCortexA53Errata843419;
   bool GcSections;
   bool GdbIndex;
   bool GnuHash = false;

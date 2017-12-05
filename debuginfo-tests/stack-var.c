@@ -1,4 +1,4 @@
-// RUN: %clang %target_itanium_abi_host_triple %s -O -o %t.out -g
+// RUN: %clang %target_itanium_abi_host_triple %s -O -o %t.out -gdwarf-2
 // RUN: %test_debuginfo %s %t.out
 
 void __attribute__((noinline, optnone)) bar(int *test) {}

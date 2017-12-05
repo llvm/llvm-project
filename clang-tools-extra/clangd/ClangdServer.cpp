@@ -173,16 +173,14 @@ ClangdServer::ClangdServer(GlobalCompilationDatabase &CDB,
                            DiagnosticsConsumer &DiagConsumer,
                            FileSystemProvider &FSProvider,
                            unsigned AsyncThreadsCount,
-                           bool StorePreamblesInMemory,
-                           const clangd::CodeCompleteOptions &CodeCompleteOpts,
-                           clangd::Logger &Logger,
+                           bool StorePreamblesInMemory, clangd::Logger &Logger,
                            llvm::Optional<StringRef> ResourceDir)
     : Logger(Logger), CDB(CDB), DiagConsumer(DiagConsumer),
       FSProvider(FSProvider),
       ResourceDir(ResourceDir ? ResourceDir->str() : getStandardResourceDir()),
       PCHs(std::make_shared<PCHContainerOperations>()),
       StorePreamblesInMemory(StorePreamblesInMemory),
-      CodeCompleteOpts(CodeCompleteOpts), WorkScheduler(AsyncThreadsCount) {}
+      WorkScheduler(AsyncThreadsCount) {}
 
 void ClangdServer::setRootPath(PathRef RootPath) {
   std::string NewRootPath = llvm::sys::path::convert_to_slash(
@@ -226,6 +224,7 @@ std::future<void> ClangdServer::forceReparse(PathRef File) {
 
 std::future<Tagged<CompletionList>>
 ClangdServer::codeComplete(PathRef File, Position Pos,
+                           const clangd::CodeCompleteOptions &Opts,
                            llvm::Optional<StringRef> OverridenContents,
                            IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS) {
   using ResultType = Tagged<CompletionList>;
@@ -239,13 +238,14 @@ ClangdServer::codeComplete(PathRef File, Position Pos,
 
   std::future<ResultType> ResultFuture = ResultPromise.get_future();
   codeComplete(BindWithForward(Callback, std::move(ResultPromise)), File, Pos,
-               OverridenContents, UsedFS);
+               Opts, OverridenContents, UsedFS);
   return ResultFuture;
 }
 
 void ClangdServer::codeComplete(
     UniqueFunction<void(Tagged<CompletionList>)> Callback, PathRef File,
-    Position Pos, llvm::Optional<StringRef> OverridenContents,
+    Position Pos, const clangd::CodeCompleteOptions &Opts,
+    llvm::Optional<StringRef> OverridenContents,
     IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS) {
   using CallbackType = UniqueFunction<void(Tagged<CompletionList>)>;
 
@@ -273,6 +273,8 @@ void ClangdServer::codeComplete(
   // is reusable in completion more often.
   std::shared_ptr<const PreambleData> Preamble =
       Resources->getPossiblyStalePreamble();
+  // Copy completion options for passing them to async task handler.
+  auto CodeCompleteOpts = Opts;
   // A task that will be run asynchronously.
   auto Task =
       // 'mutable' to reassign Preamble variable.

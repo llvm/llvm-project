@@ -55,12 +55,12 @@ std::string lld::rewritePath(StringRef S) {
   return S;
 }
 
-std::string lld::toString(opt::Arg *Arg) {
-  std::string K = Arg->getSpelling();
-  if (Arg->getNumValues() == 0)
+std::string lld::toString(const opt::Arg &Arg) {
+  std::string K = Arg.getSpelling();
+  if (Arg.getNumValues() == 0)
     return K;
-  std::string V = quote(Arg->getValue());
-  if (Arg->getOption().getRenderStyle() == opt::Option::RenderJoinedStyle)
+  std::string V = quote(Arg.getValue());
+  if (Arg.getOption().getRenderStyle() == opt::Option::RenderJoinedStyle)
     return K + V;
   return K + " " + V;
 }
