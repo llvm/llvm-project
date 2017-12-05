@@ -36,7 +36,6 @@ struct Configuration {
   uint32_t ZStackSize;
   llvm::StringRef Entry;
   llvm::StringRef OutputFile;
-  llvm::StringRef Sysroot;
 
   llvm::StringSet<> AllowUndefinedSymbols;
   std::vector<llvm::StringRef> SearchPaths;
