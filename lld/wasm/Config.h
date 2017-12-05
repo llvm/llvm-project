@@ -39,7 +39,8 @@ struct Configuration {
 
   llvm::StringSet<> AllowUndefinedSymbols;
   std::vector<llvm::StringRef> SearchPaths;
-  std::vector<std::pair<Symbol *, WasmGlobal>> SyntheticGlobals;
+  std::vector<Symbol *> SyntheticGlobals;
+  Symbol *StackPointerSymbol = nullptr;
 };
 
 // The only instance of Configuration struct.

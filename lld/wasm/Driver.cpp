@@ -138,17 +138,12 @@ static Optional<std::string> findFile(StringRef Path1, const Twine &Path2) {
 // Wasm global are used in relocatable object files to model symbol imports
 // and exports.  In the final executable the only use of wasm globals is
 // for the exlicit stack pointer (__stack_pointer).
-static void addSyntheticGlobal(StringRef Name, int32_t Value) {
+static Symbol* addSyntheticGlobal(StringRef Name, int32_t Value) {
   log("injecting global: " + Name);
   Symbol *S = Symtab->addDefinedGlobal(Name);
-  S->setOutputIndex(Config->SyntheticGlobals.size());
-
-  WasmGlobal Global;
-  Global.Mutable = true;
-  Global.Type = WASM_TYPE_I32;
-  Global.InitExpr.Opcode = WASM_OPCODE_I32_CONST;
-  Global.InitExpr.Value.Int32 = Value;
-  Config->SyntheticGlobals.emplace_back(S, Global);
+  S->setVirtualAddress(Value);
+  Config->SyntheticGlobals.emplace_back(S);
+  return S;
 }
 
 // Inject a new undefined symbol into the link.  This will cause the link to
@@ -285,7 +280,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     static WasmSignature Signature = {{}, WASM_TYPE_NORESULT};
     addSyntheticUndefinedFunction(Config->Entry, &Signature);
 
-    addSyntheticGlobal("__stack_pointer", 0);
+    Config->StackPointerSymbol = addSyntheticGlobal("__stack_pointer", 0);
   }
 
   createFiles(Args);

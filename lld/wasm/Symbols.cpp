@@ -41,6 +41,8 @@ uint32_t Symbol::getVirtualAddress() const {
   DEBUG(dbgs() << "getVirtualAddress: " << getName() << "\n");
   if (isUndefined())
     return UINT32_MAX;
+  if (VirtualAddress.hasValue())
+    return VirtualAddress.getValue();
 
   assert(Sym != nullptr);
   ObjFile *Obj = cast<ObjFile>(File);
@@ -55,6 +57,11 @@ uint32_t Symbol::getOutputIndex() const {
   if (isUndefined() && isWeak())
     return 0;
   return OutputIndex.getValue();
+}
+
+void Symbol::setVirtualAddress(uint32_t Value) {
+  DEBUG(dbgs() << "setVirtualAddress " << Name << " -> " << Value << "\n");
+  VirtualAddress = Value;
 }
 
 void Symbol::setOutputIndex(uint32_t Index) {

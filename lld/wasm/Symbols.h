@@ -77,11 +77,13 @@ public:
   uint32_t getVirtualAddress() const;
 
   // Returns true if an output index has been set for this symbol
-  bool hasOutputIndex() { return OutputIndex.hasValue(); }
+  bool hasOutputIndex() const { return OutputIndex.hasValue(); }
 
   // Set the output index of the symbol (in the function or global index
   // space of the output object.
   void setOutputIndex(uint32_t Index);
+
+  void setVirtualAddress(uint32_t VA);
 
   void update(Kind K, InputFile *F = nullptr, const WasmSymbol *Sym = nullptr,
               const InputSegment *Segment = nullptr,
@@ -105,6 +107,7 @@ protected:
   const WasmSymbol *Sym = nullptr;
   const InputSegment *Segment = nullptr;
   llvm::Optional<uint32_t> OutputIndex;
+  llvm::Optional<uint32_t> VirtualAddress;
   const WasmSignature *FunctionType;
 };
 
