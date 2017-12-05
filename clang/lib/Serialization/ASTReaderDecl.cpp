@@ -3984,10 +3984,8 @@ void ASTDeclReader::UpdateDecl(Decl *D,
       break;
     }
 
-    case UPD_CXX_INSTANTIATED_STATIC_DATA_MEMBER: {
+    case UPD_CXX_ADDED_VAR_DEFINITION: {
       VarDecl *VD = cast<VarDecl>(D);
-      VD->getMemberSpecializationInfo()->setPointOfInstantiation(
-          ReadSourceLocation());
       VD->NonParmVarDeclBits.IsInline = Record.readInt();
       VD->NonParmVarDeclBits.IsInlineSpecified = Record.readInt();
       uint64_t Val = Record.readInt();
@@ -3998,6 +3996,25 @@ void ASTDeclReader::UpdateDecl(Decl *D,
           Eval->CheckedICE = true;
           Eval->IsICE = Val == 3;
         }
+      }
+      break;
+    }
+
+    case UPD_CXX_POINT_OF_INSTANTIATION: {
+      SourceLocation POI = Record.readSourceLocation();
+      if (VarTemplateSpecializationDecl *VTSD =
+              dyn_cast<VarTemplateSpecializationDecl>(D)) {
+        VTSD->setPointOfInstantiation(POI);
+      } else if (auto *VD = dyn_cast<VarDecl>(D)) {
+        VD->getMemberSpecializationInfo()->setPointOfInstantiation(POI);
+      } else {
+        auto *FD = cast<FunctionDecl>(D);
+        if (auto *FTSInfo = FD->TemplateOrSpecialization
+                    .dyn_cast<FunctionTemplateSpecializationInfo *>())
+          FTSInfo->setPointOfInstantiation(POI);
+        else
+          FD->TemplateOrSpecialization.get<MemberSpecializationInfo *>()
+              ->setPointOfInstantiation(POI);
       }
       break;
     }

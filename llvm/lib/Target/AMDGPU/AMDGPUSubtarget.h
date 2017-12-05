@@ -140,6 +140,7 @@ protected:
 
   // Subtarget statically properties set by tablegen
   bool FP64;
+  bool FMA;
   bool IsGCN;
   bool GCN3Encoding;
   bool CIInsts;
@@ -261,7 +262,7 @@ public:
     return HasVOP3PInsts;
   }
 
-  bool hasHWFP64() const {
+  bool hasFP64() const {
     return FP64;
   }
 
@@ -346,6 +347,10 @@ public:
 
   bool hasCaymanISA() const {
     return CaymanISA;
+  }
+
+  bool hasFMA() const {
+    return FMA;
   }
 
   TrapHandlerAbi getTrapHandlerAbi() const {

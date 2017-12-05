@@ -100,7 +100,6 @@ define <16 x i1> @test6(<2 x i1> %a, <2 x i1>%b) {
 ; CHECK-NEXT:    kshiftlb $2, %k0, %k0
 ; CHECK-NEXT:    kshiftrb $2, %k0, %k0
 ; CHECK-NEXT:    korb %k1, %k0, %k0
-; CHECK-NEXT:    kunpckbw %k0, %k0, %k0
 ; CHECK-NEXT:    vpmovm2b %k0, %xmm0
 ; CHECK-NEXT:    retq
 
@@ -119,8 +118,6 @@ define <32 x i1> @test7(<4 x i1> %a, <4 x i1>%b) {
 ; CHECK-NEXT:    kshiftlb $4, %k0, %k0
 ; CHECK-NEXT:    kshiftrb $4, %k0, %k0
 ; CHECK-NEXT:    korb %k1, %k0, %k0
-; CHECK-NEXT:    kunpckbw %k0, %k0, %k0
-; CHECK-NEXT:    kunpckwd %k0, %k0, %k0
 ; CHECK-NEXT:    vpmovm2b %k0, %ymm0
 ; CHECK-NEXT:    retq
 

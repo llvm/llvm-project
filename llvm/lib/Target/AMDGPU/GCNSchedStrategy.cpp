@@ -330,8 +330,9 @@ void GCNScheduleDAGMILive::schedule() {
 
   std::vector<MachineInstr*> Unsched;
   Unsched.reserve(NumRegionInstrs);
-  for (auto &I : *this)
+  for (auto &I : *this) {
     Unsched.push_back(&I);
+  }
 
   GCNRegPressure PressureBefore;
   if (LIS) {
@@ -387,6 +388,9 @@ void GCNScheduleDAGMILive::schedule() {
   DEBUG(dbgs() << "Attempting to revert scheduling.\n");
   RegionEnd = RegionBegin;
   for (MachineInstr *MI : Unsched) {
+    if (MI->isDebugValue())
+      continue;
+
     if (MI->getIterator() != RegionEnd) {
       BB->remove(MI);
       BB->insert(RegionEnd, MI);

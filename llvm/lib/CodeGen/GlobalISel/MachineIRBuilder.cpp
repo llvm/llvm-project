@@ -295,8 +295,6 @@ MachineInstrBuilder MachineIRBuilder::buildLoad(unsigned Res, unsigned Addr,
                                                 MachineMemOperand &MMO) {
   assert(MRI->getType(Res).isValid() && "invalid operand type");
   assert(MRI->getType(Addr).isPointer() && "invalid operand type");
-  assert(MMO.getOrdering() == AtomicOrdering::NotAtomic &&
-         "invalid atomic ordering");
 
   return buildInstr(TargetOpcode::G_LOAD)
       .addDef(Res)
@@ -308,38 +306,8 @@ MachineInstrBuilder MachineIRBuilder::buildStore(unsigned Val, unsigned Addr,
                                                  MachineMemOperand &MMO) {
   assert(MRI->getType(Val).isValid() && "invalid operand type");
   assert(MRI->getType(Addr).isPointer() && "invalid operand type");
-  assert(MMO.getOrdering() == AtomicOrdering::NotAtomic &&
-         "invalid atomic ordering");
 
   return buildInstr(TargetOpcode::G_STORE)
-      .addUse(Val)
-      .addUse(Addr)
-      .addMemOperand(&MMO);
-}
-
-MachineInstrBuilder MachineIRBuilder::buildAtomicLoad(unsigned Res,
-                                                      unsigned Addr,
-                                                      MachineMemOperand &MMO) {
-  assert(MRI->getType(Res).isValid() && "invalid operand type");
-  assert(MRI->getType(Addr).isPointer() && "invalid operand type");
-  assert(MMO.getOrdering() != AtomicOrdering::NotAtomic &&
-         "invalid atomic ordering");
-
-  return buildInstr(TargetOpcode::G_ATOMIC_LOAD)
-      .addDef(Res)
-      .addUse(Addr)
-      .addMemOperand(&MMO);
-}
-
-MachineInstrBuilder MachineIRBuilder::buildAtomicStore(unsigned Val,
-                                                       unsigned Addr,
-                                                       MachineMemOperand &MMO) {
-  assert(MRI->getType(Val).isValid() && "invalid operand type");
-  assert(MRI->getType(Addr).isPointer() && "invalid operand type");
-  assert(MMO.getOrdering() != AtomicOrdering::NotAtomic &&
-         "invalid atomic ordering");
-
-  return buildInstr(TargetOpcode::G_ATOMIC_STORE)
       .addUse(Val)
       .addUse(Addr)
       .addMemOperand(&MMO);

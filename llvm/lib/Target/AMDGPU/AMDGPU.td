@@ -19,6 +19,12 @@ def FeatureFP64 : SubtargetFeature<"fp64",
   "Enable double precision operations"
 >;
 
+def FeatureFMA : SubtargetFeature<"fmaf",
+  "FMA",
+  "true",
+  "Enable single precision FMA (not as fast as mul+add, but fused)"
+>;
+
 def FeatureFastFMAF32 : SubtargetFeature<"fast-fmaf",
   "FastFMAF32",
   "true",

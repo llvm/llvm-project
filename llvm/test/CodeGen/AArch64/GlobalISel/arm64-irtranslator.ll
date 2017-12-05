@@ -1332,12 +1332,12 @@ define void @test_lifetime_intrin() {
 define void @test_load_store_atomics(i8* %addr) {
 ; CHECK-LABEL: name: test_load_store_atomics
 ; CHECK: [[ADDR:%[0-9]+]]:_(p0) = COPY %x0
-; CHECK: [[V0:%[0-9]+]]:_(s8) = G_ATOMIC_LOAD [[ADDR]](p0) :: (load unordered 1 from %ir.addr)
-; CHECK: G_ATOMIC_STORE [[V0]](s8), [[ADDR]](p0) :: (store monotonic 1 into %ir.addr)
-; CHECK: [[V1:%[0-9]+]]:_(s8) = G_ATOMIC_LOAD [[ADDR]](p0) :: (load acquire 1 from %ir.addr)
-; CHECK: G_ATOMIC_STORE [[V1]](s8), [[ADDR]](p0) :: (store release 1 into %ir.addr)
-; CHECK: [[V2:%[0-9]+]]:_(s8) = G_ATOMIC_LOAD [[ADDR]](p0) :: (load syncscope("singlethread") seq_cst 1 from %ir.addr)
-; CHECK: G_ATOMIC_STORE [[V2]](s8), [[ADDR]](p0) :: (store syncscope("singlethread") monotonic 1 into %ir.addr)
+; CHECK: [[V0:%[0-9]+]]:_(s8) = G_LOAD [[ADDR]](p0) :: (load unordered 1 from %ir.addr)
+; CHECK: G_STORE [[V0]](s8), [[ADDR]](p0) :: (store monotonic 1 into %ir.addr)
+; CHECK: [[V1:%[0-9]+]]:_(s8) = G_LOAD [[ADDR]](p0) :: (load acquire 1 from %ir.addr)
+; CHECK: G_STORE [[V1]](s8), [[ADDR]](p0) :: (store release 1 into %ir.addr)
+; CHECK: [[V2:%[0-9]+]]:_(s8) = G_LOAD [[ADDR]](p0) :: (load syncscope("singlethread") seq_cst 1 from %ir.addr)
+; CHECK: G_STORE [[V2]](s8), [[ADDR]](p0) :: (store syncscope("singlethread") monotonic 1 into %ir.addr)
   %v0 = load atomic i8, i8* %addr unordered, align 1
   store atomic i8 %v0, i8* %addr monotonic, align 1
 

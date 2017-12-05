@@ -1,4 +1,4 @@
-//===--- MacroInfo.h - Information about #defined identifiers ---*- C++ -*-===//
+//===- MacroInfo.h - Information about #defined identifiers -----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,27 +6,33 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-///
+//
 /// \file
 /// \brief Defines the clang::MacroInfo and clang::MacroDirective classes.
-///
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_LEX_MACROINFO_H
 #define LLVM_CLANG_LEX_MACROINFO_H
 
 #include "clang/Lex/Token.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Allocator.h"
+#include <algorithm>
 #include <cassert>
 
 namespace clang {
+
+class DefMacroDirective;
+class IdentifierInfo;
 class Module;
-class ModuleMacro;
 class Preprocessor;
+class SourceManager;
 
 /// \brief Encapsulates the data about a macro definition (e.g. its tokens).
 ///
@@ -37,6 +43,7 @@ class MacroInfo {
 
   /// \brief The location the macro is defined.
   SourceLocation Location;
+
   /// \brief The location of the last token in the macro.
   SourceLocation EndLocation;
 
@@ -46,10 +53,10 @@ class MacroInfo {
   ///
   /// This can be empty, for, e.g. "#define X()".  In a C99-style variadic
   /// macro, this includes the \c __VA_ARGS__ identifier on the list.
-  IdentifierInfo **ParameterList;
+  IdentifierInfo **ParameterList = nullptr;
 
   /// \see ParameterList
-  unsigned NumParameters;
+  unsigned NumParameters = 0;
 
   /// \brief This is the list of tokens that the macro is defined to.
   SmallVector<Token, 8> ReplacementTokens;
@@ -169,7 +176,7 @@ public:
 
   /// Parameters - The list of parameters for a function-like macro.  This can 
   /// be empty, for, e.g. "#define X()".
-  typedef IdentifierInfo *const *param_iterator;
+  using param_iterator = IdentifierInfo *const *;
   bool param_empty() const { return NumParameters == 0; }
   param_iterator param_begin() const { return ParameterList; }
   param_iterator param_end() const { return ParameterList + NumParameters; }
@@ -224,7 +231,6 @@ public:
   bool isWarnIfUnused() const { return IsWarnIfUnused; }
 
   /// \brief Return the number of tokens that this macro expands to.
-  ///
   unsigned getNumTokens() const { return ReplacementTokens.size(); }
 
   const Token &getReplacementToken(unsigned Tok) const {
@@ -232,7 +238,8 @@ public:
     return ReplacementTokens[Tok];
   }
 
-  typedef SmallVectorImpl<Token>::const_iterator tokens_iterator;
+  using tokens_iterator = SmallVectorImpl<Token>::const_iterator;
+
   tokens_iterator tokens_begin() const { return ReplacementTokens.begin(); }
   tokens_iterator tokens_end() const { return ReplacementTokens.end(); }
   bool tokens_empty() const { return ReplacementTokens.empty(); }
@@ -269,12 +276,10 @@ public:
   void dump() const;
 
 private:
-  unsigned getDefinitionLengthSlow(const SourceManager &SM) const;
-
   friend class Preprocessor;
-};
 
-class DefMacroDirective;
+  unsigned getDefinitionLengthSlow(const SourceManager &SM) const;
+};
 
 /// \brief Encapsulates changes to the "macros namespace" (the location where
 /// the macro name became active, the location where it was undefined, etc.).
@@ -285,11 +290,15 @@ class DefMacroDirective;
 /// create additional DefMacroDirectives for the same MacroInfo.
 class MacroDirective {
 public:
-  enum Kind { MD_Define, MD_Undefine, MD_Visibility };
+  enum Kind {
+    MD_Define,
+    MD_Undefine,
+    MD_Visibility
+  };
 
 protected:
-  /// \brief Previous macro directive for the same identifier, or NULL.
-  MacroDirective *Previous;
+  /// \brief Previous macro directive for the same identifier, or nullptr.
+  MacroDirective *Previous = nullptr;
 
   SourceLocation Loc;
 
@@ -306,8 +315,7 @@ protected:
   unsigned IsPublic : 1;
 
   MacroDirective(Kind K, SourceLocation Loc)
-      : Previous(nullptr), Loc(Loc), MDKind(K), IsFromPCH(false),
-        IsPublic(true) {}
+      : Loc(Loc), MDKind(K), IsFromPCH(false), IsPublic(true) {}
 
 public:
   Kind getKind() const { return Kind(MDKind); }
@@ -329,13 +337,12 @@ public:
   void setIsFromPCH() { IsFromPCH = true; }
 
   class DefInfo {
-    DefMacroDirective *DefDirective;
+    DefMacroDirective *DefDirective = nullptr;
     SourceLocation UndefLoc;
-    bool IsPublic;
+    bool IsPublic = true;
 
   public:
-    DefInfo() : DefDirective(nullptr), IsPublic(true) {}
-
+    DefInfo() = default;
     DefInfo(DefMacroDirective *DefDirective, SourceLocation UndefLoc,
             bool isPublic)
         : DefDirective(DefDirective), UndefLoc(UndefLoc), IsPublic(isPublic) {}
@@ -345,6 +352,7 @@ public:
 
     inline SourceLocation getLocation() const;
     inline MacroInfo *getMacroInfo();
+
     const MacroInfo *getMacroInfo() const {
       return const_cast<DefInfo *>(this)->getMacroInfo();
     }
@@ -360,6 +368,7 @@ public:
     explicit operator bool() const { return isValid(); }
 
     inline DefInfo getPreviousDefinition();
+
     const DefInfo getPreviousDefinition() const {
       return const_cast<DefInfo *>(this)->getPreviousDefinition();
     }
@@ -412,6 +421,7 @@ public:
   static bool classof(const MacroDirective *MD) {
     return MD->getKind() == MD_Define;
   }
+
   static bool classof(const DefMacroDirective *) { return true; }
 };
 
@@ -426,6 +436,7 @@ public:
   static bool classof(const MacroDirective *MD) {
     return MD->getKind() == MD_Undefine;
   }
+
   static bool classof(const UndefMacroDirective *) { return true; }
 };
 
@@ -444,12 +455,13 @@ public:
   static bool classof(const MacroDirective *MD) {
     return MD->getKind() == MD_Visibility;
   }
+
   static bool classof(const VisibilityMacroDirective *) { return true; }
 };
 
 inline SourceLocation MacroDirective::DefInfo::getLocation() const {
   if (isInvalid())
-    return SourceLocation();
+    return {};
   return DefDirective->getLocation();
 }
 
@@ -462,7 +474,7 @@ inline MacroInfo *MacroDirective::DefInfo::getMacroInfo() {
 inline MacroDirective::DefInfo
 MacroDirective::DefInfo::getPreviousDefinition() {
   if (isInvalid() || DefDirective->getPrevious() == nullptr)
-    return DefInfo();
+    return {};
   return DefDirective->getPrevious()->getDefinition();
 }
 
@@ -474,23 +486,26 @@ MacroDirective::DefInfo::getPreviousDefinition() {
 ///
 /// These are stored in a FoldingSet in the preprocessor.
 class ModuleMacro : public llvm::FoldingSetNode {
+  friend class Preprocessor;
+
   /// The name defined by the macro.
   IdentifierInfo *II;
+
   /// The body of the #define, or nullptr if this is a #undef.
   MacroInfo *Macro;
+
   /// The module that exports this macro.
   Module *OwningModule;
+
   /// The number of module macros that override this one.
-  unsigned NumOverriddenBy;
+  unsigned NumOverriddenBy = 0;
+
   /// The number of modules whose macros are directly overridden by this one.
   unsigned NumOverrides;
-  // ModuleMacro *OverriddenMacros[NumOverrides];
-
-  friend class Preprocessor;
 
   ModuleMacro(Module *OwningModule, IdentifierInfo *II, MacroInfo *Macro,
               ArrayRef<ModuleMacro *> Overrides)
-      : II(II), Macro(Macro), OwningModule(OwningModule), NumOverriddenBy(0),
+      : II(II), Macro(Macro), OwningModule(OwningModule),
         NumOverrides(Overrides.size()) {
     std::copy(Overrides.begin(), Overrides.end(),
               reinterpret_cast<ModuleMacro **>(this + 1));
@@ -504,6 +519,7 @@ public:
   void Profile(llvm::FoldingSetNodeID &ID) const {
     return Profile(ID, OwningModule, II);
   }
+
   static void Profile(llvm::FoldingSetNodeID &ID, Module *OwningModule,
                       IdentifierInfo *II) {
     ID.AddPointer(OwningModule);
@@ -522,13 +538,16 @@ public:
 
   /// Iterators over the overridden module IDs.
   /// \{
-  typedef ModuleMacro *const *overrides_iterator;
+  using overrides_iterator = ModuleMacro *const *;
+
   overrides_iterator overrides_begin() const {
     return reinterpret_cast<overrides_iterator>(this + 1);
   }
+
   overrides_iterator overrides_end() const {
     return overrides_begin() + NumOverrides;
   }
+
   ArrayRef<ModuleMacro *> overrides() const {
     return llvm::makeArrayRef(overrides_begin(), overrides_end());
   }
@@ -547,7 +566,7 @@ class MacroDefinition {
   ArrayRef<ModuleMacro *> ModuleMacros;
 
 public:
-  MacroDefinition() : LatestLocalAndAmbiguous(), ModuleMacros() {}
+  MacroDefinition() = default;
   MacroDefinition(DefMacroDirective *MD, ArrayRef<ModuleMacro *> MMs,
                   bool IsAmbiguous)
       : LatestLocalAndAmbiguous(MD, IsAmbiguous), ModuleMacros(MMs) {}
@@ -586,6 +605,6 @@ public:
   }
 };
 
-} // end namespace clang
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_LEX_MACROINFO_H

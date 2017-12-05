@@ -571,30 +571,6 @@ public:
   MachineInstrBuilder buildStore(unsigned Val, unsigned Addr,
                                  MachineMemOperand &MMO);
 
-  /// Build and insert `Res<def> = G_ATOMIC_LOAD Addr, MMO`.
-  ///
-  /// Loads the value stored at \p Addr. Puts the result in \p Res.
-  ///
-  /// \pre setBasicBlock or setMI must have been called.
-  /// \pre \p Res must be a generic virtual register.
-  /// \pre \p Addr must be a generic virtual register with pointer type.
-  ///
-  /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildAtomicLoad(unsigned Res, unsigned Addr,
-                                      MachineMemOperand &MMO);
-
-  /// Build and insert `G_ATOMIC_STORE Val, Addr, MMO`.
-  ///
-  /// Stores the value \p Val to \p Addr.
-  ///
-  /// \pre setBasicBlock or setMI must have been called.
-  /// \pre \p Val must be a generic virtual register.
-  /// \pre \p Addr must be a generic virtual register with pointer type.
-  ///
-  /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildAtomicStore(unsigned Val, unsigned Addr,
-                                       MachineMemOperand &MMO);
-
   /// Build and insert `Res0<def>, ... = G_EXTRACT Src, Idx0`.
   ///
   /// \pre setBasicBlock or setMI must have been called.

@@ -1,4 +1,4 @@
-//===--- ModuleLoader.h - Module Loader Interface ---------------*- C++ -*-===//
+//===- ModuleLoader.h - Module Loader Interface -----------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,23 +11,26 @@
 //  loading named modules.
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef LLVM_CLANG_LEX_MODULELOADER_H
 #define LLVM_CLANG_LEX_MODULELOADER_H
 
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/StringRef.h"
+#include <utility>
 
 namespace clang {
 
 class GlobalModuleIndex;
 class IdentifierInfo;
-class Module;
 
 /// \brief A sequence of identifier/location pairs used to describe a particular
 /// module or submodule, e.g., std.vector.
-typedef ArrayRef<std::pair<IdentifierInfo *, SourceLocation> > ModuleIdPath;
+using ModuleIdPath = ArrayRef<std::pair<IdentifierInfo *, SourceLocation>>;
 
 /// \brief Describes the result of attempting to load a module.
 class ModuleLoadResult {
@@ -35,16 +38,18 @@ public:
   enum LoadResultKind {
     // We either succeeded or failed to load the named module.
     Normal,
+
     // The module exists, but does not actually contain the named submodule.
     // This should only happen if the named submodule was inferred from an
     // umbrella directory, but not actually part of the umbrella header.
     MissingExpected,
+
     // The module exists but cannot be imported due to a configuration mismatch.
     ConfigMismatch
   };
   llvm::PointerIntPair<Module *, 2, LoadResultKind> Storage;
 
-  ModuleLoadResult() : Storage() { }
+  ModuleLoadResult() = default;
   ModuleLoadResult(Module *M) : Storage(M, Normal) {}
   ModuleLoadResult(LoadResultKind Kind) : Storage(nullptr, Kind) {}
 
@@ -69,10 +74,10 @@ public:
 class ModuleLoader {
   // Building a module if true.
   bool BuildingModule;
+
 public:
-  explicit ModuleLoader(bool BuildingModule = false) :
-    BuildingModule(BuildingModule),
-    HadFatalFailure(false) {}
+  explicit ModuleLoader(bool BuildingModule = false)
+      : BuildingModule(BuildingModule) {}
 
   virtual ~ModuleLoader();
   
@@ -80,6 +85,7 @@ public:
   bool buildingModule() const {
     return BuildingModule;
   }
+
   /// \brief Flag indicating whether this instance is building a module.
   void setBuildingModule(bool BuildingModuleFlag) {
     BuildingModule = BuildingModuleFlag;
@@ -144,7 +150,7 @@ public:
   virtual bool lookupMissingImports(StringRef Name,
                                     SourceLocation TriggerLoc) = 0;
 
-  bool HadFatalFailure;
+  bool HadFatalFailure = false;
 };
 
 /// A module loader that doesn't know how to load modules.
@@ -153,7 +159,7 @@ public:
   ModuleLoadResult loadModule(SourceLocation ImportLoc, ModuleIdPath Path,
                               Module::NameVisibilityKind Visibility,
                               bool IsInclusionDirective) override {
-    return ModuleLoadResult();
+    return {};
   }
 
   void loadModuleFromSource(SourceLocation ImportLoc, StringRef ModuleName,
@@ -165,12 +171,13 @@ public:
   GlobalModuleIndex *loadGlobalModuleIndex(SourceLocation TriggerLoc) override {
     return nullptr;
   }
+
   bool lookupMissingImports(StringRef Name,
                             SourceLocation TriggerLoc) override {
-    return 0;
+    return false;
   }
 };
   
-}
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_LEX_MODULELOADER_H

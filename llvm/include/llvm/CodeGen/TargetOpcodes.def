@@ -265,12 +265,6 @@ HANDLE_TARGET_OPCODE(G_LOAD)
 /// Generic store.
 HANDLE_TARGET_OPCODE(G_STORE)
 
-/// Generic atomic load
-HANDLE_TARGET_OPCODE(G_ATOMIC_LOAD)
-
-/// Generic atomic store
-HANDLE_TARGET_OPCODE(G_ATOMIC_STORE)
-
 /// Generic atomic cmpxchg with internal success check.
 HANDLE_TARGET_OPCODE(G_ATOMIC_CMPXCHG_WITH_SUCCESS)
 
