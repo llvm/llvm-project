@@ -628,7 +628,7 @@ static const clang::LangOptions &GetLangOptions() {
     g_options.CPlusPlus = true;
     g_options.CPlusPlus11 = true;
     g_options.CPlusPlus14 = true;
-    g_options.CPlusPlus1z = true;
+    g_options.CPlusPlus17 = true;
   });
   return g_options;
 }
