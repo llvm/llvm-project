@@ -10,12 +10,24 @@
 #include "Compiler.h"
 #include "Protocol.h"
 #include "TestFS.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace clang {
 namespace clangd {
+// Let GMock print completion items.
+void PrintTo(const CompletionItem &I, std::ostream *O) {
+  llvm::raw_os_ostream OS(*O);
+  OS << toJSON(I);
+}
+
 namespace {
 using namespace llvm;
+using ::testing::AllOf;
+using ::testing::Contains;
+using ::testing::ElementsAre;
+using ::testing::Matcher;
+using ::testing::Not;
 
 class IgnoreDiagnostics : public DiagnosticsConsumer {
   void onDiagnosticsReady(
@@ -27,161 +39,74 @@ struct StringWithPos {
   clangd::Position MarkerPos;
 };
 
-/// Returns location of "{mark}" substring in \p Text and removes it from \p
-/// Text. Note that \p Text must contain exactly one occurence of "{mark}".
-///
-/// Marker name can be configured using \p MarkerName parameter.
-StringWithPos parseTextMarker(StringRef Text, StringRef MarkerName = "mark") {
-  SmallString<16> Marker;
-  Twine("{" + MarkerName + "}").toVector(/*ref*/ Marker);
-
-  std::size_t MarkerOffset = Text.find(Marker);
-  assert(MarkerOffset != StringRef::npos && "{mark} wasn't found in Text.");
+/// Accepts a source file with a cursor marker ^.
+/// Returns the source file with the marker removed, and the marker position.
+StringWithPos parseTextMarker(StringRef Text) {
+  std::size_t MarkerOffset = Text.find('^');
+  assert(MarkerOffset != StringRef::npos && "^ wasn't found in Text.");
 
   std::string WithoutMarker;
   WithoutMarker += Text.take_front(MarkerOffset);
-  WithoutMarker += Text.drop_front(MarkerOffset + Marker.size());
-  assert(StringRef(WithoutMarker).find(Marker) == StringRef::npos &&
-         "There were multiple occurences of {mark} inside Text");
+  WithoutMarker += Text.drop_front(MarkerOffset + 1);
+  assert(StringRef(WithoutMarker).find('^') == StringRef::npos &&
+         "There were multiple occurences of ^ inside Text");
 
-  clangd::Position MarkerPos =
-      clangd::offsetToPosition(WithoutMarker, MarkerOffset);
+  auto MarkerPos = offsetToPosition(WithoutMarker, MarkerOffset);
   return {std::move(WithoutMarker), MarkerPos};
 }
 
-class ClangdCompletionTest : public ::testing::Test {
-protected:
-  template <class Predicate>
-  bool ContainsItemPred(CompletionList const &Items, Predicate Pred) {
-    for (const auto &Item : Items.items) {
-      if (Pred(Item))
-        return true;
-    }
-    return false;
-  }
+// GMock helpers for matching completion items.
+MATCHER_P(Named, Name, "") { return arg.insertText == Name; }
+// Shorthand for Contains(Named(Name)).
+Matcher<const std::vector<CompletionItem> &> Has(std::string Name) {
+  return Contains(Named(std::move(Name)));
+}
+MATCHER(IsDocumented, "") { return !arg.documentation.empty(); }
+MATCHER(IsSnippet, "") {
+  return arg.kind == clangd::CompletionItemKind::Snippet;
+}
+// This is hard to write as a function, because matchers may be polymorphic.
+#define EXPECT_IFF(condition, value, matcher)                                  \
+  do {                                                                         \
+    if (condition)                                                             \
+      EXPECT_THAT(value, matcher);                                             \
+    else                                                                       \
+      EXPECT_THAT(value, ::testing::Not(matcher));                             \
+  } while (0)
 
-  bool ContainsItem(CompletionList const &Items, StringRef Name) {
-    return ContainsItemPred(Items, [Name](clangd::CompletionItem Item) {
-      return Item.insertText == Name;
-    });
-    return false;
-  }
-};
-
-TEST_F(ClangdCompletionTest, CheckContentsOverride) {
+CompletionList completions(StringRef Text,
+                           clangd::CodeCompleteOptions Opts = {}) {
   MockFSProvider FS;
-  IgnoreDiagnostics DiagConsumer;
   MockCompilationDatabase CDB;
-
+  IgnoreDiagnostics DiagConsumer;
   ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
                       /*StorePreamblesInMemory=*/true,
                       EmptyLogger::getInstance());
-
-  auto FooCpp = getVirtualTestFilePath("foo.cpp");
-  const auto SourceContents = R"cpp(
-int aba;
-int b =   ;
-)cpp";
-
-  const auto OverridenSourceContents = R"cpp(
-int cbc;
-int b =   ;
-)cpp";
-
-  // Use default options.
-  CodeCompleteOptions CCOpts;
-  // Complete after '=' sign. We need to be careful to keep the SourceContents'
-  // size the same.
-  // We complete on the 3rd line (2nd in zero-based numbering), because raw
-  // string literal of the SourceContents starts with a newline(it's easy to
-  // miss).
-  Position CompletePos = {2, 8};
-  FS.Files[FooCpp] = SourceContents;
-  FS.ExpectedFile = FooCpp;
-
-  // No need to sync reparses here as there are no asserts on diagnostics (or
-  // other async operations).
-  Server.addDocument(FooCpp, SourceContents);
-
-  {
-    auto CodeCompletionResults1 =
-        Server.codeComplete(FooCpp, CompletePos, CCOpts, None).get().Value;
-    EXPECT_TRUE(ContainsItem(CodeCompletionResults1, "aba"));
-    EXPECT_FALSE(ContainsItem(CodeCompletionResults1, "cbc"));
-  }
-
-  {
-    auto CodeCompletionResultsOverriden =
-        Server
-            .codeComplete(FooCpp, CompletePos, CCOpts,
-                          StringRef(OverridenSourceContents))
-            .get()
-            .Value;
-    EXPECT_TRUE(ContainsItem(CodeCompletionResultsOverriden, "cbc"));
-    EXPECT_FALSE(ContainsItem(CodeCompletionResultsOverriden, "aba"));
-  }
-
-  {
-    auto CodeCompletionResults2 =
-        Server.codeComplete(FooCpp, CompletePos, CCOpts, None).get().Value;
-    EXPECT_TRUE(ContainsItem(CodeCompletionResults2, "aba"));
-    EXPECT_FALSE(ContainsItem(CodeCompletionResults2, "cbc"));
-  }
+  auto File = getVirtualTestFilePath("foo.cpp");
+  auto Test = parseTextMarker(Text);
+  Server.addDocument(File, Test.Text);
+  return Server.codeComplete(File, Test.MarkerPos, Opts).get().Value;
 }
 
-TEST_F(ClangdCompletionTest, Limit) {
-  MockFSProvider FS;
-  MockCompilationDatabase CDB;
-  CDB.ExtraClangFlags.push_back("-xc++");
-  IgnoreDiagnostics DiagConsumer;
-  ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
-                      /*StorePreamblesInMemory=*/true,
-                      EmptyLogger::getInstance());
-
-  auto FooCpp = getVirtualTestFilePath("foo.cpp");
-  FS.Files[FooCpp] = "";
-  FS.ExpectedFile = FooCpp;
-  StringWithPos Completion = parseTextMarker(R"cpp(
+TEST(CompletionTest, Limit) {
+  clangd::CodeCompleteOptions Opts;
+  Opts.Limit = 2;
+  auto Results = completions(R"cpp(
 struct ClassWithMembers {
   int AAA();
   int BBB();
   int CCC();
 }
-int main() { ClassWithMembers().{complete} }
+int main() { ClassWithMembers().^ }
       )cpp",
-                                             "complete");
-  Server.addDocument(FooCpp, Completion.Text);
-
-  clangd::CodeCompleteOptions Opts;
-  Opts.Limit = 2;
-
-  /// For after-dot completion we must always get consistent results.
-  auto Results = Server
-                     .codeComplete(FooCpp, Completion.MarkerPos, Opts,
-                                   StringRef(Completion.Text))
-                     .get()
-                     .Value;
+                             Opts);
 
   EXPECT_TRUE(Results.isIncomplete);
-  EXPECT_EQ(Opts.Limit, Results.items.size());
-  EXPECT_TRUE(ContainsItem(Results, "AAA"));
-  EXPECT_TRUE(ContainsItem(Results, "BBB"));
-  EXPECT_FALSE(ContainsItem(Results, "CCC"));
+  EXPECT_THAT(Results.items, ElementsAre(Named("AAA"), Named("BBB")));
 }
 
-TEST_F(ClangdCompletionTest, Filter) {
-  MockFSProvider FS;
-  MockCompilationDatabase CDB;
-  CDB.ExtraClangFlags.push_back("-xc++");
-  IgnoreDiagnostics DiagConsumer;
-  ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
-                      /*StorePreamblesInMemory=*/true,
-                      EmptyLogger::getInstance());
-
-  auto FooCpp = getVirtualTestFilePath("foo.cpp");
-  FS.Files[FooCpp] = "";
-  FS.ExpectedFile = FooCpp;
-  const char *Body = R"cpp(
+TEST(CompletionTest, Filter) {
+  std::string Body = R"cpp(
     int Abracadabra;
     int Alakazam;
     struct S {
@@ -190,73 +115,25 @@ TEST_F(ClangdCompletionTest, Filter) {
       int Qux;
     };
   )cpp";
-  auto Complete = [&](StringRef Query) {
-    StringWithPos Completion = parseTextMarker(
-        formatv("{0} int main() { {1}{{complete}} }", Body, Query).str(),
-        "complete");
-    Server.addDocument(FooCpp, Completion.Text);
-    return Server
-        .codeComplete(FooCpp, Completion.MarkerPos,
-                      clangd::CodeCompleteOptions(), StringRef(Completion.Text))
-        .get()
-        .Value;
-  };
 
-  auto Foba = Complete("S().Foba");
-  EXPECT_TRUE(ContainsItem(Foba, "FooBar"));
-  EXPECT_TRUE(ContainsItem(Foba, "FooBaz"));
-  EXPECT_FALSE(ContainsItem(Foba, "Qux"));
+  EXPECT_THAT(completions(Body + "int main() { S().Foba^ }").items,
+              AllOf(Has("FooBar"), Has("FooBaz"), Not(Has("Qux"))));
 
-  auto FR = Complete("S().FR");
-  EXPECT_TRUE(ContainsItem(FR, "FooBar"));
-  EXPECT_FALSE(ContainsItem(FR, "FooBaz"));
-  EXPECT_FALSE(ContainsItem(FR, "Qux"));
+  EXPECT_THAT(completions(Body + "int main() { S().FR^ }").items,
+              AllOf(Has("FooBar"), Not(Has("FooBaz")), Not(Has("Qux"))));
 
-  auto Op = Complete("S().opr");
-  EXPECT_TRUE(ContainsItem(Op, "operator="));
+  EXPECT_THAT(completions(Body + "int main() { S().opr^ }").items,
+              Has("operator="));
 
-  auto Aaa = Complete("aaa");
-  EXPECT_TRUE(ContainsItem(Aaa, "Abracadabra"));
-  EXPECT_TRUE(ContainsItem(Aaa, "Alakazam"));
+  EXPECT_THAT(completions(Body + "int main() { aaa^ }").items,
+              AllOf(Has("Abracadabra"), Has("Alakazam")));
 
-  auto UA = Complete("_a");
-  EXPECT_TRUE(ContainsItem(UA, "static_cast"));
-  EXPECT_FALSE(ContainsItem(UA, "Abracadabra"));
+  EXPECT_THAT(completions(Body + "int main() { _a^ }").items,
+              AllOf(Has("static_cast"), Not(Has("Abracadabra"))));
 }
 
-TEST_F(ClangdCompletionTest, CompletionOptions) {
-  MockFSProvider FS;
-  IgnoreDiagnostics DiagConsumer;
-  MockCompilationDatabase CDB;
-  CDB.ExtraClangFlags.push_back("-xc++");
-
-  auto FooCpp = getVirtualTestFilePath("foo.cpp");
-  FS.Files[FooCpp] = "";
-  FS.ExpectedFile = FooCpp;
-
-  const auto GlobalCompletionSourceTemplate = R"cpp(
-#define MACRO X
-
-int global_var;
-int global_func();
-
-struct GlobalClass {};
-
-struct ClassWithMembers {
-  /// Doc for method.
-  int method();
-};
-
-int test() {
-  struct LocalClass {};
-
-  /// Doc for local_var.
-  int local_var;
-
-  {complete}
-}
-)cpp";
-  const auto MemberCompletionSourceTemplate = R"cpp(
+void TestAfterDotCompletion(clangd::CodeCompleteOptions Opts) {
+  auto Results = completions(R"cpp(
 #define MACRO X
 
 int global_var;
@@ -280,122 +157,114 @@ int test() {
   /// Doc for local_var.
   int local_var;
 
-  ClassWithMembers().{complete}
+  ClassWithMembers().^
 }
-)cpp";
+)cpp",
+                             Opts)
+                     .items;
 
-  StringWithPos GlobalCompletion =
-      parseTextMarker(GlobalCompletionSourceTemplate, "complete");
-  StringWithPos MemberCompletion =
-      parseTextMarker(MemberCompletionSourceTemplate, "complete");
+  // Class members. The only items that must be present in after-dot
+  // completion.
+  EXPECT_THAT(Results, AllOf(Has(Opts.EnableSnippets ? "method()" : "method"),
+                             Has("field")));
+  EXPECT_IFF(Opts.IncludeIneligibleResults, Results, Has("private_field"));
+  // Global items.
+  EXPECT_THAT(Results, Not(AnyOf(Has("global_var"), Has("global_func"),
+                                 Has("global_func()"), Has("GlobalClass"),
+                                 Has("MACRO"), Has("LocalClass"))));
+  // There should be no code patterns (aka snippets) in after-dot
+  // completion. At least there aren't any we're aware of.
+  EXPECT_THAT(Results, Not(Contains(IsSnippet())));
+  // Check documentation.
+  EXPECT_IFF(Opts.IncludeBriefComments, Results, Contains(IsDocumented()));
+}
 
-  auto TestWithOpts = [&](clangd::CodeCompleteOptions Opts) {
-    ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
-                        /*StorePreamblesInMemory=*/true,
-                        EmptyLogger::getInstance());
-    // No need to sync reparses here as there are no asserts on diagnostics (or
-    // other async operations).
-    Server.addDocument(FooCpp, GlobalCompletion.Text);
+void TestGlobalScopeCompletion(clangd::CodeCompleteOptions Opts) {
+  auto Results = completions(R"cpp(
+#define MACRO X
 
-    StringRef MethodItemText = Opts.EnableSnippets ? "method()" : "method";
-    StringRef GlobalFuncItemText =
-        Opts.EnableSnippets ? "global_func()" : "global_func";
+int global_var;
+int global_func();
 
-    /// For after-dot completion we must always get consistent results.
-    {
-      auto Results = Server
-                         .codeComplete(FooCpp, MemberCompletion.MarkerPos, Opts,
-                                       StringRef(MemberCompletion.Text))
-                         .get()
-                         .Value;
+struct GlobalClass {};
 
-      // Class members. The only items that must be present in after-dor
-      // completion.
-      EXPECT_TRUE(ContainsItem(Results, MethodItemText));
-      EXPECT_TRUE(ContainsItem(Results, MethodItemText));
-      EXPECT_TRUE(ContainsItem(Results, "field"));
-      EXPECT_EQ(Opts.IncludeIneligibleResults,
-                ContainsItem(Results, "private_field"));
-      // Global items.
-      EXPECT_FALSE(ContainsItem(Results, "global_var"));
-      EXPECT_FALSE(ContainsItem(Results, GlobalFuncItemText));
-      EXPECT_FALSE(ContainsItem(Results, "GlobalClass"));
-      // A macro.
-      EXPECT_FALSE(ContainsItem(Results, "MACRO"));
-      // Local items.
-      EXPECT_FALSE(ContainsItem(Results, "LocalClass"));
-      // There should be no code patterns (aka snippets) in after-dot
-      // completion. At least there aren't any we're aware of.
-      EXPECT_FALSE(
-          ContainsItemPred(Results, [](clangd::CompletionItem const &Item) {
-            return Item.kind == clangd::CompletionItemKind::Snippet;
-          }));
-      // Check documentation.
-      EXPECT_EQ(
-          Opts.IncludeBriefComments,
-          ContainsItemPred(Results, [](clangd::CompletionItem const &Item) {
-            return !Item.documentation.empty();
-          }));
-    }
-    // Global completion differs based on the Opts that were passed.
-    {
-      auto Results = Server
-                         .codeComplete(FooCpp, GlobalCompletion.MarkerPos, Opts,
-                                       StringRef(GlobalCompletion.Text))
-                         .get()
-                         .Value;
+struct ClassWithMembers {
+  /// Doc for method.
+  int method();
+};
 
-      // Class members. Should never be present in global completions.
-      EXPECT_FALSE(ContainsItem(Results, MethodItemText));
-      EXPECT_FALSE(ContainsItem(Results, "field"));
-      // Global items.
-      EXPECT_EQ(ContainsItem(Results, "global_var"), Opts.IncludeGlobals);
-      EXPECT_EQ(ContainsItem(Results, GlobalFuncItemText), Opts.IncludeGlobals);
-      EXPECT_EQ(ContainsItem(Results, "GlobalClass"), Opts.IncludeGlobals);
-      // A macro.
-      EXPECT_EQ(ContainsItem(Results, "MACRO"), Opts.IncludeMacros);
-      // Local items. Must be present always.
-      EXPECT_TRUE(ContainsItem(Results, "local_var"));
-      EXPECT_TRUE(ContainsItem(Results, "LocalClass"));
-      // FIXME(ibiryukov): snippets have wrong Item.kind now. Reenable this
-      // check after https://reviews.llvm.org/D38720 makes it in.
-      //
-      // Code patterns (aka snippets).
-      // EXPECT_EQ(
-      //     Opts.IncludeCodePatterns && Opts.EnableSnippets,
-      //     ContainsItemPred(Results, [](clangd::CompletionItem const &Item) {
-      //       return Item.kind == clangd::CompletionItemKind::Snippet;
-      //     }));
+int test() {
+  struct LocalClass {};
 
-      // Check documentation.
-      EXPECT_EQ(
-          Opts.IncludeBriefComments,
-          ContainsItemPred(Results, [](clangd::CompletionItem const &Item) {
-            return !Item.documentation.empty();
-          }));
-    }
-  };
+  /// Doc for local_var.
+  int local_var;
 
-  clangd::CodeCompleteOptions CCOpts;
+  ^
+}
+)cpp",
+                             Opts)
+                     .items;
+
+  // Class members. Should never be present in global completions.
+  EXPECT_THAT(Results,
+              Not(AnyOf(Has("method"), Has("method()"), Has("field"))));
+  // Global items.
+  EXPECT_IFF(Opts.IncludeGlobals, Results,
+             AllOf(Has("global_var"),
+                   Has(Opts.EnableSnippets ? "global_func()" : "global_func"),
+                   Has("GlobalClass")));
+  // A macro.
+  EXPECT_IFF(Opts.IncludeMacros, Results, Has("MACRO"));
+  // Local items. Must be present always.
+  EXPECT_THAT(Results, AllOf(Has("local_var"), Has("LocalClass"),
+                             Contains(IsSnippet())));
+  // Check documentation.
+  EXPECT_IFF(Opts.IncludeBriefComments, Results, Contains(IsDocumented()));
+}
+
+TEST(CompletionTest, CompletionOptions) {
+  clangd::CodeCompleteOptions Opts;
   for (bool IncludeMacros : {true, false}) {
-    CCOpts.IncludeMacros = IncludeMacros;
+    Opts.IncludeMacros = IncludeMacros;
     for (bool IncludeGlobals : {true, false}) {
-      CCOpts.IncludeGlobals = IncludeGlobals;
+      Opts.IncludeGlobals = IncludeGlobals;
       for (bool IncludeBriefComments : {true, false}) {
-        CCOpts.IncludeBriefComments = IncludeBriefComments;
+        Opts.IncludeBriefComments = IncludeBriefComments;
         for (bool EnableSnippets : {true, false}) {
-          CCOpts.EnableSnippets = EnableSnippets;
+          Opts.EnableSnippets = EnableSnippets;
           for (bool IncludeCodePatterns : {true, false}) {
-            CCOpts.IncludeCodePatterns = IncludeCodePatterns;
+            Opts.IncludeCodePatterns = IncludeCodePatterns;
             for (bool IncludeIneligibleResults : {true, false}) {
-              CCOpts.IncludeIneligibleResults = IncludeIneligibleResults;
-              TestWithOpts(CCOpts);
+              Opts.IncludeIneligibleResults = IncludeIneligibleResults;
+              TestAfterDotCompletion(Opts);
+              TestGlobalScopeCompletion(Opts);
             }
           }
         }
       }
     }
   }
+}
+
+// Check code completion works when the file contents are overridden.
+TEST(CompletionTest, CheckContentsOverride) {
+  MockFSProvider FS;
+  IgnoreDiagnostics DiagConsumer;
+  MockCompilationDatabase CDB;
+  ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
+                      /*StorePreamblesInMemory=*/true,
+                      EmptyLogger::getInstance());
+  auto File = getVirtualTestFilePath("foo.cpp");
+  Server.addDocument(File, "ignored text!");
+
+  auto Example = parseTextMarker("int cbc; int b = ^;");
+  auto Results =
+      Server
+          .codeComplete(File, Example.MarkerPos, clangd::CodeCompleteOptions(),
+                        StringRef(Example.Text))
+          .get()
+          .Value;
+  EXPECT_THAT(Results.items, Contains(Named("cbc")));
 }
 
 } // namespace
