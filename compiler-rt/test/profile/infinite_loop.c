@@ -23,8 +23,8 @@ int main()
 // CHECK: Counters:
 // CHECK-NEXT:  main:
 // CHECK-NEXT:    Hash: {{.*}}
-// CHECK-NEXT:    Counters: 1
-// CHECK-NEXT:    Block counts: [1000]
+// CHECK-NEXT:    Counters: 2
+// CHECK-NEXT:    Block counts: [1000, 1]
 
 
 

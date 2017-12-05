@@ -143,10 +143,10 @@ public:
     std::stringstream SS;
     for (auto arg : getArguments())
       SS << arg << " ";
-    if (isOutAndErrCombined())
-      SS << "2>&1 ";
     if (hasOutputFile())
       SS << ">" << getOutputFile() << " ";
+    if (isOutAndErrCombined())
+      SS << "2>&1 ";
     std::string result = SS.str();
     if (!result.empty())
       result = result.substr(0, result.length() - 1);
