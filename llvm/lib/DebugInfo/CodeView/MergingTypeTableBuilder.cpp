@@ -28,27 +28,6 @@
 using namespace llvm;
 using namespace llvm::codeview;
 
-static HashedType Empty{0, {}, TypeIndex::None()};
-static HashedType Tombstone{hash_code(-1), {}, TypeIndex::None()};
-
-namespace llvm {
-
-template <> struct DenseMapInfo<HashedType> {
-  static inline HashedType getEmptyKey() { return Empty; }
-
-  static inline HashedType getTombstoneKey() { return Tombstone; }
-
-  static unsigned getHashValue(HashedType Val) { return Val.Hash; }
-
-  static bool isEqual(HashedType LHS, HashedType RHS) {
-    if (RHS.Hash != LHS.Hash)
-      return false;
-    return RHS.Data == LHS.Data;
-  }
-};
-
-} // end namespace llvm
-
 TypeIndex MergingTypeTableBuilder::nextTypeIndex() const {
   return TypeIndex::fromArrayIndex(SeenRecords.size());
 }
@@ -56,7 +35,6 @@ TypeIndex MergingTypeTableBuilder::nextTypeIndex() const {
 MergingTypeTableBuilder::MergingTypeTableBuilder(BumpPtrAllocator &Storage)
     : RecordStorage(Storage) {
   SeenRecords.reserve(4096);
-  SeenHashes.reserve(4096);
 }
 
 MergingTypeTableBuilder::~MergingTypeTableBuilder() = default;
@@ -102,13 +80,8 @@ ArrayRef<ArrayRef<uint8_t>> MergingTypeTableBuilder::records() const {
   return SeenRecords;
 }
 
-ArrayRef<hash_code> MergingTypeTableBuilder::hashes() const {
-  return SeenHashes;
-}
-
 void MergingTypeTableBuilder::reset() {
   HashedRecords.clear();
-  SeenHashes.clear();
   SeenRecords.clear();
 }
 
@@ -124,18 +97,19 @@ TypeIndex MergingTypeTableBuilder::insertRecordAs(hash_code Hash,
   assert(Record.size() < UINT32_MAX && "Record too big");
   assert(Record.size() % 4 == 0 && "Record is not aligned to 4 bytes!");
 
-  HashedType TempHashedType = {Hash, Record, nextTypeIndex()};
-  auto Result = HashedRecords.insert(TempHashedType);
+  LocallyHashedType WeakHash{Hash, Record};
+  auto Result = HashedRecords.try_emplace(WeakHash, nextTypeIndex());
 
   if (Result.second) {
-    Result.first->Data = stabilize(RecordStorage, Record);
-    SeenRecords.push_back(Result.first->Data);
-    SeenHashes.push_back(Result.first->Hash);
+    ArrayRef<uint8_t> RecordData = stabilize(RecordStorage, Record);
+    Result.first->first.RecordData = RecordData;
+    SeenRecords.push_back(RecordData);
   }
 
   // Update the caller's copy of Record to point a stable copy.
-  Record = Result.first->Data;
-  return Result.first->Index;
+  TypeIndex ActualTI = Result.first->second;
+  Record = SeenRecords[ActualTI.toArrayIndex()];
+  return ActualTI;
 }
 
 TypeIndex
