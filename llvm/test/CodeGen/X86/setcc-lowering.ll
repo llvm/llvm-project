@@ -29,8 +29,9 @@ define <8 x i16> @pr25080(<8 x i32> %a) {
 ; KNL-32-NEXT:    movb $15, %al
 ; KNL-32-NEXT:    kmovw %eax, %k1
 ; KNL-32-NEXT:    korw %k1, %k0, %k1
-; KNL-32-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; KNL-32-NEXT:    vpmovqw %zmm0, %xmm0
+; KNL-32-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; KNL-32-NEXT:    vpmovdw %zmm0, %ymm0
+; KNL-32-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
 ; KNL-32-NEXT:    retl
 entry:
   %0 = trunc <8 x i32> %a to <8 x i23>

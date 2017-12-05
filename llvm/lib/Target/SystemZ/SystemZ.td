@@ -58,7 +58,7 @@ include "SystemZInstrHFP.td"
 include "SystemZInstrDFP.td"
 include "SystemZInstrSystem.td"
 
-def SystemZInstrInfo : InstrInfo {}
+def SystemZInstrInfo : InstrInfo { let guessInstructionProperties = 0; }
 
 //===----------------------------------------------------------------------===//
 // Assembly parser

@@ -84,14 +84,15 @@ private:
   /// all registers that were disabled are removed from the list.
   SmallVector<MCPhysReg, 16> UpdatedCSRs;
 
-  /// RegAllocHints - This vector records register allocation hints for virtual
-  /// registers. For each virtual register, it keeps a register and hint type
-  /// pair making up the allocation hint. Hint type is target specific except
-  /// for the value 0 which means the second value of the pair is the preferred
-  /// register for allocation. For example, if the hint is <0, 1024>, it means
-  /// the allocator should prefer the physical register allocated to the virtual
-  /// register of the hint.
-  IndexedMap<std::pair<unsigned, unsigned>, VirtReg2IndexFunctor> RegAllocHints;
+  /// RegAllocHints - This vector records register allocation hints for
+  /// virtual registers. For each virtual register, it keeps a pair of hint
+  /// type and hints vector making up the allocation hints. Only the first
+  /// hint may be target specific, and in that case this is reflected by the
+  /// first member of the pair being non-zero. If the hinted register is
+  /// virtual, it means the allocator should prefer the physical register
+  /// allocated to it if any.
+  IndexedMap<std::pair<unsigned, SmallVector<unsigned, 4>>,
+             VirtReg2IndexFunctor> RegAllocHints;
 
   /// PhysRegUseDefLists - This is an array of the head of the use/def list for
   /// physical registers.
@@ -706,33 +707,59 @@ public:
   void clearVirtRegs();
 
   /// setRegAllocationHint - Specify a register allocation hint for the
-  /// specified virtual register.
+  /// specified virtual register. This is typically used by target, and in case
+  /// of an earlier hint it will be overwritten.
   void setRegAllocationHint(unsigned VReg, unsigned Type, unsigned PrefReg) {
     assert(TargetRegisterInfo::isVirtualRegister(VReg));
     RegAllocHints[VReg].first  = Type;
-    RegAllocHints[VReg].second = PrefReg;
+    RegAllocHints[VReg].second.clear();
+    RegAllocHints[VReg].second.push_back(PrefReg);
   }
 
-  /// Specify the preferred register allocation hint for the specified virtual
-  /// register.
+  /// addRegAllocationHint - Add a register allocation hint to the hints
+  /// vector for VReg.
+  void addRegAllocationHint(unsigned VReg, unsigned PrefReg) {
+    assert(TargetRegisterInfo::isVirtualRegister(VReg));
+    RegAllocHints[VReg].second.push_back(PrefReg);
+  }
+
+  /// Specify the preferred (target independent) register allocation hint for
+  /// the specified virtual register.
   void setSimpleHint(unsigned VReg, unsigned PrefReg) {
     setRegAllocationHint(VReg, /*Type=*/0, PrefReg);
   }
 
+  void clearSimpleHint(unsigned VReg) {
+    assert (RegAllocHints[VReg].first == 0 &&
+            "Expected to clear a non-target hint!");
+    RegAllocHints[VReg].second.clear();
+  }
+
   /// getRegAllocationHint - Return the register allocation hint for the
-  /// specified virtual register.
+  /// specified virtual register. If there are many hints, this returns the
+  /// one with the greatest weight.
   std::pair<unsigned, unsigned>
   getRegAllocationHint(unsigned VReg) const {
     assert(TargetRegisterInfo::isVirtualRegister(VReg));
-    return RegAllocHints[VReg];
+    unsigned BestHint = (RegAllocHints[VReg].second.size() ?
+                         RegAllocHints[VReg].second[0] : 0);
+    return std::pair<unsigned, unsigned>(RegAllocHints[VReg].first, BestHint);
   }
 
-  /// getSimpleHint - Return the preferred register allocation hint, or 0 if a
-  /// standard simple hint (Type == 0) is not set.
+  /// getSimpleHint - same as getRegAllocationHint except it will only return
+  /// a target independent hint.
   unsigned getSimpleHint(unsigned VReg) const {
     assert(TargetRegisterInfo::isVirtualRegister(VReg));
     std::pair<unsigned, unsigned> Hint = getRegAllocationHint(VReg);
     return Hint.first ? 0 : Hint.second;
+  }
+
+  /// getRegAllocationHints - Return a reference to the vector of all
+  /// register allocation hints for VReg.
+  const std::pair<unsigned, SmallVector<unsigned, 4>>
+  &getRegAllocationHints(unsigned VReg) const {
+    assert(TargetRegisterInfo::isVirtualRegister(VReg));
+    return RegAllocHints[VReg];
   }
 
   /// markUsesInDebugValueAsUndef - Mark every DBG_VALUE referencing the

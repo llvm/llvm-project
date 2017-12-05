@@ -70,13 +70,13 @@ static RegDomain getDomain(const TargetRegisterClass *RC,
 static const TargetRegisterClass *getDstRC(const TargetRegisterClass *SrcRC,
                                            RegDomain Domain) {
   assert(Domain == MaskDomain && "add domain");
-  if (SrcRC == &X86::GR8RegClass)
+  if (X86::GR8RegClass.hasSubClassEq(SrcRC))
     return &X86::VK8RegClass;
-  if (SrcRC == &X86::GR16RegClass)
+  if (X86::GR16RegClass.hasSubClassEq(SrcRC))
     return &X86::VK16RegClass;
-  if (SrcRC == &X86::GR32RegClass)
+  if (X86::GR32RegClass.hasSubClassEq(SrcRC))
     return &X86::VK32RegClass;
-  if (SrcRC == &X86::GR64RegClass)
+  if (X86::GR64RegClass.hasSubClassEq(SrcRC))
     return &X86::VK64RegClass;
   llvm_unreachable("add register class");
   return nullptr;

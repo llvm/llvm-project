@@ -93,12 +93,10 @@ define void @signum32b(<8 x float>*) {
 ; AVX512F-NEXT:    vmovaps (%rdi), %ymm0
 ; AVX512F-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX512F-NEXT:    vcmpltps %zmm1, %zmm0, %k1
-; AVX512F-NEXT:    vpternlogq $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
-; AVX512F-NEXT:    vpmovqd %zmm2, %ymm2
+; AVX512F-NEXT:    vpternlogd $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
 ; AVX512F-NEXT:    vcvtdq2ps %ymm2, %ymm2
 ; AVX512F-NEXT:    vcmpltps %zmm0, %zmm1, %k1
-; AVX512F-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; AVX512F-NEXT:    vpmovqd %zmm0, %ymm0
+; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; AVX512F-NEXT:    vcvtdq2ps %ymm0, %ymm0
 ; AVX512F-NEXT:    vsubps %ymm0, %ymm2, %ymm0
 ; AVX512F-NEXT:    vmovaps %ymm0, (%rdi)
