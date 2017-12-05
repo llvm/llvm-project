@@ -727,10 +727,11 @@ private:
                               const FunctionDecl *Delete,
                               Expr *ThisArg) override;
   void CompletedImplicitDefinition(const FunctionDecl *D) override;
-  void StaticDataMemberInstantiated(const VarDecl *D) override;
+  void InstantiationRequested(const ValueDecl *D) override;
+  void VariableDefinitionInstantiated(const VarDecl *D) override;
+  void FunctionDefinitionInstantiated(const FunctionDecl *D) override;
   void DefaultArgumentInstantiated(const ParmVarDecl *D) override;
   void DefaultMemberInitializerInstantiated(const FieldDecl *D) override;
-  void FunctionDefinitionInstantiated(const FunctionDecl *D) override;
   void AddedObjCCategoryToInterface(const ObjCCategoryDecl *CatD,
                                     const ObjCInterfaceDecl *IFD) override;
   void DeclarationMarkedUsed(const Decl *D) override;

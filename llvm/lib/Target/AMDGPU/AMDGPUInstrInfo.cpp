@@ -56,14 +56,58 @@ bool AMDGPUInstrInfo::shouldScheduleLoadsNear(SDNode *Load0, SDNode *Load1,
   return (NumLoads <= 16 && (Offset1 - Offset0) < 64);
 }
 
-int AMDGPUInstrInfo::getMaskedMIMGOp(uint16_t Opcode, unsigned Channels) const {
-  switch (Channels) {
-  default: return Opcode;
-  case 1: return AMDGPU::getMaskedMIMGOp(Opcode, AMDGPU::Channels_1);
-  case 2: return AMDGPU::getMaskedMIMGOp(Opcode, AMDGPU::Channels_2);
-  case 3: return AMDGPU::getMaskedMIMGOp(Opcode, AMDGPU::Channels_3);
+static AMDGPU::Channels indexToChannel(unsigned Channel) {
+  switch (Channel) {
+  case 1:
+    return AMDGPU::Channels_1;
+  case 2:
+    return AMDGPU::Channels_2;
+  case 3:
+    return AMDGPU::Channels_3;
+  case 4:
+    return AMDGPU::Channels_4;
+  default:
+    llvm_unreachable("invalid MIMG channel");
   }
 }
+
+// FIXME: Need to handle d16 images correctly.
+static unsigned rcToChannels(unsigned RCID) {
+  switch (RCID) {
+  case AMDGPU::VGPR_32RegClassID:
+    return 1;
+  case AMDGPU::VReg_64RegClassID:
+    return 2;
+  case AMDGPU::VReg_96RegClassID:
+    return 3;
+  case AMDGPU::VReg_128RegClassID:
+    return 4;
+  default:
+    llvm_unreachable("invalid MIMG register class");
+  }
+}
+
+int AMDGPUInstrInfo::getMaskedMIMGOp(unsigned Opc,
+                                     unsigned NewChannels) const {
+  AMDGPU::Channels Channel = indexToChannel(NewChannels);
+  unsigned OrigChannels = rcToChannels(get(Opc).OpInfo[0].RegClass);
+  if (NewChannels == OrigChannels)
+    return Opc;
+
+  switch (OrigChannels) {
+  case 1:
+    return AMDGPU::getMaskedMIMGOp1(Opc, Channel);
+  case 2:
+    return AMDGPU::getMaskedMIMGOp2(Opc, Channel);
+  case 3:
+    return AMDGPU::getMaskedMIMGOp3(Opc, Channel);
+  case 4:
+    return AMDGPU::getMaskedMIMGOp4(Opc, Channel);
+  default:
+    llvm_unreachable("invalid MIMG channel");
+  }
+}
+
 
 // This must be kept in sync with the SIEncodingFamily class in SIInstrInfo.td
 enum SIEncodingFamily {

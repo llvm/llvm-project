@@ -194,7 +194,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
     case GK_R700_DOUBLE_OPS:
     case GK_EVERGREEN_DOUBLE_OPS:
     case GK_CAYMAN:
-      Features["fp64"] = true;
+      // TODO: Add fp64 when implemented.
       break;
     case GK_NONE:
       return false;

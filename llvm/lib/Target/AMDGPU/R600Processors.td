@@ -24,7 +24,7 @@ def : Processor<"rs880", R600_VLIW5_Itin,
 >;
 
 def : Processor<"rv670", R600_VLIW5_Itin,
-  [FeatureR600, FeatureWavefrontSize64, FeatureVertexCache, FeatureFP64]
+  [FeatureR600, FeatureWavefrontSize64, FeatureVertexCache]
 >;
 
 //===----------------------------------------------------------------------===//
@@ -40,7 +40,7 @@ def : Processor<"rv730", R600_VLIW5_Itin,
 >;
 
 def : Processor<"rv770", R600_VLIW5_Itin,
-  [FeatureR700, FeatureWavefrontSize64, FeatureVertexCache, FeatureFP64]
+  [FeatureR700, FeatureWavefrontSize64, FeatureVertexCache]
 >;
 
 //===----------------------------------------------------------------------===//
@@ -53,7 +53,7 @@ def : Processor<"cedar", R600_VLIW5_Itin,
 >;
 
 def : Processor<"cypress", R600_VLIW5_Itin,
-  [FeatureEvergreen, FeatureWavefrontSize64, FeatureVertexCache, FeatureFP64]
+  [FeatureEvergreen, FeatureWavefrontSize64, FeatureVertexCache, FeatureFMA]
 >;
 
 def : Processor<"juniper", R600_VLIW5_Itin,
@@ -82,7 +82,7 @@ def : Processor<"caicos", R600_VLIW5_Itin,
 >;
 
 def : Processor<"cayman", R600_VLIW4_Itin,
-  [FeatureNorthernIslands, FeatureFP64, FeatureCaymanISA]
+  [FeatureNorthernIslands, FeatureCaymanISA, FeatureFMA]
 >;
 
 def : Processor<"turks", R600_VLIW5_Itin,

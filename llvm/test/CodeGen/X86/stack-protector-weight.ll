@@ -21,11 +21,10 @@
 ; MSVC-SELDAG: LD4[FixedStack0]
 ; MSVC-SELDAG: CALLpcrel32 <ga:@__security_check_cookie>
 
-; MSVC always uses selection DAG now.
 ; MSVC-IR: # Machine code for function test_branch_weights:
 ; MSVC-IR: mem:Volatile LD4[@__security_cookie]
 ; MSVC-IR: ST4[FixedStack0]
-; MSVC-IR: LD4[FixedStack0]
+; MSVC-IR: LD4[%StackGuardSlot]
 ; MSVC-IR: CALLpcrel32 <ga:@__security_check_cookie>
 
 define i32 @test_branch_weights(i32 %n) #0 {

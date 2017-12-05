@@ -1,4 +1,4 @@
-//===--- PreprocessorLexer.h - C Language Family Lexer ----------*- C++ -*-===//
+//===- PreprocessorLexer.h - C Language Family Lexer ------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,10 +6,10 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-///
+//
 /// \file
 /// \brief Defines the PreprocessorLexer interface.
-///
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_LEX_PREPROCESSORLEXER_H
@@ -17,8 +17,10 @@
 
 #include "clang/Lex/MultipleIncludeOpt.h"
 #include "clang/Lex/Token.h"
+#include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include <cassert>
 
 namespace clang {
 
@@ -27,25 +29,29 @@ class Preprocessor;
 
 class PreprocessorLexer {
   virtual void anchor();
+
 protected:
-  Preprocessor *PP;              // Preprocessor object controlling lexing.
+  friend class Preprocessor;
+
+  // Preprocessor object controlling lexing.
+  Preprocessor *PP = nullptr;
 
   /// The SourceManager FileID corresponding to the file being lexed.
   const FileID FID;
 
   /// \brief Number of SLocEntries before lexing the file.
-  unsigned InitialNumSLocEntries;
+  unsigned InitialNumSLocEntries = 0;
 
   //===--------------------------------------------------------------------===//
   // Context-specific lexing flags set by the preprocessor.
   //===--------------------------------------------------------------------===//
 
   /// \brief True when parsing \#XXX; turns '\\n' into a tok::eod token.
-  bool ParsingPreprocessorDirective;
+  bool ParsingPreprocessorDirective = false;
 
   /// \brief True after \#include; turns \<xx> into a tok::angle_string_literal
   /// token.
-  bool ParsingFilename;
+  bool ParsingFilename = false;
 
   /// \brief True if in raw mode.
   ///
@@ -60,7 +66,7 @@ protected:
   ///  5. No callbacks are made into the preprocessor.
   ///
   /// Note that in raw mode that the PP pointer may be null.
-  bool LexingRawMode;
+  bool LexingRawMode = false;
 
   /// \brief A state machine that detects the \#ifndef-wrapping a file
   /// idiom for the multiple-include optimization.
@@ -70,19 +76,9 @@ protected:
   /// we are currently in.
   SmallVector<PPConditionalInfo, 4> ConditionalStack;
 
-  PreprocessorLexer(const PreprocessorLexer &) = delete;
-  void operator=(const PreprocessorLexer &) = delete;
-  friend class Preprocessor;
-
+  PreprocessorLexer() : FID() {}
   PreprocessorLexer(Preprocessor *pp, FileID fid);
-
-  PreprocessorLexer()
-    : PP(nullptr), FID(), InitialNumSLocEntries(0),
-      ParsingPreprocessorDirective(false),
-      ParsingFilename(false),
-      LexingRawMode(false) {}
-
-  virtual ~PreprocessorLexer() {}
+  virtual ~PreprocessorLexer() = default;
 
   virtual void IndirectLex(Token& Result) = 0;
 
@@ -128,6 +124,8 @@ protected:
   unsigned getConditionalStackDepth() const { return ConditionalStack.size(); }
 
 public:
+  PreprocessorLexer(const PreprocessorLexer &) = delete;
+  PreprocessorLexer &operator=(const PreprocessorLexer &) = delete;
 
   //===--------------------------------------------------------------------===//
   // Misc. lexing methods.
@@ -168,12 +166,13 @@ public:
 
   /// \brief Iterator that traverses the current stack of preprocessor
   /// conditional directives (\#if/\#ifdef/\#ifndef).
-  typedef SmallVectorImpl<PPConditionalInfo>::const_iterator 
-    conditional_iterator;
+  using conditional_iterator =
+      SmallVectorImpl<PPConditionalInfo>::const_iterator;
 
   conditional_iterator conditional_begin() const { 
     return ConditionalStack.begin(); 
   }
+
   conditional_iterator conditional_end() const { 
     return ConditionalStack.end(); 
   }
@@ -184,6 +183,6 @@ public:
   }
 };
 
-}  // end namespace clang
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_LEX_PREPROCESSORLEXER_H

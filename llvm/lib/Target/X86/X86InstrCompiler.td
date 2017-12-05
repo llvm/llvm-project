@@ -142,15 +142,6 @@ def WIN_ALLOCA_64 : I<0, Pseudo, (outs), (ins GR64:$size),
                      [(X86WinAlloca GR64:$size)]>,
                      Requires<[In64BitMode]>;
 
-// These instructions XOR the frame pointer into a GPR. They are used in some
-// stack protection schemes. These are post-RA pseudos because we only know the
-// frame register after register allocation.
-let Constraints = "$src = $dst", isPseudo = 1 in {
-  def XOR32_FP : I<0, Pseudo, (outs GR32:$dst), (ins GR32:$src),
-                  "xorl\t$$FP, $src", []>, Requires<[NotLP64]>;
-  def XOR64_FP : I<0, Pseudo, (outs GR64:$dst), (ins GR64:$src),
-                  "xorq\t$$FP $src", []>, Requires<[In64BitMode]>;
-}
 
 //===----------------------------------------------------------------------===//
 // EH Pseudo Instructions
