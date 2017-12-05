@@ -12,7 +12,7 @@
 
 define void @foo() {
 ; X64-LABEL: foo:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    movl %eax, %ecx
 ; X64-NEXT:    movabsq $-1142377792914660288, %rdx # imm = 0xF02575732E06E440

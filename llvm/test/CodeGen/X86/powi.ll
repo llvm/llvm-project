@@ -3,7 +3,7 @@
 
 define double @pow_wrapper(double %a) nounwind readonly ssp noredzone {
 ; CHECK-LABEL: pow_wrapper:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movapd %xmm0, %xmm1
 ; CHECK-NEXT:    mulsd %xmm1, %xmm1
 ; CHECK-NEXT:    mulsd %xmm1, %xmm0
@@ -19,7 +19,7 @@ define double @pow_wrapper(double %a) nounwind readonly ssp noredzone {
 
 define double @pow_wrapper_optsize(double %a) optsize {
 ; CHECK-LABEL: pow_wrapper_optsize:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl  $15, %edi
 ; CHECK-NEXT:    jmp
   %ret = tail call double @llvm.powi.f64(double %a, i32 15) nounwind ; <double> [#uses=1]
@@ -28,7 +28,7 @@ define double @pow_wrapper_optsize(double %a) optsize {
 
 define double @pow_wrapper_minsize(double %a) minsize {
 ; CHECK-LABEL: pow_wrapper_minsize:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq $15
 ; CHECK:         popq %rdi
 ; CHECK:         jmp

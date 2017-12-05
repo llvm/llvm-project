@@ -3,7 +3,7 @@
 
 define i32 @and_self(i32 %x) {
 ; CHECK-LABEL: and_self:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %and = and i32 %x, %x
@@ -12,7 +12,7 @@ define i32 @and_self(i32 %x) {
 
 define <4 x i32> @and_self_vec(<4 x i32> %x) {
 ; CHECK-LABEL: and_self_vec:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    retq
   %and = and <4 x i32> %x, %x
   ret <4 x i32> %and
@@ -26,7 +26,7 @@ define <4 x i32> @and_self_vec(<4 x i32> %x) {
 
 define <4 x i32> @test1(<4 x i32> %A) {
 ; CHECK-LABEL: test1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3,4,5,6,7]
 ; CHECK-NEXT:    retq
@@ -36,7 +36,7 @@ define <4 x i32> @test1(<4 x i32> %A) {
 
 define <4 x i32> @test2(<4 x i32> %A) {
 ; CHECK-LABEL: test2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3],xmm1[4,5,6,7]
 ; CHECK-NEXT:    retq
@@ -46,7 +46,7 @@ define <4 x i32> @test2(<4 x i32> %A) {
 
 define <4 x i32> @test3(<4 x i32> %A) {
 ; CHECK-LABEL: test3:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1,2,3],xmm0[4,5],xmm1[6,7]
 ; CHECK-NEXT:    retq
@@ -56,7 +56,7 @@ define <4 x i32> @test3(<4 x i32> %A) {
 
 define <4 x i32> @test4(<4 x i32> %A) {
 ; CHECK-LABEL: test4:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1,2,3,4,5],xmm0[6,7]
 ; CHECK-NEXT:    retq
@@ -66,7 +66,7 @@ define <4 x i32> @test4(<4 x i32> %A) {
 
 define <4 x i32> @test5(<4 x i32> %A) {
 ; CHECK-LABEL: test5:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
 ; CHECK-NEXT:    retq
@@ -76,7 +76,7 @@ define <4 x i32> @test5(<4 x i32> %A) {
 
 define <4 x i32> @test6(<4 x i32> %A) {
 ; CHECK-LABEL: test6:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3],xmm1[4,5],xmm0[6,7]
 ; CHECK-NEXT:    retq
@@ -86,7 +86,7 @@ define <4 x i32> @test6(<4 x i32> %A) {
 
 define <4 x i32> @test7(<4 x i32> %A) {
 ; CHECK-LABEL: test7:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1,2,3],xmm0[4,5,6,7]
 ; CHECK-NEXT:    retq
@@ -96,7 +96,7 @@ define <4 x i32> @test7(<4 x i32> %A) {
 
 define <4 x i32> @test8(<4 x i32> %A) {
 ; CHECK-LABEL: test8:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3,4,5],xmm0[6,7]
 ; CHECK-NEXT:    retq
@@ -106,7 +106,7 @@ define <4 x i32> @test8(<4 x i32> %A) {
 
 define <4 x i32> @test9(<4 x i32> %A) {
 ; CHECK-LABEL: test9:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
 ; CHECK-NEXT:    retq
   %1 = and <4 x i32> %A, <i32 -1, i32 -1, i32 0, i32 0>
@@ -115,7 +115,7 @@ define <4 x i32> @test9(<4 x i32> %A) {
 
 define <4 x i32> @test10(<4 x i32> %A) {
 ; CHECK-LABEL: test10:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3,4,5],xmm1[6,7]
 ; CHECK-NEXT:    retq
@@ -125,7 +125,7 @@ define <4 x i32> @test10(<4 x i32> %A) {
 
 define <4 x i32> @test11(<4 x i32> %A) {
 ; CHECK-LABEL: test11:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3,4,5,6,7]
 ; CHECK-NEXT:    retq
@@ -135,7 +135,7 @@ define <4 x i32> @test11(<4 x i32> %A) {
 
 define <4 x i32> @test12(<4 x i32> %A) {
 ; CHECK-LABEL: test12:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5],xmm1[6,7]
 ; CHECK-NEXT:    retq
@@ -145,7 +145,7 @@ define <4 x i32> @test12(<4 x i32> %A) {
 
 define <4 x i32> @test13(<4 x i32> %A) {
 ; CHECK-LABEL: test13:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5],xmm0[6,7]
 ; CHECK-NEXT:    retq
@@ -155,7 +155,7 @@ define <4 x i32> @test13(<4 x i32> %A) {
 
 define <4 x i32> @test14(<4 x i32> %A) {
 ; CHECK-LABEL: test14:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3],xmm0[4,5,6,7]
 ; CHECK-NEXT:    retq
@@ -165,7 +165,7 @@ define <4 x i32> @test14(<4 x i32> %A) {
 
 define <4 x i32> @test15(<4 x i32> %A, <4 x i32> %B) {
 ; CHECK-LABEL: test15:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3],xmm0[4,5,6,7]
 ; CHECK-NEXT:    retq
   %1 = and <4 x i32> %A, <i32 -1, i32 0, i32 -1, i32 -1>
@@ -176,7 +176,7 @@ define <4 x i32> @test15(<4 x i32> %A, <4 x i32> %B) {
 
 define <4 x i32> @test16(<4 x i32> %A, <4 x i32> %B) {
 ; CHECK-LABEL: test16:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
 ; CHECK-NEXT:    retq
   %1 = and <4 x i32> %A, <i32 -1, i32 0, i32 -1, i32 0>
@@ -187,7 +187,7 @@ define <4 x i32> @test16(<4 x i32> %A, <4 x i32> %B) {
 
 define <4 x i32> @test17(<4 x i32> %A, <4 x i32> %B) {
 ; CHECK-LABEL: test17:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3],xmm1[4,5],xmm0[6,7]
 ; CHECK-NEXT:    retq
   %1 = and <4 x i32> %A, <i32 0, i32 -1, i32 0, i32 -1>
@@ -202,7 +202,7 @@ define <4 x i32> @test17(<4 x i32> %A, <4 x i32> %B) {
 
 define <2 x i64> @and_or_v2i64(<2 x i64> %a0) {
 ; CHECK-LABEL: and_or_v2i64:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [8,8]
 ; CHECK-NEXT:    retq
   %1 = or <2 x i64> %a0, <i64 255, i64 255>
@@ -212,7 +212,7 @@ define <2 x i64> @and_or_v2i64(<2 x i64> %a0) {
 
 define <4 x i32> @and_or_v4i32(<4 x i32> %a0) {
 ; CHECK-LABEL: and_or_v4i32:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [3,3,3,3]
 ; CHECK-NEXT:    retq
   %1 = or <4 x i32> %a0, <i32 15, i32 15, i32 15, i32 15>
@@ -226,7 +226,7 @@ define <4 x i32> @and_or_v4i32(<4 x i32> %a0) {
 
 define <2 x i64> @and_or_zext_v2i32(<2 x i32> %a0) {
 ; CHECK-LABEL: and_or_zext_v2i32:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %1 = zext <2 x i32> %a0 to <2 x i64>
@@ -237,7 +237,7 @@ define <2 x i64> @and_or_zext_v2i32(<2 x i32> %a0) {
 
 define <4 x i32> @and_or_zext_v4i16(<4 x i16> %a0) {
 ; CHECK-LABEL: and_or_zext_v4i16:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %1 = zext <4 x i16> %a0 to <4 x i32>
@@ -252,7 +252,7 @@ define <4 x i32> @and_or_zext_v4i16(<4 x i16> %a0) {
 
 define <8 x i16> @ashr_mask1_v8i16(<8 x i16> %a0) {
 ; CHECK-LABEL: ashr_mask1_v8i16:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    psrlw $15, %xmm0
 ; CHECK-NEXT:    retq
   %1 = ashr <8 x i16> %a0, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
@@ -262,7 +262,7 @@ define <8 x i16> @ashr_mask1_v8i16(<8 x i16> %a0) {
 
 define <4 x i32> @ashr_mask7_v4i32(<4 x i32> %a0) {
 ; CHECK-LABEL: ashr_mask7_v4i32:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    psrad $31, %xmm0
 ; CHECK-NEXT:    psrld $29, %xmm0
 ; CHECK-NEXT:    retq
@@ -278,7 +278,7 @@ define <4 x i32> @ashr_mask7_v4i32(<4 x i32> %a0) {
 ; PR34620 - redundant PAND after vector shift of a byte vector (PSRLW)
 define <16 x i8> @PR34620(<16 x i8> %a0, <16 x i8> %a1) {
 ; CHECK-LABEL: PR34620:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    psrlw $1, %xmm0
 ; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0

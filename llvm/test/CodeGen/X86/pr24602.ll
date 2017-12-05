@@ -3,7 +3,7 @@
 ; PR24602: Make sure we don't barf on non-foldable code (with opaque constants).
 
 ; CHECK-LABEL: pr24602:
-; CHECK-NEXT: # BB#0
+; CHECK-NEXT: # %bb.0
 ; CHECK-NEXT: movabsq $-10000000000, [[CST:%[a-z0-9]+]]
 ; CHECK-NEXT: imulq [[CST]], %rsi
 ; CHECK-NEXT: leaq (%rdi,%rsi,8), %rax

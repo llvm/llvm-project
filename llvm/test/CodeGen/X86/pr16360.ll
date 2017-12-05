@@ -3,7 +3,7 @@
 
 define i64 @foo(i32 %sum) {
 ; CHECK-LABEL: foo:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    shrl $2, %eax
 ; CHECK-NEXT:    orl $-67108864, %eax # imm = 0xFC000000

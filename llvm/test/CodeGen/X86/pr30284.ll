@@ -3,7 +3,7 @@
 
 define void @f_f___un_3C_unf_3E_un_3C_unf_3E_() {
 ; CHECK-LABEL: f_f___un_3C_unf_3E_un_3C_unf_3E_:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovapd 0, %zmm0
 ; CHECK-NEXT:    vmovapd 64, %zmm1
 ; CHECK-NEXT:    vmovapd {{.*#+}} zmm2 = [0,16,0,16,0,16,0,16,0,16,0,16,0,16,0,16]

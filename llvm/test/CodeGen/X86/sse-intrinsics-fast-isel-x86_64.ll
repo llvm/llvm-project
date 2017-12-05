@@ -5,7 +5,7 @@
 
 define <4 x float> @test_mm_cvtsi64_ss(<4 x float> %a0, i64 %a1) nounwind {
 ; X64-LABEL: test_mm_cvtsi64_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    cvtsi2ssq %rdi, %xmm0
 ; X64-NEXT:    retq
   %res = call <4 x float> @llvm.x86.sse.cvtsi642ss(<4 x float> %a0, i64 %a1)
@@ -15,7 +15,7 @@ declare <4 x float> @llvm.x86.sse.cvtsi642ss(<4 x float>, i64) nounwind readnone
 
 define i64 @test_mm_cvtss_si64(<4 x float> %a0) nounwind {
 ; X64-LABEL: test_mm_cvtss_si64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    cvtss2si %xmm0, %rax
 ; X64-NEXT:    retq
   %res = call i64 @llvm.x86.sse.cvtss2si64(<4 x float> %a0)
@@ -25,7 +25,7 @@ declare i64 @llvm.x86.sse.cvtss2si64(<4 x float>) nounwind readnone
 
 define i64 @test_mm_cvttss_si64(<4 x float> %a0) nounwind {
 ; X64-LABEL: test_mm_cvttss_si64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    cvttss2si %xmm0, %rax
 ; X64-NEXT:    retq
   %res = call i64 @llvm.x86.sse.cvttss2si64(<4 x float> %a0)

@@ -4,7 +4,7 @@
 
 define void @thread_selfcounts() noimplicitfloat noredzone nounwind {
 ; X86-LABEL: thread_selfcounts:
-; X86:       ## BB#0: ## %entry
+; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    subl $44, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -17,7 +17,7 @@ define void @thread_selfcounts() noimplicitfloat noredzone nounwind {
 ; X86-NEXT:    ## -- End function
 ;
 ; X64-LABEL: thread_selfcounts:
-; X64:       ## BB#0: ## %entry
+; X64:       ## %bb.0: ## %entry
 ; X64-NEXT:    subq $40, %rsp
 ; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rcx

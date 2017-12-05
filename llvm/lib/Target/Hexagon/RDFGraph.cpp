@@ -247,7 +247,7 @@ raw_ostream &operator<< (raw_ostream &OS,
     if (T != MI.operands_end()) {
       OS << ' ';
       if (T->isMBB())
-        OS << "BB#" << T->getMBB()->getNumber();
+        OS << printMBBReference(*T->getMBB());
       else if (T->isGlobal())
         OS << T->getGlobal()->getName();
       else if (T->isSymbol())
@@ -284,13 +284,13 @@ raw_ostream &operator<< (raw_ostream &OS,
   auto PrintBBs = [&OS] (std::vector<int> Ns) -> void {
     unsigned N = Ns.size();
     for (int I : Ns) {
-      OS << "BB#" << I;
+      OS << "%bb." << I;
       if (--N)
         OS << ", ";
     }
   };
 
-  OS << Print<NodeId>(P.Obj.Id, P.G) << ": --- BB#" << BB->getNumber()
+  OS << Print<NodeId>(P.Obj.Id, P.G) << ": --- " << printMBBReference(*BB)
      << " --- preds(" << NP << "): ";
   for (MachineBasicBlock *B : BB->predecessors())
     Ns.push_back(B->getNumber());
@@ -1123,8 +1123,8 @@ void DataFlowGraph::pushDefs(NodeAddr<InstrNode*> IA, DefStackMap &DefM) {
     if (!Defined.insert(RR.Reg).second) {
       MachineInstr *MI = NodeAddr<StmtNode*>(IA).Addr->getCode();
       dbgs() << "Multiple definitions of register: "
-             << Print<RegisterRef>(RR, *this) << " in\n  " << *MI
-             << "in BB#" << MI->getParent()->getNumber() << '\n';
+             << Print<RegisterRef>(RR, *this) << " in\n  " << *MI << "in "
+             << printMBBReference(*MI->getParent()) << '\n';
       llvm_unreachable(nullptr);
     }
 #endif

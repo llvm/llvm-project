@@ -7,7 +7,7 @@
 
 define <8 x i64> @testv8i64(<8 x i64> %in) nounwind {
 ; AVX512F-LABEL: testv8i64:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; AVX512F-NEXT:    vpand %ymm2, %ymm1, %ymm3
@@ -30,7 +30,7 @@ define <8 x i64> @testv8i64(<8 x i64> %in) nounwind {
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: testv8i64:
-; AVX512BW:       # BB#0:
+; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; AVX512BW-NEXT:    vpandq %zmm1, %zmm0, %zmm2
 ; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
@@ -44,12 +44,12 @@ define <8 x i64> @testv8i64(<8 x i64> %in) nounwind {
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512VPOPCNTDQ-LABEL: testv8i64:
-; AVX512VPOPCNTDQ:       # BB#0:
+; AVX512VPOPCNTDQ:       # %bb.0:
 ; AVX512VPOPCNTDQ-NEXT:    vpopcntq %zmm0, %zmm0
 ; AVX512VPOPCNTDQ-NEXT:    retq
 ;
 ; BITALG-LABEL: testv8i64:
-; BITALG:       # BB#0:
+; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; BITALG-NEXT:    vpandq %zmm1, %zmm0, %zmm2
 ; BITALG-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
@@ -67,7 +67,7 @@ define <8 x i64> @testv8i64(<8 x i64> %in) nounwind {
 
 define <16 x i32> @testv16i32(<16 x i32> %in) nounwind {
 ; AVX512F-LABEL: testv16i32:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; AVX512F-NEXT:    vpand %ymm2, %ymm1, %ymm3
@@ -98,7 +98,7 @@ define <16 x i32> @testv16i32(<16 x i32> %in) nounwind {
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: testv16i32:
-; AVX512BW:       # BB#0:
+; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; AVX512BW-NEXT:    vpandq %zmm1, %zmm0, %zmm2
 ; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
@@ -116,12 +116,12 @@ define <16 x i32> @testv16i32(<16 x i32> %in) nounwind {
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512VPOPCNTDQ-LABEL: testv16i32:
-; AVX512VPOPCNTDQ:       # BB#0:
+; AVX512VPOPCNTDQ:       # %bb.0:
 ; AVX512VPOPCNTDQ-NEXT:    vpopcntd %zmm0, %zmm0
 ; AVX512VPOPCNTDQ-NEXT:    retq
 ;
 ; BITALG-LABEL: testv16i32:
-; BITALG:       # BB#0:
+; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; BITALG-NEXT:    vpandq %zmm1, %zmm0, %zmm2
 ; BITALG-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
@@ -143,7 +143,7 @@ define <16 x i32> @testv16i32(<16 x i32> %in) nounwind {
 
 define <32 x i16> @testv32i16(<32 x i16> %in) nounwind {
 ; AVX512F-LABEL: testv32i16:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; AVX512F-NEXT:    vpand %ymm2, %ymm0, %ymm3
 ; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm4 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
@@ -167,7 +167,7 @@ define <32 x i16> @testv32i16(<32 x i16> %in) nounwind {
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: testv32i16:
-; AVX512BW:       # BB#0:
+; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; AVX512BW-NEXT:    vpandq %zmm1, %zmm0, %zmm2
 ; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
@@ -182,7 +182,7 @@ define <32 x i16> @testv32i16(<32 x i16> %in) nounwind {
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512VPOPCNTDQ-NOBW-LABEL: testv32i16:
-; AVX512VPOPCNTDQ-NOBW:       # BB#0:
+; AVX512VPOPCNTDQ-NOBW:       # %bb.0:
 ; AVX512VPOPCNTDQ-NOBW-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; AVX512VPOPCNTDQ-NOBW-NEXT:    vpopcntd %zmm0, %zmm0
 ; AVX512VPOPCNTDQ-NOBW-NEXT:    vpmovdw %zmm0, %ymm0
@@ -192,7 +192,7 @@ define <32 x i16> @testv32i16(<32 x i16> %in) nounwind {
 ; AVX512VPOPCNTDQ-NOBW-NEXT:    retq
 ;
 ; AVX512VPOPCNTDQ-BW-LABEL: testv32i16:
-; AVX512VPOPCNTDQ-BW:       # BB#0:
+; AVX512VPOPCNTDQ-BW:       # %bb.0:
 ; AVX512VPOPCNTDQ-BW-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; AVX512VPOPCNTDQ-BW-NEXT:    vpandq %zmm1, %zmm0, %zmm2
 ; AVX512VPOPCNTDQ-BW-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
@@ -207,7 +207,7 @@ define <32 x i16> @testv32i16(<32 x i16> %in) nounwind {
 ; AVX512VPOPCNTDQ-BW-NEXT:    retq
 ;
 ; BITALG-LABEL: testv32i16:
-; BITALG:       # BB#0:
+; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntw %zmm0, %zmm0
 ; BITALG-NEXT:    retq
   %out = call <32 x i16> @llvm.ctpop.v32i16(<32 x i16> %in)
@@ -216,7 +216,7 @@ define <32 x i16> @testv32i16(<32 x i16> %in) nounwind {
 
 define <64 x i8> @testv64i8(<64 x i8> %in) nounwind {
 ; AVX512F-LABEL: testv64i8:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; AVX512F-NEXT:    vpand %ymm2, %ymm0, %ymm3
 ; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm4 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
@@ -234,7 +234,7 @@ define <64 x i8> @testv64i8(<64 x i8> %in) nounwind {
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: testv64i8:
-; AVX512BW:       # BB#0:
+; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; AVX512BW-NEXT:    vpandq %zmm1, %zmm0, %zmm2
 ; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
@@ -246,7 +246,7 @@ define <64 x i8> @testv64i8(<64 x i8> %in) nounwind {
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512VPOPCNTDQ-NOBW-LABEL: testv64i8:
-; AVX512VPOPCNTDQ-NOBW:       # BB#0:
+; AVX512VPOPCNTDQ-NOBW:       # %bb.0:
 ; AVX512VPOPCNTDQ-NOBW-NEXT:    vmovdqa {{.*#+}} ymm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; AVX512VPOPCNTDQ-NOBW-NEXT:    vpand %ymm2, %ymm0, %ymm3
 ; AVX512VPOPCNTDQ-NOBW-NEXT:    vmovdqa {{.*#+}} ymm4 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
@@ -264,7 +264,7 @@ define <64 x i8> @testv64i8(<64 x i8> %in) nounwind {
 ; AVX512VPOPCNTDQ-NOBW-NEXT:    retq
 ;
 ; AVX512VPOPCNTDQ-BW-LABEL: testv64i8:
-; AVX512VPOPCNTDQ-BW:       # BB#0:
+; AVX512VPOPCNTDQ-BW:       # %bb.0:
 ; AVX512VPOPCNTDQ-BW-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; AVX512VPOPCNTDQ-BW-NEXT:    vpandq %zmm1, %zmm0, %zmm2
 ; AVX512VPOPCNTDQ-BW-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
@@ -276,7 +276,7 @@ define <64 x i8> @testv64i8(<64 x i8> %in) nounwind {
 ; AVX512VPOPCNTDQ-BW-NEXT:    retq
 ;
 ; BITALG-LABEL: testv64i8:
-; BITALG:       # BB#0:
+; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    retq
   %out = call <64 x i8> @llvm.ctpop.v64i8(<64 x i8> %in)

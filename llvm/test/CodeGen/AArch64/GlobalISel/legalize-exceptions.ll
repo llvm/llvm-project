@@ -10,9 +10,9 @@ declare void @_Unwind_Resume(i8*)
 ; CHECK: name: bar
 ; CHECK: body:
 ; CHECK-NEXT:   bb.1 (%ir-block.0):
-; CHECK:     successors: %{{bb.[0-9]+.continue.*}}%[[LP:bb.[0-9]+.cleanup]]
+; CHECK:     successors: %{{bb.[0-9]+.*}}%[[LP:bb.[0-9]+]]
 
-; CHECK:   [[LP]] (landing-pad):
+; CHECK:   [[LP]].{{[a-z]+}} (landing-pad):
 ; CHECK:     EH_LABEL
 
 ; CHECK:     [[PTR:%[0-9]+]]:_(p0) = COPY %x0

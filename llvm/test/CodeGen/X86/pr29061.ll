@@ -6,7 +6,7 @@
 
 define void @t1(i8 signext %c) {
 ; CHECK-LABEL: t1:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    .cfi_offset %edi, -8
@@ -23,7 +23,7 @@ entry:
 
 define void @t2(i8 signext %c) {
 ; CHECK-LABEL: t2:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    .cfi_offset %esi, -8

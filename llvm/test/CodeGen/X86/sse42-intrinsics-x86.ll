@@ -5,7 +5,7 @@
 
 define i32 @test_x86_sse42_pcmpestri128(<16 x i8> %a0, <16 x i8> %a2) {
 ; SSE42-LABEL: test_x86_sse42_pcmpestri128:
-; SSE42:       ## BB#0:
+; SSE42:       ## %bb.0:
 ; SSE42-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; SSE42-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
 ; SSE42-NEXT:    pcmpestri $7, %xmm1, %xmm0 ## encoding: [0x66,0x0f,0x3a,0x61,0xc1,0x07]
@@ -13,7 +13,7 @@ define i32 @test_x86_sse42_pcmpestri128(<16 x i8> %a0, <16 x i8> %a2) {
 ; SSE42-NEXT:    retl ## encoding: [0xc3]
 ;
 ; VCHECK-LABEL: test_x86_sse42_pcmpestri128:
-; VCHECK:       ## BB#0:
+; VCHECK:       ## %bb.0:
 ; VCHECK-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; VCHECK-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
 ; VCHECK-NEXT:    vpcmpestri $7, %xmm1, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x61,0xc1,0x07]
@@ -27,7 +27,7 @@ declare i32 @llvm.x86.sse42.pcmpestri128(<16 x i8>, i32, <16 x i8>, i32, i8) nou
 
 define i32 @test_x86_sse42_pcmpestri128_load(<16 x i8>* %a0, <16 x i8>* %a2) {
 ; SSE42-LABEL: test_x86_sse42_pcmpestri128_load:
-; SSE42:       ## BB#0:
+; SSE42:       ## %bb.0:
 ; SSE42-NEXT:    movl {{[0-9]+}}(%esp), %ecx ## encoding: [0x8b,0x4c,0x24,0x08]
 ; SSE42-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
 ; SSE42-NEXT:    movdqa (%eax), %xmm0 ## encoding: [0x66,0x0f,0x6f,0x00]
@@ -38,7 +38,7 @@ define i32 @test_x86_sse42_pcmpestri128_load(<16 x i8>* %a0, <16 x i8>* %a2) {
 ; SSE42-NEXT:    retl ## encoding: [0xc3]
 ;
 ; AVX2-LABEL: test_x86_sse42_pcmpestri128_load:
-; AVX2:       ## BB#0:
+; AVX2:       ## %bb.0:
 ; AVX2-NEXT:    movl {{[0-9]+}}(%esp), %ecx ## encoding: [0x8b,0x4c,0x24,0x08]
 ; AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
 ; AVX2-NEXT:    vmovdqa (%eax), %xmm0 ## encoding: [0xc5,0xf9,0x6f,0x00]
@@ -49,7 +49,7 @@ define i32 @test_x86_sse42_pcmpestri128_load(<16 x i8>* %a0, <16 x i8>* %a2) {
 ; AVX2-NEXT:    retl ## encoding: [0xc3]
 ;
 ; SKX-LABEL: test_x86_sse42_pcmpestri128_load:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    movl {{[0-9]+}}(%esp), %ecx ## encoding: [0x8b,0x4c,0x24,0x08]
 ; SKX-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
 ; SKX-NEXT:    vmovdqa (%eax), %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0x00]
@@ -67,7 +67,7 @@ define i32 @test_x86_sse42_pcmpestri128_load(<16 x i8>* %a0, <16 x i8>* %a2) {
 
 define i32 @test_x86_sse42_pcmpestria128(<16 x i8> %a0, <16 x i8> %a2) nounwind {
 ; SSE42-LABEL: test_x86_sse42_pcmpestria128:
-; SSE42:       ## BB#0:
+; SSE42:       ## %bb.0:
 ; SSE42-NEXT:    pushl %ebx ## encoding: [0x53]
 ; SSE42-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; SSE42-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
@@ -79,7 +79,7 @@ define i32 @test_x86_sse42_pcmpestria128(<16 x i8> %a0, <16 x i8> %a2) nounwind 
 ; SSE42-NEXT:    retl ## encoding: [0xc3]
 ;
 ; VCHECK-LABEL: test_x86_sse42_pcmpestria128:
-; VCHECK:       ## BB#0:
+; VCHECK:       ## %bb.0:
 ; VCHECK-NEXT:    pushl %ebx ## encoding: [0x53]
 ; VCHECK-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; VCHECK-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
@@ -97,7 +97,7 @@ declare i32 @llvm.x86.sse42.pcmpestria128(<16 x i8>, i32, <16 x i8>, i32, i8) no
 
 define i32 @test_x86_sse42_pcmpestric128(<16 x i8> %a0, <16 x i8> %a2) nounwind {
 ; SSE42-LABEL: test_x86_sse42_pcmpestric128:
-; SSE42:       ## BB#0:
+; SSE42:       ## %bb.0:
 ; SSE42-NEXT:    pushl %ebx ## encoding: [0x53]
 ; SSE42-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; SSE42-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
@@ -109,7 +109,7 @@ define i32 @test_x86_sse42_pcmpestric128(<16 x i8> %a0, <16 x i8> %a2) nounwind 
 ; SSE42-NEXT:    retl ## encoding: [0xc3]
 ;
 ; VCHECK-LABEL: test_x86_sse42_pcmpestric128:
-; VCHECK:       ## BB#0:
+; VCHECK:       ## %bb.0:
 ; VCHECK-NEXT:    pushl %ebx ## encoding: [0x53]
 ; VCHECK-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; VCHECK-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
@@ -127,7 +127,7 @@ declare i32 @llvm.x86.sse42.pcmpestric128(<16 x i8>, i32, <16 x i8>, i32, i8) no
 
 define i32 @test_x86_sse42_pcmpestrio128(<16 x i8> %a0, <16 x i8> %a2) nounwind {
 ; SSE42-LABEL: test_x86_sse42_pcmpestrio128:
-; SSE42:       ## BB#0:
+; SSE42:       ## %bb.0:
 ; SSE42-NEXT:    pushl %ebx ## encoding: [0x53]
 ; SSE42-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; SSE42-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
@@ -139,7 +139,7 @@ define i32 @test_x86_sse42_pcmpestrio128(<16 x i8> %a0, <16 x i8> %a2) nounwind 
 ; SSE42-NEXT:    retl ## encoding: [0xc3]
 ;
 ; VCHECK-LABEL: test_x86_sse42_pcmpestrio128:
-; VCHECK:       ## BB#0:
+; VCHECK:       ## %bb.0:
 ; VCHECK-NEXT:    pushl %ebx ## encoding: [0x53]
 ; VCHECK-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; VCHECK-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
@@ -157,7 +157,7 @@ declare i32 @llvm.x86.sse42.pcmpestrio128(<16 x i8>, i32, <16 x i8>, i32, i8) no
 
 define i32 @test_x86_sse42_pcmpestris128(<16 x i8> %a0, <16 x i8> %a2) nounwind {
 ; SSE42-LABEL: test_x86_sse42_pcmpestris128:
-; SSE42:       ## BB#0:
+; SSE42:       ## %bb.0:
 ; SSE42-NEXT:    pushl %ebx ## encoding: [0x53]
 ; SSE42-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; SSE42-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
@@ -169,7 +169,7 @@ define i32 @test_x86_sse42_pcmpestris128(<16 x i8> %a0, <16 x i8> %a2) nounwind 
 ; SSE42-NEXT:    retl ## encoding: [0xc3]
 ;
 ; VCHECK-LABEL: test_x86_sse42_pcmpestris128:
-; VCHECK:       ## BB#0:
+; VCHECK:       ## %bb.0:
 ; VCHECK-NEXT:    pushl %ebx ## encoding: [0x53]
 ; VCHECK-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; VCHECK-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
@@ -187,7 +187,7 @@ declare i32 @llvm.x86.sse42.pcmpestris128(<16 x i8>, i32, <16 x i8>, i32, i8) no
 
 define i32 @test_x86_sse42_pcmpestriz128(<16 x i8> %a0, <16 x i8> %a2) nounwind {
 ; SSE42-LABEL: test_x86_sse42_pcmpestriz128:
-; SSE42:       ## BB#0:
+; SSE42:       ## %bb.0:
 ; SSE42-NEXT:    pushl %ebx ## encoding: [0x53]
 ; SSE42-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; SSE42-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
@@ -199,7 +199,7 @@ define i32 @test_x86_sse42_pcmpestriz128(<16 x i8> %a0, <16 x i8> %a2) nounwind 
 ; SSE42-NEXT:    retl ## encoding: [0xc3]
 ;
 ; VCHECK-LABEL: test_x86_sse42_pcmpestriz128:
-; VCHECK:       ## BB#0:
+; VCHECK:       ## %bb.0:
 ; VCHECK-NEXT:    pushl %ebx ## encoding: [0x53]
 ; VCHECK-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; VCHECK-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
@@ -217,14 +217,14 @@ declare i32 @llvm.x86.sse42.pcmpestriz128(<16 x i8>, i32, <16 x i8>, i32, i8) no
 
 define <16 x i8> @test_x86_sse42_pcmpestrm128(<16 x i8> %a0, <16 x i8> %a2) {
 ; SSE42-LABEL: test_x86_sse42_pcmpestrm128:
-; SSE42:       ## BB#0:
+; SSE42:       ## %bb.0:
 ; SSE42-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; SSE42-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
 ; SSE42-NEXT:    pcmpestrm $7, %xmm1, %xmm0 ## encoding: [0x66,0x0f,0x3a,0x60,0xc1,0x07]
 ; SSE42-NEXT:    retl ## encoding: [0xc3]
 ;
 ; VCHECK-LABEL: test_x86_sse42_pcmpestrm128:
-; VCHECK:       ## BB#0:
+; VCHECK:       ## %bb.0:
 ; VCHECK-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; VCHECK-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
 ; VCHECK-NEXT:    vpcmpestrm $7, %xmm1, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x60,0xc1,0x07]
@@ -237,7 +237,7 @@ declare <16 x i8> @llvm.x86.sse42.pcmpestrm128(<16 x i8>, i32, <16 x i8>, i32, i
 
 define <16 x i8> @test_x86_sse42_pcmpestrm128_load(<16 x i8> %a0, <16 x i8>* %a2) {
 ; SSE42-LABEL: test_x86_sse42_pcmpestrm128_load:
-; SSE42:       ## BB#0:
+; SSE42:       ## %bb.0:
 ; SSE42-NEXT:    movl {{[0-9]+}}(%esp), %ecx ## encoding: [0x8b,0x4c,0x24,0x04]
 ; SSE42-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; SSE42-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
@@ -245,7 +245,7 @@ define <16 x i8> @test_x86_sse42_pcmpestrm128_load(<16 x i8> %a0, <16 x i8>* %a2
 ; SSE42-NEXT:    retl ## encoding: [0xc3]
 ;
 ; VCHECK-LABEL: test_x86_sse42_pcmpestrm128_load:
-; VCHECK:       ## BB#0:
+; VCHECK:       ## %bb.0:
 ; VCHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx ## encoding: [0x8b,0x4c,0x24,0x04]
 ; VCHECK-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; VCHECK-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
@@ -259,13 +259,13 @@ define <16 x i8> @test_x86_sse42_pcmpestrm128_load(<16 x i8> %a0, <16 x i8>* %a2
 
 define i32 @test_x86_sse42_pcmpistri128(<16 x i8> %a0, <16 x i8> %a1) {
 ; SSE42-LABEL: test_x86_sse42_pcmpistri128:
-; SSE42:       ## BB#0:
+; SSE42:       ## %bb.0:
 ; SSE42-NEXT:    pcmpistri $7, %xmm1, %xmm0 ## encoding: [0x66,0x0f,0x3a,0x63,0xc1,0x07]
 ; SSE42-NEXT:    movl %ecx, %eax ## encoding: [0x89,0xc8]
 ; SSE42-NEXT:    retl ## encoding: [0xc3]
 ;
 ; VCHECK-LABEL: test_x86_sse42_pcmpistri128:
-; VCHECK:       ## BB#0:
+; VCHECK:       ## %bb.0:
 ; VCHECK-NEXT:    vpcmpistri $7, %xmm1, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x63,0xc1,0x07]
 ; VCHECK-NEXT:    movl %ecx, %eax ## encoding: [0x89,0xc8]
 ; VCHECK-NEXT:    retl ## encoding: [0xc3]
@@ -277,7 +277,7 @@ declare i32 @llvm.x86.sse42.pcmpistri128(<16 x i8>, <16 x i8>, i8) nounwind read
 
 define i32 @test_x86_sse42_pcmpistri128_load(<16 x i8>* %a0, <16 x i8>* %a1) {
 ; SSE42-LABEL: test_x86_sse42_pcmpistri128_load:
-; SSE42:       ## BB#0:
+; SSE42:       ## %bb.0:
 ; SSE42-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x08]
 ; SSE42-NEXT:    movl {{[0-9]+}}(%esp), %ecx ## encoding: [0x8b,0x4c,0x24,0x04]
 ; SSE42-NEXT:    movdqa (%ecx), %xmm0 ## encoding: [0x66,0x0f,0x6f,0x01]
@@ -286,7 +286,7 @@ define i32 @test_x86_sse42_pcmpistri128_load(<16 x i8>* %a0, <16 x i8>* %a1) {
 ; SSE42-NEXT:    retl ## encoding: [0xc3]
 ;
 ; AVX2-LABEL: test_x86_sse42_pcmpistri128_load:
-; AVX2:       ## BB#0:
+; AVX2:       ## %bb.0:
 ; AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x08]
 ; AVX2-NEXT:    movl {{[0-9]+}}(%esp), %ecx ## encoding: [0x8b,0x4c,0x24,0x04]
 ; AVX2-NEXT:    vmovdqa (%ecx), %xmm0 ## encoding: [0xc5,0xf9,0x6f,0x01]
@@ -295,7 +295,7 @@ define i32 @test_x86_sse42_pcmpistri128_load(<16 x i8>* %a0, <16 x i8>* %a1) {
 ; AVX2-NEXT:    retl ## encoding: [0xc3]
 ;
 ; SKX-LABEL: test_x86_sse42_pcmpistri128_load:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x08]
 ; SKX-NEXT:    movl {{[0-9]+}}(%esp), %ecx ## encoding: [0x8b,0x4c,0x24,0x04]
 ; SKX-NEXT:    vmovdqa (%ecx), %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0x01]
@@ -311,14 +311,14 @@ define i32 @test_x86_sse42_pcmpistri128_load(<16 x i8>* %a0, <16 x i8>* %a1) {
 
 define i32 @test_x86_sse42_pcmpistria128(<16 x i8> %a0, <16 x i8> %a1) {
 ; SSE42-LABEL: test_x86_sse42_pcmpistria128:
-; SSE42:       ## BB#0:
+; SSE42:       ## %bb.0:
 ; SSE42-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
 ; SSE42-NEXT:    pcmpistri $7, %xmm1, %xmm0 ## encoding: [0x66,0x0f,0x3a,0x63,0xc1,0x07]
 ; SSE42-NEXT:    seta %al ## encoding: [0x0f,0x97,0xc0]
 ; SSE42-NEXT:    retl ## encoding: [0xc3]
 ;
 ; VCHECK-LABEL: test_x86_sse42_pcmpistria128:
-; VCHECK:       ## BB#0:
+; VCHECK:       ## %bb.0:
 ; VCHECK-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
 ; VCHECK-NEXT:    vpcmpistri $7, %xmm1, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x63,0xc1,0x07]
 ; VCHECK-NEXT:    seta %al ## encoding: [0x0f,0x97,0xc0]
@@ -331,14 +331,14 @@ declare i32 @llvm.x86.sse42.pcmpistria128(<16 x i8>, <16 x i8>, i8) nounwind rea
 
 define i32 @test_x86_sse42_pcmpistric128(<16 x i8> %a0, <16 x i8> %a1) {
 ; SSE42-LABEL: test_x86_sse42_pcmpistric128:
-; SSE42:       ## BB#0:
+; SSE42:       ## %bb.0:
 ; SSE42-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
 ; SSE42-NEXT:    pcmpistri $7, %xmm1, %xmm0 ## encoding: [0x66,0x0f,0x3a,0x63,0xc1,0x07]
 ; SSE42-NEXT:    setb %al ## encoding: [0x0f,0x92,0xc0]
 ; SSE42-NEXT:    retl ## encoding: [0xc3]
 ;
 ; VCHECK-LABEL: test_x86_sse42_pcmpistric128:
-; VCHECK:       ## BB#0:
+; VCHECK:       ## %bb.0:
 ; VCHECK-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
 ; VCHECK-NEXT:    vpcmpistri $7, %xmm1, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x63,0xc1,0x07]
 ; VCHECK-NEXT:    setb %al ## encoding: [0x0f,0x92,0xc0]
@@ -351,14 +351,14 @@ declare i32 @llvm.x86.sse42.pcmpistric128(<16 x i8>, <16 x i8>, i8) nounwind rea
 
 define i32 @test_x86_sse42_pcmpistrio128(<16 x i8> %a0, <16 x i8> %a1) {
 ; SSE42-LABEL: test_x86_sse42_pcmpistrio128:
-; SSE42:       ## BB#0:
+; SSE42:       ## %bb.0:
 ; SSE42-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
 ; SSE42-NEXT:    pcmpistri $7, %xmm1, %xmm0 ## encoding: [0x66,0x0f,0x3a,0x63,0xc1,0x07]
 ; SSE42-NEXT:    seto %al ## encoding: [0x0f,0x90,0xc0]
 ; SSE42-NEXT:    retl ## encoding: [0xc3]
 ;
 ; VCHECK-LABEL: test_x86_sse42_pcmpistrio128:
-; VCHECK:       ## BB#0:
+; VCHECK:       ## %bb.0:
 ; VCHECK-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
 ; VCHECK-NEXT:    vpcmpistri $7, %xmm1, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x63,0xc1,0x07]
 ; VCHECK-NEXT:    seto %al ## encoding: [0x0f,0x90,0xc0]
@@ -371,14 +371,14 @@ declare i32 @llvm.x86.sse42.pcmpistrio128(<16 x i8>, <16 x i8>, i8) nounwind rea
 
 define i32 @test_x86_sse42_pcmpistris128(<16 x i8> %a0, <16 x i8> %a1) {
 ; SSE42-LABEL: test_x86_sse42_pcmpistris128:
-; SSE42:       ## BB#0:
+; SSE42:       ## %bb.0:
 ; SSE42-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
 ; SSE42-NEXT:    pcmpistri $7, %xmm1, %xmm0 ## encoding: [0x66,0x0f,0x3a,0x63,0xc1,0x07]
 ; SSE42-NEXT:    sets %al ## encoding: [0x0f,0x98,0xc0]
 ; SSE42-NEXT:    retl ## encoding: [0xc3]
 ;
 ; VCHECK-LABEL: test_x86_sse42_pcmpistris128:
-; VCHECK:       ## BB#0:
+; VCHECK:       ## %bb.0:
 ; VCHECK-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
 ; VCHECK-NEXT:    vpcmpistri $7, %xmm1, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x63,0xc1,0x07]
 ; VCHECK-NEXT:    sets %al ## encoding: [0x0f,0x98,0xc0]
@@ -391,14 +391,14 @@ declare i32 @llvm.x86.sse42.pcmpistris128(<16 x i8>, <16 x i8>, i8) nounwind rea
 
 define i32 @test_x86_sse42_pcmpistriz128(<16 x i8> %a0, <16 x i8> %a1) {
 ; SSE42-LABEL: test_x86_sse42_pcmpistriz128:
-; SSE42:       ## BB#0:
+; SSE42:       ## %bb.0:
 ; SSE42-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
 ; SSE42-NEXT:    pcmpistri $7, %xmm1, %xmm0 ## encoding: [0x66,0x0f,0x3a,0x63,0xc1,0x07]
 ; SSE42-NEXT:    sete %al ## encoding: [0x0f,0x94,0xc0]
 ; SSE42-NEXT:    retl ## encoding: [0xc3]
 ;
 ; VCHECK-LABEL: test_x86_sse42_pcmpistriz128:
-; VCHECK:       ## BB#0:
+; VCHECK:       ## %bb.0:
 ; VCHECK-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
 ; VCHECK-NEXT:    vpcmpistri $7, %xmm1, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x63,0xc1,0x07]
 ; VCHECK-NEXT:    sete %al ## encoding: [0x0f,0x94,0xc0]
@@ -411,12 +411,12 @@ declare i32 @llvm.x86.sse42.pcmpistriz128(<16 x i8>, <16 x i8>, i8) nounwind rea
 
 define <16 x i8> @test_x86_sse42_pcmpistrm128(<16 x i8> %a0, <16 x i8> %a1) {
 ; SSE42-LABEL: test_x86_sse42_pcmpistrm128:
-; SSE42:       ## BB#0:
+; SSE42:       ## %bb.0:
 ; SSE42-NEXT:    pcmpistrm $7, %xmm1, %xmm0 ## encoding: [0x66,0x0f,0x3a,0x62,0xc1,0x07]
 ; SSE42-NEXT:    retl ## encoding: [0xc3]
 ;
 ; VCHECK-LABEL: test_x86_sse42_pcmpistrm128:
-; VCHECK:       ## BB#0:
+; VCHECK:       ## %bb.0:
 ; VCHECK-NEXT:    vpcmpistrm $7, %xmm1, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x62,0xc1,0x07]
 ; VCHECK-NEXT:    retl ## encoding: [0xc3]
   %res = call <16 x i8> @llvm.x86.sse42.pcmpistrm128(<16 x i8> %a0, <16 x i8> %a1, i8 7) ; <<16 x i8>> [#uses=1]
@@ -427,13 +427,13 @@ declare <16 x i8> @llvm.x86.sse42.pcmpistrm128(<16 x i8>, <16 x i8>, i8) nounwin
 
 define <16 x i8> @test_x86_sse42_pcmpistrm128_load(<16 x i8> %a0, <16 x i8>* %a1) {
 ; SSE42-LABEL: test_x86_sse42_pcmpistrm128_load:
-; SSE42:       ## BB#0:
+; SSE42:       ## %bb.0:
 ; SSE42-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
 ; SSE42-NEXT:    pcmpistrm $7, (%eax), %xmm0 ## encoding: [0x66,0x0f,0x3a,0x62,0x00,0x07]
 ; SSE42-NEXT:    retl ## encoding: [0xc3]
 ;
 ; VCHECK-LABEL: test_x86_sse42_pcmpistrm128_load:
-; VCHECK:       ## BB#0:
+; VCHECK:       ## %bb.0:
 ; VCHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
 ; VCHECK-NEXT:    vpcmpistrm $7, (%eax), %xmm0 ## encoding: [0xc4,0xe3,0x79,0x62,0x00,0x07]
 ; VCHECK-NEXT:    retl ## encoding: [0xc3]
@@ -444,7 +444,7 @@ define <16 x i8> @test_x86_sse42_pcmpistrm128_load(<16 x i8> %a0, <16 x i8>* %a1
 
 define i32 @crc32_32_8(i32 %a, i8 %b) nounwind {
 ; CHECK-LABEL: crc32_32_8:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
 ; CHECK-NEXT:    crc32b {{[0-9]+}}(%esp), %eax ## encoding: [0xf2,0x0f,0x38,0xf0,0x44,0x24,0x08]
 ; CHECK-NEXT:    retl ## encoding: [0xc3]
@@ -455,7 +455,7 @@ declare i32 @llvm.x86.sse42.crc32.32.8(i32, i8) nounwind
 
 define i32 @crc32_32_16(i32 %a, i16 %b) nounwind {
 ; CHECK-LABEL: crc32_32_16:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
 ; CHECK-NEXT:    crc32w {{[0-9]+}}(%esp), %eax ## encoding: [0x66,0xf2,0x0f,0x38,0xf1,0x44,0x24,0x08]
 ; CHECK-NEXT:    retl ## encoding: [0xc3]
@@ -466,7 +466,7 @@ declare i32 @llvm.x86.sse42.crc32.32.16(i32, i16) nounwind
 
 define i32 @crc32_32_32(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: crc32_32_32:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
 ; CHECK-NEXT:    crc32l {{[0-9]+}}(%esp), %eax ## encoding: [0xf2,0x0f,0x38,0xf1,0x44,0x24,0x08]
 ; CHECK-NEXT:    retl ## encoding: [0xc3]

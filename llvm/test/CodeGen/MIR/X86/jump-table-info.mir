@@ -61,23 +61,23 @@ name:            test_jumptable
 # CHECK-NEXT: kind: label-difference32
 # CHECK-NEXT: entries:
 # CHECK-NEXT: - id: 0
-# CHECK-NEXT: blocks: [ '%bb.3.lbl1', '%bb.4.lbl2', '%bb.5.lbl3', '%bb.6.lbl4' ]
+# CHECK-NEXT: blocks: [ '%bb.3', '%bb.4', '%bb.5', '%bb.6' ]
 # CHECK-NEXT: body:
 jumpTable:
   kind:          label-difference32
   entries:
     - id:        0
-      blocks:    [ '%bb.3.lbl1', '%bb.4.lbl2', '%bb.5.lbl3', '%bb.6.lbl4' ]
+      blocks:    [ '%bb.3', '%bb.4', '%bb.5', '%bb.6' ]
 body: |
   bb.0.entry:
-    successors: %bb.2.def, %bb.1.entry
+    successors: %bb.2, %bb.1
 
     %eax = MOV32rr %edi, implicit-def %rax
     CMP32ri8 %edi, 3, implicit-def %eflags
-    JA_1 %bb.2.def, implicit %eflags
+    JA_1 %bb.2, implicit %eflags
 
   bb.1.entry:
-    successors: %bb.3.lbl1, %bb.4.lbl2, %bb.5.lbl3, %bb.6.lbl4
+    successors: %bb.3, %bb.4, %bb.5, %bb.6
     ; CHECK: %rcx = LEA64r %rip, 1, %noreg, %jump-table.0, %noreg
     %rcx = LEA64r %rip, 1, _, %jump-table.0, _
     %rax = MOVSX64rm32 %rcx, 4, %rax, 0, _
@@ -110,17 +110,17 @@ jumpTable:
   kind:          label-difference32
   entries:
     - id:        1
-      blocks:    [ '%bb.3.lbl1', '%bb.4.lbl2', '%bb.5.lbl3', '%bb.6.lbl4' ]
+      blocks:    [ '%bb.3', '%bb.4', '%bb.5', '%bb.6' ]
 body: |
   bb.0.entry:
-    successors: %bb.2.def, %bb.1.entry
+    successors: %bb.2, %bb.1
 
     %eax = MOV32rr %edi, implicit-def %rax
     CMP32ri8 %edi, 3, implicit-def %eflags
-    JA_1 %bb.2.def, implicit %eflags
+    JA_1 %bb.2, implicit %eflags
 
   bb.1.entry:
-    successors: %bb.3.lbl1, %bb.4.lbl2, %bb.5.lbl3, %bb.6.lbl4
+    successors: %bb.3, %bb.4, %bb.5, %bb.6
     ; Verify that the printer will use an id of 0 for this jump table:
     ; CHECK: %rcx = LEA64r %rip, 1, %noreg, %jump-table.0, %noreg
     %rcx = LEA64r %rip, 1, _, %jump-table.1, _

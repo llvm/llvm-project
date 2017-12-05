@@ -4,12 +4,12 @@
 
 ; Test ldr clustering.
 ; CHECK: ********** MI Scheduling **********
-; CHECK-LABEL: ldr_int:BB#0
+; CHECK-LABEL: ldr_int:%bb.0
 ; CHECK: Cluster ld/st SU(1) - SU(2)
 ; CHECK: SU(1):   %{{[0-9]+}}<def> = LDRWui
 ; CHECK: SU(2):   %{{[0-9]+}}<def> = LDRWui
 ; EXYNOS: ********** MI Scheduling **********
-; EXYNOS-LABEL: ldr_int:BB#0
+; EXYNOS-LABEL: ldr_int:%bb.0
 ; EXYNOS: Cluster ld/st SU(1) - SU(2)
 ; EXYNOS: SU(1):   %{{[0-9]+}}<def> = LDRWui
 ; EXYNOS: SU(2):   %{{[0-9]+}}<def> = LDRWui
@@ -24,12 +24,12 @@ define i32 @ldr_int(i32* %a) nounwind {
 
 ; Test ldpsw clustering
 ; CHECK: ********** MI Scheduling **********
-; CHECK-LABEL: ldp_sext_int:BB#0
+; CHECK-LABEL: ldp_sext_int:%bb.0
 ; CHECK: Cluster ld/st SU(1) - SU(2)
 ; CHECK: SU(1):   %{{[0-9]+}}<def> = LDRSWui
 ; CHECK: SU(2):   %{{[0-9]+}}<def> = LDRSWui
 ; EXYNOS: ********** MI Scheduling **********
-; EXYNOS-LABEL: ldp_sext_int:BB#0
+; EXYNOS-LABEL: ldp_sext_int:%bb.0
 ; EXYNOS: Cluster ld/st SU(1) - SU(2)
 ; EXYNOS: SU(1):   %{{[0-9]+}}<def> = LDRSWui
 ; EXYNOS: SU(2):   %{{[0-9]+}}<def> = LDRSWui
@@ -45,12 +45,12 @@ define i64 @ldp_sext_int(i32* %p) nounwind {
 
 ; Test ldur clustering.
 ; CHECK: ********** MI Scheduling **********
-; CHECK-LABEL: ldur_int:BB#0
+; CHECK-LABEL: ldur_int:%bb.0
 ; CHECK: Cluster ld/st SU(2) - SU(1)
 ; CHECK: SU(1):   %{{[0-9]+}}<def> = LDURWi
 ; CHECK: SU(2):   %{{[0-9]+}}<def> = LDURWi
 ; EXYNOS: ********** MI Scheduling **********
-; EXYNOS-LABEL: ldur_int:BB#0
+; EXYNOS-LABEL: ldur_int:%bb.0
 ; EXYNOS: Cluster ld/st SU(2) - SU(1)
 ; EXYNOS: SU(1):   %{{[0-9]+}}<def> = LDURWi
 ; EXYNOS: SU(2):   %{{[0-9]+}}<def> = LDURWi
@@ -65,12 +65,12 @@ define i32 @ldur_int(i32* %a) nounwind {
 
 ; Test sext + zext clustering.
 ; CHECK: ********** MI Scheduling **********
-; CHECK-LABEL: ldp_half_sext_zext_int:BB#0
+; CHECK-LABEL: ldp_half_sext_zext_int:%bb.0
 ; CHECK: Cluster ld/st SU(3) - SU(4)
 ; CHECK: SU(3):   %{{[0-9]+}}<def> = LDRSWui
 ; CHECK: SU(4):   %{{[0-9]+}}:sub_32<def,read-undef> = LDRWui
 ; EXYNOS: ********** MI Scheduling **********
-; EXYNOS-LABEL: ldp_half_sext_zext_int:BB#0
+; EXYNOS-LABEL: ldp_half_sext_zext_int:%bb.0
 ; EXYNOS: Cluster ld/st SU(3) - SU(4)
 ; EXYNOS: SU(3):   %{{[0-9]+}}<def> = LDRSWui
 ; EXYNOS: SU(4):   %{{[0-9]+}}:sub_32<def,read-undef> = LDRWui
@@ -88,12 +88,12 @@ define i64 @ldp_half_sext_zext_int(i64* %q, i32* %p) nounwind {
 
 ; Test zext + sext clustering.
 ; CHECK: ********** MI Scheduling **********
-; CHECK-LABEL: ldp_half_zext_sext_int:BB#0
+; CHECK-LABEL: ldp_half_zext_sext_int:%bb.0
 ; CHECK: Cluster ld/st SU(3) - SU(4)
 ; CHECK: SU(3):   %{{[0-9]+}}:sub_32<def,read-undef> = LDRWui
 ; CHECK: SU(4):   %{{[0-9]+}}<def> = LDRSWui
 ; EXYNOS: ********** MI Scheduling **********
-; EXYNOS-LABEL: ldp_half_zext_sext_int:BB#0
+; EXYNOS-LABEL: ldp_half_zext_sext_int:%bb.0
 ; EXYNOS: Cluster ld/st SU(3) - SU(4)
 ; EXYNOS: SU(3):   %{{[0-9]+}}:sub_32<def,read-undef> = LDRWui
 ; EXYNOS: SU(4):   %{{[0-9]+}}<def> = LDRSWui
@@ -111,12 +111,12 @@ define i64 @ldp_half_zext_sext_int(i64* %q, i32* %p) nounwind {
 
 ; Verify we don't cluster volatile loads.
 ; CHECK: ********** MI Scheduling **********
-; CHECK-LABEL: ldr_int_volatile:BB#0
+; CHECK-LABEL: ldr_int_volatile:%bb.0
 ; CHECK-NOT: Cluster ld/st
 ; CHECK: SU(1):   %{{[0-9]+}}<def> = LDRWui
 ; CHECK: SU(2):   %{{[0-9]+}}<def> = LDRWui
 ; EXYNOS: ********** MI Scheduling **********
-; EXYNOS-LABEL: ldr_int_volatile:BB#0
+; EXYNOS-LABEL: ldr_int_volatile:%bb.0
 ; EXYNOS-NOT: Cluster ld/st
 ; EXYNOS: SU(1):   %{{[0-9]+}}<def> = LDRWui
 ; EXYNOS: SU(2):   %{{[0-9]+}}<def> = LDRWui
@@ -131,12 +131,12 @@ define i32 @ldr_int_volatile(i32* %a) nounwind {
 
 ; Test ldq clustering (no clustering for Exynos).
 ; CHECK: ********** MI Scheduling **********
-; CHECK-LABEL: ldq_cluster:BB#0
+; CHECK-LABEL: ldq_cluster:%bb.0
 ; CHECK: Cluster ld/st SU(1) - SU(3)
 ; CHECK: SU(1):   %{{[0-9]+}}<def> = LDRQui
 ; CHECK: SU(3):   %{{[0-9]+}}<def> = LDRQui
 ; EXYNOS: ********** MI Scheduling **********
-; EXYNOS-LABEL: ldq_cluster:BB#0
+; EXYNOS-LABEL: ldq_cluster:%bb.0
 ; EXYNOS-NOT: Cluster ld/st
 define <2 x i64> @ldq_cluster(i64* %p) {
   %a1 = bitcast i64* %p to <2 x i64>*

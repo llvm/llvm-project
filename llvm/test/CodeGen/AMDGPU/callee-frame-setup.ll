@@ -2,7 +2,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck  -enable-var-scope -check-prefix=GCN -check-prefix=GFX9 %s
 
 ; GCN-LABEL: {{^}}callee_no_stack:
-; GCN: ; BB#0:
+; GCN: ; %bb.0:
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
 define void @callee_no_stack() #0 {
@@ -10,7 +10,7 @@ define void @callee_no_stack() #0 {
 }
 
 ; GCN-LABEL: {{^}}callee_no_stack_no_fp_elim:
-; GCN: ; BB#0:
+; GCN: ; %bb.0:
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
 define void @callee_no_stack_no_fp_elim() #1 {
@@ -20,7 +20,7 @@ define void @callee_no_stack_no_fp_elim() #1 {
 ; Requires frame pointer for access to local regular object.
 
 ; GCN-LABEL: {{^}}callee_with_stack:
-; GCN: ; BB#0:
+; GCN: ; %bb.0:
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_mov_b32 s5, s32
 ; GCN-NEXT: v_mov_b32_e32 v0, 0{{$}}
@@ -34,7 +34,7 @@ define void @callee_with_stack() #0 {
 }
 
 ; GCN-LABEL: {{^}}callee_with_stack_and_call:
-; GCN: ; BB#0:
+; GCN: ; %bb.0:
 ; GCN-NEXT: s_waitcnt
 ; GCN: s_mov_b32 s5, s32
 ; GCN: buffer_store_dword v32, off, s[0:3], s5 offset:8

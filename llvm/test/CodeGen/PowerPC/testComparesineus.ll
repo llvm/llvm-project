@@ -10,7 +10,7 @@
 
 define signext i32 @test_ineus(i16 zeroext %a, i16 zeroext %b) {
 ; CHECK-LABEL: test_ineus:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xor r3, r3, r4
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    srwi r3, r3, 5
@@ -24,7 +24,7 @@ entry:
 
 define signext i32 @test_ineus_sext(i16 zeroext %a, i16 zeroext %b) {
 ; CHECK-LABEL: test_ineus_sext:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xor r3, r3, r4
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    srwi r3, r3, 5
@@ -39,7 +39,7 @@ entry:
 
 define signext i32 @test_ineus_z(i16 zeroext %a) {
 ; CHECK-LABEL: test_ineus_z:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    srwi r3, r3, 5
 ; CHECK-NEXT:    xori r3, r3, 1
@@ -52,7 +52,7 @@ entry:
 
 define signext i32 @test_ineus_sext_z(i16 zeroext %a) {
 ; CHECK-LABEL: test_ineus_sext_z:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    srwi r3, r3, 5
 ; CHECK-NEXT:    xori r3, r3, 1
@@ -66,7 +66,7 @@ entry:
 
 define void @test_ineus_store(i16 zeroext %a, i16 zeroext %b) {
 ; CHECK-LABEL: test_ineus_store:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xor r3, r3, r4
 ; CHECK-NEXT:    addis r5, r2, .LC0@toc@ha
 ; CHECK-NEXT:    cntlzw r3, r3
@@ -84,7 +84,7 @@ entry:
 
 define void @test_ineus_sext_store(i16 zeroext %a, i16 zeroext %b) {
 ; CHECK-LABEL: test_ineus_sext_store:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xor r3, r3, r4
 ; CHECK-NEXT:    addis r5, r2, .LC0@toc@ha
 ; CHECK-NEXT:    cntlzw r3, r3
@@ -103,7 +103,7 @@ entry:
 
 define void @test_ineus_z_store(i16 zeroext %a) {
 ; CHECK-LABEL: test_ineus_z_store:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
@@ -120,7 +120,7 @@ entry:
 
 define void @test_ineus_sext_z_store(i16 zeroext %a) {
 ; CHECK-LABEL: test_ineus_sext_z_store:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    srwi r3, r3, 5

@@ -795,14 +795,16 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
 static void computeKnownBitsFromShiftOperator(
     const Operator *I, KnownBits &Known, KnownBits &Known2,
     unsigned Depth, const Query &Q,
-    function_ref<KnownBits(KnownBits, unsigned)> KBF) {
+    function_ref<APInt(const APInt &, unsigned)> KZF,
+    function_ref<APInt(const APInt &, unsigned)> KOF) {
   unsigned BitWidth = Known.getBitWidth();
 
   if (auto *SA = dyn_cast<ConstantInt>(I->getOperand(1))) {
     unsigned ShiftAmt = SA->getLimitedValue(BitWidth-1);
 
     computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
-    Known = KBF(Known, ShiftAmt);
+    Known.Zero = KZF(Known.Zero, ShiftAmt);
+    Known.One  = KOF(Known.One, ShiftAmt);
     // If the known bits conflict, this must be an overflowing left shift, so
     // the shift result is poison. We can return anything we want. Choose 0 for
     // the best folding opportunity.
@@ -867,9 +869,8 @@ static void computeKnownBitsFromShiftOperator(
         continue;
     }
 
-    Known2 = KBF(Known2, ShiftAmt);
-    Known.Zero &= Known2.Zero;
-    Known.One  &= Known2.One;
+    Known.Zero &= KZF(Known2.Zero, ShiftAmt);
+    Known.One  &= KOF(Known2.One, ShiftAmt);
   }
 
   // If the known bits conflict, the result is poison. Return a 0 and hope the
@@ -1067,46 +1068,53 @@ static void computeKnownBitsFromOperator(const Operator *I, KnownBits &Known,
   case Instruction::Shl: {
     // (shl X, C1) & C2 == 0   iff   (X & C2 >>u C1) == 0
     bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
-    auto KBF = [NSW](const KnownBits &Known, unsigned ShiftAmt) {
-      KnownBits Result;
-      Result.Zero = Known.Zero << ShiftAmt;
-      Result.Zero.setLowBits(ShiftAmt); // Low bits known 0.
-      Result.One = Known.One << ShiftAmt;
+    auto KZF = [NSW](const APInt &KnownZero, unsigned ShiftAmt) {
+      APInt KZResult = KnownZero << ShiftAmt;
+      KZResult.setLowBits(ShiftAmt); // Low bits known 0.
       // If this shift has "nsw" keyword, then the result is either a poison
       // value or has the same sign bit as the first operand.
-      if (NSW && Known.isNonNegative())
-        Result.Zero.setSignBit();
-      if (NSW && Known.isNegative())
-        Result.One.setSignBit();
-      return Result;
+      if (NSW && KnownZero.isSignBitSet())
+        KZResult.setSignBit();
+      return KZResult;
     };
 
-    computeKnownBitsFromShiftOperator(I, Known, Known2, Depth, Q, KBF);
+    auto KOF = [NSW](const APInt &KnownOne, unsigned ShiftAmt) {
+      APInt KOResult = KnownOne << ShiftAmt;
+      if (NSW && KnownOne.isSignBitSet())
+        KOResult.setSignBit();
+      return KOResult;
+    };
+
+    computeKnownBitsFromShiftOperator(I, Known, Known2, Depth, Q, KZF, KOF);
     break;
   }
   case Instruction::LShr: {
     // (lshr X, C1) & C2 == 0   iff  (-1 >> C1) & C2 == 0
-    auto KBF = [](const KnownBits &Known, unsigned ShiftAmt) {
-      KnownBits Result;
-      Result.Zero = Known.Zero.lshr(ShiftAmt);
-      Result.Zero.setHighBits(ShiftAmt); // High bits known zero.
-      Result.One = Known.One.lshr(ShiftAmt);
-      return Result;
+    auto KZF = [](const APInt &KnownZero, unsigned ShiftAmt) {
+      APInt KZResult = KnownZero.lshr(ShiftAmt);
+      // High bits known zero.
+      KZResult.setHighBits(ShiftAmt);
+      return KZResult;
     };
 
-    computeKnownBitsFromShiftOperator(I, Known, Known2, Depth, Q, KBF);
+    auto KOF = [](const APInt &KnownOne, unsigned ShiftAmt) {
+      return KnownOne.lshr(ShiftAmt);
+    };
+
+    computeKnownBitsFromShiftOperator(I, Known, Known2, Depth, Q, KZF, KOF);
     break;
   }
   case Instruction::AShr: {
     // (ashr X, C1) & C2 == 0   iff  (-1 >> C1) & C2 == 0
-    auto KBF = [](const KnownBits &Known, unsigned ShiftAmt) {
-      KnownBits Result;
-      Result.Zero = Known.Zero.ashr(ShiftAmt);
-      Result.One = Known.One.ashr(ShiftAmt);
-      return Result;
+    auto KZF = [](const APInt &KnownZero, unsigned ShiftAmt) {
+      return KnownZero.ashr(ShiftAmt);
     };
 
-    computeKnownBitsFromShiftOperator(I, Known, Known2, Depth, Q, KBF);
+    auto KOF = [](const APInt &KnownOne, unsigned ShiftAmt) {
+      return KnownOne.ashr(ShiftAmt);
+    };
+
+    computeKnownBitsFromShiftOperator(I, Known, Known2, Depth, Q, KZF, KOF);
     break;
   }
   case Instruction::Sub: {

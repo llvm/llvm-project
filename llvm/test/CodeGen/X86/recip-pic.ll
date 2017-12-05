@@ -3,7 +3,7 @@
 
 define fastcc float @foo(float %x) unnamed_addr #0 {
 ; CHECK-LABEL: foo:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    calll .L0$pb
 ; CHECK-NEXT:    .cfi_adjust_cfa_offset 4
 ; CHECK-NEXT:  .L0$pb:

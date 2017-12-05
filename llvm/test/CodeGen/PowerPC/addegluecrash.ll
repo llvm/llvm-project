@@ -5,7 +5,7 @@ target triple = "powerpc64le-unknown-linux-gnu"
 
 define void @bn_mul_comba8(i64* nocapture %r, i64* nocapture readonly %a, i64* nocapture readonly %b) {
 ; CHECK-LABEL: bn_mul_comba8:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld 6, 0(4)
 ; CHECK-NEXT:    ld 7, 0(5)
 ; CHECK-NEXT:    mulhdu 8, 7, 6

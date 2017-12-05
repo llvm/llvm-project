@@ -5,7 +5,7 @@
 
 define <4 x float> @test_rsqrt14_ss(<4 x float> %a0) {
 ; CHECK-LABEL: test_rsqrt14_ss:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrsqrt14ss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
     %res = call <4 x float> @llvm.x86.avx512.rsqrt14.ss(<4 x float> %a0, <4 x float> %a0, <4 x float> zeroinitializer, i8 -1) ;
@@ -14,7 +14,7 @@ define <4 x float> @test_rsqrt14_ss(<4 x float> %a0) {
 
 define <4 x float> @test_rsqrt14_ss_load(<4 x float> %a0, <4 x float>* %a1ptr) {
 ; CHECK-LABEL: test_rsqrt14_ss_load:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrsqrt14ss (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %a1 = load <4 x float>, <4 x float>* %a1ptr
@@ -25,7 +25,7 @@ declare <4 x float> @llvm.x86.avx512.rsqrt14.ss(<4 x float>, <4 x float>, <4 x f
 
 define <4 x float> @test_rcp14_ss(<4 x float> %a0) {
 ; CHECK-LABEL: test_rcp14_ss:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrcp14ss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
     %res = call <4 x float> @llvm.x86.avx512.rcp14.ss(<4 x float> %a0, <4 x float> %a0, <4 x float> zeroinitializer, i8 -1) ;
@@ -34,7 +34,7 @@ define <4 x float> @test_rcp14_ss(<4 x float> %a0) {
 
 define <4 x float> @test_rcp14_ss_load(<4 x float> %a0, <4 x float>* %a1ptr) {
 ; CHECK-LABEL: test_rcp14_ss_load:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrcp14ss (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %a1 = load <4 x float>, <4 x float>* %a1ptr
@@ -45,7 +45,7 @@ declare <4 x float> @llvm.x86.avx512.rcp14.ss(<4 x float>, <4 x float>, <4 x flo
 
 define <2 x double> @test_rsqrt14_sd(<2 x double> %a0) {
 ; CHECK-LABEL: test_rsqrt14_sd:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrsqrt14sd %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
     %res = call <2 x double> @llvm.x86.avx512.rsqrt14.sd(<2 x double> %a0, <2 x double> %a0, <2 x double> zeroinitializer, i8 -1) ;
@@ -54,7 +54,7 @@ define <2 x double> @test_rsqrt14_sd(<2 x double> %a0) {
 
 define <2 x double> @test_rsqrt14_sd_load(<2 x double> %a0, <2 x double>* %a1ptr) {
 ; CHECK-LABEL: test_rsqrt14_sd_load:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrsqrt14sd (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %a1 = load <2 x double>, <2 x double>* %a1ptr
@@ -65,7 +65,7 @@ declare <2 x double> @llvm.x86.avx512.rsqrt14.sd(<2 x double>, <2 x double>, <2 
 
 define <2 x double> @test_rcp14_sd(<2 x double> %a0) {
 ; CHECK-LABEL: test_rcp14_sd:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrcp14sd %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
     %res = call <2 x double> @llvm.x86.avx512.rcp14.sd(<2 x double> %a0, <2 x double> %a0, <2 x double> zeroinitializer, i8 -1) ;
@@ -75,7 +75,7 @@ define <2 x double> @test_rcp14_sd(<2 x double> %a0) {
 
 define <2 x double> @test_rcp14_sd_load(<2 x double> %a0, <2 x double>* %a1ptr) {
 ; CHECK-LABEL: test_rcp14_sd_load:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrcp14sd (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %a1 = load <2 x double>, <2 x double>* %a1ptr
@@ -87,7 +87,7 @@ declare <2 x double> @llvm.x86.avx512.rcp14.sd(<2 x double>, <2 x double>, <2 x 
 declare <4 x float> @llvm.x86.avx512.mask.scalef.ss(<4 x float>, <4 x float>,<4 x float>, i8, i32)
 define <4 x float>@test_int_x86_avx512_mask_scalef_ss(<4 x float> %x0, <4 x float> %x1, <4 x float> %x3, i8 %x4) {
 ; SKX-LABEL: test_int_x86_avx512_mask_scalef_ss:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vscalefss %xmm1, %xmm0, %xmm2 {%k1}
 ; SKX-NEXT:    vscalefss {rn-sae}, %xmm1, %xmm0, %xmm0
@@ -95,7 +95,7 @@ define <4 x float>@test_int_x86_avx512_mask_scalef_ss(<4 x float> %x0, <4 x floa
 ; SKX-NEXT:    retq
 ;
 ; KNL-LABEL: test_int_x86_avx512_mask_scalef_ss:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    kmovw %edi, %k1
 ; KNL-NEXT:    vscalefss %xmm1, %xmm0, %xmm2 {%k1}
 ; KNL-NEXT:    vscalefss {rn-sae}, %xmm1, %xmm0, %xmm0
@@ -109,7 +109,7 @@ define <4 x float>@test_int_x86_avx512_mask_scalef_ss(<4 x float> %x0, <4 x floa
 
 define <4 x float>@test_int_x86_avx512_mask_scalef_ss_load(<4 x float> %x0, <4 x float>* %x1ptr) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_scalef_ss_load:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vscalefss (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %x1 = load <4 x float>, <4 x float>* %x1ptr
@@ -120,7 +120,7 @@ define <4 x float>@test_int_x86_avx512_mask_scalef_ss_load(<4 x float> %x0, <4 x
 declare <2 x double> @llvm.x86.avx512.mask.scalef.sd(<2 x double>, <2 x double>,<2 x double>, i8, i32)
 define <2 x double>@test_int_x86_avx512_mask_scalef_sd(<2 x double> %x0, <2 x double> %x1, <2 x double> %x3, i8 %x4) {
 ; SKX-LABEL: test_int_x86_avx512_mask_scalef_sd:
-; SKX:       ## BB#0:
+; SKX:       ## %bb.0:
 ; SKX-NEXT:    kmovd %edi, %k1
 ; SKX-NEXT:    vscalefsd %xmm1, %xmm0, %xmm2 {%k1}
 ; SKX-NEXT:    vscalefsd {rn-sae}, %xmm1, %xmm0, %xmm0
@@ -128,7 +128,7 @@ define <2 x double>@test_int_x86_avx512_mask_scalef_sd(<2 x double> %x0, <2 x do
 ; SKX-NEXT:    retq
 ;
 ; KNL-LABEL: test_int_x86_avx512_mask_scalef_sd:
-; KNL:       ## BB#0:
+; KNL:       ## %bb.0:
 ; KNL-NEXT:    kmovw %edi, %k1
 ; KNL-NEXT:    vscalefsd %xmm1, %xmm0, %xmm2 {%k1}
 ; KNL-NEXT:    vscalefsd {rn-sae}, %xmm1, %xmm0, %xmm0
@@ -142,7 +142,7 @@ define <2 x double>@test_int_x86_avx512_mask_scalef_sd(<2 x double> %x0, <2 x do
 
 define <2 x double>@test_int_x86_avx512_mask_scalef_sd_load(<2 x double> %x0, <2 x double>* %x1ptr) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_scalef_sd_load:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vscalefsd (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %x1 = load <2 x double>, <2 x double>* %x1ptr

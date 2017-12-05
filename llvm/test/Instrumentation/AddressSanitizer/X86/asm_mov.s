@@ -19,7 +19,7 @@
 # CHECK: movb %al, (%rdi)
 mov1b:                                  # @mov1b
 	.cfi_startproc
-# BB#0:
+# %bb.0:
 	#APP
 	movb	(%rsi), %al
 	movb	%al, (%rdi)
@@ -48,7 +48,7 @@ mov1b:                                  # @mov1b
 # CHECK: movaps %xmm0, (%rdi)
 mov16b:                                 # @mov16b
 	.cfi_startproc
-# BB#0:
+# %bb.0:
 	#APP
 	movaps	(%rsi), %xmm0
 	movaps	%xmm0, (%rdi)

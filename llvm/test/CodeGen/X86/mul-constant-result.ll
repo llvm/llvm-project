@@ -8,7 +8,7 @@
 ; Function Attrs: norecurse nounwind readnone uwtable
 define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X86-LABEL: mult:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    .cfi_offset %esi, -8
@@ -17,19 +17,19 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X86-NEXT:    movl $1, %eax
 ; X86-NEXT:    movl $1, %esi
 ; X86-NEXT:    jg .LBB0_2
-; X86-NEXT:  # BB#1:
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    movl %edx, %esi
 ; X86-NEXT:  .LBB0_2:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    testl %edx, %edx
 ; X86-NEXT:    je .LBB0_4
-; X86-NEXT:  # BB#3:
+; X86-NEXT:  # %bb.3:
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:  .LBB0_4:
 ; X86-NEXT:    decl %ecx
 ; X86-NEXT:    cmpl $31, %ecx
 ; X86-NEXT:    ja .LBB0_39
-; X86-NEXT:  # BB#5:
+; X86-NEXT:  # %bb.5:
 ; X86-NEXT:    jmpl *.LJTI0_0(,%ecx,4)
 ; X86-NEXT:  .LBB0_6:
 ; X86-NEXT:    addl %eax, %eax
@@ -187,7 +187,7 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X86-NEXT:    retl
 ;
 ; X64-HSW-LABEL: mult:
-; X64-HSW:       # BB#0:
+; X64-HSW:       # %bb.0:
 ; X64-HSW-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; X64-HSW-NEXT:    cmpl $1, %esi
 ; X64-HSW-NEXT:    movl $1, %ecx
@@ -198,7 +198,7 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X64-HSW-NEXT:    addl $-1, %edi
 ; X64-HSW-NEXT:    cmpl $31, %edi
 ; X64-HSW-NEXT:    ja .LBB0_36
-; X64-HSW-NEXT:  # BB#1:
+; X64-HSW-NEXT:  # %bb.1:
 ; X64-HSW-NEXT:    jmpq *.LJTI0_0(,%rdi,8)
 ; X64-HSW-NEXT:  .LBB0_2:
 ; X64-HSW-NEXT:    addl %eax, %eax
@@ -524,7 +524,7 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; Function Attrs: norecurse nounwind readnone uwtable
 define i32 @foo() local_unnamed_addr #0 {
 ; X86-LABEL: foo:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %edi
@@ -862,7 +862,7 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X86-NEXT:    retl
 ;
 ; X64-HSW-LABEL: foo:
-; X64-HSW:       # BB#0:
+; X64-HSW:       # %bb.0:
 ; X64-HSW-NEXT:    pushq %rbp
 ; X64-HSW-NEXT:    .cfi_def_cfa_offset 16
 ; X64-HSW-NEXT:    pushq %r15

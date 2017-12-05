@@ -6,7 +6,7 @@
 
 define i64 @test1(<2 x i64> %a) {
 ; X32-LABEL: test1:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movdqa %xmm0, %xmm1
 ; X32-NEXT:    psllq $2, %xmm1
 ; X32-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
@@ -16,7 +16,7 @@ define i64 @test1(<2 x i64> %a) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test1:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq %xmm0, %rax
 ; X64-NEXT:    retq
 entry:

@@ -30,8 +30,8 @@
 # llvm/test/DebugInfo/live-debug-values.ll and present here for testing under
 # MIR->MIR serialization.
 
-# DBG_VALUE for variable "n" is extended into BB#5 from its predecessors BB#3
-# and BB#4.
+# DBG_VALUE for variable "n" is extended into %bb.5 from its predecessors %bb.3
+# and %bb.4.
 # CHECK: ![[N_VAR:[0-9]+]] = !DILocalVariable(name: "n",{{.*}})
 #
 # CHECK:      bb.5.if.end.7:

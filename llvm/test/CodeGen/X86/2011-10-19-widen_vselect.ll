@@ -7,13 +7,13 @@
 
 define void @simple_widen(<2 x float> %a, <2 x float> %b) {
 ; X32-LABEL: simple_widen:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    extractps $1, %xmm1, (%eax)
 ; X32-NEXT:    movss %xmm1, (%eax)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: simple_widen:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movlps %xmm1, (%rax)
 ; X64-NEXT:    retq
 entry:
@@ -24,7 +24,7 @@ entry:
 
 define void @complex_inreg_work(<2 x float> %a, <2 x float> %b) {
 ; X32-LABEL: complex_inreg_work:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movaps %xmm0, %xmm2
 ; X32-NEXT:    cmpordps %xmm0, %xmm0
 ; X32-NEXT:    blendvps %xmm0, %xmm2, %xmm1
@@ -33,7 +33,7 @@ define void @complex_inreg_work(<2 x float> %a, <2 x float> %b) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: complex_inreg_work:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movaps %xmm0, %xmm2
 ; X64-NEXT:    cmpordps %xmm0, %xmm0
 ; X64-NEXT:    blendvps %xmm0, %xmm2, %xmm1
@@ -48,14 +48,14 @@ entry:
 
 define void @zero_test() {
 ; X32-LABEL: zero_test:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    xorps %xmm0, %xmm0
 ; X32-NEXT:    extractps $1, %xmm0, (%eax)
 ; X32-NEXT:    movss %xmm0, (%eax)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: zero_test:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    xorps %xmm0, %xmm0
 ; X64-NEXT:    movlps %xmm0, (%rax)
 ; X64-NEXT:    retq
@@ -67,7 +67,7 @@ entry:
 
 define void @full_test() {
 ; X32-LABEL: full_test:
-; X32:       # BB#0: # %entry
+; X32:       # %bb.0: # %entry
 ; X32-NEXT:    subl $60, %esp
 ; X32-NEXT:    .cfi_def_cfa_offset 64
 ; X32-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
@@ -91,7 +91,7 @@ define void @full_test() {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: full_test:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
 ; X64-NEXT:    cvttps2dq %xmm2, %xmm0
 ; X64-NEXT:    cvtdq2ps %xmm0, %xmm1

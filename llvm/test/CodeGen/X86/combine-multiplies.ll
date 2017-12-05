@@ -33,7 +33,7 @@
 ; Function Attrs: nounwind
 define void @testCombineMultiplies([100 x i32]* nocapture %a, i32 %lll) nounwind {
 ; CHECK-LABEL: testCombineMultiplies:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -74,7 +74,7 @@ entry:
 ; Output looks something like this:
 ;
 ; testCombineMultiplies_splat:                              # @testCombineMultiplies_splat
-; # BB#0:                                 # %entry
+; # %bb.0:                                 # %entry
 ; 	movdqa	.LCPI1_0, %xmm1         # xmm1 = [11,11,11,11]
 ; 	paddd	%xmm0, %xmm1
 ; 	movdqa	.LCPI1_1, %xmm2         # xmm2 = [22,22,22,22]
@@ -104,7 +104,7 @@ entry:
 ; Function Attrs: nounwind
 define void @testCombineMultiplies_splat(<4 x i32> %v1) nounwind {
 ; CHECK-LABEL: testCombineMultiplies_splat:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [11,11,11,11]
 ; CHECK-NEXT:    paddd %xmm0, %xmm1
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [22,22,22,22]
@@ -138,7 +138,7 @@ entry:
 ; Function Attrs: nounwind
 define void @testCombineMultiplies_non_splat(<4 x i32> %v1) nounwind {
 ; CHECK-LABEL: testCombineMultiplies_non_splat:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [11,22,33,44]
 ; CHECK-NEXT:    paddd %xmm0, %xmm1
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [22,33,44,55]

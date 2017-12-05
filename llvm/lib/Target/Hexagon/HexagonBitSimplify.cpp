@@ -2977,7 +2977,7 @@ void HexagonLoopRescheduling::moveGroup(InstrGroup &G, MachineBasicBlock &LB,
 }
 
 bool HexagonLoopRescheduling::processLoop(LoopCand &C) {
-  DEBUG(dbgs() << "Processing loop in BB#" << C.LB->getNumber() << "\n");
+  DEBUG(dbgs() << "Processing loop in " << printMBBReference(*C.LB) << "\n");
   std::vector<PhiInfo> Phis;
   for (auto &I : *C.LB) {
     if (!I.isPHI())

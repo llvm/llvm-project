@@ -7,7 +7,7 @@
 
 define void @t() nounwind  {
 ; X86-LABEL: t:
-; X86:       ## BB#0: ## %entry
+; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    subl $44, %esp
 ; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
@@ -25,7 +25,7 @@ define void @t() nounwind  {
 ; X86-NEXT:    ## -- End function
 ;
 ; XMM-LABEL: t:
-; XMM:       ## BB#0: ## %entry
+; XMM:       ## %bb.0: ## %entry
 ; XMM-NEXT:    subl $60, %esp
 ; XMM-NEXT:    xorps %xmm0, %xmm0
 ; XMM-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
@@ -38,7 +38,7 @@ define void @t() nounwind  {
 ; XMM-NEXT:    ## -- End function
 ;
 ; YMM-LABEL: t:
-; YMM:       ## BB#0: ## %entry
+; YMM:       ## %bb.0: ## %entry
 ; YMM-NEXT:    pushl %ebp
 ; YMM-NEXT:    movl %esp, %ebp
 ; YMM-NEXT:    andl $-32, %esp
@@ -71,7 +71,7 @@ declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) nounwind
 ; unaligned loads and stores.
 define void @PR15348(i8* %a) {
 ; X86-LABEL: PR15348:
-; X86:       ## BB#0:
+; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movb $0, 16(%eax)
 ; X86-NEXT:    movl $0, 12(%eax)
@@ -81,7 +81,7 @@ define void @PR15348(i8* %a) {
 ; X86-NEXT:    retl
 ;
 ; XMM-LABEL: PR15348:
-; XMM:       ## BB#0:
+; XMM:       ## %bb.0:
 ; XMM-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; XMM-NEXT:    movb $0, 16(%eax)
 ; XMM-NEXT:    movl $0, 12(%eax)
@@ -91,7 +91,7 @@ define void @PR15348(i8* %a) {
 ; XMM-NEXT:    retl
 ;
 ; YMM-LABEL: PR15348:
-; YMM:       ## BB#0:
+; YMM:       ## %bb.0:
 ; YMM-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; YMM-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; YMM-NEXT:    vmovups %xmm0, (%eax)

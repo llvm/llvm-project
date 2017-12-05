@@ -4,7 +4,7 @@
 
 define void @f(<8 x float> %A, i8* %B, <4 x double> %C, <4 x i64> %E, <8 x i32> %F, <16 x i16> %G, <32 x i8> %H) nounwind {
 ; X32-LABEL: f:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebp
 ; X32-NEXT:    movl %esp, %ebp
 ; X32-NEXT:    andl $-32, %esp
@@ -31,7 +31,7 @@ define void @f(<8 x float> %A, i8* %B, <4 x double> %C, <4 x i64> %E, <8 x i32> 
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: f:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vaddps {{.*}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    vmovntps %ymm0, (%rdi)
 ; X64-NEXT:    vpaddq {{.*}}(%rip), %ymm2, %ymm0

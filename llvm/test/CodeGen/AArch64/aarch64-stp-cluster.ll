@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=arm64-linux-gnu -mcpu=cortex-a57 -verify-misched -debug-only=machine-scheduler -aarch64-enable-stp-suppress=false -o - 2>&1 > /dev/null | FileCheck %s
 
 ; CHECK: ********** MI Scheduling **********
-; CHECK-LABEL: stp_i64_scale:BB#0
+; CHECK-LABEL: stp_i64_scale:%bb.0
 ; CHECK:Cluster ld/st SU(4) - SU(3)
 ; CHECK:Cluster ld/st SU(2) - SU(5)
 ; CHECK:SU(4):   STRXui %1, %0, 1
@@ -23,7 +23,7 @@ entry:
 }
 
 ; CHECK: ********** MI Scheduling **********
-; CHECK-LABEL: stp_i32_scale:BB#0
+; CHECK-LABEL: stp_i32_scale:%bb.0
 ; CHECK:Cluster ld/st SU(4) - SU(3)
 ; CHECK:Cluster ld/st SU(2) - SU(5)
 ; CHECK:SU(4):   STRWui %1, %0, 1
@@ -44,7 +44,7 @@ entry:
 }
 
 ; CHECK:********** MI Scheduling **********
-; CHECK-LABEL:stp_i64_unscale:BB#0 entry
+; CHECK-LABEL:stp_i64_unscale:%bb.0 entry
 ; CHECK:Cluster ld/st SU(5) - SU(2)
 ; CHECK:Cluster ld/st SU(4) - SU(3)
 ; CHECK:SU(5):   STURXi %1, %0, -32
@@ -65,7 +65,7 @@ entry:
 }
 
 ; CHECK:********** MI Scheduling **********
-; CHECK-LABEL:stp_i32_unscale:BB#0 entry
+; CHECK-LABEL:stp_i32_unscale:%bb.0 entry
 ; CHECK:Cluster ld/st SU(5) - SU(2)
 ; CHECK:Cluster ld/st SU(4) - SU(3)
 ; CHECK:SU(5):   STURWi %1, %0, -16
@@ -86,7 +86,7 @@ entry:
 }
 
 ; CHECK:********** MI Scheduling **********
-; CHECK-LABEL:stp_double:BB#0
+; CHECK-LABEL:stp_double:%bb.0
 ; CHECK:Cluster ld/st SU(3) - SU(4)
 ; CHECK:Cluster ld/st SU(2) - SU(5)
 ; CHECK:SU(3):   STRDui %1, %0, 1
@@ -107,7 +107,7 @@ entry:
 }
 
 ; CHECK:********** MI Scheduling **********
-; CHECK-LABEL:stp_float:BB#0
+; CHECK-LABEL:stp_float:%bb.0
 ; CHECK:Cluster ld/st SU(3) - SU(4)
 ; CHECK:Cluster ld/st SU(2) - SU(5)
 ; CHECK:SU(3):   STRSui %1, %0, 1
@@ -128,7 +128,7 @@ entry:
 }
 
 ; CHECK: ********** MI Scheduling **********
-; CHECK-LABEL: stp_volatile:BB#0
+; CHECK-LABEL: stp_volatile:%bb.0
 ; CHECK-NOT: Cluster ld/st
 ; CHECK:SU(2):   STRXui %1, %0, 3; mem:Volatile
 ; CHECK:SU(3):   STRXui %1, %0, 2; mem:Volatile

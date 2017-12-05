@@ -4,7 +4,7 @@
 
 define void @test(i64* %P) nounwind  {
 ; CHECK-LABEL: test:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl (%eax), %ecx
 ; CHECK-NEXT:    xorl $1, %ecx

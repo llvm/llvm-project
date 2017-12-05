@@ -12,7 +12,7 @@
 ;
 define void @mul_2xi8(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 %index) {
 ; X86-LABEL: mul_2xi8:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    .cfi_offset %esi, -8
@@ -34,7 +34,7 @@ define void @mul_2xi8(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_2xi8:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq {{.*}}(%rip), %rax
 ; X64-NEXT:    movzwl (%rdi,%rdx), %ecx
 ; X64-NEXT:    movd %ecx, %xmm0
@@ -72,7 +72,7 @@ entry:
 ;
 define void @mul_4xi8(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 %index) {
 ; X86-LABEL: mul_4xi8:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    .cfi_offset %esi, -8
@@ -92,7 +92,7 @@ define void @mul_4xi8(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_4xi8:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq {{.*}}(%rip), %rax
 ; X64-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
@@ -128,7 +128,7 @@ entry:
 ;
 define void @mul_8xi8(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 %index) {
 ; X86-LABEL: mul_8xi8:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    .cfi_offset %esi, -8
@@ -151,7 +151,7 @@ define void @mul_8xi8(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_8xi8:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq {{.*}}(%rip), %rax
 ; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
@@ -190,7 +190,7 @@ entry:
 ;
 define void @mul_16xi8(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 %index) {
 ; X86-LABEL: mul_16xi8:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    .cfi_offset %esi, -8
@@ -223,7 +223,7 @@ define void @mul_16xi8(i8* nocapture readonly %a, i8* nocapture readonly %b, i64
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_16xi8:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq {{.*}}(%rip), %rax
 ; X64-NEXT:    movdqu (%rdi,%rdx), %xmm0
 ; X64-NEXT:    movdqu (%rsi,%rdx), %xmm1
@@ -272,7 +272,7 @@ entry:
 ;
 define void @mul_2xi16(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 %index) {
 ; X86-LABEL: mul_2xi16:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    .cfi_offset %esi, -8
@@ -291,7 +291,7 @@ define void @mul_2xi16(i8* nocapture readonly %a, i8* nocapture readonly %b, i64
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_2xi16:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq {{.*}}(%rip), %rax
 ; X64-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
@@ -326,7 +326,7 @@ entry:
 ;
 define void @mul_4xi16(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 %index) {
 ; X86-LABEL: mul_4xi16:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    .cfi_offset %esi, -8
@@ -345,7 +345,7 @@ define void @mul_4xi16(i8* nocapture readonly %a, i8* nocapture readonly %b, i64
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_4xi16:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq {{.*}}(%rip), %rax
 ; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
@@ -380,7 +380,7 @@ entry:
 ;
 define void @mul_8xi16(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 %index) {
 ; X86-LABEL: mul_8xi16:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    .cfi_offset %esi, -8
@@ -402,7 +402,7 @@ define void @mul_8xi16(i8* nocapture readonly %a, i8* nocapture readonly %b, i64
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_8xi16:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq {{.*}}(%rip), %rax
 ; X64-NEXT:    movdqu (%rdi,%rdx), %xmm0
 ; X64-NEXT:    movdqu (%rsi,%rdx), %xmm1
@@ -440,7 +440,7 @@ entry:
 ;
 define void @mul_16xi16(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 %index) {
 ; X86-LABEL: mul_16xi16:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    .cfi_offset %esi, -8
@@ -472,7 +472,7 @@ define void @mul_16xi16(i8* nocapture readonly %a, i8* nocapture readonly %b, i6
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_16xi16:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq {{.*}}(%rip), %rax
 ; X64-NEXT:    movdqu (%rdi,%rdx), %xmm0
 ; X64-NEXT:    movdqu 16(%rdi,%rdx), %xmm1
@@ -520,7 +520,7 @@ entry:
 ;
 define void @mul_2xi8_sext(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 %index) {
 ; X86-LABEL: mul_2xi8_sext:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    .cfi_offset %esi, -8
@@ -544,7 +544,7 @@ define void @mul_2xi8_sext(i8* nocapture readonly %a, i8* nocapture readonly %b,
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_2xi8_sext:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq {{.*}}(%rip), %rax
 ; X64-NEXT:    movzwl (%rdi,%rdx), %ecx
 ; X64-NEXT:    movd %ecx, %xmm0
@@ -584,7 +584,7 @@ entry:
 ;
 define void @mul_2xi8_sext_zext(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 %index) {
 ; X86-LABEL: mul_2xi8_sext_zext:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    .cfi_offset %esi, -8
@@ -609,7 +609,7 @@ define void @mul_2xi8_sext_zext(i8* nocapture readonly %a, i8* nocapture readonl
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_2xi8_sext_zext:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq {{.*}}(%rip), %rax
 ; X64-NEXT:    movzwl (%rdi,%rdx), %ecx
 ; X64-NEXT:    movd %ecx, %xmm0
@@ -650,7 +650,7 @@ entry:
 ;
 define void @mul_2xi16_sext(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 %index) {
 ; X86-LABEL: mul_2xi16_sext:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    .cfi_offset %esi, -8
@@ -669,7 +669,7 @@ define void @mul_2xi16_sext(i8* nocapture readonly %a, i8* nocapture readonly %b
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_2xi16_sext:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq {{.*}}(%rip), %rax
 ; X64-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
@@ -704,7 +704,7 @@ entry:
 ;
 define void @mul_2xi16_sext_zext(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 %index) {
 ; X86-LABEL: mul_2xi16_sext_zext:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    .cfi_offset %esi, -8
@@ -736,7 +736,7 @@ define void @mul_2xi16_sext_zext(i8* nocapture readonly %a, i8* nocapture readon
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_2xi16_sext_zext:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq {{.*}}(%rip), %rax
 ; X64-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,2,1,4,5,6,7]
@@ -784,7 +784,7 @@ entry:
 ;
 define void @mul_16xi16_sext(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 %index) {
 ; X86-LABEL: mul_16xi16_sext:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    .cfi_offset %esi, -8
@@ -816,7 +816,7 @@ define void @mul_16xi16_sext(i8* nocapture readonly %a, i8* nocapture readonly %
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_16xi16_sext:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq {{.*}}(%rip), %rax
 ; X64-NEXT:    movdqu (%rdi,%rdx), %xmm0
 ; X64-NEXT:    movdqu 16(%rdi,%rdx), %xmm1
@@ -863,7 +863,7 @@ entry:
 ;
 define void @mul_2xi8_varconst1(i8* nocapture readonly %a, i64 %index) {
 ; X86-LABEL: mul_2xi8_varconst1:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl c, %edx
@@ -877,7 +877,7 @@ define void @mul_2xi8_varconst1(i8* nocapture readonly %a, i64 %index) {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_2xi8_varconst1:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq {{.*}}(%rip), %rax
 ; X64-NEXT:    movzwl (%rdi,%rsi), %ecx
 ; X64-NEXT:    movd %ecx, %xmm0
@@ -907,7 +907,7 @@ entry:
 ;
 define void @mul_2xi8_varconst2(i8* nocapture readonly %a, i64 %index) {
 ; X86-LABEL: mul_2xi8_varconst2:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl c, %edx
@@ -922,7 +922,7 @@ define void @mul_2xi8_varconst2(i8* nocapture readonly %a, i64 %index) {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_2xi8_varconst2:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq {{.*}}(%rip), %rax
 ; X64-NEXT:    movzwl (%rdi,%rsi), %ecx
 ; X64-NEXT:    movd %ecx, %xmm0
@@ -953,7 +953,7 @@ entry:
 ;
 define void @mul_2xi8_varconst3(i8* nocapture readonly %a, i64 %index) {
 ; X86-LABEL: mul_2xi8_varconst3:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl c, %edx
@@ -970,7 +970,7 @@ define void @mul_2xi8_varconst3(i8* nocapture readonly %a, i64 %index) {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_2xi8_varconst3:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq {{.*}}(%rip), %rax
 ; X64-NEXT:    movzwl (%rdi,%rsi), %ecx
 ; X64-NEXT:    movd %ecx, %xmm0
@@ -1003,7 +1003,7 @@ entry:
 ;
 define void @mul_2xi8_varconst4(i8* nocapture readonly %a, i64 %index) {
 ; X86-LABEL: mul_2xi8_varconst4:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl c, %edx
@@ -1020,7 +1020,7 @@ define void @mul_2xi8_varconst4(i8* nocapture readonly %a, i64 %index) {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_2xi8_varconst4:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq {{.*}}(%rip), %rax
 ; X64-NEXT:    movzwl (%rdi,%rsi), %ecx
 ; X64-NEXT:    movd %ecx, %xmm0
@@ -1053,7 +1053,7 @@ entry:
 ;
 define void @mul_2xi8_varconst5(i8* nocapture readonly %a, i64 %index) {
 ; X86-LABEL: mul_2xi8_varconst5:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl c, %edx
@@ -1070,7 +1070,7 @@ define void @mul_2xi8_varconst5(i8* nocapture readonly %a, i64 %index) {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_2xi8_varconst5:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq {{.*}}(%rip), %rax
 ; X64-NEXT:    movzwl (%rdi,%rsi), %ecx
 ; X64-NEXT:    movd %ecx, %xmm0
@@ -1103,7 +1103,7 @@ entry:
 ;
 define void @mul_2xi8_varconst6(i8* nocapture readonly %a, i64 %index) {
 ; X86-LABEL: mul_2xi8_varconst6:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl c, %edx
@@ -1120,7 +1120,7 @@ define void @mul_2xi8_varconst6(i8* nocapture readonly %a, i64 %index) {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_2xi8_varconst6:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq {{.*}}(%rip), %rax
 ; X64-NEXT:    movzwl (%rdi,%rsi), %ecx
 ; X64-NEXT:    movd %ecx, %xmm0
@@ -1153,7 +1153,7 @@ entry:
 ;
 define void @mul_2xi16_varconst1(i8* nocapture readonly %a, i64 %index) {
 ; X86-LABEL: mul_2xi16_varconst1:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl c, %edx
@@ -1167,7 +1167,7 @@ define void @mul_2xi16_varconst1(i8* nocapture readonly %a, i64 %index) {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_2xi16_varconst1:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq {{.*}}(%rip), %rax
 ; X64-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    movdqa {{.*#+}} xmm1 = <0,65535,u,u,u,u,u,u>
@@ -1197,7 +1197,7 @@ entry:
 ;
 define void @mul_2xi16_varconst2(i8* nocapture readonly %a, i64 %index) {
 ; X86-LABEL: mul_2xi16_varconst2:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl c, %edx
@@ -1211,7 +1211,7 @@ define void @mul_2xi16_varconst2(i8* nocapture readonly %a, i64 %index) {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_2xi16_varconst2:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq {{.*}}(%rip), %rax
 ; X64-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    movdqa {{.*#+}} xmm1 = <32768,32767,u,u,u,u,u,u>
@@ -1241,7 +1241,7 @@ entry:
 ;
 define void @mul_2xi16_varconst3(i8* nocapture readonly %a, i64 %index) {
 ; X86-LABEL: mul_2xi16_varconst3:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl c, %edx
@@ -1261,7 +1261,7 @@ define void @mul_2xi16_varconst3(i8* nocapture readonly %a, i64 %index) {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_2xi16_varconst3:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq {{.*}}(%rip), %rax
 ; X64-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    pxor %xmm1, %xmm1
@@ -1299,7 +1299,7 @@ entry:
 ;
 define void @mul_2xi16_varconst4(i8* nocapture readonly %a, i64 %index) {
 ; X86-LABEL: mul_2xi16_varconst4:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl c, %edx
@@ -1319,7 +1319,7 @@ define void @mul_2xi16_varconst4(i8* nocapture readonly %a, i64 %index) {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_2xi16_varconst4:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq {{.*}}(%rip), %rax
 ; X64-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,2,1,4,5,6,7]
@@ -1356,7 +1356,7 @@ entry:
 
 define void @PR34947() {
 ; X86-LABEL: PR34947:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movdqa (%eax), %xmm0
 ; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[3,1,2,3]
 ; X86-NEXT:    movd %xmm1, %ecx
@@ -1403,7 +1403,7 @@ define void @PR34947() {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: PR34947:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movdqa (%rax), %xmm0
 ; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[3,1,2,3]
 ; X64-NEXT:    movd %xmm1, %ecx

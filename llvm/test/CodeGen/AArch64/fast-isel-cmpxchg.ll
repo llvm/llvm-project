@@ -6,7 +6,7 @@
 ; CHECK-NEXT:     ldaxr [[OLD:w[0-9]+]], [x0]
 ; CHECK-NEXT:     cmp [[OLD]], w1
 ; CHECK-NEXT:     b.ne [[DONE:.LBB[0-9_]+]]
-; CHECK-NEXT: // BB#2:
+; CHECK-NEXT: // %bb.2:
 ; CHECK-NEXT:     stlxr [[STATUS]], w2, [x0]
 ; CHECK-NEXT:     cbnz [[STATUS]], [[RETRY]]
 ; CHECK-NEXT: [[DONE]]:
@@ -25,14 +25,14 @@ define i32 @cmpxchg_monotonic_32(i32* %p, i32 %cmp, i32 %new, i32* %ps) #0 {
 }
 
 ; CHECK-LABEL: cmpxchg_acq_rel_32_load:
-; CHECK:      // BB#0:
+; CHECK:      // %bb.0:
 ; CHECK:     ldr [[NEW:w[0-9]+]], [x2]
 ; CHECK-NEXT: [[RETRY:.LBB[0-9_]+]]:
 ; CHECK-NEXT:     mov [[STATUS:w[0-9]+]], #0
 ; CHECK-NEXT:     ldaxr [[OLD:w[0-9]+]], [x0]
 ; CHECK-NEXT:     cmp [[OLD]], w1
 ; CHECK-NEXT:     b.ne [[DONE:.LBB[0-9_]+]]
-; CHECK-NEXT: // BB#2:
+; CHECK-NEXT: // %bb.2:
 ; CHECK-NEXT:     stlxr [[STATUS]], [[NEW]], [x0]
 ; CHECK-NEXT:     cbnz [[STATUS]], [[RETRY]]
 ; CHECK-NEXT: [[DONE]]:
@@ -57,7 +57,7 @@ define i32 @cmpxchg_acq_rel_32_load(i32* %p, i32 %cmp, i32* %pnew, i32* %ps) #0 
 ; CHECK-NEXT:     ldaxr [[OLD:x[0-9]+]], [x0]
 ; CHECK-NEXT:     cmp [[OLD]], x1
 ; CHECK-NEXT:     b.ne [[DONE:.LBB[0-9_]+]]
-; CHECK-NEXT: // BB#2:
+; CHECK-NEXT: // %bb.2:
 ; CHECK-NEXT:     stlxr [[STATUS]], x2, [x0]
 ; CHECK-NEXT:     cbnz [[STATUS]], [[RETRY]]
 ; CHECK-NEXT: [[DONE]]:

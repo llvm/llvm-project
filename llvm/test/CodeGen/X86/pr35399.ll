@@ -4,7 +4,7 @@
 ; Make sure we emit opoosite setcc instructions.
 define i64 @pr35399(i64, i8*, i8*) {
 ; CHECK-LABEL: pr35399:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lzcntq %rdi, %rax
 ; CHECK-NEXT:    setae (%rsi)
 ; CHECK-NEXT:    setb (%rdx)

@@ -7,12 +7,12 @@ declare <2 x i64> @llvm.x86.pclmulqdq(<2 x i64>, <2 x i64>, i8) nounwind readnon
 
 define <2 x i64> @commute_lq_lq(<2 x i64>* %a0, <2 x i64> %a1) #0 {
 ; SSE-LABEL: commute_lq_lq:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    pclmulqdq $0, (%rdi), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: commute_lq_lq:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpclmulqdq $0, (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = load <2 x i64>, <2 x i64>* %a0
@@ -22,12 +22,12 @@ define <2 x i64> @commute_lq_lq(<2 x i64>* %a0, <2 x i64> %a1) #0 {
 
 define <2 x i64> @commute_lq_hq(<2 x i64>* %a0, <2 x i64> %a1) #0 {
 ; SSE-LABEL: commute_lq_hq:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    pclmulqdq $1, (%rdi), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: commute_lq_hq:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpclmulqdq $1, (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = load <2 x i64>, <2 x i64>* %a0
@@ -37,12 +37,12 @@ define <2 x i64> @commute_lq_hq(<2 x i64>* %a0, <2 x i64> %a1) #0 {
 
 define <2 x i64> @commute_hq_lq(<2 x i64>* %a0, <2 x i64> %a1) #0 {
 ; SSE-LABEL: commute_hq_lq:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    pclmulqdq $16, (%rdi), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: commute_hq_lq:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpclmulqdq $16, (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = load <2 x i64>, <2 x i64>* %a0
@@ -52,12 +52,12 @@ define <2 x i64> @commute_hq_lq(<2 x i64>* %a0, <2 x i64> %a1) #0 {
 
 define <2 x i64> @commute_hq_hq(<2 x i64>* %a0, <2 x i64> %a1) #0 {
 ; SSE-LABEL: commute_hq_hq:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    pclmulqdq $17, (%rdi), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: commute_hq_hq:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vpclmulqdq $17, (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = load <2 x i64>, <2 x i64>* %a0

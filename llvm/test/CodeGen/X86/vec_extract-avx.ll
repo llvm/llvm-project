@@ -10,14 +10,14 @@
 ; Extracting the low elements only requires using the right kind of store.
 define void @low_v8f32_to_v4f32(<8 x float> %v, <4 x float>* %ptr) {
 ; X32-LABEL: low_v8f32_to_v4f32:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vmovaps %xmm0, (%eax)
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: low_v8f32_to_v4f32:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vmovaps %xmm0, (%rdi)
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
@@ -36,14 +36,14 @@ define void @low_v8f32_to_v4f32(<8 x float> %v, <4 x float>* %ptr) {
 ; Extracting the high elements requires just one AVX instruction.
 define void @high_v8f32_to_v4f32(<8 x float> %v, <4 x float>* %ptr) {
 ; X32-LABEL: high_v8f32_to_v4f32:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vextractf128 $1, %ymm0, (%eax)
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: high_v8f32_to_v4f32:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vextractf128 $1, %ymm0, (%rdi)
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
@@ -64,14 +64,14 @@ define void @high_v8f32_to_v4f32(<8 x float> %v, <4 x float>* %ptr) {
 ; have AVX2, we should generate vextracti128 (the int version).
 define void @high_v8i32_to_v4i32(<8 x i32> %v, <4 x i32>* %ptr) {
 ; X32-LABEL: high_v8i32_to_v4i32:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vextractf128 $1, %ymm0, (%eax)
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: high_v8i32_to_v4i32:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vextractf128 $1, %ymm0, (%rdi)
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
@@ -90,14 +90,14 @@ define void @high_v8i32_to_v4i32(<8 x i32> %v, <4 x i32>* %ptr) {
 ; Make sure that element size doesn't alter the codegen.
 define void @high_v4f64_to_v2f64(<4 x double> %v, <2 x double>* %ptr) {
 ; X32-LABEL: high_v4f64_to_v2f64:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vextractf128 $1, %ymm0, (%eax)
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: high_v4f64_to_v2f64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vextractf128 $1, %ymm0, (%rdi)
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
@@ -114,7 +114,7 @@ define void @high_v4f64_to_v2f64(<4 x double> %v, <2 x double>* %ptr) {
 
 define void @legal_vzmovl_2i32_8i32(<2 x i32>* %in, <8 x i32>* %out) {
 ; X32-LABEL: legal_vzmovl_2i32_8i32:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
@@ -125,7 +125,7 @@ define void @legal_vzmovl_2i32_8i32(<2 x i32>* %in, <8 x i32>* %out) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: legal_vzmovl_2i32_8i32:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3,4,5,6,7]
@@ -141,7 +141,7 @@ define void @legal_vzmovl_2i32_8i32(<2 x i32>* %in, <8 x i32>* %out) {
 
 define void @legal_vzmovl_2i64_4i64(<2 x i64>* %in, <4 x i64>* %out) {
 ; X32-LABEL: legal_vzmovl_2i64_4i64:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    vmovupd (%ecx), %xmm0
@@ -152,7 +152,7 @@ define void @legal_vzmovl_2i64_4i64(<2 x i64>* %in, <4 x i64>* %out) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: legal_vzmovl_2i64_4i64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vmovupd (%rdi), %xmm0
 ; X64-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3]
@@ -168,7 +168,7 @@ define void @legal_vzmovl_2i64_4i64(<2 x i64>* %in, <4 x i64>* %out) {
 
 define void @legal_vzmovl_2f32_8f32(<2 x float>* %in, <8 x float>* %out) {
 ; X32-LABEL: legal_vzmovl_2f32_8f32:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -177,7 +177,7 @@ define void @legal_vzmovl_2f32_8f32(<2 x float>* %in, <8 x float>* %out) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: legal_vzmovl_2f32_8f32:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3,4,5,6,7]
@@ -193,7 +193,7 @@ define void @legal_vzmovl_2f32_8f32(<2 x float>* %in, <8 x float>* %out) {
 
 define void @legal_vzmovl_2f64_4f64(<2 x double>* %in, <4 x double>* %out) {
 ; X32-LABEL: legal_vzmovl_2f64_4f64:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    vmovupd (%ecx), %xmm0
@@ -204,7 +204,7 @@ define void @legal_vzmovl_2f64_4f64(<2 x double>* %in, <4 x double>* %out) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: legal_vzmovl_2f64_4f64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vmovupd (%rdi), %xmm0
 ; X64-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3]

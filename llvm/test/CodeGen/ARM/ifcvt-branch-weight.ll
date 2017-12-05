@@ -18,8 +18,8 @@ bb:
   %9 = icmp eq i32 %8, 0
   br i1 %9, label %return, label %bb2
 
-; CHECK: BB#2: derived from LLVM BB %bb2
-; CHECK: Successors according to CFG: BB#4({{[0-9a-fx/= ]+}}50.00%) BB#3({{[0-9a-fx/= ]+}}50.00%)
+; CHECK: %bb.2: derived from LLVM BB %bb2
+; CHECK: Successors according to CFG: %bb.4({{[0-9a-fx/= ]+}}50.00%) %bb.3({{[0-9a-fx/= ]+}}50.00%)
 
 bb2:
   %v10 = icmp eq i32 %3, 16

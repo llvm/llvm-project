@@ -5,7 +5,7 @@
 
 define i8 @foo(i8 %tmp325) {
 ; CHECK-LABEL: foo:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    imull $111, %ecx, %eax
 ; CHECK-NEXT:    shrl $12, %eax

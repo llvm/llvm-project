@@ -8,7 +8,7 @@ declare <2 x double> @llvm.x86.avx512.mask3.vfmsub.sd(<2 x double>, <2 x double>
 
 define <4 x float> @test_int_x86_avx512_mask3_vfmadd_ss_load0(<4 x float>* %x0ptr, <4 x float> %x1, <4 x float> %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask3_vfmadd_ss_load0:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vfmadd231ss (%rdi), %xmm0, %xmm1
 ; CHECK-NEXT:    vmovaps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
@@ -19,7 +19,7 @@ define <4 x float> @test_int_x86_avx512_mask3_vfmadd_ss_load0(<4 x float>* %x0pt
 
 define <4 x float> @test_int_x86_avx512_mask3_vfmadd_ss_load1(<4 x float> %x0, <4 x float>* %x1ptr, <4 x float> %x2){
 ; CHECK-LABEL: test_int_x86_avx512_mask3_vfmadd_ss_load1:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vfmadd231ss (%rdi), %xmm0, %xmm1
 ; CHECK-NEXT:    vmovaps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
@@ -30,7 +30,7 @@ define <4 x float> @test_int_x86_avx512_mask3_vfmadd_ss_load1(<4 x float> %x0, <
 
 define <2 x double> @test_int_x86_avx512_mask3_vfmadd_sd_load0(<2 x double>* %x0ptr, <2 x double> %x1, <2 x double> %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask3_vfmadd_sd_load0:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vfmadd231sd (%rdi), %xmm0, %xmm1
 ; CHECK-NEXT:    vmovapd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
@@ -41,7 +41,7 @@ define <2 x double> @test_int_x86_avx512_mask3_vfmadd_sd_load0(<2 x double>* %x0
 
 define <2 x double> @test_int_x86_avx512_mask3_vfmadd_sd_load1(<2 x double> %x0, <2 x double>* %x1ptr, <2 x double> %x2){
 ; CHECK-LABEL: test_int_x86_avx512_mask3_vfmadd_sd_load1:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vfmadd231sd (%rdi), %xmm0, %xmm1
 ; CHECK-NEXT:    vmovapd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
@@ -52,7 +52,7 @@ define <2 x double> @test_int_x86_avx512_mask3_vfmadd_sd_load1(<2 x double> %x0,
 
 define <4 x float> @test_int_x86_avx512_mask3_vfmsub_ss_load0(<4 x float>* %x0ptr, <4 x float> %x1, <4 x float> %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask3_vfmsub_ss_load0:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vfmsub231ss (%rdi), %xmm0, %xmm1
 ; CHECK-NEXT:    vmovaps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
@@ -63,7 +63,7 @@ define <4 x float> @test_int_x86_avx512_mask3_vfmsub_ss_load0(<4 x float>* %x0pt
 
 define <4 x float> @test_int_x86_avx512_mask3_vfmsub_ss_load1(<4 x float> %x0, <4 x float>* %x1ptr, <4 x float> %x2){
 ; CHECK-LABEL: test_int_x86_avx512_mask3_vfmsub_ss_load1:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vfmsub231ss (%rdi), %xmm0, %xmm1
 ; CHECK-NEXT:    vmovaps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
@@ -74,7 +74,7 @@ define <4 x float> @test_int_x86_avx512_mask3_vfmsub_ss_load1(<4 x float> %x0, <
 
 define <2 x double> @test_int_x86_avx512_mask3_vfmsub_sd_load0(<2 x double>* %x0ptr, <2 x double> %x1, <2 x double> %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask3_vfmsub_sd_load0:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vfmsub231sd (%rdi), %xmm0, %xmm1
 ; CHECK-NEXT:    vmovapd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
@@ -85,7 +85,7 @@ define <2 x double> @test_int_x86_avx512_mask3_vfmsub_sd_load0(<2 x double>* %x0
 
 define <2 x double> @test_int_x86_avx512_mask3_vfmsub_sd_load1(<2 x double> %x0, <2 x double>* %x1ptr, <2 x double> %x2){
 ; CHECK-LABEL: test_int_x86_avx512_mask3_vfmsub_sd_load1:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vfmsub231sd (%rdi), %xmm0, %xmm1
 ; CHECK-NEXT:    vmovapd %xmm1, %xmm0
 ; CHECK-NEXT:    retq

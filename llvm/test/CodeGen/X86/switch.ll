@@ -432,9 +432,9 @@ sw:
 ; Branch directly to the default.
 ; (In optimized builds the switch is removed earlier.)
 ; NOOPT-LABEL: default_only
-; NOOPT: .[[L:[A-Z0-9_]+]]:
+; NOOPT: .LBB[[L:[A-Z0-9_]+]]:
 ; NOOPT-NEXT: retq
-; NOOPT: jmp .[[L]]
+; NOOPT: jmp .LBB[[L]]
 }
 
 

@@ -193,7 +193,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}smrd_vgpr_offset_imm:
-; GCN-NEXT: BB#
+; GCN-NEXT: %bb.
 
 ; SICIVI-NEXT: buffer_load_dword v{{[0-9]}}, v0, s[0:3], 0 offen offset:4095 ;
 
@@ -207,7 +207,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}smrd_vgpr_offset_imm_too_large:
-; GCN-NEXT: BB#
+; GCN-NEXT: %bb.
 ; GCN-NEXT: v_add_{{i|u}}32_e32 v0, {{(vcc, )?}}0x1000, v0
 ; GCN-NEXT: buffer_load_dword v{{[0-9]}}, v0, s[0:3], 0 offen ;
 define amdgpu_ps float @smrd_vgpr_offset_imm_too_large(<4 x i32> inreg %desc, i32 %offset) #0 {
@@ -218,7 +218,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}smrd_imm_merged:
-; GCN-NEXT: BB#
+; GCN-NEXT: %bb.
 ; SICI-NEXT: s_buffer_load_dwordx4 s[{{[0-9]}}:{{[0-9]}}], s[0:3], 0x1
 ; SICI-NEXT: s_buffer_load_dwordx2 s[{{[0-9]}}:{{[0-9]}}], s[0:3], 0x7
 ; VI-NEXT: s_buffer_load_dwordx4 s[{{[0-9]}}:{{[0-9]}}], s[0:3], 0x4
@@ -243,7 +243,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}smrd_vgpr_merged:
-; GCN-NEXT: BB#
+; GCN-NEXT: %bb.
 
 ; SICIVI-NEXT: buffer_load_dwordx4 v[{{[0-9]}}:{{[0-9]}}], v0, s[0:3], 0 offen offset:4
 ; SICIVI-NEXT: buffer_load_dwordx2 v[{{[0-9]}}:{{[0-9]}}], v0, s[0:3], 0 offen offset:28

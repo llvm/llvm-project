@@ -6,14 +6,14 @@ declare float @llvm.sqrt.f32(float %x);
 
 define float @fast_recip_sqrt(float %x) {
 ; X64-LABEL: fast_recip_sqrt:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    sqrtss %xmm0, %xmm1
 ; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    divss %xmm1, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: fast_recip_sqrt:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    fsqrt
 ; X86-NEXT:    fld1
@@ -28,7 +28,7 @@ declare float @llvm.fmuladd.f32(float %a, float %b, float %c);
 
 define float @fast_fmuladd_opts(float %a , float %b , float %c) {
 ; X64-LABEL: fast_fmuladd_opts:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movaps %xmm0, %xmm1
 ; X64-NEXT:    addss %xmm1, %xmm1
 ; X64-NEXT:    addss %xmm0, %xmm1
@@ -36,7 +36,7 @@ define float @fast_fmuladd_opts(float %a , float %b , float %c) {
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: fast_fmuladd_opts:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    fld %st(0)
 ; X86-NEXT:    fadd %st(1)
@@ -52,7 +52,7 @@ define float @fast_fmuladd_opts(float %a , float %b , float %c) {
 
 define double @not_so_fast_mul_add(double %x) {
 ; X64-LABEL: not_so_fast_mul_add:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; X64-NEXT:    mulsd %xmm0, %xmm1
 ; X64-NEXT:    addsd %xmm1, %xmm0
@@ -60,7 +60,7 @@ define double @not_so_fast_mul_add(double %x) {
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: not_so_fast_mul_add:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X86-NEXT:    fld %st(0)
 ; X86-NEXT:    fmull {{\.LCPI.*}}
@@ -79,7 +79,7 @@ define double @not_so_fast_mul_add(double %x) {
 
 define float @not_so_fast_recip_sqrt(float %x) {
 ; X64-LABEL: not_so_fast_recip_sqrt:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    sqrtss %xmm0, %xmm1
 ; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    divss %xmm1, %xmm0
@@ -87,7 +87,7 @@ define float @not_so_fast_recip_sqrt(float %x) {
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: not_so_fast_recip_sqrt:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    fsqrt
 ; X86-NEXT:    fld1

@@ -3,14 +3,14 @@
 
 define i32 @branch_eq(i64 %a, i64 %b) {
 ; CHECK-LABEL: branch_eq:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    xorl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    orl %ecx, %eax
 ; CHECK-NEXT:    jne .LBB0_2
-; CHECK-NEXT:  # BB#1: # %bb1
+; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  .LBB0_2: # %bb2
@@ -27,13 +27,13 @@ bb2:
 
 define i32 @branch_slt(i64 %a, i64 %b) {
 ; CHECK-LABEL: branch_slt:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    sbbl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    jge .LBB1_2
-; CHECK-NEXT:  # BB#1: # %bb1
+; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  .LBB1_2: # %bb2
@@ -50,13 +50,13 @@ bb2:
 
 define i32 @branch_ule(i64 %a, i64 %b) {
 ; CHECK-LABEL: branch_ule:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    sbbl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    jb .LBB2_2
-; CHECK-NEXT:  # BB#1: # %bb1
+; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  .LBB2_2: # %bb2
@@ -73,7 +73,7 @@ bb2:
 
 define i32 @set_gt(i64 %a, i64 %b) {
 ; CHECK-LABEL: set_gt:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
@@ -89,7 +89,7 @@ entry:
 
 define i32 @test_wide(i128 %a, i128 %b) {
 ; CHECK-LABEL: test_wide:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    .cfi_offset %esi, -8
@@ -102,7 +102,7 @@ define i32 @test_wide(i128 %a, i128 %b) {
 ; CHECK-NEXT:    sbbl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    sbbl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    jge .LBB4_2
-; CHECK-NEXT:  # BB#1: # %bb1
+; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    retl
@@ -123,11 +123,11 @@ bb2:
 ; sure the code can handle that.
 define i32 @test_carry_false(i64 %a, i64 %b) {
 ; CHECK-LABEL: test_carry_false:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    jge .LBB5_2
-; CHECK-NEXT:  # BB#1: # %bb1
+; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  .LBB5_2: # %bb2

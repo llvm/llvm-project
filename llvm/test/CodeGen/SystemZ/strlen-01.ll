@@ -15,7 +15,7 @@ define i64 @f1(i32 %dummy, i8 *%src) {
 ; CHECK: [[LABEL:\.[^:]*]]:
 ; CHECK-NEXT: srst %r2, [[REG]]
 ; CHECK-NEXT: jo [[LABEL]]
-; CHECK-NEXT: BB#{{[0-9]+}}
+; CHECK-NEXT: %bb.{{[0-9]+}}
 ; CHECK-NEXT: sgr %r2, %r3
 ; CHECK: br %r14
   %res = call i64 @strlen(i8 *%src)
@@ -31,7 +31,7 @@ define i64 @f2(i64 %len, i8 *%src) {
 ; CHECK: [[LABEL:\.[^:]*]]:
 ; CHECK-NEXT: srst %r2, [[REG]]
 ; CHECK-NEXT: jo [[LABEL]]
-; CHECK-NEXT: BB#{{[0-9]+}}
+; CHECK-NEXT: %bb.{{[0-9]+}}
 ; CHECK-NEXT: sgr %r2, %r3
 ; CHECK: br %r14
   %res = call i64 @strnlen(i8 *%src, i64 %len)

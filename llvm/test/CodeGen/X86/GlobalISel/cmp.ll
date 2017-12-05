@@ -3,7 +3,7 @@
 
 define i32 @test_icmp_eq_i8(i8 %a, i8 %b) {
 ; ALL-LABEL: test_icmp_eq_i8:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    cmpb %sil, %dil
 ; ALL-NEXT:    sete %al
 ; ALL-NEXT:    andl $1, %eax
@@ -15,7 +15,7 @@ define i32 @test_icmp_eq_i8(i8 %a, i8 %b) {
 
 define i32 @test_icmp_eq_i16(i16 %a, i16 %b) {
 ; ALL-LABEL: test_icmp_eq_i16:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    cmpw %si, %di
 ; ALL-NEXT:    sete %al
 ; ALL-NEXT:    andl $1, %eax
@@ -27,7 +27,7 @@ define i32 @test_icmp_eq_i16(i16 %a, i16 %b) {
 
 define i32 @test_icmp_eq_i64(i64 %a, i64 %b) {
 ; ALL-LABEL: test_icmp_eq_i64:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    cmpq %rsi, %rdi
 ; ALL-NEXT:    sete %al
 ; ALL-NEXT:    andl $1, %eax
@@ -39,7 +39,7 @@ define i32 @test_icmp_eq_i64(i64 %a, i64 %b) {
 
 define i32 @test_icmp_eq_i32(i32 %a, i32 %b) {
 ; ALL-LABEL: test_icmp_eq_i32:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    cmpl %esi, %edi
 ; ALL-NEXT:    sete %al
 ; ALL-NEXT:    andl $1, %eax
@@ -51,7 +51,7 @@ define i32 @test_icmp_eq_i32(i32 %a, i32 %b) {
 
 define i32 @test_icmp_ne_i32(i32 %a, i32 %b) {
 ; ALL-LABEL: test_icmp_ne_i32:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    cmpl %esi, %edi
 ; ALL-NEXT:    setne %al
 ; ALL-NEXT:    andl $1, %eax
@@ -63,7 +63,7 @@ define i32 @test_icmp_ne_i32(i32 %a, i32 %b) {
 
 define i32 @test_icmp_ugt_i32(i32 %a, i32 %b) {
 ; ALL-LABEL: test_icmp_ugt_i32:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    cmpl %esi, %edi
 ; ALL-NEXT:    seta %al
 ; ALL-NEXT:    andl $1, %eax
@@ -75,7 +75,7 @@ define i32 @test_icmp_ugt_i32(i32 %a, i32 %b) {
 
 define i32 @test_icmp_uge_i32(i32 %a, i32 %b) {
 ; ALL-LABEL: test_icmp_uge_i32:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    cmpl %esi, %edi
 ; ALL-NEXT:    setae %al
 ; ALL-NEXT:    andl $1, %eax
@@ -87,7 +87,7 @@ define i32 @test_icmp_uge_i32(i32 %a, i32 %b) {
 
 define i32 @test_icmp_ult_i32(i32 %a, i32 %b) {
 ; ALL-LABEL: test_icmp_ult_i32:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    cmpl %esi, %edi
 ; ALL-NEXT:    setb %al
 ; ALL-NEXT:    andl $1, %eax
@@ -99,7 +99,7 @@ define i32 @test_icmp_ult_i32(i32 %a, i32 %b) {
 
 define i32 @test_icmp_ule_i32(i32 %a, i32 %b) {
 ; ALL-LABEL: test_icmp_ule_i32:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    cmpl %esi, %edi
 ; ALL-NEXT:    setbe %al
 ; ALL-NEXT:    andl $1, %eax
@@ -111,7 +111,7 @@ define i32 @test_icmp_ule_i32(i32 %a, i32 %b) {
 
 define i32 @test_icmp_sgt_i32(i32 %a, i32 %b) {
 ; ALL-LABEL: test_icmp_sgt_i32:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    cmpl %esi, %edi
 ; ALL-NEXT:    setg %al
 ; ALL-NEXT:    andl $1, %eax
@@ -123,7 +123,7 @@ define i32 @test_icmp_sgt_i32(i32 %a, i32 %b) {
 
 define i32 @test_icmp_sge_i32(i32 %a, i32 %b) {
 ; ALL-LABEL: test_icmp_sge_i32:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    cmpl %esi, %edi
 ; ALL-NEXT:    setge %al
 ; ALL-NEXT:    andl $1, %eax
@@ -135,7 +135,7 @@ define i32 @test_icmp_sge_i32(i32 %a, i32 %b) {
 
 define i32 @test_icmp_slt_i32(i32 %a, i32 %b) {
 ; ALL-LABEL: test_icmp_slt_i32:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    cmpl %esi, %edi
 ; ALL-NEXT:    setl %al
 ; ALL-NEXT:    andl $1, %eax
@@ -147,7 +147,7 @@ define i32 @test_icmp_slt_i32(i32 %a, i32 %b) {
 
 define i32 @test_icmp_sle_i32(i32 %a, i32 %b) {
 ; ALL-LABEL: test_icmp_sle_i32:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    cmpl %esi, %edi
 ; ALL-NEXT:    setle %al
 ; ALL-NEXT:    andl $1, %eax

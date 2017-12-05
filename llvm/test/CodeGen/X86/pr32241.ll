@@ -3,7 +3,7 @@
 
 define i32 @_Z3foov() {
 ; CHECK-LABEL: _Z3foov:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    subl $16, %esp
@@ -18,7 +18,7 @@ define i32 @_Z3foov() {
 ; CHECK-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
 ; CHECK-NEXT:    movb %al, {{[0-9]+}}(%esp) # 1-byte Spill
 ; CHECK-NEXT:    jne .LBB0_2
-; CHECK-NEXT:  # BB#1: # %lor.rhs
+; CHECK-NEXT:  # %bb.1: # %lor.rhs
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movb %al, %cl
 ; CHECK-NEXT:    movb %cl, {{[0-9]+}}(%esp) # 1-byte Spill
@@ -37,7 +37,7 @@ define i32 @_Z3foov() {
 ; CHECK-NEXT:    cmpl $0, %edx
 ; CHECK-NEXT:    movb %cl, {{[0-9]+}}(%esp) # 1-byte Spill
 ; CHECK-NEXT:    jne .LBB0_4
-; CHECK-NEXT:  # BB#3: # %lor.rhs4
+; CHECK-NEXT:  # %bb.3: # %lor.rhs4
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movb %al, %cl
 ; CHECK-NEXT:    movb %cl, {{[0-9]+}}(%esp) # 1-byte Spill

@@ -4,7 +4,7 @@
 
 define zeroext i8 @test_udivrem_zext_ah(i8 %x, i8 %y) {
 ; X32-LABEL: test_udivrem_zext_ah:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    # kill: %eax<def> %eax<kill> %ax<def>
 ; X32-NEXT:    divb {{[0-9]+}}(%esp)
@@ -14,7 +14,7 @@ define zeroext i8 @test_udivrem_zext_ah(i8 %x, i8 %y) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_udivrem_zext_ah:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    # kill: %eax<def> %eax<kill> %ax<def>
 ; X64-NEXT:    divb %sil
@@ -30,7 +30,7 @@ define zeroext i8 @test_udivrem_zext_ah(i8 %x, i8 %y) {
 
 define zeroext i8 @test_urem_zext_ah(i8 %x, i8 %y) {
 ; X32-LABEL: test_urem_zext_ah:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    # kill: %eax<def> %eax<kill> %ax<def>
 ; X32-NEXT:    divb {{[0-9]+}}(%esp)
@@ -39,7 +39,7 @@ define zeroext i8 @test_urem_zext_ah(i8 %x, i8 %y) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_urem_zext_ah:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    # kill: %eax<def> %eax<kill> %ax<def>
 ; X64-NEXT:    divb %sil
@@ -52,7 +52,7 @@ define zeroext i8 @test_urem_zext_ah(i8 %x, i8 %y) {
 
 define i8 @test_urem_noext_ah(i8 %x, i8 %y) {
 ; X32-LABEL: test_urem_noext_ah:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    # kill: %eax<def> %eax<kill> %ax<def>
@@ -63,7 +63,7 @@ define i8 @test_urem_noext_ah(i8 %x, i8 %y) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_urem_noext_ah:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    # kill: %eax<def> %eax<kill> %ax<def>
 ; X64-NEXT:    divb %sil
@@ -78,7 +78,7 @@ define i8 @test_urem_noext_ah(i8 %x, i8 %y) {
 
 define i64 @test_urem_zext64_ah(i8 %x, i8 %y) {
 ; X32-LABEL: test_urem_zext64_ah:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    # kill: %eax<def> %eax<kill> %ax<def>
 ; X32-NEXT:    divb {{[0-9]+}}(%esp)
@@ -87,7 +87,7 @@ define i64 @test_urem_zext64_ah(i8 %x, i8 %y) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_urem_zext64_ah:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    # kill: %eax<def> %eax<kill> %ax<def>
 ; X64-NEXT:    divb %sil
@@ -100,7 +100,7 @@ define i64 @test_urem_zext64_ah(i8 %x, i8 %y) {
 
 define signext i8 @test_sdivrem_sext_ah(i8 %x, i8 %y) {
 ; X32-LABEL: test_sdivrem_sext_ah:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    cbtw
 ; X32-NEXT:    idivb {{[0-9]+}}(%esp)
@@ -110,7 +110,7 @@ define signext i8 @test_sdivrem_sext_ah(i8 %x, i8 %y) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_sdivrem_sext_ah:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    cbtw
 ; X64-NEXT:    idivb %sil
@@ -126,7 +126,7 @@ define signext i8 @test_sdivrem_sext_ah(i8 %x, i8 %y) {
 
 define signext i8 @test_srem_sext_ah(i8 %x, i8 %y) {
 ; X32-LABEL: test_srem_sext_ah:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    cbtw
 ; X32-NEXT:    idivb {{[0-9]+}}(%esp)
@@ -135,7 +135,7 @@ define signext i8 @test_srem_sext_ah(i8 %x, i8 %y) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_srem_sext_ah:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    cbtw
 ; X64-NEXT:    idivb %sil
@@ -148,7 +148,7 @@ define signext i8 @test_srem_sext_ah(i8 %x, i8 %y) {
 
 define i8 @test_srem_noext_ah(i8 %x, i8 %y) {
 ; X32-LABEL: test_srem_noext_ah:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X32-NEXT:    cbtw
@@ -159,7 +159,7 @@ define i8 @test_srem_noext_ah(i8 %x, i8 %y) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_srem_noext_ah:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    cbtw
 ; X64-NEXT:    idivb %sil
@@ -174,7 +174,7 @@ define i8 @test_srem_noext_ah(i8 %x, i8 %y) {
 
 define i64 @test_srem_sext64_ah(i8 %x, i8 %y) {
 ; X32-LABEL: test_srem_sext64_ah:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    cbtw
 ; X32-NEXT:    idivb {{[0-9]+}}(%esp)
@@ -184,7 +184,7 @@ define i64 @test_srem_sext64_ah(i8 %x, i8 %y) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_srem_sext64_ah:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    cbtw
 ; X64-NEXT:    idivb %sil
@@ -198,7 +198,7 @@ define i64 @test_srem_sext64_ah(i8 %x, i8 %y) {
 
 define i64 @pr25754(i8 %a, i8 %c) {
 ; X32-LABEL: pr25754:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    # kill: %eax<def> %eax<kill> %ax<def>
 ; X32-NEXT:    divb {{[0-9]+}}(%esp)
@@ -209,7 +209,7 @@ define i64 @pr25754(i8 %a, i8 %c) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: pr25754:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    # kill: %eax<def> %eax<kill> %ax<def>
 ; X64-NEXT:    divb %sil

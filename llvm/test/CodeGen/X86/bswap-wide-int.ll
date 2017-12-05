@@ -10,7 +10,7 @@ declare i256 @llvm.bswap.i256(i256)
 
 define i64 @bswap_i64(i64 %a0) nounwind {
 ; X86-LABEL: bswap_i64:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    bswapl %eax
@@ -18,19 +18,19 @@ define i64 @bswap_i64(i64 %a0) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X86-MOVBE-LABEL: bswap_i64:
-; X86-MOVBE:       # BB#0:
+; X86-MOVBE:       # %bb.0:
 ; X86-MOVBE-NEXT:    movbel {{[0-9]+}}(%esp), %eax
 ; X86-MOVBE-NEXT:    movbel {{[0-9]+}}(%esp), %edx
 ; X86-MOVBE-NEXT:    retl
 ;
 ; X64-LABEL: bswap_i64:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    bswapq %rdi
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    retq
 ;
 ; X64-MOVBE-LABEL: bswap_i64:
-; X64-MOVBE:       # BB#0:
+; X64-MOVBE:       # %bb.0:
 ; X64-MOVBE-NEXT:    bswapq %rdi
 ; X64-MOVBE-NEXT:    movq %rdi, %rax
 ; X64-MOVBE-NEXT:    retq
@@ -40,7 +40,7 @@ define i64 @bswap_i64(i64 %a0) nounwind {
 
 define i128 @bswap_i128(i128 %a0) nounwind {
 ; X86-LABEL: bswap_i128:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -61,7 +61,7 @@ define i128 @bswap_i128(i128 %a0) nounwind {
 ; X86-NEXT:    retl $4
 ;
 ; X86-MOVBE-LABEL: bswap_i128:
-; X86-MOVBE:       # BB#0:
+; X86-MOVBE:       # %bb.0:
 ; X86-MOVBE-NEXT:    pushl %edi
 ; X86-MOVBE-NEXT:    pushl %esi
 ; X86-MOVBE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -78,7 +78,7 @@ define i128 @bswap_i128(i128 %a0) nounwind {
 ; X86-MOVBE-NEXT:    retl $4
 ;
 ; X64-LABEL: bswap_i128:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    bswapq %rsi
 ; X64-NEXT:    bswapq %rdi
 ; X64-NEXT:    movq %rsi, %rax
@@ -86,7 +86,7 @@ define i128 @bswap_i128(i128 %a0) nounwind {
 ; X64-NEXT:    retq
 ;
 ; X64-MOVBE-LABEL: bswap_i128:
-; X64-MOVBE:       # BB#0:
+; X64-MOVBE:       # %bb.0:
 ; X64-MOVBE-NEXT:    bswapq %rsi
 ; X64-MOVBE-NEXT:    bswapq %rdi
 ; X64-MOVBE-NEXT:    movq %rsi, %rax
@@ -98,7 +98,7 @@ define i128 @bswap_i128(i128 %a0) nounwind {
 
 define i256 @bswap_i256(i256 %a0) nounwind {
 ; X86-LABEL: bswap_i256:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    bswapl %ecx
@@ -127,7 +127,7 @@ define i256 @bswap_i256(i256 %a0) nounwind {
 ; X86-NEXT:    retl $4
 ;
 ; X86-MOVBE-LABEL: bswap_i256:
-; X86-MOVBE:       # BB#0:
+; X86-MOVBE:       # %bb.0:
 ; X86-MOVBE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-MOVBE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-MOVBE-NEXT:    movbel %ecx, 28(%eax)
@@ -148,7 +148,7 @@ define i256 @bswap_i256(i256 %a0) nounwind {
 ; X86-MOVBE-NEXT:    retl $4
 ;
 ; X64-LABEL: bswap_i256:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    bswapq %r8
 ; X64-NEXT:    bswapq %rcx
 ; X64-NEXT:    bswapq %rdx
@@ -161,7 +161,7 @@ define i256 @bswap_i256(i256 %a0) nounwind {
 ; X64-NEXT:    retq
 ;
 ; X64-MOVBE-LABEL: bswap_i256:
-; X64-MOVBE:       # BB#0:
+; X64-MOVBE:       # %bb.0:
 ; X64-MOVBE-NEXT:    movbeq %rsi, 24(%rdi)
 ; X64-MOVBE-NEXT:    movbeq %rdx, 16(%rdi)
 ; X64-MOVBE-NEXT:    movbeq %rcx, 8(%rdi)

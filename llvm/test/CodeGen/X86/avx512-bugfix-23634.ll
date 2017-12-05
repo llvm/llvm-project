@@ -6,7 +6,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @f_fu(float* %ret, float*  %aa, float %b) {
 ; CHECK-LABEL: f_fu:
-; CHECK:       ## BB#0: ## %allocas
+; CHECK:       ## %bb.0: ## %allocas
 ; CHECK-NEXT:    vcvttss2si %xmm0, %eax
 ; CHECK-NEXT:    vpbroadcastd %eax, %zmm0
 ; CHECK-NEXT:    vcvttps2dq (%rsi), %zmm1

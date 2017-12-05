@@ -8,7 +8,7 @@
 
 define <8 x i16> @pr25080(<8 x i32> %a) {
 ; AVX-LABEL: pr25080:
-; AVX:       # BB#0: # %entry
+; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
@@ -22,15 +22,16 @@ define <8 x i16> @pr25080(<8 x i32> %a) {
 ; AVX-NEXT:    retq
 ;
 ; KNL-32-LABEL: pr25080:
-; KNL-32:       # BB#0: # %entry
+; KNL-32:       # %bb.0: # %entry
 ; KNL-32-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
 ; KNL-32-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [8388607,8388607,8388607,8388607,8388607,8388607,8388607,8388607]
 ; KNL-32-NEXT:    vptestnmd %zmm1, %zmm0, %k0
 ; KNL-32-NEXT:    movb $15, %al
 ; KNL-32-NEXT:    kmovw %eax, %k1
 ; KNL-32-NEXT:    korw %k1, %k0, %k1
-; KNL-32-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; KNL-32-NEXT:    vpmovqw %zmm0, %xmm0
+; KNL-32-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; KNL-32-NEXT:    vpmovdw %zmm0, %ymm0
+; KNL-32-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
 ; KNL-32-NEXT:    retl
 entry:
   %0 = trunc <8 x i32> %a to <8 x i23>
@@ -42,7 +43,7 @@ entry:
 
 define void @pr26232(i64 %a, <16 x i1> %b) {
 ; AVX-LABEL: pr26232:
-; AVX:       # BB#0: # %for_loop599.preheader
+; AVX:       # %bb.0: # %for_loop599.preheader
 ; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
 ; AVX-NEXT:    .p2align 4, 0x90
@@ -60,11 +61,11 @@ define void @pr26232(i64 %a, <16 x i1> %b) {
 ; AVX-NEXT:    vpmovmskb %xmm3, %eax
 ; AVX-NEXT:    testw %ax, %ax
 ; AVX-NEXT:    jne .LBB1_1
-; AVX-NEXT:  # BB#2: # %for_exit600
+; AVX-NEXT:  # %bb.2: # %for_exit600
 ; AVX-NEXT:    retq
 ;
 ; KNL-32-LABEL: pr26232:
-; KNL-32:       # BB#0: # %for_loop599.preheader
+; KNL-32:       # %bb.0: # %for_loop599.preheader
 ; KNL-32-NEXT:    pushl %esi
 ; KNL-32-NEXT:    .cfi_def_cfa_offset 8
 ; KNL-32-NEXT:    .cfi_offset %esi, -8
@@ -87,7 +88,7 @@ define void @pr26232(i64 %a, <16 x i1> %b) {
 ; KNL-32-NEXT:    kmovw %k1, %esi
 ; KNL-32-NEXT:    testw %si, %si
 ; KNL-32-NEXT:    jne .LBB1_1
-; KNL-32-NEXT:  # BB#2: # %for_exit600
+; KNL-32-NEXT:  # %bb.2: # %for_exit600
 ; KNL-32-NEXT:    popl %esi
 ; KNL-32-NEXT:    retl
 allocas:

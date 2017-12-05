@@ -4,7 +4,7 @@
 
 define <1 x float> @test1(<1 x double> %x) nounwind {
 ; CHECK-LABEL: test1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    cvtsd2ss %xmm0, %xmm0
@@ -14,7 +14,7 @@ define <1 x float> @test1(<1 x double> %x) nounwind {
 ; CHECK-NEXT:    retl
 ;
 ; AVX-LABEL: test1:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    pushl %eax
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
@@ -28,12 +28,12 @@ define <1 x float> @test1(<1 x double> %x) nounwind {
 
 define <2 x float> @test2(<2 x double> %x) nounwind {
 ; CHECK-LABEL: test2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cvtpd2ps %xmm0, %xmm0
 ; CHECK-NEXT:    retl
 ;
 ; AVX-LABEL: test2:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vcvtpd2ps %xmm0, %xmm0
 ; AVX-NEXT:    retl
   %y = fptrunc <2 x double> %x to <2 x float>
@@ -42,14 +42,14 @@ define <2 x float> @test2(<2 x double> %x) nounwind {
 
 define <4 x float> @test3(<4 x double> %x) nounwind {
 ; CHECK-LABEL: test3:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cvtpd2ps %xmm1, %xmm1
 ; CHECK-NEXT:    cvtpd2ps %xmm0, %xmm0
 ; CHECK-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; CHECK-NEXT:    retl
 ;
 ; AVX-LABEL: test3:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vcvtpd2ps %ymm0, %xmm0
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retl
@@ -59,7 +59,7 @@ define <4 x float> @test3(<4 x double> %x) nounwind {
 
 define <8 x float> @test4(<8 x double> %x) nounwind {
 ; CHECK-LABEL: test4:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    cvtpd2ps %xmm1, %xmm1
 ; CHECK-NEXT:    cvtpd2ps %xmm0, %xmm0
@@ -71,7 +71,7 @@ define <8 x float> @test4(<8 x double> %x) nounwind {
 ; CHECK-NEXT:    retl
 ;
 ; AVX-LABEL: test4:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vcvtpd2ps %ymm0, %xmm0
 ; AVX-NEXT:    vcvtpd2ps %ymm1, %xmm1
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0

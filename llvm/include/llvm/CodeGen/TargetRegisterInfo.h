@@ -785,11 +785,10 @@ public:
   /// as returned from RegisterClassInfo::getOrder(). The hint registers must
   /// come from Order, and they must not be reserved.
   ///
-  /// The default implementation of this function can resolve
-  /// target-independent hints provided to MRI::setRegAllocationHint with
-  /// HintType == 0. Targets that override this function should defer to the
-  /// default implementation if they have no reason to change the allocation
-  /// order for VirtReg. There may be target-independent hints.
+  /// The default implementation of this function will only add target
+  /// independent register allocation hints. Targets that override this
+  /// function should typically call this default implementation as well and
+  /// expect to see generic copy hints added.
   virtual bool getRegAllocationHints(unsigned VirtReg,
                                      ArrayRef<MCPhysReg> Order,
                                      SmallVectorImpl<MCPhysReg> &Hints,
@@ -807,6 +806,13 @@ public:
                                   MachineFunction &MF) const {
     // Do nothing.
   }
+
+  /// The creation of multiple copy hints have been implemented in
+  /// weightCalcHelper(), but since this affects so many tests for many
+  /// targets, this is temporarily disabled per default. THIS SHOULD BE
+  /// "GENERAL GOODNESS" and hopefully all targets will update their tests
+  /// and enable this soon. This hook should then be removed.
+  virtual bool enableMultipleCopyHints() const { return false; }
 
   /// Allow the target to reverse allocation order of local live ranges. This
   /// will generally allocate shorter local live ranges first. For targets with

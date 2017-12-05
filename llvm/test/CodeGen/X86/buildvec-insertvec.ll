@@ -4,7 +4,7 @@
 
 define void @foo(<3 x float> %in, <4 x i8>* nocapture %out) nounwind {
 ; SSE2-LABEL: foo:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    cvttps2dq %xmm0, %xmm0
 ; SSE2-NEXT:    movl $255, %eax
 ; SSE2-NEXT:    movd %eax, %xmm1
@@ -17,7 +17,7 @@ define void @foo(<3 x float> %in, <4 x i8>* nocapture %out) nounwind {
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: foo:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    cvttps2dq %xmm0, %xmm0
 ; SSE41-NEXT:    movl $255, %eax
 ; SSE41-NEXT:    pinsrd $3, %eax, %xmm0
@@ -36,7 +36,7 @@ define void @foo(<3 x float> %in, <4 x i8>* nocapture %out) nounwind {
 
 define <4 x float> @test_negative_zero_1(<4 x float> %A) {
 ; SSE2-LABEL: test_negative_zero_1:
-; SSE2:       # BB#0: # %entry
+; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movaps %xmm0, %xmm1
 ; SSE2-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
 ; SSE2-NEXT:    xorps %xmm2, %xmm2
@@ -47,7 +47,7 @@ define <4 x float> @test_negative_zero_1(<4 x float> %A) {
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test_negative_zero_1:
-; SSE41:       # BB#0: # %entry
+; SSE41:       # %bb.0: # %entry
 ; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2],zero
 ; SSE41-NEXT:    retq
 entry:
@@ -64,14 +64,14 @@ entry:
 
 define <2 x double> @test_negative_zero_2(<2 x double> %A) {
 ; SSE2-LABEL: test_negative_zero_2:
-; SSE2:       # BB#0: # %entry
+; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movapd {{.*#+}} xmm1 = <u,-0>
 ; SSE2-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
 ; SSE2-NEXT:    movapd %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test_negative_zero_2:
-; SSE41:       # BB#0: # %entry
+; SSE41:       # %bb.0: # %entry
 ; SSE41-NEXT:    blendpd {{.*#+}} xmm0 = xmm0[0],mem[1]
 ; SSE41-NEXT:    retq
 entry:
@@ -83,14 +83,14 @@ entry:
 
 define <4 x float> @test_buildvector_v4f32_register(float %f0, float %f1, float %f2, float %f3) {
 ; SSE2-LABEL: test_buildvector_v4f32_register:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
 ; SSE2-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; SSE2-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test_buildvector_v4f32_register:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
 ; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
 ; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm3[0]
@@ -104,7 +104,7 @@ define <4 x float> @test_buildvector_v4f32_register(float %f0, float %f1, float 
 
 define <4 x float> @test_buildvector_v4f32_load(float* %p0, float* %p1, float* %p2, float* %p3) {
 ; SSE2-LABEL: test_buildvector_v4f32_load:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
@@ -115,7 +115,7 @@ define <4 x float> @test_buildvector_v4f32_load(float* %p0, float* %p1, float* %
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test_buildvector_v4f32_load:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
 ; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
@@ -134,7 +134,7 @@ define <4 x float> @test_buildvector_v4f32_load(float* %p0, float* %p1, float* %
 
 define <4 x float> @test_buildvector_v4f32_partial_load(float %f0, float %f1, float %f2, float* %p3) {
 ; SSE2-LABEL: test_buildvector_v4f32_partial_load:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; SSE2-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
@@ -142,7 +142,7 @@ define <4 x float> @test_buildvector_v4f32_partial_load(float %f0, float %f1, fl
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test_buildvector_v4f32_partial_load:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
 ; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
 ; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
@@ -157,7 +157,7 @@ define <4 x float> @test_buildvector_v4f32_partial_load(float %f0, float %f1, fl
 
 define <4 x i32> @test_buildvector_v4i32_register(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; SSE2-LABEL: test_buildvector_v4i32_register:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movd %ecx, %xmm0
 ; SSE2-NEXT:    movd %edx, %xmm1
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
@@ -168,7 +168,7 @@ define <4 x i32> @test_buildvector_v4i32_register(i32 %a0, i32 %a1, i32 %a2, i32
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test_buildvector_v4i32_register:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movd %edi, %xmm0
 ; SSE41-NEXT:    pinsrd $1, %esi, %xmm0
 ; SSE41-NEXT:    pinsrd $2, %edx, %xmm0
@@ -183,7 +183,7 @@ define <4 x i32> @test_buildvector_v4i32_register(i32 %a0, i32 %a1, i32 %a2, i32
 
 define <4 x i32> @test_buildvector_v4i32_partial(i32 %a0, i32 %a3) {
 ; SSE2-LABEL: test_buildvector_v4i32_partial:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movd %edi, %xmm0
 ; SSE2-NEXT:    movd %esi, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,1,1]
@@ -191,7 +191,7 @@ define <4 x i32> @test_buildvector_v4i32_partial(i32 %a0, i32 %a3) {
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test_buildvector_v4i32_partial:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movd %edi, %xmm0
 ; SSE41-NEXT:    pinsrd $3, %esi, %xmm0
 ; SSE41-NEXT:    retq
@@ -204,7 +204,7 @@ define <4 x i32> @test_buildvector_v4i32_partial(i32 %a0, i32 %a3) {
 
 define <4 x i32> @test_buildvector_v4i32_register_zero(i32 %a0, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: test_buildvector_v4i32_register_zero:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movd %edx, %xmm0
 ; CHECK-NEXT:    movd %esi, %xmm1
 ; CHECK-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
@@ -220,7 +220,7 @@ define <4 x i32> @test_buildvector_v4i32_register_zero(i32 %a0, i32 %a2, i32 %a3
 
 define <4 x i32> @test_buildvector_v4i32_register_zero_2(i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: test_buildvector_v4i32_register_zero_2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movd %edx, %xmm0
 ; CHECK-NEXT:    movd %esi, %xmm1
 ; CHECK-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
@@ -236,7 +236,7 @@ define <4 x i32> @test_buildvector_v4i32_register_zero_2(i32 %a1, i32 %a2, i32 %
 
 define <8 x i16> @test_buildvector_v8i16_register(i16 %a0, i16 %a1, i16 %a2, i16 %a3, i16 %a4, i16 %a5, i16 %a6, i16 %a7) {
 ; SSE2-LABEL: test_buildvector_v8i16_register:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
@@ -255,7 +255,7 @@ define <8 x i16> @test_buildvector_v8i16_register(i16 %a0, i16 %a1, i16 %a2, i16
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test_buildvector_v8i16_register:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movd %edi, %xmm0
 ; SSE41-NEXT:    pinsrw $1, %esi, %xmm0
 ; SSE41-NEXT:    pinsrw $2, %edx, %xmm0
@@ -278,7 +278,7 @@ define <8 x i16> @test_buildvector_v8i16_register(i16 %a0, i16 %a1, i16 %a2, i16
 
 define <8 x i16> @test_buildvector_v8i16_partial(i16 %a1, i16 %a3, i16 %a4, i16 %a5) {
 ; CHECK-LABEL: test_buildvector_v8i16_partial:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pxor %xmm0, %xmm0
 ; CHECK-NEXT:    pinsrw $1, %edi, %xmm0
 ; CHECK-NEXT:    pinsrw $3, %esi, %xmm0
@@ -298,7 +298,7 @@ define <8 x i16> @test_buildvector_v8i16_partial(i16 %a1, i16 %a3, i16 %a4, i16 
 
 define <8 x i16> @test_buildvector_v8i16_register_zero(i16 %a0, i16 %a3, i16 %a4, i16 %a5) {
 ; CHECK-LABEL: test_buildvector_v8i16_register_zero:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pxor %xmm0, %xmm0
 ; CHECK-NEXT:    pinsrw $0, %edi, %xmm0
 ; CHECK-NEXT:    pinsrw $3, %esi, %xmm0
@@ -318,7 +318,7 @@ define <8 x i16> @test_buildvector_v8i16_register_zero(i16 %a0, i16 %a3, i16 %a4
 
 define <8 x i16> @test_buildvector_v8i16_register_zero_2(i16 %a1, i16 %a3, i16 %a4, i16 %a5) {
 ; CHECK-LABEL: test_buildvector_v8i16_register_zero_2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pxor %xmm0, %xmm0
 ; CHECK-NEXT:    pinsrw $1, %edi, %xmm0
 ; CHECK-NEXT:    pinsrw $3, %esi, %xmm0
@@ -338,7 +338,7 @@ define <8 x i16> @test_buildvector_v8i16_register_zero_2(i16 %a1, i16 %a3, i16 %
 
 define <16 x i8> @test_buildvector_v16i8_register(i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i8 %a5, i8 %a6, i8 %a7, i8 %a8, i8 %a9, i8 %a10, i8 %a11, i8 %a12, i8 %a13, i8 %a14, i8 %a15) {
 ; SSE2-LABEL: test_buildvector_v16i8_register:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
@@ -373,7 +373,7 @@ define <16 x i8> @test_buildvector_v16i8_register(i8 %a0, i8 %a1, i8 %a2, i8 %a3
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test_buildvector_v16i8_register:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movd %edi, %xmm0
 ; SSE41-NEXT:    pinsrb $1, %esi, %xmm0
 ; SSE41-NEXT:    pinsrb $2, %edx, %xmm0
@@ -412,7 +412,7 @@ define <16 x i8> @test_buildvector_v16i8_register(i8 %a0, i8 %a1, i8 %a2, i8 %a3
 
 define <16 x i8> @test_buildvector_v16i8_partial(i8 %a2, i8 %a6, i8 %a8, i8 %a11, i8 %a12, i8 %a15) {
 ; SSE2-LABEL: test_buildvector_v16i8_partial:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movzbl %dil, %eax
 ; SSE2-NEXT:    pinsrw $1, %eax, %xmm0
 ; SSE2-NEXT:    movzbl %sil, %eax
@@ -428,7 +428,7 @@ define <16 x i8> @test_buildvector_v16i8_partial(i8 %a2, i8 %a6, i8 %a8, i8 %a11
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test_buildvector_v16i8_partial:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pxor %xmm0, %xmm0
 ; SSE41-NEXT:    pinsrb $2, %edi, %xmm0
 ; SSE41-NEXT:    pinsrb $6, %esi, %xmm0
@@ -458,7 +458,7 @@ define <16 x i8> @test_buildvector_v16i8_partial(i8 %a2, i8 %a6, i8 %a8, i8 %a11
 
 define <16 x i8> @test_buildvector_v16i8_register_zero(i8 %a0, i8 %a4, i8 %a6, i8 %a8, i8 %a11, i8 %a12, i8 %a15) {
 ; SSE2-LABEL: test_buildvector_v16i8_register_zero:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movzbl %sil, %eax
 ; SSE2-NEXT:    movzbl %dil, %esi
 ; SSE2-NEXT:    movd %esi, %xmm0
@@ -477,7 +477,7 @@ define <16 x i8> @test_buildvector_v16i8_register_zero(i8 %a0, i8 %a4, i8 %a6, i
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test_buildvector_v16i8_register_zero:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pxor %xmm0, %xmm0
 ; SSE41-NEXT:    pinsrb $0, %edi, %xmm0
 ; SSE41-NEXT:    pinsrb $4, %esi, %xmm0
@@ -508,7 +508,7 @@ define <16 x i8> @test_buildvector_v16i8_register_zero(i8 %a0, i8 %a4, i8 %a6, i
 
 define <16 x i8> @test_buildvector_v16i8_register_zero_2(i8 %a2, i8 %a3, i8 %a6, i8 %a8, i8 %a11, i8 %a12, i8 %a15) {
 ; SSE2-LABEL: test_buildvector_v16i8_register_zero_2:
-; SSE2:       # BB#0:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    shll $8, %esi
 ; SSE2-NEXT:    movzbl %dil, %eax
 ; SSE2-NEXT:    orl %esi, %eax
@@ -528,7 +528,7 @@ define <16 x i8> @test_buildvector_v16i8_register_zero_2(i8 %a2, i8 %a3, i8 %a6,
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test_buildvector_v16i8_register_zero_2:
-; SSE41:       # BB#0:
+; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pxor %xmm0, %xmm0
 ; SSE41-NEXT:    pinsrb $2, %edi, %xmm0
 ; SSE41-NEXT:    pinsrb $3, %esi, %xmm0

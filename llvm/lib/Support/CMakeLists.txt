@@ -1,6 +1,6 @@
 set(system_libs)
 if ( LLVM_ENABLE_ZLIB AND HAVE_LIBZ )
-  set(system_libs ${system_libs} ${ZLIB_LIBRARY_PATH})
+  set(system_libs ${system_libs} ${ZLIB_LIBRARIES})
 endif()
 if( MSVC OR MINGW )
   # libuuid required for FOLDERID_Profile usage in lib/Support/Windows/Path.inc.

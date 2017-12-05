@@ -9,14 +9,14 @@
 
 define i32 @test1(i32* %x, i32 %y, i32 %a, i32 %b) nounwind {
 ; LNX-LABEL: test1:
-; LNX:       # BB#0:
+; LNX:       # %bb.0:
 ; LNX-NEXT:    addl (%rdi), %esi
 ; LNX-NEXT:    cmovnsl %ecx, %edx
 ; LNX-NEXT:    movl %edx, %eax
 ; LNX-NEXT:    retq
 ;
 ; WIN-LABEL: test1:
-; WIN:       # BB#0:
+; WIN:       # %bb.0:
 ; WIN-NEXT:    addl (%rcx), %edx
 ; WIN-NEXT:    cmovnsl %r9d, %r8d
 ; WIN-NEXT:    movl %r8d, %eax
@@ -35,10 +35,10 @@ declare void @foo(i32)
 
 define void @test2(i32 %x) nounwind {
 ; LNX-LABEL: test2:
-; LNX:       # BB#0:
+; LNX:       # %bb.0:
 ; LNX-NEXT:    testb $16, %dil
 ; LNX-NEXT:    jne .LBB1_2
-; LNX-NEXT:  # BB#1: # %true
+; LNX-NEXT:  # %bb.1: # %true
 ; LNX-NEXT:    pushq %rax
 ; LNX-NEXT:    callq foo
 ; LNX-NEXT:    popq %rax
@@ -46,11 +46,11 @@ define void @test2(i32 %x) nounwind {
 ; LNX-NEXT:    retq
 ;
 ; WIN-LABEL: test2:
-; WIN:       # BB#0:
+; WIN:       # %bb.0:
 ; WIN-NEXT:    subq $40, %rsp
 ; WIN-NEXT:    testb $16, %cl
 ; WIN-NEXT:    jne .LBB1_2
-; WIN-NEXT:  # BB#1: # %true
+; WIN-NEXT:  # %bb.1: # %true
 ; WIN-NEXT:    callq foo
 ; WIN-NEXT:  .LBB1_2: # %false
 ; WIN-NEXT:    addq $40, %rsp
@@ -69,10 +69,10 @@ false:
 
 define void @test3(i32 %x) nounwind {
 ; LNX-LABEL: test3:
-; LNX:       # BB#0:
+; LNX:       # %bb.0:
 ; LNX-NEXT:    andl $16, %edi
 ; LNX-NEXT:    jne .LBB2_2
-; LNX-NEXT:  # BB#1: # %true
+; LNX-NEXT:  # %bb.1: # %true
 ; LNX-NEXT:    pushq %rax
 ; LNX-NEXT:    callq foo
 ; LNX-NEXT:    popq %rax
@@ -80,11 +80,11 @@ define void @test3(i32 %x) nounwind {
 ; LNX-NEXT:    retq
 ;
 ; WIN-LABEL: test3:
-; WIN:       # BB#0:
+; WIN:       # %bb.0:
 ; WIN-NEXT:    subq $40, %rsp
 ; WIN-NEXT:    andl $16, %ecx
 ; WIN-NEXT:    jne .LBB2_2
-; WIN-NEXT:  # BB#1: # %true
+; WIN-NEXT:  # %bb.1: # %true
 ; WIN-NEXT:    callq foo
 ; WIN-NEXT:  .LBB2_2: # %false
 ; WIN-NEXT:    addq $40, %rsp

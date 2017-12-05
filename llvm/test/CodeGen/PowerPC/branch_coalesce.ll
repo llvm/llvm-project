@@ -23,10 +23,10 @@ define double @testBranchCoal(double %a, double %b, double %c, i32 %x) {
 ; CHECK: blr
 
 ; CHECK-NOCOALESCE-LABEL: testBranchCoal:
-; CHECK-NOCOALESCE:       # BB#0: # %entry
+; CHECK-NOCOALESCE:       # %bb.0: # %entry
 ; CHECK-NOCOALESCE-NEXT:    cmplwi 0, 6, 0
 ; CHECK-NOCOALESCE-NEXT:    bne 0, .LBB0_5
-; CHECK-NOCOALESCE-NEXT:  # BB#1: # %entry
+; CHECK-NOCOALESCE-NEXT:  # %bb.1: # %entry
 ; CHECK-NOCOALESCE-NEXT:    bne 0, .LBB0_6
 ; CHECK-NOCOALESCE-NEXT:  .LBB0_2: # %entry
 ; CHECK-NOCOALESCE-NEXT:    beq 0, .LBB0_4

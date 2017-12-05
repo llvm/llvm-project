@@ -195,7 +195,7 @@ define i32 @test_br_cc() {
 
 iftrue:
   ret i32 42
-; CHECK-NEXT: BB#
+; CHECK-NEXT: %bb.
 ; CHECK-NEXT: mov w0, #42
 ; CHECK: ret
 iffalse:
@@ -211,7 +211,7 @@ define void @test_select(i1 %cond, fp128 %lhs, fp128 %rhs) {
   store fp128 %val, fp128* @lhs, align 16
 ; CHECK: tst w0, #0x1
 ; CHECK-NEXT: b.eq [[IFFALSE:.LBB[0-9]+_[0-9]+]]
-; CHECK-NEXT: BB#
+; CHECK-NEXT: %bb.
 ; CHECK-NEXT: mov v[[VAL:[0-9]+]].16b, v0.16b
 ; CHECK-NEXT: [[IFFALSE]]:
 ; CHECK: str q[[VAL]], [{{x[0-9]+}}, :lo12:lhs]

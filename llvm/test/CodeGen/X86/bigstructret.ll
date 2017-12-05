@@ -7,7 +7,7 @@
 
 define fastcc %0 @ReturnBigStruct() nounwind readnone {
 ; X86-LABEL: ReturnBigStruct:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl $24601, 12(%ecx) # imm = 0x6019
 ; X86-NEXT:    movl $48, 8(%ecx)
 ; X86-NEXT:    movl $24, 4(%ecx)
@@ -16,7 +16,7 @@ define fastcc %0 @ReturnBigStruct() nounwind readnone {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: ReturnBigStruct:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movabsq $105660490448944, %rax # imm = 0x601900000030
 ; X64-NEXT:    movq %rax, 8(%rdi)
 ; X64-NEXT:    movabsq $103079215116, %rax # imm = 0x180000000C
@@ -34,7 +34,7 @@ entry:
 
 define fastcc %1 @ReturnBigStruct2() nounwind readnone {
 ; X86-LABEL: ReturnBigStruct2:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl $48, 4(%ecx)
 ; X86-NEXT:    movb $1, 2(%ecx)
 ; X86-NEXT:    movw $256, (%ecx) # imm = 0x100
@@ -42,7 +42,7 @@ define fastcc %1 @ReturnBigStruct2() nounwind readnone {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: ReturnBigStruct2:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movl $48, 4(%rdi)
 ; X64-NEXT:    movb $1, 2(%rdi)
 ; X64-NEXT:    movw $256, (%rdi) # imm = 0x100

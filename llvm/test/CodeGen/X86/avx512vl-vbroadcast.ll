@@ -4,7 +4,7 @@
 declare void @func_f32(float)
 define <8 x float> @_256_broadcast_ss_spill(float %x) {
 ; CHECK-LABEL: _256_broadcast_ss_spill:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    vaddss %xmm0, %xmm0, %xmm0
@@ -22,7 +22,7 @@ define <8 x float> @_256_broadcast_ss_spill(float %x) {
 
 define <4 x float> @_128_broadcast_ss_spill(float %x) {
 ; CHECK-LABEL: _128_broadcast_ss_spill:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    vaddss %xmm0, %xmm0, %xmm0
@@ -41,7 +41,7 @@ define <4 x float> @_128_broadcast_ss_spill(float %x) {
 declare void @func_f64(double)
 define <4 x double> @_256_broadcast_sd_spill(double %x) {
 ; CHECK-LABEL: _256_broadcast_sd_spill:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    vaddsd %xmm0, %xmm0, %xmm0
@@ -59,7 +59,7 @@ define <4 x double> @_256_broadcast_sd_spill(double %x) {
 
 define   <8 x float> @_inreg8xfloat(float %a) {
 ; CHECK-LABEL: _inreg8xfloat:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vbroadcastss %xmm0, %ymm0
 ; CHECK-NEXT:    retq
   %b = insertelement <8 x float> undef, float %a, i32 0
@@ -69,7 +69,7 @@ define   <8 x float> @_inreg8xfloat(float %a) {
 
 define   <8 x float> @_ss8xfloat_mask(<8 x float> %i, float %a, <8 x i32> %mask1) {
 ; CHECK-LABEL: _ss8xfloat_mask:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vpcmpneqd %ymm3, %ymm2, %k1
 ; CHECK-NEXT:    vbroadcastss %xmm1, %ymm0 {%k1}
@@ -83,7 +83,7 @@ define   <8 x float> @_ss8xfloat_mask(<8 x float> %i, float %a, <8 x i32> %mask1
 
 define   <8 x float> @_ss8xfloat_maskz(float %a, <8 x i32> %mask1) {
 ; CHECK-LABEL: _ss8xfloat_maskz:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vpcmpneqd %ymm2, %ymm1, %k1
 ; CHECK-NEXT:    vbroadcastss %xmm0, %ymm0 {%k1} {z}
@@ -97,7 +97,7 @@ define   <8 x float> @_ss8xfloat_maskz(float %a, <8 x i32> %mask1) {
 
 define   <4 x float> @_inreg4xfloat(float %a) {
 ; CHECK-LABEL: _inreg4xfloat:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vbroadcastss %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %b = insertelement <4 x float> undef, float %a, i32 0
@@ -107,7 +107,7 @@ define   <4 x float> @_inreg4xfloat(float %a) {
 
 define   <4 x float> @_ss4xfloat_mask(<4 x float> %i, float %a, <4 x i32> %mask1) {
 ; CHECK-LABEL: _ss4xfloat_mask:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vpcmpneqd %xmm3, %xmm2, %k1
 ; CHECK-NEXT:    vbroadcastss %xmm1, %xmm0 {%k1}
@@ -121,7 +121,7 @@ define   <4 x float> @_ss4xfloat_mask(<4 x float> %i, float %a, <4 x i32> %mask1
 
 define   <4 x float> @_ss4xfloat_maskz(float %a, <4 x i32> %mask1) {
 ; CHECK-LABEL: _ss4xfloat_maskz:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vpcmpneqd %xmm2, %xmm1, %k1
 ; CHECK-NEXT:    vbroadcastss %xmm0, %xmm0 {%k1} {z}
@@ -135,7 +135,7 @@ define   <4 x float> @_ss4xfloat_maskz(float %a, <4 x i32> %mask1) {
 
 define   <4 x double> @_inreg4xdouble(double %a) {
 ; CHECK-LABEL: _inreg4xdouble:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vbroadcastsd %xmm0, %ymm0
 ; CHECK-NEXT:    retq
   %b = insertelement <4 x double> undef, double %a, i32 0
@@ -145,7 +145,7 @@ define   <4 x double> @_inreg4xdouble(double %a) {
 
 define   <4 x double> @_ss4xdouble_mask(<4 x double> %i, double %a, <4 x i32> %mask1) {
 ; CHECK-LABEL: _ss4xdouble_mask:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vpcmpneqd %xmm3, %xmm2, %k1
 ; CHECK-NEXT:    vbroadcastsd %xmm1, %ymm0 {%k1}
@@ -159,7 +159,7 @@ define   <4 x double> @_ss4xdouble_mask(<4 x double> %i, double %a, <4 x i32> %m
 
 define   <4 x double> @_ss4xdouble_maskz(double %a, <4 x i32> %mask1) {
 ; CHECK-LABEL: _ss4xdouble_maskz:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vpcmpneqd %xmm2, %xmm1, %k1
 ; CHECK-NEXT:    vbroadcastsd %xmm0, %ymm0 {%k1} {z}
@@ -173,7 +173,7 @@ define   <4 x double> @_ss4xdouble_maskz(double %a, <4 x i32> %mask1) {
 
 define <2 x double> @test_v2f64_broadcast_fold(<2 x double> *%a0, <2 x double> %a1) {
 ; CHECK-LABEL: test_v2f64_broadcast_fold:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vaddpd (%rdi){1to2}, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %1 = load <2 x double>, <2 x double> *%a0, align 16
@@ -184,7 +184,7 @@ define <2 x double> @test_v2f64_broadcast_fold(<2 x double> *%a0, <2 x double> %
 
 define <2 x double> @test_v2f64_broadcast_fold_mask(<2 x double> *%a0, <2 x double> %a1, <2 x i64> %mask1, <2 x double> %a2) {
 ; CHECK-LABEL: test_v2f64_broadcast_fold_mask:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vpcmpneqq %xmm3, %xmm1, %k1
 ; CHECK-NEXT:    vaddpd (%rdi){1to2}, %xmm0, %xmm2 {%k1}

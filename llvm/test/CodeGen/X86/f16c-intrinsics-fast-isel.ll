@@ -6,7 +6,7 @@
 
 define float @test_cvtsh_ss(i16 %a0) nounwind {
 ; X32-LABEL: test_cvtsh_ss:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %eax
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vmovd %eax, %xmm0
@@ -17,7 +17,7 @@ define float @test_cvtsh_ss(i16 %a0) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_cvtsh_ss:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movzwl %di, %eax
 ; X64-NEXT:    vmovd %eax, %xmm0
 ; X64-NEXT:    vcvtph2ps %xmm0, %xmm0
@@ -37,7 +37,7 @@ define float @test_cvtsh_ss(i16 %a0) nounwind {
 
 define i16 @test_cvtss_sh(float %a0) nounwind {
 ; X32-LABEL: test_cvtss_sh:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X32-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
@@ -47,7 +47,7 @@ define i16 @test_cvtss_sh(float %a0) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_cvtss_sh:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; X64-NEXT:    vcvtps2ph $0, %xmm0, %xmm0
@@ -65,12 +65,12 @@ define i16 @test_cvtss_sh(float %a0) nounwind {
 
 define <4 x float> @test_mm_cvtph_ps(<2 x i64> %a0) nounwind {
 ; X32-LABEL: test_mm_cvtph_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cvtph_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <8 x i16>
@@ -80,12 +80,12 @@ define <4 x float> @test_mm_cvtph_ps(<2 x i64> %a0) nounwind {
 
 define <8 x float> @test_mm256_cvtph_ps(<2 x i64> %a0) nounwind {
 ; X32-LABEL: test_mm256_cvtph_ps:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    vcvtph2ps %xmm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_cvtph_ps:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vcvtph2ps %xmm0, %ymm0
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <8 x i16>
@@ -95,12 +95,12 @@ define <8 x float> @test_mm256_cvtph_ps(<2 x i64> %a0) nounwind {
 
 define <2 x i64> @test_mm_cvtps_ph(<4 x float> %a0) nounwind {
 ; X32-LABEL: test_mm_cvtps_ph:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    vcvtps2ph $0, %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cvtps_ph:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vcvtps2ph $0, %xmm0, %xmm0
 ; X64-NEXT:    retq
   %cvt = call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> %a0, i32 0)
@@ -110,13 +110,13 @@ define <2 x i64> @test_mm_cvtps_ph(<4 x float> %a0) nounwind {
 
 define <2 x i64> @test_mm256_cvtps_ph(<8 x float> %a0) nounwind {
 ; X32-LABEL: test_mm256_cvtps_ph:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    vcvtps2ph $0, %ymm0, %xmm0
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_cvtps_ph:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vcvtps2ph $0, %ymm0, %xmm0
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq

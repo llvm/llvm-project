@@ -35,10 +35,10 @@ liveins:
 # CHECK-LABEL: name: foo
 # CHECK: body: |
 # CHECK-NEXT: bb.0.entry:
-# CHECK-NEXT: successors: %bb.1.less(0x40000000), %bb.2.exit(0x40000000)
+# CHECK-NEXT: successors: %bb.1(0x40000000), %bb.2(0x40000000)
 # CHECK-NEXT: liveins: %edi
 # CHECK:      CMP32ri8 %edi, 10, implicit-def %eflags
-# CHECK-NEXT: JG_1 %bb.2.exit, implicit killed %eflags
+# CHECK-NEXT: JG_1 %bb.2, implicit killed %eflags
 
 # CHECK:      bb.1.less:
 # CHECK-NEXT: %eax = MOV32r0 implicit-def dead %eflags
@@ -50,13 +50,13 @@ liveins:
 # CHECK-NEXT: RETQ killed %eax
 body: |
   bb.0.entry:
-    successors: %bb.1.less, %bb.2.exit
+    successors: %bb.1, %bb.2
 
     liveins: %edi
 
     CMP32ri8 %edi, 10, implicit-def %eflags
 
-    JG_1 %bb.2.exit, implicit killed %eflags
+    JG_1 %bb.2, implicit killed %eflags
 
   bb.1.less:
 
@@ -79,10 +79,10 @@ liveins:
 # CHECK-LABEL: name: bar
 # CHECK: body: |
 # CHECK-NEXT: bb.0.entry:
-# CHECK-NEXT: successors: %bb.1.less(0x40000000), %bb.2.exit(0x40000000)
+# CHECK-NEXT: successors: %bb.1(0x40000000), %bb.2(0x40000000)
 # CHECK-NEXT: liveins: %edi
 # CHECK:      CMP32ri8 %edi, 10, implicit-def %eflags
-# CHECK-NEXT: JG_1 %bb.2.exit, implicit killed %eflags
+# CHECK-NEXT: JG_1 %bb.2, implicit killed %eflags
 
 # CHECK:      bb.1.less:
 # CHECK-NEXT: %eax = MOV32r0 implicit-def dead %eflags
@@ -95,10 +95,10 @@ liveins:
 body: |
 
   bb.0.entry:
-    successors: %bb.1.less, %bb.2.exit
+    successors: %bb.1, %bb.2
     liveins: %edi
     CMP32ri8 %edi, 10, implicit-def %eflags
-    JG_1 %bb.2.exit, implicit killed %eflags
+    JG_1 %bb.2, implicit killed %eflags
   bb.1.less:  %eax = MOV32r0 implicit-def dead %eflags
               RETQ killed %eax
 

@@ -4,7 +4,7 @@
 
 define void @knownbits_zext_in_reg(i8*) nounwind {
 ; X32-LABEL: knownbits_zext_in_reg:
-; X32:       # BB#0: # %BB
+; X32:       # %bb.0: # %BB
 ; X32-NEXT:    pushl %ebp
 ; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    pushl %edi
@@ -47,7 +47,7 @@ define void @knownbits_zext_in_reg(i8*) nounwind {
 ; X32-NEXT:    jmp .LBB0_1
 ;
 ; X64-LABEL: knownbits_zext_in_reg:
-; X64:       # BB#0: # %BB
+; X64:       # %bb.0: # %BB
 ; X64-NEXT:    movzbl (%rdi), %eax
 ; X64-NEXT:    imull $101, %eax, %eax
 ; X64-NEXT:    shrl $14, %eax
@@ -106,12 +106,12 @@ CF246:                                            ; preds = %CF237
 
 define i32 @knownbits_mask_add_lshr(i32 %a0, i32 %a1) nounwind {
 ; X32-LABEL: knownbits_mask_add_lshr:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    xorl %eax, %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: knownbits_mask_add_lshr:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
   %1 = and i32 %a0, 32767
@@ -123,7 +123,7 @@ define i32 @knownbits_mask_add_lshr(i32 %a0, i32 %a1) nounwind {
 
 define i128 @knownbits_mask_addc_shl(i64 %a0, i64 %a1, i64 %a2) nounwind {
 ; X32-LABEL: knownbits_mask_addc_shl:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %edi
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -147,7 +147,7 @@ define i128 @knownbits_mask_addc_shl(i64 %a0, i64 %a1, i64 %a2) nounwind {
 ; X32-NEXT:    retl $4
 ;
 ; X64-LABEL: knownbits_mask_addc_shl:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    andq $-1024, %rdi # imm = 0xFC00
 ; X64-NEXT:    andq $-1024, %rsi # imm = 0xFC00
 ; X64-NEXT:    addq %rdi, %rsi
@@ -169,7 +169,7 @@ define i128 @knownbits_mask_addc_shl(i64 %a0, i64 %a1, i64 %a2) nounwind {
 
 define {i32, i1} @knownbits_uaddo_saddo(i64 %a0, i64 %a1) nounwind {
 ; X32-LABEL: knownbits_uaddo_saddo:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -193,7 +193,7 @@ define {i32, i1} @knownbits_uaddo_saddo(i64 %a0, i64 %a1) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: knownbits_uaddo_saddo:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    shlq $32, %rdi
 ; X64-NEXT:    shlq $32, %rsi
 ; X64-NEXT:    addq %rdi, %rsi
@@ -220,7 +220,7 @@ define {i32, i1} @knownbits_uaddo_saddo(i64 %a0, i64 %a1) nounwind {
 
 define {i32, i1} @knownbits_usubo_ssubo(i64 %a0, i64 %a1) nounwind {
 ; X32-LABEL: knownbits_usubo_ssubo:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -244,7 +244,7 @@ define {i32, i1} @knownbits_usubo_ssubo(i64 %a0, i64 %a1) nounwind {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: knownbits_usubo_ssubo:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    shlq $32, %rdi
 ; X64-NEXT:    shlq $32, %rsi
 ; X64-NEXT:    cmpq %rsi, %rdi

@@ -3,7 +3,7 @@
 
 define <112 x i8> @pr34657() local_unnamed_addr {
 ; CHECK-LABEL: pr34657
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmovups (%rax), %xmm0
 ; CHECK-NEXT:    vmovups (%rax), %ymm1
 ; CHECK-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm0

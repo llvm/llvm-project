@@ -4,7 +4,7 @@
 ; Function Attrs: norecurse nounwind readonly
 define float @testSingleAccess(i32* nocapture readonly %arr) local_unnamed_addr #0 {
 ; CHECK-LABEL: testSingleAccess:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi 3, 3, 8
 ; CHECK-NEXT:    lfiwax 0, 0, 3
 ; CHECK-NEXT:    xscvsxdsp 1, 0
@@ -19,7 +19,7 @@ entry:
 ; Function Attrs: norecurse nounwind readonly
 define float @testMultipleAccess(i32* nocapture readonly %arr) local_unnamed_addr #0 {
 ; CHECK-LABEL: testMultipleAccess:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lwz 4, 8(3)
 ; CHECK-NEXT:    lwz 12, 12(3)
 ; CHECK-NEXT:    add 3, 12, 4

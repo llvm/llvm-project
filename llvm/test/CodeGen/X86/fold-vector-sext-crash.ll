@@ -8,7 +8,7 @@
 
 define <4 x i64> @foo(<4 x i64> %A) {
 ; CHECK-LABEL: foo:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm1
 ; CHECK-NEXT:    vandps %ymm0, %ymm1, %ymm0

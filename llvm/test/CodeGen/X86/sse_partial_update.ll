@@ -10,7 +10,7 @@
 
 define void @rsqrtss(<4 x float> %a) nounwind uwtable ssp {
 ; CHECK-LABEL: rsqrtss:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    rsqrtss %xmm0, %xmm0
 ; CHECK-NEXT:    cvtss2sd %xmm0, %xmm2
 ; CHECK-NEXT:    movshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
@@ -32,7 +32,7 @@ declare <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float>) nounwind readnone
 
 define void @rcpss(<4 x float> %a) nounwind uwtable ssp {
 ; CHECK-LABEL: rcpss:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    rcpss %xmm0, %xmm0
 ; CHECK-NEXT:    cvtss2sd %xmm0, %xmm2
 ; CHECK-NEXT:    movshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
@@ -53,7 +53,7 @@ declare <4 x float> @llvm.x86.sse.rcp.ss(<4 x float>) nounwind readnone
 
 define void @sqrtss(<4 x float> %a) nounwind uwtable ssp {
 ; CHECK-LABEL: sqrtss:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    sqrtss %xmm0, %xmm0
 ; CHECK-NEXT:    cvtss2sd %xmm0, %xmm2
 ; CHECK-NEXT:    movshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
@@ -74,7 +74,7 @@ declare <4 x float> @llvm.x86.sse.sqrt.ss(<4 x float>) nounwind readnone
 
 define void @sqrtsd(<2 x double> %a) nounwind uwtable ssp {
 ; CHECK-LABEL: sqrtsd:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    sqrtsd %xmm0, %xmm0
 ; CHECK-NEXT:    cvtsd2ss %xmm0, %xmm2
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
@@ -97,7 +97,7 @@ declare <2 x double> @llvm.x86.sse2.sqrt.sd(<2 x double>) nounwind readnone
 
 define <2 x double> @load_fold_cvtss2sd_int(<4 x float> *%a) {
 ; CHECK-LABEL: load_fold_cvtss2sd_int:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    cvtss2sd (%rdi), %xmm0
 ; CHECK-NEXT:    retq
@@ -108,7 +108,7 @@ define <2 x double> @load_fold_cvtss2sd_int(<4 x float> *%a) {
 
 define <2 x double> @load_fold_cvtss2sd_int_optsize(<4 x float> *%a) optsize {
 ; CHECK-LABEL: load_fold_cvtss2sd_int_optsize:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    cvtss2sd (%rdi), %xmm0
 ; CHECK-NEXT:    retq
@@ -119,7 +119,7 @@ define <2 x double> @load_fold_cvtss2sd_int_optsize(<4 x float> *%a) optsize {
 
 define <2 x double> @load_fold_cvtss2sd_int_minsize(<4 x float> *%a) minsize {
 ; CHECK-LABEL: load_fold_cvtss2sd_int_minsize:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    cvtss2sd (%rdi), %xmm0
 ; CHECK-NEXT:    retq

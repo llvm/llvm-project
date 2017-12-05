@@ -3,7 +3,7 @@
 
 define void @foo() {
 ; CHECK-LABEL: foo:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # implicit-def: %rax
 ; CHECK-NEXT:    jmpq *%rax
 ; CHECK-NEXT:  .LBB0_1:

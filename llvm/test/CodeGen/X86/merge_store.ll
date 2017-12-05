@@ -3,7 +3,7 @@
 
 define void @merge_store(i32* nocapture %a) {
 ; CHECK-LABEL: merge_store:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movabsq $4294967297, %rcx # imm = 0x100000001
 ; CHECK-NEXT:    .p2align 4, 0x90
@@ -14,7 +14,7 @@ define void @merge_store(i32* nocapture %a) {
 ; CHECK-NEXT:    addq $4, %rax
 ; CHECK-NEXT:    cmpl $1000, %eax # imm = 0x3E8
 ; CHECK-NEXT:    jl .LBB0_1
-; CHECK-NEXT:  # BB#2: # %for.end
+; CHECK-NEXT:  # %bb.2: # %for.end
 ; CHECK-NEXT:    retq
 entry:
   br label %for.body
@@ -43,7 +43,7 @@ entry:
 
 define void @indexed_store_merge(i64 %p, i8* %v) {
 ; CHECK-LABEL: indexed_store_merge:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl $0, 2(%rsi,%rdi)
 ; CHECK-NEXT:    movb $0, (%rsi)
 ; CHECK-NEXT:    retq

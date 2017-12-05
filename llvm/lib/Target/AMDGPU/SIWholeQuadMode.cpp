@@ -224,7 +224,8 @@ FunctionPass *llvm::createSIWholeQuadModePass() {
 #ifndef NDEBUG
 LLVM_DUMP_METHOD void SIWholeQuadMode::printInfo() {
   for (const auto &BII : Blocks) {
-    dbgs() << "\nBB#" << BII.first->getNumber() << ":\n"
+    dbgs() << "\n"
+           << printMBBReference(*BII.first) << ":\n"
            << "  InNeeds = " << PrintState(BII.second.InNeeds)
            << ", Needs = " << PrintState(BII.second.Needs)
            << ", OutNeeds = " << PrintState(BII.second.OutNeeds) << "\n\n";
@@ -680,7 +681,7 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, unsigned LiveMaskReg,
   if (!isEntry && BI.Needs == StateWQM && BI.OutNeeds != StateExact)
     return;
 
-  DEBUG(dbgs() << "\nProcessing block BB#" << MBB.getNumber() << ":\n");
+  DEBUG(dbgs() << "\nProcessing block " << printMBBReference(MBB) << ":\n");
 
   unsigned SavedWQMReg = 0;
   unsigned SavedNonWWMReg = 0;

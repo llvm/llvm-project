@@ -11,13 +11,13 @@
 
 define i16 @test_movbe_i16(i16 *%a0, i16 %a1, i16 *%a2) {
 ; GENERIC-LABEL: test_movbe_i16:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    movbew (%rdi), %ax # sched: [5:0.50]
 ; GENERIC-NEXT:    movbew %si, (%rdx) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_movbe_i16:
-; ATOM:       # BB#0:
+; ATOM:       # %bb.0:
 ; ATOM-NEXT:    movbew (%rdi), %ax # sched: [1:1.00]
 ; ATOM-NEXT:    movbew %si, (%rdx) # sched: [1:1.00]
 ; ATOM-NEXT:    nop # sched: [1:0.50]
@@ -27,37 +27,37 @@ define i16 @test_movbe_i16(i16 *%a0, i16 %a1, i16 *%a2) {
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_movbe_i16:
-; SLM:       # BB#0:
+; SLM:       # %bb.0:
 ; SLM-NEXT:    movbew (%rdi), %ax # sched: [4:1.00]
 ; SLM-NEXT:    movbew %si, (%rdx) # sched: [1:1.00]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; HASWELL-LABEL: test_movbe_i16:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    movbew (%rdi), %ax # sched: [1:0.50]
 ; HASWELL-NEXT:    movbew %si, (%rdx) # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_movbe_i16:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    movbew (%rdi), %ax # sched: [6:0.50]
 ; BROADWELL-NEXT:    movbew %si, (%rdx) # sched: [2:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_movbe_i16:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    movbew (%rdi), %ax # sched: [6:0.50]
 ; SKYLAKE-NEXT:    movbew %si, (%rdx) # sched: [2:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_movbe_i16:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movbew (%rdi), %ax # sched: [4:1.00]
 ; BTVER2-NEXT:    movbew %si, (%rdx) # sched: [1:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_movbe_i16:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    movbew (%rdi), %ax # sched: [5:0.50]
 ; ZNVER1-NEXT:    movbew %si, (%rdx) # sched: [5:0.50]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -71,13 +71,13 @@ declare i16 @llvm.bswap.i16(i16)
 
 define i32 @test_movbe_i32(i32 *%a0, i32 %a1, i32 *%a2) {
 ; GENERIC-LABEL: test_movbe_i32:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    movbel (%rdi), %eax # sched: [5:0.50]
 ; GENERIC-NEXT:    movbel %esi, (%rdx) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_movbe_i32:
-; ATOM:       # BB#0:
+; ATOM:       # %bb.0:
 ; ATOM-NEXT:    movbel (%rdi), %eax # sched: [1:1.00]
 ; ATOM-NEXT:    movbel %esi, (%rdx) # sched: [1:1.00]
 ; ATOM-NEXT:    nop # sched: [1:0.50]
@@ -87,37 +87,37 @@ define i32 @test_movbe_i32(i32 *%a0, i32 %a1, i32 *%a2) {
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_movbe_i32:
-; SLM:       # BB#0:
+; SLM:       # %bb.0:
 ; SLM-NEXT:    movbel (%rdi), %eax # sched: [4:1.00]
 ; SLM-NEXT:    movbel %esi, (%rdx) # sched: [1:1.00]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; HASWELL-LABEL: test_movbe_i32:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    movbel (%rdi), %eax # sched: [1:0.50]
 ; HASWELL-NEXT:    movbel %esi, (%rdx) # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_movbe_i32:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    movbel (%rdi), %eax # sched: [6:0.50]
 ; BROADWELL-NEXT:    movbel %esi, (%rdx) # sched: [2:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_movbe_i32:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    movbel (%rdi), %eax # sched: [6:0.50]
 ; SKYLAKE-NEXT:    movbel %esi, (%rdx) # sched: [2:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_movbe_i32:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movbel (%rdi), %eax # sched: [4:1.00]
 ; BTVER2-NEXT:    movbel %esi, (%rdx) # sched: [1:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_movbe_i32:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    movbel (%rdi), %eax # sched: [5:0.50]
 ; ZNVER1-NEXT:    movbel %esi, (%rdx) # sched: [5:0.50]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -131,13 +131,13 @@ declare i32 @llvm.bswap.i32(i32)
 
 define i64 @test_movbe_i64(i64 *%a0, i64 %a1, i64 *%a2) {
 ; GENERIC-LABEL: test_movbe_i64:
-; GENERIC:       # BB#0:
+; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    movbeq (%rdi), %rax # sched: [5:0.50]
 ; GENERIC-NEXT:    movbeq %rsi, (%rdx) # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_movbe_i64:
-; ATOM:       # BB#0:
+; ATOM:       # %bb.0:
 ; ATOM-NEXT:    movbeq (%rdi), %rax # sched: [1:1.00]
 ; ATOM-NEXT:    movbeq %rsi, (%rdx) # sched: [1:1.00]
 ; ATOM-NEXT:    nop # sched: [1:0.50]
@@ -147,37 +147,37 @@ define i64 @test_movbe_i64(i64 *%a0, i64 %a1, i64 *%a2) {
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_movbe_i64:
-; SLM:       # BB#0:
+; SLM:       # %bb.0:
 ; SLM-NEXT:    movbeq (%rdi), %rax # sched: [4:1.00]
 ; SLM-NEXT:    movbeq %rsi, (%rdx) # sched: [1:1.00]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; HASWELL-LABEL: test_movbe_i64:
-; HASWELL:       # BB#0:
+; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    movbeq (%rdi), %rax # sched: [1:0.50]
 ; HASWELL-NEXT:    movbeq %rsi, (%rdx) # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_movbe_i64:
-; BROADWELL:       # BB#0:
+; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    movbeq (%rdi), %rax # sched: [6:0.50]
 ; BROADWELL-NEXT:    movbeq %rsi, (%rdx) # sched: [2:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_movbe_i64:
-; SKYLAKE:       # BB#0:
+; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    movbeq (%rdi), %rax # sched: [6:0.50]
 ; SKYLAKE-NEXT:    movbeq %rsi, (%rdx) # sched: [2:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_movbe_i64:
-; BTVER2:       # BB#0:
+; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movbeq (%rdi), %rax # sched: [4:1.00]
 ; BTVER2-NEXT:    movbeq %rsi, (%rdx) # sched: [1:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_movbe_i64:
-; ZNVER1:       # BB#0:
+; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    movbeq (%rdi), %rax # sched: [5:0.50]
 ; ZNVER1-NEXT:    movbeq %rsi, (%rdx) # sched: [5:0.50]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]

@@ -3,7 +3,7 @@
 
 define <8 x i8> @test_vextd(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 ; CHECK-LABEL: test_vextd:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
 ; CHECK-NEXT:    vldr d17, [r0]
 ; CHECK-NEXT:    vext.8 d16, d17, d16, #3
@@ -17,7 +17,7 @@ define <8 x i8> @test_vextd(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 
 define <8 x i8> @test_vextRd(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 ; CHECK-LABEL: test_vextRd:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vldr d17, [r1]
 ; CHECK-NEXT:    vext.8 d16, d17, d16, #5
@@ -31,7 +31,7 @@ define <8 x i8> @test_vextRd(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 
 define <16 x i8> @test_vextq(<16 x i8>* %A, <16 x i8>* %B) nounwind {
 ; CHECK-LABEL: test_vextq:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r1]
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r0]
 ; CHECK-NEXT:    vext.8 q8, q9, q8, #3
@@ -46,7 +46,7 @@ define <16 x i8> @test_vextq(<16 x i8>* %A, <16 x i8>* %B) nounwind {
 
 define <16 x i8> @test_vextRq(<16 x i8>* %A, <16 x i8>* %B) nounwind {
 ; CHECK-LABEL: test_vextRq:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r1]
 ; CHECK-NEXT:    vext.8 q8, q9, q8, #7
@@ -61,7 +61,7 @@ define <16 x i8> @test_vextRq(<16 x i8>* %A, <16 x i8>* %B) nounwind {
 
 define <4 x i16> @test_vextd16(<4 x i16>* %A, <4 x i16>* %B) nounwind {
 ; CHECK-LABEL: test_vextd16:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
 ; CHECK-NEXT:    vldr d17, [r0]
 ; CHECK-NEXT:    vext.16 d16, d17, d16, #3
@@ -75,7 +75,7 @@ define <4 x i16> @test_vextd16(<4 x i16>* %A, <4 x i16>* %B) nounwind {
 
 define <4 x i32> @test_vextq32(<4 x i32>* %A, <4 x i32>* %B) nounwind {
 ; CHECK-LABEL: test_vextq32:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r1]
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r0]
 ; CHECK-NEXT:    vext.32 q8, q9, q8, #3
@@ -92,7 +92,7 @@ define <4 x i32> @test_vextq32(<4 x i32>* %A, <4 x i32>* %B) nounwind {
 
 define <8 x i8> @test_vextd_undef(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 ; CHECK-LABEL: test_vextd_undef:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
 ; CHECK-NEXT:    vldr d17, [r0]
 ; CHECK-NEXT:    vext.8 d16, d17, d16, #3
@@ -106,7 +106,7 @@ define <8 x i8> @test_vextd_undef(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 
 define <16 x i8> @test_vextRq_undef(<16 x i8>* %A, <16 x i8>* %B) nounwind {
 ; CHECK-LABEL: test_vextRq_undef:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r1]
 ; CHECK-NEXT:    vext.8 q8, q9, q8, #7
@@ -121,7 +121,7 @@ define <16 x i8> @test_vextRq_undef(<16 x i8>* %A, <16 x i8>* %B) nounwind {
 
 define <16 x i8> @test_vextq_undef_op2(<16 x i8> %a) nounwind {
 ; CHECK-LABEL: test_vextq_undef_op2:
-; CHECK:       @ BB#0: @ %entry
+; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov d17, r2, r3
 ; CHECK-NEXT:    vmov d16, r0, r1
 ; CHECK-NEXT:    vext.8 q8, q8, q8, #2
@@ -135,7 +135,7 @@ entry:
 
 define <8 x i8> @test_vextd_undef_op2(<8 x i8> %a) nounwind {
 ; CHECK-LABEL: test_vextd_undef_op2:
-; CHECK:       @ BB#0: @ %entry
+; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov d16, r0, r1
 ; CHECK-NEXT:    vext.8 d16, d16, d16, #2
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -148,7 +148,7 @@ entry:
 
 define <16 x i8> @test_vextq_undef_op2_undef(<16 x i8> %a) nounwind {
 ; CHECK-LABEL: test_vextq_undef_op2_undef:
-; CHECK:       @ BB#0: @ %entry
+; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov d17, r2, r3
 ; CHECK-NEXT:    vmov d16, r0, r1
 ; CHECK-NEXT:    vext.8 q8, q8, q8, #2
@@ -162,7 +162,7 @@ entry:
 
 define <8 x i8> @test_vextd_undef_op2_undef(<8 x i8> %a) nounwind {
 ; CHECK-LABEL: test_vextd_undef_op2_undef:
-; CHECK:       @ BB#0: @ %entry
+; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov d16, r0, r1
 ; CHECK-NEXT:    vext.8 d16, d16, d16, #2
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -180,7 +180,7 @@ entry:
 ; Essence: a vext is used on %A and something saner than stack load/store for final result.
 define <4 x i16> @test_interleaved(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 ; CHECK-LABEL: test_interleaved:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vext.16 d16, d16, d17, #3
 ; CHECK-NEXT:    vorr d17, d16, d16
@@ -198,7 +198,7 @@ define <4 x i16> @test_interleaved(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 ; An undef in the shuffle list should still be optimizable
 define <4 x i16> @test_undef(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 ; CHECK-LABEL: test_undef:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr  d16, [r1]
 ; CHECK-NEXT:    vldr  d17, [r0, #8]
 ; CHECK-NEXT:    vzip.16 d17, d16
@@ -215,7 +215,7 @@ define <4 x i16> @test_undef(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 ; Try to look for fallback to by-element inserts.
 define <4 x i16> @test_multisource(<32 x i16>* %B) nounwind {
 ; CHECK-LABEL: test_multisource:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    mov r1, r0
 ; CHECK-NEXT:    add r2, r0, #48
 ; CHECK-NEXT:    add r0, r0, #32
@@ -240,7 +240,7 @@ define <4 x i16> @test_multisource(<32 x i16>* %B) nounwind {
 ; Again, test for fallback to by-element inserts.
 define <4 x i16> @test_largespan(<8 x i16>* %B) nounwind {
 ; CHECK-LABEL: test_largespan:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vorr d18, d16, d16
 ; CHECK-NEXT:    vuzp.16 d18, d17
@@ -258,7 +258,7 @@ define <4 x i16> @test_largespan(<8 x i16>* %B) nounwind {
 ; really important.)
 define <8 x i16> @test_illegal(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 ; CHECK-LABEL: test_illegal:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:	vld1.64	{d16, d17}, [r0]
 ; CHECK-NEXT:	vorr	d22, d16, d16
 ; CHECK-NEXT:	vmov.u16	r0, d16[0]
@@ -287,7 +287,7 @@ define <8 x i16> @test_illegal(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 ; Make sure this doesn't crash
 define arm_aapcscc void @test_elem_mismatch(<2 x i64>* nocapture %src, <4 x i16>* nocapture %dest) nounwind {
 ; CHECK-LABEL: test_elem_mismatch:
-; CHECK:       @ BB#0:
+; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0:128]
 ; CHECK-NEXT:    vmov.32 r0, d16[0]
 ; CHECK-NEXT:    vmov.32 r2, d17[0]
@@ -309,7 +309,7 @@ define arm_aapcscc void @test_elem_mismatch(<2 x i64>* nocapture %src, <4 x i16>
 
 define <4 x i32> @test_reverse_and_extract(<2 x i32>* %A) {
 ; CHECK-LABEL: test_reverse_and_extract:
-; CHECK:       @ BB#0: @ %entry
+; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vrev64.32 q9, q8
 ; CHECK-NEXT:    vext.32 q8, q8, q9, #2
@@ -324,7 +324,7 @@ entry:
 
 define <4 x i32> @test_dup_and_extract(<2 x i32>* %A) {
 ; CHECK-LABEL: test_dup_and_extract:
-; CHECK:       @ BB#0: @ %entry
+; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vdup.32 q9, d16[0]
 ; CHECK-NEXT:    vext.32 q8, q9, q8, #2
@@ -339,7 +339,7 @@ entry:
 
 define <4 x i32> @test_zip_and_extract(<2 x i32>* %A) {
 ; CHECK-LABEL: test_zip_and_extract:
-; CHECK:       @ BB#0: @ %entry
+; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vorr q9, q8, q8
 ; CHECK-NEXT:    vorr q10, q8, q8

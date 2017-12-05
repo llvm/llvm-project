@@ -9,7 +9,7 @@ declare i64 @llvm.cttz.i64(i64, i1)
 
 define i8 @t1(i8 %x)   {
 ; CHECK-LABEL: t1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzbl %dil, %eax
 ; CHECK-NEXT:    orl $256, %eax # imm = 0x100
 ; CHECK-NEXT:    tzcntl %eax, %eax
@@ -21,7 +21,7 @@ define i8 @t1(i8 %x)   {
 
 define i16 @t2(i16 %x)   {
 ; CHECK-LABEL: t2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    tzcntw %di, %ax
 ; CHECK-NEXT:    retq
   %tmp = tail call i16 @llvm.cttz.i16( i16 %x, i1 false )
@@ -30,7 +30,7 @@ define i16 @t2(i16 %x)   {
 
 define i32 @t3(i32 %x)   {
 ; CHECK-LABEL: t3:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    tzcntl %edi, %eax
 ; CHECK-NEXT:    retq
   %tmp = tail call i32 @llvm.cttz.i32( i32 %x, i1 false )
@@ -39,7 +39,7 @@ define i32 @t3(i32 %x)   {
 
 define i32 @tzcnt32_load(i32* %x)   {
 ; CHECK-LABEL: tzcnt32_load:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    tzcntl (%rdi), %eax
 ; CHECK-NEXT:    retq
   %x1 = load i32, i32* %x
@@ -49,7 +49,7 @@ define i32 @tzcnt32_load(i32* %x)   {
 
 define i64 @t4(i64 %x)   {
 ; CHECK-LABEL: t4:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    tzcntq %rdi, %rax
 ; CHECK-NEXT:    retq
   %tmp = tail call i64 @llvm.cttz.i64( i64 %x, i1 false )
@@ -58,7 +58,7 @@ define i64 @t4(i64 %x)   {
 
 define i8 @t5(i8 %x)   {
 ; CHECK-LABEL: t5:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzbl %dil, %eax
 ; CHECK-NEXT:    tzcntl %eax, %eax
 ; CHECK-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
@@ -69,7 +69,7 @@ define i8 @t5(i8 %x)   {
 
 define i16 @t6(i16 %x)   {
 ; CHECK-LABEL: t6:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    tzcntw %di, %ax
 ; CHECK-NEXT:    retq
   %tmp = tail call i16 @llvm.cttz.i16( i16 %x, i1 true )
@@ -78,7 +78,7 @@ define i16 @t6(i16 %x)   {
 
 define i32 @t7(i32 %x)   {
 ; CHECK-LABEL: t7:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    tzcntl %edi, %eax
 ; CHECK-NEXT:    retq
   %tmp = tail call i32 @llvm.cttz.i32( i32 %x, i1 true )
@@ -87,7 +87,7 @@ define i32 @t7(i32 %x)   {
 
 define i64 @t8(i64 %x)   {
 ; CHECK-LABEL: t8:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    tzcntq %rdi, %rax
 ; CHECK-NEXT:    retq
   %tmp = tail call i64 @llvm.cttz.i64( i64 %x, i1 true )
@@ -96,7 +96,7 @@ define i64 @t8(i64 %x)   {
 
 define i32 @andn32(i32 %x, i32 %y)   {
 ; CHECK-LABEL: andn32:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andnl %esi, %edi, %eax
 ; CHECK-NEXT:    retq
   %tmp1 = xor i32 %x, -1
@@ -106,7 +106,7 @@ define i32 @andn32(i32 %x, i32 %y)   {
 
 define i32 @andn32_load(i32 %x, i32* %y)   {
 ; CHECK-LABEL: andn32_load:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andnl (%rsi), %edi, %eax
 ; CHECK-NEXT:    retq
   %y1 = load i32, i32* %y
@@ -117,7 +117,7 @@ define i32 @andn32_load(i32 %x, i32* %y)   {
 
 define i64 @andn64(i64 %x, i64 %y)   {
 ; CHECK-LABEL: andn64:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andnq %rsi, %rdi, %rax
 ; CHECK-NEXT:    retq
   %tmp1 = xor i64 %x, -1
@@ -128,7 +128,7 @@ define i64 @andn64(i64 %x, i64 %y)   {
 ; Don't choose a 'test' if an 'andn' can be used.
 define i1 @andn_cmp(i32 %x, i32 %y) {
 ; CHECK-LABEL: andn_cmp:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andnl %esi, %edi, %eax
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
@@ -141,7 +141,7 @@ define i1 @andn_cmp(i32 %x, i32 %y) {
 ; Recognize a disguised andn in the following 4 tests.
 define i1 @and_cmp1(i32 %x, i32 %y) {
 ; CHECK-LABEL: and_cmp1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andnl %esi, %edi, %eax
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
@@ -152,7 +152,7 @@ define i1 @and_cmp1(i32 %x, i32 %y) {
 
 define i1 @and_cmp2(i32 %x, i32 %y) {
 ; CHECK-LABEL: and_cmp2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andnl %esi, %edi, %eax
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
@@ -163,7 +163,7 @@ define i1 @and_cmp2(i32 %x, i32 %y) {
 
 define i1 @and_cmp3(i32 %x, i32 %y) {
 ; CHECK-LABEL: and_cmp3:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andnl %esi, %edi, %eax
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
@@ -174,7 +174,7 @@ define i1 @and_cmp3(i32 %x, i32 %y) {
 
 define i1 @and_cmp4(i32 %x, i32 %y) {
 ; CHECK-LABEL: and_cmp4:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andnl %esi, %edi, %eax
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
@@ -187,7 +187,7 @@ define i1 @and_cmp4(i32 %x, i32 %y) {
 ; even though the BMI instruction doesn't have an immediate form.
 define i1 @and_cmp_const(i32 %x) {
 ; CHECK-LABEL: and_cmp_const:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl $43, %eax
 ; CHECK-NEXT:    andnl %eax, %edi, %eax
 ; CHECK-NEXT:    sete %al
@@ -200,7 +200,7 @@ define i1 @and_cmp_const(i32 %x) {
 ; But don't use 'andn' if the mask is a power-of-two.
 define i1 @and_cmp_const_power_of_two(i32 %x, i32 %y) {
 ; CHECK-LABEL: and_cmp_const_power_of_two:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    btl %esi, %edi
 ; CHECK-NEXT:    setae %al
 ; CHECK-NEXT:    retq
@@ -213,7 +213,7 @@ define i1 @and_cmp_const_power_of_two(i32 %x, i32 %y) {
 ; Don't transform to 'andn' if there's another use of the 'and'.
 define i32 @and_cmp_not_one_use(i32 %x) {
 ; CHECK-LABEL: and_cmp_not_one_use:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andl $37, %edi
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl $37, %edi
@@ -230,7 +230,7 @@ define i32 @and_cmp_not_one_use(i32 %x) {
 ; Verify that we're not transforming invalid comparison predicates.
 define i1 @not_an_andn1(i32 %x, i32 %y) {
 ; CHECK-LABEL: not_an_andn1:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andl %esi, %edi
 ; CHECK-NEXT:    cmpl %edi, %esi
 ; CHECK-NEXT:    setg %al
@@ -242,7 +242,7 @@ define i1 @not_an_andn1(i32 %x, i32 %y) {
 
 define i1 @not_an_andn2(i32 %x, i32 %y) {
 ; CHECK-LABEL: not_an_andn2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andl %esi, %edi
 ; CHECK-NEXT:    cmpl %edi, %esi
 ; CHECK-NEXT:    setbe %al
@@ -255,7 +255,7 @@ define i1 @not_an_andn2(i32 %x, i32 %y) {
 ; Don't choose a 'test' if an 'andn' can be used.
 define i1 @andn_cmp_swap_ops(i64 %x, i64 %y) {
 ; CHECK-LABEL: andn_cmp_swap_ops:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andnq %rsi, %rdi, %rax
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
@@ -268,7 +268,7 @@ define i1 @andn_cmp_swap_ops(i64 %x, i64 %y) {
 ; Use a 'test' (not an 'and') because 'andn' only works for i32/i64.
 define i1 @andn_cmp_i8(i8 %x, i8 %y) {
 ; CHECK-LABEL: andn_cmp_i8:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    notb %sil
 ; CHECK-NEXT:    testb %sil, %dil
 ; CHECK-NEXT:    sete %al
@@ -281,7 +281,7 @@ define i1 @andn_cmp_i8(i8 %x, i8 %y) {
 
 define i32 @bextr32(i32 %x, i32 %y)   {
 ; CHECK-LABEL: bextr32:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    bextrl %esi, %edi, %eax
 ; CHECK-NEXT:    retq
   %tmp = tail call i32 @llvm.x86.bmi.bextr.32(i32 %x, i32 %y)
@@ -290,7 +290,7 @@ define i32 @bextr32(i32 %x, i32 %y)   {
 
 define i32 @bextr32_load(i32* %x, i32 %y)   {
 ; CHECK-LABEL: bextr32_load:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    bextrl %esi, (%rdi), %eax
 ; CHECK-NEXT:    retq
   %x1 = load i32, i32* %x
@@ -302,7 +302,7 @@ declare i32 @llvm.x86.bmi.bextr.32(i32, i32)
 
 define i32 @bextr32b(i32 %x)  uwtable  ssp {
 ; CHECK-LABEL: bextr32b:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl $3076, %eax # imm = 0xC04
 ; CHECK-NEXT:    bextrl %eax, %edi, %eax
 ; CHECK-NEXT:    retq
@@ -314,7 +314,7 @@ define i32 @bextr32b(i32 %x)  uwtable  ssp {
 ; Make sure we still use AH subreg trick to extract 15:8
 define i32 @bextr32_subreg(i32 %x)  uwtable  ssp {
 ; CHECK-LABEL: bextr32_subreg:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    movzbl %ah, %eax # NOREX
 ; CHECK-NEXT:    retq
@@ -325,7 +325,7 @@ define i32 @bextr32_subreg(i32 %x)  uwtable  ssp {
 
 define i32 @bextr32b_load(i32* %x)  uwtable  ssp {
 ; CHECK-LABEL: bextr32b_load:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl $3076, %eax # imm = 0xC04
 ; CHECK-NEXT:    bextrl %eax, (%rdi), %eax
 ; CHECK-NEXT:    retq
@@ -338,7 +338,7 @@ define i32 @bextr32b_load(i32* %x)  uwtable  ssp {
 ; PR34042
 define i32 @bextr32c(i32 %x, i16 zeroext %y) {
 ; CHECK-LABEL: bextr32c:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movswl %si, %eax
 ; CHECK-NEXT:    bextrl %eax, %edi, %eax
 ; CHECK-NEXT:    retq
@@ -349,7 +349,7 @@ define i32 @bextr32c(i32 %x, i16 zeroext %y) {
 
 define i64 @bextr64(i64 %x, i64 %y)   {
 ; CHECK-LABEL: bextr64:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    bextrq %rsi, %rdi, %rax
 ; CHECK-NEXT:    retq
   %tmp = tail call i64 @llvm.x86.bmi.bextr.64(i64 %x, i64 %y)
@@ -360,7 +360,7 @@ declare i64 @llvm.x86.bmi.bextr.64(i64, i64)
 
 define i64 @bextr64b(i64 %x)  uwtable  ssp {
 ; CHECK-LABEL: bextr64b:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl $3076, %eax # imm = 0xC04
 ; CHECK-NEXT:    bextrl %eax, %edi, %eax
 ; CHECK-NEXT:    retq
@@ -372,7 +372,7 @@ define i64 @bextr64b(i64 %x)  uwtable  ssp {
 ; Make sure we still use the AH subreg trick to extract 15:8
 define i64 @bextr64_subreg(i64 %x)  uwtable  ssp {
 ; CHECK-LABEL: bextr64_subreg:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    movzbl %ah, %eax # NOREX
 ; CHECK-NEXT:    retq
@@ -383,7 +383,7 @@ define i64 @bextr64_subreg(i64 %x)  uwtable  ssp {
 
 define i64 @bextr64b_load(i64* %x) {
 ; CHECK-LABEL: bextr64b_load:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl $3076, %eax # imm = 0xC04
 ; CHECK-NEXT:    bextrl %eax, (%rdi), %eax
 ; CHECK-NEXT:    retq
@@ -396,7 +396,7 @@ define i64 @bextr64b_load(i64* %x) {
 ; PR34042
 define i64 @bextr64c(i64 %x, i32 %y) {
 ; CHECK-LABEL: bextr64c:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movslq %esi, %rax
 ; CHECK-NEXT:    bextrq %rax, %rdi, %rax
 ; CHECK-NEXT:    retq
@@ -407,7 +407,7 @@ define i64 @bextr64c(i64 %x, i32 %y) {
 
 define i64 @bextr64d(i64 %a) {
 ; CHECK-LABEL: bextr64d:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl $8450, %eax # imm = 0x2102
 ; CHECK-NEXT:    bextrq %rax, %rdi, %rax
 ; CHECK-NEXT:    retq
@@ -419,7 +419,7 @@ entry:
 
 define i32 @non_bextr32(i32 %x) {
 ; CHECK-LABEL: non_bextr32:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    shrl $2, %edi
 ; CHECK-NEXT:    andl $111, %edi
 ; CHECK-NEXT:    movl %edi, %eax
@@ -432,7 +432,7 @@ entry:
 
 define i64 @non_bextr64(i64 %x) {
 ; CHECK-LABEL: non_bextr64:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    shrq $2, %rdi
 ; CHECK-NEXT:    movabsq $8589934590, %rax # imm = 0x1FFFFFFFE
 ; CHECK-NEXT:    andq %rdi, %rax
@@ -445,7 +445,7 @@ entry:
 
 define i32 @bzhi32b(i32 %x, i8 zeroext %index) {
 ; BMI1-LABEL: bzhi32b:
-; BMI1:       # BB#0: # %entry
+; BMI1:       # %bb.0: # %entry
 ; BMI1-NEXT:    movl $1, %eax
 ; BMI1-NEXT:    movl %esi, %ecx
 ; BMI1-NEXT:    shll %cl, %eax
@@ -454,7 +454,7 @@ define i32 @bzhi32b(i32 %x, i8 zeroext %index) {
 ; BMI1-NEXT:    retq
 ;
 ; BMI2-LABEL: bzhi32b:
-; BMI2:       # BB#0: # %entry
+; BMI2:       # %bb.0: # %entry
 ; BMI2-NEXT:    bzhil %esi, %edi, %eax
 ; BMI2-NEXT:    retq
 entry:
@@ -467,7 +467,7 @@ entry:
 
 define i32 @bzhi32b_load(i32* %w, i8 zeroext %index) {
 ; BMI1-LABEL: bzhi32b_load:
-; BMI1:       # BB#0: # %entry
+; BMI1:       # %bb.0: # %entry
 ; BMI1-NEXT:    movl $1, %eax
 ; BMI1-NEXT:    movl %esi, %ecx
 ; BMI1-NEXT:    shll %cl, %eax
@@ -476,7 +476,7 @@ define i32 @bzhi32b_load(i32* %w, i8 zeroext %index) {
 ; BMI1-NEXT:    retq
 ;
 ; BMI2-LABEL: bzhi32b_load:
-; BMI2:       # BB#0: # %entry
+; BMI2:       # %bb.0: # %entry
 ; BMI2-NEXT:    bzhil %esi, (%rdi), %eax
 ; BMI2-NEXT:    retq
 entry:
@@ -490,7 +490,7 @@ entry:
 
 define i32 @bzhi32c(i32 %x, i8 zeroext %index) {
 ; BMI1-LABEL: bzhi32c:
-; BMI1:       # BB#0: # %entry
+; BMI1:       # %bb.0: # %entry
 ; BMI1-NEXT:    movl $1, %eax
 ; BMI1-NEXT:    movl %esi, %ecx
 ; BMI1-NEXT:    shll %cl, %eax
@@ -499,7 +499,7 @@ define i32 @bzhi32c(i32 %x, i8 zeroext %index) {
 ; BMI1-NEXT:    retq
 ;
 ; BMI2-LABEL: bzhi32c:
-; BMI2:       # BB#0: # %entry
+; BMI2:       # %bb.0: # %entry
 ; BMI2-NEXT:    bzhil %esi, %edi, %eax
 ; BMI2-NEXT:    retq
 entry:
@@ -512,7 +512,7 @@ entry:
 
 define i32 @bzhi32d(i32 %a, i32 %b) {
 ; BMI1-LABEL: bzhi32d:
-; BMI1:       # BB#0: # %entry
+; BMI1:       # %bb.0: # %entry
 ; BMI1-NEXT:    movl $32, %ecx
 ; BMI1-NEXT:    subl %esi, %ecx
 ; BMI1-NEXT:    movl $-1, %eax
@@ -522,7 +522,7 @@ define i32 @bzhi32d(i32 %a, i32 %b) {
 ; BMI1-NEXT:    retq
 ;
 ; BMI2-LABEL: bzhi32d:
-; BMI2:       # BB#0: # %entry
+; BMI2:       # %bb.0: # %entry
 ; BMI2-NEXT:    bzhil %esi, %edi, %eax
 ; BMI2-NEXT:    retq
 entry:
@@ -534,7 +534,7 @@ entry:
 
 define i32 @bzhi32e(i32 %a, i32 %b) {
 ; BMI1-LABEL: bzhi32e:
-; BMI1:       # BB#0: # %entry
+; BMI1:       # %bb.0: # %entry
 ; BMI1-NEXT:    movl $32, %ecx
 ; BMI1-NEXT:    subl %esi, %ecx
 ; BMI1-NEXT:    shll %cl, %edi
@@ -544,7 +544,7 @@ define i32 @bzhi32e(i32 %a, i32 %b) {
 ; BMI1-NEXT:    retq
 ;
 ; BMI2-LABEL: bzhi32e:
-; BMI2:       # BB#0: # %entry
+; BMI2:       # %bb.0: # %entry
 ; BMI2-NEXT:    bzhil %esi, %edi, %eax
 ; BMI2-NEXT:    retq
 entry:
@@ -556,7 +556,7 @@ entry:
 
 define i64 @bzhi64b(i64 %x, i8 zeroext %index) {
 ; BMI1-LABEL: bzhi64b:
-; BMI1:       # BB#0: # %entry
+; BMI1:       # %bb.0: # %entry
 ; BMI1-NEXT:    movl $1, %eax
 ; BMI1-NEXT:    movl %esi, %ecx
 ; BMI1-NEXT:    shlq %cl, %rax
@@ -565,7 +565,7 @@ define i64 @bzhi64b(i64 %x, i8 zeroext %index) {
 ; BMI1-NEXT:    retq
 ;
 ; BMI2-LABEL: bzhi64b:
-; BMI2:       # BB#0: # %entry
+; BMI2:       # %bb.0: # %entry
 ; BMI2-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; BMI2-NEXT:    bzhiq %rsi, %rdi, %rax
 ; BMI2-NEXT:    retq
@@ -579,7 +579,7 @@ entry:
 
 define i64 @bzhi64c(i64 %a, i64 %b) {
 ; BMI1-LABEL: bzhi64c:
-; BMI1:       # BB#0: # %entry
+; BMI1:       # %bb.0: # %entry
 ; BMI1-NEXT:    movl $64, %ecx
 ; BMI1-NEXT:    subl %esi, %ecx
 ; BMI1-NEXT:    movq $-1, %rax
@@ -589,7 +589,7 @@ define i64 @bzhi64c(i64 %a, i64 %b) {
 ; BMI1-NEXT:    retq
 ;
 ; BMI2-LABEL: bzhi64c:
-; BMI2:       # BB#0: # %entry
+; BMI2:       # %bb.0: # %entry
 ; BMI2-NEXT:    bzhiq %rsi, %rdi, %rax
 ; BMI2-NEXT:    retq
 entry:
@@ -601,7 +601,7 @@ entry:
 
 define i64 @bzhi64d(i64 %a, i32 %b) {
 ; BMI1-LABEL: bzhi64d:
-; BMI1:       # BB#0: # %entry
+; BMI1:       # %bb.0: # %entry
 ; BMI1-NEXT:    movl $64, %ecx
 ; BMI1-NEXT:    subl %esi, %ecx
 ; BMI1-NEXT:    movq $-1, %rax
@@ -611,7 +611,7 @@ define i64 @bzhi64d(i64 %a, i32 %b) {
 ; BMI1-NEXT:    retq
 ;
 ; BMI2-LABEL: bzhi64d:
-; BMI2:       # BB#0: # %entry
+; BMI2:       # %bb.0: # %entry
 ; BMI2-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; BMI2-NEXT:    bzhiq %rsi, %rdi, %rax
 ; BMI2-NEXT:    retq
@@ -625,7 +625,7 @@ entry:
 
 define i64 @bzhi64e(i64 %a, i64 %b) {
 ; BMI1-LABEL: bzhi64e:
-; BMI1:       # BB#0: # %entry
+; BMI1:       # %bb.0: # %entry
 ; BMI1-NEXT:    movl $64, %ecx
 ; BMI1-NEXT:    subl %esi, %ecx
 ; BMI1-NEXT:    shlq %cl, %rdi
@@ -635,7 +635,7 @@ define i64 @bzhi64e(i64 %a, i64 %b) {
 ; BMI1-NEXT:    retq
 ;
 ; BMI2-LABEL: bzhi64e:
-; BMI2:       # BB#0: # %entry
+; BMI2:       # %bb.0: # %entry
 ; BMI2-NEXT:    bzhiq %rsi, %rdi, %rax
 ; BMI2-NEXT:    retq
 entry:
@@ -647,7 +647,7 @@ entry:
 
 define i64 @bzhi64f(i64 %a, i32 %b) {
 ; BMI1-LABEL: bzhi64f:
-; BMI1:       # BB#0: # %entry
+; BMI1:       # %bb.0: # %entry
 ; BMI1-NEXT:    movl $64, %ecx
 ; BMI1-NEXT:    subl %esi, %ecx
 ; BMI1-NEXT:    shlq %cl, %rdi
@@ -657,7 +657,7 @@ define i64 @bzhi64f(i64 %a, i32 %b) {
 ; BMI1-NEXT:    retq
 ;
 ; BMI2-LABEL: bzhi64f:
-; BMI2:       # BB#0: # %entry
+; BMI2:       # %bb.0: # %entry
 ; BMI2-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
 ; BMI2-NEXT:    bzhiq %rsi, %rdi, %rax
 ; BMI2-NEXT:    retq
@@ -671,13 +671,13 @@ entry:
 
 define i64 @bzhi64_constant_mask(i64 %x) {
 ; BMI1-LABEL: bzhi64_constant_mask:
-; BMI1:       # BB#0: # %entry
+; BMI1:       # %bb.0: # %entry
 ; BMI1-NEXT:    movl $15872, %eax # imm = 0x3E00
 ; BMI1-NEXT:    bextrq %rax, %rdi, %rax
 ; BMI1-NEXT:    retq
 ;
 ; BMI2-LABEL: bzhi64_constant_mask:
-; BMI2:       # BB#0: # %entry
+; BMI2:       # %bb.0: # %entry
 ; BMI2-NEXT:    movb $62, %al
 ; BMI2-NEXT:    bzhiq %rax, %rdi, %rax
 ; BMI2-NEXT:    retq
@@ -688,13 +688,13 @@ entry:
 
 define i64 @bzhi64_constant_mask_load(i64* %x) {
 ; BMI1-LABEL: bzhi64_constant_mask_load:
-; BMI1:       # BB#0: # %entry
+; BMI1:       # %bb.0: # %entry
 ; BMI1-NEXT:    movl $15872, %eax # imm = 0x3E00
 ; BMI1-NEXT:    bextrq %rax, (%rdi), %rax
 ; BMI1-NEXT:    retq
 ;
 ; BMI2-LABEL: bzhi64_constant_mask_load:
-; BMI2:       # BB#0: # %entry
+; BMI2:       # %bb.0: # %entry
 ; BMI2-NEXT:    movb $62, %al
 ; BMI2-NEXT:    bzhiq %rax, (%rdi), %rax
 ; BMI2-NEXT:    retq
@@ -706,7 +706,7 @@ entry:
 
 define i64 @bzhi64_small_constant_mask(i64 %x) {
 ; CHECK-LABEL: bzhi64_small_constant_mask:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andl $2147483647, %edi # imm = 0x7FFFFFFF
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    retq
@@ -717,7 +717,7 @@ entry:
 
 define i32 @blsi32(i32 %x)   {
 ; CHECK-LABEL: blsi32:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    blsil %edi, %eax
 ; CHECK-NEXT:    retq
   %tmp = sub i32 0, %x
@@ -727,7 +727,7 @@ define i32 @blsi32(i32 %x)   {
 
 define i32 @blsi32_load(i32* %x)   {
 ; CHECK-LABEL: blsi32_load:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    blsil (%rdi), %eax
 ; CHECK-NEXT:    retq
   %x1 = load i32, i32* %x
@@ -738,7 +738,7 @@ define i32 @blsi32_load(i32* %x)   {
 
 define i64 @blsi64(i64 %x)   {
 ; CHECK-LABEL: blsi64:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    blsiq %rdi, %rax
 ; CHECK-NEXT:    retq
   %tmp = sub i64 0, %x
@@ -748,7 +748,7 @@ define i64 @blsi64(i64 %x)   {
 
 define i32 @blsmsk32(i32 %x)   {
 ; CHECK-LABEL: blsmsk32:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    blsmskl %edi, %eax
 ; CHECK-NEXT:    retq
   %tmp = sub i32 %x, 1
@@ -758,7 +758,7 @@ define i32 @blsmsk32(i32 %x)   {
 
 define i32 @blsmsk32_load(i32* %x)   {
 ; CHECK-LABEL: blsmsk32_load:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    blsmskl (%rdi), %eax
 ; CHECK-NEXT:    retq
   %x1 = load i32, i32* %x
@@ -769,7 +769,7 @@ define i32 @blsmsk32_load(i32* %x)   {
 
 define i64 @blsmsk64(i64 %x)   {
 ; CHECK-LABEL: blsmsk64:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    blsmskq %rdi, %rax
 ; CHECK-NEXT:    retq
   %tmp = sub i64 %x, 1
@@ -779,7 +779,7 @@ define i64 @blsmsk64(i64 %x)   {
 
 define i32 @blsr32(i32 %x)   {
 ; CHECK-LABEL: blsr32:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    blsrl %edi, %eax
 ; CHECK-NEXT:    retq
   %tmp = sub i32 %x, 1
@@ -789,7 +789,7 @@ define i32 @blsr32(i32 %x)   {
 
 define i32 @blsr32_load(i32* %x)   {
 ; CHECK-LABEL: blsr32_load:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    blsrl (%rdi), %eax
 ; CHECK-NEXT:    retq
   %x1 = load i32, i32* %x
@@ -800,7 +800,7 @@ define i32 @blsr32_load(i32* %x)   {
 
 define i64 @blsr64(i64 %x)   {
 ; CHECK-LABEL: blsr64:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    blsrq %rdi, %rax
 ; CHECK-NEXT:    retq
   %tmp = sub i64 %x, 1

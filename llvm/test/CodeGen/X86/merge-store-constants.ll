@@ -4,14 +4,14 @@
 
 define void @big_nonzero_16_bytes(i32* nocapture %a) {
 ; X32-LABEL: big_nonzero_16_bytes:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vmovaps {{.*#+}} xmm0 = [1,2,3,4]
 ; X32-NEXT:    vmovups %xmm0, (%eax)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: big_nonzero_16_bytes:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vmovaps {{.*#+}} xmm0 = [1,2,3,4]
 ; X64-NEXT:    vmovups %xmm0, (%rdi)
 ; X64-NEXT:    retq
@@ -32,14 +32,14 @@ define void @big_nonzero_16_bytes(i32* nocapture %a) {
 
 define void @big_nonzero_16_bytes_big64bit_constants(i64* nocapture %a) {
 ; X32-LABEL: big_nonzero_16_bytes_big64bit_constants:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vmovaps {{.*#+}} xmm0 = [1,1,1,3]
 ; X32-NEXT:    vmovups %xmm0, (%eax)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: big_nonzero_16_bytes_big64bit_constants:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movabsq $4294967297, %rax # imm = 0x100000001
 ; X64-NEXT:    movq %rax, (%rdi)
 ; X64-NEXT:    movabsq $12884901889, %rax # imm = 0x300000001
@@ -56,7 +56,7 @@ define void @big_nonzero_16_bytes_big64bit_constants(i64* nocapture %a) {
 
 define void @big_nonzero_32_bytes_splat(i32* nocapture %a) {
 ; X32-LABEL: big_nonzero_32_bytes_splat:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vmovaps {{.*#+}} ymm0 = [42,42,42,42,42,42,42,42]
 ; X32-NEXT:    vmovups %ymm0, (%eax)
@@ -64,7 +64,7 @@ define void @big_nonzero_32_bytes_splat(i32* nocapture %a) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: big_nonzero_32_bytes_splat:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vmovaps {{.*#+}} ymm0 = [42,42,42,42,42,42,42,42]
 ; X64-NEXT:    vmovups %ymm0, (%rdi)
 ; X64-NEXT:    vzeroupper
@@ -92,7 +92,7 @@ define void @big_nonzero_32_bytes_splat(i32* nocapture %a) {
 
 define void @big_nonzero_63_bytes(i8* nocapture %a) {
 ; X32-LABEL: big_nonzero_63_bytes:
-; X32:       # BB#0:
+; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vmovaps {{.*#+}} ymm0 = [1,0,2,0,3,0,4,0]
 ; X32-NEXT:    vmovups %ymm0, (%eax)
@@ -107,7 +107,7 @@ define void @big_nonzero_63_bytes(i8* nocapture %a) {
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: big_nonzero_63_bytes:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    vmovaps {{.*#+}} ymm0 = [1,2,3,4]
 ; X64-NEXT:    vmovups %ymm0, (%rdi)
 ; X64-NEXT:    movq $5, 32(%rdi)

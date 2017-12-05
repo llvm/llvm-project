@@ -4,7 +4,7 @@
 
 define void @and_masks(<8 x float>* %a, <8 x float>* %b, <8 x float>* %c) nounwind uwtable noinline ssp {
 ; X32-LABEL: and_masks:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -20,7 +20,7 @@ define void @and_masks(<8 x float>* %a, <8 x float>* %b, <8 x float>* %c) nounwi
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: and_masks:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    vmovups (%rdi), %ymm0
 ; X64-NEXT:    vmovups (%rsi), %ymm1
 ; X64-NEXT:    vcmpltps %ymm0, %ymm1, %ymm1
@@ -44,7 +44,7 @@ define void @and_masks(<8 x float>* %a, <8 x float>* %b, <8 x float>* %c) nounwi
 
 define void @neg_masks(<8 x float>* %a, <8 x float>* %b, <8 x float>* %c) nounwind uwtable noinline ssp {
 ; X32-LABEL: neg_masks:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    vmovups (%ecx), %ymm0
@@ -55,7 +55,7 @@ define void @neg_masks(<8 x float>* %a, <8 x float>* %b, <8 x float>* %c) nounwi
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: neg_masks:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    vmovups (%rsi), %ymm0
 ; X64-NEXT:    vcmpnltps (%rdi), %ymm0, %ymm0
 ; X64-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0

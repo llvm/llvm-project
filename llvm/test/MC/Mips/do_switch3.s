@@ -21,7 +21,7 @@ main:                                   # @main
 	.set	noreorder
 	.set	nomacro
 	.set	noat
-# BB#0:                                 # %entry
+# %bb.0:                                # %entry
 	daddiu	$sp, $sp, -16
 	lui	$1, %hi(%neg(%gp_rel(main)))
 	daddu	$2, $1, $25

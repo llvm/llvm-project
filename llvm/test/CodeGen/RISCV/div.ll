@@ -4,7 +4,7 @@
 
 define i32 @udiv(i32 %a, i32 %b) {
 ; RV32I-LABEL: udiv:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sw ra, 12(s0)
 ; RV32I-NEXT:    lui a2, %hi(__udivsi3)
 ; RV32I-NEXT:    addi a2, a2, %lo(__udivsi3)
@@ -17,7 +17,7 @@ define i32 @udiv(i32 %a, i32 %b) {
 
 define i32 @udiv_constant(i32 %a) {
 ; RV32I-LABEL: udiv_constant:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sw ra, 12(s0)
 ; RV32I-NEXT:    lui a1, %hi(__udivsi3)
 ; RV32I-NEXT:    addi a2, a1, %lo(__udivsi3)
@@ -31,7 +31,7 @@ define i32 @udiv_constant(i32 %a) {
 
 define i32 @udiv_pow2(i32 %a) {
 ; RV32I-LABEL: udiv_pow2:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    srli a0, a0, 3
 ; RV32I-NEXT:    jalr zero, ra, 0
   %1 = udiv i32 %a, 8
@@ -40,7 +40,7 @@ define i32 @udiv_pow2(i32 %a) {
 
 define i64 @udiv64(i64 %a, i64 %b) {
 ; RV32I-LABEL: udiv64:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sw ra, 12(s0)
 ; RV32I-NEXT:    lui a4, %hi(__udivdi3)
 ; RV32I-NEXT:    addi a4, a4, %lo(__udivdi3)
@@ -53,7 +53,7 @@ define i64 @udiv64(i64 %a, i64 %b) {
 
 define i64 @udiv64_constant(i64 %a) {
 ; RV32I-LABEL: udiv64_constant:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sw ra, 12(s0)
 ; RV32I-NEXT:    lui a2, %hi(__udivdi3)
 ; RV32I-NEXT:    addi a4, a2, %lo(__udivdi3)
@@ -68,7 +68,7 @@ define i64 @udiv64_constant(i64 %a) {
 
 define i32 @sdiv(i32 %a, i32 %b) {
 ; RV32I-LABEL: sdiv:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sw ra, 12(s0)
 ; RV32I-NEXT:    lui a2, %hi(__divsi3)
 ; RV32I-NEXT:    addi a2, a2, %lo(__divsi3)
@@ -81,7 +81,7 @@ define i32 @sdiv(i32 %a, i32 %b) {
 
 define i32 @sdiv_constant(i32 %a) {
 ; RV32I-LABEL: sdiv_constant:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sw ra, 12(s0)
 ; RV32I-NEXT:    lui a1, %hi(__divsi3)
 ; RV32I-NEXT:    addi a2, a1, %lo(__divsi3)
@@ -95,7 +95,7 @@ define i32 @sdiv_constant(i32 %a) {
 
 define i32 @sdiv_pow2(i32 %a) {
 ; RV32I-LABEL: sdiv_pow2:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    srai a1, a0, 31
 ; RV32I-NEXT:    srli a1, a1, 29
 ; RV32I-NEXT:    add a0, a0, a1
@@ -107,7 +107,7 @@ define i32 @sdiv_pow2(i32 %a) {
 
 define i64 @sdiv64(i64 %a, i64 %b) {
 ; RV32I-LABEL: sdiv64:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sw ra, 12(s0)
 ; RV32I-NEXT:    lui a4, %hi(__divdi3)
 ; RV32I-NEXT:    addi a4, a4, %lo(__divdi3)
@@ -120,7 +120,7 @@ define i64 @sdiv64(i64 %a, i64 %b) {
 
 define i64 @sdiv64_constant(i64 %a) {
 ; RV32I-LABEL: sdiv64_constant:
-; RV32I:       # BB#0:
+; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sw ra, 12(s0)
 ; RV32I-NEXT:    lui a2, %hi(__divdi3)
 ; RV32I-NEXT:    addi a4, a2, %lo(__divdi3)

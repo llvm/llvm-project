@@ -5,7 +5,7 @@ declare <4 x i32> @llvm.x86.avx512.mask.lzcnt.d.128(<4 x i32>, <4 x i32>, i8)
 
 define <4 x i32>@test_int_x86_avx512_mask_vplzcnt_d_128(<4 x i32> %x0, <4 x i32> %x1, i8 %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vplzcnt_d_128:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vplzcntd %xmm0, %xmm2
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vplzcntd %xmm0, %xmm1 {%k1}
@@ -25,7 +25,7 @@ declare <8 x i32> @llvm.x86.avx512.mask.lzcnt.d.256(<8 x i32>, <8 x i32>, i8)
 
 define <8 x i32>@test_int_x86_avx512_mask_vplzcnt_d_256(<8 x i32> %x0, <8 x i32> %x1, i8 %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vplzcnt_d_256:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vplzcntd %ymm0, %ymm2
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vplzcntd %ymm0, %ymm1 {%k1}
@@ -41,7 +41,7 @@ declare <2 x i64> @llvm.x86.avx512.mask.lzcnt.q.128(<2 x i64>, <2 x i64>, i8)
 
 define <2 x i64>@test_int_x86_avx512_mask_vplzcnt_q_128(<2 x i64> %x0, <2 x i64> %x1, i8 %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vplzcnt_q_128:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vplzcntq %xmm0, %xmm2
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vplzcntq %xmm0, %xmm1 {%k1}
@@ -57,7 +57,7 @@ declare <4 x i64> @llvm.x86.avx512.mask.lzcnt.q.256(<4 x i64>, <4 x i64>, i8)
 
 define <4 x i64>@test_int_x86_avx512_mask_vplzcnt_q_256(<4 x i64> %x0, <4 x i64> %x1, i8 %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vplzcnt_q_256:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vplzcntq %ymm0, %ymm2
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vplzcntq %ymm0, %ymm1 {%k1}
@@ -71,7 +71,7 @@ define <4 x i64>@test_int_x86_avx512_mask_vplzcnt_q_256(<4 x i64> %x0, <4 x i64>
 
 define <8 x i32> @test_x86_vbroadcastmw_256(i16 %a0) {
 ; CHECK-LABEL: test_x86_vbroadcastmw_256:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movzwl %di, %eax
 ; CHECK-NEXT:    vpbroadcastd %eax, %ymm0
 ; CHECK-NEXT:    retq
@@ -82,7 +82,7 @@ declare <8 x i32> @llvm.x86.avx512.broadcastmw.256(i16)
 
 define <4 x i32> @test_x86_vbroadcastmw_128(i16 %a0) {
 ; CHECK-LABEL: test_x86_vbroadcastmw_128:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movzwl %di, %eax
 ; CHECK-NEXT:    vpbroadcastd %eax, %xmm0
 ; CHECK-NEXT:    retq
@@ -93,7 +93,7 @@ declare <4 x i32> @llvm.x86.avx512.broadcastmw.128(i16)
 
 define <4 x i64> @test_x86_broadcastmb_256(i8 %a0) {
 ; CHECK-LABEL: test_x86_broadcastmb_256:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movzbl %dil, %eax
 ; CHECK-NEXT:    vpbroadcastq %rax, %ymm0
 ; CHECK-NEXT:    retq
@@ -104,7 +104,7 @@ declare <4 x i64> @llvm.x86.avx512.broadcastmb.256(i8)
 
 define <2 x i64> @test_x86_broadcastmb_128(i8 %a0) {
 ; CHECK-LABEL: test_x86_broadcastmb_128:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movzbl %dil, %eax
 ; CHECK-NEXT:    vpbroadcastq %rax, %xmm0
 ; CHECK-NEXT:    retq

@@ -4,7 +4,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 define i32 @test1(i32 %x, i32 %n, i32 %w, i32* %vp) nounwind readnone {
 ; CHECK-LABEL: test1:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    btl %esi, %edi
 ; CHECK-NEXT:    movl $12, %eax
 ; CHECK-NEXT:    cmovael (%rcx), %eax
@@ -20,7 +20,7 @@ entry:
 
 define i32 @test2(i32 %x, i32 %n, i32 %w, i32* %vp) nounwind readnone {
 ; CHECK-LABEL: test2:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    btl %esi, %edi
 ; CHECK-NEXT:    movl $12, %eax
 ; CHECK-NEXT:    cmovbl (%rcx), %eax
@@ -43,7 +43,7 @@ declare void @bar(i64) nounwind
 
 define void @test3(i64 %a, i64 %b, i1 %p) nounwind {
 ; CHECK-LABEL: test3:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    testb $1, %dl
 ; CHECK-NEXT:    cmovel %esi, %edi
@@ -77,7 +77,7 @@ define void @test3(i64 %a, i64 %b, i1 %p) nounwind {
 
 define i1 @test4() nounwind {
 ; CHECK-LABEL: test4:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movsbl {{.*}}(%rip), %edx
 ; CHECK-NEXT:    movl %edx, %eax
 ; CHECK-NEXT:    shrb $7, %al
@@ -88,7 +88,7 @@ define i1 @test4() nounwind {
 ; CHECK-NEXT:    movb {{.*}}(%rip), %al
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je .LBB3_2
-; CHECK-NEXT:  # BB#1: # %bb.i.i.i
+; CHECK-NEXT:  # %bb.1: # %bb.i.i.i
 ; CHECK-NEXT:    movb {{.*}}(%rip), %cl
 ; CHECK-NEXT:  .LBB3_2: # %func_4.exit.i
 ; CHECK-NEXT:    pushq %rbx
@@ -96,15 +96,15 @@ define i1 @test4() nounwind {
 ; CHECK-NEXT:    setne %bl
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    je .LBB3_4
-; CHECK-NEXT:  # BB#3: # %func_4.exit.i
+; CHECK-NEXT:  # %bb.3: # %func_4.exit.i
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:  .LBB3_4: # %func_4.exit.i
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je .LBB3_7
-; CHECK-NEXT:  # BB#5: # %func_4.exit.i
+; CHECK-NEXT:  # %bb.5: # %func_4.exit.i
 ; CHECK-NEXT:    testb %bl, %bl
 ; CHECK-NEXT:    jne .LBB3_7
-; CHECK-NEXT:  # BB#6: # %bb.i.i
+; CHECK-NEXT:  # %bb.6: # %bb.i.i
 ; CHECK-NEXT:    movb {{.*}}(%rip), %cl
 ; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:    movl %eax, %ecx
@@ -160,7 +160,7 @@ declare i32 @printf(i8* nocapture, ...) nounwind
 ; rdar://6668608
 define i32 @test5(i32* nocapture %P) nounwind readonly {
 ; CHECK-LABEL: test5:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl $41, (%rdi)
 ; CHECK-NEXT:    setg %al
@@ -175,7 +175,7 @@ entry:
 
 define i32 @test6(i32* nocapture %P) nounwind readonly {
 ; CHECK-LABEL: test6:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl $42, (%rdi)
 ; CHECK-NEXT:    setl %al
@@ -193,10 +193,10 @@ entry:
 ; because it isn't worth it. Just use a branch instead.
 define i8 @test7(i1 inreg %c, i8 inreg %a, i8 inreg %b) nounwind {
 ; CHECK-LABEL: test7:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    jne .LBB6_2
-; CHECK-NEXT:  # BB#1:
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    movl %edx, %esi
 ; CHECK-NEXT:  .LBB6_2:
 ; CHECK-NEXT:    movl %esi, %eax
@@ -207,7 +207,7 @@ define i8 @test7(i1 inreg %c, i8 inreg %a, i8 inreg %b) nounwind {
 
 define i32 @smin(i32 %x) {
 ; CHECK-LABEL: smin:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    notl %edi
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    movl $-1, %eax

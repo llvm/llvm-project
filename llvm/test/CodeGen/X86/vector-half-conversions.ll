@@ -10,7 +10,7 @@
 
 define float @cvt_i16_to_f32(i16 %a0) nounwind {
 ; ALL-LABEL: cvt_i16_to_f32:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    movswl %di, %eax
 ; ALL-NEXT:    vmovd %eax, %xmm0
 ; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
@@ -22,7 +22,7 @@ define float @cvt_i16_to_f32(i16 %a0) nounwind {
 
 define <4 x float> @cvt_4i16_to_4f32(<4 x i16> %a0) nounwind {
 ; AVX1-LABEL: cvt_4i16_to_4f32:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
 ; AVX1-NEXT:    vmovq %xmm0, %rax
 ; AVX1-NEXT:    movq %rax, %rcx
@@ -49,7 +49,7 @@ define <4 x float> @cvt_4i16_to_4f32(<4 x i16> %a0) nounwind {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: cvt_4i16_to_4f32:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
 ; AVX2-NEXT:    vmovq %xmm0, %rax
 ; AVX2-NEXT:    movq %rax, %rcx
@@ -76,7 +76,7 @@ define <4 x float> @cvt_4i16_to_4f32(<4 x i16> %a0) nounwind {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: cvt_4i16_to_4f32:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
 ; AVX512F-NEXT:    vmovq %xmm0, %rax
 ; AVX512F-NEXT:    movq %rax, %rcx
@@ -103,7 +103,7 @@ define <4 x float> @cvt_4i16_to_4f32(<4 x i16> %a0) nounwind {
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: cvt_4i16_to_4f32:
-; AVX512VL:       # BB#0:
+; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpmovdw %xmm0, -{{[0-9]+}}(%rsp)
 ; AVX512VL-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
 ; AVX512VL-NEXT:    movq %rax, %rcx
@@ -135,7 +135,7 @@ define <4 x float> @cvt_4i16_to_4f32(<4 x i16> %a0) nounwind {
 
 define <4 x float> @cvt_8i16_to_4f32(<8 x i16> %a0) nounwind {
 ; AVX1-LABEL: cvt_8i16_to_4f32:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovq %xmm0, %rax
 ; AVX1-NEXT:    movq %rax, %rcx
 ; AVX1-NEXT:    movq %rax, %rdx
@@ -161,7 +161,7 @@ define <4 x float> @cvt_8i16_to_4f32(<8 x i16> %a0) nounwind {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: cvt_8i16_to_4f32:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovq %xmm0, %rax
 ; AVX2-NEXT:    movq %rax, %rcx
 ; AVX2-NEXT:    movq %rax, %rdx
@@ -187,7 +187,7 @@ define <4 x float> @cvt_8i16_to_4f32(<8 x i16> %a0) nounwind {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: cvt_8i16_to_4f32:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovq %xmm0, %rax
 ; AVX512F-NEXT:    movq %rax, %rcx
 ; AVX512F-NEXT:    movq %rax, %rdx
@@ -213,7 +213,7 @@ define <4 x float> @cvt_8i16_to_4f32(<8 x i16> %a0) nounwind {
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: cvt_8i16_to_4f32:
-; AVX512VL:       # BB#0:
+; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; AVX512VL-NEXT:    vpmovdw %xmm0, -{{[0-9]+}}(%rsp)
 ; AVX512VL-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
@@ -247,7 +247,7 @@ define <4 x float> @cvt_8i16_to_4f32(<8 x i16> %a0) nounwind {
 
 define <8 x float> @cvt_8i16_to_8f32(<8 x i16> %a0) nounwind {
 ; ALL-LABEL: cvt_8i16_to_8f32:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vpextrq $1, %xmm0, %rdx
 ; ALL-NEXT:    movq %rdx, %r8
 ; ALL-NEXT:    movq %rdx, %r10
@@ -301,7 +301,7 @@ define <8 x float> @cvt_8i16_to_8f32(<8 x i16> %a0) nounwind {
 
 define <16 x float> @cvt_16i16_to_16f32(<16 x i16> %a0) nounwind {
 ; AVX1-LABEL: cvt_16i16_to_16f32:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
 ; AVX1-NEXT:    vmovq %xmm4, %rax
 ; AVX1-NEXT:    movq %rax, %rcx
@@ -396,7 +396,7 @@ define <16 x float> @cvt_16i16_to_16f32(<16 x i16> %a0) nounwind {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: cvt_16i16_to_16f32:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm4
 ; AVX2-NEXT:    vmovq %xmm4, %rax
 ; AVX2-NEXT:    movq %rax, %rcx
@@ -491,7 +491,7 @@ define <16 x float> @cvt_16i16_to_16f32(<16 x i16> %a0) nounwind {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: cvt_16i16_to_16f32:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm10
 ; AVX512F-NEXT:    vmovq %xmm0, %rax
 ; AVX512F-NEXT:    movq %rax, %rcx
@@ -587,7 +587,7 @@ define <16 x float> @cvt_16i16_to_16f32(<16 x i16> %a0) nounwind {
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: cvt_16i16_to_16f32:
-; AVX512VL:       # BB#0:
+; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vextracti128 $1, %ymm0, %xmm10
 ; AVX512VL-NEXT:    vmovq %xmm0, %rax
 ; AVX512VL-NEXT:    movq %rax, %rcx
@@ -692,7 +692,7 @@ define <16 x float> @cvt_16i16_to_16f32(<16 x i16> %a0) nounwind {
 
 define float @load_cvt_i16_to_f32(i16* %a0) nounwind {
 ; ALL-LABEL: load_cvt_i16_to_f32:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    movswl (%rdi), %eax
 ; ALL-NEXT:    vmovd %eax, %xmm0
 ; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
@@ -705,7 +705,7 @@ define float @load_cvt_i16_to_f32(i16* %a0) nounwind {
 
 define <4 x float> @load_cvt_4i16_to_4f32(<4 x i16>* %a0) nounwind {
 ; ALL-LABEL: load_cvt_4i16_to_4f32:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    movswl 6(%rdi), %eax
 ; ALL-NEXT:    vmovd %eax, %xmm0
 ; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
@@ -730,7 +730,7 @@ define <4 x float> @load_cvt_4i16_to_4f32(<4 x i16>* %a0) nounwind {
 
 define <4 x float> @load_cvt_8i16_to_4f32(<8 x i16>* %a0) nounwind {
 ; AVX1-LABEL: load_cvt_8i16_to_4f32:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    movq (%rdi), %rax
 ; AVX1-NEXT:    movq %rax, %rcx
 ; AVX1-NEXT:    movq %rax, %rdx
@@ -756,7 +756,7 @@ define <4 x float> @load_cvt_8i16_to_4f32(<8 x i16>* %a0) nounwind {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: load_cvt_8i16_to_4f32:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    movq (%rdi), %rax
 ; AVX2-NEXT:    movq %rax, %rcx
 ; AVX2-NEXT:    movq %rax, %rdx
@@ -782,7 +782,7 @@ define <4 x float> @load_cvt_8i16_to_4f32(<8 x i16>* %a0) nounwind {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: load_cvt_8i16_to_4f32:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    movq (%rdi), %rax
 ; AVX512F-NEXT:    movq %rax, %rcx
 ; AVX512F-NEXT:    movq %rax, %rdx
@@ -808,7 +808,7 @@ define <4 x float> @load_cvt_8i16_to_4f32(<8 x i16>* %a0) nounwind {
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: load_cvt_8i16_to_4f32:
-; AVX512VL:       # BB#0:
+; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
 ; AVX512VL-NEXT:    vpmovdw %xmm0, -{{[0-9]+}}(%rsp)
 ; AVX512VL-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
@@ -843,7 +843,7 @@ define <4 x float> @load_cvt_8i16_to_4f32(<8 x i16>* %a0) nounwind {
 
 define <8 x float> @load_cvt_8i16_to_8f32(<8 x i16>* %a0) nounwind {
 ; ALL-LABEL: load_cvt_8i16_to_8f32:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    movswl 6(%rdi), %eax
 ; ALL-NEXT:    vmovd %eax, %xmm0
 ; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
@@ -884,7 +884,7 @@ define <8 x float> @load_cvt_8i16_to_8f32(<8 x i16>* %a0) nounwind {
 
 define <16 x float> @load_cvt_16i16_to_16f32(<16 x i16>* %a0) nounwind {
 ; AVX1-LABEL: load_cvt_16i16_to_16f32:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    movswl 22(%rdi), %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm0
 ; AVX1-NEXT:    vcvtph2ps %xmm0, %xmm8
@@ -950,7 +950,7 @@ define <16 x float> @load_cvt_16i16_to_16f32(<16 x i16>* %a0) nounwind {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: load_cvt_16i16_to_16f32:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    movswl 22(%rdi), %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm0
 ; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm8
@@ -1016,7 +1016,7 @@ define <16 x float> @load_cvt_16i16_to_16f32(<16 x i16>* %a0) nounwind {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: load_cvt_16i16_to_16f32:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    movswl 6(%rdi), %eax
 ; AVX512F-NEXT:    vmovd %eax, %xmm0
 ; AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm8
@@ -1083,7 +1083,7 @@ define <16 x float> @load_cvt_16i16_to_16f32(<16 x i16>* %a0) nounwind {
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: load_cvt_16i16_to_16f32:
-; AVX512VL:       # BB#0:
+; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    movswl 6(%rdi), %eax
 ; AVX512VL-NEXT:    vmovd %eax, %xmm0
 ; AVX512VL-NEXT:    vcvtph2ps %xmm0, %xmm8
@@ -1160,7 +1160,7 @@ define <16 x float> @load_cvt_16i16_to_16f32(<16 x i16>* %a0) nounwind {
 
 define double @cvt_i16_to_f64(i16 %a0) nounwind {
 ; ALL-LABEL: cvt_i16_to_f64:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    movswl %di, %eax
 ; ALL-NEXT:    vmovd %eax, %xmm0
 ; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
@@ -1173,7 +1173,7 @@ define double @cvt_i16_to_f64(i16 %a0) nounwind {
 
 define <2 x double> @cvt_2i16_to_2f64(<2 x i16> %a0) nounwind {
 ; AVX1-LABEL: cvt_2i16_to_2f64:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
 ; AVX1-NEXT:    vmovd %xmm0, %eax
@@ -1190,7 +1190,7 @@ define <2 x double> @cvt_2i16_to_2f64(<2 x i16> %a0) nounwind {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: cvt_2i16_to_2f64:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; AVX2-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
 ; AVX2-NEXT:    vmovd %xmm0, %eax
@@ -1207,7 +1207,7 @@ define <2 x double> @cvt_2i16_to_2f64(<2 x i16> %a0) nounwind {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: cvt_2i16_to_2f64:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; AVX512F-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
 ; AVX512F-NEXT:    vmovd %xmm0, %eax
@@ -1224,7 +1224,7 @@ define <2 x double> @cvt_2i16_to_2f64(<2 x i16> %a0) nounwind {
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: cvt_2i16_to_2f64:
-; AVX512VL:       # BB#0:
+; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpmovqw %xmm0, -{{[0-9]+}}(%rsp)
 ; AVX512VL-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
 ; AVX512VL-NEXT:    movswl %ax, %ecx
@@ -1245,7 +1245,7 @@ define <2 x double> @cvt_2i16_to_2f64(<2 x i16> %a0) nounwind {
 
 define <4 x double> @cvt_4i16_to_4f64(<4 x i16> %a0) nounwind {
 ; AVX1-LABEL: cvt_4i16_to_4f64:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
 ; AVX1-NEXT:    vmovq %xmm0, %rax
 ; AVX1-NEXT:    movq %rax, %rcx
@@ -1275,7 +1275,7 @@ define <4 x double> @cvt_4i16_to_4f64(<4 x i16> %a0) nounwind {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: cvt_4i16_to_4f64:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
 ; AVX2-NEXT:    vmovq %xmm0, %rax
 ; AVX2-NEXT:    movq %rax, %rcx
@@ -1305,7 +1305,7 @@ define <4 x double> @cvt_4i16_to_4f64(<4 x i16> %a0) nounwind {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: cvt_4i16_to_4f64:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
 ; AVX512F-NEXT:    vmovq %xmm0, %rax
 ; AVX512F-NEXT:    movq %rax, %rcx
@@ -1335,7 +1335,7 @@ define <4 x double> @cvt_4i16_to_4f64(<4 x i16> %a0) nounwind {
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: cvt_4i16_to_4f64:
-; AVX512VL:       # BB#0:
+; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpmovdw %xmm0, -{{[0-9]+}}(%rsp)
 ; AVX512VL-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
 ; AVX512VL-NEXT:    movq %rax, %rcx
@@ -1370,7 +1370,7 @@ define <4 x double> @cvt_4i16_to_4f64(<4 x i16> %a0) nounwind {
 
 define <2 x double> @cvt_8i16_to_2f64(<8 x i16> %a0) nounwind {
 ; AVX1-LABEL: cvt_8i16_to_2f64:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovd %xmm0, %eax
 ; AVX1-NEXT:    movswl %ax, %ecx
 ; AVX1-NEXT:    shrl $16, %eax
@@ -1385,7 +1385,7 @@ define <2 x double> @cvt_8i16_to_2f64(<8 x i16> %a0) nounwind {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: cvt_8i16_to_2f64:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %xmm0, %eax
 ; AVX2-NEXT:    movswl %ax, %ecx
 ; AVX2-NEXT:    shrl $16, %eax
@@ -1400,7 +1400,7 @@ define <2 x double> @cvt_8i16_to_2f64(<8 x i16> %a0) nounwind {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: cvt_8i16_to_2f64:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovd %xmm0, %eax
 ; AVX512F-NEXT:    movswl %ax, %ecx
 ; AVX512F-NEXT:    shrl $16, %eax
@@ -1415,7 +1415,7 @@ define <2 x double> @cvt_8i16_to_2f64(<8 x i16> %a0) nounwind {
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: cvt_8i16_to_2f64:
-; AVX512VL:       # BB#0:
+; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; AVX512VL-NEXT:    vpmovqw %xmm0, -{{[0-9]+}}(%rsp)
 ; AVX512VL-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
@@ -1438,7 +1438,7 @@ define <2 x double> @cvt_8i16_to_2f64(<8 x i16> %a0) nounwind {
 
 define <4 x double> @cvt_8i16_to_4f64(<8 x i16> %a0) nounwind {
 ; AVX1-LABEL: cvt_8i16_to_4f64:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovq %xmm0, %rax
 ; AVX1-NEXT:    movq %rax, %rcx
 ; AVX1-NEXT:    movl %eax, %edx
@@ -1467,7 +1467,7 @@ define <4 x double> @cvt_8i16_to_4f64(<8 x i16> %a0) nounwind {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: cvt_8i16_to_4f64:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovq %xmm0, %rax
 ; AVX2-NEXT:    movq %rax, %rcx
 ; AVX2-NEXT:    movl %eax, %edx
@@ -1496,7 +1496,7 @@ define <4 x double> @cvt_8i16_to_4f64(<8 x i16> %a0) nounwind {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: cvt_8i16_to_4f64:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovq %xmm0, %rax
 ; AVX512F-NEXT:    movq %rax, %rcx
 ; AVX512F-NEXT:    movl %eax, %edx
@@ -1525,7 +1525,7 @@ define <4 x double> @cvt_8i16_to_4f64(<8 x i16> %a0) nounwind {
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: cvt_8i16_to_4f64:
-; AVX512VL:       # BB#0:
+; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; AVX512VL-NEXT:    vpmovdw %xmm0, -{{[0-9]+}}(%rsp)
 ; AVX512VL-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
@@ -1562,7 +1562,7 @@ define <4 x double> @cvt_8i16_to_4f64(<8 x i16> %a0) nounwind {
 
 define <8 x double> @cvt_8i16_to_8f64(<8 x i16> %a0) nounwind {
 ; AVX1-LABEL: cvt_8i16_to_8f64:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovq %xmm0, %rdx
 ; AVX1-NEXT:    movq %rdx, %r9
 ; AVX1-NEXT:    movl %edx, %r10d
@@ -1616,7 +1616,7 @@ define <8 x double> @cvt_8i16_to_8f64(<8 x i16> %a0) nounwind {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: cvt_8i16_to_8f64:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovq %xmm0, %rdx
 ; AVX2-NEXT:    movq %rdx, %r9
 ; AVX2-NEXT:    movl %edx, %r10d
@@ -1670,7 +1670,7 @@ define <8 x double> @cvt_8i16_to_8f64(<8 x i16> %a0) nounwind {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: cvt_8i16_to_8f64:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpextrq $1, %xmm0, %rdx
 ; AVX512-NEXT:    movq %rdx, %r9
 ; AVX512-NEXT:    movl %edx, %r10d
@@ -1734,7 +1734,7 @@ define <8 x double> @cvt_8i16_to_8f64(<8 x i16> %a0) nounwind {
 
 define double @load_cvt_i16_to_f64(i16* %a0) nounwind {
 ; ALL-LABEL: load_cvt_i16_to_f64:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    movswl (%rdi), %eax
 ; ALL-NEXT:    vmovd %eax, %xmm0
 ; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
@@ -1748,7 +1748,7 @@ define double @load_cvt_i16_to_f64(i16* %a0) nounwind {
 
 define <2 x double> @load_cvt_2i16_to_2f64(<2 x i16>* %a0) nounwind {
 ; ALL-LABEL: load_cvt_2i16_to_2f64:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    movswl (%rdi), %eax
 ; ALL-NEXT:    vmovd %eax, %xmm0
 ; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
@@ -1767,7 +1767,7 @@ define <2 x double> @load_cvt_2i16_to_2f64(<2 x i16>* %a0) nounwind {
 
 define <4 x double> @load_cvt_4i16_to_4f64(<4 x i16>* %a0) nounwind {
 ; ALL-LABEL: load_cvt_4i16_to_4f64:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    movswl (%rdi), %eax
 ; ALL-NEXT:    vmovd %eax, %xmm0
 ; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
@@ -1796,7 +1796,7 @@ define <4 x double> @load_cvt_4i16_to_4f64(<4 x i16>* %a0) nounwind {
 
 define <4 x double> @load_cvt_8i16_to_4f64(<8 x i16>* %a0) nounwind {
 ; AVX1-LABEL: load_cvt_8i16_to_4f64:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    movq (%rdi), %rax
 ; AVX1-NEXT:    movq %rax, %rcx
 ; AVX1-NEXT:    movl %eax, %edx
@@ -1825,7 +1825,7 @@ define <4 x double> @load_cvt_8i16_to_4f64(<8 x i16>* %a0) nounwind {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: load_cvt_8i16_to_4f64:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    movq (%rdi), %rax
 ; AVX2-NEXT:    movq %rax, %rcx
 ; AVX2-NEXT:    movl %eax, %edx
@@ -1854,7 +1854,7 @@ define <4 x double> @load_cvt_8i16_to_4f64(<8 x i16>* %a0) nounwind {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: load_cvt_8i16_to_4f64:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    movq (%rdi), %rax
 ; AVX512F-NEXT:    movq %rax, %rcx
 ; AVX512F-NEXT:    movl %eax, %edx
@@ -1883,7 +1883,7 @@ define <4 x double> @load_cvt_8i16_to_4f64(<8 x i16>* %a0) nounwind {
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: load_cvt_8i16_to_4f64:
-; AVX512VL:       # BB#0:
+; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
 ; AVX512VL-NEXT:    vpmovdw %xmm0, -{{[0-9]+}}(%rsp)
 ; AVX512VL-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
@@ -1921,7 +1921,7 @@ define <4 x double> @load_cvt_8i16_to_4f64(<8 x i16>* %a0) nounwind {
 
 define <8 x double> @load_cvt_8i16_to_8f64(<8 x i16>* %a0) nounwind {
 ; AVX1-LABEL: load_cvt_8i16_to_8f64:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    movswl 8(%rdi), %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm0
 ; AVX1-NEXT:    vcvtph2ps %xmm0, %xmm1
@@ -1963,7 +1963,7 @@ define <8 x double> @load_cvt_8i16_to_8f64(<8 x i16>* %a0) nounwind {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: load_cvt_8i16_to_8f64:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    movswl 8(%rdi), %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm0
 ; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm1
@@ -2005,7 +2005,7 @@ define <8 x double> @load_cvt_8i16_to_8f64(<8 x i16>* %a0) nounwind {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: load_cvt_8i16_to_8f64:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    movswl (%rdi), %eax
 ; AVX512-NEXT:    vmovd %eax, %xmm0
 ; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
@@ -2058,7 +2058,7 @@ define <8 x double> @load_cvt_8i16_to_8f64(<8 x i16>* %a0) nounwind {
 
 define i16 @cvt_f32_to_i16(float %a0) nounwind {
 ; ALL-LABEL: cvt_f32_to_i16:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; ALL-NEXT:    vmovd %xmm0, %eax
 ; ALL-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
@@ -2070,7 +2070,7 @@ define i16 @cvt_f32_to_i16(float %a0) nounwind {
 
 define <4 x i16> @cvt_4f32_to_4i16(<4 x float> %a0) nounwind {
 ; ALL-LABEL: cvt_4f32_to_4i16:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; ALL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
 ; ALL-NEXT:    vmovd %xmm1, %eax
@@ -2099,7 +2099,7 @@ define <4 x i16> @cvt_4f32_to_4i16(<4 x float> %a0) nounwind {
 
 define <8 x i16> @cvt_4f32_to_8i16_undef(<4 x float> %a0) nounwind {
 ; AVX1-LABEL: cvt_4f32_to_8i16_undef:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX1-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
 ; AVX1-NEXT:    vmovd %xmm1, %eax
@@ -2124,7 +2124,7 @@ define <8 x i16> @cvt_4f32_to_8i16_undef(<4 x float> %a0) nounwind {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: cvt_4f32_to_8i16_undef:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX2-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
 ; AVX2-NEXT:    vmovd %xmm1, %eax
@@ -2149,7 +2149,7 @@ define <8 x i16> @cvt_4f32_to_8i16_undef(<4 x float> %a0) nounwind {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: cvt_4f32_to_8i16_undef:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX512F-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
 ; AVX512F-NEXT:    vmovd %xmm1, %eax
@@ -2174,7 +2174,7 @@ define <8 x i16> @cvt_4f32_to_8i16_undef(<4 x float> %a0) nounwind {
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: cvt_4f32_to_8i16_undef:
-; AVX512VL:       # BB#0:
+; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX512VL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vmovd %xmm1, %eax
@@ -2206,7 +2206,7 @@ define <8 x i16> @cvt_4f32_to_8i16_undef(<4 x float> %a0) nounwind {
 
 define <8 x i16> @cvt_4f32_to_8i16_zero(<4 x float> %a0) nounwind {
 ; AVX1-LABEL: cvt_4f32_to_8i16_zero:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX1-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
 ; AVX1-NEXT:    vmovd %xmm1, %eax
@@ -2231,7 +2231,7 @@ define <8 x i16> @cvt_4f32_to_8i16_zero(<4 x float> %a0) nounwind {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: cvt_4f32_to_8i16_zero:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX2-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
 ; AVX2-NEXT:    vmovd %xmm1, %eax
@@ -2256,7 +2256,7 @@ define <8 x i16> @cvt_4f32_to_8i16_zero(<4 x float> %a0) nounwind {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: cvt_4f32_to_8i16_zero:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX512F-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
 ; AVX512F-NEXT:    vmovd %xmm1, %eax
@@ -2281,7 +2281,7 @@ define <8 x i16> @cvt_4f32_to_8i16_zero(<4 x float> %a0) nounwind {
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: cvt_4f32_to_8i16_zero:
-; AVX512VL:       # BB#0:
+; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX512VL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vmovd %xmm1, %eax
@@ -2315,7 +2315,7 @@ define <8 x i16> @cvt_4f32_to_8i16_zero(<4 x float> %a0) nounwind {
 
 define <8 x i16> @cvt_8f32_to_8i16(<8 x float> %a0) nounwind {
 ; ALL-LABEL: cvt_8f32_to_8i16:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; ALL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
 ; ALL-NEXT:    vmovd %xmm1, %eax
@@ -2367,7 +2367,7 @@ define <8 x i16> @cvt_8f32_to_8i16(<8 x float> %a0) nounwind {
 
 define <16 x i16> @cvt_16f32_to_16i16(<16 x float> %a0) nounwind {
 ; AVX1-LABEL: cvt_16f32_to_16i16:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vcvtps2ph $4, %xmm1, %xmm2
 ; AVX1-NEXT:    vmovd %xmm2, %eax
 ; AVX1-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm1[1,1,3,3]
@@ -2434,7 +2434,7 @@ define <16 x i16> @cvt_16f32_to_16i16(<16 x float> %a0) nounwind {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: cvt_16f32_to_16i16:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vcvtps2ph $4, %xmm1, %xmm2
 ; AVX2-NEXT:    vmovd %xmm2, %eax
 ; AVX2-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm1[1,1,3,3]
@@ -2501,7 +2501,7 @@ define <16 x i16> @cvt_16f32_to_16i16(<16 x float> %a0) nounwind {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: cvt_16f32_to_16i16:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vextractf64x4 $1, %zmm0, %ymm1
 ; AVX512-NEXT:    vcvtps2ph $4, %xmm1, %xmm2
 ; AVX512-NEXT:    vmovd %xmm2, %eax
@@ -2578,7 +2578,7 @@ define <16 x i16> @cvt_16f32_to_16i16(<16 x float> %a0) nounwind {
 
 define void @store_cvt_f32_to_i16(float %a0, i16* %a1) nounwind {
 ; ALL-LABEL: store_cvt_f32_to_i16:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; ALL-NEXT:    vmovd %xmm0, %eax
 ; ALL-NEXT:    movw %ax, (%rdi)
@@ -2591,7 +2591,7 @@ define void @store_cvt_f32_to_i16(float %a0, i16* %a1) nounwind {
 
 define void @store_cvt_4f32_to_4i16(<4 x float> %a0, <4 x i16>* %a1) nounwind {
 ; ALL-LABEL: store_cvt_4f32_to_4i16:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; ALL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
 ; ALL-NEXT:    vmovd %xmm1, %eax
@@ -2616,7 +2616,7 @@ define void @store_cvt_4f32_to_4i16(<4 x float> %a0, <4 x i16>* %a1) nounwind {
 
 define void @store_cvt_4f32_to_8i16_undef(<4 x float> %a0, <8 x i16>* %a1) nounwind {
 ; AVX1-LABEL: store_cvt_4f32_to_8i16_undef:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX1-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
 ; AVX1-NEXT:    vmovd %xmm1, %eax
@@ -2642,7 +2642,7 @@ define void @store_cvt_4f32_to_8i16_undef(<4 x float> %a0, <8 x i16>* %a1) nounw
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: store_cvt_4f32_to_8i16_undef:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX2-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
 ; AVX2-NEXT:    vmovd %xmm1, %eax
@@ -2668,7 +2668,7 @@ define void @store_cvt_4f32_to_8i16_undef(<4 x float> %a0, <8 x i16>* %a1) nounw
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: store_cvt_4f32_to_8i16_undef:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX512F-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
 ; AVX512F-NEXT:    vmovd %xmm1, %eax
@@ -2694,7 +2694,7 @@ define void @store_cvt_4f32_to_8i16_undef(<4 x float> %a0, <8 x i16>* %a1) nounw
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: store_cvt_4f32_to_8i16_undef:
-; AVX512VL:       # BB#0:
+; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX512VL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vmovd %xmm1, %eax
@@ -2728,7 +2728,7 @@ define void @store_cvt_4f32_to_8i16_undef(<4 x float> %a0, <8 x i16>* %a1) nounw
 
 define void @store_cvt_4f32_to_8i16_zero(<4 x float> %a0, <8 x i16>* %a1) nounwind {
 ; AVX1-LABEL: store_cvt_4f32_to_8i16_zero:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX1-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
 ; AVX1-NEXT:    vmovd %xmm1, %eax
@@ -2754,7 +2754,7 @@ define void @store_cvt_4f32_to_8i16_zero(<4 x float> %a0, <8 x i16>* %a1) nounwi
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: store_cvt_4f32_to_8i16_zero:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX2-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
 ; AVX2-NEXT:    vmovd %xmm1, %eax
@@ -2780,7 +2780,7 @@ define void @store_cvt_4f32_to_8i16_zero(<4 x float> %a0, <8 x i16>* %a1) nounwi
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: store_cvt_4f32_to_8i16_zero:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX512F-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
 ; AVX512F-NEXT:    vmovd %xmm1, %eax
@@ -2806,7 +2806,7 @@ define void @store_cvt_4f32_to_8i16_zero(<4 x float> %a0, <8 x i16>* %a1) nounwi
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: store_cvt_4f32_to_8i16_zero:
-; AVX512VL:       # BB#0:
+; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX512VL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vmovd %xmm1, %eax
@@ -2842,7 +2842,7 @@ define void @store_cvt_4f32_to_8i16_zero(<4 x float> %a0, <8 x i16>* %a1) nounwi
 
 define void @store_cvt_8f32_to_8i16(<8 x float> %a0, <8 x i16>* %a1) nounwind {
 ; ALL-LABEL: store_cvt_8f32_to_8i16:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; ALL-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
 ; ALL-NEXT:    vmovd %xmm1, %r8d
@@ -2884,7 +2884,7 @@ define void @store_cvt_8f32_to_8i16(<8 x float> %a0, <8 x i16>* %a1) nounwind {
 
 define void @store_cvt_16f32_to_16i16(<16 x float> %a0, <16 x i16>* %a1) nounwind {
 ; AVX1-LABEL: store_cvt_16f32_to_16i16:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
 ; AVX1-NEXT:    vcvtps2ph $4, %xmm3, %xmm4
@@ -2951,7 +2951,7 @@ define void @store_cvt_16f32_to_16i16(<16 x float> %a0, <16 x i16>* %a1) nounwin
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: store_cvt_16f32_to_16i16:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm3
 ; AVX2-NEXT:    vcvtps2ph $4, %xmm3, %xmm4
@@ -3018,7 +3018,7 @@ define void @store_cvt_16f32_to_16i16(<16 x float> %a0, <16 x i16>* %a1) nounwin
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: store_cvt_16f32_to_16i16:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX512-NEXT:    vextractf64x4 $1, %zmm0, %ymm2
 ; AVX512-NEXT:    vextractf128 $1, %ymm2, %xmm3
@@ -3096,7 +3096,7 @@ define void @store_cvt_16f32_to_16i16(<16 x float> %a0, <16 x i16>* %a1) nounwin
 
 define i16 @cvt_f64_to_i16(double %a0) nounwind {
 ; ALL-LABEL: cvt_f64_to_i16:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    jmp __truncdfhf2 # TAILCALL
   %1 = fptrunc double %a0 to half
   %2 = bitcast half %1 to i16
@@ -3105,7 +3105,7 @@ define i16 @cvt_f64_to_i16(double %a0) nounwind {
 
 define <2 x i16> @cvt_2f64_to_2i16(<2 x double> %a0) nounwind {
 ; ALL-LABEL: cvt_2f64_to_2i16:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    pushq %rbx
 ; ALL-NEXT:    subq $16, %rsp
 ; ALL-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
@@ -3128,7 +3128,7 @@ define <2 x i16> @cvt_2f64_to_2i16(<2 x double> %a0) nounwind {
 
 define <4 x i16> @cvt_4f64_to_4i16(<4 x double> %a0) nounwind {
 ; AVX1-LABEL: cvt_4f64_to_4i16:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    pushq %r14
 ; AVX1-NEXT:    pushq %rbx
 ; AVX1-NEXT:    subq $40, %rsp
@@ -3165,7 +3165,7 @@ define <4 x i16> @cvt_4f64_to_4i16(<4 x double> %a0) nounwind {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: cvt_4f64_to_4i16:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    pushq %r14
 ; AVX2-NEXT:    pushq %rbx
 ; AVX2-NEXT:    subq $40, %rsp
@@ -3202,7 +3202,7 @@ define <4 x i16> @cvt_4f64_to_4i16(<4 x double> %a0) nounwind {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: cvt_4f64_to_4i16:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    pushq %r14
 ; AVX512-NEXT:    pushq %rbx
 ; AVX512-NEXT:    subq $40, %rsp
@@ -3244,7 +3244,7 @@ define <4 x i16> @cvt_4f64_to_4i16(<4 x double> %a0) nounwind {
 
 define <8 x i16> @cvt_4f64_to_8i16_undef(<4 x double> %a0) nounwind {
 ; AVX1-LABEL: cvt_4f64_to_8i16_undef:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    pushq %r14
 ; AVX1-NEXT:    pushq %rbx
 ; AVX1-NEXT:    subq $40, %rsp
@@ -3282,7 +3282,7 @@ define <8 x i16> @cvt_4f64_to_8i16_undef(<4 x double> %a0) nounwind {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: cvt_4f64_to_8i16_undef:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    pushq %r14
 ; AVX2-NEXT:    pushq %rbx
 ; AVX2-NEXT:    subq $40, %rsp
@@ -3320,7 +3320,7 @@ define <8 x i16> @cvt_4f64_to_8i16_undef(<4 x double> %a0) nounwind {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: cvt_4f64_to_8i16_undef:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    pushq %r14
 ; AVX512F-NEXT:    pushq %rbx
 ; AVX512F-NEXT:    subq $40, %rsp
@@ -3358,7 +3358,7 @@ define <8 x i16> @cvt_4f64_to_8i16_undef(<4 x double> %a0) nounwind {
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: cvt_4f64_to_8i16_undef:
-; AVX512VL:       # BB#0:
+; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    pushq %r14
 ; AVX512VL-NEXT:    pushq %rbx
 ; AVX512VL-NEXT:    subq $40, %rsp
@@ -3403,7 +3403,7 @@ define <8 x i16> @cvt_4f64_to_8i16_undef(<4 x double> %a0) nounwind {
 
 define <8 x i16> @cvt_4f64_to_8i16_zero(<4 x double> %a0) nounwind {
 ; AVX1-LABEL: cvt_4f64_to_8i16_zero:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    pushq %r14
 ; AVX1-NEXT:    pushq %rbx
 ; AVX1-NEXT:    subq $40, %rsp
@@ -3441,7 +3441,7 @@ define <8 x i16> @cvt_4f64_to_8i16_zero(<4 x double> %a0) nounwind {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: cvt_4f64_to_8i16_zero:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    pushq %r14
 ; AVX2-NEXT:    pushq %rbx
 ; AVX2-NEXT:    subq $40, %rsp
@@ -3479,7 +3479,7 @@ define <8 x i16> @cvt_4f64_to_8i16_zero(<4 x double> %a0) nounwind {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: cvt_4f64_to_8i16_zero:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    pushq %r14
 ; AVX512F-NEXT:    pushq %rbx
 ; AVX512F-NEXT:    subq $40, %rsp
@@ -3517,7 +3517,7 @@ define <8 x i16> @cvt_4f64_to_8i16_zero(<4 x double> %a0) nounwind {
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: cvt_4f64_to_8i16_zero:
-; AVX512VL:       # BB#0:
+; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    pushq %r14
 ; AVX512VL-NEXT:    pushq %rbx
 ; AVX512VL-NEXT:    subq $40, %rsp
@@ -3564,7 +3564,7 @@ define <8 x i16> @cvt_4f64_to_8i16_zero(<4 x double> %a0) nounwind {
 
 define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) nounwind {
 ; AVX1-LABEL: cvt_8f64_to_8i16:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    pushq %r15
 ; AVX1-NEXT:    pushq %r14
 ; AVX1-NEXT:    pushq %rbx
@@ -3631,7 +3631,7 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) nounwind {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: cvt_8f64_to_8i16:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    pushq %r15
 ; AVX2-NEXT:    pushq %r14
 ; AVX2-NEXT:    pushq %rbx
@@ -3698,7 +3698,7 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) nounwind {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: cvt_8f64_to_8i16:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    pushq %r15
 ; AVX512-NEXT:    pushq %r14
 ; AVX512-NEXT:    pushq %rbx
@@ -3776,7 +3776,7 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) nounwind {
 
 define void @store_cvt_f64_to_i16(double %a0, i16* %a1) nounwind {
 ; ALL-LABEL: store_cvt_f64_to_i16:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    pushq %rbx
 ; ALL-NEXT:    movq %rdi, %rbx
 ; ALL-NEXT:    callq __truncdfhf2
@@ -3791,7 +3791,7 @@ define void @store_cvt_f64_to_i16(double %a0, i16* %a1) nounwind {
 
 define void @store_cvt_2f64_to_2i16(<2 x double> %a0, <2 x i16>* %a1) nounwind {
 ; ALL-LABEL: store_cvt_2f64_to_2i16:
-; ALL:       # BB#0:
+; ALL:       # %bb.0:
 ; ALL-NEXT:    pushq %rbp
 ; ALL-NEXT:    pushq %rbx
 ; ALL-NEXT:    subq $24, %rsp
@@ -3816,7 +3816,7 @@ define void @store_cvt_2f64_to_2i16(<2 x double> %a0, <2 x i16>* %a1) nounwind {
 
 define void @store_cvt_4f64_to_4i16(<4 x double> %a0, <4 x i16>* %a1) nounwind {
 ; AVX1-LABEL: store_cvt_4f64_to_4i16:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    pushq %rbp
 ; AVX1-NEXT:    pushq %r15
 ; AVX1-NEXT:    pushq %r14
@@ -3854,7 +3854,7 @@ define void @store_cvt_4f64_to_4i16(<4 x double> %a0, <4 x i16>* %a1) nounwind {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: store_cvt_4f64_to_4i16:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    pushq %rbp
 ; AVX2-NEXT:    pushq %r15
 ; AVX2-NEXT:    pushq %r14
@@ -3892,7 +3892,7 @@ define void @store_cvt_4f64_to_4i16(<4 x double> %a0, <4 x i16>* %a1) nounwind {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: store_cvt_4f64_to_4i16:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    pushq %rbp
 ; AVX512-NEXT:    pushq %r15
 ; AVX512-NEXT:    pushq %r14
@@ -3936,7 +3936,7 @@ define void @store_cvt_4f64_to_4i16(<4 x double> %a0, <4 x i16>* %a1) nounwind {
 
 define void @store_cvt_4f64_to_8i16_undef(<4 x double> %a0, <8 x i16>* %a1) nounwind {
 ; AVX1-LABEL: store_cvt_4f64_to_8i16_undef:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    pushq %rbp
 ; AVX1-NEXT:    pushq %r14
 ; AVX1-NEXT:    pushq %rbx
@@ -3978,7 +3978,7 @@ define void @store_cvt_4f64_to_8i16_undef(<4 x double> %a0, <8 x i16>* %a1) noun
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: store_cvt_4f64_to_8i16_undef:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    pushq %rbp
 ; AVX2-NEXT:    pushq %r14
 ; AVX2-NEXT:    pushq %rbx
@@ -4020,7 +4020,7 @@ define void @store_cvt_4f64_to_8i16_undef(<4 x double> %a0, <8 x i16>* %a1) noun
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: store_cvt_4f64_to_8i16_undef:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    pushq %rbp
 ; AVX512F-NEXT:    pushq %r14
 ; AVX512F-NEXT:    pushq %rbx
@@ -4062,7 +4062,7 @@ define void @store_cvt_4f64_to_8i16_undef(<4 x double> %a0, <8 x i16>* %a1) noun
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: store_cvt_4f64_to_8i16_undef:
-; AVX512VL:       # BB#0:
+; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    pushq %rbp
 ; AVX512VL-NEXT:    pushq %r14
 ; AVX512VL-NEXT:    pushq %rbx
@@ -4112,7 +4112,7 @@ define void @store_cvt_4f64_to_8i16_undef(<4 x double> %a0, <8 x i16>* %a1) noun
 
 define void @store_cvt_4f64_to_8i16_zero(<4 x double> %a0, <8 x i16>* %a1) nounwind {
 ; AVX1-LABEL: store_cvt_4f64_to_8i16_zero:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    pushq %rbp
 ; AVX1-NEXT:    pushq %r14
 ; AVX1-NEXT:    pushq %rbx
@@ -4154,7 +4154,7 @@ define void @store_cvt_4f64_to_8i16_zero(<4 x double> %a0, <8 x i16>* %a1) nounw
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: store_cvt_4f64_to_8i16_zero:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    pushq %rbp
 ; AVX2-NEXT:    pushq %r14
 ; AVX2-NEXT:    pushq %rbx
@@ -4196,7 +4196,7 @@ define void @store_cvt_4f64_to_8i16_zero(<4 x double> %a0, <8 x i16>* %a1) nounw
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: store_cvt_4f64_to_8i16_zero:
-; AVX512F:       # BB#0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    pushq %rbp
 ; AVX512F-NEXT:    pushq %r14
 ; AVX512F-NEXT:    pushq %rbx
@@ -4238,7 +4238,7 @@ define void @store_cvt_4f64_to_8i16_zero(<4 x double> %a0, <8 x i16>* %a1) nounw
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: store_cvt_4f64_to_8i16_zero:
-; AVX512VL:       # BB#0:
+; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    pushq %rbp
 ; AVX512VL-NEXT:    pushq %r14
 ; AVX512VL-NEXT:    pushq %rbx
@@ -4290,7 +4290,7 @@ define void @store_cvt_4f64_to_8i16_zero(<4 x double> %a0, <8 x i16>* %a1) nounw
 
 define void @store_cvt_8f64_to_8i16(<8 x double> %a0, <8 x i16>* %a1) nounwind {
 ; AVX1-LABEL: store_cvt_8f64_to_8i16:
-; AVX1:       # BB#0:
+; AVX1:       # %bb.0:
 ; AVX1-NEXT:    pushq %rbp
 ; AVX1-NEXT:    pushq %r15
 ; AVX1-NEXT:    pushq %r14
@@ -4358,7 +4358,7 @@ define void @store_cvt_8f64_to_8i16(<8 x double> %a0, <8 x i16>* %a1) nounwind {
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: store_cvt_8f64_to_8i16:
-; AVX2:       # BB#0:
+; AVX2:       # %bb.0:
 ; AVX2-NEXT:    pushq %rbp
 ; AVX2-NEXT:    pushq %r15
 ; AVX2-NEXT:    pushq %r14
@@ -4426,7 +4426,7 @@ define void @store_cvt_8f64_to_8i16(<8 x double> %a0, <8 x i16>* %a1) nounwind {
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: store_cvt_8f64_to_8i16:
-; AVX512:       # BB#0:
+; AVX512:       # %bb.0:
 ; AVX512-NEXT:    pushq %rbp
 ; AVX512-NEXT:    pushq %r15
 ; AVX512-NEXT:    pushq %r14

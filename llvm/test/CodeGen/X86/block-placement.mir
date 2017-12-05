@@ -46,28 +46,28 @@ liveins:
   - { reg: '%rdi' }
   - { reg: '%esi' }
 
-# CHECK: %eax = FAULTING_OP 1, %bb.3.null, 1684, killed %rdi, 1, %noreg, 0, %noreg :: (load 4 from %ir.ptr)
-# CHECK-NEXT: JMP_1 %bb.2.not_null
+# CHECK: %eax = FAULTING_OP 1, %bb.3, 1684, killed %rdi, 1, %noreg, 0, %noreg :: (load 4 from %ir.ptr)
+# CHECK-NEXT: JMP_1 %bb.2
 # CHECK: bb.3.null:
 # CHECK:  bb.4.right:
 # CHECK:  bb.2.not_null:
 
 body:             |
   bb.0.entry:
-    successors: %bb.1.left(0x7ffff800), %bb.3.right(0x00000800)
+    successors: %bb.1(0x7ffff800), %bb.3(0x00000800)
     liveins: %esi, %rdi
   
     frame-setup PUSH64r undef %rax, implicit-def %rsp, implicit %rsp
     CFI_INSTRUCTION def_cfa_offset 16
     TEST8ri %sil, 1, implicit-def %eflags, implicit killed %esi
-    JE_1 %bb.3.right, implicit killed %eflags
+    JE_1 %bb.3, implicit killed %eflags
   
   bb.1.left:
-    successors: %bb.2.null(0x7ffff800), %bb.4.not_null(0x00000800)
+    successors: %bb.2(0x7ffff800), %bb.4(0x00000800)
     liveins: %rdi
   
-    %eax = FAULTING_OP 1, %bb.2.null, 1684, killed %rdi, 1, %noreg, 0, %noreg :: (load 4 from %ir.ptr)
-    JMP_1 %bb.4.not_null
+    %eax = FAULTING_OP 1, %bb.2, 1684, killed %rdi, 1, %noreg, 0, %noreg :: (load 4 from %ir.ptr)
+    JMP_1 %bb.4
   
   bb.4.not_null:
     liveins: %rdi, %eax

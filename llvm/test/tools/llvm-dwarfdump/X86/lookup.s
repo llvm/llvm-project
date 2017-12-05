@@ -45,7 +45,7 @@ Lfunc_begin0:
 	.file	1 "foo.c"
 	.loc	1 1 0                   ## foo.c:1:0
 	.cfi_startproc
-## BB#0:                                ## %entry
+## %bb.0:                               ## %entry
 	pushq	%rbp
 Lcfi0:
 	.cfi_def_cfa_offset 16

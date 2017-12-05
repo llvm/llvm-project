@@ -6,7 +6,7 @@
 
 define void @f(<4 x float> %A, i8* %B, <2 x double> %C, i32 %D, <2 x i64> %E, <4 x i32> %F, <8 x i16> %G, <16 x i8> %H, i64 %I) nounwind {
 ; X32-SSE-LABEL: f:
-; X32-SSE:       # BB#0:
+; X32-SSE:       # %bb.0:
 ; X32-SSE-NEXT:    pushl %ebp
 ; X32-SSE-NEXT:    movl %esp, %ebp
 ; X32-SSE-NEXT:    andl $-16, %esp
@@ -36,7 +36,7 @@ define void @f(<4 x float> %A, i8* %B, <2 x double> %C, i32 %D, <2 x i64> %E, <4
 ; X32-SSE-NEXT:    retl
 ;
 ; X32-AVX-LABEL: f:
-; X32-AVX:       # BB#0:
+; X32-AVX:       # %bb.0:
 ; X32-AVX-NEXT:    pushl %ebp
 ; X32-AVX-NEXT:    movl %esp, %ebp
 ; X32-AVX-NEXT:    andl $-16, %esp
@@ -66,7 +66,7 @@ define void @f(<4 x float> %A, i8* %B, <2 x double> %C, i32 %D, <2 x i64> %E, <4
 ; X32-AVX-NEXT:    retl
 ;
 ; X64-SSE-LABEL: f:
-; X64-SSE:       # BB#0:
+; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    addps {{.*}}(%rip), %xmm0
 ; X64-SSE-NEXT:    movntps %xmm0, (%rdi)
 ; X64-SSE-NEXT:    paddq {{.*}}(%rip), %xmm2
@@ -84,7 +84,7 @@ define void @f(<4 x float> %A, i8* %B, <2 x double> %C, i32 %D, <2 x i64> %E, <4
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: f:
-; X64-AVX:       # BB#0:
+; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vmovntps %xmm0, (%rdi)
 ; X64-AVX-NEXT:    vpaddq {{.*}}(%rip), %xmm2, %xmm0

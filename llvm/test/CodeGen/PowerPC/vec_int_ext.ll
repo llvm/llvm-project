@@ -4,11 +4,11 @@
 
 define <4 x i32> @vextsb2wLE(<16 x i8> %a) {
 ; CHECK-LE-LABEL: vextsb2wLE:
-; CHECK-LE:       # BB#0: # %entry
+; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    vextsb2w 2, 2
 ; CHECK-LE-NEXT:    blr
 ; CHECK-BE-LABEL: vextsb2wLE:
-; CHECK-BE:       # BB#0: # %entry
+; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE:         vperm 2, 2, 2, 3
 ; CHECK-BE-NEXT:    vextsb2w 2, 2
 ; CHECK-BE-NEXT:    blr
@@ -31,11 +31,11 @@ entry:
 
 define <2 x i64> @vextsb2dLE(<16 x i8> %a) {
 ; CHECK-LE-LABEL: vextsb2dLE:
-; CHECK-LE:       # BB#0: # %entry
+; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    vextsb2d 2, 2
 ; CHECK-LE-NEXT:    blr
 ; CHECK-BE-LABEL: vextsb2dLE:
-; CHECK-BE:       # BB#0: # %entry
+; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE:         vperm 2, 2, 2, 3
 ; CHECK-BE-NEXT:    vextsb2d 2, 2
 ; CHECK-BE-NEXT:    blr
@@ -52,11 +52,11 @@ entry:
 
 define <4 x i32> @vextsh2wLE(<8 x i16> %a) {
 ; CHECK-LE-LABEL: vextsh2wLE:
-; CHECK-LE:       # BB#0: # %entry
+; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    vextsh2w 2, 2
 ; CHECK-LE-NEXT:    blr
 ; CHECK-BE-LABEL: vextsh2wLE:
-; CHECK-BE:       # BB#0: # %entry
+; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE:         vperm 2, 2, 2, 3
 ; CHECK-BE-NEXT:    vextsh2w 2, 2
 ; CHECK-BE-NEXT:    blr
@@ -79,11 +79,11 @@ entry:
 
 define <2 x i64> @vextsh2dLE(<8 x i16> %a) {
 ; CHECK-LE-LABEL: vextsh2dLE:
-; CHECK-LE:       # BB#0: # %entry
+; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    vextsh2d 2, 2
 ; CHECK-LE-NEXT:    blr
 ; CHECK-BE-LABEL: vextsh2dLE:
-; CHECK-BE:       # BB#0: # %entry
+; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE:         vperm 2, 2, 2, 3
 ; CHECK-BE-NEXT:    vextsh2d 2, 2
 ; CHECK-BE-NEXT:    blr
@@ -100,11 +100,11 @@ entry:
 
 define <2 x i64> @vextsw2dLE(<4 x i32> %a) {
 ; CHECK-LE-LABEL: vextsw2dLE:
-; CHECK-LE:       # BB#0: # %entry
+; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    vextsw2d 2, 2
 ; CHECK-LE-NEXT:    blr
 ; CHECK-BE-LABEL: vextsw2dLE:
-; CHECK-BE:       # BB#0: # %entry
+; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE:         vmrgew
 ; CHECK-BE-NEXT:    vextsw2d 2, 2
 ; CHECK-BE-NEXT:    blr
@@ -121,11 +121,11 @@ entry:
 
 define <4 x i32> @vextsb2wBE(<16 x i8> %a) {
 ; CHECK-BE-LABEL: vextsb2wBE:
-; CHECK-BE:       # BB#0: # %entry
+; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    vextsb2w 2, 2
 ; CHECK-BE-NEXT:    blr
 ; CHECK-LE-LABEL: vextsb2wBE:
-; CHECK-LE:       # BB#0: # %entry
+; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    vsldoi 2, 2, 2, 13
 ; CHECK-LE-NEXT:    vextsb2w 2, 2
 ; CHECK-LE-NEXT:    blr
@@ -147,11 +147,11 @@ entry:
 
 define <2 x i64> @vextsb2dBE(<16 x i8> %a) {
 ; CHECK-BE-LABEL: vextsb2dBE:
-; CHECK-BE:       # BB#0: # %entry
+; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    vextsb2d 2, 2
 ; CHECK-BE-NEXT:    blr
 ; CHECK-LE-LABEL: vextsb2dBE:
-; CHECK-LE:       # BB#0: # %entry
+; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    vsldoi 2, 2, 2, 9
 ; CHECK-LE-NEXT:    vextsb2d 2, 2
 ; CHECK-LE-NEXT:    blr
@@ -167,11 +167,11 @@ entry:
 
 define <4 x i32> @vextsh2wBE(<8 x i16> %a) {
 ; CHECK-BE-LABEL: vextsh2wBE:
-; CHECK-BE:       # BB#0: # %entry
+; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    vextsh2w 2, 2
 ; CHECK-BE-NEXT:    blr
 ; CHECK-LE-LABEL: vextsh2wBE:
-; CHECK-LE:       # BB#0: # %entry
+; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    vsldoi 2, 2, 2, 14
 ; CHECK-LE-NEXT:    vextsh2w 2, 2
 ; CHECK-LE-NEXT:    blr
@@ -193,11 +193,11 @@ entry:
 
 define <2 x i64> @vextsh2dBE(<8 x i16> %a) {
 ; CHECK-BE-LABEL: vextsh2dBE:
-; CHECK-BE:       # BB#0: # %entry
+; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    vextsh2d 2, 2
 ; CHECK-BE-NEXT:    blr
 ; CHECK-LE-LABEL: vextsh2dBE:
-; CHECK-LE:       # BB#0: # %entry
+; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    vsldoi 2, 2, 2, 10
 ; CHECK-LE-NEXT:    vextsh2d 2, 2
 ; CHECK-LE-NEXT:    blr
@@ -213,11 +213,11 @@ entry:
 
 define <2 x i64> @vextsw2dBE(<4 x i32> %a) {
 ; CHECK-BE-LABEL: vextsw2dBE:
-; CHECK-BE:       # BB#0: # %entry
+; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    vextsw2d 2, 2
 ; CHECK-BE-NEXT:    blr
 ; CHECK-LE-LABEL: vextsw2dBE:
-; CHECK-LE:       # BB#0: # %entry
+; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    vsldoi 2, 2, 2, 12
 ; CHECK-LE-NEXT:    vextsw2d 2, 2
 ; CHECK-LE-NEXT:    blr
@@ -233,11 +233,11 @@ entry:
 
 define <2 x i64> @vextDiffVectors(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LE-LABEL: vextDiffVectors:
-; CHECK-LE:       # BB#0: # %entry
+; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NOT:     vextsw2d
 
 ; CHECK-BE-LABEL: vextDiffVectors:
-; CHECK-BE:       # BB#0: # %entry
+; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NOT:     vextsw2d
 entry:
   %vecext = extractelement <4 x i32> %a, i32 0
@@ -252,11 +252,11 @@ entry:
 define <8 x i16> @testInvalidExtend(<16 x i8> %a) {
 entry:
 ; CHECK-LE-LABEL: testInvalidExtend:
-; CHECK-LE:       # BB#0: # %entry
+; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NOT:     vexts
 
 ; CHECK-BE-LABEL: testInvalidExtend:
-; CHECK-BE:       # BB#0: # %entry
+; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NOT:     vexts
 
   %vecext = extractelement <16 x i8> %a, i32 0

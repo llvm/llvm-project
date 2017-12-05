@@ -22,7 +22,7 @@ main:                                   # @main
 	.set	noreorder
 	.set	nomacro
 	.set	noat
-# BB#0:                                 # %entry
+# %bb.0:                                # %entry
 	addiu	$sp, $sp, -8
 	addiu	$1, $zero, 2
 	sw	$1, 4($sp)

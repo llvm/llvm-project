@@ -461,7 +461,7 @@ bool HexagonOptAddrMode::changeAddAsl(NodeAddr<UseNode *> AddAslUN,
     DEBUG(dbgs() << "[InstrNode]: " << Print<NodeAddr<InstrNode *>>(UseIA, *DFG)
                  << "\n");
     MachineInstr *UseMI = UseIA.Addr->getCode();
-    DEBUG(dbgs() << "[MI <BB#" << UseMI->getParent()->getNumber()
+    DEBUG(dbgs() << "[MI <" << printMBBReference(*UseMI->getParent())
                  << ">]: " << *UseMI << "\n");
     const MCInstrDesc &UseMID = UseMI->getDesc();
     assert(HII->getAddrMode(*UseMI) == HexagonII::BaseImmOffset);
@@ -570,7 +570,7 @@ bool HexagonOptAddrMode::processBlock(NodeAddr<BlockNode *> BA) {
 
       NodeAddr<StmtNode *> OwnerN = UseN.Addr->getOwner(*DFG);
       MachineInstr *UseMI = OwnerN.Addr->getCode();
-      DEBUG(dbgs() << "\t\t[MI <BB#" << UseMI->getParent()->getNumber()
+      DEBUG(dbgs() << "\t\t[MI <" << printMBBReference(*UseMI->getParent())
                    << ">]: " << *UseMI << "\n");
 
       int UseMOnum = -1;

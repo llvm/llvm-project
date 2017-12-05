@@ -6,25 +6,25 @@
 
 define i64 @test2(i64 %a) {
 ; LNX1-LABEL: test2:
-; LNX1:       # BB#0:
+; LNX1:       # %bb.0:
 ; LNX1-NEXT:    leaq (,%rdi,4), %rax
 ; LNX1-NEXT:    orq %rdi, %rax
 ; LNX1-NEXT:    retq
 ;
 ; LNX2-LABEL: test2:
-; LNX2:       # BB#0:
+; LNX2:       # %bb.0:
 ; LNX2-NEXT:    leaq (,%rdi,4), %rax
 ; LNX2-NEXT:    orq %rdi, %rax
 ; LNX2-NEXT:    retq
 ;
 ; NACL-LABEL: test2:
-; NACL:       # BB#0:
+; NACL:       # %bb.0:
 ; NACL-NEXT:    leaq (,%rdi,4), %rax
 ; NACL-NEXT:    orq %rdi, %rax
 ; NACL-NEXT:    retq
 ;
 ; WIN-LABEL: test2:
-; WIN:       # BB#0:
+; WIN:       # %bb.0:
 ; WIN-NEXT:    leaq (,%rcx,4), %rax
 ; WIN-NEXT:    orq %rcx, %rax
 ; WIN-NEXT:    retq
@@ -35,25 +35,25 @@ define i64 @test2(i64 %a) {
 
 define i32 @test(i32 %a) {
 ; LNX1-LABEL: test:
-; LNX1:       # BB#0:
+; LNX1:       # %bb.0:
 ; LNX1-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; LNX1-NEXT:    leal (%rdi,%rdi,2), %eax
 ; LNX1-NEXT:    retq
 ;
 ; LNX2-LABEL: test:
-; LNX2:       # BB#0:
+; LNX2:       # %bb.0:
 ; LNX2-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; LNX2-NEXT:    leal (%rdi,%rdi,2), %eax
 ; LNX2-NEXT:    retq
 ;
 ; NACL-LABEL: test:
-; NACL:       # BB#0:
+; NACL:       # %bb.0:
 ; NACL-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
 ; NACL-NEXT:    leal (%rdi,%rdi,2), %eax
 ; NACL-NEXT:    retq
 ;
 ; WIN-LABEL: test:
-; WIN:       # BB#0:
+; WIN:       # %bb.0:
 ; WIN-NEXT:    # kill: %ecx<def> %ecx<kill> %rcx<def>
 ; WIN-NEXT:    leal (%rcx,%rcx,2), %eax
 ; WIN-NEXT:    retq
@@ -63,22 +63,22 @@ define i32 @test(i32 %a) {
 
 define i64 @test3(i64 %a) {
 ; LNX1-LABEL: test3:
-; LNX1:       # BB#0:
+; LNX1:       # %bb.0:
 ; LNX1-NEXT:    leaq (,%rdi,8), %rax
 ; LNX1-NEXT:    retq
 ;
 ; LNX2-LABEL: test3:
-; LNX2:       # BB#0:
+; LNX2:       # %bb.0:
 ; LNX2-NEXT:    leaq (,%rdi,8), %rax
 ; LNX2-NEXT:    retq
 ;
 ; NACL-LABEL: test3:
-; NACL:       # BB#0:
+; NACL:       # %bb.0:
 ; NACL-NEXT:    leaq (,%rdi,8), %rax
 ; NACL-NEXT:    retq
 ;
 ; WIN-LABEL: test3:
-; WIN:       # BB#0:
+; WIN:       # %bb.0:
 ; WIN-NEXT:    leaq (,%rcx,8), %rax
 ; WIN-NEXT:    retq
   %tmp2 = shl i64 %a, 3

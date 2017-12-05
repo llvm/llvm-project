@@ -4,12 +4,12 @@
 
 define void @test () {
 ; X86-LABEL: test:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movb $0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movb $0, (%rax)
 ; X64-NEXT:    retq
   store <2 x i4> zeroinitializer, <2 x i4>* undef, align 1

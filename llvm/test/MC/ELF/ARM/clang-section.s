@@ -23,12 +23,12 @@
 	.code	32                      @ @foo
 foo:
 	.fnstart
-@ BB#0:                                 @ %entry
+@ %bb.0:                                @ %entry
 	ldr	r0, .LCPI0_0
 	ldr	r0, [r0]
 	mov	pc, lr
 	.p2align	2
-@ BB#1:
+@ %bb.1:
 .LCPI0_0:
 	.long	b
 .Lfunc_end0:
@@ -43,7 +43,7 @@ foo:
 	.code	32                      @ @goo
 goo:
 	.fnstart
-@ BB#0:                                 @ %entry
+@ %bb.0:                                @ %entry
 	.save	{r11, lr}
 	push	{r11, lr}
 	ldr	r0, .LCPI1_0
@@ -52,7 +52,7 @@ goo:
 	pop	{r11, lr}
 	mov	pc, lr
 	.p2align	2
-@ BB#1:
+@ %bb.1:
 .LCPI1_0:
 	.long	_ZL1g
 .LCPI1_1:
@@ -69,12 +69,12 @@ goo:
 	.code	32                      @ @hoo
 hoo:
 	.fnstart
-@ BB#0:                                 @ %entry
+@ %bb.0:                                @ %entry
 	ldr	r0, .LCPI2_0
 	ldr	r0, [r0]
 	mov	pc, lr
 	.p2align	2
-@ BB#1:
+@ %bb.1:
 .LCPI2_0:
 	.long	b
 .Lfunc_end2:

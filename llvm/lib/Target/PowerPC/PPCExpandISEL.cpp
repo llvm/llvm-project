@@ -171,7 +171,7 @@ bool PPCExpandISEL::collectISELInstructions() {
 #ifndef NDEBUG
 void PPCExpandISEL::DumpISELInstructions() const {
   for (const auto &I : ISELInstructions) {
-    DEBUG(dbgs() << "BB#" << I.first << ":\n");
+    DEBUG(dbgs() << printMBBReference(*MF->getBlockNumbered(I.first)) << ":\n");
     for (const auto &VI : I.second)
       DEBUG(dbgs() << "    "; VI->print(dbgs()));
   }
@@ -191,7 +191,11 @@ bool PPCExpandISEL::canMerge(MachineInstr *PrevPushedMI, MachineInstr *MI) {
 
 void PPCExpandISEL::expandAndMergeISELs() {
   for (auto &BlockList : ISELInstructions) {
-    DEBUG(dbgs() << "Expanding ISEL instructions in BB#" << BlockList.first
+
+    DEBUG(dbgs() << printMBBReference(*MF->getBlockNumbered(BlockList.first))
+                 << ":\n");
+    DEBUG(dbgs() << "Expanding ISEL instructions in "
+                 << printMBBReference(*MF->getBlockNumbered(BlockList.first))
                  << "\n");
 
     BlockISELList &CurrentISELList = BlockList.second;

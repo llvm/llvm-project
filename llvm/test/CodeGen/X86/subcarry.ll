@@ -5,7 +5,7 @@
 
 define %S @negate(%S* nocapture readonly %this) {
 ; CHECK-LABEL: negate:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq (%rsi), %rax
 ; CHECK-NEXT:    movq 8(%rsi), %rcx
 ; CHECK-NEXT:    notq %rax
@@ -62,7 +62,7 @@ entry:
 
 define %S @sub(%S* nocapture readonly %this, %S %arg.b) local_unnamed_addr {
 ; CHECK-LABEL: sub:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    notq %rdx
 ; CHECK-NEXT:    xorl %r10d, %r10d
 ; CHECK-NEXT:    addq (%rsi), %rdx

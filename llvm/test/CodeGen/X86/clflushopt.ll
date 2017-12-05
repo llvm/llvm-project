@@ -4,13 +4,13 @@
 
 define void @clflushopt(i8* %p) nounwind {
 ; X86-LABEL: clflushopt:
-; X86:       ## BB#0:
+; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    clflushopt (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: clflushopt:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    clflushopt (%rdi)
 ; X64-NEXT:    retq
   tail call void @llvm.x86.clflushopt(i8* %p)

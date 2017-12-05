@@ -8,7 +8,7 @@
 
 define void @_Z1fe(x86_fp80 %z) local_unnamed_addr #0 {
 ; SSE2-LABEL: _Z1fe:
-; SSE2:       ## BB#0: ## %entry
+; SSE2:       ## %bb.0: ## %entry
 ; SSE2-NEXT:    pushq %rbp
 ; SSE2-NEXT:    .cfi_def_cfa_offset 16
 ; SSE2-NEXT:    .cfi_offset %rbp, -16
@@ -47,7 +47,7 @@ define void @_Z1fe(x86_fp80 %z) local_unnamed_addr #0 {
 ; SSE2-NEXT:    retq
 ;
 ; SSE2-BROKEN-LABEL: _Z1fe:
-; SSE2-BROKEN:       ## BB#0: ## %entry
+; SSE2-BROKEN:       ## %bb.0: ## %entry
 ; SSE2-BROKEN-NEXT:    pushq %rbp
 ; SSE2-BROKEN-NEXT:    .cfi_def_cfa_offset 16
 ; SSE2-BROKEN-NEXT:    .cfi_offset %rbp, -16
@@ -86,7 +86,7 @@ define void @_Z1fe(x86_fp80 %z) local_unnamed_addr #0 {
 ; SSE2-BROKEN-NEXT:    retq
 ;
 ; SSE3-LABEL: _Z1fe:
-; SSE3:       ## BB#0: ## %entry
+; SSE3:       ## %bb.0: ## %entry
 ; SSE3-NEXT:    pushq %rbp
 ; SSE3-NEXT:    .cfi_def_cfa_offset 16
 ; SSE3-NEXT:    .cfi_offset %rbp, -16
@@ -115,7 +115,7 @@ define void @_Z1fe(x86_fp80 %z) local_unnamed_addr #0 {
 ; SSE3-NEXT:    retq
 ;
 ; AVX-LABEL: _Z1fe:
-; AVX:       ## BB#0: ## %entry
+; AVX:       ## %bb.0: ## %entry
 ; AVX-NEXT:    pushq %rbp
 ; AVX-NEXT:    .cfi_def_cfa_offset 16
 ; AVX-NEXT:    .cfi_offset %rbp, -16

@@ -6,7 +6,7 @@
 
 define void @test1(<2 x double>* %r, <2 x double>* %A, double %B) nounwind  {
 ; X86-LABEL: test1:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movapd (%ecx), %xmm0
@@ -15,7 +15,7 @@ define void @test1(<2 x double>* %r, <2 x double>* %A, double %B) nounwind  {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test1:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movapd (%rsi), %xmm1
 ; X64-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
 ; X64-NEXT:    movapd %xmm1, (%rdi)
@@ -29,7 +29,7 @@ define void @test1(<2 x double>* %r, <2 x double>* %A, double %B) nounwind  {
 
 define void @test2(<2 x double>* %r, <2 x double>* %A, double %B) nounwind  {
 ; X86-LABEL: test2:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movapd (%ecx), %xmm0
@@ -38,7 +38,7 @@ define void @test2(<2 x double>* %r, <2 x double>* %A, double %B) nounwind  {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test2:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movaps (%rsi), %xmm1
 ; X64-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; X64-NEXT:    movaps %xmm1, (%rdi)
@@ -53,7 +53,7 @@ define void @test2(<2 x double>* %r, <2 x double>* %A, double %B) nounwind  {
 
 define void @test3(<4 x float>* %res, <4 x float>* %A, <4 x float>* %B) nounwind {
 ; X86-LABEL: test3:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -63,7 +63,7 @@ define void @test3(<4 x float>* %res, <4 x float>* %A, <4 x float>* %B) nounwind
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test3:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movaps (%rsi), %xmm0
 ; X64-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; X64-NEXT:    movaps %xmm0, (%rdi)
@@ -84,14 +84,14 @@ define void @test3(<4 x float>* %res, <4 x float>* %A, <4 x float>* %B) nounwind
 
 define void @test4(<4 x float> %X, <4 x float>* %res) nounwind {
 ; X86-LABEL: test4:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,1,3,3]
 ; X86-NEXT:    movaps %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test4:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,1,3,3]
 ; X64-NEXT:    movaps %xmm0, (%rdi)
 ; X64-NEXT:    retq
@@ -102,7 +102,7 @@ define void @test4(<4 x float> %X, <4 x float>* %res) nounwind {
 
 define <4 x i32> @test5(i8** %ptr) nounwind {
 ; X86-LABEL: test5:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
@@ -112,7 +112,7 @@ define <4 x i32> @test5(i8** %ptr) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test5:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq (%rdi), %rax
 ; X64-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X64-NEXT:    pxor %xmm0, %xmm0
@@ -136,7 +136,7 @@ define <4 x i32> @test5(i8** %ptr) nounwind {
 
 define void @test6(<4 x float>* %res, <4 x float>* %A) nounwind {
 ; X86-LABEL: test6:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movaps (%ecx), %xmm0
@@ -144,7 +144,7 @@ define void @test6(<4 x float>* %res, <4 x float>* %A) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test6:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movaps (%rsi), %xmm0
 ; X64-NEXT:    movaps %xmm0, (%rdi)
 ; X64-NEXT:    retq
@@ -156,13 +156,13 @@ define void @test6(<4 x float>* %res, <4 x float>* %A) nounwind {
 
 define void @test7() nounwind {
 ; X86-LABEL: test7:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    xorps %xmm0, %xmm0
 ; X86-NEXT:    movaps %xmm0, 0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test7:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    xorps %xmm0, %xmm0
 ; X64-NEXT:    movaps %xmm0, 0
 ; X64-NEXT:    retq
@@ -176,12 +176,12 @@ define void @test7() nounwind {
 
 define <2 x i64> @test8() nounwind {
 ; X86-LABEL: test8:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movups x, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test8:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movups {{.*}}(%rip), %xmm0
 ; X64-NEXT:    retq
 	%tmp = load i32, i32* getelementptr ([4 x i32], [4 x i32]* @x, i32 0, i32 0)		; <i32> [#uses=1]
@@ -198,12 +198,12 @@ define <2 x i64> @test8() nounwind {
 
 define <4 x float> @test9(i32 %dummy, float %a, float %b, float %c, float %d) nounwind {
 ; X86-LABEL: test9:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movups {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test9:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
 ; X64-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X64-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm2[0]
@@ -217,12 +217,12 @@ define <4 x float> @test9(i32 %dummy, float %a, float %b, float %c, float %d) no
 
 define <4 x float> @test10(float %a, float %b, float %c, float %d) nounwind {
 ; X86-LABEL: test10:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movups {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test10:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
 ; X64-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X64-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm2[0]
@@ -236,12 +236,12 @@ define <4 x float> @test10(float %a, float %b, float %c, float %d) nounwind {
 
 define <2 x double> @test11(double %a, double %b) nounwind {
 ; X86-LABEL: test11:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movups {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test11:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; X64-NEXT:    retq
 	%tmp = insertelement <2 x double> undef, double %a, i32 0		; <<2 x double>> [#uses=1]
@@ -251,7 +251,7 @@ define <2 x double> @test11(double %a, double %b) nounwind {
 
 define void @test12() nounwind {
 ; X86-LABEL: test12:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movapd 0, %xmm0
 ; X86-NEXT:    movapd {{.*#+}} xmm1 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00]
 ; X86-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
@@ -262,7 +262,7 @@ define void @test12() nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test12:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movapd 0, %xmm0
 ; X64-NEXT:    movapd {{.*#+}} xmm1 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00]
 ; X64-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
@@ -281,7 +281,7 @@ define void @test12() nounwind {
 
 define void @test13(<4 x float>* %res, <4 x float>* %A, <4 x float>* %B, <4 x float>* %C) nounwind {
 ; X86-LABEL: test13:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -292,7 +292,7 @@ define void @test13(<4 x float>* %res, <4 x float>* %A, <4 x float>* %B, <4 x fl
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test13:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movaps (%rdx), %xmm0
 ; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1],mem[0,1]
 ; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2,1,3]
@@ -307,7 +307,7 @@ define void @test13(<4 x float>* %res, <4 x float>* %A, <4 x float>* %B, <4 x fl
 
 define <4 x float> @test14(<4 x float>* %x, <4 x float>* %y) nounwind {
 ; X86-LABEL: test14:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movaps (%ecx), %xmm1
@@ -319,7 +319,7 @@ define <4 x float> @test14(<4 x float>* %x, <4 x float>* %y) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test14:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movaps (%rsi), %xmm1
 ; X64-NEXT:    movaps (%rdi), %xmm2
 ; X64-NEXT:    movaps %xmm2, %xmm0
@@ -337,7 +337,7 @@ define <4 x float> @test14(<4 x float>* %x, <4 x float>* %y) nounwind {
 
 define <4 x float> @test15(<4 x float>* %x, <4 x float>* %y) nounwind {
 ; X86-LABEL: test15:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movaps (%ecx), %xmm0
@@ -345,7 +345,7 @@ define <4 x float> @test15(<4 x float>* %x, <4 x float>* %y) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test15:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movaps (%rdi), %xmm0
 ; X64-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],mem[1]
 ; X64-NEXT:    retq
@@ -360,14 +360,14 @@ entry:
 
 define  <2 x double> @test16(<4 x double> * nocapture %srcA, <2 x double>* nocapture %dst) {
 ; X86-LABEL: test16:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movaps 96(%eax), %xmm0
 ; X86-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test16:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movaps 96(%rdi), %xmm0
 ; X64-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; X64-NEXT:    retq
@@ -380,13 +380,13 @@ define  <2 x double> @test16(<4 x double> * nocapture %srcA, <2 x double>* nocap
 ; PR9009
 define fastcc void @test17() nounwind {
 ; X86-LABEL: test17:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movaps {{.*#+}} xmm0 = <u,u,32768,32768>
 ; X86-NEXT:    movaps %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test17:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movaps {{.*#+}} xmm0 = <u,u,32768,32768>
 ; X64-NEXT:    movaps %xmm0, (%rax)
 ; X64-NEXT:    retq
@@ -401,14 +401,14 @@ entry:
 ; PR9210
 define <4 x float> @f(<4 x double>) nounwind {
 ; X86-LABEL: f:
-; X86:       # BB#0: # %entry
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    cvtpd2ps %xmm1, %xmm1
 ; X86-NEXT:    cvtpd2ps %xmm0, %xmm0
 ; X86-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: f:
-; X64:       # BB#0: # %entry
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    cvtpd2ps %xmm1, %xmm1
 ; X64-NEXT:    cvtpd2ps %xmm0, %xmm0
 ; X64-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -420,12 +420,12 @@ entry:
 
 define <2 x i64> @test_insert_64_zext(<2 x i64> %i) {
 ; X86-LABEL: test_insert_64_zext:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_insert_64_zext:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
 ; X64-NEXT:    retq
   %1 = shufflevector <2 x i64> %i, <2 x i64> <i64 0, i64 undef>, <2 x i32> <i32 0, i32 2>
@@ -434,12 +434,12 @@ define <2 x i64> @test_insert_64_zext(<2 x i64> %i) {
 
 define <4 x i32> @PR19721(<4 x i32> %i) {
 ; X86-LABEL: PR19721:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    andps {{\.LCPI.*}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: PR19721:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    movq %xmm0, %rax
 ; X64-NEXT:    movabsq $-4294967296, %rcx # imm = 0xFFFFFFFF00000000
 ; X64-NEXT:    andq %rax, %rcx
@@ -454,7 +454,7 @@ define <4 x i32> @PR19721(<4 x i32> %i) {
 
 define <4 x i32> @test_mul(<4 x i32> %x, <4 x i32> %y) {
 ; X86-LABEL: test_mul:
-; X86:       # BB#0:
+; X86:       # %bb.0:
 ; X86-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
 ; X86-NEXT:    pmuludq %xmm1, %xmm0
 ; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
@@ -465,7 +465,7 @@ define <4 x i32> @test_mul(<4 x i32> %x, <4 x i32> %y) {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mul:
-; X64:       # BB#0:
+; X64:       # %bb.0:
 ; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
 ; X64-NEXT:    pmuludq %xmm1, %xmm0
 ; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]

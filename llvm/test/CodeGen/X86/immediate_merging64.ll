@@ -8,7 +8,7 @@
 ; optimizing for code size.
 define i1 @imm_multiple_users(i64 %a, i64* %b) optsize {
 ; CHECK-LABEL: imm_multiple_users:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq $-1, %rax
 ; CHECK-NEXT:    movq %rax, (%rsi)
 ; CHECK-NEXT:    cmpq %rax, %rdi
@@ -26,7 +26,7 @@ declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1)
 ; code size.
 define void @memset_zero(i8* noalias nocapture %D) optsize {
 ; CHECK-LABEL: memset_zero:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movq %rax, 7(%rdi)
 ; CHECK-NEXT:    movq %rax, (%rdi)

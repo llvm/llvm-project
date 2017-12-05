@@ -356,9 +356,7 @@ SDNode *AMDGPUDAGToDAGISel::glueCopyToM0(SDNode *N) const {
      Ops.push_back(N->getOperand(i));
   }
   Ops.push_back(Glue);
-  CurDAG->MorphNodeTo(N, N->getOpcode(), N->getVTList(), Ops);
-
-  return N;
+  return CurDAG->MorphNodeTo(N, N->getOpcode(), N->getVTList(), Ops);
 }
 
 static unsigned selectSGPRVectorRegClassID(unsigned NumVectorElts) {
@@ -2082,15 +2080,19 @@ void AMDGPUDAGToDAGISel::PostprocessISelDAG() {
   bool IsModified = false;
   do {
     IsModified = false;
+
     // Go over all selected nodes and try to fold them a bit more
-    for (SDNode &Node : CurDAG->allnodes()) {
-      MachineSDNode *MachineNode = dyn_cast<MachineSDNode>(&Node);
+    SelectionDAG::allnodes_iterator Position = CurDAG->allnodes_begin();
+    while (Position != CurDAG->allnodes_end()) {
+      SDNode *Node = &*Position++;
+      MachineSDNode *MachineNode = dyn_cast<MachineSDNode>(Node);
       if (!MachineNode)
         continue;
 
       SDNode *ResNode = Lowering.PostISelFolding(MachineNode, *CurDAG);
-      if (ResNode != &Node) {
-        ReplaceUses(&Node, ResNode);
+      if (ResNode != Node) {
+        if (ResNode)
+          ReplaceUses(Node, ResNode);
         IsModified = true;
       }
     }

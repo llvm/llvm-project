@@ -8,13 +8,13 @@
 ; (i32) p[0] | ((i32) p[1] << 8) | ((i32) p[2] << 16) | ((i32) p[3] << 24)
 define i32 @load_i32_by_i8(i32* %arg) {
 ; CHECK-LABEL: load_i32_by_i8:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl (%eax), %eax
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: load_i32_by_i8:
-; CHECK64:       # BB#0:
+; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    movl (%rdi), %eax
 ; CHECK64-NEXT:    retq
   %tmp = bitcast i32* %arg to i8*
@@ -42,26 +42,26 @@ define i32 @load_i32_by_i8(i32* %arg) {
 ; ((i32) p[0] << 24) | ((i32) p[1] << 16) | ((i32) p[2] << 8) | (i32) p[3]
 define i32 @load_i32_by_i8_bswap(i32* %arg) {
 ; BSWAP-LABEL: load_i32_by_i8_bswap:
-; BSWAP:       # BB#0:
+; BSWAP:       # %bb.0:
 ; BSWAP-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; BSWAP-NEXT:    movl (%eax), %eax
 ; BSWAP-NEXT:    bswapl %eax
 ; BSWAP-NEXT:    retl
 ;
 ; MOVBE-LABEL: load_i32_by_i8_bswap:
-; MOVBE:       # BB#0:
+; MOVBE:       # %bb.0:
 ; MOVBE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; MOVBE-NEXT:    movbel (%eax), %eax
 ; MOVBE-NEXT:    retl
 ;
 ; BSWAP64-LABEL: load_i32_by_i8_bswap:
-; BSWAP64:       # BB#0:
+; BSWAP64:       # %bb.0:
 ; BSWAP64-NEXT:    movl (%rdi), %eax
 ; BSWAP64-NEXT:    bswapl %eax
 ; BSWAP64-NEXT:    retq
 ;
 ; MOVBE64-LABEL: load_i32_by_i8_bswap:
-; MOVBE64:       # BB#0:
+; MOVBE64:       # %bb.0:
 ; MOVBE64-NEXT:    movbel (%rdi), %eax
 ; MOVBE64-NEXT:    retq
   %tmp = bitcast i32* %arg to i8*
@@ -89,13 +89,13 @@ define i32 @load_i32_by_i8_bswap(i32* %arg) {
 ; (i32) p[0] | ((i32) p[1] << 16)
 define i32 @load_i32_by_i16(i32* %arg) {
 ; CHECK-LABEL: load_i32_by_i16:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl (%eax), %eax
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: load_i32_by_i16:
-; CHECK64:       # BB#0:
+; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    movl (%rdi), %eax
 ; CHECK64-NEXT:    retq
   %tmp = bitcast i32* %arg to i16*
@@ -114,13 +114,13 @@ define i32 @load_i32_by_i16(i32* %arg) {
 ; (i32) p_16[0] | ((i32) p[2] << 16) | ((i32) p[3] << 24)
 define i32 @load_i32_by_i16_i8(i32* %arg) {
 ; CHECK-LABEL: load_i32_by_i16_i8:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl (%eax), %eax
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: load_i32_by_i16_i8:
-; CHECK64:       # BB#0:
+; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    movl (%rdi), %eax
 ; CHECK64-NEXT:    retq
   %tmp = bitcast i32* %arg to i16*
@@ -145,13 +145,13 @@ define i32 @load_i32_by_i16_i8(i32* %arg) {
 ; (i32) ((i16) p[0] | ((i16) p[1] << 8)) | (((i32) ((i16) p[3] | ((i16) p[4] << 8)) << 16)
 define i32 @load_i32_by_i16_by_i8(i32* %arg) {
 ; CHECK-LABEL: load_i32_by_i16_by_i8:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl (%eax), %eax
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: load_i32_by_i16_by_i8:
-; CHECK64:       # BB#0:
+; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    movl (%rdi), %eax
 ; CHECK64-NEXT:    retq
   %tmp = bitcast i32* %arg to i8*
@@ -181,26 +181,26 @@ define i32 @load_i32_by_i16_by_i8(i32* %arg) {
 ; ((i32) (((i16) p[0] << 8) | (i16) p[1]) << 16) | (i32) (((i16) p[3] << 8) | (i16) p[4])
 define i32 @load_i32_by_i16_by_i8_bswap(i32* %arg) {
 ; BSWAP-LABEL: load_i32_by_i16_by_i8_bswap:
-; BSWAP:       # BB#0:
+; BSWAP:       # %bb.0:
 ; BSWAP-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; BSWAP-NEXT:    movl (%eax), %eax
 ; BSWAP-NEXT:    bswapl %eax
 ; BSWAP-NEXT:    retl
 ;
 ; MOVBE-LABEL: load_i32_by_i16_by_i8_bswap:
-; MOVBE:       # BB#0:
+; MOVBE:       # %bb.0:
 ; MOVBE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; MOVBE-NEXT:    movbel (%eax), %eax
 ; MOVBE-NEXT:    retl
 ;
 ; BSWAP64-LABEL: load_i32_by_i16_by_i8_bswap:
-; BSWAP64:       # BB#0:
+; BSWAP64:       # %bb.0:
 ; BSWAP64-NEXT:    movl (%rdi), %eax
 ; BSWAP64-NEXT:    bswapl %eax
 ; BSWAP64-NEXT:    retq
 ;
 ; MOVBE64-LABEL: load_i32_by_i16_by_i8_bswap:
-; MOVBE64:       # BB#0:
+; MOVBE64:       # %bb.0:
 ; MOVBE64-NEXT:    movbel (%rdi), %eax
 ; MOVBE64-NEXT:    retq
   %tmp = bitcast i32* %arg to i8*
@@ -230,14 +230,14 @@ define i32 @load_i32_by_i16_by_i8_bswap(i32* %arg) {
 ; (i64) p[0] | ((i64) p[1] << 8) | ((i64) p[2] << 16) | ((i64) p[3] << 24) | ((i64) p[4] << 32) | ((i64) p[5] << 40) | ((i64) p[6] << 48) | ((i64) p[7] << 56)
 define i64 @load_i64_by_i8(i64* %arg) {
 ; CHECK-LABEL: load_i64_by_i8:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl (%ecx), %eax
 ; CHECK-NEXT:    movl 4(%ecx), %edx
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: load_i64_by_i8:
-; CHECK64:       # BB#0:
+; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    movq (%rdi), %rax
 ; CHECK64-NEXT:    retq
   %tmp = bitcast i64* %arg to i8*
@@ -285,7 +285,7 @@ define i64 @load_i64_by_i8(i64* %arg) {
 ; ((i64) p[0] << 56) | ((i64) p[1] << 48) | ((i64) p[2] << 40) | ((i64) p[3] << 32) | ((i64) p[4] << 24) | ((i64) p[5] << 16) | ((i64) p[6] << 8) | (i64) p[7]
 define i64 @load_i64_by_i8_bswap(i64* %arg) {
 ; BSWAP-LABEL: load_i64_by_i8_bswap:
-; BSWAP:       # BB#0:
+; BSWAP:       # %bb.0:
 ; BSWAP-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; BSWAP-NEXT:    movl (%eax), %edx
 ; BSWAP-NEXT:    movl 4(%eax), %eax
@@ -294,20 +294,20 @@ define i64 @load_i64_by_i8_bswap(i64* %arg) {
 ; BSWAP-NEXT:    retl
 ;
 ; MOVBE-LABEL: load_i64_by_i8_bswap:
-; MOVBE:       # BB#0:
+; MOVBE:       # %bb.0:
 ; MOVBE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; MOVBE-NEXT:    movbel 4(%ecx), %eax
 ; MOVBE-NEXT:    movbel (%ecx), %edx
 ; MOVBE-NEXT:    retl
 ;
 ; BSWAP64-LABEL: load_i64_by_i8_bswap:
-; BSWAP64:       # BB#0:
+; BSWAP64:       # %bb.0:
 ; BSWAP64-NEXT:    movq (%rdi), %rax
 ; BSWAP64-NEXT:    bswapq %rax
 ; BSWAP64-NEXT:    retq
 ;
 ; MOVBE64-LABEL: load_i64_by_i8_bswap:
-; MOVBE64:       # BB#0:
+; MOVBE64:       # %bb.0:
 ; MOVBE64-NEXT:    movbeq (%rdi), %rax
 ; MOVBE64-NEXT:    retq
   %tmp = bitcast i64* %arg to i8*
@@ -358,7 +358,7 @@ define i64 @load_i64_by_i8_bswap(i64* %arg) {
 ; x | res
 define i32 @load_i32_by_i8_bswap_uses(i32* %arg) {
 ; CHECK-LABEL: load_i32_by_i8_bswap_uses:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    .cfi_offset %esi, -8
@@ -379,7 +379,7 @@ define i32 @load_i32_by_i8_bswap_uses(i32* %arg) {
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: load_i32_by_i8_bswap_uses:
-; CHECK64:       # BB#0:
+; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    movzbl (%rdi), %eax
 ; CHECK64-NEXT:    shll $24, %eax
 ; CHECK64-NEXT:    movzbl 1(%rdi), %ecx
@@ -422,7 +422,7 @@ define i32 @load_i32_by_i8_bswap_uses(i32* %arg) {
 ; ((i32) p0 << 24) | ((i32) p[1] << 16) | ((i32) p[2] << 8) | (i32) p[3]
 define i32 @load_i32_by_i8_bswap_volatile(i32* %arg) {
 ; CHECK-LABEL: load_i32_by_i8_bswap_volatile:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movzbl (%eax), %ecx
 ; CHECK-NEXT:    shll $24, %ecx
@@ -437,7 +437,7 @@ define i32 @load_i32_by_i8_bswap_volatile(i32* %arg) {
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: load_i32_by_i8_bswap_volatile:
-; CHECK64:       # BB#0:
+; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    movzbl (%rdi), %eax
 ; CHECK64-NEXT:    shll $24, %eax
 ; CHECK64-NEXT:    movzbl 1(%rdi), %ecx
@@ -478,7 +478,7 @@ define i32 @load_i32_by_i8_bswap_volatile(i32* %arg) {
 ; res1 | res2
 define i32 @load_i32_by_i8_bswap_store_in_between(i32* %arg, i32* %arg1) {
 ; CHECK-LABEL: load_i32_by_i8_bswap_store_in_between:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    .cfi_offset %esi, -8
@@ -499,7 +499,7 @@ define i32 @load_i32_by_i8_bswap_store_in_between(i32* %arg, i32* %arg1) {
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: load_i32_by_i8_bswap_store_in_between:
-; CHECK64:       # BB#0:
+; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    movzbl (%rdi), %eax
 ; CHECK64-NEXT:    shll $24, %eax
 ; CHECK64-NEXT:    movzbl 1(%rdi), %ecx
@@ -540,7 +540,7 @@ define i32 @load_i32_by_i8_bswap_store_in_between(i32* %arg, i32* %arg1) {
 ; ((i32) p[0] << 24) | ((i32) q[1] << 16) | ((i32) p[2] << 8) | (i32) p[3]
 define i32 @load_i32_by_i8_bswap_unrelated_load(i32* %arg, i32* %arg1) {
 ; CHECK-LABEL: load_i32_by_i8_bswap_unrelated_load:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movzbl (%ecx), %edx
@@ -556,7 +556,7 @@ define i32 @load_i32_by_i8_bswap_unrelated_load(i32* %arg, i32* %arg1) {
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: load_i32_by_i8_bswap_unrelated_load:
-; CHECK64:       # BB#0:
+; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    movzbl (%rdi), %eax
 ; CHECK64-NEXT:    shll $24, %eax
 ; CHECK64-NEXT:    movzbl 1(%rsi), %ecx
@@ -595,13 +595,13 @@ define i32 @load_i32_by_i8_bswap_unrelated_load(i32* %arg, i32* %arg1) {
 ; (i32) p[1] | ((i32) p[2] << 8) | ((i32) p[3] << 16) | ((i32) p[4] << 24)
 define i32 @load_i32_by_i8_nonzero_offset(i32* %arg) {
 ; CHECK-LABEL: load_i32_by_i8_nonzero_offset:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl 1(%eax), %eax
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: load_i32_by_i8_nonzero_offset:
-; CHECK64:       # BB#0:
+; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    movl 1(%rdi), %eax
 ; CHECK64-NEXT:    retq
   %tmp = bitcast i32* %arg to i8*
@@ -630,13 +630,13 @@ define i32 @load_i32_by_i8_nonzero_offset(i32* %arg) {
 ; (i32) p[-4] | ((i32) p[-3] << 8) | ((i32) p[-2] << 16) | ((i32) p[-1] << 24)
 define i32 @load_i32_by_i8_neg_offset(i32* %arg) {
 ; CHECK-LABEL: load_i32_by_i8_neg_offset:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl -4(%eax), %eax
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: load_i32_by_i8_neg_offset:
-; CHECK64:       # BB#0:
+; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    movl -4(%rdi), %eax
 ; CHECK64-NEXT:    retq
   %tmp = bitcast i32* %arg to i8*
@@ -665,26 +665,26 @@ define i32 @load_i32_by_i8_neg_offset(i32* %arg) {
 ; (i32) p[4] | ((i32) p[3] << 8) | ((i32) p[2] << 16) | ((i32) p[1] << 24)
 define i32 @load_i32_by_i8_nonzero_offset_bswap(i32* %arg) {
 ; BSWAP-LABEL: load_i32_by_i8_nonzero_offset_bswap:
-; BSWAP:       # BB#0:
+; BSWAP:       # %bb.0:
 ; BSWAP-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; BSWAP-NEXT:    movl 1(%eax), %eax
 ; BSWAP-NEXT:    bswapl %eax
 ; BSWAP-NEXT:    retl
 ;
 ; MOVBE-LABEL: load_i32_by_i8_nonzero_offset_bswap:
-; MOVBE:       # BB#0:
+; MOVBE:       # %bb.0:
 ; MOVBE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; MOVBE-NEXT:    movbel 1(%eax), %eax
 ; MOVBE-NEXT:    retl
 ;
 ; BSWAP64-LABEL: load_i32_by_i8_nonzero_offset_bswap:
-; BSWAP64:       # BB#0:
+; BSWAP64:       # %bb.0:
 ; BSWAP64-NEXT:    movl 1(%rdi), %eax
 ; BSWAP64-NEXT:    bswapl %eax
 ; BSWAP64-NEXT:    retq
 ;
 ; MOVBE64-LABEL: load_i32_by_i8_nonzero_offset_bswap:
-; MOVBE64:       # BB#0:
+; MOVBE64:       # %bb.0:
 ; MOVBE64-NEXT:    movbel 1(%rdi), %eax
 ; MOVBE64-NEXT:    retq
   %tmp = bitcast i32* %arg to i8*
@@ -713,26 +713,26 @@ define i32 @load_i32_by_i8_nonzero_offset_bswap(i32* %arg) {
 ; (i32) p[-1] | ((i32) p[-2] << 8) | ((i32) p[-3] << 16) | ((i32) p[-4] << 24)
 define i32 @load_i32_by_i8_neg_offset_bswap(i32* %arg) {
 ; BSWAP-LABEL: load_i32_by_i8_neg_offset_bswap:
-; BSWAP:       # BB#0:
+; BSWAP:       # %bb.0:
 ; BSWAP-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; BSWAP-NEXT:    movl -4(%eax), %eax
 ; BSWAP-NEXT:    bswapl %eax
 ; BSWAP-NEXT:    retl
 ;
 ; MOVBE-LABEL: load_i32_by_i8_neg_offset_bswap:
-; MOVBE:       # BB#0:
+; MOVBE:       # %bb.0:
 ; MOVBE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; MOVBE-NEXT:    movbel -4(%eax), %eax
 ; MOVBE-NEXT:    retl
 ;
 ; BSWAP64-LABEL: load_i32_by_i8_neg_offset_bswap:
-; BSWAP64:       # BB#0:
+; BSWAP64:       # %bb.0:
 ; BSWAP64-NEXT:    movl -4(%rdi), %eax
 ; BSWAP64-NEXT:    bswapl %eax
 ; BSWAP64-NEXT:    retq
 ;
 ; MOVBE64-LABEL: load_i32_by_i8_neg_offset_bswap:
-; MOVBE64:       # BB#0:
+; MOVBE64:       # %bb.0:
 ; MOVBE64-NEXT:    movbel -4(%rdi), %eax
 ; MOVBE64-NEXT:    retq
   %tmp = bitcast i32* %arg to i8*
@@ -761,7 +761,7 @@ define i32 @load_i32_by_i8_neg_offset_bswap(i32* %arg) {
 ; ((i32) p[i] << 24) | ((i32) p[i + 1] << 16) | ((i32) p[i + 2] << 8) | (i32) p[i + 3]
 define i32 @load_i32_by_i8_bswap_base_index_offset(i32* %arg, i32 %arg1) {
 ; BSWAP-LABEL: load_i32_by_i8_bswap_base_index_offset:
-; BSWAP:       # BB#0:
+; BSWAP:       # %bb.0:
 ; BSWAP-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; BSWAP-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; BSWAP-NEXT:    movl (%ecx,%eax), %eax
@@ -769,21 +769,21 @@ define i32 @load_i32_by_i8_bswap_base_index_offset(i32* %arg, i32 %arg1) {
 ; BSWAP-NEXT:    retl
 ;
 ; MOVBE-LABEL: load_i32_by_i8_bswap_base_index_offset:
-; MOVBE:       # BB#0:
+; MOVBE:       # %bb.0:
 ; MOVBE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; MOVBE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; MOVBE-NEXT:    movbel (%ecx,%eax), %eax
 ; MOVBE-NEXT:    retl
 ;
 ; BSWAP64-LABEL: load_i32_by_i8_bswap_base_index_offset:
-; BSWAP64:       # BB#0:
+; BSWAP64:       # %bb.0:
 ; BSWAP64-NEXT:    movslq %esi, %rax
 ; BSWAP64-NEXT:    movl (%rdi,%rax), %eax
 ; BSWAP64-NEXT:    bswapl %eax
 ; BSWAP64-NEXT:    retq
 ;
 ; MOVBE64-LABEL: load_i32_by_i8_bswap_base_index_offset:
-; MOVBE64:       # BB#0:
+; MOVBE64:       # %bb.0:
 ; MOVBE64-NEXT:    movslq %esi, %rax
 ; MOVBE64-NEXT:    movbel (%rdi,%rax), %eax
 ; MOVBE64-NEXT:    retq
@@ -815,14 +815,14 @@ define i32 @load_i32_by_i8_bswap_base_index_offset(i32* %arg, i32 %arg1) {
 ; Verify that we don't crash handling shl i32 %conv57, 32
 define void @shift_i32_by_32(i8* %src1, i8* %src2, i64* %dst) {
 ; CHECK-LABEL: shift_i32_by_32:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl $-1, 4(%eax)
 ; CHECK-NEXT:    movl $-1, (%eax)
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: shift_i32_by_32:
-; CHECK64:       # BB#0: # %entry
+; CHECK64:       # %bb.0: # %entry
 ; CHECK64-NEXT:    movq $-1, (%rdx)
 ; CHECK64-NEXT:    retq
 entry:
@@ -846,26 +846,26 @@ declare i16 @llvm.bswap.i16(i16)
 ; (i32) bswap(p[1]) | (i32) bswap(p[0] << 16)
 define i32 @load_i32_by_bswap_i16(i32* %arg) {
 ; BSWAP-LABEL: load_i32_by_bswap_i16:
-; BSWAP:       # BB#0:
+; BSWAP:       # %bb.0:
 ; BSWAP-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; BSWAP-NEXT:    movl (%eax), %eax
 ; BSWAP-NEXT:    bswapl %eax
 ; BSWAP-NEXT:    retl
 ;
 ; MOVBE-LABEL: load_i32_by_bswap_i16:
-; MOVBE:       # BB#0:
+; MOVBE:       # %bb.0:
 ; MOVBE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; MOVBE-NEXT:    movbel (%eax), %eax
 ; MOVBE-NEXT:    retl
 ;
 ; BSWAP64-LABEL: load_i32_by_bswap_i16:
-; BSWAP64:       # BB#0:
+; BSWAP64:       # %bb.0:
 ; BSWAP64-NEXT:    movl (%rdi), %eax
 ; BSWAP64-NEXT:    bswapl %eax
 ; BSWAP64-NEXT:    retq
 ;
 ; MOVBE64-LABEL: load_i32_by_bswap_i16:
-; MOVBE64:       # BB#0:
+; MOVBE64:       # %bb.0:
 ; MOVBE64-NEXT:    movbel (%rdi), %eax
 ; MOVBE64-NEXT:    retq
   %tmp = bitcast i32* %arg to i16*
@@ -885,13 +885,13 @@ define i32 @load_i32_by_bswap_i16(i32* %arg) {
 ; (i32) p[0] | (sext(p[1] << 16) to i32)
 define i32 @load_i32_by_sext_i16(i32* %arg) {
 ; CHECK-LABEL: load_i32_by_sext_i16:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl (%eax), %eax
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: load_i32_by_sext_i16:
-; CHECK64:       # BB#0:
+; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    movl (%rdi), %eax
 ; CHECK64-NEXT:    retq
   %tmp = bitcast i32* %arg to i16*
@@ -910,14 +910,14 @@ define i32 @load_i32_by_sext_i16(i32* %arg) {
 ; (i32) p[i] | ((i32) p[i + 1] << 8) | ((i32) p[i + 2] << 16) | ((i32) p[i + 3] << 24)
 define i32 @load_i32_by_i8_base_offset_index(i8* %arg, i32 %i) {
 ; CHECK-LABEL: load_i32_by_i8_base_offset_index:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl 12(%eax,%ecx), %eax
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: load_i32_by_i8_base_offset_index:
-; CHECK64:       # BB#0:
+; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    movl %esi, %eax
 ; CHECK64-NEXT:    movl 12(%rdi,%rax), %eax
 ; CHECK64-NEXT:    retq
@@ -955,14 +955,14 @@ define i32 @load_i32_by_i8_base_offset_index(i8* %arg, i32 %i) {
 ; (i32) p[i + 1] | ((i32) p[i + 2] << 8) | ((i32) p[i + 3] << 16) | ((i32) p[i + 4] << 24)
 define i32 @load_i32_by_i8_base_offset_index_2(i8* %arg, i32 %i) {
 ; CHECK-LABEL: load_i32_by_i8_base_offset_index_2:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl 13(%eax,%ecx), %eax
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: load_i32_by_i8_base_offset_index_2:
-; CHECK64:       # BB#0:
+; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    movl %esi, %eax
 ; CHECK64-NEXT:    movl 13(%rdi,%rax), %eax
 ; CHECK64-NEXT:    retq
@@ -1011,14 +1011,14 @@ define i32 @load_i32_by_i8_base_offset_index_2(i8* %arg, i32 %i) {
 ; to zext and aext loads.
 define i32 @load_i32_by_i8_zaext_loads(i8* %arg, i32 %arg1) {
 ; CHECK-LABEL: load_i32_by_i8_zaext_loads:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl 12(%eax,%ecx), %eax
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: load_i32_by_i8_zaext_loads:
-; CHECK64:       # BB#0:
+; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    movl %esi, %eax
 ; CHECK64-NEXT:    movl 12(%rdi,%rax), %eax
 ; CHECK64-NEXT:    retq
@@ -1067,14 +1067,14 @@ define i32 @load_i32_by_i8_zaext_loads(i8* %arg, i32 %arg1) {
 ; (i32) p0[12] | ((i32) p1[12] << 8) | ((i32) p2[12] << 16) | ((i32) p3[12] << 24)
 define i32 @load_i32_by_i8_zsext_loads(i8* %arg, i32 %arg1) {
 ; CHECK-LABEL: load_i32_by_i8_zsext_loads:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl 12(%eax,%ecx), %eax
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: load_i32_by_i8_zsext_loads:
-; CHECK64:       # BB#0:
+; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    movl %esi, %eax
 ; CHECK64-NEXT:    movl 12(%rdi,%rax), %eax
 ; CHECK64-NEXT:    retq
@@ -1115,7 +1115,7 @@ define i32 @load_i32_by_i8_zsext_loads(i8* %arg, i32 %arg1) {
 ; (i32) p[0] | ((i32) p[1] << 8)
 define i32 @zext_load_i32_by_i8(i32* %arg) {
 ; CHECK-LABEL: zext_load_i32_by_i8:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movzbl (%eax), %ecx
 ; CHECK-NEXT:    movzbl 1(%eax), %eax
@@ -1124,7 +1124,7 @@ define i32 @zext_load_i32_by_i8(i32* %arg) {
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: zext_load_i32_by_i8:
-; CHECK64:       # BB#0:
+; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    movzbl (%rdi), %ecx
 ; CHECK64-NEXT:    movzbl 1(%rdi), %eax
 ; CHECK64-NEXT:    shll $8, %eax
@@ -1146,7 +1146,7 @@ define i32 @zext_load_i32_by_i8(i32* %arg) {
 ; ((i32) p[0] << 8) | ((i32) p[1] << 16)
 define i32 @zext_load_i32_by_i8_shl_8(i32* %arg) {
 ; CHECK-LABEL: zext_load_i32_by_i8_shl_8:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movzbl (%eax), %ecx
 ; CHECK-NEXT:    shll $8, %ecx
@@ -1156,7 +1156,7 @@ define i32 @zext_load_i32_by_i8_shl_8(i32* %arg) {
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: zext_load_i32_by_i8_shl_8:
-; CHECK64:       # BB#0:
+; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    movzbl (%rdi), %ecx
 ; CHECK64-NEXT:    shll $8, %ecx
 ; CHECK64-NEXT:    movzbl 1(%rdi), %eax
@@ -1180,7 +1180,7 @@ define i32 @zext_load_i32_by_i8_shl_8(i32* %arg) {
 ; ((i32) p[0] << 16) | ((i32) p[1] << 24)
 define i32 @zext_load_i32_by_i8_shl_16(i32* %arg) {
 ; CHECK-LABEL: zext_load_i32_by_i8_shl_16:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movzbl (%eax), %ecx
 ; CHECK-NEXT:    shll $16, %ecx
@@ -1190,7 +1190,7 @@ define i32 @zext_load_i32_by_i8_shl_16(i32* %arg) {
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: zext_load_i32_by_i8_shl_16:
-; CHECK64:       # BB#0:
+; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    movzbl (%rdi), %ecx
 ; CHECK64-NEXT:    shll $16, %ecx
 ; CHECK64-NEXT:    movzbl 1(%rdi), %eax
@@ -1214,7 +1214,7 @@ define i32 @zext_load_i32_by_i8_shl_16(i32* %arg) {
 ; (i32) p[1] | ((i32) p[0] << 8)
 define i32 @zext_load_i32_by_i8_bswap(i32* %arg) {
 ; CHECK-LABEL: zext_load_i32_by_i8_bswap:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movzbl 1(%eax), %ecx
 ; CHECK-NEXT:    movzbl (%eax), %eax
@@ -1223,7 +1223,7 @@ define i32 @zext_load_i32_by_i8_bswap(i32* %arg) {
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: zext_load_i32_by_i8_bswap:
-; CHECK64:       # BB#0:
+; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    movzbl 1(%rdi), %ecx
 ; CHECK64-NEXT:    movzbl (%rdi), %eax
 ; CHECK64-NEXT:    shll $8, %eax
@@ -1245,7 +1245,7 @@ define i32 @zext_load_i32_by_i8_bswap(i32* %arg) {
 ; ((i32) p[1] << 8) | ((i32) p[0] << 16)
 define i32 @zext_load_i32_by_i8_bswap_shl_8(i32* %arg) {
 ; CHECK-LABEL: zext_load_i32_by_i8_bswap_shl_8:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movzbl 1(%eax), %ecx
 ; CHECK-NEXT:    shll $8, %ecx
@@ -1255,7 +1255,7 @@ define i32 @zext_load_i32_by_i8_bswap_shl_8(i32* %arg) {
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: zext_load_i32_by_i8_bswap_shl_8:
-; CHECK64:       # BB#0:
+; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    movzbl 1(%rdi), %ecx
 ; CHECK64-NEXT:    shll $8, %ecx
 ; CHECK64-NEXT:    movzbl (%rdi), %eax
@@ -1279,7 +1279,7 @@ define i32 @zext_load_i32_by_i8_bswap_shl_8(i32* %arg) {
 ; ((i32) p[1] << 16) | ((i32) p[0] << 24)
 define i32 @zext_load_i32_by_i8_bswap_shl_16(i32* %arg) {
 ; CHECK-LABEL: zext_load_i32_by_i8_bswap_shl_16:
-; CHECK:       # BB#0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movzbl 1(%eax), %ecx
 ; CHECK-NEXT:    shll $16, %ecx
@@ -1289,7 +1289,7 @@ define i32 @zext_load_i32_by_i8_bswap_shl_16(i32* %arg) {
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: zext_load_i32_by_i8_bswap_shl_16:
-; CHECK64:       # BB#0:
+; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    movzbl 1(%rdi), %ecx
 ; CHECK64-NEXT:    shll $16, %ecx
 ; CHECK64-NEXT:    movzbl (%rdi), %eax

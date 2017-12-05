@@ -4,7 +4,7 @@ declare <64 x i8> @llvm.x86.avx512.mask.permvar.qi.512(<64 x i8>, <64 x i8>, <64
 
 define <64 x i8>@test_int_x86_avx512_mask_permvar_qi_512(<64 x i8> %x0, <64 x i8> %x1, <64 x i8> %x2, i64 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_permvar_qi_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovq %rdi, %k1
 ; CHECK-NEXT:    vpermb %zmm0, %zmm1, %zmm2 {%k1}
 ; CHECK-NEXT:    vpermb %zmm0, %zmm1, %zmm3 {%k1} {z}
@@ -24,7 +24,7 @@ declare <64 x i8> @llvm.x86.avx512.mask.pmultishift.qb.512(<64 x i8>, <64 x i8>,
 
 define <64 x i8>@test_int_x86_avx512_mask_pmultishift_qb_512(<64 x i8> %x0, <64 x i8> %x1, <64 x i8> %x2, i64 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_pmultishift_qb_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovq %rdi, %k1
 ; CHECK-NEXT:    vpmultishiftqb %zmm1, %zmm0, %zmm2 {%k1}
 ; CHECK-NEXT:    vpmultishiftqb %zmm1, %zmm0, %zmm3 {%k1} {z}
@@ -44,7 +44,7 @@ declare <64 x i8> @llvm.x86.avx512.mask.vpermi2var.qi.512(<64 x i8>, <64 x i8>, 
 
 define <64 x i8>@test_int_x86_avx512_mask_vpermi2var_qi_512(<64 x i8> %x0, <64 x i8> %x1, <64 x i8> %x2, i64 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpermi2var_qi_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovq %rdi, %k1
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm3
 ; CHECK-NEXT:    vpermi2b %zmm2, %zmm0, %zmm3 {%k1}
@@ -66,7 +66,7 @@ declare <64 x i8> @llvm.x86.avx512.mask.vpermt2var.qi.512(<64 x i8>, <64 x i8>, 
 
 define <64 x i8>@test_int_x86_avx512_mask_vpermt2var_qi_512(<64 x i8> %x0, <64 x i8> %x1, <64 x i8> %x2, i64 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpermt2var_qi_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovq %rdi, %k1
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm3
 ; CHECK-NEXT:    vpermt2b %zmm2, %zmm0, %zmm3 {%k1}
@@ -88,7 +88,7 @@ declare <64 x i8> @llvm.x86.avx512.maskz.vpermt2var.qi.512(<64 x i8>, <64 x i8>,
 
 define <64 x i8>@test_int_x86_avx512_maskz_vpermt2var_qi_512(<64 x i8> %x0, <64 x i8> %x1, <64 x i8> %x2, i64 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_maskz_vpermt2var_qi_512:
-; CHECK:       ## BB#0:
+; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovq %rdi, %k1
 ; CHECK-NEXT:    vpermi2b %zmm2, %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq

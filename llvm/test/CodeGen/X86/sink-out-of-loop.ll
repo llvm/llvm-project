@@ -68,7 +68,7 @@ loop:
   br i1 %exit_cond, label %exit, label %loop
 
 exit:
-; CHECK: BB#2
+; CHECK: %bb.2
 ; CHECK: imull %eax, %eax
 ; CHECK: retq
   ret i32 %j

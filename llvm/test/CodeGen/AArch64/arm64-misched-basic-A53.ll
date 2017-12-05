@@ -8,7 +8,7 @@
 ;
 ; CHECK: ********** MI Scheduling **********
 ; CHECK: main
-; CHECK: *** Final schedule for BB#2 ***
+; CHECK: *** Final schedule for %bb.2 ***
 ; CHECK: MADDWrrr
 ; CHECK: ADDWri
 ; CHECK: ********** INTERVALS **********
@@ -83,8 +83,8 @@ for.end:                                          ; preds = %for.cond
 ; after it, this test checks to make sure there are more than one.
 ;
 ; CHECK: ********** MI Scheduling **********
-; CHECK: neon4xfloat:BB#0
-; CHECK: *** Final schedule for BB#0 ***
+; CHECK: neon4xfloat:%bb.0
+; CHECK: *** Final schedule for %bb.0 ***
 ; CHECK: FDIVv4f32
 ; CHECK: FADDv4f32
 ; CHECK: FADDv4f32
@@ -130,7 +130,7 @@ declare { <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld2.v16i8.p0i8(i8*)
 ; are otherwise ready are jammed in the pending queue.
 ; CHECK: ********** MI Scheduling **********
 ; CHECK: testResourceConflict
-; CHECK: *** Final schedule for BB#0 ***
+; CHECK: *** Final schedule for %bb.0 ***
 ; CHECK: BRK
 ; CHECK: ********** INTERVALS **********
 define void @testResourceConflict(float* %ptr) {
@@ -178,7 +178,7 @@ declare void @llvm.trap()
 ; Resource contention on LDST.
 ; CHECK: ********** MI Scheduling **********
 ; CHECK: testLdStConflict
-; CHECK: *** Final schedule for BB#1 ***
+; CHECK: *** Final schedule for %bb.1 ***
 ; CHECK: LD4Fourv2d
 ; CHECK: STRQui
 ; CHECK: ********** INTERVALS **********

@@ -4,7 +4,7 @@
 
 define i8 @test1(i8 %x) nounwind {
 ; X32-LABEL: test1:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $1, %al
 ; X32-NEXT:    negb %al
@@ -12,7 +12,7 @@ define i8 @test1(i8 %x) nounwind {
 ; X32-NEXT:    ## -- End function
 ;
 ; X64-LABEL: test1:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    andb $1, %dil
 ; X64-NEXT:    negb %dil
 ; X64-NEXT:    movl %edi, %eax
@@ -25,7 +25,7 @@ define i8 @test1(i8 %x) nounwind {
 
 define i16 @test2(i16 %x) nounwind {
 ; X32-LABEL: test2:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    andb $1, %al
 ; X32-NEXT:    negb %al
@@ -35,7 +35,7 @@ define i16 @test2(i16 %x) nounwind {
 ; X32-NEXT:    ## -- End function
 ;
 ; X64-LABEL: test2:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    andb $1, %dil
 ; X64-NEXT:    negb %dil
 ; X64-NEXT:    movsbl %dil, %eax
@@ -49,7 +49,7 @@ define i16 @test2(i16 %x) nounwind {
 
 define i32 @test3(i32 %x) nounwind {
 ; X32-LABEL: test3:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    andb $1, %al
 ; X32-NEXT:    negb %al
@@ -58,7 +58,7 @@ define i32 @test3(i32 %x) nounwind {
 ; X32-NEXT:    ## -- End function
 ;
 ; X64-LABEL: test3:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    andb $1, %dil
 ; X64-NEXT:    negb %dil
 ; X64-NEXT:    movsbl %dil, %eax
@@ -71,7 +71,7 @@ define i32 @test3(i32 %x) nounwind {
 
 define i32 @test4(i32 %x) nounwind {
 ; X32-LABEL: test4:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    andb $1, %al
 ; X32-NEXT:    negb %al
@@ -80,7 +80,7 @@ define i32 @test4(i32 %x) nounwind {
 ; X32-NEXT:    ## -- End function
 ;
 ; X64-LABEL: test4:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    andb $1, %dil
 ; X64-NEXT:    negb %dil
 ; X64-NEXT:    movsbl %dil, %eax
@@ -93,14 +93,14 @@ define i32 @test4(i32 %x) nounwind {
 
 define i8 @test5(i8 %x) nounwind {
 ; X32-LABEL: test5:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $1, %al
 ; X32-NEXT:    retl
 ; X32-NEXT:    ## -- End function
 ;
 ; X64-LABEL: test5:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    andb $1, %dil
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    retq
@@ -112,7 +112,7 @@ define i8 @test5(i8 %x) nounwind {
 
 define i16 @test6(i16 %x) nounwind {
 ; X32-LABEL: test6:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    andb $1, %al
 ; X32-NEXT:    movzbl %al, %eax
@@ -121,7 +121,7 @@ define i16 @test6(i16 %x) nounwind {
 ; X32-NEXT:    ## -- End function
 ;
 ; X64-LABEL: test6:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    andb $1, %dil
 ; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
@@ -134,7 +134,7 @@ define i16 @test6(i16 %x) nounwind {
 
 define i32 @test7(i32 %x) nounwind {
 ; X32-LABEL: test7:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    andb $1, %al
 ; X32-NEXT:    movzbl %al, %eax
@@ -142,7 +142,7 @@ define i32 @test7(i32 %x) nounwind {
 ; X32-NEXT:    ## -- End function
 ;
 ; X64-LABEL: test7:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    andb $1, %dil
 ; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    retq
@@ -154,7 +154,7 @@ define i32 @test7(i32 %x) nounwind {
 
 define i32 @test8(i32 %x) nounwind {
 ; X32-LABEL: test8:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    andb $1, %al
 ; X32-NEXT:    movzbl %al, %eax
@@ -162,7 +162,7 @@ define i32 @test8(i32 %x) nounwind {
 ; X32-NEXT:    ## -- End function
 ;
 ; X64-LABEL: test8:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    andb $1, %dil
 ; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    retq
@@ -174,14 +174,14 @@ define i32 @test8(i32 %x) nounwind {
 
 define i16 @test9(i8 %x) nounwind {
 ; X32-LABEL: test9:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
 ; X32-NEXT:    retl
 ; X32-NEXT:    ## -- End function
 ;
 ; X64-LABEL: test9:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    movsbl %dil, %eax
 ; X64-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
 ; X64-NEXT:    retq
@@ -192,13 +192,13 @@ define i16 @test9(i8 %x) nounwind {
 
 define i32 @test10(i8 %x) nounwind {
 ; X32-LABEL: test10:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    retl
 ; X32-NEXT:    ## -- End function
 ;
 ; X64-LABEL: test10:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    movsbl %dil, %eax
 ; X64-NEXT:    retq
 ; X64-NEXT:    ## -- End function
@@ -208,7 +208,7 @@ define i32 @test10(i8 %x) nounwind {
 
 define i64 @test11(i8 %x) nounwind {
 ; X32-LABEL: test11:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl %eax, %edx
 ; X32-NEXT:    sarl $31, %edx
@@ -216,7 +216,7 @@ define i64 @test11(i8 %x) nounwind {
 ; X32-NEXT:    ## -- End function
 ;
 ; X64-LABEL: test11:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    movsbq %dil, %rax
 ; X64-NEXT:    retq
 ; X64-NEXT:    ## -- End function
@@ -226,14 +226,14 @@ define i64 @test11(i8 %x) nounwind {
 
 define i16 @test12(i8 %x) nounwind {
 ; X32-LABEL: test12:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
 ; X32-NEXT:    retl
 ; X32-NEXT:    ## -- End function
 ;
 ; X64-LABEL: test12:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
 ; X64-NEXT:    retq
@@ -244,13 +244,13 @@ define i16 @test12(i8 %x) nounwind {
 
 define i32 @test13(i8 %x) nounwind {
 ; X32-LABEL: test13:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    retl
 ; X32-NEXT:    ## -- End function
 ;
 ; X64-LABEL: test13:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    retq
 ; X64-NEXT:    ## -- End function
@@ -260,14 +260,14 @@ define i32 @test13(i8 %x) nounwind {
 
 define i64 @test14(i8 %x) nounwind {
 ; X32-LABEL: test14:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    xorl %edx, %edx
 ; X32-NEXT:    retl
 ; X32-NEXT:    ## -- End function
 ;
 ; X64-LABEL: test14:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    retq
 ; X64-NEXT:    ## -- End function
@@ -277,13 +277,13 @@ define i64 @test14(i8 %x) nounwind {
 
 define i32 @test15(i16 %x) nounwind {
 ; X32-LABEL: test15:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    movswl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    retl
 ; X32-NEXT:    ## -- End function
 ;
 ; X64-LABEL: test15:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    movswl %di, %eax
 ; X64-NEXT:    retq
 ; X64-NEXT:    ## -- End function
@@ -293,7 +293,7 @@ define i32 @test15(i16 %x) nounwind {
 
 define i64 @test16(i16 %x) nounwind {
 ; X32-LABEL: test16:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    movswl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl %eax, %edx
 ; X32-NEXT:    sarl $31, %edx
@@ -301,7 +301,7 @@ define i64 @test16(i16 %x) nounwind {
 ; X32-NEXT:    ## -- End function
 ;
 ; X64-LABEL: test16:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    movswq %di, %rax
 ; X64-NEXT:    retq
 ; X64-NEXT:    ## -- End function
@@ -311,13 +311,13 @@ define i64 @test16(i16 %x) nounwind {
 
 define i32 @test17(i16 %x) nounwind {
 ; X32-LABEL: test17:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    retl
 ; X32-NEXT:    ## -- End function
 ;
 ; X64-LABEL: test17:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    movzwl %di, %eax
 ; X64-NEXT:    retq
 ; X64-NEXT:    ## -- End function
@@ -327,14 +327,14 @@ define i32 @test17(i16 %x) nounwind {
 
 define i64 @test18(i16 %x) nounwind {
 ; X32-LABEL: test18:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    xorl %edx, %edx
 ; X32-NEXT:    retl
 ; X32-NEXT:    ## -- End function
 ;
 ; X64-LABEL: test18:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    movzwl %di, %eax
 ; X64-NEXT:    retq
 ; X64-NEXT:    ## -- End function
@@ -344,7 +344,7 @@ define i64 @test18(i16 %x) nounwind {
 
 define i64 @test19(i32 %x) nounwind {
 ; X32-LABEL: test19:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl %eax, %edx
 ; X32-NEXT:    sarl $31, %edx
@@ -352,7 +352,7 @@ define i64 @test19(i32 %x) nounwind {
 ; X32-NEXT:    ## -- End function
 ;
 ; X64-LABEL: test19:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    movslq %edi, %rax
 ; X64-NEXT:    retq
 ; X64-NEXT:    ## -- End function
@@ -362,14 +362,14 @@ define i64 @test19(i32 %x) nounwind {
 
 define i64 @test20(i32 %x) nounwind {
 ; X32-LABEL: test20:
-; X32:       ## BB#0:
+; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    xorl %edx, %edx
 ; X32-NEXT:    retl
 ; X32-NEXT:    ## -- End function
 ;
 ; X64-LABEL: test20:
-; X64:       ## BB#0:
+; X64:       ## %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    retq
 ; X64-NEXT:    ## -- End function

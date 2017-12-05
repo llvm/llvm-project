@@ -11,17 +11,17 @@
 
 define double @FsANDPSrr(double %x, double %y) {
 ; SSE-LABEL: FsANDPSrr:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    andps %xmm1, %xmm0 # encoding: [0x0f,0x54,0xc1]
 ; SSE-NEXT:    retq # encoding: [0xc3]
 ;
 ; AVX-LABEL: FsANDPSrr:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vandps %xmm1, %xmm0, %xmm0 # encoding: [0xc5,0xf8,0x54,0xc1]
 ; AVX-NEXT:    retq # encoding: [0xc3]
 ;
 ; AVX512DQ-LABEL: FsANDPSrr:
-; AVX512DQ:       # BB#0:
+; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    vandps %xmm1, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x54,0xc1]
 ; AVX512DQ-NEXT:    retq # encoding: [0xc3]
   %bc1 = bitcast double %x to i64
@@ -33,18 +33,18 @@ define double @FsANDPSrr(double %x, double %y) {
 
 define double @FsANDNPSrr(double %x, double %y) {
 ; SSE-LABEL: FsANDNPSrr:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    andnps %xmm0, %xmm1 # encoding: [0x0f,0x55,0xc8]
 ; SSE-NEXT:    movaps %xmm1, %xmm0 # encoding: [0x0f,0x28,0xc1]
 ; SSE-NEXT:    retq # encoding: [0xc3]
 ;
 ; AVX-LABEL: FsANDNPSrr:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vandnps %xmm0, %xmm1, %xmm0 # encoding: [0xc5,0xf0,0x55,0xc0]
 ; AVX-NEXT:    retq # encoding: [0xc3]
 ;
 ; AVX512DQ-LABEL: FsANDNPSrr:
-; AVX512DQ:       # BB#0:
+; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    vandnps %xmm0, %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf0,0x55,0xc0]
 ; AVX512DQ-NEXT:    retq # encoding: [0xc3]
   %bc1 = bitcast double %x to i64
@@ -57,17 +57,17 @@ define double @FsANDNPSrr(double %x, double %y) {
 
 define double @FsORPSrr(double %x, double %y) {
 ; SSE-LABEL: FsORPSrr:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    orps %xmm1, %xmm0 # encoding: [0x0f,0x56,0xc1]
 ; SSE-NEXT:    retq # encoding: [0xc3]
 ;
 ; AVX-LABEL: FsORPSrr:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vorps %xmm1, %xmm0, %xmm0 # encoding: [0xc5,0xf8,0x56,0xc1]
 ; AVX-NEXT:    retq # encoding: [0xc3]
 ;
 ; AVX512DQ-LABEL: FsORPSrr:
-; AVX512DQ:       # BB#0:
+; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    vorps %xmm1, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x56,0xc1]
 ; AVX512DQ-NEXT:    retq # encoding: [0xc3]
   %bc1 = bitcast double %x to i64
@@ -79,17 +79,17 @@ define double @FsORPSrr(double %x, double %y) {
 
 define double @FsXORPSrr(double %x, double %y) {
 ; SSE-LABEL: FsXORPSrr:
-; SSE:       # BB#0:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    xorps %xmm1, %xmm0 # encoding: [0x0f,0x57,0xc1]
 ; SSE-NEXT:    retq # encoding: [0xc3]
 ;
 ; AVX-LABEL: FsXORPSrr:
-; AVX:       # BB#0:
+; AVX:       # %bb.0:
 ; AVX-NEXT:    vxorps %xmm1, %xmm0, %xmm0 # encoding: [0xc5,0xf8,0x57,0xc1]
 ; AVX-NEXT:    retq # encoding: [0xc3]
 ;
 ; AVX512DQ-LABEL: FsXORPSrr:
-; AVX512DQ:       # BB#0:
+; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    vxorps %xmm1, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x57,0xc1]
 ; AVX512DQ-NEXT:    retq # encoding: [0xc3]
   %bc1 = bitcast double %x to i64

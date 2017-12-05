@@ -7,7 +7,7 @@
 
 define i8 @PR30841(i64 %argc) {
 ; CHECK-LABEL: PR30841:
-; CHECK:       ## BB#0: ## %entry
+; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    negl %eax
 ; CHECK-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>

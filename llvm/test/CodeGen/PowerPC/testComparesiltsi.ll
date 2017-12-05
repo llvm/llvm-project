@@ -11,7 +11,7 @@
 ; Function Attrs: norecurse nounwind readnone
 define signext i32 @test_iltsi(i32 signext %a, i32 signext %b) {
 ; CHECK-LABEL: test_iltsi:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sub [[REG:r[0-9]+]], r3, r4
 ; CHECK-NEXT:    rldicl r3, [[REG]], 1, 63
 ; CHECK-NEXT:    blr
@@ -24,7 +24,7 @@ entry:
 ; Function Attrs: norecurse nounwind readnone
 define signext i32 @test_iltsi_sext(i32 signext %a, i32 signext %b) {
 ; CHECK-LABEL: test_iltsi_sext:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sub [[REG:r[0-9]+]], r3, r4
 ; CHECK-NEXT:    sradi r3, [[REG]], 63
 ; CHECK-NEXT:    blr
@@ -37,7 +37,7 @@ entry:
 ; Function Attrs: norecurse nounwind readnone
 define signext i32 @test_iltsi_sext_z(i32 signext %a) {
 ; CHECK-LABEL: test_iltsi_sext_z:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    srawi r3, r3, 31
 ; CHECK-NEXT:    blr
 entry:
@@ -49,7 +49,7 @@ entry:
 ; Function Attrs: norecurse nounwind
 define void @test_iltsi_store(i32 signext %a, i32 signext %b) {
 ; CHECK-LABEL: test_iltsi_store:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK:         sub [[REG:r[0-9]+]], r3, r4
 ; CHECK:         rldicl {{r[0-9]+}}, [[REG]], 1, 63
 entry:
@@ -62,7 +62,7 @@ entry:
 ; Function Attrs: norecurse nounwind
 define void @test_iltsi_sext_store(i32 signext %a, i32 signext %b) {
 ; CHECK-LABEL: test_iltsi_sext_store:
-; CHECK:       # BB#0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK:         sub [[REG:r[0-9]+]], r3, r4
 ; CHECK:         sradi {{r[0-9]+}}, [[REG]], 63
 entry:
