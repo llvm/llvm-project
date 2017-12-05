@@ -37,12 +37,7 @@ public:
 // A Compilation database that returns a fixed set of compile flags.
 class MockCompilationDatabase : public GlobalCompilationDatabase {
 public:
-  MockCompilationDatabase(bool AddFreestandingFlag) {
-    // We have to add -ffreestanding to VFS-specific tests to avoid errors on
-    // implicit includes of stdc-predef.h.
-    if (AddFreestandingFlag)
-      ExtraClangFlags.push_back("-ffreestanding");
-  }
+  MockCompilationDatabase();
 
   llvm::Optional<tooling::CompileCommand>
   getCompileCommand(PathRef File) const override;

@@ -121,7 +121,7 @@ protected:
       bool ExpectErrors = false) {
     MockFSProvider FS;
     ErrorCheckingDiagConsumer DiagConsumer;
-    MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
+    MockCompilationDatabase CDB;
     ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
                         /*StorePreamblesInMemory=*/true,
                         clangd::CodeCompleteOptions(),
@@ -186,7 +186,7 @@ int b = a;
 TEST_F(ClangdVFSTest, Reparse) {
   MockFSProvider FS;
   ErrorCheckingDiagConsumer DiagConsumer;
-  MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
+  MockCompilationDatabase CDB;
   ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
                       /*StorePreamblesInMemory=*/true,
                       clangd::CodeCompleteOptions(),
@@ -232,7 +232,7 @@ int b = a;
 TEST_F(ClangdVFSTest, ReparseOnHeaderChange) {
   MockFSProvider FS;
   ErrorCheckingDiagConsumer DiagConsumer;
-  MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
+  MockCompilationDatabase CDB;
 
   ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
                       /*StorePreamblesInMemory=*/true,
@@ -281,7 +281,7 @@ int b = a;
 TEST_F(ClangdVFSTest, CheckVersions) {
   MockFSProvider FS;
   ErrorCheckingDiagConsumer DiagConsumer;
-  MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
+  MockCompilationDatabase CDB;
   // Run ClangdServer synchronously.
   ClangdServer Server(CDB, DiagConsumer, FS,
                       /*AsyncThreadsCount=*/0,
@@ -313,7 +313,7 @@ TEST_F(ClangdVFSTest, SearchLibDir) {
   // Checks that searches for GCC installation is done through vfs.
   MockFSProvider FS;
   ErrorCheckingDiagConsumer DiagConsumer;
-  MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
+  MockCompilationDatabase CDB;
   CDB.ExtraClangFlags.insert(CDB.ExtraClangFlags.end(),
                              {"-xc++", "-target", "x86_64-linux-unknown",
                               "-m64", "--gcc-toolchain=/randomusr",
@@ -369,7 +369,7 @@ std::string x;
 TEST_F(ClangdVFSTest, ForceReparseCompileCommand) {
   MockFSProvider FS;
   ErrorCheckingDiagConsumer DiagConsumer;
-  MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
+  MockCompilationDatabase CDB;
   ClangdServer Server(CDB, DiagConsumer, FS,
                       /*AsyncThreadsCount=*/0,
                       /*StorePreamblesInMemory=*/true,
@@ -512,7 +512,7 @@ int d;
 
   TestDiagConsumer DiagConsumer;
   {
-    MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
+    MockCompilationDatabase CDB;
     ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
                         /*StorePreamblesInMemory=*/true,
                         clangd::CodeCompleteOptions(),
@@ -672,7 +672,7 @@ int d;
 TEST_F(ClangdVFSTest, CheckSourceHeaderSwitch) {
   MockFSProvider FS;
   ErrorCheckingDiagConsumer DiagConsumer;
-  MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
+  MockCompilationDatabase CDB;
 
   ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
                       /*StorePreamblesInMemory=*/true,
@@ -801,7 +801,7 @@ int d;
   NoConcurrentAccessDiagConsumer DiagConsumer(
       std::move(StartSecondReparsePromise));
 
-  MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
+  MockCompilationDatabase CDB;
   ClangdServer Server(CDB, DiagConsumer, FS, 4, /*StorePreamblesInMemory=*/true,
                       clangd::CodeCompleteOptions(),
                       EmptyLogger::getInstance());

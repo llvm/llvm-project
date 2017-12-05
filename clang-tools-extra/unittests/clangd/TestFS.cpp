@@ -143,6 +143,9 @@ MockFSProvider::getTaggedFileSystem(PathRef File) {
   return make_tagged(FS, Tag);
 }
 
+MockCompilationDatabase::MockCompilationDatabase()
+    : ExtraClangFlags({"-ffreestanding"}) {} // Avoid implicit stdc-predef.h.
+
 llvm::Optional<tooling::CompileCommand>
 MockCompilationDatabase::getCompileCommand(PathRef File) const {
   if (ExtraClangFlags.empty())

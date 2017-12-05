@@ -71,7 +71,7 @@ protected:
 TEST_F(ClangdCompletionTest, CheckContentsOverride) {
   MockFSProvider FS;
   IgnoreDiagnostics DiagConsumer;
-  MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
+  MockCompilationDatabase CDB;
 
   ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
                       /*StorePreamblesInMemory=*/true,
@@ -129,7 +129,7 @@ int b =   ;
 
 TEST_F(ClangdCompletionTest, Limit) {
   MockFSProvider FS;
-  MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
+  MockCompilationDatabase CDB;
   CDB.ExtraClangFlags.push_back("-xc++");
   IgnoreDiagnostics DiagConsumer;
   clangd::CodeCompleteOptions Opts;
@@ -168,7 +168,7 @@ int main() { ClassWithMembers().{complete} }
 
 TEST_F(ClangdCompletionTest, Filter) {
   MockFSProvider FS;
-  MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
+  MockCompilationDatabase CDB;
   CDB.ExtraClangFlags.push_back("-xc++");
   IgnoreDiagnostics DiagConsumer;
   clangd::CodeCompleteOptions Opts;
@@ -224,7 +224,7 @@ TEST_F(ClangdCompletionTest, Filter) {
 TEST_F(ClangdCompletionTest, CompletionOptions) {
   MockFSProvider FS;
   IgnoreDiagnostics DiagConsumer;
-  MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
+  MockCompilationDatabase CDB;
   CDB.ExtraClangFlags.push_back("-xc++");
 
   auto FooCpp = getVirtualTestFilePath("foo.cpp");
