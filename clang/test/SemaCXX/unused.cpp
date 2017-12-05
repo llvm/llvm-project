@@ -1,6 +1,7 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wunused %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 -Wunused %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wunused %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 -Wunused %s
 
 // PR4103 : Make sure we don't get a bogus unused expression warning
 namespace PR4103 {
@@ -8,7 +9,7 @@ namespace PR4103 {
     char foo;
   };
   class APSInt : public APInt {
-    char bar;
+    char bar; // expected-warning {{private field 'bar' is not used}}
   public:
     APSInt &operator=(const APSInt &RHS);
   };
@@ -69,3 +70,44 @@ namespace UnresolvedLookup {
     }
   };
 }
+
+#if __cplusplus >= 201703L
+namespace PR33839 {
+  void a() {
+    struct X { int a, b; } x;
+    auto [a, b] = x; // expected-warning {{unused variable '[a, b]'}}
+    auto [c, d] = x;
+    (void)d;
+  }
+
+  template<typename T> void f() {
+    struct A { int n; } a[1];
+    for (auto [x] : a) {
+      (void)x;
+    }
+    auto [y] = a[0]; // expected-warning {{unused}}
+  }
+  template<bool b> void g() {
+    struct A { int n; } a[1];
+    for (auto [x] : a) {
+      if constexpr (b)
+        (void)x;
+    }
+
+    auto [y] = a[0];
+    if constexpr (b)
+      (void)y; // ok, even when b == false
+  }
+  template<typename T> void h() {
+    struct A { int n; } a[1];
+    for (auto [x] : a) { // expected-warning {{unused variable '[x]'}}
+    }
+  }
+  void use() { 
+    f<int>(); // expected-note {{instantiation of}}
+    g<true>();
+    g<false>();
+    h<int>(); // expected-note {{instantiation of}}
+  }
+}
+#endif
