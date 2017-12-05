@@ -390,6 +390,7 @@ private:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<BlockFrequencyInfoWrapperPass>();
+    AU.addRequired<LoopInfoWrapperPass>();
   }
 };
 
@@ -415,6 +416,7 @@ private:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<BlockFrequencyInfoWrapperPass>();
+    AU.addRequired<LoopInfoWrapperPass>();
   }
 };
 
@@ -426,6 +428,7 @@ INITIALIZE_PASS_BEGIN(PGOInstrumentationGenLegacyPass, "pgo-instr-gen",
                       "PGO instrumentation.", false, false)
 INITIALIZE_PASS_DEPENDENCY(BlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(BranchProbabilityInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_END(PGOInstrumentationGenLegacyPass, "pgo-instr-gen",
                     "PGO instrumentation.", false, false)
 
@@ -439,6 +442,7 @@ INITIALIZE_PASS_BEGIN(PGOInstrumentationUseLegacyPass, "pgo-instr-use",
                       "Read PGO instrumentation profile.", false, false)
 INITIALIZE_PASS_DEPENDENCY(BlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(BranchProbabilityInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_END(PGOInstrumentationUseLegacyPass, "pgo-instr-use",
                     "Read PGO instrumentation profile.", false, false)
 
@@ -530,9 +534,9 @@ public:
       Function &Func,
       std::unordered_multimap<Comdat *, GlobalValue *> &ComdatMembers,
       bool CreateGlobalVar = false, BranchProbabilityInfo *BPI = nullptr,
-      BlockFrequencyInfo *BFI = nullptr)
+      BlockFrequencyInfo *BFI = nullptr, LoopInfo *LI = nullptr)
       : F(Func), ComdatMembers(ComdatMembers), ValueSites(IPVK_Last + 1),
-        SIVisitor(Func), MIVisitor(Func), MST(F, BPI, BFI) {
+        SIVisitor(Func), MIVisitor(Func), MST(F, BPI, BFI, LI) {
     // This should be done before CFG hash computation.
     SIVisitor.countSelects(Func);
     MIVisitor.countMemIntrinsics(Func);
@@ -715,9 +719,10 @@ BasicBlock *FuncPGOInstrumentation<Edge, BBInfo>::getInstrBB(Edge *E) {
 // Critical edges will be split.
 static void instrumentOneFunc(
     Function &F, Module *M, BranchProbabilityInfo *BPI, BlockFrequencyInfo *BFI,
+    LoopInfo *LI,
     std::unordered_multimap<Comdat *, GlobalValue *> &ComdatMembers) {
   FuncPGOInstrumentation<PGOEdge, BBInfo> FuncInfo(F, ComdatMembers, true, BPI,
-                                                   BFI);
+                                                   BFI, LI);
   unsigned NumCounters = FuncInfo.getNumCounters();
 
   uint32_t I = 0;
@@ -844,9 +849,10 @@ public:
   PGOUseFunc(Function &Func, Module *Modu,
              std::unordered_multimap<Comdat *, GlobalValue *> &ComdatMembers,
              BranchProbabilityInfo *BPI = nullptr,
-             BlockFrequencyInfo *BFIin = nullptr)
+             BlockFrequencyInfo *BFIin = nullptr,
+             LoopInfo *LI = nullptr)
       : F(Func), M(Modu), BFI(BFIin),
-        FuncInfo(Func, ComdatMembers, false, BPI, BFIin),
+        FuncInfo(Func, ComdatMembers, false, BPI, BFIin, LI),
         FreqAttr(FFA_Normal) {}
 
   // Read counts for the instrumented BB from profile.
@@ -1379,7 +1385,8 @@ static void collectComdatMembers(
 
 static bool InstrumentAllFunctions(
     Module &M, function_ref<BranchProbabilityInfo *(Function &)> LookupBPI,
-    function_ref<BlockFrequencyInfo *(Function &)> LookupBFI) {
+    function_ref<BlockFrequencyInfo *(Function &)> LookupBFI,
+    function_ref<LoopInfo *(Function &)> LookupLI) {
   createIRLevelProfileFlagVariable(M);
   std::unordered_multimap<Comdat *, GlobalValue *> ComdatMembers;
   collectComdatMembers(M, ComdatMembers);
@@ -1389,7 +1396,8 @@ static bool InstrumentAllFunctions(
       continue;
     auto *BPI = LookupBPI(F);
     auto *BFI = LookupBFI(F);
-    instrumentOneFunc(F, &M, BPI, BFI, ComdatMembers);
+    auto *LI = LookupLI(F);
+    instrumentOneFunc(F, &M, BPI, BFI, LI, ComdatMembers);
   }
   return true;
 }
@@ -1404,7 +1412,10 @@ bool PGOInstrumentationGenLegacyPass::runOnModule(Module &M) {
   auto LookupBFI = [this](Function &F) {
     return &this->getAnalysis<BlockFrequencyInfoWrapperPass>(F).getBFI();
   };
-  return InstrumentAllFunctions(M, LookupBPI, LookupBFI);
+  auto LookupLI = [this](Function &F) {
+    return &this->getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
+  };
+  return InstrumentAllFunctions(M, LookupBPI, LookupBFI, LookupLI);
 }
 
 PreservedAnalyses PGOInstrumentationGen::run(Module &M,
@@ -1418,7 +1429,11 @@ PreservedAnalyses PGOInstrumentationGen::run(Module &M,
     return &FAM.getResult<BlockFrequencyAnalysis>(F);
   };
 
-  if (!InstrumentAllFunctions(M, LookupBPI, LookupBFI))
+  auto LookupLI = [&FAM](Function &F) {
+    return &FAM.getResult<LoopAnalysis>(F);
+  };
+
+  if (!InstrumentAllFunctions(M, LookupBPI, LookupBFI, LookupLI))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();
@@ -1427,7 +1442,8 @@ PreservedAnalyses PGOInstrumentationGen::run(Module &M,
 static bool annotateAllFunctions(
     Module &M, StringRef ProfileFileName,
     function_ref<BranchProbabilityInfo *(Function &)> LookupBPI,
-    function_ref<BlockFrequencyInfo *(Function &)> LookupBFI) {
+    function_ref<BlockFrequencyInfo *(Function &)> LookupBFI,
+    function_ref<LoopInfo *(Function &)> LookupLI) {
   DEBUG(dbgs() << "Read in profile counters: ");
   auto &Ctx = M.getContext();
   // Read the counter array from file.
@@ -1463,7 +1479,8 @@ static bool annotateAllFunctions(
       continue;
     auto *BPI = LookupBPI(F);
     auto *BFI = LookupBFI(F);
-    PGOUseFunc Func(F, &M, ComdatMembers, BPI, BFI);
+    auto *LI = LookupLI(F);
+    PGOUseFunc Func(F, &M, ComdatMembers, BPI, BFI, LI);
     if (!Func.readCounters(PGOReader.get()))
       continue;
     Func.populateCounters();
@@ -1539,7 +1556,11 @@ PreservedAnalyses PGOInstrumentationUse::run(Module &M,
     return &FAM.getResult<BlockFrequencyAnalysis>(F);
   };
 
-  if (!annotateAllFunctions(M, ProfileFileName, LookupBPI, LookupBFI))
+  auto LookupLI = [&FAM](Function &F) {
+    return &FAM.getResult<LoopAnalysis>(F);
+  };
+
+  if (!annotateAllFunctions(M, ProfileFileName, LookupBPI, LookupBFI, LookupLI))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();
@@ -1555,8 +1576,11 @@ bool PGOInstrumentationUseLegacyPass::runOnModule(Module &M) {
   auto LookupBFI = [this](Function &F) {
     return &this->getAnalysis<BlockFrequencyInfoWrapperPass>(F).getBFI();
   };
+  auto LookupLI = [this](Function &F) {
+    return &this->getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
+  };
 
-  return annotateAllFunctions(M, ProfileFileName, LookupBPI, LookupBFI);
+  return annotateAllFunctions(M, ProfileFileName, LookupBPI, LookupBFI, LookupLI);
 }
 
 static std::string getSimpleNodeName(const BasicBlock *Node) {

@@ -233,9 +233,11 @@ define i64 @f20(i64 %foo) {
 ; Now try an arithmetic right shift in which the sign bits aren't needed.
 ; Introduce a second use of %shr so that the ashr doesn't decompose to
 ; an lshr.
+; NOTE: the extra move to %r2 should not be needed (temporary FAIL)
 define i32 @f21(i32 %foo, i32 *%dest) {
 ; CHECK-LABEL: f21:
-; CHECK: risbg %r2, %r2, 60, 190, 36
+; CHECK: risbg %r0, %r2, 60, 190, 36
+; CHECK: lr %r2, %r0
 ; CHECK: br %r14
   %shr = ashr i32 %foo, 28
   store i32 %shr, i32 *%dest

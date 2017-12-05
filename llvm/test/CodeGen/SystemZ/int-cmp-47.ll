@@ -342,3 +342,25 @@ store:
 exit:
   ret void
 }
+
+; Check that we don't fold a shift if the comparison value
+; would need to be shifted out of range
+define void @f19(i64 %a) {
+; CHECK-LABEL: f19:
+; CHECK-NOT: tmhh
+; CHECK: srlg [[REG:%r[0-5]]], %r2, 63
+; CHECK: cgibl [[REG]], 3, 0(%r14)
+; CHECK: br %r14
+entry:
+  %shr = lshr i64 %a, 63
+  %cmp = icmp ult i64 %shr, 3
+  br i1 %cmp, label %exit, label %store
+
+store:
+  store i32 1, i32 *@g
+  br label %exit
+
+exit:
+  ret void
+}
+

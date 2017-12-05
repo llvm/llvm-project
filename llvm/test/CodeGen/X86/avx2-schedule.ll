@@ -236,7 +236,7 @@ define <4 x i32> @test_extracti128(<8 x i32> %a0, <8 x i32> %a1, <4 x i32> *%a2)
 define <2 x double> @test_gatherdpd(<2 x double> %a0, i8* %a1, <4 x i32> %a2, <2 x double> %a3) {
 ; GENERIC-LABEL: test_gatherdpd:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vgatherdpd %xmm2, (%rdi,%xmm1,2), %xmm0
+; GENERIC-NEXT:    vgatherdpd %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [4:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_gatherdpd:
@@ -271,7 +271,7 @@ declare <2 x double> @llvm.x86.avx2.gather.d.pd(<2 x double>, i8*, <4 x i32>, <2
 define <4 x double> @test_gatherdpd_ymm(<4 x double> %a0, i8* %a1, <4 x i32> %a2, <4 x double> %a3) {
 ; GENERIC-LABEL: test_gatherdpd_ymm:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vgatherdpd %ymm2, (%rdi,%xmm1,8), %ymm0
+; GENERIC-NEXT:    vgatherdpd %ymm2, (%rdi,%xmm1,8), %ymm0 # sched: [4:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_gatherdpd_ymm:
@@ -306,7 +306,7 @@ declare <4 x double> @llvm.x86.avx2.gather.d.pd.256(<4 x double>, i8*, <4 x i32>
 define <4 x float> @test_gatherdps(<4 x float> %a0, i8* %a1, <4 x i32> %a2, <4 x float> %a3) {
 ; GENERIC-LABEL: test_gatherdps:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vgatherdps %xmm2, (%rdi,%xmm1,2), %xmm0
+; GENERIC-NEXT:    vgatherdps %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [4:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_gatherdps:
@@ -341,7 +341,7 @@ declare <4 x float> @llvm.x86.avx2.gather.d.ps(<4 x float>, i8*, <4 x i32>, <4 x
 define <8 x float> @test_gatherdps_ymm(<8 x float> %a0, i8* %a1, <8 x i32> %a2, <8 x float> %a3) {
 ; GENERIC-LABEL: test_gatherdps_ymm:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vgatherdps %ymm2, (%rdi,%ymm1,4), %ymm0
+; GENERIC-NEXT:    vgatherdps %ymm2, (%rdi,%ymm1,4), %ymm0 # sched: [4:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_gatherdps_ymm:
@@ -376,7 +376,7 @@ declare <8 x float> @llvm.x86.avx2.gather.d.ps.256(<8 x float>, i8*, <8 x i32>, 
 define <2 x double> @test_gatherqpd(<2 x double> %a0, i8* %a1, <2 x i64> %a2, <2 x double> %a3) {
 ; GENERIC-LABEL: test_gatherqpd:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vgatherqpd %xmm2, (%rdi,%xmm1,2), %xmm0
+; GENERIC-NEXT:    vgatherqpd %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [4:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_gatherqpd:
@@ -411,7 +411,7 @@ declare <2 x double> @llvm.x86.avx2.gather.q.pd(<2 x double>, i8*, <2 x i64>, <2
 define <4 x double> @test_gatherqpd_ymm(<4 x double> %a0, i8* %a1, <4 x i64> %a2, <4 x double> %a3) {
 ; GENERIC-LABEL: test_gatherqpd_ymm:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vgatherqpd %ymm2, (%rdi,%ymm1,8), %ymm0
+; GENERIC-NEXT:    vgatherqpd %ymm2, (%rdi,%ymm1,8), %ymm0 # sched: [4:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_gatherqpd_ymm:
@@ -446,7 +446,7 @@ declare <4 x double> @llvm.x86.avx2.gather.q.pd.256(<4 x double>, i8*, <4 x i64>
 define <4 x float> @test_gatherqps(<4 x float> %a0, i8* %a1, <2 x i64> %a2, <4 x float> %a3) {
 ; GENERIC-LABEL: test_gatherqps:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vgatherqps %xmm2, (%rdi,%xmm1,2), %xmm0
+; GENERIC-NEXT:    vgatherqps %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [4:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_gatherqps:
@@ -481,7 +481,7 @@ declare <4 x float> @llvm.x86.avx2.gather.q.ps(<4 x float>, i8*, <2 x i64>, <4 x
 define <4 x float> @test_gatherqps_ymm(<4 x float> %a0, i8* %a1, <4 x i64> %a2, <4 x float> %a3) {
 ; GENERIC-LABEL: test_gatherqps_ymm:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vgatherqps %xmm2, (%rdi,%ymm1,4), %xmm0
+; GENERIC-NEXT:    vgatherqps %xmm2, (%rdi,%ymm1,4), %xmm0 # sched: [4:0.50]
 ; GENERIC-NEXT:    vzeroupper
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -2750,7 +2750,7 @@ define <4 x i64> @test_permq(<4 x i64> %a0, <4 x i64> *%a1) {
 define <4 x i32> @test_pgatherdd(<4 x i32> %a0, i8* %a1, <4 x i32> %a2, <4 x i32> %a3) {
 ; GENERIC-LABEL: test_pgatherdd:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpgatherdd %xmm2, (%rdi,%xmm1,2), %xmm0
+; GENERIC-NEXT:    vpgatherdd %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [4:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pgatherdd:
@@ -2760,7 +2760,7 @@ define <4 x i32> @test_pgatherdd(<4 x i32> %a0, i8* %a1, <4 x i32> %a2, <4 x i32
 ;
 ; BROADWELL-LABEL: test_pgatherdd:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    vpgatherdd %xmm2, (%rdi,%xmm1,2), %xmm0
+; BROADWELL-NEXT:    vpgatherdd %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [5:0.50]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_pgatherdd:
@@ -2785,7 +2785,7 @@ declare <4 x i32> @llvm.x86.avx2.gather.d.d(<4 x i32>, i8*, <4 x i32>, <4 x i32>
 define <8 x i32> @test_pgatherdd_ymm(<8 x i32> %a0, i8* %a1, <8 x i32> %a2, <8 x i32> %a3) {
 ; GENERIC-LABEL: test_pgatherdd_ymm:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpgatherdd %ymm2, (%rdi,%ymm1,2), %ymm0
+; GENERIC-NEXT:    vpgatherdd %ymm2, (%rdi,%ymm1,2), %ymm0 # sched: [4:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pgatherdd_ymm:
@@ -2795,7 +2795,7 @@ define <8 x i32> @test_pgatherdd_ymm(<8 x i32> %a0, i8* %a1, <8 x i32> %a2, <8 x
 ;
 ; BROADWELL-LABEL: test_pgatherdd_ymm:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    vpgatherdd %ymm2, (%rdi,%ymm1,2), %ymm0
+; BROADWELL-NEXT:    vpgatherdd %ymm2, (%rdi,%ymm1,2), %ymm0 # sched: [5:0.50]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_pgatherdd_ymm:
@@ -2820,7 +2820,7 @@ declare <8 x i32> @llvm.x86.avx2.gather.d.d.256(<8 x i32>, i8*, <8 x i32>, <8 x 
 define <2 x i64> @test_pgatherdq(<2 x i64> %a0, i8* %a1, <4 x i32> %a2, <2 x i64> %a3) {
 ; GENERIC-LABEL: test_pgatherdq:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpgatherdq %xmm2, (%rdi,%xmm1,2), %xmm0
+; GENERIC-NEXT:    vpgatherdq %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [4:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pgatherdq:
@@ -2830,7 +2830,7 @@ define <2 x i64> @test_pgatherdq(<2 x i64> %a0, i8* %a1, <4 x i32> %a2, <2 x i64
 ;
 ; BROADWELL-LABEL: test_pgatherdq:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    vpgatherdq %xmm2, (%rdi,%xmm1,2), %xmm0
+; BROADWELL-NEXT:    vpgatherdq %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [5:0.50]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_pgatherdq:
@@ -2855,7 +2855,7 @@ declare <2 x i64> @llvm.x86.avx2.gather.d.q(<2 x i64>, i8*, <4 x i32>, <2 x i64>
 define <4 x i64> @test_pgatherdq_ymm(<4 x i64> %a0, i8* %a1, <4 x i32> %a2, <4 x i64> %a3) {
 ; GENERIC-LABEL: test_pgatherdq_ymm:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpgatherdq %ymm2, (%rdi,%xmm1,2), %ymm0
+; GENERIC-NEXT:    vpgatherdq %ymm2, (%rdi,%xmm1,2), %ymm0 # sched: [4:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pgatherdq_ymm:
@@ -2865,7 +2865,7 @@ define <4 x i64> @test_pgatherdq_ymm(<4 x i64> %a0, i8* %a1, <4 x i32> %a2, <4 x
 ;
 ; BROADWELL-LABEL: test_pgatherdq_ymm:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    vpgatherdq %ymm2, (%rdi,%xmm1,2), %ymm0
+; BROADWELL-NEXT:    vpgatherdq %ymm2, (%rdi,%xmm1,2), %ymm0 # sched: [5:0.50]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_pgatherdq_ymm:
@@ -2890,7 +2890,7 @@ declare <4 x i64> @llvm.x86.avx2.gather.d.q.256(<4 x i64>, i8*, <4 x i32>, <4 x 
 define <4 x i32> @test_pgatherqd(<4 x i32> %a0, i8* %a1, <2 x i64> %a2, <4 x i32> %a3) {
 ; GENERIC-LABEL: test_pgatherqd:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpgatherqd %xmm2, (%rdi,%xmm1,2), %xmm0
+; GENERIC-NEXT:    vpgatherqd %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [4:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pgatherqd:
@@ -2900,7 +2900,7 @@ define <4 x i32> @test_pgatherqd(<4 x i32> %a0, i8* %a1, <2 x i64> %a2, <4 x i32
 ;
 ; BROADWELL-LABEL: test_pgatherqd:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    vpgatherqd %xmm2, (%rdi,%xmm1,2), %xmm0
+; BROADWELL-NEXT:    vpgatherqd %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [5:0.50]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_pgatherqd:
@@ -2925,7 +2925,7 @@ declare <4 x i32> @llvm.x86.avx2.gather.q.d(<4 x i32>, i8*, <2 x i64>, <4 x i32>
 define <4 x i32> @test_pgatherqd_ymm(<4 x i32> %a0, i8* %a1, <4 x i64> %a2, <4 x i32> %a3) {
 ; GENERIC-LABEL: test_pgatherqd_ymm:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpgatherqd %xmm2, (%rdi,%ymm1,2), %xmm0
+; GENERIC-NEXT:    vpgatherqd %xmm2, (%rdi,%ymm1,2), %xmm0 # sched: [4:0.50]
 ; GENERIC-NEXT:    vzeroupper
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -2937,7 +2937,7 @@ define <4 x i32> @test_pgatherqd_ymm(<4 x i32> %a0, i8* %a1, <4 x i64> %a2, <4 x
 ;
 ; BROADWELL-LABEL: test_pgatherqd_ymm:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    vpgatherqd %xmm2, (%rdi,%ymm1,2), %xmm0
+; BROADWELL-NEXT:    vpgatherqd %xmm2, (%rdi,%ymm1,2), %xmm0 # sched: [5:0.50]
 ; BROADWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
@@ -2966,7 +2966,7 @@ declare <4 x i32> @llvm.x86.avx2.gather.q.d.256(<4 x i32>, i8*, <4 x i64>, <4 x 
 define <2 x i64> @test_pgatherqq(<2 x i64> %a0, i8 *%a1, <2 x i64> %a2, <2 x i64> %a3) {
 ; GENERIC-LABEL: test_pgatherqq:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpgatherqq %xmm2, (%rdi,%xmm1,2), %xmm0
+; GENERIC-NEXT:    vpgatherqq %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [4:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pgatherqq:
@@ -2976,7 +2976,7 @@ define <2 x i64> @test_pgatherqq(<2 x i64> %a0, i8 *%a1, <2 x i64> %a2, <2 x i64
 ;
 ; BROADWELL-LABEL: test_pgatherqq:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    vpgatherqq %xmm2, (%rdi,%xmm1,2), %xmm0
+; BROADWELL-NEXT:    vpgatherqq %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [5:0.50]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_pgatherqq:
@@ -3001,7 +3001,7 @@ declare <2 x i64> @llvm.x86.avx2.gather.q.q(<2 x i64>, i8*, <2 x i64>, <2 x i64>
 define <4 x i64> @test_pgatherqq_ymm(<4 x i64> %a0, i8 *%a1, <4 x i64> %a2, <4 x i64> %a3) {
 ; GENERIC-LABEL: test_pgatherqq_ymm:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpgatherqq %ymm2, (%rdi,%ymm1,2), %ymm0
+; GENERIC-NEXT:    vpgatherqq %ymm2, (%rdi,%ymm1,2), %ymm0 # sched: [4:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pgatherqq_ymm:
@@ -3011,7 +3011,7 @@ define <4 x i64> @test_pgatherqq_ymm(<4 x i64> %a0, i8 *%a1, <4 x i64> %a2, <4 x
 ;
 ; BROADWELL-LABEL: test_pgatherqq_ymm:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    vpgatherqq %ymm2, (%rdi,%ymm1,2), %ymm0
+; BROADWELL-NEXT:    vpgatherqq %ymm2, (%rdi,%ymm1,2), %ymm0 # sched: [5:0.50]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_pgatherqq_ymm:

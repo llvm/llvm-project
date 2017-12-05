@@ -324,7 +324,8 @@ static MachineOperand *findSingleRegDef(const MachineOperand *Reg,
       return &DefMO;
   }
 
-  llvm_unreachable("invalid reg");
+  // Ignore implicit defs.
+  return nullptr;
 }
 
 uint64_t SDWASrcOperand::getSrcMods(const SIInstrInfo *TII,

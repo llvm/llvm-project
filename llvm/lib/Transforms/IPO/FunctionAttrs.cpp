@@ -130,17 +130,18 @@ static MemoryAccessKind checkFunctionMemoryAccess(Function &F, bool ThisBody,
           SCCNodes.count(CS.getCalledFunction()))
         continue;
       FunctionModRefBehavior MRB = AAR.getModRefBehavior(CS);
+      ModRefInfo MRI = createModRefInfo(MRB);
 
       // If the call doesn't access memory, we're done.
-      if (!(MRB & MRI_ModRef))
+      if (isNoModRef(MRI))
         continue;
 
       if (!AliasAnalysis::onlyAccessesArgPointees(MRB)) {
         // The call could access any memory. If that includes writes, give up.
-        if (MRB & MRI_Mod)
+        if (isModSet(MRI))
           return MAK_MayWrite;
         // If it reads, note it.
-        if (MRB & MRI_Ref)
+        if (isRefSet(MRI))
           ReadsMemory = true;
         continue;
       }
@@ -162,10 +163,10 @@ static MemoryAccessKind checkFunctionMemoryAccess(Function &F, bool ThisBody,
         if (AAR.pointsToConstantMemory(Loc, /*OrLocal=*/true))
           continue;
 
-        if (MRB & MRI_Mod)
+        if (isModSet(MRI))
           // Writes non-local memory.  Give up.
           return MAK_MayWrite;
-        if (MRB & MRI_Ref)
+        if (isRefSet(MRI))
           // Ok, it reads non-local memory.
           ReadsMemory = true;
       }

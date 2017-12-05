@@ -5174,7 +5174,7 @@ static void reuseTableCompare(
   for (auto ValuePair : Values) {
     Constant *CaseConst = ConstantExpr::getICmp(CmpInst->getPredicate(),
                                                 ValuePair.second, CmpOp1, true);
-    if (!CaseConst || CaseConst == DefaultConst)
+    if (!CaseConst || CaseConst == DefaultConst || isa<UndefValue>(CaseConst))
       return;
     assert((CaseConst == TrueConst || CaseConst == FalseConst) &&
            "Expect true or false as compare result.");

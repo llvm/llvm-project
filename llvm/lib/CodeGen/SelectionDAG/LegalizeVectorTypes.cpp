@@ -3225,19 +3225,6 @@ SDValue DAGTypeLegalizer::WidenVecRes_SELECT_CC(SDNode *N) {
                      N->getOperand(1), InOp1, InOp2, N->getOperand(4));
 }
 
-SDValue DAGTypeLegalizer::WidenVecRes_SETCC(SDNode *N) {
-  assert(N->getValueType(0).isVector() ==
-         N->getOperand(0).getValueType().isVector() &&
-         "Scalar/Vector type mismatch");
-  if (N->getValueType(0).isVector()) return WidenVecRes_VSETCC(N);
-
-  EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
-  SDValue InOp1 = GetWidenedVector(N->getOperand(0));
-  SDValue InOp2 = GetWidenedVector(N->getOperand(1));
-  return DAG.getNode(ISD::SETCC, SDLoc(N), WidenVT,
-                     InOp1, InOp2, N->getOperand(2));
-}
-
 SDValue DAGTypeLegalizer::WidenVecRes_UNDEF(SDNode *N) {
  EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
  return DAG.getUNDEF(WidenVT);
@@ -3268,7 +3255,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N) {
   return DAG.getVectorShuffle(WidenVT, dl, InOp1, InOp2, NewMask);
 }
 
-SDValue DAGTypeLegalizer::WidenVecRes_VSETCC(SDNode *N) {
+SDValue DAGTypeLegalizer::WidenVecRes_SETCC(SDNode *N) {
   assert(N->getValueType(0).isVector() &&
          N->getOperand(0).getValueType().isVector() &&
          "Operands must be vectors");

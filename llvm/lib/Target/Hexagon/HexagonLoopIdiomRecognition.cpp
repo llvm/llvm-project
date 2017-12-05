@@ -1928,7 +1928,8 @@ mayLoopAccessLocation(Value *Ptr, ModRefInfo Access, Loop *L,
 
   for (auto *B : L->blocks())
     for (auto &I : *B)
-      if (Ignored.count(&I) == 0 && (AA.getModRefInfo(&I, StoreLoc) & Access))
+      if (Ignored.count(&I) == 0 &&
+          intersectModRef(AA.getModRefInfo(&I, StoreLoc), Access))
         return true;
 
   return false;

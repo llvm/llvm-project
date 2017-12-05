@@ -596,28 +596,28 @@ define void @test_fcmov() optsize {
 ; ATOM-LABEL: test_fcmov:
 ; ATOM:       # %bb.0:
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    fcmovb %st(1), %st(0)
-; ATOM-NEXT:    fcmovbe %st(1), %st(0)
-; ATOM-NEXT:    fcmove %st(1), %st(0)
-; ATOM-NEXT:    fcmovnb %st(1), %st(0)
-; ATOM-NEXT:    fcmovnbe %st(1), %st(0)
-; ATOM-NEXT:    fcmovne %st(1), %st(0)
-; ATOM-NEXT:    fcmovnu %st(1), %st(0)
-; ATOM-NEXT:    fcmovu %st(1), %st(0)
+; ATOM-NEXT:    fcmovb %st(1), %st(0) # sched: [9:4.50]
+; ATOM-NEXT:    fcmovbe %st(1), %st(0) # sched: [9:4.50]
+; ATOM-NEXT:    fcmove %st(1), %st(0) # sched: [9:4.50]
+; ATOM-NEXT:    fcmovnb %st(1), %st(0) # sched: [9:4.50]
+; ATOM-NEXT:    fcmovnbe %st(1), %st(0) # sched: [9:4.50]
+; ATOM-NEXT:    fcmovne %st(1), %st(0) # sched: [9:4.50]
+; ATOM-NEXT:    fcmovnu %st(1), %st(0) # sched: [9:4.50]
+; ATOM-NEXT:    fcmovu %st(1), %st(0) # sched: [9:4.50]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_fcmov:
 ; SLM:       # %bb.0:
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    fcmovb %st(1), %st(0)
-; SLM-NEXT:    fcmovbe %st(1), %st(0)
-; SLM-NEXT:    fcmove %st(1), %st(0)
-; SLM-NEXT:    fcmovnb %st(1), %st(0)
-; SLM-NEXT:    fcmovnbe %st(1), %st(0)
-; SLM-NEXT:    fcmovne %st(1), %st(0)
-; SLM-NEXT:    fcmovnu %st(1), %st(0)
-; SLM-NEXT:    fcmovu %st(1), %st(0)
+; SLM-NEXT:    fcmovb %st(1), %st(0) # sched: [3:1.00]
+; SLM-NEXT:    fcmovbe %st(1), %st(0) # sched: [3:1.00]
+; SLM-NEXT:    fcmove %st(1), %st(0) # sched: [3:1.00]
+; SLM-NEXT:    fcmovnb %st(1), %st(0) # sched: [3:1.00]
+; SLM-NEXT:    fcmovnbe %st(1), %st(0) # sched: [3:1.00]
+; SLM-NEXT:    fcmovne %st(1), %st(0) # sched: [3:1.00]
+; SLM-NEXT:    fcmovnu %st(1), %st(0) # sched: [3:1.00]
+; SLM-NEXT:    fcmovu %st(1), %st(0) # sched: [3:1.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    retl # sched: [4:1.00]
 ;
@@ -638,70 +638,70 @@ define void @test_fcmov() optsize {
 ; HASWELL-LABEL: test_fcmov:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    fcmovb %st(1), %st(0)
-; HASWELL-NEXT:    fcmovbe %st(1), %st(0)
-; HASWELL-NEXT:    fcmove %st(1), %st(0)
-; HASWELL-NEXT:    fcmovnb %st(1), %st(0)
-; HASWELL-NEXT:    fcmovnbe %st(1), %st(0)
-; HASWELL-NEXT:    fcmovne %st(1), %st(0)
-; HASWELL-NEXT:    fcmovnu %st(1), %st(0)
-; HASWELL-NEXT:    fcmovu %st(1), %st(0)
+; HASWELL-NEXT:    fcmovb %st(1), %st(0) # sched: [3:1.00]
+; HASWELL-NEXT:    fcmovbe %st(1), %st(0) # sched: [3:1.00]
+; HASWELL-NEXT:    fcmove %st(1), %st(0) # sched: [3:1.00]
+; HASWELL-NEXT:    fcmovnb %st(1), %st(0) # sched: [3:1.00]
+; HASWELL-NEXT:    fcmovnbe %st(1), %st(0) # sched: [3:1.00]
+; HASWELL-NEXT:    fcmovne %st(1), %st(0) # sched: [3:1.00]
+; HASWELL-NEXT:    fcmovnu %st(1), %st(0) # sched: [3:1.00]
+; HASWELL-NEXT:    fcmovu %st(1), %st(0) # sched: [3:1.00]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retl # sched: [5:0.50]
 ;
 ; BROADWELL-LABEL: test_fcmov:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    fcmovb %st(1), %st(0)
-; BROADWELL-NEXT:    fcmovbe %st(1), %st(0)
-; BROADWELL-NEXT:    fcmove %st(1), %st(0)
-; BROADWELL-NEXT:    fcmovnb %st(1), %st(0)
-; BROADWELL-NEXT:    fcmovnbe %st(1), %st(0)
-; BROADWELL-NEXT:    fcmovne %st(1), %st(0)
-; BROADWELL-NEXT:    fcmovnu %st(1), %st(0)
-; BROADWELL-NEXT:    fcmovu %st(1), %st(0)
+; BROADWELL-NEXT:    fcmovb %st(1), %st(0) # sched: [3:1.00]
+; BROADWELL-NEXT:    fcmovbe %st(1), %st(0) # sched: [3:1.00]
+; BROADWELL-NEXT:    fcmove %st(1), %st(0) # sched: [3:1.00]
+; BROADWELL-NEXT:    fcmovnb %st(1), %st(0) # sched: [3:1.00]
+; BROADWELL-NEXT:    fcmovnbe %st(1), %st(0) # sched: [3:1.00]
+; BROADWELL-NEXT:    fcmovne %st(1), %st(0) # sched: [3:1.00]
+; BROADWELL-NEXT:    fcmovnu %st(1), %st(0) # sched: [3:1.00]
+; BROADWELL-NEXT:    fcmovu %st(1), %st(0) # sched: [3:1.00]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retl # sched: [6:0.50]
 ;
 ; SKYLAKE-LABEL: test_fcmov:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    fcmovb %st(1), %st(0)
-; SKYLAKE-NEXT:    fcmovbe %st(1), %st(0)
-; SKYLAKE-NEXT:    fcmove %st(1), %st(0)
-; SKYLAKE-NEXT:    fcmovnb %st(1), %st(0)
-; SKYLAKE-NEXT:    fcmovnbe %st(1), %st(0)
-; SKYLAKE-NEXT:    fcmovne %st(1), %st(0)
-; SKYLAKE-NEXT:    fcmovnu %st(1), %st(0)
-; SKYLAKE-NEXT:    fcmovu %st(1), %st(0)
+; SKYLAKE-NEXT:    fcmovb %st(1), %st(0) # sched: [3:1.00]
+; SKYLAKE-NEXT:    fcmovbe %st(1), %st(0) # sched: [3:1.00]
+; SKYLAKE-NEXT:    fcmove %st(1), %st(0) # sched: [3:1.00]
+; SKYLAKE-NEXT:    fcmovnb %st(1), %st(0) # sched: [3:1.00]
+; SKYLAKE-NEXT:    fcmovnbe %st(1), %st(0) # sched: [3:1.00]
+; SKYLAKE-NEXT:    fcmovne %st(1), %st(0) # sched: [3:1.00]
+; SKYLAKE-NEXT:    fcmovnu %st(1), %st(0) # sched: [3:1.00]
+; SKYLAKE-NEXT:    fcmovu %st(1), %st(0) # sched: [3:1.00]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retl # sched: [6:0.50]
 ;
 ; SKX-LABEL: test_fcmov:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    fcmovb %st(1), %st(0)
-; SKX-NEXT:    fcmovbe %st(1), %st(0)
-; SKX-NEXT:    fcmove %st(1), %st(0)
-; SKX-NEXT:    fcmovnb %st(1), %st(0)
-; SKX-NEXT:    fcmovnbe %st(1), %st(0)
-; SKX-NEXT:    fcmovne %st(1), %st(0)
-; SKX-NEXT:    fcmovnu %st(1), %st(0)
-; SKX-NEXT:    fcmovu %st(1), %st(0)
+; SKX-NEXT:    fcmovb %st(1), %st(0) # sched: [3:1.00]
+; SKX-NEXT:    fcmovbe %st(1), %st(0) # sched: [3:1.00]
+; SKX-NEXT:    fcmove %st(1), %st(0) # sched: [3:1.00]
+; SKX-NEXT:    fcmovnb %st(1), %st(0) # sched: [3:1.00]
+; SKX-NEXT:    fcmovnbe %st(1), %st(0) # sched: [3:1.00]
+; SKX-NEXT:    fcmovne %st(1), %st(0) # sched: [3:1.00]
+; SKX-NEXT:    fcmovnu %st(1), %st(0) # sched: [3:1.00]
+; SKX-NEXT:    fcmovu %st(1), %st(0) # sched: [3:1.00]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
 ; BTVER2-LABEL: test_fcmov:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    fcmovb %st(1), %st(0)
-; BTVER2-NEXT:    fcmovbe %st(1), %st(0)
-; BTVER2-NEXT:    fcmove %st(1), %st(0)
-; BTVER2-NEXT:    fcmovnb %st(1), %st(0)
-; BTVER2-NEXT:    fcmovnbe %st(1), %st(0)
-; BTVER2-NEXT:    fcmovne %st(1), %st(0)
-; BTVER2-NEXT:    fcmovnu %st(1), %st(0)
-; BTVER2-NEXT:    fcmovu %st(1), %st(0)
+; BTVER2-NEXT:    fcmovb %st(1), %st(0) # sched: [3:1.00]
+; BTVER2-NEXT:    fcmovbe %st(1), %st(0) # sched: [3:1.00]
+; BTVER2-NEXT:    fcmove %st(1), %st(0) # sched: [3:1.00]
+; BTVER2-NEXT:    fcmovnb %st(1), %st(0) # sched: [3:1.00]
+; BTVER2-NEXT:    fcmovnbe %st(1), %st(0) # sched: [3:1.00]
+; BTVER2-NEXT:    fcmovne %st(1), %st(0) # sched: [3:1.00]
+; BTVER2-NEXT:    fcmovnu %st(1), %st(0) # sched: [3:1.00]
+; BTVER2-NEXT:    fcmovu %st(1), %st(0) # sched: [3:1.00]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -710,7 +710,7 @@ define void @test_fcmov() optsize {
 ; ZNVER1-NEXT:    #APP
 ; ZNVER1-NEXT:    fcmovb %st(1), %st(0) # sched: [100:?]
 ; ZNVER1-NEXT:    fcmovbe %st(1), %st(0) # sched: [100:?]
-; ZNVER1-NEXT:    fcmove %st(1), %st(0)
+; ZNVER1-NEXT:    fcmove %st(1), %st(0) # sched: [100:?]
 ; ZNVER1-NEXT:    fcmovnb %st(1), %st(0) # sched: [100:?]
 ; ZNVER1-NEXT:    fcmovnbe %st(1), %st(0) # sched: [100:?]
 ; ZNVER1-NEXT:    fcmovne %st(1), %st(0) # sched: [100:?]

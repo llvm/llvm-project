@@ -1360,6 +1360,12 @@ public:
   /// getIRStackGuard returns nullptr.
   virtual Value *getSDagStackGuard(const Module &M) const;
 
+  /// If this function returns true, stack protection checks should XOR the
+  /// frame pointer (or whichever pointer is used to address locals) into the
+  /// stack guard value before checking it. getIRStackGuard must return nullptr
+  /// if this returns true.
+  virtual bool useStackGuardXorFP() const { return false; }
+
   /// If the target has a standard stack protection check function that
   /// performs validation and error handling, returns the function. Otherwise,
   /// returns nullptr. Must be previously inserted by insertSSPDeclarations.
@@ -3485,6 +3491,11 @@ public:
   /// LOAD_STACK_GUARD node when it is lowering Intrinsic::stackprotector.
   virtual bool useLoadStackGuardNode() const {
     return false;
+  }
+
+  virtual SDValue emitStackGuardXorFP(SelectionDAG &DAG, SDValue Val,
+                                      const SDLoc &DL) const {
+    llvm_unreachable("not implemented for this target");
   }
 
   /// Lower TLS global address SDNode for target independent emulated TLS model.

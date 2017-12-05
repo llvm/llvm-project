@@ -500,6 +500,19 @@ namespace {
     bool isAndLoadExtLoad(ConstantSDNode *AndC, LoadSDNode *LoadN,
                           EVT LoadResultTy, EVT &ExtVT);
 
+    /// Helper function to calculate whether the given Load can have its
+    /// width reduced to ExtVT.
+    bool isLegalNarrowLoad(LoadSDNode *LoadN, ISD::LoadExtType ExtType,
+                           EVT &ExtVT, unsigned ShAmt = 0);
+
+    /// Used by BackwardsPropagateMask to find suitable loads.
+    bool SearchForAndLoads(SDNode *N, SmallPtrSetImpl<LoadSDNode*> &Loads,
+                           ConstantSDNode *Mask, SDNode *&UncombinedNode);
+
+    /// Attempt to propagate a given AND node back to load leaves so that they
+    /// can be combined into narrow loads.
+    bool BackwardsPropagateMask(SDNode *N, SelectionDAG &DAG);
+
     /// Helper function for MergeConsecutiveStores which merges the
     /// component store chains.
     SDValue getMergeStoreChains(SmallVectorImpl<MemOpLink> &StoreNodes,
@@ -3726,6 +3739,161 @@ bool DAGCombiner::isAndLoadExtLoad(ConstantSDNode *AndC, LoadSDNode *LoadN,
   return true;
 }
 
+bool DAGCombiner::isLegalNarrowLoad(LoadSDNode *LoadN, ISD::LoadExtType ExtType,
+                                    EVT &ExtVT, unsigned ShAmt) {
+  // Don't transform one with multiple uses, this would require adding a new
+  // load.
+  if (!SDValue(LoadN, 0).hasOneUse())
+    return false;
+
+  if (LegalOperations &&
+      !TLI.isLoadExtLegal(ExtType, LoadN->getValueType(0), ExtVT))
+    return false;
+
+  // Do not generate loads of non-round integer types since these can
+  // be expensive (and would be wrong if the type is not byte sized).
+  if (!ExtVT.isRound())
+    return false;
+
+  // Don't change the width of a volatile load.
+  if (LoadN->isVolatile())
+    return false;
+
+  // Verify that we are actually reducing a load width here.
+  if (LoadN->getMemoryVT().getSizeInBits() < ExtVT.getSizeInBits())
+    return false;
+
+  // For the transform to be legal, the load must produce only two values
+  // (the value loaded and the chain).  Don't transform a pre-increment
+  // load, for example, which produces an extra value.  Otherwise the
+  // transformation is not equivalent, and the downstream logic to replace
+  // uses gets things wrong.
+  if (LoadN->getNumValues() > 2)
+    return false;
+
+  // If the load that we're shrinking is an extload and we're not just
+  // discarding the extension we can't simply shrink the load. Bail.
+  // TODO: It would be possible to merge the extensions in some cases.
+  if (LoadN->getExtensionType() != ISD::NON_EXTLOAD &&
+      LoadN->getMemoryVT().getSizeInBits() < ExtVT.getSizeInBits() + ShAmt)
+    return false;
+
+  if (!TLI.shouldReduceLoadWidth(LoadN, ExtType, ExtVT))
+    return false;
+
+  // It's not possible to generate a constant of extended or untyped type.
+  EVT PtrType = LoadN->getOperand(1).getValueType();
+  if (PtrType == MVT::Untyped || PtrType.isExtended())
+    return false;
+
+  return true;
+}
+
+bool DAGCombiner::SearchForAndLoads(SDNode *N,
+                                    SmallPtrSetImpl<LoadSDNode*> &Loads,
+                                    ConstantSDNode *Mask,
+                                    SDNode *&NodeToMask) {
+  // Recursively search for the operands, looking for loads which can be
+  // narrowed.
+  for (unsigned i = 0, e = N->getNumOperands(); i < e; ++i) {
+    SDValue Op = N->getOperand(i);
+
+    // Constants should already be fixed up...
+    if (isa<ConstantSDNode>(Op))
+      continue;
+
+    if (!Op.hasOneUse() || Op.getValueType().isVector())
+      return false;
+
+    switch(Op.getOpcode()) {
+    case ISD::LOAD: {
+      auto *Load = cast<LoadSDNode>(Op);
+      EVT ExtVT;
+      if (isAndLoadExtLoad(Mask, Load, Load->getValueType(0), ExtVT) &&
+          isLegalNarrowLoad(Load, ISD::ZEXTLOAD, ExtVT)) {
+        Loads.insert(Load);
+        continue;
+      }
+      return false;
+    }
+    case ISD::ZERO_EXTEND:
+    case ISD::ANY_EXTEND:
+    case ISD::AssertZext: {
+      unsigned ActiveBits = Mask->getAPIntValue().countTrailingOnes();
+      EVT ExtVT = EVT::getIntegerVT(*DAG.getContext(), ActiveBits);
+      EVT VT = Op.getOpcode() == ISD::AssertZext ?
+        cast<VTSDNode>(Op.getOperand(1))->getVT() :
+        Op.getOperand(0).getValueType();
+
+      // We can accept extending nodes if the mask is wider or an equal
+      // width to the original type.
+      if (ExtVT.bitsGE(VT))
+        continue;
+      break;
+    }
+    case ISD::OR:
+    case ISD::XOR:
+    case ISD::AND:
+      if (!SearchForAndLoads(Op.getNode(), Loads, Mask, NodeToMask))
+        return false;
+      continue;
+    }
+
+    // Allow one node which will masked along with any loads found.
+    if (NodeToMask)
+      return false;
+    NodeToMask = Op.getNode();
+  }
+  return true;
+}
+
+bool DAGCombiner::BackwardsPropagateMask(SDNode *N, SelectionDAG &DAG) {
+  auto *Mask = dyn_cast<ConstantSDNode>(N->getOperand(1));
+  if (!Mask)
+    return false;
+
+  if (!Mask->getAPIntValue().isMask())
+    return false;
+
+  // No need to do anything if the and directly uses a load.
+  if (isa<LoadSDNode>(N->getOperand(0)))
+    return false;
+
+  SmallPtrSet<LoadSDNode*, 8> Loads;
+  SDNode *FixupNode = nullptr;
+  if (SearchForAndLoads(N, Loads, Mask, FixupNode)) {
+    if (Loads.size() == 0)
+      return false;
+
+    SDValue MaskOp = N->getOperand(1);
+
+    // If it exists, fixup the single node we allow in the tree that needs
+    // masking.
+    if (FixupNode) {
+      SDValue And = DAG.getNode(ISD::AND, SDLoc(FixupNode),
+                                FixupNode->getValueType(0),
+                                SDValue(FixupNode, 0), MaskOp);
+      DAG.ReplaceAllUsesOfValueWith(SDValue(FixupNode, 0), And);
+      DAG.UpdateNodeOperands(And.getNode(), SDValue(FixupNode, 0),
+                             MaskOp);
+    }
+
+    for (auto *Load : Loads) {
+      SDValue And = DAG.getNode(ISD::AND, SDLoc(Load), Load->getValueType(0),
+                                SDValue(Load, 0), MaskOp);
+      DAG.ReplaceAllUsesOfValueWith(SDValue(Load, 0), And);
+      DAG.UpdateNodeOperands(And.getNode(), SDValue(Load, 0), MaskOp);
+      SDValue NewLoad = ReduceLoadWidth(And.getNode());
+      assert(NewLoad &&
+             "Shouldn't be masking the load if it can't be narrowed");
+      CombineTo(Load, NewLoad, NewLoad.getValue(1));
+    }
+    DAG.ReplaceAllUsesWith(N, N->getOperand(0).getNode());
+    return true;
+  }
+  return false;
+}
+
 SDValue DAGCombiner::visitAND(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -3923,6 +4091,16 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
 
       AddToWorklist(N);
       CombineTo(LN0, Res, Res.getValue(1));
+      return SDValue(N, 0);
+    }
+  }
+
+  if (Level >= AfterLegalizeTypes) {
+    // Attempt to propagate the AND back up to the leaves which, if they're
+    // loads, can be combined to narrow loads and the AND node can be removed.
+    // Perform after legalization so that extend nodes will already be
+    // combined into the loads.
+    if (BackwardsPropagateMask(N, DAG)) {
       return SDValue(N, 0);
     }
   }
@@ -8030,20 +8208,12 @@ SDValue DAGCombiner::ReduceLoadWidth(SDNode *N) {
     ExtType = ISD::ZEXTLOAD;
     ExtVT = EVT::getIntegerVT(*DAG.getContext(), ActiveBits);
   }
-  if (LegalOperations && !TLI.isLoadExtLegal(ExtType, VT, ExtVT))
-    return SDValue();
-
-  unsigned EVTBits = ExtVT.getSizeInBits();
-
-  // Do not generate loads of non-round integer types since these can
-  // be expensive (and would be wrong if the type is not byte sized).
-  if (!ExtVT.isRound())
-    return SDValue();
 
   unsigned ShAmt = 0;
   if (N0.getOpcode() == ISD::SRL && N0.hasOneUse()) {
     if (ConstantSDNode *N01 = dyn_cast<ConstantSDNode>(N0.getOperand(1))) {
       ShAmt = N01->getZExtValue();
+      unsigned EVTBits = ExtVT.getSizeInBits();
       // Is the shift amount a multiple of size of VT?
       if ((ShAmt & (EVTBits-1)) == 0) {
         N0 = N0.getOperand(0);
@@ -8080,42 +8250,12 @@ SDValue DAGCombiner::ReduceLoadWidth(SDNode *N) {
     }
   }
 
-  // If we haven't found a load, we can't narrow it.  Don't transform one with
-  // multiple uses, this would require adding a new load.
-  if (!isa<LoadSDNode>(N0) || !N0.hasOneUse())
+  // If we haven't found a load, we can't narrow it.
+  if (!isa<LoadSDNode>(N0))
     return SDValue();
 
-  // Don't change the width of a volatile load.
   LoadSDNode *LN0 = cast<LoadSDNode>(N0);
-  if (LN0->isVolatile())
-    return SDValue();
-
-  // Verify that we are actually reducing a load width here.
-  if (LN0->getMemoryVT().getSizeInBits() < EVTBits)
-    return SDValue();
-
-  // For the transform to be legal, the load must produce only two values
-  // (the value loaded and the chain).  Don't transform a pre-increment
-  // load, for example, which produces an extra value.  Otherwise the
-  // transformation is not equivalent, and the downstream logic to replace
-  // uses gets things wrong.
-  if (LN0->getNumValues() > 2)
-    return SDValue();
-
-  // If the load that we're shrinking is an extload and we're not just
-  // discarding the extension we can't simply shrink the load. Bail.
-  // TODO: It would be possible to merge the extensions in some cases.
-  if (LN0->getExtensionType() != ISD::NON_EXTLOAD &&
-      LN0->getMemoryVT().getSizeInBits() < ExtVT.getSizeInBits() + ShAmt)
-    return SDValue();
-
-  if (!TLI.shouldReduceLoadWidth(LN0, ExtType, ExtVT))
-    return SDValue();
-
-  EVT PtrType = N0.getOperand(1).getValueType();
-
-  if (PtrType == MVT::Untyped || PtrType.isExtended())
-    // It's not possible to generate a constant of extended or untyped type.
+  if (!isLegalNarrowLoad(LN0, ExtType, ExtVT, ShAmt))
     return SDValue();
 
   // For big endian targets, we need to adjust the offset to the pointer to
@@ -8126,6 +8266,7 @@ SDValue DAGCombiner::ReduceLoadWidth(SDNode *N) {
     ShAmt = LVTStoreBits - EVTStoreBits - ShAmt;
   }
 
+  EVT PtrType = N0.getOperand(1).getValueType();
   uint64_t PtrOff = ShAmt / 8;
   unsigned NewAlign = MinAlign(LN0->getAlignment(), PtrOff);
   SDLoc DL(LN0);
@@ -8604,6 +8745,13 @@ SDValue DAGCombiner::CombineConsecutiveLoads(SDNode *N, EVT VT) {
 
   LoadSDNode *LD1 = dyn_cast<LoadSDNode>(getBuildPairElt(N, 0));
   LoadSDNode *LD2 = dyn_cast<LoadSDNode>(getBuildPairElt(N, 1));
+
+  // A BUILD_PAIR is always having the least significant part in elt 0 and the
+  // most significant part in elt 1. So when combining into one large load, we
+  // need to consider the endianness.
+  if (DAG.getDataLayout().isBigEndian())
+    std::swap(LD1, LD2);
+
   if (!LD1 || !LD2 || !ISD::isNON_EXTLoad(LD1) || !LD1->hasOneUse() ||
       LD1->getAddressSpace() != LD2->getAddressSpace())
     return SDValue();

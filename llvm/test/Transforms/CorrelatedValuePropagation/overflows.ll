@@ -13,8 +13,7 @@ declare void @llvm.trap()
 
 define i32 @signed_add(i32 %x, i32 %y) {
 ; CHECK-LABEL: @signed_add(
-; CHECK: @llvm.ssub.with.overflow.i32
-; CHECK: @llvm.ssub.with.overflow.i32
+; CHECK-NOT: @llvm.ssub.with.overflow.i32
 ; CHECK: @llvm.sadd.with.overflow.i32
 entry:
   %cmp = icmp sgt i32 %y, 0
@@ -61,7 +60,7 @@ cond.end:                                         ; preds = %cond.false, %cont, 
 
 define i32 @unsigned_add(i32 %x, i32 %y) {
 ; CHECK-LABEL: @unsigned_add(
-; CHECK: @llvm.usub.with.overflow.i32
+; CHECK-NOT: @llvm.usub.with.overflow.i32
 ; CHECK: @llvm.uadd.with.overflow.i32
 entry:
   %0 = tail call { i32, i1 } @llvm.usub.with.overflow.i32(i32 -1, i32 %y)
@@ -203,7 +202,7 @@ cond.end:                                         ; preds = %cond.false, %entry
 
 define i32 @signed_sub_r1(i32 %x) {
 ; CHECK-LABEL: @signed_sub_r1(
-; CHECK: @llvm.ssub.with.overflow.i32
+; CHECK-NOT: @llvm.ssub.with.overflow.i32
 entry:
   %cmp = icmp eq i32 %x, -2147483648
   br i1 %cmp, label %cond.end, label %cond.false
@@ -225,7 +224,7 @@ cond.end:                                         ; preds = %cond.false, %entry
 
 define i32 @unsigned_sub_r1(i32 %x) {
 ; CHECK-LABEL: @unsigned_sub_r1(
-; CHECK: @llvm.usub.with.overflow.i32
+; CHECK-NOT: @llvm.usub.with.overflow.i32
 entry:
   %cmp = icmp eq i32 %x, 0
   br i1 %cmp, label %cond.end, label %cond.false
@@ -269,7 +268,7 @@ cond.end:                                         ; preds = %cond.false, %entry
 
 define i32 @signed_sub_rn1(i32 %x) {
 ; CHECK-LABEL: @signed_sub_rn1(
-; CHECK: @llvm.ssub.with.overflow.i32
+; CHECK-NOT: @llvm.ssub.with.overflow.i32
 entry:
   %cmp = icmp eq i32 %x, 2147483647
   br i1 %cmp, label %cond.end, label %cond.false
@@ -293,7 +292,7 @@ declare i32 @bar(i32)
 
 define void @unsigned_loop(i32 %i) {
 ; CHECK-LABEL: @unsigned_loop(
-; CHECK: @llvm.usub.with.overflow.i32
+; CHECK-NOT: @llvm.usub.with.overflow.i32
 entry:
   %cmp3 = icmp eq i32 %i, 0
   br i1 %cmp3, label %while.end, label %while.body.preheader
