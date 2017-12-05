@@ -20,6 +20,7 @@ add_clang_unittest(FormatTests
   )
 
 target_link_libraries(FormatTests
+  PRIVATE
   clangBasic
   clangFormat
   clangFrontend

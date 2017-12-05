@@ -13,6 +13,7 @@ add_clang_executable(diagtool
 )
 
 target_link_libraries(diagtool
+  PRIVATE
   clangBasic
   clangFrontend
   )

@@ -10,6 +10,7 @@ add_clang_executable(clang-func-mapping
   )
 
 target_link_libraries(clang-func-mapping
+  PRIVATE
   clangAST
   clangBasic
   clangCrossTU
