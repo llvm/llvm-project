@@ -18,17 +18,15 @@ class ExecTestCase(TestBase):
 
     @skipUnlessDarwin
     @expectedFailureAll(archs=['i386'], bugnumber="rdar://28656532")
-    @expectedFailureAll(oslist=['macosx'], bugnumber="rdar://29291115")
     @expectedFailureAll(oslist=["ios", "tvos", "watchos", "bridgeos"], bugnumber="rdar://problem/34559552") # this exec test has problems on ios systems
     def test_hitting_exec (self):
         self.do_test(False)
 
     @skipUnlessDarwin
-    @expectedFailureAll(oslist=['macosx'], bugnumber="rdar://29291115")
     @expectedFailureAll(archs=['i386'], bugnumber="rdar://28656532")
     @expectedFailureAll(oslist=["ios", "tvos", "watchos", "bridgeos"], bugnumber="rdar://problem/34559552") # this exec test has problems on ios systems
     def test_skipping_exec (self):
-        self.do_test(True)
+        self.do_test(False)
 
     def do_test(self, skip_exec):
         if self.getArchitecture() == 'x86_64':
@@ -62,7 +60,8 @@ class ExecTestCase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         if skip_exec:
-            self.debugger.HandleCommand("settings set target.process.stop-on-exec false")
+            self.dbg.HandleCommand("settings set target.process.stop-on-exec false")
+
             def cleanup():
                 self.runCmd("settings set target.process.stop-on-exec false",
                             check=False)
