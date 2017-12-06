@@ -46,3 +46,10 @@ define i8 @test4(<8 x i8> %V) {
 ; CHECK-NEXT: %[[extract:.*]] = extractelement <8 x i8> %[[add]], i32 6
 ; CHECK-NEXT: ret i8 %[[extract]]
 }
+
+define i32 @test5(<4 x i32> %V) {
+  %extract = extractelement <4 x i32> %V, i32 undef
+  ret i32 %extract
+}
+; CHECK-LABEL: @test5(
+; CHECK: ret i32 undef

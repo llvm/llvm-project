@@ -398,7 +398,6 @@ Error WasmObjectFile::parseLinkingSection(const uint8_t *Ptr,
       }
       break;
     }
-    case wasm::WASM_STACK_POINTER:
     default:
       Ptr += Size;
       break;

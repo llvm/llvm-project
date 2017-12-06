@@ -423,7 +423,7 @@ define <2 x double> @test_cmppd(<2 x double> %a0, <2 x double> %a1, <2 x double>
 ; SKX-NEXT:    vcmpeqpd %xmm1, %xmm0, %k0 # sched: [3:1.00]
 ; SKX-NEXT:    vcmpeqpd (%rdi), %xmm0, %k1 # sched: [9:1.00]
 ; SKX-NEXT:    korw %k1, %k0, %k0 # sched: [1:1.00]
-; SKX-NEXT:    vpmovm2q %k0, %xmm0
+; SKX-NEXT:    vpmovm2q %k0, %xmm0 # sched: [1:0.25]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_cmppd:
@@ -5049,7 +5049,7 @@ define <16 x i8> @test_pcmpeqb(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; SKX-NEXT:    vpcmpeqb %xmm1, %xmm0, %k0 # sched: [3:1.00]
 ; SKX-NEXT:    vpcmpeqb (%rdi), %xmm0, %k1 # sched: [9:1.00]
 ; SKX-NEXT:    korw %k1, %k0, %k0 # sched: [1:1.00]
-; SKX-NEXT:    vpmovm2b %k0, %xmm0
+; SKX-NEXT:    vpmovm2b %k0, %xmm0 # sched: [1:0.25]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_pcmpeqb:
@@ -5130,7 +5130,7 @@ define <4 x i32> @test_pcmpeqd(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ; SKX-NEXT:    vpcmpeqd %xmm1, %xmm0, %k0 # sched: [3:1.00]
 ; SKX-NEXT:    vpcmpeqd (%rdi), %xmm0, %k1 # sched: [9:1.00]
 ; SKX-NEXT:    korw %k1, %k0, %k0 # sched: [1:1.00]
-; SKX-NEXT:    vpmovm2d %k0, %xmm0
+; SKX-NEXT:    vpmovm2d %k0, %xmm0 # sched: [1:0.25]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_pcmpeqd:
@@ -5211,7 +5211,7 @@ define <8 x i16> @test_pcmpeqw(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ; SKX-NEXT:    vpcmpeqw %xmm1, %xmm0, %k0 # sched: [3:1.00]
 ; SKX-NEXT:    vpcmpeqw (%rdi), %xmm0, %k1 # sched: [9:1.00]
 ; SKX-NEXT:    korb %k1, %k0, %k0 # sched: [1:1.00]
-; SKX-NEXT:    vpmovm2w %k0, %xmm0
+; SKX-NEXT:    vpmovm2w %k0, %xmm0 # sched: [1:0.25]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_pcmpeqw:
@@ -5293,7 +5293,7 @@ define <16 x i8> @test_pcmpgtb(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; SKX-NEXT:    vpcmpgtb %xmm1, %xmm0, %k0 # sched: [3:1.00]
 ; SKX-NEXT:    vpcmpgtb (%rdi), %xmm0, %k1 # sched: [9:1.00]
 ; SKX-NEXT:    korw %k1, %k0, %k0 # sched: [1:1.00]
-; SKX-NEXT:    vpmovm2b %k0, %xmm0
+; SKX-NEXT:    vpmovm2b %k0, %xmm0 # sched: [1:0.25]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_pcmpgtb:
@@ -5375,7 +5375,7 @@ define <4 x i32> @test_pcmpgtd(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ; SKX-NEXT:    vpcmpgtd %xmm1, %xmm0, %k0 # sched: [3:1.00]
 ; SKX-NEXT:    vpcmpeqd (%rdi), %xmm0, %k1 # sched: [9:1.00]
 ; SKX-NEXT:    korw %k1, %k0, %k0 # sched: [1:1.00]
-; SKX-NEXT:    vpmovm2d %k0, %xmm0
+; SKX-NEXT:    vpmovm2d %k0, %xmm0 # sched: [1:0.25]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_pcmpgtd:
@@ -5457,7 +5457,7 @@ define <8 x i16> @test_pcmpgtw(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ; SKX-NEXT:    vpcmpgtw %xmm1, %xmm0, %k0 # sched: [3:1.00]
 ; SKX-NEXT:    vpcmpgtw (%rdi), %xmm0, %k1 # sched: [9:1.00]
 ; SKX-NEXT:    korb %k1, %k0, %k0 # sched: [1:1.00]
-; SKX-NEXT:    vpmovm2w %k0, %xmm0
+; SKX-NEXT:    vpmovm2w %k0, %xmm0 # sched: [1:0.25]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_pcmpgtw:

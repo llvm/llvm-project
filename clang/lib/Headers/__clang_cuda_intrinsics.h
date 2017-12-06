@@ -135,6 +135,24 @@ __MAKE_SHUFFLES(__shfl_xor, __nvvm_shfl_bfly_i32, __nvvm_shfl_bfly_f32, 0x1f);
     return static_cast<unsigned long long>(::__FnName(                         \
         __mask, static_cast<unsigned long long>(__val), __offset, __width));   \
   }                                                                            \
+  inline __device__ long __FnName(unsigned int __mask, long __val,             \
+                                  int __offset, int __width = warpSize) {      \
+    _Static_assert(sizeof(long) == sizeof(long long) ||                        \
+                   sizeof(long) == sizeof(int));                               \
+    if (sizeof(long) == sizeof(long long)) {                                   \
+      return static_cast<long>(::__FnName(                                     \
+          __mask, static_cast<long long>(__val), __offset, __width));          \
+    } else if (sizeof(long) == sizeof(int)) {                                  \
+      return static_cast<long>(                                                \
+          ::__FnName(__mask, static_cast<int>(__val), __offset, __width));     \
+    }                                                                          \
+  }                                                                            \
+  inline __device__ unsigned long __FnName(unsigned int __mask,                \
+                                           unsigned long __val, int __offset,  \
+                                           int __width = warpSize) {           \
+    return static_cast<unsigned long>(                                         \
+        ::__FnName(__mask, static_cast<long>(__val), __offset, __width));      \
+  }                                                                            \
   inline __device__ double __FnName(unsigned int __mask, double __val,         \
                                     int __offset, int __width = warpSize) {    \
     long long __tmp;                                                           \
@@ -187,6 +205,10 @@ inline __device__ unsigned int __ballot_sync(unsigned int mask, int pred) {
 }
 
 inline __device__ unsigned int __activemask() { return __nvvm_vote_ballot(1); }
+
+inline __device__ unsigned int __fns(unsigned mask, unsigned base, int offset) {
+  return __nvvm_fns(mask, base, offset);
+}
 
 #endif // !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 300
 

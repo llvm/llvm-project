@@ -7,7 +7,7 @@
 # 
 ##===----------------------------------------------------------------------===##
 #
-# Build offloading library libomptarget.so.
+# Build offloading library and related plugins.
 #
 ##===----------------------------------------------------------------------===##
 
@@ -44,8 +44,6 @@ set (LIBOMPTARGET_SYSTEM_TARGETS "")
 set(LIBOMPTARGET_BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(LIBOMPTARGET_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
-libomptarget_say("Building offloading runtime library libomptarget.")
-
 # If building this library in debug mode, we define a macro to enable
 # dumping progress messages at runtime.
 string( TOLOWER "${CMAKE_BUILD_TYPE}" LIBOMPTARGET_CMAKE_BUILD_TYPE)
@@ -55,20 +53,10 @@ if(LIBOMPTARGET_CMAKE_BUILD_TYPE MATCHES debug)
   add_definitions(-O0)
 endif()
 
-set(src_files
-  src/omptarget.cpp
-)
+include_directories(include)
 
-include_directories(src/)
-
-# Build libomptarget library with libdl dependency.
-add_library(omptarget SHARED ${src_files})
-target_link_libraries(omptarget
-  ${CMAKE_DL_LIBS}
-  "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports")
-
-# Install libomptarget under the lib destination folder.
-install(TARGETS omptarget LIBRARY DESTINATION lib${OPENMP_LIBDIR_SUFFIX})
+# Build target agnostic offloading library.
+add_subdirectory(src)
 
 # Retrieve the path to the resulting library so that it can be used for 
 # testing.

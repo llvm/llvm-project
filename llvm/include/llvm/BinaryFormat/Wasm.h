@@ -182,7 +182,6 @@ enum class ValType {
 
 // Linking metadata kinds.
 enum : unsigned {
-  WASM_STACK_POINTER  = 0x1,
   WASM_SYMBOL_INFO    = 0x2,
   WASM_DATA_SIZE      = 0x3,
   WASM_DATA_ALIGNMENT = 0x4,

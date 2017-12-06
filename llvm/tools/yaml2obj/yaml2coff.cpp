@@ -234,6 +234,9 @@ static bool layoutCOFF(COFFParser &CP) {
     } else if (S.Name == ".debug$T") {
       if (S.SectionData.binary_size() == 0)
         S.SectionData = CodeViewYAML::toDebugT(S.DebugT, CP.Allocator);
+    } else if (S.Name == ".debug$H") {
+      if (S.DebugH.hasValue() && S.SectionData.binary_size() == 0)
+        S.SectionData = CodeViewYAML::toDebugH(*S.DebugH, CP.Allocator);
     }
 
     if (S.SectionData.binary_size() > 0) {
