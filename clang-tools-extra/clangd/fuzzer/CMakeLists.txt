@@ -12,6 +12,7 @@ add_clang_executable(clangd-fuzzer
   )
 
 target_link_libraries(clangd-fuzzer
+  PRIVATE
   clangBasic
   clangDaemon
   clangFormat

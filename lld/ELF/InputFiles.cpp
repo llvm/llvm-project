@@ -209,8 +209,8 @@ typename ELFT::SymRange ELFFileBase<ELFT>::getGlobalELFSyms() {
 
 template <class ELFT>
 uint32_t ELFFileBase<ELFT>::getSectionIndex(const Elf_Sym &Sym) const {
-  return check(getObj().getSectionIndex(&Sym, ELFSyms, SymtabSHNDX),
-               toString(this));
+  return checkLazy(getObj().getSectionIndex(&Sym, ELFSyms, SymtabSHNDX),
+                   [=]() { return toString(this); });
 }
 
 template <class ELFT>
@@ -253,13 +253,15 @@ StringRef ObjFile<ELFT>::getShtGroupSignature(ArrayRef<Elf_Shdr> Sections,
   // Group signatures are stored as symbol names in object files.
   // sh_info contains a symbol index, so we fetch a symbol and read its name.
   if (this->ELFSyms.empty())
-    this->initSymtab(
-        Sections,
-        check(object::getSection<ELFT>(Sections, Sec.sh_link), toString(this)));
+    this->initSymtab(Sections,
+                     checkLazy(object::getSection<ELFT>(Sections, Sec.sh_link),
+                               [=]() { return toString(this); }));
 
-  const Elf_Sym *Sym = check(
-      object::getSymbol<ELFT>(this->ELFSyms, Sec.sh_info), toString(this));
-  StringRef Signature = check(Sym->getName(this->StringTable), toString(this));
+  const Elf_Sym *Sym =
+      checkLazy(object::getSymbol<ELFT>(this->ELFSyms, Sec.sh_info),
+                [=]() { return toString(this); });
+  StringRef Signature = checkLazy(Sym->getName(this->StringTable),
+                                  [=]() { return toString(this); });
 
   // As a special case, if a symbol is a section symbol and has no name,
   // we use a section name as a signature.
@@ -277,8 +279,9 @@ template <class ELFT>
 ArrayRef<typename ObjFile<ELFT>::Elf_Word>
 ObjFile<ELFT>::getShtGroupEntries(const Elf_Shdr &Sec) {
   const ELFFile<ELFT> &Obj = this->getObj();
-  ArrayRef<Elf_Word> Entries = check(
-      Obj.template getSectionContentsAsArray<Elf_Word>(&Sec), toString(this));
+  ArrayRef<Elf_Word> Entries =
+      checkLazy(Obj.template getSectionContentsAsArray<Elf_Word>(&Sec),
+                [=]() { return toString(this); });
   if (Entries.empty() || Entries[0] != GRP_COMDAT)
     fatal(toString(this) + ": unsupported SHT_GROUP format");
   return Entries.slice(1);
@@ -520,13 +523,14 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
 
     size_t NumRelocations;
     if (Sec.sh_type == SHT_RELA) {
-      ArrayRef<Elf_Rela> Rels =
-          check(this->getObj().relas(&Sec), toString(this));
+      ArrayRef<Elf_Rela> Rels = checkLazy(this->getObj().relas(&Sec),
+                                          [=]() { return toString(this); });
       Target->FirstRelocation = Rels.begin();
       NumRelocations = Rels.size();
       Target->AreRelocsRela = true;
     } else {
-      ArrayRef<Elf_Rel> Rels = check(this->getObj().rels(&Sec), toString(this));
+      ArrayRef<Elf_Rel> Rels = checkLazy(this->getObj().rels(&Sec),
+                                         [=]() { return toString(this); });
       Target->FirstRelocation = Rels.begin();
       NumRelocations = Rels.size();
       Target->AreRelocsRela = false;
@@ -595,8 +599,8 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
 
 template <class ELFT>
 StringRef ObjFile<ELFT>::getSectionName(const Elf_Shdr &Sec) {
-  return check(this->getObj().getSectionName(&Sec, SectionStringTable),
-               toString(this));
+  return checkLazy(this->getObj().getSectionName(&Sec, SectionStringTable),
+                   [=]() { return toString(this); });
 }
 
 template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
@@ -640,7 +644,8 @@ template <class ELFT> Symbol *ObjFile<ELFT>::createSymbol(const Elf_Sym *Sym) {
     return make<Defined>(this, Name, Binding, StOther, Type, Value, Size, Sec);
   }
 
-  StringRef Name = check(Sym->getName(this->StringTable), toString(this));
+  StringRef Name = checkLazy(Sym->getName(this->StringTable),
+                             [=]() { return toString(this); });
 
   switch (Sym->st_shndx) {
   case SHN_UNDEF:
