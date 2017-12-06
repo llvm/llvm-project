@@ -108,10 +108,6 @@ void WebAssemblyTargetAsmStreamer::emitGlobal(
   }
 }
 
-void WebAssemblyTargetAsmStreamer::emitStackPointer(MCSymbol *Symbol) {
-  OS << "\t.stack_pointer\t" << Symbol->getName() << '\n';
-}
-
 void WebAssemblyTargetAsmStreamer::emitEndFunc() { OS << "\t.endfunc\n"; }
 
 void WebAssemblyTargetAsmStreamer::emitIndirectFunctionType(
@@ -155,11 +151,6 @@ void WebAssemblyTargetELFStreamer::emitLocal(ArrayRef<MVT> Types) {
 void WebAssemblyTargetELFStreamer::emitGlobal(
     ArrayRef<wasm::Global> Globals) {
   llvm_unreachable(".globalvar encoding not yet implemented");
-}
-
-void WebAssemblyTargetELFStreamer::emitStackPointer(
-    MCSymbol *Symbol) {
-  llvm_unreachable(".stack_pointer encoding not yet implemented");
 }
 
 void WebAssemblyTargetELFStreamer::emitEndFunc() {
@@ -235,14 +226,6 @@ void WebAssemblyTargetWasmStreamer::emitGlobal(
       Streamer.EmitIntValue(0, 1); // nul-terminate
     }
   }
-  Streamer.PopSection();
-}
-
-void WebAssemblyTargetWasmStreamer::emitStackPointer(MCSymbol *Symbol) {
-  Streamer.PushSection();
-  Streamer.SwitchSection(Streamer.getContext().getWasmSection(
-      ".stack_pointer", SectionKind::getMetadata()));
-  Streamer.EmitBytes(Symbol->getName());
   Streamer.PopSection();
 }
 

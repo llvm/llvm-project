@@ -532,9 +532,6 @@ class VectorType;
     bool canCombineStoreAndExtract(Type *VectorTy, Value *Idx,
                                    unsigned &Cost) const override;
 
-    // Disable currently because of invalid merge.
-    bool mergeStoresAfterLegalization() const override { return false; }
-
     bool canMergeStoresTo(unsigned AddressSpace, EVT MemVT,
                           const SelectionDAG &DAG) const override {
       // Do not merge to larger than i32.

@@ -1860,7 +1860,8 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
         if (MarkNoUnwind)
           CI->setDoesNotThrow();
 
-        if (ForwardVarArgsTo && CI->getCalledFunction() == ForwardVarArgsTo) {
+        if (ForwardVarArgsTo && !VarArgsToForward.empty() &&
+            CI->getCalledFunction() == ForwardVarArgsTo) {
           SmallVector<Value*, 6> Params(CI->arg_operands());
           Params.append(VarArgsToForward.begin(), VarArgsToForward.end());
           CallInst *Call = CallInst::Create(CI->getCalledFunction(), Params, "", CI);

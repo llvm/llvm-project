@@ -348,7 +348,7 @@ define <4 x float> @test_cmpps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ; SKX-NEXT:    vcmpeqps %xmm1, %xmm0, %k0 # sched: [3:1.00]
 ; SKX-NEXT:    vcmpeqps (%rdi), %xmm0, %k1 # sched: [9:1.00]
 ; SKX-NEXT:    korw %k1, %k0, %k0 # sched: [1:1.00]
-; SKX-NEXT:    vpmovm2d %k0, %xmm0
+; SKX-NEXT:    vpmovm2d %k0, %xmm0 # sched: [1:0.25]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_cmpps:

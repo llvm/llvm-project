@@ -2839,21 +2839,16 @@ int X86TTIImpl::getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
                                            ArrayRef<unsigned> Indices,
                                            unsigned Alignment,
                                            unsigned AddressSpace) {
-  auto isSupportedOnAVX512 = [](Type *VecTy, bool &RequiresBW) {
-    RequiresBW = false;
+  auto isSupportedOnAVX512 = [](Type *VecTy, bool HasBW) {
     Type *EltTy = VecTy->getVectorElementType();
     if (EltTy->isFloatTy() || EltTy->isDoubleTy() || EltTy->isIntegerTy(64) ||
         EltTy->isIntegerTy(32) || EltTy->isPointerTy())
       return true;
-    if (EltTy->isIntegerTy(16) || EltTy->isIntegerTy(8)) {
-      RequiresBW = true;
-      return true;
-    }
+    if (EltTy->isIntegerTy(16) || EltTy->isIntegerTy(8))
+      return HasBW;
     return false;
   };
-  bool RequiresBW;
-  bool HasAVX512Solution = isSupportedOnAVX512(VecTy, RequiresBW);
-  if (ST->hasAVX512() && HasAVX512Solution && (!RequiresBW || ST->hasBWI()))
+  if (ST->hasAVX512() && isSupportedOnAVX512(VecTy, ST->hasBWI()))
     return getInterleavedMemoryOpCostAVX512(Opcode, VecTy, Factor, Indices,
                                             Alignment, AddressSpace);
   if (ST->hasAVX2())
