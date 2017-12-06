@@ -16090,6 +16090,19 @@ static SDValue LowerAVXExtend(SDValue Op, SelectionDAG &DAG,
   MVT InVT = In.getSimpleValueType();
   SDLoc dl(Op);
 
+  if ((VT != MVT::v4i64  || InVT != MVT::v4i32) &&
+      (VT != MVT::v8i32  || InVT != MVT::v8i16) &&
+      (VT != MVT::v16i16 || InVT != MVT::v16i8) &&
+      (VT != MVT::v8i64  || InVT != MVT::v8i32) &&
+      (VT != MVT::v8i64  || InVT != MVT::v8i16) &&
+      (VT != MVT::v16i32 || InVT != MVT::v16i16) &&
+      (VT != MVT::v16i32 || InVT != MVT::v16i8) &&
+      (VT != MVT::v32i16 || InVT != MVT::v32i8))
+    return SDValue();
+
+  if (Subtarget.hasInt256())
+    return DAG.getNode(X86ISD::VZEXT, dl, VT, In);
+
   // Optimize vectors in AVX mode:
   //
   //   v8i16 -> v8i32
@@ -16102,14 +16115,6 @@ static SDValue LowerAVXExtend(SDValue Op, SelectionDAG &DAG,
   //   Use vpunpckhdq for 4 upper elements  v4i32 -> v2i64.
   //   Concat upper and lower parts.
   //
-
-  if (((VT != MVT::v16i16) || (InVT != MVT::v16i8)) &&
-      ((VT != MVT::v8i32) || (InVT != MVT::v8i16)) &&
-      ((VT != MVT::v4i64) || (InVT != MVT::v4i32)))
-    return SDValue();
-
-  if (Subtarget.hasInt256())
-    return DAG.getNode(X86ISD::VZEXT, dl, VT, In);
 
   SDValue ZeroVec = getZeroVector(InVT, Subtarget, DAG, dl);
   SDValue Undef = DAG.getUNDEF(InVT);
@@ -16126,20 +16131,15 @@ static SDValue LowerAVXExtend(SDValue Op, SelectionDAG &DAG,
   return DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, OpLo, OpHi);
 }
 
-static  SDValue LowerZERO_EXTEND_AVX512(SDValue Op,
-                  const X86Subtarget &Subtarget, SelectionDAG &DAG) {
+static  SDValue LowerZERO_EXTEND_Mask(SDValue Op,
+                                      const X86Subtarget &Subtarget,
+                                      SelectionDAG &DAG) {
   MVT VT = Op->getSimpleValueType(0);
   SDValue In = Op->getOperand(0);
   MVT InVT = In.getSimpleValueType();
+  assert(InVT.getVectorElementType() == MVT::i1 && "Unexpected input type!");
   SDLoc DL(Op);
   unsigned NumElts = VT.getVectorNumElements();
-
-  if (VT.is512BitVector() && InVT.getVectorElementType() != MVT::i1 &&
-      (NumElts == 8 || NumElts == 16 || Subtarget.hasBWI()))
-    return DAG.getNode(X86ISD::VZEXT, DL, VT, In);
-
-  if (InVT.getVectorElementType() != MVT::i1)
-    return SDValue();
 
   // Extend VT if the scalar type is v8/v16 and BWI is not supported.
   MVT ExtVT = VT;
@@ -16179,12 +16179,11 @@ static  SDValue LowerZERO_EXTEND_AVX512(SDValue Op,
 
 static SDValue LowerANY_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
                                SelectionDAG &DAG) {
-  MVT VT = Op->getSimpleValueType(0);
   SDValue In = Op->getOperand(0);
   MVT InVT = In.getSimpleValueType();
 
-  if (VT.is512BitVector() || InVT.getVectorElementType() == MVT::i1)
-    return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(Op), VT, In);
+  if (InVT.getVectorElementType() == MVT::i1)
+    return LowerZERO_EXTEND_Mask(Op, Subtarget, DAG);
 
   if (Subtarget.hasFp256())
     if (SDValue Res = LowerAVXExtend(Op, DAG, Subtarget))
@@ -16199,8 +16198,8 @@ static SDValue LowerZERO_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
   SDValue In = Op.getOperand(0);
   MVT SVT = In.getSimpleValueType();
 
-  if (VT.is512BitVector() || SVT.getVectorElementType() == MVT::i1)
-    return LowerZERO_EXTEND_AVX512(Op, Subtarget, DAG);
+  if (SVT.getVectorElementType() == MVT::i1)
+    return LowerZERO_EXTEND_Mask(Op, Subtarget, DAG);
 
   if (Subtarget.hasFp256())
     if (SDValue Res = LowerAVXExtend(Op, DAG, Subtarget))
@@ -18285,27 +18284,17 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(X86ISD::CMOV, DL, Op.getValueType(), Ops);
 }
 
-static SDValue LowerSIGN_EXTEND_AVX512(SDValue Op,
-                                       const X86Subtarget &Subtarget,
-                                       SelectionDAG &DAG) {
+static SDValue LowerSIGN_EXTEND_Mask(SDValue Op,
+                                     const X86Subtarget &Subtarget,
+                                     SelectionDAG &DAG) {
   MVT VT = Op->getSimpleValueType(0);
   SDValue In = Op->getOperand(0);
   MVT InVT = In.getSimpleValueType();
+  assert(InVT.getVectorElementType() == MVT::i1 && "Unexpected input type!");
   MVT VTElt = VT.getVectorElementType();
-  MVT InVTElt = InVT.getVectorElementType();
   SDLoc dl(Op);
 
   unsigned NumElts = VT.getVectorNumElements();
-
-  if (VT.is512BitVector() && InVTElt != MVT::i1 &&
-      (NumElts == 8 || NumElts == 16 || Subtarget.hasBWI())) {
-    if (In.getOpcode() == X86ISD::VSEXT)
-      return getExtendInVec(In.getOpcode(), dl, VT, In.getOperand(0), DAG);
-    return getExtendInVec(X86ISD::VSEXT, dl, VT, In, DAG);
-  }
-
-  if (InVTElt != MVT::i1)
-    return SDValue();
 
   // Extend VT if the scalar type is v8/v16 and BWI is not supported.
   MVT ExtVT = VT;
@@ -18441,12 +18430,17 @@ static SDValue LowerSIGN_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
   MVT InVT = In.getSimpleValueType();
   SDLoc dl(Op);
 
-  if (VT.is512BitVector() || InVT.getVectorElementType() == MVT::i1)
-    return LowerSIGN_EXTEND_AVX512(Op, Subtarget, DAG);
+  if (InVT.getVectorElementType() == MVT::i1)
+    return LowerSIGN_EXTEND_Mask(Op, Subtarget, DAG);
 
-  if ((VT != MVT::v4i64 || InVT != MVT::v4i32) &&
-      (VT != MVT::v8i32 || InVT != MVT::v8i16) &&
-      (VT != MVT::v16i16 || InVT != MVT::v16i8))
+  if ((VT != MVT::v4i64  || InVT != MVT::v4i32) &&
+      (VT != MVT::v8i32  || InVT != MVT::v8i16) &&
+      (VT != MVT::v16i16 || InVT != MVT::v16i8) &&
+      (VT != MVT::v8i64  || InVT != MVT::v8i32) &&
+      (VT != MVT::v8i64  || InVT != MVT::v8i16) &&
+      (VT != MVT::v16i32 || InVT != MVT::v16i16) &&
+      (VT != MVT::v16i32 || InVT != MVT::v16i8) &&
+      (VT != MVT::v32i16 || InVT != MVT::v32i8))
     return SDValue();
 
   if (Subtarget.hasInt256())

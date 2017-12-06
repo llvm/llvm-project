@@ -52,7 +52,7 @@ static std::vector<Symbol *> getSymbols() {
   for (InputFile *File : ObjectFiles) {
     for (Symbol *B : File->getSymbols()) {
       if (auto *SS = dyn_cast<SharedSymbol>(B))
-        if (SS->CopyRelSec)
+        if (SS->CopyRelSec || SS->NeedsPltAddr)
           V.push_back(SS);
       if (auto *DR = dyn_cast<Defined>(B))
         if (DR->File == File && !DR->isSection() && DR->Section &&
@@ -67,10 +67,16 @@ static std::vector<Symbol *> getSymbols() {
 static SymbolMapTy getSectionSyms(ArrayRef<Symbol *> Syms) {
   SymbolMapTy Ret;
   for (Symbol *S : Syms) {
-    if (auto *DR = dyn_cast<Defined>(S))
+    if (auto *DR = dyn_cast<Defined>(S)) {
       Ret[DR->Section].push_back(S);
+      continue;
+    }
+
+    SharedSymbol *SS = cast<SharedSymbol>(S);
+    if (SS->CopyRelSec)
+      Ret[SS->CopyRelSec].push_back(S);
     else
-      Ret[cast<SharedSymbol>(S)->CopyRelSec].push_back(S);
+      Ret[InX::Plt].push_back(S);
   }
 
   // Sort symbols by address. We want to print out symbols in the
