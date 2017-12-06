@@ -457,6 +457,60 @@ public:
   }
 };
 
+/// This represents the llvm.coro.alloca.alloc instruction.
+class LLVM_LIBRARY_VISIBILITY CoroAllocaAllocInst : public IntrinsicInst {
+  enum { SizeArg, AlignArg };
+public:
+  Value *getSize() const {
+    return getArgOperand(SizeArg);
+  }
+  unsigned getAlignment() const {
+    return cast<ConstantInt>(getArgOperand(AlignArg))->getZExtValue();
+  }
+
+  // Methods to support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::coro_alloca_alloc;
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
+
+/// This represents the llvm.coro.alloca.get instruction.
+class LLVM_LIBRARY_VISIBILITY CoroAllocaGetInst : public IntrinsicInst {
+  enum { AllocArg };
+public:
+  CoroAllocaAllocInst *getAlloc() const {
+    return cast<CoroAllocaAllocInst>(getArgOperand(AllocArg));
+  }
+
+  // Methods to support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::coro_alloca_get;
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
+
+/// This represents the llvm.coro.alloca.free instruction.
+class LLVM_LIBRARY_VISIBILITY CoroAllocaFreeInst : public IntrinsicInst {
+  enum { AllocArg };
+public:
+  CoroAllocaAllocInst *getAlloc() const {
+    return cast<CoroAllocaAllocInst>(getArgOperand(AllocArg));
+  }
+
+  // Methods to support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::coro_alloca_free;
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
+
 } // End namespace llvm.
 
 #endif
