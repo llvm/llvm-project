@@ -1,6 +1,5 @@
-
 LLVM Linker (lld)
-==============================
+=================
 
 This directory and its subdirectories contain source code for the LLVM Linker, a
 modular cross platform linker which is built as part of the LLVM compiler
