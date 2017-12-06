@@ -54,4 +54,4 @@ add_lldb_tool(lldb-server INCLUDE_IN_FRAMEWORK
       Support
 )
 
-target_link_libraries(lldb-server ${LLDB_SYSTEM_LIBS})
+target_link_libraries(lldb-server PRIVATE ${LLDB_SYSTEM_LIBS})
