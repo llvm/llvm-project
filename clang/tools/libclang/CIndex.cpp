@@ -4162,6 +4162,27 @@ CXFile clang_getFile(CXTranslationUnit TU, const char *file_name) {
   return const_cast<FileEntry *>(FMgr.getFile(file_name));
 }
 
+const char *clang_getFileContents(CXTranslationUnit TU, CXFile file,
+                                  size_t *size) {
+  if (isNotUsableTU(TU)) {
+    LOG_BAD_TU(TU);
+    return nullptr;
+  }
+
+  const SourceManager &SM = cxtu::getASTUnit(TU)->getSourceManager();
+  FileID fid = SM.translateFile(static_cast<FileEntry *>(file));
+  bool Invalid = true;
+  llvm::MemoryBuffer *buf = SM.getBuffer(fid, &Invalid);
+  if (Invalid) {
+    if (size)
+      *size = 0;
+    return nullptr;
+  }
+  if (size)
+    *size = buf->getBufferSize();
+  return buf->getBufferStart();
+}
+
 unsigned clang_isFileMultipleIncludeGuarded(CXTranslationUnit TU,
                                             CXFile file) {
   if (isNotUsableTU(TU)) {
