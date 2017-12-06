@@ -472,6 +472,8 @@ void ObjCStringRegion::dumpToStream(raw_ostream &os) const {
 }
 
 void SymbolicRegion::dumpToStream(raw_ostream &os) const {
+  if (isa<HeapSpaceRegion>(getSuperRegion()))
+    os << "Heap";
   os << "SymRegion{" << sym << '}';
 }
 

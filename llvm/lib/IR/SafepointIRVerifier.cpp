@@ -32,6 +32,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/IR/BasicBlock.h"
@@ -168,7 +169,7 @@ static void GatherDominatingDefs(const BasicBlock *BB,
     const auto &Defs = BlockMap[DTN->getBlock()]->Contribution;
     Result.insert(Defs.begin(), Defs.end());
     // If this block is 'Cleared', then nothing LiveIn to this block can be
-    // available after this block completes.  Note: This turns out to be 
+    // available after this block completes.  Note: This turns out to be
     // really important for reducing memory consuption of the initial available
     // sets and thus peak memory usage by this verifier.
     if (BlockMap[DTN->getBlock()]->Cleared)
@@ -190,23 +191,21 @@ static void TransferInstruction(const Instruction &I, bool &Cleared,
     Available.insert(&I);
 }
 
-/// Compute the AvailableOut set for BB, based on the
-/// BasicBlockState BBS, which is the BasicBlockState for BB. FirstPass is set
-/// when the verifier runs for the first time computing the AvailableOut set
-/// for BB.
-static void TransferBlock(const BasicBlock *BB,
-                          BasicBlockState &BBS, bool FirstPass) {
+/// Compute the AvailableOut set for BB, based on the BasicBlockState BBS,
+/// which is the BasicBlockState for BB.
+/// ContributionChanged is set when the verifier runs for the first time
+/// (in this case Contribution was changed from 'empty' to its initial state) or
+/// when Contribution of this BB was changed since last computation.
+static void TransferBlock(const BasicBlock *BB, BasicBlockState &BBS,
+                          bool ContributionChanged) {
 
-  const DenseSet<const Value *> &AvailableIn = BBS.AvailableIn; 
+  const DenseSet<const Value *> &AvailableIn = BBS.AvailableIn;
   DenseSet<const Value *> &AvailableOut  = BBS.AvailableOut;
 
   if (BBS.Cleared) {
-    // AvailableOut does not change no matter how the input changes, just
-    // leave it be.  We need to force this calculation the first time so that
-    // we have a AvailableOut at all.
-    if (FirstPass) {
+    // AvailableOut will change only when Contribution changed.
+    if (ContributionChanged)
       AvailableOut = BBS.Contribution;
-    }
   } else {
     // Otherwise, we need to reduce the AvailableOut set by things which are no
     // longer in our AvailableIn
@@ -293,10 +292,67 @@ static enum BaseType getBaseType(const Value *Val) {
                                       : BaseType::ExclusivelySomeConstant;
 }
 
+static bool isNotExclusivelyConstantDerived(const Value *V) {
+  return getBaseType(V) == BaseType::NonConstant;
+}
+
+using BlockStateMap = DenseMap<const BasicBlock *, BasicBlockState *>;
+
+/// This function iterates over all BBs from BlockMap and recalculates
+/// AvailableIn/Out for each of them until it converges.
+/// It calls Visitor for each visited BB after updating it's AvailableIn.
+/// BBContributionUpdater may change BB's Contribution and should return true in
+/// this case.
+///
+/// BBContributionUpdater is expected to have following signature:
+/// (const BasicBlock *BB, const BasicBlockState *BBS,
+///  DenseSet<const Value *> &Contribution) -> bool
+/// FIXME: type of BBContributionUpdater is a template parameter because it
+/// might be a lambda with arbitrary non-empty capture list. It's a bit ugly and
+/// unclear, but other options causes us to spread the logic of
+/// RecalculateBBStates across the rest of the algorithm. The solution is to
+/// move this function, TransferBlock, TransferInstruction and others to a
+/// separate class which will hold all the logic related to BlockStateMap.
+template <typename VisitorTy>
+static void RecalculateBBsStates(BlockStateMap &BlockMap,
+                                 VisitorTy &&BBContributionUpdater) {
+  SetVector<const BasicBlock *> Worklist;
+  // TODO: This order is suboptimal, it's better to replace it with priority
+  // queue where priority is RPO number of BB.
+  for (auto &BBI : BlockMap)
+    Worklist.insert(BBI.first);
+
+  // This loop iterates the AvailableIn/Out sets until it converges.
+  // The AvailableIn and AvailableOut sets decrease as we iterate.
+  while (!Worklist.empty()) {
+    const BasicBlock *BB = Worklist.pop_back_val();
+    BasicBlockState *BBS = BlockMap[BB];
+
+    size_t OldInCount = BBS->AvailableIn.size();
+    for (const BasicBlock *PBB : predecessors(BB))
+      set_intersect(BBS->AvailableIn, BlockMap[PBB]->AvailableOut);
+
+    assert(OldInCount >= BBS->AvailableIn.size() && "invariant!");
+
+    bool InputsChanged = OldInCount != BBS->AvailableIn.size();
+    bool ContributionChanged =
+        BBContributionUpdater(BB, BBS, BBS->Contribution);
+    if (!InputsChanged && !ContributionChanged)
+      continue;
+
+    size_t OldOutCount = BBS->AvailableOut.size();
+    TransferBlock(BB, *BBS, ContributionChanged);
+    if (OldOutCount != BBS->AvailableOut.size()) {
+      assert(OldOutCount > BBS->AvailableOut.size() && "invariant!");
+      Worklist.insert(succ_begin(BB), succ_end(BB));
+    }
+  }
+}
+
 static void Verify(const Function &F, const DominatorTree &DT) {
   SpecificBumpPtrAllocator<BasicBlockState> BSAllocator;
-  DenseMap<const BasicBlock *, BasicBlockState *> BlockMap;
- 
+  BlockStateMap BlockMap;
+
   DEBUG(dbgs() << "Verifying gc pointers in function: " << F.getName() << "\n");
   if (PrintOnly)
     dbgs() << "Verifying gc pointers in function: " << F.getName() << "\n";
@@ -314,32 +370,11 @@ static void Verify(const Function &F, const DominatorTree &DT) {
     TransferBlock(BBI.first, *BBI.second, true);
   }
 
-  SetVector<const BasicBlock *> Worklist;
-  for (auto &BBI : BlockMap)
-    Worklist.insert(BBI.first);
-
-  // This loop iterates the AvailableIn and AvailableOut sets to a fixed point.
-  // The AvailableIn and AvailableOut sets decrease as we iterate.
-  while (!Worklist.empty()) {
-    const BasicBlock *BB = Worklist.pop_back_val();
-    BasicBlockState *BBS = BlockMap[BB];
-
-    size_t OldInCount = BBS->AvailableIn.size();
-    for (const BasicBlock *PBB : predecessors(BB))
-      set_intersect(BBS->AvailableIn, BlockMap[PBB]->AvailableOut);
-
-    if (OldInCount == BBS->AvailableIn.size())
-      continue;
-
-    assert(OldInCount > BBS->AvailableIn.size() && "invariant!");
-
-    size_t OldOutCount = BBS->AvailableOut.size();
-    TransferBlock(BB, *BBS, false);
-    if (OldOutCount != BBS->AvailableOut.size()) {
-      assert(OldOutCount > BBS->AvailableOut.size() && "invariant!");
-      Worklist.insert(succ_begin(BB), succ_end(BB));
-    }
-  }
+  RecalculateBBsStates(BlockMap, [] (const BasicBlock *,
+                                     const BasicBlockState *,
+                                     DenseSet<const Value *> &) {
+    return false;
+  });
 
   // We now have all the information we need to decide if the use of a heap
   // reference is legal or not, given our safepoint semantics.
@@ -356,16 +391,58 @@ static void Verify(const Function &F, const DominatorTree &DT) {
     AnyInvalidUses = true;
   };
 
-  auto isNotExclusivelyConstantDerived = [](const Value *V) {
-    return getBaseType(V) == BaseType::NonConstant;
-  };
+  // This set contains defs that can be safely ignored during verification.
+  DenseSet<const Instruction *> ValidUnrelocatedDefs;
 
-  for (const BasicBlock &BB : F) {
+  // Now we can remove all valid unrelocated gc pointer defs from all BBS sets.
+  RecalculateBBsStates(BlockMap, [&ValidUnrelocatedDefs](
+                                     const BasicBlock *BB,
+                                     const BasicBlockState *BBS,
+                                     DenseSet<const Value *> &Contribution) {
+    DenseSet<const Value *> AvailableSet = BBS->AvailableIn;
+    bool ContributionChanged = false;
+    for (const Instruction &I : *BB) {
+      bool ProducesUnrelocatedPointer = false;
+      if ((isa<GetElementPtrInst>(I) || isa<BitCastInst>(I)) &&
+          containsGCPtrType(I.getType())) {
+        // GEP/bitcast of unrelocated pointer is legal by itself but this
+        // def shouldn't appear in any AvailableSet.
+        for (const Value *V : I.operands())
+          if (containsGCPtrType(V->getType()) &&
+              isNotExclusivelyConstantDerived(V) && !AvailableSet.count(V)) {
+            ProducesUnrelocatedPointer = true;
+            break;
+          }
+      }
+      if (!ProducesUnrelocatedPointer) {
+        bool Cleared = false;
+        TransferInstruction(I, Cleared, AvailableSet);
+        (void)Cleared;
+      } else {
+        // Remove def of unrelocated pointer from Contribution of this BB
+        // and trigger update of all its successors.
+        Contribution.erase(&I);
+        ValidUnrelocatedDefs.insert(&I);
+        DEBUG(dbgs() << "Removing " << I << " from Contribution of "
+                     << BB->getName() << "\n");
+        ContributionChanged = true;
+      }
+    }
+    return ContributionChanged;
+  });
+
+  // We need RPO here to a) report always the first error b) report errors in
+  // same order from run to run.
+  ReversePostOrderTraversal<const Function *> RPOT(&F);
+  for (const BasicBlock *BB : RPOT) {
+    BasicBlockState *BBS = BlockMap[BB];
     // We destructively modify AvailableIn as we traverse the block instruction
     // by instruction.
-    DenseSet<const Value *> &AvailableSet = BlockMap[&BB]->AvailableIn;
-    for (const Instruction &I : BB) {
-      if (const PHINode *PN = dyn_cast<PHINode>(&I)) {
+    DenseSet<const Value *> &AvailableSet = BBS->AvailableIn;
+    for (const Instruction &I : *BB) {
+      if (ValidUnrelocatedDefs.count(&I)) {
+        continue; // This instruction shouldn't be added to AvailableSet.
+      } else if (const PHINode *PN = dyn_cast<PHINode>(&I)) {
         if (containsGCPtrType(PN->getType()))
           for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
             const BasicBlock *InBB = PN->getIncomingBlock(i);

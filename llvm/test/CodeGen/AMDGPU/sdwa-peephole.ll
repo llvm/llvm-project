@@ -497,3 +497,26 @@ entry:
   store <8 x i8> %tmp19, <8 x i8> addrspace(1)* %arrayidx5, align 8
   ret void
 }
+
+; GCN-LABEL: {{^}}sdwa_crash_inlineasm_de
+; GCN: s_mov_b32 s{{[0-9]+}}, 0xffff
+; GCN: v_and_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
+; GCN: v_or_b32_e32 v{{[0-9]+}}, 0x10000,
+define amdgpu_kernel void @sdwa_crash_inlineasm_def() #0 {
+bb:
+  br label %bb1
+
+bb1:                                              ; preds = %bb11, %bb
+  %tmp = phi <2 x i32> [ %tmp12, %bb11 ], [ undef, %bb ]
+  br i1 true, label %bb2, label %bb11
+
+bb2:                                              ; preds = %bb1
+  %tmp3 = call i32 asm "v_and_b32_e32 $0, $1, $2", "=v,s,v"(i32 65535, i32 undef) #1
+  %tmp5 = or i32 %tmp3, 65536
+  %tmp6 = insertelement <2 x i32> %tmp, i32 %tmp5, i64 0
+  br label %bb11
+
+bb11:                                             ; preds = %bb10, %bb2
+  %tmp12 = phi <2 x i32> [ %tmp6, %bb2 ], [ %tmp, %bb1 ]
+  br label %bb1
+}

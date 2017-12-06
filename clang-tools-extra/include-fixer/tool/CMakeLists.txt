@@ -5,6 +5,7 @@ add_clang_executable(clang-include-fixer
   )
 
 target_link_libraries(clang-include-fixer
+  PRIVATE
   clangBasic
   clangFormat
   clangFrontend

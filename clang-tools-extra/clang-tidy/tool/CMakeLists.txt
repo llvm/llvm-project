@@ -12,6 +12,7 @@ add_dependencies(clang-tidy
   clang-headers
   )
 target_link_libraries(clang-tidy
+  PRIVATE
   clangAST
   clangASTMatchers
   clangBasic

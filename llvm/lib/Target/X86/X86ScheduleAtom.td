@@ -364,6 +364,7 @@ def AtomItineraries : ProcessorItineraries<
   InstrItinData<IIC_FST80, [InstrStage<5, [Port0, Port1]>] >,
   InstrItinData<IIC_FIST,  [InstrStage<6, [Port0, Port1]>] >,
 
+  InstrItinData<IIC_FCMOV,  [InstrStage<9, [Port0, Port1]>] >,
   InstrItinData<IIC_FLDZ,   [InstrStage<1, [Port0, Port1]>] >,
   InstrItinData<IIC_FUCOM,  [InstrStage<1, [Port1]>] >,
   InstrItinData<IIC_FUCOMI, [InstrStage<9, [Port0, Port1]>] >,

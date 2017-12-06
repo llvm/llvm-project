@@ -8442,10 +8442,10 @@ let Predicates = [HasAVX2, NoVLX] in {
             (VPSRAVDYrm VR256:$src1, addr:$src2)>;
 }
 
-
-
 //===----------------------------------------------------------------------===//
 // VGATHER - GATHER Operations
+
+// FIXME: Improve scheduling of gather instructions.
 multiclass avx2_gather<bits<8> opc, string OpcodeStr, ValueType VTx,
                        ValueType VTy, PatFrag GatherNode128, 
                        PatFrag GatherNode256, RegisterClass RC256,
@@ -8457,14 +8457,16 @@ multiclass avx2_gather<bits<8> opc, string OpcodeStr, ValueType VTx,
               "\t{$mask, $src2, $dst|$dst, $src2, $mask}"),
             [(set (VTx VR128:$dst), (MTx VR128:$mask_wb),
                   (GatherNode128 VR128:$src1, VR128:$mask,
-                                vectoraddr:$src2))]>, VEX;
+                                vectoraddr:$src2))]>,
+            VEX, Sched<[WriteLoad]>;
   def Yrm : AVX28I<opc, MRMSrcMem4VOp3, (outs RC256:$dst, RC256:$mask_wb),
             (ins RC256:$src1, memop256:$src2, RC256:$mask),
             !strconcat(OpcodeStr,
               "\t{$mask, $src2, $dst|$dst, $src2, $mask}"),
             [(set (VTy RC256:$dst), (MTy RC256:$mask_wb),
                   (GatherNode256 RC256:$src1, RC256:$mask,
-                                vectoraddr:$src2))]>, VEX, VEX_L;
+                                vectoraddr:$src2))]>,
+            VEX, VEX_L, Sched<[WriteLoad]>;
 }
 
 let Predicates = [UseAVX2] in {

@@ -923,7 +923,7 @@ TEST(FuzzerCommand, SetOutput) {
   EXPECT_TRUE(Cmd.isOutAndErrCombined());
 
   CmdLine = Cmd.toString();
-  EXPECT_EQ(CmdLine, makeCmdLine("", "2>&1 >thud"));
+  EXPECT_EQ(CmdLine, makeCmdLine("", ">thud 2>&1"));
 }
 
 int main(int argc, char **argv) {

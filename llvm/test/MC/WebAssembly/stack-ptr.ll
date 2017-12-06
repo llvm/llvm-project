@@ -14,7 +14,7 @@ entry:
 ; CHECK:         Field:           __stack_pointer
 ; CHECK:         Kind:            GLOBAL
 ; CHECK:         GlobalType:      I32
-; CHECK:         GlobalMutable:   false
+; CHECK:         GlobalMutable:   true
 ; CHECK:   - Type:            CODE
 ; CHECK:     Relocations:
 ; CHECK:       - Type:            R_WEBASSEMBLY_GLOBAL_INDEX_LEB

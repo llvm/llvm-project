@@ -9,6 +9,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 target_link_libraries(clangd
+  PRIVATE
   clangBasic
   clangDaemon
   clangFormat

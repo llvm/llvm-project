@@ -1854,15 +1854,13 @@ _mm512_maskz_set1_epi8 (__mmask64 __M, char __A)
 static __inline__ __mmask64 __DEFAULT_FN_ATTRS
 _mm512_kunpackd (__mmask64 __A, __mmask64 __B)
 {
-  return (__mmask64) __builtin_ia32_kunpckdi ((__mmask64) __A,
-                (__mmask64) __B);
+  return (__mmask64)  (( __A  & 0xFFFFFFFF) | ( __B << 32));
 }
 
 static __inline__ __mmask32 __DEFAULT_FN_ATTRS
 _mm512_kunpackw (__mmask32 __A, __mmask32 __B)
 {
-  return (__mmask32) __builtin_ia32_kunpcksi ((__mmask32) __A,
-                (__mmask32) __B);
+return (__mmask32)  (( __A  & 0xFFFF) | ( __B << 16));
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS

@@ -111,7 +111,11 @@ The ``gsl::owner<T*>`` is declared as a templated type alias.
 In template functions and classes, like in the example below, the information
 of the type aliases gets lost. Therefore using ``gsl::owner<T*>`` in a heavy templated
 code base might lead to false positives. 
-This limitation results in ``std::vector<gsl::owner<T*>>`` not being diagnosed correctly.
+
+Known code constructs that do not get diagnosed correctly are:
+
+- ``std::exchange``
+- ``std::vector<gsl::owner<T*>>``
 
 .. code-block:: c++
 

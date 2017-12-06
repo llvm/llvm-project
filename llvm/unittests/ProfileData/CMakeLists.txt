@@ -11,4 +11,4 @@ add_llvm_unittest(ProfileDataTests
   SampleProfTest.cpp
   )
 
-target_link_libraries(ProfileDataTests LLVMTestingSupport)
+target_link_libraries(ProfileDataTests PRIVATE LLVMTestingSupport)

@@ -264,7 +264,7 @@ void ArchiveFile::addMember(const Archive::Symbol *Sym) {
 }
 
 // Returns a string in the format of "foo.o" or "foo.a(bar.o)".
-std::string lld::toString(wasm::InputFile *File) {
+std::string lld::toString(const wasm::InputFile *File) {
   if (!File)
     return "<internal>";
 

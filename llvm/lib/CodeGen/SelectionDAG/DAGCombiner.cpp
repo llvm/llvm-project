@@ -8622,6 +8622,13 @@ SDValue DAGCombiner::CombineConsecutiveLoads(SDNode *N, EVT VT) {
 
   LoadSDNode *LD1 = dyn_cast<LoadSDNode>(getBuildPairElt(N, 0));
   LoadSDNode *LD2 = dyn_cast<LoadSDNode>(getBuildPairElt(N, 1));
+
+  // A BUILD_PAIR is always having the least significant part in elt 0 and the
+  // most significant part in elt 1. So when combining into one large load, we
+  // need to consider the endianness.
+  if (DAG.getDataLayout().isBigEndian())
+    std::swap(LD1, LD2);
+
   if (!LD1 || !LD2 || !ISD::isNON_EXTLoad(LD1) || !LD1->hasOneUse() ||
       LD1->getAddressSpace() != LD2->getAddressSpace())
     return SDValue();

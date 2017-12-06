@@ -1099,8 +1099,14 @@ Error TempFile::keep(const Twine &Name) {
   std::error_code RenameEC = cancelDeleteOnClose(FD);
   if (!RenameEC)
     RenameEC = rename_fd(FD, Name);
+  // If we can't rename, discard the temporary file.
+  if (RenameEC)
+    removeFD(FD);
 #else
   std::error_code RenameEC = fs::rename(TmpName, Name);
+  // If we can't rename, discard the temporary file.
+  if (RenameEC)
+    remove(TmpName);
   sys::DontRemoveFileOnSignal(TmpName);
 #endif
 

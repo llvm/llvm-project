@@ -12,4 +12,4 @@ add_llvm_unittest(DebugInfoMSFTests
   ${DebugInfoMSFSources}
   )
 
-target_link_libraries(DebugInfoMSFTests LLVMTestingSupport)
+target_link_libraries(DebugInfoMSFTests PRIVATE LLVMTestingSupport)

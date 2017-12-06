@@ -257,6 +257,66 @@ static void emitAbsValue(MCStreamer &OS, const MCExpr *Value, unsigned Size) {
   OS.EmitValue(ABS, Size);
 }
 
+static void
+emitV2FileDirTables(MCStreamer *MCOS,
+                    const SmallVectorImpl<std::string> &MCDwarfDirs,
+                    const SmallVectorImpl<MCDwarfFile> &MCDwarfFiles) {
+  // First the directory table.
+  for (auto Dir : MCDwarfDirs) {
+    MCOS->EmitBytes(Dir);                // The DirectoryName, and...
+    MCOS->EmitBytes(StringRef("\0", 1)); // its null terminator.
+  }
+  MCOS->EmitIntValue(0, 1); // Terminate the directory list.
+
+  // Second the file table.
+  for (unsigned i = 1; i < MCDwarfFiles.size(); i++) {
+    assert(!MCDwarfFiles[i].Name.empty());
+    MCOS->EmitBytes(MCDwarfFiles[i].Name); // FileName and...
+    MCOS->EmitBytes(StringRef("\0", 1));   // its null terminator.
+    MCOS->EmitULEB128IntValue(MCDwarfFiles[i].DirIndex); // Directory number.
+    MCOS->EmitIntValue(0, 1); // Last modification timestamp (always 0).
+    MCOS->EmitIntValue(0, 1); // File size (always 0).
+  }
+  MCOS->EmitIntValue(0, 1); // Terminate the file list.
+}
+
+static void
+emitV5FileDirTables(MCStreamer *MCOS,
+                    const SmallVectorImpl<std::string> &MCDwarfDirs,
+                    const SmallVectorImpl<MCDwarfFile> &MCDwarfFiles,
+                    StringRef CompilationDir) {
+  // The directory format, which is just inline null-terminated strings.
+  MCOS->EmitIntValue(1, 1);
+  MCOS->EmitULEB128IntValue(dwarf::DW_LNCT_path);
+  MCOS->EmitULEB128IntValue(dwarf::DW_FORM_string);
+  // Then the list of directory paths.  CompilationDir comes first.
+  MCOS->EmitULEB128IntValue(MCDwarfDirs.size() + 1);
+  MCOS->EmitBytes(CompilationDir);
+  MCOS->EmitBytes(StringRef("\0", 1));
+  for (auto Dir : MCDwarfDirs) {
+    MCOS->EmitBytes(Dir);                // The DirectoryName, and...
+    MCOS->EmitBytes(StringRef("\0", 1)); // its null terminator.
+  }
+
+  // The file format, which is the inline null-terminated filename and a
+  // directory index.  We don't track file size/timestamp so don't emit them
+  // in the v5 table.
+  // FIXME: Arrange to emit MD5 signatures for the source files.
+  MCOS->EmitIntValue(2, 1);
+  MCOS->EmitULEB128IntValue(dwarf::DW_LNCT_path);
+  MCOS->EmitULEB128IntValue(dwarf::DW_FORM_string);
+  MCOS->EmitULEB128IntValue(dwarf::DW_LNCT_directory_index);
+  MCOS->EmitULEB128IntValue(dwarf::DW_FORM_udata);
+  // Then the list of file names. These start at 1 for some reason.
+  MCOS->EmitULEB128IntValue(MCDwarfFiles.size() - 1);
+  for (unsigned i = 1; i < MCDwarfFiles.size(); ++i) {
+    assert(!MCDwarfFiles[i].Name.empty());
+    MCOS->EmitBytes(MCDwarfFiles[i].Name); // FileName and...
+    MCOS->EmitBytes(StringRef("\0", 1));   // its null terminator.
+    MCOS->EmitULEB128IntValue(MCDwarfFiles[i].DirIndex); // Directory number.
+  }
+}
+
 std::pair<MCSymbol *, MCSymbol *>
 MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
                              ArrayRef<char> StandardOpcodeLengths) const {
@@ -279,29 +339,35 @@ MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
 
   // Next 2 bytes is the Version.
   unsigned LineTableVersion = context.getDwarfVersion();
-  // FIXME: Right now the compiler doesn't support line table V5. Until it's
-  // supported keep generating line table V4, when Dwarf Info version V5 is used.  
-  if (LineTableVersion >= 5) 
-    LineTableVersion = 4; 
   MCOS->EmitIntValue(LineTableVersion, 2);
+
+  // Keep track of the bytes between the very start and where the header length
+  // comes out.
+  unsigned PreHeaderLengthBytes = 4 + 2;
+
+  // In v5, we get address info next.
+  if (LineTableVersion >= 5) {
+    MCOS->EmitIntValue(context.getAsmInfo()->getCodePointerSize(), 1);
+    MCOS->EmitIntValue(0, 1); // Segment selector; same as EmitGenDwarfAranges.
+    PreHeaderLengthBytes += 2;
+  }
 
   // Create a symbol for the end of the prologue (to be set when we get there).
   MCSymbol *ProEndSym = context.createTempSymbol(); // Lprologue_end
 
-  // Length of the prologue, is the next 4 bytes.  Which is the start of the
-  // section to the end of the prologue.  Not including the 4 bytes for the
-  // total length, the 2 bytes for the version, and these 4 bytes for the
-  // length of the prologue.
-  emitAbsValue(
-      *MCOS,
-      MakeStartMinusEndExpr(*MCOS, *LineStartSym, *ProEndSym, (4 + 2 + 4)), 4);
+  // Length of the prologue, is the next 4 bytes.  This is actually the length
+  // from after the length word, to the end of the prologue.
+  emitAbsValue(*MCOS,
+               MakeStartMinusEndExpr(*MCOS, *LineStartSym, *ProEndSym,
+                                     (PreHeaderLengthBytes + 4)),
+               4);
 
   // Parameters of the state machine, are next.
   MCOS->EmitIntValue(context.getAsmInfo()->getMinInstAlignment(), 1);
   // maximum_operations_per_instruction 
   // For non-VLIW architectures this field is always 1.
   // FIXME: VLIW architectures need to update this field accordingly.
-  if (context.getDwarfVersion() >= 4)
+  if (LineTableVersion >= 4)
     MCOS->EmitIntValue(1, 1);
   MCOS->EmitIntValue(DWARF2_LINE_DEFAULT_IS_STMT, 1);
   MCOS->EmitIntValue(Params.DWARF2LineBase, 1);
@@ -312,26 +378,12 @@ MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
   for (char Length : StandardOpcodeLengths)
     MCOS->EmitIntValue(Length, 1);
 
-  // Put out the directory and file tables.
-
-  // First the directory table.
-  for (unsigned i = 0; i < MCDwarfDirs.size(); i++) {
-    MCOS->EmitBytes(MCDwarfDirs[i]); // the DirectoryName
-    MCOS->EmitBytes(StringRef("\0", 1)); // the null term. of the string
-  }
-  MCOS->EmitIntValue(0, 1); // Terminate the directory list
-
-  // Second the file table.
-  for (unsigned i = 1; i < MCDwarfFiles.size(); i++) {
-    assert(!MCDwarfFiles[i].Name.empty());
-    MCOS->EmitBytes(MCDwarfFiles[i].Name); // FileName
-    MCOS->EmitBytes(StringRef("\0", 1)); // the null term. of the string
-    // the Directory num
-    MCOS->EmitULEB128IntValue(MCDwarfFiles[i].DirIndex);
-    MCOS->EmitIntValue(0, 1); // last modification timestamp (always 0)
-    MCOS->EmitIntValue(0, 1); // filesize (always 0)
-  }
-  MCOS->EmitIntValue(0, 1); // Terminate the file list
+  // Put out the directory and file tables.  The formats vary depending on
+  // the version.
+  if (LineTableVersion >= 5)
+    emitV5FileDirTables(MCOS, MCDwarfDirs, MCDwarfFiles, CompilationDir);
+  else
+    emitV2FileDirTables(MCOS, MCDwarfDirs, MCDwarfFiles);
 
   // This is the end of the prologue, so set the value of the symbol at the
   // end of the prologue (that was used in a previous expression).

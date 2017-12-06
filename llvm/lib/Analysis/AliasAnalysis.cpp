@@ -122,10 +122,10 @@ ModRefInfo AAResults::getArgModRefInfo(ImmutableCallSite CS, unsigned ArgIdx) {
   ModRefInfo Result = MRI_ModRef;
 
   for (const auto &AA : AAs) {
-    Result = ModRefInfo(Result & AA->getArgModRefInfo(CS, ArgIdx));
+    Result = intersectModRef(Result, AA->getArgModRefInfo(CS, ArgIdx));
 
     // Early-exit the moment we reach the bottom of the lattice.
-    if (Result == MRI_NoModRef)
+    if (isNoModRef(Result))
       return Result;
   }
 
@@ -146,8 +146,9 @@ ModRefInfo AAResults::getModRefInfo(Instruction *I, ImmutableCallSite Call) {
     // is that if the call references what this instruction
     // defines, it must be clobbered by this location.
     const MemoryLocation DefLoc = MemoryLocation::get(I);
-    if (getModRefInfo(Call, DefLoc) != MRI_NoModRef)
-      return MRI_ModRef;
+    ModRefInfo MR = getModRefInfo(Call, DefLoc);
+    if (isModOrRefSet(MR))
+      return setModAndRef(MR);
   }
   return MRI_NoModRef;
 }
@@ -157,10 +158,10 @@ ModRefInfo AAResults::getModRefInfo(ImmutableCallSite CS,
   ModRefInfo Result = MRI_ModRef;
 
   for (const auto &AA : AAs) {
-    Result = ModRefInfo(Result & AA->getModRefInfo(CS, Loc));
+    Result = intersectModRef(Result, AA->getModRefInfo(CS, Loc));
 
     // Early-exit the moment we reach the bottom of the lattice.
-    if (Result == MRI_NoModRef)
+    if (isNoModRef(Result))
       return Result;
   }
 
@@ -172,9 +173,9 @@ ModRefInfo AAResults::getModRefInfo(ImmutableCallSite CS,
     return MRI_NoModRef;
 
   if (onlyReadsMemory(MRB))
-    Result = ModRefInfo(Result & MRI_Ref);
+    Result = clearMod(Result);
   else if (doesNotReadMemory(MRB))
-    Result = ModRefInfo(Result & MRI_Mod);
+    Result = clearRef(Result);
 
   if (onlyAccessesArgPointees(MRB) || onlyAccessesInaccessibleOrArgMem(MRB)) {
     bool DoesAlias = false;
@@ -190,20 +191,21 @@ ModRefInfo AAResults::getModRefInfo(ImmutableCallSite CS,
         if (ArgAlias != NoAlias) {
           ModRefInfo ArgMask = getArgModRefInfo(CS, ArgIdx);
           DoesAlias = true;
-          AllArgsMask = ModRefInfo(AllArgsMask | ArgMask);
+          AllArgsMask = unionModRef(AllArgsMask, ArgMask);
         }
       }
     }
+    // Return MRI_NoModRef if no alias found with any argument.
     if (!DoesAlias)
       return MRI_NoModRef;
-    Result = ModRefInfo(Result & AllArgsMask);
+    // Logical & between other AA analyses and argument analysis.
+    Result = intersectModRef(Result, AllArgsMask);
   }
 
   // If Loc is a constant memory location, the call definitely could not
   // modify the memory location.
-  if ((Result & MRI_Mod) &&
-      pointsToConstantMemory(Loc, /*OrLocal*/ false))
-    Result = ModRefInfo(Result & ~MRI_Mod);
+  if (isModSet(Result) && pointsToConstantMemory(Loc, /*OrLocal*/ false))
+    Result = clearMod(Result);
 
   return Result;
 }
@@ -213,10 +215,10 @@ ModRefInfo AAResults::getModRefInfo(ImmutableCallSite CS1,
   ModRefInfo Result = MRI_ModRef;
 
   for (const auto &AA : AAs) {
-    Result = ModRefInfo(Result & AA->getModRefInfo(CS1, CS2));
+    Result = intersectModRef(Result, AA->getModRefInfo(CS1, CS2));
 
     // Early-exit the moment we reach the bottom of the lattice.
-    if (Result == MRI_NoModRef)
+    if (isNoModRef(Result))
       return Result;
   }
 
@@ -239,9 +241,9 @@ ModRefInfo AAResults::getModRefInfo(ImmutableCallSite CS1,
   // If CS1 only reads memory, the only dependence on CS2 can be
   // from CS1 reading memory written by CS2.
   if (onlyReadsMemory(CS1B))
-    Result = ModRefInfo(Result & MRI_Ref);
+    Result = clearMod(Result);
   else if (doesNotReadMemory(CS1B))
-    Result = ModRefInfo(Result & MRI_Mod);
+    Result = clearRef(Result);
 
   // If CS2 only access memory through arguments, accumulate the mod/ref
   // information from CS1's references to the memory referenced by
@@ -256,17 +258,23 @@ ModRefInfo AAResults::getModRefInfo(ImmutableCallSite CS1,
         unsigned CS2ArgIdx = std::distance(CS2.arg_begin(), I);
         auto CS2ArgLoc = MemoryLocation::getForArgument(CS2, CS2ArgIdx, TLI);
 
-        // ArgMask indicates what CS2 might do to CS2ArgLoc, and the dependence
-        // of CS1 on that location is the inverse.
-        ModRefInfo ArgMask = getArgModRefInfo(CS2, CS2ArgIdx);
-        if (ArgMask == MRI_Mod)
+        // ArgModRefCS2 indicates what CS2 might do to CS2ArgLoc, and the
+        // dependence of CS1 on that location is the inverse:
+        // - If CS2 modifies location, dependence exists if CS1 reads or writes.
+        // - If CS2 only reads location, dependence exists if CS1 writes.
+        ModRefInfo ArgModRefCS2 = getArgModRefInfo(CS2, CS2ArgIdx);
+        ModRefInfo ArgMask = MRI_NoModRef;
+        if (isModSet(ArgModRefCS2))
           ArgMask = MRI_ModRef;
-        else if (ArgMask == MRI_Ref)
+        else if (isRefSet(ArgModRefCS2))
           ArgMask = MRI_Mod;
 
-        ArgMask = ModRefInfo(ArgMask & getModRefInfo(CS1, CS2ArgLoc));
+        // ModRefCS1 indicates what CS1 might do to CS2ArgLoc, and we use
+        // above ArgMask to update dependence info.
+        ModRefInfo ModRefCS1 = getModRefInfo(CS1, CS2ArgLoc);
+        ArgMask = intersectModRef(ArgMask, ModRefCS1);
 
-        R = ModRefInfo((R | ArgMask) & Result);
+        R = intersectModRef(unionModRef(R, ArgMask), Result);
         if (R == Result)
           break;
       }
@@ -286,16 +294,14 @@ ModRefInfo AAResults::getModRefInfo(ImmutableCallSite CS1,
         unsigned CS1ArgIdx = std::distance(CS1.arg_begin(), I);
         auto CS1ArgLoc = MemoryLocation::getForArgument(CS1, CS1ArgIdx, TLI);
 
-        // ArgMask indicates what CS1 might do to CS1ArgLoc; if CS1 might Mod
-        // CS1ArgLoc, then we care about either a Mod or a Ref by CS2. If CS1
-        // might Ref, then we care only about a Mod by CS2.
-        ModRefInfo ArgMask = getArgModRefInfo(CS1, CS1ArgIdx);
-        ModRefInfo ArgR = getModRefInfo(CS2, CS1ArgLoc);
-        if (((ArgMask & MRI_Mod) != MRI_NoModRef &&
-             (ArgR & MRI_ModRef) != MRI_NoModRef) ||
-            ((ArgMask & MRI_Ref) != MRI_NoModRef &&
-             (ArgR & MRI_Mod) != MRI_NoModRef))
-          R = ModRefInfo((R | ArgMask) & Result);
+        // ArgModRefCS1 indicates what CS1 might do to CS1ArgLoc; if CS1 might
+        // Mod CS1ArgLoc, then we care about either a Mod or a Ref by CS2. If
+        // CS1 might Ref, then we care only about a Mod by CS2.
+        ModRefInfo ArgModRefCS1 = getArgModRefInfo(CS1, CS1ArgIdx);
+        ModRefInfo ModRefCS2 = getModRefInfo(CS2, CS1ArgLoc);
+        if ((isModSet(ArgModRefCS1) && isModOrRefSet(ModRefCS2)) ||
+            (isRefSet(ArgModRefCS1) && isModSet(ModRefCS2)))
+          R = intersectModRef(unionModRef(R, ArgModRefCS1), Result);
 
         if (R == Result)
           break;
@@ -456,7 +462,7 @@ ModRefInfo AAResults::getModRefInfo(const AtomicRMWInst *RMW,
 
 /// \brief Return information about whether a particular call site modifies
 /// or reads the specified memory location \p MemLoc before instruction \p I
-/// in a BasicBlock. A ordered basic block \p OBB can be used to speed up
+/// in a BasicBlock. An ordered basic block \p OBB can be used to speed up
 /// instruction-ordering queries inside the BasicBlock containing \p I.
 /// FIXME: this is really just shoring-up a deficiency in alias analysis.
 /// BasicAA isn't willing to spend linear time determining whether an alloca
@@ -538,7 +544,7 @@ bool AAResults::canInstructionRangeModRef(const Instruction &I1,
   ++E;  // Convert from inclusive to exclusive range.
 
   for (; I != E; ++I) // Check every instruction in range
-    if (getModRefInfo(&*I, Loc) & Mode)
+    if (intersectModRef(getModRefInfo(&*I, Loc), Mode))
       return true;
   return false;
 }

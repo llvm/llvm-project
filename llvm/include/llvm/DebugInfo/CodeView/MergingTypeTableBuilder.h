@@ -16,6 +16,7 @@
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/SimpleTypeSerializer.h"
 #include "llvm/DebugInfo/CodeView/TypeCollection.h"
+#include "llvm/DebugInfo/CodeView/TypeHashing.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/Support/Allocator.h"
 #include <cassert>
@@ -27,13 +28,6 @@ namespace llvm {
 namespace codeview {
 
 class ContinuationRecordBuilder;
-class TypeHasher;
-
-struct HashedType {
-  hash_code Hash;
-  ArrayRef<uint8_t> Data;
-  TypeIndex Index;
-};
 
 class MergingTypeTableBuilder : public TypeCollection {
   /// Storage for records.  These need to outlive the TypeTableBuilder.
@@ -45,13 +39,10 @@ class MergingTypeTableBuilder : public TypeCollection {
   SimpleTypeSerializer SimpleSerializer;
 
   /// Hash table.
-  DenseSet<HashedType> HashedRecords;
+  DenseMap<LocallyHashedType, TypeIndex> HashedRecords;
 
   /// Contains a list of all records indexed by TypeIndex.toArrayIndex().
   SmallVector<ArrayRef<uint8_t>, 2> SeenRecords;
-
-  /// Contains a list of all hash codes index by TypeIndex.toArrayIndex().
-  SmallVector<hash_code, 2> SeenHashes;
 
 public:
   explicit MergingTypeTableBuilder(BumpPtrAllocator &Storage);
@@ -73,7 +64,6 @@ public:
   BumpPtrAllocator &getAllocator() { return RecordStorage; }
 
   ArrayRef<ArrayRef<uint8_t>> records() const;
-  ArrayRef<hash_code> hashes() const;
 
   TypeIndex insertRecordAs(hash_code Hash, ArrayRef<uint8_t> &Record);
   TypeIndex insertRecordBytes(ArrayRef<uint8_t> &Record);

@@ -95,18 +95,59 @@ enum AliasResult {
 ///
 /// This is no access at all, a modification, a reference, or both
 /// a modification and a reference. These are specifically structured such that
-/// they form a two bit matrix and bit-tests for 'mod' or 'ref' work with any
-/// of the possible values.
+/// they form a two bit matrix and bit-tests for 'mod' or 'ref'
+/// work with any of the possible values.
+
 enum ModRefInfo {
   /// The access neither references nor modifies the value stored in memory.
   MRI_NoModRef = 0,
-  /// The access references the value stored in memory.
+  /// The access may reference the value stored in memory.
   MRI_Ref = 1,
-  /// The access modifies the value stored in memory.
+  /// The access may modify the value stored in memory.
   MRI_Mod = 2,
-  /// The access both references and modifies the value stored in memory.
-  MRI_ModRef = MRI_Ref | MRI_Mod
+  /// The access may reference and may modify the value stored in memory.
+  MRI_ModRef = MRI_Ref | MRI_Mod,
 };
+
+LLVM_NODISCARD inline bool isNoModRef(const ModRefInfo MRI) {
+  return MRI == MRI_NoModRef;
+}
+LLVM_NODISCARD inline bool isModOrRefSet(const ModRefInfo MRI) {
+  return MRI & MRI_ModRef;
+}
+LLVM_NODISCARD inline bool isModAndRefSet(const ModRefInfo MRI) {
+  return (MRI & MRI_ModRef) == MRI_ModRef;
+}
+LLVM_NODISCARD inline bool isModSet(const ModRefInfo MRI) {
+  return MRI & MRI_Mod;
+}
+LLVM_NODISCARD inline bool isRefSet(const ModRefInfo MRI) {
+  return MRI & MRI_Ref;
+}
+
+LLVM_NODISCARD inline ModRefInfo setRef(const ModRefInfo MRI) {
+  return ModRefInfo(MRI | MRI_Ref);
+}
+LLVM_NODISCARD inline ModRefInfo setMod(const ModRefInfo MRI) {
+  return ModRefInfo(MRI | MRI_Mod);
+}
+LLVM_NODISCARD inline ModRefInfo setModAndRef(const ModRefInfo MRI) {
+  return ModRefInfo(MRI | MRI_ModRef);
+}
+LLVM_NODISCARD inline ModRefInfo clearMod(const ModRefInfo MRI) {
+  return ModRefInfo(MRI & MRI_Ref);
+}
+LLVM_NODISCARD inline ModRefInfo clearRef(const ModRefInfo MRI) {
+  return ModRefInfo(MRI & MRI_Mod);
+}
+LLVM_NODISCARD inline ModRefInfo unionModRef(const ModRefInfo MRI1,
+                                             const ModRefInfo MRI2) {
+  return ModRefInfo(MRI1 | MRI2);
+}
+LLVM_NODISCARD inline ModRefInfo intersectModRef(const ModRefInfo MRI1,
+                                                 const ModRefInfo MRI2) {
+  return ModRefInfo(MRI1 & MRI2);
+}
 
 /// The locations at which a function might access memory.
 ///
@@ -186,6 +227,15 @@ enum FunctionModRefBehavior {
   /// behaviors above.
   FMRB_UnknownModRefBehavior = FMRL_Anywhere | MRI_ModRef
 };
+
+// Wrapper method strips bits significant only in FunctionModRefBehavior,
+// to obtain a valid ModRefInfo. The benefit of using the wrapper is that if
+// ModRefInfo enum changes, the wrapper can be updated to & with the new enum
+// entry with all bits set to 1.
+LLVM_NODISCARD inline ModRefInfo
+createModRefInfo(const FunctionModRefBehavior FMRB) {
+  return ModRefInfo(FMRB & MRI_ModRef);
+}
 
 class AAResults {
 public:
@@ -520,14 +570,7 @@ public:
                            const Optional<MemoryLocation> &OptLoc) {
     if (OptLoc == None) {
       if (auto CS = ImmutableCallSite(I)) {
-        auto MRB = getModRefBehavior(CS);
-        if ((MRB & MRI_ModRef) == MRI_ModRef)
-          return MRI_ModRef;
-        if (MRB & MRI_Ref)
-          return MRI_Ref;
-        if (MRB & MRI_Mod)
-          return MRI_Mod;
-        return MRI_NoModRef;
+        return createModRefInfo(getModRefBehavior(CS));
       }
     }
 
@@ -570,7 +613,7 @@ public:
 
   /// \brief Return information about whether a particular call site modifies
   /// or reads the specified memory location \p MemLoc before instruction \p I
-  /// in a BasicBlock. A ordered basic block \p OBB can be used to speed up
+  /// in a BasicBlock. An ordered basic block \p OBB can be used to speed up
   /// instruction ordering queries inside the BasicBlock containing \p I.
   ModRefInfo callCapturesBefore(const Instruction *I,
                                 const MemoryLocation &MemLoc, DominatorTree *DT,

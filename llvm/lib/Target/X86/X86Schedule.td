@@ -447,6 +447,7 @@ def IIC_CMPX_LOCK_16B : InstrItinClass;
 def IIC_XADD_LOCK_MEM : InstrItinClass;
 def IIC_XADD_LOCK_MEM8 : InstrItinClass;
 
+def IIC_FCMOV : InstrItinClass;
 def IIC_FILD : InstrItinClass;
 def IIC_FLD : InstrItinClass;
 def IIC_FLD80 : InstrItinClass;

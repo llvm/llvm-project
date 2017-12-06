@@ -12,6 +12,7 @@ add_clang_tool(modularize
   )
 
 target_link_libraries(modularize
+  PRIVATE
   clangAST
   clangBasic
   clangDriver
