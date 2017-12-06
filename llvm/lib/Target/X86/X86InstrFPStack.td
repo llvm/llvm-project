@@ -356,28 +356,31 @@ def FBLDm    : FPI<0xDF, MRM4m, (outs), (ins f80mem:$src), "fbld\t$src">;
 def FBSTPm   : FPI<0xDF, MRM6m, (outs), (ins f80mem:$dst), "fbstp\t$dst">;
 
 // Floating point cmovs.
-class FpIf32CMov<dag outs, dag ins, FPFormat fp, list<dag> pattern> :
-  FpI_<outs, ins, fp, pattern>, Requires<[FPStackf32, HasCMov]>;
-class FpIf64CMov<dag outs, dag ins, FPFormat fp, list<dag> pattern> :
-  FpI_<outs, ins, fp, pattern>, Requires<[FPStackf64, HasCMov]>;
+class FpIf32CMov<dag outs, dag ins, FPFormat fp, list<dag> pattern,
+                 InstrItinClass itin> :
+  FpI_<outs, ins, fp, pattern, itin>, Requires<[FPStackf32, HasCMov]>;
+class FpIf64CMov<dag outs, dag ins, FPFormat fp, list<dag> pattern,
+                 InstrItinClass itin> :
+  FpI_<outs, ins, fp, pattern, itin>, Requires<[FPStackf64, HasCMov]>;
 
 multiclass FPCMov<PatLeaf cc> {
   def _Fp32  : FpIf32CMov<(outs RFP32:$dst), (ins RFP32:$src1, RFP32:$src2),
                        CondMovFP,
                      [(set RFP32:$dst, (X86cmov RFP32:$src1, RFP32:$src2,
-                                        cc, EFLAGS))]>;
+                                        cc, EFLAGS))], IIC_FCMOV>;
   def _Fp64  : FpIf64CMov<(outs RFP64:$dst), (ins RFP64:$src1, RFP64:$src2),
                        CondMovFP,
                      [(set RFP64:$dst, (X86cmov RFP64:$src1, RFP64:$src2,
-                                        cc, EFLAGS))]>;
+                                        cc, EFLAGS))], IIC_FCMOV>;
   def _Fp80  : FpI_<(outs RFP80:$dst), (ins RFP80:$src1, RFP80:$src2),
                      CondMovFP,
                      [(set RFP80:$dst, (X86cmov RFP80:$src1, RFP80:$src2,
-                                        cc, EFLAGS))]>,
+                                        cc, EFLAGS))], IIC_FCMOV>,
                                         Requires<[HasCMov]>;
 }
 
 let Defs = [FPSW] in {
+let SchedRW = [WriteFAdd] in {
 let Uses = [EFLAGS], Constraints = "$src1 = $dst" in {
 defm CMOVB  : FPCMov<X86_COND_B>;
 defm CMOVBE : FPCMov<X86_COND_BE>;
@@ -392,22 +395,23 @@ defm CMOVNP : FPCMov<X86_COND_NP>;
 let Predicates = [HasCMov] in {
 // These are not factored because there's no clean way to pass DA/DB.
 def CMOVB_F  : FPI<0xDA, MRM0r, (outs), (ins RST:$op),
-                  "fcmovb\t{$op, %st(0)|st(0), $op}">;
+                  "fcmovb\t{$op, %st(0)|st(0), $op}", IIC_FCMOV>;
 def CMOVBE_F : FPI<0xDA, MRM2r, (outs), (ins RST:$op),
-                  "fcmovbe\t{$op, %st(0)|st(0), $op}">;
+                  "fcmovbe\t{$op, %st(0)|st(0), $op}", IIC_FCMOV>;
 def CMOVE_F  : FPI<0xDA, MRM1r, (outs), (ins RST:$op),
-                  "fcmove\t{$op, %st(0)|st(0), $op}">;
+                  "fcmove\t{$op, %st(0)|st(0), $op}", IIC_FCMOV>;
 def CMOVP_F  : FPI<0xDA, MRM3r, (outs), (ins RST:$op),
-                  "fcmovu\t{$op, %st(0)|st(0), $op}">;
+                  "fcmovu\t{$op, %st(0)|st(0), $op}", IIC_FCMOV>;
 def CMOVNB_F : FPI<0xDB, MRM0r, (outs), (ins RST:$op),
-                  "fcmovnb\t{$op, %st(0)|st(0), $op}">;
+                  "fcmovnb\t{$op, %st(0)|st(0), $op}", IIC_FCMOV>;
 def CMOVNBE_F: FPI<0xDB, MRM2r, (outs), (ins RST:$op),
-                  "fcmovnbe\t{$op, %st(0)|st(0), $op}">;
+                  "fcmovnbe\t{$op, %st(0)|st(0), $op}", IIC_FCMOV>;
 def CMOVNE_F : FPI<0xDB, MRM1r, (outs), (ins RST:$op),
-                  "fcmovne\t{$op, %st(0)|st(0), $op}">;
+                  "fcmovne\t{$op, %st(0)|st(0), $op}", IIC_FCMOV>;
 def CMOVNP_F : FPI<0xDB, MRM3r, (outs), (ins RST:$op),
-                  "fcmovnu\t{$op, %st(0)|st(0), $op}">;
+                  "fcmovnu\t{$op, %st(0)|st(0), $op}", IIC_FCMOV>;
 } // Predicates = [HasCMov]
+} // SchedRW
 
 // Floating point loads & stores.
 let canFoldAsLoad = 1 in {

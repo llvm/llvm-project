@@ -32,6 +32,7 @@ add_llvm_library(LLVMDebugInfoCodeView
   TypeDumpVisitor.cpp
   TypeIndex.cpp
   TypeIndexDiscovery.cpp
+  TypeHashing.cpp
   TypeRecordMapping.cpp
   TypeStreamMerger.cpp
   TypeTableCollection.cpp

@@ -66,6 +66,7 @@ add_clang_executable(clang-fuzzer
   )
 
 target_link_libraries(clang-fuzzer
+  PRIVATE
   ${LLVM_LIB_FUZZING_ENGINE}
   clangHandleCXX
   )

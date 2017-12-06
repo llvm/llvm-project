@@ -58,21 +58,27 @@ LazyRandomTypeCollection::LazyRandomTypeCollection(const CVTypeArray &Types,
                                                    uint32_t NumRecords)
     : LazyRandomTypeCollection(Types, NumRecords, PartialOffsetArray()) {}
 
-void LazyRandomTypeCollection::reset(StringRef Data, uint32_t RecordCountHint) {
+void LazyRandomTypeCollection::reset(BinaryStreamReader &Reader,
+                                     uint32_t RecordCountHint) {
   Count = 0;
   PartialOffsets = PartialOffsetArray();
 
-  BinaryStreamReader Reader(Data, support::little);
-  error(Reader.readArray(Types, Reader.getLength()));
+  error(Reader.readArray(Types, Reader.bytesRemaining()));
 
   // Clear and then resize, to make sure existing data gets destroyed.
   Records.clear();
   Records.resize(RecordCountHint);
 }
 
+void LazyRandomTypeCollection::reset(StringRef Data, uint32_t RecordCountHint) {
+  BinaryStreamReader Reader(Data, support::little);
+  reset(Reader, RecordCountHint);
+}
+
 void LazyRandomTypeCollection::reset(ArrayRef<uint8_t> Data,
                                      uint32_t RecordCountHint) {
-  reset(toStringRef(Data), RecordCountHint);
+  BinaryStreamReader Reader(Data, support::little);
+  reset(Reader, RecordCountHint);
 }
 
 uint32_t LazyRandomTypeCollection::getOffsetOfType(TypeIndex Index) {

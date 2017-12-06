@@ -23,7 +23,7 @@ add_llvm_tool(llvm-objdump
   )
 
 if(HAVE_LIBXAR)
-  target_link_libraries(llvm-objdump ${XAR_LIB})
+  target_link_libraries(llvm-objdump PRIVATE ${XAR_LIB})
 endif()
 
 if(LLVM_INSTALL_BINUTILS_SYMLINKS)

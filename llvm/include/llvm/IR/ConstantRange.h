@@ -96,9 +96,9 @@ public:
   ///
   /// NB! The returned set does *not* contain **all** possible values of X for
   /// which "X BinOpC Y" does not wrap -- some viable values of X may be
-  /// missing, so you cannot use this to constrain X's range.  E.g. in the last
-  /// example, "(-2) + 1" is both nsw and nuw (so the "X" could be -2), but (-2)
-  /// is not in the set returned.
+  /// missing, so you cannot use this to constrain X's range.  E.g. in the
+  /// fourth example, "(-2) + 1" is both nsw and nuw (so the "X" could be -2),
+  /// but (-2) is not in the set returned.
   ///
   /// Examples:
   ///  typedef OverflowingBinaryOperator OBO;
@@ -109,6 +109,10 @@ public:
   ///  MGNR(Add, [i8 1, 2), OBO::NoUnsignedWrap | OBO::NoSignedWrap)
   ///    == [0,INT_MAX)
   ///  MGNR(Add, [i8 -1, 6), OBO::NoSignedWrap) == [INT_MIN+1, INT_MAX-4)
+  ///  MGNR(Sub, [i8 1, 2), OBO::NoSignedWrap) == [-127, 128)
+  ///  MGNR(Sub, [i8 1, 2), OBO::NoUnsignedWrap) == [1, 0)
+  ///  MGNR(Sub, [i8 1, 2), OBO::NoUnsignedWrap | OBO::NoSignedWrap)
+  ///    == [1,INT_MAX)
   static ConstantRange makeGuaranteedNoWrapRegion(Instruction::BinaryOps BinOp,
                                                   const ConstantRange &Other,
                                                   unsigned NoWrapKind);

@@ -18,7 +18,7 @@ namespace clang {
 namespace tidy {
 namespace fuchsia {
 
-/// This module is for Fuchsia specific checks.
+/// This module is for Fuchsia-specific checks.
 class FuchsiaModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {

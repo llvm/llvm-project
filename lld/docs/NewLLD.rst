@@ -58,59 +58,61 @@ between speed, simplicity and extensibility.
 
 * Efficient archive file handling
 
-  LLD's handling of archive files (the files with ".a" file extension) is different
-  from the traditional Unix linkers and similar to Windows linkers.
-  We'll describe how the traditional Unix linker handles archive files,
-  what the problem is, and how LLD approached the problem.
+  LLD's handling of archive files (the files with ".a" file extension) is
+  different from the traditional Unix linkers and similar to Windows linkers.
+  We'll describe how the traditional Unix linker handles archive files, what the
+  problem is, and how LLD approached the problem.
 
-  The traditional Unix linker maintains a set of undefined symbols during linking.
-  The linker visits each file in the order as they appeared in the command line
-  until the set becomes empty. What the linker would do depends on file type.
+  The traditional Unix linker maintains a set of undefined symbols during
+  linking.  The linker visits each file in the order as they appeared in the
+  command line until the set becomes empty. What the linker would do depends on
+  file type.
 
-  - If the linker visits an object file, the linker links object files to the result,
-    and undefined symbols in the object file are added to the set.
+  - If the linker visits an object file, the linker links object files to the
+    result, and undefined symbols in the object file are added to the set.
 
-  - If the linker visits an archive file, it checks for the archive file's symbol table
-    and extracts all object files that have definitions for any symbols in the set.
+  - If the linker visits an archive file, it checks for the archive file's
+    symbol table and extracts all object files that have definitions for any
+    symbols in the set.
 
-  This algorithm sometimes leads to a counter-intuitive behavior.
-  If you give archive files before object files, nothing will happen
-  because when the linker visits archives, there is no undefined symbols in the set.
-  As a result, no files are extracted from the first archive file,
-  and the link is done at that point because the set is empty after it visits one file.
+  This algorithm sometimes leads to a counter-intuitive behavior.  If you give
+  archive files before object files, nothing will happen because when the linker
+  visits archives, there is no undefined symbols in the set.  As a result, no
+  files are extracted from the first archive file, and the link is done at that
+  point because the set is empty after it visits one file.
 
   You can fix the problem by reordering the files,
   but that cannot fix the issue of mutually-dependent archive files.
 
-  Linking mutually-dependent archive files is tricky.
-  You may specify the same archive file multiple times to
-  let the linker visit it more than once.
-  Or, you may use the special command line options, `--start-group` and `--end-group`,
-  to let the linker loop over the files between the options until
+  Linking mutually-dependent archive files is tricky.  You may specify the same
+  archive file multiple times to let the linker visit it more than once.  Or,
+  you may use the special command line options, `--start-group` and
+  `--end-group`, to let the linker loop over the files between the options until
   no new symbols are added to the set.
 
   Visiting the same archive files multiple makes the linker slower.
 
-  Here is how LLD approaches the problem. Instead of memorizing only undefined symbols,
-  we program LLD so that it memorizes all symbols.
-  When it sees an undefined symbol that can be resolved by extracting an object file
-  from an archive file it previously visited, it immediately extracts the file and link it.
-  It is doable because LLD does not forget symbols it have seen in archive files.
+  Here is how LLD approaches the problem. Instead of memorizing only undefined
+  symbols, we program LLD so that it memorizes all symbols.  When it sees an
+  undefined symbol that can be resolved by extracting an object file from an
+  archive file it previously visited, it immediately extracts the file and link
+  it.  It is doable because LLD does not forget symbols it have seen in archive
+  files.
 
   We believe that the LLD's way is efficient and easy to justify.
 
-  The semantics of LLD's archive handling is different from the traditional Unix's.
-  You can observe it if you carefully craft archive files to exploit it.
-  However, in reality, we don't know any program that cannot link
-  with our algorithm so far, so it's not going to cause trouble.
+  The semantics of LLD's archive handling is different from the traditional
+  Unix's.  You can observe it if you carefully craft archive files to exploit
+  it.  However, in reality, we don't know any program that cannot link with our
+  algorithm so far, so it's not going to cause trouble.
 
 Numbers You Want to Know
 ------------------------
 
 To give you intuition about what kinds of data the linker is mainly working on,
 I'll give you the list of objects and their numbers LLD has to read and process
-in order to link a very large executable. In order to link Chrome with debug info,
-which is roughly 2 GB in output size, LLD reads
+in order to link a very large executable. In order to link Chrome with debug
+info, which is roughly 2 GB in output size, LLD reads
 
 - 17,000 files,
 - 1,800,000 sections,
@@ -137,9 +139,9 @@ when handling files.
 Important Data Structures
 -------------------------
 
-We will describe the key data structures in LLD in this section.
-The linker can be understood as the interactions between them.
-Once you understand their functions, the code of the linker should look obvious to you.
+We will describe the key data structures in LLD in this section.  The linker can
+be understood as the interactions between them.  Once you understand their
+functions, the code of the linker should look obvious to you.
 
 * Symbol
 
@@ -174,7 +176,8 @@ Once you understand their functions, the code of the linker should look obvious 
   SymbolTable is basically a hash table from strings to Symbols
   with logic to resolve symbol conflicts. It resolves conflicts by symbol type.
 
-  - If we add Defined and Undefined symbols, the symbol table will keep the former.
+  - If we add Defined and Undefined symbols, the symbol table will keep the
+    former.
   - If we add Defined and Lazy symbols, it will keep the former.
   - If we add Lazy and Undefined, it will keep the former,
     but it will also trigger the Lazy symbol to load the archive member
@@ -217,10 +220,10 @@ There are mainly three actors in this linker.
 
 * Writer
 
-  The writer is responsible for writing file headers and InputSections/Chunks to a file.
-  It creates OutputSections, put all InputSections/Chunks into them,
-  assign unique, non-overlapping addresses and file offsets to them,
-  and then write them down to a file.
+  The writer is responsible for writing file headers and InputSections/Chunks to
+  a file.  It creates OutputSections, put all InputSections/Chunks into them,
+  assign unique, non-overlapping addresses and file offsets to them, and then
+  write them down to a file.
 
 * Driver
 
@@ -228,7 +231,8 @@ There are mainly three actors in this linker.
 
   - processes command line options,
   - creates a symbol table,
-  - creates an InputFile for each input file and puts all symbols within into the symbol table,
+  - creates an InputFile for each input file and puts all symbols within into
+    the symbol table,
   - checks if there's no remaining undefined symbols,
   - creates a writer,
   - and passes the symbol table to the writer to write the result to a file.

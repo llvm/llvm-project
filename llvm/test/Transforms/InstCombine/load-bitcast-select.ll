@@ -85,3 +85,26 @@ define void @bitcasted_store(i1 %cond, float* %loadaddr1, float* %loadaddr2, flo
   store i32 %ld, i32* %int_store_addr
   ret void
 }
+
+define void @bitcasted_minmax_with_select_of_pointers(float* %loadaddr1, float* %loadaddr2, float* %storeaddr) {
+; CHECK-LABEL: @bitcasted_minmax_with_select_of_pointers(
+; CHECK-NEXT:    [[LD1:%.*]] = load float, float* [[LOADADDR1:%.*]], align 4
+; CHECK-NEXT:    [[LD2:%.*]] = load float, float* [[LOADADDR2:%.*]], align 4
+; CHECK-NEXT:    [[COND:%.*]] = fcmp ogt float [[LD1]], [[LD2]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], float* [[LOADADDR1]], float* [[LOADADDR2]]
+; CHECK-NEXT:    [[INT_LOAD_ADDR:%.*]] = bitcast float* [[SEL]] to i32*
+; CHECK-NEXT:    [[LD:%.*]] = load i32, i32* [[INT_LOAD_ADDR]], align 4
+; CHECK-NEXT:    [[INT_STORE_ADDR:%.*]] = bitcast float* [[STOREADDR:%.*]] to i32*
+; CHECK-NEXT:    store i32 [[LD]], i32* [[INT_STORE_ADDR]], align 4
+; CHECK-NEXT:    ret void
+;
+  %ld1 = load float, float* %loadaddr1, align 4
+  %ld2 = load float, float* %loadaddr2, align 4
+  %cond = fcmp ogt float %ld1, %ld2
+  %sel = select i1 %cond, float* %loadaddr1, float* %loadaddr2
+  %int_load_addr = bitcast float* %sel to i32*
+  %ld = load i32, i32* %int_load_addr, align 4
+  %int_store_addr = bitcast float* %storeaddr to i32*
+  store i32 %ld, i32* %int_store_addr, align 4
+  ret void
+}

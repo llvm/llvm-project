@@ -7,6 +7,7 @@ add_clang_executable(tool-template
   )
 
 target_link_libraries(tool-template
+  PRIVATE
   clangAST
   clangASTMatchers
   clangBasic

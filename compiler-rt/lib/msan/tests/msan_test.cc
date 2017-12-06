@@ -1788,6 +1788,7 @@ TEST_STRTO_INT(strtol, char, )
 TEST_STRTO_INT(strtoll, char, )
 TEST_STRTO_INT(strtoul, char, )
 TEST_STRTO_INT(strtoull, char, )
+TEST_STRTO_INT(strtouq, char, )
 
 TEST_STRTO_FLOAT(strtof, char, )
 TEST_STRTO_FLOAT(strtod, char, )

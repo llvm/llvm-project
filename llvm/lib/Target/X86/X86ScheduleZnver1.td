@@ -761,7 +761,7 @@ def : InstRW<[ZnWriteFPU3], (instregex "LD_F1")>;
 // FLDPI FLDL2E etc.
 def : InstRW<[ZnWriteFPU3], (instregex "FLDPI", "FLDL2(T|E)" "FLDL(G|N)2")>;
 
-def : InstRW<[WriteMicrocoded], (instregex "CMOV(B|BE|P|NB|NBE|NE|NP)_F")>;
+def : InstRW<[WriteMicrocoded], (instregex "CMOV(B|BE|E|P|NB|NBE|NE|NP)_F")>;
 
 // FNSTSW.
 // AX.

@@ -120,6 +120,9 @@ defm filter: Eq<"filter">,
 defm fini: Eq<"fini">,
   HelpText<"Specify a finalizer function">, MetaVarName<"<symbol>">;
 
+def fix_cortex_a53_843419: F<"fix-cortex-a53-843419">,
+  HelpText<"Apply fixes for AArch64 Cortex-A53 erratum 843419">;
+
 def full_shutdown : F<"full-shutdown">,
   HelpText<"Perform a full shutdown instead of calling _exit">;
 

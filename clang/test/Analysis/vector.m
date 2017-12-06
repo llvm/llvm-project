@@ -2,6 +2,7 @@
 
 typedef int __attribute__((ext_vector_type(2))) V;
 
+void clang_analyzer_warnIfReached();
 void clang_analyzer_numTimesReached();
 void clang_analyzer_eval(int);
 
@@ -25,4 +26,36 @@ V dont_crash_and_dont_split_state(V x, V y) {
   // FIXME: Should be 1 since we should not split state.
   clang_analyzer_numTimesReached(); // expected-warning{{2}}
   return z;
+}
+
+void test_read() {
+  V x;
+  x[0] = 0;
+  x[1] = 1;
+
+  clang_analyzer_eval(x[0] == 0); // expected-warning{{TRUE}}
+}
+
+V return_vector() {
+  V z;
+  z[0] = 0;
+  z[1] = 0;
+  return z;
+}
+
+int test_vector_access() {
+  return return_vector()[0]; // no-crash no-warning
+}
+
+@interface I
+@property V v;
+@end
+
+// Do not crash on subscript operations into ObjC properties.
+int myfunc(I *i2) {
+  int out = i2.v[0]; // no-crash no-warning
+
+  // Check that the analysis continues.
+  clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
+  return out;
 }

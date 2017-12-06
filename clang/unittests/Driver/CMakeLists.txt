@@ -11,6 +11,7 @@ add_clang_unittest(ClangDriverTests
   )
 
 target_link_libraries(ClangDriverTests
+  PRIVATE
   clangDriver
   clangBasic
   )

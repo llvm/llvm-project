@@ -3738,15 +3738,6 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   def int_x86_avx512_kxnor_w : GCCBuiltin<"__builtin_ia32_kxnorhi">,
               Intrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i16_ty],
                          [IntrNoMem]>;
-  def int_x86_avx512_kunpck_bw : GCCBuiltin<"__builtin_ia32_kunpckhi">,
-              Intrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i16_ty],
-                         [IntrNoMem]>;
-  def int_x86_avx512_kunpck_wd : GCCBuiltin<"__builtin_ia32_kunpcksi">,
-              Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
-                         [IntrNoMem]>;
-  def int_x86_avx512_kunpck_dq : GCCBuiltin<"__builtin_ia32_kunpckdi">,
-              Intrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty],
-                         [IntrNoMem]>;
   def int_x86_avx512_kortestz_w : GCCBuiltin<"__builtin_ia32_kortestzhi">,
               Intrinsic<[llvm_i32_ty], [llvm_i16_ty, llvm_i16_ty],
                         [IntrNoMem]>;

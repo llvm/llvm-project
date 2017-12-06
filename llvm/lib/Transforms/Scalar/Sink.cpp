@@ -68,7 +68,7 @@ static bool isSafeToMove(Instruction *Inst, AliasAnalysis &AA,
   if (LoadInst *L = dyn_cast<LoadInst>(Inst)) {
     MemoryLocation Loc = MemoryLocation::get(L);
     for (Instruction *S : Stores)
-      if (AA.getModRefInfo(S, Loc) & MRI_Mod)
+      if (isModSet(AA.getModRefInfo(S, Loc)))
         return false;
   }
 
@@ -83,7 +83,7 @@ static bool isSafeToMove(Instruction *Inst, AliasAnalysis &AA,
       return false;
 
     for (Instruction *S : Stores)
-      if (AA.getModRefInfo(S, CS) & MRI_Mod)
+      if (isModSet(AA.getModRefInfo(S, CS)))
         return false;
   }
 

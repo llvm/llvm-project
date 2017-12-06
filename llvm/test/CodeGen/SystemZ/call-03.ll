@@ -62,16 +62,13 @@ define void @f4() {
 
 ; Check an indirect call.  In this case the only acceptable choice for
 ; the target register is %r1.
-;
-; NOTE: the extra copy 'lgr %r1, %r0' is a coalescing failure.
 define void @f5(void(i32, i32, i32, i32) *%foo) {
 ; CHECK-LABEL: f5:
-; CHECK: lgr %r0, %r2
+; CHECK: lgr %r1, %r2
 ; CHECK-DAG: lhi %r2, 1
 ; CHECK-DAG: lhi %r3, 2
 ; CHECK-DAG: lhi %r4, 3
 ; CHECK-DAG: lhi %r5, 4
-; CHECK: lgr %r1, %r0
 ; CHECK: br %r1
   tail call void %foo(i32 1, i32 2, i32 3, i32 4)
   ret void

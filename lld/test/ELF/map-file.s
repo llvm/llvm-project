@@ -5,7 +5,7 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/map-file3.s -o %t3.o
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/map-file4.s -o %t4.o
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/map-file5.s -o %t5.o
-// RUN: ld.lld -shared %t5.o -o %t5.so
+// RUN: ld.lld -shared %t5.o -o %t5.so -soname dso
 // RUN: rm -f %t4.a
 // RUN: llvm-ar rc %t4.a %t4.o
 // RUN: ld.lld %t1.o %t2.o %t3.o %t4.a %t5.so -o %t -M | FileCheck -strict-whitespace %s
@@ -40,12 +40,12 @@ labs = 0x1AB5
 // CHECK-NEXT: 0000000000200210 0000000000000024     8         <internal>:(.gnu.hash)
 // CHECK-NEXT: 0000000000200234 0000000000000020     4 .hash
 // CHECK-NEXT: 0000000000200234 0000000000000020     4         <internal>:(.hash)
-// CHECK-NEXT: 0000000000200254 0000000000000057     1 .dynstr
-// CHECK-NEXT: 0000000000200254 0000000000000057     1         <internal>:(.dynstr)
-// CHECK-NEXT: 00000000002002b0 0000000000000030     8 .rela.dyn
-// CHECK-NEXT: 00000000002002b0 0000000000000030     8         <internal>:(.rela.dyn)
-// CHECK-NEXT: 00000000002002e0 0000000000000030     8 .eh_frame
-// CHECK-NEXT: 00000000002002e0 0000000000000030     8         <internal>:(.eh_frame)
+// CHECK-NEXT: 0000000000200254 0000000000000019     1 .dynstr
+// CHECK-NEXT: 0000000000200254 0000000000000019     1         <internal>:(.dynstr)
+// CHECK-NEXT: 0000000000200270 0000000000000030     8 .rela.dyn
+// CHECK-NEXT: 0000000000200270 0000000000000030     8         <internal>:(.rela.dyn)
+// CHECK-NEXT: 00000000002002a0 0000000000000030     8 .eh_frame
+// CHECK-NEXT: 00000000002002a0 0000000000000030     8         <internal>:(.eh_frame)
 // CHECK-NEXT: 0000000000201000 0000000000000025     4 .text
 // CHECK-NEXT: 0000000000201000 000000000000001e     4         {{.*}}{{/|\\}}map-file.s.tmp1.o:(.text)
 // CHECK-NEXT: 0000000000201000 0000000000000000     0                 _start

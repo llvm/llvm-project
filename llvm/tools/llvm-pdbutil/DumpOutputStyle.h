@@ -80,6 +80,7 @@ private:
   Error dumpXmi();
   Error dumpXme();
   Error dumpTpiStream(uint32_t StreamIdx);
+  Error dumpTypesFromObjectFile();
   Error dumpModules();
   Error dumpModuleFiles();
   Error dumpModuleSymsForPdb();

@@ -1885,9 +1885,6 @@ SDValue DAGTypeLegalizer::SplitVecOp_MSTORE(MaskedStoreSDNode *N,
   else
     std::tie(MaskLo, MaskHi) = DAG.SplitVector(Mask, DL);
 
-  MaskLo = PromoteTargetBoolean(MaskLo, DataLo.getValueType());
-  MaskHi = PromoteTargetBoolean(MaskHi, DataHi.getValueType());
-
   // if Alignment is equal to the vector size,
   // take the half of it for the second part
   unsigned SecondHalfAlignment =
@@ -2916,11 +2913,11 @@ SDValue DAGTypeLegalizer::WidenVecRes_MLOAD(MaskedLoadSDNode *N) {
   ISD::LoadExtType ExtType = N->getExtensionType();
   SDLoc dl(N);
 
-  if (getTypeAction(MaskVT) == TargetLowering::TypeWidenVector)
-    Mask = GetWidenedVector(Mask);
-  else {
-    Mask = WidenTargetBoolean(Mask, WidenVT, true);
-  }
+  // The mask should be widened as well
+  EVT WideMaskVT = EVT::getVectorVT(*DAG.getContext(),
+                                    MaskVT.getVectorElementType(),
+                                    WidenVT.getVectorNumElements());
+  Mask = ModifyToType(Mask, WideMaskVT, true);
 
   SDValue Res = DAG.getMaskedLoad(WidenVT, dl, N->getChain(), N->getBasePtr(),
                                   Mask, Src0, N->getMemoryVT(),
@@ -2936,12 +2933,16 @@ SDValue DAGTypeLegalizer::WidenVecRes_MGATHER(MaskedGatherSDNode *N) {
 
   EVT WideVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   SDValue Mask = N->getMask();
+  EVT MaskVT = Mask.getValueType();
   SDValue Src0 = GetWidenedVector(N->getValue());
   unsigned NumElts = WideVT.getVectorNumElements();
   SDLoc dl(N);
 
   // The mask should be widened as well
-  Mask = WidenTargetBoolean(Mask, WideVT, true);
+  EVT WideMaskVT = EVT::getVectorVT(*DAG.getContext(),
+                                    MaskVT.getVectorElementType(),
+                                    WideVT.getVectorNumElements());
+  Mask = ModifyToType(Mask, WideMaskVT, true);
 
   // Widen the Index operand
   SDValue Index = N->getIndex();
@@ -3225,19 +3226,6 @@ SDValue DAGTypeLegalizer::WidenVecRes_SELECT_CC(SDNode *N) {
                      N->getOperand(1), InOp1, InOp2, N->getOperand(4));
 }
 
-SDValue DAGTypeLegalizer::WidenVecRes_SETCC(SDNode *N) {
-  assert(N->getValueType(0).isVector() ==
-         N->getOperand(0).getValueType().isVector() &&
-         "Scalar/Vector type mismatch");
-  if (N->getValueType(0).isVector()) return WidenVecRes_VSETCC(N);
-
-  EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
-  SDValue InOp1 = GetWidenedVector(N->getOperand(0));
-  SDValue InOp2 = GetWidenedVector(N->getOperand(1));
-  return DAG.getNode(ISD::SETCC, SDLoc(N), WidenVT,
-                     InOp1, InOp2, N->getOperand(2));
-}
-
 SDValue DAGTypeLegalizer::WidenVecRes_UNDEF(SDNode *N) {
  EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
  return DAG.getUNDEF(WidenVT);
@@ -3268,7 +3256,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N) {
   return DAG.getVectorShuffle(WidenVT, dl, InOp1, InOp2, NewMask);
 }
 
-SDValue DAGTypeLegalizer::WidenVecRes_VSETCC(SDNode *N) {
+SDValue DAGTypeLegalizer::WidenVecRes_SETCC(SDNode *N) {
   assert(N->getValueType(0).isVector() &&
          N->getOperand(0).getValueType().isVector() &&
          "Operands must be vectors");
@@ -3545,6 +3533,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_STORE(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_MSTORE(SDNode *N, unsigned OpNo) {
+  assert(OpNo == 3 && "Can widen only data operand of mstore");
   MaskedStoreSDNode *MST = cast<MaskedStoreSDNode>(N);
   SDValue Mask = MST->getMask();
   EVT MaskVT = Mask.getValueType();
@@ -3553,12 +3542,13 @@ SDValue DAGTypeLegalizer::WidenVecOp_MSTORE(SDNode *N, unsigned OpNo) {
   SDValue WideVal = GetWidenedVector(StVal);
   SDLoc dl(N);
 
-  if (OpNo == 2 || getTypeAction(MaskVT) == TargetLowering::TypeWidenVector)
-    Mask = GetWidenedVector(Mask);
-  else {
-    // The mask should be widened as well.
-    Mask = WidenTargetBoolean(Mask, WideVal.getValueType(), true);
-  }
+  // The mask should be widened as well.
+  EVT WideVT = WideVal.getValueType();
+  EVT WideMaskVT = EVT::getVectorVT(*DAG.getContext(),
+                                    MaskVT.getVectorElementType(),
+                                    WideVT.getVectorNumElements());
+  Mask = ModifyToType(Mask, WideMaskVT, true);
+
   assert(Mask.getValueType().getVectorNumElements() ==
          WideVal.getValueType().getVectorNumElements() &&
          "Mask and data vectors should have the same number of elements");
@@ -3572,15 +3562,18 @@ SDValue DAGTypeLegalizer::WidenVecOp_MSCATTER(SDNode *N, unsigned OpNo) {
   MaskedScatterSDNode *MSC = cast<MaskedScatterSDNode>(N);
   SDValue DataOp = MSC->getValue();
   SDValue Mask = MSC->getMask();
+  EVT MaskVT = Mask.getValueType();
 
   // Widen the value.
   SDValue WideVal = GetWidenedVector(DataOp);
   EVT WideVT = WideVal.getValueType();
-  unsigned NumElts = WideVal.getValueType().getVectorNumElements();
+  unsigned NumElts = WideVT.getVectorNumElements();
   SDLoc dl(N);
 
   // The mask should be widened as well.
-  Mask = WidenTargetBoolean(Mask, WideVT, true);
+  EVT WideMaskVT = EVT::getVectorVT(*DAG.getContext(),
+                                    MaskVT.getVectorElementType(), NumElts);
+  Mask = ModifyToType(Mask, WideMaskVT, true);
 
   // Widen index.
   SDValue Index = MSC->getIndex();
