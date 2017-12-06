@@ -3901,6 +3901,11 @@ static Value *SimplifyExtractElementInst(Value *Vec, Value *Idx, const SimplifyQ
     if (Value *Elt = findScalarElement(Vec, IdxC->getZExtValue()))
       return Elt;
 
+  // An undef extract index can be arbitrarily chosen to be an out-of-range
+  // index value, which would result in the instruction being undef.
+  if (isa<UndefValue>(Idx))
+    return UndefValue::get(Vec->getType()->getVectorElementType());
+
   return nullptr;
 }
 

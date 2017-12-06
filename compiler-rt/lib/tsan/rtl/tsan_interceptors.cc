@@ -392,7 +392,7 @@ static int setup_at_exit_wrapper(ThreadState *thr, uptr pc, void(*f)(),
 
 #if !SANITIZER_ANDROID
 TSAN_INTERCEPTOR(int, atexit, void (*f)()) {
-  if (cur_thread()->in_symbolizer)
+  if (UNLIKELY(cur_thread()->in_symbolizer))
     return 0;
   // We want to setup the atexit callback even if we are in ignored lib
   // or after fork.
@@ -402,7 +402,7 @@ TSAN_INTERCEPTOR(int, atexit, void (*f)()) {
 #endif
 
 TSAN_INTERCEPTOR(int, __cxa_atexit, void (*f)(void *a), void *arg, void *dso) {
-  if (cur_thread()->in_symbolizer)
+  if (UNLIKELY(cur_thread()->in_symbolizer))
     return 0;
   SCOPED_TSAN_INTERCEPTOR(__cxa_atexit, f, arg, dso);
   return setup_at_exit_wrapper(thr, pc, (void(*)())f, arg, dso);
@@ -448,7 +448,7 @@ static void on_exit_wrapper(int status, void *arg) {
 }
 
 TSAN_INTERCEPTOR(int, on_exit, void(*f)(int, void*), void *arg) {
-  if (cur_thread()->in_symbolizer)
+  if (UNLIKELY(cur_thread()->in_symbolizer))
     return 0;
   SCOPED_TSAN_INTERCEPTOR(on_exit, f, arg);
   AtExitCtx *ctx = (AtExitCtx*)InternalAlloc(sizeof(AtExitCtx));
@@ -659,7 +659,7 @@ TSAN_INTERCEPTOR(void, _longjmp, uptr *env, int val) {
 
 #if !SANITIZER_MAC
 TSAN_INTERCEPTOR(void*, malloc, uptr size) {
-  if (cur_thread()->in_symbolizer)
+  if (UNLIKELY(cur_thread()->in_symbolizer))
     return InternalAlloc(size);
   void *p = 0;
   {
@@ -676,7 +676,7 @@ TSAN_INTERCEPTOR(void*, __libc_memalign, uptr align, uptr sz) {
 }
 
 TSAN_INTERCEPTOR(void*, calloc, uptr size, uptr n) {
-  if (cur_thread()->in_symbolizer)
+  if (UNLIKELY(cur_thread()->in_symbolizer))
     return InternalCalloc(size, n);
   void *p = 0;
   {
@@ -688,7 +688,7 @@ TSAN_INTERCEPTOR(void*, calloc, uptr size, uptr n) {
 }
 
 TSAN_INTERCEPTOR(void*, realloc, void *p, uptr size) {
-  if (cur_thread()->in_symbolizer)
+  if (UNLIKELY(cur_thread()->in_symbolizer))
     return InternalRealloc(p, size);
   if (p)
     invoke_free_hook(p);
@@ -703,7 +703,7 @@ TSAN_INTERCEPTOR(void*, realloc, void *p, uptr size) {
 TSAN_INTERCEPTOR(void, free, void *p) {
   if (p == 0)
     return;
-  if (cur_thread()->in_symbolizer)
+  if (UNLIKELY(cur_thread()->in_symbolizer))
     return InternalFree(p);
   invoke_free_hook(p);
   SCOPED_INTERCEPTOR_RAW(free, p);
@@ -713,7 +713,7 @@ TSAN_INTERCEPTOR(void, free, void *p) {
 TSAN_INTERCEPTOR(void, cfree, void *p) {
   if (p == 0)
     return;
-  if (cur_thread()->in_symbolizer)
+  if (UNLIKELY(cur_thread()->in_symbolizer))
     return InternalFree(p);
   invoke_free_hook(p);
   SCOPED_INTERCEPTOR_RAW(cfree, p);
@@ -827,11 +827,15 @@ TSAN_INTERCEPTOR(void*, memalign, uptr align, uptr sz) {
 
 #if !SANITIZER_MAC
 TSAN_INTERCEPTOR(void*, aligned_alloc, uptr align, uptr sz) {
+  if (UNLIKELY(cur_thread()->in_symbolizer))
+    return InternalAlloc(sz, nullptr, align);
   SCOPED_INTERCEPTOR_RAW(aligned_alloc, align, sz);
   return user_aligned_alloc(thr, pc, align, sz);
 }
 
 TSAN_INTERCEPTOR(void*, valloc, uptr sz) {
+  if (UNLIKELY(cur_thread()->in_symbolizer))
+    return InternalAlloc(sz, nullptr, GetPageSizeCached());
   SCOPED_INTERCEPTOR_RAW(valloc, sz);
   return user_valloc(thr, pc, sz);
 }
@@ -839,6 +843,11 @@ TSAN_INTERCEPTOR(void*, valloc, uptr sz) {
 
 #if SANITIZER_LINUX
 TSAN_INTERCEPTOR(void*, pvalloc, uptr sz) {
+  if (UNLIKELY(cur_thread()->in_symbolizer)) {
+    uptr PageSize = GetPageSizeCached();
+    sz = sz ? RoundUpTo(sz, PageSize) : PageSize;
+    return InternalAlloc(sz, nullptr, PageSize);
+  }
   SCOPED_INTERCEPTOR_RAW(pvalloc, sz);
   return user_pvalloc(thr, pc, sz);
 }
@@ -849,6 +858,13 @@ TSAN_INTERCEPTOR(void*, pvalloc, uptr sz) {
 
 #if !SANITIZER_MAC
 TSAN_INTERCEPTOR(int, posix_memalign, void **memptr, uptr align, uptr sz) {
+  if (UNLIKELY(cur_thread()->in_symbolizer)) {
+    void *p = InternalAlloc(sz, nullptr, align);
+    if (!p)
+      return errno_ENOMEM;
+    *memptr = p;
+    return 0;
+  }
   SCOPED_INTERCEPTOR_RAW(posix_memalign, memptr, align, sz);
   return user_posix_memalign(thr, pc, memptr, align, sz);
 }
@@ -2069,7 +2085,7 @@ TSAN_INTERCEPTOR(int, getaddrinfo, void *node, void *service,
 }
 
 TSAN_INTERCEPTOR(int, fork, int fake) {
-  if (cur_thread()->in_symbolizer)
+  if (UNLIKELY(cur_thread()->in_symbolizer))
     return REAL(fork)(fake);
   SCOPED_INTERCEPTOR_RAW(fork, fake);
   ForkBefore(thr, pc);

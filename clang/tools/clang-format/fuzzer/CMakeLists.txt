@@ -10,6 +10,7 @@ add_clang_executable(clang-format-fuzzer
   )
 
 target_link_libraries(clang-format-fuzzer
+  PRIVATE
   ${CLANG_FORMAT_LIB_DEPS}
   ${LLVM_LIB_FUZZING_ENGINE}
   )

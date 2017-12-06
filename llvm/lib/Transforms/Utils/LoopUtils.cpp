@@ -1400,8 +1400,8 @@ Value *llvm::createSimpleTargetReduction(
   using RD = RecurrenceDescriptor;
   RD::MinMaxRecurrenceKind MinMaxKind = RD::MRK_Invalid;
   // TODO: Support creating ordered reductions.
-  FastMathFlags FMFUnsafe;
-  FMFUnsafe.setFast();
+  FastMathFlags FMFFast;
+  FMFFast.setFast();
 
   switch (Opcode) {
   case Instruction::Add:
@@ -1422,14 +1422,14 @@ Value *llvm::createSimpleTargetReduction(
   case Instruction::FAdd:
     BuildFunc = [&]() {
       auto Rdx = Builder.CreateFAddReduce(ScalarUdf, Src);
-      cast<CallInst>(Rdx)->setFastMathFlags(FMFUnsafe);
+      cast<CallInst>(Rdx)->setFastMathFlags(FMFFast);
       return Rdx;
     };
     break;
   case Instruction::FMul:
     BuildFunc = [&]() {
       auto Rdx = Builder.CreateFMulReduce(ScalarUdf, Src);
-      cast<CallInst>(Rdx)->setFastMathFlags(FMFUnsafe);
+      cast<CallInst>(Rdx)->setFastMathFlags(FMFFast);
       return Rdx;
     };
     break;
@@ -1465,55 +1465,39 @@ Value *llvm::createSimpleTargetReduction(
 }
 
 /// Create a vector reduction using a given recurrence descriptor.
-Value *llvm::createTargetReduction(IRBuilder<> &Builder,
+Value *llvm::createTargetReduction(IRBuilder<> &B,
                                    const TargetTransformInfo *TTI,
                                    RecurrenceDescriptor &Desc, Value *Src,
                                    bool NoNaN) {
   // TODO: Support in-order reductions based on the recurrence descriptor.
-  RecurrenceDescriptor::RecurrenceKind RecKind = Desc.getRecurrenceKind();
+  using RD = RecurrenceDescriptor;
+  RD::RecurrenceKind RecKind = Desc.getRecurrenceKind();
   TargetTransformInfo::ReductionFlags Flags;
   Flags.NoNaN = NoNaN;
-  auto getSimpleRdx = [&](unsigned Opc) {
-    return createSimpleTargetReduction(Builder, TTI, Opc, Src, Flags);
-  };
   switch (RecKind) {
-  case RecurrenceDescriptor::RK_FloatAdd:
-    return getSimpleRdx(Instruction::FAdd);
-  case RecurrenceDescriptor::RK_FloatMult:
-    return getSimpleRdx(Instruction::FMul);
-  case RecurrenceDescriptor::RK_IntegerAdd:
-    return getSimpleRdx(Instruction::Add);
-  case RecurrenceDescriptor::RK_IntegerMult:
-    return getSimpleRdx(Instruction::Mul);
-  case RecurrenceDescriptor::RK_IntegerAnd:
-    return getSimpleRdx(Instruction::And);
-  case RecurrenceDescriptor::RK_IntegerOr:
-    return getSimpleRdx(Instruction::Or);
-  case RecurrenceDescriptor::RK_IntegerXor:
-    return getSimpleRdx(Instruction::Xor);
-  case RecurrenceDescriptor::RK_IntegerMinMax: {
-    switch (Desc.getMinMaxRecurrenceKind()) {
-    case RecurrenceDescriptor::MRK_SIntMax:
-      Flags.IsSigned = true;
-      Flags.IsMaxOp = true;
-      break;
-    case RecurrenceDescriptor::MRK_UIntMax:
-      Flags.IsMaxOp = true;
-      break;
-    case RecurrenceDescriptor::MRK_SIntMin:
-      Flags.IsSigned = true;
-      break;
-    case RecurrenceDescriptor::MRK_UIntMin:
-      break;
-    default:
-      llvm_unreachable("Unhandled MRK");
-    }
-    return getSimpleRdx(Instruction::ICmp);
+  case RD::RK_FloatAdd:
+    return createSimpleTargetReduction(B, TTI, Instruction::FAdd, Src, Flags);
+  case RD::RK_FloatMult:
+    return createSimpleTargetReduction(B, TTI, Instruction::FMul, Src, Flags);
+  case RD::RK_IntegerAdd:
+    return createSimpleTargetReduction(B, TTI, Instruction::Add, Src, Flags);
+  case RD::RK_IntegerMult:
+    return createSimpleTargetReduction(B, TTI, Instruction::Mul, Src, Flags);
+  case RD::RK_IntegerAnd:
+    return createSimpleTargetReduction(B, TTI, Instruction::And, Src, Flags);
+  case RD::RK_IntegerOr:
+    return createSimpleTargetReduction(B, TTI, Instruction::Or, Src, Flags);
+  case RD::RK_IntegerXor:
+    return createSimpleTargetReduction(B, TTI, Instruction::Xor, Src, Flags);
+  case RD::RK_IntegerMinMax: {
+    RD::MinMaxRecurrenceKind MMKind = Desc.getMinMaxRecurrenceKind();
+    Flags.IsMaxOp = (MMKind == RD::MRK_SIntMax || MMKind == RD::MRK_UIntMax);
+    Flags.IsSigned = (MMKind == RD::MRK_SIntMax || MMKind == RD::MRK_SIntMin);
+    return createSimpleTargetReduction(B, TTI, Instruction::ICmp, Src, Flags);
   }
-  case RecurrenceDescriptor::RK_FloatMinMax: {
-    Flags.IsMaxOp =
-        Desc.getMinMaxRecurrenceKind() == RecurrenceDescriptor::MRK_FloatMax;
-    return getSimpleRdx(Instruction::FCmp);
+  case RD::RK_FloatMinMax: {
+    Flags.IsMaxOp = Desc.getMinMaxRecurrenceKind() == RD::MRK_FloatMax;
+    return createSimpleTargetReduction(B, TTI, Instruction::FCmp, Src, Flags);
   }
   default:
     llvm_unreachable("Unhandled RecKind");

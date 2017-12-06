@@ -5952,6 +5952,8 @@ def warn_out_of_range_compare : Warning<
   "comparison of %select{constant %0|true|false}1 with " 
   "%select{expression of type %2|boolean expression}3 is always "
   "%select{false|true}4">, InGroup<TautologicalOutOfRangeCompare>;
+def warn_tautological_bool_compare : Warning<warn_out_of_range_compare.Text>,
+  InGroup<TautologicalConstantCompare>;
 def warn_comparison_of_mixed_enum_types : Warning<
   "comparison of two values with different enumeration types"
   "%diff{ ($ and $)|}0,1">,
@@ -8617,7 +8619,7 @@ def err_omp_bit_fields_forbidden_in_clause : Error<
 def err_array_section_does_not_specify_contiguous_storage : Error<
   "array section does not specify contiguous storage">;
 def err_omp_union_type_not_allowed : Error<
-  "mapped storage cannot be derived from a union">;
+  "mapping of union members is not allowed">;
 def err_omp_expected_access_to_data_field : Error<
   "expected access to data field">;
 def err_omp_multiple_array_items_in_map_clause : Error<

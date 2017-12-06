@@ -1520,8 +1520,13 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
     return BinaryOperator::CreateNot(Op1);
 
   if (Constant *C = dyn_cast<Constant>(Op0)) {
+    Value *X;
+    // C - zext(bool) -> bool ? C - 1 : C
+    if (match(Op1, m_ZExt(m_Value(X))) &&
+        X->getType()->getScalarSizeInBits() == 1)
+      return SelectInst::Create(X, SubOne(C), C);
+
     // C - ~X == X + (1+C)
-    Value *X = nullptr;
     if (match(Op1, m_Not(m_Value(X))))
       return BinaryOperator::CreateAdd(X, AddOne(C));
 

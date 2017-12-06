@@ -30,6 +30,7 @@
 
 #include "lld/Common/LLVM.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
 
@@ -99,6 +100,13 @@ template <class T> T check(Expected<T> E, const Twine &Prefix) {
   return std::move(*E);
 }
 
+// A lazy variant that only allocates error messages when there is an error.
+template <class T>
+T checkLazy(Expected<T> E, llvm::function_ref<std::string()> getPrefix) {
+  if (!E)
+    fatal(getPrefix() + ": " + toString(E.takeError()));
+  return std::move(*E);
+}
 } // namespace lld
 
 #endif

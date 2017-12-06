@@ -682,6 +682,11 @@ let TargetPrefix = "nvvm" in {
   def int_nvvm_bitcast_d2ll : GCCBuiltin<"__nvvm_bitcast_d2ll">,
       Intrinsic<[llvm_i64_ty], [llvm_double_ty], [IntrNoMem]>;
 
+// FNS
+
+  def int_nvvm_fns : GCCBuiltin<"__nvvm_fns">,
+      Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+                [IntrNoMem]>;
 
 // Atomics not available as llvm intrinsics.
   def int_nvvm_atomic_load_add_f32 : Intrinsic<[llvm_float_ty],

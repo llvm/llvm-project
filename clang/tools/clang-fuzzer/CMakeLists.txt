@@ -48,6 +48,7 @@ if(CLANG_ENABLE_PROTO_FUZZER)
     )
 
   target_link_libraries(clang-proto-fuzzer
+    PRIVATE
     ${ProtobufMutator_LIBRARIES}
     ${PROTOBUF_LIBRARIES}
     ${LLVM_LIB_FUZZING_ENGINE}

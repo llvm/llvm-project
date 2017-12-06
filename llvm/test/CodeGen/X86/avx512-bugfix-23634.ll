@@ -16,8 +16,8 @@ define void @f_fu(float* %ret, float*  %aa, float %b) {
 ; CHECK-NEXT:    movw $-21846, %ax ## imm = 0xAAAA
 ; CHECK-NEXT:    kmovw %eax, %k1
 ; CHECK-NEXT:    vmovdqa32 {{.*}}(%rip), %zmm1 {%k1}
-; CHECK-NEXT:    vpaddd %zmm0, %zmm2, %zmm0
 ; CHECK-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vpaddd %zmm0, %zmm2, %zmm0
 ; CHECK-NEXT:    vcvtdq2ps %zmm0, %zmm0
 ; CHECK-NEXT:    vmovups %zmm0, (%rdi)
 ; CHECK-NEXT:    retq

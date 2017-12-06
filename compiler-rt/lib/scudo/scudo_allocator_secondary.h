@@ -24,16 +24,17 @@
 class ScudoLargeMmapAllocator {
  public:
   void Init() {
-    PageSize = GetPageSizeCached();
+    PageSizeCached = GetPageSizeCached();
   }
 
   void *Allocate(AllocatorStats *Stats, uptr Size, uptr Alignment) {
-    uptr UserSize = Size - AlignedChunkHeaderSize;
+    const uptr UserSize = Size - AlignedChunkHeaderSize;
     // The Scudo frontend prevents us from allocating more than
     // MaxAllowedMallocSize, so integer overflow checks would be superfluous.
     uptr MapSize = Size + AlignedReservedAddressRangeSize;
     if (Alignment > MinAlignment)
       MapSize += Alignment;
+    const uptr PageSize = PageSizeCached;
     MapSize = RoundUpTo(MapSize, PageSize);
     // Account for 2 guard pages, one before and one after the chunk.
     MapSize += 2 * PageSize;
@@ -79,7 +80,7 @@ class ScudoLargeMmapAllocator {
     // Actually mmap the memory, preserving the guard pages on either side
     CHECK_EQ(MapBeg + PageSize,
              AddressRange.Map(MapBeg + PageSize, MapSize - 2 * PageSize));
-    uptr Ptr = UserBeg - AlignedChunkHeaderSize;
+    const uptr Ptr = UserBeg - AlignedChunkHeaderSize;
     ReservedAddressRange *StoredRange = getReservedAddressRange(Ptr);
     *StoredRange = AddressRange;
 
@@ -98,6 +99,7 @@ class ScudoLargeMmapAllocator {
   void Deallocate(AllocatorStats *Stats, void *Ptr) {
     // Since we're unmapping the entirety of where the ReservedAddressRange
     // actually is, copy onto the stack.
+    const uptr PageSize = PageSizeCached;
     ReservedAddressRange AddressRange = *getReservedAddressRange(Ptr);
     {
       SpinMutexLock l(&StatsMutex);
@@ -113,7 +115,7 @@ class ScudoLargeMmapAllocator {
     // Deduct PageSize as ReservedAddressRange size includes the trailing guard
     // page.
     uptr MapEnd = reinterpret_cast<uptr>(StoredRange->base()) +
-        StoredRange->size() - PageSize;
+        StoredRange->size() - PageSizeCached;
     return MapEnd - reinterpret_cast<uptr>(Ptr);
   }
 
@@ -126,12 +128,12 @@ class ScudoLargeMmapAllocator {
     return getReservedAddressRange(reinterpret_cast<uptr>(Ptr));
   }
 
-  const uptr AlignedReservedAddressRangeSize =
-      RoundUpTo(sizeof(ReservedAddressRange), MinAlignment);
-  const uptr HeadersSize =
+  static constexpr uptr AlignedReservedAddressRangeSize =
+      (sizeof(ReservedAddressRange) + MinAlignment - 1) & ~(MinAlignment - 1);
+  static constexpr uptr HeadersSize =
       AlignedReservedAddressRangeSize + AlignedChunkHeaderSize;
 
-  uptr PageSize;
+  uptr PageSizeCached;
   SpinMutex StatsMutex;
 };
 
