@@ -22,6 +22,7 @@
 #include "msan_thread.h"
 #include "msan_poisoning.h"
 #include "sanitizer_common/sanitizer_platform_limits_posix.h"
+#include "sanitizer_common/sanitizer_platform_limits_netbsd.h"
 #include "sanitizer_common/sanitizer_allocator.h"
 #include "sanitizer_common/sanitizer_allocator_interface.h"
 #include "sanitizer_common/sanitizer_allocator_internal.h"
@@ -32,6 +33,11 @@
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_linux.h"
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
+
+#if SANITIZER_NETBSD
+#define gettimeofday __gettimeofday50
+#define getrusage __getrusage50
+#endif
 
 #include <stdarg.h>
 // ACHTUNG! No other system header includes in this file.
@@ -1134,21 +1140,6 @@ INTERCEPTOR(int, __cxa_atexit, void (*func)(void *), void *arg,
   return REAL(__cxa_atexit)(MSanAtExitWrapper, r, dso_handle);
 }
 
-DECLARE_REAL(int, shmctl, int shmid, int cmd, void *buf)
-
-INTERCEPTOR(void *, shmat, int shmid, const void *shmaddr, int shmflg) {
-  ENSURE_MSAN_INITED();
-  void *p = REAL(shmat)(shmid, shmaddr, shmflg);
-  if (p != (void *)-1) {
-    __sanitizer_shmid_ds ds;
-    int res = REAL(shmctl)(shmid, shmctl_ipc_stat, &ds);
-    if (!res) {
-      __msan_unpoison(p, ds.shm_segsz);
-    }
-  }
-  return p;
-}
-
 static void BeforeFork() {
   StackDepotLockAll();
   ChainedOriginDepotLockAll();
@@ -1340,7 +1331,7 @@ static int sigaction_impl(int signo, const __sanitizer_sigaction *act,
         pnew_act->sigaction = (decltype(pnew_act->sigaction))new_cb;
       }
     }
-    res = REAL(sigaction)(signo, pnew_act, oldact);
+    res = REAL(SIGACTION_SYMNAME)(signo, pnew_act, oldact);
     if (res == 0 && oldact) {
       uptr cb = (uptr)oldact->sigaction;
       if (cb == (uptr)SignalAction || cb == (uptr)SignalHandler) {
@@ -1348,7 +1339,7 @@ static int sigaction_impl(int signo, const __sanitizer_sigaction *act,
       }
     }
   } else {
-    res = REAL(sigaction)(signo, act, oldact);
+    res = REAL(SIGACTION_SYMNAME)(signo, act, oldact);
   }
 
   if (res == 0 && oldact) {
@@ -1428,6 +1419,19 @@ static int msan_dl_iterate_phdr_cb(__sanitizer_dl_phdr_info *info, SIZE_T size,
   dl_iterate_phdr_data *cbdata = (dl_iterate_phdr_data *)data;
   UnpoisonParam(3);
   return cbdata->callback(info, size, cbdata->data);
+}
+
+INTERCEPTOR(void *, shmat, int shmid, const void *shmaddr, int shmflg) {
+  ENSURE_MSAN_INITED();
+  void *p = REAL(shmat)(shmid, shmaddr, shmflg);
+  if (p != (void *)-1) {
+    __sanitizer_shmid_ds ds;
+    int res = REAL(shmctl)(shmid, shmctl_ipc_stat, &ds);
+    if (!res) {
+      __msan_unpoison(p, ds.shm_segsz);
+    }
+  }
+  return p;
 }
 
 INTERCEPTOR(int, dl_iterate_phdr, dl_iterate_phdr_cb callback, void *data) {
