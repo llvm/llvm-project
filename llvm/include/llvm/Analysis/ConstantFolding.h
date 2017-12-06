@@ -102,6 +102,13 @@ Constant *ConstantFoldInsertValueInstruction(Constant *Agg, Constant *Val,
 Constant *ConstantFoldExtractValueInstruction(Constant *Agg,
                                               ArrayRef<unsigned> Idxs);
 
+/// \brief Attempt to constant fold an insertelement instruction with the
+/// specified operands and indices.  The constant result is returned if
+/// successful; if not, null is returned.
+Constant *ConstantFoldInsertElementInstruction(Constant *Val,
+                                               Constant *Elt,
+                                               Constant *Idx);
+
 /// \brief Attempt to constant fold an extractelement instruction with the
 /// specified operands and indices.  The constant result is returned if
 /// successful; if not, null is returned.

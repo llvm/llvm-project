@@ -16194,7 +16194,6 @@ static SDValue LowerANY_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
 
 static SDValue LowerZERO_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
                                 SelectionDAG &DAG) {
-  MVT VT = Op.getSimpleValueType();
   SDValue In = Op.getOperand(0);
   MVT SVT = In.getSimpleValueType();
 
@@ -16205,8 +16204,9 @@ static SDValue LowerZERO_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
     if (SDValue Res = LowerAVXExtend(Op, DAG, Subtarget))
       return Res;
 
-  assert(!VT.is256BitVector() || !SVT.is128BitVector() ||
-         VT.getVectorNumElements() != SVT.getVectorNumElements());
+  assert(!Op.getSimpleValueType().is256BitVector() || !SVT.is128BitVector() ||
+         Op.getSimpleValueType().getVectorNumElements() !=
+             SVT.getVectorNumElements());
   return SDValue();
 }
 

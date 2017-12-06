@@ -8650,15 +8650,8 @@ static bool IsEnumConstOrFromMacro(Sema &S, Expr *E) {
   return false;
 }
 
-static bool isNonBooleanIntegerValue(Expr *E) {
-  return !E->isKnownToHaveBooleanValue() && E->getType()->isIntegerType();
-}
-
-static bool isNonBooleanUnsignedValue(Expr *E) {
-  // We are checking that the expression is not known to have boolean value,
-  // is an integer type; and is either unsigned after implicit casts,
-  // or was unsigned before implicit casts.
-  return isNonBooleanIntegerValue(E) &&
+static bool isKnownToHaveUnsignedValue(Expr *E) {
+  return E->getType()->isIntegerType() &&
          (!E->getType()->isSignedIntegerType() ||
           !E->IgnoreParenImpCasts()->getType()->isSignedIntegerType());
 }
@@ -8684,7 +8677,7 @@ static llvm::Optional<LimitType> IsTypeLimit(Sema &S, Expr *Constant,
   if (IsEnumConstOrFromMacro(S, Constant))
     return llvm::Optional<LimitType>();
 
-  if (isNonBooleanUnsignedValue(Other) && Value == 0)
+  if (isKnownToHaveUnsignedValue(Other) && Value == 0)
     return LimitType::Min;
 
   // TODO: Investigate using GetExprRange() to get tighter bounds
@@ -8694,20 +8687,20 @@ static llvm::Optional<LimitType> IsTypeLimit(Sema &S, Expr *Constant,
     OtherT = AT->getValueType();
 
   IntRange OtherRange = IntRange::forValueOfType(S.Context, OtherT);
+  if (Other->isKnownToHaveBooleanValue())
+    OtherRange = IntRange::forBoolType();
 
   // Special-case for C++ for enum with one enumerator with value of 0.
   if (OtherRange.Width == 0)
     return Value == 0 ? LimitType::Both : llvm::Optional<LimitType>();
 
   if (llvm::APSInt::isSameValue(
-          llvm::APSInt::getMaxValue(OtherRange.Width,
-                                    OtherT->isUnsignedIntegerType()),
+          llvm::APSInt::getMaxValue(OtherRange.Width, OtherRange.NonNegative),
           Value))
     return LimitType::Max;
 
   if (llvm::APSInt::isSameValue(
-          llvm::APSInt::getMinValue(OtherRange.Width,
-                                    OtherT->isUnsignedIntegerType()),
+          llvm::APSInt::getMinValue(OtherRange.Width, OtherRange.NonNegative),
           Value))
     return LimitType::Min;
 
@@ -8726,6 +8719,20 @@ static bool HasEnumType(Expr *E) {
   return E->getType()->isEnumeralType();
 }
 
+static int classifyConstantValue(Expr *Constant) {
+  // The values of this enumeration are used in the diagnostics
+  // diag::warn_out_of_range_compare and diag::warn_tautological_bool_compare.
+  enum ConstantValueKind {
+    Miscellaneous = 0,
+    LiteralTrue,
+    LiteralFalse
+  };
+  if (auto *BL = dyn_cast<CXXBoolLiteralExpr>(Constant))
+    return BL->getValue() ? ConstantValueKind::LiteralTrue
+                          : ConstantValueKind::LiteralFalse;
+  return ConstantValueKind::Miscellaneous;
+}
+
 static bool CheckTautologicalComparison(Sema &S, BinaryOperator *E,
                                         Expr *Constant, Expr *Other,
                                         const llvm::APSInt &Value,
@@ -8738,11 +8745,12 @@ static bool CheckTautologicalComparison(Sema &S, BinaryOperator *E,
   BinaryOperatorKind Op = E->getOpcode();
 
   QualType OType = Other->IgnoreParenImpCasts()->getType();
+  if (!OType->isIntegerType())
+    return false;
 
-  llvm::Optional<LimitType> ValueType; // Which limit (min/max) is the constant?
-
-  if (!(isNonBooleanIntegerValue(Other) &&
-        (ValueType = IsTypeLimit(S, Constant, Other, Value))))
+  // Determine which limit (min/max) the constant is, if either.
+  llvm::Optional<LimitType> ValueType = IsTypeLimit(S, Constant, Other, Value);
+  if (!ValueType)
     return false;
 
   bool ConstIsLowerBound = (Op == BO_LT || Op == BO_LE) ^ RhsConstant;
@@ -8757,16 +8765,29 @@ static bool CheckTautologicalComparison(Sema &S, BinaryOperator *E,
 
   const bool Result = ResultWhenConstEqualsOther;
 
-  unsigned Diag = (isNonBooleanUnsignedValue(Other) && Value == 0)
-                      ? (HasEnumType(Other)
-                             ? diag::warn_unsigned_enum_always_true_comparison
-                             : diag::warn_unsigned_always_true_comparison)
-                      : diag::warn_tautological_constant_compare;
-
   // Should be enough for uint128 (39 decimal digits)
   SmallString<64> PrettySourceValue;
   llvm::raw_svector_ostream OS(PrettySourceValue);
   OS << Value;
+
+  // FIXME: We use a somewhat different formatting for the cases involving
+  // boolean values for historical reasons. We should pick a consistent way
+  // of presenting these diagnostics.
+  if (Other->isKnownToHaveBooleanValue()) {
+    S.DiagRuntimeBehavior(
+      E->getOperatorLoc(), E,
+      S.PDiag(diag::warn_tautological_bool_compare)
+          << OS.str() << classifyConstantValue(Constant->IgnoreParenImpCasts())
+          << OType << !OType->isBooleanType() << Result
+          << E->getLHS()->getSourceRange() << E->getRHS()->getSourceRange());
+    return true;
+  }
+
+  unsigned Diag = (isKnownToHaveUnsignedValue(Other) && Value == 0)
+                      ? (HasEnumType(Other)
+                             ? diag::warn_unsigned_enum_always_true_comparison
+                             : diag::warn_unsigned_always_true_comparison)
+                      : diag::warn_tautological_constant_compare;
 
   S.Diag(E->getOperatorLoc(), Diag)
       << RhsConstant << OType << E->getOpcodeStr() << OS.str() << Result
@@ -8791,26 +8812,29 @@ static bool DiagnoseOutOfRangeComparison(Sema &S, BinaryOperator *E,
   QualType OtherT = Other->getType();
   if (const auto *AT = OtherT->getAs<AtomicType>())
     OtherT = AT->getValueType();
-  IntRange OtherRange = IntRange::forValueOfType(S.Context, OtherT);
-  unsigned OtherWidth = OtherRange.Width;
 
-  bool OtherIsBooleanType = Other->isKnownToHaveBooleanValue();
+  IntRange OtherRange = IntRange::forValueOfType(S.Context, OtherT);
+
+  // Whether we're treating Other as being a bool because of the form of
+  // expression despite it having another type (typically 'int' in C).
+  bool OtherIsBooleanDespiteType =
+      !OtherT->isBooleanType() && Other->isKnownToHaveBooleanValue();
+  if (OtherIsBooleanDespiteType)
+    OtherRange = IntRange::forBoolType();
+
+  unsigned OtherWidth = OtherRange.Width;
 
   BinaryOperatorKind op = E->getOpcode();
   bool IsTrue = true;
 
-  // Used for diagnostic printout.
-  enum {
-    LiteralConstant = 0,
-    CXXBoolLiteralTrue,
-    CXXBoolLiteralFalse
-  } LiteralOrBoolConstant = LiteralConstant;
-
-  if (!OtherIsBooleanType) {
+  // Check whether the constant value can be represented in OtherRange. Bail
+  // out if so; this isn't an out-of-range comparison.
+  {
     QualType ConstantT = Constant->getType();
     QualType CommonT = E->getLHS()->getType();
 
-    if (S.Context.hasSameUnqualifiedType(OtherT, ConstantT))
+    if (S.Context.hasSameUnqualifiedType(OtherT, ConstantT) &&
+        !OtherIsBooleanDespiteType)
       return false;
     assert((OtherT->isIntegerType() && ConstantT->isIntegerType()) &&
            "comparison with non-integer type");
@@ -8882,84 +8906,6 @@ static bool DiagnoseOutOfRangeComparison(Sema &S, BinaryOperator *E,
       else // op == BO_GT || op == BO_GE
         IsTrue = PositiveConstant;
     }
-  } else {
-    // Other isKnownToHaveBooleanValue
-    enum CompareBoolWithConstantResult { AFals, ATrue, Unkwn };
-    enum ConstantValue { LT_Zero, Zero, One, GT_One, SizeOfConstVal };
-    enum ConstantSide { Lhs, Rhs, SizeOfConstSides };
-
-    static const struct LinkedConditions {
-      CompareBoolWithConstantResult BO_LT_OP[SizeOfConstSides][SizeOfConstVal];
-      CompareBoolWithConstantResult BO_GT_OP[SizeOfConstSides][SizeOfConstVal];
-      CompareBoolWithConstantResult BO_LE_OP[SizeOfConstSides][SizeOfConstVal];
-      CompareBoolWithConstantResult BO_GE_OP[SizeOfConstSides][SizeOfConstVal];
-      CompareBoolWithConstantResult BO_EQ_OP[SizeOfConstSides][SizeOfConstVal];
-      CompareBoolWithConstantResult BO_NE_OP[SizeOfConstSides][SizeOfConstVal];
-
-    } TruthTable = {
-        // Constant on LHS.              | Constant on RHS.              |
-        // LT_Zero| Zero  | One   |GT_One| LT_Zero| Zero  | One   |GT_One|
-        { { ATrue, Unkwn, AFals, AFals }, { AFals, AFals, Unkwn, ATrue } },
-        { { AFals, AFals, Unkwn, ATrue }, { ATrue, Unkwn, AFals, AFals } },
-        { { ATrue, ATrue, Unkwn, AFals }, { AFals, Unkwn, ATrue, ATrue } },
-        { { AFals, Unkwn, ATrue, ATrue }, { ATrue, ATrue, Unkwn, AFals } },
-        { { AFals, Unkwn, Unkwn, AFals }, { AFals, Unkwn, Unkwn, AFals } },
-        { { ATrue, Unkwn, Unkwn, ATrue }, { ATrue, Unkwn, Unkwn, ATrue } }
-      };
-
-    bool ConstantIsBoolLiteral = isa<CXXBoolLiteralExpr>(Constant);
-
-    enum ConstantValue ConstVal = Zero;
-    if (Value.isUnsigned() || Value.isNonNegative()) {
-      if (Value == 0) {
-        LiteralOrBoolConstant =
-            ConstantIsBoolLiteral ? CXXBoolLiteralFalse : LiteralConstant;
-        ConstVal = Zero;
-      } else if (Value == 1) {
-        LiteralOrBoolConstant =
-            ConstantIsBoolLiteral ? CXXBoolLiteralTrue : LiteralConstant;
-        ConstVal = One;
-      } else {
-        LiteralOrBoolConstant = LiteralConstant;
-        ConstVal = GT_One;
-      }
-    } else {
-      ConstVal = LT_Zero;
-    }
-
-    CompareBoolWithConstantResult CmpRes;
-
-    switch (op) {
-    case BO_LT:
-      CmpRes = TruthTable.BO_LT_OP[RhsConstant][ConstVal];
-      break;
-    case BO_GT:
-      CmpRes = TruthTable.BO_GT_OP[RhsConstant][ConstVal];
-      break;
-    case BO_LE:
-      CmpRes = TruthTable.BO_LE_OP[RhsConstant][ConstVal];
-      break;
-    case BO_GE:
-      CmpRes = TruthTable.BO_GE_OP[RhsConstant][ConstVal];
-      break;
-    case BO_EQ:
-      CmpRes = TruthTable.BO_EQ_OP[RhsConstant][ConstVal];
-      break;
-    case BO_NE:
-      CmpRes = TruthTable.BO_NE_OP[RhsConstant][ConstVal];
-      break;
-    default:
-      CmpRes = Unkwn;
-      break;
-    }
-
-    if (CmpRes == AFals) {
-      IsTrue = false;
-    } else if (CmpRes == ATrue) {
-      IsTrue = true;
-    } else {
-      return false;
-    }
   }
 
   // If this is a comparison to an enum constant, include that
@@ -8978,8 +8924,8 @@ static bool DiagnoseOutOfRangeComparison(Sema &S, BinaryOperator *E,
   S.DiagRuntimeBehavior(
     E->getOperatorLoc(), E,
     S.PDiag(diag::warn_out_of_range_compare)
-        << OS.str() << LiteralOrBoolConstant
-        << OtherT << (OtherIsBooleanType && !OtherT->isBooleanType()) << IsTrue
+        << OS.str() << classifyConstantValue(Constant)
+        << OtherT << OtherIsBooleanDespiteType << IsTrue
         << E->getLHS()->getSourceRange() << E->getRHS()->getSourceRange());
 
    return true;

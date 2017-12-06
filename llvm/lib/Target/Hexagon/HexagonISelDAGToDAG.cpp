@@ -754,7 +754,6 @@ void HexagonDAGToDAGISel::SelectBitcast(SDNode *N) {
   CurDAG->RemoveDeadNode(N);
 }
 
-
 void HexagonDAGToDAGISel::Select(SDNode *N) {
   if (N->isMachineOpcode())
     return N->setNodeId(-1);  // Already selected.
@@ -770,6 +769,13 @@ void HexagonDAGToDAGISel::Select(SDNode *N) {
   case ISD::ZERO_EXTEND:          return SelectZeroExtend(N);
   case ISD::INTRINSIC_W_CHAIN:    return SelectIntrinsicWChain(N);
   case ISD::INTRINSIC_WO_CHAIN:   return SelectIntrinsicWOChain(N);
+  }
+
+  if (HST->useHVXOps()) {
+    switch (N->getOpcode()) {
+    case ISD::VECTOR_SHUFFLE:     return SelectHvxShuffle(N);
+    case HexagonISD::VROR:        return SelectHvxRor(N);
+    }
   }
 
   SelectCode(N);

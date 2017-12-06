@@ -694,6 +694,10 @@ static int CompareSCEVComplexity(
     if (LNumOps != RNumOps)
       return (int)LNumOps - (int)RNumOps;
 
+    // Compare NoWrap flags.
+    if (LA->getNoWrapFlags() != RA->getNoWrapFlags())
+      return (int)LA->getNoWrapFlags() - (int)RA->getNoWrapFlags();
+
     // Lexicographically compare.
     for (unsigned i = 0; i != LNumOps; ++i) {
       int X = CompareSCEVComplexity(EqCacheSCEV, EqCacheValue, LI,
@@ -717,6 +721,10 @@ static int CompareSCEVComplexity(
     unsigned LNumOps = LC->getNumOperands(), RNumOps = RC->getNumOperands();
     if (LNumOps != RNumOps)
       return (int)LNumOps - (int)RNumOps;
+
+    // Compare NoWrap flags.
+    if (LC->getNoWrapFlags() != RC->getNoWrapFlags())
+      return (int)LC->getNoWrapFlags() - (int)RC->getNoWrapFlags();
 
     for (unsigned i = 0; i != LNumOps; ++i) {
       int X = CompareSCEVComplexity(EqCacheSCEV, EqCacheValue, LI,

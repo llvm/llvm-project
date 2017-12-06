@@ -12642,15 +12642,14 @@ bool DAGCombiner::MergeStoresOfConstantsOrVecElts(
           if (ElementSizeBits != Val.getValueSizeInBits()) {
             EVT IntMemVT =
                 EVT::getIntegerVT(*DAG.getContext(), MemVT.getSizeInBits());
-            if (auto *CFP = dyn_cast<ConstantFPSDNode>(Val))
-              Val = DAG.getConstant(
-                  CFP->getValueAPF().bitcastToAPInt().zextOrTrunc(
-                      ElementSizeBits),
-                  SDLoc(CFP), IntMemVT);
-            else if (auto *C = dyn_cast<ConstantSDNode>(Val))
-              Val = DAG.getConstant(
-                  C->getAPIntValue().zextOrTrunc(ElementSizeBits),
-                  SDLoc(C), IntMemVT);
+            if (isa<ConstantFPSDNode>(Val)) {
+              // Not clear how to truncate FP values.
+              return false;
+            } else if (auto *C = dyn_cast<ConstantSDNode>(Val))
+              Val = DAG.getConstant(C->getAPIntValue()
+                                        .zextOrTrunc(Val.getValueSizeInBits())
+                                        .zextOrTrunc(ElementSizeBits),
+                                    SDLoc(C), IntMemVT);
           }
           // Make sure correctly size type is the correct type.
           Val = DAG.getBitcast(MemVT, Val);
@@ -12713,9 +12712,17 @@ bool DAGCombiner::MergeStoresOfConstantsOrVecElts(
       SDValue Val = St->getValue();
       StoreInt <<= ElementSizeBits;
       if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Val)) {
-        StoreInt |= C->getAPIntValue().zextOrTrunc(SizeInBits);
+        StoreInt |= C->getAPIntValue()
+                        .zextOrTrunc(ElementSizeBits)
+                        .zextOrTrunc(SizeInBits);
       } else if (ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Val)) {
-        StoreInt |= C->getValueAPF().bitcastToAPInt().zextOrTrunc(SizeInBits);
+        StoreInt |= C->getValueAPF()
+                        .bitcastToAPInt()
+                        .zextOrTrunc(ElementSizeBits)
+                        .zextOrTrunc(SizeInBits);
+        // If fp truncation is necessary give up for now.
+        if (MemVT.getSizeInBits() != ElementSizeBits)
+          return false;
       } else {
         llvm_unreachable("Invalid constant element type");
       }
@@ -13065,7 +13072,7 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
           // Find a legal type for the vector store.
           unsigned Elts = (i + 1) * NumMemElts;
           EVT Ty = EVT::getVectorVT(Context, MemVT.getScalarType(), Elts);
-          if (TLI.isTypeLegal(Ty) &&
+          if (TLI.isTypeLegal(Ty) && TLI.isTypeLegal(MemVT) &&
               TLI.canMergeStoresTo(FirstStoreAS, Ty, DAG) &&
               TLI.allowsMemoryAccess(Context, DL, Ty, FirstStoreAS,
                                      FirstStoreAlign, &IsFast) &&

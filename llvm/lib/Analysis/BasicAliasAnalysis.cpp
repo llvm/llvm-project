@@ -933,12 +933,12 @@ ModRefInfo BasicAAResult::getModRefInfo(ImmutableCallSite CS1,
   // possibilities for guard intrinsics.
 
   if (isIntrinsicCall(CS1, Intrinsic::experimental_guard))
-    return isModSet(ModRefInfo(getModRefBehavior(CS2))) ? MRI_Ref
-                                                        : MRI_NoModRef;
+    return isModSet(createModRefInfo(getModRefBehavior(CS2))) ? MRI_Ref
+                                                              : MRI_NoModRef;
 
   if (isIntrinsicCall(CS2, Intrinsic::experimental_guard))
-    return isModSet(ModRefInfo(getModRefBehavior(CS1))) ? MRI_Mod
-                                                        : MRI_NoModRef;
+    return isModSet(createModRefInfo(getModRefBehavior(CS1))) ? MRI_Mod
+                                                              : MRI_NoModRef;
 
   // The AAResultBase base class has some smarts, lets use them.
   return AAResultBase::getModRefInfo(CS1, CS2);

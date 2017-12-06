@@ -10,7 +10,7 @@
 #   rs > rt
 # appropriately for each branch instruction
 #
-# RUN: llvm-mc %s -triple=mips-unknown-linux -show-encoding -mcpu=mips32r6 2> %t0 | FileCheck %s
+# RUN: llvm-mc %s -triple=mips-unknown-linux -show-encoding -show-inst -mcpu=mips32r6 2> %t0 | FileCheck %s
 # RUN: FileCheck %s -check-prefix=WARNING < %t0
 a:
         .set noat
@@ -25,6 +25,7 @@ a:
         bal     21100            # CHECK: bal 21100           # encoding: [0x04,0x11,0x14,0x9b]
         balc 14572256            # CHECK: balc 14572256       # encoding: [0xe8,0x37,0x96,0xb8]
         bc 14572256              # CHECK: bc 14572256         # encoding: [0xc8,0x37,0x96,0xb8]
+                                 # CHECK-NEXT:                # <MCInst #{{[0-9]+}} BC
         bc1eqz  $f0,4            # CHECK: bc1eqz $f0, 4       # encoding: [0x45,0x20,0x00,0x01]
         bc1eqz  $f31,4           # CHECK: bc1eqz $f31, 4      # encoding: [0x45,0x3f,0x00,0x01]
         bc1nez  $f0,4            # CHECK: bc1nez $f0, 4       # encoding: [0x45,0xa0,0x00,0x01]

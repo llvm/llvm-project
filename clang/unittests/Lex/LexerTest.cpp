@@ -37,7 +37,7 @@ protected:
       DiagID(new DiagnosticIDs()),
       Diags(DiagID, new DiagnosticOptions, new IgnoringDiagConsumer()),
       SourceMgr(Diags, FileMgr),
-      TargetOpts(new TargetOptions) 
+      TargetOpts(new TargetOptions)
   {
     TargetOpts->Triple = "x86_64-apple-darwin11.1.0";
     Target = TargetInfo::CreateTargetInfo(Diags, TargetOpts);
@@ -476,6 +476,44 @@ TEST_F(LexerTest, GetBeginningOfTokenWithEscapedNewLine) {
 TEST_F(LexerTest, AvoidPastEndOfStringDereference) {
   std::vector<Token> LexedTokens = Lex("  //  \\\n");
   EXPECT_TRUE(LexedTokens.empty());
+}
+
+TEST_F(LexerTest, StringizingRasString) {
+  // For "std::string Lexer::Stringify(StringRef Str, bool Charify)".
+  std::string String1 = R"(foo
+    {"bar":[]}
+    baz)";
+  // For "void Lexer::Stringify(SmallVectorImpl<char> &Str)".
+  SmallString<128> String2;
+  String2 += String1.c_str();
+
+  // Corner cases.
+  std::string String3 = R"(\
+    \n
+    \\n
+    \\)";
+  SmallString<128> String4;
+  String4 += String3.c_str();
+  std::string String5 = R"(a\
+
+
+    \\b)";
+  SmallString<128> String6;
+  String6 += String5.c_str();
+
+  String1 = Lexer::Stringify(StringRef(String1));
+  Lexer::Stringify(String2);
+  String3 = Lexer::Stringify(StringRef(String3));
+  Lexer::Stringify(String4);
+  String5 = Lexer::Stringify(StringRef(String5));
+  Lexer::Stringify(String6);
+
+  EXPECT_EQ(String1, R"(foo\n    {\"bar\":[]}\n    baz)");
+  EXPECT_EQ(String2, R"(foo\n    {\"bar\":[]}\n    baz)");
+  EXPECT_EQ(String3, R"(\\\n    \\n\n    \\\\n\n    \\\\)");
+  EXPECT_EQ(String4, R"(\\\n    \\n\n    \\\\n\n    \\\\)");
+  EXPECT_EQ(String5, R"(a\\\n\n\n    \\\\b)");
+  EXPECT_EQ(String6, R"(a\\\n\n\n    \\\\b)");
 }
 
 } // anonymous namespace

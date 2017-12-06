@@ -788,7 +788,8 @@ mayLoopAccessLocation(Value *Ptr, ModRefInfo Access, Loop *L,
        ++BI)
     for (Instruction &I : **BI)
       if (IgnoredStores.count(&I) == 0 &&
-          intersectModRef(AA.getModRefInfo(&I, StoreLoc), Access))
+          isModOrRefSet(
+              intersectModRef(AA.getModRefInfo(&I, StoreLoc), Access)))
         return true;
 
   return false;

@@ -544,7 +544,7 @@ bool AAResults::canInstructionRangeModRef(const Instruction &I1,
   ++E;  // Convert from inclusive to exclusive range.
 
   for (; I != E; ++I) // Check every instruction in range
-    if (intersectModRef(getModRefInfo(&*I, Loc), Mode))
+    if (isModOrRefSet(intersectModRef(getModRefInfo(&*I, Loc), Mode)))
       return true;
   return false;
 }

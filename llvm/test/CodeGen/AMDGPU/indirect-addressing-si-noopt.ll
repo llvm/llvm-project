@@ -17,3 +17,48 @@ entry:
   ret void
 }
 
+; Make sure we don't hit use of undefined register errors when expanding an
+; extract with undef index.
+
+; CHECK-LABEL: {{^}}extract_adjacent_blocks:
+; CHECK: s_load_dword [[ARG:s[0-9]+]]
+; CHECK: s_cmp_lg_u32
+; CHECK: s_cbranch_scc1 [[BB4:BB[0-9]+_[0-9]+]]
+
+; CHECK: buffer_load_dwordx4
+; CHECK: s_mov_b32 m0,
+; CHECK: v_movrels_b32_e32
+
+; CHECK: s_branch [[ENDBB:BB[0-9]+_[0-9]+]]
+
+; CHECK: [[BB4]]:
+; CHECK: buffer_load_dwordx4
+; CHECK: s_mov_b32 m0,
+; CHECK: v_movrels_b32_e32
+
+; CHECK: [[ENDBB]]:
+; CHECK: buffer_store_dword
+; CHECK: s_endpgm
+
+define amdgpu_kernel void @extract_adjacent_blocks(i32 %arg) #0 {
+bb:
+  %tmp = icmp eq i32 %arg, 0
+  br i1 %tmp, label %bb1, label %bb4
+
+bb1:
+  %tmp2 = load volatile <4 x float>, <4 x float> addrspace(1)* undef
+  %tmp3 = extractelement <4 x float> %tmp2, i32 undef
+  call void asm sideeffect "; reg use $0", "v"(<4 x float> %tmp2) #0 ; Prevent block optimize out
+  br label %bb7
+
+bb4:
+  %tmp5 = load volatile <4 x float>, <4 x float> addrspace(1)* undef
+  %tmp6 = extractelement <4 x float> %tmp5, i32 undef
+  call void asm sideeffect "; reg use $0", "v"(<4 x float> %tmp5) #0 ; Prevent block optimize out
+  br label %bb7
+
+bb7:
+  %tmp8 = phi float [ %tmp3, %bb1 ], [ %tmp6, %bb4 ]
+  store volatile float %tmp8, float addrspace(1)* undef
+  ret void
+}
