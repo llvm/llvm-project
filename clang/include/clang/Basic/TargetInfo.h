@@ -46,7 +46,6 @@ class MacroBuilder;
 class QualType;
 class SourceLocation;
 class SourceManager;
-class Type;
 
 namespace Builtin { struct Info; }
 
@@ -1057,8 +1056,19 @@ public:
       return getTargetOpts().SupportedOpenCLOptions;
   }
 
+  enum OpenCLTypeKind {
+    OCLTK_Default,
+    OCLTK_ClkEvent,
+    OCLTK_Event,
+    OCLTK_Image,
+    OCLTK_Pipe,
+    OCLTK_Queue,
+    OCLTK_ReserveID,
+    OCLTK_Sampler,
+  };
+
   /// \brief Get address space for OpenCL type.
-  virtual LangAS getOpenCLTypeAddrSpace(const Type *T) const;
+  virtual LangAS getOpenCLTypeAddrSpace(OpenCLTypeKind TK) const;
 
   /// \returns Target specific vtbl ptr address space.
   virtual unsigned getVtblPtrAddressSpace() const {
