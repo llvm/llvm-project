@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s -triple=mips-unknown-linux -show-encoding -mcpu=mips32r6 -mattr=micromips | FileCheck %s
+# RUN: llvm-mc %s -triple=mips-unknown-linux -show-encoding -show-inst -mcpu=mips32r6 -mattr=micromips | FileCheck %s
 
   .set noat
   add $3, $4, $5           # CHECK: add $3, $4, $5      # encoding: [0x00,0xa4,0x19,0x10]
@@ -37,6 +37,7 @@
   balc 7286128             # CHECK: balc 7286128        # encoding: [0xb4,0x37,0x96,0xb8]
   b 132                    # CHECK: bc16 132            # encoding: [0xcc,0x42]
   bc 7286128               # CHECK: bc 7286128          # encoding: [0x94,0x37,0x96,0xb8]
+                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} BC_MMR6
   bc16 132                 # CHECK: bc16 132            # encoding: [0xcc,0x42]
   beqzc16 $6, 20           # CHECK: beqzc16 $6, 20      # encoding: [0x8f,0x0a]
   bnezc16 $6, 20           # CHECK: bnezc16 $6, 20      # encoding: [0xaf,0x0a]

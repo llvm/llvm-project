@@ -315,7 +315,8 @@ void DominatorTree::verifyDomTree() const {
   DominatorTree OtherDT;
   OtherDT.recalculate(F);
   if (compare(OtherDT)) {
-    errs() << "DominatorTree is not up to date!\nComputed:\n";
+    errs() << "DominatorTree for function " << F.getName()
+           << " is not up to date!\nComputed:\n";
     print(errs());
     errs() << "\nActual:\n";
     OtherDT.print(errs());

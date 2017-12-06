@@ -3827,6 +3827,28 @@ Value *llvm::SimplifyInsertValueInst(Value *Agg, Value *Val,
   return ::SimplifyInsertValueInst(Agg, Val, Idxs, Q, RecursionLimit);
 }
 
+Value *llvm::SimplifyInsertElementInst(Value *Vec, Value *Val, Value *Idx,
+                                       const SimplifyQuery &Q) {
+  // Try to constant fold.
+  auto *VecC = dyn_cast<Constant>(Vec);
+  auto *ValC = dyn_cast<Constant>(Val);
+  auto *IdxC = dyn_cast<Constant>(Idx);
+  if (VecC && ValC && IdxC)
+    return ConstantFoldInsertElementInstruction(VecC, ValC, IdxC);
+
+  // Fold into undef if index is out of bounds.
+  if (auto *CI = dyn_cast<ConstantInt>(Idx)) {
+    uint64_t NumElements = cast<VectorType>(Vec->getType())->getNumElements();
+
+    if (CI->uge(NumElements))
+      return UndefValue::get(Vec->getType());
+  }
+
+  // TODO: We should also fold if index is iteslf an undef.
+
+  return nullptr;
+}
+
 /// Given operands for an ExtractValueInst, see if we can fold the result.
 /// If not, this returns null.
 static Value *SimplifyExtractValueInst(Value *Agg, ArrayRef<unsigned> Idxs,
@@ -4693,6 +4715,12 @@ Value *llvm::SimplifyInstruction(Instruction *I, const SimplifyQuery &SQ,
     Result = SimplifyInsertValueInst(IV->getAggregateOperand(),
                                      IV->getInsertedValueOperand(),
                                      IV->getIndices(), Q);
+    break;
+  }
+  case Instruction::InsertElement: {
+    auto *IE = cast<InsertElementInst>(I);
+    Result = SimplifyInsertElementInst(IE->getOperand(0), IE->getOperand(1),
+                                       IE->getOperand(2), Q);
     break;
   }
   case Instruction::ExtractValue: {

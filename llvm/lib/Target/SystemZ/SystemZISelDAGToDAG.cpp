@@ -838,9 +838,16 @@ bool SystemZDAGToDAGISel::expandRxSBG(RxSBGOperands &RxSBG) const {
   case ISD::SIGN_EXTEND: {
     // Check that the extension bits are don't-care (i.e. are masked out
     // by the final mask).
+    unsigned BitSize = N.getValueSizeInBits();
     unsigned InnerBitSize = N.getOperand(0).getValueSizeInBits();
-    if (maskMatters(RxSBG, allOnes(RxSBG.BitSize) - allOnes(InnerBitSize)))
-      return false;
+    if (maskMatters(RxSBG, allOnes(BitSize) - allOnes(InnerBitSize))) {
+      // In the case where only the sign bit is active, increase Rotate with
+      // the extension width.
+      if (RxSBG.Mask == 1 && RxSBG.Rotate == 1)
+        RxSBG.Rotate += (BitSize - InnerBitSize);
+      else
+        return false;
+    }
 
     RxSBG.Input = N.getOperand(0);
     return true;

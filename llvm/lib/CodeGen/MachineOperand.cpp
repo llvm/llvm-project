@@ -29,6 +29,18 @@ static cl::opt<int>
                                  "unlimited = -1"),
                         cl::init(32), cl::Hidden);
 
+static const MachineFunction *getMFIfAvailable(const MachineOperand &MO) {
+  if (const MachineInstr *MI = MO.getParent())
+    if (const MachineBasicBlock *MBB = MI->getParent())
+      if (const MachineFunction *MF = MBB->getParent())
+        return MF;
+  return nullptr;
+}
+static MachineFunction *getMFIfAvailable(MachineOperand &MO) {
+  return const_cast<MachineFunction *>(
+      getMFIfAvailable(const_cast<const MachineOperand &>(MO)));
+}
+
 void MachineOperand::setReg(unsigned Reg) {
   if (getReg() == Reg)
     return; // No change.
@@ -36,15 +48,13 @@ void MachineOperand::setReg(unsigned Reg) {
   // Otherwise, we have to change the register.  If this operand is embedded
   // into a machine function, we need to update the old and new register's
   // use/def lists.
-  if (MachineInstr *MI = getParent())
-    if (MachineBasicBlock *MBB = MI->getParent())
-      if (MachineFunction *MF = MBB->getParent()) {
-        MachineRegisterInfo &MRI = MF->getRegInfo();
-        MRI.removeRegOperandFromUseList(this);
-        SmallContents.RegNo = Reg;
-        MRI.addRegOperandToUseList(this);
-        return;
-      }
+  if (MachineFunction *MF = getMFIfAvailable(*this)) {
+    MachineRegisterInfo &MRI = MF->getRegInfo();
+    MRI.removeRegOperandFromUseList(this);
+    SmallContents.RegNo = Reg;
+    MRI.addRegOperandToUseList(this);
+    return;
+  }
 
   // Otherwise, just change the register, no problem.  :)
   SmallContents.RegNo = Reg;
@@ -80,15 +90,13 @@ void MachineOperand::setIsDef(bool Val) {
   if (IsDef == Val)
     return;
   // MRI may keep uses and defs in different list positions.
-  if (MachineInstr *MI = getParent())
-    if (MachineBasicBlock *MBB = MI->getParent())
-      if (MachineFunction *MF = MBB->getParent()) {
-        MachineRegisterInfo &MRI = MF->getRegInfo();
-        MRI.removeRegOperandFromUseList(this);
-        IsDef = Val;
-        MRI.addRegOperandToUseList(this);
-        return;
-      }
+  if (MachineFunction *MF = getMFIfAvailable(*this)) {
+    MachineRegisterInfo &MRI = MF->getRegInfo();
+    MRI.removeRegOperandFromUseList(this);
+    IsDef = Val;
+    MRI.addRegOperandToUseList(this);
+    return;
+  }
   IsDef = Val;
 }
 
@@ -98,12 +106,8 @@ void MachineOperand::removeRegFromUses() {
   if (!isReg() || !isOnRegUseList())
     return;
 
-  if (MachineInstr *MI = getParent()) {
-    if (MachineBasicBlock *MBB = MI->getParent()) {
-      if (MachineFunction *MF = MBB->getParent())
-        MF->getRegInfo().removeRegOperandFromUseList(this);
-    }
-  }
+  if (MachineFunction *MF = getMFIfAvailable(*this))
+    MF->getRegInfo().removeRegOperandFromUseList(this);
 }
 
 /// ChangeToImmediate - Replace this operand with a new immediate operand of
@@ -180,10 +184,8 @@ void MachineOperand::ChangeToRegister(unsigned Reg, bool isDef, bool isImp,
                                       bool isKill, bool isDead, bool isUndef,
                                       bool isDebug) {
   MachineRegisterInfo *RegInfo = nullptr;
-  if (MachineInstr *MI = getParent())
-    if (MachineBasicBlock *MBB = MI->getParent())
-      if (MachineFunction *MF = MBB->getParent())
-        RegInfo = &MF->getRegInfo();
+  if (MachineFunction *MF = getMFIfAvailable(*this))
+    RegInfo = &MF->getRegInfo();
   // If this operand is already a register operand, remove it from the
   // register's use/def lists.
   bool WasReg = isReg();
@@ -257,13 +259,17 @@ bool MachineOperand::isIdenticalTo(const MachineOperand &Other) const {
     if (RegMask == OtherRegMask)
       return true;
 
-    // Calculate the size of the RegMask
-    const MachineFunction *MF = getParent()->getMF();
-    const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
-    unsigned RegMaskSize = (TRI->getNumRegs() + 31) / 32;
+    if (const MachineFunction *MF = getMFIfAvailable(*this)) {
+      // Calculate the size of the RegMask
+      const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
+      unsigned RegMaskSize = (TRI->getNumRegs() + 31) / 32;
 
-    // Deep compare of the two RegMasks
-    return std::equal(RegMask, RegMask + RegMaskSize, OtherRegMask);
+      // Deep compare of the two RegMasks
+      return std::equal(RegMask, RegMask + RegMaskSize, OtherRegMask);
+    }
+    // We don't know the size of the RegMask, so we can't deep compare the two
+    // reg masks.
+    return false;
   }
   case MachineOperand::MO_MCSymbol:
     return getMCSymbol() == Other.getMCSymbol();

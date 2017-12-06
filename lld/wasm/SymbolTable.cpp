@@ -10,7 +10,6 @@
 #include "SymbolTable.h"
 
 #include "Config.h"
-#include "Strings.h"
 #include "WriterUtils.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
@@ -201,7 +200,7 @@ Symbol *SymbolTable::addUndefinedFunction(StringRef Name,
 }
 
 Symbol *SymbolTable::addUndefined(InputFile *F, const WasmSymbol *Sym) {
-  DEBUG(dbgs() << "addUndefined: " << displayName(Sym->Name) << "\n");
+  DEBUG(dbgs() << "addUndefined: " << Sym->Name << "\n");
   Symbol *S;
   bool WasInserted;
   Symbol::Kind Kind = Symbol::UndefinedFunctionKind;
@@ -225,7 +224,7 @@ Symbol *SymbolTable::addUndefined(InputFile *F, const WasmSymbol *Sym) {
 }
 
 void SymbolTable::addLazy(ArchiveFile *F, const Archive::Symbol *Sym) {
-  DEBUG(dbgs() << "addLazy: " << displayName(Sym->getName()) << "\n");
+  DEBUG(dbgs() << "addLazy: " << Sym->getName() << "\n");
   StringRef Name = Sym->getName();
   Symbol *S;
   bool WasInserted;

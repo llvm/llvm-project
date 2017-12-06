@@ -95,7 +95,7 @@ else()
 foreach(arch ${XRAY_SUPPORTED_ARCH})
   if(CAN_TARGET_${arch})
     add_compiler_rt_object_libraries(RTXray
-      ARCHS ${XRAY_SUPPORTED_ARCH}
+      ARCHS ${arch}
       SOURCES ${XRAY_SOURCES} CFLAGS ${XRAY_CFLAGS}
       DEFS ${XRAY_COMMON_DEFINITIONS})
     add_compiler_rt_runtime(clang_rt.xray
