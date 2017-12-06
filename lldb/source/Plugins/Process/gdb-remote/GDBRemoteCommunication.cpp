@@ -600,10 +600,9 @@ bool GDBRemoteCommunication::DecompressPacket() {
 #if defined(HAVE_LIBCOMPRESSION)
   // libcompression is weak linked so check that compression_decode_buffer() is
   // available
-  if (compression_decode_buffer != NULL &&
-      (m_compression_type == CompressionType::ZlibDeflate ||
-       m_compression_type == CompressionType::LZFSE ||
-       m_compression_type == CompressionType::LZ4)) {
+  if (m_compression_type == CompressionType::ZlibDeflate ||
+      m_compression_type == CompressionType::LZFSE ||
+      m_compression_type == CompressionType::LZ4) {
     compression_algorithm compression_type;
     if (m_compression_type == CompressionType::LZFSE)
       compression_type = COMPRESSION_LZFSE;

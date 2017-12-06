@@ -1022,10 +1022,7 @@ void GDBRemoteCommunicationClient::MaybeEnableCompression(
   std::string avail_name;
 
 #if defined(HAVE_LIBCOMPRESSION)
-  // libcompression is weak linked so test if compression_decode_buffer() is
-  // available
-  if (compression_decode_buffer != NULL &&
-      avail_type == CompressionType::None) {
+  if (avail_type == CompressionType::None) {
     for (auto compression : supported_compressions) {
       if (compression == "lzfse") {
         avail_type = CompressionType::LZFSE;
@@ -1037,10 +1034,7 @@ void GDBRemoteCommunicationClient::MaybeEnableCompression(
 #endif
 
 #if defined(HAVE_LIBCOMPRESSION)
-  // libcompression is weak linked so test if compression_decode_buffer() is
-  // available
-  if (compression_decode_buffer != NULL &&
-      avail_type == CompressionType::None) {
+  if (avail_type == CompressionType::None) {
     for (auto compression : supported_compressions) {
       if (compression == "zlib-deflate") {
         avail_type = CompressionType::ZlibDeflate;
@@ -1064,10 +1058,7 @@ void GDBRemoteCommunicationClient::MaybeEnableCompression(
 #endif
 
 #if defined(HAVE_LIBCOMPRESSION)
-  // libcompression is weak linked so test if compression_decode_buffer() is
-  // available
-  if (compression_decode_buffer != NULL &&
-      avail_type == CompressionType::None) {
+  if (avail_type == CompressionType::None) {
     for (auto compression : supported_compressions) {
       if (compression == "lz4") {
         avail_type = CompressionType::LZ4;
@@ -1079,10 +1070,7 @@ void GDBRemoteCommunicationClient::MaybeEnableCompression(
 #endif
 
 #if defined(HAVE_LIBCOMPRESSION)
-  // libcompression is weak linked so test if compression_decode_buffer() is
-  // available
-  if (compression_decode_buffer != NULL &&
-      avail_type == CompressionType::None) {
+  if (avail_type == CompressionType::None) {
     for (auto compression : supported_compressions) {
       if (compression == "lzma") {
         avail_type = CompressionType::LZMA;

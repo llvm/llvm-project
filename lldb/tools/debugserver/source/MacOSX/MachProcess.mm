@@ -45,26 +45,6 @@
 #include "CFBundle.h"
 #include "CFString.h"
 
-static void SplitEventData(const char *data, std::vector<std::string> &elements)
-{
-  elements.clear();
-  if (!data)
-    return;
-
-  const char *start = data;
-
-  while (*start != '\0') {
-    const char *token = strchr(start, ':');
-    if (!token) {
-      elements.push_back(std::string(start));
-      return;
-    }
-    if (token != start)
-      elements.push_back(std::string(start, token - start));
-    start = ++token;
-  }
-}
-
 #ifdef WITH_SPRINGBOARD
 
 #include <CoreFoundation/CoreFoundation.h>
@@ -207,6 +187,28 @@ static bool CallBoardSystemServiceOpenApplication(NSString *bundleIDNSStr,
   }
 
   return success;
+}
+#endif
+
+#if defined(WITH_BKS) || defined(WITH_FBS)
+static void SplitEventData(const char *data, std::vector<std::string> &elements)
+{
+  elements.clear();
+  if (!data)
+    return;
+
+  const char *start = data;
+
+  while (*start != '\0') {
+    const char *token = strchr(start, ':');
+    if (!token) {
+      elements.push_back(std::string(start));
+      return;
+    }
+    if (token != start)
+      elements.push_back(std::string(start, token - start));
+    start = ++token;
+  }
 }
 #endif
 
@@ -3144,7 +3146,8 @@ pid_t MachProcess::PosixSpawnChildForPTraceDebugging(
       ::chdir(working_directory);
 
     err.SetError(::posix_spawnp(&pid, path, &file_actions, &attr,
-                                (char *const *)argv, (char *const *)envp),
+                                const_cast<char *const *>(argv),
+                                const_cast<char *const *>(envp)),
                  DNBError::POSIX);
     if (err.Fail() || DNBLogCheckLogBit(LOG_PROCESS))
       err.LogThreaded("::posix_spawnp ( pid => %i, path = '%s', file_actions = "
@@ -3156,8 +3159,9 @@ pid_t MachProcess::PosixSpawnChildForPTraceDebugging(
     if (working_directory)
       ::chdir(working_directory);
 
-    err.SetError(::posix_spawnp(&pid, path, NULL, &attr, (char *const *)argv,
-                                (char *const *)envp),
+    err.SetError(::posix_spawnp(&pid, path, NULL, &attr,
+                                const_cast<char *const *>(argv),
+                                const_cast<char *const *>(envp)),
                  DNBError::POSIX);
     if (err.Fail() || DNBLogCheckLogBit(LOG_PROCESS))
       err.LogThreaded("::posix_spawnp ( pid => %i, path = '%s', file_actions = "
@@ -3254,7 +3258,7 @@ pid_t MachProcess::ForkChildForPTraceDebugging(const char *path,
       ::sleep(1);
 
       // Turn this process into
-      ::execv(path, (char *const *)argv);
+      ::execv(path, const_cast<char *const *>(argv));
     }
     // Exit with error code. Child process should have taken
     // over in above exec call and if the exec fails it will
