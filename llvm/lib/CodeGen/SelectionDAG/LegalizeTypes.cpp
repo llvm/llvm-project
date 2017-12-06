@@ -1147,23 +1147,6 @@ SDValue DAGTypeLegalizer::PromoteTargetBoolean(SDValue Bool, EVT ValVT) {
   return DAG.getNode(ExtendCode, dl, BoolVT, Bool);
 }
 
-/// Widen the given target boolean to a target boolean of the given type.
-/// The boolean vector is widened and then promoted to match the target boolean
-/// type of the given ValVT.
-SDValue DAGTypeLegalizer::WidenTargetBoolean(SDValue Bool, EVT ValVT,
-                                             bool WithZeroes) {
-  SDLoc dl(Bool);
-  EVT BoolVT = Bool.getValueType();
-
-  assert(ValVT.getVectorNumElements() > BoolVT.getVectorNumElements() &&
-         TLI.isTypeLegal(ValVT) &&
-         "Unexpected types in WidenTargetBoolean");
-  EVT WideVT = EVT::getVectorVT(*DAG.getContext(), BoolVT.getScalarType(),
-                                ValVT.getVectorNumElements());
-  Bool = ModifyToType(Bool, WideVT, WithZeroes);
-  return PromoteTargetBoolean(Bool, ValVT);
-}
-
 /// Return the lower LoVT bits of Op in Lo and the upper HiVT bits in Hi.
 void DAGTypeLegalizer::SplitInteger(SDValue Op,
                                     EVT LoVT, EVT HiVT,

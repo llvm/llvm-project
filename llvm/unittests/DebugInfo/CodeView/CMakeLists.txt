@@ -4,6 +4,7 @@ set(LLVM_LINK_COMPONENTS
 
 set(DebugInfoCodeViewSources
   RandomAccessVisitorTest.cpp
+  TypeHashingTest.cpp
   TypeIndexDiscoveryTest.cpp
   )
 

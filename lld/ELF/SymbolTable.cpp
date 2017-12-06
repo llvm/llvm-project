@@ -685,9 +685,9 @@ void SymbolTable::handleDynamicList() {
   for (SymbolVersion &Ver : Config->DynamicList) {
     std::vector<Symbol *> Syms;
     if (Ver.HasWildcard)
-      Syms = findByVersion(Ver);
-    else
       Syms = findAllByVersion(Ver);
+    else
+      Syms = findByVersion(Ver);
 
     for (Symbol *B : Syms) {
       if (!Config->Shared)

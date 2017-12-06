@@ -183,10 +183,6 @@ private:
 
   SDValue PromoteTargetBoolean(SDValue Bool, EVT ValVT);
 
-  /// Modify Bit Vector to match SetCC result type of ValVT.
-  /// The bit vector is widened with zeroes when WithZeroes is true.
-  SDValue WidenTargetBoolean(SDValue Bool, EVT ValVT, bool WithZeroes = false);
-
   void ReplaceValueWith(SDValue From, SDValue To);
   void SplitInteger(SDValue Op, SDValue &Lo, SDValue &Hi);
   void SplitInteger(SDValue Op, EVT LoVT, EVT HiVT,

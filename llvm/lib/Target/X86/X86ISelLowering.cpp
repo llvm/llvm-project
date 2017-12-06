@@ -1716,37 +1716,26 @@ EVT X86TargetLowering::getSetCCResultType(const DataLayout &DL,
   if (!VT.isVector())
     return MVT::i8;
 
-  if (VT.getSizeInBits() >= 512) {
-    EVT EltVT = VT.getVectorElementType();
+  if (Subtarget.hasAVX512()) {
     const unsigned NumElts = VT.getVectorNumElements();
-    if (Subtarget.hasAVX512())
-      if (EltVT == MVT::i32 || EltVT == MVT::i64 ||
-          EltVT == MVT::f32 || EltVT == MVT::f64)
+
+    // Figure out what this type will be legalized to.
+    EVT LegalVT = VT;
+    while (getTypeAction(Context, LegalVT) != TypeLegal)
+      LegalVT = getTypeToTransformTo(Context, LegalVT);
+
+    // If we got a 512-bit vector then we'll definitely have a vXi1 compare.
+    if (LegalVT.getSimpleVT().is512BitVector())
+      return EVT::getVectorVT(Context, MVT::i1, NumElts);
+
+    if (LegalVT.getSimpleVT().isVector() && Subtarget.hasVLX()) {
+      // If we legalized to less than a 512-bit vector, then we will use a vXi1
+      // compare for vXi32/vXi64 for sure. If we have BWI we will also support
+      // vXi16/vXi8.
+      MVT EltVT = LegalVT.getSimpleVT().getVectorElementType();
+      if (Subtarget.hasBWI() || EltVT.getSizeInBits() >= 32)
         return EVT::getVectorVT(Context, MVT::i1, NumElts);
-    if (Subtarget.hasBWI())
-      if (EltVT == MVT::i8 || EltVT == MVT::i16)
-        return EVT::getVectorVT(Context, MVT::i1, NumElts);
-  }
-
-  if (VT.isSimple()) {
-    MVT VVT = VT.getSimpleVT();
-    const unsigned NumElts = VVT.getVectorNumElements();
-    MVT EltVT = VVT.getVectorElementType();
-
-    if (Subtarget.hasBWI() && Subtarget.hasVLX())
-      return MVT::getVectorVT(MVT::i1, NumElts);
-
-    if (!isTypeLegal(VT) && getTypeAction(Context, VT) == TypePromoteInteger) {
-      EVT LegalVT = getTypeToTransformTo(Context, VT);
-      EltVT = LegalVT.getVectorElementType().getSimpleVT();
     }
-
-    if (Subtarget.hasVLX() && EltVT.getSizeInBits() >= 32)
-      switch(NumElts) {
-      case 2: return MVT::v2i1;
-      case 4: return MVT::v4i1;
-      case 8: return MVT::v8i1;
-      }
   }
 
   return VT.changeVectorElementTypeToInteger();
