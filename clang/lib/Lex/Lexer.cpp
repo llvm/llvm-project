@@ -209,30 +209,39 @@ Lexer *Lexer::Create_PragmaLexer(SourceLocation SpellingLoc,
   return L;
 }
 
-/// Stringify - Convert the specified string into a C string, with surrounding
-/// ""'s, and with escaped \ and " characters.
+template <typename T> void StringifyImpl(T &Str, char Quote) {
+  typename T::size_type i = 0, e = Str.size();
+  while (i < e) {
+    if (Str[i] == '\\' || Str[i] == Quote) {
+      Str.insert(Str.begin() + i, '\\');
+      i += 2;
+      ++e;
+    } else if (Str[i] == '\n' || Str[i] == '\r') {
+      // Replace '\r\n' and '\n\r' to '\\' followed by 'n'.
+      if ((i < e - 1) && (Str[i + 1] == '\n' || Str[i + 1] == '\r') &&
+          Str[i] != Str[i + 1]) {
+        Str[i] = '\\';
+        Str[i + 1] = 'n';
+      } else {
+        // Replace '\n' and '\r' to '\\' followed by 'n'.
+        Str[i] = '\\';
+        Str.insert(Str.begin() + i + 1, 'n');
+        ++e;
+      }
+      i += 2;
+    } else
+      ++i;
+  }
+}
+
 std::string Lexer::Stringify(StringRef Str, bool Charify) {
   std::string Result = Str;
   char Quote = Charify ? '\'' : '"';
-  for (unsigned i = 0, e = Result.size(); i != e; ++i) {
-    if (Result[i] == '\\' || Result[i] == Quote) {
-      Result.insert(Result.begin()+i, '\\');
-      ++i; ++e;
-    }
-  }
+  StringifyImpl(Result, Quote);
   return Result;
 }
 
-/// Stringify - Convert the specified string into a C string by escaping '\'
-/// and " characters.  This does not add surrounding ""'s to the string.
-void Lexer::Stringify(SmallVectorImpl<char> &Str) {
-  for (unsigned i = 0, e = Str.size(); i != e; ++i) {
-    if (Str[i] == '\\' || Str[i] == '"') {
-      Str.insert(Str.begin()+i, '\\');
-      ++i; ++e;
-    }
-  }
-}
+void Lexer::Stringify(SmallVectorImpl<char> &Str) { StringifyImpl(Str, '"'); }
 
 //===----------------------------------------------------------------------===//
 // Token Spelling
@@ -367,7 +376,7 @@ std::string Lexer::getSpelling(const Token &Tok, const SourceManager &SourceMgr,
 /// to point to a constant buffer with the data already in it (avoiding a
 /// copy).  The caller is not allowed to modify the returned buffer pointer
 /// if an internal buffer is returned.
-unsigned Lexer::getSpelling(const Token &Tok, const char *&Buffer, 
+unsigned Lexer::getSpelling(const Token &Tok, const char *&Buffer,
                             const SourceManager &SourceMgr,
                             const LangOptions &LangOpts, bool *Invalid) {
   assert((int)Tok.getLength() >= 0 && "Token character range is bogus!");
@@ -592,17 +601,17 @@ PreambleBounds Lexer::ComputePreamble(StringRef Buffer,
       if (TheTok.getKind() == tok::eof) {
         break;
       }
-      
+
       // If we haven't hit the end of the preprocessor directive, skip this
       // token.
       if (!TheTok.isAtStartOfLine())
         continue;
-        
+
       // We've passed the end of the preprocessor directive, and will look
       // at this token again below.
       InPreprocessorDirective = false;
     }
-    
+
     // Keep track of the # of lines in the preamble.
     if (TheTok.isAtStartOfLine()) {
       unsigned TokOffset = TheTok.getLocation().getRawEncoding() - StartOffset;
@@ -619,13 +628,13 @@ PreambleBounds Lexer::ComputePreamble(StringRef Buffer,
         ActiveCommentLoc = TheTok.getLocation();
       continue;
     }
-    
+
     if (TheTok.isAtStartOfLine() && TheTok.getKind() == tok::hash) {
-      // This is the start of a preprocessor directive. 
+      // This is the start of a preprocessor directive.
       Token HashTok = TheTok;
       InPreprocessorDirective = true;
       ActiveCommentLoc = SourceLocation();
-      
+
       // Figure out which directive this is. Since we're lexing raw tokens,
       // we don't have an identifier table available. Instead, just look at
       // the raw identifier to recognize and categorize preprocessor directives.
@@ -665,7 +674,7 @@ PreambleBounds Lexer::ComputePreamble(StringRef Buffer,
           break;
         }
       }
-      
+
       // We only end up here if we didn't recognize the preprocessor
       // directive or it was one that can't occur in the preamble at this
       // point. Roll back the current token to the location of the '#'.
@@ -678,7 +687,7 @@ PreambleBounds Lexer::ComputePreamble(StringRef Buffer,
     // the preamble.
     break;
   } while (true);
-  
+
   SourceLocation End;
   if (ActiveCommentLoc.isValid())
     End = ActiveCommentLoc; // don't truncate a decl comment.
@@ -700,13 +709,13 @@ SourceLocation Lexer::AdvanceToTokenCharacter(SourceLocation TokStart,
   // trigraphs.
   bool Invalid = false;
   const char *TokPtr = SM.getCharacterData(TokStart, &Invalid);
-  
+
   // If they request the first char of the token, we're trivially done.
   if (Invalid || (CharNo == 0 && Lexer::isObviouslySimpleCharacter(*TokPtr)))
     return TokStart;
-  
+
   unsigned PhysOffset = 0;
-  
+
   // The usual case is that tokens don't contain anything interesting.  Skip
   // over the uninteresting characters.  If a token only consists of simple
   // chars, this method is extremely fast.
@@ -717,7 +726,7 @@ SourceLocation Lexer::AdvanceToTokenCharacter(SourceLocation TokStart,
     --CharNo;
     ++PhysOffset;
   }
-  
+
   // If we have a character that may be a trigraph or escaped newline, use a
   // lexer to parse it correctly.
   for (; CharNo; --CharNo) {
@@ -726,14 +735,14 @@ SourceLocation Lexer::AdvanceToTokenCharacter(SourceLocation TokStart,
     TokPtr += Size;
     PhysOffset += Size;
   }
-  
+
   // Final detail: if we end up on an escaped newline, we want to return the
   // location of the actual byte of the token.  For example foo\<newline>bar
   // advanced by 3 should return the location of b, not of \\.  One compounding
   // detail of this is that the escape may be made by a trigraph.
   if (!Lexer::isObviouslySimpleCharacter(*TokPtr))
     PhysOffset += Lexer::SkipEscapedNewLines(TokPtr)-TokPtr;
-  
+
   return TokStart.getLocWithOffset(PhysOffset);
 }
 
@@ -768,7 +777,7 @@ SourceLocation Lexer::getLocForEndOfToken(SourceLocation Loc, unsigned Offset,
     Len = Len - Offset;
   else
     return Loc;
-  
+
   return Loc.getLocWithOffset(Len);
 }
 
@@ -965,7 +974,7 @@ StringRef Lexer::getImmediateMacroName(SourceLocation Loc,
 
     // For macro arguments we need to check that the argument did not come
     // from an inner macro, e.g: "MAC1( MAC2(foo) )"
-    
+
     // Loc points to the argument id of the macro definition, move to the
     // macro expansion.
     Loc = SM.getImmediateExpansionRange(Loc).first;
@@ -1795,7 +1804,7 @@ bool Lexer::LexStringLiteral(Token &Result, const char *CurPtr,
     // getAndAdvanceChar.
     if (C == '\\')
       C = getAndAdvanceChar(CurPtr, Result);
-    
+
     if (C == '\n' || C == '\r' ||             // Newline.
         (C == 0 && CurPtr-1 == BufferEnd)) {  // End of file.
       if (!isLexingRawMode() && !LangOpts.AsmPreprocessor)
@@ -1803,7 +1812,7 @@ bool Lexer::LexStringLiteral(Token &Result, const char *CurPtr,
       FormTokenWithChars(Result, CurPtr-1, tok::unknown);
       return true;
     }
-    
+
     if (C == 0) {
       if (isCodeCompletionPoint(CurPtr-1)) {
         PP->CodeCompleteNaturalLanguage();
@@ -2232,7 +2241,7 @@ bool Lexer::SaveLineComment(Token &Result, const char *CurPtr) {
   std::string Spelling = PP->getSpelling(Result, &Invalid);
   if (Invalid)
     return true;
-  
+
   assert(Spelling[0] == '/' && Spelling[1] == '/' && "Not line comment?");
   Spelling[1] = '*';   // Change prefix to "/*".
   Spelling += "*/";    // add suffix.
@@ -2558,7 +2567,7 @@ bool Lexer::LexEndOfFile(Token &Result, const char *CurPtr) {
       resetExtendedTokenMode();
     return true;  // Have a token.
   }
- 
+
   // If we are in raw mode, return this event as an EOF token.  Let the caller
   // that put us in raw mode handle the event.
   if (isLexingRawMode()) {
@@ -2567,7 +2576,7 @@ bool Lexer::LexEndOfFile(Token &Result, const char *CurPtr) {
     FormTokenWithChars(Result, BufferEnd, tok::eof);
     return true;
   }
-  
+
   if (PP->isRecordingPreamble() && PP->isInPrimaryFile()) {
     PP->setRecordedPreambleConditionalStack(ConditionalStack);
     ConditionalStack.clear();
@@ -2679,7 +2688,7 @@ bool Lexer::IsStartOfConflictMarker(const char *CurPtr) {
   if (CurPtr != BufferStart &&
       CurPtr[-1] != '\n' && CurPtr[-1] != '\r')
     return false;
-  
+
   // Check to see if we have <<<<<<< or >>>>.
   if (!StringRef(CurPtr, BufferEnd - CurPtr).startswith("<<<<<<<") &&
       !StringRef(CurPtr, BufferEnd - CurPtr).startswith(">>>> "))
@@ -2689,7 +2698,7 @@ bool Lexer::IsStartOfConflictMarker(const char *CurPtr) {
   // it.
   if (CurrentConflictMarkerState || isLexingRawMode())
     return false;
-  
+
   ConflictMarkerKind Kind = *CurPtr == '<' ? CMK_Normal : CMK_Perforce;
 
   // Check to see if there is an ending marker somewhere in the buffer at the
@@ -2699,7 +2708,7 @@ bool Lexer::IsStartOfConflictMarker(const char *CurPtr) {
     // Diagnose this, and ignore to the end of line.
     Diag(CurPtr, diag::err_conflict_marker);
     CurrentConflictMarkerState = Kind;
-    
+
     // Skip ahead to the end of line.  We know this exists because the
     // end-of-conflict marker starts with \r or \n.
     while (*CurPtr != '\r' && *CurPtr != '\n') {
@@ -2709,7 +2718,7 @@ bool Lexer::IsStartOfConflictMarker(const char *CurPtr) {
     BufferPtr = CurPtr;
     return true;
   }
-  
+
   // No end of conflict marker found.
   return false;
 }
@@ -2723,35 +2732,35 @@ bool Lexer::HandleEndOfConflictMarker(const char *CurPtr) {
   if (CurPtr != BufferStart &&
       CurPtr[-1] != '\n' && CurPtr[-1] != '\r')
     return false;
-  
+
   // If we have a situation where we don't care about conflict markers, ignore
   // it.
   if (!CurrentConflictMarkerState || isLexingRawMode())
     return false;
-  
+
   // Check to see if we have the marker (4 characters in a row).
   for (unsigned i = 1; i != 4; ++i)
     if (CurPtr[i] != CurPtr[0])
       return false;
-  
+
   // If we do have it, search for the end of the conflict marker.  This could
   // fail if it got skipped with a '#if 0' or something.  Note that CurPtr might
   // be the end of conflict marker.
   if (const char *End = FindConflictEnd(CurPtr, BufferEnd,
                                         CurrentConflictMarkerState)) {
     CurPtr = End;
-    
+
     // Skip ahead to the end of line.
     while (CurPtr != BufferEnd && *CurPtr != '\r' && *CurPtr != '\n')
       ++CurPtr;
-    
+
     BufferPtr = CurPtr;
-    
+
     // No longer in the conflict marker.
     CurrentConflictMarkerState = CMK_None;
     return true;
   }
-  
+
   return false;
 }
 
@@ -3060,7 +3069,7 @@ LexNextToken:
     // We know the lexer hasn't changed, so just try again with this lexer.
     // (We manually eliminate the tail call to avoid recursion.)
     goto LexNextToken;
-      
+
   case 26:  // DOS & CP/M EOF: "^Z".
     // If we're in Microsoft extensions mode, treat this as end of file.
     if (LangOpts.MicrosoftExt) {
@@ -3072,7 +3081,7 @@ LexNextToken:
     // If Microsoft extensions are disabled, this is just random garbage.
     Kind = tok::unknown;
     break;
-      
+
   case '\r':
     if (CurPtr[0] == '\n')
       Char = getAndAdvanceChar(CurPtr, Result);
@@ -3135,7 +3144,7 @@ LexNextToken:
     // We only saw whitespace, so just try again with this lexer.
     // (We manually eliminate the tail call to avoid recursion.)
     goto LexNextToken;
-      
+
   // C99 6.4.4.1: Integer Constants.
   // C99 6.4.4.2: Floating Constants.
   case '0': case '1': case '2': case '3': case '4':
@@ -3652,7 +3661,7 @@ LexNextToken:
       // If this is '====' and we're in a conflict marker, ignore it.
       if (CurPtr[1] == '=' && HandleEndOfConflictMarker(CurPtr-1))
         goto LexNextToken;
-      
+
       Kind = tok::equalequal;
       CurPtr = ConsumeChar(CurPtr, SizeTmp, Result);
     } else {
@@ -3739,7 +3748,7 @@ LexNextToken:
       }
       return LexUnicode(Result, CodePoint, CurPtr);
     }
-    
+
     if (isLexingRawMode() || ParsingPreprocessorDirective ||
         PP->isPreprocessedOutput()) {
       ++CurPtr;

@@ -34,6 +34,13 @@ class Context:
 
 context = Context()
 
+def suppress(remark):
+    if remark.Name == 'sil.Specialized':
+        return remark.getArgDict()['Function'][0].startswith('\"Swift.')
+    elif remark.Name == 'sil.Inlined':
+        return remark.getArgDict()['Callee'][0].startswith(('\"Swift.', '\"specialized Swift.'))
+    return False
+
 class SourceFileRenderer:
     def __init__(self, source_dir, output_dir, filename):
         existing_filename = None
@@ -88,7 +95,8 @@ class SourceFileRenderer:
 </tr>'''.format(**locals()), file=self.stream)
 
             for remark in line_remarks.get(linenum, []):
-                self.render_inline_remarks(remark, html_line)
+                if not suppress(remark):
+                    self.render_inline_remarks(remark, html_line)
 
     def render_inline_remarks(self, r, line):
         inlining_context = r.DemangledFunctionName
@@ -179,7 +187,8 @@ class IndexRenderer:
             max_entries = args.max_hottest_remarks_on_index
 
         for i, remark in enumerate(all_remarks[:max_entries]):
-            self.render_entry(remark, i % 2)
+            if not suppress(remark):
+                self.render_entry(remark, i % 2)
         print('''
 </table>
 </body>

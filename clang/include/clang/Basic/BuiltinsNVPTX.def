@@ -371,6 +371,9 @@ BUILTIN(__nvvm_bitcast_i2f, "fi", "")
 BUILTIN(__nvvm_bitcast_ll2d, "dLLi", "")
 BUILTIN(__nvvm_bitcast_d2ll, "LLid", "")
 
+// FNS
+TARGET_BUILTIN(__nvvm_fns, "UiUiUii", "n", "ptx60")
+
 // Sync
 
 BUILTIN(__syncthreads, "v", "")

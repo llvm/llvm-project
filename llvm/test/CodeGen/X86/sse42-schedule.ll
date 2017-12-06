@@ -772,9 +772,9 @@ define <2 x i64> @test_pcmpgtq(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ; SKX-LABEL: test_pcmpgtq:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vpcmpgtq %xmm1, %xmm0, %k0 # sched: [3:1.00]
-; SKX-NEXT:    vpmovm2q %k0, %xmm0
+; SKX-NEXT:    vpmovm2q %k0, %xmm0 # sched: [1:0.25]
 ; SKX-NEXT:    vpcmpgtq (%rdi), %xmm0, %k0 # sched: [9:1.00]
-; SKX-NEXT:    vpmovm2q %k0, %xmm0
+; SKX-NEXT:    vpmovm2q %k0, %xmm0 # sched: [1:0.25]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_pcmpgtq:

@@ -979,6 +979,33 @@ def INT_NVVM_BITCAST_LL2D : F_MATH_1<"mov.b64 \t$dst, $src0;", Float64Regs,
 def INT_NVVM_BITCAST_D2LL : F_MATH_1<"mov.b64 \t$dst, $src0;", Int64Regs,
   Float64Regs, int_nvvm_bitcast_d2ll>;
 
+//
+// FNS
+//
+
+class INT_FNS_MBO<dag ins, dag Operands>
+  : NVPTXInst<(outs Int32Regs:$dst), ins,
+               "fns.b32 \t$dst, $mask, $base, $offset;",
+               [(set Int32Regs:$dst, Operands )]>,
+    Requires<[hasPTX60, hasSM30]>;
+
+def INT_FNS_rrr : INT_FNS_MBO<(ins Int32Regs:$mask, Int32Regs:$base, Int32Regs:$offset),
+                     (int_nvvm_fns Int32Regs:$mask, Int32Regs:$base, Int32Regs:$offset)>;
+def INT_FNS_rri : INT_FNS_MBO<(ins Int32Regs:$mask, Int32Regs:$base,    i32imm:$offset),
+                     (int_nvvm_fns Int32Regs:$mask, Int32Regs:$base,       imm:$offset)>;
+def INT_FNS_rir : INT_FNS_MBO<(ins Int32Regs:$mask,    i32imm:$base, Int32Regs:$offset),
+                     (int_nvvm_fns Int32Regs:$mask,       imm:$base, Int32Regs:$offset)>;
+def INT_FNS_rii : INT_FNS_MBO<(ins Int32Regs:$mask,    i32imm:$base,    i32imm:$offset),
+                     (int_nvvm_fns Int32Regs:$mask,       imm:$base,       imm:$offset)>;
+def INT_FNS_irr : INT_FNS_MBO<(ins    i32imm:$mask, Int32Regs:$base, Int32Regs:$offset),
+                     (int_nvvm_fns       imm:$mask, Int32Regs:$base, Int32Regs:$offset)>;
+def INT_FNS_iri : INT_FNS_MBO<(ins    i32imm:$mask, Int32Regs:$base,    i32imm:$offset),
+                     (int_nvvm_fns       imm:$mask, Int32Regs:$base,       imm:$offset)>;
+def INT_FNS_iir : INT_FNS_MBO<(ins    i32imm:$mask,    i32imm:$base, Int32Regs:$offset),
+                     (int_nvvm_fns       imm:$mask,       imm:$base, Int32Regs:$offset)>;
+def INT_FNS_iii : INT_FNS_MBO<(ins    i32imm:$mask,    i32imm:$base,    i32imm:$offset),
+                     (int_nvvm_fns       imm:$mask,       imm:$base,       imm:$offset)>;
+
 //-----------------------------------
 // Atomic Functions
 //-----------------------------------

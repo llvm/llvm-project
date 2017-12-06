@@ -117,7 +117,7 @@ public:
       return Token(Identifier, S);
     }
     default: {
-      size_t End = Buf.find_first_of("=,\r\n \t\v");
+      size_t End = Buf.find_first_of("=,;\r\n \t\v");
       StringRef Word = Buf.substr(0, End);
       Kind K = llvm::StringSwitch<Kind>(Word)
                    .Case("BASE", KwBase)

@@ -1068,7 +1068,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                           CI->getArgOperand(1));
     } else if (IsX86 && (Name.startswith("avx512.kunpck"))) {
       uint64_t Shift = CI->getType()->getScalarSizeInBits() / 2;
-      uint64_t And = (1 << Shift) - 1; 
+      uint64_t And = (1ULL << Shift) - 1; 
       Value* LowBits =  Builder.CreateAnd(CI->getArgOperand(0), And);
       Value* HighBits =  Builder.CreateShl(CI->getArgOperand(1), Shift);
       Rep = Builder.CreateOr(LowBits, HighBits);

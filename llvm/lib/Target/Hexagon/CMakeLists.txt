@@ -35,7 +35,9 @@ add_llvm_target(HexagonCodeGen
   HexagonHazardRecognizer.cpp
   HexagonInstrInfo.cpp
   HexagonISelDAGToDAG.cpp
+  HexagonISelDAGToDAGHVX.cpp
   HexagonISelLowering.cpp
+  HexagonISelLoweringHVX.cpp
   HexagonLoopIdiomRecognition.cpp
   HexagonMachineFunctionInfo.cpp
   HexagonMachineScheduler.cpp

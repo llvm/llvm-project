@@ -1104,11 +1104,14 @@ Address ReductionCodeGen::adjustPrivateAddress(CodeGenFunction &CGF, unsigned N,
                     OriginalBaseLValue);
     llvm::Value *Adjustment = CGF.Builder.CreatePtrDiff(
         BaseLValue.getPointer(), SharedAddresses[N].first.getPointer());
-    llvm::Value *Ptr =
-        CGF.Builder.CreateGEP(PrivateAddr.getPointer(), Adjustment);
+    llvm::Value *PrivatePointer =
+        CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+            PrivateAddr.getPointer(),
+            SharedAddresses[N].first.getAddress().getType());
+    llvm::Value *Ptr = CGF.Builder.CreateGEP(PrivatePointer, Adjustment);
     return castToBase(CGF, OrigVD->getType(),
                       SharedAddresses[N].first.getType(),
-                      OriginalBaseLValue.getPointer()->getType(),
+                      OriginalBaseLValue.getAddress().getType(),
                       OriginalBaseLValue.getAlignment(), Ptr);
   }
   BaseDecls.emplace_back(
