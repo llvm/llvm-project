@@ -14,4 +14,4 @@ add_llvm_unittest(DebugInfoPDBTests
   ${DebugInfoPDBSources}
   )
 
-target_link_libraries(DebugInfoPDBTests LLVMTestingSupport)
+target_link_libraries(DebugInfoPDBTests PRIVATE LLVMTestingSupport)

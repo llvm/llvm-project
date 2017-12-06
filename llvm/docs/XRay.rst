@@ -143,15 +143,25 @@ variable, where we list down the options and their defaults below.
 |                   |                 |               | instrumentation points |
 |                   |                 |               | before main.           |
 +-------------------+-----------------+---------------+------------------------+
-| xray_naive_log    | ``bool``        | ``false``     | Whether to install     |
-|                   |                 |               | the naive log          |
-|                   |                 |               | implementation.        |
+| xray_mode         | ``const char*`` | ``""``        | Default mode to        |
+|                   |                 |               | install and initialize |
+|                   |                 |               | before ``main``.       |
 +-------------------+-----------------+---------------+------------------------+
 | xray_logfile_base | ``const char*`` | ``xray-log.`` | Filename base for the  |
 |                   |                 |               | XRay logfile.          |
 +-------------------+-----------------+---------------+------------------------+
-| xray_fdr_log      | ``bool``        | ``false``     | Whether to install the |
-|                   |                 |               | Flight Data Recorder   |
+| xray_naive_log    | ``bool``        | ``false``     | **DEPRECATED:** Use    |
+|                   |                 |               | xray_mode=xray-basic   |
+|                   |                 |               | instead. Whether to    |
+|                   |                 |               | install the basic log  |
+|                   |                 |               | the naive log          |
+|                   |                 |               | implementation.        |
++-------------------+-----------------+---------------+------------------------+
+| xray_fdr_log      | ``bool``        | ``false``     | **DEPRECATED:** Use    |
+|                   |                 |               | xray_mode=xray-fdr     |
+|                   |                 |               | instead. Whether to    |
+|                   |                 |               | install the Flight     |
+|                   |                 |               | Data Recorder          |
 |                   |                 |               | (FDR) mode.            |
 +-------------------+-----------------+---------------+------------------------+
 
@@ -241,6 +251,14 @@ following API:
 - ``__xray_set_log_impl(...)``: This function takes a struct of type
   ``XRayLogImpl``, which is defined in ``xray/xray_log_interface.h``, part of
   the XRay compiler-rt installation.
+- ``__xray_log_register_mode(...)``: Register a logging implementation against
+  a string Mode. The implementation is an instance of ``XRayLogImpl`` defined
+  in ``xray/xray_log_interface.h``.
+- ``__xray_log_select_mode(...)``: Select the mode to install, associated with
+  a string Mode. Only implementations registered with
+  ``__xray_log_register_mode(...)`` can be chosen with this function. When
+  successful, has the same effects as calling ``__xray_set_log_impl(...)`` with
+  the registered logging implementation.
 - ``__xray_log_init(...)``: This function allows for initializing and
   re-initializing an installed logging implementation. See
   ``xray/xray_log_interface.h`` for details, part of the XRay compiler-rt

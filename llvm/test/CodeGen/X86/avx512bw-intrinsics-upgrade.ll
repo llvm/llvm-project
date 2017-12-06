@@ -2,6 +2,45 @@
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefix=ALL --check-prefix=AVX512BW
 ; RUN: llc < %s -mtriple=i386-unknown-linux-gnu -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefix=ALL --check-prefix=AVX512F-32
 
+declare i32 @llvm.x86.avx512.kunpck.wd(i32, i32)
+
+define i32@test_int_x86_avx512_kunpck_wd(i32 %x0, i32 %x1) {
+; AVX512BW-LABEL: test_int_x86_avx512_kunpck_wd:
+; AVX512BW:       ## %bb.0:
+; AVX512BW-NEXT:    movzwl %di, %eax
+; AVX512BW-NEXT:    shll $16, %esi
+; AVX512BW-NEXT:    orl %esi, %eax
+; AVX512BW-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_int_x86_avx512_kunpck_wd:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; AVX512F-32-NEXT:    shll $16, %eax
+; AVX512F-32-NEXT:    orl %ecx, %eax
+; AVX512F-32-NEXT:    retl
+  %res = call i32 @llvm.x86.avx512.kunpck.wd(i32 %x0, i32 %x1)
+  ret i32 %res
+}
+
+declare i64 @llvm.x86.avx512.kunpck.dq(i64, i64)
+
+define i64@test_int_x86_avx512_kunpck_qd(i64 %x0, i64 %x1) {
+; AVX512BW-LABEL: test_int_x86_avx512_kunpck_qd:
+; AVX512BW:       ## %bb.0:
+; AVX512BW-NEXT:    shlq $32, %rsi
+; AVX512BW-NEXT:    movq %rsi, %rax
+; AVX512BW-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_int_x86_avx512_kunpck_qd:
+; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; AVX512F-32-NEXT:    xorl %eax, %eax
+; AVX512F-32-NEXT:    retl
+  %res = call i64 @llvm.x86.avx512.kunpck.dq(i64 %x0, i64 %x1)
+  ret i64 %res
+}
+
 declare <64 x i8> @llvm.x86.avx512.mask.pbroadcast.b.gpr.512(i8, <64 x i8>, i64)
 
   define <64 x i8>@test_int_x86_avx512_mask_pbroadcast_b_gpr_512(i8 %x0, <64 x i8> %x1, i64 %mask) {

@@ -2,11 +2,11 @@
 // RUN: %clang_cc1 -std=c++11 -triple=x86_64-pc-win32 -fsyntax-only -DSIGNED -verify %s
 // RUN: %clang_cc1 -std=c++11 -triple=x86_64-pc-win32 -fsyntax-only -DSILENCE -Wno-tautological-unsigned-enum-zero-compare -verify %s
 
-// Okay, this is where it gets complicated.
-// Then default enum sigdness is target-specific.
-// On windows, it is signed by default. We do not want to warn in that case.
-
 int main() {
+  // On Windows, all enumerations have a fixed underlying type, which is 'int'
+  // if not otherwise specified, so A is identical to C on Windows. Otherwise,
+  // we follow the C++ rules, which say that the only valid values of A are 0
+  // and 1.
   enum A { A_foo = 0, A_bar, };
   enum A a;
 
@@ -87,21 +87,23 @@ int main() {
 
   if (c < 0)
     return 0;
-  if (0 >= c) // expected-warning {{comparison 0 >= 'enum C' is always true}}
+  if (0 >= c)
     return 0;
-  if (c > 0) // expected-warning {{comparison 'enum C' > 0 is always false}}
+  if (c > 0)
     return 0;
   if (0 <= c)
     return 0;
-  if (c <= 0) // expected-warning {{comparison 'enum C' <= 0 is always true}}
+  if (c <= 0)
     return 0;
   if (0 > c)
     return 0;
   if (c >= 0)
     return 0;
-  if (0 < c) // expected-warning {{0 < 'enum C' is always false}}
+  if (0 < c)
     return 0;
 
+  // FIXME: These diagnostics are terrible. The issue here is that the signed
+  // enumeration value was promoted to an unsigned type.
   if (c < 0U) // expected-warning {{comparison of unsigned enum expression < 0 is always false}}
     return 0;
   if (0U >= c)
@@ -121,21 +123,23 @@ int main() {
 #elif defined(SIGNED)
   if (a < 0)
     return 0;
-  if (0 >= a) // expected-warning {{comparison 0 >= 'enum A' is always true}}
+  if (0 >= a)
     return 0;
-  if (a > 0) // expected-warning {{comparison 'enum A' > 0 is always false}}
+  if (a > 0)
     return 0;
   if (0 <= a)
     return 0;
-  if (a <= 0) // expected-warning {{comparison 'enum A' <= 0 is always true}}
+  if (a <= 0)
     return 0;
   if (0 > a)
     return 0;
   if (a >= 0)
     return 0;
-  if (0 < a) // expected-warning {{comparison 0 < 'enum A' is always false}}
+  if (0 < a)
     return 0;
 
+  // FIXME: As above, the issue here is that the enumeration is promoted to
+  // unsigned.
   if (a < 0U) // expected-warning {{comparison of unsigned enum expression < 0 is always false}}
     return 0;
   if (0U >= a)
@@ -189,19 +193,19 @@ int main() {
 
   if (c < 0)
     return 0;
-  if (0 >= c) // expected-warning {{comparison 0 >= 'enum C' is always true}}
+  if (0 >= c)
     return 0;
-  if (c > 0) // expected-warning {{comparison 'enum C' > 0 is always false}}
+  if (c > 0)
     return 0;
   if (0 <= c)
     return 0;
-  if (c <= 0) // expected-warning {{comparison 'enum C' <= 0 is always true}}
+  if (c <= 0)
     return 0;
   if (0 > c)
     return 0;
   if (c >= 0)
     return 0;
-  if (0 < c) // expected-warning {{0 < 'enum C' is always false}}
+  if (0 < c)
     return 0;
 
   if (c < 0U) // expected-warning {{comparison of unsigned enum expression < 0 is always false}}
@@ -221,21 +225,22 @@ int main() {
   if (0U < c)
     return 0;
 #else
+  // expected-no-diagnostics
   if (a < 0)
     return 0;
-  if (0 >= a) // expected-warning {{comparison 0 >= 'enum A' is always true}}
+  if (0 >= a)
     return 0;
-  if (a > 0) // expected-warning {{comparison 'enum A' > 0 is always false}}
+  if (a > 0)
     return 0;
   if (0 <= a)
     return 0;
-  if (a <= 0) // expected-warning {{comparison 'enum A' <= 0 is always true}}
+  if (a <= 0)
     return 0;
   if (0 > a)
     return 0;
   if (a >= 0)
     return 0;
-  if (0 < a) // expected-warning {{comparison 0 < 'enum A' is always false}}
+  if (0 < a)
     return 0;
 
   if (a < 0U)
@@ -291,19 +296,19 @@ int main() {
 
   if (c < 0)
     return 0;
-  if (0 >= c) // expected-warning {{comparison 0 >= 'enum C' is always true}}
+  if (0 >= c)
     return 0;
-  if (c > 0) // expected-warning {{comparison 'enum C' > 0 is always false}}
+  if (c > 0)
     return 0;
   if (0 <= c)
     return 0;
-  if (c <= 0) // expected-warning {{comparison 'enum C' <= 0 is always true}}
+  if (c <= 0)
     return 0;
   if (0 > c)
     return 0;
   if (c >= 0)
     return 0;
-  if (0 < c) // expected-warning {{0 < 'enum C' is always false}}
+  if (0 < c)
     return 0;
 
   if (c < 0U)

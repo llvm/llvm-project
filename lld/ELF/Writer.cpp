@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Writer.h"
+#include "AArch64ErrataFix.h"
 #include "Config.h"
 #include "Filesystem.h"
 #include "LinkerScript.h"
@@ -1349,9 +1350,11 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   if (!Script->HasSectionsCommand && !Config->Relocatable)
     fixSectionAlignments();
 
-  // Some architectures use small displacements for jump instructions.
-  // It is linker's responsibility to create thunks containing long
-  // jump instructions if jump targets are too far. Create thunks.
+  // Some architectures need to generate content that depends on the address
+  // of InputSections. For example some architectures use small displacements
+  // for jump instructions that is is the linker's responsibility for creating
+  // range extension thunks for. As the generation of the content may also
+  // alter InputSection addresses we must converge to a fixed point.
   if (Target->NeedsThunks || Config->AndroidPackDynRelocs) {
     ThunkCreator TC;
     bool Changed;
@@ -1360,6 +1363,11 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       Changed = false;
       if (Target->NeedsThunks)
         Changed |= TC.createThunks(OutputSections);
+      if (Config->FixCortexA53Errata843419) {
+        if (Changed)
+          Script->assignAddresses();
+        reportA53Errata843419Fixes();
+      }
       if (InX::MipsGot)
         InX::MipsGot->updateAllocSize();
       Changed |= In<ELFT>::RelaDyn->updateAllocSize();

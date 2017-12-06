@@ -2201,6 +2201,7 @@ static void adjustForTestUnderMask(SelectionDAG &DAG, const SDLoc &DL,
       NewC.Op0.getOpcode() == ISD::SHL &&
       isSimpleShift(NewC.Op0, ShiftVal) &&
       (MaskVal >> ShiftVal != 0) &&
+      ((CmpVal >> ShiftVal) << ShiftVal) == CmpVal &&
       (NewCCMask = getTestUnderMaskCond(BitSize, NewC.CCMask,
                                         MaskVal >> ShiftVal,
                                         CmpVal >> ShiftVal,
@@ -2211,6 +2212,7 @@ static void adjustForTestUnderMask(SelectionDAG &DAG, const SDLoc &DL,
              NewC.Op0.getOpcode() == ISD::SRL &&
              isSimpleShift(NewC.Op0, ShiftVal) &&
              (MaskVal << ShiftVal != 0) &&
+             ((CmpVal << ShiftVal) >> ShiftVal) == CmpVal &&
              (NewCCMask = getTestUnderMaskCond(BitSize, NewC.CCMask,
                                                MaskVal << ShiftVal,
                                                CmpVal << ShiftVal,

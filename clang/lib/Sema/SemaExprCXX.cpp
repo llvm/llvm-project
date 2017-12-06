@@ -3293,6 +3293,15 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
     // is trivial and left to AST consumers to handle.
     QualType ParamType = OperatorDelete->getParamDecl(0)->getType();
     if (!IsVirtualDelete && !ParamType->getPointeeType()->isVoidType()) {
+      Qualifiers Qs = Pointee.getQualifiers();
+      if (Qs.hasCVRQualifiers()) {
+        // Qualifiers are irrelevant to this conversion; we're only looking
+        // for access and ambiguity.
+        Qs.removeCVRQualifiers();
+        QualType Unqual = Context.getPointerType(
+            Context.getQualifiedType(Pointee.getUnqualifiedType(), Qs));
+        Ex = ImpCastExprToType(Ex.get(), Unqual, CK_NoOp);
+      }
       Ex = PerformImplicitConversion(Ex.get(), ParamType, AA_Passing);
       if (Ex.isInvalid())
         return ExprError();

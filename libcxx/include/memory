@@ -1730,10 +1730,10 @@ private:
             }
 
     _LIBCPP_INLINE_VISIBILITY
-    static size_type __max_size(true_type, const allocator_type& __a)
+    static size_type __max_size(true_type, const allocator_type& __a) _NOEXCEPT
             {return __a.max_size();}
     _LIBCPP_INLINE_VISIBILITY
-    static size_type __max_size(false_type, const allocator_type&)
+    static size_type __max_size(false_type, const allocator_type&) _NOEXCEPT
             {return numeric_limits<size_type>::max() / sizeof(value_type);}
 
     _LIBCPP_INLINE_VISIBILITY

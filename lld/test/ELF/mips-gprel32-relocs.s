@@ -21,9 +21,9 @@ v1:
   .gpword bar
 
 # CHECK: Contents of section .rodata:
-# CHECK:  00f4 fffe8014 fffe8018
-#              ^ 0x10004 - 0x27ff0
-#                       ^ 0x10008 - 0x27ff0
+# CHECK:  {{[0-9a-f]+}} fffe8014 fffe8018
+#                       ^ 0x10004 - 0x27ff0
+#                                ^ 0x10008 - 0x27ff0
 
 # CHECK: SYMBOL TABLE:
 # CHECK: 00010008         .text           00000000 bar

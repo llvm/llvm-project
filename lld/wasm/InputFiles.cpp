@@ -11,7 +11,6 @@
 
 #include "Config.h"
 #include "InputSegment.h"
-#include "Strings.h"
 #include "SymbolTable.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
@@ -245,7 +244,7 @@ void ArchiveFile::addMember(const Archive::Symbol *Sym) {
   if (!Seen.insert(C.getChildOffset()).second)
     return;
 
-  DEBUG(dbgs() << "loading lazy: " << displayName(Sym->getName()) << "\n");
+  DEBUG(dbgs() << "loading lazy: " << Sym->getName() << "\n");
   DEBUG(dbgs() << "from archive: " << toString(this) << "\n");
 
   MemoryBufferRef MB =
@@ -264,7 +263,7 @@ void ArchiveFile::addMember(const Archive::Symbol *Sym) {
 }
 
 // Returns a string in the format of "foo.o" or "foo.a(bar.o)".
-std::string lld::toString(wasm::InputFile *File) {
+std::string lld::toString(const wasm::InputFile *File) {
   if (!File)
     return "<internal>";
 

@@ -56,8 +56,7 @@ def : VectorExtractSubreg<v4i32, VLGVF>;
 //===----------------------------------------------------------------------===//
 
 let Predicates = [FeatureVector] in {
-  let hasSideEffects = 0, isAsCheapAsAMove = 1, isMoveImm = 1,
-      isReMaterializable = 1 in {
+  let isAsCheapAsAMove = 1, isMoveImm = 1, isReMaterializable = 1 in {
 
     // Generate byte mask.
     def VZERO : InherentVRIa<"vzero", 0xE744, 0>;
@@ -141,8 +140,10 @@ let Predicates = [FeatureVector] in {
   // LEY and LDY offer full 20-bit displacement fields.  It's often better
   // to use those instructions rather than force a 20-bit displacement
   // into a GPR temporary.
-  def VL32 : UnaryAliasVRX<load, v32sb, bdxaddr12pair>;
-  def VL64 : UnaryAliasVRX<load, v64db, bdxaddr12pair>;
+  let mayLoad = 1 in {
+    def VL32 : UnaryAliasVRX<load, v32sb, bdxaddr12pair>;
+    def VL64 : UnaryAliasVRX<load, v64db, bdxaddr12pair>;
+  }
 
   // Load logical element and zero.
   def VLLEZ  : UnaryVRXGeneric<"vllez", 0xE704>;
@@ -231,8 +232,10 @@ let Predicates = [FeatureVector] in {
   // STEY and STDY offer full 20-bit displacement fields.  It's often better
   // to use those instructions rather than force a 20-bit displacement
   // into a GPR temporary.
-  def VST32 : StoreAliasVRX<store, v32sb, bdxaddr12pair>;
-  def VST64 : StoreAliasVRX<store, v64db, bdxaddr12pair>;
+  let mayStore = 1 in {
+    def VST32 : StoreAliasVRX<store, v32sb, bdxaddr12pair>;
+    def VST64 : StoreAliasVRX<store, v64db, bdxaddr12pair>;
+  }
 
   // Scatter element.
   def VSCEF : StoreBinaryVRV<"vscef", 0xE71B, 4, imm32zx2>;

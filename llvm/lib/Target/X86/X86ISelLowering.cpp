@@ -1687,6 +1687,19 @@ bool X86TargetLowering::useLoadStackGuardNode() const {
   return Subtarget.isTargetMachO() && Subtarget.is64Bit();
 }
 
+bool X86TargetLowering::useStackGuardXorFP() const {
+  // Currently only MSVC CRTs XOR the frame pointer into the stack guard value.
+  return Subtarget.getTargetTriple().isOSMSVCRT();
+}
+
+SDValue X86TargetLowering::emitStackGuardXorFP(SelectionDAG &DAG, SDValue Val,
+                                               const SDLoc &DL) const {
+  EVT PtrTy = getPointerTy(DAG.getDataLayout());
+  unsigned XorOp = Subtarget.is64Bit() ? X86::XOR64_FP : X86::XOR32_FP;
+  MachineSDNode *Node = DAG.getMachineNode(XorOp, DL, PtrTy, Val);
+  return SDValue(Node, 0);
+}
+
 TargetLoweringBase::LegalizeTypeAction
 X86TargetLowering::getPreferredVectorAction(EVT VT) const {
   if (ExperimentalVectorWideningLegalization &&
@@ -1703,37 +1716,26 @@ EVT X86TargetLowering::getSetCCResultType(const DataLayout &DL,
   if (!VT.isVector())
     return MVT::i8;
 
-  if (VT.getSizeInBits() >= 512) {
-    EVT EltVT = VT.getVectorElementType();
+  if (Subtarget.hasAVX512()) {
     const unsigned NumElts = VT.getVectorNumElements();
-    if (Subtarget.hasAVX512())
-      if (EltVT == MVT::i32 || EltVT == MVT::i64 ||
-          EltVT == MVT::f32 || EltVT == MVT::f64)
+
+    // Figure out what this type will be legalized to.
+    EVT LegalVT = VT;
+    while (getTypeAction(Context, LegalVT) != TypeLegal)
+      LegalVT = getTypeToTransformTo(Context, LegalVT);
+
+    // If we got a 512-bit vector then we'll definitely have a vXi1 compare.
+    if (LegalVT.getSimpleVT().is512BitVector())
+      return EVT::getVectorVT(Context, MVT::i1, NumElts);
+
+    if (LegalVT.getSimpleVT().isVector() && Subtarget.hasVLX()) {
+      // If we legalized to less than a 512-bit vector, then we will use a vXi1
+      // compare for vXi32/vXi64 for sure. If we have BWI we will also support
+      // vXi16/vXi8.
+      MVT EltVT = LegalVT.getSimpleVT().getVectorElementType();
+      if (Subtarget.hasBWI() || EltVT.getSizeInBits() >= 32)
         return EVT::getVectorVT(Context, MVT::i1, NumElts);
-    if (Subtarget.hasBWI())
-      if (EltVT == MVT::i8 || EltVT == MVT::i16)
-        return EVT::getVectorVT(Context, MVT::i1, NumElts);
-  }
-
-  if (VT.isSimple()) {
-    MVT VVT = VT.getSimpleVT();
-    const unsigned NumElts = VVT.getVectorNumElements();
-    MVT EltVT = VVT.getVectorElementType();
-
-    if (Subtarget.hasBWI() && Subtarget.hasVLX())
-      return MVT::getVectorVT(MVT::i1, NumElts);
-
-    if (!isTypeLegal(VT) && getTypeAction(Context, VT) == TypePromoteInteger) {
-      EVT LegalVT = getTypeToTransformTo(Context, VT);
-      EltVT = LegalVT.getVectorElementType().getSimpleVT();
     }
-
-    if (Subtarget.hasVLX() && EltVT.getSizeInBits() >= 32)
-      switch(NumElts) {
-      case 2: return MVT::v2i1;
-      case 4: return MVT::v4i1;
-      case 8: return MVT::v8i1;
-      }
   }
 
   return VT.changeVectorElementTypeToInteger();
@@ -30006,6 +30008,53 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, SDValue BitCast,
   EVT VT = BitCast.getValueType();
   SDValue N0 = BitCast.getOperand(0);
   EVT VecVT = N0->getValueType(0);
+
+  if (VT.isVector() && VecVT.isScalarInteger() && Subtarget.hasAVX512() &&
+      N0->getOpcode() == ISD::OR) {
+    SDValue Op0 = N0->getOperand(0);
+    SDValue Op1 = N0->getOperand(1);
+    MVT TrunckVT;
+    MVT BitcastVT;
+    switch (VT.getSimpleVT().SimpleTy) {
+    default:
+      return SDValue();
+    case MVT::v16i1:
+      TrunckVT = MVT::i8;
+      BitcastVT = MVT::v8i1;
+      break;
+    case MVT::v32i1:
+      TrunckVT = MVT::i16;
+      BitcastVT = MVT::v16i1;
+      break;
+    case MVT::v64i1:
+      TrunckVT = MVT::i32;
+      BitcastVT = MVT::v32i1;
+      break;
+    }
+    bool isArg0UndefRight = Op0->getOpcode() == ISD::SHL;
+    bool isArg0UndefLeft =
+        Op0->getOpcode() == ISD::ZERO_EXTEND || Op0->getOpcode() == ISD::AND;
+    bool isArg1UndefRight = Op1->getOpcode() == ISD::SHL;
+    bool isArg1UndefLeft =
+        Op1->getOpcode() == ISD::ZERO_EXTEND || Op1->getOpcode() == ISD::AND;
+    SDValue OpLeft;
+    SDValue OpRight;
+    if (isArg0UndefRight && isArg1UndefLeft) {
+      OpLeft = Op0;
+      OpRight = Op1;
+    } else if (isArg1UndefRight && isArg0UndefLeft) {
+      OpLeft = Op1;
+      OpRight = Op0;
+    } else
+      return SDValue();
+    SDLoc DL(BitCast);
+    SDValue Shr = OpLeft->getOperand(0);
+    SDValue Trunc1 = DAG.getNode(ISD::TRUNCATE, DL, TrunckVT, Shr);
+    SDValue Bitcast1 = DAG.getBitcast(BitcastVT, Trunc1);
+    SDValue Trunc2 = DAG.getNode(ISD::TRUNCATE, DL, TrunckVT, OpRight);
+    SDValue Bitcast2 = DAG.getBitcast(BitcastVT, Trunc2);
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Bitcast1, Bitcast2);
+  }
 
   if (!VT.isScalarInteger() || !VecVT.isSimple())
     return SDValue();

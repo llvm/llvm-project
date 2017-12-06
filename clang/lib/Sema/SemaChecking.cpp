@@ -8260,11 +8260,12 @@ struct IntRange {
     } else if (const EnumType *ET = dyn_cast<EnumType>(T)) {
       // For enum types in C++, use the known bit width of the enumerators.
       EnumDecl *Enum = ET->getDecl();
-      // In C++11, enums without definitions can have an explicitly specified
-      // underlying type.  Use this type to compute the range.
-      if (!Enum->isCompleteDefinition())
+      // In C++11, enums can have a fixed underlying type. Use this type to
+      // compute the range.
+      if (Enum->isFixed()) {
         return IntRange(C.getIntWidth(QualType(T, 0)),
                         !ET->isSignedIntegerOrEnumerationType());
+      }
 
       unsigned NumPositive = Enum->getNumPositiveBits();
       unsigned NumNegative = Enum->getNumNegativeBits();

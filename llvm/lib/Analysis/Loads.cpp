@@ -414,7 +414,7 @@ Value *llvm::FindAvailablePtrLoadStore(Value *Ptr, Type *AccessTy,
 
       // If we have alias analysis and it says the store won't modify the loaded
       // value, ignore the store.
-      if (AA && (AA->getModRefInfo(SI, StrippedPtr, AccessSize) & MRI_Mod) == 0)
+      if (AA && !isModSet(AA->getModRefInfo(SI, StrippedPtr, AccessSize)))
         continue;
 
       // Otherwise the store that may or may not alias the pointer, bail out.
@@ -426,8 +426,7 @@ Value *llvm::FindAvailablePtrLoadStore(Value *Ptr, Type *AccessTy,
     if (Inst->mayWriteToMemory()) {
       // If alias analysis claims that it really won't modify the load,
       // ignore it.
-      if (AA &&
-          (AA->getModRefInfo(Inst, StrippedPtr, AccessSize) & MRI_Mod) == 0)
+      if (AA && !isModSet(AA->getModRefInfo(Inst, StrippedPtr, AccessSize)))
         continue;
 
       // May modify the pointer, bail out.

@@ -601,8 +601,8 @@ static RelExpr adjustExpr(Symbol &Sym, RelExpr Expr, RelType Type,
 
   if (Sym.isObject()) {
     // Produce a copy relocation.
-    auto *B = cast<SharedSymbol>(&Sym);
-    if (!B->CopyRelSec) {
+    auto *B = dyn_cast<SharedSymbol>(&Sym);
+    if (B && !B->CopyRelSec) {
       if (Config->ZNocopyreloc)
         error("unresolvable relocation " + toString(Type) +
               " against symbol '" + toString(*B) +

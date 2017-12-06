@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// TODO: Most floating-point instructions (except for simple moves and the
+// like) can raise exceptions -- should they have hasSideEffects=1 ?
+
 //===----------------------------------------------------------------------===//
 // Select instructions
 //===----------------------------------------------------------------------===//
@@ -29,22 +32,20 @@ defm CondStoreF64 : CondStores<FP64, nonvolatile_store,
 //===----------------------------------------------------------------------===//
 
 // Load zero.
-let hasSideEffects = 0, isAsCheapAsAMove = 1, isMoveImm = 1 in {
+let isAsCheapAsAMove = 1, isMoveImm = 1 in {
   def LZER : InherentRRE<"lzer", 0xB374, FP32,  fpimm0>;
   def LZDR : InherentRRE<"lzdr", 0xB375, FP64,  fpimm0>;
   def LZXR : InherentRRE<"lzxr", 0xB376, FP128, fpimm0>;
 }
 
 // Moves between two floating-point registers.
-let hasSideEffects = 0 in {
-  def LER : UnaryRR <"ler", 0x38,   null_frag, FP32,  FP32>;
-  def LDR : UnaryRR <"ldr", 0x28,   null_frag, FP64,  FP64>;
-  def LXR : UnaryRRE<"lxr", 0xB365, null_frag, FP128, FP128>;
+def LER : UnaryRR <"ler", 0x38,   null_frag, FP32,  FP32>;
+def LDR : UnaryRR <"ldr", 0x28,   null_frag, FP64,  FP64>;
+def LXR : UnaryRRE<"lxr", 0xB365, null_frag, FP128, FP128>;
 
-  // For z13 we prefer LDR over LER to avoid partial register dependencies.
-  let isCodeGenOnly = 1 in
-    def LDR32 : UnaryRR<"ldr", 0x28, null_frag, FP32, FP32>;
-}
+// For z13 we prefer LDR over LER to avoid partial register dependencies.
+let isCodeGenOnly = 1 in
+  def LDR32 : UnaryRR<"ldr", 0x28, null_frag, FP32, FP32>;
 
 // Moves between two floating-point registers that also set the condition
 // codes.
@@ -130,7 +131,7 @@ defm LoadStoreF128 : MVCLoadStore<load, f128, MVCSequence, 16>;
 // Load instructions
 //===----------------------------------------------------------------------===//
 
-let canFoldAsLoad = 1, SimpleBDXLoad = 1 in {
+let canFoldAsLoad = 1, SimpleBDXLoad = 1, mayLoad = 1 in {
   defm LE : UnaryRXPair<"le", 0x78, 0xED64, load, FP32, 4>;
   defm LD : UnaryRXPair<"ld", 0x68, 0xED65, load, FP64, 8>;
 
@@ -150,7 +151,7 @@ let canFoldAsLoad = 1, SimpleBDXLoad = 1 in {
 // Store instructions
 //===----------------------------------------------------------------------===//
 
-let SimpleBDXStore = 1 in {
+let SimpleBDXStore = 1, mayStore = 1 in {
   defm STE : StoreRXPair<"ste", 0x70, 0xED66, store, FP32, 4>;
   defm STD : StoreRXPair<"std", 0x60, 0xED67, store, FP64, 8>;
 
@@ -525,11 +526,14 @@ let Defs = [CC], CCValues = 0xC in {
 //===----------------------------------------------------------------------===//
 
 let hasSideEffects = 1 in {
-  def EFPC  : InherentRRE<"efpc", 0xB38C, GR32, int_s390_efpc>;
-  def STFPC : StoreInherentS<"stfpc", 0xB29C, storei<int_s390_efpc>, 4>;
+  let mayLoad = 1, mayStore = 1 in {
+    // TODO: EFPC and SFPC do not touch memory at all
+    def EFPC  : InherentRRE<"efpc", 0xB38C, GR32, int_s390_efpc>;
+    def STFPC : StoreInherentS<"stfpc", 0xB29C, storei<int_s390_efpc>, 4>;
 
-  def SFPC : SideEffectUnaryRRE<"sfpc", 0xB384, GR32, int_s390_sfpc>;
-  def LFPC : SideEffectUnaryS<"lfpc", 0xB29D, loadu<int_s390_sfpc>, 4>;
+    def SFPC : SideEffectUnaryRRE<"sfpc", 0xB384, GR32, int_s390_sfpc>;
+    def LFPC : SideEffectUnaryS<"lfpc", 0xB29D, loadu<int_s390_sfpc>, 4>;
+  }
 
   def SFASR : SideEffectUnaryRRE<"sfasr", 0xB385, GR32, null_frag>;
   def LFAS  : SideEffectUnaryS<"lfas", 0xB2BD, null_frag, 4>;

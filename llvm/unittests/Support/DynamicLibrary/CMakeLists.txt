@@ -4,7 +4,7 @@ add_library(DynamicLibraryLib STATIC ExportedFuncs.cxx)
 set_target_properties(DynamicLibraryLib PROPERTIES FOLDER "Tests")
 
 add_llvm_unittest(DynamicLibraryTests DynamicLibraryTest.cpp)
-target_link_libraries(DynamicLibraryTests DynamicLibraryLib)
+target_link_libraries(DynamicLibraryTests PRIVATE DynamicLibraryLib)
 export_executable_symbols(DynamicLibraryTests)
 
 function(dynlib_add_module NAME)

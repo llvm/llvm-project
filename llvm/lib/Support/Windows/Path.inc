@@ -391,6 +391,20 @@ std::error_code is_local(int FD, bool &Result) {
   return is_local_internal(FinalPath, Result);
 }
 
+static std::error_code setDeleteDisposition(HANDLE Handle, bool Delete) {
+  FILE_DISPOSITION_INFO Disposition;
+  Disposition.DeleteFile = Delete;
+  if (!SetFileInformationByHandle(Handle, FileDispositionInfo, &Disposition,
+                                  sizeof(Disposition)))
+    return mapWindowsError(::GetLastError());
+  return std::error_code();
+}
+
+static std::error_code removeFD(int FD) {
+  HANDLE Handle = reinterpret_cast<HANDLE>(_get_osfhandle(FD));
+  return setDeleteDisposition(Handle, true);
+}
+
 /// In order to handle temporary files we want the following properties
 ///
 /// * The temporary file is deleted on crashes
@@ -425,11 +439,9 @@ static std::error_code cancelDeleteOnClose(int &FD) {
   if (close(FD))
     return mapWindowsError(::GetLastError());
 
-  FILE_DISPOSITION_INFO Disposition;
-  Disposition.DeleteFile = false;
-  if (!SetFileInformationByHandle(NewHandle, FileDispositionInfo, &Disposition,
-                                  sizeof(Disposition)))
-    return mapWindowsError(::GetLastError());
+  if (std::error_code EC = setDeleteDisposition(NewHandle, false))
+    return EC;
+
   FD = ::_open_osfhandle(intptr_t(NewHandle), 0);
   if (FD == -1) {
     ::CloseHandle(NewHandle);
