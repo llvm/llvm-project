@@ -30,6 +30,7 @@
 
 #include "lld/Common/LLVM.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
 
@@ -73,7 +74,7 @@ inline uint64_t errorCount() { return errorHandler().ErrorCount; }
 
 LLVM_ATTRIBUTE_NORETURN void exitLld(int Val);
 
-// check() functions are convenient functions to strip errors
+// check functions are convenient functions to strip errors
 // from error-or-value objects.
 template <class T> T check(ErrorOr<T> E) {
   if (auto EC = E.getError())
@@ -87,17 +88,26 @@ template <class T> T check(Expected<T> E) {
   return std::move(*E);
 }
 
-template <class T> T check(ErrorOr<T> E, const Twine &Prefix) {
+template <class T>
+T check2(ErrorOr<T> E, llvm::function_ref<std::string()> Prefix) {
   if (auto EC = E.getError())
-    fatal(Prefix + ": " + EC.message());
+    fatal(Prefix() + ": " + EC.message());
   return std::move(*E);
 }
 
-template <class T> T check(Expected<T> E, const Twine &Prefix) {
+template <class T>
+T check2(Expected<T> E, llvm::function_ref<std::string()> Prefix) {
   if (!E)
-    fatal(Prefix + ": " + toString(E.takeError()));
+    fatal(Prefix() + ": " + toString(E.takeError()));
   return std::move(*E);
 }
+
+inline std::string checkToString(const Twine &S) { return S.str(); }
+inline std::string checkToString(std::string S) { return S; }
+inline std::string checkToString(const char *S) { return S; }
+
+// To evaluate the second argument lazily, we use C macro.
+#define CHECK(E, S) check2(E, [&] { return checkToString(S); })
 
 } // namespace lld
 

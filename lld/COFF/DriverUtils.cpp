@@ -317,7 +317,7 @@ public:
   // is called (you cannot remove an opened file on Windows.)
   std::unique_ptr<MemoryBuffer> getMemoryBuffer() {
     // IsVolatileSize=true forces MemoryBuffer to not use mmap().
-    return check(MemoryBuffer::getFile(Path, /*FileSize=*/-1,
+    return CHECK(MemoryBuffer::getFile(Path, /*FileSize=*/-1,
                                        /*RequiresNullTerminator=*/false,
                                        /*IsVolatileSize=*/true),
                  "could not open " + Path);
@@ -402,7 +402,7 @@ static std::string createManifestXmlWithExternalMt(StringRef DefaultXml) {
   E.add("/out:" + StringRef(User.Path));
   E.run();
 
-  return check(MemoryBuffer::getFile(User.Path), "could not open " + User.Path)
+  return CHECK(MemoryBuffer::getFile(User.Path), "could not open " + User.Path)
       .get()
       ->getBuffer();
 }

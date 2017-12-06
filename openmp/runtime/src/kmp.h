@@ -341,7 +341,7 @@ enum sched_type : kmp_int32 {
 #endif
 
   /* accessible only through KMP_SCHEDULE environment variable */
-  kmp_sch_upper = 48, /**< upper bound for unordered values */
+  kmp_sch_upper, /**< upper bound for unordered values */
 
   kmp_ord_lower = 64, /**< lower bound for ordered values, must be power of 2 */
   kmp_ord_static_chunked = 65,
@@ -351,7 +351,7 @@ enum sched_type : kmp_int32 {
   kmp_ord_runtime = 69,
   kmp_ord_auto = 70, /**< ordered auto */
   kmp_ord_trapezoidal = 71,
-  kmp_ord_upper = 72, /**< upper bound for ordered values */
+  kmp_ord_upper, /**< upper bound for ordered values */
 
 #if OMP_40_ENABLED
   /* Schedules for Distribute construct */
@@ -390,7 +390,7 @@ enum sched_type : kmp_int32 {
   kmp_nm_ord_runtime = 197,
   kmp_nm_ord_auto = 198, /**< auto */
   kmp_nm_ord_trapezoidal = 199,
-  kmp_nm_upper = 200, /**< upper bound for nomerge values */
+  kmp_nm_upper, /**< upper bound for nomerge values */
 
 #if OMP_45_ENABLED
   /* Support for OpenMP 4.5 monotonic and nonmonotonic schedule modifiers. Since
@@ -1759,7 +1759,7 @@ typedef enum kmp_bar_pat { /* Barrier communication patterns */
                                2, /* Hypercube-embedded tree with min branching
                                      factor 2^n */
                            bp_hierarchical_bar = 3, /* Machine hierarchy tree */
-                           bp_last_bar = 4 /* Placeholder to mark the end */
+                           bp_last_bar /* Placeholder to mark the end */
 } kmp_bar_pat_e;
 
 #define KMP_BARRIER_ICV_PUSH 1

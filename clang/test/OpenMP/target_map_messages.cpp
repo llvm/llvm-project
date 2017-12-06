@@ -274,7 +274,7 @@ void SAclient(int arg) {
   {}
   #pragma omp target map((p+1)->A)  // expected-error {{expected expression containing only member accesses and/or array sections based on named variables}}
   {}
-  #pragma omp target map(u.B)  // expected-error {{mapped storage cannot be derived from a union}}
+  #pragma omp target map(u.B)  // expected-error {{mapping of union members is not allowed}}
   {}
   #pragma omp target
   {

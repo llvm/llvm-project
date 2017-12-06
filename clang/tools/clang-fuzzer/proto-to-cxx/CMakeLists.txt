@@ -11,4 +11,4 @@ add_clang_library(clangProtoToCXX proto_to_cxx.cpp
                   )
 
 add_clang_executable(clang-proto-to-cxx proto_to_cxx_main.cpp)
-target_link_libraries(clang-proto-to-cxx clangProtoToCXX)
+target_link_libraries(clang-proto-to-cxx PRIVATE clangProtoToCXX)
