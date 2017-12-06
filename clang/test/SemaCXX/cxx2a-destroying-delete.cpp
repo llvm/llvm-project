@@ -101,3 +101,22 @@ namespace delete_selection {
   };
   void delete_I(I *i) { delete i; } // expected-error {{deleted}}
 }
+
+namespace first_param_conversion {
+  struct A {
+    void operator delete(A *, std::destroying_delete_t);
+  };
+  void f(const volatile A *a) {
+    delete a; // ok
+  }
+
+  struct B {
+    void operator delete(B *, std::destroying_delete_t);
+  };
+  struct C : B {};
+  struct D : B {};
+  struct E : C, D {};
+  void g(E *e) {
+    delete e; // expected-error {{ambiguous conversion from derived class 'first_param_conversion::E' to base class 'first_param_conversion::B':}}
+  }
+}
