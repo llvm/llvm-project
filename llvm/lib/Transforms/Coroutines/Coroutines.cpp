@@ -423,10 +423,15 @@ void coro::Shape::buildFrom(Function &F) {
 
       // Check that the result type of the suspend matches the resume types.
       Type *SResultTy = Suspend->getType();
-      ArrayRef<Type*> SuspendResultTys =
-        (isa<StructType>(SResultTy)
-           ? cast<StructType>(SResultTy)->elements()
-           : SResultTy); // forms an ArrayRef using SResultTy, be careful
+      ArrayRef<Type*> SuspendResultTys;
+      if (SResultTy->isVoidTy()) {
+        // leave as empty array
+      } else if (auto SResultStructTy = dyn_cast<StructType>(SResultTy)) {
+        SuspendResultTys = SResultStructTy->elements();
+      } else {
+        // forms an ArrayRef using SResultTy, be careful
+        SuspendResultTys = SResultTy;
+      }
       if (SuspendResultTys.size() != ResumeTys.size()) {
 #ifndef NDEBUG
         Suspend->dump();
