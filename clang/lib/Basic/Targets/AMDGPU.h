@@ -14,7 +14,6 @@
 #ifndef LLVM_CLANG_LIB_BASIC_TARGETS_AMDGPU_H
 #define LLVM_CLANG_LIB_BASIC_TARGETS_AMDGPU_H
 
-#include "clang/AST/Type.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/ADT/StringSet.h"
@@ -258,24 +257,18 @@ public:
     }
   }
 
-  LangAS getOpenCLTypeAddrSpace(const Type *T) const override {
-    auto BT = dyn_cast<BuiltinType>(T);
+  LangAS getOpenCLTypeAddrSpace(OpenCLTypeKind TK) const override {
+    switch (TK) {
+    case OCLTK_Image:
+      return LangAS::opencl_constant;
 
-    if (!BT)
-      return TargetInfo::getOpenCLTypeAddrSpace(T);
-
-    switch (BT->getKind()) {
-#define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix)                   \
-  case BuiltinType::Id:                                                        \
-    return LangAS::opencl_constant;
-#include "clang/Basic/OpenCLImageTypes.def"
-    case BuiltinType::OCLClkEvent:
-    case BuiltinType::OCLQueue:
-    case BuiltinType::OCLReserveID:
+    case OCLTK_ClkEvent:
+    case OCLTK_Queue:
+    case OCLTK_ReserveID:
       return LangAS::opencl_global;
 
     default:
-      return TargetInfo::getOpenCLTypeAddrSpace(T);
+      return TargetInfo::getOpenCLTypeAddrSpace(TK);
     }
   }
 

@@ -10,3 +10,14 @@ sharedFoo:
 sharedBar:
 .quad 0
 .size sharedBar, 8
+
+.text
+.globl sharedFunc1
+.type sharedFunc1,@function
+sharedFunc1:
+ nop
+
+.globl sharedFunc2
+.type sharedFunc2,@function
+sharedFunc2:
+ nop
