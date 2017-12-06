@@ -161,6 +161,32 @@ class Remark(yaml.YAMLObject):
         else:
             return value
 
+    # Return a cached dictionary for the arguments.  The key for each entry is
+    # the argument key (e.g. 'Callee' for inlining remarks.  The value is a
+    # list containing the value (e.g. for 'Callee' the function) and
+    # optionally a DebugLoc.
+    def getArgDict(self):
+        if hasattr(self, 'ArgDict'):
+            return self.ArgDict
+        self.ArgDict = {}
+        for arg in self.Args:
+            if len(arg) == 2:
+                if arg[0][0] == 'DebugLoc':
+                    dbgidx = 0
+                else:
+                    assert(arg[1][0] == 'DebugLoc')
+                    dbgidx = 1
+
+                key = arg[1 - dbgidx][0]
+                entry = (arg[1 - dbgidx][1], arg[dbgidx][1])
+            else:
+                arg = arg[0]
+                key = arg[0]
+                entry = (arg[1], )
+
+            self.ArgDict[key] = entry
+        return self.ArgDict
+
     def getDiffPrefix(self):
         if hasattr(self, 'Added'):
             if self.Added:

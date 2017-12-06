@@ -28,14 +28,15 @@ declare i64 @llvm.x86.avx512.kunpck.dq(i64, i64)
 define i64@test_int_x86_avx512_kunpck_qd(i64 %x0, i64 %x1) {
 ; AVX512BW-LABEL: test_int_x86_avx512_kunpck_qd:
 ; AVX512BW:       ## %bb.0:
+; AVX512BW-NEXT:    movl %edi, %eax
 ; AVX512BW-NEXT:    shlq $32, %rsi
-; AVX512BW-NEXT:    movq %rsi, %rax
+; AVX512BW-NEXT:    orq %rsi, %rax
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512F-32-LABEL: test_int_x86_avx512_kunpck_qd:
 ; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; AVX512F-32-NEXT:    xorl %eax, %eax
 ; AVX512F-32-NEXT:    retl
   %res = call i64 @llvm.x86.avx512.kunpck.dq(i64 %x0, i64 %x1)
   ret i64 %res

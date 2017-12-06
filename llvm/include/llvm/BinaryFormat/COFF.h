@@ -707,6 +707,7 @@ struct ImportHeader {
 
 enum CodeViewIdentifiers {
   DEBUG_SECTION_MAGIC = 0x4,
+  DEBUG_HASHES_SECTION_MAGIC = 0x133C9C5
 };
 
 inline bool isReservedSectionNumber(int32_t SectionNumber) {

@@ -1944,8 +1944,7 @@ let hasSideEffects = 1, Predicates = [FeatureTransactionalExecution] in {
     def TEND : SideEffectInherentS<"tend", 0xB2F8, z_tend>;
 
   // Transaction Abort
-  // TODO: Shouldn't be mayLoad or mayStore.
-  let isTerminator = 1, isBarrier = 1, mayLoad = 1, mayStore = 1,
+  let isTerminator = 1, isBarrier = 1, mayStore = 1,
       hasSideEffects = 1 in
     def TABORT : SideEffectAddressS<"tabort", 0xB2FC, int_s390_tabort>;
 

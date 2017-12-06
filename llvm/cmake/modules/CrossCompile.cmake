@@ -32,10 +32,10 @@ function(llvm_create_cross_target_internal target_name toolchain buildtype)
 
   add_custom_command(OUTPUT ${LLVM_${target_name}_BUILD}/CMakeCache.txt
     COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}"
-        ${CROSS_TOOLCHAIN_FLAGS_${target_name}} ${CMAKE_SOURCE_DIR}
-        -DLLVM_TARGET_IS_CROSSCOMPILE_HOST=TRUE
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+        ${CROSS_TOOLCHAIN_FLAGS_${target_name}} ${CMAKE_SOURCE_DIR}
+        -DLLVM_TARGET_IS_CROSSCOMPILE_HOST=TRUE
         -DLLVM_TARGETS_TO_BUILD=Native
         ${build_type_flags} ${linker_flag} ${external_clang_dir}
     WORKING_DIRECTORY ${LLVM_${target_name}_BUILD}

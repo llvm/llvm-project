@@ -63,6 +63,9 @@ namespace HexagonISD {
       VCOMBINE,
       VPACKE,
       VPACKO,
+      VEXTRACTW,
+      VINSERTW0,
+      VROR,
       TC_RETURN,
       EH_RETURN,
       DCFETCH,
@@ -87,6 +90,8 @@ namespace HexagonISD {
   public:
     explicit HexagonTargetLowering(const TargetMachine &TM,
                                    const HexagonSubtarget &ST);
+
+    bool isHVXVectorType(MVT Ty) const;
 
     /// IsEligibleForTailCallOptimization - Check whether the call is eligible
     /// for tail call optimization. Targets which want to do tail call
@@ -121,9 +126,8 @@ namespace HexagonISD {
     SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerEXTRACT_SUBVECTOR_HVX(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerINSERT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerINSERT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerVECTOR_SHIFT(SDValue Op, SelectionDAG &DAG) const;
 
@@ -281,7 +285,24 @@ namespace HexagonISD {
         return Ty;
       return MVT::getIntegerVT(Ty.getSizeInBits());
     }
+    MVT tyVector(MVT Ty, MVT ElemTy) const {
+      if (Ty.isVector() && Ty.getVectorElementType() == ElemTy)
+        return Ty;
+      unsigned TyWidth = Ty.getSizeInBits(), ElemWidth = ElemTy.getSizeInBits();
+      assert((TyWidth % ElemWidth) == 0);
+      return MVT::getVectorVT(ElemTy, TyWidth/ElemWidth);
+    }
 
+    bool isUndef(SDValue Op) const {
+      if (Op.isMachineOpcode())
+        return Op.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF;
+      return Op.getOpcode() == ISD::UNDEF;
+    }
+    SDValue getNode(unsigned MachineOpc, const SDLoc &dl, MVT Ty,
+                    ArrayRef<SDValue> Ops, SelectionDAG &DAG) const {
+      SDNode *N = DAG.getMachineNode(MachineOpc, dl, Ty, Ops);
+      return SDValue(N, 0);
+    }
     SDValue buildVector32(ArrayRef<SDValue> Elem, const SDLoc &dl, MVT VecTy,
                           SelectionDAG &DAG) const;
     SDValue buildVector64(ArrayRef<SDValue> Elem, const SDLoc &dl, MVT VecTy,
@@ -290,6 +311,38 @@ namespace HexagonISD {
                           MVT ValTy, MVT ResTy, SelectionDAG &DAG) const;
     SDValue insertVector(SDValue VecV, SDValue ValV, SDValue IdxV,
                          const SDLoc &dl, MVT ValTy, SelectionDAG &DAG) const;
+
+    using VectorPair = std::pair<SDValue, SDValue>;
+    using TypePair = std::pair<MVT, MVT>;
+
+    SDValue getInt(unsigned IntId, MVT ResTy, ArrayRef<SDValue> Ops,
+                   const SDLoc &dl, SelectionDAG &DAG) const;
+
+    TypePair ty(const VectorPair &Ops) const {
+      return { Ops.first.getValueType().getSimpleVT(),
+               Ops.second.getValueType().getSimpleVT() };
+    }
+
+    MVT typeJoin(const TypePair &Tys) const;
+    TypePair typeSplit(MVT Ty) const;
+    MVT typeCastElem(MVT VecTy, MVT ElemTy) const;
+    MVT typeExtElem(MVT VecTy, unsigned Factor) const;
+    MVT typeTruncElem(MVT VecTy, unsigned Factor) const;
+
+    SDValue opJoin(const VectorPair &Ops, const SDLoc &dl,
+                   SelectionDAG &DAG) const;
+    VectorPair opSplit(SDValue Vec, const SDLoc &dl, SelectionDAG &DAG) const;
+    SDValue opCastElem(SDValue Vec, MVT ElemTy, SelectionDAG &DAG) const;
+
+    SDValue convertToByteIndex(SDValue ElemIdx, MVT ElemTy,
+                               SelectionDAG &DAG) const;
+    SDValue getIndexInWord32(SDValue Idx, MVT ElemTy, SelectionDAG &DAG) const;
+
+    SDValue LowerHvxBuildVector(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerHvxExtractElement(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerHvxInsertElement(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerHvxExtractSubvector(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerHvxInsertSubvector(SDValue Op, SelectionDAG &DAG) const;
 
     std::pair<const TargetRegisterClass*, uint8_t>
     findRepresentativeClass(const TargetRegisterInfo *TRI, MVT VT)

@@ -19,10 +19,10 @@
 //     (8) Shift/permute
 //     (9) Arithmetic/bitwise
 //    (10) Bit
-//    (11) Load
-//    (12) Store
-//    (13) Memop
-//    (14) PIC
+//    (11) PIC
+//    (12) Load
+//    (13) Store
+//    (14) Memop
 //    (15) Call
 //    (16) Branch
 //    (17) Misc
@@ -340,6 +340,8 @@ def: Pat<(HexagonCONST32_GP tblockaddress:$A),  (A2_tfrsi imm:$A)>;
 def: Pat<(HexagonCONST32_GP tglobaladdr:$A),    (A2_tfrsi imm:$A)>;
 def: Pat<(HexagonJT         tjumptable:$A),     (A2_tfrsi imm:$A)>;
 def: Pat<(HexagonCP         tconstpool:$A),     (A2_tfrsi imm:$A)>;
+// The HVX load patterns also match CP directly. Make sure that if
+// the selection of this opcode changes, it's updated in all places.
 
 def: Pat<(i1 0),        (PS_false)>;
 def: Pat<(i1 1),        (PS_true)>;
@@ -1630,7 +1632,31 @@ let AddedComplexity = 100 in {
            (I1toI32 (S4_ntstbit_r IntRegs:$Rs, IntRegs:$Rt))>;
 }
 
-// --(11) Load -----------------------------------------------------------
+// --(11) PIC ------------------------------------------------------------
+//
+
+def SDT_HexagonAtGot
+  : SDTypeProfile<1, 3, [SDTCisVT<0, i32>, SDTCisVT<1, i32>, SDTCisVT<2, i32>]>;
+def SDT_HexagonAtPcrel
+  : SDTypeProfile<1, 1, [SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
+
+// AT_GOT address-of-GOT, address-of-global, offset-in-global
+def HexagonAtGot       : SDNode<"HexagonISD::AT_GOT", SDT_HexagonAtGot>;
+// AT_PCREL address-of-global
+def HexagonAtPcrel     : SDNode<"HexagonISD::AT_PCREL", SDT_HexagonAtPcrel>;
+
+def: Pat<(HexagonAtGot I32:$got, I32:$addr, (i32 0)),
+         (L2_loadri_io I32:$got, imm:$addr)>;
+def: Pat<(HexagonAtGot I32:$got, I32:$addr, s30_2ImmPred:$off),
+         (A2_addi (L2_loadri_io I32:$got, imm:$addr), imm:$off)>;
+def: Pat<(HexagonAtPcrel I32:$addr),
+         (C4_addipc imm:$addr)>;
+
+// The HVX load patterns also match AT_PCREL directly. Make sure that
+// if the selection of this opcode changes, it's updated in all places.
+
+
+// --(12) Load -----------------------------------------------------------
 //
 
 def extloadv2i8: PatFrag<(ops node:$ptr), (extload node:$ptr), [{
@@ -1971,6 +1997,12 @@ multiclass HvxLd_pat<InstHexagon MI, PatFrag Load, ValueType VT,
                      PatFrag ImmPred> {
   def: Pat<(VT (Load I32:$Rt)),                   (MI I32:$Rt, 0)>;
   def: Pat<(VT (Load (add I32:$Rt, ImmPred:$s))), (MI I32:$Rt, imm:$s)>;
+  // The HVX selection code for shuffles can generate vector constants.
+  // Calling "Select" on the resulting loads from CP fails without these
+  // patterns.
+  def: Pat<(VT (Load (HexagonCP tconstpool:$A))), (MI (A2_tfrsi imm:$A), 0)>;
+  def: Pat<(VT (Load (HexagonAtPcrel tconstpool:$A))),
+           (MI (C4_addipc imm:$A), 0)>;
 }
 
 
@@ -1997,7 +2029,7 @@ let Predicates = [UseHVX] in {
 }
 
 
-// --(12) Store ----------------------------------------------------------
+// --(13) Store ----------------------------------------------------------
 //
 
 
@@ -2466,7 +2498,7 @@ let Predicates = [UseHVX] in {
 }
 
 
-// --(13) Memop ----------------------------------------------------------
+// --(14) Memop ----------------------------------------------------------
 //
 
 def m5_0Imm8Pred : PatLeaf<(i32 imm), [{
@@ -2744,27 +2776,6 @@ let AddedComplexity = 220 in {
 }
 
 
-// --(14) PIC ------------------------------------------------------------
-//
-
-def SDT_HexagonAtGot
-  : SDTypeProfile<1, 3, [SDTCisVT<0, i32>, SDTCisVT<1, i32>, SDTCisVT<2, i32>]>;
-def SDT_HexagonAtPcrel
-  : SDTypeProfile<1, 1, [SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
-
-// AT_GOT address-of-GOT, address-of-global, offset-in-global
-def HexagonAtGot       : SDNode<"HexagonISD::AT_GOT", SDT_HexagonAtGot>;
-// AT_PCREL address-of-global
-def HexagonAtPcrel     : SDNode<"HexagonISD::AT_PCREL", SDT_HexagonAtPcrel>;
-
-def: Pat<(HexagonAtGot I32:$got, I32:$addr, (i32 0)),
-         (L2_loadri_io I32:$got, imm:$addr)>;
-def: Pat<(HexagonAtGot I32:$got, I32:$addr, s30_2ImmPred:$off),
-         (A2_addi (L2_loadri_io I32:$got, imm:$addr), imm:$off)>;
-def: Pat<(HexagonAtPcrel I32:$addr),
-         (C4_addipc imm:$addr)>;
-
-
 // --(15) Call -----------------------------------------------------------
 //
 
@@ -2894,3 +2905,32 @@ def HexagonREADCYCLE: SDNode<"HexagonISD::READCYCLE", SDTInt64Leaf,
   [SDNPHasChain]>;
 
 def: Pat<(HexagonREADCYCLE), (A4_tfrcpp UPCYCLE)>;
+
+def SDTHexagonVEXTRACTW: SDTypeProfile<1, 2,
+  [SDTCisVT<0, i32>, SDTCisVec<1>, SDTCisVT<2, i32>]>;
+def HexagonVEXTRACTW : SDNode<"HexagonISD::VEXTRACTW", SDTHexagonVEXTRACTW>;
+
+def SDTHexagonVINSERTW0: SDTypeProfile<1, 2,
+  [SDTCisVec<0>, SDTCisSameAs<0, 1>, SDTCisVT<2, i32>]>;
+def HexagonVINSERTW0 : SDNode<"HexagonISD::VINSERTW0", SDTHexagonVINSERTW0>;
+
+let Predicates = [UseHVX] in {
+  def: Pat<(concat_vectors HVI8:$Vs, HVI8:$Vt),
+           (V6_vcombine HvxVR:$Vt, HvxVR:$Vs)>;
+  def: Pat<(or HVI8:$Vs, HVI8:$Vt),
+           (V6_vor HvxVR:$Vt, HvxVR:$Vs)>;
+
+  def: Pat<(HexagonVEXTRACTW HVI8:$Vu, I32:$Rs),
+           (V6_extractw HvxVR:$Vu, I32:$Rs)>;
+  def: Pat<(HexagonVEXTRACTW HVI16:$Vu, I32:$Rs),
+           (V6_extractw HvxVR:$Vu, I32:$Rs)>;
+  def: Pat<(HexagonVEXTRACTW HVI32:$Vu, I32:$Rs),
+           (V6_extractw HvxVR:$Vu, I32:$Rs)>;
+
+  def: Pat<(HexagonVINSERTW0 HVI8:$Vu,  I32:$Rt),
+           (V6_vinsertwr HvxVR:$Vu, I32:$Rt)>;
+  def: Pat<(HexagonVINSERTW0 HVI16:$Vu, I32:$Rt),
+           (V6_vinsertwr HvxVR:$Vu, I32:$Rt)>;
+  def: Pat<(HexagonVINSERTW0 HVI32:$Vu, I32:$Rt),
+           (V6_vinsertwr HvxVR:$Vu, I32:$Rt)>;
+}

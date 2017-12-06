@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/ObjectYAML/CodeViewYAMLDebugSections.h"
+#include "llvm/ObjectYAML/CodeViewYAMLTypeHashing.h"
 #include "llvm/ObjectYAML/CodeViewYAMLTypes.h"
 #include "llvm/ObjectYAML/YAML.h"
 #include <cstdint>
@@ -66,6 +67,7 @@ struct Section {
   yaml::BinaryRef SectionData;
   std::vector<CodeViewYAML::YAMLDebugSubsection> DebugS;
   std::vector<CodeViewYAML::LeafRecord> DebugT;
+  Optional<CodeViewYAML::DebugHSection> DebugH;
   std::vector<Relocation> Relocations;
   StringRef Name;
 

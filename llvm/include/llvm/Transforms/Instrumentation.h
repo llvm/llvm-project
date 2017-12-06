@@ -77,9 +77,12 @@ ModulePass *createPGOIndirectCallPromotionLegacyPass(bool InLTO = false,
                                                      bool SamplePGO = false);
 FunctionPass *createPGOMemOPSizeOptLegacyPass();
 
-// Helper function to check if it is legal to promote indirect call \p Inst
-// to a direct call of function \p F. Stores the reason in \p Reason.
-bool isLegalToPromote(Instruction *Inst, Function *F, const char **Reason);
+// The pgo-specific indirect call promotion function declared below is used by
+// the pgo-driven indirect call promotion and sample profile passes. It's a
+// wrapper around llvm::promoteCall, et al. that additionally computes !prof
+// metadata. We place it in a pgo namespace so it's not confused with the
+// generic utilities.
+namespace pgo {
 
 // Helper function that transforms Inst (either an indirect-call instruction, or
 // an invoke instruction , to a conditional call to F. This is like:
@@ -98,6 +101,7 @@ Instruction *promoteIndirectCall(Instruction *Inst, Function *F, uint64_t Count,
                                  uint64_t TotalCount,
                                  bool AttachProfToDirectCall,
                                  OptimizationRemarkEmitter *ORE);
+} // namespace pgo
 
 /// Options for the frontend instrumentation based profiling pass.
 struct InstrProfOptions {
