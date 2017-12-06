@@ -10,11 +10,14 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_TYPEHASHING_H
 #define LLVM_DEBUGINFO_CODEVIEW_TYPEHASHING_H
 
-#include "llvm/DebugInfo/CodeView/CodeView.h"
-#include "llvm/DebugInfo/CodeView/TypeIndex.h"
-
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Hashing.h"
+
+#include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/DebugInfo/CodeView/TypeCollection.h"
+#include "llvm/DebugInfo/CodeView/TypeIndex.h"
+
+#include "llvm/Support/FormatProviders.h"
 
 namespace llvm {
 namespace codeview {
@@ -29,7 +32,28 @@ struct LocallyHashedType {
   hash_code Hash;
   ArrayRef<uint8_t> RecordData;
 
+  /// Given a type, compute its local hash.
   static LocallyHashedType hashType(ArrayRef<uint8_t> RecordData);
+
+  /// Given a sequence of types, compute all of the local hashes.
+  template <typename Range>
+  static std::vector<LocallyHashedType> hashTypes(Range &&Records) {
+    std::vector<LocallyHashedType> Hashes;
+    Hashes.reserve(std::distance(std::begin(Records), std::end(Records)));
+    for (const auto &R : Records)
+      Hashes.push_back(hashType(R));
+
+    return Hashes;
+  }
+
+  static std::vector<LocallyHashedType>
+  hashTypeCollection(TypeCollection &Types) {
+    std::vector<LocallyHashedType> Hashes;
+    Types.ForEachRecord([&Hashes](TypeIndex TI, const CVType &Type) {
+      Hashes.push_back(hashType(Type.RecordData));
+    });
+    return Hashes;
+  }
 };
 
 /// A globally hashed type represents a hash value that is sufficient to
@@ -73,6 +97,15 @@ struct GloballyHashedType {
 
     return Hashes;
   }
+
+  static std::vector<GloballyHashedType>
+  hashTypeCollection(TypeCollection &Types) {
+    std::vector<GloballyHashedType> Hashes;
+    Types.ForEachRecord([&Hashes](TypeIndex TI, const CVType &Type) {
+      Hashes.push_back(hashType(Type.RecordData, Hashes, Hashes));
+    });
+    return Hashes;
+  }
 };
 } // namespace codeview
 
@@ -111,6 +144,24 @@ template <> struct DenseMapInfo<codeview::GloballyHashedType> {
   static bool isEqual(codeview::GloballyHashedType LHS,
                       codeview::GloballyHashedType RHS) {
     return LHS.Hash == RHS.Hash;
+  }
+};
+
+template <> struct format_provider<codeview::LocallyHashedType> {
+public:
+  static void format(const codeview::LocallyHashedType &V,
+                     llvm::raw_ostream &Stream, StringRef Style) {
+    write_hex(Stream, V.Hash, HexPrintStyle::Upper, 8);
+  }
+};
+
+template <> struct format_provider<codeview::GloballyHashedType> {
+public:
+  static void format(const codeview::GloballyHashedType &V,
+                     llvm::raw_ostream &Stream, StringRef Style) {
+    for (uint8_t B : V.Hash) {
+      write_hex(Stream, B, HexPrintStyle::Upper, 2);
+    }
   }
 };
 

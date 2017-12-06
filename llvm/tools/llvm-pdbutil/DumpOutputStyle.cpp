@@ -38,6 +38,7 @@
 #include "llvm/DebugInfo/CodeView/SymbolVisitorCallbackPipeline.h"
 #include "llvm/DebugInfo/CodeView/SymbolVisitorCallbacks.h"
 #include "llvm/DebugInfo/CodeView/TypeDumpVisitor.h"
+#include "llvm/DebugInfo/CodeView/TypeHashing.h"
 #include "llvm/DebugInfo/CodeView/TypeIndexDiscovery.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbackPipeline.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
@@ -50,8 +51,8 @@
 #include "llvm/DebugInfo/PDB/Native/ModuleDebugStream.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/PublicsStream.h"
-#include "llvm/DebugInfo/PDB/Native/SymbolStream.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
+#include "llvm/DebugInfo/PDB/Native/SymbolStream.h"
 #include "llvm/DebugInfo/PDB/Native/TpiHashing.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/DebugInfo/PDB/PDBExtras.h"
@@ -135,16 +136,23 @@ Error DumpOutputStyle::dump() {
       return EC;
   }
 
-  if (opts::dump::DumpTypes || !opts::dump::DumpTypeIndex.empty() ||
-      opts::dump::DumpTypeExtras) {
-    if (auto EC = dumpTpiStream(StreamTPI))
-      return EC;
-  }
+  if (File.isObj()) {
+    if (opts::dump::DumpTypes || !opts::dump::DumpTypeIndex.empty() ||
+        opts::dump::DumpTypeExtras)
+      if (auto EC = dumpTypesFromObjectFile())
+        return EC;
+  } else {
+    if (opts::dump::DumpTypes || !opts::dump::DumpTypeIndex.empty() ||
+        opts::dump::DumpTypeExtras) {
+      if (auto EC = dumpTpiStream(StreamTPI))
+        return EC;
+    }
 
-  if (opts::dump::DumpIds || !opts::dump::DumpIdIndex.empty() ||
-      opts::dump::DumpIdExtras) {
-    if (auto EC = dumpTpiStream(StreamIPI))
-      return EC;
+    if (opts::dump::DumpIds || !opts::dump::DumpIdIndex.empty() ||
+        opts::dump::DumpIdExtras) {
+      if (auto EC = dumpTpiStream(StreamIPI))
+        return EC;
+    }
   }
 
   if (opts::dump::DumpGlobals) {
@@ -913,15 +921,17 @@ static void buildDepSet(LazyRandomTypeCollection &Types,
   }
 }
 
-static void dumpFullTypeStream(LinePrinter &Printer,
-                               LazyRandomTypeCollection &Types,
-                               TpiStream &Stream, bool Bytes, bool Extras) {
-  Printer.formatLine("Showing {0:N} records", Stream.getNumTypeRecords());
-  uint32_t Width =
-      NumDigits(TypeIndex::FirstNonSimpleIndex + Stream.getNumTypeRecords());
+static void
+dumpFullTypeStream(LinePrinter &Printer, LazyRandomTypeCollection &Types,
+                   uint32_t NumTypeRecords, uint32_t NumHashBuckets,
+                   FixedStreamArray<support::ulittle32_t> HashValues,
+                   bool Bytes, bool Extras) {
+
+  Printer.formatLine("Showing {0:N} records", NumTypeRecords);
+  uint32_t Width = NumDigits(TypeIndex::FirstNonSimpleIndex + NumTypeRecords);
 
   MinimalTypeDumpVisitor V(Printer, Width + 2, Bytes, Extras, Types,
-                           Stream.getNumHashBuckets(), Stream.getHashValues());
+                           NumHashBuckets, HashValues);
 
   if (auto EC = codeview::visitTypeStream(Types, V)) {
     Printer.formatLine("An error occurred dumping type records: {0}",
@@ -967,6 +977,55 @@ static void dumpPartialTypeStream(LinePrinter &Printer,
   }
 }
 
+Error DumpOutputStyle::dumpTypesFromObjectFile() {
+  LazyRandomTypeCollection Types(100);
+
+  for (const auto &S : getObj().sections()) {
+    StringRef SectionName;
+    if (auto EC = S.getName(SectionName))
+      return errorCodeToError(EC);
+
+    if (SectionName != ".debug$T")
+      continue;
+    StringRef Contents;
+    if (auto EC = S.getContents(Contents))
+      return errorCodeToError(EC);
+
+    uint32_t Magic;
+    BinaryStreamReader Reader(Contents, llvm::support::little);
+    if (auto EC = Reader.readInteger(Magic))
+      return EC;
+    if (Magic != COFF::DEBUG_SECTION_MAGIC)
+      return make_error<StringError>("Invalid CodeView debug section.",
+                                     inconvertibleErrorCode());
+
+    Types.reset(Reader, 100);
+
+    if (opts::dump::DumpTypes) {
+      dumpFullTypeStream(P, Types, 0, 0, {}, opts::dump::DumpTypeData, false);
+    } else if (opts::dump::DumpTypeExtras) {
+      auto LocalHashes = LocallyHashedType::hashTypeCollection(Types);
+      auto GlobalHashes = GloballyHashedType::hashTypeCollection(Types);
+      assert(LocalHashes.size() == GlobalHashes.size());
+
+      P.formatLine("Local / Global hashes:");
+      TypeIndex TI(TypeIndex::FirstNonSimpleIndex);
+      for (const auto &H : zip(LocalHashes, GlobalHashes)) {
+        AutoIndent Indent2(P);
+        LocallyHashedType &L = std::get<0>(H);
+        GloballyHashedType &G = std::get<1>(H);
+
+        P.formatLine("TI: {0}, LocalHash: {1:X}, GlobalHash: {2}", TI, L, G);
+
+        ++TI;
+      }
+      P.NewLine();
+    }
+  }
+
+  return Error::success();
+}
+
 Error DumpOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
   assert(StreamIdx == StreamTPI || StreamIdx == StreamIPI);
 
@@ -977,10 +1036,7 @@ Error DumpOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
   }
 
   AutoIndent Indent(P);
-  if (File.isObj()) {
-    P.formatLine("Dumping types is not supported for object files");
-    return Error::success();
-  }
+  assert(!File.isObj());
 
   bool Present = false;
   bool DumpTypes = false;
@@ -1017,7 +1073,9 @@ Error DumpOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
 
   if (DumpTypes || !Indices.empty()) {
     if (Indices.empty())
-      dumpFullTypeStream(P, Types, Stream, DumpBytes, DumpExtras);
+      dumpFullTypeStream(P, Types, Stream.getNumTypeRecords(),
+                         Stream.getNumHashBuckets(), Stream.getHashValues(),
+                         DumpBytes, DumpExtras);
     else {
       std::vector<TypeIndex> TiList(Indices.begin(), Indices.end());
       dumpPartialTypeStream(P, Types, Stream, TiList, DumpBytes, DumpExtras,
