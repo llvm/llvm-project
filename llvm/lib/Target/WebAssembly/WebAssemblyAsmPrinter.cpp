@@ -79,8 +79,10 @@ WebAssemblyTargetStreamer *WebAssemblyAsmPrinter::getTargetStreamer() {
 
 void WebAssemblyAsmPrinter::EmitEndOfAsmFile(Module &M) {
   // Declare the stack pointer.
-  getTargetStreamer()->emitStackPointer(
-      GetExternalSymbolSymbol("__stack_pointer"));
+  if (TM.getTargetTriple().isOSBinFormatWasm()) {
+    getTargetStreamer()->emitStackPointer(
+        GetExternalSymbolSymbol("__stack_pointer"));
+  }
 
   for (const auto &F : M) {
     // Emit function type info for all undefined functions

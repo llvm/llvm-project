@@ -12,8 +12,8 @@
 #include "Config.h"
 #include "InputFiles.h"
 #include "InputSegment.h"
-#include "Strings.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Strings.h"
 
 #define DEBUG_TYPE "lld"
 
@@ -84,7 +84,10 @@ bool Symbol::isWeak() const { return Sym && Sym->isWeak(); }
 bool Symbol::isHidden() const { return Sym && Sym->isHidden(); }
 
 std::string lld::toString(const wasm::Symbol &Sym) {
-  return wasm::displayName(Sym.getName());
+  if (Config->Demangle)
+    if (Optional<std::string> S = demangleItanium(Sym.getName()))
+      return "`" + *S + "'";
+  return Sym.getName();
 }
 
 std::string lld::toString(wasm::Symbol::Kind Kind) {
