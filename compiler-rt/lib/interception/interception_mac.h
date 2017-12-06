@@ -12,7 +12,7 @@
 // Mac-specific interception methods.
 //===----------------------------------------------------------------------===//
 
-#ifdef __APPLE__
+#if SANITIZER_MAC
 
 #if !defined(INCLUDED_FROM_INTERCEPTION_LIB)
 # error "interception_mac.h should be included from interception.h only"
@@ -25,4 +25,4 @@
 #define INTERCEPT_FUNCTION_VER_MAC(func, symver)
 
 #endif  // INTERCEPTION_MAC_H
-#endif  // __APPLE__
+#endif  // SANITIZER_MAC
