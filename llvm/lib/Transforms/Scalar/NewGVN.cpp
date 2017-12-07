@@ -586,8 +586,8 @@ public:
 private:
   // Expression handling.
   const Expression *createExpression(Instruction *) const;
-  const Expression *createBinaryExpression(unsigned, Type *, Value *,
-                                           Value *) const;
+  const Expression *createBinaryExpression(unsigned, Type *, Value *, Value *,
+                                           Instruction *) const;
   PHIExpression *createPHIExpression(Instruction *, bool &HasBackEdge,
                                      bool &OriginalOpsConstant) const;
   const DeadExpression *createDeadExpression() const;
@@ -902,8 +902,8 @@ bool NewGVN::setBasicExpressionInfo(Instruction *I, BasicExpression *E) const {
 }
 
 const Expression *NewGVN::createBinaryExpression(unsigned Opcode, Type *T,
-                                                 Value *Arg1,
-                                                 Value *Arg2) const {
+                                                 Value *Arg1, Value *Arg2,
+                                                 Instruction *I) const {
   auto *E = new (ExpressionAllocator) BasicExpression(2);
 
   E->setType(T);
@@ -921,7 +921,7 @@ const Expression *NewGVN::createBinaryExpression(unsigned Opcode, Type *T,
   E->op_push_back(lookupOperandLeader(Arg2));
 
   Value *V = SimplifyBinOp(Opcode, E->getOperand(0), E->getOperand(1), SQ);
-  if (const Expression *SimplifiedE = checkSimplificationResults(E, nullptr, V))
+  if (const Expression *SimplifiedE = checkSimplificationResults(E, I, V))
     return SimplifiedE;
   return E;
 }
@@ -1699,8 +1699,9 @@ NewGVN::performSymbolicAggrValueEvaluation(Instruction *I) const {
         // expression.
         assert(II->getNumArgOperands() == 2 &&
                "Expect two args for recognised intrinsics.");
-        return createBinaryExpression(
-            Opcode, EI->getType(), II->getArgOperand(0), II->getArgOperand(1));
+        return createBinaryExpression(Opcode, EI->getType(),
+                                      II->getArgOperand(0),
+                                      II->getArgOperand(1), I);
       }
     }
   }
@@ -1933,6 +1934,7 @@ void NewGVN::touchAndErase(Map &M, const KeyType &Key) {
 }
 
 void NewGVN::addAdditionalUsers(Value *To, Value *User) const {
+  assert(User && To != User);
   if (isa<Instruction>(To))
     AdditionalUsers[To].insert(User);
 }
