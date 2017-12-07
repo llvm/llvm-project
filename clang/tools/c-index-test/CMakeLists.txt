@@ -60,7 +60,7 @@ endif()
 if(APPLE)
   check_include_files("CoreServices/CoreServices.h" HAVE_CORESERVICES_H)
   if(HAVE_CORESERVICES_H)
-    target_link_libraries(c-index-test "-framework CoreServices")
+    target_link_libraries(c-index-test PRIVATE "-framework CoreServices")
   endif()
 endif()
 
