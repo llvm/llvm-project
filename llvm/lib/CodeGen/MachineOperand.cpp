@@ -339,13 +339,9 @@ hash_code llvm::hash_value(const MachineOperand &MO) {
 static void tryToGetTargetInfo(const MachineOperand &MO,
                                const TargetRegisterInfo *&TRI,
                                const TargetIntrinsicInfo *&IntrinsicInfo) {
-  if (const MachineInstr *MI = MO.getParent()) {
-    if (const MachineBasicBlock *MBB = MI->getParent()) {
-      if (const MachineFunction *MF = MBB->getParent()) {
-        TRI = MF->getSubtarget().getRegisterInfo();
-        IntrinsicInfo = MF->getTarget().getIntrinsicInfo();
-      }
-    }
+  if (const MachineFunction *MF = getMFIfAvailable(MO)) {
+    TRI = MF->getSubtarget().getRegisterInfo();
+    IntrinsicInfo = MF->getTarget().getIntrinsicInfo();
   }
 }
 
@@ -394,15 +390,11 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     }
     // Print the register class / bank.
     if (TargetRegisterInfo::isVirtualRegister(Reg)) {
-      if (const MachineInstr *MI = getParent()) {
-        if (const MachineBasicBlock *MBB = MI->getParent()) {
-          if (const MachineFunction *MF = MBB->getParent()) {
-            const MachineRegisterInfo &MRI = MF->getRegInfo();
-            if (!PrintDef || MRI.def_empty(Reg)) {
-              OS << ':';
-              OS << printRegClassOrBank(Reg, MRI, TRI);
-            }
-          }
+      if (const MachineFunction *MF = getMFIfAvailable(*this)) {
+        const MachineRegisterInfo &MRI = MF->getRegInfo();
+        if (!PrintDef || MRI.def_empty(Reg)) {
+          OS << ':';
+          OS << printRegClassOrBank(Reg, MRI, TRI);
         }
       }
     }

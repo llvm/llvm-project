@@ -14,10 +14,7 @@
 #ifndef LLVM_LIB_TARGET_NIOS2_NIOS2INSTRINFO_H
 #define LLVM_LIB_TARGET_NIOS2_NIOS2INSTRINFO_H
 
-#include "Nios2.h"
 #include "Nios2RegisterInfo.h"
-
-#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 
 #define GET_INSTRINFO_HEADER
@@ -25,22 +22,23 @@
 
 namespace llvm {
 
+class Nios2Subtarget;
+
 class Nios2InstrInfo : public Nios2GenInstrInfo {
-protected:
-  const Nios2Subtarget &Subtarget;
   const Nios2RegisterInfo RI;
+  const Nios2Subtarget &Subtarget;
+  virtual void anchor();
 
 public:
-  explicit Nios2InstrInfo(const Nios2Subtarget &STI)
-      : Nios2GenInstrInfo(), Subtarget(STI), RI(STI) {}
-
-  static const Nios2InstrInfo *create(Nios2Subtarget &STI);
+  explicit Nios2InstrInfo(Nios2Subtarget &ST);
 
   /// getRegisterInfo - TargetInstrInfo is a superset of MRegister info.  As
   /// such, whenever a client has an instance of instruction info, it should
   /// always be able to get register info as well (through this method).
   ///
-  const Nios2RegisterInfo &getRegisterInfo() const;
+  const Nios2RegisterInfo &getRegisterInfo() const { return RI; };
+
+  bool expandPostRAPseudo(MachineInstr &MI) const override;
 };
 } // namespace llvm
 

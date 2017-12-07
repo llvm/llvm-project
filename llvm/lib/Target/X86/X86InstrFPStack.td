@@ -237,19 +237,24 @@ def _FI32m  : FPI<0xDA, fp, (outs), (ins i32mem:$src),
 let Defs = [FPSW] in {
 // FPBinary_rr just defines pseudo-instructions, no need to set a scheduling
 // resources.
+let hasNoSchedulingInfo = 1 in {
 defm ADD : FPBinary_rr<fadd>;
 defm SUB : FPBinary_rr<fsub>;
 defm MUL : FPBinary_rr<fmul>;
 defm DIV : FPBinary_rr<fdiv>;
+}
+
 // Sets the scheduling resources for the actual NAME#_F<size>m defintions.
 let SchedRW = [WriteFAddLd] in {
 defm ADD : FPBinary<fadd, MRM0m, "add">;
 defm SUB : FPBinary<fsub, MRM4m, "sub">;
 defm SUBR: FPBinary<fsub ,MRM5m, "subr", 0>;
 }
+
 let SchedRW = [WriteFMulLd] in {
 defm MUL : FPBinary<fmul, MRM1m, "mul">;
 }
+
 let SchedRW = [WriteFDivLd] in {
 defm DIV : FPBinary<fdiv, MRM6m, "div">;
 defm DIVR: FPBinary<fdiv, MRM7m, "divr", 0>;

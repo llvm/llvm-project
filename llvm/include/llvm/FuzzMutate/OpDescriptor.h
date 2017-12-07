@@ -140,6 +140,24 @@ static inline SourcePred anyPtrType() {
   return {Pred, Make};
 }
 
+static inline SourcePred sizedPtrType() {
+  auto Pred = [](ArrayRef<Value *>, const Value *V) {
+    if (const auto *PtrT = dyn_cast<PointerType>(V->getType()))
+      return PtrT->getElementType()->isSized();
+    return false;
+  };
+  auto Make = [](ArrayRef<Value *>, ArrayRef<Type *> Ts) {
+    std::vector<Constant *> Result;
+
+    for (Type *T : Ts)
+      if (T->isSized())
+        Result.push_back(UndefValue::get(PointerType::getUnqual(T)));
+
+    return Result;
+  };
+  return {Pred, Make};
+}
+
 static inline SourcePred anyAggregateType() {
   auto Pred = [](ArrayRef<Value *>, const Value *V) {
     return V->getType()->isAggregateType();

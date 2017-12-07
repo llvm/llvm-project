@@ -12,10 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Nios2Subtarget.h"
-
 #include "Nios2.h"
-#include "Nios2RegisterInfo.h"
-#include "Nios2TargetMachine.h"
 
 using namespace llvm;
 
@@ -28,19 +25,17 @@ using namespace llvm;
 void Nios2Subtarget::anchor() {}
 
 Nios2Subtarget::Nios2Subtarget(const Triple &TT, const std::string &CPU,
-                               const std::string &FS,
-                               const Nios2TargetMachine &_TM)
+                               const std::string &FS, const TargetMachine &TM)
     :
 
       // Nios2GenSubtargetInfo will display features by llc -march=nios2
       // -mcpu=help
-      Nios2GenSubtargetInfo(TT, CPU, FS), TM(_TM), TargetTriple(TT),
-      InstrInfo(Nios2InstrInfo::create(
-          initializeSubtargetDependencies(CPU, FS, TM))) {}
+      Nios2GenSubtargetInfo(TT, CPU, FS), TargetTriple(TT),
+      InstrInfo(initializeSubtargetDependencies(CPU, FS)), TLInfo(TM, *this),
+      FrameLowering(*this) {}
 
-Nios2Subtarget &
-Nios2Subtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
-                                                const TargetMachine &TM) {
+Nios2Subtarget &Nios2Subtarget::initializeSubtargetDependencies(StringRef CPU,
+                                                                StringRef FS) {
   if (TargetTriple.getArch() == Triple::nios2) {
     if (CPU != "nios2r2") {
       CPU = "nios2r1";

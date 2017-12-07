@@ -54,10 +54,10 @@ define <4 x float> @bazz(<4 x float> %x, i32 %a) {
   ret <4 x float> %ins6
 }
 
+; Out of bounds index folds to undef
 define <4 x float> @bazzz(<4 x float> %x) {
 ; CHECK-LABEL: @bazzz(
-; CHECK-NEXT:    [[INS2:%.*]] = insertelement <4 x float> %x, float 2.000000e+00, i32 2
-; CHECK-NEXT:    ret <4 x float> [[INS2]]
+; CHECK-NEXT:   ret <4 x float> <float undef, float undef, float 2.000000e+00, float undef>
 ;
   %ins1 = insertelement<4 x float> %x, float 1.0, i32 5
   %ins2 = insertelement<4 x float> %ins1, float 2.0, i32 2

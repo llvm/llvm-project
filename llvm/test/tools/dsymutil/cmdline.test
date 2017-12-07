@@ -14,6 +14,7 @@ HELP: -o=<filename>
 HELP: -oso-prepend-path=<path>
 HELP: -symtab
 HELP: -verbose
+HELP: -verify
 HELP: -y
 HELP-NOT: -reverse-iterate
 

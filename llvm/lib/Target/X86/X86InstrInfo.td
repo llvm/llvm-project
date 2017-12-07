@@ -2198,31 +2198,35 @@ let Predicates = [HasMOVBE] in {
 //===----------------------------------------------------------------------===//
 // RDRAND Instruction
 //
-let Predicates = [HasRDRAND], Defs = [EFLAGS] in {
+let Predicates = [HasRDRAND], Defs = [EFLAGS], SchedRW = [WriteSystem] in {
   def RDRAND16r : I<0xC7, MRM6r, (outs GR16:$dst), (ins),
                     "rdrand{w}\t$dst",
-                    [(set GR16:$dst, EFLAGS, (X86rdrand))]>, OpSize16, PS;
+                    [(set GR16:$dst, EFLAGS, (X86rdrand))], IIC_RDRAND>,
+                    OpSize16, PS;
   def RDRAND32r : I<0xC7, MRM6r, (outs GR32:$dst), (ins),
                     "rdrand{l}\t$dst",
-                    [(set GR32:$dst, EFLAGS, (X86rdrand))]>, OpSize32, PS;
+                    [(set GR32:$dst, EFLAGS, (X86rdrand))], IIC_RDRAND>,
+                    OpSize32, PS;
   def RDRAND64r : RI<0xC7, MRM6r, (outs GR64:$dst), (ins),
                      "rdrand{q}\t$dst",
-                     [(set GR64:$dst, EFLAGS, (X86rdrand))]>, PS;
+                     [(set GR64:$dst, EFLAGS, (X86rdrand))], IIC_RDRAND>, PS;
 }
 
 //===----------------------------------------------------------------------===//
 // RDSEED Instruction
 //
-let Predicates = [HasRDSEED], Defs = [EFLAGS] in {
+let Predicates = [HasRDSEED], Defs = [EFLAGS], SchedRW = [WriteSystem] in {
   def RDSEED16r : I<0xC7, MRM7r, (outs GR16:$dst), (ins),
                     "rdseed{w}\t$dst",
-                    [(set GR16:$dst, EFLAGS, (X86rdseed))]>, OpSize16, PS;
+                    [(set GR16:$dst, EFLAGS, (X86rdseed))], IIC_RDSEED>,
+                    OpSize16, PS;
   def RDSEED32r : I<0xC7, MRM7r, (outs GR32:$dst), (ins),
                     "rdseed{l}\t$dst",
-                    [(set GR32:$dst, EFLAGS, (X86rdseed))]>, OpSize32, PS;
+                    [(set GR32:$dst, EFLAGS, (X86rdseed))], IIC_RDSEED>,
+                    OpSize32, PS;
   def RDSEED64r : RI<0xC7, MRM7r, (outs GR64:$dst), (ins),
                      "rdseed{q}\t$dst",
-                     [(set GR64:$dst, EFLAGS, (X86rdseed))]>, PS;
+                     [(set GR64:$dst, EFLAGS, (X86rdseed))], IIC_RDSEED>, PS;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2231,30 +2235,33 @@ let Predicates = [HasRDSEED], Defs = [EFLAGS] in {
 let Predicates = [HasLZCNT], Defs = [EFLAGS] in {
   def LZCNT16rr : I<0xBD, MRMSrcReg, (outs GR16:$dst), (ins GR16:$src),
                     "lzcnt{w}\t{$src, $dst|$dst, $src}",
-                    [(set GR16:$dst, (ctlz GR16:$src)), (implicit EFLAGS)]>, XS,
-                    OpSize16;
+                    [(set GR16:$dst, (ctlz GR16:$src)), (implicit EFLAGS)],
+                    IIC_LZCNT_RR>, XS, OpSize16, Sched<[WriteIMul]>;
   def LZCNT16rm : I<0xBD, MRMSrcMem, (outs GR16:$dst), (ins i16mem:$src),
                     "lzcnt{w}\t{$src, $dst|$dst, $src}",
                     [(set GR16:$dst, (ctlz (loadi16 addr:$src))),
-                     (implicit EFLAGS)]>, XS, OpSize16;
+                     (implicit EFLAGS)], IIC_LZCNT_RM>, XS, OpSize16,
+                    Sched<[WriteIMulLd]>;
 
   def LZCNT32rr : I<0xBD, MRMSrcReg, (outs GR32:$dst), (ins GR32:$src),
                     "lzcnt{l}\t{$src, $dst|$dst, $src}",
-                    [(set GR32:$dst, (ctlz GR32:$src)), (implicit EFLAGS)]>, XS,
-                    OpSize32;
+                    [(set GR32:$dst, (ctlz GR32:$src)), (implicit EFLAGS)],
+                    IIC_LZCNT_RR>, XS, OpSize32, Sched<[WriteIMul]>;
   def LZCNT32rm : I<0xBD, MRMSrcMem, (outs GR32:$dst), (ins i32mem:$src),
                     "lzcnt{l}\t{$src, $dst|$dst, $src}",
                     [(set GR32:$dst, (ctlz (loadi32 addr:$src))),
-                     (implicit EFLAGS)]>, XS, OpSize32;
+                     (implicit EFLAGS)], IIC_LZCNT_RM>, XS, OpSize32,
+                    Sched<[WriteIMulLd]>;
 
   def LZCNT64rr : RI<0xBD, MRMSrcReg, (outs GR64:$dst), (ins GR64:$src),
                      "lzcnt{q}\t{$src, $dst|$dst, $src}",
-                     [(set GR64:$dst, (ctlz GR64:$src)), (implicit EFLAGS)]>,
-                     XS;
+                     [(set GR64:$dst, (ctlz GR64:$src)), (implicit EFLAGS)],
+                     IIC_LZCNT_RR>, XS, Sched<[WriteIMul]>;
   def LZCNT64rm : RI<0xBD, MRMSrcMem, (outs GR64:$dst), (ins i64mem:$src),
                      "lzcnt{q}\t{$src, $dst|$dst, $src}",
                      [(set GR64:$dst, (ctlz (loadi64 addr:$src))),
-                      (implicit EFLAGS)]>, XS;
+                      (implicit EFLAGS)], IIC_LZCNT_RM>, XS,
+                     Sched<[WriteIMulLd]>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2263,30 +2270,33 @@ let Predicates = [HasLZCNT], Defs = [EFLAGS] in {
 let Predicates = [HasBMI], Defs = [EFLAGS] in {
   def TZCNT16rr : I<0xBC, MRMSrcReg, (outs GR16:$dst), (ins GR16:$src),
                     "tzcnt{w}\t{$src, $dst|$dst, $src}",
-                    [(set GR16:$dst, (cttz GR16:$src)), (implicit EFLAGS)]>, XS,
-                    OpSize16;
+                    [(set GR16:$dst, (cttz GR16:$src)), (implicit EFLAGS)],
+                    IIC_TZCNT_RR>, XS, OpSize16, Sched<[WriteIMul]>;
   def TZCNT16rm : I<0xBC, MRMSrcMem, (outs GR16:$dst), (ins i16mem:$src),
                     "tzcnt{w}\t{$src, $dst|$dst, $src}",
                     [(set GR16:$dst, (cttz (loadi16 addr:$src))),
-                     (implicit EFLAGS)]>, XS, OpSize16;
+                     (implicit EFLAGS)], IIC_TZCNT_RM>, XS, OpSize16,
+                    Sched<[WriteIMulLd]>;
 
   def TZCNT32rr : I<0xBC, MRMSrcReg, (outs GR32:$dst), (ins GR32:$src),
                     "tzcnt{l}\t{$src, $dst|$dst, $src}",
-                    [(set GR32:$dst, (cttz GR32:$src)), (implicit EFLAGS)]>, XS,
-                    OpSize32;
+                    [(set GR32:$dst, (cttz GR32:$src)), (implicit EFLAGS)],
+                    IIC_TZCNT_RR>, XS, OpSize32, Sched<[WriteIMul]>;
   def TZCNT32rm : I<0xBC, MRMSrcMem, (outs GR32:$dst), (ins i32mem:$src),
                     "tzcnt{l}\t{$src, $dst|$dst, $src}",
                     [(set GR32:$dst, (cttz (loadi32 addr:$src))),
-                     (implicit EFLAGS)]>, XS, OpSize32;
+                     (implicit EFLAGS)], IIC_TZCNT_RM>, XS, OpSize32,
+                    Sched<[WriteIMulLd]>;
 
   def TZCNT64rr : RI<0xBC, MRMSrcReg, (outs GR64:$dst), (ins GR64:$src),
                      "tzcnt{q}\t{$src, $dst|$dst, $src}",
-                     [(set GR64:$dst, (cttz GR64:$src)), (implicit EFLAGS)]>,
-                     XS;
+                     [(set GR64:$dst, (cttz GR64:$src)), (implicit EFLAGS)],
+                     IIC_TZCNT_RR>, XS, Sched<[WriteIMul]>;
   def TZCNT64rm : RI<0xBC, MRMSrcMem, (outs GR64:$dst), (ins i64mem:$src),
                      "tzcnt{q}\t{$src, $dst|$dst, $src}",
                      [(set GR64:$dst, (cttz (loadi64 addr:$src))),
-                      (implicit EFLAGS)]>, XS;
+                      (implicit EFLAGS)], IIC_TZCNT_RM>, XS,
+                     Sched<[WriteIMulLd]>;
 }
 
 multiclass bmi_bls<string mnemonic, Format RegMRM, Format MemMRM,

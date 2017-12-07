@@ -166,7 +166,7 @@ def: InstRW<[WriteSHLDm], (instregex "SHRD(16|32|64)mr(i8|CL)")>;
 
 def : WriteRes<WriteLoad,  [JLAGU]> { let Latency = 5; }
 def : WriteRes<WriteStore, [JSAGU]>;
-def : WriteRes<WriteMove,  [JAny]>;
+def : WriteRes<WriteMove,  [JALU01]>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Idioms that clear a register, like xorps %xmm0, %xmm0.
