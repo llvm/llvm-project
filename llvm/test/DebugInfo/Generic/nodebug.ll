@@ -1,6 +1,6 @@
 ; REQUIRES: object-emission
 
-; RUN: %llc_dwarf < %s -filetype=obj | llvm-dwarfdump -v - | FileCheck %s
+; RUN: %llc_dwarf < %s -filetype=obj -mtriple=x86_64-apple-darwin | llvm-dwarfdump -v - | FileCheck %s
 
 ; Test that a nodebug function (a function not appearing in the debug info IR
 ; metadata subprogram list) with DebugLocs on its IR doesn't cause crashes/does
@@ -24,7 +24,7 @@
 ; Expect no line table entry since there are no functions and file references in this compile unit
 ; CHECK: .debug_line contents:
 ; CHECK: Line table prologue:
-; CHECK: total_length: 0x0000001a
+; CHECK: total_length: 0x00000019
 ; CHECK-NOT: file_names[
 
 @i = external global i32

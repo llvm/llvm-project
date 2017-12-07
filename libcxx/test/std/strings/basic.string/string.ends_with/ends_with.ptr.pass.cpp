@@ -30,7 +30,7 @@ int main()
 //  S   s4  { s + 1, 4 };
 //  S   s5  { s,     5 };
     S  sNot { "def", 3 };
-    
+
     LIBCPP_ASSERT_NOEXCEPT(s0.ends_with(""));
 
     assert ( s0.ends_with(""));

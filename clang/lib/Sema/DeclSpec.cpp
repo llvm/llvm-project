@@ -969,18 +969,6 @@ bool DeclSpec::SetConstexprSpec(SourceLocation Loc, const char *&PrevSpec,
   return false;
 }
 
-bool DeclSpec::SetConceptSpec(SourceLocation Loc, const char *&PrevSpec,
-                              unsigned &DiagID) {
-  if (Concept_specified) {
-    DiagID = diag::ext_duplicate_declspec;
-    PrevSpec = "concept";
-    return true;
-  }
-  Concept_specified = true;
-  ConceptLoc = Loc;
-  return false;
-}
-
 void DeclSpec::SaveWrittenBuiltinSpecs() {
   writtenBS.Sign = getTypeSpecSign();
   writtenBS.Width = getTypeSpecWidth();

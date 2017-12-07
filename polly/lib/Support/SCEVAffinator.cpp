@@ -261,8 +261,7 @@ PWACtx SCEVAffinator::visitConstant(const SCEVConstant *Expr) {
       isl::manage(isl_pw_aff_from_aff(isl_aff_val_on_domain(ls, v))));
 }
 
-PWACtx
-SCEVAffinator::visitTruncateExpr(const SCEVTruncateExpr *Expr) {
+PWACtx SCEVAffinator::visitTruncateExpr(const SCEVTruncateExpr *Expr) {
   // Truncate operations are basically modulo operations, thus we can
   // model them that way. However, for large types we assume the operand
   // to fit in the new type size instead of introducing a modulo with a very
@@ -298,8 +297,7 @@ SCEVAffinator::visitTruncateExpr(const SCEVTruncateExpr *Expr) {
   return OpPWAC;
 }
 
-PWACtx
-SCEVAffinator::visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {
+PWACtx SCEVAffinator::visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {
   // A zero-extended value can be interpreted as a piecewise defined signed
   // value. If the value was non-negative it stays the same, otherwise it
   // is the sum of the original value and 2^n where n is the bit-width of

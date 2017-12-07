@@ -142,7 +142,6 @@ static Symbol* addSyntheticGlobal(StringRef Name, int32_t Value) {
   log("injecting global: " + Name);
   Symbol *S = Symtab->addDefinedGlobal(Name);
   S->setVirtualAddress(Value);
-  S->setOutputIndex(Config->SyntheticGlobals.size());
   Config->SyntheticGlobals.emplace_back(S);
   return S;
 }

@@ -149,7 +149,7 @@ public:
     if (AlignedMap *P = Info.getPointer()) {
       auto I = P->Map.find(&GV);
       if (I != P->Map.end())
-        GlobalMRI = ModRefInfo(GlobalMRI | I->second);
+        GlobalMRI = unionModRef(GlobalMRI, I->second);
     }
     return GlobalMRI;
   }
@@ -174,7 +174,7 @@ public:
       Info.setPointer(P);
     }
     auto &GlobalMRI = P->Map[&GV];
-    GlobalMRI = ModRefInfo(GlobalMRI | NewMRI);
+    GlobalMRI = unionModRef(GlobalMRI, NewMRI);
   }
 
   /// Clear a global's ModRef info. Should be used when a global is being
@@ -570,7 +570,7 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
             if (Callee->isIntrinsic()) {
               FunctionModRefBehavior Behaviour =
                   AAResultBase::getModRefBehavior(Callee);
-              FI.addModRefInfo(ModRefInfo(Behaviour & MRI_ModRef));
+              FI.addModRefInfo(createModRefInfo(Behaviour));
             }
           }
           continue;

@@ -405,7 +405,7 @@ protected:
   TemplateDecl(ConstrainedTemplateDeclInfo *CTDI, Kind DK, DeclContext *DC,
                SourceLocation L, DeclarationName Name,
                TemplateParameterList *Params)
-      : NamedDecl(DK, DC, L, Name), TemplatedDecl(nullptr, false),
+      : NamedDecl(DK, DC, L, Name), TemplatedDecl(nullptr),
         TemplateParams(CTDI) {
     this->setTemplateParameters(Params);
   }
@@ -418,7 +418,7 @@ protected:
   TemplateDecl(ConstrainedTemplateDeclInfo *CTDI, Kind DK, DeclContext *DC,
                SourceLocation L, DeclarationName Name,
                TemplateParameterList *Params, NamedDecl *Decl)
-      : NamedDecl(DK, DC, L, Name), TemplatedDecl(Decl, false),
+      : NamedDecl(DK, DC, L, Name), TemplatedDecl(Decl),
         TemplateParams(CTDI) {
     this->setTemplateParameters(Params);
   }
@@ -450,7 +450,7 @@ public:
   }
 
   /// Get the underlying, templated declaration.
-  NamedDecl *getTemplatedDecl() const { return TemplatedDecl.getPointer(); }
+  NamedDecl *getTemplatedDecl() const { return TemplatedDecl; }
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
@@ -461,21 +461,11 @@ public:
 
   SourceRange getSourceRange() const override LLVM_READONLY {
     return SourceRange(getTemplateParameters()->getTemplateLoc(),
-                       TemplatedDecl.getPointer()->getSourceRange().getEnd());
+                       TemplatedDecl->getSourceRange().getEnd());
   }
 
-  /// Whether this is a (C++ Concepts TS) function or variable concept.
-  bool isConcept() const { return TemplatedDecl.getInt(); }
-  void setConcept() { TemplatedDecl.setInt(true); }
-
 protected:
-  /// \brief The named declaration from which this template was instantiated.
-  /// (or null).
-  ///
-  /// The boolean value will be true to indicate that this template
-  /// (function or variable) is a concept.
-  llvm::PointerIntPair<NamedDecl *, 1, bool> TemplatedDecl;
-
+  NamedDecl *TemplatedDecl;
   /// \brief The template parameter list and optional requires-clause
   /// associated with this declaration; alternatively, a
   /// \c ConstrainedTemplateDeclInfo if the associated constraints of the
@@ -504,9 +494,9 @@ public:
   /// \brief Initialize the underlying templated declaration and
   /// template parameters.
   void init(NamedDecl *templatedDecl, TemplateParameterList* templateParams) {
-    assert(!TemplatedDecl.getPointer() && "TemplatedDecl already set!");
+    assert(!TemplatedDecl && "TemplatedDecl already set!");
     assert(!TemplateParams && "TemplateParams already set!");
-    TemplatedDecl.setPointer(templatedDecl);
+    TemplatedDecl = templatedDecl;
     TemplateParams = templateParams;
   }
 };
@@ -1028,7 +1018,7 @@ public:
 
   /// Get the underlying function declaration of the template.
   FunctionDecl *getTemplatedDecl() const {
-    return static_cast<FunctionDecl *>(TemplatedDecl.getPointer());
+    return static_cast<FunctionDecl *>(TemplatedDecl);
   }
 
   /// Returns whether this template declaration defines the primary
@@ -2120,7 +2110,7 @@ public:
 
   /// \brief Get the underlying class declarations of the template.
   CXXRecordDecl *getTemplatedDecl() const {
-    return static_cast<CXXRecordDecl *>(TemplatedDecl.getPointer());
+    return static_cast<CXXRecordDecl *>(TemplatedDecl);
   }
 
   /// \brief Returns whether this template declaration defines the primary
@@ -2367,7 +2357,7 @@ public:
 
   /// Get the underlying function declaration of the template.
   TypeAliasDecl *getTemplatedDecl() const {
-    return static_cast<TypeAliasDecl *>(TemplatedDecl.getPointer());
+    return static_cast<TypeAliasDecl *>(TemplatedDecl);
   }
 
 
@@ -2934,7 +2924,7 @@ public:
 
   /// \brief Get the underlying variable declarations of the template.
   VarDecl *getTemplatedDecl() const {
-    return static_cast<VarDecl *>(TemplatedDecl.getPointer());
+    return static_cast<VarDecl *>(TemplatedDecl);
   }
 
   /// \brief Returns whether this template declaration defines the primary

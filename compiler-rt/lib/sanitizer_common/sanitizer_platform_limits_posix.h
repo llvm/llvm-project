@@ -1498,6 +1498,8 @@ struct __sanitizer_cookie_io_functions_t {
   COMPILER_CHECK(offsetof(struct __sanitizer_##CLASS, MEMBER) ==          \
                  offsetof(struct CLASS, MEMBER))
 
+#define SIGACTION_SYMNAME sigaction
+
 #endif  // SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_MAC
 
 #endif
