@@ -15,17 +15,17 @@ declare {i64, i32} @llvm.x86.rdrand.64()
 define i16 @test_rdrand_16(i16* %random_val) {
 ; GENERIC-LABEL: test_rdrand_16:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    rdrandw %ax
+; GENERIC-NEXT:    rdrandw %ax # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; GOLDMONT-LABEL: test_rdrand_16:
 ; GOLDMONT:       # %bb.0:
-; GOLDMONT-NEXT:    rdrandw %ax
+; GOLDMONT-NEXT:    rdrandw %ax # sched: [100:1.00]
 ; GOLDMONT-NEXT:    retq # sched: [4:1.00]
 ;
 ; IVY-LABEL: test_rdrand_16:
 ; IVY:       # %bb.0:
-; IVY-NEXT:    rdrandw %ax
+; IVY-NEXT:    rdrandw %ax # sched: [100:0.33]
 ; IVY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_rdrand_16:
@@ -40,12 +40,12 @@ define i16 @test_rdrand_16(i16* %random_val) {
 ;
 ; SKYLAKE-LABEL: test_rdrand_16:
 ; SKYLAKE:       # %bb.0:
-; SKYLAKE-NEXT:    rdrandw %ax
+; SKYLAKE-NEXT:    rdrandw %ax # sched: [100:0.25]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_rdrand_16:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    rdrandw %ax
+; SKX-NEXT:    rdrandw %ax # sched: [100:0.25]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_rdrand_16:
@@ -60,17 +60,17 @@ define i16 @test_rdrand_16(i16* %random_val) {
 define i32 @test_rdrand_32(i32* %random_val) {
 ; GENERIC-LABEL: test_rdrand_32:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    rdrandl %eax
+; GENERIC-NEXT:    rdrandl %eax # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; GOLDMONT-LABEL: test_rdrand_32:
 ; GOLDMONT:       # %bb.0:
-; GOLDMONT-NEXT:    rdrandl %eax
+; GOLDMONT-NEXT:    rdrandl %eax # sched: [100:1.00]
 ; GOLDMONT-NEXT:    retq # sched: [4:1.00]
 ;
 ; IVY-LABEL: test_rdrand_32:
 ; IVY:       # %bb.0:
-; IVY-NEXT:    rdrandl %eax
+; IVY-NEXT:    rdrandl %eax # sched: [100:0.33]
 ; IVY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_rdrand_32:
@@ -85,12 +85,12 @@ define i32 @test_rdrand_32(i32* %random_val) {
 ;
 ; SKYLAKE-LABEL: test_rdrand_32:
 ; SKYLAKE:       # %bb.0:
-; SKYLAKE-NEXT:    rdrandl %eax
+; SKYLAKE-NEXT:    rdrandl %eax # sched: [100:0.25]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_rdrand_32:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    rdrandl %eax
+; SKX-NEXT:    rdrandl %eax # sched: [100:0.25]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_rdrand_32:
@@ -105,17 +105,17 @@ define i32 @test_rdrand_32(i32* %random_val) {
 define i64 @test_rdrand_64(i64* %random_val) {
 ; GENERIC-LABEL: test_rdrand_64:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    rdrandq %rax
+; GENERIC-NEXT:    rdrandq %rax # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; GOLDMONT-LABEL: test_rdrand_64:
 ; GOLDMONT:       # %bb.0:
-; GOLDMONT-NEXT:    rdrandq %rax
+; GOLDMONT-NEXT:    rdrandq %rax # sched: [100:1.00]
 ; GOLDMONT-NEXT:    retq # sched: [4:1.00]
 ;
 ; IVY-LABEL: test_rdrand_64:
 ; IVY:       # %bb.0:
-; IVY-NEXT:    rdrandq %rax
+; IVY-NEXT:    rdrandq %rax # sched: [100:0.33]
 ; IVY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_rdrand_64:
@@ -130,12 +130,12 @@ define i64 @test_rdrand_64(i64* %random_val) {
 ;
 ; SKYLAKE-LABEL: test_rdrand_64:
 ; SKYLAKE:       # %bb.0:
-; SKYLAKE-NEXT:    rdrandq %rax
+; SKYLAKE-NEXT:    rdrandq %rax # sched: [100:0.25]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_rdrand_64:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    rdrandq %rax
+; SKX-NEXT:    rdrandq %rax # sched: [100:0.25]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_rdrand_64:

@@ -22,16 +22,17 @@ enum LangFeatures {
   LineComment = (1 << 0),
   C99 = (1 << 1),
   C11 = (1 << 2),
-  CPlusPlus = (1 << 3),
-  CPlusPlus11 = (1 << 4),
-  CPlusPlus14 = (1 << 5),
-  CPlusPlus17 = (1 << 6),
-  CPlusPlus2a = (1 << 7),
-  Digraphs = (1 << 8),
-  GNUMode = (1 << 9),
-  HexFloat = (1 << 10),
-  ImplicitInt = (1 << 11),
-  OpenCL = (1 << 12)
+  C17 = (1 << 3),
+  CPlusPlus = (1 << 4),
+  CPlusPlus11 = (1 << 5),
+  CPlusPlus14 = (1 << 6),
+  CPlusPlus17 = (1 << 7),
+  CPlusPlus2a = (1 << 8),
+  Digraphs = (1 << 9),
+  GNUMode = (1 << 10),
+  HexFloat = (1 << 11),
+  ImplicitInt = (1 << 12),
+  OpenCL = (1 << 13)
 };
 
 }
@@ -69,6 +70,9 @@ public:
 
   /// isC11 - Language is a superset of C11.
   bool isC11() const { return Flags & frontend::C11; }
+
+  /// isC17 - Language is a superset of C17.
+  bool isC17() const { return Flags & frontend::C17; }
 
   /// isCPlusPlus - Language is a C++ variant.
   bool isCPlusPlus() const { return Flags & frontend::CPlusPlus; }

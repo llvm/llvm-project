@@ -1163,7 +1163,89 @@ define void @test_invlpg_invlpga(i8 *%a0) optsize {
 
 ; TODO - test_jmp
 
-; TODO - test_lahf
+define void @test_lahf_sahf() optsize {
+; GENERIC-LABEL: test_lahf_sahf:
+; GENERIC:       # %bb.0:
+; GENERIC-NEXT:    #APP
+; GENERIC-NEXT:    lahf # sched: [1:0.50]
+; GENERIC-NEXT:    sahf # sched: [1:0.50]
+; GENERIC-NEXT:    #NO_APP
+; GENERIC-NEXT:    retq # sched: [1:1.00]
+;
+; ATOM-LABEL: test_lahf_sahf:
+; ATOM:       # %bb.0:
+; ATOM-NEXT:    #APP
+; ATOM-NEXT:    lahf # sched: [1:0.50]
+; ATOM-NEXT:    sahf # sched: [1:0.50]
+; ATOM-NEXT:    #NO_APP
+; ATOM-NEXT:    retq # sched: [79:39.50]
+;
+; SLM-LABEL: test_lahf_sahf:
+; SLM:       # %bb.0:
+; SLM-NEXT:    #APP
+; SLM-NEXT:    lahf # sched: [1:0.50]
+; SLM-NEXT:    sahf # sched: [1:0.50]
+; SLM-NEXT:    #NO_APP
+; SLM-NEXT:    retq # sched: [4:1.00]
+;
+; SANDY-LABEL: test_lahf_sahf:
+; SANDY:       # %bb.0:
+; SANDY-NEXT:    #APP
+; SANDY-NEXT:    lahf # sched: [1:0.50]
+; SANDY-NEXT:    sahf # sched: [1:0.50]
+; SANDY-NEXT:    #NO_APP
+; SANDY-NEXT:    retq # sched: [1:1.00]
+;
+; HASWELL-LABEL: test_lahf_sahf:
+; HASWELL:       # %bb.0:
+; HASWELL-NEXT:    #APP
+; HASWELL-NEXT:    lahf # sched: [1:0.25]
+; HASWELL-NEXT:    sahf # sched: [1:0.25]
+; HASWELL-NEXT:    #NO_APP
+; HASWELL-NEXT:    retq # sched: [2:1.00]
+;
+; BROADWELL-LABEL: test_lahf_sahf:
+; BROADWELL:       # %bb.0:
+; BROADWELL-NEXT:    #APP
+; BROADWELL-NEXT:    lahf # sched: [1:0.25]
+; BROADWELL-NEXT:    sahf # sched: [1:0.25]
+; BROADWELL-NEXT:    #NO_APP
+; BROADWELL-NEXT:    retq # sched: [7:1.00]
+;
+; SKYLAKE-LABEL: test_lahf_sahf:
+; SKYLAKE:       # %bb.0:
+; SKYLAKE-NEXT:    #APP
+; SKYLAKE-NEXT:    lahf # sched: [1:0.25]
+; SKYLAKE-NEXT:    sahf # sched: [1:0.25]
+; SKYLAKE-NEXT:    #NO_APP
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
+;
+; SKX-LABEL: test_lahf_sahf:
+; SKX:       # %bb.0:
+; SKX-NEXT:    #APP
+; SKX-NEXT:    lahf # sched: [1:0.25]
+; SKX-NEXT:    sahf # sched: [1:0.25]
+; SKX-NEXT:    #NO_APP
+; SKX-NEXT:    retq # sched: [7:1.00]
+;
+; BTVER2-LABEL: test_lahf_sahf:
+; BTVER2:       # %bb.0:
+; BTVER2-NEXT:    #APP
+; BTVER2-NEXT:    lahf # sched: [1:0.50]
+; BTVER2-NEXT:    sahf # sched: [1:0.50]
+; BTVER2-NEXT:    #NO_APP
+; BTVER2-NEXT:    retq # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_lahf_sahf:
+; ZNVER1:       # %bb.0:
+; ZNVER1-NEXT:    #APP
+; ZNVER1-NEXT:    lahf # sched: [100:?]
+; ZNVER1-NEXT:    sahf # sched: [2:0.25]
+; ZNVER1-NEXT:    #NO_APP
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
+  tail call void asm "lahf \0A\09 sahf", ""() nounwind
+  ret void
+}
 
 ; TODO - test_lds
 ; TODO - test_les
@@ -1242,8 +1324,6 @@ define void @test_invlpg_invlpga(i8 *%a0) optsize {
 
 ; TODO - test_rol
 ; TODO - test_ror
-
-; TODO - test_sahf
 
 ; TODO - test_sar
 ; TODO - test_shl

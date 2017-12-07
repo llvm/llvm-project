@@ -370,7 +370,9 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__STDC_HOSTED__");
 
   if (!LangOpts.CPlusPlus) {
-    if (LangOpts.C11)
+    if (LangOpts.C17)
+      Builder.defineMacro("__STDC_VERSION__", "201710L");
+    else if (LangOpts.C11)
       Builder.defineMacro("__STDC_VERSION__", "201112L");
     else if (LangOpts.C99)
       Builder.defineMacro("__STDC_VERSION__", "199901L");
@@ -997,6 +999,11 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__null_unspecified", "_Null_unspecified");
     Builder.defineMacro("__nullable", "_Nullable");
   }
+
+  // Add a macro to differentiate between regular iOS/tvOS/watchOS targets and
+  // the corresponding simulator targets.
+  if (TI.getTriple().isOSDarwin() && TI.getTriple().isSimulatorEnvironment())
+    Builder.defineMacro("__APPLE_EMBEDDED_SIMULATOR__", "1");
 
   // OpenMP definition
   // OpenMP 2.2:

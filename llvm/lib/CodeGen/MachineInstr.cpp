@@ -1289,7 +1289,7 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << " ";
     const unsigned OpIdx = InlineAsm::MIOp_AsmString;
     LLT TypeToPrint = MRI ? getTypeToPrint(OpIdx, PrintedTypes, *MRI) : LLT{};
-    unsigned TiedOperandIdx = getTiedOperandIdx(StartOp);
+    unsigned TiedOperandIdx = getTiedOperandIdx(OpIdx);
     getOperand(OpIdx).print(OS, MST, TypeToPrint, /*PrintDef=*/true,
                             ShouldPrintRegisterTies, TiedOperandIdx, TRI,
                             IntrinsicInfo);
@@ -1337,7 +1337,7 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
         OS << "!\"" << DIV->getName() << '\"';
       else {
         LLT TypeToPrint = MRI ? getTypeToPrint(i, PrintedTypes, *MRI) : LLT{};
-        unsigned TiedOperandIdx = getTiedOperandIdx(StartOp);
+        unsigned TiedOperandIdx = getTiedOperandIdx(i);
         MO.print(OS, MST, TypeToPrint, /*PrintDef=*/true,
                  ShouldPrintRegisterTies, TiedOperandIdx, TRI, IntrinsicInfo);
       }
@@ -1404,7 +1404,7 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
       AsmDescOp += 1 + InlineAsm::getNumOperandRegisters(Flag);
     } else {
       LLT TypeToPrint = MRI ? getTypeToPrint(i, PrintedTypes, *MRI) : LLT{};
-      unsigned TiedOperandIdx = getTiedOperandIdx(StartOp);
+      unsigned TiedOperandIdx = getTiedOperandIdx(i);
       MO.print(OS, MST, TypeToPrint, /*PrintDef=*/true, ShouldPrintRegisterTies,
                TiedOperandIdx, TRI, IntrinsicInfo);
     }

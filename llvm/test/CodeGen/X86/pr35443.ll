@@ -5,8 +5,8 @@
 @ai3 = external local_unnamed_addr global [20 x i32], align 16
 
 ; Function Attrs: norecurse nounwind uwtable
-define void @main() {
-; CHECK-LABEL: main:
+define void @pr35443() {
+; CHECK-LABEL: pr35443:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movzbl ac+{{.*}}(%rip), %eax
 ; CHECK-NEXT:    vmovd %eax, %xmm0

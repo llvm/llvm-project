@@ -2000,17 +2000,23 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     bool Use64b = Subtarget.useHVX64BOps();
     ArrayRef<MVT> LegalV = Use64b ? LegalV64 : LegalV128;
     ArrayRef<MVT> LegalW = Use64b ? LegalW64 : LegalW128;
-    MVT ByteV  = Use64b ?  MVT::v64i8 : MVT::v128i8;
-    MVT ByteW  = Use64b ? MVT::v128i8 : MVT::v256i8;
+    MVT ByteV = Use64b ?  MVT::v64i8 : MVT::v128i8;
+    MVT ByteW = Use64b ? MVT::v128i8 : MVT::v256i8;
 
     setOperationAction(ISD::VECTOR_SHUFFLE, ByteV, Legal);
     setOperationAction(ISD::VECTOR_SHUFFLE, ByteW, Legal);
     setOperationAction(ISD::CONCAT_VECTORS, ByteW, Legal);
+    setOperationAction(ISD::AND,            ByteV, Legal);
     setOperationAction(ISD::OR,             ByteV, Legal);
+    setOperationAction(ISD::XOR,            ByteV, Legal);
 
     for (MVT T : LegalV) {
       setIndexedLoadAction(ISD::POST_INC,  T, Legal);
       setIndexedStoreAction(ISD::POST_INC, T, Legal);
+
+      setOperationAction(ISD::ADD, T, Legal);
+      setOperationAction(ISD::SUB, T, Legal);
+      setOperationAction(ISD::MUL, T, Custom);
 
       setOperationAction(ISD::BUILD_VECTOR,       T, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR,   T, Custom);
@@ -2025,7 +2031,9 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
       // Promote all shuffles and concats to operate on vectors of bytes.
       setPromoteTo(ISD::VECTOR_SHUFFLE, T, ByteV);
       setPromoteTo(ISD::CONCAT_VECTORS, T, ByteV);
+      setPromoteTo(ISD::AND,            T, ByteV);
       setPromoteTo(ISD::OR,             T, ByteV);
+      setPromoteTo(ISD::XOR,            T, ByteV);
     }
 
     for (MVT T : LegalW) {
@@ -2792,6 +2800,10 @@ HexagonTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     case ISD::INLINEASM:            return LowerINLINEASM(Op, DAG);
     case ISD::PREFETCH:             return LowerPREFETCH(Op, DAG);
     case ISD::READCYCLECOUNTER:     return LowerREADCYCLECOUNTER(Op, DAG);
+    case ISD::MUL:
+      if (Subtarget.useHVXOps())
+        return LowerHvxMul(Op, DAG);
+      break;
   }
   return SDValue();
 }
