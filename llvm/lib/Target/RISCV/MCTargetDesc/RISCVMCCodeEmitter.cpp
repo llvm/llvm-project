@@ -83,9 +83,25 @@ MCCodeEmitter *llvm::createRISCVMCCodeEmitter(const MCInstrInfo &MCII,
 void RISCVMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
                                            SmallVectorImpl<MCFixup> &Fixups,
                                            const MCSubtargetInfo &STI) const {
-  // For now, we only support RISC-V instructions with 32-bit length
-  uint32_t Bits = getBinaryCodeForInstr(MI, Fixups, STI);
-  support::endian::Writer<support::little>(OS).write(Bits);
+  const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
+  // Get byte count of instruction.
+  unsigned Size = Desc.getSize();
+
+  switch (Size) {
+  default:
+    llvm_unreachable("Unhandled encodeInstruction length!");
+  case 2: {
+    uint16_t Bits = getBinaryCodeForInstr(MI, Fixups, STI);
+    support::endian::Writer<support::little>(OS).write<uint16_t>(Bits);
+    break;
+  }
+  case 4: {
+    uint32_t Bits = getBinaryCodeForInstr(MI, Fixups, STI);
+    support::endian::Writer<support::little>(OS).write(Bits);
+    break;
+  }
+  }
+
   ++MCNumEmitted; // Keep track of the # of mi's emitted.
 }
 
@@ -161,6 +177,10 @@ unsigned RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
       FixupKind = RISCV::fixup_riscv_jal;
     } else if (MIFrm == RISCVII::InstFormatB) {
       FixupKind = RISCV::fixup_riscv_branch;
+    } else if (MIFrm == RISCVII::InstFormatCJ) {
+      FixupKind = RISCV::fixup_riscv_rvc_jump;
+    } else if (MIFrm == RISCVII::InstFormatCB) {
+      FixupKind = RISCV::fixup_riscv_rvc_branch;
     }
   }
 

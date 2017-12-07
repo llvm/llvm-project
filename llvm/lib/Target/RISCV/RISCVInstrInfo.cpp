@@ -52,7 +52,7 @@ void RISCVInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   if (I != MBB.end())
     DL = I->getDebugLoc();
 
-  if (RC == &RISCV::GPRRegClass)
+  if (RISCV::GPRRegClass.hasSubClassEq(RC))
     BuildMI(MBB, I, DL, get(RISCV::SW))
         .addReg(SrcReg, getKillRegState(IsKill))
         .addFrameIndex(FI)
@@ -70,7 +70,7 @@ void RISCVInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   if (I != MBB.end())
     DL = I->getDebugLoc();
 
-  if (RC == &RISCV::GPRRegClass)
+  if (RISCV::GPRRegClass.hasSubClassEq(RC))
     BuildMI(MBB, I, DL, get(RISCV::LW), DstReg).addFrameIndex(FI).addImm(0);
   else
     llvm_unreachable("Can't load this register from stack slot");

@@ -19,7 +19,8 @@
 type = Library
 name = Nios2Desc
 parent = Nios2
-required_libraries = MC 
-                     Nios2Info 
+required_libraries = MC
+                     Nios2AsmPrinter
+                     Nios2Info
                      Support
 add_to_library_groups = Nios2

@@ -1,6 +1,6 @@
-# RUN: llvm-mc -triple riscv32 < %s -show-encoding \
+# RUN: llvm-mc -triple riscv32 -mattr=+c < %s -show-encoding \
 # RUN:     | FileCheck -check-prefix=INSTR -check-prefix=FIXUP %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 < %s \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+c < %s \
 # RUN:     | llvm-readobj -r | FileCheck -check-prefix=RELOC %s
 
 # Check prefixes:
@@ -63,3 +63,13 @@ bgeu a0, a1, foo
 # RELOC: R_RISCV_BRANCH
 # INSTR: bgeu a0, a1, foo
 # FIXUP: fixup A - offset: 0, value: foo, kind: fixup_riscv_branch
+
+c.jal foo
+# RELOC: R_RISCV_RVC_JUMP
+# INSTR: c.jal foo
+# FIXUP: fixup A - offset: 0, value: foo, kind: fixup_riscv_rvc_jump
+
+c.bnez a0, foo
+# RELOC: R_RISCV_RVC_BRANCH
+# INSTR: c.bnez a0, foo
+# FIXUP: fixup A - offset: 0, value: foo, kind: fixup_riscv_rvc_branch

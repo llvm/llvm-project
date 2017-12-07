@@ -28,8 +28,8 @@
 // Format specifies the encoding used by the instruction. This is used by
 // RISCVMCCodeEmitter to determine which form of fixup to use. These
 // definitions must be kept in-sync with RISCVBaseInfo.h.
-class InstFormat<bits<4> val> {
-  bits<4> Value = val;
+class InstFormat<bits<5> val> {
+  bits<5> Value = val;
 }
 def InstFormatPseudo : InstFormat<0>;
 def InstFormatR      : InstFormat<1>;
@@ -39,7 +39,15 @@ def InstFormatS      : InstFormat<4>;
 def InstFormatB      : InstFormat<5>;
 def InstFormatU      : InstFormat<6>;
 def InstFormatJ      : InstFormat<7>;
-def InstFormatOther  : InstFormat<8>;
+def InstFormatCR     : InstFormat<8>;
+def InstFormatCI     : InstFormat<9>;
+def InstFormatCSS    : InstFormat<10>;
+def InstFormatCIW    : InstFormat<11>;
+def InstFormatCL     : InstFormat<12>;
+def InstFormatCS     : InstFormat<13>;
+def InstFormatCB     : InstFormat<14>;
+def InstFormatCJ     : InstFormat<15>;
+def InstFormatOther  : InstFormat<16>;
 
 // The following opcode names and match those given in Table 19.1 in the
 // RISC-V User-level ISA specification ("RISC-V base opcode map").
@@ -90,7 +98,7 @@ class RVInst<dag outs, dag ins, string opcodestr, string argstr,
   let AsmString = opcodestr # "\t" # argstr;
   let Pattern = pattern;
 
-  let TSFlags{3-0} = format.Value;
+  let TSFlags{4-0} = format.Value;
 }
 
 // Pseudo instructions

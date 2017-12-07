@@ -21,7 +21,7 @@ define i32 @test_mul_by_1(i32 %x) {
 ;
 ; X64-JAG-LABEL: test_mul_by_1:
 ; X64-JAG:       # %bb.0:
-; X64-JAG-NEXT:    movl %edi, %eax # sched: [1:0.17]
+; X64-JAG-NEXT:    movl %edi, %eax # sched: [1:0.50]
 ; X64-JAG-NEXT:    retq # sched: [4:1.00]
 ;
 ; X86-NOOPT-LABEL: test_mul_by_1:
@@ -36,7 +36,7 @@ define i32 @test_mul_by_1(i32 %x) {
 ;
 ; JAG-NOOPT-LABEL: test_mul_by_1:
 ; JAG-NOOPT:       # %bb.0:
-; JAG-NOOPT-NEXT:    movl %edi, %eax # sched: [1:0.17]
+; JAG-NOOPT-NEXT:    movl %edi, %eax # sched: [1:0.50]
 ; JAG-NOOPT-NEXT:    retq # sched: [4:1.00]
 ;
 ; X64-SLM-LABEL: test_mul_by_1:
@@ -787,7 +787,7 @@ define i32 @test_mul_by_16(i32 %x) {
 ; X64-JAG-LABEL: test_mul_by_16:
 ; X64-JAG:       # %bb.0:
 ; X64-JAG-NEXT:    shll $4, %edi # sched: [1:0.50]
-; X64-JAG-NEXT:    movl %edi, %eax # sched: [1:0.17]
+; X64-JAG-NEXT:    movl %edi, %eax # sched: [1:0.50]
 ; X64-JAG-NEXT:    retq # sched: [4:1.00]
 ;
 ; X86-NOOPT-LABEL: test_mul_by_16:
@@ -805,7 +805,7 @@ define i32 @test_mul_by_16(i32 %x) {
 ; JAG-NOOPT-LABEL: test_mul_by_16:
 ; JAG-NOOPT:       # %bb.0:
 ; JAG-NOOPT-NEXT:    shll $4, %edi # sched: [1:0.50]
-; JAG-NOOPT-NEXT:    movl %edi, %eax # sched: [1:0.17]
+; JAG-NOOPT-NEXT:    movl %edi, %eax # sched: [1:0.50]
 ; JAG-NOOPT-NEXT:    retq # sched: [4:1.00]
 ;
 ; X64-SLM-LABEL: test_mul_by_16:
@@ -843,7 +843,7 @@ define i32 @test_mul_by_17(i32 %x) {
 ; X64-JAG-LABEL: test_mul_by_17:
 ; X64-JAG:       # %bb.0:
 ; X64-JAG-NEXT:    # kill: def %edi killed %edi def %rdi
-; X64-JAG-NEXT:    movl %edi, %eax # sched: [1:0.17]
+; X64-JAG-NEXT:    movl %edi, %eax # sched: [1:0.50]
 ; X64-JAG-NEXT:    shll $4, %eax # sched: [1:0.50]
 ; X64-JAG-NEXT:    leal (%rax,%rdi), %eax # sched: [1:0.50]
 ; X64-JAG-NEXT:    retq # sched: [4:1.00]
@@ -1530,7 +1530,7 @@ define i32 @test_mul_by_30(i32 %x) {
 ;
 ; X64-JAG-LABEL: test_mul_by_30:
 ; X64-JAG:       # %bb.0:
-; X64-JAG-NEXT:    movl %edi, %eax # sched: [1:0.17]
+; X64-JAG-NEXT:    movl %edi, %eax # sched: [1:0.50]
 ; X64-JAG-NEXT:    shll $5, %eax # sched: [1:0.50]
 ; X64-JAG-NEXT:    subl %edi, %eax # sched: [1:0.50]
 ; X64-JAG-NEXT:    subl %edi, %eax # sched: [1:0.50]
@@ -1582,7 +1582,7 @@ define i32 @test_mul_by_31(i32 %x) {
 ;
 ; X64-JAG-LABEL: test_mul_by_31:
 ; X64-JAG:       # %bb.0:
-; X64-JAG-NEXT:    movl %edi, %eax # sched: [1:0.17]
+; X64-JAG-NEXT:    movl %edi, %eax # sched: [1:0.50]
 ; X64-JAG-NEXT:    shll $5, %eax # sched: [1:0.50]
 ; X64-JAG-NEXT:    subl %edi, %eax # sched: [1:0.50]
 ; X64-JAG-NEXT:    retq # sched: [4:1.00]
@@ -1633,7 +1633,7 @@ define i32 @test_mul_by_32(i32 %x) {
 ; X64-JAG-LABEL: test_mul_by_32:
 ; X64-JAG:       # %bb.0:
 ; X64-JAG-NEXT:    shll $5, %edi # sched: [1:0.50]
-; X64-JAG-NEXT:    movl %edi, %eax # sched: [1:0.17]
+; X64-JAG-NEXT:    movl %edi, %eax # sched: [1:0.50]
 ; X64-JAG-NEXT:    retq # sched: [4:1.00]
 ;
 ; X86-NOOPT-LABEL: test_mul_by_32:
@@ -1651,7 +1651,7 @@ define i32 @test_mul_by_32(i32 %x) {
 ; JAG-NOOPT-LABEL: test_mul_by_32:
 ; JAG-NOOPT:       # %bb.0:
 ; JAG-NOOPT-NEXT:    shll $5, %edi # sched: [1:0.50]
-; JAG-NOOPT-NEXT:    movl %edi, %eax # sched: [1:0.17]
+; JAG-NOOPT-NEXT:    movl %edi, %eax # sched: [1:0.50]
 ; JAG-NOOPT-NEXT:    retq # sched: [4:1.00]
 ;
 ; X64-SLM-LABEL: test_mul_by_32:

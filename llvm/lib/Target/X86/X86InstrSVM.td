@@ -15,44 +15,44 @@
 //===----------------------------------------------------------------------===//
 // SVM instructions
 
+let SchedRW = [WriteSystem] in {
 // 0F 01 D9
-def VMMCALL : I<0x01, MRM_D9, (outs), (ins), "vmmcall", []>, TB;
+def VMMCALL : I<0x01, MRM_D9, (outs), (ins), "vmmcall", [], IIC_SVM>, TB;
 
 // 0F 01 DC
-def STGI : I<0x01, MRM_DC, (outs), (ins), "stgi", []>, TB;
+def STGI : I<0x01, MRM_DC, (outs), (ins), "stgi", [], IIC_STGI>, TB;
 
 // 0F 01 DD
-def CLGI : I<0x01, MRM_DD, (outs), (ins), "clgi", []>, TB;
+def CLGI : I<0x01, MRM_DD, (outs), (ins), "clgi", [], IIC_CLGI>, TB;
 
 // 0F 01 DE
 let Uses = [EAX] in
-def SKINIT : I<0x01, MRM_DE, (outs), (ins), "skinit\t{%eax|eax}", []>, TB;
+def SKINIT : I<0x01, MRM_DE, (outs), (ins), "skinit\t{%eax|eax}", [], IIC_SKINIT>, TB;
 
 // 0F 01 D8
 let Uses = [EAX] in
 def VMRUN32 : I<0x01, MRM_D8, (outs), (ins),
-                "vmrun\t{%eax|eax}", []>, TB, Requires<[Not64BitMode]>;
+                "vmrun\t{%eax|eax}", [], IIC_SVM>, TB, Requires<[Not64BitMode]>;
 let Uses = [RAX] in
 def VMRUN64 : I<0x01, MRM_D8, (outs), (ins),
-                "vmrun\t{%rax|rax}", []>, TB, Requires<[In64BitMode]>;
+                "vmrun\t{%rax|rax}", [], IIC_SVM>, TB, Requires<[In64BitMode]>;
 
 // 0F 01 DA
 let Uses = [EAX] in
 def VMLOAD32 : I<0x01, MRM_DA, (outs), (ins),
-                "vmload\t{%eax|eax}", []>, TB, Requires<[Not64BitMode]>;
+                "vmload\t{%eax|eax}", [], IIC_SVM>, TB, Requires<[Not64BitMode]>;
 let Uses = [RAX] in
 def VMLOAD64 : I<0x01, MRM_DA, (outs), (ins),
-                "vmload\t{%rax|rax}", []>, TB, Requires<[In64BitMode]>;
+                "vmload\t{%rax|rax}", [], IIC_SVM>, TB, Requires<[In64BitMode]>;
 
 // 0F 01 DB
 let Uses = [EAX] in
 def VMSAVE32 : I<0x01, MRM_DB, (outs), (ins),
-                "vmsave\t{%eax|eax}", []>, TB, Requires<[Not64BitMode]>;
+                "vmsave\t{%eax|eax}", [], IIC_SVM>, TB, Requires<[Not64BitMode]>;
 let Uses = [RAX] in
 def VMSAVE64 : I<0x01, MRM_DB, (outs), (ins),
-                "vmsave\t{%rax|rax}", []>, TB, Requires<[In64BitMode]>;
+                "vmsave\t{%rax|rax}", [], IIC_SVM>, TB, Requires<[In64BitMode]>;
 
-let SchedRW = [WriteSystem] in {
 // 0F 01 DF
 let Uses = [EAX, ECX] in
 def INVLPGA32 : I<0x01, MRM_DF, (outs), (ins),

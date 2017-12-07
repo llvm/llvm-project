@@ -148,6 +148,9 @@ GCNHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
       checkReadM0Hazards(MI) > 0)
     return NoopHazard;
 
+  if (MI->isInlineAsm() && checkInlineAsmHazards(MI) > 0)
+    return NoopHazard;
+
   if (checkAnyInstHazards(MI) > 0)
     return NoopHazard;
 
@@ -178,6 +181,9 @@ unsigned GCNHazardRecognizer::PreEmitNoops(MachineInstr *MI) {
 
   if (isRWLane(MI->getOpcode()))
     WaitStates = std::max(WaitStates, checkRWLaneHazards(MI));
+
+  if (MI->isInlineAsm())
+    return std::max(WaitStates, checkInlineAsmHazards(MI));
 
   if (isSGetReg(MI->getOpcode()))
     return std::max(WaitStates, checkGetRegHazards(MI));
@@ -525,39 +531,76 @@ int GCNHazardRecognizer::createsVALUHazard(const MachineInstr &MI) {
   return -1;
 }
 
+int GCNHazardRecognizer::checkVALUHazardsHelper(const MachineOperand &Def,
+						const MachineRegisterInfo &MRI) {
+  // Helper to check for the hazard where VMEM instructions that store more than
+  // 8 bytes can have there store data over written by the next instruction.
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+
+  const int VALUWaitStates = 1;
+  int WaitStatesNeeded = 0;
+
+  if (!TRI->isVGPR(MRI, Def.getReg()))
+    return WaitStatesNeeded;
+  unsigned Reg = Def.getReg();
+  auto IsHazardFn = [this, Reg, TRI] (MachineInstr *MI) {
+    int DataIdx = createsVALUHazard(*MI);
+    return DataIdx >= 0 &&
+    TRI->regsOverlap(MI->getOperand(DataIdx).getReg(), Reg);
+  };
+  int WaitStatesNeededForDef =
+    VALUWaitStates - getWaitStatesSince(IsHazardFn);
+  WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForDef);
+
+  return WaitStatesNeeded;
+}
+
 int GCNHazardRecognizer::checkVALUHazards(MachineInstr *VALU) {
   // This checks for the hazard where VMEM instructions that store more than
   // 8 bytes can have there store data over written by the next instruction.
   if (!ST.has12DWordStoreHazard())
     return 0;
 
-  const SIRegisterInfo *TRI = ST.getRegisterInfo();
-  const MachineRegisterInfo &MRI = VALU->getParent()->getParent()->getRegInfo();
-
-  const int VALUWaitStates = 1;
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
   int WaitStatesNeeded = 0;
 
   for (const MachineOperand &Def : VALU->defs()) {
-    if (!TRI->isVGPR(MRI, Def.getReg()))
-      continue;
-    unsigned Reg = Def.getReg();
-    auto IsHazardFn = [this, Reg, TRI] (MachineInstr *MI) {
-      int DataIdx = createsVALUHazard(*MI);
-      return DataIdx >= 0 &&
-             TRI->regsOverlap(MI->getOperand(DataIdx).getReg(), Reg);
-    };
-    int WaitStatesNeededForDef =
-        VALUWaitStates - getWaitStatesSince(IsHazardFn);
-    WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForDef);
+    WaitStatesNeeded = std::max(WaitStatesNeeded, checkVALUHazardsHelper(Def, MRI));
   }
+
+  return WaitStatesNeeded;
+}
+
+int GCNHazardRecognizer::checkInlineAsmHazards(MachineInstr *IA) {
+  // This checks for hazards associated with inline asm statements.
+  // Since inline asms can contain just about anything, we use this
+  // to call/leverage other check*Hazard routines. Note that
+  // this function doesn't attempt to address all possible inline asm
+  // hazards (good luck), but is a collection of what has been
+  // problematic thus far.
+
+  // see checkVALUHazards()
+  if (!ST.has12DWordStoreHazard())
+    return 0;
+
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  int WaitStatesNeeded = 0;
+
+  for (unsigned I = InlineAsm::MIOp_FirstOperand, E = IA->getNumOperands();
+       I != E; ++I) {
+    const MachineOperand &Op = IA->getOperand(I);
+    if (Op.isReg() && Op.isDef()) {
+      WaitStatesNeeded = std::max(WaitStatesNeeded, checkVALUHazardsHelper(Op, MRI));
+    }
+  }
+
   return WaitStatesNeeded;
 }
 
 int GCNHazardRecognizer::checkRWLaneHazards(MachineInstr *RWLane) {
   const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
-  const MachineRegisterInfo &MRI =
-      RWLane->getParent()->getParent()->getRegInfo();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
 
   const MachineOperand *LaneSelectOp =
       TII->getNamedOperand(*RWLane, AMDGPU::OpName::src1);

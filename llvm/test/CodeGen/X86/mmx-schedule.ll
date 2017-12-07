@@ -81,7 +81,7 @@ define i64 @test_cvtpd2pi(<2 x double> %a0, <2 x double>* %a1) optsize {
 ; BTVER2-NEXT:    cvtpd2pi (%rdi), %mm1 # sched: [8:1.00]
 ; BTVER2-NEXT:    cvtpd2pi %xmm0, %mm0 # sched: [3:1.00]
 ; BTVER2-NEXT:    por %mm0, %mm1 # sched: [1:0.50]
-; BTVER2-NEXT:    movd %mm1, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm1, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_cvtpd2pi:
@@ -326,7 +326,7 @@ define i64 @test_cvtps2pi(<4 x float> %a0, <4 x float>* %a1) optsize {
 ; BTVER2-NEXT:    cvtps2pi (%rdi), %mm1 # sched: [8:1.00]
 ; BTVER2-NEXT:    cvtps2pi %xmm0, %mm0 # sched: [3:1.00]
 ; BTVER2-NEXT:    por %mm0, %mm1 # sched: [1:0.50]
-; BTVER2-NEXT:    movd %mm1, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm1, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_cvtps2pi:
@@ -415,7 +415,7 @@ define i64 @test_cvttpd2pi(<2 x double> %a0, <2 x double>* %a1) optsize {
 ; BTVER2-NEXT:    cvttpd2pi (%rdi), %mm1 # sched: [8:1.00]
 ; BTVER2-NEXT:    cvttpd2pi %xmm0, %mm0 # sched: [3:1.00]
 ; BTVER2-NEXT:    por %mm0, %mm1 # sched: [1:0.50]
-; BTVER2-NEXT:    movd %mm1, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm1, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_cvttpd2pi:
@@ -504,7 +504,7 @@ define i64 @test_cvttps2pi(<4 x float> %a0, <4 x float>* %a1) optsize {
 ; BTVER2-NEXT:    cvttps2pi (%rdi), %mm1 # sched: [8:1.00]
 ; BTVER2-NEXT:    cvttps2pi %xmm0, %mm0 # sched: [3:1.00]
 ; BTVER2-NEXT:    por %mm0, %mm1 # sched: [1:0.50]
-; BTVER2-NEXT:    movd %mm1, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm1, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_cvttps2pi:
@@ -748,15 +748,15 @@ define i32 @test_movd(x86_mmx %a0, i32 %a1, i32 *%a2) {
 ;
 ; BTVER2-LABEL: test_movd:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vmovd %edi, %xmm0 # sched: [1:0.17]
+; BTVER2-NEXT:    vmovd %edi, %xmm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    vmovq %xmm0, -{{[0-9]+}}(%rsp) # sched: [1:1.00]
 ; BTVER2-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero sched: [5:1.00]
 ; BTVER2-NEXT:    movq -{{[0-9]+}}(%rsp), %mm1 # sched: [5:1.00]
 ; BTVER2-NEXT:    vmovlps %xmm0, -{{[0-9]+}}(%rsp) # sched: [1:1.00]
 ; BTVER2-NEXT:    paddd -{{[0-9]+}}(%rsp), %mm1 # sched: [6:1.00]
 ; BTVER2-NEXT:    paddd %mm1, %mm0 # sched: [1:0.50]
-; BTVER2-NEXT:    movd %mm1, %ecx # sched: [1:0.17]
-; BTVER2-NEXT:    movd %mm0, %eax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm1, %ecx # sched: [1:0.50]
+; BTVER2-NEXT:    movd %mm0, %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    movl %ecx, (%rsi) # sched: [1:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -847,9 +847,9 @@ define i64 @test_movdq2q(<2 x i64> %a0) optsize {
 ;
 ; BTVER2-LABEL: test_movdq2q:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movdq2q %xmm0, %mm0 # sched: [1:0.17]
+; BTVER2-NEXT:    movdq2q %xmm0, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    paddd %mm0, %mm0 # sched: [1:0.50]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_movdq2q:
@@ -1043,7 +1043,7 @@ define <2 x i64> @test_movq2dq(x86_mmx %a0) optsize {
 ;
 ; BTVER2-LABEL: test_movq2dq:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movq2dq %mm0, %xmm0 # sched: [1:0.17]
+; BTVER2-NEXT:    movq2dq %mm0, %xmm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_movq2dq:
@@ -1116,7 +1116,7 @@ define i64 @test_pabsb(x86_mmx *%a0) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    pabsb (%rdi), %mm0 # sched: [6:1.00]
 ; BTVER2-NEXT:    pabsb %mm0, %mm0 # sched: [1:0.50]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pabsb:
@@ -1194,7 +1194,7 @@ define i64 @test_pabsd(x86_mmx *%a0) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    pabsd (%rdi), %mm0 # sched: [6:1.00]
 ; BTVER2-NEXT:    pabsd %mm0, %mm0 # sched: [1:0.50]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pabsd:
@@ -1272,7 +1272,7 @@ define i64 @test_pabsw(x86_mmx *%a0) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    pabsw (%rdi), %mm0 # sched: [6:1.00]
 ; BTVER2-NEXT:    pabsw %mm0, %mm0 # sched: [1:0.50]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pabsw:
@@ -1350,7 +1350,7 @@ define i64 @test_packssdw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    packssdw %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    packssdw (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_packssdw:
@@ -1428,7 +1428,7 @@ define i64 @test_packsswb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    packsswb %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    packsswb (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_packsswb:
@@ -1506,7 +1506,7 @@ define i64 @test_packuswb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    packuswb %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    packuswb (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_packuswb:
@@ -1584,7 +1584,7 @@ define i64 @test_paddb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    paddb %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    paddb (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_paddb:
@@ -1662,7 +1662,7 @@ define i64 @test_paddd(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    paddd %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    paddd (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_paddd:
@@ -1740,7 +1740,7 @@ define i64 @test_paddq(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    paddq %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    paddq (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_paddq:
@@ -1818,7 +1818,7 @@ define i64 @test_paddsb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    paddsb %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    paddsb (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_paddsb:
@@ -1896,7 +1896,7 @@ define i64 @test_paddsw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    paddsw %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    paddsw (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_paddsw:
@@ -1974,7 +1974,7 @@ define i64 @test_paddusb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    paddusb %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    paddusb (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_paddusb:
@@ -2052,7 +2052,7 @@ define i64 @test_paddusw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    paddusw %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    paddusw (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_paddusw:
@@ -2130,7 +2130,7 @@ define i64 @test_paddw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    paddw %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    paddw (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_paddw:
@@ -2208,7 +2208,7 @@ define i64 @test_palignr(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    palignr $1, %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    palignr $1, (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_palignr:
@@ -2286,7 +2286,7 @@ define i64 @test_pand(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    pand %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    pand (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pand:
@@ -2364,7 +2364,7 @@ define i64 @test_pandn(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    pandn %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    pandn (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pandn:
@@ -2442,7 +2442,7 @@ define i64 @test_pavgb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    pavgb %mm1, %mm0 # sched: [2:1.00]
 ; BTVER2-NEXT:    pavgb (%rdi), %mm0 # sched: [7:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pavgb:
@@ -2520,7 +2520,7 @@ define i64 @test_pavgw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    pavgw %mm1, %mm0 # sched: [2:1.00]
 ; BTVER2-NEXT:    pavgw (%rdi), %mm0 # sched: [7:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pavgw:
@@ -2598,7 +2598,7 @@ define i64 @test_pcmpeqb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    pcmpeqb %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    pcmpeqb (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pcmpeqb:
@@ -2676,7 +2676,7 @@ define i64 @test_pcmpeqd(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    pcmpeqd %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    pcmpeqd (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pcmpeqd:
@@ -2754,7 +2754,7 @@ define i64 @test_pcmpeqw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    pcmpeqw %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    pcmpeqw (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pcmpeqw:
@@ -2832,7 +2832,7 @@ define i64 @test_pcmpgtb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    pcmpgtb %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    pcmpgtb (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pcmpgtb:
@@ -2910,7 +2910,7 @@ define i64 @test_pcmpgtd(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    pcmpgtd %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    pcmpgtd (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pcmpgtd:
@@ -2988,7 +2988,7 @@ define i64 @test_pcmpgtw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    pcmpgtw %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    pcmpgtw (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pcmpgtw:
@@ -3121,7 +3121,7 @@ define i64 @test_phaddd(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    phaddd %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    phaddd (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_phaddd:
@@ -3199,7 +3199,7 @@ define i64 @test_phaddsw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    phaddsw %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    phaddsw (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_phaddsw:
@@ -3277,7 +3277,7 @@ define i64 @test_phaddw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    phaddw %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    phaddw (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_phaddw:
@@ -3355,7 +3355,7 @@ define i64 @test_phsubd(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    phsubd %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    phsubd (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_phsubd:
@@ -3433,7 +3433,7 @@ define i64 @test_phsubsw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    phsubsw %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    phsubsw (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_phsubsw:
@@ -3511,7 +3511,7 @@ define i64 @test_phsubw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    phsubw %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    phsubw (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_phsubw:
@@ -3598,7 +3598,7 @@ define i64 @test_pinsrw(x86_mmx %a0, i32 %a1, i16* %a2) optsize {
 ; BTVER2-NEXT:    movswl (%rsi), %eax # sched: [4:1.00]
 ; BTVER2-NEXT:    pinsrw $0, %edi, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    pinsrw $1, %eax, %mm0 # sched: [1:0.50]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pinsrw:
@@ -3678,7 +3678,7 @@ define i64 @test_pmaddwd(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    pmaddwd %mm1, %mm0 # sched: [2:1.00]
 ; BTVER2-NEXT:    pmaddwd (%rdi), %mm0 # sched: [7:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pmaddwd:
@@ -3756,7 +3756,7 @@ define i64 @test_pmaddubsw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    pmaddubsw %mm1, %mm0 # sched: [2:1.00]
 ; BTVER2-NEXT:    pmaddubsw (%rdi), %mm0 # sched: [7:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pmaddubsw:
@@ -3834,7 +3834,7 @@ define i64 @test_pmaxsw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    pmaxsw %mm1, %mm0 # sched: [2:1.00]
 ; BTVER2-NEXT:    pmaxsw (%rdi), %mm0 # sched: [7:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pmaxsw:
@@ -3912,7 +3912,7 @@ define i64 @test_pmaxub(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    pmaxub %mm1, %mm0 # sched: [2:1.00]
 ; BTVER2-NEXT:    pmaxub (%rdi), %mm0 # sched: [7:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pmaxub:
@@ -3990,7 +3990,7 @@ define i64 @test_pminsw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    pminsw %mm1, %mm0 # sched: [2:1.00]
 ; BTVER2-NEXT:    pminsw (%rdi), %mm0 # sched: [7:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pminsw:
@@ -4068,7 +4068,7 @@ define i64 @test_pminub(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    pminub %mm1, %mm0 # sched: [2:1.00]
 ; BTVER2-NEXT:    pminub (%rdi), %mm0 # sched: [7:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pminub:
@@ -4201,7 +4201,7 @@ define i64 @test_pmulhrsw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    pmulhrsw %mm1, %mm0 # sched: [2:1.00]
 ; BTVER2-NEXT:    pmulhrsw (%rdi), %mm0 # sched: [7:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pmulhrsw:
@@ -4279,7 +4279,7 @@ define i64 @test_pmulhw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    pmulhw %mm1, %mm0 # sched: [2:1.00]
 ; BTVER2-NEXT:    pmulhw (%rdi), %mm0 # sched: [7:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pmulhw:
@@ -4357,7 +4357,7 @@ define i64 @test_pmulhuw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    pmulhuw %mm1, %mm0 # sched: [2:1.00]
 ; BTVER2-NEXT:    pmulhuw (%rdi), %mm0 # sched: [7:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pmulhuw:
@@ -4435,7 +4435,7 @@ define i64 @test_pmullw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    pmullw %mm1, %mm0 # sched: [2:1.00]
 ; BTVER2-NEXT:    pmullw (%rdi), %mm0 # sched: [7:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pmullw:
@@ -4513,7 +4513,7 @@ define i64 @test_pmuludq(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    pmuludq %mm1, %mm0 # sched: [2:1.00]
 ; BTVER2-NEXT:    pmuludq (%rdi), %mm0 # sched: [7:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pmuludq:
@@ -4591,7 +4591,7 @@ define i64 @test_por(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    por %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    por (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_por:
@@ -4669,7 +4669,7 @@ define i64 @test_psadbw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    psadbw %mm1, %mm0 # sched: [2:1.00]
 ; BTVER2-NEXT:    psadbw (%rdi), %mm0 # sched: [7:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_psadbw:
@@ -4747,7 +4747,7 @@ define i64 @test_pshufb(x86_mmx %a0, x86_mmx %a1, x86_mmx *%a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    pshufb %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    pshufb (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pshufb:
@@ -4825,7 +4825,7 @@ define i64 @test_pshufw(x86_mmx *%a0) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    pshufw $0, (%rdi), %mm0 # mm0 = mem[0,0,0,0] sched: [6:1.00]
 ; BTVER2-NEXT:    pshufw $0, %mm0, %mm0 # mm0 = mm0[0,0,0,0] sched: [1:0.50]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pshufw:
@@ -4903,7 +4903,7 @@ define i64 @test_psignb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    psignb %mm1, %mm0 # sched: [2:1.00]
 ; BTVER2-NEXT:    psignb (%rdi), %mm0 # sched: [7:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_psignb:
@@ -4981,7 +4981,7 @@ define i64 @test_psignd(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    psignd %mm1, %mm0 # sched: [2:1.00]
 ; BTVER2-NEXT:    psignd (%rdi), %mm0 # sched: [7:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_psignd:
@@ -5059,7 +5059,7 @@ define i64 @test_psignw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    psignw %mm1, %mm0 # sched: [2:1.00]
 ; BTVER2-NEXT:    psignw (%rdi), %mm0 # sched: [7:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_psignw:
@@ -5146,7 +5146,7 @@ define i64 @test_pslld(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2-NEXT:    pslld %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    pslld (%rdi), %mm0 # sched: [6:1.00]
 ; BTVER2-NEXT:    pslld $7, %mm0 # sched: [1:0.50]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pslld:
@@ -5236,7 +5236,7 @@ define i64 @test_psllq(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2-NEXT:    psllq %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    psllq (%rdi), %mm0 # sched: [6:1.00]
 ; BTVER2-NEXT:    psllq $7, %mm0 # sched: [1:0.50]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_psllq:
@@ -5326,7 +5326,7 @@ define i64 @test_psllw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2-NEXT:    psllw %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    psllw (%rdi), %mm0 # sched: [6:1.00]
 ; BTVER2-NEXT:    psllw $7, %mm0 # sched: [1:0.50]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_psllw:
@@ -5416,7 +5416,7 @@ define i64 @test_psrad(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2-NEXT:    psrad %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    psrad (%rdi), %mm0 # sched: [6:1.00]
 ; BTVER2-NEXT:    psrad $7, %mm0 # sched: [1:0.50]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_psrad:
@@ -5506,7 +5506,7 @@ define i64 @test_psraw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2-NEXT:    psraw %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    psraw (%rdi), %mm0 # sched: [6:1.00]
 ; BTVER2-NEXT:    psraw $7, %mm0 # sched: [1:0.50]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_psraw:
@@ -5596,7 +5596,7 @@ define i64 @test_psrld(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2-NEXT:    psrld %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    psrld (%rdi), %mm0 # sched: [6:1.00]
 ; BTVER2-NEXT:    psrld $7, %mm0 # sched: [1:0.50]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_psrld:
@@ -5686,7 +5686,7 @@ define i64 @test_psrlq(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2-NEXT:    psrlq %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    psrlq (%rdi), %mm0 # sched: [6:1.00]
 ; BTVER2-NEXT:    psrlq $7, %mm0 # sched: [1:0.50]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_psrlq:
@@ -5776,7 +5776,7 @@ define i64 @test_psrlw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2-NEXT:    psrlw %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    psrlw (%rdi), %mm0 # sched: [6:1.00]
 ; BTVER2-NEXT:    psrlw $7, %mm0 # sched: [1:0.50]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_psrlw:
@@ -5857,7 +5857,7 @@ define i64 @test_psubb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    psubb %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    psubb (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_psubb:
@@ -5935,7 +5935,7 @@ define i64 @test_psubd(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    psubd %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    psubd (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_psubd:
@@ -6013,7 +6013,7 @@ define i64 @test_psubq(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    psubq %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    psubq (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_psubq:
@@ -6091,7 +6091,7 @@ define i64 @test_psubsb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    psubsb %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    psubsb (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_psubsb:
@@ -6169,7 +6169,7 @@ define i64 @test_psubsw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    psubsw %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    psubsw (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_psubsw:
@@ -6247,7 +6247,7 @@ define i64 @test_psubusb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    psubusb %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    psubusb (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_psubusb:
@@ -6325,7 +6325,7 @@ define i64 @test_psubusw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    psubusw %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    psubusw (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_psubusw:
@@ -6403,7 +6403,7 @@ define i64 @test_psubw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    psubw %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    psubw (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_psubw:
@@ -6481,7 +6481,7 @@ define i64 @test_punpckhbw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    punpckhbw %mm1, %mm0 # mm0 = mm0[4],mm1[4],mm0[5],mm1[5],mm0[6],mm1[6],mm0[7],mm1[7] sched: [1:0.50]
 ; BTVER2-NEXT:    punpckhbw (%rdi), %mm0 # mm0 = mm0[4],mem[4],mm0[5],mem[5],mm0[6],mem[6],mm0[7],mem[7] sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_punpckhbw:
@@ -6559,7 +6559,7 @@ define i64 @test_punpckhdq(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    punpckhdq %mm1, %mm0 # mm0 = mm0[1],mm1[1] sched: [1:0.50]
 ; BTVER2-NEXT:    punpckhdq (%rdi), %mm0 # mm0 = mm0[1],mem[1] sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_punpckhdq:
@@ -6637,7 +6637,7 @@ define i64 @test_punpckhwd(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    punpckhwd %mm1, %mm0 # mm0 = mm0[2],mm1[2],mm0[3],mm1[3] sched: [1:0.50]
 ; BTVER2-NEXT:    punpckhwd (%rdi), %mm0 # mm0 = mm0[2],mem[2],mm0[3],mem[3] sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_punpckhwd:
@@ -6715,7 +6715,7 @@ define i64 @test_punpcklbw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    punpcklbw %mm1, %mm0 # mm0 = mm0[0],mm1[0],mm0[1],mm1[1],mm0[2],mm1[2],mm0[3],mm1[3] sched: [1:0.50]
 ; BTVER2-NEXT:    punpcklbw (%rdi), %mm0 # mm0 = mm0[0],mem[0],mm0[1],mem[1],mm0[2],mem[2],mm0[3],mem[3] sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_punpcklbw:
@@ -6793,7 +6793,7 @@ define i64 @test_punpckldq(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    punpckldq %mm1, %mm0 # mm0 = mm0[0],mm1[0] sched: [1:0.50]
 ; BTVER2-NEXT:    punpckldq (%rdi), %mm0 # mm0 = mm0[0],mem[0] sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_punpckldq:
@@ -6871,7 +6871,7 @@ define i64 @test_punpcklwd(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    punpcklwd %mm1, %mm0 # mm0 = mm0[0],mm1[0],mm0[1],mm1[1] sched: [1:0.50]
 ; BTVER2-NEXT:    punpcklwd (%rdi), %mm0 # mm0 = mm0[0],mem[0],mm0[1],mem[1] sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_punpcklwd:
@@ -6949,7 +6949,7 @@ define i64 @test_pxor(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    pxor %mm1, %mm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    pxor (%rdi), %mm0 # sched: [6:1.00]
-; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    movd %mm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pxor:

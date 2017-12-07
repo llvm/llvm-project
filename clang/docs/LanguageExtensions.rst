@@ -139,6 +139,35 @@ and following ``__`` (double underscore) to avoid interference from a macro with
 the same name.  For instance, ``gnu::__const__`` can be used instead of
 ``gnu::const``.
 
+``__has_c_attribute``
+---------------------
+
+This function-like macro takes a single argument that is the name of an
+attribute exposed with the double square-bracket syntax in C mode. The argument
+can either be a single identifier or a scoped identifier. If the attribute is
+supported, a nonzero value is returned. If the attribute is not supported by the
+current compilation target, this macro evaluates to 0. It can be used like this:
+
+.. code-block:: c
+
+  #ifndef __has_c_attribute         // Optional of course.
+    #define __has_c_attribute(x) 0  // Compatibility with non-clang compilers.
+  #endif
+
+  ...
+  #if __has_c_attribute(fallthrough)
+    #define FALLTHROUGH [[fallthrough]]
+  #else
+    #define FALLTHROUGH
+  #endif
+  ...
+
+The attribute identifier (but not scope) can also be specified with a preceding
+and following ``__`` (double underscore) to avoid interference from a macro with
+the same name.  For instance, ``gnu::__const__`` can be used instead of
+``gnu::const``.
+
+
 ``__has_attribute``
 -------------------
 

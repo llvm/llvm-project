@@ -13,12 +13,9 @@
 
 include "llvm/Target/Target.td"
 include "Nios2RegisterInfo.td"
-include "Nios2InstrInfo.td"
 include "Nios2Schedule.td"
-
-def Nios2InstrInfo : InstrInfo;
-
-def Nios2 : Target { let InstructionSet = Nios2InstrInfo; }
+include "Nios2InstrInfo.td"
+include "Nios2CallingConv.td"
 
 //===----------------------------------------------------------------------===//
 // Nios2 Subtarget features
@@ -37,3 +34,26 @@ class Proc<string Name, list<SubtargetFeature> Features>
 
 def : Proc<"nios2r1", [FeatureNios2r1]>;
 def : Proc<"nios2r2", [FeatureNios2r2]>;
+
+def Nios2InstrInfo : InstrInfo;
+
+def Nios2AsmParser : AsmParser {
+  let ShouldEmitMatchRegisterName = 0;
+}
+
+//===----------------------------------------------------------------------===//
+// Declare the target which we are implementing
+//===----------------------------------------------------------------------===//
+
+def Nios2AsmWriter : AsmWriter {
+  string AsmWriterClassName  = "InstPrinter";
+  int PassSubtarget = 1;
+  int Variant = 0;
+}
+
+def Nios2 : Target {
+// def Nios2InstrInfo : InstrInfo as before.
+  let InstructionSet = Nios2InstrInfo;
+  let AssemblyParsers = [Nios2AsmParser];
+  let AssemblyWriters = [Nios2AsmWriter];
+}
