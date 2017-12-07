@@ -547,7 +547,7 @@ public:
   /// Represents a predicate at the MachineFunction level.  The control flow a
   /// MachineBranchPredicate represents is:
   ///
-  ///  Reg <def>= LHS `Predicate` RHS         == ConditionDef
+  ///  Reg = LHS `Predicate` RHS         == ConditionDef
   ///  if Reg then goto TrueDest else goto FalseDest
   ///
   struct MachineBranchPredicate {
@@ -1432,7 +1432,7 @@ public:
   /// For example, AVX instructions may copy part of a register operand into
   /// the unused high bits of the destination register.
   ///
-  /// vcvtsi2sdq %rax, %xmm0<undef>, %xmm14
+  /// vcvtsi2sdq %rax, undef %xmm0, %xmm14
   ///
   /// In the code above, vcvtsi2sdq copies %xmm0[127:64] into %xmm14 creating a
   /// false dependence on any previous write to %xmm0.

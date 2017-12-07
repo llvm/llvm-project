@@ -6,19 +6,19 @@
 # that were no longer live-in.
 # This could cause if-converter to generate incorrect code.
 #
-# In this testcase, the "r1 = A2_sxth r0<kill>" was hoisted, and since r0
+# In this testcase, the "r1 = A2_sxth killed r0" was hoisted, and since r0
 # was killed, it was no longer live-in in either successor. The if-converter
 # then created code, where the first predicated instruction has incorrect
 # implicit use of r0:
 #
 # %bb.0:
 #     Live Ins: %R0
-#         %R1<def> = A2_sxth %R0<kill>               ; hoisted, kills r0
-#         A2_nop %P0<imp-def>
-#         %R0<def> = C2_cmoveit %P0, 2, %R0<imp-use> ; predicated A2_tfrsi
-#         %R0<def> = C2_cmoveif killed %P0, 1, %R0<imp-use> ; predicated A2_tfrsi
-#         %R0<def> = A2_add %R0<kill>, %R1<kill>
-#         J2_jumpr %R31, %PC<imp-def,dead>
+#         %R1 = A2_sxth killed %R0               ; hoisted, kills r0
+#         A2_nop implicit-def %P0
+#         %R0 = C2_cmoveit %P0, 2, implicit %R0 ; predicated A2_tfrsi
+#         %R0 = C2_cmoveif killed %P0, 1, implicit %R0 ; predicated A2_tfrsi
+#         %R0 = A2_add killed %R0, killed %R1
+#         J2_jumpr %R31, implicit dead %PC
 #
 
 # CHECK: %r1 = A2_sxth killed %r0

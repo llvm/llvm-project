@@ -772,8 +772,8 @@ bool HexagonPacketizerList::canPromoteToNewValueStore(const MachineInstr &MI,
 
   // If data definition is because of implicit definition of the register,
   // do not newify the store. Eg.
-  // %r9<def> = ZXTH %r12, %d6<imp-use>, %r12<imp-def>
-  // S2_storerh_io %r8, 2, %r12<kill>; mem:ST2[%scevgep343]
+  // %r9 = ZXTH %r12, implicit %d6, implicit-def %r12
+  // S2_storerh_io %r8, 2, killed %r12; mem:ST2[%scevgep343]
   for (auto &MO : PacketMI.operands()) {
     if (MO.isRegMask() && MO.clobbersPhysReg(DepReg))
       return false;
@@ -787,8 +787,8 @@ bool HexagonPacketizerList::canPromoteToNewValueStore(const MachineInstr &MI,
   // Handle imp-use of super reg case. There is a target independent side
   // change that should prevent this situation but I am handling it for
   // just-in-case. For example, we cannot newify R2 in the following case:
-  // %r3<def> = A2_tfrsi 0;
-  // S2_storeri_io %r0<kill>, 0, %r2<kill>, %d1<imp-use,kill>;
+  // %r3 = A2_tfrsi 0;
+  // S2_storeri_io killed %r0, 0, killed %r2, implicit killed %d1;
   for (auto &MO : MI.operands()) {
     if (MO.isReg() && MO.isUse() && MO.isImplicit() && MO.getReg() == DepReg)
       return false;
@@ -892,12 +892,12 @@ bool HexagonPacketizerList::canPromoteToDotNew(const MachineInstr &MI,
 // Go through the packet instructions and search for an anti dependency between
 // them and DepReg from MI. Consider this case:
 // Trying to add
-// a) %r1<def> = TFRI_cdNotPt %p3, 2
+// a) %r1 = TFRI_cdNotPt %p3, 2
 // to this packet:
 // {
-//   b) %p0<def> = C2_or %p3<kill>, %p0<kill>
-//   c) %p3<def> = C2_tfrrp %r23
-//   d) %r1<def> = C2_cmovenewit %p3, 4
+//   b) %p0 = C2_or killed %p3, killed %p0
+//   c) %p3 = C2_tfrrp %r23
+//   d) %r1 = C2_cmovenewit %p3, 4
 //  }
 // The P3 from a) and d) will be complements after
 // a)'s P3 is converted to .new form
@@ -962,11 +962,11 @@ bool HexagonPacketizerList::arePredicatesComplements(MachineInstr &MI1,
 
   // One corner case deals with the following scenario:
   // Trying to add
-  // a) %r24<def> = A2_tfrt %p0, %r25
+  // a) %r24 = A2_tfrt %p0, %r25
   // to this packet:
   // {
-  //   b) %r25<def> = A2_tfrf %p0, %r24
-  //   c) %p0<def> = C2_cmpeqi %r26, 1
+  //   b) %r25 = A2_tfrf %p0, %r24
+  //   c) %p0 = C2_cmpeqi %r26, 1
   // }
   //
   // On general check a) and b) are complements, but presence of c) will
@@ -1543,7 +1543,7 @@ bool HexagonPacketizerList::isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) {
 
     // There are certain anti-dependencies that cannot be ignored.
     // Specifically:
-    //   J2_call ... %r0<imp-def>   ; SUJ
+    //   J2_call ... implicit-def %r0   ; SUJ
     //   R0 = ...                   ; SUI
     // Those cannot be packetized together, since the call will observe
     // the effect of the assignment to R0.

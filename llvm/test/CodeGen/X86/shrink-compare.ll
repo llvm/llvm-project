@@ -72,11 +72,11 @@ define i1 @test4(i64 %a, i32 %b) {
 ; CHECK-NEXT:    testl %esi, %esi
 ; CHECK-NEXT:    je .LBB3_1
 ; CHECK-NEXT:  # %bb.2: # %lor.end
-; CHECK-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; CHECK-NEXT:    # kill: def %al killed %al killed %eax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB3_1: # %lor.rhs
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; CHECK-NEXT:    # kill: def %al killed %al killed %eax
 ; CHECK-NEXT:    retq
 entry:
   %tobool = icmp ne i32 %b, 0

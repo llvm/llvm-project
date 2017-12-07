@@ -150,7 +150,7 @@ public:
   ///
   struct VirtRegInfo {
     /// Reads - One of the operands read the virtual register.  This does not
-    /// include <undef> or <internal> use operands, see MO::readsReg().
+    /// include undef or internal use operands, see MO::readsReg().
     bool Reads;
 
     /// Writes - One of the operands writes the virtual register.

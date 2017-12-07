@@ -530,7 +530,7 @@ define void @test_monitor(i8* %a0, i32 %a1, i32 %a2) {
 ; BTVER2-LABEL: test_monitor:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    leaq (%rdi), %rax # sched: [1:0.50]
-; BTVER2-NEXT:    movl %esi, %ecx # sched: [1:0.17]
+; BTVER2-NEXT:    movl %esi, %ecx # sched: [1:0.50]
 ; BTVER2-NEXT:    monitor # sched: [100:0.17]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -838,8 +838,8 @@ define void @test_mwait(i32 %a0, i32 %a1) {
 ;
 ; BTVER2-LABEL: test_mwait:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movl %edi, %ecx # sched: [1:0.17]
-; BTVER2-NEXT:    movl %esi, %eax # sched: [1:0.17]
+; BTVER2-NEXT:    movl %edi, %ecx # sched: [1:0.50]
+; BTVER2-NEXT:    movl %esi, %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    mwait # sched: [100:0.17]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;

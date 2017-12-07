@@ -22,7 +22,10 @@ struct ErrorHolder {
 };
 
 template <typename T> struct ExpectedHolder : public ErrorHolder {
-  Optional<T *> Value;
+  ExpectedHolder(ErrorHolder Err, Expected<T> &Exp)
+      : ErrorHolder(std::move(Err)), Exp(Exp) {}
+
+  Expected<T> &Exp;
 };
 
 inline void PrintTo(const ErrorHolder &Err, std::ostream *Out) {
@@ -35,7 +38,7 @@ inline void PrintTo(const ErrorHolder &Err, std::ostream *Out) {
 template <typename T>
 void PrintTo(const ExpectedHolder<T> &Item, std::ostream *Out) {
   if (Item.Success) {
-    *Out << "succeeded with value \"" << ::testing::PrintToString(**Item.Value)
+    *Out << "succeeded with value \"" << ::testing::PrintToString(*Item.Exp)
          << "\"";
   } else {
     PrintTo(static_cast<const ErrorHolder &>(Item), Out);

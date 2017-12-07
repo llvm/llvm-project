@@ -41,7 +41,7 @@ define i16 @test_i16(i16 %a) nounwind {
 ; X86-NO-CMOV-NEXT:    sarw $15, %cx
 ; X86-NO-CMOV-NEXT:    addl %ecx, %eax
 ; X86-NO-CMOV-NEXT:    xorl %ecx, %eax
-; X86-NO-CMOV-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; X86-NO-CMOV-NEXT:    # kill: def %ax killed %ax killed %eax
 ; X86-NO-CMOV-NEXT:    retl
 ;
 ; X86-CMOV-LABEL: test_i16:

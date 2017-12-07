@@ -4255,8 +4255,8 @@ define void @test_fxch() optsize {
 ; BTVER2-LABEL: test_fxch:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    fxch %st(1) # sched: [1:0.17]
-; BTVER2-NEXT:    fxch %st(3) # sched: [1:0.17]
+; BTVER2-NEXT:    fxch %st(1) # sched: [1:0.50]
+; BTVER2-NEXT:    fxch %st(3) # sched: [1:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;

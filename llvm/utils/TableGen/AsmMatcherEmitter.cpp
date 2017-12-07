@@ -2438,7 +2438,9 @@ static void emitMatchRegisterName(CodeGenTarget &Target, Record *AsmParser,
 
   OS << "static unsigned MatchRegisterName(StringRef Name) {\n";
 
-  StringMatcher("Name", Matches, OS).Emit();
+  bool IgnoreDuplicates =
+      AsmParser->getValueAsBit("AllowDuplicateRegisterNames");
+  StringMatcher("Name", Matches, OS).Emit(0, IgnoreDuplicates);
 
   OS << "  return 0;\n";
   OS << "}\n\n";
@@ -2469,7 +2471,9 @@ static void emitMatchRegisterAltName(CodeGenTarget &Target, Record *AsmParser,
 
   OS << "static unsigned MatchRegisterAltName(StringRef Name) {\n";
 
-  StringMatcher("Name", Matches, OS).Emit();
+  bool IgnoreDuplicates =
+      AsmParser->getValueAsBit("AllowDuplicateRegisterNames");
+  StringMatcher("Name", Matches, OS).Emit(0, IgnoreDuplicates);
 
   OS << "  return 0;\n";
   OS << "}\n\n";

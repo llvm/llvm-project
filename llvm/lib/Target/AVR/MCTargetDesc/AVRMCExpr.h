@@ -30,7 +30,11 @@ public:
 
     VK_AVR_PM_LO8, ///< Corresponds to `pm_lo8()`.
     VK_AVR_PM_HI8, ///< Corresponds to `pm_hi8()`.
-    VK_AVR_PM_HH8  ///< Corresponds to `pm_hh8()`.
+    VK_AVR_PM_HH8, ///< Corresponds to `pm_hh8()`.
+
+    VK_AVR_LO8_GS, ///< Corresponds to `lo8(gs())`.
+    VK_AVR_HI8_GS, ///< Corresponds to `hi8(gs())`.
+    VK_AVR_GS, ///< Corresponds to `gs()`.
   };
 
 public:

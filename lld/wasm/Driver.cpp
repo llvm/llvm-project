@@ -142,7 +142,6 @@ static Symbol* addSyntheticGlobal(StringRef Name, int32_t Value) {
   log("injecting global: " + Name);
   Symbol *S = Symtab->addDefinedGlobal(Name);
   S->setVirtualAddress(Value);
-  Config->SyntheticGlobals.emplace_back(S);
   return S;
 }
 
@@ -273,12 +272,18 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   if (Config->Relocatable && !Config->Entry.empty())
     error("entry point specified for relocatable output file");
+  if (Config->Relocatable && Args.hasArg(OPT_undefined))
+    error("undefined symbols specified for relocatable output file");
 
   if (!Config->Relocatable) {
     if (Config->Entry.empty())
       Config->Entry = "_start";
     static WasmSignature Signature = {{}, WASM_TYPE_NORESULT};
     addSyntheticUndefinedFunction(Config->Entry, &Signature);
+
+    // Handle the `--undefined <sym>` options.
+    for (StringRef S : args::getStrings(Args, OPT_undefined))
+      addSyntheticUndefinedFunction(S, nullptr);
 
     Config->StackPointerSymbol = addSyntheticGlobal("__stack_pointer", 0);
   }
@@ -295,6 +300,18 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // Make sure we have resolved all symbols.
   if (!Config->Relocatable && !Config->AllowUndefined) {
     Symtab->reportRemainingUndefines();
+    if (errorCount())
+      return;
+  } else {
+    // When we allow undefined symbols we cannot include those defined in
+    // -u/--undefined since these undefined symbols have only names and no
+    // function signature, which means they cannot be written to the final
+    // output.
+    for (StringRef S : args::getStrings(Args, OPT_undefined)) {
+      Symbol *Sym = Symtab->find(S);
+      if (!Sym->isDefined())
+        error("function forced with --undefined not found: " + Sym->getName());
+    }
     if (errorCount())
       return;
   }

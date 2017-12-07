@@ -12,3 +12,6 @@ amoor.w. a4, a5, (a6) # CHECK: :[[@LINE]]:1: error: unrecognized instruction mne
 
 # lr only takes two operands
 lr.w s0, (s1), s2 # CHECK: :[[@LINE]]:16: error: invalid operand for instruction
+
+# Note: errors for use of RV64A instructions for RV32 are checked in
+# rv64a-valid.s

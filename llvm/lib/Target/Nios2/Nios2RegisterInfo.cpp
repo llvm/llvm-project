@@ -32,11 +32,16 @@ const TargetRegisterClass *Nios2RegisterInfo::intRegClass(unsigned Size) const {
 
 const MCPhysReg *
 Nios2RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
-  return nullptr;
+  return CSR_SaveList;
 }
 
 BitVector Nios2RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
-  BitVector Reserved(1);
+  static const MCPhysReg ReservedCPURegs[] = {Nios2::ZERO, Nios2::AT, Nios2::SP,
+                                             Nios2::RA,   Nios2::PC, Nios2::GP};
+  BitVector Reserved(getNumRegs());
+
+  for (unsigned I = 0; I < array_lengthof(ReservedCPURegs); ++I)
+    Reserved.set(ReservedCPURegs[I]);
 
   return Reserved;
 }
@@ -46,5 +51,5 @@ void Nios2RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                             RegScavenger *RS) const {}
 
 unsigned Nios2RegisterInfo::getFrameRegister(const MachineFunction &MF) const {
-  return 0;
+  return Nios2::SP;
 }

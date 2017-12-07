@@ -227,8 +227,8 @@ attributes #0 = { nounwind }
 
 ; The following test failed because llvm had a bug where a structure like:
 ;
-; %12<def> = CMOV_GR8 %7, %11 ... (lt)
-; %13<def> = CMOV_GR8 %12, %11 ... (gt)
+; %12 = CMOV_GR8 %7, %11 ... (lt)
+; %13 = CMOV_GR8 %12, %11 ... (gt)
 ;
 ; was lowered to:
 ;

@@ -272,7 +272,7 @@ unsigned HexagonMCInstrInfo::getDuplexCandidateGroup(MCInst const &MCI) {
   case Hexagon::J2_jumpr:
   case Hexagon::PS_jmpret:
     // jumpr r31
-    // Actual form JMPR %pc<imp-def>, %r31<imp-use>, %r0<imp-use,internal>.
+    // Actual form JMPR implicit-def %pc, implicit %r31, implicit internal %r0.
     DstReg = MCI.getOperand(0).getReg();
     if (Hexagon::R31 == DstReg)
       return HexagonII::HSIG_L2;
@@ -471,7 +471,7 @@ unsigned HexagonMCInstrInfo::getDuplexCandidateGroup(MCInst const &MCI) {
   case Hexagon::C2_cmovenewif:
     // if ([!]P0[.new]) Rd = #0
     // Actual form:
-    // %r16<def> = C2_cmovenewit %p0<internal>, 0, %r16<imp-use,undef>;
+    // %r16 = C2_cmovenewit internal %p0, 0, implicit undef %r16;
     DstReg = MCI.getOperand(0).getReg();  // Rd
     PredReg = MCI.getOperand(1).getReg(); // P0
     if (HexagonMCInstrInfo::isIntRegForSubInst(DstReg) &&

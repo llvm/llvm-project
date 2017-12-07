@@ -4,7 +4,7 @@
 # Check there is no SReg_32 pressure created by DS_* instructions because of M0 use
 
 # CHECK: ScheduleDAGMILive::schedule starting
-# CHECK: SU({{.*}} = DS_READ_B32 {{.*}} %m0<imp-use>, %exec<imp-use>
+# CHECK: SU({{.*}} = DS_READ_B32 {{.*}} implicit %m0, implicit %exec
 # CHECK: Pressure Diff : {{$}}
 # CHECK: SU({{.*}} DS_WRITE_B32
 

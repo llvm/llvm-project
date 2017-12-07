@@ -6965,7 +6965,7 @@ multiclass pseudo_pcmpistrm<string asm, PatFrag ld_frag> {
                        (bc_v16i8 (ld_frag addr:$src2)), imm:$src3))]>;
 }
 
-let Defs = [EFLAGS], usesCustomInserter = 1 in {
+let Defs = [EFLAGS], usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
   defm VPCMPISTRM128 : pseudo_pcmpistrm<"#VPCMPISTRM128", loadv2i64>,
                          Requires<[HasAVX]>, VEX_WIG;
   defm PCMPISTRM128 : pseudo_pcmpistrm<"#PCMPISTRM128", memopv2i64>,
@@ -7002,7 +7002,7 @@ multiclass pseudo_pcmpestrm<string asm, PatFrag ld_frag> {
                        (bc_v16i8 (ld_frag addr:$src3)), EDX, imm:$src5))]>;
 }
 
-let Defs = [EFLAGS], Uses = [EAX, EDX], usesCustomInserter = 1 in {
+let Defs = [EFLAGS], Uses = [EAX, EDX], usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
   defm VPCMPESTRM128 : pseudo_pcmpestrm<"#VPCMPESTRM128", loadv2i64>,
                          Requires<[HasAVX]>;
   defm PCMPESTRM128 : pseudo_pcmpestrm<"#PCMPESTRM128", memopv2i64>,
@@ -7039,7 +7039,7 @@ multiclass pseudo_pcmpistri<string asm, PatFrag ld_frag> {
                               (bc_v16i8 (ld_frag addr:$src2)), imm:$src3))]>;
 }
 
-let Defs = [EFLAGS], usesCustomInserter = 1 in {
+let Defs = [EFLAGS], usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
   defm VPCMPISTRI : pseudo_pcmpistri<"#VPCMPISTRI", loadv2i64>,
                       Requires<[HasAVX]>, VEX_WIG;
   defm PCMPISTRI  : pseudo_pcmpistri<"#PCMPISTRI", memopv2i64>,
@@ -7077,7 +7077,7 @@ multiclass pseudo_pcmpestri<string asm, PatFrag ld_frag> {
        imm:$src5))]>;
 }
 
-let Defs = [EFLAGS], Uses = [EAX, EDX], usesCustomInserter = 1 in {
+let Defs = [EFLAGS], Uses = [EAX, EDX], hasNoSchedulingInfo = 1, usesCustomInserter = 1 in {
   defm VPCMPESTRI : pseudo_pcmpestri<"#VPCMPESTRI", loadv2i64>,
                       Requires<[HasAVX]>;
   defm PCMPESTRI  : pseudo_pcmpestri<"#PCMPESTRI", memopv2i64>,

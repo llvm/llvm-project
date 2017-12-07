@@ -421,7 +421,7 @@ bool ImplicitNullChecks::canHoistInst(MachineInstr *FaultingMI,
     //    test %rcx, %rcx
     //    je _null_block
     //  _non_null_block:
-    //    %rdx<def> = INST
+    //    %rdx = INST
     //    ...
     //
     // This restriction does not apply to the faulting load inst because in

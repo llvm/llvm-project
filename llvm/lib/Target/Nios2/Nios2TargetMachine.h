@@ -20,6 +20,8 @@
 namespace llvm {
 class Nios2TargetMachine : public LLVMTargetMachine {
   mutable StringMap<std::unique_ptr<Nios2Subtarget>> SubtargetMap;
+  std::unique_ptr<TargetLoweringObjectFile> TLOF;
+  Nios2Subtarget Subtarget;
 
 public:
   Nios2TargetMachine(const Target &T, const Triple &TT, StringRef CPU,
@@ -28,7 +30,12 @@ public:
                      CodeGenOpt::Level OL, bool JIT);
   ~Nios2TargetMachine() override;
 
+  const Nios2Subtarget *getSubtargetImpl() const { return &Subtarget; }
   const Nios2Subtarget *getSubtargetImpl(const Function &F) const override;
+
+  TargetLoweringObjectFile *getObjFileLowering() const override {
+    return TLOF.get();
+  }
 
   // Pass Pipeline Configuration
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;

@@ -13,7 +13,7 @@ define zeroext i8 @test_extractelement_varible_v64i1(<64 x i8> %a, <64 x i8> %b,
 ; SKX-NEXT:    .cfi_def_cfa_register %rbp
 ; SKX-NEXT:    andq $-64, %rsp
 ; SKX-NEXT:    subq $128, %rsp
-; SKX-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
+; SKX-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; SKX-NEXT:    vpcmpnleub %zmm1, %zmm0, %k0
 ; SKX-NEXT:    vpmovm2b %k0, %zmm0
 ; SKX-NEXT:    vmovdqa32 %zmm0, (%rsp)

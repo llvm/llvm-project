@@ -922,7 +922,7 @@ bool ARMExpandPseudo::ExpandCMP_SWAP_64(MachineBasicBlock &MBB,
   // .Lloadcmp:
   //     ldrexd rDestLo, rDestHi, [rAddr]
   //     cmp rDestLo, rDesiredLo
-  //     sbcs rTempReg<dead>, rDestHi, rDesiredHi
+  //     sbcs dead rTempReg, rDestHi, rDesiredHi
   //     bne .Ldone
   unsigned LDREXD = IsThumb ? ARM::t2LDREXD : ARM::LDREXD;
   MachineInstrBuilder MIB;

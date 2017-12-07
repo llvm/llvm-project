@@ -176,14 +176,14 @@ define i64 @test6(i64 %A, i32 %B) nounwind {
 ;
 ; X64-LINUX-LABEL: test6:
 ; X64-LINUX:       # %bb.0: # %entry
-; X64-LINUX-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
+; X64-LINUX-NEXT:    # kill: def %esi killed %esi def %rsi
 ; X64-LINUX-NEXT:    shlq $32, %rsi
 ; X64-LINUX-NEXT:    leaq (%rsi,%rdi), %rax
 ; X64-LINUX-NEXT:    retq
 ;
 ; X64-WIN32-LABEL: test6:
 ; X64-WIN32:       # %bb.0: # %entry
-; X64-WIN32-NEXT:    # kill: %edx<def> %edx<kill> %rdx<def>
+; X64-WIN32-NEXT:    # kill: def %edx killed %edx def %rdx
 ; X64-WIN32-NEXT:    shlq $32, %rdx
 ; X64-WIN32-NEXT:    leaq (%rdx,%rcx), %rax
 ; X64-WIN32-NEXT:    retq

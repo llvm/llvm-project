@@ -28,37 +28,37 @@
   }
 
 # CHECK:       ********** MI Scheduling **********
-# CHECK:       SU(2):   %2<def> = SMULBB %1, %1, pred:14, pred:%noreg; GPR:%2,%1,%1
+# CHECK:       SU(2):   %2:gpr = SMULBB %1, %1, pred:14, pred:%noreg; GPR:%2,%1,%1
 # CHECK_A9:    Latency    : 2
 # CHECK_SWIFT: Latency    : 4
 # CHECK_R52:   Latency    : 4
 #
-# CHECK:       SU(3):   %3<def> = SMLABB %0, %0, %2, pred:14, pred:%noreg; GPRnopc:%3,%0,%0 GPR:%2
+# CHECK:       SU(3):   %3:gprnopc = SMLABB %0, %0, %2, pred:14, pred:%noreg; GPRnopc:%3,%0,%0 GPR:%2
 # CHECK_A9:    Latency    : 2
 # CHECK_SWIFT: Latency    : 4
 # CHECK_R52:   Latency    : 4
 #
-# CHECK:       SU(4):   %4<def> = UXTH %3, 0, pred:14, pred:%noreg; GPRnopc:%4,%3
+# CHECK:       SU(4):   %4:gprnopc = UXTH %3, 0, pred:14, pred:%noreg; GPRnopc:%4,%3
 # CHECK_A9:    Latency    : 1
 # CHECK_SWIFT: Latency    : 1
 # CHECK_R52:   Latency    : 3
 #
-# CHECK:       SU(5):   %5<def> = MUL %4, %4, pred:14, pred:%noreg, opt:%noreg; GPRnopc:%5,%4,%4
+# CHECK:       SU(5):   %5:gprnopc = MUL %4, %4, pred:14, pred:%noreg, opt:%noreg; GPRnopc:%5,%4,%4
 # CHECK_A9:    Latency    : 2
 # CHECK_SWIFT: Latency    : 4
 # CHECK_R52:   Latency    : 4
 #
-# CHECK:       SU(6):   %6<def> = MLA %5, %5, %5, pred:14, pred:%noreg, opt:%noreg; GPRnopc:%6,%5,%5,%5
+# CHECK:       SU(6):   %6:gprnopc = MLA %5, %5, %5, pred:14, pred:%noreg, opt:%noreg; GPRnopc:%6,%5,%5,%5
 # CHECK_A9:    Latency    : 2
 # CHECK_SWIFT: Latency    : 4
 # CHECK_R52:   Latency    : 4
 #
-# CHECK:       SU(7):   %7<def>, %8<def> = UMULL %6, %6, pred:14, pred:%noreg, opt:%noreg; GPRnopc:%7,%8,%6,%6
+# CHECK:       SU(7):   %7:gprnopc, %8:gprnopc = UMULL %6, %6, pred:14, pred:%noreg, opt:%noreg; GPRnopc:%7,%8,%6,%6
 # CHECK_A9:    Latency    : 3
 # CHECK_SWIFT: Latency    : 5
 # CHECK_R52:   Latency    : 4
 #
-# CHECK:       SU(11):   %13<def,tied4>, %14<def,tied5> = UMLAL %6, %6, %13<tied0>, %14<tied1>, pred:14, pred:%noreg, opt:%noreg; GPR:%13 GPRnopc:%14,%6,%6
+# CHECK:       SU(11):   %13:gpr, %14:gprnopc = UMLAL %6, %6, %13, %14, pred:14, pred:%noreg, opt:%noreg; GPR:%13 GPRnopc:%14,%6,%6
 # CHECK_SWIFT: Latency    : 7
 # CHECK_A9:    Latency    : 3
 # CHECK_R52:   Latency    : 4
