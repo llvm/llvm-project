@@ -35,7 +35,7 @@ define i32 @test2(i32 %a, i32 %b) nounwind readnone {
 ;
 ; X64-LABEL: test2:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
+; X64-NEXT:    # kill: def %edi killed %edi def %rdi
 ; X64-NEXT:    addl %esi, %edi
 ; X64-NEXT:    leal (%rdi,%rdi), %eax
 ; X64-NEXT:    retq
@@ -57,8 +57,8 @@ define i32 @test3(i32 %a, i32 %b) nounwind readnone {
 ;
 ; X64-LABEL: test3:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
-; X64-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
+; X64-NEXT:    # kill: def %esi killed %esi def %rsi
+; X64-NEXT:    # kill: def %edi killed %edi def %rdi
 ; X64-NEXT:    leal (%rdi,%rsi), %eax
 ; X64-NEXT:    movl $4, %ecx
 ; X64-NEXT:    mull %ecx

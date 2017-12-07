@@ -27,8 +27,8 @@ define void @foo() {
 ; X640-NEXT:    movzwl var_27, %ecx
 ; X640-NEXT:    subl $16610, %ecx # imm = 0x40E2
 ; X640-NEXT:    movl %ecx, %ecx
-; X640-NEXT:    # kill: %rcx<def> %ecx<kill>
-; X640-NEXT:    # kill: %cl<def> %rcx<kill>
+; X640-NEXT:    # kill: def %rcx killed %ecx
+; X640-NEXT:    # kill: def %cl killed %rcx
 ; X640-NEXT:    sarq %cl, %rsi
 ; X640-NEXT:    movb %sil, %cl
 ; X640-NEXT:    movb %cl, (%rax)
@@ -104,7 +104,7 @@ define void @foo() {
 ; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    addl $-16610, %ecx # imm = 0xBF1E
-; X64-NEXT:    # kill: %cl<def> %cl<kill> %ecx<kill>
+; X64-NEXT:    # kill: def %cl killed %cl killed %ecx
 ; X64-NEXT:    shrq %cl, %rax
 ; X64-NEXT:    movb %al, (%rax)
 ; X64-NEXT:    retq

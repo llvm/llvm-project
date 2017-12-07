@@ -1968,7 +1968,7 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
           //
           // BB2:
           // r1 = op2, ...
-          //    = op3, r1<kill>
+          //    = op3, killed r1
           IsSafe = false;
           break;
         }

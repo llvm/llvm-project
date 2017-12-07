@@ -22,7 +22,7 @@ entry:
 
 ; CHECK: Format: WASM
 ; CHECK: Relocations [
-; CHECK-NEXT:   Section (6) CODE {
+; CHECK-NEXT:   Section (8) CODE {
 ; CHECK-NEXT:     Relocation {
 ; CHECK-NEXT:       Type: R_WEBASSEMBLY_MEMORY_ADDR_LEB (3)
 ; CHECK-NEXT:       Offset: 0x9

@@ -503,7 +503,7 @@ define i16 @test_pcmpeq_w_256(<16 x i16> %a, <16 x i16> %b) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpcmpeqw %ymm1, %ymm0, %k0 ## encoding: [0x62,0xf1,0x7d,0x28,0x75,0xc1]
 ; CHECK-NEXT:    kmovd %k0, %eax ## encoding: [0xc5,0xfb,0x93,0xc0]
-; CHECK-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %ax killed %ax killed %eax
 ; CHECK-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call i16 @llvm.x86.avx512.mask.pcmpeq.w.256(<16 x i16> %a, <16 x i16> %b, i16 -1)
@@ -516,7 +516,7 @@ define i16 @test_mask_pcmpeq_w_256(<16 x i16> %a, <16 x i16> %b, i16 %mask) {
 ; CHECK-NEXT:    kmovd %edi, %k1 ## encoding: [0xc5,0xfb,0x92,0xcf]
 ; CHECK-NEXT:    vpcmpeqw %ymm1, %ymm0, %k0 {%k1} ## encoding: [0x62,0xf1,0x7d,0x29,0x75,0xc1]
 ; CHECK-NEXT:    kmovd %k0, %eax ## encoding: [0xc5,0xfb,0x93,0xc0]
-; CHECK-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %ax killed %ax killed %eax
 ; CHECK-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call i16 @llvm.x86.avx512.mask.pcmpeq.w.256(<16 x i16> %a, <16 x i16> %b, i16 %mask)
@@ -555,7 +555,7 @@ define i16 @test_pcmpgt_w_256(<16 x i16> %a, <16 x i16> %b) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpcmpgtw %ymm1, %ymm0, %k0 ## encoding: [0x62,0xf1,0x7d,0x28,0x65,0xc1]
 ; CHECK-NEXT:    kmovd %k0, %eax ## encoding: [0xc5,0xfb,0x93,0xc0]
-; CHECK-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %ax killed %ax killed %eax
 ; CHECK-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call i16 @llvm.x86.avx512.mask.pcmpgt.w.256(<16 x i16> %a, <16 x i16> %b, i16 -1)
@@ -568,7 +568,7 @@ define i16 @test_mask_pcmpgt_w_256(<16 x i16> %a, <16 x i16> %b, i16 %mask) {
 ; CHECK-NEXT:    kmovd %edi, %k1 ## encoding: [0xc5,0xfb,0x92,0xcf]
 ; CHECK-NEXT:    vpcmpgtw %ymm1, %ymm0, %k0 {%k1} ## encoding: [0x62,0xf1,0x7d,0x29,0x65,0xc1]
 ; CHECK-NEXT:    kmovd %k0, %eax ## encoding: [0xc5,0xfb,0x93,0xc0]
-; CHECK-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %ax killed %ax killed %eax
 ; CHECK-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call i16 @llvm.x86.avx512.mask.pcmpgt.w.256(<16 x i16> %a, <16 x i16> %b, i16 %mask)
@@ -582,7 +582,7 @@ define i16 @test_pcmpeq_b_128(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpcmpeqb %xmm1, %xmm0, %k0 ## encoding: [0x62,0xf1,0x7d,0x08,0x74,0xc1]
 ; CHECK-NEXT:    kmovd %k0, %eax ## encoding: [0xc5,0xfb,0x93,0xc0]
-; CHECK-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %ax killed %ax killed %eax
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call i16 @llvm.x86.avx512.mask.pcmpeq.b.128(<16 x i8> %a, <16 x i8> %b, i16 -1)
   ret i16 %res
@@ -594,7 +594,7 @@ define i16 @test_mask_pcmpeq_b_128(<16 x i8> %a, <16 x i8> %b, i16 %mask) {
 ; CHECK-NEXT:    kmovd %edi, %k1 ## encoding: [0xc5,0xfb,0x92,0xcf]
 ; CHECK-NEXT:    vpcmpeqb %xmm1, %xmm0, %k0 {%k1} ## encoding: [0x62,0xf1,0x7d,0x09,0x74,0xc1]
 ; CHECK-NEXT:    kmovd %k0, %eax ## encoding: [0xc5,0xfb,0x93,0xc0]
-; CHECK-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %ax killed %ax killed %eax
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call i16 @llvm.x86.avx512.mask.pcmpeq.b.128(<16 x i8> %a, <16 x i8> %b, i16 %mask)
   ret i16 %res
@@ -607,7 +607,7 @@ define i8 @test_pcmpeq_w_128(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpcmpeqw %xmm1, %xmm0, %k0 ## encoding: [0x62,0xf1,0x7d,0x08,0x75,0xc1]
 ; CHECK-NEXT:    kmovd %k0, %eax ## encoding: [0xc5,0xfb,0x93,0xc0]
-; CHECK-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %al killed %al killed %eax
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call i8 @llvm.x86.avx512.mask.pcmpeq.w.128(<8 x i16> %a, <8 x i16> %b, i8 -1)
   ret i8 %res
@@ -619,7 +619,7 @@ define i8 @test_mask_pcmpeq_w_128(<8 x i16> %a, <8 x i16> %b, i8 %mask) {
 ; CHECK-NEXT:    kmovd %edi, %k1 ## encoding: [0xc5,0xfb,0x92,0xcf]
 ; CHECK-NEXT:    vpcmpeqw %xmm1, %xmm0, %k0 {%k1} ## encoding: [0x62,0xf1,0x7d,0x09,0x75,0xc1]
 ; CHECK-NEXT:    kmovd %k0, %eax ## encoding: [0xc5,0xfb,0x93,0xc0]
-; CHECK-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %al killed %al killed %eax
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call i8 @llvm.x86.avx512.mask.pcmpeq.w.128(<8 x i16> %a, <8 x i16> %b, i8 %mask)
   ret i8 %res
@@ -632,7 +632,7 @@ define i16 @test_pcmpgt_b_128(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpcmpgtb %xmm1, %xmm0, %k0 ## encoding: [0x62,0xf1,0x7d,0x08,0x64,0xc1]
 ; CHECK-NEXT:    kmovd %k0, %eax ## encoding: [0xc5,0xfb,0x93,0xc0]
-; CHECK-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %ax killed %ax killed %eax
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call i16 @llvm.x86.avx512.mask.pcmpgt.b.128(<16 x i8> %a, <16 x i8> %b, i16 -1)
   ret i16 %res
@@ -644,7 +644,7 @@ define i16 @test_mask_pcmpgt_b_128(<16 x i8> %a, <16 x i8> %b, i16 %mask) {
 ; CHECK-NEXT:    kmovd %edi, %k1 ## encoding: [0xc5,0xfb,0x92,0xcf]
 ; CHECK-NEXT:    vpcmpgtb %xmm1, %xmm0, %k0 {%k1} ## encoding: [0x62,0xf1,0x7d,0x09,0x64,0xc1]
 ; CHECK-NEXT:    kmovd %k0, %eax ## encoding: [0xc5,0xfb,0x93,0xc0]
-; CHECK-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %ax killed %ax killed %eax
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call i16 @llvm.x86.avx512.mask.pcmpgt.b.128(<16 x i8> %a, <16 x i8> %b, i16 %mask)
   ret i16 %res
@@ -657,7 +657,7 @@ define i8 @test_pcmpgt_w_128(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpcmpgtw %xmm1, %xmm0, %k0 ## encoding: [0x62,0xf1,0x7d,0x08,0x65,0xc1]
 ; CHECK-NEXT:    kmovd %k0, %eax ## encoding: [0xc5,0xfb,0x93,0xc0]
-; CHECK-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %al killed %al killed %eax
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call i8 @llvm.x86.avx512.mask.pcmpgt.w.128(<8 x i16> %a, <8 x i16> %b, i8 -1)
   ret i8 %res
@@ -669,7 +669,7 @@ define i8 @test_mask_pcmpgt_w_128(<8 x i16> %a, <8 x i16> %b, i8 %mask) {
 ; CHECK-NEXT:    kmovd %edi, %k1 ## encoding: [0xc5,0xfb,0x92,0xcf]
 ; CHECK-NEXT:    vpcmpgtw %xmm1, %xmm0, %k0 {%k1} ## encoding: [0x62,0xf1,0x7d,0x09,0x65,0xc1]
 ; CHECK-NEXT:    kmovd %k0, %eax ## encoding: [0xc5,0xfb,0x93,0xc0]
-; CHECK-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %al killed %al killed %eax
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call i8 @llvm.x86.avx512.mask.pcmpgt.w.128(<8 x i16> %a, <8 x i16> %b, i8 %mask)
   ret i8 %res
@@ -3683,7 +3683,7 @@ define i16@test_int_x86_avx512_ptestm_b_128(<16 x i8> %x0, <16 x i8> %x1, i16 %x
 ; CHECK-NEXT:    kmovd %k1, %ecx ## encoding: [0xc5,0xfb,0x93,0xc9]
 ; CHECK-NEXT:    kmovd %k0, %eax ## encoding: [0xc5,0xfb,0x93,0xc0]
 ; CHECK-NEXT:    addl %ecx, %eax ## encoding: [0x01,0xc8]
-; CHECK-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %ax killed %ax killed %eax
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call i16 @llvm.x86.avx512.ptestm.b.128(<16 x i8> %x0, <16 x i8> %x1, i16 %x2)
   %res1 = call i16 @llvm.x86.avx512.ptestm.b.128(<16 x i8> %x0, <16 x i8> %x1, i16-1)
@@ -3721,7 +3721,7 @@ define i8@test_int_x86_avx512_ptestm_w_128(<8 x i16> %x0, <8 x i16> %x1, i8 %x2)
 ; CHECK-NEXT:    kmovd %k1, %ecx ## encoding: [0xc5,0xfb,0x93,0xc9]
 ; CHECK-NEXT:    kmovd %k0, %eax ## encoding: [0xc5,0xfb,0x93,0xc0]
 ; CHECK-NEXT:    addb %cl, %al ## encoding: [0x00,0xc8]
-; CHECK-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %al killed %al killed %eax
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call i8 @llvm.x86.avx512.ptestm.w.128(<8 x i16> %x0, <8 x i16> %x1, i8 %x2)
   %res1 = call i8 @llvm.x86.avx512.ptestm.w.128(<8 x i16> %x0, <8 x i16> %x1, i8-1)
@@ -3740,7 +3740,7 @@ define i16@test_int_x86_avx512_ptestm_w_256(<16 x i16> %x0, <16 x i16> %x1, i16 
 ; CHECK-NEXT:    kmovd %k1, %ecx ## encoding: [0xc5,0xfb,0x93,0xc9]
 ; CHECK-NEXT:    kmovd %k0, %eax ## encoding: [0xc5,0xfb,0x93,0xc0]
 ; CHECK-NEXT:    addl %ecx, %eax ## encoding: [0x01,0xc8]
-; CHECK-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %ax killed %ax killed %eax
 ; CHECK-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call i16 @llvm.x86.avx512.ptestm.w.256(<16 x i16> %x0, <16 x i16> %x1, i16 %x2)
@@ -3760,7 +3760,7 @@ define i16@test_int_x86_avx512_ptestnm_b_128(<16 x i8> %x0, <16 x i8> %x1, i16 %
 ; CHECK-NEXT:    kmovd %k1, %ecx ## encoding: [0xc5,0xfb,0x93,0xc9]
 ; CHECK-NEXT:    kmovd %k0, %eax ## encoding: [0xc5,0xfb,0x93,0xc0]
 ; CHECK-NEXT:    addl %ecx, %eax ## encoding: [0x01,0xc8]
-; CHECK-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %ax killed %ax killed %eax
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call i16 @llvm.x86.avx512.ptestnm.b.128(<16 x i8> %x0, <16 x i8> %x1, i16 %x2)
   %res1 = call i16 @llvm.x86.avx512.ptestnm.b.128(<16 x i8> %x0, <16 x i8> %x1, i16-1)
@@ -3798,7 +3798,7 @@ define i8@test_int_x86_avx512_ptestnm_w_128(<8 x i16> %x0, <8 x i16> %x1, i8 %x2
 ; CHECK-NEXT:    kmovd %k1, %ecx ## encoding: [0xc5,0xfb,0x93,0xc9]
 ; CHECK-NEXT:    kmovd %k0, %eax ## encoding: [0xc5,0xfb,0x93,0xc0]
 ; CHECK-NEXT:    addb %cl, %al ## encoding: [0x00,0xc8]
-; CHECK-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %al killed %al killed %eax
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call i8 @llvm.x86.avx512.ptestnm.w.128(<8 x i16> %x0, <8 x i16> %x1, i8 %x2)
   %res1 = call i8 @llvm.x86.avx512.ptestnm.w.128(<8 x i16> %x0, <8 x i16> %x1, i8-1)
@@ -3817,7 +3817,7 @@ define i16@test_int_x86_avx512_ptestnm_w_256(<16 x i16> %x0, <16 x i16> %x1, i16
 ; CHECK-NEXT:    kmovd %k1, %ecx ## encoding: [0xc5,0xfb,0x93,0xc9]
 ; CHECK-NEXT:    kmovd %k0, %eax ## encoding: [0xc5,0xfb,0x93,0xc0]
 ; CHECK-NEXT:    addl %ecx, %eax ## encoding: [0x01,0xc8]
-; CHECK-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %ax killed %ax killed %eax
 ; CHECK-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call i16 @llvm.x86.avx512.ptestnm.w.256(<16 x i16> %x0, <16 x i16> %x1, i16 %x2)

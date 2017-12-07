@@ -25,8 +25,23 @@ def FeatureStdExtA
 def HasStdExtA : Predicate<"Subtarget->hasStdExtA()">,
                            AssemblerPredicate<"FeatureStdExtA">;
 
+def FeatureStdExtF
+    : SubtargetFeature<"f", "HasStdExtF", "true",
+                       "'F' (Single-Precision Floating-Point)">;
+def HasStdExtF : Predicate<"Subtarget->hasStdExtF()">,
+                           AssemblerPredicate<"FeatureStdExtF">;
+
+def FeatureStdExtD
+    : SubtargetFeature<"d", "HasStdExtD", "true",
+                       "'D' (Double-Precision Floating-Point)",
+                       [FeatureStdExtF]>;
+def HasStdExtD : Predicate<"Subtarget->hasStdExtD()">,
+                           AssemblerPredicate<"FeatureStdExtD">;
+
 def Feature64Bit
     : SubtargetFeature<"64bit", "HasRV64", "true", "Implements RV64">;
+def IsRV64 : Predicate<"Subtarget->is64Bit()">,
+                       AssemblerPredicate<"Feature64Bit">;
 
 def RV64           : HwMode<"+64bit">;
 def RV32           : HwMode<"-64bit">;
@@ -57,6 +72,7 @@ def RISCVInstrInfo : InstrInfo {
 
 def RISCVAsmParser : AsmParser {
   let ShouldEmitMatchRegisterAltName = 1;
+  let AllowDuplicateRegisterNames = 1;
 }
 
 def RISCV : Target {

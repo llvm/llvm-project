@@ -1,9 +1,9 @@
 # RUN: llc -run-pass arm-ldst-opt -verify-machineinstrs %s -o - | FileCheck %s
 # ARM load store optimizer was dealing with a sequence like:
-#     s1 = VLDRS [r0, 1], Q0<imp-def>
-#     s3 = VLDRS [r0, 2], Q0<imp-use,kill>, Q0<imp-def>
-#     s0 = VLDRS [r0, 0], Q0<imp-use,kill>, Q0<imp-def>
-#     s2 = VLDRS [r0, 4], Q0<imp-use,kill>, Q0<imp-def>
+#     s1 = VLDRS [r0, 1], implicit-def Q0
+#     s3 = VLDRS [r0, 2], implicit killed Q0, implicit-def Q0
+#     s0 = VLDRS [r0, 0], implicit killed Q0, implicit-def Q0
+#     s2 = VLDRS [r0, 4], implicit killed Q0, implicit-def Q0
 #
 # It decided to combine the {s0, s1} loads into a single instruction in the
 # third position. However, this leaves the instruction defining s3 with a stray

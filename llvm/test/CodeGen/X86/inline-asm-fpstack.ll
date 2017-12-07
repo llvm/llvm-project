@@ -437,9 +437,9 @@ entry:
 ; inline-asm instruction and the ST register was live across another
 ; inline-asm instruction.
 ;
-; INLINEASM <es:frndint> [sideeffect] [attdialect], $0:[regdef], %st0<imp-def,tied5>, $1:[reguse tiedto:$0], %st0<tied3>, $2:[clobber], %eflags<earlyclobber,imp-def,dead>
-; INLINEASM <es:fldcw $0> [sideeffect] [mayload] [attdialect], $0:[mem], %eax<undef>, 1, %noreg, 0, %noreg, $1:[clobber], %eflags<earlyclobber,imp-def,dead>
-; %fp0<def> = COPY %st0
+; INLINEASM <es:frndint> [sideeffect] [attdialect], $0:[regdef], %st0<imp-def,tied5>, $1:[reguse tiedto:$0], %st0<tied3>, $2:[clobber], early-clobber implicit dead %eflags
+; INLINEASM <es:fldcw $0> [sideeffect] [mayload] [attdialect], $0:[mem], undef %eax, 1, %noreg, 0, %noreg, $1:[clobber], early-clobber implicit dead %eflags
+; %fp0 = COPY %st0
 
 %struct.fpu_t = type { [8 x x86_fp80], x86_fp80, %struct.anon1, %struct.anon2, i32, i8, [15 x i8] }
 %struct.anon1 = type { i32, i32, i32 }

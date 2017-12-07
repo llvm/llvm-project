@@ -380,8 +380,8 @@ void VirtRegRewriter::handleIdentityCopy(MachineInstr &MI) const {
   ++NumIdCopies;
 
   // Copies like:
-  //    %r0 = COPY %r0<undef>
-  //    %al = COPY %al, %eax<imp-def>
+  //    %r0 = COPY undef %r0
+  //    %al = COPY %al, implicit-def %eax
   // give us additional liveness information: The target (super-)register
   // must not be valid before this point. Replace the COPY with a KILL
   // instruction to maintain this information.
@@ -488,7 +488,7 @@ void VirtRegRewriter::rewrite() {
         if (SubReg != 0) {
           if (NoSubRegLiveness) {
             // A virtual register kill refers to the whole register, so we may
-            // have to add <imp-use,kill> operands for the super-register.  A
+            // have to add implicit killed operands for the super-register.  A
             // partial redef always kills and redefines the super-register.
             if ((MO.readsReg() && (MO.isDef() || MO.isKill())) ||
                 (MO.isDef() && subRegLiveThrough(*MI, PhysReg)))
@@ -513,9 +513,9 @@ void VirtRegRewriter::rewrite() {
             }
           }
 
-          // The <def,undef> and <def,internal> flags only make sense for
+          // The def undef and def internal flags only make sense for
           // sub-register defs, and we are substituting a full physreg.  An
-          // <imp-use,kill> operand from the SuperKills list will represent the
+          // implicit killed operand from the SuperKills list will represent the
           // partial read of the super-register.
           if (MO.isDef()) {
             MO.setIsUndef(false);

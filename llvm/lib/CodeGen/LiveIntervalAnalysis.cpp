@@ -700,7 +700,7 @@ void LiveIntervals::addKillFlags(const VirtRegMap *VRM) {
       //
       //   %eax = COPY %5
       //   FOO %5             <--- MI, cancel kill because %eax is live.
-      //   BAR %eax<kill>
+      //   BAR killed %eax
       //
       // There should be no kill flag on FOO when %5 is rewritten as %eax.
       for (auto &RUP : RU) {
@@ -721,7 +721,7 @@ void LiveIntervals::addKillFlags(const VirtRegMap *VRM) {
         // Example:
         //     %1 = ...                  ; R32: %1
         //     %2:high16 = ...           ; R64: %2
-        //        = read %2<kill>        ; R64: %2
+        //        = read killed %2        ; R64: %2
         //        = read %1              ; R32: %1
         // The <kill> flag is correct for %2, but the register allocator may
         // assign R0L to %1, and R0 to %2 because the low 32bits of R0

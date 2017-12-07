@@ -11,12 +11,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AVRMCTargetDesc.h"
 #include "AVRELFStreamer.h"
 #include "AVRMCAsmInfo.h"
+#include "AVRMCELFStreamer.h"
+#include "AVRMCTargetDesc.h"
 #include "AVRTargetStreamer.h"
 #include "InstPrinter/AVRInstPrinter.h"
 
+#include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -35,7 +37,7 @@
 
 using namespace llvm;
 
-static MCInstrInfo *createAVRMCInstrInfo() {
+MCInstrInfo *llvm::createAVRMCInstrInfo() {
   MCInstrInfo *X = new MCInstrInfo();
   InitAVRMCInstrInfo(X);
 
@@ -108,7 +110,7 @@ extern "C" void LLVMInitializeAVRTargetMC() {
   // Register the MC Code Emitter
   TargetRegistry::RegisterMCCodeEmitter(getTheAVRTarget(), createAVRMCCodeEmitter);
 
-  // Register the ELF streamer
+  // Register the obj streamer
   TargetRegistry::RegisterELFStreamer(getTheAVRTarget(), createMCStreamer);
 
   // Register the obj target streamer.

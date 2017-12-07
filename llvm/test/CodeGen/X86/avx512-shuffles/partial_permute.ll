@@ -839,7 +839,7 @@ define <8 x i16> @test_32xi16_to_8xi16_perm_mem_mask0(<32 x i16>* %vp) {
 ; CHECK-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
 ; CHECK-NEXT:    vmovdqa {{.*#+}} ymm0 = <16,17,5,1,14,14,13,17,u,u,u,u,u,u,u,u>
 ; CHECK-NEXT:    vpermi2w %ymm1, %ymm2, %ymm0
-; CHECK-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
+; CHECK-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %vec = load <32 x i16>, <32 x i16>* %vp
@@ -967,7 +967,7 @@ define <8 x i16> @test_32xi16_to_8xi16_perm_mem_mask3(<32 x i16>* %vp) {
 ; CHECK-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
 ; CHECK-NEXT:    vmovdqa {{.*#+}} ymm0 = <19,1,5,31,9,12,17,9,u,u,u,u,u,u,u,u>
 ; CHECK-NEXT:    vpermi2w %ymm2, %ymm1, %ymm0
-; CHECK-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
+; CHECK-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %vec = load <32 x i16>, <32 x i16>* %vp
@@ -1493,7 +1493,7 @@ define <4 x i32> @test_16xi32_to_4xi32_perm_mask0(<16 x i32> %vec) {
 ; CHECK-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,2,0,3,4,6,4,7]
 ; CHECK-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2],ymm1[3],ymm0[4,5,6],ymm1[7]
 ; CHECK-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,3,2,3]
-; CHECK-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
+; CHECK-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %res = shufflevector <16 x i32> %vec, <16 x i32> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 12>
@@ -1814,7 +1814,7 @@ define <4 x i32> @test_16xi32_to_4xi32_perm_mem_mask0(<16 x i32>* %vp) {
 ; CHECK-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
 ; CHECK-NEXT:    vmovdqa {{.*#+}} ymm0 = <13,0,0,6,u,u,u,u>
 ; CHECK-NEXT:    vpermi2d %ymm2, %ymm1, %ymm0
-; CHECK-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
+; CHECK-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %vec = load <16 x i32>, <16 x i32>* %vp
@@ -3857,7 +3857,7 @@ define <4 x float> @test_16xfloat_to_4xfloat_perm_mem_mask3(<16 x float>* %vp) {
 ; CHECK-NEXT:    vextractf64x4 $1, %zmm1, %ymm2
 ; CHECK-NEXT:    vmovaps {{.*#+}} ymm0 = <3,3,15,9,u,u,u,u>
 ; CHECK-NEXT:    vpermi2ps %ymm2, %ymm1, %ymm0
-; CHECK-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
+; CHECK-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %vec = load <16 x float>, <16 x float>* %vp
@@ -4329,7 +4329,7 @@ define <2 x double> @test_8xdouble_to_2xdouble_perm_mask0(<8 x double> %vec) {
 ; CHECK-NEXT:    vextractf64x4 $1, %zmm0, %ymm1
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
 ; CHECK-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,3,2,3]
-; CHECK-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
+; CHECK-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %res = shufflevector <8 x double> %vec, <8 x double> undef, <2 x i32> <i32 0, i32 6>
@@ -4727,7 +4727,7 @@ define <2 x double> @test_8xdouble_to_2xdouble_perm_mem_mask0(<8 x double>* %vp)
 ; CHECK-NEXT:    vextractf64x4 $1, %zmm0, %ymm1
 ; CHECK-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1],ymm1[0],ymm0[3],ymm1[2]
 ; CHECK-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,3,2,3]
-; CHECK-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
+; CHECK-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %vec = load <8 x double>, <8 x double>* %vp

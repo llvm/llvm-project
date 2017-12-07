@@ -6,13 +6,13 @@
 ; CHECK: ********** MI Scheduling **********
 ; CHECK-LABEL: ldr_int:%bb.0
 ; CHECK: Cluster ld/st SU(1) - SU(2)
-; CHECK: SU(1):   %{{[0-9]+}}<def> = LDRWui
-; CHECK: SU(2):   %{{[0-9]+}}<def> = LDRWui
+; CHECK: SU(1):   %{{[0-9]+}}:gpr32 = LDRWui
+; CHECK: SU(2):   %{{[0-9]+}}:gpr32 = LDRWui
 ; EXYNOS: ********** MI Scheduling **********
 ; EXYNOS-LABEL: ldr_int:%bb.0
 ; EXYNOS: Cluster ld/st SU(1) - SU(2)
-; EXYNOS: SU(1):   %{{[0-9]+}}<def> = LDRWui
-; EXYNOS: SU(2):   %{{[0-9]+}}<def> = LDRWui
+; EXYNOS: SU(1):   %{{[0-9]+}}:gpr32 = LDRWui
+; EXYNOS: SU(2):   %{{[0-9]+}}:gpr32 = LDRWui
 define i32 @ldr_int(i32* %a) nounwind {
   %p1 = getelementptr inbounds i32, i32* %a, i32 1
   %tmp1 = load i32, i32* %p1, align 2
@@ -26,13 +26,13 @@ define i32 @ldr_int(i32* %a) nounwind {
 ; CHECK: ********** MI Scheduling **********
 ; CHECK-LABEL: ldp_sext_int:%bb.0
 ; CHECK: Cluster ld/st SU(1) - SU(2)
-; CHECK: SU(1):   %{{[0-9]+}}<def> = LDRSWui
-; CHECK: SU(2):   %{{[0-9]+}}<def> = LDRSWui
+; CHECK: SU(1):   %{{[0-9]+}}:gpr64 = LDRSWui
+; CHECK: SU(2):   %{{[0-9]+}}:gpr64 = LDRSWui
 ; EXYNOS: ********** MI Scheduling **********
 ; EXYNOS-LABEL: ldp_sext_int:%bb.0
 ; EXYNOS: Cluster ld/st SU(1) - SU(2)
-; EXYNOS: SU(1):   %{{[0-9]+}}<def> = LDRSWui
-; EXYNOS: SU(2):   %{{[0-9]+}}<def> = LDRSWui
+; EXYNOS: SU(1):   %{{[0-9]+}}:gpr64 = LDRSWui
+; EXYNOS: SU(2):   %{{[0-9]+}}:gpr64 = LDRSWui
 define i64 @ldp_sext_int(i32* %p) nounwind {
   %tmp = load i32, i32* %p, align 4
   %add.ptr = getelementptr inbounds i32, i32* %p, i64 1
@@ -47,13 +47,13 @@ define i64 @ldp_sext_int(i32* %p) nounwind {
 ; CHECK: ********** MI Scheduling **********
 ; CHECK-LABEL: ldur_int:%bb.0
 ; CHECK: Cluster ld/st SU(2) - SU(1)
-; CHECK: SU(1):   %{{[0-9]+}}<def> = LDURWi
-; CHECK: SU(2):   %{{[0-9]+}}<def> = LDURWi
+; CHECK: SU(1):   %{{[0-9]+}}:gpr32 = LDURWi
+; CHECK: SU(2):   %{{[0-9]+}}:gpr32 = LDURWi
 ; EXYNOS: ********** MI Scheduling **********
 ; EXYNOS-LABEL: ldur_int:%bb.0
 ; EXYNOS: Cluster ld/st SU(2) - SU(1)
-; EXYNOS: SU(1):   %{{[0-9]+}}<def> = LDURWi
-; EXYNOS: SU(2):   %{{[0-9]+}}<def> = LDURWi
+; EXYNOS: SU(1):   %{{[0-9]+}}:gpr32 = LDURWi
+; EXYNOS: SU(2):   %{{[0-9]+}}:gpr32 = LDURWi
 define i32 @ldur_int(i32* %a) nounwind {
   %p1 = getelementptr inbounds i32, i32* %a, i32 -1
   %tmp1 = load i32, i32* %p1, align 2
@@ -67,13 +67,13 @@ define i32 @ldur_int(i32* %a) nounwind {
 ; CHECK: ********** MI Scheduling **********
 ; CHECK-LABEL: ldp_half_sext_zext_int:%bb.0
 ; CHECK: Cluster ld/st SU(3) - SU(4)
-; CHECK: SU(3):   %{{[0-9]+}}<def> = LDRSWui
-; CHECK: SU(4):   %{{[0-9]+}}:sub_32<def,read-undef> = LDRWui
+; CHECK: SU(3):   %{{[0-9]+}}:gpr64 = LDRSWui
+; CHECK: SU(4):   undef %{{[0-9]+}}.sub_32:gpr64 = LDRWui
 ; EXYNOS: ********** MI Scheduling **********
 ; EXYNOS-LABEL: ldp_half_sext_zext_int:%bb.0
 ; EXYNOS: Cluster ld/st SU(3) - SU(4)
-; EXYNOS: SU(3):   %{{[0-9]+}}<def> = LDRSWui
-; EXYNOS: SU(4):   %{{[0-9]+}}:sub_32<def,read-undef> = LDRWui
+; EXYNOS: SU(3):   %{{[0-9]+}}:gpr64 = LDRSWui
+; EXYNOS: SU(4):   undef %{{[0-9]+}}.sub_32:gpr64 = LDRWui
 define i64 @ldp_half_sext_zext_int(i64* %q, i32* %p) nounwind {
   %tmp0 = load i64, i64* %q, align 4
   %tmp = load i32, i32* %p, align 4
@@ -90,13 +90,13 @@ define i64 @ldp_half_sext_zext_int(i64* %q, i32* %p) nounwind {
 ; CHECK: ********** MI Scheduling **********
 ; CHECK-LABEL: ldp_half_zext_sext_int:%bb.0
 ; CHECK: Cluster ld/st SU(3) - SU(4)
-; CHECK: SU(3):   %{{[0-9]+}}:sub_32<def,read-undef> = LDRWui
-; CHECK: SU(4):   %{{[0-9]+}}<def> = LDRSWui
+; CHECK: SU(3):   undef %{{[0-9]+}}.sub_32:gpr64 = LDRWui
+; CHECK: SU(4):   %{{[0-9]+}}:gpr64 = LDRSWui
 ; EXYNOS: ********** MI Scheduling **********
 ; EXYNOS-LABEL: ldp_half_zext_sext_int:%bb.0
 ; EXYNOS: Cluster ld/st SU(3) - SU(4)
-; EXYNOS: SU(3):   %{{[0-9]+}}:sub_32<def,read-undef> = LDRWui
-; EXYNOS: SU(4):   %{{[0-9]+}}<def> = LDRSWui
+; EXYNOS: SU(3):   undef %{{[0-9]+}}.sub_32:gpr64 = LDRWui
+; EXYNOS: SU(4):   %{{[0-9]+}}:gpr64 = LDRSWui
 define i64 @ldp_half_zext_sext_int(i64* %q, i32* %p) nounwind {
   %tmp0 = load i64, i64* %q, align 4
   %tmp = load i32, i32* %p, align 4
@@ -113,13 +113,13 @@ define i64 @ldp_half_zext_sext_int(i64* %q, i32* %p) nounwind {
 ; CHECK: ********** MI Scheduling **********
 ; CHECK-LABEL: ldr_int_volatile:%bb.0
 ; CHECK-NOT: Cluster ld/st
-; CHECK: SU(1):   %{{[0-9]+}}<def> = LDRWui
-; CHECK: SU(2):   %{{[0-9]+}}<def> = LDRWui
+; CHECK: SU(1):   %{{[0-9]+}}:gpr32 = LDRWui
+; CHECK: SU(2):   %{{[0-9]+}}:gpr32 = LDRWui
 ; EXYNOS: ********** MI Scheduling **********
 ; EXYNOS-LABEL: ldr_int_volatile:%bb.0
 ; EXYNOS-NOT: Cluster ld/st
-; EXYNOS: SU(1):   %{{[0-9]+}}<def> = LDRWui
-; EXYNOS: SU(2):   %{{[0-9]+}}<def> = LDRWui
+; EXYNOS: SU(1):   %{{[0-9]+}}:gpr32 = LDRWui
+; EXYNOS: SU(2):   %{{[0-9]+}}:gpr32 = LDRWui
 define i32 @ldr_int_volatile(i32* %a) nounwind {
   %p1 = getelementptr inbounds i32, i32* %a, i32 1
   %tmp1 = load volatile i32, i32* %p1, align 2
@@ -133,8 +133,8 @@ define i32 @ldr_int_volatile(i32* %a) nounwind {
 ; CHECK: ********** MI Scheduling **********
 ; CHECK-LABEL: ldq_cluster:%bb.0
 ; CHECK: Cluster ld/st SU(1) - SU(3)
-; CHECK: SU(1):   %{{[0-9]+}}<def> = LDRQui
-; CHECK: SU(3):   %{{[0-9]+}}<def> = LDRQui
+; CHECK: SU(1):   %{{[0-9]+}}:fpr128 = LDRQui
+; CHECK: SU(3):   %{{[0-9]+}}:fpr128 = LDRQui
 ; EXYNOS: ********** MI Scheduling **********
 ; EXYNOS-LABEL: ldq_cluster:%bb.0
 ; EXYNOS-NOT: Cluster ld/st

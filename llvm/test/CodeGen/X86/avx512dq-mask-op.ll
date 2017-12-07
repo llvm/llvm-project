@@ -7,7 +7,7 @@ define i8 @mask8(i8 %x) {
 ; CHECK-NEXT:    kmovd %edi, %k0
 ; CHECK-NEXT:    knotb %k0, %k0
 ; CHECK-NEXT:    kmovd %k0, %eax
-; CHECK-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %al killed %al killed %eax
 ; CHECK-NEXT:    retq
   %m0 = bitcast i8 %x to <8 x i1>
   %m1 = xor <8 x i1> %m0, <i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1>
@@ -57,7 +57,7 @@ define i8 @mand8_mem(<8 x i1>* %x, <8 x i1>* %y) {
 ; CHECK-NEXT:    kxorb %k1, %k0, %k0
 ; CHECK-NEXT:    korb %k0, %k2, %k0
 ; CHECK-NEXT:    kmovd %k0, %eax
-; CHECK-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %al killed %al killed %eax
 ; CHECK-NEXT:    retq
   %ma = load <8 x i1>, <8 x i1>* %x
   %mb = load <8 x i1>, <8 x i1>* %y

@@ -422,8 +422,9 @@ MCFixupKindInfo const &AVRAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_8_hi8", 0, 8, 0},
       {"fixup_8_hlo8", 0, 8, 0},
 
-      {"fixup_sym_diff", 0, 32, 0},
-      {"fixup_16_ldst", 0, 16, 0},
+      {"fixup_diff8", 0, 8, 0},
+      {"fixup_diff16", 0, 16, 0},
+      {"fixup_diff32", 0, 32, 0},
 
       {"fixup_lds_sts_16", 0, 16, 0},
 

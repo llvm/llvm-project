@@ -46,8 +46,8 @@ define <2 x i16> @test_bitreverse_v2i16(<2 x i16> %a) nounwind {
 ; X86-NEXT:    andl $43690, %ecx # imm = 0xAAAA
 ; X86-NEXT:    shrl %ecx
 ; X86-NEXT:    leal (%ecx,%edx,2), %edx
-; X86-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
-; X86-NEXT:    # kill: %dx<def> %dx<kill> %edx<kill>
+; X86-NEXT:    # kill: def %ax killed %ax killed %eax
+; X86-NEXT:    # kill: def %dx killed %dx killed %edx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_bitreverse_v2i16:
@@ -191,7 +191,7 @@ define i32 @test_bitreverse_i32(i32 %a) nounwind {
 ;
 ; X64-LABEL: test_bitreverse_i32:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
+; X64-NEXT:    # kill: def %edi killed %edi def %rdi
 ; X64-NEXT:    bswapl %edi
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
@@ -242,7 +242,7 @@ define i24 @test_bitreverse_i24(i24 %a) nounwind {
 ;
 ; X64-LABEL: test_bitreverse_i24:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
+; X64-NEXT:    # kill: def %edi killed %edi def %rdi
 ; X64-NEXT:    bswapl %edi
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
@@ -289,12 +289,12 @@ define i16 @test_bitreverse_i16(i16 %a) nounwind {
 ; X86-NEXT:    andl $43690, %eax # imm = 0xAAAA
 ; X86-NEXT:    shrl %eax
 ; X86-NEXT:    leal (%eax,%ecx,2), %eax
-; X86-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; X86-NEXT:    # kill: def %ax killed %ax killed %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_bitreverse_i16:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
+; X64-NEXT:    # kill: def %edi killed %edi def %rdi
 ; X64-NEXT:    rolw $8, %di
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    andl $3855, %eax # imm = 0xF0F
@@ -312,7 +312,7 @@ define i16 @test_bitreverse_i16(i16 %a) nounwind {
 ; X64-NEXT:    andl $43690, %eax # imm = 0xAAAA
 ; X64-NEXT:    shrl %eax
 ; X64-NEXT:    leal (%rax,%rcx,2), %eax
-; X64-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; X64-NEXT:    # kill: def %ax killed %ax killed %eax
 ; X64-NEXT:    retq
   %b = call i16 @llvm.bitreverse.i16(i16 %a)
   ret i16 %b

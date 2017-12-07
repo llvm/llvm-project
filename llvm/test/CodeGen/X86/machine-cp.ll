@@ -94,7 +94,7 @@ while.end:                                        ; preds = %while.body, %entry
 
 ; Check that copy propagation does not kill thing like:
 ; dst = copy src <-- do not kill that.
-; ... = op1 dst<undef>
+; ... = op1 undef dst
 ; ... = op2 dst <-- this is used here.
 define <16 x float> @foo(<16 x float> %x) {
 ; CHECK-LABEL: foo:

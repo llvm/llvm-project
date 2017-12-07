@@ -3,7 +3,7 @@
 ; Check that the dead register definition pass is considering implicit defs.
 ; When rematerializing through truncates, the coalescer may produce instructions
 ; with dead defs, but live implicit-defs of subregs:
-; E.g. %x1<def, dead> = MOVi64imm 2, %w1<imp-def>; %x1:GPR64, %w1:GPR32
+; E.g. dead %x1 = MOVi64imm 2, implicit-def %w1; %x1:GPR64, %w1:GPR32
 ; These instructions are live, and their definitions should not be rewritten.
 ;
 ; <rdar://problem/16492408>

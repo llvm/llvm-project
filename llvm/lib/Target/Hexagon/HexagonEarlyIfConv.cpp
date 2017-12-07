@@ -25,38 +25,38 @@
 //
 // Example:
 //
-//         %40<def> = L2_loadrub_io %39<kill>, 1
-//         %41<def> = S2_tstbit_i %40<kill>, 0
-//         J2_jumpt %41<kill>, <%bb.5>, %pc<imp-def,dead>
-//         J2_jump <%bb.4>, %pc<imp-def,dead>
+//         %40 = L2_loadrub_io killed %39, 1
+//         %41 = S2_tstbit_i killed %40, 0
+//         J2_jumpt killed %41, <%bb.5>, implicit dead %pc
+//         J2_jump <%bb.4>, implicit dead %pc
 //     Successors according to CFG: %bb.4(62) %bb.5(62)
 //
 // %bb.4: derived from LLVM BB %if.then
 //     Predecessors according to CFG: %bb.3
-//         %11<def> = A2_addp %6, %10
+//         %11 = A2_addp %6, %10
 //         S2_storerd_io %32, 16, %11
 //     Successors according to CFG: %bb.5
 //
 // %bb.5: derived from LLVM BB %if.end
 //     Predecessors according to CFG: %bb.3 %bb.4
-//         %12<def> = PHI %6, <%bb.3>, %11, <%bb.4>
-//         %13<def> = A2_addp %7, %12
-//         %42<def> = C2_cmpeqi %9, 10
-//         J2_jumpf %42<kill>, <%bb.3>, %pc<imp-def,dead>
-//         J2_jump <%bb.6>, %pc<imp-def,dead>
+//         %12 = PHI %6, <%bb.3>, %11, <%bb.4>
+//         %13 = A2_addp %7, %12
+//         %42 = C2_cmpeqi %9, 10
+//         J2_jumpf killed %42, <%bb.3>, implicit dead %pc
+//         J2_jump <%bb.6>, implicit dead %pc
 //     Successors according to CFG: %bb.6(4) %bb.3(124)
 //
 // would become:
 //
-//         %40<def> = L2_loadrub_io %39<kill>, 1
-//         %41<def> = S2_tstbit_i %40<kill>, 0
-// spec->  %11<def> = A2_addp %6, %10
+//         %40 = L2_loadrub_io killed %39, 1
+//         %41 = S2_tstbit_i killed %40, 0
+// spec->  %11 = A2_addp %6, %10
 // pred->  S2_pstorerdf_io %41, %32, 16, %11
-//         %46<def> = PS_pselect %41, %6, %11
-//         %13<def> = A2_addp %7, %46
-//         %42<def> = C2_cmpeqi %9, 10
-//         J2_jumpf %42<kill>, <%bb.3>, %pc<imp-def,dead>
-//         J2_jump <%bb.6>, %pc<imp-def,dead>
+//         %46 = PS_pselect %41, %6, %11
+//         %13 = A2_addp %7, %46
+//         %42 = C2_cmpeqi %9, 10
+//         J2_jumpf killed %42, <%bb.3>, implicit dead %pc
+//         J2_jump <%bb.6>, implicit dead %pc
 //     Successors according to CFG: %bb.6 %bb.3
 
 #include "Hexagon.h"

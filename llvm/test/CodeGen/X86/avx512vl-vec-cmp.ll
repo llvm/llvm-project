@@ -45,12 +45,12 @@ define <8 x i32> @test256_3(<8 x i32> %x, <8 x i32> %y, <8 x i32> %x1) nounwind 
 ;
 ; NoVLX-LABEL: test256_3:
 ; NoVLX:       # %bb.0:
-; NoVLX-NEXT:    # kill: %ymm2<def> %ymm2<kill> %zmm2<def>
-; NoVLX-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
-; NoVLX-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; NoVLX-NEXT:    # kill: def %ymm2 killed %ymm2 def %zmm2
+; NoVLX-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vpcmpled %zmm0, %zmm1, %k1
 ; NoVLX-NEXT:    vpblendmd %zmm2, %zmm1, %zmm0 {%k1}
-; NoVLX-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
+; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
 ; NoVLX-NEXT:    retq
   %mask = icmp sge <8 x i32> %x, %y
   %max = select <8 x i1> %mask, <8 x i32> %x1, <8 x i32> %y
@@ -86,12 +86,12 @@ define <8 x i32> @test256_5(<8 x i32> %x, <8 x i32> %x1, <8 x i32>* %yp) nounwin
 ;
 ; NoVLX-LABEL: test256_5:
 ; NoVLX:       # %bb.0:
-; NoVLX-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
-; NoVLX-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; NoVLX-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vmovdqu (%rdi), %ymm2
 ; NoVLX-NEXT:    vpcmpeqd %zmm2, %zmm0, %k1
 ; NoVLX-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
-; NoVLX-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
+; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
 ; NoVLX-NEXT:    retq
   %y = load <8 x i32>, <8 x i32>* %yp, align 4
   %mask = icmp eq <8 x i32> %x, %y
@@ -108,12 +108,12 @@ define <8 x i32> @test256_5b(<8 x i32> %x, <8 x i32> %x1, <8 x i32>* %yp) nounwi
 ;
 ; NoVLX-LABEL: test256_5b:
 ; NoVLX:       # %bb.0:
-; NoVLX-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
-; NoVLX-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; NoVLX-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vmovdqu (%rdi), %ymm2
 ; NoVLX-NEXT:    vpcmpeqd %zmm0, %zmm2, %k1
 ; NoVLX-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
-; NoVLX-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
+; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
 ; NoVLX-NEXT:    retq
   %y = load <8 x i32>, <8 x i32>* %yp, align 4
   %mask = icmp eq <8 x i32> %y, %x
@@ -130,12 +130,12 @@ define <8 x i32> @test256_6(<8 x i32> %x, <8 x i32> %x1, <8 x i32>* %y.ptr) noun
 ;
 ; NoVLX-LABEL: test256_6:
 ; NoVLX:       # %bb.0:
-; NoVLX-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
-; NoVLX-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; NoVLX-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vmovdqu (%rdi), %ymm2
 ; NoVLX-NEXT:    vpcmpgtd %zmm2, %zmm0, %k1
 ; NoVLX-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
-; NoVLX-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
+; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
 ; NoVLX-NEXT:    retq
   %y = load <8 x i32>, <8 x i32>* %y.ptr, align 4
   %mask = icmp sgt <8 x i32> %x, %y
@@ -152,12 +152,12 @@ define <8 x i32> @test256_6b(<8 x i32> %x, <8 x i32> %x1, <8 x i32>* %y.ptr) nou
 ;
 ; NoVLX-LABEL: test256_6b:
 ; NoVLX:       # %bb.0:
-; NoVLX-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
-; NoVLX-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; NoVLX-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vmovdqu (%rdi), %ymm2
 ; NoVLX-NEXT:    vpcmpgtd %zmm2, %zmm0, %k1
 ; NoVLX-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
-; NoVLX-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
+; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
 ; NoVLX-NEXT:    retq
   %y = load <8 x i32>, <8 x i32>* %y.ptr, align 4
   %mask = icmp slt <8 x i32> %y, %x
@@ -174,12 +174,12 @@ define <8 x i32> @test256_7(<8 x i32> %x, <8 x i32> %x1, <8 x i32>* %y.ptr) noun
 ;
 ; NoVLX-LABEL: test256_7:
 ; NoVLX:       # %bb.0:
-; NoVLX-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
-; NoVLX-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; NoVLX-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vmovdqu (%rdi), %ymm2
 ; NoVLX-NEXT:    vpcmpled %zmm2, %zmm0, %k1
 ; NoVLX-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
-; NoVLX-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
+; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
 ; NoVLX-NEXT:    retq
   %y = load <8 x i32>, <8 x i32>* %y.ptr, align 4
   %mask = icmp sle <8 x i32> %x, %y
@@ -196,12 +196,12 @@ define <8 x i32> @test256_7b(<8 x i32> %x, <8 x i32> %x1, <8 x i32>* %y.ptr) nou
 ;
 ; NoVLX-LABEL: test256_7b:
 ; NoVLX:       # %bb.0:
-; NoVLX-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
-; NoVLX-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; NoVLX-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vmovdqu (%rdi), %ymm2
 ; NoVLX-NEXT:    vpcmpled %zmm2, %zmm0, %k1
 ; NoVLX-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
-; NoVLX-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
+; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
 ; NoVLX-NEXT:    retq
   %y = load <8 x i32>, <8 x i32>* %y.ptr, align 4
   %mask = icmp sge <8 x i32> %y, %x
@@ -218,12 +218,12 @@ define <8 x i32> @test256_8(<8 x i32> %x, <8 x i32> %x1, <8 x i32>* %y.ptr) noun
 ;
 ; NoVLX-LABEL: test256_8:
 ; NoVLX:       # %bb.0:
-; NoVLX-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
-; NoVLX-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; NoVLX-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vmovdqu (%rdi), %ymm2
 ; NoVLX-NEXT:    vpcmpleud %zmm2, %zmm0, %k1
 ; NoVLX-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
-; NoVLX-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
+; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
 ; NoVLX-NEXT:    retq
   %y = load <8 x i32>, <8 x i32>* %y.ptr, align 4
   %mask = icmp ule <8 x i32> %x, %y
@@ -240,12 +240,12 @@ define <8 x i32> @test256_8b(<8 x i32> %x, <8 x i32> %x1, <8 x i32>* %y.ptr) nou
 ;
 ; NoVLX-LABEL: test256_8b:
 ; NoVLX:       # %bb.0:
-; NoVLX-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
-; NoVLX-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; NoVLX-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vmovdqu (%rdi), %ymm2
 ; NoVLX-NEXT:    vpcmpnltud %zmm0, %zmm2, %k1
 ; NoVLX-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
-; NoVLX-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
+; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
 ; NoVLX-NEXT:    retq
   %y = load <8 x i32>, <8 x i32>* %y.ptr, align 4
   %mask = icmp uge <8 x i32> %y, %x
@@ -263,14 +263,14 @@ define <8 x i32> @test256_9(<8 x i32> %x, <8 x i32> %y, <8 x i32> %x1, <8 x i32>
 ;
 ; NoVLX-LABEL: test256_9:
 ; NoVLX:       # %bb.0:
-; NoVLX-NEXT:    # kill: %ymm3<def> %ymm3<kill> %zmm3<def>
-; NoVLX-NEXT:    # kill: %ymm2<def> %ymm2<kill> %zmm2<def>
-; NoVLX-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
-; NoVLX-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; NoVLX-NEXT:    # kill: def %ymm3 killed %ymm3 def %zmm3
+; NoVLX-NEXT:    # kill: def %ymm2 killed %ymm2 def %zmm2
+; NoVLX-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vpcmpeqd %zmm1, %zmm0, %k1
 ; NoVLX-NEXT:    vpcmpeqd %zmm3, %zmm2, %k1 {%k1}
 ; NoVLX-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
-; NoVLX-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
+; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
 ; NoVLX-NEXT:    retq
   %mask1 = icmp eq <8 x i32> %x1, %y1
   %mask0 = icmp eq <8 x i32> %x, %y
@@ -336,14 +336,14 @@ define <8 x i32> @test256_12(<8 x i32> %x, <8 x i32>* %y.ptr, <8 x i32> %x1, <8 
 ;
 ; NoVLX-LABEL: test256_12:
 ; NoVLX:       # %bb.0:
-; NoVLX-NEXT:    # kill: %ymm2<def> %ymm2<kill> %zmm2<def>
-; NoVLX-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
-; NoVLX-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; NoVLX-NEXT:    # kill: def %ymm2 killed %ymm2 def %zmm2
+; NoVLX-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vmovdqu (%rdi), %ymm3
 ; NoVLX-NEXT:    vpcmpleud %zmm3, %zmm0, %k1
 ; NoVLX-NEXT:    vpcmpled %zmm1, %zmm2, %k1 {%k1}
 ; NoVLX-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
-; NoVLX-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
+; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
 ; NoVLX-NEXT:    retq
   %mask1 = icmp sge <8 x i32> %x1, %y1
   %y = load <8 x i32>, <8 x i32>* %y.ptr, align 4
@@ -383,12 +383,12 @@ define <8 x i32> @test256_14(<8 x i32> %x, i32* %yb.ptr, <8 x i32> %x1) nounwind
 ;
 ; NoVLX-LABEL: test256_14:
 ; NoVLX:       # %bb.0:
-; NoVLX-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
-; NoVLX-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; NoVLX-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vpbroadcastd (%rdi), %ymm2
 ; NoVLX-NEXT:    vpcmpled %zmm2, %zmm0, %k1
 ; NoVLX-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
-; NoVLX-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
+; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
 ; NoVLX-NEXT:    retq
   %yb = load i32, i32* %yb.ptr, align 4
   %y.0 = insertelement <8 x i32> undef, i32 %yb, i32 0
@@ -408,14 +408,14 @@ define <8 x i32> @test256_15(<8 x i32> %x, i32* %yb.ptr, <8 x i32> %x1, <8 x i32
 ;
 ; NoVLX-LABEL: test256_15:
 ; NoVLX:       # %bb.0:
-; NoVLX-NEXT:    # kill: %ymm2<def> %ymm2<kill> %zmm2<def>
-; NoVLX-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
-; NoVLX-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; NoVLX-NEXT:    # kill: def %ymm2 killed %ymm2 def %zmm2
+; NoVLX-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vpbroadcastd (%rdi), %ymm3
 ; NoVLX-NEXT:    vpcmpgtd %zmm3, %zmm0, %k1
 ; NoVLX-NEXT:    vpcmpled %zmm1, %zmm2, %k1 {%k1}
 ; NoVLX-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
-; NoVLX-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
+; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
 ; NoVLX-NEXT:    retq
   %mask1 = icmp sge <8 x i32> %x1, %y1
   %yb = load i32, i32* %yb.ptr, align 4
@@ -462,12 +462,12 @@ define <8 x i32> @test256_17(<8 x i32> %x, <8 x i32> %x1, <8 x i32>* %yp) nounwi
 ;
 ; NoVLX-LABEL: test256_17:
 ; NoVLX:       # %bb.0:
-; NoVLX-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
-; NoVLX-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; NoVLX-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vmovdqu (%rdi), %ymm2
 ; NoVLX-NEXT:    vpcmpneqd %zmm2, %zmm0, %k1
 ; NoVLX-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
-; NoVLX-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
+; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
 ; NoVLX-NEXT:    retq
   %y = load <8 x i32>, <8 x i32>* %yp, align 4
   %mask = icmp ne <8 x i32> %x, %y
@@ -484,12 +484,12 @@ define <8 x i32> @test256_18(<8 x i32> %x, <8 x i32> %x1, <8 x i32>* %yp) nounwi
 ;
 ; NoVLX-LABEL: test256_18:
 ; NoVLX:       # %bb.0:
-; NoVLX-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
-; NoVLX-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; NoVLX-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vmovdqu (%rdi), %ymm2
 ; NoVLX-NEXT:    vpcmpneqd %zmm0, %zmm2, %k1
 ; NoVLX-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
-; NoVLX-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
+; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
 ; NoVLX-NEXT:    retq
   %y = load <8 x i32>, <8 x i32>* %yp, align 4
   %mask = icmp ne <8 x i32> %y, %x
@@ -506,12 +506,12 @@ define <8 x i32> @test256_19(<8 x i32> %x, <8 x i32> %x1, <8 x i32>* %yp) nounwi
 ;
 ; NoVLX-LABEL: test256_19:
 ; NoVLX:       # %bb.0:
-; NoVLX-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
-; NoVLX-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; NoVLX-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vmovdqu (%rdi), %ymm2
 ; NoVLX-NEXT:    vpcmpnltud %zmm2, %zmm0, %k1
 ; NoVLX-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
-; NoVLX-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
+; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
 ; NoVLX-NEXT:    retq
   %y = load <8 x i32>, <8 x i32>* %yp, align 4
   %mask = icmp uge <8 x i32> %x, %y
@@ -528,12 +528,12 @@ define <8 x i32> @test256_20(<8 x i32> %x, <8 x i32> %x1, <8 x i32>* %yp) nounwi
 ;
 ; NoVLX-LABEL: test256_20:
 ; NoVLX:       # %bb.0:
-; NoVLX-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
-; NoVLX-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; NoVLX-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vmovdqu (%rdi), %ymm2
 ; NoVLX-NEXT:    vpcmpnltud %zmm0, %zmm2, %k1
 ; NoVLX-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
-; NoVLX-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
+; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
 ; NoVLX-NEXT:    retq
   %y = load <8 x i32>, <8 x i32>* %yp, align 4
   %mask = icmp uge <8 x i32> %y, %x

@@ -15,10 +15,11 @@
 #include "llvm/Analysis/Loads.h"
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/Target/TargetIntrinsicInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/ModuleSlotTracker.h"
+#include "llvm/Target/TargetIntrinsicInfo.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
@@ -333,75 +334,86 @@ hash_code llvm::hash_value(const MachineOperand &MO) {
   llvm_unreachable("Invalid machine operand type");
 }
 
+// Try to crawl up to the machine function and get TRI and IntrinsicInfo from
+// it.
+static void tryToGetTargetInfo(const MachineOperand &MO,
+                               const TargetRegisterInfo *&TRI,
+                               const TargetIntrinsicInfo *&IntrinsicInfo) {
+  if (const MachineInstr *MI = MO.getParent()) {
+    if (const MachineBasicBlock *MBB = MI->getParent()) {
+      if (const MachineFunction *MF = MBB->getParent()) {
+        TRI = MF->getSubtarget().getRegisterInfo();
+        IntrinsicInfo = MF->getTarget().getIntrinsicInfo();
+      }
+    }
+  }
+}
+
 void MachineOperand::print(raw_ostream &OS, const TargetRegisterInfo *TRI,
                            const TargetIntrinsicInfo *IntrinsicInfo) const {
+  tryToGetTargetInfo(*this, TRI, IntrinsicInfo);
   ModuleSlotTracker DummyMST(nullptr);
-  print(OS, DummyMST, TRI, IntrinsicInfo);
+  print(OS, DummyMST, LLT{}, /*PrintDef=*/false,
+        /*ShouldPrintRegisterTies=*/true,
+        /*TiedOperandIdx=*/0, TRI, IntrinsicInfo);
 }
 
 void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
+                           LLT TypeToPrint, bool PrintDef,
+                           bool ShouldPrintRegisterTies,
+                           unsigned TiedOperandIdx,
                            const TargetRegisterInfo *TRI,
                            const TargetIntrinsicInfo *IntrinsicInfo) const {
   switch (getType()) {
-  case MachineOperand::MO_Register:
-    OS << printReg(getReg(), TRI, getSubReg());
-
-    if (isDef() || isKill() || isDead() || isImplicit() || isUndef() ||
-        isInternalRead() || isEarlyClobber() || isTied()) {
-      OS << '<';
-      bool NeedComma = false;
-      if (isDef()) {
-        if (NeedComma)
-          OS << ',';
-        if (isEarlyClobber())
-          OS << "earlyclobber,";
-        if (isImplicit())
-          OS << "imp-";
-        OS << "def";
-        NeedComma = true;
-        // <def,read-undef> only makes sense when getSubReg() is set.
-        // Don't clutter the output otherwise.
-        if (isUndef() && getSubReg())
-          OS << ",read-undef";
-      } else if (isImplicit()) {
-        OS << "imp-use";
-        NeedComma = true;
-      }
-
-      if (isKill()) {
-        if (NeedComma)
-          OS << ',';
-        OS << "kill";
-        NeedComma = true;
-      }
-      if (isDead()) {
-        if (NeedComma)
-          OS << ',';
-        OS << "dead";
-        NeedComma = true;
-      }
-      if (isUndef() && isUse()) {
-        if (NeedComma)
-          OS << ',';
-        OS << "undef";
-        NeedComma = true;
-      }
-      if (isInternalRead()) {
-        if (NeedComma)
-          OS << ',';
-        OS << "internal";
-        NeedComma = true;
-      }
-      if (isTied()) {
-        if (NeedComma)
-          OS << ',';
-        OS << "tied";
-        if (TiedTo != 15)
-          OS << unsigned(TiedTo - 1);
-      }
-      OS << '>';
+  case MachineOperand::MO_Register: {
+    unsigned Reg = getReg();
+    if (isImplicit())
+      OS << (isDef() ? "implicit-def " : "implicit ");
+    else if (PrintDef && isDef())
+      // Print the 'def' flag only when the operand is defined after '='.
+      OS << "def ";
+    if (isInternalRead())
+      OS << "internal ";
+    if (isDead())
+      OS << "dead ";
+    if (isKill())
+      OS << "killed ";
+    if (isUndef())
+      OS << "undef ";
+    if (isEarlyClobber())
+      OS << "early-clobber ";
+    if (isDebug())
+      OS << "debug-use ";
+    OS << printReg(Reg, TRI);
+    // Print the sub register.
+    if (unsigned SubReg = getSubReg()) {
+      if (TRI)
+        OS << '.' << TRI->getSubRegIndexName(SubReg);
+      else
+        OS << ".subreg" << SubReg;
     }
+    // Print the register class / bank.
+    if (TargetRegisterInfo::isVirtualRegister(Reg)) {
+      if (const MachineInstr *MI = getParent()) {
+        if (const MachineBasicBlock *MBB = MI->getParent()) {
+          if (const MachineFunction *MF = MBB->getParent()) {
+            const MachineRegisterInfo &MRI = MF->getRegInfo();
+            if (!PrintDef || MRI.def_empty(Reg)) {
+              OS << ':';
+              OS << printRegClassOrBank(Reg, MRI, TRI);
+            }
+          }
+        }
+      }
+    }
+    // Print ties.
+    if (ShouldPrintRegisterTies && isTied() && !isDef())
+      OS << "(tied-def " << TiedOperandIdx << ")";
+    // Print types.
+    if (TypeToPrint.isValid())
+      OS << '(' << TypeToPrint << ')';
     break;
+  }
   case MachineOperand::MO_Immediate:
     OS << getImm();
     break;
@@ -475,23 +487,27 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << '>';
     break;
   case MachineOperand::MO_RegisterMask: {
-    unsigned NumRegsInMask = 0;
-    unsigned NumRegsEmitted = 0;
     OS << "<regmask";
-    for (unsigned i = 0; i < TRI->getNumRegs(); ++i) {
-      unsigned MaskWord = i / 32;
-      unsigned MaskBit = i % 32;
-      if (getRegMask()[MaskWord] & (1 << MaskBit)) {
-        if (PrintRegMaskNumRegs < 0 ||
-            NumRegsEmitted <= static_cast<unsigned>(PrintRegMaskNumRegs)) {
-          OS << " " << printReg(i, TRI);
-          NumRegsEmitted++;
+    if (TRI) {
+      unsigned NumRegsInMask = 0;
+      unsigned NumRegsEmitted = 0;
+      for (unsigned i = 0; i < TRI->getNumRegs(); ++i) {
+        unsigned MaskWord = i / 32;
+        unsigned MaskBit = i % 32;
+        if (getRegMask()[MaskWord] & (1 << MaskBit)) {
+          if (PrintRegMaskNumRegs < 0 ||
+              NumRegsEmitted <= static_cast<unsigned>(PrintRegMaskNumRegs)) {
+            OS << " " << printReg(i, TRI);
+            NumRegsEmitted++;
+          }
+          NumRegsInMask++;
         }
-        NumRegsInMask++;
       }
+      if (NumRegsEmitted != NumRegsInMask)
+        OS << " and " << (NumRegsInMask - NumRegsEmitted) << " more...";
+    } else {
+      OS << " ...";
     }
-    if (NumRegsEmitted != NumRegsInMask)
-      OS << " and " << (NumRegsInMask - NumRegsEmitted) << " more...";
     OS << ">";
     break;
   }

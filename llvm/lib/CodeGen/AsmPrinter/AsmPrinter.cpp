@@ -815,10 +815,8 @@ static void emitKill(const MachineInstr *MI, AsmPrinter &AP) {
   for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
     const MachineOperand &Op = MI->getOperand(i);
     assert(Op.isReg() && "KILL instruction must have only register operands");
-    OS << ' '
-       << printReg(Op.getReg(),
-                   AP.MF->getSubtarget().getRegisterInfo())
-       << (Op.isDef() ? "<def>" : "<kill>");
+    OS << ' ' << (Op.isDef() ? "def " : "killed ")
+       << printReg(Op.getReg(), AP.MF->getSubtarget().getRegisterInfo());
   }
   AP.OutStreamer->AddComment(OS.str());
   AP.OutStreamer->AddBlankLine();

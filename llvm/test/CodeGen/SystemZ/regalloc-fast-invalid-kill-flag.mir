@@ -21,7 +21,7 @@ registers:
 # CHECK-NEXT: %r0l = COPY %r1l
 # Although R0L partially redefines R0Q, it must not mark R0Q as kill
 # because R1D is still live through that instruction.
-# CHECK-NOT: %r0q<imp-use,kill>
+# CHECK-NOT: implicit killed %r0q
 # CHECK-NEXT: %r2d = COPY %r1d
 # CHECK-NEXT: LARL
 body:             |

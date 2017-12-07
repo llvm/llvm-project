@@ -144,6 +144,21 @@ Printable printVRegOrUnit(unsigned Unit, const TargetRegisterInfo *TRI) {
   });
 }
 
+Printable printRegClassOrBank(unsigned Reg, const MachineRegisterInfo &RegInfo,
+                              const TargetRegisterInfo *TRI) {
+  return Printable([Reg, &RegInfo, TRI](raw_ostream &OS) {
+    if (RegInfo.getRegClassOrNull(Reg))
+      OS << StringRef(TRI->getRegClassName(RegInfo.getRegClass(Reg))).lower();
+    else if (RegInfo.getRegBankOrNull(Reg))
+      OS << StringRef(RegInfo.getRegBankOrNull(Reg)->getName()).lower();
+    else {
+      OS << "_";
+      assert((RegInfo.def_empty(Reg) || RegInfo.getType(Reg).isValid()) &&
+             "Generic registers must have a valid type");
+    }
+  });
+}
+
 } // end namespace llvm
 
 /// getAllocatableClass - Return the maximal subclass of the given register

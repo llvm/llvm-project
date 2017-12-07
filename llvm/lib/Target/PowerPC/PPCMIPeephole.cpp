@@ -585,8 +585,8 @@ bool PPCMIPeephole::simplifyCode(void) {
         // We can eliminate RLDICL (e.g. for zero-extension)
         // if all bits to clear are already zero in the input.
         // This code assume following code sequence for zero-extension.
-        //   %6<def> = COPY %5:sub_32; (optional)
-        //   %8<def> = IMPLICIT_DEF;
+        //   %6 = COPY %5:sub_32; (optional)
+        //   %8 = IMPLICIT_DEF;
         //   %7<def,tied1> = INSERT_SUBREG %8<tied0>, %6, sub_32;
         if (!EnableZExtElimination) break;
 
@@ -685,7 +685,7 @@ bool PPCMIPeephole::simplifyCode(void) {
           DEBUG(dbgs() << "Optimizing LI to ADDI: ");
           DEBUG(LiMI->dump());
 
-          // There could be repeated registers in the PHI, e.g: %1<def> =
+          // There could be repeated registers in the PHI, e.g: %1 =
           // PHI %6, <%bb.2>, %8, <%bb.3>, %8, <%bb.6>; So if we've
           // already replaced the def instruction, skip.
           if (LiMI->getOpcode() == PPC::ADDI || LiMI->getOpcode() == PPC::ADDI8)

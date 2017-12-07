@@ -138,10 +138,10 @@ define i32 @PR15215_good(<4 x i32> %input) {
 ;
 ; X64-LABEL: PR15215_good:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    # kill: %ecx<def> %ecx<kill> %rcx<def>
-; X64-NEXT:    # kill: %edx<def> %edx<kill> %rdx<def>
-; X64-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
-; X64-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
+; X64-NEXT:    # kill: def %ecx killed %ecx def %rcx
+; X64-NEXT:    # kill: def %edx killed %edx def %rdx
+; X64-NEXT:    # kill: def %esi killed %esi def %rsi
+; X64-NEXT:    # kill: def %edi killed %edi def %rdi
 ; X64-NEXT:    andl $1, %edi
 ; X64-NEXT:    andl $1, %esi
 ; X64-NEXT:    andl $1, %edx

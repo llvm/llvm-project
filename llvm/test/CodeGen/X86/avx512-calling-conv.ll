@@ -65,7 +65,7 @@ define <8 x i1> @test3(<8 x i1>%a, <8 x i1>%b) {
 ; KNL-NEXT:    vptestmq %zmm1, %zmm1, %k1 {%k1}
 ; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; KNL-NEXT:    vpmovdw %zmm0, %ymm0
-; KNL-NEXT:    ## kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
+; KNL-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %ymm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test3:
@@ -88,7 +88,7 @@ define <8 x i1> @test3(<8 x i1>%a, <8 x i1>%b) {
 ; KNL_X32-NEXT:    vptestmq %zmm1, %zmm1, %k1 {%k1}
 ; KNL_X32-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; KNL_X32-NEXT:    vpmovdw %zmm0, %ymm0
-; KNL_X32-NEXT:    ## kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
+; KNL_X32-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %ymm0
 ; KNL_X32-NEXT:    retl
   %c = and <8 x i1>%a, %b
   ret <8 x i1> %c
@@ -126,7 +126,7 @@ define <8 x i32> @test5(<8 x i32>%a, <8 x i32>%b) {
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
 ; KNL-NEXT:    vpcmpgtd %ymm1, %ymm0, %ymm0
 ; KNL-NEXT:    vpmovdw %zmm0, %ymm0
-; KNL-NEXT:    ## kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
+; KNL-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %ymm0
 ; KNL-NEXT:    callq _func8xi1
 ; KNL-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; KNL-NEXT:    vpslld $31, %ymm0, %ymm0
@@ -154,7 +154,7 @@ define <8 x i32> @test5(<8 x i32>%a, <8 x i32>%b) {
 ; KNL_X32-NEXT:    .cfi_def_cfa_offset 16
 ; KNL_X32-NEXT:    vpcmpgtd %ymm1, %ymm0, %ymm0
 ; KNL_X32-NEXT:    vpmovdw %zmm0, %ymm0
-; KNL_X32-NEXT:    ## kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
+; KNL_X32-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %ymm0
 ; KNL_X32-NEXT:    calll _func8xi1
 ; KNL_X32-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; KNL_X32-NEXT:    vpslld $31, %ymm0, %ymm0
@@ -266,7 +266,7 @@ define <8 x i1> @test7a(<8 x i32>%a, <8 x i32>%b) {
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
 ; KNL-NEXT:    vpcmpgtd %ymm1, %ymm0, %ymm0
 ; KNL-NEXT:    vpmovdw %zmm0, %ymm0
-; KNL-NEXT:    ## kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
+; KNL-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %ymm0
 ; KNL-NEXT:    callq _func8xi1
 ; KNL-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; KNL-NEXT:    vpsllq $63, %zmm0, %zmm0
@@ -275,7 +275,7 @@ define <8 x i1> @test7a(<8 x i32>%a, <8 x i32>%b) {
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k1 {%k1}
 ; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; KNL-NEXT:    vpmovdw %zmm0, %ymm0
-; KNL-NEXT:    ## kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
+; KNL-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %ymm0
 ; KNL-NEXT:    popq %rax
 ; KNL-NEXT:    retq
 ;
@@ -302,7 +302,7 @@ define <8 x i1> @test7a(<8 x i32>%a, <8 x i32>%b) {
 ; KNL_X32-NEXT:    .cfi_def_cfa_offset 16
 ; KNL_X32-NEXT:    vpcmpgtd %ymm1, %ymm0, %ymm0
 ; KNL_X32-NEXT:    vpmovdw %zmm0, %ymm0
-; KNL_X32-NEXT:    ## kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
+; KNL_X32-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %ymm0
 ; KNL_X32-NEXT:    calll _func8xi1
 ; KNL_X32-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; KNL_X32-NEXT:    vpsllq $63, %zmm0, %zmm0
@@ -311,7 +311,7 @@ define <8 x i1> @test7a(<8 x i32>%a, <8 x i32>%b) {
 ; KNL_X32-NEXT:    vptestmq %zmm0, %zmm0, %k1 {%k1}
 ; KNL_X32-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; KNL_X32-NEXT:    vpmovdw %zmm0, %ymm0
-; KNL_X32-NEXT:    ## kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
+; KNL_X32-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %ymm0
 ; KNL_X32-NEXT:    addl $12, %esp
 ; KNL_X32-NEXT:    retl
   %cmpRes = icmp sgt <8 x i32>%a, %b

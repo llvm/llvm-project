@@ -57,9 +57,9 @@ define void @trunc_qb_512_mem(<8 x i64> %i, <8 x i8>* %res) #0 {
 define <4 x i8> @trunc_qb_256(<4 x i64> %i) #0 {
 ; KNL-LABEL: trunc_qb_256:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    ## kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; KNL-NEXT:    ## kill: def %ymm0 killed %ymm0 def %zmm0
 ; KNL-NEXT:    vpmovqd %zmm0, %ymm0
-; KNL-NEXT:    ## kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
+; KNL-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %ymm0
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
 ;
@@ -75,7 +75,7 @@ define <4 x i8> @trunc_qb_256(<4 x i64> %i) #0 {
 define void @trunc_qb_256_mem(<4 x i64> %i, <4 x i8>* %res) #0 {
 ; KNL-LABEL: trunc_qb_256_mem:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    ## kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; KNL-NEXT:    ## kill: def %ymm0 killed %ymm0 def %zmm0
 ; KNL-NEXT:    vpmovqd %zmm0, %ymm0
 ; KNL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
 ; KNL-NEXT:    vmovd %xmm0, (%rdi)
@@ -140,9 +140,9 @@ define void @trunc_qw_512_mem(<8 x i64> %i, <8 x i16>* %res) #0 {
 define <4 x i16> @trunc_qw_256(<4 x i64> %i) #0 {
 ; KNL-LABEL: trunc_qw_256:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    ## kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; KNL-NEXT:    ## kill: def %ymm0 killed %ymm0 def %zmm0
 ; KNL-NEXT:    vpmovqd %zmm0, %ymm0
-; KNL-NEXT:    ## kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
+; KNL-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %ymm0
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
 ;
@@ -158,7 +158,7 @@ define <4 x i16> @trunc_qw_256(<4 x i64> %i) #0 {
 define void @trunc_qw_256_mem(<4 x i64> %i, <4 x i16>* %res) #0 {
 ; KNL-LABEL: trunc_qw_256_mem:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    ## kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; KNL-NEXT:    ## kill: def %ymm0 killed %ymm0 def %zmm0
 ; KNL-NEXT:    vpmovqd %zmm0, %ymm0
 ; KNL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
 ; KNL-NEXT:    vmovq %xmm0, (%rdi)
@@ -223,9 +223,9 @@ define void @trunc_qd_512_mem(<8 x i64> %i, <8 x i32>* %res) #0 {
 define <4 x i32> @trunc_qd_256(<4 x i64> %i) #0 {
 ; KNL-LABEL: trunc_qd_256:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    ## kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; KNL-NEXT:    ## kill: def %ymm0 killed %ymm0 def %zmm0
 ; KNL-NEXT:    vpmovqd %zmm0, %ymm0
-; KNL-NEXT:    ## kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
+; KNL-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %ymm0
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
 ;
@@ -241,7 +241,7 @@ define <4 x i32> @trunc_qd_256(<4 x i64> %i) #0 {
 define void @trunc_qd_256_mem(<4 x i64> %i, <4 x i32>* %res) #0 {
 ; KNL-LABEL: trunc_qd_256_mem:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    ## kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; KNL-NEXT:    ## kill: def %ymm0 killed %ymm0 def %zmm0
 ; KNL-NEXT:    vpmovqd %zmm0, %ymm0
 ; KNL-NEXT:    vmovdqa %xmm0, (%rdi)
 ; KNL-NEXT:    vzeroupper
@@ -305,9 +305,9 @@ define void @trunc_db_512_mem(<16 x i32> %i, <16 x i8>* %res) #0 {
 define <8 x i8> @trunc_db_256(<8 x i32> %i) #0 {
 ; KNL-LABEL: trunc_db_256:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    ## kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; KNL-NEXT:    ## kill: def %ymm0 killed %ymm0 def %zmm0
 ; KNL-NEXT:    vpmovdw %zmm0, %ymm0
-; KNL-NEXT:    ## kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
+; KNL-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %ymm0
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
 ;
@@ -323,7 +323,7 @@ define <8 x i8> @trunc_db_256(<8 x i32> %i) #0 {
 define void @trunc_db_256_mem(<8 x i32> %i, <8 x i8>* %res) #0 {
 ; KNL-LABEL: trunc_db_256_mem:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    ## kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; KNL-NEXT:    ## kill: def %ymm0 killed %ymm0 def %zmm0
 ; KNL-NEXT:    vpmovdw %zmm0, %ymm0
 ; KNL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
 ; KNL-NEXT:    vmovq %xmm0, (%rdi)
@@ -387,9 +387,9 @@ define void @trunc_dw_512_mem(<16 x i32> %i, <16 x i16>* %res) #0 {
 define <8 x i16> @trunc_dw_256(<8 x i32> %i) #0 {
 ; KNL-LABEL: trunc_dw_256:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    ## kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; KNL-NEXT:    ## kill: def %ymm0 killed %ymm0 def %zmm0
 ; KNL-NEXT:    vpmovdw %zmm0, %ymm0
-; KNL-NEXT:    ## kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
+; KNL-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %ymm0
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
 ;
@@ -405,7 +405,7 @@ define <8 x i16> @trunc_dw_256(<8 x i32> %i) #0 {
 define void @trunc_dw_256_mem(<8 x i32> %i, <8 x i16>* %res) #0 {
 ; KNL-LABEL: trunc_dw_256_mem:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    ## kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; KNL-NEXT:    ## kill: def %ymm0 killed %ymm0 def %zmm0
 ; KNL-NEXT:    vpmovdw %zmm0, %ymm0
 ; KNL-NEXT:    vmovdqa %xmm0, (%rdi)
 ; KNL-NEXT:    vzeroupper

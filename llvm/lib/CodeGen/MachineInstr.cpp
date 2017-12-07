@@ -18,6 +18,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -742,7 +743,7 @@ MachineInstr::readsWritesVirtualRegister(unsigned Reg,
     if (MO.isUse())
       Use |= !MO.isUndef();
     else if (MO.getSubReg() && !MO.isUndef())
-      // A partial <def,undef> doesn't count as reading the register.
+      // A partial def undef doesn't count as reading the register.
       PartDef = true;
     else
       FullDef = true;
@@ -1163,6 +1164,41 @@ void MachineInstr::copyImplicitOps(MachineFunction &MF,
   }
 }
 
+bool MachineInstr::hasComplexRegisterTies() const {
+  const MCInstrDesc &MCID = getDesc();
+  for (unsigned I = 0, E = getNumOperands(); I < E; ++I) {
+    const auto &Operand = getOperand(I);
+    if (!Operand.isReg() || Operand.isDef())
+      // Ignore the defined registers as MCID marks only the uses as tied.
+      continue;
+    int ExpectedTiedIdx = MCID.getOperandConstraint(I, MCOI::TIED_TO);
+    int TiedIdx = Operand.isTied() ? int(findTiedOperandIdx(I)) : -1;
+    if (ExpectedTiedIdx != TiedIdx)
+      return true;
+  }
+  return false;
+}
+
+LLT MachineInstr::getTypeToPrint(unsigned OpIdx, SmallBitVector &PrintedTypes,
+                                 const MachineRegisterInfo &MRI) const {
+  const MachineOperand &Op = getOperand(OpIdx);
+  if (!Op.isReg())
+    return LLT{};
+
+  if (isVariadic() || OpIdx >= getNumExplicitOperands())
+    return MRI.getType(Op.getReg());
+
+  auto &OpInfo = getDesc().OpInfo[OpIdx];
+  if (!OpInfo.isGenericType())
+    return MRI.getType(Op.getReg());
+
+  if (PrintedTypes[OpInfo.getGenericTypeIndex()])
+    return LLT{};
+
+  PrintedTypes.set(OpInfo.getGenericTypeIndex());
+  return MRI.getType(Op.getReg());
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void MachineInstr::dump() const {
   dbgs() << "  ";
@@ -1204,21 +1240,31 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
   // Save a list of virtual registers.
   SmallVector<unsigned, 8> VirtRegs;
 
+  SmallBitVector PrintedTypes(8);
+  bool ShouldPrintRegisterTies = hasComplexRegisterTies();
+  auto getTiedOperandIdx = [&](unsigned OpIdx) {
+    if (!ShouldPrintRegisterTies)
+      return 0U;
+    const MachineOperand &MO = getOperand(OpIdx);
+    if (MO.isReg() && MO.isTied() && !MO.isDef())
+      return findTiedOperandIdx(OpIdx);
+    return 0U;
+  };
   // Print explicitly defined operands on the left of an assignment syntax.
   unsigned StartOp = 0, e = getNumOperands();
   for (; StartOp < e && getOperand(StartOp).isReg() &&
-         getOperand(StartOp).isDef() &&
-         !getOperand(StartOp).isImplicit();
+         getOperand(StartOp).isDef() && !getOperand(StartOp).isImplicit();
        ++StartOp) {
-    if (StartOp != 0) OS << ", ";
-    getOperand(StartOp).print(OS, MST, TRI, IntrinsicInfo);
+    if (StartOp != 0)
+      OS << ", ";
+    LLT TypeToPrint = MRI ? getTypeToPrint(StartOp, PrintedTypes, *MRI) : LLT{};
+    unsigned TiedOperandIdx = getTiedOperandIdx(StartOp);
+    getOperand(StartOp).print(OS, MST, TypeToPrint, /*PrintDef=*/false,
+                              ShouldPrintRegisterTies, TiedOperandIdx, TRI,
+                              IntrinsicInfo);
     unsigned Reg = getOperand(StartOp).getReg();
-    if (TargetRegisterInfo::isVirtualRegister(Reg)) {
+    if (TargetRegisterInfo::isVirtualRegister(Reg))
       VirtRegs.push_back(Reg);
-      LLT Ty = MRI ? MRI->getType(Reg) : LLT{};
-      if (Ty.isValid())
-        OS << '(' << Ty << ')';
-    }
   }
 
   if (StartOp != 0)
@@ -1241,7 +1287,12 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
   if (isInlineAsm() && e >= InlineAsm::MIOp_FirstOperand) {
     // Print asm string.
     OS << " ";
-    getOperand(InlineAsm::MIOp_AsmString).print(OS, MST, TRI);
+    const unsigned OpIdx = InlineAsm::MIOp_AsmString;
+    LLT TypeToPrint = MRI ? getTypeToPrint(OpIdx, PrintedTypes, *MRI) : LLT{};
+    unsigned TiedOperandIdx = getTiedOperandIdx(StartOp);
+    getOperand(OpIdx).print(OS, MST, TypeToPrint, /*PrintDef=*/true,
+                            ShouldPrintRegisterTies, TiedOperandIdx, TRI,
+                            IntrinsicInfo);
 
     // Print HasSideEffects, MayLoad, MayStore, IsAlignStack
     unsigned ExtraInfo = getOperand(InlineAsm::MIOp_ExtraInfo).getImm();
@@ -1284,8 +1335,12 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
       auto *DIV = dyn_cast<DILocalVariable>(MO.getMetadata());
       if (DIV && !DIV->getName().empty())
         OS << "!\"" << DIV->getName() << '\"';
-      else
-        MO.print(OS, MST, TRI);
+      else {
+        LLT TypeToPrint = MRI ? getTypeToPrint(i, PrintedTypes, *MRI) : LLT{};
+        unsigned TiedOperandIdx = getTiedOperandIdx(StartOp);
+        MO.print(OS, MST, TypeToPrint, /*PrintDef=*/true,
+                 ShouldPrintRegisterTies, TiedOperandIdx, TRI, IntrinsicInfo);
+      }
     } else if (TRI && (isInsertSubreg() || isRegSequence() ||
                        (isSubregToReg() && i == 3)) && MO.isImm()) {
       OS << TRI->getSubRegIndexName(MO.getImm());
@@ -1347,8 +1402,12 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
 
       // Compute the index of the next operand descriptor.
       AsmDescOp += 1 + InlineAsm::getNumOperandRegisters(Flag);
-    } else
-      MO.print(OS, MST, TRI);
+    } else {
+      LLT TypeToPrint = MRI ? getTypeToPrint(i, PrintedTypes, *MRI) : LLT{};
+      unsigned TiedOperandIdx = getTiedOperandIdx(StartOp);
+      MO.print(OS, MST, TypeToPrint, /*PrintDef=*/true, ShouldPrintRegisterTies,
+               TiedOperandIdx, TRI, IntrinsicInfo);
+    }
   }
 
   bool HaveSemi = false;

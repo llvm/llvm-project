@@ -11,7 +11,7 @@ define void @t1(i8 signext %c) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    .cfi_offset %edi, -8
 ; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %edi
-; CHECK-NEXT:    # kill: %di<def> %di<kill> %edi<kill>
+; CHECK-NEXT:    # kill: def %di killed %di killed %edi
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    popl %edi
@@ -28,7 +28,7 @@ define void @t2(i8 signext %c) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    .cfi_offset %esi, -8
 ; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %esi
-; CHECK-NEXT:    # kill: %si<def> %si<kill> %esi<kill>
+; CHECK-NEXT:    # kill: def %si killed %si killed %esi
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    popl %esi

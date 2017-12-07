@@ -28,14 +28,14 @@
 // definitions are predicable, then in the second step, the conditional
 // transfers will then be rewritten as predicated instructions. E.g.
 //   %0 = A2_or %1, %2
-//   %3 = A2_tfrt %99, %0<kill>
+//   %3 = A2_tfrt %99, killed %0
 // will be rewritten as
 //   %3 = A2_port %99, %1, %2
 //
 // This replacement has two variants: "up" and "down". Consider this case:
 //   %0 = A2_or %1, %2
 //   ... [intervening instructions] ...
-//   %3 = A2_tfrt %99, %0<kill>
+//   %3 = A2_tfrt %99, killed %0
 // variant "up":
 //   %3 = A2_port %99, %1, %2
 //   ... [intervening instructions, %0->vreg3] ...
@@ -65,15 +65,15 @@
 // will see both instructions as actual definitions, and will mark the
 // first one as dead. The definition is not actually dead, and this
 // situation will need to be fixed. For example:
-//   %1<def,dead> = A2_tfrt ...  ; marked as dead
-//   %1<def> = A2_tfrf ...
+//   dead %1 = A2_tfrt ...  ; marked as dead
+//   %1 = A2_tfrf ...
 //
 // Since any of the individual predicated transfers may end up getting
 // removed (in case it is an identity copy), some pre-existing def may
 // be marked as dead after live interval recomputation:
-//   %1<def,dead> = ...          ; marked as dead
+//   dead %1 = ...          ; marked as dead
 //   ...
-//   %1<def> = A2_tfrf ...       ; if A2_tfrt is removed
+//   %1 = A2_tfrf ...       ; if A2_tfrt is removed
 // This case happens if %1 was used as a source in A2_tfrt, which means
 // that is it actually live at the A2_tfrf, and so the now dead definition
 // of %1 will need to be updated to non-dead at some point.

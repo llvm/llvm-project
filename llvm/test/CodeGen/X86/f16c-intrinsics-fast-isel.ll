@@ -43,7 +43,7 @@ define i16 @test_cvtss_sh(float %a0) nounwind {
 ; X32-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; X32-NEXT:    vcvtps2ph $0, %xmm0, %xmm0
 ; X32-NEXT:    vmovd %xmm0, %eax
-; X32-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; X32-NEXT:    # kill: def %ax killed %ax killed %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_cvtss_sh:
@@ -52,7 +52,7 @@ define i16 @test_cvtss_sh(float %a0) nounwind {
 ; X64-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; X64-NEXT:    vcvtps2ph $0, %xmm0, %xmm0
 ; X64-NEXT:    vmovd %xmm0, %eax
-; X64-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; X64-NEXT:    # kill: def %ax killed %ax killed %eax
 ; X64-NEXT:    retq
   %ins0 = insertelement <4 x float> undef, float %a0, i32 0
   %ins1 = insertelement <4 x float> %ins0, float 0.000000e+00, i32 1
