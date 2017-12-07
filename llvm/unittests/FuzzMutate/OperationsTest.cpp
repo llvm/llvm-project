@@ -8,11 +8,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/FuzzMutate/Operations.h"
+#include "llvm/AsmParser/Parser.h"
 #include "llvm/FuzzMutate/OpDescriptor.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Support/SourceMgr.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <iostream>
@@ -52,9 +54,25 @@ using testing::NotNull;
 using testing::PrintToString;
 using testing::SizeIs;
 
+namespace {
+std::unique_ptr<Module> parseAssembly(
+    const char *Assembly, LLVMContext &Context) {
+
+  SMDiagnostic Error;
+  std::unique_ptr<Module> M = parseAssemblyString(Assembly, Error, Context);
+
+  std::string ErrMsg;
+  raw_string_ostream OS(ErrMsg);
+  Error.print("", OS);
+
+  assert(M && !verifyModule(*M, &errs()));
+  return M;
+}
+
 MATCHER_P(TypesMatch, V, "has type " + PrintToString(V->getType())) {
   return arg->getType() == V->getType();
 }
+
 MATCHER_P(HasType, T, "") { return arg->getType() == T; }
 
 TEST(OperationsTest, SourcePreds) {
@@ -253,6 +271,33 @@ TEST(OperationsTest, GEP) {
   EXPECT_FALSE(verifyModule(M, &errs()));
 }
 
+
+TEST(OperationsTest, GEPPointerOperand) {
+  // Check that we only pick sized pointers for the GEP instructions
+
+  LLVMContext Ctx;
+  const char *SourceCode =
+      "declare void @f()\n"
+      "define void @test() {\n"
+      "  %v = bitcast void ()* @f to i64 (i8 addrspace(4)*)*\n"
+      "  %a = alloca i64, i32 10\n"
+      "  ret void\n"
+      "}";
+  auto M = parseAssembly(SourceCode, Ctx);
+
+  fuzzerop::OpDescriptor Descr = fuzzerop::gepDescriptor(1);
+
+  // Get first basic block of the test function
+  Function &F = *M->getFunction("test");
+  BasicBlock &BB = *F.begin();
+
+  // Don't match %v
+  ASSERT_FALSE(Descr.SourcePreds[0].matches({}, &*BB.begin()));
+
+  // Match %a
+  ASSERT_TRUE(Descr.SourcePreds[0].matches({}, &*std::next(BB.begin())));
+}
+
 TEST(OperationsTest, ExtractAndInsertValue) {
   LLVMContext Ctx;
 
@@ -320,4 +365,6 @@ TEST(OperationsTest, ExtractAndInsertValue) {
   EXPECT_THAT(
       IVOp.SourcePreds[2].generate({SVal, ConstantInt::get(Int32Ty, 0)}, {}),
       ElementsAre(ConstantInt::get(Int32Ty, 1)));
+}
+
 }

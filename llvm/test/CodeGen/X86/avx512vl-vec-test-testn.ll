@@ -8,14 +8,14 @@ define zeroext i8 @TEST_mm_test_epi64_mask(<2 x i64> %__A, <2 x i64> %__B) local
 ; X86_64:       # %bb.0: # %entry
 ; X86_64-NEXT:    vptestmq %xmm0, %xmm1, %k0
 ; X86_64-NEXT:    kmovw %k0, %eax
-; X86_64-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; X86_64-NEXT:    # kill: def %al killed %al killed %eax
 ; X86_64-NEXT:    retq
 ;
 ; I386-LABEL: TEST_mm_test_epi64_mask:
 ; I386:       # %bb.0: # %entry
 ; I386-NEXT:    vptestmq %xmm0, %xmm1, %k0
 ; I386-NEXT:    kmovw %k0, %eax
-; I386-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; I386-NEXT:    # kill: def %al killed %al killed %eax
 ; I386-NEXT:    retl
 entry:
   %and.i.i = and <2 x i64> %__B, %__A
@@ -31,14 +31,14 @@ define zeroext i8 @TEST_mm_test_epi32_mask(<2 x i64> %__A, <2 x i64> %__B) local
 ; X86_64:       # %bb.0: # %entry
 ; X86_64-NEXT:    vptestmd %xmm0, %xmm1, %k0
 ; X86_64-NEXT:    kmovw %k0, %eax
-; X86_64-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; X86_64-NEXT:    # kill: def %al killed %al killed %eax
 ; X86_64-NEXT:    retq
 ;
 ; I386-LABEL: TEST_mm_test_epi32_mask:
 ; I386:       # %bb.0: # %entry
 ; I386-NEXT:    vptestmd %xmm0, %xmm1, %k0
 ; I386-NEXT:    kmovw %k0, %eax
-; I386-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; I386-NEXT:    # kill: def %al killed %al killed %eax
 ; I386-NEXT:    retl
 entry:
   %and.i.i = and <2 x i64> %__B, %__A
@@ -55,7 +55,7 @@ define zeroext i8 @TEST_mm256_test_epi64_mask(<4 x i64> %__A, <4 x i64> %__B) lo
 ; X86_64:       # %bb.0: # %entry
 ; X86_64-NEXT:    vptestmq %ymm0, %ymm1, %k0
 ; X86_64-NEXT:    kmovw %k0, %eax
-; X86_64-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; X86_64-NEXT:    # kill: def %al killed %al killed %eax
 ; X86_64-NEXT:    vzeroupper
 ; X86_64-NEXT:    retq
 ;
@@ -63,7 +63,7 @@ define zeroext i8 @TEST_mm256_test_epi64_mask(<4 x i64> %__A, <4 x i64> %__B) lo
 ; I386:       # %bb.0: # %entry
 ; I386-NEXT:    vptestmq %ymm0, %ymm1, %k0
 ; I386-NEXT:    kmovw %k0, %eax
-; I386-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; I386-NEXT:    # kill: def %al killed %al killed %eax
 ; I386-NEXT:    vzeroupper
 ; I386-NEXT:    retl
 entry:
@@ -80,7 +80,7 @@ define zeroext i8 @TEST_mm256_test_epi32_mask(<4 x i64> %__A, <4 x i64> %__B) lo
 ; X86_64:       # %bb.0: # %entry
 ; X86_64-NEXT:    vptestmd %ymm0, %ymm1, %k0
 ; X86_64-NEXT:    kmovw %k0, %eax
-; X86_64-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; X86_64-NEXT:    # kill: def %al killed %al killed %eax
 ; X86_64-NEXT:    vzeroupper
 ; X86_64-NEXT:    retq
 ;
@@ -88,7 +88,7 @@ define zeroext i8 @TEST_mm256_test_epi32_mask(<4 x i64> %__A, <4 x i64> %__B) lo
 ; I386:       # %bb.0: # %entry
 ; I386-NEXT:    vptestmd %ymm0, %ymm1, %k0
 ; I386-NEXT:    kmovw %k0, %eax
-; I386-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; I386-NEXT:    # kill: def %al killed %al killed %eax
 ; I386-NEXT:    vzeroupper
 ; I386-NEXT:    retl
 entry:
@@ -106,7 +106,7 @@ define zeroext i8 @TEST_mm_mask_test_epi64_mask(i8 %__U, <2 x i64> %__A, <2 x i6
 ; X86_64-NEXT:    kmovw %edi, %k1
 ; X86_64-NEXT:    vptestmq %xmm0, %xmm1, %k0 {%k1}
 ; X86_64-NEXT:    kmovw %k0, %eax
-; X86_64-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; X86_64-NEXT:    # kill: def %al killed %al killed %eax
 ; X86_64-NEXT:    retq
 ;
 ; I386-LABEL: TEST_mm_mask_test_epi64_mask:
@@ -115,7 +115,7 @@ define zeroext i8 @TEST_mm_mask_test_epi64_mask(i8 %__U, <2 x i64> %__A, <2 x i6
 ; I386-NEXT:    kmovw %eax, %k1
 ; I386-NEXT:    vptestmq %xmm0, %xmm1, %k0 {%k1}
 ; I386-NEXT:    kmovw %k0, %eax
-; I386-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; I386-NEXT:    # kill: def %al killed %al killed %eax
 ; I386-NEXT:    retl
 entry:
   %and.i.i = and <2 x i64> %__B, %__A
@@ -135,7 +135,7 @@ define zeroext i8 @TEST_mm_mask_test_epi32_mask(i8 %__U, <2 x i64> %__A, <2 x i6
 ; X86_64-NEXT:    kmovw %edi, %k1
 ; X86_64-NEXT:    vptestmd %xmm0, %xmm1, %k0 {%k1}
 ; X86_64-NEXT:    kmovw %k0, %eax
-; X86_64-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; X86_64-NEXT:    # kill: def %al killed %al killed %eax
 ; X86_64-NEXT:    retq
 ;
 ; I386-LABEL: TEST_mm_mask_test_epi32_mask:
@@ -144,7 +144,7 @@ define zeroext i8 @TEST_mm_mask_test_epi32_mask(i8 %__U, <2 x i64> %__A, <2 x i6
 ; I386-NEXT:    kmovw %eax, %k1
 ; I386-NEXT:    vptestmd %xmm0, %xmm1, %k0 {%k1}
 ; I386-NEXT:    kmovw %k0, %eax
-; I386-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; I386-NEXT:    # kill: def %al killed %al killed %eax
 ; I386-NEXT:    retl
 entry:
   %and.i.i = and <2 x i64> %__B, %__A
@@ -166,7 +166,7 @@ define zeroext i8 @TEST_mm256_mask_test_epi64_mask(i8 %__U, <4 x i64> %__A, <4 x
 ; X86_64-NEXT:    kmovw %edi, %k1
 ; X86_64-NEXT:    vptestmq %ymm0, %ymm1, %k0 {%k1}
 ; X86_64-NEXT:    kmovw %k0, %eax
-; X86_64-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; X86_64-NEXT:    # kill: def %al killed %al killed %eax
 ; X86_64-NEXT:    vzeroupper
 ; X86_64-NEXT:    retq
 ;
@@ -176,7 +176,7 @@ define zeroext i8 @TEST_mm256_mask_test_epi64_mask(i8 %__U, <4 x i64> %__A, <4 x
 ; I386-NEXT:    kmovw %eax, %k1
 ; I386-NEXT:    vptestmq %ymm0, %ymm1, %k0 {%k1}
 ; I386-NEXT:    kmovw %k0, %eax
-; I386-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; I386-NEXT:    # kill: def %al killed %al killed %eax
 ; I386-NEXT:    vzeroupper
 ; I386-NEXT:    retl
 entry:
@@ -197,7 +197,7 @@ define zeroext i8 @TEST_mm256_mask_test_epi32_mask(i8 %__U, <4 x i64> %__A, <4 x
 ; X86_64-NEXT:    kmovw %edi, %k1
 ; X86_64-NEXT:    vptestmd %ymm0, %ymm1, %k0 {%k1}
 ; X86_64-NEXT:    kmovw %k0, %eax
-; X86_64-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; X86_64-NEXT:    # kill: def %al killed %al killed %eax
 ; X86_64-NEXT:    vzeroupper
 ; X86_64-NEXT:    retq
 ;
@@ -207,7 +207,7 @@ define zeroext i8 @TEST_mm256_mask_test_epi32_mask(i8 %__U, <4 x i64> %__A, <4 x
 ; I386-NEXT:    kmovw %eax, %k1
 ; I386-NEXT:    vptestmd %ymm0, %ymm1, %k0 {%k1}
 ; I386-NEXT:    kmovw %k0, %eax
-; I386-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; I386-NEXT:    # kill: def %al killed %al killed %eax
 ; I386-NEXT:    vzeroupper
 ; I386-NEXT:    retl
 entry:
@@ -226,14 +226,14 @@ define zeroext i8 @TEST_mm_testn_epi64_mask(<2 x i64> %__A, <2 x i64> %__B) loca
 ; X86_64:       # %bb.0: # %entry
 ; X86_64-NEXT:    vptestnmq %xmm0, %xmm1, %k0
 ; X86_64-NEXT:    kmovw %k0, %eax
-; X86_64-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; X86_64-NEXT:    # kill: def %al killed %al killed %eax
 ; X86_64-NEXT:    retq
 ;
 ; I386-LABEL: TEST_mm_testn_epi64_mask:
 ; I386:       # %bb.0: # %entry
 ; I386-NEXT:    vptestnmq %xmm0, %xmm1, %k0
 ; I386-NEXT:    kmovw %k0, %eax
-; I386-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; I386-NEXT:    # kill: def %al killed %al killed %eax
 ; I386-NEXT:    retl
 entry:
   %and.i.i = and <2 x i64> %__B, %__A
@@ -249,14 +249,14 @@ define zeroext i8 @TEST_mm_testn_epi32_mask(<2 x i64> %__A, <2 x i64> %__B) loca
 ; X86_64:       # %bb.0: # %entry
 ; X86_64-NEXT:    vptestnmd %xmm0, %xmm1, %k0
 ; X86_64-NEXT:    kmovw %k0, %eax
-; X86_64-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; X86_64-NEXT:    # kill: def %al killed %al killed %eax
 ; X86_64-NEXT:    retq
 ;
 ; I386-LABEL: TEST_mm_testn_epi32_mask:
 ; I386:       # %bb.0: # %entry
 ; I386-NEXT:    vptestnmd %xmm0, %xmm1, %k0
 ; I386-NEXT:    kmovw %k0, %eax
-; I386-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; I386-NEXT:    # kill: def %al killed %al killed %eax
 ; I386-NEXT:    retl
 entry:
   %and.i.i = and <2 x i64> %__B, %__A
@@ -273,7 +273,7 @@ define zeroext i8 @TEST_mm256_testn_epi64_mask(<4 x i64> %__A, <4 x i64> %__B) l
 ; X86_64:       # %bb.0: # %entry
 ; X86_64-NEXT:    vptestnmq %ymm0, %ymm1, %k0
 ; X86_64-NEXT:    kmovw %k0, %eax
-; X86_64-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; X86_64-NEXT:    # kill: def %al killed %al killed %eax
 ; X86_64-NEXT:    vzeroupper
 ; X86_64-NEXT:    retq
 ;
@@ -281,7 +281,7 @@ define zeroext i8 @TEST_mm256_testn_epi64_mask(<4 x i64> %__A, <4 x i64> %__B) l
 ; I386:       # %bb.0: # %entry
 ; I386-NEXT:    vptestnmq %ymm0, %ymm1, %k0
 ; I386-NEXT:    kmovw %k0, %eax
-; I386-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; I386-NEXT:    # kill: def %al killed %al killed %eax
 ; I386-NEXT:    vzeroupper
 ; I386-NEXT:    retl
 entry:
@@ -298,7 +298,7 @@ define zeroext i8 @TEST_mm256_testn_epi32_mask(<4 x i64> %__A, <4 x i64> %__B) l
 ; X86_64:       # %bb.0: # %entry
 ; X86_64-NEXT:    vptestnmd %ymm0, %ymm1, %k0
 ; X86_64-NEXT:    kmovw %k0, %eax
-; X86_64-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; X86_64-NEXT:    # kill: def %al killed %al killed %eax
 ; X86_64-NEXT:    vzeroupper
 ; X86_64-NEXT:    retq
 ;
@@ -306,7 +306,7 @@ define zeroext i8 @TEST_mm256_testn_epi32_mask(<4 x i64> %__A, <4 x i64> %__B) l
 ; I386:       # %bb.0: # %entry
 ; I386-NEXT:    vptestnmd %ymm0, %ymm1, %k0
 ; I386-NEXT:    kmovw %k0, %eax
-; I386-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; I386-NEXT:    # kill: def %al killed %al killed %eax
 ; I386-NEXT:    vzeroupper
 ; I386-NEXT:    retl
 entry:
@@ -324,7 +324,7 @@ define zeroext i8 @TEST_mm_mask_testn_epi64_mask(i8 %__U, <2 x i64> %__A, <2 x i
 ; X86_64-NEXT:    kmovw %edi, %k1
 ; X86_64-NEXT:    vptestnmq %xmm0, %xmm1, %k0 {%k1}
 ; X86_64-NEXT:    kmovw %k0, %eax
-; X86_64-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; X86_64-NEXT:    # kill: def %al killed %al killed %eax
 ; X86_64-NEXT:    retq
 ;
 ; I386-LABEL: TEST_mm_mask_testn_epi64_mask:
@@ -333,7 +333,7 @@ define zeroext i8 @TEST_mm_mask_testn_epi64_mask(i8 %__U, <2 x i64> %__A, <2 x i
 ; I386-NEXT:    kmovw %eax, %k1
 ; I386-NEXT:    vptestnmq %xmm0, %xmm1, %k0 {%k1}
 ; I386-NEXT:    kmovw %k0, %eax
-; I386-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; I386-NEXT:    # kill: def %al killed %al killed %eax
 ; I386-NEXT:    retl
 entry:
   %and.i.i = and <2 x i64> %__B, %__A
@@ -353,7 +353,7 @@ define zeroext i8 @TEST_mm_mask_testn_epi32_mask(i8 %__U, <2 x i64> %__A, <2 x i
 ; X86_64-NEXT:    kmovw %edi, %k1
 ; X86_64-NEXT:    vptestnmd %xmm0, %xmm1, %k0 {%k1}
 ; X86_64-NEXT:    kmovw %k0, %eax
-; X86_64-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; X86_64-NEXT:    # kill: def %al killed %al killed %eax
 ; X86_64-NEXT:    retq
 ;
 ; I386-LABEL: TEST_mm_mask_testn_epi32_mask:
@@ -362,7 +362,7 @@ define zeroext i8 @TEST_mm_mask_testn_epi32_mask(i8 %__U, <2 x i64> %__A, <2 x i
 ; I386-NEXT:    kmovw %eax, %k1
 ; I386-NEXT:    vptestnmd %xmm0, %xmm1, %k0 {%k1}
 ; I386-NEXT:    kmovw %k0, %eax
-; I386-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; I386-NEXT:    # kill: def %al killed %al killed %eax
 ; I386-NEXT:    retl
 entry:
   %and.i.i = and <2 x i64> %__B, %__A
@@ -384,7 +384,7 @@ define zeroext i8 @TEST_mm256_mask_testn_epi64_mask(i8 %__U, <4 x i64> %__A, <4 
 ; X86_64-NEXT:    kmovw %edi, %k1
 ; X86_64-NEXT:    vptestnmq %ymm0, %ymm1, %k0 {%k1}
 ; X86_64-NEXT:    kmovw %k0, %eax
-; X86_64-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; X86_64-NEXT:    # kill: def %al killed %al killed %eax
 ; X86_64-NEXT:    vzeroupper
 ; X86_64-NEXT:    retq
 ;
@@ -394,7 +394,7 @@ define zeroext i8 @TEST_mm256_mask_testn_epi64_mask(i8 %__U, <4 x i64> %__A, <4 
 ; I386-NEXT:    kmovw %eax, %k1
 ; I386-NEXT:    vptestnmq %ymm0, %ymm1, %k0 {%k1}
 ; I386-NEXT:    kmovw %k0, %eax
-; I386-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; I386-NEXT:    # kill: def %al killed %al killed %eax
 ; I386-NEXT:    vzeroupper
 ; I386-NEXT:    retl
 entry:
@@ -415,7 +415,7 @@ define zeroext i8 @TEST_mm256_mask_testn_epi32_mask(i8 %__U, <4 x i64> %__A, <4 
 ; X86_64-NEXT:    kmovw %edi, %k1
 ; X86_64-NEXT:    vptestnmd %ymm0, %ymm1, %k0 {%k1}
 ; X86_64-NEXT:    kmovw %k0, %eax
-; X86_64-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; X86_64-NEXT:    # kill: def %al killed %al killed %eax
 ; X86_64-NEXT:    vzeroupper
 ; X86_64-NEXT:    retq
 ;
@@ -425,7 +425,7 @@ define zeroext i8 @TEST_mm256_mask_testn_epi32_mask(i8 %__U, <4 x i64> %__A, <4 
 ; I386-NEXT:    kmovw %eax, %k1
 ; I386-NEXT:    vptestnmd %ymm0, %ymm1, %k0 {%k1}
 ; I386-NEXT:    kmovw %k0, %eax
-; I386-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; I386-NEXT:    # kill: def %al killed %al killed %eax
 ; I386-NEXT:    vzeroupper
 ; I386-NEXT:    retl
 entry:

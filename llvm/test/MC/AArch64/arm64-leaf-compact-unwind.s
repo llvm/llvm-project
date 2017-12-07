@@ -200,7 +200,7 @@ Ltmp13:
 	.cfi_offset w27, -16
 Ltmp14:
 	.cfi_offset w28, -24
-                                        ; kill: W0<def> W0<kill> X0<def>
+                                        ; kill: def W0 killed W0 def X0
 	mov	x9, xzr
 	ubfx	x10, x0, #0, #32
 	mov	x8, sp

@@ -23,7 +23,7 @@ define <8 x i16> @pr25080(<8 x i32> %a) {
 ;
 ; KNL-32-LABEL: pr25080:
 ; KNL-32:       # %bb.0: # %entry
-; KNL-32-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; KNL-32-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; KNL-32-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [8388607,8388607,8388607,8388607,8388607,8388607,8388607,8388607]
 ; KNL-32-NEXT:    vptestnmd %zmm1, %zmm0, %k0
 ; KNL-32-NEXT:    movb $15, %al
@@ -31,7 +31,7 @@ define <8 x i16> @pr25080(<8 x i32> %a) {
 ; KNL-32-NEXT:    korw %k1, %k0, %k1
 ; KNL-32-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; KNL-32-NEXT:    vpmovdw %zmm0, %ymm0
-; KNL-32-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
+; KNL-32-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
 ; KNL-32-NEXT:    retl
 entry:
   %0 = trunc <8 x i32> %a to <8 x i23>

@@ -62,9 +62,9 @@ namespace llvm {
 /// %bb.0: derived from LLVM BB %entry
 ///    Live Ins: %f1 %f3 %x6
 ///        <SNIP1>
-///        %0<def> = COPY %f1; F8RC:%0
-///        %5<def> = CMPLWI %4<kill>, 0; CRRC:%5 GPRC:%4
-///        %8<def> = LXSDX %zero8, %7<kill>, %rm<imp-use>;
+///        %0 = COPY %f1; F8RC:%0
+///        %5 = CMPLWI killed %4, 0; CRRC:%5 GPRC:%4
+///        %8 = LXSDX %zero8, killed %7, implicit %rm;
 ///                    mem:LD8[ConstantPool] F8RC:%8 G8RC:%7
 ///        BCC 76, %5, <%bb.2>; CRRC:%5
 ///    Successors according to CFG: %bb.1(?%) %bb.2(?%)
@@ -75,7 +75,7 @@ namespace llvm {
 ///
 /// %bb.2: derived from LLVM BB %entry
 ///    Predecessors according to CFG: %bb.0 %bb.1
-///        %9<def> = PHI %8, <%bb.1>, %0, <%bb.0>;
+///        %9 = PHI %8, <%bb.1>, %0, <%bb.0>;
 ///                    F8RC:%9,%8,%0
 ///        <SNIP2>
 ///        BCC 76, %5, <%bb.4>; CRRC:%5
@@ -87,10 +87,10 @@ namespace llvm {
 ///
 /// %bb.4: derived from LLVM BB %entry
 ///    Predecessors according to CFG: %bb.2 %bb.3
-///        %13<def> = PHI %12, <%bb.3>, %2, <%bb.2>;
+///        %13 = PHI %12, <%bb.3>, %2, <%bb.2>;
 ///                     F8RC:%13,%12,%2
 ///        <SNIP3>
-///        BLR8 %lr8<imp-use>, %rm<imp-use>, %f1<imp-use>
+///        BLR8 implicit %lr8, implicit %rm, implicit %f1
 ///
 /// When this pattern is detected, branch coalescing will try to collapse
 /// it by moving code in %bb.2 to %bb.0 and/or %bb.4 and removing %bb.3.
@@ -100,9 +100,9 @@ namespace llvm {
 /// %bb.0: derived from LLVM BB %entry
 ///    Live Ins: %f1 %f3 %x6
 ///        <SNIP1>
-///        %0<def> = COPY %f1; F8RC:%0
-///        %5<def> = CMPLWI %4<kill>, 0; CRRC:%5 GPRC:%4
-///        %8<def> = LXSDX %zero8, %7<kill>, %rm<imp-use>;
+///        %0 = COPY %f1; F8RC:%0
+///        %5 = CMPLWI killed %4, 0; CRRC:%5 GPRC:%4
+///        %8 = LXSDX %zero8, killed %7, implicit %rm;
 ///                     mem:LD8[ConstantPool] F8RC:%8 G8RC:%7
 ///        <SNIP2>
 ///        BCC 76, %5, <%bb.4>; CRRC:%5
@@ -115,12 +115,12 @@ namespace llvm {
 ///
 /// %bb.4: derived from LLVM BB %entry
 ///    Predecessors according to CFG: %bb.0 %bb.1
-///        %9<def> = PHI %8, <%bb.1>, %0, <%bb.0>;
+///        %9 = PHI %8, <%bb.1>, %0, <%bb.0>;
 ///                    F8RC:%9,%8,%0
-///        %13<def> = PHI %12, <%bb.1>, %2, <%bb.0>;
+///        %13 = PHI %12, <%bb.1>, %2, <%bb.0>;
 ///                     F8RC:%13,%12,%2
 ///        <SNIP3>
-///        BLR8 %lr8<imp-use>, %rm<imp-use>, %f1<imp-use>
+///        BLR8 implicit %lr8, implicit %rm, implicit %f1
 ///
 /// Branch Coalescing does not split blocks, it moves everything in the same
 /// direction ensuring it does not break use/definition semantics.

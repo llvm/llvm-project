@@ -436,8 +436,8 @@ bool SystemZElimCompare::optimizeCompareZero(
   // Also do a forward search to handle cases where an instruction after the
   // compare can be converted like
   //
-  // LTEBRCompare %f0s, %f0s, %cc<imp-def> LTEBRCompare %f0s, %f0s, %cc<imp-def>
-  // %f2s<def> = LER %f0s
+  // LTEBRCompare %f0s, %f0s, implicit-def %cc LTEBRCompare %f0s, %f0s,
+  // implicit-def %cc %f2s = LER %f0s
   //
   MBBI = Compare, MBBE = MBB.end();
   while (++MBBI != MBBE) {

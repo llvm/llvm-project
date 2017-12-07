@@ -74,7 +74,7 @@ define i32 @select_1_or_0_signext(i1 signext %cond) {
 define i32 @select_0_or_neg1(i1 %cond) {
 ; CHECK-LABEL: select_0_or_neg1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
+; CHECK-NEXT:    # kill: def %edi killed %edi def %rdi
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    leal -1(%rdi), %eax
 ; CHECK-NEXT:    retq
@@ -85,7 +85,7 @@ define i32 @select_0_or_neg1(i1 %cond) {
 define i32 @select_0_or_neg1_zeroext(i1 zeroext %cond) {
 ; CHECK-LABEL: select_0_or_neg1_zeroext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
+; CHECK-NEXT:    # kill: def %edi killed %edi def %rdi
 ; CHECK-NEXT:    leal -1(%rdi), %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 0, i32 -1
@@ -139,7 +139,7 @@ define i32 @select_neg1_or_0_signext(i1 signext %cond) {
 define i32 @select_Cplus1_C(i1 %cond) {
 ; CHECK-LABEL: select_Cplus1_C:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
+; CHECK-NEXT:    # kill: def %edi killed %edi def %rdi
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    leal 41(%rdi), %eax
 ; CHECK-NEXT:    retq
@@ -150,7 +150,7 @@ define i32 @select_Cplus1_C(i1 %cond) {
 define i32 @select_Cplus1_C_zeroext(i1 zeroext %cond) {
 ; CHECK-LABEL: select_Cplus1_C_zeroext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
+; CHECK-NEXT:    # kill: def %edi killed %edi def %rdi
 ; CHECK-NEXT:    leal 41(%rdi), %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 42, i32 41
@@ -287,7 +287,7 @@ define i16 @sel_neg1_1(i32 %x) {
 ; CHECK-NEXT:    cmpl $43, %edi
 ; CHECK-NEXT:    setl %al
 ; CHECK-NEXT:    leal -1(,%rax,4), %eax
-; CHECK-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; CHECK-NEXT:    # kill: def %ax killed %ax killed %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp sgt i32 %x, 42
   %sel = select i1 %cmp, i16 -1, i16 3
@@ -344,7 +344,7 @@ define i16 @select_pow2_diff_invert(i1 zeroext %cond) {
 ; CHECK-NEXT:    movzbl %dil, %eax
 ; CHECK-NEXT:    shll $6, %eax
 ; CHECK-NEXT:    orl $7, %eax
-; CHECK-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; CHECK-NEXT:    # kill: def %ax killed %ax killed %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i16 7, i16 71
   ret i16 %sel

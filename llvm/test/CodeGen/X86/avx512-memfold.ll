@@ -7,7 +7,7 @@ define i8 @test_int_x86_avx512_mask_cmp_ss(<4 x float> %a, float* %b, i8 %mask) 
 ; CHECK-NEXT:    kmovw %esi, %k1
 ; CHECK-NEXT:    vcmpunordss (%rdi), %xmm0, %k0 {%k1}
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %al killed %al killed %eax
 ; CHECK-NEXT:    retq
   %b.val = load float, float* %b
   %bv0 = insertelement <4 x float> undef, float %b.val, i32 0

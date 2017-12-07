@@ -40,7 +40,7 @@ define i16 @test_kand(i16 %a0, i16 %a1) {
 ; CHECK-NEXT:    kandw %k0, %k1, %k0
 ; CHECK-NEXT:    kandw %k0, %k2, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %ax killed %ax killed %eax
 ; CHECK-NEXT:    retq
   %t1 = call i16 @llvm.x86.avx512.kand.w(i16 %a0, i16 8)
   %t2 = call i16 @llvm.x86.avx512.kand.w(i16 %t1, i16 %a1)
@@ -58,7 +58,7 @@ define i16 @test_kandn(i16 %a0, i16 %a1) {
 ; CHECK-NEXT:    kandnw %k2, %k1, %k1
 ; CHECK-NEXT:    kandnw %k0, %k1, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %ax killed %ax killed %eax
 ; CHECK-NEXT:    retq
   %t1 = call i16 @llvm.x86.avx512.kandn.w(i16 %a0, i16 8)
   %t2 = call i16 @llvm.x86.avx512.kandn.w(i16 %t1, i16 %a1)
@@ -72,7 +72,7 @@ define i16 @test_knot(i16 %a0) {
 ; CHECK-NEXT:    kmovw %edi, %k0
 ; CHECK-NEXT:    knotw %k0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %ax killed %ax killed %eax
 ; CHECK-NEXT:    retq
   %res = call i16 @llvm.x86.avx512.knot.w(i16 %a0)
   ret i16 %res
@@ -89,7 +89,7 @@ define i16 @test_kor(i16 %a0, i16 %a1) {
 ; CHECK-NEXT:    korw %k0, %k1, %k0
 ; CHECK-NEXT:    korw %k0, %k2, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %ax killed %ax killed %eax
 ; CHECK-NEXT:    retq
   %t1 = call i16 @llvm.x86.avx512.kor.w(i16 %a0, i16 8)
   %t2 = call i16 @llvm.x86.avx512.kor.w(i16 %t1, i16 %a1)
@@ -109,7 +109,7 @@ define i16 @test_kxnor(i16 %a0, i16 %a1) {
 ; CHECK-NEXT:    kxorw %k0, %k1, %k0
 ; CHECK-NEXT:    kxorw %k0, %k2, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %ax killed %ax killed %eax
 ; CHECK-NEXT:    retq
   %t1 = call i16 @llvm.x86.avx512.kxnor.w(i16 %a0, i16 8)
   %t2 = call i16 @llvm.x86.avx512.kxnor.w(i16 %t1, i16 %a1)
@@ -127,7 +127,7 @@ define i16 @test_kxor(i16 %a0, i16 %a1) {
 ; CHECK-NEXT:    kxorw %k0, %k1, %k0
 ; CHECK-NEXT:    kxorw %k0, %k2, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %ax killed %ax killed %eax
 ; CHECK-NEXT:    retq
   %t1 = call i16 @llvm.x86.avx512.kxor.w(i16 %a0, i16 8)
   %t2 = call i16 @llvm.x86.avx512.kxor.w(i16 %t1, i16 %a1)
@@ -793,7 +793,7 @@ declare <8 x double> @llvm.x86.avx512.vbroadcast.sd.512(i8*) nounwind readonly
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vcmpleps {sae}, %zmm1, %zmm0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %ax killed %ax killed %eax
 ; CHECK-NEXT:    retq
    %res = call i16 @llvm.x86.avx512.mask.cmp.ps.512(<16 x float> %a, <16 x float> %b, i32 2, i16 -1, i32 8)
    ret i16 %res
@@ -805,7 +805,7 @@ declare <8 x double> @llvm.x86.avx512.vbroadcast.sd.512(i8*) nounwind readonly
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vcmpneqpd %zmm1, %zmm0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %al killed %al killed %eax
 ; CHECK-NEXT:    retq
    %res = call i8 @llvm.x86.avx512.mask.cmp.pd.512(<8 x double> %a, <8 x double> %b, i32 4, i8 -1, i32 4)
    ret i8 %res
@@ -3294,7 +3294,7 @@ define i8@test_int_x86_avx512_mask_cmp_sd(<2 x double> %x0, <2 x double> %x1, i8
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vcmpnltsd {sae}, %xmm1, %xmm0, %k0 {%k1}
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %al killed %al killed %eax
 ; CHECK-NEXT:    retq
 
   %res4 = call i8 @llvm.x86.avx512.mask.cmp.sd(<2 x double> %x0, <2 x double> %x1, i32 5, i8 %x3, i32 8)
@@ -3316,7 +3316,7 @@ define i8@test_int_x86_avx512_mask_cmp_sd_all(<2 x double> %x0, <2 x double> %x1
 ; CHECK-NEXT:    orb %cl, %dl
 ; CHECK-NEXT:    orb %sil, %al
 ; CHECK-NEXT:    orb %dl, %al
-; CHECK-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %al killed %al killed %eax
 ; CHECK-NEXT:    retq
 
   %res1 = call i8 @llvm.x86.avx512.mask.cmp.sd(<2 x double> %x0, <2 x double> %x1, i32 2, i8 -1, i32 4)
@@ -3338,7 +3338,7 @@ define i8@test_int_x86_avx512_mask_cmp_ss(<4 x float> %x0, <4 x float> %x1, i8 %
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vcmpunordss %xmm1, %xmm0, %k0 {%k1}
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %al killed %al killed %eax
 ; CHECK-NEXT:    retq
 
   %res2 = call i8 @llvm.x86.avx512.mask.cmp.ss(<4 x float> %x0, <4 x float> %x1, i32 3, i8 %x3, i32 4)
@@ -3361,7 +3361,7 @@ define i8@test_int_x86_avx512_mask_cmp_ss_all(<4 x float> %x0, <4 x float> %x1, 
 ; CHECK-NEXT:    andb %cl, %dl
 ; CHECK-NEXT:    andb %sil, %al
 ; CHECK-NEXT:    andb %dl, %al
-; CHECK-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %al killed %al killed %eax
 ; CHECK-NEXT:    retq
   %res1 = call i8 @llvm.x86.avx512.mask.cmp.ss(<4 x float> %x0, <4 x float> %x1, i32 2, i8 -1, i32 4)
   %res2 = call i8 @llvm.x86.avx512.mask.cmp.ss(<4 x float> %x0, <4 x float> %x1, i32 3, i8 -1, i32 8)

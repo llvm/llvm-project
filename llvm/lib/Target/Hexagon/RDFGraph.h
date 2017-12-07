@@ -183,7 +183,7 @@
 //   This is typically used to prevent keeping registers artificially live
 //   in cases when they are defined via predicated instructions. For example:
 //     r0 = add-if-true cond, r10, r11                (1)
-//     r0 = add-if-false cond, r12, r13, r0<imp-use>  (2)
+//     r0 = add-if-false cond, r12, r13, implicit r0  (2)
 //     ... = r0                                       (3)
 //   Before (1), r0 is not intended to be live, and the use of r0 in (3) is
 //   not meant to be reached by any def preceding (1). However, since the

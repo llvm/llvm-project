@@ -68,6 +68,8 @@ add_llvm_unittest(SupportTests
   xxhashTest.cpp
   )
 
+target_link_libraries(SupportTests PRIVATE LLVMTestingSupport)
+
 # Disable all warning for AlignOfTest.cpp,
 # as it does things intentionally, and there is no reliable way of
 # disabling all warnings for all the compilers by using pragmas.

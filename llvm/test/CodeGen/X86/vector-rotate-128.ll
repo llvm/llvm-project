@@ -78,10 +78,10 @@ define <2 x i64> @var_rotate_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ;
 ; AVX512BW-LABEL: var_rotate_v2i64:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    # kill: %xmm1<def> %xmm1<kill> %zmm1<def>
-; AVX512BW-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<def>
+; AVX512BW-NEXT:    # kill: def %xmm1 killed %xmm1 def %zmm1
+; AVX512BW-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
 ; AVX512BW-NEXT:    vprolvq %zmm1, %zmm0, %zmm0
-; AVX512BW-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<kill>
+; AVX512BW-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
@@ -219,10 +219,10 @@ define <4 x i32> @var_rotate_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ;
 ; AVX512BW-LABEL: var_rotate_v4i32:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    # kill: %xmm1<def> %xmm1<kill> %zmm1<def>
-; AVX512BW-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<def>
+; AVX512BW-NEXT:    # kill: def %xmm1 killed %xmm1 def %zmm1
+; AVX512BW-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
 ; AVX512BW-NEXT:    vprolvd %zmm1, %zmm0, %zmm0
-; AVX512BW-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<kill>
+; AVX512BW-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
@@ -462,8 +462,8 @@ define <8 x i16> @var_rotate_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 ;
 ; AVX512BW-LABEL: var_rotate_v8i16:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    # kill: %xmm1<def> %xmm1<kill> %zmm1<def>
-; AVX512BW-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<def>
+; AVX512BW-NEXT:    # kill: def %xmm1 killed %xmm1 def %zmm1
+; AVX512BW-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
 ; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm2 = [16,16,16,16,16,16,16,16]
 ; AVX512BW-NEXT:    vpsubw %xmm1, %xmm2, %xmm2
 ; AVX512BW-NEXT:    vpsllvw %zmm1, %zmm0, %zmm1
@@ -838,10 +838,10 @@ define <2 x i64> @constant_rotate_v2i64(<2 x i64> %a) nounwind {
 ;
 ; AVX512BW-LABEL: constant_rotate_v2i64:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<def>
+; AVX512BW-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
 ; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm1 = [4,14]
 ; AVX512BW-NEXT:    vprolvq %zmm1, %zmm0, %zmm0
-; AVX512BW-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<kill>
+; AVX512BW-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
@@ -940,10 +940,10 @@ define <4 x i32> @constant_rotate_v4i32(<4 x i32> %a) nounwind {
 ;
 ; AVX512BW-LABEL: constant_rotate_v4i32:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<def>
+; AVX512BW-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
 ; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm1 = [4,5,6,7]
 ; AVX512BW-NEXT:    vprolvd %zmm1, %zmm0, %zmm0
-; AVX512BW-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<kill>
+; AVX512BW-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
@@ -1067,7 +1067,7 @@ define <8 x i16> @constant_rotate_v8i16(<8 x i16> %a) nounwind {
 ;
 ; AVX512BW-LABEL: constant_rotate_v8i16:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<def>
+; AVX512BW-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
 ; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,1,2,3,4,5,6,7]
 ; AVX512BW-NEXT:    vpsllvw %zmm1, %zmm0, %zmm1
 ; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm2 = [16,15,14,13,12,11,10,9]
@@ -1350,9 +1350,9 @@ define <2 x i64> @splatconstant_rotate_v2i64(<2 x i64> %a) nounwind {
 ;
 ; AVX512BW-LABEL: splatconstant_rotate_v2i64:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<def>
+; AVX512BW-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
 ; AVX512BW-NEXT:    vprolq $14, %zmm0, %zmm0
-; AVX512BW-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<kill>
+; AVX512BW-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
@@ -1397,9 +1397,9 @@ define <4 x i32> @splatconstant_rotate_v4i32(<4 x i32> %a) nounwind {
 ;
 ; AVX512BW-LABEL: splatconstant_rotate_v4i32:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<def>
+; AVX512BW-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
 ; AVX512BW-NEXT:    vprold $4, %zmm0, %zmm0
-; AVX512BW-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<kill>
+; AVX512BW-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
@@ -1535,7 +1535,7 @@ define <2 x i64> @splatconstant_rotate_mask_v2i64(<2 x i64> %a) nounwind {
 ;
 ; AVX512BW-LABEL: splatconstant_rotate_mask_v2i64:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<def>
+; AVX512BW-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
 ; AVX512BW-NEXT:    vprolq $15, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
 ; AVX512BW-NEXT:    vzeroupper
@@ -1587,7 +1587,7 @@ define <4 x i32> @splatconstant_rotate_mask_v4i32(<4 x i32> %a) nounwind {
 ;
 ; AVX512BW-LABEL: splatconstant_rotate_mask_v4i32:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<def>
+; AVX512BW-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
 ; AVX512BW-NEXT:    vprold $4, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
 ; AVX512BW-NEXT:    vzeroupper

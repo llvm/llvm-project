@@ -79,8 +79,8 @@ bool PPCQPXLoadSplat::runOnMachineFunction(MachineFunction &MF) {
       }
 
       // We're looking for a sequence like this:
-      // %f0<def> = LFD 0, %x3<kill>, %qf0<imp-def>; mem:LD8[%a](tbaa=!2)
-      // %qf1<def> = QVESPLATI %qf0<kill>, 0, %rm<imp-use>
+      // %f0 = LFD 0, killed %x3, implicit-def %qf0; mem:LD8[%a](tbaa=!2)
+      // %qf1 = QVESPLATI killed %qf0, 0, implicit %rm
 
       for (auto SI = Splats.begin(); SI != Splats.end();) {
         MachineInstr *SMI = *SI;

@@ -246,14 +246,14 @@ MachineSinking::AllUsesDominatedByBlock(unsigned Reg,
   // %bb.1: derived from LLVM BB %bb4.preheader
   //   Predecessors according to CFG: %bb.0
   //     ...
-  //     %reg16385<def> = DEC64_32r %reg16437, %eflags<imp-def,dead>
+  //     %reg16385 = DEC64_32r %reg16437, implicit-def dead %eflags
   //     ...
-  //     JE_4 <%bb.37>, %eflags<imp-use>
+  //     JE_4 <%bb.37>, implicit %eflags
   //   Successors according to CFG: %bb.37 %bb.2
   //
   // %bb.2: derived from LLVM BB %bb.nph
   //   Predecessors according to CFG: %bb.0 %bb.1
-  //     %reg16386<def> = PHI %reg16434, %bb.0, %reg16385, %bb.1
+  //     %reg16386 = PHI %reg16434, %bb.0, %reg16385, %bb.1
   BreakPHIEdge = true;
   for (MachineOperand &MO : MRI->use_nodbg_operands(Reg)) {
     MachineInstr *UseInst = MO.getParent();

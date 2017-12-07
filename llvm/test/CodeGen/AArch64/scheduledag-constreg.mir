@@ -7,16 +7,16 @@
 # Check that the instructions are not dependent on each other, even though
 # they all read/write to the zero register.
 # CHECK-LABEL: MI Scheduling
-# CHECK: SU(0): %wzr<def,dead> = SUBSWri %w1, 0, 0, %nzcv<imp-def,dead>
+# CHECK: SU(0): dead %wzr = SUBSWri %w1, 0, 0, implicit-def dead %nzcv
 # CHECK: # succs left : 0
 # CHECK-NOT: Successors:
-# CHECK: SU(1): %w2<def> = COPY %wzr
+# CHECK: SU(1): %w2 = COPY %wzr
 # CHECK: # succs left : 0
 # CHECK-NOT: Successors:
-# CHECK: SU(2): %wzr<def,dead> = SUBSWri %w3, 0, 0, %nzcv<imp-def,dead>
+# CHECK: SU(2): dead %wzr = SUBSWri %w3, 0, 0, implicit-def dead %nzcv
 # CHECK: # succs left : 0
 # CHECK-NOT: Successors:
-# CHECK: SU(3): %w4<def> = COPY %wzr
+# CHECK: SU(3): %w4 = COPY %wzr
 # CHECK: # succs left : 0
 # CHECK-NOT: Successors:
 name: func

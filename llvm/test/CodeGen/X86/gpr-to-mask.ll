@@ -260,8 +260,8 @@ exit:
 define void @test_shl1(i1 %cond, i8* %ptr1, i8* %ptr2, <8 x float> %fvec1, <8 x float> %fvec2, <8 x float>* %fptrvec) {
 ; X86-64-LABEL: test_shl1:
 ; X86-64:       # %bb.0: # %entry
-; X86-64-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
-; X86-64-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; X86-64-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; X86-64-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; X86-64-NEXT:    testb $1, %dil
 ; X86-64-NEXT:    je .LBB5_2
 ; X86-64-NEXT:  # %bb.1: # %if
@@ -278,8 +278,8 @@ define void @test_shl1(i1 %cond, i8* %ptr1, i8* %ptr2, <8 x float> %fvec1, <8 x 
 ;
 ; X86-32-LABEL: test_shl1:
 ; X86-32:       # %bb.0: # %entry
-; X86-32-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
-; X86-32-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; X86-32-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; X86-32-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; X86-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-32-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; X86-32-NEXT:    je .LBB5_2
@@ -319,8 +319,8 @@ exit:
 define void @test_shr1(i1 %cond, i8* %ptr1, i8* %ptr2, <8 x float> %fvec1, <8 x float> %fvec2, <8 x float>* %fptrvec) {
 ; X86-64-LABEL: test_shr1:
 ; X86-64:       # %bb.0: # %entry
-; X86-64-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
-; X86-64-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; X86-64-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; X86-64-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; X86-64-NEXT:    testb $1, %dil
 ; X86-64-NEXT:    je .LBB6_2
 ; X86-64-NEXT:  # %bb.1: # %if
@@ -338,8 +338,8 @@ define void @test_shr1(i1 %cond, i8* %ptr1, i8* %ptr2, <8 x float> %fvec1, <8 x 
 ;
 ; X86-32-LABEL: test_shr1:
 ; X86-32:       # %bb.0: # %entry
-; X86-32-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
-; X86-32-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; X86-32-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; X86-32-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; X86-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-32-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; X86-32-NEXT:    je .LBB6_2
@@ -380,8 +380,8 @@ exit:
 define void @test_shr2(i1 %cond, i8* %ptr1, i8* %ptr2, <8 x float> %fvec1, <8 x float> %fvec2, <8 x float>* %fptrvec) {
 ; X86-64-LABEL: test_shr2:
 ; X86-64:       # %bb.0: # %entry
-; X86-64-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
-; X86-64-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; X86-64-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; X86-64-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; X86-64-NEXT:    testb $1, %dil
 ; X86-64-NEXT:    je .LBB7_2
 ; X86-64-NEXT:  # %bb.1: # %if
@@ -398,8 +398,8 @@ define void @test_shr2(i1 %cond, i8* %ptr1, i8* %ptr2, <8 x float> %fvec1, <8 x 
 ;
 ; X86-32-LABEL: test_shr2:
 ; X86-32:       # %bb.0: # %entry
-; X86-32-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
-; X86-32-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; X86-32-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; X86-32-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; X86-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-32-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; X86-32-NEXT:    je .LBB7_2
@@ -439,8 +439,8 @@ exit:
 define void @test_shl(i1 %cond, i8* %ptr1, i8* %ptr2, <8 x float> %fvec1, <8 x float> %fvec2, <8 x float>* %fptrvec) {
 ; X86-64-LABEL: test_shl:
 ; X86-64:       # %bb.0: # %entry
-; X86-64-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
-; X86-64-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; X86-64-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; X86-64-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; X86-64-NEXT:    testb $1, %dil
 ; X86-64-NEXT:    je .LBB8_2
 ; X86-64-NEXT:  # %bb.1: # %if
@@ -457,8 +457,8 @@ define void @test_shl(i1 %cond, i8* %ptr1, i8* %ptr2, <8 x float> %fvec1, <8 x f
 ;
 ; X86-32-LABEL: test_shl:
 ; X86-32:       # %bb.0: # %entry
-; X86-32-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
-; X86-32-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; X86-32-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; X86-32-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; X86-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-32-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; X86-32-NEXT:    je .LBB8_2
@@ -498,8 +498,8 @@ exit:
 define void @test_add(i1 %cond, i8* %ptr1, i8* %ptr2, <8 x float> %fvec1, <8 x float> %fvec2, <8 x float>* %fptrvec) {
 ; X86-64-LABEL: test_add:
 ; X86-64:       # %bb.0: # %entry
-; X86-64-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
-; X86-64-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; X86-64-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; X86-64-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; X86-64-NEXT:    kmovb (%rsi), %k0
 ; X86-64-NEXT:    kmovb (%rdx), %k1
 ; X86-64-NEXT:    testb $1, %dil
@@ -517,8 +517,8 @@ define void @test_add(i1 %cond, i8* %ptr1, i8* %ptr2, <8 x float> %fvec1, <8 x f
 ;
 ; X86-32-LABEL: test_add:
 ; X86-32:       # %bb.0: # %entry
-; X86-32-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
-; X86-32-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; X86-32-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; X86-32-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; X86-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-32-NEXT:    movl {{[0-9]+}}(%esp), %edx

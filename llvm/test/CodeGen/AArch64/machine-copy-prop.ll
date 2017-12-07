@@ -2,18 +2,18 @@
 
 ; This file check a bug in MachineCopyPropagation pass. The last COPY will be
 ; incorrectly removed if the machine instructions are as follows:
-;   %q5_q6<def> = COPY %q2_q3
-;   %d5<def> =
-;   %d3<def> =
-;   %d3<def> = COPY %d6
+;   %q5_q6 = COPY %q2_q3
+;   %d5 =
+;   %d3 =
+;   %d3 = COPY %d6
 ; This is caused by a bug in function SourceNoLongerAvailable(), which fails to
-; remove the relationship of D6 and "%q5_q6<def> = COPY %q2_q3".
+; remove the relationship of D6 and "%q5_q6 = COPY %q2_q3".
 
 @failed = internal unnamed_addr global i1 false
 
 ; CHECK-LABEL: foo:
 ; CHECK: ld2
-; CHECK-NOT: // kill: D{{[0-9]+}}<def> D{{[0-9]+}}<kill>
+; CHECK-NOT: // kill: def D{{[0-9]+}} killed D{{[0-9]+}}
 define void @foo(<2 x i32> %shuffle251, <8 x i8> %vtbl1.i, i8* %t2, <2 x i32> %vrsubhn_v2.i1364) {
 entry:
   %val0 = alloca [2 x i64], align 8

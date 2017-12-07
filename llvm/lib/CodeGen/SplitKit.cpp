@@ -1379,7 +1379,7 @@ void SplitEditor::rewriteAssigned(bool ExtendRanges) {
       // for a partially defined original register. For example:
       //   %0:subreg_hireg<def,read-undef> = ...
       //   ...
-      //   %1<def> = COPY %0
+      //   %1 = COPY %0
       if (S.empty())
         continue;
       SubLRC.reset(&VRM.getMachineFunction(), LIS.getSlotIndexes(), &MDT,

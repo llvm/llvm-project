@@ -16,7 +16,7 @@ define x86_mmx @t0(i32 %A) nounwind {
 ;
 ; X64-LABEL: t0:
 ; X64:       ## %bb.0:
-; X64-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
+; X64-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; X64-NEXT:    movq %rdi, %xmm0
 ; X64-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6,7]
 ; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]

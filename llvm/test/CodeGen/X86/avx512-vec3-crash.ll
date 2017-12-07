@@ -20,9 +20,9 @@ define <3 x i8 > @foo(<3 x i8>%x, <3 x i8>%a, <3 x i8>%b) {
 ; CHECK-NEXT:    vpextrb $0, %xmm0, %eax
 ; CHECK-NEXT:    vpextrb $4, %xmm0, %edx
 ; CHECK-NEXT:    vpextrb $8, %xmm0, %ecx
-; CHECK-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
-; CHECK-NEXT:    # kill: %dl<def> %dl<kill> %edx<kill>
-; CHECK-NEXT:    # kill: %cl<def> %cl<kill> %ecx<kill>
+; CHECK-NEXT:    # kill: def %al killed %al killed %eax
+; CHECK-NEXT:    # kill: def %dl killed %dl killed %edx
+; CHECK-NEXT:    # kill: def %cl killed %cl killed %ecx
 ; CHECK-NEXT:    retq
   %cmp.i = icmp slt <3 x i8> %x, %a
   %res = sext <3 x i1> %cmp.i to <3 x i8>

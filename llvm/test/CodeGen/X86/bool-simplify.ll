@@ -55,7 +55,7 @@ define i16 @rnd16(i16 %arg) nounwind {
 ; CHECK-NEXT:    rdrandw %cx
 ; CHECK-NEXT:    cmovbw %di, %ax
 ; CHECK-NEXT:    addl %ecx, %eax
-; CHECK-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; CHECK-NEXT:    # kill: def %ax killed %ax killed %eax
 ; CHECK-NEXT:    retq
   %1 = tail call { i16, i32 } @llvm.x86.rdrand.16() nounwind
   %2 = extractvalue { i16, i32 } %1, 0
@@ -107,7 +107,7 @@ define i16 @seed16(i16 %arg) nounwind {
 ; CHECK-NEXT:    rdseedw %cx
 ; CHECK-NEXT:    cmovbw %di, %ax
 ; CHECK-NEXT:    addl %ecx, %eax
-; CHECK-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; CHECK-NEXT:    # kill: def %ax killed %ax killed %eax
 ; CHECK-NEXT:    retq
   %1 = tail call { i16, i32 } @llvm.x86.rdseed.16() nounwind
   %2 = extractvalue { i16, i32 } %1, 0

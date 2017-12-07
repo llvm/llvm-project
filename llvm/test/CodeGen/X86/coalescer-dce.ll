@@ -4,19 +4,19 @@ target triple = "x86_64-apple-macosx10.7.0"
 
 ; This test case has a sub-register join followed by a remat:
 ;
-; 256L    %2<def> = COPY %7:sub_32bit<kill>; GR32:%2 GR64:%7
+; 256L    %2 = COPY killed %7:sub_32bit; GR32:%2 GR64:%7
 ;         Considering merging %2 with %7:sub_32bit
 ;         Cross-class to GR64.
 ;                 RHS = %2 = [256d,272d:0)  0@256d
 ;                 LHS = %7 = [208d,256d:0)[304L,480L:0)  0@208d
-;                 updated: 272L   %0<def> = COPY %7:sub_32bit<kill>; GR32:%0 GR64:%7
+;                 updated: 272L   %0 = COPY killed %7:sub_32bit; GR32:%0 GR64:%7
 ;         Joined. Result = %7 = [208d,272d:0)[304L,480L:0)  0@208d
 ;
-; 272L    %10:sub_32bit<def> = COPY %7:sub_32bit<kill>, %10<imp-def>; GR64:%10,%7
+; 272L    %10:sub_32bit = COPY killed %7:sub_32bit, implicit-def %10; GR64:%10,%7
 ;         Considering merging %7 with %10
 ;                 RHS = %7 = [208d,272d:0)[304L,480L:0)  0@208d
 ;                 LHS = %10 = [16d,64L:2)[64L,160L:1)[192L,240L:1)[272d,304L:3)[304L,352d:1)[352d,400d:0)[400d,400S:4)  0@352d 1@64L-phidef 2@16d-phikill 3@272d-phikill 4@400d
-; Remat: %10<def> = MOV64r0 %10<imp-def>, %eflags<imp-def,dead>, %10<imp-def>; GR64:%10
+; Remat: %10 = MOV64r0 implicit-def %10, implicit dead %eflags, implicit-def %10; GR64:%10
 ; Shrink: %7 = [208d,272d:0)[304L,480L:0)  0@208d
 ;  live-in at 240L
 ;  live-in at 416L

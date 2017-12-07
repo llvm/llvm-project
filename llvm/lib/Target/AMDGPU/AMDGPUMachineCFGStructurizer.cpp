@@ -1450,8 +1450,7 @@ bool AMDGPUMachineCFGStructurizer::shrinkPHI(MachineInstr &PHI,
                                        unsigned *ReplaceReg) {
   DEBUG(dbgs() << "Shrink PHI: ");
   DEBUG(PHI.dump());
-  DEBUG(dbgs() << " to " << printReg(getPHIDestReg(PHI), TRI)
-               << "<def> = PHI(");
+  DEBUG(dbgs() << " to " << printReg(getPHIDestReg(PHI), TRI) << " = PHI(");
 
   bool Replaced = false;
   unsigned NumInputs = getPHINumInputs(PHI);
@@ -1507,8 +1506,7 @@ void AMDGPUMachineCFGStructurizer::replacePHI(
     SmallVector<unsigned, 2> &PHIRegionIndices) {
   DEBUG(dbgs() << "Replace PHI: ");
   DEBUG(PHI.dump());
-  DEBUG(dbgs() << " with " << printReg(getPHIDestReg(PHI), TRI)
-               << "<def> = PHI(");
+  DEBUG(dbgs() << " with " << printReg(getPHIDestReg(PHI), TRI) << " = PHI(");
 
   bool HasExternalEdge = false;
   unsigned NumInputs = getPHINumInputs(PHI);
@@ -1566,7 +1564,7 @@ void AMDGPUMachineCFGStructurizer::replaceEntryPHI(
     DEBUG(dbgs() << " register " << printReg(CombinedSourceReg, TRI) << "\n");
     PHI.eraseFromParent();
   } else {
-    DEBUG(dbgs() << printReg(getPHIDestReg(PHI), TRI) << "<def> = PHI(");
+    DEBUG(dbgs() << printReg(getPHIDestReg(PHI), TRI) << " = PHI(");
     MachineBasicBlock *MBB = PHI.getParent();
     MachineInstrBuilder MIB =
         BuildMI(*MBB, PHI, PHI.getDebugLoc(), TII->get(TargetOpcode::PHI),
@@ -1751,7 +1749,7 @@ void AMDGPUMachineCFGStructurizer::insertMergePHI(MachineBasicBlock *IfBB,
     return;
   }
   DEBUG(dbgs() << "Merge PHI (" << printMBBReference(*MergeBB)
-               << "): " << printReg(DestRegister, TRI) << "<def> = PHI("
+               << "): " << printReg(DestRegister, TRI) << " = PHI("
                << printReg(IfSourceRegister, TRI) << ", "
                << printMBBReference(*IfBB) << printReg(CodeSourceRegister, TRI)
                << ", " << printMBBReference(*CodeBB) << ")\n");
@@ -2147,7 +2145,7 @@ void AMDGPUMachineCFGStructurizer::createEntryPHI(LinearizedRegion *CurrentRegio
     const DebugLoc &DL = Entry->findDebugLoc(Entry->begin());
     MachineInstrBuilder MIB = BuildMI(*Entry, Entry->instr_begin(), DL,
                                       TII->get(TargetOpcode::PHI), DestReg);
-    DEBUG(dbgs() << "Entry PHI " << printReg(DestReg, TRI) << "<def> = PHI(");
+    DEBUG(dbgs() << "Entry PHI " << printReg(DestReg, TRI) << " = PHI(");
 
     unsigned CurrentBackedgeReg = 0;
 
@@ -2172,7 +2170,7 @@ void AMDGPUMachineCFGStructurizer::createEntryPHI(LinearizedRegion *CurrentRegio
           BackedgePHI.addMBB((*SRI).second);
           CurrentBackedgeReg = NewBackedgeReg;
           DEBUG(dbgs() << "Inserting backedge PHI: "
-                       << printReg(NewBackedgeReg, TRI) << "<def> = PHI("
+                       << printReg(NewBackedgeReg, TRI) << " = PHI("
                        << printReg(CurrentBackedgeReg, TRI) << ", "
                        << printMBBReference(*getPHIPred(*PHIDefInstr, 0))
                        << ", "
@@ -2441,8 +2439,7 @@ void AMDGPUMachineCFGStructurizer::splitLoopPHI(MachineInstr &PHI,
   MachineInstrBuilder MIB =
       BuildMI(*EntrySucc, EntrySucc->instr_begin(), PHI.getDebugLoc(),
               TII->get(TargetOpcode::PHI), NewDestReg);
-  DEBUG(dbgs() << "Split Entry PHI " << printReg(NewDestReg, TRI)
-               << "<def> = PHI(");
+  DEBUG(dbgs() << "Split Entry PHI " << printReg(NewDestReg, TRI) << " = PHI(");
   MIB.addReg(PHISource);
   MIB.addMBB(Entry);
   DEBUG(dbgs() << printReg(PHISource, TRI) << ", "

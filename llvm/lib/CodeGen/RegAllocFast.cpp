@@ -272,7 +272,7 @@ void RegAllocFast::addKillFlag(const LiveReg &LR) {
     // subreg of this register and given we don't track which
     // lanes are actually dead, we cannot insert a kill flag here.
     // Otherwise we may end up in a situation like this:
-    // ... = (MO) physreg:sub1, physreg <implicit-use, kill>
+    // ... = (MO) physreg:sub1, implicit killed physreg
     // ... <== Here we would allow later pass to reuse physreg:sub1
     //         which is potentially wrong.
     // LR:sub0 = ...
@@ -675,7 +675,7 @@ RegAllocFast::LiveRegMap::iterator RegAllocFast::reloadVirtReg(MachineInstr &MI,
   } else if (MO.isKill()) {
     // We must remove kill flags from uses of reloaded registers because the
     // register would be killed immediately, and there might be a second use:
-    //   %foo = OR %x<kill>, %x
+    //   %foo = OR killed %x, %x
     // This would cause a second reload of %x into a different register.
     DEBUG(dbgs() << "Clearing clean kill: " << MO << "\n");
     MO.setIsKill(false);

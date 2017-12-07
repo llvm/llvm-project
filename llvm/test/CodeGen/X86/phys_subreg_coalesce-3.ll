@@ -2,9 +2,9 @@
 ; rdar://5571034
 
 ; This requires physreg joining, %13 is live everywhere:
-; 304L		%cl<def> = COPY %13:sub_8bit; GR32_ABCD:%13
-; 320L		%15<def> = COPY %19; GR32:%15 GR32_NOSP:%19
-; 336L		%15<def> = SAR32rCL %15, %eflags<imp-def,dead>, %cl<imp-use,kill>; GR32:%15
+; 304L		%cl = COPY %13:sub_8bit; GR32_ABCD:%13
+; 320L		%15 = COPY %19; GR32:%15 GR32_NOSP:%19
+; 336L		%15 = SAR32rCL %15, implicit dead %eflags, implicit killed %cl; GR32:%15
 
 define void @foo(i32* nocapture %quadrant, i32* nocapture %ptr, i32 %bbSize, i32 %bbStart, i32 %shifts) nounwind ssp {
 ; CHECK-LABEL: foo:

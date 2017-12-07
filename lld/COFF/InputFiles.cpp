@@ -63,7 +63,7 @@ ArchiveFile::ArchiveFile(MemoryBufferRef M) : InputFile(ArchiveKind, M) {}
 
 void ArchiveFile::parse() {
   // Parse a MemoryBufferRef as an archive file.
-  File = CHECK(Archive::create(MB), toString(this));
+  File = CHECK(Archive::create(MB), this);
 
   // Read the symbol table to construct Lazy objects.
   for (const Archive::Symbol &Sym : File->symbols())
@@ -104,7 +104,7 @@ std::vector<MemoryBufferRef> getArchiveMembers(Archive *File) {
 
 void ObjFile::parse() {
   // Parse a memory buffer as a COFF file.
-  std::unique_ptr<Binary> Bin = CHECK(createBinary(MB), toString(this));
+  std::unique_ptr<Binary> Bin = CHECK(createBinary(MB), this);
 
   if (auto *Obj = dyn_cast<COFFObjectFile>(Bin.get())) {
     Bin.release();

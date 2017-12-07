@@ -154,7 +154,7 @@ bool OptimizePHIs::IsDeadPHICycle(MachineInstr *MI, InstrSet &PHIsInCycle) {
   if (PHIsInCycle.size() == 16)
     return false;
 
-  for (MachineInstr &UseMI : MRI->use_instructions(DstReg)) {
+  for (MachineInstr &UseMI : MRI->use_nodbg_instructions(DstReg)) {
     if (!UseMI.isPHI() || !IsDeadPHICycle(&UseMI, PHIsInCycle))
       return false;
   }

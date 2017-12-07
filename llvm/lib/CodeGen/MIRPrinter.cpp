@@ -164,7 +164,7 @@ public:
   void printTargetFlags(const MachineOperand &Op);
   void print(const MachineInstr &MI, unsigned OpIdx,
              const TargetRegisterInfo *TRI, bool ShouldPrintRegisterTies,
-             LLT TypeToPrint, bool IsDef = false);
+             LLT TypeToPrint, bool PrintDef = true);
   void print(const LLVMContext &Context, const TargetInstrInfo &TII,
              const MachineMemOperand &Op);
   void printSyncScope(const LLVMContext &Context, SyncScope::ID SSID);
@@ -257,25 +257,11 @@ static void printCustomRegMask(const uint32_t *RegMask, raw_ostream &OS,
   OS << ')';
 }
 
-static void printRegClassOrBank(unsigned Reg, raw_ostream &OS,
-                                const MachineRegisterInfo &RegInfo,
-                                const TargetRegisterInfo *TRI) {
-  if (RegInfo.getRegClassOrNull(Reg))
-    OS << StringRef(TRI->getRegClassName(RegInfo.getRegClass(Reg))).lower();
-  else if (RegInfo.getRegBankOrNull(Reg))
-    OS << StringRef(RegInfo.getRegBankOrNull(Reg)->getName()).lower();
-  else {
-    OS << "_";
-    assert((RegInfo.def_empty(Reg) || RegInfo.getType(Reg).isValid()) &&
-           "Generic registers must have a valid type");
-  }
-}
-
 static void printRegClassOrBank(unsigned Reg, yaml::StringValue &Dest,
                                 const MachineRegisterInfo &RegInfo,
                                 const TargetRegisterInfo *TRI) {
   raw_string_ostream OS(Dest.Value);
-  printRegClassOrBank(Reg, OS, RegInfo, TRI);
+  OS << printRegClassOrBank(Reg, RegInfo, TRI);
 }
 
 
@@ -289,7 +275,7 @@ void MIRPrinter::convert(yaml::MachineFunction &MF,
     unsigned Reg = TargetRegisterInfo::index2VirtReg(I);
     yaml::VirtualRegisterDefinition VReg;
     VReg.ID = I;
-    printRegClassOrBank(Reg, VReg.Class, RegInfo, TRI);
+    ::printRegClassOrBank(Reg, VReg.Class, RegInfo, TRI);
     unsigned PreferredReg = RegInfo.getSimpleHint(Reg);
     if (PreferredReg)
       printRegMIR(PreferredReg, VReg.PreferredRegister, TRI);
@@ -661,44 +647,6 @@ void MIPrinter::print(const MachineBasicBlock &MBB) {
     OS.indent(2) << "}\n";
 }
 
-/// Return true when an instruction has tied register that can't be determined
-/// by the instruction's descriptor.
-static bool hasComplexRegisterTies(const MachineInstr &MI) {
-  const MCInstrDesc &MCID = MI.getDesc();
-  for (unsigned I = 0, E = MI.getNumOperands(); I < E; ++I) {
-    const auto &Operand = MI.getOperand(I);
-    if (!Operand.isReg() || Operand.isDef())
-      // Ignore the defined registers as MCID marks only the uses as tied.
-      continue;
-    int ExpectedTiedIdx = MCID.getOperandConstraint(I, MCOI::TIED_TO);
-    int TiedIdx = Operand.isTied() ? int(MI.findTiedOperandIdx(I)) : -1;
-    if (ExpectedTiedIdx != TiedIdx)
-      return true;
-  }
-  return false;
-}
-
-static LLT getTypeToPrint(const MachineInstr &MI, unsigned OpIdx,
-                          SmallBitVector &PrintedTypes,
-                          const MachineRegisterInfo &MRI) {
-  const MachineOperand &Op = MI.getOperand(OpIdx);
-  if (!Op.isReg())
-    return LLT{};
-
-  if (MI.isVariadic() || OpIdx >= MI.getNumExplicitOperands())
-    return MRI.getType(Op.getReg());
-
-  auto &OpInfo = MI.getDesc().OpInfo[OpIdx];
-  if (!OpInfo.isGenericType())
-    return MRI.getType(Op.getReg());
-
-  if (PrintedTypes[OpInfo.getGenericTypeIndex()])
-    return LLT{};
-
-  PrintedTypes.set(OpInfo.getGenericTypeIndex());
-  return MRI.getType(Op.getReg());
-}
-
 void MIPrinter::print(const MachineInstr &MI) {
   const auto *MF = MI.getMF();
   const auto &MRI = MF->getRegInfo();
@@ -711,7 +659,7 @@ void MIPrinter::print(const MachineInstr &MI) {
     assert(MI.getNumOperands() == 1 && "Expected 1 operand in CFI instruction");
 
   SmallBitVector PrintedTypes(8);
-  bool ShouldPrintRegisterTies = hasComplexRegisterTies(MI);
+  bool ShouldPrintRegisterTies = MI.hasComplexRegisterTies();
   unsigned I = 0, E = MI.getNumOperands();
   for (; I < E && MI.getOperand(I).isReg() && MI.getOperand(I).isDef() &&
          !MI.getOperand(I).isImplicit();
@@ -719,8 +667,8 @@ void MIPrinter::print(const MachineInstr &MI) {
     if (I)
       OS << ", ";
     print(MI, I, TRI, ShouldPrintRegisterTies,
-          getTypeToPrint(MI, I, PrintedTypes, MRI),
-          /*IsDef=*/true);
+          MI.getTypeToPrint(I, PrintedTypes, MRI),
+          /*PrintDef=*/false);
   }
 
   if (I)
@@ -736,7 +684,7 @@ void MIPrinter::print(const MachineInstr &MI) {
     if (NeedComma)
       OS << ", ";
     print(MI, I, TRI, ShouldPrintRegisterTies,
-          getTypeToPrint(MI, I, PrintedTypes, MRI));
+          MI.getTypeToPrint(I, PrintedTypes, MRI));
     NeedComma = true;
   }
 
@@ -902,44 +850,17 @@ static const char *getTargetIndexName(const MachineFunction &MF, int Index) {
 void MIPrinter::print(const MachineInstr &MI, unsigned OpIdx,
                       const TargetRegisterInfo *TRI,
                       bool ShouldPrintRegisterTies, LLT TypeToPrint,
-                      bool IsDef) {
+                      bool PrintDef) {
   const MachineOperand &Op = MI.getOperand(OpIdx);
   printTargetFlags(Op);
   switch (Op.getType()) {
   case MachineOperand::MO_Register: {
-    unsigned Reg = Op.getReg();
-    if (Op.isImplicit())
-      OS << (Op.isDef() ? "implicit-def " : "implicit ");
-    else if (!IsDef && Op.isDef())
-      // Print the 'def' flag only when the operand is defined after '='.
-      OS << "def ";
-    if (Op.isInternalRead())
-      OS << "internal ";
-    if (Op.isDead())
-      OS << "dead ";
-    if (Op.isKill())
-      OS << "killed ";
-    if (Op.isUndef())
-      OS << "undef ";
-    if (Op.isEarlyClobber())
-      OS << "early-clobber ";
-    if (Op.isDebug())
-      OS << "debug-use ";
-    OS << printReg(Reg, TRI);
-    // Print the sub register.
-    if (Op.getSubReg() != 0)
-      OS << '.' << TRI->getSubRegIndexName(Op.getSubReg());
-    if (TargetRegisterInfo::isVirtualRegister(Reg)) {
-      const MachineRegisterInfo &MRI = Op.getParent()->getMF()->getRegInfo();
-      if (IsDef || MRI.def_empty(Reg)) {
-        OS << ':';
-        printRegClassOrBank(Reg, OS, MRI, TRI);
-      }
-    }
+    unsigned TiedOperandIdx = 0;
     if (ShouldPrintRegisterTies && Op.isTied() && !Op.isDef())
-      OS << "(tied-def " << Op.getParent()->findTiedOperandIdx(OpIdx) << ")";
-    if (TypeToPrint.isValid())
-      OS << '(' << TypeToPrint << ')';
+      TiedOperandIdx = Op.getParent()->findTiedOperandIdx(OpIdx);
+    const TargetIntrinsicInfo *TII = MI.getMF()->getTarget().getIntrinsicInfo();
+    Op.print(OS, MST, TypeToPrint, PrintDef, ShouldPrintRegisterTies,
+             TiedOperandIdx, TRI, TII);
     break;
   }
   case MachineOperand::MO_Immediate:

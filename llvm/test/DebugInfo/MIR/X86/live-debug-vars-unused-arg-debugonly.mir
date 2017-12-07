@@ -153,11 +153,11 @@ body:             |
 # not cover the whole BB.
 #
 # CHECKDBG-LABEL: ********** EMITTING LIVE DEBUG VARIABLES **********
-# CHECKDBG-NEXT: !"argc,5"        [0B;0e):0 Loc0=%edi
+# CHECKDBG-NEXT: !"argc,5"        [0B;0e):0 Loc0=debug-use %edi
 # CHECKDBG-NEXT:         [0B;0e):0 %bb.0-160B
-# CHECKDBG-NEXT: !"argv,5"        [0B;0e):0 Loc0=%rsi
+# CHECKDBG-NEXT: !"argv,5"        [0B;0e):0 Loc0=debug-use %rsi
 # CHECKDBG-NEXT:         [0B;0e):0 %bb.0-160B
-# CHECKDBG-NEXT: !"a0,7"  [16r;64r):0 Loc0=%2
+# CHECKDBG-NEXT: !"a0,7"  [16r;64r):0 Loc0=debug-use %2
 # CHECKDBG-NEXT:         [16r;64r):0 %bb.0-160B
-# CHECKDBG-NEXT: !"a1,8"  [32r;80r):0 Loc0=%3
+# CHECKDBG-NEXT: !"a1,8"  [32r;80r):0 Loc0=debug-use %3
 # CHECKDBG-NEXT:         [32r;80r):0 %bb.0-160B

@@ -8,27 +8,27 @@
 // This peephole pass optimizes in the following cases.
 // 1. Optimizes redundant sign extends for the following case
 //    Transform the following pattern
-//    %170<def> = SXTW %166
+//    %170 = SXTW %166
 //    ...
-//    %176<def> = COPY %170:isub_lo
+//    %176 = COPY %170:isub_lo
 //
 //    Into
-//    %176<def> = COPY %166
+//    %176 = COPY %166
 //
 //  2. Optimizes redundant negation of predicates.
-//     %15<def> = CMPGTrr %6, %2
+//     %15 = CMPGTrr %6, %2
 //     ...
-//     %16<def> = NOT_p %15<kill>
+//     %16 = NOT_p killed %15
 //     ...
-//     JMP_c %16<kill>, <%bb.1>, %pc<imp-def,dead>
+//     JMP_c killed %16, <%bb.1>, implicit dead %pc
 //
 //     Into
-//     %15<def> = CMPGTrr %6, %2;
+//     %15 = CMPGTrr %6, %2;
 //     ...
-//     JMP_cNot %15<kill>, <%bb.1>, %pc<imp-def,dead>;
+//     JMP_cNot killed %15, <%bb.1>, implicit dead %pc;
 //
 // Note: The peephole pass makes the instrucstions like
-// %170<def> = SXTW %166 or %16<def> = NOT_p %15<kill>
+// %170 = SXTW %166 or %16 = NOT_p killed %15
 // redundant and relies on some form of dead removal instructions, like
 // DCE or DIE to actually eliminate them.
 
@@ -132,7 +132,7 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
       NextI = std::next(I);
       MachineInstr &MI = *I;
       // Look for sign extends:
-      // %170<def> = SXTW %166
+      // %170 = SXTW %166
       if (!DisableOptSZExt && MI.getOpcode() == Hexagon::A2_sxtw) {
         assert(MI.getNumOperands() == 2);
         MachineOperand &Dst = MI.getOperand(0);
@@ -143,13 +143,13 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
         if (TargetRegisterInfo::isVirtualRegister(DstReg) &&
             TargetRegisterInfo::isVirtualRegister(SrcReg)) {
           // Map the following:
-          // %170<def> = SXTW %166
+          // %170 = SXTW %166
           // PeepholeMap[170] = %166
           PeepholeMap[DstReg] = SrcReg;
         }
       }
 
-      // Look for  %170<def> = COMBINE_ir_V4 (0, %169)
+      // Look for  %170 = COMBINE_ir_V4 (0, %169)
       // %170:DoublRegs, %169:IntRegs
       if (!DisableOptExtTo64 && MI.getOpcode() == Hexagon::A4_combineir) {
         assert(MI.getNumOperands() == 3);
@@ -192,14 +192,14 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
         if (TargetRegisterInfo::isVirtualRegister(DstReg) &&
             TargetRegisterInfo::isVirtualRegister(SrcReg)) {
           // Map the following:
-          // %170<def> = NOT_xx %166
+          // %170 = NOT_xx %166
           // PeepholeMap[170] = %166
           PeepholeMap[DstReg] = SrcReg;
         }
       }
 
       // Look for copy:
-      // %176<def> = COPY %170:isub_lo
+      // %176 = COPY %170:isub_lo
       if (!DisableOptSZExt && MI.isCopy()) {
         assert(MI.getNumOperands() == 2);
         MachineOperand &Dst = MI.getOperand(0);

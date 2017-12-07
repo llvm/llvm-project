@@ -65,7 +65,7 @@ define i32 @test5(i32 %a, i32* nocapture %b, i32 %x, i32 %y) {
 define void @test6(i32 %a, i32 %x, i32* %y.ptr, i64* %z.ptr) {
 ; CHECK-LABEL: test6:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
+; CHECK-NEXT:    # kill: def %esi killed %esi def %rsi
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    cmovnsl (%rdx), %esi
 ; CHECK-NEXT:    movq %rsi, (%rcx)

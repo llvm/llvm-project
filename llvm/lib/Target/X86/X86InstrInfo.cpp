@@ -4469,7 +4469,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(
     unsigned leaInReg2 = 0;
     MachineInstr *InsMI2 = nullptr;
     if (Src == Src2) {
-      // ADD16rr %reg1028<kill>, %reg1028
+      // ADD16rr killed %reg1028, %reg1028
       // just a single insert_subreg.
       addRegReg(MIB, leaInReg, true, leaInReg, false);
     } else {
@@ -7633,7 +7633,7 @@ MachineInstr *X86InstrInfo::optimizeLoadInstr(MachineInstr &MI,
 /// This is used for mapping:
 ///   %xmm4 = V_SET0
 /// to:
-///   %xmm4 = PXORrr %xmm4<undef>, %xmm4<undef>
+///   %xmm4 = PXORrr undef %xmm4, undef %xmm4
 ///
 static bool Expand2AddrUndef(MachineInstrBuilder &MIB,
                              const MCInstrDesc &Desc) {
@@ -8197,12 +8197,12 @@ static bool hasUndefRegUpdate(unsigned Opcode) {
 ///
 /// This catches the VCVTSI2SD family of instructions:
 ///
-/// vcvtsi2sdq %rax, %xmm0<undef>, %xmm14
+/// vcvtsi2sdq %rax, undef %xmm0, %xmm14
 ///
 /// We should to be careful *not* to catch VXOR idioms which are presumably
 /// handled specially in the pipeline:
 ///
-/// vxorps %xmm1<undef>, %xmm1<undef>, %xmm1
+/// vxorps undef %xmm1, undef %xmm1, %xmm1
 ///
 /// Like getPartialRegUpdateClearance, this makes a strong assumption that the
 /// high bits that are passed-through are not live.
@@ -10895,7 +10895,7 @@ X86InstrInfo::getOutliningType(MachineInstr &MI) const {
   // FIXME: There are instructions which are being manually built without
   // explicit uses/defs so we also have to check the MCInstrDesc. We should be
   // able to remove the extra checks once those are fixed up. For example,
-  // sometimes we might get something like %rax<def> = POP64r 1. This won't be
+  // sometimes we might get something like %rax = POP64r 1. This won't be
   // caught by modifiesRegister or readsRegister even though the instruction
   // really ought to be formed so that modifiesRegister/readsRegister would
   // catch it.

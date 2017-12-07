@@ -15,7 +15,7 @@ define <8 x i16> @extract_subvector128_v32i16(<32 x i16> %x) nounwind {
 define <8 x i16> @extract_subvector128_v32i16_first_element(<32 x i16> %x) nounwind {
 ; SKX-LABEL: extract_subvector128_v32i16_first_element:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    ## kill: %xmm0<def> %xmm0<kill> %zmm0<kill>
+; SKX-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %zmm0
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %r1 = shufflevector <32 x i16> %x, <32 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -35,7 +35,7 @@ define <16 x i8> @extract_subvector128_v64i8(<64 x i8> %x) nounwind {
 define <16 x i8> @extract_subvector128_v64i8_first_element(<64 x i8> %x) nounwind {
 ; SKX-LABEL: extract_subvector128_v64i8_first_element:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    ## kill: %xmm0<def> %xmm0<kill> %zmm0<kill>
+; SKX-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %zmm0
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %r1 = shufflevector <64 x i8> %x, <64 x i8> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>

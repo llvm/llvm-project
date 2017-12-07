@@ -56,7 +56,7 @@ define i16 @shift_right_pow_2(i16 %x, i16 %y) {
 ; X86-NEXT:    shrl %cl, %eax
 ; X86-NEXT:    decl %eax
 ; X86-NEXT:    andw {{[0-9]+}}(%esp), %ax
-; X86-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; X86-NEXT:    # kill: def %ax killed %ax killed %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: shift_right_pow_2:
@@ -66,7 +66,7 @@ define i16 @shift_right_pow_2(i16 %x, i16 %y) {
 ; X64-NEXT:    shrl %cl, %eax
 ; X64-NEXT:    decl %eax
 ; X64-NEXT:    andl %edi, %eax
-; X64-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; X64-NEXT:    # kill: def %ax killed %ax killed %eax
 ; X64-NEXT:    retq
   %shr = lshr i16 -32768, %y
   %urem = urem i16 %x, %shr
@@ -81,20 +81,20 @@ define i8 @and_pow_2(i8 %x, i8 %y) {
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    andb $4, %cl
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    # kill: %eax<def> %eax<kill> %ax<def>
+; X86-NEXT:    # kill: def %eax killed %eax def %ax
 ; X86-NEXT:    divb %cl
 ; X86-NEXT:    movzbl %ah, %eax # NOREX
-; X86-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; X86-NEXT:    # kill: def %al killed %al killed %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: and_pow_2:
 ; X64:       # %bb.0:
 ; X64-NEXT:    andb $4, %sil
 ; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    # kill: %eax<def> %eax<kill> %ax<def>
+; X64-NEXT:    # kill: def %eax killed %eax def %ax
 ; X64-NEXT:    divb %sil
 ; X64-NEXT:    movzbl %ah, %eax # NOREX
-; X64-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; X64-NEXT:    # kill: def %al killed %al killed %eax
 ; X64-NEXT:    retq
   %and = and i8 %y, 4
   %urem = urem i8 %x, %and
