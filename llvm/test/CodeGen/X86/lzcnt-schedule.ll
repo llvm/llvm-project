@@ -10,8 +10,8 @@
 define i16 @test_ctlz_i16(i16 zeroext %a0, i16 *%a1) {
 ; GENERIC-LABEL: test_ctlz_i16:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    lzcntw (%rsi), %cx
-; GENERIC-NEXT:    lzcntw %di, %ax
+; GENERIC-NEXT:    lzcntw (%rsi), %cx # sched: [7:1.00]
+; GENERIC-NEXT:    lzcntw %di, %ax # sched: [3:1.00]
 ; GENERIC-NEXT:    orl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    # kill: def %ax killed %ax killed %eax
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -42,8 +42,8 @@ define i16 @test_ctlz_i16(i16 zeroext %a0, i16 *%a1) {
 ;
 ; BTVER2-LABEL: test_ctlz_i16:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    lzcntw (%rsi), %cx
-; BTVER2-NEXT:    lzcntw %di, %ax
+; BTVER2-NEXT:    lzcntw (%rsi), %cx # sched: [6:1.00]
+; BTVER2-NEXT:    lzcntw %di, %ax # sched: [3:1.00]
 ; BTVER2-NEXT:    orl %ecx, %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    # kill: def %ax killed %ax killed %eax
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
@@ -66,8 +66,8 @@ declare i16 @llvm.ctlz.i16(i16, i1)
 define i32 @test_ctlz_i32(i32 %a0, i32 *%a1) {
 ; GENERIC-LABEL: test_ctlz_i32:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    lzcntl (%rsi), %ecx
-; GENERIC-NEXT:    lzcntl %edi, %eax
+; GENERIC-NEXT:    lzcntl (%rsi), %ecx # sched: [7:1.00]
+; GENERIC-NEXT:    lzcntl %edi, %eax # sched: [3:1.00]
 ; GENERIC-NEXT:    orl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -94,8 +94,8 @@ define i32 @test_ctlz_i32(i32 %a0, i32 *%a1) {
 ;
 ; BTVER2-LABEL: test_ctlz_i32:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    lzcntl (%rsi), %ecx
-; BTVER2-NEXT:    lzcntl %edi, %eax
+; BTVER2-NEXT:    lzcntl (%rsi), %ecx # sched: [6:1.00]
+; BTVER2-NEXT:    lzcntl %edi, %eax # sched: [3:1.00]
 ; BTVER2-NEXT:    orl %ecx, %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -116,8 +116,8 @@ declare i32 @llvm.ctlz.i32(i32, i1)
 define i64 @test_ctlz_i64(i64 %a0, i64 *%a1) {
 ; GENERIC-LABEL: test_ctlz_i64:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    lzcntq (%rsi), %rcx
-; GENERIC-NEXT:    lzcntq %rdi, %rax
+; GENERIC-NEXT:    lzcntq (%rsi), %rcx # sched: [7:1.00]
+; GENERIC-NEXT:    lzcntq %rdi, %rax # sched: [3:1.00]
 ; GENERIC-NEXT:    orq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -144,8 +144,8 @@ define i64 @test_ctlz_i64(i64 %a0, i64 *%a1) {
 ;
 ; BTVER2-LABEL: test_ctlz_i64:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    lzcntq (%rsi), %rcx
-; BTVER2-NEXT:    lzcntq %rdi, %rax
+; BTVER2-NEXT:    lzcntq (%rsi), %rcx # sched: [6:1.00]
+; BTVER2-NEXT:    lzcntq %rdi, %rax # sched: [3:1.00]
 ; BTVER2-NEXT:    orq %rcx, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;

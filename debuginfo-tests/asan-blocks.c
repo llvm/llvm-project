@@ -1,4 +1,4 @@
-// RUN: %clang -fblocks %target_itanium_abi_host_triple -arch x86_64 %s -o %t.out -gdwarf-2 -fsanitize=address
+// RUN: %clang -fblocks %target_itanium_abi_host_triple -arch x86_64 %s -o %t.out -g -fsanitize=address
 // RUN: %test_debuginfo %s %t.out
 // FIXME: Remove system-darwin when we build BlocksRuntime everywhere.
 // REQUIRES: not_asan, system-darwin

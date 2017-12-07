@@ -329,6 +329,9 @@ protected:
     TargetInitialized = true;
     TargetPlatform = Platform;
     TargetVersion = VersionTuple(Major, Minor, Micro);
+    if (Platform == IPhoneOSSimulator || Platform == TvOSSimulator ||
+        Platform == WatchOSSimulator)
+      const_cast<Darwin *>(this)->setTripleEnvironment(llvm::Triple::Simulator);
   }
 
   bool isTargetIPhoneOS() const {
