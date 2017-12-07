@@ -451,7 +451,8 @@ protected:
     DepCollector.setSysrootPath(IndexCtx.getSysrootPath());
     DepCollector.attachToPreprocessor(PP);
 
-    return llvm::make_unique<IndexASTConsumer>(IndexCtx);
+    return llvm::make_unique<IndexASTConsumer>(CI.getPreprocessorPtr(),
+                                               IndexCtx);
   }
 
   void finish(CompilerInstance &CI);
