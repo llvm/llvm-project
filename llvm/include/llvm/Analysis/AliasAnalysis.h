@@ -404,13 +404,13 @@ public:
   /// Checks if functions with the specified behavior are known to only read
   /// from non-volatile memory (or not access memory at all).
   static bool onlyReadsMemory(FunctionModRefBehavior MRB) {
-    return !(MRB & MRI_Mod);
+    return !isModSet(createModRefInfo(MRB));
   }
 
   /// Checks if functions with the specified behavior are known to only write
   /// memory (or not access memory at all).
   static bool doesNotReadMemory(FunctionModRefBehavior MRB) {
-    return !(MRB & MRI_Ref);
+    return !isRefSet(createModRefInfo(MRB));
   }
 
   /// Checks if functions with the specified behavior are known to read and
@@ -424,7 +424,8 @@ public:
   /// read or write from objects pointed to be their pointer-typed arguments
   /// (with arbitrary offsets).
   static bool doesAccessArgPointees(FunctionModRefBehavior MRB) {
-    return (MRB & MRI_ModRef) && (MRB & FMRL_ArgumentPointees);
+    return isModOrRefSet(createModRefInfo(MRB)) &&
+           (MRB & FMRL_ArgumentPointees);
   }
 
   /// Checks if functions with the specified behavior are known to read and
@@ -436,7 +437,7 @@ public:
   /// Checks if functions with the specified behavior are known to potentially
   /// read or write from memory that is inaccessible from LLVM IR.
   static bool doesAccessInaccessibleMem(FunctionModRefBehavior MRB) {
-    return (MRB & MRI_ModRef) && (MRB & FMRL_InaccessibleMem);
+    return isModOrRefSet(createModRefInfo(MRB)) && (MRB & FMRL_InaccessibleMem);
   }
 
   /// Checks if functions with the specified behavior are known to read and

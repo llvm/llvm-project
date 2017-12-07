@@ -3672,6 +3672,15 @@ static bool getFMAPatterns(MachineInstr &Root,
     }
     break;
   case AArch64::FSUBv2f32:
+    if (canCombineWithFMUL(MBB, Root.getOperand(1),
+                           AArch64::FMULv2i32_indexed)) {
+      Patterns.push_back(MachineCombinerPattern::FMLSv2i32_indexed_OP1);
+      Found = true;
+    } else if (canCombineWithFMUL(MBB, Root.getOperand(1),
+                                  AArch64::FMULv2f32)) {
+      Patterns.push_back(MachineCombinerPattern::FMLSv2f32_OP1);
+      Found = true;
+    }
     if (canCombineWithFMUL(MBB, Root.getOperand(2),
                            AArch64::FMULv2i32_indexed)) {
       Patterns.push_back(MachineCombinerPattern::FMLSv2i32_indexed_OP2);
@@ -3683,6 +3692,15 @@ static bool getFMAPatterns(MachineInstr &Root,
     }
     break;
   case AArch64::FSUBv2f64:
+    if (canCombineWithFMUL(MBB, Root.getOperand(1),
+                           AArch64::FMULv2i64_indexed)) {
+      Patterns.push_back(MachineCombinerPattern::FMLSv2i64_indexed_OP1);
+      Found = true;
+    } else if (canCombineWithFMUL(MBB, Root.getOperand(1),
+                                  AArch64::FMULv2f64)) {
+      Patterns.push_back(MachineCombinerPattern::FMLSv2f64_OP1);
+      Found = true;
+    }
     if (canCombineWithFMUL(MBB, Root.getOperand(2),
                            AArch64::FMULv2i64_indexed)) {
       Patterns.push_back(MachineCombinerPattern::FMLSv2i64_indexed_OP2);
@@ -3694,6 +3712,15 @@ static bool getFMAPatterns(MachineInstr &Root,
     }
     break;
   case AArch64::FSUBv4f32:
+    if (canCombineWithFMUL(MBB, Root.getOperand(1),
+                           AArch64::FMULv4i32_indexed)) {
+      Patterns.push_back(MachineCombinerPattern::FMLSv4i32_indexed_OP1);
+      Found = true;
+    } else if (canCombineWithFMUL(MBB, Root.getOperand(1),
+                                  AArch64::FMULv4f32)) {
+      Patterns.push_back(MachineCombinerPattern::FMLSv4f32_OP1);
+      Found = true;
+    }
     if (canCombineWithFMUL(MBB, Root.getOperand(2),
                            AArch64::FMULv4i32_indexed)) {
       Patterns.push_back(MachineCombinerPattern::FMLSv4i32_indexed_OP2);
@@ -3790,12 +3817,15 @@ enum class FMAInstKind { Default, Indexed, Accumulator };
 /// \param MaddOpc the opcode fo the f|madd instruction
 /// \param RC Register class of operands
 /// \param kind of fma instruction (addressing mode) to be generated
+/// \param ReplacedAddend is the result register from the instruction
+/// replacing the non-combined operand, if any.
 static MachineInstr *
 genFusedMultiply(MachineFunction &MF, MachineRegisterInfo &MRI,
                  const TargetInstrInfo *TII, MachineInstr &Root,
                  SmallVectorImpl<MachineInstr *> &InsInstrs, unsigned IdxMulOpd,
                  unsigned MaddOpc, const TargetRegisterClass *RC,
-                 FMAInstKind kind = FMAInstKind::Default) {
+                 FMAInstKind kind = FMAInstKind::Default,
+                 const unsigned *ReplacedAddend = nullptr) {
   assert(IdxMulOpd == 1 || IdxMulOpd == 2);
 
   unsigned IdxOtherOpd = IdxMulOpd == 1 ? 2 : 1;
@@ -3805,8 +3835,17 @@ genFusedMultiply(MachineFunction &MF, MachineRegisterInfo &MRI,
   bool Src0IsKill = MUL->getOperand(1).isKill();
   unsigned SrcReg1 = MUL->getOperand(2).getReg();
   bool Src1IsKill = MUL->getOperand(2).isKill();
-  unsigned SrcReg2 = Root.getOperand(IdxOtherOpd).getReg();
-  bool Src2IsKill = Root.getOperand(IdxOtherOpd).isKill();
+
+  unsigned SrcReg2;
+  bool Src2IsKill;
+  if (ReplacedAddend) {
+    // If we just generated a new addend, we must be it's only use.
+    SrcReg2 = *ReplacedAddend;
+    Src2IsKill = true;
+  } else {
+    SrcReg2 = Root.getOperand(IdxOtherOpd).getReg();
+    Src2IsKill = Root.getOperand(IdxOtherOpd).isKill();
+  }
 
   if (TargetRegisterInfo::isVirtualRegister(ResultReg))
     MRI.constrainRegClass(ResultReg, RC);
@@ -4326,6 +4365,66 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
                              FMAInstKind::Accumulator);
     }
     break;
+  case MachineCombinerPattern::FMLSv2f32_OP1:
+  case MachineCombinerPattern::FMLSv2i32_indexed_OP1: {
+    RC = &AArch64::FPR64RegClass;
+    unsigned NewVR = MRI.createVirtualRegister(RC);
+    MachineInstrBuilder MIB1 =
+        BuildMI(MF, Root.getDebugLoc(), TII->get(AArch64::FNEGv2f32), NewVR)
+            .add(Root.getOperand(2));
+    InsInstrs.push_back(MIB1);
+    InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
+    if (Pattern == MachineCombinerPattern::FMLSv2i32_indexed_OP1) {
+      Opc = AArch64::FMLAv2i32_indexed;
+      MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC,
+                             FMAInstKind::Indexed, &NewVR);
+    } else {
+      Opc = AArch64::FMLAv2f32;
+      MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC,
+                             FMAInstKind::Accumulator, &NewVR);
+    }
+    break;
+  }
+  case MachineCombinerPattern::FMLSv4f32_OP1:
+  case MachineCombinerPattern::FMLSv4i32_indexed_OP1: {
+    RC = &AArch64::FPR128RegClass;
+    unsigned NewVR = MRI.createVirtualRegister(RC);
+    MachineInstrBuilder MIB1 =
+        BuildMI(MF, Root.getDebugLoc(), TII->get(AArch64::FNEGv4f32), NewVR)
+            .add(Root.getOperand(2));
+    InsInstrs.push_back(MIB1);
+    InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
+    if (Pattern == MachineCombinerPattern::FMLSv4i32_indexed_OP1) {
+      Opc = AArch64::FMLAv4i32_indexed;
+      MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC,
+                             FMAInstKind::Indexed, &NewVR);
+    } else {
+      Opc = AArch64::FMLAv4f32;
+      MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC,
+                             FMAInstKind::Accumulator, &NewVR);
+    }
+    break;
+  }
+  case MachineCombinerPattern::FMLSv2f64_OP1:
+  case MachineCombinerPattern::FMLSv2i64_indexed_OP1: {
+    RC = &AArch64::FPR128RegClass;
+    unsigned NewVR = MRI.createVirtualRegister(RC);
+    MachineInstrBuilder MIB1 =
+        BuildMI(MF, Root.getDebugLoc(), TII->get(AArch64::FNEGv2f64), NewVR)
+            .add(Root.getOperand(2));
+    InsInstrs.push_back(MIB1);
+    InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
+    if (Pattern == MachineCombinerPattern::FMLSv2i64_indexed_OP1) {
+      Opc = AArch64::FMLAv2i64_indexed;
+      MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC,
+                             FMAInstKind::Indexed, &NewVR);
+    } else {
+      Opc = AArch64::FMLAv2f64;
+      MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC,
+                             FMAInstKind::Accumulator, &NewVR);
+    }
+    break;
+  }
   } // end switch (Pattern)
   // Record MUL and ADD/SUB for deletion
   DelInstrs.push_back(MUL);

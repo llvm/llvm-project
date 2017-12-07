@@ -1538,8 +1538,6 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
   // V6_vshuffvdd (V6_vshuff)
   // V6_dealvdd (V6_vdeal)
 
-  // TODO Recognize patterns for V6_vdeal{b,h} and V6_vshuff{b,h}.
-
   int VecLen = SM.Mask.size();
   assert(isPowerOf2_32(VecLen) && Log2_32(VecLen) <= 8);
   unsigned LogLen = Log2_32(VecLen);
@@ -1708,6 +1706,32 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
     return NewC;
   };
 
+  auto pfs = [](const std::set<CycleType> &Cs, unsigned Len) {
+    // Ordering: shuff: 5 0 1 2 3 4, deal: 5 4 3 2 1 0 (for Log=6),
+    // for bytes zero is included, for halfwords is not.
+    if (Cs.size() != 1)
+      return 0u;
+    const CycleType &C = *Cs.begin();
+    if (C[0] != Len-1)
+      return 0u;
+    int D = Len - C.size();
+    if (D != 0 && D != 1)
+      return 0u;
+
+    bool IsDeal = true, IsShuff = true;
+    for (unsigned I = 1; I != Len-D; ++I) {
+      if (C[I] != Len-1-I)
+        IsDeal = false;
+      if (C[I] != I-(1-D))  // I-1, I
+        IsShuff = false;
+    }
+    // At most one, IsDeal or IsShuff, can be non-zero.
+    assert(!(IsDeal || IsShuff) || IsDeal != IsShuff);
+    static unsigned Deals[] = { Hexagon::V6_vdealb, Hexagon::V6_vdealh };
+    static unsigned Shufs[] = { Hexagon::V6_vshuffb, Hexagon::V6_vshuffh };
+    return IsDeal ? Deals[D] : (IsShuff ? Shufs[D] : 0);
+  };
+
   while (!All.empty()) {
     unsigned A = *All.begin();
     All.erase(A);
@@ -1722,6 +1746,17 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
     Cycles.insert(canonicalize(C));
   }
 
+  MVT SingleTy = getSingleVT(MVT::i8);
+  MVT PairTy = getPairVT(MVT::i8);
+
+  // Recognize patterns for V6_vdeal{b,h} and V6_vshuff{b,h}.
+  if (unsigned(VecLen) == HwLen) {
+    if (unsigned SingleOpc = pfs(Cycles, LogLen)) {
+      Results.push(SingleOpc, SingleTy, {Va});
+      return OpRef::res(Results.top());
+    }
+  }
+
   SmallVector<unsigned,8> SwapElems;
   if (HwLen == unsigned(VecLen))
     SwapElems.push_back(LogLen-1);
@@ -1733,8 +1768,6 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
       SwapElems.push_back(C[0]);
   }
 
-  MVT SingleTy = getSingleVT(MVT::i8);
-  MVT PairTy = getPairVT(MVT::i8);
   const SDLoc &dl(Results.InpNode);
   OpRef Arg = !Extend ? Va
                       : concat(Va, OpRef::undef(SingleTy), Results);

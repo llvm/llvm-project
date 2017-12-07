@@ -68,12 +68,18 @@ enum class MachineCombinerPattern {
   FMLAv4i32_indexed_OP2,
   FMLSv1i32_indexed_OP2,
   FMLSv1i64_indexed_OP2,
-  FMLSv2i32_indexed_OP2,
-  FMLSv2i64_indexed_OP2,
+  FMLSv2f32_OP1,
   FMLSv2f32_OP2,
+  FMLSv2f64_OP1,
   FMLSv2f64_OP2,
-  FMLSv4i32_indexed_OP2,
-  FMLSv4f32_OP2
+  FMLSv2i32_indexed_OP1,
+  FMLSv2i32_indexed_OP2,
+  FMLSv2i64_indexed_OP1,
+  FMLSv2i64_indexed_OP2,
+  FMLSv4f32_OP1,
+  FMLSv4f32_OP2,
+  FMLSv4i32_indexed_OP1,
+  FMLSv4i32_indexed_OP2
 };
 
 } // end namespace llvm

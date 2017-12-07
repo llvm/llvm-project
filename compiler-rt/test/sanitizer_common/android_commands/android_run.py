@@ -12,7 +12,7 @@ def build_env():
     # Android linker ignores RPATH. Set LD_LIBRARY_PATH to Output dir.
     args.append('LD_LIBRARY_PATH=%s' % (ANDROID_TMPDIR,))
     for (key, value) in os.environ.items():
-        if key in ['ASAN_OPTIONS', 'ASAN_ACTIVATION_OPTIONS', 'SCUDO_OPTIONS', 'UBSAN_OPTIONS']:
+        if key in ['ASAN_ACTIVATION_OPTIONS', 'SCUDO_OPTIONS'] or key.endswith('SAN_OPTIONS'):
             args.append('%s="%s"' % (key, value))
     return ' '.join(args)
 

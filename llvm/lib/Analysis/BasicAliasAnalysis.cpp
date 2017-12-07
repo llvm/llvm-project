@@ -823,7 +823,7 @@ ModRefInfo BasicAAResult::getModRefInfo(ImmutableCallSite CS,
     }
 
     // Early return if we improved mod ref information
-    if (Result != MRI_ModRef)
+    if (!isModAndRefSet(Result))
       return Result;
   }
 
