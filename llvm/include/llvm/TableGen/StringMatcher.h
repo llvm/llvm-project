@@ -43,11 +43,12 @@ public:
                 const std::vector<StringPair> &matches, raw_ostream &os)
     : StrVariableName(strVariableName), Matches(matches), OS(os) {}
 
-  void Emit(unsigned Indent = 0) const;
+  void Emit(unsigned Indent = 0, bool IgnoreDuplicates = false) const;
 
 private:
-  bool EmitStringMatcherForChar(const std::vector<const StringPair*> &Matches,
-                                unsigned CharNo, unsigned IndentCount) const;
+  bool EmitStringMatcherForChar(const std::vector<const StringPair *> &Matches,
+                                unsigned CharNo, unsigned IndentCount,
+                                bool IgnoreDuplicates) const;
 };
 
 } // end namespace llvm

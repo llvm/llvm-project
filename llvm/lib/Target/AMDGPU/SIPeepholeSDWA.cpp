@@ -480,7 +480,7 @@ Optional<int64_t> SIPeepholeSDWA::foldToImm(const MachineOperand &Op) const {
   }
 
   // If this is not immediate then it can be copy of immediate value, e.g.:
-  // %1<def> = S_MOV_B32 255;
+  // %1 = S_MOV_B32 255;
   if (Op.isReg()) {
     for (const MachineOperand &Def : MRI->def_operands(Op.getReg())) {
       if (!isSameReg(Op, Def))

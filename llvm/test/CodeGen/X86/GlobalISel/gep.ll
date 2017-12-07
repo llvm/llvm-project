@@ -13,7 +13,7 @@ define i32* @test_gep_i8(i32 *%arr, i8 %ind) {
 ;
 ; X64-LABEL: test_gep_i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
+; X64-NEXT:    # kill: def %esi killed %esi def %rsi
 ; X64-NEXT:    movsbq %sil, %rax
 ; X64-NEXT:    leaq (%rdi,%rax,4), %rax
 ; X64-NEXT:    retq
@@ -47,7 +47,7 @@ define i32* @test_gep_i16(i32 *%arr, i16 %ind) {
 ;
 ; X64-LABEL: test_gep_i16:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
+; X64-NEXT:    # kill: def %esi killed %esi def %rsi
 ; X64-NEXT:    movswq %si, %rax
 ; X64-NEXT:    leaq (%rdi,%rax,4), %rax
 ; X64-NEXT:    retq

@@ -1167,6 +1167,11 @@ Printable printRegUnit(unsigned Unit, const TargetRegisterInfo *TRI);
 /// registers on a \ref raw_ostream.
 Printable printVRegOrUnit(unsigned VRegOrUnit, const TargetRegisterInfo *TRI);
 
+/// \brief Create Printable object to print register classes or register banks
+/// on a \ref raw_ostream.
+Printable printRegClassOrBank(unsigned Reg, const MachineRegisterInfo &RegInfo,
+                              const TargetRegisterInfo *TRI);
+
 } // end namespace llvm
 
 #endif // LLVM_CODEGEN_TARGETREGISTERINFO_H

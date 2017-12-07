@@ -5485,61 +5485,61 @@ define i16 @test_pextrw(<8 x i16> %a0) {
 ; GENERIC-LABEL: test_pextrw:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    pextrw $6, %xmm0, %eax # sched: [3:1.00]
-; GENERIC-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; GENERIC-NEXT:    # kill: def %ax killed %ax killed %eax
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_pextrw:
 ; ATOM:       # %bb.0:
 ; ATOM-NEXT:    pextrw $6, %xmm0, %eax # sched: [4:2.00]
-; ATOM-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; ATOM-NEXT:    # kill: def %ax killed %ax killed %eax
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_pextrw:
 ; SLM:       # %bb.0:
 ; SLM-NEXT:    pextrw $6, %xmm0, %eax # sched: [4:1.00]
-; SLM-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; SLM-NEXT:    # kill: def %ax killed %ax killed %eax
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_pextrw:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vpextrw $6, %xmm0, %eax # sched: [3:1.00]
-; SANDY-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; SANDY-NEXT:    # kill: def %ax killed %ax killed %eax
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pextrw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpextrw $6, %xmm0, %eax # sched: [2:1.00]
-; HASWELL-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; HASWELL-NEXT:    # kill: def %ax killed %ax killed %eax
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_pextrw:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vpextrw $6, %xmm0, %eax # sched: [2:1.00]
-; BROADWELL-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; BROADWELL-NEXT:    # kill: def %ax killed %ax killed %eax
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_pextrw:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vpextrw $6, %xmm0, %eax # sched: [3:1.00]
-; SKYLAKE-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; SKYLAKE-NEXT:    # kill: def %ax killed %ax killed %eax
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pextrw:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vpextrw $6, %xmm0, %eax # sched: [3:1.00]
-; SKX-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; SKX-NEXT:    # kill: def %ax killed %ax killed %eax
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_pextrw:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vpextrw $6, %xmm0, %eax # sched: [1:0.50]
-; BTVER2-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; BTVER2-NEXT:    # kill: def %ax killed %ax killed %eax
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_pextrw:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vpextrw $6, %xmm0, %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; ZNVER1-NEXT:    # kill: def %ax killed %ax killed %eax
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = extractelement <8 x i16> %a0, i32 6
   ret i16 %1

@@ -1720,7 +1720,7 @@ bool HexagonHardwareLoops::fixupInductionVariable(MachineLoop *L) {
     MachineOperand &MO = PredDef->getOperand(i);
     if (MO.isReg()) {
       // Skip all implicit references.  In one case there was:
-      //   %140<def> = FCMPUGT32_rr %138, %139, %usr<imp-use>
+      //   %140 = FCMPUGT32_rr %138, %139, implicit %usr
       if (MO.isImplicit())
         continue;
       if (MO.isUse()) {

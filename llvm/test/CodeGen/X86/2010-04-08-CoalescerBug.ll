@@ -2,8 +2,8 @@
 ; rdar://7842028
 
 ; Do not delete partially dead copy instructions.
-; %rdi<def,dead> = MOV64rr %rax<kill>, %edi<imp-def>
-; REP_MOVSD %ecx<imp-def,dead>, %edi<imp-def,dead>, %esi<imp-def,dead>, %ecx<imp-use,kill>, %edi<imp-use,kill>, %esi<imp-use,kill>
+; dead %rdi = MOV64rr killed %rax, implicit-def %edi
+; REP_MOVSD implicit dead %ecx, implicit dead %edi, implicit dead %esi, implicit killed %ecx, implicit killed %edi, implicit killed %esi
 
 
 %struct.F = type { %struct.FC*, i32, i32, i8, i32, i32, i32 }

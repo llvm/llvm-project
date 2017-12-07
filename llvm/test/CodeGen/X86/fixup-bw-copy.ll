@@ -54,7 +54,7 @@ define i8 @test_movb_hreg(i16 %a0) {
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shrl $8, %eax
 ; X64-NEXT:    addb %dil, %al
-; X64-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; X64-NEXT:    # kill: def %al killed %al killed %eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_movb_hreg:

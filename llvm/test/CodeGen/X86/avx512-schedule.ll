@@ -4335,7 +4335,7 @@ define i16 @trunc_16i8_to_16i1(<16 x i8> %a) {
 ; GENERIC-NEXT:    vpsllw $7, %xmm0, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vpmovb2m %xmm0, %k0 # sched: [1:0.33]
 ; GENERIC-NEXT:    kmovd %k0, %eax # sched: [1:0.33]
-; GENERIC-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; GENERIC-NEXT:    # kill: def %ax killed %ax killed %eax
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: trunc_16i8_to_16i1:
@@ -4343,7 +4343,7 @@ define i16 @trunc_16i8_to_16i1(<16 x i8> %a) {
 ; SKX-NEXT:    vpsllw $7, %xmm0, %xmm0 # sched: [1:0.50]
 ; SKX-NEXT:    vpmovb2m %xmm0, %k0 # sched: [1:1.00]
 ; SKX-NEXT:    kmovd %k0, %eax # sched: [3:1.00]
-; SKX-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; SKX-NEXT:    # kill: def %ax killed %ax killed %eax
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %mask_b = trunc <16 x i8>%a to <16 x i1>
   %mask = bitcast <16 x i1> %mask_b to i16
@@ -4356,7 +4356,7 @@ define i16 @trunc_16i32_to_16i1(<16 x i32> %a) {
 ; GENERIC-NEXT:    vpslld $31, %zmm0, %zmm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vptestmd %zmm0, %zmm0, %k0 # sched: [1:1.00]
 ; GENERIC-NEXT:    kmovd %k0, %eax # sched: [1:0.33]
-; GENERIC-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; GENERIC-NEXT:    # kill: def %ax killed %ax killed %eax
 ; GENERIC-NEXT:    vzeroupper
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -4365,7 +4365,7 @@ define i16 @trunc_16i32_to_16i1(<16 x i32> %a) {
 ; SKX-NEXT:    vpslld $31, %zmm0, %zmm0 # sched: [1:0.50]
 ; SKX-NEXT:    vptestmd %zmm0, %zmm0, %k0 # sched: [3:1.00]
 ; SKX-NEXT:    kmovd %k0, %eax # sched: [3:1.00]
-; SKX-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; SKX-NEXT:    # kill: def %ax killed %ax killed %eax
 ; SKX-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %mask_b = trunc <16 x i32>%a to <16 x i1>
@@ -4405,7 +4405,7 @@ define i8 @trunc_8i16_to_8i1(<8 x i16> %a) {
 ; GENERIC-NEXT:    vpsllw $15, %xmm0, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vpmovw2m %xmm0, %k0 # sched: [1:0.33]
 ; GENERIC-NEXT:    kmovd %k0, %eax # sched: [1:0.33]
-; GENERIC-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; GENERIC-NEXT:    # kill: def %al killed %al killed %eax
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: trunc_8i16_to_8i1:
@@ -4413,7 +4413,7 @@ define i8 @trunc_8i16_to_8i1(<8 x i16> %a) {
 ; SKX-NEXT:    vpsllw $15, %xmm0, %xmm0 # sched: [1:0.50]
 ; SKX-NEXT:    vpmovw2m %xmm0, %k0 # sched: [1:1.00]
 ; SKX-NEXT:    kmovd %k0, %eax # sched: [3:1.00]
-; SKX-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; SKX-NEXT:    # kill: def %al killed %al killed %eax
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %mask_b = trunc <8 x i16>%a to <8 x i1>
   %mask = bitcast <8 x i1> %mask_b to i8
@@ -4450,7 +4450,7 @@ define i16 @trunc_i32_to_i1(i32 %a) {
 ; GENERIC-NEXT:    kmovw %edi, %k1 # sched: [1:0.33]
 ; GENERIC-NEXT:    korw %k1, %k0, %k0 # sched: [1:1.00]
 ; GENERIC-NEXT:    kmovd %k0, %eax # sched: [1:0.33]
-; GENERIC-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; GENERIC-NEXT:    # kill: def %ax killed %ax killed %eax
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: trunc_i32_to_i1:
@@ -4463,7 +4463,7 @@ define i16 @trunc_i32_to_i1(i32 %a) {
 ; SKX-NEXT:    kmovw %edi, %k1 # sched: [1:1.00]
 ; SKX-NEXT:    korw %k1, %k0, %k0 # sched: [1:1.00]
 ; SKX-NEXT:    kmovd %k0, %eax # sched: [3:1.00]
-; SKX-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; SKX-NEXT:    # kill: def %ax killed %ax killed %eax
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %a_i = trunc i32 %a to i1
   %maskv = insertelement <16 x i1> <i1 true, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i1 %a_i, i32 0
@@ -6740,7 +6740,7 @@ define i16 @mask16(i16 %x) {
 ; GENERIC-NEXT:    kmovd %edi, %k0 # sched: [1:0.33]
 ; GENERIC-NEXT:    knotw %k0, %k0 # sched: [1:1.00]
 ; GENERIC-NEXT:    kmovd %k0, %eax # sched: [1:0.33]
-; GENERIC-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; GENERIC-NEXT:    # kill: def %ax killed %ax killed %eax
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: mask16:
@@ -6748,7 +6748,7 @@ define i16 @mask16(i16 %x) {
 ; SKX-NEXT:    kmovd %edi, %k0 # sched: [1:1.00]
 ; SKX-NEXT:    knotw %k0, %k0 # sched: [1:1.00]
 ; SKX-NEXT:    kmovd %k0, %eax # sched: [3:1.00]
-; SKX-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; SKX-NEXT:    # kill: def %ax killed %ax killed %eax
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %m0 = bitcast i16 %x to <16 x i1>
   %m1 = xor <16 x i1> %m0, <i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1>
@@ -6783,7 +6783,7 @@ define i8 @mask8(i8 %x) {
 ; GENERIC-NEXT:    kmovd %edi, %k0 # sched: [1:0.33]
 ; GENERIC-NEXT:    knotb %k0, %k0 # sched: [1:1.00]
 ; GENERIC-NEXT:    kmovd %k0, %eax # sched: [1:0.33]
-; GENERIC-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; GENERIC-NEXT:    # kill: def %al killed %al killed %eax
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: mask8:
@@ -6791,7 +6791,7 @@ define i8 @mask8(i8 %x) {
 ; SKX-NEXT:    kmovd %edi, %k0 # sched: [1:1.00]
 ; SKX-NEXT:    knotb %k0, %k0 # sched: [1:1.00]
 ; SKX-NEXT:    kmovd %k0, %eax # sched: [3:1.00]
-; SKX-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; SKX-NEXT:    # kill: def %al killed %al killed %eax
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %m0 = bitcast i8 %x to <8 x i1>
   %m1 = xor <8 x i1> %m0, <i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1>
@@ -6900,7 +6900,7 @@ define i16 @mand16_mem(<16 x i1>* %x, <16 x i1>* %y) {
 ; GENERIC-NEXT:    kxorw %k1, %k0, %k0 # sched: [1:1.00]
 ; GENERIC-NEXT:    korw %k0, %k2, %k0 # sched: [1:1.00]
 ; GENERIC-NEXT:    kmovd %k0, %eax # sched: [1:0.33]
-; GENERIC-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; GENERIC-NEXT:    # kill: def %ax killed %ax killed %eax
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: mand16_mem:
@@ -6911,7 +6911,7 @@ define i16 @mand16_mem(<16 x i1>* %x, <16 x i1>* %y) {
 ; SKX-NEXT:    kxorw %k1, %k0, %k0 # sched: [1:1.00]
 ; SKX-NEXT:    korw %k0, %k2, %k0 # sched: [1:1.00]
 ; SKX-NEXT:    kmovd %k0, %eax # sched: [3:1.00]
-; SKX-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; SKX-NEXT:    # kill: def %ax killed %ax killed %eax
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %ma = load <16 x i1>, <16 x i1>* %x
   %mb = load <16 x i1>, <16 x i1>* %y
@@ -6928,7 +6928,7 @@ define i8 @shuf_test1(i16 %v) nounwind {
 ; GENERIC-NEXT:    kmovd %edi, %k0 # sched: [1:0.33]
 ; GENERIC-NEXT:    kshiftrw $8, %k0, %k0 # sched: [1:1.00]
 ; GENERIC-NEXT:    kmovd %k0, %eax # sched: [1:0.33]
-; GENERIC-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; GENERIC-NEXT:    # kill: def %al killed %al killed %eax
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: shuf_test1:
@@ -6936,7 +6936,7 @@ define i8 @shuf_test1(i16 %v) nounwind {
 ; SKX-NEXT:    kmovd %edi, %k0 # sched: [1:1.00]
 ; SKX-NEXT:    kshiftrw $8, %k0, %k0 # sched: [3:1.00]
 ; SKX-NEXT:    kmovd %k0, %eax # sched: [3:1.00]
-; SKX-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; SKX-NEXT:    # kill: def %al killed %al killed %eax
 ; SKX-NEXT:    retq # sched: [7:1.00]
    %v1 = bitcast i16 %v to <16 x i1>
    %mask = shufflevector <16 x i1> %v1, <16 x i1> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -6978,7 +6978,7 @@ define i16 @zext_test2(<16 x i32> %a, <16 x i32> %b) {
 ; GENERIC-NEXT:    kshiftrw $15, %k0, %k0 # sched: [1:1.00]
 ; GENERIC-NEXT:    kmovd %k0, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    andl $1, %eax # sched: [1:0.33]
-; GENERIC-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; GENERIC-NEXT:    # kill: def %ax killed %ax killed %eax
 ; GENERIC-NEXT:    vzeroupper
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -6989,7 +6989,7 @@ define i16 @zext_test2(<16 x i32> %a, <16 x i32> %b) {
 ; SKX-NEXT:    kshiftrw $15, %k0, %k0 # sched: [3:1.00]
 ; SKX-NEXT:    kmovd %k0, %eax # sched: [3:1.00]
 ; SKX-NEXT:    andl $1, %eax # sched: [1:0.25]
-; SKX-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; SKX-NEXT:    # kill: def %ax killed %ax killed %eax
 ; SKX-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %cmp_res = icmp ugt <16 x i32> %a, %b
@@ -7006,7 +7006,7 @@ define i8 @zext_test3(<16 x i32> %a, <16 x i32> %b) {
 ; GENERIC-NEXT:    kshiftrw $15, %k0, %k0 # sched: [1:1.00]
 ; GENERIC-NEXT:    kmovd %k0, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    andb $1, %al # sched: [1:0.33]
-; GENERIC-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; GENERIC-NEXT:    # kill: def %al killed %al killed %eax
 ; GENERIC-NEXT:    vzeroupper
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -7017,7 +7017,7 @@ define i8 @zext_test3(<16 x i32> %a, <16 x i32> %b) {
 ; SKX-NEXT:    kshiftrw $15, %k0, %k0 # sched: [3:1.00]
 ; SKX-NEXT:    kmovd %k0, %eax # sched: [3:1.00]
 ; SKX-NEXT:    andb $1, %al # sched: [1:0.25]
-; SKX-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; SKX-NEXT:    # kill: def %al killed %al killed %eax
 ; SKX-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %cmp_res = icmp ugt <16 x i32> %a, %b
@@ -8133,7 +8133,7 @@ define i16 @test_v16i1_add(i16 %x, i16 %y) {
 ; GENERIC-NEXT:    kmovd %esi, %k1 # sched: [1:0.33]
 ; GENERIC-NEXT:    kxorw %k1, %k0, %k0 # sched: [1:1.00]
 ; GENERIC-NEXT:    kmovd %k0, %eax # sched: [1:0.33]
-; GENERIC-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; GENERIC-NEXT:    # kill: def %ax killed %ax killed %eax
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_v16i1_add:
@@ -8142,7 +8142,7 @@ define i16 @test_v16i1_add(i16 %x, i16 %y) {
 ; SKX-NEXT:    kmovd %esi, %k1 # sched: [1:1.00]
 ; SKX-NEXT:    kxorw %k1, %k0, %k0 # sched: [1:1.00]
 ; SKX-NEXT:    kmovd %k0, %eax # sched: [3:1.00]
-; SKX-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; SKX-NEXT:    # kill: def %ax killed %ax killed %eax
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %m0 = bitcast i16 %x to <16 x i1>
   %m1 = bitcast i16 %y to <16 x i1>
@@ -8158,7 +8158,7 @@ define i16 @test_v16i1_sub(i16 %x, i16 %y) {
 ; GENERIC-NEXT:    kmovd %esi, %k1 # sched: [1:0.33]
 ; GENERIC-NEXT:    kxorw %k1, %k0, %k0 # sched: [1:1.00]
 ; GENERIC-NEXT:    kmovd %k0, %eax # sched: [1:0.33]
-; GENERIC-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; GENERIC-NEXT:    # kill: def %ax killed %ax killed %eax
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_v16i1_sub:
@@ -8167,7 +8167,7 @@ define i16 @test_v16i1_sub(i16 %x, i16 %y) {
 ; SKX-NEXT:    kmovd %esi, %k1 # sched: [1:1.00]
 ; SKX-NEXT:    kxorw %k1, %k0, %k0 # sched: [1:1.00]
 ; SKX-NEXT:    kmovd %k0, %eax # sched: [3:1.00]
-; SKX-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; SKX-NEXT:    # kill: def %ax killed %ax killed %eax
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %m0 = bitcast i16 %x to <16 x i1>
   %m1 = bitcast i16 %y to <16 x i1>
@@ -8183,7 +8183,7 @@ define i16 @test_v16i1_mul(i16 %x, i16 %y) {
 ; GENERIC-NEXT:    kmovd %esi, %k1 # sched: [1:0.33]
 ; GENERIC-NEXT:    kandw %k1, %k0, %k0 # sched: [1:1.00]
 ; GENERIC-NEXT:    kmovd %k0, %eax # sched: [1:0.33]
-; GENERIC-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; GENERIC-NEXT:    # kill: def %ax killed %ax killed %eax
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_v16i1_mul:
@@ -8192,7 +8192,7 @@ define i16 @test_v16i1_mul(i16 %x, i16 %y) {
 ; SKX-NEXT:    kmovd %esi, %k1 # sched: [1:1.00]
 ; SKX-NEXT:    kandw %k1, %k0, %k0 # sched: [1:1.00]
 ; SKX-NEXT:    kmovd %k0, %eax # sched: [3:1.00]
-; SKX-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; SKX-NEXT:    # kill: def %ax killed %ax killed %eax
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %m0 = bitcast i16 %x to <16 x i1>
   %m1 = bitcast i16 %y to <16 x i1>
@@ -8208,7 +8208,7 @@ define i8 @test_v8i1_add(i8 %x, i8 %y) {
 ; GENERIC-NEXT:    kmovd %esi, %k1 # sched: [1:0.33]
 ; GENERIC-NEXT:    kxorb %k1, %k0, %k0 # sched: [1:1.00]
 ; GENERIC-NEXT:    kmovd %k0, %eax # sched: [1:0.33]
-; GENERIC-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; GENERIC-NEXT:    # kill: def %al killed %al killed %eax
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_v8i1_add:
@@ -8217,7 +8217,7 @@ define i8 @test_v8i1_add(i8 %x, i8 %y) {
 ; SKX-NEXT:    kmovd %esi, %k1 # sched: [1:1.00]
 ; SKX-NEXT:    kxorb %k1, %k0, %k0 # sched: [1:1.00]
 ; SKX-NEXT:    kmovd %k0, %eax # sched: [3:1.00]
-; SKX-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; SKX-NEXT:    # kill: def %al killed %al killed %eax
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %m0 = bitcast i8 %x to <8 x i1>
   %m1 = bitcast i8 %y to <8 x i1>
@@ -8233,7 +8233,7 @@ define i8 @test_v8i1_sub(i8 %x, i8 %y) {
 ; GENERIC-NEXT:    kmovd %esi, %k1 # sched: [1:0.33]
 ; GENERIC-NEXT:    kxorb %k1, %k0, %k0 # sched: [1:1.00]
 ; GENERIC-NEXT:    kmovd %k0, %eax # sched: [1:0.33]
-; GENERIC-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; GENERIC-NEXT:    # kill: def %al killed %al killed %eax
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_v8i1_sub:
@@ -8242,7 +8242,7 @@ define i8 @test_v8i1_sub(i8 %x, i8 %y) {
 ; SKX-NEXT:    kmovd %esi, %k1 # sched: [1:1.00]
 ; SKX-NEXT:    kxorb %k1, %k0, %k0 # sched: [1:1.00]
 ; SKX-NEXT:    kmovd %k0, %eax # sched: [3:1.00]
-; SKX-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; SKX-NEXT:    # kill: def %al killed %al killed %eax
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %m0 = bitcast i8 %x to <8 x i1>
   %m1 = bitcast i8 %y to <8 x i1>
@@ -8258,7 +8258,7 @@ define i8 @test_v8i1_mul(i8 %x, i8 %y) {
 ; GENERIC-NEXT:    kmovd %esi, %k1 # sched: [1:0.33]
 ; GENERIC-NEXT:    kandb %k1, %k0, %k0 # sched: [1:1.00]
 ; GENERIC-NEXT:    kmovd %k0, %eax # sched: [1:0.33]
-; GENERIC-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; GENERIC-NEXT:    # kill: def %al killed %al killed %eax
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_v8i1_mul:
@@ -8267,7 +8267,7 @@ define i8 @test_v8i1_mul(i8 %x, i8 %y) {
 ; SKX-NEXT:    kmovd %esi, %k1 # sched: [1:1.00]
 ; SKX-NEXT:    kandb %k1, %k0, %k0 # sched: [1:1.00]
 ; SKX-NEXT:    kmovd %k0, %eax # sched: [3:1.00]
-; SKX-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; SKX-NEXT:    # kill: def %al killed %al killed %eax
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %m0 = bitcast i8 %x to <8 x i1>
   %m1 = bitcast i8 %y to <8 x i1>

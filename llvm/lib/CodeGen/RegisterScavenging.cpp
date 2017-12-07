@@ -213,7 +213,7 @@ void RegScavenger::forward() {
         continue;
       if (!isRegUsed(Reg)) {
         // Check if it's partial live: e.g.
-        // D0 = insert_subreg D0<undef>, S0
+        // D0 = insert_subreg undef D0, S0
         // ... D0
         // The problem is the insert_subreg could be eliminated. The use of
         // D0 is using a partially undef value. This is not *incorrect* since

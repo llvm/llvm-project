@@ -11,11 +11,11 @@
 ;
 ; %bb.2: derived from LLVM BB %finish
 ;     Predecessors according to CFG: %bb.0 %bb.1
-;         %0<def> = PHI %3, <%bb.0>, %5, <%bb.1>
-;         %7<def> = LDIRdK 2
-;         %8<def> = LDIRdK 1
-;         CPRdRr %2, %0, %SREG<imp-def>
-;         BREQk <%bb.6>, %SREG<imp-use>
+;         %0 = PHI %3, <%bb.0>, %5, <%bb.1>
+;         %7 = LDIRdK 2
+;         %8 = LDIRdK 1
+;         CPRdRr %2, %0, implicit-def %SREG
+;         BREQk <%bb.6>, implicit %SREG
 ;     Successors according to CFG: %bb.5(?%) %bb.6(?%)
 ;
 ; The code assumes it the fallthrough block after this is %bb.5, but

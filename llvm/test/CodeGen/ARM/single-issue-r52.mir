@@ -20,22 +20,22 @@
 
 # CHECK: ********** MI Scheduling **********
 # CHECK: ScheduleDAGMILive::schedule starting
-# CHECK: SU(1):   %1<def> = VLD4d8Pseudo %0, 8, pred:14, pred:%noreg; mem:LD32[%A](align=8) QQPR:%1 GPR:%0
+# CHECK: SU(1):   %1:qqpr = VLD4d8Pseudo %0, 8, pred:14, pred:%noreg; mem:LD32[%A](align=8) QQPR:%1 GPR:%0
 # CHECK: Latency            : 8
 # CHECK: Single Issue       : true;
-# CHECK: SU(2):   %4<def> = VADDv8i8 %1:dsub_0, %1:dsub_1, pred:14, pred:%noreg; DPR:%4 QQPR:%1
+# CHECK: SU(2):   %4:dpr = VADDv8i8 %1.dsub_0, %1.dsub_1, pred:14, pred:%noreg; DPR:%4 QQPR:%1
 # CHECK: Latency            : 5
 # CHECK: Single Issue       : false;
-# CHECK: SU(3):   %5<def>, %6<def> = VMOVRRD %4, pred:14, pred:%noreg; GPR:%5,%6 DPR:%4
+# CHECK: SU(3):   %5:gpr, %6:gpr = VMOVRRD %4, pred:14, pred:%noreg; GPR:%5,%6 DPR:%4
 # CHECK: Latency            : 4
 # CHECK: Single Issue       : false;
 
-# TOPDOWN: Scheduling SU(1) %1<def> = VLD4d8Pseudo
+# TOPDOWN: Scheduling SU(1) %1:qqpr = VLD4d8Pseudo
 # TOPDOWN: Bump cycle to end group
-# TOPDOWN: Scheduling SU(2) %4<def> = VADDv8i8
+# TOPDOWN: Scheduling SU(2) %4:dpr = VADDv8i8
 
-# BOTTOMUP: Scheduling SU(2) %4<def> = VADDv8i8
-# BOTTOMUP: Scheduling SU(1) %1<def> = VLD4d8Pseudo
+# BOTTOMUP: Scheduling SU(2) %4:dpr = VADDv8i8
+# BOTTOMUP: Scheduling SU(1) %1:qqpr = VLD4d8Pseudo
 # BOTTOMUP: Bump cycle to begin group
 
 ...

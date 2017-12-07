@@ -111,8 +111,9 @@ private:
 
   std::vector<const WasmSignature *> Types;
   DenseMap<WasmSignature, int32_t, WasmSignatureDenseMapInfo> TypeIndices;
-  std::vector<Symbol *> FunctionImports;
-  std::vector<Symbol *> GlobalImports;
+  std::vector<const Symbol *> FunctionImports;
+  std::vector<const Symbol *> GlobalImports;
+  std::vector<const Symbol *> DefinedGlobals;
 
   // Elements that are used to construct the final output
   std::string Header;
@@ -217,35 +218,20 @@ void Writer::createMemorySection() {
 }
 
 void Writer::createGlobalSection() {
+  if (DefinedGlobals.empty())
+    return;
+
   SyntheticSection *Section = createSyntheticSection(WASM_SEC_GLOBAL);
   raw_ostream &OS = Section->getStream();
 
-  writeUleb128(OS, NumGlobals, "global count");
-  for (const Symbol *Sym : Config->SyntheticGlobals) {
+  writeUleb128(OS, DefinedGlobals.size(), "global count");
+  for (const Symbol *Sym : DefinedGlobals) {
     WasmGlobal Global;
     Global.Type = WASM_TYPE_I32;
     Global.Mutable = Sym == Config->StackPointerSymbol;
     Global.InitExpr.Opcode = WASM_OPCODE_I32_CONST;
     Global.InitExpr.Value.Int32 = Sym->getVirtualAddress();
     writeGlobal(OS, Global);
-  }
-
-  if (Config->EmitRelocs) {
-    for (ObjFile *File : Symtab->ObjectFiles) {
-      uint32_t GlobalIndex = File->NumGlobalImports();
-      for (const WasmGlobal &Global : File->getWasmObj()->globals()) {
-        WasmGlobal RelocatedGlobal(Global);
-        if (Global.Type != WASM_TYPE_I32)
-          fatal("unsupported global type: " + Twine(Global.Type));
-        if (Global.InitExpr.Opcode != WASM_OPCODE_I32_CONST)
-          fatal("unsupported global init opcode: " +
-                Twine(Global.InitExpr.Opcode));
-        RelocatedGlobal.InitExpr.Value.Int32 =
-            File->getRelocatedAddress(GlobalIndex);
-        writeGlobal(OS, RelocatedGlobal);
-        ++GlobalIndex;
-      }
-    }
   }
 }
 
@@ -261,35 +247,36 @@ void Writer::createTableSection() {
 }
 
 void Writer::createExportSection() {
-  // Memory is and main function are exported for executables.
   bool ExportMemory = !Config->Relocatable && !Config->ImportMemory;
-  bool ExportOther = true; // ??? TODO Config->Relocatable;
-  bool ExportHidden = Config->Relocatable;
   Symbol *EntrySym = Symtab->find(Config->Entry);
   bool ExportEntry = !Config->Relocatable && EntrySym && EntrySym->isDefined();
+  bool ExportHidden = Config->EmitRelocs;
 
-  uint32_t NumExports = 0;
+  uint32_t NumExports = ExportMemory ? 1 : 0;
 
-  if (ExportMemory)
-    ++NumExports;
-
+  std::vector<const Symbol *> SymbolExports;
   if (ExportEntry)
-    ++NumExports;
+    SymbolExports.emplace_back(EntrySym);
 
-  if (ExportOther) {
-    for (ObjFile *File : Symtab->ObjectFiles) {
-      for (Symbol *Sym : File->getSymbols()) {
-        if (!Sym->isFunction() || Sym->isLocal() || Sym->isUndefined() ||
-            (Sym->isHidden() && !ExportHidden) || Sym->WrittenToSymtab)
-          continue;
-        if (Sym == EntrySym)
-          continue;
-        Sym->WrittenToSymtab = true;
-        ++NumExports;
-      }
-    }
+  for (const Symbol *Sym : Symtab->getSymbols()) {
+    if (Sym->isUndefined() || Sym->isGlobal())
+      continue;
+    if (Sym->isHidden() && !ExportHidden)
+      continue;
+    if (ExportEntry && Sym == EntrySym)
+      continue;
+    SymbolExports.emplace_back(Sym);
   }
 
+  for (const Symbol *Sym : DefinedGlobals) {
+    // Can't export the SP right now because it mutable and mutable globals
+    // connot be exported.
+    if (Sym == Config->StackPointerSymbol)
+      continue;
+    SymbolExports.emplace_back(Sym);
+  }
+
+  NumExports += SymbolExports.size();
   if (!NumExports)
     return;
 
@@ -306,34 +293,16 @@ void Writer::createExportSection() {
     writeExport(OS, MemoryExport);
   }
 
-  if (ExportEntry) {
-    WasmExport EntryExport;
-    EntryExport.Name = Config->Entry;
-    EntryExport.Kind = WASM_EXTERNAL_FUNCTION;
-    EntryExport.Index = EntrySym->getOutputIndex();
-    writeExport(OS, EntryExport);
-  }
-
-  if (ExportOther) {
-    for (ObjFile *File : Symtab->ObjectFiles) {
-      for (Symbol *Sym : File->getSymbols()) {
-        if (!Sym->isFunction() || Sym->isLocal() || Sym->isUndefined() ||
-            (Sym->isHidden() && !ExportHidden) || !Sym->WrittenToSymtab)
-          continue;
-        if (Sym == EntrySym)
-          continue;
-        Sym->WrittenToSymtab = false;
-        log("Export: " + Sym->getName());
-        WasmExport Export;
-        Export.Name = Sym->getName();
-        Export.Index = Sym->getOutputIndex();
-        if (Sym->isFunction())
-          Export.Kind = WASM_EXTERNAL_FUNCTION;
-        else
-          Export.Kind = WASM_EXTERNAL_GLOBAL;
-        writeExport(OS, Export);
-      }
-    }
+  for (const Symbol *Sym : SymbolExports) {
+    log("Export: " + Sym->getName());
+    WasmExport Export;
+    Export.Name = Sym->getName();
+    Export.Index = Sym->getOutputIndex();
+    if (Sym->isFunction())
+      Export.Kind = WASM_EXTERNAL_FUNCTION;
+    else
+      Export.Kind = WASM_EXTERNAL_GLOBAL;
+    writeExport(OS, Export);
   }
 }
 
@@ -557,7 +526,6 @@ void Writer::createSections() {
 }
 
 void Writer::calculateOffsets() {
-  NumGlobals = Config->SyntheticGlobals.size();
   NumTableElems = InitialTableOffset;
 
   for (ObjFile *File : Symtab->ObjectFiles) {
@@ -567,13 +535,6 @@ void Writer::calculateOffsets() {
     File->FunctionIndexOffset =
         FunctionImports.size() - File->NumFunctionImports() + NumFunctions;
     NumFunctions += WasmFile->functions().size();
-
-    // Global Index
-    if (Config->EmitRelocs) {
-      File->GlobalIndexOffset =
-          GlobalImports.size() - File->NumGlobalImports() + NumGlobals;
-      NumGlobals += WasmFile->globals().size();
-    }
 
     // Memory
     if (WasmFile->memories().size()) {
@@ -640,19 +601,31 @@ void Writer::calculateTypes() {
 }
 
 void Writer::assignSymbolIndexes() {
+  uint32_t GlobalIndex = GlobalImports.size();
+
+  if (Config->StackPointerSymbol) {
+    DefinedGlobals.emplace_back(Config->StackPointerSymbol);
+    Config->StackPointerSymbol->setOutputIndex(GlobalIndex++);
+  }
+
+  if (Config->EmitRelocs)
+    DefinedGlobals.reserve(Symtab->getSymbols().size());
+
   for (ObjFile *File : Symtab->ObjectFiles) {
     DEBUG(dbgs() << "assignSymbolIndexes: " << File->getName() << "\n");
     for (Symbol *Sym : File->getSymbols()) {
       if (Sym->hasOutputIndex() || !Sym->isDefined())
         continue;
 
-      if (Sym->getFile() && isa<ObjFile>(Sym->getFile())) {
-        auto *Obj = cast<ObjFile>(Sym->getFile());
-        if (Sym->isFunction())
+      if (Sym->isFunction()) {
+        if (Sym->getFile() && isa<ObjFile>(Sym->getFile())) {
+          auto *Obj = cast<ObjFile>(Sym->getFile());
           Sym->setOutputIndex(Obj->FunctionIndexOffset +
                               Sym->getFunctionIndex());
-        else
-          Sym->setOutputIndex(Obj->GlobalIndexOffset + Sym->getGlobalIndex());
+        }
+      } else if (Config->EmitRelocs) {
+        DefinedGlobals.emplace_back(Sym);
+        Sym->setOutputIndex(GlobalIndex++);
       }
     }
   }

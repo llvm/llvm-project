@@ -8,7 +8,7 @@
 define <2 x i1> @bitcast_i2_2i1(i2 zeroext %a0) {
 ; SSE2-SSSE3-LABEL: bitcast_i2_2i1:
 ; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
+; SSE2-SSSE3-NEXT:    # kill: def %edi killed %edi def %rdi
 ; SSE2-SSSE3-NEXT:    movq %rdi, %xmm0
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,1,0,1]
 ; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm0 = [1,2]
@@ -21,7 +21,7 @@ define <2 x i1> @bitcast_i2_2i1(i2 zeroext %a0) {
 ;
 ; AVX1-LABEL: bitcast_i2_2i1:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
+; AVX1-NEXT:    # kill: def %edi killed %edi def %rdi
 ; AVX1-NEXT:    vmovq %rdi, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2]
@@ -32,7 +32,7 @@ define <2 x i1> @bitcast_i2_2i1(i2 zeroext %a0) {
 ;
 ; AVX2-LABEL: bitcast_i2_2i1:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
+; AVX2-NEXT:    # kill: def %edi killed %edi def %rdi
 ; AVX2-NEXT:    vmovq %rdi, %xmm0
 ; AVX2-NEXT:    vpbroadcastq %xmm0, %xmm0
 ; AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2]
@@ -47,7 +47,7 @@ define <2 x i1> @bitcast_i2_2i1(i2 zeroext %a0) {
 ; AVX512-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
 ; AVX512-NEXT:    kmovd %eax, %k1
 ; AVX512-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; AVX512-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<kill>
+; AVX512-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %1 = bitcast i2 %a0 to <2 x i1>
@@ -92,7 +92,7 @@ define <4 x i1> @bitcast_i4_4i1(i4 zeroext %a0) {
 ; AVX512-NEXT:    kmovd %eax, %k1
 ; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
 ; AVX512-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
-; AVX512-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
+; AVX512-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %1 = bitcast i4 %a0 to <4 x i1>

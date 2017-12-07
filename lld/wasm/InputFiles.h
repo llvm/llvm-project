@@ -103,7 +103,6 @@ public:
   size_t NumGlobalImports() const { return GlobalImports; }
 
   int32_t FunctionIndexOffset = 0;
-  int32_t GlobalIndexOffset = 0;
   int32_t TableIndexOffset = 0;
   const WasmSection *CodeSection = nullptr;
   std::vector<OutputRelocation> CodeRelocations;

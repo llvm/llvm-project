@@ -145,7 +145,7 @@ define signext i8 @test4(i8* nocapture %P, double %F) nounwind readonly {
 ; MCU-NEXT:    fucompp
 ; MCU-NEXT:    fnstsw %ax
 ; MCU-NEXT:    xorl %edx, %edx
-; MCU-NEXT:    # kill: %ah<def> %ah<kill> %ax<kill>
+; MCU-NEXT:    # kill: def %ah killed %ah killed %ax
 ; MCU-NEXT:    sahf
 ; MCU-NEXT:    seta %dl
 ; MCU-NEXT:    movb (%ecx,%edx,4), %al
@@ -798,14 +798,14 @@ define i16 @test17(i16 %x) nounwind {
 ; GENERIC:       ## %bb.0: ## %entry
 ; GENERIC-NEXT:    negw %di
 ; GENERIC-NEXT:    sbbl %eax, %eax
-; GENERIC-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
+; GENERIC-NEXT:    ## kill: def %ax killed %ax killed %eax
 ; GENERIC-NEXT:    retq
 ;
 ; ATOM-LABEL: test17:
 ; ATOM:       ## %bb.0: ## %entry
 ; ATOM-NEXT:    negw %di
 ; ATOM-NEXT:    sbbl %eax, %eax
-; ATOM-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
+; ATOM-NEXT:    ## kill: def %ax killed %ax killed %eax
 ; ATOM-NEXT:    nop
 ; ATOM-NEXT:    nop
 ; ATOM-NEXT:    nop
@@ -816,7 +816,7 @@ define i16 @test17(i16 %x) nounwind {
 ; MCU:       # %bb.0: # %entry
 ; MCU-NEXT:    negw %ax
 ; MCU-NEXT:    sbbl %eax, %eax
-; MCU-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; MCU-NEXT:    # kill: def %ax killed %ax killed %eax
 ; MCU-NEXT:    retl
 entry:
   %cmp = icmp ne i16 %x, 0
@@ -1027,7 +1027,7 @@ define void @test19() {
 ; MCU-NEXT:    cmpl %eax, %ecx
 ; MCU-NEXT:    fucom %st(0)
 ; MCU-NEXT:    fnstsw %ax
-; MCU-NEXT:    # kill: %ah<def> %ah<kill> %ax<kill>
+; MCU-NEXT:    # kill: def %ah killed %ah killed %ax
 ; MCU-NEXT:    sahf
 ; MCU-NEXT:    jp .LBB24_4
 ; MCU-NEXT:  # %bb.5: # %CF244
@@ -1073,7 +1073,7 @@ define i16 @select_xor_1(i16 %A, i8 %cond) {
 ; MCU-NEXT:    negl %edx
 ; MCU-NEXT:    andl $43, %edx
 ; MCU-NEXT:    xorl %edx, %eax
-; MCU-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; MCU-NEXT:    # kill: def %ax killed %ax killed %eax
 ; MCU-NEXT:    retl
 entry:
  %and = and i8 %cond, 1

@@ -12,6 +12,8 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Testing/Support/Error.h"
+#include "gtest/gtest-spi.h"
 #include "gtest/gtest.h"
 #include <memory>
 
@@ -712,6 +714,44 @@ TEST(Error, ErrorMessage) {
                 .compare("CustomError { 0}\n"
                          "CustomError { 1}"),
             0);
+}
+
+TEST(Error, ErrorMatchers) {
+  EXPECT_THAT_ERROR(Error::success(), Succeeded());
+  EXPECT_NONFATAL_FAILURE(
+      EXPECT_THAT_ERROR(make_error<CustomError>(0), Succeeded()),
+      "Expected: succeeded\n  Actual: failed  (CustomError { 0})");
+
+  EXPECT_THAT_ERROR(make_error<CustomError>(0), Failed());
+  EXPECT_NONFATAL_FAILURE(EXPECT_THAT_ERROR(Error::success(), Failed()),
+                          "Expected: failed\n  Actual: succeeded");
+
+  EXPECT_THAT_EXPECTED(Expected<int>(0), Succeeded());
+  EXPECT_NONFATAL_FAILURE(
+      EXPECT_THAT_EXPECTED(Expected<int>(make_error<CustomError>(0)),
+                           Succeeded()),
+      "Expected: succeeded\n  Actual: failed  (CustomError { 0})");
+
+  EXPECT_THAT_EXPECTED(Expected<int>(make_error<CustomError>(0)), Failed());
+  EXPECT_NONFATAL_FAILURE(
+      EXPECT_THAT_EXPECTED(Expected<int>(0), Failed()),
+      "Expected: failed\n  Actual: succeeded with value \"0\"");
+
+  EXPECT_THAT_EXPECTED(Expected<int>(0), HasValue(0));
+  EXPECT_NONFATAL_FAILURE(
+      EXPECT_THAT_EXPECTED(Expected<int>(make_error<CustomError>(0)),
+                           HasValue(0)),
+      "Expected: succeeded with value \"0\"\n"
+      "  Actual: failed  (CustomError { 0})");
+  EXPECT_NONFATAL_FAILURE(
+      EXPECT_THAT_EXPECTED(Expected<int>(1), HasValue(0)),
+      "Expected: succeeded with value \"0\"\n"
+      "  Actual: succeeded with value \"1\", but \"1\" != \"0\"");
+
+  EXPECT_THAT_EXPECTED(Expected<int &>(make_error<CustomError>(0)), Failed());
+  int a = 1;
+  EXPECT_THAT_EXPECTED(Expected<int &>(a), Succeeded());
+  EXPECT_THAT_EXPECTED(Expected<int &>(a), HasValue(1));
 }
 
 } // end anon namespace

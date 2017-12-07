@@ -3,13 +3,13 @@
 # CHECK: Bad machine code: PHI operand is not live-out from predecessor
 # CHECK: - function:    func0
 # CHECK: - basic block: %bb.3
-# CHECK: - instruction: %0<def> = PHI
+# CHECK: - instruction: %0:gr32 = PHI
 # CHECK: - operand 1:   %1
 #
 # CHECK: Bad machine code: PHI operand is not live-out from predecessor
 # CHECK: - function:    func0
 # CHECK: - basic block: %bb.3
-# CHECK: - instruction: %0<def> = PHI
+# CHECK: - instruction: %0:gr32 = PHI
 # CHECK: - operand 3:   %0
 name: func0
 tracksRegLiveness: true

@@ -2039,7 +2039,7 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    vpblendvb %ymm0, %ymm3, %ymm2, %ymm2
 ; AVX512F-32-NEXT:    vshufi64x2 {{.*#+}} zmm2 = zmm2[0,1,2,3],zmm3[4,5,6,7]
 ; AVX512F-32-NEXT:    vpmovb2m %zmm2, %k0
-; AVX512F-32-NEXT:    # kill: %al<def> %al<kill> %eax<kill> %eax<def>
+; AVX512F-32-NEXT:    # kill: def %al killed %al killed %eax def %eax
 ; AVX512F-32-NEXT:    shrb $7, %al
 ; AVX512F-32-NEXT:    kmovd %eax, %k1
 ; AVX512F-32-NEXT:    vpmovm2b %k1, %zmm2
@@ -2408,7 +2408,7 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    vpblendvb %ymm7, %ymm4, %ymm0, %ymm0
 ; AVX512F-32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; AVX512F-32-NEXT:    vpmovb2m %zmm0, %k0
-; AVX512F-32-NEXT:    # kill: %bl<def> %bl<kill> %ebx<kill> %ebx<def>
+; AVX512F-32-NEXT:    # kill: def %bl killed %bl killed %ebx def %ebx
 ; AVX512F-32-NEXT:    shrb $7, %bl
 ; AVX512F-32-NEXT:    kmovd %ebx, %k1
 ; AVX512F-32-NEXT:    vpmovm2b %k1, %zmm0
@@ -2923,7 +2923,7 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    vpblendvb %ymm0, %ymm3, %ymm2, %ymm2
 ; AVX512F-32-NEXT:    vshufi64x2 {{.*#+}} zmm2 = zmm2[0,1,2,3],zmm3[4,5,6,7]
 ; AVX512F-32-NEXT:    vpmovb2m %zmm2, %k0
-; AVX512F-32-NEXT:    # kill: %al<def> %al<kill> %eax<kill> %eax<def>
+; AVX512F-32-NEXT:    # kill: def %al killed %al killed %eax def %eax
 ; AVX512F-32-NEXT:    shrb $7, %al
 ; AVX512F-32-NEXT:    kmovd %eax, %k1
 ; AVX512F-32-NEXT:    vpmovm2b %k1, %zmm2
@@ -3292,7 +3292,7 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    vpblendvb %ymm7, %ymm4, %ymm0, %ymm0
 ; AVX512F-32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; AVX512F-32-NEXT:    vpmovb2m %zmm0, %k0
-; AVX512F-32-NEXT:    # kill: %bl<def> %bl<kill> %ebx<kill> %ebx<def>
+; AVX512F-32-NEXT:    # kill: def %bl killed %bl killed %ebx def %ebx
 ; AVX512F-32-NEXT:    shrb $7, %bl
 ; AVX512F-32-NEXT:    kmovd %ebx, %k1
 ; AVX512F-32-NEXT:    vpmovm2b %k1, %zmm0

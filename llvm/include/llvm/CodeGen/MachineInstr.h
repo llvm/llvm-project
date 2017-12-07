@@ -44,6 +44,7 @@ class MachineRegisterInfo;
 class ModuleSlotTracker;
 class raw_ostream;
 template <typename T> class SmallVectorImpl;
+class SmallBitVector;
 class StringRef;
 class TargetInstrInfo;
 class TargetRegisterClass;
@@ -1220,6 +1221,15 @@ public:
 
   /// Debugging support
   /// @{
+  /// Determine the generic type to be printed (if needed) on uses and defs.
+  LLT getTypeToPrint(unsigned OpIdx, SmallBitVector &PrintedTypes,
+                     const MachineRegisterInfo &MRI) const;
+
+  /// Return true when an instruction has tied register that can't be determined
+  /// by the instruction's descriptor. This is useful for MIR printing, to
+  /// determine whether we need to print the ties or not.
+  bool hasComplexRegisterTies() const;
+
   /// Print this MI to \p OS.
   /// Only print the defs and the opcode if \p SkipOpers is true.
   /// Otherwise, also print operands if \p SkipDebugLoc is true.

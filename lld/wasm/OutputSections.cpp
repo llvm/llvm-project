@@ -72,9 +72,8 @@ std::string lld::toString(OutputSection *Section) {
 
 static void applyRelocation(uint8_t *Buf, const OutputRelocation &Reloc) {
   DEBUG(dbgs() << "write reloc: type=" << Reloc.Reloc.Type
-               << " index=" << Reloc.Reloc.Index << " new=" << Reloc.NewIndex
-               << " value=" << Reloc.Value << " offset=" << Reloc.Reloc.Offset
-               << "\n");
+               << " index=" << Reloc.Reloc.Index << " value=" << Reloc.Value
+               << " offset=" << Reloc.Reloc.Offset << "\n");
   Buf += Reloc.Reloc.Offset;
   int64_t ExistingValue;
   switch (Reloc.Reloc.Type) {
@@ -149,14 +148,17 @@ static void calcRelocations(const ObjFile &File,
                             int32_t OutputOffset) {
   log("calcRelocations: " + File.getName() + " offset=" + Twine(OutputOffset));
   for (const WasmRelocation &Reloc : Relocs) {
-    int64_t NewIndex = calcNewIndex(File, Reloc);
     OutputRelocation NewReloc;
     NewReloc.Reloc = Reloc;
     NewReloc.Reloc.Offset += OutputOffset;
-    NewReloc.NewIndex = NewIndex;
     DEBUG(dbgs() << "reloc: type=" << Reloc.Type << " index=" << Reloc.Index
-                 << " offset=" << Reloc.Offset << " new=" << NewIndex
+                 << " offset=" << Reloc.Offset
                  << " newOffset=" << NewReloc.Reloc.Offset << "\n");
+
+    if (Config->EmitRelocs)
+      NewReloc.NewIndex = calcNewIndex(File, Reloc);
+    else
+      NewReloc.NewIndex = UINT32_MAX;
 
     switch (Reloc.Type) {
     case R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
@@ -167,7 +169,8 @@ static void calcRelocations(const ObjFile &File,
         NewReloc.Value += Reloc.Addend;
       break;
     default:
-      NewReloc.Value = NewIndex;
+      NewReloc.Value = calcNewIndex(File, Reloc);
+      break;
     }
 
     OutputRelocs.emplace_back(NewReloc);

@@ -370,7 +370,7 @@ define i32 @test_pcmpestri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; GENERIC-NEXT:    movl $7, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    movl $7, %edx # sched: [1:0.33]
 ; GENERIC-NEXT:    pcmpestri $7, (%rdi), %xmm0 # sched: [4:2.33]
-; GENERIC-NEXT:    # kill: %ecx<def> %ecx<kill> %rcx<def>
+; GENERIC-NEXT:    # kill: def %ecx killed %ecx def %rcx
 ; GENERIC-NEXT:    leal (%rcx,%rsi), %eax # sched: [1:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -383,7 +383,7 @@ define i32 @test_pcmpestri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; SLM-NEXT:    movl $7, %edx # sched: [1:0.50]
 ; SLM-NEXT:    movl %ecx, %esi # sched: [1:0.50]
 ; SLM-NEXT:    pcmpestri $7, (%rdi), %xmm0 # sched: [21:21.00]
-; SLM-NEXT:    # kill: %ecx<def> %ecx<kill> %rcx<def>
+; SLM-NEXT:    # kill: def %ecx killed %ecx def %rcx
 ; SLM-NEXT:    leal (%rcx,%rsi), %eax # sched: [1:1.00]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
@@ -396,7 +396,7 @@ define i32 @test_pcmpestri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; SANDY-NEXT:    movl $7, %eax # sched: [1:0.33]
 ; SANDY-NEXT:    movl $7, %edx # sched: [1:0.33]
 ; SANDY-NEXT:    vpcmpestri $7, (%rdi), %xmm0 # sched: [4:2.33]
-; SANDY-NEXT:    # kill: %ecx<def> %ecx<kill> %rcx<def>
+; SANDY-NEXT:    # kill: def %ecx killed %ecx def %rcx
 ; SANDY-NEXT:    leal (%rcx,%rsi), %eax # sched: [1:0.50]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -409,7 +409,7 @@ define i32 @test_pcmpestri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; HASWELL-NEXT:    movl $7, %eax # sched: [1:0.25]
 ; HASWELL-NEXT:    movl $7, %edx # sched: [1:0.25]
 ; HASWELL-NEXT:    vpcmpestri $7, (%rdi), %xmm0 # sched: [18:4.00]
-; HASWELL-NEXT:    # kill: %ecx<def> %ecx<kill> %rcx<def>
+; HASWELL-NEXT:    # kill: def %ecx killed %ecx def %rcx
 ; HASWELL-NEXT:    leal (%rcx,%rsi), %eax # sched: [1:0.50]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
@@ -422,7 +422,7 @@ define i32 @test_pcmpestri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; BROADWELL-NEXT:    movl $7, %eax # sched: [1:0.25]
 ; BROADWELL-NEXT:    movl $7, %edx # sched: [1:0.25]
 ; BROADWELL-NEXT:    vpcmpestri $7, (%rdi), %xmm0 # sched: [23:4.00]
-; BROADWELL-NEXT:    # kill: %ecx<def> %ecx<kill> %rcx<def>
+; BROADWELL-NEXT:    # kill: def %ecx killed %ecx def %rcx
 ; BROADWELL-NEXT:    leal (%rcx,%rsi), %eax # sched: [1:0.50]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
@@ -435,7 +435,7 @@ define i32 @test_pcmpestri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; SKYLAKE-NEXT:    movl $7, %eax # sched: [1:0.25]
 ; SKYLAKE-NEXT:    movl $7, %edx # sched: [1:0.25]
 ; SKYLAKE-NEXT:    vpcmpestri $7, (%rdi), %xmm0 # sched: [24:4.00]
-; SKYLAKE-NEXT:    # kill: %ecx<def> %ecx<kill> %rcx<def>
+; SKYLAKE-NEXT:    # kill: def %ecx killed %ecx def %rcx
 ; SKYLAKE-NEXT:    leal (%rcx,%rsi), %eax # sched: [1:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
@@ -448,7 +448,7 @@ define i32 @test_pcmpestri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; SKX-NEXT:    movl $7, %eax # sched: [1:0.25]
 ; SKX-NEXT:    movl $7, %edx # sched: [1:0.25]
 ; SKX-NEXT:    vpcmpestri $7, (%rdi), %xmm0 # sched: [24:4.00]
-; SKX-NEXT:    # kill: %ecx<def> %ecx<kill> %rcx<def>
+; SKX-NEXT:    # kill: def %ecx killed %ecx def %rcx
 ; SKX-NEXT:    leal (%rcx,%rsi), %eax # sched: [1:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
@@ -461,7 +461,7 @@ define i32 @test_pcmpestri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; BTVER2-NEXT:    movl $7, %edx # sched: [1:0.17]
 ; BTVER2-NEXT:    movl %ecx, %esi # sched: [1:0.17]
 ; BTVER2-NEXT:    vpcmpestri $7, (%rdi), %xmm0 # sched: [19:10.00]
-; BTVER2-NEXT:    # kill: %ecx<def> %ecx<kill> %rcx<def>
+; BTVER2-NEXT:    # kill: def %ecx killed %ecx def %rcx
 ; BTVER2-NEXT:    leal (%rcx,%rsi), %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -474,7 +474,7 @@ define i32 @test_pcmpestri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; ZNVER1-NEXT:    movl $7, %edx # sched: [1:0.25]
 ; ZNVER1-NEXT:    movl %ecx, %esi # sched: [1:0.25]
 ; ZNVER1-NEXT:    vpcmpestri $7, (%rdi), %xmm0 # sched: [100:?]
-; ZNVER1-NEXT:    # kill: %ecx<def> %ecx<kill> %rcx<def>
+; ZNVER1-NEXT:    # kill: def %ecx killed %ecx def %rcx
 ; ZNVER1-NEXT:    leal (%rcx,%rsi), %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call i32 @llvm.x86.sse42.pcmpestri128(<16 x i8> %a0, i32 7, <16 x i8> %a1, i32 7, i8 7)
@@ -588,7 +588,7 @@ define i32 @test_pcmpistri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; GENERIC-NEXT:    pcmpistri $7, %xmm1, %xmm0 # sched: [11:3.00]
 ; GENERIC-NEXT:    movl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    pcmpistri $7, (%rdi), %xmm0 # sched: [17:3.00]
-; GENERIC-NEXT:    # kill: %ecx<def> %ecx<kill> %rcx<def>
+; GENERIC-NEXT:    # kill: def %ecx killed %ecx def %rcx
 ; GENERIC-NEXT:    leal (%rcx,%rax), %eax # sched: [1:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -597,7 +597,7 @@ define i32 @test_pcmpistri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; SLM-NEXT:    pcmpistri $7, %xmm1, %xmm0 # sched: [17:17.00]
 ; SLM-NEXT:    movl %ecx, %eax # sched: [1:0.50]
 ; SLM-NEXT:    pcmpistri $7, (%rdi), %xmm0 # sched: [17:17.00]
-; SLM-NEXT:    # kill: %ecx<def> %ecx<kill> %rcx<def>
+; SLM-NEXT:    # kill: def %ecx killed %ecx def %rcx
 ; SLM-NEXT:    leal (%rcx,%rax), %eax # sched: [1:1.00]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
@@ -606,7 +606,7 @@ define i32 @test_pcmpistri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; SANDY-NEXT:    vpcmpistri $7, %xmm1, %xmm0 # sched: [11:3.00]
 ; SANDY-NEXT:    movl %ecx, %eax # sched: [1:0.33]
 ; SANDY-NEXT:    vpcmpistri $7, (%rdi), %xmm0 # sched: [17:3.00]
-; SANDY-NEXT:    # kill: %ecx<def> %ecx<kill> %rcx<def>
+; SANDY-NEXT:    # kill: def %ecx killed %ecx def %rcx
 ; SANDY-NEXT:    leal (%rcx,%rax), %eax # sched: [1:0.50]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -615,7 +615,7 @@ define i32 @test_pcmpistri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; HASWELL-NEXT:    vpcmpistri $7, %xmm1, %xmm0 # sched: [11:3.00]
 ; HASWELL-NEXT:    movl %ecx, %eax # sched: [1:0.25]
 ; HASWELL-NEXT:    vpcmpistri $7, (%rdi), %xmm0 # sched: [11:3.00]
-; HASWELL-NEXT:    # kill: %ecx<def> %ecx<kill> %rcx<def>
+; HASWELL-NEXT:    # kill: def %ecx killed %ecx def %rcx
 ; HASWELL-NEXT:    leal (%rcx,%rax), %eax # sched: [1:0.50]
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
@@ -624,7 +624,7 @@ define i32 @test_pcmpistri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; BROADWELL-NEXT:    vpcmpistri $7, %xmm1, %xmm0 # sched: [11:3.00]
 ; BROADWELL-NEXT:    movl %ecx, %eax # sched: [1:0.25]
 ; BROADWELL-NEXT:    vpcmpistri $7, (%rdi), %xmm0 # sched: [16:3.00]
-; BROADWELL-NEXT:    # kill: %ecx<def> %ecx<kill> %rcx<def>
+; BROADWELL-NEXT:    # kill: def %ecx killed %ecx def %rcx
 ; BROADWELL-NEXT:    leal (%rcx,%rax), %eax # sched: [1:0.50]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
@@ -633,7 +633,7 @@ define i32 @test_pcmpistri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; SKYLAKE-NEXT:    vpcmpistri $7, %xmm1, %xmm0 # sched: [10:3.00]
 ; SKYLAKE-NEXT:    movl %ecx, %eax # sched: [1:0.25]
 ; SKYLAKE-NEXT:    vpcmpistri $7, (%rdi), %xmm0 # sched: [16:3.00]
-; SKYLAKE-NEXT:    # kill: %ecx<def> %ecx<kill> %rcx<def>
+; SKYLAKE-NEXT:    # kill: def %ecx killed %ecx def %rcx
 ; SKYLAKE-NEXT:    leal (%rcx,%rax), %eax # sched: [1:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
@@ -642,7 +642,7 @@ define i32 @test_pcmpistri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; SKX-NEXT:    vpcmpistri $7, %xmm1, %xmm0 # sched: [10:3.00]
 ; SKX-NEXT:    movl %ecx, %eax # sched: [1:0.25]
 ; SKX-NEXT:    vpcmpistri $7, (%rdi), %xmm0 # sched: [16:3.00]
-; SKX-NEXT:    # kill: %ecx<def> %ecx<kill> %rcx<def>
+; SKX-NEXT:    # kill: def %ecx killed %ecx def %rcx
 ; SKX-NEXT:    leal (%rcx,%rax), %eax # sched: [1:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
@@ -651,7 +651,7 @@ define i32 @test_pcmpistri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; BTVER2-NEXT:    vpcmpistri $7, %xmm1, %xmm0 # sched: [7:2.00]
 ; BTVER2-NEXT:    movl %ecx, %eax # sched: [1:0.17]
 ; BTVER2-NEXT:    vpcmpistri $7, (%rdi), %xmm0 # sched: [12:2.00]
-; BTVER2-NEXT:    # kill: %ecx<def> %ecx<kill> %rcx<def>
+; BTVER2-NEXT:    # kill: def %ecx killed %ecx def %rcx
 ; BTVER2-NEXT:    leal (%rcx,%rax), %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -660,7 +660,7 @@ define i32 @test_pcmpistri(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; ZNVER1-NEXT:    vpcmpistri $7, %xmm1, %xmm0 # sched: [100:?]
 ; ZNVER1-NEXT:    movl %ecx, %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    vpcmpistri $7, (%rdi), %xmm0 # sched: [100:?]
-; ZNVER1-NEXT:    # kill: %ecx<def> %ecx<kill> %rcx<def>
+; ZNVER1-NEXT:    # kill: def %ecx killed %ecx def %rcx
 ; ZNVER1-NEXT:    leal (%rcx,%rax), %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call i32 @llvm.x86.sse42.pcmpistri128(<16 x i8> %a0, <16 x i8> %a1, i8 7)

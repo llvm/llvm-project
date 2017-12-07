@@ -185,12 +185,12 @@ define <8 x float> @var_shuffle_v8f32_v8f32_xxxxxxxx_i32(<8 x float> %x, i32 %i0
 ; ALL-NEXT:    movq %rsp, %rbp
 ; ALL-NEXT:    andq $-32, %rsp
 ; ALL-NEXT:    subq $64, %rsp
-; ALL-NEXT:    # kill: %r9d<def> %r9d<kill> %r9<def>
-; ALL-NEXT:    # kill: %r8d<def> %r8d<kill> %r8<def>
-; ALL-NEXT:    # kill: %ecx<def> %ecx<kill> %rcx<def>
-; ALL-NEXT:    # kill: %edx<def> %edx<kill> %rdx<def>
-; ALL-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
-; ALL-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
+; ALL-NEXT:    # kill: def %r9d killed %r9d def %r9
+; ALL-NEXT:    # kill: def %r8d killed %r8d def %r8
+; ALL-NEXT:    # kill: def %ecx killed %ecx def %rcx
+; ALL-NEXT:    # kill: def %edx killed %edx def %rdx
+; ALL-NEXT:    # kill: def %esi killed %esi def %rsi
+; ALL-NEXT:    # kill: def %edi killed %edi def %rdi
 ; ALL-NEXT:    andl $7, %edi
 ; ALL-NEXT:    andl $7, %esi
 ; ALL-NEXT:    andl $7, %edx
@@ -236,12 +236,12 @@ define <8 x float> @var_shuffle_v8f32_v8f32_xxxxxxxx_i32(<8 x float> %x, i32 %i0
 define <8 x float> @var_shuffle_v8f32_v4f32_xxxxxxxx_i32(<4 x float> %x, i32 %i0, i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, i32 %i6, i32 %i7) nounwind {
 ; ALL-LABEL: var_shuffle_v8f32_v4f32_xxxxxxxx_i32:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    # kill: %r9d<def> %r9d<kill> %r9<def>
-; ALL-NEXT:    # kill: %r8d<def> %r8d<kill> %r8<def>
-; ALL-NEXT:    # kill: %ecx<def> %ecx<kill> %rcx<def>
-; ALL-NEXT:    # kill: %edx<def> %edx<kill> %rdx<def>
-; ALL-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
-; ALL-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
+; ALL-NEXT:    # kill: def %r9d killed %r9d def %r9
+; ALL-NEXT:    # kill: def %r8d killed %r8d def %r8
+; ALL-NEXT:    # kill: def %ecx killed %ecx def %rcx
+; ALL-NEXT:    # kill: def %edx killed %edx def %rdx
+; ALL-NEXT:    # kill: def %esi killed %esi def %rsi
+; ALL-NEXT:    # kill: def %edi killed %edi def %rdi
 ; ALL-NEXT:    andl $3, %edi
 ; ALL-NEXT:    andl $3, %esi
 ; ALL-NEXT:    andl $3, %edx
@@ -289,12 +289,12 @@ define <16 x i16> @var_shuffle_v16i16_v16i16_xxxxxxxxxxxxxxxx_i16(<16 x i16> %x,
 ; AVX1-NEXT:    movq %rsp, %rbp
 ; AVX1-NEXT:    andq $-32, %rsp
 ; AVX1-NEXT:    subq $64, %rsp
-; AVX1-NEXT:    # kill: %r9d<def> %r9d<kill> %r9<def>
-; AVX1-NEXT:    # kill: %r8d<def> %r8d<kill> %r8<def>
-; AVX1-NEXT:    # kill: %ecx<def> %ecx<kill> %rcx<def>
-; AVX1-NEXT:    # kill: %edx<def> %edx<kill> %rdx<def>
-; AVX1-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
-; AVX1-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
+; AVX1-NEXT:    # kill: def %r9d killed %r9d def %r9
+; AVX1-NEXT:    # kill: def %r8d killed %r8d def %r8
+; AVX1-NEXT:    # kill: def %ecx killed %ecx def %rcx
+; AVX1-NEXT:    # kill: def %edx killed %edx def %rdx
+; AVX1-NEXT:    # kill: def %esi killed %esi def %rsi
+; AVX1-NEXT:    # kill: def %edi killed %edi def %rdi
 ; AVX1-NEXT:    andl $15, %edi
 ; AVX1-NEXT:    vmovaps %ymm0, (%rsp)
 ; AVX1-NEXT:    movzwl (%rsp,%rdi,2), %eax
@@ -351,12 +351,12 @@ define <16 x i16> @var_shuffle_v16i16_v16i16_xxxxxxxxxxxxxxxx_i16(<16 x i16> %x,
 ; AVX2-NEXT:    movq %rsp, %rbp
 ; AVX2-NEXT:    andq $-32, %rsp
 ; AVX2-NEXT:    subq $64, %rsp
-; AVX2-NEXT:    # kill: %r9d<def> %r9d<kill> %r9<def>
-; AVX2-NEXT:    # kill: %r8d<def> %r8d<kill> %r8<def>
-; AVX2-NEXT:    # kill: %ecx<def> %ecx<kill> %rcx<def>
-; AVX2-NEXT:    # kill: %edx<def> %edx<kill> %rdx<def>
-; AVX2-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
-; AVX2-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
+; AVX2-NEXT:    # kill: def %r9d killed %r9d def %r9
+; AVX2-NEXT:    # kill: def %r8d killed %r8d def %r8
+; AVX2-NEXT:    # kill: def %ecx killed %ecx def %rcx
+; AVX2-NEXT:    # kill: def %edx killed %edx def %rdx
+; AVX2-NEXT:    # kill: def %esi killed %esi def %rsi
+; AVX2-NEXT:    # kill: def %edi killed %edi def %rdi
 ; AVX2-NEXT:    andl $15, %edi
 ; AVX2-NEXT:    vmovaps %ymm0, (%rsp)
 ; AVX2-NEXT:    movzwl (%rsp,%rdi,2), %eax
@@ -444,12 +444,12 @@ define <16 x i16> @var_shuffle_v16i16_v16i16_xxxxxxxxxxxxxxxx_i16(<16 x i16> %x,
 define <16 x i16> @var_shuffle_v16i16_v8i16_xxxxxxxxxxxxxxxx_i16(<8 x i16> %x, i32 %i0, i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, i32 %i6, i32 %i7, i32 %i8, i32 %i9, i32 %i10, i32 %i11, i32 %i12, i32 %i13, i32 %i14, i32 %i15) nounwind {
 ; AVX1-LABEL: var_shuffle_v16i16_v8i16_xxxxxxxxxxxxxxxx_i16:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    # kill: %r9d<def> %r9d<kill> %r9<def>
-; AVX1-NEXT:    # kill: %r8d<def> %r8d<kill> %r8<def>
-; AVX1-NEXT:    # kill: %ecx<def> %ecx<kill> %rcx<def>
-; AVX1-NEXT:    # kill: %edx<def> %edx<kill> %rdx<def>
-; AVX1-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
-; AVX1-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
+; AVX1-NEXT:    # kill: def %r9d killed %r9d def %r9
+; AVX1-NEXT:    # kill: def %r8d killed %r8d def %r8
+; AVX1-NEXT:    # kill: def %ecx killed %ecx def %rcx
+; AVX1-NEXT:    # kill: def %edx killed %edx def %rdx
+; AVX1-NEXT:    # kill: def %esi killed %esi def %rsi
+; AVX1-NEXT:    # kill: def %edi killed %edi def %rdi
 ; AVX1-NEXT:    andl $7, %edi
 ; AVX1-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; AVX1-NEXT:    movzwl -24(%rsp,%rdi,2), %eax
@@ -500,12 +500,12 @@ define <16 x i16> @var_shuffle_v16i16_v8i16_xxxxxxxxxxxxxxxx_i16(<8 x i16> %x, i
 ;
 ; AVX2-LABEL: var_shuffle_v16i16_v8i16_xxxxxxxxxxxxxxxx_i16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    # kill: %r9d<def> %r9d<kill> %r9<def>
-; AVX2-NEXT:    # kill: %r8d<def> %r8d<kill> %r8<def>
-; AVX2-NEXT:    # kill: %ecx<def> %ecx<kill> %rcx<def>
-; AVX2-NEXT:    # kill: %edx<def> %edx<kill> %rdx<def>
-; AVX2-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
-; AVX2-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
+; AVX2-NEXT:    # kill: def %r9d killed %r9d def %r9
+; AVX2-NEXT:    # kill: def %r8d killed %r8d def %r8
+; AVX2-NEXT:    # kill: def %ecx killed %ecx def %rcx
+; AVX2-NEXT:    # kill: def %edx killed %edx def %rdx
+; AVX2-NEXT:    # kill: def %esi killed %esi def %rsi
+; AVX2-NEXT:    # kill: def %edi killed %edi def %rdi
 ; AVX2-NEXT:    andl $7, %edi
 ; AVX2-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; AVX2-NEXT:    movzwl -24(%rsp,%rdi,2), %eax

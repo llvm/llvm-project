@@ -1961,7 +1961,7 @@ void MachineVerifier::verifyLiveRangeSegment(const LiveRange &LR,
       if (MOI->isDef()) {
         if (Sub != 0) {
           hasSubRegDef = true;
-          // An operand %0:sub0<def> reads %0:sub1..n. Invert the lane
+          // An operand %0:sub0 reads %0:sub1..n. Invert the lane
           // mask for subregister defs. Read-undef defs will be handled by
           // readsReg below.
           SLM = ~SLM;
