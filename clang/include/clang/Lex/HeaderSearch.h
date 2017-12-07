@@ -1,4 +1,4 @@
-//===--- HeaderSearch.h - Resolve Header File Locations ---------*- C++ -*-===//
+//===- HeaderSearch.h - Resolve Header File Locations -----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,25 +14,37 @@
 #ifndef LLVM_CLANG_LEX_HEADERSEARCH_H
 #define LLVM_CLANG_LEX_HEADERSEARCH_H
 
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Lex/DirectoryLookup.h"
 #include "clang/Lex/ModuleMap.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
+#include <cassert>
+#include <cstddef>
 #include <memory>
+#include <string>
+#include <utility>
 #include <vector>
 
 namespace clang {
-  
-class DiagnosticsEngine;  
+
+class DiagnosticsEngine;
+class DirectoryEntry;
 class ExternalPreprocessorSource;
 class FileEntry;
 class FileManager;
+class HeaderMap;
 class HeaderSearchOptions;
 class IdentifierInfo;
+class LangOptions;
+class Module;
 class Preprocessor;
+class TargetInfo;
 
 /// \brief The preprocessor keeps track of this information for each
 /// file that is \#included.
@@ -76,14 +88,14 @@ struct HeaderFileInfo {
   unsigned IsValid : 1;
   
   /// \brief The number of times the file has been included already.
-  unsigned short NumIncludes;
+  unsigned short NumIncludes = 0;
 
   /// \brief The ID number of the controlling macro.
   ///
   /// This ID number will be non-zero when there is a controlling
   /// macro whose IdentifierInfo may not yet have been loaded from
   /// external storage.
-  unsigned ControllingMacroID;
+  unsigned ControllingMacroID = 0;
 
   /// If this file has a \#ifndef XXX (or equivalent) guard that
   /// protects the entire contents of the file, this is the identifier
@@ -93,17 +105,16 @@ struct HeaderFileInfo {
   /// the controlling macro of this header, since
   /// getControllingMacro() is able to load a controlling macro from
   /// external storage.
-  const IdentifierInfo *ControllingMacro;
+  const IdentifierInfo *ControllingMacro = nullptr;
 
   /// \brief If this header came from a framework include, this is the name
   /// of the framework.
   StringRef Framework;
   
   HeaderFileInfo()
-    : isImport(false), isPragmaOnce(false), DirInfo(SrcMgr::C_User), 
-      External(false), isModuleHeader(false), isCompilingModuleHeader(false),
-      Resolved(false), IndexHeaderMapHeader(false), IsValid(0),
-      NumIncludes(0), ControllingMacroID(0), ControllingMacro(nullptr)  {}
+      : isImport(false), isPragmaOnce(false), DirInfo(SrcMgr::C_User), 
+        External(false), isModuleHeader(false), isCompilingModuleHeader(false),
+        Resolved(false), IndexHeaderMapHeader(false), IsValid(false)  {}
 
   /// \brief Retrieve the controlling macro for this header file, if
   /// any.
@@ -135,6 +146,8 @@ public:
 /// \brief Encapsulates the information needed to find the file referenced
 /// by a \#include or \#include_next, (sub-)framework lookup, etc.
 class HeaderSearch {
+  friend class DirectoryLookup;
+
   /// This structure is used to record entries in our framework cache.
   struct FrameworkCacheEntry {
     /// The directory entry which should be used for the cached framework.
@@ -151,6 +164,7 @@ class HeaderSearch {
 
   DiagnosticsEngine &Diags;
   FileManager &FileMgr;
+
   /// \#include search path information.  Requests for \#include "x" search the
   /// directory of the \#including file first, then each directory in SearchDirs
   /// consecutively. Requests for <x> search the current dir first, then each
@@ -158,9 +172,9 @@ class HeaderSearch {
   /// NoCurDirSearch is true, then the check for the file in the current
   /// directory is suppressed.
   std::vector<DirectoryLookup> SearchDirs;
-  unsigned AngledDirIdx;
-  unsigned SystemDirIdx;
-  bool NoCurDirSearch;
+  unsigned AngledDirIdx = 0;
+  unsigned SystemDirIdx = 0;
+  bool NoCurDirSearch = false;
 
   /// \brief \#include prefixes for which the 'system header' property is
   /// overridden.
@@ -168,7 +182,7 @@ class HeaderSearch {
   /// For a \#include "x" or \#include \<x> directive, the last string in this
   /// list which is a prefix of 'x' determines whether the file is treated as
   /// a system header.
-  std::vector<std::pair<std::string, bool> > SystemHeaderPrefixes;
+  std::vector<std::pair<std::string, bool>> SystemHeaderPrefixes;
 
   /// \brief The path to the module cache.
   std::string ModuleCachePath;
@@ -182,15 +196,17 @@ class HeaderSearch {
     /// Starting index in SearchDirs that the cached search was performed from.
     /// If there is a hit and this value doesn't match the current query, the
     /// cache has to be ignored.
-    unsigned StartIdx;
+    unsigned StartIdx = 0;
+
     /// The entry in SearchDirs that satisfied the query.
-    unsigned HitIdx;
+    unsigned HitIdx = 0;
+
     /// This is non-null if the original filename was mapped to a framework
     /// include via a headermap.
-    const char *MappedName;
+    const char *MappedName = nullptr;
 
     /// Default constructor -- Initialize all members with zero.
-    LookupFileCacheInfo(): StartIdx(0), HitIdx(0), MappedName(nullptr) {}
+    LookupFileCacheInfo() = default;
 
     void reset(unsigned StartIdx) {
       this->StartIdx = StartIdx;
@@ -206,13 +222,13 @@ class HeaderSearch {
   /// IncludeAliases - maps include file names (including the quotes or
   /// angle brackets) to other include file names.  This is used to support the
   /// include_alias pragma for Microsoft compatibility.
-  typedef llvm::StringMap<std::string, llvm::BumpPtrAllocator>
-    IncludeAliasMap;
+  using IncludeAliasMap =
+      llvm::StringMap<std::string, llvm::BumpPtrAllocator>;
   std::unique_ptr<IncludeAliasMap> IncludeAliases;
 
   /// HeaderMaps - This is a mapping from FileEntry -> HeaderMap, uniquing
   /// headermaps.  This vector owns the headermap.
-  std::vector<std::pair<const FileEntry*, const HeaderMap*> > HeaderMaps;
+  std::vector<std::pair<const FileEntry *, const HeaderMap *>> HeaderMaps;
 
   /// \brief The mapping between modules and headers.
   mutable ModuleMap ModMap;
@@ -231,26 +247,23 @@ class HeaderSearch {
   /// \brief Entity used to resolve the identifier IDs of controlling
   /// macros into IdentifierInfo pointers, and keep the identifire up to date,
   /// as needed.
-  ExternalPreprocessorSource *ExternalLookup;
+  ExternalPreprocessorSource *ExternalLookup = nullptr;
 
   /// \brief Entity used to look up stored header file information.
-  ExternalHeaderFileInfoSource *ExternalSource;
+  ExternalHeaderFileInfoSource *ExternalSource = nullptr;
   
   // Various statistics we track for performance analysis.
-  unsigned NumIncluded;
-  unsigned NumMultiIncludeFileOptzn;
-  unsigned NumFrameworkLookups, NumSubFrameworkLookups;
+  unsigned NumIncluded = 0;
+  unsigned NumMultiIncludeFileOptzn = 0;
+  unsigned NumFrameworkLookups = 0;
+  unsigned NumSubFrameworkLookups = 0;
 
-  // HeaderSearch doesn't support default or copy construction.
-  HeaderSearch(const HeaderSearch&) = delete;
-  void operator=(const HeaderSearch&) = delete;
-
-  friend class DirectoryLookup;
-  
 public:
   HeaderSearch(std::shared_ptr<HeaderSearchOptions> HSOpts,
                SourceManager &SourceMgr, DiagnosticsEngine &Diags,
                const LangOptions &LangOpts, const TargetInfo *Target);
+  HeaderSearch(const HeaderSearch &) = delete;
+  HeaderSearch &operator=(const HeaderSearch &) = delete;
   ~HeaderSearch();
 
   /// \brief Retrieve the header-search options with which this header search
@@ -282,7 +295,7 @@ public:
   }
 
   /// \brief Set the list of system header prefixes.
-  void SetSystemHeaderPrefixes(ArrayRef<std::pair<std::string, bool> > P) {
+  void SetSystemHeaderPrefixes(ArrayRef<std::pair<std::string, bool>> P) {
     SystemHeaderPrefixes.assign(P.begin(), P.end());
   }
 
@@ -310,7 +323,7 @@ public:
     IncludeAliasMap::const_iterator Iter = IncludeAliases->find(Source);
     if (Iter != IncludeAliases->end())
       return Iter->second;
-    return StringRef();
+    return {};
   }
 
   /// \brief Set the path to the module cache.
@@ -493,7 +506,6 @@ public:
   std::string getPrebuiltModuleFileName(StringRef ModuleName,
                                         bool FileMapOnly = false);
 
-
   /// \brief Retrieve the name of the (to-be-)cached module file that should
   /// be used to load a module with the given name.
   ///
@@ -572,7 +584,6 @@ public:
   void loadTopLevelSystemModules();
 
 private:
-
   /// \brief Lookup a module with the given module name and search-name.
   ///
   /// \param ModuleName The name of the module we're looking for.
@@ -652,7 +663,8 @@ public:
                                             bool WantExternal = true) const;
 
   // Used by external tools
-  typedef std::vector<DirectoryLookup>::const_iterator search_dir_iterator;
+  using search_dir_iterator = std::vector<DirectoryLookup>::const_iterator;
+
   search_dir_iterator search_dir_begin() const { return SearchDirs.begin(); }
   search_dir_iterator search_dir_end() const { return SearchDirs.end(); }
   unsigned search_dir_size() const { return SearchDirs.size(); }
@@ -660,6 +672,7 @@ public:
   search_dir_iterator quoted_dir_begin() const {
     return SearchDirs.begin();
   }
+
   search_dir_iterator quoted_dir_end() const {
     return SearchDirs.begin() + AngledDirIdx;
   }
@@ -667,6 +680,7 @@ public:
   search_dir_iterator angled_dir_begin() const {
     return SearchDirs.begin() + AngledDirIdx;
   }
+
   search_dir_iterator angled_dir_end() const {
     return SearchDirs.begin() + SystemDirIdx;
   }
@@ -674,6 +688,7 @@ public:
   search_dir_iterator system_dir_begin() const {
     return SearchDirs.begin() + SystemDirIdx;
   }
+
   search_dir_iterator system_dir_end() const { return SearchDirs.end(); }
 
   /// \brief Retrieve a uniqued framework name.
@@ -696,10 +711,13 @@ private:
   enum LoadModuleMapResult {
     /// \brief The module map file had already been loaded.
     LMM_AlreadyLoaded,
+
     /// \brief The module map file was loaded by this invocation.
     LMM_NewlyLoaded,
+
     /// \brief There is was directory with the given name.
     LMM_NoDirectory,
+
     /// \brief There was either no module map file or the module map file was
     /// invalid.
     LMM_InvalidModuleMap
@@ -735,6 +753,6 @@ private:
                                         bool IsSystem, bool IsFramework);
 };
 
-}  // end namespace clang
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_LEX_HEADERSEARCH_H

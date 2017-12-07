@@ -1,4 +1,4 @@
-//===--- ModuleMap.cpp - Describe the layout of modules ---------*- C++ -*-===//
+//===- ModuleMap.cpp - Describe the layout of modules ---------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,29 +11,47 @@
 // of a module as it relates to headers.
 //
 //===----------------------------------------------------------------------===//
+
 #include "clang/Lex/ModuleMap.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/LangOptions.h"
+#include "clang/Basic/Module.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
-#include "clang/Basic/TargetOptions.h"
+#include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/LexDiagnostic.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/LiteralSupport.h"
+#include "clang/Lex/Token.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Host.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include <stdlib.h>
-#if defined(LLVM_ON_UNIX)
-#include <limits.h>
-#endif
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <cstring>
+#include <string>
+#include <system_error>
+#include <utility>
+
 using namespace clang;
 
 Module::HeaderKind ModuleMap::headerRoleToKind(ModuleHeaderRole Role) {
@@ -80,7 +98,7 @@ ModuleMap::resolveExport(Module *Mod,
   // Resolve the module-id.
   Module *Context = resolveModuleId(Unresolved.Id, Mod, Complain);
   if (!Context)
-    return Module::ExportDecl();
+    return {};
 
   return Module::ExportDecl(Context, Unresolved.Wildcard);
 }
@@ -344,7 +362,7 @@ ModuleMap::KnownHeader
 ModuleMap::findHeaderInUmbrellaDirs(const FileEntry *File,
                     SmallVectorImpl<const DirectoryEntry *> &IntermediateDirs) {
   if (UmbrellaDirs.empty())
-    return KnownHeader();
+    return {};
 
   const DirectoryEntry *Dir = File->getDir();
   assert(Dir && "file in no directory");
@@ -372,7 +390,7 @@ ModuleMap::findHeaderInUmbrellaDirs(const FileEntry *File,
     // Resolve the parent path to a directory entry.
     Dir = SourceMgr.getFileManager().getDirectory(DirName);
   } while (Dir);
-  return KnownHeader();
+  return {};
 }
 
 static bool violatesPrivateInclude(Module *RequestingModule,
@@ -502,7 +520,7 @@ ModuleMap::KnownHeader ModuleMap::findModuleForHeader(const FileEntry *File,
                                                       bool AllowTextual) {
   auto MakeResult = [&](ModuleMap::KnownHeader R) -> ModuleMap::KnownHeader {
     if (!AllowTextual && R.getRole() & ModuleMap::TextualHeader)
-      return ModuleMap::KnownHeader();
+      return {};
     return R;
   };
 
@@ -592,7 +610,7 @@ ModuleMap::findOrCreateModuleForHeaderInUmbrellaDir(const FileEntry *File) {
     return Header;
   }
 
-  return KnownHeader();
+  return {};
 }
 
 ArrayRef<ModuleMap::KnownHeader>
@@ -1188,6 +1206,7 @@ bool ModuleMap::resolveConflicts(Module *Mod, bool Complain) {
 //----------------------------------------------------------------------------//
 
 namespace clang {
+
   /// \brief A token in a module map file.
   struct MMToken {
     enum TokenKind {
@@ -1226,6 +1245,7 @@ namespace clang {
     union {
       // If Kind != IntegerLiteral.
       const char *StringData;
+
       // If Kind == IntegerLiteral.
       uint64_t IntegerValue;
     };
@@ -1275,7 +1295,7 @@ namespace clang {
     bool IsSystem;
     
     /// \brief Whether an error occurred.
-    bool HadError;
+    bool HadError = false;
         
     /// \brief Stores string data for the various string literals referenced
     /// during parsing.
@@ -1285,7 +1305,7 @@ namespace clang {
     MMToken Tok;
     
     /// \brief The active module.
-    Module *ActiveModule;
+    Module *ActiveModule = nullptr;
 
     /// \brief Whether a module uses the 'requires excluded' hack to mark its
     /// contents as 'textual'.
@@ -1304,13 +1324,13 @@ namespace clang {
     /// (or the end of the file).
     void skipUntil(MMToken::TokenKind K);
 
-    typedef SmallVector<std::pair<std::string, SourceLocation>, 2> ModuleId;
+    using ModuleId = SmallVector<std::pair<std::string, SourceLocation>, 2>;
+
     bool parseModuleId(ModuleId &Id);
     void parseModuleDecl();
     void parseExternModuleDecl();
     void parseRequiresDecl();
-    void parseHeaderDecl(clang::MMToken::TokenKind,
-                         SourceLocation LeadingLoc);
+    void parseHeaderDecl(MMToken::TokenKind, SourceLocation LeadingLoc);
     void parseUmbrellaDirDecl(SourceLocation UmbrellaLoc);
     void parseExportDecl();
     void parseExportAsDecl();
@@ -1320,7 +1340,8 @@ namespace clang {
     void parseConflict();
     void parseInferredModuleDecl(bool Framework, bool Explicit);
 
-    typedef ModuleMap::Attributes Attributes;
+    using Attributes = ModuleMap::Attributes;
+
     bool parseOptionalAttributes(Attributes &Attrs);
     
   public:
@@ -1331,10 +1352,9 @@ namespace clang {
                              const FileEntry *ModuleMapFile,
                              const DirectoryEntry *Directory,
                              bool IsSystem)
-      : L(L), SourceMgr(SourceMgr), Target(Target), Diags(Diags), Map(Map), 
-        ModuleMapFile(ModuleMapFile), Directory(Directory),
-        IsSystem(IsSystem), HadError(false), ActiveModule(nullptr)
-    {
+        : L(L), SourceMgr(SourceMgr), Target(Target), Diags(Diags), Map(Map),
+          ModuleMapFile(ModuleMapFile), Directory(Directory),
+          IsSystem(IsSystem) {
       Tok.clear();
       consumeToken();
     }
@@ -1344,7 +1364,8 @@ namespace clang {
     bool terminatedByDirective() { return false; }
     SourceLocation getLocation() { return Tok.getLocation(); }
   };
-}
+
+} // namespace clang
 
 SourceLocation ModuleMapParser::consumeToken() {
   SourceLocation Result = Tok.getLocation();
@@ -1566,20 +1587,26 @@ bool ModuleMapParser::parseModuleId(ModuleId &Id) {
 }
 
 namespace {
+
   /// \brief Enumerates the known attributes.
   enum AttributeKind {
     /// \brief An unknown attribute.
     AT_unknown,
+
     /// \brief The 'system' attribute.
     AT_system,
+
     /// \brief The 'extern_c' attribute.
     AT_extern_c,
+
     /// \brief The 'exhaustive' attribute.
     AT_exhaustive,
+
     /// \brief The 'no_undeclared_includes' attribute.
     AT_no_undeclared_includes
   };
-}
+
+} // namespace
 
 /// \brief Parse a module declaration.
 ///
@@ -1702,7 +1729,6 @@ void ModuleMapParser::parseModuleDecl() {
   if (parseOptionalAttributes(Attrs))
     return;
 
-  
   // Parse the opening brace.
   if (!Tok.is(MMToken::LBrace)) {
     Diags.Report(Tok.getLocation(), diag::err_mmap_expected_lbrace)
@@ -2574,7 +2600,7 @@ void ModuleMapParser::parseInferredModuleDecl(bool Framework, bool Explicit) {
       Done = true;
       break;
 
-    case MMToken::ExcludeKeyword: {
+    case MMToken::ExcludeKeyword:
       if (ActiveModule) {
         Diags.Report(Tok.getLocation(), diag::err_mmap_expected_inferred_member)
           << (ActiveModule != nullptr);
@@ -2593,7 +2619,6 @@ void ModuleMapParser::parseInferredModuleDecl(bool Framework, bool Explicit) {
         .push_back(Tok.getString());
       consumeToken();
       break;
-    }
 
     case MMToken::ExportKeyword:
       if (!ActiveModule) {

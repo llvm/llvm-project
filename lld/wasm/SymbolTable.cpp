@@ -34,8 +34,7 @@ void SymbolTable::addFile(InputFile *File) {
 
 void SymbolTable::reportRemainingUndefines() {
   std::unordered_set<Symbol *> Undefs;
-  for (auto &I : SymMap) {
-    Symbol *Sym = I.second;
+  for (Symbol *Sym : SymVector) {
     if (Sym->isUndefined() && !Sym->isWeak() &&
         Config->AllowUndefinedSymbols.count(Sym->getName()) == 0) {
       Undefs.insert(Sym);
@@ -67,6 +66,7 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name) {
   if (Sym)
     return {Sym, false};
   Sym = make<Symbol>(Name, false);
+  SymVector.emplace_back(Sym);
   return {Sym, true};
 }
 
