@@ -1178,7 +1178,8 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
     m_swift_ast_context->GetLanguageOptions().EnableThrowWithoutTry = true;
   }
 
-  m_swift_ast_context->GetIRGenOptions().OptMode = swift::OptimizationMode::NoOptimization;
+  m_swift_ast_context->GetIRGenOptions().OptMode 
+          = swift::OptimizationMode::NoOptimization;
   m_swift_ast_context->GetIRGenOptions().Verify =
       false; // normally we'd like to verify, but unfortunately the verifier's
              // error mode is abort().
