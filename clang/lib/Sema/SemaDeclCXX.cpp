@@ -692,8 +692,9 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
   assert(D.isDecompositionDeclarator());
   const DecompositionDeclarator &Decomp = D.getDecompositionDeclarator();
 
-  // The syntax only allows a decomposition declarator as a simple-declaration
-  // or a for-range-declaration, but we parse it in more cases than that.
+  // The syntax only allows a decomposition declarator as a simple-declaration,
+  // a for-range-declaration, or a condition in Clang, but we parse it in more
+  // cases than that.
   if (!D.mayHaveDecompositionDeclarator()) {
     Diag(Decomp.getLSquareLoc(), diag::err_decomp_decl_context)
       << Decomp.getSourceRange();
@@ -708,9 +709,12 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
     return nullptr;
   }
 
-  Diag(Decomp.getLSquareLoc(), getLangOpts().CPlusPlus17
-                                   ? diag::warn_cxx14_compat_decomp_decl
-                                   : diag::ext_decomp_decl)
+  Diag(Decomp.getLSquareLoc(),
+       !getLangOpts().CPlusPlus17
+           ? diag::ext_decomp_decl
+           : D.getContext() == Declarator::ConditionContext
+                 ? diag::ext_decomp_decl_cond
+                 : diag::warn_cxx14_compat_decomp_decl)
       << Decomp.getSourceRange();
 
   // The semantic context is always just the current context.
@@ -8342,8 +8346,7 @@ void Sema::CheckDeductionGuideDeclarator(Declarator &D, QualType &R,
   // We leave 'friend' and 'virtual' to be rejected in the normal way.
   if (DS.hasTypeSpecifier() || DS.getTypeQualifiers() ||
       DS.getStorageClassSpecLoc().isValid() || DS.isInlineSpecified() ||
-      DS.isNoreturnSpecified() || DS.isConstexprSpecified() ||
-      DS.isConceptSpecified()) {
+      DS.isNoreturnSpecified() || DS.isConstexprSpecified()) {
     BadSpecifierDiagnoser Diagnoser(
         *this, D.getIdentifierLoc(),
         diag::err_deduction_guide_invalid_specifier);
@@ -8356,9 +8359,7 @@ void Sema::CheckDeductionGuideDeclarator(Declarator &D, QualType &R,
     Diagnoser.check(DS.getInlineSpecLoc(), "inline");
     Diagnoser.check(DS.getNoreturnSpecLoc(), "_Noreturn");
     Diagnoser.check(DS.getConstexprSpecLoc(), "constexpr");
-    Diagnoser.check(DS.getConceptSpecLoc(), "concept");
     DS.ClearConstexprSpec();
-    DS.ClearConceptSpec();
 
     Diagnoser.check(DS.getConstSpecLoc(), "const");
     Diagnoser.check(DS.getRestrictSpecLoc(), "__restrict");

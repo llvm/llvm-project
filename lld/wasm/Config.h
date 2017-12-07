@@ -39,7 +39,6 @@ struct Configuration {
 
   llvm::StringSet<> AllowUndefinedSymbols;
   std::vector<llvm::StringRef> SearchPaths;
-  std::vector<Symbol *> SyntheticGlobals;
   Symbol *StackPointerSymbol = nullptr;
 };
 

@@ -23,6 +23,11 @@ target triple = "wasm32-unknown-unknown-wasm"
 ; CHECK-NEXT:         Mutable:         false
 ; CHECK-NEXT:         InitExpr:
 ; CHECK-NEXT:           Opcode:          I32_CONST
+; CHECK-NEXT:           Value:           1052
+; CHECK-NEXT:       - Type:            I32
+; CHECK-NEXT:         Mutable:         false
+; CHECK-NEXT:         InitExpr:
+; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           1024
 ; CHECK-NEXT:       - Type:            I32
 ; CHECK-NEXT:         Mutable:         false
@@ -34,16 +39,11 @@ target triple = "wasm32-unknown-unknown-wasm"
 ; CHECK-NEXT:         InitExpr:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           1048
-; CHECK-NEXT:       - Type:            I32
-; CHECK-NEXT:         Mutable:         false
-; CHECK-NEXT:         InitExpr:
-; CHECK-NEXT:           Opcode:          I32_CONST
-; CHECK-NEXT:           Value:           1052
 
 ; CHECK:       - Type:            DATA
 ; CHECK-NEXT:     Relocations:
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_MEMORY_ADDR_I32
-; CHECK-NEXT:         Index:           4
+; CHECK-NEXT:         Index:           1
 ; CHECK-NEXT:         Offset:          0x0000001F
 ; CHECK-NEXT:     Segments:
 ; CHECK-NEXT:       - SectionOffset:   7

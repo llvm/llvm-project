@@ -774,7 +774,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
           {Arg->getValue(), /*IsExternCpp*/ false, /*HasWildcard*/ false});
   }
 
-  if (auto *Arg = Args.getLastArg(OPT_version_script))
+  for (auto *Arg : Args.filtered(OPT_version_script))
     if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
       readVersionScript(*Buffer);
 }
