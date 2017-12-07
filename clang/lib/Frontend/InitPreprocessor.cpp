@@ -969,6 +969,11 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__nullable", "_Nullable");
   }
 
+  // Add a macro to differentiate between regular iOS/tvOS/watchOS targets and
+  // the corresponding simulator targets.
+  if (TI.getTriple().isOSDarwin() && TI.getTriple().isSimulatorEnvironment())
+    Builder.defineMacro("__APPLE_EMBEDDED_SIMULATOR__", "1");
+
   // OpenMP definition
   // OpenMP 2.2:
   //   In implementations that support a preprocessor, the _OPENMP
