@@ -470,8 +470,9 @@ TEST_P(CoverageMappingTest, multiple_completed_segments_at_same_loc) {
   ProfileWriter.addRecord({"func1", 0x1234, {0, 1, 2}}, Err);
   startFunction("func1", 0x1234);
 
-  // PR35437
+  // PR35495
   addCMR(Counter::getCounter(1), "file1", 2, 1, 18, 2);
+  addCMR(Counter::getCounter(0), "file1", 8, 10, 14, 6);
   addCMR(Counter::getCounter(0), "file1", 8, 12, 14, 6);
   addCMR(Counter::getCounter(1), "file1", 9, 1, 14, 6);
   addCMR(Counter::getCounter(2), "file1", 11, 13, 11, 14);
@@ -482,14 +483,15 @@ TEST_P(CoverageMappingTest, multiple_completed_segments_at_same_loc) {
   CoverageData Data = LoadedCoverage->getCoverageForFunction(FunctionRecord);
   std::vector<CoverageSegment> Segments(Data.begin(), Data.end());
 
-  ASSERT_EQ(6U, Segments.size());
+  ASSERT_EQ(7U, Segments.size());
   EXPECT_EQ(CoverageSegment(2, 1, 1, true), Segments[0]);
-  EXPECT_EQ(CoverageSegment(8, 12, 0, true), Segments[1]);
-  EXPECT_EQ(CoverageSegment(9, 1, 1, true), Segments[2]);
-  EXPECT_EQ(CoverageSegment(11, 13, 2, true), Segments[3]);
+  EXPECT_EQ(CoverageSegment(8, 10, 0, true), Segments[1]);
+  EXPECT_EQ(CoverageSegment(8, 12, 0, true), Segments[2]);
+  EXPECT_EQ(CoverageSegment(9, 1, 1, true), Segments[3]);
+  EXPECT_EQ(CoverageSegment(11, 13, 2, true), Segments[4]);
   // Use count=1 (from 9:1 -> 14:6), not count=0 (from 8:12 -> 14:6).
-  EXPECT_EQ(CoverageSegment(11, 14, 1, false), Segments[4]);
-  EXPECT_EQ(CoverageSegment(18, 2, false), Segments[5]);
+  EXPECT_EQ(CoverageSegment(11, 14, 1, false), Segments[5]);
+  EXPECT_EQ(CoverageSegment(18, 2, false), Segments[6]);
 }
 
 TEST_P(CoverageMappingTest, dont_emit_redundant_segments) {

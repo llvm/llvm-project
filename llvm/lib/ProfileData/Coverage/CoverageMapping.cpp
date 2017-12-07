@@ -388,11 +388,10 @@ class SegmentBuilder {
       if (CompletedSegmentLoc == CompletedRegion->endLoc())
         continue;
 
-      // Use the count from the next completed region if it ends at the same
-      // location.
-      if (I + 1 < E &&
-          CompletedRegion->endLoc() == ActiveRegions[I + 1]->endLoc())
-        CompletedRegion = ActiveRegions[I + 1];
+      // Use the count from the last completed region which ends at this loc.
+      for (unsigned J = I + 1; J < E; ++J)
+        if (CompletedRegion->endLoc() == ActiveRegions[J]->endLoc())
+          CompletedRegion = ActiveRegions[J];
 
       startSegment(*CompletedRegion, CompletedSegmentLoc, false);
     }
