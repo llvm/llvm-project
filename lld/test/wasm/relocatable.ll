@@ -93,6 +93,18 @@ declare i32 @foo_import() local_unnamed_addr
 ; CHECK-NEXT:       - Name:            my_func
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           3
+; CHECK-NEXT:       - Name:            hello_str
+; CHECK-NEXT:         Kind:            GLOBAL
+; CHECK-NEXT:         Index:           1
+; CHECK-NEXT:       - Name:            func_addr1
+; CHECK-NEXT:         Kind:            GLOBAL
+; CHECK-NEXT:         Index:           2
+; CHECK-NEXT:       - Name:            func_addr2
+; CHECK-NEXT:         Kind:            GLOBAL
+; CHECK-NEXT:         Index:           3
+; CHECK-NEXT:       - Name:            data_addr1
+; CHECK-NEXT:         Kind:            GLOBAL
+; CHECK-NEXT:         Index:           4
 ; CHECK-NEXT:   - Type:            ELEM
 ; CHECK-NEXT:     Segments:        
 ; CHECK-NEXT:       - Offset:          

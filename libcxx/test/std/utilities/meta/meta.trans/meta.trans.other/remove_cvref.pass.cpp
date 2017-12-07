@@ -32,7 +32,7 @@ int main()
     test_remove_cvref<const volatile int, int>();
     test_remove_cvref<volatile int, int>();
 
-//	Doesn't decay 
+//	Doesn't decay
     test_remove_cvref<int[3],                 int[3]>();
     test_remove_cvref<int const [3],          int[3]>();
     test_remove_cvref<int volatile [3],       int[3]>();
