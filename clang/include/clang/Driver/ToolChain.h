@@ -70,7 +70,7 @@ public:
 
 private:
   const Driver &D;
-  const llvm::Triple Triple;
+  llvm::Triple Triple;
   const llvm::opt::ArgList &Args;
   // We need to initialize CachedRTTIArg before CachedRTTIMode
   const llvm::opt::Arg *const CachedRTTIArg;
@@ -112,6 +112,8 @@ protected:
 
   ToolChain(const Driver &D, const llvm::Triple &T,
             const llvm::opt::ArgList &Args);
+
+  void setTripleEnvironment(llvm::Triple::EnvironmentType Env);
 
   virtual Tool *buildAssembler() const;
   virtual Tool *buildLinker() const;

@@ -60,7 +60,7 @@
 //
 // CHECK-SIMULATOR: clang
 // CHECK-SIMULATOR: "-cc1"
-// CHECK-SIMULATOR: "-triple" "x86_64-apple-ios8.0.0"
+// CHECK-SIMULATOR: "-triple" "x86_64-apple-ios8.0.0-simulator"
 // CHECK-SIMULATOR: ld
 // CHECK-SIMULATOR: "-ios_simulator_version_min" "8.0.0"
 //
