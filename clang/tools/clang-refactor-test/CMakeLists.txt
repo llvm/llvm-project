@@ -8,10 +8,12 @@ add_clang_executable(clang-refactor-test
 
 if (LLVM_BUILD_STATIC)
   target_link_libraries(clang-refactor-test
+    PRIVATE
     libclang_static
   )
 else()
   target_link_libraries(clang-refactor-test
+    PRIVATE
     libclang
     clangBasic
     clangFrontend
