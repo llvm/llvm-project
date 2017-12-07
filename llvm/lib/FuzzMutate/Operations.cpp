@@ -172,7 +172,7 @@ OpDescriptor llvm::fuzzerop::gepDescriptor(unsigned Weight) {
   // TODO: Handle aggregates and vectors
   // TODO: Support multiple indices.
   // TODO: Try to avoid meaningless accesses.
-  return {Weight, {anyPtrType(), anyIntType()}, buildGEP};
+  return {Weight, {sizedPtrType(), anyIntType()}, buildGEP};
 }
 
 static uint64_t getAggregateNumElements(Type *T) {

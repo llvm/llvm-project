@@ -82,14 +82,14 @@ define <4 x float> @test02(<8 x float> %a, <8 x float> %b) nounwind {
 ; VZ-LABEL: test02:
 ; VZ:       # %bb.0:
 ; VZ-NEXT:    vaddps %ymm1, %ymm0, %ymm0
-; VZ-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
+; VZ-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
 ; VZ-NEXT:    vzeroupper
 ; VZ-NEXT:    jmp do_sse # TAILCALL
 ;
 ; NO-VZ-LABEL: test02:
 ; NO-VZ:       # %bb.0:
 ; NO-VZ-NEXT:    vaddps %ymm1, %ymm0, %ymm0
-; NO-VZ-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
+; NO-VZ-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
 ; NO-VZ-NEXT:    jmp do_sse # TAILCALL
   %add.i = fadd <8 x float> %a, %b
   %add.low = call <4 x float> @llvm.x86.avx.vextractf128.ps.256(<8 x float> %add.i, i8 0)
@@ -222,10 +222,10 @@ define <4 x float> @test04(<4 x float> %a, <4 x float> %b) nounwind {
 ; VZ-LABEL: test04:
 ; VZ:       # %bb.0:
 ; VZ-NEXT:    pushq %rax
-; VZ-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<def>
+; VZ-NEXT:    # kill: def %xmm0 killed %xmm0 def %ymm0
 ; VZ-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; VZ-NEXT:    callq do_avx
-; VZ-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
+; VZ-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
 ; VZ-NEXT:    popq %rax
 ; VZ-NEXT:    vzeroupper
 ; VZ-NEXT:    retq
@@ -233,10 +233,10 @@ define <4 x float> @test04(<4 x float> %a, <4 x float> %b) nounwind {
 ; NO-VZ-LABEL: test04:
 ; NO-VZ:       # %bb.0:
 ; NO-VZ-NEXT:    pushq %rax
-; NO-VZ-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<def>
+; NO-VZ-NEXT:    # kill: def %xmm0 killed %xmm0 def %ymm0
 ; NO-VZ-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; NO-VZ-NEXT:    callq do_avx
-; NO-VZ-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
+; NO-VZ-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
 ; NO-VZ-NEXT:    popq %rax
 ; NO-VZ-NEXT:    retq
   %shuf = shufflevector <4 x float> %a, <4 x float> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>

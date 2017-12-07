@@ -82,10 +82,10 @@ define <2 x i64> @max_gt_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ;
 ; AVX512-LABEL: max_gt_v2i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    # kill: %xmm1<def> %xmm1<kill> %zmm1<def>
-; AVX512-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<def>
+; AVX512-NEXT:    # kill: def %xmm1 killed %xmm1 def %zmm1
+; AVX512-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
 ; AVX512-NEXT:    vpmaxuq %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<kill>
+; AVX512-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %1 = icmp ugt <2 x i64> %a, %b
@@ -208,10 +208,10 @@ define <4 x i64> @max_gt_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ;
 ; AVX512-LABEL: max_gt_v4i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
-; AVX512-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; AVX512-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; AVX512-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; AVX512-NEXT:    vpmaxuq %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
+; AVX512-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
 ; AVX512-NEXT:    retq
   %1 = icmp ugt <4 x i64> %a, %b
   %2 = select <4 x i1> %1, <4 x i64> %a, <4 x i64> %b
@@ -526,10 +526,10 @@ define <2 x i64> @max_ge_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ;
 ; AVX512-LABEL: max_ge_v2i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    # kill: %xmm1<def> %xmm1<kill> %zmm1<def>
-; AVX512-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<def>
+; AVX512-NEXT:    # kill: def %xmm1 killed %xmm1 def %zmm1
+; AVX512-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
 ; AVX512-NEXT:    vpmaxuq %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<kill>
+; AVX512-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %1 = icmp uge <2 x i64> %a, %b
@@ -669,10 +669,10 @@ define <4 x i64> @max_ge_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ;
 ; AVX512-LABEL: max_ge_v4i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
-; AVX512-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; AVX512-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; AVX512-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; AVX512-NEXT:    vpmaxuq %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
+; AVX512-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
 ; AVX512-NEXT:    retq
   %1 = icmp uge <4 x i64> %a, %b
   %2 = select <4 x i1> %1, <4 x i64> %a, <4 x i64> %b
@@ -980,10 +980,10 @@ define <2 x i64> @min_lt_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ;
 ; AVX512-LABEL: min_lt_v2i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    # kill: %xmm1<def> %xmm1<kill> %zmm1<def>
-; AVX512-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<def>
+; AVX512-NEXT:    # kill: def %xmm1 killed %xmm1 def %zmm1
+; AVX512-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
 ; AVX512-NEXT:    vpminuq %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<kill>
+; AVX512-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %1 = icmp ult <2 x i64> %a, %b
@@ -1106,10 +1106,10 @@ define <4 x i64> @min_lt_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ;
 ; AVX512-LABEL: min_lt_v4i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
-; AVX512-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; AVX512-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; AVX512-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; AVX512-NEXT:    vpminuq %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
+; AVX512-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
 ; AVX512-NEXT:    retq
   %1 = icmp ult <4 x i64> %a, %b
   %2 = select <4 x i1> %1, <4 x i64> %a, <4 x i64> %b
@@ -1423,10 +1423,10 @@ define <2 x i64> @min_le_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ;
 ; AVX512-LABEL: min_le_v2i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    # kill: %xmm1<def> %xmm1<kill> %zmm1<def>
-; AVX512-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<def>
+; AVX512-NEXT:    # kill: def %xmm1 killed %xmm1 def %zmm1
+; AVX512-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
 ; AVX512-NEXT:    vpminuq %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<kill>
+; AVX512-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %1 = icmp ule <2 x i64> %a, %b
@@ -1566,10 +1566,10 @@ define <4 x i64> @min_le_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ;
 ; AVX512-LABEL: min_le_v4i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
-; AVX512-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; AVX512-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; AVX512-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; AVX512-NEXT:    vpminuq %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
+; AVX512-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
 ; AVX512-NEXT:    retq
   %1 = icmp ule <4 x i64> %a, %b
   %2 = select <4 x i1> %1, <4 x i64> %a, <4 x i64> %b

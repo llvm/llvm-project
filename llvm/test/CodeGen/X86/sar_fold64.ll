@@ -6,7 +6,7 @@ define i32 @shl48sar47(i64 %a) #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movswq %di, %rax
 ; CHECK-NEXT:    addl %eax, %eax
-; CHECK-NEXT:    # kill: %eax<def> %eax<kill> %rax<kill>
+; CHECK-NEXT:    # kill: def %eax killed %eax killed %rax
 ; CHECK-NEXT:    retq
   %1 = shl i64 %a, 48
   %2 = ashr exact i64 %1, 47
@@ -19,7 +19,7 @@ define i32 @shl48sar49(i64 %a) #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movswq %di, %rax
 ; CHECK-NEXT:    shrq %rax
-; CHECK-NEXT:    # kill: %eax<def> %eax<kill> %rax<kill>
+; CHECK-NEXT:    # kill: def %eax killed %eax killed %rax
 ; CHECK-NEXT:    retq
   %1 = shl i64 %a, 48
   %2 = ashr exact i64 %1, 49
@@ -32,7 +32,7 @@ define i32 @shl56sar55(i64 %a) #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movsbq %dil, %rax
 ; CHECK-NEXT:    addl %eax, %eax
-; CHECK-NEXT:    # kill: %eax<def> %eax<kill> %rax<kill>
+; CHECK-NEXT:    # kill: def %eax killed %eax killed %rax
 ; CHECK-NEXT:    retq
   %1 = shl i64 %a, 56
   %2 = ashr exact i64 %1, 55
@@ -45,7 +45,7 @@ define i32 @shl56sar57(i64 %a) #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movsbq %dil, %rax
 ; CHECK-NEXT:    shrq %rax
-; CHECK-NEXT:    # kill: %eax<def> %eax<kill> %rax<kill>
+; CHECK-NEXT:    # kill: def %eax killed %eax killed %rax
 ; CHECK-NEXT:    retq
   %1 = shl i64 %a, 56
   %2 = ashr exact i64 %1, 57

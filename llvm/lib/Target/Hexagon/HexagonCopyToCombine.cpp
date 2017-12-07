@@ -351,11 +351,11 @@ bool HexagonCopyToCombine::isSafeToMoveTogether(MachineInstr &I1,
       //   kill flag for a register (a removeRegisterKilled() analogous to
       //   addRegisterKilled) that handles aliased register correctly.
       //   * or has a killed aliased register use of I1's use reg
-      //           %d4<def> = A2_tfrpi 16
-      //           %r6<def> = A2_tfr %r9
-      //           %r8<def> = KILL %r8, %d4<imp-use,kill>
+      //           %d4 = A2_tfrpi 16
+      //           %r6 = A2_tfr %r9
+      //           %r8 = KILL %r8, implicit killed %d4
       //      If we want to move R6 = across the KILL instruction we would have
-      //      to remove the %d4<imp-use,kill> operand. For now, we are
+      //      to remove the implicit killed %d4 operand. For now, we are
       //      conservative and disallow the move.
       // we can't move I1 across it.
       if (MI.isDebugValue()) {

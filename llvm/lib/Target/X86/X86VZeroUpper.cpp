@@ -235,7 +235,7 @@ void VZeroUpperInserter::processBasicBlock(MachineBasicBlock &MBB) {
     // If the call has no RegMask, skip it as well. It usually happens on
     // helper function calls (such as '_chkstk', '_ftol2') where standard
     // calling convention is not used (RegMask is not used to mark register
-    // clobbered and register usage (def/imp-def/use) is well-defined and
+    // clobbered and register usage (def/implicit-def/use) is well-defined and
     // explicitly specified.
     if (IsCall && !callHasRegMask(MI))
       continue;

@@ -391,16 +391,12 @@ define <4 x i32> @insertps_from_load_ins_elt_undef_i32(<4 x i32> %a, i32* %b) {
 ; X32-LABEL: insertps_from_load_ins_elt_undef_i32:
 ; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X32-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
-; X32-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5],xmm0[6,7]
+; X32-NEXT:    pinsrd $2, (%eax), %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: insertps_from_load_ins_elt_undef_i32:
 ; X64:       ## %bb.0:
-; X64-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
-; X64-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5],xmm0[6,7]
+; X64-NEXT:    pinsrd $2, (%rdi), %xmm0
 ; X64-NEXT:    retq
   %1 = load i32, i32* %b, align 4
   %2 = insertelement <4 x i32> undef, i32 %1, i32 0

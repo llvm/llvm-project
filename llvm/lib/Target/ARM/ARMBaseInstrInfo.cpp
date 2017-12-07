@@ -1447,7 +1447,7 @@ bool ARMBaseInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   DEBUG(dbgs() << "widening:    " << MI);
   MachineInstrBuilder MIB(*MI.getParent()->getParent(), MI);
 
-  // Get rid of the old <imp-def> of DstRegD.  Leave it if it defines a Q-reg
+  // Get rid of the old implicit-def of DstRegD.  Leave it if it defines a Q-reg
   // or some other super-register.
   int ImpDefIdx = MI.findRegisterDefOperandIdx(DstRegD);
   if (ImpDefIdx != -1)
@@ -1650,7 +1650,7 @@ bool ARMBaseInstrInfo::produceSameValue(const MachineInstr &MI0,
     }
 
     for (unsigned i = 3, e = MI0.getNumOperands(); i != e; ++i) {
-      // %12<def> = PICLDR %11, 0, pred:14, pred:%noreg
+      // %12 = PICLDR %11, 0, pred:14, pred:%noreg
       const MachineOperand &MO0 = MI0.getOperand(i);
       const MachineOperand &MO1 = MI1.getOperand(i);
       if (!MO0.isIdenticalTo(MO1))
@@ -4668,7 +4668,7 @@ void ARMBaseInstrInfo::setExecutionDomain(MachineInstr &MI,
       NewMIB = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), get(ARM::VEXTd32),
                        DDst);
 
-      // On the first instruction, both DSrc and DDst may be <undef> if present.
+      // On the first instruction, both DSrc and DDst may be undef if present.
       // Specifically when the original instruction didn't have them as an
       // <imp-use>.
       unsigned CurReg = SrcLane == 1 && DstLane == 1 ? DSrc : DDst;
@@ -4688,7 +4688,7 @@ void ARMBaseInstrInfo::setExecutionDomain(MachineInstr &MI,
       MIB.addReg(DDst, RegState::Define);
 
       // On the second instruction, DDst has definitely been defined above, so
-      // it is not <undef>. DSrc, if present, can be <undef> as above.
+      // it is not undef. DSrc, if present, can be undef as above.
       CurReg = SrcLane == 1 && DstLane == 0 ? DSrc : DDst;
       CurUndef = CurReg == DSrc && !MI.readsRegister(CurReg, TRI);
       MIB.addReg(CurReg, getUndefRegState(CurUndef));
@@ -4771,7 +4771,7 @@ unsigned ARMBaseInstrInfo::getPartialRegUpdateClearance(
 
   // We must be able to clobber the whole D-reg.
   if (TargetRegisterInfo::isVirtualRegister(Reg)) {
-    // Virtual register must be a foo:ssub_0<def,undef> operand.
+    // Virtual register must be a def undef foo:ssub_0 operand.
     if (!MO.getSubReg() || MI.readsVirtualRegister(Reg))
       return 0;
   } else if (ARM::SPRRegClass.contains(Reg)) {

@@ -82,3 +82,4 @@ SBBreakpointCallbackBaton::SBBreakpointCallbackBaton(SBBreakpointHitCallback
   return true; // Return true if we should stop at this breakpoint
 }
 
+SBBreakpointCallbackBaton::~SBBreakpointCallbackBaton() = default;

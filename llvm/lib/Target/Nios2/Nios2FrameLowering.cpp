@@ -25,7 +25,3 @@ void Nios2FrameLowering::emitPrologue(MachineFunction &MF,
 
 void Nios2FrameLowering::emitEpilogue(MachineFunction &MF,
                                       MachineBasicBlock &MBB) const {}
-
-const Nios2FrameLowering *Nios2FrameLowering::create(const Nios2Subtarget &ST) {
-  return new Nios2FrameLowering(ST, 4);
-}

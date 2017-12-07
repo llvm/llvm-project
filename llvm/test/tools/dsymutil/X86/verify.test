@@ -1,0 +1,8 @@
+# Multiple inputs in flat mode
+RUN: not llvm-dsymutil -verify -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 %p/../Inputs/basic-archive.macho.x86_64 %p/../Inputs/basic-lto.macho.x86_64 %p/../Inputs/basic-lto-dw4.macho.x86_64 -o %t 2>&1 | FileCheck %s --check-prefix=QUIET
+RUN: not llvm-dsymutil -verify -verbose -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 %p/../Inputs/basic-archive.macho.x86_64 %p/../Inputs/basic-lto.macho.x86_64 %p/../Inputs/basic-lto-dw4.macho.x86_64 -o %t 2>&1 | FileCheck %s --check-prefix=QUIET --check-prefix=VERBOSE
+
+VERBOSE: Verifying DWARF for architecture: x86_64
+VERBOSE: error: DIE has invalid DW_AT_location encoding:
+VERBOSE: error: DIE has invalid DW_AT_location encoding:
+QUIET: error: verification failed

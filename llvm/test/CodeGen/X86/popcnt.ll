@@ -44,14 +44,14 @@ define i8 @cnt8(i8 %x) nounwind readnone {
 ; X32-POPCNT:       # %bb.0:
 ; X32-POPCNT-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X32-POPCNT-NEXT:    popcntl %eax, %eax
-; X32-POPCNT-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; X32-POPCNT-NEXT:    # kill: def %al killed %al killed %eax
 ; X32-POPCNT-NEXT:    retl
 ;
 ; X64-POPCNT-LABEL: cnt8:
 ; X64-POPCNT:       # %bb.0:
 ; X64-POPCNT-NEXT:    movzbl %dil, %eax
 ; X64-POPCNT-NEXT:    popcntl %eax, %eax
-; X64-POPCNT-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; X64-POPCNT-NEXT:    # kill: def %al killed %al killed %eax
 ; X64-POPCNT-NEXT:    retq
   %cnt = tail call i8 @llvm.ctpop.i8(i8 %x)
   ret i8 %cnt
@@ -79,7 +79,7 @@ define i16 @cnt16(i16 %x) nounwind readnone {
 ; X32-NEXT:    shll $8, %eax
 ; X32-NEXT:    addl %ecx, %eax
 ; X32-NEXT:    movzbl %ah, %eax
-; X32-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; X32-NEXT:    # kill: def %ax killed %ax killed %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: cnt16:
@@ -102,7 +102,7 @@ define i16 @cnt16(i16 %x) nounwind readnone {
 ; X64-NEXT:    shll $8, %ecx
 ; X64-NEXT:    addl %eax, %ecx
 ; X64-NEXT:    movzbl %ch, %eax # NOREX
-; X64-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; X64-NEXT:    # kill: def %ax killed %ax killed %eax
 ; X64-NEXT:    retq
 ;
 ; X32-POPCNT-LABEL: cnt16:

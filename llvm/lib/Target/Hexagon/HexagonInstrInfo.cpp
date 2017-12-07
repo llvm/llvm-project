@@ -1615,8 +1615,8 @@ DFAPacketizer *HexagonInstrInfo::CreateTargetScheduleState(
 }
 
 // Inspired by this pair:
-//  %r13<def> = L2_loadri_io %r29, 136; mem:LD4[FixedStack0]
-//  S2_storeri_io %r29, 132, %r1<kill>; flags:  mem:ST4[FixedStack1]
+//  %r13 = L2_loadri_io %r29, 136; mem:LD4[FixedStack0]
+//  S2_storeri_io %r29, 132, killed %r1; flags:  mem:ST4[FixedStack1]
 // Currently AA considers the addresses in these instructions to be aliasing.
 bool HexagonInstrInfo::areMemAccessesTriviallyDisjoint(
     MachineInstr &MIa, MachineInstr &MIb, AliasAnalysis *AA) const {
@@ -3515,7 +3515,7 @@ HexagonII::SubInstructionGroup HexagonInstrInfo::getDuplexCandidateGroup(
   case Hexagon::EH_RETURN_JMPR:
   case Hexagon::PS_jmpret:
     // jumpr r31
-    // Actual form JMPR %pc<imp-def>, %r31<imp-use>, %r0<imp-use,internal>.
+    // Actual form JMPR implicit-def %pc, implicit %r31, implicit internal %r0
     DstReg = MI.getOperand(0).getReg();
     if (Hexagon::IntRegsRegClass.contains(DstReg) && (Hexagon::R31 == DstReg))
       return HexagonII::HSIG_L2;
@@ -3705,7 +3705,7 @@ HexagonII::SubInstructionGroup HexagonInstrInfo::getDuplexCandidateGroup(
   case Hexagon::C2_cmovenewif:
     // if ([!]P0[.new]) Rd = #0
     // Actual form:
-    // %r16<def> = C2_cmovenewit %p0<internal>, 0, %r16<imp-use,undef>;
+    // %r16 = C2_cmovenewit internal %p0, 0, implicit undef %r16;
     DstReg = MI.getOperand(0).getReg();
     SrcReg = MI.getOperand(1).getReg();
     if (isIntRegForSubInst(DstReg) &&

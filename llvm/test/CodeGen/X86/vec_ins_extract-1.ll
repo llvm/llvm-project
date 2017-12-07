@@ -22,7 +22,7 @@ define i32 @t0(i32 inreg %t7, <4 x i32> inreg %t8) nounwind {
 ;
 ; X64-LABEL: t0:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
+; X64-NEXT:    # kill: def %edi killed %edi def %rdi
 ; X64-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    andl $3, %edi
 ; X64-NEXT:    movl $76, -24(%rsp,%rdi,4)
@@ -51,7 +51,7 @@ define i32 @t1(i32 inreg %t7, <4 x i32> inreg %t8) nounwind {
 ;
 ; X64-LABEL: t1:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
+; X64-NEXT:    # kill: def %edi killed %edi def %rdi
 ; X64-NEXT:    movl $76, %eax
 ; X64-NEXT:    pinsrd $0, %eax, %xmm0
 ; X64-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
@@ -79,7 +79,7 @@ define <4 x i32> @t2(i32 inreg %t7, <4 x i32> inreg %t8) nounwind {
 ;
 ; X64-LABEL: t2:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
+; X64-NEXT:    # kill: def %edi killed %edi def %rdi
 ; X64-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    andl $3, %edi
 ; X64-NEXT:    pinsrd $0, -24(%rsp,%rdi,4), %xmm0
@@ -106,7 +106,7 @@ define <4 x i32> @t3(i32 inreg %t7, <4 x i32> inreg %t8) nounwind {
 ;
 ; X64-LABEL: t3:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
+; X64-NEXT:    # kill: def %edi killed %edi def %rdi
 ; X64-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    andl $3, %edi
 ; X64-NEXT:    movss %xmm0, -24(%rsp,%rdi,4)

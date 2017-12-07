@@ -4295,7 +4295,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
               << T << D.getSourceRange();
             D.setInvalidType(true);
           } else if (D.getName().getKind() ==
-                         UnqualifiedId::IK_DeductionGuideName) {
+                     UnqualifiedId::IK_DeductionGuideName) {
             if (T != Context.DependentTy) {
               S.Diag(D.getDeclSpec().getLocStart(),
                      diag::err_deduction_guide_with_complex_decl)

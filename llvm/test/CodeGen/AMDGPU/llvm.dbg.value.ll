@@ -5,7 +5,7 @@
 ; NOOPT: s_load_dwordx2 s[4:5]
 
 ; FIXME: Why is the SGPR4_SGPR5 reference being removed from DBG_VALUE?
-; NOOPT: ; kill: %sgpr8_sgpr9<def> %sgpr4_sgpr5<kill>
+; NOOPT: ; kill: def %sgpr8_sgpr9 killed %sgpr4_sgpr5
 ; NOOPT-NEXT: ;DEBUG_VALUE: test_debug_value:globalptr_arg <- undef
 
 ; GCN: flat_store_dword

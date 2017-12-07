@@ -262,7 +262,7 @@ define void @ui8(i8 %x, i8 %y, i8* %p, i8* %q) nounwind {
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    # kill: %eax<def> %eax<kill> %ax<def>
+; X32-NEXT:    # kill: def %eax killed %eax def %ax
 ; X32-NEXT:    divb {{[0-9]+}}(%esp)
 ; X32-NEXT:    movzbl %ah, %ebx # NOREX
 ; X32-NEXT:    movb %al, (%edx)
@@ -273,7 +273,7 @@ define void @ui8(i8 %x, i8 %y, i8* %p, i8* %q) nounwind {
 ; X64-LABEL: ui8:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    # kill: %eax<def> %eax<kill> %ax<def>
+; X64-NEXT:    # kill: def %eax killed %eax def %ax
 ; X64-NEXT:    divb %sil
 ; X64-NEXT:    movzbl %ah, %esi # NOREX
 ; X64-NEXT:    movb %al, (%rdx)

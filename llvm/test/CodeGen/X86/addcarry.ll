@@ -84,7 +84,7 @@ entry:
 define i8 @e(i32* nocapture %a, i32 %b) nounwind {
 ; CHECK-LABEL: e:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
+; CHECK-NEXT:    # kill: def %esi killed %esi def %rsi
 ; CHECK-NEXT:    movl (%rdi), %ecx
 ; CHECK-NEXT:    leal (%rsi,%rcx), %edx
 ; CHECK-NEXT:    addl %esi, %edx

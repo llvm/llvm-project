@@ -689,7 +689,7 @@ define <16 x i32> @mask_shuffle_v16i32_00_01_02_03_16_17_18_19_08_09_10_11_12_13
 define <16 x i32> @mask_shuffle_v4i32_v16i32_00_01_02_03_00_01_02_03_00_01_02_03_00_01_02_03(<4 x i32> %a) {
 ; ALL-LABEL: mask_shuffle_v4i32_v16i32_00_01_02_03_00_01_02_03_00_01_02_03_00_01_02_03:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<def>
+; ALL-NEXT:    # kill: def %xmm0 killed %xmm0 def %ymm0
 ; ALL-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; ALL-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm0
 ; ALL-NEXT:    retq
@@ -700,7 +700,7 @@ define <16 x i32> @mask_shuffle_v4i32_v16i32_00_01_02_03_00_01_02_03_00_01_02_03
 define <16 x float> @mask_shuffle_v4f32_v16f32_00_01_02_03_00_01_02_03_00_01_02_03_00_01_02_03(<4 x float> %a) {
 ; ALL-LABEL: mask_shuffle_v4f32_v16f32_00_01_02_03_00_01_02_03_00_01_02_03_00_01_02_03:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<def>
+; ALL-NEXT:    # kill: def %xmm0 killed %xmm0 def %ymm0
 ; ALL-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; ALL-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm0
 ; ALL-NEXT:    retq

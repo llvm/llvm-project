@@ -1554,21 +1554,26 @@ bool Sema::CheckARMBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 
   // For intrinsics which take an immediate value as part of the instruction,
   // range check them here.
-  unsigned i = 0, l = 0, u = 0;
+  // FIXME: VFP Intrinsics should error if VFP not present.
   switch (BuiltinID) {
   default: return false;
-  case ARM::BI__builtin_arm_ssat: i = 1; l = 1; u = 31; break;
-  case ARM::BI__builtin_arm_usat: i = 1; u = 31; break;
+  case ARM::BI__builtin_arm_ssat:
+    return SemaBuiltinConstantArgRange(TheCall, 1, 1, 32);
+  case ARM::BI__builtin_arm_usat:
+    return SemaBuiltinConstantArgRange(TheCall, 1, 0, 31);
+  case ARM::BI__builtin_arm_ssat16:
+    return SemaBuiltinConstantArgRange(TheCall, 1, 1, 16);
+  case ARM::BI__builtin_arm_usat16:
+    return SemaBuiltinConstantArgRange(TheCall, 1, 0, 15);
   case ARM::BI__builtin_arm_vcvtr_f:
-  case ARM::BI__builtin_arm_vcvtr_d: i = 1; u = 1; break;
+  case ARM::BI__builtin_arm_vcvtr_d:
+    return SemaBuiltinConstantArgRange(TheCall, 1, 0, 1);
   case ARM::BI__builtin_arm_dmb:
   case ARM::BI__builtin_arm_dsb:
   case ARM::BI__builtin_arm_isb:
-  case ARM::BI__builtin_arm_dbg: l = 0; u = 15; break;
+  case ARM::BI__builtin_arm_dbg:
+    return SemaBuiltinConstantArgRange(TheCall, 0, 0, 15);
   }
-
-  // FIXME: VFP Intrinsics should error if VFP not present.
-  return SemaBuiltinConstantArgRange(TheCall, i, l, u + l);
 }
 
 bool Sema::CheckAArch64BuiltinFunctionCall(unsigned BuiltinID,
@@ -12399,8 +12404,9 @@ void Sema::DiscardMisalignedMemberAddress(const Type *T, Expr *E) {
                           MisalignedMember(Op));
       if (MA != MisalignedMembers.end() &&
           (T->isIntegerType() ||
-           (T->isPointerType() &&
-            Context.getTypeAlignInChars(T->getPointeeType()) <= MA->Alignment)))
+           (T->isPointerType() && (T->getPointeeType()->isIncompleteType() ||
+                                   Context.getTypeAlignInChars(
+                                       T->getPointeeType()) <= MA->Alignment))))
         MisalignedMembers.erase(MA);
     }
   }

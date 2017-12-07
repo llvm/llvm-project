@@ -22,12 +22,7 @@ namespace detail {
 ErrorHolder TakeError(Error Err);
 
 template <typename T> ExpectedHolder<T> TakeExpected(Expected<T> &Exp) {
-  llvm::detail::ExpectedHolder<T> Result;
-  auto &EH = static_cast<llvm::detail::ErrorHolder &>(Result);
-  EH = TakeError(Exp.takeError());
-  if (Result.Success)
-    Result.Value = &(*Exp);
-  return Result;
+  return {TakeError(Exp.takeError()), Exp};
 }
 
 template <typename T> ExpectedHolder<T> TakeExpected(Expected<T> &&Exp) {
@@ -49,16 +44,15 @@ MATCHER(Succeeded, "") { return arg.Success; }
 MATCHER(Failed, "") { return !arg.Success; }
 
 MATCHER_P(HasValue, value,
-          "succeeded with value " + testing::PrintToString(value)) {
+          "succeeded with value \"" + testing::PrintToString(value) + '"') {
   if (!arg.Success) {
     *result_listener << "operation failed";
     return false;
   }
 
-  assert(arg.Value.hasValue());
-  if (**arg.Value != value) {
-    *result_listener << "but \"" + testing::PrintToString(**arg.Value) +
-                            "\" != " + testing::PrintToString(value);
+  if (*arg.Exp != value) {
+    *result_listener << "but \"" + testing::PrintToString(*arg.Exp) +
+                            "\" != \"" + testing::PrintToString(value) + '"';
     return false;
   }
 

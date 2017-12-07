@@ -26,3 +26,11 @@ def DIVU    : ALU_rr<0b0000001, 0b101, "divu">;
 def REM     : ALU_rr<0b0000001, 0b110, "rem">;
 def REMU    : ALU_rr<0b0000001, 0b111, "remu">;
 } // Predicates = [HasStdExtM]
+
+let Predicates = [HasStdExtM, IsRV64] in {
+def MULW    : ALUW_rr<0b0000001, 0b000, "mulw">;
+def DIVW    : ALUW_rr<0b0000001, 0b100, "divw">;
+def DIVUW   : ALUW_rr<0b0000001, 0b101, "divuw">;
+def REMW    : ALUW_rr<0b0000001, 0b110, "remw">;
+def REMUW   : ALUW_rr<0b0000001, 0b111, "remuw">;
+} // Predicates = [HasStdExtM, IsRV64]

@@ -144,8 +144,8 @@ def VTX_READ_32_cm
   // to be caused by ALU instructions in the next instruction group that wrote
   // to the $src_gpr registers of the VTX_READ.
   // e.g.
-  // %t3_x<def> = VTX_READ_PARAM_32_eg %t2_x<kill>, 24
-  // %t2_x<def> = MOV %zero
+  // %t3_x = VTX_READ_PARAM_32_eg killed %t2_x, 24
+  // %t2_x = MOV %zero
   //Adding this constraint prevents this from happening.
   let Constraints = "$src_gpr.ptr = $dst_gpr";
 }

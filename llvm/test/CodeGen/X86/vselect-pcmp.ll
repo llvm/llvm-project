@@ -182,13 +182,13 @@ define <8 x i32> @signbit_sel_v8i32(<8 x i32> %x, <8 x i32> %y, <8 x i32> %mask)
 ;
 ; AVX512F-LABEL: signbit_sel_v8i32:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    # kill: %ymm2<def> %ymm2<kill> %zmm2<def>
-; AVX512F-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
-; AVX512F-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; AVX512F-NEXT:    # kill: def %ymm2 killed %ymm2 def %zmm2
+; AVX512F-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; AVX512F-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; AVX512F-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX512F-NEXT:    vpcmpgtd %zmm2, %zmm3, %k1
 ; AVX512F-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
-; AVX512F-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
+; AVX512F-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: signbit_sel_v8i32:

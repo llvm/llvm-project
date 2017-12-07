@@ -1749,19 +1749,11 @@ SDValue DAGTypeLegalizer::SplitVecOp_EXTRACT_VECTOR_ELT(SDNode *N) {
   // Make the vector elements byte-addressable if they aren't already.
   SDLoc dl(N);
   EVT EltVT = VecVT.getVectorElementType();
-  if (EltVT.getSizeInBits() < 8) {
-    SmallVector<SDValue, 4> ElementOps;
-    for (unsigned i = 0; i < VecVT.getVectorNumElements(); ++i) {
-      ElementOps.push_back(DAG.getAnyExtOrTrunc(
-          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, EltVT, Vec,
-                      DAG.getConstant(i, dl, MVT::i8)),
-          dl, MVT::i8));
-    }
-
+  if (VecVT.getScalarSizeInBits() < 8) {
     EltVT = MVT::i8;
     VecVT = EVT::getVectorVT(*DAG.getContext(), EltVT,
                              VecVT.getVectorNumElements());
-    Vec = DAG.getBuildVector(VecVT, dl, ElementOps);
+    Vec = DAG.getNode(ISD::ANY_EXTEND, dl, VecVT, Vec);
   }
 
   // Store the vector to the stack.

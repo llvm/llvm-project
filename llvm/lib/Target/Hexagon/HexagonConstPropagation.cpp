@@ -187,7 +187,7 @@ namespace {
 
     // Mapping: vreg -> cell
     // The keys are registers _without_ subregisters. This won't allow
-    // definitions in the form of "vreg:subreg<def> = ...". Such definitions
+    // definitions in the form of "vreg:subreg = ...". Such definitions
     // would be questionable from the point of view of SSA, since the "vreg"
     // could not be initialized in its entirety (specifically, an instruction
     // defining the "other part" of "vreg" would also count as a definition
@@ -1977,7 +1977,7 @@ bool HexagonConstEvaluator::evaluate(const MachineInstr &MI,
     {
       const MachineOperand &VO = MI.getOperand(1);
       // The operand of CONST32 can be a blockaddress, e.g.
-      //   %0<def> = CONST32 <blockaddress(@eat, %l)>
+      //   %0 = CONST32 <blockaddress(@eat, %l)>
       // Do this check for all instructions for safety.
       if (!VO.isImm())
         return false;
@@ -3147,7 +3147,7 @@ bool HexagonConstEvaluator::rewriteHexBranch(MachineInstr &BrI,
       BrI.setDesc(JD);
       while (BrI.getNumOperands() > 0)
         BrI.RemoveOperand(0);
-      // This ensures that all implicit operands (e.g. %r31<imp-def>, etc)
+      // This ensures that all implicit operands (e.g. implicit-def %r31, etc)
       // are present in the rewritten branch.
       for (auto &Op : NI->operands())
         BrI.addOperand(Op);

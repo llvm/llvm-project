@@ -10,7 +10,7 @@ define zeroext i1 @fcmp_oeq(float %x, float %y) {
 ; SDAG-NEXT:    cmpeqss %xmm1, %xmm0
 ; SDAG-NEXT:    movd %xmm0, %eax
 ; SDAG-NEXT:    andl $1, %eax
-; SDAG-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
+; SDAG-NEXT:    ## kill: def %al killed %al killed %eax
 ; SDAG-NEXT:    retq
 ;
 ; FAST_NOAVX-LABEL: fcmp_oeq:
@@ -354,7 +354,7 @@ define zeroext i1 @fcmp_une(float %x, float %y) {
 ; SDAG-NEXT:    cmpneqss %xmm1, %xmm0
 ; SDAG-NEXT:    movd %xmm0, %eax
 ; SDAG-NEXT:    andl $1, %eax
-; SDAG-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
+; SDAG-NEXT:    ## kill: def %al killed %al killed %eax
 ; SDAG-NEXT:    retq
 ;
 ; FAST_NOAVX-LABEL: fcmp_une:
@@ -594,7 +594,7 @@ define zeroext i1 @fcmp_oeq3(float %x) {
 ; SDAG-NEXT:    cmpeqss %xmm0, %xmm1
 ; SDAG-NEXT:    movd %xmm1, %eax
 ; SDAG-NEXT:    andl $1, %eax
-; SDAG-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
+; SDAG-NEXT:    ## kill: def %al killed %al killed %eax
 ; SDAG-NEXT:    retq
 ;
 ; FAST_NOAVX-LABEL: fcmp_oeq3:
@@ -1249,7 +1249,7 @@ define zeroext i1 @fcmp_une3(float %x) {
 ; SDAG-NEXT:    cmpneqss %xmm0, %xmm1
 ; SDAG-NEXT:    movd %xmm1, %eax
 ; SDAG-NEXT:    andl $1, %eax
-; SDAG-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
+; SDAG-NEXT:    ## kill: def %al killed %al killed %eax
 ; SDAG-NEXT:    retq
 ;
 ; FAST_NOAVX-LABEL: fcmp_une3:

@@ -2917,8 +2917,6 @@ def HexagonVINSERTW0 : SDNode<"HexagonISD::VINSERTW0", SDTHexagonVINSERTW0>;
 let Predicates = [UseHVX] in {
   def: Pat<(concat_vectors HVI8:$Vs, HVI8:$Vt),
            (V6_vcombine HvxVR:$Vt, HvxVR:$Vs)>;
-  def: Pat<(or HVI8:$Vs, HVI8:$Vt),
-           (V6_vor HvxVR:$Vt, HvxVR:$Vs)>;
 
   def: Pat<(HexagonVEXTRACTW HVI8:$Vu, I32:$Rs),
            (V6_extractw HvxVR:$Vu, I32:$Rs)>;
@@ -2933,4 +2931,16 @@ let Predicates = [UseHVX] in {
            (V6_vinsertwr HvxVR:$Vu, I32:$Rt)>;
   def: Pat<(HexagonVINSERTW0 HVI32:$Vu, I32:$Rt),
            (V6_vinsertwr HvxVR:$Vu, I32:$Rt)>;
+
+  def: Pat<(add HVI8:$Vs,  HVI8:$Vt),   (V6_vaddb HvxVR:$Vs, HvxVR:$Vt)>;
+  def: Pat<(add HVI16:$Vs, HVI16:$Vt),  (V6_vaddh HvxVR:$Vs, HvxVR:$Vt)>;
+  def: Pat<(add HVI32:$Vs, HVI32:$Vt),  (V6_vaddw HvxVR:$Vs, HvxVR:$Vt)>;
+
+  def: Pat<(sub HVI8:$Vs,  HVI8:$Vt),   (V6_vsubb HvxVR:$Vs, HvxVR:$Vt)>;
+  def: Pat<(sub HVI16:$Vs, HVI16:$Vt),  (V6_vsubh HvxVR:$Vs, HvxVR:$Vt)>;
+  def: Pat<(sub HVI32:$Vs, HVI32:$Vt),  (V6_vsubw HvxVR:$Vs, HvxVR:$Vt)>;
+
+  def: Pat<(and HVI8:$Vs, HVI8:$Vt),    (V6_vand HvxVR:$Vs, HvxVR:$Vt)>;
+  def: Pat<(or  HVI8:$Vs, HVI8:$Vt),    (V6_vor  HvxVR:$Vs, HvxVR:$Vt)>;
+  def: Pat<(xor HVI8:$Vs, HVI8:$Vt),    (V6_vxor HvxVR:$Vs, HvxVR:$Vt)>;
 }

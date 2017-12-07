@@ -2759,21 +2759,15 @@ define <4 x i32> @combine_constant_insertion_v4i32(i32 %f) {
 ;
 ; SSE41-LABEL: combine_constant_insertion_v4i32:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movd %edi, %xmm0
-; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],mem[2,3,4,5,6,7]
+; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = <u,4,5,30>
+; SSE41-NEXT:    pinsrd $0, %edi, %xmm0
 ; SSE41-NEXT:    retq
 ;
-; AVX1-LABEL: combine_constant_insertion_v4i32:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovd %edi, %xmm0
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],mem[2,3,4,5,6,7]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: combine_constant_insertion_v4i32:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovd %edi, %xmm0
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],mem[1,2,3]
-; AVX2-NEXT:    retq
+; AVX-LABEL: combine_constant_insertion_v4i32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm0 = <u,4,5,30>
+; AVX-NEXT:    vpinsrd $0, %edi, %xmm0, %xmm0
+; AVX-NEXT:    retq
   %a0 = insertelement <4 x i32> undef, i32 %f, i32 0
   %ret = shufflevector <4 x i32> %a0, <4 x i32> <i32 undef, i32 4, i32 5, i32 30>, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
   ret <4 x i32> %ret

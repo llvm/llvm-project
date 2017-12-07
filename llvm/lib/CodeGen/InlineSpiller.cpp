@@ -360,7 +360,7 @@ bool InlineSpiller::isSibling(unsigned Reg) {
 ///
 ///   x = def
 ///   spill x
-///   y = use x<kill>
+///   y = use killed x
 ///
 /// This hoist only helps when the copy kills its source.
 ///

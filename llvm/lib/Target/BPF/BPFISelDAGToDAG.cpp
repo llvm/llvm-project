@@ -573,7 +573,7 @@ void BPFDAGToDAGISel::PreprocessTrunc(SDNode *Node,
       return;
   } else {
     // The PHI node looks like:
-    //   %2<def> = PHI %0, <%bb.1>, %1, <%bb.3>
+    //   %2 = PHI %0, <%bb.1>, %1, <%bb.3>
     // Trace each incoming definition, e.g., (%0, %bb.1) and (%1, %bb.3)
     // The AND operation can be removed if both %0 in %bb.1 and %1 in
     // %bb.3 are defined with with a load matching the MaskN.

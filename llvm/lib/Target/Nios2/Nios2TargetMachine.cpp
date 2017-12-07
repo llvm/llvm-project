@@ -13,6 +13,7 @@
 
 #include "Nios2TargetMachine.h"
 #include "Nios2.h"
+#include "Nios2TargetObjectFile.h"
 
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -36,14 +37,27 @@ static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
   return *RM;
 }
 
+static CodeModel::Model getEffectiveCodeModel(Optional<CodeModel::Model> CM,
+                                              Reloc::Model RM, bool JIT) {
+  if (CM)
+    return *CM;
+  return CodeModel::Small;
+}
+
 Nios2TargetMachine::Nios2TargetMachine(const Target &T, const Triple &TT,
                                        StringRef CPU, StringRef FS,
                                        const TargetOptions &Options,
                                        Optional<Reloc::Model> RM,
                                        Optional<CodeModel::Model> CM,
                                        CodeGenOpt::Level OL, bool JIT)
-    : LLVMTargetMachine(T, computeDataLayout(), TT, CPU, FS, Options,
-                        getEffectiveRelocModel(RM), *CM, OL) {}
+    : LLVMTargetMachine(
+          T, computeDataLayout(), TT, CPU, FS, Options,
+          getEffectiveRelocModel(RM),
+          getEffectiveCodeModel(CM, getEffectiveRelocModel(RM), JIT), OL),
+      TLOF(make_unique<Nios2TargetObjectFile>()),
+      Subtarget(TT, CPU, FS, *this) {
+  initAsmInfo();
+}
 
 Nios2TargetMachine::~Nios2TargetMachine() {}
 
@@ -82,6 +96,7 @@ public:
   }
 
   void addCodeGenPrepare() override;
+  bool addInstSelector() override;
   void addIRPasses() override;
 };
 } // namespace
@@ -95,3 +110,10 @@ void Nios2PassConfig::addCodeGenPrepare() {
 }
 
 void Nios2PassConfig::addIRPasses() { TargetPassConfig::addIRPasses(); }
+
+// Install an instruction selector pass using
+// the ISelDag to gen Nios2 code.
+bool Nios2PassConfig::addInstSelector() {
+  addPass(createNios2ISelDag(getNios2TargetMachine(), getOptLevel()));
+  return false;
+}

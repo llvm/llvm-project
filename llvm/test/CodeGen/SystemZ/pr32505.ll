@@ -10,8 +10,8 @@ define <2 x float> @pr32505(<2 x i8> * %a) {
 ; CHECK-NEXT:    lbh %r1, 0(%r2)
 ; CHECK-NEXT:    ldgr %f0, %r1
 ; CHECK-NEXT:    ldgr %f2, %r0
-; CHECK-NEXT:    # kill: %f0s<def> %f0s<kill> %f0d<kill>
-; CHECK-NEXT:    # kill: %f2s<def> %f2s<kill> %f2d<kill>
+; CHECK-NEXT:    # kill: def %f0s killed %f0s killed %f0d
+; CHECK-NEXT:    # kill: def %f2s killed %f2s killed %f2d
 ; CHECK-NEXT:    br %r14
   %L17 = load <2 x i8>, <2 x i8>* %a
   %Se21 = sext <2 x i8> %L17 to <2 x i32>

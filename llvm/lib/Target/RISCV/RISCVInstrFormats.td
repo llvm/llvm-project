@@ -28,17 +28,26 @@
 // Format specifies the encoding used by the instruction. This is used by
 // RISCVMCCodeEmitter to determine which form of fixup to use. These
 // definitions must be kept in-sync with RISCVBaseInfo.h.
-class InstFormat<bits<4> val> {
-  bits<4> Value = val;
+class InstFormat<bits<5> val> {
+  bits<5> Value = val;
 }
 def InstFormatPseudo : InstFormat<0>;
 def InstFormatR      : InstFormat<1>;
-def InstFormatI      : InstFormat<2>;
-def InstFormatS      : InstFormat<3>;
-def InstFormatB      : InstFormat<4>;
-def InstFormatU      : InstFormat<5>;
-def InstFormatJ      : InstFormat<6>;
-def InstFormatOther  : InstFormat<7>;
+def InstFormatR4     : InstFormat<2>;
+def InstFormatI      : InstFormat<3>;
+def InstFormatS      : InstFormat<4>;
+def InstFormatB      : InstFormat<5>;
+def InstFormatU      : InstFormat<6>;
+def InstFormatJ      : InstFormat<7>;
+def InstFormatCR     : InstFormat<8>;
+def InstFormatCI     : InstFormat<9>;
+def InstFormatCSS    : InstFormat<10>;
+def InstFormatCIW    : InstFormat<11>;
+def InstFormatCL     : InstFormat<12>;
+def InstFormatCS     : InstFormat<13>;
+def InstFormatCB     : InstFormat<14>;
+def InstFormatCJ     : InstFormat<15>;
+def InstFormatOther  : InstFormat<16>;
 
 // The following opcode names and match those given in Table 19.1 in the
 // RISC-V User-level ISA specification ("RISC-V base opcode map").
@@ -89,7 +98,7 @@ class RVInst<dag outs, dag ins, string opcodestr, string argstr,
   let AsmString = opcodestr # "\t" # argstr;
   let Pattern = pattern;
 
-  let TSFlags{3-0} = format.Value;
+  let TSFlags{4-0} = format.Value;
 }
 
 // Pseudo instructions
@@ -118,6 +127,24 @@ class RVInstR<bits<7> funct7, bits<3> funct3, RISCVOpcode opcode, dag outs,
   let Opcode = opcode.Value;
 }
 
+class RVInstR4<bits<2> funct2, RISCVOpcode opcode, dag outs, dag ins,
+               string opcodestr, string argstr>
+    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR4> {
+  bits<5> rs3;
+  bits<5> rs2;
+  bits<5> rs1;
+  bits<3> funct3;
+  bits<5> rd;
+
+  let Inst{31-27} = rs3;
+  let Inst{26-25} = funct2;
+  let Inst{24-20} = rs2;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = funct3;
+  let Inst{11-7} = rd;
+  let Opcode = opcode.Value;
+}
+
 class RVInstRAtomic<bits<5> funct5, bit aq, bit rl, bits<3> funct3,
                     RISCVOpcode opcode, dag outs, dag ins, string opcodestr,
                     string argstr>
@@ -129,6 +156,22 @@ class RVInstRAtomic<bits<5> funct5, bit aq, bit rl, bits<3> funct3,
   let Inst{31-27} = funct5;
   let Inst{26} = aq;
   let Inst{25} = rl;
+  let Inst{24-20} = rs2;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = funct3;
+  let Inst{11-7} = rd;
+  let Opcode = opcode.Value;
+}
+
+class RVInstRFrm<bits<7> funct7, RISCVOpcode opcode, dag outs, dag ins,
+                 string opcodestr, string argstr>
+    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
+  bits<5> rs2;
+  bits<5> rs1;
+  bits<3> funct3;
+  bits<5> rd;
+
+  let Inst{31-25} = funct7;
   let Inst{24-20} = rs2;
   let Inst{19-15} = rs1;
   let Inst{14-12} = funct3;
@@ -152,6 +195,23 @@ class RVInstI<bits<3> funct3, RISCVOpcode opcode, dag outs, dag ins,
 
 class RVInstIShift<bit arithshift, bits<3> funct3, RISCVOpcode opcode,
                    dag outs, dag ins, string opcodestr, string argstr>
+    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatI> {
+  bits<6> shamt;
+  bits<5> rs1;
+  bits<5> rd;
+
+  let Inst{31} = 0;
+  let Inst{30} = arithshift;
+  let Inst{29-26} = 0;
+  let Inst{25-20} = shamt;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = funct3;
+  let Inst{11-7} = rd;
+  let Opcode = opcode.Value;
+}
+
+class RVInstIShiftW<bit arithshift, bits<3> funct3, RISCVOpcode opcode,
+                    dag outs, dag ins, string opcodestr, string argstr>
     : RVInst<outs, ins, opcodestr, argstr, [], InstFormatI> {
   bits<5> shamt;
   bits<5> rs1;

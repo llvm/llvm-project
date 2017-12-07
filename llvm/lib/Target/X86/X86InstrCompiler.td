@@ -944,15 +944,15 @@ multiclass RELEASE_FP_BINOP_MI<SDNode op> {
     def NAME#32mr : I<0, Pseudo, (outs), (ins i32mem:$dst, FR32:$src),
         "#BINOP "#NAME#"32mr PSEUDO!",
         [(atomic_store_32 addr:$dst,
-	   (i32 (bitconvert (op
+           (i32 (bitconvert (op
              (f32 (bitconvert (i32 (atomic_load_32 addr:$dst)))),
-	      FR32:$src))))]>, Requires<[HasSSE1]>;
+          FR32:$src))))]>, Requires<[HasSSE1]>;
     def NAME#64mr : I<0, Pseudo, (outs), (ins i64mem:$dst, FR64:$src),
         "#BINOP "#NAME#"64mr PSEUDO!",
         [(atomic_store_64 addr:$dst,
-	   (i64 (bitconvert (op
+           (i64 (bitconvert (op
              (f64 (bitconvert (i64 (atomic_load_64 addr:$dst)))),
-	      FR64:$src))))]>, Requires<[HasSSE2]>;
+          FR64:$src))))]>, Requires<[HasSSE2]>;
 }
 defm RELEASE_FADD : RELEASE_FP_BINOP_MI<fadd>;
 // FIXME: Add fsub, fmul, fdiv, ...
@@ -1004,17 +1004,17 @@ defm RELEASE_NOT : RELEASE_UNOP<
 */
 
 def RELEASE_MOV8mi : I<0, Pseudo, (outs), (ins i8mem:$dst, i8imm:$src),
-			"#RELEASE_MOV8mi PSEUDO!",
-			[(atomic_store_8 addr:$dst, (i8 imm:$src))]>;
+            "#RELEASE_MOV8mi PSEUDO!",
+            [(atomic_store_8 addr:$dst, (i8 imm:$src))]>;
 def RELEASE_MOV16mi : I<0, Pseudo, (outs), (ins i16mem:$dst, i16imm:$src),
-			"#RELEASE_MOV16mi PSEUDO!",
-			[(atomic_store_16 addr:$dst, (i16 imm:$src))]>;
+            "#RELEASE_MOV16mi PSEUDO!",
+            [(atomic_store_16 addr:$dst, (i16 imm:$src))]>;
 def RELEASE_MOV32mi : I<0, Pseudo, (outs), (ins i32mem:$dst, i32imm:$src),
-			"#RELEASE_MOV32mi PSEUDO!",
-			[(atomic_store_32 addr:$dst, (i32 imm:$src))]>;
+            "#RELEASE_MOV32mi PSEUDO!",
+            [(atomic_store_32 addr:$dst, (i32 imm:$src))]>;
 def RELEASE_MOV64mi32 : I<0, Pseudo, (outs), (ins i64mem:$dst, i64i32imm:$src),
-			"#RELEASE_MOV64mi32 PSEUDO!",
-			[(atomic_store_64 addr:$dst, i64immSExt32:$src)]>;
+            "#RELEASE_MOV64mi32 PSEUDO!",
+            [(atomic_store_64 addr:$dst, i64immSExt32:$src)]>;
 
 def RELEASE_MOV8mr  : I<0, Pseudo, (outs), (ins i8mem :$dst, GR8 :$src),
                         "#RELEASE_MOV8mr PSEUDO!",

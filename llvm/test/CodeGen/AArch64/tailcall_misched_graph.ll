@@ -26,15 +26,15 @@ declare void @callee2(i8*, i8*, i8*, i8*, i8*,
 ; CHECK:  fi#-2: {{.*}} fixed, at location [SP+8]
 ; CHECK:  fi#-1: {{.*}} fixed, at location [SP]
 
-; CHECK:  [[VRA:%.*]]<def> = LDRXui <fi#-1>
-; CHECK:  [[VRB:%.*]]<def> = LDRXui <fi#-2>
+; CHECK:  [[VRA:%.*]]:gpr64 = LDRXui <fi#-1>
+; CHECK:  [[VRB:%.*]]:gpr64 = LDRXui <fi#-2>
 ; CHECK:  STRXui %{{.*}}, <fi#-4>
 ; CHECK:  STRXui [[VRB]], <fi#-3>
 
 ; Make sure that there is an dependence edge between fi#-2 and fi#-4.
 ; Without this edge the scheduler would be free to move the store accross the load.
 
-; CHECK: SU({{.*}}):   [[VRB]]<def> = LDRXui <fi#-2>
+; CHECK: SU({{.*}}):   [[VRB]]:gpr64 = LDRXui <fi#-2>
 ; CHECK-NOT: SU
 ; CHECK:  Successors:
 ; CHECK:   SU([[DEPSTOREB:.*]]): Ord  Latency=0

@@ -129,9 +129,9 @@ static bool canBeFeederToNewValueJump(const HexagonInstrInfo *QII,
   // using -- if (QRI->isSubRegister(feederReg, cmpReg1) logic
   // before the callsite of this function
   // But we can not as it comes in the following fashion.
-  //    %d0<def> = Hexagon_S2_lsr_r_p %d0<kill>, %r2<kill>
-  //    %r0<def> = KILL %r0, %d0<imp-use,kill>
-  //    %p0<def> = CMPEQri %r0<kill>, 0
+  //    %d0 = Hexagon_S2_lsr_r_p killed %d0, killed %r2
+  //    %r0 = KILL %r0, implicit killed %d0
+  //    %p0 = CMPEQri killed %r0, 0
   // Hence, we need to check if it's a KILL instruction.
   if (II->getOpcode() == TargetOpcode::KILL)
     return false;
@@ -196,9 +196,9 @@ static bool commonChecksToProhibitNewValueJump(bool afterRA,
     // to new value jump. If they are in the path, bail out.
     // KILL sets kill flag on the opcode. It also sets up a
     // single register, out of pair.
-    //    %d0<def> = S2_lsr_r_p %d0<kill>, %r2<kill>
-    //    %r0<def> = KILL %r0, %d0<imp-use,kill>
-    //    %p0<def> = C2_cmpeqi %r0<kill>, 0
+    //    %d0 = S2_lsr_r_p killed %d0, killed %r2
+    //    %r0 = KILL %r0, implicit killed %d0
+    //    %p0 = C2_cmpeqi killed %r0, 0
     // PHI can be anything after RA.
     // COPY can remateriaze things in between feeder, compare and nvj.
     if (MII->getOpcode() == TargetOpcode::KILL ||

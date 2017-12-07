@@ -7,7 +7,7 @@ define <4 x i32> @trunc4(<4 x i64> %A) nounwind {
 ; X32:       # %bb.0:
 ; X32-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,2,2,3,4,6,6,7]
 ; X32-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; X32-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
+; X32-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
@@ -15,7 +15,7 @@ define <4 x i32> @trunc4(<4 x i64> %A) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,2,2,3,4,6,6,7]
 ; X64-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; X64-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
+; X64-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
   %B = trunc <4 x i64> %A to <4 x i32>
@@ -27,7 +27,7 @@ define <8 x i16> @trunc8(<8 x i32> %A) nounwind {
 ; X32:       # %bb.0:
 ; X32-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
 ; X32-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; X32-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
+; X32-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
@@ -35,7 +35,7 @@ define <8 x i16> @trunc8(<8 x i32> %A) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
 ; X64-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; X64-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
+; X64-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
   %B = trunc <8 x i32> %A to <8 x i16>

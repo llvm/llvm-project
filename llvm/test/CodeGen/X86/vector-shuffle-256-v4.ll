@@ -1295,21 +1295,21 @@ define <4 x i64> @insert_mem_and_zero_v4i64(i64* %ptr) {
 define <4 x double> @insert_reg_and_zero_v4f64(double %a) {
 ; AVX1-LABEL: insert_reg_and_zero_v4f64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<def>
+; AVX1-NEXT:    # kill: def %xmm0 killed %xmm0 def %ymm0
 ; AVX1-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: insert_reg_and_zero_v4f64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<def>
+; AVX2-NEXT:    # kill: def %xmm0 killed %xmm0 def %ymm0
 ; AVX2-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3]
 ; AVX2-NEXT:    retq
 ;
 ; AVX512VL-LABEL: insert_reg_and_zero_v4f64:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<def>
+; AVX512VL-NEXT:    # kill: def %xmm0 killed %xmm0 def %ymm0
 ; AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; AVX512VL-NEXT:    retq

@@ -623,10 +623,10 @@ bool MachineCSE::ProcessBlock(MachineBasicBlock *MBB) {
       // Go through implicit defs of CSMI and MI, and clear the kill flags on
       // their uses in all the instructions between CSMI and MI.
       // We might have made some of the kill flags redundant, consider:
-      //   subs  ... %nzcv<imp-def>        <- CSMI
-      //   csinc ... %nzcv<imp-use,kill>   <- this kill flag isn't valid anymore
-      //   subs  ... %nzcv<imp-def>        <- MI, to be eliminated
-      //   csinc ... %nzcv<imp-use,kill>
+      //   subs  ... implicit-def %nzcv    <- CSMI
+      //   csinc ... implicit killed %nzcv <- this kill flag isn't valid anymore
+      //   subs  ... implicit-def %nzcv    <- MI, to be eliminated
+      //   csinc ... implicit killed %nzcv
       // Since we eliminated MI, and reused a register imp-def'd by CSMI
       // (here %nzcv), that register, if it was killed before MI, should have
       // that kill flag removed, because it's lifetime was extended.

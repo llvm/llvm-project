@@ -191,15 +191,15 @@ bool FixupBWInstPass::runOnMachineFunction(MachineFunction &MF) {
 ///   %bb.2: derived from LLVM BB %if.then
 ///   Live Ins: %rdi
 ///   Predecessors according to CFG: %bb.0
-///   %ax<def> = MOV16rm %rdi<kill>, 1, %noreg, 0, %noreg, %eax<imp-def>;
+///   %ax = MOV16rm killed %rdi, 1, %noreg, 0, %noreg, implicit-def %eax;
 ///   mem:LD2[%p]
-///                                             No %eax<imp-use>
+///                                             No implicit %eax
 ///   Successors according to CFG: %bb.3(?%)
 ///
 ///   %bb.3: derived from LLVM BB %if.end
 ///   Live Ins: %eax                            Only %ax is actually live
 ///   Predecessors according to CFG: %bb.2 %bb.1
-///   %ax<def> = KILL %ax, %eax<imp-use,kill>
+///   %ax = KILL %ax, implicit killed %eax
 ///   RET 0, %ax
 static bool isLive(const MachineInstr &MI,
                    const LivePhysRegs &LiveRegs,

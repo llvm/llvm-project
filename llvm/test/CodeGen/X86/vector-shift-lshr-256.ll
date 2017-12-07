@@ -272,10 +272,10 @@ define <16 x i16> @var_shift_v16i16(<16 x i16> %a, <16 x i16> %b) nounwind {
 ;
 ; AVX512BW-LABEL: var_shift_v16i16:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    # kill: %ymm1<def> %ymm1<kill> %zmm1<def>
-; AVX512BW-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; AVX512BW-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; AVX512BW-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; AVX512BW-NEXT:    vpsrlvw %zmm1, %zmm0, %zmm0
-; AVX512BW-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
+; AVX512BW-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512DQVL-LABEL: var_shift_v16i16:
@@ -1091,10 +1091,10 @@ define <16 x i16> @constant_shift_v16i16(<16 x i16> %a) nounwind {
 ;
 ; AVX512BW-LABEL: constant_shift_v16i16:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; AVX512BW-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm1 = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
 ; AVX512BW-NEXT:    vpsrlvw %zmm1, %zmm0, %zmm0
-; AVX512BW-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
+; AVX512BW-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512DQVL-LABEL: constant_shift_v16i16:

@@ -85,7 +85,7 @@ define float @test7(<16 x float> %x, i32 %ind) nounwind {
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    andq $-64, %rsp
 ; CHECK-NEXT:    subq $128, %rsp
-; CHECK-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
+; CHECK-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; CHECK-NEXT:    vmovaps %zmm0, (%rsp)
 ; CHECK-NEXT:    andl $15, %edi
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -104,7 +104,7 @@ define double @test8(<8 x double> %x, i32 %ind) nounwind {
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    andq $-64, %rsp
 ; CHECK-NEXT:    subq $128, %rsp
-; CHECK-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
+; CHECK-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; CHECK-NEXT:    vmovaps %zmm0, (%rsp)
 ; CHECK-NEXT:    andl $7, %edi
 ; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
@@ -123,7 +123,7 @@ define float @test9(<8 x float> %x, i32 %ind) nounwind {
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    andq $-32, %rsp
 ; CHECK-NEXT:    subq $64, %rsp
-; CHECK-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
+; CHECK-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; CHECK-NEXT:    vmovaps %ymm0, (%rsp)
 ; CHECK-NEXT:    andl $7, %edi
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -142,7 +142,7 @@ define i32 @test10(<16 x i32> %x, i32 %ind) nounwind {
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    andq $-64, %rsp
 ; CHECK-NEXT:    subq $128, %rsp
-; CHECK-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
+; CHECK-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; CHECK-NEXT:    vmovaps %zmm0, (%rsp)
 ; CHECK-NEXT:    andl $15, %edi
 ; CHECK-NEXT:    movl (%rsp,%rdi,4), %eax
@@ -237,7 +237,7 @@ define i16 @test13(i32 %a, i32 %b) {
 ; KNL-NEXT:    kmovw %eax, %k1
 ; KNL-NEXT:    korw %k1, %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
+; KNL-NEXT:    ## kill: def %ax killed %ax killed %eax
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test13:
@@ -252,7 +252,7 @@ define i16 @test13(i32 %a, i32 %b) {
 ; SKX-NEXT:    kmovw %eax, %k1
 ; SKX-NEXT:    korw %k1, %k0, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
-; SKX-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
+; SKX-NEXT:    ## kill: def %ax killed %ax killed %eax
 ; SKX-NEXT:    retq
   %cmp_res = icmp ult i32 %a, %b
   %maskv = insertelement <16 x i1> <i1 true, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i1 %cmp_res, i32 0
@@ -318,7 +318,7 @@ define i16 @test16(i1 *%addr, i16 %a) {
 ; KNL-NEXT:    vpslld $31, %zmm2, %zmm0
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
+; KNL-NEXT:    ## kill: def %ax killed %ax killed %eax
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
 ;
@@ -332,7 +332,7 @@ define i16 @test16(i1 *%addr, i16 %a) {
 ; SKX-NEXT:    vpermi2d %zmm0, %zmm1, %zmm2
 ; SKX-NEXT:    vpmovd2m %zmm2, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
-; SKX-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
+; SKX-NEXT:    ## kill: def %ax killed %ax killed %eax
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %x = load i1 , i1 * %addr, align 128
@@ -355,7 +355,7 @@ define i8 @test17(i1 *%addr, i8 %a) {
 ; KNL-NEXT:    vpsllq $63, %zmm2, %zmm0
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
+; KNL-NEXT:    ## kill: def %al killed %al killed %eax
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
 ;
@@ -369,7 +369,7 @@ define i8 @test17(i1 *%addr, i8 %a) {
 ; SKX-NEXT:    vpermi2q %zmm0, %zmm1, %zmm2
 ; SKX-NEXT:    vpmovq2m %zmm2, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
-; SKX-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
+; SKX-NEXT:    ## kill: def %al killed %al killed %eax
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %x = load i1 , i1 * %addr, align 128
@@ -465,7 +465,7 @@ define i16 @extract_v32i16(<32 x i16> %x, i16* %dst) {
 ; CHECK-NEXT:    vpextrw $1, %xmm0, %eax
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; CHECK-NEXT:    vpextrw $1, %xmm0, (%rdi)
-; CHECK-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %ax killed %ax killed %eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %r1 = extractelement <32 x i16> %x, i32 1
@@ -480,7 +480,7 @@ define i16 @extract_v16i16(<16 x i16> %x, i16* %dst) {
 ; CHECK-NEXT:    vpextrw $1, %xmm0, %eax
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; CHECK-NEXT:    vpextrw $1, %xmm0, (%rdi)
-; CHECK-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %ax killed %ax killed %eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %r1 = extractelement <16 x i16> %x, i32 1
@@ -494,7 +494,7 @@ define i16 @extract_v8i16(<8 x i16> %x, i16* %dst) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpextrw $1, %xmm0, %eax
 ; CHECK-NEXT:    vpextrw $3, %xmm0, (%rdi)
-; CHECK-NEXT:    ## kill: %ax<def> %ax<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %ax killed %ax killed %eax
 ; CHECK-NEXT:    retq
   %r1 = extractelement <8 x i16> %x, i32 1
   %r2 = extractelement <8 x i16> %x, i32 3
@@ -508,7 +508,7 @@ define i8 @extract_v64i8(<64 x i8> %x, i8* %dst) {
 ; CHECK-NEXT:    vpextrb $1, %xmm0, %eax
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; CHECK-NEXT:    vpextrb $1, %xmm0, (%rdi)
-; CHECK-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %al killed %al killed %eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %r1 = extractelement <64 x i8> %x, i32 1
@@ -523,7 +523,7 @@ define i8 @extract_v32i8(<32 x i8> %x, i8* %dst) {
 ; CHECK-NEXT:    vpextrb $1, %xmm0, %eax
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; CHECK-NEXT:    vpextrb $1, %xmm0, (%rdi)
-; CHECK-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %al killed %al killed %eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %r1 = extractelement <32 x i8> %x, i32 1
@@ -537,7 +537,7 @@ define i8 @extract_v16i8(<16 x i8> %x, i8* %dst) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpextrb $1, %xmm0, %eax
 ; CHECK-NEXT:    vpextrb $3, %xmm0, (%rdi)
-; CHECK-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %al killed %al killed %eax
 ; CHECK-NEXT:    retq
   %r1 = extractelement <16 x i8> %x, i32 1
   %r2 = extractelement <16 x i8> %x, i32 3
@@ -1013,7 +1013,7 @@ define i8 @test_iinsertelement_v4i1(i32 %a, i32 %b, <4 x i32> %x , <4 x i32> %y)
 ; KNL-NEXT:    vpsllq $63, %zmm2, %zmm0
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
+; KNL-NEXT:    ## kill: def %al killed %al killed %eax
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
 ;
@@ -1029,7 +1029,7 @@ define i8 @test_iinsertelement_v4i1(i32 %a, i32 %b, <4 x i32> %x , <4 x i32> %y)
 ; SKX-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2],xmm0[3]
 ; SKX-NEXT:    vpmovd2m %xmm0, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
-; SKX-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
+; SKX-NEXT:    ## kill: def %al killed %al killed %eax
 ; SKX-NEXT:    retq
   %cmp_res_i1 = icmp ult i32 %a, %b
   %cmp_cmp_vec = icmp ult <4 x i32> %x, %y
@@ -1058,7 +1058,7 @@ define i8 @test_iinsertelement_v2i1(i32 %a, i32 %b, <2 x i64> %x , <2 x i64> %y)
 ; KNL-NEXT:    vpsllq $63, %zmm2, %zmm0
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
+; KNL-NEXT:    ## kill: def %al killed %al killed %eax
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
 ;
@@ -1073,7 +1073,7 @@ define i8 @test_iinsertelement_v2i1(i32 %a, i32 %b, <2 x i64> %x , <2 x i64> %y)
 ; SKX-NEXT:    kshiftrw $1, %k0, %k0
 ; SKX-NEXT:    korw %k1, %k0, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
-; SKX-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
+; SKX-NEXT:    ## kill: def %al killed %al killed %eax
 ; SKX-NEXT:    retq
   %cmp_res_i1 = icmp ult i32 %a, %b
   %cmp_cmp_vec = icmp ult <2 x i64> %x, %y
@@ -1268,7 +1268,7 @@ define zeroext i8 @extractelement_v64i1_alt(<64 x i8> %a, <64 x i8> %b) {
 define i64 @test_extractelement_variable_v2i64(<2 x i64> %t1, i32 %index) {
 ; CHECK-LABEL: test_extractelement_variable_v2i64:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
+; CHECK-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; CHECK-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    movq -24(%rsp,%rdi,8), %rax
@@ -1287,7 +1287,7 @@ define i64 @test_extractelement_variable_v4i64(<4 x i64> %t1, i32 %index) {
 ; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    andq $-32, %rsp
 ; CHECK-NEXT:    subq $64, %rsp
-; CHECK-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
+; CHECK-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; CHECK-NEXT:    vmovaps %ymm0, (%rsp)
 ; CHECK-NEXT:    andl $3, %edi
 ; CHECK-NEXT:    movq (%rsp,%rdi,8), %rax
@@ -1309,7 +1309,7 @@ define i64 @test_extractelement_variable_v8i64(<8 x i64> %t1, i32 %index) {
 ; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    andq $-64, %rsp
 ; CHECK-NEXT:    subq $128, %rsp
-; CHECK-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
+; CHECK-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; CHECK-NEXT:    vmovaps %zmm0, (%rsp)
 ; CHECK-NEXT:    andl $7, %edi
 ; CHECK-NEXT:    movq (%rsp,%rdi,8), %rax
@@ -1324,7 +1324,7 @@ define i64 @test_extractelement_variable_v8i64(<8 x i64> %t1, i32 %index) {
 define double @test_extractelement_variable_v2f64(<2 x double> %t1, i32 %index) {
 ; CHECK-LABEL: test_extractelement_variable_v2f64:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
+; CHECK-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; CHECK-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
@@ -1343,7 +1343,7 @@ define double @test_extractelement_variable_v4f64(<4 x double> %t1, i32 %index) 
 ; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    andq $-32, %rsp
 ; CHECK-NEXT:    subq $64, %rsp
-; CHECK-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
+; CHECK-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; CHECK-NEXT:    vmovaps %ymm0, (%rsp)
 ; CHECK-NEXT:    andl $3, %edi
 ; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
@@ -1365,7 +1365,7 @@ define double @test_extractelement_variable_v8f64(<8 x double> %t1, i32 %index) 
 ; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    andq $-64, %rsp
 ; CHECK-NEXT:    subq $128, %rsp
-; CHECK-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
+; CHECK-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; CHECK-NEXT:    vmovaps %zmm0, (%rsp)
 ; CHECK-NEXT:    andl $7, %edi
 ; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
@@ -1380,7 +1380,7 @@ define double @test_extractelement_variable_v8f64(<8 x double> %t1, i32 %index) 
 define i32 @test_extractelement_variable_v4i32(<4 x i32> %t1, i32 %index) {
 ; CHECK-LABEL: test_extractelement_variable_v4i32:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
+; CHECK-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; CHECK-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    andl $3, %edi
 ; CHECK-NEXT:    movl -24(%rsp,%rdi,4), %eax
@@ -1399,7 +1399,7 @@ define i32 @test_extractelement_variable_v8i32(<8 x i32> %t1, i32 %index) {
 ; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    andq $-32, %rsp
 ; CHECK-NEXT:    subq $64, %rsp
-; CHECK-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
+; CHECK-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; CHECK-NEXT:    vmovaps %ymm0, (%rsp)
 ; CHECK-NEXT:    andl $7, %edi
 ; CHECK-NEXT:    movl (%rsp,%rdi,4), %eax
@@ -1421,7 +1421,7 @@ define i32 @test_extractelement_variable_v16i32(<16 x i32> %t1, i32 %index) {
 ; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    andq $-64, %rsp
 ; CHECK-NEXT:    subq $128, %rsp
-; CHECK-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
+; CHECK-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; CHECK-NEXT:    vmovaps %zmm0, (%rsp)
 ; CHECK-NEXT:    andl $15, %edi
 ; CHECK-NEXT:    movl (%rsp,%rdi,4), %eax
@@ -1436,7 +1436,7 @@ define i32 @test_extractelement_variable_v16i32(<16 x i32> %t1, i32 %index) {
 define float @test_extractelement_variable_v4f32(<4 x float> %t1, i32 %index) {
 ; CHECK-LABEL: test_extractelement_variable_v4f32:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
+; CHECK-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; CHECK-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    andl $3, %edi
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -1455,7 +1455,7 @@ define float @test_extractelement_variable_v8f32(<8 x float> %t1, i32 %index) {
 ; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    andq $-32, %rsp
 ; CHECK-NEXT:    subq $64, %rsp
-; CHECK-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
+; CHECK-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; CHECK-NEXT:    vmovaps %ymm0, (%rsp)
 ; CHECK-NEXT:    andl $7, %edi
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -1477,7 +1477,7 @@ define float @test_extractelement_variable_v16f32(<16 x float> %t1, i32 %index) 
 ; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    andq $-64, %rsp
 ; CHECK-NEXT:    subq $128, %rsp
-; CHECK-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
+; CHECK-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; CHECK-NEXT:    vmovaps %zmm0, (%rsp)
 ; CHECK-NEXT:    andl $15, %edi
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -1492,7 +1492,7 @@ define float @test_extractelement_variable_v16f32(<16 x float> %t1, i32 %index) 
 define i16 @test_extractelement_variable_v8i16(<8 x i16> %t1, i32 %index) {
 ; CHECK-LABEL: test_extractelement_variable_v8i16:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
+; CHECK-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; CHECK-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    andl $7, %edi
 ; CHECK-NEXT:    movzwl -24(%rsp,%rdi,2), %eax
@@ -1511,7 +1511,7 @@ define i16 @test_extractelement_variable_v16i16(<16 x i16> %t1, i32 %index) {
 ; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    andq $-32, %rsp
 ; CHECK-NEXT:    subq $64, %rsp
-; CHECK-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
+; CHECK-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; CHECK-NEXT:    vmovaps %ymm0, (%rsp)
 ; CHECK-NEXT:    andl $15, %edi
 ; CHECK-NEXT:    movzwl (%rsp,%rdi,2), %eax
@@ -1533,7 +1533,7 @@ define i16 @test_extractelement_variable_v32i16(<32 x i16> %t1, i32 %index) {
 ; KNL-NEXT:    .cfi_def_cfa_register %rbp
 ; KNL-NEXT:    andq $-64, %rsp
 ; KNL-NEXT:    subq $128, %rsp
-; KNL-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
+; KNL-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; KNL-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
 ; KNL-NEXT:    vmovaps %ymm0, (%rsp)
 ; KNL-NEXT:    andl $31, %edi
@@ -1552,7 +1552,7 @@ define i16 @test_extractelement_variable_v32i16(<32 x i16> %t1, i32 %index) {
 ; SKX-NEXT:    .cfi_def_cfa_register %rbp
 ; SKX-NEXT:    andq $-64, %rsp
 ; SKX-NEXT:    subq $128, %rsp
-; SKX-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
+; SKX-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; SKX-NEXT:    vmovaps %zmm0, (%rsp)
 ; SKX-NEXT:    andl $31, %edi
 ; SKX-NEXT:    movzwl (%rsp,%rdi,2), %eax
@@ -1567,7 +1567,7 @@ define i16 @test_extractelement_variable_v32i16(<32 x i16> %t1, i32 %index) {
 define i8 @test_extractelement_variable_v16i8(<16 x i8> %t1, i32 %index) {
 ; CHECK-LABEL: test_extractelement_variable_v16i8:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
+; CHECK-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; CHECK-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    andl $15, %edi
 ; CHECK-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
@@ -1587,7 +1587,7 @@ define i8 @test_extractelement_variable_v32i8(<32 x i8> %t1, i32 %index) {
 ; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    andq $-32, %rsp
 ; CHECK-NEXT:    subq $64, %rsp
-; CHECK-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
+; CHECK-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; CHECK-NEXT:    vmovaps %ymm0, (%rsp)
 ; CHECK-NEXT:    andl $31, %edi
 ; CHECK-NEXT:    movq %rsp, %rax
@@ -1611,7 +1611,7 @@ define i8 @test_extractelement_variable_v64i8(<64 x i8> %t1, i32 %index) {
 ; KNL-NEXT:    .cfi_def_cfa_register %rbp
 ; KNL-NEXT:    andq $-64, %rsp
 ; KNL-NEXT:    subq $128, %rsp
-; KNL-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
+; KNL-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; KNL-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
 ; KNL-NEXT:    vmovaps %ymm0, (%rsp)
 ; KNL-NEXT:    andl $63, %edi
@@ -1631,7 +1631,7 @@ define i8 @test_extractelement_variable_v64i8(<64 x i8> %t1, i32 %index) {
 ; SKX-NEXT:    .cfi_def_cfa_register %rbp
 ; SKX-NEXT:    andq $-64, %rsp
 ; SKX-NEXT:    subq $128, %rsp
-; SKX-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
+; SKX-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; SKX-NEXT:    vmovaps %zmm0, (%rsp)
 ; SKX-NEXT:    andl $63, %edi
 ; SKX-NEXT:    movq %rsp, %rax
@@ -1695,7 +1695,7 @@ define i8 @test_extractelement_variable_v64i8_indexi8(<64 x i8> %t1, i8 %index) 
 define zeroext i8 @test_extractelement_varible_v2i1(<2 x i64> %a, <2 x i64> %b, i32 %index) {
 ; KNL-LABEL: test_extractelement_varible_v2i1:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
+; KNL-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; KNL-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
 ; KNL-NEXT:    vpxor %xmm2, %xmm1, %xmm1
 ; KNL-NEXT:    vpxor %xmm2, %xmm0, %xmm0
@@ -1708,7 +1708,7 @@ define zeroext i8 @test_extractelement_varible_v2i1(<2 x i64> %a, <2 x i64> %b, 
 ;
 ; SKX-LABEL: test_extractelement_varible_v2i1:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
+; SKX-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; SKX-NEXT:    vpcmpnleuq %xmm1, %xmm0, %k0
 ; SKX-NEXT:    vpmovm2q %k0, %xmm0
 ; SKX-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
@@ -1725,7 +1725,7 @@ define zeroext i8 @test_extractelement_varible_v2i1(<2 x i64> %a, <2 x i64> %b, 
 define zeroext i8 @test_extractelement_varible_v4i1(<4 x i32> %a, <4 x i32> %b, i32 %index) {
 ; KNL-LABEL: test_extractelement_varible_v4i1:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
+; KNL-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; KNL-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
 ; KNL-NEXT:    vpxor %xmm2, %xmm1, %xmm1
 ; KNL-NEXT:    vpxor %xmm2, %xmm0, %xmm0
@@ -1738,7 +1738,7 @@ define zeroext i8 @test_extractelement_varible_v4i1(<4 x i32> %a, <4 x i32> %b, 
 ;
 ; SKX-LABEL: test_extractelement_varible_v4i1:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
+; SKX-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; SKX-NEXT:    vpcmpnleud %xmm1, %xmm0, %k0
 ; SKX-NEXT:    vpmovm2d %k0, %xmm0
 ; SKX-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
@@ -1762,9 +1762,9 @@ define zeroext i8 @test_extractelement_varible_v8i1(<8 x i32> %a, <8 x i32> %b, 
 ; KNL-NEXT:    .cfi_def_cfa_register %rbp
 ; KNL-NEXT:    andq $-64, %rsp
 ; KNL-NEXT:    subq $128, %rsp
-; KNL-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
-; KNL-NEXT:    ## kill: %ymm1<def> %ymm1<kill> %zmm1<def>
-; KNL-NEXT:    ## kill: %ymm0<def> %ymm0<kill> %zmm0<def>
+; KNL-NEXT:    ## kill: def %edi killed %edi def %rdi
+; KNL-NEXT:    ## kill: def %ymm1 killed %ymm1 def %zmm1
+; KNL-NEXT:    ## kill: def %ymm0 killed %ymm0 def %zmm0
 ; KNL-NEXT:    vpcmpnleud %zmm1, %zmm0, %k1
 ; KNL-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; KNL-NEXT:    vmovdqa64 %zmm0, (%rsp)
@@ -1785,7 +1785,7 @@ define zeroext i8 @test_extractelement_varible_v8i1(<8 x i32> %a, <8 x i32> %b, 
 ; SKX-NEXT:    .cfi_def_cfa_register %rbp
 ; SKX-NEXT:    andq $-64, %rsp
 ; SKX-NEXT:    subq $128, %rsp
-; SKX-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
+; SKX-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; SKX-NEXT:    vpcmpnleud %ymm1, %ymm0, %k0
 ; SKX-NEXT:    vpmovm2q %k0, %zmm0
 ; SKX-NEXT:    vmovdqa64 %zmm0, (%rsp)
@@ -1812,7 +1812,7 @@ define zeroext i8 @test_extractelement_varible_v16i1(<16 x i32> %a, <16 x i32> %
 ; KNL-NEXT:    .cfi_def_cfa_register %rbp
 ; KNL-NEXT:    andq $-64, %rsp
 ; KNL-NEXT:    subq $128, %rsp
-; KNL-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
+; KNL-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; KNL-NEXT:    vpcmpnleud %zmm1, %zmm0, %k1
 ; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; KNL-NEXT:    vmovdqa32 %zmm0, (%rsp)
@@ -1833,7 +1833,7 @@ define zeroext i8 @test_extractelement_varible_v16i1(<16 x i32> %a, <16 x i32> %
 ; SKX-NEXT:    .cfi_def_cfa_register %rbp
 ; SKX-NEXT:    andq $-64, %rsp
 ; SKX-NEXT:    subq $128, %rsp
-; SKX-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
+; SKX-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; SKX-NEXT:    vpcmpnleud %zmm1, %zmm0, %k0
 ; SKX-NEXT:    vpmovm2d %k0, %zmm0
 ; SKX-NEXT:    vmovdqa32 %zmm0, (%rsp)
@@ -1860,7 +1860,7 @@ define zeroext i8 @test_extractelement_varible_v32i1(<32 x i8> %a, <32 x i8> %b,
 ; KNL-NEXT:    .cfi_def_cfa_register %rbp
 ; KNL-NEXT:    andq $-32, %rsp
 ; KNL-NEXT:    subq $64, %rsp
-; KNL-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
+; KNL-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; KNL-NEXT:    vmovdqa {{.*#+}} ymm2 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
 ; KNL-NEXT:    vpxor %ymm2, %ymm1, %ymm1
 ; KNL-NEXT:    vpxor %ymm2, %ymm0, %ymm0
@@ -1884,7 +1884,7 @@ define zeroext i8 @test_extractelement_varible_v32i1(<32 x i8> %a, <32 x i8> %b,
 ; SKX-NEXT:    .cfi_def_cfa_register %rbp
 ; SKX-NEXT:    andq $-64, %rsp
 ; SKX-NEXT:    subq $128, %rsp
-; SKX-NEXT:    ## kill: %edi<def> %edi<kill> %rdi<def>
+; SKX-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; SKX-NEXT:    vpcmpnleub %ymm1, %ymm0, %k0
 ; SKX-NEXT:    vpmovm2w %k0, %zmm0
 ; SKX-NEXT:    vmovdqa32 %zmm0, (%rsp)

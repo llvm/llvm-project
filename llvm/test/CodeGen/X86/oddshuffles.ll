@@ -30,7 +30,7 @@ define void @v3i64(<2 x i64> %a, <2 x i64> %b, <3 x i64>* %p) nounwind {
 ;
 ; AVX2-LABEL: v3i64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<def>
+; AVX2-NEXT:    # kill: def %xmm0 killed %xmm0 def %ymm0
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,2,1,3]
 ; AVX2-NEXT:    vpextrq $1, %xmm0, 16(%rdi)
@@ -65,7 +65,7 @@ define void @v3f64(<2 x double> %a, <2 x double> %b, <3 x double>* %p) nounwind 
 ;
 ; AVX2-LABEL: v3f64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<def>
+; AVX2-NEXT:    # kill: def %xmm0 killed %xmm0 def %ymm0
 ; AVX2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
 ; AVX2-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[0,2,1,3]
 ; AVX2-NEXT:    vmovhpd %xmm0, 16(%rdi)
@@ -205,7 +205,7 @@ define void @v5i32(<4 x i32> %a, <4 x i32> %b, <5 x i32>* %p) nounwind {
 ;
 ; AVX2-LABEL: v5i32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<def>
+; AVX2-NEXT:    # kill: def %xmm0 killed %xmm0 def %ymm0
 ; AVX2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
 ; AVX2-NEXT:    vmovaps {{.*#+}} ymm2 = <0,5,1,6,3,u,u,u>
 ; AVX2-NEXT:    vpermps %ymm1, %ymm2, %ymm1
@@ -255,7 +255,7 @@ define void @v5f32(<4 x float> %a, <4 x float> %b, <5 x float>* %p) nounwind {
 ;
 ; AVX2-LABEL: v5f32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<def>
+; AVX2-NEXT:    # kill: def %xmm0 killed %xmm0 def %ymm0
 ; AVX2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
 ; AVX2-NEXT:    vmovaps {{.*#+}} ymm2 = <0,5,1,6,3,u,u,u>
 ; AVX2-NEXT:    vpermps %ymm1, %ymm2, %ymm1
@@ -421,7 +421,7 @@ define void @v7i32(<4 x i32> %a, <4 x i32> %b, <7 x i32>* %p) nounwind {
 ;
 ; AVX2-LABEL: v7i32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<def>
+; AVX2-NEXT:    # kill: def %xmm0 killed %xmm0 def %ymm0
 ; AVX2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vmovaps {{.*#+}} ymm2 = <0,6,3,6,1,7,4,u>
 ; AVX2-NEXT:    vpermps %ymm0, %ymm2, %ymm0
@@ -1697,7 +1697,7 @@ define <2 x double> @wrongorder(<4 x double> %A, <8 x double>* %P) #0 {
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm1
 ; AVX1-NEXT:    vmovaps %ymm1, 32(%rdi)
 ; AVX1-NEXT:    vmovaps %ymm1, (%rdi)
-; AVX1-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
+; AVX1-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -1716,7 +1716,7 @@ define <2 x double> @wrongorder(<4 x double> %A, <8 x double>* %P) #0 {
 ; XOP-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm1
 ; XOP-NEXT:    vmovaps %ymm1, 32(%rdi)
 ; XOP-NEXT:    vmovaps %ymm1, (%rdi)
-; XOP-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
+; XOP-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
 ; XOP-NEXT:    vzeroupper
 ; XOP-NEXT:    retq
   %shuffle = shufflevector <4 x double> %A, <4 x double> %A, <8 x i32> zeroinitializer

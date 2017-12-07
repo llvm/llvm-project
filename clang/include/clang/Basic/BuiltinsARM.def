@@ -36,6 +36,7 @@ BUILTIN(__builtin_arm_smulwt, "iii", "nc")
 // Saturating arithmetic
 BUILTIN(__builtin_arm_qadd, "iii", "nc")
 BUILTIN(__builtin_arm_qsub, "iii", "nc")
+BUILTIN(__builtin_arm_qdbl, "ii", "nc")
 BUILTIN(__builtin_arm_ssat, "iiUi", "nc")
 BUILTIN(__builtin_arm_usat, "UiiUi", "nc")
 

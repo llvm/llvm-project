@@ -111,6 +111,37 @@ HexagonTargetLowering::getIndexInWord32(SDValue Idx, MVT ElemTy,
 }
 
 SDValue
+HexagonTargetLowering::getByteShuffle(const SDLoc &dl, SDValue Op0,
+                                      SDValue Op1, ArrayRef<int> Mask,
+                                      SelectionDAG &DAG) const {
+  MVT OpTy = ty(Op0);
+  assert(OpTy == ty(Op1));
+
+  MVT ElemTy = OpTy.getVectorElementType();
+  if (ElemTy == MVT::i8)
+    return DAG.getVectorShuffle(OpTy, dl, Op0, Op1, Mask);
+  assert(ElemTy.getSizeInBits() >= 8);
+
+  MVT ResTy = tyVector(OpTy, MVT::i8);
+  unsigned ElemSize = ElemTy.getSizeInBits() / 8;
+
+  SmallVector<int,128> ByteMask;
+  for (int M : Mask) {
+    if (M < 0) {
+      for (unsigned I = 0; I != ElemSize; ++I)
+        ByteMask.push_back(-1);
+    } else {
+      int NewM = M*ElemSize;
+      for (unsigned I = 0; I != ElemSize; ++I)
+        ByteMask.push_back(NewM+I);
+    }
+  }
+  assert(ResTy.getVectorNumElements() == ByteMask.size());
+  return DAG.getVectorShuffle(ResTy, dl, opCastElem(Op0, MVT::i8, DAG),
+                              opCastElem(Op1, MVT::i8, DAG), ByteMask);
+}
+
+SDValue
 HexagonTargetLowering::LowerHvxBuildVector(SDValue Op, SelectionDAG &DAG)
       const {
   const SDLoc &dl(Op);
@@ -276,7 +307,7 @@ HexagonTargetLowering::LowerHvxExtractSubvector(SDValue Op, SelectionDAG &DAG)
 SDValue
 HexagonTargetLowering::LowerHvxInsertSubvector(SDValue Op, SelectionDAG &DAG)
       const {
-  // Idx may be variable
+  // Idx may be variable.
   SDValue IdxV = Op.getOperand(2);
   auto *IdxN = dyn_cast<ConstantSDNode>(IdxV.getNode());
   if (!IdxN)
@@ -297,5 +328,58 @@ HexagonTargetLowering::LowerHvxInsertSubvector(SDValue Op, SelectionDAG &DAG)
     return DAG.getTargetInsertSubreg(Hexagon::vsub_lo, dl, DstTy, DstV, SrcV);
   if (Idx == SrcElems)
     return DAG.getTargetInsertSubreg(Hexagon::vsub_hi, dl, DstTy, DstV, SrcV);
+  return SDValue();
+}
+
+SDValue
+HexagonTargetLowering::LowerHvxMul(SDValue Op, SelectionDAG &DAG) const {
+  MVT ResTy = ty(Op);
+  if (!ResTy.isVector())
+    return SDValue();
+  const SDLoc &dl(Op);
+  SmallVector<int,256> ShuffMask;
+
+  MVT ElemTy = ResTy.getVectorElementType();
+  unsigned VecLen = ResTy.getVectorNumElements();
+  SDValue Vs = Op.getOperand(0);
+  SDValue Vt = Op.getOperand(1);
+
+  switch (ElemTy.SimpleTy) {
+    case MVT::i8:
+    case MVT::i16: {
+      // For i8 vectors Vs = (a0, a1, ...), Vt = (b0, b1, ...),
+      // V6_vmpybv Vs, Vt produces a pair of i16 vectors Hi:Lo,
+      // where Lo = (a0*b0, a2*b2, ...), Hi = (a1*b1, a3*b3, ...).
+      // For i16, use V6_vmpyhv, which behaves in an analogous way to
+      // V6_vmpybv: results Lo and Hi are products of even/odd elements
+      // respectively.
+      MVT ExtTy = typeExtElem(ResTy, 2);
+      unsigned MpyOpc = ElemTy == MVT::i8 ? Hexagon::V6_vmpybv
+                                          : Hexagon::V6_vmpyhv;
+      SDValue M = getNode(MpyOpc, dl, ExtTy, {Vs, Vt}, DAG);
+
+      // Discard high halves of the resulting values, collect the low halves.
+      for (unsigned I = 0; I < VecLen; I += 2) {
+        ShuffMask.push_back(I);         // Pick even element.
+        ShuffMask.push_back(I+VecLen);  // Pick odd element.
+      }
+      VectorPair P = opSplit(opCastElem(M, ElemTy, DAG), dl, DAG);
+      return getByteShuffle(dl, P.first, P.second, ShuffMask, DAG);
+    }
+    case MVT::i32: {
+      // Use the following sequence for signed word multiply:
+      // T0 = V6_vmpyiowh Vs, Vt
+      // T1 = V6_vaslw T0, 16
+      // T2 = V6_vmpyiewuh_acc T1, Vs, Vt
+      SDValue S16 = DAG.getConstant(16, dl, MVT::i32);
+      SDValue T0 = getNode(Hexagon::V6_vmpyiowh, dl, ResTy, {Vs, Vt}, DAG);
+      SDValue T1 = getNode(Hexagon::V6_vaslw, dl, ResTy, {T0, S16}, DAG);
+      SDValue T2 = getNode(Hexagon::V6_vmpyiewuh_acc, dl, ResTy,
+                           {T1, Vs, Vt}, DAG);
+      return T2;
+    }
+    default:
+      break;
+  }
   return SDValue();
 }
