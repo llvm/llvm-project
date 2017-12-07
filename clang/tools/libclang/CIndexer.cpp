@@ -93,6 +93,7 @@ StringRef CIndexer::getClangToolchainPath() {
 LibclangInvocationReporter::LibclangInvocationReporter(
     CIndexer &Idx, OperationKind Op, unsigned ParseOptions,
     llvm::ArrayRef<const char *> Args,
+    llvm::ArrayRef<std::string> InvocationArgs,
     llvm::ArrayRef<CXUnsavedFile> UnsavedFiles) {
   StringRef Path = Idx.getInvocationEmissionPath();
   if (Path.empty())
@@ -126,6 +127,14 @@ LibclangInvocationReporter::LibclangInvocationReporter(
     if (I.index())
       OS << ',';
     OS << '"' << I.value() << '"';
+  }
+  if (!InvocationArgs.empty()) {
+    OS << R"(],"invocation-args":[)";
+    for (const auto &I : llvm::enumerate(InvocationArgs)) {
+      if (I.index())
+        OS << ',';
+      OS << '"' << I.value() << '"';
+    }
   }
   if (!UnsavedFiles.empty()) {
     OS << R"(],"unsaved_file_hashes":[)";

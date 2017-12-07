@@ -95,6 +95,7 @@ public:
   LibclangInvocationReporter(CIndexer &Idx, OperationKind Op,
                              unsigned ParseOptions,
                              llvm::ArrayRef<const char *> Args,
+                             llvm::ArrayRef<std::string> InvocationArgs,
                              llvm::ArrayRef<CXUnsavedFile> UnsavedFiles);
   ~LibclangInvocationReporter();
 
