@@ -289,10 +289,14 @@ class TestSwiftStepping(lldbtest.TestBase):
         # get us past any dispatch thunk.
         thread.StepOut()
         stop_on_caller = self.hit_correct_line(thread, "indirect.protocol_func(20)", False)
-        
-        # And one step over is necessary because step out doesn't
+        stop_at_cd_maker = self.hit_correct_line(thread, "var cd_maker", False)
+
+        # In swift-4.0 U before, one step over is necessary because step out doesn't
         # finish off the line.
-        if stop_on_caller:
+        # In swift-4.1 we now step over the line but we also stop on the "var cd_maker"
+        # line, which we didn't with swift-4.0.  So we check for either of these.
+
+        if stop_on_caller or stop_at_cd_maker:
             thread.StepOver()
         self.hit_correct_line(thread, "doSomethingWithFunction(cd_maker, 10)")
 
