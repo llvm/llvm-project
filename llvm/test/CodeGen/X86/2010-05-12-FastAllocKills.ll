@@ -5,24 +5,24 @@ target triple = "x86_64-apple-darwin"
 ; This test causes a virtual FP register to be redefined while it is live:
 ;%bb.5: derived from LLVM BB %bb10
 ;    Predecessors according to CFG: %bb.4 %bb.5
-;	%reg1024<def> = MOV_Fp8080 %reg1034
-;	%reg1025<def> = MUL_Fp80m32 %reg1024, %rip, 1, %reg0, <cp#0>, %reg0; mem:LD4[ConstantPool]
-;	%reg1034<def> = MOV_Fp8080 %reg1025
-;	FP_REG_KILL %fp0<imp-def>, %fp1<imp-def>, %fp2<imp-def>, %fp3<imp-def>, %fp4<imp-def>, %fp5<imp-def>, %fp6<imp-def>
+;	%reg1024 = MOV_Fp8080 %reg1034
+;	%reg1025 = MUL_Fp80m32 %reg1024, %rip, 1, %reg0, <cp#0>, %reg0; mem:LD4[ConstantPool]
+;	%reg1034 = MOV_Fp8080 %reg1025
+;	FP_REG_KILL implicit-def %fp0, implicit-def %fp1, implicit-def %fp2, implicit-def %fp3, implicit-def %fp4, implicit-def %fp5, implicit-def %fp6
 ;	JMP_4 <%bb.5>
 ;    Successors according to CFG: %bb.5
 ;
 ; The X86FP pass needs good kill flags, like on %fp0 representing %reg1034:
 ;%bb.5: derived from LLVM BB %bb10
 ;    Predecessors according to CFG: %bb.4 %bb.5
-;	%fp0<def> = LD_Fp80m <fi#3>, 1, %reg0, 0, %reg0; mem:LD10[FixedStack3](align=4)
-;	%fp1<def> = MOV_Fp8080 %fp0<kill>
-;	%fp2<def> = MUL_Fp80m32 %fp1, %rip, 1, %reg0, <cp#0>, %reg0; mem:LD4[ConstantPool]
-;	%fp0<def> = MOV_Fp8080 %fp2
-;	ST_FpP80m <fi#3>, 1, %reg0, 0, %reg0, %fp0<kill>; mem:ST10[FixedStack3](align=4)
-;	ST_FpP80m <fi#4>, 1, %reg0, 0, %reg0, %fp1<kill>; mem:ST10[FixedStack4](align=4)
-;	ST_FpP80m <fi#5>, 1, %reg0, 0, %reg0, %fp2<kill>; mem:ST10[FixedStack5](align=4)
-;	FP_REG_KILL %fp0<imp-def>, %fp1<imp-def>, %fp2<imp-def>, %fp3<imp-def>, %fp4<imp-def>, %fp5<imp-def>, %fp6<imp-def>
+;	%fp0 = LD_Fp80m <fi#3>, 1, %reg0, 0, %reg0; mem:LD10[FixedStack3](align=4)
+;	%fp1 = MOV_Fp8080 killed %fp0
+;	%fp2 = MUL_Fp80m32 %fp1, %rip, 1, %reg0, <cp#0>, %reg0; mem:LD4[ConstantPool]
+;	%fp0 = MOV_Fp8080 %fp2
+;	ST_FpP80m <fi#3>, 1, %reg0, 0, %reg0, killed %fp0; mem:ST10[FixedStack3](align=4)
+;	ST_FpP80m <fi#4>, 1, %reg0, 0, %reg0, killed %fp1; mem:ST10[FixedStack4](align=4)
+;	ST_FpP80m <fi#5>, 1, %reg0, 0, %reg0, killed %fp2; mem:ST10[FixedStack5](align=4)
+;	FP_REG_KILL implicit-def %fp0, implicit-def %fp1, implicit-def %fp2, implicit-def %fp3, implicit-def %fp4, implicit-def %fp5, implicit-def %fp6
 ;	JMP_4 <%bb.5>
 ;    Successors according to CFG: %bb.5
 

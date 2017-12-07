@@ -29,22 +29,16 @@ entry:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         ReturnType:      I32
 ; CHECK-NEXT:         ParamTypes:      
-; CHECK-NEXT:   - Type:            IMPORT
-; CHECK-NEXT:     Imports:
-; CHECK-NEXT:       - Module:          env
-; CHECK-NEXT:         Field:           __linear_memory
-; CHECK-NEXT:         Kind:            MEMORY
-; CHECK-NEXT:         Memory:
-; CHECK-NEXT:           Initial:         0x00000001
-; CHECK-NEXT:       - Module:          env
-; CHECK-NEXT:         Field:           __indirect_function_table
-; CHECK-NEXT:         Kind:            TABLE
-; CHECK-NEXT:         Table:
-; CHECK-NEXT:           ElemType:        ANYFUNC
-; CHECK-NEXT:           Limits:
-; CHECK-NEXT:             Initial:         0x00000000
 ; CHECK-NEXT:   - Type:            FUNCTION
 ; CHECK-NEXT:     FunctionTypes:   [ 0, 0 ]
+; CHECK-NEXT:   - Type:            TABLE
+; CHECK-NEXT:     Tables:          
+; CHECK-NEXT:       - ElemType:        ANYFUNC
+; CHECK-NEXT:         Limits:          
+; CHECK-NEXT:           Initial:         0x00000000
+; CHECK-NEXT:   - Type:            MEMORY
+; CHECK-NEXT:     Memories:        
+; CHECK-NEXT:       - Initial:         0x00000001
 ; CHECK-NEXT:   - Type:            GLOBAL
 ; CHECK-NEXT:     Globals:         
 ; CHECK-NEXT:       - Type:            I32

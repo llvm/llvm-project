@@ -224,6 +224,13 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_ARM_SBREL: return "sbrel";
   case VK_ARM_TLSLDO: return "tlsldo";
   case VK_ARM_TLSDESCSEQ: return "tlsdescseq";
+  case VK_AVR_NONE: return "none";
+  case VK_AVR_LO8: return "lo8";
+  case VK_AVR_HI8: return "hi8";
+  case VK_AVR_HLO8: return "hlo8";
+  case VK_AVR_DIFF8: return "diff8";
+  case VK_AVR_DIFF16: return "diff16";
+  case VK_AVR_DIFF32: return "diff32";
   case VK_PPC_LO: return "l";
   case VK_PPC_HI: return "h";
   case VK_PPC_HA: return "ha";
@@ -389,6 +396,9 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
     .Case("prel31", VK_ARM_PREL31)
     .Case("sbrel", VK_ARM_SBREL)
     .Case("tlsldo", VK_ARM_TLSLDO)
+    .Case("lo8", VK_AVR_LO8)
+    .Case("hi8", VK_AVR_HI8)
+    .Case("hlo8", VK_AVR_HLO8)
     .Case("gotpcrel32@lo", VK_AMDGPU_GOTPCREL32_LO)
     .Case("gotpcrel32@hi", VK_AMDGPU_GOTPCREL32_HI)
     .Case("rel32@lo", VK_AMDGPU_REL32_LO)

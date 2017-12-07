@@ -10,9 +10,9 @@
   ;
   ; %0 is used in %if.end BB (before tail-duplication), so its
   ; corresponding super-register (EAX) is live-in into that BB (%if.end)
-  ; and also has an EAX<imp-def> flag. Make sure that we still change
+  ; and also has an implicit-def EAX flag. Make sure that we still change
   ; the movw into movzwl because EAX is not live before the load (which
-  ; can be seen by the fact that EAX<imp-use> flag is missing).
+  ; can be seen by the fact that implicit EAX flag is missing).
   entry:
     %tobool = icmp eq i16* %p, null
     br i1 %tobool, label %if.end, label %if.then

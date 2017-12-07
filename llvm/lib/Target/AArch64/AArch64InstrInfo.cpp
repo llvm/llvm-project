@@ -2801,7 +2801,7 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
     LiveIntervals *LIS) const {
   // This is a bit of a hack. Consider this instruction:
   //
-  //   %0<def> = COPY %sp; GPR64all:%0
+  //   %0 = COPY %sp; GPR64all:%0
   //
   // We explicitly chose GPR64all for the virtual register so such a copy might
   // be eliminated by RegisterCoalescer. However, that may not be possible, and
@@ -2830,7 +2830,7 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
   // Handle the case where a copy is being spilled or filled but the source
   // and destination register class don't match.  For example:
   //
-  //   %0<def> = COPY %xzr; GPR64common:%0
+  //   %0 = COPY %xzr; GPR64common:%0
   //
   // In this case we can still safely fold away the COPY and generate the
   // following spill code:
@@ -2840,7 +2840,7 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
   // This also eliminates spilled cross register class COPYs (e.g. between x and
   // d regs) of the same size.  For example:
   //
-  //   %0<def> = COPY %1; GPR64:%0, FPR64:%1
+  //   %0 = COPY %1; GPR64:%0, FPR64:%1
   //
   // will be filled as
   //

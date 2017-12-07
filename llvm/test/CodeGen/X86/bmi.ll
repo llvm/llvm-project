@@ -13,7 +13,7 @@ define i8 @t1(i8 %x)   {
 ; CHECK-NEXT:    movzbl %dil, %eax
 ; CHECK-NEXT:    orl $256, %eax # imm = 0x100
 ; CHECK-NEXT:    tzcntl %eax, %eax
-; CHECK-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; CHECK-NEXT:    # kill: def %al killed %al killed %eax
 ; CHECK-NEXT:    retq
   %tmp = tail call i8 @llvm.cttz.i8( i8 %x, i1 false )
   ret i8 %tmp
@@ -61,7 +61,7 @@ define i8 @t5(i8 %x)   {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzbl %dil, %eax
 ; CHECK-NEXT:    tzcntl %eax, %eax
-; CHECK-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
+; CHECK-NEXT:    # kill: def %al killed %al killed %eax
 ; CHECK-NEXT:    retq
   %tmp = tail call i8 @llvm.cttz.i8( i8 %x, i1 true )
   ret i8 %tmp
@@ -516,7 +516,7 @@ define i32 @bzhi32d(i32 %a, i32 %b) {
 ; BMI1-NEXT:    movl $32, %ecx
 ; BMI1-NEXT:    subl %esi, %ecx
 ; BMI1-NEXT:    movl $-1, %eax
-; BMI1-NEXT:    # kill: %cl<def> %cl<kill> %ecx<kill>
+; BMI1-NEXT:    # kill: def %cl killed %cl killed %ecx
 ; BMI1-NEXT:    shrl %cl, %eax
 ; BMI1-NEXT:    andl %edi, %eax
 ; BMI1-NEXT:    retq
@@ -538,7 +538,7 @@ define i32 @bzhi32e(i32 %a, i32 %b) {
 ; BMI1-NEXT:    movl $32, %ecx
 ; BMI1-NEXT:    subl %esi, %ecx
 ; BMI1-NEXT:    shll %cl, %edi
-; BMI1-NEXT:    # kill: %cl<def> %cl<kill> %ecx<kill>
+; BMI1-NEXT:    # kill: def %cl killed %cl killed %ecx
 ; BMI1-NEXT:    shrl %cl, %edi
 ; BMI1-NEXT:    movl %edi, %eax
 ; BMI1-NEXT:    retq
@@ -566,7 +566,7 @@ define i64 @bzhi64b(i64 %x, i8 zeroext %index) {
 ;
 ; BMI2-LABEL: bzhi64b:
 ; BMI2:       # %bb.0: # %entry
-; BMI2-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
+; BMI2-NEXT:    # kill: def %esi killed %esi def %rsi
 ; BMI2-NEXT:    bzhiq %rsi, %rdi, %rax
 ; BMI2-NEXT:    retq
 entry:
@@ -583,7 +583,7 @@ define i64 @bzhi64c(i64 %a, i64 %b) {
 ; BMI1-NEXT:    movl $64, %ecx
 ; BMI1-NEXT:    subl %esi, %ecx
 ; BMI1-NEXT:    movq $-1, %rax
-; BMI1-NEXT:    # kill: %cl<def> %cl<kill> %ecx<kill>
+; BMI1-NEXT:    # kill: def %cl killed %cl killed %ecx
 ; BMI1-NEXT:    shrq %cl, %rax
 ; BMI1-NEXT:    andq %rdi, %rax
 ; BMI1-NEXT:    retq
@@ -605,14 +605,14 @@ define i64 @bzhi64d(i64 %a, i32 %b) {
 ; BMI1-NEXT:    movl $64, %ecx
 ; BMI1-NEXT:    subl %esi, %ecx
 ; BMI1-NEXT:    movq $-1, %rax
-; BMI1-NEXT:    # kill: %cl<def> %cl<kill> %ecx<kill>
+; BMI1-NEXT:    # kill: def %cl killed %cl killed %ecx
 ; BMI1-NEXT:    shrq %cl, %rax
 ; BMI1-NEXT:    andq %rdi, %rax
 ; BMI1-NEXT:    retq
 ;
 ; BMI2-LABEL: bzhi64d:
 ; BMI2:       # %bb.0: # %entry
-; BMI2-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
+; BMI2-NEXT:    # kill: def %esi killed %esi def %rsi
 ; BMI2-NEXT:    bzhiq %rsi, %rdi, %rax
 ; BMI2-NEXT:    retq
 entry:
@@ -629,7 +629,7 @@ define i64 @bzhi64e(i64 %a, i64 %b) {
 ; BMI1-NEXT:    movl $64, %ecx
 ; BMI1-NEXT:    subl %esi, %ecx
 ; BMI1-NEXT:    shlq %cl, %rdi
-; BMI1-NEXT:    # kill: %cl<def> %cl<kill> %ecx<kill>
+; BMI1-NEXT:    # kill: def %cl killed %cl killed %ecx
 ; BMI1-NEXT:    shrq %cl, %rdi
 ; BMI1-NEXT:    movq %rdi, %rax
 ; BMI1-NEXT:    retq
@@ -651,14 +651,14 @@ define i64 @bzhi64f(i64 %a, i32 %b) {
 ; BMI1-NEXT:    movl $64, %ecx
 ; BMI1-NEXT:    subl %esi, %ecx
 ; BMI1-NEXT:    shlq %cl, %rdi
-; BMI1-NEXT:    # kill: %cl<def> %cl<kill> %ecx<kill>
+; BMI1-NEXT:    # kill: def %cl killed %cl killed %ecx
 ; BMI1-NEXT:    shrq %cl, %rdi
 ; BMI1-NEXT:    movq %rdi, %rax
 ; BMI1-NEXT:    retq
 ;
 ; BMI2-LABEL: bzhi64f:
 ; BMI2:       # %bb.0: # %entry
-; BMI2-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
+; BMI2-NEXT:    # kill: def %esi killed %esi def %rsi
 ; BMI2-NEXT:    bzhiq %rsi, %rdi, %rax
 ; BMI2-NEXT:    retq
 entry:

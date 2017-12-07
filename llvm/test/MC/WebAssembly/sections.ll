@@ -28,6 +28,17 @@ entry:
 ; CHECK:    Type: FUNCTION (0x3)
 ; CHECK:  }
 ; CHECK:  Section {
+; CHECK:    Type: TABLE (0x4)
+; CHECK:  }
+; CHECK:  Section {
+; CHECK:    Type: MEMORY (0x5)
+; CHECK:    Memories [
+; CHECK:      Memory {
+; CHECK:        InitialPages: 1
+; CHECK:      }
+; CHECK:    ]
+; CHECK:  }
+; CHECK:  Section {
 ; CHECK:    Type: GLOBAL (0x6)
 ; CHECK:  }
 ; CHECK:  Section {

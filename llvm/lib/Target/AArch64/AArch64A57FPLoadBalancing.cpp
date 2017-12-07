@@ -161,9 +161,9 @@ namespace {
 /// A Chain is a sequence of instructions that are linked together by
 /// an accumulation operand. For example:
 ///
-///   fmul d0<def>, ?
-///   fmla d1<def>, ?, ?, d0<kill>
-///   fmla d2<def>, ?, ?, d1<kill>
+///   fmul def d0, ?
+///   fmla def d1, ?, ?, killed d0
+///   fmla def d2, ?, ?, killed d1
 ///
 /// There may be other instructions interleaved in the sequence that
 /// do not belong to the chain. These other instructions must not use

@@ -17,6 +17,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/DataTypes.h"
+#include "llvm/Support/LowLevelTypeImpl.h"
 #include <cassert>
 
 namespace llvm {
@@ -116,7 +117,7 @@ private:
   /// the same register.  In that case, the instruction may depend on those
   /// operands reading the same dont-care value.  For example:
   ///
-  ///   %1<def> = XOR %2<undef>, %2<undef>
+  ///   %1 = XOR undef %2, undef %2
   ///
   /// Any register can be used for %2, and its value doesn't matter, but
   /// the two operands must be the same register.
@@ -226,11 +227,33 @@ public:
   ///
   void clearParent() { ParentMI = nullptr; }
 
+  /// Print the MachineOperand to \p os.
+  /// Providing a valid \p TRI and \p IntrinsicInfo results in a more
+  /// target-specific printing. If \p TRI and \p IntrinsicInfo are null, the
+  /// function will try to pick it up from the parent.
   void print(raw_ostream &os, const TargetRegisterInfo *TRI = nullptr,
              const TargetIntrinsicInfo *IntrinsicInfo = nullptr) const;
-  void print(raw_ostream &os, ModuleSlotTracker &MST,
-             const TargetRegisterInfo *TRI = nullptr,
-             const TargetIntrinsicInfo *IntrinsicInfo = nullptr) const;
+
+  /// More complex way of printing a MachineOperand.
+  /// \param TypeToPrint specifies the generic type to be printed on uses and
+  /// defs. It can be determined using MachineInstr::getTypeToPrint.
+  /// \param PrintDef - whether we want to print `def` on an operand which
+  /// isDef. Sometimes, if the operand is printed before '=', we don't print
+  /// `def`.
+  /// \param ShouldPrintRegisterTies - whether we want to print register ties.
+  /// Sometimes they are easily determined by the instruction's descriptor
+  /// (MachineInstr::hasComplexRegiterTies can determine if it's needed).
+  /// \param TiedOperandIdx - if we need to print register ties this needs to
+  /// provide the index of the tied register. If not, it will be ignored.
+  /// \param TRI - provide more target-specific information to the printer.
+  /// Unlike the previous function, this one will not try and get the
+  /// information from it's parent.
+  /// \param IntrinsicInfo - same as \p TRI.
+  void print(raw_ostream &os, ModuleSlotTracker &MST, LLT TypeToPrint,
+             bool PrintDef, bool ShouldPrintRegisterTies,
+             unsigned TiedOperandIdx, const TargetRegisterInfo *TRI,
+             const TargetIntrinsicInfo *IntrinsicInfo) const;
+
   void dump() const;
 
   //===--------------------------------------------------------------------===//
@@ -831,7 +854,7 @@ template <> struct DenseMapInfo<MachineOperand> {
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const MachineOperand &MO) {
-  MO.print(OS, nullptr);
+  MO.print(OS);
   return OS;
 }
 

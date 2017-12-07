@@ -25,15 +25,15 @@ define zeroext i1 @search(i32 %needle, i32* nocapture readonly %haystack, i32 %c
 ;            ### FIXME: %bb.3 and LBB0_1 should be merged
 ; CHECK-NEXT:  ## %bb.3:
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %al killed %al killed %eax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  LBB0_1:
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %al killed %al killed %eax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  LBB0_6:
 ; CHECK-NEXT:    movb $1, %al
-; CHECK-NEXT:    ## kill: %al<def> %al<kill> %eax<kill>
+; CHECK-NEXT:    ## kill: def %al killed %al killed %eax
 ; CHECK-NEXT:    retq
 entry:
   %cmp5 = icmp sgt i32 %count, 0

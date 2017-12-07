@@ -297,8 +297,8 @@ define <2 x i64> @ge_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ;
 ; AVX512-LABEL: ge_v2i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    # kill: %xmm1<def> %xmm1<kill> %zmm1<def>
-; AVX512-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<def>
+; AVX512-NEXT:    # kill: def %xmm1 killed %xmm1 def %zmm1
+; AVX512-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
 ; AVX512-NEXT:    vpmaxuq %zmm1, %zmm0, %zmm1
 ; AVX512-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vzeroupper
@@ -633,8 +633,8 @@ define <2 x i64> @le_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ;
 ; AVX512-LABEL: le_v2i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    # kill: %xmm1<def> %xmm1<kill> %zmm1<def>
-; AVX512-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<def>
+; AVX512-NEXT:    # kill: def %xmm1 killed %xmm1 def %zmm1
+; AVX512-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
 ; AVX512-NEXT:    vpminuq %zmm1, %zmm0, %zmm1
 ; AVX512-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vzeroupper

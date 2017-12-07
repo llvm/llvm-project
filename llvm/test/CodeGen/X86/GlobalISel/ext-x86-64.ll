@@ -6,7 +6,7 @@
 define i64 @test_zext_i1(i8 %a) {
 ; X64-LABEL: test_zext_i1:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
+; X64-NEXT:    # kill: def %edi killed %edi def %rdi
 ; X64-NEXT:    andq $1, %rdi
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    retq

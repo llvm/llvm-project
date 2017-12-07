@@ -226,19 +226,19 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
 
       // The two copies cancel out and the source of the first copy
       // hasn't been overridden, eliminate the second one. e.g.
-      //  %ecx<def> = COPY %eax
+      //  %ecx = COPY %eax
       //  ... nothing clobbered eax.
-      //  %eax<def> = COPY %ecx
+      //  %eax = COPY %ecx
       // =>
-      //  %ecx<def> = COPY %eax
+      //  %ecx = COPY %eax
       //
       // or
       //
-      //  %ecx<def> = COPY %eax
+      //  %ecx = COPY %eax
       //  ... nothing clobbered eax.
-      //  %ecx<def> = COPY %eax
+      //  %ecx = COPY %eax
       // =>
-      //  %ecx<def> = COPY %eax
+      //  %ecx = COPY %eax
       if (eraseIfRedundant(*MI, Def, Src) || eraseIfRedundant(*MI, Src, Def))
         continue;
 
@@ -262,11 +262,11 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
 
       // If 'Def' is previously source of another copy, then this earlier copy's
       // source is no longer available. e.g.
-      // %xmm9<def> = copy %xmm2
+      // %xmm9 = copy %xmm2
       // ...
-      // %xmm2<def> = copy %xmm0
+      // %xmm2 = copy %xmm0
       // ...
-      // %xmm2<def> = copy %xmm9
+      // %xmm2 = copy %xmm9
       ClobberRegister(Def);
       for (const MachineOperand &MO : MI->implicit_operands()) {
         if (!MO.isReg() || !MO.isDef())

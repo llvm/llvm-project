@@ -14,7 +14,7 @@ define i16 @test_andn_i16(i16 zeroext %a0, i16 zeroext %a1, i16 *%a2) {
 ; GENERIC-NEXT:    notl %edi # sched: [1:0.33]
 ; GENERIC-NEXT:    andw (%rdx), %di # sched: [6:0.50]
 ; GENERIC-NEXT:    addl %edi, %eax # sched: [1:0.33]
-; GENERIC-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; GENERIC-NEXT:    # kill: def %ax killed %ax killed %eax
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_andn_i16:
@@ -23,7 +23,7 @@ define i16 @test_andn_i16(i16 zeroext %a0, i16 zeroext %a1, i16 *%a2) {
 ; HASWELL-NEXT:    notl %edi # sched: [1:0.25]
 ; HASWELL-NEXT:    andw (%rdx), %di # sched: [1:0.50]
 ; HASWELL-NEXT:    addl %edi, %eax # sched: [1:0.25]
-; HASWELL-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; HASWELL-NEXT:    # kill: def %ax killed %ax killed %eax
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_andn_i16:
@@ -32,7 +32,7 @@ define i16 @test_andn_i16(i16 zeroext %a0, i16 zeroext %a1, i16 *%a2) {
 ; BROADWELL-NEXT:    notl %edi # sched: [1:0.25]
 ; BROADWELL-NEXT:    andw (%rdx), %di # sched: [6:0.50]
 ; BROADWELL-NEXT:    addl %edi, %eax # sched: [1:0.25]
-; BROADWELL-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; BROADWELL-NEXT:    # kill: def %ax killed %ax killed %eax
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_andn_i16:
@@ -41,7 +41,7 @@ define i16 @test_andn_i16(i16 zeroext %a0, i16 zeroext %a1, i16 *%a2) {
 ; SKYLAKE-NEXT:    notl %edi # sched: [1:0.25]
 ; SKYLAKE-NEXT:    andw (%rdx), %di # sched: [6:0.50]
 ; SKYLAKE-NEXT:    addl %edi, %eax # sched: [1:0.25]
-; SKYLAKE-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; SKYLAKE-NEXT:    # kill: def %ax killed %ax killed %eax
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_andn_i16:
@@ -50,7 +50,7 @@ define i16 @test_andn_i16(i16 zeroext %a0, i16 zeroext %a1, i16 *%a2) {
 ; BTVER2-NEXT:    notl %edi # sched: [1:0.50]
 ; BTVER2-NEXT:    andw (%rdx), %di # sched: [4:1.00]
 ; BTVER2-NEXT:    addl %edi, %eax # sched: [1:0.50]
-; BTVER2-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; BTVER2-NEXT:    # kill: def %ax killed %ax killed %eax
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_andn_i16:
@@ -59,7 +59,7 @@ define i16 @test_andn_i16(i16 zeroext %a0, i16 zeroext %a1, i16 *%a2) {
 ; ZNVER1-NEXT:    notl %edi # sched: [1:0.25]
 ; ZNVER1-NEXT:    andw (%rdx), %di # sched: [5:0.50]
 ; ZNVER1-NEXT:    addl %edi, %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; ZNVER1-NEXT:    # kill: def %ax killed %ax killed %eax
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load i16, i16 *%a2
   %2 = xor i16 %a0, -1
@@ -581,7 +581,7 @@ define i16 @test_cttz_i16(i16 zeroext %a0, i16 *%a1) {
 ; GENERIC-NEXT:    tzcntw (%rsi), %cx
 ; GENERIC-NEXT:    tzcntw %di, %ax
 ; GENERIC-NEXT:    orl %ecx, %eax # sched: [1:0.33]
-; GENERIC-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; GENERIC-NEXT:    # kill: def %ax killed %ax killed %eax
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_cttz_i16:
@@ -589,7 +589,7 @@ define i16 @test_cttz_i16(i16 zeroext %a0, i16 *%a1) {
 ; HASWELL-NEXT:    tzcntw (%rsi), %cx # sched: [3:1.00]
 ; HASWELL-NEXT:    tzcntw %di, %ax # sched: [3:1.00]
 ; HASWELL-NEXT:    orl %ecx, %eax # sched: [1:0.25]
-; HASWELL-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; HASWELL-NEXT:    # kill: def %ax killed %ax killed %eax
 ; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; BROADWELL-LABEL: test_cttz_i16:
@@ -597,7 +597,7 @@ define i16 @test_cttz_i16(i16 zeroext %a0, i16 *%a1) {
 ; BROADWELL-NEXT:    tzcntw (%rsi), %cx # sched: [8:1.00]
 ; BROADWELL-NEXT:    tzcntw %di, %ax # sched: [3:1.00]
 ; BROADWELL-NEXT:    orl %ecx, %eax # sched: [1:0.25]
-; BROADWELL-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; BROADWELL-NEXT:    # kill: def %ax killed %ax killed %eax
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_cttz_i16:
@@ -605,7 +605,7 @@ define i16 @test_cttz_i16(i16 zeroext %a0, i16 *%a1) {
 ; SKYLAKE-NEXT:    tzcntw (%rsi), %cx # sched: [8:1.00]
 ; SKYLAKE-NEXT:    tzcntw %di, %ax # sched: [3:1.00]
 ; SKYLAKE-NEXT:    orl %ecx, %eax # sched: [1:0.25]
-; SKYLAKE-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; SKYLAKE-NEXT:    # kill: def %ax killed %ax killed %eax
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_cttz_i16:
@@ -613,7 +613,7 @@ define i16 @test_cttz_i16(i16 zeroext %a0, i16 *%a1) {
 ; BTVER2-NEXT:    tzcntw (%rsi), %cx
 ; BTVER2-NEXT:    tzcntw %di, %ax
 ; BTVER2-NEXT:    orl %ecx, %eax # sched: [1:0.50]
-; BTVER2-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; BTVER2-NEXT:    # kill: def %ax killed %ax killed %eax
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_cttz_i16:
@@ -621,7 +621,7 @@ define i16 @test_cttz_i16(i16 zeroext %a0, i16 *%a1) {
 ; ZNVER1-NEXT:    tzcntw (%rsi), %cx # sched: [6:0.50]
 ; ZNVER1-NEXT:    tzcntw %di, %ax # sched: [2:0.25]
 ; ZNVER1-NEXT:    orl %ecx, %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; ZNVER1-NEXT:    # kill: def %ax killed %ax killed %eax
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load i16, i16 *%a1
   %2 = tail call i16 @llvm.cttz.i16( i16 %1, i1 false )

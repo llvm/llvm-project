@@ -1245,7 +1245,7 @@ define <2 x i64> @load_sext_2i1_to_2i64(<2 x i1> *%ptr) {
 ; AVX512F-NEXT:    movzbl (%rdi), %eax
 ; AVX512F-NEXT:    kmovw %eax, %k1
 ; AVX512F-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; AVX512F-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<kill>
+; AVX512F-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
@@ -1254,7 +1254,7 @@ define <2 x i64> @load_sext_2i1_to_2i64(<2 x i1> *%ptr) {
 ; AVX512BW-NEXT:    movzbl (%rdi), %eax
 ; AVX512BW-NEXT:    kmovd %eax, %k1
 ; AVX512BW-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; AVX512BW-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<kill>
+; AVX512BW-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
@@ -1436,7 +1436,7 @@ define <4 x i32> @load_sext_4i1_to_4i32(<4 x i1> *%ptr) {
 ; AVX512F-NEXT:    movzbl (%rdi), %eax
 ; AVX512F-NEXT:    kmovw %eax, %k1
 ; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; AVX512F-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<kill>
+; AVX512F-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
@@ -1445,7 +1445,7 @@ define <4 x i32> @load_sext_4i1_to_4i32(<4 x i1> *%ptr) {
 ; AVX512BW-NEXT:    movzbl (%rdi), %eax
 ; AVX512BW-NEXT:    kmovd %eax, %k1
 ; AVX512BW-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; AVX512BW-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<kill>
+; AVX512BW-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
@@ -1641,7 +1641,7 @@ define <4 x i64> @load_sext_4i1_to_4i64(<4 x i1> *%ptr) {
 ; AVX512F-NEXT:    movzbl (%rdi), %eax
 ; AVX512F-NEXT:    kmovw %eax, %k1
 ; AVX512F-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; AVX512F-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
+; AVX512F-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: load_sext_4i1_to_4i64:
@@ -1649,7 +1649,7 @@ define <4 x i64> @load_sext_4i1_to_4i64(<4 x i1> *%ptr) {
 ; AVX512BW-NEXT:    movzbl (%rdi), %eax
 ; AVX512BW-NEXT:    kmovd %eax, %k1
 ; AVX512BW-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; AVX512BW-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
+; AVX512BW-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
 ; AVX512BW-NEXT:    retq
 ;
 ; X32-SSE41-LABEL: load_sext_4i1_to_4i64:
@@ -1999,7 +1999,7 @@ define <8 x i16> @load_sext_8i1_to_8i16(<8 x i1> *%ptr) {
 ; AVX512F-NEXT:    kmovw %eax, %k1
 ; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; AVX512F-NEXT:    vpmovdw %zmm0, %ymm0
-; AVX512F-NEXT:    # kill: %xmm0<def> %xmm0<kill> %ymm0<kill>
+; AVX512F-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
@@ -2008,7 +2008,7 @@ define <8 x i16> @load_sext_8i1_to_8i16(<8 x i1> *%ptr) {
 ; AVX512BW-NEXT:    movzbl (%rdi), %eax
 ; AVX512BW-NEXT:    kmovd %eax, %k0
 ; AVX512BW-NEXT:    vpmovm2w %k0, %zmm0
-; AVX512BW-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<kill>
+; AVX512BW-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
@@ -2402,7 +2402,7 @@ define <8 x i32> @load_sext_8i1_to_8i32(<8 x i1> *%ptr) {
 ; AVX512F-NEXT:    movzbl (%rdi), %eax
 ; AVX512F-NEXT:    kmovw %eax, %k1
 ; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; AVX512F-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
+; AVX512F-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: load_sext_8i1_to_8i32:
@@ -2410,7 +2410,7 @@ define <8 x i32> @load_sext_8i1_to_8i32(<8 x i1> *%ptr) {
 ; AVX512BW-NEXT:    movzbl (%rdi), %eax
 ; AVX512BW-NEXT:    kmovd %eax, %k1
 ; AVX512BW-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; AVX512BW-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
+; AVX512BW-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
 ; AVX512BW-NEXT:    retq
 ;
 ; X32-SSE41-LABEL: load_sext_8i1_to_8i32:
@@ -2920,7 +2920,7 @@ define <16 x i8> @load_sext_16i1_to_16i8(<16 x i1> *%ptr) nounwind readnone {
 ; AVX512BW:       # %bb.0: # %entry
 ; AVX512BW-NEXT:    kmovw (%rdi), %k0
 ; AVX512BW-NEXT:    vpmovm2b %k0, %zmm0
-; AVX512BW-NEXT:    # kill: %xmm0<def> %xmm0<kill> %zmm0<kill>
+; AVX512BW-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
@@ -3441,7 +3441,7 @@ define <16 x i16> @load_sext_16i1_to_16i16(<16 x i1> *%ptr) {
 ; AVX512BW:       # %bb.0: # %entry
 ; AVX512BW-NEXT:    kmovw (%rdi), %k0
 ; AVX512BW-NEXT:    vpmovm2w %k0, %zmm0
-; AVX512BW-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
+; AVX512BW-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
 ; AVX512BW-NEXT:    retq
 ;
 ; X32-SSE41-LABEL: load_sext_16i1_to_16i16:
@@ -4296,7 +4296,7 @@ define <32 x i8> @load_sext_32i1_to_32i8(<32 x i1> *%ptr) nounwind readnone {
 ; AVX512BW:       # %bb.0: # %entry
 ; AVX512BW-NEXT:    kmovd (%rdi), %k0
 ; AVX512BW-NEXT:    vpmovm2b %k0, %zmm0
-; AVX512BW-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
+; AVX512BW-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
 ; AVX512BW-NEXT:    retq
 ;
 ; X32-SSE41-LABEL: load_sext_32i1_to_32i8:
@@ -5029,7 +5029,7 @@ define <32 x i8> @sext_32xi1_to_32xi8(<32 x i16> %c1, <32 x i16> %c2)nounwind {
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpcmpeqw %zmm1, %zmm0, %k0
 ; AVX512BW-NEXT:    vpmovm2b %k0, %zmm0
-; AVX512BW-NEXT:    # kill: %ymm0<def> %ymm0<kill> %zmm0<kill>
+; AVX512BW-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
 ; AVX512BW-NEXT:    retq
 ;
 ; X32-SSE41-LABEL: sext_32xi1_to_32xi8:

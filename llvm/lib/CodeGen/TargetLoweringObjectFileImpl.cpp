@@ -1265,11 +1265,22 @@ static void checkWasmComdat(const GlobalValue *GV) {
                      "' cannot be lowered.");
 }
 
+static SectionKind getWasmKindForNamedSection(StringRef Name, SectionKind K) {
+  // If we're told we have function data, then use that.
+  if (K.isText())
+    return SectionKind::getText();
+
+  // Otherwise, ignore whatever section type the generic impl detected and use
+  // a plain data section.
+  return SectionKind::getData();
+}
+
 MCSection *TargetLoweringObjectFileWasm::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   StringRef Name = GO->getSection();
   checkWasmComdat(GO);
-  return getContext().getWasmSection(Name, SectionKind::getData());
+  Kind = getWasmKindForNamedSection(Name, Kind);
+  return getContext().getWasmSection(Name, Kind);
 }
 
 static MCSectionWasm *selectWasmSectionForGlobal(

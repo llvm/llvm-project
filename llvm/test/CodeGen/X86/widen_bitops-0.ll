@@ -141,9 +141,9 @@ define <3 x i8> @and_v3i8_as_i24(<3 x i8> %a, <3 x i8> %b) nounwind {
 ; X32-SSE-NEXT:    pextrb $0, %xmm1, %eax
 ; X32-SSE-NEXT:    pextrb $4, %xmm1, %edx
 ; X32-SSE-NEXT:    pextrb $8, %xmm1, %ecx
-; X32-SSE-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
-; X32-SSE-NEXT:    # kill: %dl<def> %dl<kill> %edx<kill>
-; X32-SSE-NEXT:    # kill: %cl<def> %cl<kill> %ecx<kill>
+; X32-SSE-NEXT:    # kill: def %al killed %al killed %eax
+; X32-SSE-NEXT:    # kill: def %dl killed %dl killed %edx
+; X32-SSE-NEXT:    # kill: def %cl killed %cl killed %ecx
 ; X32-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: and_v3i8_as_i24:
@@ -158,9 +158,9 @@ define <3 x i8> @and_v3i8_as_i24(<3 x i8> %a, <3 x i8> %b) nounwind {
 ; X64-SSE-NEXT:    pextrb $0, %xmm1, %eax
 ; X64-SSE-NEXT:    pextrb $4, %xmm1, %edx
 ; X64-SSE-NEXT:    pextrb $8, %xmm1, %ecx
-; X64-SSE-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
-; X64-SSE-NEXT:    # kill: %dl<def> %dl<kill> %edx<kill>
-; X64-SSE-NEXT:    # kill: %cl<def> %cl<kill> %ecx<kill>
+; X64-SSE-NEXT:    # kill: def %al killed %al killed %eax
+; X64-SSE-NEXT:    # kill: def %dl killed %dl killed %edx
+; X64-SSE-NEXT:    # kill: def %cl killed %cl killed %ecx
 ; X64-SSE-NEXT:    retq
   %1 = bitcast <3 x i8> %a to i24
   %2 = bitcast <3 x i8> %b to i24
@@ -182,9 +182,9 @@ define <3 x i8> @xor_v3i8_as_i24(<3 x i8> %a, <3 x i8> %b) nounwind {
 ; X32-SSE-NEXT:    pextrb $0, %xmm1, %eax
 ; X32-SSE-NEXT:    pextrb $4, %xmm1, %edx
 ; X32-SSE-NEXT:    pextrb $8, %xmm1, %ecx
-; X32-SSE-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
-; X32-SSE-NEXT:    # kill: %dl<def> %dl<kill> %edx<kill>
-; X32-SSE-NEXT:    # kill: %cl<def> %cl<kill> %ecx<kill>
+; X32-SSE-NEXT:    # kill: def %al killed %al killed %eax
+; X32-SSE-NEXT:    # kill: def %dl killed %dl killed %edx
+; X32-SSE-NEXT:    # kill: def %cl killed %cl killed %ecx
 ; X32-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: xor_v3i8_as_i24:
@@ -199,9 +199,9 @@ define <3 x i8> @xor_v3i8_as_i24(<3 x i8> %a, <3 x i8> %b) nounwind {
 ; X64-SSE-NEXT:    pextrb $0, %xmm1, %eax
 ; X64-SSE-NEXT:    pextrb $4, %xmm1, %edx
 ; X64-SSE-NEXT:    pextrb $8, %xmm1, %ecx
-; X64-SSE-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
-; X64-SSE-NEXT:    # kill: %dl<def> %dl<kill> %edx<kill>
-; X64-SSE-NEXT:    # kill: %cl<def> %cl<kill> %ecx<kill>
+; X64-SSE-NEXT:    # kill: def %al killed %al killed %eax
+; X64-SSE-NEXT:    # kill: def %dl killed %dl killed %edx
+; X64-SSE-NEXT:    # kill: def %cl killed %cl killed %ecx
 ; X64-SSE-NEXT:    retq
   %1 = bitcast <3 x i8> %a to i24
   %2 = bitcast <3 x i8> %b to i24
@@ -223,9 +223,9 @@ define <3 x i8> @or_v3i8_as_i24(<3 x i8> %a, <3 x i8> %b) nounwind {
 ; X32-SSE-NEXT:    pextrb $0, %xmm1, %eax
 ; X32-SSE-NEXT:    pextrb $4, %xmm1, %edx
 ; X32-SSE-NEXT:    pextrb $8, %xmm1, %ecx
-; X32-SSE-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
-; X32-SSE-NEXT:    # kill: %dl<def> %dl<kill> %edx<kill>
-; X32-SSE-NEXT:    # kill: %cl<def> %cl<kill> %ecx<kill>
+; X32-SSE-NEXT:    # kill: def %al killed %al killed %eax
+; X32-SSE-NEXT:    # kill: def %dl killed %dl killed %edx
+; X32-SSE-NEXT:    # kill: def %cl killed %cl killed %ecx
 ; X32-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: or_v3i8_as_i24:
@@ -240,9 +240,9 @@ define <3 x i8> @or_v3i8_as_i24(<3 x i8> %a, <3 x i8> %b) nounwind {
 ; X64-SSE-NEXT:    pextrb $0, %xmm1, %eax
 ; X64-SSE-NEXT:    pextrb $4, %xmm1, %edx
 ; X64-SSE-NEXT:    pextrb $8, %xmm1, %ecx
-; X64-SSE-NEXT:    # kill: %al<def> %al<kill> %eax<kill>
-; X64-SSE-NEXT:    # kill: %dl<def> %dl<kill> %edx<kill>
-; X64-SSE-NEXT:    # kill: %cl<def> %cl<kill> %ecx<kill>
+; X64-SSE-NEXT:    # kill: def %al killed %al killed %eax
+; X64-SSE-NEXT:    # kill: def %dl killed %dl killed %edx
+; X64-SSE-NEXT:    # kill: def %cl killed %cl killed %ecx
 ; X64-SSE-NEXT:    retq
   %1 = bitcast <3 x i8> %a to i24
   %2 = bitcast <3 x i8> %b to i24

@@ -69,6 +69,22 @@ def fencearg : Operand<XLenVT> {
   let DecoderMethod = "decodeUImmOperand<4>";
 }
 
+def UImmLog2XLenAsmOperand : AsmOperandClass {
+  let Name = "UImmLog2XLen";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = "InvalidUImmLog2XLen";
+}
+
+def uimmlog2xlen : Operand<XLenVT>, ImmLeaf<XLenVT, [{
+  if (Subtarget->is64Bit())
+    return isUInt<6>(Imm);
+  return isUInt<5>(Imm);
+}]> {
+  let ParserMatchClass = UImmLog2XLenAsmOperand;
+  // TODO: should ensure invalid shamt is rejected when decoding.
+  let DecoderMethod = "decodeUImmOperand<6>";
+}
+
 def uimm5 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isUInt<5>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<5>;
   let DecoderMethod = "decodeUImmOperand<5>";
@@ -161,7 +177,7 @@ class ALU_ri<bits<3> funct3, string opcodestr>
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class Shift_ri<bit arithshift, bits<3> funct3, string opcodestr>
     : RVInstIShift<arithshift, funct3, OPC_OP_IMM, (outs GPR:$rd),
-                   (ins GPR:$rs1, uimm5:$shamt), opcodestr,
+                   (ins GPR:$rs1, uimmlog2xlen:$shamt), opcodestr,
                    "$rd, $rs1, $shamt">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
@@ -179,6 +195,17 @@ class CSR_ii<bits<3> funct3, string opcodestr> :
       RVInstI<funct3, OPC_SYSTEM, (outs GPR:$rd),
               (ins uimm12:$imm12, uimm5:$rs1),
               opcodestr, "$rd, $imm12, $rs1">;
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class ShiftW_ri<bit arithshift, bits<3> funct3, string opcodestr>
+    : RVInstIShiftW<arithshift, funct3, OPC_OP_IMM_32, (outs GPR:$rd),
+                    (ins GPR:$rs1, uimm5:$shamt), opcodestr,
+                    "$rd, $rs1, $shamt">;
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class ALUW_rr<bits<7> funct7, bits<3> funct3, string opcodestr>
+    : RVInstR<funct7, funct3, OPC_OP_32, (outs GPR:$rd),
+              (ins GPR:$rs1, GPR:$rs2), opcodestr, "$rd, $rs1, $rs2">;
 
 //===----------------------------------------------------------------------===//
 // Instructions
@@ -279,6 +306,29 @@ def CSRRWI : CSR_ii<0b101, "csrrwi">;
 def CSRRSI : CSR_ii<0b110, "csrrsi">;
 def CSRRCI : CSR_ii<0b111, "csrrci">;
 
+/// RV64I instructions
+
+let Predicates = [IsRV64] in {
+def LWU   : Load_ri<0b110, "lwu">;
+def LD    : Load_ri<0b011, "ld">;
+def SD    : Store_rri<0b011, "sd">;
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+def ADDIW : RVInstI<0b000, OPC_OP_IMM_32, (outs GPR:$rd),
+                    (ins GPR:$rs1, simm12:$imm12),
+                    "addiw", "$rd, $rs1, $imm12">;
+
+def SLLIW : ShiftW_ri<0, 0b001, "slliw">;
+def SRLIW : ShiftW_ri<0, 0b101, "srliw">;
+def SRAIW : ShiftW_ri<1, 0b101, "sraiw">;
+
+def ADDW  : ALUW_rr<0b0000000, 0b000, "addw">;
+def SUBW  : ALUW_rr<0b0100000, 0b000, "subw">;
+def SLLW  : ALUW_rr<0b0000000, 0b001, "sllw">;
+def SRLW  : ALUW_rr<0b0000000, 0b101, "srlw">;
+def SRAW  : ALUW_rr<0b0100000, 0b101, "sraw">;
+} // Predicates = [IsRV64]
+
 //===----------------------------------------------------------------------===//
 // Pseudo-instructions and codegen patterns
 //
@@ -293,9 +343,9 @@ class PatGprGpr<SDPatternOperator OpNode, RVInstR Inst>
     : Pat<(OpNode GPR:$rs1, GPR:$rs2), (Inst GPR:$rs1, GPR:$rs2)>;
 class PatGprSimm12<SDPatternOperator OpNode, RVInstI Inst>
     : Pat<(OpNode GPR:$rs1, simm12:$imm12), (Inst GPR:$rs1, simm12:$imm12)>;
-class PatGprUimm5<SDPatternOperator OpNode, RVInstIShift Inst>
-    : Pat<(OpNode GPR:$rs1, uimm5:$shamt),
-          (Inst GPR:$rs1, uimm5:$shamt)>;
+class PatGprUimmLog2XLen<SDPatternOperator OpNode, RVInstIShift Inst>
+    : Pat<(OpNode GPR:$rs1, uimmlog2xlen:$shamt),
+          (Inst GPR:$rs1, uimmlog2xlen:$shamt)>;
 
 /// Immediates
 
@@ -315,11 +365,11 @@ def : PatGprSimm12<and, ANDI>;
 def : PatGprGpr<xor, XOR>;
 def : PatGprSimm12<xor, XORI>;
 def : PatGprGpr<shl, SLL>;
-def : PatGprUimm5<shl, SLLI>;
+def : PatGprUimmLog2XLen<shl, SLLI>;
 def : PatGprGpr<srl, SRL>;
-def : PatGprUimm5<srl, SRLI>;
+def : PatGprUimmLog2XLen<srl, SRLI>;
 def : PatGprGpr<sra, SRA>;
-def : PatGprUimm5<sra, SRAI>;
+def : PatGprUimmLog2XLen<sra, SRAI>;
 
 /// Setcc
 
@@ -441,3 +491,5 @@ def ADJCALLSTACKUP   : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
 
 include "RISCVInstrInfoM.td"
 include "RISCVInstrInfoA.td"
+include "RISCVInstrInfoF.td"
+include "RISCVInstrInfoD.td"

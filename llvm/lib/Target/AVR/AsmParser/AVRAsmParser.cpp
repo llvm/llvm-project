@@ -9,6 +9,7 @@
 
 #include "AVR.h"
 #include "AVRRegisterInfo.h"
+#include "MCTargetDesc/AVRMCELFStreamer.h"
 #include "MCTargetDesc/AVRMCExpr.h"
 #include "MCTargetDesc/AVRMCTargetDesc.h"
 
@@ -40,6 +41,7 @@ class AVRAsmParser : public MCTargetAsmParser {
   const MCSubtargetInfo &STI;
   MCAsmParser &Parser;
   const MCRegisterInfo *MRI;
+  const std::string GENERATE_STUBS = "gs";
 
 #define GET_ASSEMBLER_HEADER
 #include "AVRGenAsmMatcher.inc"
@@ -54,7 +56,7 @@ class AVRAsmParser : public MCTargetAsmParser {
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
 
-  bool ParseDirective(AsmToken directiveID) override;
+  bool ParseDirective(AsmToken DirectiveID) override;
 
   OperandMatchResultTy parseMemriOperand(OperandVector &Operands);
 
@@ -79,6 +81,8 @@ class AVRAsmParser : public MCTargetAsmParser {
   bool invalidOperand(SMLoc const &Loc, OperandVector const &Operands,
                       uint64_t const &ErrorInfo);
   bool missingFeature(SMLoc const &Loc, uint64_t const &ErrorInfo);
+
+  bool parseLiteralValues(unsigned SizeInBytes, SMLoc L);
 
 public:
   AVRAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
@@ -404,11 +408,14 @@ bool AVRAsmParser::tryParseRelocExpression(OperandVector &Operands) {
   size_t ReadCount = Parser.getLexer().peekTokens(tokens);
 
   if (ReadCount == 2) {
-    if (tokens[0].getKind() == AsmToken::Identifier &&
-        tokens[1].getKind() == AsmToken::LParen) {
+    if ((tokens[0].getKind() == AsmToken::Identifier &&
+         tokens[1].getKind() == AsmToken::LParen) ||
+        (tokens[0].getKind() == AsmToken::LParen &&
+         tokens[1].getKind() == AsmToken::Minus)) {
 
       AsmToken::TokenKind CurTok = Parser.getLexer().getKind();
-      if (CurTok == AsmToken::Minus) {
+      if (CurTok == AsmToken::Minus ||
+          tokens[1].getKind() == AsmToken::Minus) {
         isNegated = true;
       } else {
         assert(CurTok == AsmToken::Plus);
@@ -416,7 +423,8 @@ bool AVRAsmParser::tryParseRelocExpression(OperandVector &Operands) {
       }
 
       // Eat the sign
-      Parser.Lex();
+      if (CurTok == AsmToken::Minus || CurTok == AsmToken::Plus)
+        Parser.Lex();
     }
   }
 
@@ -432,13 +440,33 @@ bool AVRAsmParser::tryParseRelocExpression(OperandVector &Operands) {
   if (ModifierKind != AVRMCExpr::VK_AVR_None) {
     Parser.Lex();
     Parser.Lex(); // Eat modifier name and parenthesis
+    if (Parser.getTok().getString() == GENERATE_STUBS &&
+        Parser.getTok().getKind() == AsmToken::Identifier) {
+      std::string GSModName = ModifierName.str() + "_" + GENERATE_STUBS;
+      ModifierKind = AVRMCExpr::getKindByName(GSModName.c_str());
+      if (ModifierKind != AVRMCExpr::VK_AVR_None)
+        Parser.Lex(); // Eat gs modifier name
+    }
   } else {
     return Error(Parser.getTok().getLoc(), "unknown modifier");
+  }
+
+  if (tokens[1].getKind() == AsmToken::Minus ||
+      tokens[1].getKind() == AsmToken::Plus) {
+    Parser.Lex();
+    assert(Parser.getTok().getKind() == AsmToken::LParen);
+    Parser.Lex(); // Eat the sign and parenthesis
   }
 
   MCExpr const *InnerExpression;
   if (getParser().parseExpression(InnerExpression))
     return true;
+
+  if (tokens[1].getKind() == AsmToken::Minus ||
+      tokens[1].getKind() == AsmToken::Plus) {
+    assert(Parser.getTok().getKind() == AsmToken::RParen);
+    Parser.Lex(); // Eat closing parenthesis
+  }
 
   // If we have a modifier wrap the inner expression
   assert(Parser.getTok().getKind() == AsmToken::RParen);
@@ -580,7 +608,59 @@ bool AVRAsmParser::ParseInstruction(ParseInstructionInfo &Info,
   return false;
 }
 
-bool AVRAsmParser::ParseDirective(llvm::AsmToken DirectiveID) { return true; }
+bool AVRAsmParser::ParseDirective(llvm::AsmToken DirectiveID) {
+  StringRef IDVal = DirectiveID.getIdentifier();
+  if (IDVal.lower() == ".long") {
+    parseLiteralValues(SIZE_LONG, DirectiveID.getLoc());
+  } else if (IDVal.lower() == ".word" || IDVal.lower() == ".short") {
+    parseLiteralValues(SIZE_WORD, DirectiveID.getLoc());
+  } else if (IDVal.lower() == ".byte") {
+    parseLiteralValues(1, DirectiveID.getLoc());
+  }
+  return true;
+}
+
+bool AVRAsmParser::parseLiteralValues(unsigned SizeInBytes, SMLoc L) {
+  MCAsmParser &Parser = getParser();
+  AVRMCELFStreamer &AVRStreamer =
+      static_cast<AVRMCELFStreamer &>(Parser.getStreamer());
+  AsmToken Tokens[2];
+  size_t ReadCount = Parser.getLexer().peekTokens(Tokens);
+  if (ReadCount == 2 && Parser.getTok().getKind() == AsmToken::Identifier &&
+      Tokens[0].getKind() == AsmToken::Minus &&
+      Tokens[1].getKind() == AsmToken::Identifier) {
+    MCSymbol *Symbol = getContext().getOrCreateSymbol(".text");
+    AVRStreamer.EmitValueForModiferKind(Symbol, SizeInBytes, L,
+            AVRMCExpr::VK_AVR_None);
+    return false;
+  }
+
+  if (Parser.getTok().getKind() == AsmToken::Identifier &&
+      Parser.getLexer().peekTok().getKind() == AsmToken::LParen) {
+    StringRef ModifierName = Parser.getTok().getString();
+    AVRMCExpr::VariantKind ModifierKind =
+        AVRMCExpr::getKindByName(ModifierName.str().c_str());
+    if (ModifierKind != AVRMCExpr::VK_AVR_None) {
+      Parser.Lex();
+      Parser.Lex(); // Eat the modifier and parenthesis
+    } else {
+      return Error(Parser.getTok().getLoc(), "unknown modifier");
+    }
+    MCSymbol *Symbol =
+        getContext().getOrCreateSymbol(Parser.getTok().getString());
+    AVRStreamer.EmitValueForModiferKind(Symbol, SizeInBytes, L, ModifierKind);
+    return false;
+  }
+
+  auto parseOne = [&]() -> bool {
+    const MCExpr *Value;
+    if (Parser.parseExpression(Value))
+      return true;
+    Parser.getStreamer().EmitValue(Value, SizeInBytes, L);
+    return false;
+  };
+  return (parseMany(parseOne));
+}
 
 extern "C" void LLVMInitializeAVRAsmParser() {
   RegisterMCAsmParser<AVRAsmParser> X(getTheAVRTarget());

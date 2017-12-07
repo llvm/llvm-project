@@ -4,8 +4,8 @@ target triple = "x86_64-apple-macosx10.7"
 
 ; This test case extracts a sub_8bit_hi sub-register:
 ;
-;	%r8b<def> = COPY %bh, %ebx<imp-use,kill>
-;	%esi<def> = MOVZX32_NOREXrr8 %r8b<kill>
+;	%r8b = COPY %bh, implicit killed %ebx
+;	%esi = MOVZX32_NOREXrr8 killed %r8b
 ;
 ; The register allocation above is invalid, %bh can only be encoded without an
 ; REX prefix, so the destination register must be GR8_NOREX.  The code above
@@ -41,8 +41,8 @@ entry:
 
 ; This test case extracts a sub_8bit_hi sub-register:
 ;
-;       %2<def> = COPY %1:sub_8bit_hi; GR8:%2 GR64_ABCD:%1
-;       TEST8ri %2, 1, %eflags<imp-def>; GR8:%2
+;       %2 = COPY %1:sub_8bit_hi; GR8:%2 GR64_ABCD:%1
+;       TEST8ri %2, 1, implicit-def %eflags; GR8:%2
 ;
 ; %2 must be constrained to GR8_NOREX, or the COPY could become impossible.
 ;

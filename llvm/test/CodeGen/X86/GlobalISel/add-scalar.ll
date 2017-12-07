@@ -28,8 +28,8 @@ define i64 @test_add_i64(i64 %arg1, i64 %arg2) {
 define i32 @test_add_i32(i32 %arg1, i32 %arg2) {
 ; X64-LABEL: test_add_i32:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
-; X64-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
+; X64-NEXT:    # kill: def %edi killed %edi def %rdi
+; X64-NEXT:    # kill: def %esi killed %esi def %rsi
 ; X64-NEXT:    leal (%rsi,%rdi), %eax
 ; X64-NEXT:    retq
 ;
@@ -45,10 +45,10 @@ define i32 @test_add_i32(i32 %arg1, i32 %arg2) {
 define i16 @test_add_i16(i16 %arg1, i16 %arg2) {
 ; X64-LABEL: test_add_i16:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
-; X64-NEXT:    # kill: %esi<def> %esi<kill> %rsi<def>
+; X64-NEXT:    # kill: def %edi killed %edi def %rdi
+; X64-NEXT:    # kill: def %esi killed %esi def %rsi
 ; X64-NEXT:    leal (%rsi,%rdi), %eax
-; X64-NEXT:    # kill: %ax<def> %ax<kill> %eax<kill>
+; X64-NEXT:    # kill: def %ax killed %ax killed %eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_add_i16:

@@ -4,7 +4,7 @@
 define void @vst(i8* %m, [4 x i64] %v) {
 entry:
 ; CHECK: vst:
-; CHECK: VST1d64Q %r{{[0-9]+}}<kill>, 8, %d{{[0-9]+}}, pred:14, pred:%noreg, %q{{[0-9]+}}_q{{[0-9]+}}<imp-use,kill>
+; CHECK: VST1d64Q killed %r{{[0-9]+}}, 8, %d{{[0-9]+}}, pred:14, pred:%noreg, implicit killed %q{{[0-9]+}}_q{{[0-9]+}}
 
   %v0 = extractvalue [4 x i64] %v, 0
   %v1 = extractvalue [4 x i64] %v, 1
@@ -37,7 +37,7 @@ entry:
 %struct.__neon_int8x8x4_t = type { <8 x i8>,  <8 x i8>,  <8 x i8>, <8 x i8> }
 define <8 x i8> @vtbx4(<8 x i8>* %A, %struct.__neon_int8x8x4_t* %B, <8 x i8>* %C) nounwind {
 ; CHECK: vtbx4:
-; CHECK: VTBX4 {{.*}}, pred:14, pred:%noreg, %q{{[0-9]+}}_q{{[0-9]+}}<imp-use>
+; CHECK: VTBX4 {{.*}}, pred:14, pred:%noreg, implicit %q{{[0-9]+}}_q{{[0-9]+}}
 	%tmp1 = load <8 x i8>, <8 x i8>* %A
 	%tmp2 = load %struct.__neon_int8x8x4_t, %struct.__neon_int8x8x4_t* %B
         %tmp3 = extractvalue %struct.__neon_int8x8x4_t %tmp2, 0

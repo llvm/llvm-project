@@ -36,25 +36,25 @@ define i64 @test2(i64 %a) {
 define i32 @test(i32 %a) {
 ; LNX1-LABEL: test:
 ; LNX1:       # %bb.0:
-; LNX1-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
+; LNX1-NEXT:    # kill: def %edi killed %edi def %rdi
 ; LNX1-NEXT:    leal (%rdi,%rdi,2), %eax
 ; LNX1-NEXT:    retq
 ;
 ; LNX2-LABEL: test:
 ; LNX2:       # %bb.0:
-; LNX2-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
+; LNX2-NEXT:    # kill: def %edi killed %edi def %rdi
 ; LNX2-NEXT:    leal (%rdi,%rdi,2), %eax
 ; LNX2-NEXT:    retq
 ;
 ; NACL-LABEL: test:
 ; NACL:       # %bb.0:
-; NACL-NEXT:    # kill: %edi<def> %edi<kill> %rdi<def>
+; NACL-NEXT:    # kill: def %edi killed %edi def %rdi
 ; NACL-NEXT:    leal (%rdi,%rdi,2), %eax
 ; NACL-NEXT:    retq
 ;
 ; WIN-LABEL: test:
 ; WIN:       # %bb.0:
-; WIN-NEXT:    # kill: %ecx<def> %ecx<kill> %rcx<def>
+; WIN-NEXT:    # kill: def %ecx killed %ecx def %rcx
 ; WIN-NEXT:    leal (%rcx,%rcx,2), %eax
 ; WIN-NEXT:    retq
   %tmp2 = mul i32 %a, 3

@@ -15,6 +15,8 @@
 #define LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVBASEINFO_H
 
 #include "RISCVMCTargetDesc.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 
 namespace llvm {
 
@@ -24,12 +26,13 @@ namespace RISCVII {
 enum {
   InstFormatPseudo = 0,
   InstFormatR = 1,
-  InstFormatI = 2,
-  InstFormatS = 3,
-  InstFormatB = 4,
-  InstFormatU = 5,
-  InstFormatJ = 6,
-  InstFormatOther = 7,
+  InstFormatR4 = 2,
+  InstFormatI = 3,
+  InstFormatS = 4,
+  InstFormatB = 5,
+  InstFormatU = 6,
+  InstFormatJ = 7,
+  InstFormatOther = 8,
 
   InstFormatMask = 15
 };
@@ -51,6 +54,49 @@ enum FenceField {
   W = 1
 };
 }
+
+// Describes the supported floating point rounding mode encodings.
+namespace RISCVFPRndMode {
+enum RoundingMode {
+  RNE = 0,
+  RTZ = 1,
+  RDN = 2,
+  RUP = 3,
+  RMM = 4,
+  DYN = 7,
+  Invalid
+};
+
+inline static StringRef roundingModeToString(RoundingMode RndMode) {
+  switch (RndMode) {
+  default:
+    llvm_unreachable("Unknown floating point rounding mode");
+  case RISCVFPRndMode::RNE:
+    return "rne";
+  case RISCVFPRndMode::RTZ:
+    return "rtz";
+  case RISCVFPRndMode::RDN:
+    return "rdn";
+  case RISCVFPRndMode::RUP:
+    return "rup";
+  case RISCVFPRndMode::RMM:
+    return "rmm";
+  case RISCVFPRndMode::DYN:
+    return "dyn";
+  }
+}
+
+inline static RoundingMode stringToRoundingMode(StringRef Str) {
+  return StringSwitch<RoundingMode>(Str)
+      .Case("rne", RISCVFPRndMode::RNE)
+      .Case("rtz", RISCVFPRndMode::RTZ)
+      .Case("rdn", RISCVFPRndMode::RDN)
+      .Case("rup", RISCVFPRndMode::RUP)
+      .Case("rmm", RISCVFPRndMode::RMM)
+      .Case("dyn", RISCVFPRndMode::DYN)
+      .Default(RISCVFPRndMode::Invalid);
+}
+} // namespace RISCVFPRndMode
 } // namespace llvm
 
 #endif
