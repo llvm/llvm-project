@@ -1105,9 +1105,9 @@ isl::pw_aff MemoryAccess::getPwAff(const SCEV *E) {
   PWACtx PWAC = Stmt->getParent()->getPwAff(E, Stmt->getEntryBlock());
   isl::set StmtDom = getStatement()->getDomain();
   StmtDom = StmtDom.reset_tuple_id();
-  isl::set NewInvalidDom = StmtDom.intersect(isl::manage(PWAC.second));
+  isl::set NewInvalidDom = StmtDom.intersect(PWAC.second);
   InvalidDomain = InvalidDomain.unite(NewInvalidDom);
-  return isl::manage(PWAC.first);
+  return PWAC.first;
 }
 
 // Create a map in the size of the provided set domain, that maps from the
@@ -1440,8 +1440,8 @@ getPwAff(Scop &S, BasicBlock *BB,
          DenseMap<BasicBlock *, isl::set> &InvalidDomainMap, const SCEV *E,
          bool NonNegative = false) {
   PWACtx PWAC = S.getPwAff(E, BB, NonNegative);
-  InvalidDomainMap[BB] = InvalidDomainMap[BB].unite(isl::manage(PWAC.second));
-  return PWAC.first;
+  InvalidDomainMap[BB] = InvalidDomainMap[BB].unite(PWAC.second);
+  return PWAC.first.take();
 }
 
 /// Build the conditions sets for the switch @p SI in the @p Domain.
@@ -4493,8 +4493,7 @@ isl::union_set Scop::getDomains() const {
 
 isl::pw_aff Scop::getPwAffOnly(const SCEV *E, BasicBlock *BB) {
   PWACtx PWAC = getPwAff(E, BB);
-  isl_set_free(PWAC.second);
-  return isl::manage(PWAC.first);
+  return PWAC.first;
 }
 
 isl::union_map

@@ -4640,7 +4640,9 @@ void __kmp_affinity_set_init_mask(int gtid, int isa_root) {
 
   KMP_CPU_COPY(th->th.th_affin_mask, mask);
 
-  if (__kmp_affinity_verbose) {
+  if (__kmp_affinity_verbose
+      /* to avoid duplicate printing (will be correctly printed on barrier) */
+      && (__kmp_affinity_type == affinity_none || i != KMP_PLACE_ALL)) {
     char buf[KMP_AFFIN_MASK_PRINT_LEN];
     __kmp_affinity_print_mask(buf, KMP_AFFIN_MASK_PRINT_LEN,
                               th->th.th_affin_mask);

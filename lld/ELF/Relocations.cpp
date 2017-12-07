@@ -867,6 +867,9 @@ template <class ELFT, class RelTy>
 static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
   OffsetGetter GetOffset(Sec);
 
+  // Not all relocations end up in Sec.Relocations, but a lot do.
+  Sec.Relocations.reserve(Rels.size());
+
   for (auto I = Rels.begin(), End = Rels.end(); I != End; ++I) {
     const RelTy &Rel = *I;
     Symbol &Sym = Sec.getFile<ELFT>()->getRelocTargetSym(Rel);
