@@ -72,13 +72,13 @@ int main() {
   // LAMBDA: call void [[OUTER_LAMBDA:@.+]](
   [&]() {
     // LAMBDA: define{{.*}} internal{{.*}} void [[OUTER_LAMBDA]](
-    // LAMBDA: call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 3, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 0, i32 0)
+    // LAMBDA: call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 1, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 0, i32 0)
     // LAMBDA: call void @[[LOFFL1:.+]](
     // LAMBDA:  ret
 #pragma omp target
 #pragma omp teams distribute private(g, g1, sivar)
   for (int i = 0; i < 2; ++i) {
-    // LAMBDA: define{{.*}} internal{{.*}} void @[[LOFFL1]](i{{64|32}} {{%.+}}, i{{64|32}} {{%.+}})
+    // LAMBDA: define{{.*}} internal{{.*}} void @[[LOFFL1]](i{{64|32}} {{%.+}})
     // LAMBDA: call void {{.+}} @__kmpc_fork_teams({{.+}}, i32 0, {{.+}} @[[LOUTL1:.+]] to {{.+}})
     // LAMBDA: ret void
 
@@ -97,7 +97,6 @@ int main() {
     // LAMBDA: [[TMP:%.+]] = alloca i{{[0-9]+}}*,
     // LAMBDA: [[SIVAR_PRIV:%.+]] = alloca i{{[0-9]+}},
     // LAMBDA: store{{.+}} [[G1_PRIV]], {{.+}} [[TMP]],
-    
     g = 1;
     g1 = 1;
     sivar = 2;
@@ -142,12 +141,12 @@ int main() {
 }
 
 // CHECK: define {{.*}}i{{[0-9]+}} @main()
-// CHECK: call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 5, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 0, i32 0)
-// CHECK: call void @[[OFFL1:.+]](i{{64|32}} %{{.+}})
+// CHECK: call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 0, i8** null, i8** null, i{{64|32}}* null, i64* null, i32 0, i32 0)
+// CHECK: call void @[[OFFL1:.+]]()
 // CHECK: {{%.+}} = call{{.*}} i32 @[[TMAIN_INT:.+]]()
 // CHECK:  ret
 
-// CHECK: define{{.*}} void @[[OFFL1]]({{.+}})
+// CHECK: define{{.*}} void @[[OFFL1]]()
 // CHECK: call void {{.+}} @__kmpc_fork_teams({{.+}}, i32 0, {{.+}} @[[OUTL1:.+]] to {{.+}})
 // CHECK: ret void
 
