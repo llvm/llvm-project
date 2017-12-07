@@ -131,7 +131,7 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> MB,
   case file_magic::archive:
     if (WholeArchive) {
       std::unique_ptr<Archive> File =
-          check(Archive::create(MBRef),
+          CHECK(Archive::create(MBRef),
                 MBRef.getBufferIdentifier() + ": failed to parse archive");
 
       for (MemoryBufferRef M : getArchiveMembers(File.get()))
@@ -196,7 +196,7 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &C,
                                         StringRef SymName,
                                         StringRef ParentName) {
   if (!C.getParent()->isThin()) {
-    MemoryBufferRef MB = check(
+    MemoryBufferRef MB = CHECK(
         C.getMemoryBufferRef(),
         "could not get the buffer for the member defining symbol " + SymName);
     enqueueTask([=]() { Driver->addArchiveBuffer(MB, SymName, ParentName); });
@@ -204,7 +204,7 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &C,
   }
 
   auto Future = std::make_shared<std::future<MBErrPair>>(createFutureForFile(
-      check(C.getFullName(),
+      CHECK(C.getFullName(),
             "could not get the filename for the member defining symbol " +
                 SymName)));
   enqueueTask([=]() {
@@ -531,8 +531,8 @@ static void createImportLibrary(bool AsLib) {
 }
 
 static void parseModuleDefs(StringRef Path) {
-  std::unique_ptr<MemoryBuffer> MB = check(
-    MemoryBuffer::getFile(Path, -1, false, true), "could not open " + Path);
+  std::unique_ptr<MemoryBuffer> MB = CHECK(
+      MemoryBuffer::getFile(Path, -1, false, true), "could not open " + Path);
   COFFModuleDefinition M = check(parseCOFFModuleDefinition(
       MB->getMemBufferRef(), Config->Machine, Config->MinGW));
 
@@ -577,7 +577,7 @@ static bool needsRebuilding(MemoryBufferRef MB) {
   // The MSVC linker doesn't support thin archives, so if it's a thin
   // archive, we always need to rebuild it.
   std::unique_ptr<Archive> File =
-      check(Archive::create(MB), "Failed to read " + MB.getBufferIdentifier());
+      CHECK(Archive::create(MB), "Failed to read " + MB.getBufferIdentifier());
   if (File->isThin())
     return true;
 
@@ -598,7 +598,7 @@ static bool needsRebuilding(MemoryBufferRef MB) {
 // its path is returned.
 static Optional<std::string>
 filterBitcodeFiles(StringRef Path, std::vector<std::string> &TemporaryFiles) {
-  std::unique_ptr<MemoryBuffer> MB = check(
+  std::unique_ptr<MemoryBuffer> MB = CHECK(
       MemoryBuffer::getFile(Path, -1, false, true), "could not open " + Path);
   MemoryBufferRef MBRef = MB->getMemBufferRef();
   file_magic Magic = identify_magic(MBRef.getBuffer());
@@ -611,7 +611,7 @@ filterBitcodeFiles(StringRef Path, std::vector<std::string> &TemporaryFiles) {
     return Path.str();
 
   std::unique_ptr<Archive> File =
-      check(Archive::create(MBRef),
+      CHECK(Archive::create(MBRef),
             MBRef.getBufferIdentifier() + ": failed to parse archive");
 
   std::vector<NewArchiveMember> New;
@@ -957,7 +957,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   // Handle /lldsavecachepolicy
   if (auto *Arg = Args.getLastArg(OPT_lldltocachepolicy))
-    Config->LTOCachePolicy = check(
+    Config->LTOCachePolicy = CHECK(
         parseCachePruningPolicy(Arg->getValue()),
         Twine("/lldltocachepolicy: invalid cache policy: ") + Arg->getValue());
 

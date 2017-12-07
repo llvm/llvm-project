@@ -784,7 +784,7 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
 }
 
 void Writer::openFile(StringRef Path) {
-  Buffer = check(
+  Buffer = CHECK(
       FileOutputBuffer::create(Path, FileSize, FileOutputBuffer::F_executable),
       "failed to open " + Path);
 }

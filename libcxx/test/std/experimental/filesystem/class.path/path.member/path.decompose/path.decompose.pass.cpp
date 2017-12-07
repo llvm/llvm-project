@@ -178,7 +178,7 @@ void decompFilenameTest()
     path p(TC.raw);
     assert(p == TC.raw);
     ASSERT_NOEXCEPT(p.empty());
-    
+
     assert(p.filename() == TC.filename);
     assert(p.has_filename() != TC.filename.empty());
 
