@@ -41,7 +41,7 @@
 
 // RUN: %clang -target x86_64-apple-darwin -mios-simulator-version-min=11.0 -c -### %s 2>&1 | \
 // RUN: FileCheck --check-prefix=CHECK-VERSION-IOS10 %s
-// CHECK-VERSION-IOS10: x86_64-apple-ios11.0.0
+// CHECK-VERSION-IOS10: x86_64-apple-ios11.0.0-simulator
 
 // RUN: %clang -target arm64-apple-ios11.1 -c -### %s 2>&1 | \
 // RUN: FileCheck --check-prefix=CHECK-VERSION-IOS11 %s
@@ -85,13 +85,13 @@
 // CHECK-VERSION-TVOS83: "thumbv7-apple-tvos8.3.0"
 // RUN: %clang -target i386-apple-darwin -mtvos-simulator-version-min=8.3 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-TVSIM83 %s
-// CHECK-VERSION-TVSIM83: "i386-apple-tvos8.3.0"
+// CHECK-VERSION-TVSIM83: "i386-apple-tvos8.3.0-simulator"
 // RUN: %clang -target armv7k-apple-darwin -mwatchos-version-min=2.0 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-WATCHOS20 %s
 // CHECK-VERSION-WATCHOS20: "thumbv7k-apple-watchos2.0.0"
 // RUN: %clang -target i386-apple-darwin -mwatchos-simulator-version-min=2.0 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-WATCHSIM20 %s
-// CHECK-VERSION-WATCHSIM20: "i386-apple-watchos2.0.0"
+// CHECK-VERSION-WATCHSIM20: "i386-apple-watchos2.0.0-simulator"
 
 // Check environment variable gets interpreted correctly
 // RUN: env MACOSX_DEPLOYMENT_TARGET=10.5 IPHONEOS_DEPLOYMENT_TARGET=2.0 \
@@ -117,7 +117,7 @@
 // RUN: env TVOS_DEPLOYMENT_TARGET=8.3.1 \
 // RUN:   %clang -target i386-apple-darwin9 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-TVOSSIM %s
-// CHECK-VERSION-TVOSSIM: "i386-apple-tvos8.3.1"
+// CHECK-VERSION-TVOSSIM: "i386-apple-tvos8.3.1-simulator"
 
 // RUN: env MACOSX_DEPLOYMENT_TARGET=10.5 WATCHOS_DEPLOYMENT_TARGET=2.0 \
 // RUN:   %clang -target armv7-apple-darwin9 -c %s -### 2>&1 | \
@@ -126,16 +126,16 @@
 // RUN: env WATCHOS_DEPLOYMENT_TARGET=2.0 \
 // RUN:   %clang -target i386-apple-darwin9 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-WATCHOSSIM %s
-// CHECK-VERSION-WATCHOSSIM: "i386-apple-watchos2.0.0"
+// CHECK-VERSION-WATCHOSSIM: "i386-apple-watchos2.0.0-simulator"
 
 // RUN: %clang -target x86_64-apple-ios11.0.0 -c %s -### 2>&1 | \
 // RUN: FileCheck --check-prefix=CHECK-VERSION-IOS-TARGET %s
-// CHECK-VERSION-IOS-TARGET: "x86_64-apple-ios11.0.0"
+// CHECK-VERSION-IOS-TARGET: "x86_64-apple-ios11.0.0-simulator"
 
 // RUN: %clang -target x86_64-apple-tvos11.0 -c %s -### 2>&1 | \
 // RUN: FileCheck --check-prefix=CHECK-VERSION-TVOS-TARGET %s
-// CHECK-VERSION-TVOS-TARGET: "x86_64-apple-tvos11.0.0"
+// CHECK-VERSION-TVOS-TARGET: "x86_64-apple-tvos11.0.0-simulator"
 
 // RUN: %clang -target x86_64-apple-watchos4.0 -c %s -### 2>&1 | \
 // RUN: FileCheck --check-prefix=CHECK-VERSION-WATCHOS-TARGET %s
-// CHECK-VERSION-WATCHOS-TARGET: "x86_64-apple-watchos4.0.0"
+// CHECK-VERSION-WATCHOS-TARGET: "x86_64-apple-watchos4.0.0-simulator"

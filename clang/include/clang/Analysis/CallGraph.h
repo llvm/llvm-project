@@ -1,4 +1,4 @@
-//== CallGraph.h - AST-based Call graph  ------------------------*- C++ -*--==//
+//===- CallGraph.h - AST-based Call graph -----------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,19 +12,27 @@
 //  A call graph for functions whose definitions/bodies are available in the
 //  current translation unit. The graph has a "virtual" root node that contains
 //  edges to all externally available functions.
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_ANALYSIS_CALLGRAPH_H
 #define LLVM_CLANG_ANALYSIS_CALLGRAPH_H
 
-#include "clang/AST/DeclBase.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/GraphTraits.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVector.h"
+#include <memory>
 
 namespace clang {
+
 class CallGraphNode;
+class Decl;
+class DeclContext;
+class Stmt;
 
 /// \brief The AST-based call graph.
 ///
@@ -34,8 +42,8 @@ class CallGraphNode;
 class CallGraph : public RecursiveASTVisitor<CallGraph> {
   friend class CallGraphNode;
 
-  typedef llvm::DenseMap<const Decl *, std::unique_ptr<CallGraphNode>>
-      FunctionMapTy;
+  using FunctionMapTy =
+      llvm::DenseMap<const Decl *, std::unique_ptr<CallGraphNode>>;
 
   /// FunctionMap owns all CallGraphNodes.
   FunctionMapTy FunctionMap;
@@ -65,10 +73,11 @@ public:
   /// one into the graph.
   CallGraphNode *getOrInsertNode(Decl *);
 
+  using iterator = FunctionMapTy::iterator;
+  using const_iterator = FunctionMapTy::const_iterator;
+
   /// Iterators through all the elements in the graph. Note, this gives
   /// non-deterministic order.
-  typedef FunctionMapTy::iterator iterator;
-  typedef FunctionMapTy::const_iterator const_iterator;
   iterator begin() { return FunctionMap.begin(); }
   iterator end()   { return FunctionMap.end();   }
   const_iterator begin() const { return FunctionMap.begin(); }
@@ -84,8 +93,8 @@ public:
   /// Iterators through all the nodes of the graph that have no parent. These
   /// are the unreachable nodes, which are either unused or are due to us
   /// failing to add a call edge due to the analysis imprecision.
-  typedef llvm::SetVector<CallGraphNode *>::iterator nodes_iterator;
-  typedef llvm::SetVector<CallGraphNode *>::const_iterator const_nodes_iterator;
+  using nodes_iterator = llvm::SetVector<CallGraphNode *>::iterator;
+  using const_nodes_iterator = llvm::SetVector<CallGraphNode *>::const_iterator;
 
   void print(raw_ostream &os) const;
   void dump() const;
@@ -133,7 +142,7 @@ private:
 
 class CallGraphNode {
 public:
-  typedef CallGraphNode* CallRecord;
+  using CallRecord = CallGraphNode *;
 
 private:
   /// \brief The function/method declaration.
@@ -145,17 +154,17 @@ private:
 public:
   CallGraphNode(Decl *D) : FD(D) {}
 
-  typedef SmallVectorImpl<CallRecord>::iterator iterator;
-  typedef SmallVectorImpl<CallRecord>::const_iterator const_iterator;
+  using iterator = SmallVectorImpl<CallRecord>::iterator;
+  using const_iterator = SmallVectorImpl<CallRecord>::const_iterator;
 
   /// Iterators through all the callees/children of the node.
-  inline iterator begin() { return CalledFunctions.begin(); }
-  inline iterator end()   { return CalledFunctions.end(); }
-  inline const_iterator begin() const { return CalledFunctions.begin(); }
-  inline const_iterator end()   const { return CalledFunctions.end();   }
+  iterator begin() { return CalledFunctions.begin(); }
+  iterator end() { return CalledFunctions.end(); }
+  const_iterator begin() const { return CalledFunctions.begin(); }
+  const_iterator end() const { return CalledFunctions.end(); }
 
-  inline bool empty() const {return CalledFunctions.empty(); }
-  inline unsigned size() const {return CalledFunctions.size(); }
+  bool empty() const { return CalledFunctions.empty(); }
+  unsigned size() const { return CalledFunctions.size(); }
 
   void addCallee(CallGraphNode *N) {
     CalledFunctions.push_back(N);
@@ -167,35 +176,33 @@ public:
   void dump() const;
 };
 
-} // end clang namespace
+} // namespace clang
 
 // Graph traits for iteration, viewing.
 namespace llvm {
+
 template <> struct GraphTraits<clang::CallGraphNode*> {
-  typedef clang::CallGraphNode NodeType;
-  typedef clang::CallGraphNode *NodeRef;
-  typedef NodeType::iterator ChildIteratorType;
+  using NodeType = clang::CallGraphNode;
+  using NodeRef = clang::CallGraphNode *;
+  using ChildIteratorType = NodeType::iterator;
 
   static NodeType *getEntryNode(clang::CallGraphNode *CGN) { return CGN; }
-  static inline ChildIteratorType child_begin(NodeType *N) {
-    return N->begin();
-  }
-  static inline ChildIteratorType child_end(NodeType *N) { return N->end(); }
+  static ChildIteratorType child_begin(NodeType *N) { return N->begin();  }
+  static ChildIteratorType child_end(NodeType *N) { return N->end(); }
 };
 
 template <> struct GraphTraits<const clang::CallGraphNode*> {
-  typedef const clang::CallGraphNode NodeType;
-  typedef const clang::CallGraphNode *NodeRef;
-  typedef NodeType::const_iterator ChildIteratorType;
+  using NodeType = const clang::CallGraphNode;
+  using NodeRef = const clang::CallGraphNode *;
+  using ChildIteratorType = NodeType::const_iterator;
 
   static NodeType *getEntryNode(const clang::CallGraphNode *CGN) { return CGN; }
-  static inline ChildIteratorType child_begin(NodeType *N) { return N->begin();}
-  static inline ChildIteratorType child_end(NodeType *N) { return N->end(); }
+  static ChildIteratorType child_begin(NodeType *N) { return N->begin();}
+  static ChildIteratorType child_end(NodeType *N) { return N->end(); }
 };
 
 template <> struct GraphTraits<clang::CallGraph*>
   : public GraphTraits<clang::CallGraphNode*> {
-
   static NodeType *getEntryNode(clang::CallGraph *CGN) {
     return CGN->getRoot();  // Start at the external node!
   }
@@ -206,19 +213,18 @@ template <> struct GraphTraits<clang::CallGraph*>
   }
 
   // nodes_iterator/begin/end - Allow iteration over all nodes in the graph
-  typedef mapped_iterator<clang::CallGraph::iterator, decltype(&CGGetValue)>
-      nodes_iterator;
+  using nodes_iterator =
+      mapped_iterator<clang::CallGraph::iterator, decltype(&CGGetValue)>;
 
   static nodes_iterator nodes_begin(clang::CallGraph *CG) {
     return nodes_iterator(CG->begin(), &CGGetValue);
   }
+
   static nodes_iterator nodes_end  (clang::CallGraph *CG) {
     return nodes_iterator(CG->end(), &CGGetValue);
   }
 
-  static unsigned size(clang::CallGraph *CG) {
-    return CG->size();
-  }
+  static unsigned size(clang::CallGraph *CG) { return CG->size(); }
 };
 
 template <> struct GraphTraits<const clang::CallGraph*> :
@@ -233,21 +239,20 @@ template <> struct GraphTraits<const clang::CallGraph*> :
   }
 
   // nodes_iterator/begin/end - Allow iteration over all nodes in the graph
-  typedef mapped_iterator<clang::CallGraph::const_iterator,
-                          decltype(&CGGetValue)>
-      nodes_iterator;
+  using nodes_iterator =
+      mapped_iterator<clang::CallGraph::const_iterator, decltype(&CGGetValue)>;
 
   static nodes_iterator nodes_begin(const clang::CallGraph *CG) {
     return nodes_iterator(CG->begin(), &CGGetValue);
   }
+
   static nodes_iterator nodes_end(const clang::CallGraph *CG) {
     return nodes_iterator(CG->end(), &CGGetValue);
   }
-  static unsigned size(const clang::CallGraph *CG) {
-    return CG->size();
-  }
+
+  static unsigned size(const clang::CallGraph *CG) { return CG->size(); }
 };
 
-} // end llvm namespace
+} // namespace llvm
 
-#endif
+#endif // LLVM_CLANG_ANALYSIS_CALLGRAPH_H

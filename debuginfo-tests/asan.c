@@ -1,4 +1,4 @@
-// RUN: %clang -fblocks %target_itanium_abi_host_triple -arch x86_64 %s -o %t.out -gdwarf-2 -fsanitize=address
+// RUN: %clang -fblocks %target_itanium_abi_host_triple -arch x86_64 %s -o %t.out -g -fsanitize=address
 // RUN: %test_debuginfo %s %t.out
 // REQUIRES: not_asan
 //           Zorg configures the ASAN stage2 bots to not build the asan

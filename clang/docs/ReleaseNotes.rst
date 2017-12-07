@@ -121,6 +121,12 @@ New Compiler Flags
   number of attributes are supported outside of C++ mode. See the Clang
   attribute documentation for more information about which attributes are
   supported for each syntax.
+  
+- Added the ``-std=c17``, ``-std=gnu17``, and ``-std=iso9899:2017`` language
+  mode flags for compatibility with GCC. This enables support for the next
+  version of the C standard, expected to be published by ISO in 2018. The only
+  difference between the ``-std=c17`` and ``-std=c11`` language modes is the
+  value of the ``__STDC_VERSION__`` macro, as C17 is a bug fix release.
 
 Deprecated Compiler Flags
 -------------------------
@@ -139,6 +145,11 @@ Clang now supports the ...
 Attribute Changes in Clang
 --------------------------
 
+- Added the ``__has_c_attribute()`` builtin preprocessor macro which allows
+  users to dynamically detect whether a double square-bracket attribute is
+  supported in C mode. This attribute syntax can be enabled with the
+  ``-fdouble-square-bracket-attributes`` flag.
+  
 - The presence of __attribute__((availability(...))) on a declaration no longer
   implies default visibility for that declaration on macOS.
 

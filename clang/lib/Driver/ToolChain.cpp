@@ -81,6 +81,12 @@ ToolChain::ToolChain(const Driver &D, const llvm::Triple &T,
     getFilePaths().push_back(CandidateLibPath);
 }
 
+void ToolChain::setTripleEnvironment(llvm::Triple::EnvironmentType Env) {
+  Triple.setEnvironment(Env);
+  if (EffectiveTriple != llvm::Triple())
+    EffectiveTriple.setEnvironment(Env);
+}
+
 ToolChain::~ToolChain() {
 }
 
