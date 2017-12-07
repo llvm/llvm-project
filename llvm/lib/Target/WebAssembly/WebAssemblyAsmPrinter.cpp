@@ -78,12 +78,6 @@ WebAssemblyTargetStreamer *WebAssemblyAsmPrinter::getTargetStreamer() {
 //===----------------------------------------------------------------------===//
 
 void WebAssemblyAsmPrinter::EmitEndOfAsmFile(Module &M) {
-  // Declare the stack pointer.
-  if (TM.getTargetTriple().isOSBinFormatWasm()) {
-    getTargetStreamer()->emitStackPointer(
-        GetExternalSymbolSymbol("__stack_pointer"));
-  }
-
   for (const auto &F : M) {
     // Emit function type info for all undefined functions
     if (F.isDeclarationForLinker() && !F.isIntrinsic()) {
@@ -96,11 +90,13 @@ void WebAssemblyAsmPrinter::EmitEndOfAsmFile(Module &M) {
   }
   for (const auto &G : M.globals()) {
     if (!G.hasInitializer() && G.hasExternalLinkage()) {
-      uint16_t Size = M.getDataLayout().getTypeAllocSize(G.getValueType());
-      if (TM.getTargetTriple().isOSBinFormatELF())
-        getTargetStreamer()->emitGlobalImport(G.getGlobalIdentifier());
-      OutStreamer->emitELFSize(getSymbol(&G),
-                               MCConstantExpr::create(Size, OutContext));
+      if (G.getValueType()->isSized()) {
+        uint16_t Size = M.getDataLayout().getTypeAllocSize(G.getValueType());
+        if (TM.getTargetTriple().isOSBinFormatELF())
+          getTargetStreamer()->emitGlobalImport(G.getGlobalIdentifier());
+        OutStreamer->emitELFSize(getSymbol(&G),
+                                 MCConstantExpr::create(Size, OutContext));
+      }
     }
   }
 }

@@ -1172,6 +1172,9 @@ OpRef HvxSelector::shuffs1(ShuffleMask SM, OpRef Va, ResultStack &Results) {
   if (isUndef(SM.Mask))
     return OpRef::undef(getSingleVT(MVT::i8));
 
+  OpRef P = perfect(SM, Va, Results);
+  if (P.isValid())
+    return P;
   return butterfly(SM, Va, Results);
 }
 
@@ -1417,7 +1420,7 @@ OpRef HvxSelector::contracting(ShuffleMask SM, OpRef Va, OpRef Vb,
     if (Strip.first != 0 && Strip.first != L)
       return OpRef::fail();
     // Examine the rest of the mask.
-    for (int I = L; I < N/2; I += L) {
+    for (int I = L; I < N; I += L) {
       auto S = findStrip(subm(SM.Mask,I), 1, N-I);
       // Check whether the mask element at the beginning of each strip
       // increases by 2L each time.
@@ -1535,11 +1538,14 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
   // V6_vshuffvdd (V6_vshuff)
   // V6_dealvdd (V6_vdeal)
 
-  // TODO Recognize patterns for V6_vdeal{b,h} and V6_vshuff{b,h}.
-
   int VecLen = SM.Mask.size();
   assert(isPowerOf2_32(VecLen) && Log2_32(VecLen) <= 8);
   unsigned LogLen = Log2_32(VecLen);
+  unsigned HwLog = Log2_32(HwLen);
+  // The result length must be the same as the length of a single vector,
+  // or a vector pair.
+  assert(LogLen == HwLog || LogLen == HwLog+1);
+  bool Extend = (LogLen == HwLog);
 
   if (!isPermutation(SM.Mask))
     return OpRef::fail();
@@ -1700,6 +1706,32 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
     return NewC;
   };
 
+  auto pfs = [](const std::set<CycleType> &Cs, unsigned Len) {
+    // Ordering: shuff: 5 0 1 2 3 4, deal: 5 4 3 2 1 0 (for Log=6),
+    // for bytes zero is included, for halfwords is not.
+    if (Cs.size() != 1)
+      return 0u;
+    const CycleType &C = *Cs.begin();
+    if (C[0] != Len-1)
+      return 0u;
+    int D = Len - C.size();
+    if (D != 0 && D != 1)
+      return 0u;
+
+    bool IsDeal = true, IsShuff = true;
+    for (unsigned I = 1; I != Len-D; ++I) {
+      if (C[I] != Len-1-I)
+        IsDeal = false;
+      if (C[I] != I-(1-D))  // I-1, I
+        IsShuff = false;
+    }
+    // At most one, IsDeal or IsShuff, can be non-zero.
+    assert(!(IsDeal || IsShuff) || IsDeal != IsShuff);
+    static unsigned Deals[] = { Hexagon::V6_vdealb, Hexagon::V6_vdealh };
+    static unsigned Shufs[] = { Hexagon::V6_vshuffb, Hexagon::V6_vshuffh };
+    return IsDeal ? Deals[D] : (IsShuff ? Shufs[D] : 0);
+  };
+
   while (!All.empty()) {
     unsigned A = *All.begin();
     All.erase(A);
@@ -1714,6 +1746,17 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
     Cycles.insert(canonicalize(C));
   }
 
+  MVT SingleTy = getSingleVT(MVT::i8);
+  MVT PairTy = getPairVT(MVT::i8);
+
+  // Recognize patterns for V6_vdeal{b,h} and V6_vshuff{b,h}.
+  if (unsigned(VecLen) == HwLen) {
+    if (unsigned SingleOpc = pfs(Cycles, LogLen)) {
+      Results.push(SingleOpc, SingleTy, {Va});
+      return OpRef::res(Results.top());
+    }
+  }
+
   SmallVector<unsigned,8> SwapElems;
   if (HwLen == unsigned(VecLen))
     SwapElems.push_back(LogLen-1);
@@ -1726,8 +1769,8 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
   }
 
   const SDLoc &dl(Results.InpNode);
-  OpRef Arg = Va;
-  MVT PairTy = getPairVT(MVT::i8);
+  OpRef Arg = !Extend ? Va
+                      : concat(Va, OpRef::undef(SingleTy), Results);
 
   for (unsigned I = 0, E = SwapElems.size(); I != E; ) {
     bool IsInc = I == E-1 || SwapElems[I] < SwapElems[I+1];
@@ -1751,7 +1794,7 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
     Arg = OpRef::res(Results.top());
   }
 
-  return Arg;
+  return !Extend ? Arg : OpRef::lo(Arg);
 }
 
 OpRef HvxSelector::butterfly(ShuffleMask SM, OpRef Va, ResultStack &Results) {
@@ -1877,10 +1920,13 @@ void HvxSelector::selectShuffle(SDNode *N) {
                          : shuffp2(ShuffleMask(Mask), Va, Vb, Results);
 
   bool Done = Res.isValid();
-  if (Done)
+  if (Done) {
+    // Make sure that Res is on the stack before materializing.
+    Results.push(TargetOpcode::COPY, ResTy, {Res});
     materialize(Results);
-  else
+  } else {
     Done = scalarizeShuffle(Mask, SDLoc(N), ResTy, Vec0, Vec1, N);
+  }
 
   if (!Done) {
 #ifndef NDEBUG

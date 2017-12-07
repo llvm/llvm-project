@@ -282,9 +282,16 @@ bool MachineCombiner::improvesCriticalPathLen(
   // of the original code sequence. This may allow the transform to proceed
   // even if the instruction depths (data dependency cycles) become worse.
 
-  unsigned NewRootLatency = getLatency(Root, NewRoot, BlockTrace);
-  unsigned RootLatency = 0;
+  // Account for the latency of the inserted and deleted instructions by
+  // adding up their latencies. This assumes that the inserted and deleted
+  // instructions are dependent instruction chains, which might not hold
+  // in all cases.
+  unsigned NewRootLatency = 0;
+  for (unsigned i = 0; i < InsInstrs.size() - 1; i++)
+    NewRootLatency += TSchedModel.computeInstrLatency(InsInstrs[i]);
+  NewRootLatency += getLatency(Root, NewRoot, BlockTrace);
 
+  unsigned RootLatency = 0;
   for (auto I : DelInstrs)
     RootLatency += TSchedModel.computeInstrLatency(I);
 

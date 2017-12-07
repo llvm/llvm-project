@@ -31,7 +31,7 @@ int main()
 //  S   s4  { s + 1, 4 };
 //  S   s5  { s,     5 };
     S  sNot { "def", 3 };
-    
+
     SV  sv0;
     SV  sv1 { s + 4, 1 };
     SV  sv2 { s + 3, 2 };

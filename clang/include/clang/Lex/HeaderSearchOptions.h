@@ -1,4 +1,4 @@
-//===--- HeaderSearchOptions.h ----------------------------------*- C++ -*-===//
+//===- HeaderSearchOptions.h ------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,9 +12,9 @@
 
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/CachedHashString.h"
-#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
+#include <cstdint> 
 #include <string>
 #include <vector>
 #include <map>
@@ -22,26 +22,45 @@
 namespace clang {
 
 namespace frontend {
-  /// IncludeDirGroup - Identifies the group an include Entry belongs to,
-  /// representing its relative positive in the search list.
-  /// \#include directives whose paths are enclosed by string quotes ("")
-  /// start searching at the Quoted group (specified by '-iquote'),
-  /// then search the Angled group, then the System group, etc.
-  enum IncludeDirGroup {
-    Quoted = 0,     ///< '\#include ""' paths, added by 'gcc -iquote'.
-    Angled,         ///< Paths for '\#include <>' added by '-I'.
-    IndexHeaderMap, ///< Like Angled, but marks header maps used when
-                       ///  building frameworks.
-    System,         ///< Like Angled, but marks system directories.
-    ExternCSystem,  ///< Like System, but headers are implicitly wrapped in
-                    ///  extern "C".
-    CSystem,        ///< Like System, but only used for C.
-    CXXSystem,      ///< Like System, but only used for C++.
-    ObjCSystem,     ///< Like System, but only used for ObjC.
-    ObjCXXSystem,   ///< Like System, but only used for ObjC++.
-    After           ///< Like System, but searched after the system directories.
-  };
-}
+
+/// IncludeDirGroup - Identifies the group an include Entry belongs to,
+/// representing its relative positive in the search list.
+/// \#include directives whose paths are enclosed by string quotes ("")
+/// start searching at the Quoted group (specified by '-iquote'),
+/// then search the Angled group, then the System group, etc.
+enum IncludeDirGroup {
+  /// '\#include ""' paths, added by 'gcc -iquote'.
+  Quoted = 0,
+
+  /// Paths for '\#include <>' added by '-I'.
+  Angled,
+
+  /// Like Angled, but marks header maps used when building frameworks.
+  IndexHeaderMap, 
+
+  /// Like Angled, but marks system directories.
+  System,
+
+  /// Like System, but headers are implicitly wrapped in extern "C".
+  ExternCSystem,
+
+  /// Like System, but only used for C.
+  CSystem,
+
+  /// Like System, but only used for C++.
+  CXXSystem,
+
+  /// Like System, but only used for ObjC.
+  ObjCSystem,
+
+  /// Like System, but only used for ObjC++.
+  ObjCXXSystem,
+
+  /// Like System, but searched after the system directories.
+  After
+};
+
+} // namespace frontend
 
 /// HeaderSearchOptions - Helper class for storing options related to the
 /// initialization of the HeaderSearch object.
@@ -59,8 +78,8 @@ public:
 
     Entry(StringRef path, frontend::IncludeDirGroup group, bool isFramework,
           bool ignoreSysRoot)
-      : Path(path), Group(group), IsFramework(isFramework),
-        IgnoreSysRoot(ignoreSysRoot) {}
+        : Path(path), Group(group), IsFramework(isFramework),
+          IgnoreSysRoot(ignoreSysRoot) {}
   };
 
   struct SystemHeaderPrefix {
@@ -72,7 +91,7 @@ public:
     bool IsSystemHeader;
 
     SystemHeaderPrefix(StringRef Prefix, bool IsSystemHeader)
-      : Prefix(Prefix), IsSystemHeader(IsSystemHeader) {}
+        : Prefix(Prefix), IsSystemHeader(IsSystemHeader) {}
   };
 
   /// If non-empty, the directory to use as a "virtual system root" for include
@@ -130,7 +149,7 @@ public:
   /// files.
   ///
   /// The default value is large, e.g., the operation runs once a week.
-  unsigned ModuleCachePruneInterval;
+  unsigned ModuleCachePruneInterval = 7 * 24 * 60 * 60;
 
   /// \brief The time (in seconds) after which an unused module file will be
   /// considered unused and will, therefore, be pruned.
@@ -139,13 +158,13 @@ public:
   /// accessed in this many seconds will be removed. The default value is
   /// large, e.g., a month, to avoid forcing infrequently-used modules to be
   /// regenerated often.
-  unsigned ModuleCachePruneAfter;
+  unsigned ModuleCachePruneAfter = 31 * 24 * 60 * 60;
 
   /// \brief The time in seconds when the build session started.
   ///
   /// This time is used by other optimizations in header search and module
   /// loading.
-  uint64_t BuildSessionTimestamp;
+  uint64_t BuildSessionTimestamp = 0;
 
   /// \brief The set of macro names that should be ignored for the purposes
   /// of computing the module hash.
@@ -185,10 +204,8 @@ public:
   unsigned ModulesHashContent : 1;
 
   HeaderSearchOptions(StringRef _Sysroot = "/")
-      : Sysroot(_Sysroot), ModuleFormat("raw"), DisableModuleHash(0),
-        ImplicitModuleMaps(0), ModuleMapFileHomeIsCwd(0),
-        ModuleCachePruneInterval(7 * 24 * 60 * 60),
-        ModuleCachePruneAfter(31 * 24 * 60 * 60), BuildSessionTimestamp(0),
+      : Sysroot(_Sysroot), ModuleFormat("raw"), DisableModuleHash(false),
+        ImplicitModuleMaps(false), ModuleMapFileHomeIsCwd(false),
         UseBuiltinIncludes(true), UseStandardSystemIncludes(true),
         UseStandardCXXIncludes(true), UseLibcxx(false), Verbose(false),
         ModulesValidateOncePerBuildSession(false),
@@ -217,6 +234,6 @@ public:
   }
 };
 
-} // end namespace clang
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_LEX_HEADERSEARCHOPTIONS_H

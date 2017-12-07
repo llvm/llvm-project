@@ -270,10 +270,9 @@ private:
   }
 
   void writeTypeSection(ArrayRef<WasmFunctionType> FunctionTypes);
-  void writeImportSection(ArrayRef<WasmImport> Imports);
+  void writeImportSection(ArrayRef<WasmImport> Imports, uint32_t DataSize,
+                          uint32_t NumElements);
   void writeFunctionSection(ArrayRef<WasmFunction> Functions);
-  void writeTableSection(uint32_t NumElements);
-  void writeMemorySection(uint32_t DataSize);
   void writeGlobalSection();
   void writeExportSection(ArrayRef<WasmExport> Exports);
   void writeElemSection(ArrayRef<uint32_t> TableElems);
@@ -287,8 +286,7 @@ private:
   void writeDataRelocSection();
   void writeLinkingMetaDataSection(
       ArrayRef<WasmDataSegment> Segments, uint32_t DataSize,
-      SmallVector<std::pair<StringRef, uint32_t>, 4> SymbolFlags,
-      Optional<uint32_t> StackPointerGlobal);
+      SmallVector<std::pair<StringRef, uint32_t>, 4> SymbolFlags);
 
   uint32_t getProvisionalValue(const WasmRelocationEntry &RelEntry);
   void applyRelocations(ArrayRef<WasmRelocationEntry> Relocations,
@@ -662,9 +660,13 @@ void WasmObjectWriter::writeTypeSection(
   endSection(Section);
 }
 
-void WasmObjectWriter::writeImportSection(ArrayRef<WasmImport> Imports) {
+void WasmObjectWriter::writeImportSection(ArrayRef<WasmImport> Imports,
+                                          uint32_t DataSize,
+                                          uint32_t NumElements) {
   if (Imports.empty())
     return;
+
+  uint32_t NumPages = (DataSize + wasm::WasmPageSize - 1) / wasm::WasmPageSize;
 
   SectionBookkeeping Section;
   startSection(Section, wasm::WASM_SEC_IMPORT);
@@ -684,6 +686,15 @@ void WasmObjectWriter::writeImportSection(ArrayRef<WasmImport> Imports) {
       encodeSLEB128(int32_t(Import.Type), getStream());
       encodeULEB128(int32_t(Import.IsMutable), getStream());
       break;
+    case wasm::WASM_EXTERNAL_MEMORY:
+      encodeULEB128(0, getStream()); // flags
+      encodeULEB128(NumPages, getStream()); // initial
+      break;
+    case wasm::WASM_EXTERNAL_TABLE:
+      encodeSLEB128(int32_t(Import.Type), getStream());
+      encodeULEB128(0, getStream()); // flags
+      encodeULEB128(NumElements, getStream()); // initial
+      break;
     default:
       llvm_unreachable("unsupported import kind");
     }
@@ -702,39 +713,6 @@ void WasmObjectWriter::writeFunctionSection(ArrayRef<WasmFunction> Functions) {
   encodeULEB128(Functions.size(), getStream());
   for (const WasmFunction &Func : Functions)
     encodeULEB128(Func.Type, getStream());
-
-  endSection(Section);
-}
-
-void WasmObjectWriter::writeTableSection(uint32_t NumElements) {
-  // For now, always emit the table section, since indirect calls are not
-  // valid without it. In the future, we could perhaps be more clever and omit
-  // it if there are no indirect calls.
-
-  SectionBookkeeping Section;
-  startSection(Section, wasm::WASM_SEC_TABLE);
-
-  encodeULEB128(1, getStream());                       // The number of tables.
-                                                       // Fixed to 1 for now.
-  encodeSLEB128(wasm::WASM_TYPE_ANYFUNC, getStream()); // Type of table
-  encodeULEB128(0, getStream());                       // flags
-  encodeULEB128(NumElements, getStream());             // initial
-
-  endSection(Section);
-}
-
-void WasmObjectWriter::writeMemorySection(uint32_t DataSize) {
-  // For now, always emit the memory section, since loads and stores are not
-  // valid without it. In the future, we could perhaps be more clever and omit
-  // it if there are no loads or stores.
-  SectionBookkeeping Section;
-  uint32_t NumPages = (DataSize + wasm::WasmPageSize - 1) / wasm::WasmPageSize;
-
-  startSection(Section, wasm::WASM_SEC_MEMORY);
-  encodeULEB128(1, getStream()); // number of memory spaces
-
-  encodeULEB128(0, getStream()); // flags
-  encodeULEB128(NumPages, getStream()); // initial
 
   endSection(Section);
 }
@@ -929,17 +907,10 @@ void WasmObjectWriter::writeDataRelocSection() {
 
 void WasmObjectWriter::writeLinkingMetaDataSection(
     ArrayRef<WasmDataSegment> Segments, uint32_t DataSize,
-    SmallVector<std::pair<StringRef, uint32_t>, 4> SymbolFlags,
-    Optional<uint32_t> StackPointerGlobal) {
+    SmallVector<std::pair<StringRef, uint32_t>, 4> SymbolFlags) {
   SectionBookkeeping Section;
   startSection(Section, wasm::WASM_SEC_CUSTOM, "linking");
   SectionBookkeeping SubSection;
-
-  if (StackPointerGlobal.hasValue()) {
-    startSection(SubSection, wasm::WASM_STACK_POINTER);
-    encodeULEB128(StackPointerGlobal.getValue(), getStream()); // id
-    endSection(SubSection);
-  }
 
   if (SymbolFlags.size() != 0) {
     startSection(SubSection, wasm::WASM_SYMBOL_INFO);
@@ -1011,8 +982,6 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
   SmallPtrSet<const MCSymbolWasm *, 4> IsAddressTaken;
   unsigned NumFuncImports = 0;
   SmallVector<WasmDataSegment, 4> DataSegments;
-  Optional<StringRef> StackPointerGlobalName;
-  Optional<uint32_t> StackPointerGlobal;
   uint32_t DataSize = 0;
 
   // Populate the IsAddressTaken set.
@@ -1095,22 +1064,28 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
     }
   }
 
-  // In the special .stack_pointer section, we've encoded the stack pointer
-  // index.
-  MCSectionWasm *StackPtr =
-      Ctx.getWasmSection(".stack_pointer", SectionKind::getMetadata());
-  if (!StackPtr->getFragmentList().empty()) {
-    if (StackPtr->getFragmentList().size() != 1)
-      report_fatal_error("only one .stack_pointer fragment supported");
-    const MCFragment &Frag = *StackPtr->begin();
-    if (Frag.hasInstructions() || Frag.getKind() != MCFragment::FT_Data)
-      report_fatal_error("only data supported in .stack_pointer");
-    const auto &DataFrag = cast<MCDataFragment>(Frag);
-    if (!DataFrag.getFixups().empty())
-      report_fatal_error("fixups not supported in .stack_pointer");
-    const SmallVectorImpl<char> &Contents = DataFrag.getContents();
-    StackPointerGlobalName = StringRef(Contents.data(), Contents.size());
-  }
+  // For now, always emit the memory import, since loads and stores are not
+  // valid without it. In the future, we could perhaps be more clever and omit
+  // it if there are no loads or stores.
+  MCSymbolWasm *MemorySym =
+      cast<MCSymbolWasm>(Ctx.getOrCreateSymbol("__linear_memory"));
+  WasmImport MemImport;
+  MemImport.ModuleName = MemorySym->getModuleName();
+  MemImport.FieldName = MemorySym->getName();
+  MemImport.Kind = wasm::WASM_EXTERNAL_MEMORY;
+  Imports.push_back(MemImport);
+
+  // For now, always emit the table section, since indirect calls are not
+  // valid without it. In the future, we could perhaps be more clever and omit
+  // it if there are no indirect calls.
+  MCSymbolWasm *TableSym =
+      cast<MCSymbolWasm>(Ctx.getOrCreateSymbol("__indirect_function_table"));
+  WasmImport TableImport;
+  TableImport.ModuleName = TableSym->getModuleName();
+  TableImport.FieldName = TableSym->getName();
+  TableImport.Kind = wasm::WASM_EXTERNAL_TABLE;
+  TableImport.Type = wasm::WASM_TYPE_ANYFUNC;
+  Imports.push_back(TableImport);
 
   // Populate FunctionTypeIndices and Imports.
   for (const MCSymbol &S : Asm.symbols()) {
@@ -1144,11 +1119,8 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
 
         // If this global is the stack pointer, make it mutable and remember it
         // so that we can emit metadata for it.
-        if (StackPointerGlobalName.hasValue() &&
-            WS.getName() == StackPointerGlobalName.getValue()) {
+        if (WS.getName() == "__stack_pointer")
           Import.IsMutable = true;
-          StackPointerGlobal = NumGlobalImports;
-        }
 
         ++NumGlobalImports;
       }
@@ -1325,10 +1297,10 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
   writeHeader(Asm);
 
   writeTypeSection(FunctionTypes);
-  writeImportSection(Imports);
+  writeImportSection(Imports, DataSize, TableElems.size());
   writeFunctionSection(Functions);
-  writeTableSection(TableElems.size());
-  writeMemorySection(DataSize);
+  // Skip the "table" section; we import the table instead.
+  // Skip the "memory" section; we import the memory instead.
   writeGlobalSection();
   writeExportSection(Exports);
   // TODO: Start Section
@@ -1338,8 +1310,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
   writeNameSection(Functions, Imports, NumFuncImports);
   writeCodeRelocSection();
   writeDataRelocSection();
-  writeLinkingMetaDataSection(DataSegments, DataSize, SymbolFlags,
-                              StackPointerGlobal);
+  writeLinkingMetaDataSection(DataSegments, DataSize, SymbolFlags);
 
   // TODO: Translate the .comment section to the output.
   // TODO: Translate debug sections to the output.

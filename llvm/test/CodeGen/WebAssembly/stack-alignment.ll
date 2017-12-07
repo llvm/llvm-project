@@ -147,5 +147,3 @@ entry:
   call void @somefunc(i32* %static)
   ret void
 }
-
-; CHECK: .stack_pointer __stack_pointer

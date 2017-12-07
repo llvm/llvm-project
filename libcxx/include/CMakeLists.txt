@@ -58,6 +58,8 @@ if (LIBCXX_INSTALL_HEADERS)
                       COMMAND "${CMAKE_COMMAND}"
                               -DCMAKE_INSTALL_COMPONENT=cxx-headers
                               -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+    # Stripping is a no-op for headers
+    add_custom_target(install-cxx-headers-stripped DEPENDS install-cxx-headers)
 
     add_custom_target(libcxx-headers)
     add_custom_target(install-libcxx-headers DEPENDS install-cxx-headers)

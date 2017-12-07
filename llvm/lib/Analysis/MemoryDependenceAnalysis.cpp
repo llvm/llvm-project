@@ -747,7 +747,7 @@ MemDepResult MemoryDependenceResults::getDependency(Instruction *QueryInst) {
     ModRefInfo MR = GetLocation(QueryInst, MemLoc, TLI);
     if (MemLoc.Ptr) {
       // If we can do a pointer scan, make it happen.
-      bool isLoad = !(MR & MRI_Mod);
+      bool isLoad = !isModSet(MR);
       if (auto *II = dyn_cast<IntrinsicInst>(QueryInst))
         isLoad |= II->getIntrinsicID() == Intrinsic::lifetime_start;
 

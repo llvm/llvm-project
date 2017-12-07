@@ -218,7 +218,7 @@ static void WorkerThread(const Command &BaseCmd, std::atomic<unsigned> *Counter,
     Cmd.combineOutAndErr();
     if (Flags.verbosity) {
       std::string CommandLine = Cmd.toString();
-      Printf("%s", CommandLine.c_str());
+      Printf("%s\n", CommandLine.c_str());
     }
     int ExitCode = ExecuteCommand(Cmd);
     if (ExitCode != 0)

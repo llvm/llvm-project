@@ -575,6 +575,8 @@ extern const int si_SEGV_ACCERR;
   COMPILER_CHECK(offsetof(struct __sanitizer_##CLASS, MEMBER) ==         \
                  offsetof(struct CLASS, MEMBER))
 
+#define SIGACTION_SYMNAME __sigaction14
+
 #endif  // SANITIZER_NETBSD
 
 #endif
