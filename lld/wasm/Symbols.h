@@ -69,6 +69,7 @@ public:
   uint32_t getGlobalIndex() const;
   uint32_t getFunctionIndex() const;
 
+  bool hasFunctionType() const { return FunctionType != nullptr; }
   const WasmSignature &getFunctionType() const;
   uint32_t getOutputIndex() const;
 

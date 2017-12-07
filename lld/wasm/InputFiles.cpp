@@ -47,7 +47,6 @@ void ObjFile::dumpInfo() const {
       "        FunctionIndexOffset : " + Twine(FunctionIndexOffset) + "\n" +
       "         NumFunctionImports : " + Twine(NumFunctionImports()) + "\n" +
       "           TableIndexOffset : " + Twine(TableIndexOffset) + "\n" +
-      "          GlobalIndexOffset : " + Twine(GlobalIndexOffset) + "\n" +
       "           NumGlobalImports : " + Twine(NumGlobalImports()) + "\n");
 }
 
@@ -68,15 +67,10 @@ uint32_t ObjFile::getRelocatedAddress(uint32_t Index) const {
 }
 
 uint32_t ObjFile::relocateFunctionIndex(uint32_t Original) const {
-  DEBUG(dbgs() << "relocateFunctionIndex: " << Original);
   const Symbol *Sym = getFunctionSymbol(Original);
-  uint32_t Index;
-  if (Sym)
-    Index = Sym->getOutputIndex();
-  else
-    Index = Original + FunctionIndexOffset;
-
-  DEBUG(dbgs() << " -> " << Index << "\n");
+  uint32_t Index = Sym->getOutputIndex();
+  DEBUG(dbgs() << "relocateFunctionIndex: " << toString(*Sym) << ": "
+               << Original << " -> " << Index << "\n");
   return Index;
 }
 
@@ -89,15 +83,10 @@ uint32_t ObjFile::relocateTableIndex(uint32_t Original) const {
 }
 
 uint32_t ObjFile::relocateGlobalIndex(uint32_t Original) const {
-  DEBUG(dbgs() << "relocateGlobalIndex: " << Original);
-  uint32_t Index;
   const Symbol *Sym = getGlobalSymbol(Original);
-  if (Sym)
-    Index = Sym->getOutputIndex();
-  else
-    Index = Original + GlobalIndexOffset;
-
-  DEBUG(dbgs() << " -> " << Index << "\n");
+  uint32_t Index = Sym->getOutputIndex();
+  DEBUG(dbgs() << "relocateGlobalIndex: " << toString(*Sym) << ": " << Original
+               << " -> " << Index << "\n");
   return Index;
 }
 
