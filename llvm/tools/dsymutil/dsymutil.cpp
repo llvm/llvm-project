@@ -20,6 +20,10 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/DebugInfo/DIContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFVerifier.h"
+#include "llvm/Object/Binary.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -40,6 +44,7 @@
 using namespace llvm;
 using namespace llvm::cl;
 using namespace llvm::dsymutil;
+using namespace object;
 
 static OptionCategory DsymCategory("Specific Options");
 static opt<bool> Help("h", desc("Alias for -help"), Hidden);
@@ -114,6 +119,9 @@ static opt<bool> InputIsYAMLDebugMap(
     "y", desc("Treat the input file is a YAML debug map rather than a binary."),
     init(false), cat(DsymCategory));
 
+static opt<bool> Verify("verify", desc("Verify the linked DWARF debug info."),
+                        cat(DsymCategory));
+
 static bool createPlistFile(llvm::StringRef Bin, llvm::StringRef BundleRoot) {
   if (NoOutput)
     return true;
@@ -182,6 +190,34 @@ static bool createBundleDir(llvm::StringRef BundleBase) {
     return false;
   }
   return true;
+}
+
+static bool verify(llvm::StringRef OutputFile, llvm::StringRef Arch) {
+  if (OutputFile == "-") {
+    llvm::errs() << "warning: verification skipped for " << Arch
+                 << "because writing to stdout.\n";
+    return true;
+  }
+
+  Expected<OwningBinary<Binary>> BinOrErr = createBinary(OutputFile);
+  if (!BinOrErr) {
+    errs() << OutputFile << ": " << toString(BinOrErr.takeError());
+    return false;
+  }
+
+  Binary &Binary = *BinOrErr.get().getBinary();
+  if (auto *Obj = dyn_cast<MachOObjectFile>(&Binary)) {
+    raw_ostream &os = Verbose ? errs() : nulls();
+    os << "Verifying DWARF for architecture: " << Arch << "\n";
+    std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(*Obj);
+    DIDumpOptions DumpOpts;
+    bool success = DICtx->verify(os, DumpOpts.noImplicitRecursion());
+    if (!success)
+        errs() << "error: verification failed for " << Arch << '\n';
+    return success;
+  }
+
+  return false;
 }
 
 static std::string getOutputFileName(llvm::StringRef InputFile) {
@@ -361,6 +397,7 @@ int main(int argc, char **argv) {
       std::atomic_char AllOK(1);
       auto LinkLambda = [&]() {
         AllOK.fetch_and(linkDwarf(*OS, *Map, Options));
+        OS->flush();
       };
 
       // FIXME: The DwarfLinker can have some very deep recursion that can max
@@ -374,6 +411,10 @@ int main(int argc, char **argv) {
         Threads.wait();
       }
       if (!AllOK)
+        return 1;
+
+      if (Verify && !NoOutput &&
+          !verify(OutputFile, Map->getTriple().getArchName()))
         return 1;
 
       if (NeedsTempFiles)

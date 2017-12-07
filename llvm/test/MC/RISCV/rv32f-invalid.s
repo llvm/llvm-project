@@ -30,3 +30,5 @@ fnmsub.s f18, f19, f20, f21, 0b111 # CHECK: :[[@LINE]]:30: error: operand must b
 
 # Using 'D' instructions for an 'F'-only target
 fadd.d ft0, ft1, ft2 # CHECK: :[[@LINE]]:1: error: instruction use requires an option to be enabled
+
+# Using RV64F instructions for RV32 is tested in rv64f-valid.s

@@ -2838,11 +2838,11 @@ define i32 @test_movd(<4 x i32> %a0, i32 %a1, i32 *%a2) {
 ; BTVER2-LABEL: test_movd:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero sched: [5:1.00]
-; BTVER2-NEXT:    vmovd %edi, %xmm1 # sched: [1:0.17]
+; BTVER2-NEXT:    vmovd %edi, %xmm1 # sched: [1:0.50]
 ; BTVER2-NEXT:    vpaddd %xmm1, %xmm0, %xmm1 # sched: [1:0.50]
 ; BTVER2-NEXT:    vmovd %xmm1, (%rsi) # sched: [1:1.00]
 ; BTVER2-NEXT:    vpaddd %xmm2, %xmm0, %xmm0 # sched: [1:0.50]
-; BTVER2-NEXT:    vmovd %xmm0, %eax # sched: [1:0.17]
+; BTVER2-NEXT:    vmovd %xmm0, %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_movd:
@@ -2949,11 +2949,11 @@ define i64 @test_movd_64(<2 x i64> %a0, i64 %a1, i64 *%a2) {
 ; BTVER2-LABEL: test_movd_64:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero sched: [5:1.00]
-; BTVER2-NEXT:    vmovq %rdi, %xmm1 # sched: [1:0.17]
+; BTVER2-NEXT:    vmovq %rdi, %xmm1 # sched: [1:0.50]
 ; BTVER2-NEXT:    vpaddq %xmm1, %xmm0, %xmm1 # sched: [1:0.50]
 ; BTVER2-NEXT:    vmovq %xmm1, (%rsi) # sched: [1:1.00]
 ; BTVER2-NEXT:    vpaddq %xmm2, %xmm0, %xmm0 # sched: [1:0.50]
-; BTVER2-NEXT:    vmovq %xmm0, %rax # sched: [1:0.17]
+; BTVER2-NEXT:    vmovq %xmm0, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_movd_64:

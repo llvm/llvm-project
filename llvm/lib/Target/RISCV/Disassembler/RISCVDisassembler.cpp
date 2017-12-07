@@ -130,10 +130,41 @@ static DecodeStatus DecodeFPR64RegisterClass(MCInst &Inst, uint64_t RegNo,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus DecodeGPRNoX0RegisterClass(MCInst &Inst, uint64_t RegNo,
+                                               uint64_t Address,
+                                               const void *Decoder) {
+   if (RegNo == 0) {
+     return MCDisassembler::Fail;
+   }
+
+   return DecodeGPRRegisterClass(Inst, RegNo, Address, Decoder);
+}
+
+static DecodeStatus DecodeGPRCRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                            uint64_t Address,
+                                            const void *Decoder) {
+  if (RegNo > 8)
+    return MCDisassembler::Fail;
+
+  unsigned Reg = GPRDecoderTable[RegNo + 8];
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
+// Add implied SP operand for instructions *SP compressed instructions. The SP
+// operand isn't explicitly encoded in the instruction.
+static void addImplySP(MCInst &Inst, int64_t Address, const void *Decoder) {
+  if (Inst.getOpcode() == RISCV::CLWSP || Inst.getOpcode() == RISCV::CSWSP ||
+      Inst.getOpcode() == RISCV::CLDSP || Inst.getOpcode() == RISCV::CSDSP) {
+    DecodeGPRRegisterClass(Inst, 2, Address, Decoder);
+  }
+}
+
 template <unsigned N>
 static DecodeStatus decodeUImmOperand(MCInst &Inst, uint64_t Imm,
                                       int64_t Address, const void *Decoder) {
   assert(isUInt<N>(Imm) && "Invalid immediate");
+  addImplySP(Inst, Address, Decoder);
   Inst.addOperand(MCOperand::createImm(Imm));
   return MCDisassembler::Success;
 }
@@ -166,19 +197,24 @@ DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                                uint64_t Address,
                                                raw_ostream &OS,
                                                raw_ostream &CS) const {
-  // TODO: although assuming 4-byte instructions is sufficient for RV32 and
-  // RV64, this will need modification when supporting the compressed
-  // instruction set extension (RVC) which uses 16-bit instructions. Other
-  // instruction set extensions have the option of defining instructions up to
-  // 176 bits wide.
-  Size = 4;
-  if (Bytes.size() < 4) {
-    Size = 0;
-    return MCDisassembler::Fail;
+  // TODO: This will need modification when supporting instruction set
+  // extensions with instructions > 32-bits (up to 176 bits wide).
+  uint32_t Insn;
+  DecodeStatus Result;
+
+  // It's a 32 bit instruction if bit 0 and 1 are 1.
+  if ((Bytes[0] & 0x3) == 0x3) {
+    Insn = support::endian::read32le(Bytes.data());
+    DEBUG(dbgs() << "Trying RISCV32 table :\n");
+    Result = decodeInstruction(DecoderTable32, MI, Insn, Address, this, STI);
+    Size = 4;
+  } else {
+    Insn = support::endian::read16le(Bytes.data());
+    DEBUG(dbgs() << "Trying RISCV_C table (16-bit Instruction):\n");
+    // Calling the auto-generated decoder function.
+    Result = decodeInstruction(DecoderTable16, MI, Insn, Address, this, STI);
+    Size = 2;
   }
 
-  // Get the four bytes of the instruction.
-  uint32_t Inst = support::endian::read32le(Bytes.data());
-
-  return decodeInstruction(DecoderTable32, MI, Inst, Address, this, STI);
+  return Result;
 }
