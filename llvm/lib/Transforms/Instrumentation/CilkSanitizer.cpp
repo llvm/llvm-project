@@ -177,7 +177,6 @@ private:
   // Analysis results
   // function_ref<DetachSSA &(Function &)> GetDSSA;
   // function_ref<MemorySSA &(Function &)> GetMSSA;
-  // function_ref<DominatorTree &(Function &)> GetDomTree;
   const TargetLibraryInfo *TLI;
 
   // Instrumentation hooks
@@ -187,10 +186,6 @@ private:
   Function *CsanDetach, *CsanDetachContinue;
   Function *CsanTaskEntry, *CsanTaskExit;
   Function *CsanSync;
-
-  // CilkSanitizer FED tables
-  // FrontEndDataTable DetachFED, TaskFED, TaskExitFED, DetachContinueFED,
-  //   SyncFED;
 
   // CilkSanitizer custom forensic tables
   ObjectTable LoadObj, StoreObj;

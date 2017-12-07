@@ -100,9 +100,6 @@ INITIALIZE_PASS_END(ComprehensiveStaticInstrumentation, "csi",
                     "ComprehensiveStaticInstrumentation pass",
                     false, false)
 
-// INITIALIZE_PASS(ComprehensiveStaticInstrumentation, "csi",
-//                 "ComprehensiveStaticInstrumentation pass", false, false)
-
 ModulePass *llvm::createComprehensiveStaticInstrumentationPass(
     const CSIOptions &Options) {
   return new ComprehensiveStaticInstrumentation(Options);
