@@ -119,38 +119,38 @@ static ModRefInfo GetLocation(const Instruction *Inst, MemoryLocation &Loc,
   if (const LoadInst *LI = dyn_cast<LoadInst>(Inst)) {
     if (LI->isUnordered()) {
       Loc = MemoryLocation::get(LI);
-      return MRI_Ref;
+      return ModRefInfo::Ref;
     }
     if (LI->getOrdering() == AtomicOrdering::Monotonic) {
       Loc = MemoryLocation::get(LI);
-      return MRI_ModRef;
+      return ModRefInfo::ModRef;
     }
     Loc = MemoryLocation();
-    return MRI_ModRef;
+    return ModRefInfo::ModRef;
   }
 
   if (const StoreInst *SI = dyn_cast<StoreInst>(Inst)) {
     if (SI->isUnordered()) {
       Loc = MemoryLocation::get(SI);
-      return MRI_Mod;
+      return ModRefInfo::Mod;
     }
     if (SI->getOrdering() == AtomicOrdering::Monotonic) {
       Loc = MemoryLocation::get(SI);
-      return MRI_ModRef;
+      return ModRefInfo::ModRef;
     }
     Loc = MemoryLocation();
-    return MRI_ModRef;
+    return ModRefInfo::ModRef;
   }
 
   if (const VAArgInst *V = dyn_cast<VAArgInst>(Inst)) {
     Loc = MemoryLocation::get(V);
-    return MRI_ModRef;
+    return ModRefInfo::ModRef;
   }
 
   if (const CallInst *CI = isFreeCall(Inst, &TLI)) {
     // calls to free() deallocate the entire structure
     Loc = MemoryLocation(CI->getArgOperand(0));
-    return MRI_Mod;
+    return ModRefInfo::Mod;
   }
 
   if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst)) {
@@ -166,7 +166,7 @@ static ModRefInfo GetLocation(const Instruction *Inst, MemoryLocation &Loc,
           cast<ConstantInt>(II->getArgOperand(0))->getZExtValue(), AAInfo);
       // These intrinsics don't really modify the memory, but returning Mod
       // will allow them to be handled conservatively.
-      return MRI_Mod;
+      return ModRefInfo::Mod;
     case Intrinsic::invariant_end:
       II->getAAMetadata(AAInfo);
       Loc = MemoryLocation(
@@ -174,7 +174,7 @@ static ModRefInfo GetLocation(const Instruction *Inst, MemoryLocation &Loc,
           cast<ConstantInt>(II->getArgOperand(1))->getZExtValue(), AAInfo);
       // These intrinsics don't really modify the memory, but returning Mod
       // will allow them to be handled conservatively.
-      return MRI_Mod;
+      return ModRefInfo::Mod;
     default:
       break;
     }
@@ -182,10 +182,10 @@ static ModRefInfo GetLocation(const Instruction *Inst, MemoryLocation &Loc,
 
   // Otherwise, just do the coarse-grained thing that always works.
   if (Inst->mayWriteToMemory())
-    return MRI_ModRef;
+    return ModRefInfo::ModRef;
   if (Inst->mayReadFromMemory())
-    return MRI_Ref;
-  return MRI_NoModRef;
+    return ModRefInfo::Ref;
+  return ModRefInfo::NoModRef;
 }
 
 /// Private helper for finding the local dependencies of a call site.
@@ -689,12 +689,12 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
     if (isModAndRefSet(MR))
       MR = AA.callCapturesBefore(Inst, MemLoc, &DT, &OBB);
     switch (MR) {
-    case MRI_NoModRef:
+    case ModRefInfo::NoModRef:
       // If the call has no effect on the queried pointer, just ignore it.
       continue;
-    case MRI_Mod:
+    case ModRefInfo::Mod:
       return MemDepResult::getClobber(Inst);
-    case MRI_Ref:
+    case ModRefInfo::Ref:
       // If the call is known to never store to the pointer, and if this is a
       // load query, we can safely ignore it (scan past it).
       if (isLoad)

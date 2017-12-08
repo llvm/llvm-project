@@ -3147,3 +3147,24 @@ entry:
 	%s = fsub <4 x float> %0, %1
   ret <4 x float> %s
 }
+
+define <2 x float> @test_vfma_lane_simdinstr_opt_pass_caching_a57(<2 x float> %a, <2 x float> %b, <2 x float> %v) "target-cpu"="cortex-a57" {
+; CHECK-LABEL: test_vfma_lane_simdinstr_opt_pass_caching_a57:
+; CHECK: fmla {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.s[1]
+; CHECK-NEXT: ret
+entry:
+  %lane = shufflevector <2 x float> %v, <2 x float> undef, <2 x i32> <i32 1, i32 1>
+  %0 = tail call <2 x float> @llvm.fma.v2f32(<2 x float> %lane, <2 x float> %b, <2 x float> %a)
+  ret <2 x float> %0
+}
+
+define <2 x float> @test_vfma_lane_simdinstr_opt_pass_caching_m1(<2 x float> %a, <2 x float> %b, <2 x float> %v) "target-cpu"="exynos-m1" {
+; CHECK-LABEL: test_vfma_lane_simdinstr_opt_pass_caching_m1:
+; CHECK: dup  [[x:v[0-9]+]].2s, {{v[0-9]+}}.s[1]
+; CHECK: fmla {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, [[x]].2s
+; CHECK-NEXT: ret
+entry:
+  %lane = shufflevector <2 x float> %v, <2 x float> undef, <2 x i32> <i32 1, i32 1>
+  %0 = tail call <2 x float> @llvm.fma.v2f32(<2 x float> %lane, <2 x float> %b, <2 x float> %a)
+  ret <2 x float> %0
+}

@@ -2009,12 +2009,12 @@ CleanupAndExit:
 
   SmallPtrSet<Instruction*, 2> Ignore1;
   Ignore1.insert(SI);
-  if (mayLoopAccessLocation(StoreBasePtr, MRI_ModRef, CurLoop, BECount,
+  if (mayLoopAccessLocation(StoreBasePtr, ModRefInfo::ModRef, CurLoop, BECount,
                             StoreSize, *AA, Ignore1)) {
     // Check if the load is the offending instruction.
     Ignore1.insert(LI);
-    if (mayLoopAccessLocation(StoreBasePtr, MRI_ModRef, CurLoop, BECount,
-                              StoreSize, *AA, Ignore1)) {
+    if (mayLoopAccessLocation(StoreBasePtr, ModRefInfo::ModRef, CurLoop,
+                              BECount, StoreSize, *AA, Ignore1)) {
       // Still bad. Nothing we can do.
       goto CleanupAndExit;
     }
@@ -2056,8 +2056,8 @@ CleanupAndExit:
 
   SmallPtrSet<Instruction*, 2> Ignore2;
   Ignore2.insert(SI);
-  if (mayLoopAccessLocation(LoadBasePtr, MRI_Mod, CurLoop, BECount, StoreSize,
-                            *AA, Ignore2))
+  if (mayLoopAccessLocation(LoadBasePtr, ModRefInfo::Mod, CurLoop, BECount,
+                            StoreSize, *AA, Ignore2))
     goto CleanupAndExit;
 
   // Check the stride.

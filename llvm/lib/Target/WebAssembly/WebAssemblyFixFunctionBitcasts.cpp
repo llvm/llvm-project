@@ -142,41 +142,11 @@ static Function *CreateWrapper(Function *F, FunctionType *Ty) {
 }
 
 bool FixFunctionBitcasts::runOnModule(Module &M) {
-  Function *Main = nullptr;
-  CallInst *CallMain = nullptr;
   SmallVector<std::pair<Use *, Function *>, 0> Uses;
   SmallPtrSet<Constant *, 2> ConstantBCs;
 
   // Collect all the places that need wrappers.
-  for (Function &F : M) {
-    FindUses(&F, F, Uses, ConstantBCs);
-
-    // If we have a "main" function, and its type isn't
-    // "int main(int argc, char *argv[])", create an artificial call with it
-    // bitcasted to that type so that we generate a wrapper for it, so that
-    // the C runtime can call it.
-    if (F.getName() == "main") {
-      Main = &F;
-      LLVMContext &C = M.getContext();
-      Type *MainArgTys[] = {
-        PointerType::get(Type::getInt8PtrTy(C), 0),
-        Type::getInt32Ty(C)
-      };
-      FunctionType *MainTy = FunctionType::get(Type::getInt32Ty(C), MainArgTys,
-                                               /*isVarArg=*/false);
-      if (F.getFunctionType() != MainTy) {
-        Value *Args[] = {
-          UndefValue::get(MainArgTys[0]),
-          UndefValue::get(MainArgTys[1])
-        };
-        Value *Casted = ConstantExpr::getBitCast(Main,
-                                                 PointerType::get(MainTy, 0));
-        CallMain = CallInst::Create(Casted, Args, "call_main");
-        Use *UseMain = &CallMain->getOperandUse(2);
-        Uses.push_back(std::make_pair(UseMain, &F));
-      }
-    }
-  }
+  for (Function &F : M) FindUses(&F, F, Uses, ConstantBCs);
 
   DenseMap<std::pair<Function *, FunctionType *>, Function *> Wrappers;
 
@@ -209,20 +179,6 @@ bool FixFunctionBitcasts::runOnModule(Module &M) {
       U->get()->replaceAllUsesWith(Wrapper);
     else
       U->set(Wrapper);
-  }
-
-  // If we created a wrapper for main, rename the wrapper so that it's the
-  // one that gets called from startup.
-  if (CallMain) {
-    Main->setName("__original_main");
-    Function *MainWrapper =
-        cast<Function>(CallMain->getCalledValue()->stripPointerCasts());
-    MainWrapper->setName("main");
-    MainWrapper->setLinkage(Main->getLinkage());
-    MainWrapper->setVisibility(Main->getVisibility());
-    Main->setLinkage(Function::PrivateLinkage);
-    Main->setVisibility(Function::DefaultVisibility);
-    delete CallMain;
   }
 
   return true;

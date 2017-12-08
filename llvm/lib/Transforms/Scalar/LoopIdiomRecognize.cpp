@@ -887,8 +887,8 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   // base pointer and checking the region.
   Value *BasePtr =
       Expander.expandCodeFor(Start, DestInt8PtrTy, Preheader->getTerminator());
-  if (mayLoopAccessLocation(BasePtr, MRI_ModRef, CurLoop, BECount, StoreSize,
-                            *AA, Stores)) {
+  if (mayLoopAccessLocation(BasePtr, ModRefInfo::ModRef, CurLoop, BECount,
+                            StoreSize, *AA, Stores)) {
     Expander.clear();
     // If we generated new code for the base pointer, clean up.
     RecursivelyDeleteTriviallyDeadInstructions(BasePtr, TLI);
@@ -997,7 +997,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
 
   SmallPtrSet<Instruction *, 1> Stores;
   Stores.insert(SI);
-  if (mayLoopAccessLocation(StoreBasePtr, MRI_ModRef, CurLoop, BECount,
+  if (mayLoopAccessLocation(StoreBasePtr, ModRefInfo::ModRef, CurLoop, BECount,
                             StoreSize, *AA, Stores)) {
     Expander.clear();
     // If we generated new code for the base pointer, clean up.
@@ -1017,8 +1017,8 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
   Value *LoadBasePtr = Expander.expandCodeFor(
       LdStart, Builder.getInt8PtrTy(LdAS), Preheader->getTerminator());
 
-  if (mayLoopAccessLocation(LoadBasePtr, MRI_Mod, CurLoop, BECount, StoreSize,
-                            *AA, Stores)) {
+  if (mayLoopAccessLocation(LoadBasePtr, ModRefInfo::Mod, CurLoop, BECount,
+                            StoreSize, *AA, Stores)) {
     Expander.clear();
     // If we generated new code for the base pointer, clean up.
     RecursivelyDeleteTriviallyDeadInstructions(LoadBasePtr, TLI);

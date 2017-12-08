@@ -134,17 +134,6 @@ static Optional<std::string> findFile(StringRef Path1, const Twine &Path2) {
   return None;
 }
 
-// Inject a new wasm global into the output binary with the given value.
-// Wasm global are used in relocatable object files to model symbol imports
-// and exports.  In the final executable the only use of wasm globals is
-// for the exlicit stack pointer (__stack_pointer).
-static Symbol* addSyntheticGlobal(StringRef Name, int32_t Value) {
-  log("injecting global: " + Name);
-  Symbol *S = Symtab->addDefinedGlobal(Name);
-  S->setVirtualAddress(Value);
-  return S;
-}
-
 // Inject a new undefined symbol into the link.  This will cause the link to
 // fail unless this symbol can be found.
 static void addSyntheticUndefinedFunction(StringRef Name,
@@ -285,7 +274,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     for (StringRef S : args::getStrings(Args, OPT_undefined))
       addSyntheticUndefinedFunction(S, nullptr);
 
-    Config->StackPointerSymbol = addSyntheticGlobal("__stack_pointer", 0);
+    Config->StackPointerSymbol = Symtab->addDefinedGlobal("__stack_pointer");
   }
 
   createFiles(Args);

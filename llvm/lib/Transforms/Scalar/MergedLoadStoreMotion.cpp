@@ -195,7 +195,7 @@ bool MergedLoadStoreMotion::isStoreSinkBarrierInRange(const Instruction &Start,
        make_range(Start.getIterator(), End.getIterator()))
     if (Inst.mayThrow())
       return true;
-  return AA->canInstructionRangeModRef(Start, End, Loc, MRI_ModRef);
+  return AA->canInstructionRangeModRef(Start, End, Loc, ModRefInfo::ModRef);
 }
 
 ///
