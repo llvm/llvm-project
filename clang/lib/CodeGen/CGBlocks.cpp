@@ -784,7 +784,9 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo,
       8);
   // Using the computed layout, generate the actual block function.
   bool isLambdaConv = blockInfo.getBlockDecl()->isConversionFromLambda();
-  auto *InvokeFn = CodeGenFunction(CGM, true).GenerateBlockFunction(
+  CodeGenFunction BlockCGF{CGM, true};
+  BlockCGF.SanOpts = SanOpts;
+  auto *InvokeFn = BlockCGF.GenerateBlockFunction(
       CurGD, blockInfo, LocalDeclMap, isLambdaConv, blockInfo.CanBeGlobal);
   if (InvokeF)
     *InvokeF = InvokeFn;
