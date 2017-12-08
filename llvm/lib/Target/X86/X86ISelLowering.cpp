@@ -5014,40 +5014,33 @@ static SDValue insert1BitVector(SDValue Op, SelectionDAG &DAG,
     return SDValue();
 
   unsigned IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
-  if (IdxVal == 0  && Vec.isUndef()) // the operation is legal
+  if (IdxVal == 0 && Vec.isUndef()) // the operation is legal
     return Op;
 
   MVT OpVT = Op.getSimpleValueType();
-  MVT SubVecVT = SubVec.getSimpleValueType();
   unsigned NumElems = OpVT.getVectorNumElements();
+
+  // Inserting into the lsbs of a zero vector is legal. ISel will insert shifts
+  // if necessary.
+  if (IdxVal == 0 && ISD::isBuildVectorAllZeros(Vec.getNode())) {
+    if ((!Subtarget.hasDQI() && NumElems == 8) || (NumElems < 8)) {
+      // Need to promote to v16i1, do the insert, then extract back.
+      Op = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, MVT::v16i1, 
+                       getZeroVector(MVT::v16i1, Subtarget, DAG, dl),
+                       SubVec, Idx);
+      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, OpVT, Op,
+                         DAG.getIntPtrConstant(0, dl));
+    }
+
+    return Op;
+  }
+
+  MVT SubVecVT = SubVec.getSimpleValueType();
   unsigned SubVecNumElems = SubVecVT.getVectorNumElements();
 
   assert(IdxVal + SubVecNumElems <= NumElems &&
          IdxVal % SubVecVT.getSizeInBits() == 0 &&
          "Unexpected index value in INSERT_SUBVECTOR");
-
-  // There are 3 possible cases:
-  // 1. Subvector should be inserted in the lower part (IdxVal == 0)
-  // 2. Subvector should be inserted in the upper part
-  //    (IdxVal + SubVecNumElems == NumElems)
-  // 3. Subvector should be inserted in the middle (for example v2i1
-  //    to v16i1, index 2)
-
-  // If this node widens - by concatenating zeroes - the type of the result
-  // of a node with instruction that zeroes all upper (irrelevant) bits of the
-  // output register, mark this node as legal to enable replacing them with
-  // the v8i1 version of the previous instruction during instruction selection.
-  // For example, VPCMPEQDZ128rr instruction stores its v4i1 result in a k-reg,
-  // while zeroing all the upper remaining 60 bits of the register. if the
-  // result of such instruction is inserted into an allZeroVector, then we can
-  // safely remove insert_vector (in instruction selection) as the cmp instr
-  // already zeroed the rest of the register.
-  if (ISD::isBuildVectorAllZeros(Vec.getNode()) && IdxVal == 0 &&
-      (isMaskedZeroUpperBitsvXi1(SubVec.getOpcode()) ||
-       (SubVec.getOpcode() == ISD::AND &&
-        (isMaskedZeroUpperBitsvXi1(SubVec.getOperand(0).getOpcode()) ||
-         isMaskedZeroUpperBitsvXi1(SubVec.getOperand(1).getOpcode())))))
-    return Op;
 
   // extend to natively supported kshift
   MVT MinVT = Subtarget.hasDQI() ? MVT::v8i1 : MVT::v16i1;
@@ -5076,13 +5069,14 @@ static SDValue insert1BitVector(SDValue Op, SelectionDAG &DAG,
   }
 
   if (ISD::isBuildVectorAllZeros(Vec.getNode())) {
+    assert(IdxVal != 0 && "Unexpected index");
     NumElems = WideOpVT.getVectorNumElements();
     unsigned ShiftLeft = NumElems - SubVecNumElems;
     unsigned ShiftRight = NumElems - SubVecNumElems - IdxVal;
     Vec = DAG.getNode(X86ISD::KSHIFTL, dl, WideOpVT, WideSubVec,
                       DAG.getConstant(ShiftLeft, dl, MVT::i8));
-    Vec = ShiftRight ? DAG.getNode(X86ISD::KSHIFTR, dl, WideOpVT, Vec,
-      DAG.getConstant(ShiftRight, dl, MVT::i8)) : Vec;
+    Vec = DAG.getNode(X86ISD::KSHIFTR, dl, WideOpVT, Vec,
+                      DAG.getConstant(ShiftRight, dl, MVT::i8));
     return ExtractSubVec(Vec);
   }
 
@@ -25373,9 +25367,9 @@ bool X86TargetLowering::isVectorShiftByScalarCheap(Type *Ty) const {
   if (Bits == 8)
     return false;
 
-  // On AVX2 there are new vpsllv[dq] instructions (and other shifts), that make
-  // variable shifts just as cheap as scalar ones.
-  if (Subtarget.hasInt256() && (Bits == 32 || Bits == 64))
+  // AVX2 has vpsllv[dq] instructions (and other shifts) that make variable
+  // shifts just as cheap as scalar ones.
+  if (Subtarget.hasAVX2() && (Bits == 32 || Bits == 64))
     return false;
 
   // Otherwise, it's significantly cheaper to shift by a scalar amount than by a

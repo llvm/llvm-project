@@ -2030,7 +2030,7 @@ static int __kmp_affinity_create_cpuinfo_map(AddrUnsPair **address2os,
         if (threadInfo[num_avail][osIdIndex] != UINT_MAX)
           goto dup_field;
         threadInfo[num_avail][osIdIndex] = val;
-#if KMP_OS_LINUX && USE_SYSFS_INFO
+#if KMP_OS_LINUX && !(KMP_ARCH_X86 || KMP_ARCH_X86_64)
         char path[256];
         KMP_SNPRINTF(
             path, sizeof(path),

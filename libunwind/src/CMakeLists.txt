@@ -139,7 +139,15 @@ if (LIBUNWIND_INSTALL_LIBRARY)
 endif()
 
 if (NOT CMAKE_CONFIGURATION_TYPES AND LIBUNWIND_INSTALL_LIBRARY)
-  add_llvm_install_targets(install-unwind
-                           DEPENDS unwind
-                           COMPONENT unwind)
+  add_custom_target(install-unwind
+    DEPENDS unwind
+    COMMAND "${CMAKE_COMMAND}"
+            -DCMAKE_INSTALL_COMPONENT=unwind
+            -P "${LIBUNWIND_BINARY_DIR}/cmake_install.cmake")
+  add_custom_target(install-unwind-stripped
+    DEPENDS unwind
+    COMMAND "${CMAKE_COMMAND}"
+            -DCMAKE_INSTALL_COMPONENT=unwind
+            -DCMAKE_INSTALL_DO_STRIP=1
+            -P "${LIBUNWIND_BINARY_DIR}/cmake_install.cmake")
 endif()

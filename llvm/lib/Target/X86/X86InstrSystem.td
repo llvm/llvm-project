@@ -602,11 +602,12 @@ let Predicates = [HasXSAVES] in {
 
 //===----------------------------------------------------------------------===//
 // VIA PadLock crypto instructions
-let Defs = [RAX, RDI], Uses = [RDX, RDI] in
+let Defs = [RAX, RDI], Uses = [RDX, RDI], SchedRW = [WriteSystem] in
   def XSTORE : I<0xa7, MRM_C0, (outs), (ins), "xstore", []>, TB;
 
 def : InstAlias<"xstorerng", (XSTORE)>;
 
+let SchedRW = [WriteSystem] in {
 let Defs = [RSI, RDI], Uses = [RBX, RDX, RSI, RDI] in {
   def XCRYPTECB : I<0xa7, MRM_C8, (outs), (ins), "xcryptecb", []>, TB;
   def XCRYPTCBC : I<0xa7, MRM_D0, (outs), (ins), "xcryptcbc", []>, TB;
@@ -621,19 +622,23 @@ let Defs = [RAX, RSI, RDI], Uses = [RAX, RSI, RDI] in {
 }
 let Defs = [RAX, RDX, RSI], Uses = [RAX, RSI] in
   def MONTMUL : I<0xa6, MRM_C0, (outs), (ins), "montmul", []>, TB;
+} // SchedRW
+
 //==-----------------------------------------------------------------------===//
 // PKU  - enable protection key
-let usesCustomInserter = 1 in {
+let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
   def WRPKRU : PseudoI<(outs), (ins GR32:$src),
                 [(int_x86_wrpkru GR32:$src)]>;
   def RDPKRU : PseudoI<(outs GR32:$dst), (ins),
                 [(set GR32:$dst, (int_x86_rdpkru))]>;
 }
 
+let SchedRW = [WriteSystem] in {
 let Defs = [EAX, EDX], Uses = [ECX] in
-  def RDPKRUr : I<0x01, MRM_EE, (outs), (ins), "rdpkru", []>, TB;
+  def RDPKRUr : I<0x01, MRM_EE, (outs), (ins), "rdpkru", [], IIC_PKU>, TB;
 let Uses = [EAX, ECX, EDX] in
-  def WRPKRUr : I<0x01, MRM_EF, (outs), (ins), "wrpkru", []>, TB;
+  def WRPKRUr : I<0x01, MRM_EF, (outs), (ins), "wrpkru", [], IIC_PKU>, TB;
+} // SchedRW
 
 //===----------------------------------------------------------------------===//
 // FS/GS Base Instructions
@@ -666,43 +671,54 @@ let Predicates = [HasFSGSBase, In64BitMode] in {
 
 //===----------------------------------------------------------------------===//
 // INVPCID Instruction
+let SchedRW = [WriteSystem] in {
 def INVPCID32 : I<0x82, MRMSrcMem, (outs), (ins GR32:$src1, i128mem:$src2),
-                "invpcid\t{$src2, $src1|$src1, $src2}", []>, T8PD,
+                "invpcid\t{$src2, $src1|$src1, $src2}", [], IIC_INVPCID>, T8PD,
                 Requires<[Not64BitMode]>;
 def INVPCID64 : I<0x82, MRMSrcMem, (outs), (ins GR64:$src1, i128mem:$src2),
-                "invpcid\t{$src2, $src1|$src1, $src2}", []>, T8PD,
+                "invpcid\t{$src2, $src1|$src1, $src2}", [], IIC_INVPCID>, T8PD,
                 Requires<[In64BitMode]>;
+} // SchedRW
 
 //===----------------------------------------------------------------------===//
 // SMAP Instruction
-let Defs = [EFLAGS] in {
-  def CLAC : I<0x01, MRM_CA, (outs), (ins), "clac", []>, TB;
-  def STAC : I<0x01, MRM_CB, (outs), (ins), "stac", []>, TB;
+let Defs = [EFLAGS], SchedRW = [WriteSystem] in {
+  def CLAC : I<0x01, MRM_CA, (outs), (ins), "clac", [], IIC_SMAP>, TB;
+  def STAC : I<0x01, MRM_CB, (outs), (ins), "stac", [], IIC_SMAP>, TB;
 }
 
 //===----------------------------------------------------------------------===//
 // SMX Instruction
+let SchedRW = [WriteSystem] in {
 let Uses = [RAX, RBX, RCX, RDX], Defs = [RAX, RBX, RCX] in {
-  def GETSEC : I<0x37, RawFrm, (outs), (ins), "getsec", []>, TB;
-}
+  def GETSEC : I<0x37, RawFrm, (outs), (ins), "getsec", [], IIC_SMX>, TB;
+} // Uses, Defs
+} // SchedRW
 
 //===----------------------------------------------------------------------===//
 // RDPID Instruction
+let SchedRW = [WriteSystem] in {
 def RDPID32 : I<0xC7, MRM7r, (outs GR32:$src), (ins),
-              "rdpid\t$src", []>, XS,
+              "rdpid\t$src", [], IIC_RDPID>, XS,
               Requires<[Not64BitMode]>;
 def RDPID64 : I<0xC7, MRM7r, (outs GR64:$src), (ins),
-              "rdpid\t$src", []>, XS,
+              "rdpid\t$src", [], IIC_RDPID>, XS,
               Requires<[In64BitMode]>;
+} // SchedRW
 
 //===----------------------------------------------------------------------===//
 // PTWRITE Instruction
+let SchedRW = [WriteSystem] in {
+
 def PTWRITEm: I<0xAE, MRM4m, (outs), (ins i32mem:$dst),
-                "ptwrite{l}\t$dst", []>, XS;
+                "ptwrite{l}\t$dst", [], IIC_PTWRITE>, XS;
 def PTWRITE64m : RI<0xAE, MRM4m, (outs), (ins i64mem:$dst),
-                    "ptwrite{q}\t$dst", []>, XS, Requires<[In64BitMode]>;
+                    "ptwrite{q}\t$dst", [], IIC_PTWRITE>, XS,
+                    Requires<[In64BitMode]>;
 
 def PTWRITEr : I<0xAE, MRM4r, (outs), (ins GR32:$dst),
-                "ptwrite{l}\t$dst", []>, XS;
+                 "ptwrite{l}\t$dst", [], IIC_PTWRITE>, XS;
 def PTWRITE64r : RI<0xAE, MRM4r, (outs), (ins GR64:$dst),
-                   "ptwrite{q}\t$dst", []>, XS, Requires<[In64BitMode]>;
+                    "ptwrite{q}\t$dst", [], IIC_PTWRITE>, XS,
+                    Requires<[In64BitMode]>;
+} // SchedRW

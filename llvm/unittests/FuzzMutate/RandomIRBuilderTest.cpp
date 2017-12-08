@@ -200,4 +200,40 @@ TEST(RandomIRBuilderTest, InsertValueArray) {
   }
 }
 
+TEST(RandomIRBuilderTest, Invokes) {
+  // Check that we never generate load or store after invoke instruction
+
+  LLVMContext Ctx;
+  const char *SourceCode =
+      "declare i32* @f()"
+      "declare i32 @personality_function()"
+      "define i32* @test() personality i32 ()* @personality_function {\n"
+      "entry:\n"
+      "  %val = invoke i32* @f()\n"
+      "          to label %normal unwind label %exceptional\n"
+      "normal:\n"
+      "  ret i32* %val\n"
+      "exceptional:\n"
+      "  %landing_pad4 = landingpad token cleanup\n"
+      "  ret i32* undef\n"
+      "}";
+  auto M = parseAssembly(SourceCode, Ctx);
+
+
+  std::vector<Type *> Types = {Type::getInt8Ty(Ctx)};
+  RandomIRBuilder IB(Seed, Types);
+
+  // Get first basic block of the test function
+  Function &F = *M->getFunction("test");
+  BasicBlock &BB = *F.begin();
+
+  Instruction *Invoke = &*BB.begin();
+
+  // Find source but never insert new load after invoke
+  for (int i = 0; i < 10; ++i) {
+    (void)IB.findOrCreateSource(BB, {Invoke}, {}, fuzzerop::anyIntType());
+    ASSERT_TRUE(!verifyModule(*M, &errs()));
+  }
+}
+
 }

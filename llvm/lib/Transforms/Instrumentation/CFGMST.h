@@ -20,7 +20,6 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -137,21 +136,6 @@ public:
                      << " w = " << BBWeight << "\n");
       }
     }
-    // check if there is any infinite loop. If yes, add a fake edge from
-    // the header block to the fake node:
-    for (auto *L : *LI) {
-      SmallVector<BasicBlock *, 2> ExitingBlocks;
-      L->getExitingBlocks(ExitingBlocks);
-      if (!ExitingBlocks.empty())
-        continue;
-      auto *HB = L->getHeader();
-      if (!HB)
-        continue;
-      addEdge(HB, nullptr, UINT64_MAX);
-      DEBUG(dbgs() << "  Edge: from infinite loop header " << HB->getName()
-                   << " to exit"
-                   << " w = " << UINT64_MAX << "\n");
-    }
   }
 
   // Sort CFG edges based on its weight.
@@ -226,13 +210,13 @@ public:
     return *AllEdges.back();
   }
 
-  const BranchProbabilityInfo *BPI;
+  BranchProbabilityInfo *BPI;
   BlockFrequencyInfo *BFI;
-  const LoopInfo *LI;
 
 public:
-  CFGMST(Function &Func, BlockFrequencyInfo *BFI_ = nullptr)
-      : F(Func), BPI(BFI_->getBPI()), BFI(BFI_), LI(BFI_->getLoopInfo()) {
+  CFGMST(Function &Func, BranchProbabilityInfo *BPI_ = nullptr,
+         BlockFrequencyInfo *BFI_ = nullptr)
+      : F(Func), BPI(BPI_), BFI(BFI_) {
     buildEdges();
     sortEdgesByWeight();
     computeMinimumSpanningTree();

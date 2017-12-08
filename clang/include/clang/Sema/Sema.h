@@ -8536,6 +8536,10 @@ private:
   /// Returns OpenMP nesting level for current directive.
   unsigned getOpenMPNestingLevel() const;
 
+  /// Adjusts the function scopes index for the target-based regions.
+  void adjustOpenMPTargetScopeIndex(unsigned &FunctionScopesIndex,
+                                    unsigned Level) const;
+
   /// Push new OpenMP function region for non-capturing function.
   void pushOpenMPFunctionRegion();
 

@@ -22,40 +22,52 @@
 ; CHECK:    - Name:       test
 ; CHECK:      SymbolName: 'test@kd'
 ; CHECK:      Args:
-; CHECK:        - TypeName:  image1d_t
+; CHECK:        - Name:      a
+; CHECK:          TypeName:  image1d_t
 ; CHECK:          Size:      8
 ; CHECK:          ValueKind: Image
-; CHECK:        - TypeName:  image1d_array_t
+; CHECK:        - Name:      b
+; CHECK:          TypeName:  image1d_array_t
 ; CHECK:          Size:      8
 ; CHECK:          ValueKind: Image
-; CHECK:        - TypeName:  image1d_buffer_t
+; CHECK:        - Name:      c
+; CHECK:          TypeName:  image1d_buffer_t
 ; CHECK:          Size:      8
 ; CHECK:          ValueKind: Image
-; CHECK:        - TypeName:  image2d_t
+; CHECK:        - Name:      d
+; CHECK:          TypeName:  image2d_t
 ; CHECK:          Size:      8
 ; CHECK:          ValueKind: Image
-; CHECK:        - TypeName:  image2d_array_t
+; CHECK:        - Name:      e
+; CHECK:          TypeName:  image2d_array_t
 ; CHECK:          Size:      8
 ; CHECK:          ValueKind: Image
-; CHECK:        - TypeName:  image2d_array_depth_t
+; CHECK:        - Name:      f
+; CHECK:          TypeName:  image2d_array_depth_t
 ; CHECK:          Size:      8
 ; CHECK:          ValueKind: Image
-; CHECK:        - TypeName:  image2d_array_msaa_t
+; CHECK:        - Name:      g
+; CHECK:          TypeName:  image2d_array_msaa_t
 ; CHECK:          Size:      8
 ; CHECK:          ValueKind: Image
-; CHECK:        - TypeName:  image2d_array_msaa_depth_t
+; CHECK:        - Name:      h
+; CHECK:          TypeName:  image2d_array_msaa_depth_t
 ; CHECK:          Size:      8
 ; CHECK:          ValueKind: Image
-; CHECK:        - TypeName:  image2d_depth_t
+; CHECK:        - Name:      i
+; CHECK:          TypeName:  image2d_depth_t
 ; CHECK:          Size:      8
 ; CHECK:          ValueKind: Image
-; CHECK:        - TypeName:  image2d_msaa_t
+; CHECK:        - Name:      j
+; CHECK:          TypeName:  image2d_msaa_t
 ; CHECK:          Size:      8
 ; CHECK:          ValueKind: Image
-; CHECK:        - TypeName:  image2d_msaa_depth_t
+; CHECK:        - Name:      k
+; CHECK:          TypeName:  image2d_msaa_depth_t
 ; CHECK:          Size:      8
 ; CHECK:          ValueKind: Image
-; CHECK:        - TypeName:  image3d_t
+; CHECK:        - Name:      l
+; CHECK:          TypeName:  image3d_t
 ; CHECK:          Size:      8
 ; CHECK:          ValueKind: Image
 define amdgpu_kernel void @test(%opencl.image1d_t addrspace(1)* %a,

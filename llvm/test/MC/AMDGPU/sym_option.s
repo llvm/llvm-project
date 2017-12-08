@@ -6,7 +6,6 @@
 // RUN: llvm-mc -arch=amdgcn -mcpu=carrizo %s | FileCheck %s --check-prefix=CARRIZO
 // RUN: llvm-mc -arch=amdgcn -mcpu=tonga %s | FileCheck %s --check-prefix=TONGA
 // RUN: llvm-mc -arch=amdgcn -mcpu=fiji %s | FileCheck %s --check-prefix=FIJI
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx804  %s | FileCheck %s --check-prefix=GFX804
 // RUN: llvm-mc -arch=amdgcn -mcpu=stoney  %s | FileCheck %s --check-prefix=STONEY
 
 .byte .option.machine_version_major
@@ -18,7 +17,6 @@
 // CARRIZO: .byte 8
 // TONGA: .byte 8
 // FIJI: .byte 8
-// GFX804: .byte 8
 // STONEY: .byte 8
 
 .byte .option.machine_version_minor
@@ -30,17 +28,15 @@
 // CARRIZO: .byte 0
 // TONGA: .byte 0
 // FIJI: .byte 0
-// GFX804: .byte 0
 // STONEY: .byte 1
 
 .byte .option.machine_version_stepping
 // SI: .byte 0
-// BONAIRE: .byte 0
+// BONAIRE: .byte 4
 // HAWAII: .byte 1
 // KABINI: .byte 3
 // ICELAND: .byte 0
 // CARRIZO: .byte 1
 // TONGA: .byte 2
 // FIJI: .byte 3
-// GFX804: .byte 4
 // STONEY: .byte 0

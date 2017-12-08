@@ -2154,6 +2154,60 @@ TEST_F(ChangeNamespaceTest, DefaultMoveConstructors) {
   EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
 }
 
+TEST_F(ChangeNamespaceTest, InjectedClassNameInFriendDecl) {
+  OldNamespace = "d";
+  NewNamespace = "e";
+  std::string Code = "namespace a{\n"
+                     "template <typename T>\n"
+                     "class Base {\n"
+                     " public:\n"
+                     "  void f() {\n"
+                     "    T t;\n"
+                     "    t.priv();\n"
+                     "  }\n"
+                     "};\n"
+                     "}  // namespace a\n"
+                     "namespace d {\n"
+                     "class D : public a::Base<D> {\n"
+                     " private:\n"
+                     "  friend class Base<D>;\n"
+                     "  void priv() {}\n"
+                     "  Base b;\n"
+                     "};\n"
+                     "\n"
+                     "void f() {\n"
+                     "  D d;\n"
+                     "  a:: Base<D> b;\n"
+                     "  b.f();\n"
+                     "}\n"
+                     "}  // namespace d\n";
+  std::string Expected = "namespace a{\n"
+                         "template <typename T>\n"
+                         "class Base {\n"
+                         " public:\n"
+                         "  void f() {\n"
+                         "    T t;\n"
+                         "    t.priv();\n"
+                         "  }\n"
+                         "};\n"
+                         "}  // namespace a\n"
+                         "\n"
+                         "namespace e {\n"
+                         "class D : public a::Base<D> {\n"
+                         " private:\n"
+                         "  friend class Base<D>;\n"
+                         "  void priv() {}\n"
+                         "  a::Base b;\n"
+                         "};\n"
+                         "\n"
+                         "void f() {\n"
+                         "  D d;\n"
+                         "  a::Base<D> b;\n"
+                         "  b.f();\n"
+                         "}\n"
+                         "}  // namespace e\n";
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
 
 } // anonymous namespace
 } // namespace change_namespace

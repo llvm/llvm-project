@@ -957,6 +957,26 @@ inline CastClass_match<OpTy, Instruction::FPExt> m_FPExt(const OpTy &Op) {
 }
 
 //===----------------------------------------------------------------------===//
+// Matcher for LoadInst classes
+//
+
+template <typename Op_t> struct LoadClass_match {
+  Op_t Op;
+
+  LoadClass_match(const Op_t &OpMatch) : Op(OpMatch) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    if (auto *LI = dyn_cast<LoadInst>(V))
+      return Op.match(LI->getPointerOperand());
+    return false;
+  }
+};
+
+/// Matches LoadInst.
+template <typename OpTy> inline LoadClass_match<OpTy> m_Load(const OpTy &Op) {
+  return LoadClass_match<OpTy>(Op);
+}
+//===----------------------------------------------------------------------===//
 // Matchers for unary operators
 //
 
