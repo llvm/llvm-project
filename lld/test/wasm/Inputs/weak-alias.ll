@@ -1,3 +1,4 @@
+; Function Attrs: norecurse nounwind readnone
 define i32 @foo() #0 {
 entry:
   ret i32 0

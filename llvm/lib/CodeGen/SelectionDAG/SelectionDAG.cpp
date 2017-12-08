@@ -7130,6 +7130,7 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
         // DW_OP_stack_value.
         auto *DIExpr = DV->getExpression();
         DIExpr = DIExpression::prepend(DIExpr, DIExpression::NoDeref, Offset,
+                                       DIExpression::NoDeref,
                                        DIExpression::WithStackValue);
         SDDbgValue *Clone =
             getDbgValue(DV->getVariable(), DIExpr, N0.getNode(), N0.getResNo(),

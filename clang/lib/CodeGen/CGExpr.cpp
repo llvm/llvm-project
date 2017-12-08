@@ -829,14 +829,6 @@ llvm::Value *CodeGenFunction::LoadPassedObjectSize(const Expr *E,
   if (!ParamDecl)
     return nullptr;
 
-  // Arrays don't have pass_object_size attributes, but if they have a constant
-  // size modifier it's the array size (C99 6.5.7.2p1).
-  if (auto *DecayedArrayTy = dyn_cast<DecayedType>(ParamDecl->getType()))
-    if (auto *ArrayTy =
-            dyn_cast<ConstantArrayType>(DecayedArrayTy->getOriginalType()))
-      return llvm::ConstantInt::get(SizeTy,
-                                    ArrayTy->getSize().getLimitedValue());
-
   auto *POSAttr = ParamDecl->getAttr<PassObjectSizeAttr>();
   if (!POSAttr)
     return nullptr;

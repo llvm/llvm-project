@@ -14626,7 +14626,7 @@ bool Sema::tryCaptureVariable(
           // target region, therefore we need to propagate the capture from the
           // enclosing region. Therefore, the capture is not initially nested.
           if (IsTargetCap)
-            FunctionScopesIndex--;
+            adjustOpenMPTargetScopeIndex(FunctionScopesIndex, RSI->OpenMPLevel);
 
           if (IsTargetCap || IsOpenMPPrivateDecl) {
             Nested = !IsTargetCap;

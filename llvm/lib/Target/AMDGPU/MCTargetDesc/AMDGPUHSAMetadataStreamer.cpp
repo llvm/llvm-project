@@ -292,6 +292,8 @@ void MetadataStreamer::emitKernelArg(const Argument &Arg) {
   Node = Func->getMetadata("kernel_arg_name");
   if (Node && ArgNo < Node->getNumOperands())
     Name = cast<MDString>(Node->getOperand(ArgNo))->getString();
+  else if (Arg.hasName())
+    Name = Arg.getName();
 
   StringRef TypeName;
   Node = Func->getMetadata("kernel_arg_type");

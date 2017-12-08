@@ -1,6 +1,6 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -strict-whitespace -check-prefix=GCN %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -strict-whitespace -check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=gfx901 -verify-machineinstrs < %s | FileCheck -strict-whitespace -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -strict-whitespace -check-prefix=GCN %s
 
 declare void @llvm.amdgcn.exp.compr.v2f16(i32, i32, <2 x half>, <2 x half>, i1, i1) #0
 declare void @llvm.amdgcn.exp.compr.v2i16(i32, i32, <2 x i16>, <2 x i16>, i1, i1) #0

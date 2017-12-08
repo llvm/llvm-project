@@ -330,6 +330,11 @@ public:
   OpenMPDirectiveKind getCurrentDirective() const {
     return isStackEmpty() ? OMPD_unknown : Stack.back().first.back().Directive;
   }
+  /// \brief Returns directive kind at specified level.
+  OpenMPDirectiveKind getDirective(unsigned Level) const {
+    assert(!isStackEmpty() && "No directive at specified level.");
+    return Stack.back().first[Level].Directive;
+  }
   /// \brief Returns parent directive.
   OpenMPDirectiveKind getParentDirective() const {
     if (isStackEmpty() || Stack.back().first.size() == 1)
@@ -1350,6 +1355,13 @@ VarDecl *Sema::IsOpenMPCapturedDecl(ValueDecl *D) {
   return nullptr;
 }
 
+void Sema::adjustOpenMPTargetScopeIndex(unsigned &FunctionScopesIndex,
+                                        unsigned Level) const {
+  SmallVector<OpenMPDirectiveKind, 4> Regions;
+  getOpenMPCaptureRegions(Regions, DSAStack->getDirective(Level));
+  FunctionScopesIndex -= Regions.size();
+}
+
 bool Sema::isOpenMPPrivateDecl(ValueDecl *D, unsigned Level) {
   assert(LangOpts.OpenMP && "OpenMP is not allowed");
   return DSAStack->hasExplicitDSA(
@@ -2092,7 +2104,8 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
   case OMPD_target_teams:
   case OMPD_target_parallel:
   case OMPD_target_parallel_for:
-  case OMPD_target_parallel_for_simd: {
+  case OMPD_target_parallel_for_simd:
+  case OMPD_target_teams_distribute: {
     Sema::CapturedParamNameType ParamsTarget[] = {
         std::make_pair(StringRef(), QualType()) // __context with shared vars
     };
@@ -2199,7 +2212,6 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
   }
   case OMPD_distribute_parallel_for_simd:
   case OMPD_distribute_parallel_for:
-  case OMPD_target_teams_distribute:
   case OMPD_target_teams_distribute_parallel_for:
   case OMPD_target_teams_distribute_parallel_for_simd:
   case OMPD_target_teams_distribute_simd: {
@@ -7308,14 +7320,24 @@ StmtResult Sema::ActOnOpenMPTargetTeamsDistributeDirective(
   // The point of exit cannot be a branch out of the structured block.
   // longjmp() and throw() must not violate the entry/exit criteria.
   CS->getCapturedDecl()->setNothrow();
+  for (int ThisCaptureLevel =
+           getOpenMPCaptureLevels(OMPD_target_teams_distribute);
+       ThisCaptureLevel > 1; --ThisCaptureLevel) {
+    CS = cast<CapturedStmt>(CS->getCapturedStmt());
+    // 1.2.2 OpenMP Language Terminology
+    // Structured block - An executable statement with a single entry at the
+    // top and a single exit at the bottom.
+    // The point of exit cannot be a branch out of the structured block.
+    // longjmp() and throw() must not violate the entry/exit criteria.
+    CS->getCapturedDecl()->setNothrow();
+  }
 
   OMPLoopDirective::HelperExprs B;
   // In presence of clause 'collapse' with number of loops, it will
   // define the nested loops number.
   auto NestedLoopCount = CheckOpenMPLoop(
-      OMPD_target_teams_distribute,
-      getCollapseNumberExpr(Clauses),
-      nullptr /*ordered not a clause on distribute*/, AStmt, *this, *DSAStack,
+      OMPD_target_teams_distribute, getCollapseNumberExpr(Clauses),
+      nullptr /*ordered not a clause on distribute*/, CS, *this, *DSAStack,
       VarsWithImplicitDSA, B);
   if (NestedLoopCount == 0)
     return StmtError();

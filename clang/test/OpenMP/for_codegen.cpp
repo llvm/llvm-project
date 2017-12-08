@@ -386,7 +386,9 @@ void parallel_for(float *a) {
 char i = 1, j = 2, k = 3;
 // CHECK-LABEL: for_with_global_lcv
 void for_with_global_lcv() {
+// CHECK: alloca i8,
 // CHECK: [[I_ADDR:%.+]] = alloca i8,
+// CHECK: alloca i8,
 // CHECK: [[J_ADDR:%.+]] = alloca i8,
 
 // CHECK: call void @__kmpc_for_static_init_4(

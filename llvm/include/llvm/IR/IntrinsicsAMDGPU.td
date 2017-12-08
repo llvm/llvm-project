@@ -294,7 +294,7 @@ class AMDGPUAtomicIncIntrin : Intrinsic<[llvm_anyint_ty],
 def int_amdgcn_atomic_inc : AMDGPUAtomicIncIntrin;
 def int_amdgcn_atomic_dec : AMDGPUAtomicIncIntrin;
 
-class AMDGPUImageLoad : Intrinsic <
+class AMDGPUImageLoad<bit NoMem = 0> : Intrinsic <
   [llvm_anyfloat_ty], // vdata(VGPR)
   [llvm_anyint_ty,    // vaddr(VGPR)
    llvm_anyint_ty,    // rsrc(SGPR)
@@ -303,11 +303,11 @@ class AMDGPUImageLoad : Intrinsic <
    llvm_i1_ty,        // slc(imm)
    llvm_i1_ty,        // lwe(imm)
    llvm_i1_ty],       // da(imm)
-  [IntrReadMem]>;
+  !if(NoMem, [IntrNoMem], [IntrReadMem])>;
 
 def int_amdgcn_image_load : AMDGPUImageLoad;
 def int_amdgcn_image_load_mip : AMDGPUImageLoad;
-def int_amdgcn_image_getresinfo : AMDGPUImageLoad;
+def int_amdgcn_image_getresinfo : AMDGPUImageLoad<1>;
 
 class AMDGPUImageStore : Intrinsic <
   [],
@@ -324,7 +324,7 @@ class AMDGPUImageStore : Intrinsic <
 def int_amdgcn_image_store : AMDGPUImageStore;
 def int_amdgcn_image_store_mip : AMDGPUImageStore;
 
-class AMDGPUImageSample : Intrinsic <
+class AMDGPUImageSample<bit NoMem = 0> : Intrinsic <
     [llvm_anyfloat_ty], // vdata(VGPR)
     [llvm_anyfloat_ty,  // vaddr(VGPR)
      llvm_anyint_ty,    // rsrc(SGPR)
@@ -335,7 +335,7 @@ class AMDGPUImageSample : Intrinsic <
      llvm_i1_ty,        // slc(imm)
      llvm_i1_ty,        // lwe(imm)
      llvm_i1_ty],       // da(imm)
-     [IntrReadMem]>;
+     !if(NoMem, [IntrNoMem], [IntrReadMem])>;
 
 // Basic sample
 def int_amdgcn_image_sample : AMDGPUImageSample;
@@ -417,7 +417,7 @@ def int_amdgcn_image_gather4_c_b_o : AMDGPUImageSample;
 def int_amdgcn_image_gather4_c_b_cl_o : AMDGPUImageSample;
 def int_amdgcn_image_gather4_c_lz_o : AMDGPUImageSample;
 
-def int_amdgcn_image_getlod : AMDGPUImageSample;
+def int_amdgcn_image_getlod : AMDGPUImageSample<1>;
 
 class AMDGPUImageAtomic : Intrinsic <
   [llvm_i32_ty],
@@ -570,7 +570,7 @@ def int_amdgcn_s_dcache_inv :
 
 def int_amdgcn_s_memtime :
   GCCBuiltin<"__builtin_amdgcn_s_memtime">,
-  Intrinsic<[llvm_i64_ty], [], []>;
+  Intrinsic<[llvm_i64_ty], [], [IntrReadMem]>;
 
 def int_amdgcn_s_sleep :
   GCCBuiltin<"__builtin_amdgcn_s_sleep">,
@@ -816,7 +816,7 @@ def int_amdgcn_s_dcache_wb_vol :
 
 def int_amdgcn_s_memrealtime :
   GCCBuiltin<"__builtin_amdgcn_s_memrealtime">,
-  Intrinsic<[llvm_i64_ty], [], []>;
+  Intrinsic<[llvm_i64_ty], [], [IntrReadMem]>;
 
 // llvm.amdgcn.ds.permute <index> <src>
 def int_amdgcn_ds_permute :

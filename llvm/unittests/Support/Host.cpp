@@ -139,6 +139,37 @@ Hardware        : Qualcomm Technologies, Inc MSM8992
 
   EXPECT_EQ(sys::detail::getHostCPUNameForARM(MSM8992ProcCpuInfo),
             "cortex-a53");
+
+  // Exynos big.LITTLE weirdness
+  const std::string ExynosProcCpuInfo = R"(
+processor       : 0
+Features        : fp asimd evtstrm aes pmull sha1 sha2 crc32
+CPU implementer : 0x41
+CPU architecture: 8
+CPU variant     : 0x0
+CPU part        : 0xd03
+
+processor       : 1
+Features        : fp asimd evtstrm aes pmull sha1 sha2 crc32
+CPU implementer : 0x53
+CPU architecture: 8
+)";
+
+  // Verify default for Exynos.
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(ExynosProcCpuInfo +
+                                              "CPU variant     : 0xc\n"
+                                              "CPU part        : 0xafe"),
+            "exynos-m1");
+  // Verify Exynos M1.
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(ExynosProcCpuInfo +
+                                              "CPU variant     : 0x1\n"
+                                              "CPU part        : 0x001"),
+            "exynos-m1");
+  // Verify Exynos M2.
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(ExynosProcCpuInfo +
+                                              "CPU variant     : 0x4\n"
+                                              "CPU part        : 0x001"),
+            "exynos-m2");
 }
 
 #if defined(__APPLE__)

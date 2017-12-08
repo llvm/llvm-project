@@ -1559,33 +1559,39 @@ def MOV32o16a : Ii16<0xA3, RawFrmMemOffs, (outs), (ins offset16_32:$dst),
 let mayLoad = 1 in {
 let Defs = [AL] in
 def MOV8ao64 : RIi64_NOREX<0xA0, RawFrmMemOffs, (outs), (ins offset64_8:$src),
-                     "movabs{b}\t{$src, %al|al, $src}", []>, AdSize64;
+                     "movabs{b}\t{$src, %al|al, $src}", [], IIC_MOV_MEM>,
+                     AdSize64;
 let Defs = [AX] in
 def MOV16ao64 : RIi64_NOREX<0xA1, RawFrmMemOffs, (outs), (ins offset64_16:$src),
-                     "movabs{w}\t{$src, %ax|ax, $src}", []>, OpSize16, AdSize64;
+                     "movabs{w}\t{$src, %ax|ax, $src}", [], IIC_MOV_MEM>,
+                     OpSize16, AdSize64;
 let Defs = [EAX] in
 def MOV32ao64 : RIi64_NOREX<0xA1, RawFrmMemOffs, (outs), (ins offset64_32:$src),
-                     "movabs{l}\t{$src, %eax|eax, $src}", []>, OpSize32,
-                     AdSize64;
+                     "movabs{l}\t{$src, %eax|eax, $src}", [], IIC_MOV_MEM>,
+                     OpSize32, AdSize64;
 let Defs = [RAX] in
 def MOV64ao64 : RIi64<0xA1, RawFrmMemOffs, (outs), (ins offset64_64:$src),
-                     "movabs{q}\t{$src, %rax|rax, $src}", []>, AdSize64;
+                     "movabs{q}\t{$src, %rax|rax, $src}", [], IIC_MOV_MEM>,
+                     AdSize64;
 }
 
 let mayStore = 1 in {
 let Uses = [AL] in
 def MOV8o64a : RIi64_NOREX<0xA2, RawFrmMemOffs, (outs), (ins offset64_8:$dst),
-                     "movabs{b}\t{%al, $dst|$dst, al}", []>, AdSize64;
+                     "movabs{b}\t{%al, $dst|$dst, al}", [], IIC_MOV_MEM>,
+                     AdSize64;
 let Uses = [AX] in
 def MOV16o64a : RIi64_NOREX<0xA3, RawFrmMemOffs, (outs), (ins offset64_16:$dst),
-                     "movabs{w}\t{%ax, $dst|$dst, ax}", []>, OpSize16, AdSize64;
+                     "movabs{w}\t{%ax, $dst|$dst, ax}", [], IIC_MOV_MEM>,
+                     OpSize16, AdSize64;
 let Uses = [EAX] in
 def MOV32o64a : RIi64_NOREX<0xA3, RawFrmMemOffs, (outs), (ins offset64_32:$dst),
-                     "movabs{l}\t{%eax, $dst|$dst, eax}", []>, OpSize32,
-                     AdSize64;
+                     "movabs{l}\t{%eax, $dst|$dst, eax}", [], IIC_MOV_MEM>,
+                     OpSize32, AdSize64;
 let Uses = [RAX] in
 def MOV64o64a : RIi64<0xA3, RawFrmMemOffs, (outs), (ins offset64_64:$dst),
-                     "movabs{q}\t{%rax, $dst|$dst, rax}", []>, AdSize64;
+                     "movabs{q}\t{%rax, $dst|$dst, rax}", [], IIC_MOV_MEM>,
+                     AdSize64;
 }
 } // hasSideEffects = 0
 
@@ -2723,10 +2729,9 @@ def CLFLUSHOPT : I<0xAE, MRM7m, (outs), (ins i8mem:$src),
                    "clflushopt\t$src", [(int_x86_clflushopt addr:$src)],
                    IIC_SSE_PREFETCH>, PD;
 
-let Predicates = [HasCLWB] in
+let Predicates = [HasCLWB], SchedRW = [WriteLoad] in
 def CLWB       : I<0xAE, MRM6m, (outs), (ins i8mem:$src), "clwb\t$src",
-                   [(int_x86_clwb addr:$src)]>, PD;
-
+                   [(int_x86_clwb addr:$src)], IIC_SSE_PREFETCH>, PD;
 
 //===----------------------------------------------------------------------===//
 // Subsystems.

@@ -157,6 +157,7 @@ int main() {
     // LAMBDA: alloca i{{[0-9]+}},
     // LAMBDA: alloca i{{[0-9]+}},
     // LAMBDA: alloca i{{[0-9]+}},
+    // LAMBDA: alloca i{{[0-9]+}},
     // LAMBDA: [[A_PRIV:%.+]] = alloca i{{[0-9]+}},
     // LAMBDA: [[B_PRIV:%.+]] = alloca i{{[0-9]+}},
     // LAMBDA: [[C_PRIV:%.+]] = alloca i{{[0-9]+}},
@@ -183,6 +184,7 @@ int main() {
     // LAMBDA: alloca i{{[0-9]+}},
     // LAMBDA: alloca i{{[0-9]+}},
     // LAMBDA: [[G_START_ADDR:%.+]] = alloca i{{[0-9]+}},
+    // LAMBDA: alloca i{{[0-9]+}},
     // LAMBDA: alloca i{{[0-9]+}},
     // LAMBDA: alloca i{{[0-9]+}},
     // LAMBDA: alloca i{{[0-9]+}},
@@ -235,6 +237,7 @@ int main() {
     // BLOCKS: alloca i{{[0-9]+}},
     // BLOCKS: alloca i{{[0-9]+}},
     // BLOCKS: [[G_START_ADDR:%.+]] = alloca i{{[0-9]+}},
+    // BLOCKS: alloca i{{[0-9]+}},
     // BLOCKS: alloca i{{[0-9]+}},
     // BLOCKS: alloca i{{[0-9]+}},
     // BLOCKS: alloca i{{[0-9]+}},
@@ -298,6 +301,7 @@ int main() {
 // BLOCKS: ret void
 
 // BLOCKS: define internal void @{{.+}}(i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [[SS_TY]]* %{{.+}}, i32* {{.+}}, i32* {{.+}}, i32* {{.+}})
+// BLOCKS: alloca i{{[0-9]+}},
 // BLOCKS: alloca i{{[0-9]+}},
 // BLOCKS: alloca i{{[0-9]+}},
 // BLOCKS: alloca i{{[0-9]+}},
@@ -409,6 +413,7 @@ int main() {
 // CHECK: ret
 
 // CHECK: define internal void [[SS_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [[SS_TY]]* %{{.+}})
+// CHECK: alloca i{{[0-9]+}},
 // CHECK: alloca i{{[0-9]+}},
 // CHECK: alloca i{{[0-9]+}},
 // CHECK: alloca i{{[0-9]+}},

@@ -257,7 +257,11 @@ defm IMAGE_STORE : MIMG_Store <0x00000008, "image_store">;
 defm IMAGE_STORE_MIP : MIMG_Store <0x00000009, "image_store_mip">;
 //def IMAGE_STORE_PCK : MIMG_NoPattern_ <"image_store_pck", 0x0000000a>;
 //def IMAGE_STORE_MIP_PCK : MIMG_NoPattern_ <"image_store_mip_pck", 0x0000000b>;
+
+let mayLoad = 0, mayStore = 0 in {
 defm IMAGE_GET_RESINFO : MIMG_NoSampler <0x0000000e, "image_get_resinfo">;
+}
+
 defm IMAGE_ATOMIC_SWAP : MIMG_Atomic <mimg<0x0f, 0x10>, "image_atomic_swap">;
 defm IMAGE_ATOMIC_CMPSWAP : MIMG_Atomic <mimg<0x10, 0x11>, "image_atomic_cmpswap", VReg_64>;
 defm IMAGE_ATOMIC_ADD : MIMG_Atomic <mimg<0x11, 0x12>, "image_atomic_add">;
@@ -331,7 +335,11 @@ defm IMAGE_GATHER4_C_L_O    : MIMG_Gather <0x0000005c, "image_gather4_c_l_o">;
 defm IMAGE_GATHER4_C_B_O    : MIMG_Gather_WQM <0x0000005d, "image_gather4_c_b_o">;
 defm IMAGE_GATHER4_C_B_CL_O : MIMG_Gather_WQM <0x0000005e, "image_gather4_c_b_cl_o">;
 defm IMAGE_GATHER4_C_LZ_O   : MIMG_Gather <0x0000005f, "image_gather4_c_lz_o">;
+
+let mayLoad = 0, mayStore = 0 in {
 defm IMAGE_GET_LOD          : MIMG_Sampler_WQM <0x00000060, "image_get_lod">;
+}
+
 defm IMAGE_SAMPLE_CD        : MIMG_Sampler <0x00000068, "image_sample_cd">;
 defm IMAGE_SAMPLE_CD_CL     : MIMG_Sampler <0x00000069, "image_sample_cd_cl">;
 defm IMAGE_SAMPLE_C_CD      : MIMG_Sampler <0x0000006a, "image_sample_c_cd">;

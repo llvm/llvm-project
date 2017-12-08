@@ -993,7 +993,6 @@ public:
   }
 
   const BranchProbabilityInfoT &getBPI() const { return *BPI; }
-  const LoopInfoT &getLoopInfo() const { return *LI; }
 
   /// \brief Print the frequencies for the current function.
   ///

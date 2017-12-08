@@ -66,16 +66,14 @@ public:
     ISAVersion7_0_1,
     ISAVersion7_0_2,
     ISAVersion7_0_3,
+    ISAVersion7_0_4,
     ISAVersion8_0_0,
     ISAVersion8_0_1,
     ISAVersion8_0_2,
     ISAVersion8_0_3,
-    ISAVersion8_0_4,
     ISAVersion8_1_0,
     ISAVersion9_0_0,
-    ISAVersion9_0_1,
-    ISAVersion9_0_2,
-    ISAVersion9_0_3
+    ISAVersion9_0_2
   };
 
   enum TrapHandlerAbi {

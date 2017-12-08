@@ -453,7 +453,7 @@ def AVX512_512_SETALLONES : I<0, Pseudo, (outs VR512:$dst), (ins), "",
 // Alias instructions that allow VPTERNLOG to be used with a mask to create
 // a mix of all ones and all zeros elements. This is done this way to force
 // the same register to be used as input for all three sources.
-let isPseudo = 1, Predicates = [HasAVX512] in {
+let isPseudo = 1, Predicates = [HasAVX512], SchedRW = [WriteVecALU] in {
 def AVX512_512_SEXT_MASK_32 : I<0, Pseudo, (outs VR512:$dst),
                                 (ins VK16WM:$mask), "",
                            [(set VR512:$dst, (vselect (v16i1 VK16WM:$mask),

@@ -129,11 +129,8 @@ class SM_Time_Pseudo<string opName, SDPatternOperator node> : SM_Pseudo<
   opName, (outs SReg_64_XEXEC:$sdst), (ins),
   " $sdst", [(set i64:$sdst, (node))]> {
   let hasSideEffects = 1;
-  // FIXME: mayStore = ? is a workaround for tablegen bug for different
-  // inferred mayStore flags for the instruction pattern vs. standalone
-  // Pat. Each considers the other contradictory.
-  let mayStore = ?;
-  let mayLoad = ?;
+  let mayStore = 0;
+  let mayLoad = 1;
   let has_sbase = 0;
   let has_offset = 0;
 }

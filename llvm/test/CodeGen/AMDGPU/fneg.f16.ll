@@ -1,6 +1,6 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=kaveri -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI,CIVI %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tonga -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,CIVI,GFX89 %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx901 -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX89,GFX9 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX89,GFX9 %s
 
 ; FIXME: Should be able to do scalar op
 ; GCN-LABEL: {{^}}s_fneg_f16:
