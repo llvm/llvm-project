@@ -105,21 +105,21 @@ public:
 
 class CodeSection : public OutputSection {
 public:
-  explicit CodeSection(uint32_t NumFunctions, std::vector<ObjFile *> &Objs);
+  explicit CodeSection(uint32_t NumFunctions, ArrayRef<ObjFile *> Objs);
   size_t getSize() const override { return Header.size() + BodySize; }
   void writeTo(uint8_t *Buf) override;
   uint32_t numRelocations() const override;
   void writeRelocations(raw_ostream &OS) const override;
 
 protected:
-  std::vector<ObjFile *> &InputObjects;
+  ArrayRef<ObjFile *> InputObjects;
   std::string CodeSectionHeader;
   size_t BodySize = 0;
 };
 
 class DataSection : public OutputSection {
 public:
-  explicit DataSection(std::vector<OutputSegment *> &Segments);
+  explicit DataSection(ArrayRef<OutputSegment *> Segments);
   size_t getSize() const override { return Header.size() + BodySize; }
   void writeTo(uint8_t *Buf) override;
   uint32_t numRelocations() const override { return Relocations.size(); }
@@ -127,7 +127,7 @@ public:
 
 protected:
   std::vector<OutputRelocation> Relocations;
-  std::vector<OutputSegment *> &Segments;
+  ArrayRef<OutputSegment *> Segments;
   std::string DataSectionHeader;
   size_t BodySize = 0;
 };
