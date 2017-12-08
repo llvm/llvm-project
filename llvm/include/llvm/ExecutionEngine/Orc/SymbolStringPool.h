@@ -88,6 +88,10 @@ public:
     return !(*this == Other);
   }
 
+  bool operator<(const SymbolStringPtr &Other) const {
+    return S->getValue() < Other.S->getValue();
+  }
+
 private:
 
   SymbolStringPtr(SymbolStringPool::PoolMapEntry *S)
@@ -99,7 +103,7 @@ private:
   SymbolStringPool::PoolMapEntry *S = nullptr;
 };
 
-SymbolStringPtr SymbolStringPool::intern(StringRef S) {
+inline SymbolStringPtr SymbolStringPool::intern(StringRef S) {
   std::lock_guard<std::mutex> Lock(PoolMutex);
   auto I = Pool.find(S);
   if (I != Pool.end())
@@ -111,7 +115,7 @@ SymbolStringPtr SymbolStringPool::intern(StringRef S) {
   return SymbolStringPtr(&*I);
 }
 
-void SymbolStringPool::clearDeadEntries() {
+inline void SymbolStringPool::clearDeadEntries() {
   std::lock_guard<std::mutex> Lock(PoolMutex);
   for (auto I = Pool.begin(), E = Pool.end(); I != E;) {
     auto Tmp = std::next(I);
@@ -121,13 +125,12 @@ void SymbolStringPool::clearDeadEntries() {
   }
 }
 
-bool SymbolStringPool::empty() const {
+inline bool SymbolStringPool::empty() const {
   std::lock_guard<std::mutex> Lock(PoolMutex);
   return Pool.empty();
 }
 
 } // end namespace orc
-
 } // end namespace llvm
 
 #endif // LLVM_EXECUTIONENGINE_ORC_SYMBOLSTRINGPOOL_H

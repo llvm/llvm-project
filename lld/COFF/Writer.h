@@ -34,7 +34,7 @@ public:
   void setFileOffset(uint64_t);
   void addChunk(Chunk *C);
   llvm::StringRef getName() { return Name; }
-  std::vector<Chunk *> &getChunks() { return Chunks; }
+  ArrayRef<Chunk *> getChunks() { return Chunks; }
   void addPermissions(uint32_t C);
   void setPermissions(uint32_t C);
   uint32_t getPermissions() { return Header.Characteristics & PermMask; }

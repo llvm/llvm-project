@@ -392,6 +392,9 @@ static bool discoverTypeIndices(ArrayRef<uint8_t> Content, SymbolKind Kind,
   case SymbolKind::S_LOCAL:
     Refs.push_back({TiRefKind::TypeRef, 0, 1}); // Type
     break;
+  case SymbolKind::S_REGISTER:
+    Refs.push_back({TiRefKind::TypeRef, 0, 1}); // Type;
+    break;
   case SymbolKind::S_CONSTANT:
     Refs.push_back({TiRefKind::TypeRef, 0, 1}); // Type
     break;

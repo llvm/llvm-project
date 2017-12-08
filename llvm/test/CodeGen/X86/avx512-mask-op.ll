@@ -972,14 +972,11 @@ define <64 x i8> @test16(i64 %x) {
 ; SKX-NEXT:    kmovq %rdi, %k0
 ; SKX-NEXT:    movb $1, %al
 ; SKX-NEXT:    kmovd %eax, %k1
-; SKX-NEXT:    vpmovm2b %k1, %zmm0
-; SKX-NEXT:    vpsllq $40, %xmm0, %xmm0
-; SKX-NEXT:    vpmovm2b %k0, %zmm1
-; SKX-NEXT:    movl $32, %eax
-; SKX-NEXT:    kmovd %eax, %k1
-; SKX-NEXT:    vpblendmb %ymm0, %ymm1, %ymm0 {%k1}
-; SKX-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; SKX-NEXT:    vpmovb2m %zmm0, %k0
+; SKX-NEXT:    kshiftrq $5, %k0, %k2
+; SKX-NEXT:    kxorq %k1, %k2, %k1
+; SKX-NEXT:    kshiftlq $63, %k1, %k1
+; SKX-NEXT:    kshiftrq $58, %k1, %k1
+; SKX-NEXT:    kxorq %k0, %k1, %k0
 ; SKX-NEXT:    vpmovm2b %k0, %zmm0
 ; SKX-NEXT:    retq
 ;
@@ -988,13 +985,11 @@ define <64 x i8> @test16(i64 %x) {
 ; AVX512BW-NEXT:    kmovq %rdi, %k0
 ; AVX512BW-NEXT:    movb $1, %al
 ; AVX512BW-NEXT:    kmovd %eax, %k1
-; AVX512BW-NEXT:    vpmovm2b %k1, %zmm0
-; AVX512BW-NEXT:    vpsllq $40, %xmm0, %xmm0
-; AVX512BW-NEXT:    vpmovm2b %k0, %zmm1
-; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; AVX512BW-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; AVX512BW-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; AVX512BW-NEXT:    vpmovb2m %zmm0, %k0
+; AVX512BW-NEXT:    kshiftrq $5, %k0, %k2
+; AVX512BW-NEXT:    kxorq %k1, %k2, %k1
+; AVX512BW-NEXT:    kshiftlq $63, %k1, %k1
+; AVX512BW-NEXT:    kshiftrq $58, %k1, %k1
+; AVX512BW-NEXT:    kxorq %k0, %k1, %k0
 ; AVX512BW-NEXT:    vpmovm2b %k0, %zmm0
 ; AVX512BW-NEXT:    retq
 ;
@@ -1085,14 +1080,11 @@ define <64 x i8> @test17(i64 %x, i32 %y, i32 %z) {
 ; SKX-NEXT:    cmpl %edx, %esi
 ; SKX-NEXT:    setg %al
 ; SKX-NEXT:    kmovd %eax, %k1
-; SKX-NEXT:    vpmovm2b %k1, %zmm0
-; SKX-NEXT:    vpsllq $40, %xmm0, %xmm0
-; SKX-NEXT:    vpmovm2b %k0, %zmm1
-; SKX-NEXT:    movl $32, %eax
-; SKX-NEXT:    kmovd %eax, %k1
-; SKX-NEXT:    vpblendmb %ymm0, %ymm1, %ymm0 {%k1}
-; SKX-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; SKX-NEXT:    vpmovb2m %zmm0, %k0
+; SKX-NEXT:    kshiftrq $5, %k0, %k2
+; SKX-NEXT:    kxorq %k1, %k2, %k1
+; SKX-NEXT:    kshiftlq $63, %k1, %k1
+; SKX-NEXT:    kshiftrq $58, %k1, %k1
+; SKX-NEXT:    kxorq %k0, %k1, %k0
 ; SKX-NEXT:    vpmovm2b %k0, %zmm0
 ; SKX-NEXT:    retq
 ;
@@ -1102,13 +1094,11 @@ define <64 x i8> @test17(i64 %x, i32 %y, i32 %z) {
 ; AVX512BW-NEXT:    cmpl %edx, %esi
 ; AVX512BW-NEXT:    setg %al
 ; AVX512BW-NEXT:    kmovd %eax, %k1
-; AVX512BW-NEXT:    vpmovm2b %k1, %zmm0
-; AVX512BW-NEXT:    vpsllq $40, %xmm0, %xmm0
-; AVX512BW-NEXT:    vpmovm2b %k0, %zmm1
-; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; AVX512BW-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; AVX512BW-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; AVX512BW-NEXT:    vpmovb2m %zmm0, %k0
+; AVX512BW-NEXT:    kshiftrq $5, %k0, %k2
+; AVX512BW-NEXT:    kxorq %k1, %k2, %k1
+; AVX512BW-NEXT:    kshiftlq $63, %k1, %k1
+; AVX512BW-NEXT:    kshiftrq $58, %k1, %k1
+; AVX512BW-NEXT:    kxorq %k0, %k1, %k0
 ; AVX512BW-NEXT:    vpmovm2b %k0, %zmm0
 ; AVX512BW-NEXT:    retq
 ;
@@ -1159,24 +1149,22 @@ define <64 x i8> @test17(i64 %x, i32 %y, i32 %z) {
 define <8 x i1> @test18(i8 %a, i16 %y) {
 ; KNL-LABEL: test18:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    kmovw %edi, %k2
-; KNL-NEXT:    kmovw %esi, %k0
-; KNL-NEXT:    kshiftlw $7, %k0, %k1
+; KNL-NEXT:    kmovw %edi, %k0
+; KNL-NEXT:    kmovw %esi, %k1
+; KNL-NEXT:    kshiftlw $7, %k1, %k2
+; KNL-NEXT:    kshiftrw $15, %k2, %k2
+; KNL-NEXT:    kshiftlw $6, %k1, %k1
 ; KNL-NEXT:    kshiftrw $15, %k1, %k1
-; KNL-NEXT:    kshiftlw $6, %k0, %k0
-; KNL-NEXT:    kshiftrw $15, %k0, %k3
-; KNL-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k2} {z}
-; KNL-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k3} {z}
-; KNL-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,1,2,3,4,5,8,7]
-; KNL-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
-; KNL-NEXT:    vpsllq $63, %zmm2, %zmm0
-; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k2
-; KNL-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k2} {z}
-; KNL-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
-; KNL-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,1,2,3,4,5,6,8]
-; KNL-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
-; KNL-NEXT:    vpsllq $63, %zmm2, %zmm0
-; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k1
+; KNL-NEXT:    kshiftrw $6, %k0, %k3
+; KNL-NEXT:    kxorw %k1, %k3, %k1
+; KNL-NEXT:    kshiftlw $15, %k1, %k1
+; KNL-NEXT:    kshiftrw $9, %k1, %k1
+; KNL-NEXT:    kxorw %k0, %k1, %k0
+; KNL-NEXT:    kshiftrw $7, %k0, %k1
+; KNL-NEXT:    kxorw %k2, %k1, %k1
+; KNL-NEXT:    kshiftlw $15, %k1, %k1
+; KNL-NEXT:    kshiftrw $8, %k1, %k1
+; KNL-NEXT:    kxorw %k0, %k1, %k1
 ; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; KNL-NEXT:    vpmovdw %zmm0, %ymm0
 ; KNL-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %ymm0
@@ -1185,45 +1173,42 @@ define <8 x i1> @test18(i8 %a, i16 %y) {
 ;
 ; SKX-LABEL: test18:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    kmovd %edi, %k1
-; SKX-NEXT:    kmovd %esi, %k2
-; SKX-NEXT:    kshiftlw $7, %k2, %k0
-; SKX-NEXT:    kshiftrw $15, %k0, %k0
-; SKX-NEXT:    kshiftlw $6, %k2, %k2
+; SKX-NEXT:    kmovd %edi, %k0
+; SKX-NEXT:    kmovd %esi, %k1
+; SKX-NEXT:    kshiftlw $7, %k1, %k2
 ; SKX-NEXT:    kshiftrw $15, %k2, %k2
-; SKX-NEXT:    vpmovm2q %k1, %zmm0
-; SKX-NEXT:    vpmovm2q %k2, %zmm1
-; SKX-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,1,2,3,4,5,8,7]
-; SKX-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
-; SKX-NEXT:    vpmovq2m %zmm2, %k1
-; SKX-NEXT:    kshiftlb $1, %k1, %k1
+; SKX-NEXT:    kshiftlw $6, %k1, %k1
+; SKX-NEXT:    kshiftrw $15, %k1, %k1
+; SKX-NEXT:    kshiftrb $6, %k0, %k3
+; SKX-NEXT:    kxorb %k1, %k3, %k1
+; SKX-NEXT:    kshiftlb $7, %k1, %k1
 ; SKX-NEXT:    kshiftrb $1, %k1, %k1
-; SKX-NEXT:    kshiftlb $7, %k0, %k0
-; SKX-NEXT:    korb %k0, %k1, %k0
+; SKX-NEXT:    kxorb %k0, %k1, %k0
+; SKX-NEXT:    kshiftlb $1, %k0, %k0
+; SKX-NEXT:    kshiftrb $1, %k0, %k0
+; SKX-NEXT:    kshiftlb $7, %k2, %k1
+; SKX-NEXT:    korb %k1, %k0, %k0
 ; SKX-NEXT:    vpmovm2w %k0, %xmm0
-; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
 ;
 ; AVX512BW-LABEL: test18:
 ; AVX512BW:       ## %bb.0:
-; AVX512BW-NEXT:    kmovd %edi, %k2
-; AVX512BW-NEXT:    kmovd %esi, %k0
-; AVX512BW-NEXT:    kshiftlw $7, %k0, %k1
+; AVX512BW-NEXT:    kmovd %edi, %k0
+; AVX512BW-NEXT:    kmovd %esi, %k1
+; AVX512BW-NEXT:    kshiftlw $7, %k1, %k2
+; AVX512BW-NEXT:    kshiftrw $15, %k2, %k2
+; AVX512BW-NEXT:    kshiftlw $6, %k1, %k1
 ; AVX512BW-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512BW-NEXT:    kshiftlw $6, %k0, %k0
-; AVX512BW-NEXT:    kshiftrw $15, %k0, %k3
-; AVX512BW-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k2} {z}
-; AVX512BW-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k3} {z}
-; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,1,2,3,4,5,8,7]
-; AVX512BW-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
-; AVX512BW-NEXT:    vpsllq $63, %zmm2, %zmm0
-; AVX512BW-NEXT:    vptestmq %zmm0, %zmm0, %k2
-; AVX512BW-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k2} {z}
-; AVX512BW-NEXT:    vpternlogq $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
-; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,1,2,3,4,5,6,8]
-; AVX512BW-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
-; AVX512BW-NEXT:    vpsllq $63, %zmm2, %zmm0
-; AVX512BW-NEXT:    vptestmq %zmm0, %zmm0, %k0
+; AVX512BW-NEXT:    kshiftrw $6, %k0, %k3
+; AVX512BW-NEXT:    kxorw %k1, %k3, %k1
+; AVX512BW-NEXT:    kshiftlw $15, %k1, %k1
+; AVX512BW-NEXT:    kshiftrw $9, %k1, %k1
+; AVX512BW-NEXT:    kxorw %k0, %k1, %k0
+; AVX512BW-NEXT:    kshiftrw $7, %k0, %k1
+; AVX512BW-NEXT:    kxorw %k2, %k1, %k1
+; AVX512BW-NEXT:    kshiftlw $15, %k1, %k1
+; AVX512BW-NEXT:    kshiftrw $8, %k1, %k1
+; AVX512BW-NEXT:    kxorw %k0, %k1, %k0
 ; AVX512BW-NEXT:    vpmovm2w %k0, %zmm0
 ; AVX512BW-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %zmm0
 ; AVX512BW-NEXT:    vzeroupper
@@ -1231,21 +1216,21 @@ define <8 x i1> @test18(i8 %a, i16 %y) {
 ;
 ; AVX512DQ-LABEL: test18:
 ; AVX512DQ:       ## %bb.0:
-; AVX512DQ-NEXT:    kmovw %edi, %k1
-; AVX512DQ-NEXT:    kmovw %esi, %k2
-; AVX512DQ-NEXT:    kshiftlw $7, %k2, %k0
-; AVX512DQ-NEXT:    kshiftrw $15, %k0, %k0
-; AVX512DQ-NEXT:    kshiftlw $6, %k2, %k2
+; AVX512DQ-NEXT:    kmovw %edi, %k0
+; AVX512DQ-NEXT:    kmovw %esi, %k1
+; AVX512DQ-NEXT:    kshiftlw $7, %k1, %k2
 ; AVX512DQ-NEXT:    kshiftrw $15, %k2, %k2
-; AVX512DQ-NEXT:    vpmovm2q %k1, %zmm0
-; AVX512DQ-NEXT:    vpmovm2q %k2, %zmm1
-; AVX512DQ-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,1,2,3,4,5,8,7]
-; AVX512DQ-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
-; AVX512DQ-NEXT:    vpmovq2m %zmm2, %k1
-; AVX512DQ-NEXT:    kshiftlb $1, %k1, %k1
+; AVX512DQ-NEXT:    kshiftlw $6, %k1, %k1
+; AVX512DQ-NEXT:    kshiftrw $15, %k1, %k1
+; AVX512DQ-NEXT:    kshiftrb $6, %k0, %k3
+; AVX512DQ-NEXT:    kxorb %k1, %k3, %k1
+; AVX512DQ-NEXT:    kshiftlb $7, %k1, %k1
 ; AVX512DQ-NEXT:    kshiftrb $1, %k1, %k1
-; AVX512DQ-NEXT:    kshiftlb $7, %k0, %k0
-; AVX512DQ-NEXT:    korb %k0, %k1, %k0
+; AVX512DQ-NEXT:    kxorb %k0, %k1, %k0
+; AVX512DQ-NEXT:    kshiftlb $1, %k0, %k0
+; AVX512DQ-NEXT:    kshiftrb $1, %k0, %k0
+; AVX512DQ-NEXT:    kshiftlb $7, %k2, %k1
+; AVX512DQ-NEXT:    korb %k1, %k0, %k0
 ; AVX512DQ-NEXT:    vpmovm2d %k0, %zmm0
 ; AVX512DQ-NEXT:    vpmovdw %zmm0, %ymm0
 ; AVX512DQ-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %ymm0

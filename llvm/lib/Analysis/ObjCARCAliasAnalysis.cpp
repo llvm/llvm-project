@@ -123,7 +123,7 @@ ModRefInfo ObjCARCAAResult::getModRefInfo(ImmutableCallSite CS,
     // These functions don't access any memory visible to the compiler.
     // Note that this doesn't include objc_retainBlock, because it updates
     // pointers when it copies block data.
-    return MRI_NoModRef;
+    return ModRefInfo::NoModRef;
   default:
     break;
   }

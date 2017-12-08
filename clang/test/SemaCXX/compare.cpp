@@ -245,8 +245,8 @@ void test4(short s) {
   // unsigned.
   const unsigned B = -1;
   void (s < B); // expected-warning{{comparison of integers of different signs: 'short' and 'const unsigned int'}}
-  void (s > B); // expected-warning{{comparison of integers of different signs: 'short' and 'const unsigned int'}}
-  void (s <= B); // expected-warning{{comparison of integers of different signs: 'short' and 'const unsigned int'}}
+  void (s > B); // expected-warning{{comparison 'short' > 4294967295 is always false}}
+  void (s <= B); // expected-warning{{comparison 'short' <= 4294967295 is always true}}
   void (s >= B); // expected-warning{{comparison of integers of different signs: 'short' and 'const unsigned int'}}
   void (s == B); // expected-warning{{comparison of integers of different signs: 'short' and 'const unsigned int'}}
   void (s != B); // expected-warning{{comparison of integers of different signs: 'short' and 'const unsigned int'}}

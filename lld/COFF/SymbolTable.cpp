@@ -291,7 +291,7 @@ DefinedImportThunk *SymbolTable::addImportThunk(StringRef Name,
 std::vector<Chunk *> SymbolTable::getChunks() {
   std::vector<Chunk *> Res;
   for (ObjFile *File : ObjFile::Instances) {
-    std::vector<Chunk *> &V = File->getChunks();
+    ArrayRef<Chunk *> V = File->getChunks();
     Res.insert(Res.end(), V.begin(), V.end());
   }
   return Res;

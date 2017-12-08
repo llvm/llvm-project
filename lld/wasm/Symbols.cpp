@@ -61,6 +61,7 @@ uint32_t Symbol::getOutputIndex() const {
 
 void Symbol::setVirtualAddress(uint32_t Value) {
   DEBUG(dbgs() << "setVirtualAddress " << Name << " -> " << Value << "\n");
+  assert(!VirtualAddress.hasValue());
   VirtualAddress = Value;
 }
 
