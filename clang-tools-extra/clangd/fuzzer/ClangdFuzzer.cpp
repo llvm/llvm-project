@@ -13,16 +13,19 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "CodeComplete.h"
 #include "ClangdLSPServer.h"
 #include <sstream>
 
 extern "C" int LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
   clang::clangd::JSONOutput Out(llvm::nulls(), llvm::nulls(), nullptr);
+  clang::clangd::CodeCompleteOptions CCOpts;
+  CCOpts.EnableSnippets = false;
 
   // Initialize and run ClangdLSPServer.
   clang::clangd::ClangdLSPServer LSPServer(
       Out, clang::clangd::getDefaultAsyncThreadsCount(),
-      /*EnableSnippets=*/false, llvm::None, llvm::None);
+      /*StorePreamblesInMemory=*/false, CCOpts, llvm::None, llvm::None);
 
   std::istringstream In(std::string(reinterpret_cast<char *>(data), size));
   LSPServer.run(In);
