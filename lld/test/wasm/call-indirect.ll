@@ -1,5 +1,5 @@
-; RUN: llc -filetype=obj %p/Inputs/call-indirect.ll -o %t2.o
-; RUN: llc -filetype=obj %s -o %t.o
+; RUN: llc -filetype=obj -mtriple=wasm32-unknown-uknown-wasm %p/Inputs/call-indirect.ll -o %t2.o
+; RUN: llc -filetype=obj -mtriple=wasm32-unknown-uknown-wasm %s -o %t.o
 ; RUN: lld -flavor wasm -o %t.wasm %t2.o %t.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
@@ -7,9 +7,6 @@
 ; int foo(void) { return 1; }
 ; int (*indirect_func)(void) = &foo;
 ; void _start(void) { indirect_func(); }
-
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
-target triple = "wasm32-unknown-unknown-wasm"
 
 @indirect_func = local_unnamed_addr global i32 ()* @foo, align 4
 
@@ -46,8 +43,8 @@ entry:
 ; CHECK-NEXT:       - ElemType:        ANYFUNC
 ; CHECK-NEXT:         Limits:          
 ; CHECK-NEXT:           Flags:           0x00000001
-; CHECK-NEXT:           Initial:         0x00000003
-; CHECK-NEXT:           Maximum:         0x00000003
+; CHECK-NEXT:           Initial:         0x00000004
+; CHECK-NEXT:           Maximum:         0x00000004
 ; CHECK-NEXT:   - Type:            MEMORY
 ; CHECK-NEXT:     Memories:        
 ; CHECK-NEXT:       - Initial:         0x00000002
@@ -66,21 +63,21 @@ entry:
 ; CHECK-NEXT:       - Name:            _start
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           3
+; CHECK-NEXT:       - Name:            foo
+; CHECK-NEXT:         Kind:            FUNCTION
+; CHECK-NEXT:         Index:           2
 ; CHECK-NEXT:       - Name:            bar
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           0
 ; CHECK-NEXT:       - Name:            call_bar_indirect
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           1
-; CHECK-NEXT:       - Name:            foo
-; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Index:           2
 ; CHECK:        - Type:            ELEM
 ; CHECK-NEXT:     Segments:        
 ; CHECK-NEXT:       - Offset:          
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           1
-; CHECK-NEXT:         Functions:       [ 0, 2 ]
+; CHECK-NEXT:         Functions:       [ 0, 2, 2 ]
 ; CHECK-NEXT:   - Type:            CODE
 ; CHECK-NEXT:     Functions:       
 ; CHECK:            - Locals:          
@@ -93,10 +90,10 @@ entry:
 ; CHECK-NEXT:         Offset:          
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           1024
-; CHECK-NEXT:         Content:         '0100000002000000'
+; CHECK-NEXT:         Content:         '010000000200000003000000'
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            linking
-; CHECK-NEXT:     DataSize:        8
+; CHECK-NEXT:     DataSize:        12
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            name
 ; CHECK-NEXT:     FunctionNames:   

@@ -1456,6 +1456,7 @@ int __kmp_release_queuing_lock(kmp_queuing_lock_t *lck, kmp_int32 gtid) {
       }
       dequeued = FALSE;
     } else {
+      KMP_MB();
       tail = *tail_id_p;
       if (head == tail) { /* only one thread on the queue */
 #ifdef DEBUG_QUEUING_LOCKS
