@@ -157,7 +157,8 @@ TEST(Local, ReplaceDbgDeclare) {
   ASSERT_TRUE(DII);
   Value *NewBase = Constant::getNullValue(Type::getInt32PtrTy(C));
   DIBuilder DIB(*M);
-  replaceDbgDeclare(AI, NewBase, DII, DIB, /*Deref=*/false, /*Offset=*/0);
+  replaceDbgDeclare(AI, NewBase, DII, DIB, DIExpression::NoDeref, 0,
+                    DIExpression::NoDeref);
 
   // There should be exactly two dbg.declares.
   int Declares = 0;
