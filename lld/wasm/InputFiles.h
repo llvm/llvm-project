@@ -112,7 +112,7 @@ public:
   std::vector<uint32_t> TypeMap;
   std::vector<InputSegment *> Segments;
 
-  const std::vector<Symbol *> &getSymbols() { return Symbols; }
+  ArrayRef<Symbol *> getSymbols() { return Symbols; }
 
 private:
   Symbol *createDefined(const WasmSymbol &Sym,

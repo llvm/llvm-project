@@ -46,7 +46,7 @@ define i32 @test_lea_offset(i32) {
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    # kill: def %edi killed %edi def %rdi
 ; HASWELL-NEXT:    leal -24(%rdi), %eax # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_lea_offset:
 ; BROADWELL:       # %bb.0:
@@ -110,7 +110,7 @@ define i32 @test_lea_offset_big(i32) {
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    # kill: def %edi killed %edi def %rdi
 ; HASWELL-NEXT:    leal 1024(%rdi), %eax # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_lea_offset_big:
 ; BROADWELL:       # %bb.0:
@@ -180,7 +180,7 @@ define i32 @test_lea_add(i32, i32) {
 ; HASWELL-NEXT:    # kill: def %esi killed %esi def %rsi
 ; HASWELL-NEXT:    # kill: def %edi killed %edi def %rdi
 ; HASWELL-NEXT:    leal (%rdi,%rsi), %eax # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_lea_add:
 ; BROADWELL:       # %bb.0:
@@ -256,7 +256,7 @@ define i32 @test_lea_add_offset(i32, i32) {
 ; HASWELL-NEXT:    # kill: def %edi killed %edi def %rdi
 ; HASWELL-NEXT:    leal (%rdi,%rsi), %eax # sched: [1:0.50]
 ; HASWELL-NEXT:    addl $16, %eax # sched: [1:0.25]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_lea_add_offset:
 ; BROADWELL:       # %bb.0:
@@ -338,7 +338,7 @@ define i32 @test_lea_add_offset_big(i32, i32) {
 ; HASWELL-NEXT:    leal (%rdi,%rsi), %eax # sched: [1:0.50]
 ; HASWELL-NEXT:    addl $-4096, %eax # imm = 0xF000
 ; HASWELL-NEXT:    # sched: [1:0.25]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_lea_add_offset_big:
 ; BROADWELL:       # %bb.0:
@@ -411,7 +411,7 @@ define i32 @test_lea_mul(i32) {
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    # kill: def %edi killed %edi def %rdi
 ; HASWELL-NEXT:    leal (%rdi,%rdi,2), %eax # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_lea_mul:
 ; BROADWELL:       # %bb.0:
@@ -478,7 +478,7 @@ define i32 @test_lea_mul_offset(i32) {
 ; HASWELL-NEXT:    # kill: def %edi killed %edi def %rdi
 ; HASWELL-NEXT:    leal (%rdi,%rdi,2), %eax # sched: [1:0.50]
 ; HASWELL-NEXT:    addl $-32, %eax # sched: [1:0.25]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_lea_mul_offset:
 ; BROADWELL:       # %bb.0:
@@ -551,7 +551,7 @@ define i32 @test_lea_mul_offset_big(i32) {
 ; HASWELL-NEXT:    leal (%rdi,%rdi,8), %eax # sched: [1:0.50]
 ; HASWELL-NEXT:    addl $10000, %eax # imm = 0x2710
 ; HASWELL-NEXT:    # sched: [1:0.25]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_lea_mul_offset_big:
 ; BROADWELL:       # %bb.0:
@@ -625,7 +625,7 @@ define i32 @test_lea_add_scale(i32, i32) {
 ; HASWELL-NEXT:    # kill: def %esi killed %esi def %rsi
 ; HASWELL-NEXT:    # kill: def %edi killed %edi def %rdi
 ; HASWELL-NEXT:    leal (%rdi,%rsi,2), %eax # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_lea_add_scale:
 ; BROADWELL:       # %bb.0:
@@ -702,7 +702,7 @@ define i32 @test_lea_add_scale_offset(i32, i32) {
 ; HASWELL-NEXT:    # kill: def %edi killed %edi def %rdi
 ; HASWELL-NEXT:    leal (%rdi,%rsi,4), %eax # sched: [1:0.50]
 ; HASWELL-NEXT:    addl $96, %eax # sched: [1:0.25]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_lea_add_scale_offset:
 ; BROADWELL:       # %bb.0:
@@ -785,7 +785,7 @@ define i32 @test_lea_add_scale_offset_big(i32, i32) {
 ; HASWELL-NEXT:    leal (%rdi,%rsi,8), %eax # sched: [1:0.50]
 ; HASWELL-NEXT:    addl $-1200, %eax # imm = 0xFB50
 ; HASWELL-NEXT:    # sched: [1:0.25]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_lea_add_scale_offset_big:
 ; BROADWELL:       # %bb.0:
