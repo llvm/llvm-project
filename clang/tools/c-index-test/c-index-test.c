@@ -2316,7 +2316,8 @@ int perform_code_completion(int argc, const char **argv, int timing_only) {
   CXTranslationUnit TU;
   unsigned I, Repeats = 1;
   unsigned completionOptions = clang_defaultCodeCompleteOptions();
-  
+  const char *InvocationPath;
+
   if (getenv("CINDEXTEST_CODE_COMPLETE_PATTERNS"))
     completionOptions |= CXCodeComplete_IncludeCodePatterns;
   if (getenv("CINDEXTEST_COMPLETION_BRIEF_COMMENTS"))
@@ -2335,7 +2336,10 @@ int perform_code_completion(int argc, const char **argv, int timing_only) {
     return -1;
 
   CIdx = clang_createIndex(0, 0);
-  
+  InvocationPath = getenv("CINDEXTEST_INVOCATION_EMISSION_PATH");
+  if (InvocationPath)
+    clang_CXIndex_setInvocationEmissionPathOption(CIdx, InvocationPath);
+
   if (getenv("CINDEXTEST_EDITING"))
     Repeats = 5;
 

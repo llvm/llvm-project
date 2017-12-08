@@ -173,6 +173,7 @@ class Preprocessor {
   IdentifierInfo *Ident__building_module;          // __building_module
   IdentifierInfo *Ident__MODULE__;                 // __MODULE__
   IdentifierInfo *Ident__has_cpp_attribute;        // __has_cpp_attribute
+  IdentifierInfo *Ident__has_c_attribute;          // __has_c_attribute
   IdentifierInfo *Ident__has_declspec;             // __has_declspec_attribute
 
   SourceLocation DATELoc, TIMELoc;

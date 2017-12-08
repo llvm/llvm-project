@@ -14478,8 +14478,8 @@ static SDValue LowerEXTRACT_VECTOR_ELT_SSE4(SDValue Op, SelectionDAG &DAG) {
 
 /// Extract one bit from mask vector, like v16i1 or v8i1.
 /// AVX-512 feature.
-SDValue
-X86TargetLowering::ExtractBitFromMaskVector(SDValue Op, SelectionDAG &DAG) const {
+static SDValue ExtractBitFromMaskVector(SDValue Op, SelectionDAG &DAG,
+                                        const X86Subtarget &Subtarget) {
   SDValue Vec = Op.getOperand(0);
   SDLoc dl(Vec);
   MVT VecVT = Vec.getSimpleValueType();
@@ -14503,22 +14503,26 @@ X86TargetLowering::ExtractBitFromMaskVector(SDValue Op, SelectionDAG &DAG) const
     return DAG.getNode(ISD::TRUNCATE, dl, EltVT, Elt);
   }
 
-  unsigned IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
+  // If the kshift instructions of the correct width aren't natively supported
+  // then we need to promote the vector to the native size to get the correct
+  // zeroing behavior.
   if ((!Subtarget.hasDQI() && (VecVT.getVectorNumElements() == 8)) ||
       (VecVT.getVectorNumElements() < 8)) {
-    // Use kshiftlw/rw instruction.
     VecVT = MVT::v16i1;
     Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, VecVT,
                       DAG.getUNDEF(VecVT),
                       Vec,
                       DAG.getIntPtrConstant(0, dl));
   }
-  unsigned MaxSift = VecVT.getVectorNumElements() - 1;
-  if (MaxSift - IdxVal)
+
+  // Use kshiftlw/rw instruction.
+  unsigned IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
+  unsigned MaxShift = VecVT.getVectorNumElements() - 1;
+  if (MaxShift - IdxVal)
     Vec = DAG.getNode(X86ISD::KSHIFTL, dl, VecVT, Vec,
-                      DAG.getConstant(MaxSift - IdxVal, dl, MVT::i8));
+                      DAG.getConstant(MaxShift - IdxVal, dl, MVT::i8));
   Vec = DAG.getNode(X86ISD::KSHIFTR, dl, VecVT, Vec,
-                    DAG.getConstant(MaxSift, dl, MVT::i8));
+                    DAG.getConstant(MaxShift, dl, MVT::i8));
   return DAG.getNode(X86ISD::VEXTRACT, dl, Op.getSimpleValueType(), Vec,
                      DAG.getIntPtrConstant(0, dl));
 }
@@ -14532,7 +14536,7 @@ X86TargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
   SDValue Idx = Op.getOperand(1);
 
   if (VecVT.getVectorElementType() == MVT::i1)
-    return ExtractBitFromMaskVector(Op, DAG);
+    return ExtractBitFromMaskVector(Op, DAG, Subtarget);
 
   if (!isa<ConstantSDNode>(Idx)) {
     // Its more profitable to go through memory (1 cycles throughput)
@@ -14670,8 +14674,8 @@ X86TargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
 
 /// Insert one bit to mask vector, like v16i1 or v8i1.
 /// AVX-512 feature.
-SDValue
-X86TargetLowering::InsertBitToMaskVector(SDValue Op, SelectionDAG &DAG) const {
+static SDValue InsertBitToMaskVector(SDValue Op, SelectionDAG &DAG,
+                                     const X86Subtarget &Subtarget) {
   SDLoc dl(Op);
   SDValue Vec = Op.getOperand(0);
   SDValue Elt = Op.getOperand(1);
@@ -14690,10 +14694,24 @@ X86TargetLowering::InsertBitToMaskVector(SDValue Op, SelectionDAG &DAG) const {
   }
 
   unsigned IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
-  SDValue EltInVec = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VecVT, Elt);
   unsigned NumElems = VecVT.getVectorNumElements();
 
-  if(Vec.isUndef()) {
+  // If the kshift instructions of the correct width aren't natively supported
+  // then we need to promote the vector to the native size to get the correct
+  // zeroing behavior.
+  if ((!Subtarget.hasDQI() && NumElems == 8) || (NumElems < 8)) {
+    // Need to promote to v16i1, do the insert, then extract back.
+    Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, MVT::v16i1,
+                      DAG.getUNDEF(MVT::v16i1), Vec,
+                      DAG.getIntPtrConstant(0, dl));
+    Op = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, MVT::v16i1, Vec, Elt, Idx);
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, VecVT, Op,
+                       DAG.getIntPtrConstant(0, dl));
+  }
+
+  SDValue EltInVec = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VecVT, Elt);
+
+  if (Vec.isUndef()) {
     if (IdxVal)
       EltInVec = DAG.getNode(X86ISD::KSHIFTL, dl, VecVT, EltInVec,
                              DAG.getConstant(IdxVal, dl, MVT::i8));
@@ -14716,25 +14734,33 @@ X86TargetLowering::InsertBitToMaskVector(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getNode(ISD::OR, dl, VecVT, Vec, EltInVec);
   }
   // Insertion of one bit into last position
-  if (IdxVal == NumElems -1) {
+  if (IdxVal == NumElems - 1) {
     // Move the bit to the last position inside the vector.
     EltInVec = DAG.getNode(X86ISD::KSHIFTL, dl, VecVT, EltInVec,
                            DAG.getConstant(IdxVal, dl, MVT::i8));
     // Clean the last bit in the source vector.
     Vec = DAG.getNode(X86ISD::KSHIFTL, dl, VecVT, Vec,
-                           DAG.getConstant(1, dl, MVT::i8));
+                      DAG.getConstant(1, dl, MVT::i8));
     Vec = DAG.getNode(X86ISD::KSHIFTR, dl, VecVT, Vec,
-                           DAG.getConstant(1 , dl, MVT::i8));
+                      DAG.getConstant(1 , dl, MVT::i8));
 
     return DAG.getNode(ISD::OR, dl, VecVT, Vec, EltInVec);
   }
 
-  // Use shuffle to insert element.
-  SmallVector<int, 64> MaskVec(NumElems);
-  for (unsigned i = 0; i != NumElems; ++i)
-    MaskVec[i] = (i == IdxVal) ? NumElems : i;
-
-  return DAG.getVectorShuffle(VecVT, dl, Vec, EltInVec, MaskVec);
+  // Move the current value of the bit to be replace to bit 0.
+  SDValue Merged = DAG.getNode(X86ISD::KSHIFTR, dl, VecVT, Vec,
+                               DAG.getConstant(IdxVal, dl, MVT::i8));
+  // Xor with the new bit.
+  Merged = DAG.getNode(ISD::XOR, dl, VecVT, Merged, EltInVec);
+  // Shift to MSB, filling bottom bits with 0.
+  Merged = DAG.getNode(X86ISD::KSHIFTL, dl, VecVT, Merged,
+                       DAG.getConstant(NumElems - 1, dl, MVT::i8));
+  // Shift to the final position, filling upper bits with 0.
+  Merged = DAG.getNode(X86ISD::KSHIFTR, dl, VecVT, Merged,
+                       DAG.getConstant(NumElems - 1 - IdxVal, dl, MVT::i8));
+  // Xor with original vector to cancel out the original bit value that's still
+  // present.
+  return DAG.getNode(ISD::XOR, dl, VecVT, Merged, Vec);
 }
 
 SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
@@ -14744,7 +14770,7 @@ SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
   unsigned NumElts = VT.getVectorNumElements();
 
   if (EltVT == MVT::i1)
-    return InsertBitToMaskVector(Op, DAG);
+    return InsertBitToMaskVector(Op, DAG, Subtarget);
 
   SDLoc dl(Op);
   SDValue N0 = Op.getOperand(0);

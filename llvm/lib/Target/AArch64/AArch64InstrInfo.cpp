@@ -4833,15 +4833,17 @@ AArch64InstrInfo::getOutliningType(MachineInstr &MI) const {
 
       // Find the minimum/maximum offset for this instruction and check if
       // fixing it up would be in range.
-      int64_t MinOffset, MaxOffset;
-      unsigned DummyScale;
-      getMemOpInfo(MI.getOpcode(), DummyScale, DummyWidth, MinOffset,
+      int64_t MinOffset, MaxOffset; // Unscaled offsets for the instruction.
+      unsigned Scale; // The scale to multiply the offsets by.
+      getMemOpInfo(MI.getOpcode(), Scale, DummyWidth, MinOffset,
                    MaxOffset);
 
       // TODO: We should really test what happens if an instruction overflows.
       // This is tricky to test with IR tests, but when the outliner is moved
       // to a MIR test, it really ought to be checked.
-      if (Offset + 16 < MinOffset || Offset + 16 > MaxOffset)
+
+      Offset += 16; // Update the offset to what it would be if we outlined.
+      if (Offset < MinOffset * Scale || Offset > MaxOffset * Scale)
         return MachineOutlinerInstrType::Illegal;
 
       // It's in range, so we can outline it.

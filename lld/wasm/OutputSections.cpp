@@ -109,7 +109,7 @@ static void applyRelocation(uint8_t *Buf, const OutputRelocation &Reloc) {
 }
 
 static void applyRelocations(uint8_t *Buf,
-                             const std::vector<OutputRelocation> &Relocs) {
+                             ArrayRef<OutputRelocation> Relocs) {
   log("applyRelocations: count=" + Twine(Relocs.size()));
   for (const OutputRelocation &Reloc : Relocs) {
     applyRelocation(Buf, Reloc);
@@ -188,7 +188,7 @@ void OutputSection::createHeader(size_t BodySize) {
       " total=" + Twine(getSize()));
 }
 
-CodeSection::CodeSection(uint32_t NumFunctions, std::vector<ObjFile *> &Objs)
+CodeSection::CodeSection(uint32_t NumFunctions, ArrayRef<ObjFile *> Objs)
     : OutputSection(WASM_SEC_CODE), InputObjects(Objs) {
   raw_string_ostream OS(CodeSectionHeader);
   writeUleb128(OS, NumFunctions, "function count");
@@ -263,7 +263,7 @@ void CodeSection::writeRelocations(raw_ostream &OS) const {
       writeReloc(OS, Reloc);
 }
 
-DataSection::DataSection(std::vector<OutputSegment *> &Segments)
+DataSection::DataSection(ArrayRef<OutputSegment *> Segments)
     : OutputSection(WASM_SEC_DATA), Segments(Segments) {
   raw_string_ostream OS(DataSectionHeader);
 
