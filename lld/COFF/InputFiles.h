@@ -108,9 +108,9 @@ public:
   static bool classof(const InputFile *F) { return F->kind() == ObjectKind; }
   void parse() override;
   MachineTypes getMachineType() override;
-  std::vector<Chunk *> &getChunks() { return Chunks; }
-  std::vector<SectionChunk *> &getDebugChunks() { return DebugChunks; }
-  std::vector<Symbol *> &getSymbols() { return Symbols; }
+  ArrayRef<Chunk *> getChunks() { return Chunks; }
+  ArrayRef<SectionChunk *> getDebugChunks() { return DebugChunks; }
+  ArrayRef<Symbol *> getSymbols() { return Symbols; }
 
   // Returns a Symbol object for the SymbolIndex'th symbol in the
   // underlying object file.
@@ -217,7 +217,7 @@ class BitcodeFile : public InputFile {
 public:
   explicit BitcodeFile(MemoryBufferRef M) : InputFile(BitcodeKind, M) {}
   static bool classof(const InputFile *F) { return F->kind() == BitcodeKind; }
-  std::vector<Symbol *> &getSymbols() { return SymbolBodies; }
+  ArrayRef<Symbol *> getSymbols() { return SymbolBodies; }
   MachineTypes getMachineType() override;
   static std::vector<BitcodeFile *> Instances;
   std::unique_ptr<llvm::lto::InputFile> Obj;

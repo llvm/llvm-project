@@ -4,7 +4,7 @@ function(add_lldb_library name)
   cmake_parse_arguments(PARAM
     "MODULE;SHARED;STATIC;OBJECT;PLUGIN"
     ""
-    "DEPENDS;LINK_LIBS;LINK_COMPONENTS"
+    "EXTRA_CXXFLAGS;DEPENDS;LINK_LIBS;LINK_COMPONENTS"
     ${ARGN})
   llvm_process_sources(srcs ${PARAM_UNPARSED_ARGUMENTS})
   list(APPEND LLVM_LINK_COMPONENTS ${PARAM_LINK_COMPONENTS})
@@ -35,6 +35,8 @@ function(add_lldb_library name)
   endif()
 
   #PIC not needed on Win
+  # FIXME: Setting CMAKE_CXX_FLAGS here is a no-op, use target_compile_options
+  # or omit this logic instead.
   if (NOT WIN32)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
   endif()
@@ -77,6 +79,9 @@ function(add_lldb_library name)
   # but it is simple enough to make all of LLDB depend on some of those
   # headers without negatively impacting much of anything.
   add_dependencies(${name} clang-tablegen-targets)
+
+  # Add in any extra C++ compilation flags for this library.
+  target_compile_options(${name} PRIVATE ${PARAM_EXTRA_CXXFLAGS})
 
   set_target_properties(${name} PROPERTIES FOLDER "lldb libraries")
 endfunction(add_lldb_library)

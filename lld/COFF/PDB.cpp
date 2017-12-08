@@ -136,7 +136,7 @@ private:
 };
 }
 
-static SectionChunk *findByName(std::vector<SectionChunk *> &Sections,
+static SectionChunk *findByName(ArrayRef<SectionChunk *> Sections,
                                 StringRef Name) {
   for (SectionChunk *C : Sections)
     if (C->getSectionName() == Name)
